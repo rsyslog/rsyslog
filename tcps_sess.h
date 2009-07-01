@@ -46,7 +46,7 @@ struct tcps_sess_s {
 	TCPFRAMINGMODE eFraming;
 	uchar *pMsg;		/* message (fragment) received */
 	prop_t *fromHost;	/* host name we received messages from */
-	uchar *fromHostIP;
+	prop_t *fromHostIP;
 	void *pUsr;		/* a user-pointer */
 	rsRetVal (*DoSubmitMessage)(tcps_sess_t*, uchar*, int); /* submit message callback */
 };

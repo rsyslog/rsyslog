@@ -211,6 +211,7 @@ static rsRetVal GlobalClassExit(void);
 #endif
 
 static prop_t *pInternalInputName = NULL;	/* there is only one global inputName for all internally-generated messages */
+static prop_t *pLocalHostIP = NULL;		/* there is only one global IP for all internally-generated messages */
 static uchar	*ConfFile = (uchar*) _PATH_LOGCONF; /* read-only after startup */
 static char	*PidFile = _PATH_LOGPID; /* read-only after startup */
 
@@ -598,7 +599,7 @@ static inline rsRetVal printline(uchar *hname, uchar *hnameIP, uchar *msg, int f
 		MsgSetHOSTNAME(pMsg, hname, ustrlen(hname));
 	MsgSetRcvFromStr(pMsg, hname, ustrlen(hname));
 	MsgSetAfterPRIOffs(pMsg, p - msg);
-	CHKiRet(MsgSetRcvFromIP(pMsg, hnameIP));
+	CHKiRet(MsgSetRcvFromIPStr(pMsg, hnameIP, ustrlen(hname)));
 
 	logmsg(pMsg, flags);
 
@@ -871,7 +872,7 @@ logmsgInternal(int iErr, int pri, uchar *msg, int flags)
 	MsgSetRawMsgWOSize(pMsg, (char*)msg);
 	MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName(), ustrlen(glbl.GetLocalHostName()));
 	MsgSetRcvFrom(pMsg, glbl.GetLocalHostNameProp());
-	MsgSetRcvFromIP(pMsg, UCHAR_CONSTANT("127.0.0.1"));
+	MsgSetRcvFromIP(pMsg, pLocalHostIP);
 	/* check if we have an error code associated and, if so,
 	 * adjust the tag. -- rgerhards, 2008-06-27
 	 */
@@ -1697,9 +1698,11 @@ die(int sig)
 
 	legacyOptsFree();
 
-	/* destruct our input name */
+	/* destruct our global properties */
 	if(pInternalInputName != NULL)
 		prop.Destruct(&pInternalInputName);
+	if(pLocalHostIP != NULL)
+		prop.Destruct(&pLocalHostIP);
 
 	/* terminate the remaining classes */
 	GlobalClassExit();
@@ -3208,8 +3211,12 @@ int realMain(int argc, char **argv)
 
 	/* we need to create the inputName property (only once during our lifetime) */
 	CHKiRet(prop.Construct(&pInternalInputName));
-	CHKiRet(prop.SetString(pInternalInputName, UCHAR_CONSTANT("rsyslgod"), sizeof("rsyslgod") - 1));
+	CHKiRet(prop.SetString(pInternalInputName, UCHAR_CONSTANT("rsyslogd"), sizeof("rsyslgod") - 1));
 	CHKiRet(prop.ConstructFinalize(pInternalInputName));
+
+	CHKiRet(prop.Construct(&pLocalHostIP));
+	CHKiRet(prop.SetString(pLocalHostIP, UCHAR_CONSTANT("127.0.0.1"), sizeof("127.0.0.1") - 1));
+	CHKiRet(prop.ConstructFinalize(pLocalHostIP));
 
 	/* get our host and domain names - we need to do this early as we may emit
 	 * error log messages, which need the correct hostname. -- rgerhards, 2008-04-04

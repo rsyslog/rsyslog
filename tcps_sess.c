@@ -105,7 +105,8 @@ CODESTARTobjDestruct(tcps_sess)
 	/* now destruct our own properties */
 	if(pThis->fromHost != NULL)
 		CHKiRet(prop.Destruct(&pThis->fromHost));
-	free(pThis->fromHostIP);
+	if(pThis->fromHostIP != NULL)
+		CHKiRet(prop.Destruct(&pThis->fromHostIP));
 	free(pThis->pMsg);
 ENDobjDestruct(tcps_sess)
 
@@ -128,9 +129,8 @@ SetHost(tcps_sess_t *pThis, uchar *pszHost)
 
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
 
-	if(pThis->fromHost == NULL) {
+	if(pThis->fromHost == NULL)
 		CHKiRet(prop.Construct(&pThis->fromHost));
-	}
 
 	CHKiRet(prop.SetString(pThis->fromHost, pszHost, ustrlen(pszHost)));
 
@@ -150,9 +150,12 @@ SetHostIP(tcps_sess_t *pThis, uchar *pszHostIP)
 
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
 
-	free(pThis->fromHostIP);
-	pThis->fromHostIP = pszHostIP;
+	if(pThis->fromHostIP == NULL)
+		CHKiRet(prop.Construct(&pThis->fromHostIP));
 
+	CHKiRet(prop.SetString(pThis->fromHostIP, pszHostIP, ustrlen(pszHostIP)));
+
+finalize_it:
 	RETiRet;
 }
 
@@ -249,8 +252,8 @@ defaultDoSubmitMessage(tcps_sess_t *pThis, struct syslogTime *stTime, time_t ttG
 	pMsg->msgFlags  = NEEDS_PARSING | PARSE_HOSTNAME;
 	pMsg->bParseHOSTNAME = 1;
 	MsgSetRcvFrom(pMsg, pThis->fromHost);
-	MsgSetRuleset(pMsg, pThis->pLstnInfo->pRuleset);
 	CHKiRet(MsgSetRcvFromIP(pMsg, pThis->fromHostIP));
+	MsgSetRuleset(pMsg, pThis->pLstnInfo->pRuleset);
 
 	if(pMultiSub == NULL) {
 		CHKiRet(submitMsg(pMsg));
@@ -335,8 +338,8 @@ Close(tcps_sess_t *pThis)
 	if(pThis->fromHost != NULL) {
 		prop.Destruct(&pThis->fromHost);
 	}
-	free(pThis->fromHostIP);
-	pThis->fromHostIP = NULL; /* not really needed, but... */
+	if(pThis->fromHostIP != NULL)
+		prop.Destruct(&pThis->fromHostIP);
 
 	RETiRet;
 }

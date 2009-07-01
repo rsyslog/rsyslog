@@ -250,7 +250,7 @@ processSocket(int fd, struct sockaddr_storage *frominetPrev, int *pbIsPermitted,
 			pMsg->msgFlags  = NEEDS_PARSING | PARSE_HOSTNAME;
 			pMsg->bParseHOSTNAME = 1;
 			MsgSetRcvFromStr(pMsg, fromHost, ustrlen(fromHost));
-			CHKiRet(MsgSetRcvFromIP(pMsg, fromHostIP));
+			CHKiRet(MsgSetRcvFromIPStr(pMsg, fromHostIP, ustrlen(fromHostIP)));
 			CHKiRet(submitMsg(pMsg));
 		}
 	}

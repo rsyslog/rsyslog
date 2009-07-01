@@ -105,7 +105,7 @@ enqMsg(uchar *msg, uchar* pszTag, int iFacility, int iSeverity)
 	MsgSetRawMsgWOSize(pMsg, (char*)msg);
 	MsgSetMSGoffs(pMsg, 0);	/* we do not have a header... */
 	MsgSetRcvFrom(pMsg, glbl.GetLocalHostNameProp());
-	MsgSetRcvFromIP(pMsg, (uchar*)"127.0.0.1");
+	MsgSetRcvFromIPStr(pMsg, (uchar*)"127.0.0.1", sizeof("127.0.0.1") - 1);
 	MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName(), ustrlen(glbl.GetLocalHostName()));
 	MsgSetTAG(pMsg, pszTag, ustrlen(pszTag));
 	pMsg->iFacility = LOG_FAC(iFacility);

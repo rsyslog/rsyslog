@@ -78,11 +78,9 @@ struct msg {
 	int	iLenMSG;	/* Length of the MSG part */
 	int	iLenTAG;	/* Length of the TAG part */
 	int	iLenHOSTNAME;	/* Length of HOSTNAME */
-	int	iLenRcvFromIP;	/* Length of pszRcvFromIP */
 	uchar	*pszRawMsg;	/* message as it was received on the wire. This is important in case we
 				 * need to preserve cryptographic verifiers.  */
 	uchar	*pszHOSTNAME;	/* HOSTNAME from syslog message */
-	uchar	*pszRcvFromIP;	/* IP of system message was received from */
 	char *pszRcvdAt3164;	/* time as RFC3164 formatted string (always 15 charcters) */
 	char *pszRcvdAt3339;	/* time as RFC3164 formatted string (32 charcters at most) */
 	char *pszRcvdAt_MySQL;	/* rcvdAt as MySQL formatted string (always 14 charcters) */
@@ -98,6 +96,7 @@ struct msg {
 	cstr_t *pCSMSGID;	/* MSGID */
 	prop_t *pInputName;	/* input name property */
 	prop_t *pRcvFrom;	/* name of system message was received from */
+	prop_t *pRcvFromIP;	/* IP of system message was received from */
 	ruleset_t *pRuleset;	/* ruleset to be used for processing this message */
 	time_t ttGenTime;	/* time msg object was generated, same as tRcvdAt, but a Unix timestamp.
 				   While this field looks redundant, it is required because a Unix timestamp
@@ -152,7 +151,8 @@ rsRetVal MsgSetFlowControlType(msg_t *pMsg, flowControl_t eFlowCtl);
 rsRetVal MsgSetStructuredData(msg_t *pMsg, char* pszStrucData);
 void MsgSetRcvFrom(msg_t *pMsg, prop_t*);
 void MsgSetRcvFromStr(msg_t *pMsg, uchar* pszRcvFrom, int);
-rsRetVal MsgSetRcvFromIP(msg_t *pMsg, uchar* pszRcvFromIP);
+rsRetVal MsgSetRcvFromIP(msg_t *pMsg, prop_t*);
+rsRetVal MsgSetRcvFromIPStr(msg_t *pMsg, uchar*, int);
 void MsgSetHOSTNAME(msg_t *pMsg, uchar* pszHOSTNAME, int lenHOSTNAME);
 rsRetVal MsgSetAfterPRIOffs(msg_t *pMsg, short offs);
 void MsgSetMSGoffs(msg_t *pMsg, short offs);

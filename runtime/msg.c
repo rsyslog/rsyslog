@@ -296,6 +296,26 @@ getInputName(msg_t *pM, uchar **ppsz, int *plen)
 }
 
 
+static inline uchar*
+getRcvFromIP(msg_t *pM)
+{
+	uchar *psz;
+	int len;
+	BEGINfunc
+	if(pM == NULL) {
+		psz = UCHAR_CONSTANT("");
+	} else {
+		if(pM->pRcvFromIP == NULL)
+			psz = UCHAR_CONSTANT("");
+		else
+			prop.GetString(pM->pRcvFromIP, &psz, &len);
+	}
+	ENDfunc
+	return psz;
+}
+
+
+
 /* map a property name (string) to a property ID */
 rsRetVal propNameToID(cstr_t *pCSPropName, propid_t *pPropID)
 {
@@ -622,10 +642,8 @@ static inline rsRetVal msgBaseConstruct(msg_t **ppThis)
 	pM->iLenMSG = 0;
 	pM->iLenTAG = 0;
 	pM->iLenHOSTNAME = 0;
-	pM->iLenRcvFromIP = 0;
 	pM->pszRawMsg = NULL;
 	pM->pszHOSTNAME = NULL;
-	pM->pszRcvFromIP = NULL;
 	pM->pszRcvdAt3164 = NULL;
 	pM->pszRcvdAt3339 = NULL;
 	pM->pszRcvdAt_MySQL = NULL;
@@ -640,6 +658,7 @@ static inline rsRetVal msgBaseConstruct(msg_t **ppThis)
 	pM->pCSPROCID = NULL;
 	pM->pCSMSGID = NULL;
 	pM->pInputName = NULL;
+	pM->pRcvFromIP = NULL;
 	pM->pRcvFrom = NULL;
 	pM->pRuleset = NULL;
 	memset(&pM->tRcvdAt, 0, sizeof(pM->tRcvdAt));
@@ -743,6 +762,8 @@ CODESTARTobjDestruct(msg)
 			prop.Destruct(&pThis->pInputName);
 		if(pThis->pRcvFrom != NULL)
 			prop.Destruct(&pThis->pRcvFrom);
+		if(pThis->pRcvFromIP != NULL)
+			prop.Destruct(&pThis->pRcvFromIP);
 		free(pThis->pszRcvdAt3164);
 		free(pThis->pszRcvdAt3339);
 		free(pThis->pszRcvdAt_MySQL);
@@ -845,6 +866,8 @@ msg_t* MsgDup(msg_t* pOld)
 	pNew->offMSG = pOld->offMSG;
 	pNew->pRcvFrom = pOld->pRcvFrom;
 	prop.AddRef(pNew->pRcvFrom);
+	pNew->pRcvFromIP = pOld->pRcvFromIP;
+	prop.AddRef(pNew->pRcvFromIP);
 	pNew->pInputName = pOld->pInputName;
 	prop.AddRef(pNew->pInputName);
 	/* enable this, if someone actually uses UxTradMsg, delete after some time has
@@ -939,7 +962,8 @@ static rsRetVal MsgSerialize(msg_t *pThis, strm_t *pStrm)
 	objSerializeSCALAR_VAR(pStrm, "pszInputName", PSZ, psz); 
 	psz = getRcvFrom(pThis); 
 	objSerializeSCALAR_VAR(pStrm, "pszRcvFrom", PSZ, psz); 
-	objSerializePTR(pStrm, pszRcvFromIP, PSZ);
+	psz = getRcvFromIP(pThis); 
+	objSerializeSCALAR_VAR(pStrm, "pszRcvFromIP", PSZ, psz); 
 
 	objSerializePTR(pStrm, pCSStrucData, CSTR);
 	objSerializePTR(pStrm, pCSAPPNAME, CSTR);
@@ -1640,23 +1664,15 @@ uchar *getRcvFrom(msg_t *pM)
 	if(pM == NULL) {
 		psz = UCHAR_CONSTANT("");
 	} else {
-		prop.GetString(pM->pInputName, &psz, &len);
+		if(pM->pRcvFrom == NULL)
+			psz = UCHAR_CONSTANT("");
+		else
+			prop.GetString(pM->pRcvFrom, &psz, &len);
 	}
 	ENDfunc
 	return psz;
 }
 
-
-uchar *getRcvFromIP(msg_t *pM)
-{
-	if(pM == NULL)
-		return (uchar*) "";
-	else
-		if(pM->pszRcvFromIP == NULL)
-			return (uchar*) "";
-		else
-			return pM->pszRcvFromIP;
-}
 
 /* rgerhards 2004-11-24: set STRUCTURED DATA in msg object
  */
@@ -1822,8 +1838,8 @@ void MsgSetRcvFrom(msg_t *pThis, prop_t *new)
 	pThis->pRcvFrom = new;
 }
 
-/* to be removed soon: work-around for those tht can not natively generate an
- * input name.
+/* to be removed soon: work-around for those tht can not natively generate a
+ * property.
  * rgerhards, 2009-06-29
  */
 void MsgSetRcvFromStr(msg_t *pThis, uchar *psz, int len)
@@ -1840,23 +1856,42 @@ void MsgSetRcvFromStr(msg_t *pThis, uchar *psz, int len)
 }
 
 
-/* rgerhards 2005-05-16: set pszRcvFromIP in msg object */
-rsRetVal
-MsgSetRcvFromIP(msg_t *pMsg, uchar* pszRcvFromIP)
+/* set RcvFromIP name in msg object. This calls AddRef()
+ * on the property, because this must be done in all current cases and there
+ * is no case expected where this may not be necessary.
+ * rgerhards, 2009-06-30
+ */
+rsRetVal MsgSetRcvFromIP(msg_t *pThis, prop_t *new)
 {
-	DEFiRet;
-	assert(pMsg != NULL);
-	if(pMsg->pszRcvFromIP != NULL) {
-		free(pMsg->pszRcvFromIP);
-		pMsg->iLenRcvFromIP = 0;
-	}
+	assert(pThis != NULL);
 
-	CHKmalloc(pMsg->pszRcvFromIP = (uchar*)strdup((char*)pszRcvFromIP));
-	pMsg->iLenRcvFromIP = strlen((char*)pszRcvFromIP);
-finalize_it:
-	RETiRet;
+	BEGINfunc
+	prop.AddRef(new);
+	if(pThis->pRcvFromIP != NULL)
+		prop.Destruct(&pThis->pRcvFromIP);
+	pThis->pRcvFromIP = new;
+	ENDfunc
+	return RS_RET_OK;
 }
 
+
+/* to be removed soon: work-around for those tht can not natively generate a
+ * property.
+ * rgerhards, 2009-06-29
+ */
+rsRetVal MsgSetRcvFromIPStr(msg_t *pThis, uchar *psz, int len)
+{
+	prop_t *pProp;
+	assert(pThis != NULL);
+
+	/* we need to create a property */ 
+	prop.Construct(&pProp);
+	prop.SetString(pProp, psz, len);
+	prop.ConstructFinalize(pProp);
+	MsgSetRcvFromIP(pThis, pProp);
+	prop.Destruct(&pProp);
+	return RS_RET_OK;
+}
 
 /* rgerhards 2004-11-09: set HOSTNAME in msg object
  * rgerhards, 2007-06-21:
@@ -2900,7 +2935,7 @@ rsRetVal MsgSetProperty(msg_t *pThis, var_t *pProp)
 		MsgSetInputName(pThis, myProp);
 		prop.Destruct(&myProp);
 	} else if(isProp("pszRcvFromIP")) {
-		MsgSetRcvFromIP(pThis, rsCStrGetSzStrNoNULL(pProp->val.pStr));
+		MsgSetRcvFromIPStr(pThis, rsCStrGetSzStrNoNULL(pProp->val.pStr), rsCStrLen(pProp->val.pStr));
 	} else if(isProp("pszRcvFrom")) {
 		MsgSetRcvFromStr(pThis, rsCStrGetSzStrNoNULL(pProp->val.pStr), rsCStrLen(pProp->val.pStr));
 	} else if(isProp("pszHOSTNAME")) {
