@@ -1,4 +1,3 @@
-#include <stdio.h>
 /* This is the byte-counted string class for rsyslog. It is a replacement
  * for classical \0 terminated string functions. We introduce it in
  * the hope it will make the program more secure, obtain some performance

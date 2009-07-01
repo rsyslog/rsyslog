@@ -39,6 +39,7 @@
 #define CONF_RAWMSG_BUFSIZE		101
 #define CONF_TAG_BUFSIZE		32
 #define CONF_HOSTNAME_BUFSIZE		32
+#define CONF_PROP_BUFSIZE		16	/* should be close to sizeof(ptr) or lighly above it */
 
 
 /* ############################################################# *

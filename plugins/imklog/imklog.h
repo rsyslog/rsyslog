@@ -52,6 +52,7 @@ extern int symbol_lookup;
 extern char *symfile; 
 extern int console_log_level;
 extern int dbgPrintSymbols;
+extern uchar *pszPath;
 
 /* the functions below may be called by the drivers */
 rsRetVal imklogLogIntMsg(int priority, char *fmt, ...) __attribute__((format(printf,2, 3)));

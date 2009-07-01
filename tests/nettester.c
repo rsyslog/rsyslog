@@ -107,6 +107,7 @@ tcpSend(char *buf, int lenBuf)
 {
 	static int sock = INVALID_SOCKET;
 	struct sockaddr_in addr;
+	int retries;
 
 	if(sock == INVALID_SOCKET) {
 		/* first time, need to connect to target */
@@ -122,10 +123,20 @@ tcpSend(char *buf, int lenBuf)
 			fprintf(stderr, "inet_aton() failed\n");
 			return(1);
 		}
-		if(connect(sock, (struct sockaddr*)&addr, sizeof(addr)) != 0) {
-			fprintf(stderr, "connect() failed\n");
-			return(1);
-		}
+		retries = 0;
+		while(1) { /* loop broken inside */
+			if(connect(sock, (struct sockaddr*)&addr, sizeof(addr)) == 0) {
+				break;
+			} else {
+				if(retries++ == 30) {
+					++iFailed;
+					fprintf(stderr, "connect() failed\n");
+					return(1);
+				} else {
+					usleep(100);
+				}
+			}
+		} 
 	}
 
 	/* send test data */

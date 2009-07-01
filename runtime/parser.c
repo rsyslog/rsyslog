@@ -261,7 +261,7 @@ rsRetVal parseMsg(msg_t *pMsg)
 	CHKiRet(sanitizeMessage(pMsg));
 
 	/* we needed to sanitize first, because we otherwise do not have a C-string we can print... */
-	DBGPRINTF("msg parser: flags %x, from '%s', msg '%s'\n", pMsg->msgFlags, pMsg->pszRcvFrom, pMsg->pszRawMsg);
+	DBGPRINTF("msg parser: flags %x, from '%s', msg '%s'\n", pMsg->msgFlags, getRcvFrom(pMsg), pMsg->pszRawMsg);
 
 	/* pull PRI */
 	pri = DEFUPRI;

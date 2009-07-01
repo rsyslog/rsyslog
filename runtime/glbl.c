@@ -35,8 +35,10 @@
 
 #include "rsyslog.h"
 #include "obj.h"
+#include "unicode-helper.h"
 #include "cfsysline.h"
 #include "glbl.h"
+#include "prop.h"
 
 /* some defaults */
 #ifndef DFLT_NETSTRM_DRVR
@@ -45,6 +47,7 @@
 
 /* static data */
 DEFobjStaticHelpers
+DEFobjCurrIf(prop)
 
 /* static data
  * For this object, these variables are obviously what makes the "meat" of the
@@ -59,6 +62,7 @@ static int iDefPFFamily = PF_UNSPEC;     /* protocol family (IPv4, IPv6 or both)
 static int bDropMalPTRMsgs = 0;/* Drop messages which have malicious PTR records during DNS lookup */
 static int option_DisallowWarning = 1;	/* complain if message from disallowed sender is received */
 static int bDisableDNS = 0; /* don't look up IP addresses of remote messages */
+static prop_t *propLocalHostName = NULL;/* our hostname as FQDN - read-only after startup */
 static uchar *LocalHostName = NULL;/* our hostname  - read-only after startup */
 static uchar *LocalFQDNName = NULL;/* our hostname as FQDN - read-only after startup */
 static uchar *LocalDomain;	/* our local domain name  - read-only after startup */
@@ -132,6 +136,44 @@ GetLocalHostName(void)
 }
 
 
+/* generate the local hostname property. This must be done after the hostname info
+ * has been set as well as PreserveFQDN.
+ * rgerhards, 2009-06-30
+ */
+static rsRetVal
+GenerateLocalHostNameProperty(void)
+{
+	DEFiRet;
+	uchar *pszName;
+
+	if(propLocalHostName != NULL)
+		prop.Destruct(&propLocalHostName);
+
+	CHKiRet(prop.Construct(&propLocalHostName));
+	if(LocalHostName == NULL)
+		pszName = (uchar*) "[localhost]";
+	else {
+		if(GetPreserveFQDN() == 1)
+			pszName = LocalFQDNName;
+		else
+			pszName = LocalHostName;
+	}
+	CHKiRet(prop.SetString(propLocalHostName, pszName, ustrlen(pszName)));
+	CHKiRet(prop.ConstructFinalize(propLocalHostName));
+
+finalize_it:
+	RETiRet;
+}
+
+/* return our local hostname as a string property
+ */
+static prop_t*
+GetLocalHostNameProp(void)
+{
+	return(propLocalHostName);
+}
+
+
 /* return the current localhost name as FQDN (requires FQDN to be set) 
  * TODO: we should set the FQDN ourselfs in here!
  */
@@ -197,6 +239,8 @@ CODESTARTobjQueryInterface(glbl)
 	 * of course, also affects the "if" above).
 	 */
 	pIf->GetWorkDir = GetWorkDir;
+	pIf->GenerateLocalHostNameProperty = GenerateLocalHostNameProperty;
+	pIf->GetLocalHostNameProp = GetLocalHostNameProp;
 #define SIMP_PROP(name) \
 	pIf->Get##name = Get##name; \
 	pIf->Set##name = Set##name;
@@ -262,6 +306,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
  */
 BEGINAbstractObjClassInit(glbl, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
+	CHKiRet(objUse(prop, CORE_COMPONENT));
 
 	/* register config handlers (TODO: we need to implement a way to unregister them) */
 	CHKiRet(regCfSysLineHdlr((uchar *)"workdirectory", 0, eCmdHdlrGetWord, NULL, &pszWorkDir, NULL));
@@ -295,6 +340,7 @@ BEGINObjClassExit(glbl, OBJ_IS_CORE_MODULE) /* class, version */
 		free(LocalHostName);
 	if(LocalFQDNName != NULL)
 		free(LocalFQDNName);
+	objRelease(prop, CORE_COMPONENT);
 ENDObjClassExit(glbl)
 
 /* vi:set ai:

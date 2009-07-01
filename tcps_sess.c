@@ -36,6 +36,7 @@
 
 #include "rsyslog.h"
 #include "dirty.h"
+#include "unicode-helper.h"
 #include "module-template.h"
 #include "net.h"
 #include "tcpsrv.h"
@@ -45,6 +46,7 @@
 #include "netstrm.h"
 #include "msg.h"
 #include "datetime.h"
+#include "prop.h"
 
 
 /* static data */
@@ -52,6 +54,7 @@ DEFobjStaticHelpers
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(netstrm)
+DEFobjCurrIf(prop)
 DEFobjCurrIf(datetime)
 
 static int iMaxLine; /* maximum size of a single message */
@@ -100,8 +103,10 @@ CODESTARTobjDestruct(tcps_sess)
 		pThis->pSrv->pOnSessDestruct(&pThis->pUsr);
 	}
 	/* now destruct our own properties */
-	free(pThis->fromHost);
-	free(pThis->fromHostIP);
+	if(pThis->fromHost != NULL)
+		CHKiRet(prop.Destruct(&pThis->fromHost));
+	if(pThis->fromHostIP != NULL)
+		CHKiRet(prop.Destruct(&pThis->fromHostIP));
 	free(pThis->pMsg);
 ENDobjDestruct(tcps_sess)
 
@@ -124,9 +129,13 @@ SetHost(tcps_sess_t *pThis, uchar *pszHost)
 
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
 
-	free(pThis->fromHost);
-	pThis->fromHost = pszHost;
+	if(pThis->fromHost == NULL)
+		CHKiRet(prop.Construct(&pThis->fromHost));
 
+	CHKiRet(prop.SetString(pThis->fromHost, pszHost, ustrlen(pszHost)));
+
+finalize_it:
+	free(pszHost); /* we must free according to our (old) calling conventions */
 	RETiRet;
 }
 
@@ -141,9 +150,13 @@ SetHostIP(tcps_sess_t *pThis, uchar *pszHostIP)
 
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
 
-	free(pThis->fromHostIP);
-	pThis->fromHostIP = pszHostIP;
+	if(pThis->fromHostIP == NULL)
+		CHKiRet(prop.Construct(&pThis->fromHostIP));
 
+	CHKiRet(prop.SetString(pThis->fromHostIP, pszHostIP, ustrlen(pszHostIP)));
+
+finalize_it:
+	free(pszHostIP);
 	RETiRet;
 }
 
@@ -234,15 +247,14 @@ defaultDoSubmitMessage(tcps_sess_t *pThis, struct syslogTime *stTime, time_t ttG
 
 	/* we now create our own message object and submit it to the queue */
 	CHKiRet(msgConstructWithTime(&pMsg, stTime, ttGenTime));
-dbgprintf("defaultDoSubmit, iMsg %d\n", pThis->iMsg);
 	MsgSetRawMsg(pMsg, (char*)pThis->pMsg, pThis->iMsg);
-	MsgSetInputName(pMsg, pThis->pLstnInfo->pszInputName, pThis->pLstnInfo->lenInputName);
+	MsgSetInputName(pMsg, pThis->pLstnInfo->pInputName);
 	MsgSetFlowControlType(pMsg, eFLOWCTL_LIGHT_DELAY);
 	pMsg->msgFlags  = NEEDS_PARSING | PARSE_HOSTNAME;
 	pMsg->bParseHOSTNAME = 1;
 	MsgSetRcvFrom(pMsg, pThis->fromHost);
-	MsgSetRuleset(pMsg, pThis->pLstnInfo->pRuleset);
 	CHKiRet(MsgSetRcvFromIP(pMsg, pThis->fromHostIP));
+	MsgSetRuleset(pMsg, pThis->pLstnInfo->pRuleset);
 
 	if(pMultiSub == NULL) {
 		CHKiRet(submitMsg(pMsg));
@@ -324,10 +336,11 @@ Close(tcps_sess_t *pThis)
 
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
 	netstrm.Destruct(&pThis->pStrm);
-	free(pThis->fromHost);
-	pThis->fromHost = NULL; /* not really needed, but... */
-	free(pThis->fromHostIP);
-	pThis->fromHostIP = NULL; /* not really needed, but... */
+	if(pThis->fromHost != NULL) {
+		prop.Destruct(&pThis->fromHost);
+	}
+	if(pThis->fromHostIP != NULL)
+		prop.Destruct(&pThis->fromHostIP);
 
 	RETiRet;
 }
@@ -520,6 +533,7 @@ CODESTARTObjClassExit(tcps_sess)
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(netstrm, LM_NETSTRMS_FILENAME);
 	objRelease(datetime, CORE_COMPONENT);
+	objRelease(prop, CORE_COMPONENT);
 ENDObjClassExit(tcps_sess)
 
 
@@ -532,6 +546,7 @@ BEGINObjClassInit(tcps_sess, 1, OBJ_IS_CORE_MODULE) /* class, version - CHANGE c
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(netstrm, LM_NETSTRMS_FILENAME));
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
+	CHKiRet(objUse(prop, CORE_COMPONENT));
 
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	iMaxLine = glbl.GetMaxLine(); /* get maximum size we currently support */

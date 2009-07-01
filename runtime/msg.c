@@ -48,6 +48,7 @@
 #include "atomic.h"
 #include "unicode-helper.h"
 #include "ruleset.h"
+#include "prop.h"
 
 /* static data */
 DEFobjStaticHelpers
@@ -55,6 +56,7 @@ DEFobjCurrIf(var)
 DEFobjCurrIf(datetime)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(regexp)
+DEFobjCurrIf(prop)
 
 static struct {
 	uchar *pszName;
@@ -273,9 +275,212 @@ static char *syslog_number_names[24] = { "0", "1", "2", "3", "4", "5", "6", "7",
 /* some forward declarations */
 static int getAPPNAMELen(msg_t *pM, bool bLockMutex);
 
+
 static inline int getProtocolVersion(msg_t *pM)
 {
 	return(pM->iProtocolVersion);
+}
+
+
+static inline void
+getInputName(msg_t *pM, uchar **ppsz, int *plen)
+{
+	BEGINfunc
+	if(pM == NULL) {
+		*ppsz = UCHAR_CONSTANT("");
+		*plen = 0;
+	} else {
+		prop.GetString(pM->pInputName, ppsz, plen);
+	}
+	ENDfunc
+}
+
+
+static inline uchar*
+getRcvFromIP(msg_t *pM)
+{
+	uchar *psz;
+	int len;
+	BEGINfunc
+	if(pM == NULL) {
+		psz = UCHAR_CONSTANT("");
+	} else {
+		if(pM->pRcvFromIP == NULL)
+			psz = UCHAR_CONSTANT("");
+		else
+			prop.GetString(pM->pRcvFromIP, &psz, &len);
+	}
+	ENDfunc
+	return psz;
+}
+
+
+
+/* map a property name (string) to a property ID */
+rsRetVal propNameToID(cstr_t *pCSPropName, propid_t *pPropID)
+{
+	uchar *pName;
+	DEFiRet;
+
+	assert(pCSPropName != NULL);
+	assert(pPropID != NULL);
+	pName = rsCStrGetSzStrNoNULL(pCSPropName);
+
+	/* sometimes there are aliases to the original MonitoWare
+	 * property names. These come after || in the ifs below. */
+	if(!strcmp((char*) pName, "msg")) {
+		*pPropID = PROP_MSG;
+	} else if(!strcmp((char*) pName, "timestamp")
+		  || !strcmp((char*) pName, "timereported")) {
+		*pPropID = PROP_TIMESTAMP;
+	} else if(!strcmp((char*) pName, "hostname") || !strcmp((char*) pName, "source")) {
+		*pPropID = PROP_HOSTNAME;
+	} else if(!strcmp((char*) pName, "syslogtag")) {
+		*pPropID = PROP_SYSLOGTAG;
+	} else if(!strcmp((char*) pName, "rawmsg")) {
+		*pPropID = PROP_RAWMSG;
+	/* enable this, if someone actually uses UxTradMsg, delete after some  time has
+	 * passed and nobody complained -- rgerhards, 2009-06-16
+	} else if(!strcmp((char*) pName, "uxtradmsg")) {
+		pRes = getUxTradMsg(pMsg);
+	*/
+	} else if(!strcmp((char*) pName, "inputname")) {
+		*pPropID = PROP_INPUTNAME;
+	} else if(!strcmp((char*) pName, "fromhost")) {
+		*pPropID = PROP_FROMHOST;
+	} else if(!strcmp((char*) pName, "fromhost-ip")) {
+		*pPropID = PROP_FROMHOST_IP;
+	} else if(!strcmp((char*) pName, "pri")) {
+		*pPropID = PROP_PRI;
+	} else if(!strcmp((char*) pName, "pri-text")) {
+		*pPropID = PROP_PRI_TEXT;
+	} else if(!strcmp((char*) pName, "iut")) {
+		*pPropID = PROP_IUT;
+	} else if(!strcmp((char*) pName, "syslogfacility")) {
+		*pPropID = PROP_SYSLOGFACILITY;
+	} else if(!strcmp((char*) pName, "syslogfacility-text")) {
+		*pPropID = PROP_SYSLOGFACILITY_TEXT;
+	} else if(!strcmp((char*) pName, "syslogseverity") || !strcmp((char*) pName, "syslogpriority")) {
+		*pPropID = PROP_SYSLOGSEVERITY;
+	} else if(!strcmp((char*) pName, "syslogseverity-text") || !strcmp((char*) pName, "syslogpriority-text")) {
+		*pPropID = PROP_SYSLOGSEVERITY_TEXT;
+	} else if(!strcmp((char*) pName, "timegenerated")) {
+		*pPropID = PROP_TIMEGENERATED;
+	} else if(!strcmp((char*) pName, "programname")) {
+		*pPropID = PROP_PROGRAMNAME;
+	} else if(!strcmp((char*) pName, "protocol-version")) {
+		*pPropID = PROP_PROTOCOL_VERSION;
+	} else if(!strcmp((char*) pName, "structured-data")) {
+		*pPropID = PROP_STRUCTURED_DATA;
+	} else if(!strcmp((char*) pName, "app-name")) {
+		*pPropID = PROP_APP_NAME;
+	} else if(!strcmp((char*) pName, "procid")) {
+		*pPropID = PROP_PROCID;
+	} else if(!strcmp((char*) pName, "msgid")) {
+		*pPropID = PROP_MSGID;
+	/* here start system properties (those, that do not relate to the message itself */
+	} else if(!strcmp((char*) pName, "$now")) {
+		*pPropID = PROP_SYS_NOW;
+	} else if(!strcmp((char*) pName, "$year")) {
+		*pPropID = PROP_SYS_YEAR;
+	} else if(!strcmp((char*) pName, "$month")) {
+		*pPropID = PROP_SYS_MONTH;
+	} else if(!strcmp((char*) pName, "$day")) {
+		*pPropID = PROP_SYS_DAY;
+	} else if(!strcmp((char*) pName, "$hour")) {
+		*pPropID = PROP_SYS_HOUR;
+	} else if(!strcmp((char*) pName, "$hhour")) {
+		*pPropID = PROP_SYS_HHOUR;
+	} else if(!strcmp((char*) pName, "$qhour")) {
+		*pPropID = PROP_SYS_QHOUR;
+	} else if(!strcmp((char*) pName, "$minute")) {
+		*pPropID = PROP_SYS_MINUTE;
+	} else if(!strcmp((char*) pName, "$myhostname")) {
+		*pPropID = PROP_SYS_MYHOSTNAME;
+	} else {
+		*pPropID = PROP_INVALID;
+		iRet = RS_RET_VAR_NOT_FOUND;
+	}
+
+	RETiRet;
+}
+
+
+/* map a property ID to a name string (useful for displaying) */
+uchar *propIDToName(propid_t propID)
+{
+	switch(propID) {
+		case PROP_MSG:
+			return UCHAR_CONSTANT("msg");
+		case PROP_TIMESTAMP:
+			return UCHAR_CONSTANT("timestamp");
+		case PROP_HOSTNAME:
+			return UCHAR_CONSTANT("hostname");
+		case PROP_SYSLOGTAG:
+			return UCHAR_CONSTANT("syslogtag");
+		case PROP_RAWMSG:
+			return UCHAR_CONSTANT("rawmsg");
+		/* enable this, if someone actually uses UxTradMsg, delete after some  time has
+		 * passed and nobody complained -- rgerhards, 2009-06-16
+		case PROP_UXTRADMSG:
+			pRes = getUxTradMsg(pMsg);
+			break;
+		*/
+		case PROP_INPUTNAME:
+			return UCHAR_CONSTANT("inputname");
+		case PROP_FROMHOST:
+			return UCHAR_CONSTANT("fromhost");
+		case PROP_FROMHOST_IP:
+			return UCHAR_CONSTANT("fromhost-ip");
+		case PROP_PRI:
+			return UCHAR_CONSTANT("pri");
+		case PROP_PRI_TEXT:
+			return UCHAR_CONSTANT("pri-text");
+		case PROP_IUT:
+			return UCHAR_CONSTANT("iut");
+		case PROP_SYSLOGFACILITY:
+			return UCHAR_CONSTANT("syslogfacility");
+		case PROP_SYSLOGFACILITY_TEXT:
+			return UCHAR_CONSTANT("syslogfacility-text");
+		case PROP_SYSLOGSEVERITY:
+			return UCHAR_CONSTANT("syslogseverity");
+		case PROP_SYSLOGSEVERITY_TEXT:
+			return UCHAR_CONSTANT("syslogseverity-text");
+		case PROP_TIMEGENERATED:
+			return UCHAR_CONSTANT("timegenerated");
+		case PROP_PROGRAMNAME:
+			return UCHAR_CONSTANT("programname");
+		case PROP_PROTOCOL_VERSION:
+			return UCHAR_CONSTANT("protocol-version");
+		case PROP_STRUCTURED_DATA:
+			return UCHAR_CONSTANT("structured-data");
+		case PROP_APP_NAME:
+			return UCHAR_CONSTANT("app-name");
+		case PROP_PROCID:
+			return UCHAR_CONSTANT("procid");
+		case PROP_MSGID:
+			return UCHAR_CONSTANT("msgid");
+		case PROP_SYS_NOW:
+			return UCHAR_CONSTANT("$NOW");
+		case PROP_SYS_YEAR:
+			return UCHAR_CONSTANT("$YEAR");
+		case PROP_SYS_MONTH:
+			return UCHAR_CONSTANT("$MONTH");
+		case PROP_SYS_DAY:
+			return UCHAR_CONSTANT("$DAY");
+		case PROP_SYS_HOUR:
+			return UCHAR_CONSTANT("$HOUR");
+		case PROP_SYS_HHOUR:
+			return UCHAR_CONSTANT("$HHOUR");
+		case PROP_SYS_QHOUR:
+			return UCHAR_CONSTANT("$QHOUR");
+		case PROP_SYS_MINUTE:
+			return UCHAR_CONSTANT("$MINUTE");
+		case PROP_SYS_MYHOSTNAME:
+			return UCHAR_CONSTANT("$MYHOSTNAME");
+		default:
+			return UCHAR_CONSTANT("*invalid property id*");
+	}
 }
 
 
@@ -431,20 +636,14 @@ static inline rsRetVal msgBaseConstruct(msg_t **ppThis)
 	pM->iFacility = -1;
 	pM->offAfterPRI = 0;
 	pM->offMSG = -1;
-	pM->iLenInputName = 0;
 	pM->iProtocolVersion = 0;
 	pM->msgFlags = 0;
 	pM->iLenRawMsg = 0;
 	pM->iLenMSG = 0;
 	pM->iLenTAG = 0;
 	pM->iLenHOSTNAME = 0;
-	pM->iLenRcvFrom = 0;
-	pM->iLenRcvFromIP = 0;
 	pM->pszRawMsg = NULL;
 	pM->pszHOSTNAME = NULL;
-	pM->pszRcvFrom = NULL;
-	pM->pszRcvFromIP = NULL;
-	pM->pszInputName = NULL;
 	pM->pszRcvdAt3164 = NULL;
 	pM->pszRcvdAt3339 = NULL;
 	pM->pszRcvdAt_MySQL = NULL;
@@ -458,6 +657,9 @@ static inline rsRetVal msgBaseConstruct(msg_t **ppThis)
 	pM->pCSAPPNAME = NULL;
 	pM->pCSPROCID = NULL;
 	pM->pCSMSGID = NULL;
+	pM->pInputName = NULL;
+	pM->pRcvFromIP = NULL;
+	pM->pRcvFrom = NULL;
 	pM->pRuleset = NULL;
 	memset(&pM->tRcvdAt, 0, sizeof(pM->tRcvdAt));
 	memset(&pM->tTIMESTAMP, 0, sizeof(pM->tTIMESTAMP));
@@ -556,9 +758,12 @@ CODESTARTobjDestruct(msg)
 			free(pThis->pszRawMsg);
 		freeTAG(pThis);
 		freeHOSTNAME(pThis);
-		free(pThis->pszInputName);
-		free(pThis->pszRcvFrom);
-		free(pThis->pszRcvFromIP);
+		if(pThis->pInputName != NULL)
+			prop.Destruct(&pThis->pInputName);
+		if(pThis->pRcvFrom != NULL)
+			prop.Destruct(&pThis->pRcvFrom);
+		if(pThis->pRcvFromIP != NULL)
+			prop.Destruct(&pThis->pRcvFromIP);
 		free(pThis->pszRcvdAt3164);
 		free(pThis->pszRcvdAt3339);
 		free(pThis->pszRcvdAt_MySQL);
@@ -659,6 +864,12 @@ msg_t* MsgDup(msg_t* pOld)
 	pNew->iProtocolVersion = pOld->iProtocolVersion;
 	pNew->ttGenTime = pOld->ttGenTime;
 	pNew->offMSG = pOld->offMSG;
+	pNew->pRcvFrom = pOld->pRcvFrom;
+	prop.AddRef(pNew->pRcvFrom);
+	pNew->pRcvFromIP = pOld->pRcvFromIP;
+	prop.AddRef(pNew->pRcvFromIP);
+	pNew->pInputName = pOld->pInputName;
+	prop.AddRef(pNew->pInputName);
 	/* enable this, if someone actually uses UxTradMsg, delete after some time has
 	 * passed and nobody complained -- rgerhards, 2009-06-16
 	pNew->offAfterPRI = pOld->offAfterPRI;
@@ -686,7 +897,6 @@ msg_t* MsgDup(msg_t* pOld)
 	} else {
 		tmpCOPYSZ(HOSTNAME);
 	}
-	tmpCOPYSZ(RcvFrom);
 
 	tmpCOPYCSTR(ProgName);
 	tmpCOPYCSTR(StrucData);
@@ -719,11 +929,16 @@ msg_t* MsgDup(msg_t* pOld)
  */
 static rsRetVal MsgSerialize(msg_t *pThis, strm_t *pStrm)
 {
+	uchar *psz;
+	int len;
 	DEFiRet;
 
 	assert(pThis != NULL);
 	assert(pStrm != NULL);
 
+	/* "pump" some property values into strings */
+
+	/* then serialize elements */
 	CHKiRet(obj.BeginSerialize(pStrm, (obj_t*) pThis));
 	objSerializeSCALAR(pStrm, iProtocolVersion, SHORT);
 	objSerializeSCALAR(pStrm, iSeverity, SHORT);
@@ -743,9 +958,12 @@ static rsRetVal MsgSerialize(msg_t *pThis, strm_t *pStrm)
 
 	objSerializePTR(pStrm, pszRawMsg, PSZ);
 	objSerializePTR(pStrm, pszHOSTNAME, PSZ);
-	objSerializePTR(pStrm, pszInputName, PSZ);
-	objSerializePTR(pStrm, pszRcvFrom, PSZ);
-	objSerializePTR(pStrm, pszRcvFromIP, PSZ);
+	getInputName(pThis, &psz, &len);
+	objSerializeSCALAR_VAR(pStrm, "pszInputName", PSZ, psz); 
+	psz = getRcvFrom(pThis); 
+	objSerializeSCALAR_VAR(pStrm, "pszRcvFrom", PSZ, psz); 
+	psz = getRcvFromIP(pThis); 
+	objSerializeSCALAR_VAR(pStrm, "pszRcvFromIP", PSZ, psz); 
 
 	objSerializePTR(pStrm, pCSStrucData, CSTR);
 	objSerializePTR(pStrm, pCSAPPNAME, CSTR);
@@ -1409,7 +1627,10 @@ int getHOSTNAMELen(msg_t *pM)
 		return 0;
 	else
 		if(pM->pszHOSTNAME == NULL)
-			return pM->iLenRcvFrom;
+			if(pM->pRcvFrom == NULL)
+				return 0;
+			else
+				return prop.GetStringLen(pM->pRcvFrom);
 		else
 			return pM->iLenHOSTNAME;
 }
@@ -1420,47 +1641,38 @@ char *getHOSTNAME(msg_t *pM)
 	if(pM == NULL)
 		return "";
 	else
-		if(pM->pszHOSTNAME == NULL)
-			return (char*) pM->pszRcvFrom;
-		else
+		if(pM->pszHOSTNAME == NULL) {
+			if(pM->pRcvFrom == NULL) {
+				return "";
+			} else {
+				uchar *psz;
+				int len;
+				prop.GetString(pM->pRcvFrom, &psz, &len);
+				return (char*) psz;
+			}
+		} else {
 			return (char*) pM->pszHOSTNAME;
-}
-
-
-static uchar *getInputName(msg_t *pM)
-{
-	if(pM == NULL)
-		return (uchar*) "";
-	else
-		if(pM->pszInputName == NULL)
-			return (uchar*) "";
-		else
-			return pM->pszInputName;
+		}
 }
 
 
 uchar *getRcvFrom(msg_t *pM)
 {
-	if(pM == NULL)
-		return UCHAR_CONSTANT("");
-	else
-		if(pM->pszRcvFrom == NULL)
-			return UCHAR_CONSTANT("");
+	uchar *psz;
+	int len;
+	BEGINfunc
+	if(pM == NULL) {
+		psz = UCHAR_CONSTANT("");
+	} else {
+		if(pM->pRcvFrom == NULL)
+			psz = UCHAR_CONSTANT("");
 		else
-			return pM->pszRcvFrom;
+			prop.GetString(pM->pRcvFrom, &psz, &len);
+	}
+	ENDfunc
+	return psz;
 }
 
-
-uchar *getRcvFromIP(msg_t *pM)
-{
-	if(pM == NULL)
-		return (uchar*) "";
-	else
-		if(pM->pszRcvFromIP == NULL)
-			return (uchar*) "";
-		else
-			return pM->pszRcvFromIP;
-}
 
 /* rgerhards 2004-11-24: set STRUCTURED DATA in msg object
  */
@@ -1595,46 +1807,91 @@ static int getAPPNAMELen(msg_t *pM, bool bLockMutex)
 	return (pM->pCSAPPNAME == NULL) ? 0 : rsCStrLen(pM->pCSAPPNAME);
 }
 
-/* rgerhards 2008-09-10: set pszInputName in msg object
+/* rgerhards 2008-09-10: set pszInputName in msg object. This calls AddRef()
+ * on the property, because this must be done in all current cases and there
+ * is no case expected where this may not be necessary.
  * rgerhards, 2009-06-16
  */
-void MsgSetInputName(msg_t *pMsg, uchar* pszInputName, size_t lenInputName)
+void MsgSetInputName(msg_t *pThis, prop_t *inputName)
 {
-	assert(pMsg != NULL);
-	free(pMsg->pszInputName);
-	pMsg->iLenInputName = lenInputName;
-	if((pMsg->pszInputName = malloc(pMsg->iLenInputName + 1)) != NULL) {
-		memcpy(pMsg->pszInputName, pszInputName, pMsg->iLenInputName + 1);
-	}
+	assert(pThis != NULL);
+
+	prop.AddRef(inputName);
+	if(pThis->pInputName != NULL)
+		prop.Destruct(&pThis->pInputName);
+	pThis->pInputName = inputName;
 }
 
-/* rgerhards 2004-11-16: set pszRcvFrom in msg object
+
+/* rgerhards 2008-09-10: set RcvFrom name in msg object. This calls AddRef()
+ * on the property, because this must be done in all current cases and there
+ * is no case expected where this may not be necessary.
+ * rgerhards, 2009-06-30
  */
-void MsgSetRcvFrom(msg_t *pMsg, uchar* pszRcvFrom)
+void MsgSetRcvFrom(msg_t *pThis, prop_t *new)
 {
-	assert(pMsg != NULL);
-	free(pMsg->pszRcvFrom);
+	assert(pThis != NULL);
 
-	pMsg->iLenRcvFrom = ustrlen(pszRcvFrom);
-	if((pMsg->pszRcvFrom = malloc(pMsg->iLenRcvFrom + 1)) != NULL) {
-		memcpy(pMsg->pszRcvFrom, pszRcvFrom, pMsg->iLenRcvFrom + 1);
-	}
+	prop.AddRef(new);
+	if(pThis->pRcvFrom != NULL)
+		prop.Destruct(&pThis->pRcvFrom);
+	pThis->pRcvFrom = new;
 }
 
 
-/* rgerhards 2005-05-16: set pszRcvFromIP in msg object */
-rsRetVal
-MsgSetRcvFromIP(msg_t *pMsg, uchar* pszRcvFromIP)
+/* This is used to set the property via a string. This function should not be
+ * called if there is a reliable way for a caller to make sure that the
+ * same name can be used across multiple messages. However, if it can not
+ * ensure that, calling this function is the second best thing, because it
+ * will re-use the previously created property if it contained the same
+ * name (but it works only for the immediate previous).
+ * rgerhards, 2009-06-31
+ */
+void MsgSetRcvFromStr(msg_t *pThis, uchar *psz, int len, prop_t **ppProp)
+{
+	assert(pThis != NULL);
+	assert(ppProp != NULL);
+
+	prop.CreateOrReuseStringProp(ppProp, psz, len);
+	MsgSetRcvFrom(pThis, *ppProp);
+}
+
+
+/* set RcvFromIP name in msg object. This calls AddRef()
+ * on the property, because this must be done in all current cases and there
+ * is no case expected where this may not be necessary.
+ * rgerhards, 2009-06-30
+ */
+rsRetVal MsgSetRcvFromIP(msg_t *pThis, prop_t *new)
+{
+	assert(pThis != NULL);
+
+	BEGINfunc
+	prop.AddRef(new);
+	if(pThis->pRcvFromIP != NULL)
+		prop.Destruct(&pThis->pRcvFromIP);
+	pThis->pRcvFromIP = new;
+	ENDfunc
+	return RS_RET_OK;
+}
+
+
+/* This is used to set the property via a string. This function should not be
+ * called if there is a reliable way for a caller to make sure that the
+ * same name can be used across multiple messages. However, if it can not
+ * ensure that, calling this function is the second best thing, because it
+ * will re-use the previously created property if it contained the same
+ * name (but it works only for the immediate previous).
+ * rgerhards, 2009-06-31
+ */
+rsRetVal MsgSetRcvFromIPStr(msg_t *pThis, uchar *psz, int len, prop_t **ppProp)
 {
 	DEFiRet;
-	assert(pMsg != NULL);
-	if(pMsg->pszRcvFromIP != NULL) {
-		free(pMsg->pszRcvFromIP);
-		pMsg->iLenRcvFromIP = 0;
-	}
+	assert(pThis != NULL);
 
-	CHKmalloc(pMsg->pszRcvFromIP = (uchar*)strdup((char*)pszRcvFromIP));
-	pMsg->iLenRcvFromIP = strlen((char*)pszRcvFromIP);
+	CHKiRet(prop.CreateOrReuseStringProp(ppProp, psz, len));
+	MsgSetRcvFrom(pThis, *ppProp);
+
 finalize_it:
 	RETiRet;
 }
@@ -1910,7 +2167,7 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			break;
 		*/
 		case PROP_INPUTNAME:
-			pRes = (char*) getInputName(pMsg);
+			getInputName(pMsg, ((uchar**) &pRes), &bufLen);
 			break;
 		case PROP_FROMHOST:
 			pRes = (char*) getRcvFrom(pMsg);
@@ -2638,97 +2895,6 @@ finalize_it:
 
 	RETiRet;
 }
-
-/* map a property name (string) to a property ID */
-rsRetVal propNameToID(cstr_t *pCSPropName, propid_t *pPropID)
-{
-	uchar *pName;
-	DEFiRet;
-
-	assert(pCSPropName != NULL);
-	assert(pPropID != NULL);
-	pName = rsCStrGetSzStrNoNULL(pCSPropName);
-
-	/* sometimes there are aliases to the original MonitoWare
-	 * property names. These come after || in the ifs below. */
-	if(!strcmp((char*) pName, "msg")) {
-		*pPropID = PROP_MSG;
-	} else if(!strcmp((char*) pName, "timestamp")
-		  || !strcmp((char*) pName, "timereported")) {
-		*pPropID = PROP_TIMESTAMP;
-	} else if(!strcmp((char*) pName, "hostname") || !strcmp((char*) pName, "source")) {
-		*pPropID = PROP_HOSTNAME;
-	} else if(!strcmp((char*) pName, "syslogtag")) {
-		*pPropID = PROP_SYSLOGTAG;
-	} else if(!strcmp((char*) pName, "rawmsg")) {
-		*pPropID = PROP_RAWMSG;
-	/* enable this, if someone actually uses UxTradMsg, delete after some  time has
-	 * passed and nobody complained -- rgerhards, 2009-06-16
-	} else if(!strcmp((char*) pName, "uxtradmsg")) {
-		pRes = getUxTradMsg(pMsg);
-	*/
-	} else if(!strcmp((char*) pName, "inputname")) {
-		*pPropID = PROP_INPUTNAME;
-	} else if(!strcmp((char*) pName, "fromhost")) {
-		*pPropID = PROP_FROMHOST;
-	} else if(!strcmp((char*) pName, "fromhost-ip")) {
-		*pPropID = PROP_FROMHOST_IP;
-	} else if(!strcmp((char*) pName, "pri")) {
-		*pPropID = PROP_PRI;
-	} else if(!strcmp((char*) pName, "pri-text")) {
-		*pPropID = PROP_PRI_TEXT;
-	} else if(!strcmp((char*) pName, "iut")) {
-		*pPropID = PROP_IUT;
-	} else if(!strcmp((char*) pName, "syslogfacility")) {
-		*pPropID = PROP_SYSLOGFACILITY;
-	} else if(!strcmp((char*) pName, "syslogfacility-text")) {
-		*pPropID = PROP_SYSLOGFACILITY_TEXT;
-	} else if(!strcmp((char*) pName, "syslogseverity") || !strcmp((char*) pName, "syslogpriority")) {
-		*pPropID = PROP_SYSLOGSEVERITY;
-	} else if(!strcmp((char*) pName, "syslogseverity-text") || !strcmp((char*) pName, "syslogpriority-text")) {
-		*pPropID = PROP_SYSLOGSEVERITY_TEXT;
-	} else if(!strcmp((char*) pName, "timegenerated")) {
-		*pPropID = PROP_TIMEGENERATED;
-	} else if(!strcmp((char*) pName, "programname")) {
-		*pPropID = PROP_PROGRAMNAME;
-	} else if(!strcmp((char*) pName, "protocol-version")) {
-		*pPropID = PROP_PROTOCOL_VERSION;
-	} else if(!strcmp((char*) pName, "structured-data")) {
-		*pPropID = PROP_STRUCTURED_DATA;
-	} else if(!strcmp((char*) pName, "app-name")) {
-		*pPropID = PROP_APP_NAME;
-	} else if(!strcmp((char*) pName, "procid")) {
-		*pPropID = PROP_PROCID;
-	} else if(!strcmp((char*) pName, "msgid")) {
-		*pPropID = PROP_MSGID;
-	/* here start system properties (those, that do not relate to the message itself */
-	} else if(!strcmp((char*) pName, "$now")) {
-		*pPropID = PROP_SYS_NOW;
-	} else if(!strcmp((char*) pName, "$year")) {
-		*pPropID = PROP_SYS_YEAR;
-	} else if(!strcmp((char*) pName, "$month")) {
-		*pPropID = PROP_SYS_MONTH;
-	} else if(!strcmp((char*) pName, "$day")) {
-		*pPropID = PROP_SYS_DAY;
-	} else if(!strcmp((char*) pName, "$hour")) {
-		*pPropID = PROP_SYS_HOUR;
-	} else if(!strcmp((char*) pName, "$hhour")) {
-		*pPropID = PROP_SYS_HHOUR;
-	} else if(!strcmp((char*) pName, "$qhour")) {
-		*pPropID = PROP_SYS_QHOUR;
-	} else if(!strcmp((char*) pName, "$minute")) {
-		*pPropID = PROP_SYS_MINUTE;
-	} else if(!strcmp((char*) pName, "$myhostname")) {
-		*pPropID = PROP_SYS_MYHOSTNAME;
-	} else {
-		*pPropID = PROP_INVALID;
-		iRet = RS_RET_VAR_NOT_FOUND;
-	}
-
-	RETiRet;
-}
-
-
 /* This function can be used as a generic way to set properties.
  * We have to handle a lot of legacy, so our return value is not always
  * 100% correct (called functions do not always provide one, should
@@ -2738,6 +2904,9 @@ rsRetVal propNameToID(cstr_t *pCSPropName, propid_t *pPropID)
 #define isProp(name) !rsCStrSzStrCmp(pProp->pcsName, (uchar*) name, sizeof(name) - 1)
 rsRetVal MsgSetProperty(msg_t *pThis, var_t *pProp)
 {
+	prop_t *myProp;
+	prop_t *propRcvFrom = NULL;
+	prop_t *propRcvFromIP = NULL;
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, msg);
@@ -2765,11 +2934,18 @@ rsRetVal MsgSetProperty(msg_t *pThis, var_t *pProp)
 	} else if(isProp("pszTAG")) {
 		MsgSetTAG(pThis, rsCStrGetSzStrNoNULL(pProp->val.pStr), cstrLen(pProp->val.pStr));
 	} else if(isProp("pszInputName")) {
-		MsgSetInputName(pThis, rsCStrGetSzStrNoNULL(pProp->val.pStr), rsCStrLen(pProp->val.pStr));
+		/* we need to create a property */ 
+		CHKiRet(prop.Construct(&myProp));
+		CHKiRet(prop.SetString(myProp, rsCStrGetSzStrNoNULL(pProp->val.pStr), rsCStrLen(pProp->val.pStr)));
+		CHKiRet(prop.ConstructFinalize(myProp));
+		MsgSetInputName(pThis, myProp);
+		prop.Destruct(&myProp);
 	} else if(isProp("pszRcvFromIP")) {
-		MsgSetRcvFromIP(pThis, rsCStrGetSzStrNoNULL(pProp->val.pStr));
+		MsgSetRcvFromIPStr(pThis, rsCStrGetSzStrNoNULL(pProp->val.pStr), rsCStrLen(pProp->val.pStr), &propRcvFromIP);
+		prop.Destruct(&propRcvFromIP);
 	} else if(isProp("pszRcvFrom")) {
-		MsgSetRcvFrom(pThis, rsCStrGetSzStrNoNULL(pProp->val.pStr));
+		MsgSetRcvFromStr(pThis, rsCStrGetSzStrNoNULL(pProp->val.pStr), rsCStrLen(pProp->val.pStr), &propRcvFrom);
+		prop.Destruct(&propRcvFrom);
 	} else if(isProp("pszHOSTNAME")) {
 		MsgSetHOSTNAME(pThis, rsCStrGetSzStrNoNULL(pProp->val.pStr), rsCStrLen(pProp->val.pStr));
 	} else if(isProp("pCSStrucData")) {
@@ -2790,6 +2966,7 @@ rsRetVal MsgSetProperty(msg_t *pThis, var_t *pProp)
 		dbgprintf("no longer supported property pszMSG silently ignored\n");
 	}
 
+finalize_it:
 	RETiRet;
 }
 #undef	isProp
@@ -2833,6 +3010,7 @@ BEGINObjClassInit(msg, 1, OBJ_IS_CORE_MODULE)
 	CHKiRet(objUse(var, CORE_COMPONENT));
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
+	CHKiRet(objUse(prop, CORE_COMPONENT));
 
 	/* set our own handlers */
 	OBJSetMethodHandler(objMethod_SERIALIZE, MsgSerialize);

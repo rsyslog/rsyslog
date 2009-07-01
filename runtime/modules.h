@@ -106,6 +106,7 @@ typedef struct modInfo_s {
 			rsRetVal (*runInput)(thrdInfo_t*);	/* function to gather input and submit to queue */
 			rsRetVal (*willRun)(void); 		/* function to gather input and submit to queue */
 			rsRetVal (*afterRun)(thrdInfo_t*);	/* function to gather input and submit to queue */
+			int bCanRun;	/* cached value of whether willRun() succeeded */
 		} im;
 		struct {/* data for output modules */
 			/* below: perform the configured action

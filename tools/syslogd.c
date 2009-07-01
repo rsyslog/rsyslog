@@ -143,6 +143,7 @@
 #include "rule.h"
 #include "net.h"
 #include "vm.h"
+#include "prop.h"
 
 /* definitions for objects we access */
 DEFobjCurrIf(obj)
@@ -154,24 +155,12 @@ DEFobjCurrIf(module)
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(rule)
 DEFobjCurrIf(ruleset)
+DEFobjCurrIf(prop)
 DEFobjCurrIf(net) /* TODO: make go away! */
 
 
 /* forward definitions */
 static rsRetVal GlobalClassExit(void);
-
-/* We define our own set of syslog defintions so that we
- * do not need to rely on (possibly different) implementations.
- * 2007-07-19 rgerhards
- */
-/* missing definitions for solaris
- * 2006-02-16 Rger
- */
-#ifdef __sun
-#	define LOG_AUTHPRIV LOG_AUTH
-#endif
-#define INTERNAL_NOPRI  0x10    /* the "no priority" priority */
-#define LOG_FTP         (11<<3) /* ftp daemon */
 
 
 #ifndef UTMP_FILE
@@ -220,14 +209,12 @@ static rsRetVal GlobalClassExit(void);
 #	endif
 #endif
 
-#ifndef _PATH_DEV
-#	define _PATH_DEV	"/dev/"
-#endif
-
 #ifndef _PATH_TTY
 #	define _PATH_TTY	"/dev/tty"
 #endif
 
+static prop_t *pInternalInputName = NULL;	/* there is only one global inputName for all internally-generated messages */
+static prop_t *pLocalHostIP = NULL;		/* there is only one global IP for all internally-generated messages */
 static uchar	*ConfFile = (uchar*) _PATH_LOGCONF; /* read-only after startup */
 static char	*PidFile = _PATH_LOGPID; /* read-only after startup */
 
@@ -571,12 +558,14 @@ void untty(void)
  * interface change: bParseHostname removed, now in flags
  */
 static inline rsRetVal printline(uchar *hname, uchar *hnameIP, uchar *msg, int flags, flowControl_t flowCtlType,
-	uchar *pszInputName, struct syslogTime *stTime, time_t ttGenTime)
+	prop_t *pInputName, struct syslogTime *stTime, time_t ttGenTime)
 {
 	DEFiRet;
 	register uchar *p;
 	int pri;
 	msg_t *pMsg;
+	prop_t *propFromHost = NULL;
+	prop_t *propFromHostIP = NULL;
 
 	/* Now it is time to create the message object (rgerhards) */
 	if(stTime == NULL) {
@@ -584,8 +573,8 @@ static inline rsRetVal printline(uchar *hname, uchar *hnameIP, uchar *msg, int f
 	} else {
 		CHKiRet(msgConstructWithTime(&pMsg, stTime, ttGenTime));
 	}
-	if(pszInputName != NULL)
-		MsgSetInputName(pMsg, pszInputName, ustrlen(pszInputName));
+	if(pInputName != NULL)
+		MsgSetInputName(pMsg, pInputName);
 	MsgSetFlowControlType(pMsg, flowCtlType);
 	MsgSetRawMsgWOSize(pMsg, (char*)msg);
 	
@@ -615,9 +604,9 @@ static inline rsRetVal printline(uchar *hname, uchar *hnameIP, uchar *msg, int f
 	 */
 	if((pMsg->msgFlags & PARSE_HOSTNAME) == 0)
 		MsgSetHOSTNAME(pMsg, hname, ustrlen(hname));
-	MsgSetRcvFrom(pMsg, hname);
+	MsgSetRcvFromStr(pMsg, hname, ustrlen(hname), &propFromHost);
+	CHKiRet(MsgSetRcvFromIPStr(pMsg, hnameIP, ustrlen(hname), &propFromHostIP));
 	MsgSetAfterPRIOffs(pMsg, p - msg);
-	CHKiRet(MsgSetRcvFromIP(pMsg, hnameIP));
 
 	logmsg(pMsg, flags);
 
@@ -680,7 +669,7 @@ finalize_it:
  */
 rsRetVal
 parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int flags, flowControl_t flowCtlType,
-	uchar *pszInputName, struct syslogTime *stTime, time_t ttGenTime)
+	prop_t *pInputName, struct syslogTime *stTime, time_t ttGenTime)
 {
 	DEFiRet;
 	register int iMsg;
@@ -791,7 +780,7 @@ parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int fla
 			 */
 			if(iMsg == iMaxLine) {
 				*(pMsg + iMsg) = '\0'; /* space *is* reserved for this! */
-				printline(hname, hnameIP, tmpline, flags, flowCtlType, pszInputName, stTime, ttGenTime);
+				printline(hname, hnameIP, tmpline, flags, flowCtlType, pInputName, stTime, ttGenTime);
 			} else {
 				/* This case in theory never can happen. If it happens, we have
 				 * a logic error. I am checking for it, because if I would not,
@@ -843,7 +832,7 @@ parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int fla
 	*(pMsg + iMsg) = '\0'; /* space *is* reserved for this! */
 
 	/* typically, we should end up here! */
-	printline(hname, hnameIP, tmpline, flags, flowCtlType, pszInputName, stTime, ttGenTime);
+	printline(hname, hnameIP, tmpline, flags, flowCtlType, pInputName, stTime, ttGenTime);
 
 finalize_it:
 	if(tmpline != NULL)
@@ -886,11 +875,11 @@ logmsgInternal(int iErr, int pri, uchar *msg, int flags)
 	DEFiRet;
 
 	CHKiRet(msgConstruct(&pMsg));
-	MsgSetInputName(pMsg, UCHAR_CONSTANT("rsyslogd"), sizeof("rsyslogd")-1);
+	MsgSetInputName(pMsg, pInternalInputName);
 	MsgSetRawMsgWOSize(pMsg, (char*)msg);
 	MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName(), ustrlen(glbl.GetLocalHostName()));
-	MsgSetRcvFrom(pMsg, glbl.GetLocalHostName());
-	MsgSetRcvFromIP(pMsg, UCHAR_CONSTANT("127.0.0.1"));
+	MsgSetRcvFrom(pMsg, glbl.GetLocalHostNameProp());
+	MsgSetRcvFromIP(pMsg, pLocalHostIP);
 	/* check if we have an error code associated and, if so,
 	 * adjust the tag. -- rgerhards, 2008-06-27
 	 */
@@ -1955,6 +1944,12 @@ die(int sig)
 
 	legacyOptsFree();
 
+	/* destruct our global properties */
+	if(pInternalInputName != NULL)
+		prop.Destruct(&pInternalInputName);
+	if(pLocalHostIP != NULL)
+		prop.Destruct(&pLocalHostIP);
+
 	/* terminate the remaining classes */
 	GlobalClassExit();
 
@@ -2325,6 +2320,30 @@ static void dbgPrintInitInfo(void)
 }
 
 
+/* Actually run the input modules.  This happens after privileges are dropped,
+ * if that is requested.
+ */
+static rsRetVal
+runInputModules(void)
+{
+	modInfo_t *pMod;
+
+	BEGINfunc
+	/* loop through all modules and activate them (brr...) */
+	pMod = module.GetNxtType(NULL, eMOD_IN);
+	while(pMod != NULL) {
+		if(pMod->mod.im.bCanRun) {
+			/* activate here */
+			thrdCreate(pMod->mod.im.runInput, pMod->mod.im.afterRun);
+		}
+	pMod = module.GetNxtType(pMod, eMOD_IN);
+	}
+
+	ENDfunc
+	return RS_RET_OK; /* intentional: we do not care about module errors */
+}
+
+
 /* Start the input modules. This function will probably undergo big changes
  * while we implement the input module interface. For now, it does the most
  * important thing to get at least my poor initial input modules up and
@@ -2340,10 +2359,9 @@ startInputModules(void)
 	/* loop through all modules and activate them (brr...) */
 	pMod = module.GetNxtType(NULL, eMOD_IN);
 	while(pMod != NULL) {
-		if((iRet = pMod->mod.im.willRun()) == RS_RET_OK) {
-			/* activate here */
-			thrdCreate(pMod->mod.im.runInput, pMod->mod.im.afterRun);
-		} else {
+		iRet = pMod->mod.im.willRun();
+		pMod->mod.im.bCanRun = (iRet == RS_RET_OK);
+		if(!pMod->mod.im.bCanRun) {
 			DBGPRINTF("module %lx will not run, iRet %d\n", (unsigned long) pMod, iRet);
 		}
 	pMod = module.GetNxtType(pMod, eMOD_IN);
@@ -2360,7 +2378,7 @@ startInputModules(void)
  * else happens. -- rgerhards, 2008-07-28
  */
 static rsRetVal
-init(void)
+init()
 {
 	rsRetVal localRet;
 	int iNbrActions;
@@ -2562,9 +2580,12 @@ init(void)
 	DBGPRINTF("Main processing queue is initialized and running\n");
 
 	/* the output part and the queue is now ready to run. So it is a good time
-	 * to start the inputs. Please note that the net code above should be
+	 * to initialize the inputs. Please note that the net code above should be
 	 * shuffled to down here once we have everything in input modules.
 	 * rgerhards, 2007-12-14
+	 * NOTE: as of 2009-06-29, the input modules are initialized, but not yet run.
+	 * Keep in mind. though, that the outputs already run if the queue was
+	 * persisted to disk. -- rgerhards
 	 */
 	startInputModules();
 
@@ -2738,6 +2759,7 @@ doHUP(void)
 	if(glbl.GetHUPisRestart()) {
 		DBGPRINTF("Received SIGHUP, configured to be restart, reloading rsyslogd.\n");
 		init(); /* main queue is stopped as part of init() */
+		runInputModules();
 	} else {
 		DBGPRINTF("Received SIGHUP, configured to be a non-restart type of HUP - notifying actions.\n");
 		ruleset.IterateAllActions(doHUPActions, NULL);
@@ -3001,6 +3023,7 @@ static rsRetVal mainThread()
 	if(Debug && debugging_on) {
 		DBGPRINTF("Debugging enabled, SIGUSR1 to turn off debugging.\n");
 	}
+
 	/* Send a signal to the parent so it can terminate.
 	 */
 	if(myPid != ppid)
@@ -3008,7 +3031,7 @@ static rsRetVal mainThread()
 
 
 	/* If instructed to do so, we now drop privileges. Note that this is not 100% secure,
-	 * because inputs and outputs are already running at this time. However, we can implement
+	 * because outputs are already running at this time. However, we can implement
 	 * dropping of privileges rather quickly and it will work in many cases. While it is not
 	 * the ultimate solution, the current one is still much better than not being able to
 	 * drop privileges at all. Doing it correctly, requires a change in architecture, which
@@ -3024,14 +3047,27 @@ static rsRetVal mainThread()
 		glbl.SetHUPisRestart(0); /* we can not do restart-type HUPs with dropped privs */
 	}
 
+	/* finally let the inputs run... */
+	runInputModules();
 
 	/* END OF INTIALIZATION
 	 * ... but keep in mind that we might do a restart and thus init() might
-	 * be called again. If that happens, we must shut down the worker thread,
-	 * do the init() and then restart things.
-	 * rgerhards, 2005-10-24
+	 * be called again. -- rgerhards, 2005-10-24
 	 */
 	DBGPRINTF("initialization completed, transitioning to regular run mode\n");
+
+	/* close stderr and stdout if they are kept open during a fork. Note that this
+	 * may introduce subtle security issues: if we are in a jail, one may break out of
+	 * it via these descriptors. But if I close them earlier, error messages will (once
+	 * again) not be emitted to the user that starts the daemon. As root jail support
+	 * is still in its infancy (and not really done), we currently accept this issue.
+	 * rgerhards, 2009-06-29
+	 */
+	if(!(Debug || NoFork)) {
+		close(1);
+		close(2);
+		bErrMsgToStderr = 0;
+	}
 
 	mainloop();
 
@@ -3072,6 +3108,8 @@ InitGlobalClasses(void)
 	CHKiRet(objUse(ruleset,  CORE_COMPONENT));
 	pErrObj = "conf";
 	CHKiRet(objUse(conf,     CORE_COMPONENT));
+	pErrObj = "prop";
+	CHKiRet(objUse(prop,     CORE_COMPONENT));
 
 	/* intialize some dummy classes that are not part of the runtime */
 	pErrObj = "action";
@@ -3112,6 +3150,7 @@ GlobalClassExit(void)
 
 	/* first, release everything we used ourself */
 	objRelease(net,      LM_NET_FILENAME);/* TODO: the dependency on net shall go away! -- rgerhards, 2008-03-07 */
+	objRelease(prop,     CORE_COMPONENT);
 	objRelease(conf,     CORE_COMPONENT);
 	objRelease(ruleset,  CORE_COMPONENT);
 	objRelease(rule,     CORE_COMPONENT);
@@ -3418,6 +3457,15 @@ int realMain(int argc, char **argv)
 
 	/* doing some core initializations */
 
+	/* we need to create the inputName property (only once during our lifetime) */
+	CHKiRet(prop.Construct(&pInternalInputName));
+	CHKiRet(prop.SetString(pInternalInputName, UCHAR_CONSTANT("rsyslogd"), sizeof("rsyslgod") - 1));
+	CHKiRet(prop.ConstructFinalize(pInternalInputName));
+
+	CHKiRet(prop.Construct(&pLocalHostIP));
+	CHKiRet(prop.SetString(pLocalHostIP, UCHAR_CONSTANT("127.0.0.1"), sizeof("127.0.0.1") - 1));
+	CHKiRet(prop.ConstructFinalize(pLocalHostIP));
+
 	/* get our host and domain names - we need to do this early as we may emit
 	 * error log messages, which need the correct hostname. -- rgerhards, 2008-04-04
 	 */
@@ -3466,6 +3514,7 @@ int realMain(int argc, char **argv)
 	 */
 	glbl.SetLocalHostName(LocalHostName);
 	glbl.SetLocalDomain(LocalDomain);
+	glbl.GenerateLocalHostNameProperty(); /* must be redone after conf processing, FQDN setting may have changed */
 
 	/* initialize the objects */
 	if((iRet = modInitIminternal()) != RS_RET_OK) {
@@ -3661,6 +3710,9 @@ int realMain(int argc, char **argv)
 
 	if(!iConfigVerify)
 		CHKiRet(doGlblProcessInit());
+
+	/* re-generate local host name property, as the config may have changed our FQDN settings */
+	glbl.GenerateLocalHostNameProperty();
 
 	CHKiRet(mainThread());
 

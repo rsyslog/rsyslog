@@ -77,6 +77,7 @@
 #include "conf.h"
 #include "glbl.h"
 #include "errmsg.h"
+#include "prop.h"
 #include "rule.h"
 #include "ruleset.h"
 
@@ -146,6 +147,8 @@ rsrtInit(char **ppErrObj, obj_if_t *pObjIF)
 		 * class immediately after it is initialized. And, of course, we load those classes
 		 * first that we use ourselfs... -- rgerhards, 2008-03-07
 		 */
+		if(ppErrObj != NULL) *ppErrObj = "prop";
+		CHKiRet(propClassInit(NULL));
 		if(ppErrObj != NULL) *ppErrObj = "glbl";
 		CHKiRet(glblClassInit(NULL));
 		if(ppErrObj != NULL) *ppErrObj = "datetime";

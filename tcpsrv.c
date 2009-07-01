@@ -89,6 +89,7 @@ DEFobjCurrIf(net)
 DEFobjCurrIf(netstrms)
 DEFobjCurrIf(netstrm)
 DEFobjCurrIf(nssel)
+DEFobjCurrIf(prop)
 
 
 /* add new listener port to listener port list
@@ -107,8 +108,11 @@ addNewLstnPort(tcpsrv_t *pThis, uchar *pszPort)
 	pEntry->pszPort = pszPort;
 	pEntry->pSrv = pThis;
 	pEntry->pRuleset = pThis->pRuleset;
-	CHKmalloc(pEntry->pszInputName = ustrdup(pThis->pszInputName));
-	pEntry->lenInputName = ustrlen(pEntry->pszInputName);
+
+	/* we need to create a property */ 
+	CHKiRet(prop.Construct(&pEntry->pInputName));
+	CHKiRet(prop.SetString(pEntry->pInputName, pThis->pszInputName, ustrlen(pThis->pszInputName)));
+	CHKiRet(prop.ConstructFinalize(pEntry->pInputName));
 
 	/* and add to list */
 	pEntry->pNext = pThis->pLstnPorts;
@@ -250,7 +254,7 @@ static void deinit_tcp_listener(tcpsrv_t *pThis)
 	pEntry = pThis->pLstnPorts;
 	while(pEntry != NULL) {
 		free(pEntry->pszPort);
-		free(pEntry->pszInputName);
+		prop.Destruct(&pEntry->pInputName);
 		pDel = pEntry;
 		pEntry = pEntry->pNext;
 		free(pDel);
@@ -477,6 +481,7 @@ Run(tcpsrv_t *pThis)
 	 * this thread. Thus, we also need to instantiate a cancel cleanup handler
 	 * to prevent us from leaking anything. -- rgerharsd, 20080-04-24
 	 */
+RUNLOG_STR("XXXX: tcp server runs\n");
 	pthread_cleanup_push(RunCancelCleanup, (void*) &pSel);
 	while(1) {
 		CHKiRet(nssel.Construct(&pSel));
@@ -497,6 +502,7 @@ Run(tcpsrv_t *pThis)
 			iTCPSess = TCPSessGetNxtSess(pThis, iTCPSess);
 		}
 
+RUNLOG_STR("XXXX: tcp server select\n");
 		/* wait for io to become ready */
 		CHKiRet(nssel.Wait(pSel, &nfds));
 
@@ -508,6 +514,7 @@ Run(tcpsrv_t *pThis)
 				--nfds; /* indicate we have processed one */
 			}
 		}
+RUNLOG_STR("XXXX: tcp server post select\n");
 
 		/* now check the sessions */
 		iTCPSess = TCPSessGetNxtSess(pThis, -1);
@@ -883,6 +890,7 @@ CODESTARTObjClassExit(tcpsrv)
 	/* release objects we no longer need */
 	objRelease(tcps_sess, DONT_LOAD_LIB);
 	objRelease(conf, CORE_COMPONENT);
+	objRelease(prop, CORE_COMPONENT);
 	objRelease(ruleset, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
@@ -908,6 +916,7 @@ BEGINObjClassInit(tcpsrv, 1, OBJ_IS_LOADABLE_MODULE) /* class, version - CHANGE 
 	CHKiRet(objUse(conf, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(ruleset, CORE_COMPONENT));
+	CHKiRet(objUse(prop, CORE_COMPONENT));
 
 	/* set our own handlers */
 	OBJSetMethodHandler(objMethod_DEBUGPRINT, tcpsrvDebugPrint);

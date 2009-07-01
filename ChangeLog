@@ -44,6 +44,8 @@ increase.
   output module interface
 ---------------------------------------------------------------------------
 Version 4.5.0  [DEVEL] (rgerhards), 2009-??-??
+- activation order of inputs changed, they are now activated only after
+  privileges are dropped. Thanks to Michael Terry for the patch.
 - greatly improved performance
 - greatly reduced memory requirements of msg object
   to around half of the previous demand. This means that more messages can
@@ -73,6 +75,16 @@ Version 4.5.0  [DEVEL] (rgerhards), 2009-??-??
 - set a more sensible timeout for shutdow, now 1.5 seconds to complete
   processing (this also removes those cases where the shutdown message
   was not written because the termination happened before it)
+- internal bugfix: object pointer was only reset to NULL when an object
+  was actually destructed. This most likely had no effect to existing code,
+  but it may also have caused trouble in remote cases. Similarly, the fix
+  may also cause trouble...
+---------------------------------------------------------------------------
+Version 4.3.3  [beta] (rgerhards), 2009-0?-??
+- internal bugfix: object pointer was only reset to NULL when an object
+  was actually destructed. This most likely had no effect to existing code,
+  but it may also have caused trouble in remote cases. Similarly, the fix
+  may also cause trouble...
 ---------------------------------------------------------------------------
 Version 4.3.2  [beta] (rgerhards), 2009-06-24
 - removed long-obsoleted property UxTradMsg
@@ -128,6 +140,12 @@ Version 4.3.0  [DEVEL] (rgerhards), 2009-04-17
   connection broke, but not if there was a problem with statement
   execution. The most probable case for such a case would be invalid
   sql inside the template, and this is now much easier to diagnose.
+---------------------------------------------------------------------------
+Version 4.2.1  [v4-stable] (rgerhards), 2009-0?-??
+- bugfix: stderr/stdout were not closed to be able to emit error messages,
+  but this caused ssh sessions to hang. Now we close them after the 
+  initial initialization. See forum thread:
+  http://kb.monitorware.com/controlling-terminal-issues-t9875.html
 ---------------------------------------------------------------------------
 Version 4.2.0  [v4-stable] (rgerhards), 2009-06-23
 - bugfix: light and full delay watermarks had invalid values, badly

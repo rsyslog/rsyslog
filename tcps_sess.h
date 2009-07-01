@@ -24,6 +24,7 @@
 #define INCLUDED_TCPS_SESS_H
 
 #include "obj.h"
+#include "prop.h"
 
 /* a forward-definition, we are somewhat cyclic */
 struct tcpsrv_s;
@@ -44,8 +45,8 @@ struct tcps_sess_s {
 	int iOctetsRemain;	/* Number of Octets remaining in message */
 	TCPFRAMINGMODE eFraming;
 	uchar *pMsg;		/* message (fragment) received */
-	uchar *fromHost;
-	uchar *fromHostIP;
+	prop_t *fromHost;	/* host name we received messages from */
+	prop_t *fromHostIP;
 	void *pUsr;		/* a user-pointer */
 	rsRetVal (*DoSubmitMessage)(tcps_sess_t*, uchar*, int); /* submit message callback */
 };

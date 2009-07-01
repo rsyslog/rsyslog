@@ -23,8 +23,6 @@
 #ifndef INCLUDED_DATETIME_H
 #define INCLUDED_DATETIME_H
 
-#include "datetime.h"
-
 /* TODO: define error codes */
 #define NO_ERRCODE -1
 

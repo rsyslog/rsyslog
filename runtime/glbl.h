@@ -32,6 +32,8 @@
 #ifndef GLBL_H_INCLUDED
 #define GLBL_H_INCLUDED
 
+#include "prop.h"
+
 #define glblGetIOBufSize() 4096 /* size of the IO buffer, e.g. for strm class */
 
 /* interfaces */
@@ -57,9 +59,12 @@ BEGINinterface(glbl) /* name must also be changed in ENDinterface macro! */
 	SIMP_PROP(DfltNetstrmDrvrCAF, uchar*)
 	SIMP_PROP(DfltNetstrmDrvrKeyFile, uchar*)
 	SIMP_PROP(DfltNetstrmDrvrCertFile, uchar*)
+	/* added v3, 2009-06-30 */
+	rsRetVal (*GenerateLocalHostNameProperty)(void);
+	prop_t* (*GetLocalHostNameProp)(void);
 #undef	SIMP_PROP
 ENDinterface(glbl)
-#define glblCURR_IF_VERSION 2 /* increment whenever you change the interface structure! */
+#define glblCURR_IF_VERSION 3 /* increment whenever you change the interface structure! */
 /* version 2 had PreserveFQDN added - rgerhards, 2008-12-08 */
 
 /* the remaining prototypes */
