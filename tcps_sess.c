@@ -156,6 +156,7 @@ SetHostIP(tcps_sess_t *pThis, uchar *pszHostIP)
 	CHKiRet(prop.SetString(pThis->fromHostIP, pszHostIP, ustrlen(pszHostIP)));
 
 finalize_it:
+	free(pszHostIP);
 	RETiRet;
 }
 

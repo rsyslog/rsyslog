@@ -1838,21 +1838,22 @@ void MsgSetRcvFrom(msg_t *pThis, prop_t *new)
 	pThis->pRcvFrom = new;
 }
 
-/* to be removed soon: work-around for those tht can not natively generate a
- * property.
- * rgerhards, 2009-06-29
- */
-void MsgSetRcvFromStr(msg_t *pThis, uchar *psz, int len)
-{
-	prop_t *pProp;
-	assert(pThis != NULL);
 
-	/* we need to create a property */ 
-	prop.Construct(&pProp);
-	prop.SetString(pProp, psz, len);
-	prop.ConstructFinalize(pProp);
-	MsgSetRcvFrom(pThis, pProp);
-	prop.Destruct(&pProp);
+/* This is used to set the property via a string. This function should not be
+ * called if there is a reliable way for a caller to make sure that the
+ * same name can be used across multiple messages. However, if it can not
+ * ensure that, calling this function is the second best thing, because it
+ * will re-use the previously created property if it contained the same
+ * name (but it works only for the immediate previous).
+ * rgerhards, 2009-06-31
+ */
+void MsgSetRcvFromStr(msg_t *pThis, uchar *psz, int len, prop_t **ppProp)
+{
+	assert(pThis != NULL);
+	assert(ppProp != NULL);
+
+	prop.CreateOrReuseStringProp(ppProp, psz, len);
+	MsgSetRcvFrom(pThis, *ppProp);
 }
 
 
@@ -1875,23 +1876,26 @@ rsRetVal MsgSetRcvFromIP(msg_t *pThis, prop_t *new)
 }
 
 
-/* to be removed soon: work-around for those tht can not natively generate a
- * property.
- * rgerhards, 2009-06-29
+/* This is used to set the property via a string. This function should not be
+ * called if there is a reliable way for a caller to make sure that the
+ * same name can be used across multiple messages. However, if it can not
+ * ensure that, calling this function is the second best thing, because it
+ * will re-use the previously created property if it contained the same
+ * name (but it works only for the immediate previous).
+ * rgerhards, 2009-06-31
  */
-rsRetVal MsgSetRcvFromIPStr(msg_t *pThis, uchar *psz, int len)
+rsRetVal MsgSetRcvFromIPStr(msg_t *pThis, uchar *psz, int len, prop_t **ppProp)
 {
-	prop_t *pProp;
+	DEFiRet;
 	assert(pThis != NULL);
 
-	/* we need to create a property */ 
-	prop.Construct(&pProp);
-	prop.SetString(pProp, psz, len);
-	prop.ConstructFinalize(pProp);
-	MsgSetRcvFromIP(pThis, pProp);
-	prop.Destruct(&pProp);
-	return RS_RET_OK;
+	CHKiRet(prop.CreateOrReuseStringProp(ppProp, psz, len));
+	MsgSetRcvFrom(pThis, *ppProp);
+
+finalize_it:
+	RETiRet;
 }
+
 
 /* rgerhards 2004-11-09: set HOSTNAME in msg object
  * rgerhards, 2007-06-21:
@@ -2901,6 +2905,8 @@ finalize_it:
 rsRetVal MsgSetProperty(msg_t *pThis, var_t *pProp)
 {
 	prop_t *myProp;
+	prop_t *propRcvFrom = NULL;
+	prop_t *propRcvFromIP = NULL;
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, msg);
@@ -2935,9 +2941,11 @@ rsRetVal MsgSetProperty(msg_t *pThis, var_t *pProp)
 		MsgSetInputName(pThis, myProp);
 		prop.Destruct(&myProp);
 	} else if(isProp("pszRcvFromIP")) {
-		MsgSetRcvFromIPStr(pThis, rsCStrGetSzStrNoNULL(pProp->val.pStr), rsCStrLen(pProp->val.pStr));
+		MsgSetRcvFromIPStr(pThis, rsCStrGetSzStrNoNULL(pProp->val.pStr), rsCStrLen(pProp->val.pStr), &propRcvFromIP);
+		prop.Destruct(&propRcvFromIP);
 	} else if(isProp("pszRcvFrom")) {
-		MsgSetRcvFromStr(pThis, rsCStrGetSzStrNoNULL(pProp->val.pStr), rsCStrLen(pProp->val.pStr));
+		MsgSetRcvFromStr(pThis, rsCStrGetSzStrNoNULL(pProp->val.pStr), rsCStrLen(pProp->val.pStr), &propRcvFrom);
+		prop.Destruct(&propRcvFrom);
 	} else if(isProp("pszHOSTNAME")) {
 		MsgSetHOSTNAME(pThis, rsCStrGetSzStrNoNULL(pProp->val.pStr), rsCStrLen(pProp->val.pStr));
 	} else if(isProp("pCSStrucData")) {

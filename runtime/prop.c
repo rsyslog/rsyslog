@@ -41,6 +41,7 @@
 #include "rsyslog.h"
 #include "obj.h"
 #include "obj-types.h"
+#include "unicode-helper.h"
 #include "atomic.h"
 #include "prop.h"
 
@@ -53,6 +54,21 @@ DEFobjStaticHelpers
 BEGINobjConstruct(prop) /* be sure to specify the object type also in END macro! */
 	pThis->iRefCount = 1;
 ENDobjConstruct(prop)
+
+
+/* destructor for the prop object */
+BEGINobjDestruct(prop) /* be sure to specify the object type also in END and CODESTART macros! */
+	int currRefCount;
+CODESTARTobjDestruct(prop)
+	currRefCount = ATOMIC_DEC_AND_FETCH(pThis->iRefCount);
+	if(currRefCount == 0) {
+		/* (only) in this case we need to actually destruct the object */
+		if(pThis->len >= CONF_PROP_BUFSIZE)
+			free(pThis->szVal.psz);
+	} else {
+		pThis = NULL; /* tell framework NOT to destructing the object! */
+	}
+ENDobjDestruct(prop)
 
 /* set string, we make our own private copy! This MUST only be called BEFORE
  * ConstructFinalize()!
@@ -90,10 +106,8 @@ static rsRetVal GetString(prop_t *pThis, uchar **ppsz, int *plen)
 	ISOBJ_TYPE_assert(pThis, prop);
 	if(pThis->len < CONF_PROP_BUFSIZE) {
 		*ppsz = pThis->szVal.sz;
-RUNLOG;
 	} else {
 		*ppsz = pThis->szVal.psz;
-RUNLOG;
 	}
 	*plen = pThis->len;
 	ENDfunc
@@ -123,19 +137,53 @@ static rsRetVal AddRef(prop_t *pThis)
 }
 
 
-/* destructor for the prop object */
-BEGINobjDestruct(prop) /* be sure to specify the object type also in END and CODESTART macros! */
-	int currRefCount;
-CODESTARTobjDestruct(prop)
-	currRefCount = ATOMIC_DEC_AND_FETCH(pThis->iRefCount);
-	if(currRefCount == 0) {
-		/* (only) in this case we need to actually destruct the object */
-		if(pThis->len >= CONF_PROP_BUFSIZE)
-			free(pThis->szVal.psz);
+/* this is a "do it all in one shot" function that creates a new property,
+ * assigns the provided string to it and finalizes the property. Among the
+ * convenience, it is alos (very, very) slightly faster.
+ * rgerhards, 2009-07-01
+ */
+static rsRetVal CreateStringProp(prop_t **ppThis, uchar* psz, int len)
+{
+	DEFiRet;
+	propConstruct(ppThis);
+	SetString(*ppThis, psz, len);
+	propConstructFinalize(*ppThis);
+	RETiRet;
+}
+
+/* another one-stop function, quite useful: it takes a property pointer and
+ * a string. If the string is already contained in the property, nothing happens.
+ * If the string is different (or the pointer NULL), the current property
+ * is destructed and a new one created. This can be used to get a specific
+ * name in those cases where there is a good chance that the property
+ * immediatly previously processed already contained the value we need - in 
+ * which case we save us all the creation overhead by just reusing the already
+ * existing property).
+ * rgerhards, 2009-07-01
+ */
+rsRetVal CreateOrReuseStringProp(prop_t **ppThis, uchar *psz, int len)
+{
+	uchar *pszPrev;
+	int lenPrev;
+	DEFiRet;
+	assert(ppThis != NULL);
+
+	if(*ppThis == NULL) {
+		/* we need to create a property */ 
+		CHKiRet(CreateStringProp(ppThis, psz, len));
 	} else {
-		pThis = NULL; /* tell framework NOT to destructing the object! */
+		/* already exists, check if we can re-use it */
+		GetString(*ppThis, &pszPrev, &lenPrev);
+		if(len != lenPrev && ustrcmp(psz, pszPrev)) {
+			/* different, need to discard old & create new one */
+			propDestruct(ppThis);
+			CHKiRet(CreateStringProp(ppThis, psz, len));
+		} /* else we can re-use the existing one! */
 	}
-ENDobjDestruct(prop)
+
+finalize_it:
+	RETiRet;
+}
 
 
 /* debugprint for the prop object */
@@ -167,6 +215,8 @@ CODESTARTobjQueryInterface(prop)
 	pIf->GetString = GetString;
 	pIf->GetStringLen = GetStringLen;
 	pIf->AddRef = AddRef;
+	pIf->CreateStringProp = CreateStringProp;
+	pIf->CreateOrReuseStringProp = CreateOrReuseStringProp;
 
 finalize_it:
 ENDobjQueryInterface(prop)

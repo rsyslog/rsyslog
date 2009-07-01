@@ -191,6 +191,8 @@ processSocket(int fd, struct sockaddr_storage *frominetPrev, int *pbIsPermitted,
 	ssize_t lenRcvBuf;
 	struct sockaddr_storage frominet;
 	msg_t *pMsg;
+	prop_t *propFromHost = NULL;
+	prop_t *propFromHostIP = NULL;
 	char errStr[1024];
 
 	iNbrTimeUsed = 0;
@@ -249,14 +251,18 @@ processSocket(int fd, struct sockaddr_storage *frominetPrev, int *pbIsPermitted,
 			MsgSetFlowControlType(pMsg, eFLOWCTL_NO_DELAY);
 			pMsg->msgFlags  = NEEDS_PARSING | PARSE_HOSTNAME;
 			pMsg->bParseHOSTNAME = 1;
-			MsgSetRcvFromStr(pMsg, fromHost, ustrlen(fromHost));
-			CHKiRet(MsgSetRcvFromIPStr(pMsg, fromHostIP, ustrlen(fromHostIP)));
+			MsgSetRcvFromStr(pMsg, fromHost, ustrlen(fromHost), &propFromHost);
+			CHKiRet(MsgSetRcvFromIPStr(pMsg, fromHostIP, ustrlen(fromHostIP), &propFromHostIP));
 			CHKiRet(submitMsg(pMsg));
 		}
 	}
 
-
 finalize_it:
+	if(propFromHost != NULL)
+		prop.Destruct(&propFromHost);
+	if(propFromHostIP != NULL)
+		prop.Destruct(&propFromHostIP);
+
 	RETiRet;
 }
 

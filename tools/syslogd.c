@@ -559,6 +559,8 @@ static inline rsRetVal printline(uchar *hname, uchar *hnameIP, uchar *msg, int f
 	register uchar *p;
 	int pri;
 	msg_t *pMsg;
+	prop_t *propFromHost = NULL;
+	prop_t *propFromHostIP = NULL;
 
 	/* Now it is time to create the message object (rgerhards) */
 	if(stTime == NULL) {
@@ -597,9 +599,9 @@ static inline rsRetVal printline(uchar *hname, uchar *hnameIP, uchar *msg, int f
 	 */
 	if((pMsg->msgFlags & PARSE_HOSTNAME) == 0)
 		MsgSetHOSTNAME(pMsg, hname, ustrlen(hname));
-	MsgSetRcvFromStr(pMsg, hname, ustrlen(hname));
+	MsgSetRcvFromStr(pMsg, hname, ustrlen(hname), &propFromHost);
+	CHKiRet(MsgSetRcvFromIPStr(pMsg, hnameIP, ustrlen(hname), &propFromHostIP));
 	MsgSetAfterPRIOffs(pMsg, p - msg);
-	CHKiRet(MsgSetRcvFromIPStr(pMsg, hnameIP, ustrlen(hname)));
 
 	logmsg(pMsg, flags);
 
