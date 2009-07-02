@@ -43,7 +43,7 @@ increase.
 - increased ompgsql performance by adapting to new transactional
   output module interface
 ---------------------------------------------------------------------------
-Version 4.5.0  [DEVEL] (rgerhards), 2009-??-??
+Version 4.5.0  [DEVEL] (rgerhards), 2009-07-02
 - activation order of inputs changed, they are now activated only after
   privileges are dropped. Thanks to Michael Terry for the patch.
 - greatly improved performance
@@ -301,7 +301,7 @@ version before switching to this one.
 - bugfix: memory leak in ompgsql
   Thanks to Ken for providing the patch
 ---------------------------------------------------------------------------
-Version 3.22.1 [v3-stable] (rgerhards), 2009-04-??
+Version 3.22.1 [v3-stable] (rgerhards), 2009-07-02
 - bugfix: invalid error message issued if $inlcudeConfig was on an empty
   set of files (e.g. *.conf, where none such files existed)
   thanks to Michael Biebl for reporting this bug

@@ -111,6 +111,7 @@ html_files = \
 	rsyslog_conf_templates.html \
 	rsyslog_conf_nomatch.html \
 	queues_analogy.html \
+	multi_ruleset.html \
 	src/classes.dia
 
 grfx_files = \
