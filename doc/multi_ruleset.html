@@ -8,13 +8,14 @@ multiple rulesets within a single configuration.
 This is especially useful for routing the recpetion of remote messages to a set of specific rules.
 Note that the input module must support binding to non-standard rulesets, so the functionality
 may not be available with all inputs.
-<p>In this document, I am using the <a href="imtcp.html">imtcp</a> in this text, an input module
-that supports binding to non-standard rulesets as long as rsyslog supports multiple rulesets.
+<p>In this document, I am using <a href="imtcp.html">imtcp</a>, an input module
+that supports binding to non-standard rulesets since rsyslog started to support them.
 <h2>What is a Ruleset?</h2>
 If you have worked with (r)syslog.conf, you know that it is made up of what I call rules (others
-tend to call them selectors, an sysklogd term). Each rule consist of a filter and one or more
-actions to be carried out when the filter evaluates to true. A filter may be a simple traditional
-syslog priority based filter (like &quot;*.*&quot; or &quot;mail.info&quot; or a complex
+tend to call them selectors, a sysklogd term). Each rule consist of a filter and one or more
+actions to be carried out when the filter evaluates to true. A filter may be as simple as a
+traditional
+syslog priority based filter (like &quot;*.*&quot; or &quot;mail.info&quot; or a as complex as a
 script-like expression. Details on that are covered in the config file documentation. After the
 filter come action specifiers, and an action is something that does something to a message, e.g.
 write it to a file or forward it to a remote logging server.
@@ -33,7 +34,8 @@ rsyslog.conf is processed, the config file parser looks for the directive
 <pre>$RuleSet &lt;name&gt;
 </pre>
 
-<p>Where name is any name the user likes. If it finds this directive, it begins a new
+<p>Where name is any name the user likes (but must not start with &quot;RSYSLOG_&quot;, which
+is the name space reserved for rsyslog use). If it finds this directive, it begins a new
 rule set (if the name was not yet know) or switches to an already-existing one (if the name
 was known). All rules defined between this $RuleSet directive and the next one are appended
 to the named ruleset. Note that the reserved name "RSYSLOG_DefaultRuleset" is used to
@@ -46,9 +48,9 @@ there are no more rules or the discard action is executed. Note that with multip
 no longer <b>all</b> rsyslog.conf rules are executed but <b>only</b> those that are 
 contained within the specific ruleset.
 
-<p>Inputs must explicitely bind to rulesets. If they don't do, the default ruleset is used.
+<p>Inputs must explicitely bind to rulesets. If they don't do, the default ruleset is bound.
 
-This brings up the next question:
+<p>This brings up the next question:
 
 <h2>What does &quot;To bind to a Ruleset&quot; mean?</h2>
 <p>This term is used in the same sense as &quot;to bind an IP address to an interface&quot;:
@@ -67,8 +69,19 @@ to seperate the messages by any other method.
 directive. Note that &quot;name&quote; must be the name of a ruleset that is already defined
 at the time the bind directive is given. There are many ways to make sure this happens, but
 I personally think that it is best to define all rule sets at the top of rsyslog.conf and
-define the input at the bottom. This kind of reverses its traditional recommended ordering, but
-seems to be a really useful and straightforward ways of doing things.
+define the inputs at the bottom. This kind of reverses the traditional recommended ordering, but
+seems to be a really useful and straightforward way of doing things.
+<h2>Can I use a different Ruleset as the default?</h2>
+<p>This is possible by using the
+
+<pre>$DefaultRuleset &lt;name&gt;
+</pre>
+
+Directive. Please note, however, that this directive is actually global: that is, it does not
+modify the ruleset to which the next input is bound but rather provides a system-wide
+default rule set for those inputs that did not explicitly bind to one. As such, the directive
+can not be used as a work-around to bind inputs to non-default rulesets that do not support
+ruleset binding.
 <h2>Examples</h2>
 <h3>Split local and remote logging</h3>
 <p>Let's say you have a pretty standard system that logs its local messages to the usual
@@ -78,13 +91,13 @@ might look like this:
 <pre>
 # ... module loading ...
 # The authpriv file has restricted access.
-authpriv.*                                              /var/log/secure
+authpriv.*  /var/log/secure
 # Log all the mail messages in one place.
-mail.*                                                  /var/log/maillog
+mail.*      /var/log/maillog
 # Log cron stuff
-cron.*                                                  /var/log/cron
+cron.*      /var/log/cron
 # Everybody gets emergency messages
-*.emerg                                                 *
+*.emerg     *
 ... more ...
 </pre>
 
@@ -96,18 +109,18 @@ filters on the message, processes it and then discards it:
 <pre>
 # ... module loading ...
 # process remote messages
-:fromhost-ip, isequal, "192.0.2.1"                      /var/log/remotefile
+:fromhost-ip, isequal, "192.0.2.1"    /var/log/remotefile
 & ~
 # only messages not from 192.0.21 make it past this point
 
 # The authpriv file has restricted access.
-authpriv.*                                              /var/log/secure
+authpriv.*                            /var/log/secure
 # Log all the mail messages in one place.
-mail.*                                                  /var/log/maillog
+mail.*                                /var/log/maillog
 # Log cron stuff
-cron.*                                                  /var/log/cron
+cron.*                                /var/log/cron
 # Everybody gets emergency messages
-*.emerg                                                 *
+*.emerg                               *
 ... more ...
 </pre>
 
@@ -122,7 +135,7 @@ case and bind it to the receiver. This may be written as follows:
 # process remote messages
 # define new ruleset and add rules to it:
 $RuleSet remote
-*.*                                                     /var/log/remotefile
+*.*           /var/log/remotefile
 # only messages not from 192.0.21 make it past this point
 
 # bind ruleset to tcp listener
@@ -133,13 +146,13 @@ $InputTCPServerRun 10514
 # switch back to the default ruleset:
 $RuleSet RSYSLOG_DefaultRuleset
 # The authpriv file has restricted access.
-authpriv.*                                              /var/log/secure
+authpriv.*    /var/log/secure
 # Log all the mail messages in one place.
-mail.*                                                  /var/log/maillog
+mail.*        /var/log/maillog
 # Log cron stuff
-cron.*                                                  /var/log/cron
+cron.*        /var/log/cron
 # Everybody gets emergency messages
-*.emerg                                                 *
+*.emerg       *
 ... more ...
 </pre>
 
@@ -151,19 +164,20 @@ below has it, and it leads to the same results:
 # ... module loading ...
 # at first, this is a copy of the unmodified rsyslog.conf
 # The authpriv file has restricted access.
-authpriv.*                                              /var/log/secure
+authpriv.*    /var/log/secure
 # Log all the mail messages in one place.
-mail.*                                                  /var/log/maillog
+mail.*        /var/log/maillog
 # Log cron stuff
-cron.*                                                  /var/log/cron
+cron.*        /var/log/cron
 # Everybody gets emergency messages
-*.emerg                                                 *
+*.emerg       *
 ... more ...
 # end of the "regular" rsyslog.conf. Now come the new definitions:
+
 # process remote messages
 # define new ruleset and add rules to it:
 $RuleSet remote
-*.*                                                     /var/log/remotefile
+*.*           /var/log/remotefile
 
 # bind ruleset to tcp listener
 $InputTCPServerBindRuleset remote
@@ -172,12 +186,72 @@ $InputTCPServerRun 10514
 </pre>
 
 <p>Here, we do not switch back to the default ruleset, because this is not needed as it is
-completely defined.
+completely defined when we begin the &quot;remote&quot; ruleset.
 
 <p>Now look at the examples and compare them to the single-ruleset solution. You will notice
 that we do <b>not</b> need a real filter in the multi-ruleset case: we can simply use
 &quot;*.*&quot; as all messages now means all messages that are being processed by this
-rule set and all of them come in via the TCP receiver!
+rule set and all of them come in via the TCP receiver! This is what makes using multiple
+rulesets so much easier.
+
+<h3>Split local and remote logging for three different ports</h3>
+<p>This example is almost like the first one, but it extends it a little bit. While it is
+very similar, I hope it is different enough to provide a useful example why you may want
+to have more than two rulesets.
+
+<p>Again, we would like to use the &quot;regular&quot; log files for local logging, only. But
+this time we set up three syslog/tcp listeners, each one listening to a different
+port (in this example 10514, 10515, and 10516). Logs received from these receivers shall go into
+different files. Also, logs received from 10516 (and only from that port!) with
+&quot;mail.*&quot; priority, shall be written into a specif file and <b>not</b> be
+written to 10516's general log file.
+
+<p>This is the config:
+
+<pre>
+# ... module loading ...
+# at first, this is a copy of the unmodified rsyslog.conf
+# The authpriv file has restricted access.
+authpriv.* /var/log/secure
+# Log all the mail messages in one place.
+mail.*  /var/log/maillog
+# Log cron stuff
+cron.*  /var/log/cron
+# Everybody gets emergency messages
+*.emerg       *
+... more ...
+# end of the "regular" rsyslog.conf. Now come the new definitions:
+
+# process remote messages
+
+#define rulesets first
+$RuleSet remote10514
+*.*     /var/log/remote10514
+
+$RuleSet remote10515
+*.*     /var/log/remote10515
+
+$RuleSet remote10516
+mail.*	/var/log/mail10516
+&       ~
+# note that the discard-action will prevent this messag from 
+# being written to the remote10516 file - as usual...
+*.*     /var/log/remote10516
+
+# and now define listners bound to the relevant ruleset
+$InputTCPServerBindRuleset remote10514
+$InputTCPServerRun 10514
+
+$InputTCPServerBindRuleset remote10515
+$InputTCPServerRun 10515
+
+$InputTCPServerBindRuleset remote10516
+$InputTCPServerRun 10516
+</pre>
+
+<p>Note that the &quot;mail.*&quot; rule inside the &quot;remote10516&quote; ruleset does
+not affect processing inside any other rule set, including the default rule set.
+
 
 <h2>Performance</h2>
 <p>No rule processing can be faster than not processing a rule at all. As such, it is useful
@@ -188,6 +262,9 @@ are easier to use and offer more performance. The performance is better simply b
 is no need to check the reception service - instead messages are automatically pushed to the
 right rule set and can be processed by very simple rules (maybe even with
 &quot;*.*&quot;-filters, the fastest ones available).
+
+<p>In the long term, multiple rule sets will probably lay the foundation for even better
+optimizations. So it is not a bad idea to get aquainted with them.
 
 <p>[<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
 <p><font size="2">This documentation is part of the <a href="http://www.rsyslog.com/">rsyslog</a>

@@ -110,7 +110,8 @@ that no rebind is done. This directive is useful for use with load-balancers.</l
 <li>$DefaultNetstreamDriverKeyFile &lt;/path/to/keyfile.pem&gt;</li>
 <li><b>$DefaultRuleset</b> <i>name</i> - changes the default ruleset for unbound inputs to
 the provided <i>name</i> (the default default ruleset is named
-&quot;RSYSLOG_DefaultRuleset&quot;).
+&quot;RSYSLOG_DefaultRuleset&quot;).  It is advised to also read
+our paper on <a href="multi_ruleset.html">using multiple rule sets in rsyslog</a>.</li>
 <li><b>$CreateDirs</b> [<b>on</b>/off] - create directories on an as-needed basis</li>
 <li><a href="rsconf1_dircreatemode.html">$DirCreateMode</a></li>
 <li><a href="rsconf1_dirgroup.html">$DirGroup</a></li>
@@ -218,7 +219,8 @@ large enough for the whole message. (Introduced with 4.1.5). Once set, it affect
 All following actions belong to that new rule set.
 the <i>name</i> does not yet exist, it is created. To swith back to rsyslog's
 default ruleset, specify &quot;RSYSLOG_DefaultRuleset&quot;) as the name.
-All following actions belong to that new rule set.</li>
+All following actions belong to that new rule set. It is advised to also read
+our paper on <a href="multi_ruleset.html">using multiple rule sets in rsyslog</a>.</li>
 <li><b>$OptimizeForUniprocessor</b> [on/<b>off</b>] - turns on optimizatons which lead to better
 performance on uniprocessors. If you run on multicore-machiens, turning this off lessens CPU load. The
 default may change as uniprocessor systems become less common. [available since 4.1.0]</li>
