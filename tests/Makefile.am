@@ -116,6 +116,7 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   diag.sh \
 	   testsuites/diag-common.conf \
            daqueue-persist.sh \
+	   daqueue-persist-drvr.sh \
 	   queue-persist.sh \
 	   queue-persist-drvr.sh \
 	   testsuites/queue-persist.conf \
