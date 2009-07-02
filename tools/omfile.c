@@ -65,7 +65,6 @@
 #include "module-template.h"
 #include "errmsg.h"
 #include "stream.h"
-#include "zlibw.h"
 #include "unicode-helper.h"
 
 MODULE_TYPE_OUTPUT
@@ -74,7 +73,6 @@ MODULE_TYPE_OUTPUT
  */
 DEF_OMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
-DEFobjCurrIf(zlibw)
 DEFobjCurrIf(strm)
 
 /* The following structure is a dynafile name cache entry.
@@ -745,7 +743,6 @@ BEGINmodExit
 CODESTARTmodExit
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(strm, CORE_COMPONENT);
-	objRelease(zlibw, LM_ZLIBW_FILENAME);
 	free(pszTplName);
 ENDmodExit
 
@@ -762,7 +759,6 @@ CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
-	CHKiRet(objUse(zlibw, LM_ZLIBW_FILENAME));
 	CHKiRet(objUse(strm, CORE_COMPONENT));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"dynafilecachesize", 0, eCmdHdlrInt, (void*) setDynaFileCacheSize, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omfileziplevel", 0, eCmdHdlrInt, NULL, &iZipLevel, STD_LOADABLE_MODULE_ID));
