@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 4.5.0  [DEVEL] (rgerhards), 2009-??-??
+Version 4.5.0  [DEVEL] (rgerhards), 2009-07-02
 - activation order of inputs changed, they are now activated only after
   privileges are dropped. Thanks to Michael Terry for the patch.
 - greatly improved performance
