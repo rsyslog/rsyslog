@@ -92,17 +92,14 @@ static uchar *GetPath(void)
 
 static void CloseLogSrc(void)
 {
-	/* Turn on logging of messages to console, but only if we had the -c
-	 * option -- rgerhards, 2007-08-01
-	 */
-	if (console_log_level != -1)
+	/* Turn on logging of messages to console, but only if a log level was speficied */
+	if(console_log_level != -1)
 		ksyslog(7, NULL, 0);
   
         /* Shutdown the log sources. */
-	switch ( logsrc )
-	{
+	switch(logsrc) {
 	    case kernel:
-		ksyslog(0, 0, 0);
+		ksyslog(0, NULL, 0);
 		imklogLogIntMsg(LOG_INFO, "Kernel logging (ksyslog) stopped.");
 		break;
             case proc:
@@ -153,7 +150,7 @@ static enum LOGSRC GetKernelLogSrc(void)
 	if ( (kmsg = open((char*)GetPath(), O_RDONLY|O_CLOEXEC)) < 0 )
 	{
 		imklogLogIntMsg(LOG_ERR, "imklog: Cannot open proc file system, %d.\n", errno);
-		ksyslog(7, NULL, 0); /* TODO: check this, implement more */
+		ksyslog(7, NULL, 0);
 		return(none);
 	}
 

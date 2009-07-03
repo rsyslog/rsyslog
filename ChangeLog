@@ -1,4 +1,8 @@
 ---------------------------------------------------------------------------
+Version 4.5.1  [DEVEL] (rgerhards), 2009-07-??
+- added $klogConsoleLogLevel directive which permits to set a new
+  console log level while rsyslog is active
+---------------------------------------------------------------------------
 Version 4.5.0  [DEVEL] (rgerhards), 2009-07-02
 - activation order of inputs changed, they are now activated only after
   privileges are dropped. Thanks to Michael Terry for the patch.

@@ -34,9 +34,9 @@ handled. The default is "off", in which case these messages are
 ignored. Switch it to on to submit non-kernel messages to rsyslog
 processing.<span style="font-weight: bold;"></span></li>
 <li><span style="font-weight: bold;"></span>$DebugPrintKernelSymbols
-(imklog) [on/<b>off</b>]<br>
+[on/<b>off</b>]<br>
 Linux only, ignored on other platforms (but may be specified)</li>
-<li>$klogSymbolLookup (imklog) [on/<b>off</b>] --
+<li>$klogSymbolLookup [on/<b>off</b>] --
 disables imklog kernel symbol translation (former klogd -x option). NOTE that 
 this option is counter-productive on recent kernels (>= 2.6) because the
 kernel already does the symbol translation and this option breaks the information.<br>
@@ -44,10 +44,19 @@ kernel already does the symbol translation and this option breaks the informatio
 it except if you have a very good reason. If you have one, let us know
 because otherwise new versions will no longer support it.<br>
 Linux only, ignored on other platforms (but may be specified)</li>
-<li>$klogUseSyscallInterface (imklog)&nbsp; [on/<b>off</b>]
+<li><b>$klogConsoleLogLevel</b> [<i>number</i>]
+(former klogd -c option) -- sets the console log level. If specified, only messages with
+up to the specified level are printed to the console. The default is -1, which means that
+the current settings are not modified. To get this behavior, do not specify
+$klogConsoleLogLevel in the configuration file. Note that this is a global parameter. Each time
+it is changed, the previous definition is re-set. The one activate will be that one that is
+active when imklog actually starts processing. In short words: do not specify this 
+directive more than once!
+<br><b>Linux only</b>, ignored on other platforms (but may be specified)</li>
+<li><b>$klogUseSyscallInterface</b> [on/<b>off</b>]
 -- former klogd -s option<br>
 Linux only, ignored on other platforms (but may be specified)</li>
-<li>$klogSymbolsTwice (imklog) [on/<b>off</b>] --
+<li>$klogSymbolsTwice [on/<b>off</b>] --
 former klogd -2 option<br>
 Linux only, ignored on other platforms (but may be specified)<br style="font-weight: bold;">
 </li>
@@ -69,7 +78,7 @@ is needed to start pulling kernel messages.<br>
 <p><font size="2">This documentation is part of the
 <a href="http://www.rsyslog.com/">rsyslog</a>
 project.<br>
-Copyright © 2008 by <a href="http://www.gerhards.net/rainer">Rainer
+Copyright &copy; 2008-2009 by <a href="http://www.gerhards.net/rainer">Rainer
 Gerhards</a> and
 <a href="http://www.adiscon.com/">Adiscon</a>.
 Released under the GNU GPL version 3 or higher.</font></p>
