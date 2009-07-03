@@ -72,10 +72,12 @@ flushApc(void *param1, void __attribute__((unused)) *param2)
 	strm_t *pThis = (strm_t*)  param1;
 	ISOBJ_TYPE_assert(pThis, strm);
 
+	BEGINfunc
 	BEGIN_MTX_PROTECTED_OPERATIONS_UNCOND(&pThis->mut);
 	strmFlush(pThis);
 	pThis->apcRequested = 0;
 	END_MTX_PROTECTED_OPERATIONS_UNCOND(&pThis->mut);
+	ENDfunc
 }
 
 
@@ -254,7 +256,7 @@ static rsRetVal strmOpenFile(strm_t *pThis)
 				    pThis->pszFName, pThis->lenFName, pThis->iCurrFNum, pThis->iFileNumDigits));
 	} else {
 		if(pThis->pszDir == NULL) {
-			if((pThis->pszCurrFName = (uchar*) strdup((char*) pThis->pszFName)) == NULL)
+			if((pThis->pszCurrFName = ustrdup(pThis->pszFName)) == NULL)
 				ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 		} else {
 			CHKiRet(genFileName(&pThis->pszCurrFName, pThis->pszDir, pThis->lenDir,
@@ -1250,6 +1252,46 @@ finalize_it:
 }
 
 
+/* duplicate a stream object excluding dynamic properties. This function is
+ * primarily meant to provide a duplicate that later on can be used to access
+ * the data. This is needed, for example, for a restart of the disk queue.
+ * Note that ConstructFinalize() is NOT called. So our caller may change some
+ * properties before finalizing things.
+ * rgerhards, 2009-05-26
+ */
+rsRetVal
+strmDup(strm_t *pThis, strm_t **ppNew)
+{
+	strm_t *pNew = NULL;
+	DEFiRet;
+
+	ISOBJ_TYPE_assert(pThis, strm);
+	assert(ppNew != NULL);
+
+	CHKiRet(strmConstruct(&pNew));
+	pNew->sType = pThis->sType;
+	pNew->iCurrFNum = pThis->iCurrFNum;
+	CHKmalloc(pNew->pszFName = ustrdup(pThis->pszFName));
+	pNew->lenFName = pThis->lenFName;
+	CHKmalloc(pNew->pszDir = ustrdup(pThis->pszDir));
+	pNew->lenDir = pThis->lenDir;
+	pNew->tOperationsMode = pThis->tOperationsMode;
+	pNew->tOpenMode = pThis->tOpenMode;
+	pNew->iMaxFileSize = pThis->iMaxFileSize;
+	pNew->iMaxFiles = pThis->iMaxFiles;
+	pNew->iFileNumDigits = pThis->iFileNumDigits;
+	pNew->bDeleteOnClose = pThis->bDeleteOnClose;
+	pNew->iCurrOffs = pThis->iCurrOffs;
+	
+	*ppNew = pNew;
+	pNew = NULL;
+
+finalize_it:
+	if(pNew != NULL)
+		strmDestruct(&pNew);
+
+	RETiRet;
+}
 
 /* set a user write-counter. This counter is initialized to zero and
  * receives the number of bytes written. It is accurate only after a
@@ -1365,6 +1407,7 @@ CODESTARTobjQueryInterface(strm)
 	pIf->RecordEnd = strmRecordEnd;
 	pIf->Serialize = strmSerialize;
 	pIf->GetCurrOffset = strmGetCurrOffset;
+	pIf->Dup = strmDup;
 	pIf->SetWCntr = strmSetWCntr;
 	/* set methods */
 	pIf->SetbDeleteOnClose = strmSetbDeleteOnClose;

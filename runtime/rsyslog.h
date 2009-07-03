@@ -69,8 +69,24 @@
 #endif
 
 
+/* the rsyslog core provides information about present feature to plugins
+ * asking it. Below are feature-test macros which must be used to query 
+ * features. Note that this must be powers of two, so that multiple queries
+ * can be combined. -- rgerhards, 2009-04-27
+ */
+#define CORE_FEATURE_BATCHING	1
+/*#define CORE_FEATURE_whatever 2 ... and so on ... */
+
+/* some universal fixed size integer defines ... */
+typedef long long int64;
+typedef long long unsigned uint64;
+typedef int64 number_t; /* type to use for numbers - TODO: maybe an autoconf option? */
+typedef char intTiny; 	/* 0..127! */
+typedef unsigned char uintTiny;	/* 0..255! */
+
 /* define some base data types */
 typedef unsigned char uchar;/* get rid of the unhandy "unsigned char" */
+typedef struct aUsrp_s aUsrp_t;
 typedef struct thrdInfo thrdInfo_t;
 typedef struct obj_s obj_t;
 typedef struct ruleset_s ruleset_t;
@@ -87,6 +103,7 @@ typedef struct nsd_gsspi_s nsd_gsspi_t;
 typedef struct nsd_nss_s nsd_nss_t;
 typedef struct nsdsel_ptcp_s nsdsel_ptcp_t;
 typedef struct nsdsel_gtls_s nsdsel_gtls_t;
+typedef struct wti_s wti_t;
 typedef obj_t nsd_t;
 typedef obj_t nsdsel_t;
 typedef struct msg msg_t;
@@ -102,17 +119,14 @@ typedef struct tcps_sess_s tcps_sess_t;
 typedef struct strmsrv_s strmsrv_t;
 typedef struct strms_sess_s strms_sess_t;
 typedef struct vmstk_s vmstk_t;
+typedef struct batch_obj_s batch_obj_t;
+typedef struct batch_s batch_t;
+typedef struct wtp_s wtp_t;
 typedef rsRetVal (*prsf_t)(struct vmstk_s*, int);	/* pointer to a RainerScript function */
+typedef uint64 qDeqID;	/* queue Dequeue order ID. 32 bits is considered dangerously few */
 
 typedef struct tcpLstnPortList_s tcpLstnPortList_t; // TODO: rename?
 typedef struct strmLstnPortList_s strmLstnPortList_t; // TODO: rename?
-
-/* some universal 64 bit define... */
-typedef long long int64;
-typedef long long unsigned uint64;
-typedef int64 number_t; /* type to use for numbers - TODO: maybe an autoconf option? */
-typedef char intTiny; 	/* 0..127! */
-typedef uchar uintTiny;	/* 0..255! */
 
 #ifdef __hpux
 typedef unsigned int u_int32_t; /* TODO: is this correct? */
@@ -372,10 +386,12 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */
 
 	/* some generic error/status codes */
+	RS_RET_OK = 0,			/**< operation successful */
 	RS_RET_OK_DELETE_LISTENTRY = 1,	/**< operation successful, but callee requested the deletion of an entry (special state) */
 	RS_RET_TERMINATE_NOW = 2,	/**< operation successful, function is requested to terminate (mostly used with threads) */
 	RS_RET_NO_RUN = 3,		/**< operation successful, but function does not like to be executed */
-	RS_RET_OK = 0			/**< operation successful */
+	RS_RET_IDLE = 4,		/**< operation successful, but callee is idle (e.g. because queue is empty) */
+	RS_RET_TERMINATE_WHEN_IDLE = 5	/**< operation successful, function is requested to terminate when idle */
 };
 
 /* some helpful macros to work with srRetVals.

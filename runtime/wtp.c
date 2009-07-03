@@ -42,10 +42,10 @@
 #include <atomic.h>
 #include <sys/prctl.h>
 
-#ifdef OS_SOLARIS
-#	include <sched.h>
-#	define pthread_yield() sched_yield()
-#endif
+/// TODO: check on solaris if this is any longer needed - I don't think so - rgerhards, 2009-09-20
+//#ifdef OS_SOLARIS
+//#	include <sched.h>
+//#endif
 
 #include "rsyslog.h"
 #include "stringbuf.h"
@@ -80,7 +80,7 @@ wtpGetDbgHdr(wtp_t *pThis)
 
 
 /* Not implemented dummy function for constructor */
-static rsRetVal NotImplementedDummy() { return RS_RET_OK; }
+static rsRetVal NotImplementedDummy() { return RS_RET_NOT_IMPLEMENTED; }
 /* Standard-Constructor for the wtp object
  */
 BEGINobjConstruct(wtp) /* be sure to specify the object type also in END macro! */
@@ -89,12 +89,15 @@ BEGINobjConstruct(wtp) /* be sure to specify the object type also in END macro! 
 	pthread_cond_init(&pThis->condThrdTrm, NULL);
 	/* set all function pointers to "not implemented" dummy so that we can safely call them */
 	pThis->pfChkStopWrkr = NotImplementedDummy;
+	pThis->pfGetDeqBatchSize = NotImplementedDummy;
 	pThis->pfIsIdle = NotImplementedDummy;
 	pThis->pfDoWork = NotImplementedDummy;
+	pThis->pfObjProcessed = NotImplementedDummy;
 	pThis->pfOnIdle = NotImplementedDummy;
 	pThis->pfOnWorkerCancel = NotImplementedDummy;
 	pThis->pfOnWorkerStartup = NotImplementedDummy;
 	pThis->pfOnWorkerShutdown = NotImplementedDummy;
+dbgprintf("XXX: wtpConstruct: %d\n", pThis->wtpState);
 ENDobjConstruct(wtp)
 
 
@@ -118,7 +121,7 @@ wtpConstructFinalize(wtp_t *pThis)
 	 */
 	if((pThis->pWrkr = malloc(sizeof(wti_t*) * pThis->iNumWorkerThreads)) == NULL)
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-
+	
 	for(i = 0 ; i < pThis->iNumWorkerThreads ; ++i) {
 		CHKiRet(wtiConstruct(&pThis->pWrkr[i]));
 		pWti = pThis->pWrkr[i];
@@ -248,7 +251,6 @@ wtpSetState(wtp_t *pThis, wtpState_t iNewState)
 
 
 /* check if the worker shall shutdown (1 = yes, 0 = no)
- * TODO: check if we can use atomic operations to enhance performance
  * Note: there may be two mutexes locked, the bLockUsrMutex is the one in our "user"
  * (e.g. the queue clas)
  * rgerhards, 2008-01-21
@@ -262,16 +264,19 @@ wtpChkStopWrkr(wtp_t *pThis, int bLockMutex, int bLockUsrMutex)
 	ISOBJ_TYPE_assert(pThis, wtp);
 
 	BEGIN_MTX_PROTECTED_OPERATIONS(&pThis->mut, bLockMutex);
-	if(   (pThis->wtpState == wtpState_SHUTDOWN_IMMEDIATE)
-	   || ((pThis->wtpState == wtpState_SHUTDOWN) && pThis->pfIsIdle(pThis->pUsr, bLockUsrMutex)))
-		iRet = RS_RET_TERMINATE_NOW;
-	END_MTX_PROTECTED_OPERATIONS(&pThis->mut);
+	if(pThis->wtpState == wtpState_SHUTDOWN_IMMEDIATE) {
+		ABORT_FINALIZE(RS_RET_TERMINATE_NOW);
+	} else if(pThis->wtpState == wtpState_SHUTDOWN) {
+		ABORT_FINALIZE(RS_RET_TERMINATE_WHEN_IDLE);
+	}
 
 	/* try customer handler if one was set and we do not yet have a definite result */
-	if(iRet == RS_RET_OK && pThis->pfChkStopWrkr != NULL) {
+	if(pThis->pfChkStopWrkr != NULL) {
 		iRet = pThis->pfChkStopWrkr(pThis->pUsr, bLockUsrMutex);
 	}
 
+finalize_it:
+	END_MTX_PROTECTED_OPERATIONS(&pThis->mut);
 	RETiRet;
 }
 
@@ -581,8 +586,10 @@ DEFpropSetMethPTR(wtp, pmutUsr, pthread_mutex_t)
 DEFpropSetMethPTR(wtp, pcondBusy, pthread_cond_t)
 DEFpropSetMethFP(wtp, pfChkStopWrkr, rsRetVal(*pVal)(void*, int))
 DEFpropSetMethFP(wtp, pfRateLimiter, rsRetVal(*pVal)(void*))
-DEFpropSetMethFP(wtp, pfIsIdle, rsRetVal(*pVal)(void*, int))
+DEFpropSetMethFP(wtp, pfGetDeqBatchSize, rsRetVal(*pVal)(void*, int*))
+DEFpropSetMethFP(wtp, pfIsIdle, rsRetVal(*pVal)(void*, wtp_t*))
 DEFpropSetMethFP(wtp, pfDoWork, rsRetVal(*pVal)(void*, void*, int))
+DEFpropSetMethFP(wtp, pfObjProcessed, rsRetVal(*pVal)(void*, wti_t*))
 DEFpropSetMethFP(wtp, pfOnIdle, rsRetVal(*pVal)(void*, int))
 DEFpropSetMethFP(wtp, pfOnWorkerCancel, rsRetVal(*pVal)(void*, void*))
 DEFpropSetMethFP(wtp, pfOnWorkerStartup, rsRetVal(*pVal)(void*))

@@ -246,7 +246,7 @@ injectMsg(uchar *pszCmd, tcps_sess_t *pSess)
 		doInjectMsg(i + iFrom);
 	}
 
-	CHKiRet(sendResponse(pSess, "messages injected\n"));
+	CHKiRet(sendResponse(pSess, "%d messages injected\n", nMsgs));
 
 finalize_it:
 	RETiRet;
@@ -259,10 +259,13 @@ static rsRetVal
 waitMainQEmpty(tcps_sess_t *pSess)
 {
 	int iMsgQueueSize;
+	int iPrint = 0;
 	DEFiRet;
 
 	CHKiRet(diagGetMainMsgQSize(&iMsgQueueSize));
 	while(iMsgQueueSize > 0) {
+		if(iPrint++ % 500 == 0) 
+			dbgprintf("imdiag sleeping, wait mainq drain, curr size %d\n", iMsgQueueSize);
 		srSleep(0,2);	/* wait a little bit */
 		CHKiRet(diagGetMainMsgQSize(&iMsgQueueSize));
 	}
@@ -297,6 +300,7 @@ OnMsgReceived(tcps_sess_t *pSess, uchar *pRcv, int iLenMsg)
 
 	getFirstWord(&pszMsg, cmdBuf, sizeof(cmdBuf)/sizeof(uchar), TO_LOWERCASE);
 
+	dbgprintf("imdiag received command '%s'\n", cmdBuf);
 	if(!ustrcmp(cmdBuf, UCHAR_CONSTANT("getmainmsgqueuesize"))) {
 		CHKiRet(diagGetMainMsgQSize(&iMsgQueueSize));
 		CHKiRet(sendResponse(pSess, "%d\n", iMsgQueueSize));

@@ -336,6 +336,33 @@ in this regard - it was just not requested so far. So if you need more
 fine-grained control, let us know and we'll probably implement it.
 There are two configuration directives, both should be used together or
 results are unpredictable:" <i>$&lt;object&gt;QueueDequeueTimeBegin &lt;hour&gt;</i>" and&nbsp;"<i>$&lt;object&gt;QueueDequeueTimeEnd &lt;hour&gt;</i>". The hour parameter must be specified in 24-hour format (so 10pm is 22). A use case for this parameter can be found in the <a href="http://wiki.rsyslog.com/index.php/OffPeakHours">rsyslog wiki</a>. </p>
+<h2>Performance</h2>
+<p>The locking involved with maintaining the queue has a potentially large
+performance impact. How large this is, and if it exists at all, depends much on
+the configuration and actual use case. However, the queue is able to work on
+so-called &quot;batches&quot; when dequeueing data elements. With batches,
+multiple data elements are dequeued at once (with a single locking call).
+The queue dequeues all available elements up to a configured upper
+limit (<i>&lt;object&gt;DequeueBatchSize &lt;number&gt;</i>). It is important
+to note that the actual upper limit is dictated by availability. The queue engine
+will never wait for a batch to fill. So even if a high upper limit is configured,
+batches may consist of fewer elements, even just one, if there are no more elements
+waiting in the queue.
+<p>Batching
+can improve performance considerably. Note, however, that it affects the
+order in which messages are passed to the queue worker threads, as each worker
+now receive as batch of messages. Also, the larger the batch size and the higher
+the maximum number of permitted worker threads, the more main memory is needed. 
+For a busy server, large batch sizes (around 1,000 or even more elements) may be useful.
+Please note that with batching, the main memory must hold BatchSize * NumOfWorkers
+objects in memory (worst-case scenario), even if running in disk-only mode. So if you
+use the default 5 workers at the main message queue and set the batch size to 1,000, you need
+to be prepared that the main message queue holds up to 5,000 messages in main memory
+<b>in addition</b> to the configured queue size limits!
+<p>The queue object's default maximum batch size
+is eight, but there exists different defaults for the actual parts of
+rsyslog processing that utilize queues. So you need to check these object's
+defaults.
 <h2>Terminating Queues</h2>
 <p>Terminating a process sounds easy, but can be complex.
 Terminating a running queue is in fact the most complex operation a queue 

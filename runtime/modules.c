@@ -77,6 +77,21 @@ static modInfo_t *pLoadedModulesLast = NULL;	/* tail-pointer */
 uchar	*pModDir = NULL; /* read-only after startup */
 
 
+/* we provide a set of dummy functions for output modules that do not support the
+ * transactional interface. As they do not do this, they commit each message they
+ * receive, and as such the dummies can always return RS_RET_OK without causing
+ * harm. This simplifies things as in action processing we do not need to check
+ * if the transactional entry points exist.
+ */
+static rsRetVal dummyBeginTransaction() 
+{
+	return RS_RET_OK;
+}
+static rsRetVal dummyEndTransaction() 
+{
+	return RS_RET_OK;
+}
+
 #ifdef DEBUG
 /* we add some home-grown support to track our users (and detect who does not free us). In
  * the long term, this should probably be migrated into debug.c (TODO). -- rgerhards, 2008-03-11
@@ -216,19 +231,38 @@ static void moduleDestruct(modInfo_t *pThis)
 }
 
 
+/* This enables a module to query the core for specific features.
+ * rgerhards, 2009-04-22
+ */
+static rsRetVal queryCoreFeatureSupport(int *pBool, unsigned uFeat)
+{
+	DEFiRet;
+
+	if((pBool == NULL))
+		ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+
+	*pBool = (uFeat & CORE_FEATURE_BATCHING) ? 1 : 0;
+
+finalize_it:
+	RETiRet;
+}
+
+
 /* The following function is the queryEntryPoint for host-based entry points.
  * Modules may call it to get access to core interface functions. Please note
  * that utility functions can be accessed via shared libraries - at least this
  * is my current shool of thinking.
  * Please note that the implementation as a query interface allows to take
  * care of plug-in interface version differences. -- rgerhards, 2007-07-31
+ * ... but often it better not to use a new interface. So we now add core
+ * functions here that a plugin may request. -- rgerhards, 2009-04-22
  */
 static rsRetVal queryHostEtryPt(uchar *name, rsRetVal (**pEtryPoint)())
 {
 	DEFiRet;
 
 	if((name == NULL) || (pEtryPoint == NULL))
-		return RS_RET_PARAM_ERROR;
+		ABORT_FINALIZE(RS_RET_PARAM_ERROR);
 
 	if(!strcmp((char*) name, "regCfSysLineHdlr")) {
 		*pEtryPoint = regCfSysLineHdlr;
@@ -236,6 +270,8 @@ static rsRetVal queryHostEtryPt(uchar *name, rsRetVal (**pEtryPoint)())
 		*pEtryPoint = objGetObjInterface;
 	} else if(!strcmp((char*) name, "OMSRgetSupportedTplOpts")) {
 		*pEtryPoint = OMSRgetSupportedTplOpts;
+	} else if(!strcmp((char*) name, "queryCoreFeatureSupport")) {
+		*pEtryPoint = queryCoreFeatureSupport;
 	} else {
 		*pEtryPoint = NULL; /* to  be on the safe side */
 		ABORT_FINALIZE(RS_RET_ENTRY_POINT_NOT_FOUND);
@@ -411,6 +447,18 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 			/* try load optional interfaces */
 			localRet = (*pNew->modQueryEtryPt)((uchar*)"doHUP", &pNew->doHUP);
 			if(localRet != RS_RET_OK && localRet != RS_RET_MODULE_ENTRY_POINT_NOT_FOUND)
+				ABORT_FINALIZE(localRet);
+
+			localRet = (*pNew->modQueryEtryPt)((uchar*)"beginTransaction", &pNew->mod.om.beginTransaction);
+			if(localRet == RS_RET_MODULE_ENTRY_POINT_NOT_FOUND)
+				pNew->mod.om.beginTransaction = dummyBeginTransaction;
+			else if(localRet != RS_RET_OK)
+				ABORT_FINALIZE(localRet);
+
+			localRet = (*pNew->modQueryEtryPt)((uchar*)"endTransaction", &pNew->mod.om.endTransaction);
+			if(localRet == RS_RET_MODULE_ENTRY_POINT_NOT_FOUND)
+				pNew->mod.om.beginTransaction = dummyEndTransaction;
+			else if(localRet != RS_RET_OK)
 				ABORT_FINALIZE(localRet);
 			break;
 		case eMOD_LIB:

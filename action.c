@@ -42,10 +42,14 @@
 #include "cfsysline.h"
 #include "srUtils.h"
 #include "errmsg.h"
+#include "batch.h"
+#include "wti.h"
 #include "datetime.h"
 
+#define NO_TIME_PROVIDED 0 /* indicate we do not provide any cached time */
+
 /* forward definitions */
-rsRetVal actionCallDoAction(action_t *pAction, msg_t *pMsg);
+static rsRetVal processBatchMain(action_t *pAction, batch_t *pBatch);
 
 /* object static data (once for all instances) */
 /* TODO: make this an object! DEFobjStaticHelpers -- rgerhards, 2008-03-05 */
@@ -64,6 +68,7 @@ static uchar *pszActionName;					/* short name for the action */
 /* main message queue and its configuration parameters */
 static queueType_t ActionQueType = QUEUETYPE_DIRECT;		/* type of the main message queue above */
 static int iActionQueueSize = 1000;				/* size of the main message queue above */
+static int iActionQueueDeqBatchSize = 16;			/* batch size for action queues */
 static int iActionQHighWtrMark = 800;				/* high water mark for disk-assisted queues */
 static int iActionQLowWtrMark = 200;				/* low water mark for disk-assisted queues */
 static int iActionQDiscardMark = 9800;				/* begin to discard messages */
@@ -145,6 +150,7 @@ actionResetQueueParams(void)
 
 	ActionQueType = QUEUETYPE_DIRECT;		/* type of the main message queue above */
 	iActionQueueSize = 1000;			/* size of the main message queue above */
+	iActionQueueDeqBatchSize = 16;			/* default batch size */
 	iActionQHighWtrMark = 800;			/* high water mark for disk-assisted queues */
 	iActionQLowWtrMark = 200;			/* low water mark for disk-assisted queues */
 	iActionQDiscardMark = 9800;			/* begin to discard messages */
@@ -282,7 +288,8 @@ actionConstructFinalize(action_t *pThis)
 	 * to be run on multiple threads. So far, this is forbidden by the interface
 	 * spec. -- rgerhards, 2008-01-30
 	 */
-	CHKiRet(qqueueConstruct(&pThis->pQueue, ActionQueType, 1, iActionQueueSize, (rsRetVal (*)(void*,void*))actionCallDoAction));
+	CHKiRet(qqueueConstruct(&pThis->pQueue, ActionQueType, 1, iActionQueueSize,
+					(rsRetVal (*)(void*, batch_t*))processBatchMain));
 	obj.SetName((obj_t*) pThis->pQueue, pszQName);
 
 	/* ... set some properties ... */
@@ -297,6 +304,7 @@ actionConstructFinalize(action_t *pThis)
 
 	qqueueSetpUsr(pThis->pQueue, pThis);
 	setQPROP(qqueueSetsizeOnDiskMax, "$ActionQueueMaxDiskSpace", iActionQueMaxDiskSpace);
+	setQPROP(qqueueSetiDeqBatchSize, "$ActionQueueDequeueBatchSize", iActionQueueDeqBatchSize);
 	setQPROP(qqueueSetMaxFileSize, "$ActionQueueFileSize", iActionQueMaxFileSize);
 	setQPROPstr(qqueueSetFilePrefix, "$ActionQueueFileName", pszActionQFName);
 	setQPROP(qqueueSetiPersistUpdCnt, "$ActionQueueCheckpointInterval", iActionQPersistUpdCnt);
@@ -333,18 +341,6 @@ finalize_it:
 }
 
 
-/* set an action back to active state -- rgerhards, 2007-08-02
- */
-static rsRetVal actionResume(action_t *pThis)
-{
-	DEFiRet;
-
-	ASSERT(pThis != NULL);
-	pThis->bSuspended = 0;
-
-	RETiRet;
-}
-
 
 /* set the global resume interval
  */
@@ -355,65 +351,229 @@ rsRetVal actionSetGlobalResumeInterval(int iNewVal)
 }
 
 
-/* suspend an action -- rgerhards, 2007-08-02
+/* returns the action state name in human-readable form
+ * returned string must not be modified.
+ * rgerhards, 2009-05-07
  */
-static rsRetVal actionSuspend(action_t *pThis, time_t tNow)
+static uchar *getActStateName(action_t *pThis)
+{
+	switch(pThis->eState) {
+		case ACT_STATE_RDY:
+			return (uchar*) "rdy";
+		case ACT_STATE_ITX:
+			return (uchar*) "itx";
+		case ACT_STATE_RTRY:
+			return (uchar*) "rtry";
+		case ACT_STATE_SUSP:
+			return (uchar*) "susp";
+		case ACT_STATE_DIED:
+			return (uchar*) "died";
+		case ACT_STATE_COMM:
+			return (uchar*) "comm";
+		default:
+			return (uchar*) "ERROR/UNKNWON";
+	}
+}
+
+
+/* returns a suitable return code based on action state
+ * rgerhards, 2009-05-07
+ */
+static rsRetVal getReturnCode(action_t *pThis)
 {
 	DEFiRet;
 
 	ASSERT(pThis != NULL);
-	pThis->bSuspended = 1;
-	pThis->ttResumeRtry = tNow + pThis->iResumeInterval;
-	pThis->iNbrResRtry = 0; /* tell that we did not yet retry to resume */
+	switch(pThis->eState) {
+		case ACT_STATE_RDY:
+			iRet = RS_RET_OK;
+			break;
+		case ACT_STATE_ITX:
+			if(pThis->bHadAutoCommit) {
+				pThis->bHadAutoCommit = 0; /* auto-reset */
+				iRet = RS_RET_PREVIOUS_COMMITTED;
+			} else {
+				iRet = RS_RET_DEFER_COMMIT;
+			}
+			break;
+		case ACT_STATE_RTRY:
+			iRet = RS_RET_SUSPENDED;
+			break;
+		case ACT_STATE_SUSP:
+		case ACT_STATE_DIED:
+			iRet = RS_RET_ACTION_FAILED;
+			break;
+		default:
+			DBGPRINTF("Invalid action engine state %d, program error\n",
+					(int) pThis->eState);
+			iRet = RS_RET_ERR;
+			break;
+	}
+
+	RETiRet;
+}
+
+
+/* set the action to a new state
+ * rgerhards, 2007-08-02
+ */
+static inline void actionSetState(action_t *pThis, action_state_t newState)
+{
+	pThis->eState = newState;
+	DBGPRINTF("Action %p transitioned to state: %s\n", pThis, getActStateName(pThis));
+}
+
+/* Handles the transient commit state. So far, this is
+ * mostly a dummy...
+ * rgerhards, 2007-08-02
+ */
+static void actionCommitted(action_t *pThis)
+{
+	actionSetState(pThis, ACT_STATE_RDY);
+}
+
+
+/* set action to "rtry" state.
+ * rgerhards, 2007-08-02
+ */
+static void actionRetry(action_t *pThis)
+{
+	actionSetState(pThis, ACT_STATE_RTRY);
+}
+
+
+/* Disable action, this means it will never again be usable
+ * until rsyslog is reloaded. Use only as a last resort, but
+ * depends on output module.
+ * rgerhards, 2007-08-02
+ */
+static void actionDisable(action_t *pThis)
+{
+	actionSetState(pThis, ACT_STATE_DIED);
+}
+
+
+/* Suspend action, this involves changing the acton state as well
+ * as setting the next retry time.
+ * if we have more than 10 retries, we prolong the
+ * retry interval. If something is really stalled, it will
+ * get re-tried only very, very seldom - but that saves
+ * CPU time. TODO: maybe a config option for that?
+ * rgerhards, 2007-08-02
+ */
+static inline void actionSuspend(action_t *pThis, time_t ttNow)
+{
+	if(ttNow == NO_TIME_PROVIDED)
+		time(&ttNow);
+	pThis->ttResumeRtry = ttNow + pThis->iResumeInterval * (pThis->iNbrResRtry / 10 + 1);
+	actionSetState(pThis, ACT_STATE_SUSP);
+	DBGPRINTF("earliest retry=%d\n", (int) pThis->ttResumeRtry);
+}
+
+
+/* actually do retry processing. Note that the function receives a timestamp so
+ * that we do not need to call the (expensive) time() API.
+ * Note that we do the full retry processing here, doing the configured number of
+ * iterations.
+ * rgerhards, 2009-05-07
+ */
+static rsRetVal actionDoRetry(action_t *pThis, time_t ttNow)
+{
+	int iRetries;
+	int iSleepPeriod;
+	DEFiRet;
+
+	ASSERT(pThis != NULL);
+
+	iRetries = 0;
+	while(pThis->eState == ACT_STATE_RTRY) {
+		iRet = pThis->pMod->tryResume(pThis->pModData);
+		if(iRet == RS_RET_OK) {
+			actionSetState(pThis, ACT_STATE_RDY);
+		} else if(iRet == RS_RET_SUSPENDED) {
+			/* max retries reached? */
+			if((pThis->iResumeRetryCount != -1 && iRetries >= pThis->iResumeRetryCount)) {
+				actionSuspend(pThis, ttNow);
+			} else {
+				++pThis->iNbrResRtry;
+				++iRetries;
+				iSleepPeriod = pThis->iResumeInterval;
+				ttNow += iSleepPeriod; /* not truly exact, but sufficiently... */
+				srSleep(iSleepPeriod, 0);
+			}
+		} else if(iRet == RS_RET_DISABLE_ACTION) {
+			actionDisable(pThis);
+		}
+	}
+
+	if(pThis->eState == ACT_STATE_RDY) {
+		pThis->iNbrResRtry = 0;
+	}
 
 	RETiRet;
 }
 
 
 /* try to resume an action -- rgerhards, 2007-08-02
- * returns RS_RET_OK if resumption worked, RS_RET_SUSPEND if the
- * action is still suspended.
+ * changed to new action state engine -- rgerhards, 2009-05-07
  */
 static rsRetVal actionTryResume(action_t *pThis)
 {
 	DEFiRet;
-	time_t ttNow;
+	time_t ttNow = NO_TIME_PROVIDED;
 
 	ASSERT(pThis != NULL);
 
-	/* for resume handling, we must always obtain a fresh timestamp. We used
-	 * to use the action timestamp, but in this case we will never reach a
-	 * point where a resumption is actually tried, because the action timestamp
-	 * is always in the past. So we can not avoid doing a fresh time() call
-	 * here. -- rgerhards, 2009-03-18
-	 */
-	time(&ttNow); /* cache "now" */
-
-	/* first check if it is time for a re-try */
-	if(ttNow > pThis->ttResumeRtry) {
-		iRet = pThis->pMod->tryResume(pThis->pModData);
-		if(iRet == RS_RET_SUSPENDED) {
-			/* set new tryResume time */
-			++pThis->iNbrResRtry;
-			/* if we have more than 10 retries, we prolong the
-			 * retry interval. If something is really stalled, it will
-			 * get re-tried only very, very seldom - but that saves
-			 * CPU time. TODO: maybe a config option for that?
-			 * rgerhards, 2007-08-02
-			 */
-			pThis->ttResumeRtry = ttNow + pThis->iResumeInterval * (pThis->iNbrResRtry / 10 + 1);
+	if(pThis->eState == ACT_STATE_SUSP) {
+		/* if we are suspended, we need to check if the timeout expired.
+		 * for this handling, we must always obtain a fresh timestamp. We used
+		 * to use the action timestamp, but in this case we will never reach a
+		 * point where a resumption is actually tried, because the action timestamp
+		 * is always in the past. So we can not avoid doing a fresh time() call
+		 * here. -- rgerhards, 2009-03-18
+		 */
+		time(&ttNow); /* cache "now" */
+		if(ttNow > pThis->ttResumeRtry) {
+			actionSetState(pThis, ACT_STATE_RTRY); /* back to retries */
 		}
-	} else {
-		/* it's too early, we are still suspended --> indicate this */
-		iRet = RS_RET_SUSPENDED;
 	}
 
-	if(iRet == RS_RET_OK)
-		actionResume(pThis);
+	if(pThis->eState == ACT_STATE_RTRY) {
+		if(ttNow == NO_TIME_PROVIDED) /* use cached result if we have it */
+			time(&ttNow);
+		CHKiRet(actionDoRetry(pThis, ttNow));
+	}
 
-	dbgprintf("actionTryResume: iRet: %d, next retry (if applicable): %u [now %u]\n",
-		iRet, (unsigned) pThis->ttResumeRtry, (unsigned) ttNow);
+	if(Debug && (pThis->eState == ACT_STATE_RTRY ||pThis->eState == ACT_STATE_SUSP)) {
+		dbgprintf("actionTryResume: action state: %s, next retry (if applicable): %u [now %u]\n",
+			getActStateName(pThis), (unsigned) pThis->ttResumeRtry, (unsigned) ttNow);
+	}
 
+finalize_it:
+	RETiRet;
+}
+
+
+/* prepare an action for performing work. This involves trying to recover it,
+ * depending on its current state.
+ * rgerhards, 2009-05-07
+ */
+static rsRetVal actionPrepare(action_t *pThis)
+{
+	DEFiRet;
+
+	assert(pThis != NULL);
+	CHKiRet(actionTryResume(pThis));
+
+	/* if we are now ready, we initialize the transaction and advance
+	 * action state accordingly
+	 */
+	if(pThis->eState == ACT_STATE_RDY) {
+		CHKiRet(pThis->pMod->mod.om.beginTransaction(pThis->pModData));
+		actionSetState(pThis, ACT_STATE_ITX);
+	}
+
+finalize_it:
 	RETiRet;
 }
 
@@ -430,12 +590,11 @@ rsRetVal actionDbgPrint(action_t *pThis)
 	dbgprintf("\n\tInstance data: 0x%lx\n", (unsigned long) pThis->pModData);
 	dbgprintf("\tRepeatedMsgReduction: %d\n", pThis->f_ReduceRepeated);
 	dbgprintf("\tResume Interval: %d\n", pThis->iResumeInterval);
-	dbgprintf("\tSuspended: %d", pThis->bSuspended);
-	if(pThis->bSuspended) {
-		dbgprintf(" next retry: %u, number retries: %d", (unsigned) pThis->ttResumeRtry, pThis->iNbrResRtry);
+	if(pThis->eState == ACT_STATE_SUSP) {
+		dbgprintf("\tresume next retry: %u, number retries: %d",
+			  (unsigned) pThis->ttResumeRtry, pThis->iNbrResRtry);
 	}
-	dbgprintf("\n");
-	dbgprintf("\tDisabled: %d\n", !pThis->bEnabled);
+	dbgprintf("\tState: %s\n", getActStateName(pThis));
 	dbgprintf("\tExec only when previous is suspended: %d\n", pThis->bExecWhenPrevSusp);
 	dbgprintf("\n");
 
@@ -443,32 +602,15 @@ rsRetVal actionDbgPrint(action_t *pThis)
 }
 
 
-/* call the DoAction output plugin entry point
- * rgerhards, 2008-01-28
+/* prepare the calling parameters for doAction()
+ * rgerhards, 2009-05-07
  */
-#pragma GCC diagnostic ignored "-Wempty-body"
-rsRetVal
-actionCallDoAction(action_t *pAction, msg_t *pMsg)
+static rsRetVal prepareDoActionParams(action_t *pAction, msg_t *pMsg)
 {
-	DEFiRet;
-	int iRetries;
 	int i;
-	int iArr;
-	int iSleepPeriod;
-	int bCallAction;
-	int iCancelStateSave;
+	DEFiRet;
 
 	ASSERT(pAction != NULL);
-
-	/* We now must guard the output module against execution by multiple threads. The
-	 * plugin interface specifies that output modules must not be thread-safe (except
-	 * if they notify us they are - functionality not yet implemented...).
-	 * rgerhards, 2008-01-30
-	 */
-	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
-	d_pthread_mutex_lock(&pAction->mutActExec);
-	pthread_cleanup_push(mutexCancelCleanup, &pAction->mutActExec);
-	pthread_setcancelstate(iCancelStateSave, NULL);
 
 	/* here we must loop to process all requested strings */
 	for(i = 0 ; i < pAction->iNumTpls ; ++i) {
@@ -483,47 +625,21 @@ actionCallDoAction(action_t *pAction, msg_t *pMsg)
 		}
 	}
 
-	iRetries = 0;
-	do {
-		/* on first invocation, this if should never be true. We just put it at the top
-		 * of the loop so that processing (and code) is simplified. This code is actually
-		 * triggered on the 2nd+ invocation. -- rgerhards, 2008-01-30
-		 */
-		if(iRet == RS_RET_SUSPENDED) {
-			/* ok, this calls for our retry logic... */
-			++iRetries;
-			iSleepPeriod = pAction->iResumeInterval;
-			srSleep(iSleepPeriod, 0);
-		}
-		/* first check if we are suspended and, if so, retry */
-		if(actionIsSuspended(pAction)) {
-			iRet = actionTryResume(pAction);
-			if(iRet == RS_RET_OK)
-				bCallAction = 1;
-			else
-				bCallAction = 0;
-		} else {
-			bCallAction = 1;
-		}
-
-		if(bCallAction) {
-			/* call configured action */
-			iRet = pAction->pMod->mod.om.doAction(pAction->ppMsgs, pMsg->msgFlags, pAction->pModData);
-			if(iRet == RS_RET_SUSPENDED) {
-				dbgprintf("Action requested to be suspended, done that.\n");
-				actionSuspend(pAction, getActNow(pAction));
-			}
-		}
-
-	} while(iRet == RS_RET_SUSPENDED && (pAction->iResumeRetryCount == -1 || iRetries < pAction->iResumeRetryCount)); /* do...while! */
-
-	if(iRet == RS_RET_DISABLE_ACTION) {
-		dbgprintf("Action requested to be disabled, done that.\n");
-		pAction->bEnabled = 0; /* that's it... */
-	}
-
 finalize_it:
-	/* cleanup */
+	RETiRet;
+}
+
+
+/* cleanup doAction calling parameters
+ * rgerhards, 2009-05-07
+ */
+static rsRetVal cleanupDoActionParams(action_t *pAction)
+{
+	int i;
+	int iArr;
+	DEFiRet;
+
+	ASSERT(pAction != NULL);
 	for(i = 0 ; i < pAction->iNumTpls ; ++i) {
 		if(pAction->ppMsgs[i] != NULL) {
 			switch(pAction->eParamPassing) {
@@ -544,9 +660,306 @@ finalize_it:
 		}
 	}
 
+	RETiRet;
+}
+
+
+/* call the DoAction output plugin entry point
+ * Performance note: we build the action parameters here in this function. That
+ * means we do it while we hold the action look, potentially reducing concurrency
+ * (especially if the action queue is run in DIRECT mode). As an alternative, we
+ * may generate all params for the batch as whole before aquiring the action. However,
+ * that requires more memory, for large batches potentially a lot of memory. So for the
+ * time being, I am doing it here - the performance hit should be very minor and may even
+ * not be a hit because we may gain CPU cache locality gains with the "fewer memory"
+ * approach (I'd say that is rater likely).
+ * rgerhards, 2008-01-28
+ */
+rsRetVal
+actionCallDoAction(action_t *pThis, msg_t *pMsg)
+{
+	DEFiRet;
+
+	ASSERT(pThis != NULL);
+	ISOBJ_TYPE_assert(pMsg, msg);
+
+	DBGPRINTF("entering actionCalldoAction(), state: %s\n", getActStateName(pThis));
+	CHKiRet(prepareDoActionParams(pThis, pMsg));
+
+	pThis->bHadAutoCommit = 0;
+	iRet = pThis->pMod->mod.om.doAction(pThis->ppMsgs, pMsg->msgFlags, pThis->pModData);
+	switch(iRet) {
+		case RS_RET_OK:
+			actionCommitted(pThis);
+			break;
+		case RS_RET_DEFER_COMMIT:
+			/* we are done, action state remains the same */
+			break;
+		case RS_RET_PREVIOUS_COMMITTED:
+			/* action state remains the same, but we had a commit. */
+			pThis->bHadAutoCommit = 1;
+			break;
+		case RS_RET_SUSPENDED:
+			actionRetry(pThis);
+			break;
+		case RS_RET_DISABLE_ACTION:
+			actionDisable(pThis);
+			break;
+		default:/* permanent failure of this message - no sense in retrying. This is
+			 * not yet handled (but easy TODO)
+			 */
+			FINALIZE;
+	}
+	iRet = getReturnCode(pThis);
+
+finalize_it:
+	cleanupDoActionParams(pThis); /* iRet ignored! */
+
+	RETiRet;
+}
+
+
+/* process a message
+ * this readies the action and then calls doAction()
+ * rgerhards, 2008-01-28
+ */
+rsRetVal
+actionProcessMessage(action_t *pThis, msg_t *pMsg)
+{
+	DEFiRet;
+
+	ASSERT(pThis != NULL);
+	ISOBJ_TYPE_assert(pMsg, msg);
+
+RUNLOG_STR("inside actionProcessMsg()");
+	CHKiRet(actionPrepare(pThis));
+	if(pThis->eState == ACT_STATE_ITX)
+		CHKiRet(actionCallDoAction(pThis, pMsg));
+
+	iRet = getReturnCode(pThis);
+finalize_it:
+	RETiRet;
+}
+
+
+/* finish processing a batch. Most importantly, that means we commit if we 
+ * need to do so.
+ * rgerhards, 2008-01-28
+ */
+static rsRetVal
+finishBatch(action_t *pThis)
+{
+	DEFiRet;
+
+	ASSERT(pThis != NULL);
+
+	if(pThis->eState == ACT_STATE_RDY)
+		FINALIZE; /* nothing to do */
+
+	CHKiRet(actionPrepare(pThis));
+	if(pThis->eState == ACT_STATE_ITX) {
+		iRet = pThis->pMod->mod.om.endTransaction(pThis->pModData);
+		switch(iRet) {
+			case RS_RET_OK:
+				actionCommitted(pThis);
+				break;
+			case RS_RET_SUSPENDED:
+				actionRetry(pThis);
+				break;
+			case RS_RET_DISABLE_ACTION:
+				actionDisable(pThis);
+				break;
+			case RS_RET_DEFER_COMMIT:
+				DBGPRINTF("output plugin error: endTransaction() returns RS_RET_DEFER_COMMIT "
+					  "- ignored\n");
+				actionCommitted(pThis);
+				break;
+			case RS_RET_PREVIOUS_COMMITTED:
+				DBGPRINTF("output plugin error: endTransaction() returns RS_RET_PREVIOUS_COMMITTED "
+					  "- ignored\n");
+				actionCommitted(pThis);
+				break;
+			default:/* permanent failure of this message - no sense in retrying. This is
+				 * not yet handled (but easy TODO)
+				 */
+				FINALIZE;
+		}
+	}
+	iRet = getReturnCode(pThis);
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* try to submit a partial batch of elements.
+ * rgerhards, 2009-05-12
+ */
+static rsRetVal
+tryDoAction(action_t *pAction, batch_t *pBatch, int *pnElem)
+{
+	int i;
+	int iElemProcessed;
+	int iCommittedUpTo;
+	msg_t *pMsg;
+	rsRetVal localRet;
+	DEFiRet;
+
+	assert(pBatch != NULL);
+	assert(pnElem != NULL);
+
+	i = pBatch->iDoneUpTo;	/* all messages below that index are processed */
+	iElemProcessed = 0;
+	iCommittedUpTo = i;
+	while(iElemProcessed <= *pnElem && i < pBatch->nElem) {
+		pMsg = (msg_t*) pBatch->pElem[i].pUsrp;
+	dbgprintf("submitBatch: i:%d, batch size %d, to process %d, pMsg: %p\n", i, pBatch->nElem, *pnElem, pMsg);//remove later!
+		localRet = actionProcessMessage(pAction, pMsg);
+		dbgprintf("action call returned %d\n", localRet);
+		if(localRet == RS_RET_OK) {
+			/* mark messages as committed */
+			while(iCommittedUpTo < i) {
+				pBatch->pElem[iCommittedUpTo++].state = BATCH_STATE_COMM;
+			}
+		} else if(localRet == RS_RET_PREVIOUS_COMMITTED) {
+			/* mark messages as committed */
+			while(iCommittedUpTo < i - 1) {
+				pBatch->pElem[iCommittedUpTo++].state = BATCH_STATE_COMM;
+			}
+			pBatch->pElem[i].state = BATCH_STATE_SUB;
+		} else if(localRet == RS_RET_PREVIOUS_COMMITTED) {
+			pBatch->pElem[i].state = BATCH_STATE_SUB;
+		} else {
+			iRet = localRet;
+			FINALIZE;
+		}
+		++i;
+		++iElemProcessed;
+	}
+
+finalize_it:
+	if(pBatch->iDoneUpTo != iCommittedUpTo) {
+		*pnElem += iCommittedUpTo - pBatch->iDoneUpTo;
+		pBatch->iDoneUpTo = iCommittedUpTo;
+	}
+	RETiRet;
+}
+
+
+/* submit a batch for actual action processing.
+ * The first nElem elements are processed. This function calls itself
+ * recursively if it needs to handle errors.
+ * rgerhards, 2009-05-12
+ */
+static rsRetVal
+submitBatch(action_t *pAction, batch_t *pBatch, int nElem)
+{
+	int i;
+	int bDone;
+	rsRetVal localRet;
+	DEFiRet;
+
+	assert(pBatch != NULL);
+
+	bDone = 0;
+	do {
+		localRet = tryDoAction(pAction, pBatch, &nElem);
+		if(   localRet == RS_RET_OK
+		   || localRet == RS_RET_PREVIOUS_COMMITTED
+		   || localRet == RS_RET_DEFER_COMMIT) {
+			/* try commit transaction, once done, we can simply do so as if
+			 * that return state was returned from tryDoAction().
+			 */
+			localRet = finishBatch(pAction);
+		}
+
+		if(   localRet == RS_RET_OK
+		   || localRet == RS_RET_PREVIOUS_COMMITTED
+		   || localRet == RS_RET_DEFER_COMMIT) {
+			bDone = 1;
+		} else if(localRet == RS_RET_SUSPENDED) {
+			; /* do nothing, this will retry the full batch */
+		} else if(localRet == RS_RET_ACTION_FAILED) {
+			/* in this case, the whole batch can not be processed */
+			for(i = 0 ; i < nElem ; ++i) {
+				pBatch->pElem[++pBatch->iDoneUpTo].state = BATCH_STATE_BAD;
+			}
+			bDone = 1;
+		} else {
+			if(nElem == 1) {
+				pBatch->pElem[++pBatch->iDoneUpTo].state = BATCH_STATE_BAD;
+				bDone = 1;
+			} else {
+				/* retry with half as much. Depth is log_2 batchsize, so recursion is not too deep */
+				submitBatch(pAction, pBatch, nElem / 2);
+				submitBatch(pAction, pBatch, nElem - (nElem / 2));
+				bDone = 1;
+			}
+		}
+	} while(!bDone); /* do .. while()! */
+
+	RETiRet;
+}
+
+
+/* receive a batch and process it. This includes retry handling.
+ * rgerhards, 2009-05-12
+ */
+static rsRetVal
+processAction(action_t *pAction, batch_t *pBatch)
+{
+	int i;
+	msg_t *pMsg;
+	rsRetVal localRet;
+	DEFiRet;
+
+	assert(pBatch != NULL);
+
+	pBatch->iDoneUpTo = 0;
+	/* TODO: think about action batches, must be handled at upper layer!
+	 * MULTIQUEUE
+	 */
+	localRet = submitBatch(pAction, pBatch, pBatch->nElem);
+	CHKiRet(localRet);
+
+	/* this must be moved away - up into the dequeue part of the queue, I guess, but that's for another day */
+	for(i = 0 ; i < pBatch->nElem ; i++) {
+		pMsg = (msg_t*) pBatch->pElem[i].pUsrp;
+	}
+	iRet = finishBatch(pAction);
+
+finalize_it:
+	RETiRet;
+}
+
+
+#pragma GCC diagnostic ignored "-Wempty-body"
+/* receive an array of to-process user pointers and submit them
+ * for processing.
+ * rgerhards, 2009-04-22
+ */
+static rsRetVal
+processBatchMain(action_t *pAction, batch_t *pBatch)
+{
+	int iCancelStateSave;
+	DEFiRet;
+
+	assert(pBatch != NULL);
+
+	/* We now must guard the output module against execution by multiple threads. The
+	 * plugin interface specifies that output modules must not be thread-safe (except
+	 * if they notify us they are - functionality not yet implemented...).
+	 * rgerhards, 2008-01-30
+	 */
+	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
+	d_pthread_mutex_lock(&pAction->mutActExec);
+	pthread_cleanup_push(mutexCancelCleanup, &pAction->mutActExec);
+	pthread_setcancelstate(iCancelStateSave, NULL);
+
+	iRet = processAction(pAction, pBatch);
+
 	pthread_cleanup_pop(1); /* unlock mutex */
 
-	msgDestruct(&pMsg); /* we are now finished with the message */
 	RETiRet;
 }
 #pragma GCC diagnostic warning "-Wempty-body"
@@ -756,19 +1169,6 @@ static rsRetVal
 doActionCallAction(action_t *pAction, msg_t *pMsg)
 {
 	DEFiRet;
-	/* first, we need to check if this is a disabled
-	 * entry. If so, we must not further process it.
-	 * rgerhards 2005-09-26
-	 * In the future, disabled modules may be re-probed from time
-	 * to time. They are in a perfectly legal state, except that the
-	 * doAction method indicated that it wanted to be disabled - but
-	 * we do not consider this is a solution for eternity... So we
-	 * should check from time to time if affairs have improved.
-	 * rgerhards, 2007-07-24
-	 */
-	if(pAction->bEnabled == 0) {
-		ABORT_FINALIZE(RS_RET_OK);
-	}
 
 	pAction->tActNow = -1; /* we do not yet know our current time (clear prev. value) */
 
@@ -819,6 +1219,7 @@ finalize_it:
 	RETiRet;
 }
 
+
 /* call the configured action. Does all necessary housekeeping.
  * rgerhards, 2007-08-01
  * FYI: currently, this function is only called from the queue
@@ -836,15 +1237,22 @@ actionCallAction(action_t *pAction, msg_t *pMsg)
 	ISOBJ_TYPE_assert(pMsg, msg);
 	ASSERT(pAction != NULL);
 
-	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
-	LockObj(pAction);
-	pthread_cleanup_push(mutexCancelCleanup, pAction->Sync_mut);
-	pthread_setcancelstate(iCancelStateSave, NULL);
-	iRet = doActionCallAction(pAction, pMsg);
-	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
-	UnlockObj(pAction);
-	pthread_cleanup_pop(0); /* remove mutex cleanup handler */
-	pthread_setcancelstate(iCancelStateSave, NULL);
+	/* We need to lock the mutex only for repeated line processing. 
+	 * rgerhards, 2009-06-19
+	 */
+	//if(pAction->f_ReduceRepeated == 1) {
+		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
+		LockObj(pAction);
+		pthread_cleanup_push(mutexCancelCleanup, pAction->Sync_mut);
+		pthread_setcancelstate(iCancelStateSave, NULL);
+		iRet = doActionCallAction(pAction, pMsg);
+		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
+		UnlockObj(pAction);
+		pthread_cleanup_pop(0); /* remove mutex cleanup handler */
+		pthread_setcancelstate(iCancelStateSave, NULL);
+	//} else {
+		//iRet = doActionCallAction(pAction, pMsg);
+	//}
 
 	RETiRet;
 }
@@ -862,6 +1270,7 @@ actionAddCfSysLineHdrl(void)
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionname", 0, eCmdHdlrGetWord, NULL, &pszActionName, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuefilename", 0, eCmdHdlrGetWord, NULL, &pszActionQFName, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuesize", 0, eCmdHdlrInt, NULL, &iActionQueueSize, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuedequeuebatchsize", 0, eCmdHdlrInt, NULL, &iActionQueueDeqBatchSize, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuemaxdiskspace", 0, eCmdHdlrSize, NULL, &iActionQueMaxDiskSpace, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuehighwatermark", 0, eCmdHdlrInt, NULL, &iActionQHighWtrMark, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuelowwatermark", 0, eCmdHdlrInt, NULL, &iActionQLowWtrMark, NULL));
@@ -979,7 +1388,7 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStringReques
 		dbgprintf("module is incompatible with RepeatedMsgReduction - turned off\n");
 		pAction->f_ReduceRepeated = 0;
 	}
-	pAction->bEnabled = 1; /* action is enabled */
+	pAction->eState = ACT_STATE_RDY; /* action is enabled */
 
 	if(bSuspended)
 		actionSuspend(pAction, time(NULL)); /* "good" time call, only during init and unavoidable */

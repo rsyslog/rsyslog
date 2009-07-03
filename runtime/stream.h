@@ -152,6 +152,7 @@ BEGINinterface(strm) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Serialize)(strm_t *pThis, strm_t *pStrm);
 	rsRetVal (*GetCurrOffset)(strm_t *pThis, int64 *pOffs);
 	rsRetVal (*SetWCntr)(strm_t *pThis, number_t *pWCnt);
+	rsRetVal (*Dup)(strm_t *pThis, strm_t **ppNew);
 	INTERFACEpropSetMeth(strm, bDeleteOnClose, int);
 	INTERFACEpropSetMeth(strm, iMaxFileSize, int);
 	INTERFACEpropSetMeth(strm, iMaxFiles, int);
@@ -166,7 +167,7 @@ BEGINinterface(strm) /* name must also be changed in ENDinterface macro! */
 	INTERFACEpropSetMeth(strm, iFlushInterval, int);
 	INTERFACEpropSetMeth(strm, pszSizeLimitCmd, uchar*);
 ENDinterface(strm)
-#define strmCURR_IF_VERSION 2 /* increment whenever you change the interface structure! */
+#define strmCURR_IF_VERSION 5 /* increment whenever you change the interface structure! */
 
 
 /* prototypes */

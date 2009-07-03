@@ -2,8 +2,12 @@ if ENABLE_TESTBENCH
 TESTRUNS = rt_init rscript
 check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq
 TESTS = $(TESTRUNS) cfg.sh \
+	arrayqueue.sh \
+	linkedlistqueue.sh \
+	da-mainmsg-q.sh \
 	validation-run.sh \
 	imtcp-multiport.sh \
+	daqueue-persist.sh \
 	diskqueue.sh \
 	diskqueue-fsync.sh \
 	manytcp.sh \
@@ -91,6 +95,12 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   fieldtest.sh \
 	   diskqueue.sh \
 	   testsuites/diskqueue.conf \
+	   arrayqueue.sh \
+	   testsuites/arrayqueue.conf \
+	   linkedlistqueue.sh \
+	   testsuites/linkedlistqueue.conf \
+	   da-mainmsg-q.sh \
+	   testsuites/da-mainmsg-q.conf \
 	   diskqueue-fsync.sh \
 	   testsuites/diskqueue-fsync.conf \
 	   imtcp-multiport.sh \
@@ -105,6 +115,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   omod-if-array.sh \
 	   diag.sh \
 	   testsuites/diag-common.conf \
+           daqueue-persist.sh \
+	   daqueue-persist-drvr.sh \
 	   queue-persist.sh \
 	   queue-persist-drvr.sh \
 	   testsuites/queue-persist.conf \

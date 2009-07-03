@@ -116,11 +116,13 @@ rsRetVal getFileSize(uchar *pszName, off_t *pSize);
 	if(bMustLock == LOCK_MUTEX) { \
 		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave); \
 		d_pthread_mutex_lock(mut); \
+		assert(bLockedOpIsLocked == 0); \
 		bLockedOpIsLocked = 1; \
 	}
 #define END_MTX_PROTECTED_OPERATIONS(mut) \
 	if(bLockedOpIsLocked) { \
 		d_pthread_mutex_unlock(mut); \
+		bLockedOpIsLocked = 0; \
 		pthread_setcancelstate(iCancelStateSave, NULL); \
 	}
 

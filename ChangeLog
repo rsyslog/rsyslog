@@ -1,4 +1,48 @@
 ---------------------------------------------------------------------------
+Version 5.1.1  [DEVEL] (rgerhards), 2009-06-??
+- bugfix: huge memory leak in queue engine (made rsyslogd unusable in
+  production). Occured if at least one queue was in direct mode 
+  (the default for action queues)
+- imported many performance optimizations from v4-devel (4.5.0)
+- bugfix: subtle (and usually irrelevant) issue in timout processing
+  timeout could be one second too early if nanoseconds wrapped
+- set a more sensible timeout for shutdow, now 1.5 seconds to complete
+  processing (this also removes those cases where the shutdown message
+  was not written because the termination happened before it)
+---------------------------------------------------------------------------
+Version 5.1.0  [DEVEL] (rgerhards), 2009-05-29
+
+*********************************** NOTE **********************************
+The v5 versions of rsyslog feature a greatly redesigned queue engine. The
+major theme for the v5 release is twofold:
+
+a) greatly improved performance
+b) enable audit-grade processing
+
+Here, audit-grade processing means that rsyslog, if used together with
+audit-grade transports and configured correctly, will never lose messages
+that already have been acknowledged, not even in fatal failure cases like
+sudden loss of power.
+
+Note that large parts of rsyslog's important core components have been
+restructured to support these design goals. As such, early versions of
+the engine will probably be less stable than the v3/v4 engine.
+
+Also note that the initial versions do not cover all and everything. As
+usual, the code will evolve toward the final goal as version numbers
+increase.
+*********************************** NOTE **********************************
+
+- redesigned queue engine so that it supports ultra-reliable operations
+  This resulted in a rewrite of large parts. The new capability can be
+  used to build audit-grade systems on the basis of rsyslog.
+- added $MainMsgQueueDequeueBatchSize and $ActionQueueDequeueBatchSize 
+  configuration directives
+- implemented a new transactional output module interface which provides
+  superior performance (for databases potentially far superior performance)
+- increased ompgsql performance by adapting to new transactional
+  output module interface
+---------------------------------------------------------------------------
 Version 4.5.1  [DEVEL] (rgerhards), 2009-07-??
 - added $klogConsoleLogLevel directive which permits to set a new
   console log level while rsyslog is active
