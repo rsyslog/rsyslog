@@ -76,6 +76,10 @@ enum _EHostnameCmpMode {
 };
 typedef enum _EHostnameCmpMode EHostnameCmpMode;
 
+/* time type numerical values for structure below */
+#define TIME_TYPE_UNINIT	0
+#define TIME_TYPE_RFC3164	1
+#define TIME_TYPE_RFC5424	2
 /* rgerhards 2004-11-11: the following structure represents
  * a time as it is used in syslog.
  * rgerhards, 2009-06-23: packed structure for better cache performance

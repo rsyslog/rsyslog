@@ -35,6 +35,9 @@ Version 4.5.0  [DEVEL] (rgerhards), 2009-07-02
   was actually destructed. This most likely had no effect to existing code,
   but it may also have caused trouble in remote cases. Similarly, the fix
   may also cause trouble...
+- bugfix: missing initialization during timestamp creation
+  This could lead to timestamps written in the wrong format, but not to
+  an abort
 ---------------------------------------------------------------------------
 Version 4.3.3  [beta] (rgerhards), 2009-0?-??
 - internal bugfix: object pointer was only reset to NULL when an object

@@ -123,6 +123,7 @@ static void getCurrTime(struct syslogTime *t, time_t *ttSeconds)
 		t->OffsetMode = '+';
 	t->OffsetHour = lBias / 3600;
 	t->OffsetMinute = lBias % 3600;
+	t->timeType = TIME_TYPE_RFC5424; /* we have a high precision timestamp */
 }
 
 
