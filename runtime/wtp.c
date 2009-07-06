@@ -53,6 +53,7 @@
 #include "wtp.h"
 #include "wti.h"
 #include "obj.h"
+#include "unicode-helper.h"
 #include "glbl.h"
 
 /* static data */
@@ -438,7 +439,7 @@ wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in 
 
 	/* set thread name - we ignore if the call fails, has no harsh consequences... */
 	pszDbgHdr = wtpGetDbgHdr(pThis);
-	strncpy(thrdName+3, pszDbgHdr, 20);
+	ustrncpy(thrdName+3, pszDbgHdr, 20);
 	if(prctl(PR_SET_NAME, thrdName, 0, 0, 0) != 0) {
 		DBGPRINTF("prctl failed, not setting thread name for '%s'\n", wtpGetDbgHdr(pThis));
 	}

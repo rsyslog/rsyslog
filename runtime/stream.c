@@ -123,10 +123,11 @@ resolveFileSizeLimit(strm_t *pThis, uchar *pszCurrFName)
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		if(iRet == RS_RET_SIZELIMITCMD_DIDNT_RESOLVE)
-			dbgprintf("file size limit cmd for file '%s' did no resolve situation\n", pszCurrFName);
-		else
-			dbgprintf("file size limit cmd for file '%s' failed with code %d.\n", pszCurrFName, iRet);
+		if(iRet == RS_RET_SIZELIMITCMD_DIDNT_RESOLVE) {
+			DBGPRINTF("file size limit cmd for file '%s' did no resolve situation\n", pszCurrFName);
+		} else {
+			DBGPRINTF("file size limit cmd for file '%s' failed with code %d.\n", pszCurrFName, iRet);
+		}
 		pThis->bDisabled = 1;
 	}
 
@@ -585,12 +586,12 @@ static rsRetVal strmConstructFinalize(strm_t *pThis)
 		}
 	}
 
-dbgprintf("TTT: before checks: iFlushInterval %d, bAsyncWrite %d\n", pThis->iFlushInterval, pThis->bAsyncWrite);
+DBGPRINTF("TTT: before checks: iFlushInterval %d, bAsyncWrite %d\n", pThis->iFlushInterval, pThis->bAsyncWrite);
 	/* if we have a flush interval, we need to do async writes in any case */
 	if(pThis->iFlushInterval != 0) {
 		pThis->bAsyncWrite = 1;
 	}
-dbgprintf("TTT: after checks: iFlushInterval %d, bAsyncWrite %d\n", pThis->iFlushInterval, pThis->bAsyncWrite);
+DBGPRINTF("TTT: after checks: iFlushInterval %d, bAsyncWrite %d\n", pThis->iFlushInterval, pThis->bAsyncWrite);
 
 	/* if we work asynchronously, we need a couple of synchronization objects */
 	if(pThis->bAsyncWrite) {
@@ -604,9 +605,8 @@ dbgprintf("TTT: after checks: iFlushInterval %d, bAsyncWrite %d\n", pThis->iFlus
 		}
 		//pThis->pIOBuf = pThis->ioBuf[0];
 		pThis->bStopWriter = 0;
-		// TODO: detached thread?
 		if(pthread_create(&pThis->writerThreadID, NULL, asyncWriterThread, pThis) != 0)
-			dbgprintf("ERROR: stream %p cold not create writer thread\n", pThis);
+			DBGPRINTF("ERROR: stream %p cold not create writer thread\n", pThis);
 		// TODO: remove that below later!
 		CHKmalloc(pThis->pIOBuf = (uchar*) malloc(sizeof(uchar) * pThis->sIOBufSize));
 	} else {
@@ -789,11 +789,11 @@ asyncWriterThread(void *pPtr)
 	}
 
 fprintf(stderr, "async stream writer thread started\n");fflush(stderr);
-dbgprintf("TTT: writer thread startup\n");
+DBGPRINTF("TTT: writer thread startup\n");
 	while(1) { /* loop broken inside */
 		d_pthread_mutex_lock(&pThis->mut);
 		while(pThis->iCnt == 0) {
-dbgprintf("TTT: writer thread empty queue, stopWriter=%d\n", pThis->bStopWriter);
+DBGPRINTF("TTT: writer thread empty queue, stopWriter=%d\n", pThis->bStopWriter);
 			if(pThis->bStopWriter) {
 				pthread_cond_signal(&pThis->isEmpty);
 				d_pthread_mutex_unlock(&pThis->mut);
@@ -815,7 +815,7 @@ dbgprintf("TTT: writer thread empty queue, stopWriter=%d\n", pThis->bStopWriter)
 	}
 
 finalize_it:
-dbgprintf("TTT: writer thread shutdown\n");
+DBGPRINTF("TTT: writer thread shutdown\n");
 	ENDfunc
 	return NULL; /* to keep pthreads happy */
 }
@@ -957,7 +957,7 @@ doZipWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf)
 	/* see note in file header for the params we use with deflateInit2() */
 	zRet = zlibw.DeflateInit2(&zstrm, pThis->iZipLevel, Z_DEFLATED, 31, 9, Z_DEFAULT_STRATEGY);
 	if(zRet != Z_OK) {
-		dbgprintf("error %d returned from zlib/deflateInit2()\n", zRet);
+		DBGPRINTF("error %d returned from zlib/deflateInit2()\n", zRet);
 		ABORT_FINALIZE(RS_RET_ZLIB_ERR);
 	}
 
@@ -967,11 +967,11 @@ doZipWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf)
 	/* run deflate() on input until output buffer not full, finish
 	   compression if all of source has been read in */
 	do {
-		dbgprintf("in deflate() loop, avail_in %d, total_in %ld\n", zstrm.avail_in, zstrm.total_in);
+		DBGPRINTF("in deflate() loop, avail_in %d, total_in %ld\n", zstrm.avail_in, zstrm.total_in);
 		zstrm.avail_out = pThis->sIOBufSize;
 		zstrm.next_out = pThis->pZipBuf;
 		zRet = zlibw.Deflate(&zstrm, Z_FINISH);    /* no bad return value */
-		dbgprintf("after deflate, ret %d, avail_out %d\n", zRet, zstrm.avail_out);
+		DBGPRINTF("after deflate, ret %d, avail_out %d\n", zRet, zstrm.avail_out);
 		assert(zRet != Z_STREAM_ERROR);  /* state not clobbered */
 		CHKiRet(strmPhysWrite(pThis, (uchar*)pThis->pZipBuf, pThis->sIOBufSize - zstrm.avail_out));
 	} while (zstrm.avail_out == 0);
@@ -980,7 +980,7 @@ doZipWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf)
 
 	zRet = zlibw.DeflateEnd(&zstrm);
 	if(zRet != Z_OK) {
-		dbgprintf("error %d returned from zlib/deflateEnd()\n", zRet);
+		DBGPRINTF("error %d returned from zlib/deflateEnd()\n", zRet);
 		ABORT_FINALIZE(RS_RET_ZLIB_ERR);
 	}
 
@@ -1122,7 +1122,7 @@ strmWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf)
 	ASSERT(pThis != NULL);
 	ASSERT(pBuf != NULL);
 
-dbgprintf("strmWrite(%p, '%65.65s', %ld);, disabled %d, sizelim %ld, size %lld\n", pThis, pBuf,lenBuf, pThis->bDisabled, pThis->iSizeLimit, pThis->iCurrOffs);
+DBGPRINTF("strmWrite(%p, '%65.65s', %ld);, disabled %d, sizelim %ld, size %lld\n", pThis, pBuf,lenBuf, pThis->bDisabled, pThis->iSizeLimit, pThis->iCurrOffs);
 	if(pThis->bDisabled)
 		ABORT_FINALIZE(RS_RET_STREAM_DISABLED);
 
