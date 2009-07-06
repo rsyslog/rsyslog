@@ -1452,11 +1452,11 @@ qqueueDequeueConsumable(qqueue_t *pThis, wti_t *pWti, int iCancelStateSave)
 	 * we have someone waiting for the condition (or only when we hit the watermark right
 	 * on the nail [exact value]) -- rgerhards, 2008-03-14
 	 */
-	if(iQueueSize < pThis->iFullDlyMrk) {
+	if(iQueueSize < pThis->iFullDlyMrk / 2) {
 		pthread_cond_broadcast(&pThis->belowFullDlyWtrMrk);
 	}
 
-	if(iQueueSize < pThis->iLightDlyMrk) {
+	if(iQueueSize < pThis->iLightDlyMrk / 2) {
 		pthread_cond_broadcast(&pThis->belowLightDlyWtrMrk);
 	}
 

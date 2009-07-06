@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 4.5.1  [DEVEL] (rgerhards), 2009-07-??
+- performance enhancement: much faster, up to twice as fast (depending
+  on configuration)
 - bugfix: abort condition when RecvFrom was not set and message reduction
   was on. Happend e.g. with imuxsock.
 - added $klogConsoleLogLevel directive which permits to set a new
