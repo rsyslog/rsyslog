@@ -864,12 +864,18 @@ msg_t* MsgDup(msg_t* pOld)
 	pNew->iProtocolVersion = pOld->iProtocolVersion;
 	pNew->ttGenTime = pOld->ttGenTime;
 	pNew->offMSG = pOld->offMSG;
-	pNew->pRcvFrom = pOld->pRcvFrom;
-	prop.AddRef(pNew->pRcvFrom);
-	pNew->pRcvFromIP = pOld->pRcvFromIP;
-	prop.AddRef(pNew->pRcvFromIP);
-	pNew->pInputName = pOld->pInputName;
-	prop.AddRef(pNew->pInputName);
+	if(pOld->pRcvFrom != NULL) {
+		pNew->pRcvFrom = pOld->pRcvFrom;
+		prop.AddRef(pNew->pRcvFrom);
+	}
+	if(pOld->pRcvFromIP != NULL) {
+		pNew->pRcvFromIP = pOld->pRcvFromIP;
+		prop.AddRef(pNew->pRcvFromIP); /* XXX */
+	}
+	if(pOld->pInputName != NULL) {
+		pNew->pInputName = pOld->pInputName;
+		prop.AddRef(pNew->pInputName);
+	}
 	/* enable this, if someone actually uses UxTradMsg, delete after some time has
 	 * passed and nobody complained -- rgerhards, 2009-06-16
 	pNew->offAfterPRI = pOld->offAfterPRI;
