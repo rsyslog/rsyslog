@@ -9,7 +9,7 @@
 echo TEST: threadingmq.sh - main queue concurrency
 source $srcdir/diag.sh init
 source $srcdir/diag.sh startup threadingmq.conf
-source $srcdir/diag.sh tcpflood 127.0.0.1 13514 2 100000
+source $srcdir/diag.sh tcpflood 127.0.0.1 13514 2 10000000
 source $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-source $srcdir/diag.sh seq-check 0 99999
+source $srcdir/diag.sh seq-check 0 9999999
 source $srcdir/diag.sh exit

@@ -87,6 +87,7 @@ typedef enum {				/* when extending, do NOT change existing modes! */
 	STREAMMODE_WRITE_APPEND = 4
 } strmMode_t;
 
+#define STREAM_ASYNC_NUMBUFS 2 /* must be a power of 2 -- TODO: make configurable */
 /* The strm_t data structure */
 typedef struct strm_s {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
@@ -112,7 +113,7 @@ typedef struct strm_s {
 	int fd;		/* the file descriptor, -1 if closed */
 	int fdDir;	/* the directory's descriptor, in case bSync is requested (-1 if closed) */
 	uchar *pszCurrFName; /* name of current file (if open) */
-	uchar *pIOBuf;	/* io Buffer */
+	uchar *pIOBuf;	/* the iobuffer currently in use to gather data */
 	size_t iBufPtrMax;	/* current max Ptr in Buffer (if partial read!) */
 	size_t iBufPtr;	/* pointer into current buffer */
 	int iUngetC;	/* char set via UngetChar() call or -1 if none set */
@@ -120,15 +121,29 @@ typedef struct strm_s {
 	int iZipLevel;	/* zip level (0..9). If 0, zip is completely disabled */
 	Bytef *pZipBuf;
 	/* support for async flush procesing */
+	bool bAsyncWrite;	/* do asynchronous writes (always if a flush interval is given) */
+	bool bStopWriter;	/* shall writer thread terminate? */
 	int iFlushInterval; /* flush in which interval - 0, no flushing */
 	apc_id_t apcID;    /* id of current Apc request (used for cancelling) */
 	pthread_mutex_t mut;/* mutex for flush in async mode */
+	pthread_cond_t notFull;
+	pthread_cond_t notEmpty;
+	pthread_cond_t isEmpty;
+	short iEnq;
+	short iDeq;
+	short iCnt;	/* current nbr of elements in buffer */
+	struct {
+		uchar *pBuf;
+		size_t lenBuf;
+	} asyncBuf[STREAM_ASYNC_NUMBUFS];
+	pthread_t writerThreadID;
 	int apcRequested;  /* is an apc Requested? */
 	/* support for omfile size-limiting commands, special counters, NOT persisted! */
 	off_t	iSizeLimit;	/* file size limit, 0 = no limit */
 	uchar	*pszSizeLimitCmd;	/* command to carry out when size limit is reached */
 	bool	bIsTTY;		/* is this a tty file? */
 } strm_t;
+
 
 /* interfaces */
 BEGINinterface(strm) /* name must also be changed in ENDinterface macro! */

@@ -128,12 +128,13 @@ tcpSend(char *buf, int lenBuf)
 			if(connect(sock, (struct sockaddr*)&addr, sizeof(addr)) == 0) {
 				break;
 			} else {
-				if(retries++ == 30) {
+				if(retries++ == 50) {
 					++iFailed;
 					fprintf(stderr, "connect() failed\n");
 					return(1);
 				} else {
-					usleep(100);
+					fprintf(stderr, "connect() failed, retry %d\n", retries);
+					usleep(100000); /* ms = 1000 us! */
 				}
 			}
 		} 

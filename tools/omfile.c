@@ -401,12 +401,17 @@ prepareFile(instanceData *pData, uchar *newFileName)
 	CHKiRet(strm.SetDir(pData->pStrm, szDirName, ustrlen(szDirName)));
 	CHKiRet(strm.SetiZipLevel(pData->pStrm, pData->iZipLevel));
 	CHKiRet(strm.SetsIOBufSize(pData->pStrm, (size_t) pData->iIOBufSize));
-	CHKiRet(strm.SetiFlushInterval(pData->pStrm, pData->iFlushInterval));
 	CHKiRet(strm.SettOperationsMode(pData->pStrm, STREAMMODE_WRITE_APPEND));
 	CHKiRet(strm.SettOpenMode(pData->pStrm, fCreateMode));
 	CHKiRet(strm.SetbSync(pData->pStrm, pData->bSyncFile));
 	CHKiRet(strm.SetsType(pData->pStrm, STREAMTYPE_FILE_SINGLE));
 	CHKiRet(strm.SetiSizeLimit(pData->pStrm, pData->iSizeLimit));
+	/* set the flush interval only if we actually use it - otherwise it will activate
+	 * async processing, which is a real performance waste if we do not do buffered
+	 * writes! -- rgerhards, 2009-07-06
+	 */
+	if(!pData->bFlushOnTXEnd)
+		CHKiRet(strm.SetiFlushInterval(pData->pStrm, pData->iFlushInterval));
 	if(pData->pszSizeLimitCmd != NULL)
 		CHKiRet(strm.SetpszSizeLimitCmd(pData->pStrm, ustrdup(pData->pszSizeLimitCmd)));
 	CHKiRet(strm.ConstructFinalize(pData->pStrm));

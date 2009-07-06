@@ -61,6 +61,7 @@ int openConn(int *fd)
 {
 	int sock;
 	struct sockaddr_in addr;
+	int retries = 0;
 
 	if((sock=socket(AF_INET, SOCK_STREAM, 0))==-1) {
 		perror("socket()");
@@ -74,11 +75,19 @@ int openConn(int *fd)
 		fprintf(stderr, "inet_aton() failed\n");
 		return(1);
 	}
-	if(connect(sock, (struct sockaddr*)&addr, sizeof(addr)) != 0) {
-		perror("connect()");
-		fprintf(stderr, "connect() failed\n");
-		return(1);
-	}
+	while(1) { /* loop broken inside */
+		if(connect(sock, (struct sockaddr*)&addr, sizeof(addr)) == 0) {
+			break;
+		} else {
+			if(retries++ == 50) {
+				perror("connect()");
+				fprintf(stderr, "connect() failed\n");
+				return(1);
+			} else {
+				usleep(100000); /* ms = 1000 us! */
+			}
+		}
+	} 
 
 	*fd = sock;
 	return 0;
