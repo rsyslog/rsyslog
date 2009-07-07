@@ -801,7 +801,8 @@ finalize_it:
 
 /* This function is called to "do" an async write call, what primarily means that 
  * the data is handed over to the writer thread (which will then do the actual write
- * in parallel. -- rgerhards, 2009-07-06
+ * in parallel). Note that the stream mutex has already been locked by the
+ * strmWrite...() calls. -- rgerhards, 2009-07-06
  */
 static inline rsRetVal
 doAsyncWriteInternal(strm_t *pThis, uchar *pBuf, size_t lenBuf)
@@ -810,7 +811,6 @@ doAsyncWriteInternal(strm_t *pThis, uchar *pBuf, size_t lenBuf)
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, strm);
 
-	d_pthread_mutex_lock(&pThis->mut);
 	while(pThis->iCnt >= STREAM_ASYNC_NUMBUFS)
 		d_pthread_cond_wait(&pThis->notFull, &pThis->mut);
 
@@ -1102,6 +1102,9 @@ static rsRetVal strmWriteChar(strm_t *pThis, uchar c)
 
 	ASSERT(pThis != NULL);
 
+	if(pThis->bAsyncWrite)
+		d_pthread_mutex_lock(&pThis->mut);
+
 	/* if the buffer is full, we need to flush before we can write */
 	if(pThis->iBufPtr == pThis->sIOBufSize) {
 		CHKiRet(strmFlush(pThis));
@@ -1111,11 +1114,18 @@ static rsRetVal strmWriteChar(strm_t *pThis, uchar c)
 	pThis->iBufPtr++;
 
 finalize_it:
+	if(pThis->bAsyncWrite)
+		d_pthread_mutex_unlock(&pThis->mut);
+
 	RETiRet;
 }
 
 
-/* write an integer value (actually a long) to a stream object */
+/* write an integer value (actually a long) to a stream object
+ * Note that we do not need to lock the mutex here, because we call
+ * strmWrite(), which does the lock (aka: we must not lock it, else we
+ * would run into a recursive lock, resulting in a deadlock!)
+ */
 static rsRetVal strmWriteLong(strm_t *pThis, long i)
 {
 	DEFiRet;
@@ -1143,6 +1153,9 @@ strmWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf)
 	ASSERT(pBuf != NULL);
 
 DBGPRINTF("strmWrite(%p, '%65.65s', %ld);, disabled %d, sizelim %ld, size %lld\n", pThis, pBuf,lenBuf, pThis->bDisabled, pThis->iSizeLimit, pThis->iCurrOffs);
+	if(pThis->bAsyncWrite)
+		d_pthread_mutex_lock(&pThis->mut);
+
 	if(pThis->bDisabled)
 		ABORT_FINALIZE(RS_RET_STREAM_DISABLED);
 
@@ -1175,6 +1188,9 @@ DBGPRINTF("strmWrite(%p, '%65.65s', %ld);, disabled %d, sizelim %ld, size %lld\n
 	}
 
 finalize_it:
+	if(pThis->bAsyncWrite)
+		d_pthread_mutex_unlock(&pThis->mut);
+
 	RETiRet;
 }
 
