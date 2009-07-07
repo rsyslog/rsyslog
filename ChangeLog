@@ -1,6 +1,6 @@
 ---------------------------------------------------------------------------
 Version 4.5.1  [DEVEL] (rgerhards), 2009-07-??
-- bugfix: properties inputname, fromhost, fromhost-ip were lost when
+- bugfix: properties inputname, fromhost, fromhost-ip, msg were lost when
   working with disk queues
 - performance enhancement: much faster, up to twice as fast (depending
   on configuration)
