@@ -1703,11 +1703,11 @@ DequeueConsumable(qqueue_t *pThis, wti_t *pWti, int iCancelStateSave)
 	 * now that we dequeue batches of pointers, this is much less an issue...
 	 * rgerhards, 2009-04-22
 	 */
-	if(iQueueSize < pThis->iFullDlyMrk) {
+	if(iQueueSize < pThis->iFullDlyMrk / 2) {
 		pthread_cond_broadcast(&pThis->belowFullDlyWtrMrk);
 	}
 
-	if(iQueueSize < pThis->iLightDlyMrk) {
+	if(iQueueSize < pThis->iLightDlyMrk / 2) {
 		pthread_cond_broadcast(&pThis->belowLightDlyWtrMrk);
 	}
 
