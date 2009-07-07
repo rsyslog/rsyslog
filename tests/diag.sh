@@ -5,7 +5,7 @@
 # not always able to convey back states to the upper-level test driver
 # begun 2009-05-27 by rgerhards
 # This file is part of the rsyslog project, released under GPLv3
-#valgrind="valgrind --log-fd=1"
+valgrind="valgrind --log-fd=1"
 #valgrind="valgrind --tool=drd --log-fd=1"
 #valgrind="valgrind --tool=helgrind --log-fd=1"
 #set -o xtrace
