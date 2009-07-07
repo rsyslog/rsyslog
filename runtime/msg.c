@@ -942,14 +942,11 @@ static rsRetVal MsgSerialize(msg_t *pThis, strm_t *pStrm)
 	assert(pThis != NULL);
 	assert(pStrm != NULL);
 
-	/* "pump" some property values into strings */
-
 	/* then serialize elements */
 	CHKiRet(obj.BeginSerialize(pStrm, (obj_t*) pThis));
 	objSerializeSCALAR(pStrm, iProtocolVersion, SHORT);
 	objSerializeSCALAR(pStrm, iSeverity, SHORT);
 	objSerializeSCALAR(pStrm, iFacility, SHORT);
-	objSerializeSCALAR(pStrm, offMSG, SHORT);
 	objSerializeSCALAR(pStrm, msgFlags, INT);
 	objSerializeSCALAR(pStrm, ttGenTime, INT);
 	objSerializeSCALAR(pStrm, tRcvdAt, SYSLOGTIME);
@@ -965,16 +962,21 @@ static rsRetVal MsgSerialize(msg_t *pThis, strm_t *pStrm)
 	objSerializePTR(pStrm, pszRawMsg, PSZ);
 	objSerializePTR(pStrm, pszHOSTNAME, PSZ);
 	getInputName(pThis, &psz, &len);
-	objSerializeSCALAR_VAR(pStrm, "pszInputName", PSZ, psz); 
+	CHKiRet(obj.SerializeProp(pStrm, UCHAR_CONSTANT("pszInputName"), PROPTYPE_PSZ, (void*) psz));
 	psz = getRcvFrom(pThis); 
-	objSerializeSCALAR_VAR(pStrm, "pszRcvFrom", PSZ, psz); 
+	CHKiRet(obj.SerializeProp(pStrm, UCHAR_CONSTANT("pszRcvFrom"), PROPTYPE_PSZ, (void*) psz));
 	psz = getRcvFromIP(pThis); 
-	objSerializeSCALAR_VAR(pStrm, "pszRcvFromIP", PSZ, psz); 
+	CHKiRet(obj.SerializeProp(pStrm, UCHAR_CONSTANT("pszRcvFromIP"), PROPTYPE_PSZ, (void*) psz));
 
 	objSerializePTR(pStrm, pCSStrucData, CSTR);
 	objSerializePTR(pStrm, pCSAPPNAME, CSTR);
 	objSerializePTR(pStrm, pCSPROCID, CSTR);
 	objSerializePTR(pStrm, pCSMSGID, CSTR);
+
+	/* offset must be serialized after pszRawMsg, because we need that to obtain the correct
+	 * MSG size.
+	 */
+	objSerializeSCALAR(pStrm, offMSG, SHORT);
 
 	CHKiRet(obj.EndSerialize(pStrm));
 
@@ -1159,14 +1161,16 @@ int getMSGLen(msg_t *pM)
 
 char *getMSG(msg_t *pM)
 {
+	char *ret;
 	if(pM == NULL)
-		return "";
+		ret = "";
 	else {
 		if(pM->offMSG == -1)
-			return "";
+			ret = "";
 		else
-			return (char*)(pM->pszRawMsg + pM->offMSG);
+			ret = (char*)(pM->pszRawMsg + pM->offMSG);
 	}
+	return ret;
 }
 
 
@@ -2289,6 +2293,7 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			return "**INVALID PROPERTY NAME**";
 	}
 
+
 	/* If we did not receive a template pointer, we are already done... */
 	if(pTpe == NULL) {
 		return pRes;
@@ -2927,7 +2932,7 @@ rsRetVal MsgSetProperty(msg_t *pThis, var_t *pProp)
  	} else if(isProp("msgFlags")) {
 		pThis->msgFlags = pProp->val.num;
  	} else if(isProp("offMSG")) {
-		pThis->offMSG = pProp->val.num;
+		MsgSetMSGoffs(pThis, pProp->val.num);
 	} else if(isProp("pszRawMsg")) {
 		MsgSetRawMsg(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.pStr), cstrLen(pProp->val.pStr));
  	/* enable this, if someone actually uses UxTradMsg, delete after some  time has
