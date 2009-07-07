@@ -778,7 +778,7 @@ static void dbgCallStackPrint(dbgThrdInfo_t *pThrd)
 
 /* print all threads call stacks
  */
-static void dbgCallStackPrintAll(void)
+void dbgCallStackPrintAll(void)
 {
 	dbgThrdInfo_t *pThrd;
 	/* stack info */

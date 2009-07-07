@@ -276,11 +276,13 @@ finalize_it:
 static inline void
 strmWaitAsyncWriterDone(strm_t *pThis)
 {
+	BEGINfunc
 	if(pThis->bAsyncWrite) {
 		/* awake writer thread and make it write out everything */
 		pthread_cond_signal(&pThis->notEmpty);
 		d_pthread_cond_wait(&pThis->isEmpty, &pThis->mut);
 	}
+	ENDfunc
 }
 
 
@@ -296,10 +298,16 @@ static rsRetVal strmCloseFile(strm_t *pThis)
 	ASSERT(pThis->fd != -1);
 	dbgoprint((obj_t*) pThis, "file %d closing\n", pThis->fd);
 
-	if(pThis->tOperationsMode != STREAMMODE_READ)
-		strmFlush(pThis);
-
-	strmWaitAsyncWriterDone(pThis);
+	dbgCallStackPrintAll();
+	if(!pThis->bInClose && pThis->tOperationsMode != STREAMMODE_READ) {
+		pThis->bInClose = 1;
+		if(pThis->bAsyncWrite) {
+			strmFlush(pThis);
+		} else {
+			strmWaitAsyncWriterDone(pThis);
+		}
+		pThis->bInClose = 0;
+	}
 
 	close(pThis->fd);
 	pThis->fd = -1;
@@ -796,11 +804,6 @@ finalize_it:
 
 
 /* write memory buffer to a stream object.
- * To support direct writes of large objects, this method may be called
- * with a buffer pointing to some region other than the stream buffer itself.
- * However, in that case the stream buffer must be empty (strmFlush() has to
- * be called before), because we would otherwise mess up with the sequence
- * inside the stream. -- rgerhards, 2008-01-10
  */
 static inline rsRetVal
 doWriteInternal(strm_t *pThis, uchar *pBuf, size_t lenBuf)
