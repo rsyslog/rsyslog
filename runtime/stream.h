@@ -124,6 +124,7 @@ typedef struct strm_s {
 	/* support for async flush procesing */
 	bool bAsyncWrite;	/* do asynchronous writes (always if a flush interval is given) */
 	bool bStopWriter;	/* shall writer thread terminate? */
+	bool bDoTimedWait;	/* instruct writer thread to do a times wait to support flush timeouts */
 	int iFlushInterval; /* flush in which interval - 0, no flushing */
 	apc_id_t apcID;    /* id of current Apc request (used for cancelling) */
 	pthread_mutex_t mut;/* mutex for flush in async mode */
