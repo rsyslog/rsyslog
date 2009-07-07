@@ -942,8 +942,6 @@ static rsRetVal MsgSerialize(msg_t *pThis, strm_t *pStrm)
 	assert(pThis != NULL);
 	assert(pStrm != NULL);
 
-	/* "pump" some property values into strings */
-
 	/* then serialize elements */
 	CHKiRet(obj.BeginSerialize(pStrm, (obj_t*) pThis));
 	objSerializeSCALAR(pStrm, iProtocolVersion, SHORT);
@@ -965,11 +963,11 @@ static rsRetVal MsgSerialize(msg_t *pThis, strm_t *pStrm)
 	objSerializePTR(pStrm, pszRawMsg, PSZ);
 	objSerializePTR(pStrm, pszHOSTNAME, PSZ);
 	getInputName(pThis, &psz, &len);
-	objSerializeSCALAR_VAR(pStrm, "pszInputName", PSZ, psz); 
+	CHKiRet(obj.SerializeProp(pStrm, UCHAR_CONSTANT("pszInputName"), PROPTYPE_PSZ, (void*) psz));
 	psz = getRcvFrom(pThis); 
-	objSerializeSCALAR_VAR(pStrm, "pszRcvFrom", PSZ, psz); 
+	CHKiRet(obj.SerializeProp(pStrm, UCHAR_CONSTANT("pszRcvFrom"), PROPTYPE_PSZ, (void*) psz));
 	psz = getRcvFromIP(pThis); 
-	objSerializeSCALAR_VAR(pStrm, "pszRcvFromIP", PSZ, psz); 
+	CHKiRet(obj.SerializeProp(pStrm, UCHAR_CONSTANT("pszRcvFromIP"), PROPTYPE_PSZ, (void*) psz));
 
 	objSerializePTR(pStrm, pCSStrucData, CSTR);
 	objSerializePTR(pStrm, pCSAPPNAME, CSTR);
