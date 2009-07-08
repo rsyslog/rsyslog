@@ -62,6 +62,17 @@
 #include "glbl.h"
 #include "errmsg.h"
 
+
+#include <libnet.h>
+#define HAVE_PACKET_SOCKET 1
+#define _BSD_SOURCE 1
+#define __BSD_SOURCE 1
+#define __FAVOR_BSD 1
+#define LIBNET_LIL_ENDIAN 1
+#define HAVE_LINUX_PROCFS 1
+#define HAVE_NET_ETHERNET_H 1
+
+
 MODULE_TYPE_OUTPUT
 
 /* internal structures
@@ -118,6 +129,11 @@ static char *getFwdPt(instanceData *pData)
 		return(pData->port);
 }
 
+	/* add some variables needed for libnet */
+	libnet_t *libnet_handle;
+	libnet_ptag_t ip, ipo;
+	libnet_ptag_t udp;
+	char errbuf[LIBNET_ERRBUF_SIZE];
 
 /* destruct the TCP helper objects
  * This, for example, is needed after something went wrong.
@@ -134,8 +150,25 @@ DestructTCPInstanceData(instanceData *pData)
 		netstrms.Destruct(&pData->pNS);
 }
 
+u_short source_port=32000;
+
 BEGINcreateInstance
 CODESTARTcreateInstance
+    /*
+     *  Initialize the libnet library.  Root priviledges are required.
+     *  this initializes a IPv4 socket to use for forging UDP packets
+     */
+    libnet_handle = libnet_init(
+            LIBNET_RAW4,                            /* injection type */
+            NULL,                                   /* network interface */
+            errbuf);                                /* errbuf */
+
+    if (libnet_handle == NULL)
+    {
+        fprintf(stderr, "libnet_init() failed: %s\n", errbuf);
+        exit(EXIT_FAILURE);
+    }
+
 ENDcreateInstance
 
 
@@ -172,6 +205,8 @@ CODESTARTfreeInstance
 		free(pData->pszStrmDrvrAuthMode);
 	if(pData->pPermPeers != NULL)
 		net.DestructPermittedPeers(&pData->pPermPeers);
+	/* destroy the libnet state needed for forged UDP sources */
+	libnet_destroy(libnet_handle);
 ENDfreeInstance
 
 
@@ -188,10 +223,21 @@ static rsRetVal UDPSend(instanceData *pData, char *msg, size_t len)
 {
 	DEFiRet;
 	struct addrinfo *r;
-	int i;
 	unsigned lsent = 0;
 	int bSendSuccess;
 
+	int j, build_ip;
+	u_char opt[20],*source_text_ip;
+	struct sockaddr_in *tempaddr,source_ip;
+	ip = ipo = udp = 0;
+	if(source_port++ >= (u_short)42000){
+		source_port = 32000;
+	}
+	for(source_text_ip = msg; msg[0] != ' '; msg++ ,len--);
+		/* move the msg pointer to the first space in the message to strip off the IP address */
+	msg[0]='\0';
+	msg++;
+	inet_pton(AF_INET, source_text_ip, &(source_ip.sin_addr));
 	if(pData->pSockArray != NULL) {
 		/* we need to track if we have success sending to the remote
 		 * peer. Success is indicated by at least one sendto() call
@@ -202,18 +248,62 @@ static rsRetVal UDPSend(instanceData *pData, char *msg, size_t len)
 		 */
 		bSendSuccess = FALSE;
 		for (r = pData->f_addr; r; r = r->ai_next) {
-			for (i = 0; i < *pData->pSockArray; i++) {
-			       lsent = sendto(pData->pSockArray[i+1], msg, len, 0, r->ai_addr, r->ai_addrlen);
-				if (lsent == len) {
+			tempaddr = (struct sockaddr_in *)r->ai_addr;
+			libnet_clear_packet(libnet_handle);
+			udp = libnet_build_udp(
+				source_port,                                /* source port */
+				tempaddr->sin_port,                            /* destination port */
+				LIBNET_UDP_H + len,               /* packet length */
+				0,                                      /* checksum */
+				msg,                                /* payload */
+				len,                              /* payload size */
+				libnet_handle,                                      /* libnet handle */
+				udp);                                   /* libnet id */
+				if (udp == -1) {
+					dbgprintf("Can't build UDP header: %s\n", libnet_geterror(libnet_handle));
+				}
+
+				build_ip = 0;
+				/* this is not a legal options string */
+				for (j = 0; j < 20; j++) {
+					opt[j] = libnet_get_prand(LIBNET_PR2);
+				}
+				ipo = libnet_build_ipv4_options(
+					opt,
+					20,
+					libnet_handle,
+					ipo);
+				if (ipo == -1) {
+					dbgprintf("Can't build IP options: %s\n", libnet_geterror(libnet_handle));
+				}
+				ip = libnet_build_ipv4(
+				LIBNET_IPV4_H + 20 + len + LIBNET_UDP_H, /* length */
+					0,                                          /* TOS */
+					242,                                        /* IP ID */
+					0,                                          /* IP Frag */
+					64,                                         /* TTL */
+					IPPROTO_UDP,                                /* protocol */
+					0,                                          /* checksum */
+					source_ip.sin_addr.s_addr,
+					tempaddr->sin_addr.s_addr,
+					NULL,                                       /* payload */
+					0,                                          /* payload size */
+					libnet_handle,                                          /* libnet handle */
+					ip);                                         /* libnet id */
+				if (ip == -1) {
+					dbgprintf("Can't build IP header: %s\n", libnet_geterror(libnet_handle));
+				}
+
+				/*
+				*  Write it to the wire.
+				*/
+				lsent = libnet_write(libnet_handle);
+				if (lsent == -1) {
+					dbgprintf("Write error: %s\n", libnet_geterror(libnet_handle));
+				} else {
 					bSendSuccess = TRUE;
 					break;
-				} else {
-					int eno = errno;
-					char errStr[1024];
-					dbgprintf("sendto() error: %d = %s.\n",
-						eno, rs_strerror_r(eno, errStr, sizeof(errStr)));
 				}
-			}
 			if (lsent == len && !send_to_all)
 			       break;
 		}
