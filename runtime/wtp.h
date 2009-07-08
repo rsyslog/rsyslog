@@ -30,7 +30,7 @@
 /* commands and states for worker threads. */
 typedef enum {
 	eWRKTHRD_STOPPED = 0,	/* worker thread is not running (either actually never ran or was shut down) */
-	eWRKTHRD_TERMINATING = 1,/* worker thread has shut down, but some finalzing is still needed */
+	//eWRKTHRD_TERMINATING = 1,/* worker thread has shut down, but some finalzing is still needed */
 	/* ALL active states MUST be numerically higher than eWRKTHRD_TERMINATED and NONE must be lower! */
 	eWRKTHRD_RUN_CREATED = 2,/* worker thread has been created, but not yet begun initialization (prob. not yet scheduled) */
 	eWRKTHRD_RUN_INIT = 3,	/* worker thread is initializing, but not yet fully running */

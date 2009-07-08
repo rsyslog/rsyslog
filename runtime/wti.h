@@ -36,7 +36,7 @@ struct wti_s {
 	pthread_t thrdID;  /* thread ID */
 	qWrkCmd_t tCurrCmd; /* current command to be carried out by worker */
 	wtp_t *pWtp; /* my worker thread pool (important if only the work thread instance is passed! */
-	pthread_cond_t condExitDone; /* signaled when the thread exit is done (once per thread existance) */
+	//pthread_cond_t condExitDone; /* signaled when the thread exit is done (once per thread existance) */
 	pthread_mutex_t mut;
 	batch_t batch; /* pointer to an object array meaningful for current user pointer (e.g. queue pUsr data elemt) */
 	bool bShutdownRqtd;	/* shutdown for this thread requested? 0 - no , 1 - yes */
