@@ -493,11 +493,12 @@ wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in 
 static rsRetVal
 wtpStartWrkr(wtp_t *pThis, int bLockMutex)
 {
-	DEFiRet;
 	DEFVARS_mutexProtection;
 	wti_t *pWti;
 	int i;
 	int iState;
+	pthread_attr_t attr;
+	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, wtp);
 
@@ -521,7 +522,10 @@ wtpStartWrkr(wtp_t *pThis, int bLockMutex)
 
 	pWti = pThis->pWrkr[i];
 	wtiSetState(pWti, eWRKTHRD_RUN_CREATED, 0, LOCK_MUTEX);
-	iState = pthread_create(&(pWti->thrdID), NULL, wtpWorker, (void*) pWti);
+	pthread_attr_init(&attr);
+	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+	iState = pthread_create(&(pWti->thrdID), &attr, wtpWorker, (void*) pWti);
+	pthread_attr_destroy(&attr);	/* TODO: we could globally reuse such an attribute 2009-07-08 */
 	dbgprintf("%s: started with state %d, num workers now %d\n",
 		  wtpGetDbgHdr(pThis), iState, pThis->iCurNumWrkThrd);
 

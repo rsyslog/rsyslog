@@ -263,7 +263,7 @@ wtiJoinThrd(wti_t *pThis)
 	if (pThis->thrdID == 0) {
 		dbgprintf("worker %s was already stopped\n", wtiGetDbgHdr(pThis));
 	} else {
-		pthread_join(pThis->thrdID, NULL);
+		//pthread_join(pThis->thrdID, NULL);
 		wtiSetState(pThis, eWRKTHRD_STOPPED, 0, MUTEX_ALREADY_LOCKED); /* back to virgin... */
 		pThis->thrdID = 0; /* invalidate the thread ID so that we do not accidently find reused ones */
 	dbgprintf("worker %s has stopped\n", wtiGetDbgHdr(pThis));
@@ -399,7 +399,7 @@ wtiWorker(wti_t *pThis)
 	/* now we have our identity, on to real processing */
 	while(1) { /* loop will be broken below - need to do mutex locks */
 		/* process any pending thread requests */
-		wtpProcessThrdChanges(pWtp);
+	//	wtpProcessThrdChanges(pWtp);
 
 		if(pWtp->pfRateLimiter != NULL) { /* call rate-limiter, if defined */
 			pWtp->pfRateLimiter(pWtp->pUsr);
