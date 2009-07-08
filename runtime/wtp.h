@@ -30,7 +30,6 @@
 /* commands and states for worker threads. */
 typedef enum {
 	eWRKTHRD_STOPPED = 0,	/* worker thread is not running (either actually never ran or was shut down) */
-	//eWRKTHRD_TERMINATING = 1,/* worker thread has shut down, but some finalzing is still needed */
 	/* ALL active states MUST be numerically higher than eWRKTHRD_TERMINATED and NONE must be lower! */
 	eWRKTHRD_RUN_CREATED = 2,/* worker thread has been created, but not yet begun initialization (prob. not yet scheduled) */
 	eWRKTHRD_RUN_INIT = 3,	/* worker thread is initializing, but not yet fully running */
@@ -60,10 +59,8 @@ struct wtp_s {
 	bool	bInactivityGuard;/* prevents inactivity due to race condition */
 	rsRetVal (*pConsumer)(void *); /* user-supplied consumer function for dewtpd messages */
 	/* synchronization variables */
-	pthread_mutex_t mutThrdShutdwn; /* mutex to guard thread shutdown processing */
 	pthread_mutex_t mut; /* mutex for the wtp's thread management */
 	pthread_cond_t condThrdTrm;/* signalled when threads terminate */
-	int bThrdStateChanged;	/* at least one thread state has changed if 1 */
 	/* end sync variables */
 	/* user objects */
 	void *pUsr;		/* pointer to user object (in this case, the queue the wtp belongs to) */
@@ -99,7 +96,6 @@ rsRetVal wtpWakeupWrkr(wtp_t *pThis);
 rsRetVal wtpWakeupAllWrkr(wtp_t *pThis);
 rsRetVal wtpCancelAll(wtp_t *pThis);
 rsRetVal wtpSetDbgHdr(wtp_t *pThis, uchar *pszMsg, size_t lenMsg);
-rsRetVal wtpSignalWrkrTermination(wtp_t *pWtp);
 rsRetVal wtpShutdownAll(wtp_t *pThis, wtpState_t tShutdownCmd, struct timespec *ptTimeout);
 int wtpGetCurNumWrkr(wtp_t *pThis, int bLockMutex);
 PROTOTYPEObjClassInit(wtp);

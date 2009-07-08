@@ -86,7 +86,6 @@ static rsRetVal NotImplementedDummy() { return RS_RET_NOT_IMPLEMENTED; }
  */
 BEGINobjConstruct(wtp) /* be sure to specify the object type also in END macro! */
 	pthread_mutex_init(&pThis->mut, NULL);
-	pthread_mutex_init(&pThis->mutThrdShutdwn, NULL);
 	pthread_cond_init(&pThis->condThrdTrm, NULL);
 	/* set all function pointers to "not implemented" dummy so that we can safely call them */
 	pThis->pfChkStopWrkr = NotImplementedDummy;
@@ -152,7 +151,6 @@ CODESTARTobjDestruct(wtp)
 	/* actual destruction */
 	pthread_cond_destroy(&pThis->condThrdTrm);
 	pthread_mutex_destroy(&pThis->mut);
-	pthread_mutex_destroy(&pThis->mutThrdShutdwn);
 
 	free(pThis->pszDbgHdr);
 ENDobjDestruct(wtp)
@@ -277,30 +275,6 @@ wtpShutdownAll(wtp_t *pThis, wtpState_t tShutdownCmd, struct timespec *ptTimeout
 #pragma GCC diagnostic warning "-Wempty-body"
 
 
-/* indicate that a thread has terminated and awake anyone waiting on it
- * rgerhards, 2008-01-23
- */
-rsRetVal wtpSignalWrkrTermination(wtp_t *pThis)
-{
-	DEFiRet;
-	/* I leave the mutex code here out as it gives us deadlocks. I think it is not really
-	 * needed and we are on the safe side. I leave this comment in if practice proves us
-	 * wrong. The whole thing should be removed after half a year or year if we see there
-	 * actually is no issue (or revisit it from a theoretical POV).
-	 * rgerhards, 2008-01-28
-	 * revisited 2008-09-30, still a bit unclear, leave in
-	 */
-	/*TODO: mutex or not mutex, that's the question ;)DEFVARS_mutexProtection;*/
-
-	ISOBJ_TYPE_assert(pThis, wtp);
-
-	/*BEGIN_MTX_PROTECTED_OPERATIONS(&pThis->mut, LOCK_MUTEX);*/
-	pthread_cond_signal(&pThis->condThrdTrm); /* activate anyone waiting on thread shutdown */
-	/*END_MTX_PROTECTED_OPERATIONS(&pThis->mut);*/
-	RETiRet;
-}
-
-
 /* Unconditionally cancel all running worker threads.
  * rgerhards, 2008-01-14
  */
@@ -344,7 +318,7 @@ wtpSetInactivityGuard(wtp_t *pThis, int bNewState, int bLockMutex)
  * decrements the worker counter
  * rgerhards, 2008-01-20
  */
-void
+static void
 wtpWrkrExecCancelCleanup(void *arg)
 {
 	wtp_t *pThis = (wtp_t*) arg;
@@ -352,8 +326,7 @@ wtpWrkrExecCancelCleanup(void *arg)
 	BEGINfunc
 	ISOBJ_TYPE_assert(pThis, wtp);
 	pThis->iCurNumWrkThrd--;
-	wtpSignalWrkrTermination(pThis);
-
+	pthread_cond_signal(&pThis->condThrdTrm); /* activate anyone waiting on thread shutdown */
 	dbgprintf("%s: thread CANCELED with %d workers running.\n", wtpGetDbgHdr(pThis), pThis->iCurNumWrkThrd);
 	ENDfunc
 }
@@ -416,7 +389,7 @@ wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in 
 
 	pthread_cleanup_pop(0);
 	pThis->iCurNumWrkThrd--;
-	wtpSignalWrkrTermination(pThis);
+	pthread_cond_signal(&pThis->condThrdTrm); /* activate anyone waiting on thread shutdown */
 
 	dbgprintf("%s: Worker thread %lx, terminated, num workers now %d\n",
 		  wtpGetDbgHdr(pThis), (unsigned long) pWti, pThis->iCurNumWrkThrd);

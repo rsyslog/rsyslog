@@ -162,7 +162,6 @@ wtiCancelThrd(wti_t *pThis)
 		pthread_cancel(pThis->thrdID);
 		/* TODO: check: the following check should automatically be done by cancel cleanup handler! 2009-07-08 rgerhards */
 		wtiSetState(pThis, eWRKTHRD_STOPPED, 0, MUTEX_ALREADY_LOCKED);
-		ATOMIC_STORE_1_TO_INT(pThis->pWtp->bThrdStateChanged); /* indicate change, so harverster will be called */
 	}
 
 	d_pthread_mutex_unlock(&pThis->mut);
@@ -244,7 +243,6 @@ wtiWorkerCancelCleanup(void *arg)
 	d_pthread_mutex_lock(&pWtp->mut);
 	wtiSetState(pThis, eWRKTHRD_STOPPED, 0, MUTEX_ALREADY_LOCKED);
 	/* TODO: sync access? I currently think it is NOT needed -- rgerhards, 2008-01-28 */
-	ATOMIC_STORE_1_TO_INT(pWtp->bThrdStateChanged); /* indicate change, so harverster will be called */
 
 	d_pthread_mutex_unlock(&pWtp->mut);
 	pthread_setcancelstate(iCancelStateSave, NULL);
@@ -307,8 +305,6 @@ wtiWorker(wti_t *pThis)
 
 	/* now we have our identity, on to real processing */
 	while(1) { /* loop will be broken below - need to do mutex locks */
-		/* process any pending thread requests */
-
 		if(pWtp->pfRateLimiter != NULL) { /* call rate-limiter, if defined */
 			pWtp->pfRateLimiter(pWtp->pUsr);
 		}
@@ -364,7 +360,6 @@ RUNLOG_STR("XXX: Worker shutdown");
 	pWtp->pfOnWorkerShutdown(pWtp->pUsr);
 
 	wtiSetState(pThis, eWRKTHRD_STOPPED, 0, MUTEX_ALREADY_LOCKED);
-	ATOMIC_STORE_1_TO_INT(pWtp->bThrdStateChanged); /* indicate change, so harverster will be called */
 	d_pthread_mutex_unlock(&pThis->mut);
 	pthread_setcancelstate(iCancelStateSave, NULL);
 
