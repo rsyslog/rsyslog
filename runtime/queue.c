@@ -2460,7 +2460,7 @@ finalize_it:
 }
 
 
-/* enqueue a single data object. This currently is a helper to qqueueMultiEnqObj.
+/* enqueue a single data object.
  * Note that the queue mutex MUST already be locked when this function is called.
  * rgerhards, 2009-06-16
  */
