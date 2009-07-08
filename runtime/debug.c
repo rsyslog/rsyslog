@@ -732,6 +732,8 @@ static void dbgGetThrdName(char *pszBuf, size_t lenBuf, pthread_t thrd, int bInc
  */
 void dbgSetThrdName(uchar *pszName)
 {
+return;
+
 	dbgThrdInfo_t *pThrd = dbgGetThrdInfo();
 	if(pThrd->pszThrdName != NULL)
 		free(pThrd->pszThrdName);
@@ -776,7 +778,7 @@ static void dbgCallStackPrint(dbgThrdInfo_t *pThrd)
 
 /* print all threads call stacks
  */
-static void dbgCallStackPrintAll(void)
+void dbgCallStackPrintAll(void)
 {
 	dbgThrdInfo_t *pThrd;
 	/* stack info */

@@ -2,6 +2,6 @@
 if [ -e "rsyslog.pid" ]
 then
   echo rsyslog.pid exists, trying to shut down rsyslogd process `cat rsyslog.pid`.
-  kill `cat rsyslog.pid`
+  kill -9 `cat rsyslog.pid`
   sleep 1
 fi
