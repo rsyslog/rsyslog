@@ -77,6 +77,7 @@
 #include "glbl.h"
 #include "errmsg.h"
 #include "dirty.h"
+#include "unicode-helper.h"
 
 
 #include <libnet.h>
@@ -96,15 +97,16 @@ DEFobjCurrIf(net)
 
 typedef struct _instanceData {
 	char	*host;
-	int *pSockArray;	/* sockets to use for UDP */
-	int bIsAddrResolved;  	/* is hostname address resolved? 0 - no, 1 - yes */
+	char	*port;
+	int	*pSockArray;		/* sockets to use for UDP */
+	int	bIsAddrResolved;  	/* is hostname address resolved? 0 - no, 1 - yes */
+	int	compressionLevel;	/* 0 - no compression, else level for zlib */
 	struct addrinfo *f_addr;
-	int compressionLevel;	/* 0 - no compression, else level for zlib */
-	char *port;
 } instanceData;
 
 /* config data */
 static uchar *pszTplName = NULL; /* name of the default template to use */
+static uchar *pszSourceNameTemplate = NULL; /* name of the template containing the spoofing address */
 
 
 /* add some variables needed for libnet */
@@ -196,17 +198,17 @@ ENDdbgPrintInstInfo
 /* Send a message via UDP
  * rgehards, 2007-12-20
  */
-static rsRetVal UDPSend(instanceData *pData, char *msg, size_t len)
+static rsRetVal UDPSend(instanceData *pData, uchar *pszSourcename, char *msg, size_t len)
 {
 	struct addrinfo *r;
 	int lsent = 0;
 	int bSendSuccess;
 	int j, build_ip;
 	u_char opt[20];
-	u_char *source_text_ip;
 	struct sockaddr_in *tempaddr,source_ip;
 	DEFiRet;
 
+RUNLOG_VAR("%s", pszSourcename);
 	if(pData->pSockArray == NULL) {
 		CHKiRet(doTryResume(pData));
 	}
@@ -215,11 +217,11 @@ static rsRetVal UDPSend(instanceData *pData, char *msg, size_t len)
 	if(source_port++ >= (u_short)42000){
 		source_port = 32000;
 	}
-	for(source_text_ip = (uchar*) msg; msg[0] != ' '; msg++ ,len--);
-		/* move the msg pointer to the first space in the message to strip off the IP address */
-	msg[0]='\0';
-	msg++;
-	inet_pton(AF_INET, (char*)source_text_ip, &(source_ip.sin_addr));
+
+int iii;
+	//iii = inet_pton(AF_INET, (char*)pszSourcename, &(source_ip.sin_addr));
+	iii = inet_pton(AF_INET, "172.19.12.3", &(source_ip.sin_addr));
+RUNLOG_VAR("%d", iii);
 
 	bSendSuccess = FALSE;
 	for (r = pData->f_addr; r; r = r->ai_next) {
@@ -390,7 +392,7 @@ CODESTARTdoAction
 	}
 #	endif
 
-	CHKiRet(UDPSend(pData, psz, l));
+	CHKiRet(UDPSend(pData, ppString[1], psz, l));
 
 finalize_it:
 ENDdoAction
@@ -402,7 +404,7 @@ BEGINparseSelectorAct
 	int bErr;
         struct addrinfo;
 CODESTARTparseSelectorAct
-CODE_STD_STRING_REQUESTparseSelectorAct(1)
+CODE_STD_STRING_REQUESTparseSelectorAct(2)
 	/* first check if this config line is actually for us */
 	if(strncmp((char*) p, ":omudpspoof:", sizeof(":omudpspoof:") - 1)) {
 		ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
@@ -411,6 +413,11 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	/* ok, if we reach this point, we have something for us */
 	p += sizeof(":omudpspoof:") - 1; /* eat indicator sequence  (-1 because of '\0'!) */
 	CHKiRet(createInstance(&pData));
+
+	if(pszSourceNameTemplate == NULL) {
+		errmsg.LogError(0, NO_ERRCODE, "No $ActionOMUDPSpoofSourceNameTemplate given, can not continue");
+		ABORT_FINALIZE(RS_RET_NO_SRCNAME_TPL);
+	}
 
 	/* we are now after the protocol indicator. Now check if we should
 	 * use compression. We begin to use a new option format for this:
@@ -525,6 +532,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS,
 		(pszTplName == NULL) ? (uchar*)"RSYSLOG_TraditionalForwardFormat" : pszTplName));
 
+	CHKiRet(OMSRsetEntry(*ppOMSR, 1, ustrdup(pszSourceNameTemplate), OMSR_NO_RQD_TPL_OPTS));
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
@@ -578,7 +586,8 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(net,LM_NET_FILENAME));
 
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionudpspoofdefaulttemplate", 0, eCmdHdlrGetWord, NULL, &pszTplName, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionomudpspoofdefaulttemplate", 0, eCmdHdlrGetWord, NULL, &pszTplName, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionomudpspoofsourcenametemplate", 0, eCmdHdlrGetWord, NULL, &pszSourceNameTemplate, NULL));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
 
