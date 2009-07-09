@@ -159,7 +159,7 @@ void MsgSetMSGoffs(msg_t *pMsg, short offs);
 void MsgSetRawMsgWOSize(msg_t *pMsg, char* pszRawMsg);
 void MsgSetRawMsg(msg_t *pMsg, char* pszRawMsg, size_t lenMsg);
 rsRetVal MsgReplaceMSG(msg_t *pThis, uchar* pszMSG, int lenMSG);
-char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
+uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
                  propid_t propID, size_t *pPropLen, unsigned short *pbMustBeFreed);
 char *textpri(char *pRes, size_t pResLen, int pri);
 rsRetVal msgGetMsgVar(msg_t *pThis, cstr_t *pstrPropName, var_t **ppVar);
@@ -168,7 +168,7 @@ uchar *getRcvFrom(msg_t *pM);
 
 
 /* TODO: remove these five (so far used in action.c) */
-char *getMSG(msg_t *pM);
+uchar *getMSG(msg_t *pM);
 char *getHOSTNAME(msg_t *pM);
 char *getPROCID(msg_t *pM, bool bLockMutex);
 char *getAPPNAME(msg_t *pM, bool bLockMutex);
