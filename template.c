@@ -121,8 +121,10 @@ rsRetVal tplToString(struct template *pTpl, msg_t *pMsg, uchar **ppBuf, size_t *
 		if(iBuf + iLenVal + 1 >= *pLenBuf) /* we reserve one char for the final \0! */
 			CHKiRet(ExtendBuf(ppBuf, pLenBuf, iBuf + iLenVal + 1));
 
-		memcpy(*ppBuf + iBuf, pVal, iLenVal);
-		iBuf += iLenVal;
+		if(iLenVal > 0) { /* may be zero depending on property */
+			memcpy(*ppBuf + iBuf, pVal, iLenVal);
+			iBuf += iLenVal;
+		}
 
 		if(bMustBeFreed)
 			free(pVal);

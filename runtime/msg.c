@@ -2405,6 +2405,7 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			--iLen;
 		}
 		*pBuf = '\0';
+		bufLen -= iLen; /* subtract remaining lenght if the string was smaller! */
 		if(*pbMustBeFreed == 1)
 			free(pRes);
 		pRes = pBufStart;
@@ -2858,7 +2859,6 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 		bufLen = strlen(pRes);
 	*pPropLen = bufLen;
 
-	/*dbgprintf("MsgGetProp(\"%s\"): \"%s\"\n", pName, pRes); only for verbose debug logging */
 	ENDfunc
 	return(pRes);
 }
