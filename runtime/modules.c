@@ -40,6 +40,7 @@
 #include <time.h>
 #include <assert.h>
 #include <errno.h>
+#include <pthread.h>
 #ifdef	OS_BSD
 #	include "libgen.h"
 #endif
@@ -49,6 +50,10 @@
 #include <unistd.h>
 #include <sys/file.h>
 
+#ifdef OS_SOLARIS
+#	define PATH_MAX MAXPATHLEN
+#endif
+
 #include "cfsysline.h"
 #include "modules.h"
 #include "errmsg.h"
@@ -57,12 +62,35 @@
 DEFobjStaticHelpers
 DEFobjCurrIf(errmsg)
 
+/* we must ensure that only one thread at one time tries to load or unload
+ * modules, otherwise we may see race conditions. This first came up with
+ * imdiag/imtcp, which both use the same stream drivers. Below is the mutex
+ * for that handling.
+ * rgerhards, 2009-05-25
+ */
+static pthread_mutex_t mutLoadUnload;
+
 static modInfo_t *pLoadedModules = NULL;	/* list of currently-loaded modules */
 static modInfo_t *pLoadedModulesLast = NULL;	/* tail-pointer */
 
 /* config settings */
 uchar	*pModDir = NULL; /* read-only after startup */
 
+
+/* we provide a set of dummy functions for output modules that do not support the
+ * transactional interface. As they do not do this, they commit each message they
+ * receive, and as such the dummies can always return RS_RET_OK without causing
+ * harm. This simplifies things as in action processing we do not need to check
+ * if the transactional entry points exist.
+ */
+static rsRetVal dummyBeginTransaction() 
+{
+	return RS_RET_OK;
+}
+static rsRetVal dummyEndTransaction() 
+{
+	return RS_RET_OK;
+}
 
 #ifdef DEBUG
 /* we add some home-grown support to track our users (and detect who does not free us). In
@@ -203,24 +231,47 @@ static void moduleDestruct(modInfo_t *pThis)
 }
 
 
+/* This enables a module to query the core for specific features.
+ * rgerhards, 2009-04-22
+ */
+static rsRetVal queryCoreFeatureSupport(int *pBool, unsigned uFeat)
+{
+	DEFiRet;
+
+	if((pBool == NULL))
+		ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+
+	*pBool = (uFeat & CORE_FEATURE_BATCHING) ? 1 : 0;
+
+finalize_it:
+	RETiRet;
+}
+
+
 /* The following function is the queryEntryPoint for host-based entry points.
  * Modules may call it to get access to core interface functions. Please note
  * that utility functions can be accessed via shared libraries - at least this
  * is my current shool of thinking.
  * Please note that the implementation as a query interface allows to take
  * care of plug-in interface version differences. -- rgerhards, 2007-07-31
+ * ... but often it better not to use a new interface. So we now add core
+ * functions here that a plugin may request. -- rgerhards, 2009-04-22
  */
 static rsRetVal queryHostEtryPt(uchar *name, rsRetVal (**pEtryPoint)())
 {
 	DEFiRet;
 
 	if((name == NULL) || (pEtryPoint == NULL))
-		return RS_RET_PARAM_ERROR;
+		ABORT_FINALIZE(RS_RET_PARAM_ERROR);
 
 	if(!strcmp((char*) name, "regCfSysLineHdlr")) {
 		*pEtryPoint = regCfSysLineHdlr;
 	} else if(!strcmp((char*) name, "objGetObjInterface")) {
 		*pEtryPoint = objGetObjInterface;
+	} else if(!strcmp((char*) name, "OMSRgetSupportedTplOpts")) {
+		*pEtryPoint = OMSRgetSupportedTplOpts;
+	} else if(!strcmp((char*) name, "queryCoreFeatureSupport")) {
+		*pEtryPoint = queryCoreFeatureSupport;
 	} else {
 		*pEtryPoint = NULL; /* to  be on the safe side */
 		ABORT_FINALIZE(RS_RET_ENTRY_POINT_NOT_FOUND);
@@ -347,6 +398,7 @@ static rsRetVal
 doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_t*), uchar *name, void *pModHdlr)
 {
 	DEFiRet;
+	rsRetVal localRet;
 	modInfo_t *pNew = NULL;
 	rsRetVal (*modGetType)(eModType_t *pType);
 
@@ -383,6 +435,7 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"runInput", &pNew->mod.im.runInput));
 			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"willRun", &pNew->mod.im.willRun));
 			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"afterRun", &pNew->mod.im.afterRun));
+			pNew->mod.im.bCanRun = 0;
 			break;
 		case eMOD_OUT:
 			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"freeInstance", &pNew->freeInstance));
@@ -391,6 +444,22 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"parseSelectorAct", &pNew->mod.om.parseSelectorAct));
 			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"isCompatibleWithFeature", &pNew->isCompatibleWithFeature));
 			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"tryResume", &pNew->tryResume));
+			/* try load optional interfaces */
+			localRet = (*pNew->modQueryEtryPt)((uchar*)"doHUP", &pNew->doHUP);
+			if(localRet != RS_RET_OK && localRet != RS_RET_MODULE_ENTRY_POINT_NOT_FOUND)
+				ABORT_FINALIZE(localRet);
+
+			localRet = (*pNew->modQueryEtryPt)((uchar*)"beginTransaction", &pNew->mod.om.beginTransaction);
+			if(localRet == RS_RET_MODULE_ENTRY_POINT_NOT_FOUND)
+				pNew->mod.om.beginTransaction = dummyBeginTransaction;
+			else if(localRet != RS_RET_OK)
+				ABORT_FINALIZE(localRet);
+
+			localRet = (*pNew->modQueryEtryPt)((uchar*)"endTransaction", &pNew->mod.om.endTransaction);
+			if(localRet == RS_RET_MODULE_ENTRY_POINT_NOT_FOUND)
+				pNew->mod.om.beginTransaction = dummyEndTransaction;
+			else if(localRet != RS_RET_OK)
+				ABORT_FINALIZE(localRet);
 			break;
 		case eMOD_LIB:
 			break;
@@ -468,6 +537,8 @@ modUnlinkAndDestroy(modInfo_t **ppThis)
 	pThis = *ppThis;
 	assert(pThis != NULL);
 
+	pthread_mutex_lock(&mutLoadUnload);
+
 	/* first check if we are permitted to unload */
 	if(pThis->eType == eMOD_LIB) {
 		if(pThis->uRefCnt > 0) {
@@ -502,6 +573,7 @@ modUnlinkAndDestroy(modInfo_t **ppThis)
 	moduleDestruct(pThis);
 
 finalize_it:
+	pthread_mutex_unlock(&mutLoadUnload);
 	RETiRet;
 }
 
@@ -576,6 +648,8 @@ Load(uchar *pModName)
 	assert(pModName != NULL);
 	dbgprintf("Requested to load module '%s'\n", pModName);
 
+	pthread_mutex_lock(&mutLoadUnload);
+
 	iModNameLen = strlen((char *) pModName);
 	if(iModNameLen > 3 && !strcmp((char *) pModName + iModNameLen - 3, ".so")) {
 		iModNameLen -= 3;
@@ -599,7 +673,7 @@ Load(uchar *pModName)
 	iLoadCnt    = 0;
 	do {
 		/* now build our load module name */
-		if(*pModName == '/') {
+		if(*pModName == '/' || *pModName == '.') {
 			*szPath = '\0';	/* we do not need to append the path - its already in the module name */
 			iPathLen = 0;
 		} else {
@@ -685,6 +759,7 @@ Load(uchar *pModName)
 	}
 
 finalize_it:
+	pthread_mutex_unlock(&mutLoadUnload);
 	RETiRet;
 }
 
@@ -780,6 +855,15 @@ BEGINObjClassExit(module, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MA
 CODESTARTObjClassExit(module)
 	/* release objects we no longer need */
 	objRelease(errmsg, CORE_COMPONENT);
+	/* We have a problem in our reference counting, which leads to this function
+	 * being called too early. This usually is no problem, but if we destroy
+	 * the mutex object, we get into trouble. So rather than finding the root cause,
+	 * we do not release the mutex right now and have a very, very slight leak.
+	 * We know that otherwise no bad effects happen, so this acceptable for the 
+	 * time being. -- rgerhards, 2009-05-25
+	 *
+	 * TODO: add again: pthread_mutex_destroy(&mutLoadUnload);
+	 */
 
 #	ifdef DEBUG
 	modUsrPrintAll(); /* debug aid - TODO: integrate with debug.c, at least the settings! */
@@ -822,6 +906,7 @@ ENDobjQueryInterface(module)
  */
 BEGINAbstractObjClassInit(module, 1, OBJ_IS_CORE_MODULE) /* class, version - CHANGE class also in END MACRO! */
 	uchar *pModPath;
+	pthread_mutexattr_t mutAttr;
 
 	/* use any module load path specified in the environment */
 	if((pModPath = (uchar*) getenv("RSYSLOG_MODDIR")) != NULL) {
@@ -838,6 +923,10 @@ BEGINAbstractObjClassInit(module, 1, OBJ_IS_CORE_MODULE) /* class, version - CHA
 	if(glblModPath != NULL) {
 		SetModDir(glblModPath);
 	}
+
+	pthread_mutexattr_init(&mutAttr);
+	pthread_mutexattr_settype(&mutAttr, PTHREAD_MUTEX_RECURSIVE);
+	pthread_mutex_init(&mutLoadUnload, &mutAttr);
 
 	/* request objects we use */
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));

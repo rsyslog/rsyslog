@@ -398,7 +398,7 @@ rsRetVal llExecFunc(linkedList_t *pThis, rsRetVal (*pFunc)(void*, void*), void* 
 			 */
 			llCookie = llCookiePrev;
 		} else if (iRet != RS_RET_OK) {
-			goto finalize_it;
+			FINALIZE;
 		}
 		llCookiePrev = llCookie;
 	}

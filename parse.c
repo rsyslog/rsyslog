@@ -256,7 +256,7 @@ rsRetVal parsDelimCStr(rsParsObj *pThis, cstr_t **ppCStr, char cDelim, int bTrim
 	pC = rsCStrGetBufBeg(pThis->pCStr) + pThis->iCurrPos;
 
 	while(pThis->iCurrPos < rsCStrLen(pThis->pCStr) && *pC != cDelim) {
-		CHKiRet(rsCStrAppendChar(pCStr, bConvLower ? tolower(*pC) : *pC));
+		CHKiRet(cstrAppendChar(pCStr, bConvLower ? tolower(*pC) : *pC));
 		++pThis->iCurrPos;
 		++pC;
 	}
@@ -268,10 +268,10 @@ rsRetVal parsDelimCStr(rsParsObj *pThis, cstr_t **ppCStr, char cDelim, int bTrim
 	/* We got the string, now take it and see if we need to
 	 * remove anything at its end.
 	 */
-	CHKiRet(rsCStrFinish(pCStr));
+	CHKiRet(cstrFinalize(pCStr));
 
 	if(bTrimTrailing) {
-		CHKiRet(rsCStrTrimTrailingWhiteSpace(pCStr));
+		CHKiRet(cstrTrimTrailingWhiteSpace(pCStr));
 	}
 
 	/* done! */
@@ -313,23 +313,23 @@ rsRetVal parsQuotedCStr(rsParsObj *pThis, cstr_t **ppCStr)
 	pC = rsCStrGetBufBeg(pThis->pCStr) + pThis->iCurrPos;
 
 	/* OK, we most probably can obtain a value... */
-	CHKiRet(rsCStrConstruct(&pCStr));
+	CHKiRet(cstrConstruct(&pCStr));
 
-	while(pThis->iCurrPos < rsCStrLen(pThis->pCStr)) {
+	while(pThis->iCurrPos < cstrLen(pThis->pCStr)) {
 		if(*pC == '"') {
 			break;	/* we are done! */
 		} else if(*pC == '\\') {
 			++pThis->iCurrPos;
 			++pC;
-			if(pThis->iCurrPos < rsCStrLen(pThis->pCStr)) {
+			if(pThis->iCurrPos < cstrLen(pThis->pCStr)) {
 				/* in this case, we copy the escaped character
 				 * to the output buffer (but do not rely on this,
 				 * we might later introduce other things, like \007!
 				 */
-				CHKiRet(rsCStrAppendChar(pCStr, *pC));
+				CHKiRet(cstrAppendChar(pCStr, *pC));
 			}
 		} else { /* regular character */
-			CHKiRet(rsCStrAppendChar(pCStr, *pC));
+			CHKiRet(cstrAppendChar(pCStr, *pC));
 		}
 		++pThis->iCurrPos;
 		++pC;
@@ -339,12 +339,12 @@ rsRetVal parsQuotedCStr(rsParsObj *pThis, cstr_t **ppCStr)
 		++pThis->iCurrPos; /* 'eat' trailing quote */
 	} else {
 		/* error - improperly quoted string! */
-		rsCStrDestruct(&pCStr);
+		cstrDestruct(&pCStr);
 		ABORT_FINALIZE(RS_RET_MISSING_TRAIL_QUOTE);
 	}
 
 	/* We got the string, let's finish it...  */
-	CHKiRet(rsCStrFinish(pCStr));
+	CHKiRet(cstrFinalize(pCStr));
 
 	/* done! */
 	*ppCStr = pCStr;
@@ -352,7 +352,7 @@ rsRetVal parsQuotedCStr(rsParsObj *pThis, cstr_t **ppCStr)
 finalize_it:
 	if(iRet != RS_RET_OK) {
 		if(pCStr != NULL)
-			rsCStrDestruct(&pCStr);
+			cstrDestruct(&pCStr);
 	}
 
 	RETiRet;
@@ -380,7 +380,7 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 	assert(pIP != NULL);
 	assert(pBits != NULL);
 
-	CHKiRet(rsCStrConstruct(&pCStr));
+	CHKiRet(cstrConstruct(&pCStr));
 
 	parsSkipWhitespace(pThis);
 	pC = rsCStrGetBufBeg(pThis->pCStr) + pThis->iCurrPos;
@@ -390,8 +390,8 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 	 */
 	while(pThis->iCurrPos < rsCStrLen(pThis->pCStr)
 	      && *pC != '/' && *pC != ',' && !isspace((int)*pC)) {
-		if((iRet = rsCStrAppendChar(pCStr, *pC)) != RS_RET_OK) {
-			rsCStrDestruct (&pCStr);
+		if((iRet = cstrAppendChar(pCStr, *pC)) != RS_RET_OK) {
+			cstrDestruct (&pCStr);
 			FINALIZE;
 		}
 		++pThis->iCurrPos;
@@ -399,15 +399,15 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 	}
 	
 	/* We got the string, let's finish it...  */
-	if((iRet = rsCStrFinish(pCStr)) != RS_RET_OK) {
-		rsCStrDestruct (&pCStr);
+	if((iRet = cstrFinalize(pCStr)) != RS_RET_OK) {
+		cstrDestruct(&pCStr);
 		FINALIZE;
 	}
 
 	/* now we have the string and must check/convert it to
 	 * an NetAddr structure.
 	 */	
-  	CHKiRet(rsCStrConvSzStrAndDestruct(pCStr, &pszIP, 0));
+  	CHKiRet(cstrConvSzStrAndDestruct(pCStr, &pszIP, 0));
 
 	*pIP = calloc(1, sizeof(struct NetAddr));
 	

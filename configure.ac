@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([rsyslog],[3.22.1],[rsyslog@lists.adiscon.com])
+AC_INIT([rsyslog],[5.1.2],[rsyslog@lists.adiscon.com])
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([ChangeLog])
 AC_CONFIG_MACRO_DIR([m4])
@@ -35,6 +35,13 @@ case "${host}" in
     # do not DEFINE OS_BSD
     os_type="bsd"
   ;;
+  *-*-solaris*)
+    os_type="solaris"
+    AC_DEFINE([OS_SOLARIS], [1], [Indicator for a Solaris OS])
+    AC_DEFINE([_POSIX_PTHREAD_SEMANTICS], [1], [Use POSIX pthread semantics])
+    SOL_LIBS="-lsocket -lnsl"
+    AC_SUBST(SOL_LIBS)
+  ;;
 esac
 
 AC_DEFINE_UNQUOTED([HOSTENV], "$host", [the host environment, can be queried via a system variable])
@@ -56,7 +63,7 @@ AC_SUBST(DL_LIBS)
 AC_HEADER_RESOLV
 AC_HEADER_STDC
 AC_HEADER_SYS_WAIT
-AC_CHECK_HEADERS([arpa/inet.h libgen.h fcntl.h locale.h netdb.h netinet/in.h paths.h stddef.h stdlib.h string.h sys/file.h sys/ioctl.h sys/param.h sys/socket.h sys/time.h sys/stat.h syslog.h unistd.h utmp.h])
+AC_CHECK_HEADERS([arpa/inet.h libgen.h fcntl.h locale.h netdb.h netinet/in.h paths.h stddef.h stdlib.h string.h sys/file.h sys/ioctl.h sys/param.h sys/socket.h sys/time.h sys/stat.h syslog.h unistd.h utmp.h sys/epoll.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
@@ -91,7 +98,7 @@ AC_TYPE_SIGNAL
 AC_FUNC_STAT
 AC_FUNC_STRERROR_R
 AC_FUNC_VPRINTF
-AC_CHECK_FUNCS([flock basename alarm clock_gettime gethostbyname gethostname gettimeofday localtime_r memset mkdir regcomp select setid socket strcasecmp strchr strdup strerror strndup strnlen strrchr strstr strtol strtoul uname ttyname_r])
+AC_CHECK_FUNCS([flock basename alarm clock_gettime gethostbyname gethostname gettimeofday localtime_r memset mkdir regcomp select setid socket strcasecmp strchr strdup strerror strndup strnlen strrchr strstr strtol strtoul uname ttyname_r epoll_wait getline malloc_trim])
 
 # Check for MAXHOSTNAMELEN
 AC_MSG_CHECKING(for MAXHOSTNAMELEN)
@@ -137,6 +144,7 @@ AC_ARG_WITH(moddirs,
 AM_CONDITIONAL(WITH_MODDIRS, test x$moddirs != x)
 AC_SUBST(moddirs)
 
+
 # Large file support
 AC_ARG_ENABLE(largefile,
         [AS_HELP_STRING([--enable-largefile],[Enable large file support @<:@default=yes@:>@])],
@@ -150,6 +158,7 @@ AC_ARG_ENABLE(largefile,
 if test "$enable_largefile" = "no"; then
         AC_DEFINE(NOLARGEFILE, 1, [Defined when large file support is disabled.])
 fi
+
 
 # Regular expressions
 AC_ARG_ENABLE(regexp,
@@ -166,6 +175,7 @@ if test "$enable_regexp" = "yes"; then
         AC_DEFINE(FEATURE_REGEXP, 1, [Regular expressions support enabled.])
 fi
 
+
 # zlib compression
 AC_ARG_ENABLE(zlib,
         [AS_HELP_STRING([--enable-zlib],[Enable zlib compression  support @<:@default=yes@:>@])],
@@ -176,6 +186,7 @@ AC_ARG_ENABLE(zlib,
          esac],
         [enable_zlib=yes]
 )
+AM_CONDITIONAL(ENABLE_ZLIB, test x$enable_zlib = xyes)
 if test "$enable_zlib" = "yes"; then
 	AC_CHECK_HEADER(zlib.h, [zlib_header="yes"], [zlib_header="no" enable_zlib="false"])
 	if test "$zlib_header" = "yes"; then
@@ -186,17 +197,18 @@ if test "$enable_zlib" = "yes"; then
 	fi
 fi
 
+
 #gssapi
 AC_ARG_ENABLE(gssapi_krb5,
 	[AS_HELP_STRING([--enable-gssapi-krb5],[Enable GSSAPI Kerberos 5 support @<:@default=no@:>@])],
         [case "${enableval}" in
-         yes) want_gssapi_krb5="yes" ;;
-          no) want_gssapi_krb5="no" ;;
+         yes) enable_gssapi_krb5="yes" ;;
+          no) enable_gssapi_krb5="no" ;;
            *) AC_MSG_ERROR(bad value ${enableval} for --enable-gssapi-krb5) ;;
          esac],
-	[want_gssapi_krb5=no]
+	[enable_gssapi_krb5=no]
 )
-if test $want_gssapi_krb5 = yes; then
+if test $enable_gssapi_krb5 = yes; then
 	AC_CHECK_LIB(gssapi_krb5, gss_acquire_cred, [
 		AC_CHECK_HEADER(gssapi/gssapi.h, [
 			AC_DEFINE(USE_GSSAPI,,
@@ -206,7 +218,8 @@ if test $want_gssapi_krb5 = yes; then
 		])
 	])
 fi
-AM_CONDITIONAL(ENABLE_GSSAPI, test x$want_gssapi_krb5 = xyes)
+AM_CONDITIONAL(ENABLE_GSSAPI, test x$enable_gssapi_krb5 = xyes)
+
 
 # multithreading via pthreads
 AC_ARG_ENABLE(pthreads,
@@ -233,7 +246,10 @@ if test "x$enable_pthreads" != "xno"; then
         [
           AC_DEFINE([USE_PTHREADS], [1], [Multithreading support enabled.])
           PTHREADS_LIBS="-lpthread"
-          PTHREADS_CFLAGS="-pthread"
+ 	  case "${os_type}" in
+ 	  solaris) PTHREADS_CFLAGS="-pthreads" ;;
+ 	  *)       PTHREADS_CFLAGS="-pthread" ;;
+ 	  esac
           AC_SUBST(PTHREADS_LIBS)
           AC_SUBST(PTHREADS_CFLAGS)
         ],
@@ -244,6 +260,7 @@ if test "x$enable_pthreads" != "xno"; then
     [AC_MSG_FAILURE([pthread is missing])]
   )
 fi
+
 
 # klog
 AC_ARG_ENABLE(klog,
@@ -258,6 +275,7 @@ AC_ARG_ENABLE(klog,
 AM_CONDITIONAL(ENABLE_IMKLOG, test x$enable_klog = xyes)
 AM_CONDITIONAL(ENABLE_IMKLOG_BSD, test x$os_type = xbsd)
 AM_CONDITIONAL(ENABLE_IMKLOG_LINUX, test x$os_type = xlinux)
+
 
 #
 # SYSLOG_UNIXAF
@@ -279,6 +297,7 @@ AC_ARG_ENABLE([unix],
     AC_DEFINE([SYSLOG_UNIXAF], [1], [Description])
   ])
 
+
 # inet
 AC_ARG_ENABLE(inet,
         [AS_HELP_STRING([--enable-inet],[Enable networking support @<:@default=yes@:>@])],
@@ -293,6 +312,7 @@ AM_CONDITIONAL(ENABLE_INET, test x$enable_inet = xyes)
 if test "$enable_inet" = "yes"; then
         AC_DEFINE(SYSLOG_INET, 1, [network support is integrated.])
 fi
+
 
 #
 # The following define determines whether the package adheres to the
@@ -315,6 +335,7 @@ AC_ARG_ENABLE([fsstnd],
     AC_DEFINE([FSSTND], [1], [Description])
   ])
 
+
 # debug
 AC_ARG_ENABLE(debug,
         [AS_HELP_STRING([--enable-debug],[Enable debug mode @<:@default=no@:>@])],
@@ -332,6 +353,7 @@ if test "$enable_debug" = "no"; then
         AC_DEFINE(NDEBUG, 1, [Defined if debug mode is disabled.])
 fi
 
+
 # runtime instrumentation
 AC_ARG_ENABLE(rtinst,
         [AS_HELP_STRING([--enable-rtinst],[Enable runtime instrumentation mode @<:@default=no@:>@])],
@@ -345,6 +367,7 @@ AC_ARG_ENABLE(rtinst,
 if test "$enable_rtinst" = "yes"; then
         AC_DEFINE(RTINST, 1, [Defined if runtime instrumentation mode is enabled.])
 fi
+
 
 # valgrind
 AC_ARG_ENABLE(valgrind,
@@ -441,6 +464,40 @@ fi
 AM_CONDITIONAL(ENABLE_PGSQL, test x$enable_pgsql = xyes)
 AC_SUBST(PGSQL_CFLAGS)
 AC_SUBST(PGSQL_LIBS)
+
+
+# oracle (OCI) support
+AC_ARG_ENABLE(oracle,
+	[AS_HELP_STRING([--enable-oracle],[Enable native Oracle database support @<:@default=no@:>@])],
+	[case "${enableval}" in
+	 yes) enable_oracle="yes" ;;
+	 no) enable_oracle="no" ;;
+	 *) AC_MSG_ERROR(bad value ${enableval} for --enable-oracle) ;;
+	 esac],
+	[enable_oracle=no]
+)
+if test "x$enable_oracle" = "xyes"; then
+    AC_CHECK_PROG(
+	[HAVE_ORACLE_CONFIG],
+	[oracle-instantclient-config],
+	[yes],,,
+	)
+    if test "x${HAVE_ORACLE_CONFIG}" != "xyes"; then
+	AC_MSG_FAILURE([oracle-instantclient-config not found in PATH])
+    fi
+    AC_CHECK_LIB(
+	[occi],
+	[OCIEnvCreate],
+	[ORACLE_CFLAGS="`oracle-instantclient-config --cflags`"
+	ORACLE_LIBS="`oracle-instantclient-config --libs`"
+	],
+	[AC_MSG_FAILURE([Oracle (OCI) libraray is missing])],
+	[`oracle-instantclient-config --libs --cflags`]
+	)
+fi
+AM_CONDITIONAL(ENABLE_ORACLE, test x$enable_oracle = xyes)
+AC_SUBST(ORACLE_CFLAGS)
+AC_SUBST(ORACLE_LIBS)
 
 
 # libdbi support
@@ -603,6 +660,7 @@ AM_CONDITIONAL(ENABLE_RELP, test x$enable_relp = xyes)
 AC_SUBST(RELP_CFLAGS)
 AC_SUBST(RELP_LIBS)
 
+
 # RFC 3195 support
 AC_ARG_ENABLE(rfc3195,
         [AS_HELP_STRING([--enable-rfc3195],[Enable RFC3195 support @<:@default=no@:>@])],
@@ -621,9 +679,21 @@ AC_SUBST(LIBLOGGING_CFLAGS)
 AC_SUBST(LIBLOGGING_LIBS)
 
 
-# settings for the template input module; copy and modify this code
-# if you intend to add your own module. Be sure to replace imtemplate
-# by the actual name of your module.
+# enable/disable the testbench (e.g. because some important parts
+# are missing)
+AC_ARG_ENABLE(testbench,
+        [AS_HELP_STRING([--enable-testbench],[file input module enabled @<:@default=yes@:>@])],
+        [case "${enableval}" in
+         yes) enable_testbench="yes" ;;
+          no) enable_testbench="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-testbench) ;;
+         esac],
+        [enable_testbench=yes]
+)
+AM_CONDITIONAL(ENABLE_TESTBENCH, test x$enable_testbench = xyes)
+
+
+# settings for the file input module
 AC_ARG_ENABLE(imfile,
         [AS_HELP_STRING([--enable-imfile],[file input module enabled @<:@default=no@:>@])],
         [case "${enableval}" in
@@ -633,14 +703,49 @@ AC_ARG_ENABLE(imfile,
          esac],
         [enable_imfile=no]
 )
-#
-# you may want to do some library checks here - see snmp, mysql, pgsql modules
-# for samples
-#
 AM_CONDITIONAL(ENABLE_IMFILE, test x$enable_imfile = xyes)
 
-AM_CONDITIONAL(ENABLE_IMTEMPLATE, test x$enable_imtemplate = xyes)
-# end of copy template - be sure to serach for imtemplate to find everything!
+
+# settings for the omprog output module
+AC_ARG_ENABLE(omprog,
+        [AS_HELP_STRING([--enable-omprog],[Compiles omprog module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_omprog="yes" ;;
+          no) enable_omprog="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-omprog) ;;
+         esac],
+        [enable_omprog=no]
+)
+AM_CONDITIONAL(ENABLE_OMPROG, test x$enable_omprog = xyes)
+
+
+# settings for omstdout
+AC_ARG_ENABLE(omstdout,
+        [AS_HELP_STRING([--enable-omstdout],[Compiles stdout module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_omstdout="yes" ;;
+          no) enable_omstdout="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-omstdout) ;;
+         esac],
+        [enable_omstdout=no]
+)
+AM_CONDITIONAL(ENABLE_OMSTDOUT, test x$enable_omstdout = xyes)
+
+# This provides a vehicle to integrate custom modules, that are not
+# part of rsyslog, into the build process. It is named cust1, so that
+# additional such modules can easily be added.
+AC_ARG_ENABLE(cust1,
+        [AS_HELP_STRING([--enable-cust1],[Compiles stdout module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_cust1="yes" ;;
+          no) enable_cust1="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-cust1) ;;
+         esac],
+        [enable_cust1=no]
+)
+AM_CONDITIONAL(ENABLE_CUST1, test x$enable_cust1 = xyes)
+
+
 # settings for the template input module; copy and modify this code
 # if you intend to add your own module. Be sure to replace imtemplate
 # by the actual name of your module.
@@ -658,10 +763,35 @@ AC_ARG_ENABLE(imtemplate,
 # for samples
 #
 AM_CONDITIONAL(ENABLE_IMTEMPLATE, test x$enable_imtemplate = xyes)
-# end of copy template - be sure to serach for imtemplate to find everything!
+# end of copy template - be sure to search for imtemplate to find everything!
+
+
+# settings for the template output module; copy and modify this code
+# if you intend to add your own module. Be sure to replace omtemplate
+# by the actual name of your module.
+AC_ARG_ENABLE(omtemplate,
+        [AS_HELP_STRING([--enable-omtemplate],[Compiles omtemplate template module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_omtemplate="yes" ;;
+          no) enable_omtemplate="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-omtemplate) ;;
+         esac],
+        [enable_omtemplate=no]
+)
+#
+# you may want to do some library checks here - see snmp, mysql, pgsql modules
+# for samples
+#
+AM_CONDITIONAL(ENABLE_OMTEMPLATE, test x$enable_omtemplate = xyes)
+# end of copy template - be sure to search for omtemplate to find everything!
+
+
+SHAVE_INIT
 
 
 AC_CONFIG_FILES([Makefile \
+		shave \
+		shave-libtool \
 		runtime/Makefile \
 		tools/Makefile \
 		doc/Makefile \
@@ -673,6 +803,9 @@ AC_CONFIG_FILES([Makefile \
 		plugins/immark/Makefile \
 		plugins/imklog/Makefile \
 		plugins/imtemplate/Makefile \
+		plugins/omtemplate/Makefile \
+		plugins/omprog/Makefile \
+		plugins/omstdout/Makefile \
 		plugins/imfile/Makefile \
 		plugins/imrelp/Makefile \
 		plugins/imdiag/Makefile \
@@ -684,33 +817,51 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omlibdbi/Makefile \
 		plugins/ommail/Makefile \
 		plugins/omsnmp/Makefile \
+		plugins/omoracle/Makefile \
+		plugins/cust1/Makefile \
 		tests/Makefile])
 AC_OUTPUT
 
 echo "****************************************************"
 echo "rsyslog will be compiled with the following settings:"
 echo
-echo "Multithreading support enabled:           $enable_pthreads"
-echo "Klog functionality enabled:               $enable_klog ($os_type)"
-echo "Regular expressions support enabled:      $enable_regexp"
-echo "Zlib compression support enabled:         $enable_zlib"
-echo "MySql support enabled:                    $enable_mysql"
-echo "libdbi support enabled:                   $enable_libdbi"
-echo "PostgreSQL support enabled:               $enable_pgsql"
-echo "SNMP support enabled:                     $enable_snmp"
-echo "Mail support enabled:                     $enable_mail"
-echo "RELP support enabled:                     $enable_relp"
-echo "imdiag enabled:                           $enable_imdiag"
-echo "file input module enabled:                $enable_imfile"
-echo "input template module will be compiled:   $enable_imtemplate"
-echo "Large file support enabled:               $enable_largefile"
-echo "Networking support enabled:               $enable_inet"
-echo "GnuTLS network stream driver enabled:     $enable_gnutls"
-echo "Enable GSSAPI Kerberos 5 support:         $want_gssapi_krb5"
-echo "Debug mode enabled:                       $enable_debug"
-echo "Runtime Instrumentation enabled:          $enable_rtinst"
-echo "Diagnostic tools enabled:                 $enable_diagtools"
-echo "valgrind support settings enabled:        $enable_valgrind"
-echo "rsyslog runtime will be built:            $enable_rsyslogrt"
-echo "rsyslogd will be built:                   $enable_rsyslogd"
-
+echo "    Multithreading support enabled:           $enable_pthreads"
+echo "    Large file support enabled:               $enable_largefile"
+echo "    Networking support enabled:               $enable_inet"
+echo "    Regular expressions support enabled:      $enable_regexp"
+echo "    Zlib compression support enabled:         $enable_zlib"
+echo "    rsyslog runtime will be built:            $enable_rsyslogrt"
+echo "    rsyslogd will be built:                   $enable_rsyslogd"
+echo "    custom module 1 will be built:            $enable_cust1"
+echo
+echo "---{ input plugins }---"
+echo "    Klog functionality enabled:               $enable_klog ($os_type)"
+echo "    imdiag enabled:                           $enable_imdiag"
+echo "    file input module enabled:                $enable_imfile"
+echo "    input template module will be compiled:   $enable_imtemplate"
+echo
+echo "---{ output plugins }---"
+echo "    Mail support enabled:                     $enable_mail"
+echo "    omprog module will be compiled:           $enable_omprog"
+echo "    omstdout module will be compiled:         $enable_omstdout"
+echo "    output template module will be compiled:  $enable_omtemplate"
+echo
+echo "---{ database support }---"
+echo "    MySql support enabled:                    $enable_mysql"
+echo "    libdbi support enabled:                   $enable_libdbi"
+echo "    PostgreSQL support enabled:               $enable_pgsql"
+echo "    Oracle (OCI) support enabled:             $enable_oracle"
+echo
+echo "---{ protocol support }---"
+echo "    GnuTLS network stream driver enabled:     $enable_gnutls"
+echo "    GSSAPI Kerberos 5 support enabled:        $enable_gssapi_krb5"
+echo "    RELP support enabled:                     $enable_relp"
+echo "    SNMP support enabled:                     $enable_snmp"
+echo
+echo "---{ debugging support }---"
+echo "    Testbench enabled:                        $enable_testbench"
+echo "    Debug mode enabled:                       $enable_debug"
+echo "    Runtime Instrumentation enabled:          $enable_rtinst"
+echo "    Diagnostic tools enabled:                 $enable_diagtools"
+echo "    Valgrind support settings enabled:        $enable_valgrind"
+echo

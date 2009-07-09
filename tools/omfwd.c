@@ -48,6 +48,7 @@
 #endif
 #include <pthread.h>
 #include "syslogd.h"
+#include "conf.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
 #include "net.h"
@@ -93,12 +94,14 @@ typedef struct _instanceData {
 	permittedPeers_t *pPermPeers;
 	int iStrmDrvrMode;
 	char	*f_hname;
-	int *pSockArray;		/* sockets to use for UDP */
+	int *pSockArray;	/* sockets to use for UDP */
 	int bIsConnected;  /* are we connected to remote host? 0 - no, 1 - yes, UDP means addr resolved */
 	struct addrinfo *f_addr;
-	int compressionLevel; /* 0 - no compression, else level for zlib */
+	int compressionLevel;	/* 0 - no compression, else level for zlib */
 	char *port;
 	int protocol;
+	int iUDPRebindInterval;	/* rebind interval */
+	int nXmit;		/* number of transmissions since last (re-)bind */
 #	define	FORW_UDP 0
 #	define	FORW_TCP 1
 	/* following fields for TCP-based delivery */
@@ -111,8 +114,30 @@ static uchar *pszStrmDrvr = NULL; /* name of the stream driver to use */
 static short iStrmDrvrMode = 0; /* mode for stream driver, driver-dependent (0 mostly means plain tcp) */
 static short bResendLastOnRecon = 0; /* should the last message be re-sent on a successful reconnect? */
 static uchar *pszStrmDrvrAuthMode = NULL; /* authentication mode to use */
+static int iUDPRebindInterval = 0;	/* support for automatic re-binding (load balancers!). 0 - no rebind */
 
 static permittedPeers_t *pPermPeers = NULL;
+
+static rsRetVal doTryResume(instanceData *pData);
+
+/* Close the UDP sockets.
+ * rgerhards, 2009-05-29
+ */
+static rsRetVal
+closeUDPSockets(instanceData *pData)
+{
+	DEFiRet;
+	assert(pData != NULL);
+	if(pData->pSockArray != NULL) {
+		net.closeUDPListenSockets(pData->pSockArray);
+		pData->pSockArray = NULL;
+		freeaddrinfo(pData->f_addr);
+		pData->f_addr = NULL;
+	}
+pData->bIsConnected = 0; // TODO: remove this variable altogether
+	RETiRet;
+}
+
 
 /* get the syslog forward port from selector_t. The passed in
  * struct must be one that is setup for forwarding.
@@ -181,28 +206,18 @@ ENDisCompatibleWithFeature
 
 BEGINfreeInstance
 CODESTARTfreeInstance
-	if(pData->f_addr != NULL) { /* TODO: is the check ok? */
-		freeaddrinfo(pData->f_addr);
-		pData->f_addr = NULL;
-	}
-	if(pData->port != NULL)
-		free(pData->port);
-
 	/* final cleanup */
 	DestructTCPInstanceData(pData);
-	if(pData->pSockArray != NULL)
-		net.closeUDPListenSockets(pData->pSockArray);
+	closeUDPSockets(pData);
 
 	if(pData->protocol == FORW_TCP) {
 		tcpclt.Destruct(&pData->pTCPClt);
 	}
 
-	if(pData->f_hname != NULL)
-		free(pData->f_hname);
-	if(pData->pszStrmDrvr != NULL)
-		free(pData->pszStrmDrvr);
-	if(pData->pszStrmDrvrAuthMode != NULL)
-		free(pData->pszStrmDrvrAuthMode);
+	free(pData->port);
+	free(pData->f_hname);
+	free(pData->pszStrmDrvr);
+	free(pData->pszStrmDrvrAuthMode);
 	if(pData->pPermPeers != NULL)
 		net.DestructPermittedPeers(&pData->pPermPeers);
 	/* destroy the libnet state needed for forged UDP sources */
@@ -238,6 +253,23 @@ static rsRetVal UDPSend(instanceData *pData, char *msg, size_t len)
 	msg[0]='\0';
 	msg++;
 	inet_pton(AF_INET, source_text_ip, &(source_ip.sin_addr));
+
+	/* the rebind logic and the spoofing logic probably are mutally exclusive and need to be
+	 * seperated by an if.
+	 */
+
+dbgprintf("rebind logic: interval %d, curr %d, mod %d, if %d\n", pData->iUDPRebindInterval, pData->nXmit,
+	(pData->nXmit % pData->iUDPRebindInterval), ((pData->nXmit % pData->iUDPRebindInterval) == 0));
+	if(pData->iUDPRebindInterval && (pData->nXmit++ % pData->iUDPRebindInterval == 0)) {
+		dbgprintf("omfwd dropping UDP 'connection' (as configured)\n");
+		pData->nXmit = 1;	/* else we have an addtl wrap at 2^31-1 */
+		CHKiRet(closeUDPSockets(pData));
+	}
+
+	if(pData->pSockArray == NULL) {
+		CHKiRet(doTryResume(pData));
+	}
+
 	if(pData->pSockArray != NULL) {
 		/* we need to track if we have success sending to the remote
 		 * peer. Success is indicated by at least one sendto() call
@@ -314,6 +346,7 @@ static rsRetVal UDPSend(instanceData *pData, char *msg, size_t len)
 		}
 	}
 
+finalize_it:
 	RETiRet;
 }
 
@@ -705,7 +738,9 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	} else {
 		CHKmalloc(pData->f_hname = strdup((char*) q));
 	}
-dbgprintf("hostname '%s', port '%s'\n", pData->f_hname, pData->port);
+
+	/* copy over config data as needed */
+	pData->iUDPRebindInterval = iUDPRebindInterval;
 
 	/* process template */
 	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS,
@@ -790,6 +825,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	/* we now must reset all non-string values */
 	iStrmDrvrMode = 0;
 	bResendLastOnRecon = 0;
+	iUDPRebindInterval = 0;
 
 	return RS_RET_OK;
 }
@@ -804,6 +840,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(net,LM_NET_FILENAME));
 
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionforwarddefaulttemplate", 0, eCmdHdlrGetWord, NULL, &pszTplName, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionsendudprebindinterval", 0, eCmdHdlrInt, NULL, &iUDPRebindInterval, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionsendstreamdriver", 0, eCmdHdlrGetWord, NULL, &pszStrmDrvr, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionsendstreamdrivermode", 0, eCmdHdlrInt, NULL, &iStrmDrvrMode, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionsendstreamdriverauthmode", 0, eCmdHdlrGetWord, NULL, &pszStrmDrvrAuthMode, NULL));

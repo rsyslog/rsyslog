@@ -44,6 +44,7 @@
 #include <pthread.h>
 #include <gssapi/gssapi.h>
 #include "dirty.h"
+#include "conf.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
 #include "net.h"
@@ -444,7 +445,7 @@ CODESTARTdoAction
 			/* error! */
 			dbgprintf("error forwarding via tcp, suspending\n");
 			pData->eDestState = eDestFORW_SUSP;
-			iRet = RS_RET_SUSPENDED;
+			ABORT_FINALIZE(RS_RET_SUSPENDED);
 		}
 		break;
 	}

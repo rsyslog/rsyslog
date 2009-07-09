@@ -1,4 +1,329 @@
 ---------------------------------------------------------------------------
+Version 5.1.2  [DEVEL] (rgerhards), 2009-07-08
+- bugfix: properties inputname, fromhost, fromhost-ip, msg were lost when
+  working with disk queues
+- some performance enhancements
+- bugfix: abort condition when RecvFrom was not set and message reduction
+  was on. Happend e.g. with imuxsock.
+- added $klogConsoleLogLevel directive which permits to set a new
+  console log level while rsyslog is active
+- some internal code cleanup
+---------------------------------------------------------------------------
+Version 5.1.1  [DEVEL] (rgerhards), 2009-07-03
+- bugfix: huge memory leak in queue engine (made rsyslogd unusable in
+  production). Occured if at least one queue was in direct mode 
+  (the default for action queues)
+- imported many performance optimizations from v4-devel (4.5.0)
+- bugfix: subtle (and usually irrelevant) issue in timout processing
+  timeout could be one second too early if nanoseconds wrapped
+- set a more sensible timeout for shutdow, now 1.5 seconds to complete
+  processing (this also removes those cases where the shutdown message
+  was not written because the termination happened before it)
+---------------------------------------------------------------------------
+Version 5.1.0  [DEVEL] (rgerhards), 2009-05-29
+
+*********************************** NOTE **********************************
+The v5 versions of rsyslog feature a greatly redesigned queue engine. The
+major theme for the v5 release is twofold:
+
+a) greatly improved performance
+b) enable audit-grade processing
+
+Here, audit-grade processing means that rsyslog, if used together with
+audit-grade transports and configured correctly, will never lose messages
+that already have been acknowledged, not even in fatal failure cases like
+sudden loss of power.
+
+Note that large parts of rsyslog's important core components have been
+restructured to support these design goals. As such, early versions of
+the engine will probably be less stable than the v3/v4 engine.
+
+Also note that the initial versions do not cover all and everything. As
+usual, the code will evolve toward the final goal as version numbers
+increase.
+*********************************** NOTE **********************************
+
+- redesigned queue engine so that it supports ultra-reliable operations
+  This resulted in a rewrite of large parts. The new capability can be
+  used to build audit-grade systems on the basis of rsyslog.
+- added $MainMsgQueueDequeueBatchSize and $ActionQueueDequeueBatchSize 
+  configuration directives
+- implemented a new transactional output module interface which provides
+  superior performance (for databases potentially far superior performance)
+- increased ompgsql performance by adapting to new transactional
+  output module interface
+---------------------------------------------------------------------------
+Version 4.5.1  [DEVEL] (rgerhards), 2009-07-??
+- bugfix: properties inputname, fromhost, fromhost-ip, msg were lost when
+  working with disk queues
+- performance enhancement: much faster, up to twice as fast (depending
+  on configuration)
+- bugfix: abort condition when RecvFrom was not set and message reduction
+  was on. Happend e.g. with imuxsock.
+- added $klogConsoleLogLevel directive which permits to set a new
+  console log level while rsyslog is active
+---------------------------------------------------------------------------
+Version 4.5.0  [DEVEL] (rgerhards), 2009-07-02
+- activation order of inputs changed, they are now activated only after
+  privileges are dropped. Thanks to Michael Terry for the patch.
+- greatly improved performance
+- greatly reduced memory requirements of msg object
+  to around half of the previous demand. This means that more messages can
+  be stored in core! Due to fewer cache misses, this also means some
+  performance improvement.
+- improved config error messages: now contain a copy of the config line
+  that (most likely) caused the error
+- reduced max value for $DynaFileCacheSize to 1,000 (the former maximum
+  of 10,000 really made no sense, even 1,000 is very high, but we like
+  to keep the user in control ;)).
+- added capability to fsync() queue disk files for enhanced reliability
+  (also add's speed, because you do no longer need to run the whole file
+  system in sync mode)
+- more strict parsing of the hostname in rfc3164 mode, hopefully
+  removes false positives (but may cause some trouble with hostname
+  parsing). For details, see this bug tracker:
+  http://bugzilla.adiscon.com/show_bug.cgi?id=126
+- added configuration commands (see doc for explanations)
+  * $OMFileZipLevel
+  * $OMFileIOBufferSize
+  * $OMFileFlushOnTXEnd
+  * $MainMsgQueueSyncQueueFiles
+  * $ActionQueueSyncQueueFiles
+- done some memory accesses explicitely atomic
+- bugfix: subtle (and usually irrelevant) issue in timout processing
+  timeout could be one second too early if nanoseconds wrapped
+- set a more sensible timeout for shutdow, now 1.5 seconds to complete
+  processing (this also removes those cases where the shutdown message
+  was not written because the termination happened before it)
+- internal bugfix: object pointer was only reset to NULL when an object
+  was actually destructed. This most likely had no effect to existing code,
+  but it may also have caused trouble in remote cases. Similarly, the fix
+  may also cause trouble...
+- bugfix: missing initialization during timestamp creation
+  This could lead to timestamps written in the wrong format, but not to
+  an abort
+---------------------------------------------------------------------------
+Version 4.3.3  [beta] (rgerhards), 2009-0?-??
+- internal bugfix: object pointer was only reset to NULL when an object
+  was actually destructed. This most likely had no effect to existing code,
+  but it may also have caused trouble in remote cases. Similarly, the fix
+  may also cause trouble...
+---------------------------------------------------------------------------
+Version 4.3.2  [beta] (rgerhards), 2009-06-24
+- removed long-obsoleted property UxTradMsg
+- added a generic network stream server (in addition to rather specific
+  syslog tcp server)
+- added ability for the UDP output action to rebind its send socket after
+  sending n messages. New config directive $ActionSendUDPRebindInterval
+  added for the purpose. By default, rebinding is disabled. This is 
+  considered useful for load balancers.
+- bugfix: imdiag/imtcp had a race condition
+- improved testbench (now much better code design and reuse)
+- added config switch --enable-testbench=no to turn off testbench
+---------------------------------------------------------------------------
+Version 4.3.1  [DEVEL] (rgerhards), 2009-05-25
+- added capability to run multiple tcp listeners (on different ports)
+- performance enhancement: imtcp calls parser no longer on input thread
+  but rather inside on of the potentially many main msg queue worker
+  threads (an enhancement scheduled for all input plugins where this is
+  possible)
+- added $GenerateConfigGraph configuration command which can be used
+  to generate nice-looking (and very informative) rsyslog configuration
+  graphs.
+- added $ActionName configuration directive (currently only used for
+  graph generation, but may find other uses)
+- improved doc
+  * added (hopefully) easier to grasp queue explanation
+- improved testbench
+  * added tests for queue disk-only mode (checks disk queue logic)
+- bugfix: light and full delay watermarks had invalid values, badly
+  affecting performance for delayable inputs
+- build system improvements - thanks to Michael Biebl
+- added new testing module imdiag, which enables to talk to the 
+  rsyslog core at runtime. The current implementation is only a 
+  beginning, but can be expanded over time
+---------------------------------------------------------------------------
+Version 4.3.0  [DEVEL] (rgerhards), 2009-04-17
+- new feature: new output plugin omprog, which permits to start program
+  and feed it (via its stdin) with syslog messages. If the program
+  terminates, it is restarted.
+- improved internal handling of RainerScript functions, building the
+  necessary plumbing to support more functions with decent runtime
+  performance. This is also necessary towards the long-term goal
+  of loadable library modules.
+- added new RainerScript function "tolower"
+- improved testbench
+  * added tests for tcp-based reception
+  * added tcp-load test (1000 connections, 20,000 messages)
+- added $MaxOpenFiles configuration directive
+- bugfix: solved potential memory leak in msg processing, could manifest
+  itself in imtcp
+- bugfix: ompgsql did not detect problems in sql command execution
+  this could cause loss of messages. The handling was correct if the
+  connection broke, but not if there was a problem with statement
+  execution. The most probable case for such a case would be invalid
+  sql inside the template, and this is now much easier to diagnose.
+---------------------------------------------------------------------------
+Version 4.2.1  [v4-stable] (rgerhards), 2009-0?-??
+- bugfix: stderr/stdout were not closed to be able to emit error messages,
+  but this caused ssh sessions to hang. Now we close them after the 
+  initial initialization. See forum thread:
+  http://kb.monitorware.com/controlling-terminal-issues-t9875.html
+---------------------------------------------------------------------------
+Version 4.2.0  [v4-stable] (rgerhards), 2009-06-23
+- bugfix: light and full delay watermarks had invalid values, badly
+  affecting performance for delayable inputs
+- imported all patches from 3.22.1 as of today (see below)
+- bugfix: compile problems in im3195
+---------------------------------------------------------------------------
+Version 4.1.7  [BETA] (rgerhards), 2009-04-22
+- bugfix: $InputTCPMaxSessions config directive was accepted, but not
+  honored. This resulted in a fixed upper limit of 200 connections.
+- bugfix: the default for $DirCreateMode was 0644, and as such wrong.
+  It has now been changed to 0700. For some background, please see
+  http://lists.adiscon.net/pipermail/rsyslog/2009-April/001986.html
+- bugfix: ompgsql did not detect problems in sql command execution
+  this could cause loss of messages. The handling was correct if the
+  connection broke, but not if there was a problem with statement
+  execution. The most probable case for such a case would be invalid
+  sql inside the template, and this is now much easier to diagnose.
+---------------------------------------------------------------------------
+Version 4.1.6  [DEVEL] (rgerhards), 2009-04-07
+- added new "csv" property replacer options to enable simple creation
+  of CSV-formatted outputs (format from RFC4180 is used)
+- implemented function support in RainerScript. That means the engine
+  parses and compile functions, as well as executes a few build-in
+  ones. Dynamic loading and registration of functions is not yet
+  supported - but we now have a good foundation to do that later on.
+- implemented the strlen() RainerScript function
+- added a template output module
+- added -T rsyslogd command line option, enables to specify a directory
+  where to chroot() into on startup. This is NOT a security feature but
+  introduced to support testing. Thus, -T does not make sure chroot()
+  is used in a secure way. (may be removed later)
+- added omstdout module for testing purposes. Spits out all messages to
+  stdout - no config option, no other features
+- added a parser testing suite (still needs to be extended, but a good
+  start)
+- modified $ModLoad statement so that for modules whom's name starts with
+  a dot, no path is prepended (this enables relative-pathes and should
+  not break any valid current config)
+- fixed a bug that caused action retries not to work correctly
+  situation was only cleared by a restart
+- bugfix: closed dynafile was potentially never written until another
+  dynafile name was generated - potential loss of messages
+- improved omfile so that it properly suspends itself if there is an
+  i/o or file name generation error. This enables it to be used with
+  the full high availability features of rsyslog's engine
+- bugfix: fixed some segaults on Solaris, where vsprintf() does not
+  check for NULL pointers
+- improved performance of regexp-based filters
+  Thanks to Arnaud Cornet for providing the idea and initial patch.
+- added a new way how output plugins may be passed parameters. This is
+  more effcient for some outputs. They new can receive fields not only
+  as a single string but rather in an array where each string is seperated.
+- added (some) developer documentation for output plugin interface
+- bugfix: potential abort with DA queue after high watermark is reached
+  There exists a race condition that can lead to a segfault. Thanks
+  go to vbernetr, who performed the analysis and provided patch, which
+  I only tweaked a very little bit.
+- bugfix: imtcp did incorrectly parse hostname/tag
+  Thanks to Luis Fernando Muñoz Mejías for the patch.
+---------------------------------------------------------------------------
+Version 4.1.5  [DEVEL] (rgerhards), 2009-03-11
+- bugfix: parser did not correctly parse fields in UDP-received messages
+- added ERE support in filter conditions
+  new comparison operation "ereregex"
+- added new config directive $RepeatedMsgContainsOriginalMsg so that the
+  "last message repeated n times" messages, if generated, may
+  have an alternate format that contains the message that is being repeated
+---------------------------------------------------------------------------
+Version 4.1.4  [DEVEL] (rgerhards), 2009-01-29
+- bugfix: inconsistent use of mutex/atomic operations could cause segfault
+  details are too many, for full analysis see blog post at:
+  http://blog.gerhards.net/2009/01/rsyslog-data-race-analysis.html
+- bugfix: unitialized mutex was used in msg.c:getPRI
+  This was subtle, because getPRI is called as part of the debugging code
+  (always executed) in syslogd.c:logmsg.
+- bufgix: $PreserveFQDN was not properly handled for locally emitted
+  messages
+---------------------------------------------------------------------------
+Version 4.1.3  [DEVEL] (rgerhards), 2008-12-17
+- added $InputTCPServerAddtlFrameDelimiter config directive, which
+  enables to specify an additional, non-standard message delimiter
+  for processing plain tcp syslog. This is primarily a fix for the invalid
+  framing used in Juniper's NetScreen products. Credit to forum user
+  Arv for suggesting this solution.
+- added $InputTCPServerInputName property, which enables a name to be
+  specified that will be available during message processing in the
+  inputname property. This is considered useful for logic that treats
+  messages differently depending on which input received them.
+- added $PreserveFQDN config file directive
+  Enables to use FQDNs in sender names where the legacy default
+  would have stripped the domain part.
+  Thanks to BlinkMind, Inc. http://www.blinkmind.com for sponsoring this
+  development.
+- bugfix: imudp went into an endless loop under some circumstances
+  (but could also leave it under some other circumstances...)
+  Thanks to David Lang and speedfox for reporting this issue.
+---------------------------------------------------------------------------
+Version 4.1.2  [DEVEL] (rgerhards), 2008-12-04
+- bugfix: code did not compile without zlib
+- security bugfix: $AllowedSender was not honored, all senders were
+  permitted instead (see http://www.rsyslog.com/Article322.phtml)
+- security fix: imudp emitted a message when a non-permitted sender
+  tried to send a message to it. This behaviour is operator-configurable.
+  If enabled, a message was emitted each time. That way an attacker could
+  effectively fill the disk via this facility. The message is now
+  emitted only once in a minute (this currently is a hard-coded limit,
+  if someone comes up with a good reason to make it configurable, we
+  will probably do that).
+- doc bugfix: typo in v3 compatibility document directive syntax
+  thanks to Andrej for reporting
+- imported other changes from 3.21.8 and 3.20.1 (see there)
+---------------------------------------------------------------------------
+Version 4.1.1  [DEVEL] (rgerhards), 2008-11-26
+- added $PrivDropToGroup, $PrivDropToUser, $PrivDropToGroupID,
+  $PrivDropToUserID config directives to enable dropping privileges.
+  This is an effort to provide a security enhancement. For the limits of this
+  approach, see http://wiki.rsyslog.com/index.php/Security
+- re-enabled imklog to compile on FreeBSD (brought in from beta)
+---------------------------------------------------------------------------
+Version 4.1.0  [DEVEL] (rgerhards), 2008-11-18
+
+********************************* WARNING *********************************
+This version has a slightly different on-disk format for message entries.
+As a consequence, old queue files being read by this version may have
+an invalid output timestamp, which could result to some malfunction inside
+the output driver. It is recommended to drain queues with the previous
+version before switching to this one.
+********************************* WARNING *********************************
+
+- greatly enhanced performance when compared to v3.
+- added configuration directive "HUPisRestart" which enables to configure
+  HUP to be either a full restart or "just" a leightweight way to
+  close open files.
+- enhanced legacy syslog parser to detect year if part of the timestamp
+  the format is based on what Cisco devices seem to emit.
+- added a setting "$OptimizeForUniprocessor" to enable users to turn off
+  pthread_yield calls which are counter-productive on multiprocessor 
+  machines (but have been shown to be useful on uniprocessors)
+- reordered imudp processing. Message parsing is now done as part of main
+  message queue worker processing (was part of the input thread)
+  This should also improve performance, as potentially more work is
+  done in parallel.
+- bugfix: compressed syslog messages could be slightly mis-uncompressed
+  if the last byte of the compressed record was a NUL
+- added $UDPServerTimeRequery option which enables to work with
+  less acurate timestamps in favor of performance. This enables querying
+  of the time only every n-th time if imudp is running in the tight
+  receive loop (aka receiving messsages at a high rate)
+- doc bugfix: queue doc had wrong parameter name for setting controlling
+  worker thread shutdown period
+- restructured rsyslog.conf documentation
+- bugfix: memory leak in ompgsql
+  Thanks to Ken for providing the patch
+---------------------------------------------------------------------------
 Version 3.22.1 [v3-stable] (rgerhards), 2009-07-02
 - bugfix: invalid error message issued if $inlcudeConfig was on an empty
   set of files (e.g. *.conf, where none such files existed)
@@ -89,9 +414,12 @@ Version 3.21.6  [DEVEL] (rgerhards), 2008-10-22
 - bugfix: solved a segfault condition
 - bugfix: subsecond time properties generated by imfile, imklog and
   internal messages could be slightly inconsistent
+- bugfix: (potentially big) memory leak on HUP if queues could not be
+  drained before timeout - thanks to David Lang for pointing this out
 - added capability to support multiple module search pathes. Thank
   to Marius Tomaschewski for providing the patch.
 - bugfix: im3195 did no longer compile
+- improved "make distcheck" by ensuring everything relevant is recompiled
 ---------------------------------------------------------------------------
 Version 3.21.5  [DEVEL] (rgerhards), 2008-09-30
 - performance optimization: unnecessary time() calls during message

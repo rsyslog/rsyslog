@@ -1,0 +1,33 @@
+// This file is part of rsyslog.
+// 
+// rsyslog action call state diagram
+//
+// see http://www.graphviz.org for how to obtain the graphviz processor
+// which is used to build the actual graph.
+//
+// generate the graph with
+// $ dot action-call.dot -Tpng >action-call.png
+
+digraph G {
+	label="\n\nrsyslog message states during action processing\nhttp://www.rsyslog.com";
+	//fontsize=20;
+
+	ok	[label="ready for processing" color="green"];
+	mpf	[label="message permanent failure" color="red"];
+	tf	[label="temporary failure"]
+	cPen	[label="commit pending"];
+	com	[label="committed" color="red"];
+
+	tf -> tf	[label="retry fails, i < n"];
+	tf -> mpf	[label="retry fails, i = n"];
+	tf -> ok	[label="retry succeeds"];
+	ok -> com	[label="doAction RS_RET_OK"];
+	ok -> cPen	[label="doAction COMMIT_PENDING"];
+	ok -> tf	[label="doAction RS_RET_SUSPENDED"];
+	ok -> mpf	[label="doAction RS_RET_DISABLED"];
+	cPen -> com	[label="endTransaction RS_RET_OK"];
+	cPen -> tf	[label="endTransaction _SUSPENDED"];
+
+	//{rank=same; tf cPen}
+	{rank=same; com mpf}
+}

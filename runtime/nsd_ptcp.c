@@ -614,6 +614,34 @@ finalize_it:
 }
 
 
+/* Enable KEEPALIVE handling on the socket.
+ * rgerhards, 2009-06-02
+ */
+static rsRetVal
+EnableKeepAlive(nsd_t *pNsd)
+{
+	nsd_ptcp_t *pThis = (nsd_ptcp_t*) pNsd;
+	int ret;
+	int optval;
+	socklen_t optlen;
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, nsd_ptcp);
+
+	optval = 1;
+	optlen = sizeof(optval);
+	ret = setsockopt(pThis->sock, SOL_SOCKET, SO_KEEPALIVE, &optval, optlen);
+	if(ret < 0) {
+		dbgprintf("EnableKeepAlive socket call returns error %d\n", ret);
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
+	dbgprintf("KEEPALIVE enabled for nsd %p\n", pThis);
+
+finalize_it:
+	RETiRet;
+}
+
+
 /* open a connection to a remote host (server).
  * rgerhards, 2008-03-19
  */
@@ -754,6 +782,7 @@ CODESTARTobjQueryInterface(nsd_ptcp)
 	pIf->GetRemoteHName = GetRemoteHName;
 	pIf->GetRemoteIP = GetRemoteIP;
 	pIf->CheckConnection = CheckConnection;
+	pIf->EnableKeepAlive = EnableKeepAlive;
 finalize_it:
 ENDobjQueryInterface(nsd_ptcp)
 

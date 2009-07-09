@@ -92,6 +92,7 @@ void srSleep(int iSeconds, int iuSeconds);
 char *rs_strerror_r(int errnum, char *buf, size_t buflen);
 int decodeSyslogName(uchar *name, syslogName_t *codetab);
 int getSubString(uchar **ppSrc,  char *pDst, size_t DstSize, char cSep);
+rsRetVal getFileSize(uchar *pszName, off_t *pSize);
 
 /* mutex operations */
 /* some macros to cancel-safe lock a mutex (it will automatically be released
@@ -108,8 +109,6 @@ int getSubString(uchar **ppSrc,  char *pDst, size_t DstSize, char cSep);
 #define mutex_cancelsafe_unlock(mut) pthread_cleanup_pop(1)
 
 /* some useful constants */
-#define MUTEX_ALREADY_LOCKED	0
-#define LOCK_MUTEX		1
 #define DEFVARS_mutexProtection\
 	int iCancelStateSave; \
 	int bLockedOpIsLocked=0
@@ -117,11 +116,26 @@ int getSubString(uchar **ppSrc,  char *pDst, size_t DstSize, char cSep);
 	if(bMustLock == LOCK_MUTEX) { \
 		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave); \
 		d_pthread_mutex_lock(mut); \
+		assert(bLockedOpIsLocked == 0); \
 		bLockedOpIsLocked = 1; \
 	}
 #define END_MTX_PROTECTED_OPERATIONS(mut) \
 	if(bLockedOpIsLocked) { \
 		d_pthread_mutex_unlock(mut); \
+		bLockedOpIsLocked = 0; \
 		pthread_setcancelstate(iCancelStateSave, NULL); \
 	}
+
+/* The unconditional versions of the macro always lock the mutex. They are preferred in 
+ * complex scenarios, where the simple ones might get mixed up by multiple calls.
+ */
+#define DEFVARS_mutexProtection_uncond\
+	int iCancelStateSave
+#define BEGIN_MTX_PROTECTED_OPERATIONS_UNCOND(mut) \
+	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave); \
+	d_pthread_mutex_lock(mut); 
+#define END_MTX_PROTECTED_OPERATIONS_UNCOND(mut) \
+	d_pthread_mutex_unlock(mut); \
+	pthread_setcancelstate(iCancelStateSave, NULL);
+
 #endif

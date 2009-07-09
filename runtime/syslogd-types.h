@@ -76,25 +76,31 @@ enum _EHostnameCmpMode {
 };
 typedef enum _EHostnameCmpMode EHostnameCmpMode;
 
+/* time type numerical values for structure below */
+#define TIME_TYPE_UNINIT	0
+#define TIME_TYPE_RFC3164	1
+#define TIME_TYPE_RFC5424	2
 /* rgerhards 2004-11-11: the following structure represents
  * a time as it is used in syslog.
+ * rgerhards, 2009-06-23: packed structure for better cache performance
+ * (but left ultimate decision about packing to compiler)
  */
 struct syslogTime {
-	int timeType;	/* 0 - unitinialized , 1 - RFC 3164, 2 - syslog-protocol */
-	int year;
-	int month;
-	int day;
-	int hour; /* 24 hour clock */
-	int minute;
-	int second;
-	int secfrac;	/* fractional seconds (must be 32 bit!) */
-	int secfracPrecision;
+	intTiny timeType;	/* 0 - unitinialized , 1 - RFC 3164, 2 - syslog-protocol */
+	intTiny month;
+	intTiny day;
+	intTiny hour; /* 24 hour clock */
+	intTiny minute;
+	intTiny second;
+	intTiny secfracPrecision;
+	intTiny OffsetMinute;	/* UTC offset in minutes */
+	intTiny OffsetHour;	/* UTC offset in hours
+				 * full UTC offset minutes = OffsetHours*60 + OffsetMinute. Then use
+				 * OffsetMode to know the direction.
+				 */
 	char OffsetMode;	/* UTC offset + or - */
-	char OffsetHour;	/* UTC offset in hours */
-	int OffsetMinute;	/* UTC offset in minutes */
-	/* full UTC offset minutes = OffsetHours*60 + OffsetMinute. Then use
-	 * OffsetMode to know the direction.
-	 */
+	short year;
+	int secfrac;	/* fractional seconds (must be 32 bit!) */
 };
 typedef struct syslogTime syslogTime_t;
 

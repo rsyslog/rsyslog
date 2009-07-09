@@ -25,7 +25,9 @@
  *
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
  */
+#include "config.h"
 #include <stdlib.h>
+#include "rsyslog.h"
 
 int bReduceRepeatMsgs = 0;
 int repeatinterval = 30;
@@ -37,5 +39,7 @@ void cflineClassic(void) {};
 void selectorAddList(void) {};
 void selectorConstruct(void) {};
 void selectorDestruct(void) {};
+void getFIOPName(void) {};
 
+ruleset_t *pCurrRuleset;
 /* these are required by some dynamically loaded modules */

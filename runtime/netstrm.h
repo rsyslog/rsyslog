@@ -31,6 +31,7 @@ struct netstrm_s {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
 	nsd_t *pDrvrData;	/**< the driver's data elements (at most other places, this is called pNsd) */
 	nsd_if_t Drvr;		/**< our stream driver */
+	void *pUsr;		/**< pointer to user-provided data structure */
 	netstrms_t *pNS;	/**< pointer to our netstream subsystem object */
 };
 
@@ -68,9 +69,13 @@ BEGINinterface(netstrm) /* name must also be changed in ENDinterface macro! */
 	 * sockets - not really desirable, but not the end of the world... TODO: should be
 	 * reconsidered when a new ACL system is build. -- rgerhards, 2008-12-01
 	 */
+	/* v4 */
+	rsRetVal (*EnableKeepAlive)(netstrm_t *pThis);
 ENDinterface(netstrm)
-#define netstrmCURR_IF_VERSION 3 /* increment whenever you change the interface structure! */
-/* interface version 3 added GetRemAddr() */
+#define netstrmCURR_IF_VERSION 4 /* increment whenever you change the interface structure! */
+/* interface version 3 added GetRemAddr()
+ * interface version 4 added EnableKeepAlive() -- rgerhards, 2009-06-02
+ * */
 
 /* prototypes */
 PROTOTYPEObj(netstrm);

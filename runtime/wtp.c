@@ -39,6 +39,13 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
+#include <atomic.h>
+#include <sys/prctl.h>
+
+/// TODO: check on solaris if this is any longer needed - I don't think so - rgerhards, 2009-09-20
+//#ifdef OS_SOLARIS
+//#	include <sched.h>
+//#endif
 
 #include "rsyslog.h"
 #include "stringbuf.h"
@@ -46,9 +53,12 @@
 #include "wtp.h"
 #include "wti.h"
 #include "obj.h"
+#include "unicode-helper.h"
+#include "glbl.h"
 
 /* static data */
 DEFobjStaticHelpers
+DEFobjCurrIf(glbl)
 
 /* forward-definitions */
 
@@ -71,7 +81,7 @@ wtpGetDbgHdr(wtp_t *pThis)
 
 
 /* Not implemented dummy function for constructor */
-static rsRetVal NotImplementedDummy() { return RS_RET_OK; }
+static rsRetVal NotImplementedDummy() { return RS_RET_NOT_IMPLEMENTED; }
 /* Standard-Constructor for the wtp object
  */
 BEGINobjConstruct(wtp) /* be sure to specify the object type also in END macro! */
@@ -80,12 +90,15 @@ BEGINobjConstruct(wtp) /* be sure to specify the object type also in END macro! 
 	pthread_cond_init(&pThis->condThrdTrm, NULL);
 	/* set all function pointers to "not implemented" dummy so that we can safely call them */
 	pThis->pfChkStopWrkr = NotImplementedDummy;
+	pThis->pfGetDeqBatchSize = NotImplementedDummy;
 	pThis->pfIsIdle = NotImplementedDummy;
 	pThis->pfDoWork = NotImplementedDummy;
+	pThis->pfObjProcessed = NotImplementedDummy;
 	pThis->pfOnIdle = NotImplementedDummy;
 	pThis->pfOnWorkerCancel = NotImplementedDummy;
 	pThis->pfOnWorkerStartup = NotImplementedDummy;
 	pThis->pfOnWorkerShutdown = NotImplementedDummy;
+dbgprintf("XXX: wtpConstruct: %d\n", pThis->wtpState);
 ENDobjConstruct(wtp)
 
 
@@ -109,7 +122,7 @@ wtpConstructFinalize(wtp_t *pThis)
 	 */
 	if((pThis->pWrkr = malloc(sizeof(wti_t*) * pThis->iNumWorkerThreads)) == NULL)
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-
+	
 	for(i = 0 ; i < pThis->iNumWorkerThreads ; ++i) {
 		CHKiRet(wtiConstruct(&pThis->pWrkr[i]));
 		pWti = pThis->pWrkr[i];
@@ -143,8 +156,7 @@ CODESTARTobjDestruct(wtp)
 	pthread_mutex_destroy(&pThis->mut);
 	pthread_mutex_destroy(&pThis->mutThrdShutdwn);
 
-	if(pThis->pszDbgHdr != NULL)
-		free(pThis->pszDbgHdr);
+	free(pThis->pszDbgHdr);
 ENDobjDestruct(wtp)
 
 
@@ -208,7 +220,7 @@ wtpProcessThrdChanges(wtp_t *pThis)
 	 */
 	do {
 		/* reset the change marker */
-		pThis->bThrdStateChanged = 0;
+		ATOMIC_STORE_0_TO_INT(pThis->bThrdStateChanged);
 		/* go through all threads */
 		for(i = 0 ; i < pThis->iNumWorkerThreads ; ++i) {
 			wtiProcessThrdChanges(pThis->pWrkr[i], LOCK_MUTEX);
@@ -240,7 +252,6 @@ wtpSetState(wtp_t *pThis, wtpState_t iNewState)
 
 
 /* check if the worker shall shutdown (1 = yes, 0 = no)
- * TODO: check if we can use atomic operations to enhance performance
  * Note: there may be two mutexes locked, the bLockUsrMutex is the one in our "user"
  * (e.g. the queue clas)
  * rgerhards, 2008-01-21
@@ -254,16 +265,19 @@ wtpChkStopWrkr(wtp_t *pThis, int bLockMutex, int bLockUsrMutex)
 	ISOBJ_TYPE_assert(pThis, wtp);
 
 	BEGIN_MTX_PROTECTED_OPERATIONS(&pThis->mut, bLockMutex);
-	if(   (pThis->wtpState == wtpState_SHUTDOWN_IMMEDIATE)
-	   || ((pThis->wtpState == wtpState_SHUTDOWN) && pThis->pfIsIdle(pThis->pUsr, bLockUsrMutex)))
-		iRet = RS_RET_TERMINATE_NOW;
-	END_MTX_PROTECTED_OPERATIONS(&pThis->mut);
+	if(pThis->wtpState == wtpState_SHUTDOWN_IMMEDIATE) {
+		ABORT_FINALIZE(RS_RET_TERMINATE_NOW);
+	} else if(pThis->wtpState == wtpState_SHUTDOWN) {
+		ABORT_FINALIZE(RS_RET_TERMINATE_WHEN_IDLE);
+	}
 
 	/* try customer handler if one was set and we do not yet have a definite result */
-	if(iRet == RS_RET_OK && pThis->pfChkStopWrkr != NULL) {
+	if(pThis->pfChkStopWrkr != NULL) {
 		iRet = pThis->pfChkStopWrkr(pThis->pUsr, bLockUsrMutex);
 	}
 
+finalize_it:
+	END_MTX_PROTECTED_OPERATIONS(&pThis->mut);
 	RETiRet;
 }
 
@@ -413,6 +427,8 @@ wtpWrkrExecCancelCleanup(void *arg)
 static void *
 wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in wtp! */
 {
+	uchar *pszDbgHdr;
+	uchar thrdName[32] = "rs:";
 	DEFiRet;
 	DEFVARS_mutexProtection;
 	wti_t *pWti = (wti_t*) arg;
@@ -425,6 +441,13 @@ wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in 
 
 	sigfillset(&sigSet);
 	pthread_sigmask(SIG_BLOCK, &sigSet, NULL);
+
+	/* set thread name - we ignore if the call fails, has no harsh consequences... */
+	pszDbgHdr = wtpGetDbgHdr(pThis);
+	ustrncpy(thrdName+3, pszDbgHdr, 20);
+	if(prctl(PR_SET_NAME, thrdName, 0, 0, 0) != 0) {
+		DBGPRINTF("prctl failed, not setting thread name for '%s'\n", wtpGetDbgHdr(pThis));
+	}
 
 	BEGIN_MTX_PROTECTED_OPERATIONS(&pThis->mut, LOCK_MUTEX);
 
@@ -470,15 +493,16 @@ wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in 
 static rsRetVal
 wtpStartWrkr(wtp_t *pThis, int bLockMutex)
 {
-	DEFiRet;
 	DEFVARS_mutexProtection;
 	wti_t *pWti;
 	int i;
 	int iState;
+	pthread_attr_t attr;
+	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, wtp);
 
-	wtpProcessThrdChanges(pThis);
+	wtpProcessThrdChanges(pThis);	// TODO: Performance: this causes a lot of FUTEX calls
 
 	BEGIN_MTX_PROTECTED_OPERATIONS(&pThis->mut, bLockMutex);
 
@@ -498,16 +522,12 @@ wtpStartWrkr(wtp_t *pThis, int bLockMutex)
 
 	pWti = pThis->pWrkr[i];
 	wtiSetState(pWti, eWRKTHRD_RUN_CREATED, 0, LOCK_MUTEX);
-	iState = pthread_create(&(pWti->thrdID), NULL, wtpWorker, (void*) pWti);
+	pthread_attr_init(&attr);
+	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+	iState = pthread_create(&(pWti->thrdID), &attr, wtpWorker, (void*) pWti);
+	pthread_attr_destroy(&attr);	/* TODO: we could globally reuse such an attribute 2009-07-08 */
 	dbgprintf("%s: started with state %d, num workers now %d\n",
 		  wtpGetDbgHdr(pThis), iState, pThis->iCurNumWrkThrd);
-
-	/* we try to give the starting worker a little boost. It won't help much as we still
- 	 * hold the queue's mutex, but at least it has a chance to start on a single-CPU system.
- 	 */
-#	if !defined(__hpux) /* pthread_yield is missing there! */
-	pthread_yield();
-#	endif
 
 	/* indicate we just started a worker and would like to see it running */
 	wtpSetInactivityGuard(pThis, 1, MUTEX_ALREADY_LOCKED);
@@ -575,8 +595,10 @@ DEFpropSetMethPTR(wtp, pmutUsr, pthread_mutex_t)
 DEFpropSetMethPTR(wtp, pcondBusy, pthread_cond_t)
 DEFpropSetMethFP(wtp, pfChkStopWrkr, rsRetVal(*pVal)(void*, int))
 DEFpropSetMethFP(wtp, pfRateLimiter, rsRetVal(*pVal)(void*))
-DEFpropSetMethFP(wtp, pfIsIdle, rsRetVal(*pVal)(void*, int))
+DEFpropSetMethFP(wtp, pfGetDeqBatchSize, rsRetVal(*pVal)(void*, int*))
+DEFpropSetMethFP(wtp, pfIsIdle, rsRetVal(*pVal)(void*, wtp_t*))
 DEFpropSetMethFP(wtp, pfDoWork, rsRetVal(*pVal)(void*, void*, int))
+DEFpropSetMethFP(wtp, pfObjProcessed, rsRetVal(*pVal)(void*, wti_t*))
 DEFpropSetMethFP(wtp, pfOnIdle, rsRetVal(*pVal)(void*, int))
 DEFpropSetMethFP(wtp, pfOnWorkerCancel, rsRetVal(*pVal)(void*, void*))
 DEFpropSetMethFP(wtp, pfOnWorkerStartup, rsRetVal(*pVal)(void*))
@@ -639,12 +661,22 @@ finalize_it:
 /* dummy */
 rsRetVal wtpQueryInterface(void) { return RS_RET_NOT_IMPLEMENTED; }
 
+/* exit our class
+ */
+BEGINObjClassExit(wtp, OBJ_IS_CORE_MODULE) /* CHANGE class also in END MACRO! */
+CODESTARTObjClassExit(nsdsel_gtls)
+	/* release objects we no longer need */
+	objRelease(glbl, CORE_COMPONENT);
+ENDObjClassExit(wtp)
+
+
 /* Initialize the stream class. Must be called as the very first method
  * before anything else is called inside this class.
  * rgerhards, 2008-01-09
  */
 BEGINObjClassInit(wtp, 1, OBJ_IS_CORE_MODULE)
 	/* request objects we use */
+	CHKiRet(objUse(glbl, CORE_COMPONENT));
 ENDObjClassInit(wtp)
 
 /*

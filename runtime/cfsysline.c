@@ -364,7 +364,7 @@ static rsRetVal doGetGID(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *p
 			/* we set value via a set function */
 			CHKiRet(pSetHdlr(pVal, pgBuf->gr_gid));
 		}
-		dbgprintf("gid %d obtained for group '%s'\n", pgBuf->gr_gid, szName);
+		dbgprintf("gid %d obtained for group '%s'\n", (int) pgBuf->gr_gid, szName);
 	}
 
 	skipWhiteSpace(pp); /* skip over any whitespace */
@@ -406,7 +406,7 @@ static rsRetVal doGetUID(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *p
 			/* we set value via a set function */
 			CHKiRet(pSetHdlr(pVal, ppwBuf->pw_uid));
 		}
-		dbgprintf("uid %d obtained for user '%s'\n", ppwBuf->pw_uid, szName);
+		dbgprintf("uid %d obtained for user '%s'\n", (int) ppwBuf->pw_uid, szName);
 	}
 
 	skipWhiteSpace(pp); /* skip over any whitespace */
@@ -462,7 +462,7 @@ getWord(uchar **pp, cstr_t **ppStrB)
 	ASSERT(*pp != NULL);
 	ASSERT(ppStrB != NULL);
 
-	CHKiRet(rsCStrConstruct(ppStrB));
+	CHKiRet(cstrConstruct(ppStrB));
 
 	skipWhiteSpace(pp); /* skip over any whitespace */
 
@@ -470,9 +470,9 @@ getWord(uchar **pp, cstr_t **ppStrB)
 	p = *pp;
 
 	while(*p && !isspace((int) *p)) {
-		CHKiRet(rsCStrAppendChar(*ppStrB, *p++));
+		CHKiRet(cstrAppendChar(*ppStrB, *p++));
 	}
-	CHKiRet(rsCStrFinish(*ppStrB));
+	CHKiRet(cstrFinalize(*ppStrB));
 
 	*pp = p;
 
@@ -506,7 +506,7 @@ static rsRetVal doGetWord(uchar **pp, rsRetVal (*pSetHdlr)(void*, uchar*), void 
 	ASSERT(*pp != NULL);
 
 	CHKiRet(getWord(pp, &pStrB));
-	CHKiRet(rsCStrConvSzStrAndDestruct(pStrB, &pNewVal, 0));
+	CHKiRet(cstrConvSzStrAndDestruct(pStrB, &pNewVal, 0));
 	pStrB = NULL;
 
 	/* we got the word, now set it */
@@ -525,7 +525,7 @@ static rsRetVal doGetWord(uchar **pp, rsRetVal (*pSetHdlr)(void*, uchar*), void 
 finalize_it:
 	if(iRet != RS_RET_OK) {
 		if(pStrB != NULL)
-			rsCStrDestruct(&pStrB);
+			cstrDestruct(&pStrB);
 	}
 
 	RETiRet;
@@ -548,7 +548,7 @@ doSyslogName(uchar **pp, rsRetVal (*pSetHdlr)(void*, int), void *pVal, syslogNam
 	ASSERT(*pp != NULL);
 
 	CHKiRet(getWord(pp, &pStrB)); /* get word */
-	iNewVal = decodeSyslogName(rsCStrGetSzStr(pStrB), pNameTable);
+	iNewVal = decodeSyslogName(cstrGetSzStr(pStrB), pNameTable);
 
 	if(pSetHdlr == NULL) {
 		/* we should set value directly to var */
@@ -814,7 +814,7 @@ rsRetVal regCfSysLineHdlr(uchar *pCmdName, int bChainingPermitted, ecslCmdHdrlTy
 		CHKiRet(cslcConstruct(&pThis, bChainingPermitted));
 		CHKiRet_Hdlr(cslcAddHdlr(pThis, eType, pHdlr, pData, pOwnerCookie)) {
 			cslcDestruct(pThis);
-			goto finalize_it;
+			FINALIZE;
 		}
 		/* important: add to list, AFTER everything else is OK. Else
 		 * we mess up things in the error case.
@@ -825,7 +825,7 @@ rsRetVal regCfSysLineHdlr(uchar *pCmdName, int bChainingPermitted, ecslCmdHdrlTy
 		}
 		CHKiRet_Hdlr(llAppend(&llCmdList, pMyCmdName, (void*) pThis)) {
 			cslcDestruct(pThis);
-			goto finalize_it;
+			FINALIZE;
 		}
 	} else {
 		/* command already exists, are we allowed to chain? */
@@ -834,7 +834,7 @@ rsRetVal regCfSysLineHdlr(uchar *pCmdName, int bChainingPermitted, ecslCmdHdrlTy
 		}
 		CHKiRet_Hdlr(cslcAddHdlr(pThis, eType, pHdlr, pData, pOwnerCookie)) {
 			cslcDestruct(pThis);
-			goto finalize_it;
+			FINALIZE;
 		}
 	}
 

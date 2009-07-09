@@ -141,5 +141,23 @@ int OMSRgetEntry(omodStringRequest_t *pThis, int iEntry, uchar **ppTplName, int 
 
 	return RS_RET_OK;
 }
+
+
+/* return the full set of template options that are supported by this version of
+ * OMSR. They are returned in an unsigned long value. The caller can mask that
+ * value to check on the option he is interested in.
+ * Note that this interface was added in 4.1.6, so a plugin must obtain a pointer
+ * to this interface via queryHostEtryPt().
+ * rgerhards, 2009-04-03
+ */
+rsRetVal
+OMSRgetSupportedTplOpts(unsigned long *pOpts)
+{
+	DEFiRet;
+	assert(pOpts != NULL);
+	*pOpts = OMSR_RQD_TPL_OPT_SQL | OMSR_TPL_AS_ARRAY;
+	RETiRet;
+}
+
 /* vim:set ai:
  */

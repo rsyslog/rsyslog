@@ -3,7 +3,7 @@
  *
  * File begun on 2007-07-13 by RGerhards (extracted from syslogd.c)
  *
- * Copyright 2007 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2009 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -33,6 +33,7 @@
 #include "syslogd-types.h"
 #include "template.h"
 
+
 /* rgerhards 2004-11-08: The following structure represents a
  * syslog message. 
  *
@@ -47,129 +48,140 @@
  * will be decremented. If it is 1, however, the object is actually
  * destroyed. To make this work, it is vital that MsgAddRef() is
  * called each time a "copy" is stored somewhere.
+ *
+ * WARNING: this structure is not calloc()ed, so be careful when
+ * adding new fields. You need to initialize them in
+ * msgBaseConstruct(). That function header comment also describes
+ * why this is the case.
  */
 struct msg {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
-	pthread_mutexattr_t mutAttr;
-short bDoLock; /* use the mutex? */
+	flowControl_t flowCtlType; /**< type of flow control we can apply, for enqueueing, needs not to be persisted because
+				        once data has entered the queue, this property is no longer needed. */
 	pthread_mutex_t mut;
-	int	iRefCount;	/* reference counter (0 = unused) */
-	short	bParseHOSTNAME;	/* should the hostname be parsed from the message? */
+	bool	bDoLock;	 /* use the mutex? */
+	bool	bParseHOSTNAME;	/* should the hostname be parsed from the message? */
+	short	iRefCount;	/* reference counter (0 = unused) */
 	   /* background: the hostname is not present on "regular" messages
 	    * received via UNIX domain sockets from the same machine. However,
 	    * it is available when we have a forwarder (e.g. rfc3195d) using local
 	    * sockets. All in all, the parser would need parse templates, that would
 	    * resolve all these issues... rgerhards, 2005-10-06
 	    */
-	flowControl_t flowCtlType; /**< type of flow control we can apply, for enqueueing, needs not to be persisted because
-				        once data has entered the queue, this property is no longer needed. */
 	short	iSeverity;	/* the severity 0..7 */
-	uchar *pszSeverity;	/* severity as string... */
-	int iLenSeverity;	/* ... and its length. */
- 	uchar *pszSeverityStr;   /* severity name... */
- 	int iLenSeverityStr;    /* ... and its length. */
 	short	iFacility;	/* Facility code 0 .. 23*/
-	uchar *pszFacility;	/* Facility as string... */
-	int iLenFacility;	/* ... and its length. */
- 	uchar *pszFacilityStr;   /* facility name... */
- 	int iLenFacilityStr;    /* ... and its length. */
-	uchar *pszPRI;		/* the PRI as a string */
-	int iLenPRI;		/* and its length */
-	uchar	*pszRawMsg;	/* message as it was received on the
-				 * wire. This is important in case we
-				 * need to preserve cryptographic verifiers.
-				 */
-	int	iLenRawMsg;	/* length of raw message */
-	uchar	*pszMSG;	/* the MSG part itself */
-	int	iLenMSG;	/* Length of the MSG part */
-	uchar	*pszUxTradMsg;	/* the traditional UNIX message */
-	int	iLenUxTradMsg;/* Length of the traditional UNIX message */
-	uchar	*pszTAG;	/* pointer to tag value */
-	int	iLenTAG;	/* Length of the TAG part */
-	uchar	*pszHOSTNAME;	/* HOSTNAME from syslog message */
-	int	iLenHOSTNAME;	/* Length of HOSTNAME */
-	uchar	*pszRcvFrom;	/* System message was received from */
-	int	iLenRcvFrom;	/* Length of pszRcvFrom */
-	uchar	*pszRcvFromIP;	/* IP of system message was received from */
-	int	iLenRcvFromIP;	/* Length of pszRcvFromIP */
-	uchar *pszInputName;	/* name of the input module that submitted this message */
-	int	iLenInputName;	/* Length of pszInputName */
+	short	offAfterPRI;	/* offset, at which raw message WITHOUT PRI part starts in pszRawMsg */
+	short	offMSG;		/* offset at which the MSG part starts in pszRawMsg */
 	short	iProtocolVersion;/* protocol version of message received 0 - legacy, 1 syslog-protocol) */
+	int	msgFlags;	/* flags associated with this message */
+	int	iLenRawMsg;	/* length of raw message */
+	int	iLenMSG;	/* Length of the MSG part */
+	int	iLenTAG;	/* Length of the TAG part */
+	int	iLenHOSTNAME;	/* Length of HOSTNAME */
+	uchar	*pszRawMsg;	/* message as it was received on the wire. This is important in case we
+				 * need to preserve cryptographic verifiers.  */
+	uchar	*pszHOSTNAME;	/* HOSTNAME from syslog message */
+	char *pszRcvdAt3164;	/* time as RFC3164 formatted string (always 15 charcters) */
+	char *pszRcvdAt3339;	/* time as RFC3164 formatted string (32 charcters at most) */
+	char *pszRcvdAt_MySQL;	/* rcvdAt as MySQL formatted string (always 14 charcters) */
+        char *pszRcvdAt_PgSQL;  /* rcvdAt as PgSQL formatted string (always 21 characters) */
+	char *pszTIMESTAMP3164;	/* TIMESTAMP as RFC3164 formatted string (always 15 charcters) */
+	char *pszTIMESTAMP3339;	/* TIMESTAMP as RFC3339 formatted string (32 charcters at most) */
+	char *pszTIMESTAMP_MySQL;/* TIMESTAMP as MySQL formatted string (always 14 charcters) */
+        char *pszTIMESTAMP_PgSQL;/* TIMESTAMP as PgSQL formatted string (always 21 characters) */
 	cstr_t *pCSProgName;	/* the (BSD) program name */
 	cstr_t *pCSStrucData;   /* STRUCTURED-DATA */
 	cstr_t *pCSAPPNAME;	/* APP-NAME */
 	cstr_t *pCSPROCID;	/* PROCID */
 	cstr_t *pCSMSGID;	/* MSGID */
+	prop_t *pInputName;	/* input name property */
+	prop_t *pRcvFrom;	/* name of system message was received from */
+	prop_t *pRcvFromIP;	/* IP of system message was received from */
+	ruleset_t *pRuleset;	/* ruleset to be used for processing this message */
+	time_t ttGenTime;	/* time msg object was generated, same as tRcvdAt, but a Unix timestamp.
+				   While this field looks redundant, it is required because a Unix timestamp
+				   is used at later processing stages (namely in the output arena). Thanks to
+				   the subleties of how time is defined, there is no reliable way to reconstruct
+				   the Unix timestamp from the syslogTime fields (in practice, we may be close
+				   enough to reliable, but I prefer to leave the subtle things to the OS, where
+				   it obviously is solved in way or another...). */
 	struct syslogTime tRcvdAt;/* time the message entered this program */
-	char *pszRcvdAt3164;	/* time as RFC3164 formatted string (always 15 charcters) */
-	char *pszRcvdAt3339;	/* time as RFC3164 formatted string (32 charcters at most) */
-	char *pszRcvdAt_SecFrac;/* time just as fractional seconds  (6 charcters) */
-	char *pszRcvdAt_MySQL;	/* rcvdAt as MySQL formatted string (always 14 charcters) */
-        char *pszRcvdAt_PgSQL;  /* rcvdAt as PgSQL formatted string (always 21 characters) */
 	struct syslogTime tTIMESTAMP;/* (parsed) value of the timestamp */
-	char *pszTIMESTAMP3164;	/* TIMESTAMP as RFC3164 formatted string (always 15 charcters) */
-	char *pszTIMESTAMP3339;	/* TIMESTAMP as RFC3339 formatted string (32 charcters at most) */
-	char *pszTIMESTAMP_MySQL;/* TIMESTAMP as MySQL formatted string (always 14 charcters) */
-        char *pszTIMESTAMP_PgSQL;/* TIMESTAMP as PgSQL formatted string (always 21 characters) */
-        char *pszTIMESTAMP_SecFrac;/* TIMESTAMP fractional seconds (always 6 characters) */
-	int msgFlags;		/* flags associated with this message */
+	/* some fixed-size buffers to save malloc()/free() for frequently used fields (from the default templates) */
+	uchar szRawMsg[CONF_RAWMSG_BUFSIZE];	/* most messages are small, and these are stored here (without malloc/free!) */
+	uchar szHOSTNAME[CONF_HOSTNAME_BUFSIZE];
+	union {
+		uchar	*pszTAG;	/* pointer to tag value */
+		uchar	szBuf[CONF_TAG_BUFSIZE];
+	} TAG;
+	char pszTimestamp3164[16];
+	char pszTimestamp3339[33];
+	char pszTIMESTAMP_SecFrac[7]; /* Note: a pointer is 64 bits/8 char, so this is actually fewer than a pointer! */
+	char pszRcvdAt_SecFrac[7];	     /* same as above. Both are fractional seconds for their respective timestamp */
 };
+
+
+/* message flags (msgFlags), not an enum for historical reasons
+ */
+#define NOFLAG		0x000	/* no flag is set (to be used when a flag must be specified and none is required) */
+#define INTERNAL_MSG	0x001	/* msg generated by logmsgInternal() --> special handling */
+/* 0x002 not used because it was previously a known value - rgerhards, 2008-10-09 */
+#define IGNDATE		0x004	/* ignore, if given, date in message and use date of reception as msg date */
+#define MARK		0x008	/* this message is a mark */
+#define NEEDS_PARSING	0x010	/* raw message, must be parsed before processing can be done */
+#define PARSE_HOSTNAME	0x020	/* parse the hostname during message parsing */
+
 
 /* function prototypes
  */
 PROTOTYPEObjClassInit(msg);
-char* getProgramName(msg_t*);
 rsRetVal msgConstruct(msg_t **ppThis);
+rsRetVal msgConstructWithTime(msg_t **ppThis, struct syslogTime *stTime, time_t ttGenTime);
 rsRetVal msgDestruct(msg_t **ppM);
 msg_t* MsgDup(msg_t* pOld);
 msg_t *MsgAddRef(msg_t *pM);
 void setProtocolVersion(msg_t *pM, int iNewVersion);
-int getProtocolVersion(msg_t *pM);
-char *getProtocolVersionString(msg_t *pM);
-int getMSGLen(msg_t *pM);
-char *getRawMsg(msg_t *pM);
-char *getUxTradMsg(msg_t *pM);
-char *getMSG(msg_t *pM);
-char *getPRI(msg_t *pM);
-int getPRIi(msg_t *pM);
-char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt);
-char *getTimeGenerated(msg_t *pM, enum tplFormatTypes eFmt);
-char *getSeverity(msg_t *pM);
-char *getSeverityStr(msg_t *pM);
-char *getFacility(msg_t *pM);
-char *getFacilityStr(msg_t *pM);
-void MsgSetInputName(msg_t *pMsg, char*);
+void MsgSetInputName(msg_t *pMsg, prop_t*);
 rsRetVal MsgSetAPPNAME(msg_t *pMsg, char* pszAPPNAME);
-char *getAPPNAME(msg_t *pM);
 rsRetVal MsgSetPROCID(msg_t *pMsg, char* pszPROCID);
-int getPROCIDLen(msg_t *pM);
-char *getPROCID(msg_t *pM);
 rsRetVal MsgSetMSGID(msg_t *pMsg, char* pszMSGID);
-void MsgAssignTAG(msg_t *pMsg, uchar *pBuf);
-void MsgSetTAG(msg_t *pMsg, char* pszTAG);
+void MsgSetTAG(msg_t *pMsg, uchar* pszBuf, size_t lenBuf);
+void MsgSetRuleset(msg_t *pMsg, ruleset_t*);
 rsRetVal MsgSetFlowControlType(msg_t *pMsg, flowControl_t eFlowCtl);
-char *getTAG(msg_t *pM);
-int getHOSTNAMELen(msg_t *pM);
-char *getHOSTNAME(msg_t *pM);
-char *getRcvFrom(msg_t *pM);
 rsRetVal MsgSetStructuredData(msg_t *pMsg, char* pszStrucData);
-char *getStructuredData(msg_t *pM);
-int getProgramNameLen(msg_t *pM);
-char *getProgramName(msg_t *pM);
-void MsgSetRcvFrom(msg_t *pMsg, char* pszRcvFrom);
-rsRetVal MsgSetRcvFromIP(msg_t *pMsg, uchar* pszRcvFromIP);
-void MsgAssignHOSTNAME(msg_t *pMsg, char *pBuf);
-void MsgSetHOSTNAME(msg_t *pMsg, char* pszHOSTNAME);
-int MsgSetUxTradMsg(msg_t *pMsg, char* pszUxTradMsg);
-void MsgSetMSG(msg_t *pMsg, char* pszMSG);
-void MsgSetRawMsg(msg_t *pMsg, char* pszRawMsg);
-void moveHOSTNAMEtoTAG(msg_t *pM);
-char *getMSGID(msg_t *pM);
+void MsgSetRcvFrom(msg_t *pMsg, prop_t*);
+void MsgSetRcvFromStr(msg_t *pMsg, uchar* pszRcvFrom, int, prop_t **);
+rsRetVal MsgSetRcvFromIP(msg_t *pMsg, prop_t*);
+rsRetVal MsgSetRcvFromIPStr(msg_t *pThis, uchar *psz, int len, prop_t **ppProp);
+void MsgSetHOSTNAME(msg_t *pMsg, uchar* pszHOSTNAME, int lenHOSTNAME);
+rsRetVal MsgSetAfterPRIOffs(msg_t *pMsg, short offs);
+void MsgSetMSGoffs(msg_t *pMsg, short offs);
+void MsgSetRawMsgWOSize(msg_t *pMsg, char* pszRawMsg);
+void MsgSetRawMsg(msg_t *pMsg, char* pszRawMsg, size_t lenMsg);
+rsRetVal MsgReplaceMSG(msg_t *pThis, uchar* pszMSG, int lenMSG);
 char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
-                 cstr_t *pCSPropName, unsigned short *pbMustBeFreed);
+                 propid_t propID, size_t *pPropLen, unsigned short *pbMustBeFreed);
 char *textpri(char *pRes, size_t pResLen, int pri);
 rsRetVal msgGetMsgVar(msg_t *pThis, cstr_t *pstrPropName, var_t **ppVar);
 rsRetVal MsgEnableThreadSafety(void);
+uchar *getRcvFrom(msg_t *pM);
+
+
+/* TODO: remove these five (so far used in action.c) */
+char *getMSG(msg_t *pM);
+char *getHOSTNAME(msg_t *pM);
+char *getPROCID(msg_t *pM, bool bLockMutex);
+char *getAPPNAME(msg_t *pM, bool bLockMutex);
+int getMSGLen(msg_t *pM);
+
+char *getHOSTNAME(msg_t *pM);
+int getHOSTNAMELen(msg_t *pM);
+char *getProgramName(msg_t *pM, bool bLockMutex);
+int getProgramNameLen(msg_t *pM, bool bLockMutex);
+uchar *getRcvFrom(msg_t *pM);
+rsRetVal propNameToID(cstr_t *pCSPropName, propid_t *pPropID);
+uchar *propIDToName(propid_t propID);
+
 
 /* The MsgPrepareEnqueue() function is a macro for performance reasons.
  * It needs one global variable to work. This is acceptable, as it gains
@@ -181,6 +193,5 @@ extern void (*funcMsgPrepareEnqueue)(msg_t *pMsg);
 #define MsgPrepareEnqueue(pMsg) funcMsgPrepareEnqueue(pMsg)
 
 #endif /* #ifndef MSG_H_INCLUDED */
-/*
- * vi:set ai:
+/* vim:set ai:
  */

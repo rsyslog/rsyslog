@@ -63,7 +63,7 @@ struct templateEntry {
 			int iLenConstant;	/* its length */
 		} constant;
 		struct {
-			uchar *pPropRepl;	/* pointer to property replacer string */
+			propid_t propid;	/* property to be used */
 			unsigned iFromPos;	/* for partial strings only chars from this position ... */
 			unsigned iToPos;	/* up to that one... */
 #ifdef FEATURE_REGEXP
@@ -94,9 +94,10 @@ struct templateEntry {
 				unsigned bSpaceCC: 1;		/* change control characters to spaceescape? */
 				unsigned bEscapeCC: 1;		/* escape control characters? */
 				unsigned bDropLastLF: 1;	/* drop last LF char in msg (PIX!) */
-				unsigned bSecPathDrop: 1;		/* drop slashes, replace dots, empty string */
-				unsigned bSecPathReplace: 1;		/* replace slashes, replace dots, empty string */
-				unsigned bSPIffNo1stSP: 1;		/* replace slashes, replace dots, empty string */
+				unsigned bSecPathDrop: 1;	/* drop slashes, replace dots, empty string */
+				unsigned bSecPathReplace: 1;	/* replace slashes, replace dots, empty string */
+				unsigned bSPIffNo1stSP: 1;	/* replace slashes, replace dots, empty string */
+				unsigned bCSV: 1;		/* format field in CSV (RFC 4180) format */
 			} options;		/* options as bit fields */
 		} field;
 	} data;
@@ -125,7 +126,8 @@ void tplLastStaticInit(struct template *tpl);
  * BEFORE msg.h, even if your code file does not actually need it.
  * rgerhards, 2007-08-06
  */
-rsRetVal tplToString(struct template *pTpl, msg_t *pMsg, uchar** ppSz);
+rsRetVal tplToArray(struct template *pTpl, msg_t *pMsg, uchar*** ppArr);
+rsRetVal tplToString(struct template *pTpl, msg_t *pMsg, uchar** ppSz, size_t *);
 rsRetVal doSQLEscape(uchar **pp, size_t *pLen, unsigned short *pbMustBeFreed, int escapeMode);
 
 rsRetVal templateInit();

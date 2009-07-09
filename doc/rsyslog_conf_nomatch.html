@@ -1,0 +1,48 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><title>nomatch mode - property replacer - rsyslog.conf</title></head>
+<body>
+<h1>nomatch mode - property replacer - rsyslog.con</h1>
+<p>This is a part of the <a href="rsyslog_conf.html">rsyslog.conf documentation</a>
+of the <a href="property_replacer.html">property replacer</a>.</p>
+<p><b>The "nomatch-Mode" specifies which string the property replacer
+shall return if a regular expression did not find the search string.</b>. Traditionally,
+the string "**NO MATCH**" was returned, but many people complained this was almost never useful.
+Still, this mode is support as "<b>DFLT</b>" for legacy configurations.
+<p>Three additional and potentially useful modes exist: in one (<b>BLANK</b>) a blank string
+is returned. This is probably useful for inserting values into databases where no
+value shall be inserted if the expression could not be found.
+<p>A similar mode is "<b>ZERO</b>" where the string "0" is returned. This is suitable
+for numerical values. A use case may be
+that you record a traffic log based on firewall rules and the "bytes transmitted" counter
+is extracted via a regular expression. If no "bytes transmitted" counter is available
+in the current message, it is probably a good idea to return an empty string, which the
+database layer can turn into a zero.
+<p>The other mode is "<b>FIELD</b>", in which the complete field is returned. This may be useful
+in cases where absense of a match is considered a failure and the message that triggered
+it shall be logged.
+<p>If in doubt, <b>it is highly suggested to use the
+<a href="http://www.rsyslog.com/tool-regex">rsyslog online regular expression
+checker and generator</a> to see these options in action</b>. With that online tool,
+you can craft regular expressions based on samples and try out the different modes.
+
+<h2>Summary of nomatch Modes</h2>
+<table border="1" cellspacing="0">
+<tr><td><b>Mode</b></td><td><b>Returned</b></td></tr>
+<tr><td>DFLT</td><td>"**NO MATCH**"</td></tr>
+<tr><td>BLANK</td><td>"" (empty string)</td></tr>
+<tr><td>ZERO</td><td>"0"</td></tr>
+<tr><td>FIELD</td><td>full content of original field</td></tr>
+<tr><td>&nbsp;</td><td><a href="http://www.rsyslog.com/tool-regex">Interactive Tool</a></td></tr>
+</table>
+<p>[<a href="manual.html">manual index</a>]
+[<a href="rsyslog_conf.html">rsyslog.conf</a>]
+[<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the
+<a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
+Copyright &copy; 2008 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>. Released under the GNU GPL
+version 2 or higher.</font></p>
+</body>
+</html>
+
+

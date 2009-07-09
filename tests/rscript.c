@@ -24,6 +24,7 @@
  */
 #include "config.h"
 #include <stdio.h>
+#include <string.h>
 #include <glob.h>
 #include <sys/stat.h>
 
@@ -38,6 +39,7 @@ DEFobjCurrIf(expr)
 DEFobjCurrIf(ctok)
 DEFobjCurrIf(ctok_token)
 DEFobjCurrIf(vmprg)
+
 
 BEGINInit
 CODESTARTInit
@@ -102,8 +104,8 @@ PerformTest(cstr_t *pstrIn, rsRetVal iRetExpected, cstr_t *pstrOut)
 
 	if(strcmp((char*)rsCStrGetSzStr(pstrPrg), (char*)rsCStrGetSzStr(pstrOut))) {
 		printf("error: compiled program different from expected result!\n");
-		printf("generated vmprg:\n%s\n", rsCStrGetSzStr(pstrPrg));
-		printf("expected:\n%s\n", rsCStrGetSzStr(pstrOut));
+		printf("generated vmprg (%d bytes):\n%s\n", (int)strlen((char*)rsCStrGetSzStr(pstrPrg)), rsCStrGetSzStr(pstrPrg));
+		printf("expected (%d bytes):\n%s\n", (int)strlen((char*)rsCStrGetSzStr(pstrOut)), rsCStrGetSzStr(pstrOut));
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
@@ -138,6 +140,7 @@ ProcessTestFile(uchar *pszFileName)
 	size_t lenLn;
 	cstr_t *pstrIn = NULL;
 	cstr_t *pstrOut = NULL;
+	int iParse;
 	rsRetVal iRetExpected;
 	DEFiRet;
 
@@ -160,10 +163,11 @@ ProcessTestFile(uchar *pszFileName)
 	/* once we had a comment, the next line MUST be "result: <nbr>". Anything
 	 * after nbr is simply ignored.
 	 */
-	if(sscanf(lnptr, "result: %d", &iRetExpected) != 1) {
+	if(sscanf(lnptr, "result: %d", &iParse) != 1) {
 		printf("error in result line, scanf failed, line: '%s'\n", lnptr);
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
+	iRetExpected = iParse;
 	getline(&lnptr, &lenLn, fp); CHKEOF;
 
 	/* and now we look for "in:" (and again ignore the rest...) */

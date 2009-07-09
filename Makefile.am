@@ -84,8 +84,20 @@ if ENABLE_SNMP
 SUBDIRS += plugins/omsnmp
 endif
 
+if ENABLE_CUST1
+SUBDIRS += plugins/cust1
+endif
+
 if ENABLE_IMTEMPLATE
 SUBDIRS += plugins/imtemplate
+endif
+
+if ENABLE_OMSTDOUT
+SUBDIRS += plugins/omstdout
+endif
+
+if ENABLE_OMTEMPLATE
+SUBDIRS += plugins/omtemplate
 endif
 
 if ENABLE_IMFILE
@@ -100,12 +112,28 @@ if ENABLE_MAIL
 SUBDIRS += plugins/ommail
 endif
 
+if ENABLE_OMPROG
+SUBDIRS += plugins/omprog
+endif
+
 if ENABLE_RFC3195
 SUBDIRS += plugins/im3195
+endif
+
+if ENABLE_ORACLE
+SUBDIRS += plugins/omoracle
 endif
 
 # tests are added as last element, because tests may need different
 # modules that need to be generated first
 SUBDIRS += tests
 
+
+# make sure "make distcheck" tries to build all modules. This means that
+# a developer must always have an environment where every supporting library
+# is available. If that is not the case, the respective configure option may
+# temporarily be removed below. The intent behind forcing everthing to compile
+# in a make distcheck is so that we detect code that accidently was not updated
+# when some global update happened.
+DISTCHECK_CONFIGURE_FLAGS=--enable-gssapi_krb5 --enable-imfile --enable-snmp --enable-pgsql --enable-libdbi --enable-mysql --enable-omtemplate --enable-imtemplate --enable-relp --enable-rsyslogd --enable-mail --enable-klog  --enable-diagtools --enable-gnutls --enable-omstdout --enable-omprog --enable-imdiag --enable-shave
 ACLOCAL_AMFLAGS = -I m4

@@ -16,7 +16,10 @@ relay chains while at the same time being very easy to setup for the
 novice user. And as we know what enterprise users really need, there is
 also <a href="professional_support.html">professional
 rsyslog support</a> available directly from the source!</p>
-<p><b>This documentation is for version 3.22.1 (v3-stable branch) of rsyslog.</b>
+<p><b>Please visit the <a href="http://www.rsyslog.com/sponsors">rsyslog sponsor's page</a>
+to honor the project sponsors or become one yourself!</b> We are very grateful for any help towards the
+project goals.</p>
+<p><b>This documentation is for version 5.1.2 (devel branch) of rsyslog.</b>
 Visit the <i> <a href="http://www.rsyslog.com/doc-status.html">rsyslog status page</a></i></b> to obtain current
 version information and project status.
 </p><p><b>If you like rsyslog, you might
@@ -33,13 +36,13 @@ the links below for the</b><br></p><ul>
 
 <li><a href="troubleshoot.html">troubleshooting rsyslog problems</a></li>
 <li><a href="rsyslog_conf.html">configuration file syntax (rsyslog.conf)</a></li>
-<li> <a href="property_replacer.html">property replacer, an important core component</a></li>
 <li><a href="http://www.rsyslog.com/tool-regex">a regular expression checker/generator tool for rsyslog</a></li>
+<li> <a href="property_replacer.html">property replacer, an important core component</a></li>
 <li>a commented <a href="sample.conf.html">sample rsyslog.conf</a> </li>
 <li><a href="bugs.html">rsyslog bug list</a></li>
 <li><a href="rsyslog_packages.html"> rsyslog packages</a></li>
 <li><a href="generic_design.html">backgrounder on
-generic syslog application design</a><!-- not good as it currently is ;) <li><a href="contributors.html">contributor &quot;Hall of Fame&quot;</a>--></li>
+generic syslog application design</a></li>
 <li><a href="modules.html">description of rsyslog modules</a></li>
 <li><a href="man_rsyslogd.html">rsyslogd man page</a> (heavily outdated)</li>
 </ul>
@@ -49,6 +52,7 @@ generic syslog application design</a><!-- not good as it currently is ;) <li><a 
 <li><a href="build_from_repo.html">obtaining rsyslog from the source repository</a></li>
 <li><a href="ipv6.html">rsyslog and IPv6</a> (which is fully supported)</li>
 <li><a href="rsyslog_secure_tls.html">native TLS encryption for syslog</a></li>
+<li><a href="multi_ruleset.html">using multiple rule sets in rsyslog</a></li>
 <li><a href="rsyslog_stunnel.html">ssl-encrypting syslog with stunnel</a></li>
 <li><a href="rsyslog_mysql.html">writing syslog messages to MySQL (and other databases as well)</a></li>
 <li><a href="rsyslog_high_database_rate.html">writing massive amounts of syslog messages to a database</a></li>
@@ -61,7 +65,11 @@ the syslog priority (severity and facility) to the log file</a></li>
 syslog sender over NAT</a> (online only)</li>
 <li><a href="gssapi.html">an overview and howto of rsyslog gssapi support</a></li>
 <li><a href="debug.html">debug support in rsyslog</a></li>
-<li><a href="dev_queue.html">the rsyslog message queue object (developer's view)</a></li>
+<li>Developer Documentation
+  <ul>
+  <li><a href="dev_oplugins.html">writing rsyslog output plugins</a></li>
+  <li><a href="dev_queue.html">the rsyslog message queue object (developer's view)</a></li>
+  </ul></li>
 </ul>
 <p>Our <a href="history.html">rsyslog history</a>
 page is for you if you would like to learn a little more

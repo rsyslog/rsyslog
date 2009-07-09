@@ -68,7 +68,7 @@
 #define objSerializePTR(strm, propName, propType) \
 	CHKiRet(obj.SerializeProp(strm, (uchar*) #propName, PROPTYPE_##propType, (void*) pThis->propName));
 #define DEFobjStaticHelpers \
-	static objInfo_t *pObjInfoOBJ = NULL; \
+	static objInfo_t __attribute__((unused)) *pObjInfoOBJ = NULL; \
 	DEFobjCurrIf(obj)
 
 
@@ -77,11 +77,13 @@
 /* the next macro MUST be called in Constructors: */
 #ifndef NDEBUG /* this means if debug... */
 #	define objConstructSetObjInfo(pThis) \
-		ASSERT(((obj_t*) (pThis))->pObjInfo == NULL); \
 		((obj_t*) (pThis))->pObjInfo = pObjInfoOBJ; \
+		((obj_t*) (pThis))->pszName = NULL; \
 		((obj_t*) (pThis))->iObjCooCKiE = 0xBADEFEE
 #else
-#	define objConstructSetObjInfo(pThis) ((obj_t*) (pThis))->pObjInfo = pObjInfoOBJ
+#	define objConstructSetObjInfo(pThis) \
+		((obj_t*) (pThis))->pObjInfo = pObjInfoOBJ; \
+		((obj_t*) (pThis))->pszName = NULL
 #endif
 #define objDestruct(pThis) (((obj_t*) (pThis))->pObjInfo->objMethods[objMethod_DESTRUCT])(&pThis)
 #define objSerialize(pThis) (((obj_t*) (pThis))->pObjInfo->objMethods[objMethod_SERIALIZE])

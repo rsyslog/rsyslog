@@ -1,3 +1,4 @@
+#include <sys/syscall.h>
 /* debug.c
  *
  * This file proides debug and run time error analysis support. Some of the
@@ -731,6 +732,8 @@ static void dbgGetThrdName(char *pszBuf, size_t lenBuf, pthread_t thrd, int bInc
  */
 void dbgSetThrdName(uchar *pszName)
 {
+return;
+
 	dbgThrdInfo_t *pThrd = dbgGetThrdInfo();
 	if(pThrd->pszThrdName != NULL)
 		free(pThrd->pszThrdName);
@@ -775,7 +778,7 @@ static void dbgCallStackPrint(dbgThrdInfo_t *pThrd)
 
 /* print all threads call stacks
  */
-static void dbgCallStackPrintAll(void)
+void dbgCallStackPrintAll(void)
 {
 	dbgThrdInfo_t *pThrd;
 	/* stack info */
@@ -827,13 +830,12 @@ sigsegvHdlr(int signum)
 	abort();
 }
 
-#if 1
-#pragma GCC diagnostic ignored "-Wempty-body"
-/* write the debug message. This is a helper to dbgprintf and dbgoprint which
- * contains common code. added 2008-09-26 rgerhards
+/* actually write the debug message. This is a separate fuction because the cleanup_push/_pop
+ * interface otherwise is unsafe to use (generates compiler warnings at least).
+ * 2009-05-20 rgerhards
  */
-static void
-dbgprint(obj_t *pObj, char *pszMsg, size_t lenMsg)
+static inline void
+do_dbgprint(uchar *pszObjName, char *pszMsg, size_t lenMsg)
 {
 	static pthread_t ptLastThrdID = 0;
 	static int bWasNL = 0;
@@ -841,20 +843,6 @@ dbgprint(obj_t *pObj, char *pszMsg, size_t lenMsg)
 	char pszWriteBuf[1024];
 	size_t lenWriteBuf;
 	struct timespec t;
-	uchar *pszObjName = NULL;
-
-	/* we must get the object name before we lock the mutex, because the object
-	 * potentially calls back into us. If we locked the mutex, we would deadlock
-	 * ourselfs. On the other hand, the GetName call needs not to be protected, as
-	 * this thread has a valid reference. If such an object is deleted by another
-	 * thread, we are in much more trouble than just for dbgprint(). -- rgerhards, 2008-09-26
-	 */
-	if(pObj != NULL) {
-		pszObjName = obj.GetName(pObj);
-	}
-
-	pthread_mutex_lock(&mutdbgprint);
-	pthread_cleanup_push(dbgMutexCancelCleanupHdlr, &mutdbgprint);
 
 	/* The bWasNL handler does not really work. It works if no thread
 	 * switching occurs during non-NL messages. Else, things are messed
@@ -886,7 +874,9 @@ dbgprint(obj_t *pObj, char *pszMsg, size_t lenMsg)
 			if(stddbg != -1) write(stddbg, pszWriteBuf, lenWriteBuf);
 			if(altdbg != -1) write(altdbg, pszWriteBuf, lenWriteBuf);
 		}
+
 		lenWriteBuf = snprintf(pszWriteBuf, sizeof(pszWriteBuf), "%s: ", pszThrdName);
+		// use for testing: lenWriteBuf = snprintf(pszWriteBuf, sizeof(pszWriteBuf), "{%ld}%s: ", (long) syscall(SYS_gettid), pszThrdName);
 		if(stddbg != -1) write(stddbg, pszWriteBuf, lenWriteBuf);
 		if(altdbg != -1) write(altdbg, pszWriteBuf, lenWriteBuf);
 		/* print object name header if we have an object */
@@ -900,11 +890,35 @@ dbgprint(obj_t *pObj, char *pszMsg, size_t lenMsg)
 	if(altdbg != -1) write(altdbg, pszMsg, lenMsg);
 
 	bWasNL = (pszMsg[lenMsg - 1] == '\n') ? 1 : 0;
+}
+
+#pragma GCC diagnostic ignored "-Wempty-body"
+/* write the debug message. This is a helper to dbgprintf and dbgoprint which
+ * contains common code. added 2008-09-26 rgerhards
+ */
+static void
+dbgprint(obj_t *pObj, char *pszMsg, size_t lenMsg)
+{
+	uchar *pszObjName = NULL;
+
+	/* we must get the object name before we lock the mutex, because the object
+	 * potentially calls back into us. If we locked the mutex, we would deadlock
+	 * ourselfs. On the other hand, the GetName call needs not to be protected, as
+	 * this thread has a valid reference. If such an object is deleted by another
+	 * thread, we are in much more trouble than just for dbgprint(). -- rgerhards, 2008-09-26
+	 */
+	if(pObj != NULL) {
+		pszObjName = obj.GetName(pObj);
+	}
+
+	pthread_mutex_lock(&mutdbgprint);
+	pthread_cleanup_push(dbgMutexCancelCleanupHdlr, &mutdbgprint);
+
+	do_dbgprint(pszObjName, pszMsg, lenMsg);
 
 	pthread_cleanup_pop(1);
 }
 #pragma GCC diagnostic warning "-Wempty-body"
-#endif
 
 /* print some debug output when an object is given
  * This is mostly a copy of dbgprintf, but I do not know how to combine it
@@ -1047,7 +1061,9 @@ int dbgEntrFunc(dbgFuncDB_t **ppFuncDB, const char *file, const char *func, int 
 	/* when we reach this point, we have a fully-initialized FuncDB! */
 	ATOMIC_INC(pFuncDB->nTimesCalled);
 	if(bLogFuncFlow && dbgPrintNameIsInList((const uchar*)pFuncDB->file, printNameFileRoot))
-		dbgprintf("%s:%d: %s: enter\n", pFuncDB->file, pFuncDB->line, pFuncDB->func);
+		if(strcmp(pFuncDB->file, "stringbuf.c")) {	/* TODO: make configurable */
+			dbgprintf("%s:%d: %s: enter\n", pFuncDB->file, pFuncDB->line, pFuncDB->func);
+		}
 	if(pThrd->stackPtr >= (int) (sizeof(pThrd->callStack) / sizeof(dbgFuncDB_t*))) {
 		dbgprintf("%s:%d: %s: debug module: call stack for this thread full, suspending call tracking\n",
 			  pFuncDB->file, pFuncDB->line, pFuncDB->func);
@@ -1077,10 +1093,12 @@ void dbgExitFunc(dbgFuncDB_t *pFuncDB, int iStackPtrRestore, int iRet)
 
 	dbgFuncDBPrintActiveMutexes(pFuncDB, "WARNING: mutex still owned by us as we exit function, mutex: ", pthread_self());
 	if(bLogFuncFlow && dbgPrintNameIsInList((const uchar*)pFuncDB->file, printNameFileRoot)) {
-		if(iRet == RS_RET_NO_IRET)
-			dbgprintf("%s:%d: %s: exit: (no iRet)\n", pFuncDB->file, pFuncDB->line, pFuncDB->func);
-		else 
-			dbgprintf("%s:%d: %s: exit: %d\n", pFuncDB->file, pFuncDB->line, pFuncDB->func, iRet);
+		if(strcmp(pFuncDB->file, "stringbuf.c")) {	/* TODO: make configurable */
+			if(iRet == RS_RET_NO_IRET)
+				dbgprintf("%s:%d: %s: exit: (no iRet)\n", pFuncDB->file, pFuncDB->line, pFuncDB->func);
+			else 
+				dbgprintf("%s:%d: %s: exit: %d\n", pFuncDB->file, pFuncDB->line, pFuncDB->func, iRet);
+		}
 	}
 	pThrd->stackPtr = iStackPtrRestore;
 	if(pThrd->stackPtr < 0) {
@@ -1340,7 +1358,7 @@ rsRetVal dbgClassInit(void)
 
 	if(pszAltDbgFileName != NULL) {
 		/* we have a secondary file, so let's open it) */
-		if((altdbg = open(pszAltDbgFileName, O_WRONLY|O_CREAT|O_TRUNC|O_NOCTTY, S_IRUSR|S_IWUSR)) == -1) {
+		if((altdbg = open(pszAltDbgFileName, O_WRONLY|O_CREAT|O_TRUNC|O_NOCTTY|O_CLOEXEC, S_IRUSR|S_IWUSR)) == -1) {
 			fprintf(stderr, "alternate debug file could not be opened, ignoring. Error: %s\n", strerror(errno));
 		}
 	}

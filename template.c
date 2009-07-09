@@ -47,62 +47,65 @@ static struct template *tplRoot = NULL;	/* the root of the template list */
 static struct template *tplLast = NULL;	/* points to the last element of the template list */
 static struct template *tplLastStatic = NULL; /* last static element of the template list */
 
-/* This functions converts a template into a string. It should
- * actually be in template.c, but this requires larger re-structuring
- * of the code (because all the property-access functions are static
- * to this module). I have placed it next to the iov*() functions, as
- * it is somewhat similiar in what it does.
+
+
+/* helper to tplToString, extends buffer */
+#define ALLOC_INC 128
+static inline rsRetVal ExtendBuf(uchar **pBuf, size_t *pLenBuf, size_t iMinSize)
+{
+	uchar *pNewBuf;
+	size_t iNewSize;
+	DEFiRet;
+
+	iNewSize = (iMinSize / ALLOC_INC + 1) * ALLOC_INC;
+	CHKmalloc(pNewBuf = (uchar*) realloc(*pBuf, iNewSize));
+	*pBuf = pNewBuf;
+	*pLenBuf = iNewSize;
+dbgprintf("extend buf to at least %ld, done %ld\n", iMinSize, iNewSize);
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* This functions converts a template into a string.
  *
- * The function takes a pointer to a template and a pointer to a msg object.
- * It the creates a string based on the template definition. A pointer
- * to that string is returned to the caller. The caller MUST FREE that
- * pointer when it is no longer needed. If the function fails, NULL
- * is returned.
- * If memory allocation fails in this function, we silently return
- * NULL. The reason is that we can not do anything against it. And
- * if we raise an alert, the memory situation might become even
- * worse. So we prefer to let the caller deal with it.
- * rgerhards, 2007-07-03
- *
- * rgerhards, 2007-09-05: I changed the interface to use the standard iRet
- * "calling sequence". This greatly eases complexity when it comes to handling
- * errors in called modules (plus, it is much nicer).
+ * The function takes a pointer to a template and a pointer to a msg object
+ * as well as a pointer to an output buffer and its size. Note that the output
+ * buffer pointer may be NULL, size 0, in which case a new one is allocated.
+ * The outpub buffer is grown as required. It is the caller's duty to free the
+ * buffer when it is done. Note that it is advisable to reuse memory, as this
+ * offers big performance improvements.
+ * rewritten 2009-06-19 rgerhards
  */
-rsRetVal tplToString(struct template *pTpl, msg_t *pMsg, uchar** ppSz)
+rsRetVal tplToString(struct template *pTpl, msg_t *pMsg, uchar **ppBuf, size_t *pLenBuf)
 {
 	DEFiRet;
 	struct templateEntry *pTpe;
-	cstr_t *pCStr;
+	int iBuf;
 	unsigned short bMustBeFreed;
 	uchar *pVal;
 	size_t iLenVal;
 
 	assert(pTpl != NULL);
 	assert(pMsg != NULL);
-	assert(ppSz != NULL);
+	assert(ppBuf != NULL);
+	assert(pLenBuf != NULL);
 
 	/* loop through the template. We obtain one value
 	 * and copy it over to our dynamic string buffer. Then, we
 	 * free the obtained value (if requested). We continue this
 	 * loop until we got hold of all values.
 	 */
-	CHKiRet(rsCStrConstruct(&pCStr));
-
 	pTpe = pTpl->pEntryRoot;
+	iBuf = 0;
 	while(pTpe != NULL) {
 		if(pTpe->eEntryType == CONSTANT) {
-			CHKiRet_Hdlr(rsCStrAppendStrWithLen(pCStr, 
-							  (uchar *) pTpe->data.constant.pConstant,
-							  pTpe->data.constant.iLenConstant)
-							 ) {
-				dbgprintf("error %d during tplToString()\n", iRet);
-				/* it does not make sense to continue now */
-				rsCStrDestruct(&pCStr);
-				FINALIZE;
-			}
+			pVal = (uchar*) pTpe->data.constant.pConstant;
+			iLenVal = pTpe->data.constant.iLenConstant;
+			bMustBeFreed = 0;
 		} else 	if(pTpe->eEntryType == FIELD) {
-			pVal = (uchar*) MsgGetProp(pMsg, pTpe, NULL, &bMustBeFreed);
-			iLenVal = strlen((char*) pVal);
+			pVal = (uchar*) MsgGetProp(pMsg, pTpe, pTpe->data.field.propid, &iLenVal, &bMustBeFreed);
 			/* we now need to check if we should use SQL option. In this case,
 			 * we must go over the generated string and escape '\'' characters.
 			 * rgerhards, 2005-09-22: the option values below look somewhat misplaced,
@@ -113,32 +116,80 @@ rsRetVal tplToString(struct template *pTpl, msg_t *pMsg, uchar** ppSz)
 				doSQLEscape(&pVal, &iLenVal, &bMustBeFreed, 1);
 			else if(pTpl->optFormatForSQL == 2)
 				doSQLEscape(&pVal, &iLenVal, &bMustBeFreed, 0);
-			/* value extracted, so lets copy */
-			CHKiRet_Hdlr(rsCStrAppendStrWithLen(pCStr, (uchar*) pVal, iLenVal)) {
-				dbgprintf("error %d during tplToString()\n", iRet);
-				/* it does not make sense to continue now */
-				rsCStrDestruct(&pCStr);
-				if(bMustBeFreed)
-					free(pVal);
-				FINALIZE;
-			}
-			if(bMustBeFreed)
-				free(pVal);
 		}
+		/* got source, now copy over */
+		if(iBuf + iLenVal + 1 >= *pLenBuf) /* we reserve one char for the final \0! */
+			CHKiRet(ExtendBuf(ppBuf, pLenBuf, iBuf + iLenVal + 1));
+
+		memcpy(*ppBuf + iBuf, pVal, iLenVal);
+		iBuf += iLenVal;
+
+		if(bMustBeFreed)
+			free(pVal);
+
 		pTpe = pTpe->pNext;
 	}
 
-	/* we are done with the template, now let's convert the result into a
-	 * "real" (usable) string and discard the helper structures.
-	 */
-	CHKiRet(rsCStrFinish(pCStr));
-	CHKiRet(rsCStrConvSzStrAndDestruct(pCStr, &pVal, 0));
+	(*ppBuf)[iBuf] = '\0'; /* space was reserved above (see copy) */
 	
 finalize_it:
-	*ppSz = (iRet == RS_RET_OK) ? pVal : NULL;
+	RETiRet;
+}
+
+
+/* This functions converts a template into an array of strings.
+ * For further general details, see the very similar funtion
+ * tpltoString().
+ * Instead of a string, an array of string pointers is returned by
+ * thus function. The caller is repsonsible for destroying that array as
+ * well as all of its elements. The array is of fixed size. It's end
+ * is indicated by a NULL pointer.
+ * rgerhards, 2009-04-03
+ */
+rsRetVal tplToArray(struct template *pTpl, msg_t *pMsg, uchar*** ppArr)
+{
+	DEFiRet;
+	struct templateEntry *pTpe;
+	uchar **pArr;
+	int iArr;
+	size_t propLen;
+	unsigned short bMustBeFreed;
+	uchar *pVal;
+
+	assert(pTpl != NULL);
+	assert(pMsg != NULL);
+	assert(ppArr != NULL);
+
+	/* loop through the template. We obtain one value, create a
+	 * private copy (if necessary), add it to the string array
+	 * and then on to the next until we have processed everything.
+	 */
+
+	CHKmalloc(pArr = calloc(pTpl->tpenElements + 1, sizeof(uchar*)));
+	iArr = 0;
+
+	pTpe = pTpl->pEntryRoot;
+	while(pTpe != NULL) {
+		if(pTpe->eEntryType == CONSTANT) {
+			CHKmalloc(pArr[iArr] = (uchar*)strdup((char*) pTpe->data.constant.pConstant));
+		} else 	if(pTpe->eEntryType == FIELD) {
+			pVal = (uchar*) MsgGetProp(pMsg, pTpe, pTpe->data.field.propid, &propLen, &bMustBeFreed);
+			if(bMustBeFreed) { /* if it must be freed, it is our own private copy... */
+				pArr[iArr] = pVal; /* ... so we can use it! */
+			} else {
+				CHKmalloc(pArr[iArr] = (uchar*)strdup((char*) pVal));
+			}
+		}
+		iArr++;
+		pTpe = pTpe->pNext;
+	}
+
+finalize_it:
+	*ppArr = (iRet == RS_RET_OK) ? pArr : NULL;
 
 	RETiRet;
 }
+
 
 /* Helper to doSQLEscape. This is called if doSQLEscape
  * runs out of memory allocating the escaped string.
@@ -216,21 +267,21 @@ doSQLEscape(uchar **pp, size_t *pLen, unsigned short *pbMustBeFreed, int escapeM
 
 	p = *pp;
 	iLen = *pLen;
-	CHKiRet(rsCStrConstruct(&pStrB));
+	CHKiRet(cstrConstruct(&pStrB));
 	
 	while(*p) {
 		if(*p == '\'') {
-			CHKiRet(rsCStrAppendChar(pStrB, (escapeMode == 0) ? '\'' : '\\'));
+			CHKiRet(cstrAppendChar(pStrB, (escapeMode == 0) ? '\'' : '\\'));
 			iLen++;	/* reflect the extra character */
 		} else if((escapeMode == 1) && (*p == '\\')) {
-			CHKiRet(rsCStrAppendChar(pStrB, '\\'));
+			CHKiRet(cstrAppendChar(pStrB, '\\'));
 			iLen++;	/* reflect the extra character */
 		}
-		CHKiRet(rsCStrAppendChar(pStrB, *p));
+		CHKiRet(cstrAppendChar(pStrB, *p));
 		++p;
 	}
-	CHKiRet(rsCStrFinish(pStrB));
-	CHKiRet(rsCStrConvSzStrAndDestruct(pStrB, &pszGenerated, 0));
+	CHKiRet(cstrFinalize(pStrB));
+	CHKiRet(cstrConvSzStrAndDestruct(pStrB, &pszGenerated, 0));
 
 	if(*pbMustBeFreed)
 		free(*pp); /* discard previous value */
@@ -243,7 +294,7 @@ finalize_it:
 	if(iRet != RS_RET_OK) {
 		doSQLEmergencyEscape(*pp, escapeMode);
 		if(pStrB != NULL)
-			rsCStrDestruct(&pStrB);
+			cstrDestruct(&pStrB);
 	}
 
 	RETiRet;
@@ -320,9 +371,8 @@ static int do_Constant(unsigned char **pp, struct template *pTpl)
 
 	p = *pp;
 
-	if(rsCStrConstruct(&pStrB) != RS_RET_OK)
+	if(cstrConstruct(&pStrB) != RS_RET_OK)
 		 return 1;
-	rsCStrSetAllocIncrement(pStrB, 32);
 	/* process the message and expand escapes
 	 * (additional escapes can be added here if needed)
 	 */
@@ -331,22 +381,22 @@ static int do_Constant(unsigned char **pp, struct template *pTpl)
 			switch(*++p) {
 				case '\0':	
 					/* the best we can do - it's invalid anyhow... */
-					rsCStrAppendChar(pStrB, *p);
+					cstrAppendChar(pStrB, *p);
 					break;
 				case 'n':
-					rsCStrAppendChar(pStrB, '\n');
+					cstrAppendChar(pStrB, '\n');
 					++p;
 					break;
 				case 'r':
-					rsCStrAppendChar(pStrB, '\r');
+					cstrAppendChar(pStrB, '\r');
 					++p;
 					break;
 				case '\\':
-					rsCStrAppendChar(pStrB, '\\');
+					cstrAppendChar(pStrB, '\\');
 					++p;
 					break;
 				case '%':
-					rsCStrAppendChar(pStrB, '%');
+					cstrAppendChar(pStrB, '%');
 					++p;
 					break;
 				case '0': /* numerical escape sequence */
@@ -363,15 +413,15 @@ static int do_Constant(unsigned char **pp, struct template *pTpl)
 					while(*p && isdigit((int)*p)) {
 						i = i * 10 + *p++ - '0';
 					}
-					rsCStrAppendChar(pStrB, i);
+					cstrAppendChar(pStrB, i);
 					break;
 				default:
-					rsCStrAppendChar(pStrB, *p++);
+					cstrAppendChar(pStrB, *p++);
 					break;
 			}
 		}
 		else
-			rsCStrAppendChar(pStrB, *p++);
+			cstrAppendChar(pStrB, *p++);
 	}
 
 	if((pTpe = tpeConstruct(pTpl)) == NULL) {
@@ -382,14 +432,14 @@ static int do_Constant(unsigned char **pp, struct template *pTpl)
 		return 1;
 	}
 	pTpe->eEntryType = CONSTANT;
-	rsCStrFinish(pStrB);
+	cstrFinalize(pStrB);
 	/* We obtain the length from the counted string object
 	 * (before we delete it). Later we might take additional
 	 * benefit from the counted string object.
 	 * 2005-09-09 rgerhards
 	 */
 	pTpe->data.constant.iLenConstant = rsCStrLen(pStrB);
-	if(rsCStrConvSzStrAndDestruct(pStrB, &pTpe->data.constant.pConstant, 0) != RS_RET_OK)
+	if(cstrConvSzStrAndDestruct(pStrB, &pTpe->data.constant.pConstant, 0) != RS_RET_OK)
 		return 1;
 
 	*pp = p;
@@ -460,6 +510,8 @@ static void doOptions(unsigned char **pp, struct templateEntry *pTpe)
 			pTpe->data.field.options.bSecPathDrop = 1;
 		 } else if(!strcmp((char*)Buf, "secpath-replace")) {
 			pTpe->data.field.options.bSecPathReplace = 1;
+		 } else if(!strcmp((char*)Buf, "csv")) {
+			pTpe->data.field.options.bCSV = 1;
 		 } else {
 			dbgprintf("Invalid field option '%s' specified - ignored.\n", Buf);
 		 }
@@ -494,7 +546,7 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 
 	p = (unsigned char*) *pp;
 
-	if(rsCStrConstruct(&pStrB) != RS_RET_OK)
+	if(cstrConstruct(&pStrB) != RS_RET_OK)
 		 return 1;
 
 	if((pTpe = tpeConstruct(pTpl)) == NULL) {
@@ -505,13 +557,14 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 	pTpe->eEntryType = FIELD;
 
 	while(*p && *p != '%' && *p != ':') {
-		rsCStrAppendChar(pStrB, tolower(*p));
+		cstrAppendChar(pStrB, tolower(*p));
 		++p; /* do NOT do this in tolower()! */
 	}
 
-	/* got the name*/
-	rsCStrFinish(pStrB);
-	if(rsCStrConvSzStrAndDestruct(pStrB, &pTpe->data.field.pPropRepl, 0) != RS_RET_OK)
+	/* got the name */
+	cstrFinalize(pStrB);
+
+	if(propNameToID(pStrB, &pTpe->data.field.propid) != RS_RET_OK)
 		return 1;
 
 	/* Check frompos, if it has an R, then topos should be a regex */
@@ -951,8 +1004,6 @@ void tplDeleteAll(void)
 						regexp.regfree(&(pTpeDel->data.field.re));
 					}
 				}
-				/*dbgprintf("(FIELD), value: '%s'", pTpeDel->data.field.pPropRepl);*/
-				free(pTpeDel->data.field.pPropRepl);
 				break;
 			}
 			/*dbgprintf("\n");*/
@@ -1008,8 +1059,6 @@ void tplDeleteNew(void)
 						regexp.regfree(&(pTpeDel->data.field.re));
 					}
 				}
-				/*dbgprintf("(FIELD), value: '%s'", pTpeDel->data.field.pPropRepl);*/
-				free(pTpeDel->data.field.pPropRepl);
 				break;
 			}
 			/*dbgprintf("\n");*/
@@ -1058,7 +1107,7 @@ void tplPrintList(void)
 					pTpe->data.constant.pConstant);
 				break;
 			case FIELD:
-				dbgprintf("(FIELD), value: '%s' ", pTpe->data.field.pPropRepl);
+				dbgprintf("(FIELD), value: '%d' ", pTpe->data.field.propid);
 				switch(pTpe->data.field.eDateFormat) {
 				case tplFmtDefault:
 					break;
@@ -1104,6 +1153,9 @@ void tplPrintList(void)
 				}
 				if(pTpe->data.field.options.bSPIffNo1stSP) {
 				  	dbgprintf("[SP iff no first SP] ");
+				}
+				if(pTpe->data.field.options.bCSV) {
+				  	dbgprintf("[format as CSV (RFC4180)]");
 				}
 				if(pTpe->data.field.options.bDropLastLF) {
 				  	dbgprintf("[drop last LF in msg] ");

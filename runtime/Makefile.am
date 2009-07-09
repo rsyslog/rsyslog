@@ -7,7 +7,9 @@ pkglib_LTLIBRARIES =
 librsyslog_la_SOURCES = \
 	rsyslog.c \
 	rsyslog.h \
+	unicode-helper.h \
 	atomic.h \
+	batch.h \
 	syslogd-types.h \
 	module-template.h \
 	obj-types.h \
@@ -16,6 +18,8 @@ librsyslog_la_SOURCES = \
 	glbl.c \
 	conf.c \
 	conf.h \
+	parser.h \
+	parser.c \
 	msg.c \
 	msg.h \
 	linkedlist.c \
@@ -36,6 +40,8 @@ librsyslog_la_SOURCES = \
 	obj.h \
 	modules.c \
 	modules.h \
+	apc.c \
+	apc.h \
 	sync.c \
 	sync.h \
 	expr.c \
@@ -64,6 +70,12 @@ librsyslog_la_SOURCES = \
 	vmop.h \
 	queue.c \
 	queue.h \
+	ruleset.c \
+	ruleset.h \
+	rule.c \
+	rule.h \
+	prop.c \
+	prop.h \
 	cfsysline.c \
 	cfsysline.h \
 	\
@@ -102,6 +114,17 @@ lmregexp_la_LDFLAGS = -module -avoid-version
 lmregexp_la_LIBADD =
 endif
 
+#
+# zlib support
+# 
+if ENABLE_ZLIB
+pkglib_LTLIBRARIES += lmzlibw.la
+lmzlibw_la_SOURCES = zlibw.c zlibw.h
+lmzlibw_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
+lmzlibw_la_LDFLAGS = -module -avoid-version
+lmzlibw_la_LIBADD =
+endif
+
 if ENABLE_INET
 pkglib_LTLIBRARIES += lmnet.la lmnetstrms.la
 #
@@ -117,6 +140,13 @@ lmnetstrms_la_SOURCES = netstrms.c netstrms.h netstrm.c netstrm.h nssel.c nssel.
 lmnetstrms_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
 lmnetstrms_la_LDFLAGS = -module -avoid-version
 lmnetstrms_la_LIBADD =
+
+# generic stream server framework
+pkglib_LTLIBRARIES += lmstrmsrv.la
+lmstrmsrv_la_SOURCES = strmsrv.c strmsrv.h strms_sess.c strms_sess.h
+lmstrmsrv_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
+lmstrmsrv_la_LDFLAGS = -module -avoid-version
+lmstrmsrv_la_LIBADD =
 
 # netstream drivers
 

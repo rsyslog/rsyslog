@@ -1,0 +1,82 @@
+// This file is part of rsyslog.
+// 
+// rsyslog "family tree" compressed version
+//
+// see http://www.graphviz.org for how to obtain the graphviz processor
+// which is used to build the actual graph.
+//
+// generate the graph with
+// $ dot rsyslog-vers.dot -Tpng >rsyslog-vers.png
+
+digraph G {
+	label="\n\nrsyslog \"family tree\"\nhttp://www.rsyslog.com";
+	fontsize=20;
+
+	v1stable [label="v1-stable", shape=box, style=dotted];
+	v2stable [label="v2-stable", shape=box, style=filled];
+	v3stable [label="v3-stable", shape=box, style=filled];
+	beta     [label="beta", shape=box, style=filled];
+	devel    [label="devel", shape=box, style=filled];
+	"1.0.5"  [style=dotted];
+	perf     [style=dashed];
+	"imudp-select" [style=dashed label="imudp-\nselect"];
+	msgnolock [style=dashed];
+	"file-errHdlr" [style=dashed];
+	solaris [style=dashed];
+	tests   [style=dashed];
+	"0.x.y"   [group=master];
+	"1.10.0"  [group=master];
+	"1.21.2"  [group=master];
+	"3.10.0"  [group=master];
+	"3.15.1"  [group=master];
+	"3.17.0"  [group=master];
+	"3.19.x"  [group=master];
+	"3.21.x"  [group=master];
+	"4.1.0"   [group=master];
+	"4.1.4"   [group=master];
+	"4.1.5"   [group=master];
+	"4.1.6"   [group=master];
+
+	sysklogd -> "0.x.y" [color=red];
+	"0.x.y" -> "1.0.0";
+	"0.x.y" -> "1.10.0" [color=red];
+	"1.0.0" -> "1.0.5"  [style=dashed];
+	"1.10.0" -> "1.21.2" [color=red style=dashed];
+	"1.21.2" -> "2.0.0" [color=blue];
+	"2.0.0" -> "2.0.5" [style=dashed, color=blue];
+	"1.21.2" -> "3.10.0" [color=red];
+	"3.10.0" -> "3.15.1" [color=red style=dashed];
+	"3.15.1" -> "tests";
+	"3.15.1" -> "3.17.0" [color=red style=dashed];
+	"3.15.1" -> "3.16.x";
+	"3.16.x" -> "3.18.x" [color=blue, style=dashed];
+	"3.17.0" -> "3.18.x";
+	"3.17.0" -> "3.19.x" [color=red, style=dashed];
+	"3.19.x" -> "3.20.x";
+	"3.19.x" -> "3.21.x" [color=red];
+	"3.18.x" -> debian_lenny;
+	"3.18.x" -> "3.20.x" [color=blue, style=dashed];
+	"3.21.x" -> "3.21.11";
+	"3.21.x" -> "4.1.0" [color=red];
+	"3.21.x" -> "perf";
+	"perf" -> "4.1.0";
+	"4.1.0" -> "4.1.4" [color=red, style=dashed];
+	"4.1.4" -> "file-errHdlr";
+	"4.1.4" -> "4.1.5" [color=red];
+	"4.1.5" -> "4.1.6" [color=red];
+	"3.21.x" -> msgnolock
+	"3.21.x" -> "imudp-select";
+	"4.1.5" -> solaris;
+	"file-errHdlr" -> "4.1.6";
+	"tests" -> "4.1.6";
+
+	"1.0.5" -> v1stable [dir=none, style=dotted];
+	"2.0.5" -> v2stable [dir=none, style=dotted];
+	"3.20.x" -> v3stable [dir=none, style=dotted];
+	"3.21.11" -> beta    [dir=none, style=dotted];
+	"4.1.6" ->   devel   [dir=none, style=dotted];
+
+	{rank=same; "4.1.5" "solaris"}
+	{rank=same; "3.18.x" "debian_lenny"}
+	{rank=same; "1.0.5" "2.0.5" "3.20.x" "3.21.11" "4.1.6"}
+}

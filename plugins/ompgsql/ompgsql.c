@@ -40,7 +40,7 @@
 #include <errno.h>
 #include <time.h>
 #include <libpq-fe.h>
-#include "dirty.h"
+#include "conf.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
 #include "template.h"
@@ -170,6 +170,9 @@ tryExec(uchar *pszCmd, instanceData *pData)
 	int bHadError = 0;
 
 	/* try insert */
+BEGINfunc
+RUNLOG_VAR("%p", pData->f_hpgsql);
+RUNLOG_VAR("%s", pszCmd);
 	pgRet = PQexec(pData->f_hpgsql, (char*)pszCmd);
 	execState = PQresultStatus(pgRet);
 	if(execState != PGRES_COMMAND_OK && execState != PGRES_TUPLES_OK) {
@@ -178,6 +181,7 @@ tryExec(uchar *pszCmd, instanceData *pData)
 	}
 	PQclear(pgRet);
 
+ENDfunc
 	return(bHadError);
 }
 
@@ -230,11 +234,26 @@ CODESTARTtryResume
 	}
 ENDtryResume
 
+
+BEGINbeginTransaction
+CODESTARTbeginTransaction
+dbgprintf("ompgsql: beginTransaction\n");
+	iRet = writePgSQL((uchar*) "begin", pData); /* TODO: make user-configurable */
+ENDbeginTransaction
+
+
 BEGINdoAction
 CODESTARTdoAction
 	dbgprintf("\n");
 	iRet = writePgSQL(ppString[0], pData);
 ENDdoAction
+
+
+BEGINendTransaction
+CODESTARTendTransaction
+	iRet = writePgSQL((uchar*) "commit;", pData); /* TODO: make user-configurable */
+dbgprintf("ompgsql: endTransaction\n");
+ENDendTransaction
 
 
 BEGINparseSelectorAct
@@ -314,6 +333,7 @@ ENDmodExit
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
+CODEqueryEtryPt_TXIF_OMOD_QUERIES /* we support the transactional interface! */
 ENDqueryEtryPt
 
 
@@ -322,6 +342,8 @@ CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	INITChkCoreFeature(bCoreSupportsBatching, CORE_FEATURE_BATCHING);
+	DBGPRINTF("ompgsql: %susing transactional output interface.\n", bCoreSupportsBatching ? "" : "not ");
 ENDmodInit
 /* vi:set ai:
  */

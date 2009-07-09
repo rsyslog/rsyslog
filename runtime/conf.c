@@ -46,7 +46,9 @@
 #include <glob.h>
 #include <sys/types.h>
 #ifdef HAVE_LIBGEN_H
-#	include <libgen.h>
+#	ifndef OS_SOLARIS
+#		include <libgen.h>
+#	endif
 #endif
 
 #include "rsyslog.h"
@@ -67,10 +69,16 @@
 #include "expr.h"
 #include "ctok.h"
 #include "ctok_token.h"
+#include "rule.h"
+#include "ruleset.h"
+#include "unicode-helper.h"
 
+#ifdef OS_SOLARIS
+#	define NAME_MAX MAXNAMELEN
+#endif
 
 /* forward definitions */
-static rsRetVal cfline(uchar *line, selector_t **pfCurr);
+static rsRetVal cfline(uchar *line, rule_t **pfCurr);
 static rsRetVal processConfFile(uchar *pConfFile);
 
 
@@ -82,6 +90,8 @@ DEFobjCurrIf(ctok_token)
 DEFobjCurrIf(module)
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(net)
+DEFobjCurrIf(rule)
+DEFobjCurrIf(ruleset)
 
 static int iNbrActions; /* number of actions the running config has. Needs to be init on ReInitConf() */
 
@@ -387,15 +397,17 @@ finalize_it:
 static rsRetVal
 processConfFile(uchar *pConfFile)
 {
-	DEFiRet;
 	int iLnNbr = 0;
 	FILE *cf;
-	selector_t *fCurr = NULL;
+	rule_t *pCurrRule = NULL;
 	uchar *p;
 	uchar cbuf[CFGLNSIZ];
 	uchar *cline;
 	int i;
 	int bHadAnError = 0;
+	uchar *pszOrgLine = NULL;
+	size_t lenLine;
+	DEFiRet;
 	ASSERT(pConfFile != NULL);
 
 	if((cf = fopen((char*)pConfFile, "r")) == NULL) {
@@ -408,9 +420,12 @@ processConfFile(uchar *pConfFile)
 	while (fgets((char*)cline, sizeof(cbuf) - (cline - cbuf), cf) != NULL) {
 		++iLnNbr;
 		/* drop LF - TODO: make it better, replace fgets(), but its clean as it is */
-		if(cline[strlen((char*)cline)-1] == '\n') {
-			cline[strlen((char*)cline) -1] = '\0';
+		lenLine = ustrlen(cline);
+		if(cline[lenLine-1] == '\n') {
+			cline[lenLine-1] = '\0';
 		}
+		free(pszOrgLine);
+		pszOrgLine = ustrdup(cline); /* save if needed for errmsg, NULL ptr is OK */
 		/* check for end-of-section, comments, strip off trailing
 		 * spaces and newline character.
 		 */
@@ -424,7 +439,6 @@ processConfFile(uchar *pConfFile)
 		 * TODO: review the code at whole - this is highly suspect (but will go away
 		 * once we do the rest of RainerScript).
 		 */
-		/* was: strcpy((char*)cline, (char*)p); */
 		for( i = 0 ; p[i] != '\0' ; ++i) {
 			cline[i] = p[i];
 		}
@@ -448,7 +462,7 @@ processConfFile(uchar *pConfFile)
 		/* we now have the complete line, and are positioned at the first non-whitespace
 		 * character. So let's process it
 		 */
-		if(cfline(cbuf, &fCurr) != RS_RET_OK) {
+		if(cfline(cbuf, &pCurrRule) != RS_RET_OK) {
 			/* we log a message, but otherwise ignore the error. After all, the next
 			 * line can be correct.  -- rgerhards, 2007-08-02
 			 */
@@ -456,27 +470,31 @@ processConfFile(uchar *pConfFile)
 			dbgprintf("config line NOT successfully processed\n");
 			snprintf((char*)szErrLoc, sizeof(szErrLoc) / sizeof(uchar),
 				 "%s, line %d", pConfFile, iLnNbr);
-			errmsg.LogError(0, NO_ERRCODE, "the last error occured in %s", (char*)szErrLoc);
+			errmsg.LogError(0, NO_ERRCODE, "the last error occured in %s:\"%s\"", (char*)szErrLoc, (char*)pszOrgLine);
 			bHadAnError = 1;
 		}
 	}
 
 	/* we probably have one selector left to be added - so let's do that now */
-	CHKiRet(selectorAddList(fCurr));
+	if(pCurrRule != NULL) {
+		CHKiRet(ruleset.AddRule(rule.GetAssRuleset(pCurrRule), &pCurrRule));
+	}
 
 	/* close the configuration file */
-	(void) fclose(cf);
+	fclose(cf);
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
 		char errStr[1024];
-		if(fCurr != NULL)
-			selectorDestruct(fCurr);
+		if(pCurrRule != NULL)
+			rule.Destruct(&pCurrRule);
 
 		rs_strerror_r(errno, errStr, sizeof(errStr));
 		dbgprintf("error %d processing config file '%s'; os error (if any): %s\n",
 			iRet, pConfFile, errStr);
 	}
+
+	free(pszOrgLine);
 
 	if(bHadAnError && (iRet == RS_RET_OK)) { /* a bit dirty, enhance in future releases */
 		iRet = RS_RET_NONFATAL_CONFIG_ERR;
@@ -521,17 +539,15 @@ rsRetVal cflineParseTemplateName(uchar** pp, omodStringRequest_t *pOMSR, int iEn
 		tplName = (uchar*) strdup((char*)dfltTplName);
 	} else {
 		/* template specified, pick it up */
-		if(rsCStrConstruct(&pStrB) != RS_RET_OK) {
-			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-		}
+		CHKiRet(cstrConstruct(&pStrB));
 
 		/* now copy the string */
 		while(*p && *p != '#' && !isspace((int) *p)) {
-			CHKiRet(rsCStrAppendChar(pStrB, *p));
+			CHKiRet(cstrAppendChar(pStrB, *p));
 			++p;
 		}
-		CHKiRet(rsCStrFinish(pStrB));
-		CHKiRet(rsCStrConvSzStrAndDestruct(pStrB, &tplName, 0));
+		CHKiRet(cstrFinalize(pStrB));
+		CHKiRet(cstrConvSzStrAndDestruct(pStrB, &tplName, 0));
 	}
 
 	iRet = OMSRsetEntry(pOMSR, iEntry, tplName, iTplOpts);
@@ -583,7 +599,7 @@ cflineParseFileName(uchar* p, uchar *pFileName, omodStringRequest_t *pOMSR, int 
  * rgerhards 2005-09-15
  */
 /* GPLv3 - stems back to sysklogd */
-static rsRetVal cflineProcessTradPRIFilter(uchar **pline, register selector_t *f)
+static rsRetVal cflineProcessTradPRIFilter(uchar **pline, register rule_t *pRule)
 {
 	uchar *p;
 	register uchar *q;
@@ -598,17 +614,17 @@ static rsRetVal cflineProcessTradPRIFilter(uchar **pline, register selector_t *f
 
 	ASSERT(pline != NULL);
 	ASSERT(*pline != NULL);
-	ASSERT(f != NULL);
+	ISOBJ_TYPE_assert(pRule, rule);
 
 	dbgprintf(" - traditional PRI filter\n");
 	errno = 0;	/* keep strerror_r() stuff out of logerror messages */
 
-	f->f_filter_type = FILTER_PRI;
+	pRule->f_filter_type = FILTER_PRI;
 	/* Note: file structure is pre-initialized to zero because it was
 	 * created with calloc()!
 	 */
 	for (i = 0; i <= LOG_NFACILITIES; i++) {
-		f->f_filterData.f_pmask[i] = TABLE_NOPRI;
+		pRule->f_filterData.f_pmask[i] = TABLE_NOPRI;
 	}
 
 	/* scan through the list of selectors */
@@ -663,32 +679,32 @@ static rsRetVal cflineProcessTradPRIFilter(uchar **pline, register selector_t *f
 				for (i = 0; i <= LOG_NFACILITIES; i++) {
 					if ( pri == INTERNAL_NOPRI ) {
 						if ( ignorepri )
-							f->f_filterData.f_pmask[i] = TABLE_ALLPRI;
+							pRule->f_filterData.f_pmask[i] = TABLE_ALLPRI;
 						else
-							f->f_filterData.f_pmask[i] = TABLE_NOPRI;
+							pRule->f_filterData.f_pmask[i] = TABLE_NOPRI;
 					}
 					else if ( singlpri ) {
 						if ( ignorepri )
-				  			f->f_filterData.f_pmask[i] &= ~(1<<pri);
+				  			pRule->f_filterData.f_pmask[i] &= ~(1<<pri);
 						else
-				  			f->f_filterData.f_pmask[i] |= (1<<pri);
+				  			pRule->f_filterData.f_pmask[i] |= (1<<pri);
 					}
 					else
 					{
 						if ( pri == TABLE_ALLPRI ) {
 							if ( ignorepri )
-								f->f_filterData.f_pmask[i] = TABLE_NOPRI;
+								pRule->f_filterData.f_pmask[i] = TABLE_NOPRI;
 							else
-								f->f_filterData.f_pmask[i] = TABLE_ALLPRI;
+								pRule->f_filterData.f_pmask[i] = TABLE_ALLPRI;
 						}
 						else
 						{
 							if ( ignorepri )
 								for (i2= 0; i2 <= pri; ++i2)
-									f->f_filterData.f_pmask[i] &= ~(1<<i2);
+									pRule->f_filterData.f_pmask[i] &= ~(1<<i2);
 							else
 								for (i2= 0; i2 <= pri; ++i2)
-									f->f_filterData.f_pmask[i] |= (1<<i2);
+									pRule->f_filterData.f_pmask[i] |= (1<<i2);
 						}
 					}
 				}
@@ -703,27 +719,27 @@ static rsRetVal cflineProcessTradPRIFilter(uchar **pline, register selector_t *f
 
 				if ( pri == INTERNAL_NOPRI ) {
 					if ( ignorepri )
-						f->f_filterData.f_pmask[i >> 3] = TABLE_ALLPRI;
+						pRule->f_filterData.f_pmask[i >> 3] = TABLE_ALLPRI;
 					else
-						f->f_filterData.f_pmask[i >> 3] = TABLE_NOPRI;
+						pRule->f_filterData.f_pmask[i >> 3] = TABLE_NOPRI;
 				} else if ( singlpri ) {
 					if ( ignorepri )
-						f->f_filterData.f_pmask[i >> 3] &= ~(1<<pri);
+						pRule->f_filterData.f_pmask[i >> 3] &= ~(1<<pri);
 					else
-						f->f_filterData.f_pmask[i >> 3] |= (1<<pri);
+						pRule->f_filterData.f_pmask[i >> 3] |= (1<<pri);
 				} else {
 					if ( pri == TABLE_ALLPRI ) {
 						if ( ignorepri )
-							f->f_filterData.f_pmask[i >> 3] = TABLE_NOPRI;
+							pRule->f_filterData.f_pmask[i >> 3] = TABLE_NOPRI;
 						else
-							f->f_filterData.f_pmask[i >> 3] = TABLE_ALLPRI;
+							pRule->f_filterData.f_pmask[i >> 3] = TABLE_ALLPRI;
 					} else {
 						if ( ignorepri )
 							for (i2= 0; i2 <= pri; ++i2)
-								f->f_filterData.f_pmask[i >> 3] &= ~(1<<i2);
+								pRule->f_filterData.f_pmask[i >> 3] &= ~(1<<i2);
 						else
 							for (i2= 0; i2 <= pri; ++i2)
-								f->f_filterData.f_pmask[i >> 3] |= (1<<i2);
+								pRule->f_filterData.f_pmask[i >> 3] |= (1<<i2);
 					}
 				}
 			}
@@ -749,7 +765,7 @@ static rsRetVal cflineProcessTradPRIFilter(uchar **pline, register selector_t *f
  * A pointer to that beginnig is passed back to the caller.
  * rgerhards 2008-01-19
  */
-static rsRetVal cflineProcessIfFilter(uchar **pline, register selector_t *f)
+static rsRetVal cflineProcessIfFilter(uchar **pline, register rule_t *f)
 {
 	DEFiRet;
 	ctok_t *tok;
@@ -762,7 +778,6 @@ static rsRetVal cflineProcessIfFilter(uchar **pline, register selector_t *f)
 	dbgprintf(" - general expression-based filter\n");
 	errno = 0;	/* keep strerror_r() stuff out of logerror messages */
 
-dbgprintf("calling expression parser, pp %p ('%s')\n", *pline, *pline);
 	f->f_filter_type = FILTER_EXPR;
 
 	/* if we come to over here, pline starts with "if ". We just skip that part. */
@@ -795,6 +810,9 @@ dbgprintf("calling expression parser, pp %p ('%s')\n", *pline, *pline);
 	CHKiRet(ctok.Getpp(tok, pline));
 	CHKiRet(ctok.Destruct(&tok));
 
+	/* debug support - print vmprg after construction (uncomment to use) */
+	/* vmprgDebugPrint(f->f_filterData.f_expr->pVmprg); */
+
 	/* we now need to skip whitespace to the action part, else we confuse
 	 * the legacy rsyslog conf parser. -- rgerhards, 2008-02-25
 	 */
@@ -815,10 +833,11 @@ finalize_it:
  * of the action part. A pointer to that beginnig is passed back to the caller.
  * rgerhards 2005-09-15
  */
-static rsRetVal cflineProcessPropFilter(uchar **pline, register selector_t *f)
+static rsRetVal cflineProcessPropFilter(uchar **pline, register rule_t *f)
 {
 	rsParsObj *pPars;
 	cstr_t *pCSCompOp;
+	cstr_t *pCSPropName;
 	rsRetVal iRet;
 	int iOffset; /* for compare operations */
 
@@ -838,12 +857,19 @@ static rsRetVal cflineProcessPropFilter(uchar **pline, register selector_t *f)
 	}
 
 	/* read property */
-	iRet = parsDelimCStr(pPars, &f->f_filterData.prop.pCSPropName, ',', 1, 1, 1);
+	iRet = parsDelimCStr(pPars, &pCSPropName, ',', 1, 1, 1);
 	if(iRet != RS_RET_OK) {
 		errmsg.LogError(0, iRet, "error %d parsing filter property - ignoring selector", iRet);
 		rsParsDestruct(pPars);
 		return(iRet);
 	}
+	iRet = propNameToID(pCSPropName, &f->f_filterData.prop.propID);
+	if(iRet != RS_RET_OK) {
+		errmsg.LogError(0, iRet, "error %d parsing filter property - ignoring selector", iRet);
+		rsParsDestruct(pPars);
+		return(iRet);
+	}
+	cstrDestruct(&pCSPropName);
 
 	/* read operation */
 	iRet = parsDelimCStr(pPars, &pCSCompOp, ',', 1, 1, 1);
@@ -879,6 +905,8 @@ static rsRetVal cflineProcessPropFilter(uchar **pline, register selector_t *f)
 		f->f_filterData.prop.operation = FIOP_STARTSWITH;
 	} else if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, (unsigned char*) "regex", 5)) {
 		f->f_filterData.prop.operation = FIOP_REGEX;
+	} else if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, (unsigned char*) "ereregex", 8)) {
+		f->f_filterData.prop.operation = FIOP_EREREGEX;
 	} else {
 		errmsg.LogError(0, NO_ERRCODE, "error: invalid compare operation '%s' - ignoring selector",
 		           (char*) rsCStrGetSzStrNoNULL(pCSCompOp));
@@ -915,7 +943,7 @@ static rsRetVal cflineProcessPropFilter(uchar **pline, register selector_t *f)
  */
 static rsRetVal cflineProcessHostSelector(uchar **pline)
 {
-	rsRetVal iRet;
+	DEFiRet;
 
 	ASSERT(pline != NULL);
 	ASSERT(*pline != NULL);
@@ -941,21 +969,20 @@ static rsRetVal cflineProcessHostSelector(uchar **pline)
 		dbgprintf("resetting BSD-like hostname filter\n");
 		eDfltHostnameCmpMode = HN_NO_COMP;
 		if(pDfltHostnameCmp != NULL) {
-			if((iRet = rsCStrSetSzStr(pDfltHostnameCmp, NULL)) != RS_RET_OK)
-				return(iRet);
+			CHKiRet(rsCStrSetSzStr(pDfltHostnameCmp, NULL));
 		}
 	} else {
 		dbgprintf("setting BSD-like hostname filter to '%s'\n", *pline);
 		if(pDfltHostnameCmp == NULL) {
 			/* create string for parser */
-			if((iRet = rsCStrConstructFromszStr(&pDfltHostnameCmp, *pline)) != RS_RET_OK)
-				return(iRet);
+			CHKiRet(rsCStrConstructFromszStr(&pDfltHostnameCmp, *pline));
 		} else { /* string objects exists, just update... */
-			if((iRet = rsCStrSetSzStr(pDfltHostnameCmp, *pline)) != RS_RET_OK)
-				return(iRet);
+			CHKiRet(rsCStrSetSzStr(pDfltHostnameCmp, *pline));
 		}
 	}
-	return RS_RET_OK;
+
+finalize_it:
+	RETiRet;
 }
 
 
@@ -966,7 +993,7 @@ static rsRetVal cflineProcessHostSelector(uchar **pline)
  */
 static rsRetVal cflineProcessTagSelector(uchar **pline)
 {
-	rsRetVal iRet;
+	DEFiRet;
 
 	ASSERT(pline != NULL);
 	ASSERT(*pline != NULL);
@@ -985,29 +1012,28 @@ static rsRetVal cflineProcessTagSelector(uchar **pline)
 	if(**pline != '\0' && **pline == '*' && *(*pline+1) == '\0') {
 		dbgprintf("resetting programname filter\n");
 		if(pDfltProgNameCmp != NULL) {
-			if((iRet = rsCStrSetSzStr(pDfltProgNameCmp, NULL)) != RS_RET_OK)
-				return(iRet);
+			CHKiRet(rsCStrSetSzStr(pDfltProgNameCmp, NULL));
 		}
 	} else {
 		dbgprintf("setting programname filter to '%s'\n", *pline);
 		if(pDfltProgNameCmp == NULL) {
 			/* create string for parser */
-			if((iRet = rsCStrConstructFromszStr(&pDfltProgNameCmp, *pline)) != RS_RET_OK)
-				return(iRet);
+			CHKiRet(rsCStrConstructFromszStr(&pDfltProgNameCmp, *pline));
 		} else { /* string objects exists, just update... */
-			if((iRet = rsCStrSetSzStr(pDfltProgNameCmp, *pline)) != RS_RET_OK)
-				return(iRet);
+			CHKiRet(rsCStrSetSzStr(pDfltProgNameCmp, *pline));
 		}
 	}
-	return RS_RET_OK;
+
+finalize_it:
+	RETiRet;
 }
 
 
 /* read the filter part of a configuration line and store the filter
- * in the supplied selector_t
+ * in the supplied rule_t
  * rgerhards, 2007-08-01
  */
-static rsRetVal cflineDoFilter(uchar **pp, selector_t *f)
+static rsRetVal cflineDoFilter(uchar **pp, rule_t *f)
 {
 	DEFiRet;
 
@@ -1076,7 +1102,7 @@ static rsRetVal cflineDoAction(uchar **p, action_t **ppAction)
 					dbgprintf("module is incompatible with RepeatedMsgReduction - turned off\n");
 					pAction->f_ReduceRepeated = 0;
 				}
-				pAction->bEnabled = 1; /* action is enabled */
+				pAction->eState = ACT_STATE_RDY; /* action is enabled */
 				iNbrActions++;	/* one more active action! */
 			}
 			break;
@@ -1100,17 +1126,15 @@ static rsRetVal cflineDoAction(uchar **p, action_t **ppAction)
 
 
 /* Process a configuration file line in traditional "filter selector" format
- * or one that builds upon this format.
+ * or one that builds upon this format. Note that ppRule may be a NULL pointer,
+ * which is valid and happens if there is no previous line (right at the start
+ * of the master config file!).
  */
-static rsRetVal cflineClassic(uchar *p, selector_t **pfCurr)
+static rsRetVal
+cflineClassic(uchar *p, rule_t **ppRule)
 {
 	DEFiRet;
 	action_t *pAction;
-	selector_t *fCurr;
-
-	ASSERT(pfCurr != NULL);
-
-	fCurr = *pfCurr;
 
 	/* lines starting with '&' have no new filters and just add
 	 * new actions to the currently processed selector.
@@ -1128,16 +1152,19 @@ static rsRetVal cflineClassic(uchar *p, selector_t **pfCurr)
 		 * selector is NULL, which means we do not need to care about it at
 		 * all.  -- rgerhards, 2007-08-01
 		 */
-		CHKiRet(selectorAddList(fCurr));
-		CHKiRet(selectorConstruct(&fCurr)); /* create "fresh" selector */
-		CHKiRet(cflineDoFilter(&p, fCurr)); /* pull filters */
+		if(*ppRule != NULL) {
+			CHKiRet(ruleset.AddRule(rule.GetAssRuleset(*ppRule), ppRule));
+		}
+		CHKiRet(rule.Construct(ppRule)); /* create "fresh" selector */
+		CHKiRet(rule.SetAssRuleset(*ppRule, ruleset.GetCurrent())); /* create "fresh" selector */
+		CHKiRet(rule.ConstructFinalize(*ppRule)); /* create "fresh" selector */
+		CHKiRet(cflineDoFilter(&p, *ppRule)); /* pull filters */
 	}
 
 	CHKiRet(cflineDoAction(&p, &pAction));
-	CHKiRet(llAppend(&fCurr->llActList,  NULL, (void*) pAction));
+	CHKiRet(llAppend(&(*ppRule)->llActList,  NULL, (void*) pAction));
 
 finalize_it:
-	*pfCurr = fCurr;
 	RETiRet;
 }
 
@@ -1147,7 +1174,7 @@ finalize_it:
  * rgerhards, 2007-08-01
  */
 static rsRetVal
-cfline(uchar *line, selector_t **pfCurr)
+cfline(uchar *line, rule_t **pfCurr)
 {
 	DEFiRet;
 
@@ -1244,6 +1271,8 @@ CODESTARTObjClassExit(conf)
 	objRelease(module, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(net, LM_NET_FILENAME);
+	objRelease(rule, CORE_COMPONENT);
+	objRelease(ruleset, CORE_COMPONENT);
 ENDObjClassExit(conf)
 
 
@@ -1259,6 +1288,8 @@ BEGINAbstractObjClassInit(conf, 1, OBJ_IS_CORE_MODULE) /* class, version - CHANG
 	CHKiRet(objUse(module, CORE_COMPONENT));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(net, LM_NET_FILENAME)); /* TODO: make this dependcy go away! */
+	CHKiRet(objUse(rule, CORE_COMPONENT));
+	CHKiRet(objUse(ruleset, CORE_COMPONENT));
 ENDObjClassInit(conf)
 
 /* vi:set ai:

@@ -5,6 +5,7 @@ html_files = \
 	features.html \
 	generic_design.html \
 	expression.html \
+	droppriv.html \
 	history.html \
 	how2help.html \
 	install.html \
@@ -32,6 +33,7 @@ html_files = \
 	dev_queue.html \
 	omsnmp.html \
 	ommysql.html \
+	omoracle.html \
 	omlibdbi.html \
 	imfile.html \
 	imtcp.html \
@@ -76,6 +78,7 @@ html_files = \
 	rsconf1_filecreatemode.html \
 	rsconf1_filegroup.html \
 	rsconf1_fileowner.html \
+	rsconf1_generateconfiggraph.html \
 	rsconf1_gssforwardservicename.html \
 	rsconf1_gsslistenservicename.html \
 	rsconf1_gssmode.html \
@@ -99,6 +102,31 @@ html_files = \
 	omrelp.html \
 	syslog_parsing.html \
 	troubleshoot.html \
+	rsyslog_conf_actions.html \
+	rsyslog_conf_examples.html \
+	rsyslog_conf_filter.html \
+	rsyslog_conf_global.html \
+	rsyslog_conf_modules.html \
+	rsyslog_conf_output.html \
+	rsyslog_conf_templates.html \
+	rsyslog_conf_nomatch.html \
+	queues_analogy.html \
+	multi_ruleset.html \
 	src/classes.dia
 
-EXTRA_DIST = $(html_files)
+grfx_files = \
+	rsyslog_confgraph_complex.png\
+	rsyslog_confgraph_std.png \
+	direct_queue0.png \
+	direct_queue1.png \
+	direct_queue2.png \
+	direct_queue3.png \
+	direct_queue_rsyslog.png \
+	direct_queue_rsyslog2.png \
+	direct_queue_directq.png \
+	dataflow.png \
+	queue_analogy_tv.png \
+	gssapi.png \
+	rsyslog-vers.png
+
+EXTRA_DIST = $(html_files) $(grfx_files)

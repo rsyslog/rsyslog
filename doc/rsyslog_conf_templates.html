@@ -1,0 +1,151 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><title>Templates - rsyslog.conf</title></head>
+<body>
+<p>This is a part of the rsyslog.conf - documentation.</p>
+<a href="rsyslog_conf.html">back</a>
+<h2>Templates</h2>
+<p>Templates are a key feature of rsyslog. They allow to specify
+any
+format a user might want. They are also used for dynamic file name
+generation. Every output in rsyslog uses templates - this holds true
+for files, user messages and so on. The database writer expects its
+template to be a proper SQL statement - so this is highly customizable
+too. You might ask how does all of this work when no templates at all
+are specified. Good question ;) The answer is simple, though. Templates
+compatible with the stock syslogd formats are hardcoded into rsyslogd.
+So if no template is specified, we use one of these hardcoded
+templates. Search for "template_" in syslogd.c and you will find the
+hardcoded ones.</p>
+<p>A template consists of a template directive, a name, the
+actual template text and optional options. A sample is:</p>
+<blockquote><code>$template MyTemplateName,"\7Text
+%property% some more text\n",&lt;options&gt;</code></blockquote>
+<p>The "$template" is the template directive. It tells rsyslog
+that this line contains a template. "MyTemplateName" is the template
+name. All
+other config lines refer to this name. The text within quotes is the
+actual template text. The backslash is an escape character, much as it
+is in C. It does all these "cool" things. For example, \7 rings the
+bell (this is an ASCII value), \n is a new line. C programmers and perl
+coders have the advantage of knowing this, but the set in rsyslog is a
+bit restricted currently.
+</p>
+<p>All text in the template is used literally, except for things
+within percent signs. These are properties and allow you access to the
+contents of the syslog message. Properties are accessed via the
+<a href="property_replacer.html">property replacer</a>
+(nice name, huh) and it can do cool things, too. For
+example, it can pick a substring or do date-specific formatting. More
+on this is below, on some lines of the property replacer.<br>
+<br>
+The &lt;options&gt; part is optional. It carries options
+influencing the template as whole. See details below. Be sure NOT to
+mistake template options with property options - the later ones are
+processed by the property replacer and apply to a SINGLE property, only
+(and not the whole template).<br>
+<br>
+Template options are case-insensitive. Currently defined are: </p>
+<p><b>sql</b> - format the string suitable for a SQL
+statement in MySQL format. This will replace single quotes ("'") and
+the backslash character by their backslash-escaped counterpart ("\'"
+and "\\") inside each field. Please note that in MySQL configuration,
+the <code class="literal">NO_BACKSLASH_ESCAPES</code>
+mode must be turned off for this format to work (this is the default).</p>
+<p><b>stdsql</b> - format the string suitable for a
+SQL statement that is to be sent to a standards-compliant sql server.
+This will replace single quotes ("'") by two single quotes ("''")
+inside each field. You must use stdsql together with MySQL if in MySQL
+configuration the
+<code class="literal">NO_BACKSLASH_ESCAPES</code> is
+turned on.</p>
+<p>Either the <b>sql</b> or <b>stdsql</b>&nbsp;
+option <b>must</b> be specified when a template is used
+for writing to a database, otherwise injection might occur. Please note
+that due to the unfortunate fact that several vendors have violated the
+sql standard and introduced their own escape methods, it is impossible
+to have a single option doing all the work.&nbsp; So you yourself
+must make sure you are using the right format. <b>If you choose
+the wrong one, you are still vulnerable to sql injection.</b><br>
+<br>
+Please note that the database writer *checks* that the sql option is
+present in the template. If it is not present, the write database
+action is disabled. This is to guard you against accidental forgetting
+it and then becoming vulnerable to SQL injection. The sql option can
+also be useful with files - especially if you want to import them into
+a database on another machine for performance reasons. However, do NOT
+use it if you do not have a real need for it - among others, it takes
+some toll on the processing time. Not much, but on a really busy system
+you might notice it ;)</p>
+<p>The default template for the write to database action has the
+sql option set. As we currently support only MySQL and the sql option
+matches the default MySQL configuration, this is a good choice.
+However, if you have turned on
+<code class="literal">NO_BACKSLASH_ESCAPES</code> in
+your MySQL config, you need to supply a template with the stdsql
+option. Otherwise you will become vulnerable to SQL injection. <br>
+<br>
+To escape:<br>
+% = \%<br>
+\ = \\ --&gt; '\' is used to escape (as in C)<br>
+$template TraditionalFormat,%timegenerated% %HOSTNAME%
+%syslogtag%%msg%\n"<br>
+<br>
+Properties can be accessed by the <a href="property_replacer.html">property
+replacer</a> (see there for details).</p>
+<p><b>Please note that templates can also by
+used to generate selector lines with dynamic file names.</b> For
+example, if you would like to split syslog messages from different
+hosts to different files (one per host), you can define the following
+template:</p>
+<blockquote><code>$template
+DynFile,"/var/log/system-%HOSTNAME%.log"</code></blockquote>
+<p>This template can then be used when defining an output
+selector line. It will result in something like
+"/var/log/system-localhost.log"</p>
+<p>Template
+names beginning with "RSYSLOG_" are reserved for rsyslog use. Do NOT
+use them if, otherwise you may receive a conflict in the future (and
+quite unpredictable behaviour). There is a small set of pre-defined
+templates that you can use without the need to define it:</p>
+<ul>
+<li><span style="font-weight: bold;">RSYSLOG_TraditionalFileFormat</span>
+- the "old style" default log file format with low-precision timestamps</li>
+<li><span style="font-weight: bold;">RSYSLOG_FileFormat</span>
+- a modern-style logfile format similar to TraditionalFileFormat, buth
+with high-precision timestamps and timezone information</li>
+<li><span style="font-weight: bold;">RSYSLOG_TraditionalForwardFormat</span>
+- the traditional forwarding format with low-precision timestamps. Most
+useful if you send&nbsp;messages to other syslogd's or rsyslogd
+below
+version 3.12.5.</li>
+<li><span style="font-weight: bold;">RSYSLOG_ForwardFormat</span>
+- a new high-precision forwarding format very similar to the
+traditional one, but with high-precision timestamps and timezone
+information. Recommended to be used when sending messages to rsyslog
+3.12.5 or above.</li>
+<li><span style="font-weight: bold;">RSYSLOG_SyslogProtocol23Format</span>
+- the format specified in IETF's internet-draft
+ietf-syslog-protocol-23, which is assumed to be come the new syslog
+standard RFC. This format includes several improvements. The rsyslog
+message parser understands this format, so you can use it together with
+all relatively recent versions of rsyslog. Other syslogd's may get
+hopelessly confused if receiving that format, so check before you use
+it. Note that the format is unlikely to change when the final RFC comes
+out, but this may happen.</li>
+<li><span style="font-weight: bold;">RSYSLOG_DebugFormat</span>
+- a special format used for troubleshooting property problems. This format
+is meant to be written to a log file. Do <b>not</b> use for production or remote
+forwarding.</li>
+</ul>
+
+<p>[<a href="manual.html">manual index</a>]
+[<a href="rsyslog_conf.html">rsyslog.conf</a>]
+[<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the
+<a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
+Copyright &copy; 2008 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>. Released under the GNU GPL
+version 2 or higher.</font></p>
+</body>
+</html>
+

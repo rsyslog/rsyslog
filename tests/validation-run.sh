@@ -22,17 +22,18 @@
 # A copy of the GPL can be found in the file "COPYING" in this distribution.
 #set -x
 echo "testing a failed configuration verification run"
-../tools/rsyslogd -u2 -c3 -N1 -f$srcdir/testsuites/invalid.conf
+../tools/rsyslogd  -dn -u2 -c4 -N1 -f$srcdir/testsuites/invalid.conf -M../runtime/.libs:../.libs
 if [ $? -ne 1 ]; then
    exit 1
 fi
 echo testing a valid config verification run
-../tools/rsyslogd -u2 -c3 -N1 -f$srcdir/testsuites/valid.conf
+../tools/rsyslogd -u2 -c4 -N1 -f$srcdir/testsuites/valid.conf -M../runtime/.libs:../.libs
 if [ $? -ne 0 ]; then
    exit 1
 fi
 echo testing empty config file
-../tools/rsyslogd -u2 -c3 -N1 -f/dev/null
+../tools/rsyslogd -u2 -c4 -N1 -f/dev/null -M../runtime/.libs:../.libs
 if [ $? -ne 1 ]; then
    exit 1
 fi
+echo SUCCESS: validation run tests

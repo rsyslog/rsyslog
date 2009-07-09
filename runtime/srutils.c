@@ -366,19 +366,23 @@ int getNumberDigits(long lNum)
 
 
 /* compute an absolute time timeout suitable for calls to pthread_cond_timedwait()
+ * iTimeout is in milliseconds
  * rgerhards, 2008-01-14
  */
 rsRetVal
 timeoutComp(struct timespec *pt, long iTimeout)
 {
+	BEGINfunc
 	assert(pt != NULL);
 	/* compute timeout */
 	clock_gettime(CLOCK_REALTIME, pt);
+	pt->tv_sec += iTimeout / 1000;
 	pt->tv_nsec += (iTimeout % 1000) * 1000000; /* think INTEGER arithmetic! */
 	if(pt->tv_nsec > 999999999) { /* overrun? */
 		pt->tv_nsec -= 1000000000;
+		++pt->tv_sec;
 	}
-	pt->tv_sec += iTimeout / 1000;
+	ENDfunc
 	return RS_RET_OK; /* so far, this is static... */
 }
 
@@ -393,6 +397,7 @@ timeoutVal(struct timespec *pt)
 {
 	struct timespec t;
 	long iTimeout;
+	BEGINfunc
 
 	assert(pt != NULL);
 	/* compute timeout */
@@ -403,6 +408,7 @@ timeoutVal(struct timespec *pt)
 	if(iTimeout < 0)
 		iTimeout = 0;
 
+	ENDfunc
 	return iTimeout;
 }
 
@@ -454,7 +460,7 @@ srSleep(int iSeconds, int iuSeconds)
  * Added 2008-01-30
  */
 char *rs_strerror_r(int errnum, char *buf, size_t buflen) {
-#ifdef	__hpux
+#ifndef HAVE_STRERROR_R
 	char *pszErr;
 	pszErr = strerror(errnum);
 	snprintf(buf, buflen, "%s", pszErr);
@@ -548,6 +554,33 @@ int getSubString(uchar **ppSrc,  char *pDst, size_t DstSize, char cSep)
 	return iErr;
 }
 
+
+/* get the size of a file or return appropriate error code. If an error is returned,
+ * *pSize content is undefined.
+ * rgerhards, 2009-06-12
+ */
+rsRetVal
+getFileSize(uchar *pszName, off_t *pSize)
+{
+	int ret;
+	struct stat statBuf;
+	DEFiRet;
+
+	ret = stat((char*) pszName, &statBuf);
+	if(ret == -1) {
+		switch(errno) {
+			case EACCES: ABORT_FINALIZE(RS_RET_NO_FILE_ACCESS);
+			case ENOTDIR:
+			case ENOENT:  ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
+			default:      ABORT_FINALIZE(RS_RET_FILE_NO_STAT);
+		}
+	}
+
+	*pSize = statBuf.st_size;
+
+finalize_it:
+	RETiRet;
+}
 
 
 /* vim:set ai:

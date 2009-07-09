@@ -82,6 +82,7 @@ static gnutls_certificate_credentials xcred;
 static gnutls_dh_params dh_params;
 
 #ifdef DEBUG
+#if 0 /* uncomment, if needed some time again -- DEV Debug only */
 /* This defines a log function to be provided to GnuTLS. It hopefully
  * helps us track down hard to find problems.
  * rgerhards, 2008-06-20
@@ -90,6 +91,7 @@ static void logFunction(int level, const char *msg)
 {
 	dbgprintf("GnuTLS log msg, level %d: %s\n", level, msg);
 }
+#endif
 #endif /* #ifdef DEBUG */
 
 
@@ -333,7 +335,7 @@ gtlsGetCertInfo(nsd_gtls_t *pThis, cstr_t **ppStr)
 		gnutls_x509_crt_deinit(cert);
 	}
 
-	CHKiRet(rsCStrFinish(pStr));
+	CHKiRet(cstrFinalize(pStr));
 	*ppStr = pStr;
 
 finalize_it:
@@ -453,7 +455,7 @@ GenFingerprintStr(uchar *pFingerprint, size_t sizeFingerprint, cstr_t **ppStr)
 		snprintf((char*)buf, sizeof(buf), ":%2.2X", pFingerprint[i]);
 		CHKiRet(rsCStrAppendStrWithLen(pStr, buf, 3));
 	}
-	CHKiRet(rsCStrFinish(pStr));
+	CHKiRet(cstrFinalize(pStr));
 
 	*ppStr = pStr;
 
@@ -708,20 +710,20 @@ gtlsGetCN(nsd_gtls_t *pThis, gnutls_x509_crt *pCert, cstr_t **ppstrCN)
 	}
 
 	/* we found a common name, now extract it */
-	CHKiRet(rsCStrConstruct(&pstrCN));
+	CHKiRet(cstrConstruct(&pstrCN));
 	while(szDN[i] != '\0' && szDN[i] != ',') {
 		if(szDN[i] == '\\') {
 			/* hex escapes are not implemented */
 			++i; /* escape char processed */
 			if(szDN[i] == '\0')
 				ABORT_FINALIZE(RS_RET_CERT_INVALID_DN);
-			CHKiRet(rsCStrAppendChar(pstrCN, szDN[i]));
+			CHKiRet(cstrAppendChar(pstrCN, szDN[i]));
 		} else {
-			CHKiRet(rsCStrAppendChar(pstrCN, szDN[i]));
+			CHKiRet(cstrAppendChar(pstrCN, szDN[i]));
 		}
 		++i; /* char processed */
 	}
-	CHKiRet(rsCStrFinish(pstrCN));
+	CHKiRet(cstrFinalize(pstrCN));
 
 	/* we got it - we ignore the rest of the DN string (if any). So we may
 	 * not detect if it contains more than one CN
@@ -732,7 +734,7 @@ gtlsGetCN(nsd_gtls_t *pThis, gnutls_x509_crt *pCert, cstr_t **ppstrCN)
 finalize_it:
 	if(iRet != RS_RET_OK) {
 		if(pstrCN != NULL)
-			rsCStrDestruct(&pstrCN);
+			cstrDestruct(&pstrCN);
 	}
 
 	RETiRet;
@@ -759,7 +761,7 @@ gtlsChkPeerFingerprint(nsd_gtls_t *pThis, gnutls_x509_crt *pCert)
 	size = sizeof(fingerprint);
 	CHKgnutls(gnutls_x509_crt_get_fingerprint(*pCert, GNUTLS_DIG_SHA1, fingerprint, &size));
 	CHKiRet(GenFingerprintStr(fingerprint, size, &pstrFingerprint));
-	dbgprintf("peer's certificate SHA1 fingerprint: %s\n", rsCStrGetSzStr(pstrFingerprint));
+	dbgprintf("peer's certificate SHA1 fingerprint: %s\n", cstrGetSzStr(pstrFingerprint));
 
 	/* now search through the permitted peers to see if we can find a permitted one */
 	bFoundPositiveMatch = 0;
@@ -777,7 +779,7 @@ gtlsChkPeerFingerprint(nsd_gtls_t *pThis, gnutls_x509_crt *pCert)
 		if(pThis->bReportAuthErr == 1) {
 			errno = 0;
 			errmsg.LogError(0, RS_RET_INVALID_FINGERPRINT, "error: peer fingerprint '%s' unknown - we are "
-					"not permitted to talk to it", rsCStrGetSzStr(pstrFingerprint));
+					"not permitted to talk to it", cstrGetSzStr(pstrFingerprint));
 			pThis->bReportAuthErr = 0;
 		}
 		ABORT_FINALIZE(RS_RET_INVALID_FINGERPRINT);
@@ -785,7 +787,7 @@ gtlsChkPeerFingerprint(nsd_gtls_t *pThis, gnutls_x509_crt *pCert)
 
 finalize_it:
 	if(pstrFingerprint != NULL)
-		rsCStrDestruct(&pstrFingerprint);
+		cstrDestruct(&pstrFingerprint);
 	RETiRet;
 }
 
@@ -872,21 +874,21 @@ gtlsChkPeerName(nsd_gtls_t *pThis, gnutls_x509_crt *pCert)
 		/* if we did not succeed so far, we try the CN part of the DN... */
 		CHKiRet(gtlsGetCN(pThis, pCert, &pstrCN));
 		if(pstrCN != NULL) { /* NULL if there was no CN present */
-			dbgprintf("gtls now checking auth for CN '%s'\n", rsCStrGetSzStr(pstrCN));
-			snprintf((char*)lnBuf, sizeof(lnBuf), "CN: %s; ", rsCStrGetSzStr(pstrCN));
+			dbgprintf("gtls now checking auth for CN '%s'\n", cstrGetSzStr(pstrCN));
+			snprintf((char*)lnBuf, sizeof(lnBuf), "CN: %s; ", cstrGetSzStr(pstrCN));
 			CHKiRet(rsCStrAppendStr(pStr, lnBuf));
-			CHKiRet(gtlsChkOnePeerName(pThis, rsCStrGetSzStr(pstrCN), &bFoundPositiveMatch));
+			CHKiRet(gtlsChkOnePeerName(pThis, cstrGetSzStr(pstrCN), &bFoundPositiveMatch));
 		}
 	}
 
 	if(!bFoundPositiveMatch) {
 		dbgprintf("invalid peer name, not permitted to talk to it\n");
 		if(pThis->bReportAuthErr == 1) {
-			CHKiRet(rsCStrFinish(pStr));
+			CHKiRet(cstrFinalize(pStr));
 			errno = 0;
 			errmsg.LogError(0, RS_RET_INVALID_FINGERPRINT, "error: peer name not authorized -  "
 					"not permitted to talk to it. Names: %s",
-					rsCStrGetSzStr(pStr));
+					cstrGetSzStr(pStr));
 			pThis->bReportAuthErr = 0;
 		}
 		ABORT_FINALIZE(RS_RET_INVALID_FINGERPRINT);
@@ -1008,8 +1010,8 @@ gtlsChkPeerCertValidity(nsd_gtls_t *pThis)
 		errmsg.LogError(0, NO_ERRCODE, "not permitted to talk to peer, certificate invalid: %s",
 				pszErrCause);
 		gtlsGetCertInfo(pThis, &pStr);
-		errmsg.LogError(0, NO_ERRCODE, "invalid cert info: %s", rsCStrGetSzStr(pStr));
-		rsCStrDestruct(&pStr);
+		errmsg.LogError(0, NO_ERRCODE, "invalid cert info: %s", cstrGetSzStr(pStr));
+		cstrDestruct(&pStr);
 		ABORT_FINALIZE(RS_RET_CERT_INVALID);
 	}
 
@@ -1030,8 +1032,8 @@ gtlsChkPeerCertValidity(nsd_gtls_t *pThis)
 		else if(ttCert > ttNow) {
 			errmsg.LogError(0, RS_RET_CERT_NOT_YET_ACTIVE, "not permitted to talk to peer: certificate %d not yet active", i);
 			gtlsGetCertInfo(pThis, &pStr);
-			errmsg.LogError(0, RS_RET_CERT_NOT_YET_ACTIVE, "invalid cert info: %s", rsCStrGetSzStr(pStr));
-			rsCStrDestruct(&pStr);
+			errmsg.LogError(0, RS_RET_CERT_NOT_YET_ACTIVE, "invalid cert info: %s", cstrGetSzStr(pStr));
+			cstrDestruct(&pStr);
 			ABORT_FINALIZE(RS_RET_CERT_NOT_YET_ACTIVE);
 		}
 
@@ -1041,8 +1043,8 @@ gtlsChkPeerCertValidity(nsd_gtls_t *pThis)
 		else if(ttCert < ttNow) {
 			errmsg.LogError(0, RS_RET_CERT_EXPIRED, "not permitted to talk to peer: certificate %d expired", i);
 			gtlsGetCertInfo(pThis, &pStr);
-			errmsg.LogError(0, RS_RET_CERT_EXPIRED, "invalid cert info: %s", rsCStrGetSzStr(pStr));
-			rsCStrDestruct(&pStr);
+			errmsg.LogError(0, RS_RET_CERT_EXPIRED, "invalid cert info: %s", cstrGetSzStr(pStr));
+			cstrDestruct(&pStr);
 			ABORT_FINALIZE(RS_RET_CERT_EXPIRED);
 		}
 		gnutls_x509_crt_deinit(cert);
@@ -1558,6 +1560,16 @@ finalize_it:
 	RETiRet;
 }
 
+/* Enable KEEPALIVE handling on the socket.
+ * rgerhards, 2009-06-02
+ */
+static rsRetVal
+EnableKeepAlive(nsd_t *pNsd)
+{
+	return nsd_ptcp.EnableKeepAlive(pNsd);
+}
+
+
 
 /* open a connection to a remote host (server). With GnuTLS, we always
  * open a plain tcp socket and then, if in TLS mode, do a handshake on it.
@@ -1667,6 +1679,7 @@ CODESTARTobjQueryInterface(nsd_gtls)
 	pIf->GetRemoteHName = GetRemoteHName;
 	pIf->GetRemoteIP = GetRemoteIP;
 	pIf->GetRemAddr = GetRemAddr;
+	pIf->EnableKeepAlive = EnableKeepAlive;
 finalize_it:
 ENDobjQueryInterface(nsd_gtls)
 

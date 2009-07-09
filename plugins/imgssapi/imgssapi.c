@@ -9,7 +9,7 @@
  * NOTE: read comments in module-template.h to understand how this file
  *       works!
  *
- * Copyright 2007 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007, 2009 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -249,7 +249,6 @@ onErrClose(tcps_sess_t *pSess)
 static rsRetVal
 doOpenLstnSocks(tcpsrv_t *pSrv)
 {
-	int *pRet = NULL;
 	gsssrv_t *pGSrv;
 	DEFiRet;
 
@@ -331,7 +330,7 @@ addGSSListener(void __attribute__((unused)) *pVal, uchar *pNewVal)
 		CHKiRet(tcpsrv.SetCBOnSessAccept(pOurTcpsrv, onSessAccept));
 		CHKiRet(tcpsrv.SetCBOnRegularClose(pOurTcpsrv, onRegularClose));
 		CHKiRet(tcpsrv.SetCBOnErrClose(pOurTcpsrv, onErrClose));
-		tcpsrv.configureTCPListen(pOurTcpsrv, (char *) pNewVal);
+		tcpsrv.configureTCPListen(pOurTcpsrv, pNewVal);
 		CHKiRet(tcpsrv.ConstructFinalize(pOurTcpsrv));
 	}
 

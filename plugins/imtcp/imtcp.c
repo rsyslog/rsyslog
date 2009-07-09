@@ -3,7 +3,7 @@
  *
  * File begun on 2007-12-21 by RGerhards (extracted from syslogd.c)
  *
- * Copyright 2007 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007, 2009 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -56,10 +56,12 @@
 #include "dirty.h"
 #include "cfsysline.h"
 #include "module-template.h"
+#include "unicode-helper.h"
 #include "net.h"
 #include "netstrm.h"
 #include "errmsg.h"
 #include "tcpsrv.h"
+#include "ruleset.h"
 #include "net.h" /* for permittedPeers, may be removed when this is removed */
 
 MODULE_TYPE_INPUT
@@ -71,6 +73,7 @@ DEFobjCurrIf(tcps_sess)
 DEFobjCurrIf(net)
 DEFobjCurrIf(netstrm)
 DEFobjCurrIf(errmsg)
+DEFobjCurrIf(ruleset)
 
 /* Module static data */
 static tcpsrv_t *pOurTcpsrv = NULL;  /* our TCP server(listener) TODO: change for multiple instances */
@@ -80,7 +83,10 @@ static permittedPeers_t *pPermPeersRoot = NULL;
 /* config settings */
 static int iTCPSessMax = 200; /* max number of sessions */
 static int iStrmDrvrMode = 0; /* mode for stream driver, driver-dependent (0 mostly means plain tcp) */
+static int iAddtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER; /* addtl frame delimiter, e.g. for netscreen, default none */
 static uchar *pszStrmDrvrAuthMode = NULL; /* authentication mode to use */
+static uchar *pszInputName = NULL; /* value for inputname property, NULL is OK and handled by core engine */
+static ruleset_t *pBindRuleset = NULL; /* ruleset to bind listener to (use system default if unspecified) */
 
 
 /* callbacks */
@@ -89,7 +95,7 @@ static int
 isPermittedHost(struct sockaddr *addr, char *fromHostFQDN, void __attribute__((unused)) *pUsrSrv,
 	        void __attribute__((unused)) *pUsrSess)
 {
-	return net.isAllowedSender((uchar*) "TCP", addr, fromHostFQDN);
+	return net.isAllowedSender(UCHAR_CONSTANT("TCP"), addr, fromHostFQDN);
 }
 
 
@@ -154,6 +160,27 @@ finalize_it:
 }
 
 
+/* accept a new ruleset to bind. Checks if it exists and complains, if not */
+static rsRetVal setRuleset(void __attribute__((unused)) *pVal, uchar *pszName)
+{
+	ruleset_t *pRuleset;
+	rsRetVal localRet;
+	DEFiRet;
+
+	localRet = ruleset.GetRuleset(&pRuleset, pszName);
+	if(localRet == RS_RET_NOT_FOUND) {
+		errmsg.LogError(0, NO_ERRCODE, "error: ruleset '%s' not found - ignored", pszName);
+	}
+	CHKiRet(localRet);
+	pBindRuleset = pRuleset;
+	DBGPRINTF("imtcp current bind ruleset %p: '%s'\n", pRuleset, pszName);
+
+finalize_it:
+	free(pszName); /* no longer needed */
+	RETiRet;
+}
+
+
 static rsRetVal addTCPListener(void __attribute__((unused)) *pVal, uchar *pNewVal)
 {
 	DEFiRet;
@@ -167,6 +194,7 @@ static rsRetVal addTCPListener(void __attribute__((unused)) *pVal, uchar *pNewVa
 		CHKiRet(tcpsrv.SetCBOnRegularClose(pOurTcpsrv, onRegularClose));
 		CHKiRet(tcpsrv.SetCBOnErrClose(pOurTcpsrv, onErrClose));
 		CHKiRet(tcpsrv.SetDrvrMode(pOurTcpsrv, iStrmDrvrMode));
+		CHKiRet(tcpsrv.SetAddtlFrameDelim(pOurTcpsrv, iAddtlFrameDelim));
 		/* now set optional params, but only if they were actually configured */
 		if(pszStrmDrvrAuthMode != NULL) {
 			CHKiRet(tcpsrv.SetDrvrAuthMode(pOurTcpsrv, pszStrmDrvrAuthMode));
@@ -174,10 +202,13 @@ static rsRetVal addTCPListener(void __attribute__((unused)) *pVal, uchar *pNewVa
 		if(pPermPeersRoot != NULL) {
 			CHKiRet(tcpsrv.SetDrvrPermPeers(pOurTcpsrv, pPermPeersRoot));
 		}
-		/* most params set, now start listener */
-		tcpsrv.configureTCPListen(pOurTcpsrv, (char *) pNewVal);
-		CHKiRet(tcpsrv.ConstructFinalize(pOurTcpsrv));
 	}
+
+	/* initialized, now add socket and listener params */
+	CHKiRet(tcpsrv.SetRuleset(pOurTcpsrv, pBindRuleset));
+	CHKiRet(tcpsrv.SetInputName(pOurTcpsrv, pszInputName == NULL ?
+						UCHAR_CONSTANT("imtcp") : pszInputName));
+	tcpsrv.configureTCPListen(pOurTcpsrv, pNewVal);
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
@@ -195,7 +226,9 @@ CODESTARTrunInput
 	/* TODO: we must be careful to start the listener here. Currently, tcpsrv.c seems to
 	 * do that in ConstructFinalize
 	 */
+	CHKiRet(tcpsrv.ConstructFinalize(pOurTcpsrv));
 	iRet = tcpsrv.Run(pOurTcpsrv);
+finalize_it:
 ENDrunInput
 
 
@@ -213,7 +246,7 @@ ENDwillRun
 BEGINafterRun
 CODESTARTafterRun
 	/* do cleanup here */
-	net.clearAllowedSenders((uchar*)"TCP");
+	net.clearAllowedSenders(UCHAR_CONSTANT("TCP"));
 ENDafterRun
 
 
@@ -232,6 +265,7 @@ CODESTARTmodExit
 	objRelease(tcps_sess, LM_TCPSRV_FILENAME);
 	objRelease(tcpsrv, LM_TCPSRV_FILENAME);
 	objRelease(errmsg, CORE_COMPONENT);
+	objRelease(ruleset, CORE_COMPONENT);
 ENDmodExit
 
 
@@ -240,6 +274,11 @@ resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unus
 {
 	iTCPSessMax = 200;
 	iStrmDrvrMode = 0;
+	iAddtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
+	free(pszInputName);
+	pszInputName = NULL;
+	free(pszStrmDrvrAuthMode);
+	pszStrmDrvrAuthMode = NULL;
 	return RS_RET_OK;
 }
 
@@ -262,19 +301,26 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(tcps_sess, LM_TCPSRV_FILENAME));
 	CHKiRet(objUse(tcpsrv, LM_TCPSRV_FILENAME));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	CHKiRet(objUse(ruleset, CORE_COMPONENT));
 
 	/* register config file handlers */
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputtcpserverrun", 0, eCmdHdlrGetWord,
+	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpserverrun"), 0, eCmdHdlrGetWord,
 				   addTCPListener, NULL, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputtcpmaxsessions", 0, eCmdHdlrInt,
+	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpmaxsessions"), 0, eCmdHdlrInt,
 				   NULL, &iTCPSessMax, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputtcpserverstreamdrivermode", 0,
+	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpserverstreamdrivermode"), 0,
 				   eCmdHdlrInt, NULL, &iStrmDrvrMode, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputtcpserverstreamdriverauthmode", 0,
+	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpserverstreamdriverauthmode"), 0,
 				   eCmdHdlrGetWord, NULL, &pszStrmDrvrAuthMode, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputtcpserverstreamdriverpermittedpeer", 0,
+	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpserverstreamdriverpermittedpeer"), 0,
 				   eCmdHdlrGetWord, setPermittedPeer, NULL, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
+	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpserveraddtlframedelimiter"), 0, eCmdHdlrInt,
+				   NULL, &iAddtlFrameDelim, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpserverinputname"), 0,
+				   eCmdHdlrGetWord, NULL, &pszInputName, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpserverbindruleset"), 0,
+				   eCmdHdlrGetWord, setRuleset, NULL, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("resetconfigvariables"), 1, eCmdHdlrCustomHandler,
 		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
 

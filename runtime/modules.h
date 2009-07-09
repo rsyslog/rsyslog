@@ -44,8 +44,11 @@
  * rgerhards, 2008-03-04
  * version 3 adds modInfo_t ptr to call of modInit -- rgerhards, 2008-03-10
  * version 4 removes needUDPSocket OM callback -- rgerhards, 2008-03-22
+ * version 5 changes the way parsing works for input modules. This is
+ *           an important change, parseAndSubmitMessage() goes away. Other
+ *           module types are not affected. -- rgerhards, 2008-10-09
  */
-#define CURR_MOD_IF_VERSION 4
+#define CURR_MOD_IF_VERSION 5
 
 typedef enum eModType_ {
 	eMOD_IN,	/* input module */
@@ -88,6 +91,7 @@ typedef struct modInfo_s {
 	rsRetVal (*tryResume)(void*);/* called to see if module actin can be resumed now */
 	rsRetVal (*modExit)(void);		/* called before termination or module unload */
 	rsRetVal (*modGetID)(void **);		/* get its unique ID from module */
+	rsRetVal (*doHUP)(void *);		/* non-restart type HUP handler */
 	/* below: parse a configuration line - return if processed
 	 * or not. If not, must be parsed to next module.
 	 */
@@ -102,11 +106,14 @@ typedef struct modInfo_s {
 			rsRetVal (*runInput)(thrdInfo_t*);	/* function to gather input and submit to queue */
 			rsRetVal (*willRun)(void); 		/* function to gather input and submit to queue */
 			rsRetVal (*afterRun)(thrdInfo_t*);	/* function to gather input and submit to queue */
+			int bCanRun;	/* cached value of whether willRun() succeeded */
 		} im;
 		struct {/* data for output modules */
 			/* below: perform the configured action
 			 */
+			rsRetVal (*beginTransaction)(void*);
 			rsRetVal (*doAction)(uchar**, unsigned, void*);
+			rsRetVal (*endTransaction)(void*);
 			rsRetVal (*parseSelectorAct)(uchar**, void**,omodStringRequest_t**);
 		} om;
 		struct { /* data for library modules */

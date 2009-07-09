@@ -27,6 +27,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <ctype.h>
 
 #include "rsyslog.h"
 #include "obj.h"
@@ -39,6 +40,143 @@ DEFobjStaticHelpers
 DEFobjCurrIf(vmstk)
 DEFobjCurrIf(var)
 DEFobjCurrIf(sysvar)
+
+/* ------------------------------ function registry code and structures  ------------------------------ */
+
+/* we maintain a registry of known functions */
+/* currently, this is a singly-linked list, this shall become a binary
+ * tree when we add the real call interface. So far, entries are added
+ * at the root, only.
+ */
+typedef struct s_rsf_entry {
+	cstr_t *pName;			/* function name */
+	prsf_t rsf;	/* pointer to function code */
+	struct s_rsf_entry *pNext;	/* Pointer to next element or NULL */
+} rsf_entry_t;
+rsf_entry_t *funcRegRoot = NULL;
+
+
+/* add a function to the function registry.
+ * The handed-over cstr_t* object must no longer be used by the caller.
+ * A duplicate function name is an error.
+ * rgerhards, 2009-04-06
+ */
+static rsRetVal
+rsfrAddFunction(uchar *szName, prsf_t rsf)
+{
+	rsf_entry_t *pEntry;
+	size_t lenName;
+	DEFiRet;
+
+	assert(szName != NULL);
+	assert(rsf != NULL);
+
+	/* first check if we have a duplicate name, with the current approach this means
+	 * we need to go through the whole list.
+	 */
+	lenName = strlen((char*)szName);
+	for(pEntry = funcRegRoot ; pEntry != NULL ; pEntry = pEntry->pNext)
+		if(!rsCStrSzStrCmp(pEntry->pName, szName, lenName))
+			ABORT_FINALIZE(RS_RET_DUP_FUNC_NAME);
+
+	/* unique name, so add to head of list */
+	CHKmalloc(pEntry = calloc(1, sizeof(rsf_entry_t)));
+	CHKiRet(rsCStrConstructFromszStr(&pEntry->pName, szName));
+	CHKiRet(cstrFinalize(pEntry->pName));
+	pEntry->rsf = rsf;
+	pEntry->pNext = funcRegRoot;
+	funcRegRoot = pEntry;
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* find a function inside the function registry
+ * The caller provides a cstr_t with the function name and receives
+ * a function pointer back. If no function is found, an RS_RET_UNKNW_FUNC
+ * error is returned. So if the function returns with RS_RET_OK, the caller
+ * can savely assume the function pointer is valid.
+ * rgerhards, 2009-04-06
+ */
+static rsRetVal
+findRSFunction(cstr_t *pcsName, prsf_t *prsf)
+{
+	rsf_entry_t *pEntry;
+	rsf_entry_t *pFound;
+	DEFiRet;
+
+	assert(prsf != NULL);
+
+	/* find function by list walkthrough.  */
+	pFound = NULL;
+	for(pEntry = funcRegRoot ; pEntry != NULL && pFound == NULL ; pEntry = pEntry->pNext)
+		if(!rsCStrCStrCmp(pEntry->pName, pcsName))
+			pFound = pEntry;
+
+	if(pFound == NULL)
+		ABORT_FINALIZE(RS_RET_UNKNW_FUNC);
+
+	*prsf = pFound->rsf;
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* find the name of a RainerScript function whom's function pointer
+ * is known. This function returns the cstr_t object, which MUST NOT
+ * be modified by the caller.
+ * rgerhards, 2009-04-06
+ */
+static rsRetVal
+findRSFunctionName(prsf_t rsf, cstr_t **ppcsName)
+{
+	rsf_entry_t *pEntry;
+	rsf_entry_t *pFound;
+	DEFiRet;
+
+	assert(rsf != NULL);
+	assert(ppcsName != NULL);
+
+	/* find function by list walkthrough.  */
+	pFound = NULL;
+	for(pEntry = funcRegRoot ; pEntry != NULL && pFound == NULL ; pEntry = pEntry->pNext)
+		if(pEntry->rsf == rsf)
+			pFound = pEntry;
+
+	if(pFound == NULL)
+		ABORT_FINALIZE(RS_RET_UNKNW_FUNC);
+
+	*ppcsName = pFound->pName;
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* free the whole function registry
+ */
+static void
+rsfrRemoveAll(void)
+{
+	rsf_entry_t *pEntry;
+	rsf_entry_t *pEntryDel;
+	
+	BEGINfunc
+	pEntry = funcRegRoot;
+	while(pEntry != NULL) {
+		pEntryDel = pEntry;
+		pEntry = pEntry->pNext;
+		cstrDestruct(&pEntryDel->pName);
+		free(pEntryDel);
+	}
+	funcRegRoot = NULL;
+	ENDfunc
+}
+
+
+/* ------------------------------ end function registry code and structures  ------------------------------ */
 
 
 /* ------------------------------ instruction set implementation ------------------------------ *
@@ -268,6 +406,7 @@ CODESTARTop(STRADD)
 	vmstk.PopString(pThis->pStk, &operand1);
 
 	CHKiRet(rsCStrAppendCStr(operand1->val.pStr, operand2->val.pStr));
+	CHKiRet(cstrFinalize(operand1->val.pStr));
 
 	/* we have a result, so let's push it */
 	vmstk.Push(pThis->pStk, operand1);
@@ -331,8 +470,107 @@ CODESTARTop(PUSHSYSVAR)
 finalize_it:
 ENDop(PUSHSYSVAR)
 
+/* The function call operation is only very roughly implemented. While the plumbing
+ * to reach this instruction is fine, the instruction itself currently supports only
+ * functions with a single argument AND with a name that we know.
+ * TODO: later, we can add here the real logic, that involves looking up function
+ * names, loading them dynamically ... and all that...
+ * implementation begun 2009-03-10 by rgerhards
+ */
+BEGINop(FUNC_CALL) /* remember to set the instruction also in the ENDop macro! */
+	var_t *numOperands;
+CODESTARTop(FUNC_CALL)
+	vmstk.PopNumber(pThis->pStk, &numOperands);
+	CHKiRet((*pOp->operand.rsf)(pThis->pStk, numOperands->val.num));
+	var.Destruct(&numOperands); /* no longer needed */
+finalize_it:
+ENDop(FUNC_CALL)
+
 
 /* ------------------------------ end instruction set implementation ------------------------------ */
+
+
+/* ------------------------------ begin built-in function implementation ------------------------------ */
+/* note: this shall probably be moved to a separate module, but for the time being we do it directly
+ * in here. This is on our way to get from a dirty to a clean solution via baby steps that are
+ * a bit less dirty each time... 
+ *
+ * The advantage of doing it here is that we do not yet need to think about how to handle the
+ * exit case, where we must not unload function modules which functions are still referenced.
+ *
+ * CALLING INTERFACE:
+ * The function must pop its parameters off the stack and pop its result onto
+ * the stack when it is finished. The number of parameters the function was
+ * called with is provided to it. If the argument count is less then what the function
+ * expected, it may handle the situation with defaults (or return an error). If the
+ * argument count is greater than expected, returnung an error is highly 
+ * recommended (use RS_RET_INVLD_NBR_ARGUMENTS for these cases).
+ *
+ * All function names are prefixed with "rsf_" (RainerScript Function) to have
+ * a separate "name space".
+ *
+ * rgerhards, 2009-04-06
+ */
+
+
+/* The strlen function, also probably a prototype of how all functions should be
+ * implemented.
+ * rgerhards, 2009-04-06
+ */
+static rsRetVal
+rsf_strlen(vmstk_t *pStk, int numOperands)
+{
+	DEFiRet;
+	var_t *operand1;
+	int iStrlen;
+
+	if(numOperands != 1)
+		ABORT_FINALIZE(RS_RET_INVLD_NBR_ARGUMENTS);
+
+	/* pop args and do operaton (trivial case here...) */
+	vmstk.PopString(pStk, &operand1);
+	iStrlen = strlen((char*) rsCStrGetSzStr(operand1->val.pStr));
+
+	/* Store result and cleanup */
+	var.SetNumber(operand1, iStrlen);
+	vmstk.Push(pStk, operand1);
+finalize_it:
+	RETiRet;
+}
+
+
+/* The "tolower" function, which converts its sole argument to lower case.
+ * Quite honestly, currently this is primarily a test driver for me...
+ * rgerhards, 2009-04-06
+ */
+static rsRetVal
+rsf_tolower(vmstk_t *pStk, int numOperands)
+{
+	DEFiRet;
+	var_t *operand1;
+	uchar *pSrc;
+	cstr_t *pcstr;
+	int iStrlen;
+
+	if(numOperands != 1)
+		ABORT_FINALIZE(RS_RET_INVLD_NBR_ARGUMENTS);
+
+	/* pop args and do operaton */
+	CHKiRet(cstrConstruct(&pcstr));
+	vmstk.PopString(pStk, &operand1);
+	pSrc = cstrGetSzStr(operand1->val.pStr);
+	iStrlen = strlen((char*)pSrc); // TODO: use count from string!
+	while(iStrlen--) {
+		CHKiRet(cstrAppendChar(pcstr, tolower(*pSrc++)));
+	}
+
+	/* Store result and cleanup */
+	CHKiRet(cstrFinalize(pcstr));
+	var.SetString(operand1, pcstr);
+	vmstk.Push(pStk, operand1);
+finalize_it:
+	RETiRet;
+}
 
 
 /* Standard-Constructor
@@ -413,6 +651,7 @@ execProg(vm_t *pThis, vmprg_t *pProg)
 			doOP(DIV);
 			doOP(MOD);
 			doOP(UNARY_MINUS);
+			doOP(FUNC_CALL);
 			default:
 				ABORT_FINALIZE(RS_RET_INVALID_VMOP);
 				dbgoprint((obj_t*) pThis, "invalid instruction %d in vmprg\n", pCurrOp->opcode);
@@ -503,8 +742,21 @@ CODESTARTobjQueryInterface(vm)
 	pIf->PopBoolFromStack = PopBoolFromStack;
 	pIf->PopVarFromStack = PopVarFromStack;
 	pIf->SetMsg = SetMsg;
+	pIf->FindRSFunction = findRSFunction;
+	pIf->FindRSFunctionName = findRSFunctionName;
 finalize_it:
 ENDobjQueryInterface(vm)
+
+
+/* Exit the vm class.
+ * rgerhards, 2009-04-06
+ */
+BEGINObjClassExit(vm, OBJ_IS_CORE_MODULE) /* class, version */
+	rsfrRemoveAll();
+	objRelease(sysvar, CORE_COMPONENT);
+	objRelease(var, CORE_COMPONENT);
+	objRelease(vmstk, CORE_COMPONENT);
+ENDObjClassExit(vm)
 
 
 /* Initialize the vm class. Must be called as the very first method
@@ -520,6 +772,11 @@ BEGINObjClassInit(vm, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* set our own handlers */
 	OBJSetMethodHandler(objMethod_DEBUGPRINT, vmDebugPrint);
 	OBJSetMethodHandler(objMethod_CONSTRUCTION_FINALIZER, vmConstructFinalize);
+
+	/* register built-in functions // TODO: move to its own module */
+	CHKiRet(rsfrAddFunction((uchar*)"strlen",  rsf_strlen));
+	CHKiRet(rsfrAddFunction((uchar*)"tolower", rsf_tolower));
+
 ENDObjClassInit(vm)
 
 /* vi:set ai:

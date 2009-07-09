@@ -50,14 +50,14 @@ typedef enum {
 
 
 /* the worker thread pool (wtp) object */
-typedef struct wtp_s {
+struct wtp_s {
 	BEGINobjInstance;
 	wtpState_t wtpState;
 	int 	iNumWorkerThreads;/* number of worker threads to use */
 	int 	iCurNumWrkThrd;/* current number of active worker threads */
 	struct wti_s **pWrkr;/* array with control structure for the worker thread(s) associated with this wtp */
 	int	toWrkShutdown;	/* timeout for idle workers in ms, -1 means indefinite (0 is immediate) */
-	int	bInactivityGuard;/* prevents inactivity due to race condition */
+	bool	bInactivityGuard;/* prevents inactivity due to race condition */
 	rsRetVal (*pConsumer)(void *); /* user-supplied consumer function for dewtpd messages */
 	/* synchronization variables */
 	pthread_mutex_t mutThrdShutdwn; /* mutex to guard thread shutdown processing */
@@ -66,12 +66,14 @@ typedef struct wtp_s {
 	int bThrdStateChanged;	/* at least one thread state has changed if 1 */
 	/* end sync variables */
 	/* user objects */
-	void *pUsr;		/* pointer to user object */
+	void *pUsr;		/* pointer to user object (in this case, the queue the wtp belongs to) */
 	pthread_mutex_t *pmutUsr;
 	pthread_cond_t *pcondBusy; /* condition the user will signal "busy again, keep runing" on (awakes worker) */
 	rsRetVal (*pfChkStopWrkr)(void *pUsr, int);
+	rsRetVal (*pfGetDeqBatchSize)(void *pUsr, int*); /* obtains max dequeue count from queue config */
+	rsRetVal (*pfObjProcessed)(void *pUsr, wti_t *pWti); /* indicate user object is processed */
 	rsRetVal (*pfRateLimiter)(void *pUsr);
-	rsRetVal (*pfIsIdle)(void *pUsr, int);
+	rsRetVal (*pfIsIdle)(void *pUsr, wtp_t *pWtp);
 	rsRetVal (*pfDoWork)(void *pUsr, void *pWti, int);
 	rsRetVal (*pfOnIdle)(void *pUsr, int);
 	rsRetVal (*pfOnWorkerCancel)(void *pUsr, void*pWti);
@@ -79,7 +81,7 @@ typedef struct wtp_s {
 	rsRetVal (*pfOnWorkerShutdown)(void *pUsr);
 	/* end user objects */
 	uchar *pszDbgHdr;	/* header string for debug messages */
-} wtp_t;
+};
 
 /* some symbolic constants for easier reference */
 
@@ -103,8 +105,10 @@ int wtpGetCurNumWrkr(wtp_t *pThis, int bLockMutex);
 PROTOTYPEObjClassInit(wtp);
 PROTOTYPEpropSetMethFP(wtp, pfChkStopWrkr, rsRetVal(*pVal)(void*, int));
 PROTOTYPEpropSetMethFP(wtp, pfRateLimiter, rsRetVal(*pVal)(void*));
-PROTOTYPEpropSetMethFP(wtp, pfIsIdle, rsRetVal(*pVal)(void*, int));
+PROTOTYPEpropSetMethFP(wtp, pfGetDeqBatchSize, rsRetVal(*pVal)(void*, int*));
+PROTOTYPEpropSetMethFP(wtp, pfIsIdle, rsRetVal(*pVal)(void*, wtp_t*));
 PROTOTYPEpropSetMethFP(wtp, pfDoWork, rsRetVal(*pVal)(void*, void*, int));
+PROTOTYPEpropSetMethFP(wtp, pfObjProcessed, rsRetVal(*pVal)(void*, wti_t*));
 PROTOTYPEpropSetMethFP(wtp, pfOnIdle, rsRetVal(*pVal)(void*, int));
 PROTOTYPEpropSetMethFP(wtp, pfOnWorkerCancel, rsRetVal(*pVal)(void*,void*));
 PROTOTYPEpropSetMethFP(wtp, pfOnWorkerStartup, rsRetVal(*pVal)(void*));

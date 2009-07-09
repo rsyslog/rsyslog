@@ -105,12 +105,13 @@ struct obj_s {	/* the dummy struct that each derived class can be casted to */
 #	define ISOBJ_TYPE_assert(pObj, objType) \
 		do { \
 		ASSERT(pObj != NULL); \
-		ASSERT((unsigned) ((obj_t*) (pObj))->iObjCooCKiE == (unsigned) 0xBADEFEE); \
 		if(strcmp((char*)(((obj_t*)pObj)->pObjInfo->pszID), #objType)) { \
 			dbgprintf("%s:%d ISOBJ assert failure: invalid object type, expected '%s' " \
-				  "actual '%s'\n", __FILE__, __LINE__, #objType, (((obj_t*)pObj)->pObjInfo->pszID)); \
+				  "actual '%s', cookie: %X\n", __FILE__, __LINE__, #objType, \
+				  (((obj_t*)pObj)->pObjInfo->pszID), ((obj_t*)(pObj))->iObjCooCKiE); \
 			assert(0); /* trigger assertion, messge we already have */ \
 		} \
+		ASSERT((unsigned) ((obj_t*)(pObj))->iObjCooCKiE == (unsigned) 0xBADEFEE); \
 		} while(0)
 #else /* non-debug mode, no checks but much faster */
 #	define BEGINobjInstance obj_t objData
@@ -280,7 +281,7 @@ rsRetVal objName##ClassExit(void) \
  * rgerhards, 2008-01-30
  */
 #define BEGINobjDestruct(OBJ) \
-	rsRetVal OBJ##Destruct(OBJ##_t **ppThis) \
+	rsRetVal OBJ##Destruct(OBJ##_t __attribute__((unused)) **ppThis) \
 	{ \
 		DEFiRet; \
 		int iCancelStateSave; \
@@ -292,6 +293,15 @@ rsRetVal objName##ClassExit(void) \
 		ISOBJ_TYPE_assert(pThis, OBJ); \
 		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
 
+/* note: there was a long-time bug in the macro below that lead to *ppThis = NULL
+ * only when the object was actually destructed. I discovered this issue during 
+ * introduction of the pRcvFrom property in msg_t, but it potentially had other
+ * effects, too. I am not sure if some experienced instability resulted from this
+ * bug OR if its fix will cause harm to so-far "correctly" running code. The later
+ * may very well be. Thus I will change it only for the current branch and also
+ * the beta, but not in all old builds. Let's see how things evolve.
+ * rgerhards, 2009-06-30
+ */
 #define ENDobjDestruct(OBJ) \
 	 	goto finalize_it; /* prevent compiler warning ;) */ \
 	 	/* no more code here! */ \
@@ -299,8 +309,8 @@ rsRetVal objName##ClassExit(void) \
 		if(pThis != NULL) { \
 			obj.DestructObjSelf((obj_t*) pThis); \
 			free(pThis); \
-			*ppThis = NULL; \
 		} \
+		*ppThis = NULL; \
 		pthread_setcancelstate(iCancelStateSave, NULL); \
 		RETiRet; \
 	} 
@@ -314,7 +324,7 @@ rsRetVal objName##ClassExit(void) \
 #define PROTOTYPEObjDebugPrint(obj) rsRetVal obj##DebugPrint(obj##_t *pThis)
 #define INTERFACEObjDebugPrint(obj) rsRetVal (*DebugPrint)(obj##_t *pThis)
 #define BEGINobjDebugPrint(obj) \
-	rsRetVal obj##DebugPrint(obj##_t *pThis) \
+	rsRetVal obj##DebugPrint(obj##_t __attribute__((unused)) *pThis) \
 	{ \
 		DEFiRet; \
 

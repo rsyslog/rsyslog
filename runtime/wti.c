@@ -39,15 +39,23 @@
 #include <pthread.h>
 #include <errno.h>
 
+/// TODO: check on solaris if this is any longer needed - I don't think so - rgerhards, 2009-09-20
+//#ifdef OS_SOLARIS
+//#	include <sched.h>
+//#endif
+
 #include "rsyslog.h"
 #include "stringbuf.h"
 #include "srUtils.h"
 #include "wtp.h"
 #include "wti.h"
 #include "obj.h"
+#include "glbl.h"
+#include "atomic.h"
 
 /* static data */
 DEFobjStaticHelpers
+DEFobjCurrIf(glbl)
 
 /* forward-definitions */
 
@@ -99,6 +107,7 @@ rsRetVal
 wtiSetState(wti_t *pThis, qWrkCmd_t tCmd, int bActiveOnly, int bLockMutex)
 {
 	DEFiRet;
+	qWrkCmd_t tCurrCmd;
 	DEFVARS_mutexProtection;
 
 	ISOBJ_TYPE_assert(pThis, wti);
@@ -106,13 +115,14 @@ wtiSetState(wti_t *pThis, qWrkCmd_t tCmd, int bActiveOnly, int bLockMutex)
 
 	BEGIN_MTX_PROTECTED_OPERATIONS(&pThis->mut, bLockMutex);
 
+	tCurrCmd = pThis->tCurrCmd;
 	/* all worker states must be followed sequentially, only termination can be set in any state */
-	if(   (bActiveOnly && (pThis->tCurrCmd < eWRKTHRD_RUN_CREATED))
-	   || (pThis->tCurrCmd > tCmd && !(tCmd == eWRKTHRD_TERMINATING || tCmd == eWRKTHRD_STOPPED))) {
-		dbgprintf("%s: command %d can not be accepted in current %d processing state - ignored\n",
-			  wtiGetDbgHdr(pThis), tCmd, pThis->tCurrCmd);
+	if(   (bActiveOnly && (tCurrCmd < eWRKTHRD_RUN_CREATED))
+	   || (tCurrCmd > tCmd && !(tCmd == eWRKTHRD_TERMINATING || tCmd == eWRKTHRD_STOPPED))) {
+		DBGPRINTF("%s: command %d can not be accepted in current %d processing state - ignored\n",
+			  wtiGetDbgHdr(pThis), tCmd, tCurrCmd);
 	} else {
-		dbgprintf("%s: receiving command %d\n", wtiGetDbgHdr(pThis), tCmd);
+		DBGPRINTF("%s: receiving command %d\n", wtiGetDbgHdr(pThis), tCmd);
 		/* we could replace this with a simple if, but we leave the switch in in case we need
 		 * to add something at a later stage. -- rgerhards, 2008-09-30
 		 */
@@ -136,7 +146,13 @@ wtiSetState(wti_t *pThis, qWrkCmd_t tCmd, int bActiveOnly, int bLockMutex)
 				/* DO NOTHING */
 				break;
 		}
-		pThis->tCurrCmd = tCmd; /* apply the new state */
+		/* apply the new state */
+dbgprintf("worker terminator will write stateval %d\n", tCmd);
+		unsigned val = ATOMIC_CAS_VAL(pThis->tCurrCmd, tCurrCmd, tCmd);
+		if(val != tCurrCmd) {
+			DBGPRINTF("wtiSetState PROBLEM, tCurrCmd %d overwritten with %d, wanted to set %d\n", tCurrCmd, val, tCmd);
+		}
+//dbgprintf("worker terminator has written stateval %d\n", tCmd);
 	}
 
 	END_MTX_PROTECTED_OPERATIONS(&pThis->mut);
@@ -144,7 +160,7 @@ wtiSetState(wti_t *pThis, qWrkCmd_t tCmd, int bActiveOnly, int bLockMutex)
 }
 
 
-/* Cancel the thread. If the thread is already cancelled or termination,
+/* Cancel the thread. If the thread is already cancelled or terminated,
  * we do not again cancel it. But it is save and legal to call wtiCancelThrd() in
  * such situations.
  * rgerhards, 2008-02-26
@@ -158,11 +174,13 @@ wtiCancelThrd(wti_t *pThis)
 
 	d_pthread_mutex_lock(&pThis->mut);
 
+	wtiProcessThrdChanges(pThis, MUTEX_ALREADY_LOCKED); /* process state change, so that we have current state vars */
+
 	if(pThis->tCurrCmd >= eWRKTHRD_TERMINATING) {
-		dbgoprint((obj_t*) pThis, "canceling worker thread\n");
+		dbgoprint((obj_t*) pThis, "canceling worker thread, curr stat %d\n", pThis->tCurrCmd);
 		pthread_cancel(pThis->thrdID);
 		wtiSetState(pThis, eWRKTHRD_TERMINATING, 0, MUTEX_ALREADY_LOCKED);
-		pThis->pWtp->bThrdStateChanged = 1; /* indicate change, so harverster will be called */
+		ATOMIC_STORE_1_TO_INT(pThis->pWtp->bThrdStateChanged); /* indicate change, so harverster will be called */
 	}
 
 	d_pthread_mutex_unlock(&pThis->mut);
@@ -194,8 +212,8 @@ CODESTARTobjDestruct(wti)
 	pthread_cond_destroy(&pThis->condExitDone);
 	pthread_mutex_destroy(&pThis->mut);
 
-	if(pThis->pszDbgHdr != NULL)
-		free(pThis->pszDbgHdr);
+	free(pThis->batch.pElem);
+	free(pThis->pszDbgHdr);
 ENDobjDestruct(wti)
 
 
@@ -214,15 +232,20 @@ rsRetVal
 wtiConstructFinalize(wti_t *pThis)
 {
 	DEFiRet;
+	int iDeqBatchSize;
 
 	ISOBJ_TYPE_assert(pThis, wti);
 
 	dbgprintf("%s: finalizing construction of worker instance data\n", wtiGetDbgHdr(pThis));
 
 	/* initialize our thread instance descriptor */
-	pThis->pUsrp = NULL;
 	pThis->tCurrCmd = eWRKTHRD_STOPPED;
 
+	/* we now alloc the array for user pointers. We obtain the max from the queue itself. */
+	CHKiRet(pThis->pWtp->pfGetDeqBatchSize(pThis->pWtp->pUsr, &iDeqBatchSize));
+	CHKmalloc(pThis->batch.pElem = calloc((size_t)iDeqBatchSize, sizeof(batch_obj_t)));
+
+finalize_it:
 	RETiRet;
 }
 
@@ -240,7 +263,7 @@ wtiJoinThrd(wti_t *pThis)
 	if (pThis->thrdID == 0) {
 		dbgprintf("worker %s was already stopped\n", wtiGetDbgHdr(pThis));
 	} else {
-		pthread_join(pThis->thrdID, NULL);
+		//pthread_join(pThis->thrdID, NULL);
 		wtiSetState(pThis, eWRKTHRD_STOPPED, 0, MUTEX_ALREADY_LOCKED); /* back to virgin... */
 		pThis->thrdID = 0; /* invalidate the thread ID so that we do not accidently find reused ones */
 	dbgprintf("worker %s has stopped\n", wtiGetDbgHdr(pThis));
@@ -303,16 +326,16 @@ wtiWorkerCancelCleanup(void *arg)
 	pWtp = pThis->pWtp;
 	ISOBJ_TYPE_assert(pWtp, wtp);
 
-	dbgprintf("%s: cancelation cleanup handler called.\n", wtiGetDbgHdr(pThis));
+	DBGPRINTF("%s: cancelation cleanup handler called.\n", wtiGetDbgHdr(pThis));
 	
 	/* call user supplied handler (that one e.g. requeues the element) */
-	pWtp->pfOnWorkerCancel(pThis->pWtp->pUsr, pThis->pUsrp);
+	pWtp->pfOnWorkerCancel(pThis->pWtp->pUsr, pThis->batch.pElem[0].pUsrp);
 
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
 	d_pthread_mutex_lock(&pWtp->mut);
 	wtiSetState(pThis, eWRKTHRD_TERMINATING, 0, MUTEX_ALREADY_LOCKED);
 	/* TODO: sync access? I currently think it is NOT needed -- rgerhards, 2008-01-28 */
-	pWtp->bThrdStateChanged = 1; /* indicate change, so harverster will be called */
+	ATOMIC_STORE_1_TO_INT(pWtp->bThrdStateChanged); /* indicate change, so harverster will be called */
 
 	d_pthread_mutex_unlock(&pWtp->mut);
 	pthread_setcancelstate(iCancelStateSave, NULL);
@@ -320,100 +343,108 @@ wtiWorkerCancelCleanup(void *arg)
 }
 
 
+/* wait for queue to become non-empty or timeout
+ * helper to wtiWorker
+ * IMPORTANT: mutex must be locked when this code is called!
+ * rgerhards, 2009-05-20
+ */
+static inline void
+doIdleProcessing(wti_t *pThis, wtp_t *pWtp, int *pbInactivityTOOccured)
+{
+	struct timespec t;
+
+	BEGINfunc
+	DBGPRINTF("%s: worker IDLE, waiting for work.\n", wtiGetDbgHdr(pThis));
+	pWtp->pfOnIdle(pWtp->pUsr, MUTEX_ALREADY_LOCKED);
+
+	if(pWtp->toWrkShutdown == -1) {
+		/* never shut down any started worker */
+		d_pthread_cond_wait(pWtp->pcondBusy, pWtp->pmutUsr);
+	} else {
+		timeoutComp(&t, pWtp->toWrkShutdown);/* get absolute timeout */
+		if(d_pthread_cond_timedwait(pWtp->pcondBusy, pWtp->pmutUsr, &t) != 0) {
+			DBGPRINTF("%s: inactivity timeout, worker terminating...\n", wtiGetDbgHdr(pThis));
+			*pbInactivityTOOccured = 1; /* indicate we had a timeout */
+		}
+	}
+	ENDfunc
+}
+
+
 /* generic worker thread framework
- *
- * Some special comments below, so that they do not clutter the main function code:
- *
- * On the use of pthread_testcancel():
- * Now make sure we can get canceled - it is not specified if pthread_setcancelstate() is
- * a cancellation point in itself. As we run most of the time without cancel enabled, I fear
- * we may never get cancelled if we do not create a cancellation point ourselfs.
- *
- * On the use of pthread_yield():
- * We yield to give the other threads a chance to obtain the mutex. If we do not
- * do that, this thread may very well aquire the mutex again before another thread
- * has even a chance to run. The reason is that mutex operations are free to be
- * implemented in the quickest possible way (and they typically are!). That is, the
- * mutex lock/unlock most probably just does an atomic memory swap and does not necessarily
- * schedule other threads waiting on the same mutex. That can lead to the same thread
- * aquiring the mutex ever and ever again while all others are starving for it. We
- * have exactly seen this behaviour when we deliberately introduced a long-running
- * test action which basically did a sleep. I understand that with real actions the
- * likelihood of this starvation condition is very low - but it could still happen
- * and would be very hard to debug. The yield() is a sure fix, its performance overhead
- * should be well accepted given the above facts. -- rgerhards, 2008-01-10
  */
 #pragma GCC diagnostic ignored "-Wempty-body"
 rsRetVal
 wtiWorker(wti_t *pThis)
 {
-	DEFiRet;
-	DEFVARS_mutexProtection;
-	struct timespec t;
+	DEFVARS_mutexProtection_uncond;
 	wtp_t *pWtp;		/* our worker thread pool */
 	int bInactivityTOOccured = 0;
+	rsRetVal localRet;
+	rsRetVal terminateRet;
+	bool bMutexIsLocked;
+	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, wti);
 	pWtp = pThis->pWtp; /* shortcut */
 	ISOBJ_TYPE_assert(pWtp, wtp);
 
 	dbgSetThrdName(pThis->pszDbgHdr);
-	pThis->pUsrp = NULL;
 	pthread_cleanup_push(wtiWorkerCancelCleanup, pThis);
 
-	BEGIN_MTX_PROTECTED_OPERATIONS(pWtp->pmutUsr, LOCK_MUTEX);
+	BEGIN_MTX_PROTECTED_OPERATIONS_UNCOND(pWtp->pmutUsr);
 	pWtp->pfOnWorkerStartup(pWtp->pUsr);
-	END_MTX_PROTECTED_OPERATIONS(pWtp->pmutUsr);
+	END_MTX_PROTECTED_OPERATIONS_UNCOND(pWtp->pmutUsr);
 
 	/* now we have our identity, on to real processing */
 	while(1) { /* loop will be broken below - need to do mutex locks */
 		/* process any pending thread requests */
-		wtpProcessThrdChanges(pWtp);
-		pthread_testcancel(); /* see big comment in function header */
-#		if !defined(__hpux) /* pthread_yield is missing there! */
-		pthread_yield(); /* see big comment in function header */
-#		endif
+	//	wtpProcessThrdChanges(pWtp);
 
-		/* if we have a rate-limiter set for this worker pool, let's call it. Please
-		 * keep in mind that the rate-limiter may hold us for an extended period
-		 * of time. -- rgerhards, 2008-04-02
-		 */
-		if(pWtp->pfRateLimiter != NULL) {
+		if(pWtp->pfRateLimiter != NULL) { /* call rate-limiter, if defined */
 			pWtp->pfRateLimiter(pWtp->pUsr);
 		}
 		
 		wtpSetInactivityGuard(pThis->pWtp, 0, LOCK_MUTEX); /* must be set before usr mutex is locked! */
-		BEGIN_MTX_PROTECTED_OPERATIONS(pWtp->pmutUsr, LOCK_MUTEX);
+		BEGIN_MTX_PROTECTED_OPERATIONS_UNCOND(pWtp->pmutUsr);
+		bMutexIsLocked = TRUE;
 
-		if(  (bInactivityTOOccured && pWtp->pfIsIdle(pWtp->pUsr, MUTEX_ALREADY_LOCKED))
-		   || wtpChkStopWrkr(pWtp, LOCK_MUTEX, MUTEX_ALREADY_LOCKED)) {
-			END_MTX_PROTECTED_OPERATIONS(pWtp->pmutUsr);
-			break; /* end worker thread run */
+		/* first check if we are in shutdown process (but evaluate a bit later) */
+		terminateRet = wtpChkStopWrkr(pWtp, LOCK_MUTEX, MUTEX_ALREADY_LOCKED);
+		if(terminateRet == RS_RET_TERMINATE_NOW) {
+			/* we now need to free the old batch */
+			localRet = pWtp->pfObjProcessed(pWtp->pUsr, pThis);
+			dbgoprint((obj_t*) pThis, "terminating worker because of TERMINATE_NOW mode, del iRet %d\n",
+				 localRet);
+			break;
 		}
-		bInactivityTOOccured = 0; /* reset for next run */
 
-		/* if we reach this point, we are still protected by the mutex */
+		/* try to execute and process whatever we have */
+		/* This function must and does RELEASE the MUTEX! */
+		localRet = pWtp->pfDoWork(pWtp->pUsr, pThis, iCancelStateSave);
+		bMutexIsLocked = FALSE;
 
-		if(pWtp->pfIsIdle(pWtp->pUsr, MUTEX_ALREADY_LOCKED)) {
-			dbgprintf("%s: worker IDLE, waiting for work.\n", wtiGetDbgHdr(pThis));
-			pWtp->pfOnIdle(pWtp->pUsr, MUTEX_ALREADY_LOCKED);
-
-			if(pWtp->toWrkShutdown == -1) {
-				/* never shut down any started worker */
-				d_pthread_cond_wait(pWtp->pcondBusy, pWtp->pmutUsr);
-			} else {
-				timeoutComp(&t, pWtp->toWrkShutdown);/* get absolute timeout */
-				if(d_pthread_cond_timedwait(pWtp->pcondBusy, pWtp->pmutUsr, &t) != 0) {
-					dbgprintf("%s: inactivity timeout, worker terminating...\n", wtiGetDbgHdr(pThis));
-					bInactivityTOOccured = 1; /* indicate we had a timeout */
-				}
+		if(localRet == RS_RET_IDLE) {
+			if(terminateRet == RS_RET_TERMINATE_WHEN_IDLE) {
+				break;	/* end of loop */
 			}
-			END_MTX_PROTECTED_OPERATIONS(pWtp->pmutUsr);
+
+			if(bInactivityTOOccured) {
+				/* we had an inactivity timeout in the last run and are still idle, so it is time to exit... */
+				break; /* end worker thread run */
+			}
+			BEGIN_MTX_PROTECTED_OPERATIONS_UNCOND(pWtp->pmutUsr);
+			doIdleProcessing(pThis, pWtp, &bInactivityTOOccured);
+			END_MTX_PROTECTED_OPERATIONS_UNCOND(pWtp->pmutUsr);
 			continue; /* request next iteration */
 		}
 
-		/* if we reach this point, we have a non-empty queue (and are still protected by mutex) */
-		pWtp->pfDoWork(pWtp->pUsr, pThis, iCancelStateSave);
+		bInactivityTOOccured = 0; /* reset for next run */
+	}
+
+	/* if we exit the loop, the mutex may be locked and, if so, must be unlocked */
+	if(bMutexIsLocked) {
+		END_MTX_PROTECTED_OPERATIONS_UNCOND(pWtp->pmutUsr);
 	}
 
 	/* indicate termination */
@@ -421,10 +452,11 @@ wtiWorker(wti_t *pThis)
 	d_pthread_mutex_lock(&pThis->mut);
 	pthread_cleanup_pop(0); /* remove cleanup handler */
 
+RUNLOG_STR("XXX: Worker shutdown");
 	pWtp->pfOnWorkerShutdown(pWtp->pUsr);
 
 	wtiSetState(pThis, eWRKTHRD_TERMINATING, 0, MUTEX_ALREADY_LOCKED);
-	pWtp->bThrdStateChanged = 1; /* indicate change, so harverster will be called */
+	ATOMIC_STORE_1_TO_INT(pWtp->bThrdStateChanged); /* indicate change, so harverster will be called */
 	d_pthread_mutex_unlock(&pThis->mut);
 	pthread_setcancelstate(iCancelStateSave, NULL);
 
@@ -470,6 +502,14 @@ finalize_it:
 /* dummy */
 rsRetVal wtiQueryInterface(void) { return RS_RET_NOT_IMPLEMENTED; }
 
+/* exit our class
+ */
+BEGINObjClassExit(wti, OBJ_IS_CORE_MODULE) /* CHANGE class also in END MACRO! */
+CODESTARTObjClassExit(nsdsel_gtls)
+	/* release objects we no longer need */
+	objRelease(glbl, CORE_COMPONENT);
+ENDObjClassExit(wti)
+
 
 /* Initialize the wti class. Must be called as the very first method
  * before anything else is called inside this class.
@@ -477,6 +517,7 @@ rsRetVal wtiQueryInterface(void) { return RS_RET_NOT_IMPLEMENTED; }
  */
 BEGINObjClassInit(wti, 1, OBJ_IS_CORE_MODULE) /* one is the object version (most important for persisting) */
 	/* request objects we use */
+	CHKiRet(objUse(glbl, CORE_COMPONENT));
 ENDObjClassInit(wti)
 
 /*

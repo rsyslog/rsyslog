@@ -1,6 +1,6 @@
 /* Definition of the omsr (omodStringRequest) object.
  *
- * Copyright 2007 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007, 2009 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -27,7 +27,8 @@
 /* define flags for required template options */
 #define OMSR_NO_RQD_TPL_OPTS	0
 #define OMSR_RQD_TPL_OPT_SQL	1
-/* next option is 2, 4, 8, ... */
+#define OMSR_TPL_AS_ARRAY	2	 /* introduced in 4.1.6, 2009-04-03 */
+/* next option is 4, 8, 16, ... */
 
 struct omodStringRequest_s {	/* strings requested by output module for doAction() */
 	int iNumEntries;	/* number of array entries for data elements below */
@@ -40,6 +41,7 @@ typedef struct omodStringRequest_s omodStringRequest_t;
 rsRetVal OMSRdestruct(omodStringRequest_t *pThis);
 rsRetVal OMSRconstruct(omodStringRequest_t **ppThis, int iNumEntries);
 rsRetVal OMSRsetEntry(omodStringRequest_t *pThis, int iEntry, uchar *pTplName, int iTplOpts);
+rsRetVal OMSRgetSupportedTplOpts(unsigned long *pOpts);
 int OMSRgetEntryCount(omodStringRequest_t *pThis);
 int OMSRgetEntry(omodStringRequest_t *pThis, int iEntry, uchar **ppTplName, int *piTplOpts);
 
