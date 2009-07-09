@@ -176,27 +176,6 @@ if test "$enable_regexp" = "yes"; then
 fi
 
 
-# libnet (for UDP spoofing)
-AC_ARG_ENABLE(libnet,
-        [AS_HELP_STRING([--enable-libnet],[Enable libnet support (for UDP spoofing) @<:@default=yes@:>@])],
-        [case "${enableval}" in
-         yes) enable_libnet="yes" ;;
-          no) enable_libnet="no" ;;
-           *) AC_MSG_ERROR(bad value ${enableval} for --enable-libnet) ;;
-         esac],
-        [enable_libnet=yes]
-)
-AM_CONDITIONAL(ENABLE_LIBNET, test x$enable_libnet = xyes)
-if test "$enable_libnet" = "yes"; then
-	AC_CHECK_HEADER(libnet.h, [libnet_header="yes"], [libnet_header="no" enable_libnet="false"])
-	if test "$libnet_header" = "yes"; then
-		AC_CHECK_LIB(net, libnet_init,
-                        [AC_DEFINE(USE_LIBNET, 1, [Define if you want to enable libnet support]) 
-                         LIBNET_LIBS="-lnet"
-                         AC_SUBST(LIBNET_LIBS)], enable_libnet="false")
-	fi
-fi
-
 
 # zlib compression
 AC_ARG_ENABLE(zlib,
@@ -255,7 +234,7 @@ AC_ARG_ENABLE(pthreads,
 )
 
 if test "x$enable_pthreads" = "xno"; then
-	AC_MSG_ERROR(rsyslog v3 does no longer support single threading mode -- use a previous version for that);
+	AC_MSG_ERROR(rsyslog v3+ does no longer support single threading mode -- use a previous version for that);
 fi
 
 if test "x$enable_pthreads" != "xno"; then
@@ -741,6 +720,36 @@ AC_ARG_ENABLE(omprog,
 AM_CONDITIONAL(ENABLE_OMPROG, test x$enable_omprog = xyes)
 
 
+# settings for omudpspoof
+AC_ARG_ENABLE(omudpspoof,
+        [AS_HELP_STRING([--enable-omudpspoof],[Compiles omudpspoof module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_omudpspoof="yes" ;;
+          no) enable_omudpspoof="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-omudpspoof) ;;
+         esac],
+        [enable_omudpspoof=no]
+)
+
+if test "x$enable_omudpspoof" = "xyes"; then
+  AC_CHECK_HEADERS(
+    [libnet.h],,
+    [AC_MSG_FAILURE([libnet is missing])]
+  )
+  AC_CHECK_LIB(
+    [net],
+    [libnet_init],
+    [UDPSPOOF_CFLAGS=""
+     UDPSPOOF_LIBS="-lnet"
+    ],
+    [AC_MSG_FAILURE([libnet is missing])]
+  )
+fi
+AM_CONDITIONAL(ENABLE_OMUDPSPOOF, test x$enable_omudpspoof = xyes)
+AC_SUBST(UDPSPOOF_CFLAGS)
+AC_SUBST(UDPSPOOF_LIBS)
+
+
 # settings for omstdout
 AC_ARG_ENABLE(omstdout,
         [AS_HELP_STRING([--enable-omstdout],[Compiles stdout module @<:@default=no@:>@])],
@@ -840,6 +849,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/ommail/Makefile \
 		plugins/omsnmp/Makefile \
 		plugins/omoracle/Makefile \
+		plugins/omudpspoof/Makefile \
 		plugins/cust1/Makefile \
 		tests/Makefile])
 AC_OUTPUT
@@ -847,7 +857,6 @@ AC_OUTPUT
 echo "****************************************************"
 echo "rsyslog will be compiled with the following settings:"
 echo
-echo "    Multithreading support enabled:           $enable_pthreads"
 echo "    Large file support enabled:               $enable_largefile"
 echo "    Networking support enabled:               $enable_inet"
 echo "    Regular expressions support enabled:      $enable_regexp"
@@ -866,6 +875,7 @@ echo "---{ output plugins }---"
 echo "    Mail support enabled:                     $enable_mail"
 echo "    omprog module will be compiled:           $enable_omprog"
 echo "    omstdout module will be compiled:         $enable_omstdout"
+echo "    omudpspoof module will be compiled:       $enable_omudpspoof"
 echo "    output template module will be compiled:  $enable_omtemplate"
 echo
 echo "---{ database support }---"

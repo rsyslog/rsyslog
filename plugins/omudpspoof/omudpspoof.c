@@ -1,16 +1,19 @@
-/* omfwd.c
- * This is the implementation of the build-in forwarding output module.
+/* omudpspoof.c
+ * This is a udp-based output module that support spoofing.
  *
  * NOTE: read comments in module-template.h to understand how this file
  *       works!
  *
- * File begun on 2007-07-20 by RGerhards (extracted from syslogd.c)
- * This file is under development and has not yet arrived at being fully
- * self-contained and a real object. So far, it is mostly an excerpt
- * of the "old" message code without any modifications. However, it
- * helps to have things at the right place one we go to the meat of it.
+ * Note: this file builds on UDP spoofing code contributed by 
+ * David Lang <david@lang.hm>. I then created a "real" rsyslog module
+ * out of that code and omfwd. I decided to make it a separate module because
+ * omfwd already mixes up too many things (TCP & UDP & a differnt modes,
+ * this has historic reasons), it would not be a good idea to also add
+ * spoofing to it. And, looking at the requirements, there is little in 
+ * common between omfwd and this module.
  *
- * Copyright 2007, 2009 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2009 David Lang
+ * Copyright 2009 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -62,6 +65,17 @@
 #include "module-template.h"
 #include "glbl.h"
 #include "errmsg.h"
+
+
+#include <libnet.h>
+#define HAVE_PACKET_SOCKET 1
+#define _BSD_SOURCE 1
+#define __BSD_SOURCE 1
+#define __FAVOR_BSD 1
+#define LIBNET_LIL_ENDIAN 1
+#define HAVE_LINUX_PROCFS 1
+#define HAVE_NET_ETHERNET_H 1
+
 
 MODULE_TYPE_OUTPUT
 
@@ -143,6 +157,11 @@ static char *getFwdPt(instanceData *pData)
 		return(pData->port);
 }
 
+	/* add some variables needed for libnet */
+	libnet_t *libnet_handle;
+	libnet_ptag_t ip, ipo;
+	libnet_ptag_t udp;
+	char errbuf[LIBNET_ERRBUF_SIZE];
 
 /* destruct the TCP helper objects
  * This, for example, is needed after something went wrong.
@@ -159,8 +178,25 @@ DestructTCPInstanceData(instanceData *pData)
 		netstrms.Destruct(&pData->pNS);
 }
 
+u_short source_port=32000;
+
 BEGINcreateInstance
 CODESTARTcreateInstance
+    /*
+     *  Initialize the libnet library.  Root priviledges are required.
+     *  this initializes a IPv4 socket to use for forging UDP packets
+     */
+    libnet_handle = libnet_init(
+            LIBNET_RAW4,                            /* injection type */
+            NULL,                                   /* network interface */
+            errbuf);                                /* errbuf */
+
+    if (libnet_handle == NULL)
+    {
+        fprintf(stderr, "libnet_init() failed: %s\n", errbuf);
+        exit(EXIT_FAILURE);
+    }
+
 ENDcreateInstance
 
 
@@ -185,7 +221,10 @@ CODESTARTfreeInstance
 	free(pData->f_hname);
 	free(pData->pszStrmDrvr);
 	free(pData->pszStrmDrvrAuthMode);
-	net.DestructPermittedPeers(&pData->pPermPeers);
+	if(pData->pPermPeers != NULL)
+		net.DestructPermittedPeers(&pData->pPermPeers);
+	/* destroy the libnet state needed for forged UDP sources */
+	libnet_destroy(libnet_handle);
 ENDfreeInstance
 
 
@@ -202,9 +241,25 @@ static rsRetVal UDPSend(instanceData *pData, char *msg, size_t len)
 {
 	DEFiRet;
 	struct addrinfo *r;
-	int i;
 	unsigned lsent = 0;
 	int bSendSuccess;
+
+	int j, build_ip;
+	u_char opt[20],*source_text_ip;
+	struct sockaddr_in *tempaddr,source_ip;
+	ip = ipo = udp = 0;
+	if(source_port++ >= (u_short)42000){
+		source_port = 32000;
+	}
+	for(source_text_ip = msg; msg[0] != ' '; msg++ ,len--);
+		/* move the msg pointer to the first space in the message to strip off the IP address */
+	msg[0]='\0';
+	msg++;
+	inet_pton(AF_INET, source_text_ip, &(source_ip.sin_addr));
+
+	/* the rebind logic and the spoofing logic probably are mutally exclusive and need to be
+	 * seperated by an if.
+	 */
 
 dbgprintf("rebind logic: interval %d, curr %d, mod %d, if %d\n", pData->iUDPRebindInterval, pData->nXmit,
 	(pData->nXmit % pData->iUDPRebindInterval), ((pData->nXmit % pData->iUDPRebindInterval) == 0));
@@ -228,18 +283,62 @@ dbgprintf("rebind logic: interval %d, curr %d, mod %d, if %d\n", pData->iUDPRebi
 		 */
 		bSendSuccess = FALSE;
 		for (r = pData->f_addr; r; r = r->ai_next) {
-			for (i = 0; i < *pData->pSockArray; i++) {
-			       lsent = sendto(pData->pSockArray[i+1], msg, len, 0, r->ai_addr, r->ai_addrlen);
-				if (lsent == len) {
+			tempaddr = (struct sockaddr_in *)r->ai_addr;
+			libnet_clear_packet(libnet_handle);
+			udp = libnet_build_udp(
+				source_port,                                /* source port */
+				tempaddr->sin_port,                            /* destination port */
+				LIBNET_UDP_H + len,               /* packet length */
+				0,                                      /* checksum */
+				msg,                                /* payload */
+				len,                              /* payload size */
+				libnet_handle,                                      /* libnet handle */
+				udp);                                   /* libnet id */
+				if (udp == -1) {
+					dbgprintf("Can't build UDP header: %s\n", libnet_geterror(libnet_handle));
+				}
+
+				build_ip = 0;
+				/* this is not a legal options string */
+				for (j = 0; j < 20; j++) {
+					opt[j] = libnet_get_prand(LIBNET_PR2);
+				}
+				ipo = libnet_build_ipv4_options(
+					opt,
+					20,
+					libnet_handle,
+					ipo);
+				if (ipo == -1) {
+					dbgprintf("Can't build IP options: %s\n", libnet_geterror(libnet_handle));
+				}
+				ip = libnet_build_ipv4(
+				LIBNET_IPV4_H + 20 + len + LIBNET_UDP_H, /* length */
+					0,                                          /* TOS */
+					242,                                        /* IP ID */
+					0,                                          /* IP Frag */
+					64,                                         /* TTL */
+					IPPROTO_UDP,                                /* protocol */
+					0,                                          /* checksum */
+					source_ip.sin_addr.s_addr,
+					tempaddr->sin_addr.s_addr,
+					NULL,                                       /* payload */
+					0,                                          /* payload size */
+					libnet_handle,                                          /* libnet handle */
+					ip);                                         /* libnet id */
+				if (ip == -1) {
+					dbgprintf("Can't build IP header: %s\n", libnet_geterror(libnet_handle));
+				}
+
+				/*
+				*  Write it to the wire.
+				*/
+				lsent = libnet_write(libnet_handle);
+				if (lsent == -1) {
+					dbgprintf("Write error: %s\n", libnet_geterror(libnet_handle));
+				} else {
 					bSendSuccess = TRUE;
 					break;
-				} else {
-					int eno = errno;
-					char errStr[1024];
-					dbgprintf("sendto() error: %d = %s.\n",
-						eno, rs_strerror_r(eno, errStr, sizeof(errStr)));
 				}
-			}
 			if (lsent == len && !send_to_all)
 			       break;
 		}
