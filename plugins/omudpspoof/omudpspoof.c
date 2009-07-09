@@ -1,8 +1,25 @@
 /* omudpspoof.c
+ *
  * This is a udp-based output module that support spoofing.
  *
  * NOTE: read comments in module-template.h to understand how this file
  *       works!
+ *
+ * --------------------------------------------------------------------------------
+ *
+ * USAGE NOTES:
+ * To use it create a template that puts the hostname-ip ahead of what you want to 
+ * send, similar to
+ * 
+ * $template TraditionalFwdFormat,"%fromhost-ip% <%pri%>%timegenerated% %HOSTNAME% 
+ * %syslogtag%%msg%\n"
+ * 
+ * *.*     @10.0.0.100;TraditionalFwdFormat
+ * 
+ * The one problem right now is that any logs sent from the local box will go out 
+ * with a source IP of 127.0.0.1
+ *
+ * --------------------------------------------------------------------------------
  *
  * Note: this file builds on UDP spoofing code contributed by 
  * David Lang <david@lang.hm>. I then created a "real" rsyslog module
@@ -12,7 +29,7 @@
  * spoofing to it. And, looking at the requirements, there is little in 
  * common between omfwd and this module.
  *
- * Copyright 2009 David Lang
+ * Copyright 2009 David Lang (spoofing code)
  * Copyright 2009 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
@@ -49,32 +66,23 @@
 #ifdef USE_NETZIP
 #include <zlib.h>
 #endif
-#include <pthread.h>
-#include "syslogd.h"
 #include "conf.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
 #include "net.h"
-#include "netstrms.h"
-#include "netstrm.h"
-#include "omfwd.h"
 #include "template.h"
 #include "msg.h"
-#include "tcpclt.h"
 #include "cfsysline.h"
 #include "module-template.h"
 #include "glbl.h"
 #include "errmsg.h"
+#include "dirty.h"
 
 
 #include <libnet.h>
-#define HAVE_PACKET_SOCKET 1
 #define _BSD_SOURCE 1
 #define __BSD_SOURCE 1
 #define __FAVOR_BSD 1
-#define LIBNET_LIL_ENDIAN 1
-#define HAVE_LINUX_PROCFS 1
-#define HAVE_NET_ETHERNET_H 1
 
 
 MODULE_TYPE_OUTPUT
@@ -85,42 +93,28 @@ DEF_OMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(net)
-DEFobjCurrIf(netstrms)
-DEFobjCurrIf(netstrm)
-DEFobjCurrIf(tcpclt)
 
 typedef struct _instanceData {
-	netstrms_t *pNS; /* netstream subsystem */
-	netstrm_t *pNetstrm; /* our output netstream */
-	uchar *pszStrmDrvr;
-	uchar *pszStrmDrvrAuthMode;
-	permittedPeers_t *pPermPeers;
-	int iStrmDrvrMode;
-	char	*f_hname;
+	char	*host;
 	int *pSockArray;	/* sockets to use for UDP */
-	int bIsConnected;  /* are we connected to remote host? 0 - no, 1 - yes, UDP means addr resolved */
+	int bIsAddrResolved;  	/* is hostname address resolved? 0 - no, 1 - yes */
 	struct addrinfo *f_addr;
 	int compressionLevel;	/* 0 - no compression, else level for zlib */
 	char *port;
-	int protocol;
-	int iUDPRebindInterval;	/* rebind interval */
-	int nXmit;		/* number of transmissions since last (re-)bind */
-#	define	FORW_UDP 0
-#	define	FORW_TCP 1
-	/* following fields for TCP-based delivery */
-	tcpclt_t *pTCPClt;	/* our tcpclt object */
 } instanceData;
 
 /* config data */
 static uchar *pszTplName = NULL; /* name of the default template to use */
-static uchar *pszStrmDrvr = NULL; /* name of the stream driver to use */
-static short iStrmDrvrMode = 0; /* mode for stream driver, driver-dependent (0 mostly means plain tcp) */
-static short bResendLastOnRecon = 0; /* should the last message be re-sent on a successful reconnect? */
-static uchar *pszStrmDrvrAuthMode = NULL; /* authentication mode to use */
-static int iUDPRebindInterval = 0;	/* support for automatic re-binding (load balancers!). 0 - no rebind */
 
-static permittedPeers_t *pPermPeers = NULL;
 
+/* add some variables needed for libnet */
+libnet_t *libnet_handle;
+libnet_ptag_t ip, ipo;
+libnet_ptag_t udp;
+char errbuf[LIBNET_ERRBUF_SIZE];
+u_short source_port=32000;
+
+/* forward definitions */
 static rsRetVal doTryResume(instanceData *pData);
 
 /* Close the UDP sockets.
@@ -137,7 +131,7 @@ closeUDPSockets(instanceData *pData)
 		freeaddrinfo(pData->f_addr);
 		pData->f_addr = NULL;
 	}
-pData->bIsConnected = 0; // TODO: remove this variable altogether
+pData->bIsAddrResolved = 0; // TODO: remove this variable altogether
 	RETiRet;
 }
 
@@ -157,42 +151,17 @@ static char *getFwdPt(instanceData *pData)
 		return(pData->port);
 }
 
-	/* add some variables needed for libnet */
-	libnet_t *libnet_handle;
-	libnet_ptag_t ip, ipo;
-	libnet_ptag_t udp;
-	char errbuf[LIBNET_ERRBUF_SIZE];
-
-/* destruct the TCP helper objects
- * This, for example, is needed after something went wrong.
- * This function is void because it "can not" fail.
- * rgerhards, 2008-06-04
- */
-static inline void
-DestructTCPInstanceData(instanceData *pData)
-{
-	assert(pData != NULL);
-	if(pData->pNetstrm != NULL)
-		netstrm.Destruct(&pData->pNetstrm);
-	if(pData->pNS != NULL)
-		netstrms.Destruct(&pData->pNS);
-}
-
-u_short source_port=32000;
-
 BEGINcreateInstance
 CODESTARTcreateInstance
-    /*
-     *  Initialize the libnet library.  Root priviledges are required.
-     *  this initializes a IPv4 socket to use for forging UDP packets
+    /* Initialize the libnet library.  Root priviledges are required.
+     * this initializes a IPv4 socket to use for forging UDP packets.
      */
     libnet_handle = libnet_init(
             LIBNET_RAW4,                            /* injection type */
             NULL,                                   /* network interface */
             errbuf);                                /* errbuf */
 
-    if (libnet_handle == NULL)
-    {
+    if (libnet_handle == NULL) {
         fprintf(stderr, "libnet_init() failed: %s\n", errbuf);
         exit(EXIT_FAILURE);
     }
@@ -210,19 +179,9 @@ ENDisCompatibleWithFeature
 BEGINfreeInstance
 CODESTARTfreeInstance
 	/* final cleanup */
-	DestructTCPInstanceData(pData);
 	closeUDPSockets(pData);
-
-	if(pData->protocol == FORW_TCP) {
-		tcpclt.Destruct(&pData->pTCPClt);
-	}
-
 	free(pData->port);
-	free(pData->f_hname);
-	free(pData->pszStrmDrvr);
-	free(pData->pszStrmDrvrAuthMode);
-	if(pData->pPermPeers != NULL)
-		net.DestructPermittedPeers(&pData->pPermPeers);
+	free(pData->host);
 	/* destroy the libnet state needed for forged UDP sources */
 	libnet_destroy(libnet_handle);
 ENDfreeInstance
@@ -230,7 +189,7 @@ ENDfreeInstance
 
 BEGINdbgPrintInstInfo
 CODESTARTdbgPrintInstInfo
-	dbgprintf("%s", pData->f_hname);
+	dbgprintf("%s", pData->host);
 ENDdbgPrintInstInfo
 
 
@@ -239,218 +198,89 @@ ENDdbgPrintInstInfo
  */
 static rsRetVal UDPSend(instanceData *pData, char *msg, size_t len)
 {
-	DEFiRet;
 	struct addrinfo *r;
-	unsigned lsent = 0;
+	int lsent = 0;
 	int bSendSuccess;
-
 	int j, build_ip;
-	u_char opt[20],*source_text_ip;
+	u_char opt[20];
+	u_char *source_text_ip;
 	struct sockaddr_in *tempaddr,source_ip;
-	ip = ipo = udp = 0;
-	if(source_port++ >= (u_short)42000){
-		source_port = 32000;
-	}
-	for(source_text_ip = msg; msg[0] != ' '; msg++ ,len--);
-		/* move the msg pointer to the first space in the message to strip off the IP address */
-	msg[0]='\0';
-	msg++;
-	inet_pton(AF_INET, source_text_ip, &(source_ip.sin_addr));
-
-	/* the rebind logic and the spoofing logic probably are mutally exclusive and need to be
-	 * seperated by an if.
-	 */
-
-dbgprintf("rebind logic: interval %d, curr %d, mod %d, if %d\n", pData->iUDPRebindInterval, pData->nXmit,
-	(pData->nXmit % pData->iUDPRebindInterval), ((pData->nXmit % pData->iUDPRebindInterval) == 0));
-	if(pData->iUDPRebindInterval && (pData->nXmit++ % pData->iUDPRebindInterval == 0)) {
-		dbgprintf("omfwd dropping UDP 'connection' (as configured)\n");
-		pData->nXmit = 1;	/* else we have an addtl wrap at 2^31-1 */
-		CHKiRet(closeUDPSockets(pData));
-	}
+	DEFiRet;
 
 	if(pData->pSockArray == NULL) {
 		CHKiRet(doTryResume(pData));
 	}
 
-	if(pData->pSockArray != NULL) {
-		/* we need to track if we have success sending to the remote
-		 * peer. Success is indicated by at least one sendto() call
-		 * succeeding. We track this be bSendSuccess. We can not simply
-		 * rely on lsent, as a call might initially work, but a later
-		 * call fails. Then, lsent has the error status, even though
-		 * the sendto() succeeded. -- rgerhards, 2007-06-22
-		 */
-		bSendSuccess = FALSE;
-		for (r = pData->f_addr; r; r = r->ai_next) {
-			tempaddr = (struct sockaddr_in *)r->ai_addr;
-			libnet_clear_packet(libnet_handle);
-			udp = libnet_build_udp(
-				source_port,                                /* source port */
-				tempaddr->sin_port,                            /* destination port */
-				LIBNET_UDP_H + len,               /* packet length */
-				0,                                      /* checksum */
-				msg,                                /* payload */
-				len,                              /* payload size */
-				libnet_handle,                                      /* libnet handle */
-				udp);                                   /* libnet id */
-				if (udp == -1) {
-					dbgprintf("Can't build UDP header: %s\n", libnet_geterror(libnet_handle));
-				}
+	ip = ipo = udp = 0;
+	if(source_port++ >= (u_short)42000){
+		source_port = 32000;
+	}
+	for(source_text_ip = (uchar*) msg; msg[0] != ' '; msg++ ,len--);
+		/* move the msg pointer to the first space in the message to strip off the IP address */
+	msg[0]='\0';
+	msg++;
+	inet_pton(AF_INET, (char*)source_text_ip, &(source_ip.sin_addr));
 
-				build_ip = 0;
-				/* this is not a legal options string */
-				for (j = 0; j < 20; j++) {
-					opt[j] = libnet_get_prand(LIBNET_PR2);
-				}
-				ipo = libnet_build_ipv4_options(
-					opt,
-					20,
-					libnet_handle,
-					ipo);
-				if (ipo == -1) {
-					dbgprintf("Can't build IP options: %s\n", libnet_geterror(libnet_handle));
-				}
-				ip = libnet_build_ipv4(
-				LIBNET_IPV4_H + 20 + len + LIBNET_UDP_H, /* length */
-					0,                                          /* TOS */
-					242,                                        /* IP ID */
-					0,                                          /* IP Frag */
-					64,                                         /* TTL */
-					IPPROTO_UDP,                                /* protocol */
-					0,                                          /* checksum */
-					source_ip.sin_addr.s_addr,
-					tempaddr->sin_addr.s_addr,
-					NULL,                                       /* payload */
-					0,                                          /* payload size */
-					libnet_handle,                                          /* libnet handle */
-					ip);                                         /* libnet id */
-				if (ip == -1) {
-					dbgprintf("Can't build IP header: %s\n", libnet_geterror(libnet_handle));
-				}
+	bSendSuccess = FALSE;
+	for (r = pData->f_addr; r; r = r->ai_next) {
+		tempaddr = (struct sockaddr_in *)r->ai_addr;
+		libnet_clear_packet(libnet_handle);
+		udp = libnet_build_udp(
+			source_port,		/* source port */
+			tempaddr->sin_port,	/* destination port */
+			LIBNET_UDP_H + len,	/* packet length */
+			0,			/* checksum */
+			(u_char*)msg,		/* payload */
+			len,			/* payload size */
+			libnet_handle,		/* libnet handle */
+			udp);			/* libnet id */
+		if (udp == -1) {
+			dbgprintf("Can't build UDP header: %s\n", libnet_geterror(libnet_handle));
+		}
 
-				/*
-				*  Write it to the wire.
-				*/
-				lsent = libnet_write(libnet_handle);
-				if (lsent == -1) {
-					dbgprintf("Write error: %s\n", libnet_geterror(libnet_handle));
-				} else {
-					bSendSuccess = TRUE;
-					break;
-				}
-			if (lsent == len && !send_to_all)
-			       break;
+		build_ip = 0;
+		/* this is not a legal options string */
+		for (j = 0; j < 20; j++) {
+			opt[j] = libnet_get_prand(LIBNET_PR2);
 		}
-		/* finished looping */
-		if (bSendSuccess == FALSE) {
-			dbgprintf("error forwarding via udp, suspending\n");
-			iRet = RS_RET_SUSPENDED;
+		ipo = libnet_build_ipv4_options(opt, 20, libnet_handle, ipo);
+		if (ipo == -1) {
+			dbgprintf("Can't build IP options: %s\n", libnet_geterror(libnet_handle));
 		}
+		ip = libnet_build_ipv4(
+			LIBNET_IPV4_H + 20 + len + LIBNET_UDP_H, /* length */
+			0,				/* TOS */
+			242,				/* IP ID */
+			0,				/* IP Frag */
+			64,				/* TTL */
+			IPPROTO_UDP,			/* protocol */
+			0,				/* checksum */
+			source_ip.sin_addr.s_addr,
+			tempaddr->sin_addr.s_addr,
+			NULL,				/* payload */
+			0,				/* payload size */
+			libnet_handle,			/* libnet handle */
+			ip);				/* libnet id */
+		if (ip == -1) {
+			dbgprintf("Can't build IP header: %s\n", libnet_geterror(libnet_handle));
+		}
+
+		/* Write it to the wire. */
+		lsent = libnet_write(libnet_handle);
+		if (lsent == -1) {
+			dbgprintf("Write error: %s\n", libnet_geterror(libnet_handle));
+		} else {
+			bSendSuccess = TRUE;
+			break;
+		}
+	}
+	/* finished looping */
+	if (bSendSuccess == FALSE) {
+		dbgprintf("error forwarding via udp, suspending\n");
+		iRet = RS_RET_SUSPENDED;
 	}
 
 finalize_it:
-	RETiRet;
-}
-
-
-/* set the permitted peers -- rgerhards, 2008-05-19
- */
-static rsRetVal
-setPermittedPeer(void __attribute__((unused)) *pVal, uchar *pszID)
-{
-	DEFiRet;
-	CHKiRet(net.AddPermittedPeer(&pPermPeers, pszID));
-	free(pszID); /* no longer needed, but we must free it as of interface def */
-finalize_it:
-	RETiRet;
-}
-
-
-
-/* CODE FOR SENDING TCP MESSAGES */
-
-
-/* Send a frame via plain TCP protocol
- * rgerhards, 2007-12-28
- */
-static rsRetVal TCPSendFrame(void *pvData, char *msg, size_t len)
-{
-	DEFiRet;
-	ssize_t lenSend;
-	instanceData *pData = (instanceData *) pvData;
-
-	lenSend = len;
-	netstrm.CheckConnection(pData->pNetstrm); /* hack for plain tcp syslog - see ptcp driver for details */
-	CHKiRet(netstrm.Send(pData->pNetstrm, (uchar*)msg, &lenSend));
-	dbgprintf("TCP sent %ld bytes, requested %ld\n", (long) lenSend, (long) len);
-
-	if(lenSend != (ssize_t) len) {
-		/* no real error, could "just" not send everything... 
-		 * For the time being, we ignore this...
-		 * rgerhards, 2005-10-25
-		 */
-		dbgprintf("message not completely (tcp)send, ignoring %ld\n", (long) lenSend);
-		usleep(1000); /* experimental - might be benefitial in this situation */
-		/* TODO: we need to revisit this code -- rgerhards, 2007-12-28 */
-	}
-
-finalize_it:
-	RETiRet;
-}
-
-
-/* This function is called immediately before a send retry is attempted.
- * It shall clean up whatever makes sense.
- * rgerhards, 2007-12-28
- */
-static rsRetVal TCPSendPrepRetry(void *pvData)
-{
-	DEFiRet;
-	instanceData *pData = (instanceData *) pvData;
-
-	assert(pData != NULL);
-	DestructTCPInstanceData(pData);
-	RETiRet;
-}
-
-
-/* initializes everything so that TCPSend can work.
- * rgerhards, 2007-12-28
- */
-static rsRetVal TCPSendInit(void *pvData)
-{
-	DEFiRet;
-	instanceData *pData = (instanceData *) pvData;
-
-	assert(pData != NULL);
-	if(pData->pNetstrm == NULL) {
-		CHKiRet(netstrms.Construct(&pData->pNS));
-		/* the stream driver must be set before the object is finalized! */
-		CHKiRet(netstrms.SetDrvrName(pData->pNS, pszStrmDrvr));
-		CHKiRet(netstrms.ConstructFinalize(pData->pNS));
-
-		/* now create the actual stream and connect to the server */
-		CHKiRet(netstrms.CreateStrm(pData->pNS, &pData->pNetstrm));
-		CHKiRet(netstrm.ConstructFinalize(pData->pNetstrm));
-		CHKiRet(netstrm.SetDrvrMode(pData->pNetstrm, pData->iStrmDrvrMode));
-		/* now set optional params, but only if they were actually configured */
-		if(pData->pszStrmDrvrAuthMode != NULL) {
-			CHKiRet(netstrm.SetDrvrAuthMode(pData->pNetstrm, pData->pszStrmDrvrAuthMode));
-		}
-		if(pData->pPermPeers != NULL) {
-			CHKiRet(netstrm.SetDrvrPermPeers(pData->pNetstrm, pData->pPermPeers));
-		}
-		/* params set, now connect */
-		CHKiRet(netstrm.Connect(pData->pNetstrm, glbl.GetDefPFFamily(),
-			(uchar*)getFwdPt(pData), (uchar*)pData->f_hname));
-	}
-
-finalize_it:
-	if(iRet != RS_RET_OK) {
-		DestructTCPInstanceData(pData);
-	}
-
 	RETiRet;
 }
 
@@ -465,31 +295,25 @@ static rsRetVal doTryResume(instanceData *pData)
 	struct addrinfo hints;
 	DEFiRet;
 
-	if(pData->bIsConnected)
+	if(pData->pSockArray != NULL)
 		FINALIZE;
 
 	/* The remote address is not yet known and needs to be obtained */
-	dbgprintf(" %s\n", pData->f_hname);
-	if(pData->protocol == FORW_UDP) {
-		memset(&hints, 0, sizeof(hints));
-		/* port must be numeric, because config file syntax requires this */
-		hints.ai_flags = AI_NUMERICSERV;
-		hints.ai_family = glbl.GetDefPFFamily();
-		hints.ai_socktype = SOCK_DGRAM;
-		if((iErr = (getaddrinfo(pData->f_hname, getFwdPt(pData), &hints, &res))) != 0) {
-			dbgprintf("could not get addrinfo for hostname '%s':'%s': %d%s\n",
-				  pData->f_hname, getFwdPt(pData), iErr, gai_strerror(iErr));
-			ABORT_FINALIZE(RS_RET_SUSPENDED);
-		}
-		dbgprintf("%s found, resuming.\n", pData->f_hname);
-		pData->f_addr = res;
-		pData->bIsConnected = 1;
-		if(pData->pSockArray == NULL) {
-			pData->pSockArray = net.create_udp_socket((uchar*)pData->f_hname, NULL, 0);
-		}
-	} else {
-		CHKiRet(TCPSendInit((void*)pData));
+	dbgprintf(" %s\n", pData->host);
+	memset(&hints, 0, sizeof(hints));
+	/* port must be numeric, because config file syntax requires this */
+	hints.ai_flags = AI_NUMERICSERV;
+	hints.ai_family = glbl.GetDefPFFamily();
+	hints.ai_socktype = SOCK_DGRAM;
+	if((iErr = (getaddrinfo(pData->host, getFwdPt(pData), &hints, &res))) != 0) {
+		dbgprintf("could not get addrinfo for hostname '%s':'%s': %d%s\n",
+			  pData->host, getFwdPt(pData), iErr, gai_strerror(iErr));
+		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
+	dbgprintf("%s found, resuming.\n", pData->host);
+	pData->f_addr = res;
+	pData->bIsAddrResolved = 1;
+	pData->pSockArray = net.create_udp_socket((uchar*)pData->host, NULL, 0);
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
@@ -518,8 +342,7 @@ CODESTARTdoAction
 
 	iMaxLine = glbl.GetMaxLine();
 
-	dbgprintf(" %s:%s/%s\n", pData->f_hname, getFwdPt(pData),
-		 pData->protocol == FORW_UDP ? "udp" : "tcp");
+	dbgprintf(" %s:%s/udpspoofs\n", pData->host, getFwdPt(pData));
 
 	psz = (char*) ppString[0];
 	l = strlen((char*) psz);
@@ -567,68 +390,28 @@ CODESTARTdoAction
 	}
 #	endif
 
-	if(pData->protocol == FORW_UDP) {
-		/* forward via UDP */
-		CHKiRet(UDPSend(pData, psz, l));
-	} else {
-		/* forward via TCP */
-		rsRetVal ret;
-		ret = tcpclt.Send(pData->pTCPClt, pData, psz, l);
-		if(ret != RS_RET_OK) {
-			/* error! */
-			dbgprintf("error forwarding via tcp, suspending\n");
-			DestructTCPInstanceData(pData);
-			iRet = RS_RET_SUSPENDED;
-		}
-	}
+	CHKiRet(UDPSend(pData, psz, l));
+
 finalize_it:
 ENDdoAction
-
-
-/* This function loads TCP support, if not already loaded. It will be called
- * during config processing. To server ressources, TCP support will only
- * be loaded if it actually is used. -- rgerhard, 2008-04-17
- */
-static rsRetVal
-loadTCPSupport(void)
-{
-	DEFiRet;
-	CHKiRet(objUse(netstrms, LM_NETSTRMS_FILENAME));
-	CHKiRet(objUse(netstrm, LM_NETSTRMS_FILENAME));
-	CHKiRet(objUse(tcpclt, LM_TCPCLT_FILENAME));
-
-finalize_it:
-	RETiRet;
-}
 
 
 BEGINparseSelectorAct
 	uchar *q;
 	int i;
 	int bErr;
-	rsRetVal localRet;
         struct addrinfo;
-	TCPFRAMINGMODE tcp_framing = TCP_FRAMING_OCTET_STUFFING;
 CODESTARTparseSelectorAct
 CODE_STD_STRING_REQUESTparseSelectorAct(1)
-	if(*p != '@')
+	/* first check if this config line is actually for us */
+	if(strncmp((char*) p, ":omudpspoof:", sizeof(":omudpspoof:") - 1)) {
 		ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
+	}
 
+	/* ok, if we reach this point, we have something for us */
+	p += sizeof(":omudpspoof:") - 1; /* eat indicator sequence  (-1 because of '\0'!) */
 	CHKiRet(createInstance(&pData));
 
-	++p; /* eat '@' */
-	if(*p == '@') { /* indicator for TCP! */
-		localRet = loadTCPSupport();
-		if(localRet != RS_RET_OK) {
-			errmsg.LogError(0, localRet, "could not activate network stream modules for TCP "
-					"(internal error %d) - are modules missing?", localRet);
-			ABORT_FINALIZE(localRet);
-		}
-		pData->protocol = FORW_TCP;
-		++p; /* eat this '@', too */
-	} else {
-		pData->protocol = FORW_UDP;
-	}
 	/* we are now after the protocol indicator. Now check if we should
 	 * use compression. We begin to use a new option format for this:
 	 * @(option,option)host:port
@@ -668,10 +451,6 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 				errmsg.LogError(0, NO_ERRCODE, "Compression requested, but rsyslogd is not compiled "
 					 "with compression support - request ignored.");
 #				endif /* #ifdef USE_NETZIP */
-			} else if(*p == 'o') { /* octet-couting based TCP framing? */
-				++p; /* eat */
-				/* no further options settable */
-				tcp_framing = TCP_FRAMING_OCTET_COUNTING;
 			} else { /* invalid option! Just skip it... */
 				errmsg.LogError(0, NO_ERRCODE, "Invalid option %c in forwarding action - ignoring.", *p);
 				++p; /* eat invalid option */
@@ -736,39 +515,15 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	if(*p == ';' || *p == '#' || isspace(*p)) {
 		uchar cTmp = *p;
 		*p = '\0'; /* trick to obtain hostname (later)! */
-		CHKmalloc(pData->f_hname = strdup((char*) q));
+		CHKmalloc(pData->host = strdup((char*) q));
 		*p = cTmp;
 	} else {
-		CHKmalloc(pData->f_hname = strdup((char*) q));
+		CHKmalloc(pData->host = strdup((char*) q));
 	}
-
-	/* copy over config data as needed */
-	pData->iUDPRebindInterval = iUDPRebindInterval;
 
 	/* process template */
 	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS,
 		(pszTplName == NULL) ? (uchar*)"RSYSLOG_TraditionalForwardFormat" : pszTplName));
-
-	if(pData->protocol == FORW_TCP) {
-		/* create our tcpclt */
-		CHKiRet(tcpclt.Construct(&pData->pTCPClt));
-		CHKiRet(tcpclt.SetResendLastOnRecon(pData->pTCPClt, bResendLastOnRecon));
-		/* and set callbacks */
-		CHKiRet(tcpclt.SetSendInit(pData->pTCPClt, TCPSendInit));
-		CHKiRet(tcpclt.SetSendFrame(pData->pTCPClt, TCPSendFrame));
-		CHKiRet(tcpclt.SetSendPrepRetry(pData->pTCPClt, TCPSendPrepRetry));
-		CHKiRet(tcpclt.SetFraming(pData->pTCPClt, tcp_framing));
-		pData->iStrmDrvrMode = iStrmDrvrMode;
-		if(pszStrmDrvr != NULL)
-			CHKmalloc(pData->pszStrmDrvr = (uchar*)strdup((char*)pszStrmDrvr));
-		if(pszStrmDrvrAuthMode != NULL)
-			CHKmalloc(pData->pszStrmDrvrAuthMode =
-				     (uchar*)strdup((char*)pszStrmDrvrAuthMode));
-		if(pPermPeers != NULL) {
-			pData->pPermPeers = pPermPeers;
-			pPermPeers = NULL;
-		}
-	}
 
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
@@ -784,17 +539,6 @@ freeConfigVars(void)
 		free(pszTplName);
 		pszTplName = NULL;
 	}
-	if(pszStrmDrvr != NULL) {
-		free(pszStrmDrvr);
-		pszStrmDrvr = NULL;
-	}
-	if(pszStrmDrvrAuthMode != NULL) {
-		free(pszStrmDrvrAuthMode);
-		pszStrmDrvrAuthMode = NULL;
-	}
-	if(pPermPeers != NULL) {
-		free(pPermPeers);
-	}
 }
 
 
@@ -804,9 +548,6 @@ CODESTARTmodExit
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(net, LM_NET_FILENAME);
-	objRelease(netstrm, LM_NETSTRMS_FILENAME);
-	objRelease(netstrms, LM_NETSTRMS_FILENAME);
-	objRelease(tcpclt, LM_TCPCLT_FILENAME);
 
 	freeConfigVars();
 ENDmodExit
@@ -824,17 +565,12 @@ ENDqueryEtryPt
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
 	freeConfigVars();
-
 	/* we now must reset all non-string values */
-	iStrmDrvrMode = 0;
-	bResendLastOnRecon = 0;
-	iUDPRebindInterval = 0;
-
 	return RS_RET_OK;
 }
 
 
-BEGINmodInit(Fwd)
+BEGINmodInit()
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
@@ -842,13 +578,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(net,LM_NET_FILENAME));
 
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionforwarddefaulttemplate", 0, eCmdHdlrGetWord, NULL, &pszTplName, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionsendudprebindinterval", 0, eCmdHdlrInt, NULL, &iUDPRebindInterval, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionsendstreamdriver", 0, eCmdHdlrGetWord, NULL, &pszStrmDrvr, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionsendstreamdrivermode", 0, eCmdHdlrInt, NULL, &iStrmDrvrMode, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionsendstreamdriverauthmode", 0, eCmdHdlrGetWord, NULL, &pszStrmDrvrAuthMode, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionsendstreamdriverpermittedpeer", 0, eCmdHdlrGetWord, setPermittedPeer, NULL, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionsendresendlastmsgonreconnect", 0, eCmdHdlrBinary, NULL, &bResendLastOnRecon, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionudpspoofdefaulttemplate", 0, eCmdHdlrGetWord, NULL, &pszTplName, NULL));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
 

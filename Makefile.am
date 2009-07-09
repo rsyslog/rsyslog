@@ -96,6 +96,10 @@ if ENABLE_OMSTDOUT
 SUBDIRS += plugins/omstdout
 endif
 
+if ENABLE_OMUDPSPOOF
+SUBDIRS += plugins/omudpspoof
+endif
+
 if ENABLE_OMTEMPLATE
 SUBDIRS += plugins/omtemplate
 endif
