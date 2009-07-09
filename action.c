@@ -45,6 +45,7 @@
 #include "batch.h"
 #include "wti.h"
 #include "datetime.h"
+#include "unicode-helper.h"
 
 #define NO_TIME_PROVIDED 0 /* indicate we do not provide any cached time */
 
@@ -1180,7 +1181,7 @@ doActionCallAction(action_t *pAction, msg_t *pMsg)
 	/* suppress duplicate messages */
 	if ((pAction->f_ReduceRepeated == 1) && pAction->f_pMsg != NULL &&
 	    (pMsg->msgFlags & MARK) == 0 && getMSGLen(pMsg) == getMSGLen(pAction->f_pMsg) &&
-	    !strcmp(getMSG(pMsg), getMSG(pAction->f_pMsg)) &&
+	    !ustrcmp(getMSG(pMsg), getMSG(pAction->f_pMsg)) &&
 	    !strcmp(getHOSTNAME(pMsg), getHOSTNAME(pAction->f_pMsg)) &&
 	    !strcmp(getPROCID(pMsg, LOCK_MUTEX), getPROCID(pAction->f_pMsg, LOCK_MUTEX)) &&
 	    !strcmp(getAPPNAME(pMsg, LOCK_MUTEX), getAPPNAME(pAction->f_pMsg, LOCK_MUTEX))) {
