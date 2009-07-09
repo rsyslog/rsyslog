@@ -176,6 +176,28 @@ if test "$enable_regexp" = "yes"; then
 fi
 
 
+# libnet (for UDP spoofing)
+AC_ARG_ENABLE(libnet,
+        [AS_HELP_STRING([--enable-libnet],[Enable libnet support (for UDP spoofing) @<:@default=yes@:>@])],
+        [case "${enableval}" in
+         yes) enable_libnet="yes" ;;
+          no) enable_libnet="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-libnet) ;;
+         esac],
+        [enable_libnet=yes]
+)
+AM_CONDITIONAL(ENABLE_LIBNET, test x$enable_libnet = xyes)
+if test "$enable_libnet" = "yes"; then
+	AC_CHECK_HEADER(libnet.h, [libnet_header="yes"], [libnet_header="no" enable_libnet="false"])
+	if test "$libnet_header" = "yes"; then
+		AC_CHECK_LIB(net, libnet_init,
+                        [AC_DEFINE(USE_LIBNET, 1, [Define if you want to enable libnet support]) 
+                         LIBNET_LIBS="-lnet"
+                         AC_SUBST(LIBNET_LIBS)], enable_libnet="false")
+	fi
+fi
+
+
 # zlib compression
 AC_ARG_ENABLE(zlib,
         [AS_HELP_STRING([--enable-zlib],[Enable zlib compression  support @<:@default=yes@:>@])],
