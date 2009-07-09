@@ -38,6 +38,7 @@
 #include <sys/socket.h>
 #include <sys/wait.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <arpa/inet.h>
 #include <assert.h>
 #include <unistd.h>
@@ -82,14 +83,27 @@ static char *inputMode2Str(inputMode_t mode)
 
 void readLine(int fd, char *ln)
 {
+	char *orig = ln;
 	char c;
 	int lenRead;
+
+	if(verbose)
+		fprintf(stderr, "begin readLine\n");
 	lenRead = read(fd, &c, 1);
 	while(lenRead == 1 && c != '\n') {
+		if(c == '\0') {
+			*ln = c;
+			fprintf(stderr, "Warning: there was a '\\0'-Byte in the read response "
+					"right after this string: '%s'\n", orig);
+			c = '?';
+		}
 		*ln++ = c;
-		 lenRead = read(fd, &c, 1);
+		lenRead = read(fd, &c, 1);
 	}
 	*ln = '\0';
+
+	if(verbose)
+		fprintf(stderr, "end readLine, val read '%s'\n", orig);
 }
 
 
@@ -133,7 +147,7 @@ tcpSend(char *buf, int lenBuf)
 					fprintf(stderr, "connect() failed\n");
 					return(1);
 				} else {
-					usleep(100);
+					usleep(100000); /* 0.1 sec, these are us! */
 				}
 			}
 		} 
@@ -207,7 +221,6 @@ int openPipe(char *configFile, pid_t *pid, int *pfd)
 	char *newenviron[] = { "RSYSLOG_DEBUG=debug nostdout",
 				"RSYSLOG_DEBUGLOG=log", NULL };
 	*/
-
 
 	sprintf(confFile, "-f%s/testsuites/%s.conf", srcdir,
 		(pszCustomConf == NULL) ? configFile : pszCustomConf);
