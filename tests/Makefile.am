@@ -15,6 +15,7 @@ TESTS = $(TESTRUNS) cfg.sh \
 
 if ENABLE_OMSTDOUT
 TESTS += omod-if-array.sh \
+	 proprepltest.sh \
 	 parsertest.sh \
 	 timestamp.sh \
 	 inputname.sh \
@@ -124,6 +125,11 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/threadingmq.conf \
 	   threadingmqaq.sh \
 	   testsuites/threadingmqaq.conf \
+	   proprepltest.sh \
+	   testsuites/rfctag.conf \
+	   testsuites/master.rfctag \
+	   testsuites/nolimittag.conf \
+	   testsuites/master.nolimittag \
 	   DiagTalker.java \
 	   cfg.sh
 

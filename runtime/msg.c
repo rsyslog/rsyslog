@@ -1130,15 +1130,21 @@ char *getProtocolVersionString(msg_t *pM)
 }
 
 
-static char *getRawMsg(msg_t *pM)
+static inline void
+getRawMsg(msg_t *pM, uchar **pBuf, int *piLen)
 {
-	if(pM == NULL)
-		return "";
-	else
-		if(pM->pszRawMsg == NULL)
-			return "";
-		else
-			return (char*)pM->pszRawMsg;
+	if(pM == NULL) {
+		*pBuf=  UCHAR_CONSTANT("");
+		*piLen = 0;
+	} else {
+		if(pM->pszRawMsg == NULL) {
+			*pBuf=  UCHAR_CONSTANT("");
+			*piLen = 0;
+		} else {
+			*pBuf = pM->pszRawMsg;
+			*piLen = pM->iLenRawMsg;
+		}
+	}
 }
 
 
@@ -1159,16 +1165,16 @@ int getMSGLen(msg_t *pM)
 	return((pM == NULL) ? 0 : pM->iLenMSG);
 }
 
-char *getMSG(msg_t *pM)
+uchar *getMSG(msg_t *pM)
 {
-	char *ret;
+	uchar *ret;
 	if(pM == NULL)
-		ret = "";
+		ret = UCHAR_CONSTANT("");
 	else {
 		if(pM->offMSG == -1)
-			ret = "";
+			ret = UCHAR_CONSTANT("");
 		else
-			ret = (char*)(pM->pszRawMsg + pM->offMSG);
+			ret = pM->pszRawMsg + pM->offMSG;
 	}
 	return ret;
 }
@@ -1613,21 +1619,23 @@ static inline void tryEmulateTAG(msg_t *pM, bool bLockMutex)
 }
 
 
-static inline char *getTAG(msg_t *pM)
+static inline void
+getTAG(msg_t *pM, uchar **ppBuf, int *piLen)
 {
-	char *ret;
-
-	if(pM == NULL)
-		ret = "";
-	else {
+	if(pM == NULL) {
+		*ppBuf = UCHAR_CONSTANT("");
+		*piLen = 0;
+	} else {
 		if(pM->iLenTAG == 0)
 			tryEmulateTAG(pM, LOCK_MUTEX);
-		if(pM->iLenTAG == 0)
-			ret = "";
-		else
-			ret = (char*) ((pM->iLenTAG < CONF_TAG_BUFSIZE) ? pM->TAG.szBuf : pM->TAG.pszTAG);
+		if(pM->iLenTAG == 0) {
+			*ppBuf = UCHAR_CONSTANT("");
+			*piLen = 0;
+		} else {
+			*ppBuf = (pM->iLenTAG < CONF_TAG_BUFSIZE) ? pM->TAG.szBuf : pM->TAG.pszTAG;
+			*piLen = pM->iLenTAG;
+		}
 	}
-	return(ret);
 }
 
 
@@ -1754,10 +1762,10 @@ int getProgramNameLen(msg_t *pM, bool bLockMutex)
 /* get the "programname" as sz string
  * rgerhards, 2005-10-19
  */
-char *getProgramName(msg_t *pM, bool bLockMutex)
+uchar *getProgramName(msg_t *pM, bool bLockMutex)
 {
 	prepareProgramName(pM, bLockMutex);
-	return (pM->pCSProgName == NULL) ? "" : (char*) rsCStrGetSzStrNoNULL(pM->pCSProgName);
+	return (pM->pCSProgName == NULL) ? UCHAR_CONSTANT("") : rsCStrGetSzStrNoNULL(pM->pCSProgName);
 }
 
 
@@ -1774,7 +1782,7 @@ static void tryEmulateAPPNAME(msg_t *pM)
 
 	if(getProtocolVersion(pM) == 0) {
 		/* only then it makes sense to emulate */
-		MsgSetAPPNAME(pM, getProgramName(pM, MUTEX_ALREADY_LOCKED));
+		MsgSetAPPNAME(pM, (char*)getProgramName(pM, MUTEX_ALREADY_LOCKED));
 	}
 }
 
@@ -2130,14 +2138,14 @@ static uchar *getNOW(eNOWType eNow)
  * be used in selector line processing.
  * rgerhards 2005-09-15
  */
-char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
+uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
                  propid_t propID, size_t *pPropLen,
 		 unsigned short *pbMustBeFreed)
 {
-	char *pRes; /* result pointer */
+	uchar *pRes; /* result pointer */
 	int bufLen = -1; /* length of string or -1, if not known */
-	char *pBufStart;
-	char *pBuf;
+	uchar *pBufStart;
+	uchar *pBuf;
 	int iLen;
 	short iOffs;
 
@@ -2159,16 +2167,17 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			bufLen = getMSGLen(pMsg);
 			break;
 		case PROP_TIMESTAMP:
-			pRes = getTimeReported(pMsg, pTpe->data.field.eDateFormat);
+			pRes = (uchar*)getTimeReported(pMsg, pTpe->data.field.eDateFormat);
 			break;
 		case PROP_HOSTNAME:
-			pRes = getHOSTNAME(pMsg);
+			pRes = (uchar*)getHOSTNAME(pMsg);
+			bufLen = getHOSTNAMELen(pMsg);
 			break;
 		case PROP_SYSLOGTAG:
-			pRes = getTAG(pMsg);
+			getTAG(pMsg, &pRes, &bufLen);
 			break;
 		case PROP_RAWMSG:
-			pRes = getRawMsg(pMsg);
+			getRawMsg(pMsg, &pRes, &bufLen);
 			break;
 		/* enable this, if someone actually uses UxTradMsg, delete after some  time has
 		 * passed and nobody complained -- rgerhards, 2009-06-16
@@ -2177,120 +2186,121 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			break;
 		*/
 		case PROP_INPUTNAME:
-			getInputName(pMsg, ((uchar**) &pRes), &bufLen);
+			getInputName(pMsg, &pRes, &bufLen);
 			break;
 		case PROP_FROMHOST:
-			pRes = (char*) getRcvFrom(pMsg);
+			pRes = getRcvFrom(pMsg);
 			break;
 		case PROP_FROMHOST_IP:
-			pRes = (char*) getRcvFromIP(pMsg);
+			pRes = getRcvFromIP(pMsg);
 			break;
 		case PROP_PRI:
-			pRes = getPRI(pMsg);
+			pRes = (uchar*)getPRI(pMsg);
 			break;
 		case PROP_PRI_TEXT:
-			pBuf = malloc(20 * sizeof(char));
+			pBuf = malloc(20 * sizeof(uchar));
 			if(pBuf == NULL) {
 				*pbMustBeFreed = 0;
-				return "**OUT OF MEMORY**";
+				return UCHAR_CONSTANT("**OUT OF MEMORY**");
 			} else {
 				*pbMustBeFreed = 1;
-				pRes = textpri(pBuf, 20, getPRIi(pMsg));
+				pRes = (uchar*)textpri((char*)pBuf, 20, getPRIi(pMsg));
 			}
 			break;
 		case PROP_IUT:
-			pRes = "1"; /* always 1 for syslog messages (a MonitorWare thing;)) */
+			pRes = UCHAR_CONSTANT("1"); /* always 1 for syslog messages (a MonitorWare thing;)) */
+			bufLen = 1;
 			break;
 		case PROP_SYSLOGFACILITY:
-			pRes = getFacility(pMsg);
+			pRes = (uchar*)getFacility(pMsg);
 			break;
 		case PROP_SYSLOGFACILITY_TEXT:
-			pRes = getFacilityStr(pMsg);
+			pRes = (uchar*)getFacilityStr(pMsg);
 			break;
 		case PROP_SYSLOGSEVERITY:
-			pRes = getSeverity(pMsg);
+			pRes = (uchar*)getSeverity(pMsg);
 			break;
 		case PROP_SYSLOGSEVERITY_TEXT:
-			pRes = getSeverityStr(pMsg);
+			pRes = (uchar*)getSeverityStr(pMsg);
 			break;
 		case PROP_TIMEGENERATED:
-			pRes = getTimeGenerated(pMsg, pTpe->data.field.eDateFormat);
+			pRes = (uchar*)getTimeGenerated(pMsg, pTpe->data.field.eDateFormat);
 			break;
 		case PROP_PROGRAMNAME:
 			pRes = getProgramName(pMsg, LOCK_MUTEX);
 			break;
 		case PROP_PROTOCOL_VERSION:
-			pRes = getProtocolVersionString(pMsg);
+			pRes = (uchar*)getProtocolVersionString(pMsg);
 			break;
 		case PROP_STRUCTURED_DATA:
-			pRes = getStructuredData(pMsg);
+			pRes = (uchar*)getStructuredData(pMsg);
 			break;
 		case PROP_APP_NAME:
-			pRes = getAPPNAME(pMsg, LOCK_MUTEX);
+			pRes = (uchar*)getAPPNAME(pMsg, LOCK_MUTEX);
 			break;
 		case PROP_PROCID:
-			pRes = getPROCID(pMsg, LOCK_MUTEX);
+			pRes = (uchar*)getPROCID(pMsg, LOCK_MUTEX);
 			break;
 		case PROP_MSGID:
-			pRes = getMSGID(pMsg);
+			pRes = (uchar*)getMSGID(pMsg);
 			break;
 		case PROP_SYS_NOW:
-			if((pRes = (char*) getNOW(NOW_NOW)) == NULL) {
-				return "***OUT OF MEMORY***";
+			if((pRes = getNOW(NOW_NOW)) == NULL) {
+				return UCHAR_CONSTANT("**OUT OF MEMORY**");
 			} else
 				*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
 			break;
 		case PROP_SYS_YEAR:
-			if((pRes = (char*) getNOW(NOW_YEAR)) == NULL) {
-				return "***OUT OF MEMORY***";
+			if((pRes = getNOW(NOW_YEAR)) == NULL) {
+				return UCHAR_CONSTANT("**OUT OF MEMORY**");
 			} else
 				*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
 			break;
 		case PROP_SYS_MONTH:
-			if((pRes = (char*) getNOW(NOW_MONTH)) == NULL) {
-				return "***OUT OF MEMORY***";
+			if((pRes = getNOW(NOW_MONTH)) == NULL) {
+				return UCHAR_CONSTANT("**OUT OF MEMORY**");
 			} else
 				*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
 			break;
 		case PROP_SYS_DAY:
-			if((pRes = (char*) getNOW(NOW_DAY)) == NULL) {
-				return "***OUT OF MEMORY***";
+			if((pRes = getNOW(NOW_DAY)) == NULL) {
+				return UCHAR_CONSTANT("**OUT OF MEMORY**");
 			} else
 				*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
 			break;
 		case PROP_SYS_HOUR:
-			if((pRes = (char*) getNOW(NOW_HOUR)) == NULL) {
-				return "***OUT OF MEMORY***";
+			if((pRes = getNOW(NOW_HOUR)) == NULL) {
+				return UCHAR_CONSTANT("**OUT OF MEMORY**");
 			} else
 				*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
 			break;
 		case PROP_SYS_HHOUR:
-			if((pRes = (char*) getNOW(NOW_HHOUR)) == NULL) {
-				return "***OUT OF MEMORY***";
+			if((pRes = getNOW(NOW_HHOUR)) == NULL) {
+				return UCHAR_CONSTANT("**OUT OF MEMORY**");
 			} else
 				*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
 			break;
 		case PROP_SYS_QHOUR:
-			if((pRes = (char*) getNOW(NOW_QHOUR)) == NULL) {
-				return "***OUT OF MEMORY***";
+			if((pRes = getNOW(NOW_QHOUR)) == NULL) {
+				return UCHAR_CONSTANT("**OUT OF MEMORY**");
 			} else
 				*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
 			break;
 		case PROP_SYS_MINUTE:
-			if((pRes = (char*) getNOW(NOW_MINUTE)) == NULL) {
-				return "***OUT OF MEMORY***";
+			if((pRes = getNOW(NOW_MINUTE)) == NULL) {
+				return UCHAR_CONSTANT("**OUT OF MEMORY**");
 			} else
 				*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
 			break;
 		case PROP_SYS_MYHOSTNAME:
-			pRes = (char*) glbl.GetLocalHostName();
+			pRes = glbl.GetLocalHostName();
 			break;
 		default:
 			/* there is no point in continuing, we may even otherwise render the
 			 * error message unreadable. rgerhards, 2007-07-10
 			 */
 			dbgprintf("invalid property id: '%d'\n", propID);
-			return "**INVALID PROPERTY NAME**";
+			return UCHAR_CONSTANT("**INVALID PROPERTY NAME**");
 	}
 
 
@@ -2310,8 +2320,8 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 	 */
 	if(pTpe->data.field.has_fields == 1) {
 		size_t iCurrFld;
-		char *pFld;
-		char *pFldEnd;
+		uchar *pFld;
+		uchar *pFldEnd;
 		/* first, skip to the field in question. The field separator
 		 * is always one character and is stored in the template entry.
 		 */
@@ -2349,7 +2359,7 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 				if(*pbMustBeFreed == 1)
 					free(pRes);
 				*pbMustBeFreed = 0;
-				return "**OUT OF MEMORY**";
+				return UCHAR_CONSTANT("**OUT OF MEMORY**");
 			}
 			/* now copy */
 			memcpy(pBuf, pFld, iLen);
@@ -2366,12 +2376,12 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			if(*pbMustBeFreed == 1)
 				free(pRes);
 			*pbMustBeFreed = 0;
-			return "**FIELD NOT FOUND**";
+			return UCHAR_CONSTANT("**FIELD NOT FOUND**");
 		}
 	} else if(pTpe->data.field.iFromPos != 0 || pTpe->data.field.iToPos != 0) {
 		/* we need to obtain a private copy */
 		int iFrom, iTo;
-		char *pSb;
+		uchar *pSb;
 		iFrom = pTpe->data.field.iFromPos;
 		iTo = pTpe->data.field.iToPos;
 		/* need to zero-base to and from (they are 1-based!) */
@@ -2379,44 +2389,55 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			--iFrom;
 		if(iTo > 0)
 			--iTo;
-		iLen = iTo - iFrom + 1; /* the +1 is for an actual char, NOT \0! */
-		pBufStart = pBuf = malloc((iLen + 1) * sizeof(char));
-		if(pBuf == NULL) {
+		if(bufLen == -1)
+			bufLen = ustrlen(pRes);
+		if(iFrom == 0 && iTo >=  bufLen) { 
+			/* in this case, the requested string is a superset of what we already have,
+			 * so there is no need to do any processing. This is a frequent case for size-limited
+			 * fields like TAG in the default forwarding template (so it is a useful optimization
+			 * to check for this condition ;)). -- rgerhards, 2009-07-09
+			 */
+			; /*DO NOTHING*/
+		} else {
+			iLen = iTo - iFrom + 1; /* the +1 is for an actual char, NOT \0! */
+			pBufStart = pBuf = malloc((iLen + 1) * sizeof(char));
+			if(pBuf == NULL) {
+				if(*pbMustBeFreed == 1)
+					free(pRes);
+				*pbMustBeFreed = 0;
+				return UCHAR_CONSTANT("**OUT OF MEMORY**");
+			}
+			pSb = pRes;
+			if(iFrom) {
+			/* skip to the start of the substring (can't do pointer arithmetic
+			 * because the whole string might be smaller!!)
+			 */
+				while(*pSb && iFrom) {
+					--iFrom;
+					++pSb;
+				}
+			}
+			/* OK, we are at the begin - now let's copy... */
+			bufLen = iLen;
+			while(*pSb && iLen) {
+				*pBuf++ = *pSb;
+				++pSb;
+				--iLen;
+			}
+			*pBuf = '\0';
+			bufLen -= iLen; /* subtract remaining length if the string was smaller! */
 			if(*pbMustBeFreed == 1)
 				free(pRes);
-			*pbMustBeFreed = 0;
-			return "**OUT OF MEMORY**";
+			pRes = pBufStart;
+			*pbMustBeFreed = 1;
 		}
-		pSb = pRes;
-		if(iFrom) {
-		/* skip to the start of the substring (can't do pointer arithmetic
-		 * because the whole string might be smaller!!)
-		 */
-			while(*pSb && iFrom) {
-				--iFrom;
-				++pSb;
-			}
-		}
-		/* OK, we are at the begin - now let's copy... */
-		bufLen = iLen;
-		while(*pSb && iLen) {
-			*pBuf++ = *pSb;
-			++pSb;
-			--iLen;
-		}
-		*pBuf = '\0';
-		bufLen -= iLen; /* subtract remaining lenght if the string was smaller! */
-		if(*pbMustBeFreed == 1)
-			free(pRes);
-		pRes = pBufStart;
-		*pbMustBeFreed = 1;
 #ifdef FEATURE_REGEXP
 	} else {
 		/* Check for regular expressions */
 		if (pTpe->data.field.has_regex != 0) {
 			if (pTpe->data.field.has_regex == 2)
 				/* Could not compile regex before! */
-				return "**NO MATCH** **BAD REGULAR EXPRESSION**";
+				return UCHAR_CONSTANT("**NO MATCH** **BAD REGULAR EXPRESSION**");
 
 			dbgprintf("string to match for regex is: %s\n", pRes);
 
@@ -2429,7 +2450,7 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 				 */
 				while(!bFound) {
 					int iREstat;
-					iREstat = regexp.regexec(&pTpe->data.field.re, pRes + iOffs, nmatch, pmatch, 0);
+					iREstat = regexp.regexec(&pTpe->data.field.re, (char*)(pRes + iOffs), nmatch, pmatch, 0);
 					dbgprintf("regexec return is %d\n", iREstat);
 					if(iREstat == 0) {
 						if(pmatch[0].rm_so == -1) {
@@ -2457,11 +2478,11 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 							*pbMustBeFreed = 0;
 						}
 						if(pTpe->data.field.nomatchAction == TPL_REGEX_NOMATCH_USE_DFLTSTR)
-							return "**NO MATCH**";
+							return UCHAR_CONSTANT("**NO MATCH**");
 						else if(pTpe->data.field.nomatchAction == TPL_REGEX_NOMATCH_USE_ZERO)
-							return "0";
+							return UCHAR_CONSTANT("0");
 						else
-							return "";
+							return UCHAR_CONSTANT("");
 					}
 				} else {
 					/* Match- but did it match the one we wanted? */
@@ -2473,24 +2494,24 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 								*pbMustBeFreed = 0;
 							}
 							if(pTpe->data.field.nomatchAction == TPL_REGEX_NOMATCH_USE_DFLTSTR)
-								return "**NO MATCH**";
+								return UCHAR_CONSTANT("**NO MATCH**");
 							else
-								return "";
+								return UCHAR_CONSTANT("");
 						}
 					}
 					/* OK, we have a usable match - we now need to malloc pB */
 					int iLenBuf;
-					char *pB;
+					uchar *pB;
 
 					iLenBuf = pmatch[pTpe->data.field.iSubMatchToUse].rm_eo
 						  - pmatch[pTpe->data.field.iSubMatchToUse].rm_so;
-					pB = (char *) malloc((iLenBuf + 1) * sizeof(char));
+					pB = malloc((iLenBuf + 1) * sizeof(uchar));
 
 					if (pB == NULL) {
 						if (*pbMustBeFreed == 1)
 							free(pRes);
 						*pbMustBeFreed = 0;
-						return "**OUT OF MEMORY ALLOCATING pBuf**";
+						return UCHAR_CONSTANT("**OUT OF MEMORY**");
 					}
 
 					/* Lets copy the matched substring to the buffer */
@@ -2513,7 +2534,7 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 					free(pRes);
 					*pbMustBeFreed = 0;
 				}
-				return "***REGEXP NOT AVAILABLE***";
+				return UCHAR_CONSTANT("***REGEXP NOT AVAILABLE***");
 			}
 		}
 #endif /* #ifdef FEATURE_REGEXP */
@@ -2525,7 +2546,7 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 		uchar cFirst = *pRes; /* save first char */
 		if(*pbMustBeFreed == 1)
 			free(pRes);
-		pRes = (cFirst == ' ') ? "" : " ";
+		pRes = (cFirst == ' ') ? UCHAR_CONSTANT("") : UCHAR_CONSTANT(" ");
 		bufLen = (cFirst == ' ') ? 0 : 1;
 		*pbMustBeFreed = 0;
 	}
@@ -2537,21 +2558,21 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 		if(pTpe->data.field.eCaseConv != tplCaseConvNo) {
 			/* we need to obtain a private copy */
 			if(bufLen == -1)
-				bufLen = strlen(pRes);
-			char *pBStart;
-			char *pB;
-			char *pSrc;
+				bufLen = ustrlen(pRes);
+			uchar *pBStart;
+			uchar *pB;
+			uchar *pSrc;
 			pBStart = pB = malloc((bufLen + 1) * sizeof(char));
 			if(pB == NULL) {
 				if(*pbMustBeFreed == 1)
 					free(pRes);
 				*pbMustBeFreed = 0;
-				return "**OUT OF MEMORY**";
+				return UCHAR_CONSTANT("**OUT OF MEMORY**");
 			}
 			pSrc = pRes;
 			while(*pSrc) {
 				*pB++ = (pTpe->data.field.eCaseConv == tplCaseConvUpper) ?
-					(char)toupper((int)*pSrc) : (char)tolower((int)*pSrc);
+					(uchar)toupper((int)*pSrc) : (uchar)tolower((int)*pSrc);
 				/* currently only these two exist */
 				++pSrc;
 			}
@@ -2575,10 +2596,10 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 		 */
 		if(pTpe->data.field.options.bDropCC) {
 			int iLenBuf = 0;
-			char *pSrc = pRes;
-			char *pDstStart;
-			char *pDst;
-			char bDropped = 0;
+			uchar *pSrc = pRes;
+			uchar *pDstStart;
+			uchar *pDst;
+			uchar bDropped = 0;
 			
 			while(*pSrc) {
 				if(!iscntrl((int) *pSrc++))
@@ -2593,7 +2614,7 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 					if(*pbMustBeFreed == 1)
 						free(pRes);
 					*pbMustBeFreed = 0;
-					return "**OUT OF MEMORY**";
+					return UCHAR_CONSTANT("**OUT OF MEMORY**");
 				}
 				for(pSrc = pRes; *pSrc; pSrc++) {
 					if(!iscntrl((int) *pSrc))
@@ -2607,9 +2628,9 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 				*pbMustBeFreed = 1;
 			}
 		} else if(pTpe->data.field.options.bSpaceCC) {
-			char *pSrc;
-			char *pDstStart;
-			char *pDst;
+			uchar *pSrc;
+			uchar *pDstStart;
+			uchar *pDst;
 			
 			if(*pbMustBeFreed == 1) {
 				/* in this case, we already work on dynamic
@@ -2623,13 +2644,13 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 				}
 			} else {
 				if(bufLen == -1)
-					bufLen = strlen(pRes);
+					bufLen = ustrlen(pRes);
 				pDst = pDstStart = malloc(bufLen + 1);
 				if(pDst == NULL) {
 					if(*pbMustBeFreed == 1)
 						free(pRes);
 					*pbMustBeFreed = 0;
-					return "**OUT OF MEMORY**";
+					return UCHAR_CONSTANT("**OUT OF MEMORY**");
 				}
 				for(pSrc = pRes; *pSrc; pSrc++) {
 					if(iscntrl((int) *pSrc))
@@ -2649,7 +2670,7 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			 */
 			int iNumCC = 0;
 			int iLenBuf = 0;
-			char *pB;
+			uchar *pB;
 
 			for(pB = pRes ; *pB ; ++pB) {
 				++iLenBuf;
@@ -2659,21 +2680,21 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 
 			if(iNumCC > 0) { /* if 0, there is nothing to escape, so we are done */
 				/* OK, let's do the escaping... */
-				char *pBStart;
-				char szCCEsc[8]; /* buffer for escape sequence */
+				uchar *pBStart;
+				uchar szCCEsc[8]; /* buffer for escape sequence */
 				int i;
 
 				iLenBuf += iNumCC * 4;
-				pBStart = pB = malloc((iLenBuf + 1) * sizeof(char));
+				pBStart = pB = malloc((iLenBuf + 1) * sizeof(uchar));
 				if(pB == NULL) {
 					if(*pbMustBeFreed == 1)
 						free(pRes);
 					*pbMustBeFreed = 0;
-					return "**OUT OF MEMORY**";
+					return UCHAR_CONSTANT("**OUT OF MEMORY**");
 				}
 				while(*pRes) {
 					if(iscntrl((int) *pRes)) {
-						snprintf(szCCEsc, sizeof(szCCEsc), "#%3.3d", *pRes);
+						snprintf((char*)szCCEsc, sizeof(szCCEsc), "#%3.3d", *pRes);
 						for(i = 0 ; i < 4 ; ++i)
 							*pB++ = szCCEsc[i];
 					} else {
@@ -2697,10 +2718,10 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 	if(pTpe->data.field.options.bSecPathDrop || pTpe->data.field.options.bSecPathReplace) {
 		if(pTpe->data.field.options.bSecPathDrop) {
 			int iLenBuf = 0;
-			char *pSrc = pRes;
-			char *pDstStart;
-			char *pDst;
-			char bDropped = 0;
+			uchar *pSrc = pRes;
+			uchar *pDstStart;
+			uchar *pDst;
+			uchar bDropped = 0;
 			
 			while(*pSrc) {
 				if(*pSrc++ != '/')
@@ -2715,7 +2736,7 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 					if(*pbMustBeFreed == 1)
 						free(pRes);
 					*pbMustBeFreed = 0;
-					return "**OUT OF MEMORY**";
+					return UCHAR_CONSTANT("**OUT OF MEMORY**");
 				}
 				for(pSrc = pRes; *pSrc; pSrc++) {
 					if(*pSrc != '/')
@@ -2729,9 +2750,9 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 				*pbMustBeFreed = 1;
 			}
 		} else {
-			char *pSrc;
-			char *pDstStart;
-			char *pDst;
+			uchar *pSrc;
+			uchar *pDstStart;
+			uchar *pDst;
 			
 			if(*pbMustBeFreed == 1) {
 				/* here, again, we can modify the string as we already obtained
@@ -2745,13 +2766,13 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 				}
 			} else {
 				if(bufLen == -1)
-					bufLen = strlen(pRes);
+					bufLen = ustrlen(pRes);
 				pDst = pDstStart = malloc(bufLen + 1);
 				if(pDst == NULL) {
 					if(*pbMustBeFreed == 1)
 						free(pRes);
 					*pbMustBeFreed = 0;
-					return "**OUT OF MEMORY**";
+					return UCHAR_CONSTANT("**OUT OF MEMORY**");
 				}
 				for(pSrc = pRes; *pSrc; pSrc++) {
 					if(*pSrc == '/')
@@ -2771,19 +2792,19 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 		
 		/* check for "." and ".." (note the parenthesis in the if condition!) */
 		if((*pRes == '.') && (*(pRes + 1) == '\0' || (*(pRes + 1) == '.' && *(pRes + 2) == '\0'))) {
-			char *pTmp = pRes;
+			uchar *pTmp = pRes;
 
 			if(*(pRes + 1) == '\0')
-				pRes = "_";
+				pRes = UCHAR_CONSTANT("_");
 			else
-				pRes = "_.";;
+				pRes = UCHAR_CONSTANT("_.");;
 			if(*pbMustBeFreed == 1)
 				free(pTmp);
 			*pbMustBeFreed = 0;
 		} else if(*pRes == '\0') {
 			if(*pbMustBeFreed == 1)
 				free(pRes);
-			pRes = "_";
+			pRes = UCHAR_CONSTANT("_");
 			bufLen = 1;
 			*pbMustBeFreed = 0;
 		}
@@ -2794,19 +2815,19 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 	 */
 	if(pTpe->data.field.options.bDropLastLF && !pTpe->data.field.options.bEscapeCC) {
 		int iLn;
-		char *pB;
+		uchar *pB;
 		if(bufLen == -1)
-			bufLen = strlen(pRes);
+			bufLen = ustrlen(pRes);
 		iLn = bufLen;
 		if(iLn > 0 && *(pRes + iLn - 1) == '\n') {
 			/* we have a LF! */
 			/* check if we need to obtain a private copy */
 			if(*pbMustBeFreed == 0) {
 				/* ok, original copy, need a private one */
-				pB = malloc((iLn + 1) * sizeof(char));
+				pB = malloc((iLn + 1) * sizeof(uchar));
 				if(pB == NULL) {
 					*pbMustBeFreed = 0;
-					return "**OUT OF MEMORY**";
+					return UCHAR_CONSTANT("**OUT OF MEMORY**");
 				}
 				memcpy(pB, pRes, iLn - 1);
 				pRes = pB;
@@ -2825,19 +2846,19 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 	if(pTpe->data.field.options.bCSV) {
 		/* we need to obtain a private copy, as we need to at least add the double quotes */
 		int iBufLen;
-		char *pBStart;
-		char *pDst;
-		char *pSrc;
+		uchar *pBStart;
+		uchar *pDst;
+		uchar *pSrc;
 		if(bufLen == -1)
-			bufLen = strlen(pRes);
+			bufLen = ustrlen(pRes);
 		iBufLen = bufLen;
 		/* the malloc may be optimized, we currently use the worst case... */
-		pBStart = pDst = malloc((2 * iBufLen + 3) * sizeof(char));
+		pBStart = pDst = malloc((2 * iBufLen + 3) * sizeof(uchar));
 		if(pDst == NULL) {
 			if(*pbMustBeFreed == 1)
 				free(pRes);
 			*pbMustBeFreed = 0;
-			return "**OUT OF MEMORY**";
+			return UCHAR_CONSTANT("**OUT OF MEMORY**");
 		}
 		pSrc = pRes;
 		*pDst++ = '"'; /* starting quote */
@@ -2856,7 +2877,7 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 	}
 
 	if(bufLen == -1)
-		bufLen = strlen(pRes);
+		bufLen = ustrlen(pRes);
 	*pPropLen = bufLen;
 
 	ENDfunc

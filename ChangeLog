@@ -67,6 +67,10 @@ Version 4.5.1  [DEVEL] (rgerhards), 2009-07-??
   was on. Happend e.g. with imuxsock.
 - added $klogConsoleLogLevel directive which permits to set a new
   console log level while rsyslog is active
+- bugfix: message could be truncated after TAG, often when forwarding
+  This was a result of an internal processing error if maximum field
+  sizes had been specified in the property replacer.
+- testbench improvements
 ---------------------------------------------------------------------------
 Version 4.5.0  [DEVEL] (rgerhards), 2009-07-02
 - activation order of inputs changed, they are now activated only after
