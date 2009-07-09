@@ -50,11 +50,13 @@ MODULE_TYPE_OUTPUT
 DEF_OMOD_STATIC_DATA
 
 /* config variables */
-static int bUseArrayInterface;		/* shall action use array instead of string template interface? */
+static int bUseArrayInterface = 0;	/* shall action use array instead of string template interface? */
+static int bEnsureLFEnding = 1;		/* shall action use array instead of string template interface? */
 
 
 typedef struct _instanceData {
 	int bUseArrayInterface;		/* uses action use array instead of string template interface? */
+	int bEnsureLFEnding;		/* ensure that a linefeed is written at the end of EACH record (test aid for nettester) */
 } instanceData;
 
 BEGINcreateInstance
@@ -90,6 +92,7 @@ BEGINdoAction
 	int iParam;
 	int iBuf;
 	char szBuf[65564];
+	size_t len;
 CODESTARTdoAction
 	if(pData->bUseArrayInterface) {
 		/* if we use array passing, we need to put together a string
@@ -120,7 +123,11 @@ CODESTARTdoAction
 	} else {
 		toWrite = (char*) ppString[0];
 	}
+	len = strlen(toWrite);
 	write(1, toWrite, strlen(toWrite)); /* 1 is stdout! */
+	if(pData->bEnsureLFEnding && toWrite[len-1] != '\n') {
+		write(1, "\n", 1); /* write missing LF */
+	}
 ENDdoAction
 
 
@@ -143,6 +150,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	iTplOpts = (bUseArrayInterface == 0) ? 0 : OMSR_TPL_AS_ARRAY;
 	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, iTplOpts, (uchar*) "RSYSLOG_FileFormat"));
 	pData->bUseArrayInterface = bUseArrayInterface;
+	pData->bEnsureLFEnding = bEnsureLFEnding;
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
@@ -165,6 +173,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 {
 	DEFiRet;
 	bUseArrayInterface = 0;
+	bEnsureLFEnding = 1;
 	RETiRet;
 }
 
@@ -195,6 +204,8 @@ CODEmodInit_QueryRegCFSLineHdlr
 		CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionomstdoutarrayinterface", 0, eCmdHdlrBinary, NULL,
 			                   &bUseArrayInterface, STD_LOADABLE_MODULE_ID));
 	}
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionomstdoutensurelfending", 0, eCmdHdlrBinary, NULL,
+				   &bEnsureLFEnding, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
 				    resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
