@@ -31,6 +31,8 @@ html_files = \
 	version_naming.html \
 	contributors.html \
 	dev_queue.html \
+	omstdout.html \
+	omudpspoof.html \
 	omsnmp.html \
 	ommysql.html \
 	omoracle.html \
