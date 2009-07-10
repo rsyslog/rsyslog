@@ -382,6 +382,8 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_ZLIB_ERR = -2141, /**< error during zlib call */
 	RS_RET_VAR_NOT_FOUND = -2142, /**< variable not found */
 	RS_RET_NO_SRCNAME_TPL = -2143, /**< sourcename template was not specified where one was needed (omudpspoof spoof addr) */
+	RS_RET_HOST_NOT_SPECIFIED = -2144, /**< (target) host was not specified where it was needed */
+	RS_RET_ERR_LIBNET_INIT = -2145, /**< error initializing libnet */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */
