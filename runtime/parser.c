@@ -115,7 +115,6 @@ static inline rsRetVal uncompressMessage(msg_t *pMsg)
 			FINALIZE; /* unconditional exit, nothing left to do... */
 		}
 		MsgSetRawMsg(pMsg, (char*)deflateBuf, iLenDefBuf);
-		free(deflateBuf);
 	}
 finalize_it:
 	if(deflateBuf != NULL)
