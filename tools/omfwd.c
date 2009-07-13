@@ -411,11 +411,11 @@ CODESTARTdoAction
 	 */
 	if(pData->compressionLevel && (l > MIN_SIZE_FOR_COMPRESS)) {
 		Bytef *out;
-		teste das hier! uLongf destLen = iMaxLine + iMaxLine/100 +12; /* recommended value from zlib doc */
+		uLongf destLen = iMaxLine + iMaxLine/100 +12; /* recommended value from zlib doc */
 		uLong srcLen = l;
 		int ret;
 		/* TODO: optimize malloc sequence? -- rgerhards, 2008-09-02 */
-		CHKmalloc(out = (Bytef*) malloc(destlen));
+		CHKmalloc(out = (Bytef*) malloc(destLen));
 		out[0] = 'z';
 		out[1] = '\0';
 		ret = compress2((Bytef*) out+1, &destLen, (Bytef*) psz,
