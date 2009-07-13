@@ -4,6 +4,7 @@ Version 4.2.1  [v4-stable] (rgerhards), 2009-0?-??
   but this caused ssh sessions to hang. Now we close them after the 
   initial initialization. See forum thread:
   http://kb.monitorware.com/controlling-terminal-issues-t9875.html
+- bugfix: sending syslog messages with zip compression did not work
 ---------------------------------------------------------------------------
 Version 4.2.0  [v4-stable] (rgerhards), 2009-06-23
 - bugfix: light and full delay watermarks had invalid values, badly
@@ -159,7 +160,10 @@ version before switching to this one.
 - bugfix: memory leak in ompgsql
   Thanks to Ken for providing the patch
 ---------------------------------------------------------------------------
-Version 3.22.1 [v3-stable] (rgerhards), 2009-04-??
+Version 3.22.2 [v3-stable] (rgerhards), 2009-07-??
+- bugfix: sending syslog messages with zip compression did not work
+---------------------------------------------------------------------------
+Version 3.22.1 [v3-stable] (rgerhards), 2009-07-02
 - bugfix: invalid error message issued if $inlcudeConfig was on an empty
   set of files (e.g. *.conf, where none such files existed)
   thanks to Michael Biebl for reporting this bug

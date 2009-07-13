@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([rsyslog],[4.2.0],[rsyslog@lists.adiscon.com])
+AC_INIT([rsyslog],[4.2.1],[rsyslog@lists.adiscon.com])
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([ChangeLog])
 AC_CONFIG_MACRO_DIR([m4])
@@ -402,7 +402,7 @@ if test "x$enable_mysql" = "xyes"; then
     [yes],,,
   )
   if test "x${HAVE_MYSQL_CONFIG}" != "xyes"; then
-    AC_MSG_FAILURE([mysql_config not found in PATH])
+    AC_MSG_FAILURE([mysql_config not found in PATH - usually a package named mysql-dev, libmysql-dev or similar, is missing - install it to fix this issue])
   fi
   AC_CHECK_LIB(
     [mysqlclient],
