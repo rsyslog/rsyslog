@@ -416,7 +416,7 @@ if test "x$enable_mysql" = "xyes"; then
     [yes],,,
   )
   if test "x${HAVE_MYSQL_CONFIG}" != "xyes"; then
-    AC_MSG_FAILURE([mysql_config not found in PATH])
+    AC_MSG_FAILURE([mysql_config not found in PATH - usually a package named mysql-dev, libmysql-dev or similar, is missing - install it to fix this issue])
   fi
   AC_CHECK_LIB(
     [mysqlclient],
