@@ -600,7 +600,7 @@ static inline rsRetVal printline(uchar *hname, uchar *hnameIP, uchar *msg, int f
 	if((pMsg->msgFlags & PARSE_HOSTNAME) == 0)
 		MsgSetHOSTNAME(pMsg, hname, ustrlen(hname));
 	MsgSetRcvFromStr(pMsg, hname, ustrlen(hname), &propFromHost);
-	CHKiRet(MsgSetRcvFromIPStr(pMsg, hnameIP, ustrlen(hname), &propFromHostIP));
+	CHKiRet(MsgSetRcvFromIPStr(pMsg, hnameIP, ustrlen(hnameIP), &propFromHostIP));
 	MsgSetAfterPRIOffs(pMsg, p - msg);
 
 	logmsg(pMsg, flags);
