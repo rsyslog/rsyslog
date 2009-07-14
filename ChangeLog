@@ -14,6 +14,12 @@ Version 4.5.1  [DEVEL] (rgerhards), 2009-07-??
 - bugfix: message could be truncated after TAG, often when forwarding
   This was a result of an internal processing error if maximum field
   sizes had been specified in the property replacer.
+- added ability for the TCP output action to "rebind" its send socket after
+  sending n messages (actually, it re-opens the connection, the name is 
+  used because this is a concept very similiar to $ActionUDPRebindInterval).
+  New config directive $ActionSendTCPRebindInterval added for the purpose.
+  By default, rebinding is disabled. This is considered useful for load
+  balancers.
 - testbench improvements
 ---------------------------------------------------------------------------
 Version 4.5.0  [DEVEL] (rgerhards), 2009-07-02
