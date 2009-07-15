@@ -13,7 +13,6 @@ html_files = \
 	ipv6.html \
 	log_rotation_fix_size.html \
 	manual.html \
-	man_rsyslogd.html \
 	modules.html \
 	property_replacer.html \
 	rsyslog_ng_comparison.html \
@@ -91,6 +90,7 @@ html_files = \
 	rsconf1_resetconfigvariables.html \
 	rsconf1_umask.html \
 	v3compatibility.html \
+	v4compatibility.html \
 	im3195.html \
 	netstream.html \
 	ns_gtls.html \

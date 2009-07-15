@@ -55,7 +55,7 @@ DEFobjCurrIf(prop)
  */
 static uchar *pszWorkDir = NULL;
 static int bOptimizeUniProc = 1;	/* enable uniprocessor optimizations */
-static int bHUPisRestart = 1;		/* should SIGHUP cause a full system restart? */
+static int bHUPisRestart = 0;		/* should SIGHUP cause a full system restart? */
 static int bPreserveFQDN = 0;		/* should FQDNs always be preserved? */
 static int iMaxLine = 2048;		/* maximum length of a syslog message */
 static int iDefPFFamily = PF_UNSPEC;     /* protocol family (IPv4, IPv6 or both) */
@@ -293,7 +293,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	}
 	bDropMalPTRMsgs = 0;
 	bOptimizeUniProc = 1;
-	bHUPisRestart = 1;
+	bHUPisRestart = 0;
 	bPreserveFQDN = 0;
 	return RS_RET_OK;
 }
