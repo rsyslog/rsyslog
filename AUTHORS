@@ -1,19 +1,14 @@
-Rainer Gerhards <rgerhards@adiscon.com>, Adiscon GmbH
-Michael Meckelein <mmeckelein@hq.adiscon.com>, Adiscon GmbH
+Thankfully, we have had so many contributions that maintaining the
+AUTHORS file would be a big task in itself. On the other hand, we
+now use git and I make sure that each author receives proper credit
+for patches I receive.
 
-Contributors
-Michael Biebl
- - helped continously with autotools
- - provided numerous advise on how to do things under Linux
- - provided excellent advise in many, many cases
-Andres Riancho (andres-dot-riancho-at-gmail-dot-com)
- (alias APR in code files)
- - supplied regexp functionality for the property replacer - a great feature.
-   thanks!
-Bjoern Kalkbrenner
- - provided code for the "execute shell script" action
-Peter Vrabec
- - provided IPv6-enabling code
-varmojfekoj
- - helped with a variety of things and, most importantly, contributed
-   the gssapi functionality
+So rather than trying to reproduce the git author log here (and
+often making mistakes in that), I invite you to check the git logs.
+You can also do this online at
+
+http://git.adiscon.com/?p=rsyslog.git;a=summary
+
+Rainer Gerhards
+<rgerhards@adiscon.com>
+lead rsyslog developer

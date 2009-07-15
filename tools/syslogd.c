@@ -16,12 +16,9 @@
  * parts of the code have been rewritten.
  *
  * This Project was intiated and is maintained by
- * Rainer Gerhards <rgerhards@hq.adiscon.com>. See
- * AUTHORS to learn who helped make it become a reality.
+ * Rainer Gerhards <rgerhards@hq.adiscon.com>.
  *
- * If you have questions about rsyslogd in general, please email
- * info@adiscon.com. To learn more about rsyslogd, please visit
- * http://www.rsyslog.com.
+ * For further information, please see http://www.rsyslog.com
  *
  * \author Rainer Gerhards <rgerhards@adiscon.com>
  * \date 2003-10-17
