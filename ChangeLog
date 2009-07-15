@@ -1,4 +1,10 @@
 ---------------------------------------------------------------------------
+Version 4.5.2  [DEVEL] (rgerhards), 2009-07-??
+- bugfix: memory leak with some input modules. Those inputs that
+  use parseAndSubmitMsg() leak two small memory blocks with every message.
+  Typically, those process only relatively few messages, so the issue 
+  does most probably not have any effect in practice.
+---------------------------------------------------------------------------
 Version 4.5.1  [DEVEL] (rgerhards), 2009-07-15
 - CONFIG CHANGE: $HUPisRestart default is now "off". We are doing this
   to support removal of restart-type HUP in v5.

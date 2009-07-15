@@ -602,6 +602,8 @@ static inline rsRetVal printline(uchar *hname, uchar *hnameIP, uchar *msg, int f
 	MsgSetRcvFromStr(pMsg, hname, ustrlen(hname), &propFromHost);
 	CHKiRet(MsgSetRcvFromIPStr(pMsg, hnameIP, ustrlen(hnameIP), &propFromHostIP));
 	MsgSetAfterPRIOffs(pMsg, p - msg);
+	prop.Destruct(&propFromHost);
+	prop.Destruct(&propFromHostIP);
 
 	logmsg(pMsg, flags);
 
