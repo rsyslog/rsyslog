@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 4.5.1  [DEVEL] (rgerhards), 2009-07-??
+- CONFIG CHANGE: $HUPisRestart default is now "off". We are doing this
+  to support removal of restart-type HUP in v5.
 - bugfix: fromhost-ip was sometimes truncated
 - bugfix: potential segfault when zip-compressed syslog records were
   received (double free)

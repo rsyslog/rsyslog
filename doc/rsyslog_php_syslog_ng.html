@@ -107,7 +107,7 @@ server machine, &quot;syslog&quot; is the database name (default from the schema
 and &quot;pass&quot; are the logon credentials. Use a user with low privileges, insert into the 
 logs table is sufficient. &quot;syslog-ng&quot; is the template name and tells rsyslogd to 
 use the SQL statement shown above.</p>
-<p>Once you have made the changes, all you need to do is reload (or HUP) 
+<p>Once you have made the changes, all you need to do is restart
 rsyslogd. Then, you should see syslog messages flow into your database - and 
 show up in php-syslog-ng.</p>
 <h2>Conclusion</h2>
