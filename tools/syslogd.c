@@ -422,7 +422,7 @@ diagGetMainMsgQSize(int *piSize)
 
 
 /* rgerhards, 2005-10-24: crunch_list is called only during option processing. So
- * it is never called once rsyslogd is running (not even when HUPed). This code
+ * it is never called once rsyslogd is running. This code
  * contains some exits, but they are considered safe because they only happen
  * during startup. Anyhow, when we review the code here, we might want to
  * reconsider the exit()s.
@@ -1719,16 +1719,6 @@ die(int sig)
 	/* terminate the remaining classes */
 	GlobalClassExit();
 
-	/* TODO: this would also be the right place to de-init the builtin output modules. We
-	 * do not currently do that, because the module interface does not allow for
-	 * it. This will come some time later (it's essential with loadable modules).
-	 * For the time being, this is a memory leak on exit, but as the process is
-	 * terminated, we do not really bother about it.
-	 * rgerhards, 2007-08-03
-	 * I have added some code now, but all that mod init/de-init should be moved to
-	 * init, so that modules are unloaded and reloaded on HUP to. Eventually it should go
-	 * into destructAllActions() - but that needs to be seen. -- rgerhards, 2007-08-09
-	 */
 	module.UnloadAndDestructAll(eMOD_LINK_ALL);
 
 	DBGPRINTF("Clean shutdown completed, bye\n");

@@ -452,7 +452,6 @@ wtiWorker(wti_t *pThis)
 	d_pthread_mutex_lock(&pThis->mut);
 	pthread_cleanup_pop(0); /* remove cleanup handler */
 
-RUNLOG_STR("XXX: Worker shutdown");
 	pWtp->pfOnWorkerShutdown(pWtp->pUsr);
 
 	wtiSetState(pThis, eWRKTHRD_TERMINATING, 0, MUTEX_ALREADY_LOCKED);
