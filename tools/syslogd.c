@@ -2362,7 +2362,7 @@ init()
 	 */
 	snprintf(bufStartUpMsg, sizeof(bufStartUpMsg)/sizeof(char), 
 		 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
-		 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"] (re)start",
+		 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"] start",
 		 (int) myPid);
 	logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)bufStartUpMsg, 0);
 
@@ -2371,7 +2371,7 @@ init()
 	sigAct.sa_handler = sighup_handler;
 	sigaction(SIGHUP, &sigAct, NULL);
 
-	DBGPRINTF(" (re)started.\n");
+	DBGPRINTF(" started.\n");
 
 finalize_it:
 	RETiRet;
@@ -2515,19 +2515,11 @@ doHUP(void)
 
 	snprintf(buf, sizeof(buf) / sizeof(char),
 		 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION
-		 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"] rsyslogd was HUPed, type '%s'.",
-		 (int) myPid, glbl.GetHUPisRestart() ? "restart" : "lightweight");
+		 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"] rsyslogd was HUPed",
+		 (int) myPid);
 		errno = 0;
-	logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)buf, 0);
 
-	if(glbl.GetHUPisRestart()) {
-		DBGPRINTF("Received SIGHUP, configured to be restart, reloading rsyslogd.\n");
-		init(); /* main queue is stopped as part of init() */
-		runInputModules();
-	} else {
-		DBGPRINTF("Received SIGHUP, configured to be a non-restart type of HUP - notifying actions.\n");
-		ruleset.IterateAllActions(doHUPActions, NULL);
-	}
+	ruleset.IterateAllActions(doHUPActions, NULL);
 }
 
 
@@ -2803,12 +2795,10 @@ static rsRetVal mainThread()
 	 */
 	if(gidDropPriv != 0) {
 		doDropPrivGid(gidDropPriv);
-		glbl.SetHUPisRestart(0); /* we can not do restart-type HUPs with dropped privs */
 	}
 
 	if(uidDropPriv != 0) {
 		doDropPrivUid(uidDropPriv);
-		glbl.SetHUPisRestart(0); /* we can not do restart-type HUPs with dropped privs */
 	}
 
 	/* finally let the inputs run... */

@@ -8,7 +8,7 @@
  * Please note that there currently is no glbl.c file as we do not yet
  * have any implementations.
  *
- * Copyright 2008 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008, 2009 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -44,7 +44,6 @@ BEGINinterface(glbl) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Set##name)(dataType);
 	SIMP_PROP(MaxLine, int)
 	SIMP_PROP(OptimizeUniProc, int)
-	SIMP_PROP(HUPisRestart, int)
 	SIMP_PROP(PreserveFQDN, int)
 	SIMP_PROP(DefPFFamily, int)
 	SIMP_PROP(DropMalPTRMsgs, int)
