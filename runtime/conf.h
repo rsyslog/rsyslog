@@ -37,10 +37,12 @@ BEGINinterface(conf) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*doIncludeLine)(uchar **pp, __attribute__((unused)) void* pVal);
 	rsRetVal (*cfline)(uchar *line, rule_t **pfCurr);
 	rsRetVal (*processConfFile)(uchar *pConfFile);
-	rsRetVal (*ReInitConf)(void);
 	rsRetVal (*GetNbrActActions)(int *);
 ENDinterface(conf)
-#define confCURR_IF_VERSION 2 /* increment whenever you change the interface structure! */
+#define confCURR_IF_VERSION 3 /* increment whenever you change the interface structure! */
+/* in Version 3, entry point "ReInitConf()" was removed, as we do not longer need
+ * to support restart-type HUP -- rgerhards, 2009-07-15
+ */
 
 
 /* prototypes */

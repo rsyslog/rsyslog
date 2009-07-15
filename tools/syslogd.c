@@ -2136,13 +2136,12 @@ startInputModules(void)
 }
 
 
-/* INIT -- Initialize syslogd from configuration table
- * init() is called at initial startup AND each time syslogd is HUPed
+/* INIT -- Initialize syslogd
  * Note that if iConfigVerify is set, only the config file is verified but nothing
  * else happens. -- rgerhards, 2008-07-28
  */
 static rsRetVal
-init()
+init(void)
 {
 	rsRetVal localRet;
 	int iNbrActions;
@@ -2153,45 +2152,12 @@ init()
 	struct sigaction sigAct;
 	DEFiRet;
 
-	thrdTerminateAll(); /* stop all running input threads - TODO: reconsider location! */
-
 	/* initialize some static variables */
 	pDfltHostnameCmp = NULL;
 	pDfltProgNameCmp = NULL;
 	eDfltHostnameCmpMode = HN_NO_COMP;
 
 	DBGPRINTF("rsyslog %s - called init()\n", VERSION);
-
-	/* delete the message queue, which also flushes all messages left over */
-	if(pMsgQueue != NULL) {
-		DBGPRINTF("deleting main message queue\n");
-		qqueueDestruct(&pMsgQueue); /* delete pThis here! */
-		pMsgQueue = NULL;
-	}
-
-	/*  Close all open log files and free log descriptor array. This also frees
-	 *  all output-modules instance data.
-	 */
-	destructAllActions();
-
-	/* Unload all non-static modules */
-	DBGPRINTF("Unloading non-static modules.\n");
-	module.UnloadAndDestructAll(eMOD_LINK_DYNAMIC_LOADED);
-
-	DBGPRINTF("Clearing templates.\n");
-	tplDeleteNew();
-
-	/* re-setting values to defaults (where applicable) */
-	/* once we have loadable modules, we must re-visit this code. The reason is
-	 * that config variables are not re-set, because the module is not yet loaded. On
-	 * the other hand, that doesn't matter, because the module got unloaded and is then
-	 * re-loaded, so the variables should be re-set via that way. And this is exactly how
-	 * it works. Loadable module's variables are initialized on load, the rest here.
-	 * rgerhards, 2008-04-28
-	 */
-	conf.cfsysline((uchar*)"ResetConfigVariables");
-
-	conf.ReInitConf();
 
 	/* construct the default ruleset */
 	ruleset.Construct(&pRuleset);
@@ -2357,6 +2323,13 @@ init()
 		dbgPrintInitInfo();
 	}
 
+	memset(&sigAct, 0, sizeof (sigAct));
+	sigemptyset(&sigAct.sa_mask);
+	sigAct.sa_handler = sighup_handler;
+	sigaction(SIGHUP, &sigAct, NULL);
+
+	DBGPRINTF(" started.\n");
+
 	/* we now generate the startup message. It now includes everything to
 	 * identify this instance. -- rgerhards, 2005-08-17
 	 */
@@ -2365,13 +2338,6 @@ init()
 		 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"] start",
 		 (int) myPid);
 	logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)bufStartUpMsg, 0);
-
-	memset(&sigAct, 0, sizeof (sigAct));
-	sigemptyset(&sigAct.sa_mask);
-	sigAct.sa_handler = sighup_handler;
-	sigaction(SIGHUP, &sigAct, NULL);
-
-	DBGPRINTF(" started.\n");
 
 finalize_it:
 	RETiRet;
@@ -2805,8 +2771,6 @@ static rsRetVal mainThread()
 	runInputModules();
 
 	/* END OF INTIALIZATION
-	 * ... but keep in mind that we might do a restart and thus init() might
-	 * be called again. -- rgerhards, 2005-10-24
 	 */
 	DBGPRINTF("initialization completed, transitioning to regular run mode\n");
 
