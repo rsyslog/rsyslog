@@ -86,7 +86,6 @@ static rsRetVal NotImplementedDummy() { return RS_RET_NOT_IMPLEMENTED; }
  */
 BEGINobjConstruct(wtp) /* be sure to specify the object type also in END macro! */
 	pthread_mutex_init(&pThis->mut, NULL);
-	pthread_mutex_init(&pThis->mutThrdShutdwn, NULL);
 	pthread_cond_init(&pThis->condThrdTrm, NULL);
 	/* set all function pointers to "not implemented" dummy so that we can safely call them */
 	pThis->pfChkStopWrkr = NotImplementedDummy;
@@ -142,8 +141,6 @@ finalize_it:
 BEGINobjDestruct(wtp) /* be sure to specify the object type also in END and CODESTART macros! */
 	int i;
 CODESTARTobjDestruct(wtp)
-	wtpProcessThrdChanges(pThis); /* process thread changes one last time */
-
 	/* destruct workers */
 	for(i = 0 ; i < pThis->iNumWorkerThreads ; ++i)
 		wtiDestruct(&pThis->pWrkr[i]);
@@ -154,7 +151,6 @@ CODESTARTobjDestruct(wtp)
 	/* actual destruction */
 	pthread_cond_destroy(&pThis->condThrdTrm);
 	pthread_mutex_destroy(&pThis->mut);
-	pthread_mutex_destroy(&pThis->mutThrdShutdwn);
 
 	free(pThis->pszDbgHdr);
 ENDobjDestruct(wtp)
@@ -186,51 +182,6 @@ wtpWakeupAllWrkr(wtp_t *pThis)
 	d_pthread_mutex_lock(pThis->pmutUsr);
 	pthread_cond_broadcast(pThis->pcondBusy);
 	d_pthread_mutex_unlock(pThis->pmutUsr);
-	RETiRet;
-}
-
-
-/* check if we had any worker thread changes and, if so, act
- * on them. At a minimum, terminated threads are harvested (joined).
- * This function MUST NEVER block on the queue mutex!
- */
-rsRetVal
-wtpProcessThrdChanges(wtp_t *pThis)
-{
-	DEFiRet;
-	int i;
-
-	ISOBJ_TYPE_assert(pThis, wtp);
-
-	if(pThis->bThrdStateChanged == 0)
-		FINALIZE;
-
-	if(d_pthread_mutex_trylock(&(pThis->mutThrdShutdwn)) != 0) {
-		/* another thread is already in the loop */
-		FINALIZE;
-	}
-
-	/* Note: there is a left-over potential race condition below:
-	 * pThis->bThrdStateChanged may be re-set by another thread while
-	 * we work on it and thus the loop may terminate too early. However,
-	 * there are no really bad effects from that so I perfer - for this
-	 * version - to live with the problem as is. Not a good idea to 
-	 * introduce that large change into the stable branch without very
-	 * good reason. -- rgerhards, 2009-04-02
-	 */
-	do {
-		/* reset the change marker */
-		ATOMIC_STORE_0_TO_INT(pThis->bThrdStateChanged);
-		/* go through all threads */
-		for(i = 0 ; i < pThis->iNumWorkerThreads ; ++i) {
-			wtiProcessThrdChanges(pThis->pWrkr[i], LOCK_MUTEX);
-		}
-	/* restart if another change occured while we were processing the changes */
-	} while(pThis->bThrdStateChanged != 0);
-
-	d_pthread_mutex_unlock(&(pThis->mutThrdShutdwn));
-
-finalize_it:
 	RETiRet;
 }
 
@@ -299,12 +250,7 @@ wtpShutdownAll(wtp_t *pThis, wtpState_t tShutdownCmd, struct timespec *ptTimeout
 	wtpSetState(pThis, tShutdownCmd);
 	wtpWakeupAllWrkr(pThis);
 
-	/* see if we need to harvest (join) any terminated threads (even in timeout case,
-	 * some may have terminated...
-	 */
-	wtpProcessThrdChanges(pThis);
-		
-	/* and wait for their termination */
+	/* wait for worker thread termination */
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
 	d_pthread_mutex_lock(&pThis->mut);
 	pthread_cleanup_push(mutexCancelCleanup, &pThis->mut);
@@ -324,38 +270,9 @@ wtpShutdownAll(wtp_t *pThis, wtpState_t tShutdownCmd, struct timespec *ptTimeout
 	if(bTimedOut)
 		iRet = RS_RET_TIMED_OUT;
 	
-	/* see if we need to harvest (join) any terminated threads (even in timeout case,
-	 * some may have terminated...
-	 */
-	wtpProcessThrdChanges(pThis);
-
 	RETiRet;
 }
 #pragma GCC diagnostic warning "-Wempty-body"
-
-
-/* indicate that a thread has terminated and awake anyone waiting on it
- * rgerhards, 2008-01-23
- */
-rsRetVal wtpSignalWrkrTermination(wtp_t *pThis)
-{
-	DEFiRet;
-	/* I leave the mutex code here out as it gives us deadlocks. I think it is not really
-	 * needed and we are on the safe side. I leave this comment in if practice proves us
-	 * wrong. The whole thing should be removed after half a year or year if we see there
-	 * actually is no issue (or revisit it from a theoretical POV).
-	 * rgerhards, 2008-01-28
-	 * revisited 2008-09-30, still a bit unclear, leave in
-	 */
-	/*TODO: mutex or not mutex, that's the question ;)DEFVARS_mutexProtection;*/
-
-	ISOBJ_TYPE_assert(pThis, wtp);
-
-	/*BEGIN_MTX_PROTECTED_OPERATIONS(&pThis->mut, LOCK_MUTEX);*/
-	pthread_cond_signal(&pThis->condThrdTrm); /* activate anyone waiting on thread shutdown */
-	/*END_MTX_PROTECTED_OPERATIONS(&pThis->mut);*/
-	RETiRet;
-}
 
 
 /* Unconditionally cancel all running worker threads.
@@ -368,9 +285,6 @@ wtpCancelAll(wtp_t *pThis)
 	int i;
 
 	ISOBJ_TYPE_assert(pThis, wtp);
-
-	/* process any pending thread requests so that we know who actually is still running */
-	wtpProcessThrdChanges(pThis);
 
 	/* go through all workers and cancel those that are active */
 	for(i = 0 ; i < pThis->iNumWorkerThreads ; ++i) {
@@ -404,7 +318,7 @@ wtpSetInactivityGuard(wtp_t *pThis, int bNewState, int bLockMutex)
  * decrements the worker counter
  * rgerhards, 2008-01-20
  */
-void
+static void
 wtpWrkrExecCancelCleanup(void *arg)
 {
 	wtp_t *pThis = (wtp_t*) arg;
@@ -412,8 +326,7 @@ wtpWrkrExecCancelCleanup(void *arg)
 	BEGINfunc
 	ISOBJ_TYPE_assert(pThis, wtp);
 	pThis->iCurNumWrkThrd--;
-	wtpSignalWrkrTermination(pThis);
-
+	pthread_cond_signal(&pThis->condThrdTrm); /* activate anyone waiting on thread shutdown */
 	dbgprintf("%s: thread CANCELED with %d workers running.\n", wtpGetDbgHdr(pThis), pThis->iCurNumWrkThrd);
 	ENDfunc
 }
@@ -476,7 +389,7 @@ wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in 
 
 	pthread_cleanup_pop(0);
 	pThis->iCurNumWrkThrd--;
-	wtpSignalWrkrTermination(pThis);
+	pthread_cond_signal(&pThis->condThrdTrm); /* activate anyone waiting on thread shutdown */
 
 	dbgprintf("%s: Worker thread %lx, terminated, num workers now %d\n",
 		  wtpGetDbgHdr(pThis), (unsigned long) pWti, pThis->iCurNumWrkThrd);
@@ -502,15 +415,11 @@ wtpStartWrkr(wtp_t *pThis, int bLockMutex)
 
 	ISOBJ_TYPE_assert(pThis, wtp);
 
-	wtpProcessThrdChanges(pThis);	// TODO: Performance: this causes a lot of FUTEX calls
-
 	BEGIN_MTX_PROTECTED_OPERATIONS(&pThis->mut, bLockMutex);
 
 	pThis->iCurNumWrkThrd++;
 
-	/* find free spot in thread table. If we find at least one worker that is in initialization,
-	 * we do NOT start a new one. Let's give the other one a chance, first.
-	 */
+	/* find free spot in thread table. */
 	for(i = 0 ; i < pThis->iNumWorkerThreads ; ++i) {
 		if(wtiGetState(pThis->pWrkr[i], LOCK_MUTEX) == eWRKTHRD_STOPPED) {
 			break;

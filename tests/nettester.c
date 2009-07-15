@@ -147,7 +147,7 @@ tcpSend(char *buf, int lenBuf)
 					fprintf(stderr, "connect() failed\n");
 					return(1);
 				} else {
-					usleep(100000); /* 0.1 sec, these are us! */
+					usleep(100000); /* ms = 1000 us! */
 				}
 			}
 		} 
