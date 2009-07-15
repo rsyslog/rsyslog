@@ -91,6 +91,7 @@ html_files = \
 	rsconf1_umask.html \
 	v3compatibility.html \
 	v4compatibility.html \
+	v5compatibility.html \
 	im3195.html \
 	netstream.html \
 	ns_gtls.html \

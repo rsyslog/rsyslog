@@ -1,0 +1,19 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><title>Compatibility notes for rsyslog v5</title>
+</head>
+<body>
+<h1>Compatibility Notes for rsyslog v5</h1>
+<p><small><i>Written by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a>
+(2009-07-15)</i></small></p>
+<p>The changes introduced in rsyslog v5 are numerous, but not very intrusive.
+This document describes things to keep in mind when moving from v4 to v5. It 
+does not list enhancements nor does it talk about compatibility concerns introduced
+by earlier versions (for this, see their respective compatibility documents).
+<h2>HUP processing</h2>
+<p>The $HUPisRestart directive is supported by some early v5 versions, but will soon been
+removed (around 5.1.x). That means that restart-type HUP processing is no longer
+available. This processing was redundant and had a lot a drawbacks. 
+For details, please see the
+<a href="v4compatibility.html">rsyslog v4 compatibility notes</a> which elaborate
+on the reasons and the (few) things you may need to change.
+</body></html>
