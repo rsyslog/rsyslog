@@ -40,7 +40,9 @@
 #include <unistd.h>
 #include <errno.h>
 #include <atomic.h>
-#include <sys/prctl.h>
+#if HAVE_SYS_PRCTL_H
+#  include <sys/prctl.h>
+#endif
 
 /// TODO: check on solaris if this is any longer needed - I don't think so - rgerhards, 2009-09-20
 //#ifdef OS_SOLARIS
@@ -355,12 +357,14 @@ wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in 
 	sigfillset(&sigSet);
 	pthread_sigmask(SIG_BLOCK, &sigSet, NULL);
 
+#	if HAVE_PRCTL && defined PR_SET_NAME
 	/* set thread name - we ignore if the call fails, has no harsh consequences... */
 	pszDbgHdr = wtpGetDbgHdr(pThis);
 	ustrncpy(thrdName+3, pszDbgHdr, 20);
 	if(prctl(PR_SET_NAME, thrdName, 0, 0, 0) != 0) {
 		DBGPRINTF("prctl failed, not setting thread name for '%s'\n", wtpGetDbgHdr(pThis));
 	}
+#	endif
 
 	BEGIN_MTX_PROTECTED_OPERATIONS(&pThis->mut, LOCK_MUTEX);
 

@@ -48,7 +48,9 @@
 #include "stream.h"
 #include "unicode-helper.h"
 #include "module-template.h"
-#include <sys/prctl.h>
+#if HAVE_SYS_PRCTL_H
+#  include <sys/prctl.h>
+#endif
 
 #define inline
 
@@ -891,9 +893,11 @@ asyncWriterThread(void *pPtr)
 	ISOBJ_TYPE_assert(pThis, strm);
 
 	BEGINfunc
+#	if HAVE_PRCTL && defined PR_SET_NAME
 	if(prctl(PR_SET_NAME, "rs:asyn strmwr", 0, 0, 0) != 0) {
 		DBGPRINTF("prctl failed, not setting thread name for '%s'\n", "stream writer");
 	}
+#endif
 
 	while(1) { /* loop broken inside */
 		d_pthread_mutex_lock(&pThis->mut);
@@ -904,7 +908,6 @@ asyncWriterThread(void *pPtr)
 				goto finalize_it; /* break main loop */
 			}
 			if(bTimedOut && pThis->iBufPtr > 0) {
-RUNLOG_STR("XXX: we had a timeout in stream writer");
 				/* if we timed out, we need to flush pending data */
 				strmFlush(pThis);
 				bTimedOut = 0;
