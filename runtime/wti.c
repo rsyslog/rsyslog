@@ -41,7 +41,6 @@
 
 #ifdef OS_SOLARIS
 #	include <sched.h>
-#	define pthread_yield() sched_yield()
 #endif
 
 #include "rsyslog.h"
