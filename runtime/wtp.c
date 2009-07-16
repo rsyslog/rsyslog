@@ -372,7 +372,7 @@ wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in 
 	 * because someone may have requested us to shut down even before we got a chance to do
 	 * our init. That would be a bad race... -- rgerhards, 2008-01-16
 	 */
-	wtiSetState(pWti, eWRKTHRD_RUNNING, 0, MUTEX_ALREADY_LOCKED); /* we are running now! */
+	wtiSetState(pWti, eWRKTHRD_RUNNING, MUTEX_ALREADY_LOCKED); /* we are running now! */
 
 	do {
 		END_MTX_PROTECTED_OPERATIONS(&pThis->mut);
@@ -430,7 +430,7 @@ wtpStartWrkr(wtp_t *pThis, int bLockMutex)
 		ABORT_FINALIZE(RS_RET_NO_MORE_THREADS);
 
 	pWti = pThis->pWrkr[i];
-	wtiSetState(pWti, eWRKTHRD_RUN_CREATED, 0, LOCK_MUTEX);
+	wtiSetState(pWti, eWRKTHRD_RUN_CREATED, LOCK_MUTEX);
 	pthread_attr_init(&attr);
 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 	iState = pthread_create(&(pWti->thrdID), &attr, wtpWorker, (void*) pWti);

@@ -31,12 +31,11 @@
 typedef enum {
 	eWRKTHRD_STOPPED = 0,	/* worker thread is not running (either actually never ran or was shut down) */
 	/* ALL active states MUST be numerically higher than eWRKTHRD_TERMINATED and NONE must be lower! */
-	eWRKTHRD_RUN_CREATED = 2,/* worker thread has been created, but not yet begun initialization (prob. not yet scheduled) */
-	eWRKTHRD_RUN_INIT = 3,	/* worker thread is initializing, but not yet fully running */
+	eWRKTHRD_RUN_CREATED = 2,/* worker thread has been created, but is not fully running (prob. not yet scheduled) */
 	eWRKTHRD_RUNNING = 4,	/* worker thread is up and running and shall continue to do so */
 	eWRKTHRD_SHUTDOWN = 5,	/* worker thread is running but shall terminate when wtp is empty */
 	eWRKTHRD_SHUTDOWN_IMMEDIATE = 6/* worker thread is running but shall terminate even if wtp is full */
-	/* SHUTDOWN_IMMEDIATE MUST alsways be the numerically highest state! */
+	/* SHUTDOWN_IMMEDIATE MUST always be the numerically highest state! */
 } qWrkCmd_t;
 
 

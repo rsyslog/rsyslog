@@ -100,11 +100,10 @@ wtiGetState(wti_t *pThis, int bLockMutex)
 
 
 /* send a command to a specific thread
- * bActiveOnly specifies if the command should be sent only when the worker is
- * in an active state. -- rgerhards, 2008-01-20
+ * rgerhards, 2008-01-20
  */
 rsRetVal
-wtiSetState(wti_t *pThis, qWrkCmd_t tCmd, int bActiveOnly, int bLockMutex)
+wtiSetState(wti_t *pThis, qWrkCmd_t tCmd, int bLockMutex)
 {
 	DEFiRet;
 	qWrkCmd_t tCurrCmd;
@@ -117,8 +116,7 @@ wtiSetState(wti_t *pThis, qWrkCmd_t tCmd, int bActiveOnly, int bLockMutex)
 
 	tCurrCmd = pThis->tCurrCmd;
 	/* all worker states must be followed sequentially, only termination can be set in any state */
-	if(   (bActiveOnly && (tCurrCmd < eWRKTHRD_RUN_CREATED))
-	   || (tCurrCmd > tCmd && !(tCmd == eWRKTHRD_STOPPED))) {
+	if(tCurrCmd > tCmd && !(tCmd == eWRKTHRD_STOPPED)) {
 		DBGPRINTF("%s: command %d can not be accepted in current %d processing state - ignored\n",
 			  wtiGetDbgHdr(pThis), tCmd, tCurrCmd);
 	} else {
@@ -161,7 +159,7 @@ wtiCancelThrd(wti_t *pThis)
 		dbgoprint((obj_t*) pThis, "canceling worker thread, curr stat %d\n", pThis->tCurrCmd);
 		pthread_cancel(pThis->thrdID);
 		/* TODO: check: the following check should automatically be done by cancel cleanup handler! 2009-07-08 rgerhards */
-		wtiSetState(pThis, eWRKTHRD_STOPPED, 0, MUTEX_ALREADY_LOCKED);
+		wtiSetState(pThis, eWRKTHRD_STOPPED, MUTEX_ALREADY_LOCKED);
 	}
 
 	d_pthread_mutex_unlock(&pThis->mut);
@@ -241,7 +239,7 @@ wtiWorkerCancelCleanup(void *arg)
 
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
 	d_pthread_mutex_lock(&pWtp->mut);
-	wtiSetState(pThis, eWRKTHRD_STOPPED, 0, MUTEX_ALREADY_LOCKED);
+	wtiSetState(pThis, eWRKTHRD_STOPPED, MUTEX_ALREADY_LOCKED);
 	/* TODO: sync access? I currently think it is NOT needed -- rgerhards, 2008-01-28 */
 
 	d_pthread_mutex_unlock(&pWtp->mut);
@@ -358,7 +356,7 @@ wtiWorker(wti_t *pThis)
 
 	pWtp->pfOnWorkerShutdown(pWtp->pUsr);
 
-	wtiSetState(pThis, eWRKTHRD_STOPPED, 0, MUTEX_ALREADY_LOCKED);
+	wtiSetState(pThis, eWRKTHRD_STOPPED, MUTEX_ALREADY_LOCKED);
 	d_pthread_mutex_unlock(&pThis->mut);
 	pthread_setcancelstate(iCancelStateSave, NULL);
 
