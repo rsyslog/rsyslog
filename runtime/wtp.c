@@ -40,11 +40,12 @@
 #include <unistd.h>
 #include <errno.h>
 #include <atomic.h>
-#include <sys/prctl.h>
+#if HAVE_SYS_PRCTL_H
+#  include <sys/prctl.h>
+#endif
 
 #ifdef OS_SOLARIS
 #	include <sched.h>
-#	define pthread_yield() sched_yield()
 #endif
 
 #include "rsyslog.h"
@@ -434,10 +435,12 @@ wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in 
 	sigfillset(&sigSet);
 	pthread_sigmask(SIG_BLOCK, &sigSet, NULL);
 
+#	if HAVE_PRCTL && defined PR_SET_NAME
 	/* set thread name - we ignore if the call fails, has no harsh consequences... */
 	if(prctl(PR_SET_NAME, wtpGetDbgHdr(pThis), 0, 0, 0) != 0) {
 		DBGPRINTF("prctl failed, not setting thread name for '%s'\n", wtpGetDbgHdr(pThis));
 	}
+#	endif
 
 	BEGIN_MTX_PROTECTED_OPERATIONS(&pThis->mut, LOCK_MUTEX);
 
