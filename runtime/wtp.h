@@ -27,16 +27,9 @@
 #include <pthread.h>
 #include "obj.h"
 
-/* commands and states for worker threads. */
-typedef enum {
-	eWRKTHRD_STOPPED = 0,	/* worker thread is not running (either actually never ran or was shut down) */
-	/* ALL active states MUST be numerically higher than eWRKTHRD_TERMINATED and NONE must be lower! */
-	eWRKTHRD_RUN_CREATED = 2,/* worker thread has been created, but is not fully running (prob. not yet scheduled) */
-	eWRKTHRD_RUNNING = 4,	/* worker thread is up and running and shall continue to do so */
-	eWRKTHRD_SHUTDOWN = 5,	/* worker thread is running but shall terminate when wtp is empty */
-	eWRKTHRD_SHUTDOWN_IMMEDIATE = 6/* worker thread is running but shall terminate even if wtp is full */
-	/* SHUTDOWN_IMMEDIATE MUST always be the numerically highest state! */
-} qWrkCmd_t;
+/* states for worker threads. */
+#define WRKTHRD_STOPPED  FALSE
+#define WRKTHRD_RUNNING  TRUE
 
 
 /* possible states of a worker thread pool */

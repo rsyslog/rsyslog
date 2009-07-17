@@ -54,17 +54,6 @@ typedef struct qLinkedList_S {
 } qLinkedList_t;
 
 
-typedef struct qWrkThrd_s {
-	pthread_t thrdID;  /* thread ID */
-	qWrkCmd_t tCurrCmd; /* current command to be carried out by worker */
-	obj_t *pUsr;        /* current user object being processed (or NULL if none) */
-	struct queue_s *pQueue; /* my queue (important if only the work thread instance is passed! */
-	int iThrd;	/* my worker thread array index */
-	pthread_cond_t condInitDone; /* signaled when the thread startup is done (once per thread existance) */
-	pthread_mutex_t mut;
-} qWrkThrd_t;	/* type for queue worker threads */
-
-
 /* the queue object */
 typedef struct queue_s {
 	BEGINobjInstance;

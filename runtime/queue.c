@@ -312,7 +312,6 @@ TurnOffDAMode(qqueue_t *pThis)
 	 * during the lifetime of DA-mode, depending on how often the DA worker receives an
 	 * inactivity timeout. -- rgerhards, 2008-01-25
 	 */
-dbgprintf("XXX: getLogicalQueueSize(pThis->pqDA): %d\n", getLogicalQueueSize(pThis->pqDA));
 	if(getLogicalQueueSize(pThis->pqDA) == 0) {
 		pThis->bRunsDA = 0; /* tell the world we are back in non-DA mode */
 		/* we destruct the queue object, which will also shutdown the queue worker. As the queue is empty,
@@ -1270,7 +1269,7 @@ tryShutdownWorkersWithinActionTimeout(qqueue_t *pThis)
 	 * startup some workers again. So this is OK here. -- rgerhards, 2009-05-28
 	 */
 	pThis->bEnqOnly = 1;
-	wtpSetState(pThis->pWtpReg, wtpState_SHUTDOWN_IMMEDIATE);
+	/* need to set this so that the DA queue begins shutdown in parallel! */
 	if(pThis->pqDA != NULL) {
 		pThis->pqDA->bEnqOnly = 1;
 		wtpSetState(pThis->pqDA->pWtpReg, wtpState_SHUTDOWN_IMMEDIATE);

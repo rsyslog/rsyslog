@@ -33,16 +33,12 @@
 /* the worker thread instance class */
 struct wti_s {
 	BEGINobjInstance;
-	pthread_t thrdID;  /* thread ID */
-	qWrkCmd_t tCurrCmd; /* current command to be carried out by worker */
+	pthread_t thrdID; 	/* thread ID */
+	bool bIsRunning;	/* is this thread currently running? */
 	wtp_t *pWtp; /* my worker thread pool (important if only the work thread instance is passed! */
-	pthread_mutex_t mut;
 	batch_t batch; /* pointer to an object array meaningful for current user pointer (e.g. queue pUsr data elemt) */
-	bool bShutdownRqtd;	/* shutdown for this thread requested? 0 - no , 1 - yes */
 	uchar *pszDbgHdr;	/* header string for debug messages */
 };
-
-/* some symbolic constants for easier reference */
 
 
 /* prototypes */
@@ -50,12 +46,10 @@ rsRetVal wtiConstruct(wti_t **ppThis);
 rsRetVal wtiConstructFinalize(wti_t *pThis);
 rsRetVal wtiDestruct(wti_t **ppThis);
 rsRetVal wtiWorker(wti_t *pThis);
-rsRetVal wtiProcessThrdChanges(wti_t *pThis, int bLockMutex);
 rsRetVal wtiSetDbgHdr(wti_t *pThis, uchar *pszMsg, size_t lenMsg);
-rsRetVal wtiSetState(wti_t *pThis, qWrkCmd_t tCmd, int bLockMutex);
-rsRetVal wtiJoinThrd(wti_t *pThis);
 rsRetVal wtiCancelThrd(wti_t *pThis);
-qWrkCmd_t wtiGetState(wti_t *pThis, int bLockMutex);
+rsRetVal wtiSetState(wti_t *pThis, bool bNew);
+bool wtiGetState(wti_t *pThis);
 PROTOTYPEObjClassInit(wti);
 PROTOTYPEpropSetMeth(wti, pszDbgHdr, uchar*);
 PROTOTYPEpropSetMeth(wti, pWtp, wtp_t*);
