@@ -245,7 +245,6 @@ wtpShutdownAll(wtp_t *pThis, wtpState_t tShutdownCmd, struct timespec *ptTimeout
 {
 	DEFiRet;
 	int bTimedOut;
-	int iCancelStateSave;
 
 	ISOBJ_TYPE_assert(pThis, wtp);
 
@@ -253,10 +252,8 @@ wtpShutdownAll(wtp_t *pThis, wtpState_t tShutdownCmd, struct timespec *ptTimeout
 	wtpWakeupAllWrkr(pThis);
 
 	/* wait for worker thread termination */
-	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
 	d_pthread_mutex_lock(&pThis->mut);
 	pthread_cleanup_push(mutexCancelCleanup, &pThis->mut);
-	pthread_setcancelstate(iCancelStateSave, NULL);
 	bTimedOut = 0;
 	while(pThis->iCurNumWrkThrd > 0 && !bTimedOut) {
 		dbgprintf("%s: waiting %ldms on worker thread termination, %d still running\n",
@@ -345,7 +342,6 @@ wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in 
 	uchar *pszDbgHdr;
 	uchar thrdName[32] = "rs:";
 	DEFiRet;
-	DEFVARS_mutexProtection;
 	wti_t *pWti = (wti_t*) arg;
 	wtp_t *pThis;
 	sigset_t sigSet;
@@ -366,24 +362,21 @@ wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in 
 	}
 #	endif
 
-	BEGIN_MTX_PROTECTED_OPERATIONS(&pThis->mut, LOCK_MUTEX);
-
-	/* do some late initialization */
-
+	d_pthread_mutex_lock(&pThis->mut);
 	pthread_cleanup_push(wtpWrkrExecCancelCleanup, pThis);
 
-	/* finally change to RUNNING state. We need to check if we actually should still run,
+	/* change to RUNNING state. We need to check if we actually should still run,
 	 * because someone may have requested us to shut down even before we got a chance to do
 	 * our init. That would be a bad race... -- rgerhards, 2008-01-16
 	 */
 	wtiSetState(pWti, eWRKTHRD_RUNNING, MUTEX_ALREADY_LOCKED); /* we are running now! */
 
 	do {
-		END_MTX_PROTECTED_OPERATIONS(&pThis->mut);
+		d_pthread_mutex_unlock(&pThis->mut);
 
 		iRet = wtiWorker(pWti); /* just to make sure: this is NOT protected by the mutex! */
 
-		BEGIN_MTX_PROTECTED_OPERATIONS(&pThis->mut, LOCK_MUTEX);
+		d_pthread_mutex_lock(&pThis->mut);
 	} while(pThis->iCurNumWrkThrd == 1 && pThis->bInactivityGuard == 1);
 	/* inactivity guard prevents shutdown of all workers while one should be running due to race
 	 * condition. It can lead to one more worker running than desired, but that is acceptable. After
@@ -398,7 +391,7 @@ wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in 
 	dbgprintf("%s: Worker thread %lx, terminated, num workers now %d\n",
 		  wtpGetDbgHdr(pThis), (unsigned long) pWti, pThis->iCurNumWrkThrd);
 
-	END_MTX_PROTECTED_OPERATIONS(&pThis->mut);
+	d_pthread_mutex_unlock(&pThis->mut);
 
 	ENDfunc
 	pthread_exit(0);
@@ -463,7 +456,6 @@ rsRetVal
 wtpAdviseMaxWorkers(wtp_t *pThis, int nMaxWrkr)
 {
 	DEFiRet;
-	DEFVARS_mutexProtection;
 	int nMissing; /* number workers missing to run */
 	int i;
 
@@ -472,7 +464,7 @@ wtpAdviseMaxWorkers(wtp_t *pThis, int nMaxWrkr)
 	if(nMaxWrkr == 0)
 		FINALIZE;
 
-	BEGIN_MTX_PROTECTED_OPERATIONS(&pThis->mut, LOCK_MUTEX);
+	d_pthread_mutex_lock(&pThis->mut);
 
 	if(nMaxWrkr > pThis->iNumWorkerThreads) /* limit to configured maximum */
 		nMaxWrkr = pThis->iNumWorkerThreads;
@@ -494,7 +486,7 @@ wtpAdviseMaxWorkers(wtp_t *pThis, int nMaxWrkr)
 
 	
 finalize_it:
-	END_MTX_PROTECTED_OPERATIONS(&pThis->mut);
+	d_pthread_mutex_unlock(&pThis->mut);
 	RETiRet;
 }
 
@@ -510,7 +502,7 @@ DEFpropSetMethFP(wtp, pfChkStopWrkr, rsRetVal(*pVal)(void*, int))
 DEFpropSetMethFP(wtp, pfRateLimiter, rsRetVal(*pVal)(void*))
 DEFpropSetMethFP(wtp, pfGetDeqBatchSize, rsRetVal(*pVal)(void*, int*))
 DEFpropSetMethFP(wtp, pfIsIdle, rsRetVal(*pVal)(void*, wtp_t*))
-DEFpropSetMethFP(wtp, pfDoWork, rsRetVal(*pVal)(void*, void*, int))
+DEFpropSetMethFP(wtp, pfDoWork, rsRetVal(*pVal)(void*, void*))
 DEFpropSetMethFP(wtp, pfObjProcessed, rsRetVal(*pVal)(void*, wti_t*))
 DEFpropSetMethFP(wtp, pfOnIdle, rsRetVal(*pVal)(void*, int))
 DEFpropSetMethFP(wtp, pfOnWorkerCancel, rsRetVal(*pVal)(void*, void*))
@@ -592,6 +584,5 @@ BEGINObjClassInit(wtp, 1, OBJ_IS_CORE_MODULE)
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 ENDObjClassInit(wtp)
 
-/*
- * vi:set ai:
+/* vi:set ai:
  */

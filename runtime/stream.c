@@ -839,7 +839,6 @@ doAsyncWriteInternal(strm_t *pThis, size_t lenBuf)
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, strm);
 
-dbgprintf("XXX: doAsyncWriteInternal: strm %p, len %ld\n", pThis, (long) lenBuf);
 	while(pThis->iCnt >= STREAM_ASYNC_NUMBUFS)
 		d_pthread_cond_wait(&pThis->notFull, &pThis->mut);
 
@@ -850,7 +849,6 @@ dbgprintf("XXX: doAsyncWriteInternal: strm %p, len %ld\n", pThis, (long) lenBuf)
 	if(++pThis->iCnt == 1)
 		pthread_cond_signal(&pThis->notEmpty);
 
-finalize_it:
 	RETiRet;
 }
 

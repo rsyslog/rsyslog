@@ -942,7 +942,6 @@ finalize_it:
 static rsRetVal
 processBatchMain(action_t *pAction, batch_t *pBatch)
 {
-	int iCancelStateSave;
 	DEFiRet;
 
 	assert(pBatch != NULL);
@@ -952,10 +951,8 @@ processBatchMain(action_t *pAction, batch_t *pBatch)
 	 * if they notify us they are - functionality not yet implemented...).
 	 * rgerhards, 2008-01-30
 	 */
-	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
 	d_pthread_mutex_lock(&pAction->mutActExec);
 	pthread_cleanup_push(mutexCancelCleanup, &pAction->mutActExec);
-	pthread_setcancelstate(iCancelStateSave, NULL);
 
 	iRet = processAction(pAction, pBatch);
 
@@ -976,7 +973,6 @@ rsRetVal
 actionCallHUPHdlr(action_t *pAction)
 {
 	DEFiRet;
-	int iCancelStateSave;
 
 	ASSERT(pAction != NULL);
 	DBGPRINTF("Action %p checks HUP hdlr: %p\n", pAction, pAction->pMod->doHUP);
@@ -985,10 +981,8 @@ actionCallHUPHdlr(action_t *pAction)
 		FINALIZE;	/* no HUP handler, so we are done ;) */
 	}
 
-	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
 	d_pthread_mutex_lock(&pAction->mutActExec);
 	pthread_cleanup_push(mutexCancelCleanup, &pAction->mutActExec);
-	pthread_setcancelstate(iCancelStateSave, NULL);
 	CHKiRet(pAction->pMod->doHUP(pAction->pModData));
 	pthread_cleanup_pop(1); /* unlock mutex */
 
@@ -1233,7 +1227,6 @@ rsRetVal
 actionCallAction(action_t *pAction, msg_t *pMsg)
 {
 	DEFiRet;
-	int iCancelStateSave;
 
 	ISOBJ_TYPE_assert(pMsg, msg);
 	ASSERT(pAction != NULL);
@@ -1242,15 +1235,11 @@ actionCallAction(action_t *pAction, msg_t *pMsg)
 	 * rgerhards, 2009-06-19
 	 */
 	//if(pAction->f_ReduceRepeated == 1) {
-		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
 		LockObj(pAction);
 		pthread_cleanup_push(mutexCancelCleanup, pAction->Sync_mut);
-		pthread_setcancelstate(iCancelStateSave, NULL);
 		iRet = doActionCallAction(pAction, pMsg);
-		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
 		UnlockObj(pAction);
 		pthread_cleanup_pop(0); /* remove mutex cleanup handler */
-		pthread_setcancelstate(iCancelStateSave, NULL);
 	//} else {
 		//iRet = doActionCallAction(pAction, pMsg);
 	//}

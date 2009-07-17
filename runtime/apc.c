@@ -249,12 +249,11 @@ execScheduled(void)
 	apc_list_t *pExecList;
 	apc_list_t *pCurr;
 	apc_list_t *pNext;
-	DEFVARS_mutexProtection_uncond;
 	DEFiRet;
 
-	BEGIN_MTX_PROTECTED_OPERATIONS_UNCOND(&listMutex);
+	d_pthread_mutex_lock(&listMutex);
 	iRet = unlistCurrent(&pExecList);
-	END_MTX_PROTECTED_OPERATIONS_UNCOND(&listMutex);
+	d_pthread_mutex_unlock(&listMutex);
 	CHKiRet(iRet);
 
 	if(pExecList != NULL) {
@@ -290,14 +289,12 @@ ENDobjConstruct(apc)
 static rsRetVal
 apcConstructFinalize(apc_t *pThis, apc_id_t *pID)
 {
-	DEFVARS_mutexProtection_uncond;
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, apc);
 	assert(pID != NULL);
-	BEGIN_MTX_PROTECTED_OPERATIONS_UNCOND(&listMutex);
+	d_pthread_mutex_lock(&listMutex);
 	insertApc(pThis, pID);
-	END_MTX_PROTECTED_OPERATIONS_UNCOND(&listMutex);
-RUNLOG_STR("apcConstructFinalize post mutex unlock\n");
+	d_pthread_mutex_unlock(&listMutex);
 	RETiRet;
 }
 
@@ -333,12 +330,10 @@ SetParam2(apc_t *pThis, void *param2)
 static rsRetVal
 CancelApc(apc_id_t id)
 {
-	DEFVARS_mutexProtection_uncond;
-
 	BEGINfunc
-	BEGIN_MTX_PROTECTED_OPERATIONS_UNCOND(&listMutex);
+	d_pthread_mutex_lock(&listMutex);
 	deleteApc(id);
-	END_MTX_PROTECTED_OPERATIONS_UNCOND(&listMutex);
+	d_pthread_mutex_unlock(&listMutex);
 	ENDfunc
 	return RS_RET_OK;
 }

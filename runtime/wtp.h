@@ -70,7 +70,7 @@ struct wtp_s {
 	rsRetVal (*pfObjProcessed)(void *pUsr, wti_t *pWti); /* indicate user object is processed */
 	rsRetVal (*pfRateLimiter)(void *pUsr);
 	rsRetVal (*pfIsIdle)(void *pUsr, wtp_t *pWtp);
-	rsRetVal (*pfDoWork)(void *pUsr, void *pWti, int);
+	rsRetVal (*pfDoWork)(void *pUsr, void *pWti);
 	rsRetVal (*pfOnIdle)(void *pUsr, int);
 	rsRetVal (*pfOnWorkerCancel)(void *pUsr, void*pWti);
 	rsRetVal (*pfOnWorkerStartup)(void *pUsr);
@@ -102,7 +102,7 @@ PROTOTYPEpropSetMethFP(wtp, pfChkStopWrkr, rsRetVal(*pVal)(void*, int));
 PROTOTYPEpropSetMethFP(wtp, pfRateLimiter, rsRetVal(*pVal)(void*));
 PROTOTYPEpropSetMethFP(wtp, pfGetDeqBatchSize, rsRetVal(*pVal)(void*, int*));
 PROTOTYPEpropSetMethFP(wtp, pfIsIdle, rsRetVal(*pVal)(void*, wtp_t*));
-PROTOTYPEpropSetMethFP(wtp, pfDoWork, rsRetVal(*pVal)(void*, void*, int));
+PROTOTYPEpropSetMethFP(wtp, pfDoWork, rsRetVal(*pVal)(void*, void*));
 PROTOTYPEpropSetMethFP(wtp, pfObjProcessed, rsRetVal(*pVal)(void*, wti_t*));
 PROTOTYPEpropSetMethFP(wtp, pfOnIdle, rsRetVal(*pVal)(void*, int));
 PROTOTYPEpropSetMethFP(wtp, pfOnWorkerCancel, rsRetVal(*pVal)(void*,void*));

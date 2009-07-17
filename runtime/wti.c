@@ -218,6 +218,8 @@ finalize_it:
 
 /* cancellation cleanup handler for queueWorker ()
  * Updates admin structure and frees ressources.
+ * Keep in mind that cancellation is disabled if we run into
+ * the cancel cleanup handler (and have been cancelled).
  * rgerhards, 2008-01-16
  */
 static void
@@ -225,7 +227,6 @@ wtiWorkerCancelCleanup(void *arg)
 {
 	wti_t *pThis = (wti_t*) arg;
 	wtp_t *pWtp;
-	int iCancelStateSave;
 
 	BEGINfunc
 	ISOBJ_TYPE_assert(pThis, wti);
@@ -237,13 +238,10 @@ wtiWorkerCancelCleanup(void *arg)
 	/* call user supplied handler (that one e.g. requeues the element) */
 	pWtp->pfOnWorkerCancel(pThis->pWtp->pUsr, pThis->batch.pElem[0].pUsrp);
 
-	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
 	d_pthread_mutex_lock(&pWtp->mut);
 	wtiSetState(pThis, eWRKTHRD_STOPPED, MUTEX_ALREADY_LOCKED);
 	/* TODO: sync access? I currently think it is NOT needed -- rgerhards, 2008-01-28 */
-
 	d_pthread_mutex_unlock(&pWtp->mut);
-	pthread_setcancelstate(iCancelStateSave, NULL);
 	ENDfunc
 }
 
@@ -282,12 +280,12 @@ doIdleProcessing(wti_t *pThis, wtp_t *pWtp, int *pbInactivityTOOccured)
 rsRetVal
 wtiWorker(wti_t *pThis)
 {
-	DEFVARS_mutexProtection_uncond;
 	wtp_t *pWtp;		/* our worker thread pool */
 	int bInactivityTOOccured = 0;
 	rsRetVal localRet;
 	rsRetVal terminateRet;
 	bool bMutexIsLocked;
+	int iCancelStateSave;
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, wti);
@@ -297,9 +295,9 @@ wtiWorker(wti_t *pThis)
 	dbgSetThrdName(pThis->pszDbgHdr);
 	pthread_cleanup_push(wtiWorkerCancelCleanup, pThis);
 
-	BEGIN_MTX_PROTECTED_OPERATIONS_UNCOND(pWtp->pmutUsr);
+	d_pthread_mutex_lock(pWtp->pmutUsr);
 	pWtp->pfOnWorkerStartup(pWtp->pUsr);
-	END_MTX_PROTECTED_OPERATIONS_UNCOND(pWtp->pmutUsr);
+	d_pthread_mutex_unlock(pWtp->pmutUsr);
 
 	/* now we have our identity, on to real processing */
 	while(1) { /* loop will be broken below - need to do mutex locks */
@@ -308,7 +306,7 @@ wtiWorker(wti_t *pThis)
 		}
 		
 		wtpSetInactivityGuard(pThis->pWtp, 0, LOCK_MUTEX); /* must be set before usr mutex is locked! */
-		BEGIN_MTX_PROTECTED_OPERATIONS_UNCOND(pWtp->pmutUsr);
+		d_pthread_mutex_lock(pWtp->pmutUsr);
 		bMutexIsLocked = TRUE;
 
 		/* first check if we are in shutdown process (but evaluate a bit later) */
@@ -323,7 +321,7 @@ wtiWorker(wti_t *pThis)
 
 		/* try to execute and process whatever we have */
 		/* This function must and does RELEASE the MUTEX! */
-		localRet = pWtp->pfDoWork(pWtp->pUsr, pThis, iCancelStateSave);
+		localRet = pWtp->pfDoWork(pWtp->pUsr, pThis);
 		bMutexIsLocked = FALSE;
 
 		if(localRet == RS_RET_IDLE) {
@@ -335,9 +333,9 @@ wtiWorker(wti_t *pThis)
 				/* we had an inactivity timeout in the last run and are still idle, so it is time to exit... */
 				break; /* end worker thread run */
 			}
-			BEGIN_MTX_PROTECTED_OPERATIONS_UNCOND(pWtp->pmutUsr);
+			d_pthread_mutex_lock(pWtp->pmutUsr);
 			doIdleProcessing(pThis, pWtp, &bInactivityTOOccured);
-			END_MTX_PROTECTED_OPERATIONS_UNCOND(pWtp->pmutUsr);
+			d_pthread_mutex_unlock(pWtp->pmutUsr);
 			continue; /* request next iteration */
 		}
 
@@ -346,7 +344,7 @@ wtiWorker(wti_t *pThis)
 
 	/* if we exit the loop, the mutex may be locked and, if so, must be unlocked */
 	if(bMutexIsLocked) {
-		END_MTX_PROTECTED_OPERATIONS_UNCOND(pWtp->pmutUsr);
+		d_pthread_mutex_unlock(pWtp->pmutUsr);
 	}
 
 	/* indicate termination */
