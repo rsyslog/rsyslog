@@ -87,7 +87,7 @@ static rsRetVal NotImplementedDummy() { return RS_RET_NOT_IMPLEMENTED; }
 /* Standard-Constructor for the wtp object
  */
 BEGINobjConstruct(wtp) /* be sure to specify the object type also in END macro! */
-	pthread_mutex_init(&pThis->mut, NULL);
+	pthread_mutex_init(&pThis->mutWtp, NULL);
 	pthread_cond_init(&pThis->condThrdTrm, NULL);
 	/* set all function pointers to "not implemented" dummy so that we can safely call them */
 	pThis->pfChkStopWrkr = NotImplementedDummy;
@@ -151,7 +151,7 @@ CODESTARTobjDestruct(wtp)
 
 	/* actual destruction */
 	pthread_cond_destroy(&pThis->condThrdTrm);
-	pthread_mutex_destroy(&pThis->mut);
+	pthread_mutex_destroy(&pThis->mutWtp);
 
 	free(pThis->pszDbgHdr);
 ENDobjDestruct(wtp)
@@ -187,19 +187,20 @@ wtpWakeupAllWrkr(wtp_t *pThis)
 }
 
 
-/* Sent a specific state for the worker thread pool.
- * rgerhards, 2008-01-21
+/* Sent a specific state for the worker thread pool. -- rgerhards, 2008-01-21
+ * We do not need to do atomic instructions as set operations are only
+ * called when terminating the pool, and then in strict sequence. So we
+ * can never overwrite each other. On the other hand, it also doesn't
+ * matter if the read operation obtains an older value, as we then simply
+ * do one more iteration, what is perfectly legal (during shutdown
+ * they are awoken in any case). -- rgerhards, 2009-07-20
  */
 rsRetVal
 wtpSetState(wtp_t *pThis, wtpState_t iNewState)
 {
-	DEFiRet;
-
 	ISOBJ_TYPE_assert(pThis, wtp);
 	pThis->wtpState = iNewState;
-	/* TODO: must wakeup workers? seen to be not needed -- rgerhards, 2008-01-28 */
-
-	RETiRet;
+	return RS_RET_OK;
 }
 
 
@@ -209,17 +210,20 @@ wtpSetState(wtp_t *pThis, wtpState_t iNewState)
  * rgerhards, 2008-01-21
  */
 rsRetVal
-wtpChkStopWrkr(wtp_t *pThis, int bLockMutex, int bLockUsrMutex)
+wtpChkStopWrkr(wtp_t *pThis, int bLockUsrMutex)
 {
 	DEFiRet;
-	DEFVARS_mutexProtection;
+	wtpState_t wtpState;
 
 	ISOBJ_TYPE_assert(pThis, wtp);
+	/* we need a consistent value, but it doesn't really matter if it is changed
+	 * right after the fetch - then we simply do one more iteration in the worker
+	 */
+	wtpState = ATOMIC_FETCH_32BIT(pThis->wtpState);
 
-	BEGIN_MTX_PROTECTED_OPERATIONS(&pThis->mut, bLockMutex);
-	if(pThis->wtpState == wtpState_SHUTDOWN_IMMEDIATE) {
+	if(wtpState == wtpState_SHUTDOWN_IMMEDIATE) {
 		ABORT_FINALIZE(RS_RET_TERMINATE_NOW);
-	} else if(pThis->wtpState == wtpState_SHUTDOWN) {
+	} else if(wtpState == wtpState_SHUTDOWN) {
 		ABORT_FINALIZE(RS_RET_TERMINATE_WHEN_IDLE);
 	}
 
@@ -229,7 +233,6 @@ wtpChkStopWrkr(wtp_t *pThis, int bLockMutex, int bLockUsrMutex)
 	}
 
 finalize_it:
-	END_MTX_PROTECTED_OPERATIONS(&pThis->mut);
 	RETiRet;
 }
 
@@ -251,14 +254,14 @@ wtpShutdownAll(wtp_t *pThis, wtpState_t tShutdownCmd, struct timespec *ptTimeout
 	wtpWakeupAllWrkr(pThis);
 
 	/* wait for worker thread termination */
-	d_pthread_mutex_lock(&pThis->mut);
-	pthread_cleanup_push(mutexCancelCleanup, &pThis->mut);
+	d_pthread_mutex_lock(&pThis->mutWtp);
+	pthread_cleanup_push(mutexCancelCleanup, &pThis->mutWtp);
 	bTimedOut = 0;
 	while(pThis->iCurNumWrkThrd > 0 && !bTimedOut) {
 		dbgprintf("%s: waiting %ldms on worker thread termination, %d still running\n",
 			   wtpGetDbgHdr(pThis), timeoutVal(ptTimeout), pThis->iCurNumWrkThrd);
 
-		if(d_pthread_cond_timedwait(&pThis->condThrdTrm, &pThis->mut, ptTimeout) != 0) {
+		if(d_pthread_cond_timedwait(&pThis->condThrdTrm, &pThis->mutWtp, ptTimeout) != 0) {
 			dbgprintf("%s: timeout waiting on worker thread termination\n", wtpGetDbgHdr(pThis));
 			bTimedOut = 1;	/* we exit the loop on timeout */
 		}
@@ -284,12 +287,12 @@ wtpCancelAll(wtp_t *pThis)
 
 	ISOBJ_TYPE_assert(pThis, wtp);
 
-	d_pthread_mutex_lock(&pThis->mut);
+	d_pthread_mutex_lock(&pThis->mutWtp);
 	/* go through all workers and cancel those that are active */
 	for(i = 0 ; i < pThis->iNumWorkerThreads ; ++i) {
 		wtiCancelThrd(pThis->pWrkr[i]);
 	}
-	d_pthread_mutex_unlock(&pThis->mut);
+	d_pthread_mutex_unlock(&pThis->mutWtp);
 
 	RETiRet;
 }
@@ -305,9 +308,9 @@ wtpSetInactivityGuard(wtp_t *pThis, int bNewState, int bLockMutex)
 	DEFiRet;
 	DEFVARS_mutexProtection;
 
-	BEGIN_MTX_PROTECTED_OPERATIONS(&pThis->mut, bLockMutex);
+	BEGIN_MTX_PROTECTED_OPERATIONS(&pThis->mutWtp, bLockMutex);
 	pThis->bInactivityGuard = bNewState;
-	END_MTX_PROTECTED_OPERATIONS(&pThis->mut);
+	END_MTX_PROTECTED_OPERATIONS(&pThis->mutWtp);
 
 	RETiRet;
 }
@@ -330,11 +333,11 @@ wtpWrkrExecCancelCleanup(void *arg)
 
 	// TODO: the mutex_lock is dangerous, if we are cancelled within some function
 	// that already has the mutex locked...
-	d_pthread_mutex_lock(&pThis->mut);
+	d_pthread_mutex_lock(&pThis->mutWtp);
 	pThis->iCurNumWrkThrd--;
 	wtiSetState(pWti, WRKTHRD_STOPPED);
 	pthread_cond_signal(&pThis->condThrdTrm); /* activate anyone waiting on thread shutdown */
-	d_pthread_mutex_unlock(&pThis->mut);
+	d_pthread_mutex_unlock(&pThis->mutWtp);
 
 	DBGPRINTF("%s: Worker thread %lx, terminated, num workers now %d\n",
 		  wtpGetDbgHdr(pThis), (unsigned long) pWti, pThis->iCurNumWrkThrd);
@@ -396,7 +399,7 @@ wtpStartWrkr(wtp_t *pThis, int bLockMutex)
 
 	ISOBJ_TYPE_assert(pThis, wtp);
 
-	BEGIN_MTX_PROTECTED_OPERATIONS(&pThis->mut, bLockMutex);
+	BEGIN_MTX_PROTECTED_OPERATIONS(&pThis->mutWtp, bLockMutex);
 
 	pThis->iCurNumWrkThrd++;
 
@@ -420,7 +423,7 @@ wtpStartWrkr(wtp_t *pThis, int bLockMutex)
 		  wtpGetDbgHdr(pThis), iState, pThis->iCurNumWrkThrd);
 
 finalize_it:
-	END_MTX_PROTECTED_OPERATIONS(&pThis->mut);
+	END_MTX_PROTECTED_OPERATIONS(&pThis->mutWtp);
 	RETiRet;
 }
 
@@ -445,7 +448,7 @@ wtpAdviseMaxWorkers(wtp_t *pThis, int nMaxWrkr)
 	if(nMaxWrkr == 0)
 		FINALIZE;
 
-	d_pthread_mutex_lock(&pThis->mut);
+	d_pthread_mutex_lock(&pThis->mutWtp);
 
 	if(nMaxWrkr > pThis->iNumWorkerThreads) /* limit to configured maximum */
 		nMaxWrkr = pThis->iNumWorkerThreads;
@@ -466,7 +469,7 @@ wtpAdviseMaxWorkers(wtp_t *pThis, int nMaxWrkr)
 
 	
 finalize_it:
-	d_pthread_mutex_unlock(&pThis->mut);
+	d_pthread_mutex_unlock(&pThis->mutWtp);
 	RETiRet;
 }
 
@@ -504,9 +507,9 @@ wtpGetCurNumWrkr(wtp_t *pThis, int bLockMutex)
 	BEGINfunc
 	ISOBJ_TYPE_assert(pThis, wtp);
 
-	BEGIN_MTX_PROTECTED_OPERATIONS(&pThis->mut, bLockMutex);
+	BEGIN_MTX_PROTECTED_OPERATIONS(&pThis->mutWtp, bLockMutex);
 	iNumWrkr = pThis->iCurNumWrkThrd;
-	END_MTX_PROTECTED_OPERATIONS(&pThis->mut);
+	END_MTX_PROTECTED_OPERATIONS(&pThis->mutWtp);
 
 	ENDfunc
 	return iNumWrkr;

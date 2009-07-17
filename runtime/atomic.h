@@ -51,7 +51,6 @@
 #	define ATOMIC_STORE_1_TO_32BIT(data) __sync_lock_test_and_set(&(data), 1)
 #	define ATOMIC_STORE_0_TO_INT(data) __sync_fetch_and_and(&(data), 0)
 #	define ATOMIC_STORE_1_TO_INT(data) __sync_fetch_and_or(&(data), 1)
-#	define ATOMIC_STORE_INT_TO_INT(data, val) __sync_fetch_and_or(&(data), (val))
 #	define ATOMIC_CAS(data, oldVal, newVal) __sync_bool_compare_and_swap(&(data), (oldVal), (newVal));
 #	define ATOMIC_CAS_VAL(data, oldVal, newVal) __sync_val_compare_and_swap(&(data), (oldVal), (newVal));
 #else

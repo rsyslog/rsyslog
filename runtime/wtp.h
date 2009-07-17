@@ -51,7 +51,7 @@ struct wtp_s {
 	bool	bInactivityGuard;/* prevents inactivity due to race condition */
 	rsRetVal (*pConsumer)(void *); /* user-supplied consumer function for dewtpd messages */
 	/* synchronization variables */
-	pthread_mutex_t mut; /* mutex for the wtp's thread management */
+	pthread_mutex_t mutWtp; /* mutex for the wtp's thread management */
 	pthread_cond_t condThrdTrm;/* signalled when threads terminate */
 	/* end sync variables */
 	/* user objects */
@@ -82,7 +82,7 @@ rsRetVal wtpDestruct(wtp_t **ppThis);
 rsRetVal wtpAdviseMaxWorkers(wtp_t *pThis, int nMaxWrkr);
 rsRetVal wtpProcessThrdChanges(wtp_t *pThis);
 rsRetVal wtpSetInactivityGuard(wtp_t *pThis, int bNewState, int bLockMutex);
-rsRetVal wtpChkStopWrkr(wtp_t *pThis, int bLockMutex, int bLockUsrMutex);
+rsRetVal wtpChkStopWrkr(wtp_t *pThis, int bLockUsrMutex);
 rsRetVal wtpSetState(wtp_t *pThis, wtpState_t iNewState);
 rsRetVal wtpWakeupWrkr(wtp_t *pThis);
 rsRetVal wtpWakeupAllWrkr(wtp_t *pThis);

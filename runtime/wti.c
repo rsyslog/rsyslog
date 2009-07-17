@@ -250,7 +250,7 @@ wtiWorker(wti_t *pThis)
 		d_pthread_mutex_lock(pWtp->pmutUsr);
 
 		/* first check if we are in shutdown process (but evaluate a bit later) */
-		terminateRet = wtpChkStopWrkr(pWtp, LOCK_MUTEX, MUTEX_ALREADY_LOCKED);
+		terminateRet = wtpChkStopWrkr(pWtp, MUTEX_ALREADY_LOCKED);
 		if(terminateRet == RS_RET_TERMINATE_NOW) {
 			/* we now need to free the old batch */
 			localRet = pWtp->pfObjProcessed(pWtp->pUsr, pThis);
