@@ -1,4 +1,11 @@
 ----------------------------------------------------------------------
+Version 0.1.4 (rgerhards), 2009-??-??
+- bugfix: offers builder did use a fixed size string without bounds
+  checking. I don't think this was a real issue as it was not
+  exposed to the outside world, but now the buffer dynamically
+  grows (which is the right thing to do). Thank to mterry for alerting
+  me.
+----------------------------------------------------------------------
 Version 0.1.3 (rgerhards), 2009-02-10
 - the callback on message reception did not contain a way to pass on
   a caller cookie (e.g. for an instance pointer). An additional

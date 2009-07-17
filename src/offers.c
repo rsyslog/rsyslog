@@ -281,7 +281,7 @@ finalize_it:
 
 /* create as string with the complete offers. The string is dynamically
  * allocated and passed to the caller. The caller is responsible for
- * freeing it. This function always allocates a sufficientla large
+ * freeing it. This function always allocates a sufficiently large
  * string (TODO: ensure that!). A string my be prepended to the offers
  * block (this is for rsp status). If that is not desired, the param
  * must be NULL, in which case its length is simply ignored (suggest to use
@@ -294,6 +294,8 @@ relpOffersToString(relpOffers_t *pThis, unsigned char *pszHdr, size_t lenHdr,
 {
 	unsigned char *pszOffers = NULL;
 	size_t iStr;
+	size_t currSize;
+	size_t iAlloc;
 	relpOffer_t *pOffer;
 	relpOfferValue_t *pOfferVal;
 
@@ -301,8 +303,15 @@ relpOffersToString(relpOffers_t *pThis, unsigned char *pszHdr, size_t lenHdr,
 	assert(ppszOffers != NULL);
 	RELPOBJ_assert(pThis, Offers);
 
+	if(pszHdr != NULL && lenHdr > 4096)
+		iAlloc = 4096 + lenHdr;
+	else
+		iAlloc = 4096;
+
 	if((pszOffers = malloc(4096)) == NULL) { // TODO: not fixed!
 		ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+		currSize = iAlloc;
+		iAlloc = 4096;
 	}
 
 	/* check if we need to prepend anything */
@@ -314,10 +323,23 @@ relpOffersToString(relpOffers_t *pThis, unsigned char *pszHdr, size_t lenHdr,
 	}
 
 	for(pOffer = pThis->pRoot ; pOffer != NULL ; pOffer = pOffer->pNext) {
+		/* we use -3 in the realloc-guard ifs so that we have space for constants following! */
+		if(currSize - iStr - 3 < strlen((char*)pOffer->szName)) {
+			if((pszOffers = realloc(pszOffers, currSize + iAlloc)) == NULL) {
+				ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+				currSize += iAlloc;
+			}
+		}
 		strcpy((char*)pszOffers+iStr, (char*)pOffer->szName);
 		iStr += strlen((char*)pOffer->szName);
 		pszOffers[iStr++] = '=';
 		for(pOfferVal = pOffer->pValueRoot ; pOfferVal != NULL ; pOfferVal = pOfferVal->pNext) {
+			if(currSize - iStr - 3 < strlen((char*)pOfferVal->szVal)) {
+				if((pszOffers = realloc(pszOffers, currSize + iAlloc)) == NULL) {
+					ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+					currSize += iAlloc;
+				}
+			}
 			strcpy((char*)pszOffers+iStr, (char*)pOfferVal->szVal);
 			iStr += strlen((char*)pOfferVal->szVal);
 			if(pOfferVal->pNext != NULL)
