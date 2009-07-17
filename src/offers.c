@@ -308,11 +308,12 @@ relpOffersToString(relpOffers_t *pThis, unsigned char *pszHdr, size_t lenHdr,
 	else
 		iAlloc = 4096;
 
-	if((pszOffers = malloc(4096)) == NULL) {
+	if((pszOffers = malloc(iAlloc)) == NULL) {
 		ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
-		currSize = iAlloc;
-		iAlloc = 4096;
 	}
+
+	currSize = iAlloc;
+	iAlloc = 4096;
 
 	/* check if we need to prepend anything */
 	if(pszHdr == NULL) {
