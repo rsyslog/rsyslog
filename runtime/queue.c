@@ -1168,9 +1168,7 @@ tryShutdownWorkersWithinQueueTimeout(qqueue_t *pThis)
 	}
 
 	/* OK, the worker for the regular queue is processed, on the the DA queue regular worker. */
-	d_pthread_mutex_lock(pThis->mut);
-	if(pThis->bRunsDA) {
-		d_pthread_mutex_unlock(pThis->mut);
+	if(pThis->pqDA != NULL) {
 		dbgoprint((obj_t*) pThis, "we have a DA queue (0x%lx), requesting its shutdown.\n",
 			 qqueueGetID(pThis->pqDA));
 		/* we use the same absolute timeout as above, so we do not use more than the configured
@@ -1193,8 +1191,6 @@ tryShutdownWorkersWithinQueueTimeout(qqueue_t *pThis)
 		} else {
 			dbgoprint((obj_t*) pThis, "main queue DA worker pool shut down.\n");
 		}
-	} else {
-		d_pthread_mutex_unlock(pThis->mut);
 	}
 
 	RETiRet;
@@ -1241,9 +1237,7 @@ tryShutdownWorkersWithinActionTimeout(qqueue_t *pThis)
 			  "in disk save mode. Continuing, but results are unpredictable\n", iRetLocal);
 	}
 
-	d_pthread_mutex_lock(pThis->mut);
-	if(pThis->bRunsDA) {
-		d_pthread_mutex_unlock(pThis->mut);
+	if(pThis->pqDA != NULL) {
 		/* and now the same for the DA queue */
 		dbgoprint((obj_t*) pThis, "trying immediate shutdown of DA queue workers\n");
 		iRetLocal = wtpShutdownAll(pThis->pqDA->pWtpReg, wtpState_SHUTDOWN_IMMEDIATE, &tTimeout);
@@ -1254,8 +1248,6 @@ tryShutdownWorkersWithinActionTimeout(qqueue_t *pThis)
 			dbgoprint((obj_t*) pThis, "unexpected iRet state %d after trying immediate shutdown of the DA "
 				  "queue in disk save mode. Continuing, but results are unpredictable\n", iRetLocal);
 		}
-	} else {
-		d_pthread_mutex_unlock(pThis->mut);
 	}
 
 	RETiRet;
@@ -2233,12 +2225,8 @@ DoSaveOnShutdown(qqueue_t *pThis)
 
 	ISOBJ_TYPE_assert(pThis, qqueue);
 
-	d_pthread_mutex_lock(pThis->mut);	/* some workers may be running in parallel! */
-	if(!pThis->bRunsDA) {
-		InitDA(pThis, QUEUE_MODE_ENQONLY, MUTEX_ALREADY_LOCKED); /* switch to DA mode */
+	InitDA(pThis, QUEUE_MODE_ENQONLY, LOCK_MUTEX); /* switch to DA mode */
 dbgprintf("after InitDA, queue log %d, phys %d\n", getLogicalQueueSize(pThis), getPhysicalQueueSize(pThis));
-	}
-	d_pthread_mutex_unlock(pThis->mut);
 	/* make sure we do not timeout before we are done */
 	dbgoprint((obj_t*) pThis, "bSaveOnShutdown configured, infinite timeout set\n");
 	timeoutComp(&tTimeout, QUEUE_TIMEOUT_ETERNAL);
