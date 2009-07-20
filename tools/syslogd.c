@@ -1664,6 +1664,7 @@ die(int sig)
 
 	/* close the inputs */
 	DBGPRINTF("Terminating input threads...\n");
+	glbl.SetGlobalInputTermination();
 	thrdTerminateAll();
 
 	/* and THEN send the termination log message (see long comment above) */
@@ -2083,6 +2084,7 @@ static rsRetVal
 runInputModules(void)
 {
 	modInfo_t *pMod;
+	int bNeedsCancel;
 
 	BEGINfunc
 	/* loop through all modules and activate them (brr...) */
@@ -2090,7 +2092,9 @@ runInputModules(void)
 	while(pMod != NULL) {
 		if(pMod->mod.im.bCanRun) {
 			/* activate here */
-			thrdCreate(pMod->mod.im.runInput, pMod->mod.im.afterRun);
+			bNeedsCancel = (pMod->isCompatibleWithFeature(sFEATURENonCancelInputTermination) == RS_RET_OK) ?
+				       0 : 1;
+			thrdCreate(pMod->mod.im.runInput, pMod->mod.im.afterRun, bNeedsCancel);
 		}
 	pMod = module.GetNxtType(pMod, eMOD_IN);
 	}
@@ -2429,6 +2433,9 @@ void sighup_handler()
 	sigaction(SIGHUP, &sigAct, NULL);
 }
 
+void sigttin_handler()
+{
+}
 
 /* this function pulls all internal messages from the buffer
  * and puts them into the processing engine.
@@ -3036,6 +3043,8 @@ doGlblProcessInit(void)
 	sigaction(SIGCHLD, &sigAct, NULL);
 	sigAct.sa_handler = Debug ? debug_switch : SIG_IGN;
 	sigaction(SIGUSR1, &sigAct, NULL);
+	sigAct.sa_handler = sigttin_handler;
+	sigaction(SIGTTIN, &sigAct, NULL); /* (ab)used to interrupt input threads */
 	sigAct.sa_handler = SIG_IGN;
 	sigaction(SIGPIPE, &sigAct, NULL);
 	sigaction(SIGXFSZ, &sigAct, NULL); /* do not abort if 2gig file limit is hit */

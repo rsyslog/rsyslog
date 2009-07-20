@@ -61,9 +61,12 @@ BEGINinterface(glbl) /* name must also be changed in ENDinterface macro! */
 	/* added v3, 2009-06-30 */
 	rsRetVal (*GenerateLocalHostNameProperty)(void);
 	prop_t* (*GetLocalHostNameProp)(void);
+	/* added v4, 2009-07-20 */
+	int (*GetGlobalInputTermState)(void);
+	void (*SetGlobalInputTermination)(void);
 #undef	SIMP_PROP
 ENDinterface(glbl)
-#define glblCURR_IF_VERSION 3 /* increment whenever you change the interface structure! */
+#define glblCURR_IF_VERSION 4 /* increment whenever you change the interface structure! */
 /* version 2 had PreserveFQDN added - rgerhards, 2008-12-08 */
 
 /* the remaining prototypes */

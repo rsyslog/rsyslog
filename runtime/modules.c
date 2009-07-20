@@ -77,8 +77,9 @@ static modInfo_t *pLoadedModulesLast = NULL;	/* tail-pointer */
 uchar	*pModDir = NULL; /* read-only after startup */
 
 
-/* we provide a set of dummy functions for output modules that do not support the
- * transactional interface. As they do not do this, they commit each message they
+/* we provide a set of dummy functions for modules that do not support the
+ * some interfaces.
+ * On the commit feature: As the modules do not support it, they commit each message they
  * receive, and as such the dummies can always return RS_RET_OK without causing
  * harm. This simplifies things as in action processing we do not need to check
  * if the transactional entry points exist.
@@ -90,6 +91,11 @@ static rsRetVal dummyBeginTransaction()
 static rsRetVal dummyEndTransaction() 
 {
 	return RS_RET_OK;
+}
+static rsRetVal dummyIsCompatibleWithFeature() 
+{
+dbgprintf("XXX: dummy isCompatibleWithFeature called!\n");
+	return RS_RET_INCOMPATIBLE;
 }
 
 #ifdef DEBUG
@@ -428,6 +434,11 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 	 */
 	CHKiRet((*pNew->modQueryEtryPt)((uchar*)"modGetID", &pNew->modGetID));
 	CHKiRet((*pNew->modQueryEtryPt)((uchar*)"modExit", &pNew->modExit));
+	localRet = (*pNew->modQueryEtryPt)((uchar*)"isCompatibleWithFeature", &pNew->isCompatibleWithFeature);
+	if(localRet == RS_RET_MODULE_ENTRY_POINT_NOT_FOUND)
+		pNew->isCompatibleWithFeature = dummyIsCompatibleWithFeature;
+	else if(localRet != RS_RET_OK)
+		ABORT_FINALIZE(localRet);
 
 	/* ... and now the module-specific interfaces */
 	switch(pNew->eType) {
@@ -442,7 +453,6 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"dbgPrintInstInfo", &pNew->dbgPrintInstInfo));
 			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"doAction", &pNew->mod.om.doAction));
 			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"parseSelectorAct", &pNew->mod.om.parseSelectorAct));
-			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"isCompatibleWithFeature", &pNew->isCompatibleWithFeature));
 			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"tryResume", &pNew->tryResume));
 			/* try load optional interfaces */
 			localRet = (*pNew->modQueryEtryPt)((uchar*)"doHUP", &pNew->doHUP);

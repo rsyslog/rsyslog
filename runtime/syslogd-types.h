@@ -56,7 +56,8 @@
  * applications I do not yet envision. -- rgerhards, 2007-07-24
  */
 typedef enum _syslogFeature {
-	sFEATURERepeatedMsgReduction = 1
+	sFEATURERepeatedMsgReduction = 1,
+	sFEATURENonCancelInputTermination = 2
 } syslogFeature;
 
 /* we define our own facility and severities */

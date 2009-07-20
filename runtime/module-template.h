@@ -368,6 +368,17 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 		*pEtryPoint = endTransaction;\
 	}
 
+
+/* the following definition is a queryEtryPt block that must be added
+ * if a non-output module supports "isCompatibleWithFeature".
+ * rgerhards, 2009-07-20
+ */
+#define CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES \
+	  else if(!strcmp((char*) name, "isCompatibleWithFeature")) {\
+		*pEtryPoint = isCompatibleWithFeature;\
+	}
+
+
 /* the following definition is the standard block for queryEtryPt for INPUT
  * modules. This can be used if no specific handling (e.g. to cover version
  * differences) is needed.

@@ -51,8 +51,7 @@ static rsRetVal thrdConstruct(thrdInfo_t **ppThis)
 
 	assert(ppThis != NULL);
 
-	if((pThis = calloc(1, sizeof(thrdInfo_t))) == NULL)
-		return RS_RET_OUT_OF_MEMORY;
+	CHKmalloc(pThis = calloc(1, sizeof(thrdInfo_t)));
 
 	/* OK, we got the element, now initialize members that should
 	 * not be zero-filled.
@@ -61,6 +60,8 @@ static rsRetVal thrdConstruct(thrdInfo_t **ppThis)
 	pthread_mutex_init (pThis->mutTermOK, NULL);
 
 	*ppThis = pThis;
+
+finalize_it:
 	RETiRet;
 }
 
@@ -91,8 +92,14 @@ rsRetVal thrdTerminate(thrdInfo_t *pThis)
 	DEFiRet;
 	assert(pThis != NULL);
 	
-	pthread_cancel(pThis->thrdID);
-	pthread_join(pThis->thrdID, NULL); /* wait for cancel to complete */
+	if(pThis->bNeedsCancel) {
+		DBGPRINTF("request term via canceling for input thread 0x%x\n", (unsigned) pThis->thrdID);
+		pthread_cancel(pThis->thrdID);
+	} else {
+		DBGPRINTF("request term via SIGTTIN for input thread 0x%x\n", (unsigned) pThis->thrdID);
+		pthread_kill(pThis->thrdID, SIGTTIN);
+	}
+	pthread_join(pThis->thrdID, NULL); /* wait for input thread to complete */
 	pThis->bIsActive = 0;
 
 	/* call cleanup function, if any */
@@ -132,6 +139,11 @@ static void* thrdStarter(void *arg)
 	sigfillset(&sigSet);
 	pthread_sigmask(SIG_BLOCK, &sigSet, NULL);
 
+	/* but ignore SIGTTN, which we (ab)use to signal the thread to shutdown -- rgerhards, 2009-07-20 */
+	sigemptyset(&sigSet);
+	sigaddset(&sigSet, SIGTTIN);
+	pthread_sigmask(SIG_UNBLOCK, &sigSet, NULL);
+
 	/* setup complete, we are now ready to execute the user code. We will not
 	 * regain control until the user code is finished, in which case we terminate
 	 * the thread.
@@ -147,7 +159,7 @@ static void* thrdStarter(void *arg)
  * executing threads. It is added at the end of the list.
  * rgerhards, 2007-12-14
  */
-rsRetVal thrdCreate(rsRetVal (*thrdMain)(thrdInfo_t*), rsRetVal(*afterRun)(thrdInfo_t *))
+rsRetVal thrdCreate(rsRetVal (*thrdMain)(thrdInfo_t*), rsRetVal(*afterRun)(thrdInfo_t *), bool bNeedsCancel)
 {
 	DEFiRet;
 	thrdInfo_t *pThis;
@@ -159,6 +171,7 @@ rsRetVal thrdCreate(rsRetVal (*thrdMain)(thrdInfo_t*), rsRetVal(*afterRun)(thrdI
 	pThis->bIsActive = 1;
 	pThis->pUsrThrdMain = thrdMain;
 	pThis->pAfterRun = afterRun;
+	pThis->bNeedsCancel = bNeedsCancel;
 	i = pthread_create(&pThis->thrdID, NULL, thrdStarter, pThis);
 	CHKiRet(llAppend(&llThrds, NULL, pThis));
 

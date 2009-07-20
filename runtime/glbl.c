@@ -39,6 +39,7 @@
 #include "cfsysline.h"
 #include "glbl.h"
 #include "prop.h"
+#include "atomic.h"
 
 /* some defaults */
 #ifndef DFLT_NETSTRM_DRVR
@@ -71,6 +72,7 @@ static uchar *pszDfltNetstrmDrvr = NULL; /* module name of default netstream dri
 static uchar *pszDfltNetstrmDrvrCAF = NULL; /* default CA file for the netstrm driver */
 static uchar *pszDfltNetstrmDrvrKeyFile = NULL; /* default key file for the netstrm driver (server) */
 static uchar *pszDfltNetstrmDrvrCertFile = NULL; /* default cert file for the netstrm driver (server) */
+static int bTerminateInputs = 0;		/* global switch that inputs shall terminate ASAP (1=> terminate) */
 
 
 /* define a macro for the simple properties' set and get functions
@@ -113,6 +115,24 @@ SIMP_PROP_SET(DfltNetstrmDrvrCertFile, pszDfltNetstrmDrvrCertFile, uchar*) /* TO
 #undef SIMP_PROP
 #undef SIMP_PROP_SET
 #undef SIMP_PROP_GET
+
+
+/* return global input termination status
+ * rgerhards, 2009-07-20
+ */
+static int GetGlobalInputTermState(void)
+{
+	return ATOMIC_FETCH_32BIT(bTerminateInputs);
+}
+
+
+/* set global termiantion state to "terminate". Note that this is a
+ * "once in a lifetime" action which can not be undone. -- gerhards, 2009-07-20
+ */
+static void SetGlobalInputTermination(void)
+{
+	ATOMIC_STORE_1_TO_INT(bTerminateInputs);
+}
 
 
 /* return our local hostname. if it is not set, "[localhost]" is returned
@@ -239,6 +259,8 @@ CODESTARTobjQueryInterface(glbl)
 	pIf->GetWorkDir = GetWorkDir;
 	pIf->GenerateLocalHostNameProperty = GenerateLocalHostNameProperty;
 	pIf->GetLocalHostNameProp = GetLocalHostNameProp;
+	pIf->SetGlobalInputTermination = SetGlobalInputTermination;
+	pIf->GetGlobalInputTermState = GetGlobalInputTermState;
 #define SIMP_PROP(name) \
 	pIf->Get##name = Get##name; \
 	pIf->Set##name = Set##name;

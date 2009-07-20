@@ -549,6 +549,8 @@ Run(tcpsrv_t *pThis)
 
 		/* wait for io to become ready */
 		CHKiRet(nssel.Wait(pSel, &nfds));
+		if(glbl.GetGlobalInputTermState() == 1)
+			break; /* terminate input! */
 
 		for(i = 0 ; i < pThis->iLstnMax ; ++i) {
 			CHKiRet(nssel.IsReady(pSel, pThis->ppLstn[i], NSDSEL_RD, &bIsReady, &nfds));
@@ -580,7 +582,7 @@ finalize_it: /* this is a very special case - this time only we do not exit the 
 	}
 
 	/* note that this point is usually not reached */
-	pthread_cleanup_pop(0); /* remove cleanup handler */
+	pthread_cleanup_pop(1); /* remove cleanup handler */
 
 	RETiRet;
 }

@@ -282,6 +282,8 @@ CODESTARTrunInput
 
 		/* wait for io to become ready */
 		nfds = select(maxfds+1, (fd_set *) &readfds, NULL, NULL, NULL);
+		if(glbl.GetGlobalInputTermState() == 1)
+			break; /* terminate input! */
 
 		for (i = 0; i < nfunix && nfds > 0; i++) {
 			if ((fd = funix[i]) != -1 && FD_ISSET(fd, &readfds)) {
@@ -352,9 +354,17 @@ CODESTARTmodExit
 ENDmodExit
 
 
+BEGINisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature
+	if(eFeat == sFEATURENonCancelInputTermination)
+		iRet = RS_RET_OK;
+ENDisCompatibleWithFeature
+
+
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_IMOD_QUERIES
+CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
 ENDqueryEtryPt
 
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)

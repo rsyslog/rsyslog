@@ -11,6 +11,12 @@ Version 5.1.3  [DEVEL] (rgerhards), 2009-07-??
   sizes had been specified in the property replacer.
 - bugfix: minor static memory leak while reading configuration
   did NOT leak based on message volume
+- internal: added ability to terminate input modules not via pthread_cancel
+  but an alternate approach via pthread_kill. This is somewhat safer as we
+  do not need to think about the cancel-safeness of all libraries we use.
+  However, not all inputs can easily supported, so this now is a feature
+  that can be requested by the input module (the most important ones
+  request it).
 ---------------------------------------------------------------------------
 Version 5.1.2  [DEVEL] (rgerhards), 2009-07-08
 - bugfix: properties inputname, fromhost, fromhost-ip, msg were lost when
