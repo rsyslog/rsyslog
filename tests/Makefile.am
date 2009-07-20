@@ -24,13 +24,13 @@ TESTS += omod-if-array.sh \
 	 fieldtest.sh
 endif
 
+check_JAVA = DiagTalker.java
+
 endif # if ENABLE_TESTBENCH
 
 TESTS_ENVIRONMENT = RSYSLOG_MODDIR='$(abs_top_builddir)'/runtime/.libs/
 DISTCLEANFILES=rsyslog.pid '$(abs_top_builddir)'/DiagTalker.class
 test_files = testbench.h runtime-dummy.c
-
-check_JAVA = DiagTalker.java
 
 EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   validation-run.sh \
