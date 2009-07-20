@@ -55,6 +55,7 @@ struct wtp_s {
 	/* end sync variables */
 	/* user objects */
 	void *pUsr;		/* pointer to user object (in this case, the queue the wtp belongs to) */
+	pthread_attr_t attrThrd;/* attribute for new threads (created just once and cached here) */
 	pthread_mutex_t *pmutUsr;
 	pthread_cond_t *pcondBusy; /* condition the user will signal "busy again, keep runing" on (awakes worker) */
 	rsRetVal (*pfChkStopWrkr)(void *pUsr, int);

@@ -89,6 +89,8 @@ static rsRetVal NotImplementedDummy() { return RS_RET_NOT_IMPLEMENTED; }
 BEGINobjConstruct(wtp) /* be sure to specify the object type also in END macro! */
 	pthread_mutex_init(&pThis->mutWtp, NULL);
 	pthread_cond_init(&pThis->condThrdTrm, NULL);
+	pthread_attr_init(&pThis->attrThrd);
+	pthread_attr_setdetachstate(&pThis->attrThrd, PTHREAD_CREATE_DETACHED);
 	/* set all function pointers to "not implemented" dummy so that we can safely call them */
 	pThis->pfChkStopWrkr = NotImplementedDummy;
 	pThis->pfGetDeqBatchSize = NotImplementedDummy;
@@ -152,6 +154,7 @@ CODESTARTobjDestruct(wtp)
 	/* actual destruction */
 	pthread_cond_destroy(&pThis->condThrdTrm);
 	pthread_mutex_destroy(&pThis->mutWtp);
+	pthread_attr_destroy(&pThis->attrThrd);
 
 	free(pThis->pszDbgHdr);
 ENDobjDestruct(wtp)
@@ -284,9 +287,9 @@ wtpCancelAll(wtp_t *pThis)
 }
 
 
-/* cancellation cleanup handler for executing worker
- * decrements the worker counter
- * rgerhards, 2008-01-20
+/* cancellation cleanup handler for executing worker decrements the worker counter.
+ * This is also called when the the worker is normally shut down.
+ * rgerhards, 2009-07-20
  */
 static void
 wtpWrkrExecCancelCleanup(void *arg)
@@ -299,6 +302,7 @@ wtpWrkrExecCancelCleanup(void *arg)
 	pThis = pWti->pWtp;
 	ISOBJ_TYPE_assert(pThis, wtp);
 
+	/* the order of the next two statements is important! */
 	wtiSetState(pWti, WRKTHRD_STOPPED);
 	ATOMIC_DEC(pThis->iCurNumWrkThrd);
 	pthread_cond_broadcast(&pThis->condThrdTrm); /* activate anyone waiting on thread shutdown */
@@ -352,18 +356,16 @@ wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in 
 
 /* start a new worker */
 static rsRetVal
-wtpStartWrkr(wtp_t *pThis, int bLockMutex)
+wtpStartWrkr(wtp_t *pThis)
 {
-	DEFVARS_mutexProtection;
 	wti_t *pWti;
 	int i;
 	int iState;
-	pthread_attr_t attr;
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, wtp);
 
-	BEGIN_MTX_PROTECTED_OPERATIONS(&pThis->mutWtp, bLockMutex);
+	d_pthread_mutex_lock(&pThis->mutWtp);
 
 	/* find free spot in thread table. */
 	for(i = 0 ; i < pThis->iNumWorkerThreads ; ++i) {
@@ -381,17 +383,14 @@ wtpStartWrkr(wtp_t *pThis, int bLockMutex)
 
 	pWti = pThis->pWrkr[i];
 	wtiSetState(pWti, WRKTHRD_RUNNING);
-	pthread_attr_init(&attr);
-	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
-	iState = pthread_create(&(pWti->thrdID), &attr, wtpWorker, (void*) pWti);
-	pthread_attr_destroy(&attr);	/* TODO: we could globally reuse such an attribute 2009-07-08 */
+	iState = pthread_create(&(pWti->thrdID), &pThis->attrThrd, wtpWorker, (void*) pWti);
 	ATOMIC_INC(pThis->iCurNumWrkThrd); /* we got one more! */
 
 	DBGPRINTF("%s: started with state %d, num workers now %d\n",
 		  wtpGetDbgHdr(pThis), iState, ATOMIC_FETCH_32BIT(pThis->iCurNumWrkThrd));
 
 finalize_it:
-	END_MTX_PROTECTED_OPERATIONS(&pThis->mutWtp);
+	d_pthread_mutex_unlock(&pThis->mutWtp);
 	RETiRet;
 }
 
@@ -425,7 +424,7 @@ wtpAdviseMaxWorkers(wtp_t *pThis, int nMaxWrkr)
 		DBGPRINTF("%s: high activity - starting %d additional worker thread(s).\n", wtpGetDbgHdr(pThis), nMissing);
 		/* start the rqtd nbr of workers */
 		for(i = 0 ; i < nMissing ; ++i) {
-			CHKiRet(wtpStartWrkr(pThis, LOCK_MUTEX));
+			CHKiRet(wtpStartWrkr(pThis));
 		}
 	} else {
 		pthread_cond_signal(pThis->pcondBusy);

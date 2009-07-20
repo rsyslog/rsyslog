@@ -1956,7 +1956,6 @@ ChkStopWrkrReg(qqueue_t *pThis)
 {
 	DEFiRet;
 	if(pThis->bEnqOnly) {
-dbgprintf("XXX: terminate_NOW queue:Reg worker: enqOnly! queue size %d\n", getPhysicalQueueSize(pThis));
 		iRet = RS_RET_TERMINATE_NOW;
 	} else if(pThis->pqParent != NULL) {
 		iRet = RS_RET_TERMINATE_WHEN_IDLE;

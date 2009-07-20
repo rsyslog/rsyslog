@@ -566,8 +566,11 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 	/* got the name */
 	cstrFinalize(pStrB);
 
-	if(propNameToID(pStrB, &pTpe->data.field.propid) != RS_RET_OK)
+	if(propNameToID(pStrB, &pTpe->data.field.propid) != RS_RET_OK) {
+		cstrDestruct(&pStrB);
 		return 1;
+	}
+	cstrDestruct(&pStrB);
 
 	/* Check frompos, if it has an R, then topos should be a regex */
 	if(*p == ':') {

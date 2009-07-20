@@ -192,7 +192,7 @@ wtiWorkerCancelCleanup(void *arg)
 
 	DBGPRINTF("%s: cancelation cleanup handler called.\n", wtiGetDbgHdr(pThis));
 	
-	/* call user supplied handler (that one e.g. requeues the element) */
+	/* call user supplied handler */
 	pWtp->pfOnWorkerCancel(pThis->pWtp->pUsr, pThis->batch.pElem[0].pUsrp);
 
 	ENDfunc
@@ -215,7 +215,6 @@ doIdleProcessing(wti_t *pThis, wtp_t *pWtp, int *pbInactivityTOOccured)
 	pWtp->pfOnIdle(pWtp->pUsr, MUTEX_ALREADY_LOCKED);
 
 	d_pthread_mutex_lock(pWtp->pmutUsr);
-RUNLOG_VAR("%d", pThis->bAlwaysRunning);
 	if(pThis->bAlwaysRunning) {
 		/* never shut down any started worker */
 		d_pthread_cond_wait(pWtp->pcondBusy, pWtp->pmutUsr);
@@ -321,7 +320,6 @@ wtiSetDbgHdr(wti_t *pThis, uchar *pszMsg, size_t lenMsg)
 
 	if(pThis->pszDbgHdr != NULL) {
 		free(pThis->pszDbgHdr);
-		pThis->pszDbgHdr = NULL;
 	}
 
 	if((pThis->pszDbgHdr = malloc(sizeof(uchar) * lenMsg + 1)) == NULL)
@@ -355,6 +353,5 @@ BEGINObjClassInit(wti, 1, OBJ_IS_CORE_MODULE) /* one is the object version (most
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 ENDObjClassInit(wti)
 
-/*
- * vi:set ai:
+/* vi:set ai:
  */
