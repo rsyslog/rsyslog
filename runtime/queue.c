@@ -1289,17 +1289,15 @@ tryShutdownWorkersWithinActionTimeout(qqueue_t *pThis)
 	d_pthread_mutex_lock(pThis->mut);
 	if(pThis->bRunsDA) {
 		d_pthread_mutex_unlock(pThis->mut);
-		if(wtpGetCurNumWrkr(pThis->pqDA->pWtpReg, LOCK_MUTEX) > 0) {
-			/* and now the same for the DA queue */
-			dbgoprint((obj_t*) pThis, "trying immediate shutdown of DA queue workers\n");
-			iRetLocal = wtpShutdownAll(pThis->pqDA->pWtpReg, wtpState_SHUTDOWN_IMMEDIATE, &tTimeout);
-			if(iRetLocal == RS_RET_TIMED_OUT) {
-				dbgoprint((obj_t*) pThis, "immediate shutdown timed out on DA queue (this is acceptable "
-					  "and triggers cancellation)\n");
-			} else if(iRetLocal != RS_RET_OK) {
-				dbgoprint((obj_t*) pThis, "unexpected iRet state %d after trying immediate shutdown of the DA "
-					  "queue in disk save mode. Continuing, but results are unpredictable\n", iRetLocal);
-			}
+		/* and now the same for the DA queue */
+		dbgoprint((obj_t*) pThis, "trying immediate shutdown of DA queue workers\n");
+		iRetLocal = wtpShutdownAll(pThis->pqDA->pWtpReg, wtpState_SHUTDOWN_IMMEDIATE, &tTimeout);
+		if(iRetLocal == RS_RET_TIMED_OUT) {
+			dbgoprint((obj_t*) pThis, "immediate shutdown timed out on DA queue (this is acceptable "
+				  "and triggers cancellation)\n");
+		} else if(iRetLocal != RS_RET_OK) {
+			dbgoprint((obj_t*) pThis, "unexpected iRet state %d after trying immediate shutdown of the DA "
+				  "queue in disk save mode. Continuing, but results are unpredictable\n", iRetLocal);
 		}
 	} else {
 		d_pthread_mutex_unlock(pThis->mut);

@@ -304,8 +304,8 @@ wtpWrkrExecCancelCleanup(void *arg)
 	// TODO: the mutex_lock is dangerous, if we are cancelled within some function
 	// that already has the mutex locked...
 	d_pthread_mutex_lock(&pThis->mutWtp);
-	pThis->iCurNumWrkThrd--;
 	wtiSetState(pWti, WRKTHRD_STOPPED);
+	pThis->iCurNumWrkThrd--;
 	pthread_cond_signal(&pThis->condThrdTrm); /* activate anyone waiting on thread shutdown */
 	d_pthread_mutex_unlock(&pThis->mutWtp);
 
@@ -461,29 +461,6 @@ DEFpropSetMethFP(wtp, pfOnIdle, rsRetVal(*pVal)(void*, int))
 DEFpropSetMethFP(wtp, pfOnWorkerCancel, rsRetVal(*pVal)(void*, void*))
 DEFpropSetMethFP(wtp, pfOnWorkerStartup, rsRetVal(*pVal)(void*))
 DEFpropSetMethFP(wtp, pfOnWorkerShutdown, rsRetVal(*pVal)(void*))
-
-
-/* return the current number of worker threads.
- * TODO: atomic operation would bring a nice performance
- * enhancemcent
- * rgerhards, 2008-01-27
- */
-int
-wtpGetCurNumWrkr(wtp_t *pThis, int bLockMutex)
-{
-	DEFVARS_mutexProtection;
-	int iNumWrkr;
-
-	BEGINfunc
-	ISOBJ_TYPE_assert(pThis, wtp);
-
-	BEGIN_MTX_PROTECTED_OPERATIONS(&pThis->mutWtp, bLockMutex);
-	iNumWrkr = pThis->iCurNumWrkThrd;
-	END_MTX_PROTECTED_OPERATIONS(&pThis->mutWtp);
-
-	ENDfunc
-	return iNumWrkr;
-}
 
 
 /* set the debug header message
