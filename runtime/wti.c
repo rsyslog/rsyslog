@@ -250,9 +250,7 @@ wtiWorker(wti_t *pThis)
 	dbgSetThrdName(pThis->pszDbgHdr);
 	pthread_cleanup_push(wtiWorkerCancelCleanup, pThis);
 
-	d_pthread_mutex_lock(pWtp->pmutUsr);
 	pWtp->pfOnWorkerStartup(pWtp->pUsr);
-	d_pthread_mutex_unlock(pWtp->pmutUsr);
 
 	/* now we have our identity, on to real processing */
 	while(1) { /* loop will be broken below - need to do mutex locks */
