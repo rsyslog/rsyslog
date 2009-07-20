@@ -298,24 +298,6 @@ wtpCancelAll(wtp_t *pThis)
 }
 
 
-
-/* Set the Inactivity Guard
- * rgerhards, 2008-01-21
- */
-rsRetVal
-wtpSetInactivityGuard(wtp_t *pThis, int bNewState, int bLockMutex)
-{
-	DEFiRet;
-	DEFVARS_mutexProtection;
-
-	BEGIN_MTX_PROTECTED_OPERATIONS(&pThis->mutWtp, bLockMutex);
-	pThis->bInactivityGuard = bNewState;
-	END_MTX_PROTECTED_OPERATIONS(&pThis->mutWtp);
-
-	RETiRet;
-}
-
-
 /* cancellation cleanup handler for executing worker
  * decrements the worker counter
  * rgerhards, 2008-01-20

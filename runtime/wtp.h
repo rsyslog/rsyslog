@@ -48,7 +48,6 @@ struct wtp_s {
 	int 	iCurNumWrkThrd;/* current number of active worker threads */
 	struct wti_s **pWrkr;/* array with control structure for the worker thread(s) associated with this wtp */
 	int	toWrkShutdown;	/* timeout for idle workers in ms, -1 means indefinite (0 is immediate) */
-	bool	bInactivityGuard;/* prevents inactivity due to race condition */
 	rsRetVal (*pConsumer)(void *); /* user-supplied consumer function for dewtpd messages */
 	/* synchronization variables */
 	pthread_mutex_t mutWtp; /* mutex for the wtp's thread management */
@@ -81,7 +80,6 @@ rsRetVal wtpConstructFinalize(wtp_t *pThis);
 rsRetVal wtpDestruct(wtp_t **ppThis);
 rsRetVal wtpAdviseMaxWorkers(wtp_t *pThis, int nMaxWrkr);
 rsRetVal wtpProcessThrdChanges(wtp_t *pThis);
-rsRetVal wtpSetInactivityGuard(wtp_t *pThis, int bNewState, int bLockMutex);
 rsRetVal wtpChkStopWrkr(wtp_t *pThis, int bLockUsrMutex);
 rsRetVal wtpSetState(wtp_t *pThis, wtpState_t iNewState);
 rsRetVal wtpWakeupWrkr(wtp_t *pThis);
