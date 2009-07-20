@@ -157,20 +157,6 @@ CODESTARTobjDestruct(wtp)
 ENDobjDestruct(wtp)
 
 
-/* wake up at least one worker thread.
- * rgerhards, 2008-01-20
- */
-rsRetVal
-wtpWakeupWrkr(wtp_t *pThis)
-{
-	DEFiRet;
-
-	/* TODO; mutex? I think not needed, as we do not need predictable exec order -- rgerhards, 2008-01-28 */
-	ISOBJ_TYPE_assert(pThis, wtp);
-	pthread_cond_signal(pThis->pcondBusy);
-	RETiRet;
-}
-
 /* wake up all worker threads.
  * rgerhards, 2008-01-16
  */
@@ -239,7 +225,9 @@ finalize_it:
 
 #pragma GCC diagnostic ignored "-Wempty-body"
 /* Send a shutdown command to all workers and see if they terminate.
- * A timeout may be specified.
+ * A timeout may be specified. This function may also be called with
+ * the current number of workers being 0, in which case it does not
+ * shut down any worker.
  * rgerhards, 2008-01-14
  */
 rsRetVal
@@ -383,8 +371,6 @@ wtpStartWrkr(wtp_t *pThis, int bLockMutex)
 
 	BEGIN_MTX_PROTECTED_OPERATIONS(&pThis->mutWtp, bLockMutex);
 
-	pThis->iCurNumWrkThrd++;
-
 	/* find free spot in thread table. */
 	for(i = 0 ; i < pThis->iNumWorkerThreads ; ++i) {
 		if(wtiGetState(pThis->pWrkr[i]) == WRKTHRD_STOPPED) {
@@ -394,6 +380,8 @@ wtpStartWrkr(wtp_t *pThis, int bLockMutex)
 
 	if(i == pThis->iNumWorkerThreads)
 		ABORT_FINALIZE(RS_RET_NO_MORE_THREADS);
+
+	pThis->iCurNumWrkThrd++; /* we got one more! */
 
 	pWti = pThis->pWrkr[i];
 	wtiSetState(pWti, WRKTHRD_RUNNING);
@@ -445,7 +433,7 @@ wtpAdviseMaxWorkers(wtp_t *pThis, int nMaxWrkr)
 		}
 	} else  {
 		if(nMaxWrkr > 0) {
-			wtpWakeupWrkr(pThis);
+			pthread_cond_signal(pThis->pcondBusy);
 		}
 	}
 
