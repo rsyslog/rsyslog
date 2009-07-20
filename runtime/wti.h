@@ -34,8 +34,8 @@
 struct wti_s {
 	BEGINobjInstance;
 	pthread_t thrdID; 	/* thread ID */
+	int bIsRunning;	/* is this thread currently running? (must be int for atomic op!) */
 	bool bAlwaysRunning;	/* should this thread always run? */
-	bool bIsRunning;	/* is this thread currently running? */
 	wtp_t *pWtp; /* my worker thread pool (important if only the work thread instance is passed! */
 	batch_t batch; /* pointer to an object array meaningful for current user pointer (e.g. queue pUsr data elemt) */
 	uchar *pszDbgHdr;	/* header string for debug messages */

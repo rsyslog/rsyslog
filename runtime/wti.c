@@ -82,7 +82,7 @@ wtiGetDbgHdr(wti_t *pThis)
 bool
 wtiGetState(wti_t *pThis)
 {
-	return pThis->bIsRunning;
+	return ATOMIC_FETCH_32BIT(pThis->bIsRunning);
 }
 
 
@@ -105,14 +105,16 @@ rsRetVal
 wtiSetState(wti_t *pThis, bool bNewVal)
 {
 	ISOBJ_TYPE_assert(pThis, wti);
-	pThis->bIsRunning = bNewVal;
+	if(bNewVal)
+		ATOMIC_STORE_1_TO_INT(pThis->bIsRunning);
+	else
+		ATOMIC_STORE_0_TO_INT(pThis->bIsRunning);
 	return RS_RET_OK;
 }
 
 
 /* Cancel the thread. If the thread is not running. But it is save and legal to
  * call wtiCancelThrd() in such situations.
- * IMPORTANT: WTP mutex must be locked while this function is called!
  * rgerhards, 2008-02-26
  */
 rsRetVal
@@ -122,7 +124,7 @@ wtiCancelThrd(wti_t *pThis)
 
 	ISOBJ_TYPE_assert(pThis, wti);
 
-	if(pThis->bIsRunning) {
+	if(wtiGetState(pThis)) {
 		dbgoprint((obj_t*) pThis, "canceling worker thread\n");
 		pthread_cancel(pThis->thrdID);
 	}
@@ -159,7 +161,7 @@ wtiConstructFinalize(wti_t *pThis)
 
 	dbgprintf("%s: finalizing construction of worker instance data\n", wtiGetDbgHdr(pThis));
 
-	/* initialize our thread instance descriptor */
+	/* initialize our thread instance descriptor (no concurrency here) */
 	pThis->bIsRunning = FALSE; 
 
 	/* we now alloc the array for user pointers. We obtain the max from the queue itself. */
