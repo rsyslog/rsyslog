@@ -305,10 +305,11 @@ wtpWrkrExecCancelCleanup(void *arg)
 	/* the order of the next two statements is important! */
 	wtiSetState(pWti, WRKTHRD_STOPPED);
 	ATOMIC_DEC(pThis->iCurNumWrkThrd);
-	pthread_cond_broadcast(&pThis->condThrdTrm); /* activate anyone waiting on thread shutdown */
 
 	DBGPRINTF("%s: Worker thread %lx, terminated, num workers now %d\n",
 		  wtpGetDbgHdr(pThis), (unsigned long) pWti, ATOMIC_FETCH_32BIT(pThis->iCurNumWrkThrd));
+
+	pthread_cond_broadcast(&pThis->condThrdTrm); /* activate anyone waiting on thread shutdown */
 	ENDfunc
 }
 
