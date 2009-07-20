@@ -289,10 +289,12 @@ wtiWorker(wti_t *pThis)
 	}
 
 	/* indicate termination */
+	d_pthread_mutex_lock(pWtp->pmutUsr);
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
 	pthread_cleanup_pop(0); /* remove cleanup handler */
 	pWtp->pfOnWorkerShutdown(pWtp->pUsr);
 	pthread_setcancelstate(iCancelStateSave, NULL);
+	d_pthread_mutex_unlock(pWtp->pmutUsr);
 
 	RETiRet;
 }
