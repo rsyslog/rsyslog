@@ -165,9 +165,9 @@ TCPSessTblInit(tcpsrv_t *pThis)
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 	assert(pThis->pSessions == NULL);
 
-	dbgprintf("Allocating buffer for %d TCP sessions.\n", pThis->iSessMax);
+	DBGPRINTF("Allocating buffer for %d TCP sessions.\n", pThis->iSessMax);
 	if((pThis->pSessions = (tcps_sess_t **) calloc(pThis->iSessMax, sizeof(tcps_sess_t *))) == NULL) {
-		dbgprintf("Error: TCPSessInit() could not alloc memory for TCP session table.\n");
+		DBGPRINTF("Error: TCPSessInit() could not alloc memory for TCP session table.\n");
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
 
@@ -408,7 +408,7 @@ SessAccept(tcpsrv_t *pThis, tcpLstnPortList_t *pLstnInfo, tcps_sess_t **ppSess, 
 	 * rgerhards, 2005-09-26
 	 */
 	if(!pThis->pIsPermittedHost((struct sockaddr*) addr, (char*) fromHostFQDN, pThis->pUsr, pSess->pUsr)) {
-		dbgprintf("%s is not an allowed sender\n", fromHostFQDN);
+		DBGPRINTF("%s is not an allowed sender\n", fromHostFQDN);
 		if(glbl.GetOption_DisallowWarning()) {
 			errno = 0;
 			errmsg.LogError(0, RS_RET_HOST_NOT_PERMITTED, "TCP message from disallowed sender %s discarded", fromHostFQDN);
@@ -472,7 +472,7 @@ doReceive(tcpsrv_t *pThis, tcps_sess_t **ppSess)
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
-	dbgprintf("netstream %p with new data\n", (*ppSess)->pStrm);
+	DBGPRINTF("netstream %p with new data\n", (*ppSess)->pStrm);
 
 	/* Receive message */
 	iRet = pThis->pRcvData(*ppSess, buf, sizeof(buf), &iRcvd);
@@ -553,7 +553,7 @@ Run(tcpsrv_t *pThis)
 		for(i = 0 ; i < pThis->iLstnMax ; ++i) {
 			CHKiRet(nssel.IsReady(pSel, pThis->ppLstn[i], NSDSEL_RD, &bIsReady, &nfds));
 			if(bIsReady) {
-				dbgprintf("New connect on NSD %p.\n", pThis->ppLstn[i]);
+				DBGPRINTF("New connect on NSD %p.\n", pThis->ppLstn[i]);
 				SessAccept(pThis, pThis->ppLstnPort[i], &pNewSess, pThis->ppLstn[i]);
 				--nfds; /* indicate we have processed one */
 			}
