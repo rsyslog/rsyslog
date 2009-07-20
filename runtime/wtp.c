@@ -381,7 +381,9 @@ wtpStartWrkr(wtp_t *pThis, int bLockMutex)
 	if(i == pThis->iNumWorkerThreads)
 		ABORT_FINALIZE(RS_RET_NO_MORE_THREADS);
 
-	pThis->iCurNumWrkThrd++; /* we got one more! */
+	if(i == 0 || pThis->toWrkShutdown == -1) {
+		wtiSetAlwaysRunning(pThis->pWrkr[i]);
+	}
 
 	pWti = pThis->pWrkr[i];
 	wtiSetState(pWti, WRKTHRD_RUNNING);
@@ -389,6 +391,8 @@ wtpStartWrkr(wtp_t *pThis, int bLockMutex)
 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 	iState = pthread_create(&(pWti->thrdID), &attr, wtpWorker, (void*) pWti);
 	pthread_attr_destroy(&attr);	/* TODO: we could globally reuse such an attribute 2009-07-08 */
+	pThis->iCurNumWrkThrd++; /* we got one more! */
+
 	dbgprintf("%s: started with state %d, num workers now %d\n",
 		  wtpGetDbgHdr(pThis), iState, pThis->iCurNumWrkThrd);
 

@@ -86,6 +86,17 @@ wtiGetState(wti_t *pThis)
 }
 
 
+/* Set this thread to "always running" state (can not be unset)
+ * rgerhards, 2009-07-20
+ */
+rsRetVal
+wtiSetAlwaysRunning(wti_t *pThis)
+{
+	ISOBJ_TYPE_assert(pThis, wti);
+	pThis->bAlwaysRunning = TRUE;
+	return RS_RET_OK;
+}
+
 /* Set status (thread is running or not), actually an property of
  * use for wtp, but we need to have it per thread instance (thus it
  * is inside wti). -- rgerhards, 2009-07-17
@@ -202,7 +213,8 @@ doIdleProcessing(wti_t *pThis, wtp_t *pWtp, int *pbInactivityTOOccured)
 	pWtp->pfOnIdle(pWtp->pUsr, MUTEX_ALREADY_LOCKED);
 
 	d_pthread_mutex_lock(pWtp->pmutUsr);
-	if(pWtp->toWrkShutdown == -1) {
+RUNLOG_VAR("%d", pThis->bAlwaysRunning);
+	if(pThis->bAlwaysRunning) {
 		/* never shut down any started worker */
 		d_pthread_cond_wait(pWtp->pcondBusy, pWtp->pmutUsr);
 	} else {

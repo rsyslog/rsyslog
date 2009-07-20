@@ -298,19 +298,6 @@ TurnOffDAMode(qqueue_t *pThis)
 
 	ISOBJ_TYPE_assert(pThis, qqueue);
 	ASSERT(pThis->bRunsDA);
-
-	/* if we need to pull any data that we still need from the (child) disk queue,
-	 * now would be the time to do so. At present, we do not need this, but I'd like to
-	 * keep that comment if future need arises.
-	 */
-
-	/* we need to check if the DA queue is empty because the DA worker may simply have
-	 * terminated due to no new messages arriving. That does not, however, mean that the
-	 * DA queue is empty. If there is still data in that queue, we do nothing and leave
-	 * that for a later incarnation of this function (it will be called multiple times
-	 * during the lifetime of DA-mode, depending on how often the DA worker receives an
-	 * inactivity timeout. -- rgerhards, 2008-01-25
-	 */
 	if(getLogicalQueueSize(pThis->pqDA) == 0) {
 		pThis->bRunsDA = 0; /* tell the world we are back in non-DA mode */
 		/* we destruct the queue object, which will also shutdown the queue worker. As the queue is empty,
@@ -319,10 +306,6 @@ TurnOffDAMode(qqueue_t *pThis)
 //XXX: TODO		qqueueDestruct(&pThis->pqDA); /* and now we are ready to destruct the DA queue */
 		dbgoprint((obj_t*) pThis, "disk-assistance has been turned off, disk queue was empty (iRet %d)\n",
 			  iRet);
-	} else {
-		/* the queue has data again! */
-		dbgprintf("DA queue has data during shutdown, restarting...\n");
-		qqueueAdviseMaxWorkers(pThis->pqDA);
 	}
 
 	RETiRet;
