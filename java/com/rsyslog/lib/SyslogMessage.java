@@ -27,7 +27,6 @@
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
  */
 package com.rsyslog.lib;
-import com.rsyslog.gui.simpServ.*;
 
 public class SyslogMessage {
 
