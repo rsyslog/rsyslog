@@ -1,4 +1,3 @@
-<<<<<<< HEAD:tests/Makefile.am
 TESTRUNS = rt_init rscript
 check_PROGRAMS = $(TESTRUNS) ourtail udptester
 TESTS = $(TESTRUNS) cfg.sh parsertest.sh omod-if-array.sh \
