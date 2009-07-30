@@ -21,6 +21,7 @@ TESTS += omod-if-array.sh \
 	 inputname.sh \
 	 threadingmq.sh \
 	 threadingmqaq.sh \
+	 discard.sh \
 	 fieldtest.sh
 endif
 
@@ -114,6 +115,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/1.inputname_imtcp_12515 \
 	   testsuites/1.inputname_imtcp_12516 \
 	   omod-if-array.sh \
+	   discard.sh \
+	   testsuites/discard.conf \
 	   diag.sh \
 	   testsuites/diag-common.conf \
            daqueue-persist.sh \

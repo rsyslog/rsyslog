@@ -466,10 +466,12 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 				ABORT_FINALIZE(localRet);
 
 			localRet = (*pNew->modQueryEtryPt)((uchar*)"endTransaction", &pNew->mod.om.endTransaction);
-			if(localRet == RS_RET_MODULE_ENTRY_POINT_NOT_FOUND)
-				pNew->mod.om.beginTransaction = dummyEndTransaction;
-			else if(localRet != RS_RET_OK)
+			if(localRet == RS_RET_MODULE_ENTRY_POINT_NOT_FOUND) {
+				pNew->mod.om.endTransaction = dummyEndTransaction;
+				//pNew->mod.om.beginTransaction = dummyEndTransaction;
+			} else if(localRet != RS_RET_OK) {
 				ABORT_FINALIZE(localRet);
+			}
 			break;
 		case eMOD_LIB:
 			break;
