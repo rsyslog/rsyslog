@@ -83,6 +83,7 @@ DEFFUNC_llExecFunc(processMsgDoActions)
 	}
 
 	iRetMod = actionCallAction(pAction, pDoActData->pMsg);
+dbgprintf("XXXX: processMsgDoActions returns %d\n", iRet);
 	if(iRetMod == RS_RET_DISCARDMSG) {
 		ABORT_FINALIZE(RS_RET_DISCARDMSG);
 	} else if(iRetMod == RS_RET_SUSPENDED) {
@@ -271,6 +272,7 @@ processMsg(rule_t *pThis, msg_t *pMsg)
 	}
 
 finalize_it:
+dbgprintf("XXXX: rule.processMsg returns %d\n", iRet);
 	RETiRet;
 }
 
