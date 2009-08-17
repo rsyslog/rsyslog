@@ -335,6 +335,10 @@ ParseTIMESTAMP3164(struct syslogTime *pTime, uchar** ppszTS)
 	 * We will use this for parsing, as it probably is the
 	 * fastest way to parse it.
 	 *
+	 * 2009-08-17: we now do case-insensitive comparisons, as some devices obviously do not
+	 * obey to the RFC-specified case. As we need to guess in any case, we can ignore case
+	 * in the first place -- rgerhards
+	 *
 	 * 2005-07-18, well sometimes it pays to be a bit more verbose, even in C...
 	 * Fixed a bug that lead to invalid detection of the data. The issue was that
 	 * we had an if(++pszTS == 'x') inside of some of the consturcts below. However,
@@ -346,20 +350,21 @@ ParseTIMESTAMP3164(struct syslogTime *pTime, uchar** ppszTS)
 	 */
 	switch(*pszTS++)
 	{
+	case 'j':
 	case 'J':
-		if(*pszTS == 'a') {
+		if(*pszTS == 'a' || *pszTS == 'A') {
 			++pszTS;
-			if(*pszTS == 'n') {
+			if(*pszTS == 'n' || *pszTS == 'N') {
 				++pszTS;
 				month = 1;
 			} else
 				ABORT_FINALIZE(RS_RET_INVLD_TIME);
-		} else if(*pszTS == 'u') {
+		} else if(*pszTS == 'u' || *pszTS == 'U') {
 			++pszTS;
-			if(*pszTS == 'n') {
+			if(*pszTS == 'n' || *pszTS == 'N') {
 				++pszTS;
 				month = 6;
-			} else if(*pszTS == 'l') {
+			} else if(*pszTS == 'l' || *pszTS == 'L') {
 				++pszTS;
 				month = 7;
 			} else
@@ -367,10 +372,11 @@ ParseTIMESTAMP3164(struct syslogTime *pTime, uchar** ppszTS)
 		} else
 			ABORT_FINALIZE(RS_RET_INVLD_TIME);
 		break;
+	case 'f':
 	case 'F':
-		if(*pszTS == 'e') {
+		if(*pszTS == 'e' || *pszTS == 'E') {
 			++pszTS;
-			if(*pszTS == 'b') {
+			if(*pszTS == 'b' || *pszTS == 'B') {
 				++pszTS;
 				month = 2;
 			} else
@@ -378,13 +384,14 @@ ParseTIMESTAMP3164(struct syslogTime *pTime, uchar** ppszTS)
 		} else
 			ABORT_FINALIZE(RS_RET_INVLD_TIME);
 		break;
+	case 'm':
 	case 'M':
-		if(*pszTS == 'a') {
+		if(*pszTS == 'a' || *pszTS == 'A') {
 			++pszTS;
-			if(*pszTS == 'r') {
+			if(*pszTS == 'r' || *pszTS == 'R') {
 				++pszTS;
 				month = 3;
-			} else if(*pszTS == 'y') {
+			} else if(*pszTS == 'y' || *pszTS == 'Y') {
 				++pszTS;
 				month = 5;
 			} else
@@ -392,17 +399,18 @@ ParseTIMESTAMP3164(struct syslogTime *pTime, uchar** ppszTS)
 		} else
 			ABORT_FINALIZE(RS_RET_INVLD_TIME);
 		break;
+	case 'a':
 	case 'A':
-		if(*pszTS == 'p') {
+		if(*pszTS == 'p' || *pszTS == 'P') {
 			++pszTS;
-			if(*pszTS == 'r') {
+			if(*pszTS == 'r' || *pszTS == 'R') {
 				++pszTS;
 				month = 4;
 			} else
 				ABORT_FINALIZE(RS_RET_INVLD_TIME);
-		} else if(*pszTS == 'u') {
+		} else if(*pszTS == 'u' || *pszTS == 'U') {
 			++pszTS;
-			if(*pszTS == 'g') {
+			if(*pszTS == 'g' || *pszTS == 'G') {
 				++pszTS;
 				month = 8;
 			} else
@@ -410,10 +418,11 @@ ParseTIMESTAMP3164(struct syslogTime *pTime, uchar** ppszTS)
 		} else
 			ABORT_FINALIZE(RS_RET_INVLD_TIME);
 		break;
+	case 's':
 	case 'S':
-		if(*pszTS == 'e') {
+		if(*pszTS == 'e' || *pszTS == 'E') {
 			++pszTS;
-			if(*pszTS == 'p') {
+			if(*pszTS == 'p' || *pszTS == 'P') {
 				++pszTS;
 				month = 9;
 			} else
@@ -421,10 +430,11 @@ ParseTIMESTAMP3164(struct syslogTime *pTime, uchar** ppszTS)
 		} else
 			ABORT_FINALIZE(RS_RET_INVLD_TIME);
 		break;
+	case 'o':
 	case 'O':
-		if(*pszTS == 'c') {
+		if(*pszTS == 'c' || *pszTS == 'C') {
 			++pszTS;
-			if(*pszTS == 't') {
+			if(*pszTS == 't' || *pszTS == 'T') {
 				++pszTS;
 				month = 10;
 			} else
@@ -432,10 +442,11 @@ ParseTIMESTAMP3164(struct syslogTime *pTime, uchar** ppszTS)
 		} else
 			ABORT_FINALIZE(RS_RET_INVLD_TIME);
 		break;
+	case 'n':
 	case 'N':
-		if(*pszTS == 'o') {
+		if(*pszTS == 'o' || *pszTS == 'O') {
 			++pszTS;
-			if(*pszTS == 'v') {
+			if(*pszTS == 'v' || *pszTS == 'V') {
 				++pszTS;
 				month = 11;
 			} else
@@ -443,10 +454,11 @@ ParseTIMESTAMP3164(struct syslogTime *pTime, uchar** ppszTS)
 		} else
 			ABORT_FINALIZE(RS_RET_INVLD_TIME);
 		break;
+	case 'd':
 	case 'D':
-		if(*pszTS == 'e') {
+		if(*pszTS == 'e' || *pszTS == 'E') {
 			++pszTS;
-			if(*pszTS == 'c') {
+			if(*pszTS == 'c' || *pszTS == 'C') {
 				++pszTS;
 				month = 12;
 			} else
