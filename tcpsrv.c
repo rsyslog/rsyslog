@@ -261,7 +261,7 @@ static void deinit_tcp_listener(tcpsrv_t *pThis)
 	}
 
 	/* finally close our listen streams */
-	for(i = 0 ; i < pThis->iLstnMax ; ++i) {
+	for(i = 0 ; i < pThis->iLstnCurr ; ++i) {
 		netstrm.Destruct(pThis->ppLstn + i);
 	}
 }
@@ -280,12 +280,12 @@ addTcpLstn(void *pUsr, netstrm_t *pLstn)
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 	ISOBJ_TYPE_assert(pLstn, netstrm);
 
-	if(pThis->iLstnMax >= TCPLSTN_MAX_DEFAULT)
+	if(pThis->iLstnCurr >= pThis->iLstnMax)
 		ABORT_FINALIZE(RS_RET_MAX_LSTN_REACHED);
 
-	pThis->ppLstn[pThis->iLstnMax] = pLstn;
-	pThis->ppLstnPort[pThis->iLstnMax] = pPortList;
-	++pThis->iLstnMax;
+	pThis->ppLstn[pThis->iLstnCurr] = pLstn;
+	pThis->ppLstnPort[pThis->iLstnCurr] = pPortList;
+	++pThis->iLstnCurr;
 
 finalize_it:
 	RETiRet;
@@ -485,7 +485,6 @@ Run(tcpsrv_t *pThis)
 	 * this thread. Thus, we also need to instantiate a cancel cleanup handler
 	 * to prevent us from leaking anything. -- rgerharsd, 20080-04-24
 	 */
-RUNLOG_STR("XXXX: tcp server runs\n");
 	pthread_cleanup_push(RunCancelCleanup, (void*) &pSel);
 	while(1) {
 		CHKiRet(nssel.Construct(&pSel));
@@ -493,7 +492,7 @@ RUNLOG_STR("XXXX: tcp server runs\n");
 		CHKiRet(nssel.ConstructFinalize(pSel));
 
 		/* Add the TCP listen sockets to the list of read descriptors. */
-		for(i = 0 ; i < pThis->iLstnMax ; ++i) {
+		for(i = 0 ; i < pThis->iLstnCurr ; ++i) {
 			CHKiRet(nssel.Add(pSel, pThis->ppLstn[i], NSDSEL_RD));
 		}
 
@@ -506,11 +505,10 @@ RUNLOG_STR("XXXX: tcp server runs\n");
 			iTCPSess = TCPSessGetNxtSess(pThis, iTCPSess);
 		}
 
-RUNLOG_STR("XXXX: tcp server select\n");
 		/* wait for io to become ready */
 		CHKiRet(nssel.Wait(pSel, &nfds));
 
-		for(i = 0 ; i < pThis->iLstnMax ; ++i) {
+		for(i = 0 ; i < pThis->iLstnCurr ; ++i) {
 			CHKiRet(nssel.IsReady(pSel, pThis->ppLstn[i], NSDSEL_RD, &bIsReady, &nfds));
 			if(bIsReady) {
 				dbgprintf("New connect on NSD %p.\n", pThis->ppLstn[i]);
@@ -518,7 +516,6 @@ RUNLOG_STR("XXXX: tcp server select\n");
 				--nfds; /* indicate we have processed one */
 			}
 		}
-RUNLOG_STR("XXXX: tcp server post select\n");
 
 		/* now check the sessions */
 		iTCPSess = TCPSessGetNxtSess(pThis, -1);
@@ -582,7 +579,8 @@ finalize_it: /* this is a very special case - this time only we do not exit the 
 
 /* Standard-Constructor */
 BEGINobjConstruct(tcpsrv) /* be sure to specify the object type also in END macro! */
-	pThis->iSessMax = TCPSESS_MAX_DEFAULT; /* TODO: useful default ;) */
+	pThis->iSessMax = TCPSESS_MAX_DEFAULT;
+	pThis->iLstnMax = TCPLSTN_MAX_DEFAULT;
 	pThis->addtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
 	pThis->OnMsgReceive = NULL;
 ENDobjConstruct(tcpsrv)
@@ -606,8 +604,8 @@ tcpsrvConstructFinalize(tcpsrv_t *pThis)
 	CHKiRet(netstrms.ConstructFinalize(pThis->pNS));
 
 	/* set up listeners */
-	CHKmalloc(pThis->ppLstn = calloc(TCPLSTN_MAX_DEFAULT, sizeof(netstrm_t*)));
-	CHKmalloc(pThis->ppLstnPort = calloc(TCPLSTN_MAX_DEFAULT, sizeof(tcpLstnPortList_t*)));
+	CHKmalloc(pThis->ppLstn = calloc(pThis->iLstnMax, sizeof(netstrm_t*)));
+	CHKmalloc(pThis->ppLstnPort = calloc(pThis->iLstnMax, sizeof(tcpLstnPortList_t*)));
 	iRet = pThis->OpenLstnSocks(pThis);
 
 finalize_it:
@@ -824,6 +822,20 @@ SetDrvrPermPeers(tcpsrv_t *pThis, permittedPeers_t *pPermPeers)
  * -------------------------------------------------------------------------- */
 
 
+/* set max number of listeners
+ * this must be called before ConstructFinalize, or it will have no effect!
+ * rgerhards, 2009-08-17
+ */
+static rsRetVal
+SetLstnMax(tcpsrv_t *pThis, int iMax)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, tcpsrv);
+	pThis->iLstnMax = iMax;
+	RETiRet;
+}
+
+
 /* set max number of sessions
  * this must be called before ConstructFinalize, or it will have no effect!
  * rgerhards, 2009-04-09
@@ -866,6 +878,7 @@ CODESTARTobjQueryInterface(tcpsrv)
 	pIf->SetInputName = SetInputName;
 	pIf->SetAddtlFrameDelim = SetAddtlFrameDelim;
 	pIf->SetSessMax = SetSessMax;
+	pIf->SetLstnMax = SetLstnMax;
 	pIf->SetDrvrMode = SetDrvrMode;
 	pIf->SetDrvrAuthMode = SetDrvrAuthMode;
 	pIf->SetDrvrPermPeers = SetDrvrPermPeers;
