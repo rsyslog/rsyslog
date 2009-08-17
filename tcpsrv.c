@@ -327,15 +327,19 @@ finalize_it:
 static rsRetVal
 create_tcp_socket(tcpsrv_t *pThis)
 {
-	tcpLstnPortList_t *pEntry;
 	DEFiRet;
+	rsRetVal localRet;
+	tcpLstnPortList_t *pEntry;
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 
 	/* init all configured ports */
 	pEntry = pThis->pLstnPorts;
 	while(pEntry != NULL) {
-		CHKiRet(initTCPListener(pThis, pEntry));
+		localRet = initTCPListener(pThis, pEntry);
+		if(localRet != RS_RET_OK) {
+			errmsg.LogError(0, localRet, "Could not create tcp listener, ignoring port %s.", pEntry->pszPort);
+		}
 		pEntry = pEntry->pNext;
 	}
 
