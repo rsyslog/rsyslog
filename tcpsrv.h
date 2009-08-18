@@ -54,9 +54,10 @@ struct tcpsrv_s {
 	uchar *pszInputName;	/**< value to be used as input name */
 	ruleset_t *pRuleset;	/**< ruleset to bind to */
 	permittedPeers_t *pPermPeers;/**< driver's permitted peers */
-	int iLstnMax;		/**< max nbr of listeners currently supported */
+	int iLstnCurr;		/**< max nbr of listeners currently supported */
 	netstrm_t **ppLstn;	/**< our netstream listners */
 	tcpLstnPortList_t **ppLstnPort; /**< pointer to relevant listen port description */
+	int iLstnMax;		/**< max number of listners supported */
 	int iSessMax;		/**< max number of sessions supported */
 	tcpLstnPortList_t *pLstnPorts;	/**< head pointer for listen ports */
 	int addtlFrameDelim;	/**< additional frame delimiter for plain TCP syslog framing (e.g. to handle NetScreen) */
@@ -111,8 +112,10 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
 	/* added v6 */
 	rsRetVal (*SetOnMsgReceive)(tcpsrv_t *pThis, rsRetVal (*OnMsgReceive)(tcps_sess_t*, uchar*, int)); /* 2009-05-24 */
 	rsRetVal (*SetRuleset)(tcpsrv_t *pThis, ruleset_t*); /* 2009-06-12 */
+	/* added v7 */
+	rsRetVal (*SetLstnMax)(tcpsrv_t *pThis, int iMaxLstn);	/* 2009-08-17 */
 ENDinterface(tcpsrv)
-#define tcpsrvCURR_IF_VERSION 6 /* increment whenever you change the interface structure! */
+#define tcpsrvCURR_IF_VERSION 7 /* increment whenever you change the interface structure! */
 /* change for v4:
  * - SetAddtlFrameDelim() added -- rgerhards, 2008-12-10
  * - SetInputName() added -- rgerhards, 2008-12-10
