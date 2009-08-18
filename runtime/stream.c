@@ -853,6 +853,7 @@ doAsyncWriteInternal(strm_t *pThis, size_t lenBuf)
 	if(++pThis->iCnt == 1)
 		pthread_cond_signal(&pThis->notEmpty);
 
+finalize_it:
 	RETiRet;
 }
 
