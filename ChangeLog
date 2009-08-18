@@ -11,6 +11,16 @@ Version 4.5.2  [DEVEL] (rgerhards), 2009-07-??
   does most probably not have any effect in practice.
 - bugfix: if tcp listen port could not be created, no error message was
   emitted
+- bugfix: potential segfault in output file writer (omfile)
+  In async write mode, we use modular arithmetic to index the output
+  buffer array. However, the counter variables accidently were signed,
+  thus resulting in negative indizes after integer overflow. That in turn
+  could lead to segfaults, but was depending on the memory layout of 
+  the instance in question (which in turn depended on a number of
+  variables, like compile settings but also configuration). The counters
+  are now unsigned (as they always should have been) and so the dangling
+  mis-indexing does no longer happen. This bug potentially affected all
+  installations, even if only some may actually have seen a segfault.
 ---------------------------------------------------------------------------
 Version 4.5.1  [DEVEL] (rgerhards), 2009-07-15
 - CONFIG CHANGE: $HUPisRestart default is now "off". We are doing this

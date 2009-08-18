@@ -833,6 +833,7 @@ finalize_it:
  * the very some producer comes back in sequence to submit the then-filled buffers.
  * This also enables us to timout on partially written buffers. -- rgerhards, 2009-07-06
  */
+//#include <stdio.h>
 static inline rsRetVal
 doAsyncWriteInternal(strm_t *pThis, size_t lenBuf)
 {
