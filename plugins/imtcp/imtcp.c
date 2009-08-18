@@ -82,6 +82,7 @@ static permittedPeers_t *pPermPeersRoot = NULL;
 
 /* config settings */
 static int iTCPSessMax = 200; /* max number of sessions */
+static int iTCPLstnMax = 20; /* max number of sessions */
 static int iStrmDrvrMode = 0; /* mode for stream driver, driver-dependent (0 mostly means plain tcp) */
 static int iAddtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER; /* addtl frame delimiter, e.g. for netscreen, default none */
 static uchar *pszStrmDrvrAuthMode = NULL; /* authentication mode to use */
@@ -188,6 +189,7 @@ static rsRetVal addTCPListener(void __attribute__((unused)) *pVal, uchar *pNewVa
 	if(pOurTcpsrv == NULL) {
 		CHKiRet(tcpsrv.Construct(&pOurTcpsrv));
 		CHKiRet(tcpsrv.SetSessMax(pOurTcpsrv, iTCPSessMax));
+		CHKiRet(tcpsrv.SetLstnMax(pOurTcpsrv, iTCPLstnMax));
 		CHKiRet(tcpsrv.SetCBIsPermittedHost(pOurTcpsrv, isPermittedHost));
 		CHKiRet(tcpsrv.SetCBRcvData(pOurTcpsrv, doRcvData));
 		CHKiRet(tcpsrv.SetCBOpenLstnSocks(pOurTcpsrv, doOpenLstnSocks));
@@ -280,6 +282,7 @@ static rsRetVal
 resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
 	iTCPSessMax = 200;
+	iTCPLstnMax = 20;
 	iStrmDrvrMode = 0;
 	iAddtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
 	free(pszInputName);
@@ -316,6 +319,8 @@ CODEmodInit_QueryRegCFSLineHdlr
 				   addTCPListener, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpmaxsessions"), 0, eCmdHdlrInt,
 				   NULL, &iTCPSessMax, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpmaxlisteners"), 0, eCmdHdlrInt,
+				   NULL, &iTCPLstnMax, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpserverstreamdrivermode"), 0,
 				   eCmdHdlrInt, NULL, &iStrmDrvrMode, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpserverstreamdriverauthmode"), 0,

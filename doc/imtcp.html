@@ -43,15 +43,19 @@ can be found at the <a href="http://www.rsyslog.com/Article321.phtml">Cisco tcp 
 page.
 <li>$InputTCPServerRun &lt;port&gt;<br>
 Starts a TCP server on selected port</li>
-<li><ul><li>$InputTCPMaxSessions &lt;number&gt;</li></ul>
-Sets the maximum number of sessions supported</li><li>$InputTCPServerStreamDriverMode &lt;number&gt;<br>
+<li>$InputTCPMaxListeners &lt;number&gt;<br>
+Sets the maximum number of listeners (server ports) supported. Default is 20. This must be set before the first $InputTCPServerRun directive.</li>
+<li>$InputTCPMaxSessions &lt;number&gt;<br>
+Sets the maximum number of sessions supported. Default is 200. This must be set before the first $InputTCPServerRun directive</li>
+<li>$InputTCPServerStreamDriverMode &lt;number&gt;<br>
 Sets the driver mode for the currently selected <a href="netstream.html">network stream driver</a>. &lt;number&gt; is driver specifc.</li>
 <li>$InputTCPServerInputName &lt;name&gt;<br>
 Sets a name for the inputname property. If no name is set "imtcp" is used by default. Setting a 
 name is not strictly necessary, but can be useful to apply filtering based on which input
 the message was received from.
 <li>$InputTCPServerStreamDriverAuthMode &lt;mode-string&gt;<br>
-Sets the authentication mode for the currently selected <a href="netstream.html">network stream driver</a>. &lt;mode-string&gt; is driver specifc.</li><li>$InputTCPServerStreamDriverPermittedPeer &lt;id-string&gt;<br>
+Sets the authentication mode for the currently selected <a href="netstream.html">network stream driver</a>. &lt;mode-string&gt; is driver specifc.</li>
+<li>$InputTCPServerStreamDriverPermittedPeer &lt;id-string&gt;<br>
 Sets permitted peer IDs. Only these peers are able to connect to the
 listener. &lt;id-string&gt; semantics depend on the currently selected
 AuthMode and&nbsp; <a href="netstream.html">network stream driver</a>. PermittedPeers may not be set in anonymous modes.</li>

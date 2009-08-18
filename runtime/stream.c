@@ -628,7 +628,8 @@ static rsRetVal strmConstructFinalize(strm_t *pThis)
 		pthread_cond_init(&pThis->notEmpty, 0);
 		pthread_cond_init(&pThis->isEmpty, 0);
 		pThis->iCnt = pThis->iEnq = pThis->iDeq = 0;
-		for(i = 0 ; i < STREAM_ASYNC_NUMBUFS ; ++i) {
+		//for(i = 0 ; i < STREAM_ASYNC_NUMBUFS ; ++i) {
+		for(i = 0 ; i < 1 ; ++i) { // HOTFIX!!!
 			CHKmalloc(pThis->asyncBuf[i].pBuf = (uchar*) malloc(sizeof(uchar) * pThis->sIOBufSize));
 		}
 		pThis->pIOBuf = pThis->asyncBuf[0].pBuf;
@@ -843,7 +844,10 @@ doAsyncWriteInternal(strm_t *pThis, size_t lenBuf)
 		d_pthread_cond_wait(&pThis->notFull, &pThis->mut);
 
 	pThis->asyncBuf[pThis->iEnq % STREAM_ASYNC_NUMBUFS].lenBuf = lenBuf;
-	pThis->pIOBuf = pThis->asyncBuf[++pThis->iEnq % STREAM_ASYNC_NUMBUFS].pBuf;
+	pThis->asyncBuf[pThis->iEnq % STREAM_ASYNC_NUMBUFS].pBuf = pThis->pIOBuf;
+	//pThis->pIOBuf = pThis->asyncBuf[++pThis->iEnq % STREAM_ASYNC_NUMBUFS].pBuf;
+	++pThis->iEnq;
+	CHKmalloc(pThis->pIOBuf = (uchar*) malloc(sizeof(uchar) * pThis->sIOBufSize));
 
 	pThis->bDoTimedWait = 0; /* everything written, no need to timeout partial buffer writes */
 	if(++pThis->iCnt == 1)
@@ -936,6 +940,8 @@ asyncWriterThread(void *pPtr)
 		iDeq = pThis->iDeq++ % STREAM_ASYNC_NUMBUFS;
 		doWriteInternal(pThis, pThis->asyncBuf[iDeq].pBuf, pThis->asyncBuf[iDeq].lenBuf);
 		// TODO: error check????? 2009-07-06
+		free(pThis->asyncBuf[iDeq].pBuf);
+		pThis->asyncBuf[iDeq].pBuf = NULL;
 
 		--pThis->iCnt;
 		if(pThis->iCnt < STREAM_ASYNC_NUMBUFS) {
