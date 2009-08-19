@@ -131,8 +131,8 @@ typedef struct strm_s {
 	pthread_cond_t notFull;
 	pthread_cond_t notEmpty;
 	pthread_cond_t isEmpty;
-	short iEnq;
-	short iDeq;
+	unsigned short iEnq;	/* this MUST be unsigned as we use module arithmetic (else invalid indexing happens!) */
+	unsigned short iDeq;	/* this MUST be unsigned as we use module arithmetic (else invalid indexing happens!) */
 	short iCnt;	/* current nbr of elements in buffer */
 	struct {
 		uchar *pBuf;
