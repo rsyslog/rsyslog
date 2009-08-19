@@ -2,6 +2,16 @@
 Version 5.1.4  [DEVEL] (rgerhards), 2009-07-??
 - bugfix: discard action did not work (did not discard messages)
 - bugfix: discard action caused segfault
+- bugfix: potential segfault in output file writer (omfile)
+  In async write mode, we use modular arithmetic to index the output
+  buffer array. However, the counter variables accidently were signed,
+  thus resulting in negative indizes after integer overflow. That in turn
+  could lead to segfaults, but was depending on the memory layout of 
+  the instance in question (which in turn depended on a number of
+  variables, like compile settings but also configuration). The counters
+  are now unsigned (as they always should have been) and so the dangling
+  mis-indexing does no longer happen. This bug potentially affected all
+  installations, even if only some may actually have seen a segfault.
 ---------------------------------------------------------------------------
 Version 5.1.3  [DEVEL] (rgerhards), 2009-07-28
 - architecture change: queue now always has at least one worker thread
