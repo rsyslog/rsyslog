@@ -111,7 +111,9 @@ that no rebind is done. This directive is useful for use with load-balancers.</l
 are written to actions only if the action was not recently executed (by default, recently means within the
 past 20 minutes). If this setting is switched to &quot;on&quot;, mark messages are always sent to actions,
 no matter how recently they have been executed. In this mode, mark messages can be used as a kind of
-heartbeat.
+heartbeat. Note that this option auto-resets to &quot;off&quot;, so if you intend to use it with multiple
+actions, it must be specified in front off <b>all</b> selector lines that should provide this 
+functionality.
 </li>
 <li><a href="rsconf1_allowedsender.html">$AllowedSender</a></li>
 <li><a href="rsconf1_controlcharacterescapeprefix.html">$ControlCharacterEscapePrefix</a></li>
