@@ -21,6 +21,9 @@ Version 4.5.2  [DEVEL] (rgerhards), 2009-07-??
   are now unsigned (as they always should have been) and so the dangling
   mis-indexing does no longer happen. This bug potentially affected all
   installations, even if only some may actually have seen a segfault.
+- bugfix: hostnames with dashes in them were incorrectly treated as
+  malformed, thus causing them to be treated as TAG (this was a regression
+  introduced from the "rfc3164 strict" change in 4.5.0).
 ---------------------------------------------------------------------------
 Version 4.5.1  [DEVEL] (rgerhards), 2009-07-15
 - CONFIG CHANGE: $HUPisRestart default is now "off". We are doing this
