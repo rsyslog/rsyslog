@@ -1218,7 +1218,7 @@ int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 		if(flags & PARSE_HOSTNAME) {
 			i = 0;
 			while((isalnum(p2parse[i]) || p2parse[i] == '.' || p2parse[i] == '.'
-				|| p2parse[i] == '_') && i < CONF_TAG_MAXSIZE) {
+				|| p2parse[i] == '_' || p2parse[i] == '-') && i < CONF_TAG_MAXSIZE) {
 				bufParseHOSTNAME[i] = p2parse[i];
 				++i;
 			}
