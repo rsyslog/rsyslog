@@ -1,4 +1,10 @@
 ---------------------------------------------------------------------------
+Version 5.1.5  [DEVEL] (rgerhards), 2009-08-??
+- added new config option $ActionWriteAllMarkMessages
+  this option permites to process mark messages under all circumstances,
+  even if an action was recently called. This can be useful to use mark
+  messages as a kind of heartbeat.
+---------------------------------------------------------------------------
 Version 5.1.4  [DEVEL] (rgerhards), 2009-08-20
 - legacy syslog parser changed so that it now accepts date stamps in
   wrong case. Some devices seem to create them and I do not see any harm

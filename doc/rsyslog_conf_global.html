@@ -107,6 +107,12 @@ that it should be not be much more often than once per second).</li>
 <li><b>$ActionSendUDPRebindInterval</b> nbr</a>- [available since 4.3.2] - instructs the UDP send
 action to rebind the send socket every nbr of messages sent. Zero, the default, means
 that no rebind is done. This directive is useful for use with load-balancers.</li>
+<li><b>$ActionWriteAllMarkMessages</b> [on/<b>off</b>]- [available since 5.1.5] - normally, mark messages
+are written to actions only if the action was not recently executed (by default, recently means within the
+past 20 minutes). If this setting is switched to &quot;on&quot;, mark messages are always sent to actions,
+no matter how recently they have been executed. In this mode, mark messages can be used as a kind of
+heartbeat.
+</li>
 <li><a href="rsconf1_allowedsender.html">$AllowedSender</a></li>
 <li><a href="rsconf1_controlcharacterescapeprefix.html">$ControlCharacterEscapePrefix</a></li>
 <li><a href="rsconf1_debugprintcfsyslinehandlerlist.html">$DebugPrintCFSyslineHandlerList</a></li>

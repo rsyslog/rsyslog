@@ -65,8 +65,9 @@ static int glbliActionResumeInterval = 30;
 int glbliActionResumeRetryCount = 0;		/* how often should suspended actions be retried? */
 static int bActionRepMsgHasMsg = 0;		/* last messsage repeated... has msg fragment in it */
 
+static int bActionWriteAllMarkMsgs = FALSE;			/* should all mark messages be unconditionally written? */
 static uchar *pszActionName;					/* short name for the action */
-/* main message queue and its configuration parameters */
+/* action queue and its configuration parameters */
 static queueType_t ActionQueType = QUEUETYPE_DIRECT;		/* type of the main message queue above */
 static int iActionQueueSize = 1000;				/* size of the main message queue above */
 static int iActionQueueDeqBatchSize = 16;			/* batch size for action queues */
@@ -1186,7 +1187,8 @@ doActionCallAction(action_t *pAction, msg_t *pMsg)
 	pAction->tActNow = -1; /* we do not yet know our current time (clear prev. value) */
 
 	/* don't output marks to recently written outputs */
-	if((pMsg->msgFlags & MARK) && (getActNow(pAction) - pAction->f_time) < MarkInterval / 2) {
+	if(pAction->bWriteAllMarkMsgs == FALSE
+	   && (pMsg->msgFlags & MARK) && (getActNow(pAction) - pAction->f_time) < MarkInterval / 2) {
 		ABORT_FINALIZE(RS_RET_OK);
 	}
 
@@ -1278,6 +1280,7 @@ actionAddCfSysLineHdrl(void)
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionname", 0, eCmdHdlrGetWord, NULL, &pszActionName, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuefilename", 0, eCmdHdlrGetWord, NULL, &pszActionQFName, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuesize", 0, eCmdHdlrInt, NULL, &iActionQueueSize, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionwriteallmarkmessages", 0, eCmdHdlrBinary, NULL, &bActionWriteAllMarkMsgs, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuedequeuebatchsize", 0, eCmdHdlrInt, NULL, &iActionQueueDeqBatchSize, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuemaxdiskspace", 0, eCmdHdlrSize, NULL, &iActionQueMaxDiskSpace, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuehighwatermark", 0, eCmdHdlrInt, NULL, &iActionQHighWtrMark, NULL));
@@ -1332,6 +1335,8 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStringReques
 	pAction->pModData = pModData;
 	pAction->pszName = pszActionName;
 	pszActionName = NULL;	/* free again! */
+	pAction->bWriteAllMarkMsgs = bActionWriteAllMarkMsgs;
+	bActionWriteAllMarkMsgs = FALSE; /* reset */
 	pAction->bExecWhenPrevSusp = bActExecWhenPrevSusp;
 	pAction->iSecsExecOnceInterval = iActExecOnceInterval;
 	pAction->iExecEveryNthOccur = iActExecEveryNthOccur;

@@ -53,6 +53,7 @@ struct action_s {
 				   populated on an as-needed basis. This is a performance optimization. */
 	time_t	tLastExec;	/* time this action was last executed */
 	bool	bExecWhenPrevSusp;/* execute only when previous action is suspended? */
+	bool	bWriteAllMarkMsgs;/* should all mark msgs be written (not matter how recent the action was executed)? */
 	int	iSecsExecOnceInterval; /* if non-zero, minimum seconds to wait until action is executed again */
 	action_state_t eState;	/* current state of action */
 	int	bHadAutoCommit;	/* did an auto-commit happen during doAction()? */
