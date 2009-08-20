@@ -1,5 +1,16 @@
 ---------------------------------------------------------------------------
-Version 5.1.4  [DEVEL] (rgerhards), 2009-07-??
+Version 5.1.4  [DEVEL] (rgerhards), 2009-08-20
+- legacy syslog parser changed so that it now accepts date stamps in
+  wrong case. Some devices seem to create them and I do not see any harm
+  in supporting that.
+- added $InputTCPMaxListeners directive - permits to specify how many 
+  TCP servers shall be possible (default is 20).
+- bugfix: memory leak with some input modules. Those inputs that
+  use parseAndSubmitMsg() leak two small memory blocks with every message.
+  Typically, those process only relatively few messages, so the issue 
+  does most probably not have any effect in practice.
+- bugfix: if tcp listen port could not be created, no error message was
+  emitted
 - bugfix: discard action did not work (did not discard messages)
 - bugfix: discard action caused segfault
 - bugfix: potential segfault in output file writer (omfile)
