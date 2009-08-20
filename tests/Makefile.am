@@ -78,6 +78,7 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/1.parse1 \
 	   testsuites/2.parse1 \
 	   testsuites/3.parse1 \
+	   testsuites/4.parse1 \
 	   testsuites/oversizeTag-1.parse1 \
 	   testsuites/date1.parse1 \
 	   testsuites/date2.parse1 \

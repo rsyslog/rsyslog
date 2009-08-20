@@ -1,0 +1,4 @@
+<29>Jul 31 21:39:21 example-b example-gw[10538]: disconnect host=/192.0.2.1 destination=192.0.2.2/11282 in=3274 out=1448 duration=0
+29,daemon,notice,Jul 31 21:39:21,example-b,example-gw,example-gw[10538]:, disconnect host=/192.0.2.1 destination=192.0.2.2/11282 in=3274 out=1448 duration=0
+# yet another real-life sample where we had some issues with - the important
+# part is the dash inside the hostname!
