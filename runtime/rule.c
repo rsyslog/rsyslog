@@ -39,6 +39,7 @@
 #include "vm.h"
 #include "var.h"
 #include "srUtils.h"
+#include "unicode-helper.h"
 #include "dirty.h" /* for getFIOPName */
 
 /* static data */
@@ -104,7 +105,7 @@ shouldProcessThisMessage(rule_t *pRule, msg_t *pMsg, int *bProcessMsg)
 {
 	DEFiRet;
 	unsigned short pbMustBeFreed;
-	char *pszPropVal;
+	uchar *pszPropVal;
 	int bRet = 0;
 	size_t propLen;
 	vm_t *pVM = NULL;
@@ -189,12 +190,12 @@ shouldProcessThisMessage(rule_t *pRule, msg_t *pMsg, int *bProcessMsg)
 			break;
 		case FIOP_ISEQUAL:
 			if(rsCStrSzStrCmp(pRule->f_filterData.prop.pCSCompValue,
-					  (uchar*) pszPropVal, strlen(pszPropVal)) == 0)
+					  pszPropVal, ustrlen(pszPropVal)) == 0)
 				bRet = 1; /* process message! */
 			break;
 		case FIOP_STARTSWITH:
 			if(rsCStrSzStrStartsWithCStr(pRule->f_filterData.prop.pCSCompValue,
-					  (uchar*) pszPropVal, strlen(pszPropVal)) == 0)
+					  pszPropVal, ustrlen(pszPropVal)) == 0)
 				bRet = 1; /* process message! */
 			break;
 		case FIOP_REGEX:

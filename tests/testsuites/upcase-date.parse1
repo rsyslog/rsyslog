@@ -1,0 +1,4 @@
+<6>AUG 10 22:18:24 2009  netips-warden2-p [audit] user=[*SMS] src=192.168.11.11 iface=5 access=9 Update State Reset
+6,kern,info,Aug 10 22:18:24,2009,,, netips-warden2-p [audit] user=[*SMS] src=192.168.11.11 iface=5 access=9 Update State Reset
+#Example from RFC3164, section 5.4
+#Only the first two lines are important, you may place anything behind them!

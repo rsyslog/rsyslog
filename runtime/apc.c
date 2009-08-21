@@ -335,9 +335,11 @@ CancelApc(apc_id_t id)
 {
 	DEFVARS_mutexProtection_uncond;
 
+	BEGINfunc
 	BEGIN_MTX_PROTECTED_OPERATIONS_UNCOND(&listMutex);
 	deleteApc(id);
 	END_MTX_PROTECTED_OPERATIONS_UNCOND(&listMutex);
+	ENDfunc
 	return RS_RET_OK;
 }
 

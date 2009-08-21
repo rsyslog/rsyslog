@@ -297,6 +297,12 @@ Send(tcpclt_t *pThis, void *pData, char *msg, size_t len)
 
 	CHKiRet(TCPSendBldFrame(pThis, &msg, &len, &bMsgMustBeFreed));
 
+	if(pThis->iRebindInterval > 0  && ++pThis->iNumMsgs == pThis->iRebindInterval) {
+		/* we need to rebind, and use the retry logic for this*/
+		CHKiRet(pThis->prepRetryFunc(pData)); /* try to recover */
+		pThis->iNumMsgs = 0;
+	}
+
 	while(!bDone) { /* loop is broken when send succeeds or error occurs */
 		CHKiRet(pThis->initFunc(pData));
 		iRet = pThis->sendFunc(pData, msg, len);
@@ -388,6 +394,13 @@ SetFraming(tcpclt_t *pThis, TCPFRAMINGMODE framing)
 	pThis->tcp_framing = framing;
 	RETiRet;
 }
+static rsRetVal
+SetRebindInterval(tcpclt_t *pThis, int iRebindInterval)
+{
+	DEFiRet;
+	pThis->iRebindInterval = iRebindInterval;
+	RETiRet;
+}
 
 
 /* Standard-Constructor
@@ -445,6 +458,7 @@ CODESTARTobjQueryInterface(tcpclt)
 	pIf->SetSendFrame = SetSendFrame;
 	pIf->SetSendPrepRetry = SetSendPrepRetry;
 	pIf->SetFraming = SetFraming;
+	pIf->SetRebindInterval = SetRebindInterval;
 
 finalize_it:
 ENDobjQueryInterface(tcpclt)

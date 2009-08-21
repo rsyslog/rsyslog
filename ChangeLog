@@ -1,5 +1,31 @@
 ---------------------------------------------------------------------------
-Version 4.5.1  [DEVEL] (rgerhards), 2009-07-??
+Version 4.5.2  [DEVEL] (rgerhards), 2009-07-??
+- legacy syslog parser changed so that it now accepts date stamps in
+  wrong case. Some devices seem to create them and I do not see any harm
+  in supporting that.
+- added $InputTCPMaxListeners directive - permits to specify how many 
+  TCP servers shall be possible (default is 20).
+- bugfix: memory leak with some input modules. Those inputs that
+  use parseAndSubmitMsg() leak two small memory blocks with every message.
+  Typically, those process only relatively few messages, so the issue 
+  does most probably not have any effect in practice.
+- bugfix: if tcp listen port could not be created, no error message was
+  emitted
+- bugfix: potential segfault in output file writer (omfile)
+  In async write mode, we use modular arithmetic to index the output
+  buffer array. However, the counter variables accidently were signed,
+  thus resulting in negative indizes after integer overflow. That in turn
+  could lead to segfaults, but was depending on the memory layout of 
+  the instance in question (which in turn depended on a number of
+  variables, like compile settings but also configuration). The counters
+  are now unsigned (as they always should have been) and so the dangling
+  mis-indexing does no longer happen. This bug potentially affected all
+  installations, even if only some may actually have seen a segfault.
+- bugfix: hostnames with dashes in them were incorrectly treated as
+  malformed, thus causing them to be treated as TAG (this was a regression
+  introduced from the "rfc3164 strict" change in 4.5.0).
+---------------------------------------------------------------------------
+Version 4.5.1  [DEVEL] (rgerhards), 2009-07-15
 - CONFIG CHANGE: $HUPisRestart default is now "off". We are doing this
   to support removal of restart-type HUP in v5.
 - bugfix: fromhost-ip was sometimes truncated
@@ -16,6 +42,12 @@ Version 4.5.1  [DEVEL] (rgerhards), 2009-07-??
 - bugfix: message could be truncated after TAG, often when forwarding
   This was a result of an internal processing error if maximum field
   sizes had been specified in the property replacer.
+- added ability for the TCP output action to "rebind" its send socket after
+  sending n messages (actually, it re-opens the connection, the name is 
+  used because this is a concept very similiar to $ActionUDPRebindInterval).
+  New config directive $ActionSendTCPRebindInterval added for the purpose.
+  By default, rebinding is disabled. This is considered useful for load
+  balancers.
 - testbench improvements
 ---------------------------------------------------------------------------
 Version 4.5.0  [DEVEL] (rgerhards), 2009-07-02

@@ -96,6 +96,13 @@ default 60000 (1 minute)]</li>
 (driver-specific)</li><li>$ActionSendStreamDriverAuthMode &lt;mode&gt;,&nbsp; authentication mode to use with the stream driver
 (driver-specific)</li><li>$ActionSendStreamDriverPermittedPeer &lt;ID&gt;,&nbsp; accepted fingerprint (SHA1) or name of remote peer
 (driver-specific) -<span style="font-weight: bold;"> directive may go away</span>!</li>
+<li><b>$ActionSendTCPRebindInterval</b> nbr</a>- [available since 4.5.1] - instructs the TCP send
+action to close and re-open the connection to the remote host every nbr of messages sent.
+Zero, the default, means that no such processing is done. This directive is useful for
+use with load-balancers. Note that there is some performance overhead associated with it,
+so it is advisable to not too often &quot;rebind&quot; the connection (what
+&quot;too often&quot; actually means depends on your configuration, a rule of thumb is
+that it should be not be much more often than once per second).</li>
 <li><b>$ActionSendUDPRebindInterval</b> nbr</a>- [available since 4.3.2] - instructs the UDP send
 action to rebind the send socket every nbr of messages sent. Zero, the default, means
 that no rebind is done. This directive is useful for use with load-balancers.</li>

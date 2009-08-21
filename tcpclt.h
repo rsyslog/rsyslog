@@ -36,6 +36,8 @@ typedef struct tcpclt_s {
 	short bResendLastOnRecon; /* should the last message be resent on a successful reconnect? */
 	size_t lenPrevMsg;
 	/* session specific callbacks */
+	int iRebindInterval;	/* how often should the send socket be rebound? */
+	int iNumMsgs;		/* number of messages during current "rebind session" */
 	rsRetVal (*initFunc)(void*);
 	rsRetVal (*sendFunc)(void*, char*, size_t);
 	rsRetVal (*prepRetryFunc)(void*);
@@ -55,8 +57,10 @@ BEGINinterface(tcpclt) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetSendFrame)(tcpclt_t*, rsRetVal (*)(void*, char*, size_t));
 	rsRetVal (*SetSendPrepRetry)(tcpclt_t*, rsRetVal (*)(void*));
 	rsRetVal (*SetFraming)(tcpclt_t*, TCPFRAMINGMODE framing);
+	/* v3, 2009-07-14*/
+	rsRetVal (*SetRebindInterval)(tcpclt_t*, int iRebindInterval);
 ENDinterface(tcpclt)
-#define tcpcltCURR_IF_VERSION 2 /* increment whenever you change the interface structure! */
+#define tcpcltCURR_IF_VERSION 3 /* increment whenever you change the interface structure! */
 
 
 /* prototypes */

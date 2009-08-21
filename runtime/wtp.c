@@ -54,6 +54,7 @@
 #include "wtp.h"
 #include "wti.h"
 #include "obj.h"
+#include "unicode-helper.h"
 #include "glbl.h"
 
 /* static data */
@@ -422,6 +423,8 @@ wtpWrkrExecCancelCleanup(void *arg)
 static void *
 wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in wtp! */
 {
+	uchar *pszDbgHdr;
+	uchar thrdName[32] = "rs:";
 	DEFiRet;
 	DEFVARS_mutexProtection;
 	wti_t *pWti = (wti_t*) arg;
@@ -437,7 +440,9 @@ wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in 
 
 #	if HAVE_PRCTL && defined PR_SET_NAME
 	/* set thread name - we ignore if the call fails, has no harsh consequences... */
-	if(prctl(PR_SET_NAME, wtpGetDbgHdr(pThis), 0, 0, 0) != 0) {
+	pszDbgHdr = wtpGetDbgHdr(pThis);
+	ustrncpy(thrdName+3, pszDbgHdr, 20);
+	if(prctl(PR_SET_NAME, thrdName, 0, 0, 0) != 0) {
 		DBGPRINTF("prctl failed, not setting thread name for '%s'\n", wtpGetDbgHdr(pThis));
 	}
 #	endif
