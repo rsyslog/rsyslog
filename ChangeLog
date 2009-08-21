@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 4.5.2  [DEVEL] (rgerhards), 2009-07-??
+Version 4.5.2  [v4-beta] (rgerhards), 2009-08-21
 - legacy syslog parser changed so that it now accepts date stamps in
   wrong case. Some devices seem to create them and I do not see any harm
   in supporting that.
@@ -90,13 +90,14 @@ Version 4.5.0  [DEVEL] (rgerhards), 2009-07-02
   This could lead to timestamps written in the wrong format, but not to
   an abort
 ---------------------------------------------------------------------------
-Version 4.3.3  [beta] (rgerhards), 2009-0?-??
-- internal bugfix: object pointer was only reset to NULL when an object
-  was actually destructed. This most likely had no effect to existing code,
-  but it may also have caused trouble in remote cases. Similarly, the fix
-  may also cause trouble...
+Version 4.4.0  [v4-stable] (rgerhards), 2009-08-21
+- bugfix: stderr/stdout were not closed to be able to emit error messages,
+  but this caused ssh sessions to hang. Now we close them after the 
+  initial initialization. See forum thread:
+  http://kb.monitorware.com/controlling-terminal-issues-t9875.html
+- bugfix: sending syslog messages with zip compression did not work
 ---------------------------------------------------------------------------
-Version 4.3.2  [beta] (rgerhards), 2009-06-24
+Version 4.3.2  [v4-beta] (rgerhards), 2009-06-24
 - removed long-obsoleted property UxTradMsg
 - added a generic network stream server (in addition to rather specific
   syslog tcp server)
@@ -150,12 +151,15 @@ Version 4.3.0  [DEVEL] (rgerhards), 2009-04-17
   connection broke, but not if there was a problem with statement
   execution. The most probable case for such a case would be invalid
   sql inside the template, and this is now much easier to diagnose.
+<<<<<<< HEAD:ChangeLog
 ---------------------------------------------------------------------------
 Version 4.2.1  [v4-stable] (rgerhards), 2009-0?-??
 - bugfix: stderr/stdout were not closed to be able to emit error messages,
   but this caused ssh sessions to hang. Now we close them after the 
   initial initialization. See forum thread:
   http://kb.monitorware.com/controlling-terminal-issues-t9875.html
+=======
+>>>>>>> bd7542b51593739893922e8ec8fb6d7195d06cbe:ChangeLog
 ---------------------------------------------------------------------------
 Version 4.2.0  [v4-stable] (rgerhards), 2009-06-23
 - bugfix: light and full delay watermarks had invalid values, badly
