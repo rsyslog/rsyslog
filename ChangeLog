@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------
+Version 4.5.3  [v4-beta] (rgerhards), 2009-08-??
+- bugfix: strings improperly reused, resulting in some message properties
+  be populated with strings from previous messages. This was caused by
+  an improper predicate check. [backported from v5]
+---------------------------------------------------------------------------
 Version 4.5.2  [v4-beta] (rgerhards), 2009-08-21
 - legacy syslog parser changed so that it now accepts date stamps in
   wrong case. Some devices seem to create them and I do not see any harm
