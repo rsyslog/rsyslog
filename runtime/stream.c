@@ -368,7 +368,7 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr)
 		CHKiRet(rsCStrAppendChar(*ppCStr, c));
 		CHKiRet(strmReadChar(pThis, &c));
 	}
-	CHKiRet(rsCStrFinish(*ppCStr));
+	CHKiRet(cstrFinalize(*ppCStr));
 
 finalize_it:
 	if(iRet != RS_RET_OK && *ppCStr != NULL)

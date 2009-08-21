@@ -1,10 +1,65 @@
 ---------------------------------------------------------------------------
-Version 4.2.1  [v4-stable] (rgerhards), 2009-0?-??
+Version 4.4.0  [v4-stable] (rgerhards), 2009-08-21
 - bugfix: stderr/stdout were not closed to be able to emit error messages,
   but this caused ssh sessions to hang. Now we close them after the 
   initial initialization. See forum thread:
   http://kb.monitorware.com/controlling-terminal-issues-t9875.html
 - bugfix: sending syslog messages with zip compression did not work
+---------------------------------------------------------------------------
+Version 4.3.2  [v4-beta] (rgerhards), 2009-06-24
+- removed long-obsoleted property UxTradMsg
+- added a generic network stream server (in addition to rather specific
+  syslog tcp server)
+- added ability for the UDP output action to rebind its send socket after
+  sending n messages. New config directive $ActionSendUDPRebindInterval
+  added for the purpose. By default, rebinding is disabled. This is 
+  considered useful for load balancers.
+- bugfix: imdiag/imtcp had a race condition
+- improved testbench (now much better code design and reuse)
+- added config switch --enable-testbench=no to turn off testbench
+---------------------------------------------------------------------------
+Version 4.3.1  [DEVEL] (rgerhards), 2009-05-25
+- added capability to run multiple tcp listeners (on different ports)
+- performance enhancement: imtcp calls parser no longer on input thread
+  but rather inside on of the potentially many main msg queue worker
+  threads (an enhancement scheduled for all input plugins where this is
+  possible)
+- added $GenerateConfigGraph configuration command which can be used
+  to generate nice-looking (and very informative) rsyslog configuration
+  graphs.
+- added $ActionName configuration directive (currently only used for
+  graph generation, but may find other uses)
+- improved doc
+  * added (hopefully) easier to grasp queue explanation
+- improved testbench
+  * added tests for queue disk-only mode (checks disk queue logic)
+- bugfix: light and full delay watermarks had invalid values, badly
+  affecting performance for delayable inputs
+- build system improvements - thanks to Michael Biebl
+- added new testing module imdiag, which enables to talk to the 
+  rsyslog core at runtime. The current implementation is only a 
+  beginning, but can be expanded over time
+---------------------------------------------------------------------------
+Version 4.3.0  [DEVEL] (rgerhards), 2009-04-17
+- new feature: new output plugin omprog, which permits to start program
+  and feed it (via its stdin) with syslog messages. If the program
+  terminates, it is restarted.
+- improved internal handling of RainerScript functions, building the
+  necessary plumbing to support more functions with decent runtime
+  performance. This is also necessary towards the long-term goal
+  of loadable library modules.
+- added new RainerScript function "tolower"
+- improved testbench
+  * added tests for tcp-based reception
+  * added tcp-load test (1000 connections, 20,000 messages)
+- added $MaxOpenFiles configuration directive
+- bugfix: solved potential memory leak in msg processing, could manifest
+  itself in imtcp
+- bugfix: ompgsql did not detect problems in sql command execution
+  this could cause loss of messages. The handling was correct if the
+  connection broke, but not if there was a problem with statement
+  execution. The most probable case for such a case would be invalid
+  sql inside the template, and this is now much easier to diagnose.
 ---------------------------------------------------------------------------
 Version 4.2.0  [v4-stable] (rgerhards), 2009-06-23
 - bugfix: light and full delay watermarks had invalid values, badly

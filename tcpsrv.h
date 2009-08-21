@@ -32,6 +32,16 @@ typedef enum ETCPsyslogFramingAnomaly {
 	frame_CiscoIOS = 2
 } eTCPsyslogFramingAnomaly;
 
+
+/* list of tcp listen ports */
+struct tcpLstnPortList_s {
+	uchar *pszPort;			/**< the ports the listener shall listen on */
+	uchar *pszInputName;		/**< value to be used as input name */
+	size_t lenInputName;		/**< length of inputName */
+	tcpsrv_t *pSrv;			/**< pointer to higher-level server instance */
+	tcpLstnPortList_t *pNext;	/**< next port or NULL */
+};
+
 #define TCPSRV_NO_ADDTL_DELIMITER -1 /* specifies that no additional delimiter is to be used in TCP framing */
 
 /* the tcpsrv object */
@@ -44,8 +54,9 @@ struct tcpsrv_s {
 	permittedPeers_t *pPermPeers;/**< driver's permitted peers */
 	int iLstnMax;		/**< max nbr of listeners currently supported */
 	netstrm_t **ppLstn;	/**< our netstream listners */
+	tcpLstnPortList_t **ppLstnPort; /**< pointer to relevant listen port description */
 	int iSessMax;		/**< max number of sessions supported */
-	char *TCPLstnPort;	/**< the port the listener shall listen on */
+	tcpLstnPortList_t *pLstnPorts;	/**< head pointer for listen ports */
 	int addtlFrameDelim;	/**< additional frame delimiter for plain TCP syslog framing (e.g. to handle NetScreen) */
 	tcps_sess_t **pSessions;/**< array of all of our sessions */
 	void *pUsr;		/**< a user-settable pointer (provides extensibility for "derived classes")*/
@@ -61,6 +72,7 @@ struct tcpsrv_s {
 	rsRetVal (*pOnSessAccept)(tcpsrv_t *, tcps_sess_t*);
 	rsRetVal (*OnSessConstructFinalize)(void*);
 	rsRetVal (*pOnSessDestruct)(void*);
+	rsRetVal (*OnMsgReceive)(tcps_sess_t *, uchar *pszMsg, int iLenMsg); /* submit message callback */
 };
 
 
@@ -70,8 +82,8 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Construct)(tcpsrv_t **ppThis);
 	rsRetVal (*ConstructFinalize)(tcpsrv_t __attribute__((unused)) *pThis);
 	rsRetVal (*Destruct)(tcpsrv_t **ppThis);
-	void (*configureTCPListen)(tcpsrv_t*, char *cOptarg);
-	rsRetVal (*SessAccept)(tcpsrv_t *pThis, tcps_sess_t **ppSess, netstrm_t *pStrm);
+	rsRetVal (*configureTCPListen)(tcpsrv_t*, uchar *pszPort);
+	//rsRetVal (*SessAccept)(tcpsrv_t *pThis, tcpLstnPortList_t*, tcps_sess_t **ppSess, netstrm_t *pStrm);
 	rsRetVal (*create_tcp_socket)(tcpsrv_t *pThis);
 	rsRetVal (*Run)(tcpsrv_t *pThis);
 	/* set methods */
@@ -94,8 +106,10 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetCBOnSessConstructFinalize)(tcpsrv_t*, rsRetVal (*) (void*));
 	/* added v5 */
 	rsRetVal (*SetSessMax)(tcpsrv_t *pThis, int iMaxSess);	/* 2009-04-09 */
+	/* added v6 */
+	rsRetVal (*SetOnMsgReceive)(tcpsrv_t *pThis, rsRetVal (*OnMsgReceive)(tcps_sess_t*, uchar*, int)); /* 2009-05-24 */
 ENDinterface(tcpsrv)
-#define tcpsrvCURR_IF_VERSION 5 /* increment whenever you change the interface structure! */
+#define tcpsrvCURR_IF_VERSION 6 /* increment whenever you change the interface structure! */
 /* change for v4:
  * - SetAddtlFrameDelim() added -- rgerhards, 2008-12-10
  * - SetInputName() added -- rgerhards, 2008-12-10

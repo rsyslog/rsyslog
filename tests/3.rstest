@@ -7,10 +7,10 @@ out:
 00000000: push_msgvar	msg[cstr]
 00000001: push_const	abc[cstr]
 00000002: push_const	1[nbr]
-00000003: func_call	strlen[cstr]
+00000003: func_call	strlen
 00000004: strconcat	
 00000005: push_const	1[nbr]
-00000006: func_call	strlen[cstr]
+00000006: func_call	strlen
 00000007: push_const	20[nbr]
 00000008: push_const	30[nbr]
 00000009: add	

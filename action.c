@@ -60,6 +60,7 @@ static int glbliActionResumeInterval = 30;
 int glbliActionResumeRetryCount = 0;		/* how often should suspended actions be retried? */
 static int bActionRepMsgHasMsg = 0;		/* last messsage repeated... has msg fragment in it */
 
+static uchar *pszActionName;					/* short name for the action */
 /* main message queue and its configuration parameters */
 static queueType_t ActionQueType = QUEUETYPE_DIRECT;		/* type of the main message queue above */
 static int iActionQueueSize = 1000;				/* size of the main message queue above */
@@ -163,8 +164,7 @@ actionResetQueueParams(void)
 
 	glbliActionResumeRetryCount = 0;		/* I guess it is smart to reset this one, too */
 
-	if(pszActionQFName != NULL)
-		d_free(pszActionQFName);
+	d_free(pszActionQFName);
 	pszActionQFName = NULL;				/* prefix for the main message queue file */
 
 	RETiRet;
@@ -191,8 +191,8 @@ rsRetVal actionDestruct(action_t *pThis)
 
 	SYNC_OBJ_TOOL_EXIT(pThis);
 	pthread_mutex_destroy(&pThis->mutActExec);
-	if(pThis->ppTpl != NULL)
-		d_free(pThis->ppTpl);
+	d_free(pThis->pszName);
+	d_free(pThis->ppTpl);
 	d_free(pThis);
 	
 	RETiRet;
@@ -829,6 +829,7 @@ actionAddCfSysLineHdrl(void)
 {
 	DEFiRet;
 
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionname", 0, eCmdHdlrGetWord, NULL, &pszActionName, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuefilename", 0, eCmdHdlrGetWord, NULL, &pszActionQFName, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuesize", 0, eCmdHdlrInt, NULL, &iActionQueueSize, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuemaxdiskspace", 0, eCmdHdlrSize, NULL, &iActionQueMaxDiskSpace, NULL));
@@ -881,6 +882,8 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStringReques
 	CHKiRet(actionConstruct(&pAction)); /* create action object first */
 	pAction->pMod = pMod;
 	pAction->pModData = pModData;
+	pAction->pszName = pszActionName;
+	pszActionName = NULL;	/* free again! */
 	pAction->bExecWhenPrevSusp = bActExecWhenPrevSusp;
 	pAction->iSecsExecOnceInterval = iActExecOnceInterval;
 	pAction->iExecEveryNthOccur = iActExecEveryNthOccur;

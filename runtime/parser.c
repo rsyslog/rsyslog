@@ -191,6 +191,31 @@ sanitizeMessage(msg_t *pMsg)
 		lenMsg--;
 	}
 
+	/* it is much quicker to sweep over the message and see if it actually
+	 * needs sanitation than to do the sanitation in any case. So we first do
+	 * this and terminate when it is not needed - which is expectedly the case
+	 * for the vast majority of messages. -- rgerhards, 2009-06-15
+	 */
+	int bNeedSanitize = 0;
+	for(iSrc = 0 ; iSrc < lenMsg ; iSrc++) {
+		if(pszMsg[iSrc] < 32) {
+			if(pszMsg[iSrc] == '\0' || bEscapeCCOnRcv) {
+				bNeedSanitize = 1;
+				break;
+			}
+		}
+	}
+	if(bNeedSanitize == 0) {
+		/* what a shame - we do not have a \0 byte...
+		 * TODO: think about adding it or otherwise be able to use it...
+		 */
+		uchar *pRaw;
+		CHKmalloc(pRaw = realloc(pMsg->pszRawMsg, pMsg->iLenRawMsg + 1));
+		pRaw[pMsg->iLenRawMsg] = '\0';
+		pMsg->pszRawMsg = pRaw;
+		FINALIZE;
+	}
+
 	/* now copy over the message and sanitize it */
 	/* TODO: can we get cheaper memory alloc? {alloca()?}*/
 	iMaxLine = glbl.GetMaxLine();
@@ -259,6 +284,7 @@ rsRetVal parseMsg(msg_t *pMsg)
 	DEFiRet;
 	uchar *msg;
 	int pri;
+	int iPriText;
 
 	CHKiRet(sanitizeMessage(pMsg));
 
@@ -268,11 +294,19 @@ rsRetVal parseMsg(msg_t *pMsg)
 	/* pull PRI */
 	pri = DEFUPRI;
 	msg = pMsg->pszRawMsg;
+	iPriText = 0;
 	if(*msg == '<') {
+		/* while we process the PRI, we also fill the PRI textual representation
+		 * inside the msg object. This may not be ideal from an OOP point of view,
+		 * but it offers us performance...
+		 */
 		pri = 0;
 		while(isdigit((int) *++msg)) {
+			pMsg->bufPRI[iPriText++ % 4] = *msg;	 /* mod 4 to guard against malformed messages! */
 			pri = 10 * pri + (*msg - '0');
 		}
+		pMsg->bufPRI[iPriText % 4] = '\0';
+		pMsg->iLenPRI = iPriText % 4;
 		if(*msg == '>')
 			++msg;
 		if(pri & ~(LOG_FACMASK|LOG_PRIMASK))
@@ -280,10 +314,10 @@ rsRetVal parseMsg(msg_t *pMsg)
 	}
 	pMsg->iFacility = LOG_FAC(pri);
 	pMsg->iSeverity = LOG_PRI(pri);
-	MsgSetUxTradMsg(pMsg, (char*) msg);
+	MsgSetAfterPRIOffs(pMsg, msg - pMsg->pszRawMsg);
 
 	if(pMsg->bParseHOSTNAME == 0)
-		MsgSetHOSTNAME(pMsg, (char*) pMsg->pszRcvFrom);
+		MsgSetHOSTNAME(pMsg, pMsg->pszRcvFrom);
 
 	/* rger 2005-11-24 (happy thanksgiving!): we now need to check if we have
 	 * a traditional syslog message or one formatted according to syslog-protocol.

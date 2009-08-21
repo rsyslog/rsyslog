@@ -29,9 +29,10 @@
 struct tcpsrv_s;
 
 /* the tcps_sess object */
-typedef struct tcps_sess_s {
+struct tcps_sess_s {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
-	struct tcpsrv_s *pSrv;	/* pointer back to my server (e.g. for callbacks) */
+	tcpsrv_t *pSrv;	/* pointer back to my server (e.g. for callbacks) */
+	tcpLstnPortList_t *pLstnInfo;	/* pointer back to listener info */
 	netstrm_t *pStrm;
 	int iMsg;		 /* index of next char to store in msg */
 	int bAtStrtOfFram;	/* are we at the very beginning of a new frame? */
@@ -45,8 +46,9 @@ typedef struct tcps_sess_s {
 	uchar *pMsg;		/* message (fragment) received */
 	uchar *fromHost;
 	uchar *fromHostIP;
-	void *pUsr;	/* a user-pointer */
-} tcps_sess_t;
+	void *pUsr;		/* a user-pointer */
+	rsRetVal (*DoSubmitMessage)(tcps_sess_t*, uchar*, int); /* submit message callback */
+};
 
 
 /* interfaces */
@@ -60,13 +62,20 @@ BEGINinterface(tcps_sess) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*DataRcvd)(tcps_sess_t *pThis, char *pData, size_t iLen);
 	/* set methods */
 	rsRetVal (*SetTcpsrv)(tcps_sess_t *pThis, struct tcpsrv_s *pSrv);
+	rsRetVal (*SetLstnInfo)(tcps_sess_t *pThis, tcpLstnPortList_t *pLstnInfo);
 	rsRetVal (*SetUsrP)(tcps_sess_t*, void*);
 	rsRetVal (*SetHost)(tcps_sess_t *pThis, uchar*);
 	rsRetVal (*SetHostIP)(tcps_sess_t *pThis, uchar*);
 	rsRetVal (*SetStrm)(tcps_sess_t *pThis, netstrm_t*);
 	rsRetVal (*SetMsgIdx)(tcps_sess_t *pThis, int);
+	rsRetVal (*SetOnMsgReceive)(tcps_sess_t *pThis, rsRetVal (*OnMsgReceive)(tcps_sess_t*, uchar*, int));
 ENDinterface(tcps_sess)
-#define tcps_sessCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
+#define tcps_sessCURR_IF_VERSION 2 /* increment whenever you change the interface structure! */
+/* interface changes
+ * to version v2, rgerhards, 2009-05-22
+ * - Data structures changed
+ * - SetLstnInfo entry point added
+ */
 
 
 /* prototypes */

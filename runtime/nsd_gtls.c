@@ -82,6 +82,7 @@ static gnutls_certificate_credentials xcred;
 static gnutls_dh_params dh_params;
 
 #ifdef DEBUG
+#if 0 /* uncomment, if needed some time again -- DEV Debug only */
 /* This defines a log function to be provided to GnuTLS. It hopefully
  * helps us track down hard to find problems.
  * rgerhards, 2008-06-20
@@ -90,6 +91,7 @@ static void logFunction(int level, const char *msg)
 {
 	dbgprintf("GnuTLS log msg, level %d: %s\n", level, msg);
 }
+#endif
 #endif /* #ifdef DEBUG */
 
 
@@ -333,7 +335,7 @@ gtlsGetCertInfo(nsd_gtls_t *pThis, cstr_t **ppStr)
 		gnutls_x509_crt_deinit(cert);
 	}
 
-	CHKiRet(rsCStrFinish(pStr));
+	CHKiRet(cstrFinalize(pStr));
 	*ppStr = pStr;
 
 finalize_it:
@@ -453,7 +455,7 @@ GenFingerprintStr(uchar *pFingerprint, size_t sizeFingerprint, cstr_t **ppStr)
 		snprintf((char*)buf, sizeof(buf), ":%2.2X", pFingerprint[i]);
 		CHKiRet(rsCStrAppendStrWithLen(pStr, buf, 3));
 	}
-	CHKiRet(rsCStrFinish(pStr));
+	CHKiRet(cstrFinalize(pStr));
 
 	*ppStr = pStr;
 
@@ -721,7 +723,7 @@ gtlsGetCN(nsd_gtls_t *pThis, gnutls_x509_crt *pCert, cstr_t **ppstrCN)
 		}
 		++i; /* char processed */
 	}
-	CHKiRet(rsCStrFinish(pstrCN));
+	CHKiRet(cstrFinalize(pstrCN));
 
 	/* we got it - we ignore the rest of the DN string (if any). So we may
 	 * not detect if it contains more than one CN
@@ -882,7 +884,7 @@ gtlsChkPeerName(nsd_gtls_t *pThis, gnutls_x509_crt *pCert)
 	if(!bFoundPositiveMatch) {
 		dbgprintf("invalid peer name, not permitted to talk to it\n");
 		if(pThis->bReportAuthErr == 1) {
-			CHKiRet(rsCStrFinish(pStr));
+			CHKiRet(cstrFinalize(pStr));
 			errno = 0;
 			errmsg.LogError(0, RS_RET_INVALID_FINGERPRINT, "error: peer name not authorized -  "
 					"not permitted to talk to it. Names: %s",
@@ -1558,6 +1560,16 @@ finalize_it:
 	RETiRet;
 }
 
+/* Enable KEEPALIVE handling on the socket.
+ * rgerhards, 2009-06-02
+ */
+static rsRetVal
+EnableKeepAlive(nsd_t *pNsd)
+{
+	return nsd_ptcp.EnableKeepAlive(pNsd);
+}
+
+
 
 /* open a connection to a remote host (server). With GnuTLS, we always
  * open a plain tcp socket and then, if in TLS mode, do a handshake on it.
@@ -1667,6 +1679,7 @@ CODESTARTobjQueryInterface(nsd_gtls)
 	pIf->GetRemoteHName = GetRemoteHName;
 	pIf->GetRemoteIP = GetRemoteIP;
 	pIf->GetRemAddr = GetRemAddr;
+	pIf->EnableKeepAlive = EnableKeepAlive;
 finalize_it:
 ENDobjQueryInterface(nsd_gtls)
 

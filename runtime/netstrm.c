@@ -17,7 +17,7 @@
  * Rainer Gerhards and Adiscon GmbH have agreed to permit using the code
  * under the terms of the GNU Lesser General Public License.
  *
- * Copyright 2007, 2008 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2009 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -233,6 +233,19 @@ Send(netstrm_t *pThis, uchar *pBuf, ssize_t *pLenBuf)
 	RETiRet;
 }
 
+/* Enable Keep-Alive handling for those drivers that support it.
+ * rgerhards, 2009-06-02
+ */
+static rsRetVal
+EnableKeepAlive(netstrm_t *pThis)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, netstrm);
+	iRet = pThis->Drvr.EnableKeepAlive(pThis->pDrvrData);
+	RETiRet;
+}
+
+
 
 /* check connection - slim wrapper for NSD driver function */
 static void
@@ -337,6 +350,7 @@ CODESTARTobjQueryInterface(netstrm)
 	pIf->SetDrvrPermPeers = SetDrvrPermPeers;
 	pIf->CheckConnection = CheckConnection;
 	pIf->GetSock = GetSock;
+	pIf->EnableKeepAlive = EnableKeepAlive;
 finalize_it:
 ENDobjQueryInterface(netstrm)
 

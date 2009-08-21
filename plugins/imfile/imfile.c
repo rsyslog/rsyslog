@@ -45,6 +45,7 @@
 #include "errmsg.h"
 #include "glbl.h"
 #include "datetime.h"
+#include "unicode-helper.h"
 
 MODULE_TYPE_INPUT	/* must be present for input modules, do not remove */
 
@@ -94,11 +95,10 @@ static rsRetVal enqLine(fileInfo_t *pInfo, cstr_t *cstrLine)
 
 	CHKiRet(msgConstruct(&pMsg));
 	MsgSetFlowControlType(pMsg, eFLOWCTL_FULL_DELAY);
-	MsgSetInputName(pMsg, "imfile");
-	MsgSetUxTradMsg(pMsg, (char*)rsCStrGetSzStr(cstrLine));
+	MsgSetInputName(pMsg, UCHAR_CONSTANT("imfile"), sizeof("imfile")-1);
 	MsgSetRawMsg(pMsg, (char*)rsCStrGetSzStr(cstrLine));
 	MsgSetMSG(pMsg, (char*)rsCStrGetSzStr(cstrLine));
-	MsgSetHOSTNAME(pMsg, (char*)glbl.GetLocalHostName());
+	MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName());
 	MsgSetTAG(pMsg, (char*)pInfo->pszTag);
 	pMsg->iFacility = LOG_FAC(pInfo->iFacility);
 	pMsg->iSeverity = LOG_PRI(pInfo->iSeverity);

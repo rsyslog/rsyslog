@@ -150,13 +150,12 @@ static void getCurrTime(struct syslogTime *t, time_t *ttSeconds)
  * \retval The number parsed.
  */
 
-static int srSLMGParseInt32(char** ppsz)
+static int srSLMGParseInt32(uchar** ppsz)
 {
-	int i;
+	register int i;
 
 	i = 0;
-	while(isdigit((int) **ppsz))
-	{
+	while(isdigit((int) **ppsz)) {
 		i = i * 10 + **ppsz - '0';
 		++(*ppsz);
 	}
@@ -172,9 +171,9 @@ static int srSLMGParseInt32(char** ppsz)
  * could be obtained (restriction added 2008-09-16 by rgerhards).
  */
 static rsRetVal
-ParseTIMESTAMP3339(struct syslogTime *pTime, char** ppszTS)
+ParseTIMESTAMP3339(struct syslogTime *pTime, uchar** ppszTS)
 {
-	char *pszTS = *ppszTS;
+	uchar *pszTS = *ppszTS;
 	/* variables to temporarily hold time information while we parse */
 	int year;
 	int month;
@@ -234,7 +233,7 @@ ParseTIMESTAMP3339(struct syslogTime *pTime, char** ppszTS)
 
 	/* Now let's see if we have secfrac */
 	if(*pszTS == '.') {
-		char *pszStart = ++pszTS;
+		uchar *pszStart = ++pszTS;
 		secfrac = srSLMGParseInt32(&pszTS);
 		secfracPrecision = (int) (pszTS - pszStart);
 	} else {
@@ -307,7 +306,7 @@ finalize_it:
  * time() call reduction ;).
  */
 static rsRetVal
-ParseTIMESTAMP3164(struct syslogTime *pTime, char** ppszTS)
+ParseTIMESTAMP3164(struct syslogTime *pTime, uchar** ppszTS)
 {
 	/* variables to temporarily hold time information while we parse */
 	int month;
@@ -317,7 +316,7 @@ ParseTIMESTAMP3164(struct syslogTime *pTime, char** ppszTS)
 	int minute;
 	int second;
 	/* end variables to temporarily hold time information while we parse */
-	char *pszTS;
+	uchar *pszTS;
 	DEFiRet;
 
 	assert(ppszTS != NULL);

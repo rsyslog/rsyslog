@@ -24,6 +24,7 @@
  */
 #include "config.h"
 #include <stdio.h>
+#include <string.h>
 #include <glob.h>
 #include <sys/stat.h>
 
@@ -103,8 +104,8 @@ PerformTest(cstr_t *pstrIn, rsRetVal iRetExpected, cstr_t *pstrOut)
 
 	if(strcmp((char*)rsCStrGetSzStr(pstrPrg), (char*)rsCStrGetSzStr(pstrOut))) {
 		printf("error: compiled program different from expected result!\n");
-		printf("generated vmprg (%d bytes):\n%s\n", strlen((char*)rsCStrGetSzStr(pstrPrg)), rsCStrGetSzStr(pstrPrg));
-		printf("expected (%d bytes):\n%s\n", strlen((char*)rsCStrGetSzStr(pstrOut)), rsCStrGetSzStr(pstrOut));
+		printf("generated vmprg (%d bytes):\n%s\n", (int)strlen((char*)rsCStrGetSzStr(pstrPrg)), rsCStrGetSzStr(pstrPrg));
+		printf("expected (%d bytes):\n%s\n", (int)strlen((char*)rsCStrGetSzStr(pstrOut)), rsCStrGetSzStr(pstrOut));
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 

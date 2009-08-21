@@ -1,14 +1,14 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
-<html><head><title>Global Directives - rsyslog.conf</title></head>
+<html><head><title>Configuration Directives - rsyslog.conf</title></head>
 <body>
 <p>This is a part of the rsyslog.conf documentation.</p>
 <a href="rsyslog_conf.html">back</a>
-<h2>Global Directives</h2>
-<p>All global directives need to be specified on a line by their
-own and must start with a dollar-sign. Here is a list in alphabetical
-order. Follow links for a description.</p>
-<p>Please note that not all directives here are actually global. Some affect
-only the next action. This documentation will be changed soon.
+<h2>Configuration Directives</h2>
+<p>All configuration directives need to be specified on a line by their
+own and must start with a dollar-sign. Note that those starting with
+the word "Action" modify the next action and should be specified
+in front of it.
+<p>Here is a list in alphabetical order. Follow links for a description.</p>
 <p>Not all directives have an in-depth description right now.
 Default values for them are in bold. A more in-depth description will
 appear as implementation progresses.
@@ -18,6 +18,8 @@ many parameter settings modify queue parameters. If in doubt, use the
 default, it is usually well-chosen and applicable in most cases.</p>
 <ul>
 <li><a href="rsconf1_actionexeconlywhenpreviousissuspended.html">$ActionExecOnlyWhenPreviousIsSuspended</a></li>
+<li>$ActionName &lt;a_single_word&gt; - used primarily for documentation, e.g. when
+generating a configuration graph. Available sice 4.3.1.
 <li>$ActionExecOnlyOnceEveryInterval &lt;seconds&gt; -
 execute action only if the last execute is at last
 &lt;seconds&gt; seconds in the past (more info in <a href="ommail.html">ommail</a>,
@@ -94,6 +96,9 @@ default 60000 (1 minute)]</li>
 (driver-specific)</li><li>$ActionSendStreamDriverAuthMode &lt;mode&gt;,&nbsp; authentication mode to use with the stream driver
 (driver-specific)</li><li>$ActionSendStreamDriverPermittedPeer &lt;ID&gt;,&nbsp; accepted fingerprint (SHA1) or name of remote peer
 (driver-specific) -<span style="font-weight: bold;"> directive may go away</span>!</li>
+<li><b>$ActionSendUDPRebindInterval</b> nbr</a>- [available since 4.3.2] - instructs the UDP send
+action to rebind the send socket every nbr of messages sent. Zero, the default, means
+that no rebind is done. This directive is useful for use with load-balancers.</li>
 <li><a href="rsconf1_allowedsender.html">$AllowedSender</a></li>
 <li><a href="rsconf1_controlcharacterescapeprefix.html">$ControlCharacterEscapePrefix</a></li>
 <li><a href="rsconf1_debugprintcfsyslinehandlerlist.html">$DebugPrintCFSyslineHandlerList</a></li>
@@ -116,6 +121,7 @@ default 60000 (1 minute)]</li>
 <li><a href="rsconf1_filecreatemode.html">$FileCreateMode</a></li>
 <li><a href="rsconf1_filegroup.html">$FileGroup</a></li>
 <li><a href="rsconf1_fileowner.html">$FileOwner</a></li>
+<li><a href="rsconf1_generateconfiggraph.html">$GenerateConfigGraph</a></li>
 <li><a href="rsconf1_gssforwardservicename.html">$GssForwardServiceName</a></li>
 <li><a href="rsconf1_gsslistenservicename.html">$GssListenServiceName</a></li>
 <li><a href="rsconf1_gssmode.html">$GssMode</a></li>
@@ -180,6 +186,7 @@ instead of UDP (plain TCP syslog, RELP). This resolves the UDP stack size restri
 <br>Note that 2k, the current default, is the smallest size that must be
 supported in order to be compliant to the upcoming new syslog RFC series.
 </li>
+<li><a href="rsconf1_maxopenfiles.html">$MaxOpenFiles</a></li>
 <li><a href="rsconf1_moddir.html">$ModDir</a></li>
 <li><a href="rsconf1_modload.html">$ModLoad</a></li>
 <li><b>$RepeatedMsgContainsOriginalMsg</b> [on/<b>off</b>] - "last message repeated n times" messages, if generated,
@@ -192,7 +199,7 @@ large enough for the whole message. (Introduced with 4.1.5). Once set, it affect
 <li><a href="rsconf1_resetconfigvariables.html">$ResetConfigVariables</a></li>
 <li><b>$OptimizeForUniprocessor</b> [on/<b>off</b>] - turns on optimizatons which lead to better
 performance on uniprocessors. If you run on multicore-machiens, turning this off lessens CPU load. The
-default may change as uniprocessor systems become less common.</li>
+default may change as uniprocessor systems become less common. [available since 4.1.0]</li>
 <li>$PreserveFQDN [on/<b>off</b>) - if set to off (legacy default to remain compatible
 to sysklogd), the domain part from a name that is within the same domain as the receiving
 system is stripped. If set to on, full names are always used.</li>
@@ -214,7 +221,6 @@ the value, the less precise the timestamp.
 <li><a href="droppriv.html">$PrivDropToGroupID</a></li>
 <li><a href="droppriv.html">$PrivDropToUser</a></li>
 <li><a href="droppriv.html">$PrivDropToUserID</a></li>
-</ul>
 <li><a href="rsconf1_umask.html">$UMASK</a></li>
 </ul>
 <p><b>Where &lt;size_nbr&gt; is specified above,</b>
@@ -235,7 +241,7 @@ point of view, "1,,0.0.,.,0" also has the value 1000. </p>
 <a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
 Copyright &copy; 2008, 2009 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
 <a href="http://www.adiscon.com/">Adiscon</a>. Released under the GNU GPL
-version 2 or higher.</font></p>
+version 3 or higher.</font></p>
 </body>
 </html>
 

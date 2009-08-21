@@ -3,7 +3,7 @@
  *
  * File begun on 2007-12-21 by RGerhards (extracted from syslogd.c)
  *
- * Copyright 2007 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007, 2009 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -56,6 +56,7 @@
 #include "dirty.h"
 #include "cfsysline.h"
 #include "module-template.h"
+#include "unicode-helper.h"
 #include "net.h"
 #include "netstrm.h"
 #include "errmsg.h"
@@ -91,7 +92,7 @@ static int
 isPermittedHost(struct sockaddr *addr, char *fromHostFQDN, void __attribute__((unused)) *pUsrSrv,
 	        void __attribute__((unused)) *pUsrSess)
 {
-	return net.isAllowedSender((uchar*) "TCP", addr, fromHostFQDN);
+	return net.isAllowedSender(UCHAR_CONSTANT("TCP"), addr, fromHostFQDN);
 }
 
 
@@ -169,7 +170,6 @@ static rsRetVal addTCPListener(void __attribute__((unused)) *pVal, uchar *pNewVa
 		CHKiRet(tcpsrv.SetCBOnRegularClose(pOurTcpsrv, onRegularClose));
 		CHKiRet(tcpsrv.SetCBOnErrClose(pOurTcpsrv, onErrClose));
 		CHKiRet(tcpsrv.SetDrvrMode(pOurTcpsrv, iStrmDrvrMode));
-		CHKiRet(tcpsrv.SetInputName(pOurTcpsrv, pszInputName == NULL ? (uchar*)"imtcp" : pszInputName));
 		CHKiRet(tcpsrv.SetAddtlFrameDelim(pOurTcpsrv, iAddtlFrameDelim));
 		/* now set optional params, but only if they were actually configured */
 		if(pszStrmDrvrAuthMode != NULL) {
@@ -178,10 +178,12 @@ static rsRetVal addTCPListener(void __attribute__((unused)) *pVal, uchar *pNewVa
 		if(pPermPeersRoot != NULL) {
 			CHKiRet(tcpsrv.SetDrvrPermPeers(pOurTcpsrv, pPermPeersRoot));
 		}
-		/* most params set, now start listener */
-		tcpsrv.configureTCPListen(pOurTcpsrv, (char *) pNewVal);
-		CHKiRet(tcpsrv.ConstructFinalize(pOurTcpsrv));
 	}
+
+	/* initialized, now add socket */
+	CHKiRet(tcpsrv.SetInputName(pOurTcpsrv, pszInputName == NULL ?
+						UCHAR_CONSTANT("imtcp") : pszInputName));
+	tcpsrv.configureTCPListen(pOurTcpsrv, pNewVal);
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
@@ -199,7 +201,9 @@ CODESTARTrunInput
 	/* TODO: we must be careful to start the listener here. Currently, tcpsrv.c seems to
 	 * do that in ConstructFinalize
 	 */
+	CHKiRet(tcpsrv.ConstructFinalize(pOurTcpsrv));
 	iRet = tcpsrv.Run(pOurTcpsrv);
+finalize_it:
 ENDrunInput
 
 
@@ -217,7 +221,7 @@ ENDwillRun
 BEGINafterRun
 CODESTARTafterRun
 	/* do cleanup here */
-	net.clearAllowedSenders((uchar*)"TCP");
+	net.clearAllowedSenders(UCHAR_CONSTANT("TCP"));
 ENDafterRun
 
 
@@ -277,21 +281,21 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 
 	/* register config file handlers */
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputtcpserverrun", 0, eCmdHdlrGetWord,
+	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpserverrun"), 0, eCmdHdlrGetWord,
 				   addTCPListener, NULL, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputtcpmaxsessions", 0, eCmdHdlrInt,
+	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpmaxsessions"), 0, eCmdHdlrInt,
 				   NULL, &iTCPSessMax, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputtcpserverstreamdrivermode", 0,
+	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpserverstreamdrivermode"), 0,
 				   eCmdHdlrInt, NULL, &iStrmDrvrMode, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputtcpserverstreamdriverauthmode", 0,
+	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpserverstreamdriverauthmode"), 0,
 				   eCmdHdlrGetWord, NULL, &pszStrmDrvrAuthMode, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputtcpserverstreamdriverpermittedpeer", 0,
+	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpserverstreamdriverpermittedpeer"), 0,
 				   eCmdHdlrGetWord, setPermittedPeer, NULL, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputtcpserveraddtlframedelimiter", 0, eCmdHdlrInt,
+	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpserveraddtlframedelimiter"), 0, eCmdHdlrInt,
 				   NULL, &iAddtlFrameDelim, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputtcpserverinputname", 0,
+	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpserverinputname"), 0,
 				   eCmdHdlrGetWord, NULL, &pszInputName, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
+	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("resetconfigvariables"), 1, eCmdHdlrCustomHandler,
 		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
 

@@ -7,6 +7,7 @@ pkglib_LTLIBRARIES =
 librsyslog_la_SOURCES = \
 	rsyslog.c \
 	rsyslog.h \
+	unicode-helper.h \
 	atomic.h \
 	syslogd-types.h \
 	module-template.h \
@@ -119,6 +120,13 @@ lmnetstrms_la_SOURCES = netstrms.c netstrms.h netstrm.c netstrm.h nssel.c nssel.
 lmnetstrms_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
 lmnetstrms_la_LDFLAGS = -module -avoid-version
 lmnetstrms_la_LIBADD =
+
+# generic stream server framework
+pkglib_LTLIBRARIES += lmstrmsrv.la
+lmstrmsrv_la_SOURCES = strmsrv.c strmsrv.h strms_sess.c strms_sess.h
+lmstrmsrv_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
+lmstrmsrv_la_LDFLAGS = -module -avoid-version
+lmstrmsrv_la_LIBADD =
 
 # netstream drivers
 

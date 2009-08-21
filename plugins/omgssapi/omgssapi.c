@@ -444,7 +444,7 @@ CODESTARTdoAction
 			/* error! */
 			dbgprintf("error forwarding via tcp, suspending\n");
 			pData->eDestState = eDestFORW_SUSP;
-			iRet = RS_RET_SUSPENDED;
+			ABORT_FINALIZE(RS_RET_SUSPENDED);
 		}
 		break;
 	}

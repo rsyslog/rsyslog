@@ -2,7 +2,7 @@
  *  Copyright (c) 1995, 1996  Dr. G.W. Wettstein <greg@wind.rmcc.com>
  *  Copyright (c) 1996 Enjellic Systems Development
  *  Copyright (c) 2004-7 Martin Schulze <joey@infodrom.org>
- *  Copyright (c) 2007-2008 Rainer Gerhards <rgerhards@adiscon.com>
+ *  Copyright (c) 2007-2009 Rainer Gerhards <rgerhards@adiscon.com>
  *
  * This file is part of rsyslog.
  *
@@ -26,7 +26,7 @@
 
 struct symbol
 {
-	char *name;
+	uchar *name;
 	int size;
 	int offset;
 };

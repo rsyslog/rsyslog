@@ -40,6 +40,7 @@
 #include <time.h>
 #include <assert.h>
 #include <errno.h>
+#include <pthread.h>
 #ifdef	OS_BSD
 #	include "libgen.h"
 #endif
@@ -60,6 +61,14 @@
 /* static data */
 DEFobjStaticHelpers
 DEFobjCurrIf(errmsg)
+
+/* we must ensure that only one thread at one time tries to load or unload
+ * modules, otherwise we may see race conditions. This first came up with
+ * imdiag/imtcp, which both use the same stream drivers. Below is the mutex
+ * for that handling.
+ * rgerhards, 2009-05-25
+ */
+static pthread_mutex_t mutLoadUnload;
 
 static modInfo_t *pLoadedModules = NULL;	/* list of currently-loaded modules */
 static modInfo_t *pLoadedModulesLast = NULL;	/* tail-pointer */
@@ -479,6 +488,8 @@ modUnlinkAndDestroy(modInfo_t **ppThis)
 	pThis = *ppThis;
 	assert(pThis != NULL);
 
+	pthread_mutex_lock(&mutLoadUnload);
+
 	/* first check if we are permitted to unload */
 	if(pThis->eType == eMOD_LIB) {
 		if(pThis->uRefCnt > 0) {
@@ -513,6 +524,7 @@ modUnlinkAndDestroy(modInfo_t **ppThis)
 	moduleDestruct(pThis);
 
 finalize_it:
+	pthread_mutex_unlock(&mutLoadUnload);
 	RETiRet;
 }
 
@@ -586,6 +598,8 @@ Load(uchar *pModName)
 
 	assert(pModName != NULL);
 	dbgprintf("Requested to load module '%s'\n", pModName);
+
+	pthread_mutex_lock(&mutLoadUnload);
 
 	iModNameLen = strlen((char *) pModName);
 	if(iModNameLen > 3 && !strcmp((char *) pModName + iModNameLen - 3, ".so")) {
@@ -696,6 +710,7 @@ Load(uchar *pModName)
 	}
 
 finalize_it:
+	pthread_mutex_unlock(&mutLoadUnload);
 	RETiRet;
 }
 
@@ -791,6 +806,15 @@ BEGINObjClassExit(module, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MA
 CODESTARTObjClassExit(module)
 	/* release objects we no longer need */
 	objRelease(errmsg, CORE_COMPONENT);
+	/* We have a problem in our reference counting, which leads to this function
+	 * being called too early. This usually is no problem, but if we destroy
+	 * the mutex object, we get into trouble. So rather than finding the root cause,
+	 * we do not release the mutex right now and have a very, very slight leak.
+	 * We know that otherwise no bad effects happen, so this acceptable for the 
+	 * time being. -- rgerhards, 2009-05-25
+	 *
+	 * TODO: add again: pthread_mutex_destroy(&mutLoadUnload);
+	 */
 
 #	ifdef DEBUG
 	modUsrPrintAll(); /* debug aid - TODO: integrate with debug.c, at least the settings! */
@@ -833,6 +857,7 @@ ENDobjQueryInterface(module)
  */
 BEGINAbstractObjClassInit(module, 1, OBJ_IS_CORE_MODULE) /* class, version - CHANGE class also in END MACRO! */
 	uchar *pModPath;
+	pthread_mutexattr_t mutAttr;
 
 	/* use any module load path specified in the environment */
 	if((pModPath = (uchar*) getenv("RSYSLOG_MODDIR")) != NULL) {
@@ -849,6 +874,10 @@ BEGINAbstractObjClassInit(module, 1, OBJ_IS_CORE_MODULE) /* class, version - CHA
 	if(glblModPath != NULL) {
 		SetModDir(glblModPath);
 	}
+
+	pthread_mutexattr_init(&mutAttr);
+	pthread_mutexattr_settype(&mutAttr, PTHREAD_MUTEX_RECURSIVE);
+	pthread_mutex_init(&mutLoadUnload, &mutAttr);
 
 	/* request objects we use */
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
