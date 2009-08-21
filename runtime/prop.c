@@ -174,7 +174,7 @@ rsRetVal CreateOrReuseStringProp(prop_t **ppThis, uchar *psz, int len)
 	} else {
 		/* already exists, check if we can re-use it */
 		GetString(*ppThis, &pszPrev, &lenPrev);
-		if(len != lenPrev && ustrcmp(psz, pszPrev)) {
+		if(len != lenPrev || ustrcmp(psz, pszPrev)) {
 			/* different, need to discard old & create new one */
 			propDestruct(ppThis);
 			CHKiRet(CreateStringProp(ppThis, psz, len));
