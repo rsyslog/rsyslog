@@ -8,6 +8,9 @@ Version 5.1.5  [DEVEL] (rgerhards), 2009-08-??
   malformed, thus causing them to be treated as TAG (this was a regression
   introduced from the "rfc3164 strict" change in 4.5.0). Testbench has been
   updated to include a smaple message with a hostname containing a dash.
+- bugfix: strings improperly reused, resulting in some message properties
+  be populated with strings from previous messages. This was caused by
+  an improper predicate check.
 ---------------------------------------------------------------------------
 Version 5.1.4  [DEVEL] (rgerhards), 2009-08-20
 - legacy syslog parser changed so that it now accepts date stamps in
