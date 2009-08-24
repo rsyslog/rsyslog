@@ -1,4 +1,10 @@
 ---------------------------------------------------------------------------
+Version 4.4.1  [v4-stable] (rgerhards), 2009-08-??
+- bugfix: Java testing tools were required, even if testbench was disabled
+  This resulted in build errors if no Java was present on the build system,
+  even though none of the selected option actually required Java.
+  (I forgot to backport a similar fix to newer releases).
+---------------------------------------------------------------------------
 Version 4.4.0  [v4-stable] (rgerhards), 2009-08-21
 - bugfix: stderr/stdout were not closed to be able to emit error messages,
   but this caused ssh sessions to hang. Now we close them after the 
