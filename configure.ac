@@ -10,6 +10,12 @@ AC_CONFIG_HEADERS([config.h])
 
 AC_GNU_SOURCE
 
+# check for Java compiler
+AC_CHECK_PROG(HAVE_JAVAC, [javac], [yes])
+if test x"$HAVE_JAVAC" = x"yes"; then
+        AC_MSG_WARN([no javac found, disabling features depending on it])
+fi
+
 # Checks for programs.
 AC_PROG_CC
 AM_PROG_CC_C_O
@@ -689,6 +695,11 @@ AC_ARG_ENABLE(testbench,
          esac],
         [enable_testbench=yes]
 )
+if test "$enable_testbench" = "yes"; then
+	if test x$HAVE_JAVAC = x; then
+	   enable_testbench='no'
+	fi
+fi
 AM_CONDITIONAL(ENABLE_TESTBENCH, test x$enable_testbench = xyes)
 
 
