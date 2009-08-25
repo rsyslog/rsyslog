@@ -2,6 +2,9 @@
 Version 4.4.1  [v4-stable] (rgerhards), 2009-08-??
 - features requiring Java are automatically disabled if Java is not
   present (thanks to Michael Biebl for his help!)
+- bugfix: invalid double-quoted PRI, among others in outgoing messages
+  This causes grief with all receivers.
+  Bug tracker: http://bugzilla.adiscon.com/show_bug.cgi?id=147
 - bugfix: Java testing tools were required, even if testbench was disabled
   This resulted in build errors if no Java was present on the build system,
   even though none of the selected option actually required Java.

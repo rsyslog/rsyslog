@@ -751,7 +751,7 @@ static inline char *getPRI(msg_t *pM)
 	 */
 	MsgLock(pM);
 	if(pM->bufPRI[0] == '\0') {
-		snprintf((char*)pM->bufPRI, sizeof(pM->bufPRI), "<%d>", getPRIi(pM));
+		snprintf((char*)pM->bufPRI, sizeof(pM->bufPRI), "%d", getPRIi(pM));
 	}
 	MsgUnlock(pM);
 
