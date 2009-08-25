@@ -95,6 +95,17 @@ Version 4.5.0  [DEVEL] (rgerhards), 2009-07-02
   This could lead to timestamps written in the wrong format, but not to
   an abort
 ---------------------------------------------------------------------------
+Version 4.4.1  [v4-stable] (rgerhards), 2009-08-??
+- features requiring Java are automatically disabled if Java is not
+  present (thanks to Michael Biebl for his help!)
+- bugfix: invalid double-quoted PRI, among others in outgoing messages
+  This causes grief with all receivers.
+  Bug tracker: http://bugzilla.adiscon.com/show_bug.cgi?id=147
+- bugfix: Java testing tools were required, even if testbench was disabled
+  This resulted in build errors if no Java was present on the build system,
+  even though none of the selected option actually required Java.
+  (I forgot to backport a similar fix to newer releases).
+---------------------------------------------------------------------------
 Version 4.4.0  [v4-stable] (rgerhards), 2009-08-21
 - bugfix: stderr/stdout were not closed to be able to emit error messages,
   but this caused ssh sessions to hang. Now we close them after the 
@@ -156,15 +167,6 @@ Version 4.3.0  [DEVEL] (rgerhards), 2009-04-17
   connection broke, but not if there was a problem with statement
   execution. The most probable case for such a case would be invalid
   sql inside the template, and this is now much easier to diagnose.
-<<<<<<< HEAD:ChangeLog
----------------------------------------------------------------------------
-Version 4.2.1  [v4-stable] (rgerhards), 2009-0?-??
-- bugfix: stderr/stdout were not closed to be able to emit error messages,
-  but this caused ssh sessions to hang. Now we close them after the 
-  initial initialization. See forum thread:
-  http://kb.monitorware.com/controlling-terminal-issues-t9875.html
-=======
->>>>>>> bd7542b51593739893922e8ec8fb6d7195d06cbe:ChangeLog
 ---------------------------------------------------------------------------
 Version 4.2.0  [v4-stable] (rgerhards), 2009-06-23
 - bugfix: light and full delay watermarks had invalid values, badly
