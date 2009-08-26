@@ -1,7 +1,6 @@
 sbin_PROGRAMS =
 pkglib_LTLIBRARIES = 
 
-
 if ENABLE_INET
 pkglib_LTLIBRARIES += lmtcpsrv.la lmtcpclt.la
 #
