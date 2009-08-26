@@ -1,5 +1,11 @@
 ---------------------------------------------------------------------------
 Version 4.5.3  [v4-beta] (rgerhards), 2009-08-??
+- bugfix: message sanitation had some issues:
+  - control character DEL was not properly escaped
+  - NUL and LF characters were not properly stripped if no control
+    character replacement was to be done
+  - NUL characters in the message body were silently dropped (this was
+    a regeression introduced by some of the recent optimizations)
 - bugfix: strings improperly reused, resulting in some message properties
   be populated with strings from previous messages. This was caused by
   an improper predicate check. [backported from v5]
