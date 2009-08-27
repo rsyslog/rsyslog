@@ -809,7 +809,6 @@ tryDoAction(action_t *pAction, batch_t *pBatch, int *pnElem)
 
 	assert(pBatch != NULL);
 	assert(pnElem != NULL);
-dbgprintf("XXXX: ENTER tryDoAction elt 0 state %d\n", pBatch->pElem[0].state);
 
 	i = pBatch->iDoneUpTo;	/* all messages below that index are processed */
 	iElemProcessed = 0;
@@ -835,7 +834,6 @@ dbgprintf("XXXX: ENTER tryDoAction elt 0 state %d\n", pBatch->pElem[0].state);
 				pBatch->pElem[i].state = BATCH_STATE_SUB;
 			} else if(localRet == RS_RET_DISCARDMSG) {
 				pBatch->pElem[i].state = BATCH_STATE_DISC;
-dbgprintf("XXXX: discardmsg! change state to _DISC: %d\n", pBatch->pElem[i].state);
 			} else {
 				iRet = localRet;
 				FINALIZE;
@@ -852,7 +850,6 @@ finalize_it:
 		*pnElem += iCommittedUpTo - pBatch->iDoneUpTo;
 		pBatch->iDoneUpTo = iCommittedUpTo;
 	}
-dbgprintf("XXXX: done tryDoAction elt 0 state %d, iret %d\n", pBatch->pElem[0].state, iRet);
 	RETiRet;
 }
 
@@ -875,7 +872,6 @@ submitBatch(action_t *pAction, batch_t *pBatch, int nElem)
 	bDone = 0;
 	do {
 		localRet = tryDoAction(pAction, pBatch, &nElem);
-dbgprintf("XXXX: submitBatch got state %d\n", localRet);
 		if(   localRet == RS_RET_OK
 		   || localRet == RS_RET_PREVIOUS_COMMITTED
 		   || localRet == RS_RET_DEFER_COMMIT) {
@@ -885,7 +881,6 @@ dbgprintf("XXXX: submitBatch got state %d\n", localRet);
 			localRet = finishBatch(pAction);
 		}
 
-dbgprintf("XXXX: submitBatch got state %d\n", localRet);
 		if(   localRet == RS_RET_OK
 		   || localRet == RS_RET_PREVIOUS_COMMITTED
 		   || localRet == RS_RET_DEFER_COMMIT) {
@@ -893,7 +888,6 @@ dbgprintf("XXXX: submitBatch got state %d\n", localRet);
 		} else if(localRet == RS_RET_DISCARDMSG) {
 			iRet = RS_RET_DISCARDMSG; /* TODO: verify this sequence -- rgerhards, 2009-07-30 */
 			bDone = 1;
-dbgprintf("XXXX: submitBatch DONE state %d\n", localRet);
 		} else if(localRet == RS_RET_SUSPENDED) {
 			; /* do nothing, this will retry the full batch */
 		} else if(localRet == RS_RET_ACTION_FAILED) {
@@ -913,10 +907,8 @@ dbgprintf("XXXX: submitBatch DONE state %d\n", localRet);
 				bDone = 1;
 			}
 		}
-dbgprintf("XXXX: submitBatch pre while state %d\n", localRet);
 	} while(!bDone); /* do .. while()! */
 
-dbgprintf("XXXX: END submitBatch elt 0 state %d, iRet %d\n", pBatch->pElem[0].state, iRet);
 	RETiRet;
 }
 
@@ -1152,7 +1144,6 @@ actionWriteToAction(action_t *pAction)
 	 * So let's enqueue our message for execution. -- rgerhards, 2007-07-24
 	 */
 	iRet = qqueueEnqObj(pAction->pQueue, pAction->f_pMsg->flowCtlType, (void*) MsgAddRef(pAction->f_pMsg));
-dbgprintf("XXXX: queueEnqObj returned %d\n", iRet);
 
 	if(iRet == RS_RET_OK)
 		pAction->f_prevcount = 0; /* message processed, so we start a new cycle */

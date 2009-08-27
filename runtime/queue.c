@@ -1044,7 +1044,6 @@ static rsRetVal qAddDirect(qqueue_t *pThis, void* pUsr)
 	iRet = pThis->pConsumer(pThis->pUsr, &singleBatch);
 	objDestruct(pUsr);
 
-dbgprintf("XXXX: qAddDirect returns %d\n", iRet);
 	RETiRet;
 }
 
@@ -2443,7 +2442,6 @@ doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, void *pUsr)
 	CHKiRet(qqueueAdd(pThis, pUsr));
 
 finalize_it:
-dbgprintf("XXXX: queueEnqObj returns  %d\n", iRet);
 	RETiRet;
 }
 

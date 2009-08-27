@@ -8,6 +8,9 @@ Version 5.1.5  [DEVEL] (rgerhards), 2009-08-??
   malformed, thus causing them to be treated as TAG (this was a regression
   introduced from the "rfc3164 strict" change in 4.5.0). Testbench has been
   updated to include a smaple message with a hostname containing a dash.
+- bugfix: strings improperly reused, resulting in some message properties
+  be populated with strings from previous messages. This was caused by
+  an improper predicate check.
 ---------------------------------------------------------------------------
 Version 5.1.4  [DEVEL] (rgerhards), 2009-08-20
 - legacy syslog parser changed so that it now accepts date stamps in
@@ -107,6 +110,17 @@ increase.
 - increased ompgsql performance by adapting to new transactional
   output module interface
 ---------------------------------------------------------------------------
+Version 4.5.3  [v4-beta] (rgerhards), 2009-08-??
+- bugfix: message sanitation had some issues:
+  - control character DEL was not properly escaped
+  - NUL and LF characters were not properly stripped if no control
+    character replacement was to be done
+  - NUL characters in the message body were silently dropped (this was
+    a regeression introduced by some of the recent optimizations)
+- bugfix: strings improperly reused, resulting in some message properties
+  be populated with strings from previous messages. This was caused by
+  an improper predicate check. [backported from v5]
+---------------------------------------------------------------------------
 Version 4.5.2  [v4-beta] (rgerhards), 2009-08-21
 - legacy syslog parser changed so that it now accepts date stamps in
   wrong case. Some devices seem to create them and I do not see any harm
@@ -197,6 +211,22 @@ Version 4.5.0  [DEVEL] (rgerhards), 2009-07-02
 - bugfix: missing initialization during timestamp creation
   This could lead to timestamps written in the wrong format, but not to
   an abort
+---------------------------------------------------------------------------
+Version 4.4.1  [v4-stable] (rgerhards), 2009-08-??
+- features requiring Java are automatically disabled if Java is not
+  present (thanks to Michael Biebl for his help!)
+- bugfix: invalid double-quoted PRI, among others in outgoing messages
+  This causes grief with all receivers.
+  Bug tracker: http://bugzilla.adiscon.com/show_bug.cgi?id=147
+- bugfix: Java testing tools were required, even if testbench was disabled
+  This resulted in build errors if no Java was present on the build system,
+  even though none of the selected option actually required Java.
+  (I forgot to backport a similar fix to newer releases).
+- bugfix (backport): omfwd segfault
+  Note that the orginal (higher version) patch states this happens only
+  when debugging mode is turned on. That statement is wrong: if debug
+  mode is turned off, the message is not being emitted, but the division
+  by zero in the actual parameters still happens.
 ---------------------------------------------------------------------------
 Version 4.4.0  [v4-stable] (rgerhards), 2009-08-21
 - bugfix: stderr/stdout were not closed to be able to emit error messages,

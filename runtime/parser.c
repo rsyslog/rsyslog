@@ -163,6 +163,7 @@ sanitizeMessage(msg_t *pMsg)
 	size_t iDst;
 	size_t iMaxLine;
 	size_t maxDest;
+	bool bUpdatedLen = FALSE;
 	uchar szSanBuf[32*1024]; /* buffer used for sanitizing a string */
 
 	assert(pMsg != NULL);
@@ -177,6 +178,7 @@ sanitizeMessage(msg_t *pMsg)
 	/* remove NUL character at end of message (see comment in function header) */
 	if(pszMsg[lenMsg-1] == '\0') {
 		DBGPRINTF("dropped NUL at very end of message\n");
+		bUpdatedLen = TRUE;
 		lenMsg--;
 	}
 
@@ -187,6 +189,7 @@ sanitizeMessage(msg_t *pMsg)
 	 */
 	if(bDropTrailingLF && pszMsg[lenMsg-1] == '\n') {
 		DBGPRINTF("dropped LF at very end of message (DropTrailingLF is set)\n");
+		bUpdatedLen = TRUE;
 		lenMsg--;
 	}
 
@@ -197,7 +200,7 @@ sanitizeMessage(msg_t *pMsg)
 	 */
 	int bNeedSanitize = 0;
 	for(iSrc = 0 ; iSrc < lenMsg ; iSrc++) {
-		if(pszMsg[iSrc] < 32) {
+		if(iscntrl(pszMsg[iSrc])) {
 			if(pszMsg[iSrc] == '\0' || bEscapeCCOnRcv) {
 				bNeedSanitize = 1;
 				break;
@@ -205,8 +208,11 @@ sanitizeMessage(msg_t *pMsg)
 		}
 	}
 
-	if(!bNeedSanitize)
+	if(!bNeedSanitize) {
+		if(bUpdatedLen == TRUE)
+			MsgSetRawMsgSize(pMsg, lenMsg);
 		FINALIZE;
+	}
 
 	/* now copy over the message and sanitize it */
 	iMaxLine = glbl.GetMaxLine();
@@ -219,8 +225,10 @@ sanitizeMessage(msg_t *pMsg)
 		CHKmalloc(pDst = malloc(sizeof(uchar) * (iMaxLine + 1)));
 	iSrc = iDst = 0;
 	while(iSrc < lenMsg && iDst < maxDest - 3) { /* leave some space if last char must be escaped */
-		if(pszMsg[iSrc] == '\0') { /* guard against \0 characters... */
-		} else if(iscntrl((int) pszMsg[iSrc])) {
+		if(iscntrl((int) pszMsg[iSrc])) {
+			/* note: \0 must always be escaped, the rest of the code currently
+			 * can not handle it! -- rgerhards, 2009-08-26
+			 */
 			if(pszMsg[iSrc] == '\0' || bEscapeCCOnRcv) {
 			/* we are configured to escape control characters. Please note
 			 * that this most probably break non-western character sets like

@@ -141,7 +141,6 @@ DEFFUNC_llExecFunc(processMsgDoRules)
 	rsRetVal iRet;
 	ISOBJ_TYPE_assert(pData, rule);
 	iRet = rule.ProcessMsg((rule_t*) pData, (msg_t*) pParam);
-dbgprintf("XXXX: pcoessMsgDoRules returns %d\n", iRet);
 	return iRet;
 }
 
@@ -162,7 +161,6 @@ processMsg(msg_t *pMsg)
 	CHKiRet(llExecFunc(&pThis->llRules, processMsgDoRules, pMsg));
 
 finalize_it:
-dbgprintf("XXXX: processMsg got return state %d\n", iRet);
 
 	//if(iRet == RS_RET_DISCARDMSG)
 		//iRet = RS_RET_OK;
