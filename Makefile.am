@@ -128,6 +128,8 @@ if ENABLE_ORACLE
 SUBDIRS += plugins/omoracle
 endif
 
+SUBDIRS += java
+
 # tests are added as last element, because tests may need different
 # modules that need to be generated first
 SUBDIRS += tests

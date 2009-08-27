@@ -851,6 +851,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omoracle/Makefile \
 		plugins/omudpspoof/Makefile \
 		plugins/cust1/Makefile \
+		java/Makefile \
 		tests/Makefile])
 AC_OUTPUT
 
