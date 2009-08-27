@@ -192,6 +192,23 @@ uchar *propIDToName(propid_t propID);
 extern void (*funcMsgPrepareEnqueue)(msg_t *pMsg);
 #define MsgPrepareEnqueue(pMsg) funcMsgPrepareEnqueue(pMsg)
 
+
+/* ------------------------------ some inline functions ------------------------------ */
+
+/* set raw message size. This is needed in some cases where a trunctation is necessary
+ * but the raw message must not be newly set. The most important (and currently only)
+ * use case is if we remove trailing LF or NUL characters. Note that the size can NOT
+ * be extended, only shrunk!
+ * rgerhards, 2009-08-26
+ */
+static inline void
+MsgSetRawMsgSize(msg_t *pMsg, size_t newLen)
+{
+	assert(newLen <= (size_t) pMsg->iLenRawMsg);
+	pMsg->iLenRawMsg = newLen;
+}
+
+
 #endif /* #ifndef MSG_H_INCLUDED */
 /* vim:set ai:
  */
