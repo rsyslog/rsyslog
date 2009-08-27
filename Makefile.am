@@ -127,7 +127,9 @@ if ENABLE_ORACLE
 SUBDIRS += plugins/omoracle
 endif
 
+if ENABLE_GUI
 SUBDIRS += java
+endif
 
 # tests are added as last element, because tests may need different
 # modules that need to be generated first

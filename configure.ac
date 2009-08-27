@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([rsyslog],[5.1.4],[rsyslog@lists.adiscon.com])
+AC_INIT([rsyslog],[5.3.0],[rsyslog@lists.adiscon.com])
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([ChangeLog])
 AC_CONFIG_MACRO_DIR([m4])
@@ -773,6 +773,27 @@ AC_ARG_ENABLE(omstdout,
 )
 AM_CONDITIONAL(ENABLE_OMSTDOUT, test x$enable_omstdout = xyes)
 
+
+# building the GUI (mostly for diagnostic reasons)
+AC_ARG_ENABLE(gui,
+        [AS_HELP_STRING([--enable-gui],[Enable GUI programs @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_gui="yes" ;;
+          no) enable_gui="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-gui) ;;
+         esac],
+        [enable_gui=no]
+)
+if test "x$enable_gui" = "xyes"; then
+	if test x$HAVE_JAVAC = x; then
+	   AC_MSG_ERROR([GUI components need Java, but Java development system is not installed on this system])
+	fi
+fi
+AM_CONDITIONAL(ENABLE_GUI, test x$enable_gui = xyes)
+
+
+AC_SUBST(RELP_CFLAGS)
+AC_SUBST(RELP_LIBS)
 # This provides a vehicle to integrate custom modules, that are not
 # part of rsyslog, into the build process. It is named cust1, so that
 # additional such modules can easily be added.
@@ -875,6 +896,7 @@ echo "    Regular expressions support enabled:      $enable_regexp"
 echo "    Zlib compression support enabled:         $enable_zlib"
 echo "    rsyslog runtime will be built:            $enable_rsyslogrt"
 echo "    rsyslogd will be built:                   $enable_rsyslogd"
+echo "    GUI components will be built:             $enable_gui"
 echo "    custom module 1 will be built:            $enable_cust1"
 echo
 echo "---{ input plugins }---"

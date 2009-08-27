@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------
+Version 5.3.0  [DEVEL] (rgerhards), 2009-08-??
+- begun to add simple GUI programs to gain insight into running rsyslogd
+  instances and help setup and troubleshooting (active via the
+  --enable-gui ./configure switch)
+---------------------------------------------------------------------------
 Version 5.1.5  [DEVEL] (rgerhards), 2009-08-??
 - added new config option $ActionWriteAllMarkMessages
   this option permites to process mark messages under all circumstances,
