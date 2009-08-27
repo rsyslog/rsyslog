@@ -205,8 +205,6 @@ static rsRetVal UDPSend(instanceData *pData, char *msg, size_t len)
 	unsigned lsent = 0;
 	int bSendSuccess;
 
-dbgprintf("rebind logic: interval %d, curr %d, mod %d, if %d\n", pData->iUDPRebindInterval, pData->nXmit,
-	(pData->nXmit % pData->iUDPRebindInterval), ((pData->nXmit % pData->iUDPRebindInterval) == 0));
 	if(pData->iUDPRebindInterval && (pData->nXmit++ % pData->iUDPRebindInterval == 0)) {
 		dbgprintf("omfwd dropping UDP 'connection' (as configured)\n");
 		pData->nXmit = 1;	/* else we have an addtl wrap at 2^31-1 */
