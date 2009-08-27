@@ -111,6 +111,11 @@ Version 4.4.1  [v4-stable] (rgerhards), 2009-08-??
   This resulted in build errors if no Java was present on the build system,
   even though none of the selected option actually required Java.
   (I forgot to backport a similar fix to newer releases).
+- bugfix (backport): omfwd segfault
+  Note that the orginal (higher version) patch states this happens only
+  when debugging mode is turned on. That statement is wrong: if debug
+  mode is turned off, the message is not being emitted, but the division
+  by zero in the actual parameters still happens.
 ---------------------------------------------------------------------------
 Version 4.4.0  [v4-stable] (rgerhards), 2009-08-21
 - bugfix: stderr/stdout were not closed to be able to emit error messages,
