@@ -19,9 +19,12 @@ JAVA_SOURCE_FILES = \
 	com/rsyslog/lib/DiagSess.java \
 	com/rsyslog/lib/SyslogMessage.java \
 	com/rsyslog/lib/SyslogMsgConsumer.java \
+	com/rsyslog/lib/SyslogSender.java \
+	com/rsyslog/lib/UDPSyslogSender.java \
 	com/rsyslog/diag/DiagTalker.java \
 	com/rsyslog/gui/simpServ/simpServ.java \
 	com/rsyslog/gui/simpServ/simpServConsumer.java \
+	com/rsyslog/gui/msggen/MsgGen.java \
 	com/rsyslog/gui/diaggui/Counters.java \
 	com/rsyslog/gui/diaggui/DiagGUI.java
 
