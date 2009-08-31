@@ -19,6 +19,7 @@ JAVA_SOURCE_FILES = \
 	com/rsyslog/lib/DiagSess.java \
 	com/rsyslog/lib/SyslogMessage.java \
 	com/rsyslog/lib/SyslogMsgConsumer.java \
+	com/rsyslog/lib/SyslogTrafficGenerator.java \
 	com/rsyslog/lib/SyslogSender.java \
 	com/rsyslog/lib/UDPSyslogSender.java \
 	com/rsyslog/diag/DiagTalker.java \

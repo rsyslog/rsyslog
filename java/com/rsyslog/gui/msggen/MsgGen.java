@@ -37,6 +37,8 @@ import javax.swing.*;
 public class MsgGen extends Frame {
 	private TextField target;
 	private TextField message;
+	private TextField nummsgs;
+	private TextField numthrds;
 
 	public static void main(String args[]) {
 		new MsgGen();
@@ -66,15 +68,23 @@ public class MsgGen extends Frame {
 
 	/** creates the main GUI */
 	private void createGUI() {
-		target = new TextField("127.0.0.1", 32);
+		//target = new TextField("127.0.0.1", 32);
+		target = new TextField("172.19.3.3", 32);
 		message = new TextField(80);
-		message.setText("<161>Test malformed");
+		//message.setText("<161>Test malformed");
+		message.setText("<5>iaalog[171652]: AIB|dcu|2009/08/12 14:48:43|mfa challenge|NNNNNNN|XX.XX.XX.XX");
+		nummsgs = new TextField("1000", 8);
+		numthrds = new TextField("10", 5);
 		Panel pCenter = new Panel();
 		pCenter.setLayout(new FlowLayout());
 		pCenter.add(new Label("Target Host:"));
 		pCenter.add(target);
+		pCenter.add(new Label("Number of Msgs:"));
+		pCenter.add(nummsgs);
 		pCenter.add(new Label("Msg:"));
 		pCenter.add(message);
+		pCenter.add(new Label("Number of Threads:"));
+		pCenter.add(numthrds);
 		
 		Button b = new Button("Start Test");
 		b.addActionListener(new ActionListener() {
@@ -96,14 +106,11 @@ public class MsgGen extends Frame {
 
 	/** perform the test, a potentially complex operation */
 	private void performTest() {
-		try {
-			UDPSyslogSender sender = new UDPSyslogSender(target.getText());
-			for(int i = 0 ; i < 100 ; ++i)
-			sender.sendMSG(message.getText());
-		}
-		catch(Exception e) {
-			JOptionPane.showMessageDialog(this, e.toString(), "Error",
-				JOptionPane.ERROR_MESSAGE, null);
+		for(short i = 0 ; i < Integer.parseInt(numthrds.getText()) ; ++ i) {
+			SyslogTrafficGenerator gen = 
+				new SyslogTrafficGenerator(target.getText(), message.getText(),
+					Long.parseLong(nummsgs.getText()));
+			gen.start();
 		}
 	}
 
