@@ -4,6 +4,9 @@
 AC_PREREQ(2.61)
 AC_INIT([rsyslog],[5.3.0],[rsyslog@lists.adiscon.com])
 AM_INIT_AUTOMAKE
+
+m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
+
 AC_CONFIG_SRCDIR([ChangeLog])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_HEADERS([config.h])
@@ -849,12 +852,7 @@ AM_CONDITIONAL(ENABLE_OMTEMPLATE, test x$enable_omtemplate = xyes)
 # end of copy template - be sure to search for omtemplate to find everything!
 
 
-SHAVE_INIT
-
-
 AC_CONFIG_FILES([Makefile \
-		shave \
-		shave-libtool \
 		runtime/Makefile \
 		tools/Makefile \
 		doc/Makefile \

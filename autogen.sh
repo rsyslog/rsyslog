@@ -19,7 +19,7 @@ fi
 
 (cd $srcdir && autoreconf --verbose --force --install) || exit 1
 
-conf_flags="--enable-shave --cache-file=config.cache"
+conf_flags="--cache-file=config.cache"
 
 if test x$NOCONFIGURE = x; then
   echo Running $srcdir/configure $conf_flags "$@" ...
