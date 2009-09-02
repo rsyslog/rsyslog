@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 4.4.1  [v4-stable] (rgerhards), 2009-08-??
+Version 4.4.1  [v4-stable] (rgerhards), 2009-09-02
 - features requiring Java are automatically disabled if Java is not
   present (thanks to Michael Biebl for his help!)
 - bugfix: invalid double-quoted PRI, among others in outgoing messages
