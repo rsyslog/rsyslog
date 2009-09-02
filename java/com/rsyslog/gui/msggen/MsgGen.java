@@ -76,26 +76,42 @@ public class MsgGen extends Frame {
 		nummsgs = new TextField("1000", 8);
 		numthrds = new TextField("10", 5);
 		Panel pCenter = new Panel();
-		pCenter.setLayout(new FlowLayout());
-		pCenter.add(new Label("Target Host:"));
-		pCenter.add(target);
-		pCenter.add(new Label("Number of Msgs:"));
-		pCenter.add(nummsgs);
-		pCenter.add(new Label("Msg:"));
-		pCenter.add(message);
-		pCenter.add(new Label("Number of Threads:"));
-		pCenter.add(numthrds);
-		
+
+		Panel pnl = new Panel();
+		pnl.setLayout(new FlowLayout());
+		pnl.add(new Label("Target Host:"));
+		pnl.add(target);
+		pCenter.add(pnl);
+
+		pnl = new Panel();
+		pnl.setLayout(new FlowLayout());
+		pnl.add(new Label("Number of Msgs:"));
+		pnl.add(nummsgs);
+		pCenter.add(pnl);
+
+		pnl = new Panel();
+		pnl.setLayout(new FlowLayout());
+		pnl.add(new Label("Msg:"));
+		pnl.add(message);
+		pCenter.add(pnl);
+
+		Panel pSouth = new Panel();
+		pSouth.setLayout(new FlowLayout());
+
+		pnl = new Panel();
+		pnl.setLayout(new FlowLayout());
+		pnl.add(new Label("Number of Threads:"));
+		pnl.add(numthrds);
+		pSouth.add(pnl);
+
 		Button b = new Button("Start Test");
 		b.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				performTest();
 			}
 		});
-		Panel pSouth = new Panel();
-		pSouth.setLayout(new FlowLayout());
 		pSouth.add(b);
-		
+
 		pack();
 		setTitle("Syslog Message Generator");
 		setLayout(new BorderLayout());
