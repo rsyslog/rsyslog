@@ -120,6 +120,8 @@ Version 4.5.3  [v4-beta] (rgerhards), 2009-08-??
 - bugfix: strings improperly reused, resulting in some message properties
   be populated with strings from previous messages. This was caused by
   an improper predicate check. [backported from v5]
+- bugfix: reverse lookup reduction logic in imudp do DNS queries too often
+  [imported from 4.4.2]
 ---------------------------------------------------------------------------
 Version 4.5.2  [v4-beta] (rgerhards), 2009-08-21
 - legacy syslog parser changed so that it now accepts date stamps in
@@ -212,7 +214,16 @@ Version 4.5.0  [DEVEL] (rgerhards), 2009-07-02
   This could lead to timestamps written in the wrong format, but not to
   an abort
 ---------------------------------------------------------------------------
-Version 4.4.1  [v4-stable] (rgerhards), 2009-08-??
+Version 4.4.2  [v4-stable] (rgerhards), 2009-09-??
+- bugfix: reverse lookup reduction logic in imudp do DNS queries too often
+  A comparison was done between the current and the former source address.
+  However, this was done on the full sockaddr_storage structure and not
+  on the host address only. This has now been changed for IPv4 and IPv6.
+  The end result of this bug could be a higher UDP message loss rate than
+  necessary (note that UDP message loss can not totally be avoided due
+  to the UDP spec)
+---------------------------------------------------------------------------
+Version 4.4.1  [v4-stable] (rgerhards), 2009-09-02
 - features requiring Java are automatically disabled if Java is not
   present (thanks to Michael Biebl for his help!)
 - bugfix: invalid double-quoted PRI, among others in outgoing messages
