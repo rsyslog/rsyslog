@@ -1496,6 +1496,49 @@ int *create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer)
 }
 
 
+/* check if two provided socket addresses point to the same host. Note that the
+ * length of the sockets must be provided as third parameter. This is necessary to
+ * compare non IPv4/v6 hosts, in which case we do a simple memory compare of the
+ * address structure (in that case, the same host may not reliably be detected).
+ * Note that we need to do the comparison not on the full structure, because it contains things
+ * like the port, which we do not need to look at when thinking about hostnames. So we look
+ * at the relevant fields, what means a somewhat more complicated processing.
+ * Also note that we use a non-standard calling interface, as this is much more natural and
+ * it looks extremely unlikely that we get an exception of any kind here. What we
+ * return is mimiced after memcmp(), and as such useful for building binary trees 
+ * (the order relation may be a bit arbritrary, but at least it is consistent).
+ * rgerhards, 2009-09-03
+ */
+static int CmpHost(struct sockaddr_storage *s1, struct sockaddr_storage* s2, size_t socklen)
+{
+	int ret;
+
+	if(((struct sockaddr*) s1)->sa_family != ((struct sockaddr*) s2)->sa_family) {
+		ret = memcmp(s1, s2, socklen);
+		goto finalize_it;
+	}
+
+	if(((struct sockaddr*) s1)->sa_family == AF_INET) {
+		if(((struct sockaddr_in *) s1)->sin_addr.s_addr == ((struct sockaddr_in*)s2)->sin_addr.s_addr) {
+			ret = 0;
+		} else if(((struct sockaddr_in *) s1)->sin_addr.s_addr < ((struct sockaddr_in*)s2)->sin_addr.s_addr) {
+			ret = -1;
+		} else {
+			ret = 1;
+		}
+	} else if(((struct sockaddr*) s1)->sa_family == AF_INET6) {
+		/* IPv6 addresses are always 16 octets long */
+		ret = memcmp(((struct sockaddr_in6 *)s1)->sin6_addr.s6_addr, ((struct sockaddr_in6*)s2)->sin6_addr.s6_addr, 16);
+	} else {
+		ret = memcmp(s1, s2, socklen);
+	}
+
+dbgprintf("CmpHost returns %d\n", ret);
+finalize_it:
+	return ret;
+}
+
+
 /* queryInterface function
  * rgerhards, 2008-03-05
  */
@@ -1524,6 +1567,7 @@ CODESTARTobjQueryInterface(net)
 	pIf->AddPermittedPeer = AddPermittedPeer;
 	pIf->DestructPermittedPeers = DestructPermittedPeers;
 	pIf->PermittedPeerWildcardMatch = PermittedPeerWildcardMatch;
+	pIf->CmpHost = CmpHost;
 finalize_it:
 ENDobjQueryInterface(net)
 
