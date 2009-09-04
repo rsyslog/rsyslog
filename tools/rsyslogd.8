@@ -248,20 +248,17 @@ kill -HUP $(cat /var/run/rsyslogd.pid)
 .B HUP
 This lets
 .B rsyslogd
-perform a re-initialization.  All open files are closed, the
-configuration file (default is 
-.IR /etc/rsyslog.conf ")"
-will be reread and the
-.BR rsyslog (3)
-facility is started again.
+perform close all open files.
+Also, in v3 a full restart will be done in order to read changed configuration files.
 Note that this means a full rsyslogd restart is done. This has, among others,
 the consequence that TCP and other connections are torn down. Also, if any
 queues are not running in disk assisted mode or are not set to persist data
 on shutdown, queue data is lost. HUPing rsyslogd is an extremely expensive
 operation and should only be done when actually necessary. Actually, it is
-a rsyslgod stop immediately followed by a restart. Future versions will probably
-include a special handling which only closes files, but will not cause any
-of the other effects.
+a rsyslgod stop immediately followed by a restart. Future versions will remove
+this restart functionality of HUP (it will go away in v5). So it is advised to use
+HUP only for closing files, and a "real restart" (e.g. /etc/rc.d/rsyslogd restart)
+to activate configuration changes.
 .TP
 .B TERM ", " INT ", " QUIT
 .B Rsyslogd

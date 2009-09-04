@@ -91,10 +91,13 @@ default 60000 (1 minute)]</li>
 <li><a href="rsconf1_actionresumeinterval.html">$ActionResumeInterval</a></li>
 <li>$ActionResumeRetryCount &lt;number&gt; [default 0, -1 means eternal]</li>
 <li>$ActionSendResendLastMsgOnReconn &lt;[on/<b>off</b>]&gt; specifies if the last message is to be resend when a connecition broken and has been reconnedcted. May increase reliability, but comes at the risk of message duplication.
-<li>$ActionSendStreamDriver &lt;driver basename&gt; just like $DefaultNetstreamDriver, but for the specific action
-</li><li>$ActionSendStreamDriverMode &lt;mode&gt;, default 0, mode to use with the stream driver
-(driver-specific)</li><li>$ActionSendStreamDriverAuthMode &lt;mode&gt;,&nbsp; authentication mode to use with the stream driver
-(driver-specific)</li><li>$ActionSendStreamDriverPermittedPeer &lt;ID&gt;,&nbsp; accepted fingerprint (SHA1) or name of remote peer
+<li>$ActionSendStreamDriver &lt;driver basename&gt; just like $DefaultNetstreamDriver, but for the specific action</li>
+<li>$ActionSendStreamDriverMode &lt;mode&gt;, default 0, mode to use with the stream driver (driver-specific)</li>
+<li>$ActionSendStreamDriverAuthMode &lt;mode&gt;,&nbsp; authentication mode to use with the stream driver. Note that this directive requires TLS
+netstream drivers. For all others, it will be ignored.
+(driver-specific)</li>
+<li>$ActionSendStreamDriverPermittedPeer &lt;ID&gt;,&nbsp; accepted fingerprint (SHA1) or name of remote peer. Note that this directive requires TLS
+netstream drivers. For all others, it will be ignored.
 (driver-specific) -<span style="font-weight: bold;"> directive may go away</span>!</li>
 <li><b>$ActionSendUDPRebindInterval</b> nbr</a>- [available since 4.3.2] - instructs the UDP send
 action to rebind the send socket every nbr of messages sent. Zero, the default, means
