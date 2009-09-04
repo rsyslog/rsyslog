@@ -77,6 +77,7 @@ static int startIndexUxLocalSockets; /* process funix from that index on (used t
 				   */
 static int funixParseHost[MAXFUNIX] = { 0, }; /* should parser parse host name?  read-only after startup */
 static int funixFlags[MAXFUNIX] = { IGNDATE, }; /* should parser parse host name?  read-only after startup */
+static int funixCreateSockPath[MAXFUNIX] = { 0, }; /* auto-creation of socket directory? */
 static uchar *funixn[MAXFUNIX] = { (uchar*) _PATH_LOG }; /* read-only after startup */
 static uchar *funixHName[MAXFUNIX] = { NULL, }; /* host-name override - if set, use this instead of actual name */
 static int funixFlowCtl[MAXFUNIX] = { eFLOWCTL_NO_DELAY, }; /* flow control settings for this socket */
@@ -89,6 +90,8 @@ static uchar *pLogSockName = NULL;
 static uchar *pLogHostName = NULL;	/* host name to use with this socket */
 static int bUseFlowCtl = 0;		/* use flow control or not (if yes, only LIGHT is used! */
 static int bIgnoreTimestamp = 1; /* ignore timestamps present in the incoming message? */
+#define DFLT_bCreateSockPath 0
+static int bCreateSockPath = DFLT_bCreateSockPath; /* auto-create socket path? */
 
 
 /* set the timestamp ignore / not ignore option for the system
@@ -132,6 +135,7 @@ static rsRetVal addLstnSocketName(void __attribute__((unused)) *pVal, uchar *pNe
 		pLogHostName = NULL; /* re-init for next, not freed because funixHName[] now owns it */
 		funixFlowCtl[nfunix] = bUseFlowCtl ? eFLOWCTL_LIGHT_DELAY : eFLOWCTL_NO_DELAY;
 		funixFlags[nfunix] = bIgnoreTimestamp ? IGNDATE : NOFLAG;
+		funixCreateSockPath[nfunix] = bCreateSockPath;
 		funixn[nfunix++] = pNewVal;
 	}
 	else {
@@ -165,7 +169,7 @@ static rsRetVal discardFunixn(void)
 }
 
 
-static int create_unix_socket(const char *path)
+static int create_unix_socket(const char *path, int bCreatePath)
 {
 	struct sockaddr_un sunx;
 	int fd;
@@ -177,6 +181,9 @@ static int create_unix_socket(const char *path)
 
 	memset(&sunx, 0, sizeof(sunx));
 	sunx.sun_family = AF_UNIX;
+	if(bCreatePath) {
+		makeFileParentDirs((uchar*)path, strlen(path), 0755, -1, -1, 0);
+	}
 	(void) strncpy(sunx.sun_path, path, sizeof(sunx.sun_path));
 	fd = socket(AF_UNIX, SOCK_DGRAM, 0);
 	if (fd < 0 || bind(fd, (struct sockaddr *) &sunx, SUN_LEN(&sunx)) < 0 ||
@@ -308,7 +315,7 @@ CODESTARTwillRun
 
 	/* initialize and return if will run or not */
 	for (i = startIndexUxLocalSockets ; i < nfunix ; i++) {
-		if ((funix[i] = create_unix_socket((char*) funixn[i])) != -1)
+		if ((funix[i] = create_unix_socket((char*) funixn[i], funixCreateSockPath[i])) != -1)
 			dbgprintf("Opened UNIX socket '%s' (fd %d).\n", funixn[i], funix[i]);
 	}
 
@@ -383,6 +390,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	nfunix = 1;
 	bIgnoreTimestamp = 1;
 	bUseFlowCtl = 0;
+	bCreateSockPath = DFLT_bCreateSockPath;
 
 	return RS_RET_OK;
 }
@@ -416,6 +424,8 @@ CODEmodInit_QueryRegCFSLineHdlr
 		NULL, &pLogHostName, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputunixlistensocketflowcontrol", 0, eCmdHdlrBinary,
 		NULL, &bUseFlowCtl, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputunixlistensocketcreatepath", 0, eCmdHdlrBinary,
+		NULL, &bCreateSockPath, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"addunixlistensocket", 0, eCmdHdlrGetWord,
 		addLstnSocketName, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,

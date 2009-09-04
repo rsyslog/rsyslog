@@ -7,6 +7,11 @@ Version 5.3.0  [DEVEL] (rgerhards), 2009-08-??
   this option permites to process mark messages under all circumstances,
   even if an action was recently called. This can be useful to use mark
   messages as a kind of heartbeat.
+- added new config option $InputUnixListenSocketCreatePath
+  to permit the auto-creation of pathes to additional log sockets. This
+  turns out to be useful if they reside on temporary file systems and
+  rsyslogd starts up before the daemons that create these sockets
+  (rsyslogd always creates the socket itself if it does not exist).
 - added $LogRSyslogStatusMessages configuration directive
   permitting to turn off rsyslog start/stop/HUP messages. See Debian
   ticket http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=463793
