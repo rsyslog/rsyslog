@@ -146,6 +146,10 @@ Usually that should not be a big issue, as the restart-type HUP can easily be re
 something along the lines of &quot;/etc/init.d/rsyslog restart&quot;.
 </li>
 <li><a href="rsconf1_includeconfig.html">$IncludeConfig</a></li><li>MainMsgQueueCheckpointInterval &lt;number&gt;</li>
+<li><b>$LogRSyslogStatusMessages</b> [<b>on</b>/off] - If set to on (the default),
+rsyslog emits message on startup and shutdown as well as when it is HUPed.
+This information might be needed by some log analyzers. If set to off, no such
+status messages are logged, what may be useful for other scenarios.
 <li>$MainMsgQueueDequeueSlowdown &lt;number&gt; [number
 is timeout in <i> micro</i>seconds (1000000us is 1sec!),
 default 0 (no delay). Simple rate-limiting!]</li>

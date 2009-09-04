@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------
+Version 4.7.0  [v4-devel] (rgerhards), 2009-09-??
+- added $LogRSyslogStatusMessages configuration directive
+  permitting to turn off rsyslog start/stop/HUP messages. See Debian
+  ticket http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=463793
+---------------------------------------------------------------------------
 Version 4.5.3  [v4-beta] (rgerhards), 2009-08-??
 - bugfix: message sanitation had some issues:
   - control character DEL was not properly escaped
