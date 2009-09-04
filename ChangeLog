@@ -3,12 +3,13 @@ Version 5.3.0  [DEVEL] (rgerhards), 2009-08-??
 - begun to add simple GUI programs to gain insight into running rsyslogd
   instances and help setup and troubleshooting (active via the
   --enable-gui ./configure switch)
----------------------------------------------------------------------------
-Version 5.1.5  [DEVEL] (rgerhards), 2009-08-??
 - added new config option $ActionWriteAllMarkMessages
   this option permites to process mark messages under all circumstances,
   even if an action was recently called. This can be useful to use mark
   messages as a kind of heartbeat.
+- added $LogRSyslogStatusMessages configuration directive
+  permitting to turn off rsyslog start/stop/HUP messages. See Debian
+  ticket http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=463793
 - bugfix: hostnames with dashes in them were incorrectly treated as
   malformed, thus causing them to be treated as TAG (this was a regression
   introduced from the "rfc3164 strict" change in 4.5.0). Testbench has been
@@ -115,6 +116,11 @@ increase.
 - increased ompgsql performance by adapting to new transactional
   output module interface
 ---------------------------------------------------------------------------
+Version 4.7.0  [v4-devel] (rgerhards), 2009-09-??
+- added $LogRSyslogStatusMessages configuration directive
+  permitting to turn off rsyslog start/stop/HUP messages. See Debian
+  ticket http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=463793
+---------------------------------------------------------------------------
 Version 4.5.3  [v4-beta] (rgerhards), 2009-08-??
 - bugfix: message sanitation had some issues:
   - control character DEL was not properly escaped
@@ -125,6 +131,8 @@ Version 4.5.3  [v4-beta] (rgerhards), 2009-08-??
 - bugfix: strings improperly reused, resulting in some message properties
   be populated with strings from previous messages. This was caused by
   an improper predicate check. [backported from v5]
+- bugfix: reverse lookup reduction logic in imudp do DNS queries too often
+  [imported from 4.4.2]
 ---------------------------------------------------------------------------
 Version 4.5.2  [v4-beta] (rgerhards), 2009-08-21
 - legacy syslog parser changed so that it now accepts date stamps in
@@ -217,7 +225,16 @@ Version 4.5.0  [DEVEL] (rgerhards), 2009-07-02
   This could lead to timestamps written in the wrong format, but not to
   an abort
 ---------------------------------------------------------------------------
-Version 4.4.1  [v4-stable] (rgerhards), 2009-08-??
+Version 4.4.2  [v4-stable] (rgerhards), 2009-09-??
+- bugfix: reverse lookup reduction logic in imudp do DNS queries too often
+  A comparison was done between the current and the former source address.
+  However, this was done on the full sockaddr_storage structure and not
+  on the host address only. This has now been changed for IPv4 and IPv6.
+  The end result of this bug could be a higher UDP message loss rate than
+  necessary (note that UDP message loss can not totally be avoided due
+  to the UDP spec)
+---------------------------------------------------------------------------
+Version 4.4.1  [v4-stable] (rgerhards), 2009-09-02
 - features requiring Java are automatically disabled if Java is not
   present (thanks to Michael Biebl for his help!)
 - bugfix: invalid double-quoted PRI, among others in outgoing messages
@@ -451,6 +468,8 @@ version before switching to this one.
 ---------------------------------------------------------------------------
 Version 3.22.2 [v3-stable] (rgerhards), 2009-07-??
 - bugfix: sending syslog messages with zip compression did not work
+- clarified use of $ActionsSendStreamDriver[AuthMode/PermittedPeers]
+  in doc set (require TLS drivers)
 ---------------------------------------------------------------------------
 Version 3.22.1 [v3-stable] (rgerhards), 2009-07-02
 - bugfix: invalid error message issued if $inlcudeConfig was on an empty
