@@ -249,6 +249,8 @@ int	bDropTrailingLF = 1; /* drop trailing LF's on reception? */
 int	iCompatibilityMode = 0;		/* version we should be compatible with; 0 means sysklogd. It is
 					   the default, so if no -c<n> option is given, we make ourselvs
 					   as compatible to sysklogd as possible. */
+#define DFLT_bLogStatusMsgs 1
+static int	bLogStatusMsgs = DFLT_bLogStatusMsgs;	/* log rsyslog start/stop/HUP messages? */
 static int	bDebugPrintTemplateList = 1;/* output template list in debug mode? */
 static int	bDebugPrintCfSysLineHandlerList = 1;/* output cfsyslinehandler list in debug mode? */
 static int	bDebugPrintModuleList = 1;/* output module list in debug mode? */
@@ -333,6 +335,7 @@ getFIOPName(unsigned iFIOP)
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
 	cCCEscapeChar = '#';
+	bLogStatusMsgs = DFLT_bLogStatusMsgs;
 	bActExecWhenPrevSusp = 0;
 	iActExecOnceInterval = 0;
 	bDebugPrintTemplateList = 1;
@@ -1668,7 +1671,7 @@ die(int sig)
 	thrdTerminateAll();
 
 	/* and THEN send the termination log message (see long comment above) */
-	if (sig) {
+	if(sig && bLogStatusMsgs) {
 		(void) snprintf(buf, sizeof(buf) / sizeof(char),
 		 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
 		 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"]" " exiting on signal %d.",
@@ -2329,11 +2332,13 @@ init(void)
 	/* we now generate the startup message. It now includes everything to
 	 * identify this instance. -- rgerhards, 2005-08-17
 	 */
-	snprintf(bufStartUpMsg, sizeof(bufStartUpMsg)/sizeof(char), 
-		 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
-		 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"] start",
-		 (int) myPid);
-	logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)bufStartUpMsg, 0);
+	if(bLogStatusMsgs) {
+		snprintf(bufStartUpMsg, sizeof(bufStartUpMsg)/sizeof(char), 
+			 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
+			 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"] start",
+			 (int) myPid);
+		logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)bufStartUpMsg, 0);
+	}
 
 finalize_it:
 	RETiRet;
@@ -2478,11 +2483,14 @@ doHUP(void)
 {
 	char buf[512];
 
-	snprintf(buf, sizeof(buf) / sizeof(char),
-		 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION
-		 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"] rsyslogd was HUPed",
-		 (int) myPid);
-		errno = 0;
+	if(bLogStatusMsgs) {
+		snprintf(buf, sizeof(buf) / sizeof(char),
+			 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION
+			 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"] rsyslogd was HUPed",
+			 (int) myPid);
+			errno = 0;
+		logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)buf, 0);
+	}
 
 	ruleset.IterateAllActions(doHUPActions, NULL);
 }
@@ -2596,6 +2604,7 @@ static rsRetVal loadBuildInModules(void)
 	 * is that rsyslog will terminate if we can not register our built-in config commands.
 	 * This, I think, is the right thing to do. -- rgerhards, 2007-07-31
 	 */
+	CHKiRet(regCfSysLineHdlr((uchar *)"logrsyslogstatusmessages", 0, eCmdHdlrBinary, NULL, &bLogStatusMsgs, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionresumeretrycount", 0, eCmdHdlrInt, NULL, &glbliActionResumeRetryCount, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"defaultruleset", 0, eCmdHdlrGetWord, setDefaultRuleset, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"ruleset", 0, eCmdHdlrGetWord, setCurrRuleset, NULL, NULL));
