@@ -1,5 +1,10 @@
 ---------------------------------------------------------------------------
 Version 4.7.0  [v4-devel] (rgerhards), 2009-09-??
+- added new config option $InputUnixListenSocketCreatePath
+  to permit the auto-creation of pathes to additional log sockets. This
+  turns out to be useful if they reside on temporary file systems and
+  rsyslogd starts up before the daemons that create these sockets
+  (rsyslogd always creates the socket itself if it does not exist).
 - added $LogRSyslogStatusMessages configuration directive
   permitting to turn off rsyslog start/stop/HUP messages. See Debian
   ticket http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=463793
