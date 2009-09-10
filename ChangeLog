@@ -127,6 +127,13 @@ Version 4.7.0  [v4-devel] (rgerhards), 2009-09-??
   ticket http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=463793
 ---------------------------------------------------------------------------
 Version 4.5.3  [v4-beta] (rgerhards), 2009-08-??
+- bugfix: repeated messages were incorrectly processed
+  this could lead to loss of the repeated message content. As a side-
+  effect, it could probably also be possible that some segfault occurs
+  (quite unlikely). The root cause was that some counters introduced
+  during the malloc optimizations were not properly duplicated in
+  MsgDup(). Note that repeated message processing is not enabled
+  by default.
 - bugfix: message sanitation had some issues:
   - control character DEL was not properly escaped
   - NUL and LF characters were not properly stripped if no control
