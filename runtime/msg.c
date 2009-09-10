@@ -864,13 +864,17 @@ msg_t* MsgDup(msg_t* pOld)
 	pNew->iProtocolVersion = pOld->iProtocolVersion;
 	pNew->ttGenTime = pOld->ttGenTime;
 	pNew->offMSG = pOld->offMSG;
+	pNew->iLenRawMsg = pOld->iLenRawMsg;
+	pNew->iLenMSG = pOld->iLenMSG;
+	pNew->iLenTAG = pOld->iLenTAG;
+	pNew->iLenHOSTNAME = pOld->iLenHOSTNAME;
 	if(pOld->pRcvFrom != NULL) {
 		pNew->pRcvFrom = pOld->pRcvFrom;
 		prop.AddRef(pNew->pRcvFrom);
 	}
 	if(pOld->pRcvFromIP != NULL) {
 		pNew->pRcvFromIP = pOld->pRcvFromIP;
-		prop.AddRef(pNew->pRcvFromIP); /* XXX */
+		prop.AddRef(pNew->pRcvFromIP);
 	}
 	if(pOld->pInputName != NULL) {
 		pNew->pInputName = pOld->pInputName;
@@ -1972,10 +1976,11 @@ rsRetVal MsgReplaceMSG(msg_t *pThis, uchar* pszMSG, int lenMSG)
 
 	lenNew = pThis->iLenRawMsg + lenMSG - pThis->iLenMSG;
 	if(lenMSG > pThis->iLenMSG && lenNew >= CONF_RAWMSG_BUFSIZE) {
-		/*  we have lost and need to alloc a new buffer ;) */
+		/*  we have lost our "bet" and need to alloc a new buffer ;) */
 		CHKmalloc(bufNew = malloc(lenNew + 1));
 		memcpy(bufNew, pThis->pszRawMsg, pThis->offMSG);
-		free(pThis->pszRawMsg);
+		if(pThis->pszRawMsg != pThis->szRawMsg)
+			free(pThis->pszRawMsg);
 		pThis->pszRawMsg = bufNew;
 	}
 
