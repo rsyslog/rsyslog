@@ -333,7 +333,7 @@ actionConstructFinalize(action_t *pThis)
  	
 
 	CHKiRet(qqueueStart(pThis->pQueue));
-	dbgprintf("Action %p: queue %p created\n", pThis, pThis->pQueue);
+	DBGPRINTF("Action %p: queue %p created\n", pThis, pThis->pQueue);
 	
 	/* and now reset the queue params (see comment in its function header!) */
 	actionResetQueueParams();
@@ -547,7 +547,7 @@ static rsRetVal actionTryResume(action_t *pThis)
 	}
 
 	if(Debug && (pThis->eState == ACT_STATE_RTRY ||pThis->eState == ACT_STATE_SUSP)) {
-		dbgprintf("actionTryResume: action state: %s, next retry (if applicable): %u [now %u]\n",
+		DBGPRINTF("actionTryResume: action state: %s, next retry (if applicable): %u [now %u]\n",
 			getActStateName(pThis), (unsigned) pThis->ttResumeRtry, (unsigned) ttNow);
 	}
 
@@ -815,10 +815,10 @@ tryDoAction(action_t *pAction, batch_t *pBatch, int *pnElem)
 	iCommittedUpTo = i;
 	while(iElemProcessed <= *pnElem && i < pBatch->nElem) {
 		pMsg = (msg_t*) pBatch->pElem[i].pUsrp;
-	dbgprintf("submitBatch: i:%d, batch size %d, to process %d, pMsg: %p, state %d\n", i, pBatch->nElem, *pnElem, pMsg, pBatch->pElem[i].state);//remove later!
+	DBGPRINTF("submitBatch: i:%d, batch size %d, to process %d, pMsg: %p, state %d\n", i, pBatch->nElem, *pnElem, pMsg, pBatch->pElem[i].state);//remove later!
 		if(pBatch->pElem[i].state != BATCH_STATE_DISC) {
 			localRet = actionProcessMessage(pAction, pMsg);
-			dbgprintf("action call returned %d\n", localRet);
+			DBGPRINTF("action call returned %d\n", localRet);
 			if(localRet == RS_RET_OK) {
 				/* mark messages as committed */
 				while(iCommittedUpTo < i) {
@@ -1012,16 +1012,16 @@ static rsRetVal setActionQueType(void __attribute__((unused)) *pVal, uchar *pszT
 
 	if (!strcasecmp((char *) pszType, "fixedarray")) {
 		ActionQueType = QUEUETYPE_FIXED_ARRAY;
-		dbgprintf("action queue type set to FIXED_ARRAY\n");
+		DBGPRINTF("action queue type set to FIXED_ARRAY\n");
 	} else if (!strcasecmp((char *) pszType, "linkedlist")) {
 		ActionQueType = QUEUETYPE_LINKEDLIST;
-		dbgprintf("action queue type set to LINKEDLIST\n");
+		DBGPRINTF("action queue type set to LINKEDLIST\n");
 	} else if (!strcasecmp((char *) pszType, "disk")) {
 		ActionQueType = QUEUETYPE_DISK;
-		dbgprintf("action queue type set to DISK\n");
+		DBGPRINTF("action queue type set to DISK\n");
 	} else if (!strcasecmp((char *) pszType, "direct")) {
 		ActionQueType = QUEUETYPE_DIRECT;
-		dbgprintf("action queue type set to DIRECT (no queueing at all)\n");
+		DBGPRINTF("action queue type set to DIRECT (no queueing at all)\n");
 	} else {
 		errmsg.LogError(0, RS_RET_INVALID_PARAMS, "unknown actionqueue parameter: %s", (char *) pszType);
 		iRet = RS_RET_INVALID_PARAMS;
@@ -1067,14 +1067,14 @@ actionWriteToAction(action_t *pAction)
 		/* we need to care about multiple occurences */
 		if(   pAction->iExecEveryNthOccurTO > 0
 		   && (getActNow(pAction) - pAction->tLastOccur) > pAction->iExecEveryNthOccurTO) {
-		  	dbgprintf("n-th occurence handling timed out (%d sec), restarting from 0\n",
+		  	DBGPRINTF("n-th occurence handling timed out (%d sec), restarting from 0\n",
 				  (int) (getActNow(pAction) - pAction->tLastOccur));
 			pAction->iNbrNoExec = 0;
 			pAction->tLastOccur = getActNow(pAction);
 		   }
 		if(pAction->iNbrNoExec < pAction->iExecEveryNthOccur - 1) {
 			++pAction->iNbrNoExec;
-			dbgprintf("action %p passed %d times to execution - less than neded - discarding\n",
+			DBGPRINTF("action %p passed %d times to execution - less than neded - discarding\n",
 			  pAction, pAction->iNbrNoExec);
 			FINALIZE;
 		} else {
@@ -1097,7 +1097,7 @@ actionWriteToAction(action_t *pAction)
 
 		if((pMsg = MsgDup(pAction->f_pMsg)) == NULL) {
 			/* it failed - nothing we can do against it... */
-			dbgprintf("Message duplication failed, dropping repeat message.\n");
+			DBGPRINTF("Message duplication failed, dropping repeat message.\n");
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
 
@@ -1119,7 +1119,7 @@ actionWriteToAction(action_t *pAction)
 		pAction->f_pMsg = pMsg;	/* use the new msg (pointer will be restored below) */
 	}
 
-	dbgprintf("Called action, logging to %s\n", module.GetStateName(pAction->pMod));
+	DBGPRINTF("Called action, logging to %s\n", module.GetStateName(pAction->pMod));
 
 	/* now check if we need to drop the message because otherwise the action would be too
 	 * frequently called. -- rgerhards, 2008-04-08
@@ -1130,7 +1130,7 @@ actionWriteToAction(action_t *pAction)
 	if(pAction->f_time != 0 && pAction->iSecsExecOnceInterval > 0 &&
 	   pAction->iSecsExecOnceInterval + pAction->tLastExec > getActNow(pAction)) {
 		/* in this case we need to discard the message - its not yet time to exec the action */
-		dbgprintf("action not yet ready again to be executed, onceInterval %d, tCurr %d, tNext %d\n",
+		DBGPRINTF("action not yet ready again to be executed, onceInterval %d, tCurr %d, tNext %d\n",
 			  (int) pAction->iSecsExecOnceInterval, (int) getActNow(pAction),
 			  (int) (pAction->iSecsExecOnceInterval + pAction->tLastExec));
 		pAction->tLastExec = getActNow(pAction); /* re-init time flags */
@@ -1191,7 +1191,7 @@ doActionCallAction(action_t *pAction, msg_t *pMsg)
 	    !strcmp(getPROCID(pMsg, LOCK_MUTEX), getPROCID(pAction->f_pMsg, LOCK_MUTEX)) &&
 	    !strcmp(getAPPNAME(pMsg, LOCK_MUTEX), getAPPNAME(pAction->f_pMsg, LOCK_MUTEX))) {
 		pAction->f_prevcount++;
-		dbgprintf("msg repeated %d times, %ld sec of %d.\n",
+		DBGPRINTF("msg repeated %d times, %ld sec of %d.\n",
 		    pAction->f_prevcount, (long) getActNow(pAction) - pAction->f_time,
 		    repeatinterval[pAction->f_repeatcount]);
 		/* use current message, so we have the new timestamp (means we need to discard previous one) */
@@ -1319,7 +1319,7 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStringReques
 	assert(ppAction != NULL);
 	assert(pMod != NULL);
 	assert(pOMSR != NULL);
-	dbgprintf("Module %s processed this config line.\n", module.GetName(pMod));
+	DBGPRINTF("Module %s processed this config line.\n", module.GetName(pMod));
 
 	CHKiRet(actionConstruct(&pAction)); /* create action object first */
 	pAction->pMod = pMod;
@@ -1380,7 +1380,7 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStringReques
 			pAction->eParamPassing = ACT_STRING_PASSING;
 		}
 
-		dbgprintf("template: '%s' assigned\n", pTplName);
+		DBGPRINTF("template: '%s' assigned\n", pTplName);
 	}
 
 	pAction->pMod = pMod;
@@ -1389,7 +1389,7 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStringReques
 	if(pMod->isCompatibleWithFeature(sFEATURERepeatedMsgReduction) == RS_RET_OK)
 		pAction->f_ReduceRepeated = bReduceRepeatMsgs;
 	else {
-		dbgprintf("module is incompatible with RepeatedMsgReduction - turned off\n");
+		DBGPRINTF("module is incompatible with RepeatedMsgReduction - turned off\n");
 		pAction->f_ReduceRepeated = 0;
 	}
 	pAction->eState = ACT_STATE_RDY; /* action is enabled */
