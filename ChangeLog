@@ -8,6 +8,9 @@ Version 4.7.0  [v4-devel] (rgerhards), 2009-09-??
 - added $LogRSyslogStatusMessages configuration directive
   permitting to turn off rsyslog start/stop/HUP messages. See Debian
   ticket http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=463793
+- added new config directive $omfileForceChown to (try to) fix some broken
+  system configs.
+  See ticket for details: http://bugzilla.adiscon.com/show_bug.cgi?id=150
 ---------------------------------------------------------------------------
 Version 4.5.3  [v4-beta] (rgerhards), 2009-08-??
 - bugfix: repeated messages were incorrectly processed

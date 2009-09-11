@@ -88,11 +88,13 @@ typedef struct s_dynaFileCacheEntry dynaFileCacheEntry;
 #define IOBUF_DFLT_SIZE 1024	/* default size for io buffers */
 #define FLUSH_INTRVL_DFLT 1 	/* default buffer flush interval (in seconds) */
 
+#define DFLT_bForceChown 0
 /* globals for default values */
 static int iDynaFileCacheSize = 10; /* max cache for dynamic files */
 static int fCreateMode = 0644; /* mode to use when creating files */
 static int fDirCreateMode = 0700; /* mode to use when creating files */
 static int	bFailOnChown;	/* fail if chown fails? */
+static int	bForceChown = DFLT_bForceChown;	/* Force chown() on existing files? */
 static uid_t	fileUID;	/* UID to be used for newly created files */
 static uid_t	fileGID;	/* GID to be used for newly created files */
 static uid_t	dirUID;		/* UID to be used for newly created directories */
@@ -115,6 +117,7 @@ typedef struct _instanceData {
 	int	fDirCreateMode;	/* creation mode for mkdir() */
 	int	bCreateDirs;	/* auto-create directories? */
 	int	bSyncFile;	/* should the file by sync()'ed? 1- yes, 0- no */
+	bool	bForceChown;	/* force chown() on existing files? */
 	uid_t	fileUID;	/* IDs for creation */
 	uid_t	dirUID;
 	gid_t	fileGID;
@@ -152,12 +155,14 @@ CODESTARTdbgPrintInstInfo
 		       "\tcreate directories: %s\n"
 		       "\tfile owner %d, group %d\n"
 		       "\tdirectory owner %d, group %d\n"
+		       "\tforce chown() for all files: %s\n"
 		       "\tfail if owner/group can not be set: %s\n",
 		        pData->f_fname,
 			pData->iDynaFileCacheSize,
 			pData->bCreateDirs ? "yes" : "no",
 			pData->fileUID, pData->fileGID,
 			pData->dirUID, pData->dirGID,
+			pData->bForceChown ? "yes" : "no",
 			pData->bFailOnChown ? "yes" : "no"
 			);
 	} else { /* regular file */
@@ -346,7 +351,22 @@ prepareFile(instanceData *pData, uchar *newFileName)
 	int fd;
 	DEFiRet;
 
-	if(access((char*)newFileName, F_OK) != 0) {
+	if(access((char*)newFileName, F_OK) == 0) {
+		if(pData->bForceChown) {
+			/* Try to fix wrong ownership set by someone else. Note that this code
+			 * will no longer work once we have made the $PrivDrop code fully secure.
+			 * This change is based on an idea of Michael Terry, provided as part of
+			 * the effort to make rsyslogd the Ubuntu default syslogd.
+			 * rgerhards, 2009-09-11
+			 */
+			if(chown((char*)newFileName, pData->fileUID, pData->fileGID) != 0) {
+				if(pData->bFailOnChown) {
+					int eSave = errno;
+					errno = eSave;
+				}
+			}
+		}
+	} else {
 		/* file does not exist, create it (and eventually parent directories */
 		fd = -1;
 		if(pData->bCreateDirs) {
@@ -367,7 +387,7 @@ prepareFile(instanceData *pData, uchar *newFileName)
 				pData->fCreateMode);
 		if(fd != -1) {
 			/* check and set uid/gid */
-			if(pData->fileUID != (uid_t)-1 || pData->fileGID != (gid_t) -1) {
+			if(pData->bForceChown || pData->fileUID != (uid_t)-1 || pData->fileGID != (gid_t) -1) {
 				/* we need to set owner/group */
 				if(fchown(fd, pData->fileUID, pData->fileGID) != 0) {
 					if(pData->bFailOnChown) {
@@ -678,6 +698,7 @@ CODESTARTparseSelectorAct
 	pData->fDirCreateMode = fDirCreateMode;
 	pData->bCreateDirs = bCreateDirs;
 	pData->bFailOnChown = bFailOnChown;
+	pData->bForceChown = bForceChown;
 	pData->fileUID = fileUID;
 	pData->fileGID = fileGID;
 	pData->dirUID = dirUID;
@@ -712,6 +733,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	dirUID = -1;
 	dirGID = -1;
 	bFailOnChown = 1;
+	bForceChown = DFLT_bForceChown;
 	iDynaFileCacheSize = 10;
 	fCreateMode = 0644;
 	fDirCreateMode = 0700;
@@ -778,6 +800,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"filecreatemode", 0, eCmdHdlrFileCreateMode, NULL, &fCreateMode, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"createdirs", 0, eCmdHdlrBinary, NULL, &bCreateDirs, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"failonchownfailure", 0, eCmdHdlrBinary, NULL, &bFailOnChown, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omfileForceChown", 0, eCmdHdlrBinary, NULL, &bForceChown, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionfileenablesync", 0, eCmdHdlrBinary, NULL, &bEnableSync, STD_LOADABLE_MODULE_ID));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionfiledefaulttemplate", 0, eCmdHdlrGetWord, NULL, &pszTplName, NULL));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
