@@ -35,7 +35,9 @@
 #include <string.h>
 #include <assert.h>
 #include <ctype.h>
-#include <malloc.h>
+#if HAVE_MALLOC_H
+#  include <malloc.h>
+#endif
 #include "rsyslog.h"
 #include "srUtils.h"
 #include "stringbuf.h"

@@ -29,6 +29,7 @@ Version 4.5.3  [v4-beta] (rgerhards), 2009-08-??
 - bugfix: strings improperly reused, resulting in some message properties
   be populated with strings from previous messages. This was caused by
   an improper predicate check. [backported from v5]
+- fixed some minor portability issues
 - bugfix: reverse lookup reduction logic in imudp do DNS queries too often
   [imported from 4.4.2]
 ---------------------------------------------------------------------------
