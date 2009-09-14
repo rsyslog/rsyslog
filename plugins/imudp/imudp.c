@@ -294,7 +294,6 @@ rsRetVal rcvMainLoop()
 	struct epoll_event currEvt[NUM_EPOLL_EVENTS];
 	char errStr[1024];
 
-RUNLOG_STR("ZZZ: imudp epoll startup");
 	/* start "name caching" algo by making sure the previous system indicator
 	 * is invalidated.
 	 */
@@ -329,14 +328,12 @@ RUNLOG_STR("ZZZ: imudp epoll startup");
 		}
 	}
 
-RUNLOG_STR("ZZZ: done setting up epoll interface");
 	while(1) {
 		/* wait for io to become ready */
 		nfds = epoll_wait(efd, currEvt, NUM_EPOLL_EVENTS, -1);
 		DBGPRINTF("imudp: epoll_wait() returned with %d fds\n", nfds);
 
 		for(i = 0 ; i < nfds ; ++i) {
-dbgprintf("ZZZ: imudp processing fd %d\n", currEvt[i].data.fd);
 			processSocket(currEvt[i].data.fd, &frominetPrev, &bIsPermitted,
 				      fromHost, fromHostFQDN, fromHostIP);
 		}
@@ -422,7 +419,6 @@ CODESTARTrunInput
 	 * signalled to do so. This, however, is handled by the framework,
 	 * right into the sleep below.
 	 */
-RUNLOG_STR("ZZZ: imudp startup");
 	iRet = rcvMainLoop();
 ENDrunInput
 
