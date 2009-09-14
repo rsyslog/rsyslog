@@ -3,6 +3,9 @@ Version 5.3.0  [DEVEL] (rgerhards), 2009-08-??
 - begun to add simple GUI programs to gain insight into running rsyslogd
   instances and help setup and troubleshooting (active via the
   --enable-gui ./configure switch)
+- changed imudp to utilize epoll(), where available. This shall provide
+  slightly better performance (just slightly because we called select()
+  rather infrequently on a busy system)
 - added new config option $ActionWriteAllMarkMessages
   this option permites to process mark messages under all circumstances,
   even if an action was recently called. This can be useful to use mark
