@@ -960,6 +960,12 @@ finalize_it:
  * is worth (read: data loss may occur where we otherwise might not
  * have it). -- rgerhards, 2009-06-08
  */
+#undef SYNCCALL
+#if HAVE_FDATASYNC
+#	define SYNCCALL(x) fdatasync(x)
+#else
+#	define SYNCCALL(x) fsync(x)
+#endif
 static rsRetVal
 syncFile(strm_t *pThis)
 {
@@ -970,7 +976,7 @@ syncFile(strm_t *pThis)
 		FINALIZE; /* TTYs can not be synced */
 
 	DBGPRINTF("syncing file %d\n", pThis->fd);
-	ret = fdatasync(pThis->fd);
+	ret = SYNCCALL(pThis->fd);
 	if(ret != 0) {
 		char errStr[1024];
 		int err = errno;
@@ -986,7 +992,7 @@ syncFile(strm_t *pThis)
 finalize_it:
 	RETiRet;
 }
-
+#undef SYNCCALL
 
 /* physically write to the output file. the provided data is ready for
  * writing (e.g. zipped if we are requested to do that).
