@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 4.5.3  [v4-beta] (rgerhards), 2009-08-??
+Version 4.5.3  [v4-beta] (rgerhards), 2009-09-17
 - bugfix: repeated messages were incorrectly processed
   this could lead to loss of the repeated message content. As a side-
   effect, it could probably also be possible that some segfault occurs
