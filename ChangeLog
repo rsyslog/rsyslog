@@ -1,5 +1,8 @@
 ---------------------------------------------------------------------------
 Version 5.3.1  [DEVEL] (rgerhards), 2009-09-??
+- added $AbortOnUncleanConfig directive - permits to prevent startup when
+  there are problems with the configuration file. See it's doc for
+  details.
 ---------------------------------------------------------------------------
 Version 5.3.0  [DEVEL] (rgerhards), 2009-09-14
 - begun to add simple GUI programs to gain insight into running rsyslogd
