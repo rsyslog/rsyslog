@@ -1,4 +1,8 @@
 ---------------------------------------------------------------------------
+Version 4.5.4  [v4-beta] (rgerhards), 2009-09-??
+- bugfix: potential race in object loader (obj.c) during use/release
+  of object interface
+---------------------------------------------------------------------------
 Version 4.5.3  [v4-beta] (rgerhards), 2009-09-17
 - bugfix: repeated messages were incorrectly processed
   this could lead to loss of the repeated message content. As a side-
