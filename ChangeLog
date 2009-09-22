@@ -2,6 +2,10 @@
 Version 4.5.4  [v4-beta] (rgerhards), 2009-09-??
 - bugfix: potential race in object loader (obj.c) during use/release
   of object interface
+- bugfixes: potential problems in out file zip writer. Problems could
+  lead to abort and/or memory leak. The module is now hardened in a very
+  conservative way, which is sub-optimal from a performance point of view.
+  This should be improved if it has proven reliable in practice.
 ---------------------------------------------------------------------------
 Version 4.5.3  [v4-beta] (rgerhards), 2009-09-17
 - bugfix: repeated messages were incorrectly processed
