@@ -607,8 +607,9 @@ static rsRetVal strmConstructFinalize(strm_t *pThis)
 		} else {
 			/* we use the same size as the original buf, as we would like
 			 * to make sure we can write out everything with a SINGLE api call!
+			 * We add another 128 bytes to take care of the gzip header and "all eventualities".
 			 */
-			CHKmalloc(pThis->pZipBuf = (Bytef*) malloc(sizeof(uchar) * pThis->sIOBufSize));
+			CHKmalloc(pThis->pZipBuf = (Bytef*) malloc(sizeof(uchar) * pThis->sIOBufSize + 128));
 		}
 	}
 
@@ -854,7 +855,6 @@ dbgprintf("XXX: doAsyncWriteInternal: strm %p, len %ld\n", pThis, (long) lenBuf)
 	if(++pThis->iCnt == 1)
 		pthread_cond_signal(&pThis->notEmpty);
 
-finalize_it:
 	RETiRet;
 }
 
