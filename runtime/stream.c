@@ -1068,7 +1068,7 @@ doZipWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf)
 	assert(pThis != NULL);
 	assert(pBuf != NULL);
 
-	pthread_mutex_lock(&mut);
+	//pthread_mutex_lock(&mut);
 
 	/* allocate deflate state */
 	zstrm.zalloc = Z_NULL;
@@ -1108,7 +1108,7 @@ finalize_it:
 		}
 	}
 
-	pthread_mutex_unlock(&mut);
+	//pthread_mutex_unlock(&mut);
 
 	RETiRet;
 }
