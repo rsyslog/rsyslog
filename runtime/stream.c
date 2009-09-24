@@ -677,14 +677,11 @@ CODESTARTobjDestruct(strm)
 		/* Note: mutex will be unlocked in stopWriter! */
 		d_pthread_mutex_lock(&pThis->mut);
 
+dbgprintf("XXX: destruct stream 1 %p\n", pThis);
 	if(pThis->tOperationsMode != STREAMMODE_READ)
 		strmFlush(pThis);
 
-dbgprintf("XXX: destruct stream %p\n", pThis);
-	/* ... then free resources */
-	if(pThis->fd != -1)
-		strmCloseFile(pThis);
-
+dbgprintf("XXX: destruct stream 2 %p\n", pThis);
 	if(pThis->bAsyncWrite) {
 		stopWriter(pThis);
 		pthread_mutex_destroy(&pThis->mut);
@@ -697,10 +694,15 @@ dbgprintf("XXX: destruct stream %p\n", pThis);
 	} else {
 		free(pThis->pIOBuf);
 	}
+dbgprintf("XXX: destruct stream 3 (doing close) %p\n", pThis);
 
-	/* IMPORTANT: we MUST free this only AFTER the ansyncWriter has been stopped, else
+	/* Finally, we can free the resources.
+	 * IMPORTANT: we MUST free this only AFTER the ansyncWriter has been stopped, else
 	 * we get random errors...
 	 */
+	if(pThis->fd != -1)
+		strmCloseFile(pThis);
+
 	free(pThis->pszDir);
 	free(pThis->pZipBuf);
 	free(pThis->pszCurrFName);
