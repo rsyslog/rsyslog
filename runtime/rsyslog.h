@@ -280,6 +280,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_ACTION_FAILED = -2123, /**< action failed and is now suspended (consider this permanent for the time being) */
 	RS_RET_NONFATAL_CONFIG_ERR = -2124, /**< non-fatal error during config processing */
 	RS_RET_FILENAME_INVALID = -2140, /**< filename invalid, not found, no access, ... */
+	RS_RET_EMPTY_MSG = -2141, /**< provided (raw) MSG is empty */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */

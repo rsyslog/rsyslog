@@ -1242,10 +1242,12 @@ msgConsumer(void __attribute__((unused)) *notNeeded, void *pUsr)
  * to after the terminating SP. The caller must ensure that the 
  * provided buffer is large enough to hold the to be extracted value.
  * Returns 0 if everything is fine or 1 if either the field is not
- * SP-terminated or any other error occurs.
- * rger, 2005-11-24
+ * SP-terminated or any other error occurs. -- rger, 2005-11-24
+ * The function now receives the size of the string and makes sure
+ * that it does not process more than that. The *pLenStr counter is
+ * updated on exit. -- rgerhards, 2009-09-23
  */
-static int parseRFCField(uchar **pp2parse, uchar *pResult)
+static int parseRFCField(uchar **pp2parse, uchar *pResult, int *pLenStr)
 {
 	uchar *p2parse;
 	int iRet = 0;
@@ -1257,14 +1259,17 @@ static int parseRFCField(uchar **pp2parse, uchar *pResult)
 	p2parse = *pp2parse;
 
 	/* this is the actual parsing loop */
-	while(*p2parse && *p2parse != ' ') {
+	while(*pLenStr > 0  && *p2parse != ' ') {
 		*pResult++ = *p2parse++;
+		--(*pLenStr);
 	}
 
-	if(*p2parse == ' ')
+	if(*pLenStr > 0 && *p2parse == ' ') {
 		++p2parse; /* eat SP, but only if not at end of string */
-	else
+		--(*pLenStr);
+	} else {
 		iRet = 1; /* there MUST be an SP! */
+	}
 	*pResult = '\0';
 
 	/* set the new parse pointer */
@@ -1280,20 +1285,24 @@ static int parseRFCField(uchar **pp2parse, uchar *pResult)
  * to after the terminating SP. The caller must ensure that the 
  * provided buffer is large enough to hold the to be extracted value.
  * Returns 0 if everything is fine or 1 if either the field is not
- * SP-terminated or any other error occurs.
- * rger, 2005-11-24
+ * SP-terminated or any other error occurs. -- rger, 2005-11-24
+ * The function now receives the size of the string and makes sure
+ * that it does not process more than that. The *pLenStr counter is
+ * updated on exit. -- rgerhards, 2009-09-23
  */
-static int parseRFCStructuredData(uchar **pp2parse, uchar *pResult)
+static int parseRFCStructuredData(uchar **pp2parse, uchar *pResult, int *pLenStr)
 {
 	uchar *p2parse;
 	int bCont = 1;
 	int iRet = 0;
+	int lenStr;
 
 	assert(pp2parse != NULL);
 	assert(*pp2parse != NULL);
 	assert(pResult != NULL);
 
 	p2parse = *pp2parse;
+	lenStr = *pLenStr;
 
 	/* this is the actual parsing loop
 	 * Remeber: structured data starts with [ and includes any characters
@@ -1301,40 +1310,47 @@ static int parseRFCStructuredData(uchar **pp2parse, uchar *pResult)
 	 * structured data. There may also be \] inside the structured data, which
 	 * do NOT terminate an element.
 	 */
-	if(*p2parse != '[')
+	if(lenStr == 0 || *p2parse != '[')
 		return 1; /* this is NOT structured data! */
 
 	if(*p2parse == '-') { /* empty structured data? */
 		*pResult++ = '-';
 		++p2parse;
+		--lenStr;
 	} else {
 		while(bCont) {
-			if(*p2parse == '\0') {
+			if(lenStr < 2) {
 				iRet = 1; /* this is not valid! */
 				bCont = 0;
 			} else if(*p2parse == '\\' && *(p2parse+1) == ']') {
 				/* this is escaped, need to copy both */
 				*pResult++ = *p2parse++;
 				*pResult++ = *p2parse++;
+				lenStr -= 2;
 			} else if(*p2parse == ']' && *(p2parse+1) == ' ') {
 				/* found end, just need to copy the ] and eat the SP */
 				*pResult++ = *p2parse;
 				p2parse += 2;
+				lenStr -= 2;
 				bCont = 0;
 			} else {
 				*pResult++ = *p2parse++;
+				--lenStr;
 			}
 		}
 	}
 
-	if(*p2parse == ' ')
+	if(lenStr > 0 && *p2parse == ' ') {
 		++p2parse; /* eat SP, but only if not at end of string */
-	else
+		--lenStr;
+	} else {
 		iRet = 1; /* there MUST be an SP! */
+	}
 	*pResult = '\0';
 
 	/* set the new parse pointer */
 	*pp2parse = p2parse;
+	*pLenStr = lenStr;
 	return 0;
 }
 
@@ -1359,23 +1375,26 @@ int parseRFCSyslogMsg(msg_t *pMsg, int flags)
 {
 	uchar *p2parse;
 	uchar *pBuf;
+	int lenMsg;
 	int bContParse = 1;
 
 	BEGINfunc
 	assert(pMsg != NULL);
 	assert(pMsg->pszRawMsg != NULL);
 	p2parse = pMsg->pszRawMsg + pMsg->offAfterPRI; /* point to start of text, after PRI */
+	lenMsg = pMsg->iLenRawMsg - (pMsg->offAfterPRI + 1);
 
-	/* do a sanity check on the version and eat it */
+	/* do a sanity check on the version and eat it (the caller checked this already) */
 	assert(p2parse[0] == '1' && p2parse[1] == ' ');
 	p2parse += 2;
+	lenMsg -= 2;
 
 	/* Now get us some memory we can use as a work buffer while parsing.
 	 * We simply allocated a buffer sufficiently large to hold all of the
 	 * message, so we can not run into any troubles. I think this is
 	 * more wise then to use individual buffers.
 	 */
-	if((pBuf = malloc(sizeof(uchar) * ustrlen(p2parse) + 1)) == NULL)
+	if((pBuf = malloc(sizeof(uchar) * (lenMsg + 1))) == NULL)
 		return 1;
 		
 	/* IMPORTANT NOTE:
@@ -1386,7 +1405,7 @@ int parseRFCSyslogMsg(msg_t *pMsg, int flags)
 	 */
 
 	/* TIMESTAMP */
-	if(datetime.ParseTIMESTAMP3339(&(pMsg->tTIMESTAMP),  &p2parse) == RS_RET_OK) {
+	if(datetime.ParseTIMESTAMP3339(&(pMsg->tTIMESTAMP),  &p2parse, &lenMsg) == RS_RET_OK) {
 		if(flags & IGNDATE) {
 			/* we need to ignore the msg data, so simply copy over reception date */
 			memcpy(&pMsg->tTIMESTAMP, &pMsg->tRcvdAt, sizeof(struct syslogTime));
@@ -1398,7 +1417,7 @@ int parseRFCSyslogMsg(msg_t *pMsg, int flags)
 
 	/* HOSTNAME */
 	if(bContParse) {
-		parseRFCField(&p2parse, pBuf);
+		parseRFCField(&p2parse, pBuf, &lenMsg);
 		MsgSetHOSTNAME(pMsg, pBuf);
 	} else {
 		/* we can not parse, so we get the system we
@@ -1409,30 +1428,30 @@ int parseRFCSyslogMsg(msg_t *pMsg, int flags)
 
 	/* APP-NAME */
 	if(bContParse) {
-		parseRFCField(&p2parse, pBuf);
+		parseRFCField(&p2parse, pBuf, &lenMsg);
 		MsgSetAPPNAME(pMsg, (char*)pBuf);
 	}
 
 	/* PROCID */
 	if(bContParse) {
-		parseRFCField(&p2parse, pBuf);
+		parseRFCField(&p2parse, pBuf, &lenMsg);
 		MsgSetPROCID(pMsg, (char*)pBuf);
 	}
 
 	/* MSGID */
 	if(bContParse) {
-		parseRFCField(&p2parse, pBuf);
+		parseRFCField(&p2parse, pBuf, &lenMsg);
 		MsgSetMSGID(pMsg, (char*)pBuf);
 	}
 
 	/* STRUCTURED-DATA */
 	if(bContParse) {
-		parseRFCStructuredData(&p2parse, pBuf);
+		parseRFCStructuredData(&p2parse, pBuf, &lenMsg);
 		MsgSetStructuredData(pMsg, (char*)pBuf);
 	}
 
 	/* MSG */
-	MsgSetMSG(pMsg, (char*)p2parse);
+	MsgSetMSG(pMsg, (lenMsg == 0) ? "" : (char*)p2parse);
 
 	free(pBuf);
 	ENDfunc
@@ -1460,11 +1479,15 @@ int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 	char *pWork;
 	cstr_t *pStrB;
 	int iCnt;
+	int lenMsg;
 	int bTAGCharDetected;
 	BEGINfunc
 
 	assert(pMsg != NULL);
 	assert(pMsg->pszRawMsg != NULL);
+	lenMsg = pMsg->iLenRawMsg - (pMsg->offAfterPRI + 1);
+RUNLOG_VAR("%d", pMsg->offAfterPRI);
+RUNLOG_VAR("%d", lenMsg);
 	p2parse = pMsg->pszRawMsg + pMsg->offAfterPRI; /* point to start of text, after PRI */
 
 	/* Check to see if msg contains a timestamp. We start by assuming
@@ -1473,13 +1496,14 @@ int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 	 * message. There we go from high-to low precison and are done
 	 * when we find a matching one. -- rgerhards, 2008-09-16
 	 */
-	if(datetime.ParseTIMESTAMP3339(&(pMsg->tTIMESTAMP), &p2parse) == RS_RET_OK) {
+	if(datetime.ParseTIMESTAMP3339(&(pMsg->tTIMESTAMP), &p2parse, &lenMsg) == RS_RET_OK) {
 		/* we are done - parse pointer is moved by ParseTIMESTAMP3339 */;
-	} else if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &p2parse) == RS_RET_OK) {
+	} else if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &p2parse, &lenMsg) == RS_RET_OK) {
 		/* we are done - parse pointer is moved by ParseTIMESTAMP3164 */;
-	} else if(*p2parse == ' ') { /* try to see if it is slighly malformed - HP procurve seems to do that sometimes */
+	} else if(*p2parse == ' ' && lenMsg > 1) { /* try to see if it is slighly malformed - HP procurve seems to do that sometimes */
 		++p2parse;	/* move over space */
-		if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &p2parse) == RS_RET_OK) {
+		--lenMsg;
+		if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &p2parse, &lenMsg) == RS_RET_OK) {
 			/* indeed, we got it! */
 			/* we are done - parse pointer is moved by ParseTIMESTAMP3164 */;
 		} else {
@@ -1487,6 +1511,7 @@ int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 			 * for this try.
 			 */
 			--p2parse;
+			++lenMsg;
 		}
 	}
 
@@ -1520,14 +1545,15 @@ int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 			/* the memory allocated is far too much in most cases. But on the plus side,
 			 * it is quite fast... - rgerhards, 2007-09-20
 			 */
-			if((pBuf = malloc(sizeof(char)* (ustrlen(p2parse) +1))) == NULL)
+			if((pBuf = malloc(sizeof(char) * (lenMsg + 1))) == NULL)
 				return 1;
 			pWork = pBuf;
 			/* this is the actual parsing loop */
-			while(*p2parse && *p2parse != ' ' && *p2parse != ':') {
+			while(lenMsg > 0 && *p2parse != ' ' && *p2parse != ':') {
 				if(*p2parse == '[' || *p2parse == ']' || *p2parse == '/')
 					bTAGCharDetected = 1;
 				*pWork++ = *p2parse++;
+				--lenMsg;
 			}
 			/* we need to handle ':' seperately, because it terminates the
 			 * TAG - so we also need to terminate the parser here!
@@ -1539,13 +1565,17 @@ int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 			 * will be true and the parse pointer remain as is. This is perfectly
 			 * well.
 			 */
-			if(*p2parse == ':') {
-				bTAGCharDetected = 1;
-				/* We will move hostname to tag, so preserve ':' (otherwise we 
-				 * will needlessly change the message format) */
-				*pWork++ = *p2parse++; 
-			} else if(*p2parse == ' ')
-				++p2parse;
+			if(lenMsg > 0) {
+				if(*p2parse == ':') {
+					bTAGCharDetected = 1;
+					/* We will move hostname to tag, so preserve ':' (otherwise we 
+					 * will needlessly change the message format) */
+					*pWork++ = *p2parse++; 
+				} else if(*p2parse == ' ') {
+					++p2parse;
+				}
+				--lenMsg;
+			}
 			*pWork = '\0';
 			MsgAssignHOSTNAME(pMsg, pBuf);
 		}
@@ -1584,12 +1614,14 @@ int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 			rsCStrSetAllocIncrement(pStrB, 33);
 			pWork = pBuf;
 			iCnt = 0;
-			while(*p2parse && *p2parse != ':' && *p2parse != ' ') {
+			while(lenMsg > 0 && *p2parse != ':' && *p2parse != ' ') {
 				cstrAppendChar(pStrB, *p2parse++);
 				++iCnt;
+				--lenMsg;
 			}
-			if(*p2parse == ':') {
+			if(lenMsg > 0 && *p2parse == ':') {
 				++p2parse; 
+				--lenMsg;
 				cstrAppendChar(pStrB, ':');
 			}
 			cstrFinalize(pStrB);
@@ -1625,7 +1657,7 @@ int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 	}
 
 	/* The rest is the actual MSG */
-	MsgSetMSG(pMsg, (char*)p2parse);
+	MsgSetMSG(pMsg, (lenMsg == 0) ? "" : (char*)p2parse);
 
 	ENDfunc
 	return 0; /* all ok */

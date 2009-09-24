@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 4.4.2  [v4-stable] (rgerhards), 2009-09-??
+- bugfix: random data could be appended to message, possibly causing
+  segfaults
 - bugfix: reverse lookup reduction logic in imudp do DNS queries too often
   A comparison was done between the current and the former source address.
   However, this was done on the full sockaddr_storage structure and not

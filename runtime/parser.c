@@ -274,6 +274,7 @@ finalize_it:
 	RETiRet;
 }
 
+
 /* Parse a received message. The object's rawmsg property is taken and
  * parsed according to the relevant standards. This can later be
  * extended to support configured parsers.
@@ -284,6 +285,7 @@ rsRetVal parseMsg(msg_t *pMsg)
 	DEFiRet;
 	uchar *msg;
 	int pri;
+	int lenMsg;
 	int iPriText;
 
 	CHKiRet(sanitizeMessage(pMsg));
@@ -292,8 +294,11 @@ rsRetVal parseMsg(msg_t *pMsg)
 	DBGPRINTF("msg parser: flags %x, from '%s', msg '%s'\n", pMsg->msgFlags, pMsg->pszRcvFrom, pMsg->pszRawMsg);
 
 	/* pull PRI */
-	pri = DEFUPRI;
+	lenMsg = pMsg->iLenRawMsg;
+	if(lenMsg == 0)
+		ABORT_FINALIZE(RS_RET_EMPTY_MSG);
 	msg = pMsg->pszRawMsg;
+	pri = DEFUPRI;
 	iPriText = 0;
 	if(*msg == '<') {
 		/* while we process the PRI, we also fill the PRI textual representation
@@ -301,7 +306,7 @@ rsRetVal parseMsg(msg_t *pMsg)
 		 * but it offers us performance...
 		 */
 		pri = 0;
-		while(isdigit((int) *++msg)) {
+		while(--lenMsg > 0 && isdigit((int) *++msg)) {
 			pMsg->bufPRI[iPriText++ % 4] = *msg;	 /* mod 4 to guard against malformed messages! */
 			pri = 10 * pri + (*msg - '0');
 		}
@@ -342,7 +347,7 @@ rsRetVal parseMsg(msg_t *pMsg)
 
 	/* finalize message object */
 	pMsg->msgFlags &= ~NEEDS_PARSING; /* this message is now parsed */
-	MsgPrepareEnqueue(pMsg); /* "historical" name - preparese for multi-threading */
+	MsgPrepareEnqueue(pMsg); /* "historical" name - prepare for multi-threading */
 
 finalize_it:
 	RETiRet;
