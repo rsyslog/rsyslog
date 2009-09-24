@@ -1,5 +1,13 @@
 ---------------------------------------------------------------------------
 Version 4.5.4  [v4-beta] (rgerhards), 2009-09-??
+- bugfix: potential segfault in stream writer on destruction
+  Most severely affected omfile. The problem was that some buffers were
+  freed before the asynchronous writer thread was shut down. So the
+  writer thread accessed invalid data, which may even already be
+  overwritten. Symptoms (with omfile) were segfaults, grabled data
+  and files with random names placed around the file system (most
+  prominently into the root directory). Special thanks to Aaron for
+  helping to track this down.
 - bugfix: potential race in object loader (obj.c) during use/release
   of object interface
 - bugfixes: potential problems in out file zip writer. Problems could

@@ -685,11 +685,6 @@ dbgprintf("XXX: destruct stream %p\n", pThis);
 	if(pThis->fd != -1)
 		strmCloseFile(pThis);
 
-	free(pThis->pszDir);
-	free(pThis->pZipBuf);
-	free(pThis->pszCurrFName);
-	free(pThis->pszFName);
-
 	if(pThis->bAsyncWrite) {
 		stopWriter(pThis);
 		pthread_mutex_destroy(&pThis->mut);
@@ -702,6 +697,15 @@ dbgprintf("XXX: destruct stream %p\n", pThis);
 	} else {
 		free(pThis->pIOBuf);
 	}
+
+	/* IMPORTANT: we MUST free this only AFTER the ansyncWriter has been stopped, else
+	 * we get random errors...
+	 */
+	free(pThis->pszDir);
+	free(pThis->pZipBuf);
+	free(pThis->pszCurrFName);
+	free(pThis->pszFName);
+
 ENDobjDestruct(strm)
 
 
