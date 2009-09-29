@@ -2,6 +2,11 @@
 Version 4.4.2  [v4-stable] (rgerhards), 2009-09-??
 - bugfix: invalid handling of zero-sized messages, could lead to mis-
   addressing and potential memory corruption/segfault
+- bugfix: zero-sized UDP messages are no longer processed
+  until now, they were forwarded to processing, but this makes no sense
+  Also, it looks like the system seems to provide a zero return code
+  on a UDP recvfrom() from time to time for some internal reasons. These
+  "receives" are now silently ignored.
 - bugfix: random data could be appended to message, possibly causing
   segfaults
 - bugfix: reverse lookup reduction logic in imudp do DNS queries too often
