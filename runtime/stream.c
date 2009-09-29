@@ -677,11 +677,9 @@ CODESTARTobjDestruct(strm)
 		/* Note: mutex will be unlocked in stopWriter! */
 		d_pthread_mutex_lock(&pThis->mut);
 
-dbgprintf("XXX: destruct stream 1 %p\n", pThis);
 	if(pThis->tOperationsMode != STREAMMODE_READ)
 		strmFlush(pThis);
 
-dbgprintf("XXX: destruct stream 2 %p\n", pThis);
 	if(pThis->bAsyncWrite) {
 		stopWriter(pThis);
 		pthread_mutex_destroy(&pThis->mut);
@@ -694,7 +692,6 @@ dbgprintf("XXX: destruct stream 2 %p\n", pThis);
 	} else {
 		free(pThis->pIOBuf);
 	}
-dbgprintf("XXX: destruct stream 3 (doing close) %p\n", pThis);
 
 	/* Finally, we can free the resources.
 	 * IMPORTANT: we MUST free this only AFTER the ansyncWriter has been stopped, else
@@ -850,7 +847,6 @@ doAsyncWriteInternal(strm_t *pThis, size_t lenBuf)
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, strm);
 
-dbgprintf("XXX: doAsyncWriteInternal: strm %p, len %ld\n", pThis, (long) lenBuf);
 	while(pThis->iCnt >= STREAM_ASYNC_NUMBUFS)
 		d_pthread_cond_wait(&pThis->notFull, &pThis->mut);
 
@@ -1065,12 +1061,9 @@ doZipWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf)
 	z_stream zstrm;
 	int zRet;	/* zlib return state */
 	bool bzInitDone = FALSE;
-	static pthread_mutex_t mut = PTHREAD_MUTEX_INITIALIZER;
 	DEFiRet;
 	assert(pThis != NULL);
 	assert(pBuf != NULL);
-
-	//pthread_mutex_lock(&mut);
 
 	/* allocate deflate state */
 	zstrm.zalloc = Z_NULL;
@@ -1109,8 +1102,6 @@ finalize_it:
 			DBGPRINTF("error %d returned from zlib/deflateEnd()\n", zRet);
 		}
 	}
-
-	//pthread_mutex_unlock(&mut);
 
 	RETiRet;
 }

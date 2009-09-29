@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 4.5.4  [v4-beta] (rgerhards), 2009-09-??
+Version 4.5.4  [v4-beta] (rgerhards), 2009-09-29
 - bugfix: potential segfault in stream writer on destruction
   Most severely affected omfile. The problem was that some buffers were
   freed before the asynchronous writer thread was shut down. So the
