@@ -167,6 +167,7 @@ sanitizeMessage(msg_t *pMsg)
 	size_t iMaxLine;
 
 	assert(pMsg != NULL);
+	assert(pMsg->iLenRawMsg > 0);
 
 #	ifdef USE_NETZIP
 	CHKiRet(uncompressMessage(pMsg));
@@ -288,6 +289,9 @@ rsRetVal parseMsg(msg_t *pMsg)
 	int lenMsg;
 	int iPriText;
 
+	if(pMsg->iLenRawMsg == 0)
+		ABORT_FINALIZE(RS_RET_EMPTY_MSG);
+
 	CHKiRet(sanitizeMessage(pMsg));
 
 	/* we needed to sanitize first, because we otherwise do not have a C-string we can print... */
@@ -295,8 +299,6 @@ rsRetVal parseMsg(msg_t *pMsg)
 
 	/* pull PRI */
 	lenMsg = pMsg->iLenRawMsg;
-	if(lenMsg == 0)
-		ABORT_FINALIZE(RS_RET_EMPTY_MSG);
 	msg = pMsg->pszRawMsg;
 	pri = DEFUPRI;
 	iPriText = 0;
