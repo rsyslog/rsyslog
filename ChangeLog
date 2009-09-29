@@ -1,4 +1,10 @@
 ---------------------------------------------------------------------------
+Version 5.1.6  [v5-beta] (rgerhards), 2009-09-??
+- bugfixes imported from 4.5.4:
+  * bugfix: potential segfault in stream writer on destruction
+  * bugfix: potential race in object loader (obj.c) during use/release
+  * bugfixes: potential problems in out file zip writer
+---------------------------------------------------------------------------
 Version 5.1.5  [v5-beta] (rgerhards), 2009-09-11
 - added new config option $ActionWriteAllMarkMessages
   this option permites to process mark messages under all circumstances,
@@ -110,7 +116,23 @@ increase.
 - increased ompgsql performance by adapting to new transactional
   output module interface
 ---------------------------------------------------------------------------
-Version 4.5.3  [v4-beta] (rgerhards), 2009-08-??
+Version 4.5.4  [v4-beta] (rgerhards), 2009-09-29
+- bugfix: potential segfault in stream writer on destruction
+  Most severely affected omfile. The problem was that some buffers were
+  freed before the asynchronous writer thread was shut down. So the
+  writer thread accessed invalid data, which may even already be
+  overwritten. Symptoms (with omfile) were segfaults, grabled data
+  and files with random names placed around the file system (most
+  prominently into the root directory). Special thanks to Aaron for
+  helping to track this down.
+- bugfix: potential race in object loader (obj.c) during use/release
+  of object interface
+- bugfixes: potential problems in out file zip writer. Problems could
+  lead to abort and/or memory leak. The module is now hardened in a very
+  conservative way, which is sub-optimal from a performance point of view.
+  This should be improved if it has proven reliable in practice.
+---------------------------------------------------------------------------
+Version 4.5.3  [v4-beta] (rgerhards), 2009-09-17
 - bugfix: repeated messages were incorrectly processed
   this could lead to loss of the repeated message content. As a side-
   effect, it could probably also be possible that some segfault occurs
