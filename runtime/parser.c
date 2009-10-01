@@ -167,6 +167,7 @@ sanitizeMessage(msg_t *pMsg)
 	uchar szSanBuf[32*1024]; /* buffer used for sanitizing a string */
 
 	assert(pMsg != NULL);
+	assert(pMsg->iLenRawMsg > 0);
 
 #	ifdef USE_NETZIP
 	CHKiRet(uncompressMessage(pMsg));
@@ -254,6 +255,7 @@ finalize_it:
 	RETiRet;
 }
 
+
 /* Parse a received message. The object's rawmsg property is taken and
  * parsed according to the relevant standards. This can later be
  * extended to support configured parsers.
@@ -264,6 +266,11 @@ rsRetVal parseMsg(msg_t *pMsg)
 	DEFiRet;
 	uchar *msg;
 	int pri;
+	int lenMsg;
+	int iPriText;
+
+	if(pMsg->iLenRawMsg == 0)
+		ABORT_FINALIZE(RS_RET_EMPTY_MSG);
 
 	CHKiRet(sanitizeMessage(pMsg));
 
@@ -271,15 +278,17 @@ rsRetVal parseMsg(msg_t *pMsg)
 	DBGPRINTF("msg parser: flags %x, from '%s', msg '%s'\n", pMsg->msgFlags, getRcvFrom(pMsg), pMsg->pszRawMsg);
 
 	/* pull PRI */
-	pri = DEFUPRI;
+	lenMsg = pMsg->iLenRawMsg;
 	msg = pMsg->pszRawMsg;
+	pri = DEFUPRI;
+	iPriText = 0;
 	if(*msg == '<') {
 		/* while we process the PRI, we also fill the PRI textual representation
 		 * inside the msg object. This may not be ideal from an OOP point of view,
 		 * but it offers us performance...
 		 */
 		pri = 0;
-		while(isdigit((int) *++msg)) {
+		while(--lenMsg > 0 && isdigit((int) *++msg)) {
 			pri = 10 * pri + (*msg - '0');
 		}
 		if(*msg == '>')

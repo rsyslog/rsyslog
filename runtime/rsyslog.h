@@ -367,6 +367,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_FILENAME_INVALID = -2140, /**< filename invalid, not found, no access, ... */
 	RS_RET_ZLIB_ERR = -2141, /**< error during zlib call */
 	RS_RET_VAR_NOT_FOUND = -2142, /**< variable not found */
+	RS_RET_EMPTY_MSG = -2143, /**< provided (raw) MSG is empty */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */
