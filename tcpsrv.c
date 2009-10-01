@@ -534,7 +534,7 @@ Run(tcpsrv_t *pThis)
 						int lenPeer;
 						errno = 0;
 						prop.GetString(pThis->pSessions[iTCPSess]->fromHostIP, &pszPeer, &lenPeer);
-						errmsg.LogError(0, iRet, "Netstream session %p closed by remote peer %s.\n",
+						errmsg.LogError(0, RS_RET_PEER_CLOSED_CONN, "Netstream session %p closed by remote peer %s.\n",
 								pThis->pSessions[iTCPSess]->pStrm, pszPeer);
 					}
 					pThis->pOnRegularClose(pThis->pSessions[iTCPSess]);
