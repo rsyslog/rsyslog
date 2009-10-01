@@ -1320,9 +1320,17 @@ static int parseRFCStructuredData(uchar **pp2parse, uchar *pResult, int *pLenStr
 	} else {
 		while(bCont) {
 			if(lenStr < 2) {
-				iRet = 1; /* this is not valid! */
-				bCont = 0;
-			} else if(*p2parse == '\\' && *(p2parse+1) == ']') {
+				/* we now need to check if we have only structured data */
+				if(lenStr > 0 && *p2parse == ']') {
+					*pResult++ = *p2parse;
+					p2parse++;
+					lenStr--;
+					bCont = 0;
+				} else {
+					iRet = 1; /* this is not valid! */
+					bCont = 0;
+				}
+  			} else if(*p2parse == '\\' && *(p2parse+1) == ']') {
 				/* this is escaped, need to copy both */
 				*pResult++ = *p2parse++;
 				*pResult++ = *p2parse++;
@@ -1382,7 +1390,7 @@ int parseRFCSyslogMsg(msg_t *pMsg, int flags)
 	assert(pMsg != NULL);
 	assert(pMsg->pszRawMsg != NULL);
 	p2parse = pMsg->pszRawMsg + pMsg->offAfterPRI; /* point to start of text, after PRI */
-	lenMsg = pMsg->iLenRawMsg - (pMsg->offAfterPRI + 1);
+	lenMsg = pMsg->iLenRawMsg - pMsg->offAfterPRI;
 
 	/* do a sanity check on the version and eat it (the caller checked this already) */
 	assert(p2parse[0] == '1' && p2parse[1] == ' ');

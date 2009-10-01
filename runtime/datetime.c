@@ -213,18 +213,21 @@ ParseTIMESTAMP3339(struct syslogTime *pTime, uchar** ppszTS, int *pLenStr)
 	 */
 	if(lenStr == 0 || *pszTS++ != '-')
 		ABORT_FINALIZE(RS_RET_INVLD_TIME);
+	--lenStr;
 	month = srSLMGParseInt32(&pszTS, &lenStr);
 	if(month < 1 || month > 12)
 		ABORT_FINALIZE(RS_RET_INVLD_TIME);
 
 	if(lenStr == 0 || *pszTS++ != '-')
 		ABORT_FINALIZE(RS_RET_INVLD_TIME);
+	--lenStr;
 	day = srSLMGParseInt32(&pszTS, &lenStr);
 	if(day < 1 || day > 31)
 		ABORT_FINALIZE(RS_RET_INVLD_TIME);
 
 	if(lenStr == 0 || *pszTS++ != 'T')
 		ABORT_FINALIZE(RS_RET_INVLD_TIME);
+	--lenStr;
 
 	hour = srSLMGParseInt32(&pszTS, &lenStr);
 	if(hour < 0 || hour > 23)
@@ -232,12 +235,14 @@ ParseTIMESTAMP3339(struct syslogTime *pTime, uchar** ppszTS, int *pLenStr)
 
 	if(lenStr == 0 || *pszTS++ != ':')
 		ABORT_FINALIZE(RS_RET_INVLD_TIME);
+	--lenStr;
 	minute = srSLMGParseInt32(&pszTS, &lenStr);
 	if(minute < 0 || minute > 59)
 		ABORT_FINALIZE(RS_RET_INVLD_TIME);
 
 	if(lenStr == 0 || *pszTS++ != ':')
 		ABORT_FINALIZE(RS_RET_INVLD_TIME);
+	--lenStr;
 	second = srSLMGParseInt32(&pszTS, &lenStr);
 	if(second < 0 || second > 60)
 		ABORT_FINALIZE(RS_RET_INVLD_TIME);
