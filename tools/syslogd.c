@@ -1095,7 +1095,7 @@ int parseRFCSyslogMsg(msg_t *pMsg, int flags)
 	assert(pMsg != NULL);
 	assert(pMsg->pszRawMsg != NULL);
 	p2parse = pMsg->pszRawMsg + pMsg->offAfterPRI; /* point to start of text, after PRI */
-	lenMsg = pMsg->iLenRawMsg - (pMsg->offAfterPRI);
+	lenMsg = pMsg->iLenRawMsg - pMsg->offAfterPRI;
 
 	/* do a sanity check on the version and eat it (the caller checked this already) */
 	assert(p2parse[0] == '1' && p2parse[1] == ' ');
