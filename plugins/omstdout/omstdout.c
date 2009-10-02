@@ -124,7 +124,7 @@ CODESTARTdoAction
 		toWrite = (char*) ppString[0];
 	}
 	len = strlen(toWrite);
-	write(1, toWrite, strlen(toWrite)); /* 1 is stdout! */
+	write(1, toWrite, len); /* 1 is stdout! */
 	if(pData->bEnsureLFEnding && toWrite[len-1] != '\n') {
 		write(1, "\n", 1); /* write missing LF */
 	}
