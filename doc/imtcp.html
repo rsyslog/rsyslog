@@ -41,6 +41,10 @@ very limited interest in fixing this issue. This directive <b>can not</b> fix th
 That would require much more code changes, which I was unable to do so far. Full details
 can be found at the <a href="http://www.rsyslog.com/Article321.phtml">Cisco tcp syslog anomaly</a>
 page.
+<li>$InputTCPServerNotifyOnConnectionClose [on/<b>off</b>] (available since 4.5.5)<br>
+instructs imtcp to emit a message if the remote peer closes a connection.<br>
+<b>Important:</b> This directive is global to all listeners and must be given right
+after loading imtcp, otherwise it may have no effect.</li>
 <li>$InputTCPServerRun &lt;port&gt;<br>
 Starts a TCP server on selected port</li>
 <li>$InputTCPMaxListeners &lt;number&gt;<br>

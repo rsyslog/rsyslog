@@ -75,6 +75,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <assert.h>
+#include <pthread.h>
 
 /* how many objects are supported by rsyslogd? */
 #define OBJ_NUM_IDS 100 /* TODO change to a linked list?  info: 16 were currently in use 2008-02-29 */
@@ -97,6 +98,7 @@ DEFobjCurrIf(module)
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(strm)
 static objInfo_t *arrObjInfo[OBJ_NUM_IDS]; /* array with object information pointers */
+static pthread_mutex_t mutObjGlobalOp;	/* mutex to guard global operations of the object system */
 
 
 /* cookies for serialized lines */
@@ -1127,6 +1129,7 @@ UseObj(char *srcFile, uchar *pObjName, uchar *pObjFile, interface_t *pIf)
 
 
 	/* DEV debug only: dbgprintf("source file %s requests object '%s', ifIsLoaded %d\n", srcFile, pObjName, pIf->ifIsLoaded); */
+	d_pthread_mutex_lock(&mutObjGlobalOp);
 
 	if(pIf->ifIsLoaded == 1) {
 		ABORT_FINALIZE(RS_RET_OK); /* we are already set */
@@ -1167,6 +1170,8 @@ UseObj(char *srcFile, uchar *pObjName, uchar *pObjFile, interface_t *pIf)
 	pIf->ifIsLoaded = 1; /* we are happy */
 
 finalize_it:
+	d_pthread_mutex_unlock(&mutObjGlobalOp);
+
 	if(pStr != NULL)
 		rsCStrDestruct(&pStr);
 
@@ -1188,15 +1193,16 @@ ReleaseObj(char *srcFile, uchar *pObjName, uchar *pObjFile, interface_t *pIf)
 
 
 	/* dev debug only dbgprintf("source file %s releasing object '%s', ifIsLoaded %d\n", srcFile, pObjName, pIf->ifIsLoaded); */
+	d_pthread_mutex_lock(&mutObjGlobalOp);
 
 	if(pObjFile == NULL)
 		FINALIZE; /* if it is not a lodable module, we do not need to do anything... */
 
 	if(pIf->ifIsLoaded == 0) {
-		ABORT_FINALIZE(RS_RET_OK); /* we are not loaded - this is perfectly OK... */
+		FINALIZE; /* we are not loaded - this is perfectly OK... */
 	} else if(pIf->ifIsLoaded == 2) {
 		pIf->ifIsLoaded = 0; /* clean up */
-		ABORT_FINALIZE(RS_RET_OK); /* we had a load error and can not continue */
+		FINALIZE; /* we had a load error and can not/must not continue */
 	}
 
 	CHKiRet(rsCStrConstructFromszStr(&pStr, pObjName));
@@ -1208,6 +1214,8 @@ ReleaseObj(char *srcFile, uchar *pObjName, uchar *pObjFile, interface_t *pIf)
 	pIf->ifIsLoaded = 0; /* indicated "no longer valid" */
 
 finalize_it:
+	d_pthread_mutex_unlock(&mutObjGlobalOp);
+
 	if(pStr != NULL)
 		rsCStrDestruct(&pStr);
 
@@ -1300,8 +1308,9 @@ objClassExit(void)
 rsRetVal
 objClassInit(modInfo_t *pModInfo)
 {
-	DEFiRet;
+	pthread_mutexattr_t mutAttr;
 	int i;
+	DEFiRet;
 	
 	/* first, initialize the object system itself. This must be done
 	 * before any other object is created.
@@ -1309,6 +1318,13 @@ objClassInit(modInfo_t *pModInfo)
 	for(i = 0 ; i < OBJ_NUM_IDS ; ++i) {
 		arrObjInfo[i] = NULL;
 	}
+
+	/* the mutex must be recursive, because objects may call into other
+	 * object identifieres recursively.
+	 */
+	pthread_mutexattr_init(&mutAttr);
+	pthread_mutexattr_settype(&mutAttr, PTHREAD_MUTEX_RECURSIVE);
+	pthread_mutex_init(&mutObjGlobalOp, &mutAttr);
 
 	/* request objects we use */
 	CHKiRet(objGetObjInterface(&obj)); /* get ourselves ;) */

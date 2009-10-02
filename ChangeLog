@@ -11,8 +11,37 @@ Version 4.7.0  [v4-devel] (rgerhards), 2009-09-??
 - added new config directive $omfileForceChown to (try to) fix some broken
   system configs.
   See ticket for details: http://bugzilla.adiscon.com/show_bug.cgi?id=150
+- imported changes from 4.5.6 and below
 ---------------------------------------------------------------------------
-Version 4.5.3  [v4-beta] (rgerhards), 2009-08-??
+Version 4.5.6  [v4-beta] (rgerhards), 2009-09-??
+- included some important fixes from v4-stable:
+  * bugfix: invalid handling of zero-sized messages
+  * bugfix: zero-sized UDP messages are no longer processed
+  * bugfix: random data could be appended to message
+  * bugfix: reverse lookup reduction logic in imudp do DNS queries too often
+---------------------------------------------------------------------------
+Version 4.5.5  [v4-beta] (rgerhards), 2009-09-??
+- added $InputTCPServerNotifyOnConnectionClose config directive
+  see doc for details
+---------------------------------------------------------------------------
+Version 4.5.4  [v4-beta] (rgerhards), 2009-09-29
+- bugfix: potential segfault in stream writer on destruction
+  Most severely affected omfile. The problem was that some buffers were
+  freed before the asynchronous writer thread was shut down. So the
+  writer thread accessed invalid data, which may even already be
+  overwritten. Symptoms (with omfile) were segfaults, grabled data
+  and files with random names placed around the file system (most
+  prominently into the root directory). Special thanks to Aaron for
+  helping to track this down.
+- bugfix: potential race in object loader (obj.c) during use/release
+  of object interface
+- bugfixes: potential problems in out file zip writer. Problems could
+  lead to abort and/or memory leak. The module is now hardened in a very
+  conservative way, which is sub-optimal from a performance point of view.
+  This should be improved if it has proven reliable in practice.
+---------------------------------------------------------------------------
+Version 4.5.3  [v4-beta] (rgerhards), 2009-09-17
+>>>>>>> 4c8546fd6fb56d5439edb5a098c8f82bc8fc36aa:ChangeLog
 - bugfix: repeated messages were incorrectly processed
   this could lead to loss of the repeated message content. As a side-
   effect, it could probably also be possible that some segfault occurs
@@ -125,6 +154,15 @@ Version 4.5.0  [DEVEL] (rgerhards), 2009-07-02
   an abort
 ---------------------------------------------------------------------------
 Version 4.4.2  [v4-stable] (rgerhards), 2009-09-??
+- bugfix: invalid handling of zero-sized messages, could lead to mis-
+  addressing and potential memory corruption/segfault
+- bugfix: zero-sized UDP messages are no longer processed
+  until now, they were forwarded to processing, but this makes no sense
+  Also, it looks like the system seems to provide a zero return code
+  on a UDP recvfrom() from time to time for some internal reasons. These
+  "receives" are now silently ignored.
+- bugfix: random data could be appended to message, possibly causing
+  segfaults
 - bugfix: reverse lookup reduction logic in imudp do DNS queries too often
   A comparison was done between the current and the former source address.
   However, this was done on the full sockaddr_storage structure and not
@@ -1517,6 +1555,7 @@ Version 2.0.8 V2-STABLE (rgerhards), 2008-??-??
   connection broke, but not if there was a problem with statement
   execution. The most probable case for such a case would be invalid
   sql inside the template, and this is now much easier to diagnose.
+- doc bugfix: default for $DirCreateMode incorrectly stated
 ---------------------------------------------------------------------------
 Version 2.0.7 V2-STABLE (rgerhards), 2008-04-14
 - bugfix: the default for $DirCreateMode was 0644, and as such wrong.
