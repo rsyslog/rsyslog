@@ -66,6 +66,7 @@
 #include "errmsg.h"
 #include "stream.h"
 #include "unicode-helper.h"
+#include "atomic.h"
 
 MODULE_TYPE_OUTPUT
 
@@ -152,12 +153,14 @@ CODESTARTdbgPrintInstInfo
 		       "\tcreate directories: %s\n"
 		       "\tfile owner %d, group %d\n"
 		       "\tdirectory owner %d, group %d\n"
+		       "\tdir create mode 0%3.3o, file create mode 0%3.3o\n"
 		       "\tfail if owner/group can not be set: %s\n",
 		        pData->f_fname,
 			pData->iDynaFileCacheSize,
 			pData->bCreateDirs ? "yes" : "no",
 			pData->fileUID, pData->fileGID,
 			pData->dirUID, pData->dirGID,
+			pData->fDirCreateMode, pData->fCreateMode,
 			pData->bFailOnChown ? "yes" : "no"
 			);
 	} else { /* regular file */
@@ -615,6 +618,7 @@ ENDdoAction
 
 BEGINparseSelectorAct
 CODESTARTparseSelectorAct
+dbgprintf("XXX: dir create mode, enter omfile,  0%3.3o set in action\n", fDirCreateMode);
 	if(!(*p == '$' || *p == '?' || *p == '|' || *p == '/' || *p == '-'))
 		ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
 
@@ -676,6 +680,7 @@ CODESTARTparseSelectorAct
 	pData->iDynaFileCacheSize = iDynaFileCacheSize;
 	pData->fCreateMode = fCreateMode;
 	pData->fDirCreateMode = fDirCreateMode;
+dbgprintf("XXX: dir create mode 0%3.3o set in action\n", fDirCreateMode);
 	pData->bCreateDirs = bCreateDirs;
 	pData->bFailOnChown = bFailOnChown;
 	pData->fileUID = fileUID;
@@ -761,6 +766,8 @@ ENDqueryEtryPt
 
 BEGINmodInit(File)
 CODESTARTmodInit
+	fDirCreateMode = 0700;	/* for some reason, we need to do this write, else the variable always is 0 :S */
+
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
