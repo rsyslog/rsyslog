@@ -143,6 +143,7 @@ static void getCurrTime(struct syslogTime *t, time_t *ttSeconds)
  * DO NOT PUT ANY OTHER CODE IN THIS BEGIN ... END BLOCK!!!!
  */
 
+
 /**
  * Parse a 32 bit integer number from a string.
  *
@@ -150,17 +151,21 @@ static void getCurrTime(struct syslogTime *t, time_t *ttSeconds)
  *             must be positioned at the first digit. Will be updated 
  *             so that on return it points to the first character AFTER
  *             the integer parsed.
+ * \param pLenStr pointer to string length, decremented on exit by
+ *                characters processed
+ * 		  Note that if an empty string (len < 1) is passed in,
+ * 		  the method always returns zero.
  * \retval The number parsed.
  */
-
-static int srSLMGParseInt32(uchar** ppsz)
+static int srSLMGParseInt32(uchar** ppsz, int *pLenStr)
 {
 	register int i;
 
 	i = 0;
-	while(isdigit((int) **ppsz)) {
+	while(*pLenStr > 0 && isdigit((int) **ppsz)) {
 		i = i * 10 + **ppsz - '0';
 		++(*ppsz);
+		--(*pLenStr);
 	}
 
 	return i;
@@ -172,9 +177,13 @@ static int srSLMGParseInt32(uchar** ppsz)
  * updates the parse pointer position. The pTime parameter
  * is guranteed to be updated only if a new valid timestamp
  * could be obtained (restriction added 2008-09-16 by rgerhards).
+ * This method now also checks the maximum string length it is passed.
+ * If a *valid* timestamp is found, the string length is decremented
+ * by the number of characters processed. If it is not a valid timestamp,
+ * the length is kept unmodified. -- rgerhards, 2009-09-23
  */
 static rsRetVal
-ParseTIMESTAMP3339(struct syslogTime *pTime, uchar** ppszTS)
+ParseTIMESTAMP3339(struct syslogTime *pTime, uchar** ppszTS, int *pLenStr)
 {
 	uchar *pszTS = *ppszTS;
 	/* variables to temporarily hold time information while we parse */
@@ -189,6 +198,7 @@ ParseTIMESTAMP3339(struct syslogTime *pTime, uchar** ppszTS)
 	char OffsetMode;	/* UTC offset + or - */
 	char OffsetHour;	/* UTC offset in hours */
 	int OffsetMinute;	/* UTC offset in minutes */
+	int lenStr;
 	/* end variables to temporarily hold time information while we parse */
 	DEFiRet;
 
@@ -196,48 +206,55 @@ ParseTIMESTAMP3339(struct syslogTime *pTime, uchar** ppszTS)
 	assert(ppszTS != NULL);
 	assert(pszTS != NULL);
 
-	year = srSLMGParseInt32(&pszTS);
+	lenStr = *pLenStr;
+	year = srSLMGParseInt32(&pszTS, &lenStr);
 
 	/* We take the liberty to accept slightly malformed timestamps e.g. in 
 	 * the format of 2003-9-1T1:0:0. This doesn't hurt on receiving. Of course,
 	 * with the current state of affairs, we would never run into this code
 	 * here because at postion 11, there is no "T" in such cases ;)
 	 */
-	if(*pszTS++ != '-')
+	if(lenStr == 0 || *pszTS++ != '-')
 		ABORT_FINALIZE(RS_RET_INVLD_TIME);
-	month = srSLMGParseInt32(&pszTS);
+	--lenStr;
+	month = srSLMGParseInt32(&pszTS, &lenStr);
 	if(month < 1 || month > 12)
 		ABORT_FINALIZE(RS_RET_INVLD_TIME);
 
-	if(*pszTS++ != '-')
+	if(lenStr == 0 || *pszTS++ != '-')
 		ABORT_FINALIZE(RS_RET_INVLD_TIME);
-	day = srSLMGParseInt32(&pszTS);
+	--lenStr;
+	day = srSLMGParseInt32(&pszTS, &lenStr);
 	if(day < 1 || day > 31)
 		ABORT_FINALIZE(RS_RET_INVLD_TIME);
 
-	if(*pszTS++ != 'T')
+	if(lenStr == 0 || *pszTS++ != 'T')
 		ABORT_FINALIZE(RS_RET_INVLD_TIME);
+	--lenStr;
 
-	hour = srSLMGParseInt32(&pszTS);
+	hour = srSLMGParseInt32(&pszTS, &lenStr);
 	if(hour < 0 || hour > 23)
 		ABORT_FINALIZE(RS_RET_INVLD_TIME);
 
-	if(*pszTS++ != ':')
+	if(lenStr == 0 || *pszTS++ != ':')
 		ABORT_FINALIZE(RS_RET_INVLD_TIME);
-	minute = srSLMGParseInt32(&pszTS);
+	--lenStr;
+	minute = srSLMGParseInt32(&pszTS, &lenStr);
 	if(minute < 0 || minute > 59)
 		ABORT_FINALIZE(RS_RET_INVLD_TIME);
 
-	if(*pszTS++ != ':')
+	if(lenStr == 0 || *pszTS++ != ':')
 		ABORT_FINALIZE(RS_RET_INVLD_TIME);
-	second = srSLMGParseInt32(&pszTS);
+	--lenStr;
+	second = srSLMGParseInt32(&pszTS, &lenStr);
 	if(second < 0 || second > 60)
 		ABORT_FINALIZE(RS_RET_INVLD_TIME);
 
 	/* Now let's see if we have secfrac */
-	if(*pszTS == '.') {
+	if(lenStr > 0 && *pszTS == '.') {
+		--lenStr;
 		uchar *pszStart = ++pszTS;
-		secfrac = srSLMGParseInt32(&pszTS);
+		secfrac = srSLMGParseInt32(&pszTS, &lenStr);
 		secfracPrecision = (int) (pszTS - pszStart);
 	} else {
 		secfracPrecision = 0;
@@ -245,23 +262,27 @@ ParseTIMESTAMP3339(struct syslogTime *pTime, uchar** ppszTS)
 	}
 
 	/* check the timezone */
-	if(*pszTS == 'Z')
-	{
+	if(lenStr == 0)
+		ABORT_FINALIZE(RS_RET_INVLD_TIME);
+
+	if(*pszTS == 'Z') {
+		--lenStr;
 		pszTS++; /* eat Z */
 		OffsetMode = 'Z';
 		OffsetHour = 0;
 		OffsetMinute = 0;
 	} else if((*pszTS == '+') || (*pszTS == '-')) {
 		OffsetMode = *pszTS;
+		--lenStr;
 		pszTS++;
 
-		OffsetHour = srSLMGParseInt32(&pszTS);
+		OffsetHour = srSLMGParseInt32(&pszTS, &lenStr);
 		if(OffsetHour < 0 || OffsetHour > 23)
 			ABORT_FINALIZE(RS_RET_INVLD_TIME);
 
-		if(*pszTS++ != ':')
+		if(lenStr == 0 || *pszTS++ != ':')
 			ABORT_FINALIZE(RS_RET_INVLD_TIME);
-		OffsetMinute = srSLMGParseInt32(&pszTS);
+		OffsetMinute = srSLMGParseInt32(&pszTS, &lenStr);
 		if(OffsetMinute < 0 || OffsetMinute > 59)
 			ABORT_FINALIZE(RS_RET_INVLD_TIME);
 	} else {
@@ -270,10 +291,12 @@ ParseTIMESTAMP3339(struct syslogTime *pTime, uchar** ppszTS)
 	}
 
 	/* OK, we actually have a 3339 timestamp, so let's indicated this */
-	if(*pszTS == ' ')
+	if(lenStr > 0 && *pszTS == ' ') {
+		--lenStr;
 		++pszTS;
-	else
+	} else {
 		ABORT_FINALIZE(RS_RET_INVLD_TIME);
+	}
 
 	/* we had success, so update parse pointer and caller-provided timestamp */
 	*ppszTS = pszTS;
@@ -289,6 +312,7 @@ ParseTIMESTAMP3339(struct syslogTime *pTime, uchar** ppszTS)
 	pTime->OffsetMode = OffsetMode;
 	pTime->OffsetHour = OffsetHour;
 	pTime->OffsetMinute = OffsetMinute;
+	*pLenStr = lenStr;
 
 finalize_it:
 	RETiRet;
@@ -307,9 +331,13 @@ finalize_it:
  * permits us to use a pre-aquired timestamp and thus avoids to do
  * a (costly) time() call. Thanks to David Lang for insisting on
  * time() call reduction ;).
+ * This method now also checks the maximum string length it is passed.
+ * If a *valid* timestamp is found, the string length is decremented
+ * by the number of characters processed. If it is not a valid timestamp,
+ * the length is kept unmodified. -- rgerhards, 2009-09-23
  */
 static rsRetVal
-ParseTIMESTAMP3164(struct syslogTime *pTime, uchar** ppszTS)
+ParseTIMESTAMP3164(struct syslogTime *pTime, uchar** ppszTS, int *pLenStr)
 {
 	/* variables to temporarily hold time information while we parse */
 	int month;
@@ -319,6 +347,7 @@ ParseTIMESTAMP3164(struct syslogTime *pTime, uchar** ppszTS)
 	int minute;
 	int second;
 	/* end variables to temporarily hold time information while we parse */
+	int lenStr;
 	uchar *pszTS;
 	DEFiRet;
 
@@ -326,6 +355,8 @@ ParseTIMESTAMP3164(struct syslogTime *pTime, uchar** ppszTS)
 	pszTS = *ppszTS;
 	assert(pszTS != NULL);
 	assert(pTime != NULL);
+	assert(pLenStr != NULL);
+	lenStr = *pLenStr;
 
 	/* If we look at the month (Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec),
 	 * we may see the following character sequences occur:
@@ -348,6 +379,9 @@ ParseTIMESTAMP3164(struct syslogTime *pTime, uchar** ppszTS)
 	 * june, when it first manifested. This also lead to invalid parsing of the rest
 	 * of the message, as the time stamp was not detected to be correct. - rgerhards
 	 */
+	if(lenStr < 3)
+		ABORT_FINALIZE(RS_RET_INVLD_TIME);
+
 	switch(*pszTS++)
 	{
 	case 'j':
@@ -470,26 +504,31 @@ ParseTIMESTAMP3164(struct syslogTime *pTime, uchar** ppszTS)
 		ABORT_FINALIZE(RS_RET_INVLD_TIME);
 	}
 
+	lenStr -= 3;
+
 	/* done month */
 
-	if(*pszTS++ != ' ')
+	if(lenStr == 0 || *pszTS++ != ' ')
 		ABORT_FINALIZE(RS_RET_INVLD_TIME);
 
 	/* we accept a slightly malformed timestamp when receiving. This is
 	 * we accept one-digit days
 	 */
-	if(*pszTS == ' ')
+	if(*pszTS == ' ') {
+		--lenStr;
 		++pszTS;
+	}
 
-	day = srSLMGParseInt32(&pszTS);
+	day = srSLMGParseInt32(&pszTS, &lenStr);
 	if(day < 1 || day > 31)
 		ABORT_FINALIZE(RS_RET_INVLD_TIME);
 
-	if(*pszTS++ != ' ')
+	if(lenStr == 0 || *pszTS++ != ' ')
 		ABORT_FINALIZE(RS_RET_INVLD_TIME);
+	--lenStr;
 
 	/* time part */
-	hour = srSLMGParseInt32(&pszTS);
+	hour = srSLMGParseInt32(&pszTS, &lenStr);
 	if(hour > 1970 && hour < 2100) {
 		/* if so, we assume this actually is a year. This is a format found
 		 * e.g. in Cisco devices.
@@ -499,23 +538,26 @@ ParseTIMESTAMP3164(struct syslogTime *pTime, uchar** ppszTS)
 		year = hour;
 
 		/* re-query the hour, this time it must be valid */
-		if(*pszTS++ != ' ')
+		if(lenStr == 0 || *pszTS++ != ' ')
 			ABORT_FINALIZE(RS_RET_INVLD_TIME);
-		hour = srSLMGParseInt32(&pszTS);
+		--lenStr;
+		hour = srSLMGParseInt32(&pszTS, &lenStr);
 	}
 
 	if(hour < 0 || hour > 23)
 		ABORT_FINALIZE(RS_RET_INVLD_TIME);
 
-	if(*pszTS++ != ':')
+	if(lenStr == 0 || *pszTS++ != ':')
 		ABORT_FINALIZE(RS_RET_INVLD_TIME);
-	minute = srSLMGParseInt32(&pszTS);
+	--lenStr;
+	minute = srSLMGParseInt32(&pszTS, &lenStr);
 	if(minute < 0 || minute > 59)
 		ABORT_FINALIZE(RS_RET_INVLD_TIME);
 
-	if(*pszTS++ != ':')
+	if(lenStr == 0 || *pszTS++ != ':')
 		ABORT_FINALIZE(RS_RET_INVLD_TIME);
-	second = srSLMGParseInt32(&pszTS);
+	--lenStr;
+	second = srSLMGParseInt32(&pszTS, &lenStr);
 	if(second < 0 || second > 60)
 		ABORT_FINALIZE(RS_RET_INVLD_TIME);
 
@@ -523,8 +565,10 @@ ParseTIMESTAMP3164(struct syslogTime *pTime, uchar** ppszTS)
 	 * invalid format, it occurs frequently enough (e.g. with Cisco devices)
 	 * to permit it as a valid case. -- rgerhards, 2008-09-12
 	 */
-	if(*pszTS++ == ':')
+	if(lenStr == 0 || *pszTS++ == ':') {
 		++pszTS; /* just skip past it */
+		--lenStr;
+	}
 
 	/* we had success, so update parse pointer and caller-provided timestamp
 	 * fields we do not have are not updated in the caller's timestamp. This
@@ -541,6 +585,7 @@ ParseTIMESTAMP3164(struct syslogTime *pTime, uchar** ppszTS)
 	pTime->second = second;
  	pTime->secfracPrecision = 0;
 	pTime->secfrac = 0;
+	*pLenStr = lenStr;
 
 finalize_it:
 	RETiRet;

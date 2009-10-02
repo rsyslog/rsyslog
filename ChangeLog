@@ -3,6 +3,11 @@ Version 5.3.1  [DEVEL] (rgerhards), 2009-09-??
 - added $AbortOnUncleanConfig directive - permits to prevent startup when
   there are problems with the configuration file. See it's doc for
   details.
+- included some important fixes from v4-stable:
+  * bugfix: invalid handling of zero-sized messages
+  * bugfix: zero-sized UDP messages are no longer processed
+  * bugfix: random data could be appended to message
+  * bugfix: reverse lookup reduction logic in imudp do DNS queries too often
 - bugfixes imported from 4.5.4:
   * bugfix: potential segfault in stream writer on destruction
   * bugfix: potential race in object loader (obj.c) during use/release
@@ -142,7 +147,6 @@ increase.
 - increased ompgsql performance by adapting to new transactional
   output module interface
 ---------------------------------------------------------------------------
-<<<<<<< HEAD:ChangeLog
 Version 4.7.0  [v4-devel] (rgerhards), 2009-09-??
 - added new config option $InputUnixListenSocketCreatePath
   to permit the auto-creation of pathes to additional log sockets. This
@@ -155,9 +159,19 @@ Version 4.7.0  [v4-devel] (rgerhards), 2009-09-??
 - added new config directive $omfileForceChown to (try to) fix some broken
   system configs.
   See ticket for details: http://bugzilla.adiscon.com/show_bug.cgi?id=150
+- imported changes from 4.5.6 and below
 ---------------------------------------------------------------------------
-Version 4.5.3  [v4-beta] (rgerhards), 2009-08-??
-=======
+Version 4.5.6  [v4-beta] (rgerhards), 2009-09-??
+- included some important fixes from v4-stable:
+  * bugfix: invalid handling of zero-sized messages
+  * bugfix: zero-sized UDP messages are no longer processed
+  * bugfix: random data could be appended to message
+  * bugfix: reverse lookup reduction logic in imudp do DNS queries too often
+---------------------------------------------------------------------------
+Version 4.5.5  [v4-beta] (rgerhards), 2009-09-??
+- added $InputTCPServerNotifyOnConnectionClose config directive
+  see doc for details
+---------------------------------------------------------------------------
 Version 4.5.4  [v4-beta] (rgerhards), 2009-09-29
 - bugfix: potential segfault in stream writer on destruction
   Most severely affected omfile. The problem was that some buffers were
@@ -175,7 +189,6 @@ Version 4.5.4  [v4-beta] (rgerhards), 2009-09-29
   This should be improved if it has proven reliable in practice.
 ---------------------------------------------------------------------------
 Version 4.5.3  [v4-beta] (rgerhards), 2009-09-17
->>>>>>> 8d8d1f01e1cd6ae372088a3ebddc27983e9a0185:ChangeLog
 - bugfix: repeated messages were incorrectly processed
   this could lead to loss of the repeated message content. As a side-
   effect, it could probably also be possible that some segfault occurs
@@ -288,6 +301,15 @@ Version 4.5.0  [DEVEL] (rgerhards), 2009-07-02
   an abort
 ---------------------------------------------------------------------------
 Version 4.4.2  [v4-stable] (rgerhards), 2009-09-??
+- bugfix: invalid handling of zero-sized messages, could lead to mis-
+  addressing and potential memory corruption/segfault
+- bugfix: zero-sized UDP messages are no longer processed
+  until now, they were forwarded to processing, but this makes no sense
+  Also, it looks like the system seems to provide a zero return code
+  on a UDP recvfrom() from time to time for some internal reasons. These
+  "receives" are now silently ignored.
+- bugfix: random data could be appended to message, possibly causing
+  segfaults
 - bugfix: reverse lookup reduction logic in imudp do DNS queries too often
   A comparison was done between the current and the former source address.
   However, this was done on the full sockaddr_storage structure and not
@@ -1680,6 +1702,7 @@ Version 2.0.8 V2-STABLE (rgerhards), 2008-??-??
   connection broke, but not if there was a problem with statement
   execution. The most probable case for such a case would be invalid
   sql inside the template, and this is now much easier to diagnose.
+- doc bugfix: default for $DirCreateMode incorrectly stated
 ---------------------------------------------------------------------------
 Version 2.0.7 V2-STABLE (rgerhards), 2008-04-14
 - bugfix: the default for $DirCreateMode was 0644, and as such wrong.
