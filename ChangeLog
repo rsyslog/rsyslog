@@ -1,4 +1,8 @@
 ---------------------------------------------------------------------------
+Version 4.5.5  [v4-beta] (rgerhards), 2009-09-??
+- added $InputTCPServerNotifyOnConnectionClose config directive
+  see doc for details
+---------------------------------------------------------------------------
 Version 4.5.4  [v4-beta] (rgerhards), 2009-09-29
 - bugfix: potential segfault in stream writer on destruction
   Most severely affected omfile. The problem was that some buffers were

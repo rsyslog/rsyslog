@@ -529,6 +529,14 @@ Run(tcpsrv_t *pThis)
 				iRet = pThis->pRcvData(pThis->pSessions[iTCPSess], buf, sizeof(buf), &iRcvd);
 				switch(iRet) {
 				case RS_RET_CLOSED:
+					if(pThis->bEmitMsgOnClose) {
+						uchar *pszPeer;
+						int lenPeer;
+						errno = 0;
+						prop.GetString(pThis->pSessions[iTCPSess]->fromHostIP, &pszPeer, &lenPeer);
+						errmsg.LogError(0, RS_RET_PEER_CLOSED_CONN, "Netstream session %p closed by remote peer %s.\n",
+								pThis->pSessions[iTCPSess]->pStrm, pszPeer);
+					}
 					pThis->pOnRegularClose(pThis->pSessions[iTCPSess]);
 					tcps_sess.Destruct(&pThis->pSessions[iTCPSess]);
 					break;
@@ -778,6 +786,16 @@ SetRuleset(tcpsrv_t *pThis, ruleset_t *pRuleset)
 }
 
 
+/* Set connection close notification */
+static rsRetVal
+SetNotificationOnRemoteClose(tcpsrv_t *pThis, int bNewVal)
+{
+	DEFiRet;
+	pThis->bEmitMsgOnClose = bNewVal;
+	RETiRet;
+}
+
+
 /* here follows a number of methods that shuffle authentication settings down
  * to the drivers. Drivers not supporting these settings may return an error
  * state.
@@ -894,6 +912,7 @@ CODESTARTobjQueryInterface(tcpsrv)
 	pIf->SetCBOnErrClose = SetCBOnErrClose;
 	pIf->SetOnMsgReceive = SetOnMsgReceive;
 	pIf->SetRuleset = SetRuleset;
+	pIf->SetNotificationOnRemoteClose = SetNotificationOnRemoteClose;
 
 finalize_it:
 ENDobjQueryInterface(tcpsrv)
