@@ -1748,7 +1748,7 @@ static void doexit()
 
 
 /* set the maximum message size */
-static rsRetVal setMaxMsgSize(void __attribute__((unused)) *pVal, int iNewVal)
+static rsRetVal setMaxMsgSize(void __attribute__((unused)) *pVal, long iNewVal)
 {
 	return glbl.SetMaxLine(iNewVal);
 }
