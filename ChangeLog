@@ -9,6 +9,11 @@ Version 4.5.6  [v4-beta] (rgerhards), 2009-09-??
 Version 4.5.5  [v4-beta] (rgerhards), 2009-09-??
 - added $InputTCPServerNotifyOnConnectionClose config directive
   see doc for details
+- bugfix: invalid storage class selected for some size config parameters.
+  This resulted in wrong values. The most prominent victim was the
+  directory creation mode, which was set to zero in some cases. For 
+  details, see related blog post:
+  http://blog.gerhards.net/2009/10/another-note-on-hard-to-find-bugs.html
 ---------------------------------------------------------------------------
 Version 4.5.4  [v4-beta] (rgerhards), 2009-09-29
 - bugfix: potential segfault in stream writer on destruction

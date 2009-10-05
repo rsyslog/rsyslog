@@ -383,7 +383,7 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 	 * can never change in the lifetime of an module. -- rgerhards, 2007-12-14
 	 */
 	CHKiRet((*pNew->modQueryEtryPt)((uchar*)"getType", &modGetType));
-	CHKiRet((iRet = (*modGetType)(&pNew->eType)) != RS_RET_OK);
+	CHKiRet((*modGetType)(&pNew->eType));
 	dbgprintf("module of type %d being loaded.\n", pNew->eType);
 	
 	/* OK, we know we can successfully work with the module. So we now fill the
