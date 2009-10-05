@@ -66,6 +66,7 @@
 #include "errmsg.h"
 #include "stream.h"
 #include "unicode-helper.h"
+#include "atomic.h"
 
 MODULE_TYPE_OUTPUT
 
@@ -103,7 +104,7 @@ static int	bCreateDirs;	/* auto-create directories for dynaFiles: 0 - no, 1 - ye
 static int	bEnableSync = 0;/* enable syncing of files (no dash in front of pathname in conf): 0 - no, 1 - yes */
 static int	iZipLevel = 0;	/* zip compression mode (0..9 as usual) */
 static bool	bFlushOnTXEnd = 1;/* flush write buffers when transaction has ended? */
-static int	iIOBufSize = IOBUF_DFLT_SIZE;	/* size of an io buffer */
+static int64	iIOBufSize = IOBUF_DFLT_SIZE;	/* size of an io buffer */
 static int	iFlushInterval = FLUSH_INTRVL_DFLT; 	/* how often flush the output buffer on inactivity? */
 static uchar	*pszTplName = NULL; /* name of the default template to use */
 /* end globals for default values */
@@ -156,6 +157,7 @@ CODESTARTdbgPrintInstInfo
 		       "\tfile owner %d, group %d\n"
 		       "\tdirectory owner %d, group %d\n"
 		       "\tforce chown() for all files: %s\n"
+		       "\tdir create mode 0%3.3o, file create mode 0%3.3o\n"
 		       "\tfail if owner/group can not be set: %s\n",
 		        pData->f_fname,
 			pData->iDynaFileCacheSize,
@@ -163,6 +165,7 @@ CODESTARTdbgPrintInstInfo
 			pData->fileUID, pData->fileGID,
 			pData->dirUID, pData->dirGID,
 			pData->bForceChown ? "yes" : "no",
+			pData->fDirCreateMode, pData->fCreateMode,
 			pData->bFailOnChown ? "yes" : "no"
 			);
 	} else { /* regular file */
@@ -705,7 +708,7 @@ CODESTARTparseSelectorAct
 	pData->dirGID = dirGID;
 	pData->iZipLevel = iZipLevel;
 	pData->bFlushOnTXEnd = bFlushOnTXEnd;
-	pData->iIOBufSize = iIOBufSize;
+	pData->iIOBufSize = (int) iIOBufSize;
 	pData->iFlushInterval = iFlushInterval;
 
 	if(pData->bDynamicName == 0) {
