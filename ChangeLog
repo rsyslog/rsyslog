@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 5.3.1  [DEVEL] (rgerhards), 2009-09-??
+Version 5.3.1  [DEVEL] (rgerhards), 2009-10-05
 - added $AbortOnUncleanConfig directive - permits to prevent startup when
   there are problems with the configuration file. See it's doc for
   details.
