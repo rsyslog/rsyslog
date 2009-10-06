@@ -1,6 +1,8 @@
 ---------------------------------------------------------------------------
 Version 5.1.6  [v5-beta] (rgerhards), 2009-09-??
 - feature imports from v4.5.6
+- bugfix: potential race condition when queue worker threads were
+  terminated
 - bugfixes imported from 4.5.4:
   * bugfix: potential segfault in stream writer on destruction
   * bugfix: potential race in object loader (obj.c) during use/release

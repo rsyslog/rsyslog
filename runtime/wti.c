@@ -114,7 +114,12 @@ wtiSetState(wti_t *pThis, bool bNewVal)
 
 
 /* Cancel the thread. If the thread is not running. But it is save and legal to
- * call wtiCancelThrd() in such situations.
+ * call wtiCancelThrd() in such situations. This function only returns when the
+ * thread has terminated. Else we may get race conditions all over the code...
+ * Note that when waiting for the thread to terminate, we do a busy wait, checking
+ * progress every 10ms. It is very unlikely that we will ever cancel a thread
+ * and, if so, it will only happen at the end of the rsyslog run. So doing this
+ * kind of not optimal wait is considered preferable over using condition variables.
  * rgerhards, 2008-02-26
  */
 rsRetVal
@@ -127,6 +132,10 @@ wtiCancelThrd(wti_t *pThis)
 	if(wtiGetState(pThis)) {
 		dbgoprint((obj_t*) pThis, "canceling worker thread\n");
 		pthread_cancel(pThis->thrdID);
+		/* now wait until the thread terminates... */
+		while(wtiGetState(pThis)) {
+			srSleep(0, 10000);
+		}
 	}
 
 	RETiRet;
