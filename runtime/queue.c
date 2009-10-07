@@ -1188,7 +1188,7 @@ tryShutdownWorkersWithinQueueTimeout(qqueue_t *pThis)
 		if(iRetLocal == RS_RET_TIMED_OUT) {
 			DBGOPRINT((obj_t*) pThis, "shutdown timed out on main queue DA worker pool (this is OK)\n");
 		} else {
-			DBGOPRINT((obj_t*) pThis, "main queue DA worker pool shut down.\n");
+			DBGOPRINT((obj_t*) pThis, "main queue DA worker pool shut down on first try.\n");
 		}
 	}
 
@@ -1247,13 +1247,31 @@ tryShutdownWorkersWithinActionTimeout(qqueue_t *pThis)
 			DBGOPRINT((obj_t*) pThis, "unexpected iRet state %d after trying immediate shutdown of the DA "
 				  "queue in disk save mode. Continuing, but results are unpredictable\n", iRetLocal);
 		}
+		/* and now we need to check the DA worker itself (the one that shuffles data to the disk). This
+		 * is necessary because we may be in a situation where the DA queue regular worker and the
+		 * main queue worker stopped rather quickly. In this case, there is almost no time (and
+		 * probably no thread switch!) between the point where we instructed the main queue DA
+		 * worker to shutdown and this code location. In consequence, it may not even have
+		 * noticed that it should should down, less acutally done this. So we provide it with a 
+		 * fixed 100ms timeout to try complete its work, what usually should be sufficient.
+		 * rgerhards, 2009-10-06
+		 */
+		timeoutComp(&tTimeout, 100);
+		DBGOPRINT((obj_t*) pThis, "last try for regular shutdown of main queue DA worker pool\n");
+		iRetLocal = wtpShutdownAll(pThis->pWtpDA, wtpState_SHUTDOWN_IMMEDIATE, &tTimeout);
+		if(iRetLocal == RS_RET_TIMED_OUT) {
+			DBGOPRINT((obj_t*) pThis, "shutdown timed out on main queue DA worker pool "
+					          "(this is not good, but probably OK)\n");
+		} else {
+			DBGOPRINT((obj_t*) pThis, "main queue DA worker pool shut down.\n");
+		}
 	}
 
 	RETiRet;
 }
 
 
-/* This function cancels all remenaing regular workers for both the main and the DA
+/* This function cancels all remaining regular workers for both the main and the DA
  * queue. The main queue's DA worker pool continues to run (if it exists and is active).
  * rgerhards, 2009-05-29
  */

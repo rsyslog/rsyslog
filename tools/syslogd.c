@@ -1733,8 +1733,6 @@ die(int sig)
 	 */
 	tplDeleteAll();
 
-	remove_pid(PidFile);
-
 	/* de-init some modules */
 	modExitIminternal();
 
@@ -1768,6 +1766,9 @@ die(int sig)
 	 */
 	freeAllDynMemForTermination();
 	/* NO CODE HERE - feeelAllDynMemForTermination() must be the last thing before exit()! */
+
+	remove_pid(PidFile);
+
 	exit(0); /* "good" exit, this is the terminator function for rsyslog [die()] */
 }
 

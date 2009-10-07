@@ -39,6 +39,11 @@ case $1 in
 		while test -f rsyslog.pid; do
 			true
 		done
+		if [ -e core.* ]
+		then
+		   echo "ABORT! core file exists, starting interactive shell"
+		   bash
+		fi
 		;;
    'wait-queueempty') # wait for main message queue to be empty
 		echo WaitMainQueueEmpty | java -classpath $abs_top_builddir DiagTalker
