@@ -43,6 +43,7 @@ case $1 in
 		then
 		   echo "ABORT! core file exists, starting interactive shell"
 		   bash
+		   exit 1
 		fi
 		;;
    'wait-queueempty') # wait for main message queue to be empty
