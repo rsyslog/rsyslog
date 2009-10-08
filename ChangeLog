@@ -2,6 +2,8 @@
 Version 4.5.5  [v4-beta] (rgerhards), 2009-09-??
 - added $InputTCPServerNotifyOnConnectionClose config directive
   see doc for details
+- bugfix: debug string larger than 1K were improperly displayed. Max size
+  is now 32K
 - bugfix: invalid storage class selected for some size config parameters.
   This resulted in wrong values. The most prominent victim was the
   directory creation mode, which was set to zero in some cases. For 
