@@ -86,6 +86,7 @@ rsRetVal tplToString(struct template *pTpl, msg_t *pMsg, uchar **ppBuf, size_t *
 	unsigned short bMustBeFreed;
 	uchar *pVal;
 	size_t iLenVal;
+int propid = -1;
 
 	assert(pTpl != NULL);
 	assert(pMsg != NULL);
@@ -101,10 +102,12 @@ rsRetVal tplToString(struct template *pTpl, msg_t *pMsg, uchar **ppBuf, size_t *
 	iBuf = 0;
 	while(pTpe != NULL) {
 		if(pTpe->eEntryType == CONSTANT) {
+propid = -1;
 			pVal = (uchar*) pTpe->data.constant.pConstant;
 			iLenVal = pTpe->data.constant.iLenConstant;
 			bMustBeFreed = 0;
 		} else 	if(pTpe->eEntryType == FIELD) {
+propid = pTpe->data.field.propid;
 			pVal = (uchar*) MsgGetProp(pMsg, pTpe, pTpe->data.field.propid, &iLenVal, &bMustBeFreed);
 			/* we now need to check if we should use SQL option. In this case,
 			 * we must go over the generated string and escape '\'' characters.
@@ -118,7 +121,8 @@ rsRetVal tplToString(struct template *pTpl, msg_t *pMsg, uchar **ppBuf, size_t *
 				doSQLEscape(&pVal, &iLenVal, &bMustBeFreed, 0);
 		}
 		/* got source, now copy over */
-		if(iBuf + iLenVal + 1 >= *pLenBuf) /* we reserve one char for the final \0! */
+dbgprintf("copying prop id %3d (entry type %d) of length %d ('%s')\n", propid, pTpe->eEntryType, (int) iLenVal, pVal);
+		if(iBuf + iLenVal >= *pLenBuf) /* we reserve one char for the final \0! */
 			CHKiRet(ExtendBuf(ppBuf, pLenBuf, iBuf + iLenVal + 1));
 
 		if(iLenVal > 0) { /* may be zero depending on property */
