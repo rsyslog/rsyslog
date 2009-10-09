@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 4.4.2  [v4-stable] (rgerhards), 2009-09-??
+Version 4.4.2  [v4-stable] (rgerhards), 2009-10-09
 - bugfix: invalid handling of zero-sized messages, could lead to mis-
   addressing and potential memory corruption/segfault
 - bugfix: zero-sized UDP messages are no longer processed
