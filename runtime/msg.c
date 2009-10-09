@@ -1177,7 +1177,7 @@ uchar *getMSG(msg_t *pM)
 	if(pM == NULL)
 		ret = UCHAR_CONSTANT("");
 	else {
-		if(pM->offMSG == -1)
+		if(pM->iLenMSG == 0)
 			ret = UCHAR_CONSTANT("");
 		else
 			ret = pM->pszRawMsg + pM->offMSG;
@@ -1953,12 +1953,20 @@ void MsgSetHOSTNAME(msg_t *pThis, uchar* pszHOSTNAME, int lenHOSTNAME)
 
 
 /* set the offset of the MSG part into the raw msg buffer
+ * Note that the offset may be higher than the length of the raw message 
+ * (exactly by one). This can happen if we have a message that does not 
+ * contain any MSG part.
  */
 void MsgSetMSGoffs(msg_t *pMsg, short offs)
 {
 	ISOBJ_TYPE_assert(pMsg, msg);
-	pMsg->iLenMSG = pMsg->iLenRawMsg - offs;
 	pMsg->offMSG = offs;
+	if(offs > pMsg->iLenRawMsg) {
+		assert(offs - 1 == pMsg->iLenRawMsg);
+		pMsg->iLenMSG = 0;
+	} else {
+		pMsg->iLenMSG = pMsg->iLenRawMsg - offs;
+	}
 }
 
 
@@ -1992,7 +2000,8 @@ rsRetVal MsgReplaceMSG(msg_t *pThis, uchar* pszMSG, int lenMSG)
 		pThis->pszRawMsg = bufNew;
 	}
 
-	memcpy(pThis->pszRawMsg + pThis->offMSG, pszMSG, lenMSG);
+	if(lenMSG > 0)
+		memcpy(pThis->pszRawMsg + pThis->offMSG, pszMSG, lenMSG);
 	pThis->pszRawMsg[lenNew] = '\0'; /* this also works with truncation! */
 	pThis->iLenRawMsg = lenNew;
 	pThis->iLenMSG = lenMSG;
