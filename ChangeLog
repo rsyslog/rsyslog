@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 5.3.2  [DEVEL] (rgerhards), 2009-10-??
+- bugfix: potential segfault on messages with empty MSG part. This was a
+  recently introduced regression.
 - bugfix: debug string larger than 1K were improperly displayed. Max size
   is now 32K, and if a string is even longer it is meaningful truncated.
 ---------------------------------------------------------------------------
