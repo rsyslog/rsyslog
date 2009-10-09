@@ -413,6 +413,7 @@ wtpAdviseMaxWorkers(wtp_t *pThis, int nMaxWrkr)
 
 	ISOBJ_TYPE_assert(pThis, wtp);
 
+int nMaxWrkrTmp = nMaxWrkr;
 	if(nMaxWrkr == 0)
 		FINALIZE;
 
@@ -420,6 +421,7 @@ wtpAdviseMaxWorkers(wtp_t *pThis, int nMaxWrkr)
 		nMaxWrkr = pThis->iNumWorkerThreads;
 
 	nMissing = nMaxWrkr - ATOMIC_FETCH_32BIT(pThis->iCurNumWrkThrd);
+dbgprintf("wtpAdviseMaxWorkers, nmax: %d, curr %d, missing %d\n", nMaxWrkrTmp, pThis->iNumWorkerThreads, nMissing);
 
 	if(nMissing > 0) {
 		DBGPRINTF("%s: high activity - starting %d additional worker thread(s).\n", wtpGetDbgHdr(pThis), nMissing);
@@ -428,6 +430,7 @@ wtpAdviseMaxWorkers(wtp_t *pThis, int nMaxWrkr)
 			CHKiRet(wtpStartWrkr(pThis));
 		}
 	} else {
+dbgprintf("YYY: adivse signal cond busy");
 		pthread_cond_signal(pThis->pcondBusy);
 	}
 

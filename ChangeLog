@@ -23,6 +23,12 @@ Version 5.3.0  [DEVEL] (rgerhards), 2009-09-14
 ---------------------------------------------------------------------------
 Version 5.1.6  [v5-beta] (rgerhards), 2009-09-??
 - feature imports from v4.5.6
+- bugfix: potential race condition when queue worker threads were
+  terminated
+- bugfix: solved potential (temporary) stall of messages when the queue was
+  almost empty and few new data added (caused testbench to sometimes hang!)
+- fixed some race condition in testbench
+- added more elaborate diagnostics to parts of the testbench
 - bugfixes imported from 4.5.4:
   * bugfix: potential segfault in stream writer on destruction
   * bugfix: potential race in object loader (obj.c) during use/release
@@ -177,6 +183,8 @@ Version 4.5.6  [v4-beta] (rgerhards), 2009-09-??
 Version 4.5.5  [v4-beta] (rgerhards), 2009-09-??
 - added $InputTCPServerNotifyOnConnectionClose config directive
   see doc for details
+- bugfix: debug string larger than 1K were improperly displayed. Max size
+  is now 32K
 - bugfix: invalid storage class selected for some size config parameters.
   This resulted in wrong values. The most prominent victim was the
   directory creation mode, which was set to zero in some cases. For 

@@ -9,7 +9,7 @@
 #valgrind="valgrind --tool=drd --log-fd=1"
 #valgrind="valgrind --tool=helgrind --log-fd=1"
 #set -o xtrace
-#export RSYSLOG_DEBUG="debug nostdout printmutexaction"
+#export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 #export RSYSLOG_DEBUGLOG="log"
 case $1 in
    'init')	$srcdir/killrsyslog.sh # kill rsyslogd if it runs for some reason
@@ -39,6 +39,12 @@ case $1 in
 		while test -f rsyslog.pid; do
 			true
 		done
+		if [ -e core.* ]
+		then
+		   echo "ABORT! core file exists, starting interactive shell"
+		   bash
+		   exit 1
+		fi
 		;;
    'wait-queueempty') # wait for main message queue to be empty
 		echo WaitMainQueueEmpty | java -classpath $abs_top_builddir DiagTalker

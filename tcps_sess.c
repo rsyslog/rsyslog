@@ -256,6 +256,7 @@ defaultDoSubmitMessage(tcps_sess_t *pThis, struct syslogTime *stTime, time_t ttG
 	CHKiRet(MsgSetRcvFromIP(pMsg, pThis->fromHostIP));
 	MsgSetRuleset(pMsg, pThis->pLstnInfo->pRuleset);
 
+dbgprintf("YYY: submitting msg to queue\n");
 	if(pMultiSub == NULL) {
 		CHKiRet(submitMsg(pMsg));
 	} else {

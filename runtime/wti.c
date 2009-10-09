@@ -114,7 +114,12 @@ wtiSetState(wti_t *pThis, bool bNewVal)
 
 
 /* Cancel the thread. If the thread is not running. But it is save and legal to
- * call wtiCancelThrd() in such situations.
+ * call wtiCancelThrd() in such situations. This function only returns when the
+ * thread has terminated. Else we may get race conditions all over the code...
+ * Note that when waiting for the thread to terminate, we do a busy wait, checking
+ * progress every 10ms. It is very unlikely that we will ever cancel a thread
+ * and, if so, it will only happen at the end of the rsyslog run. So doing this
+ * kind of not optimal wait is considered preferable over using condition variables.
  * rgerhards, 2008-02-26
  */
 rsRetVal
@@ -127,6 +132,11 @@ wtiCancelThrd(wti_t *pThis)
 	if(wtiGetState(pThis)) {
 		dbgoprint((obj_t*) pThis, "canceling worker thread\n");
 		pthread_cancel(pThis->thrdID);
+		/* now wait until the thread terminates... */
+		while(wtiGetState(pThis)) {
+//fprintf(stderr, "sleep loop for getState\n");
+			srSleep(0, 10000);
+		}
 	}
 
 	RETiRet;
@@ -214,9 +224,9 @@ doIdleProcessing(wti_t *pThis, wtp_t *pWtp, int *pbInactivityTOOccured)
 
 	pWtp->pfOnIdle(pWtp->pUsr, MUTEX_ALREADY_LOCKED);
 
-	d_pthread_mutex_lock(pWtp->pmutUsr);
 	if(pThis->bAlwaysRunning) {
 		/* never shut down any started worker */
+dbgprintf("YYY/ZZZ: wti Idle wait cond busy, mutex %p\n", pWtp->pmutUsr);
 		d_pthread_cond_wait(pWtp->pcondBusy, pWtp->pmutUsr);
 	} else {
 		timeoutComp(&t, pWtp->toWrkShutdown);/* get absolute timeout */
@@ -225,7 +235,6 @@ doIdleProcessing(wti_t *pThis, wtp_t *pWtp, int *pbInactivityTOOccured)
 			*pbInactivityTOOccured = 1; /* indicate we had a timeout */
 		}
 	}
-	d_pthread_mutex_unlock(pWtp->pmutUsr);
 	ENDfunc
 }
 
@@ -258,8 +267,10 @@ wtiWorker(wti_t *pThis)
 			pWtp->pfRateLimiter(pWtp->pUsr);
 		}
 		
+dbgprintf("YYY/ZZZ: pre lock mutex\n");
 		d_pthread_mutex_lock(pWtp->pmutUsr);
 
+dbgprintf("YYY/ZZZ: wti locks mutex %p\n", pWtp->pmutUsr);
 		/* first check if we are in shutdown process (but evaluate a bit later) */
 		terminateRet = wtpChkStopWrkr(pWtp, MUTEX_ALREADY_LOCKED);
 		if(terminateRet == RS_RET_TERMINATE_NOW) {
@@ -272,16 +283,23 @@ wtiWorker(wti_t *pThis)
 		}
 
 		/* try to execute and process whatever we have */
-		/* This function must and does RELEASE the MUTEX! */
+		/* Note that this function releases and re-aquires the mutex. The returned
+		 * information on idle state must be processed before releasing the mutex again.
+		 */
 		localRet = pWtp->pfDoWork(pWtp->pUsr, pThis);
 
+dbgprintf("YYY/ZZZ: wti loop locked mutex %p again\n", pWtp->pmutUsr);
 		if(localRet == RS_RET_IDLE) {
 			if(terminateRet == RS_RET_TERMINATE_WHEN_IDLE || bInactivityTOOccured) {
+				d_pthread_mutex_unlock(pWtp->pmutUsr);
 				break;	/* end of loop */
 			}
 			doIdleProcessing(pThis, pWtp, &bInactivityTOOccured);
+			d_pthread_mutex_unlock(pWtp->pmutUsr);
 			continue; /* request next iteration */
 		}
+
+		d_pthread_mutex_unlock(pWtp->pmutUsr);
 
 		bInactivityTOOccured = 0; /* reset for next run */
 	}

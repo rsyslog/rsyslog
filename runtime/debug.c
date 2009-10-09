@@ -840,7 +840,7 @@ do_dbgprint(uchar *pszObjName, char *pszMsg, size_t lenMsg)
 	static pthread_t ptLastThrdID = 0;
 	static int bWasNL = 0;
 	char pszThrdName[64]; /* 64 is to be on the safe side, anything over 20 is bad... */
-	char pszWriteBuf[1024];
+	char pszWriteBuf[32*1024];
 	size_t lenWriteBuf;
 	struct timespec t;
 

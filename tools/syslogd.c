@@ -1205,8 +1205,6 @@ int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 	assert(pMsg != NULL);
 	assert(pMsg->pszRawMsg != NULL);
 	lenMsg = pMsg->iLenRawMsg - (pMsg->offAfterPRI + 1);
-RUNLOG_VAR("%d", pMsg->offAfterPRI);
-RUNLOG_VAR("%d", lenMsg);
 	p2parse = pMsg->pszRawMsg + pMsg->offAfterPRI; /* point to start of text, after PRI */
 
 	/* Check to see if msg contains a timestamp. We start by assuming
@@ -1262,16 +1260,16 @@ RUNLOG_VAR("%d", lenMsg);
 		bTAGCharDetected = 0;
 		if(lenMsg > 0 && flags & PARSE_HOSTNAME) {
 			i = 0;
-			while(lenMsg > 0 && (isalnum(p2parse[i]) || p2parse[i] == '.' || p2parse[i] == '.'
+			while(i < lenMsg && (isalnum(p2parse[i]) || p2parse[i] == '.' || p2parse[i] == '.'
 				|| p2parse[i] == '_' || p2parse[i] == '-') && i < CONF_TAG_MAXSIZE) {
 				bufParseHOSTNAME[i] = p2parse[i];
 				++i;
-				--lenMsg;
 			}
 
 			if(i > 0 && p2parse[i] == ' ' && isalnum(p2parse[i-1])) {
 				/* we got a hostname! */
 				p2parse += i + 1; /* "eat" it (including SP delimiter) */
+				lenMsg -= i + 1;
 				bufParseHOSTNAME[i] = '\0';
 				MsgSetHOSTNAME(pMsg, bufParseHOSTNAME, i);
 			}
@@ -1738,8 +1736,6 @@ die(int sig)
 	 */
 	tplDeleteAll();
 
-	remove_pid(PidFile);
-
 	/* de-init some modules */
 	modExitIminternal();
 
@@ -1773,6 +1769,9 @@ die(int sig)
 	 */
 	freeAllDynMemForTermination();
 	/* NO CODE HERE - feeelAllDynMemForTermination() must be the last thing before exit()! */
+
+	remove_pid(PidFile);
+
 	exit(0); /* "good" exit, this is the terminator function for rsyslog [die()] */
 }
 

@@ -259,6 +259,7 @@ processSocket(int fd, struct sockaddr_storage *frominetPrev, int *pbIsPermitted,
 			pMsg->bParseHOSTNAME = 1;
 			MsgSetRcvFromStr(pMsg, fromHost, ustrlen(fromHost), &propFromHost);
 			CHKiRet(MsgSetRcvFromIPStr(pMsg, fromHostIP, ustrlen(fromHostIP), &propFromHostIP));
+dbgprintf("XXX: submitting msg to queue\n");
 			CHKiRet(submitMsg(pMsg));
 		}
 	}

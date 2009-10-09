@@ -47,6 +47,7 @@
 #include <signal.h>
 #include <netinet/in.h>
 #include <getopt.h>
+#include <errno.h>
 
 #define EXIT_FAILURE 1
 #define INVALID_SOCKET -1
@@ -90,6 +91,7 @@ void readLine(int fd, char *ln)
 	if(verbose)
 		fprintf(stderr, "begin readLine\n");
 	lenRead = read(fd, &c, 1);
+
 	while(lenRead == 1 && c != '\n') {
 		if(c == '\0') {
 			*ln = c;
@@ -101,6 +103,11 @@ void readLine(int fd, char *ln)
 		lenRead = read(fd, &c, 1);
 	}
 	*ln = '\0';
+
+	if(lenRead < 0) {
+		printf("read from rsyslogd returned with error '%s' - aborting test\n", strerror(errno));
+		exit(1);
+	}
 
 	if(verbose)
 		fprintf(stderr, "end readLine, val read '%s'\n", orig);
@@ -308,6 +315,10 @@ processTestFile(int fd, char *pszFileName)
 
 		/* pull response from server and then check if it meets our expectation */
 		readLine(fd, buf);
+		if(strlen(buf) == 0) {
+			printf("something went wrong - read a zero-length string from rsyslogd");
+			exit(1);
+		}
 		if(strcmp(expected, buf)) {
 			++iFailed;
 			printf("\nExpected Response:\n'%s'\nActual Response:\n'%s'\n",
@@ -372,10 +383,23 @@ doTests(int fd, char *files)
 	return(iFailed);
 }
 
+
+/* indicate that our child has died (where it is not permitted to!).
+ */
+void childDied(__attribute__((unused)) int sig)
+{
+	printf("ERROR: child died unexpectedly (maybe a segfault?)!\n");
+	exit(1);
+}
+
+
 /* cleanup */
 void doAtExit(void)
 {
 	int status;
+
+	/* disarm died-child handler */
+	signal(SIGCHLD, SIG_IGN);
 
 	if(rsyslogdPid != 0) {
 		kill(rsyslogdPid, SIGTERM);
@@ -457,6 +481,9 @@ int main(int argc, char *argv[])
 	}
 	fclose(fp);
 
+	/* arm died-child handler */
+	signal(SIGCHLD, childDied);
+
 	/* start to be tested rsyslogd */
 	openPipe(testSuite, &rsyslogdPid, &fd);
 	readLine(fd, buf);
@@ -467,5 +494,6 @@ int main(int argc, char *argv[])
 		ret = 1;
 
 	if(verbose) printf("End of nettester run (%d).\n", ret);
+
 	exit(ret);
 }

@@ -7,7 +7,7 @@
 # check everything recovers from DA mode correctly.
 # added 2009-04-22 by Rgerhards
 # This file is part of the rsyslog project, released  under GPLv3
-echo "testing main message queue in DA mode (going to disk)"
+echo "[da-mainmsg-q.sh]: testing main message queue in DA mode (going to disk)"
 source $srcdir/diag.sh init
 source $srcdir/diag.sh startup da-mainmsg-q.conf
 
