@@ -231,38 +231,15 @@ CODESTARTrunInput
 		 * 	logs an error message as syslogd, just as printf, e.g.
 		 *         errmsg.LogError(NO_ERRCODE, "Error %d occured during %s", 1, "test");
 		 *
-		 * There are several ways how a message can be enqueued. This part of the
-		 * interface is currently underspecified. Have a look at the function definitions
-		 * in syslogd.c (sorry, folks...).
-		 *
-		 * If you received a full syslog message that must be decoded by a message
-		 * parser, parseAndSubmitMessage() is the way to go. It's not just a funny name
-		 * but also a quite some legacy. Consequently, its interface is, ummm, not
-		 * well designed.
-		 *     parseAndSubmitMessage((char*)fromHost, (char*) pRcvBuf, lenRcvd, bParseHost);
-		 *     fromHost
-		 *     	 is the host that we received the message from (a string)
-		 *     pRcvBuf
-		 *     	 is the received (to-be-decoded) message
-		 *     lenRcvd
-		 *       is the length of the received message. Please note that pRcvBuf is
-		 *       NOT a standard C-string. Most importantly it is NOT expected to be
-		 *       \0-terminated. Thus the lenght is vitally imporant (if it is wrong,
-		 *       rsyslogd will probably segfault).
-		 *     bParseHost
-		 *       is a boolean (0-no, 1-yes). It tells the parser whether or not
-		 *       a hostname should be parsed from the message. This is important
-		 *       for sources that are known not to provide a hostname.
-		 *       Use define MSG_PARSE_HOSTNAME and MSG_DONT_PARSE_HOSTNAME
-		 *
-		 * Another, more elaborate, way is to create the message object ourselves and
-		 * pass it to the rule engine. That way is more appropriate if the message 
+		 * To submit the message to the queue engine, we must create the message
+		 * object and fill it with data. If it contains a syslog message that must
+		 * be parsed, we can add a flag that requests parsing. Otherwise, we must
+		 * fill the properties ourselves. That is appropriate if the message 
 		 * does not need to be parsed, for example when reading text (log) files. In that way,
 		 * we can set the message properties as of our liking. This is how it works:
 		 *
 		msg_t *pMsg;
 		CHKiRet(msgConstruct(&pMsg));
-		MsgSetUxTradMsg(pMsg, msg);
 		MsgSetRawMsg(pMsg, msg);
 		MsgSetHOSTNAME(pMsg, LocalHostName);
 		MsgSetTAG(pMsg, "rsyslogd:");
@@ -272,8 +249,8 @@ CODESTARTrunInput
 		flags |= INTERNAL_MSG;
 		logmsg(pMsg, flags); / * some time, CHKiRet() will work here, too [today NOT!] * /
 		 * 
-		 * Note that UxTradMsg is a wild construct. For the time being, set it to
-		 * the raw message text. I am hard thinking at dropping that beast at all...
+		 * NOTE: for up-to-date usage samples, see the other provided input modules.
+		 * A good starting point is probably imuxsock.
 		 *
 		 * This example probably does not set all message properties (but the ones
 		 * that are of practical importance). If you need all, check msg.h. Use
