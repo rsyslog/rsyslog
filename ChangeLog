@@ -15,6 +15,7 @@ Version 5.3.1  [DEVEL] (rgerhards), 2009-10-05
   has been removed/changed during the previous restructuring events.
   In any case, if there is a shutdown issue, one should carefully look
   at this change here!
+- enhanced immark to support non-cancel input module termination
 - some cleanup/slight improvement:
   * changed imuxsock to no longer use deprecated submitAndParseMsg() IF
   * changed submitAndParseMsg() interface to be a wrapper around the new
