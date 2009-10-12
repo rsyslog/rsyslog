@@ -3,6 +3,18 @@ Version 5.3.1  [DEVEL] (rgerhards), 2009-10-05
 - added $AbortOnUncleanConfig directive - permits to prevent startup when
   there are problems with the configuration file. See it's doc for
   details.
+- re-enabled input thread termination handling that does avoid thread
+  cancellation where possible. This provides a more reliable mode of
+  rsyslogd termination (canceling threads my result in not properly
+  freed resouces and potential later hangs, even though we perform
+  proper cancel handling in our code). This is part of an effort to
+  reduce thread cnacellation as much as possible in rsyslog.
+  NOTE: some comments indicated that there were problems with some code
+  that has been re-activated. Testing did not show any issues. My current
+  assumption is that these issues were related to some other code that
+  has been removed/changed during the previous restructuring events.
+  In any case, if there is a shutdown issue, one should carefully look
+  at this change here!
 - some cleanup/slight improvement:
   * changed imuxsock to no longer use deprecated submitAndParseMsg() IF
   * changed submitAndParseMsg() interface to be a wrapper around the new

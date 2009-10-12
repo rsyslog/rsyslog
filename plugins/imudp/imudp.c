@@ -336,6 +336,9 @@ rsRetVal rcvMainLoop()
 		nfds = epoll_wait(efd, currEvt, NUM_EPOLL_EVENTS, -1);
 		DBGPRINTF("imudp: epoll_wait() returned with %d fds\n", nfds);
 
+		if(glbl.GetGlobalInputTermState() == 1)
+			break; /* terminate input! */
+
 		for(i = 0 ; i < nfds ; ++i) {
 			processSocket(currEvt[i].data.fd, &frominetPrev, &bIsPermitted,
 				      fromHost, fromHostFQDN, fromHostIP);
@@ -343,6 +346,9 @@ rsRetVal rcvMainLoop()
 	}
 
 finalize_it:
+	if(udpEPollEvt != NULL)
+		free(udpEPollEvt);
+
 	RETiRet;
 }
 #else /* #if HAVE_EPOLL_CREATE1 */

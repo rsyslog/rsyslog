@@ -92,19 +92,14 @@ rsRetVal thrdTerminate(thrdInfo_t *pThis)
 	DEFiRet;
 	assert(pThis != NULL);
 	
-#if 0 // TODO: somehow does not really work yet!
 	if(pThis->bNeedsCancel) {
-#endif
 		DBGPRINTF("request term via canceling for input thread 0x%x\n", (unsigned) pThis->thrdID);
 		pthread_cancel(pThis->thrdID);
-#if 0 // TODO: somehow does not really work yet!
-	if(pThis->bNeedsCancel) {
 	} else {
 
 		DBGPRINTF("request term via SIGTTIN for input thread 0x%x\n", (unsigned) pThis->thrdID);
 		pthread_kill(pThis->thrdID, SIGTTIN);
 	}
-#endif
 	pthread_join(pThis->thrdID, NULL); /* wait for input thread to complete */
 	pThis->bIsActive = 0;
 
