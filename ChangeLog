@@ -5,6 +5,11 @@ Version 5.3.1  [DEVEL] (rgerhards), 2009-10-05
   details.
 - some cleanup/slight improvement:
   * changed imuxsock to no longer use deprecated submitAndParseMsg() IF
+  * changed submitAndParseMsg() interface to be a wrapper around the new
+    way of message creation/submission. This enables older plugins to be
+    used together with the new interface. The removal also enables us to
+    drop a lot of duplicate code, reducing complexity and increasing
+    maintainibility.
 - included some important fixes from v4-stable:
   * bugfix: invalid handling of zero-sized messages
   * bugfix: zero-sized UDP messages are no longer processed

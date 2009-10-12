@@ -160,18 +160,6 @@ DEFobjCurrIf(net) /* TODO: make go away! */
 static rsRetVal GlobalClassExit(void);
 
 
-#ifndef UTMP_FILE
-#ifdef UTMP_FILENAME
-#define UTMP_FILE UTMP_FILENAME
-#else
-#ifdef _PATH_UTMP
-#define UTMP_FILE _PATH_UTMP
-#else
-#define UTMP_FILE "/etc/utmp"
-#endif
-#endif
-#endif
-
 #ifndef _PATH_LOGCONF 
 #define _PATH_LOGCONF	"/etc/rsyslog.conf"
 #endif
@@ -524,52 +512,21 @@ void untty(void)
 #endif
 
 
-/* Take a raw input line, decode the message, and print the message
- * on the appropriate log files.
- * rgerhards 2004-11-08: Please note
- * that this function does only a partial decoding. At best, it splits 
- * the PRI part. No further decode happens. The rest is done in 
- * logmsg().
- * Added the iSource parameter so that we know if we have to parse
- * HOSTNAME or not. rgerhards 2004-11-16.
- * changed parameter iSource to bParseHost. For details, see comment in
- * printchopped(). rgerhards 2005-10-06
- * rgerhards: 2008-03-06: added "flags" to allow an input module to specify
- * flags, most importantly to request ignoring the messages' timestamp.
- *
- * rgerhards, 2008-03-19:
- * I added an additional calling parameter to permit specifying the flow
- * control capability of the source.
- *
- * rgerhards, 2008-05-16:
- * I added an additional calling parameter (hnameIP) to enable specifying the IP
- * of a remote host.
- *
- * rgerhards, 2008-09-11:
- * Interface change: added new parameter "InputName", permits the input to provide 
- * a string that identifies it. May be NULL, but must be a valid char* pointer if
- * non-NULL.
- *
- * rgerhards, 2008-10-06:
- * Interface change: added new parameter "stTime", which enables the caller to provide
- * a timestamp that is to be used as timegenerated instead of the current system time.
- * This is meant to facilitate performance optimization. Some inputs support such modes.
- * If stTime is NULL, the current system time is used.
- *
- * rgerhards, 2008-10-09:
- * interface change: bParseHostname removed, now in flags
+/* This takes a received message that must be decoded and submits it to
+ * the main message queue. This is a legacy function which is being provided
+ * to aid older input plugins that do not support message creation via
+ * the new interfaces themselves. It is not recommended to use this
+ * function for new plugins. -- rgerhards, 2009-10-12
  */
-static inline rsRetVal printline(uchar *hname, uchar *hnameIP, uchar *msg, int flags, flowControl_t flowCtlType,
+rsRetVal
+parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int flags, flowControl_t flowCtlType,
 	prop_t *pInputName, struct syslogTime *stTime, time_t ttGenTime)
 {
-	DEFiRet;
-	register uchar *p;
-	int pri;
+	prop_t *pProp = NULL;
 	msg_t *pMsg;
-	prop_t *propFromHost = NULL;
-	prop_t *propFromHostIP = NULL;
+	DEFiRet;
 
-	/* Now it is time to create the message object (rgerhards) */
+	/* we now create our own message object and submit it to the queue */
 	if(stTime == NULL) {
 		CHKiRet(msgConstruct(&pMsg));
 	} else {
@@ -577,274 +534,17 @@ static inline rsRetVal printline(uchar *hname, uchar *hnameIP, uchar *msg, int f
 	}
 	if(pInputName != NULL)
 		MsgSetInputName(pMsg, pInputName);
+	MsgSetRawMsg(pMsg, (char*)msg, len);
 	MsgSetFlowControlType(pMsg, flowCtlType);
-	MsgSetRawMsgWOSize(pMsg, (char*)msg);
-	
-	/* test for special codes */
-	pri = DEFUPRI;
-	p = msg;
-	if (*p == '<') {
-		pri = 0;
-		while (isdigit((int) *++p))
-		{
-		   pri = 10 * pri + (*p - '0');
-		}
-		if (*p == '>')
-			++p;
-	}
-	if (pri &~ (LOG_FACMASK|LOG_PRIMASK))
-		pri = DEFUPRI;
-	pMsg->iFacility = LOG_FAC(pri);
-	pMsg->iSeverity = LOG_PRI(pri);
+	pMsg->msgFlags  = flags | NEEDS_PARSING;
 
-	/* Now we look at the HOSTNAME. That is a bit complicated...
-	 * If we have a locally received message, it does NOT
-	 * contain any hostname information in the message itself.
-	 * As such, the HOSTNAME is the same as the system that
-	 * the message was received from (that, for obvious reasons,
-	 * being the local host).  rgerhards 2004-11-16
-	 */
-	if((pMsg->msgFlags & PARSE_HOSTNAME) == 0)
-		MsgSetHOSTNAME(pMsg, hname, ustrlen(hname));
-	MsgSetRcvFromStr(pMsg, hname, ustrlen(hname), &propFromHost);
-	CHKiRet(MsgSetRcvFromIPStr(pMsg, hnameIP, ustrlen(hnameIP), &propFromHostIP));
-	MsgSetAfterPRIOffs(pMsg, p - msg);
-	prop.Destruct(&propFromHost);
-	prop.Destruct(&propFromHostIP);
-
-	logmsg(pMsg, flags);
+	MsgSetRcvFromStr(pMsg, hname, ustrlen(hname), &pProp);
+	CHKiRet(prop.Destruct(&pProp));
+	CHKiRet(MsgSetRcvFromIPStr(pMsg, hnameIP, ustrlen(hnameIP), &pProp));
+	CHKiRet(prop.Destruct(&pProp));
+	CHKiRet(submitMsg(pMsg));
 
 finalize_it:
-	RETiRet;
-}
-
-
-/* This takes a received message that must be decoded and submits it to
- * the main message queue. The function calls the necessary parser.
- *
- * rgerhards, 2006-11-30: I have greatly changed this function. Formerly,
- * it tried to reassemble multi-part messages, which is a legacy stock
- * sysklogd concept. In essence, that was that messages not ending with
- * \0 were glued together. As far as I can see, this is a sysklogd
- * specific feature and, from looking at the code, seems to be used
- * pretty seldom (if at all). I remove this now, not the least because it is totally
- * incompatible with upcoming IETF syslog standards. If you experience
- * strange behaviour with messages beeing split across multiple lines,
- * this function here might be the place to look at.
- *
- * Some previous history worth noting:
- * I added the "iSource" parameter. This is needed to distinguish between
- * messages that have a hostname in them (received from the internet) and
- * those that do not have (most prominently /dev/log).  rgerhards 2004-11-16
- * And now I removed the "iSource" parameter and changed it to be "bParseHost",
- * because all that it actually controls is whether the host is parsed or not.
- * For rfc3195 support, we needed to modify the algo for host parsing, so we can
- * no longer rely just on the source (rfc3195d forwarded messages arrive via
- * unix domain sockets but contain the hostname). rgerhards, 2005-10-06
- *
- * rgerhards, 2008-02-18:
- * This function was previously called "printchopped"() and has been renamed
- * as part of the effort to create a clean internal message submission interface.
- * It also has been adopted to our usual calling interface, but currently does
- * not provide any useful return states. But we now have the hook and things can
- * improve in the future. <-- TODO!
- *
- * rgerhards, 2008-03-19:
- * I added an additional calling parameter to permit specifying the flow
- * control capability of the source.
- *
- * rgerhards, 2008-05-16:
- * I added an additional calling parameter (hnameIP) to enable specifying the IP
- * of a remote host.
- *
- * rgerhards, 2008-09-11:
- * Interface change: added new parameter "InputName", permits the input to provide 
- * a string that identifies it. May be NULL, but must be a valid char* pointer if
- * non-NULL.
- *
- * rgerhards, 2008-10-06:
- * Interface change: added new parameter "stTime", which enables the caller to provide
- * a timestamp that is to be used as timegenerated instead of the current system time.
- * This is meant to facilitate performance optimization. Some inputs support such modes.
- * If stTime is NULL, the current system time is used.
- *
- * rgerhards, 2008-10-09:
- * interface change: bParseHostname removed, now in flags
- */
-rsRetVal
-parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int flags, flowControl_t flowCtlType,
-	prop_t *pInputName, struct syslogTime *stTime, time_t ttGenTime)
-{
-	DEFiRet;
-	register int iMsg;
-	uchar *pMsg;
-	uchar *pData;
-	uchar *pEnd;
-	int iMaxLine;
-	uchar *tmpline = NULL;
-#	ifdef USE_NETZIP
-	uchar *deflateBuf = NULL;
-	uLongf iLenDefBuf;
-#	endif
-
-	assert(hname != NULL);
-	assert(hnameIP != NULL);
-	assert(msg != NULL);
-	assert(len >= 0);
-
-	/* we first allocate work buffers large enough to hold the configured maximum
-	 * size of a message. Over time, we should change this to a more optimal way, i.e.
-	 * by calling the function with the actual length of the message to be parsed.
-	 * rgerhards, 2008-09-02
-	 *
-	 * TODO: optimize buffer handling */
-	iMaxLine = glbl.GetMaxLine();
-	CHKmalloc(tmpline = malloc(sizeof(uchar) * (iMaxLine + 1)));
-
-	/* we first check if we have a NUL character at the very end of the
-	 * message. This seems to be a frequent problem with a number of senders.
-	 * So I have now decided to drop these NULs. However, if they are intentional,
-	 * that may cause us some problems, e.g. with syslog-sign. On the other hand,
-	 * current code always has problems with intentional NULs (as it needs to escape
-	 * them to prevent problems with the C string libraries), so that does not
-	 * really matter. Just to be on the save side, we'll log destruction of such
-	 * NULs in the debug log.
-	 * rgerhards, 2007-09-14
-	 */
-	if(*(msg + len - 1) == '\0') {
-		DBGPRINTF("dropped NUL at very end of message\n");
-		len--;
-	}
-
-	/* then we check if we need to drop trailing LFs, which often make
-	 * their way into syslog messages unintentionally. In order to remain
-	 * compatible to recent IETF developments, we allow the user to
-	 * turn on/off this handling.  rgerhards, 2007-07-23
-	 */
-	if(bDropTrailingLF && *(msg + len - 1) == '\n') {
-		DBGPRINTF("dropped LF at very end of message (DropTrailingLF is set)\n");
-		len--;
-	}
-
-	iMsg = 0;	/* initialize receiving buffer index */
-	pMsg = tmpline; /* set receiving buffer pointer */
-	pData = msg;	/* set source buffer pointer */
-	pEnd = msg + len; /* this is one off, which is intensional */
-
-#	ifdef USE_NETZIP
-	/* we first need to check if we have a compressed record. If so,
-	 * we must decompress it.
-	 */
-	if(len > 0 && *msg == 'z') { /* compressed data present? (do NOT change order if conditions!) */
-		/* we have compressed data, so let's deflate it. We support a maximum
-		 * message size of iMaxLine. If it is larger, an error message is logged
-		 * and the message is dropped. We do NOT try to decompress larger messages
-		 * as such might be used for denial of service. It might happen to later
-		 * builds that such functionality be added as an optional, operator-configurable
-		 * feature.
-		 */
-		int ret;
-		iLenDefBuf = iMaxLine;
-		CHKmalloc(deflateBuf = malloc(sizeof(uchar) * (iMaxLine + 1)));
-		ret = uncompress((uchar *) deflateBuf, &iLenDefBuf, (uchar *) msg+1, len-1);
-		DBGPRINTF("Compressed message uncompressed with status %d, length: new %ld, old %d.\n",
-		        ret, (long) iLenDefBuf, len-1);
-		/* Now check if the uncompression worked. If not, there is not much we can do. In
-		 * that case, we log an error message but ignore the message itself. Storing the
-		 * compressed text is dangerous, as it contains control characters. So we do
-		 * not do this. If someone would like to have a copy, this code here could be
-		 * modified to do a hex-dump of the buffer in question. We do not include
-		 * this functionality right now.
-		 * rgerhards, 2006-12-07
-		 */
-		if(ret != Z_OK) {
-			errmsg.LogError(0, NO_ERRCODE, "Uncompression of a message failed with return code %d "
-			            "- enable debug logging if you need further information. "
-				    "Message ignored.", ret);
-			FINALIZE; /* unconditional exit, nothing left to do... */
-		}
-		pData = deflateBuf;
-		pEnd = deflateBuf + iLenDefBuf;
-	}
-#	else /* ifdef USE_NETZIP */
-	/* in this case, we still need to check if the message is compressed. If so, we must
-	 * tell the user we can not accept it.
-	 */
-	if(len > 0 && *msg == 'z') {
-		errmsg.LogError(0, NO_ERRCODE, "Received a compressed message, but rsyslogd does not have compression "
-		         "support enabled. The message will be ignored.");
-		FINALIZE;
-	}	
-#	endif /* ifdef USE_NETZIP */
-
-	while(pData < pEnd) {
-		if(iMsg >= iMaxLine) {
-			/* emergency, we now need to flush, no matter if
-			 * we are at end of message or not...
-			 */
-			if(iMsg == iMaxLine) {
-				*(pMsg + iMsg) = '\0'; /* space *is* reserved for this! */
-				printline(hname, hnameIP, tmpline, flags, flowCtlType, pInputName, stTime, ttGenTime);
-			} else {
-				/* This case in theory never can happen. If it happens, we have
-				 * a logic error. I am checking for it, because if I would not,
-				 * we would address memory invalidly with the code above. I
-				 * do not care much about this case, just a debug log entry
-				 * (I couldn't do any more smart things anyway...).
-				 * rgerhards, 2007-9-20
-				 */
-				DBGPRINTF("internal error: iMsg > max msg size in printchopped()\n");
-			}
-			FINALIZE; /* in this case, we are done... nothing left we can do */
-		}
-		if(*pData == '\0') { /* guard against \0 characters... */
-			/* changed to the sequence (somewhat) proposed in
-			 * draft-ietf-syslog-protocol-19. rgerhards, 2006-11-30
-			 */
-			if(iMsg + 3 < iMaxLine) { /* do we have space? */
-				*(pMsg + iMsg++) =  cCCEscapeChar;
-				*(pMsg + iMsg++) = '0';
-				*(pMsg + iMsg++) = '0';
-				*(pMsg + iMsg++) = '0';
-			} /* if we do not have space, we simply ignore the '\0'... */
-			  /* log an error? Very questionable... rgerhards, 2006-11-30 */
-			  /* decided: we do not log an error, it won't help... rger, 2007-06-21 */
-			++pData;
-		} else if(bEscapeCCOnRcv && iscntrl((int) *pData)) {
-			/* we are configured to escape control characters. Please note
-			 * that this most probably break non-western character sets like
-			 * Japanese, Korean or Chinese. rgerhards, 2007-07-17
-			 * Note: sysklogd logs octal values only for DEL and CCs above 127.
-			 * For others, it logs ^n where n is the control char converted to an
-			 * alphabet character. We like consistency and thus escape it to octal
-			 * in all cases. If someone complains, we may change the mode. At least
-			 * we known now what's going on.
-			 * rgerhards, 2007-07-17
-			 */
-			if(iMsg + 3 < iMaxLine) { /* do we have space? */
-				*(pMsg + iMsg++) = cCCEscapeChar;
-				*(pMsg + iMsg++) = '0' + ((*pData & 0300) >> 6);
-				*(pMsg + iMsg++) = '0' + ((*pData & 0070) >> 3);
-				*(pMsg + iMsg++) = '0' + ((*pData & 0007));
-			} /* again, if we do not have space, we ignore the char - see comment at '\0' */
-			++pData;
-		} else {
-			*(pMsg + iMsg++) = *pData++;
-		}
-	}
-
-	*(pMsg + iMsg) = '\0'; /* space *is* reserved for this! */
-
-	/* typically, we should end up here! */
-	printline(hname, hnameIP, tmpline, flags, flowCtlType, pInputName, stTime, ttGenTime);
-
-finalize_it:
-	if(tmpline != NULL)
-		free(tmpline);
-#	ifdef USE_NETZIP
-	if(deflateBuf != NULL)
-		free(deflateBuf);
-#	endif
 	RETiRet;
 }
 
