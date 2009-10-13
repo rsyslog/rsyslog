@@ -19,7 +19,13 @@ $srcdir/diag.sh shutdown-immediate
 $srcdir/diag.sh wait-shutdown
 source $srcdir/diag.sh check-mainq-spool
 
+echo "Enter phase 2, rsyslogd restart"
+
 #exit
+
+export RSYSLOG_DEBUG="debug nostdout printmutexaction"
+export RSYSLOG_DEBUGLOG="log"
+#valgrind="valgrind --tool=helgrind --log-fd=1"
 
 # restart engine and have rest processed
 #remove delay

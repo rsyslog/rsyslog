@@ -273,7 +273,9 @@ dbgprintf("YYY/ZZZ: pre lock mutex\n");
 dbgprintf("YYY/ZZZ: wti locks mutex %p\n", pWtp->pmutUsr);
 		/* first check if we are in shutdown process (but evaluate a bit later) */
 		terminateRet = wtpChkStopWrkr(pWtp, MUTEX_ALREADY_LOCKED);
+RUNLOG;
 		if(terminateRet == RS_RET_TERMINATE_NOW) {
+RUNLOG;
 			/* we now need to free the old batch */
 			localRet = pWtp->pfObjProcessed(pWtp->pUsr, pThis);
 			dbgoprint((obj_t*) pThis, "terminating worker because of TERMINATE_NOW mode, del iRet %d\n",
@@ -281,6 +283,7 @@ dbgprintf("YYY/ZZZ: wti locks mutex %p\n", pWtp->pmutUsr);
 			d_pthread_mutex_unlock(pWtp->pmutUsr);
 			break;
 		}
+RUNLOG;
 
 		/* try to execute and process whatever we have */
 		/* Note that this function releases and re-aquires the mutex. The returned
@@ -290,27 +293,39 @@ dbgprintf("YYY/ZZZ: wti locks mutex %p\n", pWtp->pmutUsr);
 
 dbgprintf("YYY/ZZZ: wti loop locked mutex %p again\n", pWtp->pmutUsr);
 		if(localRet == RS_RET_IDLE) {
+RUNLOG;
 			if(terminateRet == RS_RET_TERMINATE_WHEN_IDLE || bInactivityTOOccured) {
 				d_pthread_mutex_unlock(pWtp->pmutUsr);
 				break;	/* end of loop */
 			}
+RUNLOG;
 			doIdleProcessing(pThis, pWtp, &bInactivityTOOccured);
+RUNLOG;
 			d_pthread_mutex_unlock(pWtp->pmutUsr);
+RUNLOG;
 			continue; /* request next iteration */
 		}
 
+RUNLOG;
 		d_pthread_mutex_unlock(pWtp->pmutUsr);
 
 		bInactivityTOOccured = 0; /* reset for next run */
 	}
 
 	/* indicate termination */
+RUNLOG;
 	d_pthread_mutex_lock(pWtp->pmutUsr);
+RUNLOG;
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
+RUNLOG;
 	pthread_cleanup_pop(0); /* remove cleanup handler */
+RUNLOG;
 	pWtp->pfOnWorkerShutdown(pWtp->pUsr);
+RUNLOG;
 	pthread_setcancelstate(iCancelStateSave, NULL);
+RUNLOG;
 	d_pthread_mutex_unlock(pWtp->pmutUsr);
+RUNLOG;
 
 	RETiRet;
 }

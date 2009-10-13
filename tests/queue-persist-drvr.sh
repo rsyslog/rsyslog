@@ -24,5 +24,6 @@ source $srcdir/diag.sh check-mainq-spool
 echo "#" > work-delay.conf
 source $srcdir/diag.sh startup queue-persist.conf
 source $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
+$srcdir/diag.sh wait-shutdown
 source $srcdir/diag.sh seq-check 0 4999
 source $srcdir/diag.sh exit

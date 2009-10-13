@@ -631,7 +631,7 @@ finalize_it:
  * for the main queue.
  */
 static rsRetVal
-msgConsumer(void __attribute__((unused)) *notNeeded, batch_t *pBatch)
+msgConsumer(void __attribute__((unused)) *notNeeded, batch_t *pBatch, int *pbShutdownImmediate)
 {
 	int i;
 	msg_t *pMsg;
@@ -639,7 +639,7 @@ msgConsumer(void __attribute__((unused)) *notNeeded, batch_t *pBatch)
 
 	assert(pBatch != NULL);
 
-	for(i = 0 ; i < pBatch->nElem ; i++) {
+	for(i = 0 ; i < pBatch->nElem  && !*pbShutdownImmediate ; i++) {
 		pMsg = (msg_t*) pBatch->pElem[i].pUsrp;
 		DBGPRINTF("msgConsumer processes msg %d/%d\n", i, pBatch->nElem);
 		if((pMsg->msgFlags & NEEDS_PARSING) != 0) {
