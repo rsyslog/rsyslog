@@ -46,8 +46,6 @@
 #include "errmsg.h"
 #include "unicode-helper.h"
 
-static rsRetVal debugPrintAll(void); // TODO: remove!
-
 /* static data */
 DEFobjStaticHelpers
 DEFobjCurrIf(errmsg)
@@ -161,12 +159,9 @@ processMsg(msg_t *pMsg)
 	CHKiRet(llExecFunc(&pThis->llRules, processMsgDoRules, pMsg));
 
 finalize_it:
-
-	//if(iRet == RS_RET_DISCARDMSG)
-		//iRet = RS_RET_OK;
-
 	RETiRet;
 }
+
 
 /* Add a new rule to the end of the current rule set. We do a number
  * of checks and ignore the rule if it does not pass them.

@@ -1,8 +1,6 @@
 ---------------------------------------------------------------------------
-Version 5.3.1  [DEVEL] (rgerhards), 2009-10-05
-- added $AbortOnUncleanConfig directive - permits to prevent startup when
-  there are problems with the configuration file. See it's doc for
-  details.
+Version 5.3.2  [DEVEL] (rgerhards), 2009-10-??
+- added multi-ruleset support to imudp
 - re-enabled input thread termination handling that does avoid thread
   cancellation where possible. This provides a more reliable mode of
   rsyslogd termination (canceling threads my result in not properly
@@ -23,6 +21,11 @@ Version 5.3.1  [DEVEL] (rgerhards), 2009-10-05
     used together with the new interface. The removal also enables us to
     drop a lot of duplicate code, reducing complexity and increasing
     maintainibility.
+---------------------------------------------------------------------------
+Version 5.3.1  [DEVEL] (rgerhards), 2009-10-05
+- added $AbortOnUncleanConfig directive - permits to prevent startup when
+  there are problems with the configuration file. See it's doc for
+  details.
 - included some important fixes from v4-stable:
   * bugfix: invalid handling of zero-sized messages
   * bugfix: zero-sized UDP messages are no longer processed

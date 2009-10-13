@@ -47,6 +47,7 @@
 #include "parser.h"
 #include "datetime.h"
 #include "prop.h"
+#include "ruleset.h"
 #include "unicode-helper.h"
 
 MODULE_TYPE_INPUT
@@ -60,6 +61,7 @@ DEFobjCurrIf(glbl)
 DEFobjCurrIf(net)
 DEFobjCurrIf(datetime)
 DEFobjCurrIf(prop)
+DEFobjCurrIf(ruleset)
 
 static int iMaxLine;			/* maximum UDP message size supported */
 static time_t ttLastDiscard = 0;	/* timestamp when a message from a non-permitted sender was last discarded
@@ -68,13 +70,14 @@ static time_t ttLastDiscard = 0;	/* timestamp when a message from a non-permitte
 					 */
 static int *udpLstnSocks = NULL;	/* Internet datagram sockets, first element is nbr of elements
 					 * read-only after init(), but beware of restart! */
+static ruleset_t **udpRulesets = NULL;	/* ruleset to be used with sockets in question (entry 0 is empty) */
 static uchar *pszBindAddr = NULL;	/* IP to bind socket to */
 static uchar *pRcvBuf = NULL;		/* receive buffer (for a single packet). We use a global and alloc
 					 * it so that we can check available memory in willRun() and request
 					 * termination if we can not get it. -- rgerhards, 2007-12-27
 					 */
 static prop_t *pInputName = NULL;	/* our inputName currently is always "imudp", and this will hold it */
-// TODO: static ruleset_t *pBindRuleset = NULL; /* ruleset to bind listener to (use system default if unspecified) */
+static ruleset_t *pBindRuleset = NULL;	/* ruleset to bind listener to (use system default if unspecified) */
 #define TIME_REQUERY_DFLT 2
 static int iTimeRequery = TIME_REQUERY_DFLT;/* how often is time to be queried inside tight recv loop? 0=always */
 
@@ -93,6 +96,7 @@ static rsRetVal addListner(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	int *newSocks;
 	int *tmpSocks;
 	int iSrc, iDst;
+	ruleset_t **tmpRulesets;
 
 	/* check which address to bind to. We could do this more compact, but have not
 	 * done so in order to make the code more readable. -- rgerhards, 2007-12-27
@@ -113,26 +117,39 @@ static rsRetVal addListner(void __attribute__((unused)) *pVal, uchar *pNewVal)
 		if(udpLstnSocks == NULL) {
 			/* esay, we can just replace it */
 			udpLstnSocks = newSocks;
+			CHKmalloc(udpRulesets = (ruleset_t**) malloc(sizeof(ruleset_t*) * (newSocks[0] + 1)));
+			for(iDst = 1 ; iDst < newSocks[0] ; ++iDst)
+				udpRulesets[iDst] = pBindRuleset;
 		} else {
 			/* we need to add them */
-			if((tmpSocks = malloc(sizeof(int) * (1 + newSocks[0] + udpLstnSocks[0]))) == NULL) {
+			tmpSocks = (int*) malloc(sizeof(int) * (1 + newSocks[0] + udpLstnSocks[0]));
+			tmpRulesets = (ruleset_t**) malloc(sizeof(ruleset_t*) * (1 + newSocks[0] + udpLstnSocks[0]));
+			if(tmpSocks == NULL || tmpRulesets == NULL) {
 				DBGPRINTF("out of memory trying to allocate udp listen socket array\n");
 				/* in this case, we discard the new sockets but continue with what we
 				 * already have
 				 */
 				free(newSocks);
+				free(tmpSocks);
+				free(tmpRulesets);
 				ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 			} else {
 				/* ready to copy */
 				iDst = 1;
-				for(iSrc = 1 ; iSrc <= udpLstnSocks[0] ; ++iSrc)
+				for(iSrc = 1 ; iSrc <= udpLstnSocks[0] ; ++iSrc) {
 					tmpSocks[iDst++] = udpLstnSocks[iSrc];
-				for(iSrc = 1 ; iSrc <= newSocks[0] ; ++iSrc)
+					tmpRulesets[iDst++] = udpRulesets[iSrc];
+				}
+				for(iSrc = 1 ; iSrc <= newSocks[0] ; ++iSrc) {
 					tmpSocks[iDst++] = newSocks[iSrc];
+					tmpRulesets[iDst++] = pBindRuleset;
+				}
 				tmpSocks[0] = udpLstnSocks[0] + newSocks[0];
 				free(newSocks);
 				free(udpLstnSocks);
 				udpLstnSocks = tmpSocks;
+				free(udpRulesets);
+				udpRulesets = tmpRulesets;
 			}
 		}
 	}
@@ -144,7 +161,6 @@ finalize_it:
 }
 
 
-#if 0 /* TODO: implement when tehre is time, requires restructure of socket array! */
 /* accept a new ruleset to bind. Checks if it exists and complains, if not */
 static rsRetVal
 setRuleset(void __attribute__((unused)) *pVal, uchar *pszName)
@@ -165,7 +181,6 @@ finalize_it:
 	free(pszName); /* no longer needed */
 	RETiRet;
 }
-#endif
 
 
 /* This function is a helper to runInput. I have extracted it
@@ -184,7 +199,7 @@ finalize_it:
  */
 static inline rsRetVal
 processSocket(int fd, struct sockaddr_storage *frominetPrev, int *pbIsPermitted,
-	      uchar *fromHost, uchar *fromHostFQDN, uchar *fromHostIP)
+	      uchar *fromHost, uchar *fromHostFQDN, uchar *fromHostIP, ruleset_t *pRuleset)
 {
 	DEFiRet;
 	int iNbrTimeUsed;
@@ -254,6 +269,7 @@ processSocket(int fd, struct sockaddr_storage *frominetPrev, int *pbIsPermitted,
 			CHKiRet(msgConstructWithTime(&pMsg, &stTime, ttGenTime));
 			MsgSetRawMsg(pMsg, (char*)pRcvBuf, lenRcvBuf);
 			MsgSetInputName(pMsg, pInputName);
+			MsgSetRuleset(pMsg, pRuleset);
 			MsgSetFlowControlType(pMsg, eFLOWCTL_NO_DELAY);
 			pMsg->msgFlags  = NEEDS_PARSING | PARSE_HOSTNAME;
 			MsgSetRcvFromStr(pMsg, fromHost, ustrlen(fromHost), &propFromHost);
@@ -282,11 +298,9 @@ finalize_it:
 rsRetVal rcvMainLoop()
 {
 	DEFiRet;
-	int maxfds;
 	int nfds;
 	int efd;
 	int i;
-	fd_set readfds;
 	struct sockaddr_storage frominetPrev;
 	int bIsPermitted;
 	uchar fromHost[NI_MAXHOST];
@@ -307,21 +321,16 @@ rsRetVal rcvMainLoop()
 	efd = epoll_create1(EPOLL_CLOEXEC);
 	if(efd < 0) {
 		DBGPRINTF("epoll_create1() could not create fd\n");
-		// TODO: "good" error message
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
 	}
 
 	/* fill the epoll set - we need to do this only once, as the set
 	 * can not change dyamically.
 	 */
-	maxfds = 0;
-	FD_ZERO (&readfds);
-
-	/* Add the UDP listen sockets to the list of read descriptors. */
 	for (i = 0; i < *udpLstnSocks; i++) {
 		if (udpLstnSocks[i+1] != -1) {
 			udpEPollEvt[i].events = EPOLLIN | EPOLLET;
-			udpEPollEvt[i].data.fd = udpLstnSocks[i+1];
+			udpEPollEvt[i].data.u64 = i+1;
 			if(epoll_ctl(efd, EPOLL_CTL_ADD,  udpLstnSocks[i+1], &(udpEPollEvt[i])) < 0) {
 				rs_strerror_r(errno, errStr, sizeof(errStr));
 				errmsg.LogError(errno, NO_ERRCODE, "epoll_ctrl failed on fd %d with %s\n",
@@ -339,8 +348,8 @@ rsRetVal rcvMainLoop()
 			break; /* terminate input! */
 
 		for(i = 0 ; i < nfds ; ++i) {
-			processSocket(currEvt[i].data.fd, &frominetPrev, &bIsPermitted,
-				      fromHost, fromHostFQDN, fromHostIP);
+			processSocket(udpLstnSocks[currEvt[i].data.u64], &frominetPrev, &bIsPermitted,
+				      fromHost, fromHostFQDN, fromHostIP, udpRulesets[currEvt[i].data.u64]);
 		}
 	}
 
@@ -406,7 +415,7 @@ rsRetVal rcvMainLoop()
 	       for(i = 0; nfds && i < *udpLstnSocks; i++) {
 			if(FD_ISSET(udpLstnSocks[i+1], &readfds)) {
 		       		processSocket(udpLstnSocks[i+1], &frominetPrev, &bIsPermitted,
-					      fromHost, fromHostFQDN, fromHostIP);
+					      fromHost, fromHostFQDN, fromHostIP, udpRulesets[i+1]);
 			--nfds; /* indicate we have processed one descriptor */
 			}
 	       }
@@ -447,9 +456,7 @@ CODESTARTwillRun
 
 	iMaxLine = glbl.GetMaxLine();
 
-	if((pRcvBuf = malloc((iMaxLine + 1) * sizeof(char))) == NULL) {
-		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-	}
+	CHKmalloc(pRcvBuf = malloc((iMaxLine + 1) * sizeof(char)));
 finalize_it:
 ENDwillRun
 
@@ -461,6 +468,8 @@ CODESTARTafterRun
 	if(udpLstnSocks != NULL) {
 		net.closeUDPListenSockets(udpLstnSocks);
 		udpLstnSocks = NULL;
+		free(udpRulesets);
+		udpRulesets = NULL;
 	}
 	if(pRcvBuf != NULL) {
 		free(pRcvBuf);
@@ -478,6 +487,7 @@ CODESTARTmodExit
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(datetime, CORE_COMPONENT);
 	objRelease(prop, CORE_COMPONENT);
+	objRelease(ruleset, CORE_COMPONENT);
 	objRelease(net, LM_NET_FILENAME);
 ENDmodExit
 
@@ -501,10 +511,6 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 		free(pszBindAddr);
 		pszBindAddr = NULL;
 	}
-	if(udpLstnSocks != NULL) {
-		net.closeUDPListenSockets(udpLstnSocks);
-		udpLstnSocks = NULL;
-	}
 	iTimeRequery = TIME_REQUERY_DFLT;/* the default is to query only every second time */
 	return RS_RET_OK;
 }
@@ -518,13 +524,12 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	CHKiRet(objUse(prop, CORE_COMPONENT));
+	CHKiRet(objUse(ruleset, CORE_COMPONENT));
 	CHKiRet(objUse(net, LM_NET_FILENAME));
 
 	/* register config file handlers */
-	/* TODO: add - but this requires more changes, no time right now...
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"udpserverbindruleset", 0, eCmdHdlrGetWord,
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputudpserverbindruleset", 0, eCmdHdlrGetWord,
 		setRuleset, NULL, STD_LOADABLE_MODULE_ID));
-	*/
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"udpserverrun", 0, eCmdHdlrGetWord,
 		addListner, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"udpserveraddress", 0, eCmdHdlrGetWord,
