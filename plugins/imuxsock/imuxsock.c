@@ -224,10 +224,8 @@ SubmitMsg(uchar *pRcv, int lenRcv, int iSock)
 
 	if(funixParseHost[iSock]) {
 		pMsg->msgFlags  = funixFlags[iSock] | NEEDS_PARSING | PARSE_HOSTNAME;
-		pMsg->bParseHOSTNAME = 1;
 	} else {
 		pMsg->msgFlags  = funixFlags[iSock] | NEEDS_PARSING;
-		pMsg->bParseHOSTNAME = 0;
 	}
 
 	MsgSetRcvFrom(pMsg, funixHName[iSock]);

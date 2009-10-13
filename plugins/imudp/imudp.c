@@ -256,7 +256,6 @@ processSocket(int fd, struct sockaddr_storage *frominetPrev, int *pbIsPermitted,
 			MsgSetInputName(pMsg, pInputName);
 			MsgSetFlowControlType(pMsg, eFLOWCTL_NO_DELAY);
 			pMsg->msgFlags  = NEEDS_PARSING | PARSE_HOSTNAME;
-			pMsg->bParseHOSTNAME = 1;
 			MsgSetRcvFromStr(pMsg, fromHost, ustrlen(fromHost), &propFromHost);
 			CHKiRet(MsgSetRcvFromIPStr(pMsg, fromHostIP, ustrlen(fromHostIP), &propFromHostIP));
 			CHKiRet(submitMsg(pMsg));

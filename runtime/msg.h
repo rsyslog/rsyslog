@@ -60,7 +60,6 @@ struct msg {
 				        once data has entered the queue, this property is no longer needed. */
 	pthread_mutex_t mut;
 	bool	bDoLock;	 /* use the mutex? */
-	bool	bParseHOSTNAME;	/* should the hostname be parsed from the message? */
 	short	iRefCount;	/* reference counter (0 = unused) */
 	   /* background: the hostname is not present on "regular" messages
 	    * received via UNIX domain sockets from the same machine. However,

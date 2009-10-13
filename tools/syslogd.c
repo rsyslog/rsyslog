@@ -596,7 +596,6 @@ logmsgInternal(int iErr, int pri, uchar *msg, int flags)
 	}
 	pMsg->iFacility = LOG_FAC(pri);
 	pMsg->iSeverity = LOG_PRI(pri);
-	pMsg->bParseHOSTNAME = 0;
 	flags |= INTERNAL_MSG;
 
 	/* we now check if we should print internal messages out to stderr. This was

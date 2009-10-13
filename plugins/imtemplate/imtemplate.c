@@ -245,7 +245,6 @@ CODESTARTrunInput
 		MsgSetTAG(pMsg, "rsyslogd:");
 		pMsg->iFacility = LOG_FAC(pri);
 		pMsg->iSeverity = LOG_PRI(pri);
-		pMsg->bParseHOSTNAME = 0;
 		flags |= INTERNAL_MSG;
 		logmsg(pMsg, flags); / * some time, CHKiRet() will work here, too [today NOT!] * /
 		 * 

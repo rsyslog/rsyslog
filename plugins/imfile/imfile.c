@@ -107,7 +107,6 @@ static rsRetVal enqLine(fileInfo_t *pInfo, cstr_t *cstrLine)
 	MsgSetTAG(pMsg, pInfo->pszTag, pInfo->lenTag);
 	pMsg->iFacility = LOG_FAC(pInfo->iFacility);
 	pMsg->iSeverity = LOG_PRI(pInfo->iSeverity);
-	pMsg->bParseHOSTNAME = 0;
 	CHKiRet(submitMsg(pMsg));
 finalize_it:
 	RETiRet;

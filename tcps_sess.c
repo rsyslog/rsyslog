@@ -251,12 +251,10 @@ defaultDoSubmitMessage(tcps_sess_t *pThis, struct syslogTime *stTime, time_t ttG
 	MsgSetInputName(pMsg, pThis->pLstnInfo->pInputName);
 	MsgSetFlowControlType(pMsg, eFLOWCTL_LIGHT_DELAY);
 	pMsg->msgFlags  = NEEDS_PARSING | PARSE_HOSTNAME;
-	pMsg->bParseHOSTNAME = 1;
 	MsgSetRcvFrom(pMsg, pThis->fromHost);
 	CHKiRet(MsgSetRcvFromIP(pMsg, pThis->fromHostIP));
 	MsgSetRuleset(pMsg, pThis->pLstnInfo->pRuleset);
 
-dbgprintf("YYY: submitting msg to queue\n");
 	if(pMultiSub == NULL) {
 		CHKiRet(submitMsg(pMsg));
 	} else {

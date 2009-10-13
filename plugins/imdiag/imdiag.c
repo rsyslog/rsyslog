@@ -213,7 +213,6 @@ doInjectMsg(int iNum)
 	MsgSetInputName(pMsg, pInputName);
 	MsgSetFlowControlType(pMsg, eFLOWCTL_NO_DELAY);
 	pMsg->msgFlags  = NEEDS_PARSING | PARSE_HOSTNAME;
-	pMsg->bParseHOSTNAME = 1;
 	MsgSetRcvFrom(pMsg, pRcvDummy);
 	CHKiRet(MsgSetRcvFromIP(pMsg, pRcvIPDummy));
 	CHKiRet(submitMsg(pMsg));

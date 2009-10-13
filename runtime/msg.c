@@ -632,7 +632,6 @@ static inline rsRetVal msgBaseConstruct(msg_t **ppThis)
 	/* initialize members in ORDER they appear in structure (think "cache line"!) */
 	pM->flowCtlType = 0;
 	pM->bDoLock = 0;
-	pM->bParseHOSTNAME = 0;
 	pM->iRefCount = 1;
 	pM->iSeverity = -1;
 	pM->iFacility = -1;
@@ -861,7 +860,6 @@ msg_t* MsgDup(msg_t* pOld)
 	pNew->iRefCount = 1;
 	pNew->iSeverity = pOld->iSeverity;
 	pNew->iFacility = pOld->iFacility;
-	pNew->bParseHOSTNAME = pOld->bParseHOSTNAME;
 	pNew->msgFlags = pOld->msgFlags;
 	pNew->iProtocolVersion = pOld->iProtocolVersion;
 	pNew->ttGenTime = pOld->ttGenTime;
@@ -935,7 +933,7 @@ msg_t* MsgDup(msg_t* pOld)
  * We do not serialize the cache properties. We re-create them when needed.
  * This saves us a lot of memory. Performance is no concern, as serializing
  * is a so slow operation that recration of the caches does not count. Also,
- * we do not serialize bParseHOSTNAME, as this is only a helper variable
+ * we do not serialize --currently none--, as this is only a helper variable
  * during msg construction - and never again used later.
  * rgerhards, 2008-01-03
  */
