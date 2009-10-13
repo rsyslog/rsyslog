@@ -624,12 +624,26 @@ BEGINtryResume
 CODESTARTtryResume
 ENDtryResume
 
+BEGINbeginTransaction
+CODESTARTbeginTransaction
+	/* we have nothing to do to begin a transaction */
+ENDbeginTransaction
+
+
+BEGINendTransaction
+CODESTARTendTransaction
+	if(pData->bFlushOnTXEnd) {
+		CHKiRet(strm.Flush(pData->pStrm));
+	}
+finalize_it:
+ENDendTransaction
+
+
 BEGINdoAction
 CODESTARTdoAction
 	DBGPRINTF("file to log to: %s\n", pData->f_fname);
 	CHKiRet(writeFile(ppString, iMsgOpts, pData));
-	if(pData->bFlushOnTXEnd) {
-		/* TODO v5: do this in endTransaction only! */
+	if(!bCoreSupportsBatching && pData->bFlushOnTXEnd) {
 		CHKiRet(strm.Flush(pData->pStrm));
 	}
 finalize_it:
@@ -780,6 +794,7 @@ ENDmodExit
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
+CODEqueryEtryPt_TXIF_OMOD_QUERIES /* we support the transactional interface! */
 CODEqueryEtryPt_doHUP
 ENDqueryEtryPt
 
@@ -790,6 +805,8 @@ CODESTARTmodInit
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(strm, CORE_COMPONENT));
+	INITChkCoreFeature(bCoreSupportsBatching, CORE_FEATURE_BATCHING);
+	DBGPRINTF("omfile: %susing transactional output interface.\n", bCoreSupportsBatching ? "" : "not ");
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"dynafilecachesize", 0, eCmdHdlrInt, (void*) setDynaFileCacheSize, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omfileziplevel", 0, eCmdHdlrInt, NULL, &iZipLevel, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omfileflushinterval", 0, eCmdHdlrInt, NULL, &iFlushInterval, STD_LOADABLE_MODULE_ID));

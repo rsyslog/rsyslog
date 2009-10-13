@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 5.3.2  [DEVEL] (rgerhards), 2009-10-??
+- enhanced omfile to support transactional interface. This will increase
+  performance in many cases.
 - added multi-ruleset support to imudp
 - re-enabled input thread termination handling that does avoid thread
   cancellation where possible. This provides a more reliable mode of
@@ -20,7 +22,7 @@ Version 5.3.2  [DEVEL] (rgerhards), 2009-10-??
     way of message creation/submission. This enables older plugins to be
     used together with the new interface. The removal also enables us to
     drop a lot of duplicate code, reducing complexity and increasing
-    maintainibility.
+    maintainability.
 ---------------------------------------------------------------------------
 Version 5.3.1  [DEVEL] (rgerhards), 2009-10-05
 - added $AbortOnUncleanConfig directive - permits to prevent startup when
