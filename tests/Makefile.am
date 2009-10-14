@@ -90,6 +90,7 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/rfc5424-2.parse1 \
 	   testsuites/rfc5424-3.parse1 \
 	   testsuites/rfc5424-4.parse1 \
+	   testsuites/malformed.parse1 \
 	   testsuites/omod-if-array.conf \
 	   testsuites/1.omod-if-array \
 	   testsuites/1.field1 \

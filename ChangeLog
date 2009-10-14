@@ -199,6 +199,11 @@ Version 4.7.0  [v4-devel] (rgerhards), 2009-09-??
 - imported changes from 4.5.6 and below
 ---------------------------------------------------------------------------
 Version 4.5.6  [v4-beta] (rgerhards), 2009-09-??
+- bugfix(minor): diag function returned wrong queue memeber count
+  for the main queue if an active DA queue existed. This had no relevance
+  to real deployments (assuming they are not running the debug/diagnostic
+  module...), but sometimes caused grief and false alerts in the 
+  testbench.
 - included some important fixes from v4-stable:
   * bugfix: invalid handling of zero-sized messages
   * bugfix: zero-sized UDP messages are no longer processed
