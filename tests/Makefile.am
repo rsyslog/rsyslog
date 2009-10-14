@@ -7,7 +7,7 @@ TESTS = $(TESTRUNS) cfg.sh \
 	da-mainmsg-q.sh \
 	validation-run.sh \
 	imtcp-multiport.sh \
-	#daqueue-persist.sh \
+	daqueue-persist.sh \
 	diskqueue.sh \
 	diskqueue-fsync.sh \
 	manytcp.sh \

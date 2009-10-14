@@ -158,6 +158,7 @@ DEFobjCurrIf(net) /* TODO: make go away! */
 
 /* forward definitions */
 static rsRetVal GlobalClassExit(void);
+static void logmsg(msg_t *pMsg, int flags);
 
 
 #ifndef _PATH_LOGCONF 
@@ -400,13 +401,16 @@ static int usage(void)
  */
 
 /* return back the approximate current number of messages in the main message queue
+ * This number includes the messages that reside in an associated DA queue (if
+ * it exists) -- rgerhards, 2009-10-14
  */
 rsRetVal
 diagGetMainMsgQSize(int *piSize)
 {
 	DEFiRet;
 	assert(piSize != NULL);
-	*piSize = pMsgQueue->iQueueSize;
+	*piSize = (pMsgQueue->bIsDA) ? pMsgQueue->pqDA->iQueueSize : 0;
+	*piSize += pMsgQueue->iQueueSize;
 	RETiRet;
 }
 
@@ -584,6 +588,7 @@ logmsgInternal(int iErr, int pri, uchar *msg, int flags)
 	MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName(), ustrlen(glbl.GetLocalHostName()));
 	MsgSetRcvFrom(pMsg, glbl.GetLocalHostNameProp());
 	MsgSetRcvFromIP(pMsg, pLocalHostIP);
+	MsgSetMSGoffs(pMsg, 0);
 	/* check if we have an error code associated and, if so,
 	 * adjust the tag. -- rgerhards, 2008-06-27
 	 */
@@ -1079,7 +1084,7 @@ multiSubmitMsg(multi_submit_t *pMultiSub)
  * potential for misinterpretation, which we simply can not solve under the
  * circumstances given.
  */
-void
+static void
 logmsg(msg_t *pMsg, int flags)
 {
 	char *msg;

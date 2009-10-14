@@ -189,6 +189,7 @@ finalize_it:
  * the cancel cleanup handler (and have been cancelled).
  * rgerhards, 2008-01-16
  */
+// TODO: REMOVE THIS FUNCTION, CURRENTLY ONLY PRESENT TO PROVIDE DEBUG OUTPUT -- rgerhards, 2009-10-14
 static void
 wtiWorkerCancelCleanup(void *arg)
 {
@@ -202,9 +203,6 @@ wtiWorkerCancelCleanup(void *arg)
 
 	DBGPRINTF("%s: cancelation cleanup handler called.\n", wtiGetDbgHdr(pThis));
 	
-	/* call user supplied handler */
-	pWtp->pfOnWorkerCancel(pThis->pWtp->pUsr, pThis->batch.pElem[0].pUsrp);
-
 	ENDfunc
 }
 
@@ -222,8 +220,6 @@ doIdleProcessing(wti_t *pThis, wtp_t *pWtp, int *pbInactivityTOOccured)
 	BEGINfunc
 	DBGPRINTF("%s: worker IDLE, waiting for work.\n", wtiGetDbgHdr(pThis));
 
-	pWtp->pfOnIdle(pWtp->pUsr, MUTEX_ALREADY_LOCKED);
-
 	if(pThis->bAlwaysRunning) {
 		/* never shut down any started worker */
 dbgprintf("YYY/ZZZ: wti Idle wait cond busy, mutex %p\n", pWtp->pmutUsr);
@@ -235,6 +231,7 @@ dbgprintf("YYY/ZZZ: wti Idle wait cond busy, mutex %p\n", pWtp->pmutUsr);
 			*pbInactivityTOOccured = 1; /* indicate we had a timeout */
 		}
 	}
+	dbgoprint((obj_t*) pThis, "worker awoke from idle processing\n");
 	ENDfunc
 }
 
@@ -249,7 +246,6 @@ wtiWorker(wti_t *pThis)
 	int bInactivityTOOccured = 0;
 	rsRetVal localRet;
 	rsRetVal terminateRet;
-	int iCancelStateSave;
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, wti);
@@ -259,23 +255,18 @@ wtiWorker(wti_t *pThis)
 	dbgSetThrdName(pThis->pszDbgHdr);
 	pthread_cleanup_push(wtiWorkerCancelCleanup, pThis);
 
-	pWtp->pfOnWorkerStartup(pWtp->pUsr);
-
 	/* now we have our identity, on to real processing */
 	while(1) { /* loop will be broken below - need to do mutex locks */
 		if(pWtp->pfRateLimiter != NULL) { /* call rate-limiter, if defined */
 			pWtp->pfRateLimiter(pWtp->pUsr);
 		}
 		
-dbgprintf("YYY/ZZZ: pre lock mutex\n");
 		d_pthread_mutex_lock(pWtp->pmutUsr);
 
-dbgprintf("YYY/ZZZ: wti locks mutex %p\n", pWtp->pmutUsr);
 		/* first check if we are in shutdown process (but evaluate a bit later) */
 		terminateRet = wtpChkStopWrkr(pWtp, MUTEX_ALREADY_LOCKED);
-RUNLOG;
+RUNLOG_VAR("%d", terminateRet);
 		if(terminateRet == RS_RET_TERMINATE_NOW) {
-RUNLOG;
 			/* we now need to free the old batch */
 			localRet = pWtp->pfObjProcessed(pWtp->pUsr, pThis);
 			dbgoprint((obj_t*) pThis, "terminating worker because of TERMINATE_NOW mode, del iRet %d\n",
@@ -283,7 +274,6 @@ RUNLOG;
 			d_pthread_mutex_unlock(pWtp->pmutUsr);
 			break;
 		}
-RUNLOG;
 
 		/* try to execute and process whatever we have */
 		/* Note that this function releases and re-aquires the mutex. The returned
@@ -291,41 +281,23 @@ RUNLOG;
 		 */
 		localRet = pWtp->pfDoWork(pWtp->pUsr, pThis);
 
-dbgprintf("YYY/ZZZ: wti loop locked mutex %p again\n", pWtp->pmutUsr);
 		if(localRet == RS_RET_IDLE) {
-RUNLOG;
 			if(terminateRet == RS_RET_TERMINATE_WHEN_IDLE || bInactivityTOOccured) {
 				d_pthread_mutex_unlock(pWtp->pmutUsr);
 				break;	/* end of loop */
 			}
-RUNLOG;
 			doIdleProcessing(pThis, pWtp, &bInactivityTOOccured);
-RUNLOG;
 			d_pthread_mutex_unlock(pWtp->pmutUsr);
-RUNLOG;
 			continue; /* request next iteration */
 		}
 
-RUNLOG;
 		d_pthread_mutex_unlock(pWtp->pmutUsr);
 
 		bInactivityTOOccured = 0; /* reset for next run */
 	}
 
 	/* indicate termination */
-RUNLOG;
-	d_pthread_mutex_lock(pWtp->pmutUsr);
-RUNLOG;
-	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
-RUNLOG;
 	pthread_cleanup_pop(0); /* remove cleanup handler */
-RUNLOG;
-	pWtp->pfOnWorkerShutdown(pWtp->pUsr);
-RUNLOG;
-	pthread_setcancelstate(iCancelStateSave, NULL);
-RUNLOG;
-	d_pthread_mutex_unlock(pWtp->pmutUsr);
-RUNLOG;
 
 	RETiRet;
 }

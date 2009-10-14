@@ -934,7 +934,8 @@ processAction(action_t *pAction, batch_t *pBatch, int *pbShutdownImmediate)
 	CHKiRet(localRet);
 
 	/* this must be moved away - up into the dequeue part of the queue, I guess, but that's for another day */
-	for(i = 0 ; i < pBatch->nElem  && !*pbShutdownImmediate ; i++) {
+	//for(i = 0 ; i < pBatch->nElem  && !*pbShutdownImmediate ; i++) {
+	for(i = 0 ; i < pBatch->nElem  ; i++) {
 		pMsg = (msg_t*) pBatch->pElem[i].pUsrp;
 	}
 	iRet = finishBatch(pAction);
