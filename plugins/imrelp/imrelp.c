@@ -76,14 +76,14 @@ isPermittedHost(struct sockaddr *addr, char *fromHostFQDN, void __attribute__((u
  * are different from our rsRetVal. So we can simply use our own iRet system
  * to fulfill the requirement.
  * rgerhards, 2008-03-21
- * TODO: we currently do not receive the remote hosts's IP. As a work-around, we
- * use "???" for the time being. -- rgerhards, 2008-05-16
+ * Note: librelp 1.0.0 is required in order to receive the IP address, otherwise
+ * we will only see the hostname (twice). -- rgerhards, 2009-10-14
  */
 static relpRetVal
-onSyslogRcv(uchar *pHostname, uchar __attribute__((unused)) *pIP, uchar *pMsg, size_t lenMsg)
+onSyslogRcv(uchar *pHostname, uchar *pIP, uchar *pMsg, size_t lenMsg)
 {
 	DEFiRet;
-	parseAndSubmitMessage(pHostname, (uchar*) "[unset]", pMsg, lenMsg, MSG_PARSE_HOSTNAME,
+	parseAndSubmitMessage(pHostname, pIP, pMsg, lenMsg, MSG_PARSE_HOSTNAME,
 			      NOFLAG, eFLOWCTL_LIGHT_DELAY, (uchar*)"imrelp");
 
 	RETiRet;
