@@ -293,7 +293,7 @@ finalize_it:
  * interface. ./configure settings control which one is used.
  * rgerhards, 2009-09-09
  */
-#if HAVE_EPOLL_CREATE1
+#if defined(HAVE_EPOLL_CREATE1) || defined(HAVE_EPOLL_CREATE)
 #define NUM_EPOLL_EVENTS 10
 rsRetVal rcvMainLoop()
 {
@@ -318,7 +318,13 @@ rsRetVal rcvMainLoop()
 
 	CHKmalloc(udpEPollEvt = calloc(udpLstnSocks[0], sizeof(struct epoll_event)));
 
-	efd = epoll_create1(EPOLL_CLOEXEC);
+#	if defined(EPOLL_CLOEXEC) && defined(HAVE_EPOLL_CREATE1)
+		DBGPRINTF("imudp uses epoll_create1()\n");
+		efd = epoll_create1(EPOLL_CLOEXEC);
+#	else
+		DBGPRINTF("imudp uses epoll_create()\n");
+		efd = epoll_create();
+#	endif
 	if(efd < 0) {
 		DBGPRINTF("epoll_create1() could not create fd\n");
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
@@ -379,6 +385,7 @@ rsRetVal rcvMainLoop()
 	 */
 	bIsPermitted = 0;
 	memset(&frominetPrev, 0, sizeof(frominetPrev));
+	DBGPRINTF("imudp uses select()\n");
 
 	while(1) {
 		/* Add the Unix Domain Sockets to the list of read
