@@ -295,7 +295,7 @@ finalize_it:
  */
 #if defined(HAVE_EPOLL_CREATE1) || defined(HAVE_EPOLL_CREATE)
 #define NUM_EPOLL_EVENTS 10
-rsRetVal rcvMainLoop()
+rsRetVal rcvMainLoop(thrdInfo_t *pThrd)
 {
 	DEFiRet;
 	int nfds;
@@ -350,7 +350,7 @@ rsRetVal rcvMainLoop()
 		nfds = epoll_wait(efd, currEvt, NUM_EPOLL_EVENTS, -1);
 		DBGPRINTF("imudp: epoll_wait() returned with %d fds\n", nfds);
 
-		if(glbl.GetGlobalInputTermState() == 1)
+		if(pThrd->bShallStop == TRUE)
 			break; /* terminate input! */
 
 		for(i = 0 ; i < nfds ; ++i) {
@@ -367,7 +367,7 @@ finalize_it:
 }
 #else /* #if HAVE_EPOLL_CREATE1 */
 /* this is the code for the select() interface */
-rsRetVal rcvMainLoop()
+rsRetVal rcvMainLoop(thrdInfo_t *pThrd)
 {
 	DEFiRet;
 	int maxfds;
@@ -443,7 +443,7 @@ CODESTARTrunInput
 	 * signalled to do so. This, however, is handled by the framework,
 	 * right into the sleep below.
 	 */
-	iRet = rcvMainLoop();
+	iRet = rcvMainLoop(pThrd);
 ENDrunInput
 
 

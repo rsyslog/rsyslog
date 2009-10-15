@@ -25,7 +25,8 @@
 
 /* the thread object */
 struct thrdInfo {
-	pthread_mutex_t *mutTermOK;	/* Is it ok to terminate that thread now? */
+	pthread_mutex_t mutThrd;/* mutex for handling long-running operations and shutdown */
+	pthread_cond_t condThrdTerm;/* condition: thread terminates (used just for shutdown loop) */
 	int bIsActive;		/* Is thread running? */
 	int bShallStop;		/* set to 1 if the thread should be stopped ? */
 	rsRetVal (*pUsrThrdMain)(struct thrdInfo*); /* user thread main to be called in new thread */

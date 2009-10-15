@@ -15,7 +15,7 @@ AC_GNU_SOURCE
 
 # check for Java compiler
 AC_CHECK_PROG(HAVE_JAVAC, [javac], [yes])
-if test x"$HAVE_JAVAC" = x"yes"; then
+if test x"$HAVE_JAVAC" = x""; then
         AC_MSG_WARN([no javac found, disabling features depending on it])
 fi
 

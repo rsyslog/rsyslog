@@ -8,13 +8,9 @@ Version 5.3.2  [DEVEL] (rgerhards), 2009-10-??
   rsyslogd termination (canceling threads my result in not properly
   freed resouces and potential later hangs, even though we perform
   proper cancel handling in our code). This is part of an effort to
-  reduce thread cnacellation as much as possible in rsyslog.
-  NOTE: some comments indicated that there were problems with some code
-  that has been re-activated. Testing did not show any issues. My current
-  assumption is that these issues were related to some other code that
-  has been removed/changed during the previous restructuring events.
-  In any case, if there is a shutdown issue, one should carefully look
-  at this change here!
+  reduce thread cancellation as much as possible in rsyslog.
+  NOTE: the code previously written code for this functionality had a
+  subtle race condition. The new code solves that.
 - enhanced immark to support non-cancel input module termination
 - improved imudp so that epoll can be used in more environments,
   fixed potential compile time problem if EPOLL_CLOEXEC is not available.
