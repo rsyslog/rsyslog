@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 5.1.6  [v5-beta] (rgerhards), 2009-09-??
+Version 5.1.6  [v5-beta] (rgerhards), 2009-10-15
 - feature imports from v4.5.6
 - bugfix: potential race condition when queue worker threads were
   terminated
