@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------
 Version 5.3.2  [DEVEL] (rgerhards), 2009-10-??
+<<<<<<< HEAD:ChangeLog
 - enhanced omfile to support transactional interface. This will increase
   performance in many cases.
 - added multi-ruleset support to imudp
@@ -21,6 +22,10 @@ Version 5.3.2  [DEVEL] (rgerhards), 2009-10-??
     used together with the new interface. The removal also enables us to
     drop a lot of duplicate code, reducing complexity and increasing
     maintainability.
+- bugfix: potential segfault on messages with empty MSG part. This was a
+  recently introduced regression.
+- bugfix: debug string larger than 1K were improperly displayed. Max size
+  is now 32K, and if a string is even longer it is meaningful truncated.
 ---------------------------------------------------------------------------
 Version 5.3.1  [DEVEL] (rgerhards), 2009-10-05
 - added $AbortOnUncleanConfig directive - permits to prevent startup when
