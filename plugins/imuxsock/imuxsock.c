@@ -330,6 +330,8 @@ CODESTARTrunInput
 			break; /* terminate input! */
 
 		for (i = 0; i < nfunix && nfds > 0; i++) {
+			if(glbl.GetGlobalInputTermState() == 1)
+				ABORT_FINALIZE(RS_RET_FORCE_TERM); /* terminate input! */
 			if ((fd = funix[i]) != -1 && FD_ISSET(fd, &readfds)) {
 				readSocket(fd, i);
 				--nfds; /* indicate we have processed one */
@@ -337,6 +339,7 @@ CODESTARTrunInput
 		}
 	}
 
+finalize_it:
 	RETiRet;
 ENDrunInput
 

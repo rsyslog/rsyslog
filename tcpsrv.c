@@ -565,6 +565,8 @@ Run(tcpsrv_t *pThis)
 			break; /* terminate input! */
 
 		for(i = 0 ; i < pThis->iLstnCurr ; ++i) {
+			if(glbl.GetGlobalInputTermState() == 1)
+				ABORT_FINALIZE(RS_RET_FORCE_TERM);
 			CHKiRet(nssel.IsReady(pSel, pThis->ppLstn[i], NSDSEL_RD, &bIsReady, &nfds));
 			if(bIsReady) {
 				DBGPRINTF("New connect on NSD %p.\n", pThis->ppLstn[i]);
@@ -576,6 +578,8 @@ Run(tcpsrv_t *pThis)
 		/* now check the sessions */
 		iTCPSess = TCPSessGetNxtSess(pThis, -1);
 		while(nfds && iTCPSess != -1) {
+			if(glbl.GetGlobalInputTermState() == 1)
+				ABORT_FINALIZE(RS_RET_FORCE_TERM);
 			CHKiRet(nssel.IsReady(pSel, pThis->pSessions[iTCPSess]->pStrm, NSDSEL_RD, &bIsReady, &nfds));
 			if(bIsReady) {
 				doReceive(pThis, &pThis->pSessions[iTCPSess]);
