@@ -323,7 +323,7 @@ rsRetVal rcvMainLoop(thrdInfo_t *pThrd)
 		efd = epoll_create1(EPOLL_CLOEXEC);
 #	else
 		DBGPRINTF("imudp uses epoll_create()\n");
-		efd = epoll_create();
+		efd = epoll_create(NUM_EPOLL_EVENTS);
 #	endif
 	if(efd < 0) {
 		DBGPRINTF("epoll_create1() could not create fd\n");
