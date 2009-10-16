@@ -198,7 +198,7 @@ finalize_it:
  * on scheduling order. -- rgerhards, 2008-10-02
  */
 static inline rsRetVal
-processSocket(int fd, struct sockaddr_storage *frominetPrev, int *pbIsPermitted,
+processSocket(thrdInfo_t *pThrd, int fd, struct sockaddr_storage *frominetPrev, int *pbIsPermitted,
 	      uchar *fromHost, uchar *fromHostFQDN, uchar *fromHostIP, ruleset_t *pRuleset)
 {
 	DEFiRet;
@@ -213,8 +213,11 @@ processSocket(int fd, struct sockaddr_storage *frominetPrev, int *pbIsPermitted,
 	prop_t *propFromHostIP = NULL;
 	char errStr[1024];
 
+	assert(pThrd != NULL);
 	iNbrTimeUsed = 0;
 	while(1) { /* loop is terminated if we have a bad receive, done below in the body */
+		if(pThrd->bShallStop == TRUE)
+			ABORT_FINALIZE(RS_RET_FORCE_TERM);
 		socklen = sizeof(struct sockaddr_storage);
 		lenRcvBuf = recvfrom(fd, (char*) pRcvBuf, iMaxLine, 0, (struct sockaddr *)&frominet, &socklen);
 		if(lenRcvBuf < 0) {
@@ -259,8 +262,7 @@ processSocket(int fd, struct sockaddr_storage *frominetPrev, int *pbIsPermitted,
 			}
 		}
 
-		//DBGPRINTF("recv(%d,%d)/%s,acl:%d,msg:%.80s\n", fd, (int) lenRcvBuf, fromHost, *pbIsPermitted, pRcvBuf);
-		DBGPRINTF("recv(%d,%d)/%s,acl:%d,msg:%s\n", fd, (int) lenRcvBuf, fromHost, *pbIsPermitted, pRcvBuf);
+		DBGPRINTF("recv(%d,%d)/%s,acl:%d,msg:%.80s\n", fd, (int) lenRcvBuf, fromHost, *pbIsPermitted, pRcvBuf);
 
 		if(*pbIsPermitted)  {
 			if((iTimeRequery == 0) || (iNbrTimeUsed++ % iTimeRequery) == 0) {
@@ -355,7 +357,7 @@ rsRetVal rcvMainLoop(thrdInfo_t *pThrd)
 			break; /* terminate input! */
 
 		for(i = 0 ; i < nfds ; ++i) {
-			processSocket(udpLstnSocks[currEvt[i].data.u64], &frominetPrev, &bIsPermitted,
+			processSocket(pThrd, udpLstnSocks[currEvt[i].data.u64], &frominetPrev, &bIsPermitted,
 				      fromHost, fromHostFQDN, fromHostIP, udpRulesets[currEvt[i].data.u64]);
 		}
 	}
@@ -422,7 +424,7 @@ rsRetVal rcvMainLoop(thrdInfo_t *pThrd)
 
 	       for(i = 0; nfds && i < *udpLstnSocks; i++) {
 			if(FD_ISSET(udpLstnSocks[i+1], &readfds)) {
-		       		processSocket(udpLstnSocks[i+1], &frominetPrev, &bIsPermitted,
+		       		processSocket(pThrd, udpLstnSocks[i+1], &frominetPrev, &bIsPermitted,
 					      fromHost, fromHostFQDN, fromHostIP, udpRulesets[i+1]);
 			--nfds; /* indicate we have processed one descriptor */
 			}
