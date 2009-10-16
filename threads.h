@@ -41,7 +41,6 @@ rsRetVal thrdInit(void);
 rsRetVal thrdTerminate(thrdInfo_t *pThis);
 rsRetVal thrdTerminateAll(void);
 rsRetVal thrdCreate(rsRetVal (*thrdMain)(thrdInfo_t*), rsRetVal(*afterRun)(thrdInfo_t *), bool);
-rsRetVal thrdSleep(thrdInfo_t *pThis, int iSeconds, int iuSeconds);
 
 /* macros (replace inline functions) */
 

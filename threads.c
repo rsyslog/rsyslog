@@ -250,29 +250,5 @@ rsRetVal thrdExit(void)
 }
 
 
-/* thrdSleep() - a fairly portable way to put a thread to sleep. It 
- * will wake up when
- * a) the wake-time is over
- * b) the thread shall be terminated
- * Returns RS_RET_OK if all went well, RS_RET_TERMINATE_NOW if the calling
- * thread shall be terminated and any other state if an error happened.
- * rgerhards, 2007-12-17
- */
-rsRetVal
-thrdSleep(thrdInfo_t *pThis, int iSeconds, int iuSeconds)
-{
-	DEFiRet;
-	struct timeval tvSelectTimeout;
-
-	assert(pThis != NULL);
-	tvSelectTimeout.tv_sec = iSeconds;
-	tvSelectTimeout.tv_usec = iuSeconds; /* micro seconds */
-	select(1, NULL, NULL, NULL, &tvSelectTimeout);
-	if(pThis->bShallStop)
-		iRet = RS_RET_TERMINATE_NOW;
-	RETiRet;
-}
-
-
 /* vi:set ai:
  */
