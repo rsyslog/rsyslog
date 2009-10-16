@@ -1,0 +1,42 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Language" content="en">
+<title>stdout output module (omstdout)</title>
+</head>
+<body>
+<a href="rsyslog_conf_modules.html">rsyslog module reference</a>
+
+<h1>stdout output module (stdout)</h1>
+<p><b>Module Name:&nbsp;&nbsp;&nbsp; omstdout</b></p>
+<p><b>Author: </b>Rainer Gerhards
+&lt;rgerhards@adiscon.com&gt;</p>
+<p><b>Available Since</b>: 4.1.6</p>
+<p><b>Description</b>:</p>
+<p>This module writes any messages that are passed to it to stdout.
+It was developed for the rsyslog test suite. However, there may
+(limited) other uses exists. Please not that we do not put too much
+effort into the quality of this module as we do not expect it to
+be used in real deployments. If you do, please drop us a note so
+that we can enhance its priority!
+<p><b>Configuration Directives</b>:</p>
+<ul>
+<li><b>$ActionOMStdoutArrayInterface</b> [on|<b>off</b><br>
+This setting instructs omstdout to use the alternate
+array based method of parameter passing. If used, the values
+will be output with commas between the values but no other padding bytes.
+This is a test aid for the alternate calling interface.
+<li><b>$ActionOMStdoutEnsureLFEnding</b> [<b>on</b>|off<br>
+Makes sure that each message is written with a terminating LF. This is needed for
+the automatted tests. If the message contains a trailing LF, none is added.
+</ul>
+<b>Caveats/Known Bugs:</b>
+<p>Currently none known.
+<p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>]
+[<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the
+<a href="http://www.rsyslog.com/">rsyslog</a>
+project.<br>
+Copyright &copy; 2009 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>.
+Released under the GNU GPL version 3 or higher.</font></p>
+</body></html>

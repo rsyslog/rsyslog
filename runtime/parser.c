@@ -231,14 +231,14 @@ sanitizeMessage(msg_t *pMsg)
 			 * can not handle it! -- rgerhards, 2009-08-26
 			 */
 			if(pszMsg[iSrc] == '\0' || bEscapeCCOnRcv) {
-			/* we are configured to escape control characters. Please note
-			 * that this most probably break non-western character sets like
-			 * Japanese, Korean or Chinese. rgerhards, 2007-07-17
-			 */
-			pDst[iDst++] = cCCEscapeChar;
-			pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0300) >> 6);
-			pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0070) >> 3);
-			pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0007));
+				/* we are configured to escape control characters. Please note
+				 * that this most probably break non-western character sets like
+				 * Japanese, Korean or Chinese. rgerhards, 2007-07-17
+				 */
+				pDst[iDst++] = cCCEscapeChar;
+				pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0300) >> 6);
+				pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0070) >> 3);
+				pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0007));
 			}
 		} else {
 			pDst[iDst++] = pszMsg[iSrc];

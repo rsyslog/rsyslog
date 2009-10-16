@@ -42,6 +42,7 @@
 #include "module-template.h"
 #include "errmsg.h"
 #include "msg.h"
+#include "srUtils.h"
 #include "glbl.h"
 
 MODULE_TYPE_INPUT
@@ -80,20 +81,13 @@ CODESTARTrunInput
 	 * right into the sleep below.
 	 */
 	while(1) {
-		/* we do not need to handle the RS_RET_TERMINATE_NOW case any
-	   	 * special because we just need to terminate. This may be different
-	   	 * if a cleanup is needed. But for now, we can just use CHKiRet().
-	   	 * rgerhards, 2007-12-17
-	   	 */
-		CHKiRet(thrdSleep(pThrd, iMarkMessagePeriod, 0)); /* seconds, micro seconds */
+		srSleep(iMarkMessagePeriod, 0); /* seconds, micro seconds */
 
 		if(glbl.GetGlobalInputTermState() == 1)
 			break; /* terminate input! */
 
 		logmsgInternal(NO_ERRCODE, LOG_INFO, (uchar*)"-- MARK --", MARK);
 	}
-finalize_it:
-	return iRet;
 ENDrunInput
 
 

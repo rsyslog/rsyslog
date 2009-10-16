@@ -198,7 +198,7 @@ finalize_it:
  * on scheduling order. -- rgerhards, 2008-10-02
  */
 static inline rsRetVal
-processSocket(int fd, struct sockaddr_storage *frominetPrev, int *pbIsPermitted,
+processSocket(thrdInfo_t *pThrd, int fd, struct sockaddr_storage *frominetPrev, int *pbIsPermitted,
 	      uchar *fromHost, uchar *fromHostFQDN, uchar *fromHostIP, ruleset_t *pRuleset)
 {
 	DEFiRet;
@@ -213,8 +213,11 @@ processSocket(int fd, struct sockaddr_storage *frominetPrev, int *pbIsPermitted,
 	prop_t *propFromHostIP = NULL;
 	char errStr[1024];
 
+	assert(pThrd != NULL);
 	iNbrTimeUsed = 0;
 	while(1) { /* loop is terminated if we have a bad receive, done below in the body */
+		if(pThrd->bShallStop == TRUE)
+			ABORT_FINALIZE(RS_RET_FORCE_TERM);
 		socklen = sizeof(struct sockaddr_storage);
 		lenRcvBuf = recvfrom(fd, (char*) pRcvBuf, iMaxLine, 0, (struct sockaddr *)&frominet, &socklen);
 		if(lenRcvBuf < 0) {
@@ -293,9 +296,9 @@ finalize_it:
  * interface. ./configure settings control which one is used.
  * rgerhards, 2009-09-09
  */
-#if HAVE_EPOLL_CREATE1
+#if defined(HAVE_EPOLL_CREATE1) || defined(HAVE_EPOLL_CREATE)
 #define NUM_EPOLL_EVENTS 10
-rsRetVal rcvMainLoop()
+rsRetVal rcvMainLoop(thrdInfo_t *pThrd)
 {
 	DEFiRet;
 	int nfds;
@@ -318,7 +321,13 @@ rsRetVal rcvMainLoop()
 
 	CHKmalloc(udpEPollEvt = calloc(udpLstnSocks[0], sizeof(struct epoll_event)));
 
-	efd = epoll_create1(EPOLL_CLOEXEC);
+#	if defined(EPOLL_CLOEXEC) && defined(HAVE_EPOLL_CREATE1)
+		DBGPRINTF("imudp uses epoll_create1()\n");
+		efd = epoll_create1(EPOLL_CLOEXEC);
+#	else
+		DBGPRINTF("imudp uses epoll_create()\n");
+		efd = epoll_create(NUM_EPOLL_EVENTS);
+#	endif
 	if(efd < 0) {
 		DBGPRINTF("epoll_create1() could not create fd\n");
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
@@ -344,11 +353,11 @@ rsRetVal rcvMainLoop()
 		nfds = epoll_wait(efd, currEvt, NUM_EPOLL_EVENTS, -1);
 		DBGPRINTF("imudp: epoll_wait() returned with %d fds\n", nfds);
 
-		if(glbl.GetGlobalInputTermState() == 1)
+		if(pThrd->bShallStop == TRUE)
 			break; /* terminate input! */
 
 		for(i = 0 ; i < nfds ; ++i) {
-			processSocket(udpLstnSocks[currEvt[i].data.u64], &frominetPrev, &bIsPermitted,
+			processSocket(pThrd, udpLstnSocks[currEvt[i].data.u64], &frominetPrev, &bIsPermitted,
 				      fromHost, fromHostFQDN, fromHostIP, udpRulesets[currEvt[i].data.u64]);
 		}
 	}
@@ -361,7 +370,7 @@ finalize_it:
 }
 #else /* #if HAVE_EPOLL_CREATE1 */
 /* this is the code for the select() interface */
-rsRetVal rcvMainLoop()
+rsRetVal rcvMainLoop(thrdInfo_t *pThrd)
 {
 	DEFiRet;
 	int maxfds;
@@ -379,6 +388,7 @@ rsRetVal rcvMainLoop()
 	 */
 	bIsPermitted = 0;
 	memset(&frominetPrev, 0, sizeof(frominetPrev));
+	DBGPRINTF("imudp uses select()\n");
 
 	while(1) {
 		/* Add the Unix Domain Sockets to the list of read
@@ -414,7 +424,7 @@ rsRetVal rcvMainLoop()
 
 	       for(i = 0; nfds && i < *udpLstnSocks; i++) {
 			if(FD_ISSET(udpLstnSocks[i+1], &readfds)) {
-		       		processSocket(udpLstnSocks[i+1], &frominetPrev, &bIsPermitted,
+		       		processSocket(pThrd, udpLstnSocks[i+1], &frominetPrev, &bIsPermitted,
 					      fromHost, fromHostFQDN, fromHostIP, udpRulesets[i+1]);
 			--nfds; /* indicate we have processed one descriptor */
 			}
@@ -436,7 +446,7 @@ CODESTARTrunInput
 	 * signalled to do so. This, however, is handled by the framework,
 	 * right into the sleep below.
 	 */
-	iRet = rcvMainLoop();
+	iRet = rcvMainLoop(pThrd);
 ENDrunInput
 
 
