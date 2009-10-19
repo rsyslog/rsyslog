@@ -1,0 +1,12 @@
+# New tests should be added to this file if there is no specific
+# reason for not doing that. Initially, we could only handle one test
+# case per file, but this restriction has been removed some time ago.
+# So it is less troublesome (and easier to overlook) to have all related
+# tests in a single file.
+# This file contains a lot of real-life samples (of course mangled so
+# that they can not be traced back to the original submitter). Note
+# that IP addr 192.0.2.1 is specifically set aside for testing and
+# documentation by IANA.
+# rgerhards, 2009-10-19
+<29>Oct 16 20:47:24 example-p exam-pl[12345]: connect host= /192.0.2.1
+29,daemon,notice,Oct 16 20:47:24,example-p,exam-pl,exam-pl[12345]:, connect host= /192.0.2.1
