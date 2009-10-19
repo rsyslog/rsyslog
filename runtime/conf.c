@@ -1037,7 +1037,7 @@ static rsRetVal cflineDoFilter(uchar **pp, rule_t *f)
 	DEFiRet;
 
 	ASSERT(pp != NULL);
-	ASSERT(f != NULL);
+	ISOBJ_TYPE_assert(f, rule);
 
 	/* check which filter we need to pull... */
 	switch(**pp) {
@@ -1059,6 +1059,7 @@ static rsRetVal cflineDoFilter(uchar **pp, rule_t *f)
 	 * and, if so, we copy them over. rgerhards, 2005-10-18
 	 */
 	if(pDfltProgNameCmp != NULL) {
+RUNLOG_STR("dflt ProgNameCmp != NULL, setting opCSProgNameComp");
 		CHKiRet(rsCStrConstructFromCStr(&(f->pCSProgNameComp), pDfltProgNameCmp));
 	}
 

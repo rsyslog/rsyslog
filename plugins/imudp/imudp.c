@@ -117,8 +117,9 @@ static rsRetVal addListner(void __attribute__((unused)) *pVal, uchar *pNewVal)
 		if(udpLstnSocks == NULL) {
 			/* esay, we can just replace it */
 			udpLstnSocks = newSocks;
+RUNLOG_VAR("%d", newSocks[0]);
 			CHKmalloc(udpRulesets = (ruleset_t**) malloc(sizeof(ruleset_t*) * (newSocks[0] + 1)));
-			for(iDst = 1 ; iDst < newSocks[0] ; ++iDst)
+			for(iDst = 1 ; iDst <= newSocks[0] ; ++iDst)
 				udpRulesets[iDst] = pBindRuleset;
 		} else {
 			/* we need to add them */
