@@ -821,12 +821,12 @@ tryDoAction(action_t *pAction, batch_t *pBatch, int *pnElem)
 			DBGPRINTF("action call returned %d\n", localRet);
 			if(localRet == RS_RET_OK) {
 				/* mark messages as committed */
-				while(iCommittedUpTo < i) {
+				while(iCommittedUpTo <= i) {
 					pBatch->pElem[iCommittedUpTo++].state = BATCH_STATE_COMM;
 				}
 			} else if(localRet == RS_RET_PREVIOUS_COMMITTED) {
 				/* mark messages as committed */
-				while(iCommittedUpTo < i - 1) {
+				while(iCommittedUpTo < i) {
 					pBatch->pElem[iCommittedUpTo++].state = BATCH_STATE_COMM;
 				}
 				pBatch->pElem[i].state = BATCH_STATE_SUB;
@@ -838,6 +838,7 @@ tryDoAction(action_t *pAction, batch_t *pBatch, int *pnElem)
 				iRet = localRet;
 				FINALIZE;
 			}
+dbgprintf("XXX: submitBatch set element %d state to %d\n", i, pBatch->pElem[i].state);
 		}
 		++i;
 		++iElemProcessed;
@@ -871,6 +872,7 @@ submitBatch(action_t *pAction, batch_t *pBatch, int nElem)
 
 	bDone = 0;
 	do {
+dbgprintf("XXX: submitBatch in loop, batch size %d\n", nElem);
 		localRet = tryDoAction(pAction, pBatch, &nElem);
 		if(   localRet == RS_RET_OK
 		   || localRet == RS_RET_PREVIOUS_COMMITTED

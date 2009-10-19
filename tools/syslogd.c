@@ -641,6 +641,7 @@ msgConsumer(void __attribute__((unused)) *notNeeded, batch_t *pBatch, int *pbShu
 	int i;
 	msg_t *pMsg;
 	DEFiRet;
+	rsRetVal localRet;
 
 	assert(pBatch != NULL);
 
@@ -650,7 +651,11 @@ msgConsumer(void __attribute__((unused)) *notNeeded, batch_t *pBatch, int *pbShu
 		if((pMsg->msgFlags & NEEDS_PARSING) != 0) {
 			parseMsg(pMsg);
 		}
+		localRet =
 		ruleset.ProcessMsg(pMsg);
+dbgprintf("msgConsumer got iRet %d from ProcessMsg\n", localRet);
+		/* if we reach this point, the message is considered committed (by definition!) */
+		pBatch->pElem[i].state = BATCH_STATE_COMM;
 	}
 
 	RETiRet;

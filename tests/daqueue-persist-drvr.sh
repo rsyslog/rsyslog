@@ -12,8 +12,8 @@ source $srcdir/diag.sh init
 echo \$MainMsgQueueType $1 > work-queuemode.conf
 echo "*.*     :omtesting:sleep 0 1000" > work-delay.conf
 
-#export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
-#export RSYSLOG_DEBUGLOG="log0"
+export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
+export RSYSLOG_DEBUGLOG="log0"
 
 # inject 10000 msgs, so that DO hit the high watermark
 source $srcdir/diag.sh startup queue-persist.conf
@@ -26,8 +26,8 @@ echo "Enter phase 2, rsyslogd restart"
 
 #exit
 
-#export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
-#export RSYSLOG_DEBUGLOG="log"
+export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
+export RSYSLOG_DEBUGLOG="log"
 #valgrind="valgrind --tool=helgrind --log-fd=1"
 
 # restart engine and have rest processed

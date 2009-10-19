@@ -164,12 +164,6 @@ typedef struct queue_s {
 	} tVars;
 } qqueue_t;
 
-/* some symbolic constants for easier reference */
-#define QUEUE_MODE_ENQDEQ 0
-#define QUEUE_MODE_ENQONLY 1
-
-#define QUEUE_IDX_DA_WORKER 0 /* index for the DA worker (fixed) */
-#define QUEUE_PTR_DA_WORKER(x) (&((pThis)->pWrkThrds[0]))
 
 /* the define below is an "eternal" timeout for the timeout settings which require a value.
  * It is one day, which is not really eternal, but comes close to it if we think about

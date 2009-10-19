@@ -280,15 +280,7 @@ qqueueChkIsDA(qqueue_t *pThis)
 }
 
 
-/* Start disk-assisted queue mode. All internal settings are changed. This is supposed
- * to be called from the DA worker, which must have been started before. The most important
- * chore of this function is to create the DA queue object. If that function fails,
- * the DA worker should return with an appropriate state, which in turn should lead to
- * a re-set to non-DA mode in the Enq process. The queue mutex must be locked when this
- * function is called, else a number of races will happen.
- * Please note that this function may be called *while* we in DA mode. This is due to the
- * fact that the DA worker calls it and the DA worker may be suspended (and restarted) due
- * to inactivity timeouts.
+/* Start disk-assisted queue mode.
  * rgerhards, 2008-01-15
  */
 static rsRetVal
@@ -354,7 +346,7 @@ finalize_it:
  * rgerhards, 2008-01-16
  */
 static rsRetVal
-InitDA(qqueue_t *pThis, int bEnqOnly, int bLockMutex)
+InitDA(qqueue_t *pThis, int bLockMutex)
 {
 	DEFiRet;
 	DEFVARS_mutexProtection;
@@ -389,7 +381,6 @@ InitDA(qqueue_t *pThis, int bEnqOnly, int bLockMutex)
 		CHKiRet(StartDA(pThis));
 	}
 
-	pThis->bEnqOnly = bEnqOnly; // TODO: I think this is not needed, but first clean up shutdown processing!
 	pThis->bRunsDA = 1;
 
 finalize_it:
@@ -1409,6 +1400,7 @@ DeleteProcessedBatch(qqueue_t *pThis, batch_t *pBatch)
 	assert(pBatch != NULL);
 
 	for(i = 0 ; i < pBatch->nElem ; ++i) {
+dbgprintf("XXX: deleteProcessedBatch delete entry %d with state %d\n", i, pBatch->pElem[i].state);
 		pUsr = pBatch->pElem[i].pUsrp;
 		objDestruct(pUsr);
 	}
@@ -1645,7 +1637,6 @@ batchProcessed(qqueue_t *pThis, wti_t *pWti)
 
 	ISOBJ_TYPE_assert(pThis, qqueue);
 	ISOBJ_TYPE_assert(pWti, wti);
-dbgprintf("XXX: batchProcessed deletes %d records\n", pWti->batch.nElemDeq);
 
 	DeleteProcessedBatch(pThis, &pWti->batch);
 	qqueueChkPersist(pThis, pWti->batch.nElemDeq);
@@ -1882,7 +1873,7 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 
 	/* set up DA system if we have a disk-assisted queue */
 	if(pThis->bIsDA)
-		InitDA(pThis, QUEUE_MODE_ENQDEQ, LOCK_MUTEX); /* initiate DA mode */
+		InitDA(pThis, LOCK_MUTEX); /* initiate DA mode */
 
 	DBGOPRINT((obj_t*) pThis, "queue finished initialization\n");
 

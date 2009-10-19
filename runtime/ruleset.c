@@ -139,6 +139,7 @@ DEFFUNC_llExecFunc(processMsgDoRules)
 	rsRetVal iRet;
 	ISOBJ_TYPE_assert(pData, rule);
 	iRet = rule.ProcessMsg((rule_t*) pData, (msg_t*) pParam);
+dbgprintf("ruleset: get iRet %d from rule.ProcessMsg()\n", iRet);
 	return iRet;
 }
 
@@ -159,6 +160,7 @@ processMsg(msg_t *pMsg)
 	CHKiRet(llExecFunc(&pThis->llRules, processMsgDoRules, pMsg));
 
 finalize_it:
+dbgprintf("ruleset.ProcessMsg() returns %d\n", iRet);
 	RETiRet;
 }
 

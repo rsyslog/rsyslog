@@ -121,7 +121,7 @@ propid = pTpe->data.field.propid;
 				doSQLEscape(&pVal, &iLenVal, &bMustBeFreed, 0);
 		}
 		/* got source, now copy over */
-dbgprintf("copying prop id %3d (entry type %d) of length %d ('%s')\n", propid, pTpe->eEntryType, (int) iLenVal, pVal);
+//dbgprintf("copying prop id %3d (entry type %d) of length %d ('%s')\n", propid, pTpe->eEntryType, (int) iLenVal, pVal);
 		if(iBuf + iLenVal >= *pLenBuf) /* we reserve one char for the final \0! */
 			CHKiRet(ExtendBuf(ppBuf, pLenBuf, iBuf + iLenVal + 1));
 
