@@ -138,6 +138,7 @@ shouldProcessThisMessage(rule_t *pRule, msg_t *pMsg, int *bProcessMsg)
 		}
 	}
 	
+RUNLOG_VAR("%p", pRule->pCSProgNameComp);
 	if(pRule->pCSProgNameComp != NULL) {
 		int bInv = 0, bEqv = 0, offset = 0;
 		if(*(rsCStrGetSzStrNoNULL(pRule->pCSProgNameComp)) == '-') {

@@ -326,10 +326,13 @@ processTestFile(int fd, char *pszFileName)
 				ret = 1;
 		}
 
+		/* clean up after the try */
+		free(testdata);
+		testdata = NULL;
+		free(expected);
+		expected = NULL;
 	}
 
-	free(testdata);
-	free(expected);
 	fclose(fp);
 	return(ret);
 }
