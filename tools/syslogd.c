@@ -1888,11 +1888,6 @@ init(void)
 	struct sigaction sigAct;
 	DEFiRet;
 
-	/* initialize some static variables */
-	pDfltHostnameCmp = NULL;
-	pDfltProgNameCmp = NULL;
-	eDfltHostnameCmpMode = HN_NO_COMP;
-
 	DBGPRINTF("rsyslog %s - called init()\n", VERSION);
 
 	/* construct the default ruleset */
@@ -1941,17 +1936,6 @@ init(void)
 	}
 
 	legacyOptsHook();
-
-	/* we are now done with reading the configuration. This is the right time to
-	 * free some objects that were just needed for loading it. rgerhards 2005-10-19
-	 */
-	if(pDfltHostnameCmp != NULL) {
-		rsCStrDestruct(&pDfltHostnameCmp);
-	}
-
-	if(pDfltProgNameCmp != NULL) {
-		rsCStrDestruct(&pDfltProgNameCmp);
-	}
 
 	/* some checks */
 	if(iMainMsgQueueNumWorkers < 1) {

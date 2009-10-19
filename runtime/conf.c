@@ -95,17 +95,16 @@ DEFobjCurrIf(ruleset)
 
 static int iNbrActions = 0; /* number of currently defined actions */
 
-/* The following global variables are used for building
+/* The following module-global variables are used for building
  * tag and host selector lines during startup and config reload.
  * This is stored as a global variable pool because of its ease. It is
  * also fairly compatible with multi-threading as the stratup code must
- * be run in a single thread anyways. So there can be no race conditions. These
- * variables are no longer used once the configuration has been loaded (except,
- * of course, during a reload). rgerhards 2005-10-18
+ * be run in a single thread anyways. So there can be no race conditions.
+ * rgerhards 2005-10-18
  */
-EHostnameCmpMode eDfltHostnameCmpMode;
-cstr_t *pDfltHostnameCmp;
-cstr_t *pDfltProgNameCmp;
+static EHostnameCmpMode eDfltHostnameCmpMode = HN_NO_COMP;
+static cstr_t *pDfltHostnameCmp = NULL;
+static cstr_t *pDfltProgNameCmp = NULL;
 
 
 /* process a directory and include all of its files into
@@ -1248,6 +1247,15 @@ ENDobjQueryInterface(conf)
  */
 BEGINObjClassExit(conf, OBJ_IS_CORE_MODULE) /* CHANGE class also in END MACRO! */
 CODESTARTObjClassExit(conf)
+	/* free no-longer needed module-global variables */
+	if(pDfltHostnameCmp != NULL) {
+		rsCStrDestruct(&pDfltHostnameCmp);
+	}
+
+	if(pDfltProgNameCmp != NULL) {
+		rsCStrDestruct(&pDfltProgNameCmp);
+	}
+
 	/* release objects we no longer need */
 	objRelease(expr, CORE_COMPONENT);
 	objRelease(ctok, CORE_COMPONENT);
