@@ -136,13 +136,13 @@ static rsRetVal addListner(void __attribute__((unused)) *pVal, uchar *pNewVal)
 			} else {
 				/* ready to copy */
 				iDst = 1;
-				for(iSrc = 1 ; iSrc <= udpLstnSocks[0] ; ++iSrc) {
-					tmpSocks[iDst++] = udpLstnSocks[iSrc];
-					tmpRulesets[iDst++] = udpRulesets[iSrc];
+				for(iSrc = 1 ; iSrc <= udpLstnSocks[0] ; ++iSrc, ++iDst) {
+					tmpSocks[iDst] = udpLstnSocks[iSrc];
+					tmpRulesets[iDst] = udpRulesets[iSrc];
 				}
-				for(iSrc = 1 ; iSrc <= newSocks[0] ; ++iSrc) {
-					tmpSocks[iDst++] = newSocks[iSrc];
-					tmpRulesets[iDst++] = pBindRuleset;
+				for(iSrc = 1 ; iSrc <= newSocks[0] ; ++iSrc, ++iDst) {
+					tmpSocks[iDst] = newSocks[iSrc];
+					tmpRulesets[iDst] = pBindRuleset;
 				}
 				tmpSocks[0] = udpLstnSocks[0] + newSocks[0];
 				free(newSocks);

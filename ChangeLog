@@ -1,6 +1,5 @@
 ---------------------------------------------------------------------------
 Version 5.3.2  [DEVEL] (rgerhards), 2009-10-??
-<<<<<<< HEAD:ChangeLog
 - enhanced omfile to support transactional interface. This will increase
   performance in many cases.
 - added multi-ruleset support to imudp
