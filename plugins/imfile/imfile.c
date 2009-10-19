@@ -213,6 +213,7 @@ static rsRetVal pollFile(fileInfo_t *pThis, int *pbHadFileData)
 	}
 
 finalize_it:
+		; /*EMPTY STATEMENT - needed to keep compiler happy - see below! */
 	/* Note: the problem above is that pthread:cleanup_pop() is a macro which
 	 * evaluates to something like "} while(0);". So the code would become
 	 * "finalize_it: }", that is a label without a statement. The C standard does
