@@ -55,6 +55,7 @@
 #include "wti.h"
 #include "msg.h"
 #include "atomic.h"
+#include "errmsg.h"
 #include "msg.h" /* TODO: remove once we remove MsgAddRef() call */
 
 #ifdef OS_SOLARIS
@@ -65,6 +66,7 @@
 DEFobjStaticHelpers
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(strm)
+DEFobjCurrIf(errmsg)
 
 /* forward-definitions */
 static rsRetVal qqueueChkPersist(qqueue_t *pThis, int nUpdates);
@@ -369,8 +371,12 @@ StartDA(qqueue_t *pThis)
 
 	iRet = qqueueStart(pThis->pqDA);
 	/* file not found is expected, that means it is no previous QIF available */
-	if(iRet != RS_RET_OK && iRet != RS_RET_FILE_NOT_FOUND)
+	if(iRet != RS_RET_OK && iRet != RS_RET_FILE_NOT_FOUND) {
+		errno = 0; /* else an errno is shown in errmsg! */
+		errmsg.LogError(errno, iRet, "error starting up disk queue, using pure in-memory mode");
+		pThis->bIsDA = 0;	/* disable memory mode */
 		FINALIZE; /* something is wrong */
+	}
 
 	//pthread_cond_broadcast(&pThis->condDAReady); /* signal we are now initialized and ready to go ;) */
 
@@ -920,9 +926,12 @@ static rsRetVal qDestructDisk(qqueue_t *pThis)
 	
 	ASSERT(pThis != NULL);
 	
-	strm.Destruct(&pThis->tVars.disk.pWrite);
-	strm.Destruct(&pThis->tVars.disk.pReadDeq);
-	strm.Destruct(&pThis->tVars.disk.pReadDel);
+	if(pThis->tVars.disk.pWrite != NULL)
+		strm.Destruct(&pThis->tVars.disk.pWrite);
+	if(pThis->tVars.disk.pReadDeq != NULL)
+		strm.Destruct(&pThis->tVars.disk.pReadDeq);
+	if(pThis->tVars.disk.pReadDel != NULL)
+		strm.Destruct(&pThis->tVars.disk.pReadDel);
 
 	RETiRet;
 }
@@ -2165,7 +2174,8 @@ static rsRetVal qqueuePersist(qqueue_t *pThis, int bIsCheckpoint)
 			pThis->bNeedDelQIF = 0;
 		}
 		/* indicate spool file needs to be deleted */
-		CHKiRet(strm.SetbDeleteOnClose(pThis->tVars.disk.pReadDel, 1));
+		if(pThis->tVars.disk.pReadDel != NULL) /* may be NULL if we had a startup failure! */
+			CHKiRet(strm.SetbDeleteOnClose(pThis->tVars.disk.pReadDel, 1));
 		FINALIZE; /* nothing left to do, so be happy */
 	}
 
@@ -2670,6 +2680,7 @@ BEGINObjClassInit(qqueue, 1, OBJ_IS_CORE_MODULE)
 	/* request objects we use */
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(strm, CORE_COMPONENT));
+	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 
 	/* now set our own handlers */
 	OBJSetMethodHandler(objMethod_SETPROPERTY, qqueueSetProperty);

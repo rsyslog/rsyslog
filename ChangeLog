@@ -21,6 +21,9 @@ Version 5.3.2  [DEVEL] (rgerhards), 2009-10-??
     used together with the new interface. The removal also enables us to
     drop a lot of duplicate code, reducing complexity and increasing
     maintainability.
+- bugfix: segfault when starting up with an invalid .qi file for a disk queue
+  Failed for both pure disk as well as DA queues. Now, we emit an error
+  message and disable disk queueing facility.
 - bugfix: potential segfault on messages with empty MSG part. This was a
   recently introduced regression.
 - bugfix: debug string larger than 1K were improperly displayed. Max size
