@@ -16,6 +16,8 @@ Version 4.4.2  [v4-stable] (rgerhards), 2009-10-09
   The end result of this bug could be a higher UDP message loss rate than
   necessary (note that UDP message loss can not totally be avoided due
   to the UDP spec)
+- bugfix: potential hang condition on queue shutdown
+  [imported from v3-stable]
 ---------------------------------------------------------------------------
 Version 4.4.1  [v4-stable] (rgerhards), 2009-09-02
 - features requiring Java are automatically disabled if Java is not
