@@ -171,9 +171,7 @@ wtpWakeupAllWrkr(wtp_t *pThis)
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, wtp);
-	d_pthread_mutex_lock(pThis->pmutUsr);
 	pthread_cond_broadcast(pThis->pcondBusy);
-	d_pthread_mutex_unlock(pThis->pmutUsr);
 	RETiRet;
 }
 
