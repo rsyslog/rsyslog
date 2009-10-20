@@ -90,7 +90,7 @@ case $1 in
 		;;
    'nettester') # perform nettester-based tests
    		# use -v for verbose output!
-		./nettester -t$2 -i$3
+		./nettester -t$2 -i$3 $4
 		if [ "$?" -ne "0" ]; then
 		  exit 1
 		fi
