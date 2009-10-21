@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 4.5.5  [v4-beta] (rgerhards), 2009-09-??
+Version 4.5.5  [v4-beta] (rgerhards), 2009-10-21
 - added $InputTCPServerNotifyOnConnectionClose config directive
   see doc for details
 - bugfix: debug string larger than 1K were improperly displayed. Max size
