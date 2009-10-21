@@ -1,4 +1,14 @@
 ---------------------------------------------------------------------------
+Version 5.3.2  [DEVEL] (rgerhards), 2009-10-??
+- bugfix: message processing states were not set correctly in all cases
+  however, this had no negative effect, as the message processing state
+  was not evaluated when a batch was deleted, and that was the only case
+  where the state could be wrong.
+- simplified and thus speeded up the queue engine, also fixed some
+  potential race conditions (in very unusual shutdown conditions)
+  along the way. The threading model has seriously changes, so there may
+  be some regressions.
+---------------------------------------------------------------------------
 Version 5.3.2  [DEVEL] (rgerhards), 2009-10-21
 - enhanced omfile to support transactional interface. This will increase
   performance in many cases.

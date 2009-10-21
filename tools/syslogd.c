@@ -158,6 +158,7 @@ DEFobjCurrIf(net) /* TODO: make go away! */
 
 /* forward definitions */
 static rsRetVal GlobalClassExit(void);
+static void logmsg(msg_t *pMsg, int flags);
 
 
 #ifndef _PATH_LOGCONF 
@@ -400,6 +401,8 @@ static int usage(void)
  */
 
 /* return back the approximate current number of messages in the main message queue
+ * This number includes the messages that reside in an associated DA queue (if
+ * it exists) -- rgerhards, 2009-10-14
  */
 rsRetVal
 diagGetMainMsgQSize(int *piSize)
@@ -585,6 +588,7 @@ logmsgInternal(int iErr, int pri, uchar *msg, int flags)
 	MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName(), ustrlen(glbl.GetLocalHostName()));
 	MsgSetRcvFrom(pMsg, glbl.GetLocalHostNameProp());
 	MsgSetRcvFromIP(pMsg, pLocalHostIP);
+	MsgSetMSGoffs(pMsg, 0);
 	/* check if we have an error code associated and, if so,
 	 * adjust the tag. -- rgerhards, 2008-06-27
 	 */
@@ -632,21 +636,26 @@ finalize_it:
  * for the main queue.
  */
 static rsRetVal
-msgConsumer(void __attribute__((unused)) *notNeeded, batch_t *pBatch)
+msgConsumer(void __attribute__((unused)) *notNeeded, batch_t *pBatch, int *pbShutdownImmediate)
 {
 	int i;
 	msg_t *pMsg;
 	DEFiRet;
+	rsRetVal localRet;
 
 	assert(pBatch != NULL);
 
-	for(i = 0 ; i < pBatch->nElem ; i++) {
+	for(i = 0 ; i < pBatch->nElem  && !*pbShutdownImmediate ; i++) {
 		pMsg = (msg_t*) pBatch->pElem[i].pUsrp;
 		DBGPRINTF("msgConsumer processes msg %d/%d\n", i, pBatch->nElem);
 		if((pMsg->msgFlags & NEEDS_PARSING) != 0) {
 			parseMsg(pMsg);
 		}
+		localRet =
 		ruleset.ProcessMsg(pMsg);
+dbgprintf("msgConsumer got iRet %d from ProcessMsg\n", localRet);
+		/* if we reach this point, the message is considered committed (by definition!) */
+		pBatch->pElem[i].state = BATCH_STATE_COMM;
 	}
 
 	RETiRet;
@@ -1080,7 +1089,7 @@ multiSubmitMsg(multi_submit_t *pMultiSub)
  * potential for misinterpretation, which we simply can not solve under the
  * circumstances given.
  */
-void
+static void
 logmsg(msg_t *pMsg, int flags)
 {
 	char *msg;

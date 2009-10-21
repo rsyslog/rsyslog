@@ -263,6 +263,9 @@ waitMainQEmpty(tcps_sess_t *pSess)
 
 	CHKiRet(diagGetMainMsgQSize(&iMsgQueueSize));
 	while(iMsgQueueSize > 0) {
+		/* DEV DEBUG ONLY if(iPrint++ % 500)
+			printf("imdiag: main msg queue size: %d\n", iMsgQueueSize);
+		*/
 		if(iPrint++ % 500 == 0) 
 			dbgprintf("imdiag sleeping, wait mainq drain, curr size %d\n", iMsgQueueSize);
 		srSleep(0,2);	/* wait a little bit */

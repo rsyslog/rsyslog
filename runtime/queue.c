@@ -56,6 +56,7 @@
 #include "msg.h"
 #include "atomic.h"
 #include "errmsg.h"
+#include "unicode-helper.h"
 #include "msg.h" /* TODO: remove once we remove MsgAddRef() call */
 
 #ifdef OS_SOLARIS
@@ -70,11 +71,9 @@ DEFobjCurrIf(errmsg)
 
 /* forward-definitions */
 static rsRetVal qqueueChkPersist(qqueue_t *pThis, int nUpdates);
-static rsRetVal SetEnqOnly(qqueue_t *pThis, int bEnqOnly, int bLockMutex);
 static rsRetVal RateLimiter(qqueue_t *pThis);
 static int qqueueChkStopWrkrDA(qqueue_t *pThis);
 static rsRetVal GetDeqBatchSize(qqueue_t *pThis, int *pVal);
-static int qqueueIsIdleDA(qqueue_t *pThis);
 static rsRetVal ConsumerDA(qqueue_t *pThis, wti_t *pWti);
 static rsRetVal batchProcessed(qqueue_t *pThis, wti_t *pWti);
 
@@ -230,7 +229,8 @@ static inline void queueDrain(qqueue_t *pThis)
  * this point in time. The mutex must be locked when
  * ths function is called. -- rgerhards, 2008-01-25
  */
-static inline rsRetVal qqueueAdviseMaxWorkers(qqueue_t *pThis)
+static inline rsRetVal
+qqueueAdviseMaxWorkers(qqueue_t *pThis)
 {
 	DEFiRet;
 	int iMaxWorkers;
@@ -238,48 +238,20 @@ static inline rsRetVal qqueueAdviseMaxWorkers(qqueue_t *pThis)
 	ISOBJ_TYPE_assert(pThis, qqueue);
 
 	if(!pThis->bEnqOnly) {
-		if(pThis->bRunsDA) {
-			/* if we have not yet reached the high water mark, there is no need to start a
-			 * worker. -- rgerhards, 2008-01-26
-			 */
-			if(getLogicalQueueSize(pThis) >= pThis->iHighWtrMrk || pThis->bQueueStarted == 0) {
-				wtpAdviseMaxWorkers(pThis->pWtpDA, 1); /* disk queues have always one worker */
-			}
-		}
-		/* regular workers always run */
-		if(pThis->qType == QUEUETYPE_DISK || pThis->iMinMsgsPerWrkr == 0) {
-			iMaxWorkers = 1;
+dbgprintf("AdviseMaxWorkers: log Queue Size: %d, high water mark %d\n", 
+		getLogicalQueueSize(pThis) ,  pThis->iHighWtrMrk);
+		if(pThis->bIsDA && getLogicalQueueSize(pThis) >= pThis->iHighWtrMrk) {
+			wtpAdviseMaxWorkers(pThis->pWtpDA, 1); /* disk queues have always one worker */
 		} else {
-			iMaxWorkers = getLogicalQueueSize(pThis) / pThis->iMinMsgsPerWrkr + 1;
+			if(getLogicalQueueSize(pThis) == 0) {
+				iMaxWorkers = 0;
+			} else if(pThis->qType == QUEUETYPE_DISK || pThis->iMinMsgsPerWrkr == 0) {
+				iMaxWorkers = 1;
+			} else {
+				iMaxWorkers = getLogicalQueueSize(pThis) / pThis->iMinMsgsPerWrkr + 1;
+			}
+			wtpAdviseMaxWorkers(pThis->pWtpReg, iMaxWorkers);
 		}
-		wtpAdviseMaxWorkers(pThis->pWtpReg, iMaxWorkers); /* disk queues have always one worker */
-	}
-
-	RETiRet;
-}
-
-
-/* Destruct DA queue. This is the last part of DA-to-normal-mode
- * transistion. This is called asynchronously and some time quite a
- * while after the actual transistion. The key point is that we need to
- * do it at some later time, because we need to destruct the DA queue. That,
- * however, can not be done in a thread that has been signalled 
- * This is to be called when we revert back to our own queue.
- * This function must be called with the queue mutex locked (the wti
- * class ensures this).
- * rgerhards, 2008-01-15
- */
-static rsRetVal
-TurnOffDAMode(qqueue_t *pThis)
-{
-	DEFiRet;
-
-	ISOBJ_TYPE_assert(pThis, qqueue);
-	ASSERT(pThis->bRunsDA);
-	if(getLogicalQueueSize(pThis->pqDA) == 0) {
-		pThis->bRunsDA = 0; /* tell the world we are back in non-DA mode */
-		DBGOPRINT((obj_t*) pThis, "disk-assistance has been turned off, disk queue was empty (iRet %d)\n",
-			  iRet);
 	}
 
 	RETiRet;
@@ -310,15 +282,7 @@ qqueueChkIsDA(qqueue_t *pThis)
 }
 
 
-/* Start disk-assisted queue mode. All internal settings are changed. This is supposed
- * to be called from the DA worker, which must have been started before. The most important
- * chore of this function is to create the DA queue object. If that function fails,
- * the DA worker should return with an appropriate state, which in turn should lead to
- * a re-set to non-DA mode in the Enq process. The queue mutex must be locked when this
- * function is called, else a number of races will happen.
- * Please note that this function may be called *while* we in DA mode. This is due to the
- * fact that the DA worker calls it and the DA worker may be suspended (and restarted) due
- * to inactivity timeouts.
+/* Start disk-assisted queue mode.
  * rgerhards, 2008-01-15
  */
 static rsRetVal
@@ -350,24 +314,11 @@ StartDA(qqueue_t *pThis)
 	CHKiRet(qqueueSetbSyncQueueFiles(pThis->pqDA, pThis->bSyncQueueFiles));
 	CHKiRet(qqueueSettoActShutdown(pThis->pqDA, pThis->toActShutdown));
 	CHKiRet(qqueueSettoEnq(pThis->pqDA, pThis->toEnq));
-	CHKiRet(SetEnqOnly(pThis->pqDA, pThis->bDAEnqOnly, MUTEX_ALREADY_LOCKED));
 	CHKiRet(qqueueSetiDeqtWinFromHr(pThis->pqDA, pThis->iDeqtWinFromHr));
 	CHKiRet(qqueueSetiDeqtWinToHr(pThis->pqDA, pThis->iDeqtWinToHr));
+	CHKiRet(qqueueSettoQShutdown(pThis->pqDA, pThis->toQShutdown));
 	CHKiRet(qqueueSetiHighWtrMrk(pThis->pqDA, 0));
 	CHKiRet(qqueueSetiDiscardMrk(pThis->pqDA, 0));
-
-	// experimental: XXX
-	CHKiRet(qqueueSettoWrkShutdown(pThis->pqDA, 0));
-
-	if(pThis->toQShutdown == 0) {
-		CHKiRet(qqueueSettoQShutdown(pThis->pqDA, 0)); /* if the user really wants... */
-	} else {
-		/* we use the shortest possible shutdown (0 is endless!) because when we run on disk AND
-		 * have an obviously large backlog, we can't finish it in any case. So there is no point
-		 * in holding shutdown longer than necessary. -- rgerhards, 2008-01-15
-		 */
-		CHKiRet(qqueueSettoQShutdown(pThis->pqDA, 1));
-	}
 
 	iRet = qqueueStart(pThis->pqDA);
 	/* file not found is expected, that means it is no previous QIF available */
@@ -378,9 +329,7 @@ StartDA(qqueue_t *pThis)
 		FINALIZE; /* something is wrong */
 	}
 
-	//pthread_cond_broadcast(&pThis->condDAReady); /* signal we are now initialized and ready to go ;) */
-
-	DBGOPRINT((obj_t*) pThis, "is now running in disk assisted mode, disk queue 0x%lx\n",
+	DBGOPRINT((obj_t*) pThis, "DA queue initialized, disk queue 0x%lx\n",
 		  qqueueGetID(pThis->pqDA));
 
 finalize_it:
@@ -403,7 +352,7 @@ finalize_it:
  * rgerhards, 2008-01-16
  */
 static rsRetVal
-InitDA(qqueue_t *pThis, int bEnqOnly, int bLockMutex)
+InitDA(qqueue_t *pThis, int bLockMutex)
 {
 	DEFiRet;
 	DEFVARS_mutexProtection;
@@ -418,27 +367,20 @@ InitDA(qqueue_t *pThis, int bEnqOnly, int bLockMutex)
 	 * rgerhards, 2008-01-24
 	 * NOTE: this is the DA worker *pool*, not the DA queue!
 	 */
-	if(pThis->pWtpDA == NULL) {
-		lenBuf = snprintf((char*)pszBuf, sizeof(pszBuf), "%s:DAwpool", obj.GetName((obj_t*) pThis));
-		CHKiRet(wtpConstruct		(&pThis->pWtpDA));
-		CHKiRet(wtpSetDbgHdr		(pThis->pWtpDA, pszBuf, lenBuf));
-		CHKiRet(wtpSetpfChkStopWrkr	(pThis->pWtpDA, (rsRetVal (*)(void *pUsr, int)) qqueueChkStopWrkrDA));
-		CHKiRet(wtpSetpfGetDeqBatchSize	(pThis->pWtpDA, (rsRetVal (*)(void *pUsr, int*)) GetDeqBatchSize));
-		CHKiRet(wtpSetpfIsIdle		(pThis->pWtpDA, (rsRetVal (*)(void *pUsr, wtp_t*)) qqueueIsIdleDA));
-		CHKiRet(wtpSetpfDoWork		(pThis->pWtpDA, (rsRetVal (*)(void *pUsr, void *pWti)) ConsumerDA));
-		CHKiRet(wtpSetpfObjProcessed	(pThis->pWtpDA, (rsRetVal (*)(void *pUsr, wti_t *pWti)) batchProcessed));
-		CHKiRet(wtpSetpfOnWorkerShutdown(pThis->pWtpDA, (rsRetVal (*)(void *pUsr)) TurnOffDAMode));
-		CHKiRet(wtpSetpmutUsr		(pThis->pWtpDA, pThis->mut));
-		CHKiRet(wtpSetpcondBusy		(pThis->pWtpDA, &pThis->notEmpty));
-		CHKiRet(wtpSetiNumWorkerThreads	(pThis->pWtpDA, 1));
-		CHKiRet(wtpSettoWrkShutdown	(pThis->pWtpDA, pThis->toWrkShutdown));
-		CHKiRet(wtpSetpUsr		(pThis->pWtpDA, pThis));
-		CHKiRet(wtpConstructFinalize	(pThis->pWtpDA));
-	}
+	lenBuf = snprintf((char*)pszBuf, sizeof(pszBuf), "%s:DAwpool", obj.GetName((obj_t*) pThis));
+	CHKiRet(wtpConstruct		(&pThis->pWtpDA));
+	CHKiRet(wtpSetDbgHdr		(pThis->pWtpDA, pszBuf, lenBuf));
+	CHKiRet(wtpSetpfChkStopWrkr	(pThis->pWtpDA, (rsRetVal (*)(void *pUsr, int)) qqueueChkStopWrkrDA));
+	CHKiRet(wtpSetpfGetDeqBatchSize	(pThis->pWtpDA, (rsRetVal (*)(void *pUsr, int*)) GetDeqBatchSize));
+	CHKiRet(wtpSetpfDoWork		(pThis->pWtpDA, (rsRetVal (*)(void *pUsr, void *pWti)) ConsumerDA));
+	CHKiRet(wtpSetpfObjProcessed	(pThis->pWtpDA, (rsRetVal (*)(void *pUsr, wti_t *pWti)) batchProcessed));
+	CHKiRet(wtpSetpmutUsr		(pThis->pWtpDA, pThis->mut));
+	CHKiRet(wtpSetpcondBusy		(pThis->pWtpDA, &pThis->notEmpty));
+	CHKiRet(wtpSetiNumWorkerThreads	(pThis->pWtpDA, 1));
+	CHKiRet(wtpSettoWrkShutdown	(pThis->pWtpDA, pThis->toWrkShutdown));
+	CHKiRet(wtpSetpUsr		(pThis->pWtpDA, pThis));
+	CHKiRet(wtpConstructFinalize	(pThis->pWtpDA));
 	/* if we reach this point, we have a "good" DA worker pool */
-
-	/* indicate we now run in DA mode - this is reset by the DA worker if it fails */
-	pThis->bDAEnqOnly = bEnqOnly;
 
 	/* now construct the actual queue (if it does not already exist) */
 	if(pThis->pqDA == NULL) {
@@ -447,58 +389,8 @@ InitDA(qqueue_t *pThis, int bEnqOnly, int bLockMutex)
 
 	pThis->bRunsDA = 1;
 
-	/* now we must now adivse the wtp that we need one worker. If none is yet active,
-	 * that will also start one up. If we forgot that step, everything would be stalled
-	 * until the next enqueue request.
-	 */
-	wtpAdviseMaxWorkers(pThis->pWtpDA, 1); /* DA queues always have just one worker max */
-
 finalize_it:
 	END_MTX_PROTECTED_OPERATIONS(pThis->mut);
-	RETiRet;
-}
-
-
-/* check if we need to start disk assisted mode and send some signals to
- * keep it running if we are already in it. It also checks if DA mode is
- * partially initialized, in which case it waits for initialization to
- * complete.
- * rgerhards, 2008-01-14
- */
-static rsRetVal
-ChkStrtDA(qqueue_t *pThis)
-{
-	DEFiRet;
-
-	ISOBJ_TYPE_assert(pThis, qqueue);
-
-	/* if we do not hit the high water mark, we have nothing to do */
-	if(getPhysicalQueueSize(pThis) != pThis->iHighWtrMrk)
-		ABORT_FINALIZE(RS_RET_OK);
-
-	if(pThis->bRunsDA) {
-		/* then we need to signal that we are at the high water mark again. If that happens
-		 * on our way down the queue, that doesn't matter, because then nobody is waiting
-		 * on the condition variable.
-		 * (Remember that a DA queue stops draining the queue once it has reached the low
-		 * water mark and restarts it when the high water mark is reached again - this is
-		 * what this code here is responsible for. Please note that all workers may have been
-		 * terminated due to the inactivity timeout, thus we need to advise the pool that
-		 * we need at least one).
-		 */
-		DBGOPRINT((obj_t*) pThis, "%d entries - passed high water mark in DA mode, send notify\n",
-			  getPhysicalQueueSize(pThis));
-		qqueueAdviseMaxWorkers(pThis);
-	} else {
-		/* this is the case when we are currently not running in DA mode. So it is time
-		 * to turn it back on.
-		 */
-		DBGOPRINT((obj_t*) pThis, "%d entries - passed high water mark for disk-assisted mode, initiating...\n",
-			  getPhysicalQueueSize(pThis));
-		InitDA(pThis, QUEUE_MODE_ENQDEQ, MUTEX_ALREADY_LOCKED); /* initiate DA mode */
-	}
-
-finalize_it:
 	RETiRet;
 }
 
@@ -734,44 +626,6 @@ qqueueLoadPersStrmInfoFixup(strm_t *pStrm, qqueue_t __attribute__((unused)) *pTh
 	ISOBJ_TYPE_assert(pStrm, strm);
 	ISOBJ_TYPE_assert(pThis, qqueue);
 	CHKiRet(strm.SetDir(pStrm, glbl.GetWorkDir(), strlen((char*)glbl.GetWorkDir())));
-finalize_it:
-	RETiRet;
-}
-
-
-/* This method checks if we have a QIF file for the current queue (no matter of
- * queue mode). Returns RS_RET_OK if we have a QIF file or an error status otherwise.
- * rgerhards, 2008-01-15
- */
-static rsRetVal 
-qqueueHaveQIF(qqueue_t *pThis)
-{
-	DEFiRet;
-	uchar pszQIFNam[MAXFNAME];
-	size_t lenQIFNam;
-	struct stat stat_buf;
-
-	ISOBJ_TYPE_assert(pThis, qqueue);
-
-	if(pThis->pszFilePrefix == NULL)
-		ABORT_FINALIZE(RS_RET_NO_FILEPREFIX);
-
-	/* Construct file name */
-	lenQIFNam = snprintf((char*)pszQIFNam, sizeof(pszQIFNam) / sizeof(uchar), "%s/%s.qi",
-			     (char*) glbl.GetWorkDir(), (char*)pThis->pszFilePrefix);
-
-	/* check if the file exists */
-	if(stat((char*) pszQIFNam, &stat_buf) == -1) {
-		if(errno == ENOENT) {
-			DBGOPRINT((obj_t*) pThis, "no .qi file found\n");
-			ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
-		} else {
-			DBGOPRINT((obj_t*) pThis, "error %d trying to access .qi file\n", errno);
-			ABORT_FINALIZE(RS_RET_IO_ERROR);
-		}
-	}
-	/* If we reach this point, we have a .qi file */
-
 finalize_it:
 	RETiRet;
 }
@@ -1050,7 +904,7 @@ static rsRetVal qAddDirect(qqueue_t *pThis, void* pUsr)
 	batchObj.pUsrp = (obj_t*) pUsr;
 	singleBatch.nElem = 1; /* there always is only one in direct mode */
 	singleBatch.pElem = &batchObj;
-	iRet = pThis->pConsumer(pThis->pUsr, &singleBatch);
+	iRet = pThis->pConsumer(pThis->pUsr, &singleBatch, &pThis->bShutdownImmediate);
 	objDestruct(pUsr);
 
 	RETiRet;
@@ -1121,15 +975,17 @@ qqueueDeq(qqueue_t *pThis, void **ppUsr)
 }
 
 
-/* Try to terminate queue worker threads within the regular shutdown interval.
- * Both the regular and DA queue (if it exists) is waited for, but on the same timeout.
- * After this function returns, the workers must either be finished or some force
- * to finish them must be applied.
- * This function also instructs the DA worker pool (if it exists) to terminate. This is done
- * in preparation of final queue shutdown. 
- * rgerhards, 2009-05-27
+/* Try to shut down regular and DA queue workers, within the queue timeout 
+ * period. That means processing continues as usual. This is the expected
+ * usual case, where during shutdown those messages remaining are being 
+ * processed. At this point, it is acceptable that the queue can not be
+ * fully depleted, that case is handled in the next step. During this phase,
+ * we first shut down the main queue DA worker to prevent new data to arrive
+ * at the DA queue, and then we ask the regular workers of both the Regular
+ * and DA queue to try complete processing.
+ * rgerhards, 2009-10-14
  */
-static rsRetVal
+static inline rsRetVal
 tryShutdownWorkersWithinQueueTimeout(qqueue_t *pThis)
 {
 	struct timespec tTimeout;
@@ -1139,30 +995,26 @@ tryShutdownWorkersWithinQueueTimeout(qqueue_t *pThis)
 	ISOBJ_TYPE_assert(pThis, qqueue);
 	ASSERT(pThis->pqParent == NULL); /* detect invalid calling sequence */
 
-	d_pthread_mutex_lock(pThis->mut);	/* some workers may be running in parallel! */
-	if(getPhysicalQueueSize(pThis) > 0) {
-		if(pThis->bRunsDA) {
-			/* We may have waited on the low water mark. As it may have changed, we
-			 * see if we reactivate the worker.
-			 */
-			wtpAdviseMaxWorkers(pThis->pWtpDA, 1);
-		}
-	}
-	d_pthread_mutex_unlock(pThis->mut);
+	if(pThis->bIsDA) {
+		/* We need to lock the mutex, as otherwise we may have a race that prevents
+		 * us from awaking the DA worker. */
+		d_pthread_mutex_lock(pThis->mut);
 
-	/* Now wait for the queue's workers to shut down. Note that we run into the code even if we just found
-	 * out there are no active workers - that doesn't matter: the wtp knows about that and so will
-	 * return immediately.
-	 * We do not yet care about the DA worker - that will be handled down later in the process.
-	 * Note that we must not request shutdown right now - that may introduce a race: if the regular queue
-	 * still runs DA assisted and the DA worker gets scheduled first, it will terminate itself (if the DA
-	 * queue happens to be empty at that instant). Then the regular worker enqueues messages, what will lead
-	 * to a restart of the worker. Of course, everything will continue to run, but in a bit sub-optimal way
-	 * (from a performance point of view). So we don't do anything right now. The DA queue will continue to
-	 * process messages and shutdown itself in any case if there is nothing to do. So we don't loose anything
-	 * by not requesting shutdown now.
-	 * rgerhards, 2008-01-25
-	 */
+		/* tell regular queue DA worker to stop shuffling messages to DA queue... */
+		pThis->pqDA->bEnqOnly = 1;
+		wtpSetState(pThis->pWtpDA, wtpState_SHUTDOWN_IMMEDIATE);
+		wtpAdviseMaxWorkers(pThis->pWtpDA, 1);
+		DBGOPRINT((obj_t*) pThis, "awoke DA worker, told it to shut down.\n");
+
+		/* also tell the DA queue worker to shut down, so that it already knows... */
+		wtpSetState(pThis->pqDA->pWtpReg, wtpState_SHUTDOWN);
+		wtpAdviseMaxWorkers(pThis->pqDA->pWtpReg, 1); /* awake its lone worker */
+		DBGOPRINT((obj_t*) pThis, "awoke DA queue regular worker, told it to shut down when done.\n");
+
+		d_pthread_mutex_unlock(pThis->mut);
+	}
+
+
 	/* first calculate absolute timeout - we need the absolute value here, because we need to coordinate
 	 * shutdown of both the regular and DA queue on *the same* timeout.
 	 */
@@ -1189,16 +1041,6 @@ tryShutdownWorkersWithinQueueTimeout(qqueue_t *pThis)
 		} else {
 			DBGOPRINT((obj_t*) pThis, "DA queue worker shut down.\n");
 		}
-		/* we also instruct the DA worker pool to shutdown ASAP. If we need it for persisting
-		 * the queue, it is restarted at a later stage. We don't care here if a timeout happens.
-		 */
-		DBGOPRINT((obj_t*) pThis, "trying shutdown of main queue DA worker pool\n");
-		iRetLocal = wtpShutdownAll(pThis->pWtpDA, wtpState_SHUTDOWN_IMMEDIATE, &tTimeout);
-		if(iRetLocal == RS_RET_TIMED_OUT) {
-			DBGOPRINT((obj_t*) pThis, "shutdown timed out on main queue DA worker pool (this is OK)\n");
-		} else {
-			DBGOPRINT((obj_t*) pThis, "main queue DA worker pool shut down on first try.\n");
-		}
 	}
 
 	RETiRet;
@@ -1206,11 +1048,12 @@ tryShutdownWorkersWithinQueueTimeout(qqueue_t *pThis)
 
 
 /* Try to shut down regular and DA queue workers, within the action timeout 
- * period. Note that the main queue DA worker is still unaffected (and may shuffle
- * data to the disk queue while we terminate the other workers). Not finishing
- * processing all messages is now OK (but they may be preserved later, depending
- * on bSaveOnShutdown setting).
- * rgerhards, 2009-05-27
+ * period. This aborts processing, but at the end of the current action, in
+ * a well-defined manner. During this phase, we terminate all three worker
+ * pools, including the regular queue DA worker if it not yet has terminated.
+ * Not finishing processing all messages is OK (and expected) at this stage
+ * (they may be preserved later, depending * on bSaveOnShutdown setting).
+ * rgerhards, 2009-10-14
  */
 static rsRetVal
 tryShutdownWorkersWithinActionTimeout(qqueue_t *pThis)
@@ -1219,20 +1062,15 @@ tryShutdownWorkersWithinActionTimeout(qqueue_t *pThis)
 	rsRetVal iRetLocal;
 	DEFiRet;
 
+RUNLOG_STR("trying to shutdown workers within Action Timeout");
 	ISOBJ_TYPE_assert(pThis, qqueue);
 	ASSERT(pThis->pqParent == NULL); /* detect invalid calling sequence */
 
 	/* instruct workers to finish ASAP, even if still work exists */
-	/* note that we modify bEnqOnly directly, because going through the method would
-	 * startup some workers again. So this is OK here. -- rgerhards, 2009-05-28
-	 */
 	pThis->bEnqOnly = 1;
-	/* need to set this so that the DA queue begins shutdown in parallel! */
-	if(pThis->pqDA != NULL) {
-		pThis->pqDA->bEnqOnly = 1;
-		wtpSetState(pThis->pqDA->pWtpReg, wtpState_SHUTDOWN_IMMEDIATE);
-	}
+	pThis->bShutdownImmediate = 1;
 
+// TODO: make sure we have at minimum a 10ms timeout - workers deserve a chance...
 	/* now give the queue workers a last chance to gracefully shut down (based on action timeout setting) */
 	timeoutComp(&tTimeout, pThis->toActShutdown);
 	DBGOPRINT((obj_t*) pThis, "trying immediate shutdown of regular workers (if any)\n");
@@ -1256,17 +1094,14 @@ tryShutdownWorkersWithinActionTimeout(qqueue_t *pThis)
 			DBGOPRINT((obj_t*) pThis, "unexpected iRet state %d after trying immediate shutdown of the DA "
 				  "queue in disk save mode. Continuing, but results are unpredictable\n", iRetLocal);
 		}
-		/* and now we need to check the DA worker itself (the one that shuffles data to the disk). This
-		 * is necessary because we may be in a situation where the DA queue regular worker and the
-		 * main queue worker stopped rather quickly. In this case, there is almost no time (and
-		 * probably no thread switch!) between the point where we instructed the main queue DA
-		 * worker to shutdown and this code location. In consequence, it may not even have
-		 * noticed that it should should down, less acutally done this. So we provide it with a 
-		 * fixed 100ms timeout to try complete its work, what usually should be sufficient.
-		 * rgerhards, 2009-10-06
+
+		/* and now we need to terminate the DA worker itself. We always grant it a 100ms timeout,
+		 * which should be sufficient and usually not be required (it is expected to have finished
+		 * long before while we were processing the queue timeout in shutdown phase 1).
+		 * rgerhards, 2009-10-14
 		 */
 		timeoutComp(&tTimeout, 100);
-		DBGOPRINT((obj_t*) pThis, "last try for regular shutdown of main queue DA worker pool\n");
+		DBGOPRINT((obj_t*) pThis, "trying regular shutdown of main queue DA worker pool\n");
 		iRetLocal = wtpShutdownAll(pThis->pWtpDA, wtpState_SHUTDOWN_IMMEDIATE, &tTimeout);
 		if(iRetLocal == RS_RET_TIMED_OUT) {
 			DBGOPRINT((obj_t*) pThis, "shutdown timed out on main queue DA worker pool "
@@ -1281,7 +1116,7 @@ tryShutdownWorkersWithinActionTimeout(qqueue_t *pThis)
 
 
 /* This function cancels all remaining regular workers for both the main and the DA
- * queue. The main queue's DA worker pool continues to run (if it exists and is active).
+ * queue.
  * rgerhards, 2009-05-29
  */
 static rsRetVal
@@ -1315,7 +1150,7 @@ cancelWorkers(qqueue_t *pThis)
 		 * big trouble when resetting the logical dequeue pointer. This operation can only be
 		 * done when *no* worker is running. So time for a shutdown... -- rgerhards, 2009-05-28
 		 */
-		DBGOPRINT((obj_t*) pThis, "checking to see if we need to cancel the main queue's DA worker pool\n");
+		DBGOPRINT((obj_t*) pThis, "checking to see if main queue DA worker pool needs to be cancelled\n");
 		iRetLocal = wtpCancelAll(pThis->pWtpDA); /* returns immediately if all threads already have terminated */
 	}
 
@@ -1350,14 +1185,8 @@ ShutdownWorkers(qqueue_t *pThis)
 
 	DBGOPRINT((obj_t*) pThis, "initiating worker thread shutdown sequence\n");
 
-	/* we reduce the low water mark in any case. This is not absolutely necessary, but
-	 * it is useful because we enable DA mode at several spots below and so we do not need
-	 * to think about the low water mark each time. 
-	 */
-	pThis->iHighWtrMrk = 1; /* if we do not do this, the DA queue will not stop! */
-	pThis->iLowWtrMrk = 0;
-
 	CHKiRet(tryShutdownWorkersWithinQueueTimeout(pThis));
+dbgprintf("YYY: physical queue size: %d\n", getPhysicalQueueSize(pThis));
 
 	if(getPhysicalQueueSize(pThis) > 0) {
 		CHKiRet(tryShutdownWorkersWithinActionTimeout(pThis));
@@ -1384,7 +1213,7 @@ finalize_it:
  * to modify some parameters before the queue is actually started.
  */
 rsRetVal qqueueConstruct(qqueue_t **ppThis, queueType_t qType, int iWorkerThreads,
-		        int iMaxQueueSize, rsRetVal (*pConsumer)(void*, batch_t*))
+		        int iMaxQueueSize, rsRetVal (*pConsumer)(void*, batch_t*,int*))
 {
 	DEFiRet;
 	qqueue_t *pThis;
@@ -1393,9 +1222,7 @@ rsRetVal qqueueConstruct(qqueue_t **ppThis, queueType_t qType, int iWorkerThread
 	ASSERT(pConsumer != NULL);
 	ASSERT(iWorkerThreads >= 0);
 
-	if((pThis = (qqueue_t *)calloc(1, sizeof(qqueue_t))) == NULL) {
-		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-	}
+	CHKmalloc(pThis = (qqueue_t *)calloc(1, sizeof(qqueue_t)));
 
 	/* we have an object, so let's fill the properties */
 	objConstructSetObjInfo(pThis);
@@ -1406,7 +1233,7 @@ rsRetVal qqueueConstruct(qqueue_t **ppThis, queueType_t qType, int iWorkerThread
 	pThis->iFullDlyMrk  = iMaxQueueSize - (iMaxQueueSize / 100) *  3; /* default 97% */
 	pThis->iLightDlyMrk = iMaxQueueSize - (iMaxQueueSize / 100) * 30; /* default 70% */
 
-	pThis->lenSpoolDir = strlen((char*)pThis->pszSpoolDir);
+	pThis->lenSpoolDir = ustrlen(pThis->pszSpoolDir);
 	pThis->iMaxFileSize = 1024 * 1024; /* default is 1 MiB */
 	pThis->iQueueSize = 0;
 	pThis->nLogDeq = 0;
@@ -1582,6 +1409,7 @@ DeleteProcessedBatch(qqueue_t *pThis, batch_t *pBatch)
 	assert(pBatch != NULL);
 
 	for(i = 0 ; i < pBatch->nElem ; ++i) {
+dbgprintf("XXX: deleteProcessedBatch delete entry %d with state %d\n", i, pBatch->pElem[i].state);
 		pUsr = pBatch->pElem[i].pUsrp;
 		objDestruct(pUsr);
 	}
@@ -1795,7 +1623,7 @@ DequeueForConsumer(qqueue_t *pThis, wti_t *pWti)
 	ISOBJ_TYPE_assert(pThis, qqueue);
 	ISOBJ_TYPE_assert(pWti, wti);
 
-dbgprintf("YYY: deqeueu for consumer");
+dbgprintf("YYY: dequeue for consumer\n");
 	CHKiRet(DequeueConsumable(pThis, pWti));
 
 	if(pWti->batch.nElem == 0)
@@ -1818,7 +1646,6 @@ batchProcessed(qqueue_t *pThis, wti_t *pWti)
 
 	ISOBJ_TYPE_assert(pThis, qqueue);
 	ISOBJ_TYPE_assert(pWti, wti);
-dbgprintf("XXX: batchProcessed deletes %d records\n", pWti->batch.nElemDeq);
 
 	DeleteProcessedBatch(pThis, &pWti->batch);
 	qqueueChkPersist(pThis, pWti->batch.nElemDeq);
@@ -1844,7 +1671,7 @@ ConsumerReg(qqueue_t *pThis, wti_t *pWti)
 	/* we now have a non-idle batch of work, so we can release the queue mutex and process it */
 	d_pthread_mutex_unlock(pThis->mut);
 
-	CHKiRet(pThis->pConsumer(pThis->pUsr, &pWti->batch));
+	CHKiRet(pThis->pConsumer(pThis->pUsr, &pWti->batch, &pThis->bShutdownImmediate));
 
 	/* we now need to check if we should deliberately delay processing a bit
 	 * and, if so, do that. -- rgerhards, 2008-01-30
@@ -1889,11 +1716,13 @@ ConsumerDA(qqueue_t *pThis, wti_t *pWti)
 	d_pthread_mutex_unlock(pThis->mut);
 
 	/* iterate over returned results and enqueue them in DA queue */
+	//for(i = 0 ; i < pWti->batch.nElem && !pThis->bShutdownImmediate ; i++) {
 	for(i = 0 ; i < pWti->batch.nElem ; i++) {
 		/* TODO: we must add a generic "addRef" mechanism, because the disk queue enqueue destructs
 		 * the message. So far, we simply assume we always have msg_t, what currently is always the case.
 		 * rgerhards, 2009-05-28
 		 */
+dbgprintf("DA consumer pushes msg '%s'\n", ((msg_t*)(pWti->batch.pElem[i].pUsrp))->pszRawMsg);
 		CHKiRet(qqueueEnqObj(pThis->pqDA, eFLOWCTL_NO_DELAY, (obj_t*)MsgAddRef((msg_t*)(pWti->batch.pElem[i].pUsrp))));
 	}
 
@@ -1922,6 +1751,7 @@ qqueueChkStopWrkrDA(qqueue_t *pThis)
 
 	if(pThis->bEnqOnly) {
 		iRet = RS_RET_TERMINATE_WHEN_IDLE;
+#if 0
 	} else {
 		if(pThis->bRunsDA) {
 			ASSERT(pThis->pqDA != NULL);
@@ -1934,13 +1764,15 @@ qqueueChkStopWrkrDA(qqueue_t *pThis)
 dbgprintf("XXX: terminate_NOW DA worker: queue size %d, high water mark %d\n", getPhysicalQueueSize(pThis), pThis->iHighWtrMrk);
 				iRet = RS_RET_TERMINATE_NOW;
 RUNLOG_STR("XXX: re-start reg worker");
-qqueueAdviseMaxWorkers(pThis);
+if(!pThis->bShutdownImmediate)
+	qqueueAdviseMaxWorkers(pThis);
 RUNLOG_STR("XXX: done re-start reg worker");
 			}
 		} else {
 		// experimental	iRet = RS_RET_TERMINATE_NOW;
 		;
 		}
+#endif
 	}
 
 	RETiRet;
@@ -1977,56 +1809,8 @@ GetDeqBatchSize(qqueue_t *pThis, int *pVal)
 	DEFiRet;
 	assert(pVal != NULL);
 	*pVal = pThis->iDeqBatchSize;
-if(pThis->pqParent != NULL)
+if(pThis->pqParent != NULL) // TODO: check why we actually do this!
 	*pVal = 16;
-	RETiRet;
-}
-
-
-/* must only be called when the queue mutex is locked, else results
- * are not stable! DA worker version (pThis *is* the *main* queue, not DA!)
- */
-static int
-qqueueIsIdleDA(qqueue_t *pThis)
-{
-	return(getPhysicalQueueSize(pThis) <= pThis->iLowWtrMrk);
-}
-/* must only be called when the queue mutex is locked, else results
- * are not stable! Regular worker version.
- */
-static int
-IsIdleReg(qqueue_t *pThis)
-{
-	return(getPhysicalQueueSize(pThis) == 0);
-}
-
-
-/* This function is called when a worker thread for the regular queue is shut down.
- * If we are the primary queue, this is not really interesting to us. If, however,
- * we are the DA (child) queue, that means the DA queue is empty. In that case, we
- * need to signal the parent queue's DA worker, so that it can terminate DA mode.
- * rgerhards, 2008-01-26
- * rgerhards, 2008-02-27: HOWEVER, in a shutdown condition, it may be that the parent's worker thread pool
- * has already been terminated and destructed. This *is* a legal condition and happens
- * from time to time in practice. So we need to signal only if there still is a
- * parent DA worker queue. Please keep in mind that the the parent's DA worker
- * pool is DIFFERENT from our (DA queue) regular worker pool. So when the parent's
- * pWtpDA is destructed, there can still be some of our (DAq/wtp) threads be running.
- * I am telling this, because I, too, always get confused by those...
- */
-static rsRetVal
-RegOnWrkrShutdown(qqueue_t *pThis)
-{
-	DEFiRet;
-
-	ISOBJ_TYPE_assert(pThis, qqueue);
-
-	if(pThis->pqParent != NULL) {
-		if(pThis->pqParent->pWtpDA != NULL) { /* see comment in function header from 2008-02-27 */
-			wtpAdviseMaxWorkers(pThis->pqParent->pWtpDA, 1); /* reactivate DA worker (always 1) */
-		}
-	}
-
 	RETiRet;
 }
 
@@ -2038,8 +1822,6 @@ rsRetVal
 qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 {
 	DEFiRet;
-	rsRetVal iRetLocal;
-	int bInitialized = 0; /* is queue already initialized? */
 	uchar pszBuf[64];
 	size_t lenBuf;
 
@@ -2081,8 +1863,7 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 	if(pThis->qType == QUEUETYPE_DIRECT)
 		FINALIZE;	/* with direct queues, we are already finished... */
 
-	/* create worker thread pools for regular operation. The DA pool is created on an as-needed
-	 * basis, which potentially means never under most circumstances.
+	/* create worker thread pools for regular and DA operation.
 	 */
 	lenBuf = snprintf((char*)pszBuf, sizeof(pszBuf), "%s:Reg", obj.GetName((obj_t*) pThis));
 	CHKiRet(wtpConstruct		(&pThis->pWtpReg));
@@ -2090,10 +1871,8 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 	CHKiRet(wtpSetpfRateLimiter	(pThis->pWtpReg, (rsRetVal (*)(void *pUsr)) RateLimiter));
 	CHKiRet(wtpSetpfChkStopWrkr	(pThis->pWtpReg, (rsRetVal (*)(void *pUsr, int)) ChkStopWrkrReg));
 	CHKiRet(wtpSetpfGetDeqBatchSize	(pThis->pWtpReg, (rsRetVal (*)(void *pUsr, int*)) GetDeqBatchSize));
-	CHKiRet(wtpSetpfIsIdle		(pThis->pWtpReg, (rsRetVal (*)(void *pUsr, wtp_t*)) IsIdleReg));
 	CHKiRet(wtpSetpfDoWork		(pThis->pWtpReg, (rsRetVal (*)(void *pUsr, void *pWti)) ConsumerReg));
 	CHKiRet(wtpSetpfObjProcessed	(pThis->pWtpReg, (rsRetVal (*)(void *pUsr, wti_t *pWti)) batchProcessed));
-	CHKiRet(wtpSetpfOnWorkerShutdown(pThis->pWtpReg, (rsRetVal (*)(void *pUsr)) RegOnWrkrShutdown));
 	CHKiRet(wtpSetpmutUsr		(pThis->pWtpReg, pThis->mut));
 	CHKiRet(wtpSetpcondBusy		(pThis->pWtpReg, &pThis->notEmpty));
 	CHKiRet(wtpSetiNumWorkerThreads	(pThis->pWtpReg, pThis->iNumWorkerThreads));
@@ -2101,27 +1880,11 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 	CHKiRet(wtpSetpUsr		(pThis->pWtpReg, pThis));
 	CHKiRet(wtpConstructFinalize	(pThis->pWtpReg));
 
-	/* initialize worker thread instances */
-	if(pThis->bIsDA) {
-		/* If we are disk-assisted, we need to check if there is a QIF file
-		 * which we need to load. -- rgerhards, 2008-01-15
-		 */
-		iRetLocal = qqueueHaveQIF(pThis);
-		if(iRetLocal == RS_RET_OK) {
-			DBGOPRINT((obj_t*) pThis, "on-disk queue present, needs to be reloaded\n");
-			InitDA(pThis, QUEUE_MODE_ENQDEQ, LOCK_MUTEX); /* initiate DA mode */
-			bInitialized = 1; /* we are done */
-		} else {
-			/* TODO: use logerror? -- rgerhards, 2008-01-16 */
-			DBGOPRINT((obj_t*) pThis, "error %d trying to access on-disk queue files, starting without them. "
-			          "Some data may be lost\n", iRetLocal);
-		}
-	}
+	/* set up DA system if we have a disk-assisted queue */
+	if(pThis->bIsDA)
+		InitDA(pThis, LOCK_MUTEX); /* initiate DA mode */
 
-	if(Debug && !bInitialized) {
-		DBGOPRINT((obj_t*) pThis, "queue starts up without (loading) any DA disk state (this is normal for the DA "
-			  "queue itself!)\n");
-	}
+	DBGOPRINT((obj_t*) pThis, "queue finished initialization\n");
 
 	/* if the queue already contains data, we need to start the correct number of worker threads. This can be
 	 * the case when a disk queue has been loaded. If we did not start it here, it would never start.
@@ -2265,10 +2028,16 @@ DoSaveOnShutdown(qqueue_t *pThis)
 
 	ISOBJ_TYPE_assert(pThis, qqueue);
 
-	InitDA(pThis, QUEUE_MODE_ENQONLY, LOCK_MUTEX); /* switch to DA mode */
-dbgprintf("after InitDA, queue log %d, phys %d\n", getLogicalQueueSize(pThis), getPhysicalQueueSize(pThis));
-	/* make sure we do not timeout before we are done */
-	DBGOPRINT((obj_t*) pThis, "bSaveOnShutdown configured, infinite timeout set\n");
+	/* we reduce the low water mark, otherwise the DA worker would terminate when
+	 * it is reached.
+	 */
+	DBGOPRINT((obj_t*) pThis, "bSaveOnShutdown set, restarting DA worker...\n");
+	pThis->bShutdownImmediate = 0; /* would termiante the DA worker! */
+	pThis->iLowWtrMrk = 0;
+	wtpSetState(pThis->pWtpDA, wtpState_SHUTDOWN);	/* shutdown worker (only) when done (was _IMMEDIATE!) */
+	wtpAdviseMaxWorkers(pThis->pWtpDA, 1);		/* restart DA worker */
+
+	DBGOPRINT((obj_t*) pThis, "waiting for DA worker to terminate...\n");
 	timeoutComp(&tTimeout, QUEUE_TIMEOUT_ETERNAL);
 	/* and run the primary queue's DA worker to drain the queue */
 	iRetLocal = wtpShutdownAll(pThis->pWtpDA, wtpState_SHUTDOWN, &tTimeout);
@@ -2286,8 +2055,6 @@ dbgprintf("after InitDA, queue log %d, phys %d\n", getLogicalQueueSize(pThis), g
 /* destructor for the queue object */
 BEGINobjDestruct(qqueue) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(qqueue)
-	pThis->bQueueInDestruction = 1; /* indicate we are in destruction (modifies some behaviour) */
-
 	/* shut down all workers
 	 * We do not need to shutdown workers when we are in enqueue-only mode or we are a
 	 * direct queue - because in both cases we have none... ;)
@@ -2425,10 +2192,6 @@ doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, void *pUsr)
 	 */
 	CHKiRet(qqueueChkDiscardMsg(pThis, pThis->iQueueSize, pThis->bRunsDA, pUsr));
 
-	/* then check if we need to add an assistance disk queue */
-	if(pThis->bIsDA)
-		CHKiRet(ChkStrtDA(pThis));
-	
 	/* handle flow control
 	 * There are two different flow control mechanisms: basic and advanced flow control.
 	 * Basic flow control has always been implemented and protects the queue structures
@@ -2472,6 +2235,7 @@ doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, void *pUsr)
 	      	  && pThis->tVars.disk.sizeOnDisk > pThis->sizeOnDiskMax)) {
 		DBGOPRINT((obj_t*) pThis, "enqueueMsg: queue FULL - waiting to drain.\n");
 		timeoutComp(&t, pThis->toEnq);
+// TODO : handle enqOnly => discard!
 		if(pthread_cond_timedwait(&pThis->notFull, pThis->mut, &t) != 0) {
 			DBGOPRINT((obj_t*) pThis, "enqueueMsg: cond timeout, dropping message!\n");
 			objDestruct(pUsr);
@@ -2510,7 +2274,6 @@ qqueueMultiEnqObj(qqueue_t *pThis, multi_submit_t *pMultiSub)
 	}
 
 	for(i = 0 ; i < pMultiSub->nElem ; ++i) {
-dbgprintf("queueMultiEnq: %d\n", i);
 		CHKiRet(doEnqSingleObj(pThis, pMultiSub->ppMsgs[i]->flowCtlType, (void*)pMultiSub->ppMsgs[i]));
 	}
 
@@ -2561,58 +2324,6 @@ dbgprintf("YYY: call advise with mutex %p locked \n", pThis->mut);
 		DBGOPRINT((obj_t*) pThis, "EnqueueMsg advised worker start\n");
 	}
 
-	RETiRet;
-}
-
-
-/* set queue mode to enqueue only or not
- * There is one subtle issue: this method may be called during queue
- * construction or while it is running. In the former case, the queue 
- * mutex does not yet exist (it is NULL), while in the later case it
- * must be locked. The function detects the state and operates as 
- * required.
- * rgerhards, 2008-01-16
- */
-static rsRetVal
-SetEnqOnly(qqueue_t *pThis, int bEnqOnly, int bLockMutex)
-{
-	DEFiRet;
-	DEFVARS_mutexProtection;
-
-	ISOBJ_TYPE_assert(pThis, qqueue);
-
-	/* for simplicity, we do one big mutex lock. This method is extremely seldom
-	 * called, so that doesn't matter... -- rgerhards, 2008-01-16
-	 */
-	if(pThis->mut != NULL) {
-		BEGIN_MTX_PROTECTED_OPERATIONS(pThis->mut, bLockMutex);
-	}
-
-	if(bEnqOnly == pThis->bEnqOnly)
-		FINALIZE; /* no change, nothing to do */
-
-	if(pThis->bQueueStarted) {
-		/* we need to adjust queue operation only if we are not during initial param setup */
-		if(bEnqOnly == 1) {
-			/* switch to enqueue-only mode */
-			/* this means we need to terminate all workers - that's it... */
-			DBGOPRINT((obj_t*) pThis, "switching to enqueue-only mode, terminating all worker threads\n");
-			if(pThis->pWtpReg != NULL)
-				wtpWakeupAllWrkr(pThis->pWtpReg);
-			if(pThis->pWtpDA != NULL)
-				wtpWakeupAllWrkr(pThis->pWtpDA);
-		} else {
-			/* switch back to regular mode */
-			ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED); /* we don't need this so far... */
-		}
-	}
-
-	pThis->bEnqOnly = bEnqOnly;
-
-finalize_it:
-	if(pThis->mut != NULL) {
-		END_MTX_PROTECTED_OPERATIONS(pThis->mut);
-	}
 	RETiRet;
 }
 
