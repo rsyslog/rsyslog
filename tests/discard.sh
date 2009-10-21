@@ -4,7 +4,7 @@
 # added 2009-07-30 by Rgerhards
 # This file is part of the rsyslog project, released  under GPLv3
 # uncomment for debugging support:
-echo TEST discard.sh: testing discard functionality
+echo \[discard.sh\]: testing discard functionality
 source $srcdir/diag.sh init
 source $srcdir/diag.sh startup discard.conf
 # 20000 messages should be enough - the disk test is slow enough ;)

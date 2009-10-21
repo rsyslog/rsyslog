@@ -22,6 +22,7 @@ TESTS += omod-if-array.sh \
 	 threadingmq.sh \
 	 threadingmqaq.sh \
 	 discard.sh \
+	 badqi.sh \
 	 fieldtest.sh
 endif
 
@@ -138,6 +139,9 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/master.rfctag \
 	   testsuites/nolimittag.conf \
 	   testsuites/master.nolimittag \
+	   badqi.sh \
+	   testsuites/badqi.conf \
+	   bad_qi/dbq.qi \
 	   DiagTalker.java \
 	   cfg.sh
 

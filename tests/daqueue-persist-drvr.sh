@@ -5,7 +5,7 @@
 # added 2009-05-27 by Rgerhards
 # This file is part of the rsyslog project, released  under GPLv3
 # uncomment for debugging support:
-echo testing memory daqueue persisting to disk, mode $1
+echo \[daqueue-persist-drvr.sh\]: testing memory daqueue persisting to disk, mode $1
 source $srcdir/diag.sh init
 
 # prepare config

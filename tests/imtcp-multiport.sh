@@ -7,7 +7,7 @@
 #
 # added 2009-05-22 by Rgerhards
 # This file is part of the rsyslog project, released  under GPLv3
-echo testing imtcp multiple listeners
+echo \[imtcp-multiport.sh\]: testing imtcp multiple listeners
 source $srcdir/diag.sh init
 source $srcdir/diag.sh startup imtcp-multiport.conf
 source $srcdir/diag.sh tcpflood 127.0.0.1 13514 1 10000

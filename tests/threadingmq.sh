@@ -6,7 +6,7 @@
 # in practice many threading bugs result in an abort rather quickly and these
 # should be covered by this test here.
 # rgerhards, 2009-06-26
-echo TEST: threadingmq.sh - main queue concurrency
+echo \[threadingmq.sh\]: main queue concurrency
 source $srcdir/diag.sh init
 source $srcdir/diag.sh startup threadingmq.conf
 source $srcdir/diag.sh tcpflood 127.0.0.1 13514 2 100000

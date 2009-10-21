@@ -1,4 +1,4 @@
-echo test fieldtest via udp
+echo \[fieldtest.sh\]: test fieldtest via udp
 $srcdir/killrsyslog.sh # kill rsyslogd if it runs for some reason
 
 ./nettester -tfield1 -iudp

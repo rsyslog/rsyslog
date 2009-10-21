@@ -1,4 +1,5 @@
 # test many concurrent tcp connections
+echo \[manytcp.sh\]: test concurrent tcp connections
 source $srcdir/diag.sh init
 source $srcdir/diag.sh startup manytcp.conf
 # the config file specifies exactly 1100 connections
