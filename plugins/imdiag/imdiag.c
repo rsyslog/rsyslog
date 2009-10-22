@@ -296,7 +296,7 @@ OnMsgReceived(tcps_sess_t *pSess, uchar *pRcv, int iLenMsg)
 	 * WITHOUT a termination \0 char. So we need to convert it to one
 	 * before proceeding.
 	 */
-	CHKmalloc(pszMsg = malloc(sizeof(uchar) * (iLenMsg + 1)));
+	CHKmalloc(pszMsg = MALLOC(sizeof(uchar) * (iLenMsg + 1)));
 	memcpy(pszMsg, pRcv, iLenMsg);
 	pszMsg[iLenMsg] = '\0';
 

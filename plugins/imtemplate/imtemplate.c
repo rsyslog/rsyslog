@@ -77,6 +77,7 @@
 #include "cfsysline.h"		/* access to config file objects */
 #include "module-template.h"	/* generic module interface code - very important, read it! */
 #include "srUtils.h"		/* some utility functions */
+#include "debug.h"		/* some debug helper functions */
 
 MODULE_TYPE_INPUT	/* must be present for input modules, do not remove */
 
@@ -137,7 +138,7 @@ imtemplateMyFunc(int iMyParam)
 	 * ABORT_FINALIZE(retcode)
 	 * 	just like FINALIZE, except that iRet is set to the provided error
 	 * 	code before control is transferred, e.g.
-	 * 	if((ptr = malloc(20)) == NULL)
+	 * 	if((ptr = MALLOC(20)) == NULL)
 	 * 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	 *
 	 * In order for all this to work, you need to define finalize_it, e.g.
@@ -290,7 +291,7 @@ CODESTARTwillRun
 	if(udpLstnSocks == NULL)
 		ABORT_FINALIZE(RS_RET_NO_RUN);
 
-	if((pRcvBuf = malloc(glbl.GetMaxLine * sizeof(char))) == NULL) {
+	if((pRcvBuf = MALLOC(glbl.GetMaxLine * sizeof(char))) == NULL) {
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
 	*

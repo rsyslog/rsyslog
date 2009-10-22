@@ -118,13 +118,13 @@ static rsRetVal addListner(void __attribute__((unused)) *pVal, uchar *pNewVal)
 			/* esay, we can just replace it */
 			udpLstnSocks = newSocks;
 RUNLOG_VAR("%d", newSocks[0]);
-			CHKmalloc(udpRulesets = (ruleset_t**) malloc(sizeof(ruleset_t*) * (newSocks[0] + 1)));
+			CHKmalloc(udpRulesets = (ruleset_t**) MALLOC(sizeof(ruleset_t*) * (newSocks[0] + 1)));
 			for(iDst = 1 ; iDst <= newSocks[0] ; ++iDst)
 				udpRulesets[iDst] = pBindRuleset;
 		} else {
 			/* we need to add them */
-			tmpSocks = (int*) malloc(sizeof(int) * (1 + newSocks[0] + udpLstnSocks[0]));
-			tmpRulesets = (ruleset_t**) malloc(sizeof(ruleset_t*) * (1 + newSocks[0] + udpLstnSocks[0]));
+			tmpSocks = (int*) MALLOC(sizeof(int) * (1 + newSocks[0] + udpLstnSocks[0]));
+			tmpRulesets = (ruleset_t**) MALLOC(sizeof(ruleset_t*) * (1 + newSocks[0] + udpLstnSocks[0]));
 			if(tmpSocks == NULL || tmpRulesets == NULL) {
 				DBGPRINTF("out of memory trying to allocate udp listen socket array\n");
 				/* in this case, we discard the new sockets but continue with what we
@@ -467,7 +467,7 @@ CODESTARTwillRun
 
 	iMaxLine = glbl.GetMaxLine();
 
-	CHKmalloc(pRcvBuf = malloc((iMaxLine + 1) * sizeof(char)));
+	CHKmalloc(pRcvBuf = MALLOC((iMaxLine + 1) * sizeof(char)));
 finalize_it:
 ENDwillRun
 

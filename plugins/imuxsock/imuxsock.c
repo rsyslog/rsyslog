@@ -45,6 +45,7 @@
 #include "glbl.h"
 #include "msg.h"
 #include "prop.h"
+#include "debug.h"
 
 MODULE_TYPE_INPUT
 
@@ -265,7 +266,7 @@ static rsRetVal readSocket(int fd, int iSock)
 	if((size_t) iMaxLine < sizeof(bufRcv) - 1) {
 		pRcv = bufRcv;
 	} else {
-		CHKmalloc(pRcv = (uchar*) malloc(sizeof(uchar) * (iMaxLine + 1)));
+		CHKmalloc(pRcv = (uchar*) MALLOC(sizeof(uchar) * (iMaxLine + 1)));
 	}
 
 	iRcvd = recv(fd, pRcv, iMaxLine, 0);

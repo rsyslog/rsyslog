@@ -28,12 +28,13 @@
 
 #include "rsyslog.h"
 #include "sync.h"
+#include "debug.h"
 
 
 void
 SyncObjInit(pthread_mutex_t **mut)
 {
-	*mut = (pthread_mutex_t *) malloc (sizeof (pthread_mutex_t));
+	*mut = (pthread_mutex_t *) MALLOC(sizeof (pthread_mutex_t));
 	pthread_mutex_init(*mut, NULL);
 }
 

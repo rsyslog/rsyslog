@@ -447,7 +447,7 @@ static char **crunch_list(char *list)
 	for (count=i=0; p[i]; i++)
 		if (p[i] == LIST_DELIMITER) count++;
 	
-	if ((result = (char **)malloc(sizeof(char *) * (count+2))) == NULL) {
+	if ((result = (char **)MALLOC(sizeof(char *) * (count+2))) == NULL) {
 		printf ("Sorry, can't get enough memory, exiting.\n");
 		exit(0); /* safe exit, because only called during startup */
 	}
@@ -459,7 +459,7 @@ static char **crunch_list(char *list)
 	 */
 	count = 0;
 	while ((q=strchr(p, LIST_DELIMITER))) {
-		result[count] = (char *) malloc((q - p + 1) * sizeof(char));
+		result[count] = (char *) MALLOC((q - p + 1) * sizeof(char));
 		if (result[count] == NULL) {
 			printf ("Sorry, can't get enough memory, exiting.\n");
 			exit(0); /* safe exit, because only called during startup */
@@ -470,7 +470,7 @@ static char **crunch_list(char *list)
 		count++;
 	}
 	if ((result[count] = \
-	     (char *)malloc(sizeof(char) * strlen(p) + 1)) == NULL) {
+	     (char *)MALLOC(sizeof(char) * strlen(p) + 1)) == NULL) {
 		printf ("Sorry, can't get enough memory, exiting.\n");
 		exit(0); /* safe exit, because only called during startup */
 	}
@@ -828,7 +828,7 @@ int parseRFCSyslogMsg(msg_t *pMsg, int flags)
 	 * message, so we can not run into any troubles. I think this is
 	 * more wise then to use individual buffers.
 	 */
-	if((pBuf = malloc(sizeof(uchar) * (lenMsg + 1))) == NULL)
+	if((pBuf = MALLOC(sizeof(uchar) * (lenMsg + 1))) == NULL)
 		return 1;
 		
 	/* IMPORTANT NOTE:
@@ -1208,7 +1208,7 @@ void legacyOptsEnq(uchar *line)
 {
 	legacyOptsLL_t *pNew;
 
-	pNew = malloc(sizeof(legacyOptsLL_t));
+	pNew = MALLOC(sizeof(legacyOptsLL_t));
 	if(line == NULL)
 		pNew->line = NULL;
 	else
@@ -2661,7 +2661,7 @@ bufOptAdd(char opt, char *arg)
 	DEFiRet;
 	bufOpt_t *pBuf;
 
-	if((pBuf = malloc(sizeof(bufOpt_t))) == NULL)
+	if((pBuf = MALLOC(sizeof(bufOpt_t))) == NULL)
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 
 	pBuf->optchar = opt;

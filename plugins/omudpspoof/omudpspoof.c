@@ -72,6 +72,7 @@
 #include "errmsg.h"
 #include "dirty.h"
 #include "unicode-helper.h"
+#include "debug.h"
 
 
 #include <libnet.h>
@@ -345,7 +346,7 @@ CODESTARTdoAction
 		uLong srcLen = l;
 		int ret;
 		/* TODO: optimize malloc sequence? -- rgerhards, 2008-09-02 */
-		CHKmalloc(out = (Bytef*) malloc(destLen));
+		CHKmalloc(out = (Bytef*) MALLOC(destLen));
 		out[0] = 'z';
 		out[1] = '\0';
 		ret = compress2((Bytef*) out+1, &destLen, (Bytef*) psz,

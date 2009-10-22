@@ -47,6 +47,7 @@
 #include "msg.h"
 #include "datetime.h"
 #include "prop.h"
+#include "debug.h"
 
 
 /* static data */
@@ -72,7 +73,7 @@ BEGINobjConstruct(tcps_sess) /* be sure to specify the object type also in END m
 		pThis->bAtStrtOfFram = 1; /* indicate frame header expected */
 		pThis->eFraming = TCP_FRAMING_OCTET_STUFFING; /* just make sure... */
 		/* now allocate the message reception buffer */
-		CHKmalloc(pThis->pMsg = (uchar*) malloc(sizeof(uchar) * iMaxLine + 1));
+		CHKmalloc(pThis->pMsg = (uchar*) MALLOC(sizeof(uchar) * iMaxLine + 1));
 finalize_it:
 ENDobjConstruct(tcps_sess)
 

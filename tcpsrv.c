@@ -104,7 +104,7 @@ addNewLstnPort(tcpsrv_t *pThis, uchar *pszPort)
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 
 	/* create entry */
-	CHKmalloc(pEntry = malloc(sizeof(tcpLstnPortList_t)));
+	CHKmalloc(pEntry = MALLOC(sizeof(tcpLstnPortList_t)));
 	pEntry->pszPort = pszPort;
 	pEntry->pSrv = pThis;
 	pEntry->pRuleset = pThis->pRuleset;

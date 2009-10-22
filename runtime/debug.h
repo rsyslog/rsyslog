@@ -3,7 +3,7 @@
  * Definitions for the debug and run-time analysis support module.
  * Contains a lot of macros.
  *
- * Copyright 2008 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008, 2009 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -99,6 +99,7 @@ void dbgExitFunc(dbgFuncDB_t *pFuncDB, int iStackPtrRestore, int iRet);
 void dbgSetExecLocation(int iStackPtr, int line);
 void dbgSetThrdName(uchar *pszName);
 void dbgPrintAllDebugInfo(void);
+void *dbgmalloc(size_t size);
 
 /* macros */
 #define DBGPRINTF(...) if(Debug) { dbgprintf(__VA_ARGS__); }
@@ -124,6 +125,12 @@ void dbgPrintAllDebugInfo(void);
 #	define RUNLOG
 #	define RUNLOG_VAR(fmt, x)
 #	define RUNLOG_STR(str)
+#endif
+
+#ifdef MEMCHECK
+#	define MALLOC(x) dbgmalloc(x)
+#else
+#	define MALLOC(x) malloc(x)
 #endif
 
 /* mutex operations */

@@ -129,7 +129,7 @@ readFile(uchar *pszFile, gnutls_datum_t *pBuf)
 		ABORT_FINALIZE(RS_RET_FILE_TOO_LARGE);
 	}
 
-	CHKmalloc(pBuf->data = malloc(stat_st.st_size));
+	CHKmalloc(pBuf->data = MALLOC(stat_st.st_size));
 	pBuf->size = stat_st.st_size;
 	if(read(fd,  pBuf->data, stat_st.st_size) != stat_st.st_size) {
 		errmsg.LogError(0, RS_RET_IO_ERROR, "error or incomplete read of file '%s'", pszFile);
@@ -1479,7 +1479,7 @@ Rcv(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf)
 
 	if(pThis->pszRcvBuf == NULL) {
 		/* we have no buffer, so we need to malloc one */
-		CHKmalloc(pThis->pszRcvBuf = malloc(NSD_GTLS_MAX_RCVBUF));
+		CHKmalloc(pThis->pszRcvBuf = MALLOC(NSD_GTLS_MAX_RCVBUF));
 		pThis->lenRcvBuf = -1;
 	}
 

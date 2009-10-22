@@ -1,5 +1,10 @@
 ---------------------------------------------------------------------------
-Version 5.3.2  [DEVEL] (rgerhards), 2009-10-??
+Version 5.3.3  [DEVEL] (rgerhards), 2009-10-??
+- enhanced test environment (inlcuding testbench): support for enhancing
+  probability of memory addressing failure by using non-NULL default
+  value for malloced memory (optional, only if requested by configure
+  option). This helps to track down some otherwise undetected issues
+  within the testbench.
 - bugfix: message processing states were not set correctly in all cases
   however, this had no negative effect, as the message processing state
   was not evaluated when a batch was deleted, and that was the only case

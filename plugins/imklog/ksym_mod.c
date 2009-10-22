@@ -106,6 +106,7 @@
 #include "rsyslog.h"
 #include "imklog.h"
 #include "ksyms.h"
+#include "debug.h"
 
 #define KSYMS  "/proc/kallsyms"
 
@@ -289,7 +290,7 @@ struct Module *AddModule(module)
         struct Module *mp;
 
         if ( num_modules == 0 ) {
-                sym_array_modules = (struct Module *)malloc(sizeof(struct Module));
+                sym_array_modules = (struct Module *)MALLOC(sizeof(struct Module));
 
                 if ( sym_array_modules == NULL )
                 {

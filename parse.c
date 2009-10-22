@@ -37,6 +37,7 @@
 #include "rsyslog.h"
 #include "net.h" /* struct NetAddr */
 #include "parse.h"
+#include "debug.h"
 
 /* ################################################################# *
  * private members                                                   *
@@ -429,7 +430,7 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 		
 		switch(getaddrinfo ((char*)pszIP+1, NULL, &hints, &res)) {
 		case 0: 
-			(*pIP)->addr.NetAddr = malloc (res->ai_addrlen);
+			(*pIP)->addr.NetAddr = MALLOC (res->ai_addrlen);
 			memcpy ((*pIP)->addr.NetAddr, res->ai_addr, res->ai_addrlen);
 			freeaddrinfo (res);
 			break;
@@ -468,7 +469,7 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 		
 		switch(getaddrinfo ((char*)pszIP, NULL, &hints, &res)) {
 		case 0: 
-			(*pIP)->addr.NetAddr = malloc (res->ai_addrlen);
+			(*pIP)->addr.NetAddr = MALLOC (res->ai_addrlen);
 			memcpy ((*pIP)->addr.NetAddr, res->ai_addr, res->ai_addrlen);
 			freeaddrinfo (res);
 			break;

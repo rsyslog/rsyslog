@@ -96,7 +96,7 @@ static inline rsRetVal uncompressMessage(msg_t *pMsg)
 		 */
 		int ret;
 		iLenDefBuf = glbl.GetMaxLine();
-		CHKmalloc(deflateBuf = malloc(sizeof(uchar) * (iLenDefBuf + 1)));
+		CHKmalloc(deflateBuf = MALLOC(sizeof(uchar) * (iLenDefBuf + 1)));
 		ret = uncompress((uchar *) deflateBuf, &iLenDefBuf, (uchar *) pszMsg+1, lenMsg-1);
 		DBGPRINTF("Compressed message uncompressed with status %d, length: new %ld, old %d.\n",
 		        ret, (long) iLenDefBuf, (int) (lenMsg-1));
@@ -223,7 +223,7 @@ sanitizeMessage(msg_t *pMsg)
 	if(maxDest < sizeof(szSanBuf))
 		pDst = szSanBuf;
 	else 
-		CHKmalloc(pDst = malloc(sizeof(uchar) * (iMaxLine + 1)));
+		CHKmalloc(pDst = MALLOC(sizeof(uchar) * (iMaxLine + 1)));
 	iSrc = iDst = 0;
 	while(iSrc < lenMsg && iDst < maxDest - 3) { /* leave some space if last char must be escaped */
 		if(iscntrl((int) pszMsg[iSrc])) {

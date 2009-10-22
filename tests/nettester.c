@@ -320,7 +320,7 @@ processTestFile(int fd, char *pszFileName)
 		/* pull response from server and then check if it meets our expectation */
 		readLine(fd, buf);
 		if(strlen(buf) == 0) {
-			printf("something went wrong - read a zero-length string from rsyslogd");
+			printf("something went wrong - read a zero-length string from rsyslogd\n");
 			exit(1);
 		}
 		if(strcmp(expected, buf)) {

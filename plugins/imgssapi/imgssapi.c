@@ -56,6 +56,7 @@
 #include "errmsg.h"
 #include "netstrm.h"
 #include "glbl.h"
+#include "debug.h"
 
 
 MODULE_TYPE_INPUT
@@ -407,7 +408,7 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *pSess)
 		 */
 		char *buf;
 		int ret = 0;
-		CHKmalloc(buf = (char*) malloc(sizeof(char) * (glbl.GetMaxLine() + 1)));
+		CHKmalloc(buf = (char*) MALLOC(sizeof(char) * (glbl.GetMaxLine() + 1)));
 
 		dbgprintf("GSS-API Trying to accept TCP session %p\n", pSess);
 

@@ -75,6 +75,7 @@
 
 #include "rsyslog.h"
 #include "imklog.h"
+#include "debug.h"
 
 /* globals */
 static int	fklog = -1;	/* /dev/klog */
@@ -132,7 +133,7 @@ readklog(void)
 	if((size_t) iMaxLine < sizeof(bufRcv) - 1) {
 		pRcv = bufRcv;
 	} else {
-		if((pRcv = (uchar*) malloc(sizeof(uchar) * (iMaxLine + 1))) == NULL)
+		if((pRcv = (uchar*) MALLOC(sizeof(uchar) * (iMaxLine + 1))) == NULL)
 			iMaxLine = sizeof(bufRcv) - 1; /* better this than noting */
 	}
 

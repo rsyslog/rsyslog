@@ -122,6 +122,7 @@
 #include "imklog.h"
 #include "ksyms.h"
 #include "module.h"
+#include "debug.h"
 
 
 int num_syms = 0;
@@ -523,7 +524,7 @@ static int AddSymbol(unsigned long address, char *symbol)
 		return(0);
 
 	/* Then the space for the symbol. */
-	sym_array[num_syms].name = (char *) malloc(strlen(symbol)*sizeof(char) + 1);
+	sym_array[num_syms].name = (char *) MALLOC(strlen(symbol)*sizeof(char) + 1);
 	if ( sym_array[num_syms].name == NULL )
 		return(0);
 	

@@ -1254,6 +1254,20 @@ dbgPrintNameIsInList(const uchar *pName, dbgPrintName_t *pRoot)
 }
 
 
+/* this is a special version of malloc that fills the alloced memory with
+ * HIGHVALUE, as this helps to identify bugs. -- rgerhards, 2009-10-22
+ */
+void *
+dbgmalloc(size_t size)
+{
+	void *pRet;
+	pRet = malloc(size);
+	if(pRet != NULL)
+		memset(pRet, 0xff, size);
+	return pRet;
+}
+
+
 /* read in the runtime options
  * rgerhards, 2008-02-28
  */

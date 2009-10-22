@@ -144,7 +144,7 @@ static inline rsRetVal tdlAdd(qqueue_t *pQueue, qDeqID deqID, int nElemDeq)
 	ISOBJ_TYPE_assert(pQueue, qqueue);
 	assert(pQueue->toDeleteLst != NULL);
 
-	CHKmalloc(pNew = malloc(sizeof(toDeleteLst_t)));
+	CHKmalloc(pNew = MALLOC(sizeof(toDeleteLst_t)));
 	pNew->deqID = deqID;
 	pNew->nElemDeq = nElemDeq;
 
@@ -414,7 +414,7 @@ static rsRetVal qConstructFixedArray(qqueue_t *pThis)
 	if(pThis->iMaxQueueSize == 0)
 		ABORT_FINALIZE(RS_RET_QSIZE_ZERO);
 
-	if((pThis->tVars.farray.pBuf = malloc(sizeof(void *) * pThis->iMaxQueueSize)) == NULL) {
+	if((pThis->tVars.farray.pBuf = MALLOC(sizeof(void *) * pThis->iMaxQueueSize)) == NULL) {
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
 
@@ -542,7 +542,7 @@ static rsRetVal qAddLinkedList(qqueue_t *pThis, void* pUsr)
 	qLinkedList_t *pEntry;
 	DEFiRet;
 
-	CHKmalloc((pEntry = (qLinkedList_t*) malloc(sizeof(qLinkedList_t))));
+	CHKmalloc((pEntry = (qLinkedList_t*) MALLOC(sizeof(qLinkedList_t))));
 
 	pEntry->pNext = NULL;
 	pEntry->pUsr = pUsr;
@@ -1835,7 +1835,7 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 	 * influenced by properties which might have been set after queueConstruct ()
 	 */
 	if(pThis->pqParent == NULL) {
-		pThis->mut = (pthread_mutex_t *) malloc (sizeof (pthread_mutex_t));
+		pThis->mut = (pthread_mutex_t *) MALLOC (sizeof (pthread_mutex_t));
 		pthread_mutex_init(pThis->mut, NULL);
 	} else {
 		/* child queue, we need to use parent's mutex */
@@ -2148,7 +2148,7 @@ qqueueSetFilePrefix(qqueue_t *pThis, uchar *pszPrefix, size_t iLenPrefix)
 	if(pszPrefix == NULL) /* just unset the prefix! */
 		ABORT_FINALIZE(RS_RET_OK);
 
-	if((pThis->pszFilePrefix = malloc(sizeof(uchar) * iLenPrefix + 1)) == NULL)
+	if((pThis->pszFilePrefix = MALLOC(sizeof(uchar) * iLenPrefix + 1)) == NULL)
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	memcpy(pThis->pszFilePrefix, pszPrefix, iLenPrefix + 1);
 	pThis->lenFilePrefix = iLenPrefix;

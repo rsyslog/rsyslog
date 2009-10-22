@@ -394,6 +394,21 @@ if test "$enable_valgrind" = "yes"; then
 fi
 
 
+# memcheck
+AC_ARG_ENABLE(memcheck,
+        [AS_HELP_STRING([--enable-memcheck],[Enable extended memory check support @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_memcheck="yes" ;;
+          no) enable_memcheck="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-memcheck) ;;
+         esac],
+        [enable_memcheck="no"]
+)
+if test "$enable_memcheck" = "yes"; then
+        AC_DEFINE(MEMCHECK, 1, [Defined if memcheck support settings are to be enabled (e.g. prevents dlclose()).])
+fi
+
+
 # compile diagnostic tools (small helpers usually not needed)
 AC_ARG_ENABLE(diagtools,
         [AS_HELP_STRING([--enable-diagtools],[Enable diagnostic tools @<:@default=no@:>@])],
@@ -927,5 +942,6 @@ echo "    Testbench enabled:                        $enable_testbench"
 echo "    Debug mode enabled:                       $enable_debug"
 echo "    Runtime Instrumentation enabled:          $enable_rtinst"
 echo "    Diagnostic tools enabled:                 $enable_diagtools"
+echo "    Enhanced memory checking enabled:         $enable_memcheck"
 echo "    Valgrind support settings enabled:        $enable_valgrind"
 echo
