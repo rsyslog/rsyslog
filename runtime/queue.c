@@ -1362,7 +1362,7 @@ dbgprintf("delete batch from store, new sizes: log %d, phys %d\n", getLogicalQue
  * picking up things from the to-delete list.
  */
 static inline rsRetVal
-DeleteBatchFromQStore(qqueue_t *pThis, batch_t *pBatch)
+DeleteBatchFromQStore(qqueue_t *pThis, batch_t *pBatch, int nDeleted)
 {
 	toDeleteLst_t *pTdl;
 	qDeqID	deqIDDel;
@@ -1370,10 +1370,11 @@ DeleteBatchFromQStore(qqueue_t *pThis, batch_t *pBatch)
 
 	ISOBJ_TYPE_assert(pThis, qqueue);
 	assert(pBatch != NULL);
+	assert(nDeleted > 0);
 
 	pTdl = tdlPeek(pThis); /* get current head element */
 	if(pTdl == NULL) { /* to-delete list empty */
-		DoDeleteBatchFromQStore(pThis, pBatch->nElemDeq);
+		DoDeleteBatchFromQStore(pThis, nDeleted);
 	} else if(pBatch->deqID == pThis->deqIDDel) {
 		deqIDDel = pThis->deqIDDel;
 		pTdl = tdlPeek(pThis);
@@ -1386,7 +1387,7 @@ DeleteBatchFromQStore(qqueue_t *pThis, batch_t *pBatch)
 	} else {
 		/* can not delete, insert into to-delete list */
 		dbgprintf("not at head of to-delete list, enqueue %d\n", (int) pBatch->deqID);
-		CHKiRet(tdlAdd(pThis, pBatch->deqID, pBatch->nElemDeq));
+		CHKiRet(tdlAdd(pThis, pBatch->deqID, nDeleted));
 	}
 
 finalize_it:
@@ -1395,7 +1396,10 @@ finalize_it:
 
 
 /* Delete a batch of processed user objects from the queue, which includes
- * destructing the objects themself.
+ * destructing the objects themself. It is assumed that batches
+ * are processed in sequential order, that is if we find one unprocessed entry,
+ * that indicates the end of the delete operation. Note that this function MUST
+ * be called only for non-empty batches!
  * rgerhards, 2009-05-13
  */
 static inline rsRetVal
@@ -1408,13 +1412,17 @@ DeleteProcessedBatch(qqueue_t *pThis, batch_t *pBatch)
 	ISOBJ_TYPE_assert(pThis, qqueue);
 	assert(pBatch != NULL);
 
-	for(i = 0 ; i < pBatch->nElem ; ++i) {
+dbgprintf("XXX: deleteProcessedBatch total entries %d with state[0] %d\n", pBatch->nElem, pBatch->pElem[0].state);
+	for(i = 0 ; i < (pBatch->nElem) && (pBatch->pElem[i].state != BATCH_STATE_RDY); ++i) {
 dbgprintf("XXX: deleteProcessedBatch delete entry %d with state %d\n", i, pBatch->pElem[i].state);
 		pUsr = pBatch->pElem[i].pUsrp;
 		objDestruct(pUsr);
 	}
 
-	iRet = DeleteBatchFromQStore(pThis, pBatch);
+dbgprintf("we deleted %d objects\n", i);
+
+	if(i > 0)
+		iRet = DeleteBatchFromQStore(pThis, pBatch, i);
 
 	pBatch->nElem = pBatch->nElemDeq = 0; /* reset batch */
 
@@ -1423,7 +1431,11 @@ dbgprintf("XXX: deleteProcessedBatch delete entry %d with state %d\n", i, pBatch
 
 
 /* dequeue as many user pointers as are available, until we hit the configured
- * upper limit of pointers.
+ * upper limit of pointers. Note that this function also deletes all processed
+ * objects from the previous batch. However, it is perfectly valid that the
+ * previous batch contained NO objects at all. For example, this happens
+ * immediately after system startup or when a queue was exhausted and the queue
+ * worker needed to wait for new data.
  * This must only be called when the queue mutex is LOOKED, otherwise serious
  * malfunction will happen.
  */
@@ -1716,8 +1728,8 @@ ConsumerDA(qqueue_t *pThis, wti_t *pWti)
 	d_pthread_mutex_unlock(pThis->mut);
 
 	/* iterate over returned results and enqueue them in DA queue */
-	//for(i = 0 ; i < pWti->batch.nElem && !pThis->bShutdownImmediate ; i++) {
-	for(i = 0 ; i < pWti->batch.nElem ; i++) {
+	for(i = 0 ; i < pWti->batch.nElem && !pThis->bShutdownImmediate ; i++) {
+	//for(i = 0 ; i < pWti->batch.nElem ; i++) {
 		/* TODO: we must add a generic "addRef" mechanism, because the disk queue enqueue destructs
 		 * the message. So far, we simply assume we always have msg_t, what currently is always the case.
 		 * rgerhards, 2009-05-28

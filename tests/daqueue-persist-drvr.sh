@@ -8,6 +8,9 @@
 echo \[daqueue-persist-drvr.sh\]: testing memory daqueue persisting to disk, mode $1
 source $srcdir/diag.sh init
 
+export RSYSLOG_DEBUG="debug logfuncflow nostdout noprintmutexaction"
+export RSYSLOG_DEBUGLOG="log"
+
 # prepare config
 echo \$MainMsgQueueType $1 > work-queuemode.conf
 echo "*.*     :omtesting:sleep 0 1000" > work-delay.conf
@@ -21,7 +24,7 @@ source $srcdir/diag.sh check-mainq-spool
 
 echo "Enter phase 2, rsyslogd restart"
 
-#exit
+exit
 
 # restart engine and have rest processed
 #remove delay
