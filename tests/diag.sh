@@ -23,6 +23,7 @@ case $1 in
    'exit')	rm -f rsyslogd.started work-*.conf diag-common.conf
 		rm -f work rsyslog.out.log rsyslog.out.log.save # common work files
 		rm -rf test-spool
+		echo  -------------------------------------------------------------------------------
 		;;
    'startup')   # start rsyslogd with default params. $2 is the config file name to use
    		# returns only after successful startup
