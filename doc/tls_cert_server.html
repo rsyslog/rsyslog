@@ -37,6 +37,15 @@ src="http://pagead2.googlesyndication.com/pagead/show_ads.js">
 </script>
 </span>
 <p><center><img src="tls_cert_100.jpg"></center>
+<p><i><font color="red"><b>Important:</b> Keep in mind that the order of configuration directives
+is very important in rsyslog. As such, the samples given below do only work if the given
+order is preserved.</font> Re-ordering the directives can break configurations and has broken them
+in practice. If you intend to re-order them, please be sure that you fully understand how
+the configuration language works and, most importantly, which statements form a block together.
+Please also note that we understand the the current configuration file format is
+ugly. However, there has been more important work in the way of enhancing it. If you would like
+to contribute some time to improve the config file language, please let us know. Any help
+is appreciated (be it doc or coding work!).</i>
 <p>Steps to do:
 <ul>
 <li>make sure you have a functional CA (<a href="tls_cert_ca.html">Setting up the CA</a>)
