@@ -1650,14 +1650,12 @@ RateLimiter(qqueue_t *pThis)
 static inline rsRetVal
 DequeueForConsumer(qqueue_t *pThis, wti_t *pWti)
 {
-	int iCancelStateSave;
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, qqueue);
 	ISOBJ_TYPE_assert(pWti, wti);
 
 dbgprintf("YYY: dequeue for consumer\n");
-	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
 	CHKiRet(DequeueConsumable(pThis, pWti));
 
 	if(pWti->batch.nElem == 0)
@@ -1665,7 +1663,6 @@ dbgprintf("YYY: dequeue for consumer\n");
 
 
 finalize_it:
-	pthread_setcancelstate(iCancelStateSave, NULL);
 	RETiRet;
 }
 
@@ -1696,15 +1693,19 @@ batchProcessed(qqueue_t *pThis, wti_t *pWti)
 static rsRetVal
 ConsumerReg(qqueue_t *pThis, wti_t *pWti)
 {
+	int iCancelStateSave;
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, qqueue);
 	ISOBJ_TYPE_assert(pWti, wti);
 
+	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
 	CHKiRet(DequeueForConsumer(pThis, pWti));
 
 	/* we now have a non-idle batch of work, so we can release the queue mutex and process it */
 	d_pthread_mutex_unlock(pThis->mut);
+
+	pthread_setcancelstate(iCancelStateSave, NULL);
 
 	CHKiRet(pThis->pConsumer(pThis->pUsr, &pWti->batch, &pThis->bShutdownImmediate));
 
@@ -1740,15 +1741,19 @@ static rsRetVal
 ConsumerDA(qqueue_t *pThis, wti_t *pWti)
 {
 	int i;
+	int iCancelStateSave;
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, qqueue);
 	ISOBJ_TYPE_assert(pWti, wti);
 
+	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
 	CHKiRet(DequeueForConsumer(pThis, pWti));
 
 	/* we now have a non-idle batch of work, so we can release the queue mutex and process it */
 	d_pthread_mutex_unlock(pThis->mut);
+
+	pthread_setcancelstate(iCancelStateSave, NULL);
 
 	/* iterate over returned results and enqueue them in DA queue */
 	for(i = 0 ; i < pWti->batch.nElem && !pThis->bShutdownImmediate ; i++) {
