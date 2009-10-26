@@ -202,6 +202,8 @@ wtiWorkerCancelCleanup(void *arg)
 	ISOBJ_TYPE_assert(pWtp, wtp);
 
 	DBGPRINTF("%s: cancelation cleanup handler called.\n", wtiGetDbgHdr(pThis));
+	pWtp->pfObjProcessed(pWtp->pUsr, pThis);
+	DBGPRINTF("%s: done cancelation cleanup handler.\n", wtiGetDbgHdr(pThis));
 	
 	ENDfunc
 }

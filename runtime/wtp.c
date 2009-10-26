@@ -271,14 +271,14 @@ wtpCancelAll(wtp_t *pThis)
 }
 
 
-/* cancellation cleanup handler for executing worker decrements the worker counter.
- * This is also called when the the worker is normally shut down.
- * rgerhards, 2009-07-20
+/* this function contains shared code for both regular worker shutdown as
+ * well as shutdown via cancellation. We can not simply use pthread_cleanup_pop(1)
+ * as this introduces a race in the debug system (RETiRet system).
+ * rgerhards, 2009-10-26
  */
-static void
-wtpWrkrExecCancelCleanup(void *arg)
+static inline void
+wtpWrkrExecCleanup(wti_t *pWti)
 {
-	wti_t *pWti = (wti_t*) arg;
 	wtp_t *pThis;
 
 	BEGINfunc
@@ -293,8 +293,34 @@ wtpWrkrExecCancelCleanup(void *arg)
 	DBGPRINTF("%s: Worker thread %lx, terminated, num workers now %d\n",
 		  wtpGetDbgHdr(pThis), (unsigned long) pWti, ATOMIC_FETCH_32BIT(pThis->iCurNumWrkThrd));
 
-	pthread_cond_broadcast(&pThis->condThrdTrm); /* activate anyone waiting on thread shutdown */
 	ENDfunc
+}
+
+
+/* cancellation cleanup handler for executing worker decrements the worker counter.
+ * rgerhards, 2009-07-20
+ */
+static void
+wtpWrkrExecCancelCleanup(void *arg)
+{
+	wti_t *pWti = (wti_t*) arg;
+	wtp_t *pThis;
+
+	BEGINfunc
+	ISOBJ_TYPE_assert(pWti, wti);
+	pThis = pWti->pWtp;
+	ISOBJ_TYPE_assert(pThis, wtp);
+	DBGPRINTF("%s: Worker thread %lx requested to be cancelled.\n",
+		  wtpGetDbgHdr(pThis), (unsigned long) pWti);
+
+	wtpWrkrExecCleanup(pWti);
+
+	ENDfunc
+	/* NOTE: we must call ENDfunc FIRST, because otherwise the schedule may activate the main
+	 * thread after the broadcast, which could destroy the debug class, resulting in a potential
+	 * segfault. So we need to do the broadcast as actually the last action in our processing
+	 */
+	pthread_cond_broadcast(&pThis->condThrdTrm); /* activate anyone waiting on thread shutdown */
 }
 
 
@@ -331,9 +357,15 @@ wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in 
 
 	pthread_cleanup_push(wtpWrkrExecCancelCleanup, pWti);
 	wtiWorker(pWti);
-	pthread_cleanup_pop(1);
+	pthread_cleanup_pop(0);
+	wtpWrkrExecCleanup(pWti);
 
 	ENDfunc
+	/* NOTE: we must call ENDfunc FIRST, because otherwise the schedule may activate the main
+	 * thread after the broadcast, which could destroy the debug class, resulting in a potential
+	 * segfault. So we need to do the broadcast as actually the last action in our processing
+	 */
+	pthread_cond_broadcast(&pThis->condThrdTrm); /* activate anyone waiting on thread shutdown */
 	pthread_exit(0);
 }
 #pragma GCC diagnostic warning "-Wempty-body"
