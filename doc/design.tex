@@ -22,7 +22,7 @@ rgerhards@adiscon.com}
 \maketitle
 
 \begin{abstract}
-This paper describes rsyslog design and internals. It is created to facilitate a discussion about the implementation of "batched queue processing". As such, it does not describe the full design of rsyslog but rather those elements that are relevant to queues. However, the document may be expanded in the future.
+This paper describes rsyslog design and internals. It is created to facilitate a discussion about the implementation of "batched queue processing". As such, it does not describe the full design of rsyslog but rather those elements that are relevant to queues. However, the document may be expanded in the future. This is work in progress and should be considered with care. It is NOT updated during all phases of development.
 \end{abstract}
 
 \tableofcontents
@@ -810,6 +810,31 @@ configure and understand)
 b) we push the failed message back to the main queue, but with an indication
 that it failed in an action. This is harder to implement and most importantly
 harder to understand/configure, but more flexible
+
+\section{Network Stream Subsystem}
+The idea of network streams was introduced when we implemented RFC5425 (syslog over TLS) in 2008. The core idea is to encapsulate all stream-oriented network data transfer into a single transport layer and make the upper layers independent of actual transport being used. This is in line with the traditional layer approaches in communication systems.
+
+Under this system, the upper layer provides plugins to send and receive streams of syslog data. Framing is provided by the upper layer. The upper layer itself is integrated in input and output plugins, which then are used to provide application-level syslog message objects to and from the rsyslog core. To these upper layers, the netstream layer provides reliable and sequenced message delivery with much of the same semantics as a usual TCP stream.
+
+\begin{figure}
+\begin{center}
+\includegraphics[scale=0.4]{tls.jpeg}
+\end{center}
+\caption{Objects at the Network Stream Layer}
+\label{fig_batchmsg_states}
+\end{figure}
+
+At the netstream layer, we have a small set of generic classes, which are used for setup of the drivers and driver parameters. This is a very thin layer, mostly a wrapper. Once an actual lower-level netstream driver has been loaded, all parameters are passed through to it.
+
+Please note that both in theory and practice netstream drivers may call back into different netstream drivers. For example, the GnuTLS RFC5425 driver loads and calls back into the plain tcp driver, simply because that driver provides part of the required functionality and there  is no point in re-implementing it for GnuTLS.
+
+The netstream driver layer does not only provide read and write calls but supports i/o multiplexing. To do so, it offers an interface that follows select() semantics. That permits an upper-layer comonent to request being blocked unless some data arrives. Note that due to the subleties in TLS processing, the upper layer may be awoken while there is no upper-layer work to do. This will properly be indicated by the netstream subsystem, is not an error and must be accepted and poperly handled by the upper layer.
+
+Using the nestream layer, we do not need to modify the input and output plugins while at the same time we can add additional transport providers. One weak spot in this design is the current configuration process. With the current system, we need to provide one configuration statement per driver property and we need to hardcode this. So if a new driver would require new properties, we still would need to modify the upper layers. This is unfortunate, but the current config system does not provide for any better way to handle the situation. Once we are able to create a new config system, we will address this by providing the ability to pass a string of parameters onto the driver, which will then have the ability to parse its content. So once we do this, we need to modify the driver interface, but the end result would be a simlification.
+
+So far, only drivers for GnuTLS and plain tcp are provided. However, during the design of the layer we also looked at openssl and Mozilla Network Security Services as well as kept an eye on the needs of Kerberos. In theory, it should not be a major problem to write drivers for these systems (but it most probably still is a lot of work to do).
+
+A final note on Kerberos: in order to keep compatible with previous protocol handling and due to constraints in testing environment and knowledge, we still support Kerberos not via the netstream layer but via special extension into the input and output modules. That, too, is unfortunate, but given the current resources at hand, there is no alternative to handling in that way. We would be very interested in moving over Kerberos to a netstream driver and any volunteer would be very welcome.
 
 \section{Future Development}
 This section covers topics that can not currently be developed, but where important thoughts came up in discussions. For obvious reasons, the section has brainstorming character.

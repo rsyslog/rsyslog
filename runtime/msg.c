@@ -288,7 +288,7 @@ static inline void
 getInputName(msg_t *pM, uchar **ppsz, int *plen)
 {
 	BEGINfunc
-	if(pM == NULL) {
+	if(pM == NULL || pM->pInputName == NULL) {
 		*ppsz = UCHAR_CONSTANT("");
 		*plen = 0;
 	} else {

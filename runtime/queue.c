@@ -1638,18 +1638,21 @@ RateLimiter(qqueue_t *pThis)
 }
 
 
-/* This dequeues the next batch.
+/* This dequeues the next batch. Note that this function must not be
+ * cancelled, else it will leave back an inconsistent state.
  * rgerhards, 2009-05-20
  */
 static inline rsRetVal
 DequeueForConsumer(qqueue_t *pThis, wti_t *pWti)
 {
+	int iCancelStateSave;
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, qqueue);
 	ISOBJ_TYPE_assert(pWti, wti);
 
 dbgprintf("YYY: dequeue for consumer\n");
+	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
 	CHKiRet(DequeueConsumable(pThis, pWti));
 
 	if(pWti->batch.nElem == 0)
@@ -1657,6 +1660,7 @@ dbgprintf("YYY: dequeue for consumer\n");
 
 
 finalize_it:
+	pthread_setcancelstate(iCancelStateSave, NULL);
 	RETiRet;
 }
 
