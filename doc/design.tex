@@ -821,7 +821,7 @@ Under this system, the upper layer provides plugins to send and receive streams 
 \includegraphics[scale=0.4]{tls.jpeg}
 \end{center}
 \caption{Objects at the Network Stream Layer}
-\label{fig_batchmsg_states}
+\label{fig_netstream_objects}
 \end{figure}
 
 At the netstream layer, we have a small set of generic classes, which are used for setup of the drivers and driver parameters. This is a very thin layer, mostly a wrapper. Once an actual lower-level netstream driver has been loaded, all parameters are passed through to it.
@@ -838,6 +838,9 @@ A final note on Kerberos: in order to keep compatible with previous protocol han
 
 \section{Future Development}
 This section covers topics that can not currently be developed, but where important thoughts came up in discussions. For obvious reasons, the section has brainstorming character.
+
+\subsection{Lock-Free Queuing}
+On a very busy system, lock contention can limit performance. We should investigate ways to apply lock-free algorithms inside rsyslog. It is believed that at least for some scenarios, lock-free algorigthms can be applied with great benefit. To do so, we should introduce new queue modes, which will use very different semantics from what is described so far for the queue engine. Most importantly, in lock-free mode we will have limits on the number of producers and we will most probably not be able to guarantee audit-grade processing. The later is not a problem, because there are ample use cases that do not require audit-gradeness.
 
 \subsection{Audit-Grade High Performance Queue Storage Driver}
 An audit grade driver must ensure that no message is lost, but should also be able to handle large workloads. The sequential disk driver does not support the later.
