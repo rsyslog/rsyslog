@@ -8,8 +8,8 @@
 echo \[daqueue-persist-drvr.sh\]: testing memory daqueue persisting to disk, mode $1
 source $srcdir/diag.sh init
 
-export RSYSLOG_DEBUG="debug logfuncflow nostdout noprintmutexaction"
-export RSYSLOG_DEBUGLOG="log"
+#export RSYSLOG_DEBUG="debug nologfuncflow nostdout noprintmutexaction"
+#export RSYSLOG_DEBUGLOG="log"
 
 # prepare config
 echo \$MainMsgQueueType $1 > work-queuemode.conf
