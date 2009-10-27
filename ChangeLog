@@ -1,4 +1,6 @@
 ---------------------------------------------------------------------------
+Version 5.3.4  [DEVEL] (rgerhards), 2009-10-??
+---------------------------------------------------------------------------
 Version 5.3.3  [DEVEL] (rgerhards), 2009-10-27
 - simplified and thus speeded up the queue engine, also fixed some
   potential race conditions (in very unusual shutdown conditions)
