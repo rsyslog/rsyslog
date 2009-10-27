@@ -239,7 +239,6 @@ qqueueAdviseMaxWorkers(qqueue_t *pThis)
 	ISOBJ_TYPE_assert(pThis, qqueue);
 
 	if(!pThis->bEnqOnly) {
-		getLogicalQueueSize(pThis) ,  pThis->iHighWtrMrk);
 		if(pThis->bIsDA && getLogicalQueueSize(pThis) >= pThis->iHighWtrMrk) {
 			wtpAdviseMaxWorkers(pThis->pWtpDA, 1); /* disk queues have always one worker */
 		} else {
