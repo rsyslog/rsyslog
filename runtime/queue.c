@@ -239,7 +239,6 @@ qqueueAdviseMaxWorkers(qqueue_t *pThis)
 	ISOBJ_TYPE_assert(pThis, qqueue);
 
 	if(!pThis->bEnqOnly) {
-dbgprintf("AdviseMaxWorkers: log Queue Size: %d, high water mark %d\n", 
 		getLogicalQueueSize(pThis) ,  pThis->iHighWtrMrk);
 		if(pThis->bIsDA && getLogicalQueueSize(pThis) >= pThis->iHighWtrMrk) {
 			wtpAdviseMaxWorkers(pThis->pWtpDA, 1); /* disk queues have always one worker */
@@ -486,26 +485,6 @@ static rsRetVal qDelFixedArray(qqueue_t *pThis)
 }
 
 
-/* reset the logical dequeue pointer to the physical dequeue position.
- * This is only needed after we cancelled workers (during queue shutdown).
- */
-static rsRetVal
-qUnDeqAllFixedArray(qqueue_t *pThis)
-{
-	DEFiRet;
-
-	ISOBJ_TYPE_assert(pThis, qqueue);
-
-	DBGOPRINT((obj_t*) pThis, "resetting FixedArray deq index to %ld (was %ld), logical dequeue count %d\n",
-		  pThis->tVars.farray.head, pThis->tVars.farray.deqhead, pThis->nLogDeq);
-
-	pThis->tVars.farray.deqhead = pThis->tVars.farray.head;
-	pThis->nLogDeq = 0;
-
-	RETiRet;
-}
-
-
 /* -------------------- linked list  -------------------- */
 
 
@@ -592,26 +571,6 @@ static rsRetVal qDelLinkedList(qqueue_t *pThis)
 	}
 
 	free(pEntry);
-
-	RETiRet;
-}
-
-
-/* reset the logical dequeue pointer to the physical dequeue position.
- * This is only needed after we cancelled workers (during queue shutdown).
- */
-static rsRetVal
-qUnDeqAllLinkedList(qqueue_t *pThis)
-{
-	DEFiRet;
-
-	ASSERT(pThis != NULL);
-
-	DBGOPRINT((obj_t*) pThis, "resetting LinkedList deq ptr to %p (was %p), logical dequeue count %d\n",
-		  pThis->tVars.linklist.pDelRoot, pThis->tVars.linklist.pDeqRoot, pThis->nLogDeq);
-
-	pThis->tVars.linklist.pDeqRoot = pThis->tVars.linklist.pDelRoot;
-	pThis->nLogDeq = 0;
 
 	RETiRet;
 }
@@ -863,16 +822,6 @@ finalize_it:
 }
 
 
-/* This is a dummy function for disks - we do not need to reset anything
- * because everything is already persisted...
- */
-static rsRetVal
-qUnDeqAllDisk(__attribute__((unused)) qqueue_t *pThis)
-{
-	return RS_RET_OK;
-}
-
-
 /* -------------------- direct (no queueing) -------------------- */
 static rsRetVal qConstructDirect(qqueue_t __attribute__((unused)) *pThis)
 {
@@ -913,12 +862,6 @@ static rsRetVal qAddDirect(qqueue_t *pThis, void* pUsr)
 
 
 static rsRetVal qDelDirect(qqueue_t __attribute__((unused)) *pThis)
-{
-	return RS_RET_OK;
-}
-
-static rsRetVal
-qUnDeqAllDirect(__attribute__((unused)) qqueue_t *pThis)
 {
 	return RS_RET_OK;
 }
@@ -1192,7 +1135,6 @@ ShutdownWorkers(qqueue_t *pThis)
 	DBGOPRINT((obj_t*) pThis, "initiating worker thread shutdown sequence\n");
 
 	CHKiRet(tryShutdownWorkersWithinQueueTimeout(pThis));
-dbgprintf("YYY: physical queue size: %d\n", getPhysicalQueueSize(pThis));
 
 	if(getPhysicalQueueSize(pThis) > 0) {
 		CHKiRet(tryShutdownWorkersWithinActionTimeout(pThis));
@@ -1260,7 +1202,6 @@ rsRetVal qqueueConstruct(qqueue_t **ppThis, queueType_t qType, int iWorkerThread
 			pThis->qAdd = qAddFixedArray;
 			pThis->qDeq = qDeqFixedArray;
 			pThis->qDel = qDelFixedArray;
-			pThis->qUnDeqAll = qUnDeqAllFixedArray;
 			break;
 		case QUEUETYPE_LINKEDLIST:
 			pThis->qConstruct = qConstructLinkedList;
@@ -1268,7 +1209,6 @@ rsRetVal qqueueConstruct(qqueue_t **ppThis, queueType_t qType, int iWorkerThread
 			pThis->qAdd = qAddLinkedList;
 			pThis->qDeq = (rsRetVal (*)(qqueue_t*,void**)) qDeqLinkedList;
 			pThis->qDel = (rsRetVal (*)(qqueue_t*)) qDelLinkedList;
-			pThis->qUnDeqAll = qUnDeqAllLinkedList;
 			break;
 		case QUEUETYPE_DISK:
 			pThis->qConstruct = qConstructDisk;
@@ -1276,7 +1216,6 @@ rsRetVal qqueueConstruct(qqueue_t **ppThis, queueType_t qType, int iWorkerThread
 			pThis->qAdd = qAddDisk;
 			pThis->qDeq = qDeqDisk;
 			pThis->qDel = qDelDisk;
-			pThis->qUnDeqAll = qUnDeqAllDisk;
 			/* special handling */
 			pThis->iNumWorkerThreads = 1; /* we need exactly one worker */
 			break;
@@ -1285,7 +1224,6 @@ rsRetVal qqueueConstruct(qqueue_t **ppThis, queueType_t qType, int iWorkerThread
 			pThis->qDestruct = qDestructDirect;
 			pThis->qAdd = qAddDirect;
 			pThis->qDel = qDelDirect;
-			pThis->qUnDeqAll = qUnDeqAllDirect;
 			break;
 	}
 
@@ -1471,7 +1409,6 @@ DequeueConsumableElements(qqueue_t *pThis, wti_t *pWti, int *piRemainingQueueSiz
 
 	nDequeued = nDiscarded = 0;
 	while((iQueueSize = getLogicalQueueSize(pThis)) > 0 && nDequeued < pThis->iDeqBatchSize) {
-dbgprintf("DequeueConsumableElements, index %d\n", nDequeued);
 		CHKiRet(qqueueDeq(pThis, &pUsr));
 
 		/* check if we should discard this element */
@@ -1652,7 +1589,6 @@ DequeueForConsumer(qqueue_t *pThis, wti_t *pWti)
 	ISOBJ_TYPE_assert(pThis, qqueue);
 	ISOBJ_TYPE_assert(pWti, wti);
 
-dbgprintf("YYY: dequeue for consumer\n");
 	CHKiRet(DequeueConsumable(pThis, pWti));
 
 	if(pWti->batch.nElem == 0)
@@ -2079,14 +2015,6 @@ CODESTARTobjDestruct(qqueue)
 	 */
 	if(pThis->qType != QUEUETYPE_DIRECT && !pThis->bEnqOnly && pThis->pqParent == NULL)
 		ShutdownWorkers(pThis);
-
-	/* now all workers are terminated. Messages may exist. Also, some logically dequeued
-	 * messages may never have been processed because their worker was terminated. So
-	 * we need to reset the logical dequeue pointer, persist the queue if configured to do
-	 * so and then destruct everything. -- rgerhards, 2009-05-26
-	 */
-RUNLOG_STR("XXX: NOT undequeueing entries!");
-	//CHKiRet(pThis->qUnDeqAll(pThis));
 
 	if(pThis->bIsDA && getPhysicalQueueSize(pThis) > 0 && pThis->bSaveOnShutdown) {
 		CHKiRet(DoSaveOnShutdown(pThis));

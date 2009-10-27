@@ -113,7 +113,6 @@ typedef struct queue_s {
 	rsRetVal (*qAdd)(struct queue_s *pThis, void *pUsr);
 	rsRetVal (*qDeq)(struct queue_s *pThis, void **ppUsr);
 	rsRetVal (*qDel)(struct queue_s *pThis);
-	rsRetVal (*qUnDeqAll)(struct queue_s *pThis);
 	/* end type-specific handler */
 	/* synchronization variables */
 	pthread_mutex_t mutThrdMgmt; /* mutex for the queue's thread management */

@@ -117,8 +117,7 @@ wtpConstructFinalize(wtp_t *pThis)
 	/* alloc and construct workers - this can only be done in finalizer as we previously do
 	 * not know the max number of workers
 	 */
-	if((pThis->pWrkr = MALLOC(sizeof(wti_t*) * pThis->iNumWorkerThreads)) == NULL)
-		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	CHKmalloc(pThis->pWrkr = MALLOC(sizeof(wti_t*) * pThis->iNumWorkerThreads));
 	
 	for(i = 0 ; i < pThis->iNumWorkerThreads ; ++i) {
 		CHKiRet(wtiConstruct(&pThis->pWrkr[i]));
@@ -190,10 +189,8 @@ wtpChkStopWrkr(wtp_t *pThis, int bLockUsrMutex)
 	wtpState = ATOMIC_FETCH_32BIT(pThis->wtpState);
 
 	if(wtpState == wtpState_SHUTDOWN_IMMEDIATE) {
-RUNLOG_STR("WWW: ChkStopWrkr returns TERMINATE_NOW");
 		ABORT_FINALIZE(RS_RET_TERMINATE_NOW);
 	} else if(wtpState == wtpState_SHUTDOWN) {
-RUNLOG_STR("WWW: ChkStopWrkr returns TERMINATE_WHEN_IDLE");
 		ABORT_FINALIZE(RS_RET_TERMINATE_WHEN_IDLE);
 	}
 
@@ -429,7 +426,6 @@ wtpAdviseMaxWorkers(wtp_t *pThis, int nMaxWrkr)
 
 	ISOBJ_TYPE_assert(pThis, wtp);
 
-int nMaxWrkrTmp = nMaxWrkr;
 	if(nMaxWrkr == 0)
 		FINALIZE;
 
@@ -437,10 +433,10 @@ int nMaxWrkrTmp = nMaxWrkr;
 		nMaxWrkr = pThis->iNumWorkerThreads;
 
 	nMissing = nMaxWrkr - ATOMIC_FETCH_32BIT(pThis->iCurNumWrkThrd);
-dbgprintf("wtpAdviseMaxWorkers, nmax: %d, curr %d, missing %d\n", nMaxWrkrTmp, pThis->iNumWorkerThreads, nMissing);
 
 	if(nMissing > 0) {
-		DBGPRINTF("%s: high activity - starting %d additional worker thread(s).\n", wtpGetDbgHdr(pThis), nMissing);
+		DBGPRINTF("%s: high activity - starting %d additional worker thread(s).\n",
+			  wtpGetDbgHdr(pThis), nMissing);
 		/* start the rqtd nbr of workers */
 		for(i = 0 ; i < nMissing ; ++i) {
 			CHKiRet(wtpStartWrkr(pThis));

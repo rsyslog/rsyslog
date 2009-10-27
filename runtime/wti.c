@@ -119,7 +119,7 @@ wtiSetState(wti_t *pThis, bool bNewVal)
  * Note that when waiting for the thread to terminate, we do a busy wait, checking
  * progress every 10ms. It is very unlikely that we will ever cancel a thread
  * and, if so, it will only happen at the end of the rsyslog run. So doing this
- * kind of not optimal wait is considered preferable over using condition variables.
+ * kind of non-optimal wait is considered preferable over using condition variables.
  * rgerhards, 2008-02-26
  */
 rsRetVal
@@ -134,7 +134,6 @@ wtiCancelThrd(wti_t *pThis)
 		pthread_cancel(pThis->thrdID);
 		/* now wait until the thread terminates... */
 		while(wtiGetState(pThis)) {
-//fprintf(stderr, "sleep loop for getState\n");
 			srSleep(0, 10000);
 		}
 	}
@@ -271,7 +270,6 @@ wtiWorker(wti_t *pThis)
 
 		/* first check if we are in shutdown process (but evaluate a bit later) */
 		terminateRet = wtpChkStopWrkr(pWtp, MUTEX_ALREADY_LOCKED);
-RUNLOG_VAR("%d", terminateRet);
 		if(terminateRet == RS_RET_TERMINATE_NOW) {
 			/* we now need to free the old batch */
 			localRet = pWtp->pfObjProcessed(pWtp->pUsr, pThis);
