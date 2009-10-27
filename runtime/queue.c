@@ -386,8 +386,6 @@ InitDA(qqueue_t *pThis, int bLockMutex)
 		CHKiRet(StartDA(pThis));
 	}
 
-	pThis->bRunsDA = 1;
-
 finalize_it:
 	END_MTX_PROTECTED_OPERATIONS(pThis->mut);
 	RETiRet;
@@ -1235,7 +1233,7 @@ finalize_it:
 /* This function checks if the provided message shall be discarded and does so, if needed.
  * In DA mode, we do not discard any messages as we assume the disk subsystem is fast enough to
  * provide real-time creation of spool files.
- * Note: cached copies of iQueueSize and bRunsDA are provided so that no mutex locks are required.
+ * Note: cached copies of iQueueSize is provided so that no mutex locks are required.
  * The caller must have obtained them while the mutex was locked. Of course, these values may no
  * longer be current, but that is OK for the discard check. At worst, the message is either processed
  * or discarded when it should not have been. As discarding is in itself somewhat racy and erratic,
@@ -1245,7 +1243,7 @@ finalize_it:
  * the return state!
  * rgerhards, 2008-01-24
  */
-static int qqueueChkDiscardMsg(qqueue_t *pThis, int iQueueSize, int bRunsDA, void *pUsr)
+static int qqueueChkDiscardMsg(qqueue_t *pThis, int iQueueSize, void *pUsr)
 {
 	DEFiRet;
 	rsRetVal iRetLocal;
@@ -1254,7 +1252,7 @@ static int qqueueChkDiscardMsg(qqueue_t *pThis, int iQueueSize, int bRunsDA, voi
 	ISOBJ_TYPE_assert(pThis, qqueue);
 	ISOBJ_assert(pUsr);
 
-	if(pThis->iDiscardMrk > 0 && iQueueSize >= pThis->iDiscardMrk && bRunsDA == 0) {
+	if(pThis->iDiscardMrk > 0 && iQueueSize >= pThis->iDiscardMrk) {
 		iRetLocal = objGetSeverity(pUsr, &iSeverity);
 		if(iRetLocal == RS_RET_OK && iSeverity >= pThis->iDiscardSeverity) {
 			DBGOPRINT((obj_t*) pThis, "queue nearly full (%d entries), discarded severity %d message\n",
@@ -1411,7 +1409,7 @@ DequeueConsumableElements(qqueue_t *pThis, wti_t *pWti, int *piRemainingQueueSiz
 		CHKiRet(qqueueDeq(pThis, &pUsr));
 
 		/* check if we should discard this element */
-		localRet = qqueueChkDiscardMsg(pThis, pThis->iQueueSize, pThis->bRunsDA, pUsr);
+		localRet = qqueueChkDiscardMsg(pThis, pThis->iQueueSize, pUsr);
 		if(localRet == RS_RET_QUEUE_FULL) {
 			++nDiscarded;
 			continue;
@@ -1734,9 +1732,7 @@ qqueueChkStopWrkrDA(qqueue_t *pThis)
 /* must only be called when the queue mutex is locked, else results
  * are not stable!
  * If we are a child, we have done our duty when the queue is empty. In that case,
- * we can terminate.
- * Version for the regular worker thread. NOTE: the pThis->bRunsDA is different from
- * the DA queue
+ * we can terminate. Version for the regular worker thread.
  */
 static rsRetVal
 ChkStopWrkrReg(qqueue_t *pThis)
@@ -2135,7 +2131,7 @@ doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, void *pUsr)
 
 	/* first check if we need to discard this message (which will cause CHKiRet() to exit)
 	 */
-	CHKiRet(qqueueChkDiscardMsg(pThis, pThis->iQueueSize, pThis->bRunsDA, pUsr));
+	CHKiRet(qqueueChkDiscardMsg(pThis, pThis->iQueueSize, pUsr));
 
 	/* handle flow control
 	 * There are two different flow control mechanisms: basic and advanced flow control.

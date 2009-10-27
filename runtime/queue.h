@@ -138,7 +138,6 @@ typedef struct queue_s {
 	qDeqID deqIDAdd;	/* next dequeue ID to use during add to queue store */
 	qDeqID deqIDDel;	/* queue store delete position */
 	int bIsDA;		/* is this queue disk assisted? */
-	int bRunsDA;		/* is this queue actually *running* disk assisted? */
 	struct queue_s *pqDA;	/* queue for disk-assisted modes */
 	struct queue_s *pqParent;/* pointer to the parent (if this is a child queue) */
 	int	bDAEnqOnly;	/* EnqOnly setting for DA queue */
