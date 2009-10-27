@@ -184,12 +184,11 @@ finalize_it:
 
 
 /* cancellation cleanup handler for queueWorker ()
- * Updates admin structure and frees ressources.
+ * Most importantly, it must bring back the batch into a consistent state.
  * Keep in mind that cancellation is disabled if we run into
  * the cancel cleanup handler (and have been cancelled).
  * rgerhards, 2008-01-16
  */
-// TODO: REMOVE THIS FUNCTION, CURRENTLY ONLY PRESENT TO PROVIDE DEBUG OUTPUT -- rgerhards, 2009-10-14
 static void
 wtiWorkerCancelCleanup(void *arg)
 {
@@ -224,7 +223,6 @@ doIdleProcessing(wti_t *pThis, wtp_t *pWtp, int *pbInactivityTOOccured)
 
 	if(pThis->bAlwaysRunning) {
 		/* never shut down any started worker */
-dbgprintf("YYY/ZZZ: wti Idle wait cond busy, mutex %p\n", pWtp->pmutUsr);
 		d_pthread_cond_wait(pWtp->pcondBusy, pWtp->pmutUsr);
 	} else {
 		timeoutComp(&t, pWtp->toWrkShutdown);/* get absolute timeout */
@@ -238,7 +236,11 @@ dbgprintf("YYY/ZZZ: wti Idle wait cond busy, mutex %p\n", pWtp->pmutUsr);
 }
 
 
-/* generic worker thread framework
+/* generic worker thread framework. Note that we prohibit cancellation
+ * during almost all times, because it can have very undesired side effects.
+ * However, we may need to cancel a thread if the consumer blocks for too
+ * long (during shutdown). So what we do is block cancellation, and every
+ * consumer must enable it during the periods where it is safe.
  */
 #pragma GCC diagnostic ignored "-Wempty-body"
 rsRetVal
@@ -248,6 +250,7 @@ wtiWorker(wti_t *pThis)
 	int bInactivityTOOccured = 0;
 	rsRetVal localRet;
 	rsRetVal terminateRet;
+	int iCancelStateSave;
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, wti);
@@ -256,6 +259,7 @@ wtiWorker(wti_t *pThis)
 
 	dbgSetThrdName(pThis->pszDbgHdr);
 	pthread_cleanup_push(wtiWorkerCancelCleanup, pThis);
+	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
 
 	/* now we have our identity, on to real processing */
 	while(1) { /* loop will be broken below - need to do mutex locks */
@@ -300,6 +304,7 @@ RUNLOG_VAR("%d", terminateRet);
 
 	/* indicate termination */
 	pthread_cleanup_pop(0); /* remove cleanup handler */
+	pthread_setcancelstate(iCancelStateSave, NULL);
 
 	RETiRet;
 }

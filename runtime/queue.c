@@ -1410,13 +1410,11 @@ DeleteProcessedBatch(qqueue_t *pThis, batch_t *pBatch)
 	void *pUsr;
 	int nEnqueued = 0;
 	rsRetVal localRet;
-	int iCancelStateSave;
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, qqueue);
 	assert(pBatch != NULL);
 
-	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
 dbgprintf("XXX: deleteProcessedBatch total entries %d with state[0] %d\n", pBatch->nElem, pBatch->pElem[0].state);
 	for(i = 0 ; i < pBatch->nElem ; ++i) {
 dbgprintf("XXX: deleteProcessedBatch delete entry %d, ptr %p, refcnt %d with state %d\n",
@@ -1444,7 +1442,6 @@ dbgprintf("we deleted %d objects and enqueued %d objects\n", i-nEnqueued, nEnque
 
 	pBatch->nElem = pBatch->nElemDeq = 0; /* reset batch */
 
-	pthread_setcancelstate(iCancelStateSave, NULL);
 	RETiRet;
 }
 
@@ -1699,13 +1696,13 @@ ConsumerReg(qqueue_t *pThis, wti_t *pWti)
 	ISOBJ_TYPE_assert(pThis, qqueue);
 	ISOBJ_TYPE_assert(pWti, wti);
 
-	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
 	CHKiRet(DequeueForConsumer(pThis, pWti));
 
 	/* we now have a non-idle batch of work, so we can release the queue mutex and process it */
 	d_pthread_mutex_unlock(pThis->mut);
 
-	pthread_setcancelstate(iCancelStateSave, NULL);
+	/* at this spot, we may be cancelled */
+	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &iCancelStateSave);
 
 	CHKiRet(pThis->pConsumer(pThis->pUsr, &pWti->batch, &pThis->bShutdownImmediate));
 
@@ -1718,6 +1715,9 @@ ConsumerReg(qqueue_t *pThis, wti_t *pWti)
 			  pThis->iDeqSlowdown);
 		srSleep(pThis->iDeqSlowdown / 1000000, pThis->iDeqSlowdown % 1000000);
 	}
+
+	/* but now cancellation is no longer permitted */
+	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
 
 	/* now we are done, but need to re-aquire the mutex */
 	d_pthread_mutex_lock(pThis->mut);
@@ -1747,13 +1747,13 @@ ConsumerDA(qqueue_t *pThis, wti_t *pWti)
 	ISOBJ_TYPE_assert(pThis, qqueue);
 	ISOBJ_TYPE_assert(pWti, wti);
 
-	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
 	CHKiRet(DequeueForConsumer(pThis, pWti));
 
 	/* we now have a non-idle batch of work, so we can release the queue mutex and process it */
 	d_pthread_mutex_unlock(pThis->mut);
 
-	pthread_setcancelstate(iCancelStateSave, NULL);
+	/* at this spot, we may be cancelled */
+	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &iCancelStateSave);
 
 	/* iterate over returned results and enqueue them in DA queue */
 	for(i = 0 ; i < pWti->batch.nElem && !pThis->bShutdownImmediate ; i++) {
@@ -1767,6 +1767,9 @@ dbgprintf("DA consumer pushes msg '%s'\n", ((msg_t*)(pWti->batch.pElem[i].pUsrp)
 			(obj_t*)MsgAddRef((msg_t*)(pWti->batch.pElem[i].pUsrp))));
 		pWti->batch.pElem[i].state = BATCH_STATE_COMM; /* commited to other queue! */
 	}
+
+	/* but now cancellation is no longer permitted */
+	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
 
 	/* now we are done, but need to re-aquire the mutex */
 	d_pthread_mutex_lock(pThis->mut);
@@ -2332,7 +2335,6 @@ finalize_it:
 	if(pThis->qType != QUEUETYPE_DIRECT) {
 		/* make sure at least one worker is running. */
 		qqueueAdviseMaxWorkers(pThis);
-dbgprintf("YYY: call advise with mutex %p locked \n", pThis->mut);
 		/* and release the mutex */
 		d_pthread_mutex_unlock(pThis->mut);
 		pthread_setcancelstate(iCancelStateSave, NULL);
