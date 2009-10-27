@@ -1,5 +1,8 @@
 ---------------------------------------------------------------------------
 Version 5.3.4  [DEVEL] (rgerhards), 2009-10-??
+- added the capability to have ruleset-specific main message queues
+  This offers considerable additional flexibility AND superior performance
+  (in cases where multiple inputs now can avoid lock contention)
 ---------------------------------------------------------------------------
 Version 5.3.3  [DEVEL] (rgerhards), 2009-10-27
 - simplified and thus speeded up the queue engine, also fixed some

@@ -40,11 +40,13 @@
 
 #include "rsyslog.h"
 #include "obj.h"
+#include "cfsysline.h"
 #include "msg.h"
 #include "ruleset.h"
 #include "rule.h"
 #include "errmsg.h"
 #include "unicode-helper.h"
+#include "dirty.h" /* for main ruleset queue creation */
 
 /* static data */
 DEFobjStaticHelpers
@@ -211,6 +213,19 @@ static ruleset_t*
 GetCurrent(void)
 {
 	return pCurrRuleset;
+}
+
+
+/* get main queue associated with ruleset. If no ruleset-specifc main queue
+ * is set, the primary main message queue is returned.
+ * We use a non-standard calling interface, as nothing can go wrong and it
+ * is really much more natural to return the pointer directly.
+ */
+static qqueue_t*
+GetRulesetQueue(ruleset_t *pThis)
+{
+	ISOBJ_TYPE_assert(pThis, ruleset);
+	return (pThis->pQueue == NULL) ? pMsgQueue : pThis->pQueue;
 }
 
 
@@ -384,6 +399,41 @@ debugPrintAll(void)
 }
 
 
+/* Create a ruleset-specific "main" queue for this ruleset. If one is already
+ * defined, an error message is emitted but nothing else is done.
+ * Note: we use the main message queue parameters for queue creation and access
+ * syslogd.c directly to obtain these. This is far from being perfect, but
+ * considered acceptable for the time being.
+ * rgerhards, 2009-10-27
+ */
+static rsRetVal
+rulesetCreateQueue(void __attribute__((unused)) *pVal, int *pNewVal)
+{
+	DEFiRet;
+
+	if(pCurrRuleset == NULL) {
+		errmsg.LogError(0, RS_RET_NO_CURR_RULESET, "error: currently no specific ruleset specified, thus a "
+				"queue can not be added to it");
+		ABORT_FINALIZE(RS_RET_NO_CURR_RULESET);
+	}
+
+	if(pCurrRuleset->pQueue != NULL) {
+		errmsg.LogError(0, RS_RET_RULES_QUEUE_EXISTS, "error: ruleset already has a main queue, can not "
+				"add another one");
+		ABORT_FINALIZE(RS_RET_RULES_QUEUE_EXISTS);
+	}
+
+	if(pNewVal == 0)
+		FINALIZE; /* if it is turned off, we do not need to change anything ;) */
+
+	dbgprintf("adding a ruleset-specific \"main\" queue");
+	CHKiRet(createMainQueue(&pCurrRuleset->pQueue, UCHAR_CONSTANT("ruleset")));
+
+finalize_it:
+	RETiRet;
+}
+
+
 /* queryInterface function
  * rgerhards, 2008-02-21
  */
@@ -413,6 +463,7 @@ CODESTARTobjQueryInterface(ruleset)
 	pIf->GetRuleset = GetRuleset;
 	pIf->SetDefaultRuleset = SetDefaultRuleset;
 	pIf->SetCurrRuleset = SetCurrRuleset;
+	pIf->GetRulesetQueue = GetRulesetQueue;
 finalize_it:
 ENDobjQueryInterface(ruleset)
 
@@ -442,6 +493,9 @@ BEGINObjClassInit(ruleset, 1, OBJ_IS_CORE_MODULE) /* class, version */
 
 	/* prepare global data */
 	CHKiRet(llInit(&llRulesets, rulesetDestructForLinkedList, keyDestruct, strcasecmp));
+
+	/* config file handlers */
+	CHKiRet(regCfSysLineHdlr((uchar *)"rulesetcreatemainqueue", 0, eCmdHdlrBinary, rulesetCreateQueue, NULL, NULL));
 ENDObjClassInit(ruleset)
 
 /* vi:set ai:

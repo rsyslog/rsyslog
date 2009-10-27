@@ -208,6 +208,16 @@ MsgSetRawMsgSize(msg_t *pMsg, size_t newLen)
 }
 
 
+/* get the ruleset that is associated with the ruleset.
+ * May be NULL. -- rgerhards, 2009-10-27
+ */
+static inline ruleset_t*
+MsgGetRuleset(msg_t *pMsg)
+{
+	return pMsg->pRuleset;
+}
+
+
 #endif /* #ifndef MSG_H_INCLUDED */
 /* vim:set ai:
  */

@@ -35,6 +35,7 @@ int parseRFCSyslogMsg(msg_t *pMsg, int flags);
 int parseLegacySyslogMsg(msg_t *pMsg, int flags);
 rsRetVal diagGetMainMsgQSize(int *piSize); /* for imdiag */
 char* getFIOPName(unsigned iFIOP);
+rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName);
 
 /* Intervals at which we flush out "message repeated" messages,
  * in seconds after previous message is logged.  After each flush,
@@ -46,6 +47,7 @@ extern int iActExecOnceInterval;
 extern int MarkInterval;
 extern int repeatinterval[2];
 extern int  bReduceRepeatMsgs;
+extern qqueue_t *pMsgQueue;				/* the main message queue */
 #define	MAXREPEAT ((int)((sizeof(repeatinterval) / sizeof(repeatinterval[0])) - 1))
 #define	REPEATTIME(f)	((f)->f_time + repeatinterval[(f)->f_repeatcount])
 #define	BACKOFF(f)	{ if (++(f)->f_repeatcount > MAXREPEAT) \

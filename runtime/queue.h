@@ -55,7 +55,7 @@ typedef struct qLinkedList_S {
 
 
 /* the queue object */
-typedef struct queue_s {
+struct queue_s {
 	BEGINobjInstance;
 	queueType_t	qType;
 	int	nLogDeq;	/* number of elements currently logically dequeued */
@@ -160,7 +160,7 @@ typedef struct queue_s {
 			strm_t *pReadDel; /* current file for deleting */
 		} disk;
 	} tVars;
-} qqueue_t;
+};
 
 
 /* the define below is an "eternal" timeout for the timeout settings which require a value.

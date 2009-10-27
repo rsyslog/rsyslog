@@ -107,6 +107,7 @@ typedef struct wti_s wti_t;
 typedef obj_t nsd_t;
 typedef obj_t nsdsel_t;
 typedef struct msg msg_t;
+typedef struct queue_s qqueue_t;
 typedef struct prop_s prop_t;
 typedef struct interface_s interface_t;
 typedef struct objInfo_s objInfo_t;
@@ -387,6 +388,8 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_HOST_NOT_SPECIFIED = -2151, /**< (target) host was not specified where it was needed */
 	RS_RET_ERR_LIBNET_INIT = -2152, /**< error initializing libnet */
 	RS_RET_FORCE_TERM = -2153,	/**< thread was forced to terminate by bShallShutdown, a state, not an error */
+	RS_RET_RULES_QUEUE_EXISTS = -2154,/**< we were instructed to create a new ruleset queue, but one already exists */
+	RS_RET_NO_CURR_RULESET = -2155,/**< no current ruleset exists (but one is required) */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */
