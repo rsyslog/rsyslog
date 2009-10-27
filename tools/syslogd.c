@@ -133,7 +133,6 @@
 #include "errmsg.h"
 #include "datetime.h"
 #include "parser.h"
-//#include "sysvar.h"
 #include "batch.h"
 #include "unicode-helper.h"
 #include "ruleset.h"
@@ -2396,11 +2395,6 @@ static rsRetVal loadBuildInModules(void)
 	CHKiRet(regCfSysLineHdlr((uchar *)"privdroptouserid", 0, eCmdHdlrInt, NULL, &uidDropPriv, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"privdroptogroup", 0, eCmdHdlrGID, NULL, &gidDropPriv, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"privdroptogroupid", 0, eCmdHdlrGID, NULL, &gidDropPriv, NULL));
-
-	/* now add other modules handlers (we should work on that to be able to do it in ClassInit(), but so far
-	 * that is not possible). -- rgerhards, 2008-01-28
-	 */
-	CHKiRet(actionAddCfSysLineHdrl());
 
 finalize_it:
 	RETiRet;
