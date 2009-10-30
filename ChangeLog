@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 5.3.4  [DEVEL] (rgerhards), 2009-10-??
+- bugfix: correct default for escape ('#') character restored
+  This was accidently changed to '\\', thanks to David Lang for reporting
 - added the capability to have ruleset-specific main message queues
   This offers considerable additional flexibility AND superior performance
   (in cases where multiple inputs now can avoid lock contention)
