@@ -1,17 +1,26 @@
 # Test for disk-only queue mode
-# This test checks if queue files can be correctly written
-# and read back, but it does not test the transition from
-# memory to disk mode for DA queues.
-# added 2009-04-17 by Rgerhards
+# This tests defines three rulesets, each one with its own queue. Then, it
+# sends data to them and checks the outcome. Note that we do need to
+# use some custom code as the test driver framework does not (yet?)
+# support multi-output-file operations.
+# added 2009-10-30 by Rgerhards
 # This file is part of the rsyslog project, released  under GPLv3
-# uncomment for debugging support:
-echo \[diskqueue.sh\]: testing queue disk-only mode
+echo \[rulesetmultiqueu.sh\]: testing multiple queues via rulesets
 source $srcdir/diag.sh init
-source $srcdir/diag.sh startup diskqueue.conf
-# 20000 messages should be enough - the disk test is slow enough ;)
-sleep 4
-source $srcdir/diag.sh tcpflood 127.0.0.1 13514 1 20000
+rm -f rsyslog.out1.log rsyslog.out2.log rsyslog.out3.log
+source $srcdir/diag.sh startup rulesetmultiqueue.conf
+source $srcdir/diag.sh wait-startup
+# now fill the three files (a bit sequentially, but they should
+# still get their share of concurrency - to increase the chance
+# we use three connections per set).
+source $srcdir/diag.sh tcpflood 127.0.0.1 13514 3 20000 0
+source $srcdir/diag.sh tcpflood 127.0.0.1 13515 3 20000 20000
+source $srcdir/diag.sh tcpflood 127.0.0.1 13516 3 20000 40000
 source $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
 source $srcdir/diag.sh wait-shutdown
-source $srcdir/diag.sh seq-check 0 19999
+# now consolidate all logs into a single one so that we can use the
+# regular check logic
+cat rsyslog.out1.log rsyslog.out2.log rsyslog.out3.log > rsyslog.out.log
+source $srcdir/diag.sh seq-check 0 59999
+rm -f rsyslog.out1.log rsyslog.out2.log rsyslog.out3.log
 source $srcdir/diag.sh exit

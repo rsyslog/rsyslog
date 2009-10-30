@@ -10,6 +10,7 @@ TESTS = $(TESTRUNS) cfg.sh \
 	daqueue-persist.sh \
 	diskqueue.sh \
 	diskqueue-fsync.sh \
+	rulesetmultiqueue.sh \
 	manytcp.sh \
 	queue-persist.sh 
 
@@ -139,6 +140,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/master.rfctag \
 	   testsuites/nolimittag.conf \
 	   testsuites/master.nolimittag \
+	   rulesetmultiqueue.sh \
+	   testsuites/rulesetmultiqueue.conf \
 	   badqi.sh \
 	   testsuites/badqi.conf \
 	   bad_qi/dbq.qi \
