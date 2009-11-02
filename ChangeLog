@@ -1,4 +1,11 @@
 ---------------------------------------------------------------------------
+Version 5.2.0  [v5-stable] (rgerhards), 2009-11-02
+This is a re-release of version 5.1.6 as stable after we did not get any bug 
+reports during the whole beta phase. Still, this first v5-stable may not be 
+as stable as one hopes for, I am not sure if we did not get bug reports
+just because nobody tried it. Anyhow, we need to go forward and so we
+have the initial v5-stable.
+---------------------------------------------------------------------------
 Version 5.1.6  [v5-beta] (rgerhards), 2009-10-15
 - feature imports from v4.5.6
 - bugfix: potential race condition when queue worker threads were
