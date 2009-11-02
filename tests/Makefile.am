@@ -27,6 +27,11 @@ TESTS += omod-if-array.sh \
 	 fieldtest.sh
 endif
 
+if ENABLE_OMRULESET
+TESTS += omruleset.sh \
+	 omruleset-queue.sh
+endif
+
 check_JAVA = DiagTalker.java
 
 endif # if ENABLE_TESTBENCH
@@ -142,6 +147,10 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/master.nolimittag \
 	   rulesetmultiqueue.sh \
 	   testsuites/rulesetmultiqueue.conf \
+	   omruleset.sh \
+	   testsuites/omruleset.conf \
+	   omruleset-queue.sh \
+	   testsuites/omruleset-queue.conf \
 	   badqi.sh \
 	   testsuites/badqi.conf \
 	   bad_qi/dbq.qi \

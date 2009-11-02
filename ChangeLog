@@ -1,10 +1,13 @@
 ---------------------------------------------------------------------------
 Version 5.3.4  [DEVEL] (rgerhards), 2009-10-??
-- bugfix: correct default for escape ('#') character restored
-  This was accidently changed to '\\', thanks to David Lang for reporting
+- added omruleset output module, which provides great flexibility in 
+  action processing. THIS IS A VERY IMPORTANT ADDITION, see its doc
+  for why.
 - added the capability to have ruleset-specific main message queues
   This offers considerable additional flexibility AND superior performance
   (in cases where multiple inputs now can avoid lock contention)
+- bugfix: correct default for escape ('#') character restored
+  This was accidently changed to '\\', thanks to David Lang for reporting
 - bugfix(testbench): testcase did not properly wait for rsyslod shutdown
   thus some unpredictable behavior and a false negative test result
   could occur.

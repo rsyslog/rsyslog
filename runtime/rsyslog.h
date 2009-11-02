@@ -390,6 +390,9 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_FORCE_TERM = -2153,	/**< thread was forced to terminate by bShallShutdown, a state, not an error */
 	RS_RET_RULES_QUEUE_EXISTS = -2154,/**< we were instructed to create a new ruleset queue, but one already exists */
 	RS_RET_NO_CURR_RULESET = -2155,/**< no current ruleset exists (but one is required) */
+	RS_RET_NO_MSG_PASSING = -2156,/**< output module interface parameter passing mode "MSG" is not available but required */
+	RS_RET_RULESET_NOT_FOUND = -2157,/**< a required ruleset could not be found */
+	RS_RET_NO_RULESET= -2158,/**< no ruleset name as specified where one was needed */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */

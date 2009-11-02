@@ -210,7 +210,7 @@ rsRetVal actionDestruct(action_t *pThis)
 		if(pThis->ppMsgs[i] != NULL) {
 			switch(pThis->eParamPassing) {
 			case ACT_ARRAY_PASSING:
-#if 0 /* later! */
+#if 0 /* later, as an optimization. So far, we do the cleanup after each message */ 
 				iArr = 0;
 				while(((char **)pThis->ppMsgs[i])[iArr] != NULL) {
 					d_free(((char **)pThis->ppMsgs[i])[iArr++]);
@@ -222,6 +222,9 @@ rsRetVal actionDestruct(action_t *pThis)
 				break;
 			case ACT_STRING_PASSING:
 				d_free(pThis->ppMsgs[i]);
+				break;
+			case ACT_MSG_PASSING:
+				/* No cleanup needed in this case */
 				break;
 			default:
 				assert(0);
@@ -623,6 +626,12 @@ static rsRetVal prepareDoActionParams(action_t *pAction, msg_t *pMsg)
 			case ACT_ARRAY_PASSING:
 				CHKiRet(tplToArray(pAction->ppTpl[i], pMsg, (uchar***) &(pAction->ppMsgs[i])));
 				break;
+			case ACT_MSG_PASSING:
+				/* we abuse the uchar* ptr, it now actually is a void*, but we can not
+				 * change that other than by chaning the interface, what we don't like...
+				 */
+				pAction->ppMsgs[i] = (uchar*) pMsg;
+				break;
 			default:assert(0); /* software bug if this happens! */
 		}
 	}
@@ -654,6 +663,7 @@ static rsRetVal cleanupDoActionParams(action_t *pAction)
 				d_free(pAction->ppMsgs[i]);
 				pAction->ppMsgs[i] = NULL;
 				break;
+			case ACT_MSG_PASSING:
 			case ACT_STRING_PASSING:
 				break;
 			default:
@@ -1306,9 +1316,8 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStringReques
 	
 	for(i = 0 ; i < pAction->iNumTpls ; ++i) {
 		CHKiRet(OMSRgetEntry(pOMSR, i, &pTplName, &iTplOpts));
-		/* Ok, we got everything, so it now is time to look up the
-		 * template (Hint: templates MUST be defined before they are
-		 * used!)
+		/* Ok, we got everything, so it now is time to look up the template
+		 * (Hint: templates MUST be defined before they are used!)
 		 */
 		if((pAction->ppTpl[i] = tplFind((char*)pTplName, strlen((char*)pTplName))) == NULL) {
 			snprintf(errMsg, sizeof(errMsg) / sizeof(char),
@@ -1330,6 +1339,8 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStringReques
 		/* set parameter-passing mode */
 		if(iTplOpts & OMSR_TPL_AS_ARRAY) {
 			pAction->eParamPassing = ACT_ARRAY_PASSING;
+		} else if(iTplOpts & OMSR_TPL_AS_MSG) {
+			pAction->eParamPassing = ACT_MSG_PASSING;
 		} else {
 			pAction->eParamPassing = ACT_STRING_PASSING;
 		}

@@ -334,6 +334,9 @@ finalize_it:
 BEGINobjDestruct(ruleset) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(ruleset)
 	dbgprintf("destructing ruleset %p, name %p\n", pThis, pThis->pszName);
+	if(pThis->pQueue != NULL) {
+		qqueueDestruct(&pThis->pQueue);
+	}
 	llDestroy(&pThis->llRules);
 	free(pThis->pszName);
 ENDobjDestruct(ruleset)

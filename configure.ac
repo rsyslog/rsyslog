@@ -792,6 +792,19 @@ AC_ARG_ENABLE(omstdout,
 AM_CONDITIONAL(ENABLE_OMSTDOUT, test x$enable_omstdout = xyes)
 
 
+# settings for omruleset
+AC_ARG_ENABLE(omruleset,
+        [AS_HELP_STRING([--enable-omruleset],[Compiles ruleset forwarding module @<:@default=yes@:>@])],
+        [case "${enableval}" in
+         yes) enable_omruleset="yes" ;;
+          no) enable_omruleset="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-omruleset) ;;
+         esac],
+        [enable_omruleset=yes]
+)
+AM_CONDITIONAL(ENABLE_OMRULESET, test x$enable_omruleset = xyes)
+
+
 # building the GUI (mostly for diagnostic reasons)
 AC_ARG_ENABLE(gui,
         [AS_HELP_STRING([--enable-gui],[Enable GUI programs @<:@default=no@:>@])],
@@ -882,6 +895,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omtemplate/Makefile \
 		plugins/omprog/Makefile \
 		plugins/omstdout/Makefile \
+		plugins/omruleset/Makefile \
 		plugins/imfile/Makefile \
 		plugins/imrelp/Makefile \
 		plugins/imdiag/Makefile \
@@ -922,6 +936,7 @@ echo "---{ output plugins }---"
 echo "    Mail support enabled:                     $enable_mail"
 echo "    omprog module will be compiled:           $enable_omprog"
 echo "    omstdout module will be compiled:         $enable_omstdout"
+echo "    omruleset module will be compiled:        $enable_omruleset"
 echo "    omudpspoof module will be compiled:       $enable_omudpspoof"
 echo "    output template module will be compiled:  $enable_omtemplate"
 echo
