@@ -8,7 +8,7 @@ Version 5.3.4  [DEVEL] (rgerhards), 2009-10-??
   (in cases where multiple inputs now can avoid lock contention)
 - bugfix: correct default for escape ('#') character restored
   This was accidently changed to '\\', thanks to David Lang for reporting
-- bugfix(testbench): testcase did not properly wait for rsyslod shutdown
+- bugfix(testbench): testcase did not properly wait for rsyslogd shutdown
   thus some unpredictable behavior and a false negative test result
   could occur.
 ---------------------------------------------------------------------------
