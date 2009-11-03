@@ -31,8 +31,6 @@ rsRetVal multiSubmitMsg(multi_submit_t *pMultiSub);
 rsRetVal submitMsg(msg_t *pMsg);
 rsRetVal logmsgInternal(int iErr, int pri, uchar *msg, int flags);
 rsRetVal parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int flags, flowControl_t flowCtlTypeu, prop_t *pInputName, struct syslogTime *stTime, time_t ttGenTime);
-int parseRFCSyslogMsg(msg_t *pMsg, int flags);
-int parseLegacySyslogMsg(msg_t *pMsg, int flags);
 rsRetVal diagGetMainMsgQSize(int *piSize); /* for imdiag */
 char* getFIOPName(unsigned iFIOP);
 rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName);
@@ -48,6 +46,7 @@ extern int MarkInterval;
 extern int repeatinterval[2];
 extern int  bReduceRepeatMsgs;
 extern qqueue_t *pMsgQueue;				/* the main message queue */
+extern int bParseHOSTNAMEandTAG; /* global config var: should the hostname and tag be */
 #define	MAXREPEAT ((int)((sizeof(repeatinterval) / sizeof(repeatinterval[0])) - 1))
 #define	REPEATTIME(f)	((f)->f_time + repeatinterval[(f)->f_repeatcount])
 #define	BACKOFF(f)	{ if (++(f)->f_repeatcount > MAXREPEAT) \
