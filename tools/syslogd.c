@@ -1027,8 +1027,6 @@ int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 
 /* submit a message to the main message queue.   This is primarily
  * a hook to prevent the need for callers to know about the main message queue
- * (which may change in the future as we will probably have multiple rule
- * sets and thus queues...).
  * rgerhards, 2008-02-13
  */
 rsRetVal
@@ -1051,23 +1049,31 @@ submitMsg(msg_t *pMsg)
 
 
 /* submit multiple messages at once, very similar to submitMsg, just
- * for multi_submit_t.
+ * for multi_submit_t. All messages need to go into the SAME queue!
  * rgerhards, 2009-06-16
  */
 rsRetVal
 multiSubmitMsg(multi_submit_t *pMultiSub)
 {
 	int i;
+	qqueue_t *pQueue;
+	ruleset_t *pRuleset;
 	DEFiRet;
 	assert(pMultiSub != NULL);
+
+	if(pMultiSub->nElem == 0)
+		FINALIZE;
 
 	for(i = 0 ; i < pMultiSub->nElem ; ++i) {
 		MsgPrepareEnqueue(pMultiSub->ppMsgs[i]);
 	}
 
-	iRet = qqueueMultiEnqObj(pMsgQueue, pMultiSub);
+	pRuleset = MsgGetRuleset(pMultiSub->ppMsgs[0]);
+	pQueue = (pRuleset == NULL) ? pMsgQueue : ruleset.GetRulesetQueue(pRuleset);
+	iRet = qqueueMultiEnqObj(pQueue, pMultiSub);
 	pMultiSub->nElem = 0;
 
+finalize_it:
 	RETiRet;
 }
 
