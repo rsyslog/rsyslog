@@ -15,6 +15,7 @@ rsyslogd_SOURCES = \
 	omfile.h \
 	omdiscard.c \
 	omdiscard.h \
+	pmrfc5424.c \
 	iminternal.c \
 	iminternal.h \
 	pidfile.c \

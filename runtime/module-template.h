@@ -46,6 +46,9 @@
 	DEFobjCurrIf(obj)
 #define DEF_LMOD_STATIC_DATA \
 	DEF_MOD_STATIC_DATA
+#define DEF_PMOD_STATIC_DATA \
+	DEFobjCurrIf(obj) \
+	DEF_MOD_STATIC_DATA
 
 
 /* Macro to define the module type. Each module can only have a single type. If
@@ -65,6 +68,7 @@ static rsRetVal modGetType(eModType_t *modType) \
 
 #define MODULE_TYPE_INPUT MODULE_TYPE(eMOD_IN)
 #define MODULE_TYPE_OUTPUT MODULE_TYPE(eMOD_OUT)
+#define MODULE_TYPE_PARSER MODULE_TYPE(eMOD_PARSER)
 #define MODULE_TYPE_LIB \
 	DEF_LMOD_STATIC_DATA \
 	MODULE_TYPE(eMOD_LIB)
@@ -400,6 +404,16 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 #define CODEqueryEtryPt_STD_LIB_QUERIES \
 	CODEqueryEtryPt_STD_MOD_QUERIES
 
+/* the following definition is the standard block for queryEtryPt for PARSER
+ * modules. This can be used if no specific handling (e.g. to cover version
+ * differences) is needed.
+ */
+#define CODEqueryEtryPt_STD_PMOD_QUERIES \
+	CODEqueryEtryPt_STD_MOD_QUERIES \
+	else if(!strcmp((char*) name, "parse")) {\
+		*pEtryPoint = parse;\
+	}
+
 /* modInit()
  * This has an extra parameter, which is the specific name of the modInit
  * function. That is needed for built-in modules, which must have unique
@@ -586,6 +600,22 @@ static rsRetVal doHUP(instanceData __attribute__((unused)) *pData)\
 #define CODESTARTdoHUP 
 
 #define ENDdoHUP \
+	RETiRet;\
+}
+
+
+
+/* parse() - main entry point of parser modules
+ */
+#define BEGINparse \
+static rsRetVal parse(msg_t *pMsg)\
+{\
+	DEFiRet;
+
+#define CODESTARTparse \
+	assert(pMsg != NULL);
+
+#define ENDparse \
 	RETiRet;\
 }
 

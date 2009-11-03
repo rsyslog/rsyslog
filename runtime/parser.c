@@ -39,8 +39,10 @@
 #include "obj.h"
 #include "datetime.h"
 #include "errmsg.h"
+#include "parser.h"
 #include "unicode-helper.h"
 #include "dirty.h"
+#include "cfsysline.h"
 
 /* some defines */
 #define DEFUPRI		(LOG_USER|LOG_NOTICE)
@@ -52,23 +54,22 @@ DEFobjCurrIf(errmsg)
 DEFobjCurrIf(datetime)
 
 /* static data */
+static int bParseHOSTNAMEandTAG;	/* cache for the equally-named global param - performance enhancement */
+/* config data */
+static uchar cCCEscapeChar = '#';/* character to be used to start an escape sequence for control chars */
+static int bEscapeCCOnRcv = 1; /* escape control characters on reception: 0 - no, 1 - yes */
+static int bDropTrailingLF = 1; /* drop trailing LF's on reception? */
 
 
-/* this is a dummy class init
+/* we need to provide standard constructors and destructors, even though
+ * we only have static methods. The framework requires that.
  */
-rsRetVal parserClassInit(void)
-{
-	DEFiRet;
+BEGINobjConstruct(parser) /* be sure to specify the object type also in END macro! */
+ENDobjConstruct(parser)
 
-	/* request objects we use */
-	CHKiRet(objGetObjInterface(&obj)); /* this provides the root pointer for all other queries */
-	CHKiRet(objUse(glbl, CORE_COMPONENT));
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
-	CHKiRet(objUse(datetime, CORE_COMPONENT));
-// TODO: free components! see action.c
-finalize_it:
-	RETiRet;
-}
+BEGINobjDestruct(parser) /* be sure to specify the object type also in END and CODESTART macros! */
+CODESTARTobjDestruct(parser)
+ENDobjDestruct(parser)
 
 /***************************RFC 5425 PARSER ******************************************************/
 
@@ -643,7 +644,8 @@ finalize_it:
  * extended to support configured parsers.
  * rgerhards, 2008-10-09
  */
-rsRetVal parseMsg(msg_t *pMsg)
+static rsRetVal
+ParseMsg(msg_t *pMsg)
 {
 	DEFiRet;
 	uchar *msg;
@@ -709,3 +711,57 @@ rsRetVal parseMsg(msg_t *pMsg)
 finalize_it:
 	RETiRet;
 }
+
+
+/* queryInterface function-- rgerhards, 2009-11-03
+ */
+BEGINobjQueryInterface(parser)
+CODESTARTobjQueryInterface(parser)
+	if(pIf->ifVersion != parserCURR_IF_VERSION) { /* check for current version, increment on each change */
+		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
+	}
+
+	/* ok, we have the right interface, so let's fill it
+	 * Please note that we may also do some backwards-compatibility
+	 * work here (if we can support an older interface version - that,
+	 * of course, also affects the "if" above).
+	 */
+	pIf->ParseMsg = ParseMsg;
+finalize_it:
+ENDobjQueryInterface(parser)
+
+
+
+/* Reset config variables to default values.
+ * rgerhards, 2007-07-17
+ */
+static rsRetVal
+resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
+{
+	cCCEscapeChar = '#';
+	bEscapeCCOnRcv = 1; /* default is to escape control characters */
+	bDropTrailingLF = 1; /* default is to drop trailing LF's on reception */
+
+	return RS_RET_OK;
+}
+
+
+/* Initialize the parser class. Must be called as the very first method
+ * before anything else is called inside this class.
+ * rgerhards, 2009-11-02
+ */
+//BEGINObjClassInit(parser, 1, OBJ_IS_CORE_MODULE) /* class, version */
+BEGINAbstractObjClassInit(parser, 1, OBJ_IS_CORE_MODULE) /* class, version */
+	/* request objects we use */
+	CHKiRet(objUse(glbl, CORE_COMPONENT));
+	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	CHKiRet(objUse(datetime, CORE_COMPONENT));
+
+	bParseHOSTNAMEandTAG = glbl.GetParseHOSTNAMEandTAG(); /* cache value, is set only during rsyslogd option processing */
+
+	CHKiRet(regCfSysLineHdlr((uchar *)"controlcharacterescapeprefix", 0, eCmdHdlrGetChar, NULL, &cCCEscapeChar, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"droptrailinglfonreception", 0, eCmdHdlrBinary, NULL, &bDropTrailingLF, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"escapecontrolcharactersonreceive", 0, eCmdHdlrBinary, NULL, &bEscapeCCOnRcv, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, NULL));
+ENDObjClassInit(parser)
+

@@ -340,7 +340,7 @@ CODESTARTdoAction
 	 * hard-coded but this may be changed to a config parameter.
 	 * rgerhards, 2006-11-30
 	 */
-	if(pData->compressionLevel && (l > MIN_SIZE_FOR_COMPRESS)) {
+	if(pData->compressionLevel && (l > CONF_MIN_SIZE_FOR_COMPRESS)) {
 		Bytef *out;
 		uLongf destLen = iMaxLine + iMaxLine/100 +12; /* recommended value from zlib doc */
 		uLong srcLen = l;

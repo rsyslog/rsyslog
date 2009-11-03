@@ -24,7 +24,21 @@
 #ifndef INCLUDED_PARSE_H
 #define INCLUDED_PARSE_H
 
-extern rsRetVal parserClassInit(void);
-extern rsRetVal parseMsg(msg_t*);
+/* the parser object, a dummy because we have only static methods */
+typedef struct parser_s {
+	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
+} parser_t;
+
+/* interfaces */
+BEGINinterface(parser) /* name must also be changed in ENDinterface macro! */
+	INTERFACEObjDebugPrint(var);
+	rsRetVal (*ParseMsg)(msg_t *pMsg);
+ENDinterface(parser)
+#define parserCURR_IF_VERSION 1 /* increment whenever you change the interface above! */
+
+
+/* prototypes */
+PROTOTYPEObj(parser);
+
 
 #endif /* #ifndef INCLUDED_PARSE_H */

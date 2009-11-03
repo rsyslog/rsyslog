@@ -40,6 +40,17 @@
 #define CONF_TAG_BUFSIZE		32
 #define CONF_HOSTNAME_BUFSIZE		32
 #define CONF_PROP_BUFSIZE		16	/* should be close to sizeof(ptr) or lighly above it */
+#define	CONF_MIN_SIZE_FOR_COMPRESS	60 	/* config param: minimum message size to try compression. The smaller
+						 * the message, the less likely is any compression gain. We check for
+						 * gain before we submit the message. But to do so we still need to
+						 * do the (costly) compress() call. The following setting sets a size
+						 * for which no call to compress() is done at all. This may result in
+						 * a few more bytes being transmited but better overall performance.
+						 * Note: I have not yet checked the minimum UDP packet size. It might be
+						 * that we do not save anything by compressing very small messages, because
+						 * UDP might need to pad ;)
+						 * rgerhards, 2006-11-30
+						 */
 
 
 /* ############################################################# *

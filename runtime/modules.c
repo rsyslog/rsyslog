@@ -475,6 +475,9 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 			break;
 		case eMOD_LIB:
 			break;
+		case eMOD_PARSER:
+			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"parse", &pNew->mod.pm.parse));
+			break;
 	}
 
 	pNew->pszName = (uchar*) strdup((char*)name); /* we do not care if strdup() fails, we can accept that */
@@ -520,6 +523,9 @@ static void modPrintList(void)
 			break;
 		case eMOD_LIB:
 			dbgprintf("library");
+			break;
+		case eMOD_PARSER:
+			dbgprintf("parser");
 			break;
 		}
 		dbgprintf(" module.\n");

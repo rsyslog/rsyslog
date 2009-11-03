@@ -144,7 +144,7 @@
 /* definitions for objects we access */
 DEFobjCurrIf(obj)
 DEFobjCurrIf(glbl)
-DEFobjCurrIf(datetime)
+DEFobjCurrIf(datetime) /* TODO: make go away! */
 DEFobjCurrIf(conf)
 DEFobjCurrIf(expr)
 DEFobjCurrIf(module)
@@ -152,6 +152,7 @@ DEFobjCurrIf(errmsg)
 DEFobjCurrIf(rule)
 DEFobjCurrIf(ruleset)
 DEFobjCurrIf(prop)
+DEFobjCurrIf(parser)
 DEFobjCurrIf(net) /* TODO: make go away! */
 
 
@@ -206,8 +207,6 @@ static pid_t myPid;	/* our pid for use in self-generated messages, e.g. on start
 /* mypid is read-only after the initial fork() */
 static int bHadHUP = 0; /* did we have a HUP? */
 
-int bParseHOSTNAMEandTAG = 1; /* global config var: should the hostname and tag be
-                                      * parsed inside message - rgerhards, 2006-03-13 */
 static int bFinished = 0;	/* used by termination signal handler, read-only except there
 				 * is either 0 or the number of the signal that requested the
  				 * termination.
@@ -232,7 +231,6 @@ typedef struct legacyOptsLL_s {
 legacyOptsLL_t *pLegacyOptsLL = NULL;
 
 /* global variables for config file state */
-int	bDropTrailingLF = 1; /* drop trailing LF's on reception? */
 int	iCompatibilityMode = 0;		/* version we should be compatible with; 0 means sysklogd. It is
 					   the default, so if no -c<n> option is given, we make ourselvs
 					   as compatible to sysklogd as possible. */
@@ -241,8 +239,6 @@ static int	bLogStatusMsgs = DFLT_bLogStatusMsgs;	/* log rsyslog start/stop/HUP m
 static int	bDebugPrintTemplateList = 1;/* output template list in debug mode? */
 static int	bDebugPrintCfSysLineHandlerList = 1;/* output cfsyslinehandler list in debug mode? */
 static int	bDebugPrintModuleList = 1;/* output module list in debug mode? */
-uchar	cCCEscapeChar = '#';/* character to be used to start an escape sequence for control chars */
-int 	bEscapeCCOnRcv = 1; /* escape control characters on reception: 0 - no, 1 - yes */
 static int	bErrMsgToStderr = 1; /* print error messages to stderr (in addition to everything else)? */
 int 	bReduceRepeatMsgs; /* reduce repeated message - 0 - no, 1 - yes */
 int 	bAbortOnUncleanConfig = 0; /* abort run (rather than starting with partial config) if there was any issue in conf */
@@ -322,14 +318,12 @@ getFIOPName(unsigned iFIOP)
  */
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
-	cCCEscapeChar = '#';
 	bLogStatusMsgs = DFLT_bLogStatusMsgs;
 	bActExecWhenPrevSusp = 0;
 	iActExecOnceInterval = 0;
 	bDebugPrintTemplateList = 1;
 	bDebugPrintCfSysLineHandlerList = 1;
 	bDebugPrintModuleList = 1;
-	bEscapeCCOnRcv = 1; /* default is to escape control characters */
 	bReduceRepeatMsgs = 0;
 	bAbortOnUncleanConfig = 0;
 	free(pszMainMsgQFName);
@@ -641,7 +635,7 @@ msgConsumer(void __attribute__((unused)) *notNeeded, batch_t *pBatch, int *pbShu
 		pMsg = (msg_t*) pBatch->pElem[i].pUsrp;
 		DBGPRINTF("msgConsumer processes msg %d/%d\n", i, pBatch->nElem);
 		if((pMsg->msgFlags & NEEDS_PARSING) != 0) {
-			parseMsg(pMsg);
+			parser.ParseMsg(pMsg);
 		}
 		ruleset.ProcessMsg(pMsg);
 		/* if we reach this point, the message is considered committed (by definition!) */
@@ -1372,13 +1366,6 @@ static void dbgPrintInitInfo(void)
 	DBGPRINTF("Messages with malicious PTR DNS Records are %sdropped.\n",
 		  glbl.GetDropMalPTRMsgs() ? "" : "not ");
 
-	DBGPRINTF("Control characters are %sreplaced upon reception.\n",
-		  bEscapeCCOnRcv? "" : "not ");
-
-	if(bEscapeCCOnRcv)
-		DBGPRINTF("Control character escape sequence prefix is '%c'.\n",
-			cCCEscapeChar);
-
 	DBGPRINTF("Main queue size %d messages.\n", iMainMsgQueueSize);
 	DBGPRINTF("Main queue worker threads: %d, wThread shutdown: %d, Perists every %d updates.\n",
 		  iMainMsgQueueNumWorkers, iMainMsgQtoWrkShutdown, iMainMsgQPersistUpdCnt);
@@ -1964,9 +1951,6 @@ static rsRetVal loadBuildInModules(void)
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionexeconlywhenpreviousissuspended", 0, eCmdHdlrBinary, NULL, &bActExecWhenPrevSusp, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionexeconlyonceeveryinterval", 0, eCmdHdlrInt, NULL, &iActExecOnceInterval, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionresumeinterval", 0, eCmdHdlrInt, setActionResumeInterval, NULL, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"controlcharacterescapeprefix", 0, eCmdHdlrGetChar, NULL, &cCCEscapeChar, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"escapecontrolcharactersonreceive", 0, eCmdHdlrBinary, NULL, &bEscapeCCOnRcv, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"droptrailinglfonreception", 0, eCmdHdlrBinary, NULL, &bDropTrailingLF, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"template", 0, eCmdHdlrCustomHandler, conf.doNameLine, (void*)DIR_TEMPLATE, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"outchannel", 0, eCmdHdlrCustomHandler, conf.doNameLine, (void*)DIR_OUTCHANNEL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"allowedsender", 0, eCmdHdlrCustomHandler, conf.doNameLine, (void*)DIR_ALLOWEDSENDER, NULL));
@@ -2161,14 +2145,14 @@ InitGlobalClasses(void)
 	CHKiRet(objUse(conf,     CORE_COMPONENT));
 	pErrObj = "prop";
 	CHKiRet(objUse(prop,     CORE_COMPONENT));
+	pErrObj = "parser";
+	CHKiRet(objUse(parser,     CORE_COMPONENT));
 
 	/* intialize some dummy classes that are not part of the runtime */
 	pErrObj = "action";
 	CHKiRet(actionClassInit());
 	pErrObj = "template";
 	CHKiRet(templateInit());
-	pErrObj = "parser";
-	CHKiRet(parserClassInit());
 
 	/* TODO: the dependency on net shall go away! -- rgerhards, 2008-03-07 */
 	pErrObj = "net";
@@ -2705,7 +2689,7 @@ int realMain(int argc, char **argv)
 		case 'u':		/* misc user settings */
 			iHelperUOpt = atoi(arg);
 			if(iHelperUOpt & 0x01)
-				bParseHOSTNAMEandTAG = 0;
+				glbl.SetParseHOSTNAMEandTAG(0);
 			if(iHelperUOpt & 0x02)
 				bChDirRoot = 0;
 			break;
