@@ -286,34 +286,6 @@ static int iMainMsgQueueDeqtWinFromHr = 0;			/* hour begin of time frame when qu
 static int iMainMsgQueueDeqtWinToHr = 25;			/* hour begin of time frame when queue is to be dequeued */
 
 
-/* support for simple textual representation of FIOP names
- * rgerhards, 2005-09-27
- */
-char*
-getFIOPName(unsigned iFIOP)
-{
-	char *pRet;
-	switch(iFIOP) {
-		case FIOP_CONTAINS:
-			pRet = "contains";
-			break;
-		case FIOP_ISEQUAL:
-			pRet = "isequal";
-			break;
-		case FIOP_STARTSWITH:
-			pRet = "startswith";
-			break;
-		case FIOP_REGEX:
-			pRet = "regex";
-			break;
-		default:
-			pRet = "NOP";
-			break;
-	}
-	return pRet;
-}
-
-
 /* Reset config variables to default values.
  * rgerhards, 2007-07-17
  */
@@ -382,7 +354,7 @@ static int usage(void)
 	fprintf(stderr, "usage: rsyslogd [-c<version>] [-46AdnqQvwx] [-l<hostlist>] [-s<domainlist>]\n"
 			"                [-f<conffile>] [-i<pidfile>] [-N<level>] [-M<module load path>]\n"
 			"                [-u<number>]\n"
-			"To run rsyslogd in native mode, use \"rsyslogd -c3 <other options>\"\n\n"
+			"To run rsyslogd in native mode, use \"rsyslogd -c5 <other options>\"\n\n"
 			"For further information see http://www.rsyslog.com/doc\n");
 	exit(1); /* "good" exit - done to terminate usage() */
 }

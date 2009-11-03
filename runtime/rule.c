@@ -40,7 +40,6 @@
 #include "var.h"
 #include "srUtils.h"
 #include "unicode-helper.h"
-#include "dirty.h" /* for getFIOPName */
 
 /* static data */
 DEFobjStaticHelpers
@@ -48,6 +47,35 @@ DEFobjCurrIf(errmsg)
 DEFobjCurrIf(expr)
 DEFobjCurrIf(var)
 DEFobjCurrIf(vm)
+
+
+/* support for simple textual representation of FIOP names
+ * rgerhards, 2005-09-27
+ */
+static char*
+getFIOPName(unsigned iFIOP)
+{
+	char *pRet;
+	switch(iFIOP) {
+		case FIOP_CONTAINS:
+			pRet = "contains";
+			break;
+		case FIOP_ISEQUAL:
+			pRet = "isequal";
+			break;
+		case FIOP_STARTSWITH:
+			pRet = "startswith";
+			break;
+		case FIOP_REGEX:
+			pRet = "regex";
+			break;
+		default:
+			pRet = "NOP";
+			break;
+	}
+	return pRet;
+}
+
 
 /* iterate over all actions, this is often needed, for example when HUP processing 
  * must be done or a shutdown is pending.

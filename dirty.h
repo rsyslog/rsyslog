@@ -32,7 +32,6 @@ rsRetVal submitMsg(msg_t *pMsg);
 rsRetVal logmsgInternal(int iErr, int pri, uchar *msg, int flags);
 rsRetVal parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int flags, flowControl_t flowCtlTypeu, prop_t *pInputName, struct syslogTime *stTime, time_t ttGenTime);
 rsRetVal diagGetMainMsgQSize(int *piSize); /* for imdiag */
-char* getFIOPName(unsigned iFIOP);
 rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName);
 
 /* Intervals at which we flush out "message repeated" messages,
