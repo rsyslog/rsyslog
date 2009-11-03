@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------
 Version 4.7.0  [v4-devel] (rgerhards), 2009-09-??
+- added function getenv() to RainerScript
 - added new config option $InputUnixListenSocketCreatePath
   to permit the auto-creation of pathes to additional log sockets. This
   turns out to be useful if they reside on temporary file systems and
