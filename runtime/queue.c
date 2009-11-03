@@ -1690,7 +1690,6 @@ ConsumerDA(qqueue_t *pThis, wti_t *pWti)
 
 	/* iterate over returned results and enqueue them in DA queue */
 	for(i = 0 ; i < pWti->batch.nElem && !pThis->bShutdownImmediate ; i++) {
-	//for(i = 0 ; i < pWti->batch.nElem ; i++) {
 		/* TODO: we must add a generic "addRef" mechanism, because the disk queue enqueue destructs
 		 * the message. So far, we simply assume we always have msg_t, what currently is always the case.
 		 * rgerhards, 2009-05-28

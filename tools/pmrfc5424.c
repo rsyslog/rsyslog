@@ -38,14 +38,18 @@
 #include "module-template.h"
 #include "glbl.h"
 #include "errmsg.h"
+#include "parser.h"
+#include "unicode-helper.h"
 
 MODULE_TYPE_PARSER
+PARSER_NAME("rsyslog.rfc5424")
 
 /* internal structures
  */
 DEF_PMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
+DEFobjCurrIf(parser)
 
 
 /* config data */
@@ -66,6 +70,7 @@ CODESTARTmodExit
 	/* release what we no longer need */
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
+	objRelease(parser, CORE_COMPONENT);
 ENDmodExit
 
 
@@ -82,6 +87,10 @@ CODESTARTmodInit
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	CHKiRet(objUse(parser, CORE_COMPONENT));
+
+	dbgprintf("rfc5424 parser init called\n");
+	dbgprintf("GetParserName addr %p\n", GetParserName);
 ENDmodInit
 
 /* vim:set ai:

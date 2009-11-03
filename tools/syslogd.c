@@ -125,6 +125,7 @@
 #include "omfwd.h"
 #include "omfile.h"
 #include "omdiscard.h"
+#include "pmrfc5424.h"
 #include "threads.h"
 #include "wti.h"
 #include "queue.h"
@@ -1912,6 +1913,9 @@ static rsRetVal loadBuildInModules(void)
 	 *   [a-zA-Z0-9_.]
 	 */
 	CHKiRet(module.doModInit(modInitUsrMsg, (uchar*) "builtin-usrmsg", NULL));
+
+	/* load build-in parser modules */
+	CHKiRet(module.doModInit(modInitpmrfc5424, UCHAR_CONSTANT("builtin-pmrfc5424"), NULL));
 
 	/* ok, initialization of the command handler probably does not 100% belong right in
 	 * this space here. However, with the current design, this is actually quite a good

@@ -12,7 +12,7 @@
  *
  * File begun on 2007-07-22 by RGerhards
  *
- * Copyright 2007, 2008 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2009 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -74,7 +74,7 @@ typedef enum eModLinkType_ {
 	eMOD_LINK_ALL			/* special: all linkage types, e.g. for unload */
 } eModLinkType_t;
 
-typedef struct modInfo_s {
+struct modInfo_s {
 	struct modInfo_s *pPrev;	/* support for creating a double linked module list */
 	struct modInfo_s *pNext;	/* support for creating a linked module list */
 	int		iIFVers;	/* Interface version of module */
@@ -130,7 +130,7 @@ typedef struct modInfo_s {
 	 */
 	modUsr_t *pModUsrRoot;
 #	endif
-} modInfo_t;
+};
 
 /* interfaces */
 BEGINinterface(module) /* name must also be changed in ENDinterface macro! */
@@ -156,6 +156,5 @@ extern uchar *pModDir; /* read-only after startup */
 
 
 #endif /* #ifndef MODULES_H_INCLUDED */
-/*
- * vi:set ai:
+/* vi:set ai:
  */

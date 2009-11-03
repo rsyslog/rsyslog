@@ -55,20 +55,113 @@ DEFobjCurrIf(datetime)
 
 /* static data */
 static int bParseHOSTNAMEandTAG;	/* cache for the equally-named global param - performance enhancement */
+
 /* config data */
 static uchar cCCEscapeChar = '#';/* character to be used to start an escape sequence for control chars */
 static int bEscapeCCOnRcv = 1; /* escape control characters on reception: 0 - no, 1 - yes */
 static int bDropTrailingLF = 1; /* drop trailing LF's on reception? */
 
-
-/* we need to provide standard constructors and destructors, even though
- * we only have static methods. The framework requires that.
+/* we create a small helper list of parsers so that we can obtain their
+ * handles if the config needs one. This is also used to unload all modules on
+ * shutdown.
  */
+parserList_t *pParsLstRoot = NULL;
+
+
+/* intialize (but NOT allocate) a parser list. Primarily meant as a hook
+ * which can be used to extend the list in the future. So far, just sets
+ * it to NULL.
+ */
+static rsRetVal
+InitParserList(parserList_t **pListRoot)
+{
+	*pListRoot = NULL;
+	return RS_RET_OK;
+}
+
+
+/* Add a parser to the list. We use a VERY simple and ineffcient algorithm,
+ * but it is employed only for a few milliseconds during config processing. So
+ * I prefer to keep it very simple and with simple data structures. Unfortunately,
+ * we need to preserve the order, but I don't like to add a tail pointer as that
+ * would require a container object. So I do the extra work to skip to the tail
+ * when adding elements...
+ * rgerhards, 2009-11-03
+ */
+static rsRetVal
+AddParserToList(parserList_t **ppListRoot, parser_t *pParser)
+{
+	parserList_t *pThis;
+	parserList_t *pTail;
+	DEFiRet;
+
+	CHKmalloc(pThis = MALLOC(sizeof(parserList_t)));
+	pThis->pParser = pParser;
+	pThis->pNext = NULL;
+
+	if(*ppListRoot == NULL) {
+		pThis->pNext = *ppListRoot;
+		*ppListRoot = pThis;
+	} else {
+		/* find tail first */
+		for(pTail = *ppListRoot ; pTail->pNext != NULL ; pTail = pTail->pNext)
+			/* just search, do nothing else */;
+		/* add at tail */
+		pTail->pNext = pThis;
+	}
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* find a parser based on the provided name */
+static rsRetVal
+FindParser(parser_t **ppParser, uchar *pName)
+{
+	parserList_t *pThis;
+	DEFiRet;
+	
+	for(pThis = pParsLstRoot ; pThis != NULL ; pThis = pThis->pNext) {
+		if(ustrcmp(pThis->pParser->pName, pName) == 0) {
+			*ppParser = pThis->pParser;
+			FINALIZE;	/* found it, iRet still eq. OK! */
+		}
+	}
+
+	iRet = RS_RET_PARSER_NOT_FOUND;
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* --- END helper functions for parser list handling --- */
+
+
 BEGINobjConstruct(parser) /* be sure to specify the object type also in END macro! */
 ENDobjConstruct(parser)
 
+/* ConstructionFinalizer. The most important chore is to add the parser object
+ * to our global list of available parsers.
+ * rgerhards, 2009-11-03
+ */
+rsRetVal parserConstructFinalize(parser_t *pThis)
+{
+	DEFiRet;
+
+	ISOBJ_TYPE_assert(pThis, parser);
+	CHKiRet(AddParserToList(&pParsLstRoot, pThis));
+	DBGPRINTF("parser '%s' added to list of available parser\n", pThis->pName);
+
+finalize_it:
+	RETiRet;
+}
+
 BEGINobjDestruct(parser) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(parser)
+	free(pThis->pName);
+	//TODO: free module!
 ENDobjDestruct(parser)
 
 /***************************RFC 5425 PARSER ******************************************************/
@@ -536,7 +629,7 @@ finalize_it:
  * rgerhards, 2007-09-14
  */
 static inline rsRetVal
-sanitizeMessage(msg_t *pMsg)
+SanitizeMsg(msg_t *pMsg)
 {
 	DEFiRet;
 	uchar *pszMsg;
@@ -656,7 +749,7 @@ ParseMsg(msg_t *pMsg)
 	if(pMsg->iLenRawMsg == 0)
 		ABORT_FINALIZE(RS_RET_EMPTY_MSG);
 
-	CHKiRet(sanitizeMessage(pMsg));
+	CHKiRet(SanitizeMsg(pMsg));
 
 	/* we needed to sanitize first, because we otherwise do not have a C-string we can print... */
 	DBGPRINTF("msg parser: flags %x, from '%s', msg '%s'\n", pMsg->msgFlags, getRcvFrom(pMsg), pMsg->pszRawMsg);
@@ -712,6 +805,54 @@ finalize_it:
 	RETiRet;
 }
 
+/* set the parser name - string is copied over, call can continue to use it,
+ * but must free it if desired.
+ */
+static rsRetVal
+SetName(parser_t *pThis, uchar *name)
+{
+	DEFiRet;
+
+	ISOBJ_TYPE_assert(pThis, parser);
+	assert(name != NULL);
+
+	if(pThis->pName != NULL) {
+		free(pThis->pName);
+		pThis->pName = NULL;
+	}
+
+	CHKmalloc(pThis->pName = ustrdup(name));
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* set a pointer to "our" module. Note that no module
+ * pointer must already be set.
+ */
+static rsRetVal
+SetModPtr(parser_t *pThis, modInfo_t *pMod)
+{
+	ISOBJ_TYPE_assert(pThis, parser);
+	assert(pMod != NULL);
+	assert(pThis->pModule == NULL);
+	pThis->pModule = pMod;
+	return RS_RET_OK;
+}
+
+
+/* Specify if we should do standard message sanitazion before we pass the data
+ * down to the parser.
+ */
+static rsRetVal
+SetDoSanitazion(parser_t *pThis, int bDoIt)
+{
+	ISOBJ_TYPE_assert(pThis, parser);
+	pThis->bDoSanitazion = bDoIt;
+	return RS_RET_OK;
+}
+
 
 /* queryInterface function-- rgerhards, 2009-11-03
  */
@@ -726,7 +867,17 @@ CODESTARTobjQueryInterface(parser)
 	 * work here (if we can support an older interface version - that,
 	 * of course, also affects the "if" above).
 	 */
+	pIf->Construct = parserConstruct;
+	pIf->ConstructFinalize = parserConstructFinalize;
+	pIf->Destruct = parserDestruct;
+	pIf->SetName = SetName;
+	pIf->SetModPtr = SetModPtr;
+	pIf->SetDoSanitazion = SetDoSanitazion;
 	pIf->ParseMsg = ParseMsg;
+	pIf->SanitizeMsg = SanitizeMsg;
+	pIf->InitParserList = InitParserList;
+	pIf->AddParserToList = AddParserToList;
+	pIf->FindParser = FindParser;
 finalize_it:
 ENDobjQueryInterface(parser)
 
@@ -750,8 +901,8 @@ resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unus
  * before anything else is called inside this class.
  * rgerhards, 2009-11-02
  */
-//BEGINObjClassInit(parser, 1, OBJ_IS_CORE_MODULE) /* class, version */
-BEGINAbstractObjClassInit(parser, 1, OBJ_IS_CORE_MODULE) /* class, version */
+BEGINObjClassInit(parser, 1, OBJ_IS_CORE_MODULE) /* class, version */
+//BEGINAbstractObjClassInit(parser, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
@@ -763,5 +914,7 @@ BEGINAbstractObjClassInit(parser, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	CHKiRet(regCfSysLineHdlr((uchar *)"droptrailinglfonreception", 0, eCmdHdlrBinary, NULL, &bDropTrailingLF, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"escapecontrolcharactersonreceive", 0, eCmdHdlrBinary, NULL, &bEscapeCCOnRcv, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, NULL));
+
+	InitParserList(&pParsLstRoot);
 ENDObjClassInit(parser)
 

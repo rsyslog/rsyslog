@@ -412,6 +412,8 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 	CODEqueryEtryPt_STD_MOD_QUERIES \
 	else if(!strcmp((char*) name, "parse")) {\
 		*pEtryPoint = parse;\
+	} else if(!strcmp((char*) name, "GetParserName")) {\
+		*pEtryPoint = GetParserName;\
 	}
 
 /* modInit()
@@ -604,7 +606,6 @@ static rsRetVal doHUP(instanceData __attribute__((unused)) *pData)\
 }
 
 
-
 /* parse() - main entry point of parser modules
  */
 #define BEGINparse \
@@ -617,6 +618,17 @@ static rsRetVal parse(msg_t *pMsg)\
 
 #define ENDparse \
 	RETiRet;\
+}
+
+
+/* function to specify the parser name. This is done via a single command which
+ * receives a ANSI string as parameter.
+ */
+#define PARSER_NAME(x) \
+static rsRetVal GetParserName(uchar **ppSz)\
+{\
+	*ppSz = UCHAR_CONSTANT(x);\
+	return RS_RET_OK;\
 }
 
 

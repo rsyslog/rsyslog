@@ -34,6 +34,7 @@ struct ruleset_s {
 	linkedList_t llRules;	/* this is NOT a pointer - no typo here ;) */
 	uchar *pszName;		/* name of our ruleset */
 	qqueue_t *pQueue;	/* "main" message queue, if the ruleset has its own (else NULL) */
+	parserList_t *pParserLst;/* list of parsers to use for this ruleset */
 };
 
 /* interfaces */

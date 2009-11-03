@@ -134,6 +134,9 @@ typedef struct vmstk_s vmstk_t;
 typedef struct batch_obj_s batch_obj_t;
 typedef struct batch_s batch_t;
 typedef struct wtp_s wtp_t;
+typedef struct modInfo_s modInfo_t;
+typedef struct parser_s parser_t;
+typedef struct parserList_s parserList_t;
 typedef rsRetVal (*prsf_t)(struct vmstk_s*, int);	/* pointer to a RainerScript function */
 typedef uint64 qDeqID;	/* queue Dequeue order ID. 32 bits is considered dangerously few */
 
@@ -404,6 +407,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_NO_MSG_PASSING = -2156,/**< output module interface parameter passing mode "MSG" is not available but required */
 	RS_RET_RULESET_NOT_FOUND = -2157,/**< a required ruleset could not be found */
 	RS_RET_NO_RULESET= -2158,/**< no ruleset name as specified where one was needed */
+	RS_RET_PARSER_NOT_FOUND = -2159,/**< parser with the specified name was not found */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */
