@@ -12,6 +12,7 @@ TESTS = $(TESTRUNS) cfg.sh \
 	diskqueue-fsync.sh \
 	rulesetmultiqueue.sh \
 	manytcp.sh \
+	rsf_getenv.sh \
 	queue-persist.sh 
 
 if ENABLE_OMSTDOUT
@@ -107,6 +108,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   killrsyslog.sh \
 	   parsertest.sh \
 	   fieldtest.sh \
+	   rsf_getenv.sh \
+	   testsuites/rsf_getenv.conf \
 	   diskqueue.sh \
 	   testsuites/diskqueue.conf \
 	   arrayqueue.sh \
