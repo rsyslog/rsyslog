@@ -882,7 +882,6 @@ submitBatch(action_t *pAction, batch_t *pBatch, int nElem, int *pbShutdownImmedi
 
 	bDone = 0;
 	do {
-dbgprintf("XXX: submitBatch in loop, batch size %d\n", nElem);
 		localRet = tryDoAction(pAction, pBatch, &nElem, pbShutdownImmediate);
 		if(localRet == RS_RET_FORCE_TERM)
 			FINALIZE;

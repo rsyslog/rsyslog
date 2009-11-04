@@ -1350,16 +1350,12 @@ DeleteProcessedBatch(qqueue_t *pThis, batch_t *pBatch)
 	ISOBJ_TYPE_assert(pThis, qqueue);
 	assert(pBatch != NULL);
 
-dbgprintf("XXX: deleteProcessedBatch total entries %d with state[0] %d\n", pBatch->nElem, pBatch->pElem[0].state);
 	for(i = 0 ; i < pBatch->nElem ; ++i) {
-dbgprintf("XXX: deleteProcessedBatch delete entry %d, ptr %p, refcnt %d with state %d\n",
-i, pBatch->pElem[i].pUsrp, ((msg_t*)pBatch->pElem[i].pUsrp)->iRefCount, pBatch->pElem[i].state);
 		pUsr = pBatch->pElem[i].pUsrp;
 		if(   pBatch->pElem[i].state == BATCH_STATE_RDY
 		   || pBatch->pElem[i].state == BATCH_STATE_SUB) {
 			localRet = doEnqSingleObj(pThis, eFLOWCTL_NO_DELAY,
 				       (obj_t*)MsgAddRef((msg_t*) pUsr));
-dbgprintf("we need to requeue the entry, refcnt now %d\n", ((msg_t*) pUsr)->iRefCount);
 			++nEnqueued;
 			if(localRet != RS_RET_OK) {
 				DBGPRINTF("error %d re-enqueuing unprocessed data element - discarded\n", localRet);
@@ -1368,7 +1364,7 @@ dbgprintf("we need to requeue the entry, refcnt now %d\n", ((msg_t*) pUsr)->iRef
 		objDestruct(pUsr);
 	}
 
-dbgprintf("we deleted %d objects and enqueued %d objects\n", i-nEnqueued, nEnqueued);
+	dbgprintf("we deleted %d objects and enqueued %d objects\n", i-nEnqueued, nEnqueued);
 
 	if(nEnqueued > 0)
 		qqueueChkPersist(pThis, nEnqueued);
@@ -1656,7 +1652,8 @@ ConsumerReg(qqueue_t *pThis, wti_t *pWti)
 	d_pthread_mutex_lock(pThis->mut);
 
 finalize_it:
-dbgprintf("XXX: regular consumer finished, iret=%d, szlog %d sz phys %d\n", iRet, getLogicalQueueSize(pThis), getPhysicalQueueSize(pThis));
+	dbgprintf("regular consumer finished, iret=%d, szlog %d sz phys %d\n", iRet,
+	          getLogicalQueueSize(pThis), getPhysicalQueueSize(pThis));
 	RETiRet;
 }
 

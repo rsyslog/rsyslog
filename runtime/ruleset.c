@@ -167,6 +167,17 @@ dbgprintf("ruleset.ProcessMsg() returns %d\n", iRet);
 }
 
 
+/* return the ruleset-assigned parser list. NULL means use the default
+ * parser list.
+ * rgerhards, 2009-11-04
+ */
+static parserList_t*
+GetParserList(msg_t *pMsg)
+{
+	return (pMsg->pRuleset == NULL) ? NULL : pMsg->pRuleset->pParserLst;
+}
+
+
 /* Add a new rule to the end of the current rule set. We do a number
  * of checks and ignore the rule if it does not pass them.
  */
@@ -467,6 +478,7 @@ CODESTARTobjQueryInterface(ruleset)
 	pIf->SetDefaultRuleset = SetDefaultRuleset;
 	pIf->SetCurrRuleset = SetCurrRuleset;
 	pIf->GetRulesetQueue = GetRulesetQueue;
+	pIf->GetParserList = GetParserList;
 finalize_it:
 ENDobjQueryInterface(ruleset)
 

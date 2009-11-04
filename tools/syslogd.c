@@ -33,7 +33,7 @@
  *       to the database).
  *
  * rsyslog - An Enhanced syslogd Replacement.
- * Copyright 2003-2008 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2003-2009 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -126,6 +126,7 @@
 #include "omfile.h"
 #include "omdiscard.h"
 #include "pmrfc5424.h"
+#include "pmrfc3164.h"
 #include "threads.h"
 #include "wti.h"
 #include "queue.h"
@@ -346,7 +347,6 @@ static char **crunch_list(char *list);
 static void reapchild();
 static void debug_switch();
 static void sighup_handler();
-static void processImInternal(void);
 
 
 static int usage(void)
@@ -600,6 +600,7 @@ msgConsumer(void __attribute__((unused)) *notNeeded, batch_t *pBatch, int *pbShu
 {
 	int i;
 	msg_t *pMsg;
+	rsRetVal localRet;
 	DEFiRet;
 
 	assert(pBatch != NULL);
@@ -608,9 +609,12 @@ msgConsumer(void __attribute__((unused)) *notNeeded, batch_t *pBatch, int *pbShu
 		pMsg = (msg_t*) pBatch->pElem[i].pUsrp;
 		DBGPRINTF("msgConsumer processes msg %d/%d\n", i, pBatch->nElem);
 		if((pMsg->msgFlags & NEEDS_PARSING) != 0) {
-			parser.ParseMsg(pMsg);
+			localRet = parser.ParseMsg(pMsg);
+			if(localRet == RS_RET_OK)
+				ruleset.ProcessMsg(pMsg);
+		} else {
+			ruleset.ProcessMsg(pMsg);
 		}
-		ruleset.ProcessMsg(pMsg);
 		/* if we reach this point, the message is considered committed (by definition!) */
 		pBatch->pElem[i].state = BATCH_STATE_COMM;
 	}
@@ -1738,7 +1742,7 @@ void sigttin_handler()
  * really help us. TODO: add error messages?
  * rgerhards, 2007-08-03
  */
-static void processImInternal(void)
+static inline void processImInternal(void)
 {
 	int iPri;
 	msg_t *pMsg;
@@ -1888,6 +1892,11 @@ static rsRetVal loadBuildInModules(void)
 
 	/* load build-in parser modules */
 	CHKiRet(module.doModInit(modInitpmrfc5424, UCHAR_CONSTANT("builtin-pmrfc5424"), NULL));
+	CHKiRet(module.doModInit(modInitpmrfc3164, UCHAR_CONSTANT("builtin-pmrfc3164"), NULL));
+
+	/* and set default parser modules (order is *very* important, legacy (3164) parse needs to go last! */
+	CHKiRet(parser.AddDfltParser(UCHAR_CONSTANT("rsyslog.rfc5424")));
+	CHKiRet(parser.AddDfltParser(UCHAR_CONSTANT("rsyslog.rfc3164")));
 
 	/* ok, initialization of the command handler probably does not 100% belong right in
 	 * this space here. However, with the current design, this is actually quite a good

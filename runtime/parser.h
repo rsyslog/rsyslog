@@ -56,6 +56,7 @@ BEGINinterface(parser) /* name must also be changed in ENDinterface macro! */
 	/* static functions */
 	rsRetVal (*ParseMsg)(msg_t *pMsg);
 	rsRetVal (*SanitizeMsg)(msg_t *pMsg);
+	rsRetVal (*AddDfltParser)(uchar *);
 ENDinterface(parser)
 #define parserCURR_IF_VERSION 1 /* increment whenever you change the interface above! */
 

@@ -408,6 +408,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_RULESET_NOT_FOUND = -2157,/**< a required ruleset could not be found */
 	RS_RET_NO_RULESET= -2158,/**< no ruleset name as specified where one was needed */
 	RS_RET_PARSER_NOT_FOUND = -2159,/**< parser with the specified name was not found */
+	RS_RET_COULD_NOT_PARSE = -2160,/**< (this) parser could not parse the message (no error, means try next one) */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */
