@@ -350,6 +350,9 @@ CODESTARTobjDestruct(ruleset)
 	if(pThis->pQueue != NULL) {
 		qqueueDestruct(&pThis->pQueue);
 	}
+	if(pThis->pParserLst != NULL) {
+		parser.DestructParserList(&pThis->pParserLst);
+	}
 	llDestroy(&pThis->llRules);
 	free(pThis->pszName);
 ENDobjDestruct(ruleset)

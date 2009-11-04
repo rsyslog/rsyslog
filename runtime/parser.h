@@ -54,6 +54,7 @@ BEGINinterface(parser) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetDoPRIParsing)(parser_t *pThis, int);
 	rsRetVal (*FindParser)(parser_t **ppThis, uchar*name);
 	rsRetVal (*InitParserList)(parserList_t **pListRoot);
+	rsRetVal (*DestructParserList)(parserList_t **pListRoot);
 	rsRetVal (*AddParserToList)(parserList_t **pListRoot, parser_t *pParser);
 	/* static functions */
 	rsRetVal (*ParseMsg)(msg_t *pMsg);

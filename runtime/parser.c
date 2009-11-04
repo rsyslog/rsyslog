@@ -85,6 +85,27 @@ InitParserList(parserList_t **pListRoot)
 }
 
 
+/* destruct a parser list. The list elements are destroyed, but the parser objects
+ * themselves are not modified. (That is done at a late stage during rsyslogd
+ * shutdown and need not be considered here.)
+ */
+static rsRetVal
+DestructParserList(parserList_t **ppListRoot)
+{
+	parserList_t *pParsLst;
+	parserList_t *pParsLstDel;
+
+	pParsLst = *ppListRoot;
+	while(pParsLst != NULL) {
+		pParsLstDel = pParsLst;
+		pParsLst = pParsLst->pNext;
+		free(pParsLstDel);
+	}
+	*ppListRoot = NULL;
+	return RS_RET_OK;
+}
+
+
 /* Add a parser to the list. We use a VERY simple and ineffcient algorithm,
  * but it is employed only for a few milliseconds during config processing. So
  * I prefer to keep it very simple and with simple data structures. Unfortunately,
@@ -143,7 +164,6 @@ finalize_it:
 
 /* --- END helper functions for parser list handling --- */
 
-
 /* Add a an already existing parser to the default list. As usual, order
  * of calls is important (most importantly, that means the legacy parser,
  * which can process everything, MUST be added last!).
@@ -186,8 +206,8 @@ finalize_it:
 
 BEGINobjDestruct(parser) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(parser)
+	dbgprintf("destructing parser '%s'\n", pThis->pName);
 	free(pThis->pName);
-	//TODO: free module!
 ENDobjDestruct(parser)
 
 
@@ -581,6 +601,7 @@ CODESTARTobjQueryInterface(parser)
 	pIf->ParseMsg = ParseMsg;
 	pIf->SanitizeMsg = SanitizeMsg;
 	pIf->InitParserList = InitParserList;
+	pIf->DestructParserList = DestructParserList;
 	pIf->AddParserToList = AddParserToList;
 	pIf->AddDfltParser = AddDfltParser;
 	pIf->FindParser = FindParser;
@@ -601,6 +622,37 @@ resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unus
 
 	return RS_RET_OK;
 }
+
+/* This destroys the master parserlist and all of its parser entries. MUST only be
+ * done when the module is shut down. Parser modules are NOT unloaded, rsyslog
+ * does that at a later stage for all dynamically loaded modules.
+ */
+static void
+destroyMasterParserList(void)
+{
+	parserList_t *pParsLst;
+	parserList_t *pParsLstDel;
+
+	pParsLst = pParsLstRoot;
+	while(pParsLst != NULL) {
+		parserDestruct(&pParsLst->pParser);
+		pParsLstDel = pParsLst;
+		pParsLst = pParsLst->pNext;
+		free(pParsLstDel);
+	}
+}
+
+/* Exit our class.
+ * rgerhards, 2009-11-04
+ */
+BEGINObjClassExit(parser, OBJ_IS_CORE_MODULE) /* class, version */
+	DestructParserList(&pDfltParsLst);
+	destroyMasterParserList();
+	objRelease(glbl, CORE_COMPONENT);
+	objRelease(errmsg, CORE_COMPONENT);
+	objRelease(datetime, CORE_COMPONENT);
+	objRelease(ruleset, CORE_COMPONENT);
+ENDObjClassExit(parser)
 
 
 /* Initialize the parser class. Must be called as the very first method
