@@ -45,6 +45,7 @@
 #include "ruleset.h"
 #include "rule.h"
 #include "errmsg.h"
+#include "parser.h"
 #include "unicode-helper.h"
 #include "dirty.h" /* for main ruleset queue creation */
 
@@ -52,10 +53,11 @@
 DEFobjStaticHelpers
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(rule)
+DEFobjCurrIf(parser)
 
 linkedList_t llRulesets; /* this is NOT a pointer - no typo here ;) */
 ruleset_t *pCurrRuleset = NULL; /* currently "active" ruleset */
-ruleset_t *pDfltRuleset = NULL; /* currentl default ruleset, e.g. for binding to actions which have no other */
+ruleset_t *pDfltRuleset = NULL; /* current default ruleset, e.g. for binding to actions which have no other */
 
 /* ---------- linked-list key handling functions ---------- */
 
@@ -174,7 +176,7 @@ dbgprintf("ruleset.ProcessMsg() returns %d\n", iRet);
 static parserList_t*
 GetParserList(msg_t *pMsg)
 {
-	return (pMsg->pRuleset == NULL) ? NULL : pMsg->pRuleset->pParserLst;
+	return (pMsg->pRuleset == NULL) ? pDfltRuleset->pParserLst : pMsg->pRuleset->pParserLst;
 }
 
 
@@ -448,6 +450,46 @@ finalize_it:
 }
 
 
+/* Add a ruleset specific parser to the ruleset. Note that adding the first
+ * parser automatically disables the default parsers. If they are needed as well,
+ * the must be added via explicit config directives.
+ * Note: this is the only spot in the code that requires the parser object. In order
+ * to solve some class init bootstrap sequence problems, we get the object handle here
+ * instead of during module initialization. Note that objUse() is capable of being 
+ * called multiple times.
+ * rgerhards, 2009-11-04
+ */
+static rsRetVal
+rulesetAddParser(void __attribute__((unused)) *pVal, uchar *pName)
+{
+	parser_t *pParser;
+	DEFiRet;
+
+	assert(pCurrRuleset != NULL); 
+
+	CHKiRet(objUse(parser, CORE_COMPONENT));
+	iRet = parser.FindParser(&pParser, pName);
+	if(iRet == RS_RET_PARSER_NOT_FOUND) {
+		errmsg.LogError(0, RS_RET_PARSER_NOT_FOUND, "error: parser '%s' unknown at this time "
+			  	"(maybe defined too late in rsyslog.conf?)", pName);
+		ABORT_FINALIZE(RS_RET_NO_CURR_RULESET);
+	} else if(iRet != RS_RET_OK) {
+		errmsg.LogError(0, iRet, "error trying to find parser '%s'\n", pName);
+		FINALIZE;
+	}
+
+	CHKiRet(parser.AddParserToList(&pCurrRuleset->pParserLst, pParser));
+
+	dbgprintf("added parser '%s' to ruleset '%s'\n", pName, pCurrRuleset->pszName);
+RUNLOG_VAR("%p", pCurrRuleset->pParserLst);
+
+finalize_it:
+	d_free(pName); /* no longer needed */
+
+	RETiRet;
+}
+
+
 /* queryInterface function
  * rgerhards, 2008-02-21
  */
@@ -490,6 +532,7 @@ BEGINObjClassExit(ruleset, OBJ_IS_CORE_MODULE) /* class, version */
 	llDestroy(&llRulesets);
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(rule, CORE_COMPONENT);
+	objRelease(parser, CORE_COMPONENT);
 ENDObjClassExit(ruleset)
 
 
@@ -510,6 +553,7 @@ BEGINObjClassInit(ruleset, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	CHKiRet(llInit(&llRulesets, rulesetDestructForLinkedList, keyDestruct, strcasecmp));
 
 	/* config file handlers */
+	CHKiRet(regCfSysLineHdlr((uchar *)"rulesetparser", 0, eCmdHdlrGetWord, rulesetAddParser, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"rulesetcreatemainqueue", 0, eCmdHdlrBinary, rulesetCreateQueue, NULL, NULL));
 ENDObjClassInit(ruleset)
 

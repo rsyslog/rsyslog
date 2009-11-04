@@ -1,5 +1,8 @@
 ---------------------------------------------------------------------------
 Version 5.3.4  [DEVEL] (rgerhards), 2009-10-??
+- added the ability to create custom message parsers
+- added $RulesetParser config directive that permits to bind specific
+  parsers to specific rulesets
 - added omruleset output module, which provides great flexibility in 
   action processing. THIS IS A VERY IMPORTANT ADDITION, see its doc
   for why.

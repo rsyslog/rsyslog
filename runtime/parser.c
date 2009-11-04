@@ -450,9 +450,10 @@ ParseMsg(msg_t *pMsg)
 	 * loger possible.
 	 */
 	pParserList = ruleset.GetParserList(pMsg);
-	if(pParserList == NULL)
+	if(pParserList == NULL) {
 		pParserList = pDfltParsLst;
-	DBGPRINTF("Using parser list %p%s.\n", pParserList,
+	}
+	DBGPRINTF("parse using parser list %p%s.\n", pParserList,
 		  (pParserList == pDfltParsLst) ? " (the default list)" : "");
 
 	bIsSanitized = FALSE;
@@ -467,7 +468,8 @@ ParseMsg(msg_t *pMsg)
 			}
 			bIsSanitized = TRUE;
 		}
-		localRet = pParserList->pParser->pModule->mod.pm.parse(pMsg);
+		localRet = pParser->pModule->mod.pm.parse(pMsg);
+		dbgprintf("Parser '%s' returned %d\n", pParser->pName, localRet);
 		if(localRet != RS_RET_COULD_NOT_PARSE)
 			break;
 		pParserList = pParserList->pNext;

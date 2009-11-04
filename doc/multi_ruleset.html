@@ -71,6 +71,13 @@ at the time the bind directive is given. There are many ways to make sure this h
 I personally think that it is best to define all rule sets at the top of rsyslog.conf and
 define the inputs at the bottom. This kind of reverses the traditional recommended ordering, but
 seems to be a really useful and straightforward way of doing things.
+<h2>Why are rulesets important for different parser configurations?</h2>
+<p>Custom message parsers, used to handle differnet (and potentially otherwise-invalid)
+message formats, can be bound to rulesets. So multiple rulesets can be a very useful
+way to handle devices sending messages in different malformed formats in a consistent
+way. Unfortunately, this is not uncommon in the syslog world. An in-depth explanation
+with configuration sample can be found at the
+<a href="rsconf1_rulesetparser.html">$RulesetParser</a> configuration directive.
 <h2>Can I use a different Ruleset as the default?</h2>
 <p>This is possible by using the
 
