@@ -62,6 +62,10 @@ static int bParseHOSTNAMEandTAG;	/* cache for the equally-named global param - p
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
+	if(eFeat == sFEATUREAutomaticSanitazion)
+		iRet = RS_RET_OK;
+	if(eFeat == sFEATUREAutomaticPRIParsing)
+		iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
 

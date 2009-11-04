@@ -493,9 +493,13 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 			CHKiRet(parser.Construct(&pParser));
 
 			/* check some features */
-			localRet = pNew->isCompatibleWithFeature(sFEATUREAtomaticSanitazion);
+			localRet = pNew->isCompatibleWithFeature(sFEATUREAutomaticSanitazion);
 			if(localRet == RS_RET_OK){
 				CHKiRet(parser.SetDoSanitazion(pParser, TRUE));
+			}
+			localRet = pNew->isCompatibleWithFeature(sFEATUREAutomaticPRIParsing);
+			if(localRet == RS_RET_OK){
+				CHKiRet(parser.SetDoPRIParsing(pParser, TRUE));
 			}
 
 			CHKiRet(parser.SetName(pParser, pParserName));

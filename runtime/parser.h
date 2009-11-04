@@ -39,6 +39,7 @@ struct parser_s {
 	uchar *pName;		/* name of this parser */
 	modInfo_t *pModule;	/* pointer to parser's module */
 	bool bDoSanitazion;	/* do standard message sanitazion before calling parser? */
+	bool bDoPRIParsing;	/* do standard PRI parsing before calling parser? */
 };
 
 /* interfaces */
@@ -50,6 +51,7 @@ BEGINinterface(parser) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetName)(parser_t *pThis, uchar *name);
 	rsRetVal (*SetModPtr)(parser_t *pThis, modInfo_t *pMod);
 	rsRetVal (*SetDoSanitazion)(parser_t *pThis, int);
+	rsRetVal (*SetDoPRIParsing)(parser_t *pThis, int);
 	rsRetVal (*FindParser)(parser_t **ppThis, uchar*name);
 	rsRetVal (*InitParserList)(parserList_t **pListRoot);
 	rsRetVal (*AddParserToList)(parserList_t **pListRoot, parser_t *pParser);

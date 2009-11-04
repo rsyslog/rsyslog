@@ -58,7 +58,8 @@
 typedef enum _syslogFeature {
 	sFEATURERepeatedMsgReduction = 1,	/* for output modules */
 	sFEATURENonCancelInputTermination = 2,	/* for input modules */
-	sFEATUREAtomaticSanitazion = 3		/* for parser modules */
+	sFEATUREAutomaticSanitazion = 3,	/* for parser modules */
+	sFEATUREAutomaticPRIParsing = 4		/* for parser modules */
 } syslogFeature;
 
 /* we define our own facility and severities */

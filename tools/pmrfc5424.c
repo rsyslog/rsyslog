@@ -60,6 +60,10 @@ DEFobjCurrIf(datetime)
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
+	if(eFeat == sFEATUREAutomaticSanitazion)
+		iRet = RS_RET_OK;
+	if(eFeat == sFEATUREAutomaticPRIParsing)
+		iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
 

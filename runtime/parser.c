@@ -376,35 +376,18 @@ finalize_it:
 	RETiRet;
 }
 
-
-/* Parse a received message. The object's rawmsg property is taken and
- * parsed according to the relevant standards. This can later be
- * extended to support configured parsers.
- * rgerhards, 2008-10-09
+/* A standard parser to parse out the PRI. This is made available in
+ * this module as it is expected that allmost all parsers will need
+ * that functionality and so they do not need to implement it themsleves.
  */
-static rsRetVal
-ParseMsg(msg_t *pMsg)
+static inline rsRetVal
+ParsePRI(msg_t *pMsg)
 {
-	uchar *msg;
 	int pri;
+	uchar *msg;
 	int lenMsg;
 	int iPriText;
-	rsRetVal localRet;
-	parserList_t *pParserList;
-	static int iErrMsgRateLimiter = 0;
 	DEFiRet;
-
-	if(pMsg->iLenRawMsg == 0)
-		ABORT_FINALIZE(RS_RET_EMPTY_MSG);
-
-#	ifdef USE_NETZIP
-	CHKiRet(uncompressMessage(pMsg));
-#	endif
-
-	CHKiRet(SanitizeMsg(pMsg));
-
-	/* we needed to sanitize first, because we otherwise do not have a C-string we can print... */
-	DBGPRINTF("msg parser: flags %x, from '%s', msg '%s'\n", pMsg->msgFlags, getRcvFrom(pMsg), pMsg->pszRawMsg);
 
 	/* pull PRI */
 	lenMsg = pMsg->iLenRawMsg;
@@ -428,9 +411,43 @@ ParseMsg(msg_t *pMsg)
 	pMsg->iFacility = LOG_FAC(pri);
 	pMsg->iSeverity = LOG_PRI(pri);
 	MsgSetAfterPRIOffs(pMsg, msg - pMsg->pszRawMsg);
+	RETiRet;
+}
+
+
+/* Parse a received message. The object's rawmsg property is taken and
+ * parsed according to the relevant standards. This can later be
+ * extended to support configured parsers.
+ * rgerhards, 2008-10-09
+ */
+static rsRetVal
+ParseMsg(msg_t *pMsg)
+{
+	rsRetVal localRet;
+	parserList_t *pParserList;
+	parser_t *pParser;
+	bool bIsSanitized;
+	bool bPRIisParsed;
+	static int iErrMsgRateLimiter = 0;
+	DEFiRet;
+
+	if(pMsg->iLenRawMsg == 0)
+		ABORT_FINALIZE(RS_RET_EMPTY_MSG);
+
+#	ifdef USE_NETZIP
+	CHKiRet(uncompressMessage(pMsg));
+#	endif
+
+	/* we take the risk to print a non-sanitized string, because this is the best we can get
+	 * (and that functionality is too important for debugging to drop it...).
+	 */
+	DBGPRINTF("msg parser: flags %x, from '%s', msg '%.50s'\n", pMsg->msgFlags,
+		  getRcvFrom(pMsg), pMsg->pszRawMsg);
 
 	/* we now need to go through our list of parsers and see which one is capable of
-	 * parsing the message.
+	 * parsing the message. Note that the first parser that requires message sanitization
+	 * will cause it to happen. After that, access to the unsanitized message is no
+	 * loger possible.
 	 */
 	pParserList = ruleset.GetParserList(pMsg);
 	if(pParserList == NULL)
@@ -438,7 +455,18 @@ ParseMsg(msg_t *pMsg)
 	DBGPRINTF("Using parser list %p%s.\n", pParserList,
 		  (pParserList == pDfltParsLst) ? " (the default list)" : "");
 
+	bIsSanitized = FALSE;
+	bPRIisParsed = FALSE;
 	while(pParserList != NULL) {
+		pParser = pParserList->pParser;
+		if(pParser->bDoSanitazion && bIsSanitized == FALSE) {
+			CHKiRet(SanitizeMsg(pMsg));
+			if(pParser->bDoPRIParsing && bPRIisParsed == FALSE) {
+				CHKiRet(ParsePRI(pMsg));
+				bPRIisParsed = TRUE;
+			}
+			bIsSanitized = TRUE;
+		}
 		localRet = pParserList->pParser->pModule->mod.pm.parse(pMsg);
 		if(localRet != RS_RET_COULD_NOT_PARSE)
 			break;
@@ -453,14 +481,14 @@ ParseMsg(msg_t *pMsg)
 	if(localRet != RS_RET_OK) {
 		if(++iErrMsgRateLimiter > 1000) {
 			errmsg.LogError(0, localRet, "Error: one message could not be processed by "
-			 	"any parser, message is being discarded (start of raw msg: '%50s')", 
+			 	"any parser, message is being discarded (start of raw msg: '%.50s')", 
 				pMsg->pszRawMsg);
 		}
 		DBGPRINTF("No parser could process the message (state %d), we need to discard it.\n", localRet);
 		ABORT_FINALIZE(localRet);
 	}
 
-	/* finalize message object */
+	/* "finalize" message object */
 	pMsg->msgFlags &= ~NEEDS_PARSING; /* this message is now parsed */
 
 finalize_it:
@@ -516,6 +544,18 @@ SetDoSanitazion(parser_t *pThis, int bDoIt)
 }
 
 
+/* Specify if we should do standard PRI parsing before we pass the data
+ * down to the parser module.
+ */
+static rsRetVal
+SetDoPRIParsing(parser_t *pThis, int bDoIt)
+{
+	ISOBJ_TYPE_assert(pThis, parser);
+	pThis->bDoPRIParsing = bDoIt;
+	return RS_RET_OK;
+}
+
+
 /* queryInterface function-- rgerhards, 2009-11-03
  */
 BEGINobjQueryInterface(parser)
@@ -535,6 +575,7 @@ CODESTARTobjQueryInterface(parser)
 	pIf->SetName = SetName;
 	pIf->SetModPtr = SetModPtr;
 	pIf->SetDoSanitazion = SetDoSanitazion;
+	pIf->SetDoPRIParsing = SetDoPRIParsing;
 	pIf->ParseMsg = ParseMsg;
 	pIf->SanitizeMsg = SanitizeMsg;
 	pIf->InitParserList = InitParserList;
