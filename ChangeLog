@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 5.3.4  [DEVEL] (rgerhards), 2009-10-??
+Version 5.3.4  [DEVEL] (rgerhards), 2009-11-04
 - added the ability to create custom message parsers
 - added $RulesetParser config directive that permits to bind specific
   parsers to specific rulesets
