@@ -13,7 +13,8 @@ TESTS = $(TESTRUNS) cfg.sh \
 	rulesetmultiqueue.sh \
 	manytcp.sh \
 	rsf_getenv.sh \
-	queue-persist.sh 
+	queue-persist.sh \
+	pipeaction.sh
 
 if ENABLE_OMSTDOUT
 TESTS += omod-if-array.sh \
@@ -143,6 +144,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/threadingmq.conf \
 	   threadingmqaq.sh \
 	   testsuites/threadingmqaq.conf \
+	   pipeaction.sh \
+	   testsuites/pipeaction.conf \
 	   proprepltest.sh \
 	   testsuites/rfctag.conf \
 	   testsuites/master.rfctag \

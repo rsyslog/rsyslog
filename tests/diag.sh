@@ -68,6 +68,7 @@ case $1 in
 		fi
 		;;
    'injectmsg') # inject messages via our inject interface (imdiag)
+		echo injecting $3 messages
 		echo injectmsg $2 $3 $4 $5 | java -classpath $abs_top_builddir DiagTalker
 		# TODO: some return state checking? (does it really make sense here?)
 		;;
@@ -83,7 +84,8 @@ case $1 in
    'seq-check') # do the usual sequence check to see if everything was properly received
 		rm -f work
 		sort < rsyslog.out.log > work
-		./chkseq -fwork -e$2 $3
+		# $4... are just to have the abilit to pass in more options...
+		./chkseq -fwork -v -s$2 -e$3 $4 $5 $6 $7
 		if [ "$?" -ne "0" ]; then
 		  echo "sequence error detected"
 		  exit 1
