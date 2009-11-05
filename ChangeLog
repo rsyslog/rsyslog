@@ -1,4 +1,6 @@
 ---------------------------------------------------------------------------
+Version 4.5.7  [v4-beta] (rgerhards), 2009-11-??
+---------------------------------------------------------------------------
 Version 4.5.6  [v4-beta] (rgerhards), 2009-11-05
 - bugfix: named pipes did no longer work (they always got an open error)
   this was a regression from the omfile rewrite in 4.5.0
