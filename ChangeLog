@@ -1,4 +1,11 @@
 ---------------------------------------------------------------------------
+Version 5.3.5  [DEVEL] (rgerhards), 2009-11-??
+- bugfixes imported from earlier releases
+  * bugfix: named pipes did no longer work (they always got an open error)
+    this was a regression from the omfile rewrite in 4.5.0
+  * bugfix(testbench): sequence check was not always performed correctly,
+    that could result in tests reporting success when they actually failed
+---------------------------------------------------------------------------
 Version 5.3.4  [DEVEL] (rgerhards), 2009-11-04
 - added the ability to create custom message parsers
 - added $RulesetParser config directive that permits to bind specific

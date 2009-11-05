@@ -15,5 +15,5 @@ echo doing shutdown
 source $srcdir/diag.sh shutdown-when-empty
 echo wait on shutdown
 source $srcdir/diag.sh wait-shutdown 
-source $srcdir/diag.sh seq-check 19999
+source $srcdir/diag.sh seq-check 0 19999
 source $srcdir/diag.sh exit

@@ -5,6 +5,7 @@
 # support multi-output-file operations.
 # added 2009-10-30 by Rgerhards
 # This file is part of the rsyslog project, released  under GPLv3
+echo ===============================================================================
 echo \[rulesetmultiqueu.sh\]: testing multiple queues via rulesets
 source $srcdir/diag.sh init
 rm -f rsyslog.out1.log rsyslog.out2.log rsyslog.out3.log
@@ -16,6 +17,12 @@ source $srcdir/diag.sh wait-startup
 source $srcdir/diag.sh tcpflood 127.0.0.1 13514 3 20000 0
 source $srcdir/diag.sh tcpflood 127.0.0.1 13515 3 20000 20000
 source $srcdir/diag.sh tcpflood 127.0.0.1 13516 3 20000 40000
+
+# in this version of the imdiag, we do not have the capability to poll
+# all queues for emptyness. So we do a sleep in the hopes that this will
+# sufficiently drain the queues. This is race, but the best we currently
+# can do... - rgerhards, 2009-11-05
+sleep 2 
 source $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
 source $srcdir/diag.sh wait-shutdown
 # now consolidate all logs into a single one so that we can use the

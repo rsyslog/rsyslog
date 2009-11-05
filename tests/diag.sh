@@ -85,7 +85,8 @@ case $1 in
 		rm -f work
 		sort < rsyslog.out.log > work
 		# $4... are just to have the abilit to pass in more options...
-		./chkseq -fwork -v -s$2 -e$3 $4 $5 $6 $7
+		# add -v to chkseq if you need more verbose output
+		./chkseq -fwork -s$2 -e$3 $4 $5 $6 $7
 		if [ "$?" -ne "0" ]; then
 		  echo "sequence error detected"
 		  exit 1
