@@ -211,6 +211,7 @@ doPhysOpen(strm_t *pThis)
 	}
 
 	pThis->fd = open((char*)pThis->pszCurrFName, iFlags, pThis->tOpenMode);
+	DBGPRINTF("file '%s' opened as #%d with mode %d\n", pThis->pszCurrFName, pThis->fd, pThis->tOpenMode);
 	if(pThis->fd == -1) {
 		int ierrnoSave = errno;
 		dbgoprint((obj_t*) pThis, "open error %d, file '%s'\n", errno, pThis->pszCurrFName);
