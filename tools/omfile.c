@@ -1,8 +1,6 @@
 /* omfile.c
  * This is the implementation of the build-in file output module.
  *
- * Handles: eTypeCONSOLE, eTypeTTY, eTypeFILE, eTypePIPE
- *
  * NOTE: read comments in module-template.h to understand how this file
  *       works!
  *
@@ -687,6 +685,11 @@ CODESTARTparseSelectorAct
         case '|':
 	case '/':
 		CODE_STD_STRING_REQUESTparseSelectorAct(1)
+		/* we now have the same semantics for files and pipes, but we need to skip over
+		 * the pipe indicator traditionally seen in config files...
+		 */
+		if(*p == '|')
+			++p;
 		CHKiRet(cflineParseFileName(p, (uchar*) pData->f_fname, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS,
 				               (pszTplName == NULL) ? (uchar*)"RSYSLOG_FileFormat" : pszTplName));
 		pData->bDynamicName = 0;

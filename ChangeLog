@@ -15,6 +15,8 @@ Version 4.7.0  [v4-devel] (rgerhards), 2009-09-??
 - imported changes from 4.5.6 and below
 ---------------------------------------------------------------------------
 Version 4.5.6  [v4-beta] (rgerhards), 2009-09-??
+- bugfix: named pipes did no longer work (they always got an open error)
+  this was a regression from the omfile rewrite in 4.5.0
 - bugfix(minor): diag function returned wrong queue memeber count
   for the main queue if an active DA queue existed. This had no relevance
   to real deployments (assuming they are not running the debug/diagnostic
@@ -25,6 +27,11 @@ Version 4.5.6  [v4-beta] (rgerhards), 2009-09-??
   * bugfix: zero-sized UDP messages are no longer processed
   * bugfix: random data could be appended to message
   * bugfix: reverse lookup reduction logic in imudp do DNS queries too often
+- bugfix(testbench): testcase did not properly wait for rsyslod shutdown
+  thus some unpredictable behavior and a false negative test result
+  could occur. [BACKPORTED from v5]
+- bugfix(testbench): sequence check was not always performed correctly,
+  that could result in tests reporting success when they actually failed
 ---------------------------------------------------------------------------
 Version 4.5.5  [v4-beta] (rgerhards), 2009-10-21
 - added $InputTCPServerNotifyOnConnectionClose config directive
@@ -146,6 +153,8 @@ Version 4.5.0  [DEVEL] (rgerhards), 2009-07-02
   removes false positives (but may cause some trouble with hostname
   parsing). For details, see this bug tracker:
   http://bugzilla.adiscon.com/show_bug.cgi?id=126
+- omfile rewrite to natively support zip files (includes large extension
+  of the stream class)
 - added configuration commands (see doc for explanations)
   * $OMFileZipLevel
   * $OMFileIOBufferSize

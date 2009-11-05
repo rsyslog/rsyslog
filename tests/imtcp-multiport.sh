@@ -7,11 +7,13 @@
 #
 # added 2009-05-22 by Rgerhards
 # This file is part of the rsyslog project, released  under GPLv3
-echo testing imtcp multiple listeners
+echo ===============================================================================
+echo \[imtcp-multiport.sh\]: testing imtcp multiple listeners
 source $srcdir/diag.sh init
 source $srcdir/diag.sh startup imtcp-multiport.conf
 source $srcdir/diag.sh tcpflood 127.0.0.1 13514 1 10000
 source $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
+source $srcdir/diag.sh wait-shutdown
 source $srcdir/diag.sh seq-check 0 9999
 source $srcdir/diag.sh exit
 #
@@ -23,6 +25,7 @@ source $srcdir/diag.sh init
 source $srcdir/diag.sh startup imtcp-multiport.conf
 source $srcdir/diag.sh tcpflood 127.0.0.1 13515 1 10000
 source $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
+source $srcdir/diag.sh wait-shutdown
 source $srcdir/diag.sh seq-check 0 9999
 source $srcdir/diag.sh exit
 #
@@ -34,5 +37,6 @@ source $srcdir/diag.sh init
 source $srcdir/diag.sh startup imtcp-multiport.conf
 source $srcdir/diag.sh tcpflood 127.0.0.1 13516 1 10000
 source $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
+source $srcdir/diag.sh wait-shutdown
 source $srcdir/diag.sh seq-check 0 9999
 source $srcdir/diag.sh exit
