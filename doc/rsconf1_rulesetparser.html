@@ -12,13 +12,15 @@
 <p><b>Default:</b> rsyslog.rfc5424;rsyslog.rfc5425</p>
 <p><b>Description:</b></p>
 <p>
-This directive permits to specify which message parsers should be used for the ruleset
+This directive permits to specify which
+<a href="messageparser.html">message parsers</a> should be used for the ruleset
 in question. It no ruleset is explicitely specified, the default ruleset is used. Message
 parsers are contained in (loadable) parser modules with the most common cases
 (RFC3164 and RFC5424) being build-in into rsyslogd.
 <p>When this directive is specified the first time for a ruleset, it will not only add the
-parser to the ruleset, it will also wipe out the default parsers. So if you need to have
-them in addition to the custom parser, you need to specify them as well.
+parser to the ruleset's parser chain, it will also wipe out the default parser chain.
+So if you need to have
+them in addition to the custom parser, you need to specify those as well.
 <p>Order of directives is important. Parsers are tried one after another, in the order
 they are specified inside the config. As soon as a parser is able to parse the message,
 it will do so and no other parsers will be executed. If no matching parser can be found,
