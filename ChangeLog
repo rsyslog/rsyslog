@@ -14,7 +14,13 @@ Version 4.7.0  [v4-devel] (rgerhards), 2009-09-??
   See ticket for details: http://bugzilla.adiscon.com/show_bug.cgi?id=150
 - imported changes from 4.5.6 and below
 ---------------------------------------------------------------------------
-Version 4.5.6  [v4-beta] (rgerhards), 2009-09-??
+Version 4.5.7  [v4-beta] (rgerhards), 2009-11-??
+- added a so-called "On Demand Debug" mode, in which debug output can
+  be generated only after the process has started, but not right from
+  the beginning. This is assumed to be useful for hard-to-find bugs.
+  Also improved the doc on the debug system.
+---------------------------------------------------------------------------
+Version 4.5.6  [v4-beta] (rgerhards), 2009-11-05
 - bugfix: named pipes did no longer work (they always got an open error)
   this was a regression from the omfile rewrite in 4.5.0
 - bugfix(minor): diag function returned wrong queue memeber count
@@ -61,7 +67,6 @@ Version 4.5.4  [v4-beta] (rgerhards), 2009-09-29
   This should be improved if it has proven reliable in practice.
 ---------------------------------------------------------------------------
 Version 4.5.3  [v4-beta] (rgerhards), 2009-09-17
->>>>>>> 4c8546fd6fb56d5439edb5a098c8f82bc8fc36aa:ChangeLog
 - bugfix: repeated messages were incorrectly processed
   this could lead to loss of the repeated message content. As a side-
   effect, it could probably also be possible that some segfault occurs
