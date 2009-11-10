@@ -74,12 +74,30 @@ DEF_OMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(strm)
 
+/* for our current LRU mechanism, we need a monotonically increasing counters. We use
+ * it much like a "Lamport logical clock": we do not need the actual time, we just need
+ * to know the sequence in which files were accessed. So we use a simple counter to
+ * create that sequence. We use an unsigned 64 bit value which is extremely unlike to
+ * wrap within the lifetime of a process. If we process 1,000,000 file writes per
+ * second, the process could still exist over 500,000 years before a wrap to 0 happens.
+ * That should be sufficient (and even than, there would no really bad effect ;)).
+ * The variable below is the global counter/clock.
+ */
+static uint64 clockFileAccess = 0;
+/* and the "tick" function */
+static inline uint64
+getClockFileAccess(void)
+{
+	return ATOMIC_INC_AND_FETCH(clockFileAccess);
+}
+
+
 /* The following structure is a dynafile name cache entry.
  */
 struct s_dynaFileCacheEntry {
 	uchar *pName;		/* name currently open, if dynamic name */
 	strm_t	*pStrm;		/* our output stream */
-	time_t	lastUsed;	/* for LRU - last access */ // TODO: perforamcne change to counter (see other comment!) 
+	uint64	clkTickAccessed;/* for LRU - based on clockFileAccess */
 };
 typedef struct s_dynaFileCacheEntry dynaFileCacheEntry;
 
@@ -453,7 +471,7 @@ finalize_it:
 static inline rsRetVal
 prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
 {
-	time_t ttOldest; /* timestamp of oldest element */
+	uint64 ctOldest; /* "timestamp" of oldest element */
 	int iOldest;
 	int i;
 	int iFirstFree;
@@ -472,7 +490,7 @@ prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
 	if(   (pData->iCurrElt != -1)
 	   && !ustrcmp(newFileName, pCache[pData->iCurrElt]->pName)) {
 	   	/* great, we are all set */
-		pCache[pData->iCurrElt]->lastUsed = time(NULL); /* update timestamp for LRU */ // TODO: optimize time call!
+		pCache[pData->iCurrElt]->clkTickAccessed = getClockFileAccess();
 		// LRU needs only a strictly monotonically increasing counter, so such a one could do
 		FINALIZE;
 	}
@@ -483,7 +501,7 @@ prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
 	pData->iCurrElt = -1;	/* invalid current element pointer */
 	iFirstFree = -1; /* not yet found */
 	iOldest = 0; /* we assume the first element to be the oldest - that will change as we loop */
-	ttOldest = time(NULL) + 1; /* there must always be an older one */
+	ctOldest = getClockFileAccess(); /* there must always be an older one */
 	for(i = 0 ; i < pData->iCurrCacheSize ; ++i) {
 		if(pCache[i] == NULL) {
 			if(iFirstFree == -1)
@@ -493,12 +511,12 @@ prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
 				/* we found our element! */
 				pData->pStrm = pCache[i]->pStrm;
 				pData->iCurrElt = i;
-				pCache[i]->lastUsed = time(NULL); /* update timestamp for LRU */
+				pCache[i]->clkTickAccessed = getClockFileAccess(); /* update "timestamp" for LRU */
 				FINALIZE;
 			}
 			/* did not find it - so lets keep track of the counters for LRU */
-			if(pCache[i]->lastUsed < ttOldest) {
-				ttOldest = pCache[i]->lastUsed;
+			if(pCache[i]->clkTickAccessed < ctOldest) {
+				ctOldest = pCache[i]->clkTickAccessed;
 				iOldest = i;
 				}
 		}
@@ -538,7 +556,7 @@ prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
 
 	CHKmalloc(pCache[iFirstFree]->pName = ustrdup(newFileName));
 	pCache[iFirstFree]->pStrm = pData->pStrm;
-	pCache[iFirstFree]->lastUsed = time(NULL); // monotonically increasing value! TODO: performance
+	pCache[iFirstFree]->clkTickAccessed = getClockFileAccess();
 	pData->iCurrElt = iFirstFree;
 	DBGPRINTF("Added new entry %d for file cache, file '%s'.\n", iFirstFree, newFileName);
 

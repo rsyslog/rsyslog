@@ -1,5 +1,8 @@
 ---------------------------------------------------------------------------
 Version 5.3.5  [DEVEL] (rgerhards), 2009-11-??
+- some improvement of omfile performance with dynafiles
+  saved costly time() calls by employing a logical clock, which is 
+  sufficient for the use case
 - bugfixes imported from earlier releases
   * bugfix: named pipes did no longer work (they always got an open error)
     this was a regression from the omfile rewrite in 4.5.0
