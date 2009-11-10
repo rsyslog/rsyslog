@@ -1,5 +1,6 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
-<html><head>
+<html>
+<head>
 <meta http-equiv="Content-Language" content="en">
 <title>Rsyslog Debug Support</title></head>
 <body>
@@ -51,6 +52,24 @@ debug output itself. You need to send SIGUSR1 to turn it on when desired.
 <li><b>help</b> - display a very short list of commands - hopefully a life saver if you can't access the documentation...</li>
 </ul>
 </ul>
+<h3>Why Environment Variables?</h3>
+<p>You may ask why we use environment variables for debug-system parameters and not
+the usual rsyslog.conf configuration commands. After all, environment variables force one
+to change distro-specific configuration files, whereas regular configuration directives
+would fit nicely into the one central rsyslog.conf.
+<p>The problem here is that many settings of the debug system must be initialized 
+before the full rsyslog engine starts up. At that point, there is no such thing like
+rsyslog.conf or the objects needed to process it present in an running instance.
+And even if we would enable to change settings some time later, that would mean that
+we can not correctly monitor (and debug) the initial startup phase of rsyslogd. What
+makes matters worse is that during this startup phase (and never again later!) some
+of the base debug structure needs to be created, at least if the build is
+configured for that (many of these things only happen in --enable-rtinst mode). So
+if we do not initialize the debug system <b>before</b> actually startig up the
+rsyslog core, we get a number of data structures wrong.
+<p>For these reasons, we utilize environment variables to initialize and configure
+the debugging system. We understand this may be somewhat painful, but now you know
+there are at least some good reasons for doing so.
 <h2>Getting debug information from a running Instance</h2>
 <p>It is possible to obtain debugging information from a running instance, but this requires
 some setup. We assume that the instance runs in the background, so debug output to
@@ -122,4 +141,5 @@ instance of rsyslogd can be aborted by pressing ctl-c.
 Copyright &copy; 2008, 2009 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
 <a href="http://www.adiscon.com/">Adiscon</a>.
 Released under the GNU GPL version 3 or higher.</font></p>
-</body></html>
+</body>
+</html>
