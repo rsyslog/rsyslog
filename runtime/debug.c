@@ -51,6 +51,7 @@
 #include "rsyslog.h"
 #include "debug.h"
 #include "atomic.h"
+#include "cfsysline.h"
 #include "obj.h"
 
 
@@ -1263,6 +1264,7 @@ dbgGetRuntimeOptions(void)
 					"NoLogTimestamp\n"
 					"Nostdoout\n"
 					"filetrace=file (may be provided multiple times)\n"
+					"DebugOnDemand - enables debugging on USR1, but does not turn on output\n"
 					"\nSee debug.html in your doc set or http://www.rsyslog.com for details\n");
 				exit(1);
 			} else if(!strcasecmp((char*)optname, "debug")) {
@@ -1271,6 +1273,13 @@ dbgGetRuntimeOptions(void)
 				 */
 				Debug = 1;
 				debugging_on = 1;
+			} else if(!strcasecmp((char*)optname, "debugondemand")) {
+				/* Enables debugging, but turns off debug output */
+				Debug = 1;
+				debugging_on = 1;
+				dbgprintf("Note: debug on demand turned on via configuraton file, "
+					  "use USR1 signal to activate.\n");
+				debugging_on = 0;
 			} else if(!strcasecmp((char*)optname, "logfuncflow")) {
 				bLogFuncFlow = 1;
 			} else if(!strcasecmp((char*)optname, "logallocfree")) {
