@@ -5,6 +5,10 @@ Version 5.3.5  [DEVEL] (rgerhards), 2009-11-??
     this was a regression from the omfile rewrite in 4.5.0
   * bugfix(testbench): sequence check was not always performed correctly,
     that could result in tests reporting success when they actually failed
+- [import v4]: added a so-called "On Demand Debug" mode, in which debug
+  output can be generated only after the process has started, but not right
+  from the beginning. This is assumed to be useful for hard-to-find bugs.
+  Also improved the doc on the debug system.
 ---------------------------------------------------------------------------
 Version 5.3.4  [DEVEL] (rgerhards), 2009-11-04
 - added the ability to create custom message parsers
@@ -244,7 +248,13 @@ Version 4.7.0  [v4-devel] (rgerhards), 2009-09-??
   See ticket for details: http://bugzilla.adiscon.com/show_bug.cgi?id=150
 - imported changes from 4.5.6 and below
 ---------------------------------------------------------------------------
-Version 4.5.6  [v4-beta] (rgerhards), 2009-09-??
+Version 4.5.7  [v4-beta] (rgerhards), 2009-11-??
+- added a so-called "On Demand Debug" mode, in which debug output can
+  be generated only after the process has started, but not right from
+  the beginning. This is assumed to be useful for hard-to-find bugs.
+  Also improved the doc on the debug system.
+---------------------------------------------------------------------------
+Version 4.5.6  [v4-beta] (rgerhards), 2009-11-05
 - bugfix: named pipes did no longer work (they always got an open error)
   this was a regression from the omfile rewrite in 4.5.0
 - bugfix(minor): diag function returned wrong queue memeber count

@@ -733,13 +733,27 @@ doFlushRptdMsgs(void)
 
 static void debug_switch()
 {
+	time_t tTime;
+	struct tm tp;
 	struct sigaction sigAct;
 
+	time(&tTime);
+	localtime_r(&tTime, &tp);
 	if(debugging_on == 0) {
 		debugging_on = 1;
-		DBGPRINTF("Switching debugging_on to true\n");
+		dbgprintf("\n");
+		dbgprintf("\n");
+		dbgprintf("********************************************************************************\n");
+		dbgprintf("Switching debugging_on to true at %2.2d:%2.2d:%2.2d\n",
+			  tp.tm_hour, tp.tm_min, tp.tm_sec);
+		dbgprintf("********************************************************************************\n");
 	} else {
-		DBGPRINTF("Switching debugging_on to false\n");
+		dbgprintf("********************************************************************************\n");
+		dbgprintf("Switching debugging_on to false at %2.2d:%2.2d:%2.2d\n",
+			  tp.tm_hour, tp.tm_min, tp.tm_sec);
+		dbgprintf("********************************************************************************\n");
+		dbgprintf("\n");
+		dbgprintf("\n");
 		debugging_on = 0;
 	}
 	
@@ -2310,8 +2324,6 @@ doGlblProcessInit(void)
 			fputs(" Already running.\n", stderr);
 			exit(1); /* "good" exit, done if syslogd is already running */
 		}
-	} else {
-		debugging_on = 1;
 	}
 
 	/* tuck my process id away */
