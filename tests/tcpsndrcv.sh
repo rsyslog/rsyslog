@@ -10,23 +10,4 @@
 # uncomment for debugging support:
 echo ===============================================================================
 echo \[tcpsndrcv.sh\]: testing sending and receiving via tcp
-source $srcdir/diag.sh init
-# start up the instances
-source $srcdir/diag.sh startup tcpsndrcv_sender.conf 2
-source $srcdir/diag.sh startup tcpsndrcv_rcvr.conf 
-source $srcdir/diag.sh wait-startup2
-source $srcdir/diag.sh wait-startup
-
-# now inject the messages into instance 2. It will connect to instance 1,
-# and that instance will record the data.
-source $srcdir/diag.sh tcpflood 127.0.0.1 13515 1 50000
-# shut down sender when everything is sent, receiver continues to run concurrently
-source $srcdir/diag.sh shutdown-when-empty 2
-source $srcdir/diag.sh wait-shutdown 2
-# now it is time to stop the receiver as well
-source $srcdir/diag.sh shutdown-when-empty
-source $srcdir/diag.sh wait-shutdown
-
-# do the final check
-source $srcdir/diag.sh seq-check 0 49999
-source $srcdir/diag.sh exit
+source $srcdir/tcpsndrcv_drvr.sh tcpsndrcv 50000

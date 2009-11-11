@@ -7,6 +7,8 @@ TESTS = $(TESTRUNS) cfg.sh \
 	diskqueue.sh \
 	diskqueue-fsync.sh \
 	manytcp.sh \
+	tcpsndrcv.sh \
+	tcpsndrcv_gzip.sh \
 	queue-persist.sh \
 	pipeaction.sh
 
@@ -114,6 +116,13 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/threadingmq.conf \
 	   threadingmqaq.sh \
 	   testsuites/threadingmqaq.conf \
+	   tcpsndrcv_drvr.sh \
+	   tcpsndrcv.sh \
+	   testsuites/tcpsndrcv_sender.conf \
+	   testsuites/tcpsndrcv_rcvr.conf \
+	   tcpsndrcv_gzip.sh \
+	   testsuites/tcpsndrcv_gzip_sender.conf \
+	   testsuites/tcpsndrcv_gzip_rcvr.conf \
 	   pipeaction.sh \
 	   testsuites/pipeaction.conf \
 	   proprepltest.sh \
