@@ -473,6 +473,7 @@ doReceive(tcpsrv_t *pThis, tcps_sess_t **ppSess)
 {
 	char buf[128*1024]; /* reception buffer - may hold a partial or multiple messages */
 	ssize_t iRcvd;
+	rsRetVal localRet;
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
@@ -498,11 +499,11 @@ doReceive(tcpsrv_t *pThis, tcps_sess_t **ppSess)
 		break;
 	case RS_RET_OK:
 		/* valid data received, process it! */
-		if(tcps_sess.DataRcvd(*ppSess, buf, iRcvd) != RS_RET_OK) {
+		if((localRet = tcps_sess.DataRcvd(*ppSess, buf, iRcvd)) != RS_RET_OK) {
 			/* in this case, something went awfully wrong.
 			 * We are instructed to terminate the session.
 			 */
-			errmsg.LogError(0, NO_ERRCODE, "Tearing down TCP Session - see "
+			errmsg.LogError(0, localRet, "Tearing down TCP Session - see "
 					    "previous messages for reason(s)\n");
 			pThis->pOnErrClose(*ppSess);
 			tcps_sess.Destruct(ppSess);
