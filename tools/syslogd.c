@@ -3855,10 +3855,10 @@ int realMain(int argc, char **argv)
 				fprintf(stderr, "error -p is no longer supported, use module imuxsock instead");
 			}
 		case 'q':               /* add hostname if DNS resolving has failed */
-		        *net.pACLAddHostnameOnFail = 1;
+		        net.pACLAddHostnameOnFail = 1;
 		        break;
 		case 'Q':               /* dont resolve hostnames in ACL to IPs */
-		        *net.pACLDontResolve = 1;
+		        net.pACLDontResolve = 1;
 		        break;
 		case 'r':		/* accept remote messages */
 			if(iCompatibilityMode < 3) {
