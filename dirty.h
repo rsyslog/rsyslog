@@ -40,7 +40,6 @@ rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName);
  * TODO: move this to action object! Only action.c and syslogd.c use it.
  */
 extern int bActExecWhenPrevSusp;
-extern int iActExecOnceInterval;
 extern int MarkInterval;
 extern int repeatinterval[2];
 extern int  bReduceRepeatMsgs;

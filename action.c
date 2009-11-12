@@ -59,6 +59,7 @@ DEFobjCurrIf(datetime)
 DEFobjCurrIf(module)
 DEFobjCurrIf(errmsg)
 
+static int iActExecOnceInterval = 0; /* execute action once every nn seconds */
 static int iActExecEveryNthOccur = 0; /* execute action every n-th occurence (0,1=always) */
 static time_t iActExecEveryNthOccurTO = 0; /* timeout for n-occurence setting (in seconds, 0=never) */
 static int glbliActionResumeInterval = 30;
@@ -1381,6 +1382,17 @@ finalize_it:
 }
 
 
+/* Reset config variables to default values.
+ * rgerhards, 2009-11-12
+ */
+static rsRetVal
+resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
+{
+	iActExecOnceInterval = 0;
+	return RS_RET_OK;
+}
+
+
 /* TODO: we are not yet a real object, the ClassInit here just looks like it is..
  */
 rsRetVal actionClassInit(void)
@@ -1418,7 +1430,9 @@ rsRetVal actionClassInit(void)
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuedequeuetimeend", 0, eCmdHdlrInt, NULL, &iActionQueueDeqtWinToHr, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionexeconlyeverynthtime", 0, eCmdHdlrInt, NULL, &iActExecEveryNthOccur, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionexeconlyeverynthtimetimeout", 0, eCmdHdlrInt, NULL, &iActExecEveryNthOccurTO, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionexeconlyonceeveryinterval", 0, eCmdHdlrInt, NULL, &iActExecOnceInterval, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"repeatedmsgcontainsoriginalmsg", 0, eCmdHdlrBinary, NULL, &bActionRepMsgHasMsg, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, NULL));
 
 finalize_it:
 	RETiRet;

@@ -245,7 +245,6 @@ static int	bErrMsgToStderr = 1; /* print error messages to stderr (in addition t
 int 	bReduceRepeatMsgs; /* reduce repeated message - 0 - no, 1 - yes */
 int 	bAbortOnUncleanConfig = 0; /* abort run (rather than starting with partial config) if there was any issue in conf */
 int	bActExecWhenPrevSusp; /* execute action only when previous one was suspended? */
-int	iActExecOnceInterval = 0; /* execute action once every nn seconds */
 /* end global config file state variables */
 
 int	MarkInterval = 20 * 60;	/* interval between marks in seconds - read-only after startup */
@@ -294,7 +293,6 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 {
 	bLogStatusMsgs = DFLT_bLogStatusMsgs;
 	bActExecWhenPrevSusp = 0;
-	iActExecOnceInterval = 0;
 	bDebugPrintTemplateList = 1;
 	bDebugPrintCfSysLineHandlerList = 1;
 	bDebugPrintModuleList = 1;
@@ -1948,7 +1946,6 @@ static rsRetVal loadBuildInModules(void)
 	CHKiRet(regCfSysLineHdlr((uchar *)"abortonuncleanconfig", 0, eCmdHdlrBinary, NULL, &bAbortOnUncleanConfig, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"repeatedmsgreduction", 0, eCmdHdlrBinary, NULL, &bReduceRepeatMsgs, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionexeconlywhenpreviousissuspended", 0, eCmdHdlrBinary, NULL, &bActExecWhenPrevSusp, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionexeconlyonceeveryinterval", 0, eCmdHdlrInt, NULL, &iActExecOnceInterval, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionresumeinterval", 0, eCmdHdlrInt, setActionResumeInterval, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"template", 0, eCmdHdlrCustomHandler, conf.doNameLine, (void*)DIR_TEMPLATE, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"outchannel", 0, eCmdHdlrCustomHandler, conf.doNameLine, (void*)DIR_OUTCHANNEL, NULL));
