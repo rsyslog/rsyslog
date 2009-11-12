@@ -686,7 +686,7 @@ actionWriteToAction(action_t *pAction)
 	 * a purely logical point of view. However, if safes us to check the system time in
 	 * (those common) cases where ExecOnceInterval is not used. -- rgerhards, 2008-09-16
 	 */
-	if(pAction->f_time != 0 && pAction->iSecsExecOnceInterval > 0 &&
+	if(pAction->iSecsExecOnceInterval > 0 &&
 	   pAction->iSecsExecOnceInterval + pAction->tLastExec > getActNow(pAction)) {
 		/* in this case we need to discard the message - its not yet time to exec the action */
 		dbgprintf("action not yet ready again to be executed, onceInterval %d, tCurr %d, tNext %d\n",
@@ -697,6 +697,7 @@ actionWriteToAction(action_t *pAction)
 	}
 
 	/* we use reception time, not dequeue time - this is considered more appropriate and also faster ;) -- rgerhards, 2008-09-17 */
+	pAction->tLastExec = getActNow(pAction); /* re-init time flags */
 	pAction->f_time = pAction->f_pMsg->ttGenTime;
 
 	/* When we reach this point, we have a valid, non-disabled action.

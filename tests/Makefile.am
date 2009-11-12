@@ -6,6 +6,7 @@ TESTS = $(TESTRUNS) cfg.sh \
 	imtcp-multiport.sh \
 	diskqueue.sh \
 	manytcp.sh \
+	execonlyonce.sh \
 	queue-persist.sh 
 
 if ENABLE_OMSTDOUT
@@ -74,6 +75,9 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   queue-persist.sh \
 	   queue-persist-drvr.sh \
 	   testsuites/queue-persist.conf \
+	   execonlyonce.sh \
+	   testsuites/execonlyonce.conf \
+	   testsuites/execonlyonce.data \
 	   DiagTalker.java \
 	   cfg.sh
 
