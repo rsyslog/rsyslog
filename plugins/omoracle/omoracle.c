@@ -346,14 +346,18 @@ static void log_detailed_err(instanceData* pData)
 
        OCIAttrGet(pData->statement, OCI_HTYPE_STMT, &errs, 0,
                   OCI_ATTR_NUM_DML_ERRORS, pData->error);
-
+       dbgprintf("There were %d errors\n", errs);
        for (i = 0; i < errs; i++) {
+               dbgprintf("Allocating stuff %d\n", i);
                OCIHandleAlloc(pData->environment, &er2, OCI_HTYPE_ERROR,
                               0, NULL);
+               dbgprintf("ParamGet %d\n", i);
                OCIParamGet(pData->error, OCI_HTYPE_ERROR,
                            er2, &er, i);
+               dbgprintf("AttrGet %d\n", i);
                OCIAttrGet(er, OCI_HTYPE_ERROR, &row, 0,
                           OCI_ATTR_DML_ROW_OFFSET, er2);
+               dbgprintf("ErrorGet %d\n", i);
                OCIErrorGet(er, row, NULL, &code, buf, sizeof buf,
                            OCI_HTYPE_ERROR);
                errmsg.LogError(0, NO_ERRCODE, "FAILURE DETAILS: %s", buf);
