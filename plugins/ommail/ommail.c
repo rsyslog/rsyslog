@@ -50,6 +50,7 @@
 #include "cfsysline.h"
 #include "module-template.h"
 #include "errmsg.h"
+#include "datetime.h"
 #include "glbl.h"
 
 MODULE_TYPE_OUTPUT
@@ -59,6 +60,7 @@ MODULE_TYPE_OUTPUT
 DEF_OMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
+DEFobjCurrIf(datetime)
 
 /* we add a little support for multiple recipients. We do this via a
  * singly-linked list, enqueued from the top. -- rgerhards, 2008-08-04
@@ -478,7 +480,7 @@ mkSMTPTimestamp(uchar *pszBuf, size_t lenBuf)
 	static const char szDay[][4] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
 	static const char szMonth[][4] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 
-	time(&tCurr);
+	datetime.GetTime(&tCurr);
 	gmtime_r(&tCurr, &tmCurr);
 	snprintf((char*)pszBuf, lenBuf, "Date: %s, %2d %s %4d %2d:%02d:%02d UT\r\n", szDay[tmCurr.tm_wday], tmCurr.tm_mday,
 		 szMonth[tmCurr.tm_mon], 1900 + tmCurr.tm_year, tmCurr.tm_hour, tmCurr.tm_min, tmCurr.tm_sec);
@@ -669,6 +671,7 @@ CODESTARTmodExit
 	freeConfigVariables();
 
 	/* release what we no longer need */
+	objRelease(datetime, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
 ENDmodExit
@@ -698,6 +701,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	/* tell which objects we need */
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
+	CHKiRet(objUse(datetime, CORE_COMPONENT));
 
 	dbgprintf("ommail version %s initializing\n", VERSION);
 

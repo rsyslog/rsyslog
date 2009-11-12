@@ -706,7 +706,7 @@ DEFFUNC_llExecFunc(flushRptdMsgsActions)
 	 * the beginn of the llExec(). This makes it slightly less correct, but
 	 * in an acceptable way. -- rgerhards, 2008-09-16
 	 */
-	if (pAction->f_prevcount && time(NULL) >= REPEATTIME(pAction)) {
+	if (pAction->f_prevcount && datetime.GetTime(NULL) >= REPEATTIME(pAction)) {
 		DBGPRINTF("flush %s: repeated %d times, %d sec.\n",
 		    module.GetStateName(pAction->pMod), pAction->f_prevcount,
 		    repeatinterval[pAction->f_repeatcount]);
@@ -735,7 +735,7 @@ static void debug_switch()
 	struct tm tp;
 	struct sigaction sigAct;
 
-	time(&tTime);
+	datetime.GetTime(&tTime);
 	localtime_r(&tTime, &tp);
 	if(debugging_on == 0) {
 		debugging_on = 1;

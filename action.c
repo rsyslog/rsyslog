@@ -129,7 +129,7 @@ getActNow(action_t *pThis)
 {
 	assert(pThis != NULL);
 	if(pThis->tActNow == -1) {
-		pThis->tActNow = time(NULL); /* good time call - the only one done */
+		pThis->tActNow = datetime.GetTime(NULL); /* good time call - the only one done */
 		if(pThis->tLastExec > pThis->tActNow) {
 			/* if we are traveling back in time, reset tLastExec */
 			pThis->tLastExec = (time_t) 0;
@@ -254,7 +254,7 @@ rsRetVal actionConstruct(action_t **ppThis)
 	CHKmalloc(pThis = (action_t*) calloc(1, sizeof(action_t)));
 	pThis->iResumeInterval = glbliActionResumeInterval;
 	pThis->iResumeRetryCount = glbliActionResumeRetryCount;
-	pThis->tLastOccur = time(NULL);	/* done once per action on startup only */
+	pThis->tLastOccur = datetime.GetTime(NULL);	/* done once per action on startup only */
 	pthread_mutex_init(&pThis->mutActExec, NULL);
 	SYNC_OBJ_TOOL_INIT(pThis);
 
@@ -470,7 +470,7 @@ static void actionDisable(action_t *pThis)
 static inline void actionSuspend(action_t *pThis, time_t ttNow)
 {
 	if(ttNow == NO_TIME_PROVIDED)
-		time(&ttNow);
+		datetime.GetTime(&ttNow);
 	pThis->ttResumeRtry = ttNow + pThis->iResumeInterval * (pThis->iNbrResRtry / 10 + 1);
 	actionSetState(pThis, ACT_STATE_SUSP);
 	DBGPRINTF("earliest retry=%d\n", (int) pThis->ttResumeRtry);
@@ -538,7 +538,7 @@ static rsRetVal actionTryResume(action_t *pThis)
 		 * is always in the past. So we can not avoid doing a fresh time() call
 		 * here. -- rgerhards, 2009-03-18
 		 */
-		time(&ttNow); /* cache "now" */
+		datetime.GetTime(&ttNow); /* cache "now" */
 		if(ttNow > pThis->ttResumeRtry) {
 			actionSetState(pThis, ACT_STATE_RTRY); /* back to retries */
 		}
@@ -546,7 +546,7 @@ static rsRetVal actionTryResume(action_t *pThis)
 
 	if(pThis->eState == ACT_STATE_RTRY) {
 		if(ttNow == NO_TIME_PROVIDED) /* use cached result if we have it */
-			time(&ttNow);
+			datetime.GetTime(&ttNow);
 		CHKiRet(actionDoRetry(pThis, ttNow));
 	}
 
@@ -1361,7 +1361,7 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStringReques
 	pAction->eState = ACT_STATE_RDY; /* action is enabled */
 
 	if(bSuspended)
-		actionSuspend(pAction, time(NULL)); /* "good" time call, only during init and unavoidable */
+		actionSuspend(pAction, datetime.GetTime(NULL)); /* "good" time call, only during init and unavoidable */
 
 	CHKiRet(actionConstructFinalize(pAction));
 	

@@ -252,7 +252,7 @@ processSocket(thrdInfo_t *pThrd, int fd, struct sockaddr_storage *frominetPrev, 
 				if(glbl.GetOption_DisallowWarning) {
 					time_t tt;
 
-					time(&tt);
+					datetime.GetTime(&tt);
 					if(tt > ttLastDiscard + 60) {
 						ttLastDiscard = tt;
 						errmsg.LogError(0, NO_ERRCODE,

@@ -16,6 +16,7 @@ sleep 4 # one more than the once inerval!
 # and inject another couple of messages
 source $srcdir/diag.sh tcpflood 127.0.0.1 13514 1 10 100
 source $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
+source $srcdir/diag.sh wait-shutdown
 
 # now we need your custom logic to see if the result is equal to the
 # expected result

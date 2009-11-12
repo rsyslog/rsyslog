@@ -48,7 +48,7 @@
  *
  * File begun on 2008-01-04 by RGerhards
  *
- * Copyright 2008 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008, 2009 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -90,6 +90,7 @@
 #include "cfsysline.h"
 #include "unicode-helper.h"
 #include "apc.h"
+#include "datetime.h"
 
 /* static data */
 DEFobjCurrIf(obj) /* we define our own interface, as this is expected by some macros! */
@@ -1330,8 +1331,9 @@ objClassInit(modInfo_t *pModInfo)
 	CHKiRet(objGetObjInterface(&obj)); /* get ourselves ;) */
 
 	/* init classes we use (limit to as few as possible!) */
-	CHKiRet(apcClassInit(pModInfo));
 	CHKiRet(errmsgClassInit(pModInfo));
+	CHKiRet(datetimeClassInit(pModInfo));
+	CHKiRet(apcClassInit(pModInfo));
 	CHKiRet(cfsyslineInit());
 	CHKiRet(varClassInit(pModInfo));
 	CHKiRet(moduleClassInit(pModInfo));

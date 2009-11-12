@@ -127,6 +127,24 @@ static void getCurrTime(struct syslogTime *t, time_t *ttSeconds)
 }
 
 
+/* A fast alternative to getCurrTime() and time() that only obtains
+ * a timestamp like time() does. I was told that gettimeofday(), at
+ * least under Linux, is much faster than time() and I could confirm
+ * this testing. So I created that function as a replacement.
+ * rgerhards, 2009-11-12
+ */
+static time_t
+getTime(time_t *ttSeconds)
+{
+	struct timeval tp;
+
+	if(gettimeofday(&tp, NULL) == -1)
+		return -1;
+
+	if(ttSeconds != NULL)
+		*ttSeconds = tp.tv_sec;
+	return tp.tv_sec;
+}
 
 
 /*******************************************************************
@@ -831,6 +849,7 @@ CODESTARTobjQueryInterface(datetime)
 	 * of course, also affects the "if" above).
 	 */
 	pIf->getCurrTime = getCurrTime;
+	pIf->GetTime = getTime;
 	pIf->ParseTIMESTAMP3339 = ParseTIMESTAMP3339;
 	pIf->ParseTIMESTAMP3164 = ParseTIMESTAMP3164;
 	pIf->formatTimestampToMySQL = formatTimestampToMySQL;

@@ -44,6 +44,7 @@
 #include "stringbuf.h"
 #include "errmsg.h"
 #include "net.h"
+#include "datetime.h"
 #include "nsd_ptcp.h"
 #include "nsdsel_gtls.h"
 #include "nsd_gtls.h"
@@ -61,6 +62,7 @@ DEFobjStaticHelpers
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(net)
+DEFobjCurrIf(datetime)
 DEFobjCurrIf(nsd_ptcp)
 
 static int bGlblSrvrInitDone = 0;	/**< 0 - server global init not yet done, 1 - already done */
@@ -1016,7 +1018,7 @@ gtlsChkPeerCertValidity(nsd_gtls_t *pThis)
 	}
 
 	/* get current time for certificate validation */
-	if(time(&ttNow) == -1)
+	if(datetime.GetTime(&ttNow) == -1)
 		ABORT_FINALIZE(RS_RET_SYS_ERR);
 
 	/* as it looks, we need to validate the expiration dates ourselves...
@@ -1694,6 +1696,7 @@ CODESTARTObjClassExit(nsd_gtls)
 	objRelease(nsd_ptcp, LM_NSD_PTCP_FILENAME);
 	objRelease(net, LM_NET_FILENAME);
 	objRelease(glbl, CORE_COMPONENT);
+	objRelease(datetime, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
 ENDObjClassExit(nsd_gtls)
 
@@ -1705,6 +1708,7 @@ ENDObjClassExit(nsd_gtls)
 BEGINObjClassInit(nsd_gtls, 1, OBJ_IS_LOADABLE_MODULE) /* class, version */
 	/* request objects we use */
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(net, LM_NET_FILENAME));
 	CHKiRet(objUse(nsd_ptcp, LM_NSD_PTCP_FILENAME));

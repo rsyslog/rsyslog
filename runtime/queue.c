@@ -56,6 +56,7 @@
 #include "msg.h"
 #include "atomic.h"
 #include "errmsg.h"
+#include "datetime.h"
 #include "unicode-helper.h"
 #include "msg.h" /* TODO: remove once we remove MsgAddRef() call */
 
@@ -68,6 +69,7 @@ DEFobjStaticHelpers
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(strm)
 DEFobjCurrIf(errmsg)
+DEFobjCurrIf(datetime)
 
 /* forward-definitions */
 static inline rsRetVal doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, void *pUsr);
@@ -1526,7 +1528,7 @@ RateLimiter(qqueue_t *pThis)
 	iDelay = 0;
 	if(pThis->iDeqtWinToHr != 25) { /* 25 means disabled */
 		/* time calls are expensive, so only do them when needed */
-		time(&tCurr);
+		datetime.GetTime(&tCurr);
 		localtime_r(&tCurr, &m);
 		iHrCurr = m.tm_hour;
 
@@ -2327,6 +2329,7 @@ BEGINObjClassInit(qqueue, 1, OBJ_IS_CORE_MODULE)
 	/* request objects we use */
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(strm, CORE_COMPONENT));
+	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 
 	/* now set our own handlers */

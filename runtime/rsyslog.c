@@ -152,8 +152,6 @@ rsrtInit(char **ppErrObj, obj_if_t *pObjIF)
 		CHKiRet(propClassInit(NULL));
 		if(ppErrObj != NULL) *ppErrObj = "glbl";
 		CHKiRet(glblClassInit(NULL));
-		if(ppErrObj != NULL) *ppErrObj = "datetime";
-		CHKiRet(datetimeClassInit(NULL));
 		if(ppErrObj != NULL) *ppErrObj = "msg";
 		CHKiRet(msgClassInit(NULL));
 		if(ppErrObj != NULL) *ppErrObj = "ctok_token";
