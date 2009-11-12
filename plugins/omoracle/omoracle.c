@@ -338,29 +338,43 @@ CODESTARTcreateInstance
 finalize_it:
 ENDcreateInstance
 
+/* Analyses the errors during a batch statement execution, and logs
+ * all the corresponding ORA-MESSAGES, together with some useful
+ * information. */
 static void log_detailed_err(instanceData* pData)
 {
-       int errs, i, row, code;
-       OCIError *er, *er2;
+       DEFiRet;
+       int errs, i, row, code, j;
+       OCIError *er = NULL, *er2 = NULL;
        unsigned char buf[MAX_BUFSIZE];
 
        OCIAttrGet(pData->statement, OCI_HTYPE_STMT, &errs, 0,
                   OCI_ATTR_NUM_DML_ERRORS, pData->error);
-       errmsg.LogError(0, NO_ERRCODE, "%d errors in statement execution\n",
-                       errs);
-       OCIHandleAlloc(pData->environment, &er, OCI_HTYPE_ERROR,
-                      0, NULL);
-       OCIHandleAlloc(pData->environment, &er2, OCI_HTYPE_ERROR,
-                      0, NULL);
+       errmsg.LogError(0, NO_ERRCODE, "OCI: %d errors in execution  of "
+                       "statement: %s", errs, pData->txt_statement);
+
+       CHECKENV(pData->environment,
+                OCIHandleAlloc(pData->environment, &er, OCI_HTYPE_ERROR,
+                               0, NULL));
+       CHECKENV(pData->environment,
+                OCIHandleAlloc(pData->environment, &er2, OCI_HTYPE_ERROR,
+                               0, NULL));
+
        for (i = 0; i < errs; i++) {
                OCIParamGet(pData->error, OCI_HTYPE_ERROR,
                            er2, &er, i);
                OCIAttrGet(er, OCI_HTYPE_ERROR, &row, 0,
                           OCI_ATTR_DML_ROW_OFFSET, er2);
-               OCIErrorGet(er, row, NULL, &code, buf, sizeof buf,
+               errmsg.LogError(0, NO_ERRCODE, "OCI failure in row %d:", row);
+               for (j = 0; j < pData->batch.arguments; j++)
+                       errmsg.LogError(0, NO_ERRCODE, "%s",
+                                       pData->batch.parameters[j][row]);
+               OCIErrorGet(er, 1, NULL, &code, buf, sizeof buf,
                            OCI_HTYPE_ERROR);
                errmsg.LogError(0, NO_ERRCODE, "FAILURE DETAILS: %s", buf);
        }
+
+finalize_it:
        OCIHandleFree(er, OCI_HTYPE_ERROR);
        OCIHandleFree(er2, OCI_HTYPE_ERROR);
 }
