@@ -180,6 +180,9 @@ static int oci_errors(void* handle, ub4 htype, sword status)
 		break;
 	case OCI_INVALID_HANDLE:
 		errmsg.LogError(0, NO_ERRCODE, "OCI INVALID HANDLE\n");
+		/* In this case we may have to trigger a call to
+		 * tryResume(). */
+		return RS_RET_SUSPENDED;
 		break;
 	case OCI_STILL_EXECUTING:
 		errmsg.LogError(0, NO_ERRCODE, "Still executing...\n");
