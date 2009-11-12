@@ -87,7 +87,8 @@ MODULE_TYPE_OUTPUT
 DEF_OMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
 
-/**  */
+/** Structure defining a batch of items to be sent to the database in
+ * the same statement execution. */
 struct oracle_batch
 {
 	/* Batch size */
@@ -162,8 +163,10 @@ static int oci_errors(void* handle, ub4 htype, sword status)
 		return OCI_SUCCESS;
 		break;
 	case OCI_SUCCESS_WITH_INFO:
-		errmsg.LogError(0, NO_ERRCODE, "OCI SUCCESS - With info\n");
-		break;
+		OCIErrorGet(handle, 1, NULL, &errcode, buf, sizeof buf, htype);
+		errmsg.LogError(0, NO_ERRCODE, "OCI SUCCESS - With info: %s",
+				buf);
+		return OCI_SUCCESS;
 	case OCI_NEED_DATA:
 		errmsg.LogError(0, NO_ERRCODE, "OCI NEEDS MORE DATA\n");
 		break;
