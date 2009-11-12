@@ -22,6 +22,8 @@ Version 5.3.5  [DEVEL] (rgerhards), 2009-11-??
   output can be generated only after the process has started, but not right
   from the beginning. This is assumed to be useful for hard-to-find bugs.
   Also improved the doc on the debug system.
+- bugfix: segfault on startup when -q or -Q option was given
+  [imported from v3-stable]
 ---------------------------------------------------------------------------
 Version 5.3.4  [DEVEL] (rgerhards), 2009-11-04
 - added the ability to create custom message parsers
