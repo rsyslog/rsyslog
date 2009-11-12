@@ -47,9 +47,9 @@
     $OmoracleStatement \
         insert into foo(hostname,message)values(:host,:message)
 
-    Also note that identifiers to placeholders are arbitrarry. You
-    need to define the properties on the template in the correct order
-    you want them passed to the statement!
+    Also note that identifiers to placeholders are arbitrary. You need
+    to define the properties on the template in the correct order you
+    want them passed to the statement!
 
     This file is licensed under the terms of the GPL version 3 or, at
     your choice, any later version. Exceptionally (perhaps), you are
