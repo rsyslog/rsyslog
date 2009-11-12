@@ -47,9 +47,9 @@
     $OmoracleStatement \
         insert into foo(hostname,message)values(:host,:message)
 
-    Also note that identifiers to placeholders are arbitrarry. You
-    need to define the properties on the template in the correct order
-    you want them passed to the statement!
+    Also note that identifiers to placeholders are arbitrary. You need
+    to define the properties on the template in the correct order you
+    want them passed to the statement!
 
     This file is licensed under the terms of the GPL version 3 or, at
     your choice, any later version. Exceptionally (perhaps), you are
@@ -87,7 +87,8 @@ MODULE_TYPE_OUTPUT
 DEF_OMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
 
-/**  */
+/** Structure defining a batch of items to be sent to the database in
+ * the same statement execution. */
 struct oracle_batch
 {
 	/* Batch size */
@@ -162,8 +163,10 @@ static int oci_errors(void* handle, ub4 htype, sword status)
 		return OCI_SUCCESS;
 		break;
 	case OCI_SUCCESS_WITH_INFO:
-		errmsg.LogError(0, NO_ERRCODE, "OCI SUCCESS - With info\n");
-		break;
+		OCIErrorGet(handle, 1, NULL, &errcode, buf, sizeof buf, htype);
+		errmsg.LogError(0, NO_ERRCODE, "OCI SUCCESS - With info: %s",
+				buf);
+                return OCI_SUCCESS_WITH_INFO;
 	case OCI_NEED_DATA:
 		errmsg.LogError(0, NO_ERRCODE, "OCI NEEDS MORE DATA\n");
 		break;
@@ -180,6 +183,9 @@ static int oci_errors(void* handle, ub4 htype, sword status)
 		break;
 	case OCI_INVALID_HANDLE:
 		errmsg.LogError(0, NO_ERRCODE, "OCI INVALID HANDLE\n");
+		/* In this case we may have to trigger a call to
+		 * tryResume(). */
+		return RS_RET_SUSPENDED;
 		break;
 	case OCI_STILL_EXECUTING:
 		errmsg.LogError(0, NO_ERRCODE, "Still executing...\n");
@@ -332,6 +338,48 @@ CODESTARTcreateInstance
 finalize_it:
 ENDcreateInstance
 
+/* Analyses the errors during a batch statement execution, and logs
+ * all the corresponding ORA-MESSAGES, together with some useful
+ * information. */
+static void log_detailed_err(instanceData* pData)
+{
+       DEFiRet;
+       int errs, i, row, code, j;
+       OCIError *er = NULL, *er2 = NULL;
+       unsigned char buf[MAX_BUFSIZE];
+
+       OCIAttrGet(pData->statement, OCI_HTYPE_STMT, &errs, 0,
+                  OCI_ATTR_NUM_DML_ERRORS, pData->error);
+       errmsg.LogError(0, NO_ERRCODE, "OCI: %d errors in execution  of "
+                       "statement: %s", errs, pData->txt_statement);
+
+       CHECKENV(pData->environment,
+                OCIHandleAlloc(pData->environment, &er, OCI_HTYPE_ERROR,
+                               0, NULL));
+       CHECKENV(pData->environment,
+                OCIHandleAlloc(pData->environment, &er2, OCI_HTYPE_ERROR,
+                               0, NULL));
+
+       for (i = 0; i < errs; i++) {
+               OCIParamGet(pData->error, OCI_HTYPE_ERROR,
+                           er2, &er, i);
+               OCIAttrGet(er, OCI_HTYPE_ERROR, &row, 0,
+                          OCI_ATTR_DML_ROW_OFFSET, er2);
+               errmsg.LogError(0, NO_ERRCODE, "OCI failure in row %d:", row);
+               for (j = 0; j < pData->batch.arguments; j++)
+                       errmsg.LogError(0, NO_ERRCODE, "%s",
+                                       pData->batch.parameters[j][row]);
+               OCIErrorGet(er, 1, NULL, &code, buf, sizeof buf,
+                           OCI_HTYPE_ERROR);
+               errmsg.LogError(0, NO_ERRCODE, "FAILURE DETAILS: %s", buf);
+       }
+
+finalize_it:
+       OCIHandleFree(er, OCI_HTYPE_ERROR);
+       OCIHandleFree(er2, OCI_HTYPE_ERROR);
+}
+
+
 /* Inserts all stored statements into the database, releasing any
  * allocated memory. */
 static int insert_to_db(instanceData* pData)
@@ -346,6 +394,10 @@ static int insert_to_db(instanceData* pData)
 				OCI_BATCH_ERRORS));
 
 finalize_it:
+        if (iRet == OCI_SUCCESS_WITH_INFO) {
+                log_detailed_err(pData);
+                iRet = RS_RET_OK;
+        }
 	pData->batch.n = 0;
 	OCITransCommit(pData->service, pData->error, 0);
 	dbgprintf ("omoracle insertion to DB %s\n", iRet == RS_RET_OK ?
