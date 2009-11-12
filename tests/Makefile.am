@@ -12,6 +12,8 @@ TESTS = $(TESTRUNS) cfg.sh \
 	sndrcv_gzip.sh \
 	queue-persist.sh \
 	pipeaction.sh
+	execonlyonce.sh \
+	queue-persist.sh 
 
 if ENABLE_OMSTDOUT
 TESTS += omod-if-array.sh \
@@ -133,6 +135,9 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/master.rfctag \
 	   testsuites/nolimittag.conf \
 	   testsuites/master.nolimittag \
+	   execonlyonce.sh \
+	   testsuites/execonlyonce.conf \
+	   testsuites/execonlyonce.data \
 	   DiagTalker.java \
 	   cfg.sh
 
