@@ -3,6 +3,11 @@ Version 5.3.5  [DEVEL] (rgerhards), 2009-11-??
 - some improvement of omfile performance with dynafiles
   saved costly time() calls by employing a logical clock, which is 
   sufficient for the use case
+- bugfix: omudpspoof miscalculated source and destination ports
+  while this was probably not noticed for source ports, it resulted in
+  almost all destination ports being wrong, except for the default port
+  of 514, which by virtue of its binary representation was calculated 
+  correct (and probably thus the bug not earlier detected).
 - bugfixes imported from earlier releases
   * bugfix: named pipes did no longer work (they always got an open error)
     this was a regression from the omfile rewrite in 4.5.0

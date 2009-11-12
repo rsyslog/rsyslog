@@ -181,7 +181,8 @@ ENDdbgPrintInstInfo
 /* Send a message via UDP
  * rgehards, 2007-12-20
  */
-static rsRetVal UDPSend(instanceData *pData, uchar *pszSourcename, char *msg, size_t len)
+static inline rsRetVal
+UDPSend(instanceData *pData, uchar *pszSourcename, char *msg, size_t len)
 {
 	struct addrinfo *r;
 	int lsent = 0;
@@ -208,9 +209,10 @@ static rsRetVal UDPSend(instanceData *pData, uchar *pszSourcename, char *msg, si
 	for (r = pData->f_addr; r; r = r->ai_next) {
 		tempaddr = (struct sockaddr_in *)r->ai_addr;
 		libnet_clear_packet(libnet_handle);
+		/* note: libnet does need ports in host order NOT in network byte order! -- rgerhards, 2009-11-12 */
 		udp = libnet_build_udp(
-			pData->sourcePort,	/* source port */
-			tempaddr->sin_port,	/* destination port */
+			ntohs(pData->sourcePort),/* source port */
+			ntohs(tempaddr->sin_port),/* destination port */
 			LIBNET_UDP_H + len,	/* packet length */
 			0,			/* checksum */
 			(u_char*)msg,		/* payload */
