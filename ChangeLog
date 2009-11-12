@@ -2,6 +2,8 @@
 Version 5.2.1  [v5-stable] (rgerhards), 2009-11-02
 - bugfix [imported from 4.4.3]: $ActionExecOnlyOnceEveryInterval did
   not work.
+- bugfix: segfault on startup when -q or -Q option was given
+  [imported from v3-stable]
 ---------------------------------------------------------------------------
 Version 5.2.0  [v5-stable] (rgerhards), 2009-11-02
 This is a re-release of version 5.1.6 as stable after we did not get any bug 
