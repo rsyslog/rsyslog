@@ -15,6 +15,8 @@ Version 5.3.5  [DEVEL] (rgerhards), 2009-11-??
     that could result in tests reporting success when they actually failed
 - improved testbench: added tests for UDP forwarding and omudpspoof
 - doc bugfix: omudpspoof had wrong config command names ("om" missing)
+- bugfix [imported from 4.4.3]: $ActionExecOnlyOnceEveryInterval did
+  not work.
 - [inport v4] improved testbench, contains now tcp and gzip test cases
 - [import v4] added a so-called "On Demand Debug" mode, in which debug
   output can be generated only after the process has started, but not right
@@ -264,6 +266,8 @@ Version 4.5.7  [v4-beta] (rgerhards), 2009-11-??
   be generated only after the process has started, but not right from
   the beginning. This is assumed to be useful for hard-to-find bugs.
   Also improved the doc on the debug system.
+- bugfix [imported from 4.4.3]: $ActionExecOnlyOnceEveryInterval did
+  not work.
 ---------------------------------------------------------------------------
 Version 4.5.6  [v4-beta] (rgerhards), 2009-11-05
 - bugfix: named pipes did no longer work (they always got an open error)
@@ -426,6 +430,10 @@ Version 4.5.0  [DEVEL] (rgerhards), 2009-07-02
   an abort
 ---------------------------------------------------------------------------
 Version 4.4.3  [v4-stable] (rgerhards), 2009-10-??
+- bugfix: $ActionExecOnlyOnceEveryInterval did not work.
+  This was a regression from the time() optimizations done in v4.
+  Bug tracker: http://bugzilla.adiscon.com/show_bug.cgi?id=143
+  Thanks to Klaus Tachtler for reporting this bug.
 - bugfix: potential hang condition on queue shutdown
   [imported from v3-stable]
 ---------------------------------------------------------------------------

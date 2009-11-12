@@ -18,7 +18,9 @@ TESTS = $(TESTRUNS) cfg.sh \
 	sndrcv_udp.sh \
 	sndrcv_udp_nonstdpt.sh \
 	queue-persist.sh \
-	pipeaction.sh
+	pipeaction.sh \
+	execonlyonce.sh \
+	queue-persist.sh 
 
 if ENABLE_OMUDPSPOOF
 TESTS += sndrcv_omudpspoof.sh \
@@ -188,6 +190,9 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   badqi.sh \
 	   testsuites/badqi.conf \
 	   bad_qi/dbq.qi \
+	   execonlyonce.sh \
+	   testsuites/execonlyonce.conf \
+	   testsuites/execonlyonce.data \
 	   DiagTalker.java \
 	   cfg.sh
 
