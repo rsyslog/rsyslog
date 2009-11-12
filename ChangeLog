@@ -6,6 +6,8 @@ Version 4.4.3  [v4-stable] (rgerhards), 2009-10-??
   Thanks to Klaus Tachtler for reporting this bug.
 - bugfix: potential hang condition on queue shutdown
   [imported from v3-stable]
+- bugfix: segfault on startup when -q or -Q option was given
+  [imported from v3-stable]
 ---------------------------------------------------------------------------
 Version 4.4.2  [v4-stable] (rgerhards), 2009-10-09
 - bugfix: invalid handling of zero-sized messages, could lead to mis-
