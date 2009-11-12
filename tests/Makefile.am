@@ -15,8 +15,15 @@ TESTS = $(TESTRUNS) cfg.sh \
 	rsf_getenv.sh \
 	sndrcv.sh \
 	sndrcv_gzip.sh \
+	sndrcv_udp.sh \
+	sndrcv_udp_nonstdpt.sh \
 	queue-persist.sh \
 	pipeaction.sh
+
+if ENABLE_OMUDPSPOOF
+TESTS += sndrcv_omudpspoof.sh \
+	 sndrcv_omudpspoof_nonstdpt.sh
+endif
 
 if ENABLE_OMSTDOUT
 TESTS += omod-if-array.sh \
@@ -150,6 +157,18 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   sndrcv.sh \
 	   testsuites/sndrcv_sender.conf \
 	   testsuites/sndrcv_rcvr.conf \
+	   sndrcv_udp.sh \
+	   testsuites/sndrcv_udp_sender.conf \
+	   testsuites/sndrcv_udp_rcvr.conf \
+	   sndrcv_udp_nonstdpt.sh \
+	   testsuites/sndrcv_udp_nonstdpt_sender.conf \
+	   testsuites/sndrcv_udp_nonstdpt_rcvr.conf \
+	   sndrcv_omudpspoof.sh \
+	   testsuites/sndrcv_omudpspoof_sender.conf \
+	   testsuites/sndrcv_omudpspoof_rcvr.conf \
+	   sndrcv_omudpspoof_nonstdpt.sh \
+	   testsuites/sndrcv_omudpspoof_nonstdpt_sender.conf \
+	   testsuites/sndrcv_omudpspoof_nonstdpt_rcvr.conf \
 	   sndrcv_gzip.sh \
 	   testsuites/sndrcv_gzip_sender.conf \
 	   testsuites/sndrcv_gzip_rcvr.conf \
