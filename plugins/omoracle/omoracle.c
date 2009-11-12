@@ -166,7 +166,7 @@ static int oci_errors(void* handle, ub4 htype, sword status)
 		OCIErrorGet(handle, 1, NULL, &errcode, buf, sizeof buf, htype);
 		errmsg.LogError(0, NO_ERRCODE, "OCI SUCCESS - With info: %s",
 				buf);
-		return OCI_SUCCESS;
+                return OCI_SUCCESS_WITH_INFO;
 	case OCI_NEED_DATA:
 		errmsg.LogError(0, NO_ERRCODE, "OCI NEEDS MORE DATA\n");
 		break;
@@ -338,6 +338,30 @@ CODESTARTcreateInstance
 finalize_it:
 ENDcreateInstance
 
+static void log_detailed_err(instanceData* pData)
+{
+       int errs, i, row, code;
+       OCIError *er, *er2;
+       unsigned char buf[MAX_BUFSIZE];
+
+       OCIAttrGet(pData->statement, OCI_HTYPE_STMT, &errs, 0,
+                  OCI_ATTR_NUM_DML_ERRORS, pData->error);
+
+       for (i = 0; i < errs; i++) {
+               OCIHandleAlloc(pData->environment, &er2, OCI_HTYPE_ERROR,
+                              0, NULL);
+               OCIParamGet(pData->error, OCI_HTYPE_ERROR,
+                           er2, &er, i);
+               OCIAttrGet(er, OCI_HTYPE_ERROR, &row, 0,
+                          OCI_ATTR_DML_ROW_OFFSET, er2);
+               OCIErrorGet(er, row, NULL, &code, buf, sizeof buf,
+                           OCI_HTYPE_ERROR);
+               errmsg.LogError(0, NO_ERRCODE, "FAILURE DETAILS: %s", buf);
+               OCIHandleFree(er2, OCI_HTYPE_ERROR);
+       }
+}
+
+
 /* Inserts all stored statements into the database, releasing any
  * allocated memory. */
 static int insert_to_db(instanceData* pData)
@@ -352,6 +376,10 @@ static int insert_to_db(instanceData* pData)
 				OCI_BATCH_ERRORS));
 
 finalize_it:
+        if (iRet == OCI_SUCCESS_WITH_INFO) {
+                log_detailed_err(pData);
+                iRet = RS_RET_OK;
+        }
 	pData->batch.n = 0;
 	OCITransCommit(pData->service, pData->error, 0);
 	dbgprintf ("omoracle insertion to DB %s\n", iRet == RS_RET_OK ?
