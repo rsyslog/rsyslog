@@ -92,7 +92,7 @@ html_files = \
 	rsconf1_resetconfigvariables.html \
 	rsconf1_rulesetcreatemainqueue.html \
 	rsconf1_umask.html \
-	rulesetparser.html \
+	rsconf1_rulesetparser.html \
 	v3compatibility.html \
 	v4compatibility.html \
 	v5compatibility.html \

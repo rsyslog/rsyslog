@@ -35,6 +35,7 @@ source $srcdir/diag.sh wait-startup 2
 # now inject the messages into instance 2. It will connect to instance 1,
 # and that instance will record the data.
 source $srcdir/diag.sh tcpflood 127.0.0.1 13514 1 $2 1
+sleep 2 # ensure all messages reach the input module
 # shut down sender when everything is sent, receiver continues to run concurrently
 # may be needed by TLS (once we do it): sleep 60
 source $srcdir/diag.sh shutdown-when-empty 2
