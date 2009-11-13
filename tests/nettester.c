@@ -62,6 +62,7 @@ static char *testSuite = NULL; /* name of current test suite */
 static int iPort = 12514; /* port which shall be used for sending data */
 static char* pszCustomConf = NULL;	/* custom config file, use -c conf to specify */
 static int verbose = 0;	/* verbose output? -v option */
+static int IPv4Only = 0;	/* use only IPv4 in rsyslogd call? */
 
 /* these two are quick hacks... */
 int iFailed = 0;
@@ -221,7 +222,7 @@ int openPipe(char *configFile, pid_t *pid, int *pfd)
 	int pipefd[2];
 	pid_t cpid;
 	char *newargv[] = {"../tools/rsyslogd", "dummy", "-c4", "-u2", "-n", "-irsyslog.pid",
-			   "-M../runtime/.libs:../.libs", NULL };
+			   "-M../runtime/.libs:../.libs", NULL, NULL};
 	char confFile[1024];
 	char *newenviron[] = { NULL };
 	/* debug aide...
@@ -232,6 +233,9 @@ int openPipe(char *configFile, pid_t *pid, int *pfd)
 	sprintf(confFile, "-f%s/testsuites/%s.conf", srcdir,
 		(pszCustomConf == NULL) ? configFile : pszCustomConf);
 	newargv[1] = confFile;
+
+	if(IPv4Only)
+		newargv[(sizeof(newargv)/sizeof(char*)) - 2] = "-4";
 
 	if (pipe(pipefd) == -1) {
 		perror("pipe");
@@ -316,7 +320,7 @@ processTestFile(int fd, char *pszFileName)
 		/* pull response from server and then check if it meets our expectation */
 		readLine(fd, buf);
 		if(strlen(buf) == 0) {
-			printf("something went wrong - read a zero-length string from rsyslogd");
+			printf("something went wrong - read a zero-length string from rsyslogd\n");
 			exit(1);
 		}
 		if(strcmp(expected, buf)) {
@@ -326,10 +330,13 @@ processTestFile(int fd, char *pszFileName)
 				ret = 1;
 		}
 
+		/* clean up after the try */
+		free(testdata);
+		testdata = NULL;
+		free(expected);
+		expected = NULL;
 	}
 
-	free(testdata);
-	free(expected);
 	fclose(fp);
 	return(ret);
 }
@@ -423,8 +430,11 @@ int main(int argc, char *argv[])
 	char buf[4096];
 	char testcases[4096];
 
-	while((opt = getopt(argc, argv, "c:i:p:t:v")) != EOF) {
+	while((opt = getopt(argc, argv, "4c:i:p:t:v")) != EOF) {
 		switch((char)opt) {
+                case '4':
+			IPv4Only = 1;
+			break;
                 case 'c':
 			pszCustomConf = optarg;
 			break;

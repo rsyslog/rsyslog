@@ -72,6 +72,7 @@
 #include "errmsg.h"
 #include "dirty.h"
 #include "unicode-helper.h"
+#include "debug.h"
 
 
 #include <libnet.h>
@@ -180,7 +181,8 @@ ENDdbgPrintInstInfo
 /* Send a message via UDP
  * rgehards, 2007-12-20
  */
-static rsRetVal UDPSend(instanceData *pData, uchar *pszSourcename, char *msg, size_t len)
+static inline rsRetVal
+UDPSend(instanceData *pData, uchar *pszSourcename, char *msg, size_t len)
 {
 	struct addrinfo *r;
 	int lsent = 0;
@@ -207,9 +209,10 @@ static rsRetVal UDPSend(instanceData *pData, uchar *pszSourcename, char *msg, si
 	for (r = pData->f_addr; r; r = r->ai_next) {
 		tempaddr = (struct sockaddr_in *)r->ai_addr;
 		libnet_clear_packet(libnet_handle);
+		/* note: libnet does need ports in host order NOT in network byte order! -- rgerhards, 2009-11-12 */
 		udp = libnet_build_udp(
-			pData->sourcePort,	/* source port */
-			tempaddr->sin_port,	/* destination port */
+			ntohs(pData->sourcePort),/* source port */
+			ntohs(tempaddr->sin_port),/* destination port */
 			LIBNET_UDP_H + len,	/* packet length */
 			0,			/* checksum */
 			(u_char*)msg,		/* payload */
@@ -339,13 +342,13 @@ CODESTARTdoAction
 	 * hard-coded but this may be changed to a config parameter.
 	 * rgerhards, 2006-11-30
 	 */
-	if(pData->compressionLevel && (l > MIN_SIZE_FOR_COMPRESS)) {
+	if(pData->compressionLevel && (l > CONF_MIN_SIZE_FOR_COMPRESS)) {
 		Bytef *out;
 		uLongf destLen = iMaxLine + iMaxLine/100 +12; /* recommended value from zlib doc */
 		uLong srcLen = l;
 		int ret;
 		/* TODO: optimize malloc sequence? -- rgerhards, 2008-09-02 */
-		CHKmalloc(out = (Bytef*) malloc(destLen));
+		CHKmalloc(out = (Bytef*) MALLOC(destLen));
 		out[0] = 'z';
 		out[1] = '\0';
 		ret = compress2((Bytef*) out+1, &destLen, (Bytef*) psz,

@@ -1,7 +1,8 @@
 # Test for fixedArray queue mode
 # added 2009-05-20 by rgerhards
 # This file is part of the rsyslog project, released  under GPLv3
-echo testing queue fixedArray queue mode
+echo ===============================================================================
+echo \[arrayqueue.sh\]: testing queue fixedArray queue mode
 source $srcdir/diag.sh init
 source $srcdir/diag.sh startup arrayqueue.conf
 

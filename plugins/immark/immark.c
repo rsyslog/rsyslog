@@ -42,6 +42,8 @@
 #include "module-template.h"
 #include "errmsg.h"
 #include "msg.h"
+#include "srUtils.h"
+#include "glbl.h"
 
 MODULE_TYPE_INPUT
 
@@ -50,7 +52,15 @@ MODULE_TYPE_INPUT
 
 /* Module static data */
 DEF_IMOD_STATIC_DATA
+DEFobjCurrIf(glbl)
 static int iMarkMessagePeriod = DEFAULT_MARK_PERIOD;
+
+BEGINisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature
+	if(eFeat == sFEATURENonCancelInputTermination)
+		iRet = RS_RET_OK;
+ENDisCompatibleWithFeature
+
 
 /* This function is called to gather input. It must terminate only
  * a) on failure (iRet set accordingly)
@@ -71,16 +81,13 @@ CODESTARTrunInput
 	 * right into the sleep below.
 	 */
 	while(1) {
-		/* we do not need to handle the RS_RET_TERMINATE_NOW case any
-	   	 * special because we just need to terminate. This may be different
-	   	 * if a cleanup is needed. But for now, we can just use CHKiRet().
-	   	 * rgerhards, 2007-12-17
-	   	 */
-		CHKiRet(thrdSleep(pThrd, iMarkMessagePeriod, 0)); /* seconds, micro seconds */
+		srSleep(iMarkMessagePeriod, 0); /* seconds, micro seconds */
+
+		if(glbl.GetGlobalInputTermState() == 1)
+			break; /* terminate input! */
+
 		logmsgInternal(NO_ERRCODE, LOG_INFO, (uchar*)"-- MARK --", MARK);
 	}
-finalize_it:
-	return iRet;
 ENDrunInput
 
 
@@ -106,6 +113,7 @@ ENDmodExit
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_IMOD_QUERIES
+CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
 ENDqueryEtryPt
 
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
@@ -119,9 +127,9 @@ BEGINmodInit()
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
+	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"markmessageperiod", 0, eCmdHdlrInt, NULL, &iMarkMessagePeriod, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
-/*
- * vi:set ai:
+/* vi:set ai:
  */

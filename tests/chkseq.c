@@ -40,13 +40,14 @@ int main(int argc, char *argv[])
 	int val;
 	int i;
 	int ret = 0;
+	int verbose = 0;
 	int dupsPermitted = 0;
 	int start = 0, end = 0;
 	int opt;
 	int nDups = 0;
 	char *file = NULL;
 
-	while((opt = getopt(argc, argv, "e:f:ds:")) != EOF) {
+	while((opt = getopt(argc, argv, "e:f:ds:v")) != EOF) {
 		switch((char)opt) {
 		case 'f':
 			file = optarg;
@@ -59,6 +60,9 @@ int main(int argc, char *argv[])
 			break;
                 case 's':
 			start = atoi(optarg);
+			break;
+                case 'v':
+			++verbose;
 			break;
 		default:printf("Invalid call of chkseq\n");
 			printf("Usage: chkseq file -sstart -eend -d\n");
@@ -74,6 +78,10 @@ int main(int argc, char *argv[])
 	if(start > end) {
 		printf("start must be less than or equal end!\n");
 		exit(1);
+	}
+
+	if(verbose) {
+		printf("chkseq: start %d, end %d\n", start, end);
 	}
 
 	/* read file */

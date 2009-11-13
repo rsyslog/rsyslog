@@ -80,6 +80,7 @@
 #include "prop.h"
 #include "rule.h"
 #include "ruleset.h"
+#include "parser.h"
 
 /* forward definitions */
 static rsRetVal dfltErrLogger(int, uchar *errMsg);
@@ -151,8 +152,6 @@ rsrtInit(char **ppErrObj, obj_if_t *pObjIF)
 		CHKiRet(propClassInit(NULL));
 		if(ppErrObj != NULL) *ppErrObj = "glbl";
 		CHKiRet(glblClassInit(NULL));
-		if(ppErrObj != NULL) *ppErrObj = "datetime";
-		CHKiRet(datetimeClassInit(NULL));
 		if(ppErrObj != NULL) *ppErrObj = "msg";
 		CHKiRet(msgClassInit(NULL));
 		if(ppErrObj != NULL) *ppErrObj = "ctok_token";
@@ -183,6 +182,8 @@ rsrtInit(char **ppErrObj, obj_if_t *pObjIF)
 		CHKiRet(qqueueClassInit(NULL));
 		if(ppErrObj != NULL) *ppErrObj = "conf";
 		CHKiRet(confClassInit(NULL));
+		if(ppErrObj != NULL) *ppErrObj = "parser";
+		CHKiRet(parserClassInit(NULL));
 
 		/* dummy "classes" */
 		if(ppErrObj != NULL) *ppErrObj = "str";

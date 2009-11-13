@@ -40,22 +40,24 @@
 
 #include "rsyslog.h"
 #include "obj.h"
+#include "cfsysline.h"
 #include "msg.h"
 #include "ruleset.h"
 #include "rule.h"
 #include "errmsg.h"
+#include "parser.h"
 #include "unicode-helper.h"
-
-static rsRetVal debugPrintAll(void); // TODO: remove!
+#include "dirty.h" /* for main ruleset queue creation */
 
 /* static data */
 DEFobjStaticHelpers
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(rule)
+DEFobjCurrIf(parser)
 
 linkedList_t llRulesets; /* this is NOT a pointer - no typo here ;) */
 ruleset_t *pCurrRuleset = NULL; /* currently "active" ruleset */
-ruleset_t *pDfltRuleset = NULL; /* currentl default ruleset, e.g. for binding to actions which have no other */
+ruleset_t *pDfltRuleset = NULL; /* current default ruleset, e.g. for binding to actions which have no other */
 
 /* ---------- linked-list key handling functions ---------- */
 
@@ -141,6 +143,7 @@ DEFFUNC_llExecFunc(processMsgDoRules)
 	rsRetVal iRet;
 	ISOBJ_TYPE_assert(pData, rule);
 	iRet = rule.ProcessMsg((rule_t*) pData, (msg_t*) pParam);
+dbgprintf("ruleset: get iRet %d from rule.ProcessMsg()\n", iRet);
 	return iRet;
 }
 
@@ -161,12 +164,21 @@ processMsg(msg_t *pMsg)
 	CHKiRet(llExecFunc(&pThis->llRules, processMsgDoRules, pMsg));
 
 finalize_it:
-
-	//if(iRet == RS_RET_DISCARDMSG)
-		//iRet = RS_RET_OK;
-
+dbgprintf("ruleset.ProcessMsg() returns %d\n", iRet);
 	RETiRet;
 }
+
+
+/* return the ruleset-assigned parser list. NULL means use the default
+ * parser list.
+ * rgerhards, 2009-11-04
+ */
+static parserList_t*
+GetParserList(msg_t *pMsg)
+{
+	return (pMsg->pRuleset == NULL) ? pDfltRuleset->pParserLst : pMsg->pRuleset->pParserLst;
+}
+
 
 /* Add a new rule to the end of the current rule set. We do a number
  * of checks and ignore the rule if it does not pass them.
@@ -214,6 +226,19 @@ static ruleset_t*
 GetCurrent(void)
 {
 	return pCurrRuleset;
+}
+
+
+/* get main queue associated with ruleset. If no ruleset-specifc main queue
+ * is set, the primary main message queue is returned.
+ * We use a non-standard calling interface, as nothing can go wrong and it
+ * is really much more natural to return the pointer directly.
+ */
+static qqueue_t*
+GetRulesetQueue(ruleset_t *pThis)
+{
+	ISOBJ_TYPE_assert(pThis, ruleset);
+	return (pThis->pQueue == NULL) ? pMsgQueue : pThis->pQueue;
 }
 
 
@@ -322,6 +347,12 @@ finalize_it:
 BEGINobjDestruct(ruleset) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(ruleset)
 	dbgprintf("destructing ruleset %p, name %p\n", pThis, pThis->pszName);
+	if(pThis->pQueue != NULL) {
+		qqueueDestruct(&pThis->pQueue);
+	}
+	if(pThis->pParserLst != NULL) {
+		parser.DestructParserList(&pThis->pParserLst);
+	}
 	llDestroy(&pThis->llRules);
 	free(pThis->pszName);
 ENDobjDestruct(ruleset)
@@ -387,6 +418,81 @@ debugPrintAll(void)
 }
 
 
+/* Create a ruleset-specific "main" queue for this ruleset. If one is already
+ * defined, an error message is emitted but nothing else is done.
+ * Note: we use the main message queue parameters for queue creation and access
+ * syslogd.c directly to obtain these. This is far from being perfect, but
+ * considered acceptable for the time being.
+ * rgerhards, 2009-10-27
+ */
+static rsRetVal
+rulesetCreateQueue(void __attribute__((unused)) *pVal, int *pNewVal)
+{
+	DEFiRet;
+
+	if(pCurrRuleset == NULL) {
+		errmsg.LogError(0, RS_RET_NO_CURR_RULESET, "error: currently no specific ruleset specified, thus a "
+				"queue can not be added to it");
+		ABORT_FINALIZE(RS_RET_NO_CURR_RULESET);
+	}
+
+	if(pCurrRuleset->pQueue != NULL) {
+		errmsg.LogError(0, RS_RET_RULES_QUEUE_EXISTS, "error: ruleset already has a main queue, can not "
+				"add another one");
+		ABORT_FINALIZE(RS_RET_RULES_QUEUE_EXISTS);
+	}
+
+	if(pNewVal == 0)
+		FINALIZE; /* if it is turned off, we do not need to change anything ;) */
+
+	dbgprintf("adding a ruleset-specific \"main\" queue");
+	CHKiRet(createMainQueue(&pCurrRuleset->pQueue, UCHAR_CONSTANT("ruleset")));
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* Add a ruleset specific parser to the ruleset. Note that adding the first
+ * parser automatically disables the default parsers. If they are needed as well,
+ * the must be added via explicit config directives.
+ * Note: this is the only spot in the code that requires the parser object. In order
+ * to solve some class init bootstrap sequence problems, we get the object handle here
+ * instead of during module initialization. Note that objUse() is capable of being 
+ * called multiple times.
+ * rgerhards, 2009-11-04
+ */
+static rsRetVal
+rulesetAddParser(void __attribute__((unused)) *pVal, uchar *pName)
+{
+	parser_t *pParser;
+	DEFiRet;
+
+	assert(pCurrRuleset != NULL); 
+
+	CHKiRet(objUse(parser, CORE_COMPONENT));
+	iRet = parser.FindParser(&pParser, pName);
+	if(iRet == RS_RET_PARSER_NOT_FOUND) {
+		errmsg.LogError(0, RS_RET_PARSER_NOT_FOUND, "error: parser '%s' unknown at this time "
+			  	"(maybe defined too late in rsyslog.conf?)", pName);
+		ABORT_FINALIZE(RS_RET_NO_CURR_RULESET);
+	} else if(iRet != RS_RET_OK) {
+		errmsg.LogError(0, iRet, "error trying to find parser '%s'\n", pName);
+		FINALIZE;
+	}
+
+	CHKiRet(parser.AddParserToList(&pCurrRuleset->pParserLst, pParser));
+
+	dbgprintf("added parser '%s' to ruleset '%s'\n", pName, pCurrRuleset->pszName);
+RUNLOG_VAR("%p", pCurrRuleset->pParserLst);
+
+finalize_it:
+	d_free(pName); /* no longer needed */
+
+	RETiRet;
+}
+
+
 /* queryInterface function
  * rgerhards, 2008-02-21
  */
@@ -416,6 +522,8 @@ CODESTARTobjQueryInterface(ruleset)
 	pIf->GetRuleset = GetRuleset;
 	pIf->SetDefaultRuleset = SetDefaultRuleset;
 	pIf->SetCurrRuleset = SetCurrRuleset;
+	pIf->GetRulesetQueue = GetRulesetQueue;
+	pIf->GetParserList = GetParserList;
 finalize_it:
 ENDobjQueryInterface(ruleset)
 
@@ -427,6 +535,7 @@ BEGINObjClassExit(ruleset, OBJ_IS_CORE_MODULE) /* class, version */
 	llDestroy(&llRulesets);
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(rule, CORE_COMPONENT);
+	objRelease(parser, CORE_COMPONENT);
 ENDObjClassExit(ruleset)
 
 
@@ -445,6 +554,10 @@ BEGINObjClassInit(ruleset, 1, OBJ_IS_CORE_MODULE) /* class, version */
 
 	/* prepare global data */
 	CHKiRet(llInit(&llRulesets, rulesetDestructForLinkedList, keyDestruct, strcasecmp));
+
+	/* config file handlers */
+	CHKiRet(regCfSysLineHdlr((uchar *)"rulesetparser", 0, eCmdHdlrGetWord, rulesetAddParser, NULL, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"rulesetcreatemainqueue", 0, eCmdHdlrBinary, rulesetCreateQueue, NULL, NULL));
 ENDObjClassInit(ruleset)
 
 /* vi:set ai:

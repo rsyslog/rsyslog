@@ -176,6 +176,19 @@ $template, MalfromedMsgFormater,"%timegenerated% %fromhost% %rawmsg:::drop-last-
 <p>This will make your log much nicer, but not look perfect. Experiment a bit
 with the available properties and replacer extraction options to fine-tune it
 to your needs.
+<h2>The Ultimate Solution...</h2>
+<p>Is available with rsyslog 5.3.4 and above. Here, we can define so-called custom
+parsers. These are plugin modules, written in C and adapted to a specific message format
+need. The big plus of custom parsers is that they offer excellent performance and unlimited
+possibilities - far better than any work-around could do. Custom parsers can be
+<a href="rsconf1_rulesetparser.html">bound to specific rule sets</a>
+(and thus listening) ports with relative ease. The only con is that they must be written.
+However, if you are lucky, a parser for your device may already exist. If not, you can
+opt to write it yourself, what is not too hard if you know some C. Alternatively,
+Adiscon can program one for you as part of the
+<a href="http://www.rsyslog.com/professional-services">rsyslog professional services offering</a>.
+In any case, you should seriously consider custom parsers as an alternative if you can not 
+reconfigure your device to send decent message format.
 <h2>Wrap-Up</h2>
 <p>Syslog message format is not sufficiently standardized. There exists a weak
 "standard" format, which is used by a good number of implementations. However, there
@@ -183,14 +196,15 @@ exist many others, including mainstream vendor implementations, which have a
 (sometimes horribly) different format. Rsyslog tries to deal with anomalies but
 can not guess right in all instances. If possible, the sender should be configured
 to submit well-formed messages. If that is not possible, you can work around these
-issues with rsyslog's property replacer and template system.
+issues with rsyslog's property replacer and template system. Or you can use a suitable
+message parser or write one for your needs.
 <p>I hope this is a useful guide. You may also have a look at the 
 <a href="troubleshoot.html">rsyslog troubleshooting guide</a> for further help and places where
 to ask questions.
 <p>[<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
 <p><font size="2">This documentation is part of the
 <a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
-Copyright &copy; 2008 by <a href="http://www.gerhards.net/rainer">Rainer
+Copyright &copy; 2009 by <a href="http://www.gerhards.net/rainer">Rainer
 Gerhards</a> and <a href="http://www.adiscon.com/">Adiscon</a>.
 Released under the GNU GPL version 3 or higher.</font></p>
 </body></html>

@@ -56,6 +56,7 @@ DEFobjCurrIf(prop)
  */
 static uchar *pszWorkDir = NULL;
 static int bOptimizeUniProc = 1;	/* enable uniprocessor optimizations */
+static int bParseHOSTNAMEandTAG = 1;	/* parser modification (based on startup params!) */
 static int bPreserveFQDN = 0;		/* should FQDNs always be preserved? */
 static int iMaxLine = 2048;		/* maximum length of a syslog message */
 static int iDefPFFamily = PF_UNSPEC;     /* protocol family (IPv4, IPv6 or both) */
@@ -94,6 +95,7 @@ static dataType Get##nameFunc(void) \
 	return(nameVar); \
 }
 
+SIMP_PROP(ParseHOSTNAMEandTAG, bParseHOSTNAMEandTAG, int)
 SIMP_PROP(OptimizeUniProc, bOptimizeUniProc, int)
 SIMP_PROP(PreserveFQDN, bPreserveFQDN, int)
 SIMP_PROP(MaxLine, iMaxLine, int)
@@ -183,6 +185,7 @@ finalize_it:
 	RETiRet;
 }
 
+
 /* return our local hostname as a string property
  */
 static prop_t*
@@ -266,6 +269,7 @@ CODESTARTobjQueryInterface(glbl)
 	pIf->Set##name = Set##name;
 	SIMP_PROP(MaxLine);
 	SIMP_PROP(OptimizeUniProc);
+	SIMP_PROP(ParseHOSTNAMEandTAG);
 	SIMP_PROP(PreserveFQDN);
 	SIMP_PROP(DefPFFamily);
 	SIMP_PROP(DropMalPTRMsgs);

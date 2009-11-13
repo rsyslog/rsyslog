@@ -38,6 +38,7 @@
 #include "stringbuf.h"
 #include "outchannel.h"
 #include "dirty.h"
+#include "debug.h"
 
 static struct outchannel *ochRoot = NULL;	/* the root of the outchannel list */
 static struct outchannel *ochLast = NULL;	/* points to the last element of the outchannel list */
@@ -212,7 +213,7 @@ struct outchannel *ochAddLine(char* pName, uchar** ppRestOfConfLine)
 		return NULL;
 	
 	pOch->iLenName = strlen(pName);
-	pOch->pszName = (char*) malloc(sizeof(char) * (pOch->iLenName + 1));
+	pOch->pszName = (char*) MALLOC(sizeof(char) * (pOch->iLenName + 1));
 	if(pOch->pszName == NULL) {
 		dbgprintf("ochAddLine could not alloc memory for outchannel name!");
 		pOch->iLenName = 0;

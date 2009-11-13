@@ -2,7 +2,7 @@
 # to carry out multiple tests with different queue modes
 # added 2009-05-27 by Rgerhards
 # This file is part of the rsyslog project, released  under GPLv3
-echo TEST: queue-persist.sh
+echo \[queue-persist.sh\]:
 source $srcdir/queue-persist-drvr.sh LinkedList
 source $srcdir/queue-persist-drvr.sh FixedArray
 # the disk test should not fail, however, the config is extreme and using

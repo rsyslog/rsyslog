@@ -222,7 +222,7 @@ static rsRetVal omsnmp_sendsnmp(instanceData *pData, uchar *psz)
 			
 			ABORT_FINALIZE(RS_RET_DISABLE_ACTION);
 		}
-		pdu->enterprise = (oid *) malloc(enterpriseoidlen * sizeof(oid));
+		pdu->enterprise = (oid *) MALLOC(enterpriseoidlen * sizeof(oid));
 		memcpy(pdu->enterprise, enterpriseoid, enterpriseoidlen * sizeof(oid));
 		pdu->enterprise_length = enterpriseoidlen;
 

@@ -1,8 +1,6 @@
 /* omfile.c
  * This is the implementation of the build-in file output module.
  *
- * Handles: eTypeCONSOLE, eTypeTTY, eTypeFILE, eTypePIPE
- *
  * NOTE: read comments in module-template.h to understand how this file
  *       works!
  *
@@ -76,12 +74,30 @@ DEF_OMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(strm)
 
+/* for our current LRU mechanism, we need a monotonically increasing counters. We use
+ * it much like a "Lamport logical clock": we do not need the actual time, we just need
+ * to know the sequence in which files were accessed. So we use a simple counter to
+ * create that sequence. We use an unsigned 64 bit value which is extremely unlike to
+ * wrap within the lifetime of a process. If we process 1,000,000 file writes per
+ * second, the process could still exist over 500,000 years before a wrap to 0 happens.
+ * That should be sufficient (and even than, there would no really bad effect ;)).
+ * The variable below is the global counter/clock.
+ */
+static uint64 clockFileAccess = 0;
+/* and the "tick" function */
+static inline uint64
+getClockFileAccess(void)
+{
+	return ATOMIC_INC_AND_FETCH(clockFileAccess);
+}
+
+
 /* The following structure is a dynafile name cache entry.
  */
 struct s_dynaFileCacheEntry {
 	uchar *pName;		/* name currently open, if dynamic name */
 	strm_t	*pStrm;		/* our output stream */
-	time_t	lastUsed;	/* for LRU - last access */ // TODO: perforamcne change to counter (see other comment!) 
+	uint64	clkTickAccessed;/* for LRU - based on clockFileAccess */
 };
 typedef struct s_dynaFileCacheEntry dynaFileCacheEntry;
 
@@ -89,11 +105,13 @@ typedef struct s_dynaFileCacheEntry dynaFileCacheEntry;
 #define IOBUF_DFLT_SIZE 1024	/* default size for io buffers */
 #define FLUSH_INTRVL_DFLT 1 	/* default buffer flush interval (in seconds) */
 
+#define DFLT_bForceChown 0
 /* globals for default values */
 static int iDynaFileCacheSize = 10; /* max cache for dynamic files */
 static int fCreateMode = 0644; /* mode to use when creating files */
 static int fDirCreateMode = 0700; /* mode to use when creating files */
 static int	bFailOnChown;	/* fail if chown fails? */
+static int	bForceChown = DFLT_bForceChown;	/* Force chown() on existing files? */
 static uid_t	fileUID;	/* UID to be used for newly created files */
 static uid_t	fileGID;	/* GID to be used for newly created files */
 static uid_t	dirUID;		/* UID to be used for newly created directories */
@@ -116,6 +134,7 @@ typedef struct _instanceData {
 	int	fDirCreateMode;	/* creation mode for mkdir() */
 	int	bCreateDirs;	/* auto-create directories? */
 	int	bSyncFile;	/* should the file by sync()'ed? 1- yes, 0- no */
+	bool	bForceChown;	/* force chown() on existing files? */
 	uid_t	fileUID;	/* IDs for creation */
 	uid_t	dirUID;
 	gid_t	fileGID;
@@ -153,6 +172,7 @@ CODESTARTdbgPrintInstInfo
 		       "\tcreate directories: %s\n"
 		       "\tfile owner %d, group %d\n"
 		       "\tdirectory owner %d, group %d\n"
+		       "\tforce chown() for all files: %s\n"
 		       "\tdir create mode 0%3.3o, file create mode 0%3.3o\n"
 		       "\tfail if owner/group can not be set: %s\n",
 		        pData->f_fname,
@@ -160,6 +180,7 @@ CODESTARTdbgPrintInstInfo
 			pData->bCreateDirs ? "yes" : "no",
 			pData->fileUID, pData->fileGID,
 			pData->dirUID, pData->dirGID,
+			pData->bForceChown ? "yes" : "no",
 			pData->fDirCreateMode, pData->fCreateMode,
 			pData->bFailOnChown ? "yes" : "no"
 			);
@@ -349,7 +370,22 @@ prepareFile(instanceData *pData, uchar *newFileName)
 	int fd;
 	DEFiRet;
 
-	if(access((char*)newFileName, F_OK) != 0) {
+	if(access((char*)newFileName, F_OK) == 0) {
+		if(pData->bForceChown) {
+			/* Try to fix wrong ownership set by someone else. Note that this code
+			 * will no longer work once we have made the $PrivDrop code fully secure.
+			 * This change is based on an idea of Michael Terry, provided as part of
+			 * the effort to make rsyslogd the Ubuntu default syslogd.
+			 * rgerhards, 2009-09-11
+			 */
+			if(chown((char*)newFileName, pData->fileUID, pData->fileGID) != 0) {
+				if(pData->bFailOnChown) {
+					int eSave = errno;
+					errno = eSave;
+				}
+			}
+		}
+	} else {
 		/* file does not exist, create it (and eventually parent directories */
 		fd = -1;
 		if(pData->bCreateDirs) {
@@ -370,7 +406,7 @@ prepareFile(instanceData *pData, uchar *newFileName)
 				pData->fCreateMode);
 		if(fd != -1) {
 			/* check and set uid/gid */
-			if(pData->fileUID != (uid_t)-1 || pData->fileGID != (gid_t) -1) {
+			if(pData->bForceChown || pData->fileUID != (uid_t)-1 || pData->fileGID != (gid_t) -1) {
 				/* we need to set owner/group */
 				if(fchown(fd, pData->fileUID, pData->fileGID) != 0) {
 					if(pData->bFailOnChown) {
@@ -435,7 +471,7 @@ finalize_it:
 static inline rsRetVal
 prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
 {
-	time_t ttOldest; /* timestamp of oldest element */
+	uint64 ctOldest; /* "timestamp" of oldest element */
 	int iOldest;
 	int i;
 	int iFirstFree;
@@ -454,7 +490,7 @@ prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
 	if(   (pData->iCurrElt != -1)
 	   && !ustrcmp(newFileName, pCache[pData->iCurrElt]->pName)) {
 	   	/* great, we are all set */
-		pCache[pData->iCurrElt]->lastUsed = time(NULL); /* update timestamp for LRU */ // TODO: optimize time call!
+		pCache[pData->iCurrElt]->clkTickAccessed = getClockFileAccess();
 		// LRU needs only a strictly monotonically increasing counter, so such a one could do
 		FINALIZE;
 	}
@@ -465,7 +501,7 @@ prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
 	pData->iCurrElt = -1;	/* invalid current element pointer */
 	iFirstFree = -1; /* not yet found */
 	iOldest = 0; /* we assume the first element to be the oldest - that will change as we loop */
-	ttOldest = time(NULL) + 1; /* there must always be an older one */
+	ctOldest = getClockFileAccess(); /* there must always be an older one */
 	for(i = 0 ; i < pData->iCurrCacheSize ; ++i) {
 		if(pCache[i] == NULL) {
 			if(iFirstFree == -1)
@@ -475,12 +511,12 @@ prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
 				/* we found our element! */
 				pData->pStrm = pCache[i]->pStrm;
 				pData->iCurrElt = i;
-				pCache[i]->lastUsed = time(NULL); /* update timestamp for LRU */
+				pCache[i]->clkTickAccessed = getClockFileAccess(); /* update "timestamp" for LRU */
 				FINALIZE;
 			}
 			/* did not find it - so lets keep track of the counters for LRU */
-			if(pCache[i]->lastUsed < ttOldest) {
-				ttOldest = pCache[i]->lastUsed;
+			if(pCache[i]->clkTickAccessed < ctOldest) {
+				ctOldest = pCache[i]->clkTickAccessed;
 				iOldest = i;
 				}
 		}
@@ -520,7 +556,7 @@ prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
 
 	CHKmalloc(pCache[iFirstFree]->pName = ustrdup(newFileName));
 	pCache[iFirstFree]->pStrm = pData->pStrm;
-	pCache[iFirstFree]->lastUsed = time(NULL); // monotonically increasing value! TODO: performance
+	pCache[iFirstFree]->clkTickAccessed = getClockFileAccess();
 	pData->iCurrElt = iFirstFree;
 	DBGPRINTF("Added new entry %d for file cache, file '%s'.\n", iFirstFree, newFileName);
 
@@ -604,12 +640,26 @@ BEGINtryResume
 CODESTARTtryResume
 ENDtryResume
 
+BEGINbeginTransaction
+CODESTARTbeginTransaction
+	/* we have nothing to do to begin a transaction */
+ENDbeginTransaction
+
+
+BEGINendTransaction
+CODESTARTendTransaction
+	if(pData->bFlushOnTXEnd) {
+		CHKiRet(strm.Flush(pData->pStrm));
+	}
+finalize_it:
+ENDendTransaction
+
+
 BEGINdoAction
 CODESTARTdoAction
 	DBGPRINTF("file to log to: %s\n", pData->f_fname);
 	CHKiRet(writeFile(ppString, iMsgOpts, pData));
-	if(pData->bFlushOnTXEnd) {
-		/* TODO v5: do this in endTransaction only! */
+	if(!bCoreSupportsBatching && pData->bFlushOnTXEnd) {
 		CHKiRet(strm.Flush(pData->pStrm));
 	}
 finalize_it:
@@ -667,6 +717,11 @@ CODESTARTparseSelectorAct
         case '|':
 	case '/':
 		CODE_STD_STRING_REQUESTparseSelectorAct(1)
+		/* we now have the same semantics for files and pipes, but we need to skip over
+		 * the pipe indicator traditionally seen in config files...
+		 */
+		if(*p == '|')
+			++p;
 		CHKiRet(cflineParseFileName(p, (uchar*) pData->f_fname, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS,
 				               (pszTplName == NULL) ? (uchar*)"RSYSLOG_FileFormat" : pszTplName));
 		pData->bDynamicName = 0;
@@ -681,6 +736,7 @@ CODESTARTparseSelectorAct
 	pData->fDirCreateMode = fDirCreateMode;
 	pData->bCreateDirs = bCreateDirs;
 	pData->bFailOnChown = bFailOnChown;
+	pData->bForceChown = bForceChown;
 	pData->fileUID = fileUID;
 	pData->fileGID = fileGID;
 	pData->dirUID = dirUID;
@@ -715,6 +771,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	dirUID = -1;
 	dirGID = -1;
 	bFailOnChown = 1;
+	bForceChown = DFLT_bForceChown;
 	iDynaFileCacheSize = 10;
 	fCreateMode = 0644;
 	fDirCreateMode = 0700;
@@ -758,6 +815,7 @@ ENDmodExit
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
+CODEqueryEtryPt_TXIF_OMOD_QUERIES /* we support the transactional interface! */
 CODEqueryEtryPt_doHUP
 ENDqueryEtryPt
 
@@ -768,6 +826,8 @@ CODESTARTmodInit
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(strm, CORE_COMPONENT));
+	INITChkCoreFeature(bCoreSupportsBatching, CORE_FEATURE_BATCHING);
+	DBGPRINTF("omfile: %susing transactional output interface.\n", bCoreSupportsBatching ? "" : "not ");
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"dynafilecachesize", 0, eCmdHdlrInt, (void*) setDynaFileCacheSize, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omfileziplevel", 0, eCmdHdlrInt, NULL, &iZipLevel, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omfileflushinterval", 0, eCmdHdlrInt, NULL, &iFlushInterval, STD_LOADABLE_MODULE_ID));
@@ -781,6 +841,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"filecreatemode", 0, eCmdHdlrFileCreateMode, NULL, &fCreateMode, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"createdirs", 0, eCmdHdlrBinary, NULL, &bCreateDirs, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"failonchownfailure", 0, eCmdHdlrBinary, NULL, &bFailOnChown, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omfileForceChown", 0, eCmdHdlrBinary, NULL, &bForceChown, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionfileenablesync", 0, eCmdHdlrBinary, NULL, &bEnableSync, STD_LOADABLE_MODULE_ID));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionfiledefaulttemplate", 0, eCmdHdlrGetWord, NULL, &pszTplName, NULL));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));

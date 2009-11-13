@@ -12,7 +12,7 @@
  *
  * File begun on 2007-07-22 by RGerhards
  *
- * Copyright 2007, 2008 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2009 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -51,9 +51,10 @@
 #define CURR_MOD_IF_VERSION 5
 
 typedef enum eModType_ {
-	eMOD_IN,	/* input module */
-	eMOD_OUT,	/* output module */
-	eMOD_LIB	/* library module - this module provides one or many interfaces */
+	eMOD_IN = 0,	/* input module */
+	eMOD_OUT = 1,	/* output module */
+	eMOD_LIB = 2,	/* library module */
+	eMOD_PARSER = 3	/* parser module */
 } eModType_t;
 
 
@@ -73,7 +74,7 @@ typedef enum eModLinkType_ {
 	eMOD_LINK_ALL			/* special: all linkage types, e.g. for unload */
 } eModLinkType_t;
 
-typedef struct modInfo_s {
+struct modInfo_s {
 	struct modInfo_s *pPrev;	/* support for creating a double linked module list */
 	struct modInfo_s *pNext;	/* support for creating a linked module list */
 	int		iIFVers;	/* Interface version of module */
@@ -117,7 +118,10 @@ typedef struct modInfo_s {
 			rsRetVal (*parseSelectorAct)(uchar**, void**,omodStringRequest_t**);
 		} om;
 		struct { /* data for library modules */
-		} fm;
+		} lm;
+		struct { /* data for parser modules */
+			rsRetVal (*parse)(msg_t*);
+		} pm;
 	} mod;
 	void *pModHdlr; /* handler to the dynamic library holding the module */
 #	ifdef DEBUG
@@ -126,7 +130,7 @@ typedef struct modInfo_s {
 	 */
 	modUsr_t *pModUsrRoot;
 #	endif
-} modInfo_t;
+};
 
 /* interfaces */
 BEGINinterface(module) /* name must also be changed in ENDinterface macro! */
@@ -152,6 +156,5 @@ extern uchar *pModDir; /* read-only after startup */
 
 
 #endif /* #ifndef MODULES_H_INCLUDED */
-/*
- * vi:set ai:
+/* vi:set ai:
  */

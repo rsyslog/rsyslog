@@ -436,13 +436,13 @@ CODESTARTdoAction
 	 * hard-coded but this may be changed to a config parameter.
 	 * rgerhards, 2006-11-30
 	 */
-	if(pData->compressionLevel && (l > MIN_SIZE_FOR_COMPRESS)) {
+	if(pData->compressionLevel && (l > CONF_MIN_SIZE_FOR_COMPRESS)) {
 		Bytef *out;
 		uLongf destLen = iMaxLine + iMaxLine/100 +12; /* recommended value from zlib doc */
 		uLong srcLen = l;
 		int ret;
 		/* TODO: optimize malloc sequence? -- rgerhards, 2008-09-02 */
-		CHKmalloc(out = (Bytef*) malloc(destLen));
+		CHKmalloc(out = (Bytef*) MALLOC(destLen));
 		out[0] = 'z';
 		out[1] = '\0';
 		ret = compress2((Bytef*) out+1, &destLen, (Bytef*) psz,
@@ -617,7 +617,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		tmp = ++p;
 		for(i=0 ; *p && isdigit((int) *p) ; ++p, ++i)
 			/* SKIP AND COUNT */;
-		pData->port = malloc(i + 1);
+		pData->port = MALLOC(i + 1);
 		if(pData->port == NULL) {
 			errmsg.LogError(0, NO_ERRCODE, "Could not get memory to store syslog forwarding port, "
 				 "using default port, results may not be what you intend\n");

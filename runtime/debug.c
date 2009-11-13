@@ -51,6 +51,7 @@
 #include "rsyslog.h"
 #include "debug.h"
 #include "atomic.h"
+#include "cfsysline.h"
 #include "obj.h"
 
 
@@ -960,7 +961,7 @@ void
 dbgprintf(char *fmt, ...)
 {
 	va_list ap;
-	char pszWriteBuf[1024];
+	char pszWriteBuf[32*1024];
 	size_t lenWriteBuf;
 
 	if(!(Debug && debugging_on))
@@ -969,6 +970,16 @@ dbgprintf(char *fmt, ...)
 	va_start(ap, fmt);
 	lenWriteBuf = vsnprintf(pszWriteBuf, sizeof(pszWriteBuf), fmt, ap);
 	va_end(ap);
+
+	if(lenWriteBuf >= sizeof(pszWriteBuf)) {
+		/* if we need to truncate, do it in a somewhat useful way... */
+  		pszWriteBuf[sizeof(pszWriteBuf) - 5] = '!';
+  		pszWriteBuf[sizeof(pszWriteBuf) - 4] = '.';
+  		pszWriteBuf[sizeof(pszWriteBuf) - 3] = '.';
+  		pszWriteBuf[sizeof(pszWriteBuf) - 2] = '.';
+  		pszWriteBuf[sizeof(pszWriteBuf) - 1] = '\n';
+		lenWriteBuf = sizeof(pszWriteBuf);
+	}
 	dbgprint(NULL, pszWriteBuf, lenWriteBuf);
 }
 
@@ -1244,6 +1255,20 @@ dbgPrintNameIsInList(const uchar *pName, dbgPrintName_t *pRoot)
 }
 
 
+/* this is a special version of malloc that fills the alloced memory with
+ * HIGHVALUE, as this helps to identify bugs. -- rgerhards, 2009-10-22
+ */
+void *
+dbgmalloc(size_t size)
+{
+	void *pRet;
+	pRet = malloc(size);
+	if(pRet != NULL)
+		memset(pRet, 0xff, size);
+	return pRet;
+}
+
+
 /* read in the runtime options
  * rgerhards, 2008-02-28
  */
@@ -1276,6 +1301,7 @@ dbgGetRuntimeOptions(void)
 					"NoLogTimestamp\n"
 					"Nostdoout\n"
 					"filetrace=file (may be provided multiple times)\n"
+					"DebugOnDemand - enables debugging on USR1, but does not turn on output\n"
 					"\nSee debug.html in your doc set or http://www.rsyslog.com for details\n");
 				exit(1);
 			} else if(!strcasecmp((char*)optname, "debug")) {
@@ -1284,6 +1310,13 @@ dbgGetRuntimeOptions(void)
 				 */
 				Debug = 1;
 				debugging_on = 1;
+			} else if(!strcasecmp((char*)optname, "debugondemand")) {
+				/* Enables debugging, but turns off debug output */
+				Debug = 1;
+				debugging_on = 1;
+				dbgprintf("Note: debug on demand turned on via configuraton file, "
+					  "use USR1 signal to activate.\n");
+				debugging_on = 0;
 			} else if(!strcasecmp((char*)optname, "logfuncflow")) {
 				bLogFuncFlow = 1;
 			} else if(!strcasecmp((char*)optname, "logallocfree")) {

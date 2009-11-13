@@ -40,9 +40,11 @@
 #include "obj.h"
 #include "apc.h"
 #include "srUtils.h"
+#include "datetime.h"
 
 /* static data */
 DEFobjStaticHelpers
+DEFobjCurrIf(datetime)
 
 /* following is a used to implement a monotonically increasing id for the apcs. That
  * ID can be used to cancel an apc request. Note that the ID is generated with modulo
@@ -200,7 +202,7 @@ unlistCurrent(apc_list_t **ppList)
 	DEFiRet;
 	assert(ppList != NULL);
 
-	time(&tCurr);
+	datetime.GetTime(&tCurr);
 
 	if(apcListRoot == NULL || apcListRoot->pApc->ttExec >  tCurr) {
 		*ppList = NULL;
@@ -375,7 +377,7 @@ ENDobjQueryInterface(apc)
  * rgerhards, 2009-04-06
  */
 BEGINObjClassExit(apc, OBJ_IS_CORE_MODULE) /* class, version */
-	//objRelease(apcstk, CORE_COMPONENT);
+	objRelease(datetime, CORE_COMPONENT);
 	pthread_mutex_destroy(&listMutex);
 ENDObjClassExit(apc)
 
@@ -386,7 +388,7 @@ ENDObjClassExit(apc)
  */
 BEGINObjClassInit(apc, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
-	//CHKiRet(objUse(apcstk, CORE_COMPONENT));
+	CHKiRet(objUse(datetime, CORE_COMPONENT));
 
 	/* set our own handlers */
 	OBJSetMethodHandler(objMethod_DEBUGPRINT, apcDebugPrint);

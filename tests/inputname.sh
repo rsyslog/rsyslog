@@ -1,4 +1,4 @@
-echo testing $InputTCPServerInputName directive
+echo \[inputname.sh\]: testing $InputTCPServerInputName directive
 $srcdir/killrsyslog.sh # kill rsyslogd if it runs for some reason
 
 echo port 12514

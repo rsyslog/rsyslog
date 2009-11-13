@@ -23,7 +23,7 @@ write it to a file or forward it to a remote logging server.
 <p>A traditional configuration file is made up of one or more of these rules. When a new
 message arrives, its processing starts with the first rule (in order of appearance in
 rsyslog.conf) and continues for each rule until either all rules have been processed or
-a so-called &quote;discard&quot; action happens, in which case processing stops and the
+a so-called &quot;discard&quot; action happens, in which case processing stops and the
 message is thrown away (what also happens after the last rule has been processed).
 
 <p>The <b>multi-ruleset</b> support now permits to specify more than one such rule sequence.
@@ -66,11 +66,18 @@ to seperate the messages by any other method.
 <pre>$InputTCPServerBindRuleset &lt;name&gt;
 </pre>
 
-directive. Note that &quot;name&quote; must be the name of a ruleset that is already defined
+directive. Note that &quot;name&quot; must be the name of a ruleset that is already defined
 at the time the bind directive is given. There are many ways to make sure this happens, but
 I personally think that it is best to define all rule sets at the top of rsyslog.conf and
 define the inputs at the bottom. This kind of reverses the traditional recommended ordering, but
 seems to be a really useful and straightforward way of doing things.
+<h2>Why are rulesets important for different parser configurations?</h2>
+<p>Custom message parsers, used to handle differnet (and potentially otherwise-invalid)
+message formats, can be bound to rulesets. So multiple rulesets can be a very useful
+way to handle devices sending messages in different malformed formats in a consistent
+way. Unfortunately, this is not uncommon in the syslog world. An in-depth explanation
+with configuration sample can be found at the
+<a href="rsconf1_rulesetparser.html">$RulesetParser</a> configuration directive.
 <h2>Can I use a different Ruleset as the default?</h2>
 <p>This is possible by using the
 
@@ -249,11 +256,12 @@ $InputTCPServerBindRuleset remote10516
 $InputTCPServerRun 10516
 </pre>
 
-<p>Note that the &quot;mail.*&quot; rule inside the &quot;remote10516&quote; ruleset does
+<p>Note that the &quot;mail.*&quot; rule inside the &quot;remote10516&quot; ruleset does
 not affect processing inside any other rule set, including the default rule set.
 
 
 <h2>Performance</h2>
+<h3>Fewer Filters</h3>
 <p>No rule processing can be faster than not processing a rule at all. As such, it is useful
 for a high performance system to identify disjunct actions and try to split these off to
 different rule sets. In the example section, we had a case where three different tcp listeners
@@ -263,6 +271,25 @@ is no need to check the reception service - instead messages are automatically p
 right rule set and can be processed by very simple rules (maybe even with
 &quot;*.*&quot;-filters, the fastest ones available).
 
+<h3>Partitioning of Input Data</h3>
+<p>Starting with rsyslog 5.3.4, rulesets permit higher concurrency. They offer the ability
+to run on their own &quot;main&quot; queue. What that means is that a own queue is associated
+with a specific rule set. That means that inputs bound to that ruleset do no longer need
+to compete with each other when they enqueue a data element into the queue. Instead, enqueue
+operations can be completed in parallel.
+<p>An example: let us assume we have three TCP listeners. Without rulesets, each of them
+needs to insert messages into the main message queue. So if each of them wants to
+submit a newly arrived message into the queue at the same time, only one can do so
+while the others need to wait. With multiple rulesets, its own queue can be created for each
+ruleset. If now each listener is bound to its own ruleset, concurrent message submission is
+possible. On a machine with a sufficiently large number of corse, this can result in
+dramatic performance improvement.
+<p>It is highly advised that high-performance systems define a dedicated ruleset, with a
+dedicated queue for each of the inputs.
+<p>By default, rulesets do <b>not</b> have their own queue. It must be activated via the
+<a href="rsconf1_rulesetcreatemainqueue.html">$RulesetCreateMainQueue</a> directive.
+
+<h3>Future Enhancements</h3>
 <p>In the long term, multiple rule sets will probably lay the foundation for even better
 optimizations. So it is not a bad idea to get aquainted with them.
 

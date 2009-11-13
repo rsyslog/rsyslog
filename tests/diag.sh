@@ -5,7 +5,7 @@
 # not always able to convey back states to the upper-level test driver
 # begun 2009-05-27 by rgerhards
 # This file is part of the rsyslog project, released under GPLv3
-#valgrind="valgrind --log-fd=1"
+#valgrind="valgrind --malloc-fill=ff --free-fill=fe --log-fd=1"
 #valgrind="valgrind --tool=drd --log-fd=1"
 #valgrind="valgrind --tool=helgrind --log-fd=1"
 #set -o xtrace
@@ -14,29 +14,34 @@
 case $1 in
    'init')	$srcdir/killrsyslog.sh # kill rsyslogd if it runs for some reason
 		cp $srcdir/testsuites/diag-common.conf diag-common.conf
+		cp $srcdir/testsuites/diag-common2.conf diag-common2.conf
 		rm -f rsyslogd.started work-*.conf
+		rm -f rsyslogd2.started work-*.conf
 		rm -f work rsyslog.out.log rsyslog.out.log.save # common work files
 		rm -rf test-spool
 		rm -f core.* vgcore.*
 		mkdir test-spool
 		;;
    'exit')	rm -f rsyslogd.started work-*.conf diag-common.conf
+   		rm -f rsyslogd2.started diag-common2.conf
 		rm -f work rsyslog.out.log rsyslog.out.log.save # common work files
 		rm -rf test-spool
+		echo  -------------------------------------------------------------------------------
 		;;
    'startup')   # start rsyslogd with default params. $2 is the config file name to use
-   		# returns only after successful startup
-		$valgrind ../tools/rsyslogd -c4 -u2 -n -irsyslog.pid -M../runtime/.libs:../.libs -f$srcdir/testsuites/$2 &
-   		$srcdir/diag.sh wait-startup
+   		# returns only after successful startup, $3 is the instance (blank or 2!)
+		$valgrind ../tools/rsyslogd -c4 -u2 -n -irsyslog$3.pid -M../runtime/.libs:../.libs -f$srcdir/testsuites/$2 &
+   		$srcdir/diag.sh wait-startup $3
 		;;
-   'wait-startup') # wait for rsyslogd startup
-		while test ! -f rsyslogd.started; do
+   'wait-startup') # wait for rsyslogd startup ($2 is the instance)
+		while test ! -f rsyslogd$2.started; do
 			true
 		done
-		echo "rsyslogd started with pid " `cat rsyslog.pid`
+		echo "rsyslogd$2 started with pid " `cat rsyslog$2.pid`
 		;;
-   'wait-shutdown')  # actually, we wait for rsyslog.pid to be deleted
-		while test -f rsyslog.pid; do
+   'wait-shutdown')  # actually, we wait for rsyslog.pid to be deleted. $2 is the
+   		# instance
+		while test -f rsyslog$2.pid; do
 			true
 		done
 		if [ -e core.* ]
@@ -46,15 +51,20 @@ case $1 in
 		   exit 1
 		fi
 		;;
-   'wait-queueempty') # wait for main message queue to be empty
-		echo WaitMainQueueEmpty | java -classpath $abs_top_builddir DiagTalker
+   'wait-queueempty') # wait for main message queue to be empty. $2 is the instance.
+		if [ "$2" == "2" ]
+		then
+			echo WaitMainQueueEmpty | java -classpath $abs_top_builddir DiagTalker
+		else
+			echo WaitMainQueueEmpty | java -classpath $abs_top_builddir DiagTalker 13501
+		fi
 		;;
-   'shutdown-when-empty') # shut rsyslogd down when main queue is empty
-   		$srcdir/diag.sh wait-queueempty
-		kill `cat rsyslog.pid`
+   'shutdown-when-empty') # shut rsyslogd down when main queue is empty. $2 is the instance.
+   		$srcdir/diag.sh wait-queueempty $2
+		kill `cat rsyslog$2.pid`
 		# note: we do not wait for the actual termination!
 		;;
-   'shutdown-immediate') # shut rsyslogd down without emptying the queue
+   'shutdown-immediate') # shut rsyslogd down without emptying the queue. $2 is the instance.
 		kill `cat rsyslog.pid`
 		# note: we do not wait for the actual termination!
 		;;
@@ -67,10 +77,11 @@ case $1 in
 		fi
 		;;
    'injectmsg') # inject messages via our inject interface (imdiag)
+		echo injecting $3 messages
 		echo injectmsg $2 $3 $4 $5 | java -classpath $abs_top_builddir DiagTalker
 		# TODO: some return state checking? (does it really make sense here?)
 		;;
-   'check-mainq-spool') # check if mainqueue spool files exist, if not abort (we just check .qi)
+   'check-mainq-spool') # check if mainqueue spool files exist, if not abort (we just check .qi).
 		echo There must exist some files now:
 		ls -l test-spool
 		if test ! -f test-spool/mainq.qi; then
@@ -79,10 +90,24 @@ case $1 in
 		  exit 1
 		fi
 		;;
-   'seq-check') # do the usual sequence check to see if everything was properly received
+   'seq-check') # do the usual sequence check to see if everything was properly received. $2 is the instance.
 		rm -f work
 		sort < rsyslog.out.log > work
-		./chkseq -fwork -e$2 $3
+		# $4... are just to have the abilit to pass in more options...
+		# add -v to chkseq if you need more verbose output
+		./chkseq -fwork -s$2 -e$3 $4 $5 $6 $7
+		if [ "$?" -ne "0" ]; then
+		  echo "sequence error detected"
+		  exit 1
+		fi
+		;;
+   'seq-check2') # do the usual sequence check to see if everything was properly received. This is
+   		# a duplicateof seq-check, but we could not change its calling conventions without
+		# breaking a lot of exitings test cases, so we preferred to duplicate the code here.
+		rm -f work2
+		sort < rsyslog2.out.log > work2
+		# $4... are just to have the abilit to pass in more options...
+		./chkseq -fwork2 -v -s$2 -e$3 $4 $5 $6 $7
 		if [ "$?" -ne "0" ]; then
 		  echo "sequence error detected"
 		  exit 1
@@ -90,7 +115,7 @@ case $1 in
 		;;
    'nettester') # perform nettester-based tests
    		# use -v for verbose output!
-		./nettester -t$2 -i$3
+		./nettester -t$2 -i$3 $4
 		if [ "$?" -ne "0" ]; then
 		  exit 1
 		fi

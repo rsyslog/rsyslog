@@ -11,7 +11,7 @@
  *
  * File begun on 2007-07-22 by RGerhards
  *
- * Copyright 2007 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007, 2009 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -57,10 +57,12 @@
 #include "cfsysline.h"
 #include "modules.h"
 #include "errmsg.h"
+#include "parser.h"
 
 /* static data */
 DEFobjStaticHelpers
 DEFobjCurrIf(errmsg)
+DEFobjCurrIf(parser)
 
 /* we must ensure that only one thread at one time tries to load or unload
  * modules, otherwise we may see race conditions. This first came up with
@@ -94,7 +96,6 @@ static rsRetVal dummyEndTransaction()
 }
 static rsRetVal dummyIsCompatibleWithFeature() 
 {
-dbgprintf("XXX: dummy isCompatibleWithFeature called!\n");
 	return RS_RET_INCOMPATIBLE;
 }
 
@@ -403,10 +404,13 @@ finalize_it:
 static rsRetVal
 doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_t*), uchar *name, void *pModHdlr)
 {
-	DEFiRet;
 	rsRetVal localRet;
 	modInfo_t *pNew = NULL;
+	uchar *pParserName;
+	parser_t *pParser; /* used for parser modules */
+	rsRetVal (*GetParserName)(uchar**);
 	rsRetVal (*modGetType)(eModType_t *pType);
+	DEFiRet;
 
 	assert(modInit != NULL);
 
@@ -475,6 +479,33 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 			break;
 		case eMOD_LIB:
 			break;
+		case eMOD_PARSER:
+			/* first, we need to obtain the parser object. We could not do that during
+			 * init as that would have caused class bootstrap issues which are not
+			 * absolutely necessary. Note that we can call objUse() multiple times, it
+			 * handles that.
+			 */
+			CHKiRet(objUse(parser, CORE_COMPONENT));
+			/* here, we create a new parser object */
+			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"parse", &pNew->mod.pm.parse));
+			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"GetParserName", &GetParserName));
+			CHKiRet(GetParserName(&pParserName));
+			CHKiRet(parser.Construct(&pParser));
+
+			/* check some features */
+			localRet = pNew->isCompatibleWithFeature(sFEATUREAutomaticSanitazion);
+			if(localRet == RS_RET_OK){
+				CHKiRet(parser.SetDoSanitazion(pParser, TRUE));
+			}
+			localRet = pNew->isCompatibleWithFeature(sFEATUREAutomaticPRIParsing);
+			if(localRet == RS_RET_OK){
+				CHKiRet(parser.SetDoPRIParsing(pParser, TRUE));
+			}
+
+			CHKiRet(parser.SetName(pParser, pParserName));
+			CHKiRet(parser.SetModPtr(pParser, pNew));
+			CHKiRet(parser.ConstructFinalize(pParser));
+			break;
 	}
 
 	pNew->pszName = (uchar*) strdup((char*)name); /* we do not care if strdup() fails, we can accept that */
@@ -520,6 +551,9 @@ static void modPrintList(void)
 			break;
 		case eMOD_LIB:
 			dbgprintf("library");
+			break;
+		case eMOD_PARSER:
+			dbgprintf("parser");
 			break;
 		}
 		dbgprintf(" module.\n");
@@ -867,6 +901,7 @@ BEGINObjClassExit(module, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MA
 CODESTARTObjClassExit(module)
 	/* release objects we no longer need */
 	objRelease(errmsg, CORE_COMPONENT);
+	objRelease(parser, CORE_COMPONENT);
 	/* We have a problem in our reference counting, which leads to this function
 	 * being called too early. This usually is no problem, but if we destroy
 	 * the mutex object, we get into trouble. So rather than finding the root cause,

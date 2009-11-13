@@ -1,0 +1,37 @@
+<html>
+<head>
+<title>rsyslog.conf file</title>
+</head>
+<body>
+<a href="rsyslog_conf_global.html">rsyslog.conf configuration directive</a>
+
+<h2>$AboortOnUncleanConfig</h2>
+<p><b>Type:</b> global configuration directive</p>
+<p><b>Parameter Values:</b> boolean (on/off, yes/no)</p>
+<p><b>Available since:</b> 5.3.1+</p>
+<p><b>Default:</b> off</p>
+<p><b>Description:</b></p>
+<p>This directive permits to prevent rsyslog from running when the configuration file
+is not clean. "Not Clean" means there are errors or some other annoyances that rsyslgod 
+reports on startup. This is a user-requested feature to have a strict startup mode. Note
+that with the current code base it is not always possible to differentiate between an
+real error and a warning-like condition. As such, the startup will also prevented if
+warnings are present. I consider this a good thing in being &quot;strict&quot;, but I admit
+there also currently is no other way of doing it.
+<p><b>Caveats:</b></p>
+Note that the consequences of a failed rsyslogd startup can be much more serious than a
+startup with only partial configuration. For example, log data may be lost or systems that
+depend on the log server in question will not be able to send logs, what in the ultimate
+result could result in a system hang on those systems. Also, the local system may hang when
+the local log socket has become full and is not read. There exist many such scenarios.
+As such, it is strongly recommended not to turn on this directive.
+
+<p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>] [<a href="manual.html">manual 
+index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the
+<a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
+Copyright &copy; 2009 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>. Released under the GNU GPL 
+version 2 or higher.</font></p>
+</body>
+</html>

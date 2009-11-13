@@ -118,7 +118,7 @@ rsRetVal tplToString(struct template *pTpl, msg_t *pMsg, uchar **ppBuf, size_t *
 				doSQLEscape(&pVal, &iLenVal, &bMustBeFreed, 0);
 		}
 		/* got source, now copy over */
-		if(iBuf + iLenVal + 1 >= *pLenBuf) /* we reserve one char for the final \0! */
+		if(iBuf + iLenVal >= *pLenBuf) /* we reserve one char for the final \0! */
 			CHKiRet(ExtendBuf(ppBuf, pLenBuf, iBuf + iLenVal + 1));
 
 		if(iLenVal > 0) { /* may be zero depending on property */
@@ -743,7 +743,7 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 				/* We get here ONLY if the regex end was found */
 				longitud = regex_end - p;
 				/* Malloc for the regex string */
-				regex_char = (unsigned char *) malloc(longitud + 1);
+				regex_char = (unsigned char *) MALLOC(longitud + 1);
 				if(regex_char == NULL) {
 					dbgprintf("Could not allocate memory for template parameter!\n");
 					pTpe->data.field.has_regex = 0;
@@ -849,7 +849,7 @@ struct template *tplAddLine(char* pName, unsigned char** ppRestOfConfLine)
 		return NULL;
 	
 	pTpl->iLenName = strlen(pName);
-	pTpl->pszName = (char*) malloc(sizeof(char) * (pTpl->iLenName + 1));
+	pTpl->pszName = (char*) MALLOC(sizeof(char) * (pTpl->iLenName + 1));
 	if(pTpl->pszName == NULL) {
 		dbgprintf("tplAddLine could not alloc memory for template name!");
 		pTpl->iLenName = 0;

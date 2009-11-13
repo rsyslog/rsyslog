@@ -1,4 +1,117 @@
 ---------------------------------------------------------------------------
+Version 5.3.5  [DEVEL] (rgerhards), 2009-11-??
+- some light performance enhancement by replacing time() call with much
+  faster (at least under linux) gettimeofday() calls.
+- some improvement of omfile performance with dynafiles
+  saved costly time() calls by employing a logical clock, which is 
+  sufficient for the use case
+- bugfix: omudpspoof miscalculated source and destination ports
+  while this was probably not noticed for source ports, it resulted in
+  almost all destination ports being wrong, except for the default port
+  of 514, which by virtue of its binary representation was calculated 
+  correct (and probably thus the bug not earlier detected).
+- bugfixes imported from earlier releases
+  * bugfix: named pipes did no longer work (they always got an open error)
+    this was a regression from the omfile rewrite in 4.5.0
+  * bugfix(testbench): sequence check was not always performed correctly,
+    that could result in tests reporting success when they actually failed
+- improved testbench: added tests for UDP forwarding and omudpspoof
+- doc bugfix: omudpspoof had wrong config command names ("om" missing)
+- bugfix [imported from 4.4.3]: $ActionExecOnlyOnceEveryInterval did
+  not work.
+- [inport v4] improved testbench, contains now tcp and gzip test cases
+- [import v4] added a so-called "On Demand Debug" mode, in which debug
+  output can be generated only after the process has started, but not right
+  from the beginning. This is assumed to be useful for hard-to-find bugs.
+  Also improved the doc on the debug system.
+- bugfix: segfault on startup when -q or -Q option was given
+  [imported from v3-stable]
+---------------------------------------------------------------------------
+Version 5.3.4  [DEVEL] (rgerhards), 2009-11-04
+- added the ability to create custom message parsers
+- added $RulesetParser config directive that permits to bind specific
+  parsers to specific rulesets
+- added omruleset output module, which provides great flexibility in 
+  action processing. THIS IS A VERY IMPORTANT ADDITION, see its doc
+  for why.
+- added the capability to have ruleset-specific main message queues
+  This offers considerable additional flexibility AND superior performance
+  (in cases where multiple inputs now can avoid lock contention)
+- bugfix: correct default for escape ('#') character restored
+  This was accidently changed to '\\', thanks to David Lang for reporting
+- bugfix(testbench): testcase did not properly wait for rsyslogd shutdown
+  thus some unpredictable behavior and a false negative test result
+  could occur.
+---------------------------------------------------------------------------
+Version 5.3.3  [DEVEL] (rgerhards), 2009-10-27
+- simplified and thus speeded up the queue engine, also fixed some
+  potential race conditions (in very unusual shutdown conditions)
+  along the way. The threading model has seriously changes, so there may
+  be some regressions.
+- enhanced test environment (inlcuding testbench): support for enhancing
+  probability of memory addressing failure by using non-NULL default
+  value for malloced memory (optional, only if requested by configure
+  option). This helps to track down some otherwise undetected issues
+  within the testbench.
+- bugfix: potential abort if inputname property was not set 
+  primarily a problem of imdiag
+- bugfix: message processing states were not set correctly in all cases
+  however, this had no negative effect, as the message processing state
+  was not evaluated when a batch was deleted, and that was the only case
+  where the state could be wrong.
+---------------------------------------------------------------------------
+Version 5.3.2  [DEVEL] (rgerhards), 2009-10-21
+- enhanced omfile to support transactional interface. This will increase
+  performance in many cases.
+- added multi-ruleset support to imudp
+- re-enabled input thread termination handling that does avoid thread
+  cancellation where possible. This provides a more reliable mode of
+  rsyslogd termination (canceling threads my result in not properly
+  freed resouces and potential later hangs, even though we perform
+  proper cancel handling in our code). This is part of an effort to
+  reduce thread cancellation as much as possible in rsyslog.
+  NOTE: the code previously written code for this functionality had a
+  subtle race condition. The new code solves that.
+- enhanced immark to support non-cancel input module termination
+- improved imudp so that epoll can be used in more environments,
+  fixed potential compile time problem if EPOLL_CLOEXEC is not available.
+- some cleanup/slight improvement:
+  * changed imuxsock to no longer use deprecated submitAndParseMsg() IF
+  * changed submitAndParseMsg() interface to be a wrapper around the new
+    way of message creation/submission. This enables older plugins to be
+    used together with the new interface. The removal also enables us to
+    drop a lot of duplicate code, reducing complexity and increasing
+    maintainability.
+- bugfix: segfault when starting up with an invalid .qi file for a disk queue
+  Failed for both pure disk as well as DA queues. Now, we emit an error
+  message and disable disk queueing facility.
+- bugfix: potential segfault on messages with empty MSG part. This was a
+  recently introduced regression.
+- bugfix: debug string larger than 1K were improperly displayed. Max size
+  is now 32K, and if a string is even longer it is meaningfully truncated.
+---------------------------------------------------------------------------
+Version 5.3.1  [DEVEL] (rgerhards), 2009-10-05
+- added $AbortOnUncleanConfig directive - permits to prevent startup when
+  there are problems with the configuration file. See it's doc for
+  details.
+- included some important fixes from v4-stable:
+  * bugfix: invalid handling of zero-sized messages
+  * bugfix: zero-sized UDP messages are no longer processed
+  * bugfix: random data could be appended to message
+  * bugfix: reverse lookup reduction logic in imudp do DNS queries too often
+- bugfixes imported from 4.5.4:
+  * bugfix: potential segfault in stream writer on destruction
+  * bugfix: potential race in object loader (obj.c) during use/release
+  * bugfixes: potential problems in out file zip writer
+---------------------------------------------------------------------------
+Version 5.3.0  [DEVEL] (rgerhards), 2009-09-14
+- begun to add simple GUI programs to gain insight into running rsyslogd
+  instances and help setup and troubleshooting (active via the
+  --enable-gui ./configure switch)
+- changed imudp to utilize epoll(), where available. This shall provide
+  slightly better performance (just slightly because we called select()
+  rather infrequently on a busy system)
+---------------------------------------------------------------------------
 Version 5.1.6  [v5-beta] (rgerhards), 2009-10-15
 - feature imports from v4.5.6
 - bugfix: potential race condition when queue worker threads were
@@ -22,6 +135,14 @@ Version 5.1.5  [v5-beta] (rgerhards), 2009-09-11
   this option permites to process mark messages under all circumstances,
   even if an action was recently called. This can be useful to use mark
   messages as a kind of heartbeat.
+- added new config option $InputUnixListenSocketCreatePath
+  to permit the auto-creation of pathes to additional log sockets. This
+  turns out to be useful if they reside on temporary file systems and
+  rsyslogd starts up before the daemons that create these sockets
+  (rsyslogd always creates the socket itself if it does not exist).
+- added $LogRSyslogStatusMessages configuration directive
+  permitting to turn off rsyslog start/stop/HUP messages. See Debian
+  ticket http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=463793
 - bugfix: hostnames with dashes in them were incorrectly treated as
   malformed, thus causing them to be treated as TAG (this was a regression
   introduced from the "rfc3164 strict" change in 4.5.0). Testbench has been
@@ -29,6 +150,7 @@ Version 5.1.5  [v5-beta] (rgerhards), 2009-09-11
 - bugfix: strings improperly reused, resulting in some message properties
   be populated with strings from previous messages. This was caused by
   an improper predicate check.
+- added new config directive $omfileForceChown [import from 4.7.0]
 ---------------------------------------------------------------------------
 Version 5.1.4  [DEVEL] (rgerhards), 2009-08-20
 - legacy syslog parser changed so that it now accepts date stamps in
@@ -128,7 +250,32 @@ increase.
 - increased ompgsql performance by adapting to new transactional
   output module interface
 ---------------------------------------------------------------------------
-Version 4.5.6  [v4-beta] (rgerhards), 2009-09-??
+Version 4.7.0  [v4-devel] (rgerhards), 2009-09-??
+- added function getenv() to RainerScript
+- added new config option $InputUnixListenSocketCreatePath
+  to permit the auto-creation of pathes to additional log sockets. This
+  turns out to be useful if they reside on temporary file systems and
+  rsyslogd starts up before the daemons that create these sockets
+  (rsyslogd always creates the socket itself if it does not exist).
+- added $LogRSyslogStatusMessages configuration directive
+  permitting to turn off rsyslog start/stop/HUP messages. See Debian
+  ticket http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=463793
+- added new config directive $omfileForceChown to (try to) fix some broken
+  system configs.
+  See ticket for details: http://bugzilla.adiscon.com/show_bug.cgi?id=150
+- imported changes from 4.5.6 and below
+---------------------------------------------------------------------------
+Version 4.5.7  [v4-beta] (rgerhards), 2009-11-??
+- added a so-called "On Demand Debug" mode, in which debug output can
+  be generated only after the process has started, but not right from
+  the beginning. This is assumed to be useful for hard-to-find bugs.
+  Also improved the doc on the debug system.
+- bugfix [imported from 4.4.3]: $ActionExecOnlyOnceEveryInterval did
+  not work.
+---------------------------------------------------------------------------
+Version 4.5.6  [v4-beta] (rgerhards), 2009-11-05
+- bugfix: named pipes did no longer work (they always got an open error)
+  this was a regression from the omfile rewrite in 4.5.0
 - bugfix(minor): diag function returned wrong queue memeber count
   for the main queue if an active DA queue existed. This had no relevance
   to real deployments (assuming they are not running the debug/diagnostic
@@ -139,6 +286,11 @@ Version 4.5.6  [v4-beta] (rgerhards), 2009-09-??
   * bugfix: zero-sized UDP messages are no longer processed
   * bugfix: random data could be appended to message
   * bugfix: reverse lookup reduction logic in imudp do DNS queries too often
+- bugfix(testbench): testcase did not properly wait for rsyslod shutdown
+  thus some unpredictable behavior and a false negative test result
+  could occur. [BACKPORTED from v5]
+- bugfix(testbench): sequence check was not always performed correctly,
+  that could result in tests reporting success when they actually failed
 ---------------------------------------------------------------------------
 Version 4.5.5  [v4-beta] (rgerhards), 2009-10-21
 - added $InputTCPServerNotifyOnConnectionClose config directive
@@ -259,6 +411,8 @@ Version 4.5.0  [DEVEL] (rgerhards), 2009-07-02
   removes false positives (but may cause some trouble with hostname
   parsing). For details, see this bug tracker:
   http://bugzilla.adiscon.com/show_bug.cgi?id=126
+- omfile rewrite to natively support zip files (includes large extension
+  of the stream class)
 - added configuration commands (see doc for explanations)
   * $OMFileZipLevel
   * $OMFileIOBufferSize
@@ -280,7 +434,13 @@ Version 4.5.0  [DEVEL] (rgerhards), 2009-07-02
   an abort
 ---------------------------------------------------------------------------
 Version 4.4.3  [v4-stable] (rgerhards), 2009-10-??
+- bugfix: $ActionExecOnlyOnceEveryInterval did not work.
+  This was a regression from the time() optimizations done in v4.
+  Bug tracker: http://bugzilla.adiscon.com/show_bug.cgi?id=143
+  Thanks to Klaus Tachtler for reporting this bug.
 - bugfix: potential hang condition on queue shutdown
+  [imported from v3-stable]
+- bugfix: segfault on startup when -q or -Q option was given
   [imported from v3-stable]
 ---------------------------------------------------------------------------
 Version 4.4.2  [v4-stable] (rgerhards), 2009-10-09
@@ -538,6 +698,9 @@ Version 3.22.2 [v3-stable] (rgerhards), 2009-07-??
   [if librelp != 1.0.0 is used]
 - bugfix: sending syslog messages with zip compression did not work
 - bugfix: potential hang condition on queue shutdown
+- bugfix: segfault on startup when -q or -Q option was given
+  bug tracker: http://bugzilla.adiscon.com/show_bug.cgi?id=157
+  Thanks to Jonas Nogueira for reporting this bug.
 - clarified use of $ActionsSendStreamDriver[AuthMode/PermittedPeers]
   in doc set (require TLS drivers)
 ---------------------------------------------------------------------------

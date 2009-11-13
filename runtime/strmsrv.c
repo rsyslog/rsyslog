@@ -165,7 +165,7 @@ addNewLstnPort(strmsrv_t *pThis, uchar *pszPort)
 	ISOBJ_TYPE_assert(pThis, strmsrv);
 
 	/* create entry */
-	CHKmalloc(pEntry = malloc(sizeof(strmLstnPortList_t)));
+	CHKmalloc(pEntry = MALLOC(sizeof(strmLstnPortList_t)));
 	pEntry->pszPort = pszPort;
 	pEntry->pSrv = pThis;
 	CHKmalloc(pEntry->pszInputName = ustrdup(pThis->pszInputName));

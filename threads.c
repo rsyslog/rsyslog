@@ -5,7 +5,7 @@
  * 
  * File begun on 2007-12-14 by RGerhards
  *
- * Copyright 2007 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007, 2009 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -29,6 +29,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
+#include <errno.h>
 #include <pthread.h>
 #include <assert.h>
 
@@ -36,6 +37,7 @@
 #include "dirty.h"
 #include "linkedlist.h"
 #include "threads.h"
+#include "srUtils.h"
 
 /* linked list of currently-known threads */
 static linkedList_t llThrds;
@@ -44,7 +46,8 @@ static linkedList_t llThrds;
 
 /* Construct a new thread object
  */
-static rsRetVal thrdConstruct(thrdInfo_t **ppThis)
+static rsRetVal
+thrdConstruct(thrdInfo_t **ppThis)
 {
 	DEFiRet;
 	thrdInfo_t *pThis;
@@ -52,13 +55,8 @@ static rsRetVal thrdConstruct(thrdInfo_t **ppThis)
 	assert(ppThis != NULL);
 
 	CHKmalloc(pThis = calloc(1, sizeof(thrdInfo_t)));
-
-	/* OK, we got the element, now initialize members that should
-	 * not be zero-filled.
-	 */
-	pThis->mutTermOK = (pthread_mutex_t *) malloc (sizeof (pthread_mutex_t));
-	pthread_mutex_init (pThis->mutTermOK, NULL);
-
+	pthread_mutex_init(&pThis->mutThrd, NULL);
+	pthread_cond_init(&pThis->condThrdTerm, NULL);
 	*ppThis = pThis;
 
 finalize_it:
@@ -78,8 +76,49 @@ static rsRetVal thrdDestruct(thrdInfo_t *pThis)
 	if(pThis->bIsActive == 1) {
 		thrdTerminate(pThis);
 	}
-	free(pThis->mutTermOK);
+	pthread_mutex_destroy(&pThis->mutThrd);
+	pthread_cond_destroy(&pThis->condThrdTerm);
 	free(pThis);
+
+	RETiRet;
+}
+
+
+/* terminate a thread via the non-cancel interface
+ * This is a separate function as it involves a bit more of code.
+ * rgerhads, 2009-10-15
+ */
+static inline rsRetVal
+thrdTerminateNonCancel(thrdInfo_t *pThis)
+{
+	struct timespec tTimeout;
+	int ret;
+	DEFiRet;
+	assert(pThis != NULL);
+
+	DBGPRINTF("request term via SIGTTIN for input thread 0x%x\n", (unsigned) pThis->thrdID);
+	pThis->bShallStop = TRUE;
+	do {
+		d_pthread_mutex_lock(&pThis->mutThrd);
+		pthread_kill(pThis->thrdID, SIGTTIN);
+		timeoutComp(&tTimeout, 10); /* a fixed 10ms timeout, do after lock (may take long!) */
+		ret = d_pthread_cond_timedwait(&pThis->condThrdTerm, &pThis->mutThrd, &tTimeout);
+		d_pthread_mutex_unlock(&pThis->mutThrd);
+		if(Debug) {
+			if(ret == ETIMEDOUT) {
+				dbgprintf("input thread term: had a timeout waiting on thread termination\n");
+			} else if(ret == 0) {
+				dbgprintf("input thread term: thread returned normally and is terminated\n");
+			} else {
+				char errStr[1024];
+				int err = errno;
+				rs_strerror_r(err, errStr, sizeof(errStr));
+				dbgprintf("input thread term: cond_wait returned with error %d: %s\n",
+					  err, errStr);
+			}
+		}
+	} while(pThis->bIsActive);
+	DBGPRINTF("non-cancel input thread termination succeeded for thread 0x%x\n", (unsigned) pThis->thrdID);
 
 	RETiRet;
 }
@@ -92,21 +131,14 @@ rsRetVal thrdTerminate(thrdInfo_t *pThis)
 	DEFiRet;
 	assert(pThis != NULL);
 	
-#if 0 // TODO: somehow does not really work yet!
 	if(pThis->bNeedsCancel) {
-#endif
 		DBGPRINTF("request term via canceling for input thread 0x%x\n", (unsigned) pThis->thrdID);
 		pthread_cancel(pThis->thrdID);
-#if 0 // TODO: somehow does not really work yet!
-	if(pThis->bNeedsCancel) {
+		pThis->bIsActive = 0;
 	} else {
-
-		DBGPRINTF("request term via SIGTTIN for input thread 0x%x\n", (unsigned) pThis->thrdID);
-		pthread_kill(pThis->thrdID, SIGTTIN);
+		thrdTerminateNonCancel(pThis);
 	}
-#endif
 	pthread_join(pThis->thrdID, NULL); /* wait for input thread to complete */
-	pThis->bIsActive = 0;
 
 	/* call cleanup function, if any */
 	if(pThis->pAfterRun != NULL)
@@ -157,6 +189,16 @@ static void* thrdStarter(void *arg)
 	iRet = pThis->pUsrThrdMain(pThis);
 
 	dbgprintf("thrdStarter: usrThrdMain 0x%lx returned with iRet %d, exiting now.\n", (unsigned long) pThis->thrdID, iRet);
+
+	/* signal master control that we exit (we do the mutex lock mostly to 
+	 * keep the thread debugger happer, it would not really be necessary with
+	 * the logic we employ...)
+	 */
+	pThis->bIsActive = 0;
+	d_pthread_mutex_lock(&pThis->mutThrd);
+	pthread_cond_signal(&pThis->condThrdTerm);
+	d_pthread_mutex_unlock(&pThis->mutThrd);
+
 	ENDfunc
 	pthread_exit(0);
 }
@@ -203,37 +245,10 @@ rsRetVal thrdInit(void)
 rsRetVal thrdExit(void)
 {
 	DEFiRet;
-
 	iRet = llDestroy(&llThrds);
-
 	RETiRet;
 }
 
 
-/* thrdSleep() - a fairly portable way to put a thread to sleep. It 
- * will wake up when
- * a) the wake-time is over
- * b) the thread shall be terminated
- * Returns RS_RET_OK if all went well, RS_RET_TERMINATE_NOW if the calling
- * thread shall be terminated and any other state if an error happened.
- * rgerhards, 2007-12-17
- */
-rsRetVal
-thrdSleep(thrdInfo_t *pThis, int iSeconds, int iuSeconds)
-{
-	DEFiRet;
-	struct timeval tvSelectTimeout;
-
-	assert(pThis != NULL);
-	tvSelectTimeout.tv_sec = iSeconds;
-	tvSelectTimeout.tv_usec = iuSeconds; /* micro seconds */
-	select(1, NULL, NULL, NULL, &tvSelectTimeout);
-	if(pThis->bShallStop)
-		iRet = RS_RET_TERMINATE_NOW;
-	RETiRet;
-}
-
-
-/*
- * vi:set ai:
+/* vi:set ai:
  */

@@ -1,21 +1,23 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
-<html><head>
-<meta http-equiv="Content-Language" content="en"><title>TCP Syslog Input Module</title></head>
+<html>
+<head>
+<meta http-equiv="Content-Language" content="en">
+<title>TCP Syslog Input Module</title>
+</head>
+
 <body>
-<a href="rsyslog_conf_modules.html">back</a>
+<a href="rsyslog_conf_modules.html">back to rsyslog module overview</a>
 
 <h1>TCP Syslog Input Module</h1>
 <p><b>Module Name:&nbsp;&nbsp;&nbsp; imtcp</b></p>
-<p><b>Author: </b>Rainer Gerhards
-&lt;rgerhards@adiscon.com&gt;</p>
+<p><b>Author: </b>Rainer Gerhards &lt;rgerhards@adiscon.com&gt;</p>
+<p><b>Multi-Ruleset Support: </b>since 4.5.0 and 5.1.1
 <p><b>Description</b>:</p>
 <p>Provides the ability to receive syslog messages via TCP.
-Encryption can be provided by using <a href="rsyslog_stunnel.html">stunnel</a>
-(an alternative is the use
-the&nbsp;<a href="imgssapi.html">imgssapi</a>
-modul).</p>
-<p>Multiple receivers may be configured by
-specifying
+Encryption is natively provided by selecting the approprioate network stream driver and
+can also be provided by using <a href="rsyslog_stunnel.html">stunnel</a>
+(an alternative is the use the <a href="imgssapi.html">imgssapi</a> module).</p>
+<p>Multiple receivers may be configured by specifying
 $InputTCPServerRun multiple times. This is available since version 4.3.1, earlier
 versions do NOT support it.
 </p>
@@ -49,8 +51,7 @@ after loading imtcp, otherwise it may have no effect.</li>
 Starts a TCP server on selected port</li>
 <li>$InputTCPMaxListeners &lt;number&gt;<br>
 Sets the maximum number of listeners (server ports) supported. Default is 20. This must be set before the first $InputTCPServerRun directive.</li>
-<li>$InputTCPMaxSessions &lt;number&gt;<br>
-Sets the maximum number of sessions supported. Default is 200. This must be set before the first $InputTCPServerRun directive</li>
+<li>$InputTCPMaxSessions &lt;number&gt;<br> Sets the maximum number of sessions supported. Default is 200. This must be set before the first $InputTCPServerRun directive</li>
 <li>$InputTCPServerStreamDriverMode &lt;number&gt;<br>
 Sets the driver mode for the currently selected <a href="netstream.html">network stream driver</a>. &lt;number&gt; is driver specifc.</li>
 <li>$InputTCPServerInputName &lt;name&gt;<br>
@@ -63,6 +64,8 @@ Sets the authentication mode for the currently selected <a href="netstream.html"
 Sets permitted peer IDs. Only these peers are able to connect to the
 listener. &lt;id-string&gt; semantics depend on the currently selected
 AuthMode and&nbsp; <a href="netstream.html">network stream driver</a>. PermittedPeers may not be set in anonymous modes.</li>
+<li>$InputTCPServerBindRuleset &lt;ruleset&gt;<br>
+Binds the listener to a specific <a href="multi_ruleset.html">ruleset</a>.</li>
 </ul>
 <b>Caveats/Known Bugs:</b>
 <ul>
@@ -70,20 +73,22 @@ AuthMode and&nbsp; <a href="netstream.html">network stream driver</a>. Permitted
 <li>can not be loaded together with <a href="imgssapi.html">imgssapi</a>
 (which includes the functionality of imtcp)</li>
 </ul>
-<p><b>Sample:</b></p>
-<p>This sets up a TCP server on port 514:<br>
+<p><b>Example:</b></p>
+<p>This sets up a TCP server on port 514 and permits it to accept up to 500 connections:<br>
 </p>
-<textarea rows="15" cols="60">$ModLoad imtcp #
-needs to be done just once
+<textarea rows="15" cols="60">$ModLoad imtcp # needs to be done just once
+$InputTCPMaxSessions 500
 $InputTCPServerRun 514
 </textarea>
+<p>Note that the parameters (here: max sessions) need to be set <b>before</b> the listener
+is activated. Otherwise, the parameters will not apply.
+</p>
 <p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>]
 [<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
-<p><font size="2">This documentation is part of the
-<a href="http://www.rsyslog.com/">rsyslog</a>
+<p><font size="2">This documentation is part of the <a href="http://www.rsyslog.com/">rsyslog</a>
 project.<br>
-Copyright © 2008 by <a href="http://www.gerhards.net/rainer">Rainer
-Gerhards</a> and
+Copyright &copy; 2008,2009 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
 <a href="http://www.adiscon.com/">Adiscon</a>.
 Released under the GNU GPL version 3 or higher.</font></p>
-</body></html>
+</body>
+</html>

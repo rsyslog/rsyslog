@@ -104,7 +104,7 @@ addNewLstnPort(tcpsrv_t *pThis, uchar *pszPort)
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 
 	/* create entry */
-	CHKmalloc(pEntry = malloc(sizeof(tcpLstnPortList_t)));
+	CHKmalloc(pEntry = MALLOC(sizeof(tcpLstnPortList_t)));
 	pEntry->pszPort = pszPort;
 	pEntry->pSrv = pThis;
 	pEntry->pRuleset = pThis->pRuleset;
@@ -473,6 +473,7 @@ doReceive(tcpsrv_t *pThis, tcps_sess_t **ppSess)
 {
 	char buf[128*1024]; /* reception buffer - may hold a partial or multiple messages */
 	ssize_t iRcvd;
+	rsRetVal localRet;
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
@@ -498,11 +499,11 @@ doReceive(tcpsrv_t *pThis, tcps_sess_t **ppSess)
 		break;
 	case RS_RET_OK:
 		/* valid data received, process it! */
-		if(tcps_sess.DataRcvd(*ppSess, buf, iRcvd) != RS_RET_OK) {
+		if((localRet = tcps_sess.DataRcvd(*ppSess, buf, iRcvd)) != RS_RET_OK) {
 			/* in this case, something went awfully wrong.
 			 * We are instructed to terminate the session.
 			 */
-			errmsg.LogError(0, NO_ERRCODE, "Tearing down TCP Session - see "
+			errmsg.LogError(0, localRet, "Tearing down TCP Session - see "
 					    "previous messages for reason(s)\n");
 			pThis->pOnErrClose(*ppSess);
 			tcps_sess.Destruct(ppSess);
@@ -565,6 +566,8 @@ Run(tcpsrv_t *pThis)
 			break; /* terminate input! */
 
 		for(i = 0 ; i < pThis->iLstnCurr ; ++i) {
+			if(glbl.GetGlobalInputTermState() == 1)
+				ABORT_FINALIZE(RS_RET_FORCE_TERM);
 			CHKiRet(nssel.IsReady(pSel, pThis->ppLstn[i], NSDSEL_RD, &bIsReady, &nfds));
 			if(bIsReady) {
 				DBGPRINTF("New connect on NSD %p.\n", pThis->ppLstn[i]);
@@ -576,6 +579,8 @@ Run(tcpsrv_t *pThis)
 		/* now check the sessions */
 		iTCPSess = TCPSessGetNxtSess(pThis, -1);
 		while(nfds && iTCPSess != -1) {
+			if(glbl.GetGlobalInputTermState() == 1)
+				ABORT_FINALIZE(RS_RET_FORCE_TERM);
 			CHKiRet(nssel.IsReady(pSel, pThis->pSessions[iTCPSess]->pStrm, NSDSEL_RD, &bIsReady, &nfds));
 			if(bIsReady) {
 				doReceive(pThis, &pThis->pSessions[iTCPSess]);

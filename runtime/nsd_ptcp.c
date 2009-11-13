@@ -296,12 +296,12 @@ FillRemHost(nsd_ptcp_t *pThis, struct sockaddr *pAddr)
 	 * memory consumption)
 	 */
 	len = strlen((char*)szIP) + 1; /* +1 for \0 byte */
-	if((pThis->pRemHostIP = malloc(len)) == NULL)
+	if((pThis->pRemHostIP = MALLOC(len)) == NULL)
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	memcpy(pThis->pRemHostIP, szIP, len);
 
 	len = strlen((char*)szHname) + 1; /* +1 for \0 byte */
-	if((pThis->pRemHostName = malloc(len)) == NULL) {
+	if((pThis->pRemHostName = MALLOC(len)) == NULL) {
 		free(pThis->pRemHostIP); /* prevent leak */
 		pThis->pRemHostIP = NULL;
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);

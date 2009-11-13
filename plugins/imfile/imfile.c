@@ -5,7 +5,7 @@
  *
  * Work originally begun on 2008-02-01 by Rainer Gerhards
  *
- * Copyright 2008 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008,2009 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -107,7 +107,6 @@ static rsRetVal enqLine(fileInfo_t *pInfo, cstr_t *cstrLine)
 	MsgSetTAG(pMsg, pInfo->pszTag, pInfo->lenTag);
 	pMsg->iFacility = LOG_FAC(pInfo->iFacility);
 	pMsg->iSeverity = LOG_PRI(pInfo->iSeverity);
-	pMsg->bParseHOSTNAME = 0;
 	CHKiRet(submitMsg(pMsg));
 finalize_it:
 	RETiRet;
@@ -214,7 +213,7 @@ static rsRetVal pollFile(fileInfo_t *pThis, int *pbHadFileData)
 	}
 
 finalize_it:
-	/*EMPTY - just to keep the compiler happy, do NOT remove*/;
+		; /*EMPTY STATEMENT - needed to keep compiler happy - see below! */
 	/* Note: the problem above is that pthread:cleanup_pop() is a macro which
 	 * evaluates to something like "} while(0);". So the code would become
 	 * "finalize_it: }", that is a label without a statement. The C standard does
@@ -244,27 +243,12 @@ finalize_it:
  * IMPORTANT: the calling interface of this function can NOT be modified. It actually is
  * called by pthreads. The provided argument is currently not being used.
  */
-/* ------------------------------------------------------------------------------------------ *
- * DO NOT TOUCH the following code - it will soon be part of the module generation macros!    */
 static void
 inputModuleCleanup(void __attribute__((unused)) *arg)
 {
 	BEGINfunc
-/* END no-touch zone                                                                          *
- * ------------------------------------------------------------------------------------------ */
-
-
-
-	/* so far not needed */
-
-
-
-/* ------------------------------------------------------------------------------------------ *
- * DO NOT TOUCH the following code - it will soon be part of the module generation macros!    */
 	ENDfunc
 }
-/* END no-touch zone                                                                          *
- * ------------------------------------------------------------------------------------------ */
 
 
 /* This function is called by the framework to gather the input. The module stays
@@ -292,28 +276,22 @@ BEGINrunInput
 	int i;
 	int bHadFileData; /* were there at least one file with data during this run? */
 CODESTARTrunInput
-	/* ------------------------------------------------------------------------------------------ *
-	 * DO NOT TOUCH the following code - it will soon be part of the module generation macros!    */
 	pthread_cleanup_push(inputModuleCleanup, NULL);
-	while(1) { /* endless loop - do NOT break; out of it! */
-	/* END no-touch zone                                                                          *
-	 * ------------------------------------------------------------------------------------------ */
+	while(1) {
 
-	do {
-		bHadFileData = 0;
-		for(i = 0 ; i < iFilPtr ; ++i) {
-			pollFile(&files[i], &bHadFileData);
-		}
-	} while(iFilPtr > 1 && bHadFileData == 1); /* waring: do...while()! */
+		do {
+			bHadFileData = 0;
+			for(i = 0 ; i < iFilPtr ; ++i) {
+				pollFile(&files[i], &bHadFileData);
+			}
+		} while(iFilPtr > 1 && bHadFileData == 1); /* warning: do...while()! */
 
-	/* Note: the additional 10ns wait is vitally important. It guards rsyslog against totally
-	 * hogging the CPU if the users selects a polling interval of 0 seconds. It doesn't hurt any
-	 * other valid scenario. So do not remove. -- rgerhards, 2008-02-14
-	 */
-	srSleep(iPollInterval, 10);
+		/* Note: the additional 10ns wait is vitally important. It guards rsyslog against totally
+		 * hogging the CPU if the users selects a polling interval of 0 seconds. It doesn't hurt any
+		 * other valid scenario. So do not remove. -- rgerhards, 2008-02-14
+		 */
+		srSleep(iPollInterval, 10);
 
-	/* ------------------------------------------------------------------------------------------ *
-	 * DO NOT TOUCH the following code - it will soon be part of the module generation macros!    */
 	}
 	/*NOTREACHED*/
 	

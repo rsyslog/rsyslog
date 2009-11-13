@@ -1,4 +1,4 @@
-echo various timestamp tests
+echo \[timestamp.sh\]: various timestamp tests
 source $srcdir/diag.sh init
 source $srcdir/diag.sh nettester ts3164 udp
 source $srcdir/diag.sh nettester ts3164 tcp

@@ -16,23 +16,23 @@ spoof the sender address. Also, it enables to circle through a number of
 source ports.
 <p><b>Configuration Directives</b>:</p>
 <ul>
-<li><b>$ActionUDPSpoofSourceNameTemplate</b> &lt;templatename&gt;<br>
+<li><b>$ActionOMUDPSpoofSourceNameTemplate</b> &lt;templatename&gt;<br>
 This MUST be specified. It is the name of the template that contains a
 numerical IP address that is to be used as the source system IP address.
 While it may often be a constant value, it can be generated as usual via the
 property replacer, as long as it is a valid IPv4 address.
-<li><b>$ActionUDPSpoofTargetHost</b> &lt;hostname&gt;<br>
+<li><b>$ActionOMUDPSpoofTargetHost</b> &lt;hostname&gt;<br>
 Host that the messages shall be sent to.
 <li><b>$ActionUDPSpoofTargetPort</b> &lt;port&gt;<br>
 Remote port that the messages shall be sent to.
-<li><b>$ActionUDPSpoofDefaultTemplate</b> &lt;templatename&gt;<br>
+<li><b>$ActionOMUDPSpoofDefaultTemplate</b> &lt;templatename&gt;<br>
 This setting instructs omudpspoof to use a template different from the
 default template for all of its actions that do not have a template specified
 explicitely.
-<li><b>$ActionUDPSpoofSourcePortStart</b> &lt;number&gt;<br>
+<li><b>$ActionOMUDPSpoofSourcePortStart</b> &lt;number&gt;<br>
 Specifies the start value for circeling the source ports. Must be less than or
 equal to the end value. Default is 32000.
-<li><b>$ActionUDPSpoofSourcePortEnd</b> &lt;number&gt;<br>
+<li><b>$ActionOMUDPSpoofSourcePortEnd</b> &lt;number&gt;<br>
 Specifies the ending value for circeling the source ports. Must be less than or
 equal to the start value. Default is 42000.
 </ul>

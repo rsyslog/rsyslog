@@ -10,8 +10,22 @@ TESTS = $(TESTRUNS) cfg.sh \
 	daqueue-persist.sh \
 	diskqueue.sh \
 	diskqueue-fsync.sh \
+	rulesetmultiqueue.sh \
 	manytcp.sh \
+	rsf_getenv.sh \
+	sndrcv.sh \
+	sndrcv_gzip.sh \
+	sndrcv_udp.sh \
+	sndrcv_udp_nonstdpt.sh \
+	queue-persist.sh \
+	pipeaction.sh \
+	execonlyonce.sh \
 	queue-persist.sh 
+
+if ENABLE_OMUDPSPOOF
+TESTS += sndrcv_omudpspoof.sh \
+	 sndrcv_omudpspoof_nonstdpt.sh
+endif
 
 if ENABLE_OMSTDOUT
 TESTS += omod-if-array.sh \
@@ -22,7 +36,13 @@ TESTS += omod-if-array.sh \
 	 threadingmq.sh \
 	 threadingmqaq.sh \
 	 discard.sh \
+	 badqi.sh \
 	 fieldtest.sh
+endif
+
+if ENABLE_OMRULESET
+TESTS += omruleset.sh \
+	 omruleset-queue.sh
 endif
 
 check_JAVA = DiagTalker.java
@@ -91,12 +111,17 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/rfc5424-3.parse1 \
 	   testsuites/rfc5424-4.parse1 \
 	   testsuites/malformed1.parse1 \
+	   testsuites/reallife.parse1 \
+	   testsuites/parse2.conf \
+	   testsuites/reallife.parse2 \
 	   testsuites/omod-if-array.conf \
 	   testsuites/1.omod-if-array \
 	   testsuites/1.field1 \
 	   killrsyslog.sh \
 	   parsertest.sh \
 	   fieldtest.sh \
+	   rsf_getenv.sh \
+	   testsuites/rsf_getenv.conf \
 	   diskqueue.sh \
 	   testsuites/diskqueue.conf \
 	   arrayqueue.sh \
@@ -130,11 +155,44 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/threadingmq.conf \
 	   threadingmqaq.sh \
 	   testsuites/threadingmqaq.conf \
+	   sndrcv_drvr.sh \
+	   sndrcv.sh \
+	   testsuites/sndrcv_sender.conf \
+	   testsuites/sndrcv_rcvr.conf \
+	   sndrcv_udp.sh \
+	   testsuites/sndrcv_udp_sender.conf \
+	   testsuites/sndrcv_udp_rcvr.conf \
+	   sndrcv_udp_nonstdpt.sh \
+	   testsuites/sndrcv_udp_nonstdpt_sender.conf \
+	   testsuites/sndrcv_udp_nonstdpt_rcvr.conf \
+	   sndrcv_omudpspoof.sh \
+	   testsuites/sndrcv_omudpspoof_sender.conf \
+	   testsuites/sndrcv_omudpspoof_rcvr.conf \
+	   sndrcv_omudpspoof_nonstdpt.sh \
+	   testsuites/sndrcv_omudpspoof_nonstdpt_sender.conf \
+	   testsuites/sndrcv_omudpspoof_nonstdpt_rcvr.conf \
+	   sndrcv_gzip.sh \
+	   testsuites/sndrcv_gzip_sender.conf \
+	   testsuites/sndrcv_gzip_rcvr.conf \
+	   pipeaction.sh \
+	   testsuites/pipeaction.conf \
 	   proprepltest.sh \
 	   testsuites/rfctag.conf \
 	   testsuites/master.rfctag \
 	   testsuites/nolimittag.conf \
 	   testsuites/master.nolimittag \
+	   rulesetmultiqueue.sh \
+	   testsuites/rulesetmultiqueue.conf \
+	   omruleset.sh \
+	   testsuites/omruleset.conf \
+	   omruleset-queue.sh \
+	   testsuites/omruleset-queue.conf \
+	   badqi.sh \
+	   testsuites/badqi.conf \
+	   bad_qi/dbq.qi \
+	   execonlyonce.sh \
+	   testsuites/execonlyonce.conf \
+	   testsuites/execonlyonce.data \
 	   DiagTalker.java \
 	   cfg.sh
 

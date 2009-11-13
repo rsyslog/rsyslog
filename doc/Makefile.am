@@ -90,7 +90,9 @@ html_files = \
 	rsconf1_moddir.html \
 	rsconf1_repeatedmsgreduction.html \
 	rsconf1_resetconfigvariables.html \
+	rsconf1_rulesetcreatemainqueue.html \
 	rsconf1_umask.html \
+	rulesetparser.html \
 	v3compatibility.html \
 	v4compatibility.html \
 	v5compatibility.html \
@@ -130,6 +132,8 @@ grfx_files = \
 	dataflow.png \
 	queue_analogy_tv.png \
 	gssapi.png \
+	rfc5424layers.png \
+	src/rfc5424layers.dia \
 	rsyslog-vers.png
 
 EXTRA_DIST = $(html_files) $(grfx_files)

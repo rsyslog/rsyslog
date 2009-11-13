@@ -173,7 +173,7 @@ AddPermittedPeerWildcard(permittedPeers_t *pPeer, uchar* pszStr, size_t lenStr)
 		/* alloc memory for the domain component. We may waste a byte or
 		 * two, but that's ok.
 		 */
-		CHKmalloc(pNew->pszDomainPart = malloc(lenStr +1 ));
+		CHKmalloc(pNew->pszDomainPart = MALLOC(lenStr +1 ));
 	}
 
 	if(pszStr[0] == '*') {
@@ -695,7 +695,7 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 				case AF_INET: /* add IPv4 */
 					iSignificantBits = 32;
 					allowIP.flags = 0;
-					if((allowIP.addr.NetAddr = malloc(res->ai_addrlen)) == NULL) {
+					if((allowIP.addr.NetAddr = MALLOC(res->ai_addrlen)) == NULL) {
 						ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 					}
 					memcpy(allowIP.addr.NetAddr, res->ai_addr, res->ai_addrlen);
@@ -710,7 +710,7 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 						
 						iSignificantBits = 32;
 						allowIP.flags = 0;
-						if((allowIP.addr.NetAddr = malloc(sizeof(struct sockaddr_in)))
+						if((allowIP.addr.NetAddr = MALLOC(sizeof(struct sockaddr_in)))
 						    == NULL) {
 							ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 						}
@@ -732,7 +732,7 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 						
 						iSignificantBits = 128;
 						allowIP.flags = 0;
-						if((allowIP.addr.NetAddr = malloc(res->ai_addrlen)) == NULL) {
+						if((allowIP.addr.NetAddr = MALLOC(res->ai_addrlen)) == NULL) {
 							ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 						}
 						memcpy(allowIP.addr.NetAddr, res->ai_addr, res->ai_addrlen);
@@ -1306,7 +1306,7 @@ getLocalHostname(uchar **ppName)
 	do {
 		if(buf == NULL) {
 			buf_len = 128;        /* Initial guess */
-			CHKmalloc(buf = malloc(buf_len));
+			CHKmalloc(buf = MALLOC(buf_len));
 		} else {
 			buf_len += buf_len;
 			CHKmalloc(buf = realloc (buf, buf_len));
@@ -1370,7 +1370,7 @@ int *create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer)
         /* Count max number of sockets we may open */
         for (maxs = 0, r = res; r != NULL ; r = r->ai_next, maxs++)
 		/* EMPTY */;
-        socks = malloc((maxs+1) * sizeof(int));
+        socks = MALLOC((maxs+1) * sizeof(int));
         if (socks == NULL) {
                errmsg.LogError(0, NO_ERRCODE, "couldn't allocate memory for UDP sockets, suspending UDP message reception");
                freeaddrinfo(res);

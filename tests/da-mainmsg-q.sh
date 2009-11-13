@@ -7,6 +7,7 @@
 # check everything recovers from DA mode correctly.
 # added 2009-04-22 by Rgerhards
 # This file is part of the rsyslog project, released  under GPLv3
+echo ===============================================================================
 echo "[da-mainmsg-q.sh]: testing main message queue in DA mode (going to disk)"
 source $srcdir/diag.sh init
 source $srcdir/diag.sh startup da-mainmsg-q.conf
@@ -27,5 +28,6 @@ source $srcdir/diag.sh injectmsg 2050 50
 
 # clean up and check test result
 source $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-source $srcdir/diag.sh seq-check 2099
+source $srcdir/diag.sh wait-shutdown
+source $srcdir/diag.sh seq-check  0 2099
 source $srcdir/diag.sh exit

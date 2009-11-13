@@ -171,7 +171,7 @@ static rsRetVal setRuleset(void __attribute__((unused)) *pVal, uchar *pszName)
 
 	localRet = ruleset.GetRuleset(&pRuleset, pszName);
 	if(localRet == RS_RET_NOT_FOUND) {
-		errmsg.LogError(0, NO_ERRCODE, "error: ruleset '%s' not found - ignored", pszName);
+		errmsg.LogError(0, RS_RET_RULESET_NOT_FOUND, "error: ruleset '%s' not found - ignored", pszName);
 	}
 	CHKiRet(localRet);
 	pBindRuleset = pRuleset;

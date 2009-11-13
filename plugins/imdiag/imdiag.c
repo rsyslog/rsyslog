@@ -213,7 +213,6 @@ doInjectMsg(int iNum)
 	MsgSetInputName(pMsg, pInputName);
 	MsgSetFlowControlType(pMsg, eFLOWCTL_NO_DELAY);
 	pMsg->msgFlags  = NEEDS_PARSING | PARSE_HOSTNAME;
-	pMsg->bParseHOSTNAME = 1;
 	MsgSetRcvFrom(pMsg, pRcvDummy);
 	CHKiRet(MsgSetRcvFromIP(pMsg, pRcvIPDummy));
 	CHKiRet(submitMsg(pMsg));
@@ -264,6 +263,9 @@ waitMainQEmpty(tcps_sess_t *pSess)
 
 	CHKiRet(diagGetMainMsgQSize(&iMsgQueueSize));
 	while(iMsgQueueSize > 0) {
+		/* DEV DEBUG ONLY if(iPrint++ % 500)
+			printf("imdiag: main msg queue size: %d\n", iMsgQueueSize);
+		*/
 		if(iPrint++ % 500 == 0) 
 			dbgprintf("imdiag sleeping, wait mainq drain, curr size %d\n", iMsgQueueSize);
 		srSleep(0,2);	/* wait a little bit */
@@ -294,7 +296,7 @@ OnMsgReceived(tcps_sess_t *pSess, uchar *pRcv, int iLenMsg)
 	 * WITHOUT a termination \0 char. So we need to convert it to one
 	 * before proceeding.
 	 */
-	CHKmalloc(pszMsg = malloc(sizeof(uchar) * (iLenMsg + 1)));
+	CHKmalloc(pszMsg = MALLOC(sizeof(uchar) * (iLenMsg + 1)));
 	memcpy(pszMsg, pRcv, iLenMsg);
 	pszMsg[iLenMsg] = '\0';
 

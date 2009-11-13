@@ -31,6 +31,7 @@
 #
 # A copy of the GPL can be found in the file "COPYING" in this distribution.
 #set -x
+echo \[cfg.sh\]:
 rm -f tmp
 echo "local directory"
 #

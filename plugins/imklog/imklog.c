@@ -111,7 +111,6 @@ enqMsg(uchar *msg, uchar* pszTag, int iFacility, int iSeverity)
 	MsgSetTAG(pMsg, pszTag, ustrlen(pszTag));
 	pMsg->iFacility = LOG_FAC(iFacility);
 	pMsg->iSeverity = LOG_PRI(iSeverity);
-	pMsg->bParseHOSTNAME = 0;
 	CHKiRet(submitMsg(pMsg));
 
 finalize_it:

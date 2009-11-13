@@ -34,7 +34,7 @@
 typedef enum {
 	BATCH_STATE_RDY  = 0,	/* object ready for processing */
 	BATCH_STATE_BAD  = 1,	/* unrecoverable failure while processing, do NOT resubmit to same action */
-	BATCH_STATE_SUB  = 2,	/* message submitted for processing, outcome yet unkonwn */
+	BATCH_STATE_SUB  = 2,	/* message submitted for processing, outcome yet unknown */
 	BATCH_STATE_COMM = 3,	/* message successfully commited */
 	BATCH_STATE_DISC = 4, 	/* discarded - processed OK, but do not submit to any other action */
 } batch_state_t;

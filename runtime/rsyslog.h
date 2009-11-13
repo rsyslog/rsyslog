@@ -40,6 +40,17 @@
 #define CONF_TAG_BUFSIZE		32
 #define CONF_HOSTNAME_BUFSIZE		32
 #define CONF_PROP_BUFSIZE		16	/* should be close to sizeof(ptr) or lighly above it */
+#define	CONF_MIN_SIZE_FOR_COMPRESS	60 	/* config param: minimum message size to try compression. The smaller
+						 * the message, the less likely is any compression gain. We check for
+						 * gain before we submit the message. But to do so we still need to
+						 * do the (costly) compress() call. The following setting sets a size
+						 * for which no call to compress() is done at all. This may result in
+						 * a few more bytes being transmited but better overall performance.
+						 * Note: I have not yet checked the minimum UDP packet size. It might be
+						 * that we do not save anything by compressing very small messages, because
+						 * UDP might need to pad ;)
+						 * rgerhards, 2006-11-30
+						 */
 
 
 /* ############################################################# *
@@ -107,6 +118,7 @@ typedef struct wti_s wti_t;
 typedef obj_t nsd_t;
 typedef obj_t nsdsel_t;
 typedef struct msg msg_t;
+typedef struct queue_s qqueue_t;
 typedef struct prop_s prop_t;
 typedef struct interface_s interface_t;
 typedef struct objInfo_s objInfo_t;
@@ -122,6 +134,9 @@ typedef struct vmstk_s vmstk_t;
 typedef struct batch_obj_s batch_obj_t;
 typedef struct batch_s batch_t;
 typedef struct wtp_s wtp_t;
+typedef struct modInfo_s modInfo_t;
+typedef struct parser_s parser_t;
+typedef struct parserList_s parserList_t;
 typedef rsRetVal (*prsf_t)(struct vmstk_s*, int);	/* pointer to a RainerScript function */
 typedef uint64 qDeqID;	/* queue Dequeue order ID. 32 bits is considered dangerously few */
 
@@ -386,6 +401,14 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_NO_SRCNAME_TPL = -2150, /**< sourcename template was not specified where one was needed (omudpspoof spoof addr) */
 	RS_RET_HOST_NOT_SPECIFIED = -2151, /**< (target) host was not specified where it was needed */
 	RS_RET_ERR_LIBNET_INIT = -2152, /**< error initializing libnet */
+	RS_RET_FORCE_TERM = -2153,	/**< thread was forced to terminate by bShallShutdown, a state, not an error */
+	RS_RET_RULES_QUEUE_EXISTS = -2154,/**< we were instructed to create a new ruleset queue, but one already exists */
+	RS_RET_NO_CURR_RULESET = -2155,/**< no current ruleset exists (but one is required) */
+	RS_RET_NO_MSG_PASSING = -2156,/**< output module interface parameter passing mode "MSG" is not available but required */
+	RS_RET_RULESET_NOT_FOUND = -2157,/**< a required ruleset could not be found */
+	RS_RET_NO_RULESET= -2158,/**< no ruleset name as specified where one was needed */
+	RS_RET_PARSER_NOT_FOUND = -2159,/**< parser with the specified name was not found */
+	RS_RET_COULD_NOT_PARSE = -2160,/**< (this) parser could not parse the message (no error, means try next one) */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */

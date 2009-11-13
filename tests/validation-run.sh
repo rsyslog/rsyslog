@@ -21,6 +21,7 @@
 #
 # A copy of the GPL can be found in the file "COPYING" in this distribution.
 #set -x
+echo \[validation-run.sh\]: testing configuraton validation
 echo "testing a failed configuration verification run"
 ../tools/rsyslogd  -dn -u2 -c4 -N1 -f$srcdir/testsuites/invalid.conf -M../runtime/.libs:../.libs
 if [ $? -ne 1 ]; then

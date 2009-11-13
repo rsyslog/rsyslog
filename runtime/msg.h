@@ -60,7 +60,6 @@ struct msg {
 				        once data has entered the queue, this property is no longer needed. */
 	pthread_mutex_t mut;
 	bool	bDoLock;	 /* use the mutex? */
-	bool	bParseHOSTNAME;	/* should the hostname be parsed from the message? */
 	short	iRefCount;	/* reference counter (0 = unused) */
 	   /* background: the hostname is not present on "regular" messages
 	    * received via UNIX domain sockets from the same machine. However,
@@ -206,6 +205,16 @@ MsgSetRawMsgSize(msg_t *pMsg, size_t newLen)
 {
 	assert(newLen <= (size_t) pMsg->iLenRawMsg);
 	pMsg->iLenRawMsg = newLen;
+}
+
+
+/* get the ruleset that is associated with the ruleset.
+ * May be NULL. -- rgerhards, 2009-10-27
+ */
+static inline ruleset_t*
+MsgGetRuleset(msg_t *pMsg)
+{
+	return pMsg->pRuleset;
 }
 
 

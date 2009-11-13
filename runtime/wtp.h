@@ -62,12 +62,7 @@ struct wtp_s {
 	rsRetVal (*pfGetDeqBatchSize)(void *pUsr, int*); /* obtains max dequeue count from queue config */
 	rsRetVal (*pfObjProcessed)(void *pUsr, wti_t *pWti); /* indicate user object is processed */
 	rsRetVal (*pfRateLimiter)(void *pUsr);
-	rsRetVal (*pfIsIdle)(void *pUsr, wtp_t *pWtp);
 	rsRetVal (*pfDoWork)(void *pUsr, void *pWti);
-	rsRetVal (*pfOnIdle)(void *pUsr, int);
-	rsRetVal (*pfOnWorkerCancel)(void *pUsr, void*pWti);
-	rsRetVal (*pfOnWorkerStartup)(void *pUsr);
-	rsRetVal (*pfOnWorkerShutdown)(void *pUsr);
 	/* end user objects */
 	uchar *pszDbgHdr;	/* header string for debug messages */
 };
@@ -91,13 +86,8 @@ PROTOTYPEObjClassInit(wtp);
 PROTOTYPEpropSetMethFP(wtp, pfChkStopWrkr, rsRetVal(*pVal)(void*, int));
 PROTOTYPEpropSetMethFP(wtp, pfRateLimiter, rsRetVal(*pVal)(void*));
 PROTOTYPEpropSetMethFP(wtp, pfGetDeqBatchSize, rsRetVal(*pVal)(void*, int*));
-PROTOTYPEpropSetMethFP(wtp, pfIsIdle, rsRetVal(*pVal)(void*, wtp_t*));
 PROTOTYPEpropSetMethFP(wtp, pfDoWork, rsRetVal(*pVal)(void*, void*));
 PROTOTYPEpropSetMethFP(wtp, pfObjProcessed, rsRetVal(*pVal)(void*, wti_t*));
-PROTOTYPEpropSetMethFP(wtp, pfOnIdle, rsRetVal(*pVal)(void*, int));
-PROTOTYPEpropSetMethFP(wtp, pfOnWorkerCancel, rsRetVal(*pVal)(void*,void*));
-PROTOTYPEpropSetMethFP(wtp, pfOnWorkerStartup, rsRetVal(*pVal)(void*));
-PROTOTYPEpropSetMethFP(wtp, pfOnWorkerShutdown, rsRetVal(*pVal)(void*));
 PROTOTYPEpropSetMeth(wtp, toWrkShutdown, long);
 PROTOTYPEpropSetMeth(wtp, wtpState, wtpState_t);
 PROTOTYPEpropSetMeth(wtp, iMaxWorkerThreads, int);

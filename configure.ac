@@ -2,8 +2,11 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([rsyslog],[5.1.6],[rsyslog@lists.adiscon.com])
+AC_INIT([rsyslog],[5.3.5],[rsyslog@lists.adiscon.com])
 AM_INIT_AUTOMAKE
+
+m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
+
 AC_CONFIG_SRCDIR([ChangeLog])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_HEADERS([config.h])
@@ -12,7 +15,7 @@ AC_GNU_SOURCE
 
 # check for Java compiler
 AC_CHECK_PROG(HAVE_JAVAC, [javac], [yes])
-if test x"$HAVE_JAVAC" = x"yes"; then
+if test x"$HAVE_JAVAC" = x""; then
         AC_MSG_WARN([no javac found, disabling features depending on it])
 fi
 
@@ -104,7 +107,7 @@ AC_TYPE_SIGNAL
 AC_FUNC_STAT
 AC_FUNC_STRERROR_R
 AC_FUNC_VPRINTF
-AC_CHECK_FUNCS([flock basename alarm clock_gettime gethostbyname gethostname gettimeofday localtime_r memset mkdir regcomp select setid socket strcasecmp strchr strdup strerror strndup strnlen strrchr strstr strtol strtoul uname ttyname_r epoll_wait getline malloc_trim prctl fdatasync])
+AC_CHECK_FUNCS([flock basename alarm clock_gettime gethostbyname gethostname gettimeofday localtime_r memset mkdir regcomp select setid socket strcasecmp strchr strdup strerror strndup strnlen strrchr strstr strtol strtoul uname ttyname_r getline malloc_trim prctl epoll_create epoll_create1 fdatasync])
 
 # Check for MAXHOSTNAMELEN
 AC_MSG_CHECKING(for MAXHOSTNAMELEN)
@@ -388,6 +391,21 @@ AC_ARG_ENABLE(valgrind,
 )
 if test "$enable_valgrind" = "yes"; then
         AC_DEFINE(VALGRIND, 1, [Defined if valgrind support settings are to be enabled (e.g. prevents dlclose()).])
+fi
+
+
+# memcheck
+AC_ARG_ENABLE(memcheck,
+        [AS_HELP_STRING([--enable-memcheck],[Enable extended memory check support @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_memcheck="yes" ;;
+          no) enable_memcheck="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-memcheck) ;;
+         esac],
+        [enable_memcheck="no"]
+)
+if test "$enable_memcheck" = "yes"; then
+        AC_DEFINE(MEMCHECK, 1, [Defined if memcheck support settings are to be enabled (e.g. prevents dlclose()).])
 fi
 
 
@@ -773,6 +791,40 @@ AC_ARG_ENABLE(omstdout,
 )
 AM_CONDITIONAL(ENABLE_OMSTDOUT, test x$enable_omstdout = xyes)
 
+
+# settings for omruleset
+AC_ARG_ENABLE(omruleset,
+        [AS_HELP_STRING([--enable-omruleset],[Compiles ruleset forwarding module @<:@default=yes@:>@])],
+        [case "${enableval}" in
+         yes) enable_omruleset="yes" ;;
+          no) enable_omruleset="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-omruleset) ;;
+         esac],
+        [enable_omruleset=yes]
+)
+AM_CONDITIONAL(ENABLE_OMRULESET, test x$enable_omruleset = xyes)
+
+
+# building the GUI (mostly for diagnostic reasons)
+AC_ARG_ENABLE(gui,
+        [AS_HELP_STRING([--enable-gui],[Enable GUI programs @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_gui="yes" ;;
+          no) enable_gui="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-gui) ;;
+         esac],
+        [enable_gui=no]
+)
+if test "x$enable_gui" = "xyes"; then
+	if test x$HAVE_JAVAC = x; then
+	   AC_MSG_ERROR([GUI components need Java, but Java development system is not installed on this system])
+	fi
+fi
+AM_CONDITIONAL(ENABLE_GUI, test x$enable_gui = xyes)
+
+
+AC_SUBST(RELP_CFLAGS)
+AC_SUBST(RELP_LIBS)
 # This provides a vehicle to integrate custom modules, that are not
 # part of rsyslog, into the build process. It is named cust1, so that
 # additional such modules can easily be added.
@@ -828,12 +880,7 @@ AM_CONDITIONAL(ENABLE_OMTEMPLATE, test x$enable_omtemplate = xyes)
 # end of copy template - be sure to search for omtemplate to find everything!
 
 
-SHAVE_INIT
-
-
 AC_CONFIG_FILES([Makefile \
-		shave \
-		shave-libtool \
 		runtime/Makefile \
 		tools/Makefile \
 		doc/Makefile \
@@ -848,6 +895,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omtemplate/Makefile \
 		plugins/omprog/Makefile \
 		plugins/omstdout/Makefile \
+		plugins/omruleset/Makefile \
 		plugins/imfile/Makefile \
 		plugins/imrelp/Makefile \
 		plugins/imdiag/Makefile \
@@ -862,6 +910,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omoracle/Makefile \
 		plugins/omudpspoof/Makefile \
 		plugins/cust1/Makefile \
+		java/Makefile \
 		tests/Makefile])
 AC_OUTPUT
 
@@ -874,6 +923,7 @@ echo "    Regular expressions support enabled:      $enable_regexp"
 echo "    Zlib compression support enabled:         $enable_zlib"
 echo "    rsyslog runtime will be built:            $enable_rsyslogrt"
 echo "    rsyslogd will be built:                   $enable_rsyslogd"
+echo "    GUI components will be built:             $enable_gui"
 echo "    custom module 1 will be built:            $enable_cust1"
 echo
 echo "---{ input plugins }---"
@@ -886,6 +936,7 @@ echo "---{ output plugins }---"
 echo "    Mail support enabled:                     $enable_mail"
 echo "    omprog module will be compiled:           $enable_omprog"
 echo "    omstdout module will be compiled:         $enable_omstdout"
+echo "    omruleset module will be compiled:        $enable_omruleset"
 echo "    omudpspoof module will be compiled:       $enable_omudpspoof"
 echo "    output template module will be compiled:  $enable_omtemplate"
 echo
@@ -906,5 +957,6 @@ echo "    Testbench enabled:                        $enable_testbench"
 echo "    Debug mode enabled:                       $enable_debug"
 echo "    Runtime Instrumentation enabled:          $enable_rtinst"
 echo "    Diagnostic tools enabled:                 $enable_diagtools"
+echo "    Enhanced memory checking enabled:         $enable_memcheck"
 echo "    Valgrind support settings enabled:        $enable_valgrind"
 echo

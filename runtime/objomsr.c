@@ -67,31 +67,25 @@ rsRetVal OMSRconstruct(omodStringRequest_t **ppThis, int iNumEntries)
 
 	assert(ppThis != NULL);
 	assert(iNumEntries >= 0);
-	if((pThis = calloc(1, sizeof(omodStringRequest_t))) == NULL) {
-		iRet = RS_RET_OUT_OF_MEMORY;
-		goto abort_it;
-	}
+	CHKmalloc(pThis = calloc(1, sizeof(omodStringRequest_t)));
 
 	/* got the structure, so fill it */
 	pThis->iNumEntries = iNumEntries;
 	/* allocate string for template name array. The individual strings will be
 	 * allocated as the code progresses (we do not yet know the string sizes)
 	 */
-	if((pThis->ppTplName = calloc(iNumEntries, sizeof(uchar*))) == NULL) {
-		OMSRdestruct(pThis);
-		pThis = NULL;
-		iRet =  RS_RET_OUT_OF_MEMORY;
-		goto abort_it;
-	}
+	CHKmalloc(pThis->ppTplName = calloc(iNumEntries, sizeof(uchar*)));
+
 	/* allocate the template options array. */
-	if((pThis->piTplOpts = calloc(iNumEntries, sizeof(int))) == NULL) {
-		OMSRdestruct(pThis);
-		pThis = NULL;
-		iRet =  RS_RET_OUT_OF_MEMORY;
-		goto abort_it;
-	}
+	CHKmalloc(pThis->piTplOpts = calloc(iNumEntries, sizeof(int)));
 	
-abort_it:
+finalize_it:
+	if(iRet != RS_RET_OK) {
+		if(pThis != NULL) {
+			OMSRdestruct(pThis);
+			pThis = NULL;
+		}
+	}
 	*ppThis = pThis;
 	RETiRet;
 }
@@ -155,7 +149,7 @@ OMSRgetSupportedTplOpts(unsigned long *pOpts)
 {
 	DEFiRet;
 	assert(pOpts != NULL);
-	*pOpts = OMSR_RQD_TPL_OPT_SQL | OMSR_TPL_AS_ARRAY;
+	*pOpts = OMSR_RQD_TPL_OPT_SQL | OMSR_TPL_AS_ARRAY | OMSR_TPL_AS_MSG;
 	RETiRet;
 }
 

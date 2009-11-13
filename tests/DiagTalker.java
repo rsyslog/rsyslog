@@ -30,7 +30,10 @@ public class DiagTalker {
         PrintWriter out = null;
         BufferedReader in = null;
 	final String host = "127.0.0.1";
-	final int port = 13500;
+	int port = 13500;
+	if(args.length > 1) {
+		port = Integer.parseInt(args[1]);
+	}
 
         try {
             diagSocket = new Socket(host, port);

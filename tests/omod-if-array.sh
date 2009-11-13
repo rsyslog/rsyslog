@@ -1,4 +1,4 @@
-echo test omod-if-array via udp
+echo \[omod-if-array.sh\]: test omod-if-array via udp
 $srcdir/killrsyslog.sh # kill rsyslogd if it runs for some reason
 
 ./nettester -tomod-if-array -iudp -p4711

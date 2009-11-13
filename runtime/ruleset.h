@@ -25,6 +25,7 @@
 #ifndef INCLUDED_RULESET_H
 #define INCLUDED_RULESET_H
 
+#include "queue.h"
 #include "linkedlist.h"
 
 /* the ruleset object */
@@ -32,6 +33,8 @@ struct ruleset_s {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
 	linkedList_t llRules;	/* this is NOT a pointer - no typo here ;) */
 	uchar *pszName;		/* name of our ruleset */
+	qqueue_t *pQueue;	/* "main" message queue, if the ruleset has its own (else NULL) */
+	parserList_t *pParserLst;/* list of parsers to use for this ruleset */
 };
 
 /* interfaces */
@@ -50,8 +53,11 @@ BEGINinterface(ruleset) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetDefaultRuleset)(uchar*);
 	rsRetVal (*SetCurrRuleset)(uchar*);
 	ruleset_t* (*GetCurrent)(void);
+	qqueue_t* (*GetRulesetQueue)(ruleset_t*);
+	/* v3, 2009-11-04 */
+	parserList_t* (*GetParserList)(msg_t *);
 ENDinterface(ruleset)
-#define rulesetCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
+#define rulesetCURR_IF_VERSION 3 /* increment whenever you change the interface structure! */
 
 
 /* prototypes */

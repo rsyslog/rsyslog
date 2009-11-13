@@ -211,6 +211,7 @@ doPhysOpen(strm_t *pThis)
 	}
 
 	pThis->fd = open((char*)pThis->pszCurrFName, iFlags, pThis->tOpenMode);
+	DBGPRINTF("file '%s' opened as #%d with mode %d\n", pThis->pszCurrFName, pThis->fd, pThis->tOpenMode);
 	if(pThis->fd == -1) {
 		int ierrnoSave = errno;
 		dbgoprint((obj_t*) pThis, "open error %d, file '%s'\n", errno, pThis->pszCurrFName);
@@ -609,7 +610,7 @@ static rsRetVal strmConstructFinalize(strm_t *pThis)
 			 * to make sure we can write out everything with a SINGLE api call!
 			 * We add another 128 bytes to take care of the gzip header and "all eventualities".
 			 */
-			CHKmalloc(pThis->pZipBuf = (Bytef*) malloc(sizeof(uchar) * pThis->sIOBufSize + 128));
+			CHKmalloc(pThis->pZipBuf = (Bytef*) MALLOC(sizeof(uchar) * pThis->sIOBufSize + 128));
 		}
 	}
 
@@ -638,7 +639,7 @@ static rsRetVal strmConstructFinalize(strm_t *pThis)
 		pthread_cond_init(&pThis->isEmpty, 0);
 		pThis->iCnt = pThis->iEnq = pThis->iDeq = 0;
 		for(i = 0 ; i < STREAM_ASYNC_NUMBUFS ; ++i) {
-			CHKmalloc(pThis->asyncBuf[i].pBuf = (uchar*) malloc(sizeof(uchar) * pThis->sIOBufSize));
+			CHKmalloc(pThis->asyncBuf[i].pBuf = (uchar*) MALLOC(sizeof(uchar) * pThis->sIOBufSize));
 		}
 		pThis->pIOBuf = pThis->asyncBuf[0].pBuf;
 		pThis->bStopWriter = 0;
@@ -646,7 +647,7 @@ static rsRetVal strmConstructFinalize(strm_t *pThis)
 			DBGPRINTF("ERROR: stream %p cold not create writer thread\n", pThis);
 	} else {
 		/* we work synchronously, so we need to alloc a fixed pIOBuf */
-		CHKmalloc(pThis->pIOBuf = (uchar*) malloc(sizeof(uchar) * pThis->sIOBufSize));
+		CHKmalloc(pThis->pIOBuf = (uchar*) MALLOC(sizeof(uchar) * pThis->sIOBufSize));
 	}
 
 finalize_it:
@@ -1322,7 +1323,7 @@ strmSetFName(strm_t *pThis, uchar *pszName, size_t iLenName)
 	if(pThis->pszFName != NULL)
 		free(pThis->pszFName);
 
-	if((pThis->pszFName = malloc(sizeof(uchar) * (iLenName + 1))) == NULL)
+	if((pThis->pszFName = MALLOC(sizeof(uchar) * (iLenName + 1))) == NULL)
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 
 	memcpy(pThis->pszFName, pszName, iLenName + 1); /* always think about the \0! */
@@ -1349,7 +1350,7 @@ strmSetDir(strm_t *pThis, uchar *pszDir, size_t iLenDir)
 	if(iLenDir < 1)
 		ABORT_FINALIZE(RS_RET_FILE_PREFIX_MISSING);
 
-	if((pThis->pszDir = malloc(sizeof(uchar) * iLenDir + 1)) == NULL)
+	if((pThis->pszDir = MALLOC(sizeof(uchar) * iLenDir + 1)) == NULL)
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 
 	memcpy(pThis->pszDir, pszDir, iLenDir + 1); /* always think about the \0! */

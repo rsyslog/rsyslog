@@ -44,6 +44,7 @@
 #include "stringbuf.h"
 #include "errmsg.h"
 #include "net.h"
+#include "datetime.h"
 #include "nsd_ptcp.h"
 #include "nsdsel_gtls.h"
 #include "nsd_gtls.h"
@@ -61,6 +62,7 @@ DEFobjStaticHelpers
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(net)
+DEFobjCurrIf(datetime)
 DEFobjCurrIf(nsd_ptcp)
 
 static int bGlblSrvrInitDone = 0;	/**< 0 - server global init not yet done, 1 - already done */
@@ -129,7 +131,7 @@ readFile(uchar *pszFile, gnutls_datum_t *pBuf)
 		ABORT_FINALIZE(RS_RET_FILE_TOO_LARGE);
 	}
 
-	CHKmalloc(pBuf->data = malloc(stat_st.st_size));
+	CHKmalloc(pBuf->data = MALLOC(stat_st.st_size));
 	pBuf->size = stat_st.st_size;
 	if(read(fd,  pBuf->data, stat_st.st_size) != stat_st.st_size) {
 		errmsg.LogError(0, RS_RET_IO_ERROR, "error or incomplete read of file '%s'", pszFile);
@@ -1016,7 +1018,7 @@ gtlsChkPeerCertValidity(nsd_gtls_t *pThis)
 	}
 
 	/* get current time for certificate validation */
-	if(time(&ttNow) == -1)
+	if(datetime.GetTime(&ttNow) == -1)
 		ABORT_FINALIZE(RS_RET_SYS_ERR);
 
 	/* as it looks, we need to validate the expiration dates ourselves...
@@ -1479,7 +1481,7 @@ Rcv(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf)
 
 	if(pThis->pszRcvBuf == NULL) {
 		/* we have no buffer, so we need to malloc one */
-		CHKmalloc(pThis->pszRcvBuf = malloc(NSD_GTLS_MAX_RCVBUF));
+		CHKmalloc(pThis->pszRcvBuf = MALLOC(NSD_GTLS_MAX_RCVBUF));
 		pThis->lenRcvBuf = -1;
 	}
 
@@ -1694,6 +1696,7 @@ CODESTARTObjClassExit(nsd_gtls)
 	objRelease(nsd_ptcp, LM_NSD_PTCP_FILENAME);
 	objRelease(net, LM_NET_FILENAME);
 	objRelease(glbl, CORE_COMPONENT);
+	objRelease(datetime, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
 ENDObjClassExit(nsd_gtls)
 
@@ -1705,6 +1708,7 @@ ENDObjClassExit(nsd_gtls)
 BEGINObjClassInit(nsd_gtls, 1, OBJ_IS_LOADABLE_MODULE) /* class, version */
 	/* request objects we use */
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(net, LM_NET_FILENAME));
 	CHKiRet(objUse(nsd_ptcp, LM_NSD_PTCP_FILENAME));
