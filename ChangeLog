@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 5.3.5  [DEVEL] (rgerhards), 2009-11-??
+Version 5.3.5  [BETA] (rgerhards), 2009-11-13
 - some light performance enhancement by replacing time() call with much
   faster (at least under linux) gettimeofday() calls.
 - some improvement of omfile performance with dynafiles
