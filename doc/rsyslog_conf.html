@@ -21,22 +21,26 @@ features</a> require a different config file syntax, rsyslogd
 should be able to work with a standard syslog.conf file. This is
 especially useful while you are migrating from syslogd to rsyslogd.</p>
 <h2>Modules</h2>
-<p>Rsyslog has a modular design. Consequently, there is a growing
+<p>Rsyslog has a modular design. This enables functionality to be
+dynamically loaded from modules, which may also be written by any
+third party. Rsyslog itself offers all non-core functionality as
+modules. Consequently, there is a growing
 number of modules. Here is the entry point to their documentation and
 what they do (list is currently not complete)</p>
+<p>Please note that each module provides configuration
+directives, which are NOT necessarily being listed below. Also
+remember, that a modules configuration directive (and functionality) is
+only available if it has been loaded (using $ModLoad).</p>
+<p>It is relatively easy to write a rsyslog module. <b>If none of the provided
+modules solve your need, you may consider writing one or have one written
+for you by
+<a href="http://www.rsyslog.com/professional-services">Adiscon's professional services for rsyslog</a>
+</b>(this often is a very cost-effective and efficient way of getting what you need).
+
+<h3>Input Modules</h3>
+<p>Input modules are used to gather messages from various sources. They interface
+to message generators.
 <ul>
-<li><a href="omsnmp.html">omsnmp</a> - SNMP
-trap output module</li>
-<li><a href="omrelp.html">omrelp</a> - RELP
-output module</li>
-<li>omgssapi - output module for GSS-enabled syslog</li>
-<li><a href="ommysql.html">ommysql</a> - output module for MySQL</li>
-<li>ompgsql - output module for PostgreSQL</li>
-<li><a href="omlibdbi.html">omlibdbi</a> -
-generic database output module (Firebird/Interbase, MS SQL, Sybase,
-SQLLite, Ingres, Oracle, mSQL)</li>
-<li><a href="ommail.html">ommail</a> -
-permits rsyslog to alert folks by mail if something important happens</li>
 <li><a href="imfile.html">imfile</a>
 -&nbsp; input module for text files</li>
 <li><a href="imrelp.html">imrelp</a> - RELP
@@ -53,10 +57,25 @@ unix sockets, including the system log socket</li>
 <li><a href="im3195.html">im3195</a> -
 accepts syslog messages via RFC 3195</li>
 </ul>
-<p>Please note that each module provides configuration
-directives, which are NOT necessarily being listed below. Also
-remember, that a modules configuration directive (and functionality) is
-only available if it has been loaded (using $ModLoad).</p>
+
+<h3>Output Modules</h3>
+<p>Output modules process messages. With them, message formats can be transformed
+and messages be transmitted to various different targets.
+<ul>
+<li><a href="omsnmp.html">omsnmp</a> - SNMP
+trap output module</li>
+<li><a href="omrelp.html">omrelp</a> - RELP
+output module</li>
+<li>omgssapi - output module for GSS-enabled syslog</li>
+<li><a href="ommysql.html">ommysql</a> - output module for MySQL</li>
+<li>ompgsql - output module for PostgreSQL</li>
+<li><a href="omlibdbi.html">omlibdbi</a> -
+generic database output module (Firebird/Interbase, MS SQL, Sybase,
+SQLLite, Ingres, Oracle, mSQL)</li>
+<li><a href="ommail.html">ommail</a> -
+permits rsyslog to alert folks by mail if something important happens</li>
+</ul>
+
 <h2>Lines</h2>
 Lines can be continued by specifying a backslash ("\") as the last
 character of the line.<br>
