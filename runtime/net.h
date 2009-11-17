@@ -139,7 +139,7 @@ BEGINinterface(net) /* name must also be changed in ENDinterface macro! */
 	void (*debugListenInfo)(int fd, char *type);
 	int *(*create_udp_socket)(uchar *hostname, uchar *LogPort, int bIsServer);
 	void (*closeUDPListenSockets)(int *finet);
-	int (*isAllowedSender)(uchar *pszType, struct sockaddr *pFrom, const char *pszFromHost);
+	int __attribute__((deprecated)) (*isAllowedSender)(uchar *pszType, struct sockaddr *pFrom, const char *pszFromHost);
 	rsRetVal (*getLocalHostname)(uchar**);
 	int (*should_use_so_bsdcompat)(void);
 	/* permitted peer handling should be replaced by something better (see comments above) */
@@ -148,11 +148,14 @@ BEGINinterface(net) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*PermittedPeerWildcardMatch)(permittedPeers_t *pPeer, uchar *pszNameToMatch, int *pbIsMatching);
 	/* v5 interface additions */
 	int (*CmpHost)(struct sockaddr_storage *, struct sockaddr_storage*, size_t);
+	/* v6 interface additions - 2009-11-16 */
+	rsRetVal (*HasRestrictions)(uchar *, int *bHasRestrictions);
+	int (*isAllowedSender2)(uchar *pszType, struct sockaddr *pFrom, const char *pszFromHost, int bChkDNS);
 	/* data members - these should go away over time... TODO */
 	int    pACLAddHostnameOnFail; /* add hostname to acl when DNS resolving has failed */
 	int    pACLDontResolve;       /* add hostname to acl instead of resolving it to IP(s) */
 ENDinterface(net)
-#define netCURR_IF_VERSION 5 /* increment whenever you change the interface structure! */
+#define netCURR_IF_VERSION 6 /* increment whenever you change the interface structure! */
 
 /* prototypes */
 PROTOTYPEObj(net);

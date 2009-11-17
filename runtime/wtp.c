@@ -442,7 +442,6 @@ wtpAdviseMaxWorkers(wtp_t *pThis, int nMaxWrkr)
 			CHKiRet(wtpStartWrkr(pThis));
 		}
 	} else {
-dbgprintf("YYY: wtpAdviseMaxWorkers, sufficient workers, just doing adivse signal cond busy\n");
 		pthread_cond_signal(pThis->pcondBusy);
 	}
 

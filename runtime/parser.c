@@ -462,7 +462,8 @@ ParseMsg(msg_t *pMsg)
 	 * (and that functionality is too important for debugging to drop it...).
 	 */
 	DBGPRINTF("msg parser: flags %x, from '%s', msg '%.50s'\n", pMsg->msgFlags,
-		  getRcvFrom(pMsg), pMsg->pszRawMsg);
+		  (pMsg->msgFlags & NEEDS_DNSRESOL) ? UCHAR_CONSTANT("~NOTRESOLVED~") : getRcvFrom(pMsg),
+		  pMsg->pszRawMsg);
 
 	/* we now need to go through our list of parsers and see which one is capable of
 	 * parsing the message. Note that the first parser that requires message sanitization

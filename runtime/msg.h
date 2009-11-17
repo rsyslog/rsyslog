@@ -61,12 +61,6 @@ struct msg {
 	pthread_mutex_t mut;
 	bool	bDoLock;	 /* use the mutex? */
 	short	iRefCount;	/* reference counter (0 = unused) */
-	   /* background: the hostname is not present on "regular" messages
-	    * received via UNIX domain sockets from the same machine. However,
-	    * it is available when we have a forwarder (e.g. rfc3195d) using local
-	    * sockets. All in all, the parser would need parse templates, that would
-	    * resolve all these issues... rgerhards, 2005-10-06
-	    */
 	short	iSeverity;	/* the severity 0..7 */
 	short	iFacility;	/* Facility code 0 .. 23*/
 	short	offAfterPRI;	/* offset, at which raw message WITHOUT PRI part starts in pszRawMsg */
@@ -94,8 +88,12 @@ struct msg {
 	cstr_t *pCSPROCID;	/* PROCID */
 	cstr_t *pCSMSGID;	/* MSGID */
 	prop_t *pInputName;	/* input name property */
-	prop_t *pRcvFrom;	/* name of system message was received from */
 	prop_t *pRcvFromIP;	/* IP of system message was received from */
+	union {
+		prop_t *pRcvFrom;/* name of system message was received from */
+		struct sockaddr_storage *pfrominet; /* unresolved name */
+	} rcvFrom;
+
 	ruleset_t *pRuleset;	/* ruleset to be used for processing this message */
 	time_t ttGenTime;	/* time msg object was generated, same as tRcvdAt, but a Unix timestamp.
 				   While this field looks redundant, it is required because a Unix timestamp
@@ -129,6 +127,8 @@ struct msg {
 #define MARK		0x008	/* this message is a mark */
 #define NEEDS_PARSING	0x010	/* raw message, must be parsed before processing can be done */
 #define PARSE_HOSTNAME	0x020	/* parse the hostname during message parsing */
+#define NEEDS_DNSRESOL	0x040	/* fromhost address is unresolved and must be locked up via DNS reverse lookup first */
+#define NEEDS_ACLCHK_U	0x080	/* check UDP ACLs after DNS resolution has been done in main queue consumer */
 
 
 /* function prototypes
@@ -148,6 +148,7 @@ void MsgSetTAG(msg_t *pMsg, uchar* pszBuf, size_t lenBuf);
 void MsgSetRuleset(msg_t *pMsg, ruleset_t*);
 rsRetVal MsgSetFlowControlType(msg_t *pMsg, flowControl_t eFlowCtl);
 rsRetVal MsgSetStructuredData(msg_t *pMsg, char* pszStrucData);
+rsRetVal msgSetFromSockinfo(msg_t *pThis, struct sockaddr_storage *sa);
 void MsgSetRcvFrom(msg_t *pMsg, prop_t*);
 void MsgSetRcvFromStr(msg_t *pMsg, uchar* pszRcvFrom, int, prop_t **);
 rsRetVal MsgSetRcvFromIP(msg_t *pMsg, prop_t*);

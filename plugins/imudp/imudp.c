@@ -63,6 +63,7 @@ DEFobjCurrIf(datetime)
 DEFobjCurrIf(prop)
 DEFobjCurrIf(ruleset)
 
+static int bDoACLCheck;			/* are ACL checks neeed? Cached once immediately before listener startup */
 static int iMaxLine;			/* maximum UDP message size supported */
 static time_t ttLastDiscard = 0;	/* timestamp when a message from a non-permitted sender was last discarded
 					 * This shall prevent remote DoS when the "discard on disallowed sender"
@@ -117,7 +118,6 @@ static rsRetVal addListner(void __attribute__((unused)) *pVal, uchar *pNewVal)
 		if(udpLstnSocks == NULL) {
 			/* esay, we can just replace it */
 			udpLstnSocks = newSocks;
-RUNLOG_VAR("%d", newSocks[0]);
 			CHKmalloc(udpRulesets = (ruleset_t**) MALLOC(sizeof(ruleset_t*) * (newSocks[0] + 1)));
 			for(iDst = 1 ; iDst <= newSocks[0] ; ++iDst)
 				udpRulesets[iDst] = pBindRuleset;
@@ -200,7 +200,7 @@ finalize_it:
  */
 static inline rsRetVal
 processSocket(thrdInfo_t *pThrd, int fd, struct sockaddr_storage *frominetPrev, int *pbIsPermitted,
-	      uchar *fromHost, uchar *fromHostFQDN, uchar *fromHostIP, ruleset_t *pRuleset)
+	      ruleset_t *pRuleset)
 {
 	DEFiRet;
 	int iNbrTimeUsed;
@@ -235,37 +235,39 @@ processSocket(thrdInfo_t *pThrd, int fd, struct sockaddr_storage *frominetPrev, 
 
 		/* if we reach this point, we had a good receive and can process the packet received */
 		/* check if we have a different sender than before, if so, we need to query some new values */
-		if(net.CmpHost(&frominet, frominetPrev, socklen) != 0) {
-			CHKiRet(net.cvthname(&frominet, fromHost, fromHostFQDN, fromHostIP));
-			memcpy(frominetPrev, &frominet, socklen); /* update cache indicator */
-			/* Here we check if a host is permitted to send us
-			* syslog messages. If it isn't, we do not further
-			* process the message but log a warning (if we are
-			* configured to do this).
-			* rgerhards, 2005-09-26
-			*/
-			*pbIsPermitted = net.isAllowedSender((uchar*)"UDP",
-			  			            (struct sockaddr *)&frominet, (char*)fromHostFQDN);
-	
-			if(!*pbIsPermitted) {
-				DBGPRINTF("%s is not an allowed sender\n", (char*)fromHostFQDN);
-				if(glbl.GetOption_DisallowWarning) {
-					time_t tt;
-
-					datetime.GetTime(&tt);
-					if(tt > ttLastDiscard + 60) {
-						ttLastDiscard = tt;
-						errmsg.LogError(0, NO_ERRCODE,
-						"UDP message from disallowed sender %s discarded",
-						(char*)fromHost);
+		if(bDoACLCheck) {
+			if(net.CmpHost(&frominet, frominetPrev, socklen) != 0) {
+				memcpy(frominetPrev, &frominet, socklen); /* update cache indicator */
+				/* Here we check if a host is permitted to send us syslog messages. If it isn't,
+				 * we do not further process the message but log a warning (if we are
+				 * configured to do this). However, if the check would require name resolution,
+				 * it is postponed to the main queue. See also my blog post at
+				 * http://blog.gerhards.net/2009/11/acls-imudp-and-accepting-messages.html
+				 * rgerhards, 2009-11-16
+				 */
+				*pbIsPermitted = net.isAllowedSender2((uchar*)"UDP",
+						    (struct sockaddr *)&frominet, "", 0);
+		
+				if(*pbIsPermitted == 0) {
+					DBGPRINTF("msg is not from an allowed sender\n");
+					if(glbl.GetOption_DisallowWarning) {
+						time_t tt;
+						datetime.GetTime(&tt);
+						if(tt > ttLastDiscard + 60) {
+							ttLastDiscard = tt;
+							errmsg.LogError(0, NO_ERRCODE,
+							"UDP message from disallowed sender discarded");
+						}
 					}
 				}
 			}
+		} else {
+			*pbIsPermitted = 1; /* no check -> everything permitted */
 		}
 
-		DBGPRINTF("recv(%d,%d)/%s,acl:%d,msg:%.80s\n", fd, (int) lenRcvBuf, fromHost, *pbIsPermitted, pRcvBuf);
+		DBGPRINTF("recv(%d,%d),acl:%d,msg:%.80s\n", fd, (int) lenRcvBuf, *pbIsPermitted, pRcvBuf);
 
-		if(*pbIsPermitted)  {
+		if(*pbIsPermitted != 0)  {
 			if((iTimeRequery == 0) || (iNbrTimeUsed++ % iTimeRequery) == 0) {
 				datetime.getCurrTime(&stTime, &ttGenTime);
 			}
@@ -275,9 +277,10 @@ processSocket(thrdInfo_t *pThrd, int fd, struct sockaddr_storage *frominetPrev, 
 			MsgSetInputName(pMsg, pInputName);
 			MsgSetRuleset(pMsg, pRuleset);
 			MsgSetFlowControlType(pMsg, eFLOWCTL_NO_DELAY);
-			pMsg->msgFlags  = NEEDS_PARSING | PARSE_HOSTNAME;
-			MsgSetRcvFromStr(pMsg, fromHost, ustrlen(fromHost), &propFromHost);
-			CHKiRet(MsgSetRcvFromIPStr(pMsg, fromHostIP, ustrlen(fromHostIP), &propFromHostIP));
+			pMsg->msgFlags  = NEEDS_PARSING | PARSE_HOSTNAME | NEEDS_DNSRESOL;
+			if(*pbIsPermitted == 2)
+				pMsg->msgFlags  |= NEEDS_ACLCHK_U; /* request ACL check after resolution */
+			CHKiRet(msgSetFromSockinfo(pMsg, &frominet));
 			CHKiRet(submitMsg(pMsg));
 		}
 	}
@@ -307,9 +310,6 @@ rsRetVal rcvMainLoop(thrdInfo_t *pThrd)
 	int i;
 	struct sockaddr_storage frominetPrev;
 	int bIsPermitted;
-	uchar fromHost[NI_MAXHOST];
-	uchar fromHostIP[NI_MAXHOST];
-	uchar fromHostFQDN[NI_MAXHOST];
 	struct epoll_event *udpEPollEvt = NULL;
 	struct epoll_event currEvt[NUM_EPOLL_EVENTS];
 	char errStr[1024];
@@ -359,7 +359,7 @@ rsRetVal rcvMainLoop(thrdInfo_t *pThrd)
 
 		for(i = 0 ; i < nfds ; ++i) {
 			processSocket(pThrd, udpLstnSocks[currEvt[i].data.u64], &frominetPrev, &bIsPermitted,
-				      fromHost, fromHostFQDN, fromHostIP, udpRulesets[currEvt[i].data.u64]);
+				      udpRulesets[currEvt[i].data.u64]);
 		}
 	}
 
@@ -443,10 +443,6 @@ rsRetVal rcvMainLoop(thrdInfo_t *pThrd)
  */
 BEGINrunInput
 CODESTARTrunInput
-	/* this is an endless loop - it is terminated when the thread is
-	 * signalled to do so. This, however, is handled by the framework,
-	 * right into the sleep below.
-	 */
 	iRet = rcvMainLoop(pThrd);
 ENDrunInput
 
@@ -460,6 +456,7 @@ CODESTARTwillRun
 	CHKiRet(prop.ConstructFinalize(pInputName));
 
 	net.PrintAllowedSenders(1); /* UDP */
+	net.HasRestrictions(UCHAR_CONSTANT("UDP"), &bDoACLCheck); /* UDP */
 
 	/* if we could not set up any listners, there is no point in running... */
 	if(udpLstnSocks == NULL)

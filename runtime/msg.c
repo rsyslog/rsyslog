@@ -35,6 +35,8 @@
 #include <string.h>
 #include <assert.h>
 #include <ctype.h>
+#include <sys/socket.h>
+#include <netdb.h>
 #if HAVE_MALLOC_H
 #  include <malloc.h>
 #endif
@@ -51,6 +53,7 @@
 #include "unicode-helper.h"
 #include "ruleset.h"
 #include "prop.h"
+#include "net.h"
 
 /* static data */
 DEFobjStaticHelpers
@@ -59,6 +62,7 @@ DEFobjCurrIf(datetime)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(regexp)
 DEFobjCurrIf(prop)
+DEFobjCurrIf(net)
 
 static struct {
 	uchar *pszName;
@@ -284,6 +288,41 @@ static inline int getProtocolVersion(msg_t *pM)
 }
 
 
+/* do a DNS reverse resolution, if not already done, reflect status
+ * rgerhards, 2009-11-16
+ */
+static inline rsRetVal
+resolveDNS(msg_t *pMsg) {
+	rsRetVal localRet;
+	prop_t *propFromHost = NULL;
+	prop_t *propFromHostIP = NULL;
+	uchar fromHost[NI_MAXHOST];
+	uchar fromHostIP[NI_MAXHOST];
+	uchar fromHostFQDN[NI_MAXHOST];
+	DEFiRet;
+
+	CHKiRet(objUse(net, CORE_COMPONENT));
+	if(pMsg->msgFlags & NEEDS_DNSRESOL) {
+		localRet = net.cvthname(pMsg->rcvFrom.pfrominet, fromHost, fromHostFQDN, fromHostIP);
+		if(localRet == RS_RET_OK) {
+			MsgSetRcvFromStr(pMsg, fromHost, ustrlen(fromHost), &propFromHost);
+			CHKiRet(MsgSetRcvFromIPStr(pMsg, fromHostIP, ustrlen(fromHostIP), &propFromHostIP));
+		}
+	}
+finalize_it:
+	if(iRet != RS_RET_OK) {
+		/* best we can do: remove property */
+		MsgSetRcvFromStr(pMsg, UCHAR_CONSTANT(""), 0, &propFromHost);
+		prop.Destruct(&propFromHost);
+	}
+	if(propFromHost != NULL)
+		prop.Destruct(&propFromHost);
+	if(propFromHostIP != NULL)
+		prop.Destruct(&propFromHostIP);
+	RETiRet;
+}
+
+
 static inline void
 getInputName(msg_t *pM, uchar **ppsz, int *plen)
 {
@@ -307,6 +346,7 @@ getRcvFromIP(msg_t *pM)
 	if(pM == NULL) {
 		psz = UCHAR_CONSTANT("");
 	} else {
+		resolveDNS(pM); /* make sure we have a resolved entry */
 		if(pM->pRcvFromIP == NULL)
 			psz = UCHAR_CONSTANT("");
 		else
@@ -660,7 +700,7 @@ static inline rsRetVal msgBaseConstruct(msg_t **ppThis)
 	pM->pCSMSGID = NULL;
 	pM->pInputName = NULL;
 	pM->pRcvFromIP = NULL;
-	pM->pRcvFrom = NULL;
+	pM->rcvFrom.pRcvFrom = NULL;
 	pM->pRuleset = NULL;
 	memset(&pM->tRcvdAt, 0, sizeof(pM->tRcvdAt));
 	memset(&pM->tTIMESTAMP, 0, sizeof(pM->tTIMESTAMP));
@@ -761,8 +801,12 @@ CODESTARTobjDestruct(msg)
 		freeHOSTNAME(pThis);
 		if(pThis->pInputName != NULL)
 			prop.Destruct(&pThis->pInputName);
-		if(pThis->pRcvFrom != NULL)
-			prop.Destruct(&pThis->pRcvFrom);
+		if((pThis->msgFlags & NEEDS_DNSRESOL) == 0) {
+			if(pThis->rcvFrom.pRcvFrom != NULL)
+				prop.Destruct(&pThis->rcvFrom.pRcvFrom);
+		} else {
+			free(pThis->rcvFrom.pfrominet);
+		}
 		if(pThis->pRcvFromIP != NULL)
 			prop.Destruct(&pThis->pRcvFromIP);
 		free(pThis->pszRcvdAt3164);
@@ -848,6 +892,7 @@ ENDobjDestruct(msg)
 msg_t* MsgDup(msg_t* pOld)
 {
 	msg_t* pNew;
+	rsRetVal localRet;
 
 	assert(pOld != NULL);
 
@@ -868,9 +913,19 @@ msg_t* MsgDup(msg_t* pOld)
 	pNew->iLenMSG = pOld->iLenMSG;
 	pNew->iLenTAG = pOld->iLenTAG;
 	pNew->iLenHOSTNAME = pOld->iLenHOSTNAME;
-	if(pOld->pRcvFrom != NULL) {
-		pNew->pRcvFrom = pOld->pRcvFrom;
-		prop.AddRef(pNew->pRcvFrom);
+	if((pOld->msgFlags & NEEDS_DNSRESOL) == 1) {
+			localRet = msgSetFromSockinfo(pNew, pOld->rcvFrom.pfrominet);
+			if(localRet != RS_RET_OK) {
+				/* if something fails, we accept loss of this property, it is
+				 * better than losing the whole message.
+				 */
+				pNew->msgFlags &= ~NEEDS_DNSRESOL;
+			}
+	} else {
+		if(pOld->rcvFrom.pRcvFrom != NULL) {
+			pNew->rcvFrom.pRcvFrom = pOld->rcvFrom.pRcvFrom;
+			prop.AddRef(pNew->rcvFrom.pRcvFrom);
+		}
 	}
 	if(pOld->pRcvFromIP != NULL) {
 		pNew->pRcvFromIP = pOld->pRcvFromIP;
@@ -1648,12 +1703,13 @@ int getHOSTNAMELen(msg_t *pM)
 	if(pM == NULL)
 		return 0;
 	else
-		if(pM->pszHOSTNAME == NULL)
-			if(pM->pRcvFrom == NULL)
+		if(pM->pszHOSTNAME == NULL) {
+			resolveDNS(pM);
+			if(pM->rcvFrom.pRcvFrom == NULL)
 				return 0;
 			else
-				return prop.GetStringLen(pM->pRcvFrom);
-		else
+				return prop.GetStringLen(pM->rcvFrom.pRcvFrom);
+		} else
 			return pM->iLenHOSTNAME;
 }
 
@@ -1664,12 +1720,13 @@ char *getHOSTNAME(msg_t *pM)
 		return "";
 	else
 		if(pM->pszHOSTNAME == NULL) {
-			if(pM->pRcvFrom == NULL) {
+			resolveDNS(pM);
+			if(pM->rcvFrom.pRcvFrom == NULL) {
 				return "";
 			} else {
 				uchar *psz;
 				int len;
-				prop.GetString(pM->pRcvFrom, &psz, &len);
+				prop.GetString(pM->rcvFrom.pRcvFrom, &psz, &len);
 				return (char*) psz;
 			}
 		} else {
@@ -1683,13 +1740,15 @@ uchar *getRcvFrom(msg_t *pM)
 	uchar *psz;
 	int len;
 	BEGINfunc
+
 	if(pM == NULL) {
 		psz = UCHAR_CONSTANT("");
 	} else {
-		if(pM->pRcvFrom == NULL)
+		resolveDNS(pM);
+		if(pM->rcvFrom.pRcvFrom == NULL)
 			psz = UCHAR_CONSTANT("");
 		else
-			prop.GetString(pM->pRcvFrom, &psz, &len);
+			prop.GetString(pM->rcvFrom.pRcvFrom, &psz, &len);
 	}
 	ENDfunc
 	return psz;
@@ -1845,6 +1904,28 @@ void MsgSetInputName(msg_t *pThis, prop_t *inputName)
 }
 
 
+/* Set the pfrominet socket store, so that we can obtain the peer at some
+ * later time. Note that we do not check if pRcvFrom is already set, so this
+ * function must only be called during message creation.
+ * NOTE: msgFlags is NOT set. While this is somewhat a violation of layers,
+ * it is done because it gains us some performance. So the caller must make
+ * sure the message flags are properly maintained. For all current callers,
+ * this is always the case and without extra effort required.
+ * rgerhards, 2009-11-17
+ */
+rsRetVal
+msgSetFromSockinfo(msg_t *pThis, struct sockaddr_storage *sa){ 
+	DEFiRet;
+	assert(pThis->rcvFrom.pRcvFrom == NULL);
+
+	CHKmalloc(pThis->rcvFrom.pfrominet = malloc(sizeof(struct sockaddr_storage)));
+	memcpy(pThis->rcvFrom.pfrominet, sa, sizeof(struct sockaddr_storage));
+
+finalize_it:
+	RETiRet;
+}
+
+
 /* rgerhards 2008-09-10: set RcvFrom name in msg object. This calls AddRef()
  * on the property, because this must be done in all current cases and there
  * is no case expected where this may not be necessary.
@@ -1855,9 +1936,15 @@ void MsgSetRcvFrom(msg_t *pThis, prop_t *new)
 	assert(pThis != NULL);
 
 	prop.AddRef(new);
-	if(pThis->pRcvFrom != NULL)
-		prop.Destruct(&pThis->pRcvFrom);
-	pThis->pRcvFrom = new;
+	if(pThis->msgFlags & NEEDS_DNSRESOL) {
+		if(pThis->rcvFrom.pfrominet != NULL)
+		free(pThis->rcvFrom.pfrominet);
+		pThis->msgFlags &= ~NEEDS_DNSRESOL;
+	} else {
+		if(pThis->rcvFrom.pRcvFrom != NULL)
+			prop.Destruct(&pThis->rcvFrom.pRcvFrom);
+	}
+	pThis->rcvFrom.pRcvFrom = new;
 }
 
 

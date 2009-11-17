@@ -586,6 +586,82 @@ finalize_it:
 	RETiRet;
 }
 
+/* check message against ACL set
+ * rgerhards, 2009-11-16
+ */
+#if 0
+static inline rsRetVal
+chkMsgAgainstACL() {
+	/* if we reach this point, we had a good receive and can process the packet received */
+	/* check if we have a different sender than before, if so, we need to query some new values */
+	if(net.CmpHost(&frominet, frominetPrev, socklen) != 0) {
+		CHKiRet(net.cvthname(&frominet, fromHost, fromHostFQDN, fromHostIP));
+		memcpy(frominetPrev, &frominet, socklen); /* update cache indicator */
+		/* Here we check if a host is permitted to send us
+		* syslog messages. If it isn't, we do not further
+		* process the message but log a warning (if we are
+		* configured to do this).
+		* rgerhards, 2005-09-26
+		*/
+		*pbIsPermitted = net.isAllowedSender((uchar*)"UDP",
+						    (struct sockaddr *)&frominet, (char*)fromHostFQDN);
+
+		if(!*pbIsPermitted) {
+			DBGPRINTF("%s is not an allowed sender\n", (char*)fromHostFQDN);
+			if(glbl.GetOption_DisallowWarning) {
+				time_t tt;
+
+				datetime.GetTime(&tt);
+				if(tt > ttLastDiscard + 60) {
+					ttLastDiscard = tt;
+					errmsg.LogError(0, NO_ERRCODE,
+					"UDP message from disallowed sender %s discarded",
+					(char*)fromHost);
+				}
+			}
+		}
+	}
+}
+#endif
+
+
+/* consumes a single messages - this function is primarily used to shuffle
+ * out some code from msgConsumer(). After this function, the message is
+ * (by definition!) considered committed.
+ * rgerhards, 2009-11-16
+ */
+static inline rsRetVal
+msgConsumeOne(msg_t *pMsg, prop_t **propFromHost, prop_t **propFromHostIP) {
+	uchar fromHost[NI_MAXHOST];
+	uchar fromHostIP[NI_MAXHOST];
+	uchar fromHostFQDN[NI_MAXHOST];
+	int bIsPermitted;
+	DEFiRet;
+
+	if((pMsg->msgFlags & NEEDS_ACLCHK_U) != 0) {
+		dbgprintf("msgConsumer: UDP ACL must be checked for message (hostname-based)\n");
+		CHKiRet(net.cvthname(pMsg->rcvFrom.pfrominet, fromHost, fromHostFQDN, fromHostIP));
+		bIsPermitted = net.isAllowedSender2((uchar*)"UDP",
+		    (struct sockaddr *)pMsg->rcvFrom.pfrominet, (char*)fromHostFQDN, 1);
+		if(!bIsPermitted) {
+			DBGPRINTF("Message from '%s' discarded, not a permitted sender host\n",
+				  fromHostFQDN);
+			ABORT_FINALIZE(RS_RET_ERR);
+		/* save some of the info we obtained */
+		MsgSetRcvFromStr(pMsg, fromHost, ustrlen(fromHost), propFromHost);
+		CHKiRet(MsgSetRcvFromIPStr(pMsg, fromHostIP, ustrlen(fromHostIP), propFromHostIP));
+		pMsg->msgFlags &= ~NEEDS_ACLCHK_U;
+		}
+	}
+
+	if((pMsg->msgFlags & NEEDS_PARSING) != 0)
+		CHKiRet(parser.ParseMsg(pMsg));
+
+	ruleset.ProcessMsg(pMsg);
+finalize_it:
+	RETiRet;
+}
+
 
 /* The consumer of dequeued messages. This function is called by the
  * queue engine on dequeueing of a message. It runs on a SEPARATE
@@ -597,26 +673,22 @@ static rsRetVal
 msgConsumer(void __attribute__((unused)) *notNeeded, batch_t *pBatch, int *pbShutdownImmediate)
 {
 	int i;
-	msg_t *pMsg;
-	rsRetVal localRet;
+	prop_t *propFromHost = NULL;
+	prop_t *propFromHostIP = NULL;
 	DEFiRet;
 
 	assert(pBatch != NULL);
 
 	for(i = 0 ; i < pBatch->nElem  && !*pbShutdownImmediate ; i++) {
-		pMsg = (msg_t*) pBatch->pElem[i].pUsrp;
 		DBGPRINTF("msgConsumer processes msg %d/%d\n", i, pBatch->nElem);
-		if((pMsg->msgFlags & NEEDS_PARSING) != 0) {
-			localRet = parser.ParseMsg(pMsg);
-			if(localRet == RS_RET_OK)
-				ruleset.ProcessMsg(pMsg);
-		} else {
-			ruleset.ProcessMsg(pMsg);
-		}
-		/* if we reach this point, the message is considered committed (by definition!) */
+		msgConsumeOne((msg_t*) pBatch->pElem[i].pUsrp, &propFromHost, &propFromHostIP);
 		pBatch->pElem[i].state = BATCH_STATE_COMM;
 	}
 
+	if(propFromHost != NULL)
+		prop.Destruct(&propFromHost);
+	if(propFromHostIP != NULL)
+		prop.Destruct(&propFromHostIP);
 	RETiRet;
 }
 
