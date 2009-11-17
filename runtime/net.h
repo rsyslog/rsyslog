@@ -139,7 +139,7 @@ BEGINinterface(net) /* name must also be changed in ENDinterface macro! */
 	void (*debugListenInfo)(int fd, char *type);
 	int *(*create_udp_socket)(uchar *hostname, uchar *LogPort, int bIsServer);
 	void (*closeUDPListenSockets)(int *finet);
-	int __attribute__((deprecated)) (*isAllowedSender)(uchar *pszType, struct sockaddr *pFrom, const char *pszFromHost);
+	int (*isAllowedSender)(uchar *pszType, struct sockaddr *pFrom, const char *pszFromHost); /* deprecated! */
 	rsRetVal (*getLocalHostname)(uchar**);
 	int (*should_use_so_bsdcompat)(void);
 	/* permitted peer handling should be replaced by something better (see comments above) */

@@ -1,5 +1,3 @@
-- added option to use unlimited-size select() calls
-  Thanks to varmjofekoj for the patch
 ---------------------------------------------------------------------------
 Version 5.5.0  [DEVEL] (rgerhards), 2009-11-??
 - moved DNS resolution code out of imudp and into the backend processing
@@ -8,6 +6,9 @@ Version 5.5.0  [DEVEL] (rgerhards), 2009-11-??
   DNS resolution almost comes for free, so we do not do it there. However,
   the new method has been implemented in a generic way and as such may 
   also be used by other modules in the future.
+- added option to use unlimited-size select() calls
+  Thanks to varmjofekoj for the patch
+  This is not done in imudp, as it natively supports epoll()
 ---------------------------------------------------------------------------
 Version 5.3.5  [BETA] (rgerhards), 2009-11-13
 - some light performance enhancement by replacing time() call with much

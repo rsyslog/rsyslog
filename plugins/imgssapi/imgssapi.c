@@ -178,10 +178,10 @@ isPermittedHost(struct sockaddr *addr, char *fromHostFQDN, void *pUsrSrv, void*p
 	pGSess = (gss_sess_t*) pUsrSess;
 
 	if((pGSrv->allowedMethods & ALLOWEDMETHOD_TCP) &&
-	   net.isAllowedSender((uchar*)"TCP", addr, (char*)fromHostFQDN))
+	   net.isAllowedSender2((uchar*)"TCP", addr, (char*)fromHostFQDN, 1))
 		allowedMethods |= ALLOWEDMETHOD_TCP;
 	if((pGSrv->allowedMethods & ALLOWEDMETHOD_GSS) &&
-	   net.isAllowedSender((uchar*)"GSS", addr, (char*)fromHostFQDN))
+	   net.isAllowedSender2((uchar*)"GSS", addr, (char*)fromHostFQDN, 1))
 		allowedMethods |= ALLOWEDMETHOD_GSS;
 	if(allowedMethods && pGSess != NULL)
 		pGSess->allowedMethods = allowedMethods;
