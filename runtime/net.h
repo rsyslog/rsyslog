@@ -149,8 +149,8 @@ BEGINinterface(net) /* name must also be changed in ENDinterface macro! */
 	/* v5 interface additions */
 	int (*CmpHost)(struct sockaddr_storage *, struct sockaddr_storage*, size_t);
 	/* data members - these should go away over time... TODO */
-	int    pACLAddHostnameOnFail; /* add hostname to acl when DNS resolving has failed */
-	int    pACLDontResolve;       /* add hostname to acl instead of resolving it to IP(s) */
+	int    *pACLAddHostnameOnFail; /* add hostname to acl when DNS resolving has failed */
+	int    *pACLDontResolve;       /* add hostname to acl instead of resolving it to IP(s) */
 ENDinterface(net)
 #define netCURR_IF_VERSION 5 /* increment whenever you change the interface structure! */
 
