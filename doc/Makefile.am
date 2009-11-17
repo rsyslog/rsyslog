@@ -122,6 +122,7 @@ html_files = \
 grfx_files = \
 	rsyslog_confgraph_complex.png\
 	rsyslog_confgraph_std.png \
+	module_workflow.png \
 	direct_queue0.png \
 	direct_queue1.png \
 	direct_queue2.png \

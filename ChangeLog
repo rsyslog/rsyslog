@@ -8,7 +8,8 @@ Version 5.5.0  [DEVEL] (rgerhards), 2009-11-??
   also be used by other modules in the future.
 - added option to use unlimited-size select() calls
   Thanks to varmjofekoj for the patch
-  This is not done in imudp, as it natively supports epoll()
+  This is not done in imudp, as it natively supports epoll().
+- doc: improved description of what loadable modules can do
 ---------------------------------------------------------------------------
 Version 5.3.5  [BETA] (rgerhards), 2009-11-13
 - some light performance enhancement by replacing time() call with much

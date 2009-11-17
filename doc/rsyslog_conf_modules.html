@@ -19,8 +19,16 @@ modules solve your need, you may consider writing one or have one written
 for you by
 <a href="http://www.rsyslog.com/professional-services">Adiscon's professional services for rsyslog</a>
 </b>(this often is a very cost-effective and efficient way of getting what you need).
+<p>There exist different classes of loadable modules:
+<ul>
+<li><a href="rsyslog_conf_modules.html#im">Input Modules</a>
+<li><a href="rsyslog_conf_modules.html#om">Output Modules</a>
+<li><a href="rsyslog_conf_modules.html#pm">Parser Modules</a>
+<li><a href="rsyslog_conf_modules.html#mm">Message Modification Modules</a>
+<li><a href="rsyslog_conf_modules.html#lm">Library Modules</a>
+</ul>
 
-<h2>Input Modules</h2>
+<a name"im"></a><h2>Input Modules</h2>
 <p>Input modules are used to gather messages from various sources. They interface
 to message generators.
 <ul>
@@ -35,7 +43,7 @@ to message generators.
 <li><a href="im3195.html">im3195</a> - accepts syslog messages via RFC 3195</li>
 </ul>
 
-<h2>Output Modules</h2>
+<a name"om"></a><h2>Output Modules</h2>
 <p>Output modules process messages. With them, message formats can be transformed
 and messages be transmitted to various different targets.
 <ul>
@@ -55,11 +63,50 @@ permits rsyslog to alert folks by mail if something important happens</li>
 <li><a href="omudpspoof.html">omudpspoof</a> - output module sending UDP syslog messages with a spoofed address</li>
 </ul>
 
-<h2>Library Modules</h2>
+<a name="pm"></a><h2>Parser Modules</h2>
+<p>Parser modules are used to parse message content, once the message has been
+received. They can be used to process custom message formats or invalidly formatted
+messages. For details, please see the <a href="rsyslog_messageparser.html">rsyslog
+message parser documentation</a>.
+<p>The current modules are currently provided as part of rsyslog:
+<ul>
+<li>pmrfc5424 - parses RFC5424-formatted messages (the new syslog standard)
+<li>pmrfc3164 - the traditional/legacy syslog parser
+</ul>
+
+<a name="mm"></a><h2>Message Modification Modules</h2>
+<p>Message modification modules are used to change the content of messages being processed.
+They can be implemented using either the output module or the parser module interface.
+From the rsyslog core's point of view, they actually are output or parser modules, it is their
+implementation that makes them special.
+<p>Currently, there do not exist any such modules, but could be written with
+the methods the engine provides. They could be used, for example, to:
+<ul>
+<li>anonymize message content
+<li>add dynamically computed content to message (fields)
+</ul>
+
+<a name="lm"></a><h2>Library Modules</h2>
 <p>Library modules provide dynamically loadable functionality for parts of rsyslog,
 most often for other loadable modules. They can not be user-configured and are loaded
 automatically by some components. They are just mentioned so that error messages that
 point to library moduls can be understood. No module list is provided.
+
+<h2>Where are the modules integrated into the Message Flow?</h2>
+<p>Depending on their module type, modules may access and/or modify messages at
+various stages during rsyslog's processing. Note that only the "core type" (e.g. input,
+output) but not any type derived from it (message modification module) specifies when
+a module is called.
+<p>The simplified workflow is as follows:
+<p align="center">
+<img src="module_workflow.png" alt"rsyslog: loadable modules and message flow">
+<p>As can be seen, messages are received by input modules, then passed to one or many
+parser modules, which generate the in-memory representation of the message and may
+also modify the message itself. The, the internal representation is passed to
+output modules, which may output a message and (with the interfaces newly introduced
+in v5) may also modify messageo object content.
+<p>Note that the actual flow is much more complex and depends a lot on queue and
+filter settings. This graphic above is a high-level message flow diagram.
 
 <p>[<a href="manual.html">manual index</a>]
 [<a href="rsyslog_conf.html">rsyslog.conf</a>]
