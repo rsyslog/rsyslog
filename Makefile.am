@@ -99,6 +99,10 @@ if ENABLE_OMRULESET
 SUBDIRS += plugins/omruleset
 endif
 
+if ENABLE_OMDBALERTING
+SUBDIRS += plugins/omdbalerting
+endif
+
 if ENABLE_OMUDPSPOOF
 SUBDIRS += plugins/omudpspoof
 endif
