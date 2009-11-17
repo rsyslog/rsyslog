@@ -31,8 +31,13 @@ typedef nsdsel_if_t nsdsel_ptcp_if_t; /* we just *implement* this interface */
 struct nsdsel_ptcp_s {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
 	int maxfds;
+#ifdef USE_UNLIMITED_SELECT
+	fd_set *pReadfds;
+	fd_set *pWritefds;
+#else
 	fd_set readfds;
 	fd_set writefds;
+#endif
 };
 
 /* interface is defined in nsd.h, we just implement it! */

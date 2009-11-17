@@ -57,6 +57,7 @@
 #include "netstrm.h"
 #include "glbl.h"
 #include "debug.h"
+#include "unlimited_select.h"
 
 
 MODULE_TYPE_INPUT
@@ -415,15 +416,20 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *pSess)
 		CHKiRet(netstrm.GetSock(pSess->pStrm, &fdSess)); // TODO: method access!
 		if (allowedMethods & ALLOWEDMETHOD_TCP) {
 			int len;
-			fd_set  fds;
 			struct timeval tv;
+#ifdef USE_UNLIMITED_SELECT
+                        fd_set *pFds = malloc(glbl.GetFdSetSize());
+#else
+                        fd_set fds;
+                        fd_set *pFds = &fds;
+#endif
 		
 			do {
-				FD_ZERO(&fds);
-				FD_SET(fdSess, &fds);
+				FD_ZERO(pFds);
+				FD_SET(fdSess, pFds);
 				tv.tv_sec = 1;
 				tv.tv_usec = 0;
-				ret = select(fdSess + 1, &fds, NULL, NULL, &tv);
+				ret = select(fdSess + 1, pFds, NULL, NULL, &tv);
 			} while (ret < 0 && errno == EINTR);
 			if (ret < 0) {
 				errmsg.LogError(0, RS_RET_ERR, "TCP session %p will be closed, error ignored\n", pSess);
@@ -476,6 +482,8 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *pSess)
 				pGSess->allowedMethods = ALLOWEDMETHOD_TCP;
 				ABORT_FINALIZE(RS_RET_OK); // TODO: define good error codes
 			}
+
+                        freeFdSet(pFds);
 		}
 
 		context = &pGSess->gss_context;

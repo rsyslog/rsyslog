@@ -1158,6 +1158,9 @@ static rsRetVal setMaxFiles(void __attribute__((unused)) *pVal, int iFiles)
 				iFiles, errStr, (long) maxFiles.rlim_max);
 		ABORT_FINALIZE(RS_RET_ERR_RLIM_NOFILE);
 	}
+#ifdef USE_UNLIMITED_SELECT
+	glbl.SetFdSetSize(howmany(iFiles, __NFDBITS) * sizeof (fd_mask));
+#endif
 	DBGPRINTF("Max number of files set to %d [kernel max %ld].\n", iFiles, (long) maxFiles.rlim_max);
 
 finalize_it:
@@ -2721,10 +2724,10 @@ int realMain(int argc, char **argv)
 				fprintf(stderr, "error -p is no longer supported, use module imuxsock instead");
 			}
 		case 'q':               /* add hostname if DNS resolving has failed */
-		        net.pACLAddHostnameOnFail = 1;
+		        *(net.pACLAddHostnameOnFail) = 1;
 		        break;
 		case 'Q':               /* dont resolve hostnames in ACL to IPs */
-		        net.pACLDontResolve = 1;
+		        *(net.pACLDontResolve) = 1;
 		        break;
 		case 'r':		/* accept remote messages */
 			if(iCompatibilityMode < 3) {

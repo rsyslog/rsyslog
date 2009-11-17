@@ -36,6 +36,7 @@
 #include "errmsg.h"
 #include "nsd_ptcp.h"
 #include "nsdsel_ptcp.h"
+#include "unlimited_select.h"
 
 /* static data */
 DEFobjStaticHelpers
@@ -47,14 +48,23 @@ DEFobjCurrIf(glbl)
  */
 BEGINobjConstruct(nsdsel_ptcp) /* be sure to specify the object type also in END macro! */
 	pThis->maxfds = 0;
+#ifdef USE_UNLIMITED_SELECT
+        pThis->pReadfds = calloc(1, glbl.GetFdSetSize());
+        pThis->pWritefds = calloc(1, glbl.GetFdSetSize());
+#else
 	FD_ZERO(&pThis->readfds);
 	FD_ZERO(&pThis->writefds);
+#endif
 ENDobjConstruct(nsdsel_ptcp)
 
 
 /* destructor for the nsdsel_ptcp object */
 BEGINobjDestruct(nsdsel_ptcp) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(nsdsel_ptcp)
+#ifdef USE_UNLIMITED_SELECT
+	freeFdSet(pThis->pReadfds);
+	freeFdSet(pThis->pWritefds);
+#endif
 ENDobjDestruct(nsdsel_ptcp)
 
 
@@ -65,20 +75,27 @@ Add(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp)
 	DEFiRet;
 	nsdsel_ptcp_t *pThis = (nsdsel_ptcp_t*) pNsdsel;
 	nsd_ptcp_t *pSock = (nsd_ptcp_t*) pNsd;
+#ifdef USE_UNLIMITED_SELECT
+        fd_set *pReadfds = pThis->pReadfds;
+        fd_set *pWritefds = pThis->pWritefds;
+#else
+        fd_set *pReadfds = &pThis->readfds;
+        fd_set *pWritefds = &pThis->writefds;
+#endif
 
 	ISOBJ_TYPE_assert(pSock, nsd_ptcp);
 	ISOBJ_TYPE_assert(pThis, nsdsel_ptcp);
 
 	switch(waitOp) {
 		case NSDSEL_RD:
-			FD_SET(pSock->sock, &pThis->readfds);
+			FD_SET(pSock->sock, pReadfds);
 			break;
 		case NSDSEL_WR:
-			FD_SET(pSock->sock, &pThis->writefds);
+			FD_SET(pSock->sock, pWritefds);
 			break;
 		case NSDSEL_RDWR:
-			FD_SET(pSock->sock, &pThis->readfds);
-			FD_SET(pSock->sock, &pThis->writefds);
+			FD_SET(pSock->sock, pReadfds);
+			FD_SET(pSock->sock, pWritefds);
 			break;
 	}
 
@@ -98,6 +115,13 @@ Select(nsdsel_t *pNsdsel, int *piNumReady)
 	DEFiRet;
 	int i;
 	nsdsel_ptcp_t *pThis = (nsdsel_ptcp_t*) pNsdsel;
+#ifdef USE_UNLIMITED_SELECT
+        fd_set *pReadfds = pThis->pReadfds;
+        fd_set *pWritefds = pThis->pWritefds;
+#else
+        fd_set *pReadfds = &pThis->readfds;
+        fd_set *pWritefds = &pThis->writefds;
+#endif
 
 	ISOBJ_TYPE_assert(pThis, nsdsel_ptcp);
 	assert(piNumReady != NULL);
@@ -106,13 +130,13 @@ Select(nsdsel_t *pNsdsel, int *piNumReady)
 		// TODO: name in dbgprintf!
 		dbgprintf("--------<NSDSEL_PTCP> calling select, active fds (max %d): ", pThis->maxfds);
 		for(i = 0; i <= pThis->maxfds; ++i)
-			if(FD_ISSET(i, &pThis->readfds) || FD_ISSET(i, &pThis->writefds))
+			if(FD_ISSET(i, pReadfds) || FD_ISSET(i, pWritefds))
 				dbgprintf("%d ", i);
 		dbgprintf("\n");
 	}
 
 	/* now do the select */
-	*piNumReady = select(pThis->maxfds+1, &pThis->readfds, &pThis->writefds, NULL, NULL);
+	*piNumReady = select(pThis->maxfds+1, pReadfds, pWritefds, NULL, NULL);
 
 	RETiRet;
 }
@@ -125,6 +149,13 @@ IsReady(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp, int *pbIsReady)
 	DEFiRet;
 	nsdsel_ptcp_t *pThis = (nsdsel_ptcp_t*) pNsdsel;
 	nsd_ptcp_t *pSock = (nsd_ptcp_t*) pNsd;
+#ifdef USE_UNLIMITED_SELECT
+        fd_set *pReadfds = pThis->pReadfds;
+        fd_set *pWritefds = pThis->pWritefds;
+#else
+        fd_set *pReadfds = &pThis->readfds;
+        fd_set *pWritefds = &pThis->writefds;
+#endif
 
 	ISOBJ_TYPE_assert(pThis, nsdsel_ptcp);
 	ISOBJ_TYPE_assert(pSock, nsd_ptcp);
@@ -132,14 +163,14 @@ IsReady(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp, int *pbIsReady)
 
 	switch(waitOp) {
 		case NSDSEL_RD:
-			*pbIsReady = FD_ISSET(pSock->sock, &pThis->readfds);
+			*pbIsReady = FD_ISSET(pSock->sock, pReadfds);
 			break;
 		case NSDSEL_WR:
-			*pbIsReady = FD_ISSET(pSock->sock, &pThis->writefds);
+			*pbIsReady = FD_ISSET(pSock->sock, pWritefds);
 			break;
 		case NSDSEL_RDWR:
-			*pbIsReady =   FD_ISSET(pSock->sock, &pThis->readfds)
-				     | FD_ISSET(pSock->sock, &pThis->writefds);
+			*pbIsReady =   FD_ISSET(pSock->sock, pReadfds)
+				     | FD_ISSET(pSock->sock, pWritefds);
 			break;
 	}
 

@@ -1611,6 +1611,9 @@ CODESTARTobjQueryInterface(net)
 	pIf->PermittedPeerWildcardMatch = PermittedPeerWildcardMatch;
 	pIf->CmpHost = CmpHost;
 	pIf->HasRestrictions = HasRestrictions;
+	/* data members */
+	pIf->pACLAddHostnameOnFail = &ACLAddHostnameOnFail;
+	pIf->pACLDontResolve = &ACLDontResolve;
 finalize_it:
 ENDobjQueryInterface(net)
 

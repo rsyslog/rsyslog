@@ -377,7 +377,6 @@ rsRetVal rcvMainLoop(thrdInfo_t *pThrd)
 	int maxfds;
 	int nfds;
 	int i;
-	fd_set readfds;
 	struct sockaddr_storage frominetPrev;
 	int bIsPermitted;
 	uchar fromHost[NI_MAXHOST];
@@ -399,21 +398,21 @@ rsRetVal rcvMainLoop(thrdInfo_t *pThrd)
 		 * is given without -a, we do not need to listen at all..
 		 */
 	        maxfds = 0;
-	        FD_ZERO (&readfds);
+	        FD_ZERO (pReadfds);
 
 		/* Add the UDP listen sockets to the list of read descriptors. */
 		for (i = 0; i < *udpLstnSocks; i++) {
 			if (udpLstnSocks[i+1] != -1) {
 				if(Debug)
 					net.debugListenInfo(udpLstnSocks[i+1], "UDP");
-				FD_SET(udpLstnSocks[i+1], &readfds);
+				FD_SET(udpLstnSocks[i+1], pReadfds);
 				if(udpLstnSocks[i+1]>maxfds) maxfds=udpLstnSocks[i+1];
 			}
 		}
 		if(Debug) {
 			dbgprintf("--------imUDP calling select, active file descriptors (max %d): ", maxfds);
 			for (nfds = 0; nfds <= maxfds; ++nfds)
-				if ( FD_ISSET(nfds, &readfds) )
+				if ( FD_ISSET(nfds, pReadfds) )
 					dbgprintf("%d ", nfds);
 			dbgprintf("\n");
 		}

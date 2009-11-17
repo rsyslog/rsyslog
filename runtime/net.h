@@ -152,8 +152,8 @@ BEGINinterface(net) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*HasRestrictions)(uchar *, int *bHasRestrictions);
 	int (*isAllowedSender2)(uchar *pszType, struct sockaddr *pFrom, const char *pszFromHost, int bChkDNS);
 	/* data members - these should go away over time... TODO */
-	int    pACLAddHostnameOnFail; /* add hostname to acl when DNS resolving has failed */
-	int    pACLDontResolve;       /* add hostname to acl instead of resolving it to IP(s) */
+	int    *pACLAddHostnameOnFail; /* add hostname to acl when DNS resolving has failed */
+	int    *pACLDontResolve;       /* add hostname to acl instead of resolving it to IP(s) */
 ENDinterface(net)
 #define netCURR_IF_VERSION 6 /* increment whenever you change the interface structure! */
 

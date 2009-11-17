@@ -1,3 +1,5 @@
+- added option to use unlimited-size select() calls
+  Thanks to varmjofekoj for the patch
 ---------------------------------------------------------------------------
 Version 5.5.0  [DEVEL] (rgerhards), 2009-11-??
 - moved DNS resolution code out of imudp and into the backend processing
