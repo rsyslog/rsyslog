@@ -1,3 +1,5 @@
+- added option to use unlimited-size select() calls
+  Thanks to varmjofekoj for the patch
 ---------------------------------------------------------------------------
 Version 4.7.0  [v4-devel] (rgerhards), 2009-09-??
 - added function getenv() to RainerScript

@@ -62,9 +62,14 @@ BEGINinterface(glbl) /* name must also be changed in ENDinterface macro! */
 	/* added v3, 2009-06-30 */
 	rsRetVal (*GenerateLocalHostNameProperty)(void);
 	prop_t* (*GetLocalHostNameProp)(void);
+	/* added v4, 2009-11-16 as part of varmojfekoj's "unlimited select()" patch
+	 * Note that it must be always present, otherwise the interface would have different
+	 * versions depending on compile settings, what is not acceptable.
+	 */
+	SIMP_PROP(FdSetSize, int)
 #undef	SIMP_PROP
 ENDinterface(glbl)
-#define glblCURR_IF_VERSION 3 /* increment whenever you change the interface structure! */
+#define glblCURR_IF_VERSION 4 /* increment whenever you change the interface structure! */
 /* version 2 had PreserveFQDN added - rgerhards, 2008-12-08 */
 
 /* the remaining prototypes */

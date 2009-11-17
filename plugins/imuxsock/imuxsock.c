@@ -45,6 +45,7 @@
 #include "glbl.h"
 #include "msg.h"
 #include "prop.h"
+#include "unlimited_select.h"
 
 MODULE_TYPE_INPUT
 
@@ -256,7 +257,13 @@ BEGINrunInput
 	int nfds;
 	int i;
 	int fd;
-	fd_set readfds;
+#ifdef USE_UNLIMITED_SELECT
+        fd_set  *pReadfds = malloc(glbl.GetFdSetSize());
+#else
+        fd_set  readfds;
+        fd_set *pReadfds = &readfds;
+#endif
+
 CODESTARTrunInput
 	/* this is an endless loop - it is terminated when the thread is
 	 * signalled to do so. This, however, is handled by the framework,
@@ -270,11 +277,11 @@ CODESTARTrunInput
 		 * is given without -a, we do not need to listen at all..
 		 */
 	        maxfds = 0;
-	        FD_ZERO (&readfds);
+	        FD_ZERO (pReadfds);
 		/* Copy master connections */
 		for (i = startIndexUxLocalSockets; i < nfunix; i++) {
 			if (funix[i] != -1) {
-				FD_SET(funix[i], &readfds);
+				FD_SET(funix[i], pReadfds);
 				if (funix[i]>maxfds) maxfds=funix[i];
 			}
 		}
@@ -282,22 +289,23 @@ CODESTARTrunInput
 		if(Debug) {
 			dbgprintf("--------imuxsock calling select, active file descriptors (max %d): ", maxfds);
 			for (nfds= 0; nfds <= maxfds; ++nfds)
-				if ( FD_ISSET(nfds, &readfds) )
+				if ( FD_ISSET(nfds, pReadfds) )
 					dbgprintf("%d ", nfds);
 			dbgprintf("\n");
 		}
 
 		/* wait for io to become ready */
-		nfds = select(maxfds+1, (fd_set *) &readfds, NULL, NULL, NULL);
+		nfds = select(maxfds+1, (fd_set *) pReadfds, NULL, NULL, NULL);
 
 		for (i = 0; i < nfunix && nfds > 0; i++) {
-			if ((fd = funix[i]) != -1 && FD_ISSET(fd, &readfds)) {
+			if ((fd = funix[i]) != -1 && FD_ISSET(fd, pReadfds)) {
 				readSocket(fd, i);
 				--nfds; /* indicate we have processed one */
 			}
 		}
 	}
 
+	freeFdSet(pReadfds);
 	RETiRet;
 ENDrunInput
 

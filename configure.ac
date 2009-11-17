@@ -342,6 +342,21 @@ AC_ARG_ENABLE([fsstnd],
   ])
 
 
+# support for unlimited select() syscall
+AC_ARG_ENABLE(unlimited_select,
+        [AS_HELP_STRING([--enable-unlimited-select],[Enable unlimited select() syscall @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_unlimited_select="yes" ;;
+          no) enable_unlimited_select="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-unlimited-select) ;;
+         esac],
+        [enable_unlimited_select="no"]
+)
+if test "$enable_unlimited_select" = "yes"; then
+        AC_DEFINE(USE_UNLIMITED_SELECT, 1, [If defined, the select() syscall won't be limited to a particular number of file descriptors.])
+fi
+
+
 # debug
 AC_ARG_ENABLE(debug,
         [AS_HELP_STRING([--enable-debug],[Enable debug mode @<:@default=no@:>@])],
@@ -844,6 +859,7 @@ echo "    Zlib compression support enabled:         $enable_zlib"
 echo "    rsyslog runtime will be built:            $enable_rsyslogrt"
 echo "    rsyslogd will be built:                   $enable_rsyslogd"
 echo "    custom module 1 will be built:            $enable_cust1"
+echo "    Unlimited select() support enabled:       $enable_unlimited_select"
 echo
 echo "---{ input plugins }---"
 echo "    Klog functionality enabled:               $enable_klog ($os_type)"
