@@ -51,11 +51,14 @@
 #include "obj.h"
 #include "errmsg.h"
 #include "gss-misc.h"
+#include "glbl.h"
+#include "unlimited_select.h"
 
 MODULE_TYPE_LIB
 
 /* static data */
 DEFobjStaticHelpers
+DEFobjCurrIf(glbl)
 DEFobjCurrIf(errmsg)
 
 static void display_status_(char *m, OM_uint32 code, int type)
@@ -108,28 +111,38 @@ static int read_all(int fd, char *buf, unsigned int nbyte)
 {
     int     ret;
     char   *ptr;
-    fd_set  rfds;
     struct timeval tv;
+#ifdef USE_UNLIMITED_SELECT
+    fd_set  *pRfds = malloc(glbl.GetFdSetSize());
+#else
+    fd_set  rfds;
+    fd_set *pRfds = &rfds;
+#endif
 
     for (ptr = buf; nbyte; ptr += ret, nbyte -= ret) {
-	    FD_ZERO(&rfds);
-	    FD_SET(fd, &rfds);
+	    FD_ZERO(pRfds);
+	    FD_SET(fd, pRfds);
 	    tv.tv_sec = 1;
 	    tv.tv_usec = 0;
 
-	    if ((ret = select(FD_SETSIZE, &rfds, NULL, NULL, &tv)) <= 0
-		|| !FD_ISSET(fd, &rfds))
+	    if ((ret = select(FD_SETSIZE, pRfds, NULL, NULL, &tv)) <= 0
+		|| !FD_ISSET(fd, pRfds)) {
+                    freeFdSet(pRfds);
 		    return ret;
+            }
 	    ret = recv(fd, ptr, nbyte, 0);
 	    if (ret < 0) {
 		    if (errno == EINTR)
 			    continue;
+                    freeFdSet(pRfds);
 		    return (ret);
 	    } else if (ret == 0) {
+                    freeFdSet(pRfds);
 		    return (ptr - buf);
 	    }
     }
 
+    freeFdSet(pRfds);
     return (ptr - buf);
 }
 

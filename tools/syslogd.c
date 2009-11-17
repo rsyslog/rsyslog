@@ -2150,6 +2150,9 @@ static rsRetVal setMaxFiles(void __attribute__((unused)) *pVal, int iFiles)
 				iFiles, errStr, (long) maxFiles.rlim_max);
 		ABORT_FINALIZE(RS_RET_ERR_RLIM_NOFILE);
 	}
+#ifdef USE_UNLIMITED_SELECT
+	glbl.SetFdSetSize(howmany(iFiles, __NFDBITS) * sizeof (fd_mask));
+#endif
 	DBGPRINTF("Max number of files set to %d [kernel max %ld].\n", iFiles, (long) maxFiles.rlim_max);
 
 finalize_it:

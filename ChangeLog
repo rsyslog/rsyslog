@@ -1,3 +1,5 @@
+- added option to use unlimited-size select() calls
+  Thanks to varmjofekoj for the patch
 ---------------------------------------------------------------------------
 Version 4.4.2  [v4-stable] (rgerhards), 2009-10-09
 - bugfix: invalid handling of zero-sized messages, could lead to mis-

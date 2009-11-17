@@ -44,6 +44,7 @@
 #include "parser.h"
 #include "datetime.h"
 #include "unicode-helper.h"
+#include "unlimited_select.h"
 
 MODULE_TYPE_INPUT
 
@@ -256,12 +257,18 @@ BEGINrunInput
 	int maxfds;
 	int nfds;
 	int i;
-	fd_set readfds;
 	struct sockaddr_storage frominetPrev;
 	int bIsPermitted;
 	uchar fromHost[NI_MAXHOST];
 	uchar fromHostIP[NI_MAXHOST];
 	uchar fromHostFQDN[NI_MAXHOST];
+#ifdef USE_UNLIMITED_SELECT
+        fd_set  *pReadfds = malloc(glbl.GetFdSetSize());
+#else
+        fd_set  readfds;
+        fd_set *pReadfds = &readfds;
+#endif
+
 CODESTARTrunInput
 	/* start "name caching" algo by making sure the previous system indicator
 	 * is invalidated.
@@ -280,30 +287,30 @@ CODESTARTrunInput
 		 * is given without -a, we do not need to listen at all..
 		 */
 	        maxfds = 0;
-	        FD_ZERO (&readfds);
+	        FD_ZERO (pReadfds);
 
 		/* Add the UDP listen sockets to the list of read descriptors. */
 		for (i = 0; i < *udpLstnSocks; i++) {
 			if (udpLstnSocks[i+1] != -1) {
 				if(Debug)
 					net.debugListenInfo(udpLstnSocks[i+1], "UDP");
-				FD_SET(udpLstnSocks[i+1], &readfds);
+				FD_SET(udpLstnSocks[i+1], pReadfds);
 				if(udpLstnSocks[i+1]>maxfds) maxfds=udpLstnSocks[i+1];
 			}
 		}
 		if(Debug) {
 			dbgprintf("--------imUDP calling select, active file descriptors (max %d): ", maxfds);
 			for (nfds = 0; nfds <= maxfds; ++nfds)
-				if ( FD_ISSET(nfds, &readfds) )
+				if ( FD_ISSET(nfds, pReadfds) )
 					dbgprintf("%d ", nfds);
 			dbgprintf("\n");
 		}
 
 		/* wait for io to become ready */
-		nfds = select(maxfds+1, (fd_set *) &readfds, NULL, NULL, NULL);
+		nfds = select(maxfds+1, (fd_set *) pReadfds, NULL, NULL, NULL);
 
 	       for(i = 0; nfds && i < *udpLstnSocks; i++) {
-			if(FD_ISSET(udpLstnSocks[i+1], &readfds)) {
+			if(FD_ISSET(udpLstnSocks[i+1], pReadfds)) {
 		       		processSocket(udpLstnSocks[i+1], &frominetPrev, &bIsPermitted,
 					      fromHost, fromHostFQDN, fromHostIP);
 			--nfds; /* indicate we have processed one descriptor */
@@ -312,6 +319,7 @@ CODESTARTrunInput
 	       /* end of a run, back to loop for next recv() */
 	}
 
+	freeFdSet(pReadfds);
 	return iRet;
 ENDrunInput
 

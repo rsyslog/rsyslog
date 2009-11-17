@@ -68,6 +68,9 @@ static uchar *pszDfltNetstrmDrvr = NULL; /* module name of default netstream dri
 static uchar *pszDfltNetstrmDrvrCAF = NULL; /* default CA file for the netstrm driver */
 static uchar *pszDfltNetstrmDrvrKeyFile = NULL; /* default key file for the netstrm driver (server) */
 static uchar *pszDfltNetstrmDrvrCertFile = NULL; /* default cert file for the netstrm driver (server) */
+#ifdef USE_UNLIMITED_SELECT
+static int iFdSetSize = howmany(FD_SETSIZE, __NFDBITS) * sizeof (fd_mask); /* size of select() bitmask in bytes */
+#endif
 
 
 /* define a macro for the simple properties' set and get functions
@@ -100,6 +103,9 @@ SIMP_PROP(DisableDNS, bDisableDNS, int)
 SIMP_PROP(LocalDomain, LocalDomain, uchar*)
 SIMP_PROP(StripDomains, StripDomains, char**)
 SIMP_PROP(LocalHosts, LocalHosts, char**)
+#ifdef USE_UNLIMITED_SELECT
+SIMP_PROP(FdSetSize, iFdSetSize, int)
+#endif
 
 SIMP_PROP_SET(LocalFQDNName, LocalFQDNName, uchar*)
 SIMP_PROP_SET(LocalHostName, LocalHostName, uchar*)
@@ -217,6 +223,9 @@ CODESTARTobjQueryInterface(glbl)
 	SIMP_PROP(DfltNetstrmDrvrCAF)
 	SIMP_PROP(DfltNetstrmDrvrKeyFile)
 	SIMP_PROP(DfltNetstrmDrvrCertFile)
+#ifdef USE_UNLIMITED_SELECT
+	SIMP_PROP(FdSetSize)
+#endif
 #undef	SIMP_PROP
 finalize_it:
 ENDobjQueryInterface(glbl)
@@ -251,6 +260,9 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	bOptimizeUniProc = 1;
 	bHUPisRestart = 1;
 	bPreserveFQDN = 0;
+#ifdef USE_UNLIMITED_SELECT
+	iFdSetSize = howmany(FD_SETSIZE, __NFDBITS) * sizeof (fd_mask);
+#endif
 	return RS_RET_OK;
 }
 
