@@ -34,10 +34,12 @@
 # define FD_ZERO(set) memset((set), 0, glbl.GetFdSetSize());
 #endif
 
-void freeFdSet(fd_set *p) {
 #ifdef USE_UNLIMITED_SELECT
+void freeFdSet(fd_set *p) {
         free(p);
-#endif
 }
+#else
+#	define freeFdSet(x)
+#endif
 
 #endif /* #ifndef UNLIMITED_SELECT_H_INCLUDED */

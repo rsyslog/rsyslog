@@ -277,6 +277,7 @@ BEGINObjClassExit(gssutil, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END M
 CODESTARTObjClassExit(gssutil)
 	/* release objects we no longer need */
 	objRelease(errmsg, CORE_COMPONENT);
+	objRelease(glbl, CORE_COMPONENT);
 ENDObjClassExit(gssutil)
 
 
@@ -287,6 +288,7 @@ ENDObjClassExit(gssutil)
 BEGINAbstractObjClassInit(gssutil, 1, OBJ_IS_LOADABLE_MODULE) /* class, version - CHANGE class also in END MACRO! */
 	/* request objects we use */
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	CHKiRet(objUse(glbl, CORE_COMPONENT));
 ENDObjClassInit(gssutil)
 
 
