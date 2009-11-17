@@ -2,11 +2,42 @@
 <html><head><title>Modules - rsyslog.conf</title></head>
 <body>
 <p>This is a part of the rsyslog.conf documentation.</p>
-<a href="rsyslog_conf.html">back</a>
-<h2>Modules</h2>
-<p>Rsyslog has a modular design. Consequently, there is a growing
+<a href="rsyslog_conf.html">Back to rsyslog.conf manual</a>
+<h1>Modules</h1>
+<p>Rsyslog has a modular design. This enables functionality to be
+dynamically loaded from modules, which may also be written by any
+third party. Rsyslog itself offers all non-core functionality as
+modules. Consequently, there is a growing
 number of modules. Here is the entry point to their documentation and
 what they do (list is currently not complete)</p>
+<p>Please note that each module provides configuration
+directives, which are NOT necessarily being listed below. Also
+remember, that a modules configuration directive (and functionality) is
+only available if it has been loaded (using $ModLoad).</p>
+<p>It is relatively easy to write a rsyslog module. <b>If none of the provided
+modules solve your need, you may consider writing one or have one written
+for you by
+<a href="http://www.rsyslog.com/professional-services">Adiscon's professional services for rsyslog</a>
+</b>(this often is a very cost-effective and efficient way of getting what you need).
+
+<h2>Input Modules</h2>
+<p>Input modules are used to gather messages from various sources. They interface
+to message generators.
+<ul>
+<li><a href="imfile.html">imfile</a> -&nbsp; input module for text files</li>
+<li><a href="imrelp.html">imrelp</a> - RELP input module</li>
+<li>imudp - udp syslog message input</li>
+<li><a href="imtcp.html">imtcp</a> - input plugin for plain tcp syslog</li>
+<li><a href="imgssapi.html">imgssapi</a> - input plugin for plain tcp and GSS-enabled syslog</li>
+<li>immark - support for mark messages</li>
+<li><a href="imklog.html">imklog</a> - kernel logging</li>
+<li><a href="imuxsock.html">imuxsock</a> - unix sockets, including the system log socket</li>
+<li><a href="im3195.html">im3195</a> - accepts syslog messages via RFC 3195</li>
+</ul>
+
+<h2>Output Modules</h2>
+<p>Output modules process messages. With them, message formats can be transformed
+and messages be transmitted to various different targets.
 <ul>
 <li><a href="omsnmp.html">omsnmp</a> - SNMP trap output module</li>
 <li><a href="omstdout.html">omtdout</a> - stdout output module (mainly a test tool)</li>
@@ -20,26 +51,14 @@ SQLLite, Ingres, Oracle, mSQL)</li>
 <li><a href="ommail.html">ommail</a> -
 permits rsyslog to alert folks by mail if something important happens</li>
 <li><a href="omoracle.html">omoracle</a> - output module for Oracle (native OCI interface)</li>
-<li><a href="imfile.html">imfile</a>
--&nbsp; input module for text files</li>
-<li><a href="imrelp.html">imrelp</a> - RELP
-input module</li>
-<li>imudp - udp syslog message input</li>
-<li><a href="imtcp.html">imtcp</a> - input
-plugin for plain tcp syslog</li>
-<li><a href="imgssapi.html">imgssapi</a> -
-input plugin for plain tcp and GSS-enabled syslog</li>
-<li>immark - support for mark messages</li>
-<li><a href="imklog.html">imklog</a> - kernel logging</li>
-<li><a href="imuxsock.html">imuxsock</a> -
-unix sockets, including the system log socket</li>
-<li><a href="im3195.html">im3195</a> -
-accepts syslog messages via RFC 3195</li>
 </ul>
-<p>Please note that each module provides configuration
-directives, which are NOT necessarily being listed below. Also
-remember, that a modules configuration directive (and functionality) is
-only available if it has been loaded (using $ModLoad).</p>
+
+<h2>Library Modules</h2>
+<p>Library modules provide dynamically loadable functionality for parts of rsyslog,
+most often for other loadable modules. They can not be user-configured and are loaded
+automatically by some components. They are just mentioned so that error messages that
+point to library moduls can be understood. No module list is provided.
+
 <p>[<a href="manual.html">manual index</a>]
 [<a href="rsyslog_conf.html">rsyslog.conf</a>]
 [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>

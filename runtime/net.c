@@ -1568,6 +1568,9 @@ CODESTARTobjQueryInterface(net)
 	pIf->DestructPermittedPeers = DestructPermittedPeers;
 	pIf->PermittedPeerWildcardMatch = PermittedPeerWildcardMatch;
 	pIf->CmpHost = CmpHost;
+	/* data members */
+	pIf->pACLAddHostnameOnFail = &ACLAddHostnameOnFail;
+	pIf->pACLDontResolve = &ACLDontResolve;
 finalize_it:
 ENDobjQueryInterface(net)
 
