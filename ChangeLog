@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 5.5.0  [DEVEL] (rgerhards), 2009-11-??
+Version 5.5.0  [DEVEL] (rgerhards), 2009-11-18
 - moved DNS resolution code out of imudp and into the backend processing
   Most importantly, DNS resolution now never happens if the resolved name
   is not required. Note that this applies to imudp - for the other inputs,
