@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 4.5.7  [v4-beta] (rgerhards), 2009-11-??
+Version 4.5.7  [v4-beta] (rgerhards), 2009-11-18
 - added a so-called "On Demand Debug" mode, in which debug output can
   be generated only after the process has started, but not right from
   the beginning. This is assumed to be useful for hard-to-find bugs.
