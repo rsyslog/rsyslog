@@ -91,8 +91,8 @@ ENDinterface(nsdsel)
 BEGINinterface(nsdpoll) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Construct)(nsdpoll_t **ppThis);
 	rsRetVal (*Destruct)(nsdpoll_t **ppThis);
-	rsRetVal (*Ctl)(nsdpoll_t *pThis, int fd, int op, epoll_event_t *event);
-	rsRetVal (*Wait)(nsdpoll_t *pThis, epoll_event_t *events, int maxevents, int timeout);
+	rsRetVal (*Ctl)(nsdpoll_t *pNsdpoll, nsd_t *pNsd, int id, void *pUsr, int op);
+	rsRetVal (*Wait)(nsdpoll_t *pNsdpoll, int timeout, int *idRdy, void **ppUsr);
 ENDinterface(nsdpoll)
 #define nsdpollCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
 

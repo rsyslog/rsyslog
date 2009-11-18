@@ -68,7 +68,7 @@ loadDrvr(nspoll_t *pThis)
 	pBaseDrvrName = pThis->pBaseDrvrName;
 	if(pBaseDrvrName == NULL) /* if no drvr name is set, use system default */
 		pBaseDrvrName = glbl.GetDfltNetstrmDrvr();
-	if(snprintf((char*)szDrvrName, sizeof(szDrvrName), "lmnspoll_%s", pBaseDrvrName) == sizeof(szDrvrName))
+	if(snprintf((char*)szDrvrName, sizeof(szDrvrName), "lmnsdpoll_%s", pBaseDrvrName) == sizeof(szDrvrName))
 		ABORT_FINALIZE(RS_RET_DRVRNAME_TOO_LONG);
 	CHKmalloc(pThis->pDrvrName = (uchar*) strdup((char*)szDrvrName));
 
@@ -79,6 +79,7 @@ loadDrvr(nspoll_t *pThis)
 	 * about this hack, but for the time being it is efficient and clean
 	 * enough. -- rgerhards, 2008-04-18
 	 */
+RUNLOG_VAR("%s", szDrvrName+2);
 	CHKiRet(obj.UseObj(__FILE__, szDrvrName+2, DONT_LOAD_LIB, (void*) &pThis->Drvr));
 
 finalize_it:
@@ -119,9 +120,11 @@ ConstructFinalize(nspoll_t *pThis)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, nspoll);
+RUNLOG_STR("trying to load epoll driver\n");
 	CHKiRet(loadDrvr(pThis));
 	CHKiRet(pThis->Drvr.Construct(&pThis->pDrvrData));
 finalize_it:
+dbgprintf("XXX: done trying to load epoll driver, state %d\n", iRet);
 	RETiRet;
 }
 
@@ -129,12 +132,11 @@ finalize_it:
 /* Carries out the actual wait (all done in lower layers)
  */
 static rsRetVal
-Wait(nspoll_t *pThis, epoll_event_t *events, int maxevents, int timeout) {
+Wait(nspoll_t *pThis, int timeout, int *idRdy, void **ppUsr) {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, nspoll);
-	assert(events != NULL);
-	assert(maxevents > 0);
-	iRet = pThis->Drvr.Wait(pThis->pDrvrData, events, maxevents, timeout);
+	assert(idRdy != NULL);
+	iRet = pThis->Drvr.Wait(pThis->pDrvrData, timeout, idRdy, ppUsr);
 	RETiRet;
 }
 
@@ -143,11 +145,10 @@ Wait(nspoll_t *pThis, epoll_event_t *events, int maxevents, int timeout) {
  * rgerhards, 2009-11-18
  */
 static rsRetVal
-Ctl(nspoll_t *pThis, int fd, int op, epoll_event_t *event) {
+Ctl(nspoll_t *pThis, nsd_t *pNsd, int id, void *pUsr, int op) {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, nspoll);
-	assert(event != NULL);
-	iRet = pThis->Drvr.Ctl(pThis->pDrvrData, fd, op, event);
+	iRet = pThis->Drvr.Ctl(pThis->pDrvrData, pNsd, id, pUsr, op);
 	RETiRet;
 }
 
@@ -188,6 +189,7 @@ ENDObjClassExit(nspoll)
  */
 BEGINObjClassInit(nspoll, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
+	DBGPRINTF("doing nspollClassInit\n");
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 
 	/* set our own handlers */

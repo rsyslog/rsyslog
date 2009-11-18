@@ -219,6 +219,7 @@ ENDObjClassExit(nssel)
  */
 BEGINObjClassInit(nssel, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
+	DBGPRINTF("doing nsselClassInit\n");
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 
 	/* set our own handlers */

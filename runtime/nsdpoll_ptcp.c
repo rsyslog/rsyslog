@@ -28,11 +28,16 @@
 #include <assert.h>
 #include <errno.h>
 #include <string.h>
+#if HAVE_SYS_EPOLL_H
+#	include <sys/epoll.h>
+#endif
 
 #include "rsyslog.h"
 #include "module-template.h"
 #include "obj.h"
 #include "errmsg.h"
+#include "srUtils.h"
+#include "nspoll.h"
 #include "nsd_ptcp.h"
 #include "nsdpoll_ptcp.h"
 #include "unlimited_select.h"
@@ -43,9 +48,66 @@ DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 
 
+/* -START------------------------- helpers for event list ------------------------------------ */
+
+/* add new entry to list. We assume that the fd is not already present and DO NOT check this!
+ * Returns newly created entry in pEvtLst.
+ * rgerhards, 2009-11-18
+ */
+static inline rsRetVal
+addEvent(nsdpoll_ptcp_t *pThis, int id, void *pUsr, int mode, nsd_ptcp_t *pSock, nsdpoll_epollevt_lst_t **pEvtLst) {
+	nsdpoll_epollevt_lst_t *pNew;
+	DEFiRet;
+
+	CHKmalloc(pNew = (nsdpoll_epollevt_lst_t*) malloc(sizeof(nsdpoll_epollevt_lst_t)));
+	pNew->id = id;
+	pNew->pUsr = pUsr;
+	pNew->pSock = pSock;
+	pNew->event.events = EPOLLET; /* always use edge-triggered mode */
+	if(mode & NSDPOLL_IN)
+		pNew->event.events |= EPOLLIN;
+	if(mode & NSDPOLL_OUT)
+		pNew->event.events |= EPOLLOUT;
+	pNew->event.data.u64 = (uint64) pNew;
+	pNew->pNext = pThis->pRoot;
+	pThis->pRoot = pNew;
+	*pEvtLst = pNew;
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* remove the entry identified by id/pUsr from the list.
+ * rgerhards, 2009-11-18
+ */
+static inline rsRetVal
+delEvent(nsdpoll_ptcp_t *pThis, int id, void *pUsr) {
+	DEFiRet;
+	// TODO: XXX add code!
+#warning delEvent implementation is missing!
+	RETiRet;
+}
+
+
+/* -END--------------------------- helpers for event list ------------------------------------ */
+
+
 /* Standard-Constructor
  */
 BEGINobjConstruct(nsdpoll_ptcp) /* be sure to specify the object type also in END macro! */
+#	if defined(EPOLL_CLOEXEC) && defined(HAVE_EPOLL_CREATE1)
+		DBGPRINTF("imudp uses epoll_create1()\n");
+		pThis->efd = epoll_create1(EPOLL_CLOEXEC);
+#	else
+		DBGPRINTF("imudp uses epoll_create()\n");
+		pThis->efd = epoll_create(NUM_EPOLL_EVENTS);
+#	endif
+	if(pThis->efd < 0) {
+		DBGPRINTF("epoll_create1() could not create fd\n");
+		ABORT_FINALIZE(RS_RET_IO_ERROR);
+	}
+finalize_it:
 ENDobjConstruct(nsdpoll_ptcp)
 
 
@@ -55,19 +117,76 @@ CODESTARTobjDestruct(nsdpoll_ptcp)
 ENDobjDestruct(nsdpoll_ptcp)
 
 
-/* Add a socket to the select set */
+/* Modify socket set */
 static rsRetVal
-Ctl(nsdpoll_t *pThis, int fd, int op, epoll_event_t *event) {
+Ctl(nsdpoll_t *pNsdpoll, nsd_t *pNsd, int id, void *pUsr, int mode) {
+	nsdpoll_ptcp_t *pThis = (nsdpoll_ptcp_t*) pNsdpoll;
+	nsd_ptcp_t *pSock = (nsd_ptcp_t*) pNsd;
+	nsdpoll_epollevt_lst_t *pEventLst;
+	int errSave;
+	char errStr[512];
 	DEFiRet;
+
+	if(mode == NSDPOLL_ADD) {
+		dbgprintf("adding nsdpoll entry %d/%p\n", id, pUsr);
+		CHKiRet(addEvent(pThis, id, pUsr, mode, pSock, &pEventLst));
+		if(epoll_ctl(pThis->efd, EPOLL_CTL_ADD,  pSock->sock, &pEventLst->event) < 0) {
+			errSave = errno;
+			rs_strerror_r(errSave, errStr, sizeof(errStr));
+			errmsg.LogError(errSave, RS_RET_ERR_EPOLL_CTL,
+				"epoll_ctl failed on fd %d, id %d/%p, op %d with %s\n",
+				pSock->sock, id, pUsr, mode, errStr);
+		}
+	} else if(mode == NSDPOLL_DEL) {
+		// TODO: XXX : code missing!
+		dbgprintf("removing nsdpoll entry %d/%p\n", id, pUsr);
+	} else {
+		dbgprintf("program error: invalid NSDPOLL_mode %d - ignoring request\n", mode);
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
+finalize_it:
 	RETiRet;
 }
 
 
-/* Wait for io to become ready.
+/* Wait for io to become ready. After the successful call, idRdy contains the
+ * id set by the caller for that i/o event, ppUsr is a pointer to a location
+ * where the user pointer shall be stored.
+ * TODO: this is a trivial implementation that only polls one event at a time. We
+ *       may later extend it to poll for multiple events, what would cause less 
+ *       overhead.
+ * rgerhards, 2009-11-18
  */
 static rsRetVal
-Wait(nsdpoll_t *pThis, epoll_event_t *events, int maxevents, int timeout) {
+Wait(nsdpoll_t *pNsdpoll, int timeout, int *idRdy, void **ppUsr) {
+	nsdpoll_ptcp_t *pThis = (nsdpoll_ptcp_t*) pNsdpoll;
+	nsdpoll_epollevt_lst_t *pOurEvt;
+	struct epoll_event event;
+	int nfds;
 	DEFiRet;
+
+	assert(idRdy != NULL);
+	assert(ppUsr != NULL);
+
+	nfds = epoll_wait(pThis->efd, &event, 1, timeout);
+	if(nfds == -1) {
+		if(errno == EINTR) {
+			ABORT_FINALIZE(RS_RET_EINTR);
+		} else {
+			DBGPRINTF("epoll() returned with error code %d\n", errno);
+			ABORT_FINALIZE(RS_RET_ERR_EPOLL);
+		}
+	} else if(nfds == 0) {
+		ABORT_FINALIZE(RS_RET_TIMEOUT);
+	}
+
+	/* we got a valid event, so tell the caller... */
+	pOurEvt = (nsdpoll_epollevt_lst_t*) event.data.u64;
+	*idRdy = pOurEvt->id;
+	*ppUsr = pOurEvt->pUsr;
+
+finalize_it:
 	RETiRet;
 }
 

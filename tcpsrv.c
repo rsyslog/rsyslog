@@ -68,6 +68,7 @@
 #include "netstrms.h"
 #include "netstrm.h"
 #include "nssel.h"
+#include "nspoll.h"
 #include "errmsg.h"
 #include "ruleset.h"
 #include "unicode-helper.h"
@@ -89,6 +90,7 @@ DEFobjCurrIf(net)
 DEFobjCurrIf(netstrms)
 DEFobjCurrIf(netstrm)
 DEFobjCurrIf(nssel)
+DEFobjCurrIf(nspoll)
 DEFobjCurrIf(prop)
 
 
@@ -521,10 +523,13 @@ doReceive(tcpsrv_t *pThis, tcps_sess_t **ppSess)
 }
 
 
-/* This function is called to gather input. */
+/* This function is called to gather input.
+ * This variant here is only used if we need to work with a netstream driver
+ * that does not support epoll().
+ */
 #pragma GCC diagnostic ignored "-Wempty-body"
-static rsRetVal
-Run(tcpsrv_t *pThis)
+static inline rsRetVal
+RunSelect(tcpsrv_t *pThis)
 {
 	DEFiRet;
 	int nfds;
@@ -532,7 +537,7 @@ Run(tcpsrv_t *pThis)
 	int iTCPSess;
 	int bIsReady;
 	tcps_sess_t *pNewSess;
-	nssel_t *pSel;
+	nssel_t *pSel = NULL;
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 
@@ -601,6 +606,110 @@ finalize_it: /* this is a very special case - this time only we do not exit the 
 	/* note that this point is usually not reached */
 	pthread_cleanup_pop(1); /* remove cleanup handler */
 
+	RETiRet;
+}
+#pragma GCC diagnostic warning "-Wempty-body"
+
+
+/* This function is called to gather input. It tries doing that via the epoll()
+ * interface. If the driver does not support that, it falls back to calling its
+ * select() equivalent.
+ * rgerhards, 2009-11-18
+ */
+#pragma GCC diagnostic ignored "-Wempty-body"
+static rsRetVal
+Run(tcpsrv_t *pThis)
+{
+	DEFiRet;
+	int nfds;
+	int i;
+	int iTCPSess;
+	int bIsReady;
+	tcps_sess_t *pNewSess;
+	nspoll_t *pPoll;
+	rsRetVal localRet;
+
+	ISOBJ_TYPE_assert(pThis, tcpsrv);
+
+	/* this is an endless loop - it is terminated by the framework canelling
+	 * this thread. Thus, we also need to instantiate a cancel cleanup handler
+	 * to prevent us from leaking anything. -- rgerhards, 20080-04-24
+	 */
+#warning implement cancel cleanup handler!
+	//pthread_cleanup_push(RunCancelCleanup, (void*) &pSel);
+	if((localRet = nspoll.Construct(&pPoll)) == RS_RET_OK) {
+		localRet = nspoll.ConstructFinalize(pPoll);
+	}
+	if(localRet != RS_RET_OK) {
+		/* fall back to select */
+		dbgprintf("tcpsrv could not use epoll() interface, iRet=%d, using select()\n", localRet);
+		iRet = RunSelect(pThis);
+		FINALIZE;
+	}
+
+	dbgprintf("we would use the poll handler, currently not implemented!\n");
+#if 0
+	while(1) {
+		CHKiRet(nssel.Construct(&pSel));
+		// TODO: set driver
+		CHKiRet(nssel.ConstructFinalize(pSel));
+
+		/* Add the TCP listen sockets to the list of read descriptors. */
+		for(i = 0 ; i < pThis->iLstnCurr ; ++i) {
+			CHKiRet(nssel.Add(pSel, pThis->ppLstn[i], NSDSEL_RD));
+		}
+
+		/* do the sessions */
+		iTCPSess = TCPSessGetNxtSess(pThis, -1);
+		while(iTCPSess != -1) {
+			/* TODO: access to pNsd is NOT really CLEAN, use method... */
+			CHKiRet(nssel.Add(pSel, pThis->pSessions[iTCPSess]->pStrm, NSDSEL_RD));
+			/* now get next... */
+			iTCPSess = TCPSessGetNxtSess(pThis, iTCPSess);
+		}
+
+		/* wait for io to become ready */
+		CHKiRet(nssel.Wait(pSel, &nfds));
+		if(glbl.GetGlobalInputTermState() == 1)
+			break; /* terminate input! */
+
+		for(i = 0 ; i < pThis->iLstnCurr ; ++i) {
+			if(glbl.GetGlobalInputTermState() == 1)
+				ABORT_FINALIZE(RS_RET_FORCE_TERM);
+			CHKiRet(nssel.IsReady(pSel, pThis->ppLstn[i], NSDSEL_RD, &bIsReady, &nfds));
+			if(bIsReady) {
+				DBGPRINTF("New connect on NSD %p.\n", pThis->ppLstn[i]);
+				SessAccept(pThis, pThis->ppLstnPort[i], &pNewSess, pThis->ppLstn[i]);
+				--nfds; /* indicate we have processed one */
+			}
+		}
+
+		/* now check the sessions */
+		iTCPSess = TCPSessGetNxtSess(pThis, -1);
+		while(nfds && iTCPSess != -1) {
+			if(glbl.GetGlobalInputTermState() == 1)
+				ABORT_FINALIZE(RS_RET_FORCE_TERM);
+			CHKiRet(nssel.IsReady(pSel, pThis->pSessions[iTCPSess]->pStrm, NSDSEL_RD, &bIsReady, &nfds));
+			if(bIsReady) {
+				doReceive(pThis, &pThis->pSessions[iTCPSess]);
+				--nfds; /* indicate we have processed one */
+			}
+			iTCPSess = TCPSessGetNxtSess(pThis, iTCPSess);
+		}
+		CHKiRet(nssel.Destruct(&pSel));
+finalize_it: /* this is a very special case - this time only we do not exit the function,
+	      * because that would not help us either. So we simply retry it. Let's see
+	      * if that actually is a better idea. Exiting the loop wasn't we always
+	      * crashed, which made sense (the rest of the engine was not prepared for
+	      * that) -- rgerhards, 2008-05-19
+	      */
+		/*EMPTY*/;
+	}
+#endif
+	/* note that this point is usually not reached */
+//	pthread_cleanup_pop(1); /* remove cleanup handler */
+
+finalize_it:
 	RETiRet;
 }
 #pragma GCC diagnostic warning "-Wempty-body"
@@ -969,6 +1078,7 @@ BEGINObjClassInit(tcpsrv, 1, OBJ_IS_LOADABLE_MODULE) /* class, version - CHANGE 
 	CHKiRet(objUse(netstrms, LM_NETSTRMS_FILENAME));
 	CHKiRet(objUse(netstrm, DONT_LOAD_LIB));
 	CHKiRet(objUse(nssel, DONT_LOAD_LIB));
+	CHKiRet(objUse(nspoll, DONT_LOAD_LIB));
 	CHKiRet(objUse(tcps_sess, DONT_LOAD_LIB));
 	CHKiRet(objUse(conf, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));

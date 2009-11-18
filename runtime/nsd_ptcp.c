@@ -821,6 +821,7 @@ ENDObjClassInit(nsd_ptcp)
 
 BEGINmodExit
 CODESTARTmodExit
+	nsdpoll_ptcpClassExit();
 	nsdsel_ptcpClassExit();
 	nsd_ptcpClassExit();
 ENDmodExit
@@ -839,6 +840,7 @@ CODESTARTmodInit
 	/* Initialize all classes that are in our module - this includes ourselfs */
 	CHKiRet(nsd_ptcpClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
 	CHKiRet(nsdsel_ptcpClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
+	CHKiRet(nsdpoll_ptcpClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
 ENDmodInit
 /* vi:set ai:
  */

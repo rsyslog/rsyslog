@@ -26,6 +26,15 @@
 
 #include "netstrms.h"
 
+/* some operations to be portable when we do not have epoll() available */
+#define NSDPOLL_ADD	1
+#define NSDPOLL_DEL	2
+
+/* and some mode specifiers for waiting on input/output */
+#define NSDPOLL_IN	1	/* EPOLLIN */
+#define NSDPOLL_OUT	2	/* EPOLLOUT */
+/* next is 4, 8, 16, ... - must be bit values, as they are ored! */
+
 /* the nspoll object */
 struct nspoll_s {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
@@ -41,8 +50,9 @@ BEGINinterface(nspoll) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Construct)(nspoll_t **ppThis);
 	rsRetVal (*ConstructFinalize)(nspoll_t *pThis);
 	rsRetVal (*Destruct)(nspoll_t **ppThis);
-	rsRetVal (*Ctl)(nspoll_t *pThis, int fd, int op, epoll_event_t *event);
-	rsRetVal (*Wait)(nspoll_t *pThis, epoll_event_t *events, int maxevents, int timeout);
+	rsRetVal (*Wait)(nspoll_t *pNsdpoll, int timeout, int *idRdy, void **ppUsr);
+	rsRetVal (*Ctl)(nspoll_t *pNsdpoll, nsd_t *pNsd, int id, void *pUsr, int op);
+	rsRetVal (*IsEPollSupported)(void); /* static method */
 ENDinterface(nspoll)
 #define nspollCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
 

@@ -414,6 +414,10 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_NO_RULESET= -2158,/**< no ruleset name as specified where one was needed */
 	RS_RET_PARSER_NOT_FOUND = -2159,/**< parser with the specified name was not found */
 	RS_RET_COULD_NOT_PARSE = -2160,/**< (this) parser could not parse the message (no error, means try next one) */
+	RS_RET_EINTR = -2161,		/**< EINTR occured during a system call (not necessarily an error) */
+	RS_RET_ERR_EPOLL = -2162,	/**< epoll() returned with an unexpected error code */
+	RS_RET_ERR_EPOLL_CTL = -2163,	/**< epol_ctll() returned with an unexpected error code */
+	RS_RET_TIMEOUT = -2164,		/**< timeout occured during operation */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */
