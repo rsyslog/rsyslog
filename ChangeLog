@@ -1,4 +1,8 @@
 ---------------------------------------------------------------------------
+Version 5.3.6  [BETA] (rgerhards), 2009-11-??
+- bugfix: omfile output was only written when buffer was full, not at
+  end of transaction
+---------------------------------------------------------------------------
 Version 5.3.5  [BETA] (rgerhards), 2009-11-13
 - some light performance enhancement by replacing time() call with much
   faster (at least under linux) gettimeofday() calls.
