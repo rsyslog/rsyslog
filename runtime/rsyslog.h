@@ -107,6 +107,7 @@ typedef struct NetAddr netAddr_t;
 typedef struct netstrms_s netstrms_t;
 typedef struct netstrm_s netstrm_t;
 typedef struct nssel_s nssel_t;
+typedef struct nspoll_s nspoll_t;
 typedef enum nsdsel_waitOp_e nsdsel_waitOp_t;
 typedef struct nsd_ptcp_s nsd_ptcp_t;
 typedef struct nsd_gtls_s nsd_gtls_t;
@@ -114,9 +115,11 @@ typedef struct nsd_gsspi_s nsd_gsspi_t;
 typedef struct nsd_nss_s nsd_nss_t;
 typedef struct nsdsel_ptcp_s nsdsel_ptcp_t;
 typedef struct nsdsel_gtls_s nsdsel_gtls_t;
+typedef struct nsdpoll_ptcp_s nsdpoll_ptcp_t;
 typedef struct wti_s wti_t;
 typedef obj_t nsd_t;
 typedef obj_t nsdsel_t;
+typedef obj_t nsdpoll_t;
 typedef struct msg msg_t;
 typedef struct queue_s qqueue_t;
 typedef struct prop_s prop_t;
@@ -147,6 +150,8 @@ typedef struct strmLstnPortList_s strmLstnPortList_t; // TODO: rename?
 typedef unsigned int u_int32_t; /* TODO: is this correct? */
 typedef int socklen_t;
 #endif
+
+typedef struct epoll_event epoll_event_t;
 
 typedef char bool;		/* I intentionally use char, to keep it slim so that many fit into the CPU cache! */
 

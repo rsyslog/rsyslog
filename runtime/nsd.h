@@ -87,4 +87,13 @@ BEGINinterface(nsdsel) /* name must also be changed in ENDinterface macro! */
 ENDinterface(nsdsel)
 #define nsdselCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
 
+/* interface  for the epoll call */
+BEGINinterface(nsdpoll) /* name must also be changed in ENDinterface macro! */
+	rsRetVal (*Construct)(nsdpoll_t **ppThis);
+	rsRetVal (*Destruct)(nsdpoll_t **ppThis);
+	rsRetVal (*Ctl)(nsdpoll_t *pThis, int fd, int op, epoll_event_t *event);
+	rsRetVal (*Wait)(nsdpoll_t *pThis, epoll_event_t *events, int maxevents, int timeout);
+ENDinterface(nsdpoll)
+#define nsdpollCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
+
 #endif /* #ifndef INCLUDED_NSD_H */
