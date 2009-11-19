@@ -15,9 +15,6 @@
  * callbacks before the code is run. The tcpsrv then calls back
  * into the specific input modules at the appropriate time.
  *
- * NOTE: read comments in module-template.h to understand how this file
- *       works!
- *
  * File begun on 2007-12-21 by RGerhards (extracted from syslogd.c)
  *
  * Copyright 2007, 2008, 2009 Rainer Gerhards and Adiscon GmbH.
@@ -626,7 +623,7 @@ Run(tcpsrv_t *pThis)
 	int iTCPSess;
 	int bIsReady;
 	tcps_sess_t *pNewSess;
-	nspoll_t *pPoll;
+	nspoll_t *pPoll = NULL;
 	rsRetVal localRet;
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
@@ -638,6 +635,7 @@ Run(tcpsrv_t *pThis)
 #warning implement cancel cleanup handler!
 	//pthread_cleanup_push(RunCancelCleanup, (void*) &pSel);
 	if((localRet = nspoll.Construct(&pPoll)) == RS_RET_OK) {
+		// TODO: set driver
 		localRet = nspoll.ConstructFinalize(pPoll);
 	}
 	if(localRet != RS_RET_OK) {
@@ -648,16 +646,31 @@ Run(tcpsrv_t *pThis)
 	}
 
 	dbgprintf("we would use the poll handler, currently not implemented!\n");
+
+	/* Add the TCP listen sockets to the list of sockets to monitor */
+	for(i = 0 ; i < pThis->iLstnCurr ; ++i) {
+		dbgprintf("Trying to add listener %d\n", i);
+		CHKiRet(nspoll.Ctl(pPoll, pThis->ppLstn[i], i, &pThis->ppLstn, NSDPOLL_IN));
+		dbgprintf("Added listener %d\n", i);
+	}
+
+	while(1) {
+		localRet = nspoll.Wait(pSel, &nfds);
+		if(glbl.GetGlobalInputTermState() == 1)
+			break; /* terminate input! */
+
+		/* check if we need to ignore the i/o ready state. We do this if we got an invalid
+		 * return state. Validly, this can happen for RS_RET_EINTR, for other cases it may
+		 * not be the right thing, but what is the right thing is really hard at this point...
+		 */
+		if(localRet != RS_RET_OK)
+			continue;
+	}
 #if 0
 	while(1) {
 		CHKiRet(nssel.Construct(&pSel));
-		// TODO: set driver
 		CHKiRet(nssel.ConstructFinalize(pSel));
 
-		/* Add the TCP listen sockets to the list of read descriptors. */
-		for(i = 0 ; i < pThis->iLstnCurr ; ++i) {
-			CHKiRet(nssel.Add(pSel, pThis->ppLstn[i], NSDSEL_RD));
-		}
 
 		/* do the sessions */
 		iTCPSess = TCPSessGetNxtSess(pThis, -1);
@@ -710,6 +723,8 @@ finalize_it: /* this is a very special case - this time only we do not exit the 
 //	pthread_cleanup_pop(1); /* remove cleanup handler */
 
 finalize_it:
+	if(pPoll != NULL)
+		nspoll.Destruct(&pPoll);
 	RETiRet;
 }
 #pragma GCC diagnostic warning "-Wempty-body"

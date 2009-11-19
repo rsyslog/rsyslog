@@ -51,7 +51,7 @@ BEGINinterface(nspoll) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*ConstructFinalize)(nspoll_t *pThis);
 	rsRetVal (*Destruct)(nspoll_t **ppThis);
 	rsRetVal (*Wait)(nspoll_t *pNsdpoll, int timeout, int *idRdy, void **ppUsr);
-	rsRetVal (*Ctl)(nspoll_t *pNsdpoll, nsd_t *pNsd, int id, void *pUsr, int op);
+	rsRetVal (*Ctl)(nspoll_t *pNsdpoll, netstrm_t *pStrm, int id, void *pUsr, int op);
 	rsRetVal (*IsEPollSupported)(void); /* static method */
 ENDinterface(nspoll)
 #define nspollCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */

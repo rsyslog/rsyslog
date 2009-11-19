@@ -145,10 +145,10 @@ Wait(nspoll_t *pThis, int timeout, int *idRdy, void **ppUsr) {
  * rgerhards, 2009-11-18
  */
 static rsRetVal
-Ctl(nspoll_t *pThis, nsd_t *pNsd, int id, void *pUsr, int op) {
+Ctl(nspoll_t *pThis, netstrm_t *pStrm, int id, void *pUsr, int op) {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, nspoll);
-	iRet = pThis->Drvr.Ctl(pThis->pDrvrData, pNsd, id, pUsr, op);
+	iRet = pThis->Drvr.Ctl(pThis->pDrvrData, pStrm->pDrvrData, id, pUsr, op);
 	RETiRet;
 }
 
