@@ -1308,11 +1308,11 @@ dbgGetRuntimeOptions(void)
 				/* this is earlier in the process than the -d option, as such it
 				 * allows us to spit out debug messages from the very beginning.
 				 */
-				Debug = 1;
+				Debug = DEBUG_FULL;
 				debugging_on = 1;
 			} else if(!strcasecmp((char*)optname, "debugondemand")) {
 				/* Enables debugging, but turns off debug output */
-				Debug = 1;
+				Debug = DEBUG_ONDEMAND;
 				debugging_on = 1;
 				dbgprintf("Note: debug on demand turned on via configuraton file, "
 					  "use USR1 signal to activate.\n");

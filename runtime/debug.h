@@ -29,6 +29,11 @@
 #include <pthread.h>
 #include "obj-types.h"
 
+/* some settings for various debug modes */
+#define DEBUG_OFF	0
+#define DEBUG_ONDEMAND	1
+#define DEBUG_FULL	2
+
 /* external static data elements (some time to be replaced) */
 extern int Debug;		/* debug flag  - read-only after startup */
 extern int debugging_on;	 /* read-only, except on sig USR1 */

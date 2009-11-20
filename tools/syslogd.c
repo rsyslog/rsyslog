@@ -569,7 +569,7 @@ logmsgInternal(int iErr, int pri, uchar *msg, int flags)
 	 * permits us to process unmodified config files which otherwise contain a
 	 * supressor statement.
 	 */
-	if(((Debug || NoFork) && bErrMsgToStderr) || iConfigVerify) {
+	if(((Debug == DEBUG_FULL || NoFork) && bErrMsgToStderr) || iConfigVerify) {
 		if(LOG_PRI(pri) == LOG_ERR)
 			fprintf(stderr, "rsyslogd: %s\n", msg);
 	}
@@ -977,9 +977,10 @@ static void doDie(int sig)
 	static int iRetries = 0; /* debug aid */
 	dbgprintf(MSG1);
 	if(Debug)
+	if(Debug == DEBUG_FULL)
 		write(1, MSG1, sizeof(MSG1) - 1);
 	if(iRetries++ == 4) {
-		if(Debug)
+		if(Debug == DEBUG_FULL)
 			write(1, MSG2, sizeof(MSG2) - 1);
 		abort();
 	}
@@ -2169,7 +2170,7 @@ static rsRetVal mainThread()
 	 * is still in its infancy (and not really done), we currently accept this issue.
 	 * rgerhards, 2009-06-29
 	 */
-	if(!(Debug || NoFork)) {
+	if(!(Debug == DEBUG_FULL || NoFork)) {
 		close(1);
 		close(2);
 		bErrMsgToStderr = 0;
@@ -2361,7 +2362,7 @@ doGlblProcessInit(void)
 
 	thrdInit();
 
-	if( !(Debug || NoFork) )
+	if( !(Debug == DEBUG_FULL || NoFork) )
 	{
 		DBGPRINTF("Checking pidfile.\n");
 		if (!check_pid(PidFile))
