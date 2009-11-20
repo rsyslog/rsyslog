@@ -114,6 +114,7 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   omod-if-array.sh \
 	   diag.sh \
 	   testsuites/diag-common.conf \
+	   testsuites/diag-common2.conf \
 	   queue-persist.sh \
 	   queue-persist-drvr.sh \
 	   testsuites/queue-persist.conf \
