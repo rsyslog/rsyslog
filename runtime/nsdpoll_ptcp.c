@@ -78,14 +78,44 @@ finalize_it:
 }
 
 
-/* remove the entry identified by id/pUsr from the list.
- * rgerhards, 2009-11-18
+/* find and unlink the entry identified by id/pUsr from the list.
+ * rgerhards, 2009-11-23
  */
 static inline rsRetVal
-delEvent(nsdpoll_ptcp_t *pThis, int id, void *pUsr) {
+unlinkEvent(nsdpoll_ptcp_t *pThis, int id, void *pUsr, nsdpoll_epollevt_lst_t **ppEvtLst) {
+	nsdpoll_epollevt_lst_t *pEvtLst;
+	nsdpoll_epollevt_lst_t *pPrev = NULL;
 	DEFiRet;
-	// TODO: XXX add code!
-#warning delEvent implementation is missing!
+
+	pEvtLst = pThis->pRoot;
+	while(pEvtLst != NULL && pEvtLst->id != id && pEvtLst->pUsr != pUsr) {
+		pPrev = pEvtLst;
+		pEvtLst = pEvtLst->pNext;
+	}
+	if(pEvtLst == NULL)
+		ABORT_FINALIZE(RS_RET_NOT_FOUND);
+
+	*ppEvtLst = pEvtLst;
+
+	/* unlink */
+	if(pPrev == NULL)
+		pThis->pRoot = pEvtLst->pNext;
+	else
+		pPrev->pNext = pEvtLst->pNext;
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* destruct the provided element. It must already be unlinked from the list.
+ * rgerhards, 2009-11-23
+ */
+static inline rsRetVal
+delEvent(nsdpoll_epollevt_lst_t **ppEvtLst) {
+	DEFiRet;
+	free(*ppEvtLst);
+	*ppEvtLst = NULL;
 	RETiRet;
 }
 
@@ -119,7 +149,7 @@ ENDobjDestruct(nsdpoll_ptcp)
 
 /* Modify socket set */
 static rsRetVal
-Ctl(nsdpoll_t *pNsdpoll, nsd_t *pNsd, int id, void *pUsr, int mode) {
+Ctl(nsdpoll_t *pNsdpoll, nsd_t *pNsd, int id, void *pUsr, int mode, int op) {
 	nsdpoll_ptcp_t *pThis = (nsdpoll_ptcp_t*) pNsdpoll;
 	nsd_ptcp_t *pSock = (nsd_ptcp_t*) pNsd;
 	nsdpoll_epollevt_lst_t *pEventLst;
@@ -127,7 +157,7 @@ Ctl(nsdpoll_t *pNsdpoll, nsd_t *pNsd, int id, void *pUsr, int mode) {
 	char errStr[512];
 	DEFiRet;
 
-	if(mode == NSDPOLL_ADD) {
+	if(op == NSDPOLL_ADD) {
 		dbgprintf("adding nsdpoll entry %d/%p\n", id, pUsr);
 		CHKiRet(addEvent(pThis, id, pUsr, mode, pSock, &pEventLst));
 		if(epoll_ctl(pThis->efd, EPOLL_CTL_ADD,  pSock->sock, &pEventLst->event) < 0) {
@@ -137,11 +167,21 @@ Ctl(nsdpoll_t *pNsdpoll, nsd_t *pNsd, int id, void *pUsr, int mode) {
 				"epoll_ctl failed on fd %d, id %d/%p, op %d with %s\n",
 				pSock->sock, id, pUsr, mode, errStr);
 		}
-	} else if(mode == NSDPOLL_DEL) {
-		// TODO: XXX : code missing!
+	} else if(op == NSDPOLL_DEL) {
+		// TODO: XXX : code missing! del Event
 		dbgprintf("removing nsdpoll entry %d/%p\n", id, pUsr);
+		CHKiRet(unlinkEvent(pThis, id, pUsr, &pEventLst));
+		if(epoll_ctl(pThis->efd, EPOLL_CTL_DEL, pSock->sock, &pEventLst->event) < 0) {
+			errSave = errno;
+			rs_strerror_r(errSave, errStr, sizeof(errStr));
+			errmsg.LogError(errSave, RS_RET_ERR_EPOLL_CTL,
+				"epoll_ctl failed on fd %d, id %d/%p, op %d with %s\n",
+				pSock->sock, id, pUsr, mode, errStr);
+			ABORT_FINALIZE(RS_RET_ERR_EPOLL_CTL);
+		}
+		CHKiRet(delEvent(&pEventLst));
 	} else {
-		dbgprintf("program error: invalid NSDPOLL_mode %d - ignoring request\n", mode);
+		dbgprintf("program error: invalid NSDPOLL_mode %d - ignoring request\n", op);
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
