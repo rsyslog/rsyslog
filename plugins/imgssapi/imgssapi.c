@@ -48,6 +48,7 @@
 #include "dirty.h"
 #include "cfsysline.h"
 #include "module-template.h"
+#include "unicode-helper.h"
 #include "net.h"
 #include "srUtils.h"
 #include "gss-misc.h"
@@ -331,6 +332,7 @@ addGSSListener(void __attribute__((unused)) *pVal, uchar *pNewVal)
 		CHKiRet(tcpsrv.SetCBOnSessAccept(pOurTcpsrv, onSessAccept));
 		CHKiRet(tcpsrv.SetCBOnRegularClose(pOurTcpsrv, onRegularClose));
 		CHKiRet(tcpsrv.SetCBOnErrClose(pOurTcpsrv, onErrClose));
+		CHKiRet(tcpsrv.SetInputName(pOurTcpsrv, UCHAR_CONSTANT("imgssapi")));
 		tcpsrv.configureTCPListen(pOurTcpsrv, pNewVal);
 		CHKiRet(tcpsrv.ConstructFinalize(pOurTcpsrv));
 	}
