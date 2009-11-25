@@ -472,7 +472,6 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 			localRet = (*pNew->modQueryEtryPt)((uchar*)"endTransaction", &pNew->mod.om.endTransaction);
 			if(localRet == RS_RET_MODULE_ENTRY_POINT_NOT_FOUND) {
 				pNew->mod.om.endTransaction = dummyEndTransaction;
-				//pNew->mod.om.beginTransaction = dummyEndTransaction;
 			} else if(localRet != RS_RET_OK) {
 				ABORT_FINALIZE(localRet);
 			}
@@ -559,10 +558,35 @@ static void modPrintList(void)
 		dbgprintf(" module.\n");
 		dbgprintf("Entry points:\n");
 		dbgprintf("\tqueryEtryPt:        0x%lx\n", (unsigned long) pMod->modQueryEtryPt);
-		dbgprintf("\tdoAction:           0x%lx\n", (unsigned long) pMod->mod.om.doAction);
-		dbgprintf("\tparseSelectorAct:   0x%lx\n", (unsigned long) pMod->mod.om.parseSelectorAct);
 		dbgprintf("\tdbgPrintInstInfo:   0x%lx\n", (unsigned long) pMod->dbgPrintInstInfo);
 		dbgprintf("\tfreeInstance:       0x%lx\n", (unsigned long) pMod->freeInstance);
+		switch(pMod->eType) {
+		case eMOD_OUT:
+			dbgprintf("Output Module Entry Points:\n");
+			dbgprintf("\tdoAction:           0x%lx\n", (unsigned long) pMod->mod.om.doAction);
+			dbgprintf("\tparseSelectorAct:   0x%lx\n", (unsigned long) pMod->mod.om.parseSelectorAct);
+			dbgprintf("\ttryResume:          0x%lx\n", (unsigned long) pMod->tryResume);
+			dbgprintf("\tdoHUP:              0x%lx\n", (unsigned long) pMod->doHUP);
+			dbgprintf("\tBeginTransaction:   0x%lx\n", (unsigned long)
+								   ((pMod->mod.om.beginTransaction == dummyBeginTransaction) ?
+								    0 :  pMod->mod.om.beginTransaction));
+			dbgprintf("\tEndTransaction:     0x%lx\n", (unsigned long)
+								   ((pMod->mod.om.endTransaction == dummyEndTransaction) ?
+								    0 :  pMod->mod.om.endTransaction));
+			break;
+		case eMOD_IN:
+			dbgprintf("Input Module Entry Points\n");
+			dbgprintf("\trunInput:           0x%lx\n", (unsigned long) pMod->mod.im.runInput);
+			dbgprintf("\twillRun:            0x%lx\n", (unsigned long) pMod->mod.im.willRun);
+			dbgprintf("\tafterRun:           0x%lx\n", (unsigned long) pMod->mod.im.afterRun);
+			break;
+		case eMOD_LIB:
+			break;
+		case eMOD_PARSER:
+			dbgprintf("Parser Module Entry Points\n");
+			dbgprintf("\tparse:              0x%lx\n", (unsigned long) pMod->mod.pm.parse);
+			break;
+		}
 		dbgprintf("\n");
 		pMod = GetNxt(pMod); /* done, go next */
 	}

@@ -769,9 +769,11 @@ finishBatch(action_t *pThis)
 	if(pThis->eState == ACT_STATE_RDY)
 		FINALIZE; /* nothing to do */
 
+DBGPRINTF("finishBatch was called\n");
 	CHKiRet(actionPrepare(pThis));
 	if(pThis->eState == ACT_STATE_ITX) {
 		iRet = pThis->pMod->mod.om.endTransaction(pThis->pModData);
+DBGPRINTF("finishBatch returned %d for endTransaction\n", iRet);
 		switch(iRet) {
 			case RS_RET_OK:
 				actionCommitted(pThis);
@@ -884,6 +886,7 @@ submitBatch(action_t *pAction, batch_t *pBatch, int nElem, int *pbShutdownImmedi
 	bDone = 0;
 	do {
 		localRet = tryDoAction(pAction, pBatch, &nElem, pbShutdownImmediate);
+dbgprintf("submitBatch: state of tryDoAction %d\n", localRet);
 		if(localRet == RS_RET_FORCE_TERM)
 			FINALIZE;
 		if(   localRet == RS_RET_OK
