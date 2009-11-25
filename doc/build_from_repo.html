@@ -43,12 +43,37 @@ you downloaded an official distribution tarball (see the
 <a href="install.html">rsyslog install guide</a>, starting at step 2,
 for further details about that).
 
+<h2>Special Compile-Time Options</h2>
+<p>On some platforms, compile-time issues occur, like the one shown below:
+<p><pre><code>
+make[2]: Entering directory `/home/az/RSyslog/rsyslog-5.5.0/tools'
+  CCLD   rsyslogd
+rsyslogd-omfile.o: In function `getClockFileAccess':
+/home/az/RSyslog/rsyslog-5.5.0/tools/omfile.c:91: undefined reference to `__sync_fetch_and_add_8'
+/home/az/RSyslog/rsyslog-5.5.0/tools/omfile.c:91: undefined reference to `__sync_fetch_and_add_8'
+/home/az/RSyslog/rsyslog-5.5.0/tools/omfile.c:91: undefined reference to `__sync_fetch_and_add_8'
+</code></pre>
+<p>Note that the exact error messages can be different. These type of errors stem down to
+atomic instruction support in GCC, which is somewhat depending on the machine architecture it
+compiles code for. Very old machines (like the original i386) do not even at all provide support
+for these instructions.
+<p>The availability of atomic instructions is vital for rsyslog - it can not be built without them.
+Consequently, there is a configure check included for them. But under some circumstances,
+GCC seems to report they are available, but does not provide implementations for
+all of them (at least this is my observation...). The simple cure is to make sure that
+GCC generates code for a modern-enough architecture. This, for example, can be done as
+follows:
+<p><pre><code>
+./configure CFLAGS="-march=i586 -mcpu=i686" --enable-imfile ... (whatever you need)
+</code></pre>
+<p>These settings should resolve the issue .
+
 <p>[<a href="manual.html">manual index</a>]
 [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
 <p><font size="2">This documentation is part of the
 <a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
-Copyright &copy; 2008 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+Copyright &copy; 2008, 2009 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
 <a href="http://www.adiscon.com/">Adiscon</a>. Released under the GNU GPL 
-version 1.2 or higher.</font></p>
+version 3 or higher.</font></p>
 </body>
 </html>
