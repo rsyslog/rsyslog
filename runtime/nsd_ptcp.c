@@ -562,6 +562,7 @@ finalize_it:
 static rsRetVal
 Rcv(nsd_t *pNsd, uchar *pRcvBuf, ssize_t *pLenBuf)
 {
+	char errStr[1024];
 	DEFiRet;
 	nsd_ptcp_t *pThis = (nsd_ptcp_t*) pNsd;
 	ISOBJ_TYPE_assert(pThis, nsd_ptcp);
@@ -571,7 +572,9 @@ Rcv(nsd_t *pNsd, uchar *pRcvBuf, ssize_t *pLenBuf)
 	if(*pLenBuf == 0) {
 		ABORT_FINALIZE(RS_RET_CLOSED);
 	} else if (*pLenBuf < 0) {
-		ABORT_FINALIZE(RS_RET_ERR);
+		rs_strerror_r(errno, errStr, sizeof(errStr));
+		dbgprintf("error during recv on NSD %p: %s\n", pNsd, errStr);
+		ABORT_FINALIZE(RS_RET_RCV_ERR);
 	}
 
 finalize_it:

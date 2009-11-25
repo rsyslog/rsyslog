@@ -467,6 +467,22 @@ RunCancelCleanup(void *arg)
 }
 
 
+/* helper to close a session. Takes status of poll vs. select into consideration.
+ * rgerhards, 2009-11-25
+ */
+static inline rsRetVal
+closeSess(tcpsrv_t *pThis, tcps_sess_t **ppSess, nspoll_t *pPoll) {
+	DEFiRet;
+	if(pPoll != NULL) {
+		CHKiRet(nspoll.Ctl(pPoll, (*ppSess)->pStrm, 0, *ppSess, NSDPOLL_IN, NSDPOLL_DEL));
+	}
+	pThis->pOnRegularClose(*ppSess);
+	tcps_sess.Destruct(ppSess);
+finalize_it:
+	RETiRet;
+}
+
+
 /* process a receive request on one of the streams
  * If pPoll is non-NULL, we have a netstream in epoll mode, which means we need
  * to remove any descriptor we close from the epoll set.
@@ -482,7 +498,6 @@ doReceive(tcpsrv_t *pThis, tcps_sess_t **ppSess, nspoll_t *pPoll)
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 	DBGPRINTF("netstream %p with new data\n", (*ppSess)->pStrm);
-
 	/* Receive message */
 	iRet = pThis->pRcvData(*ppSess, buf, sizeof(buf), &iRcvd);
 	switch(iRet) {
@@ -495,11 +510,7 @@ doReceive(tcpsrv_t *pThis, tcps_sess_t **ppSess, nspoll_t *pPoll)
 			errmsg.LogError(0, RS_RET_PEER_CLOSED_CONN, "Netstream session %p closed by remote peer %s.\n",
 					(*ppSess)->pStrm, pszPeer);
 		}
-		if(pPoll != NULL) {
-			CHKiRet(nspoll.Ctl(pPoll, (*ppSess)->pStrm, 0, *ppSess, NSDPOLL_IN, NSDPOLL_DEL));
-		}
-		pThis->pOnRegularClose(*ppSess);
-		tcps_sess.Destruct(ppSess);
+		CHKiRet(closeSess(pThis, ppSess, pPoll));
 		break;
 	case RS_RET_RETRY:
 		/* we simply ignore retry - this is not an error, but we also have not received anything */
@@ -512,16 +523,14 @@ doReceive(tcpsrv_t *pThis, tcps_sess_t **ppSess, nspoll_t *pPoll)
 			 */
 			errmsg.LogError(0, localRet, "Tearing down TCP Session - see "
 					    "previous messages for reason(s)\n");
-			pThis->pOnErrClose(*ppSess);
-			tcps_sess.Destruct(ppSess);
+			CHKiRet(closeSess(pThis, ppSess, pPoll));
 		}
 		break;
 	default:
 		errno = 0;
 		errmsg.LogError(0, iRet, "netstream session %p will be closed due to error\n",
 				(*ppSess)->pStrm);
-		pThis->pOnErrClose(*ppSess);
-		tcps_sess.Destruct(ppSess);
+		CHKiRet(closeSess(pThis, ppSess, pPoll));
 		break;
 	}
 
@@ -650,14 +659,14 @@ Run(tcpsrv_t *pThis)
 		FINALIZE;
 	}
 
-	dbgprintf("we would use the poll handler, currently not implemented!\n");
+	dbgprintf("tcpsrv uses epoll() interface, nsdpol driver found\n");
 
 	/* flag that we are in epoll mode */
 	pThis->bUsingEPoll = TRUE;
 
 	/* Add the TCP listen sockets to the list of sockets to monitor */
 	for(i = 0 ; i < pThis->iLstnCurr ; ++i) {
-		dbgprintf("Trying to add listener %d\n", i);
+		dbgprintf("Trying to add listener %d, pUsr=%p\n", i, pThis->ppLstn);
 		CHKiRet(nspoll.Ctl(pPoll, pThis->ppLstn[i], i, pThis->ppLstn, NSDPOLL_IN, NSDPOLL_ADD));
 		dbgprintf("Added listener %d\n", i);
 	}

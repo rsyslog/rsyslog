@@ -52,6 +52,12 @@ DEFobjCurrIf(glbl)
 
 /* add new entry to list. We assume that the fd is not already present and DO NOT check this!
  * Returns newly created entry in pEvtLst.
+ * Note that we currently need to use level-triggered mode, because the upper layers do not work
+ * in parallel. As such, in edge-triggered mode we may not get notified, because new data comes
+ * in after we have read everything that was present. To use ET mode, we need to change the upper
+ * peers so that they immediately start a new wait before processing the data read. That obviously
+ * requires more elaborate redesign and we postpone this until the current more simplictic mode has
+ * been proven OK in practice.
  * rgerhards, 2009-11-18
  */
 static inline rsRetVal
@@ -63,7 +69,7 @@ addEvent(nsdpoll_ptcp_t *pThis, int id, void *pUsr, int mode, nsd_ptcp_t *pSock,
 	pNew->id = id;
 	pNew->pUsr = pUsr;
 	pNew->pSock = pSock;
-	pNew->event.events = EPOLLET; /* always use edge-triggered mode */
+	pNew->event.events = 0; /* TODO: at some time we should be able to use EPOLLET */
 	if(mode & NSDPOLL_IN)
 		pNew->event.events |= EPOLLIN;
 	if(mode & NSDPOLL_OUT)
@@ -88,7 +94,7 @@ unlinkEvent(nsdpoll_ptcp_t *pThis, int id, void *pUsr, nsdpoll_epollevt_lst_t **
 	DEFiRet;
 
 	pEvtLst = pThis->pRoot;
-	while(pEvtLst != NULL && pEvtLst->id != id && pEvtLst->pUsr != pUsr) {
+	while(pEvtLst != NULL && !(pEvtLst->id == id && pEvtLst->pUsr == pUsr)) {
 		pPrev = pEvtLst;
 		pEvtLst = pEvtLst->pNext;
 	}
@@ -158,7 +164,7 @@ Ctl(nsdpoll_t *pNsdpoll, nsd_t *pNsd, int id, void *pUsr, int mode, int op) {
 	DEFiRet;
 
 	if(op == NSDPOLL_ADD) {
-		dbgprintf("adding nsdpoll entry %d/%p\n", id, pUsr);
+		dbgprintf("adding nsdpoll entry %d/%p, sock %d\n", id, pUsr, pSock->sock);
 		CHKiRet(addEvent(pThis, id, pUsr, mode, pSock, &pEventLst));
 		if(epoll_ctl(pThis->efd, EPOLL_CTL_ADD,  pSock->sock, &pEventLst->event) < 0) {
 			errSave = errno;
@@ -168,8 +174,7 @@ Ctl(nsdpoll_t *pNsdpoll, nsd_t *pNsd, int id, void *pUsr, int mode, int op) {
 				pSock->sock, id, pUsr, mode, errStr);
 		}
 	} else if(op == NSDPOLL_DEL) {
-		// TODO: XXX : code missing! del Event
-		dbgprintf("removing nsdpoll entry %d/%p\n", id, pUsr);
+		dbgprintf("removing nsdpoll entry %d/%p, sock %d\n", id, pUsr, pSock->sock);
 		CHKiRet(unlinkEvent(pThis, id, pUsr, &pEventLst));
 		if(epoll_ctl(pThis->efd, EPOLL_CTL_DEL, pSock->sock, &pEventLst->event) < 0) {
 			errSave = errno;

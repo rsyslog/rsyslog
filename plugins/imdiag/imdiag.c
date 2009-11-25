@@ -270,6 +270,11 @@ waitMainQEmpty(tcps_sess_t *pSess)
 			dbgprintf("imdiag sleeping, wait mainq drain, curr size %d\n", iMsgQueueSize);
 		srSleep(0,2);	/* wait a little bit */
 		CHKiRet(diagGetMainMsgQSize(&iMsgQueueSize));
+		if(iMsgQueueSize == 0) {
+			/* verify that queue is still empty (else it could just be a race!) */
+			srSleep(1,5);	/* wait a little bit */
+			CHKiRet(diagGetMainMsgQSize(&iMsgQueueSize));
+		}
 	}
 
 	CHKiRet(sendResponse(pSess, "mainqueue empty\n"));
