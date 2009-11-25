@@ -107,6 +107,7 @@ typedef struct NetAddr netAddr_t;
 typedef struct netstrms_s netstrms_t;
 typedef struct netstrm_s netstrm_t;
 typedef struct nssel_s nssel_t;
+typedef struct nspoll_s nspoll_t;
 typedef enum nsdsel_waitOp_e nsdsel_waitOp_t;
 typedef struct nsd_ptcp_s nsd_ptcp_t;
 typedef struct nsd_gtls_s nsd_gtls_t;
@@ -114,9 +115,11 @@ typedef struct nsd_gsspi_s nsd_gsspi_t;
 typedef struct nsd_nss_s nsd_nss_t;
 typedef struct nsdsel_ptcp_s nsdsel_ptcp_t;
 typedef struct nsdsel_gtls_s nsdsel_gtls_t;
+typedef struct nsdpoll_ptcp_s nsdpoll_ptcp_t;
 typedef struct wti_s wti_t;
 typedef obj_t nsd_t;
 typedef obj_t nsdsel_t;
+typedef obj_t nsdpoll_t;
 typedef struct msg msg_t;
 typedef struct queue_s qqueue_t;
 typedef struct prop_s prop_t;
@@ -147,6 +150,8 @@ typedef struct strmLstnPortList_s strmLstnPortList_t; // TODO: rename?
 typedef unsigned int u_int32_t; /* TODO: is this correct? */
 typedef int socklen_t;
 #endif
+
+typedef struct epoll_event epoll_event_t;
 
 typedef char bool;		/* I intentionally use char, to keep it slim so that many fit into the CPU cache! */
 
@@ -409,6 +414,11 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_NO_RULESET= -2158,/**< no ruleset name as specified where one was needed */
 	RS_RET_PARSER_NOT_FOUND = -2159,/**< parser with the specified name was not found */
 	RS_RET_COULD_NOT_PARSE = -2160,/**< (this) parser could not parse the message (no error, means try next one) */
+	RS_RET_EINTR = -2161,		/**< EINTR occured during a system call (not necessarily an error) */
+	RS_RET_ERR_EPOLL = -2162,	/**< epoll() returned with an unexpected error code */
+	RS_RET_ERR_EPOLL_CTL = -2163,	/**< epol_ctll() returned with an unexpected error code */
+	RS_RET_TIMEOUT = -2164,		/**< timeout occured during operation */
+	RS_RET_RCV_ERR = -2165,		/**< error occured during socket rcv operation */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */

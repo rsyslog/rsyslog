@@ -1,5 +1,11 @@
 ---------------------------------------------------------------------------
 Version 5.5.1  [DEVEL] (rgerhards), 2009-11-??
+- introduced the ablity for netstream drivers to utilize an epoll interface
+  This offers increased performance and removes the select() FDSET size
+  limit from imtcp. Note that we fall back to select() if there is no
+  epoll netstream drivers. So far, an epoll driver has only been
+  implemented for plain tcp syslog, the rest will follow once the code
+  proves well in practice AND there is demand.
 ---------------------------------------------------------------------------
 Version 5.5.0  [DEVEL] (rgerhards), 2009-11-18
 - moved DNS resolution code out of imudp and into the backend processing

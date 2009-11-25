@@ -1,15 +1,12 @@
-/* nssel.c
+/* nspoll.c
  *
- * The io waiter is a helper object enabling us to wait on a set of streams to become
- * ready for IO - this is modelled after select(). We need this, because
- * stream drivers may have different concepts. Consequently,
- * the structure must contain nsd_t's from the same stream driver type
- * only. This is implemented as a singly-linked list where every
- * new element is added at the top of the list.
+ * This is an io waiter interface utilizing the much-more-efficient poll/epoll API.
+ * Note that it may not always be available for a given driver. If so, that is reported
+ * back to the upper peer which then should consult a nssel-based io waiter.
  * 
- * Work on this module begun 2008-04-22 by Rainer Gerhards.
+ * Work on this module begun 2009-11-18 by Rainer Gerhards.
  *
- * Copyright 2008 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2009 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -42,7 +39,7 @@
 #include "obj.h"
 #include "module-template.h"
 #include "netstrm.h"
-#include "nssel.h"
+#include "nspoll.h"
 
 /* static data */
 DEFobjStaticHelpers
@@ -54,7 +51,7 @@ DEFobjCurrIf(glbl)
  * out. Note that the driver's .ifIsLoaded is correctly
  * initialized by calloc() and we depend on that. Please note that
  * we do some name-mangeling. We know that each nsd driver also needs
- * a nssel driver. So we simply append "sel" to the nsd driver name: This, 
+ * a nspoll driver. So we simply append "sel" to the nsd driver name: This, 
  * of course, means that the driver name must match these rules, but that
  * shouldn't be a real problem.
  * WARNING: this code is mostly identical to similar code in 
@@ -62,7 +59,7 @@ DEFobjCurrIf(glbl)
  * rgerhards, 2008-04-28
  */
 static rsRetVal
-loadDrvr(nssel_t *pThis)
+loadDrvr(nspoll_t *pThis)
 {
 	DEFiRet;
 	uchar *pBaseDrvrName;
@@ -71,7 +68,7 @@ loadDrvr(nssel_t *pThis)
 	pBaseDrvrName = pThis->pBaseDrvrName;
 	if(pBaseDrvrName == NULL) /* if no drvr name is set, use system default */
 		pBaseDrvrName = glbl.GetDfltNetstrmDrvr();
-	if(snprintf((char*)szDrvrName, sizeof(szDrvrName), "lmnsdsel_%s", pBaseDrvrName) == sizeof(szDrvrName))
+	if(snprintf((char*)szDrvrName, sizeof(szDrvrName), "lmnsdpoll_%s", pBaseDrvrName) == sizeof(szDrvrName))
 		ABORT_FINALIZE(RS_RET_DRVRNAME_TOO_LONG);
 	CHKmalloc(pThis->pDrvrName = (uchar*) strdup((char*)szDrvrName));
 
@@ -82,6 +79,7 @@ loadDrvr(nssel_t *pThis)
 	 * about this hack, but for the time being it is efficient and clean
 	 * enough. -- rgerhards, 2008-04-18
 	 */
+RUNLOG_VAR("%s", szDrvrName+2);
 	CHKiRet(obj.UseObj(__FILE__, szDrvrName+2, DONT_LOAD_LIB, (void*) &pThis->Drvr));
 
 finalize_it:
@@ -95,13 +93,13 @@ finalize_it:
 
 
 /* Standard-Constructor */
-BEGINobjConstruct(nssel) /* be sure to specify the object type also in END macro! */
-ENDobjConstruct(nssel)
+BEGINobjConstruct(nspoll) /* be sure to specify the object type also in END macro! */
+ENDobjConstruct(nspoll)
 
 
-/* destructor for the nssel object */
-BEGINobjDestruct(nssel) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDestruct(nssel)
+/* destructor for the nspoll object */
+BEGINobjDestruct(nspoll) /* be sure to specify the object type also in END and CODESTART macros! */
+CODESTARTobjDestruct(nspoll)
 	if(pThis->pDrvrData != NULL)
 		pThis->Drvr.Destruct(&pThis->pDrvrData);
 
@@ -113,79 +111,52 @@ CODESTARTobjDestruct(nssel)
 		obj.ReleaseObj(__FILE__, pThis->pDrvrName+2, DONT_LOAD_LIB, (void*) &pThis->Drvr);
 		free(pThis->pDrvrName);
 	}
-ENDobjDestruct(nssel)
+ENDobjDestruct(nspoll)
 
 
 /* ConstructionFinalizer */
 static rsRetVal
-ConstructFinalize(nssel_t *pThis)
+ConstructFinalize(nspoll_t *pThis)
 {
 	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, nssel);
+	ISOBJ_TYPE_assert(pThis, nspoll);
+RUNLOG_STR("trying to load epoll driver\n");
 	CHKiRet(loadDrvr(pThis));
 	CHKiRet(pThis->Drvr.Construct(&pThis->pDrvrData));
 finalize_it:
+dbgprintf("XXX: done trying to load epoll driver, state %d\n", iRet);
 	RETiRet;
 }
 
 
-/* Add a stream object to the current select() set.
- * Note that a single stream may have multiple "sockets" if
- * it is a listener. If so, all of them are begin added.
+/* Carries out the actual wait (all done in lower layers)
  */
 static rsRetVal
-Add(nssel_t *pThis, netstrm_t *pStrm, nsdsel_waitOp_t waitOp)
-{
+Wait(nspoll_t *pThis, int timeout, int *idRdy, void **ppUsr) {
 	DEFiRet;
-
-	ISOBJ_TYPE_assert(pThis, nssel);
-	ISOBJ_TYPE_assert(pStrm, netstrm);
-	
-	CHKiRet(pThis->Drvr.Add(pThis->pDrvrData, pStrm->pDrvrData, waitOp));
-
-finalize_it:
+	ISOBJ_TYPE_assert(pThis, nspoll);
+	assert(idRdy != NULL);
+	iRet = pThis->Drvr.Wait(pThis->pDrvrData, timeout, idRdy, ppUsr);
 	RETiRet;
 }
 
 
-/* wait for IO to happen on one of our netstreams. iNumReady has
- * the number of ready "sockets" after the call. This function blocks
- * until some are ready. EAGAIN is retried.
+/* semantics like the epoll_ctl() function, does the same thing.
+ * rgerhards, 2009-11-18
  */
 static rsRetVal
-Wait(nssel_t *pThis, int *piNumReady)
-{
+Ctl(nspoll_t *pThis, netstrm_t *pStrm, int id, void *pUsr, int mode, int op) {
 	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, nssel);
-	assert(piNumReady != NULL);
-	iRet = pThis->Drvr.Select(pThis->pDrvrData, piNumReady);
-	RETiRet;
-}
-
-
-/* Check if a stream is ready for IO. *piNumReady contains the remaining number
- * of ready streams. Note that this function may say the stream is not ready
- * but still decrement *piNumReady. This can happen when (e.g. with TLS) the low
- * level driver requires some IO which is hidden from the upper layer point of view.
- * rgerhards, 2008-04-23
- */
-static rsRetVal
-IsReady(nssel_t *pThis, netstrm_t *pStrm, nsdsel_waitOp_t waitOp, int *pbIsReady, int *piNumReady)
-{
-	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, nssel);
-	ISOBJ_TYPE_assert(pStrm, netstrm);
-	assert(pbIsReady != NULL);
-	assert(piNumReady != NULL);
-	iRet = pThis->Drvr.IsReady(pThis->pDrvrData, pStrm->pDrvrData, waitOp, pbIsReady);
+	ISOBJ_TYPE_assert(pThis, nspoll);
+	iRet = pThis->Drvr.Ctl(pThis->pDrvrData, pStrm->pDrvrData, id, pUsr, mode, op);
 	RETiRet;
 }
 
 
 /* queryInterface function */
-BEGINobjQueryInterface(nssel)
-CODESTARTobjQueryInterface(nssel)
-	if(pIf->ifVersion != nsselCURR_IF_VERSION) {/* check for current version, increment on each change */
+BEGINobjQueryInterface(nspoll)
+CODESTARTobjQueryInterface(nspoll)
+	if(pIf->ifVersion != nspollCURR_IF_VERSION) {/* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}
 
@@ -194,35 +165,34 @@ CODESTARTobjQueryInterface(nssel)
 	 * work here (if we can support an older interface version - that,
 	 * of course, also affects the "if" above).
 	 */
-	pIf->Construct = nsselConstruct;
+	pIf->Construct = nspollConstruct;
 	pIf->ConstructFinalize = ConstructFinalize;
-	pIf->Destruct = nsselDestruct;
-	pIf->Add = Add;
+	pIf->Destruct = nspollDestruct;
 	pIf->Wait = Wait;
-	pIf->IsReady = IsReady;
+	pIf->Ctl = Ctl;
 finalize_it:
-ENDobjQueryInterface(nssel)
+ENDobjQueryInterface(nspoll)
 
 
 /* exit our class
  */
-BEGINObjClassExit(nssel, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
-CODESTARTObjClassExit(nssel)
+BEGINObjClassExit(nspoll, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
+CODESTARTObjClassExit(nspoll)
 	/* release objects we no longer need */
 	objRelease(glbl, CORE_COMPONENT);
-ENDObjClassExit(nssel)
+ENDObjClassExit(nspoll)
 
 
-/* Initialize the nssel class. Must be called as the very first method
+/* Initialize the nspoll class. Must be called as the very first method
  * before anything else is called inside this class.
  * rgerhards, 2008-02-19
  */
-BEGINObjClassInit(nssel, 1, OBJ_IS_CORE_MODULE) /* class, version */
+BEGINObjClassInit(nspoll, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
-	DBGPRINTF("doing nsselClassInit\n");
+	DBGPRINTF("doing nspollClassInit\n");
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 
 	/* set our own handlers */
-ENDObjClassInit(nssel)
+ENDObjClassInit(nspoll)
 /* vi:set ai:
  */
