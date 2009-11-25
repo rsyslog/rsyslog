@@ -25,6 +25,11 @@
 #define INCLUDED_NSDPOLL_PTCP_H
 
 #include "nsd.h"
+#if HAVE_SYS_EPOLL_H
+#	include <sys/epoll.h>
+#else
+	typedef void epoll_event_t;
+#endif
 typedef nsdpoll_if_t nsdpoll_ptcp_if_t; /* we just *implement* this interface */
 /* a helper object to keep track of the epoll event records
  * Note that we need to keep track of that list because we need to

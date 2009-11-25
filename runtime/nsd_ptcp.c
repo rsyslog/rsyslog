@@ -48,6 +48,7 @@
 #include "netstrms.h"
 #include "netstrm.h"
 #include "nsdsel_ptcp.h"
+#include "nsdpoll_ptcp.h"
 #include "nsd_ptcp.h"
 
 MODULE_TYPE_LIB
