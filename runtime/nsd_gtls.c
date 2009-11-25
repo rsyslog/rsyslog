@@ -1325,7 +1325,10 @@ finalize_it:
 static void
 CheckConnection(nsd_t __attribute__((unused)) *pNsd)
 {
-	/* dummy, do nothing */
+	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
+	ISOBJ_TYPE_assert(pThis, nsd_gtls);
+
+	nsd_ptcp.CheckConnection(pThis->pTcp);
 }
 
 

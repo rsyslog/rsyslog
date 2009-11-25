@@ -4,6 +4,8 @@ Version 4.5.7  [v4-beta] (rgerhards), 2009-11-18
   be generated only after the process has started, but not right from
   the beginning. This is assumed to be useful for hard-to-find bugs.
   Also improved the doc on the debug system.
+- bugfix (kind of): check if TCP connection is still alive if using TLS
+  Thanks to Jonathan Bond-Caron for the patch.
 - bugfix [imported from 4.4.3]: $ActionExecOnlyOnceEveryInterval did
   not work.
 ---------------------------------------------------------------------------
