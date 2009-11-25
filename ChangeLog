@@ -4,6 +4,8 @@ Version 5.3.6  [BETA] (rgerhards), 2009-11-??
   end of transaction
 - bugfix: enabling GSSServer crashes rsyslog startup
   Thanks to Tomas Kubina for the patch [imgssapi]
+- bugfix (kind of): check if TCP connection is still alive if using TLS
+  Thanks to Jonathan Bond-Caron for the patch.
 ---------------------------------------------------------------------------
 Version 5.3.5  [BETA] (rgerhards), 2009-11-13
 - some light performance enhancement by replacing time() call with much
@@ -288,11 +290,13 @@ Version 4.7.0  [v4-devel] (rgerhards), 2009-09-??
   See ticket for details: http://bugzilla.adiscon.com/show_bug.cgi?id=150
 - imported changes from 4.5.6 and below
 ---------------------------------------------------------------------------
-Version 4.5.7  [v4-beta] (rgerhards), 2009-11-??
+Version 4.5.7  [v4-beta] (rgerhards), 2009-11-18
 - added a so-called "On Demand Debug" mode, in which debug output can
   be generated only after the process has started, but not right from
   the beginning. This is assumed to be useful for hard-to-find bugs.
   Also improved the doc on the debug system.
+- bugfix (kind of): check if TCP connection is still alive if using TLS
+  Thanks to Jonathan Bond-Caron for the patch.
 - bugfix [imported from 4.4.3]: $ActionExecOnlyOnceEveryInterval did
   not work.
 ---------------------------------------------------------------------------
