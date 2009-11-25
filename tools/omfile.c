@@ -663,6 +663,8 @@ CODESTARTdoAction
 		CHKiRet(strm.Flush(pData->pStrm));
 	}
 finalize_it:
+	if(iRet == RS_RET_OK)
+		iRet = RS_RET_DEFER_COMMIT;
 ENDdoAction
 
 

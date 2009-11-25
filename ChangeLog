@@ -6,6 +6,8 @@ Version 5.5.1  [DEVEL] (rgerhards), 2009-11-??
   epoll netstream drivers. So far, an epoll driver has only been
   implemented for plain tcp syslog, the rest will follow once the code
   proves well in practice AND there is demand.
+- bugfix: enabling GSSServer crashes rsyslog startup
+  Thanks to Tomas Kubina for the patch [imgssapi]
 ---------------------------------------------------------------------------
 Version 5.5.0  [DEVEL] (rgerhards), 2009-11-18
 - moved DNS resolution code out of imudp and into the backend processing
@@ -18,6 +20,12 @@ Version 5.5.0  [DEVEL] (rgerhards), 2009-11-18
   Thanks to varmjofekoj for the patch
   This is not done in imudp, as it natively supports epoll().
 - doc: improved description of what loadable modules can do
+---------------------------------------------------------------------------
+Version 5.3.6  [BETA] (rgerhards), 2009-11-??
+- bugfix: omfile output was only written when buffer was full, not at
+  end of transaction
+- bugfix: enabling GSSServer crashes rsyslog startup
+  Thanks to Tomas Kubina for the patch [imgssapi]
 ---------------------------------------------------------------------------
 Version 5.3.5  [BETA] (rgerhards), 2009-11-13
 - some light performance enhancement by replacing time() call with much
@@ -131,6 +139,23 @@ Version 5.3.0  [DEVEL] (rgerhards), 2009-09-14
 - changed imudp to utilize epoll(), where available. This shall provide
   slightly better performance (just slightly because we called select()
   rather infrequently on a busy system)
+---------------------------------------------------------------------------
+Version 5.2.2  [v5-stable] (rgerhards), 2009-11-??
+- bugfix: enabling GSSServer crashes rsyslog startup
+  Thanks to Tomas Kubina for the patch [imgssapi]
+---------------------------------------------------------------------------
+Version 5.2.1  [v5-stable] (rgerhards), 2009-11-02
+- bugfix [imported from 4.4.3]: $ActionExecOnlyOnceEveryInterval did
+  not work.
+- bugfix: segfault on startup when -q or -Q option was given
+  [imported from v3-stable]
+---------------------------------------------------------------------------
+Version 5.2.0  [v5-stable] (rgerhards), 2009-11-02
+This is a re-release of version 5.1.6 as stable after we did not get any bug 
+reports during the whole beta phase. Still, this first v5-stable may not be 
+as stable as one hopes for, I am not sure if we did not get bug reports
+just because nobody tried it. Anyhow, we need to go forward and so we
+have the initial v5-stable.
 ---------------------------------------------------------------------------
 Version 5.1.6  [v5-beta] (rgerhards), 2009-10-15
 - feature imports from v4.5.6
