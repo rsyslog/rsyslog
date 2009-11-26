@@ -760,8 +760,9 @@ finalize_it:
  * rgerhards, 2008-01-28
  */
 static rsRetVal
-finishBatch(action_t *pThis)
+finishBatch(action_t *pThis, batch_t *pBatch)
 {
+	int i;
 	DEFiRet;
 
 	ASSERT(pThis != NULL);
@@ -772,9 +773,14 @@ finishBatch(action_t *pThis)
 	CHKiRet(actionPrepare(pThis));
 	if(pThis->eState == ACT_STATE_ITX) {
 		iRet = pThis->pMod->mod.om.endTransaction(pThis->pModData);
+dbgprintf("XXX: finishBatch, result of endTranscation %d\n", iRet);
 		switch(iRet) {
 			case RS_RET_OK:
 				actionCommitted(pThis);
+				/* flag messages as committed */
+				for(i = 0 ; i < pBatch->nElem ; ++i) {
+					pBatch->pElem[i].state = BATCH_STATE_COMM;
+				}
 				break;
 			case RS_RET_SUSPENDED:
 				actionRetry(pThis);
@@ -842,11 +848,12 @@ tryDoAction(action_t *pAction, batch_t *pBatch, int *pnElem, int *pbShutdownImme
 					pBatch->pElem[iCommittedUpTo++].state = BATCH_STATE_COMM;
 				}
 				pBatch->pElem[i].state = BATCH_STATE_SUB;
-			} else if(localRet == RS_RET_PREVIOUS_COMMITTED) {
+			} else if(localRet == RS_RET_DEFER_COMMIT) {
 				pBatch->pElem[i].state = BATCH_STATE_SUB;
 			} else if(localRet == RS_RET_DISCARDMSG) {
 				pBatch->pElem[i].state = BATCH_STATE_DISC;
 			} else {
+				dbgprintf("tryDoAction: unexpected error code %d, finalizing\n", localRet);
 				iRet = localRet;
 				FINALIZE;
 			}
@@ -892,7 +899,7 @@ submitBatch(action_t *pAction, batch_t *pBatch, int nElem, int *pbShutdownImmedi
 			/* try commit transaction, once done, we can simply do so as if
 			 * that return state was returned from tryDoAction().
 			 */
-			localRet = finishBatch(pAction);
+			localRet = finishBatch(pAction, pBatch); // TODO: careful, do we need the elem counter?
 		}
 
 		if(   localRet == RS_RET_OK
@@ -942,7 +949,7 @@ processAction(action_t *pAction, batch_t *pBatch, int *pbShutdownImmediate)
 	assert(pBatch != NULL);
 	pBatch->iDoneUpTo = 0;
 	CHKiRet(submitBatch(pAction, pBatch, pBatch->nElem, pbShutdownImmediate));
-	iRet = finishBatch(pAction);
+	iRet = finishBatch(pAction, pBatch);
 
 finalize_it:
 	RETiRet;

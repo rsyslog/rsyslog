@@ -2,6 +2,8 @@
 Version 5.3.6  [BETA] (rgerhards), 2009-11-??
 - bugfix: omfile output was only written when buffer was full, not at
   end of transaction
+- bugfix: commit transaction was not properly conveyed to message layer,
+  potentially resulting in non-message destruction and thus hangs
 - bugfix: enabling GSSServer crashes rsyslog startup
   Thanks to Tomas Kubina for the patch [imgssapi]
 - bugfix (kind of): check if TCP connection is still alive if using TLS
