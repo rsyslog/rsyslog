@@ -8,6 +8,8 @@ Version 5.5.1  [DEVEL] (rgerhards), 2009-11-??
   proves well in practice AND there is demand.
 - bugfix: enabling GSSServer crashes rsyslog startup
   Thanks to Tomas Kubina for the patch [imgssapi]
+- bugfix (kind of): check if TCP connection is still alive if using TLS
+  Thanks to Jonathan Bond-Caron for the patch.
 ---------------------------------------------------------------------------
 Version 5.5.0  [DEVEL] (rgerhards), 2009-11-18
 - moved DNS resolution code out of imudp and into the backend processing
@@ -24,8 +26,12 @@ Version 5.5.0  [DEVEL] (rgerhards), 2009-11-18
 Version 5.3.6  [BETA] (rgerhards), 2009-11-??
 - bugfix: omfile output was only written when buffer was full, not at
   end of transaction
+- bugfix: commit transaction was not properly conveyed to message layer,
+  potentially resulting in non-message destruction and thus hangs
 - bugfix: enabling GSSServer crashes rsyslog startup
   Thanks to Tomas Kubina for the patch [imgssapi]
+- bugfix (kind of): check if TCP connection is still alive if using TLS
+  Thanks to Jonathan Bond-Caron for the patch.
 ---------------------------------------------------------------------------
 Version 5.3.5  [BETA] (rgerhards), 2009-11-13
 - some light performance enhancement by replacing time() call with much
@@ -319,6 +325,8 @@ Version 4.5.7  [v4-beta] (rgerhards), 2009-11-18
   be generated only after the process has started, but not right from
   the beginning. This is assumed to be useful for hard-to-find bugs.
   Also improved the doc on the debug system.
+- bugfix (kind of): check if TCP connection is still alive if using TLS
+  Thanks to Jonathan Bond-Caron for the patch.
 - bugfix [imported from 4.4.3]: $ActionExecOnlyOnceEveryInterval did
   not work.
 ---------------------------------------------------------------------------
