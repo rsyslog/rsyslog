@@ -60,6 +60,7 @@ DEFobjCurrIf(ruleset)
 /* config data */
 static uchar cCCEscapeChar = '#';/* character to be used to start an escape sequence for control chars */
 static int bEscapeCCOnRcv = 1; /* escape control characters on reception: 0 - no, 1 - yes */
+static int bEscapeTab = 1;	/* escape tab control character when doing CC escapes: 0 - no, 1 - yes */
 static int bDropTrailingLF = 1; /* drop trailing LF's on reception? */
 
 /* This is the list of all parsers known to us.
@@ -339,6 +340,11 @@ SanitizeMsg(msg_t *pMsg)
 	 * needs sanitation than to do the sanitation in any case. So we first do
 	 * this and terminate when it is not needed - which is expectedly the case
 	 * for the vast majority of messages. -- rgerhards, 2009-06-15
+	 * Note that we do NOT check here if tab characters are to be escaped or
+	 * not. I expect this functionality to be seldomly used and thus I do not
+	 * like to pay the performance penalty. So the penalty is only with those
+	 * that actually use it, because we may call the sanitizer without actual
+	 * need below (but it then still will work perfectly well!). -- rgerhards, 2009-11-27
 	 */
 	int bNeedSanitize = 0;
 	for(iSrc = 0 ; iSrc < lenMsg ; iSrc++) {
@@ -367,7 +373,7 @@ SanitizeMsg(msg_t *pMsg)
 		CHKmalloc(pDst = MALLOC(sizeof(uchar) * (iMaxLine + 1)));
 	iSrc = iDst = 0;
 	while(iSrc < lenMsg && iDst < maxDest - 3) { /* leave some space if last char must be escaped */
-		if(iscntrl((int) pszMsg[iSrc])) {
+		if(iscntrl((int) pszMsg[iSrc]) && (pszMsg[iSrc] != '\t' || bEscapeTab)) {
 			/* note: \0 must always be escaped, the rest of the code currently
 			 * can not handle it! -- rgerhards, 2009-08-26
 			 */
@@ -619,6 +625,7 @@ resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unus
 {
 	cCCEscapeChar = '#';
 	bEscapeCCOnRcv = 1; /* default is to escape control characters */
+	bEscapeTab = 1; /* default is to escape control characters */
 	bDropTrailingLF = 1; /* default is to drop trailing LF's on reception */
 
 	return RS_RET_OK;
@@ -670,6 +677,7 @@ BEGINObjClassInit(parser, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	CHKiRet(regCfSysLineHdlr((uchar *)"controlcharacterescapeprefix", 0, eCmdHdlrGetChar, NULL, &cCCEscapeChar, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"droptrailinglfonreception", 0, eCmdHdlrBinary, NULL, &bDropTrailingLF, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"escapecontrolcharactersonreceive", 0, eCmdHdlrBinary, NULL, &bEscapeCCOnRcv, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"escapecontrolcharactertab", 0, eCmdHdlrBinary, NULL, &bEscapeTab, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, NULL));
 
 	InitParserList(&pParsLstRoot);

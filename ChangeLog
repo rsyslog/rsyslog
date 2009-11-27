@@ -6,6 +6,9 @@ Version 5.5.1  [DEVEL] (rgerhards), 2009-11-??
   epoll netstream drivers. So far, an epoll driver has only been
   implemented for plain tcp syslog, the rest will follow once the code
   proves well in practice AND there is demand.
+- re-implemented $EscapeControlCharacterTab config directive
+  Based on Jonathan Bond-Caron's patch for v4. This now also includes some
+  automatted tests.
 - bugfix: enabling GSSServer crashes rsyslog startup
   Thanks to Tomas Kubina for the patch [imgssapi]
 - bugfix (kind of): check if TCP connection is still alive if using TLS

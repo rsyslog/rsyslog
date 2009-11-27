@@ -37,6 +37,8 @@ TESTS += omod-if-array.sh \
 	 threadingmqaq.sh \
 	 discard.sh \
 	 badqi.sh \
+	 tabescape_dflt.sh \
+	 tabescape_off.sh \
 	 fieldtest.sh
 endif
 
@@ -194,6 +196,12 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   execonlyonce.sh \
 	   testsuites/execonlyonce.conf \
 	   testsuites/execonlyonce.data \
+	   tabescape_dflt.sh \
+	   testsuites/tabescape_dflt.conf \
+	   testsuites/1.tabescape_dflt \
+	   tabescape_off.sh \
+	   testsuites/tabescape_off.conf \
+	   testsuites/1.tabescape_off \
 	   DiagTalker.java \
 	   cfg.sh
 
