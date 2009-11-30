@@ -20,6 +20,8 @@ TESTS = $(TESTRUNS) cfg.sh \
 	queue-persist.sh \
 	pipeaction.sh \
 	execonlyonce.sh \
+	dircreate_dflt.sh \
+	dircreate_off.sh \
 	queue-persist.sh 
 
 if ENABLE_OMUDPSPOOF
@@ -202,6 +204,10 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   tabescape_off.sh \
 	   testsuites/tabescape_off.conf \
 	   testsuites/1.tabescape_off \
+	   dircreate_dflt.sh \
+	   testsuites/dircreate_dflt.conf \
+	   dircreate_off.sh \
+	   testsuites/dircreate_off.conf \
 	   DiagTalker.java \
 	   cfg.sh
 

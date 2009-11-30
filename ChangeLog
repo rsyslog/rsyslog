@@ -1,5 +1,8 @@
 ---------------------------------------------------------------------------
 Version 5.5.2  [DEVEL] (rgerhards), 2009-11-??
+- extended testbench
+- bugfix: $CreateDirs variable not properly initialized, default thus
+  was random (but most often "on") [imported from v3]
 ---------------------------------------------------------------------------
 Version 5.5.1  [DEVEL] (rgerhards), 2009-11-27
 - introduced the ablity for netstream drivers to utilize an epoll interface
