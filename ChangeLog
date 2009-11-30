@@ -6,6 +6,8 @@ Version 4.5.7  [v4-beta] (rgerhards), 2009-11-18
   Also improved the doc on the debug system.
 - bugfix (kind of): check if TCP connection is still alive if using TLS
   Thanks to Jonathan Bond-Caron for the patch.
+- bugfix: hostname accidently set to IP address for some message sources,
+  for example imudp. Thanks to Anton for reporting this bug.
 - bugfix [imported from 4.4.3]: $ActionExecOnlyOnceEveryInterval did
   not work.
 ---------------------------------------------------------------------------
