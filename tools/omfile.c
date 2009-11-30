@@ -84,7 +84,7 @@ static uid_t	fileUID;	/* UID to be used for newly created files */
 static uid_t	fileGID;	/* GID to be used for newly created files */
 static uid_t	dirUID;		/* UID to be used for newly created directories */
 static uid_t	dirGID;		/* GID to be used for newly created directories */
-static int	bCreateDirs;	/* auto-create directories for dynaFiles: 0 - no, 1 - yes */
+static int	bCreateDirs = 1;/* auto-create directories for dynaFiles: 0 - no, 1 - yes */
 static int	bEnableSync = 0;/* enable syncing of files (no dash in front of pathname in conf): 0 - no, 1 - yes */
 static uchar	*pszTplName = NULL; /* name of the default template to use */
 /* end globals for default values */
