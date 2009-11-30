@@ -8,6 +8,8 @@ Version 5.3.6  [BETA] (rgerhards), 2009-11-??
   Thanks to Tomas Kubina for the patch [imgssapi]
 - bugfix (kind of): check if TCP connection is still alive if using TLS
   Thanks to Jonathan Bond-Caron for the patch.
+- bugfix: $CreateDirs variable not properly initialized, default thus
+  was random (but most often "on") [imported from v3]
 ---------------------------------------------------------------------------
 Version 5.3.5  [BETA] (rgerhards), 2009-11-13
 - some light performance enhancement by replacing time() call with much
