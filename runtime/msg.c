@@ -1912,7 +1912,7 @@ rsRetVal MsgSetRcvFromIPStr(msg_t *pThis, uchar *psz, int len, prop_t **ppProp)
 	assert(pThis != NULL);
 
 	CHKiRet(prop.CreateOrReuseStringProp(ppProp, psz, len));
-	MsgSetRcvFrom(pThis, *ppProp);
+	MsgSetRcvFromIP(pThis, *ppProp);
 
 finalize_it:
 	RETiRet;
