@@ -1,5 +1,8 @@
 ---------------------------------------------------------------------------
 Version 5.5.2  [DEVEL] (rgerhards), 2009-11-??
+- worked around an issue where omfile failed to compile on32 bit platforms
+  under some circumstances (this smells like a gcc problem, but a simple
+  solution was available). Thanks to Kenneth Marshall for some advice.
 - extended testbench
 - bugfix: hostname accidently set to IP address for some message sources,
   for example imudp. Thanks to Anton for reporting this bug. [imported v4]

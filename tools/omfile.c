@@ -83,7 +83,11 @@ DEFobjCurrIf(strm)
  * That should be sufficient (and even than, there would no really bad effect ;)).
  * The variable below is the global counter/clock.
  */
+#if HAVE_ATOMIC_BUILTINS_64BIT
 static uint64 clockFileAccess = 0;
+#else
+static unsigned clockFileAccess = 0;
+#endif
 /* and the "tick" function */
 static inline uint64
 getClockFileAccess(void)
