@@ -3434,6 +3434,7 @@ int realMain(int argc, char **argv)
 			} else {
 				fprintf(stderr, "error -p is no longer supported, use module imuxsock instead");
 			}
+			break;
 		case 'q':               /* add hostname if DNS resolving has failed */
 		        *(net.pACLAddHostnameOnFail) = 1;
 		        break;

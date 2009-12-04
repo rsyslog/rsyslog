@@ -21,12 +21,18 @@ Version 4.7.0  [v4-devel] (rgerhards), 2009-09-??
 - bugfix (kind of): check if TCP connection is still alive if using TLS
   Thanks to Jonathan Bond-Caron for the patch.
 - imported changes from 4.5.7 and below
+- bugfix: potential segfault when -p command line option was used
+  Thanks for varmojfekoj for pointing me at this bug.
 ---------------------------------------------------------------------------
 Version 4.5.7  [v4-beta] (rgerhards), 2009-11-18
 - added a so-called "On Demand Debug" mode, in which debug output can
   be generated only after the process has started, but not right from
   the beginning. This is assumed to be useful for hard-to-find bugs.
   Also improved the doc on the debug system.
+- bugfix (kind of): check if TCP connection is still alive if using TLS
+  Thanks to Jonathan Bond-Caron for the patch.
+- bugfix: hostname accidently set to IP address for some message sources,
+  for example imudp. Thanks to Anton for reporting this bug.
 - bugfix [imported from 4.4.3]: $ActionExecOnlyOnceEveryInterval did
   not work.
 ---------------------------------------------------------------------------
@@ -462,6 +468,8 @@ Version 3.22.2 [v3-stable] (rgerhards), 2009-07-??
   in doc set (require TLS drivers)
 - bugfix: $CreateDirs variable not properly initialized, default thus
   was random (but most often "on")
+- bugfix: potential segfault when -p command line option was used
+  thanks to varmojfekoj for pointing me at this bug
 ---------------------------------------------------------------------------
 Version 3.22.1 [v3-stable] (rgerhards), 2009-07-02
 - bugfix: invalid error message issued if $inlcudeConfig was on an empty
