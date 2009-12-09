@@ -10,6 +10,10 @@ Version 5.3.6  [BETA] (rgerhards), 2009-11-??
   Thanks to Jonathan Bond-Caron for the patch.
 - bugfix: $CreateDirs variable not properly initialized, default thus
   was random (but most often "on") [imported from v3]
+- worked around an issue where omfile failed to compile on 32 bit platforms
+  under some circumstances (this smells like a gcc problem, but a simple
+  solution was available). Thanks to Kenneth Marshall for some advice.
+  [backported from 5.5.x branch]
 ---------------------------------------------------------------------------
 Version 5.3.5  [BETA] (rgerhards), 2009-11-13
 - some light performance enhancement by replacing time() call with much

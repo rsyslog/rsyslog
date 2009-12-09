@@ -128,6 +128,7 @@ AC_TRY_COMPILE([
 
 # check for availability of atomic operations
 RS_ATOMIC_OPERATIONS
+RS_ATOMIC_OPERATIONS_64BIT
 
 
 # Additional module directories
