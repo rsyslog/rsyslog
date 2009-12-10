@@ -1,5 +1,9 @@
 ----------------------------------------------------------------------
-Version 0.1.4 (rgerhards), 2009-??-??
+Version 1.0.0 (rgerhards), 2009-12-11
+This version of librelp matured in practice and it is not time for
+a 1.0 release. Besides that, it includes a small number of
+changes:
+- bugfix: user callback never received remote IP address
 - bugfix: offers builder did use a fixed size string without bounds
   checking. I don't think this was a real issue as it was not
   exposed to the outside world, but now the buffer dynamically
