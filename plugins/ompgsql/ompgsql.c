@@ -246,7 +246,8 @@ BEGINdoAction
 CODESTARTdoAction
 	dbgprintf("\n");
 	CHKiRet(writePgSQL(ppString[0], pData));
-	iRet = RS_RET_DEFER_COMMIT;
+	if(bCoreSupportsBatching)
+		iRet = RS_RET_DEFER_COMMIT;
 finalize_it:
 ENDdoAction
 
