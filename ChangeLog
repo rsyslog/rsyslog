@@ -6,6 +6,9 @@ Version 5.5.2  [DEVEL] (rgerhards), 2009-11-??
 - extended testbench
 - bugfix: hostname accidently set to IP address for some message sources,
   for example imudp. Thanks to Anton for reporting this bug. [imported v4]
+- bugfix: ompgsql had problems with transaction support, what actually 
+  rendered it unsuable. Thanks to forum user "horhe" for alerting me
+  on this bug and helping to debug/fix it! [imported from 5.3.6]
 - bugfix: $CreateDirs variable not properly initialized, default thus
   was random (but most often "on") [imported from v3]
 ---------------------------------------------------------------------------
