@@ -245,7 +245,9 @@ ENDbeginTransaction
 BEGINdoAction
 CODESTARTdoAction
 	dbgprintf("\n");
-	iRet = writePgSQL(ppString[0], pData);
+	CHKiRet(writePgSQL(ppString[0], pData));
+	iRet = RS_RET_DEFER_COMMIT;
+finalize_it:
 ENDdoAction
 
 

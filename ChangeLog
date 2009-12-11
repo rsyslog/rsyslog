@@ -10,6 +10,9 @@ Version 5.3.6  [BETA] (rgerhards), 2009-11-??
   Thanks to Jonathan Bond-Caron for the patch.
 - bugfix: $CreateDirs variable not properly initialized, default thus
   was random (but most often "on") [imported from v3]
+- bugfix: ompgsql had problems with transaction support, what actually 
+  rendered it unsuable. Thanks to forum user "horhe" for alerting me
+  on this bug and helping to debug/fix it!
 - worked around an issue where omfile failed to compile on 32 bit platforms
   under some circumstances (this smells like a gcc problem, but a simple
   solution was available). Thanks to Kenneth Marshall for some advice.
