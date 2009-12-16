@@ -491,17 +491,14 @@ static rsRetVal actionDoRetry(action_t *pThis, time_t ttNow)
 
 	ASSERT(pThis != NULL);
 
-dbgprintf("XXX: we are doing a retry, action state %d\n", pThis->eState);
 	iRetries = 0;
 	while(pThis->eState == ACT_STATE_RTRY) {
 		iRet = pThis->pMod->tryResume(pThis->pModData);
-dbgprintf("XXX: result of tryResume %d\n", iRet);
 		if(iRet == RS_RET_OK) {
 			actionSetState(pThis, ACT_STATE_RDY);
 		} else if(iRet == RS_RET_SUSPENDED) {
 			/* max retries reached? */
 			if((pThis->iResumeRetryCount != -1 && iRetries >= pThis->iResumeRetryCount)) {
-dbgprintf("XXX: action suspeneded!\n");
 				actionSuspend(pThis, ttNow);
 			} else {
 				++pThis->iNbrResRtry;
@@ -533,7 +530,6 @@ static rsRetVal actionTryResume(action_t *pThis)
 
 	ASSERT(pThis != NULL);
 
-dbgprintf("XXX: actionTryResume, action state %d\n", pThis->eState);
 	if(pThis->eState == ACT_STATE_SUSP) {
 		/* if we are suspended, we need to check if the timeout expired.
 		 * for this handling, we must always obtain a fresh timestamp. We used
@@ -580,7 +576,6 @@ static rsRetVal actionPrepare(action_t *pThis)
 	 */
 	if(pThis->eState == ACT_STATE_RDY) {
 		iRet = pThis->pMod->mod.om.beginTransaction(pThis->pModData);
-dbgprintf("XXX: actionPrepare, result of beginTranscation %d\n", iRet);
 		switch(iRet) {
 			case RS_RET_OK:
 				actionSetState(pThis, ACT_STATE_ITX);
@@ -717,7 +712,6 @@ actionCallDoAction(action_t *pThis, msg_t *pMsg)
 
 	pThis->bHadAutoCommit = 0;
 	iRet = pThis->pMod->mod.om.doAction(pThis->ppMsgs, pMsg->msgFlags, pThis->pModData);
-dbgprintf("XXX: result of doAction: %d\n", iRet);
 	switch(iRet) {
 		case RS_RET_OK:
 			actionCommitted(pThis);
@@ -790,7 +784,6 @@ finishBatch(action_t *pThis, batch_t *pBatch)
 	CHKiRet(actionPrepare(pThis));
 	if(pThis->eState == ACT_STATE_ITX) {
 		iRet = pThis->pMod->mod.om.endTransaction(pThis->pModData);
-dbgprintf("XXX: finishBatch, result of endTranscation %d\n", iRet);
 		switch(iRet) {
 			case RS_RET_OK:
 				actionCommitted(pThis);
@@ -908,7 +901,6 @@ submitBatch(action_t *pAction, batch_t *pBatch, int nElem, int *pbShutdownImmedi
 	bDone = 0;
 	do {
 		localRet = tryDoAction(pAction, pBatch, &nElem, pbShutdownImmediate);
-dbgprintf("submitBatch: localRet %d\n", localRet);
 		if(localRet == RS_RET_FORCE_TERM)
 			FINALIZE;
 		if(   localRet == RS_RET_OK

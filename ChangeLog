@@ -1,5 +1,9 @@
 ---------------------------------------------------------------------------
 Version 5.3.6  [BETA] (rgerhards), 2009-11-??
+- bugfix: ompgsql did not properly check the server connection in
+  tryResume(), which could lead to rsyslog running in a thight loop
+- bugfix: suspension during beginTransaction() was not properly handled
+  by rsyslog core
 - bugfix: omfile output was only written when buffer was full, not at
   end of transaction
 - bugfix: commit transaction was not properly conveyed to message layer,

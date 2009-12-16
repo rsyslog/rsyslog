@@ -65,6 +65,8 @@ typedef struct _instanceData {
 } instanceData;
 
 
+static rsRetVal writePgSQL(uchar *psz, instanceData *pData);
+
 BEGINcreateInstance
 CODESTARTcreateInstance
 ENDcreateInstance
@@ -170,9 +172,6 @@ tryExec(uchar *pszCmd, instanceData *pData)
 	int bHadError = 0;
 
 	/* try insert */
-BEGINfunc
-RUNLOG_VAR("%p", pData->f_hpgsql);
-RUNLOG_VAR("%s", pszCmd);
 	pgRet = PQexec(pData->f_hpgsql, (char*)pszCmd);
 	execState = PQresultStatus(pgRet);
 	if(execState != PGRES_COMMAND_OK && execState != PGRES_TUPLES_OK) {
@@ -181,7 +180,6 @@ RUNLOG_VAR("%s", pszCmd);
 	}
 	PQclear(pgRet);
 
-ENDfunc
 	return(bHadError);
 }
 
@@ -193,7 +191,8 @@ ENDfunc
  * a sql format error - connection aborts were properly handled
  * before my patch. -- rgerhards, 2009-04-17
  */
-rsRetVal writePgSQL(uchar *psz, instanceData *pData)
+static rsRetVal
+writePgSQL(uchar *psz, instanceData *pData)
 {
 	int bHadError = 0;
 	DEFiRet;
@@ -231,6 +230,16 @@ BEGINtryResume
 CODESTARTtryResume
 	if(pData->f_hpgsql == NULL) {
 		iRet = initPgSQL(pData, 1);
+		if(iRet == RS_RET_OK) {
+			/* the code above seems not to actually connect to the database. As such, we do a
+			 * dummy statement (a pointless select...) to verify the connection and return
+			 * success only when that statemetn succeeds. Note that I am far from being a 
+			 * PostgreSQL expert, so any patch that does the desired result in a more
+			 * intelligent way is highly welcome. -- rgerhards, 2009-12-16
+			 */
+			iRet = writePgSQL((uchar*)"select 'a' as a", pData);
+		}
+
 	}
 ENDtryResume
 
