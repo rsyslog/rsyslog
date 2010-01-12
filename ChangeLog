@@ -1,3 +1,5 @@
+- fixed a memory leak when sending messages in zip-compressed format
+  Thanks to Naoya Nakazawa for analyzing this issue and providing a patch.
 ---------------------------------------------------------------------------
 Version 4.5.7  [v4-beta] (rgerhards), 2009-11-18
 - added a so-called "On Demand Debug" mode, in which debug output can
