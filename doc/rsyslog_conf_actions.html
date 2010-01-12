@@ -98,18 +98,14 @@ done, same with /dev/console.</p>
 messages to a remote host running rsyslogd(8) and to receive messages
 from remote hosts. Using this feature you're able to control all syslog
 messages on one host, if all other machines will log remotely to that.
-This tears down<br>
-administration needs.<br>
-<br>
-<b>Please note that this version of rsyslogd by default does NOT
-forward messages it has received from the network to another host.
-Specify the "-h" option to enable this.</b></p>
+This tears down administration needs.</p>
 <p>To forward messages to another host, prepend the hostname with
 the at sign ("@"). A single at sign means that messages will
 be forwarded via UDP protocol (the standard for syslog). If you prepend
 two at signs ("@@"), the messages will be transmitted via TCP. Please
 note that plain TCP based syslog is not officially standardized, but
-most major syslogds support it (e.g. syslog-ng or WinSyslog). The
+most major syslogds support it (e.g. syslog-ng or
+<a href="http://www.winsyslog.com/">WinSyslog</a>). The
 forwarding action indicator (at-sign) can be followed by one or more
 options. If they are given, they must be immediately (without a space)
 following the final at sign and be enclosed in parenthesis. The
