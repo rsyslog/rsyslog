@@ -575,8 +575,19 @@ static rsRetVal actionPrepare(action_t *pThis)
 	 * action state accordingly
 	 */
 	if(pThis->eState == ACT_STATE_RDY) {
-		CHKiRet(pThis->pMod->mod.om.beginTransaction(pThis->pModData));
-		actionSetState(pThis, ACT_STATE_ITX);
+		iRet = pThis->pMod->mod.om.beginTransaction(pThis->pModData);
+		switch(iRet) {
+			case RS_RET_OK:
+				actionSetState(pThis, ACT_STATE_ITX);
+				break;
+			case RS_RET_SUSPENDED:
+				actionRetry(pThis);
+				break;
+			case RS_RET_DISABLE_ACTION:
+				actionDisable(pThis);
+				break;
+			default:FINALIZE;
+		}
 	}
 
 finalize_it:
@@ -773,7 +784,6 @@ finishBatch(action_t *pThis, batch_t *pBatch)
 	CHKiRet(actionPrepare(pThis));
 	if(pThis->eState == ACT_STATE_ITX) {
 		iRet = pThis->pMod->mod.om.endTransaction(pThis->pModData);
-dbgprintf("XXX: finishBatch, result of endTranscation %d\n", iRet);
 		switch(iRet) {
 			case RS_RET_OK:
 				actionCommitted(pThis);

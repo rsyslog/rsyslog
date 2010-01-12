@@ -20,6 +20,7 @@ digraph msgState {
 	susp	[label="suspended"]
 
 	rdy  -> itx	[label="transaction begins"]
+	rdy  -> rtry	[label="begin tx\nerror"]
 	itx  -> itx	[label="success"]
 	itx  -> comm	[label="commit\n(caller or auto)"]
 	itx  -> rtry	[label="error"]
