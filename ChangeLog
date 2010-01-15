@@ -1,4 +1,10 @@
 ---------------------------------------------------------------------------
+Version 5.3.7  [BETA] (rgerhards), 2010-01-??
+- bugfix: rsyslog hangs when writing to a named pipe which nobody was
+  reading. Thanks to Michael Biebl for reporting this bug.
+  Bugzilla entry: http://bugzilla.adiscon.com/show_bug.cgi?id=169
+  [imported from 4.5.8]
+---------------------------------------------------------------------------
 Version 5.3.6  [BETA] (rgerhards), 2010-01-13
 - bugfix: ompgsql did not properly check the server connection in
   tryResume(), which could lead to rsyslog running in a thight loop

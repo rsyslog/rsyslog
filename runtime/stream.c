@@ -209,13 +209,19 @@ doPhysOpen(strm_t *pThis)
 		default:assert(0);
 			break;
 	}
+	if(pThis->sType == STREAMTYPE_NAMED_PIPE) {
+		DBGPRINTF("Note: stream '%s' is a named pipe, open with O_NONBLOCK\n", pThis->pszCurrFName);
+		iFlags |= O_NONBLOCK;
+	}
 
 	pThis->fd = open((char*)pThis->pszCurrFName, iFlags, pThis->tOpenMode);
 	DBGPRINTF("file '%s' opened as #%d with mode %d\n", pThis->pszCurrFName, pThis->fd, pThis->tOpenMode);
 	if(pThis->fd == -1) {
-		int ierrnoSave = errno;
-		dbgoprint((obj_t*) pThis, "open error %d, file '%s'\n", errno, pThis->pszCurrFName);
-		if(ierrnoSave == ENOENT)
+		char errStr[1024];
+		int err = errno;
+		rs_strerror_r(err, errStr, sizeof(errStr));
+		dbgoprint((obj_t*) pThis, "open error %d, file '%s': %s\n", errno, pThis->pszCurrFName, errStr);
+		if(err == ENOENT)
 			ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
 		else
 			ABORT_FINALIZE(RS_RET_IO_ERROR);
@@ -429,6 +435,7 @@ strmHandleEOF(strm_t *pThis)
 	ISOBJ_TYPE_assert(pThis, strm);
 	switch(pThis->sType) {
 		case STREAMTYPE_FILE_SINGLE:
+		case STREAMTYPE_NAMED_PIPE:
 			ABORT_FINALIZE(RS_RET_EOF);
 			break;
 		case STREAMTYPE_FILE_CIRCULAR:
