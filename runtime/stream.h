@@ -76,7 +76,8 @@
 typedef enum {
 	STREAMTYPE_FILE_SINGLE = 0,	/**< read a single file */
 	STREAMTYPE_FILE_CIRCULAR = 1,	/**< circular files */
-	STREAMTYPE_FILE_MONITOR = 2	/**< monitor a (third-party) file */
+	STREAMTYPE_FILE_MONITOR = 2,	/**< monitor a (third-party) file */
+	STREAMTYPE_NAMED_PIPE = 3	/**< file is a named pipe (so far, tested for output only) */
 } strmType_t;
 
 typedef enum {				/* when extending, do NOT change existing modes! */

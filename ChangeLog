@@ -39,6 +39,12 @@ Version 5.5.0  [DEVEL] (rgerhards), 2009-11-18
   This is not done in imudp, as it natively supports epoll().
 - doc: improved description of what loadable modules can do
 ---------------------------------------------------------------------------
+Version 5.3.7  [BETA] (rgerhards), 2010-01-??
+- bugfix: rsyslog hangs when writing to a named pipe which nobody was
+  reading. Thanks to Michael Biebl for reporting this bug.
+  Bugzilla entry: http://bugzilla.adiscon.com/show_bug.cgi?id=169
+  [imported from 4.5.8]
+---------------------------------------------------------------------------
 Version 5.3.6  [BETA] (rgerhards), 2010-01-13
 - bugfix: ompgsql did not properly check the server connection in
   tryResume(), which could lead to rsyslog running in a thight loop
