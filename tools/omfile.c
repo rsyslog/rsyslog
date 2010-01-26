@@ -111,6 +111,7 @@ static uchar	*pszTplName = NULL; /* name of the default template to use */
 typedef struct _instanceData {
 	uchar	f_fname[MAXFNAME];/* file or template name (display only) */
 	strm_t	*pStrm;		/* our output stream */
+	strmType_t strmType;	/* stream type, used for named pipes */
 	char	bDynamicName;	/* 0 - static name, 1 - dynamic name (with properties) */
 	int	fCreateMode;	/* file creation mode for open() */
 	int	fDirCreateMode;	/* creation mode for mkdir() */
@@ -425,7 +426,7 @@ prepareFile(instanceData *pData, uchar *newFileName)
 	CHKiRet(strm.SettOperationsMode(pData->pStrm, STREAMMODE_WRITE_APPEND));
 	CHKiRet(strm.SettOpenMode(pData->pStrm, fCreateMode));
 	CHKiRet(strm.SetbSync(pData->pStrm, pData->bSyncFile));
-	CHKiRet(strm.SetsType(pData->pStrm, STREAMTYPE_FILE_SINGLE));
+	CHKiRet(strm.SetsType(pData->pStrm, pData->strmType));
 	CHKiRet(strm.SetiSizeLimit(pData->pStrm, pData->iSizeLimit));
 	/* set the flush interval only if we actually use it - otherwise it will activate
 	 * async processing, which is a real performance waste if we do not do buffered
@@ -596,8 +597,11 @@ writeFile(uchar **ppString, unsigned iMsgOpts, instanceData *pData)
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		/* in v5, we shall return different states for message-cause failur (but only there!) */
-		iRet = RS_RET_SUSPENDED;
+		/* in v5, we shall return different states for message-caused failure (but only there!) */
+		if(pData->strmType == STREAMTYPE_NAMED_PIPE)
+			iRet = RS_RET_DISABLE_ACTION; /* this is the traditional semantic -- rgerhards, 2010-01-15 */
+		else
+			iRet = RS_RET_SUSPENDED;
 	}
 	RETiRet;
 }
@@ -685,11 +689,17 @@ CODESTARTparseSelectorAct
         case '|':
 	case '/':
 		CODE_STD_STRING_REQUESTparseSelectorAct(1)
-		/* we now have the same semantics for files and pipes, but we need to skip over
-		 * the pipe indicator traditionally seen in config files...
+		/* we now have *almost* the same semantics for files and pipes, but we still need
+		 * to know we deal with a pipe, because we must do non-blocking opens in that case
+		 * (to keep consistent with traditional semantics and prevent rsyslog from hanging).
 		 */
-		if(*p == '|')
+		if(*p == '|') {
 			++p;
+			pData->strmType = STREAMTYPE_NAMED_PIPE;
+		} else {
+			pData->strmType = STREAMTYPE_FILE_SINGLE;
+		}
+
 		CHKiRet(cflineParseFileName(p, (uchar*) pData->f_fname, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS,
 				               (pszTplName == NULL) ? (uchar*)"RSYSLOG_FileFormat" : pszTplName));
 		pData->bDynamicName = 0;

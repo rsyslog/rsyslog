@@ -23,6 +23,25 @@ Version 4.7.0  [v4-devel] (rgerhards), 2009-09-??
 - imported changes from 4.5.7 and below
 - bugfix: potential segfault when -p command line option was used
   Thanks for varmojfekoj for pointing me at this bug.
+- bugfix: potential segfaults during queue shutdown
+  (bugs require certain non-standard settings to appear)
+  Thanks to varmojfekoj for the patch [imported from 4.5.8]
+---------------------------------------------------------------------------
+Version 4.5.8  [v4-beta] (rgerhards), 2010-01-??
+- bugfix: -d did not enable display of debug messages
+  regression from introduction of "debug on demand" mode
+  Thanks to Michael Biebl for reporting this bug
+- bugfix: blanks inside file names did not terminate file name parsing.
+  This could reslult in the whole rest of a line (including comments)
+  to be treated as file name in "write to file" actions.
+  Thanks to Jack for reporting this issue.
+- bugfix: rsyslog hang when writing to a named pipe which nobody was
+  reading. Thanks to Michael Biebl for reporting this bug.
+- bugfix: memory leak when sending messages in zip-compressed format
+  Thanks to Naoya Nakazawa for analyzing this issue and providing a patch.
+- bugfix: potential segfaults during queue shutdown
+  (bugs require certain non-standard settings to appear)
+  Thanks to varmojfekoj for the patch
 ---------------------------------------------------------------------------
 Version 4.5.7  [v4-beta] (rgerhards), 2009-11-18
 - added a so-called "On Demand Debug" mode, in which debug output can
@@ -201,6 +220,8 @@ Version 4.4.3  [v4-stable] (rgerhards), 2009-10-??
   This was a regression from the time() optimizations done in v4.
   Bug tracker: http://bugzilla.adiscon.com/show_bug.cgi?id=143
   Thanks to Klaus Tachtler for reporting this bug.
+- bugfix: potential segfault on queue shutdown
+  Thanks to varmojfekoj for the patch.
 - bugfix: potential hang condition on queue shutdown
   [imported from v3-stable]
 - bugfix: segfault on startup when -q or -Q option was given
