@@ -567,6 +567,7 @@ finalize_it:
  * rgerhards, 2007-07-25
  * updated to include OMSR pointer -- rgerhards, 2007-07-27
  * updated to include template name -- rgerhards, 2008-03-28
+ * rgerhards, 2010-01-19: file names end at the first space
  */
 rsRetVal
 cflineParseFileName(uchar* p, uchar *pFileName, omodStringRequest_t *pOMSR, int iEntry, int iTplOpts, uchar *pszTpl)
@@ -579,7 +580,7 @@ cflineParseFileName(uchar* p, uchar *pFileName, omodStringRequest_t *pOMSR, int 
 
 	pName = pFileName;
 	i = 1; /* we start at 1 so that we reseve space for the '\0'! */
-	while(*p && *p != ';' && i < MAXFNAME) {
+	while(*p && *p != ';' && *p != ' ' && i < MAXFNAME) {
 		*pName++ = *p++;
 		++i;
 	}

@@ -2430,6 +2430,7 @@ int realMain(int argc, char **argv)
 			iCompatibilityMode = atoi(optarg);
 			break;
 		case 'd': /* debug - must be handled now, so that debug is active during init! */
+			debugging_on = 1;
 			Debug = 1;
 			break;
 		case 'e':		/* log every message (no repeat message supression) */
