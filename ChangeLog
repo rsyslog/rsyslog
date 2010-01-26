@@ -4,6 +4,11 @@ Version 5.5.2  [DEVEL] (rgerhards), 2009-11-??
   under some circumstances (this smells like a gcc problem, but a simple
   solution was available). Thanks to Kenneth Marshall for some advice.
 - extended testbench
+- bugfix: queues in direct mode could case a segfault, especially if an
+  action failed for action queues. The issue was an invalid increment of
+  a stack-based pointer which lead to destruction of the stack frame and
+  thus a segfault on function return.
+  Thanks to Michael Biebl for alerting us on this problem.
 - bugfix: hostname accidently set to IP address for some message sources,
   for example imudp. Thanks to Anton for reporting this bug. [imported v4]
 - bugfix: ompgsql had problems with transaction support, what actually 

@@ -901,7 +901,6 @@ submitBatch(action_t *pAction, batch_t *pBatch, int nElem, int *pbShutdownImmedi
 	bDone = 0;
 	do {
 		localRet = tryDoAction(pAction, pBatch, &nElem, pbShutdownImmediate);
-dbgprintf("submitBatch: state of tryDoAction %d\n", localRet);
 		if(localRet == RS_RET_FORCE_TERM)
 			FINALIZE;
 		if(   localRet == RS_RET_OK
@@ -925,12 +924,13 @@ dbgprintf("submitBatch: state of tryDoAction %d\n", localRet);
 		} else if(localRet == RS_RET_ACTION_FAILED) {
 			/* in this case, the whole batch can not be processed */
 			for(i = 0 ; i < nElem ; ++i) {
-				pBatch->pElem[++pBatch->iDoneUpTo].state = BATCH_STATE_BAD;
+				pBatch->pElem[pBatch->iDoneUpTo++].state = BATCH_STATE_BAD;
 			}
 			bDone = 1;
 		} else {
 			if(nElem == 1) {
-				pBatch->pElem[++pBatch->iDoneUpTo].state = BATCH_STATE_BAD;
+				pBatch->pElem[pBatch->iDoneUpTo++].state = BATCH_STATE_BAD;
+// TODO: This is a mark, remove when no longer needed - Here was the bug, postincrement needs to be used, not preinc
 				bDone = 1;
 			} else {
 				/* retry with half as much. Depth is log_2 batchsize, so recursion is not too deep */
