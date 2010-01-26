@@ -853,9 +853,11 @@ static rsRetVal qDestructDisk(qqueue_t *pThis)
 	DEFiRet;
 	
 	ASSERT(pThis != NULL);
-	
-	strmDestruct(&pThis->tVars.disk.pWrite);
-	strmDestruct(&pThis->tVars.disk.pRead);
+
+	if (pThis->tVars.disk.pWrite != NULL)
+		strmDestruct(&pThis->tVars.disk.pWrite);
+	if (pThis->tVars.disk.pRead != NULL)
+		strmDestruct(&pThis->tVars.disk.pRead);
 
 	RETiRet;
 }
@@ -1209,7 +1211,7 @@ static rsRetVal qqueueShutdownWorkers(qqueue_t *pThis)
 			/* we need to re-aquire the mutex for the next check in this case! */
 			BEGIN_MTX_PROTECTED_OPERATIONS(pThis->mut, LOCK_MUTEX);	/* some workers may be running in parallel! */
 		}
-		if(pThis->bIsDA && wtpGetCurNumWrkr(pThis->pWtpDA, LOCK_MUTEX) > 0) {
+		if(pThis->bRunsDA && wtpGetCurNumWrkr(pThis->pWtpDA, LOCK_MUTEX) > 0) {
 			/* and now the same for the DA queue */
 			END_MTX_PROTECTED_OPERATIONS(pThis->mut);
 			dbgoprint((obj_t*) pThis, "trying immediate shutdown of DA workers\n");
@@ -1662,7 +1664,7 @@ qqueueChkStopWrkrDA(qqueue_t *pThis)
 	if(pThis->bEnqOnly) {
 		bStopWrkr = 1;
 	} else {
-		if(pThis->bRunsDA) {
+		if(pThis->bRunsDA == 2) {
 			ASSERT(pThis->pqDA != NULL);
 			if(   pThis->pqDA->bEnqOnly
 			   && pThis->pqDA->sizeOnDiskMax > 0
@@ -1917,7 +1919,8 @@ static rsRetVal qqueuePersist(qqueue_t *pThis, int bIsCheckpoint)
 			pThis->bNeedDelQIF = 0;
 		}
 		/* indicate spool file needs to be deleted */
-		CHKiRet(strmSetbDeleteOnClose(pThis->tVars.disk.pRead, 1));
+		if (pThis->tVars.disk.pRead != NULL)
+			CHKiRet(strmSetbDeleteOnClose(pThis->tVars.disk.pRead, 1));
 		FINALIZE; /* nothing left to do, so be happy */
 	}
 
@@ -1951,13 +1954,15 @@ static rsRetVal qqueuePersist(qqueue_t *pThis, int bIsCheckpoint)
 	}
 
 	/* now persist the stream info */
-	CHKiRet(strmSerialize(pThis->tVars.disk.pWrite, psQIF));
-	CHKiRet(strmSerialize(pThis->tVars.disk.pRead, psQIF));
+	if (pThis->tVars.disk.pWrite != NULL)
+		CHKiRet(strmSerialize(pThis->tVars.disk.pWrite, psQIF));
+	if (pThis->tVars.disk.pRead != NULL)
+		CHKiRet(strmSerialize(pThis->tVars.disk.pRead, psQIF));
 	
 	/* tell the input file object that it must not delete the file on close if the queue
 	 * is non-empty - but only if we are not during a simple checkpoint
 	 */
-	if(bIsCheckpoint != QUEUE_CHECKPOINT) {
+	if(bIsCheckpoint != QUEUE_CHECKPOINT && pThis->tVars.disk.pRead != NULL) {
 		CHKiRet(strmSetbDeleteOnClose(pThis->tVars.disk.pRead, 0));
 	}
 
