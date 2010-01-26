@@ -192,6 +192,8 @@ Version 4.4.3  [v4-stable] (rgerhards), 2009-10-??
   This was a regression from the time() optimizations done in v4.
   Bug tracker: http://bugzilla.adiscon.com/show_bug.cgi?id=143
   Thanks to Klaus Tachtler for reporting this bug.
+- bugfix: potential segfault on queue shutdown
+  Thanks to varmojfekoj for the patch.
 - bugfix: potential hang condition on queue shutdown
   [imported from v3-stable]
 - bugfix: segfault on startup when -q or -Q option was given
