@@ -280,7 +280,7 @@ static int iMainMsgQtoWrkShutdown = 60000;			/* timeout for worker thread shutdo
 static int iMainMsgQWrkMinMsgs = 100;				/* minimum messages per worker needed to start a new one */
 static int iMainMsgQDeqSlowdown = 0;				/* dequeue slowdown (simple rate limiting) */
 static int64 iMainMsgQueMaxDiskSpace = 0;			/* max disk space allocated 0 ==> unlimited */
-static int iMainMsgQueDeqBatchSize = 32;			/* dequeue batch size */
+static int64 iMainMsgQueDeqBatchSize = 32;			/* dequeue batch size */
 static int bMainMsgQSaveOnShutdown = 1;				/* save queue on shutdown (when DA enabled)? */
 static int iMainMsgQueueDeqtWinFromHr = 0;			/* hour begin of time frame when queue is to be dequeued */
 static int iMainMsgQueueDeqtWinToHr = 25;			/* hour begin of time frame when queue is to be dequeued */
