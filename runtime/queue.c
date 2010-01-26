@@ -860,9 +860,9 @@ static rsRetVal qDestructDisk(qqueue_t *pThis)
 	ASSERT(pThis != NULL);
 
 	if (pThis->tVars.disk.pWrite != NULL)
-		strmDestruct(&pThis->tVars.disk.pWrite);
+		strm.Destruct(&pThis->tVars.disk.pWrite);
 	if (pThis->tVars.disk.pRead != NULL)
-		strmDestruct(&pThis->tVars.disk.pRead);
+		strm.Destruct(&pThis->tVars.disk.pRead);
 
 	RETiRet;
 }
@@ -1924,7 +1924,7 @@ static rsRetVal qqueuePersist(qqueue_t *pThis, int bIsCheckpoint)
 		}
 		/* indicate spool file needs to be deleted */
 		if (pThis->tVars.disk.pRead != NULL)
-			CHKiRet(strmSetbDeleteOnClose(pThis->tVars.disk.pRead, 1));
+			CHKiRet(strm.SetbDeleteOnClose(pThis->tVars.disk.pRead, 1));
 		FINALIZE; /* nothing left to do, so be happy */
 	}
 
@@ -1959,15 +1959,15 @@ static rsRetVal qqueuePersist(qqueue_t *pThis, int bIsCheckpoint)
 
 	/* now persist the stream info */
 	if (pThis->tVars.disk.pWrite != NULL)
-		CHKiRet(strmSerialize(pThis->tVars.disk.pWrite, psQIF));
+		CHKiRet(strm.Serialize(pThis->tVars.disk.pWrite, psQIF));
 	if (pThis->tVars.disk.pRead != NULL)
-		CHKiRet(strmSerialize(pThis->tVars.disk.pRead, psQIF));
+		CHKiRet(strm.Serialize(pThis->tVars.disk.pRead, psQIF));
 	
 	/* tell the input file object that it must not delete the file on close if the queue
 	 * is non-empty - but only if we are not during a simple checkpoint
 	 */
 	if(bIsCheckpoint != QUEUE_CHECKPOINT && pThis->tVars.disk.pRead != NULL) {
-		CHKiRet(strmSetbDeleteOnClose(pThis->tVars.disk.pRead, 0));
+		CHKiRet(strm.SetbDeleteOnClose(pThis->tVars.disk.pRead, 0));
 	}
 
 	/* we have persisted the queue object. So whenever it comes to an empty queue,
