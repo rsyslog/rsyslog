@@ -1,5 +1,13 @@
 ---------------------------------------------------------------------------
 Version 5.3.7  [BETA] (rgerhards), 2010-01-??
+- bugfix: queues in direct mode could case a segfault, especially if an
+  action failed for action queues. The issue was an invalid increment of
+  a stack-based pointer which lead to destruction of the stack frame and
+  thus a segfault on function return.
+  Thanks to Michael Biebl for alerting us on this problem.
+  [backport from 5.5.2]
+- bugfix: wrong memory assignment for a config variable (probably
+  without causing any harm) [backport from 5.2.2]
 - bugfix: potential segfaults during queue shutdown
   (bugs require certain non-standard settings to appear)
   Thanks to varmojfekoj for the patch [imported from 4.5.8]

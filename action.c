@@ -924,12 +924,12 @@ submitBatch(action_t *pAction, batch_t *pBatch, int nElem, int *pbShutdownImmedi
 		} else if(localRet == RS_RET_ACTION_FAILED) {
 			/* in this case, the whole batch can not be processed */
 			for(i = 0 ; i < nElem ; ++i) {
-				pBatch->pElem[++pBatch->iDoneUpTo].state = BATCH_STATE_BAD;
+				pBatch->pElem[pBatch->iDoneUpTo++].state = BATCH_STATE_BAD;
 			}
 			bDone = 1;
 		} else {
 			if(nElem == 1) {
-				pBatch->pElem[++pBatch->iDoneUpTo].state = BATCH_STATE_BAD;
+				pBatch->pElem[pBatch->iDoneUpTo++].state = BATCH_STATE_BAD;
 				bDone = 1;
 			} else {
 				/* retry with half as much. Depth is log_2 batchsize, so recursion is not too deep */
