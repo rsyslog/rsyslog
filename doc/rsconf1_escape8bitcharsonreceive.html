@@ -1,0 +1,44 @@
+<html>
+<head>
+<title>rsyslog.conf file</title>
+</head>
+<body>
+<a href="rsyslog_conf_global.html">back</a>
+
+<h2>$Escape8BitCharactersOnReceive</h2>
+<p><b>Type:</b> global configuration directive</p>
+<p><b>Default:</b> off</p>
+<p><b>Available Since:</b> 5.5.2</p>
+<p><b>Description:</b></p>
+<p>This directive instructs rsyslogd to replace non US-ASCII characters (those that
+have the 8th bit set) during reception of the message.
+This may be useful for some systems.
+Please note that this escaping breaks Unicode and many other encodings. Most importantly,
+it can be assumed that Asian and European characters will be rendered hardly readable by 
+this settings. However, it may still be useful when the logs themself are primarily
+in English and only occasionally contain local script.
+If this option is turned on, all control-characters are converted to a 3-digit octal number and be prefixed with the $ControlCharacterEscapePrefix character (being '#' by default).
+<p><b>Warning:</b></p>
+<ul>
+	<li>turning on this option most probably destroys non-western character sets 
+	(like Japanese, Chinese and Korean) as well as European character sets.</li>
+	<li>turning on this option destroys digital signatures if such exists inside 
+	the message</li>
+	<li>if turned on, the drop-cc, space-cc and escape-cc
+	<a href="property_replacer.html">property replacer</a> options do not work 
+	as expected because control characters are already removed upon message 
+	reception. If you intend to use these property replacer options, you must 
+	turn off $Escape8BitCharactersOnReceive.</li>
+</ul>
+<p><b>Sample:</b></p>
+<p><code><b>$Escape8BitCharactersOnReceive on</b></code></p>
+
+<p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>] [<a href="manual.html">manual 
+index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the
+<a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
+Copyright &copy; 2010 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>. Released under the GNU GPL 
+version 3 or higher.</font></p>
+</body>
+</html>

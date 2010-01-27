@@ -97,12 +97,16 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/master.tspgsql \
 	   testsuites/subsecond.conf \
 	   testsuites/master.subsecond \
+	   testsuites/parse_8bit_escape.conf \
+	   testsuites/8bit.parse_8bit_escape.conf \
 	   testsuites/parse1.conf \
 	   testsuites/field1.conf \
 	   testsuites/1.parse1 \
 	   testsuites/2.parse1 \
 	   testsuites/3.parse1 \
 	   testsuites/4.parse1 \
+	   testsuites/8bit.parse1 \
+	   testsuites/empty.parse1 \
 	   testsuites/oversizeTag-1.parse1 \
 	   testsuites/date1.parse1 \
 	   testsuites/date2.parse1 \

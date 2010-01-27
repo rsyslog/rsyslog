@@ -74,6 +74,7 @@ html_files = \
 	rsconf1_dropmsgswithmaliciousdnsptrrecords.html \
 	rsconf1_droptrailinglfonreception.html \
 	rsconf1_dynafilecachesize.html \
+	rsconf1_escape8bitcharactersonreceive.html \
 	rsconf1_escapecontrolcharactersonreceive.html \
 	rsconf1_failonchownfailure.html \
 	rsconf1_filecreatemode.html \
