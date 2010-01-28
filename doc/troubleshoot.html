@@ -102,13 +102,63 @@ comes without any guarantees, include no guarantee on confidentiality
 [aka "we don't want to be sued for work were are not even paid for ;)].
 <b>So if you submit debug logs, do so at your sole risk</b>. By submitting them, you accept
 this policy.
+<p><b>Segmentation Faults</b>
+<p>Rsyslog has a very rapid development process, complex capabilities and now gradually gets
+more and more exposure. While we are happy about this, it also has some bad effects: some
+deployment scenarios have probably never been tested and it may be impossible to test
+them for the development team because of resources needed. So while we try to avoid this,
+you may see a serious problem during deployments in demanding, non-standard, environments
+(hopefully not with a stable version, but chances are good you'll run into troubles with
+the development versions).
+<p>Active support from the user base is very important to help us track down those things.
+Most often, serious problems are the result of some memory misadressing. During development,
+we routinely use valgrind, a very well and capable memory debugger. This helps us to create
+pretty clean code. But valgrind can not detect anything, most importantly not code pathes 
+that are never executed. So of most use for us is information about aborts and abort locations.
+<p>Unforutnately, faults rooted in adressing errors typically show up only later, so the
+actual abort location is in an unrelated spot. To help track down the original spot,
+<a href="http://www.gnu.org/software/hello/manual/libc/Heap-Consistency-Checking.html">libc
+later than 5.4.23 offers support</a> for finding, and possible temporary relief from it,
+by means of the MALLOC_CHECK_ environment variable. Setting it to 2 is a useful troubleshooting
+aid for us. It will make the program abort as soon as the check routines detect anything
+suspicious (unfortunately, this may still not be the root cause, but hopefully closer to it).
+Setting it to 0 may even make some problems disappear (but it will NOT fix them!). 
+With functionality comes cost, and so exporting MALLOC_CHECK_ without need comes at
+a performance penalty. However, we strongly recommend adding this instrumentation to your
+test environment should you see any serious problems. Chances are good it will help us
+interpret a dump better, and thus be able to quicker craft a fix.
+<p>In order to get useful information, we need some backtrace of the abort. First, you need
+to make sure that a core file is created. Under Fedora, for example, that means you need
+to have an "ulimit -c unlimited" in place.
+<p>Now let's assume you got a core file (e.g. in /core.1234). So what to do next? Sending a
+core file to us is most often pointless - we need to have the exact same system configuration in
+order to interpret it correctly. Obviously, chances are extremely slim for this to be. So we would
+appreciate if you could extract the most important information. This is done as follows:
+<ul>
+<li>$gdb /path/to/rsyslogd
+<li>$info thread
+<li>you'll see a number of threads (in the range 0 to n with n being the highest number). For
+    <b>each</b> of them, do the following (let's assume that i is the thread number):
+    <ul>
+    <li>$ thread i  (e.g. thread 0, thread 1, ...)
+    <li>$bt
+    </ul>
+<li>then you can quit gdb with "$q"
+</ul>
+<p>Then please send all information that gdb spit out to the development team. It is best to first
+ask on the forum or mailing list on how to do that. The developers will keep in contact with you
+and, I fear, will probably ask for other things as well ;)
+<p>Note that we strive for highest reliability of the engine even in unusual deployment scenarios.
+Unfortunately, this is hard to achieve, especially with limited resources. So we are depending on
+cooperation from users. This is your chance to make a big contribution to the project without the
+need to program or do anything else except get a problem solved ;)
 <p>[<a href="manual.html">manual index</a>]
 [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
 <p><font size="2">This documentation is part of the
 <a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
-Copyright &copy; 2008 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+Copyright &copy; 2008-2010 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
 <a href="http://www.adiscon.com/">Adiscon</a>. Released under the GNU GPL 
-version 2 or higher.</font></p>
+version 3 or higher.</font></p>
 </body>
 </html>
 
