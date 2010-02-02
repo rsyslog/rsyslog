@@ -32,7 +32,7 @@ struct thrdInfo {
 	rsRetVal (*pUsrThrdMain)(struct thrdInfo*); /* user thread main to be called in new thread */
 	rsRetVal (*pAfterRun)(struct thrdInfo*);   /* cleanup function */
 	pthread_t thrdID;
-	bool bNeedsCancel;	/* must input be terminated by pthread_cancel()? */
+	sbool bNeedsCancel;	/* must input be terminated by pthread_cancel()? */
 };
 
 /* prototypes */
@@ -40,7 +40,7 @@ rsRetVal thrdExit(void);
 rsRetVal thrdInit(void);
 rsRetVal thrdTerminate(thrdInfo_t *pThis);
 rsRetVal thrdTerminateAll(void);
-rsRetVal thrdCreate(rsRetVal (*thrdMain)(thrdInfo_t*), rsRetVal(*afterRun)(thrdInfo_t *), bool);
+rsRetVal thrdCreate(rsRetVal (*thrdMain)(thrdInfo_t*), rsRetVal(*afterRun)(thrdInfo_t *), sbool);
 
 /* macros (replace inline functions) */
 

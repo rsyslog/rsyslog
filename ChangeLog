@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 5.5.2  [DEVEL] (rgerhards), 2009-11-??
+- replaced data type "bool" by "sbool" because this created some
+  portability issues.
 - added $Escape8BitCharactersOnReceive directive
   Thanks to David Lang for suggesting it.
 - worked around an issue where omfile failed to compile on32 bit platforms

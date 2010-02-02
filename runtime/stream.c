@@ -902,7 +902,7 @@ asyncWriterThread(void *pPtr)
 {
 	int iDeq;
 	struct timespec t;
-	bool bTimedOut = 0;
+	sbool bTimedOut = 0;
 	strm_t *pThis = (strm_t*) pPtr;
 	ISOBJ_TYPE_assert(pThis, strm);
 
@@ -1068,7 +1068,7 @@ doZipWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf)
 {
 	z_stream zstrm;
 	int zRet;	/* zlib return state */
-	bool bzInitDone = FALSE;
+	sbool bzInitDone = FALSE;
 	DEFiRet;
 	assert(pThis != NULL);
 	assert(pBuf != NULL);

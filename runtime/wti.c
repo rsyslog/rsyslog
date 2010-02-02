@@ -79,7 +79,7 @@ wtiGetDbgHdr(wti_t *pThis)
 /* return the current worker processing state. For the sake of
  * simplicity, we do not use the iRet interface. -- rgerhards, 2009-07-17
  */
-bool
+sbool
 wtiGetState(wti_t *pThis)
 {
 	return ATOMIC_FETCH_32BIT(pThis->bIsRunning);
@@ -102,7 +102,7 @@ wtiSetAlwaysRunning(wti_t *pThis)
  * is inside wti). -- rgerhards, 2009-07-17
  */
 rsRetVal
-wtiSetState(wti_t *pThis, bool bNewVal)
+wtiSetState(wti_t *pThis, sbool bNewVal)
 {
 	ISOBJ_TYPE_assert(pThis, wti);
 	if(bNewVal)

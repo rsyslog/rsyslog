@@ -47,7 +47,7 @@ struct rule_s {
 			fiop_t operation;
 			regex_t *regex_cache;		/* cache for compiled REs, if such are used */
 			cstr_t *pCSCompValue;		/* value to "compare" against */
-			bool isNegated;	
+			sbool isNegated;	
 			propid_t propID;		/* ID of the requested property */
 		} prop;
 		expr_t *f_expr;				/* expression object */

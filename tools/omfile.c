@@ -123,7 +123,7 @@ static uid_t	dirGID;		/* GID to be used for newly created directories */
 static int	bCreateDirs = 1;/* auto-create directories for dynaFiles: 0 - no, 1 - yes */
 static int	bEnableSync = 0;/* enable syncing of files (no dash in front of pathname in conf): 0 - no, 1 - yes */
 static int	iZipLevel = 0;	/* zip compression mode (0..9 as usual) */
-static bool	bFlushOnTXEnd = 1;/* flush write buffers when transaction has ended? */
+static sbool	bFlushOnTXEnd = 1;/* flush write buffers when transaction has ended? */
 static int64	iIOBufSize = IOBUF_DFLT_SIZE;	/* size of an io buffer */
 static int	iFlushInterval = FLUSH_INTRVL_DFLT; 	/* how often flush the output buffer on inactivity? */
 static uchar	*pszTplName = NULL; /* name of the default template to use */
@@ -139,7 +139,7 @@ typedef struct _instanceData {
 	int	fDirCreateMode;	/* creation mode for mkdir() */
 	int	bCreateDirs;	/* auto-create directories? */
 	int	bSyncFile;	/* should the file by sync()'ed? 1- yes, 0- no */
-	bool	bForceChown;	/* force chown() on existing files? */
+	sbool	bForceChown;	/* force chown() on existing files? */
 	uid_t	fileUID;	/* IDs for creation */
 	uid_t	dirUID;
 	gid_t	fileGID;
@@ -158,7 +158,7 @@ typedef struct _instanceData {
 	int 	iZipLevel;		/* zip mode to use for this selector */
 	int	iIOBufSize;		/* size of associated io buffer */
 	int	iFlushInterval;		/* how fast flush buffer on inactivity? */
-	bool	bFlushOnTXEnd;		/* flush write buffers when transaction has ended? */
+	sbool	bFlushOnTXEnd;		/* flush write buffers when transaction has ended? */
 } instanceData;
 
 

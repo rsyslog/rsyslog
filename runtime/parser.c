@@ -310,7 +310,7 @@ SanitizeMsg(msg_t *pMsg)
 	size_t iDst;
 	size_t iMaxLine;
 	size_t maxDest;
-	bool bUpdatedLen = FALSE;
+	sbool bUpdatedLen = FALSE;
 	uchar szSanBuf[32*1024]; /* buffer used for sanitizing a string */
 
 	assert(pMsg != NULL);
@@ -464,8 +464,8 @@ ParseMsg(msg_t *pMsg)
 	rsRetVal localRet;
 	parserList_t *pParserList;
 	parser_t *pParser;
-	bool bIsSanitized;
-	bool bPRIisParsed;
+	sbool bIsSanitized;
+	sbool bPRIisParsed;
 	static int iErrMsgRateLimiter = 0;
 	DEFiRet;
 

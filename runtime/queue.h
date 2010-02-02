@@ -60,9 +60,9 @@ struct queue_s {
 	queueType_t	qType;
 	int	nLogDeq;	/* number of elements currently logically dequeued */
 	int	bShutdownImmediate; /* should all workers cease processing messages? */
-	bool	bEnqOnly;	/* does queue run in enqueue-only mode (1) or not (0)? */
-	bool	bSaveOnShutdown;/* persists everthing on shutdown (if DA!)? 1-yes, 0-no */
-	bool	bQueueStarted;	/* has queueStart() been called on this queue? 1-yes, 0-no */
+	sbool	bEnqOnly;	/* does queue run in enqueue-only mode (1) or not (0)? */
+	sbool	bSaveOnShutdown;/* persists everthing on shutdown (if DA!)? 1-yes, 0-no */
+	sbool	bQueueStarted;	/* has queueStart() been called on this queue? 1-yes, 0-no */
 	int	iQueueSize;	/* Current number of elements in the queue */
 	int	iMaxQueueSize;	/* how large can the queue grow? */
 	int 	iNumWorkerThreads;/* number of worker threads to use */
@@ -73,14 +73,14 @@ struct queue_s {
 	void	*pUsr;		/* a global, user-supplied pointer. Is passed back to consumer. */
 	int	iUpdsSincePersist;/* nbr of queue updates since the last persist call */
 	int	iPersistUpdCnt;	/* persits queue info after this nbr of updates - 0 -> persist only on shutdown */
-	bool	bSyncQueueFiles;/* if working with files, sync them after each write? */
+	sbool	bSyncQueueFiles;/* if working with files, sync them after each write? */
 	int	iHighWtrMrk;	/* high water mark for disk-assisted memory queues */
 	int	iLowWtrMrk;	/* low water mark for disk-assisted memory queues */
 	int	iDiscardMrk;	/* if the queue is above this mark, low-severity messages are discarded */
 	int	iFullDlyMrk;	/* if the queue is above this mark, FULL_DELAYable message are put on hold */
 	int	iLightDlyMrk;	/* if the queue is above this mark, LIGHT_DELAYable message are put on hold */
 	int	iDiscardSeverity;/* messages of this severity above are discarded on too-full queue */
-	bool	bNeedDelQIF;	/* does the QIF file need to be deleted when queue becomes empty? */
+	sbool	bNeedDelQIF;	/* does the QIF file need to be deleted when queue becomes empty? */
 	int	toQShutdown;	/* timeout for regular queue shutdown in ms */
 	int	toActShutdown;	/* timeout for long-running action shutdown in ms */
 	int	toWrkShutdown;	/* timeout for idle workers in ms, -1 means indefinite (0 is immediate) */

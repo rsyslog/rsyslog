@@ -38,8 +38,8 @@ struct parser_s {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
 	uchar *pName;		/* name of this parser */
 	modInfo_t *pModule;	/* pointer to parser's module */
-	bool bDoSanitazion;	/* do standard message sanitazion before calling parser? */
-	bool bDoPRIParsing;	/* do standard PRI parsing before calling parser? */
+	sbool bDoSanitazion;	/* do standard message sanitazion before calling parser? */
+	sbool bDoPRIParsing;	/* do standard PRI parsing before calling parser? */
 };
 
 /* interfaces */

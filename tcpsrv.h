@@ -54,8 +54,8 @@ struct tcpsrv_s {
 	uchar *pszInputName;	/**< value to be used as input name */
 	ruleset_t *pRuleset;	/**< ruleset to bind to */
 	permittedPeers_t *pPermPeers;/**< driver's permitted peers */
-	bool bEmitMsgOnClose;	/**< emit an informational message when the remote peer closes connection */
-	bool bUsingEPoll;	/**< are we in epoll mode (means we do not need to keep track of sessions!) */
+	sbool bEmitMsgOnClose;	/**< emit an informational message when the remote peer closes connection */
+	sbool bUsingEPoll;	/**< are we in epoll mode (means we do not need to keep track of sessions!) */
 	int iLstnCurr;		/**< max nbr of listeners currently supported */
 	netstrm_t **ppLstn;	/**< our netstream listners */
 	tcpLstnPortList_t **ppLstnPort; /**< pointer to relevant listen port description */

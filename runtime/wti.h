@@ -35,7 +35,7 @@ struct wti_s {
 	BEGINobjInstance;
 	pthread_t thrdID; 	/* thread ID */
 	int bIsRunning;	/* is this thread currently running? (must be int for atomic op!) */
-	bool bAlwaysRunning;	/* should this thread always run? */
+	sbool bAlwaysRunning;	/* should this thread always run? */
 	wtp_t *pWtp; /* my worker thread pool (important if only the work thread instance is passed! */
 	batch_t batch; /* pointer to an object array meaningful for current user pointer (e.g. queue pUsr data elemt) */
 	uchar *pszDbgHdr;	/* header string for debug messages */
@@ -50,8 +50,8 @@ rsRetVal wtiWorker(wti_t *pThis);
 rsRetVal wtiSetDbgHdr(wti_t *pThis, uchar *pszMsg, size_t lenMsg);
 rsRetVal wtiCancelThrd(wti_t *pThis);
 rsRetVal wtiSetAlwaysRunning(wti_t *pThis);
-rsRetVal wtiSetState(wti_t *pThis, bool bNew);
-bool wtiGetState(wti_t *pThis);
+rsRetVal wtiSetState(wti_t *pThis, sbool bNew);
+sbool wtiGetState(wti_t *pThis);
 PROTOTYPEObjClassInit(wti);
 PROTOTYPEpropSetMeth(wti, pszDbgHdr, uchar*);
 PROTOTYPEpropSetMeth(wti, pWtp, wtp_t*);

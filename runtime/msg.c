@@ -279,7 +279,7 @@ static char *syslog_number_names[24] = { "0", "1", "2", "3", "4", "5", "6", "7",
 					 "15", "16", "17", "18", "19", "20", "21", "22", "23" };
 
 /* some forward declarations */
-static int getAPPNAMELen(msg_t *pM, bool bLockMutex);
+static int getAPPNAMELen(msg_t *pM, sbool bLockMutex);
 
 
 static inline int getProtocolVersion(msg_t *pM)
@@ -1543,7 +1543,7 @@ finalize_it:
  * This must be called WITHOUT the message lock being held.
  * rgerhards, 2009-06-26
  */
-static inline void preparePROCID(msg_t *pM, bool bLockMutex)
+static inline void preparePROCID(msg_t *pM, sbool bLockMutex)
 {
 	if(pM->pCSPROCID == NULL) {
 		if(bLockMutex == LOCK_MUTEX)
@@ -1560,7 +1560,7 @@ static inline void preparePROCID(msg_t *pM, bool bLockMutex)
 #if 0
 /* rgerhards, 2005-11-24
  */
-static inline int getPROCIDLen(msg_t *pM, bool bLockMutex)
+static inline int getPROCIDLen(msg_t *pM, sbool bLockMutex)
 {
 	assert(pM != NULL);
 	preparePROCID(pM, bLockMutex);
@@ -1571,7 +1571,7 @@ static inline int getPROCIDLen(msg_t *pM, bool bLockMutex)
 
 /* rgerhards, 2005-11-24
  */
-char *getPROCID(msg_t *pM, bool bLockMutex)
+char *getPROCID(msg_t *pM, sbool bLockMutex)
 {
 	ISOBJ_TYPE_assert(pM, msg);
 	preparePROCID(pM, bLockMutex);
@@ -1650,7 +1650,7 @@ void MsgSetTAG(msg_t *pMsg, uchar* pszBuf, size_t lenBuf)
  * if there is a TAG and, if not, if it can emulate it.
  * rgerhards, 2005-11-24
  */
-static inline void tryEmulateTAG(msg_t *pM, bool bLockMutex)
+static inline void tryEmulateTAG(msg_t *pM, sbool bLockMutex)
 {
 	size_t lenTAG;
 	uchar bufTAG[CONF_TAG_MAXSIZE];
@@ -1795,7 +1795,7 @@ static inline char *getStructuredData(msg_t *pM)
 /* check if we have a ProgramName, and, if not, try to aquire/emulate it.
  * rgerhards, 2009-06-26
  */
-static inline void prepareProgramName(msg_t *pM, bool bLockMutex)
+static inline void prepareProgramName(msg_t *pM, sbool bLockMutex)
 {
 	if(pM->pCSProgName == NULL) {
 		if(bLockMutex == LOCK_MUTEX)
@@ -1814,7 +1814,7 @@ static inline void prepareProgramName(msg_t *pM, bool bLockMutex)
 /* get the length of the "programname" sz string
  * rgerhards, 2005-10-19
  */
-int getProgramNameLen(msg_t *pM, bool bLockMutex)
+int getProgramNameLen(msg_t *pM, sbool bLockMutex)
 {
 	assert(pM != NULL);
 	prepareProgramName(pM, bLockMutex);
@@ -1825,7 +1825,7 @@ int getProgramNameLen(msg_t *pM, bool bLockMutex)
 /* get the "programname" as sz string
  * rgerhards, 2005-10-19
  */
-uchar *getProgramName(msg_t *pM, bool bLockMutex)
+uchar *getProgramName(msg_t *pM, sbool bLockMutex)
 {
 	prepareProgramName(pM, bLockMutex);
 	return (pM->pCSProgName == NULL) ? UCHAR_CONSTANT("") : rsCStrGetSzStrNoNULL(pM->pCSProgName);
@@ -1855,7 +1855,7 @@ static void tryEmulateAPPNAME(msg_t *pM)
  * This must be called WITHOUT the message lock being held.
  * rgerhards, 2009-06-26
  */
-static inline void prepareAPPNAME(msg_t *pM, bool bLockMutex)
+static inline void prepareAPPNAME(msg_t *pM, sbool bLockMutex)
 {
 	if(pM->pCSAPPNAME == NULL) {
 		if(bLockMutex == LOCK_MUTEX)
@@ -1872,7 +1872,7 @@ static inline void prepareAPPNAME(msg_t *pM, bool bLockMutex)
 
 /* rgerhards, 2005-11-24
  */
-char *getAPPNAME(msg_t *pM, bool bLockMutex)
+char *getAPPNAME(msg_t *pM, sbool bLockMutex)
 {
 	assert(pM != NULL);
 	prepareAPPNAME(pM, bLockMutex);
@@ -1881,7 +1881,7 @@ char *getAPPNAME(msg_t *pM, bool bLockMutex)
 
 /* rgerhards, 2005-11-24
  */
-static int getAPPNAMELen(msg_t *pM, bool bLockMutex)
+static int getAPPNAMELen(msg_t *pM, sbool bLockMutex)
 {
 	assert(pM != NULL);
 	prepareAPPNAME(pM, bLockMutex);

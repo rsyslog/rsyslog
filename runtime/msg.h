@@ -59,7 +59,7 @@ struct msg {
 	flowControl_t flowCtlType; /**< type of flow control we can apply, for enqueueing, needs not to be persisted because
 				        once data has entered the queue, this property is no longer needed. */
 	pthread_mutex_t mut;
-	bool	bDoLock;	 /* use the mutex? */
+	sbool	bDoLock;	 /* use the mutex? */
 	short	iRefCount;	/* reference counter (0 = unused) */
 	short	iSeverity;	/* the severity 0..7 */
 	short	iFacility;	/* Facility code 0 .. 23*/
@@ -170,14 +170,14 @@ uchar *getRcvFrom(msg_t *pM);
 /* TODO: remove these five (so far used in action.c) */
 uchar *getMSG(msg_t *pM);
 char *getHOSTNAME(msg_t *pM);
-char *getPROCID(msg_t *pM, bool bLockMutex);
-char *getAPPNAME(msg_t *pM, bool bLockMutex);
+char *getPROCID(msg_t *pM, sbool bLockMutex);
+char *getAPPNAME(msg_t *pM, sbool bLockMutex);
 int getMSGLen(msg_t *pM);
 
 char *getHOSTNAME(msg_t *pM);
 int getHOSTNAMELen(msg_t *pM);
-uchar *getProgramName(msg_t *pM, bool bLockMutex);
-int getProgramNameLen(msg_t *pM, bool bLockMutex);
+uchar *getProgramName(msg_t *pM, sbool bLockMutex);
+int getProgramNameLen(msg_t *pM, sbool bLockMutex);
 uchar *getRcvFrom(msg_t *pM);
 rsRetVal propNameToID(cstr_t *pCSPropName, propid_t *pPropID);
 uchar *propIDToName(propid_t propID);
