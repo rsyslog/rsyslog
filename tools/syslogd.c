@@ -167,7 +167,11 @@ static rsRetVal GlobalClassExit(void);
 #endif
 
 #ifndef _PATH_MODDIR
-#define _PATH_MODDIR	"/lib/rsyslog/"
+#       if defined(__FreeBSD__)
+#               define _PATH_MODDIR     "/usr/local/lib/rsyslog/"
+#       else
+#               define _PATH_MODDIR     "/lib/rsyslog/"
+#       endif
 #endif
 
 #if defined(SYSLOGD_PIDNAME)

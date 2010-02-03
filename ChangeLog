@@ -54,6 +54,9 @@ Version 5.3.7  [BETA] (rgerhards), 2010-01-??
 - bugfix: potential segfaults during queue shutdown
   (bugs require certain non-standard settings to appear)
   Thanks to varmojfekoj for the patch [imported from 4.5.8]
+  [backport from 5.5.2]
+- bugfix: wrong memory assignment for a config variable (probably
+  without causing any harm) [backport from 5.2.2]
 - bugfix: rsyslog hangs when writing to a named pipe which nobody was
   reading. Thanks to Michael Biebl for reporting this bug.
   Bugzilla entry: http://bugzilla.adiscon.com/show_bug.cgi?id=169
@@ -378,6 +381,9 @@ Version 4.7.0  [v4-devel] (rgerhards), 2009-09-??
   Thanks for varmojfekoj for pointing me at this bug.
 ---------------------------------------------------------------------------
 Version 4.5.8  [v4-beta] (rgerhards), 2010-01-??
+- (slightly) enhanced support for FreeBSD by setting _PATH_MODDIR to
+  the correct value on FreeBSD.
+  Thanks to Cristiano for the patch.
 - bugfix: -d did not enable display of debug messages
   regression from introduction of "debug on demand" mode
   Thanks to Michael Biebl for reporting this bug
