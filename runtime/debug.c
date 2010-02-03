@@ -47,6 +47,9 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/stat.h>
+#if _POSIX_TIMERS <= 0
+#include <sys/time.h>
+#endif
 
 #include "rsyslog.h"
 #include "debug.h"
@@ -844,6 +847,9 @@ do_dbgprint(uchar *pszObjName, char *pszMsg, size_t lenMsg)
 	char pszWriteBuf[32*1024];
 	size_t lenWriteBuf;
 	struct timespec t;
+#	if  _POSIX_TIMERS <= 0
+	struct timeval tv;
+#	endif
 
 	/* The bWasNL handler does not really work. It works if no thread
 	 * switching occurs during non-NL messages. Else, things are messed
@@ -869,7 +875,14 @@ do_dbgprint(uchar *pszObjName, char *pszMsg, size_t lenMsg)
 
 	if(bWasNL) {
 		if(bPrintTime) {
+#			if _POSIX_TIMERS > 0
+			/* this is the "regular" code */
 			clock_gettime(CLOCK_REALTIME, &t);
+#			else
+			gettimeofday(&tv, NULL);
+			t.tv_sec = tv.tv_sec;
+			t.tv_nsec = tv.tv_usec * 1000;
+#			endif
 			lenWriteBuf = snprintf(pszWriteBuf, sizeof(pszWriteBuf),
 				 	"%4.4ld.%9.9ld:", (long) (t.tv_sec % 10000), t.tv_nsec);
 			if(stddbg != -1) write(stddbg, pszWriteBuf, lenWriteBuf);

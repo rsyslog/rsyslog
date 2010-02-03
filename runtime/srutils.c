@@ -46,6 +46,9 @@
 #include "srUtils.h"
 #include "obj.h"
 
+#if _POSIX_TIMERS <= 0
+#include <sys/time.h>
+#endif
 
 /* here we host some syslog specific names. There currently is no better place
  * to do it, but over here is also not ideal... -- rgerhards, 2008-02-14
@@ -372,10 +375,22 @@ int getNumberDigits(long lNum)
 rsRetVal
 timeoutComp(struct timespec *pt, long iTimeout)
 {
+#	if _POSIX_TIMERS <= 0
+	struct timeval tv;
+#	endif
+
 	BEGINfunc
 	assert(pt != NULL);
 	/* compute timeout */
+
+#	if _POSIX_TIMERS > 0
+	/* this is the "regular" code */
 	clock_gettime(CLOCK_REALTIME, pt);
+#	else
+	gettimeofday(&tv, NULL);
+	pt->tv_sec = tv.tv_sec;
+	pt->tv_nsec = tv.tv_usec * 1000;
+#	endif
 	pt->tv_sec += iTimeout / 1000;
 	pt->tv_nsec += (iTimeout % 1000) * 1000000; /* think INTEGER arithmetic! */
 	if(pt->tv_nsec > 999999999) { /* overrun? */
@@ -397,11 +412,21 @@ timeoutVal(struct timespec *pt)
 {
 	struct timespec t;
 	long iTimeout;
-	BEGINfunc
+#	if _POSIX_TIMERS <= 0
+	struct timeval tv;
+#	endif
 
+	BEGINfunc
 	assert(pt != NULL);
 	/* compute timeout */
+#	if _POSIX_TIMERS > 0
+	/* this is the "regular" code */
 	clock_gettime(CLOCK_REALTIME, &t);
+#	else
+	gettimeofday(&tv, NULL);
+	t.tv_sec = tv.tv_sec;
+	t.tv_nsec = tv.tv_usec * 1000;
+#	endif
 	iTimeout = (pt->tv_nsec - t.tv_nsec) / 1000000;
 	iTimeout += (pt->tv_sec - t.tv_sec) * 1000;
 
