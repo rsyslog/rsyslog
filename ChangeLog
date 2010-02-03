@@ -1,5 +1,8 @@
 ---------------------------------------------------------------------------
 Version 4.5.8  [v4-beta] (rgerhards), 2010-01-??
+- (slightly) enhanced support for FreeBSD by setting _PATH_MODDIR to
+  the correct value on FreeBSD.
+  Thanks to Cristiano for the patch.
 - bugfix: -d did not enable display of debug messages
   regression from introduction of "debug on demand" mode
   Thanks to Michael Biebl for reporting this bug
