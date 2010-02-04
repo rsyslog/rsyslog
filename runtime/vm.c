@@ -87,6 +87,9 @@ rsfrAddFunction(uchar *szName, prsf_t rsf)
 	funcRegRoot = pEntry;
 
 finalize_it:
+	if(iRet != RS_RET_OK && iRet != RS_RET_DUP_FUNC_NAME)
+		free(pEntry);
+
 	RETiRet;
 }
 
