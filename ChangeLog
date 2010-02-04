@@ -191,6 +191,8 @@ Version 4.5.0  [DEVEL] (rgerhards), 2009-07-02
   an abort
 ---------------------------------------------------------------------------
 Version 4.4.3  [v4-stable] (rgerhards), 2009-10-??
+- bugfix: several smaller bugs resolved after flexelint review
+  Thanks to varmojfekoj for the patch.
 - bugfix: $ActionExecOnlyOnceEveryInterval did not work.
   This was a regression from the time() optimizations done in v4.
   Bug tracker: http://bugzilla.adiscon.com/show_bug.cgi?id=143

@@ -513,7 +513,7 @@ finalize_it:
 rsRetVal cflineParseTemplateName(uchar** pp, omodStringRequest_t *pOMSR, int iEntry, int iTplOpts, uchar *dfltTplName)
 {
 	uchar *p;
-	uchar *tplName;
+	uchar *tplName = NULL;
 	cstr_t *pStrB;
 	DEFiRet;
 
@@ -550,10 +550,12 @@ rsRetVal cflineParseTemplateName(uchar** pp, omodStringRequest_t *pOMSR, int iEn
 		CHKiRet(cstrConvSzStrAndDestruct(pStrB, &tplName, 0));
 	}
 
-	iRet = OMSRsetEntry(pOMSR, iEntry, tplName, iTplOpts);
-	if(iRet != RS_RET_OK) goto finalize_it;
+	CHKiRet(OMSRsetEntry(pOMSR, iEntry, tplName, iTplOpts));
 
 finalize_it:
+	if(iRet != RS_RET_OK)
+		free(tplName);
+
 	*pp = p;
 
 	RETiRet;

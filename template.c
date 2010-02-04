@@ -427,10 +427,7 @@ static int do_Constant(unsigned char **pp, struct template *pTpl)
 	}
 
 	if((pTpe = tpeConstruct(pTpl)) == NULL) {
-		/* OK, we are out of luck. Let's invalidate the
-		 * entry and that's it.
-		 */
-		pTpe->eEntryType = UNDEFINED;
+		rsCStrDestruct(&pStrB);
 		return 1;
 	}
 	pTpe->eEntryType = CONSTANT;
