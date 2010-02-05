@@ -1,4 +1,6 @@
 ---------------------------------------------------------------------------
+Version 5.5.3  [DEVEL] (rgerhards), 2010-02-??
+---------------------------------------------------------------------------
 Version 5.5.2  [DEVEL] (rgerhards), 2010-02-05
 - applied patches that make rsyslog compile under Apple OS X.
   Thanks to trey for providing these.
@@ -6,7 +8,7 @@ Version 5.5.2  [DEVEL] (rgerhards), 2010-02-05
   portability issues.
 - added $Escape8BitCharactersOnReceive directive
   Thanks to David Lang for suggesting it.
-- worked around an issue where omfile failed to compile on32 bit platforms
+- worked around an issue where omfile failed to compile on 32 bit platforms
   under some circumstances (this smells like a gcc problem, but a simple
   solution was available). Thanks to Kenneth Marshall for some advice.
 - extended testbench
