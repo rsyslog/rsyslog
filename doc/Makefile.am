@@ -65,6 +65,7 @@ html_files = \
 	rsconf1_actionresumeinterval.html \
 	rsconf1_allowedsender.html \
 	rsconf1_controlcharacterescapeprefix.html \
+	rsconf1_escape8bitcharsonreceive.html \
 	rsconf1_debugprintcfsyslinehandlerlist.html \
 	rsconf1_debugprintmodulelist.html \
 	rsconf1_debugprinttemplatelist.html \
@@ -74,7 +75,6 @@ html_files = \
 	rsconf1_dropmsgswithmaliciousdnsptrrecords.html \
 	rsconf1_droptrailinglfonreception.html \
 	rsconf1_dynafilecachesize.html \
-	rsconf1_escape8bitcharactersonreceive.html \
 	rsconf1_escapecontrolcharactersonreceive.html \
 	rsconf1_failonchownfailure.html \
 	rsconf1_filecreatemode.html \

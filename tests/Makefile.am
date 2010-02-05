@@ -98,7 +98,7 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/subsecond.conf \
 	   testsuites/master.subsecond \
 	   testsuites/parse_8bit_escape.conf \
-	   testsuites/8bit.parse_8bit_escape.conf \
+	   testsuites/8bit.parse_8bit_escape \
 	   testsuites/parse1.conf \
 	   testsuites/field1.conf \
 	   testsuites/1.parse1 \

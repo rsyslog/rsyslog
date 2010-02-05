@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 5.5.2  [DEVEL] (rgerhards), 2009-11-??
+Version 5.5.2  [DEVEL] (rgerhards), 2010-02-05
 - applied patches that make rsyslog compile under Apple OS X.
   Thanks to trey for providing these.
 - replaced data type "bool" by "sbool" because this created some
