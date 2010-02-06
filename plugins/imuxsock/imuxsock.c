@@ -70,7 +70,7 @@ DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(prop)
 
-static prop_t *pInputName = NULL;	/* our inputName currently is always "imudp", and this will hold it */
+static prop_t *pInputName = NULL;	/* our inputName currently is always "imuxsock", and this will hold it */
 static int startIndexUxLocalSockets; /* process funix from that index on (used to 
  				   * suppress local logging. rgerhards 2005-08-01
 				   * read-only after startup
@@ -312,7 +312,7 @@ CODESTARTwillRun
 
 	/* we need to create the inputName property (only once during our lifetime) */
 	CHKiRet(prop.Construct(&pInputName));
-	CHKiRet(prop.SetString(pInputName, UCHAR_CONSTANT("imudp"), sizeof("imudp") - 1));
+	CHKiRet(prop.SetString(pInputName, UCHAR_CONSTANT("imuxsock"), sizeof("imuxsock") - 1));
 	CHKiRet(prop.ConstructFinalize(pInputName));
 
 finalize_it:
