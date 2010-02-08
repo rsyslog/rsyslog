@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------
+Version 5.3.8  [BETA] (rgerhards), 2010-02-??
+- bugfix: omruleset failed to work in many cases
+  bug tracker: http://bugzilla.adiscon.com/show_bug.cgi?id=179
+  Thanks to Ryan B. Lynch for reporting this issue.
+---------------------------------------------------------------------------
 Version 5.3.7  [BETA] (rgerhards), 2010-01-27
 - bugfix: queues in direct mode could case a segfault, especially if an
   action failed for action queues. The issue was an invalid increment of
