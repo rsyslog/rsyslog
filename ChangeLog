@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 4.5.8  [v4-beta] (rgerhards), 2010-01-??
+- enhanced doc for using PostgreSQL
+  Thanks to Marc Schiffbauer for the new/updated doc
 - bugfix: imuxsock incorrectly stated inputname "imudp"
   Thanks to Ryan Lynch for reporting this.
 - (slightly) enhanced support for FreeBSD by setting _PATH_MODDIR to
