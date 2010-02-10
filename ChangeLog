@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 4.5.8  [v4-beta] (rgerhards), 2010-01-??
+Version 4.5.8  [v4-beta] (rgerhards), 2010-02-10
 - enhanced doc for using PostgreSQL
   Thanks to Marc Schiffbauer for the new/updated doc
 - bugfix: property replacer returned invalid parameters under some (unusual)

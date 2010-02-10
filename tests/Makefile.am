@@ -89,6 +89,10 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/rfc5424-2.parse1 \
 	   testsuites/rfc5424-3.parse1 \
 	   testsuites/rfc5424-4.parse1 \
+	   testsuites/parse3.conf \
+	   testsuites/reallife.parse3 \
+	   testsuites/parse_invld_regex.conf \
+	   testsuites/samples.parse_invld_regex \
 	   testsuites/omod-if-array.conf \
 	   testsuites/1.omod-if-array \
 	   testsuites/1.field1 \
