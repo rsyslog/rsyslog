@@ -1,4 +1,4 @@
-CREATE DATABASE "Syslog";
+CREATE DATABASE 'Syslog' WITH ENCODING 'SQL_ASCII';
 \c Syslog;
 CREATE TABLE SystemEvents
 (

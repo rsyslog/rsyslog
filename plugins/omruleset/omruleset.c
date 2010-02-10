@@ -41,7 +41,6 @@
 #include <unistd.h>
 #include "conf.h"
 #include "syslogd-types.h"
-//#include "srUtils.h"
 #include "template.h"
 #include "module-template.h"
 #include "errmsg.h"
@@ -61,10 +60,12 @@ DEF_OMOD_STATIC_DATA
 
 /* config variables */
 ruleset_t *pRuleset = NULL;	/* ruleset to enqueue message to (NULL = Default, not recommended) */
+uchar *pszRulesetName = NULL;
 
 
 typedef struct _instanceData {
 	ruleset_t *pRuleset;	/* ruleset to enqueue to */
+	uchar *pszRulesetName;	/* primarily for debugging/display purposes */
 } instanceData;
 
 
@@ -80,11 +81,13 @@ ENDisCompatibleWithFeature
 
 BEGINfreeInstance
 CODESTARTfreeInstance
+	free(pData->pszRulesetName);
 ENDfreeInstance
 
 
 BEGINdbgPrintInstInfo
 CODESTARTdbgPrintInstInfo
+	dbgprintf("omruleset target %s[%p]\n", (char*) pData->pszRulesetName, pData->pRuleset);
 ENDdbgPrintInstInfo
 
 
@@ -99,11 +102,13 @@ ENDtryResume
 BEGINdoAction
 	msg_t *pMsg;
 CODESTARTdoAction
-	pMsg = (msg_t*) ppString[0];
-	DBGPRINTF(":omruleset: forwarding message %p to ruleset %p\n", pMsg, pData->pRuleset);
+	CHKmalloc(pMsg = MsgDup((msg_t*) ppString[0]));
+	DBGPRINTF(":omruleset: forwarding message %p to ruleset %s[%p]\n", pMsg,
+		  (char*) pData->pszRulesetName, pData->pRuleset);
 	MsgSetFlowControlType(pMsg, eFLOWCTL_NO_DELAY);
 	MsgSetRuleset(pMsg, pData->pRuleset);
-	submitMsg(MsgAddRef(pMsg));
+	submitMsg(pMsg);
+finalize_it:
 ENDdoAction
 
 /* set the ruleset name */
@@ -118,9 +123,12 @@ setRuleset(void __attribute__((unused)) *pVal, uchar *pszName)
 		errmsg.LogError(0, RS_RET_RULESET_NOT_FOUND, "error: ruleset '%s' not found - ignored", pszName);
 	}
 	CHKiRet(localRet);
+	pszRulesetName = pszName; /* save for later display purposes */
 
 finalize_it:
-	free(pszName); /* no longer needed */
+	if(iRet != RS_RET_OK) { /* cleanup needed? */
+		free(pszName);
+	}
 	RETiRet;
 }
 
@@ -153,13 +161,16 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	 */
 	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, iTplOpts, (uchar*) "RSYSLOG_FileFormat"));
 	pData->pRuleset = pRuleset;
+	pData->pszRulesetName = pszRulesetName;
 	pRuleset = NULL; /* re-set, because there is a high risk of unwanted behavior if we leave it in! */
+	pszRulesetName = NULL; /* note: we must not free, as we handed over this pointer to the instanceDat to the instanceDataa! */
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
 
 BEGINmodExit
 CODESTARTmodExit
+	free(pszRulesetName);
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(ruleset, CORE_COMPONENT);
 ENDmodExit

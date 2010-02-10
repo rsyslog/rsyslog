@@ -12,6 +12,13 @@ Version 5.5.2  [DEVEL] (rgerhards), 2010-02-05
   under some circumstances (this smells like a gcc problem, but a simple
   solution was available). Thanks to Kenneth Marshall for some advice.
 - extended testbench
+---------------------------------------------------------------------------
+Version 5.3.8  [BETA] (rgerhards), 2010-02-??
+- bugfix: omruleset failed to work in many cases
+  bug tracker: http://bugzilla.adiscon.com/show_bug.cgi?id=179
+  Thanks to Ryan B. Lynch for reporting this issue.
+---------------------------------------------------------------------------
+Version 5.3.7  [BETA] (rgerhards), 2010-01-27
 - bugfix: queues in direct mode could case a segfault, especially if an
   action failed for action queues. The issue was an invalid increment of
   a stack-based pointer which lead to destruction of the stack frame and
@@ -382,7 +389,18 @@ Version 4.7.0  [v4-devel] (rgerhards), 2009-09-??
 - bugfix: potential segfault when -p command line option was used
   Thanks for varmojfekoj for pointing me at this bug.
 ---------------------------------------------------------------------------
-Version 4.5.8  [v4-beta] (rgerhards), 2010-01-??
+Version 4.5.8  [v4-beta] (rgerhards), 2010-02-10
+- enhanced doc for using PostgreSQL
+  Thanks to Marc Schiffbauer for the new/updated doc
+- bugfix: property replacer returned invalid parameters under some (unusual)
+  conditions. In extreme cases, this could lead to garbled logs and/or
+  a system failure.
+- bugfix: invalid length returned (often) when using regular expressions
+  inside the property replacer
+- bugfix: submatch regex in property replacer did not honor "return 0 on
+  no match" config case
+- bugfix: imuxsock incorrectly stated inputname "imudp"
+  Thanks to Ryan Lynch for reporting this.
 - (slightly) enhanced support for FreeBSD by setting _PATH_MODDIR to
   the correct value on FreeBSD.
   Thanks to Cristiano for the patch.
