@@ -326,7 +326,18 @@ Version 4.7.0  [v4-devel] (rgerhards), 2009-09-??
   See ticket for details: http://bugzilla.adiscon.com/show_bug.cgi?id=150
 - imported changes from 4.5.6 and below
 ---------------------------------------------------------------------------
-Version 4.5.8  [v4-beta] (rgerhards), 2010-01-??
+Version 4.5.8  [v4-beta] (rgerhards), 2010-02-10
+- enhanced doc for using PostgreSQL
+  Thanks to Marc Schiffbauer for the new/updated doc
+- bugfix: property replacer returned invalid parameters under some (unusual)
+  conditions. In extreme cases, this could lead to garbled logs and/or
+  a system failure.
+- bugfix: invalid length returned (often) when using regular expressions
+  inside the property replacer
+- bugfix: submatch regex in property replacer did not honor "return 0 on
+  no match" config case
+- bugfix: imuxsock incorrectly stated inputname "imudp"
+  Thanks to Ryan Lynch for reporting this.
 - (slightly) enhanced support for FreeBSD by setting _PATH_MODDIR to
   the correct value on FreeBSD.
   Thanks to Cristiano for the patch.

@@ -19,6 +19,7 @@ html_files = \
 	rsyslog_conf.html \
 	rsyslog-example.conf \
 	rsyslog_mysql.html \
+	rsyslog_pgsql.html \
 	rsyslog_packages.html \
 	rsyslog_high_database_rate.html \
 	rsyslog_php_syslog_ng.html \

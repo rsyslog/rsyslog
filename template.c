@@ -567,7 +567,7 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 		cstrDestruct(&pStrB);
 		return 1;
 	}
-	cstrDestruct(&pStrB);
+	cstrDestruct(&pStrB); /* no longer needed, now use ID */
 
 	/* Check frompos, if it has an R, then topos should be a regex */
 	if(*p == ':') {
