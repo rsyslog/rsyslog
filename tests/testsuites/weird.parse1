@@ -1,0 +1,5 @@
+# some really weird samples, some of them seen in practice,
+# some other deliberately generated. The main point is that they
+# should not cause an abort...
+<14>Aug 30 23:00:05 X4711 AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+14,user,info,Aug 30 23:00:05,X4711,AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA

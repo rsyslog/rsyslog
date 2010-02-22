@@ -1,3 +1,8 @@
+- bugfix: message without MSG part could case a segfault
+  [backported from v5 commit 98d1ed504ec001728955a5bcd7916f64cd85f39f]
+  This actually was a "recent" regression, but I did not realize that it
+  was introduced by the performance optimization in v4-devel. Shame on
+  me for having two devel versions at the same time...
 ---------------------------------------------------------------------------
 Version 4.5.8  [v4-beta] (rgerhards), 2010-02-10
 - enhanced doc for using PostgreSQL
