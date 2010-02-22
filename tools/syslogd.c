@@ -1192,12 +1192,12 @@ int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 	int bTAGCharDetected;
 	int i;	/* general index for parsing */
 	uchar bufParseTAG[CONF_TAG_MAXSIZE];
-	uchar bufParseHOSTNAME[CONF_TAG_HOSTNAME];
+	uchar bufParseHOSTNAME[CONF_HOSTNAME_MAXSIZE];
 	BEGINfunc
 
 	assert(pMsg != NULL);
 	assert(pMsg->pszRawMsg != NULL);
-	lenMsg = pMsg->iLenRawMsg - (pMsg->offAfterPRI + 1);
+	lenMsg = pMsg->iLenRawMsg - pMsg->offAfterPRI; /* note: offAfterPRI is already the number of PRI chars (do not add one!) */
 	p2parse = pMsg->pszRawMsg + pMsg->offAfterPRI; /* point to start of text, after PRI */
 
 	/* Check to see if msg contains a timestamp. We start by assuming
@@ -1254,12 +1254,20 @@ int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 		if(lenMsg > 0 && flags & PARSE_HOSTNAME) {
 			i = 0;
 			while(i < lenMsg && (isalnum(p2parse[i]) || p2parse[i] == '.' || p2parse[i] == '.'
-				|| p2parse[i] == '_' || p2parse[i] == '-') && i < CONF_TAG_MAXSIZE) {
+				|| p2parse[i] == '_' || p2parse[i] == '-') && i < (CONF_HOSTNAME_MAXSIZE - 1)) {
 				bufParseHOSTNAME[i] = p2parse[i];
 				++i;
 			}
 
-			if(i > 0 && p2parse[i] == ' ' && isalnum(p2parse[i-1])) {
+			if(i == lenMsg) {
+				/* we have a message that is empty immediately after the hostname,
+				 * but the hostname thus is valid! -- rgerhards, 2010-02-22
+				 */
+				p2parse += i;
+				lenMsg -= i;
+				bufParseHOSTNAME[i] = '\0';
+				MsgSetHOSTNAME(pMsg, bufParseHOSTNAME, i);
+			} else if(i > 0 && p2parse[i] == ' ' && isalnum(p2parse[i-1])) {
 				/* we got a hostname! */
 				p2parse += i + 1; /* "eat" it (including SP delimiter) */
 				lenMsg -= i + 1;
