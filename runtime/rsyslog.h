@@ -35,7 +35,7 @@
  * value to the fixed size of the message object.
  */
 #define CONF_TAG_MAXSIZE		512	/* a value that is deemed far too large for any valid TAG */
-#define CONF_TAG_HOSTNAME		512	/* a value that is deemed far too large for any valid HOSTNAME */
+#define CONF_HOSTNAME_MAXSIZE		512	/* a value that is deemed far too large for any valid HOSTNAME */
 #define CONF_RAWMSG_BUFSIZE		101
 #define CONF_TAG_BUFSIZE		32
 #define CONF_HOSTNAME_BUFSIZE		32

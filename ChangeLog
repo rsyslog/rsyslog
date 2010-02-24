@@ -1,3 +1,14 @@
+- improved testbench to contain samples for totally malformed messages
+  which miss parts of the message content
+- bugfix: some malformed messages could lead to a missing LF inside files
+  or some other missing parts of the template content.
+- bugfix: if a message ended immediately with a hostname, the hostname
+  was mistakenly interpreted as TAG, and localhost be used as hostname
+- bugfix: message without MSG part could case a segfault
+  [backported from v5 commit 98d1ed504ec001728955a5bcd7916f64cd85f39f]
+  This actually was a "recent" regression, but I did not realize that it
+  was introduced by the performance optimization in v4-devel. Shame on
+  me for having two devel versions at the same time...
 ---------------------------------------------------------------------------
 Version 5.5.3  [DEVEL] (rgerhards), 2010-02-??
 ---------------------------------------------------------------------------
