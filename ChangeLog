@@ -1,3 +1,12 @@
+---------------------------------------------------------------------------
+Version 4.6.0  [v4-beta] (rgerhards), 2010-02-24
+***************************************************************************
+* This is a new stable v4 version. It contains all fixes and enhancements *
+* made during the 4.5.x phase as well as those listed below.              *
+* Note: this version is scheduled to conclude the v4 development process. *
+*       Do not expect any more new developments in v4. The focus is now   *
+*       on v5 (what also means we have a single devel branch again.       *
+***************************************************************************
 - improved testbench to contain samples for totally malformed messages
   which miss parts of the message content
 - bugfix: some malformed messages could lead to a missing LF inside files
