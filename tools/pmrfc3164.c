@@ -77,12 +77,12 @@ BEGINparse
 	int bTAGCharDetected;
 	int i;	/* general index for parsing */
 	uchar bufParseTAG[CONF_TAG_MAXSIZE];
-	uchar bufParseHOSTNAME[CONF_TAG_HOSTNAME];
+	uchar bufParseHOSTNAME[CONF_HOSTNAME_MAXSIZE];
 CODESTARTparse
 	dbgprintf("Message will now be parsed by the legacy syslog parser (one size fits all... ;)).\n");
 	assert(pMsg != NULL);
 	assert(pMsg->pszRawMsg != NULL);
-	lenMsg = pMsg->iLenRawMsg - (pMsg->offAfterPRI + 1);
+	lenMsg = pMsg->iLenRawMsg - pMsg->offAfterPRI; /* note: offAfterPRI is already the number of PRI chars (do not add one!) */
 	p2parse = pMsg->pszRawMsg + pMsg->offAfterPRI; /* point to start of text, after PRI */
 	setProtocolVersion(pMsg, 0);
 
@@ -140,12 +140,20 @@ CODESTARTparse
 		if(lenMsg > 0 && pMsg->msgFlags & PARSE_HOSTNAME) {
 			i = 0;
 			while(i < lenMsg && (isalnum(p2parse[i]) || p2parse[i] == '.' || p2parse[i] == '.'
-				|| p2parse[i] == '_' || p2parse[i] == '-') && i < CONF_TAG_MAXSIZE) {
+				|| p2parse[i] == '_' || p2parse[i] == '-') && i < (CONF_HOSTNAME_MAXSIZE - 1)) {
 				bufParseHOSTNAME[i] = p2parse[i];
 				++i;
 			}
 
-			if(i > 0 && p2parse[i] == ' ' && isalnum(p2parse[i-1])) {
+			if(i == lenMsg) {
+				/* we have a message that is empty immediately after the hostname,
+				* but the hostname thus is valid! -- rgerhards, 2010-02-22
+				*/
+				p2parse += i;
+				lenMsg -= i;
+				bufParseHOSTNAME[i] = '\0';
+				MsgSetHOSTNAME(pMsg, bufParseHOSTNAME, i);
+			} else if(i > 0 && p2parse[i] == ' ' && isalnum(p2parse[i-1])) {
 				/* we got a hostname! */
 				p2parse += i + 1; /* "eat" it (including SP delimiter) */
 				lenMsg -= i + 1;
