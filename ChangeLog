@@ -325,6 +325,29 @@ Version 4.7.0  [v4-devel] (rgerhards), 2009-09-??
   system configs.
   See ticket for details: http://bugzilla.adiscon.com/show_bug.cgi?id=150
 - imported changes from 4.5.6 and below
+Version 4.6.1  [v4-stable] (rgerhards), 2010-02-??
+---------------------------------------------------------------------------
+Version 4.6.0  [v4-stable] (rgerhards), 2010-02-24
+***************************************************************************
+* This is a new stable v4 version. It contains all fixes and enhancements *
+* made during the 4.5.x phase as well as those listed below.              *
+* Note: this version is scheduled to conclude the v4 development process. *
+*       Do not expect any more new developments in v4. The focus is now   *
+*       on v5 (what also means we have a single devel branch again).      *
+*       ("development" means new feature development, bug fixes are of    *
+*       course provided for v4-stable)                                    *
+***************************************************************************
+- improved testbench to contain samples for totally malformed messages
+  which miss parts of the message content
+- bugfix: some malformed messages could lead to a missing LF inside files
+  or some other missing parts of the template content.
+- bugfix: if a message ended immediately with a hostname, the hostname
+  was mistakenly interpreted as TAG, and localhost be used as hostname
+- bugfix: message without MSG part could case a segfault
+  [backported from v5 commit 98d1ed504ec001728955a5bcd7916f64cd85f39f]
+  This actually was a "recent" regression, but I did not realize that it
+  was introduced by the performance optimization in v4-devel. Shame on
+  me for having two devel versions at the same time...
 ---------------------------------------------------------------------------
 Version 4.5.8  [v4-beta] (rgerhards), 2010-02-10
 - enhanced doc for using PostgreSQL

@@ -309,11 +309,11 @@ ParseTIMESTAMP3339(struct syslogTime *pTime, uchar** ppszTS, int *pLenStr)
 	}
 
 	/* OK, we actually have a 3339 timestamp, so let's indicated this */
-	if(lenStr > 0 && *pszTS == ' ') {
+	if(lenStr > 0) {
+		if(*pszTS != ' ') /* if it is not a space, it can not be a "good" time - 2010-02-22 rgerhards */
+			ABORT_FINALIZE(RS_RET_INVLD_TIME);
+		++pszTS; /* just skip past it */
 		--lenStr;
-		++pszTS;
-	} else {
-		ABORT_FINALIZE(RS_RET_INVLD_TIME);
 	}
 
 	/* we had success, so update parse pointer and caller-provided timestamp */
@@ -528,6 +528,7 @@ ParseTIMESTAMP3164(struct syslogTime *pTime, uchar** ppszTS, int *pLenStr)
 
 	if(lenStr == 0 || *pszTS++ != ' ')
 		ABORT_FINALIZE(RS_RET_INVLD_TIME);
+	--lenStr;
 
 	/* we accept a slightly malformed timestamp when receiving. This is
 	 * we accept one-digit days
@@ -583,7 +584,13 @@ ParseTIMESTAMP3164(struct syslogTime *pTime, uchar** ppszTS, int *pLenStr)
 	 * invalid format, it occurs frequently enough (e.g. with Cisco devices)
 	 * to permit it as a valid case. -- rgerhards, 2008-09-12
 	 */
-	if(lenStr == 0 || *pszTS++ == ':') {
+	if(lenStr > 0 && *pszTS == ':') {
+		++pszTS; /* just skip past it */
+		--lenStr;
+	}
+	if(lenStr > 0) {
+		if(*pszTS != ' ') /* if it is not a space, it can not be a "good" time - 2010-02-22 rgerhards */
+			ABORT_FINALIZE(RS_RET_INVLD_TIME);
 		++pszTS; /* just skip past it */
 		--lenStr;
 	}
