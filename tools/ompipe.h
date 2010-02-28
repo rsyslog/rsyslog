@@ -1,9 +1,7 @@
 /* ompipe.h
  * These are the definitions for the build-in pipe output module.
  *
- * File begun on 2007-07-21 by RGerhards (extracted from syslogd.c)
- *
- * Copyright 2007 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2010 Rainer Gerhards and Adiscon GmbH.
  *
  * This pipe is part of rsyslog.
  *
@@ -29,6 +27,5 @@
 rsRetVal modInitPipe(int iIFVersRequested __attribute__((unused)), int *ipIFVersProvided, rsRetVal (**pQueryEtryPt)(), rsRetVal (*pHostQueryEtryPt)(uchar*, rsRetVal (**)()), modInfo_t*);
 
 #endif /* #ifndef OMPIPE_H_INCLUDED */
-/*
- * vi:set ai:
+/* vi:set ai:
  */

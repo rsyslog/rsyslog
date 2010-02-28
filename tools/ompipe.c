@@ -37,11 +37,8 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
 #include <assert.h>
 #include <errno.h>
-#include <ctype.h>
-#include <unistd.h>
 #include <sys/file.h>
 
 #include "syslogd.h"
@@ -51,6 +48,7 @@
 #include "ompipe.h"
 #include "cfsysline.h"
 #include "module-template.h"
+#include "conf.h"
 #include "errmsg.h"
 
 MODULE_TYPE_OUTPUT
@@ -93,7 +91,7 @@ ENDdbgPrintInstInfo
  * course). -- rgerhards, 2008-10-22
  * changed to iRet interface - 2009-03-19
  */
-static rsRetVal
+static inline rsRetVal
 preparePipe(instanceData *pData)
 {
 	DEFiRet;

@@ -5,16 +5,16 @@
  *       works!
  *
  * File begun on 2007-07-21 by RGerhards (extracted from syslogd.c)
- * This file is under development and has not yet arrived at being fully
- * self-contained and a real object. So far, it is mostly an excerpt
- * of the "old" message code without any modifications. However, it
- * helps to have things at the right place one we go to the meat of it.
  *
  * A large re-write of this file was done in June, 2009. The focus was
  * to introduce many more features (like zipped writing), clean up the code
  * and make it more reliable. In short, that rewrite tries to provide a new
  * solid basis for the next three to five years to come. During it, bugs
  * may have been introduced ;) -- rgerhards, 2009-06-04
+ *
+ * Note that as of 2010-02-28 this module does no longer handle
+ * pipes. These have been moved to ompipe, to reduced the entanglement
+ * between the two different functionalities. -- rgerhards
  *
  * Copyright 2007-2009 Rainer Gerhards and Adiscon GmbH.
  *
@@ -666,7 +666,9 @@ CODESTARTparseSelectorAct
 				calloc(iDynaFileCacheSize, sizeof(dynaFileCacheEntry*)));
 		break;
 
-        case '|':
+        /* case '|': while pipe support has been removed, I leave the code in in case we 
+	 *           need high-performance pipes at a later stage (unlikely). -- rgerhards, 2010-02-28
+	 */
 	case '/':
 		CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		/* we now have *almost* the same semantics for files and pipes, but we still need
