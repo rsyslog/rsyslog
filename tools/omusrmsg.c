@@ -50,7 +50,11 @@
 #include <assert.h>
 #include <signal.h>
 #include <sys/param.h>
-#include <utmp.h>
+#ifdef HAVE_UTMP_X_H
+#  include <utmpx.h>
+#else
+#  include <utmp.h>
+#endif
 #include <unistd.h>
 #include <sys/uio.h>
 #include <sys/stat.h>
