@@ -127,6 +127,7 @@
 #include "omusrmsg.h"
 #include "omfwd.h"
 #include "omfile.h"
+#include "ompipe.h"
 #include "omdiscard.h"
 #include "threads.h"
 #include "queue.h"
@@ -2661,6 +2662,9 @@ static rsRetVal loadBuildInModules(void)
 	DEFiRet;
 
 	if((iRet = module.doModInit(modInitFile, UCHAR_CONSTANT("builtin-file"), NULL)) != RS_RET_OK) {
+		RETiRet;
+	}
+	if((iRet = module.doModInit(modInitPipe, UCHAR_CONSTANT("builtin-pipe"), NULL)) != RS_RET_OK) {
 		RETiRet;
 	}
 #ifdef SYSLOG_INET

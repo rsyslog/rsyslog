@@ -620,7 +620,7 @@ ENDdoAction
 
 BEGINparseSelectorAct
 CODESTARTparseSelectorAct
-	if(!(*p == '$' || *p == '?' || *p == '|' || *p == '/' || *p == '-'))
+	if(!(*p == '$' || *p == '?' || *p == '/' || *p == '-'))
 		ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
 
 	CHKiRet(createInstance(&pData));
