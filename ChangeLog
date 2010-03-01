@@ -6,6 +6,10 @@ Version 4.6.1  [v4-stable] (rgerhards), 2010-02-??
 - bugfix: fixed problem that caused compilation on FreeBSD 9.0 to fail.
   bugtracker: http://bugzilla.adiscon.com/show_bug.cgi?id=181
   Thanks to Christiano for reporting.
+- bugfix: comment char ('#') in literal terminated script parsing
+  and thus could not be used.
+  but tracker: http://bugzilla.adiscon.com/show_bug.cgi?id=119
+  [merged in from v3.22.2]
 ---------------------------------------------------------------------------
 Version 4.6.0  [v4-stable] (rgerhards), 2010-02-24
 ***************************************************************************
