@@ -87,6 +87,31 @@ ctokUngetCharFromStream(ctok_t *pThis, uchar __attribute__((unused)) c)
 }
 
 
+/* get the next character from the input "stream". Note that this version
+ * does NOT look for comment characters as end-of-stream, so it is suitable
+ * when building constant strings! -- rgerhards, 2010-03-01
+ */
+static inline rsRetVal 
+ctokGetCharFromStreamNoComment(ctok_t *pThis, uchar *pc)
+{
+	DEFiRet;
+
+	ISOBJ_TYPE_assert(pThis, ctok);
+	ASSERT(pc != NULL);
+
+	/* end of string or begin of comment terminates the "stream" */
+	if(*pThis->pp == '\0') {
+		ABORT_FINALIZE(RS_RET_EOS);
+	} else {
+		*pc = *pThis->pp;
+		++pThis->pp;
+	}
+
+finalize_it:
+	RETiRet;
+}
+
+
 /* get the next character from the input "stream" (currently just a in-memory
  * string...) -- rgerhards, 2008-02-19
  */
@@ -98,12 +123,10 @@ ctokGetCharFromStream(ctok_t *pThis, uchar *pc)
 	ISOBJ_TYPE_assert(pThis, ctok);
 	ASSERT(pc != NULL);
 
-	/* end of string or begin of comment terminates the "stream" */
-	if(*pThis->pp == '\0' || *pThis->pp == '#') {
+	CHKiRet(ctokGetCharFromStreamNoComment(pThis, pc));
+	/* begin of comment terminates the "stream"! */
+	if(*pc == '#') {
 		ABORT_FINALIZE(RS_RET_EOS);
-	} else {
-		*pc = *pThis->pp;
-		++pThis->pp;
 	}
 
 finalize_it:
@@ -302,7 +325,7 @@ ctokGetSimpStr(ctok_t *pThis, ctok_token_t *pToken)
 	pToken->tok = ctok_SIMPSTR;
 
 	CHKiRet(cstrConstruct(&pstrVal));
-	CHKiRet(ctokGetCharFromStream(pThis, &c));
+	CHKiRet(ctokGetCharFromStreamNoComment(pThis, &c));
 	/* while we are in escape mode (had a backslash), no sequence
 	 * terminates the loop. If outside, it is terminated by a single quote.
 	 */
@@ -317,7 +340,7 @@ ctokGetSimpStr(ctok_t *pThis, ctok_token_t *pToken)
 				CHKiRet(cstrAppendChar(pstrVal, c));
 			}
 		}
-		CHKiRet(ctokGetCharFromStream(pThis, &c));
+		CHKiRet(ctokGetCharFromStreamNoComment(pThis, &c));
 	}
 	CHKiRet(cstrFinalize(pstrVal));
 
