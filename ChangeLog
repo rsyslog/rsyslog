@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 5.5.3  [DEVEL] (rgerhards), 2010-02-??
+- added capability to turn off standard LF delimiter in TCP server
+  via new directive "$InputTCPServerDisableLFDelimiter on"
 - imported patches from 4.6.0:
   * improved testbench to contain samples for totally malformed messages
     which miss parts of the message content

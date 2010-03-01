@@ -23,7 +23,7 @@ versions do NOT support it.
 </p>
 <p><b>Configuration Directives</b>:</p>
 <ul>
-<li>$InputTCPServerAddtlFrameDelimiter &lt;Delimiter&gt;<br>
+<li><b>$InputTCPServerAddtlFrameDelimiter &lt;Delimiter&gt;</b><br>
 This directive permits to specify an additional frame delimiter for plain tcp syslog.
 The industry-standard specifies using the LF character as frame delimiter. Some vendors,
 notable Juniper in their NetScreen products, use an invalid frame delimiter, in Juniper's
@@ -43,28 +43,36 @@ very limited interest in fixing this issue. This directive <b>can not</b> fix th
 That would require much more code changes, which I was unable to do so far. Full details
 can be found at the <a href="http://www.rsyslog.com/Article321.phtml">Cisco tcp syslog anomaly</a>
 page.
-<li>$InputTCPServerNotifyOnConnectionClose [on/<b>off</b>] (available since 4.5.5)<br>
+<li><b>$InputTCPServerDisableLFDelimiter</b> &lt;on/<b>off</b>&gt; (available since 5.5.3)<br>
+Industry-strandard plain text tcp syslog uses the LF to delimit syslog frames. However,
+some users brought up the case that it may be useful to define a different delimiter and
+totally disable LF as a delimiter (the use case named were multi-line messages). This mode
+is non-standard and will probably come with a lot of problems. However, as there is need
+for it and it is relatively easy to support, we do so. Be sure to turn this setting to
+"on" only if you exactly know what you are doing. You may run into all sorts of troubles,
+so be prepared to wrangle with that!
+<li><b>$InputTCPServerNotifyOnConnectionClose</b> [on/<b>off</b>] (available since 4.5.5)<br>
 instructs imtcp to emit a message if the remote peer closes a connection.<br>
 <b>Important:</b> This directive is global to all listeners and must be given right
 after loading imtcp, otherwise it may have no effect.</li>
-<li>$InputTCPServerRun &lt;port&gt;<br>
+<li><b>$InputTCPServerRun</b> &lt;port&gt;<br>
 Starts a TCP server on selected port</li>
-<li>$InputTCPMaxListeners &lt;number&gt;<br>
+<li><b>$InputTCPMaxListeners</b> &lt;number&gt;<br>
 Sets the maximum number of listeners (server ports) supported. Default is 20. This must be set before the first $InputTCPServerRun directive.</li>
-<li>$InputTCPMaxSessions &lt;number&gt;<br> Sets the maximum number of sessions supported. Default is 200. This must be set before the first $InputTCPServerRun directive</li>
-<li>$InputTCPServerStreamDriverMode &lt;number&gt;<br>
+<li><b>$InputTCPMaxSessions</b> &lt;number&gt;<br> Sets the maximum number of sessions supported. Default is 200. This must be set before the first $InputTCPServerRun directive</li>
+<li><b>$InputTCPServerStreamDriverMode</b> &lt;number&gt;<br>
 Sets the driver mode for the currently selected <a href="netstream.html">network stream driver</a>. &lt;number&gt; is driver specifc.</li>
-<li>$InputTCPServerInputName &lt;name&gt;<br>
+<li><b>$InputTCPServerInputName</b> &lt;name&gt;<br>
 Sets a name for the inputname property. If no name is set "imtcp" is used by default. Setting a 
 name is not strictly necessary, but can be useful to apply filtering based on which input
 the message was received from.
-<li>$InputTCPServerStreamDriverAuthMode &lt;mode-string&gt;<br>
+<li><b>$InputTCPServerStreamDriverAuthMode</b> &lt;mode-string&gt;<br>
 Sets the authentication mode for the currently selected <a href="netstream.html">network stream driver</a>. &lt;mode-string&gt; is driver specifc.</li>
-<li>$InputTCPServerStreamDriverPermittedPeer &lt;id-string&gt;<br>
+<li><b>$InputTCPServerStreamDriverPermittedPeer</b> &lt;id-string&gt;<br>
 Sets permitted peer IDs. Only these peers are able to connect to the
 listener. &lt;id-string&gt; semantics depend on the currently selected
 AuthMode and&nbsp; <a href="netstream.html">network stream driver</a>. PermittedPeers may not be set in anonymous modes.</li>
-<li>$InputTCPServerBindRuleset &lt;ruleset&gt;<br>
+<li><b>$InputTCPServerBindRuleset</b> &lt;ruleset&gt;<br>
 Binds the listener to a specific <a href="multi_ruleset.html">ruleset</a>.</li>
 </ul>
 <b>Caveats/Known Bugs:</b>

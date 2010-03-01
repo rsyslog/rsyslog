@@ -86,6 +86,7 @@ static int iTCPLstnMax = 20; /* max number of sessions */
 static int iStrmDrvrMode = 0; /* mode for stream driver, driver-dependent (0 mostly means plain tcp) */
 static int bEmitMsgOnClose = 0; /* emit an informational message on close by remote peer */
 static int iAddtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER; /* addtl frame delimiter, e.g. for netscreen, default none */
+static int bDisableLFDelim = 0; /* disbale standard LF delimiter */
 static uchar *pszStrmDrvrAuthMode = NULL; /* authentication mode to use */
 static uchar *pszInputName = NULL; /* value for inputname property, NULL is OK and handled by core engine */
 static ruleset_t *pBindRuleset = NULL; /* ruleset to bind listener to (use system default if unspecified) */
@@ -198,6 +199,7 @@ static rsRetVal addTCPListener(void __attribute__((unused)) *pVal, uchar *pNewVa
 		CHKiRet(tcpsrv.SetCBOnErrClose(pOurTcpsrv, onErrClose));
 		CHKiRet(tcpsrv.SetDrvrMode(pOurTcpsrv, iStrmDrvrMode));
 		CHKiRet(tcpsrv.SetAddtlFrameDelim(pOurTcpsrv, iAddtlFrameDelim));
+		CHKiRet(tcpsrv.SetbDisableLFDelim(pOurTcpsrv, bDisableLFDelim));
 		CHKiRet(tcpsrv.SetNotificationOnRemoteClose(pOurTcpsrv, bEmitMsgOnClose));
 		/* now set optional params, but only if they were actually configured */
 		if(pszStrmDrvrAuthMode != NULL) {
@@ -288,6 +290,7 @@ resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unus
 	iStrmDrvrMode = 0;
 	bEmitMsgOnClose = 0;
 	iAddtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
+	bDisableLFDelim = 0;
 	free(pszInputName);
 	pszInputName = NULL;
 	free(pszStrmDrvrAuthMode);
@@ -334,6 +337,8 @@ CODEmodInit_QueryRegCFSLineHdlr
 				   eCmdHdlrGetWord, setPermittedPeer, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpserveraddtlframedelimiter"), 0, eCmdHdlrInt,
 				   NULL, &iAddtlFrameDelim, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpserverdisablelfdelimiter"), 0, eCmdHdlrBinary,
+				   NULL, &bDisableLFDelim, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpserverinputname"), 0,
 				   eCmdHdlrGetWord, NULL, &pszInputName, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpserverbindruleset"), 0,

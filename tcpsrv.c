@@ -17,7 +17,7 @@
  *
  * File begun on 2007-12-21 by RGerhards (extracted from syslogd.c)
  *
- * Copyright 2007, 2008, 2009 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2010 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -713,6 +713,7 @@ BEGINobjConstruct(tcpsrv) /* be sure to specify the object type also in END macr
 	pThis->iSessMax = TCPSESS_MAX_DEFAULT;
 	pThis->iLstnMax = TCPLSTN_MAX_DEFAULT;
 	pThis->addtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
+	pThis->bDisableLFDelim = 0;
 	pThis->OnMsgReceive = NULL;
 ENDobjConstruct(tcpsrv)
 
@@ -869,6 +870,18 @@ SetOnMsgReceive(tcpsrv_t *pThis, rsRetVal (*OnMsgReceive)(tcps_sess_t*, uchar*, 
 }
 
 
+/* set enable/disable standard LF frame delimiter (use with care!)
+ * -- rgerhards, 2010-01-03
+ */
+static rsRetVal
+SetbDisableLFDelim(tcpsrv_t *pThis, int bVal)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, tcpsrv);
+	pThis->bDisableLFDelim = bVal;
+	RETiRet;
+}
+
 
 /* Set additional framing to use (if any) -- rgerhards, 2008-12-10 */
 static rsRetVal
@@ -1017,6 +1030,7 @@ CODESTARTobjQueryInterface(tcpsrv)
 	pIf->SetUsrP = SetUsrP;
 	pIf->SetInputName = SetInputName;
 	pIf->SetAddtlFrameDelim = SetAddtlFrameDelim;
+	pIf->SetbDisableLFDelim = SetbDisableLFDelim;
 	pIf->SetSessMax = SetSessMax;
 	pIf->SetLstnMax = SetLstnMax;
 	pIf->SetDrvrMode = SetDrvrMode;

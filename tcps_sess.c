@@ -407,7 +407,7 @@ processDataRcvd(tcps_sess_t *pThis, char c, struct syslogTime *stTime, time_t tt
 			 */
 		}
 
-		if((   (c == '\n')
+		if((   ((c == '\n') && !pThis->pSrv->bDisableLFDelim)
 		   || ((pThis->pSrv->addtlFrameDelim != TCPSRV_NO_ADDTL_DELIMITER) && (c == pThis->pSrv->addtlFrameDelim))
 		   ) && pThis->eFraming == TCP_FRAMING_OCTET_STUFFING) { /* record delimiter? */
 			defaultDoSubmitMessage(pThis, stTime, ttGenTime, pMultiSub);
