@@ -326,6 +326,16 @@ Version 4.7.0  [v4-devel] (rgerhards), 2009-09-??
   See ticket for details: http://bugzilla.adiscon.com/show_bug.cgi?id=150
 - imported changes from 4.5.6 and below
 Version 4.6.1  [v4-stable] (rgerhards), 2010-02-??
+- re-enabled old pipe output (using new module ompipe, built-in) after
+  some problems with pipes (and especially in regard to xconsole) were
+  discovered. Thanks to Michael Biebl for reporting the issues.
+- bugfix: fixed problem that caused compilation on FreeBSD 9.0 to fail.
+  bugtracker: http://bugzilla.adiscon.com/show_bug.cgi?id=181
+  Thanks to Christiano for reporting.
+- bugfix: comment char ('#') in literal terminated script parsing
+  and thus could not be used.
+  but tracker: http://bugzilla.adiscon.com/show_bug.cgi?id=119
+  [merged in from v3.22.2]
 ---------------------------------------------------------------------------
 Version 4.6.0  [v4-stable] (rgerhards), 2010-02-24
 ***************************************************************************
@@ -815,6 +825,9 @@ version before switching to this one.
   Thanks to Ken for providing the patch
 ---------------------------------------------------------------------------
 Version 3.22.2 [v3-stable] (rgerhards), 2009-07-??
+- bugfix: comment char ('#') in literal terminated script parsing
+  and thus could not be used.
+  but tracker: http://bugzilla.adiscon.com/show_bug.cgi?id=119
 - enhance: imrelp now also provides remote peer's IP address 
   [if librelp != 1.0.0 is used]
 - bugfix: sending syslog messages with zip compression did not work
