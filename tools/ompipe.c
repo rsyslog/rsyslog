@@ -46,6 +46,7 @@
 #include "srUtils.h"
 #include "template.h"
 #include "ompipe.h"
+#include "omfile.h" /* for dirty trick: access to $ActionFileDefaultTemplate value */
 #include "cfsysline.h"
 #include "module-template.h"
 #include "conf.h"
@@ -60,7 +61,6 @@ DEFobjCurrIf(errmsg)
 
 
 /* globals for default values */
-static uchar	*pszTplName = NULL; /* name of the default template to use */
 /* end globals for default values */
 
 
@@ -192,7 +192,7 @@ CODESTARTparseSelectorAct
 	 * and then look at the rest of the line.
 	 */
 	CHKiRet(cflineParseFileName(p, (uchar*) pData->f_fname, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS,
-				       (pszTplName == NULL) ? (uchar*)"RSYSLOG_FileFormat" : pszTplName));
+				       (pszFileDfltTplName == NULL) ? (uchar*)"RSYSLOG_FileFormat" : pszFileDfltTplName));
 
 	/* at this stage, we ignore the return value of preparePipe, this is taken
 	 * care of in later steps. -- rgerhards, 2009-03-19
@@ -219,8 +219,6 @@ ENDdoHUP
 
 BEGINmodExit
 CODESTARTmodExit
-	if(pszTplName != NULL)
-		free(pszTplName);
 ENDmodExit
 
 

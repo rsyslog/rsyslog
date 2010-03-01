@@ -500,12 +500,14 @@ int decodeSyslogName(uchar *name, syslogName_t *codetab)
 	for (p = buf; *p; p++)
 		if (isupper((int) *p))
 			*p = tolower((int) *p);
+dbgprintf("obtained syslogName '%s'\n", buf);
 	for (c = codetab; c->c_name; c++)
 		if (!strcmp((char*) buf, (char*) c->c_name))
 		{
 			dbgprintf(" ==> %d\n", c->c_val);
 			return (c->c_val);
 		}
+dbgprintf("syslogName '%s' NOT found!\n", buf);
 	return (-1);
 }
 

@@ -102,7 +102,7 @@ static int	iZipLevel = 0;	/* zip compression mode (0..9 as usual) */
 static bool	bFlushOnTXEnd = 1;/* flush write buffers when transaction has ended? */
 static int64	iIOBufSize = IOBUF_DFLT_SIZE;	/* size of an io buffer */
 static int	iFlushInterval = FLUSH_INTRVL_DFLT; 	/* how often flush the output buffer on inactivity? */
-static uchar	*pszTplName = NULL; /* name of the default template to use */
+uchar	*pszFileDfltTplName = NULL; /* name of the default template to use */
 /* end globals for default values */
 
 
@@ -258,7 +258,7 @@ static rsRetVal cflineParseOutchannel(instanceData *pData, uchar* p, omodStringR
 	pData->pszSizeLimitCmd = pOch->cmdOnSizeLimit;
 
 	iRet = cflineParseTemplateName(&p, pOMSR, iEntry, iTplOpts,
-				       (pszTplName == NULL) ? (uchar*)"RSYSLOG_FileFormat" : pszTplName);
+				       (pszFileDfltTplName == NULL) ? (uchar*)"RSYSLOG_FileFormat" : pszFileDfltTplName);
 
 finalize_it:
 	RETiRet;
@@ -653,7 +653,7 @@ CODESTARTparseSelectorAct
 		CODE_STD_STRING_REQUESTparseSelectorAct(2)
 		++p; /* eat '?' */
 		CHKiRet(cflineParseFileName(p, (uchar*) pData->f_fname, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS,
-				               (pszTplName == NULL) ? (uchar*)"RSYSLOG_FileFormat" : pszTplName));
+				               (pszFileDfltTplName == NULL) ? (uchar*)"RSYSLOG_FileFormat" : pszFileDfltTplName));
 		/* "filename" is actually a template name, we need this as string 1. So let's add it
 		 * to the pOMSR. -- rgerhards, 2007-07-27
 		 */
@@ -683,7 +683,7 @@ CODESTARTparseSelectorAct
 		}
 
 		CHKiRet(cflineParseFileName(p, (uchar*) pData->f_fname, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS,
-				               (pszTplName == NULL) ? (uchar*)"RSYSLOG_FileFormat" : pszTplName));
+				               (pszFileDfltTplName == NULL) ? (uchar*)"RSYSLOG_FileFormat" : pszFileDfltTplName));
 		pData->bDynamicName = 0;
 		break;
 	default:
@@ -739,9 +739,9 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	bFlushOnTXEnd = 1;
 	iIOBufSize = IOBUF_DFLT_SIZE;
 	iFlushInterval = FLUSH_INTRVL_DFLT;
-	if(pszTplName != NULL) {
-		free(pszTplName);
-		pszTplName = NULL;
+	if(pszFileDfltTplName != NULL) {
+		free(pszFileDfltTplName);
+		pszFileDfltTplName = NULL;
 	}
 
 	return RS_RET_OK;
@@ -766,7 +766,7 @@ BEGINmodExit
 CODESTARTmodExit
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(strm, CORE_COMPONENT);
-	free(pszTplName);
+	free(pszFileDfltTplName);
 ENDmodExit
 
 
@@ -797,7 +797,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"createdirs", 0, eCmdHdlrBinary, NULL, &bCreateDirs, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"failonchownfailure", 0, eCmdHdlrBinary, NULL, &bFailOnChown, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionfileenablesync", 0, eCmdHdlrBinary, NULL, &bEnableSync, STD_LOADABLE_MODULE_ID));
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionfiledefaulttemplate", 0, eCmdHdlrGetWord, NULL, &pszTplName, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionfiledefaulttemplate", 0, eCmdHdlrGetWord, NULL, &pszFileDfltTplName, NULL));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
 /* vi:set ai:
