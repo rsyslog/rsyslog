@@ -24,6 +24,8 @@
  */
 #include "config.h"
 
+#ifdef HAVE_EPOLL_CREATE /* this module requires epoll! */
+
 #include <stdlib.h>
 #include <assert.h>
 #include <errno.h>
@@ -280,5 +282,7 @@ BEGINObjClassInit(nsdpoll_ptcp, 1, OBJ_IS_CORE_MODULE) /* class, version */
 
 	/* set our own handlers */
 ENDObjClassInit(nsdpoll_ptcp)
+#endif /* #ifdef HAVE_EPOLL_CREATE this module requires epoll! */
+
 /* vi:set ai:
  */

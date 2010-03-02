@@ -27,8 +27,6 @@
 #include "nsd.h"
 #if HAVE_SYS_EPOLL_H
 #	include <sys/epoll.h>
-#else
-	typedef void epoll_event_t;
 #endif
 typedef nsdpoll_if_t nsdpoll_ptcp_if_t; /* we just *implement* this interface */
 /* a helper object to keep track of the epoll event records
@@ -37,7 +35,9 @@ typedef nsdpoll_if_t nsdpoll_ptcp_if_t; /* we just *implement* this interface */
  */
 typedef struct nsdpoll_epollevt_lst_s nsdpoll_epollevt_lst_t;
 struct nsdpoll_epollevt_lst_s {
+#if HAVE_SYS_EPOLL_H
 	epoll_event_t event;
+#endif
 	int id;
 	void *pUsr;
 	nsd_ptcp_t *pSock;	/* our associated netstream driver data */

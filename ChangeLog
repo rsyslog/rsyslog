@@ -2,6 +2,7 @@
 Version 5.5.3  [DEVEL] (rgerhards), 2010-02-??
 - added capability to turn off standard LF delimiter in TCP server
   via new directive "$InputTCPServerDisableLFDelimiter on"
+- bugfix: failed to compile on systems without epoll support
 - bugfix: comment char ('#') in literal terminated script parsing
   and thus could not be used.
   but tracker: http://bugzilla.adiscon.com/show_bug.cgi?id=119
