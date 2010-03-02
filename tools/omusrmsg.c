@@ -52,8 +52,13 @@
 #include <sys/param.h>
 #ifdef HAVE_UTMP_H
 #  include <utmp.h>
+#  define STRUCTUTMP struct utmp
 #else
 #  include <utmpx.h>
+#  define _PATH_UTMP      "/var/run/utx.active"
+#  define _PATH_WTMP      "/var/log/utx.log"
+#  define _PATH_LASTLOG   "/var/log/utx.lastlogin"
+#  define STRUCTUTMP struct utmpx
 #endif
 #include <unistd.h>
 #include <sys/uio.h>
@@ -138,9 +143,9 @@ void setutent(void)
 	}
 }
 
-struct utmp* getutent(void)
+STRUCTUTMP* getutent(void)
 {
-	static struct utmp st_utmp;
+	static STRUCTUTMP st_utmp;
 
 	if(fread((char *)&st_utmp, sizeof(st_utmp), 1, BSD_uf) != 1)
 		return NULL;
@@ -177,8 +182,8 @@ static rsRetVal wallmsg(uchar* pMsg, instanceData *pData)
 	int errnoSave;
 	int ttyf;
 	int wrRet;
-	struct utmp ut;
-	struct utmp *uptr;
+	STRUCTUTMP ut;
+	STRUCTUTMP *uptr;
 	struct stat statb;
 	DEFiRet;
 
@@ -191,13 +196,21 @@ static rsRetVal wallmsg(uchar* pMsg, instanceData *pData)
 	while((uptr = getutent())) {
 		memcpy(&ut, uptr, sizeof(ut));
 		/* is this slot used? */
-		if(ut.ut_name[0] == '\0')
+
+		char UTNAME[MAXUNAMES];
+#ifdef HAVE_UTMP_H
+		strcpy(UTNAME,ut.ut_name);
+#else
+		strcpy(UTNAME,ut.ut_user);
+#endif
+
+		if(UTNAME[0] == '\0')
 			continue;
 #ifndef OS_BSD
 		if(ut.ut_type != USER_PROCESS)
 			continue;
 #endif
-		if(!(strncmp (ut.ut_name,"LOGIN", 6))) /* paranoia */
+		if(!(strncmp (UTNAME,"LOGIN", 6))) /* paranoia */
 			continue;
 
 		/* should we send the message to this user? */
@@ -207,7 +220,7 @@ static rsRetVal wallmsg(uchar* pMsg, instanceData *pData)
 					i = MAXUNAMES;
 					break;
 				}
-				if(strncmp(pData->uname[i], ut.ut_name, UNAMESZ) == 0)
+				if(strncmp(pData->uname[i], UTNAME, UNAMESZ) == 0)
 					break;
 			}
 			if(i == MAXUNAMES) /* user not found? */
