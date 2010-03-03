@@ -152,19 +152,12 @@ AC_SUBST(moddirs)
 
 
 # Large file support
-AC_ARG_ENABLE(largefile,
-        [AS_HELP_STRING([--enable-largefile],[Enable large file support @<:@default=yes@:>@])],
-        [case "${enableval}" in
-         yes) enable_largefile="yes" ;;
-          no) enable_largefile="no" ;;
-           *) AC_MSG_ERROR(bad value ${enableval} for --enable-largefile) ;;
-         esac],
-        [enable_largefile="yes"]
-)
-if test "$enable_largefile" = "no"; then
-        AC_DEFINE(NOLARGEFILE, 1, [Defined when large file support is disabled.])
-fi
-
+# http://www.gnu.org/software/autoconf/manual/html_node/System-Services.html#index-AC_005fSYS_005fLARGEFILE-1028
+AC_SYS_LARGEFILE
+case "${enable_largefile}" in
+  no) ;;
+  *) enable_largefile="yes" ;;
+esac
 
 # Regular expressions
 AC_ARG_ENABLE(regexp,
