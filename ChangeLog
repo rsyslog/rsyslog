@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 4.6.1  [v4-stable] (rgerhards), 2010-02-??
+Version 4.6.1  [v4-stable] (rgerhards), 2010-03-04
 - re-enabled old pipe output (using new module ompipe, built-in) after
   some problems with pipes (and especially in regard to xconsole) were
   discovered. Thanks to Michael Biebl for reporting the issues.
