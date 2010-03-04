@@ -53,12 +53,11 @@
 #ifdef HAVE_UTMP_H
 #  include <utmp.h>
 #  define STRUCTUTMP struct utmp
+#  define UTNAME ut_name
 #else
 #  include <utmpx.h>
-#  define _PATH_UTMP      "/var/run/utx.active"
-#  define _PATH_WTMP      "/var/log/utx.log"
-#  define _PATH_LASTLOG   "/var/log/utx.lastlogin"
 #  define STRUCTUTMP struct utmpx
+#  define UTNAME ut_user
 #endif
 #include <unistd.h>
 #include <sys/uio.h>
@@ -133,6 +132,12 @@ ENDdbgPrintInstInfo
  * need! rgerhards 2005-03-18
  */
 #ifdef OS_BSD
+/* Since version 900007, FreeBSD has a POSIX compliant <utmpx.h> */
+#if defined(__FreeBSD__) && (__FreeBSD_version >= 900007)
+#  define setutent(void) setutxent(void)
+#  define getutent(void) getutxent(void)
+#  define endutent(void) endutxent(void)
+#else
 static FILE *BSD_uf = NULL;
 void setutent(void)
 {
@@ -158,6 +163,7 @@ void endutent(void)
 	fclose(BSD_uf);
 	BSD_uf = NULL;
 }
+#endif /* if defined(__FreeBSD__) */
 #endif  /* #ifdef OS_BSD */
 
 
@@ -196,21 +202,13 @@ static rsRetVal wallmsg(uchar* pMsg, instanceData *pData)
 	while((uptr = getutent())) {
 		memcpy(&ut, uptr, sizeof(ut));
 		/* is this slot used? */
-
-		char UTNAME[MAXUNAMES];
-#ifdef HAVE_UTMP_H
-		strcpy(UTNAME,ut.ut_name);
-#else
-		strcpy(UTNAME,ut.ut_user);
-#endif
-
-		if(UTNAME[0] == '\0')
+		if(ut.UTNAME[0] == '\0')
 			continue;
 #ifndef OS_BSD
 		if(ut.ut_type != USER_PROCESS)
 			continue;
 #endif
-		if(!(strncmp (UTNAME,"LOGIN", 6))) /* paranoia */
+		if(!(strncmp (ut.UTNAME,"LOGIN", 6))) /* paranoia */
 			continue;
 
 		/* should we send the message to this user? */
@@ -220,7 +218,7 @@ static rsRetVal wallmsg(uchar* pMsg, instanceData *pData)
 					i = MAXUNAMES;
 					break;
 				}
-				if(strncmp(pData->uname[i], UTNAME, UNAMESZ) == 0)
+				if(strncmp(pData->uname[i], ut.UTNAME, UNAMESZ) == 0)
 					break;
 			}
 			if(i == MAXUNAMES) /* user not found? */
