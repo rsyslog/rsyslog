@@ -1,4 +1,3 @@
-#include <sys/syscall.h>
 /* debug.c
  *
  * This file proides debug and run time error analysis support. Some of the
@@ -550,6 +549,7 @@ if(pLog == NULL) {
 	return; /* if we don't know it yet, we can not clean up... */
 }
 #endif
+#include <sys/syscall.h>
 
 	/* we found the last lock entry. We now need to see from which FuncDB we need to
 	 * remove it. This is recorded inside the mutex log entry.
