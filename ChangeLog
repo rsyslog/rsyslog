@@ -3,6 +3,14 @@ Version 4.6.1  [v4-stable] (rgerhards), 2010-02-??
 - re-enabled old pipe output (using new module ompipe, built-in) after
   some problems with pipes (and especially in regard to xconsole) were
   discovered. Thanks to Michael Biebl for reporting the issues.
+- bugfix: potential problems with large file support could cause segfault
+  ... and other weird problems. This seemed to affect 32bit-platforms
+  only, but I can not totally outrule there were issues on other
+  platforms as well. The previous code could cause system data types
+  to be defined inconsistently, and that could lead to various 
+  troubles. Special thanks go to the Mandriva team for identifying
+  an initial problem, help discussing it and ultimately a fix they
+  contributed.
 - bugfix: fixed problem that caused compilation on FreeBSD 9.0 to fail.
   bugtracker: http://bugzilla.adiscon.com/show_bug.cgi?id=181
   Thanks to Christiano for reporting.
