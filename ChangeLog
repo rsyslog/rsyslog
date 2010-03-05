@@ -1,11 +1,28 @@
 ---------------------------------------------------------------------------
-Version 4.6.1  [v4-stable] (rgerhards), 2010-02-??
+Version 4.6.1  [v4-stable] (rgerhards), 2010-03-04
 - re-enabled old pipe output (using new module ompipe, built-in) after
   some problems with pipes (and especially in regard to xconsole) were
   discovered. Thanks to Michael Biebl for reporting the issues.
+- bugfix: potential problems with large file support could cause segfault
+  ... and other weird problems. This seemed to affect 32bit-platforms
+  only, but I can not totally outrule there were issues on other
+  platforms as well. The previous code could cause system data types
+  to be defined inconsistently, and that could lead to various 
+  troubles. Special thanks go to the Mandriva team for identifying
+  an initial problem, help discussing it and ultimately a fix they
+  contributed.
 - bugfix: fixed problem that caused compilation on FreeBSD 9.0 to fail.
   bugtracker: http://bugzilla.adiscon.com/show_bug.cgi?id=181
   Thanks to Christiano for reporting.
+- bugfix: potential segfault in omfile when a dynafile open failed
+  In that case, a partial cache entry was written, and some internal
+  pointers (iCurrElt) not correctly updated. In the next iteration, that
+  could lead to a segfault, especially if iCurrElt then points to the
+  then-partial record. Not very likely, but could happen in practice.
+- bugfix (theoretical): potential segfault in omfile under low memory
+  condition. This is only a theoretical bug, because it would only 
+  happen when strdup() fails to allocate memory - which is highly 
+  unlikely and will probably lead to all other sorts of errors.
 - bugfix: comment char ('#') in literal terminated script parsing
   and thus could not be used.
   but tracker: http://bugzilla.adiscon.com/show_bug.cgi?id=119

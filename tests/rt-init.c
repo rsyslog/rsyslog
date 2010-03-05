@@ -21,10 +21,10 @@
  *
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
  */
-#include <stdio.h>
-
+#include "config.h"
 #include "rsyslog.h"
 #include "testbench.h"
+#include <stdio.h>	/* must be last, else we get a zlib compile error on some platforms */
 
 MODULE_TYPE_TESTBENCH
 
