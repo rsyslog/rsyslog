@@ -1,5 +1,8 @@
 ---------------------------------------------------------------------------
 Version 5.5.3  [DEVEL] (rgerhards), 2010-02-??
+- added new property replacer option "date-rfc3164-buggyday" primarily
+  to ease migration from syslog-ng. See property replacer doc for
+  details.
 - added capability to turn off standard LF delimiter in TCP server
   via new directive "$InputTCPServerDisableLFDelimiter on"
 - bugfix: failed to compile on systems without epoll support
