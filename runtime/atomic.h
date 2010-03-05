@@ -66,6 +66,9 @@
 #	define ATOMIC_DEC_AND_FETCH(data) (--(data))
 #	define ATOMIC_FETCH_32BIT(data) (data)
 #	define ATOMIC_STORE_1_TO_32BIT(data) (data) = 1
+#	define ATOMIC_STORE_1_TO_INT(data) (data) = 1
+#	define ATOMIC_STORE_0_TO_INT(data) (data) = 0
+#	define ATOMIC_CAS_VAL(data, oldVal, newVal) (data) = (newVal)
 #endif
 
 #endif /* #ifndef INCLUDED_ATOMIC_H */
