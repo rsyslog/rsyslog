@@ -89,12 +89,31 @@ static uint64 clockFileAccess = 0;
 static unsigned clockFileAccess = 0;
 #endif
 /* and the "tick" function */
+#ifdef HAVE_ATOMIC_BUILTINS
 static inline uint64
 getClockFileAccess(void)
 {
 	return ATOMIC_INC_AND_FETCH(clockFileAccess);
 }
+#else
+/* if we do not have atomics, we need to guard this via a mutex.
+ * the reason is that otherwise cache lookups may fail. That function
+ * requires the highest current value, and we can not provide that
+ * without using atomic instructions and mutexes.
+ * rgerhards, 2010-03-05
+ */
+static pthread_mutex_t mutClock;
+static uint64
+getClockFileAccess(void)
+{
+	uint64 retVal;
 
+	d_pthread_mutex_lock(&mutClock);
+	retVal = ++clockFileAccess;
+	d_pthread_mutex_unlock(&mutClock);
+	return retVal;
+}
+#endif  /* #ifdef HAVE_ATOMIC_BUILTINS */
 
 /* The following structure is a dynafile name cache entry.
  */
@@ -827,6 +846,9 @@ CODESTARTmodExit
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(strm, CORE_COMPONENT);
 	free(pszFileDfltTplName);
+#	ifndef HAVE_ATOMIC_BUILTINS
+	pthread_mutex_destroy(&mutClock);
+#	endif
 ENDmodExit
 
 
@@ -844,6 +866,11 @@ CODESTARTmodInit
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(strm, CORE_COMPONENT));
+
+#	ifndef HAVE_ATOMIC_BUILTINS
+	pthread_mutex_init(&mutClock, NULL);
+#	endif
+
 	INITChkCoreFeature(bCoreSupportsBatching, CORE_FEATURE_BATCHING);
 	DBGPRINTF("omfile: %susing transactional output interface.\n", bCoreSupportsBatching ? "" : "not ");
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"dynafilecachesize", 0, eCmdHdlrInt, (void*) setDynaFileCacheSize, NULL, STD_LOADABLE_MODULE_ID));
