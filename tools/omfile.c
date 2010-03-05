@@ -364,6 +364,7 @@ dynaFileFreeCacheEntries(instanceData *pData)
 	for(i = 0 ; i < pData->iCurrCacheSize ; ++i) {
 		dynaFileDelCacheEntry(pData->dynCache, i, 1);
 	}
+	pData->iCurrElt = -1; /* invalidate current element */
 	ENDfunc;
 }
 
@@ -547,6 +548,14 @@ prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
 	}
 
 	/* we have not found an entry */
+
+	/* invalidate iCurrElt as we may error-exit out of this function when the currrent
+	 * iCurrElt has been freed or otherwise become unusable. This is a precaution, and
+	 * performance-wise it may be better to do that in each of the exits. However, that
+	 * is error-prone, so I prefer to do it here. -- rgerhards, 2010-03-02
+	 */
+	pData->iCurrElt = -1;
+
 	if(iFirstFree == -1 && (pData->iCurrCacheSize < pData->iDynaFileCacheSize)) {
 		/* there is space left, so set it to that index */
 		iFirstFree = pData->iCurrCacheSize++;
@@ -578,7 +587,11 @@ prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
 		ABORT_FINALIZE(localRet);
 	}
 
-	CHKmalloc(pCache[iFirstFree]->pName = ustrdup(newFileName));
+	if((pCache[iFirstFree]->pName = ustrdup(newFileName)) == NULL) {
+		/* we need to discard the entry, otherwise things could lead to a segfault! */
+		dynaFileDelCacheEntry(pCache, iFirstFree, 1);
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	}
 	pCache[iFirstFree]->pStrm = pData->pStrm;
 	pCache[iFirstFree]->clkTickAccessed = getClockFileAccess();
 	pData->iCurrElt = iFirstFree;
@@ -831,7 +844,6 @@ BEGINdoHUP
 CODESTARTdoHUP
 	if(pData->bDynamicName) {
 		dynaFileFreeCacheEntries(pData);
-		pData->iCurrElt = -1; /* invalidate current element */
 	} else {
 		if(pData->pStrm != NULL) {
 			strm.Destruct(&pData->pStrm);
