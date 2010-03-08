@@ -1,0 +1,6 @@
+# in 3164-buggyday mode, we need to have a leading zero in front of the day
+<38> Mar  7 19:06:53 example tag: testmessage (only date actually tested)
+38,auth,info,Mar 07 19:06:53,example,tag,tag:, testmessage (only date actually tested)
+# and now one with a complete date:
+<38> Mar 17 19:06:53 example tag: testmessage (only date actually tested)
+38,auth,info,Mar 17 19:06:53,example,tag,tag:, testmessage (only date actually tested)
