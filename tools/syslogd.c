@@ -1992,7 +1992,7 @@ static void printVersion(void)
 #else
 	printf("\tFEATURE_REGEXP:\t\t\t\tNo\n");
 #endif
-#ifndef	NOLARGEFILE
+#if defined(_LARGE_FILES) || (defined (_FILE_OFFSET_BITS) && _FILE_OFFSET_BITS >= 64)
 	printf("\tFEATURE_LARGEFILE:\t\t\tYes\n");
 #else
 	printf("\tFEATURE_LARGEFILE:\t\t\tNo\n");
