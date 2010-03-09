@@ -487,6 +487,8 @@ static void doOptions(unsigned char **pp, struct templateEntry *pTpe)
                         pTpe->data.field.eDateFormat = tplFmtPgSQLDate;
 		 } else if(!strcmp((char*)Buf, "date-rfc3164")) {
 			pTpe->data.field.eDateFormat = tplFmtRFC3164Date;
+		 } else if(!strcmp((char*)Buf, "date-rfc3164-buggyday")) {
+			pTpe->data.field.eDateFormat = tplFmtRFC3164BuggyDate;
 		 } else if(!strcmp((char*)Buf, "date-rfc3339")) {
 			pTpe->data.field.eDateFormat = tplFmtRFC3339Date;
 		 } else if(!strcmp((char*)Buf, "date-subseconds")) {

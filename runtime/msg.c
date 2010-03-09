@@ -1217,10 +1217,12 @@ static inline char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt)
 	switch(eFmt) {
 	case tplFmtDefault:
 	case tplFmtRFC3164Date:
+	case tplFmtRFC3164BuggyDate:
 		MsgLock(pM);
 		if(pM->pszTIMESTAMP3164 == NULL) {
 			pM->pszTIMESTAMP3164 = pM->pszTimestamp3164;
-			datetime.formatTimestamp3164(&pM->tTIMESTAMP, pM->pszTIMESTAMP3164);
+			datetime.formatTimestamp3164(&pM->tTIMESTAMP, pM->pszTIMESTAMP3164,
+						     (eFmt == tplFmtRFC3164BuggyDate));
 		}
 		MsgUnlock(pM);
 		return(pM->pszTIMESTAMP3164);
@@ -1283,7 +1285,7 @@ static inline char *getTimeGenerated(msg_t *pM, enum tplFormatTypes eFmt)
 				MsgUnlock(pM);
 				return "";
 			}
-			datetime.formatTimestamp3164(&pM->tRcvdAt, pM->pszRcvdAt3164);
+			datetime.formatTimestamp3164(&pM->tRcvdAt, pM->pszRcvdAt3164, 0);
 		}
 		MsgUnlock(pM);
 		return(pM->pszRcvdAt3164);
@@ -1310,13 +1312,15 @@ static inline char *getTimeGenerated(msg_t *pM, enum tplFormatTypes eFmt)
                 MsgUnlock(pM);
                 return(pM->pszRcvdAt_PgSQL);
 	case tplFmtRFC3164Date:
+	case tplFmtRFC3164BuggyDate:
 		MsgLock(pM);
 		if(pM->pszRcvdAt3164 == NULL) {
 			if((pM->pszRcvdAt3164 = MALLOC(16)) == NULL) {
 					MsgUnlock(pM);
 					return "";
 				}
-			datetime.formatTimestamp3164(&pM->tRcvdAt, pM->pszRcvdAt3164);
+			datetime.formatTimestamp3164(&pM->tRcvdAt, pM->pszRcvdAt3164,
+						     (eFmt == tplFmtRFC3164BuggyDate));
 		}
 		MsgUnlock(pM);
 		return(pM->pszRcvdAt3164);
