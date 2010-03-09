@@ -790,6 +790,7 @@ doWriteCall(strm_t *pThis, uchar *pBuf, size_t *pLenBuf)
 		if(iWritten < 0) {
 			char errStr[1024];
 			int err = errno;
+			iWritten = 0; /* we have written NO bytes! */
 			rs_strerror_r(err, errStr, sizeof(errStr));
 			DBGPRINTF("log file (%d) write error %d: %s\n", pThis->fd, err, errStr);
 			if(err == EINTR) {

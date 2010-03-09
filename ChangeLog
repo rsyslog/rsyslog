@@ -1,5 +1,13 @@
 ---------------------------------------------------------------------------
 Version 4.6.2  [v4-stable] (rgerhards), 2010-03-??
+- bugfix: potential problem (loop, abort) when file write error occured
+  When a write error occured in stream.c, variable iWritten had the error
+  code but this was handled as if it were the actual number of bytes
+  written. That was used in pointer arithmetic later on, and thus could
+  lead to all sorts of problems. However, this could only happen if the
+  error was EINTR or the file in question was a tty. All other cases were
+  handled properly. Now, iWritten is reset to zero in such cases, resulting
+  in proper retries.
 - bugfix: $omfileFlushOnTXEnd was turned on when set to off and vice
   versa due to an invalid check
 - added new property replacer option "date-rfc3164-buggyday" primarily

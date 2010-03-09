@@ -79,7 +79,7 @@ DEFobjCurrIf(strm)
 struct s_dynaFileCacheEntry {
 	uchar *pName;		/* name currently open, if dynamic name */
 	strm_t	*pStrm;		/* our output stream */
-	time_t	lastUsed;	/* for LRU - last access */ // TODO: perforamcne change to counter (see other comment!) 
+	time_t	lastUsed;	/* for LRU - last access */
 };
 typedef struct s_dynaFileCacheEntry dynaFileCacheEntry;
 
@@ -532,7 +532,7 @@ prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
 	pCache[iFirstFree]->pStrm = pData->pStrm;
-	pCache[iFirstFree]->lastUsed = time(NULL); // monotonically increasing value! TODO: performance
+	pCache[iFirstFree]->lastUsed = time(NULL);
 	pData->iCurrElt = iFirstFree;
 	DBGPRINTF("Added new entry %d for file cache, file '%s'.\n", iFirstFree, newFileName);
 
