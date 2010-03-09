@@ -30,7 +30,18 @@ Version 5.5.2  [DEVEL] (rgerhards), 2010-02-05
   solution was available). Thanks to Kenneth Marshall for some advice.
 - extended testbench
 ---------------------------------------------------------------------------
-Version 5.3.8  [BETA] (rgerhards), 2010-02-??
+Version 5.4.1  [v5-stable] (rgerhards), 2010-03-??
+- added new property replacer option "date-rfc3164-buggyday" primarily
+  to ease migration from syslog-ng. See property replacer doc for
+  details. [backport from 5.5.3 because urgently needed by some]
+---------------------------------------------------------------------------
+Version 5.4.0  [v5-stable] (rgerhards), 2010-03-08
+***************************************************************************
+* This is a new stable v5 version. It contains all fixes and enhancements *
+* made during the 5.3.x phase as well as those listed below.              *
+* Note that the 5.2.x series was quite buggy and as such all users are    *
+* strongly advised to upgrade to 5.4.0.                                   *
+***************************************************************************
 - bugfix: omruleset failed to work in many cases
   bug tracker: http://bugzilla.adiscon.com/show_bug.cgi?id=179
   Thanks to Ryan B. Lynch for reporting this issue.
@@ -410,6 +421,11 @@ Version 4.7.0  [v4-devel] (rgerhards), 2009-09-??
 - bugfix: potential segfault when -p command line option was used
   Thanks for varmojfekoj for pointing me at this bug.
 - imported changes from 4.5.6 and below
+---------------------------------------------------------------------------
+Version 4.6.2  [v4-stable] (rgerhards), 2010-03-??
+- added new property replacer option "date-rfc3164-buggyday" primarily
+  to ease migration from syslog-ng. See property replacer doc for
+  details. [backport from 5.5.3 because urgently needed by some]
 ---------------------------------------------------------------------------
 Version 4.6.1  [v4-stable] (rgerhards), 2010-03-04
 - re-enabled old pipe output (using new module ompipe, built-in) after
