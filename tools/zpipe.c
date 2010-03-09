@@ -22,6 +22,7 @@
 		     files created by rsyslog's zip output writer.
  */
 
+#include "config.h"
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
