@@ -318,13 +318,11 @@ static rsRetVal strmCloseFile(strm_t *pThis)
 	ASSERT(pThis != NULL);
 	dbgoprint((obj_t*) pThis, "file %d closing\n", pThis->fd);
 
-	if(!pThis->bInClose && pThis->tOperationsMode != STREAMMODE_READ) {
-		pThis->bInClose = 1;
+	if(pThis->tOperationsMode != STREAMMODE_READ) {
 		strmFlush(pThis);
 		if(pThis->bAsyncWrite) {
 			strmWaitAsyncWriterDone(pThis);
 		}
-		pThis->bInClose = 0;
 	}
 
 	close(pThis->fd);
@@ -882,13 +880,22 @@ strmSchedWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf)
 
 	ASSERT(pThis != NULL);
 
+	/* we need to reset the buffer pointer BEFORE calling the actual write
+	 * function. Otherwise, in circular mode, the write function will 
+	 * potentially close the file, then close will flush and as the 
+	 * buffer pointer is nonzero, will re-call into this code here. In
+	 * the end result, we than have a problem (and things are screwed
+	 * up). So we reset the buffer pointer first, and all this can
+	 * not happen. It is safe to do so, because that pointer is NOT
+	 * used inside the write functions. -- rgerhads, 2010-03-10
+	 */
+	pThis->iBufPtr = 0; /* we are at the begin of a new buffer */
 	if(pThis->bAsyncWrite) {
 		CHKiRet(doAsyncWriteInternal(pThis, lenBuf));
 	} else {
 		CHKiRet(doWriteInternal(pThis, pBuf, lenBuf));
 	}
 
-	pThis->iBufPtr = 0; /* we are at the begin of a new buffer */
 
 finalize_it:
 	RETiRet;

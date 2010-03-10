@@ -6,6 +6,9 @@
 # This file is part of the rsyslog project, released  under GPLv3
 # uncomment for debugging support:
 echo diskqueue.sh: testing queue disk-only mode
+# uncomment for debugging support:
+#export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
+#export RSYSLOG_DEBUGLOG="log"
 source $srcdir/diag.sh init
 source $srcdir/diag.sh startup diskqueue.conf
 # 20000 messages should be enough - the disk test is slow enough ;)
