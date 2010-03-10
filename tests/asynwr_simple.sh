@@ -11,7 +11,7 @@ source $srcdir/diag.sh init
 source $srcdir/diag.sh startup asynwr_simple.conf
 # send 35555 messages, make sure file size is not a multiple of
 # 10K, the buffer size!
-source $srcdir/diag.sh tcpflood 127.0.0.1 13514 1 35555
+source $srcdir/diag.sh tcpflood -m35555
 source $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
 source $srcdir/diag.sh seq-check 0 35554
 source $srcdir/diag.sh exit

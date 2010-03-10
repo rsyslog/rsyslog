@@ -17,7 +17,7 @@ echo background cp process id is $CPPROCESS
 # now do the usual run
 source $srcdir/diag.sh startup pipeaction.conf
 # 20000 messages should be enough
-#source $srcdir/diag.sh tcpflood 127.0.0.1 13514 1 20000
+#source $srcdir/diag.sh tcpflood -m20000
 source $srcdir/diag.sh injectmsg 0 20000
 source $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
 source $srcdir/diag.sh wait-shutdown

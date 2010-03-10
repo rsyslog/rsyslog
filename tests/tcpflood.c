@@ -2,11 +2,11 @@
  * messages over them. This is used for stress-testing.
  *
  * Params
- * argv[1]	target address
- * argv[2]	target port
- * argv[3]	number of connections
- * argv[4]	number of messages to send (connection is random)
- * argv[5]	initial message number (optional)
+ * -t	target address (default 127.0.0.1)
+ * -p	target port (default 13514)
+ * -c	number of connections (default 1)
+ * -m	number of messages to send (connection is random)
+ * -i	initial message number (optional)
  *
  * Part of the testbench for rsyslog.
  *
@@ -47,10 +47,10 @@
 /* Name of input file, must match $IncludeConfig in test suite .conf files */
 #define NETTEST_INPUT_CONF_FILE "nettest.input.conf" /* name of input file, must match $IncludeConfig in .conf files */
 
-static char *targetIP;
-static int targetPort;
+static char *targetIP = "127.0.0.1";
+static int targetPort = 13514;
 static int numMsgsToSend; /* number of messages to send */
-static int numConnections; /* number of connections to create */
+static int numConnections = 1; /* number of connections to create */
 static int *sockArray;  /* array of sockets to use */
 static int msgNum = 0;	/* initial message number to start with */
 
@@ -259,6 +259,7 @@ tcpSend(char *buf, int lenBuf)
 int main(int argc, char *argv[])
 {
 	int ret = 0;
+	int opt;
 	struct sigaction sigAct;
 	static char buf[1024];
 
@@ -272,18 +273,20 @@ int main(int argc, char *argv[])
 
 	setvbuf(stdout, buf, _IONBF, 48);
 
-	if(argc != 5 && argc != 6) {
-		printf("Invalid call of tcpflood\n");
-		printf("Usage: tcpflood target-host target-port num-connections num-messages [initial msgnum]\n");
-		exit(1);
+	while((opt = getopt(argc, argv, "t:p:c:m:i:")) != -1) {
+		switch (opt) {
+		case 't':	targetIP = optarg;
+				break;
+		case 'p':	targetPort = atoi(optarg);
+				break;
+		case 'c':	numConnections = atoi(optarg);
+				break;
+		case 'm':	numMsgsToSend = atoi(optarg);
+				break;
+		case 'i':	msgNum = atoi(optarg);
+				break;
+		}
 	}
-	
-	targetIP = argv[1];
-	targetPort = atoi(argv[2]);
-	numConnections = atoi(argv[3]);
-	numMsgsToSend = atoi(argv[4]);
-	if(argc == 6)
-		msgNum = atoi(argv[5]);
 
 	if(openConnections() != 0) {
 		printf("error opening connections\n");
