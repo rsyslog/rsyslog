@@ -9,6 +9,10 @@ TESTS = $(TESTRUNS) cfg.sh \
 	manytcp.sh \
 	sndrcv.sh \
 	sndrcv_gzip.sh \
+	asynwr_simple.sh \
+	asynwr_timeout.sh \
+	asynwr_small.sh \
+	asynwr_tinybuf.sh \
 	queue-persist.sh \
 	pipeaction.sh
 	execonlyonce.sh \
@@ -135,6 +139,15 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/sndrcv_gzip_rcvr.conf \
 	   pipeaction.sh \
 	   testsuites/pipeaction.conf \
+	   asynwr_simple.sh \
+	   testsuites/asynwr_simple.conf \
+	   asynwr_timeout.sh \
+	   testsuites/asynwr_timeout.conf \
+	   asynwr_small.sh \
+	   testsuites/asynwr_small.conf \
+	   asynwr_tinybuf.sh \
+	   testsuites/asynwr_tinybuf.conf \
+	   testsuites/small.conf \
 	   proprepltest.sh \
 	   testsuites/rfctag.conf \
 	   testsuites/master.rfctag \

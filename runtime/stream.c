@@ -306,20 +306,22 @@ strmWaitAsyncWriterDone(strm_t *pThis)
 /* close a strm file
  * Note that the bDeleteOnClose flag is honored. If it is set, the file will be
  * deleted after close. This is in support for the qRead thread.
+ * Note: it is valid to call this function when the physical file is closed. If so,
+ * strmCloseFile() will still check if there is any unwritten data inside buffers
+ * (this may be the case) and, if so, will open the file, write the data, and then
+ * close it again (this is done via strmFlush and friends).
  */
 static rsRetVal strmCloseFile(strm_t *pThis)
 {
 	DEFiRet;
 
 	ASSERT(pThis != NULL);
-	ASSERT(pThis->fd != -1);
 	dbgoprint((obj_t*) pThis, "file %d closing\n", pThis->fd);
 
 	if(!pThis->bInClose && pThis->tOperationsMode != STREAMMODE_READ) {
 		pThis->bInClose = 1;
+		strmFlush(pThis);
 		if(pThis->bAsyncWrite) {
-			strmFlush(pThis);
-		} else {
 			strmWaitAsyncWriterDone(pThis);
 		}
 		pThis->bInClose = 0;
@@ -685,8 +687,10 @@ CODESTARTobjDestruct(strm)
 		/* Note: mutex will be unlocked in stopWriter! */
 		d_pthread_mutex_lock(&pThis->mut);
 
-	if(pThis->tOperationsMode != STREAMMODE_READ)
-		strmFlush(pThis);
+	/* strmClose() will handle read-only files as well as need to open
+	 * files that have unwritten buffers. -- rgerhards, 2010-03-09
+	 */
+	strmCloseFile(pThis);
 
 	if(pThis->bAsyncWrite) {
 		stopWriter(pThis);
@@ -705,9 +709,6 @@ CODESTARTobjDestruct(strm)
 	 * IMPORTANT: we MUST free this only AFTER the ansyncWriter has been stopped, else
 	 * we get random errors...
 	 */
-	if(pThis->fd != -1)
-		strmCloseFile(pThis);
-
 	free(pThis->pszDir);
 	free(pThis->pZipBuf);
 	free(pThis->pszCurrFName);
