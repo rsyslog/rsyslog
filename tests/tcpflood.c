@@ -7,6 +7,13 @@
  * -c	number of connections (default 1)
  * -m	number of messages to send (connection is random)
  * -i	initial message number (optional)
+ * -P	PRI to be used for generated messages (default is 167).
+ *      Specify the plain number without leading zeros
+ * -d   amount of extra data to add to message. If present, the
+ *      number itself will be added as third field, and the data
+ *      bytes as forth. Add -r to randomize the amount of extra
+ *      data included in the range 1..(value of -d).
+ * -r	randomize amount of extra data added (-d must be > 0)
  *
  * Part of the testbench for rsyslog.
  *
@@ -47,8 +54,13 @@
 /* Name of input file, must match $IncludeConfig in test suite .conf files */
 #define NETTEST_INPUT_CONF_FILE "nettest.input.conf" /* name of input file, must match $IncludeConfig in .conf files */
 
+#define MAX_EXTRADATA_LEN 100*1024
+
 static char *targetIP = "127.0.0.1";
+static char *msgPRI = "167";
 static int targetPort = 13514;
+static int extraDataLen = 0; /* amount of extra data to add to message */
+static int bRandomizeExtraData = 0; /* randomize amount of extra data added */
 static int numMsgsToSend; /* number of messages to send */
 static int numConnections = 1; /* number of connections to create */
 static int *sockArray;  /* array of sockets to use */
@@ -164,7 +176,9 @@ int sendMessages(void)
 	int socknum;
 	int lenBuf;
 	int lenSend;
-	char buf[2048];
+	int edLen; /* actual extra data length to use */
+	char buf[MAX_EXTRADATA_LEN + 1024];
+	char extraData[MAX_EXTRADATA_LEN + 1];
 
 	srand(time(NULL));	/* seed is good enough for our needs */
 
@@ -177,7 +191,19 @@ int sendMessages(void)
 			socknum = i - (numMsgsToSend - numConnections);
 		else
 			socknum = rand() % numConnections;
-		lenBuf = sprintf(buf, "<167>Mar  1 01:00:00 172.20.245.8 tag msgnum:%8.8d:\n", msgNum);
+		if(extraDataLen == 0) {
+			lenBuf = sprintf(buf, "<%s>Mar  1 01:00:00 172.20.245.8 tag msgnum:%8.8d:\n",
+					       msgPRI, msgNum);
+		} else {
+			if(bRandomizeExtraData)
+				edLen = ((long) rand() + extraDataLen) % extraDataLen + 1;
+			else
+				edLen = extraDataLen;
+			memset(extraData, 'X', edLen);
+			extraData[edLen] = '\0';
+			lenBuf = sprintf(buf, "<%s>Mar  1 01:00:00 172.20.245.8 tag msgnum:%8.8d:%d:%s\n",
+					       msgPRI, msgNum, edLen, extraData);
+		}
 		lenSend = send(sockArray[socknum], buf, lenBuf, 0);
 		if(lenSend != lenBuf) {
 			printf("\r%5.5d\n", i);
@@ -251,9 +277,7 @@ tcpSend(char *buf, int lenBuf)
 }
 
 
-/* Run the test suite. This must be called with exactly one parameter, the
- * name of the test suite. For details, see file header comment at the top
- * of this file.
+/* Run the test.
  * rgerhards, 2009-04-03
  */
 int main(int argc, char *argv[])
@@ -273,7 +297,7 @@ int main(int argc, char *argv[])
 
 	setvbuf(stdout, buf, _IONBF, 48);
 
-	while((opt = getopt(argc, argv, "t:p:c:m:i:")) != -1) {
+	while((opt = getopt(argc, argv, "t:p:c:m:i:P:d:r")) != -1) {
 		switch (opt) {
 		case 't':	targetIP = optarg;
 				break;
@@ -284,6 +308,17 @@ int main(int argc, char *argv[])
 		case 'm':	numMsgsToSend = atoi(optarg);
 				break;
 		case 'i':	msgNum = atoi(optarg);
+				break;
+		case 'P':	msgPRI = optarg;
+				break;
+		case 'd':	extraDataLen = atoi(optarg);
+				if(extraDataLen > MAX_EXTRADATA_LEN) {
+					fprintf(stderr, "-d max is %d!\n",
+						MAX_EXTRADATA_LEN);
+					exit(1);
+				}
+				break;
+		case 'r':	bRandomizeExtraData = 1;
 				break;
 		}
 	}
@@ -298,7 +333,6 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
-	//closeConnections();
 	printf("End of tcpflood Run\n");
 
 	exit(ret);
