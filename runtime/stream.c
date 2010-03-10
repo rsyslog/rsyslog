@@ -619,11 +619,11 @@ static rsRetVal strmConstructFinalize(strm_t *pThis)
 			 * to make sure we can write out everything with a SINGLE api call!
 			 * We add another 128 bytes to take care of the gzip header and "all eventualities".
 			 */
-			CHKmalloc(pThis->pZipBuf = (Bytef*) malloc(sizeof(uchar) * pThis->sIOBufSize + 128));
+			CHKmalloc(pThis->pZipBuf = (Bytef*) malloc(sizeof(uchar) * (pThis->sIOBufSize + 128)));
 		}
 	}
 
-	/* if we are aset to sync, we must obtain a file handle to the directory for fsync() purposes */
+	/* if we are set to sync, we must obtain a file handle to the directory for fsync() purposes */
 	if(pThis->bSync && !pThis->bIsTTY) {
 		pThis->fdDir = open((char*)pThis->pszDir, O_RDONLY | O_CLOEXEC | O_NOCTTY);
 		if(pThis->fdDir == -1) {
@@ -913,7 +913,7 @@ asyncWriterThread(void *pPtr)
 	if(prctl(PR_SET_NAME, "rs:asyn strmwr", 0, 0, 0) != 0) {
 		DBGPRINTF("prctl failed, not setting thread name for '%s'\n", "stream writer");
 	}
-#endif
+#	endif
 
 	while(1) { /* loop broken inside */
 		d_pthread_mutex_lock(&pThis->mut);
@@ -1060,10 +1060,6 @@ finalize_it:
  * add a config switch so that the user can decide the risk he is ready
  * to take, but so far this is not yet implemented (not even requested ;)).
  * rgerhards, 2009-06-04
- * For the time being, we take a very conservative approach and do not run this
- * method multithreaded. This is done in an effort to solve a segfault condition
- * that seems to be related to the zip code. -- rgerhards, 2009-09-22
- * TODO: make multithreaded again!
  */
 static rsRetVal
 doZipWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf)
@@ -1235,6 +1231,11 @@ finalize_it:
  * caller-provided buffer is larger than our one. So instead of optimizing a case
  * which normally does not exist, we expect some degradation in its case but make us
  * perform better in the regular cases. -- rgerhards, 2009-07-07
+ * Note: the pThis->iBufPtr == pThis->sIOBufSize logic below looks a bit like an
+ * on-off error. In fact, it is not, because iBufPtr always points to the next
+ * *free* byte in the buffer. So if it is sIOBufSize - 1, there actually is one
+ * free byte left. This came up during a code walkthrough and was considered
+ * worth nothing. -- rgerhards, 2010-03-10
  */
 static rsRetVal
 strmWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf)
@@ -1359,8 +1360,7 @@ strmSetDir(strm_t *pThis, uchar *pszDir, size_t iLenDir)
 	if(iLenDir < 1)
 		ABORT_FINALIZE(RS_RET_FILE_PREFIX_MISSING);
 
-	if((pThis->pszDir = malloc(sizeof(uchar) * iLenDir + 1)) == NULL)
-		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	CHKmalloc(pThis->pszDir = malloc(sizeof(uchar) * iLenDir + 1));
 
 	memcpy(pThis->pszDir, pszDir, iLenDir + 1); /* always think about the \0! */
 	pThis->lenDir = iLenDir;

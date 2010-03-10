@@ -2,6 +2,7 @@
 #
 # added 2010-03-09 by Rgerhards
 # This file is part of the rsyslog project, released  under GPLv3
+echo ===============================================================================
 echo TEST: \[asynwr_simple.sh\]: simple test for async file writing
 source $srcdir/diag.sh init
 # uncomment for debugging support:

@@ -5,6 +5,7 @@
 # added 2010-03-09 by Rgerhards
 #
 # This file is part of the rsyslog project, released  under GPLv3
+echo ===============================================================================
 echo TEST: \[asynwr_tinybuf.sh\]: test async file writing with 1-byte buffer
 source $srcdir/diag.sh init
 # uncomment for debugging support:

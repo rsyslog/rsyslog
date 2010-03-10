@@ -4,6 +4,7 @@
 #
 # added 2010-03-09 by Rgerhards
 # This file is part of the rsyslog project, released  under GPLv3
+echo ===============================================================================
 echo TEST: \[asynwr_timeout.sh\]: test async file writing timeout writes
 source $srcdir/diag.sh init
 # uncomment for debugging support:
