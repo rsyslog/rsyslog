@@ -47,6 +47,7 @@
 #include <signal.h>
 #include <netinet/in.h>
 #include <getopt.h>
+#include <ctype.h>
 
 #define EXIT_FAILURE 1
 #define INVALID_SOCKET -1
@@ -254,6 +255,62 @@ int openPipe(char *configFile, pid_t *pid, int *pfd)
 }
 
 
+/* This function unescapes a string of testdata. That it, escape sequences
+ * are converted into their one-character equivalent. While doing so, it applies
+ * C-like semantics. This was made necessary for easy integration of control
+ * characters inside test cases.  -- rgerhards, 2009-03-11
+ * Currently supported:
+ * \\	single backslash
+ * \n, \t, \r as in C
+ * \nnn where nnn is a 1 to 3 character octal sequence 
+ * Note that when a problem occurs, the end result is undefined. After all, this
+ * is for a testsuite generatort, it must not be 100% bullet proof (so do not
+ * copy this code into something that must be!). Also note that we do in-memory
+ * unescaping and assume that the string gets shorter but NEVER longer!
+ */
+void unescapeTestdata(char *testdata)
+{
+	char *pDst;
+	char *pSrc;
+	int i;
+	int c;
+
+	pDst = pSrc = testdata;
+	while(*pSrc) {
+		if(*pSrc == '\\') {
+			switch(*++pSrc) {
+			case '\\':	*pDst++ = *pSrc++;
+					break;
+			case 'n':	*pDst++ = '\n';
+					++pSrc;
+					break;
+			case 'r':	*pDst++ = '\r';
+					++pSrc;
+					break;
+			case 't':	*pDst++ = '\t';
+					++pSrc;
+					break;
+			case '0':
+			case '1':
+			case '2':
+			case '3':	c = *pSrc++ - '0';
+					i = 1; /* we already processed one digit! */
+					while(i < 3 && isdigit(*pSrc)) {
+						c = c * 8 + *pSrc++ - '0';
+						++i;
+					}
+					*pDst++ = c;
+					break;
+			default:	break;
+			}
+		} else {
+			*pDst++ = *pSrc++;
+		}
+	}
+	*pDst = '\0';
+}
+
+
 /* Process a specific test case. File name is provided.
  * Needs to return 0 if all is OK, something else otherwise.
  */
@@ -291,6 +348,7 @@ processTestFile(int fd, char *pszFileName)
 
 		testdata[strlen(testdata)-1] = '\0'; /* remove \n */
 		/* now we have the test data to send (we could use function pointers here...) */
+		unescapeTestdata(testdata);
 		if(inputMode == inputUDP) {
 			if(udpSend(testdata, strlen(testdata)) != 0)
 				return(2);
@@ -314,10 +372,13 @@ processTestFile(int fd, char *pszFileName)
 				expected, buf);
 				ret = 1;
 		}
-
+		/* we need to free buffers, as we have potentially modified them! */
+		free(testdata);
+		testdata = NULL;
+		free(expected);
+		expected = NULL;
 	}
 
-	free(testdata);
 	free(expected);
 	fclose(fp);
 	return(ret);
