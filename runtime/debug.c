@@ -952,7 +952,7 @@ void
 dbgprintf(char *fmt, ...)
 {
 	va_list ap;
-	char pszWriteBuf[1024];
+	char pszWriteBuf[20480];
 	size_t lenWriteBuf;
 
 	if(!(Debug && debugging_on))

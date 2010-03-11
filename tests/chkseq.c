@@ -134,5 +134,10 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
+	if(!feof(fp)) {
+		printf("end of processing, but NOT end of file!\n");
+		exit(1);
+	}
+
 	exit(ret);
 }

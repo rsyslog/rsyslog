@@ -16,5 +16,6 @@ source $srcdir/diag.sh startup asynwr_timeout.conf
 source $srcdir/diag.sh tcpflood -m 35555
 sleep 4 # wait for output writer to write and empty buffer
 source $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
+source $srcdir/diag.sh wait-shutdown       # and wait for it to terminate
 source $srcdir/diag.sh seq-check 0 35554
 source $srcdir/diag.sh exit

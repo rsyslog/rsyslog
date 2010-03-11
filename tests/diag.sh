@@ -18,6 +18,7 @@ case $1 in
 		rm -f rsyslogd.started work-*.conf
 		rm -f rsyslogd2.started work-*.conf
 		rm -f work rsyslog.out.log rsyslog.out.log.save # common work files
+		rm -f rsyslog.out.*.log
 		rm -rf test-spool
 		rm -f core.* vgcore.*
 		mkdir test-spool
@@ -25,6 +26,7 @@ case $1 in
    'exit')	rm -f rsyslogd.started work-*.conf diag-common.conf
    		rm -f rsyslogd2.started diag-common2.conf
 		rm -f work rsyslog.out.log rsyslog.out.log.save # common work files
+		rm -f rsyslog.out.*.log
 		rm -rf test-spool
 		;;
    'startup')   # start rsyslogd with default params. $2 is the config file name to use
@@ -34,14 +36,16 @@ case $1 in
 		;;
    'wait-startup') # wait for rsyslogd startup ($2 is the instance)
 		while test ! -f rsyslogd$2.started; do
-			true
+			#true
+			sleep 0.1 # if this is not supported by all platforms, use above!
 		done
 		echo "rsyslogd$2 started with pid " `cat rsyslog$2.pid`
 		;;
    'wait-shutdown')  # actually, we wait for rsyslog.pid to be deleted. $2 is the
    		# instance
 		while test -f rsyslog$2.pid; do
-			true
+			#true
+			sleep 0.1 # if this is not supported by all platforms, use above!
 		done
 		;;
    'wait-queueempty') # wait for main message queue to be empty. $2 is the instance.
@@ -85,6 +89,7 @@ case $1 in
 		;;
    'seq-check') # do the usual sequence check to see if everything was properly received. $2 is the instance.
 		rm -f work
+		cp rsyslog.out.log work-presort
 		sort < rsyslog.out.log > work
 		# $4... are just to have the abilit to pass in more options...
 		./chkseq -fwork -v -s$2 -e$3 $4 $5 $6 $7
@@ -100,6 +105,18 @@ case $1 in
 		sort < rsyslog2.out.log > work2
 		# $4... are just to have the abilit to pass in more options...
 		./chkseq -fwork2 -v -s$2 -e$3 $4 $5 $6 $7
+		if [ "$?" -ne "0" ]; then
+		  echo "sequence error detected"
+		  exit 1
+		fi
+		;;
+   'gzip-seq-check') # do the usual sequence check, but for gzip files
+		rm -f work
+		ls -l rsyslog.out.log
+		gunzip < rsyslog.out.log | sort > work
+		ls -l work
+		# $4... are just to have the abilit to pass in more options...
+		./chkseq -fwork -v -s$2 -e$3 $4 $5 $6 $7
 		if [ "$?" -ne "0" ]; then
 		  echo "sequence error detected"
 		  exit 1

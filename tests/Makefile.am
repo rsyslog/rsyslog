@@ -13,6 +13,9 @@ TESTS = $(TESTRUNS) cfg.sh \
 	asynwr_timeout.sh \
 	asynwr_small.sh \
 	asynwr_tinybuf.sh \
+	asynwr_large.sh \
+	gzipwr_large.sh \
+	gzipwr_large_dynfile.sh \
 	queue-persist.sh \
 	pipeaction.sh
 	execonlyonce.sh \
@@ -147,6 +150,12 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/asynwr_small.conf \
 	   asynwr_tinybuf.sh \
 	   testsuites/asynwr_tinybuf.conf \
+	   asynwr_large.sh \
+	   testsuites/asynwr_large.conf \
+	   gzipwr_large.sh \
+	   testsuites/gzipwr_large.conf \
+	   gzipwr_large_dynfile.sh \
+	   testsuites/gzipwr_large_dynfile.conf \
 	   testsuites/small.conf \
 	   proprepltest.sh \
 	   testsuites/rfctag.conf \

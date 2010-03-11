@@ -14,6 +14,9 @@
  *      bytes as forth. Add -r to randomize the amount of extra
  *      data included in the range 1..(value of -d).
  * -r	randomize amount of extra data added (-d must be > 0)
+ * -f	support for testing dynafiles. If given, include a dynafile ID
+ *      in the range 0..(f-1) as the SECOND field, shifting all field values
+ *      one field to the right. Zero (default) disables this functionality.
  *
  * Part of the testbench for rsyslog.
  *
@@ -59,6 +62,7 @@
 static char *targetIP = "127.0.0.1";
 static char *msgPRI = "167";
 static int targetPort = 13514;
+static int dynFileIDs = 0;
 static int extraDataLen = 0; /* amount of extra data to add to message */
 static int bRandomizeExtraData = 0; /* randomize amount of extra data added */
 static int numMsgsToSend; /* number of messages to send */
@@ -177,6 +181,7 @@ int sendMessages(void)
 	int lenBuf;
 	int lenSend;
 	int edLen; /* actual extra data length to use */
+	char dynFileIDBuf[128] = "";
 	char buf[MAX_EXTRADATA_LEN + 1024];
 	char extraData[MAX_EXTRADATA_LEN + 1];
 
@@ -191,9 +196,12 @@ int sendMessages(void)
 			socknum = i - (numMsgsToSend - numConnections);
 		else
 			socknum = rand() % numConnections;
+		if(dynFileIDs > 0) {
+			sprintf(dynFileIDBuf, "%d:", rand() % dynFileIDs);
+		}
 		if(extraDataLen == 0) {
-			lenBuf = sprintf(buf, "<%s>Mar  1 01:00:00 172.20.245.8 tag msgnum:%8.8d:\n",
-					       msgPRI, msgNum);
+			lenBuf = sprintf(buf, "<%s>Mar  1 01:00:00 172.20.245.8 tag msgnum:%s%8.8d:\n",
+					       msgPRI, dynFileIDBuf, msgNum);
 		} else {
 			if(bRandomizeExtraData)
 				edLen = ((long) rand() + extraDataLen) % extraDataLen + 1;
@@ -201,8 +209,8 @@ int sendMessages(void)
 				edLen = extraDataLen;
 			memset(extraData, 'X', edLen);
 			extraData[edLen] = '\0';
-			lenBuf = sprintf(buf, "<%s>Mar  1 01:00:00 172.20.245.8 tag msgnum:%8.8d:%d:%s\n",
-					       msgPRI, msgNum, edLen, extraData);
+			lenBuf = sprintf(buf, "<%s>Mar  1 01:00:00 172.20.245.8 tag msgnum:%s%8.8d:%d:%s\n",
+					       msgPRI, dynFileIDBuf, msgNum, edLen, extraData);
 		}
 		lenSend = send(sockArray[socknum], buf, lenBuf, 0);
 		if(lenSend != lenBuf) {
@@ -297,7 +305,7 @@ int main(int argc, char *argv[])
 
 	setvbuf(stdout, buf, _IONBF, 48);
 
-	while((opt = getopt(argc, argv, "t:p:c:m:i:P:d:r")) != -1) {
+	while((opt = getopt(argc, argv, "f:t:p:c:m:i:P:d:r")) != -1) {
 		switch (opt) {
 		case 't':	targetIP = optarg;
 				break;
@@ -319,6 +327,11 @@ int main(int argc, char *argv[])
 				}
 				break;
 		case 'r':	bRandomizeExtraData = 1;
+				break;
+		case 'f':	dynFileIDs = atoi(optarg);
+				break;
+		default:	printf("invalid option '%c' or value missing - terminating...\n", opt);
+				exit (1);
 				break;
 		}
 	}
