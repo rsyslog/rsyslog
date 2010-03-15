@@ -157,7 +157,6 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/gzipwr_large.conf \
 	   gzipwr_large_dynfile.sh \
 	   testsuites/gzipwr_large_dynfile.conf \
-	   testsuites/small.conf \
 	   proprepltest.sh \
 	   testsuites/rfctag.conf \
 	   testsuites/master.rfctag \
