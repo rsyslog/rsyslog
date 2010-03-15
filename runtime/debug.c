@@ -961,6 +961,15 @@ dbgprintf(char *fmt, ...)
 	va_start(ap, fmt);
 	lenWriteBuf = vsnprintf(pszWriteBuf, sizeof(pszWriteBuf), fmt, ap);
 	va_end(ap);
+	if(lenWriteBuf >= sizeof(pszWriteBuf)) {
+		/* prevent buffer overrruns and garbagge display */
+		pszWriteBuf[sizeof(pszWriteBuf) - 5] = '.';
+		pszWriteBuf[sizeof(pszWriteBuf) - 4] = '.';
+		pszWriteBuf[sizeof(pszWriteBuf) - 3] = '.';
+		pszWriteBuf[sizeof(pszWriteBuf) - 2] = '\n';
+		pszWriteBuf[sizeof(pszWriteBuf) - 1] = '\0';
+		lenWriteBuf = sizeof(pszWriteBuf);
+	}
 	dbgprint(NULL, pszWriteBuf, lenWriteBuf);
 }
 
