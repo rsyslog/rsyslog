@@ -20,6 +20,8 @@ Version 4.6.2  [v4-stable] (rgerhards), 2010-03-??
   in proper retries.
 - bugfix: $omfileFlushOnTXEnd was turned on when set to off and vice
   versa due to an invalid check
+- bugfix: recent patch to fix small memory leak could cause invalid free.
+  This could only happen during config file parsing.
 - bugfix(minor): handling of extremely large strings in dbgprintf() fixed
   Previously, it could lead to garbagge output and, in extreme cases, also
   to segfaults. Note: this was a problem only when debug output was 
