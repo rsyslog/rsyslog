@@ -922,7 +922,7 @@ void
 dbgoprint(obj_t *pObj, char *fmt, ...)
 {
 	va_list ap;
-	char pszWriteBuf[1024];
+	char pszWriteBuf[32*1024];
 	size_t lenWriteBuf;
 
 	if(!(Debug && debugging_on))
