@@ -325,8 +325,13 @@ static rsRetVal strmCloseFile(strm_t *pThis)
 		}
 	}
 
-	close(pThis->fd);
-	pThis->fd = -1;
+	/* the file may already be closed (or never have opened), so guard
+	 * against this. -- rgerhards, 2010-03-19
+	 */
+	if(pThis->fd != -1) {
+		close(pThis->fd);
+		pThis->fd = -1;
+	}
 
 	if(pThis->fdDir != -1) {
 		/* close associated directory handle, if it is open */
