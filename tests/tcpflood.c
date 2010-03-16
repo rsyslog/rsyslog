@@ -4,6 +4,7 @@
  * Params
  * -t	target address (default 127.0.0.1)
  * -p	target port (default 13514)
+ * -n	number of target ports (targets are in range -p..(-p+-n-1)
  * -c	number of connections (default 1)
  * -m	number of messages to send (connection is random)
  * -i	initial message number (optional)
@@ -62,6 +63,7 @@
 static char *targetIP = "127.0.0.1";
 static char *msgPRI = "167";
 static int targetPort = 13514;
+static int numTargetPorts = 1;
 static int dynFileIDs = 0;
 static int extraDataLen = 0; /* amount of extra data to add to message */
 static int bRandomizeExtraData = 0; /* randomize amount of extra data added */
@@ -77,16 +79,25 @@ int openConn(int *fd)
 {
 	int sock;
 	struct sockaddr_in addr;
+	int port;
 	int retries = 0;
+	int rnd;
 
 	if((sock=socket(AF_INET, SOCK_STREAM, 0))==-1) {
 		perror("socket()");
 		return(1);
 	}
 
+	/* randomize port if required */
+	if(numTargetPorts > 1) {
+		rnd = rand(); /* easier if we need value for debug messages ;) */
+		port = targetPort + (rnd % numTargetPorts);
+	} else {
+		port = targetPort;
+	}
 	memset((char *) &addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
-	addr.sin_port = htons(targetPort);
+	addr.sin_port = htons(port);
 	if(inet_aton(targetIP, &addr.sin_addr)==0) {
 		fprintf(stderr, "inet_aton() failed\n");
 		return(1);
@@ -185,10 +196,8 @@ int sendMessages(void)
 	char buf[MAX_EXTRADATA_LEN + 1024];
 	char extraData[MAX_EXTRADATA_LEN + 1];
 
-	srand(time(NULL));	/* seed is good enough for our needs */
-
 	printf("Sending %d messages.\n", numMsgsToSend);
-	printf("\r%5.5d messages sent", 0);
+	printf("\r%8.8d messages sent", 0);
 	for(i = 0 ; i < numMsgsToSend ; ++i) {
 		if(i < numConnections)
 			socknum = i;
@@ -222,11 +231,11 @@ int sendMessages(void)
 			return(1);
 		}
 		if(i % 100 == 0) {
-			printf("\r%5.5d", i);
+			printf("\r%8.8d", i);
 		}
 		++msgNum;
 	}
-	printf("\r%5.5d messages sent\n", i);
+	printf("\r%8.8d messages sent\n", i);
 
 	return 0;
 }
@@ -295,6 +304,8 @@ int main(int argc, char *argv[])
 	struct sigaction sigAct;
 	static char buf[1024];
 
+	srand(time(NULL));	/* seed is good enough for our needs */
+
 	/* on Solaris, we do not HAVE MSG_NOSIGNAL, so for this reason
 	 * we block SIGPIPE (not an issue for this program)
 	 */
@@ -305,11 +316,13 @@ int main(int argc, char *argv[])
 
 	setvbuf(stdout, buf, _IONBF, 48);
 
-	while((opt = getopt(argc, argv, "f:t:p:c:m:i:P:d:r")) != -1) {
+	while((opt = getopt(argc, argv, "f:t:p:c:m:i:P:d:n:r")) != -1) {
 		switch (opt) {
 		case 't':	targetIP = optarg;
 				break;
 		case 'p':	targetPort = atoi(optarg);
+				break;
+		case 'n':	numTargetPorts = atoi(optarg);
 				break;
 		case 'c':	numConnections = atoi(optarg);
 				break;
