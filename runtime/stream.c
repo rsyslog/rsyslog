@@ -220,7 +220,7 @@ doPhysOpen(strm_t *pThis)
 		char errStr[1024];
 		int err = errno;
 		rs_strerror_r(err, errStr, sizeof(errStr));
-		dbgoprint((obj_t*) pThis, "open error %d, file '%s': %s\n", errno, pThis->pszCurrFName, errStr);
+		DBGOPRINT((obj_t*) pThis, "open error %d, file '%s': %s\n", errno, pThis->pszCurrFName, errStr);
 		if(err == ENOENT)
 			ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
 		else
@@ -278,7 +278,7 @@ static rsRetVal strmOpenFile(strm_t *pThis)
 		pThis->iCurrOffs = offset;
 	}
 
-	dbgoprint((obj_t*) pThis, "opened file '%s' for %s as %d\n", pThis->pszCurrFName,
+	DBGOPRINT((obj_t*) pThis, "opened file '%s' for %s as %d\n", pThis->pszCurrFName,
 		  (pThis->tOperationsMode == STREAMMODE_READ) ? "READ" : "WRITE", pThis->fd);
 
 finalize_it:
@@ -316,7 +316,7 @@ static rsRetVal strmCloseFile(strm_t *pThis)
 	DEFiRet;
 
 	ASSERT(pThis != NULL);
-	dbgoprint((obj_t*) pThis, "file %d closing\n", pThis->fd);
+	DBGOPRINT((obj_t*) pThis, "file %d closing\n", pThis->fd);
 
 	if(pThis->tOperationsMode != STREAMMODE_READ) {
 		strmFlush(pThis);
@@ -441,7 +441,7 @@ strmHandleEOF(strm_t *pThis)
 		case STREAMTYPE_FILE_CIRCULAR:
 			/* we have multiple files and need to switch to the next one */
 			/* TODO: think about emulating EOF in this case (not yet needed) */
-			dbgoprint((obj_t*) pThis, "file %d EOF\n", pThis->fd);
+			DBGOPRINT((obj_t*) pThis, "file %d EOF\n", pThis->fd);
 			CHKiRet(strmNextFile(pThis));
 			break;
 		case STREAMTYPE_FILE_MONITOR:
@@ -473,7 +473,7 @@ strmReadBuf(strm_t *pThis)
 		 */
 		CHKiRet(strmOpenFile(pThis));
 		iLenRead = read(pThis->fd, pThis->pIOBuf, pThis->sIOBufSize);
-		dbgoprint((obj_t*) pThis, "file %d read %ld bytes\n", pThis->fd, iLenRead);
+		DBGOPRINT((obj_t*) pThis, "file %d read %ld bytes\n", pThis->fd, iLenRead);
 		if(iLenRead == 0) {
 			CHKiRet(strmHandleEOF(pThis));
 		} else if(iLenRead < 0)
@@ -505,7 +505,7 @@ static rsRetVal strmReadChar(strm_t *pThis, uchar *pC)
 	ASSERT(pThis != NULL);
 	ASSERT(pC != NULL);
 
-	/* DEV debug only: dbgoprint((obj_t*) pThis, "strmRead index %d, max %d\n", pThis->iBufPtr, pThis->iBufPtrMax); */
+	/* DEV debug only: DBGOPRINT((obj_t*) pThis, "strmRead index %d, max %d\n", pThis->iBufPtr, pThis->iBufPtrMax); */
 	if(pThis->iUngetC != -1) {	/* do we have an "unread" char that we need to provide? */
 		*pC = pThis->iUngetC;
 		++pThis->iCurrOffs; /* one more octet read */
@@ -731,7 +731,7 @@ static rsRetVal strmCheckNextOutputFile(strm_t *pThis)
 	strmWaitAsyncWriterDone(pThis);
 
 	if(pThis->iCurrOffs >= pThis->iMaxFileSize) {
-		dbgoprint((obj_t*) pThis, "max file size %ld reached for %d, now %ld - starting new file\n",
+		DBGOPRINT((obj_t*) pThis, "max file size %ld reached for %d, now %ld - starting new file\n",
 			  (long) pThis->iMaxFileSize, pThis->fd, (long) pThis->iCurrOffs);
 		CHKiRet(strmNextFile(pThis));
 	}
@@ -811,7 +811,7 @@ doWriteCall(strm_t *pThis, uchar *pBuf, size_t *pLenBuf)
 		pWriteBuf += iWritten;
 	} while(lenBuf > 0);	/* Warning: do..while()! */
 
-	dbgoprint((obj_t*) pThis, "file %d write wrote %d bytes\n", pThis->fd, (int) iWritten);
+	DBGOPRINT((obj_t*) pThis, "file %d write wrote %d bytes\n", pThis->fd, (int) iWritten);
 
 finalize_it:
 	*pLenBuf = iTotalWritten;
@@ -1130,7 +1130,7 @@ strmFlush(strm_t *pThis)
 	DEFiRet;
 
 	ASSERT(pThis != NULL);
-	dbgoprint((obj_t*) pThis, "file %d flush, buflen %ld\n", pThis->fd, (long) pThis->iBufPtr);
+	DBGOPRINT((obj_t*) pThis, "file %d flush, buflen %ld\n", pThis->fd, (long) pThis->iBufPtr);
 
 	if(pThis->tOperationsMode != STREAMMODE_READ && pThis->iBufPtr > 0) {
 		iRet = strmSchedWrite(pThis, pThis->pIOBuf, pThis->iBufPtr);
@@ -1155,7 +1155,7 @@ static rsRetVal strmSeek(strm_t *pThis, off_t offs)
 	else
 		strmFlush(pThis);
 	int i;
-	dbgoprint((obj_t*) pThis, "file %d seek, pos %ld\n", pThis->fd, (long) offs);
+	DBGOPRINT((obj_t*) pThis, "file %d seek, pos %ld\n", pThis->fd, (long) offs);
 	i = lseek(pThis->fd, offs, SEEK_SET); // TODO: check error!
 	pThis->iCurrOffs = offs; /* we are now at *this* offset */
 	pThis->iBufPtr = 0; /* buffer invalidated */
