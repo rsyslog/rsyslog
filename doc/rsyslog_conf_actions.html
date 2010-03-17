@@ -37,8 +37,15 @@ compared to the otherwise-equal config directives below:</p>
 *.=crit /var/log/critmsgs</b></code></p>
 <p>&nbsp;</p>
 <h3>Regular File</h3>
-<p>Typically messages are logged to real files. The file has to
-be specified with full pathname, beginning with a slash "/''.<br>
+<p>Typically messages are logged to real files. The file usually is
+specified by full pathname, beginning with a slash "/".
+Starting with version 4.6.2 and 5.4.1 (previous v5 version do NOT support this)
+relative file names can also be specified. To do so, these must begin with a
+dot. For example, use "./file-in-current-dir.log" to specify a file in the
+current directory. Please note that rsyslogd usually changes its working 
+directory to the root, so relative file names must be tested with care (they
+were introduced primarily as a debugging vehicle, but may have useful other applications
+as well).<br>
 <br>
 <br>
 You may prefix each entry with the minus "-'' sign to omit syncing the

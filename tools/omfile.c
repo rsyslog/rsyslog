@@ -633,7 +633,7 @@ ENDdoAction
 
 BEGINparseSelectorAct
 CODESTARTparseSelectorAct
-	if(!(*p == '$' || *p == '?' || *p == '/' || *p == '-'))
+	if(!(*p == '$' || *p == '?' || *p == '/' || *p == '.' || *p == '-'))
 		ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
 
 	CHKiRet(createInstance(&pData));
@@ -683,6 +683,7 @@ CODESTARTparseSelectorAct
 	 *           need high-performance pipes at a later stage (unlikely). -- rgerhards, 2010-02-28
 	 */
 	case '/':
+	case '.':
 		CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		/* we now have *almost* the same semantics for files and pipes, but we still need
 		 * to know we deal with a pipe, because we must do non-blocking opens in that case
