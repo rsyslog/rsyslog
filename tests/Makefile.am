@@ -14,6 +14,7 @@ TESTS = $(TESTRUNS) cfg.sh \
 	asynwr_small.sh \
 	asynwr_tinybuf.sh \
 	asynwr_large.sh \
+	asynwr_deadlock.sh \
 	gzipwr_large.sh \
 	gzipwr_large_dynfile.sh \
 	complex1.sh \
@@ -154,6 +155,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/asynwr_tinybuf.conf \
 	   asynwr_large.sh \
 	   testsuites/asynwr_large.conf \
+	   asynwr_deadlock.sh \
+	   testsuites/asynwr_deadlock.conf \
 	   gzipwr_large.sh \
 	   testsuites/gzipwr_large.conf \
 	   gzipwr_large_dynfile.sh \
