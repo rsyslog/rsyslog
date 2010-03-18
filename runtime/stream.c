@@ -316,7 +316,8 @@ static rsRetVal strmCloseFile(strm_t *pThis)
 	DEFiRet;
 
 	ASSERT(pThis != NULL);
-	DBGOPRINT((obj_t*) pThis, "file %d closing\n", pThis->fd);
+	DBGOPRINT((obj_t*) pThis, "file %d(%s) closing\n", pThis->fd,
+		  (pThis->pszFName == NULL) ? "N/A" : (char*)pThis->pszFName);
 
 	if(pThis->tOperationsMode != STREAMMODE_READ) {
 		strmFlush(pThis);
@@ -929,6 +930,7 @@ asyncWriterThread(void *pPtr)
 
 	while(1) { /* loop broken inside */
 		d_pthread_mutex_lock(&pThis->mut);
+dbgprintf("XXX: asyncWriterThread iterating %s\n", pThis->pszFName);
 		while(pThis->iCnt == 0) {
 			if(pThis->bStopWriter) {
 				pthread_cond_broadcast(&pThis->isEmpty);
@@ -944,6 +946,7 @@ asyncWriterThread(void *pPtr)
 			bTimedOut = 0;
 			timeoutComp(&t, pThis->iFlushInterval * 2000); /* *1000 millisconds */
 			if(pThis->bDoTimedWait) {
+dbgprintf("asyncWriter thread going to timeout sleep\n");
 				if(pthread_cond_timedwait(&pThis->notEmpty, &pThis->mut, &t) != 0) {
 					int err = errno;
 					if(err == ETIMEDOUT) {
@@ -957,13 +960,16 @@ asyncWriterThread(void *pPtr)
 					}
 				}
 			} else {
+dbgprintf("asyncWriter thread going to eternal sleep\n");
 				d_pthread_cond_wait(&pThis->notEmpty, &pThis->mut);
 			}
+dbgprintf("asyncWriter woke up\n");
 		}
 
 		bTimedOut = 0; /* we may have timed out, but there *is* work to do... */
 
 		iDeq = pThis->iDeq++ % STREAM_ASYNC_NUMBUFS;
+dbgprintf("asyncWriter writes data\n");
 		doWriteInternal(pThis, pThis->asyncBuf[iDeq].pBuf, pThis->asyncBuf[iDeq].lenBuf);
 		// TODO: error check????? 2009-07-06
 
@@ -1135,7 +1141,10 @@ strmFlush(strm_t *pThis)
 	DEFiRet;
 
 	ASSERT(pThis != NULL);
-	DBGOPRINT((obj_t*) pThis, "file %d flush, buflen %ld\n", pThis->fd, (long) pThis->iBufPtr);
+	DBGOPRINT((obj_t*) pThis, "file %d(%s) flush, buflen %ld\n", pThis->fd, pThis->pszFName, (long) pThis->iBufPtr);
+	DBGOPRINT((obj_t*) pThis, "file %d(%s) flush, buflen %ld%s\n", pThis->fd,
+		  (pThis->pszFName == NULL) ? "N/A" : (char*)pThis->pszFName,
+		  (long) pThis->iBufPtr, (pThis->iBufPtr == 0) ? " (no need to flush)" : "");
 
 	if(pThis->tOperationsMode != STREAMMODE_READ && pThis->iBufPtr > 0) {
 		iRet = strmSchedWrite(pThis, pThis->pIOBuf, pThis->iBufPtr);

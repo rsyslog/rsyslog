@@ -8,8 +8,8 @@ echo ===========================================================================
 echo TEST: \[asynwr_deadlock.sh\]: a case known to have caused a deadlock in the past
 source $srcdir/diag.sh init
 # uncomment for debugging support:
-export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
-export RSYSLOG_DEBUGLOG="log"
+#export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
+#export RSYSLOG_DEBUGLOG="log"
 source $srcdir/diag.sh startup asynwr_deadlock.conf
 # just send one message
 source $srcdir/diag.sh tcpflood -m1

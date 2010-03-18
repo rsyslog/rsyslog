@@ -20,10 +20,14 @@
 # cirumstances. As far as the analysis goes, the following need to happen:
 # 1. buffers on that file are being flushed
 # 2. no new data arrives
-# 3. the inactivity timeout has not yet happend
+# 3. the inactivity timeout has not yet expired
 # 4. *then* (and only then) the stream is closed or destructed
-# In that, 1 to 3 are prequisites for the deadlock which will happen in 4. In order
-# to create this case reliably, I have used the "$OMFileFlushOnTXEnd on" directive
+# In that, 1 to 4 are prequisites for the deadlock which will happen in 4. However,
+# for it to happen, we also need the right "timing". There is a race between the
+# main thread and the async writer thread. The deadlock will only happen under
+# the "right" circumstances, which basically means it will not happen always.
+# In order to create this case as reliable as possible, I have used
+# the "$OMFileFlushOnTXEnd on" directive
 # inside my test case. It makes sure that #1 above happens. The test uses a dynafile
 # cache size of 4, and the load generator generates data for 5 different dynafiles.
 # So over time, we will hit a spot where 4 dynafiles are open and the 5th file name
@@ -50,8 +54,8 @@ echo ===========================================================================
 echo TEST: \[asynwr_deadlock2.sh\]: a case known to have caused a deadlock in the past
 source $srcdir/diag.sh init
 # uncomment for debugging support:
-export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
-export RSYSLOG_DEBUGLOG="log"
+#export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
+#export RSYSLOG_DEBUGLOG="log"
 source $srcdir/diag.sh startup asynwr_deadlock2.conf
 # send 20000 messages, each close to 2K (non-randomized!), so that we can fill
 # the buffers and hopefully run into the "deadlock".
@@ -59,6 +63,6 @@ source $srcdir/diag.sh tcpflood -m20000 -d1800 -P129 -i1 -f5
 # sleep is important! need to make sure the instance is inactive
 source $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
 source $srcdir/diag.sh wait-shutdown       # and wait for it to terminate
-zcat rsyslog.out.*.log > rsyslog.out.log
+cat rsyslog.out.*.log > rsyslog.out.log
 source $srcdir/diag.sh seq-check 1 20000 -E
 source $srcdir/diag.sh exit
