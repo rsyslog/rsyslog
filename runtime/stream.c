@@ -863,7 +863,8 @@ doAsyncWriteInternal(strm_t *pThis, size_t lenBuf)
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, strm);
 
-	while(pThis->iCnt >= STREAM_ASYNC_NUMBUFS)
+	/* the -1 below is important, because we need one buffer for the main thread! */
+	while(pThis->iCnt >= STREAM_ASYNC_NUMBUFS - 1)
 		d_pthread_cond_wait(&pThis->notFull, &pThis->mut);
 
 	pThis->asyncBuf[pThis->iEnq % STREAM_ASYNC_NUMBUFS].lenBuf = lenBuf;
