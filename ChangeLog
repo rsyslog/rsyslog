@@ -6,6 +6,9 @@ Version 4.6.2  [v4-stable] (rgerhards), 2010-03-??
   to ease migration from syslog-ng. See property replacer doc for
   details. [backport from 5.5.3 because urgently needed by some]
 - improved testbench
+- bugfix: improper synchronization when "$OMFileFlushOnTXEnd on" was used
+  Internal data structures were not properly protected due to missing
+  mutex calls.
 - bugfix: potential data loss during file stream shutdown
 - bugfix: potential problems during file stream shutdown
   The shutdown/close sequence was not clean, what potentially (but
