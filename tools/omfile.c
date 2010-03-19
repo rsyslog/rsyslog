@@ -413,7 +413,7 @@ prepareFile(instanceData *pData, uchar *newFileName)
 	 * async processing, which is a real performance waste if we do not do buffered
 	 * writes! -- rgerhards, 2009-07-06
 	 */
-	if(pData->bFlushOnTXEnd)
+	if(!pData->bFlushOnTXEnd)
 		CHKiRet(strm.SetiFlushInterval(pData->pStrm, pData->iFlushInterval));
 	if(pData->pszSizeLimitCmd != NULL)
 		CHKiRet(strm.SetpszSizeLimitCmd(pData->pStrm, ustrdup(pData->pszSizeLimitCmd)));
