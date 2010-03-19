@@ -71,6 +71,7 @@ static int numMsgsToSend; /* number of messages to send */
 static int numConnections = 1; /* number of connections to create */
 static int *sockArray;  /* array of sockets to use */
 static int msgNum = 0;	/* initial message number to start with */
+static int bShowProgress = 1; /* show progress messages */
 
 
 /* open a single tcp connection
@@ -130,11 +131,13 @@ int openConnections(void)
 	char msgBuf[128];
 	size_t lenMsg;
 
-	write(1, "      open connections", sizeof("      open connections")-1);
+	if(bShowProgress)
+		write(1, "      open connections", sizeof("      open connections")-1);
 	sockArray = calloc(numConnections, sizeof(int));
 	for(i = 0 ; i < numConnections ; ++i) {
 		if(i % 10 == 0) {
-			printf("\r%5.5d", i);
+			if(bShowProgress)
+				printf("\r%5.5d", i);
 			//lenMsg = sprintf(msgBuf, "\r%5.5d", i);
 			//write(1, msgBuf, lenMsg);
 		}
@@ -163,11 +166,14 @@ void closeConnections(void)
 	char msgBuf[128];
 	size_t lenMsg;
 
-	write(1, "      close connections", sizeof("      close connections")-1);
+	if(bShowProgress)
+		write(1, "      close connections", sizeof("      close connections")-1);
 	for(i = 0 ; i < numConnections ; ++i) {
 		if(i % 10 == 0) {
-			lenMsg = sprintf(msgBuf, "\r%5.5d", i);
-			write(1, msgBuf, lenMsg);
+			if(bShowProgress) {
+				lenMsg = sprintf(msgBuf, "\r%5.5d", i);
+				write(1, msgBuf, lenMsg);
+			}
 		}
 		close(sockArray[i]);
 	}
@@ -197,7 +203,8 @@ int sendMessages(void)
 	char extraData[MAX_EXTRADATA_LEN + 1];
 
 	printf("Sending %d messages.\n", numMsgsToSend);
-	printf("\r%8.8d messages sent", 0);
+	if(bShowProgress)
+		printf("\r%8.8d messages sent", 0);
 	for(i = 0 ; i < numMsgsToSend ; ++i) {
 		if(i < numConnections)
 			socknum = i;
@@ -231,7 +238,8 @@ int sendMessages(void)
 			return(1);
 		}
 		if(i % 100 == 0) {
-			printf("\r%8.8d", i);
+			if(bShowProgress)
+				printf("\r%8.8d", i);
 		}
 		++msgNum;
 	}
@@ -315,6 +323,9 @@ int main(int argc, char *argv[])
 	sigaction(SIGPIPE, &sigAct, NULL);
 
 	setvbuf(stdout, buf, _IONBF, 48);
+	
+	if(!isatty(1))
+		bShowProgress = 0;
 
 	while((opt = getopt(argc, argv, "f:t:p:c:m:i:P:d:n:r")) != -1) {
 		switch (opt) {
