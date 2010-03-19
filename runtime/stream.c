@@ -163,7 +163,7 @@ doSizeLimitProcessing(strm_t *pThis)
 	ASSERT(pThis->fd != -1);
 
 	if(pThis->iCurrOffs >= pThis->iSizeLimit) {
-		/* strmClosefile() destroys the current file name, so we
+		/* strmCloseFile() destroys the current file name, so we
 		 * need to preserve it.
 		 */
 		CHKmalloc(pszCurrFName = ustrdup(pThis->pszCurrFName));
@@ -296,8 +296,10 @@ strmWaitAsyncWriterDone(strm_t *pThis)
 	BEGINfunc
 	if(pThis->bAsyncWrite) {
 		/* awake writer thread and make it write out everything */
-		pthread_cond_signal(&pThis->notEmpty);
-		d_pthread_cond_wait(&pThis->isEmpty, &pThis->mut);
+		while(pThis->iCnt > 0) {
+			pthread_cond_signal(&pThis->notEmpty);
+			d_pthread_cond_wait(&pThis->isEmpty, &pThis->mut);
+		}
 	}
 	ENDfunc
 }
@@ -944,7 +946,7 @@ dbgprintf("XXX: asyncWriterThread iterating %s\n", pThis->pszFName);
 				continue; /* now we should have data */
 			}
 			bTimedOut = 0;
-			timeoutComp(&t, pThis->iFlushInterval * 2000); /* *1000 millisconds */
+			timeoutComp(&t, pThis->iFlushInterval * 2000); /* *1000 millisconds */ // TODO: check the 2000?!?
 			if(pThis->bDoTimedWait) {
 dbgprintf("asyncWriter thread going to timeout sleep\n");
 				if(pthread_cond_timedwait(&pThis->notEmpty, &pThis->mut, &t) != 0) {
