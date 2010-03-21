@@ -62,6 +62,7 @@ static char *testSuite = NULL; /* name of current test suite */
 static int iPort = 12514; /* port which shall be used for sending data */
 static char* pszCustomConf = NULL;	/* custom config file, use -c conf to specify */
 static int verbose = 0;	/* verbose output? -v option */
+static int useDebugEnv = 0; /* activate debugging environment (for rsyslog debug log)? */
 
 /* these two are quick hacks... */
 int iFailed = 0;
@@ -218,10 +219,8 @@ int openPipe(char *configFile, pid_t *pid, int *pfd)
 			   "-M../runtime/.libs:../.libs", NULL };
 	char confFile[1024];
 	char *newenviron[] = { NULL };
-	/* debug aide...
-	char *newenviron[] = { "RSYSLOG_DEBUG=debug nostdout",
+	char *newenvironDeb[] = { "RSYSLOG_DEBUG=debug nostdout",
 				"RSYSLOG_DEBUGLOG=log", NULL };
-	*/
 
 	sprintf(confFile, "-f%s/testsuites/%s.conf", srcdir,
 		(pszCustomConf == NULL) ? configFile : pszCustomConf);
@@ -244,7 +243,7 @@ int openPipe(char *configFile, pid_t *pid, int *pfd)
 		close(pipefd[1]);
 		close(pipefd[0]);
 		fclose(stdin);
-		execve("../tools/rsyslogd", newargv, newenviron);
+		execve("../tools/rsyslogd", newargv, (useDebugEnv) ? newenvironDeb : newenviron);
 	} else {            
 		close(pipefd[1]);
 		*pid = cpid;
@@ -460,10 +459,13 @@ int main(int argc, char *argv[])
 	char buf[4096];
 	char testcases[4096];
 
-	while((opt = getopt(argc, argv, "c:i:p:t:v")) != EOF) {
+	while((opt = getopt(argc, argv, "dc:i:p:t:v")) != EOF) {
 		switch((char)opt) {
                 case 'c':
 			pszCustomConf = optarg;
+			break;
+                case 'd': 
+			useDebugEnv = 1;
 			break;
                 case 'i':
 			if(!strcmp(optarg, "udp"))
@@ -485,7 +487,7 @@ int main(int argc, char *argv[])
 			verbose = 1;
 			break;
 		default:printf("Invalid call of nettester, invalid option '%c'.\n", opt);
-			printf("Usage: nettester -ttestsuite-name -iudp|tcp [-pport] [-ccustomConfFile] \n");
+			printf("Usage: nettester -d -ttestsuite-name -iudp|tcp [-pport] [-ccustomConfFile] \n");
 			exit(1);
 		}
 	}
