@@ -48,6 +48,7 @@
 #include <libgen.h>
 #include <unistd.h>
 #include <sys/file.h>
+#include <pthread.h>
 
 #ifdef OS_SOLARIS
 #	include <fcntl.h>
@@ -65,6 +66,7 @@
 #include "stream.h"
 #include "unicode-helper.h"
 #include "atomic.h"
+#include "debug.h"
 
 MODULE_TYPE_OUTPUT
 
@@ -134,6 +136,7 @@ typedef struct _instanceData {
 	int	iIOBufSize;		/* size of associated io buffer */
 	int	iFlushInterval;		/* how fast flush buffer on inactivity? */
 	bool	bFlushOnTXEnd;		/* flush write buffers when transaction has ended? */
+	pthread_mutex_t mutEx;		/* guard ourselves against being called multiple times with the same instance */
 } instanceData;
 
 
@@ -603,6 +606,7 @@ finalize_it:
 BEGINcreateInstance
 CODESTARTcreateInstance
 	pData->pStrm = NULL;
+	pthread_mutex_init(&pData->mutEx, NULL);
 ENDcreateInstance
 
 
@@ -612,6 +616,7 @@ CODESTARTfreeInstance
 		dynaFileFreeCache(pData);
 	} else if(pData->pStrm != NULL)
 		strm.Destruct(&pData->pStrm);
+	pthread_mutex_destroy(&pData->mutEx);
 ENDfreeInstance
 
 
@@ -621,12 +626,14 @@ ENDtryResume
 
 BEGINdoAction
 CODESTARTdoAction
+	d_pthread_mutex_lock(&pData->mutEx);
 	DBGPRINTF("file to log to: %s\n", pData->f_fname);
 	CHKiRet(writeFile(ppString, iMsgOpts, pData));
 	if(pData->bFlushOnTXEnd) {
 		/* TODO v5: do this in endTransaction only! */
 		CHKiRet(strm.Flush(pData->pStrm));
 	}
+	d_pthread_mutex_unlock(&pData->mutEx);
 finalize_it:
 ENDdoAction
 
@@ -764,6 +771,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 
 BEGINdoHUP
 CODESTARTdoHUP
+	d_pthread_mutex_lock(&pData->mutEx);
 	if(pData->bDynamicName) {
 		dynaFileFreeCacheEntries(pData);
 	} else {
@@ -772,6 +780,7 @@ CODESTARTdoHUP
 			pData->pStrm = NULL;
 		}
 	}
+	d_pthread_mutex_unlock(&pData->mutEx);
 ENDdoHUP
 
 
