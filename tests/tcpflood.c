@@ -18,10 +18,12 @@
  * -f	support for testing dynafiles. If given, include a dynafile ID
  *      in the range 0..(f-1) as the SECOND field, shifting all field values
  *      one field to the right. Zero (default) disables this functionality.
+ * -M   the message to be sent. Disables all message format options, as
+ *      only that exact same message is sent.
  *
  * Part of the testbench for rsyslog.
  *
- * Copyright 2009 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2009, 2010 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -72,6 +74,7 @@ static int numConnections = 1; /* number of connections to create */
 static int *sockArray;  /* array of sockets to use */
 static int msgNum = 0;	/* initial message number to start with */
 static int bShowProgress = 1; /* show progress messages */
+static char *MsgToSend = NULL; /* if non-null, this is the actual message to send */
 
 
 /* open a single tcp connection
@@ -212,21 +215,26 @@ int sendMessages(void)
 			socknum = i - (numMsgsToSend - numConnections);
 		else
 			socknum = rand() % numConnections;
-		if(dynFileIDs > 0) {
-			sprintf(dynFileIDBuf, "%d:", rand() % dynFileIDs);
-		}
-		if(extraDataLen == 0) {
-			lenBuf = sprintf(buf, "<%s>Mar  1 01:00:00 172.20.245.8 tag msgnum:%s%8.8d:\n",
-					       msgPRI, dynFileIDBuf, msgNum);
+		if(MsgToSend == NULL) {
+			if(dynFileIDs > 0) {
+				sprintf(dynFileIDBuf, "%d:", rand() % dynFileIDs);
+			}
+			if(extraDataLen == 0) {
+				lenBuf = sprintf(buf, "<%s>Mar  1 01:00:00 172.20.245.8 tag msgnum:%s%8.8d:\n",
+						       msgPRI, dynFileIDBuf, msgNum);
+			} else {
+				if(bRandomizeExtraData)
+					edLen = ((long) rand() + extraDataLen) % extraDataLen + 1;
+				else
+					edLen = extraDataLen;
+				memset(extraData, 'X', edLen);
+				extraData[edLen] = '\0';
+				lenBuf = sprintf(buf, "<%s>Mar  1 01:00:00 172.20.245.8 tag msgnum:%s%8.8d:%d:%s\n",
+						       msgPRI, dynFileIDBuf, msgNum, edLen, extraData);
+			}
 		} else {
-			if(bRandomizeExtraData)
-				edLen = ((long) rand() + extraDataLen) % extraDataLen + 1;
-			else
-				edLen = extraDataLen;
-			memset(extraData, 'X', edLen);
-			extraData[edLen] = '\0';
-			lenBuf = sprintf(buf, "<%s>Mar  1 01:00:00 172.20.245.8 tag msgnum:%s%8.8d:%d:%s\n",
-					       msgPRI, dynFileIDBuf, msgNum, edLen, extraData);
+			/* use fixed message format from command line */
+			lenBuf = sprintf(buf, "%s\n", MsgToSend);
 		}
 		lenSend = send(sockArray[socknum], buf, lenBuf, 0);
 		if(lenSend != lenBuf) {
@@ -327,7 +335,7 @@ int main(int argc, char *argv[])
 	if(!isatty(1))
 		bShowProgress = 0;
 
-	while((opt = getopt(argc, argv, "f:t:p:c:m:i:P:d:n:r")) != -1) {
+	while((opt = getopt(argc, argv, "f:t:p:c:m:i:P:d:n:M:r")) != -1) {
 		switch (opt) {
 		case 't':	targetIP = optarg;
 				break;
@@ -353,6 +361,9 @@ int main(int argc, char *argv[])
 		case 'r':	bRandomizeExtraData = 1;
 				break;
 		case 'f':	dynFileIDs = atoi(optarg);
+				break;
+		case 'M':	MsgToSend = optarg;
+fprintf(stderr, "msg to send: '%s'\n", MsgToSend);
 				break;
 		default:	printf("invalid option '%c' or value missing - terminating...\n", opt);
 				exit (1);
