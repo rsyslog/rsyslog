@@ -363,7 +363,6 @@ int main(int argc, char *argv[])
 		case 'f':	dynFileIDs = atoi(optarg);
 				break;
 		case 'M':	MsgToSend = optarg;
-fprintf(stderr, "msg to send: '%s'\n", MsgToSend);
 				break;
 		default:	printf("invalid option '%c' or value missing - terminating...\n", opt);
 				exit (1);
