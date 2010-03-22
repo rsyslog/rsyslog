@@ -19,6 +19,8 @@ TESTS = $(TESTRUNS) cfg.sh \
 	asynwr_deadlock4.sh \
 	gzipwr_large.sh \
 	gzipwr_large_dynfile.sh \
+	dynfile_invalid.sh \
+	dynfile_invalid2.sh \
 	complex1.sh \
 	queue-persist.sh \
 	pipeaction.sh
@@ -50,7 +52,7 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/valid.conf \
 	   cfg.sh \
 	   cfg1.cfgtest \
-	   cfg1.testin \
+	   fg1.testin \
 	   cfg2.cfgtest \
 	   cfg2.testin \
 	   cfg3.cfgtest \
@@ -175,6 +177,10 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/gzipwr_large_dynfile.conf \
 	   complex1.sh \
 	   testsuites/complex1.conf \
+	   dynfile_invalid.sh \
+	   testsuites/dynfile_invalid.conf \
+	   dynfile_invalid2.sh \
+	   testsuites/dynfile_invalid2.conf \
 	   proprepltest.sh \
 	   testsuites/rfctag.conf \
 	   testsuites/master.rfctag \
