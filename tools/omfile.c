@@ -633,8 +633,8 @@ CODESTARTdoAction
 		/* TODO v5: do this in endTransaction only! */
 		CHKiRet(strm.Flush(pData->pStrm));
 	}
-	d_pthread_mutex_unlock(&pData->mutEx);
 finalize_it:
+	d_pthread_mutex_unlock(&pData->mutEx);
 ENDdoAction
 
 
