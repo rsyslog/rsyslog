@@ -59,8 +59,6 @@ DEFobjCurrIf(datetime)
 
 static int iMaxLine; /* maximum size of a single message */
 
-static int iNbrTimeUsed = 0;		    /* how often has previous time been used so far? */
-
 
 /* forward definitions */
 static rsRetVal Close(tcps_sess_t *pThis);
@@ -475,7 +473,6 @@ DataRcvd(tcps_sess_t *pThis, char *pData, size_t iLen)
 	 /* We now copy the message to the session buffer. */
 	pEnd = pData + iLen; /* this is one off, which is intensional */
 
-	iNbrTimeUsed = 0; /* full time query */
 	while(pData < pEnd) {
 		CHKiRet(processDataRcvd(pThis, *pData++, &stTime, ttGenTime, &multiSub));
 	}
