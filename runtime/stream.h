@@ -119,7 +119,6 @@ typedef struct strm_s {
 	size_t iBufPtr;	/* pointer into current buffer */
 	int iUngetC;	/* char set via UngetChar() call or -1 if none set */
 	bool bInRecord;	/* if 1, indicates that we are currently writing a not-yet complete record */
-	bool bInClose;	/* used to break "deadly close loops", tells us we are already inside a close */
 	int iZipLevel;	/* zip level (0..9). If 0, zip is completely disabled */
 	Bytef *pZipBuf;
 	/* support for async flush procesing */

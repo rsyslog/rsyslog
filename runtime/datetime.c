@@ -793,8 +793,12 @@ int formatTimestamp3339(struct syslogTime *ts, char* pBuf)
  * buffer that will receive the resulting string. The function
  * returns the size of the timestamp written in bytes (without
  * the string termnator). If 0 is returend, an error occured.
+ * rgerhards, 2010-03-05: Added support to for buggy 3164 dates,
+ * where a zero-digit is written instead of a space for the first
+ * day character if day < 10. syslog-ng seems to do that, and some
+ * parsing scripts (in migration cases) rely on that.
  */
-int formatTimestamp3164(struct syslogTime *ts, char* pBuf)
+int formatTimestamp3164(struct syslogTime *ts, char* pBuf, int bBuggyDay)
 {
 	static char* monthNames[12] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun",
 					"Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
@@ -807,7 +811,7 @@ int formatTimestamp3164(struct syslogTime *ts, char* pBuf)
 	pBuf[2] = monthNames[(ts->month - 1) % 12][2];
 	pBuf[3] = ' ';
 	iDay = (ts->day / 10) % 10; /* we need to write a space if the first digit is 0 */
-	pBuf[4] = iDay ? iDay + '0' : ' ';
+	pBuf[4] = (bBuggyDay || iDay > 0) ? iDay + '0' : ' ';
 	pBuf[5] = ts->day % 10 + '0';
 	pBuf[6] = ' ';
 	pBuf[7] = (ts->hour / 10) % 10 + '0';

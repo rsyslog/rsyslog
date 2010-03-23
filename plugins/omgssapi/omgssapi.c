@@ -377,7 +377,7 @@ CODESTARTtryResume
 ENDtryResume
 
 BEGINdoAction
-	char *psz; /* temporary buffering */
+	char *psz = NULL; /* temporary buffering */
 	register unsigned l;
 	int iMaxLine;
 CODESTARTdoAction
@@ -454,7 +454,7 @@ CODESTARTdoAction
 	}
 finalize_it:
 #	ifdef USE_NETZIP
-	if(psz != (char*) ppString[0])  {
+	if((psz != NULL) && (psz != (char*) ppString[0]))  {
 		/* we need to free temporary buffer, alloced above - Naoya Nakazawa, 2010-01-11 */
 		free(psz);
 	}

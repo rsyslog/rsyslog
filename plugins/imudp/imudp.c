@@ -241,7 +241,7 @@ processSocket(int fd, struct sockaddr_storage *frominetPrev, int *pbIsPermitted,
 			}
 		}
 
-		DBGPRINTF("recv(%d,%d)/%s,acl:%d,msg:%.80s\n", fd, (int) lenRcvBuf, fromHost, *pbIsPermitted, pRcvBuf);
+		DBGPRINTF("recv(%d,%d)/%s,acl:%d,msg:%s\n", fd, (int) lenRcvBuf, fromHost, *pbIsPermitted, pRcvBuf);
 
 		if(*pbIsPermitted)  {
 			if((iTimeRequery == 0) || (iNbrTimeUsed++ % iTimeRequery) == 0) {

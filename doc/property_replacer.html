@@ -335,6 +335,19 @@ Especially useful for PIX.</td>
 <td>format as RFC 3164 date</td>
 </tr>
 <tr>
+<tr>
+<td valign="top"><b>date-rfc3164-buggyday</b></td>
+<td>similar to date-rfc3164, but emulates a common coding error: RFC 3164 demands
+that a space is written for single-digit days. With this option, a zero is
+written instead. This format seems to be used by syslog-ng and the
+date-rfc3164-buggyday option can be used in migration scenarios where otherwise
+lots of scripts would need to be adjusted. It is recommended <i>not</i> to use this
+option when forwarding to remote hosts - they may treat the date as invalid
+(especially when parsing strictly according to RFC 3164).</td>
+<br><i>This feature was introduced in rsyslog 4.6.2 and v4 versions above and
+5.5.3 and all versions above.</i>
+</tr>
+<tr>
 <td><b>date-rfc3339</b></td>
 <td>format as RFC 3339 date</td>
 </tr>

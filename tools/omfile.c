@@ -48,6 +48,7 @@
 #include <libgen.h>
 #include <unistd.h>
 #include <sys/file.h>
+#include <pthread.h>
 
 #ifdef OS_SOLARIS
 #	include <fcntl.h>
@@ -65,6 +66,7 @@
 #include "stream.h"
 #include "unicode-helper.h"
 #include "atomic.h"
+#include "debug.h"
 
 MODULE_TYPE_OUTPUT
 
@@ -79,7 +81,7 @@ DEFobjCurrIf(strm)
 struct s_dynaFileCacheEntry {
 	uchar *pName;		/* name currently open, if dynamic name */
 	strm_t	*pStrm;		/* our output stream */
-	time_t	lastUsed;	/* for LRU - last access */ // TODO: perforamcne change to counter (see other comment!) 
+	time_t	lastUsed;	/* for LRU - last access */
 };
 typedef struct s_dynaFileCacheEntry dynaFileCacheEntry;
 
@@ -99,7 +101,7 @@ static uid_t	dirGID;		/* GID to be used for newly created directories */
 static int	bCreateDirs = 1;/* auto-create directories for dynaFiles: 0 - no, 1 - yes */
 static int	bEnableSync = 0;/* enable syncing of files (no dash in front of pathname in conf): 0 - no, 1 - yes */
 static int	iZipLevel = 0;	/* zip compression mode (0..9 as usual) */
-static bool	bFlushOnTXEnd = 1;/* flush write buffers when transaction has ended? */
+static bool	bFlushOnTXEnd = 0;/* flush write buffers when transaction has ended? */
 static int64	iIOBufSize = IOBUF_DFLT_SIZE;	/* size of an io buffer */
 static int	iFlushInterval = FLUSH_INTRVL_DFLT; 	/* how often flush the output buffer on inactivity? */
 uchar	*pszFileDfltTplName = NULL; /* name of the default template to use */
@@ -134,6 +136,7 @@ typedef struct _instanceData {
 	int	iIOBufSize;		/* size of associated io buffer */
 	int	iFlushInterval;		/* how fast flush buffer on inactivity? */
 	bool	bFlushOnTXEnd;		/* flush write buffers when transaction has ended? */
+	pthread_mutex_t mutEx;		/* guard ourselves against being called multiple times with the same instance */
 } instanceData;
 
 
@@ -532,7 +535,7 @@ prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
 	pCache[iFirstFree]->pStrm = pData->pStrm;
-	pCache[iFirstFree]->lastUsed = time(NULL); // monotonically increasing value! TODO: performance
+	pCache[iFirstFree]->lastUsed = time(NULL);
 	pData->iCurrElt = iFirstFree;
 	DBGPRINTF("Added new entry %d for file cache, file '%s'.\n", iFirstFree, newFileName);
 
@@ -603,6 +606,7 @@ finalize_it:
 BEGINcreateInstance
 CODESTARTcreateInstance
 	pData->pStrm = NULL;
+	pthread_mutex_init(&pData->mutEx, NULL);
 ENDcreateInstance
 
 
@@ -612,6 +616,7 @@ CODESTARTfreeInstance
 		dynaFileFreeCache(pData);
 	} else if(pData->pStrm != NULL)
 		strm.Destruct(&pData->pStrm);
+	pthread_mutex_destroy(&pData->mutEx);
 ENDfreeInstance
 
 
@@ -621,6 +626,7 @@ ENDtryResume
 
 BEGINdoAction
 CODESTARTdoAction
+	d_pthread_mutex_lock(&pData->mutEx);
 	DBGPRINTF("file to log to: %s\n", pData->f_fname);
 	CHKiRet(writeFile(ppString, iMsgOpts, pData));
 	if(pData->bFlushOnTXEnd) {
@@ -628,12 +634,13 @@ CODESTARTdoAction
 		CHKiRet(strm.Flush(pData->pStrm));
 	}
 finalize_it:
+	d_pthread_mutex_unlock(&pData->mutEx);
 ENDdoAction
 
 
 BEGINparseSelectorAct
 CODESTARTparseSelectorAct
-	if(!(*p == '$' || *p == '?' || *p == '/' || *p == '-'))
+	if(!(*p == '$' || *p == '?' || *p == '/' || *p == '.' || *p == '-'))
 		ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
 
 	CHKiRet(createInstance(&pData));
@@ -683,6 +690,7 @@ CODESTARTparseSelectorAct
 	 *           need high-performance pipes at a later stage (unlikely). -- rgerhards, 2010-02-28
 	 */
 	case '/':
+	case '.':
 		CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		/* we now have *almost* the same semantics for files and pipes, but we still need
 		 * to know we deal with a pipe, because we must do non-blocking opens in that case
@@ -749,7 +757,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	bCreateDirs = 1;
 	bEnableSync = 0;
 	iZipLevel = 0;
-	bFlushOnTXEnd = 1;
+	bFlushOnTXEnd = 0;
 	iIOBufSize = IOBUF_DFLT_SIZE;
 	iFlushInterval = FLUSH_INTRVL_DFLT;
 	if(pszFileDfltTplName != NULL) {
@@ -763,6 +771,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 
 BEGINdoHUP
 CODESTARTdoHUP
+	d_pthread_mutex_lock(&pData->mutEx);
 	if(pData->bDynamicName) {
 		dynaFileFreeCacheEntries(pData);
 	} else {
@@ -771,6 +780,7 @@ CODESTARTdoHUP
 			pData->pStrm = NULL;
 		}
 	}
+	d_pthread_mutex_unlock(&pData->mutEx);
 ENDdoHUP
 
 

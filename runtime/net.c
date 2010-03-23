@@ -1010,8 +1010,8 @@ static int
 should_use_so_bsdcompat(void)
 {
 #ifndef OS_BSD
-    static int init_done;
-    static int so_bsdcompat_is_obsolete;
+    static int init_done = 0;
+    static int so_bsdcompat_is_obsolete = 0;
 
     if (!init_done) {
 	struct utsname myutsname;

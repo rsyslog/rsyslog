@@ -2,15 +2,28 @@
  * messages over them. This is used for stress-testing.
  *
  * Params
- * argv[1]	target address
- * argv[2]	target port
- * argv[3]	number of connections
- * argv[4]	number of messages to send (connection is random)
- * argv[5]	initial message number (optional)
+ * -t	target address (default 127.0.0.1)
+ * -p	target port (default 13514)
+ * -n	number of target ports (targets are in range -p..(-p+-n-1)
+ * -c	number of connections (default 1)
+ * -m	number of messages to send (connection is random)
+ * -i	initial message number (optional)
+ * -P	PRI to be used for generated messages (default is 167).
+ *      Specify the plain number without leading zeros
+ * -d   amount of extra data to add to message. If present, the
+ *      number itself will be added as third field, and the data
+ *      bytes as forth. Add -r to randomize the amount of extra
+ *      data included in the range 1..(value of -d).
+ * -r	randomize amount of extra data added (-d must be > 0)
+ * -f	support for testing dynafiles. If given, include a dynafile ID
+ *      in the range 0..(f-1) as the SECOND field, shifting all field values
+ *      one field to the right. Zero (default) disables this functionality.
+ * -M   the message to be sent. Disables all message format options, as
+ *      only that exact same message is sent.
  *
  * Part of the testbench for rsyslog.
  *
- * Copyright 2009 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2009, 2010 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -47,12 +60,21 @@
 /* Name of input file, must match $IncludeConfig in test suite .conf files */
 #define NETTEST_INPUT_CONF_FILE "nettest.input.conf" /* name of input file, must match $IncludeConfig in .conf files */
 
-static char *targetIP;
-static int targetPort;
+#define MAX_EXTRADATA_LEN 100*1024
+
+static char *targetIP = "127.0.0.1";
+static char *msgPRI = "167";
+static int targetPort = 13514;
+static int numTargetPorts = 1;
+static int dynFileIDs = 0;
+static int extraDataLen = 0; /* amount of extra data to add to message */
+static int bRandomizeExtraData = 0; /* randomize amount of extra data added */
 static int numMsgsToSend; /* number of messages to send */
-static int numConnections; /* number of connections to create */
+static int numConnections = 1; /* number of connections to create */
 static int *sockArray;  /* array of sockets to use */
 static int msgNum = 0;	/* initial message number to start with */
+static int bShowProgress = 1; /* show progress messages */
+static char *MsgToSend = NULL; /* if non-null, this is the actual message to send */
 
 
 /* open a single tcp connection
@@ -61,16 +83,25 @@ int openConn(int *fd)
 {
 	int sock;
 	struct sockaddr_in addr;
+	int port;
 	int retries = 0;
+	int rnd;
 
 	if((sock=socket(AF_INET, SOCK_STREAM, 0))==-1) {
 		perror("socket()");
 		return(1);
 	}
 
+	/* randomize port if required */
+	if(numTargetPorts > 1) {
+		rnd = rand(); /* easier if we need value for debug messages ;) */
+		port = targetPort + (rnd % numTargetPorts);
+	} else {
+		port = targetPort;
+	}
 	memset((char *) &addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
-	addr.sin_port = htons(targetPort);
+	addr.sin_port = htons(port);
 	if(inet_aton(targetIP, &addr.sin_addr)==0) {
 		fprintf(stderr, "inet_aton() failed\n");
 		return(1);
@@ -103,11 +134,13 @@ int openConnections(void)
 	char msgBuf[128];
 	size_t lenMsg;
 
-	write(1, "      open connections", sizeof("      open connections")-1);
+	if(bShowProgress)
+		write(1, "      open connections", sizeof("      open connections")-1);
 	sockArray = calloc(numConnections, sizeof(int));
 	for(i = 0 ; i < numConnections ; ++i) {
 		if(i % 10 == 0) {
-			printf("\r%5.5d", i);
+			if(bShowProgress)
+				printf("\r%5.5d", i);
 			//lenMsg = sprintf(msgBuf, "\r%5.5d", i);
 			//write(1, msgBuf, lenMsg);
 		}
@@ -136,11 +169,14 @@ void closeConnections(void)
 	char msgBuf[128];
 	size_t lenMsg;
 
-	write(1, "      close connections", sizeof("      close connections")-1);
+	if(bShowProgress)
+		write(1, "      close connections", sizeof("      close connections")-1);
 	for(i = 0 ; i < numConnections ; ++i) {
 		if(i % 10 == 0) {
-			lenMsg = sprintf(msgBuf, "\r%5.5d", i);
-			write(1, msgBuf, lenMsg);
+			if(bShowProgress) {
+				lenMsg = sprintf(msgBuf, "\r%5.5d", i);
+				write(1, msgBuf, lenMsg);
+			}
 		}
 		close(sockArray[i]);
 	}
@@ -164,12 +200,14 @@ int sendMessages(void)
 	int socknum;
 	int lenBuf;
 	int lenSend;
-	char buf[2048];
-
-	srand(time(NULL));	/* seed is good enough for our needs */
+	int edLen; /* actual extra data length to use */
+	char dynFileIDBuf[128] = "";
+	char buf[MAX_EXTRADATA_LEN + 1024];
+	char extraData[MAX_EXTRADATA_LEN + 1];
 
 	printf("Sending %d messages.\n", numMsgsToSend);
-	printf("\r%5.5d messages sent", 0);
+	if(bShowProgress)
+		printf("\r%8.8d messages sent", 0);
 	for(i = 0 ; i < numMsgsToSend ; ++i) {
 		if(i < numConnections)
 			socknum = i;
@@ -177,7 +215,27 @@ int sendMessages(void)
 			socknum = i - (numMsgsToSend - numConnections);
 		else
 			socknum = rand() % numConnections;
-		lenBuf = sprintf(buf, "<167>Mar  1 01:00:00 172.20.245.8 tag msgnum:%8.8d:\n", msgNum);
+		if(MsgToSend == NULL) {
+			if(dynFileIDs > 0) {
+				sprintf(dynFileIDBuf, "%d:", rand() % dynFileIDs);
+			}
+			if(extraDataLen == 0) {
+				lenBuf = sprintf(buf, "<%s>Mar  1 01:00:00 172.20.245.8 tag msgnum:%s%8.8d:\n",
+						       msgPRI, dynFileIDBuf, msgNum);
+			} else {
+				if(bRandomizeExtraData)
+					edLen = ((long) rand() + extraDataLen) % extraDataLen + 1;
+				else
+					edLen = extraDataLen;
+				memset(extraData, 'X', edLen);
+				extraData[edLen] = '\0';
+				lenBuf = sprintf(buf, "<%s>Mar  1 01:00:00 172.20.245.8 tag msgnum:%s%8.8d:%d:%s\n",
+						       msgPRI, dynFileIDBuf, msgNum, edLen, extraData);
+			}
+		} else {
+			/* use fixed message format from command line */
+			lenBuf = sprintf(buf, "%s\n", MsgToSend);
+		}
 		lenSend = send(sockArray[socknum], buf, lenBuf, 0);
 		if(lenSend != lenBuf) {
 			printf("\r%5.5d\n", i);
@@ -188,11 +246,12 @@ int sendMessages(void)
 			return(1);
 		}
 		if(i % 100 == 0) {
-			printf("\r%5.5d", i);
+			if(bShowProgress)
+				printf("\r%8.8d", i);
 		}
 		++msgNum;
 	}
-	printf("\r%5.5d messages sent\n", i);
+	printf("\r%8.8d messages sent\n", i);
 
 	return 0;
 }
@@ -251,16 +310,17 @@ tcpSend(char *buf, int lenBuf)
 }
 
 
-/* Run the test suite. This must be called with exactly one parameter, the
- * name of the test suite. For details, see file header comment at the top
- * of this file.
+/* Run the test.
  * rgerhards, 2009-04-03
  */
 int main(int argc, char *argv[])
 {
 	int ret = 0;
+	int opt;
 	struct sigaction sigAct;
 	static char buf[1024];
+
+	srand(time(NULL));	/* seed is good enough for our needs */
 
 	/* on Solaris, we do not HAVE MSG_NOSIGNAL, so for this reason
 	 * we block SIGPIPE (not an issue for this program)
@@ -271,19 +331,44 @@ int main(int argc, char *argv[])
 	sigaction(SIGPIPE, &sigAct, NULL);
 
 	setvbuf(stdout, buf, _IONBF, 48);
-
-	if(argc != 5 && argc != 6) {
-		printf("Invalid call of tcpflood\n");
-		printf("Usage: tcpflood target-host target-port num-connections num-messages [initial msgnum]\n");
-		exit(1);
-	}
 	
-	targetIP = argv[1];
-	targetPort = atoi(argv[2]);
-	numConnections = atoi(argv[3]);
-	numMsgsToSend = atoi(argv[4]);
-	if(argc == 6)
-		msgNum = atoi(argv[5]);
+	if(!isatty(1))
+		bShowProgress = 0;
+
+	while((opt = getopt(argc, argv, "f:t:p:c:m:i:P:d:n:M:r")) != -1) {
+		switch (opt) {
+		case 't':	targetIP = optarg;
+				break;
+		case 'p':	targetPort = atoi(optarg);
+				break;
+		case 'n':	numTargetPorts = atoi(optarg);
+				break;
+		case 'c':	numConnections = atoi(optarg);
+				break;
+		case 'm':	numMsgsToSend = atoi(optarg);
+				break;
+		case 'i':	msgNum = atoi(optarg);
+				break;
+		case 'P':	msgPRI = optarg;
+				break;
+		case 'd':	extraDataLen = atoi(optarg);
+				if(extraDataLen > MAX_EXTRADATA_LEN) {
+					fprintf(stderr, "-d max is %d!\n",
+						MAX_EXTRADATA_LEN);
+					exit(1);
+				}
+				break;
+		case 'r':	bRandomizeExtraData = 1;
+				break;
+		case 'f':	dynFileIDs = atoi(optarg);
+				break;
+		case 'M':	MsgToSend = optarg;
+				break;
+		default:	printf("invalid option '%c' or value missing - terminating...\n", opt);
+				exit (1);
+				break;
+		}
+	}
 
 	if(openConnections() != 0) {
 		printf("error opening connections\n");
@@ -295,7 +380,6 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
-	//closeConnections();
 	printf("End of tcpflood Run\n");
 
 	exit(ret);

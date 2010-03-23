@@ -9,6 +9,19 @@ TESTS = $(TESTRUNS) cfg.sh \
 	manytcp.sh \
 	sndrcv.sh \
 	sndrcv_gzip.sh \
+	asynwr_simple.sh \
+	asynwr_timeout.sh \
+	asynwr_small.sh \
+	asynwr_tinybuf.sh \
+	asynwr_large.sh \
+	asynwr_deadlock.sh \
+	asynwr_deadlock2.sh \
+	asynwr_deadlock4.sh \
+	gzipwr_large.sh \
+	gzipwr_large_dynfile.sh \
+	dynfile_invalid.sh \
+	dynfile_invalid2.sh \
+	complex1.sh \
 	queue-persist.sh \
 	pipeaction.sh
 	execonlyonce.sh \
@@ -39,7 +52,7 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/valid.conf \
 	   cfg.sh \
 	   cfg1.cfgtest \
-	   cfg1.testin \
+	   fg1.testin \
 	   cfg2.cfgtest \
 	   cfg2.testin \
 	   cfg3.cfgtest \
@@ -78,6 +91,7 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/1.parse1 \
 	   testsuites/2.parse1 \
 	   testsuites/3.parse1 \
+	   testsuites/snare.parse1 \
 	   testsuites/oversizeTag-1.parse1 \
 	   testsuites/weird.parse1 \
 	   testsuites/date1.parse1 \
@@ -92,8 +106,16 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/rfc5424-4.parse1 \
 	   testsuites/parse3.conf \
 	   testsuites/reallife.parse3 \
+	   testsuites/parse-nodate.conf \
+	   testsuites/reallife.parse-nodate \
 	   testsuites/parse_invld_regex.conf \
 	   testsuites/samples.parse_invld_regex \
+	   testsuites/parse-3164-buggyday.conf \
+	   testsuites/samples.parse-3164-buggyday \
+	   testsuites/snare_ccoff_udp.conf \
+	   testsuites/samples.snare_ccoff_udp \
+	   testsuites/snare_ccoff_udp2.conf \
+	   testsuites/samples.snare_ccoff_udp2 \
 	   testsuites/omod-if-array.conf \
 	   testsuites/1.omod-if-array \
 	   testsuites/1.field1 \
@@ -133,6 +155,32 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/sndrcv_gzip_rcvr.conf \
 	   pipeaction.sh \
 	   testsuites/pipeaction.conf \
+	   asynwr_simple.sh \
+	   testsuites/asynwr_simple.conf \
+	   asynwr_timeout.sh \
+	   testsuites/asynwr_timeout.conf \
+	   asynwr_small.sh \
+	   testsuites/asynwr_small.conf \
+	   asynwr_tinybuf.sh \
+	   testsuites/asynwr_tinybuf.conf \
+	   asynwr_large.sh \
+	   testsuites/asynwr_large.conf \
+	   asynwr_deadlock.sh \
+	   testsuites/asynwr_deadlock.conf \
+	   asynwr_deadlock2.sh \
+	   testsuites/asynwr_deadlock2.conf \
+	   asynwr_deadlock4.sh \
+	   testsuites/asynwr_deadlock4.conf \
+	   gzipwr_large.sh \
+	   testsuites/gzipwr_large.conf \
+	   gzipwr_large_dynfile.sh \
+	   testsuites/gzipwr_large_dynfile.conf \
+	   complex1.sh \
+	   testsuites/complex1.conf \
+	   dynfile_invalid.sh \
+	   testsuites/dynfile_invalid.conf \
+	   dynfile_invalid2.sh \
+	   testsuites/dynfile_invalid2.conf \
 	   proprepltest.sh \
 	   testsuites/rfctag.conf \
 	   testsuites/master.rfctag \

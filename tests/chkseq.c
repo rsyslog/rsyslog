@@ -32,6 +32,7 @@
 #include "config.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <getopt.h>
 
 int main(int argc, char *argv[])
@@ -40,14 +41,18 @@ int main(int argc, char *argv[])
 	int val;
 	int i;
 	int ret = 0;
+	int scanfOK;
 	int verbose = 0;
+	int bHaveExtraData = 0;
 	int dupsPermitted = 0;
 	int start = 0, end = 0;
 	int opt;
 	int nDups = 0;
+	int edLen;	/* length of extra data */
+	static char edBuf[500*1024]; /* buffer for extra data (pretty large to be on the save side...) */
 	char *file = NULL;
 
-	while((opt = getopt(argc, argv, "e:f:ds:v")) != EOF) {
+	while((opt = getopt(argc, argv, "e:f:ds:vE")) != EOF) {
 		switch((char)opt) {
 		case 'f':
 			file = optarg;
@@ -64,8 +69,11 @@ int main(int argc, char *argv[])
                 case 'v':
 			++verbose;
 			break;
-		default:printf("Invalid call of chkseq\n");
-			printf("Usage: chkseq file -sstart -eend -d\n");
+                case 'E':
+			bHaveExtraData = 1;
+			break;
+		default:printf("Invalid call of chkseq, optchar='%c'\n", opt);
+			printf("Usage: chkseq file -sstart -eend -d -E\n");
 			exit(1);
 		}
 	}
@@ -93,7 +101,17 @@ int main(int argc, char *argv[])
 	}
 
 	for(i = start ; i < end+1 ; ++i) {
-		if(fscanf(fp, "%d\n", &val) != 1) {
+		if(bHaveExtraData) {
+			scanfOK = fscanf(fp, "%d,%d,%s\n", &val, &edLen, edBuf) == 3 ? 1 : 0;
+			if(edLen != (int) strlen(edBuf)) {
+				printf("extra data length specified %d, but actually is %ld in record %d\n",
+					edLen, (long) strlen(edBuf), i);
+				exit(1);
+			}
+		} else {
+			scanfOK = fscanf(fp, "%d\n", &val) == 1 ? 1 : 0;
+		}
+		if(!scanfOK) {
 			printf("scanf error in index i=%d\n", i);
 			exit(1);
 		}
@@ -113,6 +131,11 @@ int main(int argc, char *argv[])
 
 	if(i - 1 != end) {
 		printf("only %d records in file, expected %d\n", i - 1, end);
+		exit(1);
+	}
+
+	if(!feof(fp)) {
+		printf("end of processing, but NOT end of file!\n");
 		exit(1);
 	}
 

@@ -1,4 +1,49 @@
 ---------------------------------------------------------------------------
+Version 4.6.2  [v4-stable] (rgerhards), 2010-03-??
+- new feature: "." action type added to support writing files to relative
+  pathes (this is primarily meant as a debug aid)
+- added new property replacer option "date-rfc3164-buggyday" primarily
+  to ease migration from syslog-ng. See property replacer doc for
+  details. [backport from 5.5.3 because urgently needed by some]
+- improved testbench
+- bugfix: invalid buffer write in (file) stream class
+  currently being accessed buffer could be overwritten with new data.
+  While this probably did not cause access violations, it could case loss
+  and/or duplication of some data (definitely a race with no deterministic
+  outcome)
+- bugfix: potential hang condition during filestream close
+  predicate was not properly checked when waiting for the background file
+  writer
+- bugfix: improper synchronization when "$OMFileFlushOnTXEnd on" was used
+  Internal data structures were not properly protected due to missing
+  mutex calls.
+- bugfix: potential data loss during file stream shutdown
+- bugfix: potential problems during file stream shutdown
+  The shutdown/close sequence was not clean, what potentially (but
+  unlikely) could lead to some issues. We have not been able to describe
+  any fatal cases, but there was some bug potential. Sequence has now
+  been straighted out.
+- bugfix: potential problem (loop, abort) when file write error occured
+  When a write error occured in stream.c, variable iWritten had the error
+  code but this was handled as if it were the actual number of bytes
+  written. That was used in pointer arithmetic later on, and thus could
+  lead to all sorts of problems. However, this could only happen if the
+  error was EINTR or the file in question was a tty. All other cases were
+  handled properly. Now, iWritten is reset to zero in such cases, resulting
+  in proper retries.
+- bugfix: $omfileFlushOnTXEnd was turned on when set to off and vice
+  versa due to an invalid check
+- bugfix: recent patch to fix small memory leak could cause invalid free.
+  This could only happen during config file parsing.
+- bugfix(minor): handling of extremely large strings in dbgprintf() fixed
+  Previously, it could lead to garbagge output and, in extreme cases, also
+  to segfaults. Note: this was a problem only when debug output was 
+  actually enabled, so it caused no problem in production use.
+- bugfix(minor): BSD_SO_COMPAT query function had some global vars not
+  properly initialized. However, in practice the loader initializes them 
+  with zero, the desired value, so there were no actual issue in almost 
+  all cases.
+---------------------------------------------------------------------------
 Version 4.6.1  [v4-stable] (rgerhards), 2010-03-04
 - re-enabled old pipe output (using new module ompipe, built-in) after
   some problems with pipes (and especially in regard to xconsole) were
