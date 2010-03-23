@@ -84,6 +84,7 @@ AC_TYPE_UINT8_T
 AC_HEADER_TIME
 AC_STRUCT_TM
 AC_C_VOLATILE
+AC_C_TYPEOF
 
 sa_includes="\
 $ac_includes_default
@@ -125,6 +126,9 @@ AC_TRY_COMPILE([
 
 # check for availability of atomic operations
 RS_ATOMIC_OPERATIONS
+
+# fall back to POSIX sems for atomic operations (cpu expensive)
+AC_CHECK_HEADERS([semaphore.h])
 
 
 # Additional module directories
