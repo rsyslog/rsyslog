@@ -2,6 +2,11 @@
 Version 4.6.2  [v4-stable] (rgerhards), 2010-03-??
 - new feature: "." action type added to support writing files to relative
   pathes (this is primarily meant as a debug aid)
+- bugfix: potential re-use of free()ed file stream object in omfile
+  when dynaCache is enabled, the cache is full, a new entry needs to
+  be allocated, thus the LRU discarded, then a new entry is opend and that
+  fails. In that case, it looks like the discarded stream may be reused
+  improperly (based on code analysis, test case and confirmation pending)
 - added new property replacer option "date-rfc3164-buggyday" primarily
   to ease migration from syslog-ng. See property replacer doc for
   details. [backport from 5.5.3 because urgently needed by some]
