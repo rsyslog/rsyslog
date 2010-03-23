@@ -286,17 +286,16 @@ dynaFileDelCacheEntry(dynaFileCacheEntry **pCache, int iEntry, int bFreeEntry)
 
 	DBGPRINTF("Removed entry %d for file '%s' from dynaCache.\n", iEntry,
 		pCache[iEntry]->pName == NULL ? UCHAR_CONSTANT("[OPEN FAILED]") : pCache[iEntry]->pName);
-// RG: check the "open failed" case -- can this cause trouble (but do we have that situation?)
-	/* if the name is NULL, this is an improperly initialized entry which
-	 * needs to be discarded. In this case, neither the file is to be closed
-	 * nor the name to be freed.
-	 */
+
 	if(pCache[iEntry]->pName != NULL) {
-		if(pCache[iEntry]->pStrm != NULL)
-			strm.Destruct(&pCache[iEntry]->pStrm);
-// RG: pStrm should now be NULL...
 		d_free(pCache[iEntry]->pName);
 		pCache[iEntry]->pName = NULL;
+	}
+
+	if(pCache[iEntry]->pStrm != NULL) {
+		strm.Destruct(&pCache[iEntry]->pStrm);
+		if(pCache[iEntry]->pStrm != NULL) /* safety check -- TODO: remove if no longer necessary */
+			abort();
 	}
 
 	if(bFreeEntry) {
