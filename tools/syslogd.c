@@ -3174,6 +3174,7 @@ int realMain(int argc, char **argv)
 	uchar *LocalHostName;
 	uchar *LocalDomain;
 	uchar *LocalFQDNName;
+	char cwdbuf[128]; /* buffer to obtain/display current working directory */
 
 	/* first, parse the command line options. We do not carry out any actual work, just
 	 * see what we should do. This relieves us from certain anomalies and we can process
@@ -3260,8 +3261,9 @@ int realMain(int argc, char **argv)
 	if ((argc -= optind))
 		usage();
 
-	DBGPRINTF("rsyslogd %s startup, compatibility mode %d, module path '%s'\n",
-		  VERSION, iCompatibilityMode, glblModPath == NULL ? "" : (char*)glblModPath);
+	DBGPRINTF("rsyslogd %s startup, compatibility mode %d, module path '%s', cwd:%s\n",
+		  VERSION, iCompatibilityMode, glblModPath == NULL ? "" : (char*)glblModPath,
+		  getcwd(cwdbuf, sizeof(cwdbuf)));
 
 	/* we are done with the initial option parsing and processing. Now we init the system. */
 
