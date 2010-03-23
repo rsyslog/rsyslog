@@ -48,10 +48,13 @@
 #include <libgen.h>
 #include <unistd.h>
 #include <sys/file.h>
-
 #ifdef OS_SOLARIS
 #	include <fcntl.h>
 #endif
+#ifdef HAVE_ATOMIC_BUILTINS
+#	include <pthread.h>
+#endif
+
 
 #include "conf.h"
 #include "syslogd-types.h"
@@ -108,9 +111,11 @@ getClockFileAccess(void)
 {
 	uint64 retVal;
 
+	BEGINfunc
 	d_pthread_mutex_lock(&mutClock);
 	retVal = ++clockFileAccess;
 	d_pthread_mutex_unlock(&mutClock);
+	ENDfunc
 	return retVal;
 }
 #endif  /* #ifdef HAVE_ATOMIC_BUILTINS */
