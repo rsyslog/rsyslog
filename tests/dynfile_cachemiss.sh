@@ -6,12 +6,12 @@
 #
 # This file is part of the rsyslog project, released  under GPLv3
 echo ===============================================================================
-echo TEST: \[dynfile_invalid.sh\]: test open fail for dynafiles
+echo TEST: \[dynfile_cachemiss.sh\]: test open fail for dynafiles with `cat rsyslog.action.1.include`
 source $srcdir/diag.sh init
 # uncomment for debugging support:
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 #export RSYSLOG_DEBUGLOG="log"
-source $srcdir/diag.sh startup dynfile_invalid.conf
+source $srcdir/diag.sh startup dynfile_cachemiss.conf
 # we send handcrafted message. We have a dynafile cache of 4, and now send one message
 # each to fill up the cache.
 ./tcpflood -m1 -M "<129>Mar 10 01:00:00 172.20.245.8 tag msg:rsyslog.out.0.log:0"

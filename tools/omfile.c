@@ -86,6 +86,7 @@ typedef struct s_dynaFileCacheEntry dynaFileCacheEntry;
 
 #define IOBUF_DFLT_SIZE 1024	/* default size for io buffers */
 #define FLUSH_INTRVL_DFLT 1 	/* default buffer flush interval (in seconds) */
+#define USE_ASYNCWRITER_DFLT 0 	/* default buffer use async writer */
 
 /* globals for default values */
 static int iDynaFileCacheSize = 10; /* max cache for dynamic files */
@@ -102,6 +103,7 @@ static int	iZipLevel = 0;	/* zip compression mode (0..9 as usual) */
 static bool	bFlushOnTXEnd = 0;/* flush write buffers when transaction has ended? */
 static int64	iIOBufSize = IOBUF_DFLT_SIZE;	/* size of an io buffer */
 static int	iFlushInterval = FLUSH_INTRVL_DFLT; 	/* how often flush the output buffer on inactivity? */
+static int	bUseAsyncWriter = USE_ASYNCWRITER_DFLT;	/* should we enable asynchronous writing? */
 uchar	*pszFileDfltTplName = NULL; /* name of the default template to use */
 /* end globals for default values */
 
@@ -134,6 +136,7 @@ typedef struct _instanceData {
 	int	iIOBufSize;		/* size of associated io buffer */
 	int	iFlushInterval;		/* how fast flush buffer on inactivity? */
 	bool	bFlushOnTXEnd;		/* flush write buffers when transaction has ended? */
+	bool	bUseAsyncWriter;	/* use async stream writer? */
 } instanceData;
 
 
@@ -147,26 +150,23 @@ ENDisCompatibleWithFeature
 BEGINdbgPrintInstInfo
 CODESTARTdbgPrintInstInfo
 	if(pData->bDynamicName) {
-		dbgprintf("[dynamic]\n\ttemplate='%s'"
-		       "\tfile cache size=%d\n"
-		       "\tcreate directories: %s\n"
-		       "\tfile owner %d, group %d\n"
-		       "\tdirectory owner %d, group %d\n"
-		       "\tdir create mode 0%3.3o, file create mode 0%3.3o\n"
-		       "\tfail if owner/group can not be set: %s\n",
-		        pData->f_fname,
-			pData->iDynaFileCacheSize,
-			pData->bCreateDirs ? "yes" : "no",
-			pData->fileUID, pData->fileGID,
-			pData->dirUID, pData->dirGID,
-			pData->fDirCreateMode, pData->fCreateMode,
-			pData->bFailOnChown ? "yes" : "no"
-			);
+		dbgprintf("[dynamic]\n");
 	} else { /* regular file */
-		dbgprintf("%s", pData->f_fname);
-		if (pData->pStrm == NULL)
-			dbgprintf(" (unused)");
+		dbgprintf("%s%s\n", pData->f_fname,
+			  (pData->pStrm == NULL) ? " (unused)" : "");
 	}
+
+	dbgprintf("\ttemplate='%s'\n", pData->f_fname);
+	dbgprintf("\tuse async writer=%d\n", pData->bUseAsyncWriter);
+	dbgprintf("\tflush on TX end=%d\n", pData->bFlushOnTXEnd);
+	dbgprintf("\tflush interval=%d\n", pData->iFlushInterval);
+	dbgprintf("\tfile cache size=%d\n", pData->iDynaFileCacheSize);
+	dbgprintf("\tcreate directories: %s\n", pData->bCreateDirs ? "yes" : "no");
+	dbgprintf("\tfile owner %d, group %d\n", pData->fileUID, pData->fileGID);
+	dbgprintf("\tdirectory owner %d, group %d\n", pData->dirUID, pData->dirGID);
+	dbgprintf("\tdir create mode 0%3.3o, file create mode 0%3.3o\n",
+		  pData->fDirCreateMode, pData->fCreateMode);
+	dbgprintf("\tfail if owner/group can not be set: %s\n", pData->bFailOnChown ? "yes" : "no");
 ENDdbgPrintInstInfo
 
 
@@ -414,7 +414,7 @@ prepareFile(instanceData *pData, uchar *newFileName)
 	 * async processing, which is a real performance waste if we do not do buffered
 	 * writes! -- rgerhards, 2009-07-06
 	 */
-	if(!pData->bFlushOnTXEnd)
+	if(pData->bUseAsyncWriter)
 		CHKiRet(strm.SetiFlushInterval(pData->pStrm, pData->iFlushInterval));
 	if(pData->pszSizeLimitCmd != NULL)
 		CHKiRet(strm.SetpszSizeLimitCmd(pData->pStrm, ustrdup(pData->pszSizeLimitCmd)));
@@ -731,6 +731,7 @@ CODESTARTparseSelectorAct
 	pData->bFlushOnTXEnd = bFlushOnTXEnd;
 	pData->iIOBufSize = (int) iIOBufSize;
 	pData->iFlushInterval = iFlushInterval;
+	pData->bUseAsyncWriter = bUseAsyncWriter;
 
 	if(pData->bDynamicName == 0) {
 		/* try open and emit error message if not possible. At this stage, we ignore the
@@ -766,6 +767,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	bFlushOnTXEnd = 0;
 	iIOBufSize = IOBUF_DFLT_SIZE;
 	iFlushInterval = FLUSH_INTRVL_DFLT;
+	bUseAsyncWriter = USE_ASYNCWRITER_DFLT;
 	if(pszFileDfltTplName != NULL) {
 		free(pszFileDfltTplName);
 		pszFileDfltTplName = NULL;
@@ -812,6 +814,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"dynafilecachesize", 0, eCmdHdlrInt, (void*) setDynaFileCacheSize, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omfileziplevel", 0, eCmdHdlrInt, NULL, &iZipLevel, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omfileflushinterval", 0, eCmdHdlrInt, NULL, &iFlushInterval, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omfileasyncwriting", 0, eCmdHdlrInt, NULL, &bUseAsyncWriter, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omfileflushontxend", 0, eCmdHdlrBinary, NULL, &bFlushOnTXEnd, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omfileiobuffersize", 0, eCmdHdlrSize, NULL, &iIOBufSize, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"dirowner", 0, eCmdHdlrUID, NULL, &dirUID, STD_LOADABLE_MODULE_ID));

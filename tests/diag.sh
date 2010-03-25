@@ -16,6 +16,7 @@ case $1 in
    'init')	$srcdir/killrsyslog.sh # kill rsyslogd if it runs for some reason
 		cp $srcdir/testsuites/diag-common.conf diag-common.conf
 		cp $srcdir/testsuites/diag-common2.conf diag-common2.conf
+		rm -f rsyslog.action.*.include
 		rm -f rsyslogd.started work-*.conf
 		rm -f rsyslogd2.started work-*.conf
 		rm -f work rsyslog.out.log rsyslog.out.log.save # common work files
@@ -25,7 +26,7 @@ case $1 in
 		mkdir test-spool
 		;;
    'exit')	rm -f rsyslogd.started work-*.conf diag-common.conf
-   		rm -f rsyslogd2.started diag-common2.conf
+   		rm -f rsyslogd2.started diag-common2.conf rsyslog.action.*.include
 		rm -f work rsyslog.out.log rsyslog.out.log.save # common work files
 		rm -f rsyslog.out.*.log
 		rm -rf test-spool
