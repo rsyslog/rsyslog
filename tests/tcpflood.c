@@ -54,6 +54,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <netinet/in.h>
+#include <sys/resource.h>
 
 #define EXIT_FAILURE 1
 #define INVALID_SOCKET -1
