@@ -128,5 +128,12 @@ case $1 in
 		  exit 1
 		fi
 		;;
+   'setzcat')   # find out name of zcat tool
+		if [ `uname` == SunOS ]; then
+		   ZCAT=gzcat
+		else
+		   ZCAT=zcat
+		fi
+		;;
    *)		echo "invalid argument" $1
 esac
