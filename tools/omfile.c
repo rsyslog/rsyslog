@@ -471,7 +471,7 @@ prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
 	iOldest = 0; /* we assume the first element to be the oldest - that will change as we loop */
 	ttOldest = time(NULL) + 1; /* there must always be an older one */
 	for(i = 0 ; i < pData->iCurrCacheSize ; ++i) {
-		if(pCache[i] == NULL) {
+		if(pCache[i] == NULL || pCache[i]->pName == NULL) {
 			if(iFirstFree == -1)
 				iFirstFree = i;
 		} else { /* got an element, let's see if it matches */
