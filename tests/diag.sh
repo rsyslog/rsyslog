@@ -37,16 +37,14 @@ case $1 in
 		;;
    'wait-startup') # wait for rsyslogd startup ($2 is the instance)
 		while test ! -f rsyslogd$2.started; do
-			true
-			#sleep 0.1 # if this is not supported by all platforms, use above!
+			./msleep 100 # wait 100 milliseconds
 		done
 		echo "rsyslogd$2 started with pid " `cat rsyslog$2.pid`
 		;;
    'wait-shutdown')  # actually, we wait for rsyslog.pid to be deleted. $2 is the
    		# instance
 		while test -f rsyslog$2.pid; do
-			#true
-			sleep 0.1 # if this is not supported by all platforms, use above!
+			./msleep 100 # wait 100 milliseconds
 		done
 		;;
    'wait-queueempty') # wait for main message queue to be empty. $2 is the instance.
