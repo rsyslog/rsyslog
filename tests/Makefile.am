@@ -1,6 +1,6 @@
 if ENABLE_TESTBENCH
 TESTRUNS = rt_init rscript
-check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq
+check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq msleep
 TESTS = $(TESTRUNS) cfg.sh \
 	validation-run.sh \
 	imtcp-multiport.sh \
@@ -193,6 +193,7 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   cfg.sh
 
 ourtail_SOURCES = ourtail.c
+msleep_SOURCES = msleep.c
 chkseq_SOURCES = chkseq.c
 
 tcpflood_SOURCES = tcpflood.c
