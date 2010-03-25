@@ -370,6 +370,20 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	if(numConnections > 20) {
+		/* if we use many (whatever this means, 20 is randomly picked)
+		 * connections, we need to make sure we have a high enough
+		 * limit. -- rgerhards, 2010-03-25
+		 */
+		struct rlimit maxFiles;
+		maxFiles.rlim_cur = numConnections + 20;
+		maxFiles.rlim_max = numConnections + 20;
+		if(setrlimit(RLIMIT_NOFILE, &maxFiles) < 0) {
+			perror("setrlimit to increase file handles failed");
+			exit(1);
+		}
+	}
+	
 	if(openConnections() != 0) {
 		printf("error opening connections\n");
 		exit(1);
