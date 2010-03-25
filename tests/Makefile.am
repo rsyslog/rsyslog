@@ -13,13 +13,15 @@ TESTS = $(TESTRUNS) cfg.sh \
 	asynwr_timeout.sh \
 	asynwr_small.sh \
 	asynwr_tinybuf.sh \
-	asynwr_large.sh \
+	wr_large_async.sh \
+	wr_large_sync.sh \
 	asynwr_deadlock.sh \
 	asynwr_deadlock2.sh \
 	asynwr_deadlock4.sh \
 	gzipwr_large.sh \
 	gzipwr_large_dynfile.sh \
-	dynfile_invalid.sh \
+	dynfile_invld_async.sh \
+	dynfile_invld_sync.sh \
 	dynfile_invalid2.sh \
 	complex1.sh \
 	queue-persist.sh \
@@ -163,8 +165,10 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/asynwr_small.conf \
 	   asynwr_tinybuf.sh \
 	   testsuites/asynwr_tinybuf.conf \
-	   asynwr_large.sh \
-	   testsuites/asynwr_large.conf \
+	   wr_large_async.sh \
+	   wr_large_sync.sh \
+	   wr_large.sh \
+	   testsuites/wr_large.conf \
 	   asynwr_deadlock.sh \
 	   testsuites/asynwr_deadlock.conf \
 	   asynwr_deadlock2.sh \
@@ -177,8 +181,10 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/gzipwr_large_dynfile.conf \
 	   complex1.sh \
 	   testsuites/complex1.conf \
-	   dynfile_invalid.sh \
-	   testsuites/dynfile_invalid.conf \
+	   dynfile_invld_async.sh \
+	   dynfile_invld_sync.sh \
+	   dynfile_cachemiss.sh \
+	   testsuites/dynfile_cachemiss.conf \
 	   dynfile_invalid2.sh \
 	   testsuites/dynfile_invalid2.conf \
 	   proprepltest.sh \
