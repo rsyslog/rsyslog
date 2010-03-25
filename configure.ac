@@ -278,6 +278,7 @@ AC_ARG_ENABLE(klog,
 AM_CONDITIONAL(ENABLE_IMKLOG, test x$enable_klog = xyes)
 AM_CONDITIONAL(ENABLE_IMKLOG_BSD, test x$os_type = xbsd)
 AM_CONDITIONAL(ENABLE_IMKLOG_LINUX, test x$os_type = xlinux)
+AM_CONDITIONAL(ENABLE_IMKLOG_SOLARIS, test x$os_type = xsolaris)
 
 
 #

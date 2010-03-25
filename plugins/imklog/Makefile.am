@@ -11,6 +11,10 @@ if ENABLE_IMKLOG_LINUX
 imklog_la_SOURCES += linux.c module.h ksym.c ksyms.h ksym_mod.c
 endif
 
+if ENABLE_IMKLOG_SOLARIS
+imklog_la_SOURCES += solaris_cddl.c
+endif
+
 imklog_la_CPPFLAGS = -I$(top_srcdir) $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
 imklog_la_LDFLAGS = -module -avoid-version
 imklog_la_LIBADD = 
