@@ -48,7 +48,6 @@
 #include <libgen.h>
 #include <unistd.h>
 #include <sys/file.h>
-#include <pthread.h>
 
 #ifdef OS_SOLARIS
 #	include <fcntl.h>
@@ -66,7 +65,6 @@
 #include "stream.h"
 #include "unicode-helper.h"
 #include "atomic.h"
-#include "debug.h"
 
 MODULE_TYPE_OUTPUT
 
@@ -136,7 +134,6 @@ typedef struct _instanceData {
 	int	iIOBufSize;		/* size of associated io buffer */
 	int	iFlushInterval;		/* how fast flush buffer on inactivity? */
 	bool	bFlushOnTXEnd;		/* flush write buffers when transaction has ended? */
-	pthread_mutex_t mutEx;		/* guard ourselves against being called multiple times with the same instance */
 } instanceData;
 
 
@@ -286,15 +283,16 @@ dynaFileDelCacheEntry(dynaFileCacheEntry **pCache, int iEntry, int bFreeEntry)
 
 	DBGPRINTF("Removed entry %d for file '%s' from dynaCache.\n", iEntry,
 		pCache[iEntry]->pName == NULL ? UCHAR_CONSTANT("[OPEN FAILED]") : pCache[iEntry]->pName);
-	/* if the name is NULL, this is an improperly initilized entry which
-	 * needs to be discarded. In this case, neither the file is to be closed
-	 * not the name to be freed.
-	 */
+
 	if(pCache[iEntry]->pName != NULL) {
-		if(pCache[iEntry]->pStrm != NULL)
-			strm.Destruct(&pCache[iEntry]->pStrm);
 		d_free(pCache[iEntry]->pName);
 		pCache[iEntry]->pName = NULL;
+	}
+
+	if(pCache[iEntry]->pStrm != NULL) {
+		strm.Destruct(&pCache[iEntry]->pStrm);
+		if(pCache[iEntry]->pStrm != NULL) /* safety check -- TODO: remove if no longer necessary */
+			abort();
 	}
 
 	if(bFreeEntry) {
@@ -470,11 +468,11 @@ prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
 	iOldest = 0; /* we assume the first element to be the oldest - that will change as we loop */
 	ttOldest = time(NULL) + 1; /* there must always be an older one */
 	for(i = 0 ; i < pData->iCurrCacheSize ; ++i) {
-		if(pCache[i] == NULL) {
+		if(pCache[i] == NULL || pCache[i]->pName == NULL) {
 			if(iFirstFree == -1)
 				iFirstFree = i;
 		} else { /* got an element, let's see if it matches */
-			if(!ustrcmp(newFileName, pCache[i]->pName)) {
+			if(!ustrcmp(newFileName, pCache[i]->pName)) {  // RG:  name == NULL?
 				/* we found our element! */
 				pData->pStrm = pCache[i]->pStrm;
 				pData->iCurrElt = i;
@@ -497,24 +495,38 @@ prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
 	 * is error-prone, so I prefer to do it here. -- rgerhards, 2010-03-02
 	 */
 	pData->iCurrElt = -1;
+	/* similarly, we need to set the current pStrm to NULL, because otherwise, if prepareFile() fails,
+	 * we may end up using an old stream. This bug depends on how exactly prepareFile fails,
+	 * but it* could be triggered in the common case of a failed open() system call.
+	 * rgerhards, 2010-03-22
+	 */
+	pData->pStrm = NULL;
 
 	if(iFirstFree == -1 && (pData->iCurrCacheSize < pData->iDynaFileCacheSize)) {
 		/* there is space left, so set it to that index */
 		iFirstFree = pData->iCurrCacheSize++;
 	}
 
+// RG: this is the begin of a potential problem area
+	/* Note that the following code sequence does not work with the cache entry itself,
+	 * but rather with pData->pStrm, the (sole) stream pointer in the non-dynafile case.
+	 * The cache array is only updated after the open was successful. -- rgerhards, 2010-03-21
+	 */
 	if(iFirstFree == -1) {
 		dynaFileDelCacheEntry(pCache, iOldest, 0);
 		iFirstFree = iOldest; /* this one *is* now free ;) */
 	} else {
 		/* we need to allocate memory for the cache structure */
+		/* TODO: performance note: we could alloc all entries on startup, thus saving malloc
+		 *       overhead -- this may be something to consider in v5...
+		 */
 		CHKmalloc(pCache[iFirstFree] = (dynaFileCacheEntry*) calloc(1, sizeof(dynaFileCacheEntry)));
 	}
 
 	/* Ok, we finally can open the file */
 	localRet = prepareFile(pData, newFileName); /* ignore exact error, we check fd below */
 
-	/* file is either open now or an error state set */
+	/* file is either open now or an error state set */ // RG: better check localRet?
 	if(pData->pStrm == NULL) {
 		/* do not report anything if the message is an internally-generated
 		 * message. Otherwise, we could run into a never-ending loop. The bad
@@ -525,13 +537,11 @@ prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
 		} else {
 			errmsg.LogError(0, NO_ERRCODE, "Could not open dynamic file '%s' - discarding message", newFileName);
 		}
-		dynaFileDelCacheEntry(pCache, iFirstFree, 1);
 		ABORT_FINALIZE(localRet);
 	}
 
 	if((pCache[iFirstFree]->pName = ustrdup(newFileName)) == NULL) {
-		/* we need to discard the entry, otherwise things could lead to a segfault! */
-		dynaFileDelCacheEntry(pCache, iFirstFree, 1);
+		strm.Destruct(&pData->pStrm); /* need to free failed entry! */
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
 	pCache[iFirstFree]->pStrm = pData->pStrm;
@@ -606,7 +616,6 @@ finalize_it:
 BEGINcreateInstance
 CODESTARTcreateInstance
 	pData->pStrm = NULL;
-	pthread_mutex_init(&pData->mutEx, NULL);
 ENDcreateInstance
 
 
@@ -616,7 +625,6 @@ CODESTARTfreeInstance
 		dynaFileFreeCache(pData);
 	} else if(pData->pStrm != NULL)
 		strm.Destruct(&pData->pStrm);
-	pthread_mutex_destroy(&pData->mutEx);
 ENDfreeInstance
 
 
@@ -626,7 +634,6 @@ ENDtryResume
 
 BEGINdoAction
 CODESTARTdoAction
-	d_pthread_mutex_lock(&pData->mutEx);
 	DBGPRINTF("file to log to: %s\n", pData->f_fname);
 	CHKiRet(writeFile(ppString, iMsgOpts, pData));
 	if(pData->bFlushOnTXEnd) {
@@ -634,7 +641,6 @@ CODESTARTdoAction
 		CHKiRet(strm.Flush(pData->pStrm));
 	}
 finalize_it:
-	d_pthread_mutex_unlock(&pData->mutEx);
 ENDdoAction
 
 
@@ -771,7 +777,6 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 
 BEGINdoHUP
 CODESTARTdoHUP
-	d_pthread_mutex_lock(&pData->mutEx);
 	if(pData->bDynamicName) {
 		dynaFileFreeCacheEntries(pData);
 	} else {
@@ -780,7 +785,6 @@ CODESTARTdoHUP
 			pData->pStrm = NULL;
 		}
 	}
-	d_pthread_mutex_unlock(&pData->mutEx);
 ENDdoHUP
 
 

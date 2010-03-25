@@ -4,6 +4,35 @@ Version 4.6.2  [v4-stable] (rgerhards), 2010-03-??
   pathes (this is primarily meant as a debug aid)
 - added replacements for atomic instructions on systems that do not
   support them. [backport of Stefen Sledz' patch for v5)
+- bugfix(temporary): message-induced off-by-one error (potential segfault)
+  Some types of malformed messages could trigger an off-by-one error
+  (for example, \0 or \n as the last character, and generally control
+  character escaption is questionable). This is due to not strictly
+  following a the \0 or string counted string paradigm (during the last
+  optimization on the cstring class). As a temporary fix, we have 
+  introduced a proper recalculation of the size. However, a final
+  patch is expected in the future. See bug tracker for further details
+  and when the final patch will be available:
+  http://bugzilla.adiscon.com/show_bug.cgi?id=184
+  Note that the current patch is considered sufficient to solve the
+  situation, but it requires a bit more runtime than desirable.
+- bugfix: potential segfault in dynafile cache
+  This bug was triggered by an open failure. The the cache was full and
+  a new entry needed to be placed inside it, a victim for eviction was
+  selected. That victim was freed, then the open of the new file tried. If
+  the open failed, the victim entry was still freed, and the function
+  exited. However, on next invocation and cache search, the victim entry
+  was used as if it were populated, most probably resulting in a segfault.
+- bugfix: race condition during directory creation
+  If multiple files try to create a directory at (almost) the same time,
+  some of them may fail. This is a data race and also exists with other
+  processes that may create the same directory. We do now check for this
+  condition and gracefully handle it.
+- bugfix: potential re-use of free()ed file stream object in omfile
+  when dynaCache is enabled, the cache is full, a new entry needs to
+  be allocated, thus the LRU discarded, then a new entry is opend and that
+  fails. In that case, it looks like the discarded stream may be reused
+  improperly (based on code analysis, test case and confirmation pending)
 - added new property replacer option "date-rfc3164-buggyday" primarily
   to ease migration from syslog-ng. See property replacer doc for
   details. [backport from 5.5.3 because urgently needed by some]
