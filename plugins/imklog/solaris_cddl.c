@@ -141,7 +141,7 @@ findnl_bkwd(const char *buf, const size_t len)
 				/*
 				 * Invalid character found.
 				 */
-				dbgprintf("findnl_bkwd(%u): Invalid MB "
+				dbgprintf("klog:findnl_bkwd(%u): Invalid MB "
 				    "sequence\n", mythreadno);
 				/*
 				 * handle as a single byte character.
@@ -184,10 +184,9 @@ sun_openklog(char *name, int mode)
 	int fd;
 	struct strioctl str;
 
-	solaris_create_unix_socket(name);
 	if ((fd = open(name, mode)) < 0) {
 		//logerror("cannot open %s", name);
-		dbgprintf("openklog: cannot open %s (%d)\n",
+		dbgprintf("klog:openklog: cannot open %s (%d)\n",
 		    name, errno);
 		return (-1);
 	}
@@ -197,11 +196,12 @@ sun_openklog(char *name, int mode)
 	str.ic_dp = NULL;
 	if (ioctl(fd, I_STR, &str) < 0) {
 		//logerror("cannot register to log console messages");
-		dbgprintf("openklog: cannot register to log "
+		dbgprintf("klog:openklog: cannot register to log "
 		    "console messages (%d)\n", errno);
 		return (-1);
 	}
 	Pfd.fd = fd;
+	Pfd.events = POLLIN;
 	return (fd);
 }
 
@@ -230,7 +230,7 @@ sun_getkmsg(int timeout)
 		lastline = &dat.buf[dat.len];
 		*lastline = '\0';
 
-		dbgprintf("sys_poll: getmsg: dat.len = %d\n", dat.len);
+		dbgprintf("klog:sys_poll: getmsg: dat.len = %d\n", dat.len);
 		buflen = strlen(buf);
 		len = findnl_bkwd(buf, buflen);
 
@@ -281,11 +281,11 @@ sun_getkmsg(int timeout)
 		 * means that we're done handling all the
 		 * initial messages ready during startup.
 		 */
-		dbgprintf("getkmsg: getmsg: dat.maxlen = %d\n", dat.maxlen);
-		dbgprintf("getkmsg: getmsg: dat.len = %d\n", dat.len);
-		dbgprintf("getkmsg: getmsg: strlen(dat.buf) = %d\n", strlen(dat.buf));
-		dbgprintf("getkmsg: getmsg: dat.buf = \"%s\"\n", dat.buf);
-		dbgprintf("getkmsg: buf len = %d\n", strlen(buf));
+		dbgprintf("klog:getkmsg: getmsg: dat.maxlen = %d\n", dat.maxlen);
+		dbgprintf("klog:getkmsg: getmsg: dat.len = %d\n", dat.len);
+		dbgprintf("klog:getkmsg: getmsg: strlen(dat.buf) = %d\n", strlen(dat.buf));
+		dbgprintf("klog:getkmsg: getmsg: dat.buf = \"%s\"\n", dat.buf);
+		dbgprintf("klog:getkmsg: buf len = %d\n", strlen(buf));
 		//if (timeout == 0) {
 			//formatsys(&hdr, buf, 0);
 			//--sys_init_msg_count++;
@@ -295,7 +295,7 @@ sun_getkmsg(int timeout)
 		Syslog(LOG_INFO, buf);
 	} else if (i < 0 && errno != EINTR) {
 		if(1){ // (!shutting_down) {
-			dbgprintf("kernel log driver read error");
+			dbgprintf("klog:kernel log driver read error");
 		}
 		// TODO trigger retry logic
 		//(void) close(Pfd.fd);
@@ -304,6 +304,7 @@ sun_getkmsg(int timeout)
 }
 
 
+#if 0
 /*
  * Open the log device, and pull up all pending messages.
  */
@@ -335,12 +336,14 @@ sun_prepare_sys_poll()
 			sun_getkmsg(0);
 		} else if (Pfd.revents & (POLLNVAL|POLLHUP|POLLERR)) {
 			//logerror("kernel log driver poll error");
-			dbgprintf("kernel log driver poll error");
+			dbgprintf("klog:kernel log driver poll error");
 			break;
 		}
 	}
 
 }
+#endif
+
 
 /*
  * this thread listens to the local stream log driver for log messages
@@ -353,7 +356,7 @@ sun_sys_poll(void *ap)
 {
 	int nfds;
 
-	dbgprintf("sys_poll: sys_thread started\n");
+	dbgprintf("klog:sys_poll: sys_thread started\n");
 
 	/*
 	 * Try to process as many messages as we can without blocking on poll.
@@ -366,15 +369,17 @@ sun_sys_poll(void *ap)
 
 	for (;;) {
 		errno = 0;
+dbgprintf("XXX: before poll\n");
 
 		nfds = poll(&Pfd, 1, INFTIM);
+dbgprintf("XXX: after poll, nfds %d\n", nfds);
 
 		if (nfds == 0)
 			continue;
 
 		if (nfds < 0) {
 			if (errno != EINTR)
-				dbgprintf("poll error");// logerror("poll");
+				dbgprintf("klog:poll error");// logerror("poll");
 			continue;
 		}
 		if (Pfd.revents & POLLIN) {

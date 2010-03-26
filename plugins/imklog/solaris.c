@@ -51,39 +51,6 @@ static int fklog; // TODO: remove
 #	define _PATH_KLOG "/dev/log"
 #endif
 
-// HELPER
-/* handle some defines missing on more than one platform */
-#ifndef SUN_LEN
-#define SUN_LEN(su) \
-   (sizeof(*(su)) - sizeof((su)->sun_path) + strlen((su)->sun_path))
-#endif
-
-int solaris_create_unix_socket(const char *path)
-{
-	struct sockaddr_un sunx;
-	int fd;
-
-return;
-	if (path[0] == '\0')
-		return -1;
-
-	unlink(path);
-
-	memset(&sunx, 0, sizeof(sunx));
-	sunx.sun_family = AF_UNIX;
-	(void) strncpy(sunx.sun_path, path, sizeof(sunx.sun_path));
-	fd = socket(AF_UNIX, SOCK_DGRAM, 0);
-	if (fd < 0 || bind(fd, (struct sockaddr *) &sunx, SUN_LEN(&sunx)) < 0 ||
-	    chmod(path, 0666) < 0) {
-		//errmsg.LogError(errno, NO_ERRCODE, "connot create '%s'", path);
-		dbgprintf("cannot create %s (%d).\n", path, errno);
-		close(fd);
-		return -1;
-	}
-	return fd;
-}
-// END HELPER
-
 
 static uchar *GetPath(void)
 {
@@ -104,7 +71,7 @@ klogWillRun(void)
 		int err = errno;
 perror("XXX");
 		rs_strerror_r(err, errStr, sizeof(errStr));
-		DBGPRINTF("error %d opening log socket %s: %s\n",
+		DBGPRINTF("error %d opening log socket: %s\n",
 				   GetPath(), errStr);
 		iRet = RS_RET_ERR; // TODO: better error code
 	}
