@@ -300,7 +300,16 @@ CODESTARTwillRun
 	register int i;
 
 	/* first apply some config settings */
-	startIndexUxLocalSockets = bOmitLocalLogging ? 1 : 0;
+#	ifdef OS_SOLARIS
+		/* under solaris, we must NEVER process the local log socket, because
+		 * it is implemented there differently. If we used it, we would actually
+		 * delete it and render the system partly unusable. So don't do that.
+		 * rgerhards, 2010-03-26
+		 */
+		startIndexUxLocalSockets = 1;
+#	else
+		startIndexUxLocalSockets = bOmitLocalLogging ? 1 : 0;
+#	endif
 	if(pLogSockName != NULL)
 		funixn[0] = pLogSockName;
 
@@ -329,7 +338,7 @@ CODESTARTafterRun
 			close(funix[i]);
 
 	/* Clean-up files. */
-        for (i = 0; i < nfunix; i++)
+	for(i = startIndexUxLocalSockets; i < nfunix; i++)
 		if (funixn[i] && funix[i] != -1)
 			unlink((char*) funixn[i]);
 	/* free no longer needed string */
