@@ -69,7 +69,6 @@ klogWillRun(void)
 	if (fklog < 0) {
 		char errStr[1024];
 		int err = errno;
-perror("XXX");
 		rs_strerror_r(err, errStr, sizeof(errStr));
 		DBGPRINTF("error %d opening log socket: %s\n",
 				   GetPath(), errStr);
@@ -167,7 +166,6 @@ rsRetVal klogLogKMsg(void)
 {
         DEFiRet;
 	sun_sys_poll();
-	//readklog();
 	RETiRet;
 }
 
