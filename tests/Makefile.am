@@ -54,7 +54,7 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/valid.conf \
 	   cfg.sh \
 	   cfg1.cfgtest \
-	   fg1.testin \
+	   cfg1.testin \
 	   cfg2.cfgtest \
 	   cfg2.testin \
 	   cfg3.cfgtest \
@@ -109,7 +109,6 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/parse3.conf \
 	   testsuites/reallife.parse3 \
 	   testsuites/parse-nodate.conf \
-	   testsuites/reallife.parse-nodate \
 	   testsuites/parse_invld_regex.conf \
 	   testsuites/samples.parse_invld_regex \
 	   testsuites/parse-3164-buggyday.conf \

@@ -3,7 +3,7 @@ Version 4.6.3  [v4-stable] (rgerhards), 2010-03-??
 - bugfix: local unix system log socket was deleted even when it was
   not configured
 ---------------------------------------------------------------------------
-Version 4.6.2  [v4-stable] (rgerhards), 2010-03-??
+Version 4.6.2  [v4-stable] (rgerhards), 2010-03-26
 - new feature: "." action type added to support writing files to relative
   pathes (this is primarily meant as a debug aid)
 - added replacements for atomic instructions on systems that do not
