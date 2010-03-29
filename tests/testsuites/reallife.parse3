@@ -9,7 +9,7 @@
 # documentation by IANA.
 # rgerhards, 2009-10-19
 <175>Oct 16 2009 23:47:31 hostname tag This is a message
-"2009-10-16T23:47:31+01:00", "hostname", "tag", "", "7", " This is a message"
+"2009-10-16T23:47:31", "hostname", "tag", "", "7", " This is a message"
 #
 <175>Oct 16 2009 23:47:31 hostname tag[1234] This is a message
-"2009-10-16T23:47:31+01:00", "hostname", "tag", "1234", "7", " This is a message"
+"2009-10-16T23:47:31", "hostname", "tag", "1234", "7", " This is a message"
