@@ -1,3 +1,6 @@
+- bugfix: testbench failed when not executed in UTC+1 timezone
+  accidently, the time zone information was kept inside some
+  to-be-checked-for responses
 ---------------------------------------------------------------------------
 Version 4.6.3  [v4-stable] (rgerhards), 2010-03-??
 - bugfix: local unix system log socket was deleted even when it was
