@@ -25,9 +25,13 @@ http://prefetch.net/articles/linkers.badldlibrary.html
 
 The working sample configure sequence I use is:
 
-export LDFLAGS="-R/usr/local/lib"
+export LDFLAGS="-R/opt/csw/gcc4/lib"
 ./configure AR=gar ...other options...
 
+As a "quick and dirty" fix, one may set the following library
+path before executing rsyslog (may be useful to avoid recompile):
+
+export LD_LIBRARY_PATH=/opt/csw/gcc4/lib
 
 NOT YET SUPPORTED
 * local log socket
