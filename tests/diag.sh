@@ -8,6 +8,7 @@
 #valgrind="valgrind --malloc-fill=ff --free-fill=fe --log-fd=1"
 #valgrind="valgrind --tool=drd --log-fd=1"
 #valgrind="valgrind --tool=helgrind --log-fd=1"
+#valgrind="valgrind --tool=exp-ptrcheck --log-fd=1"
 #set -o xtrace
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 #export RSYSLOG_DEBUGLOG="log"
@@ -15,16 +16,19 @@ case $1 in
    'init')	$srcdir/killrsyslog.sh # kill rsyslogd if it runs for some reason
 		cp $srcdir/testsuites/diag-common.conf diag-common.conf
 		cp $srcdir/testsuites/diag-common2.conf diag-common2.conf
+		rm -f rsyslog.action.*.include
 		rm -f rsyslogd.started work-*.conf
 		rm -f rsyslogd2.started work-*.conf
 		rm -f work rsyslog.out.log rsyslog.out.log.save # common work files
+		rm -f rsyslog.out.*.log
 		rm -rf test-spool
 		rm -f core.* vgcore.*
 		mkdir test-spool
 		;;
    'exit')	rm -f rsyslogd.started work-*.conf diag-common.conf
-   		rm -f rsyslogd2.started diag-common2.conf
+   		rm -f rsyslogd2.started diag-common2.conf rsyslog.action.*.include
 		rm -f work rsyslog.out.log rsyslog.out.log.save # common work files
+		rm -f rsyslog.out.*.log
 		rm -rf test-spool
 		echo  -------------------------------------------------------------------------------
 		;;
@@ -35,14 +39,16 @@ case $1 in
 		;;
    'wait-startup') # wait for rsyslogd startup ($2 is the instance)
 		while test ! -f rsyslogd$2.started; do
-			true
+			#true
+			sleep 0.1 # if this is not supported by all platforms, use above!
 		done
 		echo "rsyslogd$2 started with pid " `cat rsyslog$2.pid`
 		;;
    'wait-shutdown')  # actually, we wait for rsyslog.pid to be deleted. $2 is the
    		# instance
 		while test -f rsyslog$2.pid; do
-			true
+			#true
+			sleep 0.1 # if this is not supported by all platforms, use above!
 		done
 		if [ -e core.* ]
 		then
@@ -69,7 +75,7 @@ case $1 in
 		# note: we do not wait for the actual termination!
 		;;
    'tcpflood') # do a tcpflood run and check if it worked params are passed to tcpflood
-		./tcpflood $2 $3 $4 $5 $6 $7 $8
+		./tcpflood $2 $3 $4 $5 $6 $7 $8 $9
 		if [ "$?" -ne "0" ]; then
 		  echo "error during tcpflood! see rsyslog.out.log.save for what was written"
 		  cp rsyslog.out.log rsyslog.out.log.save
@@ -92,6 +98,7 @@ case $1 in
 		;;
    'seq-check') # do the usual sequence check to see if everything was properly received. $2 is the instance.
 		rm -f work
+		cp rsyslog.out.log work-presort
 		sort < rsyslog.out.log > work
 		# $4... are just to have the abilit to pass in more options...
 		# add -v to chkseq if you need more verbose output
@@ -108,6 +115,18 @@ case $1 in
 		sort < rsyslog2.out.log > work2
 		# $4... are just to have the abilit to pass in more options...
 		./chkseq -fwork2 -v -s$2 -e$3 $4 $5 $6 $7
+		if [ "$?" -ne "0" ]; then
+		  echo "sequence error detected"
+		  exit 1
+		fi
+		;;
+   'gzip-seq-check') # do the usual sequence check, but for gzip files
+		rm -f work
+		ls -l rsyslog.out.log
+		gunzip < rsyslog.out.log | sort > work
+		ls -l work
+		# $4... are just to have the abilit to pass in more options...
+		./chkseq -fwork -v -s$2 -e$3 $4 $5 $6 $7
 		if [ "$?" -ne "0" ]; then
 		  echo "sequence error detected"
 		  exit 1

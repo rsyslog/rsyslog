@@ -48,6 +48,7 @@
 #include <netinet/in.h>
 #include <getopt.h>
 #include <errno.h>
+#include <ctype.h>
 
 #define EXIT_FAILURE 1
 #define INVALID_SOCKET -1
@@ -63,6 +64,7 @@ static int iPort = 12514; /* port which shall be used for sending data */
 static char* pszCustomConf = NULL;	/* custom config file, use -c conf to specify */
 static int verbose = 0;	/* verbose output? -v option */
 static int IPv4Only = 0;	/* use only IPv4 in rsyslogd call? */
+static int useDebugEnv = 0; /* activate debugging environment (for rsyslog debug log)? */
 
 /* these two are quick hacks... */
 int iFailed = 0;
@@ -225,10 +227,8 @@ int openPipe(char *configFile, pid_t *pid, int *pfd)
 			   "-M../runtime/.libs:../.libs", NULL, NULL};
 	char confFile[1024];
 	char *newenviron[] = { NULL };
-	/* debug aide...
-	char *newenviron[] = { "RSYSLOG_DEBUG=debug nostdout",
+	char *newenvironDeb[] = { "RSYSLOG_DEBUG=debug nostdout",
 				"RSYSLOG_DEBUGLOG=log", NULL };
-	*/
 
 	sprintf(confFile, "-f%s/testsuites/%s.conf", srcdir,
 		(pszCustomConf == NULL) ? configFile : pszCustomConf);
@@ -254,7 +254,7 @@ int openPipe(char *configFile, pid_t *pid, int *pfd)
 		close(pipefd[1]);
 		close(pipefd[0]);
 		fclose(stdin);
-		execve("../tools/rsyslogd", newargv, newenviron);
+		execve("../tools/rsyslogd", newargv, (useDebugEnv) ? newenvironDeb : newenviron);
 	} else {            
 		close(pipefd[1]);
 		*pid = cpid;
@@ -262,6 +262,62 @@ int openPipe(char *configFile, pid_t *pid, int *pfd)
 	}
 
 	return(0);
+}
+
+
+/* This function unescapes a string of testdata. That it, escape sequences
+ * are converted into their one-character equivalent. While doing so, it applies
+ * C-like semantics. This was made necessary for easy integration of control
+ * characters inside test cases.  -- rgerhards, 2009-03-11
+ * Currently supported:
+ * \\	single backslash
+ * \n, \t, \r as in C
+ * \nnn where nnn is a 1 to 3 character octal sequence 
+ * Note that when a problem occurs, the end result is undefined. After all, this
+ * is for a testsuite generatort, it must not be 100% bullet proof (so do not
+ * copy this code into something that must be!). Also note that we do in-memory
+ * unescaping and assume that the string gets shorter but NEVER longer!
+ */
+void unescapeTestdata(char *testdata)
+{
+	char *pDst;
+	char *pSrc;
+	int i;
+	int c;
+
+	pDst = pSrc = testdata;
+	while(*pSrc) {
+		if(*pSrc == '\\') {
+			switch(*++pSrc) {
+			case '\\':	*pDst++ = *pSrc++;
+					break;
+			case 'n':	*pDst++ = '\n';
+					++pSrc;
+					break;
+			case 'r':	*pDst++ = '\r';
+					++pSrc;
+					break;
+			case 't':	*pDst++ = '\t';
+					++pSrc;
+					break;
+			case '0':
+			case '1':
+			case '2':
+			case '3':	c = *pSrc++ - '0';
+					i = 1; /* we already processed one digit! */
+					while(i < 3 && isdigit(*pSrc)) {
+						c = c * 8 + *pSrc++ - '0';
+						++i;
+					}
+					*pDst++ = c;
+					break;
+			default:	break;
+			}
+		} else {
+			*pDst++ = *pSrc++;
+		}
+	}
+	*pDst = '\0';
 }
 
 
@@ -302,6 +358,7 @@ processTestFile(int fd, char *pszFileName)
 
 		testdata[strlen(testdata)-1] = '\0'; /* remove \n */
 		/* now we have the test data to send (we could use function pointers here...) */
+		unescapeTestdata(testdata);
 		if(inputMode == inputUDP) {
 			if(udpSend(testdata, strlen(testdata)) != 0)
 				return(2);
@@ -330,7 +387,7 @@ processTestFile(int fd, char *pszFileName)
 				ret = 1;
 		}
 
-		/* clean up after the try */
+		/* we need to free buffers, as we have potentially modified them! */
 		free(testdata);
 		testdata = NULL;
 		free(expected);
@@ -430,13 +487,16 @@ int main(int argc, char *argv[])
 	char buf[4096];
 	char testcases[4096];
 
-	while((opt = getopt(argc, argv, "4c:i:p:t:v")) != EOF) {
+	while((opt = getopt(argc, argv, "4dc:i:p:t:v")) != EOF) {
 		switch((char)opt) {
                 case '4':
 			IPv4Only = 1;
 			break;
                 case 'c':
 			pszCustomConf = optarg;
+			break;
+                case 'd': 
+			useDebugEnv = 1;
 			break;
                 case 'i':
 			if(!strcmp(optarg, "udp"))
@@ -458,7 +518,7 @@ int main(int argc, char *argv[])
 			verbose = 1;
 			break;
 		default:printf("Invalid call of nettester, invalid option '%c'.\n", opt);
-			printf("Usage: nettester -ttestsuite-name -iudp|tcp [-pport] [-ccustomConfFile] \n");
+			printf("Usage: nettester -d -ttestsuite-name -iudp|tcp [-pport] [-ccustomConfFile] \n");
 			exit(1);
 		}
 	}

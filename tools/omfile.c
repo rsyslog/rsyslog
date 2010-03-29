@@ -108,6 +108,7 @@ typedef struct s_dynaFileCacheEntry dynaFileCacheEntry;
 
 #define IOBUF_DFLT_SIZE 1024	/* default size for io buffers */
 #define FLUSH_INTRVL_DFLT 1 	/* default buffer flush interval (in seconds) */
+#define USE_ASYNCWRITER_DFLT 0 	/* default buffer use async writer */
 
 #define DFLT_bForceChown 0
 /* globals for default values */
@@ -123,9 +124,10 @@ static uid_t	dirGID;		/* GID to be used for newly created directories */
 static int	bCreateDirs = 1;/* auto-create directories for dynaFiles: 0 - no, 1 - yes */
 static int	bEnableSync = 0;/* enable syncing of files (no dash in front of pathname in conf): 0 - no, 1 - yes */
 static int	iZipLevel = 0;	/* zip compression mode (0..9 as usual) */
-static bool	bFlushOnTXEnd = 1;/* flush write buffers when transaction has ended? */
+static bool	bFlushOnTXEnd = 0;/* flush write buffers when transaction has ended? */
 static int64	iIOBufSize = IOBUF_DFLT_SIZE;	/* size of an io buffer */
 static int	iFlushInterval = FLUSH_INTRVL_DFLT; 	/* how often flush the output buffer on inactivity? */
+static int	bUseAsyncWriter = USE_ASYNCWRITER_DFLT;	/* should we enable asynchronous writing? */
 uchar	*pszFileDfltTplName = NULL; /* name of the default template to use */
 /* end globals for default values */
 
@@ -159,6 +161,7 @@ typedef struct _instanceData {
 	int	iIOBufSize;		/* size of associated io buffer */
 	int	iFlushInterval;		/* how fast flush buffer on inactivity? */
 	bool	bFlushOnTXEnd;		/* flush write buffers when transaction has ended? */
+	bool	bUseAsyncWriter;	/* use async stream writer? */
 } instanceData;
 
 
@@ -172,28 +175,23 @@ ENDisCompatibleWithFeature
 BEGINdbgPrintInstInfo
 CODESTARTdbgPrintInstInfo
 	if(pData->bDynamicName) {
-		dbgprintf("[dynamic]\n\ttemplate='%s'"
-		       "\tfile cache size=%d\n"
-		       "\tcreate directories: %s\n"
-		       "\tfile owner %d, group %d\n"
-		       "\tdirectory owner %d, group %d\n"
-		       "\tforce chown() for all files: %s\n"
-		       "\tdir create mode 0%3.3o, file create mode 0%3.3o\n"
-		       "\tfail if owner/group can not be set: %s\n",
-		        pData->f_fname,
-			pData->iDynaFileCacheSize,
-			pData->bCreateDirs ? "yes" : "no",
-			pData->fileUID, pData->fileGID,
-			pData->dirUID, pData->dirGID,
-			pData->bForceChown ? "yes" : "no",
-			pData->fDirCreateMode, pData->fCreateMode,
-			pData->bFailOnChown ? "yes" : "no"
-			);
+		dbgprintf("[dynamic]\n");
 	} else { /* regular file */
-		dbgprintf("%s", pData->f_fname);
-		if (pData->pStrm == NULL)
-			dbgprintf(" (unused)");
+		dbgprintf("%s%s\n", pData->f_fname,
+			  (pData->pStrm == NULL) ? " (unused)" : "");
 	}
+
+	dbgprintf("\ttemplate='%s'\n", pData->f_fname);
+	dbgprintf("\tuse async writer=%d\n", pData->bUseAsyncWriter);
+	dbgprintf("\tflush on TX end=%d\n", pData->bFlushOnTXEnd);
+	dbgprintf("\tflush interval=%d\n", pData->iFlushInterval);
+	dbgprintf("\tfile cache size=%d\n", pData->iDynaFileCacheSize);
+	dbgprintf("\tcreate directories: %s\n", pData->bCreateDirs ? "yes" : "no");
+	dbgprintf("\tfile owner %d, group %d\n", pData->fileUID, pData->fileGID);
+	dbgprintf("\tdirectory owner %d, group %d\n", pData->dirUID, pData->dirGID);
+	dbgprintf("\tdir create mode 0%3.3o, file create mode 0%3.3o\n",
+		  pData->fDirCreateMode, pData->fCreateMode);
+	dbgprintf("\tfail if owner/group can not be set: %s\n", pData->bFailOnChown ? "yes" : "no");
 ENDdbgPrintInstInfo
 
 
@@ -310,15 +308,16 @@ dynaFileDelCacheEntry(dynaFileCacheEntry **pCache, int iEntry, int bFreeEntry)
 
 	DBGPRINTF("Removed entry %d for file '%s' from dynaCache.\n", iEntry,
 		pCache[iEntry]->pName == NULL ? UCHAR_CONSTANT("[OPEN FAILED]") : pCache[iEntry]->pName);
-	/* if the name is NULL, this is an improperly initilized entry which
-	 * needs to be discarded. In this case, neither the file is to be closed
-	 * not the name to be freed.
-	 */
+
 	if(pCache[iEntry]->pName != NULL) {
-		if(pCache[iEntry]->pStrm != NULL)
-			strm.Destruct(&pCache[iEntry]->pStrm);
 		d_free(pCache[iEntry]->pName);
 		pCache[iEntry]->pName = NULL;
+	}
+
+	if(pCache[iEntry]->pStrm != NULL) {
+		strm.Destruct(&pCache[iEntry]->pStrm);
+		if(pCache[iEntry]->pStrm != NULL) /* safety check -- TODO: remove if no longer necessary */
+			abort();
 	}
 
 	if(bFreeEntry) {
@@ -455,7 +454,7 @@ prepareFile(instanceData *pData, uchar *newFileName)
 	 * async processing, which is a real performance waste if we do not do buffered
 	 * writes! -- rgerhards, 2009-07-06
 	 */
-	if(!pData->bFlushOnTXEnd)
+	if(pData->bUseAsyncWriter)
 		CHKiRet(strm.SetiFlushInterval(pData->pStrm, pData->iFlushInterval));
 	if(pData->pszSizeLimitCmd != NULL)
 		CHKiRet(strm.SetpszSizeLimitCmd(pData->pStrm, ustrdup(pData->pszSizeLimitCmd)));
@@ -509,11 +508,11 @@ prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
 	iOldest = 0; /* we assume the first element to be the oldest - that will change as we loop */
 	ctOldest = getClockFileAccess(); /* there must always be an older one */
 	for(i = 0 ; i < pData->iCurrCacheSize ; ++i) {
-		if(pCache[i] == NULL) {
+		if(pCache[i] == NULL || pCache[i]->pName == NULL) {
 			if(iFirstFree == -1)
 				iFirstFree = i;
 		} else { /* got an element, let's see if it matches */
-			if(!ustrcmp(newFileName, pCache[i]->pName)) {
+			if(!ustrcmp(newFileName, pCache[i]->pName)) {  // RG:  name == NULL?
 				/* we found our element! */
 				pData->pStrm = pCache[i]->pStrm;
 				pData->iCurrElt = i;
@@ -536,24 +535,38 @@ prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
 	 * is error-prone, so I prefer to do it here. -- rgerhards, 2010-03-02
 	 */
 	pData->iCurrElt = -1;
+	/* similarly, we need to set the current pStrm to NULL, because otherwise, if prepareFile() fails,
+	 * we may end up using an old stream. This bug depends on how exactly prepareFile fails,
+	 * but it* could be triggered in the common case of a failed open() system call.
+	 * rgerhards, 2010-03-22
+	 */
+	pData->pStrm = NULL;
 
 	if(iFirstFree == -1 && (pData->iCurrCacheSize < pData->iDynaFileCacheSize)) {
 		/* there is space left, so set it to that index */
 		iFirstFree = pData->iCurrCacheSize++;
 	}
 
+// RG: this is the begin of a potential problem area
+	/* Note that the following code sequence does not work with the cache entry itself,
+	 * but rather with pData->pStrm, the (sole) stream pointer in the non-dynafile case.
+	 * The cache array is only updated after the open was successful. -- rgerhards, 2010-03-21
+	 */
 	if(iFirstFree == -1) {
 		dynaFileDelCacheEntry(pCache, iOldest, 0);
 		iFirstFree = iOldest; /* this one *is* now free ;) */
 	} else {
 		/* we need to allocate memory for the cache structure */
+		/* TODO: performance note: we could alloc all entries on startup, thus saving malloc
+		 *       overhead -- this may be something to consider in v5...
+		 */
 		CHKmalloc(pCache[iFirstFree] = (dynaFileCacheEntry*) calloc(1, sizeof(dynaFileCacheEntry)));
 	}
 
 	/* Ok, we finally can open the file */
 	localRet = prepareFile(pData, newFileName); /* ignore exact error, we check fd below */
 
-	/* file is either open now or an error state set */
+	/* file is either open now or an error state set */ // RG: better check localRet?
 	if(pData->pStrm == NULL) {
 		/* do not report anything if the message is an internally-generated
 		 * message. Otherwise, we could run into a never-ending loop. The bad
@@ -564,13 +577,11 @@ prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
 		} else {
 			errmsg.LogError(0, NO_ERRCODE, "Could not open dynamic file '%s' - discarding message", newFileName);
 		}
-		dynaFileDelCacheEntry(pCache, iFirstFree, 1);
 		ABORT_FINALIZE(localRet);
 	}
 
 	if((pCache[iFirstFree]->pName = ustrdup(newFileName)) == NULL) {
-		/* we need to discard the entry, otherwise things could lead to a segfault! */
-		dynaFileDelCacheEntry(pCache, iFirstFree, 1);
+		strm.Destruct(&pData->pStrm); /* need to free failed entry! */
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
 	pCache[iFirstFree]->pStrm = pData->pStrm;
@@ -691,7 +702,7 @@ ENDdoAction
 
 BEGINparseSelectorAct
 CODESTARTparseSelectorAct
-	if(!(*p == '$' || *p == '?' || *p == '/' || *p == '-'))
+	if(!(*p == '$' || *p == '?' || *p == '/' || *p == '.' || *p == '-'))
 		ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
 
 	CHKiRet(createInstance(&pData));
@@ -741,6 +752,7 @@ CODESTARTparseSelectorAct
 	 *           need high-performance pipes at a later stage (unlikely). -- rgerhards, 2010-02-28
 	 */
 	case '/':
+	case '.':
 		CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		/* we now have *almost* the same semantics for files and pipes, but we still need
 		 * to know we deal with a pipe, because we must do non-blocking opens in that case
@@ -776,6 +788,7 @@ CODESTARTparseSelectorAct
 	pData->bFlushOnTXEnd = bFlushOnTXEnd;
 	pData->iIOBufSize = (int) iIOBufSize;
 	pData->iFlushInterval = iFlushInterval;
+	pData->bUseAsyncWriter = bUseAsyncWriter;
 
 	if(pData->bDynamicName == 0) {
 		/* try open and emit error message if not possible. At this stage, we ignore the
@@ -809,9 +822,10 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	bCreateDirs = 1;
 	bEnableSync = 0;
 	iZipLevel = 0;
-	bFlushOnTXEnd = 1;
+	bFlushOnTXEnd = 0;
 	iIOBufSize = IOBUF_DFLT_SIZE;
 	iFlushInterval = FLUSH_INTRVL_DFLT;
+	bUseAsyncWriter = USE_ASYNCWRITER_DFLT;
 	if(pszFileDfltTplName != NULL) {
 		free(pszFileDfltTplName);
 		pszFileDfltTplName = NULL;
@@ -861,6 +875,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"dynafilecachesize", 0, eCmdHdlrInt, (void*) setDynaFileCacheSize, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omfileziplevel", 0, eCmdHdlrInt, NULL, &iZipLevel, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omfileflushinterval", 0, eCmdHdlrInt, NULL, &iFlushInterval, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omfileasyncwriting", 0, eCmdHdlrBinary, NULL, &bUseAsyncWriter, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omfileflushontxend", 0, eCmdHdlrBinary, NULL, &bFlushOnTXEnd, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omfileiobuffersize", 0, eCmdHdlrSize, NULL, &iIOBufSize, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"dirowner", 0, eCmdHdlrUID, NULL, &dirUID, STD_LOADABLE_MODULE_ID));

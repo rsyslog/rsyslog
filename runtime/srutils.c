@@ -166,10 +166,22 @@ uchar *srUtilStrDup(uchar *pOld, size_t len)
 
 
 /* creates a path recursively
- * Return 0 on success, -1 otherwise. On failure, errno
- * hold the last OS error.
- * Param "mode" holds the mode that all non-existing directories
- * are to be created with.
+ * Return 0 on success, -1 otherwise. On failure, errno * hold the last OS error.
+ * Param "mode" holds the mode that all non-existing directories are to be
+ * created with.
+ * Note that we have a potential race inside that code, a race that even exists 
+ * outside of the rsyslog process (if multiple instances run, or other programs
+ * generate directories): If the directory does not exist, a context switch happens,
+ * at that moment another process creates it, then our creation on the context 
+ * switch back fails. This actually happened in practice, and depending on the 
+ * configuration it is even likely to happen. We can not solve this situation
+ * with a mutex, as that works only within out process space. So the solution
+ * is that we take the optimistic approach, try the creation, and if it fails
+ * with "already exists" we go back and do one retry of the check/create
+ * sequence. That should then succeed. If the directory is still not found but
+ * the creation fails in the similar way, we return an error on that second
+ * try because otherwise we would potentially run into an endless loop.
+ * loop. -- rgerhards, 2010-03-25
  */
 int makeFileParentDirs(uchar *szFile, size_t lenFile, mode_t mode,
 		       uid_t uid, gid_t gid, int bFailOnChownFail)
@@ -177,6 +189,8 @@ int makeFileParentDirs(uchar *szFile, size_t lenFile, mode_t mode,
         uchar *p;
         uchar *pszWork;
         size_t len;
+	int err;
+	int iTry = 0;
 	int bErr = 0;
 
 	assert(szFile != NULL);
@@ -190,8 +204,9 @@ int makeFileParentDirs(uchar *szFile, size_t lenFile, mode_t mode,
                 if(*p == '/') {
 			/* temporarily terminate string, create dir and go on */
                         *p = '\0';
+again:
                         if(access((char*)pszWork, F_OK)) {
-                                if(mkdir((char*)pszWork, mode) == 0) {
+                                if((err = mkdir((char*)pszWork, mode)) == 0) {
 					if(uid != (uid_t) -1 || gid != (gid_t) -1) {
 						/* we need to set owner/group */
 						if(chown((char*)pszWork, uid, gid) != 0)
@@ -201,8 +216,13 @@ int makeFileParentDirs(uchar *szFile, size_t lenFile, mode_t mode,
 							 * to do so.
 							 */
 					}
-				} else
+				} else {
+					if(err == EEXIST && iTry == 0) {
+						iTry = 1;
+						goto again;
+						}
 					bErr = 1;
+				}
 				if(bErr) {
 					int eSave = errno;
 					free(pszWork);

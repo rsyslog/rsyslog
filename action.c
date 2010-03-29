@@ -4,7 +4,7 @@
  *
  * File begun on 2007-08-06 by RGerhards (extracted from syslogd.c)
  *
- * Copyright 2007-2009 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2010 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
