@@ -9,7 +9,7 @@ echo \[rsf_getenv.sh\]: testing RainerScript getenv\(\) function
 export MSGNUM="msgnum:"
 source $srcdir/diag.sh init
 source $srcdir/diag.sh startup rsf_getenv.conf
-source $srcdir/diag.sh tcpflood 127.0.0.1 13514 1 10000
+source $srcdir/diag.sh tcpflood -m10000
 source $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
 source $srcdir/diag.sh wait-shutdown
 source $srcdir/diag.sh seq-check 0 9999

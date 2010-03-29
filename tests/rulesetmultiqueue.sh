@@ -14,9 +14,9 @@ source $srcdir/diag.sh wait-startup
 # now fill the three files (a bit sequentially, but they should
 # still get their share of concurrency - to increase the chance
 # we use three connections per set).
-source $srcdir/diag.sh tcpflood 127.0.0.1 13514 3 20000 0
-source $srcdir/diag.sh tcpflood 127.0.0.1 13515 3 20000 20000
-source $srcdir/diag.sh tcpflood 127.0.0.1 13516 3 20000 40000
+source $srcdir/diag.sh tcpflood -c3 -p13514 -m20000 -i0
+source $srcdir/diag.sh tcpflood -c3 -p13515 -m20000 -i20000
+source $srcdir/diag.sh tcpflood -c3 -p13516 -m20000 -i40000
 
 # in this version of the imdiag, we do not have the capability to poll
 # all queues for emptyness. So we do a sleep in the hopes that this will
