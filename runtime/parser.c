@@ -176,7 +176,10 @@ sanitizeMessage(msg_t *pMsg)
 	pszMsg = pMsg->pszRawMsg;
 	lenMsg = pMsg->iLenRawMsg;
 
-	/* remove NUL character at end of message (see comment in function header) */
+	/* remove NUL character at end of message (see comment in function header)
+	 * Note that we do not need to add a NUL character in this case, because it
+	 * is already present ;)
+	 */
 	if(pszMsg[lenMsg-1] == '\0') {
 		DBGPRINTF("dropped NUL at very end of message\n");
 		bUpdatedLen = TRUE;
@@ -190,8 +193,9 @@ sanitizeMessage(msg_t *pMsg)
 	 */
 	if(bDropTrailingLF && pszMsg[lenMsg-1] == '\n') {
 		DBGPRINTF("dropped LF at very end of message (DropTrailingLF is set)\n");
-		bUpdatedLen = TRUE;
 		lenMsg--;
+		pszMsg[lenMsg] = '\0';
+		bUpdatedLen = TRUE;
 	}
 
 	/* it is much quicker to sweep over the message and see if it actually
@@ -245,6 +249,7 @@ sanitizeMessage(msg_t *pMsg)
 		}
 		++iSrc;
 	}
+	pDst[iDst] = '\0';
 
 	MsgSetRawMsg(pMsg, (char*)pDst, iDst); /* save sanitized string */
 

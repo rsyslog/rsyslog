@@ -792,7 +792,7 @@ parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int fla
 				 * (I couldn't do any more smart things anyway...).
 				 * rgerhards, 2007-9-20
 				 */
-				DBGPRINTF("internal error: iMsg > max msg size in printchopped()\n");
+				DBGPRINTF("internal error: iMsg > max msg size in parseAndSubmitMessage()\n");
 			}
 			FINALIZE; /* in this case, we are done... nothing left we can do */
 		}
