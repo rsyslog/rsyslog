@@ -20,6 +20,14 @@
  *      one field to the right. Zero (default) disables this functionality.
  * -M   the message to be sent. Disables all message format options, as
  *      only that exact same message is sent.
+ * -I   read specified input file, do NOT generate own test data. The test
+ *      completes when eof is reached.
+ * -B   The specified file (-I) is binary. No data processing is done by
+ *      tcpflood. If multiple connections are specified, data is read in
+ *      chunks and spread across the connections without taking any record
+ *      delemiters into account.
+ * -C	when input from a file is read, this file is transmitted -C times
+ *      (C like cycle, running out of meaningful option switches ;))
  *
  * Part of the testbench for rsyslog.
  *
@@ -75,6 +83,10 @@ static int *sockArray;  /* array of sockets to use */
 static int msgNum = 0;	/* initial message number to start with */
 static int bShowProgress = 1; /* show progress messages */
 static char *MsgToSend = NULL; /* if non-null, this is the actual message to send */
+static int bBinaryFile = 0;	/* is -I file binary */
+static char *dataFile = NULL;	/* name of data file, if NULL, generate own data */
+static int numFileIterations = 1;/* how often is file data to be sent? */
+FILE *dataFP = NULL;		/* file pointer for data file, if used */
 
 
 /* open a single tcp connection
@@ -166,8 +178,8 @@ int openConnections(void)
 void closeConnections(void)
 {
 	int i;
-	char msgBuf[128];
 	size_t lenMsg;
+	char msgBuf[128];
 
 	if(bShowProgress)
 		write(1, "      close connections", sizeof("      close connections")-1);
@@ -186,6 +198,62 @@ void closeConnections(void)
 }
 
 
+/* generate the message to be sent according to program command line parameters.
+ * this has been moved to its own function as we now have various different ways
+ * of constructing test messages. -- rgerhards, 2010-03-31
+ */
+static inline void
+genMsg(char *buf, size_t maxBuf, int *pLenBuf)
+{
+	int edLen; /* actual extra data length to use */
+	char extraData[MAX_EXTRADATA_LEN + 1];
+	char dynFileIDBuf[128] = "";
+	static int numMsgsGen = 0;
+	int done;
+
+	if(dataFP != NULL) {
+		/* get message from file */
+		do {
+			done = 1;
+			*pLenBuf = fread(buf, 1, 1024, dataFP);
+			if(feof(dataFP)) {
+				if(--numFileIterations > 0)  {
+					rewind(dataFP);
+					done = 0; /* need new iteration */
+				} else {
+					*pLenBuf = 0;
+					goto finalize_it;
+				}
+			}
+		} while(!done); /* Attention: do..while()! */
+	} else if(MsgToSend == NULL) {
+		if(dynFileIDs > 0) {
+			snprintf(dynFileIDBuf, maxBuf, "%d:", rand() % dynFileIDs);
+		}
+		if(extraDataLen == 0) {
+			*pLenBuf = snprintf(buf, maxBuf, "<%s>Mar  1 01:00:00 172.20.245.8 tag msgnum:%s%8.8d:\n",
+					       msgPRI, dynFileIDBuf, msgNum);
+		} else {
+			if(bRandomizeExtraData)
+				edLen = ((long) rand() + extraDataLen) % extraDataLen + 1;
+			else
+				edLen = extraDataLen;
+			memset(extraData, 'X', edLen);
+			extraData[edLen] = '\0';
+			*pLenBuf = snprintf(buf, maxBuf, "<%s>Mar  1 01:00:00 172.20.245.8 tag msgnum:%s%8.8d:%d:%s\n",
+					       msgPRI, dynFileIDBuf, msgNum, edLen, extraData);
+		}
+	} else {
+		/* use fixed message format from command line */
+		*pLenBuf = snprintf(buf, maxBuf, "%s\n", MsgToSend);
+	}
+
+	if(numMsgsGen++ >= numMsgsToSend)
+		*pLenBuf = 0; /* indicate end of run */
+
+finalize_it: ;
+}
+
 /* send messages to the tcp connections we keep open. We use
  * a very basic format that helps identify the message
  * (via msgnum:<number>: e.g. msgnum:00000001:). This format is suitable
@@ -196,52 +264,42 @@ void closeConnections(void)
  */
 int sendMessages(void)
 {
-	int i;
+	int i = 0;
 	int socknum;
 	int lenBuf;
 	int lenSend;
-	int edLen; /* actual extra data length to use */
-	char dynFileIDBuf[128] = "";
+	char *statusText;
 	char buf[MAX_EXTRADATA_LEN + 1024];
-	char extraData[MAX_EXTRADATA_LEN + 1];
 
-	printf("Sending %d messages.\n", numMsgsToSend);
+	if(dataFile == NULL) {
+		printf("Sending %d messages.\n", numMsgsToSend);
+		statusText = "messages";
+	} else {
+		printf("Sending file '%s' %d times.\n", dataFile, numFileIterations);
+		statusText = "kb";
+	}
 	if(bShowProgress)
-		printf("\r%8.8d messages sent", 0);
-	for(i = 0 ; i < numMsgsToSend ; ++i) {
+		printf("\r%8.8d %s sent", 0, statusText);
+	while(1) { /* broken inside loop! */
 		if(i < numConnections)
 			socknum = i;
 		else if(i >= numMsgsToSend - numConnections)
 			socknum = i - (numMsgsToSend - numConnections);
-		else
-			socknum = rand() % numConnections;
-		if(MsgToSend == NULL) {
-			if(dynFileIDs > 0) {
-				sprintf(dynFileIDBuf, "%d:", rand() % dynFileIDs);
-			}
-			if(extraDataLen == 0) {
-				lenBuf = sprintf(buf, "<%s>Mar  1 01:00:00 172.20.245.8 tag msgnum:%s%8.8d:\n",
-						       msgPRI, dynFileIDBuf, msgNum);
-			} else {
-				if(bRandomizeExtraData)
-					edLen = ((long) rand() + extraDataLen) % extraDataLen + 1;
-				else
-					edLen = extraDataLen;
-				memset(extraData, 'X', edLen);
-				extraData[edLen] = '\0';
-				lenBuf = sprintf(buf, "<%s>Mar  1 01:00:00 172.20.245.8 tag msgnum:%s%8.8d:%d:%s\n",
-						       msgPRI, dynFileIDBuf, msgNum, edLen, extraData);
-			}
-		} else {
-			/* use fixed message format from command line */
-			lenBuf = sprintf(buf, "%s\n", MsgToSend);
+		else {
+			int rnd = rand();
+			//socknum = rand() % numConnections;
+			socknum = rnd % numConnections;
 		}
+		genMsg(buf, sizeof(buf), &lenBuf); /* generate the message to send according to params */
+		if(lenBuf == 0)
+			break; /* end of processing! */
 		lenSend = send(sockArray[socknum], buf, lenBuf, 0);
 		if(lenSend != lenBuf) {
 			printf("\r%5.5d\n", i);
 			fflush(stdout);
 			perror("send test data");
-			printf("send() failed at socket %d, index %d, msgNum %d\n", socknum, i, msgNum);
+			printf("send() failed at socket %d, index %d, msgNum %d\n",
+				sockArray[socknum], i, msgNum);
 			fflush(stderr);
 			return(1);
 		}
@@ -250,8 +308,9 @@ int sendMessages(void)
 				printf("\r%8.8d", i);
 		}
 		++msgNum;
+		++i;
 	}
-	printf("\r%8.8d messages sent\n", i);
+	printf("\r%8.8d %s sent\n", i, statusText);
 
 	return 0;
 }
@@ -335,7 +394,7 @@ int main(int argc, char *argv[])
 	if(!isatty(1))
 		bShowProgress = 0;
 
-	while((opt = getopt(argc, argv, "f:t:p:c:m:i:P:d:n:M:r")) != -1) {
+	while((opt = getopt(argc, argv, "f:t:p:c:C:m:i:I:P:d:n:M:rB")) != -1) {
 		switch (opt) {
 		case 't':	targetIP = optarg;
 				break;
@@ -344,6 +403,8 @@ int main(int argc, char *argv[])
 		case 'n':	numTargetPorts = atoi(optarg);
 				break;
 		case 'c':	numConnections = atoi(optarg);
+				break;
+		case 'C':	numFileIterations = atoi(optarg);
 				break;
 		case 'm':	numMsgsToSend = atoi(optarg);
 				break;
@@ -364,9 +425,24 @@ int main(int argc, char *argv[])
 				break;
 		case 'M':	MsgToSend = optarg;
 				break;
+		case 'I':	dataFile = optarg;
+				/* in this mode, we do not know the num messages to send, so
+				 * we set a (high) number to keep the code happy.
+				 */
+				numMsgsToSend = 1000000;
+				break;
+		case 'B':	bBinaryFile = 1;
+				break;
 		default:	printf("invalid option '%c' or value missing - terminating...\n", opt);
 				exit (1);
 				break;
+		}
+	}
+
+	if(dataFile != NULL) {
+		if((dataFP = fopen(dataFile, "r")) == NULL) {
+			perror(dataFile);
+			exit(1);
 		}
 	}
 

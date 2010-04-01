@@ -1,3 +1,6 @@
+- improvded testbench
+  - added test with truly random data received via syslog to test
+    robustness
 - bugfix: testbench failed when not executed in UTC+1 timezone
   accidently, the time zone information was kept inside some
   to-be-checked-for responses
