@@ -1,6 +1,10 @@
 - bugfix: testbench failed when not executed in UTC+1 timezone
   accidently, the time zone information was kept inside some
   to-be-checked-for responses
+- temporary bugfix replaced by permanent one for
+  message-induced off-by-one error (potential segfault) (see 4.6.2)
+  The analysis has been completed and a better fix been crafted and 
+  integrated.
 ---------------------------------------------------------------------------
 Version 5.4.1  [v5-stable] (rgerhards), 2010-03-??
 - added new property replacer option "date-rfc3164-buggyday" primarily
