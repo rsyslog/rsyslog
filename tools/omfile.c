@@ -87,6 +87,7 @@ typedef struct s_dynaFileCacheEntry dynaFileCacheEntry;
 #define IOBUF_DFLT_SIZE 1024	/* default size for io buffers */
 #define FLUSH_INTRVL_DFLT 1 	/* default buffer flush interval (in seconds) */
 #define USE_ASYNCWRITER_DFLT 0 	/* default buffer use async writer */
+#define FLUSHONTX_DFLT 1 	/* default for flush on TX end */
 
 /* globals for default values */
 static int iDynaFileCacheSize = 10; /* max cache for dynamic files */
@@ -100,7 +101,7 @@ static uid_t	dirGID;		/* GID to be used for newly created directories */
 static int	bCreateDirs = 1;/* auto-create directories for dynaFiles: 0 - no, 1 - yes */
 static int	bEnableSync = 0;/* enable syncing of files (no dash in front of pathname in conf): 0 - no, 1 - yes */
 static int	iZipLevel = 0;	/* zip compression mode (0..9 as usual) */
-static bool	bFlushOnTXEnd = 0;/* flush write buffers when transaction has ended? */
+static bool	bFlushOnTXEnd = FLUSHONTX_DFLT;/* flush write buffers when transaction has ended? */
 static int64	iIOBufSize = IOBUF_DFLT_SIZE;	/* size of an io buffer */
 static int	iFlushInterval = FLUSH_INTRVL_DFLT; 	/* how often flush the output buffer on inactivity? */
 static int	bUseAsyncWriter = USE_ASYNCWRITER_DFLT;	/* should we enable asynchronous writing? */
@@ -764,7 +765,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	bCreateDirs = 1;
 	bEnableSync = 0;
 	iZipLevel = 0;
-	bFlushOnTXEnd = 0;
+	bFlushOnTXEnd = FLUSHONTX_DFLT;
 	iIOBufSize = IOBUF_DFLT_SIZE;
 	iFlushInterval = FLUSH_INTRVL_DFLT;
 	bUseAsyncWriter = USE_ASYNCWRITER_DFLT;
