@@ -219,7 +219,7 @@ in that case by sending rsyslogd a HUP signal.
 of the output file. The higher the number, the better the compression, but also the
 more CPU is required for zipping.</li>
 <li><b>$OMFileIOBufferSize</b> &lt;size_nbr&gt;, default 4k, size of the buffer used to writing output data. The larger the buffer, the potentially better performance is. The default of 4k is quite conservative, it is useful to go up to 64k, and 128K if you used gzip compression (then, even higher sizes may make sense)</li>
-<li><b>$OMFileFlushOnTXEnd</b> &lt;[on/<b>off</b>]&gt;, default ff. Omfile has the
+<li><b>$OMFileFlushOnTXEnd</b> &lt;[<b>on</b>/off]&gt;, default on. Omfile has the
 capability to
 write output using a buffered writer. Disk writes are only done when the buffer is
 full. So if an error happens during that write, data is potentially lost. In cases where
@@ -227,7 +227,7 @@ this is unacceptable, set $OMFileFlushOnTXEnd to on. Then, data is written at th
 of each transaction (for pre-v5 this means after <b>each</b> log message) and the usual
 error recovery thus can handle write errors without data loss. Note that this option
 severely reduces the effect of zip compression and should be switched to off
-for that use case. Note that the default -off- is primarily an aid to preserve
+for that use case. Note that the default -on- is primarily an aid to preserve
 the traditional syslogd behaviour.</li>
 <li><b>$RepeatedMsgContainsOriginalMsg</b> [on/<b>off</b>] - "last message repeated n times" messages, if generated,
 have a different format that contains the message that is being repeated.
