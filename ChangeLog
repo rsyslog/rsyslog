@@ -8,6 +8,8 @@
   message-induced off-by-one error (potential segfault) (see 4.6.2)
   The analysis has been completed and a better fix been crafted and 
   integrated.
+- bugfix: the T/P/E config size specifiers did not work properly under
+  all 32-bit platforms
 ---------------------------------------------------------------------------
 Version 4.6.3  [v4-stable] (rgerhards), 2010-03-??
 - bugfix: local unix system log socket was deleted even when it was
