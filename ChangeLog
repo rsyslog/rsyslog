@@ -1,6 +1,10 @@
 - improvded testbench
   - added test with truly random data received via syslog to test
     robustness
+- bugfix: default for $OMFileFlushOnTXEnd was wrong ("off").
+  This, in default mode, caused buffered writing to be used, what
+  means that it looked like no output were written or partial
+  lines. Thanks to Michael Biebl for pointing out this bug.
 - bugfix: testbench failed when not executed in UTC+1 timezone
   accidently, the time zone information was kept inside some
   to-be-checked-for responses
