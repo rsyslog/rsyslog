@@ -10,6 +10,7 @@ librsyslog_la_SOURCES = \
 	unicode-helper.h \
 	atomic.h \
 	batch.h \
+	atomic-posix-sem.c \
 	syslogd-types.h \
 	module-template.h \
 	obj-types.h \

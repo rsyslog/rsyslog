@@ -1,6 +1,6 @@
 if ENABLE_TESTBENCH
 TESTRUNS = rt_init rscript
-check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq
+check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq msleep randomgen
 TESTS = $(TESTRUNS) cfg.sh \
 	arrayqueue.sh \
 	linkedlistqueue.sh \
@@ -32,6 +32,7 @@ TESTS = $(TESTRUNS) cfg.sh \
 	dynfile_invld_sync.sh \
 	dynfile_invalid2.sh \
 	complex1.sh \
+	random.sh \
 	queue-persist.sh \
 	pipeaction.sh \
 	execonlyonce.sh \
@@ -229,6 +230,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/gzipwr_large_dynfile.conf \
 	   complex1.sh \
 	   testsuites/complex1.conf \
+	   random.sh \
+	   testsuites/random.conf \
 	   dynfile_invld_async.sh \
 	   dynfile_invld_sync.sh \
 	   dynfile_cachemiss.sh \
@@ -256,10 +259,14 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   cfg.sh
 
 ourtail_SOURCES = ourtail.c
+msleep_SOURCES = msleep.c
 chkseq_SOURCES = chkseq.c
 
 tcpflood_SOURCES = tcpflood.c
 tcpflood_LDADD = $(SOL_LIBS)
+
+randomgen_SOURCES = randomgen.c
+randomgen_LDADD = $(SOL_LIBS)
 
 nettester_SOURCES = nettester.c getline.c
 nettester_LDADD = $(SOL_LIBS)

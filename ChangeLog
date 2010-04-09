@@ -1,6 +1,23 @@
+---------------------------------------------------------------------------
+Version 4.6.3  [v4-stable] (rgerhards), 2010-03-??
+- improvded testbench
+  - added test with truly random data received via syslog to test
+    robustness
+- bugfix: default for $OMFileFlushOnTXEnd was wrong ("off").
+  This, in default mode, caused buffered writing to be used, what
+  means that it looked like no output were written or partial
+  lines. Thanks to Michael Biebl for pointing out this bug.
 - bugfix: testbench failed when not executed in UTC+1 timezone
   accidently, the time zone information was kept inside some
   to-be-checked-for responses
+- temporary bugfix replaced by permanent one for
+  message-induced off-by-one error (potential segfault) (see 4.6.2)
+  The analysis has been completed and a better fix been crafted and 
+  integrated.
+- bugfix: the T/P/E config size specifiers did not work properly under
+  all 32-bit platforms
+- bugfix: local unix system log socket was deleted even when it was
+  not configured
 ---------------------------------------------------------------------------
 Version 5.4.1  [v5-stable] (rgerhards), 2010-03-??
 - added new property replacer option "date-rfc3164-buggyday" primarily
@@ -348,6 +365,8 @@ Version 4.7.0  [v4-devel] (rgerhards), 2009-09-??
 Version 4.6.2  [v4-stable] (rgerhards), 2010-03-26
 - new feature: "." action type added to support writing files to relative
   pathes (this is primarily meant as a debug aid)
+- added replacements for atomic instructions on systems that do not
+  support them. [backport of Stefen Sledz' patch for v5)
 - new feature: $OMFileAsyncWriting directive added
   it permits to specifiy if asynchronous writing should be done or not
 - bugfix(temporary): message-induced off-by-one error (potential segfault)

@@ -64,7 +64,7 @@ static int iPort = 12514; /* port which shall be used for sending data */
 static char* pszCustomConf = NULL;	/* custom config file, use -c conf to specify */
 static int verbose = 0;	/* verbose output? -v option */
 static int IPv4Only = 0;	/* use only IPv4 in rsyslogd call? */
-static int useDebugEnv = 0; /* activate debugging environment (for rsyslog debug log)? */
+static char **ourEnvp;
 
 /* these two are quick hacks... */
 int iFailed = 0;
@@ -226,9 +226,6 @@ int openPipe(char *configFile, pid_t *pid, int *pfd)
 	char *newargv[] = {"../tools/rsyslogd", "dummy", "-c4", "-u2", "-n", "-irsyslog.pid",
 			   "-M../runtime/.libs:../.libs", NULL, NULL};
 	char confFile[1024];
-	char *newenviron[] = { NULL };
-	char *newenvironDeb[] = { "RSYSLOG_DEBUG=debug nostdout",
-				"RSYSLOG_DEBUGLOG=log", NULL };
 
 	sprintf(confFile, "-f%s/testsuites/%s.conf", srcdir,
 		(pszCustomConf == NULL) ? configFile : pszCustomConf);
@@ -254,7 +251,7 @@ int openPipe(char *configFile, pid_t *pid, int *pfd)
 		close(pipefd[1]);
 		close(pipefd[0]);
 		fclose(stdin);
-		execve("../tools/rsyslogd", newargv, (useDebugEnv) ? newenvironDeb : newenviron);
+		execve("../tools/rsyslogd", newargv, ourEnvp);
 	} else {            
 		close(pipefd[1]);
 		*pid = cpid;
@@ -478,7 +475,7 @@ void doAtExit(void)
  * of this file.
  * rgerhards, 2009-04-03
  */
-int main(int argc, char *argv[])
+int main(int argc, char *argv[], char *envp[])
 {
 	int fd;
 	int opt;
@@ -487,16 +484,14 @@ int main(int argc, char *argv[])
 	char buf[4096];
 	char testcases[4096];
 
-	while((opt = getopt(argc, argv, "4dc:i:p:t:v")) != EOF) {
+	ourEnvp = envp;
+	while((opt = getopt(argc, argv, "4c:i:p:t:v")) != EOF) {
 		switch((char)opt) {
                 case '4':
 			IPv4Only = 1;
 			break;
                 case 'c':
 			pszCustomConf = optarg;
-			break;
-                case 'd': 
-			useDebugEnv = 1;
 			break;
                 case 'i':
 			if(!strcmp(optarg, "udp"))

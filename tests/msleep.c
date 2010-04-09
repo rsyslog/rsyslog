@@ -1,8 +1,10 @@
-/* This test checks runtime initialization and exit. Other than that, it
- * also serves as the most simplistic sample of how a test can be coded.
+/* sleeps for the specified number of MILLIseconds.
+ * Primarily meant as a portable tool available everywhere for the
+ * testbench (sleep 0.1 does not work on all platforms).
  *
  * Part of the testbench for rsyslog.
- * Copyright 2008 Rainer Gerhards and Adiscon GmbH.
+ *
+ * Copyright 2010 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -22,23 +24,27 @@
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
  */
 #include "config.h"
-#include "rsyslog.h"
-#include "testbench.h"
-#include <stdio.h>	/* must be last, else we get a zlib compile error on some platforms */
+#include <stdio.h>
+#include <stdlib.h>
 
-MODULE_TYPE_TESTBENCH
+int main(int argc, char *argv[])
+{
+	struct timeval tvSelectTimeout;
+	long sleepTime;
 
+	if(argc != 2) {
+		fprintf(stderr, "usage: msleep <milliseconds>\n");
+		exit(1);
+	}
 
-BEGINInit
-CODESTARTInit
-ENDInit
+	sleepTime = atoi(argv[1]);
+	tvSelectTimeout.tv_sec = sleepTime / 1000;
+	tvSelectTimeout.tv_usec = (sleepTime % 1000) * 1000; /* micro seconds */
+	if(select(0, NULL, NULL, NULL, &tvSelectTimeout) == -1) {
+		perror("select");
+		exit(1);
+	}
 
-BEGINExit
-CODESTARTExit
-ENDExit
+	return 0;
+}
 
-BEGINTest
-CODESTARTTest
-/*finalize_it:*/
-	/* room for custom error reporter, leave blank if not needed */
-ENDTest

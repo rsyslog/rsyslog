@@ -17,7 +17,7 @@ case $1 in
 		cp $srcdir/testsuites/diag-common.conf diag-common.conf
 		cp $srcdir/testsuites/diag-common2.conf diag-common2.conf
 		rm -f rsyslog.action.*.include
-		rm -f rsyslogd.started work-*.conf
+		rm -f rsyslogd.started work-*.conf rsyslog.random.data
 		rm -f rsyslogd2.started work-*.conf
 		rm -f work rsyslog.out.log rsyslog.out.log.save # common work files
 		rm -f rsyslog.out.*.log
@@ -28,7 +28,7 @@ case $1 in
    'exit')	rm -f rsyslogd.started work-*.conf diag-common.conf
    		rm -f rsyslogd2.started diag-common2.conf rsyslog.action.*.include
 		rm -f work rsyslog.out.log rsyslog.out.log.save # common work files
-		rm -f rsyslog.out.*.log
+		rm -f rsyslog.out.*.log rsyslog.random.data
 		rm -rf test-spool
 		echo  -------------------------------------------------------------------------------
 		;;
@@ -39,16 +39,14 @@ case $1 in
 		;;
    'wait-startup') # wait for rsyslogd startup ($2 is the instance)
 		while test ! -f rsyslogd$2.started; do
-			#true
-			sleep 0.1 # if this is not supported by all platforms, use above!
+			./msleep 100 # wait 100 milliseconds
 		done
 		echo "rsyslogd$2 started with pid " `cat rsyslog$2.pid`
 		;;
    'wait-shutdown')  # actually, we wait for rsyslog.pid to be deleted. $2 is the
    		# instance
 		while test -f rsyslog$2.pid; do
-			#true
-			sleep 0.1 # if this is not supported by all platforms, use above!
+			./msleep 100 # wait 100 milliseconds
 		done
 		if [ -e core.* ]
 		then
@@ -137,6 +135,13 @@ case $1 in
 		./nettester -t$2 -i$3 $4
 		if [ "$?" -ne "0" ]; then
 		  exit 1
+		fi
+		;;
+   'setzcat')   # find out name of zcat tool
+		if [ `uname` == SunOS ]; then
+		   ZCAT=gzcat
+		else
+		   ZCAT=zcat
 		fi
 		;;
    *)		echo "invalid argument" $1
