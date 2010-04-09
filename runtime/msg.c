@@ -2101,6 +2101,8 @@ finalize_it:
 
 
 /* set raw message in message object. Size of message is provided.
+ * The function makes sure that the stored rawmsg is properly
+ * terminated by '\0'.
  * rgerhards, 2009-06-16
  */
 void MsgSetRawMsg(msg_t *pThis, char* pszRawMsg, size_t lenMsg)
@@ -2412,7 +2414,6 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			*pPropLen = sizeof("**INVALID PROPERTY NAME**") - 1;
 			return UCHAR_CONSTANT("**INVALID PROPERTY NAME**");
 	}
-
 
 	/* If we did not receive a template pointer, we are already done... */
 	if(pTpe == NULL) {

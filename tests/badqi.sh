@@ -9,7 +9,7 @@ echo \[badqi.sh\]: test startup with invalid .qi file
 source $srcdir/diag.sh init
 source $srcdir/diag.sh startup badqi.conf
 # we just inject a handful of messages so that we have something to wait for...
-source $srcdir/diag.sh tcpflood 127.0.0.1 13514 1 20
+source $srcdir/diag.sh tcpflood -m20
 source $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
 source $srcdir/diag.sh wait-shutdown  # wait for process to terminate
 source $srcdir/diag.sh seq-check 0 19

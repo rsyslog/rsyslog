@@ -11,6 +11,7 @@ librsyslog_la_SOURCES = \
 	atomic.h \
 	atomic-posix-sem.c \
 	batch.h \
+	atomic-posix-sem.c \
 	syslogd-types.h \
 	module-template.h \
 	obj-types.h \

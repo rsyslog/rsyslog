@@ -1,6 +1,6 @@
 if ENABLE_TESTBENCH
 TESTRUNS = rt_init rscript
-check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq
+check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq msleep randomgen
 TESTS = $(TESTRUNS) cfg.sh \
 	arrayqueue.sh \
 	linkedlistqueue.sh \
@@ -17,6 +17,22 @@ TESTS = $(TESTRUNS) cfg.sh \
 	sndrcv_gzip.sh \
 	sndrcv_udp.sh \
 	sndrcv_udp_nonstdpt.sh \
+	asynwr_simple.sh \
+	asynwr_timeout.sh \
+	asynwr_small.sh \
+	asynwr_tinybuf.sh \
+	wr_large_async.sh \
+	wr_large_sync.sh \
+	asynwr_deadlock.sh \
+	asynwr_deadlock2.sh \
+	asynwr_deadlock4.sh \
+	gzipwr_large.sh \
+	gzipwr_large_dynfile.sh \
+	dynfile_invld_async.sh \
+	dynfile_invld_sync.sh \
+	dynfile_invalid2.sh \
+	complex1.sh \
+	random.sh \
 	queue-persist.sh \
 	pipeaction.sh \
 	execonlyonce.sh \
@@ -108,6 +124,7 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/mark.parse1 \
 	   testsuites/8bit.parse1 \
 	   testsuites/empty.parse1 \
+	   testsuites/snare.parse1 \
 	   testsuites/oversizeTag-1.parse1 \
 	   testsuites/weird.parse1 \
 	   testsuites/date1.parse1 \
@@ -126,10 +143,15 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/reallife.parse2 \
 	   testsuites/parse3.conf \
 	   testsuites/reallife.parse3 \
+	   testsuites/parse-nodate.conf \
 	   testsuites/parse_invld_regex.conf \
 	   testsuites/samples.parse_invld_regex \
 	   testsuites/parse-3164-buggyday.conf \
 	   testsuites/samples.parse-3164-buggyday \
+	   testsuites/snare_ccoff_udp.conf \
+	   testsuites/samples.snare_ccoff_udp \
+	   testsuites/snare_ccoff_udp2.conf \
+	   testsuites/samples.snare_ccoff_udp2 \
 	   testsuites/omod-if-array.conf \
 	   testsuites/1.omod-if-array \
 	   testsuites/1.field1 \
@@ -193,6 +215,38 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/sndrcv_gzip_rcvr.conf \
 	   pipeaction.sh \
 	   testsuites/pipeaction.conf \
+	   asynwr_simple.sh \
+	   testsuites/asynwr_simple.conf \
+	   asynwr_timeout.sh \
+	   testsuites/asynwr_timeout.conf \
+	   asynwr_small.sh \
+	   testsuites/asynwr_small.conf \
+	   asynwr_tinybuf.sh \
+	   testsuites/asynwr_tinybuf.conf \
+	   wr_large_async.sh \
+	   wr_large_sync.sh \
+	   wr_large.sh \
+	   testsuites/wr_large.conf \
+	   asynwr_deadlock.sh \
+	   testsuites/asynwr_deadlock.conf \
+	   asynwr_deadlock2.sh \
+	   testsuites/asynwr_deadlock2.conf \
+	   asynwr_deadlock4.sh \
+	   testsuites/asynwr_deadlock4.conf \
+	   gzipwr_large.sh \
+	   testsuites/gzipwr_large.conf \
+	   gzipwr_large_dynfile.sh \
+	   testsuites/gzipwr_large_dynfile.conf \
+	   complex1.sh \
+	   testsuites/complex1.conf \
+	   random.sh \
+	   testsuites/random.conf \
+	   dynfile_invld_async.sh \
+	   dynfile_invld_sync.sh \
+	   dynfile_cachemiss.sh \
+	   testsuites/dynfile_cachemiss.conf \
+	   dynfile_invalid2.sh \
+	   testsuites/dynfile_invalid2.conf \
 	   proprepltest.sh \
 	   testsuites/rfctag.conf \
 	   testsuites/master.rfctag \
@@ -224,10 +278,14 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   cfg.sh
 
 ourtail_SOURCES = ourtail.c
+msleep_SOURCES = msleep.c
 chkseq_SOURCES = chkseq.c
 
 tcpflood_SOURCES = tcpflood.c
 tcpflood_LDADD = $(SOL_LIBS)
+
+randomgen_SOURCES = randomgen.c
+randomgen_LDADD = $(SOL_LIBS)
 
 nettester_SOURCES = nettester.c getline.c
 nettester_LDADD = $(SOL_LIBS)

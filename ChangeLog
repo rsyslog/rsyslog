@@ -34,6 +34,7 @@ Version 5.4.1  [v5-stable] (rgerhards), 2010-03-??
 - added new property replacer option "date-rfc3164-buggyday" primarily
   to ease migration from syslog-ng. See property replacer doc for
   details. [backport from 5.5.3 because urgently needed by some]
+- imported all bugfixes vom 4.6.2 (see below)
 ---------------------------------------------------------------------------
 Version 5.4.0  [v5-stable] (rgerhards), 2010-03-08
 ***************************************************************************
@@ -422,10 +423,103 @@ Version 4.7.0  [v4-devel] (rgerhards), 2009-09-??
   Thanks for varmojfekoj for pointing me at this bug.
 - imported changes from 4.5.6 and below
 ---------------------------------------------------------------------------
-Version 4.6.2  [v4-stable] (rgerhards), 2010-03-??
+Version 4.6.3  [v4-stable] (rgerhards), 2010-03-??
+- improvded testbench
+  - added test with truly random data received via syslog to test
+    robustness
+- bugfix: default for $OMFileFlushOnTXEnd was wrong ("off").
+  This, in default mode, caused buffered writing to be used, what
+  means that it looked like no output were written or partial
+  lines. Thanks to Michael Biebl for pointing out this bug.
+- bugfix: testbench failed when not executed in UTC+1 timezone
+  accidently, the time zone information was kept inside some
+  to-be-checked-for responses
+- temporary bugfix replaced by permanent one for
+  message-induced off-by-one error (potential segfault) (see 4.6.2)
+  The analysis has been completed and a better fix been crafted and 
+  integrated.
+- bugfix: the T/P/E config size specifiers did not work properly under
+  all 32-bit platforms
+- bugfix: local unix system log socket was deleted even when it was
+  not configured
+---------------------------------------------------------------------------
+Version 4.6.2  [v4-stable] (rgerhards), 2010-03-26
+- new feature: "." action type added to support writing files to relative
+  pathes (this is primarily meant as a debug aid)
+- added replacements for atomic instructions on systems that do not
+  support them. [backport of Stefen Sledz' patch for v5)
+- new feature: $OMFileAsyncWriting directive added
+  it permits to specifiy if asynchronous writing should be done or not
+- bugfix(temporary): message-induced off-by-one error (potential segfault)
+  Some types of malformed messages could trigger an off-by-one error
+  (for example, \0 or \n as the last character, and generally control
+  character escaption is questionable). This is due to not strictly
+  following a the \0 or string counted string paradigm (during the last
+  optimization on the cstring class). As a temporary fix, we have 
+  introduced a proper recalculation of the size. However, a final
+  patch is expected in the future. See bug tracker for further details
+  and when the final patch will be available:
+  http://bugzilla.adiscon.com/show_bug.cgi?id=184
+  Note that the current patch is considered sufficient to solve the
+  situation, but it requires a bit more runtime than desirable.
+- bugfix: potential segfault in dynafile cache
+  This bug was triggered by an open failure. The the cache was full and
+  a new entry needed to be placed inside it, a victim for eviction was
+  selected. That victim was freed, then the open of the new file tried. If
+  the open failed, the victim entry was still freed, and the function
+  exited. However, on next invocation and cache search, the victim entry
+  was used as if it were populated, most probably resulting in a segfault.
+- bugfix: race condition during directory creation
+  If multiple files try to create a directory at (almost) the same time,
+  some of them may fail. This is a data race and also exists with other
+  processes that may create the same directory. We do now check for this
+  condition and gracefully handle it.
+- bugfix: potential re-use of free()ed file stream object in omfile
+  when dynaCache is enabled, the cache is full, a new entry needs to
+  be allocated, thus the LRU discarded, then a new entry is opend and that
+  fails. In that case, it looks like the discarded stream may be reused
+  improperly (based on code analysis, test case and confirmation pending)
 - added new property replacer option "date-rfc3164-buggyday" primarily
   to ease migration from syslog-ng. See property replacer doc for
   details. [backport from 5.5.3 because urgently needed by some]
+- improved testbench
+- bugfix: invalid buffer write in (file) stream class
+  currently being accessed buffer could be overwritten with new data.
+  While this probably did not cause access violations, it could case loss
+  and/or duplication of some data (definitely a race with no deterministic
+  outcome)
+- bugfix: potential hang condition during filestream close
+  predicate was not properly checked when waiting for the background file
+  writer
+- bugfix: improper synchronization when "$OMFileFlushOnTXEnd on" was used
+  Internal data structures were not properly protected due to missing
+  mutex calls.
+- bugfix: potential data loss during file stream shutdown
+- bugfix: potential problems during file stream shutdown
+  The shutdown/close sequence was not clean, what potentially (but
+  unlikely) could lead to some issues. We have not been able to describe
+  any fatal cases, but there was some bug potential. Sequence has now
+  been straighted out.
+- bugfix: potential problem (loop, abort) when file write error occured
+  When a write error occured in stream.c, variable iWritten had the error
+  code but this was handled as if it were the actual number of bytes
+  written. That was used in pointer arithmetic later on, and thus could
+  lead to all sorts of problems. However, this could only happen if the
+  error was EINTR or the file in question was a tty. All other cases were
+  handled properly. Now, iWritten is reset to zero in such cases, resulting
+  in proper retries.
+- bugfix: $omfileFlushOnTXEnd was turned on when set to off and vice
+  versa due to an invalid check
+- bugfix: recent patch to fix small memory leak could cause invalid free.
+  This could only happen during config file parsing.
+- bugfix(minor): handling of extremely large strings in dbgprintf() fixed
+  Previously, it could lead to garbagge output and, in extreme cases, also
+  to segfaults. Note: this was a problem only when debug output was 
+  actually enabled, so it caused no problem in production use.
+- bugfix(minor): BSD_SO_COMPAT query function had some global vars not
+  properly initialized. However, in practice the loader initializes them 
+  with zero, the desired value, so there were no actual issue in almost 
+  all cases.
 ---------------------------------------------------------------------------
 Version 4.6.1  [v4-stable] (rgerhards), 2010-03-04
 - re-enabled old pipe output (using new module ompipe, built-in) after

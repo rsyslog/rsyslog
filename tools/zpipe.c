@@ -4,6 +4,13 @@
    Version 2.0  03 June     2009  Rainer Gerhards */
 
 /* RSYSLOG NOTE:
+ * This file is primarily been used as a testing aid for rsyslog. We do NOT
+ * properly maintain it and it has been brought to our attention that it may
+ * have some security issues. However, we prefer not to remove the file as it
+ * may turn out to be useful for further testing. All users are advised NOT
+ * to base any development on this version here, but rather look for the
+ * original zpipe.c by the authors mentioned above.
+ *
  * This file is beeing distributed as part of rsyslog, but is just an
  * add-on. Most importantly, rsyslog's copyright does not apply but
  * rather the (non-) copyright stated above.
