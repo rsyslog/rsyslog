@@ -1,4 +1,3 @@
-#define MAXLINE 4096
 /*
  * CDDL HEADER START
  *
@@ -53,6 +52,15 @@
 #include <sys/strlog.h>
 
 #include "rsyslog.h"
+#include "imklog.h"
+
+/* TODO: this define should be changed over time to the more generic
+ * system-provided (configurable) upper limit. However, it is quite
+ * unexpected that Solaris-emitted messages are so long, so it seems
+ * acceptable to set a fixed (relatively high) limit for the time
+ * being -- and gain some experience with it. -- rgerhars, 2010-04-12
+ */
+#define MAXLINE 4096
 
 static struct pollfd Pfd;		/* Pollfd for local the log device */
 
@@ -70,11 +78,6 @@ findnl_bkwd(const char *buf, const size_t len)
 {
 	const char *p;
 	size_t	mb_cur_max;
-	pthread_t mythreadno;
-
-	if (Debug) {
-		mythreadno = pthread_self();
-	}
 
 	if (len == 0) {
 		return (0);
@@ -104,8 +107,7 @@ findnl_bkwd(const char *buf, const size_t len)
 				/*
 				 * Invalid character found.
 				 */
-				dbgprintf("klog:findnl_bkwd(%u): Invalid MB "
-				    "sequence\n", mythreadno);
+				dbgprintf("klog:findnl_bkwd: Invalid MB sequence\n");
 				/*
 				 * handle as a single byte character.
 				 */
@@ -148,7 +150,6 @@ sun_openklog(char *name, int mode)
 	struct strioctl str;
 
 	if ((fd = open(name, mode)) < 0) {
-		//logerror("cannot open %s", name);
 		dbgprintf("klog:openklog: cannot open %s (%d)\n",
 		    name, errno);
 		return (-1);
@@ -158,7 +159,6 @@ sun_openklog(char *name, int mode)
 	str.ic_len = 0;
 	str.ic_dp = NULL;
 	if (ioctl(fd, I_STR, &str) < 0) {
-		//logerror("cannot register to log console messages");
 		dbgprintf("klog:openklog: cannot register to log "
 		    "console messages (%d)\n", errno);
 		return (-1);
@@ -200,18 +200,7 @@ sun_getkmsg()
 		(void) memcpy(tmpbuf, buf, len);
 		tmpbuf[len] = '\0';
 
-		/* Format sys will enqueue the log message.
-		 * Set the sync flag if timeout != 0, which
-		 * means that we're done handling all the
-		 * initial messages ready during startup.
-		 */
-		Syslog(LOG_INFO, buf);
-		/*if (timeout == 0) {
-			formatsys(&hdr, tmpbuf, 0);
-			//sys_init_msg_count++;
-		} else {
-			formatsys(&hdr, tmpbuf, 1);
-		}*/
+		Syslog(LOG_INFO, (uchar*) buf);
 
 		if (len != buflen) {
 			/* If anything remains in buf */
@@ -238,8 +227,7 @@ sun_getkmsg()
 
 	if (i == 0 && dat.len > 0) {
 		dat.buf[dat.len] = '\0';
-		/*
-		 * Format sys will enqueue the log message.
+		/* Format sys will enqueue the log message.
 		 * Set the sync flag if timeout != 0, which
 		 * means that we're done handling all the
 		 * initial messages ready during startup.
@@ -249,15 +237,9 @@ sun_getkmsg()
 		dbgprintf("klog:getkmsg: getmsg: strlen(dat.buf) = %d\n", strlen(dat.buf));
 		dbgprintf("klog:getkmsg: getmsg: dat.buf = \"%s\"\n", dat.buf);
 		dbgprintf("klog:getkmsg: buf len = %d\n", strlen(buf));
-		//if (timeout == 0) {
-			//formatsys(&hdr, buf, 0);
-			//--sys_init_msg_count++;
-		//} else {
-			//formatsys(&hdr, buf, 1);
-		//}
-		Syslog(LOG_INFO, buf);
+		Syslog(LOG_INFO, (uchar*) buf);
 	} else if (i < 0 && errno != EINTR) {
-		if(1){ // (!shutting_down) {
+		if(1){ /* V5-TODO: rsyslog-like termination! (!shutting_down) { */
 			dbgprintf("klog:kernel log driver read error");
 		}
 		// TODO trigger retry logic
@@ -279,15 +261,6 @@ sun_sys_poll()
 
 	dbgprintf("klog:sys_poll: sys_thread started\n");
 
-	/*
-	 * Try to process as many messages as we can without blocking on poll.
-	 * We count such "initial" messages with sys_init_msg_count and
-	 * enqueue them without the SYNC_FILE flag.  When no more data is
-	 * waiting on the local log device, we set timeout to INFTIM,
-	 * clear sys_init_msg_count, and generate a flush message to sync
-	 * the previously counted initial messages out to disk.
-	 */
-
 	for (;;) {
 		errno = 0;
 
@@ -298,16 +271,13 @@ sun_sys_poll()
 
 		if (nfds < 0) {
 			if (errno != EINTR)
-				dbgprintf("klog:poll error");// logerror("poll");
+				dbgprintf("klog:poll error");
 			continue;
 		}
 		if (Pfd.revents & POLLIN) {
 			sun_getkmsg();
 		} else {
-			// TODO: shutdown, the rsyslog way (in v5!)
-			//if (shutting_down) {
-				//pthread_exit(0);
-			//}
+			/* TODO: shutdown, the rsyslog way (in v5!) -- check shutdown flag */
 			if (Pfd.revents & (POLLNVAL|POLLHUP|POLLERR)) {
 			// TODO: trigger retry logic	
 /*				logerror("kernel log driver poll error");
