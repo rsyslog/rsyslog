@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------
 Version 4.7.0  [v4-devel] (rgerhards), 2009-09-??
+- new: support for Solaris added (but not yet the Solaris door API)
 - added function getenv() to RainerScript
 - added new config option $InputUnixListenSocketCreatePath
   to permit the auto-creation of pathes to additional log sockets. This
