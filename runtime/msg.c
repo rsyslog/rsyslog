@@ -1171,7 +1171,7 @@ uchar *getMSG(msg_t *pM)
 	if(pM == NULL)
 		ret = UCHAR_CONSTANT("");
 	else {
-		if(pM->offMSG == -1)
+		if(pM->iLenMSG == 0)
 			ret = UCHAR_CONSTANT("");
 		else
 			ret = pM->pszRawMsg + pM->offMSG;
@@ -1213,10 +1213,12 @@ static inline char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt)
 	switch(eFmt) {
 	case tplFmtDefault:
 	case tplFmtRFC3164Date:
+	case tplFmtRFC3164BuggyDate:
 		MsgLock(pM);
 		if(pM->pszTIMESTAMP3164 == NULL) {
 			pM->pszTIMESTAMP3164 = pM->pszTimestamp3164;
-			datetime.formatTimestamp3164(&pM->tTIMESTAMP, pM->pszTIMESTAMP3164);
+			datetime.formatTimestamp3164(&pM->tTIMESTAMP, pM->pszTIMESTAMP3164,
+						     (eFmt == tplFmtRFC3164BuggyDate));
 		}
 		MsgUnlock(pM);
 		return(pM->pszTIMESTAMP3164);
@@ -1279,7 +1281,7 @@ static inline char *getTimeGenerated(msg_t *pM, enum tplFormatTypes eFmt)
 				MsgUnlock(pM);
 				return "";
 			}
-			datetime.formatTimestamp3164(&pM->tRcvdAt, pM->pszRcvdAt3164);
+			datetime.formatTimestamp3164(&pM->tRcvdAt, pM->pszRcvdAt3164, 0);
 		}
 		MsgUnlock(pM);
 		return(pM->pszRcvdAt3164);
@@ -1306,13 +1308,15 @@ static inline char *getTimeGenerated(msg_t *pM, enum tplFormatTypes eFmt)
                 MsgUnlock(pM);
                 return(pM->pszRcvdAt_PgSQL);
 	case tplFmtRFC3164Date:
+	case tplFmtRFC3164BuggyDate:
 		MsgLock(pM);
 		if(pM->pszRcvdAt3164 == NULL) {
 			if((pM->pszRcvdAt3164 = malloc(16)) == NULL) {
 					MsgUnlock(pM);
 					return "";
 				}
-			datetime.formatTimestamp3164(&pM->tRcvdAt, pM->pszRcvdAt3164);
+			datetime.formatTimestamp3164(&pM->tRcvdAt, pM->pszRcvdAt3164,
+						     (eFmt == tplFmtRFC3164BuggyDate));
 		}
 		MsgUnlock(pM);
 		return(pM->pszRcvdAt3164);
@@ -1947,12 +1951,20 @@ void MsgSetHOSTNAME(msg_t *pThis, uchar* pszHOSTNAME, int lenHOSTNAME)
 
 
 /* set the offset of the MSG part into the raw msg buffer
+ * Note that the offset may be higher than the length of the raw message 
+ * (exactly by one). This can happen if we have a message that does not 
+ * contain any MSG part.
  */
 void MsgSetMSGoffs(msg_t *pMsg, short offs)
 {
 	ISOBJ_TYPE_assert(pMsg, msg);
-	pMsg->iLenMSG = pMsg->iLenRawMsg - offs;
 	pMsg->offMSG = offs;
+	if(offs > pMsg->iLenRawMsg) {
+		assert(offs - 1 == pMsg->iLenRawMsg);
+		pMsg->iLenMSG = 0;
+	} else {
+		pMsg->iLenMSG = pMsg->iLenRawMsg - offs;
+	}
 }
 
 
@@ -1986,7 +1998,8 @@ rsRetVal MsgReplaceMSG(msg_t *pThis, uchar* pszMSG, int lenMSG)
 		pThis->pszRawMsg = bufNew;
 	}
 
-	memcpy(pThis->pszRawMsg + pThis->offMSG, pszMSG, lenMSG);
+	if(lenMSG > 0)
+		memcpy(pThis->pszRawMsg + pThis->offMSG, pszMSG, lenMSG);
 	pThis->pszRawMsg[lenNew] = '\0'; /* this also works with truncation! */
 	pThis->iLenRawMsg = lenNew;
 	pThis->iLenMSG = lenMSG;
@@ -1997,6 +2010,8 @@ finalize_it:
 
 
 /* set raw message in message object. Size of message is provided.
+ * The function makes sure that the stored rawmsg is properly
+ * terminated by '\0'.
  * rgerhards, 2009-06-16
  */
 void MsgSetRawMsg(msg_t *pThis, char* pszRawMsg, size_t lenMsg)
@@ -2139,6 +2154,10 @@ static uchar *getNOW(eNOWType eNow)
  * be used in selector line processing.
  * rgerhards 2005-09-15
  */
+/* a quick helper to save some writing: */
+#define RET_OUT_OF_MEMORY { *pbMustBeFreed = 0;\
+	*pPropLen = sizeof("**OUT OF MEMORY**") - 1; \
+	return(UCHAR_CONSTANT("**OUT OF MEMORY**"));}
 uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
                  propid_t propID, size_t *pPropLen,
 		 unsigned short *pbMustBeFreed)
@@ -2200,8 +2219,7 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 		case PROP_PRI_TEXT:
 			pBuf = malloc(20 * sizeof(uchar));
 			if(pBuf == NULL) {
-				*pbMustBeFreed = 0;
-				return UCHAR_CONSTANT("**OUT OF MEMORY**");
+				RET_OUT_OF_MEMORY;
 			} else {
 				*pbMustBeFreed = 1;
 				pRes = (uchar*)textpri((char*)pBuf, 20, getPRIi(pMsg));
@@ -2245,49 +2263,49 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			break;
 		case PROP_SYS_NOW:
 			if((pRes = getNOW(NOW_NOW)) == NULL) {
-				return UCHAR_CONSTANT("**OUT OF MEMORY**");
+				RET_OUT_OF_MEMORY;
 			} else
 				*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
 			break;
 		case PROP_SYS_YEAR:
 			if((pRes = getNOW(NOW_YEAR)) == NULL) {
-				return UCHAR_CONSTANT("**OUT OF MEMORY**");
+				RET_OUT_OF_MEMORY;
 			} else
 				*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
 			break;
 		case PROP_SYS_MONTH:
 			if((pRes = getNOW(NOW_MONTH)) == NULL) {
-				return UCHAR_CONSTANT("**OUT OF MEMORY**");
+				RET_OUT_OF_MEMORY;
 			} else
 				*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
 			break;
 		case PROP_SYS_DAY:
 			if((pRes = getNOW(NOW_DAY)) == NULL) {
-				return UCHAR_CONSTANT("**OUT OF MEMORY**");
+				RET_OUT_OF_MEMORY;
 			} else
 				*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
 			break;
 		case PROP_SYS_HOUR:
 			if((pRes = getNOW(NOW_HOUR)) == NULL) {
-				return UCHAR_CONSTANT("**OUT OF MEMORY**");
+				RET_OUT_OF_MEMORY;
 			} else
 				*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
 			break;
 		case PROP_SYS_HHOUR:
 			if((pRes = getNOW(NOW_HHOUR)) == NULL) {
-				return UCHAR_CONSTANT("**OUT OF MEMORY**");
+				RET_OUT_OF_MEMORY;
 			} else
 				*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
 			break;
 		case PROP_SYS_QHOUR:
 			if((pRes = getNOW(NOW_QHOUR)) == NULL) {
-				return UCHAR_CONSTANT("**OUT OF MEMORY**");
+				RET_OUT_OF_MEMORY;
 			} else
 				*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
 			break;
 		case PROP_SYS_MINUTE:
 			if((pRes = getNOW(NOW_MINUTE)) == NULL) {
-				return UCHAR_CONSTANT("**OUT OF MEMORY**");
+				RET_OUT_OF_MEMORY;
 			} else
 				*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
 			break;
@@ -2299,9 +2317,10 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			 * error message unreadable. rgerhards, 2007-07-10
 			 */
 			dbgprintf("invalid property id: '%d'\n", propID);
+			*pbMustBeFreed = 0;
+			*pPropLen = sizeof("**INVALID PROPERTY NAME**") - 1;
 			return UCHAR_CONSTANT("**INVALID PROPERTY NAME**");
 	}
-
 
 	/* If we did not receive a template pointer, we are already done... */
 	if(pTpe == NULL) {
@@ -2357,8 +2376,7 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			if(pBuf == NULL) {
 				if(*pbMustBeFreed == 1)
 					free(pRes);
-				*pbMustBeFreed = 0;
-				return UCHAR_CONSTANT("**OUT OF MEMORY**");
+				RET_OUT_OF_MEMORY;
 			}
 			/* now copy */
 			memcpy(pBuf, pFld, iLen);
@@ -2375,6 +2393,7 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			if(*pbMustBeFreed == 1)
 				free(pRes);
 			*pbMustBeFreed = 0;
+			*pPropLen = sizeof("**FIELD NOT FOUND**") - 1;
 			return UCHAR_CONSTANT("**FIELD NOT FOUND**");
 		}
 	} else if(pTpe->data.field.iFromPos != 0 || pTpe->data.field.iToPos != 0) {
@@ -2403,8 +2422,7 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			if(pBuf == NULL) {
 				if(*pbMustBeFreed == 1)
 					free(pRes);
-				*pbMustBeFreed = 0;
-				return UCHAR_CONSTANT("**OUT OF MEMORY**");
+				RET_OUT_OF_MEMORY;
 			}
 			pSb = pRes;
 			if(iFrom) {
@@ -2434,9 +2452,15 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 	} else {
 		/* Check for regular expressions */
 		if (pTpe->data.field.has_regex != 0) {
-			if (pTpe->data.field.has_regex == 2)
+			if (pTpe->data.field.has_regex == 2) {
 				/* Could not compile regex before! */
+				if (*pbMustBeFreed == 1) {
+					free(pRes);
+					*pbMustBeFreed = 0;
+				}
+				*pPropLen = sizeof("**NO MATCH** **BAD REGULAR EXPRESSION**") - 1;
 				return UCHAR_CONSTANT("**NO MATCH** **BAD REGULAR EXPRESSION**");
+			}
 
 			dbgprintf("string to match for regex is: %s\n", pRes);
 
@@ -2476,12 +2500,16 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 							free(pRes);
 							*pbMustBeFreed = 0;
 						}
-						if(pTpe->data.field.nomatchAction == TPL_REGEX_NOMATCH_USE_DFLTSTR)
-							return UCHAR_CONSTANT("**NO MATCH**");
-						else if(pTpe->data.field.nomatchAction == TPL_REGEX_NOMATCH_USE_ZERO)
-							return UCHAR_CONSTANT("0");
-						else
-							return UCHAR_CONSTANT("");
+						if(pTpe->data.field.nomatchAction == TPL_REGEX_NOMATCH_USE_DFLTSTR) {
+							bufLen = sizeof("**NO MATCH**") - 1;
+							pRes = UCHAR_CONSTANT("**NO MATCH**");
+						} else if(pTpe->data.field.nomatchAction == TPL_REGEX_NOMATCH_USE_ZERO) {
+							bufLen = 1;
+							pRes = UCHAR_CONSTANT("0");
+						} else {
+							bufLen = 0;
+							pRes = UCHAR_CONSTANT("");
+						}
 					}
 				} else {
 					/* Match- but did it match the one we wanted? */
@@ -2492,10 +2520,16 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 								free(pRes);
 								*pbMustBeFreed = 0;
 							}
-							if(pTpe->data.field.nomatchAction == TPL_REGEX_NOMATCH_USE_DFLTSTR)
-								return UCHAR_CONSTANT("**NO MATCH**");
-							else
-								return UCHAR_CONSTANT("");
+							if(pTpe->data.field.nomatchAction == TPL_REGEX_NOMATCH_USE_DFLTSTR) {
+								bufLen = sizeof("**NO MATCH**") - 1;
+								pRes = UCHAR_CONSTANT("**NO MATCH**");
+							} else if(pTpe->data.field.nomatchAction == TPL_REGEX_NOMATCH_USE_ZERO) {
+								bufLen = 1;
+								pRes = UCHAR_CONSTANT("0");
+							} else {
+								bufLen = 0;
+								pRes = UCHAR_CONSTANT("");
+							}
 						}
 					}
 					/* OK, we have a usable match - we now need to malloc pB */
@@ -2509,13 +2543,12 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 					if (pB == NULL) {
 						if (*pbMustBeFreed == 1)
 							free(pRes);
-						*pbMustBeFreed = 0;
-						return UCHAR_CONSTANT("**OUT OF MEMORY**");
+						RET_OUT_OF_MEMORY;
 					}
 
 					/* Lets copy the matched substring to the buffer */
 					memcpy(pB, pRes + iOffs +  pmatch[pTpe->data.field.iSubMatchToUse].rm_so, iLenBuf);
-					bufLen = iLenBuf - 1;
+					bufLen = iLenBuf;
 					pB[iLenBuf] = '\0';/* terminate string, did not happen before */
 
 					if (*pbMustBeFreed == 1)
@@ -2533,6 +2566,7 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 					free(pRes);
 					*pbMustBeFreed = 0;
 				}
+				*pPropLen = sizeof("***REGEXP NOT AVAILABLE***") - 1;
 				return UCHAR_CONSTANT("***REGEXP NOT AVAILABLE***");
 			}
 		}
@@ -2565,8 +2599,7 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			if(pB == NULL) {
 				if(*pbMustBeFreed == 1)
 					free(pRes);
-				*pbMustBeFreed = 0;
-				return UCHAR_CONSTANT("**OUT OF MEMORY**");
+				RET_OUT_OF_MEMORY;
 			}
 			pSrc = pRes;
 			while(*pSrc) {
@@ -2612,8 +2645,7 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 				if(pDst == NULL) {
 					if(*pbMustBeFreed == 1)
 						free(pRes);
-					*pbMustBeFreed = 0;
-					return UCHAR_CONSTANT("**OUT OF MEMORY**");
+					RET_OUT_OF_MEMORY;
 				}
 				for(pSrc = pRes; *pSrc; pSrc++) {
 					if(!iscntrl((int) *pSrc))
@@ -2648,8 +2680,7 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 				if(pDst == NULL) {
 					if(*pbMustBeFreed == 1)
 						free(pRes);
-					*pbMustBeFreed = 0;
-					return UCHAR_CONSTANT("**OUT OF MEMORY**");
+					RET_OUT_OF_MEMORY;
 				}
 				for(pSrc = pRes; *pSrc; pSrc++) {
 					if(iscntrl((int) *pSrc))
@@ -2688,8 +2719,7 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 				if(pB == NULL) {
 					if(*pbMustBeFreed == 1)
 						free(pRes);
-					*pbMustBeFreed = 0;
-					return UCHAR_CONSTANT("**OUT OF MEMORY**");
+					RET_OUT_OF_MEMORY;
 				}
 				while(*pRes) {
 					if(iscntrl((int) *pRes)) {
@@ -2734,8 +2764,7 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 				if(pDst == NULL) {
 					if(*pbMustBeFreed == 1)
 						free(pRes);
-					*pbMustBeFreed = 0;
-					return UCHAR_CONSTANT("**OUT OF MEMORY**");
+					RET_OUT_OF_MEMORY;
 				}
 				for(pSrc = pRes; *pSrc; pSrc++) {
 					if(*pSrc != '/')
@@ -2770,8 +2799,7 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 				if(pDst == NULL) {
 					if(*pbMustBeFreed == 1)
 						free(pRes);
-					*pbMustBeFreed = 0;
-					return UCHAR_CONSTANT("**OUT OF MEMORY**");
+					RET_OUT_OF_MEMORY;
 				}
 				for(pSrc = pRes; *pSrc; pSrc++) {
 					if(*pSrc == '/')
@@ -2825,8 +2853,7 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 				/* ok, original copy, need a private one */
 				pB = malloc((iLn + 1) * sizeof(uchar));
 				if(pB == NULL) {
-					*pbMustBeFreed = 0;
-					return UCHAR_CONSTANT("**OUT OF MEMORY**");
+					RET_OUT_OF_MEMORY;
 				}
 				memcpy(pB, pRes, iLn - 1);
 				pRes = pB;
@@ -2845,6 +2872,7 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 	if(pTpe->data.field.options.bCSV) {
 		/* we need to obtain a private copy, as we need to at least add the double quotes */
 		int iBufLen;
+		int i;
 		uchar *pBStart;
 		uchar *pDst;
 		uchar *pSrc;
@@ -2856,10 +2884,10 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 		if(pDst == NULL) {
 			if(*pbMustBeFreed == 1)
 				free(pRes);
-			*pbMustBeFreed = 0;
-			return UCHAR_CONSTANT("**OUT OF MEMORY**");
+			RET_OUT_OF_MEMORY;
 		}
 		pSrc = pRes;
+		i = 0;
 		*pDst++ = '"'; /* starting quote */
 		while(*pSrc) {
 			if(*pSrc == '"')

@@ -427,10 +427,7 @@ static int do_Constant(unsigned char **pp, struct template *pTpl)
 	}
 
 	if((pTpe = tpeConstruct(pTpl)) == NULL) {
-		/* OK, we are out of luck. Let's invalidate the
-		 * entry and that's it.
-		 */
-		pTpe->eEntryType = UNDEFINED;
+		rsCStrDestruct(&pStrB);
 		return 1;
 	}
 	pTpe->eEntryType = CONSTANT;
@@ -490,6 +487,8 @@ static void doOptions(unsigned char **pp, struct templateEntry *pTpe)
                         pTpe->data.field.eDateFormat = tplFmtPgSQLDate;
 		 } else if(!strcmp((char*)Buf, "date-rfc3164")) {
 			pTpe->data.field.eDateFormat = tplFmtRFC3164Date;
+		 } else if(!strcmp((char*)Buf, "date-rfc3164-buggyday")) {
+			pTpe->data.field.eDateFormat = tplFmtRFC3164BuggyDate;
 		 } else if(!strcmp((char*)Buf, "date-rfc3339")) {
 			pTpe->data.field.eDateFormat = tplFmtRFC3339Date;
 		 } else if(!strcmp((char*)Buf, "date-subseconds")) {
@@ -566,8 +565,11 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 	/* got the name */
 	cstrFinalize(pStrB);
 
-	if(propNameToID(pStrB, &pTpe->data.field.propid) != RS_RET_OK)
+	if(propNameToID(pStrB, &pTpe->data.field.propid) != RS_RET_OK) {
+		cstrDestruct(&pStrB);
 		return 1;
+	}
+	cstrDestruct(&pStrB); /* no longer needed, now use ID */
 
 	/* Check frompos, if it has an R, then topos should be a regex */
 	if(*p == ':') {

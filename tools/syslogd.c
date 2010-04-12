@@ -127,6 +127,7 @@
 #include "omusrmsg.h"
 #include "omfwd.h"
 #include "omfile.h"
+#include "ompipe.h"
 #include "omdiscard.h"
 #include "threads.h"
 #include "queue.h"
@@ -177,7 +178,11 @@ static rsRetVal GlobalClassExit(void);
 #endif
 
 #ifndef _PATH_MODDIR
-#define _PATH_MODDIR	"/lib/rsyslog/"
+#       if defined(__FreeBSD__)
+#               define _PATH_MODDIR     "/usr/local/lib/rsyslog/"
+#       else
+#               define _PATH_MODDIR     "/lib/rsyslog/"
+#       endif
 #endif
 
 #if defined(SYSLOGD_PIDNAME)
@@ -792,7 +797,7 @@ parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int fla
 				 * (I couldn't do any more smart things anyway...).
 				 * rgerhards, 2007-9-20
 				 */
-				DBGPRINTF("internal error: iMsg > max msg size in printchopped()\n");
+				DBGPRINTF("internal error: iMsg > max msg size in parseAndSubmitMessage()\n");
 			}
 			FINALIZE; /* in this case, we are done... nothing left we can do */
 		}
@@ -1193,13 +1198,12 @@ int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 	int bTAGCharDetected;
 	int i;	/* general index for parsing */
 	uchar bufParseTAG[CONF_TAG_MAXSIZE];
-	uchar bufParseHOSTNAME[CONF_TAG_HOSTNAME];
+	uchar bufParseHOSTNAME[CONF_HOSTNAME_MAXSIZE];
 	BEGINfunc
 
 	assert(pMsg != NULL);
 	assert(pMsg->pszRawMsg != NULL);
-	lenMsg = pMsg->iLenRawMsg - (pMsg->offAfterPRI + 1);
-
+	lenMsg = pMsg->iLenRawMsg - pMsg->offAfterPRI; /* note: offAfterPRI is already the number of PRI chars (do not add one!) */
 	p2parse = pMsg->pszRawMsg + pMsg->offAfterPRI; /* point to start of text, after PRI */
 
 	/* Check to see if msg contains a timestamp. We start by assuming
@@ -1255,16 +1259,24 @@ int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 		bTAGCharDetected = 0;
 		if(lenMsg > 0 && flags & PARSE_HOSTNAME) {
 			i = 0;
-			while(lenMsg > 0 && (isalnum(p2parse[i]) || p2parse[i] == '.' || p2parse[i] == '.'
-				|| p2parse[i] == '_' || p2parse[i] == '-') && i < CONF_TAG_MAXSIZE) {
+			while(i < lenMsg && (isalnum(p2parse[i]) || p2parse[i] == '.' || p2parse[i] == '.'
+				|| p2parse[i] == '_' || p2parse[i] == '-') && i < (CONF_HOSTNAME_MAXSIZE - 1)) {
 				bufParseHOSTNAME[i] = p2parse[i];
 				++i;
-				--lenMsg;
 			}
 
-			if(i > 0 && p2parse[i] == ' ' && isalnum(p2parse[i-1])) {
+			if(i == lenMsg) {
+				/* we have a message that is empty immediately after the hostname,
+				 * but the hostname thus is valid! -- rgerhards, 2010-02-22
+				 */
+				p2parse += i;
+				lenMsg -= i;
+				bufParseHOSTNAME[i] = '\0';
+				MsgSetHOSTNAME(pMsg, bufParseHOSTNAME, i);
+			} else if(i > 0 && p2parse[i] == ' ' && isalnum(p2parse[i-1])) {
 				/* we got a hostname! */
 				p2parse += i + 1; /* "eat" it (including SP delimiter) */
+				lenMsg -= i + 1;
 				bufParseHOSTNAME[i] = '\0';
 				MsgSetHOSTNAME(pMsg, bufParseHOSTNAME, i);
 			}
@@ -2664,6 +2676,9 @@ static rsRetVal loadBuildInModules(void)
 	if((iRet = module.doModInit(modInitFile, UCHAR_CONSTANT("builtin-file"), NULL)) != RS_RET_OK) {
 		RETiRet;
 	}
+	if((iRet = module.doModInit(modInitPipe, UCHAR_CONSTANT("builtin-pipe"), NULL)) != RS_RET_OK) {
+		RETiRet;
+	}
 #ifdef SYSLOG_INET
 	if((iRet = module.doModInit(modInitFwd, UCHAR_CONSTANT("builtin-fwd"), NULL)) != RS_RET_OK) {
 		RETiRet;
@@ -2769,7 +2784,7 @@ static void printVersion(void)
 #else
 	printf("\tFEATURE_REGEXP:\t\t\t\tNo\n");
 #endif
-#ifndef	NOLARGEFILE
+#if defined(_LARGE_FILES) || (defined (_FILE_OFFSET_BITS) && _FILE_OFFSET_BITS >= 64)
 	printf("\tFEATURE_LARGEFILE:\t\t\tYes\n");
 #else
 	printf("\tFEATURE_LARGEFILE:\t\t\tNo\n");
@@ -3173,6 +3188,7 @@ int realMain(int argc, char **argv)
 	uchar *LocalHostName;
 	uchar *LocalDomain;
 	uchar *LocalFQDNName;
+	char cwdbuf[128]; /* buffer to obtain/display current working directory */
 
 	/* first, parse the command line options. We do not carry out any actual work, just
 	 * see what we should do. This relieves us from certain anomalies and we can process
@@ -3259,8 +3275,9 @@ int realMain(int argc, char **argv)
 	if ((argc -= optind))
 		usage();
 
-	DBGPRINTF("rsyslogd %s startup, compatibility mode %d, module path '%s'\n",
-		  VERSION, iCompatibilityMode, glblModPath == NULL ? "" : (char*)glblModPath);
+	DBGPRINTF("rsyslogd %s startup, compatibility mode %d, module path '%s', cwd:%s\n",
+		  VERSION, iCompatibilityMode, glblModPath == NULL ? "" : (char*)glblModPath,
+		  getcwd(cwdbuf, sizeof(cwdbuf)));
 
 	/* we are done with the initial option parsing and processing. Now we init the system. */
 

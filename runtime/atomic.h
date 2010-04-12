@@ -53,6 +53,122 @@
 #	define ATOMIC_CAS(data, oldVal, newVal) __sync_bool_compare_and_swap(&(data), (oldVal), (newVal));
 #	define ATOMIC_CAS_VAL(data, oldVal, newVal) __sync_val_compare_and_swap(&(data), (oldVal), (newVal));
 #else
+#ifdef HAVE_SEMAPHORE_H
+	/* we use POSIX semaphores instead */
+
+#include "rsyslog.h"
+#include <semaphore.h>
+
+extern sem_t atomicSem;
+rsRetVal atomicSemInit(void);
+void atomicSemExit(void);
+
+#if HAVE_TYPEOF
+#define my_typeof(x) typeof(x)
+#else /* sorry, can't determine types, using 'int' */
+#define my_typeof(x) int
+#endif
+
+#	define ATOMIC_SUB(data, val) \
+({ \
+	my_typeof(data) tmp; \
+	sem_wait(&atomicSem); \
+	tmp = data; \
+	data -= val; \
+	sem_post(&atomicSem); \
+	tmp; \
+})
+
+#	define ATOMIC_ADD(data, val) \
+({ \
+	my_typeof(data) tmp; \
+	sem_wait(&atomicSem); \
+	tmp = data; \
+	data += val; \
+	sem_post(&atomicSem); \
+	tmp; \
+})
+
+#	define ATOMIC_INC_AND_FETCH(data) \
+({ \
+	my_typeof(data) tmp; \
+	sem_wait(&atomicSem); \
+	tmp = data; \
+	data += 1; \
+	sem_post(&atomicSem); \
+	tmp; \
+})
+
+#	define ATOMIC_INC(data) ((void) ATOMIC_INC_AND_FETCH(data))
+
+#	define ATOMIC_DEC_AND_FETCH(data) \
+({ \
+	sem_wait(&atomicSem); \
+	data -= 1; \
+	sem_post(&atomicSem); \
+	data; \
+})
+
+#	define ATOMIC_DEC(data) ((void) ATOMIC_DEC_AND_FETCH(data))
+
+#	define ATOMIC_FETCH_32BIT(data) ((unsigned) ATOMIC_ADD((data), 0xffffffff))
+
+#	define ATOMIC_STORE_1_TO_32BIT(data) \
+({ \
+	my_typeof(data) tmp; \
+	sem_wait(&atomicSem); \
+	tmp = data; \
+	data = 1; \
+	sem_post(&atomicSem); \
+	tmp; \
+})
+
+#	define ATOMIC_STORE_0_TO_INT(data) \
+({ \
+	my_typeof(data) tmp; \
+	sem_wait(&atomicSem); \
+	tmp = data; \
+	data = 0; \
+	sem_post(&atomicSem); \
+	tmp; \
+})
+
+#	define ATOMIC_STORE_1_TO_INT(data) \
+({ \
+	my_typeof(data) tmp; \
+	sem_wait(&atomicSem); \
+	tmp = data; \
+	data = 1; \
+	sem_post(&atomicSem); \
+	tmp; \
+})
+
+#	define ATOMIC_CAS(data, oldVal, newVal) \
+({ \
+	int ret; \
+	sem_wait(&atomicSem); \
+	if(data != oldVal) ret = 0; \
+	else \
+	{ \
+		data = newVal; \
+		ret = 1; \
+	} \
+	sem_post(&atomicSem); \
+	ret; \
+})
+
+#	define ATOMIC_CAS_VAL(data, oldVal, newVal) \
+({ \
+	sem_wait(&atomicSem); \
+	if(data == oldVal) \
+	{ \
+		data = newVal; \
+	} \
+	sem_post(&atomicSem); \
+	data; \
+})
+
+#else /* not HAVE_SEMAPHORE_H */
 	/* note that we gained parctical proof that theoretical problems DO occur
 	 * if we do not properly address them. See this blog post for details:
 	 * http://blog.gerhards.net/2009/01/rsyslog-data-race-analysis.html
@@ -66,6 +182,10 @@
 #	define ATOMIC_DEC_AND_FETCH(data) (--(data))
 #	define ATOMIC_FETCH_32BIT(data) (data)
 #	define ATOMIC_STORE_1_TO_32BIT(data) (data) = 1
+#	define ATOMIC_STORE_1_TO_INT(data) (data) = 1
+#	define ATOMIC_STORE_0_TO_INT(data) (data) = 0
+#	define ATOMIC_CAS_VAL(data, oldVal, newVal) (data) = (newVal)
+#endif
 #endif
 
 #endif /* #ifndef INCLUDED_ATOMIC_H */

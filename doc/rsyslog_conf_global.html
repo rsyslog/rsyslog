@@ -212,13 +212,21 @@ supported in order to be compliant to the upcoming new syslog RFC series.
 <li><a href="rsconf1_maxopenfiles.html">$MaxOpenFiles</a></li>
 <li><a href="rsconf1_moddir.html">$ModDir</a></li>
 <li><a href="rsconf1_modload.html">$ModLoad</a></li>
+<li><b>$OMFileAsyncWriting</b> [on/<b>off</b>], if turned on, the files will be written
+in asynchronous mode via a separate thread. In that case, double buffers will be used so
+that one buffer can be filled while the other buffer is being written. Note that in order
+to enable $OMFileFlushInterval, $OMFileAsyncWriting must be set to "on". Otherwise, the flush
+interval will be ignored. Also note that when $OMFileFlushOnTXEnd is "on" but 
+$OMFileAsyncWriting is off, output will only be written when the buffer is full. This may take
+several hours, or even require a rsyslog shutdown. However, a buffer flush can be forced
+in that case by sending rsyslogd a HUP signal.
 <li><b>$OMFileZipLevel</b> 0..9  [default 0] - if greater 0, turns on gzip compression
 of the output file. The higher the number, the better the compression, but also the
 more CPU is required for zipping.</li>
 <li><b>$OMFileIOBufferSize</b> &lt;size_nbr&gt;, default 4k, size of the buffer used to writing output data. The larger the buffer, the potentially better performance is. The default of 4k is quite conservative, it is useful to go up to 64k, and 128K if you used gzip compression (then, even higher sizes may make sense)</li>
-<li><b>$OMFileFlushOnTXEnd</b> &lt;[<b>on</b>/off]&gt;, default on. Omfile has the
+<li><b>$OMFileFlushOnTXEnd</b> &lt;[on/<b>off</b>]&gt;, default ff. Omfile has the
 capability to
-writes output using a buffered writer. Disk writes are only done when the buffer is
+write output using a buffered writer. Disk writes are only done when the buffer is
 full. So if an error happens during that write, data is potentially lost. In cases where
 this is unacceptable, set $OMFileFlushOnTXEnd to on. Then, data is written at the end
 of each transaction (for pre-v5 this means after <b>each</b> log message) and the usual

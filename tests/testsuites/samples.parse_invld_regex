@@ -1,0 +1,16 @@
+# New tests should be added to this file if there is no specific
+# reason for not doing that. Initially, we could only handle one test
+# case per file, but this restriction has been removed some time ago.
+# So it is less troublesome (and easier to overlook) to have all related
+# tests in a single file.
+# the actual message is not important. There is an error inside the conf
+# file, and all messages will trigger the same problem.
+# NOTE: it is correct that the "BAD REGULAR EXPRESSION" error message is
+# *NOT* run through the rest of the propety replace, in specific through
+# the CSV escaper. We do not do this because it could potentially lead
+# to an obfuscated error message, and thus making problems hard to find. As
+# this is a real error case, there is no problem in not obeying to the 
+# configured format.
+# rgerhards, 2010-02-08
+<175>Feb 08 2008 23:47:31 hostname tag This is a message
+"2008-02-08T23:47:31", "hostname", "tag", **NO MATCH** **BAD REGULAR EXPRESSION**, "7", " This is a message"

@@ -71,7 +71,7 @@ DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(prop)
 
-static prop_t *pInputName = NULL;	/* our inputName currently is always "imudp", and this will hold it */
+static prop_t *pInputName = NULL;	/* our inputName currently is always "imuxsock", and this will hold it */
 static int startIndexUxLocalSockets; /* process funix from that index on (used to 
  				   * suppress local logging. rgerhards 2005-08-01
 				   * read-only after startup
@@ -315,7 +315,16 @@ CODESTARTwillRun
 	register int i;
 
 	/* first apply some config settings */
-	startIndexUxLocalSockets = bOmitLocalLogging ? 1 : 0;
+#	ifdef OS_SOLARIS
+		/* under solaris, we must NEVER process the local log socket, because
+		 * it is implemented there differently. If we used it, we would actually
+		 * delete it and render the system partly unusable. So don't do that.
+		 * rgerhards, 2010-03-26
+		 */
+		startIndexUxLocalSockets = 1;
+#	else
+		startIndexUxLocalSockets = bOmitLocalLogging ? 1 : 0;
+#	endif
 	if(pLogSockName != NULL)
 		funixn[0] = pLogSockName;
 
@@ -327,7 +336,7 @@ CODESTARTwillRun
 
 	/* we need to create the inputName property (only once during our lifetime) */
 	CHKiRet(prop.Construct(&pInputName));
-	CHKiRet(prop.SetString(pInputName, UCHAR_CONSTANT("imudp"), sizeof("imudp") - 1));
+	CHKiRet(prop.SetString(pInputName, UCHAR_CONSTANT("imuxsock"), sizeof("imuxsock") - 1));
 	CHKiRet(prop.ConstructFinalize(pInputName));
 
 finalize_it:
@@ -344,7 +353,7 @@ CODESTARTafterRun
 			close(funix[i]);
 
 	/* Clean-up files. */
-        for (i = 0; i < nfunix; i++)
+	for(i = startIndexUxLocalSockets; i < nfunix; i++)
 		if (funixn[i] && funix[i] != -1)
 			unlink((char*) funixn[i]);
 	/* free no longer needed string */

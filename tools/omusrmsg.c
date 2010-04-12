@@ -50,7 +50,15 @@
 #include <assert.h>
 #include <signal.h>
 #include <sys/param.h>
-#include <utmp.h>
+#ifdef HAVE_UTMP_H
+#  include <utmp.h>
+#  define STRUCTUTMP struct utmp
+#  define UTNAME ut_name
+#else
+#  include <utmpx.h>
+#  define STRUCTUTMP struct utmpx
+#  define UTNAME ut_user
+#endif
 #include <unistd.h>
 #include <sys/uio.h>
 #include <sys/stat.h>
@@ -124,6 +132,12 @@ ENDdbgPrintInstInfo
  * need! rgerhards 2005-03-18
  */
 #ifdef OS_BSD
+/* Since version 900007, FreeBSD has a POSIX compliant <utmpx.h> */
+#if defined(__FreeBSD__) && (__FreeBSD_version >= 900007)
+#  define setutent(void) setutxent(void)
+#  define getutent(void) getutxent(void)
+#  define endutent(void) endutxent(void)
+#else
 static FILE *BSD_uf = NULL;
 void setutent(void)
 {
@@ -134,9 +148,9 @@ void setutent(void)
 	}
 }
 
-struct utmp* getutent(void)
+STRUCTUTMP* getutent(void)
 {
-	static struct utmp st_utmp;
+	static STRUCTUTMP st_utmp;
 
 	if(fread((char *)&st_utmp, sizeof(st_utmp), 1, BSD_uf) != 1)
 		return NULL;
@@ -149,6 +163,7 @@ void endutent(void)
 	fclose(BSD_uf);
 	BSD_uf = NULL;
 }
+#endif /* if defined(__FreeBSD__) */
 #endif  /* #ifdef OS_BSD */
 
 
@@ -173,8 +188,8 @@ static rsRetVal wallmsg(uchar* pMsg, instanceData *pData)
 	int errnoSave;
 	int ttyf;
 	int wrRet;
-	struct utmp ut;
-	struct utmp *uptr;
+	STRUCTUTMP ut;
+	STRUCTUTMP *uptr;
 	struct stat statb;
 	DEFiRet;
 
@@ -187,13 +202,13 @@ static rsRetVal wallmsg(uchar* pMsg, instanceData *pData)
 	while((uptr = getutent())) {
 		memcpy(&ut, uptr, sizeof(ut));
 		/* is this slot used? */
-		if(ut.ut_name[0] == '\0')
+		if(ut.UTNAME[0] == '\0')
 			continue;
 #ifndef OS_BSD
 		if(ut.ut_type != USER_PROCESS)
 			continue;
 #endif
-		if(!(strncmp (ut.ut_name,"LOGIN", 6))) /* paranoia */
+		if(!(strncmp (ut.UTNAME,"LOGIN", 6))) /* paranoia */
 			continue;
 
 		/* should we send the message to this user? */
@@ -203,7 +218,7 @@ static rsRetVal wallmsg(uchar* pMsg, instanceData *pData)
 					i = MAXUNAMES;
 					break;
 				}
-				if(strncmp(pData->uname[i], ut.ut_name, UNAMESZ) == 0)
+				if(strncmp(pData->uname[i], ut.UTNAME, UNAMESZ) == 0)
 					break;
 			}
 			if(i == MAXUNAMES) /* user not found? */

@@ -35,7 +35,7 @@
  * value to the fixed size of the message object.
  */
 #define CONF_TAG_MAXSIZE		512	/* a value that is deemed far too large for any valid TAG */
-#define CONF_TAG_HOSTNAME		512	/* a value that is deemed far too large for any valid HOSTNAME */
+#define CONF_HOSTNAME_MAXSIZE		512	/* a value that is deemed far too large for any valid HOSTNAME */
 #define CONF_RAWMSG_BUFSIZE		101
 #define CONF_TAG_BUFSIZE		32
 #define CONF_HOSTNAME_BUFSIZE		32
@@ -45,15 +45,6 @@
 /* ############################################################# *
  * #                  End Config Settings                      # *
  * ############################################################# */
-
-#ifndef	NOLARGEFILE
-#	undef _LARGEFILE_SOURCE  
-#	undef _LARGEFILE64_SOURCE  
-#	undef _FILE_OFFSET_BITS
-#	define _LARGEFILE_SOURCE  
-#	define _LARGEFILE64_SOURCE  
-#	define _FILE_OFFSET_BITS 64
-#endif
 
 /* portability: not all platforms have these defines, so we
  * define them here if they are missing. -- rgerhards, 2008-03-04

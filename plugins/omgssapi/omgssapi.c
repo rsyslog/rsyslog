@@ -377,7 +377,7 @@ CODESTARTtryResume
 ENDtryResume
 
 BEGINdoAction
-	char *psz; /* temporary buffering */
+	char *psz = NULL; /* temporary buffering */
 	register unsigned l;
 	int iMaxLine;
 CODESTARTdoAction
@@ -431,11 +431,14 @@ CODESTARTdoAction
 				 * rgerhards, 2006-11-30
 				 */
 				dbgprintf("Compression failed, sending uncompressed message\n");
+				free(out);
 			} else if(destLen+1 < l) {
 				/* only use compression if there is a gain in using it! */
 				dbgprintf("there is gain in compression, so we do it\n");
 				psz = (char*) out;
 				l = destLen + 1; /* take care for the "z" at message start! */
+			} else {
+				free(out);
 			}
 			++destLen;
 		}
@@ -450,6 +453,12 @@ CODESTARTdoAction
 		break;
 	}
 finalize_it:
+#	ifdef USE_NETZIP
+	if((psz != NULL) && (psz != (char*) ppString[0]))  {
+		/* we need to free temporary buffer, alloced above - Naoya Nakazawa, 2010-01-11 */
+		free(psz);
+	}
+#	endif
 ENDdoAction
 
 

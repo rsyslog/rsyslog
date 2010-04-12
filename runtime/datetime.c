@@ -291,11 +291,11 @@ ParseTIMESTAMP3339(struct syslogTime *pTime, uchar** ppszTS, int *pLenStr)
 	}
 
 	/* OK, we actually have a 3339 timestamp, so let's indicated this */
-	if(lenStr > 0 && *pszTS == ' ') {
+	if(lenStr > 0) {
+		if(*pszTS != ' ') /* if it is not a space, it can not be a "good" time - 2010-02-22 rgerhards */
+			ABORT_FINALIZE(RS_RET_INVLD_TIME);
+		++pszTS; /* just skip past it */
 		--lenStr;
-		++pszTS;
-	} else {
-		ABORT_FINALIZE(RS_RET_INVLD_TIME);
 	}
 
 	/* we had success, so update parse pointer and caller-provided timestamp */
@@ -510,6 +510,7 @@ ParseTIMESTAMP3164(struct syslogTime *pTime, uchar** ppszTS, int *pLenStr)
 
 	if(lenStr == 0 || *pszTS++ != ' ')
 		ABORT_FINALIZE(RS_RET_INVLD_TIME);
+	--lenStr;
 
 	/* we accept a slightly malformed timestamp when receiving. This is
 	 * we accept one-digit days
@@ -565,7 +566,13 @@ ParseTIMESTAMP3164(struct syslogTime *pTime, uchar** ppszTS, int *pLenStr)
 	 * invalid format, it occurs frequently enough (e.g. with Cisco devices)
 	 * to permit it as a valid case. -- rgerhards, 2008-09-12
 	 */
-	if(lenStr == 0 || *pszTS++ == ':') {
+	if(lenStr > 0 && *pszTS == ':') {
+		++pszTS; /* just skip past it */
+		--lenStr;
+	}
+	if(lenStr > 0) {
+		if(*pszTS != ' ') /* if it is not a space, it can not be a "good" time - 2010-02-22 rgerhards */
+			ABORT_FINALIZE(RS_RET_INVLD_TIME);
 		++pszTS; /* just skip past it */
 		--lenStr;
 	}
@@ -786,8 +793,12 @@ int formatTimestamp3339(struct syslogTime *ts, char* pBuf)
  * buffer that will receive the resulting string. The function
  * returns the size of the timestamp written in bytes (without
  * the string termnator). If 0 is returend, an error occured.
+ * rgerhards, 2010-03-05: Added support to for buggy 3164 dates,
+ * where a zero-digit is written instead of a space for the first
+ * day character if day < 10. syslog-ng seems to do that, and some
+ * parsing scripts (in migration cases) rely on that.
  */
-int formatTimestamp3164(struct syslogTime *ts, char* pBuf)
+int formatTimestamp3164(struct syslogTime *ts, char* pBuf, int bBuggyDay)
 {
 	static char* monthNames[12] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun",
 					"Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
@@ -800,7 +811,7 @@ int formatTimestamp3164(struct syslogTime *ts, char* pBuf)
 	pBuf[2] = monthNames[(ts->month - 1) % 12][2];
 	pBuf[3] = ' ';
 	iDay = (ts->day / 10) % 10; /* we need to write a space if the first digit is 0 */
-	pBuf[4] = iDay ? iDay + '0' : ' ';
+	pBuf[4] = (bBuggyDay || iDay > 0) ? iDay + '0' : ' ';
 	pBuf[5] = ts->day % 10 + '0';
 	pBuf[6] = ' ';
 	pBuf[7] = (ts->hour / 10) % 10 + '0';

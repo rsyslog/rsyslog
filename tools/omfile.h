@@ -3,7 +3,7 @@
  *
  * File begun on 2007-07-21 by RGerhards (extracted from syslogd.c)
  *
- * Copyright 2007 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2010 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -28,7 +28,11 @@
 /* prototypes */
 rsRetVal modInitFile(int iIFVersRequested __attribute__((unused)), int *ipIFVersProvided, rsRetVal (**pQueryEtryPt)(), rsRetVal (*pHostQueryEtryPt)(uchar*, rsRetVal (**)()), modInfo_t*);
 
+/* the define below is dirty, but we need it for ompipe integration. There is no
+ * other way to have the functionality (well, one way would be to go through the
+ * globals, but that seems not yet justified. -- rgerhards, 2010-03-01
+ */
+uchar	*pszFileDfltTplName;
 #endif /* #ifndef OMFILE_H_INCLUDED */
-/*
- * vi:set ai:
+/* vi:set ai:
  */

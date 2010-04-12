@@ -69,7 +69,7 @@ AC_SUBST(DL_LIBS)
 AC_HEADER_RESOLV
 AC_HEADER_STDC
 AC_HEADER_SYS_WAIT
-AC_CHECK_HEADERS([arpa/inet.h libgen.h malloc.h fcntl.h locale.h netdb.h netinet/in.h paths.h stddef.h stdlib.h string.h sys/file.h sys/ioctl.h sys/param.h sys/socket.h sys/time.h sys/stat.h syslog.h unistd.h utmp.h sys/epoll.h sys/prctl.h])
+AC_CHECK_HEADERS([arpa/inet.h libgen.h malloc.h fcntl.h locale.h netdb.h netinet/in.h paths.h stddef.h stdlib.h string.h sys/file.h sys/ioctl.h sys/param.h sys/socket.h sys/time.h sys/stat.h syslog.h unistd.h utmp.h utmpx.h sys/epoll.h sys/prctl.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
@@ -84,6 +84,7 @@ AC_TYPE_UINT8_T
 AC_HEADER_TIME
 AC_STRUCT_TM
 AC_C_VOLATILE
+AC_C_TYPEOF
 
 sa_includes="\
 $ac_includes_default
@@ -126,6 +127,9 @@ AC_TRY_COMPILE([
 # check for availability of atomic operations
 RS_ATOMIC_OPERATIONS
 
+# fall back to POSIX sems for atomic operations (cpu expensive)
+AC_CHECK_HEADERS([semaphore.h])
+
 
 # Additional module directories
 AC_ARG_WITH(moddirs,
@@ -152,19 +156,12 @@ AC_SUBST(moddirs)
 
 
 # Large file support
-AC_ARG_ENABLE(largefile,
-        [AS_HELP_STRING([--enable-largefile],[Enable large file support @<:@default=yes@:>@])],
-        [case "${enableval}" in
-         yes) enable_largefile="yes" ;;
-          no) enable_largefile="no" ;;
-           *) AC_MSG_ERROR(bad value ${enableval} for --enable-largefile) ;;
-         esac],
-        [enable_largefile="yes"]
-)
-if test "$enable_largefile" = "no"; then
-        AC_DEFINE(NOLARGEFILE, 1, [Defined when large file support is disabled.])
-fi
-
+# http://www.gnu.org/software/autoconf/manual/html_node/System-Services.html#index-AC_005fSYS_005fLARGEFILE-1028
+AC_SYS_LARGEFILE
+case "${enable_largefile}" in
+  no) ;;
+  *) enable_largefile="yes" ;;
+esac
 
 # Regular expressions
 AC_ARG_ENABLE(regexp,
@@ -281,6 +278,7 @@ AC_ARG_ENABLE(klog,
 AM_CONDITIONAL(ENABLE_IMKLOG, test x$enable_klog = xyes)
 AM_CONDITIONAL(ENABLE_IMKLOG_BSD, test x$os_type = xbsd)
 AM_CONDITIONAL(ENABLE_IMKLOG_LINUX, test x$os_type = xlinux)
+AM_CONDITIONAL(ENABLE_IMKLOG_SOLARIS, test x$os_type = xsolaris)
 
 
 #
@@ -732,6 +730,19 @@ AC_ARG_ENABLE(imfile,
 AM_CONDITIONAL(ENABLE_IMFILE, test x$enable_imfile = xyes)
 
 
+# settings for the door input module (under solaris, thus default off)
+AC_ARG_ENABLE(imdoor,
+        [AS_HELP_STRING([--enable-imdoor],[door input module enabled @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_imdoor="yes" ;;
+          no) enable_imdoor="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-imdoor) ;;
+         esac],
+        [enable_imdoor=no]
+)
+AM_CONDITIONAL(ENABLE_IMDOOR, test x$enable_imdoor = xyes)
+
+
 # settings for the omprog output module
 AC_ARG_ENABLE(omprog,
         [AS_HELP_STRING([--enable-omprog],[Compiles omprog module @<:@default=no@:>@])],
@@ -833,6 +844,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omprog/Makefile \
 		plugins/omstdout/Makefile \
 		plugins/imfile/Makefile \
+		plugins/imdoor/Makefile \
 		plugins/imrelp/Makefile \
 		plugins/imdiag/Makefile \
 		plugins/omtesting/Makefile \
@@ -865,6 +877,7 @@ echo "---{ input plugins }---"
 echo "    Klog functionality enabled:               $enable_klog ($os_type)"
 echo "    imdiag enabled:                           $enable_imdiag"
 echo "    file input module enabled:                $enable_imfile"
+echo "    Solaris door input module enabled:        $enable_imdoor"
 echo "    input template module will be compiled:   $enable_imtemplate"
 echo
 echo "---{ output plugins }---"

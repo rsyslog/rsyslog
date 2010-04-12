@@ -13,6 +13,8 @@ rsyslogd_SOURCES = \
 	omfwd.h \
 	omfile.c \
 	omfile.h \
+	ompipe.c \
+	ompipe.h \
 	omdiscard.c \
 	omdiscard.h \
 	iminternal.c \
