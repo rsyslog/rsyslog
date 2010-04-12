@@ -20,7 +20,7 @@ case $1 in
 		rm -f rsyslogd.started work-*.conf rsyslog.random.data
 		rm -f rsyslogd2.started work-*.conf
 		rm -f work rsyslog.out.log rsyslog.out.log.save # common work files
-		rm -f rsyslog.out.*.log
+		rm -f rsyslog.out.*.log work-presort
 		rm -rf test-spool
 		rm -f core.* vgcore.*
 		mkdir test-spool
@@ -28,7 +28,7 @@ case $1 in
    'exit')	rm -f rsyslogd.started work-*.conf diag-common.conf
    		rm -f rsyslogd2.started diag-common2.conf rsyslog.action.*.include
 		rm -f work rsyslog.out.log rsyslog.out.log.save # common work files
-		rm -f rsyslog.out.*.log rsyslog.random.data
+		rm -f rsyslog.out.*.log rsyslog.random.data work-presort
 		rm -rf test-spool
 		;;
    'startup')   # start rsyslogd with default params. $2 is the config file name to use

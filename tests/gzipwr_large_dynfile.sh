@@ -18,8 +18,8 @@ echo ===========================================================================
 echo TEST: \[gzipwr_large_dynfile.sh\]: test for gzip file writing for large message sets
 source $srcdir/diag.sh init
 # uncomment for debugging support:
-export RSYSLOG_DEBUG="debug nostdout"
-export RSYSLOG_DEBUGLOG="log"
+#export RSYSLOG_DEBUG="debug nostdout"
+#export RSYSLOG_DEBUGLOG="log"
 source $srcdir/diag.sh startup gzipwr_large_dynfile.conf
 # send 4000 messages of 10.000bytes plus header max, randomized
 source $srcdir/diag.sh tcpflood -m4000 -r -d10000 -P129 -f5

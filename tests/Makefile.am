@@ -113,6 +113,7 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/parse3.conf \
 	   testsuites/reallife.parse3 \
 	   testsuites/parse-nodate.conf \
+	   testsuites/samples.parse-nodate \
 	   testsuites/parse_invld_regex.conf \
 	   testsuites/samples.parse_invld_regex \
 	   testsuites/parse-3164-buggyday.conf \

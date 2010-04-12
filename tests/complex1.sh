@@ -7,8 +7,8 @@ echo ===========================================================================
 echo TEST: \[complex1.sh\]: complex test with gzip and multiple action queues
 source $srcdir/diag.sh init
 # uncomment for debugging support:
-export RSYSLOG_DEBUG="debug nostdout"
-export RSYSLOG_DEBUGLOG="log"
+#export RSYSLOG_DEBUG="debug nostdout"
+#export RSYSLOG_DEBUGLOG="log"
 source $srcdir/diag.sh startup complex1.conf
 # send 30,000 messages of 400 bytes plus header max, via three dest ports
 source $srcdir/diag.sh tcpflood -m40000 -rd400 -P129 -f5 -n3 -c15 -i1
