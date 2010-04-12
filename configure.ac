@@ -612,6 +612,23 @@ AC_ARG_ENABLE(rsyslogd,
 AM_CONDITIONAL(ENABLE_RSYSLOGD, test x$enable_rsyslogd = xyes)
 
 
+# capability to enable an extended testbench. By default, this is off. The reason
+# for this switch is that some test simply take too long to execute them on a regular
+# basis. So we enable to skip them, while the majority of tests can still be used. The
+# idea is that at least "make distcheck" executes the extended testbench, and also
+# developers should explicitely enable it after important changes. -- rgerhards, 2010-04-12
+AC_ARG_ENABLE(extended_tests,
+        [AS_HELP_STRING([--enable-extended-tests],[extended testbench @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_rsyslogd="yes" ;;
+          no) enable_rsyslogd="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-extended-tests) ;;
+         esac],
+        [enable_extended_tests=no]
+)
+AM_CONDITIONAL(ENABLE_EXTENDED_TESTS, test x$enable_extended_tests = xyes)
+
+
 # Mail support (so far we do not need a library, but we need to turn this on and off)
 AC_ARG_ENABLE(mail,
         [AS_HELP_STRING([--enable-mail],[Enable mail support @<:@default=no@:>@])],
@@ -864,6 +881,7 @@ echo "    SNMP support enabled:                     $enable_snmp"
 echo
 echo "---{ debugging support }---"
 echo "    Testbench enabled:                        $enable_testbench"
+echo "    Extended Testbench enabled:               $enable_extended_tests"
 echo "    Debug mode enabled:                       $enable_debug"
 echo "    Runtime Instrumentation enabled:          $enable_rtinst"
 echo "    Diagnostic tools enabled:                 $enable_diagtools"

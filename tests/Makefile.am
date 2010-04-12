@@ -24,7 +24,6 @@ TESTS = $(TESTRUNS) cfg.sh \
 	dynfile_invld_sync.sh \
 	dynfile_invalid2.sh \
 	complex1.sh \
-	random.sh \
 	queue-persist.sh \
 	pipeaction.sh
 	execonlyonce.sh \
@@ -39,6 +38,10 @@ TESTS += omod-if-array.sh \
 	 threadingmq.sh \
 	 threadingmqaq.sh \
 	 fieldtest.sh
+endif
+
+if ENABLE_EXTENDED_TESTS
+TESTS += random.sh 
 endif
 
 check_JAVA = DiagTalker.java

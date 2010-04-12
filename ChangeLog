@@ -1,6 +1,10 @@
+---------------------------------------------------------------------------
+Version 4.6.3  [v4-stable] (rgerhards), 2010-04-??
 - improvded testbench
   - added test with truly random data received via syslog to test
     robustness
+  - added new configure option that permits to disable and enable an
+    extended testbench
 - bugfix: default for $OMFileFlushOnTXEnd was wrong ("off").
   This, in default mode, caused buffered writing to be used, what
   means that it looked like no output were written or partial
