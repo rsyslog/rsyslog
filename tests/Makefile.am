@@ -25,7 +25,6 @@ TESTS = $(TESTRUNS) cfg.sh \
 	dynfile_invld_sync.sh \
 	dynfile_invalid2.sh \
 	complex1.sh \
-	random.sh \
 	queue-persist.sh \
 	pipeaction.sh
 	execonlyonce.sh \
@@ -40,6 +39,10 @@ TESTS += omod-if-array.sh \
 	 threadingmq.sh \
 	 threadingmqaq.sh \
 	 fieldtest.sh
+endif
+
+if ENABLE_EXTENDED_TESTS
+TESTS += random.sh 
 endif
 
 check_JAVA = DiagTalker.java
@@ -111,6 +114,7 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/parse3.conf \
 	   testsuites/reallife.parse3 \
 	   testsuites/parse-nodate.conf \
+	   testsuites/samples.parse-nodate \
 	   testsuites/parse_invld_regex.conf \
 	   testsuites/samples.parse_invld_regex \
 	   testsuites/parse-3164-buggyday.conf \
