@@ -39,7 +39,7 @@ static int bCPUAffinity = 0;
 static int procs = 0; /* number of processors */
 static int numthrds = 0; /* if zero, => equal num of processors */
 static unsigned goal = 50000000; /* 50 million */
-static int bCVS = 0; /* generate CVS output? */
+static int bCSV = 0; /* generate CVS output? */
 static int numIterations = 1; /* number of iterations */
 static int dummyLoad = 0;     /* number of dummy load iterations to generate */
 static enum { none, atomic, cas, mutex, spinlock } syncType;
@@ -142,7 +142,7 @@ void *workerThread( void *arg )
 
 static void beginTiming(void)
 {
-	if(!bCVS) {
+	if(!bCSV) {
 		printf("Test Parameters:\n");
 		printf("\tNumber of Cores.........: %d\n", procs);
 		printf("\tNumber of Threads.......: %d\n", numthrds);
@@ -158,6 +158,7 @@ static void beginTiming(void)
 
 static void endTiming(void)
 {
+	unsigned delta;
 	long sec, usec;
 
 	gettimeofday(&tvEnd, NULL);
@@ -169,12 +170,25 @@ static void endTiming(void)
 	sec = tvEnd.tv_sec - tvStart.tv_sec;
 	usec = tvEnd.tv_usec - tvStart.tv_usec;
 
-	if(bCVS) {
-		printf("%s,%d,%d,%d,%u,%ld.%ld\n",
-			getSyncMethName(), procs, numthrds, bCPUAffinity, goal, sec, usec);
+	delta = thrd_WorkToDo * numthrds - global_int;
+	if(bCSV) {
+		printf("%s,%d,%d,%d,%u,%u,%ld.%ld\n",
+			getSyncMethName(), procs, numthrds, bCPUAffinity, goal, delta, sec, usec);
 	} else {
 		printf("measured (sytem time) runtime is %ld.%ld seconds\n", sec, usec);
+		if(delta == 0) {
+			printf("Computation was done correctly.\n");
+		} else {
+			printf("Computation INCORRECT,\n"
+			       "\texpected %9u\n"
+			       "\treal     %9u\n"
+			       "\toff by   %9u\n",
+				thrd_WorkToDo * numthrds,
+				global_int,
+				delta);
+		}
 	}
+
 	totalRuntime += sec * 1000 + (usec / 1000);
 }
 
@@ -200,7 +214,6 @@ static void
 singleTest(void)
 {
 	int i;
-	unsigned delta;
 	pthread_t *thrs;
 
 	global_int = 0;
@@ -232,20 +245,6 @@ singleTest(void)
 
 	free( thrs );
 
-	delta = thrd_WorkToDo * numthrds - global_int;
-	if(!bCVS) {
-		if(delta == 0) {
-			printf("Computation was done correctly.\n");
-		} else {
-			printf("Computation INCORRECT,\n"
-			       "\texpected %9u\n"
-			       "\treal     %9u\n"
-			       "\toff by   %9u\n",
-				thrd_WorkToDo * numthrds,
-				global_int,
-				delta);
-		}
-	}
 }
 
 
@@ -273,7 +272,7 @@ main(int argc, char *argv[])
 			numthrds = atoi(optarg);
 			break;
 		case 'C':
-			bCVS = 1;
+			bCSV = 1;
 			break;
 		case 's':
 			if(!strcmp(optarg, "none"))
