@@ -169,7 +169,7 @@ openPipe(instanceData *pData)
 		/*NO CODE HERE - WILL NEVER BE REACHED!*/
 	}
 
-	DBGPRINTF("child has pid %d\n", cpid);
+	DBGPRINTF("child has pid %d\n", (int) cpid);
 	pData->fdPipe = pipefd[1];
 	pData->pid = cpid;
 	close(pipefd[0]);
@@ -191,7 +191,6 @@ cleanup(instanceData *pData)
 
 	assert(pData != NULL);
 	assert(pData->bIsRunning == 1);
-RUNLOG_VAR("%d", pData->pid);
 	ret = waitpid(pData->pid, &status, 0);
 	if(ret != pData->pid) {
 		/* if waitpid() fails, we can not do much - try to ignore it... */

@@ -157,15 +157,9 @@ door_server_pool(door_info_t __attribute__((unused)) *dip)
 void
 sun_delete_doorfiles(void)
 {
-	pthread_t mythreadno;
 	struct stat sb;
 	int err;
 	char line[MAXLINE+1];
-
-	if (Debug) {
-		mythreadno = pthread_self();
-	}
-
 
 	if (lstat(DoorFileName, &sb) == 0 && !S_ISDIR(sb.st_mode)) {
 		if (unlink(DoorFileName) < 0) {
@@ -174,13 +168,12 @@ sun_delete_doorfiles(void)
 			    "unlink() of %s failed - fatal", DoorFileName);
 			errno = err;
 			DBGPRINTF("%s", line);//logerror(line);
-			DBGPRINTF("delete_doorfiles(%u): error: %s, "
-			    "errno=%d\n", mythreadno, line, err);
+			DBGPRINTF("delete_doorfiles: error: %s, "
+			    "errno=%d\n", line, err);
 			exit(1);
 		}
 
-		DBGPRINTF("delete_doorfiles(%u): deleted %s\n",
-		    mythreadno, DoorFileName);
+		DBGPRINTF("delete_doorfiles: deleted %s\n", DoorFileName);
 	}
 
 	if (strcmp(DoorFileName, DOORFILE) == 0) {
@@ -189,27 +182,25 @@ sun_delete_doorfiles(void)
 				err = errno;
 				(void) snprintf(line, sizeof (line),
 				    "unlink() of %s failed", OLD_DOORFILE);
-				DBGPRINTF("delete_doorfiles(%u): %s\n",
-				    mythreadno, line);
+				DBGPRINTF("delete_doorfiles: %s\n", line);
 
 				if (err != EROFS) {
 					errno = err;
 					(void) strlcat(line, " - fatal",
 					    sizeof (line));
 					//logerror(line);
-					DBGPRINTF("delete_doorfiles(%u): "
+					DBGPRINTF("delete_doorfiles: "
 					    "error: %s, errno=%d\n",
-					    mythreadno, line, err);
+					    line, err);
 					exit(1);
 				}
 
-				DBGPRINTF("delete_doorfiles(%u): unlink() "
-				    "failure OK on RO file system\n",
-				    mythreadno);
+				DBGPRINTF("delete_doorfiles: unlink() "
+				    "failure OK on RO file system\n");
 			}
 
-			DBGPRINTF("delete_doorfiles(%u): deleted %s\n",
-			    mythreadno, OLD_DOORFILE);
+			DBGPRINTF("delete_doorfiles: deleted %s\n",
+			    OLD_DOORFILE);
 		}
 	}
 
@@ -217,8 +208,8 @@ sun_delete_doorfiles(void)
 		(void) door_revoke(DoorFd);
 	}
 
-	DBGPRINTF("delete_doorfiles(%u): revoked door: DoorFd=%d\n",
-	    mythreadno, DoorFd);
+	DBGPRINTF("delete_doorfiles: revoked door: DoorFd=%d\n",
+	    DoorFd);
 }
 
 
@@ -234,12 +225,7 @@ sun_open_door(void)
 	struct stat buf;
 	door_info_t info;
 	char line[MAXLINE+1];
-	pthread_t mythreadno;
 	int err;
-
-	if (Debug) {
-		mythreadno = pthread_self();
-	}
 
 	/*
 	 * first see if another syslogd is running by trying
@@ -251,21 +237,21 @@ sun_open_door(void)
 		int door;
 
 		if ((door = open(DoorFileName, O_RDONLY)) >= 0) {
-			DBGPRINTF("open_door(%u): %s opened "
-			    "successfully\n", mythreadno, DoorFileName);
+			DBGPRINTF("open_door: %s opened "
+			    "successfully\n", DoorFileName);
 
 			if (door_info(door, &info) >= 0) {
-				DBGPRINTF("open_door(%u): "
+				DBGPRINTF("open_door: "
 				    "door_info:info.di_target = %ld\n",
-				    mythreadno, info.di_target);
+				    info.di_target);
 
 				if (info.di_target > 0) {
 					(void) sprintf(line, "syslogd pid %ld"
 					    " already running. Cannot "
 					    "start another syslogd pid %ld",
 					    info.di_target, getpid());
-					DBGPRINTF("open_door(%u): error: "
-					    "%s\n", mythreadno, line);
+					DBGPRINTF("open_door: error: "
+					    "%s\n", line);
 					errno = 0;
 					//logerror(line);
 					exit(1);
@@ -277,17 +263,17 @@ sun_open_door(void)
 			if (lstat(DoorFileName, &buf) < 0) {
 				err = errno;
 
-				DBGPRINTF("open_door(%u): lstat() of %s "
+				DBGPRINTF("open_door: lstat() of %s "
 				    "failed, errno=%d\n",
-				    mythreadno, DoorFileName, err);
+				    DoorFileName, err);
 
 				if ((door = creat(DoorFileName, 0644)) < 0) {
 					err = errno;
 					(void) snprintf(line, sizeof (line),
 					    "creat() of %s failed - fatal",
 					    DoorFileName);
-					DBGPRINTF("open_door(%u): error: %s, "
-					    "errno=%d\n", mythreadno, line,
+					DBGPRINTF("open_door: error: %s, "
+					    "errno=%d\n", line,
 					    err);
 					errno = err;
 					//logerror(line);
@@ -298,8 +284,8 @@ sun_open_door(void)
 				(void) fchmod(door,
 				    S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
 
-				DBGPRINTF("open_door(%u): creat() of %s "
-				    "succeeded\n", mythreadno,
+				DBGPRINTF("open_door: creat() of %s "
+				    "succeeded\n", 
 				    DoorFileName);
 
 				(void) close(door);
@@ -308,39 +294,36 @@ sun_open_door(void)
 
 		if (strcmp(DoorFileName, DOORFILE) == 0) {
 			if (lstat(OLD_DOORFILE, &buf) == 0) {
-				DBGPRINTF("open_door(%u): lstat() of %s "
-				    "succeeded\n", mythreadno,
-				    OLD_DOORFILE);
+				DBGPRINTF("open_door: lstat() of %s "
+				    "succeeded\n", OLD_DOORFILE);
 
 				if (S_ISDIR(buf.st_mode)) {
 					(void) snprintf(line, sizeof (line),
 					    "%s is a directory - fatal",
 					    OLD_DOORFILE);
-					DBGPRINTF("open_door(%u): error: "
-					    "%s\n", mythreadno, line);
+					DBGPRINTF("open_door: error: "
+					    "%s\n", line);
 					errno = 0;
 					//logerror(line);
 					sun_delete_doorfiles();
 					exit(1);
 				}
 
-				DBGPRINTF("open_door(%u): %s is not a "
-				    "directory\n",
-				    mythreadno, OLD_DOORFILE);
-
+				DBGPRINTF("open_door: %s is not a "
+				    "directory\n", OLD_DOORFILE); 
 				if (unlink(OLD_DOORFILE) < 0) {
 					err = errno;
 					(void) snprintf(line, sizeof (line),
 					    "unlink() of %s failed",
 					    OLD_DOORFILE);
-					DBGPRINTF("open_door(%u): %s\n",
-					    mythreadno, line);
+					DBGPRINTF("open_door: %s\n",
+					    line);
 
 					if (err != EROFS) {
-						DBGPRINTF("open_door(%u): "
+						DBGPRINTF("open_door: "
 						    "error: %s, "
 						    "errno=%d\n",
-						    mythreadno, line, err);
+						    line, err);
 						(void) strcat(line, " - fatal");
 						errno = err;
 						//logerror(line);
@@ -348,13 +331,13 @@ sun_open_door(void)
 						exit(1);
 					}
 
-					DBGPRINTF("open_door(%u): unlink "
+					DBGPRINTF("open_door: unlink "
 					    "failure OK on RO file "
-					    "system\n", mythreadno);
+					    "system\n");
 				}
 			} else {
-				DBGPRINTF("open_door(%u): file %s doesn't "
-				    "exist\n", mythreadno, OLD_DOORFILE);
+				DBGPRINTF("open_door: file %s doesn't "
+				    "exist\n", OLD_DOORFILE);
 			}
 
 			if (symlink(RELATIVE_DOORFILE, OLD_DOORFILE) < 0) {
@@ -362,12 +345,12 @@ sun_open_door(void)
 				(void) snprintf(line, sizeof (line),
 				    "symlink %s -> %s failed", OLD_DOORFILE,
 				    RELATIVE_DOORFILE);
-				DBGPRINTF("open_door(%u): %s\n", mythreadno,
+				DBGPRINTF("open_door: %s\n",
 				    line);
 
 				if (err != EROFS) {
-					DBGPRINTF("open_door(%u): error: %s, "
-					    "errno=%d\n", mythreadno, line,
+					DBGPRINTF("open_door: error: %s, "
+					    "errno=%d\n", line,
 					    err);
 					errno = err;
 					(void) strcat(line, " - fatal");
@@ -376,11 +359,11 @@ sun_open_door(void)
 					exit(1);
 				}
 
-				DBGPRINTF("open_door(%u): symlink failure OK "
-				    "on RO file system\n", mythreadno);
+				DBGPRINTF("open_door: symlink failure OK "
+				    "on RO file system\n");
 			} else {
-				DBGPRINTF("open_door(%u): symlink %s -> %s "
-				    "succeeded\n", mythreadno,
+				DBGPRINTF("open_door: symlink %s -> %s "
+				    "succeeded\n", 
 				    OLD_DOORFILE, RELATIVE_DOORFILE);
 			}
 		}
@@ -390,16 +373,16 @@ sun_open_door(void)
 		    //???? DOOR_NO_CANEL requires newer libs??? DOOR_REFUSE_DESC | DOOR_NO_CANCEL)) < 0) {
 			err = errno;
 			(void) sprintf(line, "door_create() failed - fatal");
-			DBGPRINTF("open_door(%u): error: %s, errno=%d\n",
-			    mythreadno, line, err);
+			DBGPRINTF("open_door: error: %s, errno=%d\n",
+			    line, err);
 			errno = err;
 			//logerror(line);
 			sun_delete_doorfiles();
 			exit(1);
 		}
 		//???? (void) door_setparam(DoorFd, DOOR_PARAM_DATA_MAX, 0);
-		DBGPRINTF("open_door(%u): door_create() succeeded, "
-		    "DoorFd=%d\n", mythreadno, DoorFd);
+		DBGPRINTF("open_door: door_create() succeeded, "
+		    "DoorFd=%d\n", DoorFd);
 
 		DoorCreated = 1;
 	}
@@ -412,7 +395,7 @@ sun_open_door(void)
 		err = errno;
 		(void) snprintf(line, sizeof (line), "fattach() of fd"
 		    " %d to %s failed - fatal", DoorFd, DoorFileName);
-		DBGPRINTF("open_door(%u): error: %s, errno=%d\n", mythreadno,
+		DBGPRINTF("open_door: error: %s, errno=%d\n",
 		    line, err);
 		errno = err;
 		//logerror(line);
@@ -420,7 +403,7 @@ sun_open_door(void)
 		exit(1);
 	}
 
-	DBGPRINTF("open_door(%u): attached server() to %s\n", mythreadno,
+	DBGPRINTF("open_door: attached server() to %s\n",
 	    DoorFileName);
 
 }
