@@ -81,11 +81,14 @@
 #include <sys/door.h>
 
 #include "rsyslog.h"
+#include "srUtils.h"
 #include "debug.h"
 
 #define	DOORFILE		"/var/run/syslog_door"
 #define	RELATIVE_DOORFILE	"../var/run/syslog_door"
 #define	OLD_DOORFILE		"/etc/.syslog_door"
+
+static struct pollfd Pfd;		/* Pollfd for local the log device */
 
 static int		DoorFd = -1;
 static int		DoorCreated = 0;
@@ -102,8 +105,8 @@ static pthread_attr_t door_thr_attr;
  */
 /*ARGSUSED*/
 static void
-server(void *cookie, char *argp, size_t arg_size,
-    door_desc_t *dp, uint_t n)
+server(void __attribute__((unused)) *cookie, char __attribute__((unused)) *argp, size_t __attribute__((unused)) arg_size,
+    door_desc_t __attribute__((unused)) *dp, __attribute__((unused)) uint_t n)
 {
 	(void) door_return(NULL, 0, NULL, 0);
 	/* NOTREACHED */
@@ -111,7 +114,7 @@ server(void *cookie, char *argp, size_t arg_size,
 
 /*ARGSUSED*/
 static void *
-create_door_thr(void *arg)
+create_door_thr(void __attribute__((unused)) *arg)
 {
 	(void) pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 	(void) door_return(NULL, 0, NULL, 0);
@@ -138,7 +141,7 @@ create_door_thr(void *arg)
  */
 /*ARGSUSED*/
 static void
-door_server_pool(door_info_t *dip)
+door_server_pool(door_info_t __attribute__((unused)) *dip)
 {
 	(void) pthread_mutex_lock(&door_server_cnt_lock);
 	if (door_server_cnt <= MAX_DOOR_SERVER_THR &&
@@ -151,8 +154,8 @@ door_server_pool(door_info_t *dip)
 	(void) pthread_mutex_unlock(&door_server_cnt_lock);
 }
 
-static void
-delete_doorfiles(void)
+void
+sun_delete_doorfiles(void)
 {
 	pthread_t mythreadno;
 	struct stat sb;
@@ -193,7 +196,7 @@ delete_doorfiles(void)
 					errno = err;
 					(void) strlcat(line, " - fatal",
 					    sizeof (line));
-					logerror(line);
+					//logerror(line);
 					DBGPRINTF("delete_doorfiles(%u): "
 					    "error: %s, errno=%d\n",
 					    mythreadno, line, err);
@@ -210,54 +213,6 @@ delete_doorfiles(void)
 		}
 	}
 
-#if 0
-	if (lstat(PidFileName, &sb) == 0 && !S_ISDIR(sb.st_mode)) {
-		if (unlink(PidFileName) < 0) {
-			err = errno;
-			(void) snprintf(line, sizeof (line),
-			    "unlink() of %s failed - fatal", PidFileName);
-			errno = err;
-			logerror(line);
-			DBGPRINTF("delete_doorfiles(%u): error: %s, "
-			    "errno=%d\n", mythreadno, line, err);
-			exit(1);
-		}
-
-		DBGPRINTF("delete_doorfiles(%u): deleted %s\n", mythreadno,
-		    PidFileName);
-	}
-
-	if (strcmp(PidFileName, PIDFILE) == 0) {
-		if (lstat(OLD_PIDFILE, &sb) == 0 && !S_ISDIR(sb.st_mode)) {
-			if (unlink(OLD_PIDFILE) < 0) {
-				err = errno;
-				(void) snprintf(line, sizeof (line),
-				    "unlink() of %s failed", OLD_PIDFILE);
-				DBGPRINTF(5, "delete_doorfiles(%u): %s, \n",
-				    mythreadno, line);
-
-				if (err != EROFS) {
-					errno = err;
-					(void) strlcat(line, " - fatal",
-					    sizeof (line));
-					logerror(line);
-					DBGPRINTF(1, "delete_doorfiles(%u): "
-					    "error: %s, errno=%d\n",
-					    mythreadno, line, err);
-					exit(1);
-				}
-
-				DBGPRINTF(5, "delete_doorfiles(%u): unlink "
-				    "failure OK on RO file system\n",
-				    mythreadno);
-			}
-
-			DBGPRINTF(5, "delete_doorfiles(%u): deleted %s\n",
-			    mythreadno, OLD_PIDFILE);
-		}
-	}
-#endif
-
 	if (DoorFd != -1) {
 		(void) door_revoke(DoorFd);
 	}
@@ -267,18 +222,13 @@ delete_doorfiles(void)
 }
 
 
-/*
- * Create the door file and the pid file in /var/run.  If the filesystem
- * containing /etc is writable, create symlinks /etc/.syslog_door and
- * /etc/syslog.pid to them.  On systems that do not support /var/run, create
- * /etc/.syslog_door and /etc/syslog.pid directly.
- *
- * Note: it is not considered fatal to fail to create the pid file or its
- * symlink.  Attempts to use them in the usual way will fail, of course, but
- * syslogd will function nicely without it (not so for the door file).
+/* Create the door file.  If the filesystem
+ * containing /etc is writable, create symlinks /etc/.syslog_door
+ * to them.  On systems that do not support /var/run, create
+ * /etc/.syslog_door directly.
  */
 
-static void
+void
 sun_open_door(void)
 {
 	struct stat buf;
@@ -341,7 +291,7 @@ sun_open_door(void)
 					    err);
 					errno = err;
 					//logerror(line);
-					delete_doorfiles();
+					sun_delete_doorfiles();
 					exit(1);
 				}
 
@@ -370,7 +320,7 @@ sun_open_door(void)
 					    "%s\n", mythreadno, line);
 					errno = 0;
 					//logerror(line);
-					delete_doorfiles();
+					sun_delete_doorfiles();
 					exit(1);
 				}
 
@@ -394,7 +344,7 @@ sun_open_door(void)
 						(void) strcat(line, " - fatal");
 						errno = err;
 						//logerror(line);
-						delete_doorfiles();
+						sun_delete_doorfiles();
 						exit(1);
 					}
 
@@ -422,7 +372,7 @@ sun_open_door(void)
 					errno = err;
 					(void) strcat(line, " - fatal");
 					//logerror(line);
-					delete_doorfiles();
+					sun_delete_doorfiles();
 					exit(1);
 				}
 
@@ -444,7 +394,7 @@ sun_open_door(void)
 			    mythreadno, line, err);
 			errno = err;
 			//logerror(line);
-			delete_doorfiles();
+			sun_delete_doorfiles();
 			exit(1);
 		}
 		//???? (void) door_setparam(DoorFd, DOOR_PARAM_DATA_MAX, 0);
@@ -466,127 +416,117 @@ sun_open_door(void)
 		    line, err);
 		errno = err;
 		//logerror(line);
-		delete_doorfiles();
+		sun_delete_doorfiles();
 		exit(1);
 	}
 
 	DBGPRINTF("open_door(%u): attached server() to %s\n", mythreadno,
 	    DoorFileName);
 
-#if 0
-	/*
-	 * create pidfile anyway, so those using it to control
-	 * syslogd (with kill `cat /etc/syslog.pid` perhaps)
-	 * don't get broken.
-	 */
-
-	if (!PidfileCreated) {
-		int pidfd;
-
-		PidfileCreated = 1;
-
-		if ((pidfd = open(PidFileName, O_RDWR|O_CREAT|O_TRUNC, 0644))
-		    < 0) {
-			err = errno;
-			(void) snprintf(line, sizeof (line),
-			    "open() of %s failed", PidFileName);
-			DBGPRINTF(1, "open_door(%u): warning: %s, errno=%d\n",
-			    mythreadno, line, err);
-			errno = err;
-			//logerror(line);
-			return;
-		}
-
-		(void) fchmod(pidfd, S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
-		(void) sprintf(line, "%ld\n", getpid());
-
-		if (write(pidfd, line, strlen(line)) < 0) {
-			err = errno;
-			(void) snprintf(line, sizeof (line),
-			    "write to %s on fd %d failed", PidFileName, pidfd);
-			DBGPRINTF(1, "open_door(%u): warning: %s, errno=%d\n",
-			    mythreadno, line, err);
-			errno = err;
-			//logerror(line);
-			return;
-		}
-
-		(void) close(pidfd);
-
-		DBGPRINTF("open_door(%u): %s created\n",
-		    mythreadno, PidFileName);
-
-		if (strcmp(PidFileName, PIDFILE) == 0) {
-			if (lstat(OLD_PIDFILE, &buf) == 0) {
-				DBGPRINTF("open_door(%u): lstat() of %s "
-				    "succeded\n", mythreadno, OLD_PIDFILE);
-
-				if (S_ISDIR(buf.st_mode)) {
-					(void) snprintf(line, sizeof (line),
-					    "file %s is a directory",
-					    OLD_PIDFILE);
-					DBGPRINTF("open_door(%u): warning: "
-					    "%s\n", mythreadno, line);
-					errno = 0;
-					//logerror(line);
-					return;
-				}
-
-				if (unlink(OLD_PIDFILE) < 0) {
-					err = errno;
-					(void) snprintf(line, sizeof (line),
-					    "unlink() of %s failed",
-					    OLD_PIDFILE);
-					DBGPRINTF("open_door(%u): %s\n",
-					    mythreadno, line);
-
-					if (err != EROFS) {
-						DBGPRINTF(1, "open_door (%u): "
-						    "warning: %s, "
-						    "errno=%d\n",
-						    mythreadno, line, err);
-						errno = err;
-						//logerror(line);
-						return;
-					}
-
-					DBGPRINTF(5, "open_door(%u): unlink "
-					    "failure OK on RO file "
-					    "system\n", mythreadno);
-				}
-			} else {
-				DBGPRINTF("open_door(%u): file %s doesn't "
-				    "exist\n", mythreadno, OLD_PIDFILE);
-			}
-
-			if (symlink(RELATIVE_PIDFILE, OLD_PIDFILE) < 0) {
-				err = errno;
-				(void) snprintf(line, sizeof (line),
-				    "symlink %s -> %s failed", OLD_PIDFILE,
-				    RELATIVE_PIDFILE);
-				DBGPRINTF("open_door(%u): %s\n", mythreadno,
-				    line);
-
-				if (err != EROFS) {
-					DBGPRINTF(1, "open_door(%u): warning: "
-					    "%s, errno=%d\n", mythreadno,
-					    line, err);
-					errno = err;
-					//logerror(line);
-					return;
-				}
-
-				DBGPRINTF(5, "open_door(%u): symlink failure OK "
-				    "on RO file system\n", mythreadno);
-				return;
-			}
-
-			DBGPRINTF(5, "open_door(%u): symlink %s -> %s "
-			    "succeeded\n", mythreadno, OLD_PIDFILE,
-			    RELATIVE_PIDFILE);
-		}
-	}
-#endif
 }
 
 
+/* Attempts to open the local log device
+ * and return a file descriptor.
+ */
+rsRetVal
+sun_openklog(char *name, int *fd)
+{
+	DEFiRet;
+	struct strioctl str;
+	char errBuf[1024];
+
+	if((*fd = open(name, O_RDONLY)) < 0) {
+		rs_strerror_r(errno, errBuf, sizeof(errBuf));
+		dbgprintf("imsolaris:openklog: cannot open %s: %s\n",
+		    name, errBuf);
+		ABORT_FINALIZE(RS_RET_ERR_OPEN_KLOG);
+	}
+	str.ic_cmd = I_CONSLOG;
+	str.ic_timout = 0;
+	str.ic_len = 0;
+	str.ic_dp = NULL;
+	if (ioctl(*fd, I_STR, &str) < 0) {
+		rs_strerror_r(errno, errBuf, sizeof(errBuf));
+		dbgprintf("imsolaris:openklog: cannot register to log "
+		    "console messages: %s\n", errBuf);
+		ABORT_FINALIZE(RS_RET_ERR_AQ_CONLOG);
+	}
+	Pfd.fd = *fd;
+	Pfd.events = POLLIN;
+	dbgprintf("imsolaris/openklog: opened '%s' as fd %d.\n", name, *fd);
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* this thread listens to the local stream log driver for log messages
+ * generated by this host, formats them, and queues them to the logger
+ * thread.
+ */
+/*ARGSUSED*/
+void
+sun_sys_poll()
+{
+	int nfds;
+
+	dbgprintf("imsolaris:sys_poll: sys_thread started\n");
+
+	for (;;) {
+		errno = 0;
+
+		dbgprintf("imsolaris:sys_poll waiting for next message...\n");
+		nfds = poll(&Pfd, 1, INFTIM);
+
+		if (nfds == 0)
+			continue;
+
+		if (nfds < 0) {
+			if (errno != EINTR)
+				dbgprintf("imsolaris:poll error");
+			continue;
+		}
+		if (Pfd.revents & POLLIN) {
+			solaris_readLog(Pfd.fd);
+		} else {
+			/* TODO: shutdown, the rsyslog way (in v5!) -- check shutdown flag */
+			if (Pfd.revents & (POLLNVAL|POLLHUP|POLLERR)) {
+			// TODO: trigger retry logic	
+/*				logerror("kernel log driver poll error");
+				(void) close(Pfd.fd);
+				Pfd.fd = -1;
+				*/
+			}
+		}
+
+	}
+	/*NOTREACHED*/
+}
+
+
+/* Open the log device, and pull up all pending messages.
+ */
+void
+prepare_sys_poll()
+{
+	int nfds;
+
+	Pfd.events = POLLIN;
+
+	for (;;) {
+		dbgprintf("imsolaris:prepare_sys_poll waiting for next message...\n");
+		nfds = poll(&Pfd, 1, 0);
+		if (nfds <= 0) {
+			break;
+		}
+
+		if (Pfd.revents & POLLIN) {
+			solaris_readLog(Pfd.fd);
+		} else if (Pfd.revents & (POLLNVAL|POLLHUP|POLLERR)) {
+			//logerror("kernel log driver poll error");
+			break;
+		}
+	}
+
+}

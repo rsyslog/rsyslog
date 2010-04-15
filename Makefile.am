@@ -59,8 +59,8 @@ if ENABLE_IMKLOG
 SUBDIRS += plugins/imklog
 endif
 
-if ENABLE_IMDOOR
-SUBDIRS += plugins/imdoor
+if ENABLE_IMSOLARIS
+SUBDIRS += plugins/imsolaris
 endif
 
 if ENABLE_GSSAPI

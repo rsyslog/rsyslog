@@ -748,16 +748,16 @@ AM_CONDITIONAL(ENABLE_IMFILE, test x$enable_imfile = xyes)
 
 
 # settings for the door input module (under solaris, thus default off)
-AC_ARG_ENABLE(imdoor,
-        [AS_HELP_STRING([--enable-imdoor],[door input module enabled @<:@default=no@:>@])],
+AC_ARG_ENABLE(imsolaris,
+        [AS_HELP_STRING([--enable-imsolaris],[door input module enabled @<:@default=no@:>@])],
         [case "${enableval}" in
-         yes) enable_imdoor="yes" ;;
-          no) enable_imdoor="no" ;;
-           *) AC_MSG_ERROR(bad value ${enableval} for --enable-imdoor) ;;
+         yes) enable_imsolaris="yes" ;;
+          no) enable_imsolaris="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-imsolaris) ;;
          esac],
-        [enable_imdoor=no]
+        [enable_imsolaris=no]
 )
-AM_CONDITIONAL(ENABLE_IMDOOR, test x$enable_imdoor = xyes)
+AM_CONDITIONAL(ENABLE_IMSOLARIS, test x$enable_imsolaris = xyes)
 
 
 # settings for the omprog output module
@@ -861,7 +861,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omprog/Makefile \
 		plugins/omstdout/Makefile \
 		plugins/imfile/Makefile \
-		plugins/imdoor/Makefile \
+		plugins/imsolaris/Makefile \
 		plugins/imrelp/Makefile \
 		plugins/imdiag/Makefile \
 		plugins/omtesting/Makefile \
@@ -894,7 +894,7 @@ echo "---{ input plugins }---"
 echo "    Klog functionality enabled:               $enable_klog ($os_type)"
 echo "    imdiag enabled:                           $enable_imdiag"
 echo "    file input module enabled:                $enable_imfile"
-echo "    Solaris door input module enabled:        $enable_imdoor"
+echo "    Solaris input module enabled:             $enable_imsolaris"
 echo "    input template module will be compiled:   $enable_imtemplate"
 echo
 echo "---{ output plugins }---"
