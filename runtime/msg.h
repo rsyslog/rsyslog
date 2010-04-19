@@ -129,6 +129,7 @@ struct msg {
 #define PARSE_HOSTNAME	0x020	/* parse the hostname during message parsing */
 #define NEEDS_DNSRESOL	0x040	/* fromhost address is unresolved and must be locked up via DNS reverse lookup first */
 #define NEEDS_ACLCHK_U	0x080	/* check UDP ACLs after DNS resolution has been done in main queue consumer */
+#define NO_PRI_IN_RAW	0x100	/* rawmsg does not include a PRI (Solaris!), but PRI is already set correctly in the msg object */
 
 
 /* function prototypes
