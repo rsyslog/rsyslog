@@ -1,4 +1,3 @@
-#define MAXLINE 4096
 /*
  * CDDL HEADER START
  *
@@ -41,52 +40,36 @@
  * contributors.
  */
 #include <unistd.h>
-#include <note.h>
 #include <errno.h>
 #include <sys/types.h>
 #include <stdio.h>
-#include <stdio_ext.h>
 #include <stdlib.h>
-#include <ctype.h>
-#include <signal.h>
 #include <string.h>
 #include <strings.h>
-#include <libscf.h>
-#include <netconfig.h>
-#include <netdir.h>
-#include <pwd.h>
-#include <sys/socket.h>
-#include <tiuser.h>
-#include <utmpx.h>
-#include <limits.h>
 #include <pthread.h>
 #include <fcntl.h>
 #include <stropts.h>
 #include <assert.h>
-#include <sys/statvfs.h>
 
 #include <sys/param.h>
-#include <sys/sysmacros.h>
-#include <sys/syslog.h>
 #include <sys/strlog.h>
 #include <sys/stat.h>
 #include <sys/time.h>
-#include <sys/utsname.h>
 #include <sys/poll.h>
-#include <sys/wait.h>
-#include <sys/resource.h>
-#include <sys/mman.h>
-#include <sys/note.h>
 #include <door.h>
 #include <sys/door.h>
 
 #include "rsyslog.h"
 #include "srUtils.h"
 #include "debug.h"
+#include "imsolaris.h"
 
 #define	DOORFILE		"/var/run/syslog_door"
 #define	RELATIVE_DOORFILE	"../var/run/syslog_door"
 #define	OLD_DOORFILE		"/etc/.syslog_door"
+
+/* Buffer to allocate for error messages: */
+#define ERRMSG_LEN 1024
 
 static struct pollfd Pfd;		/* Pollfd for local the log device */
 
@@ -159,7 +142,7 @@ sun_delete_doorfiles(void)
 {
 	struct stat sb;
 	int err;
-	char line[MAXLINE+1];
+	char line[ERRMSG_LEN+1];
 
 	if (lstat(DoorFileName, &sb) == 0 && !S_ISDIR(sb.st_mode)) {
 		if (unlink(DoorFileName) < 0) {
@@ -218,19 +201,17 @@ sun_delete_doorfiles(void)
  * to them.  On systems that do not support /var/run, create
  * /etc/.syslog_door directly.
  */
-
 void
 sun_open_door(void)
 {
 	struct stat buf;
 	door_info_t info;
-	char line[MAXLINE+1];
+	char line[ERRMSG_LEN+1];
 	int err;
 
-	/*
-	 * first see if another syslogd is running by trying
-	 * a door call - if it succeeds, there is already
-	 * a syslogd process active
+	/* first see if another instance of imsolaris OR another 
+	 * syslogd is running by trying a door call - if it succeeds,
+	 * there is already one active.
 	 */
 
 	if (!DoorCreated) {
