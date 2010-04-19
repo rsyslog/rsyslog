@@ -362,6 +362,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_PEER_CLOSED_CONN = -2144, /**< remote peer closed connection (information, no error) */
 	RS_RET_ERR_OPEN_KLOG = -2145, /**< error opening the kernel log socket (primarily solaris) */
 	RS_RET_ERR_AQ_CONLOG = -2146, /**< error aquiring console log (on solaris) */
+	RS_RET_ERR_DOOR = -2147, /**< some problems with handling the Solaris door functionality */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */

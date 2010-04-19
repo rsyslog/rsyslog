@@ -66,6 +66,7 @@
 #include "rsyslog.h"
 #include <stdlib.h>
 #include <stdio.h>
+#include <unistd.h>
 #include <assert.h>
 #include <string.h>
 #include <stropts.h>
@@ -94,9 +95,6 @@ DEF_IMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(prop)
-
-
-static int logfd = -1; /* file descriptor to access the system log */
 
 
 /* config settings */
@@ -128,8 +126,6 @@ solaris_readLog(int fd)
 	uchar *pRcv = NULL; /* receive buffer */
 	char errStr[1024];
 
-	assert(logfd >= 0);
-
 	iMaxLine = glbl.GetMaxLine();
 
 	/* we optimize performance: if iMaxLine is below 4K (which it is in almost all
@@ -152,10 +148,10 @@ solaris_readLog(int fd)
 	ret = getmsg(fd, &ctl, &data, &flags);
 	if(ret < 0) {
 		rs_strerror_r(errno, errStr, sizeof(errStr));
-		dbgprintf("imsolaris: getmsg() error on fd %d: %s.\n", fd, errStr);
+		DBGPRINTF("imsolaris: getmsg() error on fd %d: %s.\n", fd, errStr);
 	}
-	dbgprintf("imsolaris: getmsg() returns %d\n", ret);
-	dbgprintf("imsolaris: message from log socket: #%d: %s\n", fd, pRcv);
+	DBGPRINTF("imsolaris: getmsg() returns %d\n", ret);
+	DBGPRINTF("imsolaris: message from log socket: #%d: %s\n", fd, pRcv);
 	if (1) {//iRcvd > 0) {
 		CHKiRet(msgConstruct(&pMsg));
 		//MsgSetFlowControlType(pMsg, eFLOWCTL_FULL_DELAY);
@@ -170,7 +166,7 @@ solaris_readLog(int fd)
 	} else if (iRcvd < 0 && errno != EINTR) {
 		int en = errno;
 		rs_strerror_r(en, errStr, sizeof(errStr));
-		dbgprintf("imsolaris: stream error: %d = %s.\n", errno, errStr);
+		DBGPRINTF("imsolaris: stream error: %d = %s.\n", errno, errStr);
 		errmsg.LogError(en, NO_ERRCODE, "imsolaris: stream input error: %s", errStr);
 	}
 
@@ -178,6 +174,117 @@ finalize_it:
 	if(pRcv != NULL && (size_t) iMaxLine >= sizeof(bufRcv) - 1)
 		free(pRcv);
 
+	RETiRet;
+}
+
+
+/* we try to recover a failed file by closing and re-opening
+ * it. We loop until the re-open works, but wait between each
+ * failure. If the open succeeds, we assume all is well. If it is
+ * not, we will run into the retry process with the next
+ * iteration.
+ * rgerhards, 2010-04-19
+ */
+static inline void
+tryRecover(void)
+{
+	int tryNum = 0;
+	int waitsecs;
+	int waitusecs;
+	rsRetVal iRet;
+
+	close(sun_Pfd.fd);
+	sun_Pfd.fd = -1;
+
+	while(1) { /* loop broken inside */
+		iRet = sun_openklog((LogName == NULL) ? PATH_LOG : LogName);
+		if(iRet == RS_RET_OK) {
+			if(tryNum > 0) {		
+				errmsg.LogError(0, iRet, "failure on system log socket recovered.");
+			}	
+			break;
+		}	
+		/* failure, so sleep a bit. We wait try*10 ms, with a max of 15 seconds */
+		if(tryNum == 0) {		
+			errmsg.LogError(0, iRet, "failure on system log socket, trying to recover...");
+		waitusecs = tryNum * 10000;
+		waitsecs = waitusecs / 1000000;
+		if(waitsecs != 15) {
+			waitsecs = 15;
+			waitusecs = 0;
+		} else  {	
+			waitusecs = waitusecs % 1000000;
+		}	
+		srSleep(waitsecs, waitusecs);
+		++tryNum;
+		}	
+	}	
+}
+
+
+/* a function to replace the sun logerror() function.
+ * It generates an error message from the supplied string. The main
+ * reason for not calling logError directly is that sun_cddl.c does not
+ * know or has acces to rsyslog objects (namely errmsg) -- and we do not
+ * want to do this effort. -- rgerhards, 2010-04-19
+ */
+void
+imsolaris_logerror(int err, char *errStr)
+{
+	errmsg.LogError(err, RS_RET_ERR_DOOR, "%s", errStr);
+}
+
+
+/* once the system is fully initialized, we wait for new messages.
+ * We may think about replacing this with a read-loop, thus saving
+ * us the overhead of the poll.
+ * The timeout variable is the timeout to use for poll. During startup,
+ * it should be set to 0 (non-blocking) and later to -1 (infinit, blocking).
+ * This mimics the (strange) behaviour of the original syslogd.
+ * rgerhards, 2010-04-19
+ */
+static inline rsRetVal
+getMsgs(int timeout)
+{
+	DEFiRet;
+	int nfds;
+	char errStr[1024];
+
+	do {
+		DBGPRINTF("imsolaris: waiting for next message (timeout %d)...\n", timeout);
+		nfds = poll(&sun_Pfd, 1, timeout); /* wait without timeout */
+
+		/* v5-TODO: here we must check if we should terminante! */
+
+		if(nfds == 0) {
+			if(timeout == 0) {
+				DBGPRINTF("imsolaris: no more messages, getMsgs() terminates\n");
+				FINALIZE;
+			} else {
+				continue;
+			}	
+		}		
+
+		if(nfds < 0) {
+			if(errno != EINTR) {
+				int en = errno;
+				rs_strerror_r(en, errStr, sizeof(errStr));
+				DBGPRINTF("imsolaris: poll error: %d = %s.\n", errno, errStr);
+				errmsg.LogError(en, NO_ERRCODE, "imsolaris: poll error: %s", errStr);
+			}
+			continue;
+		}
+		if(sun_Pfd.revents & POLLIN) {
+			solaris_readLog(sun_Pfd.fd);
+		} else if(sun_Pfd.revents & (POLLNVAL|POLLHUP|POLLERR)) {
+			tryRecover();
+		}
+
+	} while(1);
+
+	/* Note: in v4, this code is never reached (our thread will be cancelled) */
+
+finalize_it:
 	RETiRet;
 }
 
@@ -190,19 +297,18 @@ CODESTARTrunInput
 	 * right into the sleep below.
 	 */
 
-	dbgprintf("imsolaris: prepare_sys_poll()\n");
-	prepare_sys_poll();
+	DBGPRINTF("imsolaris: doing startup poll before openeing door()\n");
+	CHKiRet(getMsgs(0));
 
 	/* note: sun's syslogd code claims that the door should only
-	 * be opened when the log socket has been polled. So file header
+	 * be opened when the log stream has been polled. So file header
 	 * comment of this file for more details.
 	 */
 	sun_open_door();
-	dbgprintf("imsolaris: starting regular poll loop\n");
-	while(1) {
-		sun_sys_poll();
-	}
+	DBGPRINTF("imsolaris: starting regular poll loop\n");
+	iRet = getMsgs(-1); /* this is the primary poll loop, infinite timeout */
 
+finalize_it:
 	RETiRet;
 ENDrunInput
 
@@ -214,8 +320,7 @@ CODESTARTwillRun
 	CHKiRet(prop.SetString(pInputName, UCHAR_CONSTANT("imsolaris"), sizeof("imsolaris") - 1));
 	CHKiRet(prop.ConstructFinalize(pInputName));
 
-	iRet = sun_openklog((LogName == NULL) ? PATH_LOG : LogName, &logfd);
-	dbgprintf("imsolaris opened system log socket as fd %d\n", logfd);
+	iRet = sun_openklog((LogName == NULL) ? PATH_LOG : LogName);
 	if(iRet != RS_RET_OK) {
 		errmsg.LogError(0, iRet, "error opening system log socket");
 	}
@@ -245,7 +350,8 @@ CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_IMOD_QUERIES
 ENDqueryEtryPt
 
-static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
+static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp,
+				     void __attribute__((unused)) *pVal)
 {
 	return RS_RET_OK;
 }
@@ -259,7 +365,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(prop, CORE_COMPONENT));
 
-	dbgprintf("imsolaris version %s initializing\n", PACKAGE_VERSION);
+	DBGPRINTF("imsolaris version %s initializing\n", PACKAGE_VERSION);
 
 	/* register config file handlers */
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
