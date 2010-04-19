@@ -213,6 +213,7 @@ CODESTARTdbgPrintInstInfo
 	dbgprintf("\tfile cache size=%d\n", pData->iDynaFileCacheSize);
 	dbgprintf("\tcreate directories: %s\n", pData->bCreateDirs ? "yes" : "no");
 	dbgprintf("\tfile owner %d, group %d\n", pData->fileUID, pData->fileGID);
+	dbgprintf("\tforce chown() for all files: %s\n", pData->bForceChown ? "yes" : "no"); 
 	dbgprintf("\tdirectory owner %d, group %d\n", pData->dirUID, pData->dirGID);
 	dbgprintf("\tdir create mode 0%3.3o, file create mode 0%3.3o\n",
 		  pData->fDirCreateMode, pData->fCreateMode);

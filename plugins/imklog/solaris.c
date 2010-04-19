@@ -42,6 +42,7 @@
 
 #include "rsyslog.h"
 #include "imklog.h"
+#include "srUtils.h"
 #include "unicode-helper.h"
 #include "solaris_cddl.h"
 
@@ -70,8 +71,8 @@ klogWillRun(void)
 		char errStr[1024];
 		int err = errno;
 		rs_strerror_r(err, errStr, sizeof(errStr));
-		DBGPRINTF("error %d opening log socket: %s\n",
-				   GetPath(), errStr);
+		DBGPRINTF("error %s opening log socket: %s\n",
+				   errStr, GetPath());
 		iRet = RS_RET_ERR; // TODO: better error code
 	}
 
@@ -79,6 +80,7 @@ klogWillRun(void)
 }
 
 
+#if 0
 /* Read /dev/klog while data are available, split into lines.
  * Contrary to standard BSD syslogd, we do a blocking read. We can
  * afford this as imklog is running on its own threads. So if we have
@@ -125,7 +127,7 @@ readklog(void)
 			break;
 		}
 
-		for (p = pRcv; (q = strchr(p, '\n')) != NULL; p = q + 1) {
+		for(p = pRcv; (q = strchr(p, '\n')) != NULL; p = q + 1) {
 			*q = '\0';
 			Syslog(LOG_INFO, (uchar*) p);
 		}
@@ -143,6 +145,7 @@ readklog(void)
 	if(pRcv != NULL && (size_t) iMaxLine >= sizeof(bufRcv) - 1)
 		free(pRcv);
 }
+#endif
 
 
 /* to be called in the module's AfterRun entry point

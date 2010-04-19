@@ -125,6 +125,10 @@ void readLine(int fd, char *ln)
  * We use traditional framing '\n' at EOR for this tester. It may be
  * worth considering additional framing modes.
  * rgerhards, 2009-04-08
+ * Note: we re-create the socket within the retry loop, because this
+ * seems to be needed under Solaris. If we do not do that, we run
+ * into troubles (maybe something wrongly initialized then?)
+ * -- rgerhards, 2010-04-12
  */
 int
 tcpSend(char *buf, int lenBuf)
@@ -132,30 +136,34 @@ tcpSend(char *buf, int lenBuf)
 	static int sock = INVALID_SOCKET;
 	struct sockaddr_in addr;
 	int retries;
+	int ret;
+	int iRet = 0; /* 0 OK, anything else error */
 
 	if(sock == INVALID_SOCKET) {
 		/* first time, need to connect to target */
-		if((sock=socket(AF_INET, SOCK_STREAM, 0))==-1) {
-			perror("socket()");
-			return(1);
-		}
-
-		memset((char *) &addr, 0, sizeof(addr));
-		addr.sin_family = AF_INET;
-		addr.sin_port = htons(iPort);
-		if(inet_aton("127.0.0.1", &addr.sin_addr)==0) {
-			fprintf(stderr, "inet_aton() failed\n");
-			return(1);
-		}
 		retries = 0;
 		while(1) { /* loop broken inside */
-			if(connect(sock, (struct sockaddr*)&addr, sizeof(addr)) == 0) {
+			/* first time, need to connect to target */
+			if((sock=socket(AF_INET, SOCK_STREAM, 0))==-1) {
+				perror("socket()");
+				iRet = 1;
+				goto finalize_it;
+			}
+			memset((char *) &addr, 0, sizeof(addr));
+			addr.sin_family = AF_INET;
+			addr.sin_port = htons(iPort);
+			if(inet_aton("127.0.0.1", &addr.sin_addr)==0) {
+				fprintf(stderr, "inet_aton() failed\n");
+				iRet = 1;
+				goto finalize_it;
+			}
+			if((ret = connect(sock, (struct sockaddr*)&addr, sizeof(addr))) == 0) {
 				break;
 			} else {
 				if(retries++ == 50) {
-					++iFailed;
 					fprintf(stderr, "connect() failed\n");
-					return(1);
+					iRet = 1;
+					goto finalize_it;
 				} else {
 					usleep(100000); /* ms = 1000 us! */
 				}
@@ -164,20 +172,32 @@ tcpSend(char *buf, int lenBuf)
 	}
 
 	/* send test data */
-	if(send(sock, buf, lenBuf, 0) != lenBuf) {
+	if((ret = send(sock, buf, lenBuf, 0)) != lenBuf) {
 		perror("send test data");
-		fprintf(stderr, "send() failed\n");
-		return(1);
+		fprintf(stderr, "send() failed, sock=%d, ret=%d\n", sock, ret);
+		iRet = 1;
+		goto finalize_it;
 	}
 
 	/* send record terminator */
 	if(send(sock, "\n", 1, 0) != 1) {
 		perror("send record terminator");
 		fprintf(stderr, "send() failed\n");
-		return(1);
+		iRet = 1;
+		goto finalize_it;
 	}
 
-	return 0;
+finalize_it:
+	if(iRet != 0) {
+		/* need to do some (common) cleanup */
+		if(sock != INVALID_SOCKET) {
+			close(sock);
+			sock = INVALID_SOCKET;
+		}
+		++iFailed;
+	}
+
+	return iRet;
 }
 
 
@@ -253,6 +273,7 @@ int openPipe(char *configFile, pid_t *pid, int *pfd)
 		fclose(stdin);
 		execve("../tools/rsyslogd", newargv, ourEnvp);
 	} else {            
+		usleep(10000);
 		close(pipefd[1]);
 		*pid = cpid;
 		*pfd = pipefd[0];
@@ -372,6 +393,7 @@ processTestFile(int fd, char *pszFileName)
 		expected[strlen(expected)-1] = '\0'; /* remove \n */
 
 		/* pull response from server and then check if it meets our expectation */
+//printf("try pull pipe...\n");
 		readLine(fd, buf);
 		if(strlen(buf) == 0) {
 			printf("something went wrong - read a zero-length string from rsyslogd\n");
@@ -438,7 +460,8 @@ doTests(int fd, char *files)
 		printf("Error: no test cases found, no tests executed.\n");
 		iFailed = 1;
 	} else {
-		printf("Number of tests run: %d, number of failures: %d\n", iTests, iFailed);
+		printf("Number of tests run: %3d, number of failures: %d, test: %s/%s\n",
+		       iTests, iFailed, testSuite, inputMode2Str(inputMode));
 	}
 
 	return(iFailed);
@@ -548,6 +571,11 @@ int main(int argc, char *argv[], char *envp[])
 
 	/* arm died-child handler */
 	signal(SIGCHLD, childDied);
+
+	/* make sure we do not abort if there is an issue with pipes.
+	 * our code does the necessary error handling.
+	 */
+	sigset(SIGPIPE, SIG_IGN);
 
 	/* start to be tested rsyslogd */
 	openPipe(testSuite, &rsyslogdPid, &fd);

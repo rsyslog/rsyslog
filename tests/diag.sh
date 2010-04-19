@@ -22,6 +22,7 @@ case $1 in
 		rm -f work rsyslog.out.log rsyslog.out.log.save # common work files
 		rm -rf test-spool test-logdir
 		rm -f rsyslog.out.*.log work-presort
+		rm -f rsyslog.out.*.log work-presort
 		rm -f core.* vgcore.*
 		mkdir test-spool
 		;;

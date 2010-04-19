@@ -59,8 +59,8 @@ if ENABLE_IMKLOG
 SUBDIRS += plugins/imklog
 endif
 
-if ENABLE_IMDOOR
-SUBDIRS += plugins/imdoor
+if ENABLE_IMSOLARIS
+SUBDIRS += plugins/imsolaris
 endif
 
 if ENABLE_GSSAPI
@@ -154,5 +154,5 @@ SUBDIRS += tests
 # temporarily be removed below. The intent behind forcing everthing to compile
 # in a make distcheck is so that we detect code that accidently was not updated
 # when some global update happened.
-DISTCHECK_CONFIGURE_FLAGS=--enable-gssapi_krb5 --enable-imfile --enable-snmp --enable-pgsql --enable-libdbi --enable-mysql --enable-omtemplate --enable-imtemplate --enable-relp --enable-rsyslogd --enable-mail --enable-klog  --enable-diagtools --enable-gnutls --enable-omstdout --enable-omruleset --enable-omprog --enable-imdiag --enable-shave --enable-memcheck
+DISTCHECK_CONFIGURE_FLAGS=--enable-gssapi_krb5 --enable-imfile --enable-snmp --enable-pgsql --enable-libdbi --enable-mysql --enable-omtemplate --enable-imtemplate --enable-relp --enable-rsyslogd --enable-mail --enable-klog  --enable-diagtools --enable-gnutls --enable-omstdout --enable-omruleset --enable-omprog --enable-imdiag --enable-shave --enable-extended-tests --enable-memcheck
 ACLOCAL_AMFLAGS = -I m4

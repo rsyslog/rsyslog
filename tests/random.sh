@@ -17,4 +17,4 @@ source $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done proces
 source $srcdir/diag.sh wait-shutdown       # and wait for it to terminate
 # we do not check anything yet, the point is if rsyslog survived ;)
 # TODO: check for exit message, but we'll notice an abort anyhow, so not that important
-#source $srcdir/diag.sh exit
+source $srcdir/diag.sh exit

@@ -394,6 +394,8 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_VAR_NOT_FOUND = -2142, /**< variable not found */
 	RS_RET_EMPTY_MSG = -2143, /**< provided (raw) MSG is empty */
 	RS_RET_PEER_CLOSED_CONN = -2144, /**< remote peer closed connection (information, no error) */
+	RS_RET_ERR_OPEN_KLOG = -2145, /**< error opening the kernel log socket (primarily solaris) */
+	RS_RET_ERR_AQ_CONLOG = -2146, /**< error aquiring console log (on solaris) */
 	RS_RET_NO_SRCNAME_TPL = -2150, /**< sourcename template was not specified where one was needed (omudpspoof spoof addr) */
 	RS_RET_HOST_NOT_SPECIFIED = -2151, /**< (target) host was not specified where it was needed */
 	RS_RET_ERR_LIBNET_INIT = -2152, /**< error initializing libnet */
