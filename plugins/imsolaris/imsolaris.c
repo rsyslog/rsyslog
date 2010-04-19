@@ -127,7 +127,6 @@ solaris_readLog(int fd)
 	uchar bufRcv[4096+1];
 	uchar *pRcv = NULL; /* receive buffer */
 	char errStr[1024];
-	uchar fmtBuf[10240]; // TODO: use better solution
 
 	assert(logfd >= 0);
 
@@ -158,32 +157,21 @@ solaris_readLog(int fd)
 	dbgprintf("imsolaris: getmsg() returns %d\n", ret);
 	dbgprintf("imsolaris: message from log socket: #%d: %s\n", fd, pRcv);
 	if (1) {//iRcvd > 0) {
-		// TODO: use hdr info! This whole section is a work-around to get
-		// it going.
-#if 0		
 		CHKiRet(msgConstruct(&pMsg));
 		//MsgSetFlowControlType(pMsg, eFLOWCTL_FULL_DELAY);
 		MsgSetInputName(pMsg, pInputName);
 		MsgSetRawMsg(pMsg, (char*)pRcv, strlen((char*)pRcv));
-		MsgSetMSGoffs(pMsg, 0); /* we do not have a header... */
 		MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName(), ustrlen(glbl.GetLocalHostName()));
-		//MsgSetTAG(pMsg, pInfo->pszTag, pInfo->lenTag);
-		//pMsg->iFacility = LOG_FAC(pInfo->iFacility);
-		//pMsg->iSeverity = LOG_PRI(pInfo->iSeverity);
+		pMsg->iFacility = LOG_FAC(hdr.pri);
+		pMsg->iSeverity = LOG_PRI(hdr.pri);
 		pMsg->bParseHOSTNAME = 0;
+		pMsg->msgFlags = NEEDS_PARSING | NO_PRI_IN_RAW;
 		CHKiRet(submitMsg(pMsg));
-#else
-		iRcvd = snprintf((char*)fmtBuf, sizeof(fmtBuf), "<%d>%s", hdr.pri, (char*) pRcv);
-		parseAndSubmitMessage(glbl.GetLocalHostName(),
-				      (uchar*)"127.0.0.1", fmtBuf,
-			 	      iRcvd, 0,
-				      0, pInputName, NULL, 0);
-#endif				      
 	} else if (iRcvd < 0 && errno != EINTR) {
 		int en = errno;
 		rs_strerror_r(en, errStr, sizeof(errStr));
 		dbgprintf("imsolaris: stream error: %d = %s.\n", errno, errStr);
-		//errmsg.LogError(en, NO_ERRCODE, "imsolaris: socket error UNIX");
+		errmsg.LogError(en, NO_ERRCODE, "imsolaris: stream input error: %s", errStr);
 	}
 
 finalize_it:
