@@ -130,7 +130,7 @@ struct msg {
 #define MARK		0x008	/* this message is a mark */
 #define NEEDS_PARSING	0x010	/* raw message, must be parsed before processing can be done */
 #define PARSE_HOSTNAME	0x020	/* parse the hostname during message parsing */
-#define NO_PRI_IN_RAW	0x040	/* rawmsg does not include a PRI (Solaris!), but PRI is already set correctly in the msg object */
+#define NO_PRI_IN_RAW	0x100	/* rawmsg does not include a PRI (Solaris!), but PRI is already set correctly in the msg object */
 
 
 /* function prototypes
