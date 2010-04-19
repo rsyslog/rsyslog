@@ -71,7 +71,14 @@
 /* Buffer to allocate for error messages: */
 #define ERRMSG_LEN 1024
 
-static struct pollfd Pfd;		/* Pollfd for local the log device */
+/* Max number of door server threads for syslogd. Since door is used
+ * to check the health of syslogd, we don't need large number of
+ * server threads.
+ */
+#define	MAX_DOOR_SERVER_THR	3
+
+
+struct pollfd sun_Pfd;		/* Pollfd for local log device */
 
 static int		DoorFd = -1;
 static int		DoorCreated = 0;
@@ -82,14 +89,16 @@ static pthread_mutex_t door_server_cnt_lock = PTHREAD_MUTEX_INITIALIZER;
 static uint_t door_server_cnt = 0;
 static pthread_attr_t door_thr_attr;
 
-/*
- * the 'server' function that we export via the door. It does
+/* the 'server' function that we export via the door. It does
  * nothing but return.
  */
 /*ARGSUSED*/
 static void
-server(void __attribute__((unused)) *cookie, char __attribute__((unused)) *argp, size_t __attribute__((unused)) arg_size,
-    door_desc_t __attribute__((unused)) *dp, __attribute__((unused)) uint_t n)
+server(	void __attribute__((unused)) *cookie,
+	char __attribute__((unused)) *argp,
+	size_t __attribute__((unused)) arg_size,
+	door_desc_t __attribute__((unused)) *dp,
+	__attribute__((unused)) uint_t n          )
 {
 	(void) door_return(NULL, 0, NULL, 0);
 	/* NOTREACHED */
@@ -102,8 +111,7 @@ create_door_thr(void __attribute__((unused)) *arg)
 	(void) pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 	(void) door_return(NULL, 0, NULL, 0);
 
-	/*
-	 * If there is an error in door_return(), it will return here and
+	/* If there is an error in door_return(), it will return here and
 	 * the thread will exit. Hence we need to decrement door_server_cnt.
 	 */
 	(void) pthread_mutex_lock(&door_server_cnt_lock);
@@ -111,13 +119,6 @@ create_door_thr(void __attribute__((unused)) *arg)
 	(void) pthread_mutex_unlock(&door_server_cnt_lock);
 	return (NULL);
 }
-
-/*
- * Max number of door server threads for syslogd. Since door is used
- * to check the health of syslogd, we don't need large number of
- * server threads.
- */
-#define	MAX_DOOR_SERVER_THR	3
 
 /*
  * Manage door server thread pool.
@@ -149,8 +150,7 @@ sun_delete_doorfiles(void)
 			err = errno;
 			(void) snprintf(line, sizeof (line),
 			    "unlink() of %s failed - fatal", DoorFileName);
-			errno = err;
-			DBGPRINTF("%s", line);//logerror(line);
+			imsolaris_logerror(err, line);
 			DBGPRINTF("delete_doorfiles: error: %s, "
 			    "errno=%d\n", line, err);
 			exit(1);
@@ -171,7 +171,7 @@ sun_delete_doorfiles(void)
 					errno = err;
 					(void) strlcat(line, " - fatal",
 					    sizeof (line));
-					//logerror(line);
+					imsolaris_logerror(err, line);
 					DBGPRINTF("delete_doorfiles: "
 					    "error: %s, errno=%d\n",
 					    line, err);
@@ -233,8 +233,7 @@ sun_open_door(void)
 					    info.di_target, getpid());
 					DBGPRINTF("open_door: error: "
 					    "%s\n", line);
-					errno = 0;
-					//logerror(line);
+					imsolaris_logerror(0, line);
 					exit(1);
 				}
 			}
@@ -256,8 +255,7 @@ sun_open_door(void)
 					DBGPRINTF("open_door: error: %s, "
 					    "errno=%d\n", line,
 					    err);
-					errno = err;
-					//logerror(line);
+					imsolaris_logerror(err, line);
 					sun_delete_doorfiles();
 					exit(1);
 				}
@@ -284,8 +282,7 @@ sun_open_door(void)
 					    OLD_DOORFILE);
 					DBGPRINTF("open_door: error: "
 					    "%s\n", line);
-					errno = 0;
-					//logerror(line);
+					imsolaris_logerror(0, line);
 					sun_delete_doorfiles();
 					exit(1);
 				}
@@ -306,8 +303,7 @@ sun_open_door(void)
 						    "errno=%d\n",
 						    line, err);
 						(void) strcat(line, " - fatal");
-						errno = err;
-						//logerror(line);
+						imsolaris_logerror(err, line);
 						sun_delete_doorfiles();
 						exit(1);
 					}
@@ -333,9 +329,8 @@ sun_open_door(void)
 					DBGPRINTF("open_door: error: %s, "
 					    "errno=%d\n", line,
 					    err);
-					errno = err;
 					(void) strcat(line, " - fatal");
-					//logerror(line);
+					imsolaris_logerror(err, line);
 					sun_delete_doorfiles();
 					exit(1);
 				}
@@ -356,8 +351,7 @@ sun_open_door(void)
 			(void) sprintf(line, "door_create() failed - fatal");
 			DBGPRINTF("open_door: error: %s, errno=%d\n",
 			    line, err);
-			errno = err;
-			//logerror(line);
+			imsolaris_logerror(err, line);
 			sun_delete_doorfiles();
 			exit(1);
 		}
@@ -378,8 +372,7 @@ sun_open_door(void)
 		    " %d to %s failed - fatal", DoorFd, DoorFileName);
 		DBGPRINTF("open_door: error: %s, errno=%d\n",
 		    line, err);
-		errno = err;
-		//logerror(line);
+		imsolaris_logerror(err, line);
 		sun_delete_doorfiles();
 		exit(1);
 	}
@@ -394,15 +387,16 @@ sun_open_door(void)
  * and return a file descriptor.
  */
 rsRetVal
-sun_openklog(char *name, int *fd)
+sun_openklog(char *name)
 {
 	DEFiRet;
+	int fd;
 	struct strioctl str;
 	char errBuf[1024];
 
-	if((*fd = open(name, O_RDONLY)) < 0) {
+	if((fd = open(name, O_RDONLY)) < 0) {
 		rs_strerror_r(errno, errBuf, sizeof(errBuf));
-		dbgprintf("imsolaris:openklog: cannot open %s: %s\n",
+		DBGPRINTF("imsolaris:openklog: cannot open %s: %s\n",
 		    name, errBuf);
 		ABORT_FINALIZE(RS_RET_ERR_OPEN_KLOG);
 	}
@@ -410,87 +404,16 @@ sun_openklog(char *name, int *fd)
 	str.ic_timout = 0;
 	str.ic_len = 0;
 	str.ic_dp = NULL;
-	if (ioctl(*fd, I_STR, &str) < 0) {
+	if (ioctl(fd, I_STR, &str) < 0) {
 		rs_strerror_r(errno, errBuf, sizeof(errBuf));
-		dbgprintf("imsolaris:openklog: cannot register to log "
+		DBGPRINTF("imsolaris:openklog: cannot register to log "
 		    "console messages: %s\n", errBuf);
 		ABORT_FINALIZE(RS_RET_ERR_AQ_CONLOG);
 	}
-	Pfd.fd = *fd;
-	Pfd.events = POLLIN;
-	dbgprintf("imsolaris/openklog: opened '%s' as fd %d.\n", name, *fd);
+	sun_Pfd.fd = fd;
+	sun_Pfd.events = POLLIN;
+	DBGPRINTF("imsolaris/openklog: opened '%s' as fd %d.\n", name, fd);
 
 finalize_it:
 	RETiRet;
-}
-
-
-/* this thread listens to the local stream log driver for log messages
- * generated by this host, formats them, and queues them to the logger
- * thread.
- */
-/*ARGSUSED*/
-void
-sun_sys_poll()
-{
-	int nfds;
-
-	dbgprintf("imsolaris:sys_poll: sys_thread started\n");
-
-	for (;;) {
-		errno = 0;
-
-		dbgprintf("imsolaris:sys_poll waiting for next message...\n");
-		nfds = poll(&Pfd, 1, INFTIM);
-
-		if (nfds == 0)
-			continue;
-
-		if (nfds < 0) {
-			if (errno != EINTR)
-				dbgprintf("imsolaris:poll error");
-			continue;
-		}
-		if (Pfd.revents & POLLIN) {
-			solaris_readLog(Pfd.fd);
-		} else {
-			/* TODO: shutdown, the rsyslog way (in v5!) -- check shutdown flag */
-			if (Pfd.revents & (POLLNVAL|POLLHUP|POLLERR)) {
-			// TODO: trigger retry logic	
-/*				logerror("kernel log driver poll error");
-				(void) close(Pfd.fd);
-				Pfd.fd = -1;
-				*/
-			}
-		}
-
-	}
-	/*NOTREACHED*/
-}
-
-
-/* Open the log device, and pull up all pending messages.
- */
-void
-prepare_sys_poll()
-{
-	int nfds;
-
-	Pfd.events = POLLIN;
-
-	for (;;) {
-		dbgprintf("imsolaris:prepare_sys_poll waiting for next message...\n");
-		nfds = poll(&Pfd, 1, 0);
-		if (nfds <= 0) {
-			break;
-		}
-
-		if (Pfd.revents & POLLIN) {
-			solaris_readLog(Pfd.fd);
-		} else if (Pfd.revents & (POLLNVAL|POLLHUP|POLLERR)) {
-			//logerror("kernel log driver poll error");
-			break;
-		}
-	}
-
 }
