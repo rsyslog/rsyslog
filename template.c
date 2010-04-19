@@ -61,7 +61,6 @@ static inline rsRetVal ExtendBuf(uchar **pBuf, size_t *pLenBuf, size_t iMinSize)
 	CHKmalloc(pNewBuf = (uchar*) realloc(*pBuf, iNewSize));
 	*pBuf = pNewBuf;
 	*pLenBuf = iNewSize;
-dbgprintf("extend buf to at least %ld, done %ld\n", iMinSize, iNewSize);
 
 finalize_it:
 	RETiRet;
