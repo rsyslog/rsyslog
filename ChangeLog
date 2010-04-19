@@ -1,4 +1,8 @@
 ---------------------------------------------------------------------------
+Version 5.5.4  [DEVEL] (rgerhards), 2010-04-??
+- bugfix: netstream ptcp support class was not correctly build on systems
+  without epoll() support
+---------------------------------------------------------------------------
 Version 5.5.3  [DEVEL] (rgerhards), 2010-04-09
 - added basic but functional support for Solaris
 - imported many bugfixes from 3.6.2/4.6.1 (see ChangeLog below!)

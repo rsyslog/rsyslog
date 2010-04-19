@@ -825,7 +825,9 @@ ENDObjClassInit(nsd_ptcp)
 
 BEGINmodExit
 CODESTARTmodExit
+#	ifdef HAVE_EPOLL_CREATE /* module only available if epoll() is supported! */
 	nsdpoll_ptcpClassExit();
+#	endif
 	nsdsel_ptcpClassExit();
 	nsd_ptcpClassExit();
 ENDmodExit
@@ -844,7 +846,9 @@ CODESTARTmodInit
 	/* Initialize all classes that are in our module - this includes ourselfs */
 	CHKiRet(nsd_ptcpClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
 	CHKiRet(nsdsel_ptcpClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
+#	ifdef HAVE_EPOLL_CREATE /* module only available if epoll() is supported! */
 	CHKiRet(nsdpoll_ptcpClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
+#	endif
 ENDmodInit
 /* vi:set ai:
  */
