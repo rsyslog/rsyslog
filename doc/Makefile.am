@@ -39,6 +39,7 @@ html_files = \
 	imtcp.html \
 	imgssapi.html \
 	imrelp.html \
+	imsolaris.html \
 	imuxsock.html \
 	imklog.html \
 	professional_support.html \
