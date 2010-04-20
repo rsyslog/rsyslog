@@ -51,9 +51,9 @@ case $1 in
    'wait-queueempty') # wait for main message queue to be empty. $2 is the instance.
 		if [ "$2" == "2" ]
 		then
-			echo WaitMainQueueEmpty | java -classpath $abs_top_builddir DiagTalker
+			echo WaitMainQueueEmpty | ./diagtalker
 		else
-			echo WaitMainQueueEmpty | java -classpath $abs_top_builddir DiagTalker 13501
+			echo WaitMainQueueEmpty | ./diagtalker
 		fi
 		;;
    'shutdown-when-empty') # shut rsyslogd down when main queue is empty. $2 is the instance.
@@ -75,7 +75,7 @@ case $1 in
 		;;
    'injectmsg') # inject messages via our inject interface (imdiag)
 		echo injecting $3 messages
-		echo injectmsg $2 $3 $4 $5 | java -classpath $abs_top_builddir DiagTalker
+		echo injectmsg $2 $3 $4 $5 | ./diagtalker
 		# TODO: some return state checking? (does it really make sense here?)
 		;;
    'check-mainq-spool') # check if mainqueue spool files exist, if not abort (we just check .qi).

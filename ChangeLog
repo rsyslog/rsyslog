@@ -4,6 +4,7 @@ Version 4.7.1  [v4-devel] (rgerhards), 2010-04-??
   Solaris is no longer supported in imklog, but rather there is a new
   plugin imsolaris, which is used to pull local log sources on a Solaris
   machine.
+- testbench improvement: Java is no longer needed for testing tool creation
 ---------------------------------------------------------------------------
 Version 4.7.0  [v4-devel] (rgerhards), 2010-04-14
 - new: support for Solaris added (but not yet the Solaris door API)
