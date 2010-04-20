@@ -205,7 +205,6 @@ readLog(int fd, uchar *pRcv, int iMaxLine)
 		MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName(), ustrlen(glbl.GetLocalHostName()));
 		pMsg->iFacility = LOG_FAC(hdr.pri);
 		pMsg->iSeverity = LOG_PRI(hdr.pri);
-		pMsg->bParseHOSTNAME = 0;
 		pMsg->msgFlags = NEEDS_PARSING | NO_PRI_IN_RAW;
 		CHKiRet(submitMsg(pMsg));
 	}
