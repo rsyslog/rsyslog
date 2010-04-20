@@ -1,6 +1,6 @@
 if ENABLE_TESTBENCH
 TESTRUNS = rt_init rscript
-check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq msleep randomgen
+check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq msleep randomgen diagtalker
 TESTS = $(TESTRUNS) cfg.sh \
 	arrayqueue.sh \
 	linkedlistqueue.sh \
@@ -68,12 +68,10 @@ if ENABLE_EXTENDED_TESTS
 TESTS += random.sh 
 endif
 
-check_JAVA = DiagTalker.java
-
 endif # if ENABLE_TESTBENCH
 
 TESTS_ENVIRONMENT = RSYSLOG_MODDIR='$(abs_top_builddir)'/runtime/.libs/
-DISTCLEANFILES=rsyslog.pid '$(abs_top_builddir)'/DiagTalker.class
+DISTCLEANFILES=rsyslog.pid
 test_files = testbench.h runtime-dummy.c
 
 EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
@@ -278,7 +276,6 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/dircreate_dflt.conf \
 	   dircreate_off.sh \
 	   testsuites/dircreate_off.conf \
-	   DiagTalker.java \
 	   cfg.sh
 
 ourtail_SOURCES = ourtail.c
@@ -287,6 +284,9 @@ chkseq_SOURCES = chkseq.c
 
 tcpflood_SOURCES = tcpflood.c
 tcpflood_LDADD = $(SOL_LIBS)
+
+diagtalker_SOURCES = diagtalker.c
+diagtalker_LDADD = $(SOL_LIBS)
 
 randomgen_SOURCES = randomgen.c
 randomgen_LDADD = $(SOL_LIBS)

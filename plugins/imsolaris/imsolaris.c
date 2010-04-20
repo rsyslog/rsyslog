@@ -102,126 +102,6 @@ static prop_t *pInputName = NULL;	/* our inputName currently is always "imuxsock
 static char *LogName = NULL;	/* the log socket name TODO: make configurable! */
 
 
-
-/* This function receives data from a socket indicated to be ready
- * to receive and submits the message received for processing.
- * rgerhards, 2007-12-20
- * Interface changed so that this function is passed the array index
- * of the socket which is to be processed. This eases access to the
- * growing number of properties. -- rgerhards, 2008-08-01
- */
-rsRetVal
-solaris_readLog(int fd)
-{
-	DEFiRet;
-	int iRcvd;
-	int iMaxLine;
-	struct strbuf data;
-	struct strbuf ctl;
-	struct log_ctl hdr;
-	int flags;
-	msg_t *pMsg;
-	int ret;
-	uchar bufRcv[4096+1];
-	uchar *pRcv = NULL; /* receive buffer */
-	char errStr[1024];
-
-	iMaxLine = glbl.GetMaxLine();
-
-	/* we optimize performance: if iMaxLine is below 4K (which it is in almost all
-	 * cases, we use a fixed buffer on the stack. Only if it is higher, heap memory
-	 * is used. We could use alloca() to achive a similar aspect, but there are so
-	 * many issues with alloca() that I do not want to take that route.
-	 * rgerhards, 2008-09-02
-	 */
-	if((size_t) iMaxLine < sizeof(bufRcv) - 1) {
-		pRcv = bufRcv;
-	} else {
-		CHKmalloc(pRcv = (uchar*) malloc(sizeof(uchar) * (iMaxLine + 1)));
-	}
-
-	data.buf = (char*)pRcv;
-	data.maxlen = iMaxLine;
-	ctl.maxlen = sizeof (struct log_ctl);
-	ctl.buf = (caddr_t)&hdr;
-	flags = 0;
-	ret = getmsg(fd, &ctl, &data, &flags);
-	if(ret < 0) {
-		rs_strerror_r(errno, errStr, sizeof(errStr));
-		DBGPRINTF("imsolaris: getmsg() error on fd %d: %s.\n", fd, errStr);
-	}
-	DBGPRINTF("imsolaris: getmsg() returns %d\n", ret);
-	DBGPRINTF("imsolaris: message from log socket: #%d: %s\n", fd, pRcv);
-	if (1) {//iRcvd > 0) {
-		CHKiRet(msgConstruct(&pMsg));
-		//MsgSetFlowControlType(pMsg, eFLOWCTL_FULL_DELAY);
-		MsgSetInputName(pMsg, pInputName);
-		MsgSetRawMsg(pMsg, (char*)pRcv, strlen((char*)pRcv));
-		MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName(), ustrlen(glbl.GetLocalHostName()));
-		pMsg->iFacility = LOG_FAC(hdr.pri);
-		pMsg->iSeverity = LOG_PRI(hdr.pri);
-		//pMsg->bParseHOSTNAME = 0;
-		pMsg->msgFlags = NEEDS_PARSING | NO_PRI_IN_RAW;
-		CHKiRet(submitMsg(pMsg));
-	} else if (iRcvd < 0 && errno != EINTR) {
-		int en = errno;
-		rs_strerror_r(en, errStr, sizeof(errStr));
-		DBGPRINTF("imsolaris: stream error: %d = %s.\n", errno, errStr);
-		errmsg.LogError(en, NO_ERRCODE, "imsolaris: stream input error: %s", errStr);
-	}
-
-finalize_it:
-	if(pRcv != NULL && (size_t) iMaxLine >= sizeof(bufRcv) - 1)
-		free(pRcv);
-
-	RETiRet;
-}
-
-
-/* we try to recover a failed file by closing and re-opening
- * it. We loop until the re-open works, but wait between each
- * failure. If the open succeeds, we assume all is well. If it is
- * not, we will run into the retry process with the next
- * iteration.
- * rgerhards, 2010-04-19
- */
-static inline void
-tryRecover(void)
-{
-	int tryNum = 0;
-	int waitsecs;
-	int waitusecs;
-	rsRetVal iRet;
-
-	close(sun_Pfd.fd);
-	sun_Pfd.fd = -1;
-
-	while(1) { /* loop broken inside */
-		iRet = sun_openklog((LogName == NULL) ? PATH_LOG : LogName);
-		if(iRet == RS_RET_OK) {
-			if(tryNum > 0) {		
-				errmsg.LogError(0, iRet, "failure on system log socket recovered.");
-			}	
-			break;
-		}	
-		/* failure, so sleep a bit. We wait try*10 ms, with a max of 15 seconds */
-		if(tryNum == 0) {		
-			errmsg.LogError(0, iRet, "failure on system log socket, trying to recover...");
-		waitusecs = tryNum * 10000;
-		waitsecs = waitusecs / 1000000;
-		if(waitsecs != 15) {
-			waitsecs = 15;
-			waitusecs = 0;
-		} else  {	
-			waitusecs = waitusecs % 1000000;
-		}	
-		srSleep(waitsecs, waitusecs);
-		++tryNum;
-		}	
-	}	
-}
-
-
 /* a function to replace the sun logerror() function.
  * It generates an error message from the supplied string. The main
  * reason for not calling logError directly is that sun_cddl.c does not
@@ -232,6 +112,106 @@ void
 imsolaris_logerror(int err, char *errStr)
 {
 	errmsg.LogError(err, RS_RET_ERR_DOOR, "%s", errStr);
+}
+
+
+/* we try to recover a failed file by closing and re-opening
+ * it. We loop until the re-open works, but wait between each
+ * failure. If the open succeeds, we assume all is well. If it is
+ * not, we will run into the retry process with the next
+ * iteration.
+ * rgerhards, 2010-04-19
+ */
+static void
+tryRecover(void)
+{
+	int tryNum = 1;
+	int waitsecs;
+	int waitusecs;
+	rsRetVal iRet;
+
+	close(sun_Pfd.fd);
+	sun_Pfd.fd = -1;
+
+	while(1) { /* loop broken inside */
+		iRet = sun_openklog((LogName == NULL) ? PATH_LOG : LogName);
+		if(iRet == RS_RET_OK) {
+			if(tryNum > 1) {		
+				errmsg.LogError(0, iRet, "failure on system log socket recovered.");
+			}	
+			break;
+		}	
+		/* failure, so sleep a bit. We wait try*10 ms, with a max of 15 seconds */
+		if(tryNum == 1) {		
+			errmsg.LogError(0, iRet, "failure on system log socket, trying to recover...");
+		}	
+		waitusecs = tryNum * 10000;
+		waitsecs = waitusecs / 1000000;
+		DBGPRINTF("imsolaris: try %d to recover system log socket in %d.%d seconds\n",
+			  tryNum, waitsecs, waitusecs);
+		if(waitsecs > 15) {
+			waitsecs = 15;
+			waitusecs = 0;
+		} else  {	
+			waitusecs = waitusecs % 1000000;
+		}	
+		srSleep(waitsecs, waitusecs);
+		++tryNum;
+	}	
+}
+
+
+/* This function receives data from a socket indicated to be ready
+ * to receive and submits the message received for processing.
+ * rgerhards, 2007-12-20
+ * Interface changed so that this function is passed the array index
+ * of the socket which is to be processed. This eases access to the
+ * growing number of properties. -- rgerhards, 2008-08-01
+ */
+static rsRetVal
+readLog(int fd, uchar *pRcv, int iMaxLine)
+{
+	DEFiRet;
+	struct strbuf data;
+	struct strbuf ctl;
+	struct log_ctl hdr;
+	int flags;
+	msg_t *pMsg;
+	int ret;
+	char errStr[1024];
+
+	data.buf = (char*)pRcv;
+	data.maxlen = iMaxLine;
+	ctl.maxlen = sizeof (struct log_ctl);
+	ctl.buf = (caddr_t)&hdr;
+	flags = 0;
+	ret = getmsg(fd, &ctl, &data, &flags);
+	if(ret < 0) {
+		if(errno == EINTR) {
+			FINALIZE;
+		} else 	{
+			int en = errno;
+			rs_strerror_r(errno, errStr, sizeof(errStr));
+			DBGPRINTF("imsolaris: stream input error on fd %d: %s.\n", fd, errStr);
+			errmsg.LogError(en, NO_ERRCODE, "imsolaris: stream input error: %s", errStr);
+			tryRecover();
+		}	
+	} else {
+		DBGPRINTF("imsolaris: message from log stream %d: %s\n", fd, pRcv);
+		pRcv[data.len] = '\0'; /* make sure it is a valid C-String */
+		CHKiRet(msgConstruct(&pMsg));
+		MsgSetInputName(pMsg, pInputName);
+		MsgSetRawMsg(pMsg, (char*)pRcv, strlen((char*)pRcv));
+		MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName(), ustrlen(glbl.GetLocalHostName()));
+		pMsg->iFacility = LOG_FAC(hdr.pri);
+		pMsg->iSeverity = LOG_PRI(hdr.pri);
+		pMsg->bParseHOSTNAME = 0;
+		pMsg->msgFlags = NEEDS_PARSING | NO_PRI_IN_RAW;
+		CHKiRet(submitMsg(pMsg));
+	}
+
+finalize_it:
+	RETiRet;
 }
 
 
@@ -248,43 +228,76 @@ getMsgs(int timeout)
 {
 	DEFiRet;
 	int nfds;
+	int iMaxLine;
+	uchar *pRcv = NULL; /* receive buffer */
+	uchar bufRcv[4096+1];
 	char errStr[1024];
+
+	iMaxLine = glbl.GetMaxLine();
+
+	/* we optimize performance: if iMaxLine is below 4K (which it is in almost all
+	 * cases, we use a fixed buffer on the stack. Only if it is higher, heap memory
+	 * is used. We could use alloca() to achive a similar aspect, but there are so
+	 * many issues with alloca() that I do not want to take that route.
+	 * rgerhards, 2008-09-02
+	 */
+	if((size_t) iMaxLine < sizeof(bufRcv) - 1) {
+		pRcv = bufRcv;
+	} else {
+		CHKmalloc(pRcv = (uchar*) malloc(sizeof(uchar) * (iMaxLine + 1)));
+	}
 
 	do {
 		DBGPRINTF("imsolaris: waiting for next message (timeout %d)...\n", timeout);
-		nfds = poll(&sun_Pfd, 1, timeout); /* wait without timeout */
+		if(timeout == 0) {
+			nfds = poll(&sun_Pfd, 1, timeout); /* wait without timeout */
 
-		/* v5-TODO: here we must check if we should terminante! */
+			/* v5-TODO: here we must check if we should terminante! */
 
-		if(nfds == 0) {
-			if(timeout == 0) {
-				DBGPRINTF("imsolaris: no more messages, getMsgs() terminates\n");
-				FINALIZE;
-			} else {
+			if(nfds == 0) {
+				if(timeout == 0) {
+					DBGPRINTF("imsolaris: no more messages, getMsgs() terminates\n");
+					FINALIZE;
+				} else {
+					continue;
+				}	
+			}		
+
+			if(nfds < 0) {
+				if(errno != EINTR) {
+					int en = errno;
+					rs_strerror_r(en, errStr, sizeof(errStr));
+					DBGPRINTF("imsolaris: poll error: %d = %s.\n", errno, errStr);
+					errmsg.LogError(en, NO_ERRCODE, "imsolaris: poll error: %s",
+							errStr);
+				}
 				continue;
-			}	
-		}		
-
-		if(nfds < 0) {
-			if(errno != EINTR) {
-				int en = errno;
-				rs_strerror_r(en, errStr, sizeof(errStr));
-				DBGPRINTF("imsolaris: poll error: %d = %s.\n", errno, errStr);
-				errmsg.LogError(en, NO_ERRCODE, "imsolaris: poll error: %s", errStr);
 			}
-			continue;
-		}
-		if(sun_Pfd.revents & POLLIN) {
-			solaris_readLog(sun_Pfd.fd);
-		} else if(sun_Pfd.revents & (POLLNVAL|POLLHUP|POLLERR)) {
-			tryRecover();
+			if(sun_Pfd.revents & POLLIN) {
+				readLog(sun_Pfd.fd, pRcv, iMaxLine);
+			} else if(sun_Pfd.revents & (POLLNVAL|POLLHUP|POLLERR)) {
+				tryRecover();
+			}
+		} else {
+			/* if we have an infinite wait, we do not use poll at all
+			 * I'd consider this a waste of time. However, I do not totally
+			 * remove the code, as it may be useful if we decide at some
+			 * point to provide a capability to support multiple input streams
+			 * at once (this may be useful for a jail). In that case, the poll()
+			 * loop would be needed, and so it doesn't make much sense to change
+			 * the code to not support it. -- rgerhards, 2010-04-20
+			 */
+			readLog(sun_Pfd.fd, pRcv, iMaxLine);
 		}
 
-	} while(1);
+	} while(1); /* TODO: in v5, we must check the termination predicate */
 
 	/* Note: in v4, this code is never reached (our thread will be cancelled) */
 
 finalize_it:
+	if(pRcv != NULL && (size_t) iMaxLine >= sizeof(bufRcv) - 1)
+		free(pRcv);
+
 	RETiRet;
 }
 
@@ -333,6 +346,7 @@ CODESTARTafterRun
 	/* do cleanup here */
 	if(pInputName != NULL)
 		prop.Destruct(&pInputName);
+	free(LogName);	
 ENDafterRun
 
 
@@ -370,6 +384,8 @@ CODEmodInit_QueryRegCFSLineHdlr
 	/* register config file handlers */
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
 		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
+        CHKiRet(omsdRegCFSLineHdlr((uchar *)"imsolarislogsocketname", 0, eCmdHdlrGetWord,
+                NULL, &LogName, STD_LOADABLE_MODULE_ID));
 ENDmodInit
 /* vim:set ai:
  */
