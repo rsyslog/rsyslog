@@ -37,6 +37,9 @@ case $1 in
    		$srcdir/diag.sh wait-startup $3
 		;;
    'wait-startup') # wait for rsyslogd startup ($2 is the instance)
+		while test ! -f rsyslog$2.pid; do
+			./msleep 100 # wait 100 milliseconds
+		done
 		while test ! -f rsyslogd$2.started; do
 			./msleep 100 # wait 100 milliseconds
 		done

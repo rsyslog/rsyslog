@@ -65,6 +65,7 @@ int openConn(int *fd)
 				fprintf(stderr, "connect() failed\n");
 				exit(1);
 			} else {
+				fprintf(stderr, "connect failed, retrying...\n");
 				usleep(100000); /* ms = 1000 us! */
 			}
 		}
