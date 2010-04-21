@@ -223,7 +223,7 @@ finalize_it:
  * rgerhards, 2010-04-19
  */
 static inline rsRetVal
-getMsgs(int timeout)
+getMsgs(thrdInfo_t *pThrd, int timeout)
 {
 	DEFiRet;
 	int nfds;
@@ -246,12 +246,14 @@ getMsgs(int timeout)
 		CHKmalloc(pRcv = (uchar*) malloc(sizeof(uchar) * (iMaxLine + 1)));
 	}
 
-	do {
+	 while(pThrd->bShallStop != TRUE) {
 		DBGPRINTF("imsolaris: waiting for next message (timeout %d)...\n", timeout);
 		if(timeout == 0) {
 			nfds = poll(&sun_Pfd, 1, timeout); /* wait without timeout */
 
-			/* v5-TODO: here we must check if we should terminante! */
+			if(pThrd->bShallStop == TRUE) {
+				break;
+			}
 
 			if(nfds == 0) {
 				if(timeout == 0) {
@@ -289,9 +291,7 @@ getMsgs(int timeout)
 			readLog(sun_Pfd.fd, pRcv, iMaxLine);
 		}
 
-	} while(1); /* TODO: in v5, we must check the termination predicate */
-
-	/* Note: in v4, this code is never reached (our thread will be cancelled) */
+	}
 
 finalize_it:
 	if(pRcv != NULL && (size_t) iMaxLine >= sizeof(bufRcv) - 1)
@@ -310,7 +310,7 @@ CODESTARTrunInput
 	 */
 
 	DBGPRINTF("imsolaris: doing startup poll before openeing door()\n");
-	CHKiRet(getMsgs(0));
+	CHKiRet(getMsgs(pThrd, 0));
 
 	/* note: sun's syslogd code claims that the door should only
 	 * be opened when the log stream has been polled. So file header
@@ -318,8 +318,9 @@ CODESTARTrunInput
 	 */
 	sun_open_door();
 	DBGPRINTF("imsolaris: starting regular poll loop\n");
-	iRet = getMsgs(-1); /* this is the primary poll loop, infinite timeout */
+	iRet = getMsgs(pThrd, -1); /* this is the primary poll loop, infinite timeout */
 
+	DBGPRINTF("imsolaris: terminating (bShallStop=%d)\n", pThrd->bShallStop);
 finalize_it:
 	RETiRet;
 ENDrunInput
@@ -358,9 +359,17 @@ CODESTARTmodExit
 ENDmodExit
 
 
+BEGINisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature
+        if(eFeat == sFEATURENonCancelInputTermination)
+                iRet = RS_RET_OK;
+ENDisCompatibleWithFeature
+
+
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_IMOD_QUERIES
+CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
 ENDqueryEtryPt
 
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp,
