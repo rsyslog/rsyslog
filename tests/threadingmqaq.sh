@@ -12,6 +12,9 @@ source $srcdir/diag.sh startup threadingmqaq.conf
 #source $srcdir/diag.sh tcpflood -c2 -m100000
 #source $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
 source $srcdir/diag.sh injectmsg 0 100000
+# we need to sleep a bit on some environments, as imdiag can not correctly
+# diagnose when the action queues are empty...
+sleep 3
 source $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
 source $srcdir/diag.sh wait-shutdown
 source $srcdir/diag.sh seq-check 0 99999
