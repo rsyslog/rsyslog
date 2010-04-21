@@ -60,6 +60,11 @@
 #endif
 
 
+/* under Solaris (actually only SPARC), we need to redefine some types
+ * to be void, so that we get void* pointers. Otherwise, we will see
+* alignment errors.
+*/
+
 /* define some base data types */
 typedef unsigned char uchar;/* get rid of the unhandy "unsigned char" */
 typedef struct thrdInfo thrdInfo_t;
@@ -78,8 +83,13 @@ typedef struct nsd_gsspi_s nsd_gsspi_t;
 typedef struct nsd_nss_s nsd_nss_t;
 typedef struct nsdsel_ptcp_s nsdsel_ptcp_t;
 typedef struct nsdsel_gtls_s nsdsel_gtls_t;
-typedef obj_t nsd_t;
-typedef obj_t nsdsel_t;
+#ifdef OS_SOLARIS
+	typedef void nsd_t;
+	typedef void nsdsel_t;
+#else
+	typedef obj_t nsd_t;
+	typedef obj_t nsdsel_t;
+#endif
 typedef struct msg msg_t;
 typedef struct prop_s prop_t;
 typedef struct interface_s interface_t;
