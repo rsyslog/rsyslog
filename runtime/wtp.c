@@ -329,11 +329,13 @@ wtpWrkrExecCancelCleanup(void *arg)
 static void *
 wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in wtp! */
 {
-	uchar *pszDbgHdr;
-	uchar thrdName[32] = "rs:";
 	wti_t *pWti = (wti_t*) arg;
 	wtp_t *pThis;
 	sigset_t sigSet;
+#	if HAVE_PRCTL && defined PR_SET_NAME
+	uchar *pszDbgHdr;
+	uchar thrdName[32] = "rs:";
+#	endif
 
 	BEGINfunc
 	ISOBJ_TYPE_assert(pWti, wti);

@@ -79,6 +79,10 @@
 #define CORE_FEATURE_BATCHING	1
 /*#define CORE_FEATURE_whatever 2 ... and so on ... */
 
+/* under Solaris (actually only SPARC), we need to redefine some types
+ * to be void, so that we get void* pointers. Otherwise, we will see
+ * alignment errors.
+ */
 /* some universal fixed size integer defines ... */
 typedef long long int64;
 typedef long long unsigned uint64;
@@ -108,9 +112,15 @@ typedef struct nsdsel_ptcp_s nsdsel_ptcp_t;
 typedef struct nsdsel_gtls_s nsdsel_gtls_t;
 typedef struct nsdpoll_ptcp_s nsdpoll_ptcp_t;
 typedef struct wti_s wti_t;
-typedef obj_t nsd_t;
-typedef obj_t nsdsel_t;
-typedef obj_t nsdpoll_t;
+#ifdef OS_SOLARIS
+	typedef void nsd_t;
+	typedef void nsdsel_t;
+	typedef void nsdpoll_t;
+#else
+	typedef obj_t nsd_t;
+	typedef obj_t nsdsel_t;
+	typedef obj_t nsdpoll_t;
+#endif
 typedef struct msg msg_t;
 typedef struct queue_s qqueue_t;
 typedef struct prop_s prop_t;
