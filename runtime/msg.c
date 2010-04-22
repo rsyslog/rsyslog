@@ -3048,7 +3048,7 @@ static rsRetVal msgConstructFinalizer(msg_t *pThis)
  * rgerhards, 2008-01-14
  */
 static rsRetVal
-MsgGetSeverity(obj_t *pThis, int *piSeverity)
+MsgGetSeverity(obj_t_ptr pThis, int *piSeverity)
 {
 	ISOBJ_TYPE_assert(pThis, msg);
 	assert(piSeverity != NULL);
