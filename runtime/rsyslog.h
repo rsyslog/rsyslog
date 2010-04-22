@@ -106,7 +106,7 @@ typedef struct strmLstnPortList_s strmLstnPortList_t; // TODO: rename?
 	typedef void nsd_t;
 	typedef void nsdsel_t;
 #else
-	typedef obj_t obj_t_ptr;
+	typedef obj_t *obj_t_ptr;
 	typedef obj_t nsd_t;
 	typedef obj_t nsdsel_t;
 #endif
