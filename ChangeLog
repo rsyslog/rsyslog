@@ -2,6 +2,7 @@
 Version 5.5.4  [DEVEL] (rgerhards), 2010-04-??
 - bugfix: netstream ptcp support class was not correctly build on systems
   without epoll() support
+- bugfix: [NOT YET FIXED] segfault on Solaris/Sparc
 ---------------------------------------------------------------------------
 Version 5.5.3  [DEVEL] (rgerhards), 2010-04-09
 - added basic but functional support for Solaris
@@ -403,7 +404,9 @@ increase.
 - increased ompgsql performance by adapting to new transactional
   output module interface
 ---------------------------------------------------------------------------
-Version 4.7.1  [v4-devel] (rgerhards), 2010-04-??
+Version 4.7.2  [v4-devel] (rgerhards), 2010-04-??
+---------------------------------------------------------------------------
+Version 4.7.1  [v4-devel] (rgerhards), 2010-04-22
 - Solaris support much improved -- was not truely usable in 4.7.0
   Solaris is no longer supported in imklog, but rather there is a new
   plugin imsolaris, which is used to pull local log sources on a Solaris
