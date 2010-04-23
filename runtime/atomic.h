@@ -31,8 +31,6 @@
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
  * A copy of the LGPL can be found in the file "COPYING.LESSER" in this distribution.
  */
-#include "config.h" /* autotools! */
-
 #ifndef INCLUDED_ATOMIC_H
 #define INCLUDED_ATOMIC_H
 
