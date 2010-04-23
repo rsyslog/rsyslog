@@ -91,6 +91,7 @@ typedef char intTiny; 	/* 0..127! */
 typedef unsigned char uintTiny;	/* 0..255! */
 
 /* define some base data types */
+
 typedef unsigned char uchar;/* get rid of the unhandy "unsigned char" */
 typedef struct aUsrp_s aUsrp_t;
 typedef struct thrdInfo thrdInfo_t;
@@ -112,15 +113,6 @@ typedef struct nsdsel_ptcp_s nsdsel_ptcp_t;
 typedef struct nsdsel_gtls_s nsdsel_gtls_t;
 typedef struct nsdpoll_ptcp_s nsdpoll_ptcp_t;
 typedef struct wti_s wti_t;
-#ifdef OS_SOLARIS
-	typedef void nsd_t;
-	typedef void nsdsel_t;
-	typedef void nsdpoll_t;
-#else
-	typedef obj_t nsd_t;
-	typedef obj_t nsdsel_t;
-	typedef obj_t nsdpoll_t;
-#endif
 typedef struct msg msg_t;
 typedef struct queue_s qqueue_t;
 typedef struct prop_s prop_t;
@@ -146,6 +138,23 @@ typedef uint64 qDeqID;	/* queue Dequeue order ID. 32 bits is considered dangerou
 
 typedef struct tcpLstnPortList_s tcpLstnPortList_t; // TODO: rename?
 typedef struct strmLstnPortList_s strmLstnPortList_t; // TODO: rename?
+
+/* under Solaris (actually only SPARC), we need to redefine some types
+ * to be void, so that we get void* pointers. Otherwise, we will see
+ * alignment errors.
+ */
+#ifdef OS_SOLARIS
+	typedef void * obj_t_ptr;
+	typedef void nsd_t;
+	typedef void nsdsel_t;
+	typedef void nsdpoll_t;
+#else
+	typedef obj_t obj_t_ptr;
+	typedef obj_t nsd_t;
+	typedef obj_t nsdsel_t;
+	typedef obj_t nsdpoll_t;
+#endif
+
 
 #ifdef __hpux
 typedef unsigned int u_int32_t; /* TODO: is this correct? */

@@ -208,7 +208,7 @@ rsRetVal actionDestruct(action_t *pThis)
 
 	/* message ptr cleanup */
 	for(i = 0 ; i < pThis->iNumTpls ; ++i) {
-		if(pThis->ppMsgs[i] != NULL) {
+		if(((uchar**)pThis->ppMsgs)[i] != NULL) {
 			switch(pThis->eParamPassing) {
 			case ACT_ARRAY_PASSING:
 #if 0 /* later, as an optimization. So far, we do the cleanup after each message */ 
@@ -222,7 +222,7 @@ rsRetVal actionDestruct(action_t *pThis)
 #endif
 				break;
 			case ACT_STRING_PASSING:
-				d_free(pThis->ppMsgs[i]);
+				d_free(((uchar**)pThis->ppMsgs)[i]);
 				break;
 			case ACT_MSG_PASSING:
 				/* No cleanup needed in this case */
@@ -633,16 +633,16 @@ static rsRetVal prepareDoActionParams(action_t *pAction, msg_t *pMsg)
 	for(i = 0 ; i < pAction->iNumTpls ; ++i) {
 		switch(pAction->eParamPassing) {
 			case ACT_STRING_PASSING:
-				CHKiRet(tplToString(pAction->ppTpl[i], pMsg, &(pAction->ppMsgs[i]), &(pAction->lenMsgs[i])));
+				CHKiRet(tplToString(pAction->ppTpl[i], pMsg, &(((uchar**)pAction->ppMsgs)[i]), &(pAction->lenMsgs[i])));
 				break;
 			case ACT_ARRAY_PASSING:
-				CHKiRet(tplToArray(pAction->ppTpl[i], pMsg, (uchar***) &(pAction->ppMsgs[i])));
+				CHKiRet(tplToArray(pAction->ppTpl[i], pMsg, (uchar***) &(((uchar**)pAction->ppMsgs)[i])));
 				break;
 			case ACT_MSG_PASSING:
 				/* we abuse the uchar* ptr, it now actually is a void*, but we can not
 				 * change that other than by chaning the interface, what we don't like...
 				 */
-				pAction->ppMsgs[i] = (uchar*) pMsg;
+				((uchar**)pAction->ppMsgs)[i] = (uchar*) pMsg;
 				break;
 			default:assert(0); /* software bug if this happens! */
 		}
@@ -664,16 +664,16 @@ static rsRetVal cleanupDoActionParams(action_t *pAction)
 
 	ASSERT(pAction != NULL);
 	for(i = 0 ; i < pAction->iNumTpls ; ++i) {
-		if(pAction->ppMsgs[i] != NULL) {
+		if(((uchar**)pAction->ppMsgs)[i] != NULL) {
 			switch(pAction->eParamPassing) {
 			case ACT_ARRAY_PASSING:
 				iArr = 0;
-				while(((char **)pAction->ppMsgs[i])[iArr] != NULL) {
-					d_free(((char **)pAction->ppMsgs[i])[iArr++]);
-					((char **)pAction->ppMsgs[i])[iArr++] = NULL;
+				while((((uchar***)pAction->ppMsgs)[i][iArr]) != NULL) {
+					d_free(((uchar ***)pAction->ppMsgs)[i][iArr++]);
+					((uchar ***)pAction->ppMsgs)[i][iArr++] = NULL;
 				}
-				d_free(pAction->ppMsgs[i]);
-				pAction->ppMsgs[i] = NULL;
+				d_free(((uchar**)pAction->ppMsgs)[i]);
+				((uchar**)pAction->ppMsgs)[i] = NULL;
 				break;
 			case ACT_MSG_PASSING:
 			case ACT_STRING_PASSING:
