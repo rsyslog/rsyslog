@@ -273,6 +273,9 @@ the value, the less precise the timestamp.
 <li><a href="droppriv.html">$PrivDropToGroupID</a></li>
 <li><a href="droppriv.html">$PrivDropToUser</a></li>
 <li><a href="droppriv.html">$PrivDropToUserID</a></li>
+<li><b>$Sleep</b> &lt;seconds&gt; - puts the rsyslog main thread to sleep for the specified
+number of seconds immediately when the directive is encountered. You should have a
+good reason for using this directive!</li>
 <li><a href="rsconf1_umask.html">$UMASK</a></li>
 </ul>
 <p><b>Where &lt;size_nbr&gt; is specified above,</b>
@@ -291,7 +294,7 @@ point of view, "1,,0.0.,.,0" also has the value 1000. </p>
 [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
 <p><font size="2">This documentation is part of the
 <a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
-Copyright &copy; 2008, 2009 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+Copyright &copy; 2008-2010 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
 <a href="http://www.adiscon.com/">Adiscon</a>. Released under the GNU GPL
 version 3 or higher.</font></p>
 </body>

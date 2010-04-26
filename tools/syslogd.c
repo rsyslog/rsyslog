@@ -2460,6 +2460,25 @@ finalize_it:
 }
 
 
+
+/* Put the rsyslog main thread to sleep for n seconds. This was introduced as 
+ * a quick and dirty workaround for a privilege drop race in regard to listener
+ * startup, which itself was a result of the not-yet-done proper coding of
+ * privilege drop code (quite some effort). It may be useful for other occasions, too.
+ * is specified).
+ * rgerhards, 2009-06-12
+ */
+static rsRetVal
+putToSleep(void __attribute__((unused)) *pVal, int iNewVal)
+{
+	DEFiRet;
+	DBGPRINTF("rsyslog main thread put to sleep via $sleep %d directive...\n", iNewVal);
+	srSleep(iNewVal, 0);
+	DBGPRINTF("rsyslog main thread continues after $sleep %d\n", iNewVal);
+	RETiRet;
+}
+
+
 /* Switch to either an already existing rule set or start a new one. The
  * named rule set becomes the new "current" rule set (what means that new
  * actions are added to it).
@@ -2713,6 +2732,7 @@ static rsRetVal loadBuildInModules(void)
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionresumeretrycount", 0, eCmdHdlrInt, NULL, &glbliActionResumeRetryCount, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"defaultruleset", 0, eCmdHdlrGetWord, setDefaultRuleset, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"ruleset", 0, eCmdHdlrGetWord, setCurrRuleset, NULL, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"sleep", 0, eCmdHdlrInt, putToSleep, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuefilename", 0, eCmdHdlrGetWord, NULL, &pszMainMsgQFName, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuesize", 0, eCmdHdlrInt, NULL, &iMainMsgQueueSize, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuehighwatermark", 0, eCmdHdlrInt, NULL, &iMainMsgQHighWtrMark, NULL));
