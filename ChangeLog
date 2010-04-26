@@ -37,6 +37,48 @@ Version 5.5.2  [DEVEL] (rgerhards), 2010-02-05
   solution was available). Thanks to Kenneth Marshall for some advice.
 - extended testbench
 ---------------------------------------------------------------------------
+Version 5.5.1  [DEVEL] (rgerhards), 2009-11-27
+- introduced the ablity for netstream drivers to utilize an epoll interface
+  This offers increased performance and removes the select() FDSET size
+  limit from imtcp. Note that we fall back to select() if there is no
+  epoll netstream drivers. So far, an epoll driver has only been
+  implemented for plain tcp syslog, the rest will follow once the code
+  proves well in practice AND there is demand.
+- re-implemented $EscapeControlCharacterTab config directive
+  Based on Jonathan Bond-Caron's patch for v4. This now also includes some
+  automatted tests.
+- bugfix: enabling GSSServer crashes rsyslog startup
+  Thanks to Tomas Kubina for the patch [imgssapi]
+- bugfix (kind of): check if TCP connection is still alive if using TLS
+  Thanks to Jonathan Bond-Caron for the patch.
+---------------------------------------------------------------------------
+Version 5.5.0  [DEVEL] (rgerhards), 2009-11-18
+- moved DNS resolution code out of imudp and into the backend processing
+  Most importantly, DNS resolution now never happens if the resolved name
+  is not required. Note that this applies to imudp - for the other inputs,
+  DNS resolution almost comes for free, so we do not do it there. However,
+  the new method has been implemented in a generic way and as such may 
+  also be used by other modules in the future.
+- added option to use unlimited-size select() calls
+  Thanks to varmjofekoj for the patch
+  This is not done in imudp, as it natively supports epoll().
+- doc: improved description of what loadable modules can do
+---------------------------------------------------------------------------
+Version 5.4.2  [v5-stable] (rgerhards), 2010-03-??
+- bugfix(minor): status variable was uninitialized
+  However, this would have caused harm only if NO parser modules at
+  all were loaded, which would lead to a defunctional configuration
+  at all. And, even more important, this is impossible as two parser
+  modules are built-in and thus can not be "not loaded", so we always
+  have a minimum of two.
+- bugfix: testbench failed when not executed in UTC+1 timezone
+  accidently, the time zone information was kept inside some
+  to-be-checked-for responses
+- temporary bugfix replaced by permanent one for
+  message-induced off-by-one error (potential segfault) (see 4.6.2)
+  The analysis has been completed and a better fix been crafted and 
+  integrated.
+---------------------------------------------------------------------------
 Version 5.4.1  [v5-stable] (rgerhards), 2010-03-??
 - added new property replacer option "date-rfc3164-buggyday" primarily
   to ease migration from syslog-ng. See property replacer doc for
@@ -71,35 +113,6 @@ Version 5.3.7  [BETA] (rgerhards), 2010-01-27
   on this bug and helping to debug/fix it! [imported from 5.3.6]
 - bugfix: $CreateDirs variable not properly initialized, default thus
   was random (but most often "on") [imported from v3]
----------------------------------------------------------------------------
-Version 5.5.1  [DEVEL] (rgerhards), 2009-11-27
-- introduced the ablity for netstream drivers to utilize an epoll interface
-  This offers increased performance and removes the select() FDSET size
-  limit from imtcp. Note that we fall back to select() if there is no
-  epoll netstream drivers. So far, an epoll driver has only been
-  implemented for plain tcp syslog, the rest will follow once the code
-  proves well in practice AND there is demand.
-- re-implemented $EscapeControlCharacterTab config directive
-  Based on Jonathan Bond-Caron's patch for v4. This now also includes some
-  automatted tests.
-- bugfix: enabling GSSServer crashes rsyslog startup
-  Thanks to Tomas Kubina for the patch [imgssapi]
-- bugfix (kind of): check if TCP connection is still alive if using TLS
-  Thanks to Jonathan Bond-Caron for the patch.
----------------------------------------------------------------------------
-Version 5.5.0  [DEVEL] (rgerhards), 2009-11-18
-- moved DNS resolution code out of imudp and into the backend processing
-  Most importantly, DNS resolution now never happens if the resolved name
-  is not required. Note that this applies to imudp - for the other inputs,
-  DNS resolution almost comes for free, so we do not do it there. However,
-  the new method has been implemented in a generic way and as such may 
-  also be used by other modules in the future.
-- added option to use unlimited-size select() calls
-  Thanks to varmjofekoj for the patch
-  This is not done in imudp, as it natively supports epoll().
-- doc: improved description of what loadable modules can do
----------------------------------------------------------------------------
-Version 5.3.7  [BETA] (rgerhards), 2010-01-??
 - bugfix: potential segfaults during queue shutdown
   (bugs require certain non-standard settings to appear)
   Thanks to varmojfekoj for the patch [imported from 4.5.8]
