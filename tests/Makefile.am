@@ -34,6 +34,7 @@ TESTS = $(TESTRUNS) cfg.sh \
 	complex1.sh \
 	queue-persist.sh \
 	pipeaction.sh \
+	pipe_noreader.sh \
 	execonlyonce.sh \
 	dircreate_dflt.sh \
 	dircreate_off.sh \
@@ -217,6 +218,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/sndrcv_gzip_rcvr.conf \
 	   pipeaction.sh \
 	   testsuites/pipeaction.conf \
+	   pipe_noreader.sh \
+	   testsuites/pipe_noreader.conf \
 	   asynwr_simple.sh \
 	   testsuites/asynwr_simple.conf \
 	   asynwr_timeout.sh \

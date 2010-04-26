@@ -56,8 +56,9 @@ struct action_s {
 	sbool	bWriteAllMarkMsgs;/* should all mark msgs be written (not matter how recent the action was executed)? */
 	int	iSecsExecOnceInterval; /* if non-zero, minimum seconds to wait until action is executed again */
 	action_state_t eState;	/* current state of action */
-	int	bHadAutoCommit;	/* did an auto-commit happen during doAction()? */
+	bool	bHadAutoCommit;	/* did an auto-commit happen during doAction()? */
 	time_t	ttResumeRtry;	/* when is it time to retry the resume? */
+	int	iResumeOKinRow;	/* number of times in a row that resume said OK with an immediate failure following */
 	int	iResumeInterval;/* resume interval for this action */
 	int	iResumeRetryCount;/* how often shall we retry a suspended action? (-1 --> eternal) */
 	int	iNbrResRtry;	/* number of retries since last suspend */
