@@ -448,7 +448,7 @@ ParsePRI(msg_t *pMsg)
 static rsRetVal
 ParseMsg(msg_t *pMsg)
 {
-	rsRetVal localRet;
+	rsRetVal localRet = RS_RET_ERR;
 	parserList_t *pParserList;
 	parser_t *pParser;
 	bool bIsSanitized;
