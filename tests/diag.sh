@@ -22,6 +22,7 @@ case $1 in
 		rm -f work rsyslog.out.log rsyslog.out.log.save # common work files
 		rm -f rsyslog.out.*.log
 		rm -rf test-spool
+		rm -f rsyslog.pipe
 		rm -f core.* vgcore.*
 		mkdir test-spool
 		;;
@@ -30,6 +31,7 @@ case $1 in
 		rm -f work rsyslog.out.log rsyslog.out.log.save # common work files
 		rm -f rsyslog.out.*.log
 		rm -rf test-spool
+		rm -f rsyslog.pipe
 		echo  -------------------------------------------------------------------------------
 		;;
    'startup')   # start rsyslogd with default params. $2 is the config file name to use
