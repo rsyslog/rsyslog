@@ -445,6 +445,7 @@ static void actionCommitted(action_t *pThis)
 static void actionRetry(action_t *pThis)
 {
 	actionSetState(pThis, ACT_STATE_RTRY);
+	pThis->iResumeOKinRow++;
 }
 
 
@@ -480,23 +481,39 @@ static inline void actionSuspend(action_t *pThis, time_t ttNow)
 /* actually do retry processing. Note that the function receives a timestamp so
  * that we do not need to call the (expensive) time() API.
  * Note that we do the full retry processing here, doing the configured number of
- * iterations.
- * rgerhards, 2009-05-07
+ * iterations. -- rgerhards, 2009-05-07
+ * We need to guard against module which always return RS_RET_OK from their tryResume()
+ * entry point. This is invalid, but has harsh consequences: it will cause the rsyslog
+ * engine to go into a tight loop. That obviously is not acceptable. As such, we track the
+ * count of iterations that a tryResume returning RS_RET_OK is immediately followed by
+ * an unsuccessful call to doAction(). If that happens more than 1,000 times, we assume 
+ * the return acutally is a RS_RET_SUSPENDED. In order to go through the various 
+ * resumption stages, we do this for every 1000 requests. This magic number 1000 may
+ * not be the most appropriate, but it should be thought of a "if nothing else helps"
+ * kind of facility: in the first place, the module should return a proper indication
+ * of its inability to recover. -- rgerhards, 2010-04-26.
  */
 static rsRetVal actionDoRetry(action_t *pThis, time_t ttNow)
 {
 	int iRetries;
 	int iSleepPeriod;
+	int bTreatOKasSusp;
 	DEFiRet;
 
 	ASSERT(pThis != NULL);
 
 	iRetries = 0;
 	while(pThis->eState == ACT_STATE_RTRY) {
+dbgprintf("YYY: resume in row %d\n", pThis->iResumeOKinRow);
 		iRet = pThis->pMod->tryResume(pThis->pModData);
-		if(iRet == RS_RET_OK) {
+		if((pThis->iResumeOKinRow > 999) && (pThis->iResumeOKinRow % 1000 == 0)) {
+			bTreatOKasSusp = 1;
+		} else {
+			bTreatOKasSusp = 0;
+		}
+		if((iRet == RS_RET_OK) && (!bTreatOKasSusp)) {
 			actionSetState(pThis, ACT_STATE_RDY);
-		} else if(iRet == RS_RET_SUSPENDED) {
+		} else if(iRet == RS_RET_SUSPENDED || bTreatOKasSusp) {
 			/* max retries reached? */
 			if((pThis->iResumeRetryCount != -1 && iRetries >= pThis->iResumeRetryCount)) {
 				actionSuspend(pThis, ttNow);
@@ -715,13 +732,16 @@ actionCallDoAction(action_t *pThis, msg_t *pMsg)
 	switch(iRet) {
 		case RS_RET_OK:
 			actionCommitted(pThis);
+			pThis->iResumeOKinRow = 0; /* we had a successful call! */
 			break;
 		case RS_RET_DEFER_COMMIT:
+			pThis->iResumeOKinRow = 0; /* we had a successful call! */
 			/* we are done, action state remains the same */
 			break;
 		case RS_RET_PREVIOUS_COMMITTED:
 			/* action state remains the same, but we had a commit. */
 			pThis->bHadAutoCommit = 1;
+			pThis->iResumeOKinRow = 0; /* we had a successful call! */
 			break;
 		case RS_RET_SUSPENDED:
 			actionRetry(pThis);

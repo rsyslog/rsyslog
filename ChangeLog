@@ -1,11 +1,12 @@
 ---------------------------------------------------------------------------
 Version 5.4.2  [v5-stable] (rgerhards), 2010-03-??
-- bugfix(minor): status variable was uninitialized
-  However, this would have caused harm only if NO parser modules at
-  all were loaded, which would lead to a defunctional configuration
-  at all. And, even more important, this is impossible as two parser
-  modules are built-in and thus can not be "not loaded", so we always
-  have a minimum of two.
+- bugfix(kind of): output plugin retry behaviour could cause engine to loop
+  The rsyslog engine did not guard itself against output modules that do
+  not properly convey back the tryResume() behaviour. This then leads to
+  what looks like an endless loop. I consider this to be a bug of the 
+  engine not only because it should be hardened against plugin misbehaviour,
+  but also because plugins may not be totally able to avoid this situation
+  (depending on the type of and processing done by the plugin).
 - bugfix: testbench failed when not executed in UTC+1 timezone
   accidently, the time zone information was kept inside some
   to-be-checked-for responses
@@ -13,6 +14,12 @@ Version 5.4.2  [v5-stable] (rgerhards), 2010-03-??
   message-induced off-by-one error (potential segfault) (see 4.6.2)
   The analysis has been completed and a better fix been crafted and 
   integrated.
+- bugfix(minor): status variable was uninitialized
+  However, this would have caused harm only if NO parser modules at
+  all were loaded, which would lead to a defunctional configuration
+  at all. And, even more important, this is impossible as two parser
+  modules are built-in and thus can not be "not loaded", so we always
+  have a minimum of two.
 ---------------------------------------------------------------------------
 Version 5.4.1  [v5-stable] (rgerhards), 2010-03-??
 - added new property replacer option "date-rfc3164-buggyday" primarily
