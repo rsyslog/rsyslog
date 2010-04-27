@@ -96,7 +96,8 @@ BEGINobjConstruct(wtp) /* be sure to specify the object type also in END macro! 
 	pThis->pfGetDeqBatchSize = NotImplementedDummy;
 	pThis->pfDoWork = NotImplementedDummy;
 	pThis->pfObjProcessed = NotImplementedDummy;
-	INIT_ATOMIC_HELPER_MUT(pThis->mutThrdStateChanged);
+	INIT_ATOMIC_HELPER_MUT(pThis->mutCurNumWrkThrd);
+	INIT_ATOMIC_HELPER_MUT(pThis->mutWtpState);
 ENDobjConstruct(wtp)
 
 
@@ -150,14 +151,15 @@ CODESTARTobjDestruct(wtp)
 	pthread_cond_destroy(&pThis->condThrdTrm);
 	pthread_mutex_destroy(&pThis->mutWtp);
 	pthread_attr_destroy(&pThis->attrThrd);
-	DESTROY_ATOMIC_HELPER_MUT(pThis->mutThrdStateChanged);
+	DESTROY_ATOMIC_HELPER_MUT(pThis->mutCurNumWrkThrd);
+	DESTROY_ATOMIC_HELPER_MUT(pThis->mutWtpState);
 
 	free(pThis->pszDbgHdr);
 ENDobjDestruct(wtp)
 
 
 /* Sent a specific state for the worker thread pool. -- rgerhards, 2008-01-21
- * We do not need to do atomic instructions as set operations are only
+ * We do not need to do atomic instructions as set operations are only 
  * called when terminating the pool, and then in strict sequence. So we
  * can never overwrite each other. On the other hand, it also doesn't
  * matter if the read operation obtains an older value, as we then simply
@@ -168,7 +170,7 @@ rsRetVal
 wtpSetState(wtp_t *pThis, wtpState_t iNewState)
 {
 	ISOBJ_TYPE_assert(pThis, wtp);
-	pThis->wtpState = iNewState;
+	pThis->wtpState = iNewState; // TODO: do we need a mutex here? 2010-04-26
 	return RS_RET_OK;
 }
 
@@ -188,7 +190,7 @@ wtpChkStopWrkr(wtp_t *pThis, int bLockUsrMutex)
 	/* we need a consistent value, but it doesn't really matter if it is changed
 	 * right after the fetch - then we simply do one more iteration in the worker
 	 */
-	wtpState = ATOMIC_FETCH_32BIT(pThis->wtpState);
+	wtpState = (wtpState_t) ATOMIC_FETCH_32BIT((int*)&pThis->wtpState, &pThis->mutWtpState);
 
 	if(wtpState == wtpState_SHUTDOWN_IMMEDIATE) {
 		ABORT_FINALIZE(RS_RET_TERMINATE_NOW);
@@ -233,7 +235,8 @@ wtpShutdownAll(wtp_t *pThis, wtpState_t tShutdownCmd, struct timespec *ptTimeout
 	bTimedOut = 0;
 	while(pThis->iCurNumWrkThrd > 0 && !bTimedOut) {
 		DBGPRINTF("%s: waiting %ldms on worker thread termination, %d still running\n",
-			   wtpGetDbgHdr(pThis), timeoutVal(ptTimeout), ATOMIC_FETCH_32BIT(pThis->iCurNumWrkThrd));
+			   wtpGetDbgHdr(pThis), timeoutVal(ptTimeout),
+			   ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd));
 
 		if(d_pthread_cond_timedwait(&pThis->condThrdTrm, &pThis->mutWtp, ptTimeout) != 0) {
 			DBGPRINTF("%s: timeout waiting on worker thread termination\n", wtpGetDbgHdr(pThis));
@@ -287,10 +290,11 @@ wtpWrkrExecCleanup(wti_t *pWti)
 
 	/* the order of the next two statements is important! */
 	wtiSetState(pWti, WRKTHRD_STOPPED);
-	ATOMIC_DEC(pThis->iCurNumWrkThrd);
+	ATOMIC_DEC(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd);
 
 	DBGPRINTF("%s: Worker thread %lx, terminated, num workers now %d\n",
-		  wtpGetDbgHdr(pThis), (unsigned long) pWti, ATOMIC_FETCH_32BIT(pThis->iCurNumWrkThrd));
+		  wtpGetDbgHdr(pThis), (unsigned long) pWti,
+		  ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd));
 
 	ENDfunc
 }
@@ -402,10 +406,11 @@ wtpStartWrkr(wtp_t *pThis)
 	pWti = pThis->pWrkr[i];
 	wtiSetState(pWti, WRKTHRD_RUNNING);
 	iState = pthread_create(&(pWti->thrdID), &pThis->attrThrd, wtpWorker, (void*) pWti);
-	ATOMIC_INC(pThis->iCurNumWrkThrd); /* we got one more! */
+	ATOMIC_INC(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd); /* we got one more! */
 
 	DBGPRINTF("%s: started with state %d, num workers now %d\n",
-		  wtpGetDbgHdr(pThis), iState, ATOMIC_FETCH_32BIT(pThis->iCurNumWrkThrd));
+		  wtpGetDbgHdr(pThis), iState,
+		  ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd));
 
 finalize_it:
 	d_pthread_mutex_unlock(&pThis->mutWtp);
@@ -436,7 +441,7 @@ wtpAdviseMaxWorkers(wtp_t *pThis, int nMaxWrkr)
 	if(nMaxWrkr > pThis->iNumWorkerThreads) /* limit to configured maximum */
 		nMaxWrkr = pThis->iNumWorkerThreads;
 
-	nMissing = nMaxWrkr - ATOMIC_FETCH_32BIT(pThis->iCurNumWrkThrd);
+	nMissing = nMaxWrkr - ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd);
 
 	if(nMissing > 0) {
 		DBGPRINTF("%s: high activity - starting %d additional worker thread(s).\n",

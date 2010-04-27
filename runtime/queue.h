@@ -161,6 +161,7 @@ struct queue_s {
 		} disk;
 	} tVars;
 	DEF_ATOMIC_HELPER_MUT(mutQueueSize);
+	DEF_ATOMIC_HELPER_MUT(mutLogDeq);
 };
 
 

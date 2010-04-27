@@ -82,7 +82,7 @@ wtiGetDbgHdr(wti_t *pThis)
 sbool
 wtiGetState(wti_t *pThis)
 {
-	return ATOMIC_FETCH_32BIT(pThis->bIsRunning);
+	return ATOMIC_FETCH_32BIT(&pThis->bIsRunning, &pThis->mutIsRunning);
 }
 
 
@@ -105,10 +105,11 @@ rsRetVal
 wtiSetState(wti_t *pThis, sbool bNewVal)
 {
 	ISOBJ_TYPE_assert(pThis, wti);
-	if(bNewVal)
-		ATOMIC_STORE_1_TO_INT(pThis->bIsRunning);
-	else
-		ATOMIC_STORE_0_TO_INT(pThis->bIsRunning);
+	if(bNewVal) {
+		ATOMIC_STORE_1_TO_INT(&pThis->bIsRunning, &pThis->mutIsRunning);
+	} else {
+		ATOMIC_STORE_0_TO_INT(&pThis->bIsRunning, &pThis->mutIsRunning);
+	}
 	return RS_RET_OK;
 }
 
@@ -147,7 +148,7 @@ BEGINobjDestruct(wti) /* be sure to specify the object type also in END and CODE
 CODESTARTobjDestruct(wti)
 	/* actual destruction */
 	free(pThis->batch.pElem);
-	DESTROY_ATOMIC_HELPER_MUT(pThis->mutCurrCmd);
+	DESTROY_ATOMIC_HELPER_MUT(pThis->mutIsRunning);
 
 	free(pThis->pszDbgHdr);
 ENDobjDestruct(wti)
@@ -156,7 +157,7 @@ ENDobjDestruct(wti)
 /* Standard-Constructor for the wti object
  */
 BEGINobjConstruct(wti) /* be sure to specify the object type also in END macro! */
-	INIT_ATOMIC_HELPER_MUT(pThis->mutCurrCmd);
+	INIT_ATOMIC_HELPER_MUT(pThis->mutIsRunning);
 ENDobjConstruct(wti)
 
 

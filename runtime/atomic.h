@@ -39,13 +39,13 @@
  * They simply came in too late. -- rgerhards, 2008-04-02
  */
 #ifdef HAVE_ATOMIC_BUILTINS
-#	define ATOMIC_SUB(data, val) __sync_fetch_and_sub(&(data), val)
+#	define ATOMIC_SUB(data, val) __sync_fetch_and_sub(data, val)
 #	define ATOMIC_ADD(data, val) __sync_fetch_and_add(&(data), val)
 #	define ATOMIC_INC(data, phlpmut) ((void) __sync_fetch_and_add(data, 1))
 #	define ATOMIC_INC_AND_FETCH(data) __sync_fetch_and_add(&(data), 1)
 #	define ATOMIC_DEC(data, phlpmut) ((void) __sync_sub_and_fetch(data, 1))
 #	define ATOMIC_DEC_AND_FETCH(data, phlpmut) __sync_sub_and_fetch(data, 1)
-#	define ATOMIC_FETCH_32BIT(data) ((unsigned) __sync_fetch_and_and(&(data), 0xffffffff))
+#	define ATOMIC_FETCH_32BIT(data, phlpmut) ((unsigned) __sync_fetch_and_and(data, 0xffffffff))
 #	define ATOMIC_STORE_1_TO_32BIT(data) __sync_lock_test_and_set(&(data), 1)
 #	define ATOMIC_STORE_0_TO_INT(data, phlpmut) __sync_fetch_and_and(data, 0)
 #	define ATOMIC_STORE_1_TO_INT(data, phlpmut) __sync_fetch_and_or(data, 1)
@@ -79,15 +79,15 @@
 	}
 
 #	define ATOMIC_STORE_0_TO_INT(data, hlpmut)  { \
-		pthread_mutex_lock(&hlpmut); \
+		pthread_mutex_lock(hlpmut); \
 		*(data) = 0; \
-		pthread_mutex_unlock(&hlpmut); \
+		pthread_mutex_unlock(hlpmut); \
 	}
 
 #	define ATOMIC_STORE_1_TO_INT(data, hlpmut) { \
-		pthread_mutex_lock(&hlpmut); \
+		pthread_mutex_lock(hlpmut); \
 		*(data) = 1; \
-		pthread_mutex_unlock(&hlpmut); \
+		pthread_mutex_unlock(hlpmut); \
 	}
 
 	static inline int
@@ -116,10 +116,25 @@
 		pthread_mutex_unlock(phlpmut);
 		return(val);
 	}
+
+	static inline int
+	ATOMIC_FETCH_32BIT(int *data, pthread_mutex_t *phlpmut) {
+		int val;
+		pthread_mutex_lock(phlpmut);
+		val = (*data);
+		pthread_mutex_unlock(phlpmut);
+		return(val);
+	}
+
+	static inline void
+	ATOMIC_SUB(int *data, int val, pthread_mutex_t *phlpmut) {
+		pthread_mutex_lock(phlpmut);
+		(*data) -= val;
+		pthread_mutex_unlock(phlpmut);
+	}
 #if 0
 #	warning "atomic builtins not available, using nul operations - rsyslogd will probably be racy!"
 #	define ATOMIC_INC_AND_FETCH(data) (++(data))
-#	define ATOMIC_FETCH_32BIT(data) (data) // TODO: del
 #	define ATOMIC_STORE_1_TO_32BIT(data) (data) = 1 // TODO: del
 #endif
 #	define DEF_ATOMIC_HELPER_MUT(x)  pthread_mutex_t x
