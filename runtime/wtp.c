@@ -97,6 +97,7 @@ BEGINobjConstruct(wtp) /* be sure to specify the object type also in END macro! 
 	pThis->pfOnWorkerCancel = NotImplementedDummy;
 	pThis->pfOnWorkerStartup = NotImplementedDummy;
 	pThis->pfOnWorkerShutdown = NotImplementedDummy;
+	INIT_ATOMIC_HELPER_MUT(pThis->mutThrdStateChanged);
 ENDobjConstruct(wtp)
 
 
@@ -153,6 +154,7 @@ CODESTARTobjDestruct(wtp)
 	pthread_cond_destroy(&pThis->condThrdTrm);
 	pthread_mutex_destroy(&pThis->mut);
 	pthread_mutex_destroy(&pThis->mutThrdShutdwn);
+	DESTROY_ATOMIC_HELPER_MUT(pThis->mutThrdStateChanged);
 
 	free(pThis->pszDbgHdr);
 ENDobjDestruct(wtp)
@@ -186,6 +188,20 @@ wtpWakeupAllWrkr(wtp_t *pThis)
 }
 
 
+/* set the bThrdStateChanged in an atomic way. Note that
+ * val may only be 0 or 1.
+ */
+void
+wtpSetThrdStateChanged(wtp_t *pThis, int val)
+{
+	if(val == 0) {
+		ATOMIC_STORE_0_TO_INT(&pThis->bThrdStateChanged, pThis->mutThrdStateChanged);
+	} else {
+		ATOMIC_STORE_1_TO_INT(&pThis->bThrdStateChanged, pThis->mutThrdStateChanged);
+	}
+}
+
+
 /* check if we had any worker thread changes and, if so, act
  * on them. At a minimum, terminated threads are harvested (joined).
  * This function MUST NEVER block on the queue mutex!
@@ -216,7 +232,7 @@ wtpProcessThrdChanges(wtp_t *pThis)
 	 */
 	do {
 		/* reset the change marker */
-		ATOMIC_STORE_0_TO_INT(pThis->bThrdStateChanged);
+		wtpSetThrdStateChanged(pThis, 0);
 		/* go through all threads */
 		for(i = 0 ; i < pThis->iNumWorkerThreads ; ++i) {
 			wtiProcessThrdChanges(pThis->pWrkr[i], LOCK_MUTEX);

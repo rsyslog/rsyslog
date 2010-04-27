@@ -39,6 +39,7 @@ typedef struct wti_s {
 	pthread_mutex_t mut;
 	bool bShutdownRqtd;	/* shutdown for this thread requested? 0 - no , 1 - yes */
 	uchar *pszDbgHdr;	/* header string for debug messages */
+	DEF_ATOMIC_HELPER_MUT(mutCurrCmd);
 } wti_t;
 
 /* some symbolic constants for easier reference */

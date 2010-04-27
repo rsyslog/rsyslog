@@ -140,12 +140,6 @@ rsrtInit(char **ppErrObj, obj_if_t *pObjIF)
 		CHKiRet(objClassInit(NULL)); /* *THIS* *MUST* always be the first class initilizer being called! */
 		CHKiRet(objGetObjInterface(pObjIF)); /* this provides the root pointer for all other queries */
 
-#ifndef HAVE_ATOMIC_BUILTINS
-#ifdef HAVE_SEMAPHORE_H
-		CHKiRet(atomicSemInit());
-#endif /* HAVE_SEMAPHORE_H */
-#endif /* !defined(HAVE_ATOMIC_BUILTINS) */
-
 		/* initialize core classes. We must be very careful with the order of events. Some
 		 * classes use others and if we do not initialize them in the right order, we may end
 		 * up with an invalid call. The most important thing that can happen is that an error
@@ -222,12 +216,6 @@ rsrtExit(void)
 		glblClassExit();
 		rulesetClassExit();
 		ruleClassExit();
-
-#ifndef HAVE_ATOMIC_BUILTINS
-#ifdef HAVE_SEMAPHORE_H
-		atomicSemExit();
-#endif /* HAVE_SEMAPHORE_H */
-#endif /* !defined(HAVE_ATOMIC_BUILTINS) */
 
 		objClassExit(); /* *THIS* *MUST/SHOULD?* always be the first class initilizer being called (except debug)! */
 	}

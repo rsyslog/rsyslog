@@ -32,6 +32,7 @@
 #include "obj.h"
 #include "syslogd-types.h"
 #include "template.h"
+#include "atomic.h"
 
 
 /* rgerhards 2004-11-08: The following structure represents a

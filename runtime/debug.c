@@ -1073,7 +1073,7 @@ int dbgEntrFunc(dbgFuncDB_t **ppFuncDB, const char *file, const char *func, int 
 	}
 
 	/* when we reach this point, we have a fully-initialized FuncDB! */
-	ATOMIC_INC(pFuncDB->nTimesCalled);
+	PREFER_ATOMIC_INC(pFuncDB->nTimesCalled);
 	if(bLogFuncFlow && dbgPrintNameIsInList((const uchar*)pFuncDB->file, printNameFileRoot))
 		dbgprintf("%s:%d: %s: enter\n", pFuncDB->file, pFuncDB->line, pFuncDB->func);
 	if(pThrd->stackPtr >= (int) (sizeof(pThrd->callStack) / sizeof(dbgFuncDB_t*))) {

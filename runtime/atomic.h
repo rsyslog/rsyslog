@@ -39,134 +39,29 @@
  * They simply came in too late. -- rgerhards, 2008-04-02
  */
 #ifdef HAVE_ATOMIC_BUILTINS
-#	define ATOMIC_INC(data) ((void) __sync_fetch_and_add(&(data), 1))
+#	define ATOMIC_INC(data, phlpmut) ((void) __sync_fetch_and_add(data, 1))
 #	define ATOMIC_INC_AND_FETCH(data) __sync_fetch_and_add(&(data), 1)
-#	define ATOMIC_DEC(data) ((void) __sync_sub_and_fetch(&(data), 1))
-#	define ATOMIC_DEC_AND_FETCH(data) __sync_sub_and_fetch(&(data), 1)
+#	define ATOMIC_DEC(data, phlpmut) ((void) __sync_sub_and_fetch(data, 1))
+#	define ATOMIC_DEC_AND_FETCH(data, phlpmut) __sync_sub_and_fetch(data, 1)
 #	define ATOMIC_FETCH_32BIT(data) ((unsigned) __sync_fetch_and_and(&(data), 0xffffffff))
 #	define ATOMIC_STORE_1_TO_32BIT(data) __sync_lock_test_and_set(&(data), 1)
-#	define ATOMIC_STORE_0_TO_INT(data) __sync_fetch_and_and(&(data), 0)
-#	define ATOMIC_STORE_1_TO_INT(data) __sync_fetch_and_or(&(data), 1)
+#	define ATOMIC_STORE_0_TO_INT(data, phlpmut) __sync_fetch_and_and(data, 0)
+#	define ATOMIC_STORE_1_TO_INT(data, phlpmut) __sync_fetch_and_or(data, 1)
 #	define ATOMIC_STORE_INT_TO_INT(data, val) __sync_fetch_and_or(&(data), (val))
 #	define ATOMIC_CAS(data, oldVal, newVal) __sync_bool_compare_and_swap(&(data), (oldVal), (newVal));
-#	define ATOMIC_CAS_VAL(data, oldVal, newVal) __sync_val_compare_and_swap(&(data), (oldVal), (newVal));
+#	define ATOMIC_CAS_VAL(data, oldVal, newVal, phlpmut) __sync_val_compare_and_swap(data, (oldVal), (newVal));
+
+	/* functions below are not needed if we have atomics */
+#	define DEF_ATOMIC_HELPER_MUT(x)
+#	define INIT_ATOMIC_HELPER_MUT(x)
+#	define DESTROY_ATOMIC_HELPER_MUT(x) 
+
+	/* the following operations should preferrably be done atomic, but it is
+	 * not fatal if not -- that means we can live with some missed updates. So be
+	 * sure to use these macros only if that really does not matter!
+	 */
+#	define PREFER_ATOMIC_INC(data) ((void) __sync_fetch_and_add(&(data), 1))
 #else
-#ifdef HAVE_SEMAPHORE_H
-	/* we use POSIX semaphores instead */
-
-#include "rsyslog.h"
-#include <semaphore.h>
-
-extern sem_t atomicSem;
-rsRetVal atomicSemInit(void);
-void atomicSemExit(void);
-
-#if HAVE_TYPEOF
-#define my_typeof(x) typeof(x)
-#else /* sorry, can't determine types, using 'int' */
-#define my_typeof(x) int
-#endif
-
-#	define ATOMIC_SUB(data, val) \
-({ \
-	my_typeof(data) tmp; \
-	sem_wait(&atomicSem); \
-	tmp = data; \
-	data -= val; \
-	sem_post(&atomicSem); \
-	tmp; \
-})
-
-#	define ATOMIC_ADD(data, val) \
-({ \
-	my_typeof(data) tmp; \
-	sem_wait(&atomicSem); \
-	tmp = data; \
-	data += val; \
-	sem_post(&atomicSem); \
-	tmp; \
-})
-
-#	define ATOMIC_INC_AND_FETCH(data) \
-({ \
-	my_typeof(data) tmp; \
-	sem_wait(&atomicSem); \
-	tmp = data; \
-	data += 1; \
-	sem_post(&atomicSem); \
-	tmp; \
-})
-
-#	define ATOMIC_INC(data) ((void) ATOMIC_INC_AND_FETCH(data))
-
-#	define ATOMIC_DEC_AND_FETCH(data) \
-({ \
-	sem_wait(&atomicSem); \
-	data -= 1; \
-	sem_post(&atomicSem); \
-	data; \
-})
-
-#	define ATOMIC_DEC(data) ((void) ATOMIC_DEC_AND_FETCH(data))
-
-#	define ATOMIC_FETCH_32BIT(data) ((unsigned) ATOMIC_ADD((data), 0xffffffff))
-
-#	define ATOMIC_STORE_1_TO_32BIT(data) \
-({ \
-	my_typeof(data) tmp; \
-	sem_wait(&atomicSem); \
-	tmp = data; \
-	data = 1; \
-	sem_post(&atomicSem); \
-	tmp; \
-})
-
-#	define ATOMIC_STORE_0_TO_INT(data) \
-({ \
-	my_typeof(data) tmp; \
-	sem_wait(&atomicSem); \
-	tmp = data; \
-	data = 0; \
-	sem_post(&atomicSem); \
-	tmp; \
-})
-
-#	define ATOMIC_STORE_1_TO_INT(data) \
-({ \
-	my_typeof(data) tmp; \
-	sem_wait(&atomicSem); \
-	tmp = data; \
-	data = 1; \
-	sem_post(&atomicSem); \
-	tmp; \
-})
-
-#	define ATOMIC_CAS(data, oldVal, newVal) \
-({ \
-	int ret; \
-	sem_wait(&atomicSem); \
-	if(data != oldVal) ret = 0; \
-	else \
-	{ \
-		data = newVal; \
-		ret = 1; \
-	} \
-	sem_post(&atomicSem); \
-	ret; \
-})
-
-#	define ATOMIC_CAS_VAL(data, oldVal, newVal) \
-({ \
-	sem_wait(&atomicSem); \
-	if(data == oldVal) \
-	{ \
-		data = newVal; \
-	} \
-	sem_post(&atomicSem); \
-	data; \
-})
-
-#else /* not HAVE_SEMAPHORE_H */
 	/* note that we gained parctical proof that theoretical problems DO occur
 	 * if we do not properly address them. See this blog post for details:
 	 * http://blog.gerhards.net/2009/01/rsyslog-data-race-analysis.html
@@ -174,16 +69,63 @@ void atomicSemExit(void);
 	 * simply go ahead and do without them - use mutexes or other things. The
 	 * code needs to be checked against all those cases. -- rgerhards, 2009-01-30
 	 */
+	#include <pthread.h>
+#	define ATOMIC_INC(data, phlpmut)  { \
+		pthread_mutex_lock(phlpmut); \
+		++(*(data)); \
+		pthread_mutex_unlock(phlpmut); \
+	}
+
+#	define ATOMIC_STORE_0_TO_INT(data, hlpmut)  { \
+		pthread_mutex_lock(&hlpmut); \
+		*(data) = 0; \
+		pthread_mutex_unlock(&hlpmut); \
+	}
+
+#	define ATOMIC_STORE_1_TO_INT(data, hlpmut) { \
+		pthread_mutex_lock(&hlpmut); \
+		*(data) = 1; \
+		pthread_mutex_unlock(&hlpmut); \
+	}
+
+	static inline int
+	ATOMIC_CAS_VAL(int *data, int oldVal, int newVal, pthread_mutex_t *phlpmut) {
+		int val;
+		pthread_mutex_lock(phlpmut);
+		if(*data == oldVal) {
+			*data = newVal;
+		}
+		val = *data;
+		pthread_mutex_unlock(phlpmut);
+		return(val);
+	}
+
+#	define ATOMIC_DEC(data, phlpmut)  { \
+		pthread_mutex_lock(phlpmut); \
+		--(*(data)); \
+		pthread_mutex_unlock(phlpmut); \
+	}
+
+	static inline int
+	ATOMIC_DEC_AND_FETCH(int *data, pthread_mutex_t *phlpmut) {
+		int val;
+		pthread_mutex_lock(phlpmut);
+		val = --(*data);
+		pthread_mutex_unlock(phlpmut);
+		return(val);
+	}
+#if 0
 #	warning "atomic builtins not available, using nul operations - rsyslogd will probably be racy!"
-#	define ATOMIC_INC(data) (++(data))
-#	define ATOMIC_DEC(data) (--(data))
-#	define ATOMIC_DEC_AND_FETCH(data) (--(data))
-#	define ATOMIC_FETCH_32BIT(data) (data)
-#	define ATOMIC_STORE_1_TO_32BIT(data) (data) = 1
-#	define ATOMIC_STORE_1_TO_INT(data) (data) = 1
-#	define ATOMIC_STORE_0_TO_INT(data) (data) = 0
-#	define ATOMIC_CAS_VAL(data, oldVal, newVal) (data) = (newVal)
+#	define ATOMIC_INC_AND_FETCH(data) (++(data))
+#	define ATOMIC_FETCH_32BIT(data) (data) // TODO: del
+#	define ATOMIC_STORE_1_TO_32BIT(data) (data) = 1 // TODO: del
 #endif
+#	define DEF_ATOMIC_HELPER_MUT(x)  pthread_mutex_t x
+#	define INIT_ATOMIC_HELPER_MUT(x) pthread_mutex_init(&(x), NULL)
+#	define DESTROY_ATOMIC_HELPER_MUT(x) pthread_mutex_init(&(x), NULL)
+
+#	define PREFER_ATOMIC_INC(data) ((void) ++data)
+
 #endif
 
 #endif /* #ifndef INCLUDED_ATOMIC_H */
