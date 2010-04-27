@@ -214,8 +214,8 @@ static inline void queueDrain(qqueue_t *pThis)
 	BEGINfunc
 	DBGOPRINT((obj_t*) pThis, "queue (type %d) will lose %d messages, destroying...\n", pThis->qType, pThis->iQueueSize);
 	/* iQueueSize is not decremented by qDel(), so we need to do it ourselves */
-	while(ATOMIC_DEC_AND_FETCH(pThis->iQueueSize) > 0) {
-		pThis->qDeq(pThis, &pUsr);
+	while(ATOMIC_DEC_AND_FETCH(&pThis->iQueueSize, &pThis->mutQueueSize) > 0) {
+		pThis->qDel(pThis, &pUsr);
 		if(pUsr != NULL) {
 			objDestruct(pUsr);
 		}
@@ -1226,6 +1226,8 @@ rsRetVal qqueueConstruct(qqueue_t **ppThis, queueType_t qType, int iWorkerThread
 			break;
 	}
 
+	INIT_ATOMIC_HELPER_MUT(pThis->mutQueueSize);
+
 finalize_it:
 	OBJCONSTRUCT_CHECK_SUCCESS_AND_CLEANUP
 	RETiRet;
@@ -2062,6 +2064,8 @@ CODESTARTobjDestruct(qqueue)
 	pthread_cond_destroy(&pThis->notEmpty);
 	pthread_cond_destroy(&pThis->belowFullDlyWtrMrk);
 	pthread_cond_destroy(&pThis->belowLightDlyWtrMrk);
+
+	DESTROY_ATOMIC_HELPER_MUT(pThis->mutQueueSize);
 
 	/* type-specific destructor */
 	iRet = pThis->qDestruct(pThis);

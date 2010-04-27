@@ -96,6 +96,7 @@ BEGINobjConstruct(wtp) /* be sure to specify the object type also in END macro! 
 	pThis->pfGetDeqBatchSize = NotImplementedDummy;
 	pThis->pfDoWork = NotImplementedDummy;
 	pThis->pfObjProcessed = NotImplementedDummy;
+	INIT_ATOMIC_HELPER_MUT(pThis->mutThrdStateChanged);
 ENDobjConstruct(wtp)
 
 
@@ -149,6 +150,7 @@ CODESTARTobjDestruct(wtp)
 	pthread_cond_destroy(&pThis->condThrdTrm);
 	pthread_mutex_destroy(&pThis->mutWtp);
 	pthread_attr_destroy(&pThis->attrThrd);
+	DESTROY_ATOMIC_HELPER_MUT(pThis->mutThrdStateChanged);
 
 	free(pThis->pszDbgHdr);
 ENDobjDestruct(wtp)

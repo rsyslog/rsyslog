@@ -74,6 +74,7 @@ static uchar *pszDfltNetstrmDrvrCAF = NULL; /* default CA file for the netstrm d
 static uchar *pszDfltNetstrmDrvrKeyFile = NULL; /* default key file for the netstrm driver (server) */
 static uchar *pszDfltNetstrmDrvrCertFile = NULL; /* default cert file for the netstrm driver (server) */
 static int bTerminateInputs = 0;		/* global switch that inputs shall terminate ASAP (1=> terminate) */
+static DEF_ATOMIC_HELPER_MUT(mutTerminateInputs);
 #ifdef USE_UNLIMITED_SELECT
 static int iFdSetSize = howmany(FD_SETSIZE, __NFDBITS) * sizeof (fd_mask); /* size of select() bitmask in bytes */
 #endif
@@ -139,7 +140,7 @@ static int GetGlobalInputTermState(void)
  */
 static void SetGlobalInputTermination(void)
 {
-	ATOMIC_STORE_1_TO_INT(bTerminateInputs);
+	ATOMIC_STORE_1_TO_INT(&bTerminateInputs, &mutTerminateInputs);
 }
 
 
@@ -352,6 +353,8 @@ BEGINAbstractObjClassInit(glbl, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	CHKiRet(regCfSysLineHdlr((uchar *)"optimizeforuniprocessor", 0, eCmdHdlrBinary, NULL, &bOptimizeUniProc, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"preservefqdn", 0, eCmdHdlrBinary, NULL, &bPreserveFQDN, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, NULL));
+
+	INIT_ATOMIC_HELPER_MUT(mutTerminateInputs);
 ENDObjClassInit(glbl)
 
 
@@ -374,6 +377,7 @@ BEGINObjClassExit(glbl, OBJ_IS_CORE_MODULE) /* class, version */
 	if(LocalFQDNName != NULL)
 		free(LocalFQDNName);
 	objRelease(prop, CORE_COMPONENT);
+	DESTROY_ATOMIC_HELPER_MUT(mutTerminateInputs);
 ENDObjClassExit(glbl)
 
 /* vi:set ai:

@@ -160,6 +160,7 @@ struct queue_s {
 			strm_t *pReadDel; /* current file for deleting */
 		} disk;
 	} tVars;
+	DEF_ATOMIC_HELPER_MUT(mutQueueSize);
 };
 
 

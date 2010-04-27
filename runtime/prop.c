@@ -53,6 +53,7 @@ DEFobjStaticHelpers
  */
 BEGINobjConstruct(prop) /* be sure to specify the object type also in END macro! */
 	pThis->iRefCount = 1;
+	INIT_ATOMIC_HELPER_MUT(pThis->mutRefCount);
 ENDobjConstruct(prop)
 
 
@@ -60,11 +61,12 @@ ENDobjConstruct(prop)
 BEGINobjDestruct(prop) /* be sure to specify the object type also in END and CODESTART macros! */
 	int currRefCount;
 CODESTARTobjDestruct(prop)
-	currRefCount = ATOMIC_DEC_AND_FETCH(pThis->iRefCount);
+	currRefCount = ATOMIC_DEC_AND_FETCH(&pThis->iRefCount, &pThis->mutRefCount);
 	if(currRefCount == 0) {
 		/* (only) in this case we need to actually destruct the object */
 		if(pThis->len >= CONF_PROP_BUFSIZE)
 			free(pThis->szVal.psz);
+		DESTROY_ATOMIC_HELPER_MUT(pThis->mutRefCount);
 	} else {
 		pThis = NULL; /* tell framework NOT to destructing the object! */
 	}
@@ -132,7 +134,7 @@ propConstructFinalize(prop_t __attribute__((unused)) *pThis)
  */
 static rsRetVal AddRef(prop_t *pThis)
 {
-	ATOMIC_INC(pThis->iRefCount);
+	ATOMIC_INC(&pThis->iRefCount, &pThis->mutRefCount);
 	return RS_RET_OK;
 }
 

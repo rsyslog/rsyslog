@@ -787,7 +787,7 @@ BEGINobjDestruct(msg) /* be sure to specify the object type also in END and CODE
 CODESTARTobjDestruct(msg)
 	/* DEV Debugging only ! dbgprintf("msgDestruct\t0x%lx, Ref now: %d\n", (unsigned long)pThis, pThis->iRefCount - 1); */
 #	ifdef HAVE_ATOMIC_BUILTINS
-		currRefCount = ATOMIC_DEC_AND_FETCH(pThis->iRefCount);
+		currRefCount = ATOMIC_DEC_AND_FETCH(&pThis->iRefCount, NULL);
 #	else
 		MsgLock(pThis);
 		currRefCount = --pThis->iRefCount;
@@ -843,9 +843,18 @@ CODESTARTobjDestruct(msg)
 			 * that we trim too often when the counter wraps.
 			 */
 			static unsigned iTrimCtr = 1;
+#	ifdef HAVE_ATOMICS
 			if(ATOMIC_INC_AND_FETCH(iTrimCtr) % 100000 == 0) {
 				malloc_trim(128*1024);
 			}
+#	else
+static pthread_mutex_t mutTrimCtr = PTHREAD_MUTEX_INITIALIZER;
+			d_pthread_mutex_lock(&mutTrimCtr);
+			if(iTrimCtr++ % 100000 == 0) {
+				malloc_trim(128*1024);
+			}
+			d_pthread_mutex_unlock(&mutTrimCtr);
+#	endif
 		}
 #		endif
 	} else {
@@ -1055,7 +1064,7 @@ msg_t *MsgAddRef(msg_t *pM)
 {
 	assert(pM != NULL);
 #	ifdef HAVE_ATOMIC_BUILTINS
-		ATOMIC_INC(pM->iRefCount);
+		ATOMIC_INC(&pM->iRefCount, NULL);
 #	else
 		MsgLock(pM);
 		pM->iRefCount++;

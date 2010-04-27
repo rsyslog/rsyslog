@@ -147,6 +147,8 @@ BEGINobjDestruct(wti) /* be sure to specify the object type also in END and CODE
 CODESTARTobjDestruct(wti)
 	/* actual destruction */
 	free(pThis->batch.pElem);
+	DESTROY_ATOMIC_HELPER_MUT(pThis->mutCurrCmd);
+
 	free(pThis->pszDbgHdr);
 ENDobjDestruct(wti)
 
@@ -154,6 +156,7 @@ ENDobjDestruct(wti)
 /* Standard-Constructor for the wti object
  */
 BEGINobjConstruct(wti) /* be sure to specify the object type also in END macro! */
+	INIT_ATOMIC_HELPER_MUT(pThis->mutCurrCmd);
 ENDobjConstruct(wti)
 
 

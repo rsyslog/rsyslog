@@ -26,6 +26,7 @@
 
 #include <pthread.h>
 #include "obj.h"
+#include "atomic.h"
 
 /* states for worker threads. */
 #define WRKTHRD_STOPPED  FALSE
@@ -65,6 +66,7 @@ struct wtp_s {
 	rsRetVal (*pfDoWork)(void *pUsr, void *pWti);
 	/* end user objects */
 	uchar *pszDbgHdr;	/* header string for debug messages */
+	DEF_ATOMIC_HELPER_MUT(mutThrdStateChanged);
 };
 
 /* some symbolic constants for easier reference */
@@ -82,6 +84,7 @@ rsRetVal wtpWakeupAllWrkr(wtp_t *pThis);
 rsRetVal wtpCancelAll(wtp_t *pThis);
 rsRetVal wtpSetDbgHdr(wtp_t *pThis, uchar *pszMsg, size_t lenMsg);
 rsRetVal wtpShutdownAll(wtp_t *pThis, wtpState_t tShutdownCmd, struct timespec *ptTimeout);
+//void wtpSetThrdStateChanged(wtp_t *pThis, int val);
 PROTOTYPEObjClassInit(wtp);
 PROTOTYPEpropSetMethFP(wtp, pfChkStopWrkr, rsRetVal(*pVal)(void*, int));
 PROTOTYPEpropSetMethFP(wtp, pfRateLimiter, rsRetVal(*pVal)(void*));
