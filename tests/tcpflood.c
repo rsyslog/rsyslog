@@ -471,6 +471,8 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
+	closeConnections();
+
 	printf("End of tcpflood Run\n");
 
 	exit(ret);
