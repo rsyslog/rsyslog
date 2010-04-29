@@ -39,7 +39,7 @@
  * They simply came in too late. -- rgerhards, 2008-04-02
  */
 #ifdef HAVE_ATOMIC_BUILTINS
-#	define ATOMIC_SUB(data, val) __sync_fetch_and_sub(data, val)
+#	define ATOMIC_SUB(data, val, phlpmut) __sync_fetch_and_sub(data, val)
 #	define ATOMIC_ADD(data, val) __sync_fetch_and_add(&(data), val)
 #	define ATOMIC_INC(data, phlpmut) ((void) __sync_fetch_and_add(data, 1))
 #	define ATOMIC_INC_AND_FETCH(data) __sync_fetch_and_add(&(data), 1)
