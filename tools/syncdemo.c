@@ -27,6 +27,7 @@
 #include <stdio.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <semaphore.h>
 #include <stdlib.h>
 #include <linux/unistd.h>
 #include <sys/syscall.h>
@@ -35,8 +36,8 @@
 #include <getopt.h>
 
 
-typedef enum { none, atomic, cas, mutex, spinlock } syncType_t;
-static syncType_t syncTypes[] = { none, atomic, cas, mutex, spinlock };
+typedef enum { none, atomic, cas, spinlock, mutex, semaphore } syncType_t;
+static syncType_t syncTypes[] = { none, atomic, cas, spinlock, mutex, semaphore };
 
 /* config settings */
 static int bCPUAffinity = 0;
@@ -63,16 +64,18 @@ static unsigned maxRuntime = 0;
 /* sync objects (if needed) */
 static pthread_mutex_t mut;
 static pthread_spinlock_t spin;
+static sem_t sem;
 
 static char*
 getSyncMethName(syncType_t st)
 {
 	switch(st) {
-	case none    : return "none";
-	case atomic  : return "atomic op";
-	case mutex   : return "mutex";
-	case spinlock: return "spin lock";
-	case cas     : return "cas";
+	case none     : return "none";
+	case atomic   : return "atomic op";
+	case spinlock : return "spin lock";
+	case mutex    : return "mutex";
+	case semaphore: return "semaphore";
+	case cas      : return "cas";
 	}
 }
 
@@ -132,6 +135,11 @@ void *workerThread( void *arg )
 			global_int++;
 			pthread_spin_unlock(&spin);
 			break;
+		case semaphore:
+			sem_wait(&sem);
+			global_int++;
+			sem_post(&sem);
+			break;
 		}
 
 		/* we now generate "dummy load" if instructed to do so. The idea is that
@@ -184,7 +192,7 @@ static void endTiming(void)
 			printf("%s,%d,%d,%d,%u,%u,%ld.%06.6ld\n",
 				getSyncMethName(syncType), procs, numthrds, bCPUAffinity, goal, delta, sec, usec);
 		} else {
-			printf("measured (sytem time) runtime is %ld.%06.6ld seconds\n", sec, usec);
+			printf("measured (sytem time) runtime is %ld.% 6.6ld seconds\n", sec, usec);
 			if(delta == 0) {
 				printf("Computation was done correctly.\n");
 			} else {
@@ -217,7 +225,7 @@ usage(void)
 	fprintf(stderr, "\t-c<num>   count to <num>\n");
 	fprintf(stderr, "\t-d<num>   dummy load, <num> iterations\n");
 	fprintf(stderr, "\t-t<num>   number of threads to use\n");
-	fprintf(stderr, "\t-s<type>  sync-type to use (none, atomic, mutex, spin)\n");
+	fprintf(stderr, "\t-s<type>  sync-type to use (none, atomic, mutex, spin, semaphore)\n");
 	fprintf(stderr, "\t-C        generate CSV output\n");
 	fprintf(stderr, "\t-A        test ALL sync types\n");
 	exit(2);
@@ -296,8 +304,9 @@ doTest(syncType_t st)
 	/* we have a memory leak due to calling dispRuntime(), but we don't
          * care as we terminate immediately.
          */
-	printf("%9s: total runtime %8.8ld, avg %s, min %s, max %s\n",
-	       getSyncMethName(st), (long)totalRuntime,
+	printf("%-10s: total runtime %6ld.%3.3u, avg %s, min %s, max %s\n",
+	       getSyncMethName(st),
+	       (long)totalRuntime/1000, (unsigned)(totalRuntime % 1000),
 	       dispRuntime((unsigned) (totalRuntime / numIterations)),
 	       dispRuntime(minRuntime),
 	       dispRuntime(maxRuntime));
@@ -346,6 +355,9 @@ main(int argc, char *argv[])
 			} else if(!strcmp(optarg, "spin")) {
 				syncType = spinlock;
 				pthread_spin_init(&spin, PTHREAD_PROCESS_PRIVATE);
+			} else if(!strcmp(optarg, "semaphore")) {
+				syncType = semaphore;
+				sem_init(&sem, 0, 1);
 			} else {
 				fprintf(stderr, "error: invalid sync mode '%s'\n", optarg);
 				usage();
@@ -370,10 +382,18 @@ main(int argc, char *argv[])
 	if(bAllSyncTypes) {
 		pthread_mutex_init(&mut, NULL);
 		pthread_spin_init(&spin, PTHREAD_PROCESS_PRIVATE);
+		sem_init(&sem, 0, 1);
 		for(i = 0 ; i < sizeof(syncTypes) / sizeof(syncType_t) ; ++i) {
 			doTest(syncTypes[i]);
 		}
-		printf("done running tests\n");
+		printf("Done running tests, result based on:\n");
+		printf("\tNumber of Cores.........: %d\n", procs);
+		printf("\tNumber of Threads.......: %d\n", numthrds);
+		printf("\tSet CPU Affinity........: %s\n", bCPUAffinity ? "yes" : "no");
+		printf("\tCount to................: %u\n", goal);
+		printf("\tWork for each Thread....: %u\n", thrd_WorkToDo);
+		printf("\tDummy Load Counter......: %d\n", dummyLoad);
+		printf("\tIterations..............: %d\n", numIterations);
 	} else {
 		doTest(syncType);
 	}
