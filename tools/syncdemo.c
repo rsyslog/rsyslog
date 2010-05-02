@@ -34,15 +34,20 @@
 #include <errno.h>
 #include <getopt.h>
 
+
+typedef enum { none, atomic, cas, mutex, spinlock } syncType_t;
+static syncType_t syncTypes[] = { none, atomic, cas, mutex, spinlock };
+
 /* config settings */
 static int bCPUAffinity = 0;
 static int procs = 0; /* number of processors */
 static int numthrds = 0; /* if zero, => equal num of processors */
 static unsigned goal = 50000000; /* 50 million */
-static int bCSV = 0; /* generate CVS output? */
+static int bCSV = 0; /* generate CSV output? */
 static int numIterations = 1; /* number of iterations */
 static int dummyLoad = 0;     /* number of dummy load iterations to generate */
-static enum { none, atomic, cas, mutex, spinlock } syncType;
+syncType_t syncType;
+static int bAllSyncTypes = 0;
 
 static int global_int = 0;	/* our global counter */
 static unsigned thrd_WorkToDo;	/* number of computations each thread must do */
@@ -52,17 +57,19 @@ static struct timeval tvStart, tvEnd; /* used for timing one testing iteration *
 
 /* statistic counters */
 static long long totalRuntime;
+static unsigned minRuntime = 999999999;
+static unsigned maxRuntime = 0;
 
 /* sync objects (if needed) */
 static pthread_mutex_t mut;
 static pthread_spinlock_t spin;
 
 static char*
-getSyncMethName()
+getSyncMethName(syncType_t st)
 {
-	switch(syncType) {
+	switch(st) {
 	case none    : return "none";
-	case atomic  : return "atomic instruction";
+	case atomic  : return "atomic op";
 	case mutex   : return "mutex";
 	case spinlock: return "spin lock";
 	case cas     : return "cas";
@@ -142,7 +149,7 @@ void *workerThread( void *arg )
 
 static void beginTiming(void)
 {
-	if(!bCSV) {
+	if(!(bCSV || bAllSyncTypes)) {
 		printf("Test Parameters:\n");
 		printf("\tNumber of Cores.........: %d\n", procs);
 		printf("\tNumber of Threads.......: %d\n", numthrds);
@@ -150,7 +157,7 @@ static void beginTiming(void)
 		printf("\tCount to................: %u\n", goal);
 		printf("\tWork for each Thread....: %u\n", thrd_WorkToDo);
 		printf("\tDummy Load Counter......: %d\n", dummyLoad);
-		printf("\tSync Method used........: %s\n", getSyncMethName());
+		printf("\tSync Method used........: %s\n", getSyncMethName(syncType));
 	}
 	gettimeofday(&tvStart, NULL);
 }
@@ -160,6 +167,7 @@ static void endTiming(void)
 {
 	unsigned delta;
 	long sec, usec;
+	long runtime;
 
 	gettimeofday(&tvEnd, NULL);
 	if(tvStart.tv_usec > tvEnd.tv_usec) {
@@ -171,25 +179,32 @@ static void endTiming(void)
 	usec = tvEnd.tv_usec - tvStart.tv_usec;
 
 	delta = thrd_WorkToDo * numthrds - global_int;
-	if(bCSV) {
-		printf("%s,%d,%d,%d,%u,%u,%ld.%ld\n",
-			getSyncMethName(), procs, numthrds, bCPUAffinity, goal, delta, sec, usec);
-	} else {
-		printf("measured (sytem time) runtime is %ld.%ld seconds\n", sec, usec);
-		if(delta == 0) {
-			printf("Computation was done correctly.\n");
+	if(!bAllSyncTypes) {
+		if(bCSV) {
+			printf("%s,%d,%d,%d,%u,%u,%ld.%06.6ld\n",
+				getSyncMethName(syncType), procs, numthrds, bCPUAffinity, goal, delta, sec, usec);
 		} else {
-			printf("Computation INCORRECT,\n"
-			       "\texpected %9u\n"
-			       "\treal     %9u\n"
-			       "\toff by   %9u\n",
-				thrd_WorkToDo * numthrds,
-				global_int,
-				delta);
+			printf("measured (sytem time) runtime is %ld.%06.6ld seconds\n", sec, usec);
+			if(delta == 0) {
+				printf("Computation was done correctly.\n");
+			} else {
+				printf("Computation INCORRECT,\n"
+				       "\texpected %9u\n"
+				       "\treal     %9u\n"
+				       "\toff by   %9u\n",
+					thrd_WorkToDo * numthrds,
+					global_int,
+					delta);
+			}
 		}
 	}
 
-	totalRuntime += sec * 1000 + (usec / 1000);
+	runtime = sec * 1000 + (usec / 1000);
+	totalRuntime += runtime;
+	if(runtime < minRuntime)
+		minRuntime = runtime;
+	if(runtime > maxRuntime)
+		maxRuntime = runtime;
 }
 
 
@@ -198,12 +213,13 @@ usage(void)
 {
 	fprintf(stderr, "Usage: syncdemo -a -c<num> -t<num>\n");
 	fprintf(stderr, "\t-a        set CPU affinity\n");
+	fprintf(stderr, "\t-i        number of iterations\n");
 	fprintf(stderr, "\t-c<num>   count to <num>\n");
 	fprintf(stderr, "\t-d<num>   dummy load, <num> iterations\n");
 	fprintf(stderr, "\t-t<num>   number of threads to use\n");
 	fprintf(stderr, "\t-s<type>  sync-type to use (none, atomic, mutex, spin)\n");
-	fprintf(stderr, "\t-C        generate CVS output\n");
-	fprintf(stderr, "\t-I        number of iterations\n");
+	fprintf(stderr, "\t-C        generate CSV output\n");
+	fprintf(stderr, "\t-A        test ALL sync types\n");
 	exit(2);
 }
 
@@ -248,14 +264,57 @@ singleTest(void)
 }
 
 
+/* display an unsigned ms runtime count as string. Note that the
+ * string is inside a dynamically allocated buffer, which the caller
+ * must free to prevent a memory leak.
+ */
+char *
+dispRuntime(unsigned rt)
+{
+	static char *fmtbuf;
+
+	fmtbuf = malloc(32 * sizeof(char));
+	snprintf(fmtbuf, 32, "%u.%03.3u",
+		 rt / 1000, rt % 1000);
+	return(fmtbuf);
+}
+
+
+doTest(syncType_t st)
+{
+	int i;
+
+	syncType = st;
+	totalRuntime = 0;
+	minRuntime = 999999999;
+	maxRuntime = 0;
+	for(i = 0 ; i < numIterations ; ++i) {
+		//printf("starting iteration %d\n", i);
+		singleTest();
+	}
+
+	/* we have a memory leak due to calling dispRuntime(), but we don't
+         * care as we terminate immediately.
+         */
+	printf("%9s: total runtime %8.8ld, avg %s, min %s, max %s\n",
+	       getSyncMethName(st), (long)totalRuntime,
+	       dispRuntime((unsigned) (totalRuntime / numIterations)),
+	       dispRuntime(minRuntime),
+	       dispRuntime(maxRuntime));
+}
+
+
 int
 main(int argc, char *argv[])
 {
 	int i;
 	int opt;
 
-	while((opt = getopt(argc, argv, "ac:d:i:t:s:C")) != EOF) {
+	while((opt = getopt(argc, argv, "ac:d:i:t:s:CA")) != EOF) {
 		switch((char)opt) {
+		case 'A':
+			bAllSyncTypes = 1;
+			break;
 		case 'a':
 			bCPUAffinity = 1;
 			break;
@@ -308,11 +367,16 @@ main(int argc, char *argv[])
 		numthrds = procs;
 	}
 
-	totalRuntime = 0;
-	for(i = 0 ; i < numIterations ; ++i) {
-		singleTest();
+	if(bAllSyncTypes) {
+		pthread_mutex_init(&mut, NULL);
+		pthread_spin_init(&spin, PTHREAD_PROCESS_PRIVATE);
+		for(i = 0 ; i < sizeof(syncTypes) / sizeof(syncType_t) ; ++i) {
+			doTest(syncTypes[i]);
+		}
+		printf("done running tests\n");
+	} else {
+		doTest(syncType);
 	}
 
-	printf("total runtime %ld, avg %ld\n", totalRuntime, totalRuntime / numIterations);
 	return 0;
 }
