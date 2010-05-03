@@ -15,8 +15,8 @@
 echo ===============================================================================
 echo TEST: \[pipe_noreader.sh\]: test for pipe writing without reader
 # uncomment for debugging support:
-export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
-export RSYSLOG_DEBUGLOG="log"
+#export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
+#export RSYSLOG_DEBUGLOG="log"
 source $srcdir/diag.sh init
 mkfifo ./rsyslog.pipe
 source $srcdir/diag.sh startup pipe_noreader.conf
