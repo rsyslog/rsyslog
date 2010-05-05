@@ -11,7 +11,25 @@
  * multiprocessor machine (on a uniprocessor, it will probably not display the
  * problems caused by missing synchronisation).
  *
- * compile with $ gcc -O0 -o syncdemo -lpthread syncdemo.c
+ * Note: partitioned processing mode means that all computation is first done
+ *       locally and the final result is then combined doing proper synchronization.
+ *       This mode is used as a baseline for uninterrupted processing.
+ *
+ * compile with $ gcc -O1 -o syncdemo -lpthread syncdemo.c
+ *
+ * Alternatively, you may use -O0, but not a higher level. Note that
+ * the gcc code generator does in neither case generate code really
+ * suitable to compare "part" and "none" modes. If you absolutely need
+ * to do that, you need to use inline assembly. However, the results should
+ * be fairly OK when consitently using either -O0 or -O1. If you see a big loss
+ * of performance when you compare "none" and "part", be sure to run 
+ * "none" with -t1 and watch out for the results! In any case, looking at the generated
+ * assembly code is vital to interpret results correctly. Review of generated assembly
+ * done on 2010-05-05 indicates that -O0 is probably the best choice. Note that we
+ * use the volatile attribute in one spot. This is used because it results in the
+ * best comparable result for our gcc 4.4.3, not really to invoke the volatile semantics.
+ *
+ * use "gcc -g -Wa,-ahl=syncdemo.s -lpthread syncdemo.c" to obtain a mixed code/assembly listing.
  *
  * This program REQUIRES linux. With slight modification, it may run on Solaris.
  * Note that gcc on Sparc does NOT offer atomic instruction support!
@@ -36,8 +54,8 @@
 #include <getopt.h>
 
 
-typedef enum { none, atomic, cas, spinlock, mutex, semaphore } syncType_t;
-static syncType_t syncTypes[] = { none, atomic, cas, spinlock, mutex, semaphore };
+typedef enum { part, none, atomic, cas, spinlock, mutex, semaphore } syncType_t;
+static syncType_t syncTypes[] = { part, none, atomic, cas, spinlock, mutex, semaphore };
 
 /* config settings */
 static int bCPUAffinity = 0;
@@ -70,6 +88,7 @@ static char*
 getSyncMethName(syncType_t st)
 {
 	switch(st) {
+	case part     : return "partition";
 	case none     : return "none";
 	case atomic   : return "atomic op";
 	case spinlock : return "spin lock";
@@ -90,12 +109,17 @@ gettid()
 void *workerThread( void *arg )
 {
 	int i, j;
+	volatile int partval = 0; /* use volatile so that gcc generates code similar to global var */
+	int *partptr;
 	int oldval, newval; /* for CAS sync mode */
 	int thrd_num = (int)(long)arg;
 	cpu_set_t set;
 
 	CPU_ZERO(&set);
 	CPU_SET(thrd_num % procs, &set);
+	if(syncType == part) {
+		partval = 0;
+	}
 
 	/* if enabled, try to put thread on a fixed CPU (the one that corresponds to the
 	 * thread ID). This may 
@@ -113,6 +137,11 @@ void *workerThread( void *arg )
 
 	for (i = 0; i < thrd_WorkToDo; i++) {
 		switch(syncType) {
+		case part:
+			///* one needs to use inline assembly to get this right... */
+			//asm("addl	$1, global_int(%rip)");
+			partval++;
+			break;
 		case none:
 			global_int++;
 			break;
@@ -149,6 +178,12 @@ void *workerThread( void *arg )
 		for(j = 0 ; j < dummyLoad ; ++j) {
 			/* be careful: compiler may optimize loop out! */;
 		}
+	}
+
+	if(syncType == part) {
+		pthread_mutex_lock(&mut);
+		global_int += partval;
+		pthread_mutex_unlock(&mut);
 	}
 
 	return NULL;
@@ -345,6 +380,8 @@ main(int argc, char *argv[])
 		case 's':
 			if(!strcmp(optarg, "none"))
 				syncType = none;
+			else if(!strcmp(optarg, "part"))
+				syncType = part;
 			else if(!strcmp(optarg, "atomic"))
 				syncType = atomic;
 			else if(!strcmp(optarg, "cas"))
@@ -354,7 +391,6 @@ main(int argc, char *argv[])
 				pthread_mutex_init(&mut, NULL);
 			} else if(!strcmp(optarg, "spin")) {
 				syncType = spinlock;
-				pthread_spin_init(&spin, PTHREAD_PROCESS_PRIVATE);
 			} else if(!strcmp(optarg, "semaphore")) {
 				syncType = semaphore;
 				sem_init(&sem, 0, 1);
@@ -368,10 +404,15 @@ main(int argc, char *argv[])
 		}
 	}
 
+	/* for simplicity, we init all sync helpers no matter if we need them */
+	pthread_mutex_init(&mut, NULL);
+	pthread_spin_init(&spin, PTHREAD_PROCESS_PRIVATE);
+	sem_init(&sem, 0, 1);
+
 	/* Getting number of CPUs */
 	procs = (int)sysconf(_SC_NPROCESSORS_ONLN);
-	if (procs < 0) {
-		perror( "sysconf" );
+	if(procs < 0) {
+		perror("sysconf");
 		return -1;
 	}
 
@@ -380,9 +421,6 @@ main(int argc, char *argv[])
 	}
 
 	if(bAllSyncTypes) {
-		pthread_mutex_init(&mut, NULL);
-		pthread_spin_init(&spin, PTHREAD_PROCESS_PRIVATE);
-		sem_init(&sem, 0, 1);
 		for(i = 0 ; i < sizeof(syncTypes) / sizeof(syncType_t) ; ++i) {
 			doTest(syncTypes[i]);
 		}
