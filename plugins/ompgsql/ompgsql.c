@@ -355,6 +355,7 @@ CODESTARTmodInit
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	INITChkCoreFeature(bCoreSupportsBatching, CORE_FEATURE_BATCHING);
+	DBGPRINTF("ompgsql: module compiled with rsyslog version %s.\n", VERSION);
 	DBGPRINTF("ompgsql: %susing transactional output interface.\n", bCoreSupportsBatching ? "" : "not ");
 ENDmodInit
 /* vi:set ai:
