@@ -20,18 +20,6 @@
  *
  * For further information, please see http://www.rsyslog.com
  *
- * \author Rainer Gerhards <rgerhards@adiscon.com>
- * \date 2003-10-17
- *       Some initial modifications on the sysklogd package to support
- *       liblogging. These have actually not yet been merged to the
- *       source you see currently (but they hopefully will)
- *
- * \date 2004-10-28
- *       Restarted the modifications of sysklogd. This time, we
- *       focus on a simpler approach first. The initial goal is to
- *       provide MySQL database support (so that syslogd can log
- *       to the database).
- *
  * rsyslog - An Enhanced syslogd Replacement.
  * Copyright 2003-2009 Rainer Gerhards and Adiscon GmbH.
  *
@@ -981,7 +969,6 @@ static void doDie(int sig)
 #	define MSG2 "DoDie called 5 times - unconditional exit\n"
 	static int iRetries = 0; /* debug aid */
 	dbgprintf(MSG1);
-	if(Debug)
 	if(Debug == DEBUG_FULL)
 		write(1, MSG1, sizeof(MSG1) - 1);
 	if(iRetries++ == 4) {

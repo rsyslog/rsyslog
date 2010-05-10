@@ -5088,6 +5088,21 @@ sysklogd maintainers for all their good work!
 ---------------------------------------------------------------------------
 
 ----------------------------------------------------------------------
+The following comments were left in the syslogd source. While they provide
+not too much detail, the help to date when Rainer started work on the
+project (which was 2003, now even surprising for Rainer himself ;)).
+ * \author Rainer Gerhards <rgerhards@adiscon.com>
+ * \date 2003-10-17
+ *       Some initial modifications on the sysklogd package to support
+ *       liblogging. These have actually not yet been merged to the
+ *       source you see currently (but they hopefully will)
+ *
+ * \date 2004-10-28
+ *       Restarted the modifications of sysklogd. This time, we
+ *       focus on a simpler approach first. The initial goal is to
+ *       provide MySQL database support (so that syslogd can log
+ *       to the database).
+----------------------------------------------------------------------
 The following comments are from the stock syslogd.c source. They provide
 some insight into what happened to the source before we forked
 rsyslogd. However, much of the code already has been replaced and more
