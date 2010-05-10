@@ -39,11 +39,6 @@
 #include <pthread.h>
 #include <errno.h>
 
-/// TODO: check on solaris if this is any longer needed - I don't think so - rgerhards, 2009-09-20
-//#ifdef OS_SOLARIS
-//#	include <sched.h>
-//#endif
-
 #include "rsyslog.h"
 #include "stringbuf.h"
 #include "srUtils.h"
