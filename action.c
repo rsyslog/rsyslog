@@ -503,7 +503,7 @@ static rsRetVal actionDoRetry(action_t *pThis, time_t ttNow)
 	ASSERT(pThis != NULL);
 
 	iRetries = 0;
-	while(pThis->eState == ACT_STATE_RTRY) {
+	while((*pThis->pbShutdownImmediate == 0) && pThis->eState == ACT_STATE_RTRY) {
 		iRet = pThis->pMod->tryResume(pThis->pModData);
 		if((pThis->iResumeOKinRow > 999) && (pThis->iResumeOKinRow % 1000 == 0)) {
 			bTreatOKasSusp = 1;
@@ -522,6 +522,9 @@ static rsRetVal actionDoRetry(action_t *pThis, time_t ttNow)
 				iSleepPeriod = pThis->iResumeInterval;
 				ttNow += iSleepPeriod; /* not truly exact, but sufficiently... */
 				srSleep(iSleepPeriod, 0);
+				if(*pThis->pbShutdownImmediate) {
+					ABORT_FINALIZE(RS_RET_FORCE_TERM);
+				}
 			}
 		} else if(iRet == RS_RET_DISABLE_ACTION) {
 			actionDisable(pThis);
@@ -532,6 +535,7 @@ static rsRetVal actionDoRetry(action_t *pThis, time_t ttNow)
 		pThis->iNbrResRtry = 0;
 	}
 
+finalize_it:
 	RETiRet;
 }
 
@@ -859,6 +863,7 @@ tryDoAction(action_t *pAction, batch_t *pBatch, int *pnElem, int *pbShutdownImme
 	i = pBatch->iDoneUpTo;	/* all messages below that index are processed */
 	iElemProcessed = 0;
 	iCommittedUpTo = i;
+	pAction->pbShutdownImmediate = pbShutdownImmediate;
 	while(iElemProcessed <= *pnElem && i < pBatch->nElem) {
 		if(*pbShutdownImmediate)
 			ABORT_FINALIZE(RS_RET_FORCE_TERM);
@@ -920,8 +925,9 @@ submitBatch(action_t *pAction, batch_t *pBatch, int nElem, int *pbShutdownImmedi
 	bDone = 0;
 	do {
 		localRet = tryDoAction(pAction, pBatch, &nElem, pbShutdownImmediate);
-		if(localRet == RS_RET_FORCE_TERM)
-			FINALIZE;
+		if(localRet == RS_RET_FORCE_TERM) {
+			ABORT_FINALIZE(RS_RET_FORCE_TERM);
+		}
 		if(   localRet == RS_RET_OK
 		   || localRet == RS_RET_PREVIOUS_COMMITTED
 		   || localRet == RS_RET_DEFER_COMMIT) {

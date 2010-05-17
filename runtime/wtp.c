@@ -220,6 +220,7 @@ wtpShutdownAll(wtp_t *pThis, wtpState_t tShutdownCmd, struct timespec *ptTimeout
 {
 	DEFiRet;
 	int bTimedOut;
+	int i;
 
 	ISOBJ_TYPE_assert(pThis, wtp);
 
@@ -234,6 +235,11 @@ wtpShutdownAll(wtp_t *pThis, wtpState_t tShutdownCmd, struct timespec *ptTimeout
 	pthread_cleanup_push(mutexCancelCleanup, &pThis->mutWtp);
 	bTimedOut = 0;
 	while(pThis->iCurNumWrkThrd > 0 && !bTimedOut) {
+
+for(i = 0 ; i < pThis->iNumWorkerThreads ; ++i) {
+	wtiWakeupThrd(pThis->pWrkr[i]);
+}
+
 		DBGPRINTF("%s: waiting %ldms on worker thread termination, %d still running\n",
 			   wtpGetDbgHdr(pThis), timeoutVal(ptTimeout),
 			   ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd));
@@ -348,8 +354,14 @@ wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in 
 	pThis = pWti->pWtp;
 	ISOBJ_TYPE_assert(pThis, wtp);
 
+	/* block all signals */
 	sigfillset(&sigSet);
 	pthread_sigmask(SIG_BLOCK, &sigSet, NULL);
+
+	/* but ignore SIGTTN, which we (ab)use to signal the thread to shutdown -- rgerhards, 2009-07-20 */
+	sigemptyset(&sigSet);
+	sigaddset(&sigSet, SIGTTIN);
+	pthread_sigmask(SIG_UNBLOCK, &sigSet, NULL);
 
 #	if HAVE_PRCTL && defined PR_SET_NAME
 	/* set thread name - we ignore if the call fails, has no harsh consequences... */

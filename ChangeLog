@@ -1,5 +1,11 @@
 ---------------------------------------------------------------------------
 Version 5.5.5  [DEVEL] (rgerhards), 2010-05-??
+- added new cancel-reduced action thread termination method
+  We now manage to cancel threads that block inside a retry loop to
+  terminate without the need to cancel the thread. Avoiding cancellation
+  helps keep the system complexity minimal and thus provides for better
+  stability. This also solves some issues with improper shutdown when
+  inside an action retry loop.
 ---------------------------------------------------------------------------
 Version 5.5.4  [DEVEL] (rgerhards), 2010-05-03
 - This version offers full support for Solaris on Intel and Sparc

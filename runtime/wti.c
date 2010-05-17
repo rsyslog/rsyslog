@@ -109,6 +109,29 @@ wtiSetState(wti_t *pThis, sbool bNewVal)
 }
 
 
+/* advise all workers to start by interrupting them. That should unblock all srSleep()
+ * calls.
+ */
+rsRetVal
+wtiWakeupThrd(wti_t *pThis)
+{
+	DEFiRet;
+
+	ISOBJ_TYPE_assert(pThis, wti);
+
+
+	if(wtiGetState(pThis)) {
+		/* we first try the cooperative "cancel" interface */
+		pthread_kill(pThis->thrdID, SIGTTIN);
+		dbgprintf("sent SIGTTIN to worker thread %u, giving it a chance to terminate\n", (unsigned) pThis->thrdID);
+		srSleep(0, 10000);
+		dbgprintf("cooperative worker termination failed, using cancellation...\n");
+	}
+
+	RETiRet;
+}
+
+
 /* Cancel the thread. If the thread is not running. But it is save and legal to
  * call wtiCancelThrd() in such situations. This function only returns when the
  * thread has terminated. Else we may get race conditions all over the code...
@@ -125,7 +148,16 @@ wtiCancelThrd(wti_t *pThis)
 
 	ISOBJ_TYPE_assert(pThis, wti);
 
+
 	if(wtiGetState(pThis)) {
+		/* we first try the cooperative "cancel" interface */
+#if 0
+		pthread_kill(pThis->thrdID, SIGTTIN);
+		dbgprintf("sent SIGTTIN to worker thread %u, giving it a chance to terminate\n", (unsigned) pThis->thrdID);
+		srSleep(0, 10000);
+		dbgprintf("cooperative worker termination failed, using cancellation...\n");
+#endif
+
 		dbgoprint((obj_t*) pThis, "canceling worker thread\n");
 		pthread_cancel(pThis->thrdID);
 		/* now wait until the thread terminates... */

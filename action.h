@@ -85,6 +85,7 @@ struct action_s {
 	SYNC_OBJ_TOOL;		/* required for mutex support */
 	pthread_mutex_t mutActExec; /* mutex to guard actual execution of doAction for single-threaded modules */
 	uchar *pszName;		/* action name (for documentation) */
+	int *pbShutdownImmediate;/* to facilitate shutdown, if var is 1, shut down immediately */
 	//uchar **ppMsgs;		/* pointer to action-calling parameters (kept in structure to save alloc() time!) */
 	void *ppMsgs;		/* pointer to action-calling parameters (kept in structure to save alloc() time!) */
 	size_t *lenMsgs;	/* length of message in ppMsgs */
