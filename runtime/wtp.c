@@ -228,6 +228,10 @@ wtpShutdownAll(wtp_t *pThis, wtpState_t tShutdownCmd, struct timespec *ptTimeout
 	d_pthread_mutex_lock(pThis->pmutUsr);
 	wtpSetState(pThis, tShutdownCmd);
 	pthread_cond_broadcast(pThis->pcondBusy); /* wake up all workers */
+	/* awake workers in retry loop */
+	for(i = 0 ; i < pThis->iNumWorkerThreads ; ++i) {
+		wtiWakeupThrd(pThis->pWrkr[i]);
+	}
 	d_pthread_mutex_unlock(pThis->pmutUsr);
 
 	/* wait for worker thread termination */
@@ -235,11 +239,6 @@ wtpShutdownAll(wtp_t *pThis, wtpState_t tShutdownCmd, struct timespec *ptTimeout
 	pthread_cleanup_push(mutexCancelCleanup, &pThis->mutWtp);
 	bTimedOut = 0;
 	while(pThis->iCurNumWrkThrd > 0 && !bTimedOut) {
-
-for(i = 0 ; i < pThis->iNumWorkerThreads ; ++i) {
-	wtiWakeupThrd(pThis->pWrkr[i]);
-}
-
 		DBGPRINTF("%s: waiting %ldms on worker thread termination, %d still running\n",
 			   wtpGetDbgHdr(pThis), timeoutVal(ptTimeout),
 			   ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd));
@@ -248,6 +247,12 @@ for(i = 0 ; i < pThis->iNumWorkerThreads ; ++i) {
 			DBGPRINTF("%s: timeout waiting on worker thread termination\n", wtpGetDbgHdr(pThis));
 			bTimedOut = 1;	/* we exit the loop on timeout */
 		}
+
+		/* awake workers in retry loop */
+		for(i = 0 ; i < pThis->iNumWorkerThreads ; ++i) {
+			wtiWakeupThrd(pThis->pWrkr[i]);
+		}
+
 	}
 	pthread_cleanup_pop(1);
 
@@ -298,7 +303,7 @@ wtpWrkrExecCleanup(wti_t *pWti)
 	wtiSetState(pWti, WRKTHRD_STOPPED);
 	ATOMIC_DEC(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd);
 
-	DBGPRINTF("%s: Worker thread %lx, terminated, num workers now %d\n",
+	DBGPRINTF("%s: Worker thread %lx, terminated, um workers now %d\n",
 		  wtpGetDbgHdr(pThis), (unsigned long) pWti,
 		  ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd));
 

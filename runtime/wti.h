@@ -52,6 +52,7 @@ rsRetVal wtiSetDbgHdr(wti_t *pThis, uchar *pszMsg, size_t lenMsg);
 rsRetVal wtiCancelThrd(wti_t *pThis);
 rsRetVal wtiSetAlwaysRunning(wti_t *pThis);
 rsRetVal wtiSetState(wti_t *pThis, sbool bNew);
+rsRetVal wtiWakeupThrd(wti_t *pThis);
 sbool wtiGetState(wti_t *pThis);
 PROTOTYPEObjClassInit(wti);
 PROTOTYPEpropSetMeth(wti, pszDbgHdr, uchar*);
