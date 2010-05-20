@@ -87,8 +87,7 @@ option. Otherwise you will become vulnerable to SQL injection. <br>
 To escape:<br>
 % = \%<br>
 \ = \\ --&gt; '\' is used to escape (as in C)<br>
-$template TraditionalFormat,%timegenerated% %HOSTNAME%
-%syslogtag%%msg%\n"<br>
+$template TraditionalFormat,"%timegenerated% %HOSTNAME% %syslogtag%%msg%\n"<br>
 <br>
 Properties can be accessed by the <a href="property_replacer.html">property
 replacer</a> (see there for details).</p>
