@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 5.5.5  [DEVEL] (rgerhards), 2010-05-??
+Version 5.5.5  [DEVEL] (rgerhards), 2010-05-20
 - added new cancel-reduced action thread termination method
   We now manage to cancel threads that block inside a retry loop to
   terminate without the need to cancel the thread. Avoiding cancellation
