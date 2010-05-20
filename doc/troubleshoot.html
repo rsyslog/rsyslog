@@ -113,7 +113,7 @@ the development versions).
 <p>Active support from the user base is very important to help us track down those things.
 Most often, serious problems are the result of some memory misadressing. During development,
 we routinely use valgrind, a very well and capable memory debugger. This helps us to create
-pretty clean code. But valgrind can not detect anything, most importantly not code pathes 
+pretty clean code. But valgrind can not detect everything, most importantly not code pathes 
 that are never executed. So of most use for us is information about aborts and abort locations.
 <p>Unforutnately, faults rooted in adressing errors typically show up only later, so the
 actual abort location is in an unrelated spot. To help track down the original spot,
