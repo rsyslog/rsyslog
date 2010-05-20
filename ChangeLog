@@ -64,6 +64,8 @@ Version 4.6.3  [v4-stable] (rgerhards), 2010-04-??
   all 32-bit platforms
 - bugfix: local unix system log socket was deleted even when it was
   not configured
+- some doc fixes; incorrect config samples could cause confusion
+  thanks to Anthony Edwards for pointing the problems out
 ---------------------------------------------------------------------------
 Version 4.6.2  [v4-stable] (rgerhards), 2010-03-26
 - new feature: "." action type added to support writing files to relative
