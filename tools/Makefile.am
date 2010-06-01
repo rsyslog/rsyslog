@@ -21,6 +21,8 @@ rsyslogd_SOURCES = \
 	pmrfc5424.h \
 	pmrfc3164.c \
 	pmrfc3164.h \
+	smtradfile.c \
+	smtradfile.h \
 	iminternal.c \
 	iminternal.h \
 	pidfile.c \

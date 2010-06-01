@@ -54,7 +54,8 @@ typedef enum eModType_ {
 	eMOD_IN = 0,	/* input module */
 	eMOD_OUT = 1,	/* output module */
 	eMOD_LIB = 2,	/* library module */
-	eMOD_PARSER = 3	/* parser module */
+	eMOD_PARSER = 3,/* parser module */
+	eMOD_STRGEN = 4	/* strgen module */
 } eModType_t;
 
 
@@ -122,6 +123,9 @@ struct modInfo_s {
 		struct { /* data for parser modules */
 			rsRetVal (*parse)(msg_t*);
 		} pm;
+		struct { /* data for strgen modules */
+			rsRetVal (*strgen)(msg_t*, uchar* pBuf);
+		} sm;
 	} mod;
 	void *pModHdlr; /* handler to the dynamic library holding the module */
 #	ifdef DEBUG

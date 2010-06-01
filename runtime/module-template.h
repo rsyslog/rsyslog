@@ -49,6 +49,9 @@
 #define DEF_PMOD_STATIC_DATA \
 	DEFobjCurrIf(obj) \
 	DEF_MOD_STATIC_DATA
+#define DEF_SMOD_STATIC_DATA \
+	DEFobjCurrIf(obj) \
+	DEF_MOD_STATIC_DATA
 
 
 /* Macro to define the module type. Each module can only have a single type. If
@@ -69,6 +72,7 @@ static rsRetVal modGetType(eModType_t *modType) \
 #define MODULE_TYPE_INPUT MODULE_TYPE(eMOD_IN)
 #define MODULE_TYPE_OUTPUT MODULE_TYPE(eMOD_OUT)
 #define MODULE_TYPE_PARSER MODULE_TYPE(eMOD_PARSER)
+#define MODULE_TYPE_STRGEN MODULE_TYPE(eMOD_STRGEN)
 #define MODULE_TYPE_LIB \
 	DEF_LMOD_STATIC_DATA \
 	MODULE_TYPE(eMOD_LIB)
@@ -416,6 +420,18 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 		*pEtryPoint = GetParserName;\
 	}
 
+/* the following definition is the standard block for queryEtryPt for Strgen
+ * modules. This can be used if no specific handling (e.g. to cover version
+ * differences) is needed.
+ */
+#define CODEqueryEtryPt_STD_SMOD_QUERIES \
+	CODEqueryEtryPt_STD_MOD_QUERIES \
+	else if(!strcmp((char*) name, "strgen")) {\
+		*pEtryPoint = strgen;\
+	} else if(!strcmp((char*) name, "GetName")) {\
+		*pEtryPoint = GetStrgenName;\
+	}
+
 /* modInit()
  * This has an extra parameter, which is the specific name of the modInit
  * function. That is needed for built-in modules, which must have unique
@@ -621,11 +637,38 @@ static rsRetVal parse(msg_t *pMsg)\
 }
 
 
+/* strgen() - main entry point of parser modules
+ */
+#define BEGINstrgen \
+static rsRetVal strgen(msg_t *pMsg, uchar **ppBuf, size_t *pLenBuf) \
+{\
+	DEFiRet;
+
+#define CODESTARTstrgen \
+	assert(pMsg != NULL);
+
+#define ENDstrgen \
+	RETiRet;\
+}
+
+
 /* function to specify the parser name. This is done via a single command which
  * receives a ANSI string as parameter.
  */
 #define PARSER_NAME(x) \
 static rsRetVal GetParserName(uchar **ppSz)\
+{\
+	*ppSz = UCHAR_CONSTANT(x);\
+	return RS_RET_OK;\
+}
+
+
+
+/* function to specify the strgen name. This is done via a single command which
+ * receives a ANSI string as parameter.
+ */
+#define STRGEN_NAME(x) \
+static rsRetVal GetStrgenName(uchar **ppSz)\
 {\
 	*ppSz = UCHAR_CONSTANT(x);\
 	return RS_RET_OK;\

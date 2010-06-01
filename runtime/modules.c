@@ -58,11 +58,13 @@
 #include "modules.h"
 #include "errmsg.h"
 #include "parser.h"
+#include "strgen.h"
 
 /* static data */
 DEFobjStaticHelpers
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(parser)
+DEFobjCurrIf(strgen)
 
 /* we must ensure that only one thread at one time tries to load or unload
  * modules, otherwise we may see race conditions. This first came up with
@@ -406,9 +408,10 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 {
 	rsRetVal localRet;
 	modInfo_t *pNew = NULL;
-	uchar *pParserName;
+	uchar *pName;
 	parser_t *pParser; /* used for parser modules */
-	rsRetVal (*GetParserName)(uchar**);
+	strgen_t *pStrgen; /* used for strgen modules */
+	rsRetVal (*GetName)(uchar**);
 	rsRetVal (*modGetType)(eModType_t *pType);
 	DEFiRet;
 
@@ -487,8 +490,8 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 			CHKiRet(objUse(parser, CORE_COMPONENT));
 			/* here, we create a new parser object */
 			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"parse", &pNew->mod.pm.parse));
-			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"GetParserName", &GetParserName));
-			CHKiRet(GetParserName(&pParserName));
+			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"GetParserName", &GetName));
+			CHKiRet(GetName(&pName));
 			CHKiRet(parser.Construct(&pParser));
 
 			/* check some features */
@@ -501,9 +504,25 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 				CHKiRet(parser.SetDoPRIParsing(pParser, TRUE));
 			}
 
-			CHKiRet(parser.SetName(pParser, pParserName));
+			CHKiRet(parser.SetName(pParser, pName));
 			CHKiRet(parser.SetModPtr(pParser, pNew));
 			CHKiRet(parser.ConstructFinalize(pParser));
+			break;
+		case eMOD_STRGEN:
+			/* first, we need to obtain the strgen object. We could not do that during
+			 * init as that would have caused class bootstrap issues which are not
+			 * absolutely necessary. Note that we can call objUse() multiple times, it
+			 * handles that.
+			 */
+			CHKiRet(objUse(strgen, CORE_COMPONENT));
+			/* here, we create a new parser object */
+			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"strgen", &pNew->mod.sm.strgen));
+			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"GetName", &GetName));
+			CHKiRet(GetName(&pName));
+			CHKiRet(strgen.Construct(&pStrgen));
+			CHKiRet(strgen.SetName(pStrgen, pName));
+			CHKiRet(strgen.SetModPtr(pStrgen, pNew));
+			CHKiRet(strgen.ConstructFinalize(pStrgen));
 			break;
 	}
 
@@ -554,6 +573,9 @@ static void modPrintList(void)
 		case eMOD_PARSER:
 			dbgprintf("parser");
 			break;
+		case eMOD_STRGEN:
+			dbgprintf("strgen");
+			break;
 		}
 		dbgprintf(" module.\n");
 		dbgprintf("Entry points:\n");
@@ -585,6 +607,10 @@ static void modPrintList(void)
 		case eMOD_PARSER:
 			dbgprintf("Parser Module Entry Points\n");
 			dbgprintf("\tparse:              0x%lx\n", (unsigned long) pMod->mod.pm.parse);
+			break;
+		case eMOD_STRGEN:
+			dbgprintf("Strgen Module Entry Points\n");
+			dbgprintf("\tstrgen:            0x%lx\n", (unsigned long) pMod->mod.sm.strgen);
 			break;
 		}
 		dbgprintf("\n");

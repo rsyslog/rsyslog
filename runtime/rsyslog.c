@@ -81,6 +81,7 @@
 #include "rule.h"
 #include "ruleset.h"
 #include "parser.h"
+#include "strgen.h"
 #include "atomic.h"
 
 /* forward definitions */
@@ -185,6 +186,8 @@ rsrtInit(char **ppErrObj, obj_if_t *pObjIF)
 		CHKiRet(confClassInit(NULL));
 		if(ppErrObj != NULL) *ppErrObj = "parser";
 		CHKiRet(parserClassInit(NULL));
+		if(ppErrObj != NULL) *ppErrObj = "strgen";
+		CHKiRet(strgenClassInit(NULL));
 
 		/* dummy "classes" */
 		if(ppErrObj != NULL) *ppErrObj = "str";

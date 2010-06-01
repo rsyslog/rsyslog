@@ -36,12 +36,14 @@
 #include "dirty.h"
 #include "obj.h"
 #include "errmsg.h"
+#include "strgen.h"
 #include "unicode-helper.h"
 
 /* static data */
 DEFobjCurrIf(obj)
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(regexp)
+DEFobjCurrIf(strgen)
 
 static int bFirstRegexpErrmsg = 1; /**< did we already do a "can't load regexp" error message? */
 static struct template *tplRoot = NULL;	/* the root of the template list */
@@ -52,7 +54,8 @@ static struct template *tplLastStatic = NULL; /* last static element of the temp
 
 /* helper to tplToString, extends buffer */
 #define ALLOC_INC 128
-static inline rsRetVal ExtendBuf(uchar **pBuf, size_t *pLenBuf, size_t iMinSize)
+rsRetVal
+ExtendBuf(uchar **pBuf, size_t *pLenBuf, size_t iMinSize)
 {
 	uchar *pNewBuf;
 	size_t iNewSize;
@@ -78,7 +81,6 @@ finalize_it:
  * offers big performance improvements.
  * rewritten 2009-06-19 rgerhards
  */
-extern char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt);
 rsRetVal tplToString(struct template *pTpl, msg_t *pMsg, uchar **ppBuf, size_t *pLenBuf)
 {
 	DEFiRet;
@@ -93,59 +95,8 @@ rsRetVal tplToString(struct template *pTpl, msg_t *pMsg, uchar **ppBuf, size_t *
 	assert(ppBuf != NULL);
 	assert(pLenBuf != NULL);
 
-	if(pTpl->tplMod != NULL) {
-		dbgprintf("XXX: template module, NULL operation, *ppBuf = %p\n", *ppBuf);
-		iBuf = 0;
-		dbgprintf("TIMESTAMP\n");
-		/* TIMESTAMP + ' ' */
-		dbgprintf("getTimeReported\n");
-		pVal = (uchar*) getTimeReported(pMsg, tplFmtDefault);
-		dbgprintf("obtain iLenVal ptr %p\n", pVal);
-		iLenVal = ustrlen(pVal);
-		dbgprintf("TIMESTAMP pVal='%p', iLenVal=%d\n", pVal, iLenVal);
-		if(iBuf + iLenVal + 1 >= *pLenBuf) /* we reserve one char for the final \0! */
-			CHKiRet(ExtendBuf(ppBuf, pLenBuf, iBuf + iLenVal + 1));
-		memcpy(*ppBuf + iBuf, pVal, iLenVal);
-		iBuf += iLenVal;
-		*(*ppBuf + iBuf++) = ' ';
-
-		dbgprintf("HOSTNAME\n");
-		/* HOSTNAME + ' ' */
-		pVal = (uchar*) getHOSTNAME(pMsg);
-		iLenVal = getHOSTNAMELen(pMsg);
-		if(iBuf + iLenVal + 1 >= *pLenBuf) /* we reserve one char for the ' '! */
-			CHKiRet(ExtendBuf(ppBuf, pLenBuf, iBuf + iLenVal + 1));
-		memcpy(*ppBuf + iBuf, pVal, iLenVal);
-		iBuf += iLenVal;
-		*(*ppBuf + iBuf++) = ' ';
-
-		dbgprintf("TAG\n");
-		/* syslogtag */
-		/* max size for TAG assumed 200 * TODO: check! */
-		if(iBuf + 200 >= *pLenBuf)
-			CHKiRet(ExtendBuf(ppBuf, pLenBuf, iBuf + 200));
-		getTAG(pMsg, &pVal, &iLenVal);
-		memcpy(*ppBuf + iBuf, pVal, iLenVal);
-		iBuf += iLenVal;
-
-		dbgprintf("MSG\n");
-		/* MSG, plus leading space if necessary */
-		pVal = getMSG(pMsg);
-		iLenVal = getMSGLen(pMsg);
-		if(iBuf + iLenVal + 1 >= *pLenBuf) /* we reserve one char for the leading SP*/
-			CHKiRet(ExtendBuf(ppBuf, pLenBuf, iBuf + iLenVal + 1));
-		if(pVal[0] != ' ')
-			*(*ppBuf + iBuf++) = ' ';
-		memcpy(*ppBuf + iBuf, pVal, iLenVal);
-		iBuf += iLenVal;
-
-		dbgprintf("Trailer\n");
-		/* end sequence */
-		iLenVal = 2;
-		if(iBuf + iLenVal  >= *pLenBuf) /* we reserve one char for the final \0! */
-			CHKiRet(ExtendBuf(ppBuf, pLenBuf, iBuf + iLenVal + 1));
-		*(*ppBuf + iBuf++) = '\n';
-		*(*ppBuf + iBuf) = '\0';
+	if(pTpl->pStrgen != NULL) {
+		CHKiRet(pTpl->pStrgen(pMsg, ppBuf, pLenBuf));
 		FINALIZE;
 	}
 
@@ -897,6 +848,7 @@ tplAddTplMod(struct template *pTpl, uchar** ppRestOfConfLine)
 {
 	uchar *pSrc, *pDst;
 	uchar szMod[2048];
+	strgen_t *pStrgen;
 	DEFiRet;
 
 	pSrc = *ppRestOfConfLine;
@@ -906,8 +858,11 @@ tplAddTplMod(struct template *pTpl, uchar** ppRestOfConfLine)
 	}
 	*pDst = '\0';
 	*ppRestOfConfLine = pSrc;
-	pTpl->tplMod = ustrdup(szMod);
-	dbgprintf("template bound to template module '%s'\n", szMod);
+	CHKiRet(strgen.FindStrgen(&pStrgen, szMod));
+	pTpl->pStrgen = pStrgen->pModule->mod.sm.strgen;
+	dbgprintf("template bound to strgen '%s'\n", szMod);
+
+finalize_it:
 	RETiRet;
 }
 
@@ -1286,6 +1241,7 @@ rsRetVal templateInit()
 	DEFiRet;
 	CHKiRet(objGetObjInterface(&obj));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	CHKiRet(objUse(strgen, CORE_COMPONENT));
 
 finalize_it:
 	RETiRet;

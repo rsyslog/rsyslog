@@ -32,7 +32,7 @@ struct template {
 	struct template *pNext;
 	char *pszName;
 	int iLenName;
-	uchar *tplMod;		/* name of template module to use * TODO: replace by ptr to entry point! */
+	rsRetVal (*pStrgen)(msg_t*, uchar**, size_t *);	/* name of strgen to use (bound if non-NULL!) */
 	int tpenElements; /* number of elements in templateEntry list */
 	struct templateEntry *pEntryRoot;
 	struct templateEntry *pEntryLast;

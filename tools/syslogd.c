@@ -116,6 +116,7 @@
 #include "omdiscard.h"
 #include "pmrfc5424.h"
 #include "pmrfc3164.h"
+#include "smtradfile.h"
 #include "threads.h"
 #include "wti.h"
 #include "queue.h"
@@ -1999,6 +2000,9 @@ static rsRetVal loadBuildInModules(void)
 	/* and set default parser modules (order is *very* important, legacy (3164) parse needs to go last! */
 	CHKiRet(parser.AddDfltParser(UCHAR_CONSTANT("rsyslog.rfc5424")));
 	CHKiRet(parser.AddDfltParser(UCHAR_CONSTANT("rsyslog.rfc3164")));
+
+	/* load build-in strgen modules */
+	CHKiRet(module.doModInit(modInitsmtradfile, UCHAR_CONSTANT("builtin-smtradfile"), NULL));
 
 	/* ok, initialization of the command handler probably does not 100% belong right in
 	 * this space here. However, with the current design, this is actually quite a good

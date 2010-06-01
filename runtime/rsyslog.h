@@ -133,6 +133,8 @@ typedef struct wtp_s wtp_t;
 typedef struct modInfo_s modInfo_t;
 typedef struct parser_s parser_t;
 typedef struct parserList_s parserList_t;
+typedef struct strgen_s strgen_t;
+typedef struct strgenList_s strgenList_t;
 typedef rsRetVal (*prsf_t)(struct vmstk_s*, int);	/* pointer to a RainerScript function */
 typedef uint64 qDeqID;	/* queue Dequeue order ID. 32 bits is considered dangerously few */
 
