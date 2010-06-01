@@ -36,6 +36,7 @@
 #include "dirty.h"
 #include "obj.h"
 #include "errmsg.h"
+#include "unicode-helper.h"
 
 /* static data */
 DEFobjCurrIf(obj)
@@ -77,6 +78,7 @@ finalize_it:
  * offers big performance improvements.
  * rewritten 2009-06-19 rgerhards
  */
+extern char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt);
 rsRetVal tplToString(struct template *pTpl, msg_t *pMsg, uchar **ppBuf, size_t *pLenBuf)
 {
 	DEFiRet;
@@ -90,6 +92,62 @@ rsRetVal tplToString(struct template *pTpl, msg_t *pMsg, uchar **ppBuf, size_t *
 	assert(pMsg != NULL);
 	assert(ppBuf != NULL);
 	assert(pLenBuf != NULL);
+
+	if(pTpl->tplMod != NULL) {
+		dbgprintf("XXX: template module, NULL operation, *ppBuf = %p\n", *ppBuf);
+		iBuf = 0;
+		dbgprintf("TIMESTAMP\n");
+		/* TIMESTAMP + ' ' */
+		dbgprintf("getTimeReported\n");
+		pVal = (uchar*) getTimeReported(pMsg, tplFmtDefault);
+		dbgprintf("obtain iLenVal ptr %p\n", pVal);
+		iLenVal = ustrlen(pVal);
+		dbgprintf("TIMESTAMP pVal='%p', iLenVal=%d\n", pVal, iLenVal);
+		if(iBuf + iLenVal + 1 >= *pLenBuf) /* we reserve one char for the final \0! */
+			CHKiRet(ExtendBuf(ppBuf, pLenBuf, iBuf + iLenVal + 1));
+		memcpy(*ppBuf + iBuf, pVal, iLenVal);
+		iBuf += iLenVal;
+		*(*ppBuf + iBuf++) = ' ';
+
+		dbgprintf("HOSTNAME\n");
+		/* HOSTNAME + ' ' */
+		pVal = (uchar*) getHOSTNAME(pMsg);
+		iLenVal = getHOSTNAMELen(pMsg);
+		if(iBuf + iLenVal + 1 >= *pLenBuf) /* we reserve one char for the ' '! */
+			CHKiRet(ExtendBuf(ppBuf, pLenBuf, iBuf + iLenVal + 1));
+		memcpy(*ppBuf + iBuf, pVal, iLenVal);
+		iBuf += iLenVal;
+		*(*ppBuf + iBuf++) = ' ';
+
+		dbgprintf("TAG\n");
+		/* syslogtag */
+		/* max size for TAG assumed 200 * TODO: check! */
+		if(iBuf + 200 >= *pLenBuf)
+			CHKiRet(ExtendBuf(ppBuf, pLenBuf, iBuf + 200));
+		getTAG(pMsg, &pVal, &iLenVal);
+		memcpy(*ppBuf + iBuf, pVal, iLenVal);
+		iBuf += iLenVal;
+
+		dbgprintf("MSG\n");
+		/* MSG, plus leading space if necessary */
+		pVal = getMSG(pMsg);
+		iLenVal = getMSGLen(pMsg);
+		if(iBuf + iLenVal + 1 >= *pLenBuf) /* we reserve one char for the leading SP*/
+			CHKiRet(ExtendBuf(ppBuf, pLenBuf, iBuf + iLenVal + 1));
+		if(pVal[0] != ' ')
+			*(*ppBuf + iBuf++) = ' ';
+		memcpy(*ppBuf + iBuf, pVal, iLenVal);
+		iBuf += iLenVal;
+
+		dbgprintf("Trailer\n");
+		/* end sequence */
+		iLenVal = 2;
+		if(iBuf + iLenVal  >= *pLenBuf) /* we reserve one char for the final \0! */
+			CHKiRet(ExtendBuf(ppBuf, pLenBuf, iBuf + iLenVal + 1));
+		*(*ppBuf + iBuf++) = '\n';
+		*(*ppBuf + iBuf) = '\0';
+		FINALIZE;
+	}
 
 	/* loop through the template. We obtain one value
 	 * and copy it over to our dynamic string buffer. Then, we
@@ -117,10 +175,11 @@ rsRetVal tplToString(struct template *pTpl, msg_t *pMsg, uchar **ppBuf, size_t *
 				doSQLEscape(&pVal, &iLenVal, &bMustBeFreed, 0);
 		}
 		/* got source, now copy over */
-		if(iBuf + iLenVal >= *pLenBuf) /* we reserve one char for the final \0! */
-			CHKiRet(ExtendBuf(ppBuf, pLenBuf, iBuf + iLenVal + 1));
-
 		if(iLenVal > 0) { /* may be zero depending on property */
+			/* first, make sure buffer fits */
+			if(iBuf + iLenVal >= *pLenBuf) /* we reserve one char for the final \0! */
+				CHKiRet(ExtendBuf(ppBuf, pLenBuf, iBuf + iLenVal + 1));
+
 			memcpy(*ppBuf + iBuf, pVal, iLenVal);
 			iBuf += iLenVal;
 		}
@@ -829,10 +888,34 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 }
 
 
+/* Add a new entry for a template module.
+ * returns pointer to new object if it succeeds, NULL otherwise.
+ * rgerhards, 2010-05-31
+ */
+static rsRetVal
+tplAddTplMod(struct template *pTpl, uchar** ppRestOfConfLine)
+{
+	uchar *pSrc, *pDst;
+	uchar szMod[2048];
+	DEFiRet;
+
+	pSrc = *ppRestOfConfLine;
+	pDst = szMod;
+	while(*pSrc && !isspace(*pSrc) && pDst < &(szMod[sizeof(szMod) - 1])) {
+		*pDst++ = *pSrc++;
+	}
+	*pDst = '\0';
+	*ppRestOfConfLine = pSrc;
+	pTpl->tplMod = ustrdup(szMod);
+	dbgprintf("template bound to template module '%s'\n", szMod);
+	RETiRet;
+}
+
+
 /* Add a new template line
  * returns pointer to new object if it succeeds, NULL otherwise.
  */
-struct template *tplAddLine(char* pName, unsigned char** ppRestOfConfLine)
+struct template *tplAddLine(char* pName, uchar** ppRestOfConfLine)
 {
 	struct template *pTpl;
  	unsigned char *p;
@@ -866,7 +949,14 @@ struct template *tplAddLine(char* pName, unsigned char** ppRestOfConfLine)
 	while(isspace((int)*p))/* skip whitespace */
 		++p;
 	
-	if(*p != '"') {
+	switch(*p) {
+	case '"': /* just continue */
+		break;
+	case '=':
+		*ppRestOfConfLine = p + 1;
+		tplAddTplMod(pTpl, ppRestOfConfLine); // TODO: check iRet
+		FINALIZE;
+	default:
 		dbgprintf("Template '%s' invalid, does not start with '\"'!\n", pTpl->pszName);
 		/* we simply make the template defunct in this case by setting
 		 * its name to a zero-string. We do not free it, as this would
@@ -942,6 +1032,8 @@ struct template *tplAddLine(char* pName, unsigned char** ppRestOfConfLine)
 	}
 
 	*ppRestOfConfLine = p;
+
+finalize_it:
 	return(pTpl);
 }
 
