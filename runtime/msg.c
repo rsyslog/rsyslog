@@ -1257,7 +1257,8 @@ static int getPRIi(msg_t *pM)
 
 /* Get PRI value in text form
  */
-static inline char *getPRI(msg_t *pM)
+char *
+getPRI(msg_t *pM)
 {
 	/* PRI is a number in the range 0..191. Thus, we use a simple lookup table to obtain the
 	 * string value. It looks a bit clumpsy here in code ;)
@@ -1272,8 +1273,8 @@ static inline char *getPRI(msg_t *pM)
 }
 
 
-//static inline char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt)
-char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt)
+char *
+getTimeReported(msg_t *pM, enum tplFormatTypes eFmt)
 {
 	BEGINfunc
 	if(pM == NULL)
@@ -1289,7 +1290,6 @@ char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt)
 			datetime.formatTimestamp3164(&pM->tTIMESTAMP, pM->pszTIMESTAMP3164,
 						     (eFmt == tplFmtRFC3164BuggyDate));
 		}
-dbgprintf("getTimeReported will return buffer %p\n", pM->pszTIMESTAMP3164);
 		MsgUnlock(pM);
 		return(pM->pszTIMESTAMP3164);
 	case tplFmtMySQLDate:
@@ -1693,7 +1693,6 @@ static inline void tryEmulateTAG(msg_t *pM, sbool bLockMutex)
 }
 
 
-//static inline void
 void
 getTAG(msg_t *pM, uchar **ppBuf, int *piLen)
 {

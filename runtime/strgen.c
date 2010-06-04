@@ -235,16 +235,6 @@ finalize_it:
 ENDobjQueryInterface(strgen)
 
 
-
-/* Reset config variables to default values.
- * rgerhards, 2007-07-17
- */
-static rsRetVal
-resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
-{
-	return RS_RET_OK;
-}
-
 /* This destroys the master strgenlist and all of its strgen entries. MUST only be
  * done when the module is shut down. Strgen modules are NOT unloaded, rsyslog
  * does that at a later stage for all dynamically loaded modules.
@@ -284,10 +274,6 @@ BEGINObjClassInit(strgen, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(ruleset, CORE_COMPONENT));
-
-	//CHKiRet(regCfSysLineHdlr((uchar *)"escapecontrolcharactertab", 0, eCmdHdlrBinary, NULL, &bEscapeTab, NULL));
-	//CHKiRet(regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, NULL));
-
 	InitStrgenList(&pStrgenLstRoot);
 ENDObjClassInit(strgen)
 

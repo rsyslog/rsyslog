@@ -116,7 +116,10 @@
 #include "omdiscard.h"
 #include "pmrfc5424.h"
 #include "pmrfc3164.h"
+#include "smfile.h"
 #include "smtradfile.h"
+#include "smfwd.h"
+#include "smtradfwd.h"
 #include "threads.h"
 #include "wti.h"
 #include "queue.h"
@@ -322,15 +325,15 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 /* hardcoded standard templates (used for defaults) */
 static uchar template_DebugFormat[] = "\"Debug line with all properties:\nFROMHOST: '%FROMHOST%', fromhost-ip: '%fromhost-ip%', HOSTNAME: '%HOSTNAME%', PRI: %PRI%,\nsyslogtag '%syslogtag%', programname: '%programname%', APP-NAME: '%APP-NAME%', PROCID: '%PROCID%', MSGID: '%MSGID%',\nTIMESTAMP: '%TIMESTAMP%', STRUCTURED-DATA: '%STRUCTURED-DATA%',\nmsg: '%msg%'\nescaped msg: '%msg:::drop-cc%'\nrawmsg: '%rawmsg%'\n\n\"";
 static uchar template_SyslogProtocol23Format[] = "\"<%PRI%>1 %TIMESTAMP:::date-rfc3339% %HOSTNAME% %APP-NAME% %PROCID% %MSGID% %STRUCTURED-DATA% %msg%\n\"";
-static uchar template_TraditionalFileFormat[] = "\"%TIMESTAMP% %HOSTNAME% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n\"";
-static uchar template_FileFormat[] = "\"%TIMESTAMP:::date-rfc3339% %HOSTNAME% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n\"";
+static uchar template_TraditionalFileFormat[] = "=RSYSLOG_TraditionalFileFormat";
+static uchar template_FileFormat[] = "=RSYSLOG_FileFormat";
+static uchar template_ForwardFormat[] = "=RSYSLOG_ForwardFormat";
+static uchar template_TraditionalForwardFormat[] = "=RSYSLOG_TraditionalForwardFormat";
 static uchar template_WallFmt[] = "\"\r\n\7Message from syslogd@%HOSTNAME% at %timegenerated% ...\r\n %syslogtag%%msg%\n\r\"";
-static uchar template_ForwardFormat[] = "\"<%PRI%>%TIMESTAMP:::date-rfc3339% %HOSTNAME% %syslogtag:1:32%%msg:::sp-if-no-1st-sp%%msg%\"";
-static uchar template_TraditionalForwardFormat[] = "\"<%PRI%>%TIMESTAMP% %HOSTNAME% %syslogtag:1:32%%msg:::sp-if-no-1st-sp%%msg%\"";
 static uchar template_StdUsrMsgFmt[] = "\" %syslogtag%%msg%\n\r\"";
 static uchar template_StdDBFmt[] = "\"insert into SystemEvents (Message, Facility, FromHost, Priority, DeviceReportedTime, ReceivedAt, InfoUnitID, SysLogTag) values ('%msg%', %syslogfacility%, '%HOSTNAME%', %syslogpriority%, '%timereported:::date-mysql%', '%timegenerated:::date-mysql%', %iut%, '%syslogtag%')\",SQL";
 static uchar template_StdPgSQLFmt[] = "\"insert into SystemEvents (Message, Facility, FromHost, Priority, DeviceReportedTime, ReceivedAt, InfoUnitID, SysLogTag) values ('%msg%', %syslogfacility%, '%HOSTNAME%', %syslogpriority%, '%timereported:::date-pgsql%', '%timegenerated:::date-pgsql%', %iut%, '%syslogtag%')\",STDSQL";
-/* end template */
+/* end templates */
 
 
 /* up to the next comment, prototypes that should be removed by reordering */
@@ -2002,7 +2005,10 @@ static rsRetVal loadBuildInModules(void)
 	CHKiRet(parser.AddDfltParser(UCHAR_CONSTANT("rsyslog.rfc3164")));
 
 	/* load build-in strgen modules */
+	CHKiRet(module.doModInit(modInitsmfile, UCHAR_CONSTANT("builtin-smfile"), NULL));
 	CHKiRet(module.doModInit(modInitsmtradfile, UCHAR_CONSTANT("builtin-smtradfile"), NULL));
+	CHKiRet(module.doModInit(modInitsmfwd, UCHAR_CONSTANT("builtin-smfwd"), NULL));
+	CHKiRet(module.doModInit(modInitsmtradfwd, UCHAR_CONSTANT("builtin-smtradfwd"), NULL));
 
 	/* ok, initialization of the command handler probably does not 100% belong right in
 	 * this space here. However, with the current design, this is actually quite a good
@@ -2121,10 +2127,6 @@ static rsRetVal mainThread()
 {
 	DEFiRet;
 	uchar *pTmp;
-
-	/* Note: signals MUST be processed by the thread this code is running in. The reason
-	 * is that we need to interrupt the select() system call. -- rgerhards, 2007-10-17
-	 */
 
 	/* initialize the build-in templates */
 	pTmp = template_DebugFormat;

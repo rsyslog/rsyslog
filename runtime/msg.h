@@ -112,8 +112,8 @@ struct msg {
 		uchar	*pszTAG;	/* pointer to tag value */
 		uchar	szBuf[CONF_TAG_BUFSIZE];
 	} TAG;
-	char pszTimestamp3164[16];
-	char pszTimestamp3339[33];
+	char pszTimestamp3164[CONST_LEN_TIMESTAMP_3164 + 1];
+	char pszTimestamp3339[CONST_LEN_TIMESTAMP_3339 + 1];
 	char pszTIMESTAMP_SecFrac[7]; /* Note: a pointer is 64 bits/8 char, so this is actually fewer than a pointer! */
 	char pszRcvdAt_SecFrac[7];	     /* same as above. Both are fractional seconds for their respective timestamp */
 };
@@ -167,6 +167,9 @@ char *textpri(char *pRes, size_t pResLen, int pri);
 rsRetVal msgGetMsgVar(msg_t *pThis, cstr_t *pstrPropName, var_t **ppVar);
 rsRetVal MsgEnableThreadSafety(void);
 uchar *getRcvFrom(msg_t *pM);
+void getTAG(msg_t *pM, uchar **ppBuf, int *piLen);
+char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt);
+char *getPRI(msg_t *pMsg);
 
 
 /* TODO: remove these five (so far used in action.c) */

@@ -52,7 +52,7 @@ static struct template *tplLastStatic = NULL; /* last static element of the temp
 
 
 
-/* helper to tplToString, extends buffer */
+/* helper to tplToString and strgen's, extends buffer */
 #define ALLOC_INC 128
 rsRetVal
 ExtendBuf(uchar **pBuf, size_t *pLenBuf, size_t iMinSize)
@@ -877,6 +877,7 @@ struct template *tplAddLine(char* pName, uchar** ppRestOfConfLine)
 	int bDone;
 	char optBuf[128]; /* buffer for options - should be more than enough... */
 	size_t i;
+	rsRetVal localRet;
 
 	assert(pName != NULL);
 	assert(ppRestOfConfLine != NULL);
@@ -909,8 +910,19 @@ struct template *tplAddLine(char* pName, uchar** ppRestOfConfLine)
 		break;
 	case '=':
 		*ppRestOfConfLine = p + 1;
-		tplAddTplMod(pTpl, ppRestOfConfLine); // TODO: check iRet
-		FINALIZE;
+		localRet = tplAddTplMod(pTpl, ppRestOfConfLine);
+		if(localRet != RS_RET_OK) {
+			errmsg.LogError(0, localRet, "Template '%s': error %d defining template via strgen module",
+					pTpl->pszName, localRet);
+			/* we simply make the template defunct in this case by setting
+			 * its name to a zero-string. We do not free it, as this would
+			 * require additional code and causes only a very small memory
+			 * consumption. Memory is freed, however, in normal operation
+			 * and most importantly by HUPing syslogd.
+			 */
+			*pTpl->pszName = '\0';
+		}
+		return NULL;
 	default:
 		dbgprintf("Template '%s' invalid, does not start with '\"'!\n", pTpl->pszName);
 		/* we simply make the template defunct in this case by setting
@@ -988,7 +1000,6 @@ struct template *tplAddLine(char* pName, uchar** ppRestOfConfLine)
 
 	*ppRestOfConfLine = p;
 
-finalize_it:
 	return(pTpl);
 }
 
@@ -1246,7 +1257,3 @@ rsRetVal templateInit()
 finalize_it:
 	RETiRet;
 }
-
-/*
- * vi:set ai:
- */

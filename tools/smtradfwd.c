@@ -1,8 +1,8 @@
-/* smtradfile.c
- * This is a strgen module for the traditional file format.
+/* smtradfwd.c
+ * This is a strgen module for the traditional forwarding format.
  *
  * Format generated:
- * "%TIMESTAMP% %HOSTNAME% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"
+ * "<%PRI%>%TIMESTAMP% %HOSTNAME% %syslogtag:1:32%%msg:::sp-if-no-1st-sp%%msg%"
  *
  * NOTE: read comments in module-template.h to understand how this file
  *       works!
@@ -43,7 +43,7 @@
 #include "unicode-helper.h"
 
 MODULE_TYPE_STRGEN
-STRGEN_NAME("RSYSLOG_TraditionalFileFormat")
+STRGEN_NAME("RSYSLOG_TraditionalForwardFormat")
 
 /* internal structures
  */
@@ -59,6 +59,8 @@ DEF_SMOD_STATIC_DATA
  */
 BEGINstrgen
 	register int iBuf;
+	char *pPRI;
+	size_t lenPRI;
 	uchar *pTimeStamp;
 	uchar *pHOSTNAME;
 	size_t lenHOSTNAME;
@@ -68,17 +70,21 @@ BEGINstrgen
 	size_t lenMSG;
 	size_t lenTotal;
 CODESTARTstrgen
-	DBGPRINTF("XXX: smtradfile strgen called\n");
+	DBGPRINTF("XXX: smtradfwd strgen called\n");
 	/* first obtain all strings and their length (if not fixed) */
+	pPRI = getPRI(pMsg);
+	lenPRI = strlen(pPRI);
 	pTimeStamp = (uchar*) getTimeReported(pMsg, tplFmtRFC3164Date);
 	pHOSTNAME = (uchar*) getHOSTNAME(pMsg);
 	lenHOSTNAME = getHOSTNAMELen(pMsg);
 	getTAG(pMsg, &pTAG, &lenTAG);
+	if(lenTAG > 32)
+		lenTAG = 32; /* for forwarding, a max of 32 chars is permitted (RFC!) */
 	pMSG = getMSG(pMsg);
 	lenMSG = getMSGLen(pMsg);
 
 	/* calculate len, constants for spaces and similar fixed strings */
-	lenTotal = CONST_LEN_TIMESTAMP_3164 + 1 + lenHOSTNAME + 1 + lenTAG + lenMSG + 2;
+	lenTotal = 1 + lenPRI + 1 + CONST_LEN_TIMESTAMP_3164 + 1 + lenHOSTNAME + 1 + lenTAG + lenMSG + 1;
 	if(pMSG[0] != ' ')
 		++lenTotal; /* then we need to introduce one additional space */
 
@@ -87,11 +93,17 @@ CODESTARTstrgen
 		CHKiRet(ExtendBuf(ppBuf, pLenBuf, lenTotal));
 
 	/* and concatenate the resulting string */
-	memcpy(*ppBuf, pTimeStamp, CONST_LEN_TIMESTAMP_3164);
-	*(*ppBuf + CONST_LEN_TIMESTAMP_3164) = ' ';
+	**ppBuf = '<';
+	memcpy(*ppBuf + 1, pPRI, lenPRI);
+	iBuf = lenPRI + 1;
+	*(*ppBuf + iBuf++) = '>';
 
-	memcpy(*ppBuf + CONST_LEN_TIMESTAMP_3164 + 1, pHOSTNAME, lenHOSTNAME);
-	iBuf = CONST_LEN_TIMESTAMP_3164 + 1 + lenHOSTNAME;
+	memcpy(*ppBuf + iBuf, pTimeStamp, CONST_LEN_TIMESTAMP_3164);
+	iBuf += CONST_LEN_TIMESTAMP_3164;
+	*(*ppBuf + iBuf++) = ' ';
+
+	memcpy(*ppBuf + iBuf, pHOSTNAME, lenHOSTNAME);
+	iBuf += lenHOSTNAME;
 	*(*ppBuf + iBuf++) = ' ';
 
 	memcpy(*ppBuf + iBuf, pTAG, lenTAG);
@@ -102,8 +114,7 @@ CODESTARTstrgen
 	memcpy(*ppBuf + iBuf, pMSG, lenMSG);
 	iBuf += lenMSG;
 
-	/* trailer */
-	*(*ppBuf + iBuf++) = '\n';
+	/* string terminator */
 	*(*ppBuf + iBuf) = '\0';
 
 finalize_it:
@@ -121,9 +132,9 @@ CODEqueryEtryPt_STD_SMOD_QUERIES
 ENDqueryEtryPt
 
 
-BEGINmodInit(smtradfile)
+BEGINmodInit(smtradfwd)
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
-	dbgprintf("traditional file format strgen init called, compiled with version %s\n", VERSION);
+	dbgprintf("rsyslog traditional (network) forward format strgen init called, compiled with version %s\n", VERSION);
 ENDmodInit

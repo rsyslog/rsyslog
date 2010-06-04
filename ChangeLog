@@ -1,4 +1,18 @@
 ---------------------------------------------------------------------------
+Version 5.5.6  [DEVEL] (rgerhards), 2010-06-??
+- added new module type "string generator", used to speed up output
+  processing. Expected speedup for (typical) rsyslog processing is
+  roughly 5 to 6 percent compared to using string-based templates.
+  They may also be used to do more complex formatting with custom
+  C code, what provided greater flexibility and probably far higher
+  speed, for example if using multiple regular expressions within a 
+  template.
+- added 4 string generators for
+  * RSYSLOG_FileFormat
+  * RSYSLOG_TraditionalFileFormat
+  * RSYSLOG_ForwardFormat
+  * RSYSLOG_TraditionalForwardFormat
+---------------------------------------------------------------------------
 Version 5.5.5  [DEVEL] (rgerhards), 2010-05-20
 - added new cancel-reduced action thread termination method
   We now manage to cancel threads that block inside a retry loop to

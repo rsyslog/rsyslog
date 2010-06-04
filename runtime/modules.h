@@ -124,7 +124,7 @@ struct modInfo_s {
 			rsRetVal (*parse)(msg_t*);
 		} pm;
 		struct { /* data for strgen modules */
-			rsRetVal (*strgen)(msg_t*, uchar* pBuf);
+			rsRetVal (*strgen)(msg_t*, uchar**, size_t *);
 		} sm;
 	} mod;
 	void *pModHdlr; /* handler to the dynamic library holding the module */
@@ -135,6 +135,7 @@ struct modInfo_s {
 	modUsr_t *pModUsrRoot;
 #	endif
 };
+
 
 /* interfaces */
 BEGINinterface(module) /* name must also be changed in ENDinterface macro! */
@@ -158,7 +159,4 @@ PROTOTYPEObj(module);
 /* TODO: remove them below (means move the config init code) -- rgerhards, 2008-02-19 */
 extern uchar *pModDir; /* read-only after startup */
 
-
 #endif /* #ifndef MODULES_H_INCLUDED */
-/* vi:set ai:
- */

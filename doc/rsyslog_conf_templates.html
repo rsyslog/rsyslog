@@ -16,6 +16,35 @@ compatible with the stock syslogd formats are hardcoded into rsyslogd.
 So if no template is specified, we use one of these hardcoded
 templates. Search for "template_" in syslogd.c and you will find the
 hardcoded ones.</p>
+<p>Starting with 5.5.6, there are actually two differnt types of template:
+<ul>
+<li>string based
+<li>string-generator module based
+</ul>
+<p><a href="rsyslog_conf_modules.html#sm">String-generator module</a> based templates
+have been introduced in 5.5.6. They permit a string generator, actually a C "program",
+the generate a format. Obviously, it is more work required to code such a generator,
+but the reward is speed improvement. If you do not need the ultimate throughput, you
+can forget about string generators (so most people never need to know what they are).
+You may just be interested in learning that for the most important default formats, 
+rsyslog already contains highly optimized string generators and these are called
+without any need to configure anything. But if you have written (or purchased) a
+string generator module, you need to know how to call it. Each such module has a name,
+which you need to know (look it up in the module doc or ask the developer). Let's assume
+that "mystrgen" is the module name. Then you can define a template for that strgen
+in the following way:
+<blockquote><code>$template MyTemplateName,=mystrgen</code></blockquote>
+(Of course, you must have first loaded the module via $ModLoad).
+<p>The important part is the equal sign: it tells the rsyslog config parser that
+no string follows but a strgen module name.
+<p>There are no additional parameters but the module name supported. This is because
+there is no way to customize anything inside such a "template" other than by
+modifying the code of the string generator.
+
+<p>So for most use cases, string-generator module based templates are <b>not</b>
+the route to take. Usually, us use <b>string based templates</b> instead.
+This is what the rest of the documentation now talks about.
+
 <p>A template consists of a template directive, a name, the
 actual template text and optional options. A sample is:</p>
 <blockquote><code>$template MyTemplateName,"\7Text
@@ -136,6 +165,23 @@ out, but this may happen.</li>
 is meant to be written to a log file. Do <b>not</b> use for production or remote
 forwarding.</li>
 </ul>
+<h3>String-based Template Samples</h3>
+<p>This section provides some sample of what the default formats would
+look as a text-based template. Hopefully, their description is self-explanatory.
+Note that each $Template statement is on a <b>single</b> line, but probably broken
+accross several lines for display purposes by your browsers. Lines are separated by
+empty lines.
+<p><code>
+$template FileFormat,"%TIMESTAMP:::date-rfc3339% %HOSTNAME% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"
+<br><br>
+$template TraditionalFileFormat,"%TIMESTAMP% %HOSTNAME% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"
+<br><br>
+$template ForwardFormat,"<%PRI%>%TIMESTAMP:::date-rfc3339% %HOSTNAME% %syslogtag:1:32%%msg:::sp-if-no-1st-sp%%msg%"
+<br><br>
+$template TraditionalForwardFormat,"<%PRI%>%TIMESTAMP% %HOSTNAME% %syslogtag:1:32%%msg:::sp-if-no-1st-sp%%msg%"
+<br><br>
+$template StdSQLFormat,"insert into SystemEvents (Message, Facility, FromHost, Priority, DeviceReportedTime, ReceivedAt, InfoUnitID, SysLogTag) values ('%msg%', %syslogfacility%, '%HOSTNAME%', %syslogpriority%, '%timereported:::date-mysql%', '%timegenerated:::date-mysql%', %iut%, '%syslogtag%')",SQL
+</code></p>
 
 <p>[<a href="manual.html">manual index</a>]
 [<a href="rsyslog_conf.html">rsyslog.conf</a>]
