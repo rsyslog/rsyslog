@@ -42,7 +42,7 @@
 #	define ATOMIC_SUB(data, val, phlpmut) __sync_fetch_and_sub(data, val)
 #	define ATOMIC_ADD(data, val) __sync_fetch_and_add(&(data), val)
 #	define ATOMIC_INC(data, phlpmut) ((void) __sync_fetch_and_add(data, 1))
-#	define ATOMIC_INC_AND_FETCH(data) __sync_fetch_and_add(&(data), 1)
+#	define ATOMIC_INC_AND_FETCH(data, phlpmut) __sync_fetch_and_add(data, 1)
 #	define ATOMIC_DEC(data, phlpmut) ((void) __sync_sub_and_fetch(data, 1))
 #	define ATOMIC_DEC_AND_FETCH(data, phlpmut) __sync_sub_and_fetch(data, 1)
 #	define ATOMIC_FETCH_32BIT(data, phlpmut) ((unsigned) __sync_fetch_and_and(data, 0xffffffff))
@@ -109,6 +109,15 @@
 	}
 
 	static inline int
+	ATOMIC_INC_AND_FETCH(int *data, pthread_mutex_t *phlpmut) {
+		int val;
+		pthread_mutex_lock(phlpmut);
+		val = ++(*data);
+		pthread_mutex_unlock(phlpmut);
+		return(val);
+	}
+
+	static inline int
 	ATOMIC_DEC_AND_FETCH(int *data, pthread_mutex_t *phlpmut) {
 		int val;
 		pthread_mutex_lock(phlpmut);
@@ -139,7 +148,7 @@
 #endif
 #	define DEF_ATOMIC_HELPER_MUT(x)  pthread_mutex_t x
 #	define INIT_ATOMIC_HELPER_MUT(x) pthread_mutex_init(&(x), NULL)
-#	define DESTROY_ATOMIC_HELPER_MUT(x) pthread_mutex_init(&(x), NULL)
+#	define DESTROY_ATOMIC_HELPER_MUT(x) pthread_mutex_destroy(&(x))
 
 #	define PREFER_ATOMIC_INC(data) ((void) ++data)
 

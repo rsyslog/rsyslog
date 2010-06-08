@@ -955,7 +955,6 @@ submitBatch(action_t *pAction, batch_t *pBatch, int nElem, int *pbShutdownImmedi
 		} else {
 			if(nElem == 1) {
 				pBatch->pElem[pBatch->iDoneUpTo++].state = BATCH_STATE_BAD;
-// TODO: This is a mark, remove when no longer needed - Here was the bug, postincrement needs to be used, not preinc
 				bDone = 1;
 			} else {
 				/* retry with half as much. Depth is log_2 batchsize, so recursion is not too deep */

@@ -278,6 +278,11 @@ static char *syslog_severity_names[8] = { "emerg", "alert", "crit", "err", "warn
 static char *syslog_number_names[24] = { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
 					 "15", "16", "17", "18", "19", "20", "21", "22", "23" };
 
+/* global variables */
+#if defined(HAVE_MALLOC_TRIM) && !defined(HAVE_ATOMIC_BUILTINS)
+static pthread_mutex_t mutTrimCtr;	 /* mutex to handle malloc trim */
+#endif
+
 /* some forward declarations */
 static int getAPPNAMELen(msg_t *pM, sbool bLockMutex);
 
@@ -784,6 +789,9 @@ static inline void freeHOSTNAME(msg_t *pThis)
 
 BEGINobjDestruct(msg) /* be sure to specify the object type also in END and CODESTART macros! */
 	int currRefCount;
+#	if HAVE_MALLOC_TRIM
+	int currCnt;
+#	endif
 CODESTARTobjDestruct(msg)
 	/* DEV Debugging only ! dbgprintf("msgDestruct\t0x%lx, Ref now: %d\n", (unsigned long)pThis, pThis->iRefCount - 1); */
 #	ifdef HAVE_ATOMIC_BUILTINS
@@ -843,18 +851,10 @@ CODESTARTobjDestruct(msg)
 			 * that we trim too often when the counter wraps.
 			 */
 			static unsigned iTrimCtr = 1;
-#	ifdef HAVE_ATOMICS
-			if(ATOMIC_INC_AND_FETCH(iTrimCtr) % 100000 == 0) {
+			currCnt = ATOMIC_INC_AND_FETCH(&iTrimCtr, &mutTrimCtr);
+			if(currCnt % 100000 == 0) {
 				malloc_trim(128*1024);
 			}
-#	else
-static pthread_mutex_t mutTrimCtr = PTHREAD_MUTEX_INITIALIZER;
-			d_pthread_mutex_lock(&mutTrimCtr);
-			if(iTrimCtr++ % 100000 == 0) {
-				malloc_trim(128*1024);
-			}
-			d_pthread_mutex_unlock(&mutTrimCtr);
-#	endif
 		}
 #		endif
 	} else {
@@ -3185,6 +3185,10 @@ BEGINObjClassInit(msg, 1, OBJ_IS_CORE_MODULE)
 	funcUnlock = MsgLockingDummy;
 	funcDeleteMutex = MsgLockingDummy;
 	funcMsgPrepareEnqueue = MsgLockingDummy;
+	/* some more inits */
+#	if HAVE_MALLOC_TRIM
+	INIT_ATOMIC_HELPER_MUT(mutTrimCtr);
+#	endif
 ENDObjClassInit(msg)
 /* vim:set ai:
  */
