@@ -110,7 +110,7 @@ DEFFUNC_llExecFunc(processMsgDoActions)
 		ABORT_FINALIZE(RS_RET_OK);
 	}
 
-	iRetMod = actionCallAction(pAction, pDoActData->pMsg);
+	iRetMod = pAction->submitToActQ(pAction, pDoActData->pMsg);
 	if(iRetMod == RS_RET_DISCARDMSG) {
 		ABORT_FINALIZE(RS_RET_DISCARDMSG);
 	} else if(iRetMod == RS_RET_SUSPENDED) {
