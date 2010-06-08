@@ -69,6 +69,7 @@ struct action_s {
 	struct modInfo_s *pMod;/* pointer to output module handling this selector */
 	void	*pModData;	/* pointer to module data - content is module-specific */
 	sbool	bRepMsgHasMsg;	/* "message repeated..." has msg fragment in it (0-no, 1-yes) */
+	sbool	bSubmitFirehoseMode;/* fast submission to action q in phase 1 possible? */
 	short	f_ReduceRepeated;/* reduce repeated lines 0 - no, 1 - yes */
 	int	f_prevcount;	/* repetition cnt of prevline */
 	int	f_repeatcount;	/* number of "repeated" msgs */
@@ -86,7 +87,6 @@ struct action_s {
 	pthread_mutex_t mutActExec; /* mutex to guard actual execution of doAction for single-threaded modules */
 	uchar *pszName;		/* action name (for documentation) */
 	int *pbShutdownImmediate;/* to facilitate shutdown, if var is 1, shut down immediately */
-	//uchar **ppMsgs;		/* pointer to action-calling parameters (kept in structure to save alloc() time!) */
 	void *ppMsgs;		/* pointer to action-calling parameters (kept in structure to save alloc() time!) */
 	size_t *lenMsgs;	/* length of message in ppMsgs */
 };
