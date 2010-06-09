@@ -18,11 +18,11 @@ syslogd.c/msgConsumeOne
   	parser.ParseMsg
 ruleset.ProcessMsg (loops through ruleset)
 ruleset.c/processMsgDoRules (for each rule in ruleset)
-rule.c/ProcessMsg
-rule.c/shouldProcessThisMessage
+rule.c/processMsg
+1:rule.c/shouldProcessThisMessage
 	(evaluates filters, optimize via ALL-Filter)
 if to be processed, loop through associated actions ->
-rule.c/processMsgsDoAction
+2:rule.c/processMsgsDoAction
 action.c/actionCallAction (LOCKs action object!)
 action.c/doActionCallAction (does duplicate message reduction)
 action.c/actionWriteToAction
