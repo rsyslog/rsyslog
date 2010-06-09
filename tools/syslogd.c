@@ -735,7 +735,7 @@ multiSubmitMsg(multi_submit_t *pMultiSub)
 
 	pRuleset = MsgGetRuleset(pMultiSub->ppMsgs[0]);
 	pQueue = (pRuleset == NULL) ? pMsgQueue : ruleset.GetRulesetQueue(pRuleset);
-	iRet = qqueueMultiEnqObj(pQueue, pMultiSub);
+	iRet = pQueue->MultiEnq(pQueue, pMultiSub);
 	pMultiSub->nElem = 0;
 
 finalize_it:
