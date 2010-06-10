@@ -46,6 +46,7 @@
 #include "rule.h"
 #include "errmsg.h"
 #include "parser.h"
+#include "batch.h"
 #include "unicode-helper.h"
 #include "dirty.h" /* for main ruleset queue creation */
 
@@ -134,34 +135,48 @@ finalize_it:
 
 
 
-/* helper to processMsg(), used to call the configured actions. It is
+/* helper to processBatch(), used to call the configured actions. It is
  * executed from within llExecFunc() of the action list.
  * rgerhards, 2007-08-02
  */
-DEFFUNC_llExecFunc(processMsgDoRules)
+DEFFUNC_llExecFunc(processBatchDoRules)
 {
 	rsRetVal iRet;
 	ISOBJ_TYPE_assert(pData, rule);
-	iRet = rule.ProcessMsg((rule_t*) pData, (msg_t*) pParam);
+	iRet = rule.ProcessBatch((rule_t*) pData, (batch_t*) pParam);
 dbgprintf("ruleset: get iRet %d from rule.ProcessMsg()\n", iRet);
 	return iRet;
 }
 
 
-/* Process (consume) a received message. Calls the actions configured.
+/* Process (consume) a batch of messages. Calls the actions configured.
+ * If the whole batch uses a singel ruleset, we can process the batch as 
+ * a whole. Otherwise, we need to process it slower, on a message-by-message
+ * basis (what can be optimized to a per-ruleset basis)
  * rgerhards, 2005-10-13
  */
 static rsRetVal
-processMsg(msg_t *pMsg)
+processBatch(batch_t *pBatch)
 {
 	ruleset_t *pThis;
 	DEFiRet;
-	assert(pMsg != NULL);
+	assert(pBatch != NULL);
 
-	pThis = (pMsg->pRuleset == NULL) ? pDfltRuleset : pMsg->pRuleset;
-	ISOBJ_TYPE_assert(pThis, ruleset);
-
-	CHKiRet(llExecFunc(&pThis->llRules, processMsgDoRules, pMsg));
+	if(pBatch->bSingleRuleset) {
+		pThis = batchGetRuleset(pBatch);
+		if(pThis == NULL)
+			pThis = pDfltRuleset;
+		ISOBJ_TYPE_assert(pThis, ruleset);
+		CHKiRet(llExecFunc(&pThis->llRules, processBatchDoRules, pBatch));
+	} else {
+		#warning implementation missing!
+		/* we need to split of the batch according to rulesets used */
+		// TODO: do this at the deque level, much more performant!
+		assert(0); // TODO mandatory to implement!
+		dbgprintf("processbatch missing implementation, terminating!\n");
+		printf("processBatch missing implementation, terminating!\n");
+		exit(0);
+	}
 
 finalize_it:
 dbgprintf("ruleset.ProcessMsg() returns %d\n", iRet);
@@ -515,7 +530,7 @@ CODESTARTobjQueryInterface(ruleset)
 	pIf->IterateAllActions = iterateAllActions;
 	pIf->DestructAllActions = destructAllActions;
 	pIf->AddRule = addRule;
-	pIf->ProcessMsg = processMsg;
+	pIf->ProcessBatch = processBatch;
 	pIf->SetName = setName;
 	pIf->DebugPrintAll = debugPrintAll;
 	pIf->GetCurrent = GetCurrent;

@@ -48,7 +48,7 @@ BEGINinterface(ruleset) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*DestructAllActions)(void);
 	rsRetVal (*AddRule)(ruleset_t *pThis, rule_t **ppRule);
 	rsRetVal (*SetName)(ruleset_t *pThis, uchar *pszName);
-	rsRetVal (*ProcessMsg)(msg_t *pMsg);
+	rsRetVal (*ProcessBatch)(batch_t*);
 	rsRetVal (*GetRuleset)(ruleset_t **ppThis, uchar*);
 	rsRetVal (*SetDefaultRuleset)(uchar*);
 	rsRetVal (*SetCurrRuleset)(uchar*);
@@ -57,7 +57,7 @@ BEGINinterface(ruleset) /* name must also be changed in ENDinterface macro! */
 	/* v3, 2009-11-04 */
 	parserList_t* (*GetParserList)(msg_t *);
 ENDinterface(ruleset)
-#define rulesetCURR_IF_VERSION 3 /* increment whenever you change the interface structure! */
+#define rulesetCURR_IF_VERSION 4 /* increment whenever you change the interface structure! */
 
 
 /* prototypes */

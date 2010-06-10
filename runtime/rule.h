@@ -64,11 +64,12 @@ BEGINinterface(rule) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*ConstructFinalize)(rule_t __attribute__((unused)) *pThis);
 	rsRetVal (*Destruct)(rule_t **ppThis);
 	rsRetVal (*IterateAllActions)(rule_t *pThis, rsRetVal (*pFunc)(void*, void*), void *pParam);
-	rsRetVal (*ProcessMsg)(rule_t *pThis, msg_t *pMsg);
+	rsRetVal (*ProcessBatch)(rule_t *pThis, batch_t *pBatch);
 	rsRetVal (*SetAssRuleset)(rule_t *pThis, ruleset_t*);
 	ruleset_t* (*GetAssRuleset)(rule_t *pThis);
 ENDinterface(rule)
-#define ruleCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
+#define ruleCURR_IF_VERSION 2 /* increment whenever you change the interface structure! */
+/* change for v2: ProcessMsg replaced by ProcessBatch - 2010-06-10 */
 
 
 /* prototypes */

@@ -26,6 +26,8 @@
 #ifndef BATCH_H_INCLUDED
 #define BATCH_H_INCLUDED
 
+#include "msg.h"
+
 /* enum for batch states. Actually, we violate a layer here, in that we assume that a batch is used
  * for action processing. So far, this seems acceptable, the status is simply ignored inside the
  * main message queue. But over time, it could potentially be useful to split the two.
@@ -45,12 +47,18 @@ typedef enum {
 struct batch_obj_s {
 	obj_t *pUsrp;		/* pointer to user object (most often message) */
 	batch_state_t state;	/* associated state */
+	/* work variables for action processing; these are reused for each action (or block of
+	 * actions)
+	 */
+	sbool bFilterOK;	/* work area for filter processing (per action, reused!) */
+	sbool bPrevWasSuspended;
 	void *pActParams;	/* parameters to be passed to action */
 	size_t *pLenParams;	/* length of the parameter in question */
 	void *staticActParams[CONF_OMOD_NUMSTRINGS_BUFSIZE];
 				/* a cache to save malloc(), if not absolutely necessary */
 	size_t staticLenParams[CONF_OMOD_NUMSTRINGS_BUFSIZE];
 				/* and the same for the message length (if used) */
+	/* end action work variables */
 };
 
 /* the batch
@@ -72,7 +80,27 @@ struct batch_s {
 	int nElemDeq;		/* actual number of elements dequeued (and thus to be deleted) - see comment above! */
 	int iDoneUpTo;		/* all messages below this index have state other than RDY */
 	qDeqID	deqID;		/* ID of dequeue operation that generated this batch */
+	int *pbShutdownImmediate;/* end processing of this batch immediately if set to 1 */
+	sbool bSingleRuleset;	/* do all msgs of this batch use a single ruleset? */
 	batch_obj_t *pElem;	/* batch elements */
 };
 
+
+/* some inline functions (we may move this off to an object .. or not) */
+static inline void
+batchSetSingleRuleset(batch_t *pBatch, sbool val) {
+	pBatch->bSingleRuleset = val;
+}
+
+/* get the batches ruleset */
+static inline ruleset_t*
+batchGetRuleset(batch_t *pBatch) {
+	return (pBatch->nElem > 0) ? ((msg_t*) pBatch->pElem[0].pUsrp)->pRuleset : NULL;
+}
+
+/* get number of msgs for this batch */
+static inline int
+batchNumMsgs(batch_t *pBatch) {
+	return pBatch->nElem;
+}
 #endif /* #ifndef BATCH_H_INCLUDED */

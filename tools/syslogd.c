@@ -639,19 +639,24 @@ chkMsgAgainstACL() {
  * rgerhards, 2010-06-09
  */
 static inline rsRetVal
-preprocessBatch(batch_t *pBatch, int *pbShutdownImmediate) {
+preprocessBatch(batch_t *pBatch) {
 	uchar fromHost[NI_MAXHOST];
 	uchar fromHostIP[NI_MAXHOST];
 	uchar fromHostFQDN[NI_MAXHOST];
 	prop_t *propFromHost = NULL;
 	prop_t *propFromHostIP = NULL;
+	int bSingleRuleset;
+	ruleset_t *batchRuleset; /* the ruleset used for all message inside the batch, if there is a single one */
 	int bIsPermitted;
 	msg_t *pMsg;
 	int i;
 	rsRetVal localRet;
 	DEFiRet;
 
-	for(i = 0 ; i < pBatch->nElem  && !*pbShutdownImmediate ; i++) {
+	bSingleRuleset = 1;
+	batchRuleset = (pBatch->nElem > 0) ? ((msg_t*) pBatch->pElem[0].pUsrp)->pRuleset : NULL;
+	
+	for(i = 0 ; i < pBatch->nElem  && !*(pBatch->pbShutdownImmediate) ; i++) {
 		pMsg = (msg_t*) pBatch->pElem[i].pUsrp;
 		if((pMsg->msgFlags & NEEDS_ACLCHK_U) != 0) {
 			DBGPRINTF("msgConsumer: UDP ACL must be checked for message (hostname-based)\n");
@@ -676,8 +681,11 @@ preprocessBatch(batch_t *pBatch, int *pbShutdownImmediate) {
 				pBatch->pElem[i].state = BATCH_STATE_DISC;
 			}
 		}
+		if(pMsg->pRuleset != batchRuleset)
+			bSingleRuleset = 0;
 	}
 
+	batchSetSingleRuleset(pBatch, bSingleRuleset);
 
 finalize_it:
 	if(propFromHost != NULL)
@@ -696,18 +704,18 @@ finalize_it:
 static rsRetVal
 msgConsumer(void __attribute__((unused)) *notNeeded, batch_t *pBatch, int *pbShutdownImmediate)
 {
-	int i;
 	DEFiRet;
-
 	assert(pBatch != NULL);
-
-	preprocessBatch(pBatch, pbShutdownImmediate);
+	pBatch->pbShutdownImmediate = pbShutdownImmediate; /* TODO: move this to batch creation! */
+	preprocessBatch(pBatch);
+	ruleset.ProcessBatch(pBatch);
+dbgprintf("ZZZ: back in msgConsumer\n");
+//TODO: the BATCH_STATE_COMM must be set somewhere down the road, but we 
+//do not have this yet and so we emulate -- 2010-06-10
+int i;
 	for(i = 0 ; i < pBatch->nElem  && !*pbShutdownImmediate ; i++) {
-		DBGPRINTF("msgConsumer processes msg %d/%d\n", i, pBatch->nElem);
-		ruleset.ProcessMsg((msg_t*) pBatch->pElem[i].pUsrp);
 		pBatch->pElem[i].state = BATCH_STATE_COMM;
 	}
-
 	RETiRet;
 }
 
