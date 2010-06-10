@@ -614,7 +614,7 @@ doWrite(instanceData *pData, uchar *pszBuf, int lenBuf)
 	ASSERT(pData != NULL);
 	ASSERT(pszBuf != NULL);
 
-dbgprintf("doWrite, pData->pStrm %p, lenBuf %d\n", pData->pStrm, lenBuf);
+dbgprintf("write to stream, pData->pStrm %p, lenBuf %d\n", pData->pStrm, lenBuf);
 	if(pData->pStrm != NULL){
 		CHKiRet(strm.Write(pData->pStrm, pszBuf, lenBuf));
 		FINALIZE;

@@ -489,7 +489,7 @@ ParseMsg(msg_t *pMsg)
 	/* we take the risk to print a non-sanitized string, because this is the best we can get
 	 * (and that functionality is too important for debugging to drop it...).
 	 */
-	DBGPRINTF("msg parser: flags %x, from '%s', msg '%.50s'\n", pMsg->msgFlags,
+	DBGPRINTF("msg parser: flags %x, from '%s', msg '%.60s'\n", pMsg->msgFlags,
 		  (pMsg->msgFlags & NEEDS_DNSRESOL) ? UCHAR_CONSTANT("~NOTRESOLVED~") : getRcvFrom(pMsg),
 		  pMsg->pszRawMsg);
 

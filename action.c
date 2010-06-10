@@ -765,10 +765,10 @@ actionCallDoAction(action_t *pThis, msg_t *pMsg)
 
 	pThis->bHadAutoCommit = 0;
 #if 1
-d_pthread_mutex_lock(&pThis->mutActExec);
-pthread_cleanup_push(mutexCancelCleanup, &pThis->mutActExec);
+//d_pthread_mutex_lock(&pThis->mutActExec);
+//pthread_cleanup_push(mutexCancelCleanup, &pThis->mutActExec);
 	iRet = pThis->pMod->mod.om.doAction(ppMsgs, pMsg->msgFlags, pThis->pModData);
-pthread_cleanup_pop(1); /* unlock mutex */
+//pthread_cleanup_pop(1); /* unlock mutex */
 	//iRet = pThis->pMod->mod.om.doAction(pThis->ppMsgs, pMsg->msgFlags, pThis->pModData);
 #else
 iRet = RS_RET_OK;
@@ -1051,12 +1051,12 @@ processBatchMain(action_t *pAction, batch_t *pBatch, int *pbShutdownImmediate)
 	 * if they notify us they are - functionality not yet implemented...).
 	 * rgerhards, 2008-01-30
 	 */
-//	d_pthread_mutex_lock(&pAction->mutActExec);
-//	pthread_cleanup_push(mutexCancelCleanup, &pAction->mutActExec);
+	d_pthread_mutex_lock(&pAction->mutActExec);
+	pthread_cleanup_push(mutexCancelCleanup, &pAction->mutActExec);
 
 	iRet = processAction(pAction, pBatch, pbShutdownImmediate);
 
-//	pthread_cleanup_pop(1); /* unlock mutex */
+	pthread_cleanup_pop(1); /* unlock mutex */
 
 	RETiRet;
 }
