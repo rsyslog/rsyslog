@@ -555,7 +555,6 @@ prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
 		iFirstFree = pData->iCurrCacheSize++;
 	}
 
-// RG: this is the begin of a potential problem area
 	/* Note that the following code sequence does not work with the cache entry itself,
 	 * but rather with pData->pStrm, the (sole) stream pointer in the non-dynafile case.
 	 * The cache array is only updated after the open was successful. -- rgerhards, 2010-03-21

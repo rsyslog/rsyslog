@@ -191,7 +191,6 @@ actionResetQueueParams(void)
  */
 rsRetVal actionDestruct(action_t *pThis)
 {
-	int i;
 	DEFiRet;
 	ASSERT(pThis != NULL);
 
@@ -209,37 +208,6 @@ rsRetVal actionDestruct(action_t *pThis)
 	pthread_mutex_destroy(&pThis->mutActExec);
 	d_free(pThis->pszName);
 	d_free(pThis->ppTpl);
-
-	/* message ptr cleanup */
-#if 0 
-	for(i = 0 ; i < pThis->iNumTpls ; ++i) {
-		if(((uchar**)pThis->ppMsgs)[i] != NULL) {
-			switch(pThis->eParamPassing) {
-			case ACT_ARRAY_PASSING:
-#if 0 /* later, as an optimization. So far, we do the cleanup after each message */ 
-				iArr = 0;
-				while(((char **)pThis->ppMsgs[i])[iArr] != NULL) {
-					d_free(((char **)pThis->ppMsgs[i])[iArr++]);
-					((char **)pThis->ppMsgs[i])[iArr++] = NULL;
-				}
-				d_free(pThis->ppMsgs[i]);
-				pThis->ppMsgs[i] = NULL;
-#endif
-				break;
-			case ACT_STRING_PASSING:
-				d_free(((uchar**)pThis->ppMsgs)[i]);
-				break;
-			case ACT_MSG_PASSING:
-				/* No cleanup needed in this case */
-				break;
-			default:
-				assert(0);
-			}
-		}
-	}
-	d_free(pThis->ppMsgs);
-#endif
-	d_free(pThis->lenMsgs);
 
 	d_free(pThis);
 	
@@ -721,36 +689,26 @@ finalize_it:
 /* cleanup doAction calling parameters
  * rgerhards, 2009-05-07
  */
-static rsRetVal cleanupDoActionParams(action_t *pAction)
+//TODO: check if this is still needed!
+static rsRetVal cleanupDoActionParams(action_t *pAction, uchar **ppMsgs)
 {
-	int i;
 	int iArr;
+	int i;
 	DEFiRet;
 
 	ASSERT(pAction != NULL);
 
-#if 0
 	for(i = 0 ; i < pAction->iNumTpls ; ++i) {
-		if(((uchar**)pAction->ppMsgs)[i] != NULL) {
-			switch(pAction->eParamPassing) {
-			case ACT_ARRAY_PASSING:
-				iArr = 0;
-				while((((uchar***)pAction->ppMsgs)[i][iArr]) != NULL) {
-					d_free(((uchar ***)pAction->ppMsgs)[i][iArr++]);
-					((uchar ***)pAction->ppMsgs)[i][iArr++] = NULL;
-				}
-				d_free(((uchar**)pAction->ppMsgs)[i]);
-				((uchar**)pAction->ppMsgs)[i] = NULL;
-				break;
-			case ACT_MSG_PASSING:
-			case ACT_STRING_PASSING:
-				break;
-			default:
-				assert(0);
+		if(((uchar**)ppMsgs)[i] != NULL) {
+			iArr = 0;
+			while((((uchar***)ppMsgs)[i][iArr]) != NULL) {
+				d_free(((uchar ***)ppMsgs)[i][iArr++]);
+				((uchar ***)ppMsgs)[i][iArr++] = NULL;
 			}
+			d_free(((uchar**)ppMsgs)[i]);
+			((uchar**)ppMsgs)[i] = NULL;
 		}
 	}
-#endif
 
 	RETiRet;
 }
@@ -824,12 +782,17 @@ iRet = RS_RET_OK;
 	iRet = getReturnCode(pThis);
 
 finalize_it:
-	cleanupDoActionParams(pThis); /* iRet ignored! */
-	
+
 	switch(pThis->eParamPassing) {
 	case ACT_STRING_PASSING:
 		for(i = 0 ; i < 10 ; ++i)
 			free(ppMsgs[i]);
+		break;
+	case ACT_ARRAY_PASSING:
+		cleanupDoActionParams(pThis, ppMsgs); /* iRet ignored! */
+		break;
+	case ACT_MSG_PASSING:
+		/* nothing to do in that case */
 		break;
 	}
 
@@ -1384,7 +1347,6 @@ doSubmitToActionQ(action_t *pAction, msg_t *pMsg)
 }
 
 
-
 /* Call configured action, most complex case with all features supported (and thus slow).
  * rgerhards, 2010-06-08
  */
@@ -1453,8 +1415,6 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStringReques
 	if(pAction->iNumTpls > 0) {
 		/* we first need to create the template pointer array */
 		CHKmalloc(pAction->ppTpl = (struct template **)calloc(pAction->iNumTpls, sizeof(struct template *)));
-//TODO: remove		//CHKmalloc(pAction->ppMsgs = (uchar**) calloc(pAction->iNumTpls, sizeof(uchar *)));
-		CHKmalloc(pAction->lenMsgs = (size_t*) calloc(pAction->iNumTpls, sizeof(size_t)));
 	}
 	
 	for(i = 0 ; i < pAction->iNumTpls ; ++i) {

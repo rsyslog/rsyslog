@@ -45,6 +45,12 @@ typedef enum {
 struct batch_obj_s {
 	obj_t *pUsrp;		/* pointer to user object (most often message) */
 	batch_state_t state;	/* associated state */
+	void *pActParams;	/* parameters to be passed to action */
+	size_t *pLenParams;	/* length of the parameter in question */
+	void *staticActParams[CONF_OMOD_NUMSTRINGS_BUFSIZE];
+				/* a cache to save malloc(), if not absolutely necessary */
+	size_t staticLenParams[CONF_OMOD_NUMSTRINGS_BUFSIZE];
+				/* and the same for the message length (if used) */
 };
 
 /* the batch

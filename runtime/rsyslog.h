@@ -58,6 +58,7 @@
 						 * rgerhards, 2006-11-30
 						 */
 
+#define CONF_OMOD_NUMSTRINGS_BUFSIZE	2	/* cache for pointers to output module buffer pointers */
 
 /* ############################################################# *
  * #                  End Config Settings                      # *
