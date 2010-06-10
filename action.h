@@ -47,6 +47,7 @@ typedef enum {
 
 /* the following struct defines the action object data structure
  */
+typedef struct action_s action_t;
 struct action_s {
 	time_t	f_time;		/* used for "message repeated n times" - be careful, old, old code */
 	time_t	tActNow;	/* the current time for an action execution. Initially set to -1 and
@@ -69,10 +70,11 @@ struct action_s {
 	struct modInfo_s *pMod;/* pointer to output module handling this selector */
 	void	*pModData;	/* pointer to module data - content is module-specific */
 	sbool	bRepMsgHasMsg;	/* "message repeated..." has msg fragment in it (0-no, 1-yes) */
-	sbool	bSubmitFirehoseMode;/* fast submission to action q in phase 1 possible? */
 	short	f_ReduceRepeated;/* reduce repeated lines 0 - no, 1 - yes */
 	int	f_prevcount;	/* repetition cnt of prevline */
 	int	f_repeatcount;	/* number of "repeated" msgs */
+	rsRetVal (*submitToActQ)(action_t *, msg_t *);	/* function submit message to action queue */
+	rsRetVal (*qConstruct)(struct queue_s *pThis);
 	enum 	{ ACT_STRING_PASSING = 0, ACT_ARRAY_PASSING = 1, ACT_MSG_PASSING }
 		eParamPassing;	/* mode of parameter passing to action */
 	int	iNumTpls;	/* number of array entries for template element below */
@@ -90,7 +92,6 @@ struct action_s {
 	void *ppMsgs;		/* pointer to action-calling parameters (kept in structure to save alloc() time!) */
 	size_t *lenMsgs;	/* length of message in ppMsgs */
 };
-typedef struct action_s action_t;
 
 
 /* function prototypes
@@ -101,7 +102,6 @@ rsRetVal actionDestruct(action_t *pThis);
 rsRetVal actionDbgPrint(action_t *pThis);
 rsRetVal actionSetGlobalResumeInterval(int iNewVal);
 rsRetVal actionDoAction(action_t *pAction);
-rsRetVal actionCallAction(action_t *pAction, msg_t *pMsg);
 rsRetVal actionWriteToAction(action_t *pAction);
 rsRetVal actionCallHUPHdlr(action_t *pAction);
 rsRetVal actionClassInit(void);

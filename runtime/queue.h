@@ -114,6 +114,9 @@ struct queue_s {
 	rsRetVal (*qDeq)(struct queue_s *pThis, void **ppUsr);
 	rsRetVal (*qDel)(struct queue_s *pThis);
 	/* end type-specific handler */
+	/* public entry points (set during construction, permit to set best algorithm for params selected) */
+	rsRetVal (*MultiEnq)(qqueue_t *pThis, multi_submit_t *pMultiSub);
+	/* end public entry points */
 	/* synchronization variables */
 	pthread_mutex_t mutThrdMgmt; /* mutex for the queue's thread management */
 	pthread_mutex_t *mut; /* mutex for enqueing and dequeueing messages */
@@ -174,7 +177,6 @@ struct queue_s {
 
 /* prototypes */
 rsRetVal qqueueDestruct(qqueue_t **ppThis);
-rsRetVal qqueueMultiEnqObj(qqueue_t *pThis, multi_submit_t *pMultiSub);
 rsRetVal qqueueEnqObj(qqueue_t *pThis, flowControl_t flwCtlType, void *pUsr);
 rsRetVal qqueueStart(qqueue_t *pThis);
 rsRetVal qqueueSetMaxFileSize(qqueue_t *pThis, size_t iMaxFileSize);

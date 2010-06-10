@@ -110,7 +110,7 @@ DEFFUNC_llExecFunc(processMsgDoActions)
 		ABORT_FINALIZE(RS_RET_OK);
 	}
 
-	iRetMod = actionCallAction(pAction, pDoActData->pMsg);
+	iRetMod = pAction->submitToActQ(pAction, pDoActData->pMsg);
 	if(iRetMod == RS_RET_DISCARDMSG) {
 		ABORT_FINALIZE(RS_RET_DISCARDMSG);
 	} else if(iRetMod == RS_RET_SUSPENDED) {
@@ -166,7 +166,6 @@ shouldProcessThisMessage(rule_t *pRule, msg_t *pMsg, int *bProcessMsg)
 		}
 	}
 	
-RUNLOG_VAR("%p", pRule->pCSProgNameComp);
 	if(pRule->pCSProgNameComp != NULL) {
 		int bInv = 0, bEqv = 0, offset = 0;
 		if(*(rsCStrGetSzStrNoNULL(pRule->pCSProgNameComp)) == '-') {
