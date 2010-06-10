@@ -211,6 +211,7 @@ rsRetVal actionDestruct(action_t *pThis)
 	d_free(pThis->ppTpl);
 
 	/* message ptr cleanup */
+#if 0 
 	for(i = 0 ; i < pThis->iNumTpls ; ++i) {
 		if(((uchar**)pThis->ppMsgs)[i] != NULL) {
 			switch(pThis->eParamPassing) {
@@ -237,6 +238,7 @@ rsRetVal actionDestruct(action_t *pThis)
 		}
 	}
 	d_free(pThis->ppMsgs);
+#endif
 	d_free(pThis->lenMsgs);
 
 	d_free(pThis);
@@ -699,13 +701,13 @@ static rsRetVal prepareDoActionParams(action_t *pAction, msg_t *pMsg, uchar **pp
 				CHKiRet(tplToString(pAction->ppTpl[i], pMsg, &(ppMsgs[i]), &lenMsgs[i]));
 				break;
 			case ACT_ARRAY_PASSING:
-				CHKiRet(tplToArray(pAction->ppTpl[i], pMsg, (uchar***) &(((uchar**)pAction->ppMsgs)[i])));
+				CHKiRet(tplToArray(pAction->ppTpl[i], pMsg, (uchar***) &(ppMsgs[i])));
 				break;
 			case ACT_MSG_PASSING:
 				/* we abuse the uchar* ptr, it now actually is a void*, but we can not
 				 * change that other than by chaning the interface, what we don't like...
 				 */
-				((uchar**)pAction->ppMsgs)[i] = (uchar*) pMsg;
+				ppMsgs[i] = (void*) pMsg;
 				break;
 			default:assert(0); /* software bug if this happens! */
 		}
@@ -726,6 +728,8 @@ static rsRetVal cleanupDoActionParams(action_t *pAction)
 	DEFiRet;
 
 	ASSERT(pAction != NULL);
+
+#if 0
 	for(i = 0 ; i < pAction->iNumTpls ; ++i) {
 		if(((uchar**)pAction->ppMsgs)[i] != NULL) {
 			switch(pAction->eParamPassing) {
@@ -746,6 +750,7 @@ static rsRetVal cleanupDoActionParams(action_t *pAction)
 			}
 		}
 	}
+#endif
 
 	RETiRet;
 }
@@ -820,9 +825,14 @@ iRet = RS_RET_OK;
 
 finalize_it:
 	cleanupDoActionParams(pThis); /* iRet ignored! */
+	
+	switch(pThis->eParamPassing) {
+	case ACT_STRING_PASSING:
+		for(i = 0 ; i < 10 ; ++i)
+			free(ppMsgs[i]);
+		break;
+	}
 
-for(i = 0 ; i < 10 ; ++i)
-	free(ppMsgs[i]);
 
 	RETiRet;
 }
@@ -1443,7 +1453,7 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStringReques
 	if(pAction->iNumTpls > 0) {
 		/* we first need to create the template pointer array */
 		CHKmalloc(pAction->ppTpl = (struct template **)calloc(pAction->iNumTpls, sizeof(struct template *)));
-		CHKmalloc(pAction->ppMsgs = (uchar**) calloc(pAction->iNumTpls, sizeof(uchar *)));
+//TODO: remove		//CHKmalloc(pAction->ppMsgs = (uchar**) calloc(pAction->iNumTpls, sizeof(uchar *)));
 		CHKmalloc(pAction->lenMsgs = (size_t*) calloc(pAction->iNumTpls, sizeof(size_t)));
 	}
 	
