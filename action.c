@@ -675,6 +675,7 @@ static rsRetVal prepareDoActionParams(action_t *pAction, msg_t *pMsg, uchar **pp
 				 * change that other than by chaning the interface, what we don't like...
 				 */
 				ppMsgs[i] = (void*) pMsg;
+				lenMsgs[i] = 0; /* init for *next* action */
 				break;
 			default:assert(0); /* software bug if this happens! */
 		}
@@ -688,8 +689,7 @@ finalize_it:
 /* cleanup doAction calling parameters
  * rgerhards, 2009-05-07
  */
-//TODO: check if this is still needed!
-static rsRetVal cleanupDoActionParams(action_t *pAction, uchar **ppMsgs)
+static rsRetVal cleanupDoActionParams(action_t *pAction, uchar ***ppMsgs)
 {
 	int iArr;
 	int i;
@@ -714,14 +714,6 @@ static rsRetVal cleanupDoActionParams(action_t *pAction, uchar **ppMsgs)
 
 
 /* call the DoAction output plugin entry point
- * Performance note: we build the action parameters here in this function. That
- * means we do it while we hold the action look, potentially reducing concurrency
- * (especially if the action queue is run in DIRECT mode). As an alternative, we
- * may generate all params for the batch as whole before aquiring the action. However,
- * that requires more memory, for large batches potentially a lot of memory. So for the
- * time being, I am doing it here - the performance hit should be very minor and may even
- * not be a hit because we may gain CPU cache locality gains with the "fewer memory"
- * approach (I'd say that is rater likely).
  * rgerhards, 2008-01-28
  */
 rsRetVal
@@ -734,19 +726,12 @@ actionCallDoAction(action_t *pThis, msg_t *pMsg, void *actParams)
 	ISOBJ_TYPE_assert(pMsg, msg);
 
 	DBGPRINTF("entering actionCalldoAction(), state: %s\n", getActStateName(pThis));
-	//CHKiRet(prepareDoActionParams(pThis, pMsg, ppMsgs, lenMsgs));
 
 	pThis->bHadAutoCommit = 0;
-#if 1
 //d_pthread_mutex_lock(&pThis->mutActExec);
 //pthread_cleanup_push(mutexCancelCleanup, &pThis->mutActExec);
-	// original: iRet = pThis->pMod->mod.om.doAction(ppMsgs, pMsg->msgFlags, pThis->pModData);
 	iRet = pThis->pMod->mod.om.doAction(actParams, pMsg->msgFlags, pThis->pModData);
 //pthread_cleanup_pop(1); /* unlock mutex */
-	//iRet = pThis->pMod->mod.om.doAction(pThis->ppMsgs, pMsg->msgFlags, pThis->pModData);
-#else
-iRet = RS_RET_OK;
-#endif
 	switch(iRet) {
 		case RS_RET_OK:
 			actionCommitted(pThis);
@@ -776,21 +761,25 @@ iRet = RS_RET_OK;
 
 finalize_it:
 
-#if 0 // THIS NEEDS TO BE DONE TO THE BATCH!
+	/* we need to cleanup the batches string buffers if they have been used
+	 * in a non-standard way. -- rgerhards, 2010-06-15
+	 * Note that we may do this at the batch level, this would provide a bit
+	 * more concurrency (TODO).
+	 */
 	switch(pThis->eParamPassing) {
 	case ACT_STRING_PASSING:
-		for(i = 0 ; i < 10 ; ++i)
-			free(ppMsgs[i]);
+		/* nothing to do in that case */
 		break;
 	case ACT_ARRAY_PASSING:
-		cleanupDoActionParams(pThis, ppMsgs); /* iRet ignored! */
+		cleanupDoActionParams(pThis, actParams); /* iRet ignored! */
 		break;
 	case ACT_MSG_PASSING:
 		/* nothing to do in that case */
+		for(i = 0 ; i < pThis->iNumTpls ; ++i) {
+			((uchar**)actParams)[i] = NULL;
+		}
 		break;
 	}
-#endif
-
 
 	RETiRet;
 }
@@ -900,9 +889,7 @@ dbgprintf("ZZZ1: tryDoAction, nElem %d, iDoneUpto %d\n", *pnElem, pBatch->iDoneU
 	while(iElemProcessed <= *pnElem && i < pBatch->nElem) {
 		if(*(pBatch->pbShutdownImmediate))
 			ABORT_FINALIZE(RS_RET_FORCE_TERM);
-dbgprintf("ZZZ1: tryDoAction loop %d: filter %d, state %d\n", i,  pBatch->pElem[i].bFilterOK, pBatch->pElem[i].state);
 		if(pBatch->pElem[i].bFilterOK && pBatch->pElem[i].state != BATCH_STATE_DISC) {
-dbgprintf("ZZZ1: trying to execute\n");
 			pMsg = (msg_t*) pBatch->pElem[i].pUsrp;
 			localRet = actionProcessMessage(pAction, pMsg, pBatch->pElem[i].staticActParams);
 			DBGPRINTF("action call returned %d\n", localRet);
