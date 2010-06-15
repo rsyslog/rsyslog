@@ -26,6 +26,7 @@
 #ifndef BATCH_H_INCLUDED
 #define BATCH_H_INCLUDED
 
+#include <string.h>
 #include "msg.h"
 
 /* enum for batch states. Actually, we violate a layer here, in that we assume that a batch is used
@@ -76,6 +77,7 @@ struct batch_obj_s {
  * is completed (else, the whole process does not work correctly).
  */
 struct batch_s {
+	int maxElem;		/* maximum number of elements that this batch supports */
 	int nElem;		/* actual number of element in this entry */
 	int nElemDeq;		/* actual number of elements dequeued (and thus to be deleted) - see comment above! */
 	int iDoneUpTo;		/* all messages below this index have state other than RDY */
@@ -92,15 +94,84 @@ batchSetSingleRuleset(batch_t *pBatch, sbool val) {
 	pBatch->bSingleRuleset = val;
 }
 
-/* get the batches ruleset */
+/* get the batches ruleset (if we have a single ruleset) */
 static inline ruleset_t*
 batchGetRuleset(batch_t *pBatch) {
 	return (pBatch->nElem > 0) ? ((msg_t*) pBatch->pElem[0].pUsrp)->pRuleset : NULL;
+}
+
+/* get the ruleset of a specifc element of the batch (index not verified!) */
+static inline ruleset_t*
+batchElemGetRuleset(batch_t *pBatch, int i) {
+	return ((msg_t*) pBatch->pElem[i].pUsrp)->pRuleset;
 }
 
 /* get number of msgs for this batch */
 static inline int
 batchNumMsgs(batch_t *pBatch) {
 	return pBatch->nElem;
+}
+
+
+/* set the status of the i-th batch element. Note that once the status is
+ * DISC, it will never be reset. So this function can NOT be used to initialize
+ * the state table. -- rgerhards, 2010-06-10
+ */
+static inline void
+batchSetElemState(batch_t *pBatch, int i, batch_state_t newState) {
+	if(pBatch->pElem[i].state != BATCH_STATE_DISC)
+		pBatch->pElem[i].state = newState;
+}
+
+
+/* check if an element is a valid entry. We do NOT verify if the
+ * element index is valid. -- rgerhards, 2010-06-10
+ */
+static inline int
+batchIsValidElem(batch_t *pBatch, int i) {
+	return(pBatch->pElem[i].bFilterOK && pBatch->pElem[i].state != BATCH_STATE_DISC);
+}
+
+
+/* copy one batch element to another.
+ * This creates a complete duplicate in those cases where
+ * it is needed. Use duplication only when absolutely necessary!
+ * rgerhards, 2010-06-10
+ */
+static inline void
+batchCopyElem(batch_obj_t *pDest, batch_obj_t *pSrc) {
+	memcpy(pDest, pSrc, sizeof(batch_obj_t));
+}
+
+
+/* free members of a batch "object". Note that we can not do the usual
+ * destruction as the object typically is allocated on the stack and so the
+ * object itself cannot be freed! -- rgerhards, 2010-06-15
+ */
+static inline void
+batchFree(batch_t *pBatch) {
+	int i;
+	int j;
+	for(i = 0 ; i < pBatch->maxElem ; ++i) {
+		for(j = 0 ; j < CONF_OMOD_NUMSTRINGS_BUFSIZE ; ++j) {
+			free(pBatch->pElem[i].staticActParams[j]);
+		}
+	}
+	free(pBatch->pElem);
+}
+
+
+/* initialiaze a batch "object". The record must already exist,
+ * we "just" initialize it. The max number of elements must be
+ * provided. -- rgerhards, 2010-06-15
+ */
+static inline rsRetVal
+batchInit(batch_t *pBatch, int maxElem) {
+	DEFiRet;
+	pBatch->maxElem = maxElem;
+	CHKmalloc(pBatch->pElem = calloc((size_t)maxElem, sizeof(batch_obj_t)));
+	// TODO: replace calloc by inidividual writes?
+finalize_it:
+	RETiRet;
 }
 #endif /* #ifndef BATCH_H_INCLUDED */

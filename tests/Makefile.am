@@ -34,8 +34,8 @@ TESTS = $(TESTRUNS) cfg.sh \
 	complex1.sh \
 	queue-persist.sh \
 	pipeaction.sh \
-	pipe_noreader.sh \
 	execonlyonce.sh \
+	pipe_noreader.sh \
 	dircreate_dflt.sh \
 	dircreate_off.sh \
 	queue-persist.sh 

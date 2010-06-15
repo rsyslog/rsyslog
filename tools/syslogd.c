@@ -622,17 +622,6 @@ chkMsgAgainstACL() {
 #endif
 
 
-/* consumes a single messages - this function is primarily used to shuffle
- * out some code from msgConsumer(). After this function, the message is
- * (by definition!) considered committed.
- * rgerhards, 2009-11-16
- */
-///static inline rsRetVal
-///msgConsumeOne(msg_t *pMsg, prop_t **propFromHost, prop_t **propFromHostIP) {
-	///DEFiRet;
-	//////RETiRet;
-///}
-
 /* preprocess a batch of messages, that is ready them for actual processing. This is done
  * as a first stage and totally in parallel to any other worker active in the system. So
  * it helps us keep up the overall concurrency level.
@@ -708,8 +697,8 @@ msgConsumer(void __attribute__((unused)) *notNeeded, batch_t *pBatch, int *pbShu
 	assert(pBatch != NULL);
 	pBatch->pbShutdownImmediate = pbShutdownImmediate; /* TODO: move this to batch creation! */
 	preprocessBatch(pBatch);
+//pBatch->bSingleRuleset = 0; // TODO: testing aid, remove!!!!
 	ruleset.ProcessBatch(pBatch);
-dbgprintf("ZZZ: back in msgConsumer\n");
 //TODO: the BATCH_STATE_COMM must be set somewhere down the road, but we 
 //do not have this yet and so we emulate -- 2010-06-10
 int i;

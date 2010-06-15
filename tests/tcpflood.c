@@ -5,6 +5,7 @@
  * -t	target address (default 127.0.0.1)
  * -p	target port (default 13514)
  * -n	number of target ports (targets are in range -p..(-p+-n-1)
+ *      Note -c must also be set to at LEAST the number of -n!
  * -c	number of connections (default 1)
  * -m	number of messages to send (connection is random)
  * -i	initial message number (optional)

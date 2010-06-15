@@ -16,7 +16,7 @@ syslogd.c/msgConsumeOne
 	MsgSetRcvFromIPStr
   if NEEDS_PARSING:
   	parser.ParseMsg
-ruleset.ProcessMsg (loops through ruleset)
+ruleset.ProcessBatch (loops through ruleset)
 ruleset.c/processMsgDoRules (for each rule in ruleset)
 rule.c/processMsg
 1:rule.c/shouldProcessThisMessage

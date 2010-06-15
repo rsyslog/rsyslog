@@ -108,16 +108,19 @@ DEFFUNC_llExecFunc(processBatchDoActions)
 	}
 #endif
 
-	// NEW (potentially): iRetMod = actionSubmit(pAction, (batch_t*) pParam);
+#if 1
+	// NEW (potentially):
+	iRetMod = doSubmitToActionQBatch(pAction, (batch_t*) pParam);
+#else
 	// old code -- milestone check
-dbgprintf("ZZZ: inside processBatchDoActions, begin processing (nElem=%d)\n", batchNumMsgs(pBatch));
 	int i;
 	for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pBatch->pbShutdownImmediate) ; ++i) {
-dbgprintf("ZZZ: inside processBatchDoActions, processind elem %d/%d\n", i, batchNumMsgs(pBatch));
+dbgprintf("ZZZ: inside processBatchDoActions, processing elem %d/%d\n", i, batchNumMsgs(pBatch));
 		if(pBatch->pElem[i].bFilterOK) {
 			iRetMod = pAction->submitToActQ(pAction, (msg_t*)(pBatch->pElem[i].pUsrp));
 		}
 	}
+#endif
 	//end old code
 #if 0 // TODO: this must be done inside the action as well!
 	if(iRetMod == RS_RET_DISCARDMSG) {
@@ -297,7 +300,7 @@ processBatch(rule_t *pThis, batch_t *pBatch)
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, rule);
-	assert(pMsg != NULL);
+	assert(pBatch != NULL);
 
 	/* first check the filters... */
 	for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pBatch->pbShutdownImmediate) ; ++i) {

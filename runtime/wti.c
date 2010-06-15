@@ -172,7 +172,7 @@ wtiCancelThrd(wti_t *pThis)
 BEGINobjDestruct(wti) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(wti)
 	/* actual destruction */
-	free(pThis->batch.pElem);
+	batchFree(&pThis->batch);
 	DESTROY_ATOMIC_HELPER_MUT(pThis->mutIsRunning);
 
 	free(pThis->pszDbgHdr);
@@ -204,7 +204,7 @@ wtiConstructFinalize(wti_t *pThis)
 
 	/* we now alloc the array for user pointers. We obtain the max from the queue itself. */
 	CHKiRet(pThis->pWtp->pfGetDeqBatchSize(pThis->pWtp->pUsr, &iDeqBatchSize));
-	CHKmalloc(pThis->batch.pElem = calloc((size_t)iDeqBatchSize, sizeof(batch_obj_t)));
+	CHKiRet(batchInit(&pThis->batch, iDeqBatchSize));
 
 finalize_it:
 	RETiRet;
