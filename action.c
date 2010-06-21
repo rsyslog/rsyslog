@@ -819,7 +819,6 @@ finishBatch(action_t *pThis, batch_t *pBatch)
 
 	ASSERT(pThis != NULL);
 
-dbgprintf("ZZZ: finishBatch called, eState %d\n", pThis->eState);
 	if(pThis->eState == ACT_STATE_RDY) {
 		/* we just need to flag the batch as commited */
 		FINALIZE; /* nothing to do */
@@ -834,7 +833,6 @@ dbgprintf("ZZZ: finishBatch called, eState %d\n", pThis->eState);
 				/* flag messages as committed */
 				for(i = 0 ; i < pBatch->nElem ; ++i) {
 					batchSetElemState(pBatch, i, BATCH_STATE_COMM);
-dbgprintf("ZZZ: finishBatch commits element %d\n", i);
 				}
 				break;
 			case RS_RET_SUSPENDED:
@@ -972,7 +970,6 @@ dbgprintf("ZZZ1: submitBatch, nElem %d\n", nElem);
 		} else if(localRet == RS_RET_ACTION_FAILED) {
 			/* in this case, the whole batch can not be processed */
 			for(i = 0 ; i < nElem ; ++i) {
-dbgprintf("ZZZ2: setting batch state for item %d\n", i);
 				batchSetElemState(pBatch, i, BATCH_STATE_BAD);
 			}
 			bDone = 1;
