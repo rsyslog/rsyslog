@@ -910,7 +910,8 @@ dbgprintf("ZZZ1: tryDoAction, nElem %d, iDoneUpto %d\n", *pnElem, pBatch->iDoneU
 			} else if(localRet == RS_RET_DISCARDMSG) {
 				pBatch->pElem[i].state = BATCH_STATE_DISC;
 			} else {
-				dbgprintf("tryDoAction: unexpected error code %d, finalizing\n", localRet);
+				dbgprintf("tryDoAction: unexpected error code %d[nElem %d, Commited UpTo %d], finalizing\n",
+					  localRet, *pnElem, iCommittedUpTo);
 				iRet = localRet;
 				FINALIZE;
 			}
@@ -921,7 +922,6 @@ dbgprintf("ZZZ1: tryDoAction, nElem %d, iDoneUpto %d\n", *pnElem, pBatch->iDoneU
 
 finalize_it:
 	if(pBatch->iDoneUpTo != iCommittedUpTo) {
-		*pnElem += iCommittedUpTo - pBatch->iDoneUpTo;
 		pBatch->iDoneUpTo = iCommittedUpTo;
 	}
 	RETiRet;
