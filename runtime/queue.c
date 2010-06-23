@@ -852,8 +852,11 @@ static rsRetVal qAddDirect(qqueue_t *pThis, void* pUsr)
 	 * We use our knowledge about the batch_t structure below, but without that, we
 	 * pay a too-large performance toll... -- rgerhards, 2009-04-22
 	 */
+	memset(&batchObj, 0, sizeof(batch_obj_t));
+	memset(&singleBatch, 0, sizeof(batch_t));
 	batchObj.state = BATCH_STATE_RDY;
 	batchObj.pUsrp = (obj_t*) pUsr;
+	batchObj.bFilterOK = 1;
 	singleBatch.nElem = 1; /* there always is only one in direct mode */
 	singleBatch.pElem = &batchObj;
 	iRet = pThis->pConsumer(pThis->pUsr, &singleBatch, &pThis->bShutdownImmediate);
@@ -862,7 +865,9 @@ static rsRetVal qAddDirect(qqueue_t *pThis, void* pUsr)
 	RETiRet;
 }
 
-/*** EXPERIMENTAL ***/
+/* "enqueue" a batch in direct mode. This is a shortcut which saves all the overhead
+ * otherwise incured. -- rgerhards, ~2010-06-23
+ */
 rsRetVal qqueueEnqObjDirectBatch(qqueue_t *pThis, batch_t *pBatch)
 {
 	DEFiRet;

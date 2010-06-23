@@ -101,6 +101,7 @@ DEFFUNC_llExecFunc(processBatchDoActions)
 
 	assert(pAction != NULL);
 
+#warning execonly when prev suspended functionality missing!
 #if 0	// TODO: move this to the action object
 	if((pAction->bExecWhenPrevSusp  == 1) && (pDoActData->bPrevWasSuspended == 0)) {
 		dbgprintf("not calling action because the previous one is not suspended\n");
@@ -108,20 +109,8 @@ DEFFUNC_llExecFunc(processBatchDoActions)
 	}
 #endif
 
-#if 1
-	// NEW (potentially):
-	iRetMod = doSubmitToActionQBatch(pAction, (batch_t*) pParam);
-#else
-	// old code -- milestone check
-	int i;
-	for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pBatch->pbShutdownImmediate) ; ++i) {
-dbgprintf("ZZZ: inside processBatchDoActions, processing elem %d/%d\n", i, batchNumMsgs(pBatch));
-		if(pBatch->pElem[i].bFilterOK) {
-			iRetMod = pAction->submitToActQ(pAction, (msg_t*)(pBatch->pElem[i].pUsrp));
-		}
-	}
-#endif
-	//end old code
+	iRetMod = pAction->submitToActQ(pAction, pBatch);
+
 #if 0 // TODO: this must be done inside the action as well!
 	if(iRetMod == RS_RET_DISCARDMSG) {
 		ABORT_FINALIZE(RS_RET_DISCARDMSG);

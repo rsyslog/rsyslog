@@ -79,7 +79,6 @@ loadDrvr(nspoll_t *pThis)
 	 * about this hack, but for the time being it is efficient and clean
 	 * enough. -- rgerhards, 2008-04-18
 	 */
-RUNLOG_VAR("%s", szDrvrName+2);
 	CHKiRet(obj.UseObj(__FILE__, szDrvrName+2, DONT_LOAD_LIB, (void*) &pThis->Drvr));
 
 finalize_it:
@@ -120,11 +119,9 @@ ConstructFinalize(nspoll_t *pThis)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, nspoll);
-RUNLOG_STR("trying to load epoll driver\n");
 	CHKiRet(loadDrvr(pThis));
 	CHKiRet(pThis->Drvr.Construct(&pThis->pDrvrData));
 finalize_it:
-dbgprintf("XXX: done trying to load epoll driver, state %d\n", iRet);
 	RETiRet;
 }
 

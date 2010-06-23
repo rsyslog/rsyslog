@@ -175,7 +175,6 @@ processBatchMultiRuleset(batch_t *pBatch)
 	CHKiRet(batchInit(&snglRuleBatch, pBatch->nElem));
 	snglRuleBatch.pbShutdownImmediate = pBatch->pbShutdownImmediate;
 
-dbgprintf("ZZZ: multi-ruleset batch of %d elements must be processed\n", pBatch->nElem);
 	while(1) { /* loop broken inside */
 		/* search for first unprocessed element */
 		for(iStart = 0 ; iStart < pBatch->nElem && pBatch->pElem[iStart].state == BATCH_STATE_DISC ; ++iStart)
@@ -189,7 +188,6 @@ dbgprintf("ZZZ: multi-ruleset batch of %d elements must be processed\n", pBatch-
 		iNew = 0;
 		for(i = iStart ; i < pBatch->nElem ; ++i) {
 			if(batchElemGetRuleset(pBatch, i) == currRuleset) {
-dbgprintf("ZZZ: proc elem %d:'%s'\n", i, ((msg_t*)(pBatch->pElem[i].pUsrp))->szRawMsg+15);
 				batchCopyElem(&(snglRuleBatch.pElem[iNew++]), &(pBatch->pElem[i]));
 				/* We indicate the element also as done, so it will not be processed again */
 				pBatch->pElem[i].state = BATCH_STATE_DISC;
@@ -199,15 +197,6 @@ dbgprintf("ZZZ: proc elem %d:'%s'\n", i, ((msg_t*)(pBatch->pElem[i].pUsrp))->szR
 		batchSetSingleRuleset(&snglRuleBatch, 1);
 		/* process temp batch */
 		processBatch(&snglRuleBatch);
-
-#if 0
-for(i = iStart ; i < pBatch->nElem ; ++i) {
-	dbgprintf("ZZZ: after partial execution item %d state %d\n", i, pBatch->pElem[i].state);
-}
-//dbgprintf("ZZZ: search item %d: state %d, bFilterOK %d, IsValid %d, msg:%s\n",
-//iStart, pBatch->pElem[iStart].state, pBatch->pElem[iStart].bFilterOK, batchIsValidElem(pBatch, iStart),
-//((msg_t*)(pBatch->pElem[iStart].pUsrp))->szRawMsg+40);
-#endif
 	}
 	batchFree(&snglRuleBatch);
 

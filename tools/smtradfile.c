@@ -68,7 +68,6 @@ BEGINstrgen
 	size_t lenMSG;
 	size_t lenTotal;
 CODESTARTstrgen
-	DBGPRINTF("XXX: smtradfile strgen called\n");
 	/* first obtain all strings and their length (if not fixed) */
 	pTimeStamp = (uchar*) getTimeReported(pMsg, tplFmtRFC3164Date);
 	pHOSTNAME = (uchar*) getHOSTNAME(pMsg);

@@ -72,7 +72,6 @@ BEGINstrgen
 	size_t lenMSG;
 	size_t lenTotal;
 CODESTARTstrgen
-	DBGPRINTF("XXX: smfile strgen called\n");
 	/* first obtain all strings and their length (if not fixed) */
 	pTimeStamp = (uchar*) getTimeReported(pMsg, tplFmtRFC3339Date);
 	lenTimeStamp = ustrlen(pTimeStamp);

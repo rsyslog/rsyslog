@@ -73,7 +73,7 @@ struct action_s {
 	short	f_ReduceRepeated;/* reduce repeated lines 0 - no, 1 - yes */
 	int	f_prevcount;	/* repetition cnt of prevline */
 	int	f_repeatcount;	/* number of "repeated" msgs */
-	rsRetVal (*submitToActQ)(action_t *, msg_t *);	/* function submit message to action queue */
+	rsRetVal (*submitToActQ)(action_t *, batch_t *);/* function submit message to action queue */
 	rsRetVal (*qConstruct)(struct queue_s *pThis);
 	enum 	{ ACT_STRING_PASSING = 0, ACT_ARRAY_PASSING = 1, ACT_MSG_PASSING }
 		eParamPassing;	/* mode of parameter passing to action */

@@ -937,7 +937,6 @@ asyncWriterThread(void *pPtr)
 
 	while(1) { /* loop broken inside */
 		d_pthread_mutex_lock(&pThis->mut);
-dbgprintf("XXX: asyncWriterThread iterating %s\n", pThis->pszFName);
 		while(pThis->iCnt == 0) {
 			if(pThis->bStopWriter) {
 				pthread_cond_broadcast(&pThis->isEmpty);
@@ -953,7 +952,6 @@ dbgprintf("XXX: asyncWriterThread iterating %s\n", pThis->pszFName);
 			bTimedOut = 0;
 			timeoutComp(&t, pThis->iFlushInterval * 2000); /* *1000 millisconds */ // TODO: check the 2000?!?
 			if(pThis->bDoTimedWait) {
-dbgprintf("asyncWriter thread going to timeout sleep\n");
 				if(pthread_cond_timedwait(&pThis->notEmpty, &pThis->mut, &t) != 0) {
 					int err = errno;
 					if(err == ETIMEDOUT) {
@@ -967,16 +965,13 @@ dbgprintf("asyncWriter thread going to timeout sleep\n");
 					}
 				}
 			} else {
-dbgprintf("asyncWriter thread going to eternal sleep\n");
 				d_pthread_cond_wait(&pThis->notEmpty, &pThis->mut);
 			}
-dbgprintf("asyncWriter woke up\n");
 		}
 
 		bTimedOut = 0; /* we may have timed out, but there *is* work to do... */
 
 		iDeq = pThis->iDeq++ % STREAM_ASYNC_NUMBUFS;
-dbgprintf("asyncWriter writes data\n");
 		doWriteInternal(pThis, pThis->asyncBuf[iDeq].pBuf, pThis->asyncBuf[iDeq].lenBuf);
 		// TODO: error check????? 2009-07-06
 

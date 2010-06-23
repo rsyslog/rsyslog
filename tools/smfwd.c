@@ -71,7 +71,6 @@ BEGINstrgen
 	size_t lenMSG;
 	size_t lenTotal;
 CODESTARTstrgen
-	DBGPRINTF("XXX: smfwd strgen called\n");
 	/* first obtain all strings and their length (if not fixed) */
 	pPRI = getPRI(pMsg);
 	lenPRI = strlen(pPRI);
