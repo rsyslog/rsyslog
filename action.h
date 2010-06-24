@@ -89,6 +89,7 @@ struct action_s {
 	pthread_mutex_t mutActExec; /* mutex to guard actual execution of doAction for single-threaded modules */
 	uchar *pszName;		/* action name (for documentation) */
 	int *pbShutdownImmediate;/* to facilitate shutdown, if var is 1, shut down immediately */
+	DEF_ATOMIC_HELPER_MUT(mutCAS);
 };
 
 

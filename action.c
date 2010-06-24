@@ -230,6 +230,7 @@ rsRetVal actionConstruct(action_t **ppThis)
 	pThis->iResumeRetryCount = glbliActionResumeRetryCount;
 	pThis->tLastOccur = datetime.GetTime(NULL);	/* done once per action on startup only */
 	pthread_mutex_init(&pThis->mutActExec, NULL);
+	INIT_ATOMIC_HELPER_MUT(pThis->mutCAS);
 	SYNC_OBJ_TOOL_INIT(pThis);
 
 	/* indicate we have a new action */
@@ -1386,7 +1387,8 @@ doSubmitToActionQNotAllMarkBatch(action_t *pAction, batch_t *pBatch)
 					} else {
 						bProcessMarkMsgs = 1;
 					}
-				} while(ATOMIC_CAS(&pAction->f_time, lastAct, ((msg_t*)(pBatch->pElem[i].pUsrp))->ttGenTime, ADDME) == 0);
+				} while(ATOMIC_CAS(&pAction->f_time, lastAct,
+					((msg_t*)(pBatch->pElem[i].pUsrp))->ttGenTime, &pAction->mutCAS) == 0);
 			}
 			if(bProcessMarkMsgs) {
 				pBatch->pElem[i].bFilterOK = 0;

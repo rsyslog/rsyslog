@@ -91,6 +91,21 @@
 	}
 
 	static inline int
+	ATOMIC_CAS(int *data, int oldVal, int newVal, pthread_mutex_t *phlpmut) {
+		int bSuccess;
+		pthread_mutex_lock(phlpmut);
+		if(*data == oldVal) {
+			*data = newVal;
+			bSuccess = 1;
+		} else {
+			bSuccess = 0;
+		}
+		pthread_mutex_unlock(phlpmut);
+		return(bSuccess);
+	}
+
+
+	static inline int
 	ATOMIC_CAS_VAL(int *data, int oldVal, int newVal, pthread_mutex_t *phlpmut) {
 		int val;
 		pthread_mutex_lock(phlpmut);
