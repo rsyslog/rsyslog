@@ -53,11 +53,9 @@ struct batch_obj_s {
 	 */
 	sbool bFilterOK;	/* work area for filter processing (per action, reused!) */
 	sbool bPrevWasSuspended;
-	void *pActParams;	/* parameters to be passed to action */
-	size_t *pLenParams;	/* length of the parameter in question */
-	void *staticActParams[CONF_OMOD_NUMSTRINGS_BUFSIZE];
+	void *staticActParams[CONF_OMOD_NUMSTRINGS_MAXSIZE];
 				/* a cache to save malloc(), if not absolutely necessary */
-	size_t staticLenParams[CONF_OMOD_NUMSTRINGS_BUFSIZE];
+	size_t staticLenParams[CONF_OMOD_NUMSTRINGS_MAXSIZE];
 				/* and the same for the message length (if used) */
 	/* end action work variables */
 };
@@ -153,7 +151,7 @@ batchFree(batch_t *pBatch) {
 	int i;
 	int j;
 	for(i = 0 ; i < pBatch->maxElem ; ++i) {
-		for(j = 0 ; j < CONF_OMOD_NUMSTRINGS_BUFSIZE ; ++j) {
+		for(j = 0 ; j < CONF_OMOD_NUMSTRINGS_MAXSIZE ; ++j) {
 			free(pBatch->pElem[i].staticActParams[j]);
 		}
 	}

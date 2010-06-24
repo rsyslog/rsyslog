@@ -58,7 +58,15 @@
 						 * rgerhards, 2006-11-30
 						 */
 
-#define CONF_OMOD_NUMSTRINGS_BUFSIZE	2	/* cache for pointers to output module buffer pointers */
+#define CONF_OMOD_NUMSTRINGS_MAXSIZE	2	/* cache for pointers to output module buffer pointers. All
+						 * rsyslog-provided plugins do NOT need more than two buffers. If
+						 * more are needed (future developments, third-parties), rsyslog 
+						 * must be recompiled with a larger parameter. Hardcoding this
+						 * saves us some overhead, both in runtime in code complexity. As
+						 * it is doubtful if ever more than 2 parameters are needed, the
+						 * approach taken here is considered appropriate.
+						 * rgerhards, 2010-06-24
+						 */
 
 /* ############################################################# *
  * #                  End Config Settings                      # *
