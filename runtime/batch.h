@@ -174,4 +174,23 @@ batchInit(batch_t *pBatch, int maxElem) {
 finalize_it:
 	RETiRet;
 }
+
+
+/* primarily a helper for debug purposes, get human-readble name of state */
+static inline char *
+batchState2String(batch_state_t state) {
+	switch(state) {
+	case BATCH_STATE_RDY:
+		return "BATCH_STATE_RDY";
+	case BATCH_STATE_BAD:
+		return "BATCH_STATE_BAD";
+	case BATCH_STATE_SUB:
+		return "BATCH_STATE_SUB";
+	case BATCH_STATE_COMM:
+		return "BATCH_STATE_COMM";
+	case BATCH_STATE_DISC:
+		return "BATCH_STATE_DISC";
+	}
+	return "ERROR, batch state not known!";
+}
 #endif /* #ifndef BATCH_H_INCLUDED */

@@ -35,6 +35,10 @@ TESTS = $(TESTRUNS) cfg.sh \
 	queue-persist.sh \
 	pipeaction.sh \
 	execonlyonce.sh \
+	execonlywhenprevsuspended.sh \
+	execonlywhenprevsuspended2.sh \
+	execonlywhenprevsuspended3.sh \
+	execonlywhenprevsuspended4.sh \
 	pipe_noreader.sh \
 	dircreate_dflt.sh \
 	dircreate_off.sh \
@@ -269,6 +273,14 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   execonlyonce.sh \
 	   testsuites/execonlyonce.conf \
 	   testsuites/execonlyonce.data \
+	   execonlywhenprevsuspended.sh \
+	   testsuites/execonlywhenprevsuspended.sh \
+	   execonlywhenprevsuspended2.sh \
+	   testsuites/execonlywhenprevsuspended2.sh \
+	   execonlywhenprevsuspended3.sh \
+	   testsuites/execonlywhenprevsuspended3.sh \
+	   execonlywhenprevsuspended4.sh \
+	   testsuites/execonlywhenprevsuspended4.sh \
 	   tabescape_dflt.sh \
 	   testsuites/tabescape_dflt.conf \
 	   testsuites/1.tabescape_dflt \

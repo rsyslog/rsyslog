@@ -146,6 +146,7 @@ DEFFUNC_llExecFunc(processBatchDoRules)
 {
 	rsRetVal iRet;
 	ISOBJ_TYPE_assert(pData, rule);
+	dbgprintf("Processing next rule\n");
 	iRet = rule.ProcessBatch((rule_t*) pData, (batch_t*) pParam);
 dbgprintf("ruleset: get iRet %d from rule.ProcessMsg()\n", iRet);
 	return iRet;

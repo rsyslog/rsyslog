@@ -832,6 +832,7 @@ finishBatch(action_t *pThis, batch_t *pBatch)
 				/* flag messages as committed */
 				for(i = 0 ; i < pBatch->nElem ; ++i) {
 					batchSetElemState(pBatch, i, BATCH_STATE_COMM);
+					pBatch->pElem[i].bPrevWasSuspended = 0; /* we had success! */
 				}
 				break;
 			case RS_RET_SUSPENDED:
@@ -885,12 +886,14 @@ tryDoAction(action_t *pAction, batch_t *pBatch, int *pnElem)
 	while(iElemProcessed <= *pnElem && i < pBatch->nElem) {
 		if(*(pBatch->pbShutdownImmediate))
 			ABORT_FINALIZE(RS_RET_FORCE_TERM);
-		if(pBatch->pElem[i].bFilterOK && pBatch->pElem[i].state != BATCH_STATE_DISC) {
+		if(   pBatch->pElem[i].bFilterOK
+		   && pBatch->pElem[i].state != BATCH_STATE_DISC
+		   && ((pAction->bExecWhenPrevSusp  == 0) || pBatch->pElem[i].bPrevWasSuspended) ) {
 			pMsg = (msg_t*) pBatch->pElem[i].pUsrp;
 			localRet = actionProcessMessage(pAction, pMsg, pBatch->pElem[i].staticActParams);
 			DBGPRINTF("action call returned %d\n", localRet);
 			/* Note: we directly modify the batch object state, because we know that
-			 * wo do not overwrite DISC indicators!
+			 * wo do not overwrite BATCH_STATE_DISC indicators!
 			 */
 			if(localRet == RS_RET_OK) {
 				/* mark messages as committed */
@@ -965,9 +968,13 @@ submitBatch(action_t *pAction, batch_t *pBatch, int nElem)
 		} else if(localRet == RS_RET_SUSPENDED) {
 			; /* do nothing, this will retry the full batch */
 		} else if(localRet == RS_RET_ACTION_FAILED) {
-			/* in this case, the whole batch can not be processed */
-			for(i = 0 ; i < nElem ; ++i) {
-				batchSetElemState(pBatch, i, BATCH_STATE_BAD);
+			/* in this case, everything not yet committed is BAD */
+			for(i = pBatch->iDoneUpTo ; i < nElem ; ++i) {
+				if(   pBatch->pElem[i].state != BATCH_STATE_DISC
+				   && pBatch->pElem[i].state != BATCH_STATE_COMM ) {
+					pBatch->pElem[i].state = BATCH_STATE_BAD;
+					pBatch->pElem[i].bPrevWasSuspended = 1;
+				}
 			}
 			bDone = 1;
 		} else {

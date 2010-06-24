@@ -19,7 +19,7 @@ case $1 in
 		rm -f rsyslog.action.*.include
 		rm -f rsyslogd.started work-*.conf rsyslog.random.data
 		rm -f rsyslogd2.started work-*.conf
-		rm -f work rsyslog.out.log rsyslog.out.log.save # common work files
+		rm -f work rsyslog.out.log rsyslog2.out.log rsyslog.out.log.save # common work files
 		rm -rf test-spool test-logdir
 		rm -f rsyslog.out.*.log work-presort rsyslog.pipe
 		rm -f core.* vgcore.*
@@ -27,7 +27,7 @@ case $1 in
 		;;
    'exit')	rm -f rsyslogd.started work-*.conf diag-common.conf
    		rm -f rsyslogd2.started diag-common2.conf rsyslog.action.*.include
-		rm -f work rsyslog.out.log rsyslog.out.log.save # common work files
+		rm -f work rsyslog.out.log rsyslog2.out.log rsyslog.out.log.save # common work files
 		rm -rf test-spool test-logdir 
 		rm -f rsyslog.out.*.log rsyslog.random.data work-presort rsyslog.pipe
 		echo  -------------------------------------------------------------------------------
@@ -115,7 +115,8 @@ case $1 in
 		rm -f work2
 		sort < rsyslog2.out.log > work2
 		# $4... are just to have the abilit to pass in more options...
-		./chkseq -fwork2 -v -s$2 -e$3 $4 $5 $6 $7
+		# add -v to chkseq if you need more verbose output
+		./chkseq -fwork2 -s$2 -e$3 $4 $5 $6 $7
 		if [ "$?" -ne "0" ]; then
 		  echo "sequence error detected"
 		  exit 1

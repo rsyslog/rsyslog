@@ -99,28 +99,8 @@ DEFFUNC_llExecFunc(processBatchDoActions)
 	action_t *pAction = (action_t*) pData;
 	batch_t *pBatch = (batch_t*) pParam;
 
-	assert(pAction != NULL);
-
-#warning execonly when prev suspended functionality missing!
-#if 0	// TODO: move this to the action object
-	if((pAction->bExecWhenPrevSusp  == 1) && (pDoActData->bPrevWasSuspended == 0)) {
-		dbgprintf("not calling action because the previous one is not suspended\n");
-		ABORT_FINALIZE(RS_RET_OK);
-	}
-#endif
-
+	DBGPRINTF("Processing next action\n");
 	iRetMod = pAction->submitToActQ(pAction, pBatch);
-
-#if 0 // TODO: this must be done inside the action as well!
-	if(iRetMod == RS_RET_DISCARDMSG) {
-		ABORT_FINALIZE(RS_RET_DISCARDMSG);
-	} else if(iRetMod == RS_RET_SUSPENDED) {
-		/* indicate suspension for next module to be called */
-		pDoActData->bPrevWasSuspended = 1;
-	} else {
-		pDoActData->bPrevWasSuspended = 0;
-	}
-#endif
 
 	RETiRet;
 }
@@ -291,11 +271,15 @@ processBatch(rule_t *pThis, batch_t *pBatch)
 	ISOBJ_TYPE_assert(pThis, rule);
 	assert(pBatch != NULL);
 
-	/* first check the filters... */
+	/* first check the filters and reset status variables */
 	for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pBatch->pbShutdownImmediate) ; ++i) {
 		CHKiRet(shouldProcessThisMessage(pThis, (msg_t*)(pBatch->pElem[i].pUsrp),
 						 &(pBatch->pElem[i].bFilterOK)));
 		// TODO: really abort on error? 2010-06-10
+		if(pBatch->pElem[i].bFilterOK) {
+			/* re-init only when actually needed (cache write cost!) */
+			pBatch->pElem[i].bPrevWasSuspended = 0;
+		}
 	}
 	CHKiRet(llExecFunc(&pThis->llActList, processBatchDoActions, pBatch));
 
