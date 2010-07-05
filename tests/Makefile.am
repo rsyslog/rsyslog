@@ -1,6 +1,6 @@
 if ENABLE_TESTBENCH
 TESTRUNS = rt_init rscript
-check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq
+check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq randomgen
 TESTS = $(TESTRUNS) cfg.sh \
 	arrayqueue.sh \
 	linkedlistqueue.sh \
@@ -59,6 +59,10 @@ endif
 if ENABLE_OMRULESET
 TESTS += omruleset.sh \
 	 omruleset-queue.sh
+endif
+
+if ENABLE_EXTENDED_TESTS
+TESTS += random.sh 
 endif
 
 check_JAVA = DiagTalker.java
@@ -135,6 +139,7 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/parse3.conf \
 	   testsuites/reallife.parse3 \
 	   testsuites/parse-nodate.conf \
+	   testsuites/samples.parse-nodate \
 	   testsuites/parse_invld_regex.conf \
 	   testsuites/samples.parse_invld_regex \
 	   testsuites/parse-3164-buggyday.conf \
@@ -232,6 +237,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/gzipwr_large_dynfile.conf \
 	   complex1.sh \
 	   testsuites/complex1.conf \
+	   random.sh \
+	   testsuites/random.conf \
 	   dynfile_invld_async.sh \
 	   dynfile_invld_sync.sh \
 	   dynfile_cachemiss.sh \
@@ -263,6 +270,9 @@ chkseq_SOURCES = chkseq.c
 
 tcpflood_SOURCES = tcpflood.c
 tcpflood_LDADD = $(SOL_LIBS)
+
+randomgen_SOURCES = randomgen.c
+randomgen_LDADD = $(SOL_LIBS)
 
 nettester_SOURCES = nettester.c getline.c
 nettester_LDADD = $(SOL_LIBS)

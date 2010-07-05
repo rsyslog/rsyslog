@@ -7,6 +7,12 @@ Version 5.4.2  [v5-stable] (rgerhards), 2010-03-??
   engine not only because it should be hardened against plugin misbehaviour,
   but also because plugins may not be totally able to avoid this situation
   (depending on the type of and processing done by the plugin).
+- bugfix: segfault on HUP when "HUPIsRestart" was set to "on"
+  thanks varmojfekoj for the patch
+- bugfix: default for $OMFileFlushOnTXEnd was wrong ("off").
+  This, in default mode, caused buffered writing to be used, what
+  means that it looked like no output were written or partial
+  lines. Thanks to Michael Biebl for pointing out this bug.
 - bugfix: testbench failed when not executed in UTC+1 timezone
   accidently, the time zone information was kept inside some
   to-be-checked-for responses
@@ -363,6 +369,21 @@ Version 4.7.0  [v4-devel] (rgerhards), 2009-09-??
   system configs.
   See ticket for details: http://bugzilla.adiscon.com/show_bug.cgi?id=150
 - imported changes from 4.5.6 and below
+---------------------------------------------------------------------------
+Version 4.6.3  [v4-stable] (rgerhards), 2010-04-??
+- improvded testbench
+  - added test with truly random data received via syslog to test
+    robustness
+  - added new configure option that permits to disable and enable an
+    extended testbench
+- bugfix: segfault on HUP when "HUPIsRestart" was set to "on"
+  thanks varmojfekoj for the patch
+- bugfix: default for $OMFileFlushOnTXEnd was wrong ("off").
+  This, in default mode, caused buffered writing to be used, what
+  means that it looked like no output were written or partial
+  lines. Thanks to Michael Biebl for pointing out this bug.
+- some doc fixes; incorrect config samples could cause confusion
+  thanks to Anthony Edwards for pointing the problems out
 ---------------------------------------------------------------------------
 Version 4.6.2  [v4-stable] (rgerhards), 2010-03-26
 - new feature: "." action type added to support writing files to relative

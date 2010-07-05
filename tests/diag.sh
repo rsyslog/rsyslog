@@ -17,10 +17,10 @@ case $1 in
 		cp $srcdir/testsuites/diag-common.conf diag-common.conf
 		cp $srcdir/testsuites/diag-common2.conf diag-common2.conf
 		rm -f rsyslog.action.*.include
-		rm -f rsyslogd.started work-*.conf
+		rm -f rsyslogd.started work-*.conf rsyslog.random.data
 		rm -f rsyslogd2.started work-*.conf
 		rm -f work rsyslog.out.log rsyslog.out.log.save # common work files
-		rm -f rsyslog.out.*.log
+		rm -f rsyslog.out.*.log work-presort
 		rm -rf test-spool
 		rm -f rsyslog.pipe
 		rm -f core.* vgcore.*
@@ -29,7 +29,7 @@ case $1 in
    'exit')	rm -f rsyslogd.started work-*.conf diag-common.conf
    		rm -f rsyslogd2.started diag-common2.conf rsyslog.action.*.include
 		rm -f work rsyslog.out.log rsyslog.out.log.save # common work files
-		rm -f rsyslog.out.*.log
+		rm -f rsyslog.out.*.log rsyslog.random.data work-presort
 		rm -rf test-spool
 		rm -f rsyslog.pipe
 		echo  -------------------------------------------------------------------------------

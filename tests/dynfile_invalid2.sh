@@ -9,8 +9,8 @@ echo ===========================================================================
 echo TEST: \[dynfile_invalid2.sh\]: test open fail for dynafiles
 source $srcdir/diag.sh init
 # uncomment for debugging support:
-export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
-export RSYSLOG_DEBUGLOG="log"
+#export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
+#export RSYSLOG_DEBUGLOG="log"
 source $srcdir/diag.sh startup dynfile_invalid2.conf
 # we send handcrafted message. We have a dynafile cache of 4, and now send one message
 # each to fill up the cache.
