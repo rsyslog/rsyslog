@@ -448,6 +448,7 @@ destructAllActions(void)
 
 	CHKiRet(llDestroy(&llRulesets));
 	CHKiRet(llInit(&llRulesets, rulesetDestructForLinkedList, keyDestruct, strcasecmp));
+	pDfltRuleset = NULL;
 
 finalize_it:
 	RETiRet;
