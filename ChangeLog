@@ -5,6 +5,8 @@ Version 4.6.3  [v4-stable] (rgerhards), 2010-04-??
     robustness
   - added new configure option that permits to disable and enable an
     extended testbench
+- bugfix: segfault on HUP when "HUPIsRestart" was set to "on"
+  thanks varmojfekoj for the patch
 - bugfix: default for $OMFileFlushOnTXEnd was wrong ("off").
   This, in default mode, caused buffered writing to be used, what
   means that it looked like no output were written or partial
