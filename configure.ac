@@ -835,6 +835,18 @@ AC_ARG_ENABLE(omstdout,
 )
 AM_CONDITIONAL(ENABLE_OMSTDOUT, test x$enable_omstdout = xyes)
 
+# settings for pmrfc3164sd
+AC_ARG_ENABLE(pmrfc3164sd,
+        [AS_HELP_STRING([--enable-pmrfc3164sd],[Compiles rfc3164sd parser module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_pmrfc3164sd="yes" ;;
+          no) enable_pmrfc3164sd="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-pmrfc3164sd) ;;
+         esac],
+        [enable_pmrfc3164sd=no]
+)
+AM_CONDITIONAL(ENABLE_PMRFC3164SD, test x$enable_pmrfc3164sd = xyes)
+
 
 # settings for omruleset
 AC_ARG_ENABLE(omruleset,
@@ -953,6 +965,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omtemplate/Makefile \
 		plugins/omprog/Makefile \
 		plugins/omstdout/Makefile \
+		plugins/pmrfc3164sd/Makefile \
 		plugins/omruleset/Makefile \
 		plugins/omdbalerting/Makefile \
 		plugins/imfile/Makefile \
@@ -998,6 +1011,7 @@ echo "---{ output plugins }---"
 echo "    Mail support enabled:                     $enable_mail"
 echo "    omprog module will be compiled:           $enable_omprog"
 echo "    omstdout module will be compiled:         $enable_omstdout"
+echo "    pmrfc3164sd module will be compiled:      $enable_pmrfc3164sd"
 echo "    omruleset module will be compiled:        $enable_omruleset"
 echo "    omdbalerting module will be compiled:     $enable_omdbalerting"
 echo "    omudpspoof module will be compiled:       $enable_omudpspoof"
