@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 4.6.3  [v4-stable] (rgerhards), 2010-04-??
+Version 4.6.3  [v4-stable] (rgerhards), 2010-07-07
 - improvded testbench
   - added test with truly random data received via syslog to test
     robustness
