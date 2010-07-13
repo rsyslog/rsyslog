@@ -99,6 +99,10 @@ if ENABLE_OMSTDOUT
 SUBDIRS += plugins/omstdout
 endif
 
+if ENABLE_PMLASTMSG
+SUBDIRS += plugins/pmlastmsg
+endif
+
 if ENABLE_PMRFC3164SD
 SUBDIRS += plugins/pmrfc3164sd
 endif
@@ -173,7 +177,7 @@ DISTCHECK_CONFIGURE_FLAGS=	--enable-gssapi_krb5 \
 				--enable-diagtools \
 				--enable-gnutls \
 				--enable-omstdout \
-				--enable-pmrfc3164sd \
+				--enable-pmlastmsg \
 				--enable-omruleset \
 				--enable-omprog \
 				--enable-imdiag \

@@ -1,5 +1,10 @@
 ---------------------------------------------------------------------------
 Version 5.5.6  [DEVEL] (rgerhards), 2010-06-??
+- added parser modules
+  * pmlastmsg, which supports the notoriously malformed "last message
+    repeated n times" messages from some syslogd's (namely sysklogd)
+  * pmrfc3164sd (contributed), supports RFC5424 structured data in 
+    RFC3164 messages [untested]
 - added new module type "string generator", used to speed up output
   processing. Expected speedup for (typical) rsyslog processing is
   roughly 5 to 6 percent compared to using string-based templates.

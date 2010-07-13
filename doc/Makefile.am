@@ -33,6 +33,7 @@ html_files = \
 	dev_queue.html \
 	omstdout.html \
 	omudpspoof.html \
+	omruleset.html \
 	omsnmp.html \
 	ommysql.html \
 	omoracle.html \
@@ -44,6 +45,7 @@ html_files = \
 	imsolaris.html \
 	imuxsock.html \
 	imklog.html \
+	pmlastmsg.html \
 	professional_support.html \
 	queues.html \
 	src/queueWorkerLogic.dia \

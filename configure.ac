@@ -835,6 +835,20 @@ AC_ARG_ENABLE(omstdout,
 )
 AM_CONDITIONAL(ENABLE_OMSTDOUT, test x$enable_omstdout = xyes)
 
+
+# settings for pmlastmsg
+AC_ARG_ENABLE(pmlastmsg,
+        [AS_HELP_STRING([--enable-pmlastmsg],[Compiles lastmsg parser module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_pmlastmsg="yes" ;;
+          no) enable_pmlastmsg="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-pmlastmsg) ;;
+         esac],
+        [enable_pmlastmsg=no]
+)
+AM_CONDITIONAL(ENABLE_PMLASTMSG, test x$enable_pmlastmsg = xyes)
+
+
 # settings for pmrfc3164sd
 AC_ARG_ENABLE(pmrfc3164sd,
         [AS_HELP_STRING([--enable-pmrfc3164sd],[Compiles rfc3164sd parser module @<:@default=no@:>@])],
@@ -966,6 +980,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omprog/Makefile \
 		plugins/omstdout/Makefile \
 		plugins/pmrfc3164sd/Makefile \
+		plugins/pmlastmsg/Makefile \
 		plugins/omruleset/Makefile \
 		plugins/omdbalerting/Makefile \
 		plugins/imfile/Makefile \
@@ -1011,11 +1026,14 @@ echo "---{ output plugins }---"
 echo "    Mail support enabled:                     $enable_mail"
 echo "    omprog module will be compiled:           $enable_omprog"
 echo "    omstdout module will be compiled:         $enable_omstdout"
-echo "    pmrfc3164sd module will be compiled:      $enable_pmrfc3164sd"
 echo "    omruleset module will be compiled:        $enable_omruleset"
 echo "    omdbalerting module will be compiled:     $enable_omdbalerting"
 echo "    omudpspoof module will be compiled:       $enable_omudpspoof"
 echo "    output template module will be compiled:  $enable_omtemplate"
+echo
+echo "---{ parser modules }---"
+echo "    pmrfc3164sd module will be compiled:      $enable_pmrfc3164sd"
+echo "    pmlastmsg module will be compiled:        $enable_pmlastmsg"
 echo
 echo "---{ database support }---"
 echo "    MySql support enabled:                    $enable_mysql"

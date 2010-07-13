@@ -274,13 +274,13 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/execonlyonce.conf \
 	   testsuites/execonlyonce.data \
 	   execonlywhenprevsuspended.sh \
-	   testsuites/execonlywhenprevsuspended.sh \
+	   testsuites/execonlywhenprevsuspended.conf \
 	   execonlywhenprevsuspended2.sh \
-	   testsuites/execonlywhenprevsuspended2.sh \
+	   testsuites/execonlywhenprevsuspended2.conf \
 	   execonlywhenprevsuspended3.sh \
-	   testsuites/execonlywhenprevsuspended3.sh \
+	   testsuites/execonlywhenprevsuspended3.conf \
 	   execonlywhenprevsuspended4.sh \
-	   testsuites/execonlywhenprevsuspended4.sh \
+	   testsuites/execonlywhenprevsuspended4.conf \
 	   tabescape_dflt.sh \
 	   testsuites/tabescape_dflt.conf \
 	   testsuites/1.tabescape_dflt \

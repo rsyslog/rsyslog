@@ -72,8 +72,16 @@ messages. For details, please see the <a href="messageparser.html">rsyslog
 message parser documentation</a>.
 <p>The current modules are currently provided as part of rsyslog:
 <ul>
-<li>pmrfc5424 - parses RFC5424-formatted messages (the new syslog standard)
-<li>pmrfc3164 - the traditional/legacy syslog parser
+<li>pmrfc5424[builtin] - rsyslog.rfc5424 -
+parses RFC5424-formatted messages (the new syslog standard)
+<li>pmrfc3164[builtin] - rsyslog.rfc3164 -
+the traditional/legacy syslog parser
+<li>pmrfc3164sd - rsyslog.rfc3164sd -
+a contributed module supporting RFC5424 structured data inside
+RFC3164 messages (not supported by the rsyslog team)
+<li><a href="pmlastmsg.html">pmlastmsg</a> - rsyslog.lastmsg -
+a parser module that handles the typically malformed "last messages
+repated n times" messages emitted by some syslogds.
 </ul>
 
 <a name="mm"></a><h2>Message Modification Modules</h2>
