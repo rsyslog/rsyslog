@@ -222,9 +222,9 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionomrulesetrulesetname", 0, eCmdHdlrGetWord,
-				    setRuleset, NULL, STD_LOADABLE_MODULE_ID));
+				    setRuleset, NULL, STD_LOADABLE_MODULE_ID, eConfObjAction));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
-				    resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
+				    resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID, eConfObjAction));
 ENDmodInit
 
 /* vi:set ai:

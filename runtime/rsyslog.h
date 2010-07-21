@@ -201,6 +201,34 @@ typedef enum {
 	FIOP_EREREGEX = 5	/* matches a ERE regular expression? */
 } fiop_t;
 
+//typedef enum cslCmdHdlrType ecslCmdHdrlType;
+//typedef enum ecslConfObjType;
+/* types of configuration handlers
+ */
+typedef enum cslCmdHdlrType {
+	eCmdHdlrInvalid = 0,		/* invalid handler type - indicates a coding error */
+	eCmdHdlrCustomHandler,		/* custom handler, just call handler function */
+	eCmdHdlrUID,
+	eCmdHdlrGID,
+	eCmdHdlrBinary,
+	eCmdHdlrFileCreateMode,
+	eCmdHdlrInt,
+	eCmdHdlrSize,
+	eCmdHdlrGetChar,
+	eCmdHdlrFacility,
+	eCmdHdlrSeverity,
+	eCmdHdlrGetWord
+} ecslCmdHdrlType;
+
+
+/* the next type describes $Begin .. $End block object types
+ */
+typedef enum cslConfObjType {
+	eConfObjGlobal = 0,	/* global directives */
+	eConfObjAction,		/* action-specific directives */
+} ecslConfObjType;
+
+
 
 /* multi-submit support.
  * This is done via a simple data structure, which holds the number of elements

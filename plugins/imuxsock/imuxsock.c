@@ -482,21 +482,21 @@ CODEmodInit_QueryRegCFSLineHdlr
 
 	/* register config file handlers */
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omitlocallogging", 0, eCmdHdlrBinary,
-		NULL, &bOmitLocalLogging, STD_LOADABLE_MODULE_ID));
+		NULL, &bOmitLocalLogging, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputunixlistensocketignoremsgtimestamp", 0, eCmdHdlrBinary,
-		NULL, &bIgnoreTimestamp, STD_LOADABLE_MODULE_ID));
+		NULL, &bIgnoreTimestamp, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"systemlogsocketname", 0, eCmdHdlrGetWord,
-		NULL, &pLogSockName, STD_LOADABLE_MODULE_ID));
+		NULL, &pLogSockName, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputunixlistensockethostname", 0, eCmdHdlrGetWord,
-		NULL, &pLogHostName, STD_LOADABLE_MODULE_ID));
+		NULL, &pLogHostName, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputunixlistensocketflowcontrol", 0, eCmdHdlrBinary,
-		NULL, &bUseFlowCtl, STD_LOADABLE_MODULE_ID));
+		NULL, &bUseFlowCtl, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputunixlistensocketcreatepath", 0, eCmdHdlrBinary,
-		NULL, &bCreateSockPath, STD_LOADABLE_MODULE_ID));
+		NULL, &bCreateSockPath, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"addunixlistensocket", 0, eCmdHdlrGetWord,
-		addLstnSocketName, NULL, STD_LOADABLE_MODULE_ID));
+		addLstnSocketName, NULL, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
-		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
+		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	/* the following one is a (dirty) trick: the system log socket is not added via
 	 * an "addUnixListenSocket" config format. As such, it's properties can not be modified
 	 * via $InputUnixListenSocket*". So we need to add a special directive
@@ -504,9 +504,9 @@ CODEmodInit_QueryRegCFSLineHdlr
 	 * rgerhards, 2008-03-06
 	 */
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"systemlogsocketignoremsgtimestamp", 0, eCmdHdlrBinary,
-		setSystemLogTimestampIgnore, NULL, STD_LOADABLE_MODULE_ID));
+		setSystemLogTimestampIgnore, NULL, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"systemlogsocketflowcontrol", 0, eCmdHdlrBinary,
-		setSystemLogFlowControl, NULL, STD_LOADABLE_MODULE_ID));
+		setSystemLogFlowControl, NULL, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 ENDmodInit
 /* vim:set ai:
  */

@@ -508,22 +508,22 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(prop, CORE_COMPONENT));
 
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfilename", 0, eCmdHdlrGetWord,
-	  	NULL, &pszFileName, STD_LOADABLE_MODULE_ID));
+	  	NULL, &pszFileName, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfiletag", 0, eCmdHdlrGetWord,
-	  	NULL, &pszFileTag, STD_LOADABLE_MODULE_ID));
+	  	NULL, &pszFileTag, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfilestatefile", 0, eCmdHdlrGetWord,
-	  	NULL, &pszStateFile, STD_LOADABLE_MODULE_ID));
+	  	NULL, &pszStateFile, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfileseverity", 0, eCmdHdlrSeverity,
-	  	NULL, &iSeverity, STD_LOADABLE_MODULE_ID));
+	  	NULL, &iSeverity, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfilefacility", 0, eCmdHdlrFacility,
-	  	NULL, &iFacility, STD_LOADABLE_MODULE_ID));
+	  	NULL, &iFacility, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfilepollinterval", 0, eCmdHdlrInt,
-	  	NULL, &iPollInterval, STD_LOADABLE_MODULE_ID));
+	  	NULL, &iPollInterval, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	/* that command ads a new file! */
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputrunfilemonitor", 0, eCmdHdlrGetWord,
-		addMonitor, NULL, STD_LOADABLE_MODULE_ID));
+		addMonitor, NULL, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
-		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
+		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 ENDmodInit
 /* vim:set ai:
  */
