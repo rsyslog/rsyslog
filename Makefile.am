@@ -168,8 +168,6 @@ DISTCHECK_CONFIGURE_FLAGS=	--enable-gssapi_krb5 \
 				--enable-pgsql \
 				--enable-libdbi \
 				--enable-mysql \
-				--enable-omtemplate \
-				--enable-imtemplate \
 				--enable-relp \
 				--enable-rsyslogd \
 				--enable-mail \

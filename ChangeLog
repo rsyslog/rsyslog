@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 5.5.6  [DEVEL] (rgerhards), 2010-06-??
+Version 5.5.6  [DEVEL] (rgerhards), 2010-07-21
 - added parser modules
   * pmlastmsg, which supports the notoriously malformed "last message
     repeated n times" messages from some syslogd's (namely sysklogd)
@@ -17,7 +17,7 @@ Version 5.5.6  [DEVEL] (rgerhards), 2010-06-??
   * RSYSLOG_TraditionalFileFormat
   * RSYSLOG_ForwardFormat
   * RSYSLOG_TraditionalForwardFormat
-- bugfix: mutexes used to similate atomic instructions were not destructed
+- bugfix: mutexes used to simulate atomic instructions were not destructed
 - bugfix: regression caused more locking action in msg.c than necessary
 - bugfix: "$ActionExecOnlyWhenPreviousIsSuspended on" was broken
 - bugfix: segfault on HUP when "HUPIsRestart" was set to "on"

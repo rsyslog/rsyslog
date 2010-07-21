@@ -121,6 +121,7 @@ case $1 in
 		  echo "sequence error detected"
 		  exit 1
 		fi
+		rm -f work2
 		;;
    'gzip-seq-check') # do the usual sequence check, but for gzip files
 		rm -f work
