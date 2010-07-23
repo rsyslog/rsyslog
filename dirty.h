@@ -39,7 +39,6 @@ rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName);
  * we move to the next interval until we reach the largest.
  * TODO: move this to action object! Only action.c and syslogd.c use it.
  */
-extern int bActExecWhenPrevSusp;
 extern int MarkInterval;
 extern int repeatinterval[2];
 extern int  bReduceRepeatMsgs;

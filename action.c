@@ -63,38 +63,44 @@ DEFobjCurrIf(datetime)
 DEFobjCurrIf(module)
 DEFobjCurrIf(errmsg)
 
-static int iActExecOnceInterval = 0; /* execute action once every nn seconds */
-static int iActExecEveryNthOccur = 0; /* execute action every n-th occurence (0,1=always) */
-static time_t iActExecEveryNthOccurTO = 0; /* timeout for n-occurence setting (in seconds, 0=never) */
-static int glbliActionResumeInterval = 30;
-int glbliActionResumeRetryCount = 0;		/* how often should suspended actions be retried? */
-static int bActionRepMsgHasMsg = 0;		/* last messsage repeated... has msg fragment in it */
 
-static int bActionWriteAllMarkMsgs = FALSE;			/* should all mark messages be unconditionally written? */
-static uchar *pszActionName;					/* short name for the action */
-/* action queue and its configuration parameters */
-static queueType_t ActionQueType = QUEUETYPE_DIRECT;		/* type of the main message queue above */
-static int iActionQueueSize = 1000;				/* size of the main message queue above */
-static int iActionQueueDeqBatchSize = 16;			/* batch size for action queues */
-static int iActionQHighWtrMark = 800;				/* high water mark for disk-assisted queues */
-static int iActionQLowWtrMark = 200;				/* low water mark for disk-assisted queues */
-static int iActionQDiscardMark = 9800;				/* begin to discard messages */
-static int iActionQDiscardSeverity = 8;				/* by default, discard nothing to prevent unintentional loss */
-static int iActionQueueNumWorkers = 1;				/* number of worker threads for the mm queue above */
-static uchar *pszActionQFName = NULL;				/* prefix for the main message queue file */
-static int64 iActionQueMaxFileSize = 1024*1024;
-static int iActionQPersistUpdCnt = 0;				/* persist queue info every n updates */
-static int bActionQSyncQeueFiles = 0;				/* sync queue files */
-static int iActionQtoQShutdown = 0;				/* queue shutdown */ 
-static int iActionQtoActShutdown = 1000;			/* action shutdown (in phase 2) */ 
-static int iActionQtoEnq = 2000;				/* timeout for queue enque */ 
-static int iActionQtoWrkShutdown = 60000;			/* timeout for worker thread shutdown */
-static int iActionQWrkMinMsgs = 100;				/* minimum messages per worker needed to start a new one */
-static int bActionQSaveOnShutdown = 1;				/* save queue on shutdown (when DA enabled)? */
-static int64 iActionQueMaxDiskSpace = 0;			/* max disk space allocated 0 ==> unlimited */
-static int iActionQueueDeqSlowdown = 0;				/* dequeue slowdown (simple rate limiting) */
-static int iActionQueueDeqtWinFromHr = 0;			/* hour begin of time frame when queue is to be dequeued */
-static int iActionQueueDeqtWinToHr = 25;			/* hour begin of time frame when queue is to be dequeued */
+typedef struct configSettings_s {
+	int bActExecWhenPrevSusp;			/* execute action only when previous one was suspended? */
+	int bActionWriteAllMarkMsgs;			/* should all mark messages be unconditionally written? */
+	int iActExecOnceInterval;			/* execute action once every nn seconds */
+	int iActExecEveryNthOccur;			/* execute action every n-th occurence (0,1=always) */
+	time_t iActExecEveryNthOccurTO;			/* timeout for n-occurence setting (in seconds, 0=never) */
+	int glbliActionResumeInterval;
+	int glbliActionResumeRetryCount;		/* how often should suspended actions be retried? */
+	int bActionRepMsgHasMsg;			/* last messsage repeated... has msg fragment in it */
+	uchar *pszActionName;				/* short name for the action */
+	/* action queue and its configuration parameters */
+	queueType_t ActionQueType;			/* type of the main message queue above */
+	int iActionQueueSize;				/* size of the main message queue above */
+	int iActionQueueDeqBatchSize;			/* batch size for action queues */
+	int iActionQHighWtrMark;			/* high water mark for disk-assisted queues */
+	int iActionQLowWtrMark;				/* low water mark for disk-assisted queues */
+	int iActionQDiscardMark;			/* begin to discard messages */
+	int iActionQDiscardSeverity;			/* by default, discard nothing to prevent unintentional loss */
+	int iActionQueueNumWorkers;			/* number of worker threads for the mm queue above */
+	uchar *pszActionQFName;				/* prefix for the main message queue file */
+	int64 iActionQueMaxFileSize;
+	int iActionQPersistUpdCnt;			/* persist queue info every n updates */
+	int bActionQSyncQeueFiles;			/* sync queue files */
+	int iActionQtoQShutdown;			/* queue shutdown */ 
+	int iActionQtoActShutdown;			/* action shutdown (in phase 2) */ 
+	int iActionQtoEnq;				/* timeout for queue enque */ 
+	int iActionQtoWrkShutdown;			/* timeout for worker thread shutdown */
+	int iActionQWrkMinMsgs;				/* minimum messages per worker needed to start a new one */
+	int bActionQSaveOnShutdown;			/* save queue on shutdown (when DA enabled)? */
+	int64 iActionQueMaxDiskSpace;			/* max disk space allocated 0 ==> unlimited */
+	int iActionQueueDeqSlowdown;			/* dequeue slowdown (simple rate limiting) */
+	int iActionQueueDeqtWinFromHr;			/* hour begin of time frame when queue is to be dequeued */
+	int iActionQueueDeqtWinToHr;			/* hour begin of time frame when queue is to be dequeued */
+} configSettings_t;
+
+configSettings_t cs;					/* our current config settings */
+configSettings_t cs_save;				/* our saved (scope!) config settings */
 
 /* the counter below counts actions created. It is used to obtain unique IDs for the action. They
  * should not be relied on for any long-term activity (e.g. disk queue names!), but they are nice
@@ -155,32 +161,32 @@ actionResetQueueParams(void)
 {
 	DEFiRet;
 
-	ActionQueType = QUEUETYPE_DIRECT;		/* type of the main message queue above */
-	iActionQueueSize = 1000;			/* size of the main message queue above */
-	iActionQueueDeqBatchSize = 16;			/* default batch size */
-	iActionQHighWtrMark = 800;			/* high water mark for disk-assisted queues */
-	iActionQLowWtrMark = 200;			/* low water mark for disk-assisted queues */
-	iActionQDiscardMark = 9800;			/* begin to discard messages */
-	iActionQDiscardSeverity = 8;			/* discard warning and above */
-	iActionQueueNumWorkers = 1;			/* number of worker threads for the mm queue above */
-	iActionQueMaxFileSize = 1024*1024;
-	iActionQPersistUpdCnt = 0;			/* persist queue info every n updates */
-	bActionQSyncQeueFiles = 0;
-	iActionQtoQShutdown = 0;			/* queue shutdown */ 
-	iActionQtoActShutdown = 1000;			/* action shutdown (in phase 2) */ 
-	iActionQtoEnq = 2000;				/* timeout for queue enque */ 
-	iActionQtoWrkShutdown = 60000;			/* timeout for worker thread shutdown */
-	iActionQWrkMinMsgs = 100;			/* minimum messages per worker needed to start a new one */
-	bActionQSaveOnShutdown = 1;			/* save queue on shutdown (when DA enabled)? */
-	iActionQueMaxDiskSpace = 0;
-	iActionQueueDeqSlowdown = 0;
-	iActionQueueDeqtWinFromHr = 0;
-	iActionQueueDeqtWinToHr = 25;			/* 25 disables time windowed dequeuing */
+	cs.ActionQueType = QUEUETYPE_DIRECT;		/* type of the main message queue above */
+	cs.iActionQueueSize = 1000;			/* size of the main message queue above */
+	cs.iActionQueueDeqBatchSize = 16;		/* default batch size */
+	cs.iActionQHighWtrMark = 800;			/* high water mark for disk-assisted queues */
+	cs.iActionQLowWtrMark = 200;			/* low water mark for disk-assisted queues */
+	cs.iActionQDiscardMark = 9800;			/* begin to discard messages */
+	cs.iActionQDiscardSeverity = 8;			/* discard warning and above */
+	cs.iActionQueueNumWorkers = 1;			/* number of worker threads for the mm queue above */
+	cs.iActionQueMaxFileSize = 1024*1024;
+	cs.iActionQPersistUpdCnt = 0;			/* persist queue info every n updates */
+	cs.bActionQSyncQeueFiles = 0;
+	cs.iActionQtoQShutdown = 0;			/* queue shutdown */ 
+	cs.iActionQtoActShutdown = 1000;		/* action shutdown (in phase 2) */ 
+	cs.iActionQtoEnq = 2000;			/* timeout for queue enque */ 
+	cs.iActionQtoWrkShutdown = 60000;		/* timeout for worker thread shutdown */
+	cs.iActionQWrkMinMsgs = 100;			/* minimum messages per worker needed to start a new one */
+	cs.bActionQSaveOnShutdown = 1;			/* save queue on shutdown (when DA enabled)? */
+	cs.iActionQueMaxDiskSpace = 0;
+	cs.iActionQueueDeqSlowdown = 0;
+	cs.iActionQueueDeqtWinFromHr = 0;
+	cs.iActionQueueDeqtWinToHr = 25;		/* 25 disables time windowed dequeuing */
 
-	glbliActionResumeRetryCount = 0;		/* I guess it is smart to reset this one, too */
+	cs.glbliActionResumeRetryCount = 0;		/* I guess it is smart to reset this one, too */
 
-	d_free(pszActionQFName);
-	pszActionQFName = NULL;				/* prefix for the main message queue file */
+	d_free(cs.pszActionQFName);
+	cs.pszActionQFName = NULL;			/* prefix for the main message queue file */
 
 	RETiRet;
 }
@@ -226,8 +232,8 @@ rsRetVal actionConstruct(action_t **ppThis)
 	ASSERT(ppThis != NULL);
 	
 	CHKmalloc(pThis = (action_t*) calloc(1, sizeof(action_t)));
-	pThis->iResumeInterval = glbliActionResumeInterval;
-	pThis->iResumeRetryCount = glbliActionResumeRetryCount;
+	pThis->iResumeInterval = cs.glbliActionResumeInterval;
+	pThis->iResumeRetryCount = cs.glbliActionResumeRetryCount;
 	pThis->tLastOccur = datetime.GetTime(NULL);	/* done once per action on startup only */
 	pthread_mutex_init(&pThis->mutActExec, NULL);
 	INIT_ATOMIC_HELPER_MUT(pThis->mutCAS);
@@ -286,7 +292,7 @@ actionConstructFinalize(action_t *pThis)
 	 * msg object thread safety in this case (this costs a bit performance and thus
 	 * is not enabled by default. -- rgerhards, 2008-02-20
 	 */
-	if(ActionQueType != QUEUETYPE_DIRECT)
+	if(cs.ActionQueType != QUEUETYPE_DIRECT)
 		MsgEnableThreadSafety();
 
 	/* create queue */
@@ -295,7 +301,7 @@ actionConstructFinalize(action_t *pThis)
 	 * to be run on multiple threads. So far, this is forbidden by the interface
 	 * spec. -- rgerhards, 2008-01-30
 	 */
-	CHKiRet(qqueueConstruct(&pThis->pQueue, ActionQueType, 1, iActionQueueSize,
+	CHKiRet(qqueueConstruct(&pThis->pQueue, cs.ActionQueType, 1, cs.iActionQueueSize,
 					(rsRetVal (*)(void*, batch_t*, int*))processBatchMain));
 	obj.SetName((obj_t*) pThis->pQueue, pszQName);
 
@@ -310,31 +316,31 @@ actionConstructFinalize(action_t *pThis)
 	}
 
 	qqueueSetpUsr(pThis->pQueue, pThis);
-	setQPROP(qqueueSetsizeOnDiskMax, "$ActionQueueMaxDiskSpace", iActionQueMaxDiskSpace);
-	setQPROP(qqueueSetiDeqBatchSize, "$ActionQueueDequeueBatchSize", iActionQueueDeqBatchSize);
-	setQPROP(qqueueSetMaxFileSize, "$ActionQueueFileSize", iActionQueMaxFileSize);
-	setQPROPstr(qqueueSetFilePrefix, "$ActionQueueFileName", pszActionQFName);
-	setQPROP(qqueueSetiPersistUpdCnt, "$ActionQueueCheckpointInterval", iActionQPersistUpdCnt);
-	setQPROP(qqueueSetbSyncQueueFiles, "$ActionQueueSyncQueueFiles", bActionQSyncQeueFiles);
-	setQPROP(qqueueSettoQShutdown, "$ActionQueueTimeoutShutdown", iActionQtoQShutdown );
-	setQPROP(qqueueSettoActShutdown, "$ActionQueueTimeoutActionCompletion", iActionQtoActShutdown);
-	setQPROP(qqueueSettoWrkShutdown, "$ActionQueueWorkerTimeoutThreadShutdown", iActionQtoWrkShutdown);
-	setQPROP(qqueueSettoEnq, "$ActionQueueTimeoutEnqueue", iActionQtoEnq);
-	setQPROP(qqueueSetiHighWtrMrk, "$ActionQueueHighWaterMark", iActionQHighWtrMark);
-	setQPROP(qqueueSetiLowWtrMrk, "$ActionQueueLowWaterMark", iActionQLowWtrMark);
-	setQPROP(qqueueSetiDiscardMrk, "$ActionQueueDiscardMark", iActionQDiscardMark);
-	setQPROP(qqueueSetiDiscardSeverity, "$ActionQueueDiscardSeverity", iActionQDiscardSeverity);
-	setQPROP(qqueueSetiMinMsgsPerWrkr, "$ActionQueueWorkerThreadMinimumMessages", iActionQWrkMinMsgs);
-	setQPROP(qqueueSetbSaveOnShutdown, "$ActionQueueSaveOnShutdown", bActionQSaveOnShutdown);
-	setQPROP(qqueueSetiDeqSlowdown,    "$ActionQueueDequeueSlowdown", iActionQueueDeqSlowdown);
-	setQPROP(qqueueSetiDeqtWinFromHr,  "$ActionQueueDequeueTimeBegin", iActionQueueDeqtWinFromHr);
-	setQPROP(qqueueSetiDeqtWinToHr,    "$ActionQueueDequeueTimeEnd", iActionQueueDeqtWinToHr);
+	setQPROP(qqueueSetsizeOnDiskMax, "$ActionQueueMaxDiskSpace", cs.iActionQueMaxDiskSpace);
+	setQPROP(qqueueSetiDeqBatchSize, "$ActionQueueDequeueBatchSize", cs.iActionQueueDeqBatchSize);
+	setQPROP(qqueueSetMaxFileSize, "$ActionQueueFileSize", cs.iActionQueMaxFileSize);
+	setQPROPstr(qqueueSetFilePrefix, "$ActionQueueFileName", cs.pszActionQFName);
+	setQPROP(qqueueSetiPersistUpdCnt, "$ActionQueueCheckpointInterval", cs.iActionQPersistUpdCnt);
+	setQPROP(qqueueSetbSyncQueueFiles, "$ActionQueueSyncQueueFiles", cs.bActionQSyncQeueFiles);
+	setQPROP(qqueueSettoQShutdown, "$ActionQueueTimeoutShutdown", cs.iActionQtoQShutdown );
+	setQPROP(qqueueSettoActShutdown, "$ActionQueueTimeoutActionCompletion", cs.iActionQtoActShutdown);
+	setQPROP(qqueueSettoWrkShutdown, "$ActionQueueWorkerTimeoutThreadShutdown", cs.iActionQtoWrkShutdown);
+	setQPROP(qqueueSettoEnq, "$ActionQueueTimeoutEnqueue", cs.iActionQtoEnq);
+	setQPROP(qqueueSetiHighWtrMrk, "$ActionQueueHighWaterMark", cs.iActionQHighWtrMark);
+	setQPROP(qqueueSetiLowWtrMrk, "$ActionQueueLowWaterMark", cs.iActionQLowWtrMark);
+	setQPROP(qqueueSetiDiscardMrk, "$ActionQueueDiscardMark", cs.iActionQDiscardMark);
+	setQPROP(qqueueSetiDiscardSeverity, "$ActionQueueDiscardSeverity", cs.iActionQDiscardSeverity);
+	setQPROP(qqueueSetiMinMsgsPerWrkr, "$ActionQueueWorkerThreadMinimumMessages", cs.iActionQWrkMinMsgs);
+	setQPROP(qqueueSetbSaveOnShutdown, "$ActionQueueSaveOnShutdown", cs.bActionQSaveOnShutdown);
+	setQPROP(qqueueSetiDeqSlowdown,    "$ActionQueueDequeueSlowdown", cs.iActionQueueDeqSlowdown);
+	setQPROP(qqueueSetiDeqtWinFromHr,  "$ActionQueueDequeueTimeBegin", cs.iActionQueueDeqtWinFromHr);
+	setQPROP(qqueueSetiDeqtWinToHr,    "$ActionQueueDequeueTimeEnd", cs.iActionQueueDeqtWinToHr);
 
 #	undef setQPROP
 #	undef setQPROPstr
 
 	dbgoprint((obj_t*) pThis->pQueue, "save on shutdown %d, max disk space allowed %lld\n",
-		   bActionQSaveOnShutdown, iActionQueMaxDiskSpace);
+		   cs.bActionQSaveOnShutdown, cs.iActionQueMaxDiskSpace);
  	
 
 	CHKiRet(qqueueStart(pThis->pQueue));
@@ -353,7 +359,7 @@ finalize_it:
  */
 rsRetVal actionSetGlobalResumeInterval(int iNewVal)
 {
-	glbliActionResumeInterval = iNewVal;
+	cs.glbliActionResumeInterval = iNewVal;
 	return RS_RET_OK;
 }
 
@@ -980,7 +986,8 @@ submitBatch(action_t *pAction, batch_t *pBatch, int nElem)
 			bDone = 1;
 		} else {
 			if(nElem == 1) {
-				batchSetElemState(pBatch, i, BATCH_STATE_BAD);
+#warning: fix this in master as well!
+				batchSetElemState(pBatch, pBatch->iDoneUpTo, BATCH_STATE_BAD);
 				bDone = 1;
 			} else {
 				/* retry with half as much. Depth is log_2 batchsize, so recursion is not too deep */
@@ -1120,16 +1127,16 @@ static rsRetVal setActionQueType(void __attribute__((unused)) *pVal, uchar *pszT
 	DEFiRet;
 
 	if (!strcasecmp((char *) pszType, "fixedarray")) {
-		ActionQueType = QUEUETYPE_FIXED_ARRAY;
+		cs.ActionQueType = QUEUETYPE_FIXED_ARRAY;
 		DBGPRINTF("action queue type set to FIXED_ARRAY\n");
 	} else if (!strcasecmp((char *) pszType, "linkedlist")) {
-		ActionQueType = QUEUETYPE_LINKEDLIST;
+		cs.ActionQueType = QUEUETYPE_LINKEDLIST;
 		DBGPRINTF("action queue type set to LINKEDLIST\n");
 	} else if (!strcasecmp((char *) pszType, "disk")) {
-		ActionQueType = QUEUETYPE_DISK;
+		cs.ActionQueType = QUEUETYPE_DISK;
 		DBGPRINTF("action queue type set to DISK\n");
 	} else if (!strcasecmp((char *) pszType, "direct")) {
-		ActionQueType = QUEUETYPE_DIRECT;
+		cs.ActionQueType = QUEUETYPE_DIRECT;
 		DBGPRINTF("action queue type set to DIRECT (no queueing at all)\n");
 	} else {
 		errmsg.LogError(0, RS_RET_INVALID_PARAMS, "unknown actionqueue parameter: %s", (char *) pszType);
@@ -1507,17 +1514,17 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStringReques
 	CHKiRet(actionConstruct(&pAction)); /* create action object first */
 	pAction->pMod = pMod;
 	pAction->pModData = pModData;
-	pAction->pszName = pszActionName;
-	pszActionName = NULL;	/* free again! */
-	pAction->bWriteAllMarkMsgs = bActionWriteAllMarkMsgs;
-	bActionWriteAllMarkMsgs = FALSE; /* reset */
-	pAction->bExecWhenPrevSusp = bActExecWhenPrevSusp;
-	pAction->iSecsExecOnceInterval = iActExecOnceInterval;
-	pAction->iExecEveryNthOccur = iActExecEveryNthOccur;
-	pAction->iExecEveryNthOccurTO = iActExecEveryNthOccurTO;
-	pAction->bRepMsgHasMsg = bActionRepMsgHasMsg;
-	iActExecEveryNthOccur = 0; /* auto-reset */
-	iActExecEveryNthOccurTO = 0; /* auto-reset */
+	pAction->pszName = cs.pszActionName;
+	cs.pszActionName = NULL;	/* free again! */
+	pAction->bWriteAllMarkMsgs = cs.bActionWriteAllMarkMsgs;
+	cs.bActionWriteAllMarkMsgs = FALSE; /* reset */
+	pAction->bExecWhenPrevSusp = cs.bActExecWhenPrevSusp;
+	pAction->iSecsExecOnceInterval = cs.iActExecOnceInterval;
+	pAction->iExecEveryNthOccur = cs.iActExecEveryNthOccur;
+	pAction->iExecEveryNthOccurTO = cs.iActExecEveryNthOccurTO;
+	pAction->bRepMsgHasMsg = cs.bActionRepMsgHasMsg;
+	cs.iActExecEveryNthOccur = 0; /* auto-reset */
+	cs.iActExecEveryNthOccurTO = 0; /* auto-reset */
 
 	/* check if we can obtain the template pointers - TODO: move to separate function? */
 	pAction->iNumTpls = OMSRgetEntryCount(pOMSR);
@@ -1605,9 +1612,61 @@ finalize_it:
 static rsRetVal
 resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
-	iActExecOnceInterval = 0;
+	cs.iActExecOnceInterval = 0;
+	cs.bActExecWhenPrevSusp = 0;
 	return RS_RET_OK;
 }
+
+
+/* initialize (current) config variables.
+ * Used at program start and when a new scope is created.
+ */
+static inline void
+initConfigVariables(void)
+{
+	cs.bActionWriteAllMarkMsgs = FALSE;
+	cs.glbliActionResumeRetryCount = 0;
+	cs.bActExecWhenPrevSusp = 0;
+	cs.iActExecOnceInterval = 0;
+	cs.iActExecEveryNthOccur = 0;
+	cs.iActExecEveryNthOccurTO = 0;
+	cs.glbliActionResumeInterval = 30;
+	cs.glbliActionResumeRetryCount = 0;
+	cs.bActionRepMsgHasMsg = 0;
+	if(cs.pszActionName != NULL) {
+		free(cs.pszActionName);
+		cs.pszActionName = NULL;
+	}
+	actionResetQueueParams();
+}
+
+
+/* save our config and create a new scope. Note that things are messed up if
+ * this is called while the config is already saved (we currently do not
+ * have a stack as the design is we need none!
+ * rgerhards, 2010-07-23
+ */
+rsRetVal
+actionNewScope(void)
+{
+	DEFiRet;
+	memcpy(&cs_save, &cs, sizeof(cs));
+	initConfigVariables();
+	RETiRet;
+}
+
+
+/* restore previously saved scope.
+ * rgerhards, 2010-07-23
+ */
+rsRetVal
+actionRestoreScope(void)
+{
+	DEFiRet;
+	memcpy(&cs, &cs_save, sizeof(cs));
+	RETiRet;
+}
+
 
 
 /* TODO: we are not yet a real object, the ClassInit here just looks like it is..
@@ -1621,35 +1680,39 @@ rsRetVal actionClassInit(void)
 	CHKiRet(objUse(module, CORE_COMPONENT));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionname", 0, eCmdHdlrGetWord, NULL, &pszActionName, NULL, eConfObjAction));
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuefilename", 0, eCmdHdlrGetWord, NULL, &pszActionQFName, NULL, eConfObjAction));
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuesize", 0, eCmdHdlrInt, NULL, &iActionQueueSize, NULL, eConfObjAction));
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionwriteallmarkmessages", 0, eCmdHdlrBinary, NULL, &bActionWriteAllMarkMsgs, NULL, eConfObjAction));
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuedequeuebatchsize", 0, eCmdHdlrInt, NULL, &iActionQueueDeqBatchSize, NULL, eConfObjAction));
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuemaxdiskspace", 0, eCmdHdlrSize, NULL, &iActionQueMaxDiskSpace, NULL, eConfObjAction));
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuehighwatermark", 0, eCmdHdlrInt, NULL, &iActionQHighWtrMark, NULL, eConfObjAction));
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuelowwatermark", 0, eCmdHdlrInt, NULL, &iActionQLowWtrMark, NULL, eConfObjAction));
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuediscardmark", 0, eCmdHdlrInt, NULL, &iActionQDiscardMark, NULL, eConfObjAction));
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuediscardseverity", 0, eCmdHdlrInt, NULL, &iActionQDiscardSeverity, NULL, eConfObjAction));
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuecheckpointinterval", 0, eCmdHdlrInt, NULL, &iActionQPersistUpdCnt, NULL, eConfObjAction));
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuesyncqueuefiles", 0, eCmdHdlrBinary, NULL, &bActionQSyncQeueFiles, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionname", 0, eCmdHdlrGetWord, NULL, &cs.pszActionName, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuefilename", 0, eCmdHdlrGetWord, NULL, &cs.pszActionQFName, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuesize", 0, eCmdHdlrInt, NULL, &cs.iActionQueueSize, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionwriteallmarkmessages", 0, eCmdHdlrBinary, NULL, &cs.bActionWriteAllMarkMsgs, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuedequeuebatchsize", 0, eCmdHdlrInt, NULL, &cs.iActionQueueDeqBatchSize, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuemaxdiskspace", 0, eCmdHdlrSize, NULL, &cs.iActionQueMaxDiskSpace, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuehighwatermark", 0, eCmdHdlrInt, NULL, &cs.iActionQHighWtrMark, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuelowwatermark", 0, eCmdHdlrInt, NULL, &cs.iActionQLowWtrMark, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuediscardmark", 0, eCmdHdlrInt, NULL, &cs.iActionQDiscardMark, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuediscardseverity", 0, eCmdHdlrInt, NULL, &cs.iActionQDiscardSeverity, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuecheckpointinterval", 0, eCmdHdlrInt, NULL, &cs.iActionQPersistUpdCnt, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuesyncqueuefiles", 0, eCmdHdlrBinary, NULL, &cs.bActionQSyncQeueFiles, NULL, eConfObjAction));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuetype", 0, eCmdHdlrGetWord, setActionQueType, NULL, NULL, eConfObjAction));
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueueworkerthreads", 0, eCmdHdlrInt, NULL, &iActionQueueNumWorkers, NULL, eConfObjAction));
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuetimeoutshutdown", 0, eCmdHdlrInt, NULL, &iActionQtoQShutdown, NULL, eConfObjAction));
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuetimeoutactioncompletion", 0, eCmdHdlrInt, NULL, &iActionQtoActShutdown, NULL, eConfObjAction));
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuetimeoutenqueue", 0, eCmdHdlrInt, NULL, &iActionQtoEnq, NULL, eConfObjAction));
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueueworkertimeoutthreadshutdown", 0, eCmdHdlrInt, NULL, &iActionQtoWrkShutdown, NULL, eConfObjAction));
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueueworkerthreadminimummessages", 0, eCmdHdlrInt, NULL, &iActionQWrkMinMsgs, NULL, eConfObjAction));
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuemaxfilesize", 0, eCmdHdlrSize, NULL, &iActionQueMaxFileSize, NULL, eConfObjAction));
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuesaveonshutdown", 0, eCmdHdlrBinary, NULL, &bActionQSaveOnShutdown, NULL, eConfObjAction));
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuedequeueslowdown", 0, eCmdHdlrInt, NULL, &iActionQueueDeqSlowdown, NULL, eConfObjAction));
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuedequeuetimebegin", 0, eCmdHdlrInt, NULL, &iActionQueueDeqtWinFromHr, NULL, eConfObjAction));
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuedequeuetimeend", 0, eCmdHdlrInt, NULL, &iActionQueueDeqtWinToHr, NULL, eConfObjAction));
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionexeconlyeverynthtime", 0, eCmdHdlrInt, NULL, &iActExecEveryNthOccur, NULL, eConfObjAction));
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionexeconlyeverynthtimetimeout", 0, eCmdHdlrInt, NULL, &iActExecEveryNthOccurTO, NULL, eConfObjAction));
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionexeconlyonceeveryinterval", 0, eCmdHdlrInt, NULL, &iActExecOnceInterval, NULL, eConfObjAction));
-	CHKiRet(regCfSysLineHdlr((uchar *)"repeatedmsgcontainsoriginalmsg", 0, eCmdHdlrBinary, NULL, &bActionRepMsgHasMsg, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueueworkerthreads", 0, eCmdHdlrInt, NULL, &cs.iActionQueueNumWorkers, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuetimeoutshutdown", 0, eCmdHdlrInt, NULL, &cs.iActionQtoQShutdown, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuetimeoutactioncompletion", 0, eCmdHdlrInt, NULL, &cs.iActionQtoActShutdown, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuetimeoutenqueue", 0, eCmdHdlrInt, NULL, &cs.iActionQtoEnq, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueueworkertimeoutthreadshutdown", 0, eCmdHdlrInt, NULL, &cs.iActionQtoWrkShutdown, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueueworkerthreadminimummessages", 0, eCmdHdlrInt, NULL, &cs.iActionQWrkMinMsgs, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuemaxfilesize", 0, eCmdHdlrSize, NULL, &cs.iActionQueMaxFileSize, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuesaveonshutdown", 0, eCmdHdlrBinary, NULL, &cs.bActionQSaveOnShutdown, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuedequeueslowdown", 0, eCmdHdlrInt, NULL, &cs.iActionQueueDeqSlowdown, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuedequeuetimebegin", 0, eCmdHdlrInt, NULL, &cs.iActionQueueDeqtWinFromHr, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuedequeuetimeend", 0, eCmdHdlrInt, NULL, &cs.iActionQueueDeqtWinToHr, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionexeconlyeverynthtime", 0, eCmdHdlrInt, NULL, &cs.iActExecEveryNthOccur, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionexeconlyeverynthtimetimeout", 0, eCmdHdlrInt, NULL, &cs.iActExecEveryNthOccurTO, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionexeconlyonceeveryinterval", 0, eCmdHdlrInt, NULL, &cs.iActExecOnceInterval, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"repeatedmsgcontainsoriginalmsg", 0, eCmdHdlrBinary, NULL, &cs.bActionRepMsgHasMsg, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionexeconlywhenpreviousissuspended", 0, eCmdHdlrBinary, NULL, &cs.bActExecWhenPrevSusp, NULL, eConfObjGlobal));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionresumeretrycount", 0, eCmdHdlrInt, NULL, &cs.glbliActionResumeRetryCount, NULL, eConfObjGlobal));
 	CHKiRet(regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, NULL, eConfObjAction));
+
+	initConfigVariables(); /* first-time init of config setings */
 
 finalize_it:
 	RETiRet;

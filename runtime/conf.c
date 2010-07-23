@@ -1266,7 +1266,9 @@ setActionScope(void)
 
 	currConfObj = eConfObjAction;
 	DBGPRINTF("entering action scope\n");
+	CHKiRet(actionNewScope());
 
+finalize_it:
 	RETiRet;
 }
 
@@ -1322,6 +1324,7 @@ endConfObj(void __attribute__((unused)) *pVal, uchar *pszName)
 			ABORT_FINALIZE(RS_RET_CONF_INVLD_END);
 		}
 		currConfObj = eConfObjGlobal;
+		CHKiRet(actionRestoreScope());
 	} else {
 		errmsg.LogError(0, RS_RET_INVLD_CONF_OBJ, "invalid config object \"%s\" in $End", pszName);
 		ABORT_FINALIZE(RS_RET_INVLD_CONF_OBJ);
@@ -1330,6 +1333,21 @@ endConfObj(void __attribute__((unused)) *pVal, uchar *pszName)
 finalize_it:
 	free(pszName); /* no longer needed */
 	RETiRet;
+}
+
+
+/* Reset config variables to default values. Note that
+ * when we are inside an scope, we simply reset this to global.
+ * However, $ResetConfigVariables is a global directive, and as such
+ * will not be honored inside a scope!
+ * rgerhards, 2010-07-23
+ */
+static rsRetVal
+resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
+{
+	currConfObj = eConfObjGlobal;
+	bConfStrictScoping = 0;
+	return RS_RET_OK;
 }
 
 
@@ -1377,7 +1395,7 @@ BEGINAbstractObjClassInit(conf, 1, OBJ_IS_CORE_MODULE) /* class, version - CHANG
 	CHKiRet(regCfSysLineHdlr((uchar *)"begin", 0, eCmdHdlrGetWord, beginConfObj, NULL, NULL, eConfObjGlobal));
 	CHKiRet(regCfSysLineHdlr((uchar *)"end", 0, eCmdHdlrGetWord, endConfObj, NULL, NULL, eConfObjAlways));
 	CHKiRet(regCfSysLineHdlr((uchar *)"strictscoping", 0, eCmdHdlrBinary, NULL, &bConfStrictScoping, NULL, eConfObjGlobal));
-#warning add $reset
+	CHKiRet(regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, NULL, eConfObjAction));
 ENDObjClassInit(conf)
 
 /* vi:set ai:
