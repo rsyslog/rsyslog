@@ -76,7 +76,7 @@ BEGINinterface(glbl) /* name must also be changed in ENDinterface macro! */
 	 */
 	SIMP_PROP(FdSetSize, int)
 	/* v7: was neeeded to mean v5+v6 - do NOT add anything else for that version! */
-	/* next change is v8! */
+	/* next is v8! */
 #undef	SIMP_PROP
 ENDinterface(glbl)
 #define glblCURR_IF_VERSION 7 /* increment whenever you change the interface structure! */

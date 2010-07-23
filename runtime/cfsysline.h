@@ -26,33 +26,6 @@
 
 #include "linkedlist.h"
 
-#if 0
-/* types of configuration handlers
- */
-enum cslCmdHdlrType {
-	eCmdHdlrInvalid = 0,		/* invalid handler type - indicates a coding error */
-	eCmdHdlrCustomHandler,		/* custom handler, just call handler function */
-	eCmdHdlrUID,
-	eCmdHdlrGID,
-	eCmdHdlrBinary,
-	eCmdHdlrFileCreateMode,
-	eCmdHdlrInt,
-	eCmdHdlrSize,
-	eCmdHdlrGetChar,
-	eCmdHdlrFacility,
-	eCmdHdlrSeverity,
-	eCmdHdlrGetWord
-};
-
-
-/* the next type describes $Begin .. $End block object types
- */
-enum cslConfObjType {
-	eConfObjGlobal = 0,	/* global directives */
-	eConfObjAction,		/* action-specific directives */
-};
-#endif
-
 /* this is a single entry for a parse routine. It describes exactly
  * one entry point/handler.
  * The short name is cslch (Configfile SysLine CommandHandler)

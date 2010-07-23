@@ -39,6 +39,7 @@
 
 #include "cfsysline.h"
 #include "obj.h"
+#include "conf.h"
 #include "errmsg.h"
 #include "srUtils.h"
 
@@ -912,6 +913,7 @@ rsRetVal processCfSysLineCommand(uchar *pCmdName, uchar **p)
 	uchar *pHdlrP; /* the handler's private p (else we could only call one handler) */
 	int bWasOnceOK; /* was the result of an handler at least once RS_RET_OK? */
 	uchar *pOKp = NULL; /* returned conf line pointer when it was OK */
+	int bHadScopingErr = 0; /* set if a scoping error occured */
 
 	iRet = llFind(&llCmdList, (void *) pCmdName, (void*) &pCmd);
 
@@ -925,17 +927,25 @@ rsRetVal processCfSysLineCommand(uchar *pCmdName, uchar **p)
 	llCookieCmdHdlr = NULL;
 	bWasOnceOK = 0;
 	while((iRetLL = llGetNextElt(&pCmd->llCmdHdlrs, &llCookieCmdHdlr, (void*)&pCmdHdlr)) == RS_RET_OK) {
-		/* for the time being, we ignore errors during handlers. The
-		 * reason is that handlers are independent. An error in one
-		 * handler does not necessarily mean that another one will
-		 * fail, too. Later, we might add a config variable to control
-		 * this behaviour (but I am not sure if that is rally
-		 * necessary). -- rgerhards, 2007-07-31
-		 */
-		pHdlrP = *p;
-		if((iRet = cslchCallHdlr(pCmdHdlr, &pHdlrP)) == RS_RET_OK) {
-			bWasOnceOK = 1;
-			pOKp = pHdlrP;
+		/* check if handler is valid in current scope */
+		if(pCmdHdlr->eConfObjType == eConfObjAlways ||
+		   (bConfStrictScoping == 0 && currConfObj == eConfObjGlobal) ||
+		   pCmdHdlr->eConfObjType == currConfObj) {
+			/* for the time being, we ignore errors during handlers. The
+			 * reason is that handlers are independent. An error in one
+			 * handler does not necessarily mean that another one will
+			 * fail, too. Later, we might add a config variable to control
+			 * this behaviour (but I am not sure if that is really
+			 * necessary). -- rgerhards, 2007-07-31
+			 */
+			pHdlrP = *p;
+			if((iRet = cslchCallHdlr(pCmdHdlr, &pHdlrP)) == RS_RET_OK) {
+				bWasOnceOK = 1;
+				pOKp = pHdlrP;
+			}
+		} else {
+			errmsg.LogError(0, RS_RET_CONF_INVLD_SCOPE, "config command invalid for current scope");
+			bHadScopingErr = 1;
 		}
 	}
 
@@ -946,6 +956,10 @@ rsRetVal processCfSysLineCommand(uchar *pCmdName, uchar **p)
 
 	if(iRetLL != RS_RET_END_OF_LINKEDLIST)
 		iRet = iRetLL;
+
+	if(bHadScopingErr) {
+		iRet = RS_RET_CONF_INVLD_SCOPE;
+	}
 
 finalize_it:
 	RETiRet;

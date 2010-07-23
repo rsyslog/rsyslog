@@ -52,7 +52,6 @@
 #endif
 
 #include "rsyslog.h"
-#include "../tools/syslogd.h" /* TODO: this must be removed! */
 #include "dirty.h"
 #include "parse.h"
 #include "action.h"
@@ -92,6 +91,10 @@ DEFobjCurrIf(errmsg)
 DEFobjCurrIf(net)
 DEFobjCurrIf(rule)
 DEFobjCurrIf(ruleset)
+
+ecslConfObjType currConfObj = eConfObjGlobal; /* to support scoping - which config object is currently active? */
+int bConfStrictScoping = 0;	/* force strict scoping during config processing? */
+
 
 static int iNbrActions = 0; /* number of currently defined actions */
 
@@ -1097,6 +1100,11 @@ static rsRetVal cflineDoAction(uchar **p, action_t **ppAction)
 		iRet = pMod->mod.om.parseSelectorAct(p, &pModData, &pOMSR);
 		dbgprintf("tried selector action for %s: %d\n", module.GetName(pMod), iRet);
 		if(iRet == RS_RET_OK || iRet == RS_RET_SUSPENDED) {
+			/* advance our config parser state: we now only accept an $End as valid,
+			 * no more action statments.
+			 */
+			if(currConfObj == eConfObjAction)
+				currConfObj = eConfObjActionWaitEnd;
 			if((iRet = addAction(&pAction, pMod, pModData, pOMSR, (iRet == RS_RET_SUSPENDED)? 1 : 0)) == RS_RET_OK) {
 				/* now check if the module is compatible with select features */
 				if(pMod->isCompatibleWithFeature(sFEATURERepeatedMsgReduction) == RS_RET_OK)
@@ -1246,6 +1254,85 @@ finalize_it:
 ENDobjQueryInterface(conf)
 
 
+/* switch to a new action scope. This means that we switch the current 
+ * mode to action, but it also means we need to clear all scope variables,
+ * so that we have a new environment.
+ * rgerhards, 2010-07-23
+ */
+static inline rsRetVal
+setActionScope(void)
+{
+	DEFiRet;
+
+	currConfObj = eConfObjAction;
+	DBGPRINTF("entering action scope\n");
+
+	RETiRet;
+}
+
+
+/* This method is called by our own handlers to begin a new config
+ * object ($Begin statement). This also implies a new scope.
+ * rgerhards, 2010-07-23
+ */
+static rsRetVal
+beginConfObj(void __attribute__((unused)) *pVal, uchar *pszName)
+{
+	DEFiRet;
+
+	if(currConfObj != eConfObjGlobal) {
+		errmsg.LogError(0, RS_RET_CONF_NOT_GLBL, "not in global scope - can not nest $Begin");
+		ABORT_FINALIZE(RS_RET_CONF_NOT_GLBL);
+	}
+
+	if(!strcasecmp((char*)pszName, "action")) {
+		setActionScope();
+	} else {
+		errmsg.LogError(0, RS_RET_INVLD_CONF_OBJ, "invalid config object \"%s\" in $Begin", pszName);
+		ABORT_FINALIZE(RS_RET_INVLD_CONF_OBJ);
+	}
+
+finalize_it:
+	free(pszName); /* no longer needed */
+	RETiRet;
+}
+
+
+/* This method is called to end a config scope and switch
+ * back to global scope.
+ * rgerhards, 2010-07-23
+ */
+static rsRetVal
+endConfObj(void __attribute__((unused)) *pVal, uchar *pszName)
+{
+	DEFiRet;
+
+	if(currConfObj == eConfObjGlobal) {
+		errmsg.LogError(0, RS_RET_CONF_NOT_GLBL, "already in global scope - dangling $End");
+		ABORT_FINALIZE(RS_RET_CONF_IN_GLBL);
+	}
+
+	if(!strcasecmp((char*)pszName, "action")) {
+		if(currConfObj == eConfObjAction) {
+			errmsg.LogError(0, RS_RET_CONF_END_NO_ACT, "$End action but not action specified");
+			/* this is a warning, we continue processing in that case (unscope) */
+		} else if(currConfObj != eConfObjActionWaitEnd) {
+			errmsg.LogError(0, RS_RET_CONF_INVLD_END, "$End not for active config object - "
+							          "nesting error?");
+			ABORT_FINALIZE(RS_RET_CONF_INVLD_END);
+		}
+		currConfObj = eConfObjGlobal;
+	} else {
+		errmsg.LogError(0, RS_RET_INVLD_CONF_OBJ, "invalid config object \"%s\" in $End", pszName);
+		ABORT_FINALIZE(RS_RET_INVLD_CONF_OBJ);
+	}
+
+finalize_it:
+	free(pszName); /* no longer needed */
+	RETiRet;
+}
+
+
 /* exit our class
  * rgerhards, 2008-03-11
  */
@@ -1286,6 +1373,11 @@ BEGINAbstractObjClassInit(conf, 1, OBJ_IS_CORE_MODULE) /* class, version - CHANG
 	CHKiRet(objUse(net, LM_NET_FILENAME)); /* TODO: make this dependcy go away! */
 	CHKiRet(objUse(rule, CORE_COMPONENT));
 	CHKiRet(objUse(ruleset, CORE_COMPONENT));
+
+	CHKiRet(regCfSysLineHdlr((uchar *)"begin", 0, eCmdHdlrGetWord, beginConfObj, NULL, NULL, eConfObjGlobal));
+	CHKiRet(regCfSysLineHdlr((uchar *)"end", 0, eCmdHdlrGetWord, endConfObj, NULL, NULL, eConfObjAlways));
+	CHKiRet(regCfSysLineHdlr((uchar *)"strictscoping", 0, eCmdHdlrBinary, NULL, &bConfStrictScoping, NULL, eConfObjGlobal));
+#warning add $reset
 ENDObjClassInit(conf)
 
 /* vi:set ai:

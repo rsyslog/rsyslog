@@ -28,6 +28,8 @@
  * somewhat strange (at least its name). -- rgerhards, 2007-08-01
  */
 enum eDirective { DIR_TEMPLATE = 0, DIR_OUTCHANNEL = 1, DIR_ALLOWEDSENDER = 2};
+extern ecslConfObjType currConfObj;
+extern int bConfStrictScoping;	/* force strict scoping during config processing? */
 
 /* interfaces */
 BEGINinterface(conf) /* name must also be changed in ENDinterface macro! */
@@ -38,8 +40,14 @@ BEGINinterface(conf) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*cfline)(uchar *line, rule_t **pfCurr);
 	rsRetVal (*processConfFile)(uchar *pConfFile);
 	rsRetVal (*GetNbrActActions)(int *);
+	/* version 4 -- 2010-07-23 rgerhards */
+	/* "just" added global variables
+	 * FYI: we reconsider repacking as a non-object, as only the core currently
+	 * accesses this module. The current object structure complicates things without
+	 * any real benefit.
+	 */
 ENDinterface(conf)
-#define confCURR_IF_VERSION 3 /* increment whenever you change the interface structure! */
+#define confCURR_IF_VERSION 4 /* increment whenever you change the interface structure! */
 /* in Version 3, entry point "ReInitConf()" was removed, as we do not longer need
  * to support restart-type HUP -- rgerhards, 2009-07-15
  */
