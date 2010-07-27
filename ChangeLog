@@ -1,4 +1,17 @@
 ---------------------------------------------------------------------------
+Version 6.1.0  [DEVEL] (rgerhards), 2010-07-??
+
+*********************************** NOTE **********************************
+The v6 versions of rsyslog feature a greatly redesigned config system 
+which, among others, supports scoping. However, the initial version does
+not contain the whole new system. Rather it will evolve. So it is
+expected that interfaces, even new ones, break during the initial
+6.x.y releases.
+*********************************** NOTE **********************************
+
+- added $Begin, $End and $ScriptScoping config scope statments
+  (at this time for actions only).
+---------------------------------------------------------------------------
 Version 5.5.6  [DEVEL] (rgerhards), 2010-07-21
 - added parser modules
   * pmlastmsg, which supports the notoriously malformed "last message
