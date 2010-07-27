@@ -46,6 +46,8 @@
 
 MODULE_TYPE_OUTPUT
 
+static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal);
+
 /* internal structures
  */
 DEF_OMOD_STATIC_DATA
@@ -63,14 +65,23 @@ typedef struct _instanceData {
 
 /* config variables
  * For the configuration interface, we need to keep track of some settings. This
- * is done in global variables. It works as follows: when configuration statements
+ * is done in global variables, inside a struct. It works as follows: when configuration statements
  * are entered, the config file handler (or custom function) sets the global
  * variable here. When the action then actually is instantiated, this handler
  * copies over to instanceData whatever configuration settings (from the global
  * variables) apply. The global variables are NEVER used inside an action
  * instance (at least this is how it is supposed to work ;)
  */
-static int iSrvPort = 0;	/* sample: server port */
+typedef struct configSettings_s {
+	int iSrvPort;	/* sample: server port */
+} configSettings_t;
+
+SCOPING_SUPPORT; /* must be set AFTER configSettings_t is defined */
+
+BEGINinitConfVars		/* (re)set config variables to default values */
+CODESTARTinitConfVars 
+	resetConfigVariables(NULL, NULL);
+ENDinitConfVars
 
 
 BEGINcreateInstance
@@ -176,7 +187,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	/* if we reach this point, all went well, and we can copy over to instanceData
 	 * those configuration elements that we need.
 	 */
-	pData->iSrvPort = (unsigned) iSrvPort;	/* set configured port */
+	pData->iSrvPort = (unsigned) cs.iSrvPort;	/* set configured port */
 
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
@@ -199,7 +210,7 @@ static rsRetVal
 resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
 	DEFiRet;
-	iSrvPort = 0; /* zero is the default port */
+	cs.iSrvPort = 0; /* zero is the default port */
 	RETiRet;
 }
 
@@ -211,7 +222,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	/* register our config handlers */
 	/* confguration parameters MUST always be specified in lower case! */
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionomtemplteserverport", 0, eCmdHdlrInt, NULL, &iSrvPort, STD_LOADABLE_MODULE_ID, eConfObjAction));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionomtemplteserverport", 0, eCmdHdlrInt, NULL, &cs.iSrvPort, STD_LOADABLE_MODULE_ID, eConfObjAction));
 	/* "resetconfigvariables" should be provided. Notat that it is a chained directive */
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID, eConfObjAction));
 ENDmodInit

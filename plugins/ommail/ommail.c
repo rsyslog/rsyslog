@@ -70,12 +70,6 @@ struct toRcpt_s {
 	uchar *pszTo;
 	toRcpt_t *pNext;
 };
-static toRcpt_t *lstRcpt = NULL;
-static uchar *pszSrv = NULL;
-static uchar *pszSrvPort = NULL;
-static uchar *pszFrom = NULL;
-static uchar *pszSubject = NULL;
-static int bEnableBody = 1; /* should a mail body be generated? (set to 0 eg for SMS gateways) */
 
 typedef struct _instanceData {
 	int iMode;	/* 0 - smtp, 1 - sendmail */
@@ -94,6 +88,27 @@ typedef struct _instanceData {
 			} smtp;
 	} md;	/* mode-specific data */
 } instanceData;
+
+typedef struct configSettings_s {
+	toRcpt_t *lstRcpt;
+	uchar *pszSrv;
+	uchar *pszSrvPort;
+	uchar *pszFrom;
+	uchar *pszSubject;
+	int bEnableBody; /* should a mail body be generated? (set to 0 eg for SMS gateways) */
+} configSettings_t;
+
+SCOPING_SUPPORT; /* must be set AFTER configSettings_t is defined */
+
+BEGINinitConfVars		/* (re)set config variables to default values */
+CODESTARTinitConfVars 
+	cs.lstRcpt = NULL;
+	cs.pszSrv = NULL;
+	cs.pszSrvPort = NULL;
+	cs.pszFrom = NULL;
+	cs.pszSubject = NULL;
+	cs.bEnableBody = 1; /* should a mail body be generated? (set to 0 eg for SMS gateways) */
+ENDinitConfVars
 
 /* forward definitions (as few as possible) */
 static rsRetVal Send(int sock, char *msg, size_t len);
@@ -128,8 +143,8 @@ addRcpt(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	CHKmalloc(pNew = calloc(1, sizeof(toRcpt_t)));
 
 	pNew->pszTo = pNewVal;
-	pNew->pNext = lstRcpt;
-	lstRcpt = pNew;
+	pNew->pNext = cs.lstRcpt;
+	cs.lstRcpt = pNew;
 
 	dbgprintf("ommail::addRcpt adds recipient %s\n", pNewVal);
 
@@ -608,32 +623,32 @@ CODESTARTparseSelectorAct
 
 	/* TODO: check strdup() result */
 
-	if(pszFrom == NULL) {
+	if(cs.pszFrom == NULL) {
 		errmsg.LogError(0, RS_RET_MAIL_NO_FROM, "no sender address given - specify $ActionMailFrom");
 		ABORT_FINALIZE(RS_RET_MAIL_NO_FROM);
 	}
-	if(lstRcpt == NULL) {
+	if(cs.lstRcpt == NULL) {
 		errmsg.LogError(0, RS_RET_MAIL_NO_TO, "no recipient address given - specify $ActionMailTo");
 		ABORT_FINALIZE(RS_RET_MAIL_NO_TO);
 	}
 
-	pData->md.smtp.pszFrom = (uchar*) strdup((char*)pszFrom);
-	pData->md.smtp.lstRcpt = lstRcpt; /* we "hand over" this memory */
-	lstRcpt = NULL; /* note: this is different from pre-3.21.2 versions! */
+	pData->md.smtp.pszFrom = (uchar*) strdup((char*)cs.pszFrom);
+	pData->md.smtp.lstRcpt = cs.lstRcpt; /* we "hand over" this memory */
+	cs.lstRcpt = NULL; /* note: this is different from pre-3.21.2 versions! */
 
-	if(pszSubject == NULL) {
+	if(cs.pszSubject == NULL) {
 		/* if no subject is configured, we need just one template string */
 		CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	} else {
 		CODE_STD_STRING_REQUESTparseSelectorAct(2)
 		pData->bHaveSubject = 1;
-		CHKiRet(OMSRsetEntry(*ppOMSR, 1, (uchar*)strdup((char*) pszSubject), OMSR_NO_RQD_TPL_OPTS));
+		CHKiRet(OMSRsetEntry(*ppOMSR, 1, (uchar*)strdup((char*) cs.pszSubject), OMSR_NO_RQD_TPL_OPTS));
 	}
-	if(pszSrv != NULL)
-		pData->md.smtp.pszSrv = (uchar*) strdup((char*)pszSrv);
-	if(pszSrvPort != NULL)
-		pData->md.smtp.pszSrvPort = (uchar*) strdup((char*)pszSrvPort);
-	pData->bEnableBody = bEnableBody;
+	if(cs.pszSrv != NULL)
+		pData->md.smtp.pszSrv = (uchar*) strdup((char*)cs.pszSrv);
+	if(cs.pszSrvPort != NULL)
+		pData->md.smtp.pszSrvPort = (uchar*) strdup((char*)cs.pszSrvPort);
+	pData->bEnableBody = cs.bEnableBody;
 
 	/* process template */
 	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS, (uchar*) "RSYSLOG_FileFormat"));
@@ -646,20 +661,14 @@ static rsRetVal freeConfigVariables(void)
 {
 	DEFiRet;
 
-	if(pszSrv != NULL) {
-		free(pszSrv);
-		pszSrv = NULL;
-	}
-	if(pszSrvPort != NULL) {
-		free(pszSrvPort);
-		pszSrvPort = NULL;
-	}
-	if(pszFrom != NULL) {
-		free(pszFrom);
-		pszFrom = NULL;
-	}
-	lstRcptDestruct(lstRcpt);
-	lstRcpt = NULL;
+	free(cs.pszSrv);
+	cs.pszSrv = NULL;
+	free(cs.pszSrvPort);
+	cs.pszSrvPort = NULL;
+	free(cs.pszFrom);
+	cs.pszFrom = NULL;
+	lstRcptDestruct(cs.lstRcpt);
+	cs.lstRcpt = NULL;
 	
 	RETiRet;
 }
@@ -688,7 +697,7 @@ ENDqueryEtryPt
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
 	DEFiRet;
-	bEnableBody = 1;
+	cs.bEnableBody = 1;
 	iRet = freeConfigVariables();
 	RETiRet;
 }
@@ -705,12 +714,12 @@ CODEmodInit_QueryRegCFSLineHdlr
 
 	dbgprintf("ommail version %s initializing\n", VERSION);
 
-	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionmailsmtpserver", 0, eCmdHdlrGetWord, NULL, &pszSrv, STD_LOADABLE_MODULE_ID, eConfObjAction));
-	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionmailsmtpport", 0, eCmdHdlrGetWord, NULL, &pszSrvPort, STD_LOADABLE_MODULE_ID, eConfObjAction));
-	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionmailfrom", 0, eCmdHdlrGetWord, NULL, &pszFrom, STD_LOADABLE_MODULE_ID, eConfObjAction));
+	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionmailsmtpserver", 0, eCmdHdlrGetWord, NULL, &cs.pszSrv, STD_LOADABLE_MODULE_ID, eConfObjAction));
+	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionmailsmtpport", 0, eCmdHdlrGetWord, NULL, &cs.pszSrvPort, STD_LOADABLE_MODULE_ID, eConfObjAction));
+	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionmailfrom", 0, eCmdHdlrGetWord, NULL, &cs.pszFrom, STD_LOADABLE_MODULE_ID, eConfObjAction));
 	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionmailto", 0, eCmdHdlrGetWord, addRcpt, NULL, STD_LOADABLE_MODULE_ID, eConfObjAction));
-	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionmailsubject", 0, eCmdHdlrGetWord, NULL, &pszSubject, STD_LOADABLE_MODULE_ID, eConfObjAction));
-	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionmailenablebody", 0, eCmdHdlrBinary, NULL, &bEnableBody, STD_LOADABLE_MODULE_ID, eConfObjAction));
+	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionmailsubject", 0, eCmdHdlrGetWord, NULL, &cs.pszSubject, STD_LOADABLE_MODULE_ID, eConfObjAction));
+	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionmailenablebody", 0, eCmdHdlrBinary, NULL, &cs.bEnableBody, STD_LOADABLE_MODULE_ID, eConfObjAction));
 	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID, eConfObjAction));
 ENDmodInit
 

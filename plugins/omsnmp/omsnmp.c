@@ -61,27 +61,6 @@ static oid             objid_sysdescr[] = { 1, 3, 6, 1, 2, 1, 1, 1, 0 };
 static oid             objid_snmptrap[] = { 1, 3, 6, 1, 6, 3, 1, 1, 4, 1, 0 };
 static oid             objid_sysuptime[] = { 1, 3, 6, 1, 2, 1, 1, 3, 0 };
 
-static uchar* pszTransport = NULL; /* default transport */
-static uchar* pszTarget = NULL;
-/* note using an unsigned for a port number is not a good idea from an IPv6 point of view */
-static int iPort = 0;
-static int iSNMPVersion = 1;	/* 0 Means SNMPv1, 1 Means SNMPv2c */
-static uchar* pszCommunity = NULL;
-static uchar* pszEnterpriseOID = NULL;
-static uchar* pszSnmpTrapOID = NULL;
-static uchar* pszSyslogMessageOID = NULL;
-static int iSpecificType = 0;
-static int iTrapType = SNMP_TRAP_ENTERPRISESPECIFIC;/*Default is SNMP_TRAP_ENTERPRISESPECIFIC */
-/* 
-			Possible Values
-	SNMP_TRAP_COLDSTART		(0)
-	SNMP_TRAP_WARMSTART		(1)
-	SNMP_TRAP_LINKDOWN		(2)
-	SNMP_TRAP_LINKUP		(3)
-	SNMP_TRAP_AUTHFAIL		(4)
-	SNMP_TRAP_EGPNEIGHBORLOSS	(5)
-	SNMP_TRAP_ENTERPRISESPECIFIC	(6)
-*/
 
 typedef struct _instanceData {
 	uchar	szTransport[OMSNMP_MAXTRANSPORLENGTH+1];	/* Transport - Can be udp, tcp, udp6, tcp6 and other types supported by NET-SNMP */ 
@@ -105,6 +84,46 @@ typedef struct _instanceData {
 
 	netsnmp_session *snmpsession;						/* Holds to SNMP Session, NULL if not initialized */
 } instanceData;
+
+typedef struct configSettings_s {
+	uchar* pszTransport; /* default transport */
+	uchar* pszTarget;
+	/* note using an unsigned for a port number is not a good idea from an IPv6 point of view */
+	int iPort;
+	int iSNMPVersion;	/* 0 Means SNMPv1, 1 Means SNMPv2c */
+	uchar* pszCommunity;
+	uchar* pszEnterpriseOID;
+	uchar* pszSnmpTrapOID;
+	uchar* pszSyslogMessageOID;
+	int iSpecificType;
+	int iTrapType;		/*Default is SNMP_TRAP_ENTERPRISESPECIFIC */
+	/* 
+				Possible Values
+		SNMP_TRAP_COLDSTART		(0)
+		SNMP_TRAP_WARMSTART		(1)
+		SNMP_TRAP_LINKDOWN		(2)
+		SNMP_TRAP_LINKUP		(3)
+		SNMP_TRAP_AUTHFAIL		(4)
+		SNMP_TRAP_EGPNEIGHBORLOSS	(5)
+		SNMP_TRAP_ENTERPRISESPECIFIC	(6)
+	*/
+} configSettings_t;
+
+SCOPING_SUPPORT; /* must be set AFTER configSettings_t is defined */
+
+BEGINinitConfVars		/* (re)set config variables to default values */
+CODESTARTinitConfVars 
+	cs.pszTransport = NULL;
+	cs.pszTarget = NULL;
+	cs.iPort = 0;
+	cs.iSNMPVersion = 1;
+	cs.pszCommunity = NULL;
+	cs.pszEnterpriseOID = NULL;
+	cs.pszSnmpTrapOID = NULL;
+	cs.pszSyslogMessageOID = NULL;
+	cs.iSpecificType = 0;
+	cs.iTrapType = SNMP_TRAP_ENTERPRISESPECIFIC;
+ENDinitConfVars
 
 BEGINcreateInstance
 CODESTARTcreateInstance
@@ -352,72 +371,72 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		FINALIZE;
 
 	/* Check Transport */
-	if (pszTransport == NULL) {
+	if (cs.pszTransport == NULL) {
 		/* 
 		* Default transport is UDP. Other values supported by NETSNMP are possible as well
 		 */
 		strncpy( (char*) pData->szTransport, "udp", sizeof("udp") );
 	} else {
 		/* Copy Transport */
-		strncpy( (char*) pData->szTransport, (char*) pszTransport, strlen((char*) pszTransport) );
+		strncpy( (char*) pData->szTransport, (char*) cs.pszTransport, strlen((char*) cs.pszTransport) );
 	}
 
 	/* Check Target */
-	if (pszTarget == NULL) {
+	if (cs.pszTarget == NULL) {
 		ABORT_FINALIZE( RS_RET_PARAM_ERROR );
 	} else {
 		/* Copy Target */
-		CHKmalloc(pData->szTarget = (uchar*) strdup((char*)pszTarget));
+		CHKmalloc(pData->szTarget = (uchar*) strdup((char*)cs.pszTarget));
 	}
 
 	/* Copy Community */
-	if (pszCommunity == NULL)	/* Failsave */
+	if (cs.pszCommunity == NULL)	/* Failsave */
 		strncpy( (char*) pData->szCommunity, "public", sizeof("public") );
 	else						/* Copy Target */
-		strncpy( (char*) pData->szCommunity, (char*) pszCommunity, strlen((char*) pszCommunity) );
+		strncpy( (char*) pData->szCommunity, (char*) cs.pszCommunity, strlen((char*) cs.pszCommunity) );
 
 	/* Copy Enterprise OID */
-	if (pszEnterpriseOID == NULL)	/* Failsave */
+	if (cs.pszEnterpriseOID == NULL)	/* Failsave */
 		strncpy( (char*) pData->szEnterpriseOID, "1.3.6.1.4.1.3.1.1", sizeof("1.3.6.1.4.1.3.1.1") );
 	else		/* Copy Target */
-		strncpy( (char*) pData->szEnterpriseOID, (char*) pszEnterpriseOID, strlen((char*) pszEnterpriseOID) );
+		strncpy( (char*) pData->szEnterpriseOID, (char*) cs.pszEnterpriseOID, strlen((char*) cs.pszEnterpriseOID) );
 
 	/* Copy SnmpTrap OID */
-	if (pszSnmpTrapOID == NULL)	/* Failsave */
+	if (cs.pszSnmpTrapOID == NULL)	/* Failsave */
 		strncpy( (char*) pData->szSnmpTrapOID, "1.3.6.1.4.1.19406.1.2.1", sizeof("1.3.6.1.4.1.19406.1.2.1") );
 	else		/* Copy Target */
-		strncpy( (char*) pData->szSnmpTrapOID, (char*) pszSnmpTrapOID, strlen((char*) pszSnmpTrapOID) );
+		strncpy( (char*) pData->szSnmpTrapOID, (char*) cs.pszSnmpTrapOID, strlen((char*) cs.pszSnmpTrapOID) );
 
 
 	/* Copy SyslogMessage OID */
-	if (pszSyslogMessageOID == NULL)	/* Failsave */
+	if (cs.pszSyslogMessageOID == NULL)	/* Failsave */
 		strncpy( (char*) pData->szSyslogMessageOID, "1.3.6.1.4.1.19406.1.1.2.1", sizeof("1.3.6.1.4.1.19406.1.1.2.1") );
 	else						/* Copy Target */
-		strncpy( (char*) pData->szSyslogMessageOID, (char*) pszSyslogMessageOID, strlen((char*) pszSyslogMessageOID) );
+		strncpy( (char*) pData->szSyslogMessageOID, (char*) cs.pszSyslogMessageOID, strlen((char*) cs.pszSyslogMessageOID) );
 
 	/* Copy Port */
-	if ( iPort == 0)		/* If no Port is set we use the default Port 162 */
+	if ( cs.iPort == 0)		/* If no Port is set we use the default Port 162 */
 		pData->iPort = 162;
 	else
-		pData->iPort = iPort;
+		pData->iPort = cs.iPort;
 	
 	/* Set SNMPVersion */
-	if ( iSNMPVersion < 0 || iSNMPVersion > 1)		/* Set default to 1 if out of range */
+	if ( cs.iSNMPVersion < 0 || cs.iSNMPVersion > 1)		/* Set default to 1 if out of range */
 		pData->iSNMPVersion = 1;
 	else
-		pData->iSNMPVersion = iSNMPVersion;
+		pData->iSNMPVersion = cs.iSNMPVersion;
 
 	/* Copy SpecificType */
-	if ( iSpecificType == 0)		/* If no iSpecificType is set, we use the default 0 */
+	if ( cs.iSpecificType == 0)		/* If no iSpecificType is set, we use the default 0 */
 		pData->iSpecificType = 0;
 	else
-		pData->iSpecificType = iSpecificType;
+		pData->iSpecificType = cs.iSpecificType;
 
 	/* Copy TrapType */
-	if ( iTrapType < 0 && iTrapType >= 6)		/* Only allow values from 0 to 6 !*/
+	if ( cs.iTrapType < 0 && cs.iTrapType >= 6)		/* Only allow values from 0 to 6 !*/
 		pData->iTrapType = SNMP_TRAP_ENTERPRISESPECIFIC;
 	else
-		pData->iTrapType = iTrapType;
+		pData->iTrapType = cs.iTrapType;
 
 	/* Create string for session peername! */
 	snprintf((char*)szTargetAndPort, sizeof(szTargetAndPort), "%s:%s:%d", pData->szTransport, pData->szTarget, pData->iPort);
@@ -456,48 +475,31 @@ ENDparseSelectorAct
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
 	DEFiRet;
-
-	if (pszTarget != NULL)
-		free(pszTarget);
-	pszTarget = NULL;
-	
-	if (pszCommunity != NULL)
-		free(pszCommunity);
-	pszCommunity = NULL;
-	
-	if (pszEnterpriseOID != NULL)
-		free(pszEnterpriseOID);
-	pszEnterpriseOID = NULL;
-
-	if (pszSnmpTrapOID != NULL)
-		free(pszSnmpTrapOID);
-	pszSnmpTrapOID = NULL;
-
-	if (pszSyslogMessageOID != NULL)
-		free(pszSyslogMessageOID);
-	pszSyslogMessageOID = NULL;
-
-	iPort = 0;
-	iSNMPVersion = 1;
-	iSpecificType = 0;
-	iTrapType = SNMP_TRAP_ENTERPRISESPECIFIC;
-
+	free(cs.pszTarget);
+	cs.pszTarget = NULL;
+	free(cs.pszCommunity);
+	cs.pszCommunity = NULL;
+	free(cs.pszEnterpriseOID);
+	cs.pszEnterpriseOID = NULL;
+	free(cs.pszSnmpTrapOID);
+	cs.pszSnmpTrapOID = NULL;
+	free(cs.pszSyslogMessageOID);
+	cs.pszSyslogMessageOID = NULL;
+	cs.iPort = 0;
+	cs.iSNMPVersion = 1;
+	cs.iSpecificType = 0;
+	cs.iTrapType = SNMP_TRAP_ENTERPRISESPECIFIC;
 	RETiRet;
 }
 
 
 BEGINmodExit
 CODESTARTmodExit
-	if (pszTarget != NULL)
-		free(pszTarget);	
-	if (pszCommunity != NULL)
-		free(pszCommunity);
-	if (pszEnterpriseOID != NULL)
-		free(pszEnterpriseOID);
-	if (pszSnmpTrapOID != NULL)
-		free(pszSnmpTrapOID);
-	if (pszSyslogMessageOID != NULL)
-		free(pszSyslogMessageOID);
+	free(cs.pszTarget);	
+	free(cs.pszCommunity);
+	free(cs.pszEnterpriseOID);
+	free(cs.pszSnmpTrapOID);
+	free(cs.pszSyslogMessageOID);
 
 	/* release what we no longer need */
 	objRelease(errmsg, CORE_COMPONENT);
@@ -516,17 +518,17 @@ CODESTARTmodInit
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 
-	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionsnmptransport", 0, eCmdHdlrGetWord, NULL, &pszTransport, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionsnmptarget", 0, eCmdHdlrGetWord, NULL, &pszTarget, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionsnmptargetport", 0, eCmdHdlrInt, NULL, &iPort, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionsnmpversion", 0, eCmdHdlrInt, NULL, &iSNMPVersion, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionsnmpcommunity", 0, eCmdHdlrGetWord, NULL, &pszCommunity, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionsnmpenterpriseoid", 0, eCmdHdlrGetWord, NULL, &pszEnterpriseOID, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionsnmptrapoid", 0, eCmdHdlrGetWord, NULL, &pszSnmpTrapOID, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionsnmpsyslogmessageoid", 0, eCmdHdlrGetWord, NULL, &pszSyslogMessageOID, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionsnmpspecifictype", 0, eCmdHdlrInt, NULL, &iSpecificType, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionsnmptraptype", 0, eCmdHdlrInt, NULL, &iTrapType, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionsnmptransport", 0, eCmdHdlrGetWord, NULL, &cs.pszTransport, STD_LOADABLE_MODULE_ID, eConfObjAction));
+	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionsnmptarget", 0, eCmdHdlrGetWord, NULL, &cs.pszTarget, STD_LOADABLE_MODULE_ID, eConfObjAction));
+	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionsnmptargetport", 0, eCmdHdlrInt, NULL, &cs.iPort, STD_LOADABLE_MODULE_ID, eConfObjAction));
+	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionsnmpversion", 0, eCmdHdlrInt, NULL, &cs.iSNMPVersion, STD_LOADABLE_MODULE_ID, eConfObjAction));
+	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionsnmpcommunity", 0, eCmdHdlrGetWord, NULL, &cs.pszCommunity, STD_LOADABLE_MODULE_ID, eConfObjAction));
+	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionsnmpenterpriseoid", 0, eCmdHdlrGetWord, NULL, &cs.pszEnterpriseOID, STD_LOADABLE_MODULE_ID, eConfObjAction));
+	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionsnmptrapoid", 0, eCmdHdlrGetWord, NULL, &cs.pszSnmpTrapOID, STD_LOADABLE_MODULE_ID, eConfObjAction));
+	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionsnmpsyslogmessageoid", 0, eCmdHdlrGetWord, NULL, &cs.pszSyslogMessageOID, STD_LOADABLE_MODULE_ID, eConfObjAction));
+	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionsnmpspecifictype", 0, eCmdHdlrInt, NULL, &cs.iSpecificType, STD_LOADABLE_MODULE_ID, eConfObjAction));
+	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionsnmptraptype", 0, eCmdHdlrInt, NULL, &cs.iTrapType, STD_LOADABLE_MODULE_ID, eConfObjAction));
+	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID, eConfObjAlways));
 ENDmodInit
 /*
  * vi:set ai:

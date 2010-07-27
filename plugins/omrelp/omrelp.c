@@ -64,6 +64,16 @@ typedef struct _instanceData {
 	relpClt_t *pRelpClt;		/* relp client for this instance */
 } instanceData;
 
+typedef struct configSettings_s {
+	EMPTY_STRUCT
+} configSettings_t;
+
+SCOPING_SUPPORT; /* must be set AFTER configSettings_t is defined */
+
+BEGINinitConfVars		/* (re)set config variables to default values */
+CODESTARTinitConfVars 
+ENDinitConfVars
+
 /* get the syslog forward port from selector_t. The passed in
  * struct must be one that is setup for forwarding.
  * rgerhards, 2007-06-28

@@ -58,8 +58,18 @@ typedef struct _instanceData {
 	int bIsRunning;		/* is binary currently running? 0-no, 1-yes */
 } instanceData;
 
+typedef struct configSettings_s {
+	uchar *szBinary;	/* name of binary to call */
+} configSettings_t;
+
+SCOPING_SUPPORT; /* must be set AFTER configSettings_t is defined */
+
+BEGINinitConfVars		/* (re)set config variables to default values */
+CODESTARTinitConfVars 
+	cs.szBinary = NULL;	/* name of binary to call */
+ENDinitConfVars
+
 /* config settings */
-static uchar *szBinary = NULL;	/* name of binary to call */
 
 BEGINcreateInstance
 CODESTARTcreateInstance
@@ -300,7 +310,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	p += sizeof(":omprog:") - 1; /* eat indicator sequence  (-1 because of '\0'!) */
 	CHKiRet(createInstance(&pData));
 
-	CHKmalloc(pData->szBinary = (uchar*) strdup((char*)szBinary));
+	CHKmalloc(pData->szBinary = (uchar*) strdup((char*)cs.szBinary));
 	/* check if a non-standard template is to be applied */
 	if(*(p-1) == ';')
 		--p;
@@ -311,10 +321,8 @@ ENDparseSelectorAct
 
 BEGINmodExit
 CODESTARTmodExit
-	if(szBinary != NULL) {
-		free(szBinary);
-		szBinary = NULL;
-	}
+	free(cs.szBinary);
+	cs.szBinary = NULL;
 	CHKiRet(objRelease(errmsg, CORE_COMPONENT));
 finalize_it:
 ENDmodExit
@@ -332,12 +340,8 @@ ENDqueryEtryPt
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
 	DEFiRet;
-
-	if(szBinary != NULL) {
-		free(szBinary);
-		szBinary = NULL;
-	}
-
+	free(cs.szBinary);
+	cs.szBinary = NULL;
 	RETiRet;
 }
 
@@ -347,7 +351,7 @@ CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionomprogbinary", 0, eCmdHdlrGetWord, NULL, &szBinary, STD_LOADABLE_MODULE_ID, eConfObjAction));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionomprogbinary", 0, eCmdHdlrGetWord, NULL, &cs.szBinary, STD_LOADABLE_MODULE_ID, eConfObjAction));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID, eConfObjAction));
 CODEmodInit_QueryRegCFSLineHdlr
 ENDmodInit

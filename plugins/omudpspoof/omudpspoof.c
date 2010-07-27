@@ -104,14 +104,28 @@ typedef struct _instanceData {
 #define DFLT_SOURCE_PORT_START 32000
 #define DFLT_SOURCE_PORT_END   42000
 
-/* config data */
-static uchar *pszTplName = NULL; /* name of the default template to use */
-static uchar *pszSourceNameTemplate = NULL; /* name of the template containing the spoofing address */
-static uchar *pszTargetHost = NULL;
-static uchar *pszTargetPort = NULL;
-static int iCompressionLevel = 0;	/* zlib compressionlevel, the usual values */
-static int iSourcePortStart = DFLT_SOURCE_PORT_START;
-static int iSourcePortEnd = DFLT_SOURCE_PORT_END;
+typedef struct configSettings_s {
+	uchar *pszTplName; /* name of the default template to use */
+	uchar *pszSourceNameTemplate; /* name of the template containing the spoofing address */
+	uchar *pszTargetHost;
+	uchar *pszTargetPort;
+	int iCompressionLevel;	/* zlib compressionlevel, the usual values */
+	int iSourcePortStart;
+	int iSourcePortEnd;
+} configSettings_t;
+
+SCOPING_SUPPORT; /* must be set AFTER configSettings_t is defined */
+
+BEGINinitConfVars		/* (re)set config variables to default values */
+CODESTARTinitConfVars 
+	cs.pszTplName = NULL;
+	cs.pszSourceNameTemplate = NULL;
+	cs.pszTargetHost = NULL;
+	cs.pszTargetPort = NULL;
+	cs.iCompressionLevel = 0;
+	cs.iSourcePortStart = DFLT_SOURCE_PORT_START;
+	cs.iSourcePortEnd = DFLT_SOURCE_PORT_END;
+ENDinitConfVars
 
 
 /* add some variables needed for libnet */
@@ -392,30 +406,30 @@ CODE_STD_STRING_REQUESTparseSelectorAct(2)
 	p += sizeof(":omudpspoof:") - 1; /* eat indicator sequence  (-1 because of '\0'!) */
 	CHKiRet(createInstance(&pData));
 
-	if(pszSourceNameTemplate == NULL) {
+	if(cs.pszSourceNameTemplate == NULL) {
 		errmsg.LogError(0, NO_ERRCODE, "No $ActionOMUDPSpoofSourceNameTemplate given, can not continue with this action.");
 		ABORT_FINALIZE(RS_RET_NO_SRCNAME_TPL);
 	}
 
-	if(pszTargetHost == NULL) {
+	if(cs.pszTargetHost == NULL) {
 		errmsg.LogError(0, NO_ERRCODE, "No $ActionOMUDPSpoofTargetHost given, can not continue with this action.");
 		ABORT_FINALIZE(RS_RET_HOST_NOT_SPECIFIED);
 	}
 
 	/* fill instance properties */
-	CHKmalloc(pData->host = ustrdup(pszTargetHost));
-	if(pszTargetPort == NULL)
+	CHKmalloc(pData->host = ustrdup(cs.pszTargetHost));
+	if(cs.pszTargetPort == NULL)
 		pData->port = NULL;
 	else 
-		CHKmalloc(pData->port = ustrdup(pszTargetPort));
-	CHKiRet(OMSRsetEntry(*ppOMSR, 1, ustrdup(pszSourceNameTemplate), OMSR_NO_RQD_TPL_OPTS));
-	pData->compressionLevel = iCompressionLevel;
-	pData->sourcePort = pData->sourcePortStart = iSourcePortStart;
-	pData->sourcePortEnd = iSourcePortEnd;
+		CHKmalloc(pData->port = ustrdup(cs.pszTargetPort));
+	CHKiRet(OMSRsetEntry(*ppOMSR, 1, ustrdup(cs.pszSourceNameTemplate), OMSR_NO_RQD_TPL_OPTS));
+	pData->compressionLevel = cs.iCompressionLevel;
+	pData->sourcePort = pData->sourcePortStart = cs.iSourcePortStart;
+	pData->sourcePortEnd = cs.iSourcePortEnd;
 
 	/* process template */
 	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS,
-		(pszTplName == NULL) ? (uchar*)"RSYSLOG_TraditionalForwardFormat" : pszTplName));
+		(cs.pszTplName == NULL) ? (uchar*)"RSYSLOG_TraditionalForwardFormat" : cs.pszTplName));
 
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
@@ -427,12 +441,12 @@ ENDparseSelectorAct
 static void
 freeConfigVars(void)
 {
-	free(pszTplName);
-	pszTplName = NULL;
-	free(pszTargetHost);
-	pszTargetHost = NULL;
-	free(pszTargetPort);
-	pszTargetPort = NULL;
+	free(cs.pszTplName);
+	cs.pszTplName = NULL;
+	free(cs.pszTargetHost);
+	cs.pszTargetHost = NULL;
+	free(cs.pszTargetPort);
+	cs.pszTargetPort = NULL;
 }
 
 
@@ -461,9 +475,9 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 {
 	freeConfigVars();
 	/* we now must reset all non-string values */
-	iCompressionLevel = 0;
-	iSourcePortStart = DFLT_SOURCE_PORT_START;
-	iSourcePortEnd = DFLT_SOURCE_PORT_END;
+	cs.iCompressionLevel = 0;
+	cs.iSourcePortStart = DFLT_SOURCE_PORT_START;
+	cs.iSourcePortEnd = DFLT_SOURCE_PORT_END;
 	return RS_RET_OK;
 }
 
@@ -489,14 +503,14 @@ CODEmodInit_QueryRegCFSLineHdlr
 		ABORT_FINALIZE(RS_RET_ERR_LIBNET_INIT);
 	}
 
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionomudpspoofdefaulttemplate", 0, eCmdHdlrGetWord, NULL, &pszTplName, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionomudpspoofsourcenametemplate", 0, eCmdHdlrGetWord, NULL, &pszSourceNameTemplate, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionomudpspooftargethost", 0, eCmdHdlrGetWord, NULL, &pszTargetHost, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionomudpspooftargetport", 0, eCmdHdlrGetWord, NULL, &pszTargetPort, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionomudpspoofsourceportstart", 0, eCmdHdlrInt, NULL, &iSourcePortStart, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionomudpspoofsourceportend", 0, eCmdHdlrInt, NULL, &iSourcePortEnd, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionomudpcompressionlevel", 0, eCmdHdlrInt, NULL, &iCompressionLevel, NULL));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionomudpspoofdefaulttemplate", 0, eCmdHdlrGetWord, NULL, &cs.pszTplName, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionomudpspoofsourcenametemplate", 0, eCmdHdlrGetWord, NULL, &cs.pszSourceNameTemplate, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionomudpspooftargethost", 0, eCmdHdlrGetWord, NULL, &cs.pszTargetHost, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionomudpspooftargetport", 0, eCmdHdlrGetWord, NULL, &cs.pszTargetPort, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionomudpspoofsourceportstart", 0, eCmdHdlrInt, NULL, &cs.iSourcePortStart, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionomudpspoofsourceportend", 0, eCmdHdlrInt, NULL, &cs.iSourcePortEnd, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionomudpcompressionlevel", 0, eCmdHdlrInt, NULL, &cs.iCompressionLevel, NULL, eConfObjAction));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID, eConfObjAlways));
 ENDmodInit
 
 /* vim:set ai:

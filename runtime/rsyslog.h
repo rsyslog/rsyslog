@@ -606,6 +606,13 @@ rsRetVal rsrtExit(void);
 int rsrtIsInit(void);
 rsRetVal rsrtSetErrLogger(rsRetVal (*errLogger)(int, uchar*));
 
+/* this define below is (later) intended to be used to implement empty
+ * structs. TODO: check if compilers supports this and, if not, define
+ * a dummy variable. This requires review of where in code empty structs
+ * are already defined. -- rgerhards, 2010-07-26
+ */
+#define EMPTY_STRUCT
+
 #endif /* multi-include protection */
 /* vim:set ai:
  */

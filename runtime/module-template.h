@@ -306,6 +306,50 @@ static rsRetVal tryResume(instanceData __attribute__((unused)) *pData)\
 }
 
 
+/* Config scoping system.
+ * save current config scope and start a new one. Note that we do NOT implement a
+ * stack. Exactly one scope can be saved.
+ * We assume standard naming conventions (local confgSettings_t holds all
+ * config settings and MUST have been defined before this macro is being used!).
+ * Note that initConfVars() must be defined locally as well.
+ */
+#define SCOPING_SUPPORT \
+static rsRetVal initConfVars(void);\
+static configSettings_t cs;				/* our current config settings */ \
+static configSettings_t cs_save;			/* our saved (scope!) config settings */ \
+static rsRetVal newScope(void) \
+{ \
+	DEFiRet; \
+	memcpy(&cs_save, &cs, sizeof(cs)); \
+	iRet = initConfVars(); \
+	RETiRet; \
+} \
+static rsRetVal restoreScope(void) \
+{ \
+	DEFiRet; \
+	memcpy(&cs, &cs_save, sizeof(cs)); \
+	RETiRet; \
+}
+/* initConfVars()
+ * This entry point is called to check if a module can resume operations. This
+ * happens when a module requested that it be suspended. In suspended state,
+ * the engine periodically tries to resume the module. If that succeeds, normal
+ * processing continues. If not, the module will not be called unless a
+ * tryResume() call succeeds.
+ * Returns RS_RET_OK, if resumption succeeded, RS_RET_SUSPENDED otherwise
+ * rgerhard, 2007-08-02
+ */
+#define BEGINinitConfVars \
+static rsRetVal initConfVars(void)\
+{\
+	DEFiRet;
+
+#define CODESTARTinitConfVars 
+
+#define ENDinitConfVars \
+	RETiRet;\
+}
+	
 
 /* queryEtryPt()
  */
@@ -358,6 +402,10 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 		*pEtryPoint = freeInstance;\
 	} else if(!strcmp((char*) name, "parseSelectorAct")) {\
 		*pEtryPoint = parseSelectorAct;\
+	} else if(!strcmp((char*) name, "newScope")) {\
+		*pEtryPoint = newScope;\
+	} else if(!strcmp((char*) name, "restoreScope")) {\
+		*pEtryPoint = restoreScope;\
 	} else if(!strcmp((char*) name, "isCompatibleWithFeature")) {\
 		*pEtryPoint = isCompatibleWithFeature;\
 	} else if(!strcmp((char*) name, "tryResume")) {\

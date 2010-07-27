@@ -99,15 +99,32 @@ typedef struct _instanceData {
 } instanceData;
 
 /* config data */
-static uchar *pszTplName = NULL; /* name of the default template to use */
-static uchar *pszStrmDrvr = NULL; /* name of the stream driver to use */
-static short iStrmDrvrMode = 0; /* mode for stream driver, driver-dependent (0 mostly means plain tcp) */
-static short bResendLastOnRecon = 0; /* should the last message be re-sent on a successful reconnect? */
-static uchar *pszStrmDrvrAuthMode = NULL; /* authentication mode to use */
-static int iUDPRebindInterval = 0;	/* support for automatic re-binding (load balancers!). 0 - no rebind */
-static int iTCPRebindInterval = 0;	/* support for automatic re-binding (load balancers!). 0 - no rebind */
 
-static permittedPeers_t *pPermPeers = NULL;
+typedef struct configSettings_s {
+	uchar *pszTplName; /* name of the default template to use */
+	uchar *pszStrmDrvr; /* name of the stream driver to use */
+	short iStrmDrvrMode; /* mode for stream driver, driver-dependent (0 mostly means plain tcp) */
+	short bResendLastOnRecon; /* should the last message be re-sent on a successful reconnect? */
+	uchar *pszStrmDrvrAuthMode; /* authentication mode to use */
+	int iUDPRebindInterval;	/* support for automatic re-binding (load balancers!). 0 - no rebind */
+	int iTCPRebindInterval;	/* support for automatic re-binding (load balancers!). 0 - no rebind */
+	permittedPeers_t *pPermPeers;
+} configSettings_t;
+
+SCOPING_SUPPORT; /* must be set AFTER configSettings_t is defined */
+
+BEGINinitConfVars		/* (re)set config variables to default values */
+CODESTARTinitConfVars 
+	cs.pszTplName = NULL; /* name of the default template to use */
+	cs.pszStrmDrvr = NULL; /* name of the stream driver to use */
+	cs.iStrmDrvrMode = 0; /* mode for stream driver, driver-dependent (0 mostly means plain tcp) */
+	cs.bResendLastOnRecon = 0; /* should the last message be re-sent on a successful reconnect? */
+	cs.pszStrmDrvrAuthMode = NULL; /* authentication mode to use */
+	cs.iUDPRebindInterval = 0;	/* support for automatic re-binding (load balancers!). 0 - no rebind */
+	cs.iTCPRebindInterval = 0;	/* support for automatic re-binding (load balancers!). 0 - no rebind */
+	cs.pPermPeers = NULL;
+ENDinitConfVars
+
 
 static rsRetVal doTryResume(instanceData *pData);
 
@@ -261,7 +278,7 @@ static rsRetVal
 setPermittedPeer(void __attribute__((unused)) *pVal, uchar *pszID)
 {
 	DEFiRet;
-	CHKiRet(net.AddPermittedPeer(&pPermPeers, pszID));
+	CHKiRet(net.AddPermittedPeer(&cs.pPermPeers, pszID));
 	free(pszID); /* no longer needed, but we must free it as of interface def */
 finalize_it:
 	RETiRet;
@@ -328,7 +345,7 @@ static rsRetVal TCPSendInit(void *pvData)
 	if(pData->pNetstrm == NULL) {
 		CHKiRet(netstrms.Construct(&pData->pNS));
 		/* the stream driver must be set before the object is finalized! */
-		CHKiRet(netstrms.SetDrvrName(pData->pNS, pszStrmDrvr));
+		CHKiRet(netstrms.SetDrvrName(pData->pNS, cs.pszStrmDrvr));
 		CHKiRet(netstrms.ConstructFinalize(pData->pNS));
 
 		/* now create the actual stream and connect to the server */
@@ -653,32 +670,32 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	}
 
 	/* copy over config data as needed */
-	pData->iUDPRebindInterval = iUDPRebindInterval;
-	pData->iTCPRebindInterval = iTCPRebindInterval;
+	pData->iUDPRebindInterval = cs.iUDPRebindInterval;
+	pData->iTCPRebindInterval = cs.iTCPRebindInterval;
 
 	/* process template */
 	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS,
-		(pszTplName == NULL) ? (uchar*)"RSYSLOG_TraditionalForwardFormat" : pszTplName));
+		(cs.pszTplName == NULL) ? (uchar*)"RSYSLOG_TraditionalForwardFormat" : cs.pszTplName));
 
 	if(pData->protocol == FORW_TCP) {
 		/* create our tcpclt */
 		CHKiRet(tcpclt.Construct(&pData->pTCPClt));
-		CHKiRet(tcpclt.SetResendLastOnRecon(pData->pTCPClt, bResendLastOnRecon));
+		CHKiRet(tcpclt.SetResendLastOnRecon(pData->pTCPClt, cs.bResendLastOnRecon));
 		/* and set callbacks */
 		CHKiRet(tcpclt.SetSendInit(pData->pTCPClt, TCPSendInit));
 		CHKiRet(tcpclt.SetSendFrame(pData->pTCPClt, TCPSendFrame));
 		CHKiRet(tcpclt.SetSendPrepRetry(pData->pTCPClt, TCPSendPrepRetry));
 		CHKiRet(tcpclt.SetFraming(pData->pTCPClt, tcp_framing));
 		CHKiRet(tcpclt.SetRebindInterval(pData->pTCPClt, pData->iTCPRebindInterval));
-		pData->iStrmDrvrMode = iStrmDrvrMode;
-		if(pszStrmDrvr != NULL)
-			CHKmalloc(pData->pszStrmDrvr = (uchar*)strdup((char*)pszStrmDrvr));
-		if(pszStrmDrvrAuthMode != NULL)
+		pData->iStrmDrvrMode = cs.iStrmDrvrMode;
+		if(cs.pszStrmDrvr != NULL)
+			CHKmalloc(pData->pszStrmDrvr = (uchar*)strdup((char*)cs.pszStrmDrvr));
+		if(cs.pszStrmDrvrAuthMode != NULL)
 			CHKmalloc(pData->pszStrmDrvrAuthMode =
-				     (uchar*)strdup((char*)pszStrmDrvrAuthMode));
-		if(pPermPeers != NULL) {
-			pData->pPermPeers = pPermPeers;
-			pPermPeers = NULL;
+				     (uchar*)strdup((char*)cs.pszStrmDrvrAuthMode));
+		if(cs.pPermPeers != NULL) {
+			pData->pPermPeers = cs.pPermPeers;
+			cs.pPermPeers = NULL;
 		}
 	}
 
@@ -692,21 +709,14 @@ ENDparseSelectorAct
 static void
 freeConfigVars(void)
 {
-	if(pszTplName != NULL) {
-		free(pszTplName);
-		pszTplName = NULL;
-	}
-	if(pszStrmDrvr != NULL) {
-		free(pszStrmDrvr);
-		pszStrmDrvr = NULL;
-	}
-	if(pszStrmDrvrAuthMode != NULL) {
-		free(pszStrmDrvrAuthMode);
-		pszStrmDrvrAuthMode = NULL;
-	}
-	if(pPermPeers != NULL) {
-		free(pPermPeers);
-	}
+	free(cs.pszTplName);
+	cs.pszTplName = NULL;
+	free(cs.pszStrmDrvr);
+	cs.pszStrmDrvr = NULL;
+	free(cs.pszStrmDrvrAuthMode);
+	cs.pszStrmDrvrAuthMode = NULL;
+	free(cs.pPermPeers);
+	cs.pPermPeers = NULL; /* TODO: fix in older builds! */
 }
 
 
@@ -738,10 +748,10 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	freeConfigVars();
 
 	/* we now must reset all non-string values */
-	iStrmDrvrMode = 0;
-	bResendLastOnRecon = 0;
-	iUDPRebindInterval = 0;
-	iTCPRebindInterval = 0;
+	cs.iStrmDrvrMode = 0;
+	cs.bResendLastOnRecon = 0;
+	cs.iUDPRebindInterval = 0;
+	cs.iTCPRebindInterval = 0;
 
 	return RS_RET_OK;
 }
@@ -755,14 +765,14 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(net,LM_NET_FILENAME));
 
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionforwarddefaulttemplate", 0, eCmdHdlrGetWord, NULL, &pszTplName, NULL, eConfObjAction));
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionsendtcprebindinterval", 0, eCmdHdlrInt, NULL, &iTCPRebindInterval, NULL, eConfObjAction));
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionsendudprebindinterval", 0, eCmdHdlrInt, NULL, &iUDPRebindInterval, NULL, eConfObjAction));
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionsendstreamdriver", 0, eCmdHdlrGetWord, NULL, &pszStrmDrvr, NULL, eConfObjAction));
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionsendstreamdrivermode", 0, eCmdHdlrInt, NULL, &iStrmDrvrMode, NULL, eConfObjAction));
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionsendstreamdriverauthmode", 0, eCmdHdlrGetWord, NULL, &pszStrmDrvrAuthMode, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionforwarddefaulttemplate", 0, eCmdHdlrGetWord, NULL, &cs.pszTplName, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionsendtcprebindinterval", 0, eCmdHdlrInt, NULL, &cs.iTCPRebindInterval, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionsendudprebindinterval", 0, eCmdHdlrInt, NULL, &cs.iUDPRebindInterval, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionsendstreamdriver", 0, eCmdHdlrGetWord, NULL, &cs.pszStrmDrvr, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionsendstreamdrivermode", 0, eCmdHdlrInt, NULL, &cs.iStrmDrvrMode, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionsendstreamdriverauthmode", 0, eCmdHdlrGetWord, NULL, &cs.pszStrmDrvrAuthMode, NULL, eConfObjAction));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionsendstreamdriverpermittedpeer", 0, eCmdHdlrGetWord, setPermittedPeer, NULL, NULL, eConfObjAction));
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionsendresendlastmsgonreconnect", 0, eCmdHdlrBinary, NULL, &bResendLastOnRecon, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionsendresendlastmsgonreconnect", 0, eCmdHdlrBinary, NULL, &cs.bResendLastOnRecon, NULL, eConfObjAction));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID, eConfObjAction));
 ENDmodInit
 

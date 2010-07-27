@@ -64,6 +64,16 @@ typedef struct _instanceData {
 	ConnStatusType	eLastPgSQLStatus; 	/* last status from postgres */
 } instanceData;
 
+typedef struct configSettings_s {
+	EMPTY_STRUCT
+} configSettings_t;
+
+SCOPING_SUPPORT; /* must be set AFTER configSettings_t is defined */
+
+BEGINinitConfVars		/* (re)set config variables to default values */
+CODESTARTinitConfVars 
+ENDinitConfVars
+
 
 static rsRetVal writePgSQL(uchar *psz, instanceData *pData);
 

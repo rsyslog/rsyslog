@@ -62,7 +62,6 @@ MODULE_TYPE_OUTPUT
  */
 DEF_OMOD_STATIC_DATA
 
-static int bEchoStdout = 0;	/* echo non-failed messages to stdout */
 
 typedef struct _instanceData {
 	enum { MD_SLEEP, MD_FAIL, MD_RANDFAIL, MD_ALWAYS_SUSPEND }
@@ -75,6 +74,17 @@ typedef struct _instanceData {
 	int	iResumeAfter;
 	int	iCurrRetries;
 } instanceData;
+
+typedef struct configSettings_s {
+	int bEchoStdout;	/* echo non-failed messages to stdout */
+} configSettings_t;
+
+SCOPING_SUPPORT; /* must be set AFTER configSettings_t is defined */
+
+BEGINinitConfVars		/* (re)set config variables to default values */
+CODESTARTinitConfVars 
+	cs.bEchoStdout = 0;
+ENDinitConfVars
 
 BEGINcreateInstance
 CODESTARTcreateInstance
@@ -285,7 +295,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		dbgprintf("invalid mode '%s', doing 'sleep 1 0' - fix your config\n", szBuf);
 	}
 
-	pData->bEchoStdout = bEchoStdout;
+	pData->bEchoStdout = cs.bEchoStdout;
 	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS,
 				         (uchar*)"RSYSLOG_TraditionalForwardFormat"));
 
@@ -309,7 +319,7 @@ CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionomtestingechostdout", 0, eCmdHdlrBinary, NULL,
-				   &bEchoStdout, STD_LOADABLE_MODULE_ID, eConfObjAction));
+				   &cs.bEchoStdout, STD_LOADABLE_MODULE_ID, eConfObjAction));
 	/* we seed the random-number generator in any case... */
 	srand(time(NULL));
 ENDmodInit

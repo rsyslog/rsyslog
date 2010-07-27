@@ -45,19 +45,31 @@
 
 MODULE_TYPE_OUTPUT
 
+static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal);
+
 /* internal structures
  */
 DEF_OMOD_STATIC_DATA
 
 /* config variables */
-static int bUseArrayInterface = 0;	/* shall action use array instead of string template interface? */
-static int bEnsureLFEnding = 1;		/* shall action use array instead of string template interface? */
 
 
 typedef struct _instanceData {
 	int bUseArrayInterface;		/* uses action use array instead of string template interface? */
 	int bEnsureLFEnding;		/* ensure that a linefeed is written at the end of EACH record (test aid for nettester) */
 } instanceData;
+
+typedef struct configSettings_s {
+	int bUseArrayInterface;		/* shall action use array instead of string template interface? */
+	int bEnsureLFEnding;		/* shall action use array instead of string template interface? */
+} configSettings_t;
+
+SCOPING_SUPPORT; /* must be set AFTER configSettings_t is defined */
+
+BEGINinitConfVars		/* (re)set config variables to default values */
+CODESTARTinitConfVars 
+	resetConfigVariables(NULL, NULL);
+ENDinitConfVars
 
 BEGINcreateInstance
 CODESTARTcreateInstance
@@ -147,10 +159,10 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	/* check if a non-standard template is to be applied */
 	if(*(p-1) == ';')
 		--p;
-	iTplOpts = (bUseArrayInterface == 0) ? 0 : OMSR_TPL_AS_ARRAY;
+	iTplOpts = (cs.bUseArrayInterface == 0) ? 0 : OMSR_TPL_AS_ARRAY;
 	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, iTplOpts, (uchar*) "RSYSLOG_FileFormat"));
-	pData->bUseArrayInterface = bUseArrayInterface;
-	pData->bEnsureLFEnding = bEnsureLFEnding;
+	pData->bUseArrayInterface = cs.bUseArrayInterface;
+	pData->bEnsureLFEnding = cs.bEnsureLFEnding;
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
@@ -172,8 +184,8 @@ ENDqueryEtryPt
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
 	DEFiRet;
-	bUseArrayInterface = 0;
-	bEnsureLFEnding = 1;
+	cs.bUseArrayInterface = 0;
+	cs.bEnsureLFEnding = 1;
 	RETiRet;
 }
 
@@ -202,10 +214,10 @@ CODEmodInit_QueryRegCFSLineHdlr
 	if(bArrayPassingSupported) {
 		/* enable config comand only if core supports it */
 		CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionomstdoutarrayinterface", 0, eCmdHdlrBinary, NULL,
-			                   &bUseArrayInterface, STD_LOADABLE_MODULE_ID, eConfObjAction));
+			                   &cs.bUseArrayInterface, STD_LOADABLE_MODULE_ID, eConfObjAction));
 	}
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionomstdoutensurelfending", 0, eCmdHdlrBinary, NULL,
-				   &bEnsureLFEnding, STD_LOADABLE_MODULE_ID, eConfObjAction));
+				   &cs.bEnsureLFEnding, STD_LOADABLE_MODULE_ID, eConfObjAction));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
 				    resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID, eConfObjAction));
 ENDmodInit

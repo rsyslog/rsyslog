@@ -44,7 +44,18 @@ MODULE_TYPE_OUTPUT
 DEF_OMOD_STATIC_DATA
 
 typedef struct _instanceData {
+	EMPTY_STRUCT
 } instanceData;
+
+typedef struct configSettings_s {
+	EMPTY_STRUCT
+} configSettings_t;
+
+SCOPING_SUPPORT; /* must be set AFTER configSettings_t is defined */
+
+BEGINinitConfVars		/* (re)set config variables to default values */
+CODESTARTinitConfVars 
+ENDinitConfVars
 
 /* we do not need a createInstance()!
 BEGINcreateInstance

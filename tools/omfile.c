@@ -71,6 +71,9 @@
 
 MODULE_TYPE_OUTPUT
 
+/* forward definitions */
+static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal);
+
 /* internal structures
  */
 DEF_OMOD_STATIC_DATA
@@ -118,6 +121,7 @@ typedef struct s_dynaFileCacheEntry dynaFileCacheEntry;
 #define FLUSHONTX_DFLT 1 	/* default for flush on TX end */
 
 #define DFLT_bForceChown 0
+#if 0
 /* globals for default values */
 static int iDynaFileCacheSize = 10; /* max cache for dynamic files */
 static int fCreateMode = 0644; /* mode to use when creating files */
@@ -137,6 +141,7 @@ static int	iFlushInterval = FLUSH_INTRVL_DFLT; 	/* how often flush the output bu
 static int	bUseAsyncWriter = USE_ASYNCWRITER_DFLT;	/* should we enable asynchronous writing? */
 uchar	*pszFileDfltTplName = NULL; /* name of the default template to use */
 /* end globals for default values */
+#endif
 
 
 typedef struct _instanceData {
@@ -171,6 +176,35 @@ typedef struct _instanceData {
 	sbool	bUseAsyncWriter;	/* use async stream writer? */
 } instanceData;
 
+
+typedef struct configSettings_s {
+	int iDynaFileCacheSize; /* max cache for dynamic files */
+	int fCreateMode; /* mode to use when creating files */
+	int fDirCreateMode; /* mode to use when creating files */
+	int	bFailOnChown;	/* fail if chown fails? */
+	int	bForceChown;	/* Force chown() on existing files? */
+	uid_t	fileUID;	/* UID to be used for newly created files */
+	uid_t	fileGID;	/* GID to be used for newly created files */
+	uid_t	dirUID;		/* UID to be used for newly created directories */
+	uid_t	dirGID;		/* GID to be used for newly created directories */
+	int	bCreateDirs;/* auto-create directories for dynaFiles: 0 - no, 1 - yes */
+	int	bEnableSync;/* enable syncing of files (no dash in front of pathname in conf): 0 - no, 1 - yes */
+	int	iZipLevel;	/* zip compression mode (0..9 as usual) */
+	sbool	bFlushOnTXEnd;/* flush write buffers when transaction has ended? */
+	int64	iIOBufSize;	/* size of an io buffer */
+	int	iFlushInterval; 	/* how often flush the output buffer on inactivity? */
+	int	bUseAsyncWriter;	/* should we enable asynchronous writing? */
+	uchar	*pszFileDfltTplName; /* name of the default template to use */
+	EMPTY_STRUCT
+} configSettings_t;
+
+SCOPING_SUPPORT; /* must be set AFTER configSettings_t is defined */
+
+BEGINinitConfVars		/* (re)set config variables to default values */
+CODESTARTinitConfVars 
+	cs.pszFileDfltTplName = NULL; /* make sure this can be free'ed! */
+	iRet = resetConfigVariables(NULL, NULL); /* params are dummies */
+ENDinitConfVars
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
@@ -227,7 +261,7 @@ rsRetVal setDynaFileCacheSize(void __attribute__((unused)) *pVal, int iNewVal)
 		iNewVal = 1000;
 	}
 
-	iDynaFileCacheSize = iNewVal;
+	cs.iDynaFileCacheSize = iNewVal;
 	DBGPRINTF("DynaFileCacheSize changed to %d.\n", iNewVal);
 
 	RETiRet;
@@ -454,7 +488,7 @@ prepareFile(instanceData *pData, uchar *newFileName)
 	CHKiRet(strm.SetiZipLevel(pData->pStrm, pData->iZipLevel));
 	CHKiRet(strm.SetsIOBufSize(pData->pStrm, (size_t) pData->iIOBufSize));
 	CHKiRet(strm.SettOperationsMode(pData->pStrm, STREAMMODE_WRITE_APPEND));
-	CHKiRet(strm.SettOpenMode(pData->pStrm, fCreateMode));
+	CHKiRet(strm.SettOpenMode(pData->pStrm, cs.fCreateMode));
 	CHKiRet(strm.SetbSync(pData->pStrm, pData->bSyncFile));
 	CHKiRet(strm.SetsType(pData->pStrm, pData->strmType));
 	CHKiRet(strm.SetiSizeLimit(pData->pStrm, pData->iSizeLimit));
@@ -718,7 +752,7 @@ CODESTARTparseSelectorAct
 		pData->bSyncFile = 0;
 		p++;
 	} else {
-		pData->bSyncFile = bEnableSync;
+		pData->bSyncFile = cs.bEnableSync;
 	}
 	pData->iSizeLimit = 0; /* default value, use outchannels to configure! */
 
@@ -752,7 +786,7 @@ CODESTARTparseSelectorAct
 		pData->iCurrElt = -1;		  /* no current element */
 		/* we now allocate the cache table */
 		CHKmalloc(pData->dynCache = (dynaFileCacheEntry**)
-				calloc(iDynaFileCacheSize, sizeof(dynaFileCacheEntry*)));
+				calloc(cs.iDynaFileCacheSize, sizeof(dynaFileCacheEntry*)));
 		break;
 
         /* case '|': while pipe support has been removed, I leave the code in in case we 
@@ -781,21 +815,21 @@ CODESTARTparseSelectorAct
 	}
 
 	/* freeze current paremeters for this action */
-	pData->iDynaFileCacheSize = iDynaFileCacheSize;
-	pData->fCreateMode = fCreateMode;
-	pData->fDirCreateMode = fDirCreateMode;
-	pData->bCreateDirs = bCreateDirs;
-	pData->bFailOnChown = bFailOnChown;
-	pData->bForceChown = bForceChown;
-	pData->fileUID = fileUID;
-	pData->fileGID = fileGID;
-	pData->dirUID = dirUID;
-	pData->dirGID = dirGID;
-	pData->iZipLevel = iZipLevel;
-	pData->bFlushOnTXEnd = bFlushOnTXEnd;
-	pData->iIOBufSize = (int) iIOBufSize;
-	pData->iFlushInterval = iFlushInterval;
-	pData->bUseAsyncWriter = bUseAsyncWriter;
+	pData->iDynaFileCacheSize = cs.iDynaFileCacheSize;
+	pData->fCreateMode = cs.fCreateMode;
+	pData->fDirCreateMode = cs.fDirCreateMode;
+	pData->bCreateDirs = cs.bCreateDirs;
+	pData->bFailOnChown = cs.bFailOnChown;
+	pData->bForceChown = cs.bForceChown;
+	pData->fileUID = cs.fileUID;
+	pData->fileGID = cs.fileGID;
+	pData->dirUID = cs.dirUID;
+	pData->dirGID = cs.dirGID;
+	pData->iZipLevel = cs.iZipLevel;
+	pData->bFlushOnTXEnd = cs.bFlushOnTXEnd;
+	pData->iIOBufSize = (int) cs.iIOBufSize;
+	pData->iFlushInterval = cs.iFlushInterval;
+	pData->bUseAsyncWriter = cs.bUseAsyncWriter;
 
 	if(pData->bDynamicName == 0) {
 		/* try open and emit error message if not possible. At this stage, we ignore the
@@ -817,26 +851,24 @@ ENDparseSelectorAct
  */
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
-	fileUID = -1;
-	fileGID = -1;
-	dirUID = -1;
-	dirGID = -1;
-	bFailOnChown = 1;
-	bForceChown = DFLT_bForceChown;
-	iDynaFileCacheSize = 10;
-	fCreateMode = 0644;
-	fDirCreateMode = 0700;
-	bCreateDirs = 1;
-	bEnableSync = 0;
-	iZipLevel = 0;
-	bFlushOnTXEnd = FLUSHONTX_DFLT;
-	iIOBufSize = IOBUF_DFLT_SIZE;
-	iFlushInterval = FLUSH_INTRVL_DFLT;
-	bUseAsyncWriter = USE_ASYNCWRITER_DFLT;
-	if(pszFileDfltTplName != NULL) {
-		free(pszFileDfltTplName);
-		pszFileDfltTplName = NULL;
-	}
+	cs.fileUID = -1;
+	cs.fileGID = -1;
+	cs.dirUID = -1;
+	cs.dirGID = -1;
+	cs.bFailOnChown = 1;
+	cs.bForceChown = DFLT_bForceChown;
+	cs.iDynaFileCacheSize = 10;
+	cs.fCreateMode = 0644;
+	cs.fDirCreateMode = 0700;
+	cs.bCreateDirs = 1;
+	cs.bEnableSync = 0;
+	cs.iZipLevel = 0;
+	cs.bFlushOnTXEnd = FLUSHONTX_DFLT;
+	cs.iIOBufSize = IOBUF_DFLT_SIZE;
+	cs.iFlushInterval = FLUSH_INTRVL_DFLT;
+	cs.bUseAsyncWriter = USE_ASYNCWRITER_DFLT;
+	free(cs.pszFileDfltTplName);
+	cs.pszFileDfltTplName = NULL;
 
 	return RS_RET_OK;
 }
@@ -884,22 +916,22 @@ CODEmodInit_QueryRegCFSLineHdlr
 	INITChkCoreFeature(bCoreSupportsBatching, CORE_FEATURE_BATCHING);
 	DBGPRINTF("omfile: %susing transactional output interface.\n", bCoreSupportsBatching ? "" : "not ");
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"dynafilecachesize", 0, eCmdHdlrInt, (void*) setDynaFileCacheSize, NULL, STD_LOADABLE_MODULE_ID, eConfObjAction));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omfileziplevel", 0, eCmdHdlrInt, NULL, &iZipLevel, STD_LOADABLE_MODULE_ID, eConfObjAction));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omfileflushinterval", 0, eCmdHdlrInt, NULL, &iFlushInterval, STD_LOADABLE_MODULE_ID, eConfObjAction));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omfileasyncwriting", 0, eCmdHdlrBinary, NULL, &bUseAsyncWriter, STD_LOADABLE_MODULE_ID, eConfObjAction));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omfileflushontxend", 0, eCmdHdlrBinary, NULL, &bFlushOnTXEnd, STD_LOADABLE_MODULE_ID, eConfObjAction));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omfileiobuffersize", 0, eCmdHdlrSize, NULL, &iIOBufSize, STD_LOADABLE_MODULE_ID, eConfObjAction));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"dirowner", 0, eCmdHdlrUID, NULL, &dirUID, STD_LOADABLE_MODULE_ID, eConfObjAction));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"dirgroup", 0, eCmdHdlrGID, NULL, &dirGID, STD_LOADABLE_MODULE_ID, eConfObjAction));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"fileowner", 0, eCmdHdlrUID, NULL, &fileUID, STD_LOADABLE_MODULE_ID, eConfObjAction));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"filegroup", 0, eCmdHdlrGID, NULL, &fileGID, STD_LOADABLE_MODULE_ID, eConfObjAction));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"dircreatemode", 0, eCmdHdlrFileCreateMode, NULL, &fDirCreateMode, STD_LOADABLE_MODULE_ID, eConfObjAction));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"filecreatemode", 0, eCmdHdlrFileCreateMode, NULL, &fCreateMode, STD_LOADABLE_MODULE_ID, eConfObjAction));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"createdirs", 0, eCmdHdlrBinary, NULL, &bCreateDirs, STD_LOADABLE_MODULE_ID, eConfObjAction));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"failonchownfailure", 0, eCmdHdlrBinary, NULL, &bFailOnChown, STD_LOADABLE_MODULE_ID, eConfObjAction));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omfileForceChown", 0, eCmdHdlrBinary, NULL, &bForceChown, STD_LOADABLE_MODULE_ID, eConfObjAction));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionfileenablesync", 0, eCmdHdlrBinary, NULL, &bEnableSync, STD_LOADABLE_MODULE_ID, eConfObjAction));
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionfiledefaulttemplate", 0, eCmdHdlrGetWord, NULL, &pszFileDfltTplName, NULL, eConfObjAction));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omfileziplevel", 0, eCmdHdlrInt, NULL, &cs.iZipLevel, STD_LOADABLE_MODULE_ID, eConfObjAction));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omfileflushinterval", 0, eCmdHdlrInt, NULL, &cs.iFlushInterval, STD_LOADABLE_MODULE_ID, eConfObjAction));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omfileasyncwriting", 0, eCmdHdlrBinary, NULL, &cs.bUseAsyncWriter, STD_LOADABLE_MODULE_ID, eConfObjAction));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omfileflushontxend", 0, eCmdHdlrBinary, NULL, &cs.bFlushOnTXEnd, STD_LOADABLE_MODULE_ID, eConfObjAction));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omfileiobuffersize", 0, eCmdHdlrSize, NULL, &cs.iIOBufSize, STD_LOADABLE_MODULE_ID, eConfObjAction));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"dirowner", 0, eCmdHdlrUID, NULL, &cs.dirUID, STD_LOADABLE_MODULE_ID, eConfObjAction));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"dirgroup", 0, eCmdHdlrGID, NULL, &cs.dirGID, STD_LOADABLE_MODULE_ID, eConfObjAction));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"fileowner", 0, eCmdHdlrUID, NULL, &cs.fileUID, STD_LOADABLE_MODULE_ID, eConfObjAction));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"filegroup", 0, eCmdHdlrGID, NULL, &cs.fileGID, STD_LOADABLE_MODULE_ID, eConfObjAction));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"dircreatemode", 0, eCmdHdlrFileCreateMode, NULL, &cs.fDirCreateMode, STD_LOADABLE_MODULE_ID, eConfObjAction));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"filecreatemode", 0, eCmdHdlrFileCreateMode, NULL, &cs.fCreateMode, STD_LOADABLE_MODULE_ID, eConfObjAction));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"createdirs", 0, eCmdHdlrBinary, NULL, &cs.bCreateDirs, STD_LOADABLE_MODULE_ID, eConfObjAction));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"failonchownfailure", 0, eCmdHdlrBinary, NULL, &cs.bFailOnChown, STD_LOADABLE_MODULE_ID, eConfObjAction));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omfileForceChown", 0, eCmdHdlrBinary, NULL, &cs.bForceChown, STD_LOADABLE_MODULE_ID, eConfObjAction));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionfileenablesync", 0, eCmdHdlrBinary, NULL, &cs.bEnableSync, STD_LOADABLE_MODULE_ID, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionfiledefaulttemplate", 0, eCmdHdlrGetWord, NULL, &cs.pszFileDfltTplName, NULL, eConfObjAction));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID, eConfObjAction));
 ENDmodInit
 /* vi:set ai:

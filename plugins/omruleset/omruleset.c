@@ -50,6 +50,8 @@
 
 MODULE_TYPE_OUTPUT
 
+static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal);
+
 /* static data */
 DEFobjCurrIf(ruleset);
 DEFobjCurrIf(errmsg);
@@ -59,14 +61,24 @@ DEFobjCurrIf(errmsg);
 DEF_OMOD_STATIC_DATA
 
 /* config variables */
-ruleset_t *pRuleset = NULL;	/* ruleset to enqueue message to (NULL = Default, not recommended) */
-uchar *pszRulesetName = NULL;
 
 
 typedef struct _instanceData {
 	ruleset_t *pRuleset;	/* ruleset to enqueue to */
 	uchar *pszRulesetName;	/* primarily for debugging/display purposes */
 } instanceData;
+
+typedef struct configSettings_s {
+	ruleset_t *pRuleset;	/* ruleset to enqueue message to (NULL = Default, not recommended) */
+	uchar *pszRulesetName;
+} configSettings_t;
+
+SCOPING_SUPPORT; /* must be set AFTER configSettings_t is defined */
+
+BEGINinitConfVars		/* (re)set config variables to default values */
+CODESTARTinitConfVars 
+	resetConfigVariables(NULL, NULL);
+ENDinitConfVars
 
 
 BEGINcreateInstance
@@ -118,12 +130,12 @@ setRuleset(void __attribute__((unused)) *pVal, uchar *pszName)
 	rsRetVal localRet;
 	DEFiRet;
 
-	localRet = ruleset.GetRuleset(&pRuleset, pszName);
+	localRet = ruleset.GetRuleset(&cs.pRuleset, pszName);
 	if(localRet == RS_RET_NOT_FOUND) {
 		errmsg.LogError(0, RS_RET_RULESET_NOT_FOUND, "error: ruleset '%s' not found - ignored", pszName);
 	}
 	CHKiRet(localRet);
-	pszRulesetName = pszName; /* save for later display purposes */
+	cs.pszRulesetName = pszName; /* save for later display purposes */
 
 finalize_it:
 	if(iRet != RS_RET_OK) { /* cleanup needed? */
@@ -142,7 +154,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
 	}
 
-	if(pRuleset == NULL) {
+	if(cs.pRuleset == NULL) {
 		errmsg.LogError(0, RS_RET_NO_RULESET, "error: no ruleset was specified, use "
 				"$ActionOmrulesetRulesetName directive first!");
 		ABORT_FINALIZE(RS_RET_NO_RULESET);
@@ -160,17 +172,17 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	 * the format specified (if any) is always ignored.
 	 */
 	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, iTplOpts, (uchar*) "RSYSLOG_FileFormat"));
-	pData->pRuleset = pRuleset;
-	pData->pszRulesetName = pszRulesetName;
-	pRuleset = NULL; /* re-set, because there is a high risk of unwanted behavior if we leave it in! */
-	pszRulesetName = NULL; /* note: we must not free, as we handed over this pointer to the instanceDat to the instanceDataa! */
+	pData->pRuleset = cs.pRuleset;
+	pData->pszRulesetName = cs.pszRulesetName;
+	cs.pRuleset = NULL; /* re-set, because there is a high risk of unwanted behavior if we leave it in! */
+	cs.pszRulesetName = NULL; /* note: we must not free, as we handed over this pointer to the instanceDat to the instanceDataa! */
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
 
 BEGINmodExit
 CODESTARTmodExit
-	free(pszRulesetName);
+	free(cs.pszRulesetName);
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(ruleset, CORE_COMPONENT);
 ENDmodExit
@@ -188,7 +200,9 @@ ENDqueryEtryPt
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
 	DEFiRet;
-	pRuleset = NULL;
+	cs.pRuleset = NULL;
+	free(cs.pszRulesetName);
+	cs.pszRulesetName = NULL;
 	RETiRet;
 }
 

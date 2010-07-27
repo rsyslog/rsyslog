@@ -98,6 +98,16 @@ typedef struct _instanceData {
 	char uname[MAXUNAMES][UNAMESZ+1];
 } instanceData;
 
+typedef struct configSettings_s {
+	EMPTY_STRUCT
+} configSettings_t;
+
+SCOPING_SUPPORT; /* must be set AFTER configSettings_t is defined */
+
+BEGINinitConfVars		/* (re)set config variables to default values */
+CODESTARTinitConfVars 
+ENDinitConfVars
+
 
 BEGINcreateInstance
 CODESTARTcreateInstance

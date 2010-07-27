@@ -47,23 +47,33 @@
 
 MODULE_TYPE_OUTPUT
 
+static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal);
+
 /* internal structures
  */
 DEF_OMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
 
 typedef struct _instanceData {
-	MYSQL	*f_hmysql;		/* handle to MySQL */
+	MYSQL	*f_hmysql;			/* handle to MySQL */
 	char	f_dbsrv[MAXHOSTNAMELEN+1];	/* IP or hostname of DB server*/ 
 	unsigned int f_dbsrvPort;		/* port of MySQL server */
 	char	f_dbname[_DB_MAXDBLEN+1];	/* DB name */
 	char	f_dbuid[_DB_MAXUNAMELEN+1];	/* DB user */
 	char	f_dbpwd[_DB_MAXPWDLEN+1];	/* DB user's password */
-	unsigned uLastMySQLErrno;	/* last errno returned by MySQL or 0 if all is well */
+	unsigned uLastMySQLErrno;		/* last errno returned by MySQL or 0 if all is well */
 } instanceData;
 
-/* config variables */
-static int iSrvPort = 0;	/* database server port */
+typedef struct configSettings_s {
+	int iSrvPort;				/* database server port */
+} configSettings_t;
+
+SCOPING_SUPPORT; /* must be set AFTER configSettings_t is defined */
+
+BEGINinitConfVars		/* (re)set config variables to default values */
+CODESTARTinitConfVars 
+	resetConfigVariables(NULL, NULL);
+ENDinitConfVars
 
 
 BEGINcreateInstance
@@ -277,7 +287,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		errmsg.LogError(0, RS_RET_INVALID_PARAMS, "Trouble with MySQL connection properties. -MySQL logging disabled");
 		ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 	} else {
-		pData->f_dbsrvPort = (unsigned) iSrvPort;	/* set configured port */
+		pData->f_dbsrvPort = (unsigned) cs.iSrvPort;	/* set configured port */
 		pData->f_hmysql = NULL; /* initialize, but connect only on first message (important for queued mode!) */
 	}
 
@@ -301,7 +311,7 @@ ENDqueryEtryPt
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
 	DEFiRet;
-	iSrvPort = 0; /* zero is the default port */
+	cs.iSrvPort = 0; /* zero is the default port */
 	RETiRet;
 }
 
@@ -311,7 +321,7 @@ CODESTARTmodInit
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	/* register our config handlers */
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionommysqlserverport", 0, eCmdHdlrInt, NULL, &iSrvPort, STD_LOADABLE_MODULE_ID, eConfObjAction));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionommysqlserverport", 0, eCmdHdlrInt, NULL, &cs.iSrvPort, STD_LOADABLE_MODULE_ID, eConfObjAction));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID, eConfObjAction));
 ENDmodInit
 

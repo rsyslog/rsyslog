@@ -72,6 +72,16 @@ typedef struct _instanceData {
 	short	fd;		  /* pipe descriptor for (current) pipe */
 } instanceData;
 
+typedef struct configSettings_s {
+	EMPTY_STRUCT
+} configSettings_t;
+
+SCOPING_SUPPORT; /* must be set AFTER configSettings_t is defined */
+
+BEGINinitConfVars		/* (re)set config variables to default values */
+CODESTARTinitConfVars 
+ENDinitConfVars
+
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
