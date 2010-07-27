@@ -1263,10 +1263,43 @@ static inline rsRetVal
 setActionScope(void)
 {
 	DEFiRet;
+	modInfo_t *pMod;
 
 	currConfObj = eConfObjAction;
 	DBGPRINTF("entering action scope\n");
 	CHKiRet(actionNewScope());
+
+	/* now tell each action to start the scope */
+	pMod = NULL;
+	while((pMod = module.GetNxtType(pMod, eMOD_OUT)) != NULL) {
+		DBGPRINTF("beginning scope on module %s\n", pMod->pszName);
+		pMod->mod.om.newScope();
+	}
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* switch back from action scope.
+ * rgerhards, 2010-07-27
+ */
+static inline rsRetVal
+unsetActionScope(void)
+{
+	DEFiRet;
+	modInfo_t *pMod;
+
+	currConfObj = eConfObjAction;
+	DBGPRINTF("exiting action scope\n");
+	CHKiRet(actionRestoreScope());
+
+	/* now tell each action to restore the scope */
+	pMod = NULL;
+	while((pMod = module.GetNxtType(pMod, eMOD_OUT)) != NULL) {
+		DBGPRINTF("exiting scope on module %s\n", pMod->pszName);
+		pMod->mod.om.restoreScope();
+	}
 
 finalize_it:
 	RETiRet;
@@ -1324,7 +1357,7 @@ endConfObj(void __attribute__((unused)) *pVal, uchar *pszName)
 			ABORT_FINALIZE(RS_RET_CONF_INVLD_END);
 		}
 		currConfObj = eConfObjGlobal;
-		CHKiRet(actionRestoreScope());
+		CHKiRet(unsetActionScope());
 	} else {
 		errmsg.LogError(0, RS_RET_INVLD_CONF_OBJ, "invalid config object \"%s\" in $End", pszName);
 		ABORT_FINALIZE(RS_RET_INVLD_CONF_OBJ);
