@@ -47,8 +47,10 @@
  * version 5 changes the way parsing works for input modules. This is
  *           an important change, parseAndSubmitMessage() goes away. Other
  *           module types are not affected. -- rgerhards, 2008-10-09
+ * version 6 introduces scoping support (starting with the output
+ *           modules) -- rgerhards, 2010-07-27
  */
-#define CURR_MOD_IF_VERSION 5
+#define CURR_MOD_IF_VERSION 6
 
 typedef enum eModType_ {
 	eMOD_IN = 0,	/* input module */

@@ -361,6 +361,7 @@ ENDqueryEtryPt
 
 BEGINmodInit()
 CODESTARTmodInit
+SCOPINGmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));

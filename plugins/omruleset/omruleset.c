@@ -213,6 +213,7 @@ BEGINmodInit()
 	unsigned long opts;
 	int bMsgPassingSupported;		/* does core support template passing as an array? */
 CODESTARTmodInit
+SCOPINGmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	/* check if the rsyslog core supports parameter passing code */

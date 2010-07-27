@@ -908,6 +908,7 @@ BEGINmodInit(File)
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
+SCOPINGmodInit
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(strm, CORE_COMPONENT));
 

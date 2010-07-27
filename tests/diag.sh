@@ -5,13 +5,13 @@
 # not always able to convey back states to the upper-level test driver
 # begun 2009-05-27 by rgerhards
 # This file is part of the rsyslog project, released under GPLv3
-valgrind="valgrind --malloc-fill=ff --free-fill=fe --log-fd=1"
+#valgrind="valgrind --malloc-fill=ff --free-fill=fe --log-fd=1"
 #valgrind="valgrind --tool=drd --log-fd=1"
 #valgrind="valgrind --tool=helgrind --log-fd=1"
 #valgrind="valgrind --tool=exp-ptrcheck --log-fd=1"
 #set -o xtrace
-export RSYSLOG_DEBUG="debug nostdout"
-export RSYSLOG_DEBUGLOG="log"
+#export RSYSLOG_DEBUG="debug nostdout"
+#export RSYSLOG_DEBUGLOG="log"
 case $1 in
    'init')	$srcdir/killrsyslog.sh # kill rsyslogd if it runs for some reason
 		cp $srcdir/testsuites/diag-common.conf diag-common.conf

@@ -521,6 +521,10 @@ rsRetVal modInit##uniqName(int iIFVersRequested __attribute__((unused)), int *ip
 	/* now get the obj interface so that we can access other objects */ \
 	CHKiRet(pObjGetObjInterface(&obj));
 
+/* do those initializations necessary for scoping */
+#define SCOPINGmodInit \
+	initConfVars();
+
 #define ENDmodInit \
 finalize_it:\
 	*pQueryEtryPt = queryEtryPt;\
