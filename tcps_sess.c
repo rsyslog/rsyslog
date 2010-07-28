@@ -238,6 +238,11 @@ defaultDoSubmitMessage(tcps_sess_t *pThis, struct syslogTime *stTime, time_t ttG
 
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
 	
+	if(pThis->iMsg == 0) {
+		DBGPRINTF("discarding zero-sized message\n");
+		FINALIZE;
+	}
+
 	if(pThis->DoSubmitMessage != NULL) {
 		pThis->DoSubmitMessage(pThis, pThis->pMsg, pThis->iMsg);
 		FINALIZE;
@@ -477,8 +482,10 @@ DataRcvd(tcps_sess_t *pThis, char *pData, size_t iLen)
 		CHKiRet(processDataRcvd(pThis, *pData++, &stTime, ttGenTime, &multiSub));
 	}
 
-	/* submit anything that was not yet submitted */
-	CHKiRet(multiSubmitMsg(&multiSub));
+	if(multiSub.nElem > 0) {
+		/* submit anything that was not yet submitted */
+		CHKiRet(multiSubmitMsg(&multiSub));
+	}
 
 finalize_it:
 	RETiRet;
