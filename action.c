@@ -514,6 +514,7 @@ static rsRetVal actionDoRetry(action_t *pThis, time_t ttNow)
 		iRet = pThis->pMod->tryResume(pThis->pModData);
 		if((pThis->iResumeOKinRow > 999) && (pThis->iResumeOKinRow % 1000 == 0)) {
 			bTreatOKasSusp = 1;
+			pThis->iResumeOKinRow = 0;
 		} else {
 			bTreatOKasSusp = 0;
 		}
