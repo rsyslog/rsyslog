@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 4.6.4  [v4-stable] (rgerhards), 2010-??-??
+Version 4.6.4  [v4-stable] (rgerhards), 2010-08.05
 - bugfix: zero-sized (empty) messages were processed by imtcp
   they are now dropped as they always should have been
 - bugfix: programname filter in ! configuration can not be reset
