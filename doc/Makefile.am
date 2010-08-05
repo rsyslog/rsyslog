@@ -42,7 +42,6 @@ html_files = \
 	imsolaris.html \
 	imuxsock.html \
 	imklog.html \
-	professional_support.html \
 	queues.html \
 	src/queueWorkerLogic.dia \
 	queueWorkerLogic.jpg \
