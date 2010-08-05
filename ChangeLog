@@ -26,6 +26,8 @@ Version 5.5.6  [DEVEL] (rgerhards), 2010-07-21
   This, in default mode, caused buffered writing to be used, what
   means that it looked like no output were written or partial
   lines. Thanks to Michael Biebl for pointing out this bug.
+- bugfix: programname filter in ! configuration can not be reset
+  Thanks to Kiss Gabor for the patch.
 ---------------------------------------------------------------------------
 Version 5.5.5  [DEVEL] (rgerhards), 2010-05-20
 - added new cancel-reduced action thread termination method
@@ -472,6 +474,8 @@ Version 4.7.2  [v4-devel] (rgerhards), 2010-05-03
   whole atomic operation emulation has been rewritten.
 - added new $Sleep directive to hold processing for a couple of seconds
   during startup
+- bugfix: programname filter in ! configuration can not be reset
+  Thanks to Kiss Gabor for the patch.
 ---------------------------------------------------------------------------
 Version 4.7.1  [v4-devel] (rgerhards), 2010-04-22
 - Solaris support much improved -- was not truely usable in 4.7.0
@@ -507,10 +511,13 @@ Version 4.7.0  [v4-devel] (rgerhards), 2010-04-14
   Thanks for varmojfekoj for pointing me at this bug.
 - imported changes from 4.5.6 and below
 ---------------------------------------------------------------------------
-Version 4.6.3  [v4-stable] (rgerhards), 2010-03-??
-- bugfix: potential segfaults during queue shutdown
-  (bugs require certain non-standard settings to appear)
-  Thanks to varmojfekoj for the patch [imported from 4.5.8]
+Version 4.6.4  [v4-stable] (rgerhards), 2010-??-??
+- bugfix: zero-sized (empty) messages were processed by imtcp
+  they are now dropped as they always should have been
+- bugfix: programname filter in ! configuration can not be reset
+  Thanks to Kiss Gabor for the patch.
+---------------------------------------------------------------------------
+Version 4.6.3  [v4-stable] (rgerhards), 2010-07-07
 - improvded testbench
   - added test with truly random data received via syslog to test
     robustness
@@ -1147,6 +1154,8 @@ Version 3.22.2 [v3-stable] (rgerhards), 2009-07-??
   was random (but most often "on")
 - bugfix: potential segfault when -p command line option was used
   thanks to varmojfekoj for pointing me at this bug
+- bugfix: programname filter in ! configuration can not be reset
+  Thanks to Kiss Gabor for the patch.
 ---------------------------------------------------------------------------
 Version 3.22.1 [v3-stable] (rgerhards), 2009-07-02
 - bugfix: invalid error message issued if $inlcudeConfig was on an empty
