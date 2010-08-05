@@ -46,7 +46,6 @@ html_files = \
 	imuxsock.html \
 	imklog.html \
 	pmlastmsg.html \
-	professional_support.html \
 	queues.html \
 	src/queueWorkerLogic.dia \
 	queueWorkerLogic.jpg \
