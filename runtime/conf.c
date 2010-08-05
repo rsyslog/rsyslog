@@ -1015,7 +1015,7 @@ static rsRetVal cflineProcessTagSelector(uchar **pline)
 	if(**pline != '\0' && **pline == '*' && *(*pline+1) == '\0') {
 		dbgprintf("resetting programname filter\n");
 		if(pDfltProgNameCmp != NULL) {
-			CHKiRet(rsCStrSetSzStr(pDfltProgNameCmp, NULL));
+			rsCStrDestruct(&pDfltProgNameCmp);
 		}
 	} else {
 		dbgprintf("setting programname filter to '%s'\n", *pline);
