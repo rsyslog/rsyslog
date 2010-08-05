@@ -45,7 +45,7 @@
 #include "unicode-helper.h"
 
 MODULE_TYPE_PARSER
-PARSER_NAME("rsyslog.rfc3164sd")
+PARSER_NAME("contributed.rfc3164sd")
 
 /* internal structures
  */

@@ -36,10 +36,10 @@ should be used. Note that when a parser is specified, the default parser chain
 is removed, so we need to specify all three parsers. We use this together with the
 default ruleset.
 </p>
-<textarea rows="15" cols="80">$ModLoad pmlastline # this parser is NOT a built-in module
+<textarea rows="15" cols="80">$ModLoad pmlastmsg # this parser is NOT a built-in module
 
 # note that parser are tried in the
-# order they appear in rsyslog.conf, so put pmlastline first
+# order they appear in rsyslog.conf, so put pmlastmsg first
 $RulesetParser rsyslog.lastline
 # as we have removed the default parser chain, we
 # need to add the default parsers as well.
