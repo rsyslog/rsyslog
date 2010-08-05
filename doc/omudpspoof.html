@@ -17,10 +17,15 @@ source ports.
 <p><b>Configuration Directives</b>:</p>
 <ul>
 <li><b>$ActionOMUDPSpoofSourceNameTemplate</b> &lt;templatename&gt;<br>
-This MUST be specified. It is the name of the template that contains a
+This is the name of the template that contains a
 numerical IP address that is to be used as the source system IP address.
 While it may often be a constant value, it can be generated as usual via the
-property replacer, as long as it is a valid IPv4 address.
+property replacer, as long as it is a valid IPv4 address. If not specified, the
+build-in default template RSYSLOG_omudpspoofDfltSourceTpl is used. This template is defined 
+as follows:<br>
+$template RSYSLOG_omudpspoofDfltSourceTpl,"%fromhost-ip%"<br>
+So in essence, the default template spoofs the address of the system the message
+was received from. This is considered the most important use case.
 <li><b>$ActionOMUDPSpoofTargetHost</b> &lt;hostname&gt;<br>
 Host that the messages shall be sent to.
 <li><b>$ActionUDPSpoofTargetPort</b> &lt;port&gt;<br>
@@ -42,8 +47,18 @@ equal to the start value. Default is 42000.
 know via the rsyslog mailing list.
 </ul>
 <p><b>Sample:</b></p>
+<p>The following sample forwards all syslog messages in standard form to the
+remote server server.example.com. The original sender's address is used. We do not
+care about the source port. This example is considered the typical use case for
+omudpspoof.
+</p>
+<textarea rows="5" cols="80">$ModLoad omudpspoof
+$ActionUDPSpoofTargetHost server.example.com
+*.*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; :omudpspoof:
+</textarea>
+
 <p>The following sample forwards all syslog messages in unmodified form to the
-remote server server.example.com. The sender address 192.0.2.1 with the fixed
+remote server server.example.com. The sender address 192.0.2.1 with fixed
 source port 514 is used.
 </p>
 <textarea rows="8" cols="80">$ModLoad omudpspoof
@@ -55,7 +70,7 @@ $ActionUDPSpoofSourcePortStart 514
 $ActionUDPSpoofSourcePortEnd 514
 *.*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; :omudpspoof:;spooftemplate
 </textarea>
-<p>The following sample is similar to the first, but uses as many defaults as possible.
+<p>The following sample is similar to the previous, but uses as many defaults as possible.
 In that sample, a source port in the range 32000..42000 is used. The message is formatted
 according to rsyslog's canned default forwarding format. Note that if any parameters
 have been changed, the previously set defaults will be used!

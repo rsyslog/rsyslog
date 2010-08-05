@@ -333,6 +333,7 @@ static uchar template_WallFmt[] = "\"\r\n\7Message from syslogd@%HOSTNAME% at %t
 static uchar template_StdUsrMsgFmt[] = "\" %syslogtag%%msg%\n\r\"";
 static uchar template_StdDBFmt[] = "\"insert into SystemEvents (Message, Facility, FromHost, Priority, DeviceReportedTime, ReceivedAt, InfoUnitID, SysLogTag) values ('%msg%', %syslogfacility%, '%HOSTNAME%', %syslogpriority%, '%timereported:::date-mysql%', '%timegenerated:::date-mysql%', %iut%, '%syslogtag%')\",SQL";
 static uchar template_StdPgSQLFmt[] = "\"insert into SystemEvents (Message, Facility, FromHost, Priority, DeviceReportedTime, ReceivedAt, InfoUnitID, SysLogTag) values ('%msg%', %syslogfacility%, '%HOSTNAME%', %syslogpriority%, '%timereported:::date-pgsql%', '%timegenerated:::date-pgsql%', %iut%, '%syslogtag%')\",STDSQL";
+static uchar template_spoofadr[] = "\"%fromhost-ip%\"";
 /* end templates */
 
 
@@ -2168,6 +2169,8 @@ static rsRetVal mainThread()
 	tplAddLine(" StdDBFmt", &pTmp);
         pTmp = template_StdPgSQLFmt;
         tplLastStaticInit(tplAddLine(" StdPgSQLFmt", &pTmp));
+        pTmp = template_spoofadr;
+        tplLastStaticInit(tplAddLine("RSYSLOG_omudpspoofDfltSourceTpl", &pTmp));
 
 	CHKiRet(init());
 

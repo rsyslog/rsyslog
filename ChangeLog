@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 5.5.7  [V5-BETA] (rgerhards), 2010-08-??
+- changed omudpspoof default spoof address to simplify typical use case
+  thanks to David Lang for suggesting this
 - doc bugfix: pmlastmsg doc samples had errors
 - bugfix[minor]: pmrfc3164sd had invalid name (resided in rsyslog name 
   space, what should not be the case for a contributed module)

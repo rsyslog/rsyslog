@@ -381,6 +381,7 @@ ENDdoAction
 
 
 BEGINparseSelectorAct
+	uchar *sourceTpl;
 CODESTARTparseSelectorAct
 CODE_STD_STRING_REQUESTparseSelectorAct(2)
 	/* first check if this config line is actually for us */
@@ -392,10 +393,8 @@ CODE_STD_STRING_REQUESTparseSelectorAct(2)
 	p += sizeof(":omudpspoof:") - 1; /* eat indicator sequence  (-1 because of '\0'!) */
 	CHKiRet(createInstance(&pData));
 
-	if(pszSourceNameTemplate == NULL) {
-		errmsg.LogError(0, NO_ERRCODE, "No $ActionOMUDPSpoofSourceNameTemplate given, can not continue with this action.");
-		ABORT_FINALIZE(RS_RET_NO_SRCNAME_TPL);
-	}
+	sourceTpl = (pszSourceNameTemplate == NULL) ? UCHAR_CONSTANT("RSYSLOG_omudpspoofDfltSourceTpl")
+						    : pszSourceNameTemplate;
 
 	if(pszTargetHost == NULL) {
 		errmsg.LogError(0, NO_ERRCODE, "No $ActionOMUDPSpoofTargetHost given, can not continue with this action.");
@@ -408,7 +407,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(2)
 		pData->port = NULL;
 	else 
 		CHKmalloc(pData->port = ustrdup(pszTargetPort));
-	CHKiRet(OMSRsetEntry(*ppOMSR, 1, ustrdup(pszSourceNameTemplate), OMSR_NO_RQD_TPL_OPTS));
+	CHKiRet(OMSRsetEntry(*ppOMSR, 1, ustrdup(sourceTpl), OMSR_NO_RQD_TPL_OPTS));
 	pData->compressionLevel = iCompressionLevel;
 	pData->sourcePort = pData->sourcePortStart = iSourcePortStart;
 	pData->sourcePortEnd = iSourcePortEnd;
