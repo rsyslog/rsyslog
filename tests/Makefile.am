@@ -1,6 +1,6 @@
 if ENABLE_TESTBENCH
 TESTRUNS = rt_init rscript
-check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq msleep randomgen diagtalker
+check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq msleep randomgen diagtalker uxsockrcvr
 TESTS = $(TESTRUNS) cfg.sh \
 	validation-run.sh \
 	imtcp-multiport.sh \
@@ -26,7 +26,8 @@ TESTS = $(TESTRUNS) cfg.sh \
 	dynfile_invalid2.sh \
 	complex1.sh \
 	queue-persist.sh \
-	pipeaction.sh
+	pipeaction.sh \
+	uxsock_simple.sh \
 	execonlyonce.sh \
 	queue-persist.sh 
 
@@ -162,6 +163,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/sndrcv_gzip_rcvr.conf \
 	   pipeaction.sh \
 	   testsuites/pipeaction.conf \
+	   uxsock_simple.sh \
+	   testsuites/uxsock_simple.conf \
 	   asynwr_simple.sh \
 	   testsuites/asynwr_simple.conf \
 	   asynwr_timeout.sh \
@@ -204,6 +207,7 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/execonlyonce.data \
 	   cfg.sh
 
+uxsockrcvr_SOURCES = uxsockrcvr.c
 ourtail_SOURCES = ourtail.c
 msleep_SOURCES = msleep.c
 chkseq_SOURCES = chkseq.c

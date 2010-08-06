@@ -785,6 +785,20 @@ AC_ARG_ENABLE(omstdout,
 )
 AM_CONDITIONAL(ENABLE_OMSTDOUT, test x$enable_omstdout = xyes)
 
+
+# settings for omuxsock
+AC_ARG_ENABLE(omuxsock,
+        [AS_HELP_STRING([--enable-omuxsock],[Compiles stdout module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_omuxsock="yes" ;;
+          no) enable_omuxsock="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-omuxsock) ;;
+         esac],
+        [enable_omuxsock=no]
+)
+AM_CONDITIONAL(ENABLE_OMUXSOCK, test x$enable_omuxsock = xyes)
+
+
 # This provides a vehicle to integrate custom modules, that are not
 # part of rsyslog, into the build process. It is named cust1, so that
 # additional such modules can easily be added.
@@ -860,6 +874,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omtemplate/Makefile \
 		plugins/omprog/Makefile \
 		plugins/omstdout/Makefile \
+		plugins/omuxsock/Makefile \
 		plugins/imfile/Makefile \
 		plugins/imsolaris/Makefile \
 		plugins/imrelp/Makefile \
@@ -901,6 +916,7 @@ echo "---{ output plugins }---"
 echo "    Mail support enabled:                     $enable_mail"
 echo "    omprog module will be compiled:           $enable_omprog"
 echo "    omstdout module will be compiled:         $enable_omstdout"
+echo "    omuxsock module will be compiled:         $enable_omuxsock"
 echo "    output template module will be compiled:  $enable_omtemplate"
 echo
 echo "---{ database support }---"
