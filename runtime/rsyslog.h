@@ -449,6 +449,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_ERR_EPOLL_CTL = -2163,	/**< epol_ctll() returned with an unexpected error code */
 	RS_RET_TIMEOUT = -2164,		/**< timeout occured during operation */
 	RS_RET_RCV_ERR = -2165,		/**< error occured during socket rcv operation */
+	RS_RET_NO_SOCK_CONFIGURED = -2166, /**< no socket (name) was configured where one is required */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */

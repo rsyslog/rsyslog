@@ -1,4 +1,5 @@
 ---------------------------------------------------------------------------
+<<<<<<< HEAD
 Version 5.5.7  [V5-BETA] (rgerhards), 2010-08-??
 - changed omudpspoof default spoof address to simplify typical use case
   thanks to David Lang for suggesting this
@@ -473,6 +474,11 @@ increase.
   superior performance (for databases potentially far superior performance)
 - increased ompgsql performance by adapting to new transactional
   output module interface
+=======
+Version 4.7.3  [v4-devel] (rgerhards), 2010-??-??
+- added omuxsock, which permits to write message to local Unix sockets
+  this is the counterpart to imuxsock, enabling fast local forwarding
+>>>>>>> 80ff634c841d692c1d9f335b88e225d6ce7317f7
 ---------------------------------------------------------------------------
 Version 4.7.2  [v4-devel] (rgerhards), 2010-05-03
 - bugfix: problems with atomic operations emulaton

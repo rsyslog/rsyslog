@@ -108,6 +108,7 @@ html_files = \
 	gssapi.html \
 	licensing.html \
 	ommail.html \
+	omuxsock.html \
 	omrelp.html \
 	syslog_parsing.html \
 	troubleshoot.html \
