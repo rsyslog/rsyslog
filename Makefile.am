@@ -117,6 +117,7 @@ endif
 
 if ENABLE_OMUDPSPOOF
 SUBDIRS += plugins/omudpspoof
+endif
 
 if ENABLE_OMUXSOCK
 SUBDIRS += plugins/omuxsock
