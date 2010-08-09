@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 5.5.7  [V5-BETA] (rgerhards), 2010-08-??
+Version 5.5.7  [V5-BETA] (rgerhards), 2010-08-09
 - changed omudpspoof default spoof address to simplify typical use case
   thanks to David Lang for suggesting this
 - doc bugfix: pmlastmsg doc samples had errors
