@@ -165,6 +165,16 @@ struct epolld_s {
 static ptcpsrv_t *pSrvRoot = NULL;
 static int epollfd = -1;			/* (sole) descriptor for epoll */
 static int iMaxLine; /* maximum size of a single message */
+/* we use a single static receive buffer, as this module is not multi-threaded. Keeping
+ * the buffer in the data segment is probably a little bit more efficient than on the stack
+ * (but at least I can't believe it will ever be less efficient ;) -- rgerhards, 2010-08-10
+ * Note that we do NOT (yet?) provide a config setting to set the buffer size. For usual
+ * syslog traffic, it should be large enough. Also keep in mind that we run under a virtual
+ * memory system, so if we do not use large parts of the buffer, that's no issue at
+ * all -- it'll just use up address space. On the other hand, it would be silly to page in
+ * or page out some data just to get space for the IO buffer.
+ */
+static char rcvBuf[128*1024];
 
 /* forward definitions */
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal);
@@ -207,7 +217,6 @@ static rsRetVal
 startupSrv(ptcpsrv_t *pSrv)
 {
 	DEFiRet;
-	int iSessMax = 200;	/* TODO: Make configurable or remove? */
         int error, maxs, on = 1;
 	int sock = -1;
 	int numSocks;
@@ -217,7 +226,7 @@ startupSrv(ptcpsrv_t *pSrv)
 
 	lstnIP = pSrv->lstnIP == NULL ? UCHAR_CONSTANT("") : pSrv->lstnIP;
 
-	dbgprintf("imptcp creating listen socket on server '%s', port %s\n", lstnIP, pSrv->port);
+	DBGPRINTF("imptcp creating listen socket on server '%s', port %s\n", lstnIP, pSrv->port);
 
         memset(&hints, 0, sizeof(hints));
         hints.ai_flags = AI_PASSIVE;
@@ -226,7 +235,7 @@ startupSrv(ptcpsrv_t *pSrv)
 
         error = getaddrinfo((char*)pSrv->lstnIP, (char*) pSrv->port, &hints, &res);
         if(error) {
-		dbgprintf("error %d querying server '%s', port '%s'\n", error, pSrv->lstnIP, pSrv->port);
+		DBGPRINTF("error %d querying server '%s', port '%s'\n", error, pSrv->lstnIP, pSrv->port);
 		ABORT_FINALIZE(RS_RET_INVALID_PORT);
 	}
 
@@ -239,7 +248,7 @@ startupSrv(ptcpsrv_t *pSrv)
                sock = socket(r->ai_family, r->ai_socktype, r->ai_protocol);
         	if(sock < 0) {
 			if(!(r->ai_family == PF_INET6 && errno == EAFNOSUPPORT))
-				dbgprintf("error %d creating tcp listen socket", errno);
+				DBGPRINTF("error %d creating tcp listen socket", errno);
 				/* it is debatable if PF_INET with EAFNOSUPPORT should
 				 * also be ignored...
 				 */
@@ -258,7 +267,7 @@ startupSrv(ptcpsrv_t *pSrv)
                 }
 #endif
        		if(setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char *) &on, sizeof(on)) < 0 ) {
-			dbgprintf("error %d setting tcp socket option\n", errno);
+			DBGPRINTF("error %d setting tcp socket option\n", errno);
                         close(sock);
 			sock = -1;
 			continue;
@@ -273,7 +282,7 @@ startupSrv(ptcpsrv_t *pSrv)
 			sockflags = fcntl(sock, F_SETFL, sockflags);
 		}
 		if(sockflags == -1) {
-			dbgprintf("error %d setting fcntl(O_NONBLOCK) on tcp socket", errno);
+			DBGPRINTF("error %d setting fcntl(O_NONBLOCK) on tcp socket", errno);
                         close(sock);
 			sock = -1;
 			continue;
@@ -302,26 +311,17 @@ startupSrv(ptcpsrv_t *pSrv)
 #endif
 	           ) {
 			/* TODO: check if *we* bound the socket - else we *have* an error! */
-                        dbgprintf("error %d while binding tcp socket", errno);
+                        DBGPRINTF("error %d while binding tcp socket", errno);
                 	close(sock);
 			sock = -1;
                         continue;
                 }
 
-		if(listen(sock, iSessMax / 10 + 5) < 0) {
-			/* If the listen fails, it most probably fails because we ask
-			 * for a too-large backlog. So in this case we first set back
-			 * to a fixed, reasonable, limit that should work. Only if
-			 * that fails, too, we give up.
-			 */
-			dbgprintf("listen with a backlog of %d failed - retrying with default of 32.",
-				   iSessMax / 10 + 5);
-			if(listen(sock, 32) < 0) {
-				dbgprintf("tcp listen error %d, suspending\n", errno);
-	                	close(sock);
-				sock = -1;
-               		        continue;
-			}
+		if(listen(sock, 511) < 0) {
+			DBGPRINTF("tcp listen error %d, suspending\n", errno);
+			close(sock);
+			sock = -1;
+			continue;
 		}
 
 		/* if we reach this point, we were able to obtain a valid socket, so we can
@@ -332,11 +332,11 @@ startupSrv(ptcpsrv_t *pSrv)
 	}
 
 	if(numSocks != maxs)
-		dbgprintf("We could initialize %d TCP listen sockets out of %d we received "
+		DBGPRINTF("We could initialize %d TCP listen sockets out of %d we received "
 		 	  "- this may or may not be an error indication.\n", numSocks, maxs);
 
         if(numSocks == 0) {
-		dbgprintf("No TCP listen sockets could successfully be initialized");
+		DBGPRINTF("No TCP listen sockets could successfully be initialized");
 		ABORT_FINALIZE(RS_RET_COULD_NOT_BIND);
 	}
 
@@ -375,7 +375,7 @@ getPeerNames(prop_t **peerName, prop_t **peerIP, struct sockaddr *pAddr)
         error = getnameinfo(pAddr, SALEN(pAddr), (char*)szIP, sizeof(szIP), NULL, 0, NI_NUMERICHOST);
 
         if(error) {
-                dbgprintf("Malformed from address %s\n", gai_strerror(error));
+                DBGPRINTF("Malformed from address %s\n", gai_strerror(error));
 		strcpy((char*)szHname, "???");
 		strcpy((char*)szIP, "???");
 		ABORT_FINALIZE(RS_RET_INVALID_HNAME);
@@ -395,7 +395,7 @@ getPeerNames(prop_t **peerName, prop_t **peerIP, struct sockaddr *pAddr)
 				freeaddrinfo (res);
 				/* OK, we know we have evil, so let's indicate this to our caller */
 				snprintf((char*)szHname, NI_MAXHOST, "[MALICIOUS:IP=%s]", szIP);
-				dbgprintf("Malicious PTR record, IP = \"%s\" HOST = \"%s\"", szIP, szHname);
+				DBGPRINTF("Malicious PTR record, IP = \"%s\" HOST = \"%s\"", szIP, szHname);
 				iRet = RS_RET_MALICIOUS_HNAME;
 			}
 		} else {
@@ -450,7 +450,7 @@ AcceptConnReq(int sock, int *newSock, prop_t **peerName, prop_t **peerIP)
 		sockflags = fcntl(iNewSock, F_SETFL, sockflags);
 	}
 	if(sockflags == -1) {
-		dbgprintf("error %d setting fcntl(O_NONBLOCK) on tcp socket %d", errno, iNewSock);
+		DBGPRINTF("error %d setting fcntl(O_NONBLOCK) on tcp socket %d", errno, iNewSock);
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
 	}
 
@@ -544,21 +544,21 @@ processDataRcvd(ptcpsess_t *pThis, char c, struct syslogTime *stTime, time_t ttG
 		if(isdigit(c)) {
 			pThis->iOctetsRemain = pThis->iOctetsRemain * 10 + c - '0';
 		} else { /* done with the octet count, so this must be the SP terminator */
-			dbgprintf("TCP Message with octet-counter, size %d.\n", pThis->iOctetsRemain);
+			DBGPRINTF("TCP Message with octet-counter, size %d.\n", pThis->iOctetsRemain);
 			if(c != ' ') {
 				errmsg.LogError(0, NO_ERRCODE, "Framing Error in received TCP message: "
 					    "delimiter is not SP but has ASCII value %d.\n", c);
 			}
 			if(pThis->iOctetsRemain < 1) {
 				/* TODO: handle the case where the octet count is 0! */
-				dbgprintf("Framing Error: invalid octet count\n");
+				DBGPRINTF("Framing Error: invalid octet count\n");
 				errmsg.LogError(0, NO_ERRCODE, "Framing Error in received TCP message: "
 					    "invalid octet count %d.\n", pThis->iOctetsRemain);
 			} else if(pThis->iOctetsRemain > iMaxLine) {
 				/* while we can not do anything against it, we can at least log an indication
 				 * that something went wrong) -- rgerhards, 2008-03-14
 				 */
-				dbgprintf("truncating message with %d octets - max msg size is %d\n",
+				DBGPRINTF("truncating message with %d octets - max msg size is %d\n",
 					  pThis->iOctetsRemain, iMaxLine);
 				errmsg.LogError(0, NO_ERRCODE, "received oversize message: size is %d bytes, "
 					        "max msg size is %d, truncating...\n", pThis->iOctetsRemain, iMaxLine);
@@ -569,7 +569,7 @@ processDataRcvd(ptcpsess_t *pThis, char c, struct syslogTime *stTime, time_t ttG
 		assert(pThis->inputState == eInMsg);
 		if(pThis->iMsg >= iMaxLine) {
 			/* emergency, we now need to flush, no matter if we are at end of message or not... */
-			dbgprintf("error: message received is larger than max msg size, we split it\n");
+			DBGPRINTF("error: message received is larger than max msg size, we split it\n");
 			doSubmitMsg(pThis, stTime, ttGenTime, pMultiSub);
 			/* we might think if it is better to ignore the rest of the
 			 * message than to treat it as a new one. Maybe this is a good
@@ -808,8 +808,8 @@ closeSess(ptcpsess_t *pSess)
 
 	/* finally unlink session from structures */
 //fprintf(stderr, "closing session %d next %p, prev %p\n", pSess->sock, pSess->next, pSess->prev);
-//dbgprintf("imptcp: pSess->next %p\n", pSess->next);
-//dbgprintf("imptcp: pSess->prev %p\n", pSess->prev);
+//DBGPRINTF("imptcp: pSess->next %p\n", pSess->next);
+//DBGPRINTF("imptcp: pSess->prev %p\n", pSess->prev);
 	if(pSess->next != NULL)
 		pSess->next->prev = pSess->prev;
 	if(pSess->prev == NULL) {
@@ -957,7 +957,6 @@ sessActivity(ptcpsess_t *pSess)
 {
 	int lenRcv;
 	int lenBuf;
-	char rcvBuf[128*1024];
 	DEFiRet;
 int iac = 0;
 
