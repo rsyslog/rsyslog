@@ -7,6 +7,8 @@ TESTS = $(TESTRUNS) cfg.sh \
 	diskqueue.sh \
 	diskqueue-fsync.sh \
 	manytcp.sh \
+	manyptcp.sh \
+	imptcp_large.sh \
 	sndrcv.sh \
 	sndrcv_gzip.sh \
 	asynwr_simple.sh \
@@ -136,6 +138,10 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/imtcp-multiport.conf \
 	   manytcp.sh \
 	   testsuites/manytcp.conf \
+	   manyptcp.sh \
+	   testsuites/manyptcp.conf \
+	   imptcp_large.sh \
+	   testsuites/imptcp_large.conf \
 	   inputname.sh \
 	   testsuites/inputname_imtcp.conf \
 	   testsuites/1.inputname_imtcp_12514 \
