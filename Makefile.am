@@ -103,6 +103,10 @@ if ENABLE_IMFILE
 SUBDIRS += plugins/imfile
 endif
 
+if ENABLE_IMPTCP
+SUBDIRS += plugins/imptcp
+endif
+
 if ENABLE_IMDIAG
 SUBDIRS += plugins/imdiag
 endif
@@ -134,5 +138,6 @@ SUBDIRS += tests
 # temporarily be removed below. The intent behind forcing everthing to compile
 # in a make distcheck is so that we detect code that accidently was not updated
 # when some global update happened.
-DISTCHECK_CONFIGURE_FLAGS=--enable-gssapi_krb5 --enable-imfile --enable-snmp --enable-pgsql --enable-libdbi --enable-mysql --enable-omtemplate --enable-imtemplate --enable-relp --enable-rsyslogd --enable-mail --enable-klog  --enable-diagtools --enable-gnutls --enable-omstdout --enable-omprog --enable-imdiag --enable-shave --enable-extended-tests
+DISTCHECK_CONFIGURE_FLAGS=--enable-gssapi_krb5 --enable-imfile --enable-snmp --enable-pgsql --enable-libdbi --enable-mysql --enable-omtemplate --enable-imtemplate --enable-relp --enable-rsyslogd --enable-mail --enable-klog  --enable-diagtools --enable-gnutls --enable-omstdout --enable-omprog --enable-imdiag --enable-shave --enable-extended-tests \
+	--enable-imptcp
 ACLOCAL_AMFLAGS = -I m4

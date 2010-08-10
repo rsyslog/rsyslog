@@ -360,6 +360,10 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_VAR_NOT_FOUND = -2142, /**< variable not found */
 	RS_RET_EMPTY_MSG = -2143, /**< provided (raw) MSG is empty */
 	RS_RET_PEER_CLOSED_CONN = -2144, /**< remote peer closed connection (information, no error) */
+	RS_RET_NO_LSTN_DEFINED = -2172, /**< no listener defined (e.g. inside an input module) */
+	RS_RET_EPOLL_CR_FAILED = -2173, /**< epoll_create() failed */
+	RS_RET_EPOLL_CTL_FAILED = -2174, /**< epoll_ctl() failed */
+	RS_RET_INTERNAL_ERROR = -2175, /**< rsyslogd internal error, unexpected code path reached */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */

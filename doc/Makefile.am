@@ -37,6 +37,7 @@ html_files = \
 	omlibdbi.html \
 	imfile.html \
 	imtcp.html \
+	imptcp.html \
 	imgssapi.html \
 	imrelp.html \
 	imuxsock.html \

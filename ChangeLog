@@ -1,3 +1,5 @@
+- added imptcp, a simplified, Linux-specific and potentielly fast
+  syslog plain tcp input plugin (NOT supporting TLS!)
 ---------------------------------------------------------------------------
 Version 4.6.4  [v4-stable] (rgerhards), 2010-08.05
 - bugfix: zero-sized (empty) messages were processed by imtcp
