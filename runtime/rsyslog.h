@@ -378,6 +378,10 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_ERR_AQ_CONLOG = -2146, /**< error aquiring console log (on solaris) */
 	RS_RET_ERR_DOOR = -2147, /**< some problems with handling the Solaris door functionality */
 	RS_RET_NO_SOCK_CONFIGURED = -2166, /**< no socket (name) was configured where one is required */
+	RS_RET_NO_LSTN_DEFINED = -2172, /**< no listener defined (e.g. inside an input module) */
+	RS_RET_EPOLL_CR_FAILED = -2173, /**< epoll_create() failed */
+	RS_RET_EPOLL_CTL_FAILED = -2174, /**< epoll_ctl() failed */
+	RS_RET_INTERNAL_ERROR = -2175, /**< rsyslogd internal error, unexpected code path reached */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */

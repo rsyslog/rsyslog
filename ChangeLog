@@ -2,6 +2,8 @@
 Version 4.7.3  [v4-devel] (rgerhards), 2010-??-??
 - added omuxsock, which permits to write message to local Unix sockets
   this is the counterpart to imuxsock, enabling fast local forwarding
+- added imptcp, a simplified, Linux-specific and potentielly fast
+  syslog plain tcp input plugin (NOT supporting TLS!)
 ---------------------------------------------------------------------------
 Version 4.7.2  [v4-devel] (rgerhards), 2010-05-03
 - bugfix: problems with atomic operations emulaton
