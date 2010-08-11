@@ -9,7 +9,7 @@
 <p><b>Type:</b> ruleset-specific configuration directive</p>
 <p><b>Parameter Values:</b> string</p>
 <p><b>Available since:</b> 5.3.4+</p>
-<p><b>Default:</b> rsyslog.rfc5424;rsyslog.rfc5425</p>
+<p><b>Default:</b> rsyslog.rfc5424 followed by rsyslog.rfc5425</p>
 <p><b>Description:</b></p>
 <p>
 This directive permits to specify which
@@ -37,7 +37,7 @@ messages that are malformed in various ways. The route to take then is
 <li>make sure you find a custom parser for that device; if there is no one, you
 may consider writing one yourself (it is not that hard) or getting one written
 as part of
-<a href="http://www.rsyslog.com/professional-servcies">Adiscon's professional services
+<a href="http://www.rsyslog.com/professional-services">Adiscon's professional services
 for rsyslog</a>.
 <li>load your custom parsers via $ModLoad
 <li>create a ruleset for each malformed format; assign the custom parser to it
@@ -104,6 +104,10 @@ $UDPServerRun 10514
 $InputUDPServerBindRuleset maldev2
 $UDPServerRun 10515
 </textarea>
+
+<p>For an example of how multiple parser can be chained (and an actual use case), please see
+the example section on the <a href="pmlastmsg.html">pmlastmsg</a> parser
+module.
 <p>Note the positions of the directives. With the current config language,
 <b>sequence of statements is very important</b>. This is ugly, but unfortunately
 the way it currently works.

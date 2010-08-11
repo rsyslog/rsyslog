@@ -119,12 +119,20 @@ if ENABLE_OMUDPSPOOF
 SUBDIRS += plugins/omudpspoof
 endif
 
+if ENABLE_OMUXSOCK
+SUBDIRS += plugins/omuxsock
+endif
+
 if ENABLE_OMTEMPLATE
 SUBDIRS += plugins/omtemplate
 endif
 
 if ENABLE_IMFILE
 SUBDIRS += plugins/imfile
+endif
+
+if ENABLE_IMPTCP
+SUBDIRS += plugins/imptcp
 endif
 
 if ENABLE_IMDIAG
@@ -179,6 +187,8 @@ DISTCHECK_CONFIGURE_FLAGS=	--enable-gssapi_krb5 \
 				--enable-omruleset \
 				--enable-omprog \
 				--enable-imdiag \
+				--enable-imptcp \
+				--enable-omuxsock \
 				--enable-shave \
 				--enable-extended-tests \
 				--enable-memcheck

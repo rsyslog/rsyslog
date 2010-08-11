@@ -779,6 +779,18 @@ AC_ARG_ENABLE(imsolaris,
 )
 AM_CONDITIONAL(ENABLE_IMSOLARIS, test x$enable_imsolaris = xyes)
 
+# settings for the ptcp input module
+AC_ARG_ENABLE(imptcp,
+        [AS_HELP_STRING([--enable-imptcp],[plain tcp input module enabled @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_imptcp="yes" ;;
+          no) enable_imptcp="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-imptcp) ;;
+         esac],
+        [enable_imptcp=no]
+)
+AM_CONDITIONAL(ENABLE_IMPTCP, test x$enable_imptcp = xyes)
+
 
 # settings for the omprog output module
 AC_ARG_ENABLE(omprog,
@@ -909,6 +921,20 @@ AM_CONDITIONAL(ENABLE_GUI, test x$enable_gui = xyes)
 
 AC_SUBST(RELP_CFLAGS)
 AC_SUBST(RELP_LIBS)
+
+# settings for omuxsock
+AC_ARG_ENABLE(omuxsock,
+        [AS_HELP_STRING([--enable-omuxsock],[Compiles stdout module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_omuxsock="yes" ;;
+          no) enable_omuxsock="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-omuxsock) ;;
+         esac],
+        [enable_omuxsock=no]
+)
+AM_CONDITIONAL(ENABLE_OMUXSOCK, test x$enable_omuxsock = xyes)
+
+
 # This provides a vehicle to integrate custom modules, that are not
 # part of rsyslog, into the build process. It is named cust1, so that
 # additional such modules can easily be added.
@@ -983,8 +1009,10 @@ AC_CONFIG_FILES([Makefile \
 		plugins/pmlastmsg/Makefile \
 		plugins/omruleset/Makefile \
 		plugins/omdbalerting/Makefile \
+		plugins/omuxsock/Makefile \
 		plugins/imfile/Makefile \
 		plugins/imsolaris/Makefile \
+		plugins/imptcp/Makefile \
 		plugins/imrelp/Makefile \
 		plugins/imdiag/Makefile \
 		plugins/omtesting/Makefile \
@@ -1017,6 +1045,7 @@ echo "    Unlimited select() support enabled:       $enable_unlimited_select"
 echo
 echo "---{ input plugins }---"
 echo "    Klog functionality enabled:               $enable_klog ($os_type)"
+echo "    plain tcp input module enabled:           $enable_imptcp"
 echo "    imdiag enabled:                           $enable_imdiag"
 echo "    file input module enabled:                $enable_imfile"
 echo "    Solaris input module enabled:             $enable_imsolaris"
@@ -1029,6 +1058,7 @@ echo "    omstdout module will be compiled:         $enable_omstdout"
 echo "    omruleset module will be compiled:        $enable_omruleset"
 echo "    omdbalerting module will be compiled:     $enable_omdbalerting"
 echo "    omudpspoof module will be compiled:       $enable_omudpspoof"
+echo "    omuxsock module will be compiled:         $enable_omuxsock"
 echo "    output template module will be compiled:  $enable_omtemplate"
 echo
 echo "---{ parser modules }---"

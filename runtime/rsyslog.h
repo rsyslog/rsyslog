@@ -481,12 +481,17 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_ERR_EPOLL_CTL = -2163,	/**< epol_ctll() returned with an unexpected error code */
 	RS_RET_TIMEOUT = -2164,		/**< timeout occured during operation */
 	RS_RET_RCV_ERR = -2165,		/**< error occured during socket rcv operation */
-	RS_RET_INVLD_CONF_OBJ= -2166,	/**< invalid config object (e.g. $Begin conf statement) */
+	RS_RET_NO_SOCK_CONFIGURED = -2166, /**< no socket (name) was configured where one is required */
 	RS_RET_CONF_NOT_GLBL = -2167,	/**< $Begin not in global scope */
 	RS_RET_CONF_IN_GLBL = -2168,	/**< $End when in global scope */
 	RS_RET_CONF_INVLD_END = -2169,	/**< $End for wrong conf object (probably nesting error) */
 	RS_RET_CONF_INVLD_SCOPE = -2170,/**< config statement not valid in current scope (e.g. global stmt in action block) */
 	RS_RET_CONF_END_NO_ACT = -2171,	/**< end of action block, but no actual action specified */
+	RS_RET_NO_LSTN_DEFINED = -2172, /**< no listener defined (e.g. inside an input module) */
+	RS_RET_EPOLL_CR_FAILED = -2173, /**< epoll_create() failed */
+	RS_RET_EPOLL_CTL_FAILED = -2174, /**< epoll_ctl() failed */
+	RS_RET_INTERNAL_ERROR = -2175, /**< rsyslogd internal error, unexpected code path reached */
+	RS_RET_INVLD_CONF_OBJ= -2176,	/**< invalid config object (e.g. $Begin conf statement) */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */

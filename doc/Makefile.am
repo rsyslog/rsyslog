@@ -40,13 +40,13 @@ html_files = \
 	omlibdbi.html \
 	imfile.html \
 	imtcp.html \
+	imptcp.html \
 	imgssapi.html \
 	imrelp.html \
 	imsolaris.html \
 	imuxsock.html \
 	imklog.html \
 	pmlastmsg.html \
-	professional_support.html \
 	queues.html \
 	src/queueWorkerLogic.dia \
 	queueWorkerLogic.jpg \
@@ -109,6 +109,7 @@ html_files = \
 	gssapi.html \
 	licensing.html \
 	ommail.html \
+	omuxsock.html \
 	omrelp.html \
 	syslog_parsing.html \
 	troubleshoot.html \
