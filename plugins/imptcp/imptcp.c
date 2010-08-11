@@ -60,7 +60,10 @@
 #include "ruleset.h"
 #include "msg.h"
 #include "net.h" /* for permittedPeers, may be removed when this is removed */
-//#include "tcpsrv.h" /* NOTE: we use some defines from this module -- TODO: re-think! */
+
+/* the define is from tcpsrv.h, we need to find a new (but easier!!!) abstraction layer some time ... */
+#define TCPSRV_NO_ADDTL_DELIMITER -1 /* specifies that no additional delimiter is to be used in TCP framing */
+
 
 MODULE_TYPE_INPUT
 
@@ -459,7 +462,8 @@ AcceptConnReq(int sock, int *newSock, prop_t **peerName, prop_t **peerIP)
 finalize_it:
 	if(iRet != RS_RET_OK) {
 		/* the close may be redundant, but that doesn't hurt... */
-		close(iNewSock);
+		if(iNewSock != -1)
+			close(iNewSock);
 	}
 
 	RETiRet;
@@ -579,7 +583,7 @@ processDataRcvd(ptcpsess_t *pThis, char c, struct syslogTime *stTime, time_t ttG
 		}
 
 		if((   (c == '\n')
-		   //|| ((pThis->pSrv->addtlFrameDelim != TCPSRV_NO_ADDTL_DELIMITER) && (c == pThis->pSrv->addtlFrameDelim))
+		   || ((pThis->pSrv->iAddtlFrameDelim != TCPSRV_NO_ADDTL_DELIMITER) && (c == pThis->pSrv->iAddtlFrameDelim))
 		   ) && pThis->eFraming == TCP_FRAMING_OCTET_STUFFING) { /* record delimiter? */
 			doSubmitMsg(pThis, stTime, ttGenTime, pMultiSub);
 			pThis->inputState = eAtStrtFram;
@@ -668,7 +672,7 @@ static inline void
 initConfigSettings(void)
 {
 	cs.bEmitMsgOnClose = 0;
-	//cs.iAddtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
+	cs.iAddtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
 	cs.pszInputName = NULL;
 	cs.pRuleset = NULL;
 	cs.lstnIP = NULL;
@@ -874,7 +878,7 @@ static rsRetVal addTCPListener(void __attribute__((unused)) *pVal, uchar *pNewVa
 	pSrv->pLstn = NULL;
 	pSrv->bEmitMsgOnClose = cs.bEmitMsgOnClose;
 	pSrv->port = pNewVal;
-	//pSrv->iAddtlFrameDelim = cs.iAddtlFrameDelim;
+	pSrv->iAddtlFrameDelim = cs.iAddtlFrameDelim;
 	cs.pszInputName = NULL;	/* moved over to pSrv, we do not own */
 	pSrv->lstnIP = cs.lstnIP;
 	cs.lstnIP = NULL;	/* moved over to pSrv, we do not own */
@@ -931,13 +935,11 @@ lstnActivity(ptcplstn_t *pLstn)
 	prop_t *peerName;
 	prop_t *peerIP;
 	rsRetVal localRet;
-int iac = 0;
 	DEFiRet;
 
 	DBGPRINTF("imptcp: new connection on listen socket %d\n", pLstn->sock);
 	while(1) {
 		localRet = AcceptConnReq(pLstn->sock, &newSock, &peerName, &peerIP);
-//if(iac++ > 0) fprintf(stderr, "%d accepts in a row!\n", iac);
 		if(localRet == RS_RET_NO_MORE_DATA)
 			break;
 		CHKiRet(localRet);
@@ -958,14 +960,12 @@ sessActivity(ptcpsess_t *pSess)
 	int lenRcv;
 	int lenBuf;
 	DEFiRet;
-int iac = 0;
 
 	DBGPRINTF("imptcp: new activity on session socket %d\n", pSess->sock);
 
 	while(1) {
 		lenBuf = sizeof(rcvBuf);
 		lenRcv = recv(pSess->sock, rcvBuf, lenBuf, 0);
-//if(iac++ > 1) fprintf(stderr, "\n%d recv in a row!\n", iac-1);
 
 		if(lenRcv > 0) {
 			/* have data, process it */
@@ -973,6 +973,13 @@ int iac = 0;
 			CHKiRet(DataRcvd(pSess, rcvBuf, lenRcv));
 		} else if (lenRcv == 0) {
 			/* session was closed, do clean-up */
+			if(pSess->pSrv->bEmitMsgOnClose) {
+				uchar *peerName;
+				int lenPeer;
+				prop.GetString(pSess->peerName, &peerName, &lenPeer);
+				errmsg.LogError(0, RS_RET_PEER_CLOSED_CONN, "imptcp session %d closed by remote peer %s.\n",
+						pSess->sock, peerName);
+			}
 			CHKiRet(closeSess(pSess));
 			break;
 		} else {
@@ -1117,7 +1124,7 @@ static rsRetVal
 resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
 	cs.bEmitMsgOnClose = 0;
-	//cs.iAddtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
+	cs.iAddtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
 	free(cs.pszInputName);
 	cs.pszInputName = NULL;
 	free(cs.lstnIP);
