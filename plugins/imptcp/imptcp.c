@@ -458,7 +458,8 @@ AcceptConnReq(int sock, int *newSock, prop_t **peerName, prop_t **peerIP)
 finalize_it:
 	if(iRet != RS_RET_OK) {
 		/* the close may be redundant, but that doesn't hurt... */
-		close(iNewSock);
+		if(iNewSock != -1)
+			close(iNewSock);
 	}
 
 	RETiRet;
