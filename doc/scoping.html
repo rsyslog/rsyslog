@@ -1,0 +1,39 @@
+<html><head>
+<title>rsyslog configuration scoping</title></head>
+<body>
+<h1>rsyslog configuration scoping</h1>
+<p>Starting with version 6.1.0, <a href="http://www.rsyslog.com">rsyslog</a> supports
+different scopes inside rsyslog.conf.
+Earlier versions had only a single, global scope, where each configuration command affected that global
+scope.
+This resulted in rather complex configurations. Also many users, even the rsyslog authors, were sometimes
+not sure what belonged together. So we started an effort to redo the configuration language.
+The initial effort, available in 6.1.0, is scoping for actions. Now, an action can be defined
+in its own scope and it will always get a fresh environment, not affected by any config
+settings outside of that action definition. Similarly, config statements issues within the
+scope do not affect the global scope. This is the recommended ways of defining actions.
+<p>However, the previous mode is still supported and any valid pre-v6 config is a valid v6 config
+as well. For those interested in more strict scoping, the "$StrictScoping on" directive can
+be used to force the use of scopes inside rsyslog.conf. If given, actions and action directives
+can not be specified outside of action scopes.
+<p>Nestings of scope is not permitted. Each $Begin must be matched by a $End. This is currently not
+enforced in all cases (end of file), but is considered a syntax error which later versions of rsyslog
+will most probably detect.
+<p>Note that scoping is in its infancy. Expect changes, and most importantly enhancements. Currently,
+scoping is only supported for actions. As a next step, scoping for inputs is planned. Feedback
+on the scoping feature is appreciated.
+<h2>Scoping Config Statements</h2>
+<ul>
+<li><b>$StrictScoping</b> [on/<b>off</b>] - enable strict scoping as described above.
+<li><b>$Begin</b> &lt;object&gt; - Begin definitions for the specified object. Inside the scope
+only object-specific directives can be given. Currently, only the object type "action" is supported
+(note that the object name is case-insensitive).
+<li><b>$End</b> &lt;object&gt; - End definitions for the object. Global scope is restored.
+</ul>
+<p>[<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the <a href="http://www.rsyslog.com/">rsyslog</a>
+project.<br>
+Copyright &copy; 2010 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>.
+Released under the GNU GPL version 3 or higher.</font></p>
+</body></html>
