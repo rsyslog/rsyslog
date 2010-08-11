@@ -131,6 +131,10 @@ if ENABLE_IMFILE
 SUBDIRS += plugins/imfile
 endif
 
+if ENABLE_IMPTCP
+SUBDIRS += plugins/imptcp
+endif
+
 if ENABLE_IMDIAG
 SUBDIRS += plugins/imdiag
 endif
@@ -183,6 +187,7 @@ DISTCHECK_CONFIGURE_FLAGS=	--enable-gssapi_krb5 \
 				--enable-omruleset \
 				--enable-omprog \
 				--enable-imdiag \
+				--enable-imptcp \
 				--enable-omuxsock \
 				--enable-shave \
 				--enable-extended-tests \

@@ -13,6 +13,10 @@ TESTS = $(TESTRUNS) cfg.sh \
 	rulesetmultiqueue.sh \
 	manytcp.sh \
 	rsf_getenv.sh \
+	manyptcp.sh \
+	imptcp_large.sh \
+	imptcp_conndrop.sh \
+	imtcp_conndrop.sh \
 	sndrcv.sh \
 	sndrcv_gzip.sh \
 	sndrcv_udp.sh \
@@ -182,6 +186,14 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/imtcp-multiport.conf \
 	   manytcp.sh \
 	   testsuites/manytcp.conf \
+	   manyptcp.sh \
+	   testsuites/manyptcp.conf \
+	   imptcp_large.sh \
+	   testsuites/imptcp_large.conf \
+	   imptcp_conndrop.sh \
+	   testsuites/imptcp_conndrop.conf \
+	   imtcp_conndrop.sh \
+	   testsuites/imtcp_conndrop.conf \
 	   inputname.sh \
 	   testsuites/inputname_imtcp.conf \
 	   testsuites/1.inputname_imtcp_12514 \

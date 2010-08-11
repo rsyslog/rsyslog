@@ -29,6 +29,8 @@
  *      delemiters into account.
  * -C	when input from a file is read, this file is transmitted -C times
  *      (C like cycle, running out of meaningful option switches ;))
+ * -D	randomly drop and re-establish connections. Useful for stress-testing
+ *      the TCP receiver.
  *
  * Part of the testbench for rsyslog.
  *
@@ -84,11 +86,13 @@ static int numConnections = 1; /* number of connections to create */
 static int *sockArray;  /* array of sockets to use */
 static int msgNum = 0;	/* initial message number to start with */
 static int bShowProgress = 1; /* show progress messages */
+static int bRandConnDrop = 0; /* randomly drop connections? */
 static char *MsgToSend = NULL; /* if non-null, this is the actual message to send */
 static int bBinaryFile = 0;	/* is -I file binary */
 static char *dataFile = NULL;	/* name of data file, if NULL, generate own data */
 static int numFileIterations = 1;/* how often is file data to be sent? */
 FILE *dataFP = NULL;		/* file pointer for data file, if used */
+static long nConnDrops = 0;	/* counter: number of time connection was dropped (-D option) */
 
 
 /* open a single tcp connection
@@ -155,8 +159,6 @@ int openConnections(void)
 		if(i % 10 == 0) {
 			if(bShowProgress)
 				printf("\r%5.5d", i);
-			//lenMsg = sprintf(msgBuf, "\r%5.5d", i);
-			//write(1, msgBuf, lenMsg);
 		}
 		if(openConn(&(sockArray[i])) != 0) {
 			printf("error in trying to open connection i=%d\n", i);
@@ -181,6 +183,7 @@ void closeConnections(void)
 {
 	int i;
 	size_t lenMsg;
+	struct linger ling;
 	char msgBuf[128];
 
 	if(bShowProgress)
@@ -192,7 +195,15 @@ void closeConnections(void)
 				write(1, msgBuf, lenMsg);
 			}
 		}
-		close(sockArray[i]);
+		if(sockArray[i] != -1) {
+			/* we try to not overrun the receiver by trying to flush buffers
+			 * *during* close(). -- rgerhards, 2010-08-10
+			 */
+			ling.l_onoff = 1;
+			ling.l_linger = 1;
+			setsockopt(sockArray[i], SOL_SOCKET, SO_LINGER, &ling, sizeof(ling));
+			close(sockArray[i]);
+		}
 	}
 	lenMsg = sprintf(msgBuf, "\r%5.5d close connections\n", i);
 	write(1, msgBuf, lenMsg);
@@ -289,12 +300,18 @@ int sendMessages(void)
 			socknum = i - (numMsgsToSend - numConnections);
 		else {
 			int rnd = rand();
-			//socknum = rand() % numConnections;
 			socknum = rnd % numConnections;
 		}
 		genMsg(buf, sizeof(buf), &lenBuf); /* generate the message to send according to params */
 		if(lenBuf == 0)
 			break; /* end of processing! */
+		if(sockArray[socknum] == -1) {
+			/* connection was dropped, need to re-establish */
+			if(openConn(&(sockArray[socknum])) != 0) {
+				printf("error in trying to re-open connection %d\n", socknum);
+				exit(1);
+			}
+		}
 		lenSend = send(sockArray[socknum], buf, lenBuf, 0);
 		if(lenSend != lenBuf) {
 			printf("\r%5.5d\n", i);
@@ -309,63 +326,20 @@ int sendMessages(void)
 			if(bShowProgress)
 				printf("\r%8.8d", i);
 		}
+		if(bRandConnDrop) {
+			/* if we need to randomly drop connections, see if we 
+			 * are a victim
+			 */
+			if(rand() > (int) (RAND_MAX * 0.95)) {
+				++nConnDrops;
+				close(sockArray[socknum]);
+				sockArray[socknum] = -1;
+			}
+		}
 		++msgNum;
 		++i;
 	}
 	printf("\r%8.8d %s sent\n", i, statusText);
-
-	return 0;
-}
-
-
-/* send a message via TCP
- * We open the connection on the initial send, and never close it
- * (let the OS do that). If a conneciton breaks, we do NOT try to
- * recover, so all test after that one will fail (and the test
- * driver probably hang. returns 0 if ok, something else otherwise.
- * We use traditional framing '\n' at EOR for this tester. It may be
- * worth considering additional framing modes.
- * rgerhards, 2009-04-08
- */
-int
-tcpSend(char *buf, int lenBuf)
-{
-	static int sock = INVALID_SOCKET;
-	struct sockaddr_in addr;
-
-	if(sock == INVALID_SOCKET) {
-		/* first time, need to connect to target */
-		if((sock=socket(AF_INET, SOCK_STREAM, 0))==-1) {
-			perror("socket()");
-			return(1);
-		}
-
-		memset((char *) &addr, 0, sizeof(addr));
-		addr.sin_family = AF_INET;
-		addr.sin_port = htons(13514);
-		if(inet_aton("127.0.0.1", &addr.sin_addr)==0) {
-			fprintf(stderr, "inet_aton() failed\n");
-			return(1);
-		}
-		if(connect(sock, (struct sockaddr*)&addr, sizeof(addr)) != 0) {
-			fprintf(stderr, "connect() failed\n");
-			return(1);
-		}
-	}
-
-	/* send test data */
-	if(send(sock, buf, lenBuf, 0) != lenBuf) {
-		perror("send test data");
-		fprintf(stderr, "send() failed\n");
-		return(1);
-	}
-
-	/* send record terminator */
-	if(send(sock, "\n", 1, 0) != 1) {
-		perror("send record terminator");
-		fprintf(stderr, "send() failed\n");
-		return(1);
-	}
 
 	return 0;
 }
@@ -396,7 +370,7 @@ int main(int argc, char *argv[])
 	if(!isatty(1))
 		bShowProgress = 0;
 
-	while((opt = getopt(argc, argv, "f:t:p:c:C:m:i:I:P:d:n:M:rB")) != -1) {
+	while((opt = getopt(argc, argv, "f:t:p:c:C:m:i:I:P:d:Dn:M:rB")) != -1) {
 		switch (opt) {
 		case 't':	targetIP = optarg;
 				break;
@@ -420,6 +394,8 @@ int main(int argc, char *argv[])
 						MAX_EXTRADATA_LEN);
 					exit(1);
 				}
+				break;
+		case 'D':	bRandConnDrop = 1;
 				break;
 		case 'r':	bRandomizeExtraData = 1;
 				break;
@@ -472,7 +448,10 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
-	closeConnections();
+	closeConnections(); /* this is important so that we do not finish too early! */
+
+	if(nConnDrops > 0)
+		printf("-D option initiated %ld connection closures\n", nConnDrops);
 
 	printf("End of tcpflood Run\n");
 
