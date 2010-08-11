@@ -31,6 +31,7 @@
  *      (C like cycle, running out of meaningful option switches ;))
  * -D	randomly drop and re-establish connections. Useful for stress-testing
  *      the TCP receiver.
+ * -F	USASCII value for frame delimiter (in octet-stuffing mode), default LF
  *
  * Part of the testbench for rsyslog.
  *
@@ -91,6 +92,7 @@ static char *MsgToSend = NULL; /* if non-null, this is the actual message to sen
 static int bBinaryFile = 0;	/* is -I file binary */
 static char *dataFile = NULL;	/* name of data file, if NULL, generate own data */
 static int numFileIterations = 1;/* how often is file data to be sent? */
+static char frameDelim = '\n';	/* default frame delimiter */
 FILE *dataFP = NULL;		/* file pointer for data file, if used */
 static long nConnDrops = 0;	/* counter: number of time connection was dropped (-D option) */
 
@@ -244,8 +246,8 @@ genMsg(char *buf, size_t maxBuf, int *pLenBuf)
 			snprintf(dynFileIDBuf, maxBuf, "%d:", rand() % dynFileIDs);
 		}
 		if(extraDataLen == 0) {
-			*pLenBuf = snprintf(buf, maxBuf, "<%s>Mar  1 01:00:00 172.20.245.8 tag msgnum:%s%8.8d:\n",
-					       msgPRI, dynFileIDBuf, msgNum);
+			*pLenBuf = snprintf(buf, maxBuf, "<%s>Mar  1 01:00:00 172.20.245.8 tag msgnum:%s%8.8d:%c",
+					       msgPRI, dynFileIDBuf, msgNum, frameDelim);
 		} else {
 			if(bRandomizeExtraData)
 				edLen = ((long) rand() + extraDataLen) % extraDataLen + 1;
@@ -253,8 +255,8 @@ genMsg(char *buf, size_t maxBuf, int *pLenBuf)
 				edLen = extraDataLen;
 			memset(extraData, 'X', edLen);
 			extraData[edLen] = '\0';
-			*pLenBuf = snprintf(buf, maxBuf, "<%s>Mar  1 01:00:00 172.20.245.8 tag msgnum:%s%8.8d:%d:%s\n",
-					       msgPRI, dynFileIDBuf, msgNum, edLen, extraData);
+			*pLenBuf = snprintf(buf, maxBuf, "<%s>Mar  1 01:00:00 172.20.245.8 tag msgnum:%s%8.8d:%d:%s%c",
+					       msgPRI, dynFileIDBuf, msgNum, edLen, extraData, frameDelim);
 		}
 	} else {
 		/* use fixed message format from command line */
@@ -370,7 +372,7 @@ int main(int argc, char *argv[])
 	if(!isatty(1))
 		bShowProgress = 0;
 
-	while((opt = getopt(argc, argv, "f:t:p:c:C:m:i:I:P:d:Dn:M:rB")) != -1) {
+	while((opt = getopt(argc, argv, "f:F:t:p:c:C:m:i:I:P:d:Dn:M:rB")) != -1) {
 		switch (opt) {
 		case 't':	targetIP = optarg;
 				break;
@@ -400,6 +402,8 @@ int main(int argc, char *argv[])
 		case 'r':	bRandomizeExtraData = 1;
 				break;
 		case 'f':	dynFileIDs = atoi(optarg);
+				break;
+		case 'F':	frameDelim = atoi(optarg);
 				break;
 		case 'M':	MsgToSend = optarg;
 				break;
