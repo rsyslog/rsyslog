@@ -61,6 +61,10 @@
 #include "msg.h"
 #include "net.h" /* for permittedPeers, may be removed when this is removed */
 
+/* the define is from tcpsrv.h, we need to find a new (but easier!!!) abstraction layer some time ... */
+#define TCPSRV_NO_ADDTL_DELIMITER -1 /* specifies that no additional delimiter is to be used in TCP framing */
+
+
 MODULE_TYPE_INPUT
 
 /* static data */
@@ -579,7 +583,7 @@ processDataRcvd(ptcpsess_t *pThis, char c, struct syslogTime *stTime, time_t ttG
 		}
 
 		if((   (c == '\n')
-		   //|| ((pThis->pSrv->addtlFrameDelim != TCPSRV_NO_ADDTL_DELIMITER) && (c == pThis->pSrv->addtlFrameDelim))
+		   || ((pThis->pSrv->iAddtlFrameDelim != TCPSRV_NO_ADDTL_DELIMITER) && (c == pThis->pSrv->iAddtlFrameDelim))
 		   ) && pThis->eFraming == TCP_FRAMING_OCTET_STUFFING) { /* record delimiter? */
 			doSubmitMsg(pThis, stTime, ttGenTime, pMultiSub);
 			pThis->inputState = eAtStrtFram;
@@ -668,7 +672,7 @@ static inline void
 initConfigSettings(void)
 {
 	cs.bEmitMsgOnClose = 0;
-	//cs.iAddtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
+	cs.iAddtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
 	cs.pszInputName = NULL;
 	cs.pRuleset = NULL;
 	cs.lstnIP = NULL;
@@ -873,9 +877,8 @@ static rsRetVal addTCPListener(void __attribute__((unused)) *pVal, uchar *pNewVa
 	pSrv->pSess = NULL;
 	pSrv->pLstn = NULL;
 	pSrv->bEmitMsgOnClose = cs.bEmitMsgOnClose;
-dbgprintf("imptcp: add srv emitMsgOnClose: %d\n", pSrv->bEmitMsgOnClose);
 	pSrv->port = pNewVal;
-	//pSrv->iAddtlFrameDelim = cs.iAddtlFrameDelim;
+	pSrv->iAddtlFrameDelim = cs.iAddtlFrameDelim;
 	cs.pszInputName = NULL;	/* moved over to pSrv, we do not own */
 	pSrv->lstnIP = cs.lstnIP;
 	cs.lstnIP = NULL;	/* moved over to pSrv, we do not own */
@@ -1121,7 +1124,7 @@ static rsRetVal
 resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
 	cs.bEmitMsgOnClose = 0;
-	//cs.iAddtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
+	cs.iAddtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
 	free(cs.pszInputName);
 	cs.pszInputName = NULL;
 	free(cs.lstnIP);

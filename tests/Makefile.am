@@ -9,8 +9,10 @@ TESTS = $(TESTRUNS) cfg.sh \
 	manytcp.sh \
 	manyptcp.sh \
 	imptcp_large.sh \
+	imptcp_addtlframedelim.sh \
 	imptcp_conndrop.sh \
 	imtcp_conndrop.sh \
+	imtcp_addtlframedelim.sh \
 	sndrcv.sh \
 	sndrcv_gzip.sh \
 	asynwr_simple.sh \
@@ -144,10 +146,14 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/manyptcp.conf \
 	   imptcp_large.sh \
 	   testsuites/imptcp_large.conf \
+	   imptcp_addtlframedelim.sh \
+	   testsuites/imptcp_addtlframedelim.conf \
 	   imptcp_conndrop.sh \
 	   testsuites/imptcp_conndrop.conf \
 	   imtcp_conndrop.sh \
 	   testsuites/imtcp_conndrop.conf \
+	   imtcp_addtlframedelim.sh \
+	   testsuites/imtcp_addtlframedelim.conf \
 	   inputname.sh \
 	   testsuites/inputname_imtcp.conf \
 	   testsuites/1.inputname_imtcp_12514 \
