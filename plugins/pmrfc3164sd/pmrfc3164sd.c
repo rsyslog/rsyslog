@@ -1,4 +1,4 @@
-/* pmrfc3164.c
+/* pmrfc3164sd.c
  * This is a parser module for RFC3164(legacy syslog)-formatted messages.
  *
  * NOTE: read comments in module-template.h to understand how this file
@@ -45,7 +45,7 @@
 #include "unicode-helper.h"
 
 MODULE_TYPE_PARSER
-PARSER_NAME("contributed.rfc3164sd")
+PARSER_NAME("contrib.rfc3164sd")
 
 /* internal structures
  */
@@ -293,8 +293,10 @@ CODESTARTparse
 	CHKmalloc(pBuf = MALLOC(sizeof(uchar) * (lenMsg + 1)));
 
 	/* STRUCTURED-DATA */
-	parseRFCStructuredData(&p2parse, pBuf, &lenMsg);
-	MsgSetStructuredData(pMsg, (char*)pBuf);
+	if (parseRFCStructuredData(&p2parse, pBuf, &lenMsg) == 0)
+		MsgSetStructuredData(pMsg, (char*)pBuf);
+	else
+		MsgSetStructuredData(pMsg, "-");
 
 	/* The rest is the actual MSG */
 	MsgSetMSGoffs(pMsg, p2parse - pMsg->pszRawMsg);
