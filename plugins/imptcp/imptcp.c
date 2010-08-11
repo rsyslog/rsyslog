@@ -494,7 +494,6 @@ doSubmitMsg(ptcpsess_t *pThis, struct syslogTime *stTime, time_t ttGenTime, mult
 	MsgSetInputName(pMsg, pThis->pSrv->pInputName);
 	MsgSetFlowControlType(pMsg, eFLOWCTL_LIGHT_DELAY);
 	pMsg->msgFlags  = NEEDS_PARSING | PARSE_HOSTNAME;
-	pMsg->bParseHOSTNAME = 1;
 	MsgSetRcvFrom(pMsg, pThis->peerName);
 	CHKiRet(MsgSetRcvFromIP(pMsg, pThis->peerIP));
 	MsgSetRuleset(pMsg, pThis->pSrv->pRuleset);
