@@ -1,5 +1,5 @@
 sbin_PROGRAMS =
-man_MANS = rsyslogd.8 rsyslog.conf.5 
+man_MANS = rsyslogd.8 rsyslog.conf.5
 
 sbin_PROGRAMS += rsyslogd
 rsyslogd_SOURCES = \

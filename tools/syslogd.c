@@ -135,6 +135,7 @@
 #include "net.h"
 #include "vm.h"
 #include "prop.h"
+#include "sd-daemon.h"
 
 /* definitions for objects we access */
 DEFobjCurrIf(obj)
@@ -391,7 +392,7 @@ static char **crunch_list(char *list)
 	char **result = NULL;
 
 	p = list;
-	
+
 	/* strip off trailing delimiters */
 	while (p[strlen(p)-1] == LIST_DELIMITER) {
 		count--;
@@ -400,18 +401,18 @@ static char **crunch_list(char *list)
 	/* cut off leading delimiters */
 	while (p[0] == LIST_DELIMITER) {
 		count--;
-		p++; 
+               p++;
 	}
-	
+
 	/* count delimiters to calculate elements */
 	for (count=i=0; p[i]; i++)
 		if (p[i] == LIST_DELIMITER) count++;
-	
+
 	if ((result = (char **)MALLOC(sizeof(char *) * (count+2))) == NULL) {
 		printf ("Sorry, can't get enough memory, exiting.\n");
 		exit(0); /* safe exit, because only called during startup */
 	}
-	
+
 	/*
 	 * We now can assume that the first and last
 	 * characters are different from any delimiters,
@@ -574,7 +575,7 @@ logmsgInternal(int iErr, int pri, uchar *msg, int flags)
 	if(bHaveMainQueue == 0) { /* not yet in queued mode */
 		iminternalAddMsg(pri, pMsg);
 	} else {
-		/* we have the queue, so we can simply provide the 
+               /* we have the queue, so we can simply provide the
 		 * message to the queue engine.
 		 */
 		submitMsg(pMsg);
@@ -721,7 +722,7 @@ submitMsg(msg_t *pMsg)
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pMsg, msg);
-	
+
 	pRuleset = MsgGetRuleset(pMsg);
 
 	pQueue = (pRuleset == NULL) ? pMsgQueue : ruleset.GetRulesetQueue(pRuleset);
@@ -787,7 +788,7 @@ DEFFUNC_llExecFunc(flushRptdMsgsActions)
 {
 	action_t *pAction = (action_t*) pData;
 	assert(pAction != NULL);
-	
+
 	BEGINfunc
 	LockObj(pAction);
 	/* TODO: time() performance: the call below could be moved to
@@ -842,7 +843,7 @@ static void debug_switch()
 		dbgprintf("\n");
 		debugging_on = 0;
 	}
-	
+
 	memset(&sigAct, 0, sizeof (sigAct));
 	sigemptyset(&sigAct.sa_mask);
 	sigAct.sa_handler = debug_switch;
@@ -1030,7 +1031,7 @@ destructAllActions(void)
 
 
 /* die() is called when the program shall end. This typically only occurs
- * during sigterm or during the initialization. 
+ * during sigterm or during the initialization.
  * As die() is intended to shutdown rsyslogd, it is
  * safe to call exit() here. Just make sure that die() itself is not called
  * at inapropriate places. As a general rule of thumb, it is a bad idea to add
@@ -1070,7 +1071,7 @@ die(int sig)
 		errno = 0;
 		logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)buf, 0);
 	}
-	
+
 	/* drain queue (if configured so) and stop main queue worker thread pool */
 	DBGPRINTF("Terminating main queue...\n");
 	qqueueDestruct(&pMsgQueue);
@@ -1194,7 +1195,7 @@ static rsRetVal setUmask(void __attribute__((unused)) *pVal, int iUmask)
 }
 
 
-/* drop to specified group 
+/* drop to specified group
  * if something goes wrong, the function never returns
  * Note that such an abort can cause damage to on-disk structures, so we should
  * re-design the "interface" in the long term. -- rgerhards, 2008-11-26
@@ -1222,7 +1223,7 @@ static void doDropPrivGid(int iGid)
 }
 
 
-/* drop to specified user 
+/* drop to specified user
  * if something goes wrong, the function never returns
  * Note that such an abort can cause damage to on-disk structures, so we should
  * re-design the "interface" in the long term. -- rgerhards, 2008-11-19
@@ -1332,7 +1333,7 @@ generateConfigDAG(uchar *pszDAGFile)
 	DEFiRet;
 
 	assert(pszDAGFile != NULL);
-	
+
 	if((fp = fopen((char*) pszDAGFile, "w")) == NULL) {
 		logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)
 			"configuraton graph output file could not be opened, none generated", 0);
@@ -1458,7 +1459,7 @@ static void dbgPrintInitInfo(void)
 	/* TODO: add
 	iActionRetryCount = 0;
 	iActionRetryInterval = 30000;
-	static int iMainMsgQtoWrkMinMsgs = 100;	
+       static int iMainMsgQtoWrkMinMsgs = 100;
 	static int iMainMsgQbSaveOnShutdown = 1;
 	iMainMsgQueMaxDiskSpace = 0;
 	setQPROP(qqueueSetiMinMsgsPerWrkr, "$MainMsgQueueWorkerThreadMinimumMessages", 100);
@@ -1730,7 +1731,7 @@ init(void)
 	 * identify this instance. -- rgerhards, 2005-08-17
 	 */
 	if(bLogStatusMsgs) {
-		snprintf(bufStartUpMsg, sizeof(bufStartUpMsg)/sizeof(char), 
+               snprintf(bufStartUpMsg, sizeof(bufStartUpMsg)/sizeof(char),
 			 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
 			 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"] start",
 			 (int) myPid);
@@ -1760,7 +1761,7 @@ finalize_it:
 
 
 
-/* Put the rsyslog main thread to sleep for n seconds. This was introduced as 
+/* Put the rsyslog main thread to sleep for n seconds. This was introduced as
  * a quick and dirty workaround for a privilege drop race in regard to listener
  * startup, which itself was a result of the not-yet-done proper coding of
  * privilege drop code (quite some effort). It may be useful for other occasions, too.
@@ -1845,7 +1846,7 @@ static rsRetVal setMainMsgQueType(void __attribute__((unused)) *pVal, uchar *psz
 void sighup_handler()
 {
 	struct sigaction sigAct;
-	
+
 	bHadHUP = 1;
 
 	memset(&sigAct, 0, sizeof (sigAct));
@@ -2428,8 +2429,10 @@ doGlblProcessInit(void)
 			num_fds = getdtablesize();
 			close(0);
 			/* we keep stdout and stderr open in case we have to emit something */
-			for (i = 3; i < num_fds; i++)
-				(void) close(i);
+
+                       if (sd_listen_fds(0) <= 0)
+                               for (i = 3; i < num_fds; i++)
+                                       (void) close(i);
 			untty();
 		}
 		else
@@ -2486,7 +2489,7 @@ doGlblProcessInit(void)
  * modularize it a bit more...
  */
 int realMain(int argc, char **argv)
-{	
+{
 	DEFiRet;
 
 	register uchar *p;
@@ -2516,7 +2519,7 @@ int realMain(int argc, char **argv)
 	 * of other options, we do this during the inital option processing. With later
 	 * versions (if a dependency on -c option is introduced), we must move that code
 	 * to other places, but I think it is quite appropriate and saves code to do this
-	 * only when actually neeeded. 
+        * only when actually neeeded.
 	 * rgerhards, 2008-04-04
 	 */
 	while((ch = getopt(argc, argv, "46a:Ac:def:g:hi:l:m:M:nN:op:qQr::s:t:T:u:vwx")) != EOF) {
@@ -2581,7 +2584,7 @@ int realMain(int argc, char **argv)
 		case 'v': /* MUST be carried out immediately! */
 			printVersion();
 			exit(0); /* exit for -v option - so this is a "good one" */
-		case '?':              
+               case '?':
 		default:
 			usage();
 		}
@@ -2637,7 +2640,7 @@ int realMain(int argc, char **argv)
 		 * Good software also always checks its return values...
 		 * If syslogd starts up before DNS is up & /etc/hosts
 		 * doesn't have LocalHostName listed, gethostbyname will
-		 * return NULL. 
+                * return NULL.
 		 */
 		/* TODO: gethostbyname() is not thread-safe, but replacing it is
 		 * not urgent as we do not run on multiple threads here. rgerhards, 2007-09-25
@@ -2646,7 +2649,7 @@ int realMain(int argc, char **argv)
 		if(hent) {
 			free(LocalHostName);
 			CHKmalloc(LocalHostName = (uchar*)strdup(hent->h_name));
-				
+
 			if((p = (uchar*)strchr((char*)LocalHostName, '.')))
 			{
 				*p++ = '\0';
@@ -2658,7 +2661,7 @@ int realMain(int argc, char **argv)
 	/* Convert to lower case to recognize the correct domain laterly */
 	for(p = LocalDomain ; *p ; p++)
 		*p = (char)tolower((int)*p);
-	
+
 	/* we now have our hostname and can set it inside the global vars.
 	 * TODO: think if all of this would better be a runtime function
 	 * rgerhards, 2008-04-17
@@ -2814,7 +2817,7 @@ int realMain(int argc, char **argv)
 		case 'x':		/* disable dns for remote messages */
 			glbl.SetDisableDNS(1);
 			break;
-		case '?':              
+               case '?':
 		default:
 			usage();
 		}
@@ -2871,7 +2874,7 @@ int realMain(int argc, char **argv)
 	/* do any de-init's that need to be done AFTER this comment */
 
 	die(bFinished);
-	
+
 	thrdExit();
 
 finalize_it:
@@ -2893,7 +2896,7 @@ finalize_it:
  * rgerhards, 20080-01-28
  */
 int main(int argc, char **argv)
-{	
+{
 	dbgClassInit();
 	return realMain(argc, argv);
 }

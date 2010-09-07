@@ -81,6 +81,8 @@ librsyslog_la_SOURCES = \
 	prop.h \
 	cfsysline.c \
 	cfsysline.h \
+       sd-daemon.c \
+       sd-daemon.h \
 	\
 	\
 	../action.h \
@@ -177,3 +179,6 @@ lmnsd_gtls_la_LDFLAGS = -module -avoid-version
 lmnsd_gtls_la_LIBADD = $(GNUTLS_LIBS)
 endif
 
+update-systemd:
+       curl http://cgit.freedesktop.org/systemd/plain/src/sd-daemon.c > sd-daemon.c
+       curl http://cgit.freedesktop.org/systemd/plain/src/sd-daemon.h > sd-daemon.h

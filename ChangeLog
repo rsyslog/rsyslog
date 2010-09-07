@@ -1,3 +1,5 @@
+- acquire /dev/log socket optionally from systemd
+  thanks to Lennart Poettering for this patch
 ---------------------------------------------------------------------------
 Version 5.5.6  [DEVEL] (rgerhards), 2010-06-??
 - added parser modules
