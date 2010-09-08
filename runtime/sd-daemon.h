@@ -1,4 +1,4 @@
-/*-*- Mode: C; c-basic-offset: 8 -*-*/
+/*-*- Mode: C; c-basic-offset: 8; indent-tabs-mode: nil -*-*/
 
 #ifndef foosddaemonhfoo
 #define foosddaemonhfoo
@@ -67,9 +67,13 @@ extern "C" {
   See sd-daemon(7) for more information.
 */
 
-#if __GNUC__ >= 4
+#if (__GNUC__ >= 4)
 #define _sd_printf_attr_(a,b) __attribute__ ((format (printf, a, b)))
-#define _sd_hidden_ __attribute__ ((visibility("hidden")))
+#  if defined(SD_EXPORT_SYMBOLS)
+#    define _sd_hidden_
+#  else
+#    define _sd_hidden_ __attribute__ ((visibility("hidden")))
+#  endif
 #else
 #define _sd_printf_attr_(a,b)
 #define _sd_hidden_
@@ -171,7 +175,7 @@ int sd_is_socket_unix(int fd, int type, int listening, const char *path, size_t 
 
 /*
   Informs systemd about changed daemon state. This takes a number of
-  newline seperated environment-style variable assignments in a
+  newline separated environment-style variable assignments in a
   string. The following variables are known:
 
      READY=1      Tells systemd that daemon startup is finished (only
