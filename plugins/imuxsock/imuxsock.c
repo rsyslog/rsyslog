@@ -47,6 +47,7 @@
 #include "prop.h"
 #include "debug.h"
 #include "unlimited_select.h"
+#include "sd-daemon.h"
 
 MODULE_TYPE_INPUT
 
@@ -74,7 +75,7 @@ DEFobjCurrIf(prop)
 
 static prop_t *pLocalHostIP = NULL;	/* there is only one global IP for all internally-generated messages */
 static prop_t *pInputName = NULL;	/* our inputName currently is always "imudp", and this will hold it */
-static int startIndexUxLocalSockets; /* process funix from that index on (used to 
+static int startIndexUxLocalSockets; /* process funix from that index on (used to
  				   * suppress local logging. rgerhards 2005-08-01
 				   * read-only after startup
 				   */
@@ -177,7 +178,7 @@ static rsRetVal discardFunixn(void)
 			prop.Destruct(&(funixHName[i]));
 		}
 	}
-	
+
 	return RS_RET_OK;
 }
 
@@ -189,6 +190,40 @@ static int create_unix_socket(const char *path, int bCreatePath)
 
 	if (path[0] == '\0')
 		return -1;
+
+       if (strcmp(path, _PATH_LOG) == 0) {
+               int r;
+
+               /* Check whether an FD was passed in from systemd. If
+                * so, it's the /dev/log socket, so use it. */
+
+               r = sd_listen_fds(0);
+               if (r < 0) {
+                       errmsg.LogError(-r, NO_ERRCODE, "Failed to acquire systemd socket");
+                       return -1;
+               }
+
+               if (r > 1) {
+                       errmsg.LogError(EINVAL, NO_ERRCODE, "Wrong number of systemd sockets passed");
+                       return -1;
+               }
+
+               if (r == 1) {
+                       fd = SD_LISTEN_FDS_START;
+                       r = sd_is_socket_unix(fd, SOCK_DGRAM, -1, _PATH_LOG, 0);
+                       if (r < 0) {
+                               errmsg.LogError(-r, NO_ERRCODE, "Failed to verify systemd socket type");
+                               return -1;
+                       }
+
+                       if (!r) {
+                               errmsg.LogError(EINVAL, NO_ERRCODE, "Passed systemd socket of wrong type");
+                               return -1;
+                       }
+
+                       return fd;
+               }
+       }
 
 	unlink(path);
 
@@ -391,12 +426,17 @@ CODESTARTafterRun
 	int i;
 	/* do cleanup here */
 	/* Close the UNIX sockets. */
-        for (i = 0; i < nfunix; i++)
+       for (i = 0; i < nfunix; i++)
 		if (funix[i] != -1)
 			close(funix[i]);
 
-	/* Clean-up files. */
-	for(i = startIndexUxLocalSockets; i < nfunix; i++)
+       /* Clean-up files. If systemd passed us a socket it is
+        * systemd's job to clean it up.*/
+       if (sd_listen_fds(0) > 0)
+               i = 1;
+       else
+               i = startIndexUxLocalSockets;
+       for(; i < nfunix; i++)
 		if (funixn[i] && funix[i] != -1)
 			unlink((char*) funixn[i]);
 	/* free no longer needed string */

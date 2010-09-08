@@ -1,3 +1,5 @@
+- acquire /dev/log socket optionally from systemd
+  thanks to Lennart Poettering for this patch
 ---------------------------------------------------------------------------
 Version 5.5.7  [V5-BETA] (rgerhards), 2010-08-09
 - changed omudpspoof default spoof address to simplify typical use case
