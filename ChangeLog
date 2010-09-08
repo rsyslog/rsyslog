@@ -1,3 +1,6 @@
+---------------------------------------------------------------------------
+Version 5.7.0  [V5-DEVEL] (rgerhards), 2010-09-??
+- support for systemd officially added
 - acquire /dev/log socket optionally from systemd
   thanks to Lennart Poettering for this patch
 ---------------------------------------------------------------------------
