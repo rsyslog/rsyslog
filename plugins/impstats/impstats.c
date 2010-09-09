@@ -166,6 +166,8 @@ ENDafterRun
 
 BEGINmodExit
 CODESTARTmodExit
+	prop.Destruct(&pInputName);
+	prop.Destruct(&pLocalHostIP);
 	/* release objects we used */
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(prop, CORE_COMPONENT);
@@ -200,7 +202,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 
 	CHKiRet(prop.Construct(&pInputName));
-	CHKiRet(prop.SetString(pInputName, UCHAR_CONSTANT("rsyslogd-pstats"), sizeof("rsyslogd-pstats") - 1));
+	CHKiRet(prop.SetString(pInputName, UCHAR_CONSTANT("impstats"), sizeof("impstats") - 1));
 	CHKiRet(prop.ConstructFinalize(pInputName));
 
 	CHKiRet(prop.Construct(&pLocalHostIP));
