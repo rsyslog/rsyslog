@@ -1,8 +1,10 @@
 ---------------------------------------------------------------------------
 Version 5.7.0  [V5-DEVEL] (rgerhards), 2010-09-??
+- added module impstat to emit periodic statistics on rsyslog counters
 - support for systemd officially added
-- acquire /dev/log socket optionally from systemd
-  thanks to Lennart Poettering for this patch
+  * acquire /dev/log socket optionally from systemd
+    thanks to Lennart Poettering for this patch
+  * sd-systemd API added as part of rsyslog runtime library
 ---------------------------------------------------------------------------
 Version 5.5.7  [V5-BETA] (rgerhards), 2010-08-09
 - changed omudpspoof default spoof address to simplify typical use case

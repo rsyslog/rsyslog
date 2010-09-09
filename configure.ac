@@ -792,6 +792,19 @@ AC_ARG_ENABLE(imptcp,
 AM_CONDITIONAL(ENABLE_IMPTCP, test x$enable_imptcp = xyes)
 
 
+# settings for the pstats input module
+AC_ARG_ENABLE(impstats,
+        [AS_HELP_STRING([--enable-impstats],[periodic statistics module enabled @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_impstats="yes" ;;
+          no) enable_impstats="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-impstats) ;;
+         esac],
+        [enable_impstats=no]
+)
+AM_CONDITIONAL(ENABLE_IMPSTATS, test x$enable_impstats = xyes)
+
+
 # settings for the omprog output module
 AC_ARG_ENABLE(omprog,
         [AS_HELP_STRING([--enable-omprog],[Compiles omprog module @<:@default=no@:>@])],
@@ -1013,6 +1026,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/imfile/Makefile \
 		plugins/imsolaris/Makefile \
 		plugins/imptcp/Makefile \
+		plugins/impstats/Makefile \
 		plugins/imrelp/Makefile \
 		plugins/imdiag/Makefile \
 		plugins/omtesting/Makefile \
@@ -1049,6 +1063,7 @@ echo "    plain tcp input module enabled:           $enable_imptcp"
 echo "    imdiag enabled:                           $enable_imdiag"
 echo "    file input module enabled:                $enable_imfile"
 echo "    Solaris input module enabled:             $enable_imsolaris"
+echo "    periodic statistics module enabled:       $enable_impstats"
 echo "    input template module will be compiled:   $enable_imtemplate"
 echo
 echo "---{ output plugins }---"

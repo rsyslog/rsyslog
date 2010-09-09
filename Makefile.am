@@ -59,6 +59,10 @@ if ENABLE_IMKLOG
 SUBDIRS += plugins/imklog
 endif
 
+if ENABLE_IMPSTATS
+SUBDIRS += plugins/impstats
+endif
+
 if ENABLE_IMSOLARIS
 SUBDIRS += plugins/imsolaris
 endif
@@ -191,5 +195,6 @@ DISTCHECK_CONFIGURE_FLAGS=	--enable-gssapi_krb5 \
 				--enable-omuxsock \
 				--enable-shave \
 				--enable-extended-tests \
+				--enable-impstats \
 				--enable-memcheck
 ACLOCAL_AMFLAGS = -I m4
