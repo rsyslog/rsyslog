@@ -58,6 +58,7 @@
 #include "errmsg.h"
 #include "datetime.h"
 #include "unicode-helper.h"
+#include "statsobj.h"
 #include "msg.h" /* TODO: remove once we remove MsgAddRef() call */
 
 #ifdef OS_SOLARIS
@@ -70,6 +71,7 @@ DEFobjCurrIf(glbl)
 DEFobjCurrIf(strm)
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(datetime)
+DEFobjCurrIf(statsobj)
 
 /* forward-definitions */
 static inline rsRetVal doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, void *pUsr);
@@ -1817,6 +1819,7 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 {
 	DEFiRet;
 	uchar pszBuf[64];
+	uchar *qName;
 	size_t lenBuf;
 
 	ASSERT(pThis != NULL);
@@ -1885,6 +1888,27 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 	 */
 	qqueueAdviseMaxWorkers(pThis);
 	pThis->bQueueStarted = 1;
+
+	/* support statistics gathering */
+	qName = obj.GetName((obj_t*)pThis);
+	CHKiRet(statsobj.Construct(&pThis->statsobj));
+	CHKiRet(statsobj.SetName(pThis->statsobj, qName));
+	CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("size"),
+		ctrType_Int, &pThis->iQueueSize));
+
+	STATSCOUNTER_INIT(pThis->ctrEnqueued, pThis->mutCtrEnqueued);
+	CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("enqueued"),
+		ctrType_IntCtr, &pThis->ctrEnqueued));
+
+	STATSCOUNTER_INIT(pThis->ctrFull, pThis->mutCtrFull);
+	CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("full"),
+		ctrType_IntCtr, &pThis->ctrFull));
+
+	pThis->ctrMaxqsize = 0;
+	CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("maxqsize"),
+		ctrType_Int, &pThis->ctrMaxqsize));
+
+	CHKiRet(statsobj.ConstructFinalize(pThis->statsobj));
 
 finalize_it:
 	RETiRet;
@@ -2119,6 +2143,10 @@ CODESTARTobjDestruct(qqueue)
 
 	free(pThis->pszFilePrefix);
 	free(pThis->pszSpoolDir);
+
+	/* some queues do not provide stats and thus have no statsobj! */
+	if(pThis->statsobj != NULL)
+		statsobj.Destruct(&pThis->statsobj);
 ENDobjDestruct(qqueue)
 
 
@@ -2178,6 +2206,7 @@ doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, void *pUsr)
 	DEFiRet;
 	struct timespec t;
 
+	STATSCOUNTER_INC(pThis->ctrEnqueued, pThis->mutCtrEnqueued);
 	/* first check if we need to discard this message (which will cause CHKiRet() to exit)
 	 */
 	CHKiRet(qqueueChkDiscardMsg(pThis, pThis->iQueueSize, pUsr));
@@ -2225,6 +2254,7 @@ doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, void *pUsr)
 	      	  && pThis->tVars.disk.sizeOnDisk > pThis->sizeOnDiskMax)) {
 		DBGOPRINT((obj_t*) pThis, "enqueueMsg: queue FULL - waiting to drain.\n");
 		timeoutComp(&t, pThis->toEnq);
+		STATSCOUNTER_INC(pThis->ctrFull, pThis->mutCtrFull);
 // TODO : handle enqOnly => discard!
 		if(pthread_cond_timedwait(&pThis->notFull, pThis->mut, &t) != 0) {
 			DBGOPRINT((obj_t*) pThis, "enqueueMsg: cond timeout, dropping message!\n");
@@ -2235,6 +2265,7 @@ doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, void *pUsr)
 
 	/* and finally enqueue the message */
 	CHKiRet(qqueueAdd(pThis, pUsr));
+	STATSCOUNTER_SETMAX_NOMUT(pThis->ctrMaxqsize, pThis->iQueueSize);
 
 finalize_it:
 	RETiRet;
@@ -2414,6 +2445,7 @@ BEGINObjClassInit(qqueue, 1, OBJ_IS_CORE_MODULE)
 	CHKiRet(objUse(strm, CORE_COMPONENT));
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	CHKiRet(objUse(statsobj, CORE_COMPONENT));
 
 	/* now set our own handlers */
 	OBJSetMethodHandler(objMethod_SETPROPERTY, qqueueSetProperty);

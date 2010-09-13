@@ -48,6 +48,7 @@
 #include "debug.h"
 #include "unlimited_select.h"
 #include "sd-daemon.h"
+#include "statsobj.h"
 
 MODULE_TYPE_INPUT
 
@@ -72,6 +73,10 @@ DEF_IMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(prop)
+DEFobjCurrIf(statsobj)
+
+statsobj_t *modStats;
+STATSCOUNTER_DEF(ctrSubmit, mutCtrSubmit)
 
 static prop_t *pLocalHostIP = NULL;	/* there is only one global IP for all internally-generated messages */
 static prop_t *pInputName = NULL;	/* our inputName currently is always "imudp", and this will hold it */
@@ -269,6 +274,7 @@ SubmitMsg(uchar *pRcv, int lenRcv, int iSock)
 	CHKiRet(MsgSetRcvFromIP(pMsg, pLocalHostIP));
 	CHKiRet(submitMsg(pMsg));
 
+	STATSCOUNTER_INC(ctrSubmit, mutCtrSubmit);
 finalize_it:
 	RETiRet;
 }
@@ -453,9 +459,12 @@ ENDafterRun
 
 BEGINmodExit
 CODESTARTmodExit
+	statsobj.Destruct(&modStats);
+
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(prop, CORE_COMPONENT);
+	objRelease(statsobj, CORE_COMPONENT);
 ENDmodExit
 
 
@@ -502,6 +511,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(prop, CORE_COMPONENT));
+	CHKiRet(objUse(statsobj, CORE_COMPONENT));
 
 	dbgprintf("imuxsock version %s initializing\n", PACKAGE_VERSION);
 
@@ -547,6 +557,14 @@ CODEmodInit_QueryRegCFSLineHdlr
 		setSystemLogTimestampIgnore, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"systemlogsocketflowcontrol", 0, eCmdHdlrBinary,
 		setSystemLogFlowControl, NULL, STD_LOADABLE_MODULE_ID));
+	
+	/* support statistics gathering */
+	CHKiRet(statsobj.Construct(&modStats));
+	CHKiRet(statsobj.SetName(modStats, UCHAR_CONSTANT("imuxsock")));
+	CHKiRet(statsobj.AddCounter(modStats, UCHAR_CONSTANT("submitted"),
+		ctrType_IntCtr, &ctrSubmit));
+	CHKiRet(statsobj.ConstructFinalize(modStats));
+
 ENDmodInit
 /* vim:set ai:
  */

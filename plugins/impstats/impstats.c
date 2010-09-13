@@ -45,6 +45,7 @@
 #include "srUtils.h"
 #include "unicode-helper.h"
 #include "glbl.h"
+#include "statsobj.h"
 #include "prop.h"
 
 MODULE_TYPE_INPUT
@@ -58,6 +59,9 @@ MODULE_TYPE_INPUT
 DEF_IMOD_STATIC_DATA
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(prop)
+DEFobjCurrIf(statsobj)
+DEFobjCurrIf(errmsg)
+
 typedef struct configSettings_s {
 	int iStatsInterval;
 	int iFacility;
@@ -112,22 +116,25 @@ finalize_it:
 }
 
 
+/* callback for statsobj
+ * Note: usrptr exists only to satisfy requirements of statsobj callback interface!
+ */
+static rsRetVal
+doStatsLine(void __attribute__((unused)) *usrptr, cstr_t *cstr)
+{
+	DEFiRet;
+	doSubmitMsg(rsCStrGetSzStrNoNULL(cstr));
+	RETiRet;
+}
+
+
 /* the function to generate the actual statistics messages
  * rgerhards, 2010-09-09
  */
 static inline void
 generateStatsMsgs(void)
 {
-	int iMsgQueueSize;
-	uchar msg[1024];
-	rsRetVal iRet;
-
-	CHKiRet(diagGetMainMsgQSize(&iMsgQueueSize));
-	snprintf((char*)msg, sizeof(msg), "mainqueue size=%d", iMsgQueueSize);
-	doSubmitMsg(msg);
-
-finalize_it:
-	/*empty statement needed per C syntax*/;
+	statsobj.GetAllStatsLines(doStatsLine, NULL);
 }
 
 
@@ -138,9 +145,7 @@ CODESTARTrunInput
 	 * right into the sleep below.
 	 */
 	while(1) {
-dbgprintf("impstats: stats interval %d seconds - going to sleep\n", cs.iStatsInterval);
 		srSleep(cs.iStatsInterval, 0); /* seconds, micro seconds */
-dbgprintf("impstats: woke up\n");
 
 		if(glbl.GetGlobalInputTermState() == 1)
 			break; /* terminate input! */
@@ -151,10 +156,16 @@ ENDrunInput
 
 
 BEGINwillRun
+	rsRetVal localRet;
 CODESTARTwillRun
 	DBGPRINTF("impstats: stats interval %d seconds\n", cs.iStatsInterval);
 	if(cs.iStatsInterval == 0)
 		ABORT_FINALIZE(RS_RET_NO_RUN);
+	localRet = statsobj.EnableStats();
+	if(localRet != RS_RET_OK) {
+		errmsg.LogError(0, localRet, "impstat: error enabling statistics gathering");
+		ABORT_FINALIZE(RS_RET_NO_RUN);
+	}
 finalize_it:
 ENDwillRun
 
@@ -171,6 +182,8 @@ CODESTARTmodExit
 	/* release objects we used */
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(prop, CORE_COMPONENT);
+	objRelease(errmsg, CORE_COMPONENT);
+	objRelease(statsobj, CORE_COMPONENT);
 ENDmodExit
 
 
@@ -196,6 +209,8 @@ CODEmodInit_QueryRegCFSLineHdlr
 	initConfigSettings();
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(prop, CORE_COMPONENT));
+	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	CHKiRet(objUse(statsobj, CORE_COMPONENT));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"pstatsinterval", 0, eCmdHdlrInt, NULL, &cs.iStatsInterval, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"pstatfacility", 0, eCmdHdlrInt, NULL, &cs.iFacility, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"pstatseverity", 0, eCmdHdlrInt, NULL, &cs.iSeverity, STD_LOADABLE_MODULE_ID));

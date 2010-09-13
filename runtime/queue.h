@@ -29,6 +29,7 @@
 #include "wtp.h"
 #include "batch.h"
 #include "stream.h"
+#include "statsobj.h"
 
 /* support for the toDelete list */
 typedef struct toDeleteLst_s toDeleteLst_t;
@@ -165,6 +166,11 @@ struct queue_s {
 	} tVars;
 	DEF_ATOMIC_HELPER_MUT(mutQueueSize);
 	DEF_ATOMIC_HELPER_MUT(mutLogDeq);
+	/* for statistics subsystem */
+	statsobj_t *statsobj;
+	STATSCOUNTER_DEF(ctrEnqueued, mutCtrEnqueued);
+	STATSCOUNTER_DEF(ctrFull, mutCtrFull);
+	int ctrMaxqsize;
 };
 
 
