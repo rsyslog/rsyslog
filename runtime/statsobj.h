@@ -99,7 +99,7 @@ PROTOTYPEObj(statsobj);
  */
 #define STATSCOUNTER_DEF(ctr, mut) \
 	intctr_t ctr; \
-	DEF_ATOMIC_HELPER_MUT(mut)
+	DEF_ATOMIC_HELPER_MUT(mut);
 
 #define STATSCOUNTER_INIT(ctr, mut) \
 	INIT_ATOMIC_HELPER_MUT(mut); \
@@ -107,7 +107,7 @@ PROTOTYPEObj(statsobj);
 
 #define STATSCOUNTER_INC(ctr, mut) \
 	if(GatherStats) \
-		ATOMIC_INC(&ctr, mut);
+		ATOMIC_INC(&ctr, &mut);
 
 #define STATSCOUNTER_DEC(ctr, mut) \
 	if(GatherStats) \
