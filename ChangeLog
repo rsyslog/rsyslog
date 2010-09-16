@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 5.7.0  [V5-DEVEL] (rgerhards), 2010-09-??
+Version 5.7.0  [V5-DEVEL] (rgerhards), 2010-09-16
 - added module impstat to emit periodic statistics on rsyslog counters
 - support for systemd officially added
   * acquire /dev/log socket optionally from systemd
