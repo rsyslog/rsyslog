@@ -2437,10 +2437,9 @@ doGlblProcessInit(void)
                                for (i = 3; i < num_fds; i++)
                                        (void) close(i);
 			untty();
-		}
-		else
-		{
-			fputs(" Already running.\n", stderr);
+		} else {
+			fputs(" Already running. If you want to run multiple instances, you need "
+			      "to specify different pid files (use -i option)\n", stderr);
 			exit(1); /* "good" exit, done if syslogd is already running */
 		}
 	}
