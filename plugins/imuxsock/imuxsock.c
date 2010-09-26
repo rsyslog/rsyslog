@@ -282,7 +282,7 @@ dbgprintf("imuxsock: setting socket options!\n");
 	if(setsockopt(fd, SOL_SOCKET, SO_TIMESTAMP, &one, sizeof(one)) != 0) {
 		errmsg.LogError(errno, NO_ERRCODE, "set SO_TIMESTAMP '%s'", path);
 		close(fd);
-		return -1;
+		ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
 	}
 	*pfd = fd;
 finalize_it:
