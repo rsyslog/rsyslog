@@ -29,6 +29,7 @@
 #include "rsyslog.h"
 #include <stdlib.h>
 #include <stdio.h>
+#include <ctype.h>
 #include <assert.h>
 #include <string.h>
 #include <errno.h>
@@ -50,6 +51,7 @@
 #include "unlimited_select.h"
 #include "sd-daemon.h"
 #include "statsobj.h"
+#include "datetime.h"
 
 MODULE_TYPE_INPUT
 
@@ -74,6 +76,7 @@ DEF_IMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(prop)
+DEFobjCurrIf(datetime)
 DEFobjCurrIf(statsobj)
 
 statsobj_t *modStats;
@@ -189,9 +192,38 @@ static rsRetVal discardFunixn(void)
 }
 
 
-static int create_unix_socket(const char *path, int bCreatePath)
+/* used to create a log socket if NOT passed in via systemd. 
+ */
+static inline rsRetVal
+createLogSocket(const char *path, int bCreatePath, int *fd)
 {
 	struct sockaddr_un sunx;
+	DEFiRet;
+
+	unlink(path);
+	memset(&sunx, 0, sizeof(sunx));
+	sunx.sun_family = AF_UNIX;
+	if(bCreatePath) {
+		makeFileParentDirs((uchar*)path, strlen(path), 0755, -1, -1, 0);
+	}
+	strncpy(sunx.sun_path, path, sizeof(sunx.sun_path));
+	*fd = socket(AF_UNIX, SOCK_DGRAM, 0);
+	if(*fd < 0 || bind(*fd, (struct sockaddr *) &sunx, SUN_LEN(&sunx)) < 0 ||
+	    chmod(path, 0666) < 0) {
+		errmsg.LogError(errno, NO_ERRCODE, "connot create '%s'", path);
+		dbgprintf("cannot create %s (%d).\n", path, errno);
+		close(*fd);
+		ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
+	}
+finalize_it:
+	RETiRet;
+}
+
+
+static inline rsRetVal
+openLogSocket(const char *path, int bCreatePath, int *pfd)
+{
+	DEFiRet;
 	int fd;
 	int one;
 
@@ -201,18 +233,18 @@ static int create_unix_socket(const char *path, int bCreatePath)
        if (strcmp(path, _PATH_LOG) == 0) {
                int r;
 
-               /* Check whether an FD was passed in from systemd. If
+               /* System log socket code. Check whether an FD was passed in from systemd. If
                 * so, it's the /dev/log socket, so use it. */
 
                r = sd_listen_fds(0);
                if (r < 0) {
                        errmsg.LogError(-r, NO_ERRCODE, "Failed to acquire systemd socket");
-                       return -1;
+			ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
                }
 
                if (r > 1) {
                        errmsg.LogError(EINVAL, NO_ERRCODE, "Wrong number of systemd sockets passed");
-                       return -1;
+			ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
                }
 
                if (r == 1) {
@@ -220,46 +252,31 @@ static int create_unix_socket(const char *path, int bCreatePath)
                        r = sd_is_socket_unix(fd, SOCK_DGRAM, -1, _PATH_LOG, 0);
                        if (r < 0) {
                                errmsg.LogError(-r, NO_ERRCODE, "Failed to verify systemd socket type");
-                               return -1;
+				ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
                        }
 
                        if (!r) {
                                errmsg.LogError(EINVAL, NO_ERRCODE, "Passed systemd socket of wrong type");
-                               return -1;
+				ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
                        }
-
-		       //TOD: add logic to prepare socket (or at better place!)
-                       return fd;
-               }
-       }
-
-	unlink(path);
-
-	memset(&sunx, 0, sizeof(sunx));
-	sunx.sun_family = AF_UNIX;
-	if(bCreatePath) {
-		makeFileParentDirs((uchar*)path, strlen(path), 0755, -1, -1, 0);
+		} else {
+			CHKiRet(createLogSocket(path, bCreatePath, &fd));
+		}
+	} else {
+		CHKiRet(createLogSocket(path, bCreatePath, &fd));
 	}
-	(void) strncpy(sunx.sun_path, path, sizeof(sunx.sun_path));
-	fd = socket(AF_UNIX, SOCK_DGRAM, 0);
-	if (fd < 0 || bind(fd, (struct sockaddr *) &sunx, SUN_LEN(&sunx)) < 0 ||
-	    chmod(path, 0666) < 0) {
-		errmsg.LogError(errno, NO_ERRCODE, "connot create '%s'", path);
-		dbgprintf("cannot create %s (%d).\n", path, errno);
-		close(fd);
-		return -1;
-	}
+
 	one = 1;
 dbgprintf("imuxsock: setting socket options!\n");
-	if(setsockopt(fd, SOL_SOCKET, SO_PASSCRED, &one, sizeof(one)) != 0) {
-		errmsg.LogError(errno, NO_ERRCODE, "set SCM_CREDENTIALS create '%s'", path);
+	if(setsockopt(fd, SOL_SOCKET, SO_PASSCRED, &one, (socklen_t) sizeof(one)) != 0) {
+		errmsg.LogError(errno, NO_ERRCODE, "set SCM_CREDENTIALS '%s'", path);
 		close(fd);
-		return -1;
+		ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
 	}
 	if(setsockopt(fd, SOL_SOCKET, SCM_CREDENTIALS, &one, sizeof(one)) != 0) {
-		errmsg.LogError(errno, NO_ERRCODE, "set SCM_CREDENTIALS create '%s'", path);
+		errmsg.LogError(errno, NO_ERRCODE, "set SCM_CREDENTIALS '%s'", path);
 		close(fd);
-		return -1;
+		ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
 	}
 	one = 1;
 	if(setsockopt(fd, SOL_SOCKET, SO_TIMESTAMP, &one, sizeof(one)) != 0) {
@@ -267,16 +284,53 @@ dbgprintf("imuxsock: setting socket options!\n");
 		close(fd);
 		return -1;
 	}
-	return fd;
+	*pfd = fd;
+finalize_it:
+	RETiRet;
+}
+
+
+/* patch correct pid into tag. bufTAG MUST be CONF_TAG_MAXSIZE long!
+ */
+static inline void
+fixPID(uchar *bufTAG, int *lenTag, struct ucred *cred)
+{
+	int i;
+	char bufPID[16];
+	int lenPID;
+
+	if(cred == NULL)
+		return;
+	
+	lenPID = snprintf(bufPID, sizeof(bufPID), "[%u]:", (unsigned) cred->pid);
+
+	for(i = *lenTag ; i >= 0  && bufTAG[i] != '[' ; --i)
+		/*JUST SKIP*/;
+
+	if(i < 0)
+		i = *lenTag - 1; /* go right at end of TAG, pid was not present (-1 for ':') */
+	
+	if(i + lenPID > CONF_TAG_MAXSIZE)
+		return; /* do not touch, as things would break */
+
+	memcpy(bufTAG + i, bufPID, lenPID);
+	*lenTag = i + lenPID;
 }
 
 
 /* submit received message to the queue engine
+ * We now parse the message according to expected format so that we
+ * can also mangle it if necessary.
  */
 static inline rsRetVal
-SubmitMsg(uchar *pRcv, int lenRcv, int iSock)
+SubmitMsg(uchar *pRcv, int lenRcv, int iSock, struct ucred *cred)
 {
 	msg_t *pMsg;
+	int lenMsg;
+	int i;
+	uchar *parse;
+	int pri;
+	uchar bufParseTAG[CONF_TAG_MAXSIZE];
 	DEFiRet;
 
 	/* we now create our own message object and submit it to the queue */
@@ -285,6 +339,43 @@ SubmitMsg(uchar *pRcv, int lenRcv, int iSock)
 	MsgSetInputName(pMsg, pInputName);
 	MsgSetFlowControlType(pMsg, funixFlowCtl[iSock]);
 
+// TODO: handle format errors
+	parse = pRcv;
+	lenMsg = lenRcv;
+	
+	parse++; lenMsg--; /* '<' */
+	pri = 0;
+	while(lenMsg && isdigit(*parse)) {
+		pri = pri * 10 + *parse - '0';
+		++parse;
+		--lenMsg;
+	} 
+	pMsg->iFacility = LOG_FAC(pri);
+	pMsg->iSeverity = LOG_PRI(pri);
+	MsgSetAfterPRIOffs(pMsg, lenRcv - lenMsg);
+dbgprintf("imuxsock: submit: facil %d, sever %d\n", pMsg->iFacility, pMsg->iSeverity);
+
+	parse++; lenMsg--; /* '>' */
+
+dbgprintf("imuxsock: submit: stage 2\n");
+	if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &parse, &lenMsg) != RS_RET_OK) {
+		dbgprintf("we have a problem, invalid timestamp in msg!\n");
+	}
+
+	/* pull tag */
+dbgprintf("imuxsock: submit: stage 3\n");
+
+	i = 0;
+	while(lenMsg > 0 && *parse != ' ' && i < CONF_TAG_MAXSIZE) {
+		bufParseTAG[i++] = *parse++;
+		--lenMsg;
+	}
+	bufParseTAG[i] = '\0';	/* terminate string */
+	fixPID(bufParseTAG, &i, cred);
+	MsgSetTAG(pMsg, bufParseTAG, i);
+
+	MsgSetMSGoffs(pMsg, lenRcv - lenMsg);
+
 	// TODO: here we need to mangle the raw message if we need to
 	// "fix up" the user pid. In the long term, it may make more sense
 	// to add this (somehow) to the message object (problem: at this stage,
@@ -292,9 +383,9 @@ SubmitMsg(uchar *pRcv, int lenRcv, int iSock)
 	// may use a custom parser for our messages, but that doesn't play too well
 	// with the rest of the system.
 	if(funixParseHost[iSock]) {
-		pMsg->msgFlags  = funixFlags[iSock] | NEEDS_PARSING | PARSE_HOSTNAME;
+		pMsg->msgFlags  = funixFlags[iSock] | PARSE_HOSTNAME;
 	} else {
-		pMsg->msgFlags  = funixFlags[iSock] | NEEDS_PARSING;
+		pMsg->msgFlags  = funixFlags[iSock];
 	}
 
 	MsgSetRcvFrom(pMsg, funixHName[iSock]);
@@ -363,6 +454,7 @@ static rsRetVal readSocket(int fd, int iSock)
 
 
 dbgprintf("XXX: pre CM loop, length of control message %d\n", msgh.msg_controllen);
+	cred = NULL;
         for (cm = CMSG_FIRSTHDR(&msgh); cm; cm = CMSG_NXTHDR(&msgh, cm)) {
 dbgprintf("XXX: in CM loop, %d, %d\n", cm->cmsg_level, cm->cmsg_type);
             if (cm->cmsg_level == SOL_SOCKET && cm->cmsg_type == SCM_CREDENTIALS) {
@@ -375,7 +467,7 @@ dbgprintf("XXX: post CM loop\n");
 
 
 
-		CHKiRet(SubmitMsg(pRcv, iRcvd, iSock));
+		CHKiRet(SubmitMsg(pRcv, iRcvd, iSock, cred));
 	} else if (iRcvd < 0 && errno != EINTR && ratelimitErrmsg++ < 100) {
 		char errStr[1024];
 		rs_strerror_r(errno, errStr, sizeof(errStr));
@@ -458,6 +550,7 @@ ENDrunInput
 BEGINwillRun
 CODESTARTwillRun
 	register int i;
+	int actSocks;
 
 	/* first apply some config settings */
 #	ifdef OS_SOLARIS
@@ -474,9 +567,17 @@ CODESTARTwillRun
 		funixn[0] = pLogSockName;
 
 	/* initialize and return if will run or not */
+	actSocks = 0;
 	for (i = startIndexUxLocalSockets ; i < nfunix ; i++) {
-		if ((funix[i] = create_unix_socket((char*) funixn[i], funixCreateSockPath[i])) != -1)
+		if(openLogSocket((char*) funixn[i], funixCreateSockPath[i], &(funix[i])) == RS_RET_OK) {
+			++actSocks;
 			dbgprintf("Opened UNIX socket '%s' (fd %d).\n", funixn[i], funix[i]);
+			}
+	}
+
+	if(actSocks == 0) {
+		errmsg.LogError(0, NO_ERRCODE, "imuxsock does not run because we could not aquire any socket\n");
+		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
 	/* we need to create the inputName property (only once during our lifetime) */
@@ -526,6 +627,7 @@ CODESTARTmodExit
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(prop, CORE_COMPONENT);
 	objRelease(statsobj, CORE_COMPONENT);
+	objRelease(datetime, CORE_COMPONENT);
 ENDmodExit
 
 
@@ -573,6 +675,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(prop, CORE_COMPONENT));
 	CHKiRet(objUse(statsobj, CORE_COMPONENT));
+	CHKiRet(objUse(datetime, CORE_COMPONENT));
 
 	dbgprintf("imuxsock version %s initializing\n", PACKAGE_VERSION);
 
