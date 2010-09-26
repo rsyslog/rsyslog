@@ -35,6 +35,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/un.h>
+#include <sys/socket.h>
 #include "dirty.h"
 #include "cfsysline.h"
 #include "unicode-helper.h"
@@ -192,6 +193,7 @@ static int create_unix_socket(const char *path, int bCreatePath)
 {
 	struct sockaddr_un sunx;
 	int fd;
+	int one;
 
 	if (path[0] == '\0')
 		return -1;
@@ -226,6 +228,7 @@ static int create_unix_socket(const char *path, int bCreatePath)
                                return -1;
                        }
 
+		       //TOD: add logic to prepare socket (or at better place!)
                        return fd;
                }
        }
@@ -243,6 +246,24 @@ static int create_unix_socket(const char *path, int bCreatePath)
 	    chmod(path, 0666) < 0) {
 		errmsg.LogError(errno, NO_ERRCODE, "connot create '%s'", path);
 		dbgprintf("cannot create %s (%d).\n", path, errno);
+		close(fd);
+		return -1;
+	}
+	one = 1;
+dbgprintf("imuxsock: setting socket options!\n");
+	if(setsockopt(fd, SOL_SOCKET, SO_PASSCRED, &one, sizeof(one)) != 0) {
+		errmsg.LogError(errno, NO_ERRCODE, "set SCM_CREDENTIALS create '%s'", path);
+		close(fd);
+		return -1;
+	}
+	if(setsockopt(fd, SOL_SOCKET, SCM_CREDENTIALS, &one, sizeof(one)) != 0) {
+		errmsg.LogError(errno, NO_ERRCODE, "set SCM_CREDENTIALS create '%s'", path);
+		close(fd);
+		return -1;
+	}
+	one = 1;
+	if(setsockopt(fd, SOL_SOCKET, SO_TIMESTAMP, &one, sizeof(one)) != 0) {
+		errmsg.LogError(errno, NO_ERRCODE, "set SO_TIMESTAMP '%s'", path);
 		close(fd);
 		return -1;
 	}
@@ -264,6 +285,12 @@ SubmitMsg(uchar *pRcv, int lenRcv, int iSock)
 	MsgSetInputName(pMsg, pInputName);
 	MsgSetFlowControlType(pMsg, funixFlowCtl[iSock]);
 
+	// TODO: here we need to mangle the raw message if we need to
+	// "fix up" the user pid. In the long term, it may make more sense
+	// to add this (somehow) to the message object (problem: at this stage,
+	// it is not fully available, eg no structured data). Alternatively, we
+	// may use a custom parser for our messages, but that doesn't play too well
+	// with the rest of the system.
 	if(funixParseHost[iSock]) {
 		pMsg->msgFlags  = funixFlags[iSock] | NEEDS_PARSING | PARSE_HOSTNAME;
 	} else {
@@ -292,7 +319,13 @@ static rsRetVal readSocket(int fd, int iSock)
 	DEFiRet;
 	int iRcvd;
 	int iMaxLine;
+	struct msghdr msgh;
+	struct iovec msgiov;
+	static int ratelimitErrmsg = 0; // TODO: atomic OPS
+	struct cmsghdr *cm;
+	struct ucred *cred;
 	uchar bufRcv[4096+1];
+	char aux[1024];
 	uchar *pRcv = NULL; /* receive buffer */
 
 	assert(iSock >= 0);
@@ -311,15 +344,43 @@ static rsRetVal readSocket(int fd, int iSock)
 		CHKmalloc(pRcv = (uchar*) MALLOC(sizeof(uchar) * (iMaxLine + 1)));
 	}
 
-	iRcvd = recv(fd, pRcv, iMaxLine, 0);
+	memset(&msgh, 0, sizeof(msgh));
+	memset(&msgiov, 0, sizeof(msgiov));
+	memset(&aux, 0, sizeof(aux));
+	msgiov.iov_base = pRcv;
+	msgiov.iov_len = iMaxLine;
+	msgh.msg_iov = &msgiov;
+	msgh.msg_iovlen = 1;
+	msgh.msg_control = aux;
+	msgh.msg_controllen = sizeof(aux);
+	iRcvd = recvmsg(fd, &msgh, MSG_DONTWAIT);
+/*	iRcvd = recv(fd, pRcv, iMaxLine, 0);
+ */
+ 
 	dbgprintf("Message from UNIX socket: #%d\n", fd);
 	if (iRcvd > 0) {
+		ratelimitErrmsg = 0;
+
+
+dbgprintf("XXX: pre CM loop, length of control message %d\n", msgh.msg_controllen);
+        for (cm = CMSG_FIRSTHDR(&msgh); cm; cm = CMSG_NXTHDR(&msgh, cm)) {
+dbgprintf("XXX: in CM loop, %d, %d\n", cm->cmsg_level, cm->cmsg_type);
+            if (cm->cmsg_level == SOL_SOCKET && cm->cmsg_type == SCM_CREDENTIALS) {
+	    	cred = (struct ucred*) CMSG_DATA(cm);
+	    	dbgprintf("XXX: got credentials pid %d\n", (int) cred->pid);
+                //break;
+            }
+	 }
+dbgprintf("XXX: post CM loop\n");
+
+
+
 		CHKiRet(SubmitMsg(pRcv, iRcvd, iSock));
-	} else if (iRcvd < 0 && errno != EINTR) {
+	} else if (iRcvd < 0 && errno != EINTR && ratelimitErrmsg++ < 100) {
 		char errStr[1024];
 		rs_strerror_r(errno, errStr, sizeof(errStr));
 		dbgprintf("UNIX socket error: %d = %s.\n", errno, errStr);
-		errmsg.LogError(errno, NO_ERRCODE, "recvfrom UNIX");
+		errmsg.LogError(errno, NO_ERRCODE, "imuxsock: recvfrom UNIX");
 	}
 
 finalize_it:
