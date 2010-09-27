@@ -83,7 +83,7 @@ statsobj_t *modStats;
 STATSCOUNTER_DEF(ctrSubmit, mutCtrSubmit)
 
 /* structure to describe a specific listener */
-struct lstn_s {
+typedef struct lstn_s {
 	uchar *sockName; /* read-only after startup */
 	prop_t *hostName; /* host-name override - if set, use this instead of actual name */
 	int fd; /* read-only after startup */
@@ -91,9 +91,9 @@ struct lstn_s {
 	int flowCtl; /* flow control settings for this socket */
 	sbool bParseHost; /* should parser parse host name?  read-only after startup */
 	sbool bUseCreds;
-	sbool bCreateSockPath; /* auto-creation of socket directory? */
-};
-static struct lstn_s listeners[MAXFUNIX];
+	sbool bCreatePath; /* auto-creation of socket directory? */
+} lstn_t;
+static lstn_t listeners[MAXFUNIX];
 
 static prop_t *pLocalHostIP = NULL;	/* there is only one global IP for all internally-generated messages */
 static prop_t *pInputName = NULL;	/* our inputName currently is always "imudp", and this will hold it */
@@ -108,10 +108,11 @@ static int bOmitLocalLogging = 0;
 static uchar *pLogSockName = NULL;
 static uchar *pLogHostName = NULL;	/* host name to use with this socket */
 static int bUseFlowCtl = 0;		/* use flow control or not (if yes, only LIGHT is used! */
-static int bIgnoreTimestamp = 1; /* ignore timestamps present in the incoming message? */
-static int bUseCreds = 0;	/* use credentials from recvmsg() and fixup PID in TAG */
-#define DFLT_bCreateSockPath 0
-static int bCreateSockPath = DFLT_bCreateSockPath; /* auto-create socket path? */
+static int bIgnoreTimestamp = 1;	 /* ignore timestamps present in the incoming message? */
+static int bUseCreds = 0;		/* use credentials from recvmsg() and fixup PID in TAG */
+static int bUseCredsSysSock = 0;	/* use credentials from recvmsg() and fixup PID in TAG */
+#define DFLT_bCreatePath 0
+static int bCreatePath = DFLT_bCreatePath; /* auto-create socket path? */
 
 
 /* set the timestamp ignore / not ignore option for the system
@@ -165,7 +166,7 @@ addLstnSocketName(void __attribute__((unused)) *pVal, uchar *pNewVal)
 		CHKiRet(prop.ConstructFinalize(listeners[nfd].hostName));
 		listeners[nfd].flowCtl = bUseFlowCtl ? eFLOWCTL_LIGHT_DELAY : eFLOWCTL_NO_DELAY;
 		listeners[nfd].flags = bIgnoreTimestamp ? IGNDATE : NOFLAG;
-		listeners[nfd].bCreateSockPath = bCreateSockPath;
+		listeners[nfd].bCreatePath = bCreatePath;
 		listeners[nfd].sockName = pNewVal;
 		listeners[nfd].bUseCreds = bUseCreds;
 		nfd++;
@@ -204,24 +205,25 @@ static rsRetVal discardFunixn(void)
 /* used to create a log socket if NOT passed in via systemd. 
  */
 static inline rsRetVal
-createLogSocket(const char *path, int bCreatePath, int *fd)
+createLogSocket(lstn_t *pLstn)
 {
 	struct sockaddr_un sunx;
 	DEFiRet;
 
-	unlink(path);
+	unlink((char*)pLstn->sockName);
 	memset(&sunx, 0, sizeof(sunx));
 	sunx.sun_family = AF_UNIX;
-	if(bCreatePath) {
-		makeFileParentDirs((uchar*)path, strlen(path), 0755, -1, -1, 0);
+	if(pLstn->bCreatePath) {
+		makeFileParentDirs((uchar*)pLstn->sockName, ustrlen(pLstn->sockName), 0755, -1, -1, 0);
 	}
-	strncpy(sunx.sun_path, path, sizeof(sunx.sun_path));
-	*fd = socket(AF_UNIX, SOCK_DGRAM, 0);
-	if(*fd < 0 || bind(*fd, (struct sockaddr *) &sunx, SUN_LEN(&sunx)) < 0 ||
-	    chmod(path, 0666) < 0) {
-		errmsg.LogError(errno, NO_ERRCODE, "connot create '%s'", path);
-		dbgprintf("cannot create %s (%d).\n", path, errno);
-		close(*fd);
+	strncpy(sunx.sun_path, (char*)pLstn->sockName, sizeof(sunx.sun_path));
+	pLstn->fd = socket(AF_UNIX, SOCK_DGRAM, 0);
+	if(pLstn->fd < 0 || bind(pLstn->fd, (struct sockaddr *) &sunx, SUN_LEN(&sunx)) < 0 ||
+	    chmod((char*)pLstn->sockName, 0666) < 0) {
+		errmsg.LogError(errno, NO_ERRCODE, "connot create '%s'", pLstn->sockName);
+		dbgprintf("cannot create %s (%d).\n", pLstn->sockName, errno);
+		close(pLstn->fd);
+		pLstn->fd = -1;
 		ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
 	}
 finalize_it:
@@ -230,16 +232,15 @@ finalize_it:
 
 
 static inline rsRetVal
-openLogSocket(const char *path, int bCreatePath, int *pfd)
+openLogSocket(lstn_t *pLstn)
 {
 	DEFiRet;
-	int fd;
 	int one;
 
-	if (path[0] == '\0')
+	if(pLstn->sockName[0] == '\0')
 		return -1;
 
-       if (strcmp(path, _PATH_LOG) == 0) {
+       if (ustrcmp(pLstn->sockName, UCHAR_CONSTANT(_PATH_LOG)) == 0) {
                int r;
 
                /* System log socket code. Check whether an FD was passed in from systemd. If
@@ -257,8 +258,8 @@ openLogSocket(const char *path, int bCreatePath, int *pfd)
                }
 
                if (r == 1) {
-                       fd = SD_LISTEN_FDS_START;
-                       r = sd_is_socket_unix(fd, SOCK_DGRAM, -1, _PATH_LOG, 0);
+                       pLstn->fd = SD_LISTEN_FDS_START;
+                       r = sd_is_socket_unix(pLstn->fd, SOCK_DGRAM, -1, _PATH_LOG, 0);
                        if (r < 0) {
                                errmsg.LogError(-r, NO_ERRCODE, "Failed to verify systemd socket type");
 				ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
@@ -269,42 +270,39 @@ openLogSocket(const char *path, int bCreatePath, int *pfd)
 				ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
                        }
 		} else {
-			CHKiRet(createLogSocket(path, bCreatePath, &fd));
+			CHKiRet(createLogSocket(pLstn));
 		}
 	} else {
-		CHKiRet(createLogSocket(path, bCreatePath, &fd));
+		CHKiRet(createLogSocket(pLstn));
 	}
 
+	if(pLstn->bUseCreds) {
+		one = 1;
+		if(setsockopt(pLstn->fd, SOL_SOCKET, SO_PASSCRED, &one, (socklen_t) sizeof(one)) != 0) {
+			errmsg.LogError(errno, NO_ERRCODE, "set SO_PASSCRED failed on '%s'", pLstn->sockName);
+			pLstn->bUseCreds = 0;
+		}
+		if(setsockopt(pLstn->fd, SOL_SOCKET, SCM_CREDENTIALS, &one, sizeof(one)) != 0) {
+			errmsg.LogError(errno, NO_ERRCODE, "set SCM_CREDENTIALS failed on '%s'", pLstn->sockName);
+			pLstn->bUseCreds = 0;
+		}
+	}
+
+#if 0
+	// SO_TIMESTAMP currently does not work for an unknown reason. Any help is appreciated!
 	one = 1;
-	if(setsockopt(fd, SOL_SOCKET, SO_PASSCRED, &one, (socklen_t) sizeof(one)) != 0) {
-		errmsg.LogError(errno, NO_ERRCODE, "set SCM_CREDENTIALS '%s'", path);
-		close(fd);
+	if(setsockopt(pLstn->fd, SOL_SOCKET, SO_TIMESTAMP, &one, sizeof(one)) != 0) {
+		errmsg.LogError(errno, NO_ERRCODE, "set SO_TIMESTAMP '%s'", pLstn->sockName);
 		ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
 	}
-	if(setsockopt(fd, SOL_SOCKET, SCM_CREDENTIALS, &one, sizeof(one)) != 0) {
-		errmsg.LogError(errno, NO_ERRCODE, "set SCM_CREDENTIALS '%s'", path);
-		close(fd);
-		ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
-	}
-	one = 1;
-	if(setsockopt(fd, SOL_SOCKET, SO_TIMESTAMP, &one, sizeof(one)) != 0) {
-		errmsg.LogError(errno, NO_ERRCODE, "set SO_TIMESTAMP '%s'", path);
-		close(fd);
-		ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
-	}
+#endif
 
-
-
-static socklen_t two =sizeof(one);
-	if(getsockopt(fd, SOL_SOCKET, SO_TIMESTAMP, &one,&two) != 0) {
-		errmsg.LogError(errno, NO_ERRCODE, "set SO_TIMESTAMP '%s'", path);
-		close(fd);
-		ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
-	}
-dbgprintf("imuxsock: SO_TIMESTAMP is %d\n", one);
-
-	*pfd = fd;
 finalize_it:
+	if(iRet != RS_RET_OK) {
+		close(pLstn->fd);
+		pLstn->fd = -1;
+	}
+
 	RETiRet;
 }
 
@@ -321,7 +319,7 @@ fixPID(uchar *bufTAG, int *lenTag, struct ucred *cred)
 	if(cred == NULL)
 		return;
 	
-	lenPID = snprintf(bufPID, sizeof(bufPID), "[%u]:", (unsigned) cred->pid);
+	lenPID = snprintf(bufPID, sizeof(bufPID), "[%lu]:", (unsigned long) cred->pid);
 
 	for(i = *lenTag ; i >= 0  && bufTAG[i] != '[' ; --i)
 		/*JUST SKIP*/;
@@ -342,7 +340,7 @@ fixPID(uchar *bufTAG, int *lenTag, struct ucred *cred)
  * can also mangle it if necessary.
  */
 static inline rsRetVal
-SubmitMsg(uchar *pRcv, int lenRcv, int iSock, struct ucred *cred)
+SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred)
 {
 	msg_t *pMsg;
 	int lenMsg;
@@ -356,7 +354,7 @@ SubmitMsg(uchar *pRcv, int lenRcv, int iSock, struct ucred *cred)
 	CHKiRet(msgConstruct(&pMsg));
 	MsgSetRawMsg(pMsg, (char*)pRcv, lenRcv);
 	MsgSetInputName(pMsg, pInputName);
-	MsgSetFlowControlType(pMsg, listeners[iSock].flowCtl);
+	MsgSetFlowControlType(pMsg, pLstn->flowCtl);
 
 // TODO: handle format errors
 	parse = pRcv;
@@ -372,17 +370,14 @@ SubmitMsg(uchar *pRcv, int lenRcv, int iSock, struct ucred *cred)
 	pMsg->iFacility = LOG_FAC(pri);
 	pMsg->iSeverity = LOG_PRI(pri);
 	MsgSetAfterPRIOffs(pMsg, lenRcv - lenMsg);
-dbgprintf("imuxsock: submit: facil %d, sever %d\n", pMsg->iFacility, pMsg->iSeverity);
 
 	parse++; lenMsg--; /* '>' */
 
-dbgprintf("imuxsock: submit: stage 2\n");
 	if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &parse, &lenMsg) != RS_RET_OK) {
 		dbgprintf("we have a problem, invalid timestamp in msg!\n");
 	}
 
 	/* pull tag */
-dbgprintf("imuxsock: submit: stage 3\n");
 
 	i = 0;
 	while(lenMsg > 0 && *parse != ' ' && i < CONF_TAG_MAXSIZE) {
@@ -395,19 +390,13 @@ dbgprintf("imuxsock: submit: stage 3\n");
 
 	MsgSetMSGoffs(pMsg, lenRcv - lenMsg);
 
-	// TODO: here we need to mangle the raw message if we need to
-	// "fix up" the user pid. In the long term, it may make more sense
-	// to add this (somehow) to the message object (problem: at this stage,
-	// it is not fully available, eg no structured data). Alternatively, we
-	// may use a custom parser for our messages, but that doesn't play too well
-	// with the rest of the system.
-	if(listeners[iSock].bParseHost) {
-		pMsg->msgFlags  = listeners[iSock].flags | PARSE_HOSTNAME;
+	if(pLstn->bParseHost) {
+		pMsg->msgFlags  = pLstn->flags | PARSE_HOSTNAME;
 	} else {
-		pMsg->msgFlags  = listeners[iSock].flags;
+		pMsg->msgFlags  = pLstn->flags;
 	}
 
-	MsgSetRcvFrom(pMsg, listeners[iSock].hostName);
+	MsgSetRcvFrom(pMsg, pLstn->hostName);
 	CHKiRet(MsgSetRcvFromIP(pMsg, pLocalHostIP));
 	CHKiRet(submitMsg(pMsg));
 
@@ -424,21 +413,20 @@ finalize_it:
  * of the socket which is to be processed. This eases access to the
  * growing number of properties. -- rgerhards, 2008-08-01
  */
-static rsRetVal readSocket(int fd, int iSock)
+static rsRetVal readSocket(lstn_t *pLstn)
 {
 	DEFiRet;
 	int iRcvd;
 	int iMaxLine;
 	struct msghdr msgh;
 	struct iovec msgiov;
-	static int ratelimitErrmsg = 0; // TODO: atomic OPS
 	struct cmsghdr *cm;
 	struct ucred *cred;
 	uchar bufRcv[4096+1];
-	char aux[1024];
+	char aux[128];
 	uchar *pRcv = NULL; /* receive buffer */
 
-	assert(iSock >= 0);
+	assert(pLstn->fd >= 0);
 
 	iMaxLine = glbl.GetMaxLine();
 
@@ -456,38 +444,34 @@ static rsRetVal readSocket(int fd, int iSock)
 
 	memset(&msgh, 0, sizeof(msgh));
 	memset(&msgiov, 0, sizeof(msgiov));
-	memset(&aux, 0, sizeof(aux));
+	if(pLstn->bUseCreds) {
+		memset(&aux, 0, sizeof(aux));
+		msgh.msg_control = aux;
+		msgh.msg_controllen = sizeof(aux);
+	}
 	msgiov.iov_base = pRcv;
 	msgiov.iov_len = iMaxLine;
 	msgh.msg_iov = &msgiov;
 	msgh.msg_iovlen = 1;
-	msgh.msg_control = aux;
-	msgh.msg_controllen = sizeof(aux);
-	iRcvd = recvmsg(fd, &msgh, MSG_DONTWAIT);
-/*	iRcvd = recv(fd, pRcv, iMaxLine, 0);
- */
+	iRcvd = recvmsg(pLstn->fd, &msgh, MSG_DONTWAIT);
  
-	dbgprintf("Message from UNIX socket: #%d\n", fd);
-	if (iRcvd > 0) {
-		ratelimitErrmsg = 0;
-
-
-dbgprintf("XXX: pre CM loop, length of control message %d\n", (int) msgh.msg_controllen);
-	cred = NULL;
-        for (cm = CMSG_FIRSTHDR(&msgh); cm; cm = CMSG_NXTHDR(&msgh, cm)) {
-dbgprintf("XXX: in CM loop, %d, %d\n", cm->cmsg_level, cm->cmsg_type);
-            if (cm->cmsg_level == SOL_SOCKET && cm->cmsg_type == SCM_CREDENTIALS) {
-	    	cred = (struct ucred*) CMSG_DATA(cm);
-	    	dbgprintf("XXX: got credentials pid %d\n", (int) cred->pid);
-                //break;
-            }
-	 }
-dbgprintf("XXX: post CM loop\n");
-
-
-
-		CHKiRet(SubmitMsg(pRcv, iRcvd, iSock, cred));
-	} else if (iRcvd < 0 && errno != EINTR && ratelimitErrmsg++ < 100) {
+	dbgprintf("Message from UNIX socket: #%d\n", pLstn->fd);
+	if(iRcvd > 0) {
+		cred = NULL;
+		if(pLstn->bUseCreds) {
+			dbgprintf("XXX: pre CM loop, length of control message %d\n", (int) msgh.msg_controllen);
+			for (cm = CMSG_FIRSTHDR(&msgh); cm; cm = CMSG_NXTHDR(&msgh, cm)) {
+				dbgprintf("XXX: in CM loop, %d, %d\n", cm->cmsg_level, cm->cmsg_type);
+				if (cm->cmsg_level == SOL_SOCKET && cm->cmsg_type == SCM_CREDENTIALS) {
+					cred = (struct ucred*) CMSG_DATA(cm);
+					dbgprintf("XXX: got credentials pid %d\n", (int) cred->pid);
+					//break;
+				}
+			}
+			dbgprintf("XXX: post CM loop\n");
+		}
+		CHKiRet(SubmitMsg(pRcv, iRcvd, pLstn, cred));
+	} else if(iRcvd < 0 && errno != EINTR) {
 		char errStr[1024];
 		rs_strerror_r(errno, errStr, sizeof(errStr));
 		dbgprintf("UNIX socket error: %d = %s.\n", errno, errStr);
@@ -555,7 +539,7 @@ CODESTARTrunInput
 			if(glbl.GetGlobalInputTermState() == 1)
 				ABORT_FINALIZE(RS_RET_FORCE_TERM); /* terminate input! */
 			if ((fd = listeners[i].fd) != -1 && FD_ISSET(fd, pReadfds)) {
-				readSocket(fd, i);
+				readSocket(&(listeners[i]));
 				--nfds; /* indicate we have processed one */
 			}
 		}
@@ -585,12 +569,12 @@ CODESTARTwillRun
 #	endif
 	if(pLogSockName != NULL)
 		listeners[0].sockName = pLogSockName;
+	listeners[0].bUseCreds = bUseCredsSysSock;
 
 	/* initialize and return if will run or not */
 	actSocks = 0;
 	for (i = startIndexUxLocalSockets ; i < nfd ; i++) {
-		if(openLogSocket((char*) listeners[i].sockName, listeners[i].bCreateSockPath,
-			&(listeners[i].fd)) == RS_RET_OK) {
+		if(openLogSocket(&(listeners[i])) == RS_RET_OK) {
 			++actSocks;
 			dbgprintf("Opened UNIX socket '%s' (fd %d).\n", listeners[i].sockName, listeners[i].fd);
 			}
@@ -682,7 +666,8 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	bIgnoreTimestamp = 1;
 	bUseFlowCtl = 0;
 	bUseCreds = 0;
-	bCreateSockPath = DFLT_bCreateSockPath;
+	bUseCredsSysSock = 0;
+	bCreatePath = DFLT_bCreatePath;
 
 	return RS_RET_OK;
 }
@@ -709,7 +694,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	listeners[0].fd = -1;
 	listeners[0].bParseHost = 0;
 	listeners[0].bUseCreds = 0;
-	listeners[0].bCreateSockPath = 0;
+	listeners[0].bCreatePath = 0;
 
 	/* initialize socket names */
 	for(i = 1 ; i < MAXFUNIX ; ++i) {
@@ -738,9 +723,11 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputunixlistensocketflowcontrol", 0, eCmdHdlrBinary,
 		NULL, &bUseFlowCtl, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputunixlistensocketcreatepath", 0, eCmdHdlrBinary,
-		NULL, &bCreateSockPath, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputunixlistensocketusespidfromsystem", 0, eCmdHdlrBinary,
+		NULL, &bCreatePath, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputunixlistensocketusepidfromsystem", 0, eCmdHdlrBinary,
 		NULL, &bUseCreds, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"systemlogusepidfromsystem", 0, eCmdHdlrBinary,
+		NULL, &bUseCredsSysSock, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"addunixlistensocket", 0, eCmdHdlrGetWord,
 		addLstnSocketName, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,

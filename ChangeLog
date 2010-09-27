@@ -1,4 +1,11 @@
 ---------------------------------------------------------------------------
+Version 5.7.1  [V5-DEVEL] (rgerhards), 2010-09-??
+- imuxsock now optionally use SCM_CREDENTIALS to pull the pid from the log
+  socket itself (thanks to Lennart Poettering for the suggestion)
+- added new config statements
+  * $InputUnixListenSocketUsePIDFromSystem 
+  * $SystemLogUsePIDFromSystem 
+---------------------------------------------------------------------------
 Version 5.7.0  [V5-DEVEL] (rgerhards), 2010-09-16
 - added module impstat to emit periodic statistics on rsyslog counters
 - support for systemd officially added

@@ -40,12 +40,20 @@ the implications. Note that for many systems, turning on flow control does not h
 <br>Ignore timestamps included in the message. Applies to the next socket being added.</li>
 <li><b>$InputUnixListenSocketFlowControl</b> [on/<b>off</b>] - specifies if flow control should be applied
 to the next socket.</li>
+<li><b>$InputUnixListenSocketUsePIDFromSystem</b> [on/<b>off</b>] - specifies if the pid being logged shall
+be obtained from the log socket itself. If so, the TAG part of the message is rewritten.
+It is recommended to turn this option on, but the default is "off" to keep compatible
+with earlier versions of rsyslog. This option was introduced in 5.7.0.</li>
 <li><b>$SystemLogSocketIgnoreMsgTimestamp</b> [<b>on</b>/off]<br>
 Ignore timestamps included in the messages, applies to messages received via the system log socket.</li>
 <li><b>$OmitLocalLogging</b> (imuxsock) [on/<b>off</b>] -- former -o option</li>
 <li><b>$SystemLogSocketName</b> &lt;name-of-socket&gt; -- former -p option</li>
 <li><b>$SystemLogFlowControl</b> [on/<b>off</b>] - specifies if flow control should be applied
 to the system log socket.</li>
+<li><b>$SystemLogUsePIDFromSystem</b> [on/<b>off</b>] - specifies if the pid being logged shall
+be obtained from the log socket itself. If so, the TAG part of the message is rewritten.
+It is recommended to turn this option on, but the default is "off" to keep compatible
+with earlier versions of rsyslog. This option was introduced in 5.7.0.</li>
 <li><b>$InputUnixListenSocketCreatePath</b> [on/<b>off</b>] - create directories in the socket path
 if they do not already exist. They are created with 0755 permissions with the owner being the process under
 which rsyslogd runs. The default is not to create directories. Keep in mind, though, that rsyslogd always
