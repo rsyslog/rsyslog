@@ -82,20 +82,26 @@ DEFobjCurrIf(statsobj)
 statsobj_t *modStats;
 STATSCOUNTER_DEF(ctrSubmit, mutCtrSubmit)
 
+/* structure to describe a specific listener */
+struct lstn_s {
+	uchar *sockName; /* read-only after startup */
+	prop_t *hostName; /* host-name override - if set, use this instead of actual name */
+	int fd; /* read-only after startup */
+	int flags; /* should parser parse host name?  read-only after startup */
+	int flowCtl; /* flow control settings for this socket */
+	sbool bParseHost; /* should parser parse host name?  read-only after startup */
+	sbool bUseCreds;
+	sbool bCreateSockPath; /* auto-creation of socket directory? */
+};
+static struct lstn_s listeners[MAXFUNIX];
+
 static prop_t *pLocalHostIP = NULL;	/* there is only one global IP for all internally-generated messages */
 static prop_t *pInputName = NULL;	/* our inputName currently is always "imudp", and this will hold it */
-static int startIndexUxLocalSockets; /* process funix from that index on (used to
+static int startIndexUxLocalSockets; /* process fd from that index on (used to
  				   * suppress local logging. rgerhards 2005-08-01
 				   * read-only after startup
 				   */
-static int funixParseHost[MAXFUNIX] = { 0, }; /* should parser parse host name?  read-only after startup */
-static int funixFlags[MAXFUNIX] = { IGNDATE, }; /* should parser parse host name?  read-only after startup */
-static int funixCreateSockPath[MAXFUNIX] = { 0, }; /* auto-creation of socket directory? */
-static uchar *funixn[MAXFUNIX] = { (uchar*) _PATH_LOG }; /* read-only after startup */
-static prop_t *funixHName[MAXFUNIX] = { NULL, }; /* host-name override - if set, use this instead of actual name */
-static int funixFlowCtl[MAXFUNIX] = { eFLOWCTL_NO_DELAY, }; /* flow control settings for this socket */
-static int funix[MAXFUNIX] = { -1, }; /* read-only after startup */
-static int nfunix = 1; /* number of Unix sockets open / read-only after startup */
+static int nfd = 1; /* number of Unix sockets open / read-only after startup */
 
 /* config settings */
 static int bOmitLocalLogging = 0;
@@ -103,6 +109,7 @@ static uchar *pLogSockName = NULL;
 static uchar *pLogHostName = NULL;	/* host name to use with this socket */
 static int bUseFlowCtl = 0;		/* use flow control or not (if yes, only LIGHT is used! */
 static int bIgnoreTimestamp = 1; /* ignore timestamps present in the incoming message? */
+static int bUseCreds = 0;	/* use credentials from recvmsg() and fixup PID in TAG */
 #define DFLT_bCreateSockPath 0
 static int bCreateSockPath = DFLT_bCreateSockPath; /* auto-create socket path? */
 
@@ -114,7 +121,7 @@ static int bCreateSockPath = DFLT_bCreateSockPath; /* auto-create socket path? *
 static rsRetVal setSystemLogTimestampIgnore(void __attribute__((unused)) *pVal, int iNewVal)
 {
 	DEFiRet;
-	funixFlags[0] = iNewVal ? IGNDATE : NOFLAG;
+	listeners[0].flags = iNewVal ? IGNDATE : NOFLAG;
 	RETiRet;
 }
 
@@ -123,7 +130,7 @@ static rsRetVal setSystemLogTimestampIgnore(void __attribute__((unused)) *pVal, 
 static rsRetVal setSystemLogFlowControl(void __attribute__((unused)) *pVal, int iNewVal)
 {
 	DEFiRet;
-	funixFlowCtl[0] = iNewVal ? eFLOWCTL_LIGHT_DELAY : eFLOWCTL_NO_DELAY;
+	listeners[0].flowCtl = iNewVal ? eFLOWCTL_LIGHT_DELAY : eFLOWCTL_NO_DELAY;
 	RETiRet;
 }
 
@@ -140,26 +147,28 @@ addLstnSocketName(void __attribute__((unused)) *pVal, uchar *pNewVal)
 {
 	DEFiRet;
 
-	if(nfunix < MAXFUNIX) {
+	if(nfd < MAXFUNIX) {
 		if(*pNewVal == ':') {
-			funixParseHost[nfunix] = 1;
+			listeners[nfd].bParseHost = 1;
 		} else {
-			funixParseHost[nfunix] = 0;
+			listeners[nfd].bParseHost = 0;
 		}
-		CHKiRet(prop.Construct(&(funixHName[nfunix])));
+		CHKiRet(prop.Construct(&(listeners[nfd].hostName)));
 		if(pLogHostName == NULL) {
-			CHKiRet(prop.SetString(funixHName[nfunix], glbl.GetLocalHostName(), ustrlen(glbl.GetLocalHostName())));
+			CHKiRet(prop.SetString(listeners[nfd].hostName, glbl.GetLocalHostName(), ustrlen(glbl.GetLocalHostName())));
 		} else {
-			CHKiRet(prop.SetString(funixHName[nfunix], pLogHostName, ustrlen(pLogHostName)));
+			CHKiRet(prop.SetString(listeners[nfd].hostName, pLogHostName, ustrlen(pLogHostName)));
 			/* reset hostname for next socket */
 			free(pLogHostName);
 			pLogHostName = NULL;
 		}
-		CHKiRet(prop.ConstructFinalize(funixHName[nfunix]));
-		funixFlowCtl[nfunix] = bUseFlowCtl ? eFLOWCTL_LIGHT_DELAY : eFLOWCTL_NO_DELAY;
-		funixFlags[nfunix] = bIgnoreTimestamp ? IGNDATE : NOFLAG;
-		funixCreateSockPath[nfunix] = bCreateSockPath;
-		funixn[nfunix++] = pNewVal;
+		CHKiRet(prop.ConstructFinalize(listeners[nfd].hostName));
+		listeners[nfd].flowCtl = bUseFlowCtl ? eFLOWCTL_LIGHT_DELAY : eFLOWCTL_NO_DELAY;
+		listeners[nfd].flags = bIgnoreTimestamp ? IGNDATE : NOFLAG;
+		listeners[nfd].bCreateSockPath = bCreateSockPath;
+		listeners[nfd].sockName = pNewVal;
+		listeners[nfd].bUseCreds = bUseCreds;
+		nfd++;
 	} else {
 		errmsg.LogError(0, NO_ERRCODE, "Out of unix socket name descriptors, ignoring %s\n",
 			 pNewVal);
@@ -170,21 +179,21 @@ finalize_it:
 }
 
 
-/* free the funixn[] socket names - needed as cleanup on several places
- * note that nfunix is NOT reset! funixn[0] is never freed, as it comes from
+/* free the sockName[] socket names - needed as cleanup on several places
+ * note that nfd is NOT reset! sockName[0] is never freed, as it comes from
  * the constant memory pool - and if not, it is freeed via some other pointer.
  */
 static rsRetVal discardFunixn(void)
 {
 	int i;
 
-        for (i = 1; i < nfunix; i++) {
-		if(funixn[i] != NULL) {
-			free(funixn[i]);
-			funixn[i] = NULL;
+        for (i = 1; i < nfd; i++) {
+		if(listeners[i].sockName != NULL) {
+			free(listeners[i].sockName);
+			listeners[i].sockName = NULL;
 		}
-		if(funixHName[i] != NULL) {
-			prop.Destruct(&(funixHName[i]));
+		if(listeners[i].hostName != NULL) {
+			prop.Destruct(&(listeners[i].hostName));
 		}
 	}
 
@@ -267,7 +276,6 @@ openLogSocket(const char *path, int bCreatePath, int *pfd)
 	}
 
 	one = 1;
-dbgprintf("imuxsock: setting socket options!\n");
 	if(setsockopt(fd, SOL_SOCKET, SO_PASSCRED, &one, (socklen_t) sizeof(one)) != 0) {
 		errmsg.LogError(errno, NO_ERRCODE, "set SCM_CREDENTIALS '%s'", path);
 		close(fd);
@@ -284,6 +292,17 @@ dbgprintf("imuxsock: setting socket options!\n");
 		close(fd);
 		ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
 	}
+
+
+
+static socklen_t two =sizeof(one);
+	if(getsockopt(fd, SOL_SOCKET, SO_TIMESTAMP, &one,&two) != 0) {
+		errmsg.LogError(errno, NO_ERRCODE, "set SO_TIMESTAMP '%s'", path);
+		close(fd);
+		ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
+	}
+dbgprintf("imuxsock: SO_TIMESTAMP is %d\n", one);
+
 	*pfd = fd;
 finalize_it:
 	RETiRet;
@@ -337,7 +356,7 @@ SubmitMsg(uchar *pRcv, int lenRcv, int iSock, struct ucred *cred)
 	CHKiRet(msgConstruct(&pMsg));
 	MsgSetRawMsg(pMsg, (char*)pRcv, lenRcv);
 	MsgSetInputName(pMsg, pInputName);
-	MsgSetFlowControlType(pMsg, funixFlowCtl[iSock]);
+	MsgSetFlowControlType(pMsg, listeners[iSock].flowCtl);
 
 // TODO: handle format errors
 	parse = pRcv;
@@ -382,13 +401,13 @@ dbgprintf("imuxsock: submit: stage 3\n");
 	// it is not fully available, eg no structured data). Alternatively, we
 	// may use a custom parser for our messages, but that doesn't play too well
 	// with the rest of the system.
-	if(funixParseHost[iSock]) {
-		pMsg->msgFlags  = funixFlags[iSock] | PARSE_HOSTNAME;
+	if(listeners[iSock].bParseHost) {
+		pMsg->msgFlags  = listeners[iSock].flags | PARSE_HOSTNAME;
 	} else {
-		pMsg->msgFlags  = funixFlags[iSock];
+		pMsg->msgFlags  = listeners[iSock].flags;
 	}
 
-	MsgSetRcvFrom(pMsg, funixHName[iSock]);
+	MsgSetRcvFrom(pMsg, listeners[iSock].hostName);
 	CHKiRet(MsgSetRcvFromIP(pMsg, pLocalHostIP));
 	CHKiRet(submitMsg(pMsg));
 
@@ -453,7 +472,7 @@ static rsRetVal readSocket(int fd, int iSock)
 		ratelimitErrmsg = 0;
 
 
-dbgprintf("XXX: pre CM loop, length of control message %d\n", msgh.msg_controllen);
+dbgprintf("XXX: pre CM loop, length of control message %d\n", (int) msgh.msg_controllen);
 	cred = NULL;
         for (cm = CMSG_FIRSTHDR(&msgh); cm; cm = CMSG_NXTHDR(&msgh, cm)) {
 dbgprintf("XXX: in CM loop, %d, %d\n", cm->cmsg_level, cm->cmsg_type);
@@ -511,10 +530,11 @@ CODESTARTrunInput
 	        maxfds = 0;
 	        FD_ZERO (pReadfds);
 		/* Copy master connections */
-		for (i = startIndexUxLocalSockets; i < nfunix; i++) {
-			if (funix[i] != -1) {
-				FD_SET(funix[i], pReadfds);
-				if (funix[i]>maxfds) maxfds=funix[i];
+		for (i = startIndexUxLocalSockets; i < nfd; i++) {
+			if (listeners[i].fd!= -1) {
+				FD_SET(listeners[i].fd, pReadfds);
+				if(listeners[i].fd > maxfds)
+					maxfds=listeners[i].fd;
 			}
 		}
 
@@ -531,10 +551,10 @@ CODESTARTrunInput
 		if(glbl.GetGlobalInputTermState() == 1)
 			break; /* terminate input! */
 
-		for (i = 0; i < nfunix && nfds > 0; i++) {
+		for (i = 0; i < nfd && nfds > 0; i++) {
 			if(glbl.GetGlobalInputTermState() == 1)
 				ABORT_FINALIZE(RS_RET_FORCE_TERM); /* terminate input! */
-			if ((fd = funix[i]) != -1 && FD_ISSET(fd, pReadfds)) {
+			if ((fd = listeners[i].fd) != -1 && FD_ISSET(fd, pReadfds)) {
 				readSocket(fd, i);
 				--nfds; /* indicate we have processed one */
 			}
@@ -564,14 +584,15 @@ CODESTARTwillRun
 		startIndexUxLocalSockets = bOmitLocalLogging ? 1 : 0;
 #	endif
 	if(pLogSockName != NULL)
-		funixn[0] = pLogSockName;
+		listeners[0].sockName = pLogSockName;
 
 	/* initialize and return if will run or not */
 	actSocks = 0;
-	for (i = startIndexUxLocalSockets ; i < nfunix ; i++) {
-		if(openLogSocket((char*) funixn[i], funixCreateSockPath[i], &(funix[i])) == RS_RET_OK) {
+	for (i = startIndexUxLocalSockets ; i < nfd ; i++) {
+		if(openLogSocket((char*) listeners[i].sockName, listeners[i].bCreateSockPath,
+			&(listeners[i].fd)) == RS_RET_OK) {
 			++actSocks;
-			dbgprintf("Opened UNIX socket '%s' (fd %d).\n", funixn[i], funix[i]);
+			dbgprintf("Opened UNIX socket '%s' (fd %d).\n", listeners[i].sockName, listeners[i].fd);
 			}
 	}
 
@@ -594,9 +615,9 @@ CODESTARTafterRun
 	int i;
 	/* do cleanup here */
 	/* Close the UNIX sockets. */
-       for (i = 0; i < nfunix; i++)
-		if (funix[i] != -1)
-			close(funix[i]);
+       for (i = 0; i < nfd; i++)
+		if (listeners[i].fd != -1)
+			close(listeners[i].fd);
 
        /* Clean-up files. If systemd passed us a socket it is
         * systemd's job to clean it up.*/
@@ -604,15 +625,15 @@ CODESTARTafterRun
                i = 1;
        else
                i = startIndexUxLocalSockets;
-       for(; i < nfunix; i++)
-		if (funixn[i] && funix[i] != -1)
-			unlink((char*) funixn[i]);
+       for(; i < nfd; i++)
+		if (listeners[i].sockName && listeners[i].fd != -1)
+			unlink((char*) listeners[i].sockName);
 	/* free no longer needed string */
 	free(pLogSockName);
 	free(pLogHostName);
 
 	discardFunixn();
-	nfunix = 1;
+	nfd = 1;
 
 	if(pInputName != NULL)
 		prop.Destruct(&pInputName);
@@ -657,9 +678,10 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	}
 
 	discardFunixn();
-	nfunix = 1;
+	nfd = 1;
 	bIgnoreTimestamp = 1;
 	bUseFlowCtl = 0;
+	bUseCreds = 0;
 	bCreateSockPath = DFLT_bCreateSockPath;
 
 	return RS_RET_OK;
@@ -679,10 +701,20 @@ CODEmodInit_QueryRegCFSLineHdlr
 
 	dbgprintf("imuxsock version %s initializing\n", PACKAGE_VERSION);
 
-	/* initialize funixn[] array */
+	/* init system log socket settings */
+	listeners[0].flags = IGNDATE;
+	listeners[0].sockName = UCHAR_CONSTANT(_PATH_LOG);
+	listeners[0].hostName = NULL;
+	listeners[0].flowCtl = eFLOWCTL_NO_DELAY;
+	listeners[0].fd = -1;
+	listeners[0].bParseHost = 0;
+	listeners[0].bUseCreds = 0;
+	listeners[0].bCreateSockPath = 0;
+
+	/* initialize socket names */
 	for(i = 1 ; i < MAXFUNIX ; ++i) {
-		funixn[i] = NULL;
-		funix[i]  = -1;
+		listeners[i].sockName = NULL;
+		listeners[i].fd  = -1;
 	}
 
 	CHKiRet(prop.Construct(&pLocalHostIP));
@@ -690,9 +722,9 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(prop.ConstructFinalize(pLocalHostIP));
 
 	/* now init listen socket zero, the local log socket */
-	CHKiRet(prop.Construct(&(funixHName[0])));
-	CHKiRet(prop.SetString(funixHName[0], glbl.GetLocalHostName(), ustrlen(glbl.GetLocalHostName())));
-	CHKiRet(prop.ConstructFinalize(funixHName[0]));
+	CHKiRet(prop.Construct(&(listeners[0].hostName)));
+	CHKiRet(prop.SetString(listeners[0].hostName, glbl.GetLocalHostName(), ustrlen(glbl.GetLocalHostName())));
+	CHKiRet(prop.ConstructFinalize(listeners[0].hostName));
 
 	/* register config file handlers */
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omitlocallogging", 0, eCmdHdlrBinary,
@@ -707,6 +739,8 @@ CODEmodInit_QueryRegCFSLineHdlr
 		NULL, &bUseFlowCtl, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputunixlistensocketcreatepath", 0, eCmdHdlrBinary,
 		NULL, &bCreateSockPath, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputunixlistensocketusespidfromsystem", 0, eCmdHdlrBinary,
+		NULL, &bUseCreds, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"addunixlistensocket", 0, eCmdHdlrGetWord,
 		addLstnSocketName, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
