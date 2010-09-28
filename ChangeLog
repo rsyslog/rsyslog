@@ -5,6 +5,7 @@ Version 5.7.1  [V5-DEVEL] (rgerhards), 2010-09-??
 - added new config statements
   * $InputUnixListenSocketUsePIDFromSystem 
   * $SystemLogUsePIDFromSystem 
+- imuxsock now supports up to 50 different sockets for input
 ---------------------------------------------------------------------------
 Version 5.7.0  [V5-DEVEL] (rgerhards), 2010-09-16
 - added module impstat to emit periodic statistics on rsyslog counters
