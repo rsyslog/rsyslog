@@ -6,7 +6,7 @@
  *
  * File begun on 2007-12-20 by RGerhards (extracted from syslogd.c)
  *
- * Copyright 2007-2009 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2010 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -83,6 +83,7 @@ DEFobjCurrIf(statsobj)
 statsobj_t *modStats;
 STATSCOUNTER_DEF(ctrSubmit, mutCtrSubmit)
 STATSCOUNTER_DEF(ctrLostRatelimit, mutCtrLostRatelimit)
+STATSCOUNTER_DEF(ctrNumRatelimiters, mutCtrNumRatelimiters)
 
 struct rs_ratelimit_state {
 	unsigned short interval;
@@ -90,7 +91,30 @@ struct rs_ratelimit_state {
 	unsigned done;
 	unsigned missed;
 	time_t begin;
-} ratelimiter;
+};
+typedef struct rs_ratelimit_state rs_ratelimit_state_t;
+
+/* support for per-process ratelimiting */
+static struct hashtable *hashtab;
+
+/* a very simple "hash function" for process IDs - we simply use the
+ * pid itself: it is quite expected that all pids may log some time, but
+ * from a collision point of view it is likely that long-running daemons 
+ * start early and so will stay right in the top spots of the
+ * collision list.
+ */
+static unsigned int
+hash_from_key_fn(void *k)
+{
+	return((unsigned) *((pid_t*) k));
+}
+
+static int
+key_equals_fn(void *key1, void *key2)
+{
+	return *((pid_t*) key1) == *((pid_t*) key2);
+}
+
 
 /* structure to describe a specific listener */
 typedef struct lstn_s {
@@ -381,6 +405,43 @@ finalize_it:
 }
 
 
+/* find ratelimiter to use for this message. Currently, we use the
+ * pid, but may change to cgroup later (probably via a config switch).
+ * Returns NULL if not found.
+ */
+static inline rsRetVal
+findRatelimiter(struct ucred *cred, rs_ratelimit_state_t **prl)
+{
+	rs_ratelimit_state_t *rl;
+	int r;
+	pid_t *keybuf;
+	DEFiRet;
+
+	if(cred == NULL)
+		FINALIZE;
+
+	rl = hashtable_search(hashtab, &cred->pid);
+	if(rl == NULL) {
+		/* we need to add a new ratelimiter, process not seen before! */
+		dbgprintf("imuxsock: no ratelimiter for pid %lu, creating one\n",
+			  (unsigned long) cred->pid);
+		STATSCOUNTER_INC(ctrNumRatelimiters, mutCtrNumRatelimiters);
+		CHKmalloc(rl = malloc(sizeof(rs_ratelimit_state_t)));
+		CHKmalloc(keybuf = malloc(sizeof(pid_t)));
+		*keybuf = cred->pid;
+		initRatelimitState(rl, ratelimitInterval, ratelimitBurst);
+		r = hashtable_insert(hashtab, keybuf, rl);
+		if(r == 0)
+			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	}
+
+	*prl = rl;
+
+finalize_it:
+	RETiRet;
+}
+
+
 /* patch correct pid into tag. bufTAG MUST be CONF_TAG_MAXSIZE long!
  */
 static inline void
@@ -424,10 +485,13 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred)
 	uchar bufParseTAG[CONF_TAG_MAXSIZE];
 	struct syslogTime st;
 	time_t tt;
+	rs_ratelimit_state_t *ratelimiter;
 	DEFiRet;
 
+	findRatelimiter(cred, &ratelimiter); /* ignore error, better so than others... */
+
 	datetime.getCurrTime(&st, &tt);
-	if(!withinRatelimit(&ratelimiter, tt)) {
+	if(ratelimiter != NULL && !withinRatelimit(ratelimiter, tt)) {
 		STATSCOUNTER_INC(ctrLostRatelimit, mutCtrLostRatelimit);
 		FINALIZE;
 	}
@@ -587,8 +651,6 @@ CODESTARTrunInput
 	 * signalled to do so. This, however, is handled by the framework,
 	 * right into the sleep below.
 	 */
-	initRatelimitState(&ratelimiter, ratelimitInterval, ratelimitBurst);
-
 	while(1) {
 		/* Add the Unix Domain Sockets to the list of read
 		 * descriptors.
@@ -675,6 +737,8 @@ CODESTARTwillRun
 	CHKiRet(prop.SetString(pInputName, UCHAR_CONSTANT("imuxsock"), sizeof("imuxsock") - 1));
 	CHKiRet(prop.ConstructFinalize(pInputName));
 
+	CHKmalloc(hashtab = create_hashtable(1000, hash_from_key_fn, key_equals_fn));
+
 finalize_it:
 ENDwillRun
 
@@ -706,6 +770,11 @@ CODESTARTafterRun
 
 	if(pInputName != NULL)
 		prop.Destruct(&pInputName);
+
+	if(hashtab != NULL) {
+		hashtable_destroy(hashtab, 1); /* 1 => free all values automatically */
+		hashtab = NULL;
+	}
 ENDafterRun
 
 
@@ -839,8 +908,10 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(statsobj.SetName(modStats, UCHAR_CONSTANT("imuxsock")));
 	CHKiRet(statsobj.AddCounter(modStats, UCHAR_CONSTANT("submitted"),
 		ctrType_IntCtr, &ctrSubmit));
-	CHKiRet(statsobj.AddCounter(modStats, UCHAR_CONSTANT("lost.ratelimit"),
+	CHKiRet(statsobj.AddCounter(modStats, UCHAR_CONSTANT("ratelimit.discarded"),
 		ctrType_IntCtr, &ctrLostRatelimit));
+	CHKiRet(statsobj.AddCounter(modStats, UCHAR_CONSTANT("ratelimit.numratelimiters"),
+		ctrType_IntCtr, &ctrNumRatelimiters));
 	CHKiRet(statsobj.ConstructFinalize(modStats));
 
 ENDmodInit
