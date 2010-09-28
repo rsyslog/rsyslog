@@ -1,11 +1,23 @@
 ---------------------------------------------------------------------------
 Version 5.7.1  [V5-DEVEL] (rgerhards), 2010-09-??
 - imuxsock now optionally use SCM_CREDENTIALS to pull the pid from the log
-  socket itself (thanks to Lennart Poettering for the suggestion)
+  socket itself
+  (thanks to Lennart Poettering for the suggesting this feature)
+- imuxsock now optionally uses per-process input rate limiting, guarding the
+  user against processes spamming the system log
+  (thanks to Lennart Poettering for suggesting this feature)
 - added new config statements
   * $InputUnixListenSocketUsePIDFromSystem 
   * $SystemLogUsePIDFromSystem 
+  * $SystemLogRateLimitInterval
+  * $SystemLogRateLimitBurst
+  * $SystemLogRateLimitSeverity
+  * $IMUxSockRateLimitInterval
+  * $IMUxSockRateLimitBurst
+  * $IMUxSockRateLimitSeverity
 - imuxsock now supports up to 50 different sockets for input
+- some code cleanup in imuxsock (consider this a release a major
+  modification, especially if problems show up)
 ---------------------------------------------------------------------------
 Version 5.7.0  [V5-DEVEL] (rgerhards), 2010-09-16
 - added module impstat to emit periodic statistics on rsyslog counters

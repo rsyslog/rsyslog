@@ -150,7 +150,7 @@ static int bWritePid = 0;		/* use credentials from recvmsg() and fixup PID in TA
 static int bWritePidSysSock = 0;	/* use credentials from recvmsg() and fixup PID in TAG */
 #define DFLT_bCreatePath 0
 static int bCreatePath = DFLT_bCreatePath; /* auto-create socket path? */
-#define DFLT_ratelimitInterval 2
+#define DFLT_ratelimitInterval 5
 static int ratelimitInterval = DFLT_ratelimitInterval;	/* interval in seconds, 0 = off */
 static int ratelimitIntervalSysSock = DFLT_ratelimitInterval;
 #define DFLT_ratelimitBurst 200
