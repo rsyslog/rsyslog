@@ -95,6 +95,8 @@ librsyslog_la_SOURCES = \
 	../parse.c \
 	../parse.h \
 	\
+	hashtable/hashtable.c \
+	\
 	../outchannel.c \
 	../outchannel.h \
 	../template.c \

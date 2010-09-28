@@ -52,6 +52,7 @@
 #include "sd-daemon.h"
 #include "statsobj.h"
 #include "datetime.h"
+#include "hashtable.h"
 
 MODULE_TYPE_INPUT
 
