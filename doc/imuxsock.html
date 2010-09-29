@@ -27,15 +27,16 @@ case, it can be enabled via the
 $InputUnixListenSocketIgnoreMsgTimestamp and $SystemLogSocketIgnoreMsgTimestamp config directives</p>
 <p><b>There is input rate limiting available,</b> (since 5.7.1) to guard you against
 the problems of a wild running logging process. 
-If more than $IMUXSockRateLimitInterval * $IMUXSockRateLimitBurst log messages are emitted
-from the same process, those messages with $IMUXSockRateLimitSeverity or lower will be
+If more than $SystemLogRateLimitInterval * $SystemLogRateLimitBurst log messages are emitted
+from the same process, those messages with $SystemLogRateLimitSeverity or lower will be
 dropped. It is not possible to recover anything about these messages, but imuxsock will
 tell you how many it has dropped one the interval has expired AND the next message
 is logged. Rate-limiting depends on SCM_CREDENTIALS. If the platform does not support
 this socket option, rate limiting is turned off. If multiple sockets are configured,
 rate limiting works independently on each of them (that should be what you usually expect).
-The same functionality is available for the system log socket, which
-just uses the prefix $SystemLogRateLimit... but otherwise works exactly the same.
+The same functionality is available for additional log sockets, in which case the
+config statements just use 
+the prefix $IMUXSockRateLimit... but otherwise works exactly the same.
 When working with severities, please keep in mind that higher severity numbers mean lower
 severity and configure things accordingly.
 <p><b>Unix log sockets can be flow-controlled.</b> That is, if processing queues fill up,

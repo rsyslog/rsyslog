@@ -1,6 +1,6 @@
 if ENABLE_TESTBENCH
 TESTRUNS = rt_init rscript
-check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq msleep randomgen diagtalker uxsockrcvr
+check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq msleep randomgen diagtalker uxsockrcvr syslog_caller
 TESTS = $(TESTRUNS) cfg.sh \
 	arrayqueue.sh \
 	linkedlistqueue.sh \
@@ -321,6 +321,9 @@ chkseq_SOURCES = chkseq.c
 
 tcpflood_SOURCES = tcpflood.c
 tcpflood_LDADD = $(SOL_LIBS)
+
+syslog_caller_SOURCES = syslog_caller.c
+syslog_caller_LDADD = $(SOL_LIBS)
 
 diagtalker_SOURCES = diagtalker.c
 diagtalker_LDADD = $(SOL_LIBS)
