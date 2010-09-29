@@ -5,6 +5,11 @@
  * It is highly suggested NOT to "base" any derivative work
  * on this tool ;)
  *
+ * Options
+ *
+ * -s severity (0..7 accoding to syslog spec, r "rolling", default 6)
+ * -m number of messages to generate (default 500)
+ *
  * Part of the testbench for rsyslog.
  *
  * Copyright 2010 Rainer Gerhards and Adiscon GmbH.
@@ -28,21 +33,43 @@
  */
 #include <stdio.h>
 #include <stdlib.h>
+#include <getopt.h>
 #include <syslog.h>
+
+static void usage(void)
+{
+	fprintf(stderr, "usage: syslog_caller num-messages\n");
+	exit(1);
+}
+
 
 int main(int argc, char *argv[])
 {
 	int i;
-	int sev = 0;
-	if(argc != 2) {
-		fprintf(stderr, "usage: syslog_caller num-messages\n");
-		exit(1);
-	}
+	int opt;
+	int bRollingSev = 0;
+	int sev = 6;
+	int msgs = 500;
 
-	int msgs = atoi(argv[1]);
+	while((opt = getopt(argc, argv, "m:s:")) != -1) {
+		switch (opt) {
+		case 's':	if(*optarg == 'r') {
+					bRollingSev = 1;
+					sev = 0;
+				} else
+					sev = atoi(optarg);
+				break;
+		case 'm':	msgs = atoi(optarg);
+				break;
+		default:	usage();
+				break;
+		}
+	}
 
 	for(i = 0 ; i < msgs ; ++i) {
 		syslog(sev % 8, "test message nbr %d, severity=%d", i, sev % 8);
-		sev++;
+		if(bRollingSev)
+			sev++;
 	}
+	return(0);
 }

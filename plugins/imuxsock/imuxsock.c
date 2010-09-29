@@ -180,7 +180,7 @@ initRatelimitState(struct rs_ratelimit_state *rs, unsigned short interval, unsig
  * be called concurrently.
  */
 static inline int
-withinRatelimit(struct rs_ratelimit_state *rs, time_t tt)
+withinRatelimit(struct rs_ratelimit_state *rs, time_t tt, pid_t pid)
 {
 	int ret;
 	uchar msgbuf[1024];
@@ -199,7 +199,8 @@ withinRatelimit(struct rs_ratelimit_state *rs, time_t tt)
 	if(tt > rs->begin + rs->interval) {
 		if(rs->missed) {
 			snprintf((char*)msgbuf, sizeof(msgbuf),
-			         "imuxsock lost %u messages due to rate-limiting", rs->missed);
+			         "imuxsock lost %u messages from pid %lu due to rate-limiting",
+				 rs->missed, (unsigned long) pid);
 			logmsgInternal(RS_RET_RATE_LIMITED, LOG_SYSLOG|LOG_INFO, msgbuf, 0);
 			rs->missed = 0;
 		}
@@ -212,6 +213,12 @@ withinRatelimit(struct rs_ratelimit_state *rs, time_t tt)
 		rs->done++;
 		ret = 1;
 	} else {
+		if(rs->missed == 0) {
+			snprintf((char*)msgbuf, sizeof(msgbuf),
+			         "imuxsock begins to drop messages from pid %lu due to rate-limiting",
+				 (unsigned long) pid);
+			logmsgInternal(RS_RET_RATE_LIMITED, LOG_SYSLOG|LOG_INFO, msgbuf, 0);
+		}
 		rs->missed++;
 		ret = 0;
 	}
@@ -533,7 +540,7 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred)
 		findRatelimiter(pLstn, cred, &ratelimiter); /* ignore error, better so than others... */
 
 	datetime.getCurrTime(&st, &tt);
-	if(ratelimiter != NULL && !withinRatelimit(ratelimiter, tt)) {
+	if(ratelimiter != NULL && !withinRatelimit(ratelimiter, tt, cred->pid)) {
 		STATSCOUNTER_INC(ctrLostRatelimit, mutCtrLostRatelimit);
 		FINALIZE;
 	}
