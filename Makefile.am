@@ -39,6 +39,25 @@ lmgssutil_la_LDFLAGS = -module -avoid-version
 lmgssutil_la_LIBADD = $(GSS_LIBS)
 endif
 
+#
+# systemd support
+#
+if HAVE_SYSTEMD
+
+dist_systemdsystemunit_DATA = \
+	rsyslog.socket
+
+nodist_systemdsystemunit_DATA = \
+	rsyslog.service
+
+CLEANFILES = \
+	rsyslog.service
+
+%.service: %.service.in
+	$(AM_V_GEN)sed -e 's,@sbindir\@,$(sbindir),g' $< > $@
+
+endif
+
 EXTRA_DIST = \
 	freebsd/rsyslogd \
 	slackware/rc.rsyslogd \
@@ -47,7 +66,8 @@ EXTRA_DIST = \
 	COPYING.LESSER \
 	contrib/gnutls/ca.pem \
 	contrib/gnutls/cert.pem \
-	contrib/gnutls/key.pem
+	contrib/gnutls/key.pem \
+	rsyslog.service.in
 
 SUBDIRS = doc runtime . plugins/immark plugins/imuxsock plugins/imtcp plugins/imudp plugins/omtesting
 
@@ -196,5 +216,6 @@ DISTCHECK_CONFIGURE_FLAGS=	--enable-gssapi_krb5 \
 				--enable-shave \
 				--enable-extended-tests \
 				--enable-impstats \
-				--enable-memcheck
+				--enable-memcheck \
+				--with-systemdsystemunitdir=$$dc_install_base/$(systemdsystemunitdir)
 ACLOCAL_AMFLAGS = -I m4

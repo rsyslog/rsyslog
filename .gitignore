@@ -25,9 +25,11 @@ install-sh
 missing
 compile
 rsyslogd
+rsyslog.service
 *.orig
 rg.conf*
 *.swp
+*.cache
 # some common names I use during development
 utils
 tmp*
