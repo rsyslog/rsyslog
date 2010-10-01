@@ -316,6 +316,7 @@ CODESTARTparseSelectorAct
 	}
 
 	CHKiRet(fileObjConstruct(&pData->pFile));
+	CHKmalloc(pData->pFile->name = (uchar*)strdup((char*)fileName));
 	if(hdfsHost == NULL) {
 		CHKmalloc(pData->pFile->hdfsHost = strdup("default"));
 	} else {
