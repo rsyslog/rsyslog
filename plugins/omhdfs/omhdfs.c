@@ -46,6 +46,7 @@
 #include "module-template.h"
 #include "unicode-helper.h"
 #include "errmsg.h"
+#include "hashtable.h"
 
 MODULE_TYPE_OUTPUT
 
@@ -53,6 +54,9 @@ MODULE_TYPE_OUTPUT
  */
 DEF_OMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
+
+/* global data */
+static struct hashtable *files;		/* holds all file objects that we know */
 
 /* globals for default values */
 static uchar *fileName = NULL;	
@@ -172,6 +176,7 @@ fileObjAddUser(file_t *pFile)
 	++pFile->nUsers;
 	if(pFile->nUsers == 2)
 		pthread_mutex_init(&pFile->mut, NULL);
+	dbgprintf("omhdfs: file %s now being used by %d actions\n", pFile->name, pFile->nUsers);
 }
 
 static inline rsRetVal
@@ -296,6 +301,9 @@ ENDdoAction
 
 
 BEGINparseSelectorAct
+	file_t *pFile;
+	int r;
+	uchar *keybuf;
 CODESTARTparseSelectorAct
 
 	/* first check if this config line is actually for us */
@@ -315,21 +323,28 @@ CODESTARTparseSelectorAct
 		ABORT_FINALIZE(RS_RET_FILE_NOT_SPECIFIED);
 	}
 
-	CHKiRet(fileObjConstruct(&pData->pFile));
-	CHKmalloc(pData->pFile->name = (uchar*)strdup((char*)fileName));
-	if(hdfsHost == NULL) {
-		CHKmalloc(pData->pFile->hdfsHost = strdup("default"));
-	} else {
-		CHKmalloc(pData->pFile->hdfsHost = strdup((char*)hdfsHost));
+	pFile = hashtable_search(files, fileName);
+	if(pFile == NULL) {
+		/* we need a new file object, this one not seen before */
+		CHKiRet(fileObjConstruct(&pFile));
+		CHKmalloc(pFile->name = (uchar*)strdup((char*)fileName));
+		CHKmalloc(keybuf = ustrdup(fileName));
+		r = hashtable_insert(files, keybuf, pFile);
+		if(r == 0)
+			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
-	pData->pFile->hdfsPort = hdfsPort;
+	fileObjAddUser(pFile);
 
-	fileOpen(pData->pFile);
-		
-	if(pData->pFile->fh == NULL){
-		errmsg.LogError(0, RS_RET_ERR_HDFS_OPEN, "omhdfs: failed to open %s - retrying later", pData->pFile->name);
+	CHKmalloc(pFile->hdfsHost = strdup((hdfsHost == NULL) ? "default" : (char*) hdfsHost));
+	pFile->hdfsPort = hdfsPort;
+	fileOpen(pFile);
+	if(pFile->fh == NULL){
+		errmsg.LogError(0, RS_RET_ERR_HDFS_OPEN, "omhdfs: failed to open %s - retrying later", pFile->name);
 		iRet = RS_RET_SUSPENDED;
 	}
+
+	pData->pFile = pFile;
+
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
@@ -359,6 +374,8 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 BEGINmodExit
 CODESTARTmodExit
 	objRelease(errmsg, CORE_COMPONENT);
+	if(files != NULL)
+		hashtable_destroy(files, 1); /* 1 => free all values automatically */
 ENDmodExit
 
 
@@ -373,6 +390,7 @@ CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION;
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	CHKmalloc(files = create_hashtable(20, hash_from_string, key_equals_string));
 
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omhdfsfilename", 0, eCmdHdlrGetWord, NULL, &fileName, NULL));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omhdfshost", 0, eCmdHdlrGetWord, NULL, &hdfsHost, NULL));

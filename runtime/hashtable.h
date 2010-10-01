@@ -196,4 +196,6 @@ hashtable_destroy(struct hashtable *h, int free_values);
  * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+ */
+unsigned int hash_from_string(void *k) ;
+int key_equals_string(void *key1, void *key2);

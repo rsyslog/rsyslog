@@ -241,6 +241,33 @@ hashtable_destroy(struct hashtable *h, int free_values)
     free(h);
 }
 
+/* some generic hash functions */
+
+/* one provided by Aaaron Wiebe based on perl's hashng algorithm 
+ * (so probably pretty generic). Not for excessively large strings!
+ */
+unsigned int
+hash_from_string(void *k) 
+{
+    int len;
+    char *rkey = (char*) k;
+    unsigned hashval = 1;
+
+    len = (int) strlen(rkey);
+    while (len--)
+        hashval = hashval * 33 + *rkey++;
+
+    return hashval;
+}
+
+
+int
+key_equals_string(void *key1, void *key2)
+{
+	return strcmp(key1, key2);
+}
+
+
 /*
  * Copyright (c) 2002, Christopher Clark
  * All rights reserved.
