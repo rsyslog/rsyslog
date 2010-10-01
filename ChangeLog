@@ -1,4 +1,7 @@
 ---------------------------------------------------------------------------
+Version 5.7.2  [V5-DEVEL] (rgerhards), 2010-09-??
+- support for Hadoop's HDFS added (via omhdfs)
+---------------------------------------------------------------------------
 Version 5.7.1  [V5-DEVEL] (rgerhards), 2010-09-??
 - imuxsock now optionally use SCM_CREDENTIALS to pull the pid from the log
   socket itself

@@ -1,5 +1,5 @@
 /* omhdfs.c
- * This is the implementation of the build-in file output module.
+ * This is an output module to support Hadoop's HDFS.
  *
  * NOTE: read comments in module-template.h to understand how this file
  *       works!
