@@ -21,6 +21,7 @@ struct hashtable {
     unsigned int primeindex;
     unsigned int (*hashfn) (void *k);
     int (*eqfn) (void *k1, void *k2);
+    void (*dest) (void *v); /* destructor for values, if NULL use free() */
 };
 
 /*****************************************************************************/

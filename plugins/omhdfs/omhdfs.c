@@ -61,6 +61,7 @@ static struct hashtable *files;		/* holds all file objects that we know */
 /* globals for default values */
 static uchar *fileName = NULL;	
 static uchar *hdfsHost = NULL;	
+static uchar *dfltTplName = NULL;	/* default template name to use */
 int hdfsPort = 0;
 /* end globals for default values */
 
@@ -176,10 +177,10 @@ fileObjAddUser(file_t *pFile)
 	++pFile->nUsers;
 	if(pFile->nUsers == 2)
 		pthread_mutex_init(&pFile->mut, NULL);
-	dbgprintf("omhdfs: file %s now being used by %d actions\n", pFile->name, pFile->nUsers);
+	DBGPRINTF("omhdfs: file %s now being used by %d actions\n", pFile->name, pFile->nUsers);
 }
 
-static inline rsRetVal
+static rsRetVal
 fileObjDestruct(file_t **ppFile)
 {
 	file_t *pFile = *ppFile;
@@ -192,6 +193,18 @@ fileObjDestruct(file_t **ppFile)
 
 	return RS_RET_OK;
 }
+
+/* this function is to be used as destructor for the
+ * hash table code.
+ */
+static void
+fileObjDestruct4Hashtable(void *ptr)
+{
+	dbgprintf("omfile: fileObjDestruct4Hashtable called\n");
+	file_t *pFile = (file_t*) ptr;
+	fileObjDestruct(&pFile);
+}
+
 
 static inline rsRetVal
 fileOpen(file_t *pFile)
@@ -261,6 +274,8 @@ finalize_it:
 static inline rsRetVal
 fileClose(file_t *pFile)
 {
+	DEFiRet;
+
 	if(pFile->nUsers > 1)
 		d_pthread_mutex_lock(&pFile->mut);
 	if(pFile->fh != NULL) {
@@ -271,7 +286,7 @@ fileClose(file_t *pFile)
 	if(pFile->nUsers > 1)
 		d_pthread_mutex_unlock(&pFile->mut);
 
-	return RS_RET_OK;
+	RETiRet;
 }
 
 /* ---END FILE OBJECT---------------------------------------------------- */
@@ -285,7 +300,8 @@ ENDcreateInstance
 
 BEGINfreeInstance
 CODESTARTfreeInstance
-	fileObjDestruct(&pData->pFile);
+	if(pData->pFile != NULL)
+		fileObjDestruct(&pData->pFile);
 ENDfreeInstance
 
 
@@ -315,8 +331,8 @@ CODESTARTparseSelectorAct
 	p += sizeof(":omhdfs:") - 1; /* eat indicator sequence  (-1 because of '\0'!) */
 	CHKiRet(createInstance(&pData));
 	CODE_STD_STRING_REQUESTparseSelectorAct(1)
-	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, 0, (uchar*) "RSYSLOG_FileFormat"));
-				       //(pszFileDfltTplName == NULL) ? (uchar*)"RSYSLOG_FileFormat" : pszFileDfltTplName));
+	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, 0,
+				       (dfltTplName == NULL) ? (uchar*)"RSYSLOG_FileFormat" : dfltTplName));
 
 	if(fileName == NULL) {
 		errmsg.LogError(0, RS_RET_ERR_HDFS_OPEN, "omhdfs: no file name specified, can not continue");
@@ -327,17 +343,18 @@ CODESTARTparseSelectorAct
 	if(pFile == NULL) {
 		/* we need a new file object, this one not seen before */
 		CHKiRet(fileObjConstruct(&pFile));
-		CHKmalloc(pFile->name = (uchar*)strdup((char*)fileName));
+		CHKmalloc(pFile->name = fileName);
 		CHKmalloc(keybuf = ustrdup(fileName));
+		fileName = NULL; /* re-set, data passed to file object */
+		CHKmalloc(pFile->hdfsHost = strdup((hdfsHost == NULL) ? "default" : (char*) hdfsHost));
+		pFile->hdfsPort = hdfsPort;
+		fileOpen(pFile);
 		r = hashtable_insert(files, keybuf, pFile);
 		if(r == 0)
 			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
 	fileObjAddUser(pFile);
 
-	CHKmalloc(pFile->hdfsHost = strdup((hdfsHost == NULL) ? "default" : (char*) hdfsHost));
-	pFile->hdfsPort = hdfsPort;
-	fileOpen(pFile);
 	if(pFile->fh == NULL){
 		errmsg.LogError(0, RS_RET_ERR_HDFS_OPEN, "omhdfs: failed to open %s - retrying later", pFile->name);
 		iRet = RS_RET_SUSPENDED;
@@ -390,11 +407,13 @@ CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION;
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
-	CHKmalloc(files = create_hashtable(20, hash_from_string, key_equals_string));
+	CHKmalloc(files = create_hashtable(20, hash_from_string, key_equals_string,
+			                   fileObjDestruct4Hashtable));
 
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omhdfsfilename", 0, eCmdHdlrGetWord, NULL, &fileName, NULL));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omhdfshost", 0, eCmdHdlrGetWord, NULL, &hdfsHost, NULL));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omhdfsport", 0, eCmdHdlrInt, NULL, &hdfsPort, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"omhdfsfilename", 0, eCmdHdlrGetWord, NULL, &fileName, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"omhdfshost", 0, eCmdHdlrGetWord, NULL, &hdfsHost, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"omhdfsport", 0, eCmdHdlrInt, NULL, &hdfsPort, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"omhdfsdefaulttemplate", 0, eCmdHdlrGetWord, NULL, &dfltTplName, NULL));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 CODEmodInit_QueryRegCFSLineHdlr
 ENDmodInit

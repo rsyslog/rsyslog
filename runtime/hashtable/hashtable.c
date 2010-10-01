@@ -29,7 +29,7 @@ const float max_load_factor = 0.65;
 struct hashtable *
 create_hashtable(unsigned int minsize,
                  unsigned int (*hashf) (void*),
-                 int (*eqf) (void*,void*))
+                 int (*eqf) (void*,void*), void (*dest)(void*))
 {
     struct hashtable *h;
     unsigned int pindex, size = primes[0];
@@ -49,6 +49,7 @@ create_hashtable(unsigned int minsize,
     h->entrycount   = 0;
     h->hashfn       = hashf;
     h->eqfn         = eqf;
+    h->dest         = dest;
     h->loadlimit    = (unsigned int) ceil(size * max_load_factor);
     return h;
 }
@@ -225,7 +226,16 @@ hashtable_destroy(struct hashtable *h, int free_values)
         {
             e = table[i];
             while (NULL != e)
-            { f = e; e = e->next; freekey(f->k); free(f->v); free(f); }
+            {
+                f = e;
+		e = e->next;
+		freekey(f->k);
+		if(h->dest == NULL)
+			free(f->v);
+		else
+			h->dest(f->v);
+		free(f);
+	    }
         }
     }
     else
@@ -264,7 +274,8 @@ hash_from_string(void *k)
 int
 key_equals_string(void *key1, void *key2)
 {
-	return strcmp(key1, key2);
+	/* we must return true IF the keys are equal! */
+	return !strcmp(key1, key2);
 }
 
 
