@@ -254,7 +254,6 @@ fileWrite(file_t *pFile, uchar *buf)
 	size_t lenWrite;
 	DEFiRet;
 
-	assert(pFile->fh != NULL);
 	if(pFile->nUsers > 1)
 		d_pthread_mutex_lock(&pFile->mut);
 
@@ -391,17 +390,18 @@ BEGINdoHUP
     file_t *pFile;
     struct hashtable_itr *itr;
 CODESTARTdoHUP
-    /* Iterator constructor only returns a valid iterator if
-     * the hashtable is not empty */
-    itr = hashtable_iterator(files);
-    if(hashtable_count(files) > 0)
-    {
-        do {
-            pFile = (file_t *) hashtable_iterator_value(itr);
-	    fileClose(pFile);
-	    DBGPRINTF("imuxsock: HUP, closing file %s\n", pFile->name);
-        } while (hashtable_iterator_advance(itr));
-    }
+	DBGPRINTF("omhdfs: HUP received (file count %d)\n", hashtable_count(files));
+	/* Iterator constructor only returns a valid iterator if
+	* the hashtable is not empty */
+	itr = hashtable_iterator(files);
+	if(hashtable_count(files) > 0)
+	{
+		do {
+			pFile = (file_t *) hashtable_iterator_value(itr);
+			fileClose(pFile);
+			DBGPRINTF("omhdfs: HUP, closing file %s\n", pFile->name);
+		} while (hashtable_iterator_advance(itr));
+	}
 ENDdoHUP
 
 
