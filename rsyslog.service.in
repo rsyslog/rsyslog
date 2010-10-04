@@ -2,7 +2,7 @@
 Description=System Logging Service
 
 [Service]
-ExecStart=@sbindir@/rsyslogd -n -c 4
+ExecStart=@sbindir@/rsyslogd -n -c5
 
 [Install]
 WantedBy=multi-user.target
