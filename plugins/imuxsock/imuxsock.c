@@ -369,7 +369,7 @@ openLogSocket(lstn_t *pLstn)
 		return -1;
 
        if (ustrcmp(pLstn->sockName, UCHAR_CONSTANT(_PATH_LOG)) == 0) {
-	       bSysSockFromSystemd = 1; /* set default */
+	       bSysSockFromSystemd = 0; /* set default */
                int r;
 
                /* System log socket code. Check whether an FD was passed in from systemd. If
