@@ -97,54 +97,41 @@ CODESTARTdbgPrintInstInfo
 ENDdbgPrintInstInfo
 
 
-
-#if 0
-static void prepareFile(instanceData *pData, uchar *newFileName)
+/* note that hdfsFileExists() does not work, so we did our
+ * own function to see if a pathname exists. Returns 0 if the
+ * file does not exists, something else otherwise. Note that
+ * we can also check a directroy (if that matters...)
+ */
+static int
+HDFSFileExists(hdfsFS fs, uchar *name)
 {
-	if(access((char*)newFileName, F_OK) == 0) {
-		/* file already exists */
-		pData->fh = open((char*) newFileName, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
-				pData->fCreateMode);
+	int r;
+	hdfsFileInfo *info;
+
+	info = hdfsGetPathInfo(fs, (char*)name);
+	/* if things go wrong, we assume it is because the file
+	 * does not exist. We do not get too much information...
+	 */
+	if(info == NULL) {
+		r = 0;
 	} else {
-		pData->fh = -1;
-		/* file does not exist, create it (and eventually parent directories */
-		if(pData->bCreateDirs) {
-			/* we fist need to create parent dirs if they are missing
-			 * We do not report any errors here ourselfs but let the code
-			 * fall through to error handler below.
-			 */
-			if(makeFileParentDirs(newFileName, strlen((char*)newFileName),
-			     pData->fDirCreateMode, pData->dirUID,
-			     pData->dirGID, pData->bFailOnChown) != 0) {
-			     	return; /* we give up */
-			}
-		}
-		/* no matter if we needed to create directories or not, we now try to create
-		 * the file. -- rgerhards, 2008-12-18 (based on patch from William Tisater)
-		 */
-		pData->fh = open((char*) newFileName, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
-				pData->fCreateMode);
-		if(pData->fh != -1) {
-			/* check and set uid/gid */
-			if(pData->fileUID != (uid_t)-1 || pData->fileGID != (gid_t) -1) {
-				/* we need to set owner/group */
-				if(fchown(pData->fh, pData->fileUID,
-					  pData->fileGID) != 0) {
-					if(pData->bFailOnChown) {
-						int eSave = errno;
-						close(pData->fh);
-						pData->fh = -1;
-						errno = eSave;
-					}
-					/* we will silently ignore the chown() failure
-					 * if configured to do so.
-					 */
-				}
-			}
-		}
+		r = 1;
+		hdfsFreeFileInfo(info, 1);
 	}
+	return r;
 }
-#endif
+
+static inline rsRetVal
+HDFSmkdir(hdfsFS fs, uchar *name)
+{
+	DEFiRet;
+	if(hdfsCreateDirectory(fs, (char*)name) == -1)
+		ABORT_FINALIZE(RS_RET_ERR);
+
+finalize_it:
+	RETiRet;
+}
+
 
 /* ---BEGIN FILE OBJECT---------------------------------------------------- */
 /* This code handles the "file object". This is split from the actual
@@ -195,6 +182,42 @@ fileObjDestruct(file_t **ppFile)
 	return RS_RET_OK;
 }
 
+
+/* check, and potentially create, all names inside a path */
+static rsRetVal
+filePrepare(file_t *pFile)
+{
+	uchar *p;
+	uchar *pszWork;
+	size_t len;
+	DEFiRet;
+
+	if(HDFSFileExists(pFile->fs, pFile->name))
+		FINALIZE;
+
+	/* file does not exist, create it (and eventually parent directories */
+	if(1) { // check if bCreateDirs
+		len = ustrlen(pFile->name) + 1;
+		CHKmalloc(pszWork = MALLOC(sizeof(uchar) * len));
+		memcpy(pszWork, pFile->name, len);
+		for(p = pszWork+1 ; *p ; p++)
+			if(*p == '/') {
+				/* temporarily terminate string, create dir and go on */
+				*p = '\0';
+				if(!HDFSFileExists(pFile->fs, pszWork)) {
+					CHKiRet(HDFSmkdir(pFile->fs, pszWork));
+				}
+				*p = '/';
+			}
+		free(pszWork);
+		return 0;
+	}
+
+finalize_it:
+	RETiRet;
+}
+
+
 /* this function is to be used as destructor for the
  * hash table code.
  */
@@ -222,6 +245,9 @@ fileOpen(file_t *pFile)
 		DBGPRINTF("omhdfs: error can not connect to hdfs\n");
 		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
+
+	CHKiRet(filePrepare(pFile));
+
 	pFile->fh = hdfsOpenFile(pFile->fs, (char*)pFile->name, O_WRONLY|O_APPEND, 0, 0, 0);
 	if(pFile->fh == NULL) {
 		/* maybe the file does not exist, so we try to create it now.
@@ -271,7 +297,8 @@ fileWrite(file_t *pFile, uchar *buf)
 	tSize num_written_bytes = hdfsWrite(pFile->fs, pFile->fh, buf, lenWrite);
 	if((unsigned) num_written_bytes != lenWrite) {
 		errmsg.LogError(errno, RS_RET_ERR_HDFS_WRITE, "omhdfs: failed to write %s, expected %lu bytes, "
-			        "written %lu\n", pFile->name, lenWrite, (unsigned long) num_written_bytes);
+			        "written %lu\n", pFile->name, (unsigned long) lenWrite,
+				(unsigned long) num_written_bytes);
 		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
 
@@ -410,17 +437,6 @@ ENDdoHUP
  */
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
-/*
-	fileUID = -1;
-	fileGID = -1;
-	dirUID = -1;
-	dirGID = -1;
-	bFailOnChown = 1;
-	iDynaFileCacheSize = 10;
-	fCreateMode = 0644;
-	fDirCreateMode = 0700;
-	bCreateDirs = 1;
-*/
 	hdfsHost = NULL;
 	hdfsPort = 0;
 	return RS_RET_OK;
