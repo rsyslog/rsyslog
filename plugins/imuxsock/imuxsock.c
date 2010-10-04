@@ -139,6 +139,7 @@ static int startIndexUxLocalSockets; /* process fd from that index on (used to
 				   * read-only after startup
 				   */
 static int nfd = 1; /* number of Unix sockets open / read-only after startup */
+static int bSysSockFromSystemd = 0;	/* Did we receive the system socket from systemd? */
 
 /* config settings */
 static int bOmitLocalLogging = 0;
@@ -368,6 +369,7 @@ openLogSocket(lstn_t *pLstn)
 		return -1;
 
        if (ustrcmp(pLstn->sockName, UCHAR_CONSTANT(_PATH_LOG)) == 0) {
+	       bSysSockFromSystemd = 1; /* set default */
                int r;
 
                /* System log socket code. Check whether an FD was passed in from systemd. If
@@ -396,6 +398,7 @@ openLogSocket(lstn_t *pLstn)
                                errmsg.LogError(EINVAL, NO_ERRCODE, "Passed systemd socket of wrong type");
 				ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
                        }
+		       bSysSockFromSystemd = 1; /* indicate we got the socket from systemd */
 		} else {
 			CHKiRet(createLogSocket(pLstn));
 		}
@@ -414,15 +417,6 @@ openLogSocket(lstn_t *pLstn)
 			pLstn->bUseCreds = 0;
 		}
 	}
-
-#if 0
-	// SO_TIMESTAMP currently does not work for an unknown reason. Any help is appreciated!
-	one = 1;
-	if(setsockopt(pLstn->fd, SOL_SOCKET, SO_TIMESTAMP, &one, sizeof(one)) != 0) {
-		errmsg.LogError(errno, NO_ERRCODE, "set SO_TIMESTAMP '%s'", pLstn->sockName);
-		ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
-	}
-#endif
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
@@ -802,13 +796,16 @@ CODESTARTafterRun
 
        /* Clean-up files. If systemd passed us a socket it is
         * systemd's job to clean it up.*/
-       if (sd_listen_fds(0) > 0)
+       if(bSysSockFromSystemd) {
+	       DBGPRINTF("imuxsock: got system socket from systemd, not unlinking it\n");
                i = 1;
-       else
+       } else
                i = startIndexUxLocalSockets;
        for(; i < nfd; i++)
-		if (listeners[i].sockName && listeners[i].fd != -1)
+		if (listeners[i].sockName && listeners[i].fd != -1) {
+			DBGPRINTF("imuxsock: unlinking unix socket file[%d] %s\n", i, listeners[i].sockName);
 			unlink((char*) listeners[i].sockName);
+		}
 	/* free no longer needed string */
 	free(pLogSockName);
 	free(pLogHostName);
