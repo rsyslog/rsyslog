@@ -121,28 +121,6 @@ typedef struct s_dynaFileCacheEntry dynaFileCacheEntry;
 #define FLUSHONTX_DFLT 1 	/* default for flush on TX end */
 
 #define DFLT_bForceChown 0
-#if 0
-/* globals for default values */
-static int iDynaFileCacheSize = 10; /* max cache for dynamic files */
-static int fCreateMode = 0644; /* mode to use when creating files */
-static int fDirCreateMode = 0700; /* mode to use when creating files */
-static int	bFailOnChown;	/* fail if chown fails? */
-static int	bForceChown = DFLT_bForceChown;	/* Force chown() on existing files? */
-static uid_t	fileUID;	/* UID to be used for newly created files */
-static uid_t	fileGID;	/* GID to be used for newly created files */
-static uid_t	dirUID;		/* UID to be used for newly created directories */
-static uid_t	dirGID;		/* GID to be used for newly created directories */
-static int	bCreateDirs = 1;/* auto-create directories for dynaFiles: 0 - no, 1 - yes */
-static int	bEnableSync = 0;/* enable syncing of files (no dash in front of pathname in conf): 0 - no, 1 - yes */
-static int	iZipLevel = 0;	/* zip compression mode (0..9 as usual) */
-static sbool	bFlushOnTXEnd = FLUSHONTX_DFLT;/* flush write buffers when transaction has ended? */
-static int64	iIOBufSize = IOBUF_DFLT_SIZE;	/* size of an io buffer */
-static int	iFlushInterval = FLUSH_INTRVL_DFLT; 	/* how often flush the output buffer on inactivity? */
-static int	bUseAsyncWriter = USE_ASYNCWRITER_DFLT;	/* should we enable asynchronous writing? */
-uchar	*pszFileDfltTplName = NULL; /* name of the default template to use */
-/* end globals for default values */
-#endif
-
 
 typedef struct _instanceData {
 	uchar	f_fname[MAXFNAME];/* file or template name (display only) */

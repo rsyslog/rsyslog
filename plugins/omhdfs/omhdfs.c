@@ -59,12 +59,18 @@ DEFobjCurrIf(errmsg)
 /* global data */
 static struct hashtable *files;		/* holds all file objects that we know */
 
-/* globals for default values */
-static uchar *fileName = NULL;	
-static uchar *hdfsHost = NULL;	
-static uchar *dfltTplName = NULL;	/* default template name to use */
-int hdfsPort = 0;
-/* end globals for default values */
+typedef struct configSettings_s {
+	uchar *fileName;	
+	uchar *hdfsHost;	
+	uchar *dfltTplName;	/* default template name to use */
+	int hdfsPort;
+} configSettings_t;
+
+SCOPING_SUPPORT; /* must be set AFTER configSettings_t is defined */
+
+BEGINinitConfVars		/* (re)set config variables to default values */
+CODESTARTinitConfVars 
+ENDinitConfVars
 
 typedef struct {
 	uchar	*name;
@@ -380,22 +386,22 @@ CODESTARTparseSelectorAct
 	CHKiRet(createInstance(&pData));
 	CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, 0,
-				       (dfltTplName == NULL) ? (uchar*)"RSYSLOG_FileFormat" : dfltTplName));
+				       (cs.dfltTplName == NULL) ? (uchar*)"RSYSLOG_FileFormat" : cs.dfltTplName));
 
-	if(fileName == NULL) {
+	if(cs.fileName == NULL) {
 		errmsg.LogError(0, RS_RET_ERR_HDFS_OPEN, "omhdfs: no file name specified, can not continue");
 		ABORT_FINALIZE(RS_RET_FILE_NOT_SPECIFIED);
 	}
 
-	pFile = hashtable_search(files, fileName);
+	pFile = hashtable_search(files, cs.fileName);
 	if(pFile == NULL) {
 		/* we need a new file object, this one not seen before */
 		CHKiRet(fileObjConstruct(&pFile));
-		CHKmalloc(pFile->name = fileName);
-		CHKmalloc(keybuf = ustrdup(fileName));
-		fileName = NULL; /* re-set, data passed to file object */
-		CHKmalloc(pFile->hdfsHost = strdup((hdfsHost == NULL) ? "default" : (char*) hdfsHost));
-		pFile->hdfsPort = hdfsPort;
+		CHKmalloc(pFile->name = cs.fileName);
+		CHKmalloc(keybuf = ustrdup(cs.fileName));
+		cs.fileName = NULL; /* re-set, data passed to file object */
+		CHKmalloc(pFile->hdfsHost = strdup((cs.hdfsHost == NULL) ? "default" : (char*) cs.hdfsHost));
+		pFile->hdfsPort = cs.hdfsPort;
 		fileOpen(pFile);
 		if(pFile->fh == NULL){
 			errmsg.LogError(0, RS_RET_ERR_HDFS_OPEN, "omhdfs: failed to open %s - "
@@ -437,8 +443,12 @@ ENDdoHUP
  */
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
-	hdfsHost = NULL;
-	hdfsPort = 0;
+	cs.hdfsHost = NULL;
+	cs.hdfsPort = 0;
+	free(cs.fileName);
+	cs.fileName = NULL;
+	free(cs.dfltTplName);
+	cs.dfltTplName = NULL;
 	return RS_RET_OK;
 }
 
@@ -458,6 +468,7 @@ CODEqueryEtryPt_doHUP
 ENDqueryEtryPt
 
 
+
 BEGINmodInit()
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION;
@@ -466,10 +477,10 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKmalloc(files = create_hashtable(20, hash_from_string, key_equals_string,
 			                   fileObjDestruct4Hashtable));
 
-	CHKiRet(regCfSysLineHdlr((uchar *)"omhdfsfilename", 0, eCmdHdlrGetWord, NULL, &fileName, NULL, eConfObjAction));
-	CHKiRet(regCfSysLineHdlr((uchar *)"omhdfshost", 0, eCmdHdlrGetWord, NULL, &hdfsHost, NULL, eConfObjAction));
-	CHKiRet(regCfSysLineHdlr((uchar *)"omhdfsport", 0, eCmdHdlrInt, NULL, &hdfsPort, NULL, eConfObjAction));
-	CHKiRet(regCfSysLineHdlr((uchar *)"omhdfsdefaulttemplate", 0, eCmdHdlrGetWord, NULL, &dfltTplName, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"omhdfscs.fileName", 0, eCmdHdlrGetWord, NULL, &cs.fileName, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"omhdfshost", 0, eCmdHdlrGetWord, NULL, &cs.hdfsHost, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"omhdfsport", 0, eCmdHdlrInt, NULL, &cs.hdfsPort, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"omhdfsdefaulttemplate", 0, eCmdHdlrGetWord, NULL, &cs.dfltTplName, NULL, eConfObjAction));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID, eConfObjAction));
 CODEmodInit_QueryRegCFSLineHdlr
 ENDmodInit
