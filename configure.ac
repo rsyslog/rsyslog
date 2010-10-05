@@ -1013,6 +1013,23 @@ AM_CONDITIONAL(ENABLE_OMTEMPLATE, test x$enable_omtemplate = xyes)
 # end of copy template - be sure to search for omtemplate to find everything!
 
 
+# settings for the omhdfs;
+AC_ARG_ENABLE(omhdfs,
+        [AS_HELP_STRING([--enable-omhdfs],[Compiles omhdfs template module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_omhdfs="yes" ;;
+          no) enable_omhdfs="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-omhdfs) ;;
+         esac],
+        [enable_omhdfs=no]
+)
+#
+# you may want to do some library checks here - see snmp, mysql, pgsql modules
+# for samples
+#
+AM_CONDITIONAL(ENABLE_OMHDFS, test x$enable_omhdfs = xyes)
+
+
 AC_CONFIG_FILES([Makefile \
 		runtime/Makefile \
 		tools/Makefile \
@@ -1026,6 +1043,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/imklog/Makefile \
 		plugins/imtemplate/Makefile \
 		plugins/omtemplate/Makefile \
+		plugins/omhdfs/Makefile \
 		plugins/omprog/Makefile \
 		plugins/omstdout/Makefile \
 		plugins/pmrfc3164sd/Makefile \
@@ -1080,6 +1098,7 @@ echo "---{ output plugins }---"
 echo "    Mail support enabled:                     $enable_mail"
 echo "    omprog module will be compiled:           $enable_omprog"
 echo "    omstdout module will be compiled:         $enable_omstdout"
+echo "    omhdfs module will be compiled:           $enable_omhdfs"
 echo "    omruleset module will be compiled:        $enable_omruleset"
 echo "    omdbalerting module will be compiled:     $enable_omdbalerting"
 echo "    omudpspoof module will be compiled:       $enable_omudpspoof"

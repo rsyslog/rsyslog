@@ -29,7 +29,7 @@ const float max_load_factor = 0.65;
 struct hashtable *
 create_hashtable(unsigned int minsize,
                  unsigned int (*hashf) (void*),
-                 int (*eqf) (void*,void*))
+                 int (*eqf) (void*,void*), void (*dest)(void*))
 {
     struct hashtable *h;
     unsigned int pindex, size = primes[0];
@@ -49,6 +49,7 @@ create_hashtable(unsigned int minsize,
     h->entrycount   = 0;
     h->hashfn       = hashf;
     h->eqfn         = eqf;
+    h->dest         = dest;
     h->loadlimit    = (unsigned int) ceil(size * max_load_factor);
     return h;
 }
@@ -225,7 +226,16 @@ hashtable_destroy(struct hashtable *h, int free_values)
         {
             e = table[i];
             while (NULL != e)
-            { f = e; e = e->next; freekey(f->k); free(f->v); free(f); }
+            {
+                f = e;
+		e = e->next;
+		freekey(f->k);
+		if(h->dest == NULL)
+			free(f->v);
+		else
+			h->dest(f->v);
+		free(f);
+	    }
         }
     }
     else
@@ -240,6 +250,34 @@ hashtable_destroy(struct hashtable *h, int free_values)
     free(h->table);
     free(h);
 }
+
+/* some generic hash functions */
+
+/* one provided by Aaaron Wiebe based on perl's hashng algorithm 
+ * (so probably pretty generic). Not for excessively large strings!
+ */
+unsigned int
+hash_from_string(void *k) 
+{
+    int len;
+    char *rkey = (char*) k;
+    unsigned hashval = 1;
+
+    len = (int) strlen(rkey);
+    while (len--)
+        hashval = hashval * 33 + *rkey++;
+
+    return hashval;
+}
+
+
+int
+key_equals_string(void *key1, void *key2)
+{
+	/* we must return true IF the keys are equal! */
+	return !strcmp(key1, key2);
+}
+
 
 /*
  * Copyright (c) 2002, Christopher Clark

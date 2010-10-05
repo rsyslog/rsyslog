@@ -147,6 +147,10 @@ if ENABLE_OMUXSOCK
 SUBDIRS += plugins/omuxsock
 endif
 
+if ENABLE_OMHDFS
+SUBDIRS += plugins/omhdfs
+endif
+
 if ENABLE_OMTEMPLATE
 SUBDIRS += plugins/omtemplate
 endif

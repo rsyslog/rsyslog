@@ -279,7 +279,7 @@ addLstnSocketName(void __attribute__((unused)) *pVal, uchar *pNewVal)
 		}
 		CHKiRet(prop.ConstructFinalize(listeners[nfd].hostName));
 		if(ratelimitInterval > 0) {
-			if((listeners[nfd].ht = create_hashtable(1000, hash_from_key_fn, key_equals_fn)) == NULL) {
+			if((listeners[nfd].ht = create_hashtable(1000, hash_from_key_fn, key_equals_fn, NULL)) == NULL) {
 				/* in this case, we simply turn of rate-limiting */
 				dbgprintf("imuxsock: turning off rate limiting because we could not "
 					  "create hash table\n");
@@ -749,7 +749,7 @@ CODESTARTwillRun
 	if(pLogSockName != NULL)
 		listeners[0].sockName = pLogSockName;
 	if(ratelimitIntervalSysSock > 0) {
-		if((listeners[0].ht = create_hashtable(1000, hash_from_key_fn, key_equals_fn)) == NULL) {
+		if((listeners[0].ht = create_hashtable(1000, hash_from_key_fn, key_equals_fn, NULL)) == NULL) {
 			/* in this case, we simply turn of rate-limiting */
 			dbgprintf("imuxsock: turning off rate limiting because we could not "
 				  "create hash table\n");

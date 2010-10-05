@@ -68,13 +68,14 @@ struct hashtable;
  * @param   minsize         minimum initial size of hashtable
  * @param   hashfunction    function for hashing keys
  * @param   key_eq_fn       function for determining key equality
+ * @param   dest            destructor for value entries (NULL -> use free())
  * @return                  newly created hashtable or NULL on failure
  */
 
 struct hashtable *
 create_hashtable(unsigned int minsize,
                  unsigned int (*hashfunction) (void*),
-                 int (*key_eq_fn) (void*,void*));
+                 int (*key_eq_fn) (void*,void*), void (*dest) (void*));
 
 /*****************************************************************************
  * hashtable_insert
@@ -196,4 +197,6 @@ hashtable_destroy(struct hashtable *h, int free_values);
  * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+ */
+unsigned int hash_from_string(void *k) ;
+int key_equals_string(void *key1, void *key2);
