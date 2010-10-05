@@ -18,6 +18,8 @@ Version 5.7.1  [V5-DEVEL] (rgerhards), 2010-09-??
 - imuxsock now supports up to 50 different sockets for input
 - some code cleanup in imuxsock (consider this a release a major
   modification, especially if problems show up)
+- bugfix: /dev/log was unlinked even when passed in from systemd
+  in which case it should be preserved as systemd owns it
 ---------------------------------------------------------------------------
 Version 5.7.0  [V5-DEVEL] (rgerhards), 2010-09-16
 - added module impstat to emit periodic statistics on rsyslog counters
