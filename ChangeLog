@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 6.1.1  [DEVEL] (rgerhards), 2010-??-??
+- support for omhdfs officially added (import from 5.7.1)
+- merged imuxsock improvements from 5.7.1 (see there)
 - support for systemd officially added (import from 5.7.0)
 ---------------------------------------------------------------------------
 Version 6.1.0  [DEVEL] (rgerhards), 2010-08-12
@@ -18,10 +20,35 @@ expected that interfaces, even new ones, break during the initial
   syslog plain tcp input plugin (NOT supporting TLS!)
   [ported from v4]
 ---------------------------------------------------------------------------
-Version 5.7.0  [V5-DEVEL] (rgerhards), 2010-09-??
+Version 5.7.1  [V5-DEVEL] (rgerhards), 2010-10-05
+- support for Hadoop's HDFS added (via omhdfs)
+- imuxsock now optionally use SCM_CREDENTIALS to pull the pid from the log
+  socket itself
+  (thanks to Lennart Poettering for the suggesting this feature)
+- imuxsock now optionally uses per-process input rate limiting, guarding the
+  user against processes spamming the system log
+  (thanks to Lennart Poettering for suggesting this feature)
+- added new config statements
+  * $InputUnixListenSocketUsePIDFromSystem 
+  * $SystemLogUsePIDFromSystem 
+  * $SystemLogRateLimitInterval
+  * $SystemLogRateLimitBurst
+  * $SystemLogRateLimitSeverity
+  * $IMUxSockRateLimitInterval
+  * $IMUxSockRateLimitBurst
+  * $IMUxSockRateLimitSeverity
+- imuxsock now supports up to 50 different sockets for input
+- some code cleanup in imuxsock (consider this a release a major
+  modification, especially if problems show up)
+- bugfix: /dev/log was unlinked even when passed in from systemd
+  in which case it should be preserved as systemd owns it
+---------------------------------------------------------------------------
+Version 5.7.0  [V5-DEVEL] (rgerhards), 2010-09-16
+- added module impstat to emit periodic statistics on rsyslog counters
 - support for systemd officially added
-- acquire /dev/log socket optionally from systemd
-  thanks to Lennart Poettering for this patch
+  * acquire /dev/log socket optionally from systemd
+    thanks to Lennart Poettering for this patch
+  * sd-systemd API added as part of rsyslog runtime library
 ---------------------------------------------------------------------------
 Version 5.5.7  [V5-BETA] (rgerhards), 2010-08-09
 - changed omudpspoof default spoof address to simplify typical use case

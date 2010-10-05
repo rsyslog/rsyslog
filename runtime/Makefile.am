@@ -45,6 +45,8 @@ librsyslog_la_SOURCES = \
 	modules.h \
 	apc.c \
 	apc.h \
+	statsobj.c \
+	statsobj.h \
 	sync.c \
 	sync.h \
 	expr.c \
@@ -81,8 +83,8 @@ librsyslog_la_SOURCES = \
 	prop.h \
 	cfsysline.c \
 	cfsysline.h \
-       sd-daemon.c \
-       sd-daemon.h \
+	sd-daemon.c \
+	sd-daemon.h \
 	\
 	\
 	../action.h \
@@ -92,6 +94,12 @@ librsyslog_la_SOURCES = \
 	\
 	../parse.c \
 	../parse.h \
+	\
+	hashtable.c \
+	hashtable.h \
+	hashtable_itr.c \
+	hashtable_itr.h \
+	hashtable_private.h \
 	\
 	../outchannel.c \
 	../outchannel.h \

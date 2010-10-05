@@ -42,6 +42,7 @@ html_files = \
 	imfile.html \
 	imtcp.html \
 	imptcp.html \
+	impstats.html \
 	imgssapi.html \
 	imrelp.html \
 	imsolaris.html \

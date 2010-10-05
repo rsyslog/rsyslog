@@ -150,6 +150,8 @@ typedef struct parser_s parser_t;
 typedef struct parserList_s parserList_t;
 typedef struct strgen_s strgen_t;
 typedef struct strgenList_s strgenList_t;
+typedef struct statsobj_s statsobj_t;
+typedef struct statsctr_s statsctr_t;
 typedef rsRetVal (*prsf_t)(struct vmstk_s*, int);	/* pointer to a RainerScript function */
 typedef uint64 qDeqID;	/* queue Dequeue order ID. 32 bits is considered dangerously few */
 
@@ -491,7 +493,13 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_EPOLL_CR_FAILED = -2173, /**< epoll_create() failed */
 	RS_RET_EPOLL_CTL_FAILED = -2174, /**< epoll_ctl() failed */
 	RS_RET_INTERNAL_ERROR = -2175, /**< rsyslogd internal error, unexpected code path reached */
-	RS_RET_INVLD_CONF_OBJ= -2176,	/**< invalid config object (e.g. $Begin conf statement) */
+	RS_RET_ERR_CRE_AFUX = -2176, /**< error creating AF_UNIX socket (and binding it) */
+	RS_RET_RATE_LIMITED = -2177, /**< some messages discarded due to exceeding a rate limit */
+	RS_RET_ERR_HDFS_WRITE = -2178, /**< error writing to HDFS */
+	RS_RET_ERR_HDFS_OPEN = -2179, /**< error during hdfsOpen (e.g. file does not exist) */
+	RS_RET_FILE_NOT_SPECIFIED = -2180, /**< file name not configured where this was required */
+
+	RS_RET_INVLD_CONF_OBJ= -2200,	/**< invalid config object (e.g. $Begin conf statement) */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */

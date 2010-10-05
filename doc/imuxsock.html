@@ -25,6 +25,20 @@ the past four years. Alternate behaviour may be desirable if
 gateway-like processes send messages via the local log slot - in this
 case, it can be enabled via the
 $InputUnixListenSocketIgnoreMsgTimestamp and $SystemLogSocketIgnoreMsgTimestamp config directives</p>
+<p><b>There is input rate limiting available,</b> (since 5.7.1) to guard you against
+the problems of a wild running logging process. 
+If more than $SystemLogRateLimitInterval * $SystemLogRateLimitBurst log messages are emitted
+from the same process, those messages with $SystemLogRateLimitSeverity or lower will be
+dropped. It is not possible to recover anything about these messages, but imuxsock will
+tell you how many it has dropped one the interval has expired AND the next message
+is logged. Rate-limiting depends on SCM_CREDENTIALS. If the platform does not support
+this socket option, rate limiting is turned off. If multiple sockets are configured,
+rate limiting works independently on each of them (that should be what you usually expect).
+The same functionality is available for additional log sockets, in which case the
+config statements just use 
+the prefix $IMUXSockRateLimit... but otherwise works exactly the same.
+When working with severities, please keep in mind that higher severity numbers mean lower
+severity and configure things accordingly.
 <p><b>Unix log sockets can be flow-controlled.</b> That is, if processing queues fill up,
 the unix socket reader is blocked for a short while. This may be useful to prevent overruning
 the queues (which may cause exessive disk-io where it actually would not be needed). However,
@@ -40,12 +54,38 @@ the implications. Note that for many systems, turning on flow control does not h
 <br>Ignore timestamps included in the message. Applies to the next socket being added.</li>
 <li><b>$InputUnixListenSocketFlowControl</b> [on/<b>off</b>] - specifies if flow control should be applied
 to the next socket.</li>
+<li><b>$IMUXSockRateLimitInterval</b> [number] - specifies the rate-limiting
+interval in seconds.  Default value is 5 seconds.
+</li>
+<li><b>$IMUXSockRateLimitBurst</b> [number] - specifies the rate-limiting
+burst in number of messages. Default is 200.
+</li>
+<li><b>$IMUXSockRateLimitSeverity</b> [numerical severity] - specifies the severity of
+messages that shall be rate-limited.
+</li>
+<li><b>$InputUnixListenSocketUsePIDFromSystem</b> [on/<b>off</b>] - specifies if the pid being logged shall
+be obtained from the log socket itself. If so, the TAG part of the message is rewritten.
+It is recommended to turn this option on, but the default is "off" to keep compatible
+with earlier versions of rsyslog. This option was introduced in 5.7.0.</li>
 <li><b>$SystemLogSocketIgnoreMsgTimestamp</b> [<b>on</b>/off]<br>
 Ignore timestamps included in the messages, applies to messages received via the system log socket.</li>
 <li><b>$OmitLocalLogging</b> (imuxsock) [on/<b>off</b>] -- former -o option</li>
 <li><b>$SystemLogSocketName</b> &lt;name-of-socket&gt; -- former -p option</li>
 <li><b>$SystemLogFlowControl</b> [on/<b>off</b>] - specifies if flow control should be applied
 to the system log socket.</li>
+<li><b>$SystemLogUsePIDFromSystem</b> [on/<b>off</b>] - specifies if the pid being logged shall
+be obtained from the log socket itself. If so, the TAG part of the message is rewritten.
+It is recommended to turn this option on, but the default is "off" to keep compatible
+with earlier versions of rsyslog. This option was introduced in 5.7.0.</li>
+<li><b>$SystemLogRateLimitInterval</b> [number] - specifies the rate-limiting
+interval in seconds.  Default value is 5 seconds.
+</li>
+<li><b>$SystemLogRateLimitBurst</b> [number] - specifies the rate-limiting
+burst in number of messages. Default is 200.
+</li>
+<li><b>$SystemLogRateLimitSeverity</b> [numerical severity] - specifies the severity of
+messages that shall be rate-limited.
+</li>
 <li><b>$InputUnixListenSocketCreatePath</b> [on/<b>off</b>] - create directories in the socket path
 if they do not already exist. They are created with 0755 permissions with the owner being the process under
 which rsyslogd runs. The default is not to create directories. Keep in mind, though, that rsyslogd always
@@ -66,8 +106,11 @@ will only affect the next one and then automatically be reset. This functionalit
 that the local hostname can be overridden in cases where that is desired.</li>
 </ul>
 <b>Caveats/Known Bugs:</b><br>
-<br>
-This documentation is sparse and incomplete.
+<ul>
+<li>There is a compile-time limit of 50 concurrent sockets. If you need more, you need to
+change the array size in imuxsock.c.
+<li>This documentation is sparse and incomplete.
+</ul>
 <p><b>Sample:</b></p>
 <p>The following sample is the minimum setup required to accept syslog messages from applications running
 on the local system.<br>

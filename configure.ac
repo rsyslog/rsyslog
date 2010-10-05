@@ -360,6 +360,16 @@ if test "$enable_unlimited_select" = "yes"; then
 fi
 
 
+# support for systemd unit files
+AC_ARG_WITH([systemdsystemunitdir],
+        AS_HELP_STRING([--with-systemdsystemunitdir=DIR], [Directory for systemd service files]),
+        [], [with_systemdsystemunitdir=$($PKG_CONFIG --variable=systemdsystemunitdir systemd)])
+if test "x$with_systemdsystemunitdir" != xno; then
+        AC_SUBST([systemdsystemunitdir], [$with_systemdsystemunitdir])
+fi
+AM_CONDITIONAL(HAVE_SYSTEMD, [test -n "$with_systemdsystemunitdir" -a "x$with_systemdsystemunitdir" != xno ])
+
+
 # debug
 AC_ARG_ENABLE(debug,
         [AS_HELP_STRING([--enable-debug],[Enable debug mode @<:@default=no@:>@])],
@@ -792,6 +802,19 @@ AC_ARG_ENABLE(imptcp,
 AM_CONDITIONAL(ENABLE_IMPTCP, test x$enable_imptcp = xyes)
 
 
+# settings for the pstats input module
+AC_ARG_ENABLE(impstats,
+        [AS_HELP_STRING([--enable-impstats],[periodic statistics module enabled @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_impstats="yes" ;;
+          no) enable_impstats="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-impstats) ;;
+         esac],
+        [enable_impstats=no]
+)
+AM_CONDITIONAL(ENABLE_IMPSTATS, test x$enable_impstats = xyes)
+
+
 # settings for the omprog output module
 AC_ARG_ENABLE(omprog,
         [AS_HELP_STRING([--enable-omprog],[Compiles omprog module @<:@default=no@:>@])],
@@ -990,6 +1013,23 @@ AM_CONDITIONAL(ENABLE_OMTEMPLATE, test x$enable_omtemplate = xyes)
 # end of copy template - be sure to search for omtemplate to find everything!
 
 
+# settings for the omhdfs;
+AC_ARG_ENABLE(omhdfs,
+        [AS_HELP_STRING([--enable-omhdfs],[Compiles omhdfs template module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_omhdfs="yes" ;;
+          no) enable_omhdfs="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-omhdfs) ;;
+         esac],
+        [enable_omhdfs=no]
+)
+#
+# you may want to do some library checks here - see snmp, mysql, pgsql modules
+# for samples
+#
+AM_CONDITIONAL(ENABLE_OMHDFS, test x$enable_omhdfs = xyes)
+
+
 AC_CONFIG_FILES([Makefile \
 		runtime/Makefile \
 		tools/Makefile \
@@ -1003,6 +1043,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/imklog/Makefile \
 		plugins/imtemplate/Makefile \
 		plugins/omtemplate/Makefile \
+		plugins/omhdfs/Makefile \
 		plugins/omprog/Makefile \
 		plugins/omstdout/Makefile \
 		plugins/pmrfc3164sd/Makefile \
@@ -1013,6 +1054,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/imfile/Makefile \
 		plugins/imsolaris/Makefile \
 		plugins/imptcp/Makefile \
+		plugins/impstats/Makefile \
 		plugins/imrelp/Makefile \
 		plugins/imdiag/Makefile \
 		plugins/omtesting/Makefile \
@@ -1049,12 +1091,14 @@ echo "    plain tcp input module enabled:           $enable_imptcp"
 echo "    imdiag enabled:                           $enable_imdiag"
 echo "    file input module enabled:                $enable_imfile"
 echo "    Solaris input module enabled:             $enable_imsolaris"
+echo "    periodic statistics module enabled:       $enable_impstats"
 echo "    input template module will be compiled:   $enable_imtemplate"
 echo
 echo "---{ output plugins }---"
 echo "    Mail support enabled:                     $enable_mail"
 echo "    omprog module will be compiled:           $enable_omprog"
 echo "    omstdout module will be compiled:         $enable_omstdout"
+echo "    omhdfs module will be compiled:           $enable_omhdfs"
 echo "    omruleset module will be compiled:        $enable_omruleset"
 echo "    omdbalerting module will be compiled:     $enable_omdbalerting"
 echo "    omudpspoof module will be compiled:       $enable_omudpspoof"
