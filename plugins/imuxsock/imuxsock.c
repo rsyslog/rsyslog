@@ -66,6 +66,10 @@ MODULE_TYPE_INPUT
 #endif
 #endif
 
+/* emulate struct ucred for platforms that do not have it */
+#ifndef HAVE_SCM_CREDENTIALS
+struct ucred { int pid; };
+#endif
 
 /* handle some defines missing on more than one platform */
 #ifndef SUN_LEN
