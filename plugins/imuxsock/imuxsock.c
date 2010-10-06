@@ -406,6 +406,7 @@ openLogSocket(lstn_t *pLstn)
 		CHKiRet(createLogSocket(pLstn));
 	}
 
+#	if HAVE_SCM_CREDENTIALS
 	if(pLstn->bUseCreds) {
 		one = 1;
 		if(setsockopt(pLstn->fd, SOL_SOCKET, SO_PASSCRED, &one, (socklen_t) sizeof(one)) != 0) {
@@ -417,6 +418,9 @@ openLogSocket(lstn_t *pLstn)
 			pLstn->bUseCreds = 0;
 		}
 	}
+#	else /* HAVE_SCM_CREDENTIALS */
+	pLstn->bUseCreds = 0;
+#	endif /* HAVE_SCM_CREDENTIALS */
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
@@ -513,7 +517,7 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred)
 	rs_ratelimit_state_t *ratelimiter = NULL;
 	DEFiRet;
 
-// TODO: handle format errors??
+	/* TODO: handle format errors?? */
 	/* we need to parse the pri first, because we need the severity for
 	 * rate-limiting as well.
 	 */
@@ -530,8 +534,10 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred)
 	facil = LOG_FAC(pri);
 	sever = LOG_PRI(pri);
 
-	if(sever >= pLstn->ratelimitSev)
+	if(sever >= pLstn->ratelimitSev) {
+		/* note: if cred == NULL, then ratelimiter == NULL as well! */
 		findRatelimiter(pLstn, cred, &ratelimiter); /* ignore error, better so than others... */
+	}
 
 	datetime.getCurrTime(&st, &tt);
 	if(ratelimiter != NULL && !withinRatelimit(ratelimiter, tt, cred->pid)) {
@@ -637,6 +643,7 @@ static rsRetVal readSocket(lstn_t *pLstn)
 	dbgprintf("Message from UNIX socket: #%d\n", pLstn->fd);
 	if(iRcvd > 0) {
 		cred = NULL;
+#		if HAVE_SCM_CREDENTIALS
 		if(pLstn->bUseCreds) {
 			dbgprintf("XXX: pre CM loop, length of control message %d\n", (int) msgh.msg_controllen);
 			for (cm = CMSG_FIRSTHDR(&msgh); cm; cm = CMSG_NXTHDR(&msgh, cm)) {
@@ -644,11 +651,12 @@ static rsRetVal readSocket(lstn_t *pLstn)
 				if (cm->cmsg_level == SOL_SOCKET && cm->cmsg_type == SCM_CREDENTIALS) {
 					cred = (struct ucred*) CMSG_DATA(cm);
 					dbgprintf("XXX: got credentials pid %d\n", (int) cred->pid);
-					//break;
+					break;
 				}
 			}
 			dbgprintf("XXX: post CM loop\n");
 		}
+#		endif /* HAVE_SCM_CREDENTIALS */
 		CHKiRet(SubmitMsg(pRcv, iRcvd, pLstn, cred));
 	} else if(iRcvd < 0 && errno != EINTR) {
 		char errStr[1024];
