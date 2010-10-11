@@ -139,6 +139,12 @@ the $InputUnixListenSocketCreatePath and the $InputUnixListenSocketHostName.</p>
 $InputUnixListenSocketCreatePath on # turn on for *next* socket
 $InputUnixListenSocketHostName /var/run/sshd/dev/log
 </textarea>
+<p>The following sample is used to turn off input rate limiting on the system log
+socket.
+<textarea rows="6" cols="70">$ModLoad imuxsock # needs to be done just once
+
+$SystemLogRateLimitInterval 0 # turn off rate limiting
+</textarea>
 <p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>]
 [<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
 <p><font size="2">This documentation is part of the

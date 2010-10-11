@@ -23,7 +23,17 @@ static const unsigned int primes[] = {
 805306457, 1610612741
 };
 const unsigned int prime_table_length = sizeof(primes)/sizeof(primes[0]);
-const float max_load_factor = 0.65;
+
+#define MAX_LOAD_FACTOR 65 /* to get real factor, divide by 100! */
+
+/* compute max load. We use a constant factor of 0.65, but do
+ * everything times 100, so that we do not need floats.
+ */
+static inline unsigned
+getLoadLimit(unsigned size)
+{
+    return (unsigned int) ((unsigned long long) size * MAX_LOAD_FACTOR) / 100;
+}
 
 /*****************************************************************************/
 struct hashtable *
@@ -50,7 +60,7 @@ create_hashtable(unsigned int minsize,
     h->hashfn       = hashf;
     h->eqfn         = eqf;
     h->dest         = dest;
-    h->loadlimit    = (unsigned int) ceil(size * max_load_factor);
+    h->loadlimit    = getLoadLimit(size);
     return h;
 }
 
@@ -123,7 +133,7 @@ hashtable_expand(struct hashtable *h)
         }
     }
     h->tablelength = newsize;
-    h->loadlimit   = (unsigned int) ceil(newsize * max_load_factor);
+    h->loadlimit   = getLoadLimit(newsize);
     return -1;
 }
 
