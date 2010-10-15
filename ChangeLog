@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 4.4.2a  [private build] (rgerhards), 2010-10-15
+- bugfix: a couple of problems that imfile had on some platforms, namely
+  Ubuntu (not their fault, but occured there)
 - bugfix: imfile utilizes 32 bit to track offset. Most importantly,
   this problem can not experienced on Fedora 64 bit OS (which has
   64 bit long's!)

@@ -96,10 +96,12 @@ static rsRetVal strmOpenFile(strm_t *pThis)
 
 	iFlags |= pThis->iAddtlOpenFlags;
 
-	pThis->fd = open((char*)pThis->pszCurrFName, iFlags, pThis->tOpenMode);
+	pThis->fd = open((char*)pThis->pszCurrFName, iFlags | O_LARGEFILE, pThis->tOpenMode);
 	if(pThis->fd == -1) {
 		int ierrnoSave = errno;
-		dbgoprint((obj_t*) pThis, "open error %d, file '%s'\n", errno, pThis->pszCurrFName);
+		char errmsg[1024];
+		dbgoprint((obj_t*) pThis, "open error %d, file '%s': %s\n", errno, pThis->pszCurrFName,
+			   rs_strerror_r(errno, errmsg, sizeof(errmsg)));
 		if(ierrnoSave == ENOENT)
 			ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
 		else
@@ -522,7 +524,7 @@ rsRetVal strmFlush(strm_t *pThis)
  * is invalidated.
  * rgerhards, 2008-01-12
  */
-static rsRetVal strmSeek(strm_t *pThis, off_t offs)
+static rsRetVal strmSeek(strm_t *pThis, off64_t offs)
 {
 	DEFiRet;
 
@@ -532,9 +534,9 @@ static rsRetVal strmSeek(strm_t *pThis, off_t offs)
 		strmOpenFile(pThis);
 	else
 		strmFlush(pThis);
-	int i;
+	int64 i;
 	dbgoprint((obj_t*) pThis, "file %d seek, pos %ld\n", pThis->fd, (long) offs);
-	i = lseek(pThis->fd, offs, SEEK_SET); // TODO: check error!
+	i = lseek64(pThis->fd, offs, SEEK_SET);
 	pThis->iCurrOffs = offs; /* we are now at *this* offset */
 	pThis->iBufPtr = 0; /* buffer invalidated */
 
