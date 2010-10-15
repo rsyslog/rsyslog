@@ -214,7 +214,7 @@ doPhysOpen(strm_t *pThis)
 		iFlags |= O_NONBLOCK;
 	}
 
-	pThis->fd = open((char*)pThis->pszCurrFName, iFlags, pThis->tOpenMode);
+	pThis->fd = open((char*)pThis->pszCurrFName, iFlags | O_LARGEFILE, pThis->tOpenMode);
 	DBGPRINTF("file '%s' opened as #%d with mode %d\n", pThis->pszCurrFName,
 		  pThis->fd, (int) pThis->tOpenMode);
 	if(pThis->fd == -1) {
@@ -1184,7 +1184,7 @@ finalize_it:
  * is invalidated.
  * rgerhards, 2008-01-12
  */
-static rsRetVal strmSeek(strm_t *pThis, off_t offs)
+static rsRetVal strmSeek(strm_t *pThis, off64_t offs)
 {
 	DEFiRet;
 
@@ -1194,9 +1194,9 @@ static rsRetVal strmSeek(strm_t *pThis, off_t offs)
 		strmOpenFile(pThis);
 	else
 		strmFlushInternal(pThis);
-	int i;
-	DBGOPRINT((obj_t*) pThis, "file %d seek, pos %ld\n", pThis->fd, (long) offs);
-	i = lseek(pThis->fd, offs, SEEK_SET); // TODO: check error!
+	long long i;
+	DBGOPRINT((obj_t*) pThis, "file %d seek, pos %llu\n", pThis->fd, (long long unsigned) offs);
+	i = lseek64(pThis->fd, offs, SEEK_SET); // TODO: check error!
 	pThis->iCurrOffs = offs; /* we are now at *this* offset */
 	pThis->iBufPtr = 0; /* buffer invalidated */
 
@@ -1473,7 +1473,7 @@ static rsRetVal strmSerialize(strm_t *pThis, strm_t *pStrm)
 {
 	DEFiRet;
 	int i;
-	long l;
+	int64 l;
 
 	ISOBJ_TYPE_assert(pThis, strm);
 	ISOBJ_TYPE_assert(pStrm, strm);
@@ -1495,8 +1495,8 @@ static rsRetVal strmSerialize(strm_t *pThis, strm_t *pStrm)
 	i = pThis->tOpenMode;
 	objSerializeSCALAR_VAR(pStrm, tOpenMode, INT, i);
 
-	l = (long) pThis->iCurrOffs;
-	objSerializeSCALAR_VAR(pStrm, iCurrOffs, LONG, l);
+	l = pThis->iCurrOffs;
+	objSerializeSCALAR_VAR(pStrm, iCurrOffs, INT64, l);
 
 	CHKiRet(obj.EndSerialize(pStrm));
 
