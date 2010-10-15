@@ -75,7 +75,15 @@ Locality name: <font color="red">Somewhere</font>
 State or province name: <font color="red">CA</font>
 Common name: <font color="red">machine.example.net</font>
 UID: 
-Enter a challenge password: 
+Enter a dnsName of the subject of the certificate:
+Enter the IP address of the subject of the certificate:
+Enter the e-mail of the subject of the certificate:
+Enter a challange password:
+Does the certificate belong to an authority? (y/N): <font color="red">n</font>
+Will the certificate be used for signing (DHE and RSA-EXPORT ciphersuites)? (y/N): 
+Will the certificate be used for encryption (RSA ciphersuites)? (y/N):
+Is this a TLS web client certificate? (y/N): <font color="red">y</font>
+Is this also a TLS web server certificate? (y/N): <font color="red">y</font>
 [root@rgf9dev sample]# <font color="red">certtool --generate-certificate --load-request request.pem --outfile cert.pem --load-ca-certificate ca.pem --load-ca-privkey ca-key.pem</font>
 Generating a signed certificate...
 Enter the certificate's serial number (decimal): 
@@ -86,10 +94,12 @@ The certificate will expire in (days): 1000
 
 
 Extensions.
+Do you want to honour the extensions from the request? (y/N):
 Does the certificate belong to an authority? (Y/N): <font color="red">n</font>
 Is this a TLS web client certificate? (Y/N): <font color="red">y</font>
 Is this also a TLS web server certificate? (Y/N): <font color="red">y</font>
 Enter the dnsName of the subject of the certificate: <font color="red">machine.example.net</font> <i>{This is the name of the machine that will use the certificate}</i>
+Enter the IP address of the subject of certificate:
 Will the certificate be used for signing (DHE and RSA-EXPORT ciphersuites)? (Y/N): 
 Will the certificate be used for encryption (RSA ciphersuites)? (Y/N): 
 X.509 Certificate Information:

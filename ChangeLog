@@ -4,6 +4,11 @@ Version 4.7.3  [v4-devel] (rgerhards), 2010-??-??
   this is the counterpart to imuxsock, enabling fast local forwarding
 - added imptcp, a simplified, Linux-specific and potentielly fast
   syslog plain tcp input plugin (NOT supporting TLS!)
+- bugfix: a couple of problems that imfile had on some platforms, namely
+  Ubuntu (not their fault, but occured there)
+- bugfix: imfile utilizes 32 bit to track offset. Most importantly,
+  this problem can not experienced on Fedora 64 bit OS (which has
+  64 bit long's!)
 ---------------------------------------------------------------------------
 Version 4.7.2  [v4-devel] (rgerhards), 2010-05-03
 - bugfix: problems with atomic operations emulaton
@@ -50,6 +55,13 @@ Version 4.7.0  [v4-devel] (rgerhards), 2010-04-14
 - bugfix: potential segfaults during queue shutdown
   (bugs require certain non-standard settings to appear)
   Thanks to varmojfekoj for the patch [imported from 4.5.8]
+---------------------------------------------------------------------------
+Version 4.6.5  [v4-stable] (rgerhards), 2010-??-??
+- bugfix: a couple of problems that imfile had on some platforms, namely
+  Ubuntu (not their fault, but occured there)
+- bugfix: imfile utilizes 32 bit to track offset. Most importantly,
+  this problem can not experienced on Fedora 64 bit OS (which has
+  64 bit long's!)
 ---------------------------------------------------------------------------
 Version 4.6.4  [v4-stable] (rgerhards), 2010-08-05
 - bugfix: zero-sized (empty) messages were processed by imtcp
