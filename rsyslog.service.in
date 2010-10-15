@@ -6,3 +6,4 @@ ExecStart=@sbindir@/rsyslogd -n -c5
 
 [Install]
 WantedBy=multi-user.target
+Also=rsyslog.socket

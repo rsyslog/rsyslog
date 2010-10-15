@@ -39,6 +39,7 @@ config statements just use
 the prefix $IMUXSockRateLimit... but otherwise works exactly the same.
 When working with severities, please keep in mind that higher severity numbers mean lower
 severity and configure things accordingly.
+To turn off rate limiting, set the interval to zero.
 <p><b>Unix log sockets can be flow-controlled.</b> That is, if processing queues fill up,
 the unix socket reader is blocked for a short while. This may be useful to prevent overruning
 the queues (which may cause exessive disk-io where it actually would not be needed). However,
@@ -55,7 +56,7 @@ the implications. Note that for many systems, turning on flow control does not h
 <li><b>$InputUnixListenSocketFlowControl</b> [on/<b>off</b>] - specifies if flow control should be applied
 to the next socket.</li>
 <li><b>$IMUXSockRateLimitInterval</b> [number] - specifies the rate-limiting
-interval in seconds.  Default value is 5 seconds.
+interval in seconds.  Default value is 5 seconds. Set it to 0 to turn rate limiting off.
 </li>
 <li><b>$IMUXSockRateLimitBurst</b> [number] - specifies the rate-limiting
 burst in number of messages. Default is 200.
@@ -78,7 +79,7 @@ be obtained from the log socket itself. If so, the TAG part of the message is re
 It is recommended to turn this option on, but the default is "off" to keep compatible
 with earlier versions of rsyslog. This option was introduced in 5.7.0.</li>
 <li><b>$SystemLogRateLimitInterval</b> [number] - specifies the rate-limiting
-interval in seconds.  Default value is 5 seconds.
+interval in seconds.  Default value is 5 seconds. Set it to 0 to turn rate limiting off.
 </li>
 <li><b>$SystemLogRateLimitBurst</b> [number] - specifies the rate-limiting
 burst in number of messages. Default is 200.
@@ -137,6 +138,12 @@ the $InputUnixListenSocketCreatePath and the $InputUnixListenSocketHostName.</p>
 
 $InputUnixListenSocketCreatePath on # turn on for *next* socket
 $InputUnixListenSocketHostName /var/run/sshd/dev/log
+</textarea>
+<p>The following sample is used to turn off input rate limiting on the system log
+socket.
+<textarea rows="6" cols="70">$ModLoad imuxsock # needs to be done just once
+
+$SystemLogRateLimitInterval 0 # turn off rate limiting
 </textarea>
 <p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>]
 [<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>

@@ -3,6 +3,11 @@ Version 6.1.1  [DEVEL] (rgerhards), 2010-??-??
 - support for omhdfs officially added (import from 5.7.1)
 - merged imuxsock improvements from 5.7.1 (see there)
 - support for systemd officially added (import from 5.7.0)
+- bugfix: a couple of problems that imfile had on some platforms, namely
+  Ubuntu (not their fault, but occured there)
+- bugfix: imfile utilizes 32 bit to track offset. Most importantly,
+  this problem can not experienced on Fedora 64 bit OS (which has
+  64 bit long's!)
 ---------------------------------------------------------------------------
 Version 6.1.0  [DEVEL] (rgerhards), 2010-08-12
 
@@ -19,6 +24,10 @@ expected that interfaces, even new ones, break during the initial
 - added imptcp, a simplified, Linux-specific and potentielly fast
   syslog plain tcp input plugin (NOT supporting TLS!)
   [ported from v4]
+---------------------------------------------------------------------------
+Version 5.7.2  [V5-DEVEL] (rgerhards), 2010-10-05
+- bugfix: imfile state file was not written when relative file name
+  for it was specified
 ---------------------------------------------------------------------------
 Version 5.7.1  [V5-DEVEL] (rgerhards), 2010-10-05
 - support for Hadoop's HDFS added (via omhdfs)
@@ -532,6 +541,11 @@ Version 4.7.3  [v4-devel] (rgerhards), 2010-??-??
   this is the counterpart to imuxsock, enabling fast local forwarding
 - added imptcp, a simplified, Linux-specific and potentielly fast
   syslog plain tcp input plugin (NOT supporting TLS!)
+- bugfix: a couple of problems that imfile had on some platforms, namely
+  Ubuntu (not their fault, but occured there)
+- bugfix: imfile utilizes 32 bit to track offset. Most importantly,
+  this problem can not experienced on Fedora 64 bit OS (which has
+  64 bit long's!)
 ---------------------------------------------------------------------------
 Version 4.7.2  [v4-devel] (rgerhards), 2010-05-03
 - bugfix: problems with atomic operations emulaton
@@ -576,6 +590,13 @@ Version 4.7.0  [v4-devel] (rgerhards), 2010-04-14
 - bugfix: potential segfault when -p command line option was used
   Thanks for varmojfekoj for pointing me at this bug.
 - imported changes from 4.5.6 and below
+---------------------------------------------------------------------------
+Version 4.6.5  [v4-stable] (rgerhards), 2010-??-??
+- bugfix: a couple of problems that imfile had on some platforms, namely
+  Ubuntu (not their fault, but occured there)
+- bugfix: imfile utilizes 32 bit to track offset. Most importantly,
+  this problem can not experienced on Fedora 64 bit OS (which has
+  64 bit long's!)
 ---------------------------------------------------------------------------
 Version 4.6.4  [v4-stable] (rgerhards), 2010-08-05
 - bugfix: zero-sized (empty) messages were processed by imtcp
