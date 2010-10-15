@@ -366,6 +366,7 @@ persistStrmState(fileInfo_t *pInfo)
 	/* TODO: create a function persistObj in obj.c? */
 	CHKiRet(strm.Construct(&psSF));
 	lenDir = strlen((char*)glbl.GetWorkDir());
+	if(lenDir > 0)
 		CHKiRet(strm.SetDir(psSF, glbl.GetWorkDir(), lenDir));
 	CHKiRet(strm.SettOperationsMode(psSF, STREAMMODE_WRITE_TRUNC));
 	CHKiRet(strm.SetsType(psSF, STREAMTYPE_FILE_SINGLE));
