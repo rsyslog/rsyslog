@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------
+Version 4.4.2a  [private build] (rgerhards), 2010-10-15
+- bugfix: imfile utilizes 32 bit to track offset. Most importantly,
+  this problem can not experienced on Fedora 64 bit OS (which has
+  64 bit long's!)
+---------------------------------------------------------------------------
 Version 4.4.2  [v4-stable] (rgerhards), 2009-10-09
 - bugfix: invalid handling of zero-sized messages, could lead to mis-
   addressing and potential memory corruption/segfault

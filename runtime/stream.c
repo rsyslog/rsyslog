@@ -779,7 +779,7 @@ rsRetVal strmSerialize(strm_t *pThis, strm_t *pStrm)
 {
 	DEFiRet;
 	int i;
-	long l;
+	int64 l;
 
 	ISOBJ_TYPE_assert(pThis, strm);
 	ISOBJ_TYPE_assert(pStrm, strm);
@@ -801,8 +801,8 @@ rsRetVal strmSerialize(strm_t *pThis, strm_t *pStrm)
 	i = pThis->tOpenMode;
 	objSerializeSCALAR_VAR(pStrm, tOpenMode, INT, i);
 
-	l = (long) pThis->iCurrOffs;
-	objSerializeSCALAR_VAR(pStrm, iCurrOffs, LONG, l);
+	l = pThis->iCurrOffs;
+	objSerializeSCALAR_VAR(pStrm, iCurrOffs, INT64, l);
 
 	CHKiRet(obj.EndSerialize(pStrm));
 

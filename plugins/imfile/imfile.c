@@ -349,12 +349,15 @@ persistStrmState(fileInfo_t *pInfo)
 {
 	DEFiRet;
 	strm_t *psSF = NULL; /* state file (stream) */
+	size_t lenDir;
 
 	ASSERT(pInfo != NULL);
 
 	/* TODO: create a function persistObj in obj.c? */
 	CHKiRet(strmConstruct(&psSF));
-	CHKiRet(strmSetDir(psSF, glbl.GetWorkDir(), strlen((char*)glbl.GetWorkDir())));
+	lenDir = strlen((char*)glbl.GetWorkDir());
+	if(lenDir > 0)
+		CHKiRet(strmSetDir(psSF, glbl.GetWorkDir(), lenDir));
 	CHKiRet(strmSettOperationsMode(psSF, STREAMMODE_WRITE));
 	CHKiRet(strmSetiAddtlOpenFlags(psSF, O_TRUNC));
 	CHKiRet(strmSetsType(psSF, STREAMTYPE_FILE_SINGLE));
