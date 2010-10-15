@@ -1,4 +1,8 @@
 ---------------------------------------------------------------------------
+Version 5.7.2  [V5-DEVEL] (rgerhards), 2010-10-05
+- bugfix: imfile state file was not written when relative file name
+  for it was specified
+---------------------------------------------------------------------------
 Version 5.7.1  [V5-DEVEL] (rgerhards), 2010-10-05
 - support for Hadoop's HDFS added (via omhdfs)
 - imuxsock now optionally use SCM_CREDENTIALS to pull the pid from the log
