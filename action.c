@@ -1358,7 +1358,7 @@ doSubmitToActionQNotAllMarkBatch(action_t *pAction, batch_t *pBatch)
 	time_t now = 0;
 	time_t lastAct;
 	int i;
-	int bProcessMarkMsgs;
+	int bProcessMarkMsgs = 0;
 	int bModifiedFilter;
 	sbool FilterSave[128];
 	sbool *pFilterSave;
