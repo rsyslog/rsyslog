@@ -2588,7 +2588,7 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 							bFound = 1;
 						} else {
 							dbgprintf("regex found at offset %d, new offset %d, tries %d\n",
-								  iOffs, iOffs + pmatch[0].rm_eo, iTry);
+								  iOffs, (int) (iOffs + pmatch[0].rm_eo), iTry);
 							iOffs += pmatch[0].rm_eo;
 							++iTry;
 						}
