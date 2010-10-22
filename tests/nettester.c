@@ -401,8 +401,8 @@ processTestFile(int fd, char *pszFileName)
 		}
 		if(strcmp(expected, buf)) {
 			++iFailed;
-			printf("\nExpected Response:\n'%s'\nActual Response:\n'%s'\n",
-				expected, buf);
+			printf("\nFile %s:\nExpected Response:\n'%s'\nActual Response:\n'%s'\n",
+				pszFileName, expected, buf);
 				ret = 1;
 		}
 
