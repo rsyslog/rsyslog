@@ -33,6 +33,17 @@ Version 5.7.0  [V5-DEVEL] (rgerhards), 2010-09-16
     thanks to Lennart Poettering for this patch
   * sd-systemd API added as part of rsyslog runtime library
 ---------------------------------------------------------------------------
+Version 5.6.0  [V5-STABLE] (rgerhards), 2010-10-19
+
+This release brings all changes and enhancements of the 5.5.x series
+to the v5-stable branch.
+
+- bugfix: a couple of problems that imfile had on some platforms, namely
+  Ubuntu (not their fault, but occured there)
+- bugfix: imfile utilizes 32 bit to track offset. Most importantly,
+  this problem can not experienced on Fedora 64 bit OS (which has
+  64 bit long's!)
+---------------------------------------------------------------------------
 Version 5.5.7  [V5-BETA] (rgerhards), 2010-08-09
 - changed omudpspoof default spoof address to simplify typical use case
   thanks to David Lang for suggesting this

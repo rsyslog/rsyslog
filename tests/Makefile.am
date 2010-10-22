@@ -314,10 +314,12 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/dircreate_off.conf \
 	   cfg.sh
 
-uxsockrcvr_SOURCES = uxsockrcvr.c
 ourtail_SOURCES = ourtail.c
 msleep_SOURCES = msleep.c
 chkseq_SOURCES = chkseq.c
+
+uxsockrcvr_SOURCES = uxsockrcvr.c
+uxsockrcvr_LDADD = $(SOL_LIBS)
 
 tcpflood_SOURCES = tcpflood.c
 tcpflood_LDADD = $(SOL_LIBS)
