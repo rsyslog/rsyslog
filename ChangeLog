@@ -9,6 +9,9 @@ Version 4.7.3  [v4-devel] (rgerhards), 2010-??-??
 - bugfix: imfile utilizes 32 bit to track offset. Most importantly,
   this problem can not experienced on Fedora 64 bit OS (which has
   64 bit long's!)
+- added the $InputFilePersistStateInterval config directive to imfile
+- changed imfile so that the state file is never deleted (makes imfile
+  more robust in regard to fatal failures)
 ---------------------------------------------------------------------------
 Version 4.7.2  [v4-devel] (rgerhards), 2010-05-03
 - bugfix: problems with atomic operations emulaton
