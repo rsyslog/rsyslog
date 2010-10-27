@@ -1,5 +1,11 @@
 ---------------------------------------------------------------------------
 Version 5.6.0  [V5-STABLE] (rgerhards), 2010-10-19
+- private build
+- added the $InputFilePersistStateInterval config directive to imfile
+- changed imfile so that the state file is never deleted (makes imfile
+  more robust in regard to fatal failures)
+---------------------------------------------------------------------------
+Version 5.6.0  [V5-STABLE] (rgerhards), 2010-10-19
 
 This release brings all changes and enhancements of the 5.5.x series
 to the v5-stable branch.

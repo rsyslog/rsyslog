@@ -47,6 +47,7 @@
 #include "datetime.h"
 #include "unicode-helper.h"
 #include "prop.h"
+#include "stringbuf.h"
 
 MODULE_TYPE_INPUT	/* must be present for input modules, do not remove */
 
@@ -67,15 +68,21 @@ typedef struct fileInfo_s {
 	uchar *pszStateFile; /* file in which state between runs is to be stored */
 	int iFacility;
 	int iSeverity;
+	int nRecords; /**< How many records did we process before persisting the stream? */
+	int iPersistStateInterval; /**< how often should state be persisted? (0=on close only) */
 	strm_t *pStrm;	/* its stream (NULL if not assigned) */
 } fileInfo_t;
 
+
+/* forward definitions */
+static rsRetVal persistStrmState(fileInfo_t *pInfo);
 
 /* config variables */
 static uchar *pszFileName = NULL;
 static uchar *pszFileTag = NULL;
 static uchar *pszStateFile = NULL;
 static int iPollInterval = 10;	/* number of seconds to sleep when there was no file activity */
+static int iPersistStateInterval = 0;	/* how often if state file to be persisted? (default 0->never) */
 static int iFacility = 128; /* local0 */
 static int iSeverity = 5;  /* notice, as of rfc 3164 */
 
@@ -153,10 +160,9 @@ openFile(fileInfo_t *pThis)
 
 	CHKiRet(strm.SeekCurrOffs(pThis->pStrm));
 
-	/* OK, we could successfully read the file, so we now can request that it be deleted.
-	 * If we need it again, it will be written on the next shutdown.
+	/* note: we do not delete the state file, so that the last position remains
+	 * known even in the case that rsyslogd aborts for some reason (like powerfail)
 	 */
-	psSF->bDeleteOnClose = 1;
 
 finalize_it:
 	if(psSF != NULL)
@@ -210,6 +216,10 @@ static rsRetVal pollFile(fileInfo_t *pThis, int *pbHadFileData)
 		*pbHadFileData = 1; /* this is just a flag, so set it and forget it */
 		CHKiRet(enqLine(pThis, pCStr)); /* process line */
 		rsCStrDestruct(&pCStr); /* discard string (must be done by us!) */
+		if(pThis->iPersistStateInterval > 0 && pThis->nRecords++ >= pThis->iPersistStateInterval) {
+			persistStrmState(pThis);
+			pThis->nRecords = 0;
+		}
 	}
 
 finalize_it:
@@ -477,6 +487,7 @@ static rsRetVal addMonitor(void __attribute__((unused)) *pVal, uchar *pNewVal)
 
 		pThis->iSeverity = iSeverity;
 		pThis->iFacility = iFacility;
+		pThis->iPersistStateInterval = iPersistStateInterval;
 	} else {
 		errmsg.LogError(0, RS_RET_OUT_OF_DESRIPTORS, "Too many file monitors configured - ignoring this one");
 		ABORT_FINALIZE(RS_RET_OUT_OF_DESRIPTORS);
@@ -522,6 +533,9 @@ CODEmodInit_QueryRegCFSLineHdlr
 	  	NULL, &iFacility, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfilepollinterval", 0, eCmdHdlrInt,
 	  	NULL, &iPollInterval, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfilepersiststateinterval", 0, eCmdHdlrInt,
+
+		NULL, &iPersistStateInterval, STD_LOADABLE_MODULE_ID));
 	/* that command ads a new file! */
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputrunfilemonitor", 0, eCmdHdlrGetWord,
 		addMonitor, NULL, STD_LOADABLE_MODULE_ID));
