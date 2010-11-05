@@ -1,4 +1,8 @@
 ---------------------------------------------------------------------------
+Version 5.6.1  [V5-BETA] (rgerhards), 2010-??-??
+- bugfix: compile failed with --enable-unlimited-select
+  thanks varmojfekoj for the patch
+---------------------------------------------------------------------------
 Version 5.6.0  [V5-STABLE] (rgerhards), 2010-10-19
 
 This release brings all changes and enhancements of the 5.5.x series

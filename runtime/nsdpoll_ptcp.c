@@ -42,7 +42,6 @@
 #include "nspoll.h"
 #include "nsd_ptcp.h"
 #include "nsdpoll_ptcp.h"
-#include "unlimited_select.h"
 
 /* static data */
 DEFobjStaticHelpers
