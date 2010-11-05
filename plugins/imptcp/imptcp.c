@@ -1039,7 +1039,14 @@ CODESTARTwillRun
 		ABORT_FINALIZE(RS_RET_NO_RUN);
 	}
 
-	if((epollfd = epoll_create1(EPOLL_CLOEXEC)) < 0) {
+#	if defined(EPOLL_CLOEXEC) && defined(HAVE_EPOLL_CREATE1)
+		DBGPRINTF("imptcp uses epoll_create1()\n");
+		epollfd = epoll_create1(EPOLL_CLOEXEC);
+#	else
+		DBGPRINTF("imptcp uses epoll_create()\n");
+		epollfd = epoll_create(NUM_EPOLL_EVENTS);
+#	endif
+	if(epollfd < 0) {
 		errmsg.LogError(0, RS_RET_EPOLL_CR_FAILED, "error: epoll_create() failed");
 		ABORT_FINALIZE(RS_RET_NO_RUN);
 	}
