@@ -14,9 +14,6 @@ TESTS = $(TESTRUNS) cfg.sh \
 	manytcp.sh \
 	rsf_getenv.sh \
 	manyptcp.sh \
-	imptcp_large.sh \
-	imptcp_addtlframedelim.sh \
-	imptcp_conndrop.sh \
 	imtcp_conndrop.sh \
 	imtcp_addtlframedelim.sh \
 	sndrcv.sh \
@@ -50,6 +47,13 @@ TESTS = $(TESTRUNS) cfg.sh \
 	dircreate_dflt.sh \
 	dircreate_off.sh \
 	queue-persist.sh 
+
+if ENABLE_IMPTCP
+TESTS +=  \
+	imptcp_large.sh \
+	imptcp_addtlframedelim.sh \
+	imptcp_conndrop.sh 
+endif
 
 if ENABLE_OMUDPSPOOF
 TESTS += sndrcv_omudpspoof.sh \

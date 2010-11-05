@@ -4,6 +4,7 @@ Version 5.6.1  [V5-BETA] (rgerhards), 2010-??-??
   epoll_create().
   Bug: http://bugzilla.adiscon.com/show_bug.cgi?id=204
   Thanks to Nicholas Brink for reporting this problem.
+- bugfix: testbench failed if imptcp was not enabled
 - bugfix: segfault when an *empty* template was used
   Bug: http://bugzilla.adiscon.com/show_bug.cgi?id=206
   Thanks to David Hill for alerting us.
