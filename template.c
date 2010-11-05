@@ -85,7 +85,7 @@ rsRetVal tplToString(struct template *pTpl, msg_t *pMsg, uchar **ppBuf, size_t *
 {
 	DEFiRet;
 	struct templateEntry *pTpe;
-	int iBuf;
+	size_t iBuf;
 	unsigned short bMustBeFreed;
 	uchar *pVal;
 	size_t iLenVal;
@@ -141,7 +141,15 @@ rsRetVal tplToString(struct template *pTpl, msg_t *pMsg, uchar **ppBuf, size_t *
 		pTpe = pTpe->pNext;
 	}
 
-	(*ppBuf)[iBuf] = '\0'; /* space was reserved above (see copy) */
+	if(iBuf == *pLenBuf) {
+		/* in the weired case of an *empty* template, this can happen.
+		 * it is debatable if we should really fix it here or simply
+		 * forbid that case. However, performance toll is minimal, so 
+		 * I tend to permit it. -- 201011-05 rgerhards
+		 */
+		CHKiRet(ExtendBuf(ppBuf, pLenBuf, iBuf + 1));
+	}
+	(*ppBuf)[iBuf] = '\0';
 	
 finalize_it:
 	RETiRet;

@@ -1,5 +1,8 @@
 ---------------------------------------------------------------------------
 Version 5.6.1  [V5-BETA] (rgerhards), 2010-??-??
+- bugfix: segfault when an *empty* template was used
+  Bug: http://bugzilla.adiscon.com/show_bug.cgi?id=206
+  Thanks to David Hill for alerting us.
 - bugfix: compile failed with --enable-unlimited-select
   thanks varmojfekoj for the patch
 ---------------------------------------------------------------------------
