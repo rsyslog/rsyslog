@@ -30,6 +30,13 @@
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
  */
 #include "config.h"
+#if !defined(HAVE_EPOLL_CREATE)
+#	error imptcp requires OS support for epoll - can not build
+	/* imptcp gains speed by using modern Linux capabilities. As such,
+	 * it can only be build on platforms supporting the epoll API.
+	 */
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
