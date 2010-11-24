@@ -76,6 +76,9 @@ Add(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp)
 	if(pNsdGTLS->iMode == 1) {
 		if(waitOp == NSDSEL_RD && gtlsHasRcvInBuffer(pNsdGTLS)) {
 			++pThis->iBufferRcvReady;
+			dbgprintf("nsdsel_gtls: data already present in buffer, initiating "
+				  "dummy select %p->iBufferRcvReady=%d\n",
+				  pThis, pThis->iBufferRcvReady);
 			FINALIZE;
 		}
 		if(pNsdGTLS->rtryCall != gtlsRtry_None) {
@@ -109,6 +112,7 @@ Select(nsdsel_t *pNsdsel, int *piNumReady)
 	if(pThis->iBufferRcvReady > 0) {
 		/* we still have data ready! */
 		*piNumReady = pThis->iBufferRcvReady;
+		dbgprintf("nsdsel_gtls: doing dummy select, data present\n");
 	} else {
 		iRet = nsdsel_ptcp.Select(pThis->pTcp, piNumReady);
 	}
@@ -190,6 +194,9 @@ IsReady(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp, int *pbIsReady)
 	if(pNsdGTLS->iMode == 1) {
 		if(waitOp == NSDSEL_RD && gtlsHasRcvInBuffer(pNsdGTLS)) {
 			*pbIsReady = 1;
+			--pThis->iBufferRcvReady; /* one "pseudo-read" less */
+			dbgprintf("nsdl_gtls: dummy read, decermenting %p->iBufRcvReady, now %d\n",
+				   pThis, pThis->iBufferRcvReady);
 			FINALIZE;
 		}
 		if(pNsdGTLS->rtryCall != gtlsRtry_None) {
@@ -197,6 +204,16 @@ IsReady(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp, int *pbIsReady)
 			/* we used this up for our own internal processing, so the socket
 			 * is not ready from the upper layer point of view.
 			 */
+			*pbIsReady = 0;
+			FINALIZE;
+		}
+		/* now we must ensure that we do not fall back to PTCP if we have
+		 * done a "dummy" select. In that case, we know when the predicate
+		 * is not matched here, we do not have data available for this
+		 * socket. -- rgerhards, 2010-11-20
+		 */
+		if(pThis->iBufferRcvReady) {
+			dbgprintf("nsd_gtls: dummy read, buffer not available for this FD\n");
 			*pbIsReady = 0;
 			FINALIZE;
 		}
