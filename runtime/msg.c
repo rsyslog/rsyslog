@@ -851,7 +851,7 @@ CODESTARTobjDestruct(msg)
 			 * that we trim too often when the counter wraps.
 			 */
 			static unsigned iTrimCtr = 1;
-			currCnt = ATOMIC_INC_AND_FETCH(&iTrimCtr, &mutTrimCtr);
+			currCnt = ATOMIC_INC_AND_FETCH_unsigned(&iTrimCtr, &mutTrimCtr);
 			if(currCnt % 100000 == 0) {
 				malloc_trim(128*1024);
 			}

@@ -1388,7 +1388,7 @@ doSubmitToActionQNotAllMarkBatch(action_t *pAction, batch_t *pBatch)
 					} else {
 						bProcessMarkMsgs = 1;
 					}
-				} while(ATOMIC_CAS(&pAction->f_time, lastAct,
+				} while(ATOMIC_CAS_time_t(&pAction->f_time, lastAct,
 					((msg_t*)(pBatch->pElem[i].pUsrp))->ttGenTime, &pAction->mutCAS) == 0);
 			}
 			if(bProcessMarkMsgs) {
