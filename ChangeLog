@@ -1,7 +1,9 @@
 ---------------------------------------------------------------------------
-Version 5.6.1  [V5-STABLE] (rgerhards), 2010-11-24
+Version 5.6.2  [V5-STABLE] (rgerhards), 2010-11-??
 - bugfix: compile failed on systems without epoll_create1()
   Thanks to David Hill for providing a fix.
+- bugfix: atomic increment for msg object may not work correct on all
+  platforms. Thanks to Chris Metcalf for the patch
 ---------------------------------------------------------------------------
 Version 5.6.1  [V5-STABLE] (rgerhards), 2010-11-24
 - bugfix(important): problem in TLS handling could cause rsyslog to loop
