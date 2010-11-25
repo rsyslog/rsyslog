@@ -1035,7 +1035,6 @@ ENDrunInput
 
 
 /* initialize and return if will run or not */
-#define NUM_EPOLL_EVENTS 10
 BEGINwillRun
 CODESTARTwillRun
 	/* first apply some config settings */
@@ -1052,7 +1051,11 @@ CODESTARTwillRun
 		epollfd = epoll_create1(EPOLL_CLOEXEC);
 #	else
 		DBGPRINTF("imptcp uses epoll_create()\n");
-		epollfd = epoll_create(NUM_EPOLL_EVENTS);
+		/* reading the docs, the number of epoll events passed to
+		 * epoll_create() seems not to be used at all in kernels. So
+		 * we just provide "a" number, happens to be 10.
+		 */
+		epollfd = epoll_create(10);
 #	endif
 	if(epollfd < 0) {
 		errmsg.LogError(0, RS_RET_EPOLL_CR_FAILED, "error: epoll_create() failed");
