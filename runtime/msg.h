@@ -60,9 +60,9 @@ struct msg {
 	flowControl_t flowCtlType; /**< type of flow control we can apply, for enqueueing, needs not to be persisted because
 				        once data has entered the queue, this property is no longer needed. */
 	pthread_mutex_t mut;
+	int	iRefCount;	/* reference counter (0 = unused) */
 	bool	bDoLock;	 /* use the mutex? */
 	bool	bParseHOSTNAME;	/* should the hostname be parsed from the message? */
-	short	iRefCount;	/* reference counter (0 = unused) */
 	   /* background: the hostname is not present on "regular" messages
 	    * received via UNIX domain sockets from the same machine. However,
 	    * it is available when we have a forwarder (e.g. rfc3195d) using local
