@@ -23,6 +23,7 @@
  */
 
 #ifndef	UNLIMITED_SELECT_H_INCLUDED
+#define UNLIMITED_SELECT_H_INCLUDED
 
 #include <string.h>
 #include <stdlib.h>

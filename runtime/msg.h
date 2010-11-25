@@ -60,8 +60,8 @@ struct msg {
 	flowControl_t flowCtlType; /**< type of flow control we can apply, for enqueueing, needs not to be persisted because
 				        once data has entered the queue, this property is no longer needed. */
 	pthread_mutex_t mut;
+	int	iRefCount;	/* reference counter (0 = unused) */
 	sbool	bDoLock;	 /* use the mutex? */
-	short	iRefCount;	/* reference counter (0 = unused) */
 	short	iSeverity;	/* the severity 0..7 */
 	short	iFacility;	/* Facility code 0 .. 23*/
 	short	offAfterPRI;	/* offset, at which raw message WITHOUT PRI part starts in pszRawMsg */

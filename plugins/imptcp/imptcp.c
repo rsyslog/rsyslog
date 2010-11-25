@@ -30,6 +30,13 @@
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
  */
 #include "config.h"
+#if !defined(HAVE_EPOLL_CREATE)
+#	error imptcp requires OS support for epoll - can not build
+	/* imptcp gains speed by using modern Linux capabilities. As such,
+	 * it can only be build on platforms supporting the epoll API.
+	 */
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -1039,7 +1046,18 @@ CODESTARTwillRun
 		ABORT_FINALIZE(RS_RET_NO_RUN);
 	}
 
-	if((epollfd = epoll_create1(EPOLL_CLOEXEC)) < 0) {
+#	if defined(EPOLL_CLOEXEC) && defined(HAVE_EPOLL_CREATE1)
+		DBGPRINTF("imptcp uses epoll_create1()\n");
+		epollfd = epoll_create1(EPOLL_CLOEXEC);
+#	else
+		DBGPRINTF("imptcp uses epoll_create()\n");
+		/* reading the docs, the number of epoll events passed to
+		 * epoll_create() seems not to be used at all in kernels. So
+		 * we just provide "a" number, happens to be 10.
+		 */
+		epollfd = epoll_create(10);
+#	endif
+	if(epollfd < 0) {
 		errmsg.LogError(0, RS_RET_EPOLL_CR_FAILED, "error: epoll_create() failed");
 		ABORT_FINALIZE(RS_RET_NO_RUN);
 	}
