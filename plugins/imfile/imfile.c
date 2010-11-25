@@ -47,6 +47,7 @@
 #include "datetime.h"
 #include "unicode-helper.h"
 #include "prop.h"
+#include "stringbuf.h"
 
 MODULE_TYPE_INPUT	/* must be present for input modules, do not remove */
 

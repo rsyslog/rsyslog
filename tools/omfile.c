@@ -98,7 +98,11 @@ static pthread_mutex_t mutClock;
 static inline uint64
 getClockFileAccess(void)
 {
-	return ATOMIC_INC_AND_FETCH(&clockFileAccess, &mutClock);
+#if HAVE_ATOMIC_BUILTINS_64BIT
+	return ATOMIC_INC_AND_FETCH_uint64(&clockFileAccess, &mutClock);
+#else
+	return ATOMIC_INC_AND_FETCH_unsigned(&clockFileAccess, &mutClock);
+#endif
 }
 
 

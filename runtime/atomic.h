@@ -33,6 +33,8 @@
  */
 #ifndef INCLUDED_ATOMIC_H
 #define INCLUDED_ATOMIC_H
+#include <time.h>
+#include "typedefs.h"
 
 /* for this release, we disable atomic calls because there seem to be some
  * portability problems and we can not fix that without destabilizing the build.
@@ -42,7 +44,9 @@
 #	define ATOMIC_SUB(data, val, phlpmut) __sync_fetch_and_sub(data, val)
 #	define ATOMIC_ADD(data, val) __sync_fetch_and_add(&(data), val)
 #	define ATOMIC_INC(data, phlpmut) ((void) __sync_fetch_and_add(data, 1))
-#	define ATOMIC_INC_AND_FETCH(data, phlpmut) __sync_fetch_and_add(data, 1)
+#	define ATOMIC_INC_AND_FETCH_int(data, phlpmut) __sync_fetch_and_add(data, 1)
+#	define ATOMIC_INC_AND_FETCH_unsigned(data, phlpmut) __sync_fetch_and_add(data, 1)
+#	define ATOMIC_INC_AND_FETCH_uint64(data, phlpmut) __sync_fetch_and_add(data, 1)
 #	define ATOMIC_DEC(data, phlpmut) ((void) __sync_sub_and_fetch(data, 1))
 #	define ATOMIC_DEC_AND_FETCH(data, phlpmut) __sync_sub_and_fetch(data, 1)
 #	define ATOMIC_FETCH_32BIT(data, phlpmut) ((unsigned) __sync_fetch_and_and(data, 0xffffffff))
@@ -51,6 +55,7 @@
 #	define ATOMIC_STORE_1_TO_INT(data, phlpmut) __sync_fetch_and_or(data, 1)
 #	define ATOMIC_STORE_INT_TO_INT(data, val) __sync_fetch_and_or(&(data), (val))
 #	define ATOMIC_CAS(data, oldVal, newVal, phlpmut) __sync_bool_compare_and_swap(data, (oldVal), (newVal))
+#	define ATOMIC_CAS_time_t(data, oldVal, newVal, phlpmut) __sync_bool_compare_and_swap(data, (oldVal), (newVal))
 #	define ATOMIC_CAS_VAL(data, oldVal, newVal, phlpmut) __sync_val_compare_and_swap(data, (oldVal), (newVal));
 
 	/* functions below are not needed if we have atomics */
@@ -104,6 +109,20 @@
 		return(bSuccess);
 	}
 
+	static inline int
+	ATOMIC_CAS_time_t(time_t *data, time_t oldVal, time_t newVal, pthread_mutex_t *phlpmut) {
+		int bSuccess;
+		pthread_mutex_lock(phlpmut);
+		if(*data == oldVal) {
+			*data = newVal;
+			bSuccess = 1;
+		} else {
+			bSuccess = 0;
+		}
+		pthread_mutex_unlock(phlpmut);
+		return(bSuccess);
+	}
+
 
 	static inline int
 	ATOMIC_CAS_VAL(int *data, int oldVal, int newVal, pthread_mutex_t *phlpmut) {
@@ -124,8 +143,26 @@
 	}
 
 	static inline int
-	ATOMIC_INC_AND_FETCH(int *data, pthread_mutex_t *phlpmut) {
+	ATOMIC_INC_AND_FETCH_int(int *data, pthread_mutex_t *phlpmut) {
 		int val;
+		pthread_mutex_lock(phlpmut);
+		val = ++(*data);
+		pthread_mutex_unlock(phlpmut);
+		return(val);
+	}
+
+	static inline unsigned
+	ATOMIC_INC_AND_FETCH_unsigned(unsigned *data, pthread_mutex_t *phlpmut) {
+		unsigned val;
+		pthread_mutex_lock(phlpmut);
+		val = ++(*data);
+		pthread_mutex_unlock(phlpmut);
+		return(val);
+	}
+
+	static inline unsigned
+	ATOMIC_INC_AND_FETCH_uint64(uint64 *data, pthread_mutex_t *phlpmut) {
+		uint64 val;
 		pthread_mutex_lock(phlpmut);
 		val = ++(*data);
 		pthread_mutex_unlock(phlpmut);
@@ -158,7 +195,9 @@
 	}
 #if 0
 #	warning "atomic builtins not available, using nul operations - rsyslogd will probably be racy!"
-#	define ATOMIC_INC_AND_FETCH(data) (++(data))
+#	define ATOMIC_INC_AND_FETCH_int(data) (++(data))
+#	define ATOMIC_INC_AND_FETCH_unsigned(data) (++(data))
+#	define ATOMIC_INC_AND_FETCH_uint64(data) (++(data))
 #	define ATOMIC_STORE_1_TO_32BIT(data) (data) = 1 // TODO: del
 #endif
 #	define DEF_ATOMIC_HELPER_MUT(x)  pthread_mutex_t x
