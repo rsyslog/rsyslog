@@ -1035,6 +1035,7 @@ ENDrunInput
 
 
 /* initialize and return if will run or not */
+#define NUM_EPOLL_EVENTS 10
 BEGINwillRun
 CODESTARTwillRun
 	/* first apply some config settings */
