@@ -86,6 +86,16 @@ level may be needed. Even if you need quick response, 1 seconds should
 be well enough. Please note that imfile keeps reading files as long as
 there is any data in them. So a "polling sleep" will only happen when
 nothing is left to be processed.</li>
+<li><b>$InputFilePersistStateInterval</b> [lines]</b><br>
+Available in 4.7.3+, 5.6.2+<br>
+Specifies how often the state file shall be written when processing the input
+file. The default value is 0, which means a new state file is only written when 
+the monitored files is being closed (end of rsyslogd execution). Any other
+value n means that the state file is written every time n file lines have
+been processed. This setting can be used to guard against message duplication due
+to fatal errors (like power fail). Note that this setting affects imfile
+performance, especially when set to a low value. Frequently writing the state
+file is very time consuming.
 </ul>
 <b>Caveats/Known Bugs:</b>
 <p>So far, only 100 files can be monitored. If more are needed,
