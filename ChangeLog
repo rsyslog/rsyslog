@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 5.6.2  [V5-STABLE] (rgerhards), 2010-11-??
+Version 5.6.2  [V5-STABLE] (rgerhards), 2010-11-30
 - bugfix: compile failed on systems without epoll_create1()
   Thanks to David Hill for providing a fix.
 - bugfix: atomic increment for msg object may not work correct on all
