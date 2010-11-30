@@ -487,7 +487,7 @@ AC_SUBST(PGSQL_LIBS)
 
 # oracle (OCI) support
 AC_ARG_ENABLE(oracle,
-	[AS_HELP_STRING([--enable-oracle],[Enable native Oracle database support @<:@default=no@:>@])],
+	[AS_HELP_STRING([--enable-oracle],[Enable native Oracle database support @<:@default=no@:>@]. (Check your ORACLE_HOME environment variable!))],
 	[case "${enableval}" in
 	 yes) enable_oracle="yes" ;;
 	 no) enable_oracle="no" ;;
@@ -496,23 +496,41 @@ AC_ARG_ENABLE(oracle,
 	[enable_oracle=no]
 )
 if test "x$enable_oracle" = "xyes"; then
-    AC_CHECK_PROG(
-	[HAVE_ORACLE_CONFIG],
-	[oracle-instantclient-config],
-	[yes],,,
-	)
-    if test "x${HAVE_ORACLE_CONFIG}" != "xyes"; then
-	AC_MSG_FAILURE([oracle-instantclient-config not found in PATH])
+   if test -d "$ORACLE_HOME"
+   then
+       AC_CHECK_LIB([occi], [OCIEnvCreate],
+                    [ORACLE_CFLAGS=-I$ORACLE_HOME/rdbms/public]
+		    [ORACLE_LIBS=-L$ORACLE_HOME/lib -locci],
+		    [AC_MSG_FAILURE([Oracle (OCI) library is missing: wrong oracle home])],
+		    [-I$ORACLE_HOME/rdbms/public/ -L$ORACLE_HOME/lib -locci -lclntsh ]
+		 )
+    elif test -d "$ORACLE_LIB_PATH" -a -d "$ORACLE_INCLUDE_PATH"
+    then
+       AC_CHECK_LIB([occi], [OCIEnvCreate],
+                    [ORACLE_CFLAGS=-I$ORACLE_INCLUDE_PATH]
+		    [ORACLE_LIBS=-L$ORACLE_LIB_PATH -locci],
+		    [AC_MSG_FAILURE([Oracle (OCI) library is missing: wrong oracle directories])],
+		    [-I$ORACLE_INCLUDE_PATH -L$ORACLE_LIB_PATH -locci -lclntsh ]
+		 )
+    else
+        AC_CHECK_PROG(
+      	    [HAVE_ORACLE_CONFIG],
+            [oracle-instantclient-config],
+            [yes],,,
+            )
+        if test "x${HAVE_ORACLE_CONFIG}" != "xyes"; then
+           AC_MSG_FAILURE([oracle-instantclient-config not found in PATH])
+        fi
+        AC_CHECK_LIB(
+		[occi],
+        	[OCIEnvCreate],
+        	[ORACLE_CFLAGS="`oracle-instantclient-config --cflags`"
+        	ORACLE_LIBS="`oracle-instantclient-config --libs`"
+        	],
+        	[AC_MSG_FAILURE([Oracle (OCI) libraray is missing])],
+        	[`oracle-instantclient-config --libs --cflags`]
+        	)
     fi
-    AC_CHECK_LIB(
-	[occi],
-	[OCIEnvCreate],
-	[ORACLE_CFLAGS="`oracle-instantclient-config --cflags`"
-	ORACLE_LIBS="`oracle-instantclient-config --libs`"
-	],
-	[AC_MSG_FAILURE([Oracle (OCI) libraray is missing])],
-	[`oracle-instantclient-config --libs --cflags`]
-	)
 fi
 AM_CONDITIONAL(ENABLE_ORACLE, test x$enable_oracle = xyes)
 AC_SUBST(ORACLE_CFLAGS)
