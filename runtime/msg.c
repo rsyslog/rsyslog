@@ -37,6 +37,7 @@
 #include <ctype.h>
 #include <sys/socket.h>
 #include <netdb.h>
+#include <libee/libee.h>
 #if HAVE_MALLOC_H
 #  include <malloc.h>
 #endif
@@ -707,6 +708,7 @@ static inline rsRetVal msgBaseConstruct(msg_t **ppThis)
 	pM->pRcvFromIP = NULL;
 	pM->rcvFrom.pRcvFrom = NULL;
 	pM->pRuleset = NULL;
+	pM->event = NULL;
 	memset(&pM->tRcvdAt, 0, sizeof(pM->tRcvdAt));
 	memset(&pM->tTIMESTAMP, 0, sizeof(pM->tTIMESTAMP));
 	pM->TAG.pszTAG = NULL;
@@ -833,6 +835,8 @@ CODESTARTobjDestruct(msg)
 			rsCStrDestruct(&pThis->pCSPROCID);
 		if(pThis->pCSMSGID != NULL)
 			rsCStrDestruct(&pThis->pCSMSGID);
+		if(pThis->event != NULL)
+			ee_deleteEvent(pThis->event);
 #	ifndef HAVE_ATOMIC_BUILTINS
 		MsgUnlock(pThis);
 # 	endif

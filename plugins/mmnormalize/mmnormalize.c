@@ -126,6 +126,17 @@ CODESTARTdoAction
 	if(r != 0) {
 		DBGPRINTF("error %d during ln_normalize\n", r);
 	}
+	/***DEBUG***/
+			{
+			dbgprintf("mmnormalize: event ptr now is %p\n", pMsg->event);
+			char *cstr;
+			es_emptyStr(str);
+			ee_fmtEventToJSON(pMsg->event, &str);
+			cstr = es_str2cstr(str, NULL);
+			dbgprintf("mmnormalize generated: %s\n", cstr);
+			free(cstr);
+			}
+	/***END DEBUG***/
 	es_deleteStr(str);
 ENDdoAction
 
@@ -169,6 +180,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		ee_exitCtx(pData->ctxee);
 		ABORT_FINALIZE(RS_RET_ERR_LIBLOGNORM_INIT);
 	}
+	ln_setEECtx(pData->ctxln, pData->ctxee);
 	if(ln_loadSamples(pData->ctxln, (char*) cs.sampdb) != 0) {
 		errmsg.LogError(0, RS_RET_NO_RULESET, "error: sample db '%s' could not be loaded "
 				"cannot activate action", cs.sampdb);
