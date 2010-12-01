@@ -586,7 +586,14 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 		cstrDestruct(&pStrB);
 		return 1;
 	}
-	cstrDestruct(&pStrB); /* no longer needed, now use ID */
+	if(pTpe->data.field.propid == PROP_CEE) {
+		/* in CEE case, we need to preserve the actual property name */
+		if((pTpe->data.field.propName = es_newStrFromCStr((char*)cstrGetSzStrNoNULL(pStrB)+2, cstrLen(pStrB)-2)) == NULL) {
+			cstrDestruct(&pStrB);
+			return 1;
+		}
+	}
+	cstrDestruct(&pStrB);
 
 	/* Check frompos, if it has an R, then topos should be a regex */
 	if(*p == ':') {
@@ -1073,6 +1080,8 @@ void tplDeleteAll(void)
 						regexp.regfree(&(pTpeDel->data.field.re));
 					}
 				}
+				if(pTpeDel->data.field.propName != NULL)
+					es_deleteStr(pTpeDel->data.field.propName);
 				break;
 			}
 			/*dbgprintf("\n");*/
@@ -1128,6 +1137,8 @@ void tplDeleteNew(void)
 						regexp.regfree(&(pTpeDel->data.field.re));
 					}
 				}
+				if(pTpeDel->data.field.propName != NULL)
+					es_deleteStr(pTpeDel->data.field.propName);
 				break;
 			}
 			/*dbgprintf("\n");*/
@@ -1177,6 +1188,11 @@ void tplPrintList(void)
 				break;
 			case FIELD:
 				dbgprintf("(FIELD), value: '%d' ", pTpe->data.field.propid);
+				if(pTpe->data.field.propid == PROP_CEE) {
+					char *cstr = es_str2cstr(pTpe->data.field.propName, NULL);
+					dbgprintf("[EE-Property: '%s'] ", cstr);
+					free(cstr);
+				}
 				switch(pTpe->data.field.eDateFormat) {
 				case tplFmtDefault:
 					break;

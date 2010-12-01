@@ -126,7 +126,7 @@ CODESTARTdoAction
 	if(r != 0) {
 		DBGPRINTF("error %d during ln_normalize\n", r);
 	}
-	/***DEBUG***/
+	/***DEBUG***/ // TODO: remove after initial testing - 2010-12-01
 			{
 			dbgprintf("mmnormalize: event ptr now is %p\n", pMsg->event);
 			char *cstr;

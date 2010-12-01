@@ -25,6 +25,7 @@
 #ifndef	TEMPLATE_H_INCLUDED
 #define	TEMPLATE_H_INCLUDED 1
 
+#include <libestr.h>
 #include "regexp.h"
 #include "stringbuf.h"
 
@@ -87,6 +88,8 @@ struct templateEntry {
 			unsigned has_fields; /* support for field-counting: field to extract */
 			unsigned char field_delim; /* support for field-counting: field delemiter char */
 			int field_expand;	/* use multiple instances of the field delimiter as a single one? */
+
+			es_str_t *propName;	/**< property name (currently being used for CEE only) */
 
 			enum tplFormatTypes eDateFormat;
 			enum tplFormatCaseConvTypes eCaseConv;

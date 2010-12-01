@@ -445,6 +445,10 @@ rsRetVal propNameToID(cstr_t *pCSPropName, propid_t *pPropID)
 		*pPropID = PROP_SYS_MINUTE;
 	} else if(!strcmp((char*) pName, "$myhostname")) {
 		*pPropID = PROP_SYS_MYHOSTNAME;
+	} else if(!strcmp((char*) pName, "$!all-json")) {
+		*pPropID = PROP_CEE_ALL_JSON;
+	} else if(!strncmp((char*) pName, "$!", 2)) {
+		*pPropID = PROP_CEE;
 	} else {
 		*pPropID = PROP_INVALID;
 		iRet = RS_RET_VAR_NOT_FOUND;
@@ -2265,7 +2269,7 @@ static uchar *getNOW(eNOWType eNow)
 	*pPropLen = sizeof("**OUT OF MEMORY**") - 1; \
 	return(UCHAR_CONSTANT("**OUT OF MEMORY**"));}
 uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
-                 propid_t propID, size_t *pPropLen,
+                 propid_t propid, size_t *pPropLen,
 		 unsigned short *pbMustBeFreed)
 {
 	uchar *pRes; /* result pointer */
@@ -2274,6 +2278,7 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 	uchar *pBuf;
 	int iLen;
 	short iOffs;
+	es_str_t *str; /* for CEE handling, temp. string */
 
 	BEGINfunc
 	assert(pMsg != NULL);
@@ -2287,7 +2292,7 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 
 	*pbMustBeFreed = 0;
 
-	switch(propID) {
+	switch(propid) {
 		case PROP_MSG:
 			pRes = getMSG(pMsg);
 			bufLen = getMSGLen(pMsg);
@@ -2420,11 +2425,18 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 		case PROP_SYS_MYHOSTNAME:
 			pRes = glbl.GetLocalHostName();
 			break;
+		case PROP_CEE_ALL_JSON:
+			str = es_newStr(512);
+			ee_fmtEventToJSON(pMsg->event, &str);
+			pRes = (uchar*) es_str2cstr(str, "#000");
+			es_deleteStr(str);
+			*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
+			break;
 		default:
 			/* there is no point in continuing, we may even otherwise render the
 			 * error message unreadable. rgerhards, 2007-07-10
 			 */
-			dbgprintf("invalid property id: '%d'\n", propID);
+			dbgprintf("invalid property id: '%d'\n", propid);
 			*pbMustBeFreed = 0;
 			*pPropLen = sizeof("**INVALID PROPERTY NAME**") - 1;
 			return UCHAR_CONSTANT("**INVALID PROPERTY NAME**");
