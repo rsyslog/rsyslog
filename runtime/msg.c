@@ -2227,6 +2227,40 @@ static uchar *getNOW(eNOWType eNow)
 #undef tmpBUFSIZE /* clean up */
 
 
+/* Get a CEE-Property from libee. This function probably should be
+ * placed somewhere else, but this smells like a big restructuring
+ * useful in any case. So for the time being, I'll simply leave the
+ * function here, as the context seems good enough. -- rgerhards, 2010-12-01
+ */
+static inline void
+getCEEPropVal(msg_t *pMsg, struct templateEntry *pTpe, uchar **pRes, unsigned short *pbMustBeFreed)
+{
+	struct ee_field *field;
+	es_str_t *str;
+
+	if(*pbMustBeFreed)
+		free(*pRes);
+	*pRes = NULL;
+
+	if(pMsg->event == NULL) goto finalize_it;
+	if((field = ee_getEventField(pMsg->event, pTpe->data.field.propName)) == NULL)
+		goto finalize_it;
+	/* right now, we always extract data from the first field value. A reason for this
+	 * is that as of now (2010-12-01) liblognorm never populates more than one ;)
+	 */
+	if((str = ee_getFieldValueAsStr(field, 0)) == NULL) goto finalize_it;
+	*pRes = (unsigned char*) es_str2cstr(str, "#000");
+	es_deleteStr(str);
+	*pbMustBeFreed = 1;
+
+finalize_it:
+	if(*pRes == NULL) {
+		/* could not find any value, so set it to empty */
+		*pRes = (unsigned char*)"";
+		*pbMustBeFreed = 0;
+	}
+}
+
 /* This function returns a string-representation of the 
  * requested message property. This is a generic function used
  * to abstract properties so that these can be easier
@@ -2431,6 +2465,9 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			pRes = (uchar*) es_str2cstr(str, "#000");
 			es_deleteStr(str);
 			*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
+			break;
+		case PROP_CEE:
+			getCEEPropVal(pMsg, pTpe, &pRes, pbMustBeFreed);
 			break;
 		default:
 			/* there is no point in continuing, we may even otherwise render the
