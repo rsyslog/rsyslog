@@ -31,6 +31,10 @@ AC_CANONICAL_HOST
 
 PKG_PROG_PKG_CONFIG
 
+# modules we require
+PKG_CHECK_MODULES(LIBESTR, libestr >= 0.1.0)
+PKG_CHECK_MODULES(LIBEE, libee >= 0.1.0)
+
 case "${host}" in
   *-*-linux*)
     os_type="linux"
@@ -714,6 +718,24 @@ AC_ARG_ENABLE(imdiag,
 AM_CONDITIONAL(ENABLE_IMDIAG, test x$enable_imdiag = xyes)
 
 
+# mmnormalize
+AC_ARG_ENABLE(mmnormalize,
+        [AS_HELP_STRING([--enable-mmnormalize],[Enable building mmnormalize support @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_mmnormalize="yes" ;;
+          no) enable_mmnormalize="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-mmnormalize) ;;
+         esac],
+        [enable_mmnormalize=no]
+)
+if test "x$enable_mmnormalize" = "xyes"; then
+	PKG_CHECK_MODULES(LIBLOGNORM, lognorm >= 0.1.0)
+fi
+AM_CONDITIONAL(ENABLE_MMNORMALIZE, test x$enable_mmnormalize = xyes)
+AC_SUBST(LOGNORM_CFLAGS)
+AC_SUBST(LOGNORM_LIBS)
+
+
 # RELP support
 AC_ARG_ENABLE(relp,
         [AS_HELP_STRING([--enable-relp],[Enable RELP support @<:@default=no@:>@])],
@@ -1072,6 +1094,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omsnmp/Makefile \
 		plugins/omoracle/Makefile \
 		plugins/omudpspoof/Makefile \
+		plugins/mmnormalize/Makefile \
 		plugins/cust1/Makefile \
 		java/Makefile \
 		tests/Makefile])
@@ -1113,6 +1136,9 @@ echo
 echo "---{ parser modules }---"
 echo "    pmrfc3164sd module will be compiled:      $enable_pmrfc3164sd"
 echo "    pmlastmsg module will be compiled:        $enable_pmlastmsg"
+echo
+echo "---{ message modification modules }---"
+echo "    mmnormalize module will be compiled:      $enable_mmnormalize"
 echo
 echo "---{ database support }---"
 echo "    MySql support enabled:                    $enable_mysql"

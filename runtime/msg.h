@@ -33,6 +33,7 @@
 #include "syslogd-types.h"
 #include "template.h"
 #include "atomic.h"
+#include "libee/libee.h"
 
 
 /* rgerhards 2004-11-08: The following structure represents a
@@ -105,6 +106,7 @@ struct msg {
 				   it obviously is solved in way or another...). */
 	struct syslogTime tRcvdAt;/* time the message entered this program */
 	struct syslogTime tTIMESTAMP;/* (parsed) value of the timestamp */
+	struct ee_event	*event;	/**< libee event */
 	/* some fixed-size buffers to save malloc()/free() for frequently used fields (from the default templates) */
 	uchar szRawMsg[CONF_RAWMSG_BUFSIZE];	/* most messages are small, and these are stored here (without malloc/free!) */
 	uchar szHOSTNAME[CONF_HOSTNAME_BUFSIZE];
@@ -170,6 +172,7 @@ uchar *getRcvFrom(msg_t *pM);
 void getTAG(msg_t *pM, uchar **ppBuf, int *piLen);
 char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt);
 char *getPRI(msg_t *pMsg);
+void getRawMsg(msg_t *pM, uchar **pBuf, int *piLen);
 
 
 /* TODO: remove these five (so far used in action.c) */

@@ -1198,7 +1198,7 @@ char *getProtocolVersionString(msg_t *pM)
 }
 
 
-static inline void
+void
 getRawMsg(msg_t *pM, uchar **pBuf, int *piLen)
 {
 	if(pM == NULL) {

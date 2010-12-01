@@ -179,6 +179,10 @@ if ENABLE_RFC3195
 SUBDIRS += plugins/im3195
 endif
 
+if ENABLE_MMNORMALIZE
+SUBDIRS += plugins/mmnormalize
+endif
+
 if ENABLE_ORACLE
 SUBDIRS += plugins/omoracle
 endif
