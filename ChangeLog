@@ -1,4 +1,8 @@
 ---------------------------------------------------------------------------
+Version 5.7.3  [V5-DEVEL] (rgerhards), 2010-12-??
+- bugfix: fixed build problems on some platforms
+  namely those that have 32bit atomic operations but not 64 bit ones
+---------------------------------------------------------------------------
 Version 5.7.2  [V5-DEVEL] (rgerhards), 2010-11-26
 - bugfix(important): problem in TLS handling could cause rsyslog to loop
   in a tight loop, effectively disabling functionality and bearing the
