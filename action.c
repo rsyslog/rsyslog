@@ -775,6 +775,14 @@ finalize_it:
 	 */
 	switch(pThis->eParamPassing) {
 	case ACT_STRING_PASSING:
+		/* nothing to do in this case */
+		/* TODO: find a better way of handling this situation, as it
+		 * costs performance to delete this array each time.
+		 */
+		for(i = 0 ; i < pThis->iNumTpls ; ++i) {
+			free(((uchar**)actParams)[i]);
+			((uchar**)actParams)[i] = NULL;
+		}
 		break;
 	case ACT_ARRAY_PASSING:
 		cleanupDoActionParams(pThis, actParams); /* iRet ignored! */
