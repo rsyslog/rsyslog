@@ -530,6 +530,10 @@ uchar *propIDToName(propid_t propID)
 			return UCHAR_CONSTANT("$MINUTE");
 		case PROP_SYS_MYHOSTNAME:
 			return UCHAR_CONSTANT("$MYHOSTNAME");
+		case PROP_CEE:
+			return UCHAR_CONSTANT("*CEE-based property*");
+		case PROP_CEE_ALL_JSON:
+			return UCHAR_CONSTANT("$!all-json");
 		default:
 			return UCHAR_CONSTANT("*invalid property id*");
 	}
@@ -2233,7 +2237,7 @@ static uchar *getNOW(eNOWType eNow)
  * function here, as the context seems good enough. -- rgerhards, 2010-12-01
  */
 static inline void
-getCEEPropVal(msg_t *pMsg, struct templateEntry *pTpe, uchar **pRes, unsigned short *pbMustBeFreed)
+getCEEPropVal(msg_t *pMsg, es_str_t *propName, uchar **pRes, int *buflen, unsigned short *pbMustBeFreed)
 {
 	struct ee_field *field;
 	es_str_t *str;
@@ -2243,7 +2247,7 @@ getCEEPropVal(msg_t *pMsg, struct templateEntry *pTpe, uchar **pRes, unsigned sh
 	*pRes = NULL;
 
 	if(pMsg->event == NULL) goto finalize_it;
-	if((field = ee_getEventField(pMsg->event, pTpe->data.field.propName)) == NULL)
+	if((field = ee_getEventField(pMsg->event, propName)) == NULL)
 		goto finalize_it;
 	/* right now, we always extract data from the first field value. A reason for this
 	 * is that as of now (2010-12-01) liblognorm never populates more than one ;)
@@ -2251,6 +2255,7 @@ getCEEPropVal(msg_t *pMsg, struct templateEntry *pTpe, uchar **pRes, unsigned sh
 	if((str = ee_getFieldValueAsStr(field, 0)) == NULL) goto finalize_it;
 	*pRes = (unsigned char*) es_str2cstr(str, "#000");
 	es_deleteStr(str);
+	*buflen = (int) ustrlen(*pRes);
 	*pbMustBeFreed = 1;
 
 finalize_it:
@@ -2303,7 +2308,7 @@ finalize_it:
 	*pPropLen = sizeof("**OUT OF MEMORY**") - 1; \
 	return(UCHAR_CONSTANT("**OUT OF MEMORY**"));}
 uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
-                 propid_t propid, size_t *pPropLen,
+                 propid_t propid, es_str_t *propName, size_t *pPropLen,
 		 unsigned short *pbMustBeFreed)
 {
 	uchar *pRes; /* result pointer */
@@ -2460,14 +2465,13 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			pRes = glbl.GetLocalHostName();
 			break;
 		case PROP_CEE_ALL_JSON:
-			str = es_newStr(512);
 			ee_fmtEventToJSON(pMsg->event, &str);
 			pRes = (uchar*) es_str2cstr(str, "#000");
 			es_deleteStr(str);
 			*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
 			break;
 		case PROP_CEE:
-			getCEEPropVal(pMsg, pTpe, &pRes, pbMustBeFreed);
+			getCEEPropVal(pMsg, propName, &pRes, &bufLen, pbMustBeFreed);
 			break;
 		default:
 			/* there is no point in continuing, we may even otherwise render the
@@ -2481,6 +2485,7 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 
 	/* If we did not receive a template pointer, we are already done... */
 	if(pTpe == NULL) {
+		*pPropLen = (bufLen == -1) ? ustrlen(pRes) : bufLen;
 		return pRes;
 	}
 	
@@ -3096,7 +3101,7 @@ msgGetMsgVar(msg_t *pThis, cstr_t *pstrPropName, var_t **ppVar)
 	/* always call MsgGetProp() without a template specifier */
 	/* TODO: optimize propNameToID() call -- rgerhards, 2009-06-26 */
 	propNameToID(pstrPropName, &propid);
-	pszProp = (uchar*) MsgGetProp(pThis, NULL, propid, &propLen, &bMustBeFreed);
+	pszProp = (uchar*) MsgGetProp(pThis, NULL, propid, NULL, &propLen, &bMustBeFreed);
 
 	/* now create a string object out of it and hand that over to the var */
 	CHKiRet(rsCStrConstructFromszStr(&pstrProp, pszProp));

@@ -117,6 +117,13 @@ currently supported:</p>
 the property. There must be an exact match, wildcards are not supported.</td>
 </tr>
 <tr>
+<td>isempty</td>
+<td>Checks if the property is empty. The value is discarded. This is
+especially useful when working with normalized data, where some fields
+may be populated based on normalization result.
+Available since 6.6.2.
+</tr>
+<tr>
 <td>isequal</td>
 <td>Compares the "value" string provided and the property
 contents. These two values must be exactly equal to match. The

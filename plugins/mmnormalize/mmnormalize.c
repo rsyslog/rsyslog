@@ -126,18 +126,17 @@ CODESTARTdoAction
 	if(r != 0) {
 		DBGPRINTF("error %d during ln_normalize\n", r);
 	}
+	es_deleteStr(str);
 	/***DEBUG***/ // TODO: remove after initial testing - 2010-12-01
 			{
-			dbgprintf("mmnormalize: event ptr now is %p\n", pMsg->event);
 			char *cstr;
-			es_emptyStr(str);
 			ee_fmtEventToJSON(pMsg->event, &str);
 			cstr = es_str2cstr(str, NULL);
 			dbgprintf("mmnormalize generated: %s\n", cstr);
 			free(cstr);
+			es_deleteStr(str);
 			}
 	/***END DEBUG***/
-	es_deleteStr(str);
 ENDdoAction
 
 
@@ -192,6 +191,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 
 	/* all config vars auto-reset! */
 	cs.bUseRawMsg = 0;
+	free(cs.sampdb);
 	cs.sampdb = NULL;
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct

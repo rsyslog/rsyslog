@@ -113,7 +113,8 @@ rsRetVal tplToString(struct template *pTpl, msg_t *pMsg, uchar **ppBuf, size_t *
 			iLenVal = pTpe->data.constant.iLenConstant;
 			bMustBeFreed = 0;
 		} else 	if(pTpe->eEntryType == FIELD) {
-			pVal = (uchar*) MsgGetProp(pMsg, pTpe, pTpe->data.field.propid, &iLenVal, &bMustBeFreed);
+			pVal = (uchar*) MsgGetProp(pMsg, pTpe, pTpe->data.field.propid,
+						   pTpe->data.field.propName,  &iLenVal, &bMustBeFreed);
 			/* we now need to check if we should use SQL option. In this case,
 			 * we must go over the generated string and escape '\'' characters.
 			 * rgerhards, 2005-09-22: the option values below look somewhat misplaced,
@@ -192,7 +193,8 @@ rsRetVal tplToArray(struct template *pTpl, msg_t *pMsg, uchar*** ppArr)
 		if(pTpe->eEntryType == CONSTANT) {
 			CHKmalloc(pArr[iArr] = (uchar*)strdup((char*) pTpe->data.constant.pConstant));
 		} else 	if(pTpe->eEntryType == FIELD) {
-			pVal = (uchar*) MsgGetProp(pMsg, pTpe, pTpe->data.field.propid, &propLen, &bMustBeFreed);
+			pVal = (uchar*) MsgGetProp(pMsg, pTpe, pTpe->data.field.propid,
+						   pTpe->data.field.propName,  &propLen, &bMustBeFreed);
 			if(bMustBeFreed) { /* if it must be freed, it is our own private copy... */
 				pArr[iArr] = pVal; /* ... so we can use it! */
 			} else {

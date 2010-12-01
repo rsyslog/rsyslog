@@ -127,7 +127,8 @@ typedef enum {
 	FIOP_ISEQUAL  = 2,	/* is (exactly) equal? */
 	FIOP_STARTSWITH = 3,	/* starts with a string? */
 	FIOP_REGEX = 4,		/* matches a (BRE) regular expression? */
-	FIOP_EREREGEX = 5	/* matches a ERE regular expression? */
+	FIOP_EREREGEX = 5,	/* matches a ERE regular expression? */
+	FIOP_ISEMPTY = 6	/* string empty <=> strlen(s) == 0 ?*/
 } fiop_t;
 
 /* types of configuration handlers

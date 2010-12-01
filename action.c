@@ -775,7 +775,6 @@ finalize_it:
 	 */
 	switch(pThis->eParamPassing) {
 	case ACT_STRING_PASSING:
-		/* nothing to do in that case */
 		break;
 	case ACT_ARRAY_PASSING:
 		cleanupDoActionParams(pThis, actParams); /* iRet ignored! */
