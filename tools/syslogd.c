@@ -2111,11 +2111,6 @@ static void printVersion(void)
 #else
 	printf("\tFEATURE_LARGEFILE:\t\t\tNo\n");
 #endif
-#ifdef	USE_NETZIP
-	printf("\tFEATURE_NETZIP (message compression):\tYes\n");
-#else
-	printf("\tFEATURE_NETZIP (message compression):\tNo\n");
-#endif
 #if defined(SYSLOG_INET) && defined(USE_GSSAPI)
 	printf("\tGSSAPI Kerberos 5 support:\t\tYes\n");
 #else
@@ -2127,9 +2122,14 @@ static void printVersion(void)
 	printf("\tFEATURE_DEBUG (debug build, slow code):\tNo\n");
 #endif
 #ifdef	HAVE_ATOMIC_BUILTINS
-	printf("\tAtomic operations supported:\t\tYes\n");
+	printf("\t32bit Atomic operations supported:\tYes\n");
 #else
-	printf("\tAtomic operations supported:\t\tNo\n");
+	printf("\t32bit Atomic operations supported:\tNo\n");
+#endif
+#ifdef	HAVE_ATOMIC_BUILTINS64
+	printf("\t64bit Atomic operations supported:\tYes\n");
+#else
+	printf("\t64bit Atomic operations supported:\tNo\n");
 #endif
 #ifdef	RTINST
 	printf("\tRuntime Instrumentation (slow code):\tYes\n");
