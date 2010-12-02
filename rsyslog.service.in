@@ -3,6 +3,7 @@ Description=System Logging Service
 
 [Service]
 ExecStart=@sbindir@/rsyslogd -n -c5
+ExecReload=/bin/kill -HUP $MAINPID
 
 [Install]
 WantedBy=multi-user.target
