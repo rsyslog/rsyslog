@@ -672,6 +672,8 @@ static rsRetVal prepareDoActionParams(action_t *pAction, msg_t *pMsg, uchar **pp
 	for(i = 0 ; i < pAction->iNumTpls ; ++i) {
 		switch(pAction->eParamPassing) {
 			case ACT_STRING_PASSING:
+				if(ppMsgs[i] == NULL)
+					lenMsgs[i] = 0;
 				CHKiRet(tplToString(pAction->ppTpl[i], pMsg, &(ppMsgs[i]), &lenMsgs[i]));
 				break;
 			case ACT_ARRAY_PASSING:
@@ -788,7 +790,7 @@ finalize_it:
 		cleanupDoActionParams(pThis, actParams); /* iRet ignored! */
 		break;
 	case ACT_MSG_PASSING:
-		/* nothing to do in that case */
+		/* (almost) nothing to do in that case */
 		for(i = 0 ; i < pThis->iNumTpls ; ++i) {
 			((uchar**)actParams)[i] = NULL;
 		}
