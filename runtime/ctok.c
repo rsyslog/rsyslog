@@ -277,6 +277,9 @@ ctokGetVar(ctok_t *pThis, ctok_token_t *pToken)
 	if(c == '$') { /* second dollar, we have a system variable */
 		pToken->tok = ctok_SYSVAR;
 		CHKiRet(ctokGetCharFromStream(pThis, &c)); /* "eat" it... */
+	} else if(c == '!') { /* cee variable indicator */
+		pToken->tok = ctok_CEEVAR;
+		CHKiRet(ctokGetCharFromStream(pThis, &c)); /* "eat" it... */
 	} else {
 		pToken->tok = ctok_MSGVAR;
 	}

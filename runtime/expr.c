@@ -151,6 +151,11 @@ terminal(expr_t *pThis, ctok_t *tok)
 			CHKiRet(ctok_token.UnlinkVar(pToken, &pVar));
 			CHKiRet(vmprg.AddVarOperation(pThis->pVmprg, opcode_PUSHMSGVAR, pVar)); /* add to program */
 			break;
+		case ctok_CEEVAR:
+			dbgoprint((obj_t*) pThis, "SYSVAR\n");
+			CHKiRet(ctok_token.UnlinkVar(pToken, &pVar));
+			CHKiRet(vmprg.AddVarOperation(pThis->pVmprg, opcode_PUSHCEEVAR, pVar)); /* add to program */
+			break;
 		case ctok_SYSVAR:
 			dbgoprint((obj_t*) pThis, "SYSVAR\n");
 			CHKiRet(ctok_token.UnlinkVar(pToken, &pVar));

@@ -35,6 +35,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <sys/types.h>
+#include <libestr.h>
 #include "rsyslog.h"
 #include "stringbuf.h"
 #include "srUtils.h"
@@ -97,6 +98,34 @@ rsRetVal rsCStrConstructFromszStr(cstr_t **ppThis, uchar *sz)
 
 	/* we do NOT need to copy the \0! */
 	memcpy(pThis->pBuf, sz, pThis->iStrLen);
+
+	*ppThis = pThis;
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* construct from es_str_t string
+ * rgerhards 2010-12-03
+ */
+rsRetVal cstrConstructFromESStr(cstr_t **ppThis, es_str_t *str)
+{
+	DEFiRet;
+	cstr_t *pThis;
+
+	assert(ppThis != NULL);
+
+	CHKiRet(rsCStrConstruct(&pThis));
+
+	pThis->iBufSize = pThis->iStrLen = es_strlen(str);
+	if((pThis->pBuf = (uchar*) MALLOC(sizeof(uchar) * pThis->iStrLen)) == NULL) {
+		RSFREEOBJ(pThis);
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	}
+
+	/* we do NOT need to copy the \0! */
+	memcpy(pThis->pBuf, es_getBufAddr(str), pThis->iStrLen);
 
 	*ppThis = pThis;
 

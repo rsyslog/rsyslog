@@ -3074,6 +3074,61 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 }
 
 
+/* The function returns a cee variable suitable for use with RainerScript. Most importantly, this means
+ * that the value is returned in a var_t object. The var_t is constructed inside this function and
+ * MUST be freed by the caller.
+ * Note that we need to do a lot of conversions between es_str_t and cstr -- this will go away once
+ * we have moved larger parts of rsyslog to es_str_t. Acceptable for the moment, especially as we intend
+ * to rewrite the script engine as well!
+ * rgerhards, 2010-12-03
+ */
+rsRetVal
+msgGetCEEVar(msg_t *pMsg, cstr_t *propName, var_t **ppVar)
+{
+	DEFiRet;
+	var_t *pVar;
+	cstr_t *pstrProp;
+	es_str_t *str = NULL;
+	es_str_t *epropName = NULL;
+	struct ee_field *field;
+
+	ISOBJ_TYPE_assert(pMsg, msg);
+	ASSERT(propName != NULL);
+	ASSERT(ppVar != NULL);
+
+	/* make sure we have a var_t instance */
+	CHKiRet(var.Construct(&pVar));
+	CHKiRet(var.ConstructFinalize(pVar));
+
+	epropName = es_newStrFromBuf((char*)propName->pBuf, propName->iStrLen);
+	if((field = ee_getEventField(pMsg->event, epropName)) != NULL) {
+		/* right now, we always extract data from the first field value. A reason for this
+		 * is that as of now (2010-12-01) liblognorm never populates more than one ;)
+		 */
+		str = ee_getFieldValueAsStr(field, 0);
+	}
+
+	if(str == NULL) {
+		CHKiRet(cstrConstruct(&pstrProp));
+		CHKiRet(cstrFinalize(pstrProp));
+	} else {
+		CHKiRet(cstrConstructFromESStr(&pstrProp, str));
+	}
+
+	/* now create a string object out of it and hand that over to the var */
+	CHKiRet(var.SetString(pVar, pstrProp));
+	es_deleteStr(str);
+
+	/* finally store var */
+	*ppVar = pVar;
+
+finalize_it:
+	if(epropName != NULL)
+		es_deleteStr(epropName);
+	RETiRet;
+}
+
+
 /* The returns a message variable suitable for use with RainerScript. Most importantly, this means
  * that the value is returned in a var_t object. The var_t is constructed inside this function and
  * MUST be freed by the caller.
@@ -3116,6 +3171,8 @@ finalize_it:
 
 	RETiRet;
 }
+
+
 /* This function can be used as a generic way to set properties.
  * We have to handle a lot of legacy, so our return value is not always
  * 100% correct (called functions do not always provide one, should

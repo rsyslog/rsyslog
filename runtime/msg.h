@@ -29,6 +29,7 @@
 #define	MSG_H_INCLUDED 1
 
 #include <pthread.h>
+#include <libestr.h>
 #include "obj.h"
 #include "syslogd-types.h"
 #include "template.h"
@@ -174,6 +175,7 @@ void getTAG(msg_t *pM, uchar **ppBuf, int *piLen);
 char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt);
 char *getPRI(msg_t *pMsg);
 void getRawMsg(msg_t *pM, uchar **pBuf, int *piLen);
+rsRetVal msgGetCEEVar(msg_t *pThis, cstr_t *propName, var_t **ppVar);
 
 
 /* TODO: remove these five (so far used in action.c) */

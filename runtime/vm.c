@@ -448,6 +448,7 @@ BEGINop(PUSHMSGVAR) /* remember to set the instruction also in the ENDop macro! 
 	var_t *pVal; /* the value to push */
 	cstr_t *pstrVal;
 CODESTARTop(PUSHMSGVAR)
+dbgprintf("XXX: pushMSGVAR, var '%s'\n", rsCStrGetSzStr(pOp->operand.pVar->val.pStr));
 	if(pThis->pMsg == NULL) {
 		/* TODO: flag an error message! As a work-around, we permit
 		 * execution to continue here with an empty string
@@ -466,6 +467,31 @@ CODESTARTop(PUSHMSGVAR)
 	vmstk.Push(pThis->pStk, pVal);
 finalize_it:
 ENDop(PUSHMSGVAR)
+
+
+BEGINop(PUSHCEEVAR) /* remember to set the instruction also in the ENDop macro! */
+	var_t *pVal; /* the value to push */
+	cstr_t *pstrVal;
+CODESTARTop(PUSHCEEVAR)
+dbgprintf("XXX: pushCEEVAR, var '%s'\n", rsCStrGetSzStr(pOp->operand.pVar->val.pStr));
+	if(pThis->pMsg == NULL) {
+		/* TODO: flag an error message! As a work-around, we permit
+		 * execution to continue here with an empty string
+		 */
+		CHKiRet(var.Construct(&pVal));
+		CHKiRet(var.ConstructFinalize(pVal));
+		CHKiRet(rsCStrConstructFromszStr(&pstrVal, (uchar*)""));
+		CHKiRet(var.SetString(pVal, pstrVal));
+	} else {
+		/* we have a message, so pull value from there */
+		CHKiRet(msgGetCEEVar(pThis->pMsg, pOp->operand.pVar->val.pStr, &pVal));
+	}
+
+	/* if we reach this point, we have a valid pVal and can push it */
+	vmstk.Push(pThis->pStk, pVal);
+dbgprintf("XXX: pushCEEVAR, result '%s'\n", rsCStrGetSzStr(pVal->val.pStr));
+finalize_it:
+ENDop(PUSHCEEVAR)
 
 
 BEGINop(PUSHSYSVAR) /* remember to set the instruction also in the ENDop macro! */
@@ -685,6 +711,7 @@ execProg(vm_t *pThis, vmprg_t *pProg)
 			doOP(NOT);
 			doOP(PUSHCONSTANT);
 			doOP(PUSHMSGVAR);
+			doOP(PUSHCEEVAR);
 			doOP(PUSHSYSVAR);
 			doOP(STRADD);
 			doOP(PLUS);
