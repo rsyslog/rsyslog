@@ -16,6 +16,7 @@
  *      bytes as forth. Add -r to randomize the amount of extra
  *      data included in the range 1..(value of -d).
  * -r	randomize amount of extra data added (-d must be > 0)
+ * -s	(silent) do not show progress indicator (never done on non-tty)
  * -f	support for testing dynafiles. If given, include a dynafile ID
  *      in the range 0..(f-1) as the SECOND field, shifting all field values
  *      one field to the right. Zero (default) disables this functionality.
@@ -87,6 +88,7 @@ static int numConnections = 1; /* number of connections to create */
 static int *sockArray;  /* array of sockets to use */
 static int msgNum = 0;	/* initial message number to start with */
 static int bShowProgress = 1; /* show progress messages */
+static int bSilent = 0; /* completely silent operation */
 static int bRandConnDrop = 0; /* randomly drop connections? */
 static char *MsgToSend = NULL; /* if non-null, this is the actual message to send */
 static int bBinaryFile = 0;	/* is -I file binary */
@@ -167,8 +169,10 @@ int openConnections(void)
 			return 1;
 		}
 	}
-	lenMsg = sprintf(msgBuf, "\r%5.5d open connections\n", i);
-	write(1, msgBuf, lenMsg);
+	if(bShowProgress) {
+		lenMsg = sprintf(msgBuf, "\r%5.5d open connections\n", i);
+		write(1, msgBuf, lenMsg);
+	}
 
 	return 0;
 }
@@ -207,8 +211,10 @@ void closeConnections(void)
 			close(sockArray[i]);
 		}
 	}
-	lenMsg = sprintf(msgBuf, "\r%5.5d close connections\n", i);
-	write(1, msgBuf, lenMsg);
+	if(bShowProgress) {
+		lenMsg = sprintf(msgBuf, "\r%5.5d close connections\n", i);
+		write(1, msgBuf, lenMsg);
+	}
 
 }
 
@@ -286,12 +292,15 @@ int sendMessages(void)
 	char *statusText;
 	char buf[MAX_EXTRADATA_LEN + 1024];
 
-	if(dataFile == NULL) {
-		printf("Sending %d messages.\n", numMsgsToSend);
-		statusText = "messages";
-	} else {
-		printf("Sending file '%s' %d times.\n", dataFile, numFileIterations);
-		statusText = "kb";
+	if(!bSilent) {
+		if(dataFile == NULL) {
+			printf("Sending %d messages.\n", numMsgsToSend);
+			statusText = "messages";
+		} else {
+			printf("Sending file '%s' %d times.\n", dataFile,
+			       numFileIterations);
+			statusText = "kb";
+		}
 	}
 	if(bShowProgress)
 		printf("\r%8.8d %s sent", 0, statusText);
@@ -341,7 +350,8 @@ int sendMessages(void)
 		++msgNum;
 		++i;
 	}
-	printf("\r%8.8d %s sent\n", i, statusText);
+	if(!bSilent)
+		printf("\r%8.8d %s sent\n", i, statusText);
 
 	return 0;
 }
@@ -369,10 +379,7 @@ int main(int argc, char *argv[])
 
 	setvbuf(stdout, buf, _IONBF, 48);
 	
-	if(!isatty(1))
-		bShowProgress = 0;
-
-	while((opt = getopt(argc, argv, "f:F:t:p:c:C:m:i:I:P:d:Dn:M:rB")) != -1) {
+	while((opt = getopt(argc, argv, "f:F:t:p:c:C:m:i:I:P:d:Dn:M:rsB")) != -1) {
 		switch (opt) {
 		case 't':	targetIP = optarg;
 				break;
@@ -413,6 +420,8 @@ int main(int argc, char *argv[])
 				 */
 				numMsgsToSend = 1000000;
 				break;
+		case 's':	bSilent = 1;
+				break;
 		case 'B':	bBinaryFile = 1;
 				break;
 		default:	printf("invalid option '%c' or value missing - terminating...\n", opt);
@@ -420,6 +429,9 @@ int main(int argc, char *argv[])
 				break;
 		}
 	}
+
+	if(!isatty(1) || bSilent)
+		bShowProgress = 0;
 
 	if(numConnections > 20) {
 		/* if we use many (whatever this means, 20 is randomly picked)
@@ -457,7 +469,8 @@ int main(int argc, char *argv[])
 	if(nConnDrops > 0)
 		printf("-D option initiated %ld connection closures\n", nConnDrops);
 
-	printf("End of tcpflood Run\n");
+	if(!bSilent)
+		printf("End of tcpflood Run\n");
 
 	exit(ret);
 }
