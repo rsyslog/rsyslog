@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------
+Version 6.1.2  [DEVEL] (rgerhards), 2010-11-??
+- enhanced testing tool tcpflood
+  now supports sending via UDP and the capability to run multiple
+  iterations and generate statistics data records
+---------------------------------------------------------------------------
 Version 6.1.1  [DEVEL] (rgerhards), 2010-11-30
 - bugfix(important): problem in TLS handling could cause rsyslog to loop
   in a tight loop, effectively disabling functionality and bearing the

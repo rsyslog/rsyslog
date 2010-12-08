@@ -36,12 +36,14 @@
  * -R	number of times the test shall be run (very useful for gathering performance
  *      data and other repetitive things). Default: 1
  * -S   number of seconds to sleep between different runs (-R) Default: 30
- * -T   generate sTats data records. Default: off
+ * -X   generate sTats data records. Default: off
  * -e   encode output in CSV (not yet everywhere supported)
  *      for performance data:
  *      each inidividual line has the runtime of one test
  *      the last line has 0 in field 1, followed by numberRuns,TotalRuntime,
  *      Average,min,max
+ * -T   transport to use. Currently supported: "udp", "tcp" (default)
+ *      Note: UDP supports a single target port, only
  *
  * Part of the testbench for rsyslog.
  *
@@ -121,6 +123,30 @@ struct runstats {
 	int numRuns;
 };
 
+static int udpsock;			/* socket for sending in UDP mode */
+static struct sockaddr_in udpRcvr;	/* remote receiver in UDP mode */
+
+static enum { TP_UDP, TP_TCP } transport = TP_TCP;
+
+/* prepare send subsystem for UDP send */
+static inline int
+setupUDP(void)
+{
+	if((udpsock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)
+		return 1;
+
+	memset((char *) &udpRcvr, 0, sizeof(udpRcvr));
+	udpRcvr.sin_family = AF_INET;
+	udpRcvr.sin_port = htons(targetPort);
+	if(inet_aton(targetIP, &udpRcvr.sin_addr)==0) {
+		fprintf(stderr, "inet_aton() failed\n");
+		return(1);
+	}
+
+	return 0;
+}
+
+
 /* open a single tcp connection
  */
 int openConn(int *fd)
@@ -178,6 +204,9 @@ int openConnections(void)
 	char msgBuf[128];
 	size_t lenMsg;
 
+	if(transport == TP_UDP)
+		return setupUDP();
+
 	if(bShowProgress)
 		write(1, "      open connections", sizeof("      open connections")-1);
 	sockArray = calloc(numConnections, sizeof(int));
@@ -213,6 +242,9 @@ void closeConnections(void)
 	size_t lenMsg;
 	struct linger ling;
 	char msgBuf[128];
+
+	if(transport != TP_TCP)
+		return;
 
 	if(bShowProgress)
 		write(1, "      close connections", sizeof("      close connections")-1);
@@ -338,14 +370,18 @@ int sendMessages(void)
 		genMsg(buf, sizeof(buf), &lenBuf, &numSent); /* generate the message to send according to params */
 		if(lenBuf == 0)
 			break; /* end of processing! */
-		if(sockArray[socknum] == -1) {
-			/* connection was dropped, need to re-establish */
-			if(openConn(&(sockArray[socknum])) != 0) {
-				printf("error in trying to re-open connection %d\n", socknum);
-				exit(1);
+		if(transport == TP_TCP) {
+			if(sockArray[socknum] == -1) {
+				/* connection was dropped, need to re-establish */
+				if(openConn(&(sockArray[socknum])) != 0) {
+					printf("error in trying to re-open connection %d\n", socknum);
+					exit(1);
+				}
 			}
+			lenSend = send(sockArray[socknum], buf, lenBuf, 0);
+		} else if(transport == TP_UDP) {
+			lenSend = sendto(udpsock, buf, lenBuf, 0, &udpRcvr, sizeof(udpRcvr));
 		}
-		lenSend = send(sockArray[socknum], buf, lenBuf, 0);
 		if(lenSend != lenBuf) {
 			printf("\r%5.5d\n", i);
 			fflush(stdout);
@@ -508,7 +544,7 @@ int main(int argc, char *argv[])
 
 	setvbuf(stdout, buf, _IONBF, 48);
 	
-	while((opt = getopt(argc, argv, "ef:F:t:p:c:C:m:i:I:P:d:Dn:M:rsBR:S:T")) != -1) {
+	while((opt = getopt(argc, argv, "ef:F:t:p:c:C:m:i:I:P:d:Dn:M:rsBR:S:T:X")) != -1) {
 		switch (opt) {
 		case 't':	targetIP = optarg;
 				break;
@@ -557,9 +593,18 @@ int main(int argc, char *argv[])
 				break;
 		case 'S':	sleepBetweenRuns = atoi(optarg);
 				break;
-		case 'T':	bStatsRecords = 1;
+		case 'X':	bStatsRecords = 1;
 				break;
 		case 'e':	bCSVoutput = 1;
+				break;
+		case 'T':	if(!strcmp(optarg, "udp")) {
+					transport = TP_UDP;
+				} else if(!strcmp(optarg, "tcp")) {
+					transport = TP_TCP;
+				} else {
+					fprintf(stderr, "unkonwn transport '%s'\n", optarg);
+					exit(1);
+				}
 				break;
 		default:	printf("invalid option '%c' or value missing - terminating...\n", opt);
 				exit (1);
