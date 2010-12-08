@@ -33,6 +33,15 @@
  * -D	randomly drop and re-establish connections. Useful for stress-testing
  *      the TCP receiver.
  * -F	USASCII value for frame delimiter (in octet-stuffing mode), default LF
+ * -R	number of times the test shall be run (very useful for gathering performance
+ *      data and other repetitive things). Default: 1
+ * -S   number of seconds to sleep between different runs (-R) Default: 30
+ * -T   generate sTats data records. Default: off
+ * -e   encode output in CSV (not yet everywhere supported)
+ *      for performance data:
+ *      each inidividual line has the runtime of one test
+ *      the last line has 0 in field 1, followed by numberRuns,TotalRuntime,
+ *      Average,min,max
  *
  * Part of the testbench for rsyslog.
  *
@@ -68,6 +77,7 @@
 #include <string.h>
 #include <netinet/in.h>
 #include <sys/resource.h>
+#include <sys/time.h>
 
 #define EXIT_FAILURE 1
 #define INVALID_SOCKET -1
@@ -97,7 +107,19 @@ static int numFileIterations = 1;/* how often is file data to be sent? */
 static char frameDelim = '\n';	/* default frame delimiter */
 FILE *dataFP = NULL;		/* file pointer for data file, if used */
 static long nConnDrops = 0;	/* counter: number of time connection was dropped (-D option) */
+static int numRuns = 1;		/* number of times the test shall be run */
+static int sleepBetweenRuns = 30; /* number of seconds to sleep between runs */
+static int bStatsRecords = 0;	/* generate stats records */
+static int bCSVoutput = 0;	/* generate output in CSV (where applicable) */
 
+
+/* the following structure is used to gather performance data */
+struct runstats {
+	unsigned long long totalRuntime;
+	unsigned long minRuntime;
+	unsigned long maxRuntime;
+	int numRuns;
+};
 
 /* open a single tcp connection
  */
@@ -224,12 +246,11 @@ void closeConnections(void)
  * of constructing test messages. -- rgerhards, 2010-03-31
  */
 static inline void
-genMsg(char *buf, size_t maxBuf, int *pLenBuf)
+genMsg(char *buf, size_t maxBuf, int *pLenBuf, unsigned *numMsgsGen)
 {
 	int edLen; /* actual extra data length to use */
 	char extraData[MAX_EXTRADATA_LEN + 1];
 	char dynFileIDBuf[128] = "";
-	static int numMsgsGen = 0;
 	int done;
 
 	if(dataFP != NULL) {
@@ -269,7 +290,7 @@ genMsg(char *buf, size_t maxBuf, int *pLenBuf)
 		*pLenBuf = snprintf(buf, maxBuf, "%s\n", MsgToSend);
 	}
 
-	if(numMsgsGen++ >= numMsgsToSend)
+	if((*numMsgsGen)++ >= (unsigned) numMsgsToSend)
 		*pLenBuf = 0; /* indicate end of run */
 
 finalize_it: ;
@@ -290,6 +311,7 @@ int sendMessages(void)
 	int lenBuf;
 	int lenSend;
 	char *statusText;
+	unsigned numSent = 0;	/* number of messages sent in this test */
 	char buf[MAX_EXTRADATA_LEN + 1024];
 
 	if(!bSilent) {
@@ -313,7 +335,7 @@ int sendMessages(void)
 			int rnd = rand();
 			socknum = rnd % numConnections;
 		}
-		genMsg(buf, sizeof(buf), &lenBuf); /* generate the message to send according to params */
+		genMsg(buf, sizeof(buf), &lenBuf, &numSent); /* generate the message to send according to params */
 		if(lenBuf == 0)
 			break; /* end of processing! */
 		if(sockArray[socknum] == -1) {
@@ -357,6 +379,113 @@ int sendMessages(void)
 }
 
 
+/* functions related to computing statistics on the runtime of a test. This is
+ * a separate function primarily not to mess up the test driver.
+ * rgerhards, 2010-12-08
+ */
+static inline void
+endTiming(struct timeval *tvStart, struct runstats *stats)
+{
+	long sec, usec;
+	unsigned long runtime;
+	struct timeval tvEnd;
+
+	gettimeofday(&tvEnd, NULL);
+	if(tvStart->tv_usec > tvEnd.tv_usec) {
+		tvEnd.tv_sec--;
+		tvEnd.tv_usec += 1000000;
+	}
+
+	sec = tvEnd.tv_sec - tvStart->tv_sec;
+	usec = tvEnd.tv_usec - tvStart->tv_usec;
+
+	runtime = sec * 1000 + (usec / 1000);
+	stats->totalRuntime += runtime;
+	if(runtime < stats->minRuntime)
+		stats->minRuntime = runtime;
+	if(runtime > stats->maxRuntime)
+		stats->maxRuntime = runtime;
+
+	if(!bSilent || bStatsRecords) {
+		if(bCSVoutput) {
+			printf("%ld.%4.4ld\n", runtime / 1000, runtime % 1000);
+		} else {
+			printf("runtime: %ld.%4.4ld\n", runtime / 1000, runtime % 1000);
+		}
+	}
+}
+
+
+/* generate stats summary record at end of run
+ */
+static inline void
+genStats(struct runstats *stats)
+{
+	long unsigned avg;
+	avg = stats->totalRuntime / stats->numRuns;
+
+	if(bCSVoutput) {
+		printf("#numRuns,TotalRuntime,AvgRuntime,MinRuntime,MaxRuntime\n");
+		printf("%d,%llu.%4.4d,%lu.%4.4lu,%lu.%4.4lu,%lu.%4.4lu\n",
+			stats->numRuns,
+		        stats->totalRuntime / 1000, (int) stats->totalRuntime % 1000,
+		        avg / 1000, avg % 1000,
+		        stats->minRuntime / 1000, stats->minRuntime % 1000,
+		        stats->maxRuntime / 1000, stats->maxRuntime % 1000);
+	} else {
+		printf("Runs:     %d\n",   stats->numRuns);
+		printf("Runtime:\n");
+		printf("  total:  %llu.%4.4d\n", stats->totalRuntime / 1000,
+						 (int) stats->totalRuntime % 1000);
+		printf("  avg:    %lu.%4.4lu\n",  avg / 1000, avg % 1000);
+		printf("  min:    %lu.%4.4lu\n",  stats->minRuntime / 1000, stats->minRuntime % 1000);
+		printf("  max:    %lu.%4.4lu\n",  stats->maxRuntime / 1000, stats->maxRuntime % 1000);
+		printf("All times are wallclock time.\n");
+	}
+}
+
+
+/* Run the actual test. This function handles various meta-parameters, like
+ * a specified number of iterations, performance measurement and so on...
+ * rgerhards, 2010-12-08
+ */
+static int
+runTests(void)
+{
+	struct timeval tvStart;
+	struct runstats stats;
+	int run;
+
+	stats.totalRuntime = 0;
+	stats.minRuntime = (unsigned long) 0xffffffffffffffff;
+	stats.maxRuntime = 0;
+	stats.numRuns = numRuns;
+	run = 1;
+	while(1) { /* loop broken inside */
+		if(!bSilent)
+			printf("starting run %d\n", run);
+		gettimeofday(&tvStart, NULL);
+		if(sendMessages() != 0) {
+			printf("error sending messages (run %d)\n", run);
+			return 1;
+		}
+		endTiming(&tvStart, &stats);
+		if(run == numRuns)
+			break;
+		if(!bSilent)
+			printf("sleeping %d seconds before next run\n", sleepBetweenRuns);
+		sleep(sleepBetweenRuns);
+		++run;
+	}
+
+	if(bStatsRecords) {
+		genStats(&stats);
+	}
+
+	return 0;
+}
+
+
 /* Run the test.
  * rgerhards, 2009-04-03
  */
@@ -379,7 +508,7 @@ int main(int argc, char *argv[])
 
 	setvbuf(stdout, buf, _IONBF, 48);
 	
-	while((opt = getopt(argc, argv, "f:F:t:p:c:C:m:i:I:P:d:Dn:M:rsB")) != -1) {
+	while((opt = getopt(argc, argv, "ef:F:t:p:c:C:m:i:I:P:d:Dn:M:rsBR:S:T")) != -1) {
 		switch (opt) {
 		case 't':	targetIP = optarg;
 				break;
@@ -424,6 +553,14 @@ int main(int argc, char *argv[])
 				break;
 		case 'B':	bBinaryFile = 1;
 				break;
+		case 'R':	numRuns = atoi(optarg);
+				break;
+		case 'S':	sleepBetweenRuns = atoi(optarg);
+				break;
+		case 'T':	bStatsRecords = 1;
+				break;
+		case 'e':	bCSVoutput = 1;
+				break;
 		default:	printf("invalid option '%c' or value missing - terminating...\n", opt);
 				exit (1);
 				break;
@@ -459,8 +596,8 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
-	if(sendMessages() != 0) {
-		printf("error sending messages\n");
+	if(runTests() != 0) {
+		printf("error running tests\n");
 		exit(1);
 	}
 
