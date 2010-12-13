@@ -44,6 +44,8 @@
  *      Average,min,max
  * -T   transport to use. Currently supported: "udp", "tcp" (default)
  *      Note: UDP supports a single target port, only
+ * -W	wait time between sending batches of messages, in microseconds (Default: 0)
+ * -b   number of messages within a batch (default: 100,000,000 millions)
  *
  * Part of the testbench for rsyslog.
  *
@@ -113,6 +115,8 @@ static int numRuns = 1;		/* number of times the test shall be run */
 static int sleepBetweenRuns = 30; /* number of seconds to sleep between runs */
 static int bStatsRecords = 0;	/* generate stats records */
 static int bCSVoutput = 0;	/* generate output in CSV (where applicable) */
+static long long batchsize = 100000000ll;
+static int waittime = 0;
 
 
 /* the following structure is used to gather performance data */
@@ -278,7 +282,7 @@ void closeConnections(void)
  * of constructing test messages. -- rgerhards, 2010-03-31
  */
 static inline void
-genMsg(char *buf, size_t maxBuf, int *pLenBuf, unsigned *numMsgsGen)
+genMsg(char *buf, size_t maxBuf, int *pLenBuf, long long *numMsgsGen)
 {
 	int edLen; /* actual extra data length to use */
 	char extraData[MAX_EXTRADATA_LEN + 1];
@@ -343,7 +347,7 @@ int sendMessages(void)
 	int lenBuf;
 	int lenSend;
 	char *statusText;
-	unsigned numSent = 0;	/* number of messages sent in this test */
+	long long numSent = 0;	/* number of messages sent in this test */
 	char buf[MAX_EXTRADATA_LEN + 1024];
 
 	if(!bSilent) {
@@ -386,8 +390,8 @@ int sendMessages(void)
 			printf("\r%5.5d\n", i);
 			fflush(stdout);
 			perror("send test data");
-			printf("send() failed at socket %d, index %d, msgNum %d\n",
-				sockArray[socknum], i, msgNum);
+			printf("send() failed at socket %d, index %d, msgNum %lld\n",
+				sockArray[socknum], i, numSent);
 			fflush(stderr);
 			return(1);
 		}
@@ -404,6 +408,9 @@ int sendMessages(void)
 				close(sockArray[socknum]);
 				sockArray[socknum] = -1;
 			}
+		}
+		if(numSent % batchsize == 0) {
+			usleep(waittime);
 		}
 		++msgNum;
 		++i;
@@ -544,8 +551,10 @@ int main(int argc, char *argv[])
 
 	setvbuf(stdout, buf, _IONBF, 48);
 	
-	while((opt = getopt(argc, argv, "ef:F:t:p:c:C:m:i:I:P:d:Dn:M:rsBR:S:T:X")) != -1) {
+	while((opt = getopt(argc, argv, "b:ef:F:t:p:c:C:m:i:I:P:d:Dn:M:rsBR:S:T:XW:")) != -1) {
 		switch (opt) {
+		case 'b':	batchsize = atoll(optarg);
+				break;
 		case 't':	targetIP = optarg;
 				break;
 		case 'p':	targetPort = atoi(optarg);
@@ -606,10 +615,17 @@ int main(int argc, char *argv[])
 					exit(1);
 				}
 				break;
+		case 'W':	waittime = atoi(optarg);
+				break;
 		default:	printf("invalid option '%c' or value missing - terminating...\n", opt);
 				exit (1);
 				break;
 		}
+	}
+
+	if(bStatsRecords && waittime) {
+		fprintf(stderr, "warning: generating performance stats and useing a waittime "
+				"is somewhat contradictory!\n");
 	}
 
 	if(!isatty(1) || bSilent)
