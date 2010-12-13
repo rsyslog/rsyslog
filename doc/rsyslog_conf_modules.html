@@ -93,11 +93,16 @@ repated n times" messages emitted by some syslogds.
 They can be implemented using either the output module or the parser module interface.
 From the rsyslog core's point of view, they actually are output or parser modules, it is their
 implementation that makes them special.
-<p>Currently, there do not exist any such modules, but could be written with
+<p>Currently, there exists only a limited set of such modules, but new ones could be written with
 the methods the engine provides. They could be used, for example, to:
 <ul>
 <li>anonymize message content
 <li>add dynamically computed content to message (fields)
+</ul>
+<p>Currently supported modules are:
+<ul>
+<li><a href="mmnormalize.html">mmnormalize</a> - used to normalize
+log messages.
 </ul>
 
 <a name="lm"></a><h2>String Generator Modules</h2>

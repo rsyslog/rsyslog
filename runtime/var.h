@@ -40,6 +40,7 @@ typedef struct var_s {
 	varType_t varType;
 	union {
 		number_t num;
+		es_str_t *str;
 		cstr_t *pStr;
 		syslogTime_t vSyslogTime;
 

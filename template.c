@@ -113,7 +113,8 @@ rsRetVal tplToString(struct template *pTpl, msg_t *pMsg, uchar **ppBuf, size_t *
 			iLenVal = pTpe->data.constant.iLenConstant;
 			bMustBeFreed = 0;
 		} else 	if(pTpe->eEntryType == FIELD) {
-			pVal = (uchar*) MsgGetProp(pMsg, pTpe, pTpe->data.field.propid, &iLenVal, &bMustBeFreed);
+			pVal = (uchar*) MsgGetProp(pMsg, pTpe, pTpe->data.field.propid,
+						   pTpe->data.field.propName,  &iLenVal, &bMustBeFreed);
 			/* we now need to check if we should use SQL option. In this case,
 			 * we must go over the generated string and escape '\'' characters.
 			 * rgerhards, 2005-09-22: the option values below look somewhat misplaced,
@@ -192,7 +193,8 @@ rsRetVal tplToArray(struct template *pTpl, msg_t *pMsg, uchar*** ppArr)
 		if(pTpe->eEntryType == CONSTANT) {
 			CHKmalloc(pArr[iArr] = (uchar*)strdup((char*) pTpe->data.constant.pConstant));
 		} else 	if(pTpe->eEntryType == FIELD) {
-			pVal = (uchar*) MsgGetProp(pMsg, pTpe, pTpe->data.field.propid, &propLen, &bMustBeFreed);
+			pVal = (uchar*) MsgGetProp(pMsg, pTpe, pTpe->data.field.propid,
+						   pTpe->data.field.propName,  &propLen, &bMustBeFreed);
 			if(bMustBeFreed) { /* if it must be freed, it is our own private copy... */
 				pArr[iArr] = pVal; /* ... so we can use it! */
 			} else {
@@ -586,7 +588,14 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 		cstrDestruct(&pStrB);
 		return 1;
 	}
-	cstrDestruct(&pStrB); /* no longer needed, now use ID */
+	if(pTpe->data.field.propid == PROP_CEE) {
+		/* in CEE case, we need to preserve the actual property name */
+		if((pTpe->data.field.propName = es_newStrFromCStr((char*)cstrGetSzStrNoNULL(pStrB)+2, cstrLen(pStrB)-2)) == NULL) {
+			cstrDestruct(&pStrB);
+			return 1;
+		}
+	}
+	cstrDestruct(&pStrB);
 
 	/* Check frompos, if it has an R, then topos should be a regex */
 	if(*p == ':') {
@@ -1073,6 +1082,8 @@ void tplDeleteAll(void)
 						regexp.regfree(&(pTpeDel->data.field.re));
 					}
 				}
+				if(pTpeDel->data.field.propName != NULL)
+					es_deleteStr(pTpeDel->data.field.propName);
 				break;
 			}
 			/*dbgprintf("\n");*/
@@ -1128,6 +1139,8 @@ void tplDeleteNew(void)
 						regexp.regfree(&(pTpeDel->data.field.re));
 					}
 				}
+				if(pTpeDel->data.field.propName != NULL)
+					es_deleteStr(pTpeDel->data.field.propName);
 				break;
 			}
 			/*dbgprintf("\n");*/
@@ -1177,6 +1190,11 @@ void tplPrintList(void)
 				break;
 			case FIELD:
 				dbgprintf("(FIELD), value: '%d' ", pTpe->data.field.propid);
+				if(pTpe->data.field.propid == PROP_CEE) {
+					char *cstr = es_str2cstr(pTpe->data.field.propName, NULL);
+					dbgprintf("[EE-Property: '%s'] ", cstr);
+					free(cstr);
+				}
 				switch(pTpe->data.field.eDateFormat) {
 				case tplFmtDefault:
 					break;

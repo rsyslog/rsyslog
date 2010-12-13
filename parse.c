@@ -231,7 +231,8 @@ rsRetVal parsSkipWhitespace(rsParsObj *pThis)
 /* Parse string up to a delimiter.
  *
  * Input:
- * cDelim - the delimiter
+ * cDelim - the delimiter. Note that SP within a value always is a delimiter,
+ * so cDelim is actually an *additional* delimiter.
  *   The following two are for whitespace stripping,
  *   0 means "no", 1 "yes"
  *   - bTrimLeading
@@ -256,13 +257,13 @@ rsRetVal parsDelimCStr(rsParsObj *pThis, cstr_t **ppCStr, char cDelim, int bTrim
 
 	pC = rsCStrGetBufBeg(pThis->pCStr) + pThis->iCurrPos;
 
-	while(pThis->iCurrPos < rsCStrLen(pThis->pCStr) && *pC != cDelim) {
+	while(pThis->iCurrPos < rsCStrLen(pThis->pCStr) && *pC != cDelim && *pC != ' ') {
 		CHKiRet(cstrAppendChar(pCStr, bConvLower ? tolower(*pC) : *pC));
 		++pThis->iCurrPos;
 		++pC;
 	}
 	
-	if(*pC == cDelim) {
+	if(pThis->iCurrPos < cstrLen(pThis->pCStr)) { //BUGFIX!!
 		++pThis->iCurrPos; /* eat delimiter */
 	}
 

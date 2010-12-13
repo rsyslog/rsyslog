@@ -25,6 +25,7 @@
 #ifndef INCLUDED_RULE_H
 #define INCLUDED_RULE_H
 
+#include "libestr.h"
 #include "linkedlist.h"
 #include "regexp.h"
 #include "expr.h"
@@ -49,6 +50,7 @@ struct rule_s {
 			cstr_t *pCSCompValue;		/* value to "compare" against */
 			sbool isNegated;	
 			propid_t propID;		/* ID of the requested property */
+			es_str_t *propName;		/* name of property for CEE-based filters */
 		} prop;
 		expr_t *f_expr;				/* expression object */
 	} f_filterData;

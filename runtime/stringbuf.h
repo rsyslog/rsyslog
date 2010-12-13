@@ -36,6 +36,7 @@
 #define _STRINGBUF_H_INCLUDED__ 1
 
 #include <assert.h>
+#include <libestr.h>
 
 /** 
  * The dynamic string buffer object.
@@ -57,6 +58,7 @@ typedef struct cstr_s
  */
 rsRetVal cstrConstruct(cstr_t **ppThis);
 #define rsCStrConstruct(x) cstrConstruct((x))
+rsRetVal cstrConstructFromESStr(cstr_t **ppThis, es_str_t *str);
 rsRetVal rsCStrConstructFromszStr(cstr_t **ppThis, uchar *sz);
 rsRetVal rsCStrConstructFromCStr(cstr_t **ppThis, cstr_t *pFrom);
 

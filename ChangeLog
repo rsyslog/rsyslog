@@ -1,8 +1,24 @@
 ---------------------------------------------------------------------------
-Version 6.1.2  [DEVEL] (rgerhards), 2010-11-??
+Version 6.1.2  [DEVEL] (rgerhards), 2010-12-13
+- added experimental support for log normalizaton (via liblognorm)
+  support for normalizing log messages has been added in the form of
+  mmnormalize. The core engine (property replacer, filter engine) has
+  been enhanced to support properties from normalized events.
+  Note: this is EXPERIMENTAL code. It is currently know that
+  there are issues if the functionality is used with
+  - disk-based queues
+  - asynchronous action queues
+  You can not use the new functionality together with these features.
+  This limitation will be removed in later releases. However, we 
+  preferred to release early, so that one can experiment with the new
+  feature set and accepted the price that this means the full set of
+  functionality is not yet available. If not used together with
+  these features, log normalizing should be pretty stable.
 - enhanced testing tool tcpflood
   now supports sending via UDP and the capability to run multiple
   iterations and generate statistics data records
+- bugfix: potential abort when output modules with different parameter
+  passing modes were used in configured output modules
 ---------------------------------------------------------------------------
 Version 6.1.1  [DEVEL] (rgerhards), 2010-11-30
 - bugfix(important): problem in TLS handling could cause rsyslog to loop

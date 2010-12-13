@@ -54,6 +54,7 @@ typedef struct {
 		ctok_FUNCTION = 17,
 		ctok_THEN = 18,
 		ctok_STRADD = 19,
+		ctok_CEEVAR = 20,
 		ctok_CMP_EQ = 100, /* all compare operations must be in a row */
 		ctok_CMP_NEQ = 101,
 		ctok_CMP_LT = 102,

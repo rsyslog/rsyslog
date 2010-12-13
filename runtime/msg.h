@@ -29,10 +29,12 @@
 #define	MSG_H_INCLUDED 1
 
 #include <pthread.h>
+#include <libestr.h>
 #include "obj.h"
 #include "syslogd-types.h"
 #include "template.h"
 #include "atomic.h"
+#include "libee/libee.h"
 
 
 /* rgerhards 2004-11-08: The following structure represents a
@@ -105,6 +107,7 @@ struct msg {
 				   it obviously is solved in way or another...). */
 	struct syslogTime tRcvdAt;/* time the message entered this program */
 	struct syslogTime tTIMESTAMP;/* (parsed) value of the timestamp */
+	struct ee_event	*event;	/**< libee event */
 	/* some fixed-size buffers to save malloc()/free() for frequently used fields (from the default templates) */
 	uchar szRawMsg[CONF_RAWMSG_BUFSIZE];	/* most messages are small, and these are stored here (without malloc/free!) */
 	uchar szHOSTNAME[CONF_HOSTNAME_BUFSIZE];
@@ -162,7 +165,8 @@ void MsgSetRawMsgWOSize(msg_t *pMsg, char* pszRawMsg);
 void MsgSetRawMsg(msg_t *pMsg, char* pszRawMsg, size_t lenMsg);
 rsRetVal MsgReplaceMSG(msg_t *pThis, uchar* pszMSG, int lenMSG);
 uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
-                 propid_t propID, size_t *pPropLen, unsigned short *pbMustBeFreed);
+                  propid_t propid, es_str_t *propName,
+		  size_t *pPropLen, unsigned short *pbMustBeFreed);
 char *textpri(char *pRes, size_t pResLen, int pri);
 rsRetVal msgGetMsgVar(msg_t *pThis, cstr_t *pstrPropName, var_t **ppVar);
 rsRetVal MsgEnableThreadSafety(void);
@@ -170,6 +174,8 @@ uchar *getRcvFrom(msg_t *pM);
 void getTAG(msg_t *pM, uchar **ppBuf, int *piLen);
 char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt);
 char *getPRI(msg_t *pMsg);
+void getRawMsg(msg_t *pM, uchar **pBuf, int *piLen);
+rsRetVal msgGetCEEVar(msg_t *pThis, cstr_t *propName, var_t **ppVar);
 
 
 /* TODO: remove these five (so far used in action.c) */

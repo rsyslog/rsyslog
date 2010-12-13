@@ -59,6 +59,7 @@ typedef enum {	 /* do NOT start at 0 to detect uninitialized types after calloc(
 	opcode_PUSHSYSVAR      = 1001,	 /* requires var operand */
 	opcode_PUSHMSGVAR      = 1002,	 /* requires var operand */
 	opcode_PUSHCONSTANT    = 1003,	 /* requires var operand */
+	opcode_PUSHCEEVAR      = 1004,	 /* requires var operand */
 	opcode_UNARY_MINUS     = 1010,
 	opcode_FUNC_CALL       = 1012,
 	opcode_END_PROG        = 2000

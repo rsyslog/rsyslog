@@ -874,6 +874,14 @@ static rsRetVal cflineProcessPropFilter(uchar **pline, register rule_t *f)
 		rsParsDestruct(pPars);
 		return(iRet);
 	}
+	if(f->f_filterData.prop.propID == PROP_CEE) {
+		/* in CEE case, we need to preserve the actual property name */
+		if((f->f_filterData.prop.propName =
+		     es_newStrFromBuf((char*)cstrGetSzStrNoNULL(pCSPropName)+2, cstrLen(pCSPropName)-2)) == NULL) {
+			cstrDestruct(&pCSPropName);
+			return(RS_RET_ERR);
+		}
+	}
 	cstrDestruct(&pCSPropName);
 
 	/* read operation */
@@ -902,10 +910,13 @@ static rsRetVal cflineProcessPropFilter(uchar **pline, register rule_t *f)
 		iOffset = 0;
 	}
 
+dbgprintf("XXX: offset is %d, string '%s'\n", iOffset, rsCStrGetSzStrNoNULL(pCSCompOp));
 	if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, (uchar*) "contains", 8)) {
 		f->f_filterData.prop.operation = FIOP_CONTAINS;
 	} else if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, (uchar*) "isequal", 7)) {
 		f->f_filterData.prop.operation = FIOP_ISEQUAL;
+	} else if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, (uchar*) "isempty", 7)) {
+		f->f_filterData.prop.operation = FIOP_ISEMPTY;
 	} else if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, (uchar*) "startswith", 10)) {
 		f->f_filterData.prop.operation = FIOP_STARTSWITH;
 	} else if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, (unsigned char*) "regex", 5)) {
@@ -918,12 +929,15 @@ static rsRetVal cflineProcessPropFilter(uchar **pline, register rule_t *f)
 	}
 	rsCStrDestruct(&pCSCompOp); /* no longer needed */
 
-	/* read compare value */
-	iRet = parsQuotedCStr(pPars, &f->f_filterData.prop.pCSCompValue);
-	if(iRet != RS_RET_OK) {
-		errmsg.LogError(0, iRet, "error %d compare value property - ignoring selector", iRet);
-		rsParsDestruct(pPars);
-		return(iRet);
+dbgprintf("XXX: fiop is %u\n", (unsigned) f->f_filterData.prop.operation);
+	if(f->f_filterData.prop.operation != FIOP_ISEMPTY) {
+		/* read compare value */
+		iRet = parsQuotedCStr(pPars, &f->f_filterData.prop.pCSCompValue);
+		if(iRet != RS_RET_OK) {
+			errmsg.LogError(0, iRet, "error %d compare value property - ignoring selector", iRet);
+			rsParsDestruct(pPars);
+			return(iRet);
+		}
 	}
 
 	/* skip to action part */
@@ -1065,7 +1079,6 @@ static rsRetVal cflineDoFilter(uchar **pp, rule_t *f)
 	 * and, if so, we copy them over. rgerhards, 2005-10-18
 	 */
 	if(pDfltProgNameCmp != NULL) {
-RUNLOG_STR("dflt ProgNameCmp != NULL, setting opCSProgNameComp");
 		CHKiRet(rsCStrConstructFromCStr(&(f->pCSProgNameComp), pDfltProgNameCmp));
 	}
 

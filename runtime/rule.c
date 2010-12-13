@@ -70,6 +70,12 @@ getFIOPName(unsigned iFIOP)
 		case FIOP_REGEX:
 			pRet = "regex";
 			break;
+		case FIOP_EREREGEX:
+			pRet = "ereregex";
+			break;
+		case FIOP_ISEMPTY:
+			pRet = "isempty";
+			break;
 		default:
 			pRet = "NOP";
 			break;
@@ -190,13 +196,18 @@ dbgprintf("testing filter, f_pmask %d\n", pRule->f_filterData.f_pmask[pMsg->iFac
 		bRet = (pResult->val.num) ? 1 : 0;
 	} else {
 		assert(pRule->f_filter_type == FILTER_PROP); /* assert() just in case... */
-		pszPropVal = MsgGetProp(pMsg, NULL, pRule->f_filterData.prop.propID, &propLen, &pbMustBeFreed);
+		pszPropVal = MsgGetProp(pMsg, NULL, pRule->f_filterData.prop.propID,
+					pRule->f_filterData.prop.propName, &propLen, &pbMustBeFreed);
 
 		/* Now do the compares (short list currently ;)) */
 		switch(pRule->f_filterData.prop.operation ) {
 		case FIOP_CONTAINS:
 			if(rsCStrLocateInSzStr(pRule->f_filterData.prop.pCSCompValue, (uchar*) pszPropVal) != -1)
 				bRet = 1;
+			break;
+		case FIOP_ISEMPTY:
+			if(propLen == 0)
+				bRet = 1; /* process message! */
 			break;
 		case FIOP_ISEQUAL:
 			if(rsCStrSzStrCmp(pRule->f_filterData.prop.pCSCompValue,
@@ -230,14 +241,28 @@ dbgprintf("testing filter, f_pmask %d\n", pRule->f_filterData.f_pmask[pMsg->iFac
 			bRet = (bRet == 1) ?  0 : 1;
 
 		if(Debug) {
-			dbgprintf("Filter: check for property '%s' (value '%s') ",
-			        propIDToName(pRule->f_filterData.prop.propID), pszPropVal);
+			char *cstr;
+			if(pRule->f_filterData.prop.propID == PROP_CEE) {
+				cstr = es_str2cstr(pRule->f_filterData.prop.propName, NULL);
+				dbgprintf("Filter: check for CEE property '%s' (value '%s') ",
+					cstr, pszPropVal);
+				free(cstr);
+			} else {
+				dbgprintf("Filter: check for property '%s' (value '%s') ",
+					propIDToName(pRule->f_filterData.prop.propID), pszPropVal);
+			}
 			if(pRule->f_filterData.prop.isNegated)
 				dbgprintf("NOT ");
-			dbgprintf("%s '%s': %s\n",
-			       getFIOPName(pRule->f_filterData.prop.operation),
-			       rsCStrGetSzStrNoNULL(pRule->f_filterData.prop.pCSCompValue),
-			       bRet ? "TRUE" : "FALSE");
+			if(pRule->f_filterData.prop.operation == FIOP_ISEMPTY) {
+				dbgprintf("%s : %s\n",
+				       getFIOPName(pRule->f_filterData.prop.operation),
+				       bRet ? "TRUE" : "FALSE");
+			} else {
+				dbgprintf("%s '%s': %s\n",
+				       getFIOPName(pRule->f_filterData.prop.operation),
+				       rsCStrGetSzStrNoNULL(pRule->f_filterData.prop.pCSCompValue),
+				       bRet ? "TRUE" : "FALSE");
+			}
 		}
 
 		/* cleanup */
@@ -324,6 +349,8 @@ CODESTARTobjDestruct(rule)
 			rsCStrDestruct(&pThis->f_filterData.prop.pCSCompValue);
 		if(pThis->f_filterData.prop.regex_cache != NULL)
 			rsCStrRegexDestruct(&pThis->f_filterData.prop.regex_cache);
+		if(pThis->f_filterData.prop.propName != NULL)
+			es_deleteStr(pThis->f_filterData.prop.propName);
 	} else if(pThis->f_filter_type == FILTER_EXPR) {
 		if(pThis->f_filterData.f_expr != NULL)
 			expr.Destruct(&pThis->f_filterData.f_expr);
@@ -368,6 +395,7 @@ DEFFUNC_llExecFunc(dbgPrintInitInfoAction)
 /* debugprint for the rule object */
 BEGINobjDebugPrint(rule) /* be sure to specify the object type also in END and CODESTART macros! */
 	int i;
+	char *cstr;
 CODESTARTobjDebugPrint(rule)
 	dbgoprint((obj_t*) pThis, "rsyslog rule:\n");
 	if(pThis->pCSProgNameComp != NULL)
@@ -388,12 +416,19 @@ CODESTARTobjDebugPrint(rule)
 	} else {
 		dbgprintf("PROPERTY-BASED Filter:\n");
 		dbgprintf("\tProperty.: '%s'\n", propIDToName(pThis->f_filterData.prop.propID));
+		if(pThis->f_filterData.prop.propName != NULL) {
+			cstr = es_str2cstr(pThis->f_filterData.prop.propName, NULL);
+			dbgprintf("\tCEE-Prop.: '%s'\n", cstr);
+			free(cstr);
+		}
 		dbgprintf("\tOperation: ");
 		if(pThis->f_filterData.prop.isNegated)
 			dbgprintf("NOT ");
 		dbgprintf("'%s'\n", getFIOPName(pThis->f_filterData.prop.operation));
-		dbgprintf("\tValue....: '%s'\n",
-		       rsCStrGetSzStrNoNULL(pThis->f_filterData.prop.pCSCompValue));
+		if(pThis->f_filterData.prop.pCSCompValue != NULL) {
+			dbgprintf("\tValue....: '%s'\n",
+			       rsCStrGetSzStrNoNULL(pThis->f_filterData.prop.pCSCompValue));
+		}
 		dbgprintf("\tAction...: ");
 	}
 

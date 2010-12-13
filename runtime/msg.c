@@ -37,6 +37,7 @@
 #include <ctype.h>
 #include <sys/socket.h>
 #include <netdb.h>
+#include <libee/libee.h>
 #if HAVE_MALLOC_H
 #  include <malloc.h>
 #endif
@@ -444,6 +445,10 @@ rsRetVal propNameToID(cstr_t *pCSPropName, propid_t *pPropID)
 		*pPropID = PROP_SYS_MINUTE;
 	} else if(!strcmp((char*) pName, "$myhostname")) {
 		*pPropID = PROP_SYS_MYHOSTNAME;
+	} else if(!strcmp((char*) pName, "$!all-json")) {
+		*pPropID = PROP_CEE_ALL_JSON;
+	} else if(!strncmp((char*) pName, "$!", 2)) {
+		*pPropID = PROP_CEE;
 	} else {
 		*pPropID = PROP_INVALID;
 		iRet = RS_RET_VAR_NOT_FOUND;
@@ -525,6 +530,10 @@ uchar *propIDToName(propid_t propID)
 			return UCHAR_CONSTANT("$MINUTE");
 		case PROP_SYS_MYHOSTNAME:
 			return UCHAR_CONSTANT("$MYHOSTNAME");
+		case PROP_CEE:
+			return UCHAR_CONSTANT("*CEE-based property*");
+		case PROP_CEE_ALL_JSON:
+			return UCHAR_CONSTANT("$!all-json");
 		default:
 			return UCHAR_CONSTANT("*invalid property id*");
 	}
@@ -707,6 +716,7 @@ static inline rsRetVal msgBaseConstruct(msg_t **ppThis)
 	pM->pRcvFromIP = NULL;
 	pM->rcvFrom.pRcvFrom = NULL;
 	pM->pRuleset = NULL;
+	pM->event = NULL;
 	memset(&pM->tRcvdAt, 0, sizeof(pM->tRcvdAt));
 	memset(&pM->tTIMESTAMP, 0, sizeof(pM->tTIMESTAMP));
 	pM->TAG.pszTAG = NULL;
@@ -833,6 +843,8 @@ CODESTARTobjDestruct(msg)
 			rsCStrDestruct(&pThis->pCSPROCID);
 		if(pThis->pCSMSGID != NULL)
 			rsCStrDestruct(&pThis->pCSMSGID);
+		if(pThis->event != NULL)
+			ee_deleteEvent(pThis->event);
 #	ifndef HAVE_ATOMIC_BUILTINS
 		MsgUnlock(pThis);
 # 	endif
@@ -1198,7 +1210,7 @@ char *getProtocolVersionString(msg_t *pM)
 }
 
 
-static inline void
+void
 getRawMsg(msg_t *pM, uchar **pBuf, int *piLen)
 {
 	if(pM == NULL) {
@@ -2219,6 +2231,41 @@ static uchar *getNOW(eNOWType eNow)
 #undef tmpBUFSIZE /* clean up */
 
 
+/* Get a CEE-Property from libee. This function probably should be
+ * placed somewhere else, but this smells like a big restructuring
+ * useful in any case. So for the time being, I'll simply leave the
+ * function here, as the context seems good enough. -- rgerhards, 2010-12-01
+ */
+static inline void
+getCEEPropVal(msg_t *pMsg, es_str_t *propName, uchar **pRes, int *buflen, unsigned short *pbMustBeFreed)
+{
+	struct ee_field *field;
+	es_str_t *str;
+
+	if(*pbMustBeFreed)
+		free(*pRes);
+	*pRes = NULL;
+
+	if(pMsg->event == NULL) goto finalize_it;
+	if((field = ee_getEventField(pMsg->event, propName)) == NULL)
+		goto finalize_it;
+	/* right now, we always extract data from the first field value. A reason for this
+	 * is that as of now (2010-12-01) liblognorm never populates more than one ;)
+	 */
+	if((str = ee_getFieldValueAsStr(field, 0)) == NULL) goto finalize_it;
+	*pRes = (unsigned char*) es_str2cstr(str, "#000");
+	es_deleteStr(str);
+	*buflen = (int) ustrlen(*pRes);
+	*pbMustBeFreed = 1;
+
+finalize_it:
+	if(*pRes == NULL) {
+		/* could not find any value, so set it to empty */
+		*pRes = (unsigned char*)"";
+		*pbMustBeFreed = 0;
+	}
+}
+
 /* This function returns a string-representation of the 
  * requested message property. This is a generic function used
  * to abstract properties so that these can be easier
@@ -2261,7 +2308,7 @@ static uchar *getNOW(eNOWType eNow)
 	*pPropLen = sizeof("**OUT OF MEMORY**") - 1; \
 	return(UCHAR_CONSTANT("**OUT OF MEMORY**"));}
 uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
-                 propid_t propID, size_t *pPropLen,
+                 propid_t propid, es_str_t *propName, size_t *pPropLen,
 		 unsigned short *pbMustBeFreed)
 {
 	uchar *pRes; /* result pointer */
@@ -2270,6 +2317,7 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 	uchar *pBuf;
 	int iLen;
 	short iOffs;
+	es_str_t *str; /* for CEE handling, temp. string */
 
 	BEGINfunc
 	assert(pMsg != NULL);
@@ -2283,7 +2331,7 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 
 	*pbMustBeFreed = 0;
 
-	switch(propID) {
+	switch(propid) {
 		case PROP_MSG:
 			pRes = getMSG(pMsg);
 			bufLen = getMSGLen(pMsg);
@@ -2416,11 +2464,20 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 		case PROP_SYS_MYHOSTNAME:
 			pRes = glbl.GetLocalHostName();
 			break;
+		case PROP_CEE_ALL_JSON:
+			ee_fmtEventToJSON(pMsg->event, &str);
+			pRes = (uchar*) es_str2cstr(str, "#000");
+			es_deleteStr(str);
+			*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
+			break;
+		case PROP_CEE:
+			getCEEPropVal(pMsg, propName, &pRes, &bufLen, pbMustBeFreed);
+			break;
 		default:
 			/* there is no point in continuing, we may even otherwise render the
 			 * error message unreadable. rgerhards, 2007-07-10
 			 */
-			dbgprintf("invalid property id: '%d'\n", propID);
+			dbgprintf("invalid property id: '%d'\n", propid);
 			*pbMustBeFreed = 0;
 			*pPropLen = sizeof("**INVALID PROPERTY NAME**") - 1;
 			return UCHAR_CONSTANT("**INVALID PROPERTY NAME**");
@@ -2428,6 +2485,7 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 
 	/* If we did not receive a template pointer, we are already done... */
 	if(pTpe == NULL) {
+		*pPropLen = (bufLen == -1) ? ustrlen(pRes) : bufLen;
 		return pRes;
 	}
 	
@@ -3016,6 +3074,61 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 }
 
 
+/* The function returns a cee variable suitable for use with RainerScript. Most importantly, this means
+ * that the value is returned in a var_t object. The var_t is constructed inside this function and
+ * MUST be freed by the caller.
+ * Note that we need to do a lot of conversions between es_str_t and cstr -- this will go away once
+ * we have moved larger parts of rsyslog to es_str_t. Acceptable for the moment, especially as we intend
+ * to rewrite the script engine as well!
+ * rgerhards, 2010-12-03
+ */
+rsRetVal
+msgGetCEEVar(msg_t *pMsg, cstr_t *propName, var_t **ppVar)
+{
+	DEFiRet;
+	var_t *pVar;
+	cstr_t *pstrProp;
+	es_str_t *str = NULL;
+	es_str_t *epropName = NULL;
+	struct ee_field *field;
+
+	ISOBJ_TYPE_assert(pMsg, msg);
+	ASSERT(propName != NULL);
+	ASSERT(ppVar != NULL);
+
+	/* make sure we have a var_t instance */
+	CHKiRet(var.Construct(&pVar));
+	CHKiRet(var.ConstructFinalize(pVar));
+
+	epropName = es_newStrFromBuf((char*)propName->pBuf, propName->iStrLen);
+	if((field = ee_getEventField(pMsg->event, epropName)) != NULL) {
+		/* right now, we always extract data from the first field value. A reason for this
+		 * is that as of now (2010-12-01) liblognorm never populates more than one ;)
+		 */
+		str = ee_getFieldValueAsStr(field, 0);
+	}
+
+	if(str == NULL) {
+		CHKiRet(cstrConstruct(&pstrProp));
+		CHKiRet(cstrFinalize(pstrProp));
+	} else {
+		CHKiRet(cstrConstructFromESStr(&pstrProp, str));
+	}
+
+	/* now create a string object out of it and hand that over to the var */
+	CHKiRet(var.SetString(pVar, pstrProp));
+	es_deleteStr(str);
+
+	/* finally store var */
+	*ppVar = pVar;
+
+finalize_it:
+	if(epropName != NULL)
+		es_deleteStr(epropName);
+	RETiRet;
+}
+
+
 /* The returns a message variable suitable for use with RainerScript. Most importantly, this means
  * that the value is returned in a var_t object. The var_t is constructed inside this function and
  * MUST be freed by the caller.
@@ -3043,7 +3156,7 @@ msgGetMsgVar(msg_t *pThis, cstr_t *pstrPropName, var_t **ppVar)
 	/* always call MsgGetProp() without a template specifier */
 	/* TODO: optimize propNameToID() call -- rgerhards, 2009-06-26 */
 	propNameToID(pstrPropName, &propid);
-	pszProp = (uchar*) MsgGetProp(pThis, NULL, propid, &propLen, &bMustBeFreed);
+	pszProp = (uchar*) MsgGetProp(pThis, NULL, propid, NULL, &propLen, &bMustBeFreed);
 
 	/* now create a string object out of it and hand that over to the var */
 	CHKiRet(rsCStrConstructFromszStr(&pstrProp, pszProp));
@@ -3058,6 +3171,8 @@ finalize_it:
 
 	RETiRet;
 }
+
+
 /* This function can be used as a generic way to set properties.
  * We have to handle a lot of legacy, so our return value is not always
  * 100% correct (called functions do not always provide one, should
