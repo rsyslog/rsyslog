@@ -1360,7 +1360,7 @@ doSubmitToActionQNotAllMarkBatch(action_t *pAction, batch_t *pBatch)
 	int i;
 	int bProcessMarkMsgs = 0;
 	int bModifiedFilter;
-	sbool FilterSave[128];
+	sbool FilterSave[1024];
 	sbool *pFilterSave;
 	DEFiRet;
 
@@ -1405,6 +1405,7 @@ doSubmitToActionQNotAllMarkBatch(action_t *pAction, batch_t *pBatch)
 	if(bModifiedFilter) {
 		/* in this case, we need to restore previous state */
 		for(i = 0 ; i < batchNumMsgs(pBatch) ; ++i) {
+			/* note: clang static code analyzer reports a false positive below */
 			pBatch->pElem[i].bFilterOK = pFilterSave[i];
 		}
 	}
