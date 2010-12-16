@@ -3290,7 +3290,7 @@ int realMain(int argc, char **argv)
 		}
 	}
 
-	if ((argc -= optind))
+	if(argc - optind)
 		usage();
 
 	DBGPRINTF("rsyslogd %s startup, compatibility mode %d, module path '%s', cwd:%s\n",
