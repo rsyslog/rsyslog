@@ -435,14 +435,13 @@ dbgMutLog_t *dbgMutLogFindHolder(pthread_mutex_t *pmut)
 static inline void dbgMutexPreLockLog(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncDB, int ln)
 {
 	dbgMutLog_t *pHolder;
-	dbgMutLog_t *pLog;
 	char pszBuf[128];
 	char pszHolderThrdName[64];
 	char *pszHolder;
 
 	pthread_mutex_lock(&mutMutLog);
 	pHolder = dbgMutLogFindHolder(pmut);
-	pLog = dbgMutLogAddEntry(pmut, MUTOP_LOCKWAIT, pFuncDB, ln);
+	dbgMutLogAddEntry(pmut, MUTOP_LOCKWAIT, pFuncDB, ln);
 
 	if(pHolder == NULL)
 		pszHolder = "[NONE]";
@@ -483,14 +482,13 @@ static inline void dbgMutexLockLog(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncDB, 
 static inline void dbgMutexPreTryLockLog(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncDB, int ln)
 {
    dbgMutLog_t *pHolder;
-   dbgMutLog_t *pLog;
    char pszBuf[128];
    char pszHolderThrdName[64];
    char *pszHolder;
 
    pthread_mutex_lock(&mutMutLog);
    pHolder = dbgMutLogFindHolder(pmut);
-   pLog = dbgMutLogAddEntry(pmut, MUTOP_TRYLOCK, pFuncDB, ln);
+   dbgMutLogAddEntry(pmut, MUTOP_TRYLOCK, pFuncDB, ln);
 
    if(pHolder == NULL)
       pszHolder = "[NONE]";

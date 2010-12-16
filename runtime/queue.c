@@ -685,7 +685,6 @@ qqueueHaveQIF(qqueue_t *pThis)
 {
 	DEFiRet;
 	uchar pszQIFNam[MAXFNAME];
-	size_t lenQIFNam;
 	struct stat stat_buf;
 
 	ISOBJ_TYPE_assert(pThis, qqueue);
@@ -694,8 +693,8 @@ qqueueHaveQIF(qqueue_t *pThis)
 		ABORT_FINALIZE(RS_RET_NO_FILEPREFIX);
 
 	/* Construct file name */
-	lenQIFNam = snprintf((char*)pszQIFNam, sizeof(pszQIFNam) / sizeof(uchar), "%s/%s.qi",
-			     (char*) glbl.GetWorkDir(), (char*)pThis->pszFilePrefix);
+	snprintf((char*)pszQIFNam, sizeof(pszQIFNam) / sizeof(uchar), "%s/%s.qi",
+	         (char*) glbl.GetWorkDir(), (char*)pThis->pszFilePrefix);
 
 	/* check if the file exists */
 	if(stat((char*) pszQIFNam, &stat_buf) == -1) {
