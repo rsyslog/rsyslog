@@ -460,7 +460,7 @@ wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in 
 	do {
 		END_MTX_PROTECTED_OPERATIONS(&pThis->mut);
 
-		iRet = wtiWorker(pWti); /* just to make sure: this is NOT protected by the mutex! */
+		wtiWorker(pWti); /* just to make sure: this is NOT protected by the mutex! */
 
 		BEGIN_MTX_PROTECTED_OPERATIONS(&pThis->mut, LOCK_MUTEX);
 	} while(pThis->iCurNumWrkThrd == 1 && pThis->bInactivityGuard == 1);

@@ -1190,7 +1190,6 @@ int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 {
 	uchar *p2parse;
 	int lenMsg;
-	int bTAGCharDetected;
 	int i;	/* general index for parsing */
 	uchar bufParseTAG[CONF_TAG_MAXSIZE];
 	uchar bufParseHOSTNAME[CONF_HOSTNAME_MAXSIZE];
@@ -1251,7 +1250,6 @@ int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 		 * rgerhards, 2009-06-23: and I now have extended this logic to every character
 		 * that is not a valid hostname.
 		 */
-		bTAGCharDetected = 0;
 		if(lenMsg > 0 && flags & PARSE_HOSTNAME) {
 			i = 0;
 			while(i < lenMsg && (isalnum(p2parse[i]) || p2parse[i] == '.' || p2parse[i] == '.'

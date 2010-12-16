@@ -272,7 +272,6 @@ rsRetVal parseMsg(msg_t *pMsg)
 	uchar *msg;
 	int pri;
 	int lenMsg;
-	int iPriText;
 
 	if(pMsg->iLenRawMsg == 0)
 		ABORT_FINALIZE(RS_RET_EMPTY_MSG);
@@ -286,7 +285,6 @@ rsRetVal parseMsg(msg_t *pMsg)
 	lenMsg = pMsg->iLenRawMsg;
 	msg = pMsg->pszRawMsg;
 	pri = DEFUPRI;
-	iPriText = 0;
 	if(*msg == '<') {
 		/* while we process the PRI, we also fill the PRI textual representation
 		 * inside the msg object. This may not be ideal from an OOP point of view,

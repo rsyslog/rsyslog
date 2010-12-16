@@ -151,7 +151,6 @@ rsRetVal thrdCreate(rsRetVal (*thrdMain)(thrdInfo_t*), rsRetVal(*afterRun)(thrdI
 {
 	DEFiRet;
 	thrdInfo_t *pThis;
-	int i;
 
 	assert(thrdMain != NULL);
 
@@ -159,7 +158,7 @@ rsRetVal thrdCreate(rsRetVal (*thrdMain)(thrdInfo_t*), rsRetVal(*afterRun)(thrdI
 	pThis->bIsActive = 1;
 	pThis->pUsrThrdMain = thrdMain;
 	pThis->pAfterRun = afterRun;
-	i = pthread_create(&pThis->thrdID, NULL, thrdStarter, pThis);
+	pthread_create(&pThis->thrdID, NULL, thrdStarter, pThis);
 	CHKiRet(llAppend(&llThrds, NULL, pThis));
 
 finalize_it:
