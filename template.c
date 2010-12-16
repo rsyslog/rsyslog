@@ -86,9 +86,9 @@ rsRetVal tplToString(struct template *pTpl, msg_t *pMsg, uchar **ppBuf, size_t *
 	DEFiRet;
 	struct templateEntry *pTpe;
 	size_t iBuf;
-	unsigned short bMustBeFreed;
+	unsigned short bMustBeFreed = 0;
 	uchar *pVal;
-	size_t iLenVal;
+	size_t iLenVal = 0;
 
 	assert(pTpl != NULL);
 	assert(pMsg != NULL);
@@ -1046,7 +1046,6 @@ void tplDeleteAll(void)
 {
 	struct template *pTpl, *pTplDel;
 	struct templateEntry *pTpe, *pTpeDel;
-	rsRetVal iRetLocal;
 	BEGINfunc
 
 	pTpl = tplRoot;
@@ -1069,7 +1068,7 @@ void tplDeleteAll(void)
 			case FIELD:
 				/* check if we have a regexp and, if so, delete it */
 				if(pTpeDel->data.field.has_regex != 0) {
-					if((iRetLocal = objUse(regexp, LM_REGEXP_FILENAME)) == RS_RET_OK) {
+					if(objUse(regexp, LM_REGEXP_FILENAME) == RS_RET_OK) {
 						regexp.regfree(&(pTpeDel->data.field.re));
 					}
 				}
@@ -1095,7 +1094,6 @@ void tplDeleteNew(void)
 {
 	struct template *pTpl, *pTplDel;
 	struct templateEntry *pTpe, *pTpeDel;
-	rsRetVal iRetLocal;
 
 	BEGINfunc
 
@@ -1124,7 +1122,7 @@ void tplDeleteNew(void)
 			case FIELD:
 				/* check if we have a regexp and, if so, delete it */
 				if(pTpeDel->data.field.has_regex != 0) {
-					if((iRetLocal = objUse(regexp, LM_REGEXP_FILENAME)) == RS_RET_OK) {
+					if(objUse(regexp, LM_REGEXP_FILENAME) == RS_RET_OK) {
 						regexp.regfree(&(pTpeDel->data.field.re));
 					}
 				}

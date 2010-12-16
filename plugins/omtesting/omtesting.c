@@ -188,8 +188,10 @@ CODESTARTdoAction
 			break;
 		case MD_RANDFAIL:
 			iRet = doRandFail();
+			break;
 		case MD_ALWAYS_SUSPEND:
 			iRet = RS_RET_SUSPENDED;
+			break;
 	}
 
 	if(iRet == RS_RET_OK && pData->bEchoStdout) {

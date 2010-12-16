@@ -267,7 +267,7 @@ ctokGetVar(ctok_t *pThis, ctok_token_t *pToken)
 {
 	DEFiRet;
 	uchar c;
-	cstr_t *pstrVal;
+	cstr_t *pstrVal = NULL;
 
 	ISOBJ_TYPE_assert(pThis, ctok);
 	ASSERT(pToken != NULL);
