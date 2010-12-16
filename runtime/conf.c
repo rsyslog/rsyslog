@@ -1084,7 +1084,7 @@ static rsRetVal cflineDoAction(uchar **p, action_t **ppAction)
 	DEFiRet;
 	modInfo_t *pMod;
 	omodStringRequest_t *pOMSR;
-	action_t *pAction;
+	action_t *pAction = NULL;
 	void *pModData;
 
 	ASSERT(p != NULL);
