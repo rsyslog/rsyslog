@@ -971,7 +971,7 @@ submitBatch(action_t *pAction, batch_t *pBatch, int nElem)
 			; /* do nothing, this will retry the full batch */
 		} else if(localRet == RS_RET_ACTION_FAILED) {
 			/* in this case, everything not yet committed is BAD */
-			for(i = pBatch->iDoneUpTo ; i < nElem ; ++i) {
+			for(i = pBatch->iDoneUpTo ; i < pBatch->iDoneUpTo + nElem ; ++i) {
 				if(   pBatch->pElem[i].state != BATCH_STATE_DISC
 				   && pBatch->pElem[i].state != BATCH_STATE_COMM ) {
 					pBatch->pElem[i].state = BATCH_STATE_BAD;
@@ -981,7 +981,7 @@ submitBatch(action_t *pAction, batch_t *pBatch, int nElem)
 			bDone = 1;
 		} else {
 			if(nElem == 1) {
-				batchSetElemState(pBatch, i, BATCH_STATE_BAD);
+				batchSetElemState(pBatch, pBatch->iDoneUpTo, BATCH_STATE_BAD);
 				bDone = 1;
 			} else {
 				/* retry with half as much. Depth is log_2 batchsize, so recursion is not too deep */

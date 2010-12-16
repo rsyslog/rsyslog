@@ -157,9 +157,7 @@ static pthread_key_t keyCallStack;
  */
 static void dbgMutexCancelCleanupHdlr(void *pmut)
 {
-	int ret;
-	ret = pthread_mutex_unlock((pthread_mutex_t*) pmut);
-	assert(ret == 0);
+	pthread_mutex_unlock((pthread_mutex_t*) pmut);
 }
 
 
@@ -473,7 +471,7 @@ static inline void dbgMutexLockLog(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncDB, 
 	dbgMutLogDelEntry(pLog);
 
 	/* add "lock" entry */
-	pLog = dbgMutLogAddEntry(pmut, MUTOP_LOCK, pFuncDB, lockLn);
+	dbgMutLogAddEntry(pmut, MUTOP_LOCK, pFuncDB, lockLn);
 	dbgFuncDBAddMutexLock(pFuncDB, pmut, lockLn);
 	pthread_mutex_unlock(&mutMutLog);
 	if(bPrintMutexAction)
@@ -520,7 +518,7 @@ static inline void dbgMutexTryLockLog(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncD
    dbgMutLogDelEntry(pLog);
 
    /* add "lock" entry */
-   pLog = dbgMutLogAddEntry(pmut, MUTOP_LOCK, pFuncDB, lockLn);
+   dbgMutLogAddEntry(pmut, MUTOP_LOCK, pFuncDB, lockLn);
    dbgFuncDBAddMutexLock(pFuncDB, pmut, lockLn);
    pthread_mutex_unlock(&mutMutLog);
    if(bPrintMutexAction)

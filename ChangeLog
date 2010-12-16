@@ -1,6 +1,7 @@
 ---------------------------------------------------------------------------
-<<<<<<< HEAD
 Version 5.6.3  [V5-STABLE] (rgerhards), 2010-12-??
+- bugfix: batch processing flagged invalid message as "bad" under some
+  circumstances
 - bugfix: unitialized variable could cause issues under extreme conditions
   plus some minor nits. This was found after a clang static code analyzer
   analysis (great tool, and special thanks to Marcin for telling me about
@@ -585,9 +586,8 @@ Version 4.6.5  [v4-stable] (rgerhards), 2010-??-??
   in a tight loop, effectively disabling functionality and bearing the
   risk of unresponsiveness of the whole system.
   Bug tracker: http://bugzilla.adiscon.com/show_bug.cgi?id=194
-=======
+---------------------------------------------------------------------------
 Version 4.6.6  [v4-stable] (rgerhards), 2010-11-??
->>>>>>> 371a8eec29fa25bbf58f4b1f0d7e3bf4c3ad6329
 - bugfix: a couple of problems that imfile had on some platforms, namely
   Ubuntu (not their fault, but occured there)
 - bugfix: imfile utilizes 32 bit to track offset. Most importantly,
