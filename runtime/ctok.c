@@ -1,4 +1,4 @@
-/* cfgtok.c - helper class to tokenize an input stream - which surprisingly
+/* ctok.c - helper class to tokenize an input stream - which surprisingly
  * currently does not work with streams but with string. But that will
  * probably change over time ;) This class was originally written to support
  * the expression module but may evolve when (if) the expression module is

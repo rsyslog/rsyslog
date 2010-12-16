@@ -404,7 +404,6 @@ prepareFile(instanceData *pData, uchar *newFileName)
 		}
 	} else {
 		/* file does not exist, create it (and eventually parent directories */
-		fd = -1;
 		if(pData->bCreateDirs) {
 			/* We first need to create parent dirs if they are missing.
 			 * We do not report any errors here ourselfs but let the code

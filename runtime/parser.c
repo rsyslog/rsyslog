@@ -429,14 +429,12 @@ ParsePRI(msg_t *pMsg)
 	int pri;
 	uchar *msg;
 	int lenMsg;
-	int iPriText;
 	DEFiRet;
 
 	/* pull PRI */
 	lenMsg = pMsg->iLenRawMsg;
 	msg = pMsg->pszRawMsg;
 	pri = DEFUPRI;
-	iPriText = 0;
 	if(pMsg->msgFlags & NO_PRI_IN_RAW) {
 		/* In this case, simply do so as if the pri would be right at top */
 		MsgSetAfterPRIOffs(pMsg, 0);

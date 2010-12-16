@@ -651,8 +651,7 @@ static void FreeSymbols(void)
  **************************************************************************/
 extern char *ExpandKadds(char *line, char *el)
 {
-	auto char	dlm,
-			*kp,
+	auto char	*kp,
 			*sl = line,
 			*elp = el,
 			*symbol;
@@ -782,7 +781,6 @@ extern char *ExpandKadds(char *line, char *el)
 			strcpy(el, sl);
 			return(el);
 		}
-		dlm = *kp;
 		strncpy(num,sl+1,kp-sl-1);
 		num[kp-sl-1] = '\0';
 		value = strtoul(num, (char **) 0, 16);
