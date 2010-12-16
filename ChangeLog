@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 6.1.2  [DEVEL] (rgerhards), 2010-12-13
+Version 6.1.2  [DEVEL] (rgerhards), 2010-12-16
 - added experimental support for log normalizaton (via liblognorm)
   support for normalizing log messages has been added in the form of
   mmnormalize. The core engine (property replacer, filter engine) has

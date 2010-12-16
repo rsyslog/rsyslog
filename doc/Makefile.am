@@ -110,6 +110,7 @@ html_files = \
 	src/tls_cert.dia \
 	gssapi.html \
 	licensing.html \
+	mmnormalize.html \
 	ommail.html \
 	omuxsock.html \
 	omrelp.html \
