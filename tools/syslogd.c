@@ -2302,6 +2302,9 @@ init()
 
 	legacyOptsHook();
 
+	/* re-generate local host name property, as the config may have changed our FQDN settings */
+	glbl.GenerateLocalHostNameProperty();
+
 	/* we are now done with reading the configuration. This is the right time to
 	 * free some objects that were just needed for loading it. rgerhards 2005-10-19
 	 */
@@ -3565,9 +3568,6 @@ int realMain(int argc, char **argv)
 
 	if(!iConfigVerify)
 		CHKiRet(doGlblProcessInit());
-
-	/* re-generate local host name property, as the config may have changed our FQDN settings */
-	glbl.GenerateLocalHostNameProperty();
 
 	CHKiRet(mainThread());
 

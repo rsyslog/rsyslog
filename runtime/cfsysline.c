@@ -953,8 +953,6 @@ finalize_it:
  */
 void dbgPrintCfSysLineHandlers(void)
 {
-	DEFiRet;
-
 	cslCmd_t *pCmd;
 	cslCmdHdlr_t *pCmdHdlr;
 	linkedListCookie_t llCookieCmd;
@@ -976,7 +974,6 @@ void dbgPrintCfSysLineHandlers(void)
 		}
 	}
 	dbgprintf("\n");
-	ENDfunc
 }
 
 
