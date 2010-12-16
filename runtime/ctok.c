@@ -1,4 +1,4 @@
-/* cfgtok.c - helper class to tokenize an input stream - which surprisingly
+/* ctok.c - helper class to tokenize an input stream - which surprisingly
  * currently does not work with streams but with string. But that will
  * probably change over time ;) This class was originally written to support
  * the expression module but may evolve when (if) the expression module is
@@ -267,7 +267,7 @@ ctokGetVar(ctok_t *pThis, ctok_token_t *pToken)
 {
 	DEFiRet;
 	uchar c;
-	cstr_t *pstrVal;
+	cstr_t *pstrVal = NULL;
 
 	ISOBJ_TYPE_assert(pThis, ctok);
 	ASSERT(pToken != NULL);
