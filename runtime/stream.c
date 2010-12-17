@@ -422,10 +422,15 @@ strmHandleEOFMonitor(strm_t *pThis)
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
 	if(stat((char*) pThis->pszCurrFName, &statName) == -1)
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
+	DBGPRINTF("stream checking for file change on '%s', inode %u/%u, size %lld/%lld\n",
+	  pThis->pszCurrFName, (unsigned) statOpen.st_ino,
+	  (unsigned) statName.st_ino,
+	  pThis->iCurrOffs, (long long) statName.st_size);
 	if(statOpen.st_ino == statName.st_ino && pThis->iCurrOffs == statName.st_size) {
 		ABORT_FINALIZE(RS_RET_EOF);
 	} else {
 		/* we had a file change! */
+		DBGPRINTF("we had a file change on '%s'\n", pThis->pszCurrFName);
 		CHKiRet(strmCloseFile(pThis));
 		CHKiRet(strmOpenFile(pThis));
 	}
