@@ -426,7 +426,7 @@ strmHandleEOFMonitor(strm_t *pThis)
 	  pThis->pszCurrFName, (unsigned) statOpen.st_ino,
 	  (unsigned) statName.st_ino,
 	  pThis->iCurrOffs, (long long) statName.st_size);
-	if(statOpen.st_ino == statName.st_ino && pThis->iCurrOffs == statName.st_size) {
+	if(statOpen.st_ino == statName.st_ino && pThis->iCurrOffs >= statName.st_size) {
 		ABORT_FINALIZE(RS_RET_EOF);
 	} else {
 		/* we had a file change! */
