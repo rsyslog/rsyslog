@@ -127,6 +127,13 @@ typedef struct _instanceData {
 	struct oracle_batch batch;
 } instanceData;
 
+/* To be honest, strlcpy is faster than strncpy and makes very easy to
+ * detect if a message has been truncated. */
+#ifndef strlcpy
+#define strlcpy(dst,src,sz) snprintf((dst), (sz), "%s", (src))
+#endif
+
+
 /** Database name, to be filled by the $OmoracleDB directive */
 static char* db_name;
 /** Database user name, to be filled by the $OmoracleDBUser
@@ -529,7 +536,7 @@ CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
 BEGINdoAction
-	int i;
+	int i, sz;
 	char **params = (char**) ppString[0];
 CODESTARTdoAction
 
@@ -540,9 +547,13 @@ CODESTARTdoAction
 
 	for (i = 0; i < pData->batch.arguments && params[i]; i++) {
 		dbgprintf("batch[%d][%d]=%s\n", i, pData->batch.n, params[i]);
-		strncpy(pData->batch.parameters[i][pData->batch.n], params[i],
-			pData->batch.param_size);
-		CHKmalloc(pData->batch.parameters[i][pData->batch.n]);
+		sz = strlcpy(pData->batch.parameters[i][pData->batch.n],
+			     params[i], pData->batch.param_size);
+		if (sz >= pData->batch.param_size)
+			errmsg.LogError(0, NO_ERRCODE,
+					"Possibly truncated %d column of '%s' "
+					"statement: %s", i,
+					pData->txt_statement, params[i]);
 	}
 	pData->batch.n++;
 

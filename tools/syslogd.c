@@ -2868,9 +2868,6 @@ int realMain(int argc, char **argv)
 	if(!iConfigVerify)
 		CHKiRet(doGlblProcessInit());
 
-	/* re-generate local host name property, as the config may have changed our FQDN settings */
-	glbl.GenerateLocalHostNameProperty();
-
 	CHKiRet(mainThread());
 
 	/* do any de-init's that need to be done AFTER this comment */
