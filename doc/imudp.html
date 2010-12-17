@@ -35,6 +35,12 @@ You can set this value as high as you like, but do so at your own risk. The high
 the value, the less precise the timestamp.
 <li>$InputUDPServerBindRuleset &lt;ruleset&gt;<br>
 Binds the listener to a specific <a href="multi_ruleset.html">ruleset</a>.</li>
+<li>$IMUDPSchedulingPolicy &lt;rr/fifo/other&gt;<br>
+Can be used the set the scheduler priority, if the necessary functionality
+is provided by the platform. Most useful to select "fifo" for real-time 
+processing under Linux (and thus reduce chance of packet loss). Available since 4.7.4+, 5.7.3+, 6.1.3+.
+<li>$IMUDPSchedulingPriority &lt;number&gt;<br>
+Scheduling priority to use. Available since 4.7.4+, 5.7.3+, 6.1.3+.
 </ul>
 <b>Caveats/Known Bugs:</b>
 <ul>
