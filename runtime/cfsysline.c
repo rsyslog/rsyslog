@@ -953,8 +953,6 @@ finalize_it:
  */
 void dbgPrintCfSysLineHandlers(void)
 {
-	DEFiRet;
-
 	cslCmd_t *pCmd;
 	cslCmdHdlr_t *pCmdHdlr;
 	linkedListCookie_t llCookieCmd;
@@ -963,11 +961,11 @@ void dbgPrintCfSysLineHandlers(void)
 
 	dbgprintf("Sytem Line Configuration Commands:\n");
 	llCookieCmd = NULL;
-	while((iRet = llGetNextElt(&llCmdList, &llCookieCmd, (void*)&pCmd)) == RS_RET_OK) {
+	while(llGetNextElt(&llCmdList, &llCookieCmd, (void*)&pCmd) == RS_RET_OK) {
 		llGetKey(llCookieCmd, (void*) &pKey); /* TODO: using the cookie is NOT clean! */
 		dbgprintf("\tCommand '%s':\n", pKey);
 		llCookieCmdHdlr = NULL;
-		while((iRet = llGetNextElt(&pCmd->llCmdHdlrs, &llCookieCmdHdlr, (void*)&pCmdHdlr)) == RS_RET_OK) {
+		while(llGetNextElt(&pCmd->llCmdHdlrs, &llCookieCmdHdlr, (void*)&pCmdHdlr) == RS_RET_OK) {
 			dbgprintf("\t\ttype : %d\n", pCmdHdlr->eType);
 			dbgprintf("\t\tpData: 0x%lx\n", (unsigned long) pCmdHdlr->pData);
 			dbgprintf("\t\tHdlr : 0x%lx\n", (unsigned long) pCmdHdlr->cslCmdHdlr);
@@ -976,7 +974,6 @@ void dbgPrintCfSysLineHandlers(void)
 		}
 	}
 	dbgprintf("\n");
-	ENDfunc
 }
 
 

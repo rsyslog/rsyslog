@@ -1084,7 +1084,7 @@ static rsRetVal cflineDoAction(uchar **p, action_t **ppAction)
 	DEFiRet;
 	modInfo_t *pMod;
 	omodStringRequest_t *pOMSR;
-	action_t *pAction;
+	action_t *pAction = NULL;
 	void *pModData;
 
 	ASSERT(p != NULL);
@@ -1092,6 +1092,11 @@ static rsRetVal cflineDoAction(uchar **p, action_t **ppAction)
 
 	/* loop through all modules and see if one picks up the line */
 	pMod = module.GetNxtType(NULL, eMOD_OUT);
+	/* Note: clang static analyzer reports that pMod mybe == NULL. However, this is
+	 * not possible, because we have the built-in output modules which are always
+	 * present. Anyhow, we guard this by an assert. -- rgerhards, 2010-12-16
+	 */
+	assert(pMod != NULL);
 	while(pMod != NULL) {
 		pOMSR = NULL;
 		iRet = pMod->mod.om.parseSelectorAct(p, &pModData, &pOMSR);
