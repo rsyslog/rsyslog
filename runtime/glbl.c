@@ -154,6 +154,7 @@ GenerateLocalHostNameProperty(void)
 	uchar *pszName;
 
 	if(propLocalHostName != NULL)
+		prop.Destruct(&propLocalHostName);
 
 	CHKiRet(prop.Construct(&propLocalHostName));
 	if(LocalHostNameOverride == NULL) {
