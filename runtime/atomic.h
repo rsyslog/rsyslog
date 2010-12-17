@@ -46,7 +46,6 @@
 #	define ATOMIC_INC(data, phlpmut) ((void) __sync_fetch_and_add(data, 1))
 #	define ATOMIC_INC_AND_FETCH_int(data, phlpmut) __sync_fetch_and_add(data, 1)
 #	define ATOMIC_INC_AND_FETCH_unsigned(data, phlpmut) __sync_fetch_and_add(data, 1)
-#	define ATOMIC_INC_AND_FETCH_uint64(data, phlpmut) __sync_fetch_and_add(data, 1)
 #	define ATOMIC_DEC(data, phlpmut) ((void) __sync_sub_and_fetch(data, 1))
 #	define ATOMIC_DEC_AND_FETCH(data, phlpmut) __sync_sub_and_fetch(data, 1)
 #	define ATOMIC_FETCH_32BIT(data, phlpmut) ((unsigned) __sync_fetch_and_and(data, 0xffffffff))
@@ -160,15 +159,6 @@
 		return(val);
 	}
 
-	static inline unsigned
-	ATOMIC_INC_AND_FETCH_uint64(uint64 *data, pthread_mutex_t *phlpmut) {
-		uint64 val;
-		pthread_mutex_lock(phlpmut);
-		val = ++(*data);
-		pthread_mutex_unlock(phlpmut);
-		return(val);
-	}
-
 	static inline int
 	ATOMIC_DEC_AND_FETCH(int *data, pthread_mutex_t *phlpmut) {
 		int val;
@@ -193,13 +183,6 @@
 		(*data) -= val;
 		pthread_mutex_unlock(phlpmut);
 	}
-#if 0
-#	warning "atomic builtins not available, using nul operations - rsyslogd will probably be racy!"
-#	define ATOMIC_INC_AND_FETCH_int(data) (++(data))
-#	define ATOMIC_INC_AND_FETCH_unsigned(data) (++(data))
-#	define ATOMIC_INC_AND_FETCH_uint64(data) (++(data))
-#	define ATOMIC_STORE_1_TO_32BIT(data) (data) = 1 // TODO: del
-#endif
 #	define DEF_ATOMIC_HELPER_MUT(x)  pthread_mutex_t x
 #	define INIT_ATOMIC_HELPER_MUT(x) pthread_mutex_init(&(x), NULL)
 #	define DESTROY_ATOMIC_HELPER_MUT(x) pthread_mutex_destroy(&(x))
@@ -207,5 +190,42 @@
 #	define PREFER_ATOMIC_INC(data) ((void) ++data)
 
 #endif
+
+/* we need to handle 64bit atomics seperately as some platforms have 
+ * 32 bit atomics, but not 64 biot ones... -- rgerhards, 2010-12-01
+ */
+#ifdef HAVE_ATOMIC_BUILTINS_64BIT
+#	define ATOMIC_INC_uint64(data, phlpmut) ((void) __sync_fetch_and_add(data, 1))
+#	define ATOMIC_DEC_unit64(data, phlpmut) ((void) __sync_sub_and_fetch(data, 1))
+#	define ATOMIC_INC_AND_FETCH_uint64(data, phlpmut) __sync_fetch_and_add(data, 1)
+
+#	define DEF_ATOMIC_HELPER_MUT64(x)
+#	define INIT_ATOMIC_HELPER_MUT64(x)
+#	define DESTROY_ATOMIC_HELPER_MUT64(x) 
+#else
+#	define ATOMIC_INC_uint64(data, phlpmut)  { \
+		pthread_mutex_lock(phlpmut); \
+		++(*(data)); \
+		pthread_mutex_unlock(phlpmut); \
+	}
+#	define ATOMIC_DEC_uint64(data, phlpmut)  { \
+		pthread_mutex_lock(phlpmut); \
+		--(*(data)); \
+		pthread_mutex_unlock(phlpmut); \
+	}
+
+	static inline unsigned
+	ATOMIC_INC_AND_FETCH_uint64(uint64 *data, pthread_mutex_t *phlpmut) {
+		uint64 val;
+		pthread_mutex_lock(phlpmut);
+		val = ++(*data);
+		pthread_mutex_unlock(phlpmut);
+		return(val);
+	}
+
+#	define DEF_ATOMIC_HELPER_MUT64(x)  pthread_mutex_t x
+#	define INIT_ATOMIC_HELPER_MUT64(x) pthread_mutex_init(&(x), NULL)
+#	define DESTROY_ATOMIC_HELPER_MUT64(x) pthread_mutex_destroy(&(x))
+#endif /* #ifdef HAVE_ATOMIC_BUILTINS_64BIT */
 
 #endif /* #ifndef INCLUDED_ATOMIC_H */

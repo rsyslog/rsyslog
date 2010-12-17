@@ -157,9 +157,7 @@ static pthread_key_t keyCallStack;
  */
 static void dbgMutexCancelCleanupHdlr(void *pmut)
 {
-	int ret;
-	ret = pthread_mutex_unlock((pthread_mutex_t*) pmut);
-	assert(ret == 0);
+	pthread_mutex_unlock((pthread_mutex_t*) pmut);
 }
 
 
@@ -438,14 +436,13 @@ dbgMutLog_t *dbgMutLogFindHolder(pthread_mutex_t *pmut)
 static inline void dbgMutexPreLockLog(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncDB, int ln)
 {
 	dbgMutLog_t *pHolder;
-	dbgMutLog_t *pLog;
 	char pszBuf[128];
 	char pszHolderThrdName[64];
 	char *pszHolder;
 
 	pthread_mutex_lock(&mutMutLog);
 	pHolder = dbgMutLogFindHolder(pmut);
-	pLog = dbgMutLogAddEntry(pmut, MUTOP_LOCKWAIT, pFuncDB, ln);
+	dbgMutLogAddEntry(pmut, MUTOP_LOCKWAIT, pFuncDB, ln);
 
 	if(pHolder == NULL)
 		pszHolder = "[NONE]";
@@ -474,7 +471,7 @@ static inline void dbgMutexLockLog(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncDB, 
 	dbgMutLogDelEntry(pLog);
 
 	/* add "lock" entry */
-	pLog = dbgMutLogAddEntry(pmut, MUTOP_LOCK, pFuncDB, lockLn);
+	dbgMutLogAddEntry(pmut, MUTOP_LOCK, pFuncDB, lockLn);
 	dbgFuncDBAddMutexLock(pFuncDB, pmut, lockLn);
 	pthread_mutex_unlock(&mutMutLog);
 	if(bPrintMutexAction)
@@ -486,14 +483,13 @@ static inline void dbgMutexLockLog(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncDB, 
 static inline void dbgMutexPreTryLockLog(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncDB, int ln)
 {
    dbgMutLog_t *pHolder;
-   dbgMutLog_t *pLog;
    char pszBuf[128];
    char pszHolderThrdName[64];
    char *pszHolder;
 
    pthread_mutex_lock(&mutMutLog);
    pHolder = dbgMutLogFindHolder(pmut);
-   pLog = dbgMutLogAddEntry(pmut, MUTOP_TRYLOCK, pFuncDB, ln);
+   dbgMutLogAddEntry(pmut, MUTOP_TRYLOCK, pFuncDB, ln);
 
    if(pHolder == NULL)
       pszHolder = "[NONE]";
@@ -522,7 +518,7 @@ static inline void dbgMutexTryLockLog(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncD
    dbgMutLogDelEntry(pLog);
 
    /* add "lock" entry */
-   pLog = dbgMutLogAddEntry(pmut, MUTOP_LOCK, pFuncDB, lockLn);
+   dbgMutLogAddEntry(pmut, MUTOP_LOCK, pFuncDB, lockLn);
    dbgFuncDBAddMutexLock(pFuncDB, pmut, lockLn);
    pthread_mutex_unlock(&mutMutLog);
    if(bPrintMutexAction)

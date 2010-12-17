@@ -1558,7 +1558,7 @@ rsRetVal MsgSetPROCID(msg_t *pMsg, char* pszPROCID)
 		CHKiRet(cstrConstruct(&pMsg->pCSPROCID));
 	}
 	/* if we reach this point, we have the object */
-	iRet = rsCStrSetSzStr(pMsg->pCSPROCID, (uchar*) pszPROCID);
+	CHKiRet(rsCStrSetSzStr(pMsg->pCSPROCID, (uchar*) pszPROCID));
 	CHKiRet(cstrFinalize(pMsg->pCSPROCID));
 
 finalize_it:
@@ -3034,7 +3034,6 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 	if(pTpe->data.field.options.bCSV) {
 		/* we need to obtain a private copy, as we need to at least add the double quotes */
 		int iBufLen;
-		int i;
 		uchar *pBStart;
 		uchar *pDst;
 		uchar *pSrc;
@@ -3049,7 +3048,6 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			RET_OUT_OF_MEMORY;
 		}
 		pSrc = pRes;
-		i = 0;
 		*pDst++ = '"'; /* starting quote */
 		while(*pSrc) {
 			if(*pSrc == '"')

@@ -79,6 +79,8 @@ static uchar *pRcvBuf = NULL;		/* receive buffer (for a single packet). We use a
 					 */
 static prop_t *pInputName = NULL;	/* our inputName currently is always "imudp", and this will hold it */
 static ruleset_t *pBindRuleset = NULL;	/* ruleset to bind listener to (use system default if unspecified) */
+static uchar *pszSchedPolicy = NULL;	/**< scheduling policy (string) */
+static int iSchedPrio = -1;		/**< scheduling priority (must not be negative) */
 #define TIME_REQUERY_DFLT 2
 static int iTimeRequery = TIME_REQUERY_DFLT;/* how often is time to be queried inside tight recv loop? 0=always */
 
@@ -446,6 +448,7 @@ ENDrunInput
 
 /* initialize and return if will run or not */
 BEGINwillRun
+	struct sched_param sparam;
 CODESTARTwillRun
 	/* we need to create the inputName property (only once during our lifetime) */
 	CHKiRet(prop.Construct(&pInputName));
@@ -454,6 +457,40 @@ CODESTARTwillRun
 
 	net.PrintAllowedSenders(1); /* UDP */
 	net.HasRestrictions(UCHAR_CONSTANT("UDP"), &bDoACLCheck); /* UDP */
+	
+	if(pszSchedPolicy == NULL) {
+		if(iSchedPrio != -1) {
+			errmsg.LogError(errno, NO_ERRCODE, "imudp: scheduling policy not set, but "
+				"priority - ignoring settings");
+		}
+	} else {
+		if(iSchedPrio == -1) {
+			errmsg.LogError(errno, NO_ERRCODE, "imudp: scheduling policy set, but no "
+				"priority - ignoring settings");
+		}
+		sparam.sched_priority = iSchedPrio;
+		dbgprintf("imudp trying to set sched policy to '%s', prio %d\n", 
+			  pszSchedPolicy, iSchedPrio);
+		if(0) { /* trick to use conditional compilation */
+#		ifdef SCHED_FIFO
+		} else if(!strcasecmp((char*)pszSchedPolicy, "fifo")) {
+			pthread_setschedparam(pthread_self(), SCHED_FIFO, &sparam);
+#		endif
+#		ifdef SCHED_RR
+		} else if(!strcasecmp((char*)pszSchedPolicy, "rr")) {
+			pthread_setschedparam(pthread_self(), SCHED_RR, &sparam);
+#		endif
+#		ifdef SCHED_OTHER
+		} else if(!strcasecmp((char*)pszSchedPolicy, "other")) {
+			pthread_setschedparam(pthread_self(), SCHED_OTHER, &sparam);
+#		endif
+		} else {
+			errmsg.LogError(errno, NO_ERRCODE, "imudp: invliad scheduling policy '%s' "
+				"ignoring settings", pszSchedPolicy);
+		}
+		free(pszSchedPolicy);
+		pszSchedPolicy = NULL;
+	}
 
 	/* if we could not set up any listners, there is no point in running... */
 	if(udpLstnSocks == NULL)
@@ -539,6 +576,10 @@ CODEmodInit_QueryRegCFSLineHdlr
 		addListner, NULL, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"udpserveraddress", 0, eCmdHdlrGetWord,
 		NULL, &pszBindAddr, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"imudpschedulingpolicy", 0, eCmdHdlrGetWord,
+		NULL, &pszSchedPolicy, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"imudpschedulingpriority", 0, eCmdHdlrInt,
+		NULL, &iSchedPrio, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"udpservertimerequery", 0, eCmdHdlrInt,
 		NULL, &iTimeRequery, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,

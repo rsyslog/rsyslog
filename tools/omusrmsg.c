@@ -259,7 +259,6 @@ static rsRetVal wallmsg(uchar* pMsg, instanceData *pData)
 				}
 			}
 			close(ttyf);
-			ttyf = -1;
 		}
 	}
 

@@ -99,19 +99,19 @@ PROTOTYPEObj(statsobj);
  */
 #define STATSCOUNTER_DEF(ctr, mut) \
 	intctr_t ctr; \
-	DEF_ATOMIC_HELPER_MUT(mut);
+	DEF_ATOMIC_HELPER_MUT64(mut);
 
 #define STATSCOUNTER_INIT(ctr, mut) \
-	INIT_ATOMIC_HELPER_MUT(mut); \
+	INIT_ATOMIC_HELPER_MUT64(mut); \
 	ctr = 0;
 
 #define STATSCOUNTER_INC(ctr, mut) \
 	if(GatherStats) \
-		ATOMIC_INC(&ctr, &mut);
+		ATOMIC_INC_uint64(&ctr, &mut);
 
 #define STATSCOUNTER_DEC(ctr, mut) \
 	if(GatherStats) \
-		ATOMIC_DEC(&ctr, mut);
+		ATOMIC_DEC_uint64(&ctr, mut);
 
 /* the next macro works only if the variable is already guarded
  * by mutex (or the users risks a wrong result). It is assumed 

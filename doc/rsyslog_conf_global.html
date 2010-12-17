@@ -162,6 +162,12 @@ Usually that should not be a big issue, as the restart-type HUP can easily be re
 something along the lines of &quot;/etc/init.d/rsyslog restart&quot;.
 </li>
 <li><a href="rsconf1_includeconfig.html">$IncludeConfig</a></li><li>MainMsgQueueCheckpointInterval &lt;number&gt;</li>
+<li><b>$LocalHostName</b> [name] - this directive permits to overwrite the system
+hostname with the one specified in the directive. If the directive is given
+multiple times, all but the last one will be ignored. Please note that startup
+error messages may be issued with the real hostname. This is by design and not
+a bug (but one may argue if the design should be changed ;)). Available since
+4.7.4+, 5.7.3+, 6.1.3+.
 <li><b>$LogRSyslogStatusMessages</b> [<b>on</b>/off] - If set to on (the default),
 rsyslog emits message on startup and shutdown as well as when it is HUPed.
 This information might be needed by some log analyzers. If set to off, no such

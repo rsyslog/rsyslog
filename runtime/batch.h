@@ -53,9 +53,11 @@ struct batch_obj_s {
 	 */
 	sbool bFilterOK;	/* work area for filter processing (per action, reused!) */
 	sbool bPrevWasSuspended;
-	void *staticActParams[CONF_OMOD_NUMSTRINGS_MAXSIZE];
+	/* following are caches to save allocs if not absolutely necessary */
+	uchar *staticActStrings[CONF_OMOD_NUMSTRINGS_MAXSIZE]; /**< for strings */
 				/* a cache to save malloc(), if not absolutely necessary */
-	size_t staticLenParams[CONF_OMOD_NUMSTRINGS_MAXSIZE];
+	void *staticActParams[CONF_OMOD_NUMSTRINGS_MAXSIZE]; /**< for anything else */
+	size_t staticLenStrings[CONF_OMOD_NUMSTRINGS_MAXSIZE];
 				/* and the same for the message length (if used) */
 	/* end action work variables */
 };
@@ -152,7 +154,10 @@ batchFree(batch_t *pBatch) {
 	int j;
 	for(i = 0 ; i < pBatch->maxElem ; ++i) {
 		for(j = 0 ; j < CONF_OMOD_NUMSTRINGS_MAXSIZE ; ++j) {
-			free(pBatch->pElem[i].staticActParams[j]);
+			/* staticActParams MUST be freed immediately (if required),
+			 * so we do not need to do that!
+			 */
+			free(pBatch->pElem[i].staticActStrings[j]);
 		}
 	}
 	free(pBatch->pElem);

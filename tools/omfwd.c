@@ -532,7 +532,6 @@ finalize_it:
 BEGINparseSelectorAct
 	uchar *q;
 	int i;
-	int bErr;
 	rsRetVal localRet;
         struct addrinfo;
 	TCPFRAMINGMODE tcp_framing = TCP_FRAMING_OCTET_STUFFING;
@@ -655,7 +654,6 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	}
 	
 	/* now skip to template */
-	bErr = 0;
 	while(*p && *p != ';'  && *p != '#' && !isspace((int) *p))
 		++p; /*JUST SKIP*/
 

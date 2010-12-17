@@ -1131,7 +1131,7 @@ cancelWorkers(qqueue_t *pThis)
 		 * done when *no* worker is running. So time for a shutdown... -- rgerhards, 2009-05-28
 		 */
 		DBGOPRINT((obj_t*) pThis, "checking to see if main queue DA worker pool needs to be cancelled\n");
-		iRetLocal = wtpCancelAll(pThis->pWtpDA); /* returns immediately if all threads already have terminated */
+		wtpCancelAll(pThis->pWtpDA); /* returns immediately if all threads already have terminated */
 	}
 
 	RETiRet;
