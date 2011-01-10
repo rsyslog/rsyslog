@@ -25,6 +25,7 @@
  */
 #ifndef INCLUDED_RSYSLOG_H
 #define INCLUDED_RSYSLOG_H
+#include <pthread.h>
 #include "typedefs.h"
 
 /* ############################################################# *
@@ -413,6 +414,12 @@ typedef enum rsObjectID rsObjID;
 #define RSFREEOBJ(x) free(x)
 #else
 #define RSFREEOBJ(x) {(x)->OID = OIDrsFreed; free(x);}
+#endif
+
+#ifdef HAVE_PTHREAD_SETSCHEDPARAM
+extern struct sched_param default_sched_param;
+extern pthread_attr_t default_thread_attr;
+extern int default_thr_sched_policy;
 #endif
 
 
