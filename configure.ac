@@ -269,6 +269,36 @@ if test "x$enable_pthreads" != "xno"; then
   )
 fi
 
+AC_CHECK_FUNCS(
+    [pthread_setschedparam],
+    [
+      rsyslog_have_pthread_setschedparam=yes
+    ],
+    [
+      rsyslog_have_pthread_setschedparam=no
+    ]
+)
+AC_CHECK_HEADERS(
+    [sched.h],
+    [
+      rsyslog_have_sched_h=yes
+    ],
+    [
+      rsyslog_have_sched_h=no
+    ]
+)
+if test "$rsyslog_have_pthread_setschedparam" = "yes" -a "$rsyslog_have_sched_h" = "yes"; then
+	save_LIBS=$LIBS
+	LIBS=
+	AC_SEARCH_LIBS(sched_get_priority_max, rt)
+	if test "x$ac_cv_search" != "xno"; then
+		AC_CHECK_FUNCS(sched_get_priority_max)
+	fi
+	IMUDP_LIBS=$LIBS
+	AC_SUBST(IMUDP_LIBS)
+	LIBS=$save_LIBS
+fi
+
 
 # klog
 AC_ARG_ENABLE(klog,

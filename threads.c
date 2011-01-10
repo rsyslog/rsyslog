@@ -220,7 +220,13 @@ rsRetVal thrdCreate(rsRetVal (*thrdMain)(thrdInfo_t*), rsRetVal(*afterRun)(thrdI
 	pThis->pUsrThrdMain = thrdMain;
 	pThis->pAfterRun = afterRun;
 	pThis->bNeedsCancel = bNeedsCancel;
-	i = pthread_create(&pThis->thrdID, NULL, thrdStarter, pThis);
+	i = pthread_create(&pThis->thrdID,
+#ifdef HAVE_PTHREAD_SETSCHEDPARAM
+			   &default_thread_attr,
+#else
+			   NULL,
+#endif
+			   thrdStarter, pThis);
 	CHKiRet(llAppend(&llThrds, NULL, pThis));
 
 finalize_it:
