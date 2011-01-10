@@ -480,14 +480,15 @@ prepareGenerators()
 	if(runMultithreaded) {
 		bSilent = 1;
 		numThrds = numConnections;
-		runningThreads = 0;
-		doRun = 0;
-		pthread_mutex_init(&thrdMgmt, NULL);
-		pthread_cond_init(&condStarted, NULL);
-		pthread_cond_init(&condDoRun, NULL);
 	} else {
 		numThrds = 1;
 	}
+
+	runningThreads = 0;
+	doRun = 0;
+	pthread_mutex_init(&thrdMgmt, NULL);
+	pthread_cond_init(&condStarted, NULL);
+	pthread_cond_init(&condDoRun, NULL);
 
 	if(instarray != NULL) {
 		free(instarray);
