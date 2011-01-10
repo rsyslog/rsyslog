@@ -12,6 +12,9 @@ Version 4.6.6  [v4-stable] (rgerhards), 2010-11-??
      indicator of a rollover (this is an actual bug scenario we 
      experienced). So we need to check if the new size is smaller than
      what we already have seen!
+  Also, under some circumstances an invalid truncation was detected. This
+  code has now been removed, a file change (and thus resent) is only
+  detected if the inode number changes.
 - bugfix: a couple of problems that imfile had on some platforms, namely
   Ubuntu (not their fault, but occured there)
 - bugfix: imfile utilizes 32 bit to track offset. Most importantly,
