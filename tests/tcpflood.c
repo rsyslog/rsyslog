@@ -123,6 +123,13 @@ static int waittime = 0;
 static int runMultithreaded = 0; /* run tests in multithreaded mode */
 static int numThrds = 1;	/* number of threads to use */
 
+/* variables for managing multi-threaded operations */
+int runningThreads;		/* number of threads currently running */
+int doRun;			/* shall sender thread begin to run? */
+pthread_mutex_t thrdMgmt;	/* mutex for controling startup/shutdown */
+pthread_cond_t condStarted;
+pthread_cond_t condDoRun;
+
 /* the following struct provides information for a generator instance (thread) */
 struct instdata {
 	/* lower and upper bounds for the thread in question */
@@ -445,6 +452,13 @@ static void *
 thrdStarter(void *arg)
 {
 	struct instdata *inst = (struct instdata*) arg;
+	pthread_mutex_lock(&thrdMgmt);
+	runningThreads++;
+	pthread_cond_signal(&condStarted);
+	while(doRun == 0) {
+		pthread_cond_wait(&condDoRun, &thrdMgmt);
+	}
+	pthread_mutex_unlock(&thrdMgmt);
 	if(sendMessages(inst) != 0) {
 		printf("error sending messages\n");
 	}
@@ -466,6 +480,11 @@ prepareGenerators()
 	if(runMultithreaded) {
 		bSilent = 1;
 		numThrds = numConnections;
+		runningThreads = 0;
+		doRun = 0;
+		pthread_mutex_init(&thrdMgmt, NULL);
+		pthread_cond_init(&condStarted, NULL);
+		pthread_cond_init(&condDoRun, NULL);
 	} else {
 		numThrds = 1;
 	}
@@ -482,10 +501,26 @@ prepareGenerators()
 		instarray[i].numSent = 0;
 		instarray[i].idx = i;
 		pthread_create(&(instarray[i].thread), NULL, thrdStarter, instarray + i); 
-		printf("started thread %x\n", (unsigned) instarray[i].thread);
+		/*printf("started thread %x\n", (unsigned) instarray[i].thread);*/
 		starting += msgsThrd;
 	}
 }
+
+/* Let all generators run. Threads must have been started. Here we wait until
+ * all threads are initialized and then broadcast that they can begin to run.
+ */
+static inline void
+runGenerators()
+{
+	pthread_mutex_lock(&thrdMgmt);
+	while(runningThreads != numThrds){
+		pthread_cond_wait(&condStarted, &thrdMgmt);
+	}
+	doRun = 1;
+	pthread_cond_broadcast(&condDoRun);
+	pthread_mutex_unlock(&thrdMgmt);
+}
+
 
 /* Wait for all traffic generators to stop.
  */
@@ -495,8 +530,11 @@ waitGenerators()
 	int i;
 	for(i = 0 ; i < numThrds ; ++i)  {
 		pthread_join(instarray[i].thread, NULL);
-		printf("thread %x stopped\n", (unsigned) instarray[i].thread);
+		/*printf("thread %x stopped\n", (unsigned) instarray[i].thread);*/
 	}
+	pthread_mutex_destroy(&thrdMgmt);
+	pthread_cond_destroy(&condStarted);
+	pthread_cond_destroy(&condDoRun);
 }
 
 /* functions related to computing statistics on the runtime of a test. This is
@@ -586,6 +624,7 @@ runTests(void)
 			printf("starting run %d\n", run);
 		prepareGenerators();
 		gettimeofday(&tvStart, NULL);
+		runGenerators();
 		waitGenerators();
 		endTiming(&tvStart, &stats);
 		if(run == numRuns)
