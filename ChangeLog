@@ -1,6 +1,5 @@
 ---------------------------------------------------------------------------
 Version 4.7.4  [v4-???] (rgerhards), 2010-11-??
-- added $IMUDPSchedulingPolicy and $IMUDPSchedulingPriority config settings
 - added $LocalHostName config directive
 - bugfix: local hostname was pulled too-early, so that some config 
   directives (namely FQDN settings) did not have any effect
