@@ -937,6 +937,19 @@ AC_ARG_ENABLE(pmlastmsg,
 AM_CONDITIONAL(ENABLE_PMLASTMSG, test x$enable_pmlastmsg = xyes)
 
 
+# settings for pmcisconames
+AC_ARG_ENABLE(pmcisconames,
+        [AS_HELP_STRING([--enable-pmcisconames],[Compiles cisconames parser module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_pmcisconames="yes" ;;
+          no) enable_pmcisconames="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-pmcisconames) ;;
+         esac],
+        [enable_pmcisconames=no]
+)
+AM_CONDITIONAL(ENABLE_PMCISCONAMES, test x$enable_pmcisconames = xyes)
+
+
 # settings for pmrfc3164sd
 AC_ARG_ENABLE(pmrfc3164sd,
         [AS_HELP_STRING([--enable-pmrfc3164sd],[Compiles rfc3164sd parser module @<:@default=no@:>@])],
@@ -1101,6 +1114,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omstdout/Makefile \
 		plugins/pmrfc3164sd/Makefile \
 		plugins/pmlastmsg/Makefile \
+		plugins/pmcisconames/Makefile \
 		plugins/omruleset/Makefile \
 		plugins/omdbalerting/Makefile \
 		plugins/omuxsock/Makefile \
@@ -1161,6 +1175,7 @@ echo
 echo "---{ parser modules }---"
 echo "    pmrfc3164sd module will be compiled:      $enable_pmrfc3164sd"
 echo "    pmlastmsg module will be compiled:        $enable_pmlastmsg"
+echo "    pmcisconames module will be compiled:     $enable_pmcisconames"
 echo
 echo "---{ database support }---"
 echo "    MySql support enabled:                    $enable_mysql"
