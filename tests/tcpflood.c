@@ -741,7 +741,7 @@ int main(int argc, char *argv[])
 	}
 
 	if(bStatsRecords && waittime) {
-		fprintf(stderr, "warning: generating performance stats and useing a waittime "
+		fprintf(stderr, "warning: generating performance stats and using a waittime "
 				"is somewhat contradictory!\n");
 	}
 
