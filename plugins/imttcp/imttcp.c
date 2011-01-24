@@ -169,6 +169,7 @@ struct epolld_s {
 /* global data */
 static ttcpsrv_t *pSrvRoot = NULL;
 static int iMaxLine; /* maximum size of a single message */
+pthread_attr_t sessThrdAttr;	/* Attribute for session threads; read only after startup */
 
 /* forward definitions */
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal);
@@ -707,7 +708,7 @@ addSess(ttcpsrv_t *pSrv, int sock, prop_t *peerName, prop_t *peerIP)
 	pthread_mutex_unlock(&pSrv->mutSess);
 
 	/* finally run session handler */
-	pthread_create(&pSess->tid, NULL, sessThrd, (void*) pSess);
+	pthread_create(&pSess->tid, &sessThrdAttr, sessThrd, (void*) pSess);
 
 finalize_it:
 	RETiRet;
@@ -995,7 +996,7 @@ shutdownSrv(ttcpsrv_t *pSrv)
 		pSess = pSess->next;
 		pthread_kill(tid, SIGTTIN);
 		DBGPRINTF("imttcp: termination request for session thread %x\n", (unsigned) tid);
-		pthread_join(tid, NULL);
+		//pthread_join(tid, NULL);
 		DBGPRINTF("imttcp: session thread %x terminated \n", (unsigned) tid);
 	}
 }
@@ -1018,6 +1019,8 @@ ENDafterRun
 
 BEGINmodExit
 CODESTARTmodExit
+	pthread_attr_destroy(&sessThrdAttr);
+
 	/* release objects we used */
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(prop, CORE_COMPONENT);
@@ -1060,6 +1063,11 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	CHKiRet(objUse(ruleset, CORE_COMPONENT));
+
+	/* initialize "read-only" thread attributes */
+	pthread_attr_init(&sessThrdAttr);
+	pthread_attr_setdetachstate(&sessThrdAttr, PTHREAD_CREATE_DETACHED);
+	pthread_attr_setstacksize(&sessThrdAttr, 200*1024);
 
 	/* register config file handlers */
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputttcpserverrun"), 0, eCmdHdlrGetWord,
