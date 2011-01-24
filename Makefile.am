@@ -163,6 +163,10 @@ if ENABLE_IMPTCP
 SUBDIRS += plugins/imptcp
 endif
 
+if ENABLE_IMTTCP
+SUBDIRS += plugins/imttcp
+endif
+
 if ENABLE_IMDIAG
 SUBDIRS += plugins/imdiag
 endif
@@ -220,10 +224,10 @@ DISTCHECK_CONFIGURE_FLAGS=	--enable-gssapi_krb5 \
 				--enable-omprog \
 				--enable-imdiag \
 				--enable-imptcp \
+				--enable-imttcp \
 				--enable-omuxsock \
 				--enable-extended-tests \
 				--enable-impstats \
-				--enable-imptcp \
 				--enable-memcheck \
 				--with-systemdsystemunitdir=$$dc_install_base/$(systemdsystemunitdir)
 ACLOCAL_AMFLAGS = -I m4
