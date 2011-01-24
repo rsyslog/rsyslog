@@ -2,6 +2,59 @@
  * This is an experimental plain tcp input module which follows the
  * multiple thread paradigm.
  *
+ * WARNING
+ * This module is unfinished. It seems to work, but there also seems to be a problem
+ * if it is under large stress (e.g. tcpflood with more than 500 to 1000 concurrent
+ * connections). I quickly put together this module after I worked on a larger paper
+ * and read [1], which claims that using massively threaded applications is
+ * preferrable to an event driven approach. So I put this to test, especially as
+ * that would also lead to a much simpler programming paradigm. Unfortuantely, the
+ * performance results are devastive: while there is a very slight speedup with 
+ * a low connection number (close to the number of cores on the system), there
+ * is a dramatic negative speedup if running with many threads. Even at only 50
+ * connections, rsyslog is dramatically slower (80 seconds for the same workload
+ * which was processed in 60 seconds with traditional imtcp or when running on
+ * a single connection). At 1,000 connections, the run was *extremely* slow. So
+ * this is definitely a dead-end. To be honest, Behren, condit and Brewer claim
+ * that the problem lies in the current implementation of thread libraries.
+ * As one cure, they propose user-level threads. However, as far as I could
+ * find out, User-Level threads seem not to be much faster under Linux than
+ * Kernel-Level threads (which I used in my approach). 
+ *
+ * Even more convincing is, from the rsyslog PoV, that there are clear reasons
+ * why the highly threaded input must be slower:
+ * o batch sizes are smaller, leading to much more overhead
+ * o many more context switches are needed to switch between the various
+ *   i/o handlers
+ * o more OS API calls are required because in this model we get more
+ *   frequent wakeups on new incoming data, so we have less data available
+ *   to read at each instant
+ * o more lock contention because many more threads compete on the
+ *   main queue mutex
+ *
+ * All in all, this means that the approach is not the right one, at least
+ * not for rsyslog (it may work better if the input can be processed
+ * totally independent, but I have note evaluated this). So I will look into
+ * an enhanced event-based model with a small set of input workers pulling
+ * off data (I assume this is useful for e.g. TLS, as TLS transport is much
+ * more computebound than other inputs, and this computation becomes a
+ * limiting factor for the overall processing speed under some
+ * circumstances - see [2]).
+ *
+ * For obvious reasons, I will not try to finish imttcp. However, I have
+ * decided to leave it included in the source tree, so that
+ * a) someone else can build on it, if he sees value in that
+ * b) I may use it for some other tests in the future
+ *
+ * But if you intend to actually use this module unmodified, be prepared
+ * for problems.
+ *
+ * [1] R. Von Behren, J. Condit, and E. Brewer. Why events are a bad idea
+ *     (for high-concurrency servers). In Proceedings of the 9th conference on Hot
+ *     Topics in Operating Systems-Volume 9, page 4. USENIX Association, 2003.
+ *
+ * [2] http://kb.monitorware.com/tls-limited-17800-messages-per-second-t10598.html
+ *
  * File begun on 2011-01-24 by RGerhards
  *
  * Copyright 2007-2011 Rainer Gerhards and Adiscon GmbH.
