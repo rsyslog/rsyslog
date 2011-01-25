@@ -199,23 +199,26 @@ finalize_it:
 /* Wait for io to become ready. After the successful call, idRdy contains the
  * id set by the caller for that i/o event, ppUsr is a pointer to a location
  * where the user pointer shall be stored.
- * TODO: this is a trivial implementation that only polls one event at a time. We
- *       may later extend it to poll for multiple events, what would cause less 
- *       overhead.
+ * numEntries contains the maximum number of entries on entry and the actual
+ * number of entries actually read on exit.
  * rgerhards, 2009-11-18
  */
 static rsRetVal
-Wait(nsdpoll_t *pNsdpoll, int timeout, int *idRdy, void **ppUsr) {
+Wait(nsdpoll_t *pNsdpoll, int timeout, int *numEntries, int idRdy[], void *ppUsr[]) {
 	nsdpoll_ptcp_t *pThis = (nsdpoll_ptcp_t*) pNsdpoll;
 	nsdpoll_epollevt_lst_t *pOurEvt;
-	struct epoll_event event;
+	struct epoll_event event[128];
 	int nfds;
+	int i;
 	DEFiRet;
 
 	assert(idRdy != NULL);
 	assert(ppUsr != NULL);
 
-	nfds = epoll_wait(pThis->efd, &event, 1, timeout);
+	if(*numEntries > 128)
+		*numEntries = 128;
+	DBGPRINTF("doing epoll_wait for max %d events\n", *numEntries);
+	nfds = epoll_wait(pThis->efd, event, *numEntries, timeout);
 	if(nfds == -1) {
 		if(errno == EINTR) {
 			ABORT_FINALIZE(RS_RET_EINTR);
@@ -227,10 +230,15 @@ Wait(nsdpoll_t *pNsdpoll, int timeout, int *idRdy, void **ppUsr) {
 		ABORT_FINALIZE(RS_RET_TIMEOUT);
 	}
 
-	/* we got a valid event, so tell the caller... */
-	pOurEvt = (nsdpoll_epollevt_lst_t*) event.data.u64;
-	*idRdy = pOurEvt->id;
-	*ppUsr = pOurEvt->pUsr;
+	/* we got valid events, so tell the caller... */
+dbgprintf("epoll returned %d entries\n", nfds);
+	for(i = 0 ; i < nfds ; ++i) {
+		pOurEvt = (nsdpoll_epollevt_lst_t*) event[i].data.u64;
+		idRdy[i] = pOurEvt->id;
+		ppUsr[i] = pOurEvt->pUsr;
+dbgprintf("epoll push ppusr[%d]: %p\n", i, pOurEvt->pUsr);
+	}
+	*numEntries = nfds;
 
 finalize_it:
 	RETiRet;

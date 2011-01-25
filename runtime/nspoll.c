@@ -129,11 +129,11 @@ finalize_it:
 /* Carries out the actual wait (all done in lower layers)
  */
 static rsRetVal
-Wait(nspoll_t *pThis, int timeout, int *idRdy, void **ppUsr) {
+Wait(nspoll_t *pThis, int timeout, int *numEntries, int idRdy[], void *ppUsr[]) {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, nspoll);
 	assert(idRdy != NULL);
-	iRet = pThis->Drvr.Wait(pThis->pDrvrData, timeout, idRdy, ppUsr);
+	iRet = pThis->Drvr.Wait(pThis->pDrvrData, timeout, numEntries, idRdy, ppUsr);
 	RETiRet;
 }
 

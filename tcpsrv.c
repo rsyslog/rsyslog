@@ -637,9 +637,12 @@ Run(tcpsrv_t *pThis)
 {
 	DEFiRet;
 	int i;
+	int retIDs[128]; /* 128 is currently fixed num of concurrent requests */
+	void *pUsr[128];
+	int numEntries;
 	tcps_sess_t *pNewSess;
 	nspoll_t *pPoll = NULL;
-	void *pUsr;
+	int currIdx;
 	rsRetVal localRet;
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
@@ -659,7 +662,7 @@ Run(tcpsrv_t *pThis)
 		FINALIZE;
 	}
 
-	dbgprintf("tcpsrv uses epoll() interface, nsdpol driver found\n");
+	dbgprintf("tcpsrv uses epoll() interface, nsdpoll driver found\n");
 
 	/* flag that we are in epoll mode */
 	pThis->bUsingEPoll = TRUE;
@@ -672,7 +675,8 @@ Run(tcpsrv_t *pThis)
 	}
 
 	while(1) {
-		localRet = nspoll.Wait(pPoll, -1, &i, &pUsr);
+		numEntries = sizeof(retIDs)/sizeof(int);
+		localRet = nspoll.Wait(pPoll, -1, &numEntries, retIDs, pUsr);
 		if(glbl.GetGlobalInputTermState() == 1)
 			break; /* terminate input! */
 
@@ -683,16 +687,20 @@ Run(tcpsrv_t *pThis)
 		if(localRet != RS_RET_OK)
 			continue;
 
-		dbgprintf("poll returned with i %d, pUsr %p\n", i, pUsr);
+		dbgprintf("poll returned with %d entries.\n", numEntries);
 
-		if(pUsr == pThis->ppLstn) {
-			DBGPRINTF("New connect on NSD %p.\n", pThis->ppLstn[i]);
-			SessAccept(pThis, pThis->ppLstnPort[i], &pNewSess, pThis->ppLstn[i]);
-			CHKiRet(nspoll.Ctl(pPoll, pNewSess->pStrm, 0, pNewSess, NSDPOLL_IN, NSDPOLL_ADD));
-			DBGPRINTF("New session created with NSD %p.\n", pNewSess);
-		} else {
-			pNewSess = (tcps_sess_t*) pUsr;
-			doReceive(pThis, &pNewSess, pPoll);
+		for(i = 0 ; i < numEntries ; i++) {
+			currIdx = retIDs[i];
+			dbgprintf("tcpsrv processing i %d, pUsr %p\n", currIdx, pUsr[i]);
+			if(pUsr[i] == pThis->ppLstn) {
+				DBGPRINTF("New connect on NSD %p.\n", pThis->ppLstn[currIdx]);
+				SessAccept(pThis, pThis->ppLstnPort[currIdx], &pNewSess, pThis->ppLstn[currIdx]);
+				CHKiRet(nspoll.Ctl(pPoll, pNewSess->pStrm, 0, pNewSess, NSDPOLL_IN, NSDPOLL_ADD));
+				DBGPRINTF("New session created with NSD %p.\n", pNewSess);
+			} else {
+				pNewSess = (tcps_sess_t*) pUsr[i];
+				doReceive(pThis, &pNewSess, pPoll);
+			}
 		}
 	}
 
