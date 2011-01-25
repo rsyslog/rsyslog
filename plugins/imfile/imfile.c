@@ -71,6 +71,7 @@ typedef struct fileInfo_s {
 	int nRecords; /**< How many records did we process before persisting the stream? */
 	int iPersistStateInterval; /**< how often should state be persisted? (0=on close only) */
 	strm_t *pStrm;	/* its stream (NULL if not assigned) */
+	int readMode;	/* which mode to use in ReadMulteLine call? */
 } fileInfo_t;
 
 
@@ -85,6 +86,7 @@ static int iPollInterval = 10;	/* number of seconds to sleep when there was no f
 static int iPersistStateInterval = 0;	/* how often if state file to be persisted? (default 0->never) */
 static int iFacility = 128; /* local0 */
 static int iSeverity = 5;  /* notice, as of rfc 3164 */
+static int readMode = 0;  /* mode to use for ReadMultiLine call */
 
 static int iFilPtr = 0;		/* number of files to be monitored; pointer to next free spot during config */
 #define MAX_INPUT_FILES 100
@@ -212,7 +214,7 @@ static rsRetVal pollFile(fileInfo_t *pThis, int *pbHadFileData)
 
 	/* loop below will be exited when strmReadLine() returns EOF */
 	while(1) {
-		CHKiRet(strm.ReadLine(pThis->pStrm, &pCStr));
+		CHKiRet(strm.ReadLine(pThis->pStrm, &pCStr, pThis->readMode));
 		*pbHadFileData = 1; /* this is just a flag, so set it and forget it */
 		CHKiRet(enqLine(pThis, pCStr)); /* process line */
 		rsCStrDestruct(&pCStr); /* discard string (must be done by us!) */
@@ -447,6 +449,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	iPollInterval = 10;
 	iFacility = 128; /* local0 */
 	iSeverity = 5;  /* notice, as of rfc 3164 */
+	readMode = 0;
 
 	RETiRet;
 }
@@ -489,6 +492,7 @@ static rsRetVal addMonitor(void __attribute__((unused)) *pVal, uchar *pNewVal)
 		pThis->iFacility = iFacility;
 		pThis->iPersistStateInterval = iPersistStateInterval;
 		pThis->nRecords = 0;
+		pThis->readMode = readMode;
 		iPersistStateInterval = 0;
 	} else {
 		errmsg.LogError(0, RS_RET_OUT_OF_DESRIPTORS, "Too many file monitors configured - ignoring this one");
@@ -535,6 +539,8 @@ CODEmodInit_QueryRegCFSLineHdlr
 	  	NULL, &iFacility, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfilepollinterval", 0, eCmdHdlrInt,
 	  	NULL, &iPollInterval, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfilereadmode", 0, eCmdHdlrInt,
+	  	NULL, &readMode, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfilepersiststateinterval", 0, eCmdHdlrInt,
 	  	NULL, &iPersistStateInterval, STD_LOADABLE_MODULE_ID));
 	/* that command ads a new file! */

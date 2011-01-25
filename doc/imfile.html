@@ -96,6 +96,11 @@ been processed. This setting can be used to guard against message duplication du
 to fatal errors (like power fail). Note that this setting affects imfile
 performance, especially when set to a low value. Frequently writing the state
 file is very time consuming.
+<li><b>$InputFileReadMode</b> [mode]</b><br>
+Available in 5.7.3+
+<br>
+Mode to be used when reading lines. 0 (the default) means that each line is forwarded
+as its own log message.
 </ul>
 <b>Caveats/Known Bugs:</b>
 <p>So far, only 100 files can be monitored. If more are needed,
