@@ -41,7 +41,7 @@
 #include "unicode-helper.h"
 
 MODULE_TYPE_PARSER
-PARSER_NAME("rsyslog.lastline")
+PARSER_NAME("rsyslog.cisconames")
 
 /* internal structures
  */
@@ -108,9 +108,14 @@ dbgprintf("not a cisco name mangled log!\n");
 		ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
 	}
 	/* bump the message portion up by two characters to overwrite the extra : */
-	memmove(p2parse, p2parse + 2, lenMsg - 2);
+	lenMsg -=2;
+	memmove(p2parse, p2parse + 2, lenMsg);
+	*(p2parse + lenMsg) = '\n';
+	*(p2parse + lenMsg + 1)  = '\0';
+	pMsg->iLenRawMsg -=2;
+	pMsg->iLenMSG -=2;
 	/* now, claim to abort so that something else can parse the now modified message */
-	DBGPRINTF("pmcisconames detected a mangled Cisco log message message\n");
+	DBGPRINTF("pmcisconames: new mesage: [%d]'%s'\n", lenMsg, p2parse);
 	ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
 
 finalize_it:
@@ -143,7 +148,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(parser, CORE_COMPONENT));
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 
-	dbgprintf("lastmsg parser init called, compiled with version %s\n", VERSION);
+	DBGPRINTF("cisconames parser init called, compiled with version %s\n", VERSION);
  	bParseHOSTNAMEandTAG = glbl.GetParseHOSTNAMEandTAG(); /* cache value, is set only during rsyslogd option processing */
 
 
