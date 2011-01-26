@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 5.6.3  [V5-STABLE] (rgerhards), 2010-12-??
+Version 5.6.3  [V5-STABLE] (rgerhards), 2011-01-26
 - bugfix: action processor released mememory too early, resulting in
   potential issue in retry cases (but very unlikely due to another
   bug, which I also fixed -- only after the fix this problem here
@@ -12,6 +12,7 @@ Version 5.6.3  [V5-STABLE] (rgerhards), 2010-12-??
   it!)
 - bugfix: batches which had actions in error were not properly retried in
   all cases
+- bugfix: imfile did duplicate messages under some circumstances
 ---------------------------------------------------------------------------
 Version 5.6.2  [V5-STABLE] (rgerhards), 2010-11-30
 - bugfix: compile failed on systems without epoll_create1()
