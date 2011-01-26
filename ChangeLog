@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------
 Version 5.7.3  [V5-DEVEL] (rgerhards), 2010-12-??
+- added support for processing multi-line messages in imfile
 - added $IMUDPSchedulingPolicy and $IMUDPSchedulingPriority config settings
 - added $LocalHostName config directive
 - bugfix: fixed build problems on some platforms
