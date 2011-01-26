@@ -594,6 +594,21 @@ Version 4.6.5  [v4-stable] (rgerhards), 2010-??-??
   Bug tracker: http://bugzilla.adiscon.com/show_bug.cgi?id=194
 ---------------------------------------------------------------------------
 Version 4.6.6  [v4-stable] (rgerhards), 2010-11-??
+- bugfix: imfile potentially duplicates lines
+  This can happen when 0 bytes are read from the input file, and some
+  writer appends data to the file BEFORE we check if a rollover happens.
+  The check for rollover uses the inode and size as a criterion. So far,
+  we checked for equality of sizes, which is not given in this scenario,
+  but that does not indicate a rollover. From the source code comments:
+     Note that when we check the size, we MUST NOT check for equality.
+     The reason is that the file may have been written right after we
+     did try to read (so the file size has increased). That is NOT in
+     indicator of a rollover (this is an actual bug scenario we 
+     experienced). So we need to check if the new size is smaller than
+     what we already have seen!
+  Also, under some circumstances an invalid truncation was detected. This
+  code has now been removed, a file change (and thus resent) is only
+  detected if the inode number changes.
 - bugfix: a couple of problems that imfile had on some platforms, namely
   Ubuntu (not their fault, but occured there)
 - bugfix: imfile utilizes 32 bit to track offset. Most importantly,
