@@ -690,6 +690,8 @@ Run(tcpsrv_t *pThis)
 		dbgprintf("poll returned with %d entries.\n", numEntries);
 
 		for(i = 0 ; i < numEntries ; i++) {
+			if(glbl.GetGlobalInputTermState() == 1)
+				ABORT_FINALIZE(RS_RET_FORCE_TERM);
 			currIdx = retIDs[i];
 			dbgprintf("tcpsrv processing i %d, pUsr %p\n", currIdx, pUsr[i]);
 			if(pUsr[i] == pThis->ppLstn) {

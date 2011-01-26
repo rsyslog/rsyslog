@@ -567,9 +567,9 @@ endTiming(struct timeval *tvStart, struct runstats *stats)
 
 	if(!bSilent || bStatsRecords) {
 		if(bCSVoutput) {
-			printf("%ld.%4.4ld\n", runtime / 1000, runtime % 1000);
+			printf("%ld.%3.3ld\n", runtime / 1000, runtime % 1000);
 		} else {
-			printf("runtime: %ld.%4.4ld\n", runtime / 1000, runtime % 1000);
+			printf("runtime: %ld.%3.3ld\n", runtime / 1000, runtime % 1000);
 		}
 	}
 }
@@ -585,7 +585,7 @@ genStats(struct runstats *stats)
 
 	if(bCSVoutput) {
 		printf("#numRuns,TotalRuntime,AvgRuntime,MinRuntime,MaxRuntime\n");
-		printf("%d,%llu.%4.4d,%lu.%4.4lu,%lu.%4.4lu,%lu.%4.4lu\n",
+		printf("%d,%llu.%3.3d,%lu.%3.3lu,%lu.%3.3lu,%lu.%3.3lu\n",
 			stats->numRuns,
 		        stats->totalRuntime / 1000, (int) stats->totalRuntime % 1000,
 		        avg / 1000, avg % 1000,
@@ -594,11 +594,11 @@ genStats(struct runstats *stats)
 	} else {
 		printf("Runs:     %d\n",   stats->numRuns);
 		printf("Runtime:\n");
-		printf("  total:  %llu.%4.4d\n", stats->totalRuntime / 1000,
+		printf("  total:  %llu.%3.3d\n", stats->totalRuntime / 1000,
 						 (int) stats->totalRuntime % 1000);
-		printf("  avg:    %lu.%4.4lu\n",  avg / 1000, avg % 1000);
-		printf("  min:    %lu.%4.4lu\n",  stats->minRuntime / 1000, stats->minRuntime % 1000);
-		printf("  max:    %lu.%4.4lu\n",  stats->maxRuntime / 1000, stats->maxRuntime % 1000);
+		printf("  avg:    %lu.%3.3lu\n",  avg / 1000, avg % 1000);
+		printf("  min:    %lu.%3.3lu\n",  stats->minRuntime / 1000, stats->minRuntime % 1000);
+		printf("  max:    %lu.%3.3lu\n",  stats->maxRuntime / 1000, stats->maxRuntime % 1000);
 		printf("All times are wallclock time.\n");
 	}
 }
