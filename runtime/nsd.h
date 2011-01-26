@@ -29,6 +29,16 @@
 
 #include <sys/socket.h>
 
+/**
+ * The following structure is a set of descriptors that need to be processed.
+ * This set will be the result of the epoll call and be used
+ * in the actual request processing stage. -- rgerhards, 2011-01-24
+ */
+struct nsd_epworkset_s {
+	int id;
+	void *pUsr;
+};
+
 enum nsdsel_waitOp_e {
 	NSDSEL_RD = 1,
 	NSDSEL_WR = 2,
@@ -92,7 +102,7 @@ BEGINinterface(nsdpoll) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Construct)(nsdpoll_t **ppThis);
 	rsRetVal (*Destruct)(nsdpoll_t **ppThis);
 	rsRetVal (*Ctl)(nsdpoll_t *pNsdpoll, nsd_t *pNsd, int id, void *pUsr, int mode, int op);
-	rsRetVal (*Wait)(nsdpoll_t *pNsdpoll, int timeout, int *numReady, int idRdy[], void *ppUsr[]);
+	rsRetVal (*Wait)(nsdpoll_t *pNsdpoll, int timeout, int *numReady, nsd_epworkset_t workset[]);
 ENDinterface(nsdpoll)
 #define nsdpollCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
 

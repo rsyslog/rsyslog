@@ -50,7 +50,7 @@ BEGINinterface(nspoll) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Construct)(nspoll_t **ppThis);
 	rsRetVal (*ConstructFinalize)(nspoll_t *pThis);
 	rsRetVal (*Destruct)(nspoll_t **ppThis);
-	rsRetVal (*Wait)(nspoll_t *pNsdpoll, int timeout, int *numEntries, int idRdy[], void *ppUsr[]);
+	rsRetVal (*Wait)(nspoll_t *pNsdpoll, int timeout, int *numEntries, nsd_epworkset_t workset[]);
 	rsRetVal (*Ctl)(nspoll_t *pNsdpoll, netstrm_t *pStrm, int id, void *pUsr, int mode, int op);
 	rsRetVal (*IsEPollSupported)(void); /* static method */
 ENDinterface(nspoll)

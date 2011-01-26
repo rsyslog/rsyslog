@@ -204,7 +204,7 @@ finalize_it:
  * rgerhards, 2009-11-18
  */
 static rsRetVal
-Wait(nsdpoll_t *pNsdpoll, int timeout, int *numEntries, int idRdy[], void *ppUsr[]) {
+Wait(nsdpoll_t *pNsdpoll, int timeout, int *numEntries, nsd_epworkset_t workset[]) {
 	nsdpoll_ptcp_t *pThis = (nsdpoll_ptcp_t*) pNsdpoll;
 	nsdpoll_epollevt_lst_t *pOurEvt;
 	struct epoll_event event[128];
@@ -212,8 +212,7 @@ Wait(nsdpoll_t *pNsdpoll, int timeout, int *numEntries, int idRdy[], void *ppUsr
 	int i;
 	DEFiRet;
 
-	assert(idRdy != NULL);
-	assert(ppUsr != NULL);
+	assert(workset != NULL);
 
 	if(*numEntries > 128)
 		*numEntries = 128;
@@ -234,8 +233,8 @@ Wait(nsdpoll_t *pNsdpoll, int timeout, int *numEntries, int idRdy[], void *ppUsr
 dbgprintf("epoll returned %d entries\n", nfds);
 	for(i = 0 ; i < nfds ; ++i) {
 		pOurEvt = (nsdpoll_epollevt_lst_t*) event[i].data.u64;
-		idRdy[i] = pOurEvt->id;
-		ppUsr[i] = pOurEvt->pUsr;
+		workset[i].id = pOurEvt->id;
+		workset[i].pUsr = pOurEvt->pUsr;
 dbgprintf("epoll push ppusr[%d]: %p\n", i, pOurEvt->pUsr);
 	}
 	*numEntries = nfds;
