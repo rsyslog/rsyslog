@@ -843,12 +843,15 @@ do_dbgprint(uchar *pszObjName, char *pszMsg, size_t lenMsg)
 	static int bWasNL = 0;
 	char pszThrdName[64]; /* 64 is to be on the safe side, anything over 20 is bad... */
 	char pszWriteBuf[32*1024];
+	size_t lenCopy;
+	size_t offsWriteBuf = 0;
 	size_t lenWriteBuf;
 	struct timespec t;
 #	if  _POSIX_TIMERS <= 0
 	struct timeval tv;
 #	endif
 
+#if 0
 	/* The bWasNL handler does not really work. It works if no thread
 	 * switching occurs during non-NL messages. Else, things are messed
 	 * up. Anyhow, it works well enough to provide useful help during
@@ -859,8 +862,8 @@ do_dbgprint(uchar *pszObjName, char *pszMsg, size_t lenMsg)
 	 */
 	if(ptLastThrdID != pthread_self()) {
 		if(!bWasNL) {
-			if(stddbg != -1) write(stddbg, "\n", 1);
-			if(altdbg != -1) write(altdbg, "\n", 1);
+			pszWriteBuf[0] = '\n';
+			offsWriteBuf = 1;
 			bWasNL = 1;
 		}
 		ptLastThrdID = pthread_self();
@@ -881,25 +884,28 @@ do_dbgprint(uchar *pszObjName, char *pszMsg, size_t lenMsg)
 			t.tv_sec = tv.tv_sec;
 			t.tv_nsec = tv.tv_usec * 1000;
 #			endif
-			lenWriteBuf = snprintf(pszWriteBuf, sizeof(pszWriteBuf),
+			lenWriteBuf = snprintf(pszWriteBuf+offsWriteBuf, sizeof(pszWriteBuf) - offsWriteBuf,
 				 	"%4.4ld.%9.9ld:", (long) (t.tv_sec % 10000), t.tv_nsec);
-			if(stddbg != -1) write(stddbg, pszWriteBuf, lenWriteBuf);
-			if(altdbg != -1) write(altdbg, pszWriteBuf, lenWriteBuf);
+			offsWriteBuf += lenWriteBuf;
 		}
 
-		lenWriteBuf = snprintf(pszWriteBuf, sizeof(pszWriteBuf), "%s: ", pszThrdName);
-		// use for testing: lenWriteBuf = snprintf(pszWriteBuf, sizeof(pszWriteBuf), "{%ld}%s: ", (long) syscall(SYS_gettid), pszThrdName);
-		if(stddbg != -1) write(stddbg, pszWriteBuf, lenWriteBuf);
-		if(altdbg != -1) write(altdbg, pszWriteBuf, lenWriteBuf);
+		lenWriteBuf = snprintf(pszWriteBuf + offsWriteBuf, sizeof(pszWriteBuf) - offsWriteBuf, "%s: ", pszThrdName);
+		offsWriteBuf += lenWriteBuf;
 		/* print object name header if we have an object */
 		if(pszObjName != NULL) {
-			lenWriteBuf = snprintf(pszWriteBuf, sizeof(pszWriteBuf), "%s: ", pszObjName);
-			if(stddbg != -1) write(stddbg, pszWriteBuf, lenWriteBuf);
-			if(altdbg != -1) write(altdbg, pszWriteBuf, lenWriteBuf);
+			lenWriteBuf = snprintf(pszWriteBuf + offsWriteBuf, sizeof(pszWriteBuf) - offsWriteBuf, "%s: ", pszObjName);
+			offsWriteBuf += lenWriteBuf;
 		}
 	}
-	if(stddbg != -1) write(stddbg, pszMsg, lenMsg);
-	if(altdbg != -1) write(altdbg, pszMsg, lenMsg);
+#endif
+	if(lenMsg > sizeof(pszWriteBuf) - offsWriteBuf) 
+		lenCopy = sizeof(pszWriteBuf) - offsWriteBuf;
+	else
+		lenCopy = lenMsg;
+	memcpy(pszWriteBuf + offsWriteBuf, pszMsg, lenCopy);
+	offsWriteBuf += lenCopy;
+	if(stddbg != -1) write(stddbg, pszWriteBuf, offsWriteBuf);
+	if(altdbg != -1) write(altdbg, pszWriteBuf, offsWriteBuf);
 
 	bWasNL = (pszMsg[lenMsg - 1] == '\n') ? 1 : 0;
 }
@@ -923,12 +929,12 @@ dbgprint(obj_t *pObj, char *pszMsg, size_t lenMsg)
 		pszObjName = obj.GetName(pObj);
 	}
 
-	pthread_mutex_lock(&mutdbgprint);
-	pthread_cleanup_push(dbgMutexCancelCleanupHdlr, &mutdbgprint);
+//	pthread_mutex_lock(&mutdbgprint);
+//	pthread_cleanup_push(dbgMutexCancelCleanupHdlr, &mutdbgprint);
 
 	do_dbgprint(pszObjName, pszMsg, lenMsg);
 
-	pthread_cleanup_pop(1);
+//	pthread_cleanup_pop(1);
 }
 #pragma GCC diagnostic warning "-Wempty-body"
 

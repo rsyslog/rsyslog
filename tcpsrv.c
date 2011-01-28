@@ -548,6 +548,7 @@ doReceive(tcpsrv_t *pThis, tcps_sess_t **ppSess, nspoll_t *pPoll)
 		errno = 0;
 		errmsg.LogError(0, iRet, "netstream session %p will be closed due to error\n",
 				(*ppSess)->pStrm);
+abort();
 		CHKiRet(closeSess(pThis, ppSess, pPoll));
 		break;
 	}
@@ -612,6 +613,8 @@ dbgprintf("XXX: worker %p idling\n", pthread_self());
 	return NULL;
 }
 
+#warning remove include
+#include <stdio.h>
 
 /* Process a workset, that is handle io. We become activated
  * from either select or epoll handler. We split the workload
@@ -625,6 +628,16 @@ processWorkset(tcpsrv_t *pThis, nspoll_t *pPoll, int numEntries, nsd_epworkset_t
 	int origEntries = numEntries;
 	DEFiRet;
 
+{ /* chck workset for dupes */
+int k, j;
+for(k = 0 ; k < numEntries ; ++k)
+	for(j = k+1 ; j < numEntries ; ++j) {
+		if(workset[k].pUsr == workset[j].pUsr) {
+			fprintf(stderr, "workset duplicate %d:%d:%p\n", k, j, workset[k].pUsr);
+			fflush(stderr);
+		}
+	}
+}
 	dbgprintf("tcpsrv: ready to process %d event entries\n", numEntries);
 
 	while(numEntries > 0) {
@@ -632,6 +645,7 @@ processWorkset(tcpsrv_t *pThis, nspoll_t *pPoll, int numEntries, nsd_epworkset_t
 			ABORT_FINALIZE(RS_RET_FORCE_TERM);
 dbgprintf("XXX: num entries during processing %d\n", numEntries);
 		if(numEntries == 1) {
+		  //|| workset[numEntries-1].pUsr == pThis->ppLstn) {
 dbgprintf("XXX: processWorkset 1\n");
 			/* process self, save context switch */
 			processWorksetItem(pThis, pPoll, workset[numEntries-1].id, workset[numEntries-1].pUsr);
