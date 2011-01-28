@@ -1007,13 +1007,14 @@ finalize_it:
 BEGINrunInput
 	int i;
 	int nfds;
-	struct epoll_event events[1];
+	struct epoll_event events[128];
 	epolld_t *epd;
 CODESTARTrunInput
 	DBGPRINTF("imptcp: now beginning to process input data\n");
 	while(glbl.GetGlobalInputTermState() == 0) {
 		DBGPRINTF("imptcp going on epoll_wait\n");
 		nfds = epoll_wait(epollfd, events, sizeof(events)/sizeof(struct epoll_event), -1);
+		DBGPRINTF("imptcp: epoll returned %d events\n", nfds);
 		for(i = 0 ; (i < nfds) && (glbl.GetGlobalInputTermState() == 0) ; ++i) { /* support for larger batches (later, TODO) */
 			epd = (epolld_t*) events[i].data.ptr;
 			switch(epd->typ) {
