@@ -944,9 +944,9 @@ lstnActivity(ptcplstn_t *pLstn)
 	DEFiRet;
 
 	DBGPRINTF("imptcp: new connection on listen socket %d\n", pLstn->sock);
-	while(1) {
+	while(glbl.GetGlobalInputTermState() == 0) {
 		localRet = AcceptConnReq(pLstn->sock, &newSock, &peerName, &peerIP);
-		if(localRet == RS_RET_NO_MORE_DATA)
+		if(localRet == RS_RET_NO_MORE_DATA || glbl.GetGlobalInputTermState() == 1)
 			break;
 		CHKiRet(localRet);
 		CHKiRet(addSess(pLstn->pSrv, newSock, peerName, peerIP));
@@ -1010,12 +1010,11 @@ BEGINrunInput
 	struct epoll_event events[1];
 	epolld_t *epd;
 CODESTARTrunInput
-	DBGPRINTF("imptcp now beginning to process input data\n");
-	/* v5 TODO: consentual termination mode */
-	while(1) {
+	DBGPRINTF("imptcp: now beginning to process input data\n");
+	while(glbl.GetGlobalInputTermState() == 0) {
 		DBGPRINTF("imptcp going on epoll_wait\n");
 		nfds = epoll_wait(epollfd, events, sizeof(events)/sizeof(struct epoll_event), -1);
-		for(i = 0 ; i < nfds ; ++i) { /* support for larger batches (later, TODO) */
+		for(i = 0 ; (i < nfds) && (glbl.GetGlobalInputTermState() == 0) ; ++i) { /* support for larger batches (later, TODO) */
 			epd = (epolld_t*) events[i].data.ptr;
 			switch(epd->typ) {
 			case epolld_lstn:
@@ -1031,6 +1030,7 @@ CODESTARTrunInput
 			}
 		}
 	}
+	DBGPRINTF("imptcp: successfully terminated\n");
 ENDrunInput
 
 
@@ -1038,7 +1038,6 @@ ENDrunInput
 BEGINwillRun
 CODESTARTwillRun
 	/* first apply some config settings */
-	//net.PrintAllowedSenders(2); /* TCP */
 	iMaxLine = glbl.GetMaxLine(); /* get maximum size we currently support */
 
 	if(pSrvRoot == NULL) {
@@ -1104,8 +1103,6 @@ shutdownSrv(ptcpsrv_t *pSrv)
 BEGINafterRun
 	ptcpsrv_t *pSrv, *srvDel;
 CODESTARTafterRun
-	/* do cleanup here */
-	//net.clearAllowedSenders(UCHAR_CONSTANT("TCP"));
 	/* we need to close everything that is still open */
 	pSrv = pSrvRoot;
 	while(pSrv != NULL) {
@@ -1121,12 +1118,6 @@ ENDafterRun
 
 BEGINmodExit
 CODESTARTmodExit
-#if 0
-	if(pPermPeersRoot != NULL) {
-		net.DestructPermittedPeers(&pPermPeersRoot);
-	}
-#endif
-
 	/* release objects we used */
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(prop, CORE_COMPONENT);
@@ -1150,10 +1141,17 @@ resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unus
 }
 
 
+BEGINisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature
+	if(eFeat == sFEATURENonCancelInputTermination)
+		iRet = RS_RET_OK;
+ENDisCompatibleWithFeature
+
 
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_IMOD_QUERIES
+CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
 ENDqueryEtryPt
 
 
