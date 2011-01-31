@@ -1088,6 +1088,25 @@ AC_ARG_ENABLE(omhdfs,
 AM_CONDITIONAL(ENABLE_OMHDFS, test x$enable_omhdfs = xyes)
 
 
+#MONGODB SUPPORT
+
+AC_ARG_ENABLE(ommongodb,
+        [AS_HELP_STRING([--enable-ommongodb],[Compiles ommongodb template module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_ommongodb="yes" ;;
+          no) enable_ommongodb="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-ommongodb) ;;
+         esac],
+        [enable_ommongodb=no]
+)
+#
+# you may want to do some library checks here - see snmp, mysql, pgsql modules
+# for samples
+#
+AM_CONDITIONAL(ENABLE_OMMONGODB, test x$enable_ommongodb = xyes)
+# end of copy template - be sure to search for omtemplate to find everything!
+
+
 AC_CONFIG_FILES([Makefile \
 		runtime/Makefile \
 		tools/Makefile \
@@ -1158,6 +1177,7 @@ echo
 echo "---{ output plugins }---"
 echo "    Mail support enabled:                     $enable_mail"
 echo "    omprog module will be compiled:           $enable_omprog"
+echo "    output mongodb module will be compiled:   $enable_ommongodb"
 echo "    omstdout module will be compiled:         $enable_omstdout"
 echo "    omhdfs module will be compiled:           $enable_omhdfs"
 echo "    omruleset module will be compiled:        $enable_omruleset"

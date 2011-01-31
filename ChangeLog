@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------
 Version 6.1.3  [DEVEL] (rgerhards), 2010-12-??
+- experimental support for monogodb added
 - added $IMUDPSchedulingPolicy and $IMUDPSchedulingPriority config settings
 - added $LocalHostName config directive
 - improved tcpsrv performance by enabling multiple-entry epoll
