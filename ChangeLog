@@ -8,6 +8,8 @@ Version 5.7.3  [V5-DEVEL] (rgerhards), 2010-12-??
 - bugfix: local hostname was pulled too-early, so that some config 
   directives (namely FQDN settings) did not have any effect
 - bugfix: imfile did duplicate messages under some circumstances
+- added $OMMySQLConfigFile config directive
+- added $OMMySQLConfigSection config directive
 ---------------------------------------------------------------------------
 Version 5.7.2  [V5-DEVEL] (rgerhards), 2010-11-26
 - bugfix(important): problem in TLS handling could cause rsyslog to loop
