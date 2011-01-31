@@ -95,6 +95,7 @@ finalize_it:
 /* destructor for the tcps_sess object */
 BEGINobjDestruct(tcps_sess) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(tcps_sess)
+//printf("sess %p destruct, pStrm %p\n", pThis, pThis->pStrm);
 	if(pThis->pStrm != NULL)
 		netstrm.Destruct(&pThis->pStrm);
 
@@ -337,6 +338,7 @@ Close(tcps_sess_t *pThis)
 {
 	DEFiRet;
 
+//printf("sess %p close\n", pThis);
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
 	netstrm.Destruct(&pThis->pStrm);
 	if(pThis->fromHost != NULL) {
@@ -466,6 +468,7 @@ DataRcvd(tcps_sess_t *pThis, char *pData, size_t iLen)
 	char *pEnd;
 	DEFiRet;
 
+//printf("DataRcvd: %p\n", pThis);
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
 	assert(pData != NULL);
 	assert(iLen > 0);

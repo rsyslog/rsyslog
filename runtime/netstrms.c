@@ -32,7 +32,6 @@
 #include "rsyslog.h"
 #include "module-template.h"
 #include "obj.h"
-//#include "errmsg.h"
 #include "nsd.h"
 #include "netstrm.h"
 #include "nssel.h"

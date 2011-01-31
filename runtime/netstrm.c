@@ -64,6 +64,7 @@ ENDobjConstruct(netstrm)
 /* destructor for the netstrm object */
 BEGINobjDestruct(netstrm) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(netstrm)
+//printf("destruct driver data %p\n", pThis->pDrvrData);
 	if(pThis->pDrvrData != NULL)
 		iRet = pThis->Drvr.Destruct(&pThis->pDrvrData);
 ENDobjDestruct(netstrm)
@@ -169,6 +170,7 @@ Rcv(netstrm_t *pThis, uchar *pBuf, ssize_t *pLenBuf)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, netstrm);
+//printf("Rcv %p\n", pThis);
 	iRet = pThis->Drvr.Rcv(pThis->pDrvrData, pBuf, pLenBuf);
 	RETiRet;
 }
