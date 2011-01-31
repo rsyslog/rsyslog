@@ -851,7 +851,7 @@ do_dbgprint(uchar *pszObjName, char *pszMsg, size_t lenMsg)
 	struct timeval tv;
 #	endif
 
-#if 0
+#if 1
 	/* The bWasNL handler does not really work. It works if no thread
 	 * switching occurs during non-NL messages. Else, things are messed
 	 * up. Anyhow, it works well enough to provide useful help during
