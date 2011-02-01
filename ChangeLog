@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 6.1.3  [DEVEL] (rgerhards), 2010-12-??
+Version 6.1.3  [DEVEL] (rgerhards), 2011-02-01
 - experimental support for monogodb added
 - added $IMUDPSchedulingPolicy and $IMUDPSchedulingPriority config settings
 - added $LocalHostName config directive
@@ -17,6 +17,8 @@ Version 6.1.3  [DEVEL] (rgerhards), 2010-12-??
 - enhanced tcpflood to support multiple sender threads
   this is required for some high-throughput scenarios (and necessary to
   run some performance tests, because otherwise the sender is too slow).
+- added some new custom parsers (snare, aix, some Cisco "specialities")
+  thanks to David Lang
 ---------------------------------------------------------------------------
 Version 6.1.2  [DEVEL] (rgerhards), 2010-12-16
 - added experimental support for log normalizaton (via liblognorm)
