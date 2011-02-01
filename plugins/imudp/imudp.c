@@ -35,6 +35,9 @@
 #if HAVE_SYS_EPOLL_H
 #	include <sys/epoll.h>
 #endif
+#ifdef HAVE_SCHED_H
+#	include <sched.h>
+#endif
 #include "rsyslog.h"
 #include "dirty.h"
 #include "net.h"
@@ -78,13 +81,102 @@ static uchar *pRcvBuf = NULL;		/* receive buffer (for a single packet). We use a
 					 * termination if we can not get it. -- rgerhards, 2007-12-27
 					 */
 static prop_t *pInputName = NULL;	/* our inputName currently is always "imudp", and this will hold it */
+static uchar *pszSchedPolicy = NULL;	/* scheduling policy string */
+static int iSchedPolicy;		/* scheduling policy as SCHED_xxx */
+static int iSchedPrio;			/* scheduling priority */
+static int seen_iSchedPrio = 0;		/* have we seen scheduling priority in the config file? */
 static ruleset_t *pBindRuleset = NULL;	/* ruleset to bind listener to (use system default if unspecified) */
-static uchar *pszSchedPolicy = NULL;	/**< scheduling policy (string) */
-static int iSchedPrio = -1;		/**< scheduling priority (must not be negative) */
 #define TIME_REQUERY_DFLT 2
 static int iTimeRequery = TIME_REQUERY_DFLT;/* how often is time to be queried inside tight recv loop? 0=always */
 
 /* config settings */
+
+static rsRetVal check_scheduling_priority(int report_error)
+{
+    	DEFiRet;
+
+#ifdef HAVE_SCHED_GET_PRIORITY_MAX
+	if (iSchedPrio < sched_get_priority_min(iSchedPolicy) ||
+	    iSchedPrio > sched_get_priority_max(iSchedPolicy)) {
+	    	if (report_error)
+		    	errmsg.LogError(errno, NO_ERRCODE,
+				"imudp: scheduling priority %d out of range (%d - %d)"
+				" for scheduling policy '%s' - ignoring settings",
+				iSchedPrio,
+				sched_get_priority_min(iSchedPolicy),
+				sched_get_priority_max(iSchedPolicy),
+				pszSchedPolicy);
+		ABORT_FINALIZE(RS_RET_VALIDATION_RUN);
+	}
+#endif
+
+finalize_it:
+	RETiRet;
+}
+
+/* Set scheduling priority in the supplied variable (will be iSchedPrio)
+ * and record that we have seen the directive (in seen_iSchedPrio).
+ */
+static rsRetVal set_scheduling_priority(void *pVal, int value)
+{
+	DEFiRet;
+
+	if (seen_iSchedPrio) {
+		errmsg.LogError(0, NO_ERRCODE, "directive already seen");
+		ABORT_FINALIZE(RS_RET_VALIDATION_RUN);
+	}
+	*(int *)pVal = value;
+	seen_iSchedPrio = 1;
+	if (pszSchedPolicy != NULL)
+	    	CHKiRet(check_scheduling_priority(1));
+
+finalize_it:
+	RETiRet;
+}
+
+/* Set scheduling policy in iSchedPolicy */
+static rsRetVal set_scheduling_policy(void *pVal, uchar *pNewVal)
+{
+    	int have_sched_policy = 0;
+	DEFiRet;
+
+	if (pszSchedPolicy != NULL) {
+	    	errmsg.LogError(0, NO_ERRCODE, "directive already seen");
+		ABORT_FINALIZE(RS_RET_VALIDATION_RUN);
+	}
+	*((uchar**)pVal) = pNewVal;	/* pVal is pszSchedPolicy */
+	if (0) { /* trick to use conditional compilation */
+#ifdef SCHED_FIFO
+	} else if (!strcasecmp((char*)pszSchedPolicy, "fifo")) {
+		iSchedPolicy = SCHED_FIFO;
+		have_sched_policy = 1;
+#endif
+#ifdef SCHED_RR
+	} else if (!strcasecmp((char*)pszSchedPolicy, "rr")) {
+		iSchedPolicy = SCHED_RR;
+		have_sched_policy = 1;
+#endif
+#ifdef SCHED_OTHER
+	} else if (!strcasecmp((char*)pszSchedPolicy, "other")) {
+		iSchedPolicy = SCHED_OTHER;
+		have_sched_policy = 1;
+#endif
+	} else {
+		errmsg.LogError(errno, NO_ERRCODE,
+			    "imudp: invalid scheduling policy '%s' "
+			    "- ignoring setting", pszSchedPolicy);
+	}
+	if (have_sched_policy == 0) {
+	    	free(pszSchedPolicy);
+		pszSchedPolicy = NULL;
+		ABORT_FINALIZE(RS_RET_VALIDATION_RUN);
+	}
+	if (seen_iSchedPrio)
+	    	CHKiRet(check_scheduling_priority(1));
+
+finalize_it:
+	RETiRet;
+}
 
 
 /* This function is called when a new listener shall be added. It takes
@@ -296,6 +388,41 @@ finalize_it:
 	RETiRet;
 }
 
+static void set_thread_schedparam(void)
+{
+	struct sched_param sparam;
+
+	if (pszSchedPolicy != NULL && seen_iSchedPrio == 0) {
+		errmsg.LogError(0, NO_ERRCODE,
+			"imudp: scheduling policy set, but without priority - ignoring settings");
+	} else if (pszSchedPolicy == NULL && seen_iSchedPrio != 0) {
+		errmsg.LogError(0, NO_ERRCODE,
+			"imudp: scheduling priority set, but without policy - ignoring settings");
+	} else if (pszSchedPolicy != NULL && seen_iSchedPrio != 0 &&
+		   check_scheduling_priority(0) == 0) {
+#ifndef HAVE_PTHREAD_SETSCHEDPARAM
+	    	errmsg.LogError(0, NO_ERRCODE,
+			"imudp: cannot set thread scheduling policy, "
+			"pthread_setschedparam() not available");
+#else
+		int err;
+
+		memset(&sparam, 0, sizeof sparam);
+		sparam.sched_priority = iSchedPrio;
+		dbgprintf("imudp trying to set sched policy to '%s', prio %d\n",
+			  pszSchedPolicy, iSchedPrio);
+		err = pthread_setschedparam(pthread_self(), iSchedPolicy, &sparam);
+		if (err != 0) {
+			errmsg.LogError(err, NO_ERRCODE, "imudp: pthread_setschedparam() failed");
+		}
+#endif
+	}
+
+	if (pszSchedPolicy != NULL) {
+	    	free(pszSchedPolicy);
+		pszSchedPolicy = NULL;
+	}
+}
 
 /* This function implements the main reception loop. Depending on the environment,
  * we either use the traditional (but slower) select() or the Linux-specific epoll()
@@ -319,6 +446,7 @@ rsRetVal rcvMainLoop(thrdInfo_t *pThrd)
 	/* start "name caching" algo by making sure the previous system indicator
 	 * is invalidated.
 	 */
+	set_thread_schedparam();
 	bIsPermitted = 0;
 	memset(&frominetPrev, 0, sizeof(frominetPrev));
 
@@ -386,6 +514,7 @@ rsRetVal rcvMainLoop(thrdInfo_t *pThrd)
 	/* start "name caching" algo by making sure the previous system indicator
 	 * is invalidated.
 	 */
+	set_thread_schedparam();
 	bIsPermitted = 0;
 	memset(&frominetPrev, 0, sizeof(frominetPrev));
 	DBGPRINTF("imudp uses select()\n");
@@ -448,7 +577,6 @@ ENDrunInput
 
 /* initialize and return if will run or not */
 BEGINwillRun
-	struct sched_param sparam;
 CODESTARTwillRun
 	/* we need to create the inputName property (only once during our lifetime) */
 	CHKiRet(prop.Construct(&pInputName));
@@ -457,40 +585,6 @@ CODESTARTwillRun
 
 	net.PrintAllowedSenders(1); /* UDP */
 	net.HasRestrictions(UCHAR_CONSTANT("UDP"), &bDoACLCheck); /* UDP */
-	
-	if(pszSchedPolicy == NULL) {
-		if(iSchedPrio != -1) {
-			errmsg.LogError(errno, NO_ERRCODE, "imudp: scheduling policy not set, but "
-				"priority - ignoring settings");
-		}
-	} else {
-		if(iSchedPrio == -1) {
-			errmsg.LogError(errno, NO_ERRCODE, "imudp: scheduling policy set, but no "
-				"priority - ignoring settings");
-		}
-		sparam.sched_priority = iSchedPrio;
-		dbgprintf("imudp trying to set sched policy to '%s', prio %d\n", 
-			  pszSchedPolicy, iSchedPrio);
-		if(0) { /* trick to use conditional compilation */
-#		ifdef SCHED_FIFO
-		} else if(!strcasecmp((char*)pszSchedPolicy, "fifo")) {
-			pthread_setschedparam(pthread_self(), SCHED_FIFO, &sparam);
-#		endif
-#		ifdef SCHED_RR
-		} else if(!strcasecmp((char*)pszSchedPolicy, "rr")) {
-			pthread_setschedparam(pthread_self(), SCHED_RR, &sparam);
-#		endif
-#		ifdef SCHED_OTHER
-		} else if(!strcasecmp((char*)pszSchedPolicy, "other")) {
-			pthread_setschedparam(pthread_self(), SCHED_OTHER, &sparam);
-#		endif
-		} else {
-			errmsg.LogError(errno, NO_ERRCODE, "imudp: invliad scheduling policy '%s' "
-				"ignoring settings", pszSchedPolicy);
-		}
-		free(pszSchedPolicy);
-		pszSchedPolicy = NULL;
-	}
 
 	/* if we could not set up any listners, there is no point in running... */
 	if(udpLstnSocks == NULL)

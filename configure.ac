@@ -278,6 +278,36 @@ if test "x$enable_pthreads" != "xno"; then
   )
 fi
 
+AC_CHECK_FUNCS(
+    [pthread_setschedparam],
+    [
+      rsyslog_have_pthread_setschedparam=yes
+    ],
+    [
+      rsyslog_have_pthread_setschedparam=no
+    ]
+)
+AC_CHECK_HEADERS(
+    [sched.h],
+    [
+      rsyslog_have_sched_h=yes
+    ],
+    [
+      rsyslog_have_sched_h=no
+    ]
+)
+if test "$rsyslog_have_pthread_setschedparam" = "yes" -a "$rsyslog_have_sched_h" = "yes"; then
+	save_LIBS=$LIBS
+	LIBS=
+	AC_SEARCH_LIBS(sched_get_priority_max, rt)
+	if test "x$ac_cv_search" != "xno"; then
+		AC_CHECK_FUNCS(sched_get_priority_max)
+	fi
+	IMUDP_LIBS=$LIBS
+	AC_SUBST(IMUDP_LIBS)
+	LIBS=$save_LIBS
+fi
+
 
 # klog
 AC_ARG_ENABLE(klog,
@@ -942,6 +972,32 @@ AC_ARG_ENABLE(pmlastmsg,
 AM_CONDITIONAL(ENABLE_PMLASTMSG, test x$enable_pmlastmsg = xyes)
 
 
+# settings for pmcisconames
+AC_ARG_ENABLE(pmcisconames,
+        [AS_HELP_STRING([--enable-pmcisconames],[Compiles cisconames parser module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_pmcisconames="yes" ;;
+          no) enable_pmcisconames="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-pmcisconames) ;;
+         esac],
+        [enable_pmcisconames=no]
+)
+AM_CONDITIONAL(ENABLE_PMCISCONAMES, test x$enable_pmcisconames = xyes)
+
+
+# settings for pmaixforwardedfrom
+AC_ARG_ENABLE(pmaixforwardedfrom,
+        [AS_HELP_STRING([--enable-pmaixforwardedfrom],[Compiles aixforwardedfrom parser module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_pmaixforwardedfrom="yes" ;;
+          no) enable_pmaixforwardedfrom="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-pmaixforwardedfrom) ;;
+         esac],
+        [enable_pmaixforwardedfrom=no]
+)
+AM_CONDITIONAL(ENABLE_PMAIXFORWARDEDFROM, test x$enable_pmaixforwardedfrom = xyes)
+
+
 # settings for pmrfc3164sd
 AC_ARG_ENABLE(pmrfc3164sd,
         [AS_HELP_STRING([--enable-pmrfc3164sd],[Compiles rfc3164sd parser module @<:@default=no@:>@])],
@@ -1125,6 +1181,8 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omstdout/Makefile \
 		plugins/pmrfc3164sd/Makefile \
 		plugins/pmlastmsg/Makefile \
+		plugins/pmcisconames/Makefile \
+		plugins/pmaixforwardedfrom/Makefile \
 		plugins/omruleset/Makefile \
 		plugins/omdbalerting/Makefile \
 		plugins/omuxsock/Makefile \
@@ -1189,6 +1247,8 @@ echo
 echo "---{ parser modules }---"
 echo "    pmrfc3164sd module will be compiled:      $enable_pmrfc3164sd"
 echo "    pmlastmsg module will be compiled:        $enable_pmlastmsg"
+echo "    pmcisconames module will be compiled:     $enable_pmcisconames"
+echo "    pmaixforwardedfrom module will be compiled:     $enable_pmaixforwardedfrom"
 echo
 echo "---{ message modification modules }---"
 echo "    mmnormalize module will be compiled:      $enable_mmnormalize"

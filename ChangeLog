@@ -71,12 +71,16 @@ expected that interfaces, even new ones, break during the initial
   [ported from v4]
 ---------------------------------------------------------------------------
 Version 5.7.3  [V5-DEVEL] (rgerhards), 2010-12-??
+- added support for processing multi-line messages in imfile
 - added $IMUDPSchedulingPolicy and $IMUDPSchedulingPriority config settings
 - added $LocalHostName config directive
 - bugfix: fixed build problems on some platforms
   namely those that have 32bit atomic operations but not 64 bit ones
 - bugfix: local hostname was pulled too-early, so that some config 
   directives (namely FQDN settings) did not have any effect
+- bugfix: imfile did duplicate messages under some circumstances
+- added $OMMySQLConfigFile config directive
+- added $OMMySQLConfigSection config directive
 ---------------------------------------------------------------------------
 Version 5.7.2  [V5-DEVEL] (rgerhards), 2010-11-26
 - bugfix(important): problem in TLS handling could cause rsyslog to loop
@@ -123,7 +127,7 @@ Version 5.7.0  [V5-DEVEL] (rgerhards), 2010-09-16
     thanks to Lennart Poettering for this patch
   * sd-systemd API added as part of rsyslog runtime library
 ---------------------------------------------------------------------------
-Version 5.6.3  [V5-STABLE] (rgerhards), 2010-12-??
+Version 5.6.3  [V5-STABLE] (rgerhards), 2011-01-26
 - bugfix: action processor released mememory too early, resulting in
   potential issue in retry cases (but very unlikely due to another
   bug, which I also fixed -- only after the fix this problem here
@@ -136,6 +140,7 @@ Version 5.6.3  [V5-STABLE] (rgerhards), 2010-12-??
   it!)
 - bugfix: batches which had actions in error were not properly retried in
   all cases
+- bugfix: imfile did duplicate messages under some circumstances
 ---------------------------------------------------------------------------
 Version 5.6.2  [V5-STABLE] (rgerhards), 2010-11-30
 - bugfix: compile failed on systems without epoll_create1()
@@ -712,6 +717,21 @@ Version 4.7.0  [v4-devel] (rgerhards), 2010-04-14
 - imported changes from 4.5.6 and below
 ---------------------------------------------------------------------------
 Version 4.6.6  [v4-stable] (rgerhards), 2010-11-??
+- bugfix: imfile potentially duplicates lines
+  This can happen when 0 bytes are read from the input file, and some
+  writer appends data to the file BEFORE we check if a rollover happens.
+  The check for rollover uses the inode and size as a criterion. So far,
+  we checked for equality of sizes, which is not given in this scenario,
+  but that does not indicate a rollover. From the source code comments:
+     Note that when we check the size, we MUST NOT check for equality.
+     The reason is that the file may have been written right after we
+     did try to read (so the file size has increased). That is NOT in
+     indicator of a rollover (this is an actual bug scenario we 
+     experienced). So we need to check if the new size is smaller than
+     what we already have seen!
+  Also, under some circumstances an invalid truncation was detected. This
+  code has now been removed, a file change (and thus resent) is only
+  detected if the inode number changes.
 - bugfix: a couple of problems that imfile had on some platforms, namely
   Ubuntu (not their fault, but occured there)
 - bugfix: imfile utilizes 32 bit to track offset. Most importantly,
