@@ -1,3 +1,4 @@
+- added support for TLS (in anon mode) to tcpflood
 - improved TLS error reporting
 - improved TLS startup (Diffie-Hellman bits do not need to be generated,
   as we do not support full anon key exchange -- we always need certs)
