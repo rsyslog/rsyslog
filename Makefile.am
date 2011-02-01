@@ -127,6 +127,10 @@ if ENABLE_PMCISCONAMES
 SUBDIRS += plugins/pmcisconames
 endif
 
+if ENABLE_PMAIXFORWARDEDFROM
+SUBDIRS += plugins/pmaixforwardedfrom
+endif
+
 if ENABLE_PMLASTMSG
 SUBDIRS += plugins/pmlastmsg
 endif

@@ -950,6 +950,19 @@ AC_ARG_ENABLE(pmcisconames,
 AM_CONDITIONAL(ENABLE_PMCISCONAMES, test x$enable_pmcisconames = xyes)
 
 
+# settings for pmaixforwardedfrom
+AC_ARG_ENABLE(pmaixforwardedfrom,
+        [AS_HELP_STRING([--enable-pmaixforwardedfrom],[Compiles aixforwardedfrom parser module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_pmaixforwardedfrom="yes" ;;
+          no) enable_pmaixforwardedfrom="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-pmaixforwardedfrom) ;;
+         esac],
+        [enable_pmaixforwardedfrom=no]
+)
+AM_CONDITIONAL(ENABLE_PMAIXFORWARDEDFROM, test x$enable_pmaixforwardedfrom = xyes)
+
+
 # settings for pmrfc3164sd
 AC_ARG_ENABLE(pmrfc3164sd,
         [AS_HELP_STRING([--enable-pmrfc3164sd],[Compiles rfc3164sd parser module @<:@default=no@:>@])],
@@ -1115,6 +1128,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/pmrfc3164sd/Makefile \
 		plugins/pmlastmsg/Makefile \
 		plugins/pmcisconames/Makefile \
+		plugins/pmaixforwardedfrom/Makefile \
 		plugins/omruleset/Makefile \
 		plugins/omdbalerting/Makefile \
 		plugins/omuxsock/Makefile \
@@ -1176,6 +1190,7 @@ echo "---{ parser modules }---"
 echo "    pmrfc3164sd module will be compiled:      $enable_pmrfc3164sd"
 echo "    pmlastmsg module will be compiled:        $enable_pmlastmsg"
 echo "    pmcisconames module will be compiled:     $enable_pmcisconames"
+echo "    pmaixforwardedfrom module will be compiled:     $enable_pmaixforwardedfrom"
 echo
 echo "---{ database support }---"
 echo "    MySql support enabled:                    $enable_mysql"
