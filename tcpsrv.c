@@ -577,10 +577,14 @@ processWorksetItem(tcpsrv_t *pThis, nspoll_t *pPoll, int idx, void *pUsr)
 	if(pUsr == pThis->ppLstn) {
 //printf("work item %p: connect\n", pUsr);
 		DBGPRINTF("New connect on NSD %p.\n", pThis->ppLstn[idx]);
-		SessAccept(pThis, pThis->ppLstnPort[idx], &pNewSess, pThis->ppLstn[idx]);
-		if(pPoll != NULL)
-			CHKiRet(nspoll.Ctl(pPoll, pNewSess->pStrm, 0, pNewSess, NSDPOLL_IN, NSDPOLL_ADD));
-		DBGPRINTF("New session created with NSD %p.\n", pNewSess);
+		iRet = SessAccept(pThis, pThis->ppLstnPort[idx], &pNewSess, pThis->ppLstn[idx]);
+		if(iRet == RS_RET_OK) {
+			if(pPoll != NULL)
+				CHKiRet(nspoll.Ctl(pPoll, pNewSess->pStrm, 0, pNewSess, NSDPOLL_IN, NSDPOLL_ADD));
+			DBGPRINTF("New session created with NSD %p.\n", pNewSess);
+		} else {
+			DBGPRINTF("tcpsrv: error %d during accept\n", iRet);
+		}
 	} else {
 //printf("work item %p: receive\n", pUsr);
 		pNewSess = (tcps_sess_t*) pUsr;
