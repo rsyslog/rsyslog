@@ -533,9 +533,7 @@ doReceive(tcpsrv_t *pThis, tcps_sess_t **ppSess, nspoll_t *pPoll)
 					(*ppSess)->pStrm, pszPeer);
 		}
 		//pthread_mutex_lock(&mut);
-dbgprintf("XXX: calling closeSess()\n");
 		CHKiRet(closeSess(pThis, ppSess, pPoll));
-dbgprintf("XXX: done closeSess(), *ppSess %p\n", *ppSess);
 		//pthread_mutex_unlock(&mut);
 		break;
 	case RS_RET_RETRY:
@@ -556,7 +554,6 @@ dbgprintf("XXX: done closeSess(), *ppSess %p\n", *ppSess);
 		errno = 0;
 		errmsg.LogError(0, iRet, "netstream session %p will be closed due to error\n",
 				(*ppSess)->pStrm);
-abort();
 		CHKiRet(closeSess(pThis, ppSess, pPoll));
 		break;
 	}
@@ -674,6 +671,7 @@ for(k = 0 ; k < numEntries ; ++k) {
 				wrkrInfo[i].pPoll = pPoll;
 				wrkrInfo[i].idx = workset[numEntries -1].id;
 				wrkrInfo[i].pUsr = workset[numEntries -1].pUsr;
+dbgprintf("XXX: activating worker %d\n", i);
 				/* Note: we must increment wrkrRunning HERE and not inside the worker's
 				 * code. This is because a worker may actually never start, and thus
 				 * increment wrkrRunning, before we finish and check the running worker
@@ -747,10 +745,10 @@ RunSelect(tcpsrv_t *pThis, nsd_epworkset_t workset[], size_t sizeWorkset)
 		/* do the sessions */
 		iTCPSess = TCPSessGetNxtSess(pThis, -1);
 		while(iTCPSess != -1) {
-dbgprintf("Added sessions to select set, pSel %p\n", pSel);
-dbgprintf("Added sessions to select set, iTCPSess %d\n", iTCPSess);
-dbgprintf("Added sessions to select set, ptr to strm %p\n", pThis->pSessions[iTCPSess]);
-dbgprintf("Added sessions to select set, strm %p\n", pThis->pSessions[iTCPSess]->pStrm);
+//dbgprintf("Added sessions to select set, pSel %p\n", pSel);
+//dbgprintf("Added sessions to select set, iTCPSess %d\n", iTCPSess);
+//dbgprintf("Added sessions to select set, ptr to strm %p\n", pThis->pSessions[iTCPSess]);
+//dbgprintf("Added sessions to select set, strm %p\n", pThis->pSessions[iTCPSess]->pStrm);
 			/* TODO: access to pNsd is NOT really CLEAN, use method... */
 			CHKiRet(nssel.Add(pSel, pThis->pSessions[iTCPSess]->pStrm, NSDSEL_RD));
 			/* now get next... */
@@ -1317,6 +1315,7 @@ stopWorkerPool(void)
 		pthread_cond_signal(&wrkrInfo[i].run); /* awake wrkr if not running */
 		pthread_join(wrkrInfo[i].tid, NULL);
 		DBGPRINTF("tcpsrv: info: worker %d was called %llu times\n", i, wrkrInfo[i].numCalled);
+printf("tcpsrv: info: worker %d was called %llu times\n", i, wrkrInfo[i].numCalled);
 		pthread_cond_destroy(&wrkrInfo[i].run);
 	}
 	pthread_cond_destroy(&wrkrIdle);
