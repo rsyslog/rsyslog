@@ -477,7 +477,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKmalloc(files = create_hashtable(20, hash_from_string, key_equals_string,
 			                   fileObjDestruct4Hashtable));
 
-	CHKiRet(regCfSysLineHdlr((uchar *)"omhdfscs.fileName", 0, eCmdHdlrGetWord, NULL, &cs.fileName, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"omhdfsfilename", 0, eCmdHdlrGetWord, NULL, &cs.fileName, NULL, eConfObjAction));
 	CHKiRet(regCfSysLineHdlr((uchar *)"omhdfshost", 0, eCmdHdlrGetWord, NULL, &cs.hdfsHost, NULL, eConfObjAction));
 	CHKiRet(regCfSysLineHdlr((uchar *)"omhdfsport", 0, eCmdHdlrInt, NULL, &cs.hdfsPort, NULL, eConfObjAction));
 	CHKiRet(regCfSysLineHdlr((uchar *)"omhdfsdefaulttemplate", 0, eCmdHdlrGetWord, NULL, &cs.dfltTplName, NULL, eConfObjAction));
