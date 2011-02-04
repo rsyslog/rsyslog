@@ -100,6 +100,7 @@
 #define NETTEST_INPUT_CONF_FILE "nettest.input.conf" /* name of input file, must match $IncludeConfig in .conf files */
 
 #define MAX_EXTRADATA_LEN 100*1024
+#define MAX_SENDBUF 2 * MAX_EXTRADATA_LEN
 
 static char *targetIP = "127.0.0.1";
 static char *msgPRI = "167";
@@ -397,6 +398,8 @@ int sendMessages(struct instdata *inst)
 	int lenSend = 0;
 	char *statusText = "";
 	char buf[MAX_EXTRADATA_LEN + 1024];
+	char sendBuf[MAX_SENDBUF];
+	int offsSendBuf = 0;
 
 	if(!bSilent) {
 		if(dataFile == NULL) {
@@ -438,7 +441,16 @@ int sendMessages(struct instdata *inst)
 		} else if(transport == TP_UDP) {
 			lenSend = sendto(udpsock, buf, lenBuf, 0, &udpRcvr, sizeof(udpRcvr));
 		} else if(transport == TP_TLS) {
-			lenSend = sendTLS(socknum, buf, lenBuf);
+			if(offsSendBuf + lenBuf < MAX_SENDBUF) {
+				memcpy(sendBuf+offsSendBuf, buf, lenBuf);
+				offsSendBuf += lenBuf;
+				lenSend = lenBuf; /* simulate "good" call */
+			} else {
+				lenSend = sendTLS(socknum, sendBuf, offsSendBuf);
+				lenSend = (lenSend == offsSendBuf) ? lenBuf : -1;
+				memcpy(sendBuf, buf, lenBuf);
+				offsSendBuf = lenBuf;
+			}
 		}
 		if(lenSend != lenBuf) {
 			printf("\r%5.5d\n", i);
@@ -468,6 +480,11 @@ int sendMessages(struct instdata *inst)
 		}
 		++msgNum;
 		++i;
+	}
+	if(transport == TP_TLS && offsSendBuf != 0) {
+		/* send remaining buffer */
+		lenSend = sendTLS(socknum, sendBuf, offsSendBuf);
+printf("TLS send buffer of %d messages remaining, sent %d\n", offsSendBuf, lenSend);
 	}
 	if(!bSilent)
 		printf("\r%8.8d %s sent\n", i, statusText);
@@ -731,7 +748,18 @@ initTLSSess(int i)
 static int
 sendTLS(int i, char *buf, int lenBuf)
 {
-	return gnutls_record_send(sessArray[i], buf, lenBuf);
+	int lenSent;
+	int r;
+
+	lenSent = 0;
+	while(lenSent != lenBuf) {
+		r = gnutls_record_send(sessArray[i], buf + lenSent, lenBuf - lenSent);
+		if(r < 0)
+			break;
+		lenSent += r;
+	}
+
+	return lenSent;
 }
 
 static void
