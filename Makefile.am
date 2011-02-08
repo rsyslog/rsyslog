@@ -131,6 +131,10 @@ if ENABLE_PMAIXFORWARDEDFROM
 SUBDIRS += plugins/pmaixforwardedfrom
 endif
 
+if ENABLE_PMSNARE
+SUBDIRS += plugins/pmsnare
+endif
+
 if ENABLE_PMLASTMSG
 SUBDIRS += plugins/pmlastmsg
 endif

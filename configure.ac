@@ -963,6 +963,19 @@ AC_ARG_ENABLE(pmaixforwardedfrom,
 AM_CONDITIONAL(ENABLE_PMAIXFORWARDEDFROM, test x$enable_pmaixforwardedfrom = xyes)
 
 
+# settings for pmsnare
+AC_ARG_ENABLE(pmsnare,
+        [AS_HELP_STRING([--enable-pmsnare],[Compiles snare parser module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_pmsnare="yes" ;;
+          no) enable_pmsnare="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-pmsnare) ;;
+         esac],
+        [enable_pmsnare=no]
+)
+AM_CONDITIONAL(ENABLE_PMSNARE, test x$enable_pmsnare = xyes)
+
+
 # settings for pmrfc3164sd
 AC_ARG_ENABLE(pmrfc3164sd,
         [AS_HELP_STRING([--enable-pmrfc3164sd],[Compiles rfc3164sd parser module @<:@default=no@:>@])],
@@ -1128,6 +1141,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/pmrfc3164sd/Makefile \
 		plugins/pmlastmsg/Makefile \
 		plugins/pmcisconames/Makefile \
+		plugins/pmsnare/Makefile \
 		plugins/pmaixforwardedfrom/Makefile \
 		plugins/omruleset/Makefile \
 		plugins/omdbalerting/Makefile \
@@ -1190,7 +1204,8 @@ echo "---{ parser modules }---"
 echo "    pmrfc3164sd module will be compiled:      $enable_pmrfc3164sd"
 echo "    pmlastmsg module will be compiled:        $enable_pmlastmsg"
 echo "    pmcisconames module will be compiled:     $enable_pmcisconames"
-echo "    pmaixforwardedfrom module will be compiled:     $enable_pmaixforwardedfrom"
+echo "    pmaixforwardedfrom module w.be compiled:  $enable_pmaixforwardedfrom"
+echo "    pmsnare module will be compiled:          $enable_pmsnare"
 echo
 echo "---{ database support }---"
 echo "    MySql support enabled:                    $enable_mysql"
