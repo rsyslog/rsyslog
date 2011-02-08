@@ -801,7 +801,7 @@ AC_SUBST(LIBLOGGING_LIBS)
 # enable/disable the testbench (e.g. because some important parts
 # are missing)
 AC_ARG_ENABLE(testbench,
-        [AS_HELP_STRING([--enable-testbench],[file input module enabled @<:@default=yes@:>@])],
+        [AS_HELP_STRING([--enable-testbench],[testbench enabled @<:@default=yes@:>@])],
         [case "${enableval}" in
          yes) enable_testbench="yes" ;;
           no) enable_testbench="no" ;;
@@ -832,7 +832,7 @@ AM_CONDITIONAL(ENABLE_IMFILE, test x$enable_imfile = xyes)
 
 # settings for the door input module (under solaris, thus default off)
 AC_ARG_ENABLE(imsolaris,
-        [AS_HELP_STRING([--enable-imsolaris],[door input module enabled @<:@default=no@:>@])],
+        [AS_HELP_STRING([--enable-imsolaris],[solaris input module enabled @<:@default=no@:>@])],
         [case "${enableval}" in
          yes) enable_imsolaris="yes" ;;
           no) enable_imsolaris="no" ;;
@@ -1039,7 +1039,7 @@ AC_SUBST(RELP_LIBS)
 
 # settings for omuxsock
 AC_ARG_ENABLE(omuxsock,
-        [AS_HELP_STRING([--enable-omuxsock],[Compiles stdout module @<:@default=no@:>@])],
+        [AS_HELP_STRING([--enable-omuxsock],[Compiles omuxsock module @<:@default=no@:>@])],
         [case "${enableval}" in
          yes) enable_omuxsock="yes" ;;
           no) enable_omuxsock="no" ;;
@@ -1054,7 +1054,7 @@ AM_CONDITIONAL(ENABLE_OMUXSOCK, test x$enable_omuxsock = xyes)
 # part of rsyslog, into the build process. It is named cust1, so that
 # additional such modules can easily be added.
 AC_ARG_ENABLE(cust1,
-        [AS_HELP_STRING([--enable-cust1],[Compiles stdout module @<:@default=no@:>@])],
+        [AS_HELP_STRING([--enable-cust1],[Compiles cust1 module @<:@default=no@:>@])],
         [case "${enableval}" in
          yes) enable_cust1="yes" ;;
           no) enable_cust1="no" ;;
