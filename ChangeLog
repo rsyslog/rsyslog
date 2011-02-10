@@ -1,6 +1,7 @@
 ---------------------------------------------------------------------------
 Version 5.7.4  [V5-BETA] (rgerhards), 2011-02-??
 - added pmsnare parser module (written by David Lang)
+- enhanced imfile to support non-cancel input termination
 - bugfix: abort if imfile reads file line of more than 64KiB
   Thanks to Peter Eisentraut for reporting and analysing this problem.
   bug tracker: http://bugzilla.adiscon.com/show_bug.cgi?id=221
