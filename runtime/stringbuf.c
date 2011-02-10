@@ -156,7 +156,7 @@ rsRetVal
 rsCStrExtendBuf(cstr_t *pThis, size_t iMinNeeded)
 {
 	uchar *pNewBuf;
-	unsigned short iNewSize;
+	size_t iNewSize;
 	DEFiRet;
 
 	/* first compute the new size needed */
