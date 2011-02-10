@@ -617,12 +617,12 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, int mode)
         	CHKiRet(cstrFinalize(*ppCStr));
 	}
         if (mode == 2){
-/* indented follow-up lines */
+		/* indented follow-up lines */
 		finished=0;
 		while(finished == 0){
 			if ((*ppCStr)->iStrLen == 0){
         			if(c != '\n') {
-/* nothing in the buffer, and it's not a newline, add it to the buffer */
+				/* nothing in the buffer, and it's not a newline, add it to the buffer */
                				CHKiRet(cstrAppendChar(*ppCStr, c));
                				CHKiRet(strmReadChar(pThis, &c));
 				} else {
@@ -630,7 +630,7 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, int mode)
 				}
 			} else {
 				if ((*ppCStr)->pBuf[(*ppCStr)->iStrLen -1 ] != '\n'){
-/* not the first character after a newline, add it to the buffer */
+				/* not the first character after a newline, add it to the buffer */
                				CHKiRet(cstrAppendChar(*ppCStr, c));
                				CHKiRet(strmReadChar(pThis, &c));
 				} else {
@@ -638,7 +638,9 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, int mode)
                					CHKiRet(cstrAppendChar(*ppCStr, c));
                					CHKiRet(strmReadChar(pThis, &c));
 					} else {
-/* clean things up by putting the character we just read back into the input buffer and removing the LF character that is currently at the end of the output string */
+						/* clean things up by putting the character we just read back into
+						 * the input buffer and removing the LF character that is currently at the
+						 * end of the output string */
 						CHKiRet(strmUnreadChar(pThis, c));
 						rsCStrTruncate(*ppCStr,1);
 						finished=1;
