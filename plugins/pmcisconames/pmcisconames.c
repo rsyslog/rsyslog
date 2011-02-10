@@ -89,10 +89,29 @@ dbgprintf("pmcisconames: msg to look at: [%d]'%s'\n", lenMsg, p2parse);
 dbgprintf("msg too short!\n");
 		ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
 	}
-
-	/* skip over timestamp */
-	lenMsg -=16;
-	p2parse +=16;
+	/* check if the timestamp is a 16 character or 21 character timestamp
+		'Mmm DD HH:MM:SS ' spaces at 3,6,15 : at 9,12
+		'Mmm DD YYYY HH:MM:SS ' spaces at 3,6,11,20 : at 14,17
+	   check for the : first as that will differentiate the two conditions the fastest
+	   this allows the compiler to short circuit the rst of the tests if it is the wrong timestamp
+	   but still check the rest to see if it looks correct
+	*/
+	if ( *(p2parse + 9) == ':' && *(p2parse + 12) == ':' && *(p2parse + 3) == ' ' && *(p2parse + 6) == ' ' && *(p2parse + 15) == ' ') {
+		/* skip over timestamp */
+		dbgprintf("short timestamp found\n");
+		lenMsg -=16;
+		p2parse +=16;
+	} else {
+		if ( *(p2parse + 14) == ':' && *(p2parse + 17) == ':' && *(p2parse + 3) == ' ' && *(p2parse + 6) == ' ' && *(p2parse + 11) == ' ' && *(p2parse + 20) == ' ') {
+			/* skip over timestamp */
+			dbgprintf("long timestamp found\n");
+			lenMsg -=21;
+			p2parse +=21;
+		} else {
+			dbgprintf("timestamp is not one of the valid formats\n");
+			ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
+		}
+	}
 	/* now look for the next space to walk past the hostname */
 	while(lenMsg && *p2parse != ' ') {
 		--lenMsg;
