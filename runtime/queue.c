@@ -246,6 +246,7 @@ qqueueAdviseMaxWorkers(qqueue_t *pThis)
 
 	if(!pThis->bEnqOnly) {
 		if(pThis->bIsDA && getLogicalQueueSize(pThis) >= pThis->iHighWtrMrk) {
+			DBGOPRINT((obj_t*) pThis, "(re)activating DA worker\n");
 			wtpAdviseMaxWorkers(pThis->pWtpDA, 1); /* disk queues have always one worker */
 		} else {
 			if(getLogicalQueueSize(pThis) == 0) {
@@ -1211,7 +1212,6 @@ rsRetVal qqueueConstruct(qqueue_t **ppThis, queueType_t qType, int iWorkerThread
 	/* set some water marks so that we have useful defaults if none are set specifically */
 	pThis->iFullDlyMrk  = iMaxQueueSize - (iMaxQueueSize / 100) *  3; /* default 97% */
 	pThis->iLightDlyMrk = iMaxQueueSize - (iMaxQueueSize / 100) * 30; /* default 70% */
-
 	pThis->lenSpoolDir = ustrlen(pThis->pszSpoolDir);
 	pThis->iMaxFileSize = 1024 * 1024; /* default is 1 MiB */
 	pThis->iQueueSize = 0;
@@ -1819,6 +1819,7 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 {
 	DEFiRet;
 	uchar pszBuf[64];
+	int wrk;
 	uchar *qName;
 	size_t lenBuf;
 
@@ -1849,6 +1850,16 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 
 	/* call type-specific constructor */
 	CHKiRet(pThis->qConstruct(pThis)); /* this also sets bIsDA */
+
+	/* re-adjust some params if required */
+	if(pThis->bIsDA) {
+		/* if we are in DA mode, we must make sure full delayable messages do not
+		 * initiate going to disk!
+		 */
+		wrk = pThis->iHighWtrMrk - (pThis->iHighWtrMrk / 100) * 50; /* 50% of high water mark */
+		if(wrk < pThis->iFullDlyMrk)
+			pThis->iFullDlyMrk = wrk;
+	}
 
 	DBGOPRINT((obj_t*) pThis, "type %d, enq-only %d, disk assisted %d, maxFileSz %lld, lqsize %d, pqsize %d, child %d, "
 				  "full delay %d, light delay %d, deq batch size %d starting\n",
