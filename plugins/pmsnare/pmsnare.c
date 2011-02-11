@@ -137,14 +137,17 @@ CODESTARTparse
 			*p2parse = ' ';
 			lenMsg -=(tablength-2);
 			p2parse++;
+			lenMsg--;
 			memmove(p2parse, p2parse + (tablength-2), lenMsg);
 			*(p2parse + lenMsg) = '\n';
 			*(p2parse + lenMsg + 1)  = '\0';
 			pMsg->iLenRawMsg -=(tablength-2);
 			pMsg->iLenMSG -=(tablength-2);
 			p2parse += snaremessage;
+			lenMsg -= snaremessage;
 			*p2parse = ' ';
 			p2parse++;
+			lenMsg--;
 			lenMsg -=(tablength-2);
 			memmove(p2parse, p2parse + (tablength-2), lenMsg);
 			*(p2parse + lenMsg) = '\n';
@@ -178,8 +181,10 @@ CODESTARTparse
 		}
 		if(snaremessage) {
 			p2parse += snaremessage;
+			lenMsg -= snaremessage;
 			*p2parse = ' ';
 			p2parse++;
+			lenMsg--;
 			lenMsg -=(tablength-2);
 			memmove(p2parse, p2parse + (tablength-2), lenMsg);
 			*(p2parse + lenMsg) = '\n';
@@ -190,7 +195,7 @@ CODESTARTparse
 		}
 		
 	}
-	DBGPRINTF("pmsnare: new mesage: [%d]'%s'\n", lenMsg, pMsg->pszRawMsg + pMsg->offAfterPRI);
+	DBGPRINTF("pmsnare: new message: [%d]'%s'\n", lenMsg, pMsg->pszRawMsg + pMsg->offAfterPRI);
 	ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
 
 finalize_it:
