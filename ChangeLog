@@ -11,6 +11,9 @@ Version 5.7.4  [V5-BETA] (rgerhards), 2011-02-??
   when in disk-assisted mode. This especially affected imfile, which
   created unnecessarily queue files if a large set of input file data was
   to process.
+- bugfix: very long running actions could prevent shutdown under some
+  circumstances. This has now been solved, at least for common
+  situations.
 ---------------------------------------------------------------------------
 Version 5.7.3  [V5-BETA] (rgerhards), 2011-02-07
 - added support for processing multi-line messages in imfile

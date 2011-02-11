@@ -1497,7 +1497,7 @@ DequeueConsumable(qqueue_t *pThis, wti_t *pWti)
 	 * now that we dequeue batches of pointers, this is much less an issue...
 	 * rgerhards, 2009-04-22
 	 */
-	if(iQueueSize < pThis->iFullDlyMrk / 2) {
+	if(iQueueSize < pThis->iFullDlyMrk / 2 || glbl.GetGlobalInputTermState() == 1) {
 		pthread_cond_broadcast(&pThis->belowFullDlyWtrMrk);
 	}
 
