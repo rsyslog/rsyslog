@@ -823,7 +823,7 @@ AC_SUBST(LIBLOGGING_LIBS)
 # enable/disable the testbench (e.g. because some important parts
 # are missing)
 AC_ARG_ENABLE(testbench,
-        [AS_HELP_STRING([--enable-testbench],[file input module enabled @<:@default=yes@:>@])],
+        [AS_HELP_STRING([--enable-testbench],[testbench enabled @<:@default=yes@:>@])],
         [case "${enableval}" in
          yes) enable_testbench="yes" ;;
           no) enable_testbench="no" ;;
@@ -854,7 +854,7 @@ AM_CONDITIONAL(ENABLE_IMFILE, test x$enable_imfile = xyes)
 
 # settings for the door input module (under solaris, thus default off)
 AC_ARG_ENABLE(imsolaris,
-        [AS_HELP_STRING([--enable-imsolaris],[door input module enabled @<:@default=no@:>@])],
+        [AS_HELP_STRING([--enable-imsolaris],[solaris input module enabled @<:@default=no@:>@])],
         [case "${enableval}" in
          yes) enable_imsolaris="yes" ;;
           no) enable_imsolaris="no" ;;
@@ -998,6 +998,19 @@ AC_ARG_ENABLE(pmaixforwardedfrom,
 AM_CONDITIONAL(ENABLE_PMAIXFORWARDEDFROM, test x$enable_pmaixforwardedfrom = xyes)
 
 
+# settings for pmsnare
+AC_ARG_ENABLE(pmsnare,
+        [AS_HELP_STRING([--enable-pmsnare],[Compiles snare parser module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_pmsnare="yes" ;;
+          no) enable_pmsnare="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-pmsnare) ;;
+         esac],
+        [enable_pmsnare=no]
+)
+AM_CONDITIONAL(ENABLE_PMSNARE, test x$enable_pmsnare = xyes)
+
+
 # settings for pmrfc3164sd
 AC_ARG_ENABLE(pmrfc3164sd,
         [AS_HELP_STRING([--enable-pmrfc3164sd],[Compiles rfc3164sd parser module @<:@default=no@:>@])],
@@ -1061,7 +1074,7 @@ AC_SUBST(RELP_LIBS)
 
 # settings for omuxsock
 AC_ARG_ENABLE(omuxsock,
-        [AS_HELP_STRING([--enable-omuxsock],[Compiles stdout module @<:@default=no@:>@])],
+        [AS_HELP_STRING([--enable-omuxsock],[Compiles omuxsock module @<:@default=no@:>@])],
         [case "${enableval}" in
          yes) enable_omuxsock="yes" ;;
           no) enable_omuxsock="no" ;;
@@ -1076,7 +1089,7 @@ AM_CONDITIONAL(ENABLE_OMUXSOCK, test x$enable_omuxsock = xyes)
 # part of rsyslog, into the build process. It is named cust1, so that
 # additional such modules can easily be added.
 AC_ARG_ENABLE(cust1,
-        [AS_HELP_STRING([--enable-cust1],[Compiles stdout module @<:@default=no@:>@])],
+        [AS_HELP_STRING([--enable-cust1],[Compiles cust1 module @<:@default=no@:>@])],
         [case "${enableval}" in
          yes) enable_cust1="yes" ;;
           no) enable_cust1="no" ;;
@@ -1182,6 +1195,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/pmrfc3164sd/Makefile \
 		plugins/pmlastmsg/Makefile \
 		plugins/pmcisconames/Makefile \
+		plugins/pmsnare/Makefile \
 		plugins/pmaixforwardedfrom/Makefile \
 		plugins/omruleset/Makefile \
 		plugins/omdbalerting/Makefile \
@@ -1248,7 +1262,8 @@ echo "---{ parser modules }---"
 echo "    pmrfc3164sd module will be compiled:      $enable_pmrfc3164sd"
 echo "    pmlastmsg module will be compiled:        $enable_pmlastmsg"
 echo "    pmcisconames module will be compiled:     $enable_pmcisconames"
-echo "    pmaixforwardedfrom module will be compiled:     $enable_pmaixforwardedfrom"
+echo "    pmaixforwardedfrom module w.be compiled:  $enable_pmaixforwardedfrom"
+echo "    pmsnare module will be compiled:          $enable_pmsnare"
 echo
 echo "---{ message modification modules }---"
 echo "    mmnormalize module will be compiled:      $enable_mmnormalize"

@@ -76,7 +76,16 @@ expected that interfaces, even new ones, break during the initial
   syslog plain tcp input plugin (NOT supporting TLS!)
   [ported from v4]
 ---------------------------------------------------------------------------
-Version 5.7.3  [V5-DEVEL] (rgerhards), 2010-12-??
+Version 5.7.4  [V5-BETA] (rgerhards), 2011-02-??
+- added pmsnare parser module (written by David Lang)
+- enhanced imfile to support non-cancel input termination
+- improved systemd socket activation thanks to Marius Tomaschweski
+- bugfix: pmsnare causded abort under some conditions
+- bugfix: abort if imfile reads file line of more than 64KiB
+  Thanks to Peter Eisentraut for reporting and analysing this problem.
+  bug tracker: http://bugzilla.adiscon.com/show_bug.cgi?id=221
+---------------------------------------------------------------------------
+Version 5.7.3  [V5-BETA] (rgerhards), 2011-02-07
 - added support for processing multi-line messages in imfile
 - added $IMUDPSchedulingPolicy and $IMUDPSchedulingPriority config settings
 - added $LocalHostName config directive

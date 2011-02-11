@@ -213,7 +213,7 @@ static rsRetVal pollFile(fileInfo_t *pThis, int *pbHadFileData)
 	}
 
 	/* loop below will be exited when strmReadLine() returns EOF */
-	while(1) {
+	while(glbl.GetGlobalInputTermState() == 0) {
 		CHKiRet(strm.ReadLine(pThis->pStrm, &pCStr, pThis->readMode));
 		*pbHadFileData = 1; /* this is just a flag, so set it and forget it */
 		CHKiRet(enqLine(pThis, pCStr)); /* process line */
@@ -289,9 +289,10 @@ BEGINrunInput
 	int bHadFileData; /* were there at least one file with data during this run? */
 CODESTARTrunInput
 	pthread_cleanup_push(inputModuleCleanup, NULL);
-	while(1) {
-
+	while(glbl.GetGlobalInputTermState() == 0) {
 		do {
+			if(glbl.GetGlobalInputTermState() == 1)
+				break; /* terminate input! */
 			bHadFileData = 0;
 			for(i = 0 ; i < iFilPtr ; ++i) {
 				pollFile(&files[i], &bHadFileData);
@@ -302,10 +303,10 @@ CODESTARTrunInput
 		 * hogging the CPU if the users selects a polling interval of 0 seconds. It doesn't hurt any
 		 * other valid scenario. So do not remove. -- rgerhards, 2008-02-14
 		 */
-		srSleep(iPollInterval, 10);
-
+		if(glbl.GetGlobalInputTermState() == 0)
+			srSleep(iPollInterval, 10);
 	}
-	/*NOTREACHED*/
+	DBGPRINTF("imfile: terminating upon request of rsyslog core\n");
 	
 	pthread_cleanup_pop(0); /* just for completeness, but never called... */
 	RETiRet;	/* use it to make sure the housekeeping is done! */
@@ -398,6 +399,13 @@ CODESTARTafterRun
 ENDafterRun
 
 
+BEGINisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature
+	if(eFeat == sFEATURENonCancelInputTermination)
+		iRet = RS_RET_OK;
+ENDisCompatibleWithFeature
+
+
 /* The following entry points are defined in module-template.h.
  * In general, they need to be present, but you do NOT need to provide
  * any code here.
@@ -416,6 +424,7 @@ ENDmodExit
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_IMOD_QUERIES
+CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
 ENDqueryEtryPt
 
 
@@ -527,6 +536,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(strm, CORE_COMPONENT));
 	CHKiRet(objUse(prop, CORE_COMPONENT));
 
+	DBGPRINTF("imfile: version %s initializing\n", VERSION);
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfilename", 0, eCmdHdlrGetWord,
 	  	NULL, &pszFileName, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfiletag", 0, eCmdHdlrGetWord,

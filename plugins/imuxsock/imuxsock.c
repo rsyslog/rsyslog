@@ -143,7 +143,7 @@ static int startIndexUxLocalSockets; /* process fd from that index on (used to
 				   * read-only after startup
 				   */
 static int nfd = 1; /* number of Unix sockets open / read-only after startup */
-static int bSysSockFromSystemd = 0;	/* Did we receive the system socket from systemd? */
+static int sd_fds = 0;			/* number of systemd activated sockets */
 
 /* config settings */
 static int bOmitLocalLogging = 0;
@@ -372,41 +372,32 @@ openLogSocket(lstn_t *pLstn)
 	if(pLstn->sockName[0] == '\0')
 		return -1;
 
-       if (ustrcmp(pLstn->sockName, UCHAR_CONSTANT(_PATH_LOG)) == 0) {
-	       bSysSockFromSystemd = 0; /* set default */
-               int r;
+	pLstn->fd = -1;
 
-               /* System log socket code. Check whether an FD was passed in from systemd. If
-                * so, it's the /dev/log socket, so use it. */
+	if (sd_fds > 0) {
+               /* Check if the current socket is a systemd activated one.
+	        * If so, just use it.
+		*/
+		int fd;
 
-               r = sd_listen_fds(0);
-               if (r < 0) {
-                       errmsg.LogError(-r, NO_ERRCODE, "Failed to acquire systemd socket");
-			ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
-               }
+		for (fd = SD_LISTEN_FDS_START; fd < SD_LISTEN_FDS_START + sd_fds; fd++) {
+			if( sd_is_socket_unix(fd, SOCK_DGRAM, -1, (const char*) pLstn->sockName, 0) == 1) {
+				/* ok, it matches -- just use as is */
+				pLstn->fd = fd;
 
-               if (r > 1) {
-                       errmsg.LogError(EINVAL, NO_ERRCODE, "Wrong number of systemd sockets passed");
-			ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
-               }
-
-               if (r == 1) {
-                       pLstn->fd = SD_LISTEN_FDS_START;
-                       r = sd_is_socket_unix(pLstn->fd, SOCK_DGRAM, -1, _PATH_LOG, 0);
-                       if (r < 0) {
-                               errmsg.LogError(-r, NO_ERRCODE, "Failed to verify systemd socket type");
-				ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
-                       }
-
-                       if (!r) {
-                               errmsg.LogError(EINVAL, NO_ERRCODE, "Passed systemd socket of wrong type");
-				ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
-                       }
-		       bSysSockFromSystemd = 1; /* indicate we got the socket from systemd */
-		} else {
-			CHKiRet(createLogSocket(pLstn));
+				dbgprintf("imuxsock: Acquired UNIX socket '%s' (fd %d) from systemd.\n",
+					pLstn->sockName, pLstn->fd);
+				break;
+			}
+			/*
+			 * otherwise it either didn't matched *this* socket and
+			 * we just continue to check the next one or there were
+			 * an error and we will create a new socket bellow.
+			 */
 		}
-	} else {
+	}
+
+	if (pLstn->fd == -1) {
 		CHKiRet(createLogSocket(pLstn));
 	}
 
@@ -774,12 +765,18 @@ CODESTARTwillRun
 	listeners[0].bUseCreds = (bWritePidSysSock || ratelimitIntervalSysSock) ? 1 : 0;
 	listeners[0].bWritePid = bWritePidSysSock;
 
+	sd_fds = sd_listen_fds(0);
+	if (sd_fds < 0) {
+		errmsg.LogError(-sd_fds, NO_ERRCODE, "imuxsock: Failed to acquire systemd socket");
+		ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
+	}
+
 	/* initialize and return if will run or not */
 	actSocks = 0;
 	for (i = startIndexUxLocalSockets ; i < nfd ; i++) {
 		if(openLogSocket(&(listeners[i])) == RS_RET_OK) {
 			++actSocks;
-			dbgprintf("Opened UNIX socket '%s' (fd %d).\n", listeners[i].sockName, listeners[i].fd);
+			dbgprintf("imuxsock: Opened UNIX socket '%s' (fd %d).\n", listeners[i].sockName, listeners[i].fd);
 		}
 	}
 
@@ -806,15 +803,19 @@ CODESTARTafterRun
 		if (listeners[i].fd != -1)
 			close(listeners[i].fd);
 
-       /* Clean-up files. If systemd passed us a socket it is
-        * systemd's job to clean it up.*/
-       if(bSysSockFromSystemd) {
-	       DBGPRINTF("imuxsock: got system socket from systemd, not unlinking it\n");
-               i = 1;
-       } else
-               i = startIndexUxLocalSockets;
-       for(; i < nfd; i++)
+       /* Clean-up files. */
+       for(i = startIndexUxLocalSockets; i < nfd; i++)
 		if (listeners[i].sockName && listeners[i].fd != -1) {
+
+			/* If systemd passed us a socket it is systemd's job to clean it up.
+			 * Do not unlink it -- we will get same socket (node) from systemd
+			 * e.g. on restart again.
+			 */
+			if (sd_fds > 0 &&
+			    listeners[i].fd >= SD_LISTEN_FDS_START &&
+			    listeners[i].fd <  SD_LISTEN_FDS_START + sd_fds)
+				continue;
+
 			DBGPRINTF("imuxsock: unlinking unix socket file[%d] %s\n", i, listeners[i].sockName);
 			unlink((char*) listeners[i].sockName);
 		}
