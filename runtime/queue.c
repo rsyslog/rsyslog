@@ -1842,7 +1842,6 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 	}
 
 	pthread_mutex_init(&pThis->mutThrdMgmt, NULL);
-	pthread_cond_init (&pThis->condDAReady, NULL);
 	pthread_cond_init (&pThis->notFull, NULL);
 	pthread_cond_init (&pThis->notEmpty, NULL);
 	pthread_cond_init (&pThis->belowFullDlyWtrMrk, NULL);
@@ -2140,7 +2139,6 @@ CODESTARTobjDestruct(qqueue)
 		free(pThis->mut);
 	}
 	pthread_mutex_destroy(&pThis->mutThrdMgmt);
-	pthread_cond_destroy(&pThis->condDAReady);
 	pthread_cond_destroy(&pThis->notFull);
 	pthread_cond_destroy(&pThis->notEmpty);
 	pthread_cond_destroy(&pThis->belowFullDlyWtrMrk);
