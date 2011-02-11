@@ -2440,7 +2440,7 @@ doGlblProcessInit(void)
 				char buf[24] = { '\0' };
 				char *p = NULL;
 				unsigned long l;
-				int fds;
+				int sd_fds;
 
 				/* fork & systemd socket activation:
 				 * fetch listen pid and update to ours,

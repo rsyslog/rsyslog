@@ -381,7 +381,7 @@ openLogSocket(lstn_t *pLstn)
 		int fd;
 
 		for (fd = SD_LISTEN_FDS_START; fd < SD_LISTEN_FDS_START + sd_fds; fd++) {
-			if( sd_is_socket_unix(fd, SOCK_DGRAM, -1, pLstn->sockName, 0) == 1) {
+			if( sd_is_socket_unix(fd, SOCK_DGRAM, -1, (const char*) pLstn->sockName, 0) == 1) {
 				/* ok, it matches -- just use as is */
 				pLstn->fd = fd;
 
@@ -767,7 +767,7 @@ CODESTARTwillRun
 
 	sd_fds = sd_listen_fds(0);
 	if (sd_fds < 0) {
-		errmsg.LogError(-r, NO_ERRCODE, "imuxsock: Failed to acquire systemd socket");
+		errmsg.LogError(-sd_fds, NO_ERRCODE, "imuxsock: Failed to acquire systemd socket");
 		ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
 	}
 
