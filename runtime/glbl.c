@@ -31,6 +31,9 @@
 #include "config.h"
 #include <stdlib.h>
 #include <sys/socket.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #include <assert.h>
 
 #include "rsyslog.h"
@@ -40,6 +43,7 @@
 #include "glbl.h"
 #include "prop.h"
 #include "atomic.h"
+#include "errmsg.h"
 
 /* some defaults */
 #ifndef DFLT_NETSTRM_DRVR
@@ -49,6 +53,7 @@
 /* static data */
 DEFobjStaticHelpers
 DEFobjCurrIf(prop)
+DEFobjCurrIf(errmsg)
 
 /* static data
  * For this object, these variables are obviously what makes the "meat" of the
@@ -146,6 +151,35 @@ static void SetGlobalInputTermination(void)
 	ATOMIC_STORE_1_TO_INT(&bTerminateInputs, &mutTerminateInputs);
 }
 
+
+/* This function is used to set the global work directory name. 
+ * It verifies that the provided directory actually exists and
+ * emits an error message if not.
+ * rgerhards, 2011-02-16
+ */
+static rsRetVal setWorkDir(void __attribute__((unused)) *pVal, uchar *pNewVal)
+{
+	DEFiRet;
+	struct stat sb;
+
+	if(stat((char*) pNewVal, &sb) != 0) {
+		errmsg.LogError(0, RS_RET_ERR_WRKDIR, "$WorkDirectory: %s can not be "
+				"accessed, probably does not exist - directive ignored", pNewVal);
+		ABORT_FINALIZE(RS_RET_ERR_WRKDIR);
+	}
+
+	if(!S_ISDIR(sb.st_mode)) {
+		errmsg.LogError(0, RS_RET_ERR_WRKDIR, "$WorkDirectory: %s not a directory - directive ignored", 
+				pNewVal);
+		ABORT_FINALIZE(RS_RET_ERR_WRKDIR);
+	}
+
+	free(pszWorkDir);
+	pszWorkDir = pNewVal;
+
+finalize_it:
+	RETiRet;
+}
 
 /* return our local hostname. if it is not set, "[localhost]" is returned
  */
@@ -354,9 +388,10 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 BEGINAbstractObjClassInit(glbl, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
 	CHKiRet(objUse(prop, CORE_COMPONENT));
+	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 
 	/* register config handlers (TODO: we need to implement a way to unregister them) */
-	CHKiRet(regCfSysLineHdlr((uchar *)"workdirectory", 0, eCmdHdlrGetWord, NULL, &pszWorkDir, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"workdirectory", 0, eCmdHdlrGetWord, setWorkDir, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"dropmsgswithmaliciousdnsptrrecords", 0, eCmdHdlrBinary, NULL, &bDropMalPTRMsgs, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdriver", 0, eCmdHdlrGetWord, NULL, &pszDfltNetstrmDrvr, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdrivercafile", 0, eCmdHdlrGetWord, NULL, &pszDfltNetstrmDrvrCAF, NULL));
