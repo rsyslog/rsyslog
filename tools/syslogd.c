@@ -574,7 +574,7 @@ logmsgInternal(int iErr, int pri, uchar *msg, int flags)
 	}
 
 	if(bHaveMainQueue == 0) { /* not yet in queued mode */
-		iminternalAddMsg(pri, pMsg);
+		iminternalAddMsg(pMsg);
 	} else {
                /* we have the queue, so we can simply provide the
 		 * message to the queue engine.
@@ -1868,10 +1868,9 @@ void sigttin_handler()
  */
 static inline void processImInternal(void)
 {
-	int iPri;
 	msg_t *pMsg;
 
-	while(iminternalRemoveMsg(&iPri, &pMsg) == RS_RET_OK) {
+	while(iminternalRemoveMsg(&pMsg) == RS_RET_OK) {
 		submitMsg(pMsg);
 	}
 }

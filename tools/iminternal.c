@@ -89,7 +89,7 @@ finalize_it:
  * The interface of this function is modelled after syslogd/logmsg(),
  * for which it is an "replacement".
  */
-rsRetVal iminternalAddMsg(int pri, msg_t *pMsg)
+rsRetVal iminternalAddMsg(msg_t *pMsg)
 {
 	DEFiRet;
 	iminternal_t *pThis;
@@ -98,7 +98,6 @@ rsRetVal iminternalAddMsg(int pri, msg_t *pMsg)
 
 	CHKiRet(iminternalConstruct(&pThis));
 
-	pThis->pri = pri;
 	pThis->pMsg = pMsg;
 
 	CHKiRet(llAppend(&llMsgs,  NULL, (void*) pThis));
@@ -118,7 +117,7 @@ finalize_it:
  * from the list and return it to the caller. The caller is
  * responsible for freeing the message!
  */
-rsRetVal iminternalRemoveMsg(int *pPri, msg_t **ppMsg)
+rsRetVal iminternalRemoveMsg(msg_t **ppMsg)
 {
 	DEFiRet;
 	iminternal_t *pThis;
@@ -128,7 +127,6 @@ rsRetVal iminternalRemoveMsg(int *pPri, msg_t **ppMsg)
 	assert(ppMsg != NULL);
 
 	CHKiRet(llGetNextElt(&llMsgs, &llCookie, (void*)&pThis));
-	*pPri = pThis->pri;
 	*ppMsg = pThis->pMsg;
 	pThis->pMsg = NULL; /* we do no longer own it - important for destructor */
 
