@@ -119,6 +119,7 @@ struct modInfo_s {
 			rsRetVal (*parseSelectorAct)(uchar**, void**,omodStringRequest_t**);
 		} om;
 		struct { /* data for library modules */
+		    	char dummy;
 		} lm;
 		struct { /* data for parser modules */
 			rsRetVal (*parse)(msg_t*);

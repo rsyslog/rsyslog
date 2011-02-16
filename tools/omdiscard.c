@@ -44,6 +44,7 @@ MODULE_TYPE_OUTPUT
 DEF_OMOD_STATIC_DATA
 
 typedef struct _instanceData {
+    	char dummy;
 } instanceData;
 
 /* we do not need a createInstance()!

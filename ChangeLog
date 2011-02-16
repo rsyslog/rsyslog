@@ -17,6 +17,9 @@ Version 5.7.4  [V5-BETA] (rgerhards), 2011-02-??
 - bugfix: very long running actions could prevent shutdown under some
   circumstances. This has now been solved, at least for common
   situations.
+- bugfix: fixed compile problem due to empty structs
+  this occured only on some platforms/compilers. thanks to Dražen Kačar 
+  for the fix
 ---------------------------------------------------------------------------
 Version 5.7.3  [V5-BETA] (rgerhards), 2011-02-07
 - added support for processing multi-line messages in imfile
