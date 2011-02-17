@@ -494,7 +494,8 @@ static inline void actionSuspend(action_t *pThis, time_t ttNow)
  * kind of facility: in the first place, the module should return a proper indication
  * of its inability to recover. -- rgerhards, 2010-04-26.
  */
-static rsRetVal actionDoRetry(action_t *pThis, time_t ttNow)
+static inline rsRetVal
+actionDoRetry(action_t *pThis, time_t ttNow, int *pbShutdownImmediate)
 {
 	int iRetries;
 	int iSleepPeriod;
@@ -504,7 +505,7 @@ static rsRetVal actionDoRetry(action_t *pThis, time_t ttNow)
 	ASSERT(pThis != NULL);
 
 	iRetries = 0;
-	while((*pThis->pbShutdownImmediate == 0) && pThis->eState == ACT_STATE_RTRY) {
+	while((*pbShutdownImmediate == 0) && pThis->eState == ACT_STATE_RTRY) {
 		iRet = pThis->pMod->tryResume(pThis->pModData);
 		if((pThis->iResumeOKinRow > 999) && (pThis->iResumeOKinRow % 1000 == 0)) {
 			bTreatOKasSusp = 1;
@@ -524,7 +525,7 @@ static rsRetVal actionDoRetry(action_t *pThis, time_t ttNow)
 				iSleepPeriod = pThis->iResumeInterval;
 				ttNow += iSleepPeriod; /* not truly exact, but sufficiently... */
 				srSleep(iSleepPeriod, 0);
-				if(*pThis->pbShutdownImmediate) {
+				if(*pbShutdownImmediate) {
 					ABORT_FINALIZE(RS_RET_FORCE_TERM);
 				}
 			}
@@ -545,7 +546,7 @@ finalize_it:
 /* try to resume an action -- rgerhards, 2007-08-02
  * changed to new action state engine -- rgerhards, 2009-05-07
  */
-static rsRetVal actionTryResume(action_t *pThis)
+static rsRetVal actionTryResume(action_t *pThis, int *pbShutdownImmediate)
 {
 	DEFiRet;
 	time_t ttNow = NO_TIME_PROVIDED;
@@ -569,7 +570,7 @@ static rsRetVal actionTryResume(action_t *pThis)
 	if(pThis->eState == ACT_STATE_RTRY) {
 		if(ttNow == NO_TIME_PROVIDED) /* use cached result if we have it */
 			datetime.GetTime(&ttNow);
-		CHKiRet(actionDoRetry(pThis, ttNow));
+		CHKiRet(actionDoRetry(pThis, ttNow, pbShutdownImmediate));
 	}
 
 	if(Debug && (pThis->eState == ACT_STATE_RTRY ||pThis->eState == ACT_STATE_SUSP)) {
@@ -586,12 +587,12 @@ finalize_it:
  * depending on its current state.
  * rgerhards, 2009-05-07
  */
-static inline rsRetVal actionPrepare(action_t *pThis)
+static inline rsRetVal actionPrepare(action_t *pThis, int *pbShutdownImmediate)
 {
 	DEFiRet;
 
 	assert(pThis != NULL);
-	CHKiRet(actionTryResume(pThis));
+	CHKiRet(actionTryResume(pThis, pbShutdownImmediate));
 
 	/* if we are now ready, we initialize the transaction and advance
 	 * action state accordingly
@@ -800,14 +801,14 @@ finalize_it:
  * rgerhards, 2008-01-28
  */
 static inline rsRetVal
-actionProcessMessage(action_t *pThis, msg_t *pMsg, void *actParams)
+actionProcessMessage(action_t *pThis, msg_t *pMsg, void *actParams, int *pbShutdownImmediate)
 {
 	DEFiRet;
 
 	ASSERT(pThis != NULL);
 	ISOBJ_TYPE_assert(pMsg, msg);
 
-	CHKiRet(actionPrepare(pThis));
+	CHKiRet(actionPrepare(pThis, pbShutdownImmediate));
 	if(pThis->eState == ACT_STATE_ITX)
 		CHKiRet(actionCallDoAction(pThis, pMsg, actParams));
 
@@ -834,7 +835,7 @@ finishBatch(action_t *pThis, batch_t *pBatch)
 		FINALIZE; /* nothing to do */
 	}
 
-	CHKiRet(actionPrepare(pThis));
+	CHKiRet(actionPrepare(pThis, pBatch->pbShutdownImmediate));
 	if(pThis->eState == ACT_STATE_ITX) {
 		iRet = pThis->pMod->mod.om.endTransaction(pThis->pModData);
 		switch(iRet) {
@@ -901,7 +902,8 @@ tryDoAction(action_t *pAction, batch_t *pBatch, int *pnElem)
 		   && pBatch->pElem[i].state != BATCH_STATE_DISC
 		   && ((pAction->bExecWhenPrevSusp  == 0) || pBatch->pElem[i].bPrevWasSuspended) ) {
 			pMsg = (msg_t*) pBatch->pElem[i].pUsrp;
-			localRet = actionProcessMessage(pAction, pMsg, pBatch->pElem[i].staticActParams);
+			localRet = actionProcessMessage(pAction, pMsg, pBatch->pElem[i].staticActParams,
+						        pBatch->pbShutdownImmediate);
 			DBGPRINTF("action call returned %d\n", localRet);
 			/* Note: we directly modify the batch object state, because we know that
 			 * wo do not overwrite BATCH_STATE_DISC indicators!
@@ -1072,7 +1074,6 @@ processBatchMain(action_t *pAction, batch_t *pBatch, int *pbShutdownImmediate)
 
 	pbShutdownImmdtSave = pBatch->pbShutdownImmediate;
 	pBatch->pbShutdownImmediate = pbShutdownImmediate;
-	pAction->pbShutdownImmediate = pBatch->pbShutdownImmediate;
 	CHKiRet(prepareBatch(pAction, pBatch));
 
 	/* We now must guard the output module against execution by multiple threads. The

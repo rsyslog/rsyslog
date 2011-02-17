@@ -1,4 +1,10 @@
 ---------------------------------------------------------------------------
+Version 5.7.5  [V5-BETA] (rgerhards), 2011-02-??
+- bugfix: minor race condition in action.c - considered cosmetic
+  This is considered cosmetic as multiple threads tried to write exactly
+  the same value into the same memory location without sync. The method
+  has been changed so this can no longer happen.
+---------------------------------------------------------------------------
 Version 5.7.4  [V5-BETA] (rgerhards), 2011-02-17
 - added pmsnare parser module (written by David Lang)
 - enhanced imfile to support non-cancel input termination

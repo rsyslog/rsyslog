@@ -196,8 +196,8 @@ static void* thrdStarter(void *arg)
 	 * keep the thread debugger happer, it would not really be necessary with
 	 * the logic we employ...)
 	 */
-	pThis->bIsActive = 0;
 	d_pthread_mutex_lock(&pThis->mutThrd);
+	pThis->bIsActive = 0;
 	pthread_cond_signal(&pThis->condThrdTerm);
 	d_pthread_mutex_unlock(&pThis->mutThrd);
 
