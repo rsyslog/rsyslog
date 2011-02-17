@@ -98,6 +98,8 @@ Version 5.6.3  [V5-STABLE] (rgerhards), 2011-01-26
 - bugfix: batches which had actions in error were not properly retried in
   all cases
 - bugfix: imfile did duplicate messages under some circumstances
+- bugfix: testbench was not activated if no Java was present on system
+  ... what actually was a left-over. Java is no longer required.
 ---------------------------------------------------------------------------
 Version 5.6.2  [V5-STABLE] (rgerhards), 2010-11-30
 - bugfix: compile failed on systems without epoll_create1()
