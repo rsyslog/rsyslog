@@ -48,6 +48,7 @@
 #include "unicode-helper.h"
 #include "prop.h"
 #include "stringbuf.h"
+#include "ruleset.h"
 
 MODULE_TYPE_INPUT	/* must be present for input modules, do not remove */
 
@@ -60,6 +61,7 @@ DEFobjCurrIf(glbl)
 DEFobjCurrIf(datetime)
 DEFobjCurrIf(strm)
 DEFobjCurrIf(prop)
+DEFobjCurrIf(ruleset)
 
 typedef struct fileInfo_s {
 	uchar *pszFileName;
@@ -72,6 +74,7 @@ typedef struct fileInfo_s {
 	int iPersistStateInterval; /**< how often should state be persisted? (0=on close only) */
 	strm_t *pStrm;	/* its stream (NULL if not assigned) */
 	int readMode;	/* which mode to use in ReadMulteLine call? */
+	ruleset_t *pRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
 } fileInfo_t;
 
 
@@ -87,6 +90,7 @@ static int iPersistStateInterval = 0;	/* how often if state file to be persisted
 static int iFacility = 128; /* local0 */
 static int iSeverity = 5;  /* notice, as of rfc 3164 */
 static int readMode = 0;  /* mode to use for ReadMultiLine call */
+static ruleset_t *pBindRuleset = NULL;	/* ruleset to bind listener to (use system default if unspecified) */
 
 static int iFilPtr = 0;		/* number of files to be monitored; pointer to next free spot during config */
 #define MAX_INPUT_FILES 100
@@ -116,6 +120,7 @@ static rsRetVal enqLine(fileInfo_t *pInfo, cstr_t *cstrLine)
 	MsgSetTAG(pMsg, pInfo->pszTag, pInfo->lenTag);
 	pMsg->iFacility = LOG_FAC(pInfo->iFacility);
 	pMsg->iSeverity = LOG_PRI(pInfo->iSeverity);
+	MsgSetRuleset(pMsg, pInfo->pRuleset);
 	CHKiRet(submitMsg(pMsg));
 finalize_it:
 	RETiRet;
@@ -418,6 +423,7 @@ CODESTARTmodExit
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(prop, CORE_COMPONENT);
+	objRelease(ruleset, CORE_COMPONENT);
 ENDmodExit
 
 
@@ -459,6 +465,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	iFacility = 128; /* local0 */
 	iSeverity = 5;  /* notice, as of rfc 3164 */
 	readMode = 0;
+	pBindRuleset = NULL;
 
 	RETiRet;
 }
@@ -502,6 +509,7 @@ static rsRetVal addMonitor(void __attribute__((unused)) *pVal, uchar *pNewVal)
 		pThis->iPersistStateInterval = iPersistStateInterval;
 		pThis->nRecords = 0;
 		pThis->readMode = readMode;
+		pThis->pRuleset = pBindRuleset;
 		iPersistStateInterval = 0;
 	} else {
 		errmsg.LogError(0, RS_RET_OUT_OF_DESRIPTORS, "Too many file monitors configured - ignoring this one");
@@ -516,6 +524,29 @@ finalize_it:
 
 	RETiRet;
 }
+
+
+/* accept a new ruleset to bind. Checks if it exists and complains, if not */
+static rsRetVal
+setRuleset(void __attribute__((unused)) *pVal, uchar *pszName)
+{
+	ruleset_t *pRuleset;
+	rsRetVal localRet;
+	DEFiRet;
+
+	localRet = ruleset.GetRuleset(&pRuleset, pszName);
+	if(localRet == RS_RET_NOT_FOUND) {
+		errmsg.LogError(0, NO_ERRCODE, "error: ruleset '%s' not found - ignored", pszName);
+	}
+	CHKiRet(localRet);
+	pBindRuleset = pRuleset;
+	DBGPRINTF("imfile current bind ruleset %p: '%s'\n", pRuleset, pszName);
+
+finalize_it:
+	free(pszName); /* no longer needed */
+	RETiRet;
+}
+
 
 /* modInit() is called once the module is loaded. It must perform all module-wide
  * initialization tasks. There are also a number of housekeeping tasks that the
@@ -534,6 +565,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	CHKiRet(objUse(strm, CORE_COMPONENT));
+	CHKiRet(objUse(ruleset, CORE_COMPONENT));
 	CHKiRet(objUse(prop, CORE_COMPONENT));
 
 	DBGPRINTF("imfile: version %s initializing\n", VERSION);
@@ -553,6 +585,8 @@ CODEmodInit_QueryRegCFSLineHdlr
 	  	NULL, &readMode, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfilepersiststateinterval", 0, eCmdHdlrInt,
 	  	NULL, &iPersistStateInterval, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfilebindruleset", 0, eCmdHdlrGetWord,
+		setRuleset, NULL, STD_LOADABLE_MODULE_ID));
 	/* that command ads a new file! */
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputrunfilemonitor", 0, eCmdHdlrGetWord,
 		addMonitor, NULL, STD_LOADABLE_MODULE_ID));

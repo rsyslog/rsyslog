@@ -1,5 +1,9 @@
 ---------------------------------------------------------------------------
 Version 5.7.5  [V5-BETA] (rgerhards), 2011-02-??
+- enhance: imfile did not yet support multiple rulesets, now added
+  we do this directly in the beta because a) it does not affect existing
+  functionality and b) one may argue that this missing functionality is
+  close to a bug.
 - bugfix: minor race condition in action.c - considered cosmetic
   This is considered cosmetic as multiple threads tried to write exactly
   the same value into the same memory location without sync. The method
