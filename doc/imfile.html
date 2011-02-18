@@ -97,10 +97,13 @@ to fatal errors (like power fail). Note that this setting affects imfile
 performance, especially when set to a low value. Frequently writing the state
 file is very time consuming.
 <li><b>$InputFileReadMode</b> [mode]</b><br>
-Available in 5.7.3+
+Available in 5.7.5+
 <br>
 Mode to be used when reading lines. 0 (the default) means that each line is forwarded
 as its own log message.
+<li>$InputFileBindRuleset &lt;ruleset&gt;<br>
+Available in 5.7.5+, 6.1.5+
+Binds the listener to a specific <a href="multi_ruleset.html">ruleset</a>.</li>
 </ul>
 <b>Caveats/Known Bugs:</b>
 <p>So far, only 100 files can be monitored. If more are needed,
