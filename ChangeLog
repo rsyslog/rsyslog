@@ -1,7 +1,12 @@
 ---------------------------------------------------------------------------
 Version 6.1.4  [DEVEL] (rgerhards), 2011-02-??
+- imported fixes and and enhancements from 5.7.4
 - bugfix/omhdfs: directive $OMHDFSFileName rendered unusable 
   due to a search and replace-induced bug ;)
+- bugfix: minor race condition in action.c - considered cosmetic
+  This is considered cosmetic as multiple threads tried to write exactly
+  the same value into the same memory location without sync. The method
+  has been changed so this can no longer happen.
 ---------------------------------------------------------------------------
 Version 6.1.3  [DEVEL] (rgerhards), 2011-02-01
 - experimental support for monogodb added
@@ -76,14 +81,33 @@ expected that interfaces, even new ones, break during the initial
   syslog plain tcp input plugin (NOT supporting TLS!)
   [ported from v4]
 ---------------------------------------------------------------------------
-Version 5.7.4  [V5-BETA] (rgerhards), 2011-02-??
+Version 5.7.5  [V5-BETA] (rgerhards), 2011-02-??
+- bugfix: minor race condition in action.c - considered cosmetic
+  This is considered cosmetic as multiple threads tried to write exactly
+  the same value into the same memory location without sync. The method
+  has been changed so this can no longer happen.
+---------------------------------------------------------------------------
+Version 5.7.4  [V5-BETA] (rgerhards), 2011-02-17
 - added pmsnare parser module (written by David Lang)
 - enhanced imfile to support non-cancel input termination
 - improved systemd socket activation thanks to Marius Tomaschweski
+- improved error reporting for $WorkDirectory
+  non-existance and other detectable problems are now reported,
+  and the work directory is NOT set in this case
 - bugfix: pmsnare causded abort under some conditions
 - bugfix: abort if imfile reads file line of more than 64KiB
   Thanks to Peter Eisentraut for reporting and analysing this problem.
   bug tracker: http://bugzilla.adiscon.com/show_bug.cgi?id=221
+- bugfix: queue engine did not properly slow down inputs in FULL_DELAY mode
+  when in disk-assisted mode. This especially affected imfile, which
+  created unnecessarily queue files if a large set of input file data was
+  to process.
+- bugfix: very long running actions could prevent shutdown under some
+  circumstances. This has now been solved, at least for common
+  situations.
+- bugfix: fixed compile problem due to empty structs
+  this occured only on some platforms/compilers. thanks to Dražen Kačar 
+  for the fix
 ---------------------------------------------------------------------------
 Version 5.7.3  [V5-BETA] (rgerhards), 2011-02-07
 - added support for processing multi-line messages in imfile
@@ -156,6 +180,8 @@ Version 5.6.3  [V5-STABLE] (rgerhards), 2011-01-26
 - bugfix: batches which had actions in error were not properly retried in
   all cases
 - bugfix: imfile did duplicate messages under some circumstances
+- bugfix: testbench was not activated if no Java was present on system
+  ... what actually was a left-over. Java is no longer required.
 ---------------------------------------------------------------------------
 Version 5.6.2  [V5-STABLE] (rgerhards), 2010-11-30
 - bugfix: compile failed on systems without epoll_create1()

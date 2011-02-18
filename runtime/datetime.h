@@ -28,6 +28,7 @@
 
 /* the datetime object */
 typedef struct datetime_s {
+    	char dummy;
 } datetime_t;
 
 

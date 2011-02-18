@@ -347,6 +347,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_ERR_HDFS_WRITE = -2178, /**< error writing to HDFS */
 	RS_RET_ERR_HDFS_OPEN = -2179, /**< error during hdfsOpen (e.g. file does not exist) */
 	RS_RET_FILE_NOT_SPECIFIED = -2180, /**< file name not configured where this was required */
+	RS_RET_ERR_WRKDIR = -2181, /**< problems with the rsyslog working directory */
 
 	RS_RET_INVLD_CONF_OBJ= -2200,	/**< invalid config object (e.g. $Begin conf statement) */
 	RS_RET_ERR_LIBEE_INIT = -2201,	/**< cannot obtain libee ctx */

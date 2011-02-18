@@ -831,11 +831,6 @@ AC_ARG_ENABLE(testbench,
          esac],
         [enable_testbench=yes]
 )
-if test "$enable_testbench" = "yes"; then
-	if test x$HAVE_JAVAC = x; then
-	   enable_testbench='no'
-	fi
-fi
 AM_CONDITIONAL(ENABLE_TESTBENCH, test x$enable_testbench = xyes)
 
 

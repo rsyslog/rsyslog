@@ -291,13 +291,13 @@ CODESTARTrunInput
 	pthread_cleanup_push(inputModuleCleanup, NULL);
 	while(glbl.GetGlobalInputTermState() == 0) {
 		do {
-			if(glbl.GetGlobalInputTermState() == 1)
-				break; /* terminate input! */
 			bHadFileData = 0;
 			for(i = 0 ; i < iFilPtr ; ++i) {
+				if(glbl.GetGlobalInputTermState() == 1)
+					break; /* terminate input! */
 				pollFile(&files[i], &bHadFileData);
 			}
-		} while(iFilPtr > 1 && bHadFileData == 1); /* warning: do...while()! */
+		} while(iFilPtr > 1 && bHadFileData == 1 && glbl.GetGlobalInputTermState() == 0); /* warning: do...while()! */
 
 		/* Note: the additional 10ns wait is vitally important. It guards rsyslog against totally
 		 * hogging the CPU if the users selects a polling interval of 0 seconds. It doesn't hurt any

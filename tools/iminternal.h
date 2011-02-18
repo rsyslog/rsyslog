@@ -33,7 +33,6 @@
  * The short name is cslch (Configfile SysLine CommandHandler)
  */
 struct iminternal_s { /* config file sysline parse entry */
-	int pri;
 	msg_t *pMsg;	/* the message (in all its glory) */
 };
 typedef struct iminternal_s iminternal_t;
@@ -41,8 +40,8 @@ typedef struct iminternal_s iminternal_t;
 /* prototypes */
 rsRetVal modInitIminternal(void);
 rsRetVal modExitIminternal(void);
-rsRetVal iminternalAddMsg(int pri, msg_t *pMsg);
+rsRetVal iminternalAddMsg(msg_t *pMsg);
 rsRetVal iminternalHaveMsgReady(int* pbHaveOne);
-rsRetVal iminternalRemoveMsg(int *pPri, msg_t **ppMsg);
+rsRetVal iminternalRemoveMsg(msg_t **ppMsg);
 
 #endif /* #ifndef IMINTERNAL_H_INCLUDED */
