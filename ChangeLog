@@ -4,6 +4,7 @@ Version 5.7.5  [V5-BETA] (rgerhards), 2011-02-??
   we do this directly in the beta because a) it does not affect existing
   functionality and b) one may argue that this missing functionality is
   close to a bug.
+- improved testbench, added tests for imuxsock
 - bugfix: imuxsock did no longer remove trailing LF
   This was a regression from the imuxsock partial rewrite. Happened
   because the message is no longer run through the standard parsers. 
