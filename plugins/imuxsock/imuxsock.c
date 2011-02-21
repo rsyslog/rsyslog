@@ -517,6 +517,10 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred)
 	 * rate-limiting as well.
 	 */
 	parse = pRcv;
+	if(pRcv[lenRcv-1] = '\n') {
+		DBGPRINTF("imuxsock: found trailing LF, removing\n");
+		lenRcv--;
+	}
 	lenMsg = lenRcv;
 	
 	parse++; lenMsg--; /* '<' */
