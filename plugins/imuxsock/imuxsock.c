@@ -503,6 +503,7 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred)
 {
 	msg_t *pMsg;
 	int lenMsg;
+	int offs;
 	int i;
 	uchar *parse;
 	int pri;
@@ -520,13 +521,14 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred)
 	 */
 	parse = pRcv;
 	lenMsg = lenRcv;
+	offs = 1; /* '<' */
 	
-	parse++; lenMsg--; /* '<' */
+	parse++;
 	pri = 0;
-	while(lenMsg && isdigit(*parse)) {
+	while(offs < lenMsg && isdigit(*parse)) {
 		pri = pri * 10 + *parse - '0';
 		++parse;
-		--lenMsg;
+		++offs;
 	} 
 	facil = LOG_FAC(pri);
 	sever = LOG_PRI(pri);
@@ -546,12 +548,13 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred)
 	CHKiRet(msgConstructWithTime(&pMsg, &st, tt));
 	MsgSetRawMsg(pMsg, (char*)pRcv, lenRcv);
 	parser.SanitizeMsg(pMsg);
+	lenMsg = pMsg->iLenRawMsg - offs;
 	MsgSetInputName(pMsg, pInputName);
 	MsgSetFlowControlType(pMsg, pLstn->flowCtl);
 
 	pMsg->iFacility = facil;
 	pMsg->iSeverity = sever;
-	MsgSetAfterPRIOffs(pMsg, lenRcv - lenMsg);
+	MsgSetAfterPRIOffs(pMsg, offs);
 
 	parse++; lenMsg--; /* '>' */
 
@@ -571,7 +574,7 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred)
 		fixPID(bufParseTAG, &i, cred);
 	MsgSetTAG(pMsg, bufParseTAG, i);
 
-	MsgSetMSGoffs(pMsg, lenRcv - lenMsg);
+	MsgSetMSGoffs(pMsg, pMsg->iLenRawMsg - lenMsg);
 
 	if(pLstn->bParseHost) {
 		pMsg->msgFlags  = pLstn->flags | PARSE_HOSTNAME;
