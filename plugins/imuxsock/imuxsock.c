@@ -46,6 +46,7 @@
 #include "net.h"
 #include "glbl.h"
 #include "msg.h"
+#include "parser.h"
 #include "prop.h"
 #include "debug.h"
 #include "unlimited_select.h"
@@ -81,6 +82,7 @@ DEF_IMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(prop)
+DEFobjCurrIf(parser)
 DEFobjCurrIf(datetime)
 DEFobjCurrIf(statsobj)
 
@@ -517,10 +519,6 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred)
 	 * rate-limiting as well.
 	 */
 	parse = pRcv;
-	if(pRcv[lenRcv-1] == '\n') {
-		DBGPRINTF("imuxsock: found trailing LF, removing\n");
-		lenRcv--;
-	}
 	lenMsg = lenRcv;
 	
 	parse++; lenMsg--; /* '<' */
@@ -547,6 +545,7 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred)
 	/* we now create our own message object and submit it to the queue */
 	CHKiRet(msgConstructWithTime(&pMsg, &st, tt));
 	MsgSetRawMsg(pMsg, (char*)pRcv, lenRcv);
+	parser.SanitizeMsg(pMsg);
 	MsgSetInputName(pMsg, pInputName);
 	MsgSetFlowControlType(pMsg, pLstn->flowCtl);
 
@@ -840,6 +839,7 @@ BEGINmodExit
 CODESTARTmodExit
 	statsobj.Destruct(&modStats);
 
+	objRelease(parser, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(prop, CORE_COMPONENT);
@@ -901,6 +901,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(prop, CORE_COMPONENT));
 	CHKiRet(objUse(statsobj, CORE_COMPONENT));
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
+	CHKiRet(objUse(parser, CORE_COMPONENT));
 
 	dbgprintf("imuxsock version %s initializing\n", PACKAGE_VERSION);
 

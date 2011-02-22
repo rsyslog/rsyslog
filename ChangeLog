@@ -5,10 +5,9 @@ Version 5.7.5  [V5-BETA] (rgerhards), 2011-02-??
   functionality and b) one may argue that this missing functionality is
   close to a bug.
 - improved testbench, added tests for imuxsock
-- bugfix: imuxsock did no longer remove trailing LF
+- bugfix: imuxsock did no longer sanitize received messages
   This was a regression from the imuxsock partial rewrite. Happened
   because the message is no longer run through the standard parsers. 
-  Now imuxsock does this sanitization itself.
   bug tracker: http://bugzilla.adiscon.com/show_bug.cgi?id=224
 - bugfix: minor race condition in action.c - considered cosmetic
   This is considered cosmetic as multiple threads tried to write exactly
