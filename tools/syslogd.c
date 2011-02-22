@@ -2875,7 +2875,7 @@ int realMain(int argc, char **argv)
 	if(iCompatibilityMode < 4) {
 		errmsg.LogError(0, NO_ERRCODE, "WARNING: rsyslogd is running in compatibility mode. Automatically "
 		                            "generated config directives may interfer with your rsyslog.conf settings. "
-					    "We suggest upgrading your config and adding -c4 as the first "
+					    "We suggest upgrading your config and adding -c5 as the first "
 					    "rsyslogd option.");
 	}
 
