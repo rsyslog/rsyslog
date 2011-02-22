@@ -1,6 +1,6 @@
 if ENABLE_TESTBENCH
 TESTRUNS = rt_init rscript
-check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq msleep randomgen diagtalker uxsockrcvr syslog_caller syslog_lf
+check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq msleep randomgen diagtalker uxsockrcvr syslog_caller syslog_inject
 TESTS = $(TESTRUNS) cfg.sh \
 	arrayqueue.sh \
 	linkedlistqueue.sh \
@@ -48,6 +48,7 @@ TESTS = $(TESTRUNS) cfg.sh \
 	dircreate_off.sh \
 	imuxsock_logger_root.sh \
 	imuxsock_traillf_root.sh \
+	imuxsock_ccmiddle_root.sh \
 	queue-persist.sh 
 
 if ENABLE_IMPTCP
@@ -324,6 +325,9 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   imuxsock_traillf_root.sh \
 	   testsuites/imuxsock_traillf_root.conf \
 	   resultdata/imuxsock_traillf.log \
+	   imuxsock_ccmiddle_root.sh \
+	   testsuites/imuxsock_ccmiddle_root.conf \
+	   resultdata/imuxsock_ccmiddle.log \
 	   cfg.sh
 
 ourtail_SOURCES = ourtail.c
@@ -339,8 +343,8 @@ tcpflood_LDADD = $(SOL_LIBS)
 syslog_caller_SOURCES = syslog_caller.c
 syslog_caller_LDADD = $(SOL_LIBS)
 
-syslog_lf_SOURCES = syslog_lf.c
-syslog_lf_LDADD = $(SOL_LIBS)
+syslog_inject_SOURCES = syslog_inject.c
+syslog_inject_LDADD = $(SOL_LIBS)
 
 diagtalker_SOURCES = diagtalker.c
 diagtalker_LDADD = $(SOL_LIBS)
