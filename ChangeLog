@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 5.7.5  [V5-BETA] (rgerhards), 2011-02-??
+Version 5.7.5  [V5-BETA] (rgerhards), 2011-02-23
 - enhance: imfile did not yet support multiple rulesets, now added
   we do this directly in the beta because a) it does not affect existing
   functionality and b) one may argue that this missing functionality is
