@@ -677,6 +677,7 @@ static inline rsRetVal msgBaseConstruct(msg_t **ppThis)
 	/* initialize members in ORDER they appear in structure (think "cache line"!) */
 	pM->flowCtlType = 0;
 	pM->bDoLock = 0;
+	pM->bAlreadyFreed = 0;
 	pM->iRefCount = 1;
 	pM->iSeverity = -1;
 	pM->iFacility = -1;
@@ -803,6 +804,15 @@ CODESTARTobjDestruct(msg)
 	if(currRefCount == 0)
 	{
 		/* DEV Debugging Only! dbgprintf("msgDestruct\t0x%lx, RefCount now 0, doing DESTROY\n", (unsigned long)pThis); */
+		/* The if below is included to try to nail down a well-hidden bug causing
+		 * segfaults. I hope that do to the test code the problem is sooner detected and
+		 * thus we get better data for debugging and resolving it. -- rgerhards, 2011-02-23.
+		 * TODO: remove when no longer needed.
+		 */
+		if(pThis->bAlreadyFreed)
+			abort();
+		pThis->bAlreadyFreed = 1;
+		/* end debug code */
 		if(pThis->pszRawMsg != pThis->szRawMsg)
 			free(pThis->pszRawMsg);
 		freeTAG(pThis);
