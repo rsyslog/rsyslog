@@ -606,7 +606,9 @@ static rsRetVal readSocket(lstn_t *pLstn)
 	int iMaxLine;
 	struct msghdr msgh;
 	struct iovec msgiov;
+#	if HAVE_SCM_CREDENTIALS
 	struct cmsghdr *cm;
+#	endif
 	struct ucred *cred;
 	uchar bufRcv[4096+1];
 	char aux[128];
@@ -630,11 +632,13 @@ static rsRetVal readSocket(lstn_t *pLstn)
 
 	memset(&msgh, 0, sizeof(msgh));
 	memset(&msgiov, 0, sizeof(msgiov));
+#	if HAVE_SCM_CREDENTIALS
 	if(pLstn->bUseCreds) {
 		memset(&aux, 0, sizeof(aux));
 		msgh.msg_control = aux;
 		msgh.msg_controllen = sizeof(aux);
 	}
+#	endif
 	msgiov.iov_base = pRcv;
 	msgiov.iov_len = iMaxLine;
 	msgh.msg_iov = &msgiov;
