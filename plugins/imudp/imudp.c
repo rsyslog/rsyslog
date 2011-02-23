@@ -54,6 +54,7 @@
 #include "unicode-helper.h"
 
 MODULE_TYPE_INPUT
+MODULE_TYPE_NOKEEP
 
 /* defines */
 

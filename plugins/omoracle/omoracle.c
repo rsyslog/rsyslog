@@ -82,6 +82,7 @@
 #include "omoracle.h"
 
 MODULE_TYPE_OUTPUT
+MODULE_TYPE_NOKEEP
 
 /**  */
 DEF_OMOD_STATIC_DATA

@@ -56,6 +56,7 @@
 
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 MODULE_TYPE_LIB
+MODULE_TYPE_KEEP
 
 /* static data */
 DEFobjStaticHelpers

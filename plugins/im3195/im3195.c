@@ -51,6 +51,7 @@
 #include "errmsg.h"
 
 MODULE_TYPE_INPUT
+MODULE_TYPE_NOKEEP
 
 /* Module static data */
 DEF_IMOD_STATIC_DATA

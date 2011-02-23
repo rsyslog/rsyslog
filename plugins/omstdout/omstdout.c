@@ -44,6 +44,7 @@
 #include "cfsysline.h"
 
 MODULE_TYPE_OUTPUT
+MODULE_TYPE_NOKEEP
 
 /* internal structures
  */

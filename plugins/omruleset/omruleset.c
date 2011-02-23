@@ -49,6 +49,7 @@
 #include "dirty.h"
 
 MODULE_TYPE_OUTPUT
+MODULE_TYPE_NOKEEP
 
 /* static data */
 DEFobjCurrIf(ruleset);
