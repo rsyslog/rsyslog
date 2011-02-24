@@ -36,7 +36,6 @@ TESTS = $(TESTRUNS) cfg.sh \
 	complex1.sh \
 	queue-persist.sh \
 	pipeaction.sh \
-	uxsock_simple.sh \
 	execonlyonce.sh \
 	execonlywhenprevsuspended.sh \
 	execonlywhenprevsuspended2.sh \
@@ -56,6 +55,10 @@ TESTS +=  \
 	imptcp_large.sh \
 	imptcp_addtlframedelim.sh \
 	imptcp_conndrop.sh 
+endif
+
+if ENABLE_OMUXSOCK
+TESTS += uxsock_simple.sh
 endif
 
 if ENABLE_OMUDPSPOOF
