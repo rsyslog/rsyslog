@@ -1,4 +1,8 @@
 ---------------------------------------------------------------------------
+Version 5.6.4  [V5-STABLE] (rgerhards), 2011-02-25
+- bugfix: memory leak when $RepeatedMsgReduction on was used
+  bug tracker: http://bugzilla.adiscon.com/show_bug.cgi?id=225
+---------------------------------------------------------------------------
 Version 5.6.3  [V5-STABLE] (rgerhards), 2011-01-26
 - bugfix: action processor released mememory too early, resulting in
   potential issue in retry cases (but very unlikely due to another
