@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 5.7.6  [V5-BETA] (rgerhards), 2011-02-??
+Version 5.7.6  [V5-BETA] (rgerhards), 2011-02-25
 - bugfix: fixed a memory leak and potential abort condition
   this could happen if multiple rulesets were used and some output batches
   contained messages belonging to more than one ruleset.
