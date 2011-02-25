@@ -13,7 +13,6 @@ TESTS = $(TESTRUNS) cfg.sh \
 	rulesetmultiqueue.sh \
 	manytcp.sh \
 	rsf_getenv.sh \
-	manyptcp.sh \
 	imtcp_conndrop.sh \
 	imtcp_addtlframedelim.sh \
 	sndrcv.sh \
@@ -37,7 +36,6 @@ TESTS = $(TESTRUNS) cfg.sh \
 	complex1.sh \
 	queue-persist.sh \
 	pipeaction.sh \
-	uxsock_simple.sh \
 	execonlyonce.sh \
 	execonlywhenprevsuspended.sh \
 	execonlywhenprevsuspended2.sh \
@@ -53,9 +51,14 @@ TESTS = $(TESTRUNS) cfg.sh \
 
 if ENABLE_IMPTCP
 TESTS +=  \
+	manyptcp.sh \
 	imptcp_large.sh \
 	imptcp_addtlframedelim.sh \
 	imptcp_conndrop.sh 
+endif
+
+if ENABLE_OMUXSOCK
+TESTS += uxsock_simple.sh
 endif
 
 if ENABLE_OMUDPSPOOF
