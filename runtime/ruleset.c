@@ -171,35 +171,40 @@ processBatchMultiRuleset(batch_t *pBatch)
 	int i;
 	int iStart;	/* start index of partial batch */
 	int iNew;	/* index for new (temporary) batch */
+	int bHaveUnprocessed;	/* do we (still) have unprocessed entries? (loop term predicate) */
 	DEFiRet;
 
-	CHKiRet(batchInit(&snglRuleBatch, pBatch->nElem));
-	snglRuleBatch.pbShutdownImmediate = pBatch->pbShutdownImmediate;
-
-	while(1) { /* loop broken inside */
+	do {
+		bHaveUnprocessed = 0;
 		/* search for first unprocessed element */
 		for(iStart = 0 ; iStart < pBatch->nElem && pBatch->pElem[iStart].state == BATCH_STATE_DISC ; ++iStart)
 			/* just search, no action */;
-
 		if(iStart == pBatch->nElem)
-			FINALIZE; /* everything processed */
+			break; /* everything processed */
 
 		/* prepare temporary batch */
+		CHKiRet(batchInit(&snglRuleBatch, pBatch->nElem));
+		snglRuleBatch.pbShutdownImmediate = pBatch->pbShutdownImmediate;
 		currRuleset = batchElemGetRuleset(pBatch, iStart);
 		iNew = 0;
 		for(i = iStart ; i < pBatch->nElem ; ++i) {
 			if(batchElemGetRuleset(pBatch, i) == currRuleset) {
-				batchCopyElem(&(snglRuleBatch.pElem[iNew++]), &(pBatch->pElem[i]));
+				/* for performance reasons, we copy only those members that we actually need */
+				snglRuleBatch.pElem[iNew].pUsrp = pBatch->pElem[i].pUsrp;
+				snglRuleBatch.pElem[iNew].state = pBatch->pElem[i].state;
+				++iNew;
 				/* We indicate the element also as done, so it will not be processed again */
 				pBatch->pElem[i].state = BATCH_STATE_DISC;
+			} else {
+				bHaveUnprocessed = 1;
 			}
 		}
 		snglRuleBatch.nElem = iNew; /* was left just right by the for loop */
 		batchSetSingleRuleset(&snglRuleBatch, 1);
 		/* process temp batch */
 		processBatch(&snglRuleBatch);
-	}
-	batchFree(&snglRuleBatch);
+		batchFree(&snglRuleBatch);
+	} while(bHaveUnprocessed == 1);
 
 finalize_it:
 	RETiRet;

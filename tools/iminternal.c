@@ -123,7 +123,6 @@ rsRetVal iminternalRemoveMsg(msg_t **ppMsg)
 	iminternal_t *pThis;
 	linkedListCookie_t llCookie = NULL;
 
-	assert(pPri != NULL);
 	assert(ppMsg != NULL);
 
 	CHKiRet(llGetNextElt(&llMsgs, &llCookie, (void*)&pThis));

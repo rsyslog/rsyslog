@@ -1,4 +1,13 @@
 ---------------------------------------------------------------------------
+Version 6.1.5  [DEVEL] (rgerhards), 2011-02-??
+- bugfix: fixed a memory leak and potential abort condition
+  this could happen if multiple rulesets were used and some output batches
+  contained messages belonging to more than one ruleset.
+  fixes: http://bugzilla.adiscon.com/show_bug.cgi?id=226
+  fixes: http://bugzilla.adiscon.com/show_bug.cgi?id=218
+- bugfix: memory leak when $RepeatedMsgReduction on was used
+  bug tracker: http://bugzilla.adiscon.com/show_bug.cgi?id=225
+---------------------------------------------------------------------------
 Version 6.1.4  [DEVEL] (rgerhards), 2011-02-18
 - bugfix/omhdfs: directive $OMHDFSFileName rendered unusable 
   due to a search and replace-induced bug ;)
@@ -100,11 +109,25 @@ expected that interfaces, even new ones, break during the initial
   syslog plain tcp input plugin (NOT supporting TLS!)
   [ported from v4]
 ---------------------------------------------------------------------------
-Version 5.7.5  [V5-BETA] (rgerhards), 2011-02-??
+Version 5.7.6  [V5-BETA] (rgerhards), 2011-02-25
+- bugfix: fixed a memory leak and potential abort condition
+  this could happen if multiple rulesets were used and some output batches
+  contained messages belonging to more than one ruleset.
+  fixes: http://bugzilla.adiscon.com/show_bug.cgi?id=226
+  fixes: http://bugzilla.adiscon.com/show_bug.cgi?id=218
+- bugfix: memory leak when $RepeatedMsgReduction on was used
+  bug tracker: http://bugzilla.adiscon.com/show_bug.cgi?id=225
+---------------------------------------------------------------------------
+Version 5.7.5  [V5-BETA] (rgerhards), 2011-02-23
 - enhance: imfile did not yet support multiple rulesets, now added
   we do this directly in the beta because a) it does not affect existing
   functionality and b) one may argue that this missing functionality is
   close to a bug.
+- improved testbench, added tests for imuxsock
+- bugfix: imuxsock did no longer sanitize received messages
+  This was a regression from the imuxsock partial rewrite. Happened
+  because the message is no longer run through the standard parsers. 
+  bug tracker: http://bugzilla.adiscon.com/show_bug.cgi?id=224
 - bugfix: minor race condition in action.c - considered cosmetic
   This is considered cosmetic as multiple threads tried to write exactly
   the same value into the same memory location without sync. The method
@@ -189,8 +212,12 @@ Version 5.7.0  [V5-DEVEL] (rgerhards), 2010-09-16
     thanks to Lennart Poettering for this patch
   * sd-systemd API added as part of rsyslog runtime library
 ---------------------------------------------------------------------------
+Version 5.6.4  [V5-STABLE] (rgerhards), 2011-02-25
+- bugfix: memory leak when $RepeatedMsgReduction on was used
+  bug tracker: http://bugzilla.adiscon.com/show_bug.cgi?id=225
+---------------------------------------------------------------------------
 Version 5.6.3  [V5-STABLE] (rgerhards), 2011-01-26
-- bugfix: action processor released mememory too early, resulting in
+- bugfix: action processor released memory too early, resulting in
   potential issue in retry cases (but very unlikely due to another
   bug, which I also fixed -- only after the fix this problem here
   became actually visible).
