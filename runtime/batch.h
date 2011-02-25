@@ -136,11 +136,16 @@ batchIsValidElem(batch_t *pBatch, int i) {
 /* copy one batch element to another.
  * This creates a complete duplicate in those cases where
  * it is needed. Use duplication only when absolutely necessary!
+ * Note that all working fields are reset to zeros. If that were 
+ * not done, we would have potential problems with invalid
+ * or double pointer frees.
  * rgerhards, 2010-06-10
  */
 static inline void
 batchCopyElem(batch_obj_t *pDest, batch_obj_t *pSrc) {
-	memcpy(pDest, pSrc, sizeof(batch_obj_t));
+	memset(pDest, 0, sizeof(batch_obj_t));
+	pDest->pUsrp = pSrc->pUsrp;
+	pDest->state = pSrc->state;
 }
 
 
@@ -171,6 +176,7 @@ batchFree(batch_t *pBatch) {
 static inline rsRetVal
 batchInit(batch_t *pBatch, int maxElem) {
 	DEFiRet;
+	pBatch->iDoneUpTo = 0;
 	pBatch->maxElem = maxElem;
 	CHKmalloc(pBatch->pElem = calloc((size_t)maxElem, sizeof(batch_obj_t)));
 	// TODO: replace calloc by inidividual writes?

@@ -1,5 +1,10 @@
 ---------------------------------------------------------------------------
 Version 5.7.6  [V5-BETA] (rgerhards), 2011-02-??
+- bugfix: fixed a memory leak and potential abort condition
+  this could happen if multiple rulesets were used and some output batches
+  contained messages belonging to more than one ruleset.
+  fixes: http://bugzilla.adiscon.com/show_bug.cgi?id=226
+  fixes: http://bugzilla.adiscon.com/show_bug.cgi?id=218
 - bugfix: memory leak when $RepeatedMsgReduction on was used
   bug tracker: http://bugzilla.adiscon.com/show_bug.cgi?id=225
 ---------------------------------------------------------------------------
