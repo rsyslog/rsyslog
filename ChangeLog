@@ -1,4 +1,8 @@
 ---------------------------------------------------------------------------
+Version 5.7.6  [V5-BETA] (rgerhards), 2011-02-??
+- bugfix: memory leak when $RepeatedMsgReduction on was used
+  bug tracker: http://bugzilla.adiscon.com/show_bug.cgi?id=225
+---------------------------------------------------------------------------
 Version 5.7.5  [V5-BETA] (rgerhards), 2011-02-23
 - enhance: imfile did not yet support multiple rulesets, now added
   we do this directly in the beta because a) it does not affect existing
@@ -93,8 +97,12 @@ Version 5.7.0  [V5-DEVEL] (rgerhards), 2010-09-16
     thanks to Lennart Poettering for this patch
   * sd-systemd API added as part of rsyslog runtime library
 ---------------------------------------------------------------------------
+Version 5.6.4  [V5-STABLE] (rgerhards), 2011-02-25
+- bugfix: memory leak when $RepeatedMsgReduction on was used
+  bug tracker: http://bugzilla.adiscon.com/show_bug.cgi?id=225
+---------------------------------------------------------------------------
 Version 5.6.3  [V5-STABLE] (rgerhards), 2011-01-26
-- bugfix: action processor released mememory too early, resulting in
+- bugfix: action processor released memory too early, resulting in
   potential issue in retry cases (but very unlikely due to another
   bug, which I also fixed -- only after the fix this problem here
   became actually visible).
