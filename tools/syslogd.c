@@ -699,7 +699,6 @@ msgConsumer(void __attribute__((unused)) *notNeeded, batch_t *pBatch, int *pbShu
 	assert(pBatch != NULL);
 	pBatch->pbShutdownImmediate = pbShutdownImmediate; /* TODO: move this to batch creation! */
 	preprocessBatch(pBatch);
-//pBatch->bSingleRuleset = 0; // TODO: testing aid, remove!!!!
 	ruleset.ProcessBatch(pBatch);
 //TODO: the BATCH_STATE_COMM must be set somewhere down the road, but we 
 //do not have this yet and so we emulate -- 2010-06-10
