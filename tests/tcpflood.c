@@ -50,6 +50,7 @@
  *  	is configured!)
  * -z	private key file for TLS mode
  * -Z	cert (public key) file for TLS mode
+ * -L	loglevel to use for GnuTLS troubleshooting (0-off to 10-all, 0 default)
  *
  * Part of the testbench for rsyslog.
  *
@@ -133,6 +134,7 @@ static int runMultithreaded = 0; /* run tests in multithreaded mode */
 static int numThrds = 1;	/* number of threads to use */
 static char *tlsCertFile = NULL;
 static char *tlsKeyFile = NULL;
+static int tlsLogLevel = 0;
 
 #ifdef ENABLE_GNUTLS
 static gnutls_session_t *sessArray;	/* array of TLS sessions to use */
@@ -332,7 +334,7 @@ void closeConnections(void)
  * of constructing test messages. -- rgerhards, 2010-03-31
  */
 static inline void
-genMsg(char *buf, size_t maxBuf, int *pLenBuf, struct instdata *inst)
+genMsg(char *buf, size_t maxBuf, int *pLenBuf)
 {
 	int edLen; /* actual extra data length to use */
 	char extraData[MAX_EXTRADATA_LEN + 1];
@@ -376,10 +378,7 @@ genMsg(char *buf, size_t maxBuf, int *pLenBuf, struct instdata *inst)
 		*pLenBuf = snprintf(buf, maxBuf, "%s\n", MsgToSend);
 	}
 
-	if(inst->numSent++ >= inst->numMsgs)
-		*pLenBuf = 0; /* indicate end of run */
-
-finalize_it: ;
+finalize_it: /*EMPTY to keep the compiler happy */;
 }
 
 /* send messages to the tcp connections we keep open. We use
@@ -413,22 +412,20 @@ int sendMessages(struct instdata *inst)
 	}
 	if(bShowProgress)
 		printf("\r%8.8d %s sent", 0, statusText);
-	while(1) { /* broken inside loop! */
+	while(i < inst->numMsgs) {
 		if(runMultithreaded) {
 			socknum = inst->idx;
 		} else {
 			if(i < numConnections)
 				socknum = i;
-			else if(i >= inst->numMsgs - numConnections)
+			else if(i >= inst->numMsgs - numConnections) {
 				socknum = i - (inst->numMsgs - numConnections);
-			else {
+			} else {
 				int rnd = rand();
 				socknum = rnd % numConnections;
 			}
 		}
-		genMsg(buf, sizeof(buf), &lenBuf, inst); /* generate the message to send according to params */
-		if(lenBuf == 0)
-			break; /* end of processing! */
+		genMsg(buf, sizeof(buf), &lenBuf); /* generate the message to send according to params */
 		if(transport == TP_TCP) {
 			if(sockArray[socknum] == -1) {
 				/* connection was dropped, need to re-establish */
@@ -484,7 +481,6 @@ int sendMessages(struct instdata *inst)
 	if(transport == TP_TLS && offsSendBuf != 0) {
 		/* send remaining buffer */
 		lenSend = sendTLS(socknum, sendBuf, offsSendBuf);
-printf("TLS send buffer of %d messages remaining, sent %d\n", offsSendBuf, lenSend);
 	}
 	if(!bSilent)
 		printf("\r%8.8d %s sent\n", i, statusText);
@@ -691,11 +687,17 @@ runTests(void)
 }
 
 #	if defined(ENABLE_GNUTLS)
-#if 0
-static void logFunction(int __attribute__((unused)) level, const char *msg) {
-	printf("%s\n", msg);
+/* This defines a log function to be provided to GnuTLS. It hopefully
+ * helps us track down hard to find problems.
+ * rgerhards, 2008-06-20
+ */
+static void tlsLogFunction(int level, const char *msg)
+{
+	printf("GnuTLS (level %d): %s", level, msg);
+
 }
-#endif
+
+
 /* global init GnuTLS
  */
 static void
@@ -705,39 +707,62 @@ initTLS(void)
 
 	/* order of gcry_control and gnutls_global_init matters! */
 	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
-	gnutls_global_init ();
-	/* DEV debugging: gnutls_global_set_log_function(logFunction); */
-	/* DEV debugging: gnutls_global_set_log_level(9); */
+	gnutls_global_init();
+	/* set debug mode, if so required by the options */
+	if(tlsLogLevel > 0) {
+		gnutls_global_set_log_function(tlsLogFunction);
+		gnutls_global_set_log_level(tlsLogLevel);
+	}
 
 	r = gnutls_certificate_allocate_credentials(&tlscred);
 	if(r != GNUTLS_E_SUCCESS) {
-		/* I don't know why this works even in case of error... */
+		printf("error allocating credentials\n");
 		gnutls_perror(r);
+		exit(1);
 	}
 	r = gnutls_certificate_set_x509_key_file(tlscred, tlsCertFile, tlsKeyFile, GNUTLS_X509_FMT_PEM);
 	if(r != GNUTLS_E_SUCCESS) {
-		/* I don't know why this works even in case of error... */
+		printf("error setting certificate files -- have you mixed up key and certificate?\n");
+		printf("If in doubt, try swapping the files in -z/-Z\n");
+		printf("Certifcate is: '%s'\n", tlsCertFile);
+		printf("Key        is: '%s'\n", tlsKeyFile);
 		gnutls_perror(r);
+		r = gnutls_certificate_set_x509_key_file(tlscred, tlsKeyFile, tlsCertFile,
+							 GNUTLS_X509_FMT_PEM);
+		if(r == GNUTLS_E_SUCCESS) {
+			printf("Tried swapping files, this seems to work "
+			       "(but results may be unpredictable!)\n");
+		} else {
+			exit(1);
+		}
 	}
 }
+
 
 static void
 initTLSSess(int i)
 {
 	int r;
-	gnutls_init (sessArray + i, GNUTLS_CLIENT);
+	gnutls_init(sessArray + i, GNUTLS_CLIENT);
 
 	/* Use default priorities */
 	gnutls_set_default_priority(sessArray[i]);
 
 	/* put our credentials to the current session */
 	r = gnutls_credentials_set(sessArray[i], GNUTLS_CRD_CERTIFICATE, tlscred);
+	if(r != GNUTLS_E_SUCCESS) {
+		fprintf (stderr, "Setting credentials failed\n");
+		gnutls_perror(r);
+		exit(1);
+	}
 
+	/* NOTE: the following statement generates a cast warning, but there seems to
+	 * be no way around it with current GnuTLS. Do NOT try to "fix" the situation!
+	 */
 	gnutls_transport_set_ptr(sessArray[i], (gnutls_transport_ptr_t) sockArray[i]);
 
 	/* Perform the TLS handshake */
 	r = gnutls_handshake(sessArray[i]);
-
 	if(r < 0) {
 		fprintf (stderr, "TLS Handshake failed\n");
 		gnutls_perror(r);
@@ -797,7 +822,7 @@ int main(int argc, char *argv[])
 
 	setvbuf(stdout, buf, _IONBF, 48);
 	
-	while((opt = getopt(argc, argv, "b:ef:F:t:p:c:C:m:i:I:P:d:Dn:M:rsBR:S:T:XW:YzZ")) != -1) {
+	while((opt = getopt(argc, argv, "b:ef:F:t:p:c:C:m:i:I:P:d:Dn:L:M:rsBR:S:T:XW:Yz:Z:")) != -1) {
 		switch (opt) {
 		case 'b':	batchsize = atoll(optarg);
 				break;
@@ -831,6 +856,8 @@ int main(int argc, char *argv[])
 		case 'f':	dynFileIDs = atoi(optarg);
 				break;
 		case 'F':	frameDelim = atoi(optarg);
+				break;
+		case 'L':	tlsLogLevel = atoi(optarg);
 				break;
 		case 'M':	MsgToSend = optarg;
 				break;
