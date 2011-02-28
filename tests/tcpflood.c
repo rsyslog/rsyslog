@@ -334,7 +334,7 @@ void closeConnections(void)
  * of constructing test messages. -- rgerhards, 2010-03-31
  */
 static inline void
-genMsg(char *buf, size_t maxBuf, int *pLenBuf)
+genMsg(char *buf, size_t maxBuf, int *pLenBuf, struct instdata *inst)
 {
 	int edLen; /* actual extra data length to use */
 	char extraData[MAX_EXTRADATA_LEN + 1];
@@ -377,6 +377,7 @@ genMsg(char *buf, size_t maxBuf, int *pLenBuf)
 		/* use fixed message format from command line */
 		*pLenBuf = snprintf(buf, maxBuf, "%s\n", MsgToSend);
 	}
+	++inst->numSent;
 
 finalize_it: /*EMPTY to keep the compiler happy */;
 }
@@ -425,7 +426,7 @@ int sendMessages(struct instdata *inst)
 				socknum = rnd % numConnections;
 			}
 		}
-		genMsg(buf, sizeof(buf), &lenBuf); /* generate the message to send according to params */
+		genMsg(buf, sizeof(buf), &lenBuf, inst); /* generate the message to send according to params */
 		if(transport == TP_TCP) {
 			if(sockArray[socknum] == -1) {
 				/* connection was dropped, need to re-establish */

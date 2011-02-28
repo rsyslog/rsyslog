@@ -57,6 +57,11 @@ TESTS +=  \
 	imptcp_conndrop.sh 
 endif
 
+if ENABLE_GNUTLS
+TESTS +=  \
+	imtcp-tls-basic.sh
+endif
+
 if ENABLE_OMUXSOCK
 TESTS += uxsock_simple.sh
 endif
@@ -194,6 +199,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/da-mainmsg-q.conf \
 	   diskqueue-fsync.sh \
 	   testsuites/diskqueue-fsync.conf \
+	   imtcp-tls-basic.sh \
+	   testsuites/imtcp-tls-basic.conf \
 	   imtcp-multiport.sh \
 	   testsuites/imtcp-multiport.conf \
 	   manytcp.sh \
