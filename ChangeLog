@@ -1,9 +1,12 @@
+---------------------------------------------------------------------------
+Version 6.1.5  [DEVEL] (rgerhards), 2011-02-??
+- enhanced imtcp to use a pool of worker threads to process incoming
+  messages. This enables higher processing rates, especially in the TLS
+  case (where more CPU is needed for the crypto functions)
 - added support for TLS (in anon mode) to tcpflood
 - improved TLS error reporting
 - improved TLS startup (Diffie-Hellman bits do not need to be generated,
   as we do not support full anon key exchange -- we always need certs)
----------------------------------------------------------------------------
-Version 6.1.5  [DEVEL] (rgerhards), 2011-02-??
 - bugfix: fixed a memory leak and potential abort condition
   this could happen if multiple rulesets were used and some output batches
   contained messages belonging to more than one ruleset.
