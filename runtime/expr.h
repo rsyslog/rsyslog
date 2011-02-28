@@ -30,6 +30,7 @@
 
 /* a node inside an expression tree */
 typedef struct exprNode_s {
+    	char dummy;
 } exprNode_t;
 
 

@@ -124,7 +124,6 @@ struct queue_s {
 	pthread_cond_t notFull, notEmpty;
 	pthread_cond_t belowFullDlyWtrMrk; /* below eFLOWCTL_FULL_DELAY watermark */
 	pthread_cond_t belowLightDlyWtrMrk; /* below eFLOWCTL_FULL_DELAY watermark */
-	pthread_cond_t condDAReady;/* signalled when the DA queue is fully initialized and ready for processing */
 	int bThrdStateChanged;		/* at least one thread state has changed if 1 */
 	/* end sync variables */
 	/* the following variables are always present, because they

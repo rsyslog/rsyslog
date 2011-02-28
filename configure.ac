@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([rsyslog],[6.1.2],[rsyslog@lists.adiscon.com])
+AC_INIT([rsyslog],[6.1.5],[rsyslog@lists.adiscon.com])
 AM_INIT_AUTOMAKE
 
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
@@ -276,6 +276,36 @@ if test "x$enable_pthreads" != "xno"; then
     ],
     [AC_MSG_FAILURE([pthread is missing])]
   )
+fi
+
+AC_CHECK_FUNCS(
+    [pthread_setschedparam],
+    [
+      rsyslog_have_pthread_setschedparam=yes
+    ],
+    [
+      rsyslog_have_pthread_setschedparam=no
+    ]
+)
+AC_CHECK_HEADERS(
+    [sched.h],
+    [
+      rsyslog_have_sched_h=yes
+    ],
+    [
+      rsyslog_have_sched_h=no
+    ]
+)
+if test "$rsyslog_have_pthread_setschedparam" = "yes" -a "$rsyslog_have_sched_h" = "yes"; then
+	save_LIBS=$LIBS
+	LIBS=
+	AC_SEARCH_LIBS(sched_get_priority_max, rt)
+	if test "x$ac_cv_search" != "xno"; then
+		AC_CHECK_FUNCS(sched_get_priority_max)
+	fi
+	IMUDP_LIBS=$LIBS
+	AC_SUBST(IMUDP_LIBS)
+	LIBS=$save_LIBS
 fi
 
 
@@ -794,7 +824,7 @@ AC_SUBST(LIBLOGGING_LIBS)
 # enable/disable the testbench (e.g. because some important parts
 # are missing)
 AC_ARG_ENABLE(testbench,
-        [AS_HELP_STRING([--enable-testbench],[file input module enabled @<:@default=yes@:>@])],
+        [AS_HELP_STRING([--enable-testbench],[testbench enabled @<:@default=yes@:>@])],
         [case "${enableval}" in
          yes) enable_testbench="yes" ;;
           no) enable_testbench="no" ;;
@@ -802,11 +832,6 @@ AC_ARG_ENABLE(testbench,
          esac],
         [enable_testbench=yes]
 )
-if test "$enable_testbench" = "yes"; then
-	if test x$HAVE_JAVAC = x; then
-	   enable_testbench='no'
-	fi
-fi
 AM_CONDITIONAL(ENABLE_TESTBENCH, test x$enable_testbench = xyes)
 
 
@@ -825,7 +850,7 @@ AM_CONDITIONAL(ENABLE_IMFILE, test x$enable_imfile = xyes)
 
 # settings for the door input module (under solaris, thus default off)
 AC_ARG_ENABLE(imsolaris,
-        [AS_HELP_STRING([--enable-imsolaris],[door input module enabled @<:@default=no@:>@])],
+        [AS_HELP_STRING([--enable-imsolaris],[solaris input module enabled @<:@default=no@:>@])],
         [case "${enableval}" in
          yes) enable_imsolaris="yes" ;;
           no) enable_imsolaris="no" ;;
@@ -943,6 +968,45 @@ AC_ARG_ENABLE(pmlastmsg,
 AM_CONDITIONAL(ENABLE_PMLASTMSG, test x$enable_pmlastmsg = xyes)
 
 
+# settings for pmcisconames
+AC_ARG_ENABLE(pmcisconames,
+        [AS_HELP_STRING([--enable-pmcisconames],[Compiles cisconames parser module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_pmcisconames="yes" ;;
+          no) enable_pmcisconames="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-pmcisconames) ;;
+         esac],
+        [enable_pmcisconames=no]
+)
+AM_CONDITIONAL(ENABLE_PMCISCONAMES, test x$enable_pmcisconames = xyes)
+
+
+# settings for pmaixforwardedfrom
+AC_ARG_ENABLE(pmaixforwardedfrom,
+        [AS_HELP_STRING([--enable-pmaixforwardedfrom],[Compiles aixforwardedfrom parser module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_pmaixforwardedfrom="yes" ;;
+          no) enable_pmaixforwardedfrom="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-pmaixforwardedfrom) ;;
+         esac],
+        [enable_pmaixforwardedfrom=no]
+)
+AM_CONDITIONAL(ENABLE_PMAIXFORWARDEDFROM, test x$enable_pmaixforwardedfrom = xyes)
+
+
+# settings for pmsnare
+AC_ARG_ENABLE(pmsnare,
+        [AS_HELP_STRING([--enable-pmsnare],[Compiles snare parser module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_pmsnare="yes" ;;
+          no) enable_pmsnare="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-pmsnare) ;;
+         esac],
+        [enable_pmsnare=no]
+)
+AM_CONDITIONAL(ENABLE_PMSNARE, test x$enable_pmsnare = xyes)
+
+
 # settings for pmrfc3164sd
 AC_ARG_ENABLE(pmrfc3164sd,
         [AS_HELP_STRING([--enable-pmrfc3164sd],[Compiles rfc3164sd parser module @<:@default=no@:>@])],
@@ -1006,7 +1070,7 @@ AC_SUBST(RELP_LIBS)
 
 # settings for omuxsock
 AC_ARG_ENABLE(omuxsock,
-        [AS_HELP_STRING([--enable-omuxsock],[Compiles stdout module @<:@default=no@:>@])],
+        [AS_HELP_STRING([--enable-omuxsock],[Compiles omuxsock module @<:@default=no@:>@])],
         [case "${enableval}" in
          yes) enable_omuxsock="yes" ;;
           no) enable_omuxsock="no" ;;
@@ -1021,7 +1085,7 @@ AM_CONDITIONAL(ENABLE_OMUXSOCK, test x$enable_omuxsock = xyes)
 # part of rsyslog, into the build process. It is named cust1, so that
 # additional such modules can easily be added.
 AC_ARG_ENABLE(cust1,
-        [AS_HELP_STRING([--enable-cust1],[Compiles stdout module @<:@default=no@:>@])],
+        [AS_HELP_STRING([--enable-cust1],[Compiles cust1 module @<:@default=no@:>@])],
         [case "${enableval}" in
          yes) enable_cust1="yes" ;;
           no) enable_cust1="no" ;;
@@ -1089,6 +1153,25 @@ AC_ARG_ENABLE(omhdfs,
 AM_CONDITIONAL(ENABLE_OMHDFS, test x$enable_omhdfs = xyes)
 
 
+#MONGODB SUPPORT
+
+AC_ARG_ENABLE(ommongodb,
+        [AS_HELP_STRING([--enable-ommongodb],[Compiles ommongodb template module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_ommongodb="yes" ;;
+          no) enable_ommongodb="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-ommongodb) ;;
+         esac],
+        [enable_ommongodb=no]
+)
+#
+# you may want to do some library checks here - see snmp, mysql, pgsql modules
+# for samples
+#
+AM_CONDITIONAL(ENABLE_OMMONGODB, test x$enable_ommongodb = xyes)
+# end of copy template - be sure to search for omtemplate to find everything!
+
+
 AC_CONFIG_FILES([Makefile \
 		runtime/Makefile \
 		tools/Makefile \
@@ -1107,6 +1190,9 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omstdout/Makefile \
 		plugins/pmrfc3164sd/Makefile \
 		plugins/pmlastmsg/Makefile \
+		plugins/pmcisconames/Makefile \
+		plugins/pmsnare/Makefile \
+		plugins/pmaixforwardedfrom/Makefile \
 		plugins/omruleset/Makefile \
 		plugins/omdbalerting/Makefile \
 		plugins/omuxsock/Makefile \
@@ -1159,6 +1245,7 @@ echo
 echo "---{ output plugins }---"
 echo "    Mail support enabled:                     $enable_mail"
 echo "    omprog module will be compiled:           $enable_omprog"
+echo "    output mongodb module will be compiled:   $enable_ommongodb"
 echo "    omstdout module will be compiled:         $enable_omstdout"
 echo "    omhdfs module will be compiled:           $enable_omhdfs"
 echo "    omruleset module will be compiled:        $enable_omruleset"
@@ -1170,6 +1257,9 @@ echo
 echo "---{ parser modules }---"
 echo "    pmrfc3164sd module will be compiled:      $enable_pmrfc3164sd"
 echo "    pmlastmsg module will be compiled:        $enable_pmlastmsg"
+echo "    pmcisconames module will be compiled:     $enable_pmcisconames"
+echo "    pmaixforwardedfrom module w.be compiled:  $enable_pmaixforwardedfrom"
+echo "    pmsnare module will be compiled:          $enable_pmsnare"
 echo
 echo "---{ message modification modules }---"
 echo "    mmnormalize module will be compiled:      $enable_mmnormalize"

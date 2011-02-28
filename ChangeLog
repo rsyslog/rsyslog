@@ -3,13 +3,54 @@
 - improved TLS startup (Diffie-Hellman bits do not need to be generated,
   as we do not support full anon key exchange -- we always need certs)
 ---------------------------------------------------------------------------
-Version 6.1.3  [DEVEL] (rgerhards), 2010-12-??
+Version 6.1.5  [DEVEL] (rgerhards), 2011-02-??
+- bugfix: fixed a memory leak and potential abort condition
+  this could happen if multiple rulesets were used and some output batches
+  contained messages belonging to more than one ruleset.
+  fixes: http://bugzilla.adiscon.com/show_bug.cgi?id=226
+  fixes: http://bugzilla.adiscon.com/show_bug.cgi?id=218
+- bugfix: memory leak when $RepeatedMsgReduction on was used
+  bug tracker: http://bugzilla.adiscon.com/show_bug.cgi?id=225
+---------------------------------------------------------------------------
+Version 6.1.4  [DEVEL] (rgerhards), 2011-02-18
+- bugfix/omhdfs: directive $OMHDFSFileName rendered unusable 
+  due to a search and replace-induced bug ;)
+- bugfix: minor race condition in action.c - considered cosmetic
+  This is considered cosmetic as multiple threads tried to write exactly
+  the same value into the same memory location without sync. The method
+  has been changed so this can no longer happen.
+- added pmsnare parser module (written by David Lang)
+- enhanced imfile to support non-cancel input termination
+- improved systemd socket activation thanks to Marius Tomaschweski
+- improved error reporting for $WorkDirectory
+  non-existance and other detectable problems are now reported,
+  and the work directory is NOT set in this case
+- bugfix: pmsnare causded abort under some conditions
+- bugfix: abort if imfile reads file line of more than 64KiB
+  Thanks to Peter Eisentraut for reporting and analysing this problem.
+  bug tracker: http://bugzilla.adiscon.com/show_bug.cgi?id=221
+- bugfix: queue engine did not properly slow down inputs in FULL_DELAY mode
+  when in disk-assisted mode. This especially affected imfile, which
+  created unnecessarily queue files if a large set of input file data was
+  to process.
+- bugfix: very long running actions could prevent shutdown under some
+  circumstances. This has now been solved, at least for common
+  situations.
+- bugfix: fixed compile problem due to empty structs
+  this occured only on some platforms/compilers. thanks to Dražen Kačar 
+  for the fix
+---------------------------------------------------------------------------
+Version 6.1.3  [DEVEL] (rgerhards), 2011-02-01
+- experimental support for monogodb added
 - added $IMUDPSchedulingPolicy and $IMUDPSchedulingPriority config settings
 - added $LocalHostName config directive
 - improved tcpsrv performance by enabling multiple-entry epoll
   so far, we always pulled a single event from the epoll interface. 
   Now 128, what should result in performance improvement (less API
   calls) on busy systems. Most importantly affects imtcp.
+- imptcp now supports non-cancel termination mode, a plus in stability
+- imptcp speedup: multiple worker threads can now be used to read data
+- new directive $InputIMPTcpHelperThreads added
 - bugfix: fixed build problems on some platforms
   namely those that have 32bit atomic operations but not 64 bit ones
 - bugfix: local hostname was pulled too-early, so that some config 
@@ -17,6 +58,8 @@ Version 6.1.3  [DEVEL] (rgerhards), 2010-12-??
 - enhanced tcpflood to support multiple sender threads
   this is required for some high-throughput scenarios (and necessary to
   run some performance tests, because otherwise the sender is too slow).
+- added some new custom parsers (snare, aix, some Cisco "specialities")
+  thanks to David Lang
 ---------------------------------------------------------------------------
 Version 6.1.2  [DEVEL] (rgerhards), 2010-12-16
 - added experimental support for log normalizaton (via liblognorm)
@@ -70,13 +113,63 @@ expected that interfaces, even new ones, break during the initial
   syslog plain tcp input plugin (NOT supporting TLS!)
   [ported from v4]
 ---------------------------------------------------------------------------
-Version 5.7.3  [V5-DEVEL] (rgerhards), 2010-12-??
+Version 5.7.6  [V5-BETA] (rgerhards), 2011-02-25
+- bugfix: fixed a memory leak and potential abort condition
+  this could happen if multiple rulesets were used and some output batches
+  contained messages belonging to more than one ruleset.
+  fixes: http://bugzilla.adiscon.com/show_bug.cgi?id=226
+  fixes: http://bugzilla.adiscon.com/show_bug.cgi?id=218
+- bugfix: memory leak when $RepeatedMsgReduction on was used
+  bug tracker: http://bugzilla.adiscon.com/show_bug.cgi?id=225
+---------------------------------------------------------------------------
+Version 5.7.5  [V5-BETA] (rgerhards), 2011-02-23
+- enhance: imfile did not yet support multiple rulesets, now added
+  we do this directly in the beta because a) it does not affect existing
+  functionality and b) one may argue that this missing functionality is
+  close to a bug.
+- improved testbench, added tests for imuxsock
+- bugfix: imuxsock did no longer sanitize received messages
+  This was a regression from the imuxsock partial rewrite. Happened
+  because the message is no longer run through the standard parsers. 
+  bug tracker: http://bugzilla.adiscon.com/show_bug.cgi?id=224
+- bugfix: minor race condition in action.c - considered cosmetic
+  This is considered cosmetic as multiple threads tried to write exactly
+  the same value into the same memory location without sync. The method
+  has been changed so this can no longer happen.
+---------------------------------------------------------------------------
+Version 5.7.4  [V5-BETA] (rgerhards), 2011-02-17
+- added pmsnare parser module (written by David Lang)
+- enhanced imfile to support non-cancel input termination
+- improved systemd socket activation thanks to Marius Tomaschweski
+- improved error reporting for $WorkDirectory
+  non-existance and other detectable problems are now reported,
+  and the work directory is NOT set in this case
+- bugfix: pmsnare causded abort under some conditions
+- bugfix: abort if imfile reads file line of more than 64KiB
+  Thanks to Peter Eisentraut for reporting and analysing this problem.
+  bug tracker: http://bugzilla.adiscon.com/show_bug.cgi?id=221
+- bugfix: queue engine did not properly slow down inputs in FULL_DELAY mode
+  when in disk-assisted mode. This especially affected imfile, which
+  created unnecessarily queue files if a large set of input file data was
+  to process.
+- bugfix: very long running actions could prevent shutdown under some
+  circumstances. This has now been solved, at least for common
+  situations.
+- bugfix: fixed compile problem due to empty structs
+  this occured only on some platforms/compilers. thanks to Dražen Kačar 
+  for the fix
+---------------------------------------------------------------------------
+Version 5.7.3  [V5-BETA] (rgerhards), 2011-02-07
+- added support for processing multi-line messages in imfile
 - added $IMUDPSchedulingPolicy and $IMUDPSchedulingPriority config settings
 - added $LocalHostName config directive
 - bugfix: fixed build problems on some platforms
   namely those that have 32bit atomic operations but not 64 bit ones
 - bugfix: local hostname was pulled too-early, so that some config 
   directives (namely FQDN settings) did not have any effect
+- bugfix: imfile did duplicate messages under some circumstances
+- added $OMMySQLConfigFile config directive
+- added $OMMySQLConfigSection config directive
 ---------------------------------------------------------------------------
 Version 5.7.2  [V5-DEVEL] (rgerhards), 2010-11-26
 - bugfix(important): problem in TLS handling could cause rsyslog to loop
@@ -123,8 +216,12 @@ Version 5.7.0  [V5-DEVEL] (rgerhards), 2010-09-16
     thanks to Lennart Poettering for this patch
   * sd-systemd API added as part of rsyslog runtime library
 ---------------------------------------------------------------------------
-Version 5.6.3  [V5-STABLE] (rgerhards), 2010-12-??
-- bugfix: action processor released mememory too early, resulting in
+Version 5.6.4  [V5-STABLE] (rgerhards), 2011-02-25
+- bugfix: memory leak when $RepeatedMsgReduction on was used
+  bug tracker: http://bugzilla.adiscon.com/show_bug.cgi?id=225
+---------------------------------------------------------------------------
+Version 5.6.3  [V5-STABLE] (rgerhards), 2011-01-26
+- bugfix: action processor released memory too early, resulting in
   potential issue in retry cases (but very unlikely due to another
   bug, which I also fixed -- only after the fix this problem here
   became actually visible).
@@ -136,6 +233,9 @@ Version 5.6.3  [V5-STABLE] (rgerhards), 2010-12-??
   it!)
 - bugfix: batches which had actions in error were not properly retried in
   all cases
+- bugfix: imfile did duplicate messages under some circumstances
+- bugfix: testbench was not activated if no Java was present on system
+  ... what actually was a left-over. Java is no longer required.
 ---------------------------------------------------------------------------
 Version 5.6.2  [V5-STABLE] (rgerhards), 2010-11-30
 - bugfix: compile failed on systems without epoll_create1()
@@ -712,6 +812,21 @@ Version 4.7.0  [v4-devel] (rgerhards), 2010-04-14
 - imported changes from 4.5.6 and below
 ---------------------------------------------------------------------------
 Version 4.6.6  [v4-stable] (rgerhards), 2010-11-??
+- bugfix: imfile potentially duplicates lines
+  This can happen when 0 bytes are read from the input file, and some
+  writer appends data to the file BEFORE we check if a rollover happens.
+  The check for rollover uses the inode and size as a criterion. So far,
+  we checked for equality of sizes, which is not given in this scenario,
+  but that does not indicate a rollover. From the source code comments:
+     Note that when we check the size, we MUST NOT check for equality.
+     The reason is that the file may have been written right after we
+     did try to read (so the file size has increased). That is NOT in
+     indicator of a rollover (this is an actual bug scenario we 
+     experienced). So we need to check if the new size is smaller than
+     what we already have seen!
+  Also, under some circumstances an invalid truncation was detected. This
+  code has now been removed, a file change (and thus resent) is only
+  detected if the inode number changes.
 - bugfix: a couple of problems that imfile had on some platforms, namely
   Ubuntu (not their fault, but occured there)
 - bugfix: imfile utilizes 32 bit to track offset. Most importantly,

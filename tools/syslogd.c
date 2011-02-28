@@ -571,7 +571,7 @@ logmsgInternal(int iErr, int pri, uchar *msg, int flags)
 	}
 
 	if(bHaveMainQueue == 0) { /* not yet in queued mode */
-		iminternalAddMsg(pri, pMsg);
+		iminternalAddMsg(pMsg);
 	} else {
                /* we have the queue, so we can simply provide the
 		 * message to the queue engine.
@@ -696,7 +696,6 @@ msgConsumer(void __attribute__((unused)) *notNeeded, batch_t *pBatch, int *pbShu
 	assert(pBatch != NULL);
 	pBatch->pbShutdownImmediate = pbShutdownImmediate; /* TODO: move this to batch creation! */
 	preprocessBatch(pBatch);
-//pBatch->bSingleRuleset = 0; // TODO: testing aid, remove!!!!
 	ruleset.ProcessBatch(pBatch);
 //TODO: the BATCH_STATE_COMM must be set somewhere down the road, but we 
 //do not have this yet and so we emulate -- 2010-06-10
@@ -1865,10 +1864,9 @@ void sigttin_handler()
  */
 static inline void processImInternal(void)
 {
-	int iPri;
 	msg_t *pMsg;
 
-	while(iminternalRemoveMsg(&iPri, &pMsg) == RS_RET_OK) {
+	while(iminternalRemoveMsg(&pMsg) == RS_RET_OK) {
 		submitMsg(pMsg);
 	}
 }
@@ -2424,13 +2422,46 @@ doGlblProcessInit(void)
 				 */
 				exit(1); /* "good" exit - after forking, not diasabling anything */
 			}
+
 			num_fds = getdtablesize();
 			close(0);
 			/* we keep stdout and stderr open in case we have to emit something */
+			i = 3;
 
-                       if (sd_listen_fds(0) <= 0)
-                               for (i = 3; i < num_fds; i++)
-                                       (void) close(i);
+			/* if (sd_booted()) */ {
+				const char *e;
+				char buf[24] = { '\0' };
+				char *p = NULL;
+				unsigned long l;
+				int sd_fds;
+
+				/* fork & systemd socket activation:
+				 * fetch listen pid and update to ours,
+				 * when it is set to pid of our parent.
+				 */
+				if ( (e = getenv("LISTEN_PID"))) {
+					errno = 0;
+					l = strtoul(e, &p, 10);
+					if (errno ==  0 && l > 0 && (!p || !*p)) {
+						if (getppid() == (pid_t)l) {
+							snprintf(buf, sizeof(buf), "%d",
+								 getpid());
+							setenv("LISTEN_PID", buf, 1);
+						}
+					}
+				}
+
+				/*
+				 * close only all further fds, except
+				 * of the fds provided by systemd.
+				 */
+				sd_fds = sd_listen_fds(0);
+				if (sd_fds > 0)
+					i = SD_LISTEN_FDS_START + sd_fds;
+			}
+			for ( ; i < num_fds; i++)
+				(void) close(i);
+
 			untty();
 		} else {
 			fputs(" Already running. If you want to run multiple instances, you need "
@@ -2838,7 +2869,7 @@ int realMain(int argc, char **argv)
 	if(iCompatibilityMode < 4) {
 		errmsg.LogError(0, NO_ERRCODE, "WARNING: rsyslogd is running in compatibility mode. Automatically "
 		                            "generated config directives may interfer with your rsyslog.conf settings. "
-					    "We suggest upgrading your config and adding -c4 as the first "
+					    "We suggest upgrading your config and adding -c5 as the first "
 					    "rsyslogd option.");
 	}
 

@@ -48,6 +48,7 @@
 #include "unicode-helper.h"
 #include "prop.h"
 #include "stringbuf.h"
+#include "ruleset.h"
 
 MODULE_TYPE_INPUT	/* must be present for input modules, do not remove */
 
@@ -60,6 +61,7 @@ DEFobjCurrIf(glbl)
 DEFobjCurrIf(datetime)
 DEFobjCurrIf(strm)
 DEFobjCurrIf(prop)
+DEFobjCurrIf(ruleset)
 
 typedef struct fileInfo_s {
 	uchar *pszFileName;
@@ -71,6 +73,8 @@ typedef struct fileInfo_s {
 	int nRecords; /**< How many records did we process before persisting the stream? */
 	int iPersistStateInterval; /**< how often should state be persisted? (0=on close only) */
 	strm_t *pStrm;	/* its stream (NULL if not assigned) */
+	int readMode;	/* which mode to use in ReadMulteLine call? */
+	ruleset_t *pRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
 } fileInfo_t;
 
 
@@ -85,6 +89,8 @@ static int iPollInterval = 10;	/* number of seconds to sleep when there was no f
 static int iPersistStateInterval = 0;	/* how often if state file to be persisted? (default 0->never) */
 static int iFacility = 128; /* local0 */
 static int iSeverity = 5;  /* notice, as of rfc 3164 */
+static int readMode = 0;  /* mode to use for ReadMultiLine call */
+static ruleset_t *pBindRuleset = NULL;	/* ruleset to bind listener to (use system default if unspecified) */
 
 static int iFilPtr = 0;		/* number of files to be monitored; pointer to next free spot during config */
 #define MAX_INPUT_FILES 100
@@ -114,6 +120,7 @@ static rsRetVal enqLine(fileInfo_t *pInfo, cstr_t *cstrLine)
 	MsgSetTAG(pMsg, pInfo->pszTag, pInfo->lenTag);
 	pMsg->iFacility = LOG_FAC(pInfo->iFacility);
 	pMsg->iSeverity = LOG_PRI(pInfo->iSeverity);
+	MsgSetRuleset(pMsg, pInfo->pRuleset);
 	CHKiRet(submitMsg(pMsg));
 finalize_it:
 	RETiRet;
@@ -211,8 +218,8 @@ static rsRetVal pollFile(fileInfo_t *pThis, int *pbHadFileData)
 	}
 
 	/* loop below will be exited when strmReadLine() returns EOF */
-	while(1) {
-		CHKiRet(strm.ReadLine(pThis->pStrm, &pCStr));
+	while(glbl.GetGlobalInputTermState() == 0) {
+		CHKiRet(strm.ReadLine(pThis->pStrm, &pCStr, pThis->readMode));
 		*pbHadFileData = 1; /* this is just a flag, so set it and forget it */
 		CHKiRet(enqLine(pThis, pCStr)); /* process line */
 		rsCStrDestruct(&pCStr); /* discard string (must be done by us!) */
@@ -287,23 +294,24 @@ BEGINrunInput
 	int bHadFileData; /* were there at least one file with data during this run? */
 CODESTARTrunInput
 	pthread_cleanup_push(inputModuleCleanup, NULL);
-	while(1) {
-
+	while(glbl.GetGlobalInputTermState() == 0) {
 		do {
 			bHadFileData = 0;
 			for(i = 0 ; i < iFilPtr ; ++i) {
+				if(glbl.GetGlobalInputTermState() == 1)
+					break; /* terminate input! */
 				pollFile(&files[i], &bHadFileData);
 			}
-		} while(iFilPtr > 1 && bHadFileData == 1); /* warning: do...while()! */
+		} while(iFilPtr > 1 && bHadFileData == 1 && glbl.GetGlobalInputTermState() == 0); /* warning: do...while()! */
 
 		/* Note: the additional 10ns wait is vitally important. It guards rsyslog against totally
 		 * hogging the CPU if the users selects a polling interval of 0 seconds. It doesn't hurt any
 		 * other valid scenario. So do not remove. -- rgerhards, 2008-02-14
 		 */
-		srSleep(iPollInterval, 10);
-
+		if(glbl.GetGlobalInputTermState() == 0)
+			srSleep(iPollInterval, 10);
 	}
-	/*NOTREACHED*/
+	DBGPRINTF("imfile: terminating upon request of rsyslog core\n");
 	
 	pthread_cleanup_pop(0); /* just for completeness, but never called... */
 	RETiRet;	/* use it to make sure the housekeeping is done! */
@@ -396,6 +404,13 @@ CODESTARTafterRun
 ENDafterRun
 
 
+BEGINisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature
+	if(eFeat == sFEATURENonCancelInputTermination)
+		iRet = RS_RET_OK;
+ENDisCompatibleWithFeature
+
+
 /* The following entry points are defined in module-template.h.
  * In general, they need to be present, but you do NOT need to provide
  * any code here.
@@ -408,12 +423,14 @@ CODESTARTmodExit
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(prop, CORE_COMPONENT);
+	objRelease(ruleset, CORE_COMPONENT);
 ENDmodExit
 
 
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_IMOD_QUERIES
+CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
 ENDqueryEtryPt
 
 
@@ -447,6 +464,8 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	iPollInterval = 10;
 	iFacility = 128; /* local0 */
 	iSeverity = 5;  /* notice, as of rfc 3164 */
+	readMode = 0;
+	pBindRuleset = NULL;
 
 	RETiRet;
 }
@@ -489,6 +508,8 @@ static rsRetVal addMonitor(void __attribute__((unused)) *pVal, uchar *pNewVal)
 		pThis->iFacility = iFacility;
 		pThis->iPersistStateInterval = iPersistStateInterval;
 		pThis->nRecords = 0;
+		pThis->readMode = readMode;
+		pThis->pRuleset = pBindRuleset;
 		iPersistStateInterval = 0;
 	} else {
 		errmsg.LogError(0, RS_RET_OUT_OF_DESRIPTORS, "Too many file monitors configured - ignoring this one");
@@ -503,6 +524,29 @@ finalize_it:
 
 	RETiRet;
 }
+
+
+/* accept a new ruleset to bind. Checks if it exists and complains, if not */
+static rsRetVal
+setRuleset(void __attribute__((unused)) *pVal, uchar *pszName)
+{
+	ruleset_t *pRuleset;
+	rsRetVal localRet;
+	DEFiRet;
+
+	localRet = ruleset.GetRuleset(&pRuleset, pszName);
+	if(localRet == RS_RET_NOT_FOUND) {
+		errmsg.LogError(0, NO_ERRCODE, "error: ruleset '%s' not found - ignored", pszName);
+	}
+	CHKiRet(localRet);
+	pBindRuleset = pRuleset;
+	DBGPRINTF("imfile current bind ruleset %p: '%s'\n", pRuleset, pszName);
+
+finalize_it:
+	free(pszName); /* no longer needed */
+	RETiRet;
+}
+
 
 /* modInit() is called once the module is loaded. It must perform all module-wide
  * initialization tasks. There are also a number of housekeeping tasks that the
@@ -521,8 +565,10 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	CHKiRet(objUse(strm, CORE_COMPONENT));
+	CHKiRet(objUse(ruleset, CORE_COMPONENT));
 	CHKiRet(objUse(prop, CORE_COMPONENT));
 
+	DBGPRINTF("imfile: version %s initializing\n", VERSION);
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfilename", 0, eCmdHdlrGetWord,
 	  	NULL, &pszFileName, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfiletag", 0, eCmdHdlrGetWord,
@@ -535,8 +581,12 @@ CODEmodInit_QueryRegCFSLineHdlr
 	  	NULL, &iFacility, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfilepollinterval", 0, eCmdHdlrInt,
 	  	NULL, &iPollInterval, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfilereadmode", 0, eCmdHdlrInt,
+	  	NULL, &readMode, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfilepersiststateinterval", 0, eCmdHdlrInt,
 	  	NULL, &iPersistStateInterval, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfilebindruleset", 0, eCmdHdlrGetWord,
+		setRuleset, NULL, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	/* that command ads a new file! */
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputrunfilemonitor", 0, eCmdHdlrGetWord,
 		addMonitor, NULL, STD_LOADABLE_MODULE_ID, eConfObjGlobal));

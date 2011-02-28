@@ -123,6 +123,7 @@ struct modInfo_s {
 			rsRetVal (*restoreScope)(void);
 		} om;
 		struct { /* data for library modules */
+		    	char dummy;
 		} lm;
 		struct { /* data for parser modules */
 			rsRetVal (*parse)(msg_t*);
