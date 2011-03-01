@@ -932,13 +932,14 @@ msg_t* MsgDup(msg_t* pOld)
 	pNew->iLenMSG = pOld->iLenMSG;
 	pNew->iLenTAG = pOld->iLenTAG;
 	pNew->iLenHOSTNAME = pOld->iLenHOSTNAME;
-	if((pOld->msgFlags & NEEDS_DNSRESOL) == 1) {
+	if((pOld->msgFlags & NEEDS_DNSRESOL)) {
 			localRet = msgSetFromSockinfo(pNew, pOld->rcvFrom.pfrominet);
 			if(localRet != RS_RET_OK) {
 				/* if something fails, we accept loss of this property, it is
 				 * better than losing the whole message.
 				 */
 				pNew->msgFlags &= ~NEEDS_DNSRESOL;
+				pNew->rcvFrom.pRcvFrom = NULL; /* make sure no dangling values */
 			}
 	} else {
 		if(pOld->rcvFrom.pRcvFrom != NULL) {
