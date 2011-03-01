@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------
 Version 6.1.5  [DEVEL] (rgerhards), 2011-02-??
+- improved testbench
 - bugfix: fixed a memory leak and potential abort condition
   this could happen if multiple rulesets were used and some output batches
   contained messages belonging to more than one ruleset.

@@ -47,6 +47,7 @@ TESTS = $(TESTRUNS) cfg.sh \
 	imuxsock_logger_root.sh \
 	imuxsock_traillf_root.sh \
 	imuxsock_ccmiddle_root.sh \
+	udp-msgreduc-vg.sh \
 	queue-persist.sh 
 
 if ENABLE_IMPTCP
@@ -196,6 +197,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/diskqueue-fsync.conf \
 	   imtcp-multiport.sh \
 	   testsuites/imtcp-multiport.conf \
+	   udp-msgreduc-vg.sh \
+	   testsuites/udp-msgreduc-vg.conf \
 	   manytcp.sh \
 	   testsuites/manytcp.conf \
 	   manyptcp.sh \
