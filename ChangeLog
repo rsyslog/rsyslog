@@ -1,5 +1,12 @@
 ---------------------------------------------------------------------------
-Version 5.6.4  [V5-STABLE] (rgerhards), 2011-02-??
+Version 5.6.4  [V5-STABLE] (rgerhards), 2011-03-03
+- bugfix: potential abort condition when $RepeatedMsgReduction set to on
+  as well as potentially in a number of other places where MsgDup() was
+  used. This only happened when the imudp input module was used and it
+  depended on name resolution not yet had taken place. In other words,
+  this was a strange problem that could lead to hard to diagnose 
+  instability. So if you experience instability, chances are good that
+  this fix will help.
 - bugfix: fixed a memory leak and potential abort condition
   this could happen if multiple rulesets were used and some output batches
   contained messages belonging to more than one ruleset.
