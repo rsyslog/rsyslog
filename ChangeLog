@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 5.7.7  [V5-BETA] (rgerhards), 2011-03-??
+Version 5.7.7  [V5-BETA] (rgerhards), 2011-03-02
 - bugfix: potential abort condition when $RepeatedMsgReduction set to on
   as well as potentially in a number of other places where MsgDup() was
   used. This only happened when the imudp input module was used and it
