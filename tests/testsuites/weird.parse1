@@ -11,10 +11,10 @@
 14,user,info,Aug 30 23:00:05,X4711,,,
 # there is a SP at the end of the line
 <14>Aug 30 23:00:05 
-14,user,info,Aug 30 23:00:05,localhost,,,
+14,user,info,Aug 30 23:00:05,localhost.localdomain,,,
 # and here is no SP at the end of the line
 <14>Aug 30 23:00:05
-14,user,info,Aug 30 23:00:05,localhost,,,
+14,user,info,Aug 30 23:00:05,localhost.localdomain,,,
 # unfortunately, I can not test missing dates with this test suite, because
 # we would have the current date in the response, which we can not check against
 #
@@ -31,7 +31,7 @@
 14,user,info,Aug 30 23:00:05,X4711,,,
 # there is a SP at the end of the line
 <14>2010-08-30T23:00:05Z 
-14,user,info,Aug 30 23:00:05,localhost,,,
+14,user,info,Aug 30 23:00:05,localhost.localdomain,,,
 # and here is no SP at the end of the line
 <14>2010-08-30T23:00:05Z
-14,user,info,Aug 30 23:00:05,localhost,,,
+14,user,info,Aug 30 23:00:05,localhost.localdomain,,,
