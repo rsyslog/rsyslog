@@ -77,9 +77,9 @@ typedef enum eModLinkType_ {
 
 /* remember which shared libs we dlopen()-ed */
 struct dlhandle_s {
-	uchar szName[PATH_MAX];
-	void *pModHdlr;
-	struct dlhandle_s *next;
+	uchar	*pszName;
+	void	*pModHdlr;
+	struct	dlhandle_s *next;
 };
 
 /* should this module be kept linked? */

@@ -545,18 +545,26 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 
 		/* if we need to keep the linked module, save it */
 		if (pNew->eKeepType == eMOD_KEEP) {
-			if((pHandle = calloc(1, sizeof (*pHandle))) == NULL) {
-				iRet = RS_RET_OUT_OF_MEMORY;
-				goto finalize_it;
+			/* see if we have this one already */
+			for (pHandle = pHandles; pHandle; pHandle = pHandle->next) {
+				if (!strcmp((char *)name, (char *)pHandle->pszName))
+					break;
 			}
 
-			strncpy((char *)pHandle->szName,
-			        (char *)name, PATH_MAX - 1);
-			pHandle->szName[PATH_MAX - 1] = '\0';
-			pHandle->pModHdlr = pModHdlr;
-			pHandle->next = pHandles;
+			/* not found, create it */
+			if (!pHandle) {
+				if((pHandle = malloc(sizeof (*pHandle))) == NULL) {
+					ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+				}
+				if((pHandle->pszName = (uchar*) strdup((char*)name)) == NULL) {
+					free(pHandle);
+					ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+				}
+				pHandle->pModHdlr = pModHdlr;
+				pHandle->next = pHandles;
 
-			pHandles = pHandle;
+				pHandles = pHandle;
+			}
 		}
 	}
 
@@ -859,7 +867,7 @@ Load(uchar *pModName)
 
 		/* see if we have this one already */
 		for (pHandle = pHandles; pHandle; pHandle = pHandle->next) {
-			if (!strcmp((char *)pModName, (char *)pHandle->szName)) {
+			if (!strcmp((char *)pModName, (char *)pHandle->pszName)) {
 				pModHdlr = pHandle->pModHdlr;
 				break;
 			}
