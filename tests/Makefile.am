@@ -58,6 +58,11 @@ TESTS +=  \
 	imptcp_conndrop.sh 
 endif
 
+if ENABLE_GNUTLS
+TESTS +=  \
+	imtcp-tls-basic.sh
+endif
+
 if ENABLE_OMUXSOCK
 TESTS += uxsock_simple.sh
 endif
@@ -195,6 +200,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/da-mainmsg-q.conf \
 	   diskqueue-fsync.sh \
 	   testsuites/diskqueue-fsync.conf \
+	   imtcp-tls-basic.sh \
+	   testsuites/imtcp-tls-basic.conf \
 	   imtcp-multiport.sh \
 	   testsuites/imtcp-multiport.conf \
 	   udp-msgreduc-vg.sh \
@@ -344,7 +351,11 @@ uxsockrcvr_SOURCES = uxsockrcvr.c
 uxsockrcvr_LDADD = $(SOL_LIBS)
 
 tcpflood_SOURCES = tcpflood.c
-tcpflood_LDADD = $(SOL_LIBS) $(PTHREADS_LIBS)
+tcpflood_CPPFLAGS = $(PTHREADS_CFLAGS) $(GNUTLS_CFLAGS)
+tcpflood_LDADD = $(SOL_LIBS) $(PTHREADS_LIBS) $(GNUTLS_LIBS)
+if ENABLE_GNUTLS
+tcpflood_LDADD += -lgcrypt
+endif
 
 syslog_caller_SOURCES = syslog_caller.c
 syslog_caller_LDADD = $(SOL_LIBS)

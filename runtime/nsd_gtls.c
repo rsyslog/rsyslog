@@ -50,7 +50,6 @@
 #include "nsd_gtls.h"
 
 /* things to move to some better place/functionality - TODO */
-#define DH_BITS 1024
 #define CRLFILE "crl.pem"
 
 
@@ -81,7 +80,6 @@ static pthread_mutex_t mutGtlsStrerror; /**< a mutex protecting the potentially 
 
 /* ------------------------------ GnuTLS specifics ------------------------------ */
 static gnutls_certificate_credentials xcred;
-static gnutls_dh_params dh_params;
 
 #ifdef DEBUG
 #if 0 /* uncomment, if needed some time again -- DEV Debug only */
@@ -609,27 +607,9 @@ gtlsInitSession(nsd_gtls_t *pThis)
 
 	/* request client certificate if any.  */
 	gnutls_certificate_server_set_request( session, GNUTLS_CERT_REQUEST);
-	gnutls_dh_set_prime_bits(session, DH_BITS);
 
 	pThis->sess = session;
 
-finalize_it:
-	RETiRet;
-}
-
-
-static rsRetVal
-generate_dh_params(void)
-{
-	int gnuRet;
-	DEFiRet;
-	/* Generate Diffie Hellman parameters - for use with DHE
-	 * kx algorithms. These should be discarded and regenerated
-	 * once a day, once a week or once a month. Depending on the
-	 * security requirements.
-	 */
-	CHKgnutls(gnutls_dh_params_init( &dh_params));
-	CHKgnutls(gnutls_dh_params_generate2( dh_params, DH_BITS));
 finalize_it:
 	RETiRet;
 }
@@ -648,8 +628,6 @@ gtlsGlblInitLstn(void)
 		 * considered legacy. -- rgerhards, 2008-05-05
 		 */
 		/*CHKgnutls(gnutls_certificate_set_x509_crl_file(xcred, CRLFILE, GNUTLS_X509_FMT_PEM));*/
-		CHKiRet(generate_dh_params());
-		gnutls_certificate_set_dh_params(xcred, dh_params); /* this is void */
 		bGlblSrvrInitDone = 1; /* we are all set now */
 
 		/* now we need to add our certificate */
@@ -1173,6 +1151,8 @@ CODESTARTobjDestruct(nsd_gtls)
 		gnutls_x509_crt_deinit(pThis->ourCert);
 	if(pThis->bOurKeyIsInit)
 		gnutls_x509_privkey_deinit(pThis->ourKey);
+#warning need more checks if the new gnutls_deinit() breaks things during normal operations
+//	gnutls_deinit(pThis->sess); /* see ln 600 pThis->bInSess as something to check? */
 ENDobjDestruct(nsd_gtls)
 
 
@@ -1418,6 +1398,10 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 		/* we got a handshake, now check authorization */
 		CHKiRet(gtlsChkPeerAuth(pNew));
 	} else {
+		uchar *pGnuErr = gtlsStrerror(gnuRet);
+		errmsg.LogError(0, RS_RET_TLS_HANDSHAKE_ERR, 
+			"gnutls returned error on handshake: %s\n", pGnuErr);
+		free(pGnuErr);
 		ABORT_FINALIZE(RS_RET_TLS_HANDSHAKE_ERR);
 	}
 

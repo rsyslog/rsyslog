@@ -48,6 +48,9 @@
  * -b   number of messages within a batch (default: 100,000,000 millions)
  * -Y	use multiple threads, one per connection (which means 1 if one only connection
  *  	is configured!)
+ * -z	private key file for TLS mode
+ * -Z	cert (public key) file for TLS mode
+ * -L	loglevel to use for GnuTLS troubleshooting (0-off to 10-all, 0 default)
  *
  * Part of the testbench for rsyslog.
  *
@@ -85,6 +88,12 @@
 #include <pthread.h>
 #include <sys/resource.h>
 #include <sys/time.h>
+#include <errno.h>
+#ifdef ENABLE_GNUTLS
+#	include <gnutls/gnutls.h>
+#	include <gcrypt.h>
+	GCRY_THREAD_OPTION_PTHREAD_IMPL;
+#endif
 
 #define EXIT_FAILURE 1
 #define INVALID_SOCKET -1
@@ -92,6 +101,7 @@
 #define NETTEST_INPUT_CONF_FILE "nettest.input.conf" /* name of input file, must match $IncludeConfig in .conf files */
 
 #define MAX_EXTRADATA_LEN 100*1024
+#define MAX_SENDBUF 2 * MAX_EXTRADATA_LEN
 
 static char *targetIP = "127.0.0.1";
 static char *msgPRI = "167";
@@ -122,6 +132,14 @@ static long long batchsize = 100000000ll;
 static int waittime = 0;
 static int runMultithreaded = 0; /* run tests in multithreaded mode */
 static int numThrds = 1;	/* number of threads to use */
+static char *tlsCertFile = NULL;
+static char *tlsKeyFile = NULL;
+static int tlsLogLevel = 0;
+
+#ifdef ENABLE_GNUTLS
+static gnutls_session_t *sessArray;	/* array of TLS sessions to use */
+static gnutls_certificate_credentials tlscred;
+#endif
 
 /* variables for managing multi-threaded operations */
 int runningThreads;		/* number of threads currently running */
@@ -151,7 +169,12 @@ struct runstats {
 static int udpsock;			/* socket for sending in UDP mode */
 static struct sockaddr_in udpRcvr;	/* remote receiver in UDP mode */
 
-static enum { TP_UDP, TP_TCP } transport = TP_TCP;
+static enum { TP_UDP, TP_TCP, TP_TLS } transport = TP_TCP;
+
+/* forward definitions */
+static void initTLSSess(int);
+static int sendTLS(int i, char *buf, int lenBuf);
+static void closeTLSSess(int __attribute__((unused)) i);
 
 /* prepare send subsystem for UDP send */
 static inline int
@@ -234,6 +257,9 @@ int openConnections(void)
 
 	if(bShowProgress)
 		write(1, "      open connections", sizeof("      open connections")-1);
+#	ifdef ENABLE_GNUTLS
+	sessArray = calloc(numConnections, sizeof(gnutls_session_t));
+#	endif
 	sockArray = calloc(numConnections, sizeof(int));
 	for(i = 0 ; i < numConnections ; ++i) {
 		if(i % 10 == 0) {
@@ -243,6 +269,9 @@ int openConnections(void)
 		if(openConn(&(sockArray[i])) != 0) {
 			printf("error in trying to open connection i=%d\n", i);
 			return 1;
+		}
+		if(transport == TP_TLS) {
+			initTLSSess(i);
 		}
 	}
 	if(bShowProgress) {
@@ -268,7 +297,7 @@ void closeConnections(void)
 	struct linger ling;
 	char msgBuf[128];
 
-	if(transport != TP_TCP)
+	if(transport == TP_UDP)
 		return;
 
 	if(bShowProgress)
@@ -287,6 +316,8 @@ void closeConnections(void)
 			ling.l_onoff = 1;
 			ling.l_linger = 1;
 			setsockopt(sockArray[i], SOL_SOCKET, SO_LINGER, &ling, sizeof(ling));
+			if(transport == TP_TLS)
+				closeTLSSess(i);
 			close(sockArray[i]);
 		}
 	}
@@ -346,11 +377,9 @@ genMsg(char *buf, size_t maxBuf, int *pLenBuf, struct instdata *inst)
 		/* use fixed message format from command line */
 		*pLenBuf = snprintf(buf, maxBuf, "%s\n", MsgToSend);
 	}
+	++inst->numSent;
 
-	if(inst->numSent++ >= inst->numMsgs)
-		*pLenBuf = 0; /* indicate end of run */
-
-finalize_it: ;
+finalize_it: /*EMPTY to keep the compiler happy */;
 }
 
 /* send messages to the tcp connections we keep open. We use
@@ -369,6 +398,8 @@ int sendMessages(struct instdata *inst)
 	int lenSend = 0;
 	char *statusText = "";
 	char buf[MAX_EXTRADATA_LEN + 1024];
+	char sendBuf[MAX_SENDBUF];
+	int offsSendBuf = 0;
 
 	if(!bSilent) {
 		if(dataFile == NULL) {
@@ -382,22 +413,20 @@ int sendMessages(struct instdata *inst)
 	}
 	if(bShowProgress)
 		printf("\r%8.8d %s sent", 0, statusText);
-	while(1) { /* broken inside loop! */
+	while(i < inst->numMsgs) {
 		if(runMultithreaded) {
 			socknum = inst->idx;
 		} else {
 			if(i < numConnections)
 				socknum = i;
-			else if(i >= inst->numMsgs - numConnections)
+			else if(i >= inst->numMsgs - numConnections) {
 				socknum = i - (inst->numMsgs - numConnections);
-			else {
+			} else {
 				int rnd = rand();
 				socknum = rnd % numConnections;
 			}
 		}
 		genMsg(buf, sizeof(buf), &lenBuf, inst); /* generate the message to send according to params */
-		if(lenBuf == 0)
-			break; /* end of processing! */
 		if(transport == TP_TCP) {
 			if(sockArray[socknum] == -1) {
 				/* connection was dropped, need to re-establish */
@@ -409,6 +438,17 @@ int sendMessages(struct instdata *inst)
 			lenSend = send(sockArray[socknum], buf, lenBuf, 0);
 		} else if(transport == TP_UDP) {
 			lenSend = sendto(udpsock, buf, lenBuf, 0, &udpRcvr, sizeof(udpRcvr));
+		} else if(transport == TP_TLS) {
+			if(offsSendBuf + lenBuf < MAX_SENDBUF) {
+				memcpy(sendBuf+offsSendBuf, buf, lenBuf);
+				offsSendBuf += lenBuf;
+				lenSend = lenBuf; /* simulate "good" call */
+			} else {
+				lenSend = sendTLS(socknum, sendBuf, offsSendBuf);
+				lenSend = (lenSend == offsSendBuf) ? lenBuf : -1;
+				memcpy(sendBuf, buf, lenBuf);
+				offsSendBuf = lenBuf;
+			}
 		}
 		if(lenSend != lenBuf) {
 			printf("\r%5.5d\n", i);
@@ -438,6 +478,10 @@ int sendMessages(struct instdata *inst)
 		}
 		++msgNum;
 		++i;
+	}
+	if(transport == TP_TLS && offsSendBuf != 0) {
+		/* send remaining buffer */
+		lenSend = sendTLS(socknum, sendBuf, offsSendBuf);
 	}
 	if(!bSilent)
 		printf("\r%8.8d %s sent\n", i, statusText);
@@ -643,6 +687,119 @@ runTests(void)
 	return 0;
 }
 
+#	if defined(ENABLE_GNUTLS)
+/* This defines a log function to be provided to GnuTLS. It hopefully
+ * helps us track down hard to find problems.
+ * rgerhards, 2008-06-20
+ */
+static void tlsLogFunction(int level, const char *msg)
+{
+	printf("GnuTLS (level %d): %s", level, msg);
+
+}
+
+
+/* global init GnuTLS
+ */
+static void
+initTLS(void)
+{
+	int r;
+
+	/* order of gcry_control and gnutls_global_init matters! */
+	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
+	gnutls_global_init();
+	/* set debug mode, if so required by the options */
+	if(tlsLogLevel > 0) {
+		gnutls_global_set_log_function(tlsLogFunction);
+		gnutls_global_set_log_level(tlsLogLevel);
+	}
+
+	r = gnutls_certificate_allocate_credentials(&tlscred);
+	if(r != GNUTLS_E_SUCCESS) {
+		printf("error allocating credentials\n");
+		gnutls_perror(r);
+		exit(1);
+	}
+	r = gnutls_certificate_set_x509_key_file(tlscred, tlsCertFile, tlsKeyFile, GNUTLS_X509_FMT_PEM);
+	if(r != GNUTLS_E_SUCCESS) {
+		printf("error setting certificate files -- have you mixed up key and certificate?\n");
+		printf("If in doubt, try swapping the files in -z/-Z\n");
+		printf("Certifcate is: '%s'\n", tlsCertFile);
+		printf("Key        is: '%s'\n", tlsKeyFile);
+		gnutls_perror(r);
+		r = gnutls_certificate_set_x509_key_file(tlscred, tlsKeyFile, tlsCertFile,
+							 GNUTLS_X509_FMT_PEM);
+		if(r == GNUTLS_E_SUCCESS) {
+			printf("Tried swapping files, this seems to work "
+			       "(but results may be unpredictable!)\n");
+		} else {
+			exit(1);
+		}
+	}
+}
+
+
+static void
+initTLSSess(int i)
+{
+	int r;
+	gnutls_init(sessArray + i, GNUTLS_CLIENT);
+
+	/* Use default priorities */
+	gnutls_set_default_priority(sessArray[i]);
+
+	/* put our credentials to the current session */
+	r = gnutls_credentials_set(sessArray[i], GNUTLS_CRD_CERTIFICATE, tlscred);
+	if(r != GNUTLS_E_SUCCESS) {
+		fprintf (stderr, "Setting credentials failed\n");
+		gnutls_perror(r);
+		exit(1);
+	}
+
+	/* NOTE: the following statement generates a cast warning, but there seems to
+	 * be no way around it with current GnuTLS. Do NOT try to "fix" the situation!
+	 */
+	gnutls_transport_set_ptr(sessArray[i], (gnutls_transport_ptr_t) sockArray[i]);
+
+	/* Perform the TLS handshake */
+	r = gnutls_handshake(sessArray[i]);
+	if(r < 0) {
+		fprintf (stderr, "TLS Handshake failed\n");
+		gnutls_perror(r);
+		exit(1);
+	}
+}
+
+static int
+sendTLS(int i, char *buf, int lenBuf)
+{
+	int lenSent;
+	int r;
+
+	lenSent = 0;
+	while(lenSent != lenBuf) {
+		r = gnutls_record_send(sessArray[i], buf + lenSent, lenBuf - lenSent);
+		if(r < 0)
+			break;
+		lenSent += r;
+	}
+
+	return lenSent;
+}
+
+static void
+closeTLSSess(int i)
+{
+	gnutls_bye(sessArray[i], GNUTLS_SHUT_RDWR);
+	gnutls_deinit(sessArray[i]);
+}
+#	else	/* NO TLS available */
+static void initTLS(void) {}
+static void initTLSSess(int __attribute__((unused)) i) {}
+static int sendTLS(int i, char *buf, int lenBuf) { return 0; }
+static void closeTLSSess(int __attribute__((unused)) i) {}
+#	endif
 
 /* Run the test.
  * rgerhards, 2009-04-03
@@ -666,7 +823,7 @@ int main(int argc, char *argv[])
 
 	setvbuf(stdout, buf, _IONBF, 48);
 	
-	while((opt = getopt(argc, argv, "b:ef:F:t:p:c:C:m:i:I:P:d:Dn:M:rsBR:S:T:XW:Y")) != -1) {
+	while((opt = getopt(argc, argv, "b:ef:F:t:p:c:C:m:i:I:P:d:Dn:L:M:rsBR:S:T:XW:Yz:Z:")) != -1) {
 		switch (opt) {
 		case 'b':	batchsize = atoll(optarg);
 				break;
@@ -701,6 +858,8 @@ int main(int argc, char *argv[])
 				break;
 		case 'F':	frameDelim = atoi(optarg);
 				break;
+		case 'L':	tlsLogLevel = atoi(optarg);
+				break;
 		case 'M':	MsgToSend = optarg;
 				break;
 		case 'I':	dataFile = optarg;
@@ -725,14 +884,25 @@ int main(int argc, char *argv[])
 					transport = TP_UDP;
 				} else if(!strcmp(optarg, "tcp")) {
 					transport = TP_TCP;
+				} else if(!strcmp(optarg, "tls")) {
+#					if defined(ENABLE_GNUTLS)
+						transport = TP_TLS;
+#					else
+						fprintf(stderr, "compiled without TLS support!\n", optarg);
+						exit(1);
+#					endif
 				} else {
-					fprintf(stderr, "unkonwn transport '%s'\n", optarg);
+					fprintf(stderr, "unknown transport '%s'\n", optarg);
 					exit(1);
 				}
 				break;
 		case 'W':	waittime = atoi(optarg);
 				break;
 		case 'Y':	runMultithreaded = 1;
+				break;
+		case 'z':	tlsKeyFile = optarg;
+				break;
+		case 'Z':	tlsCertFile = optarg;
 				break;
 		default:	printf("invalid option '%c' or value missing - terminating...\n", opt);
 				exit (1);
@@ -769,6 +939,10 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	if(transport == TP_TLS) {
+		initTLS();
+	}
+
 	if(openConnections() != 0) {
 		printf("error opening connections\n");
 		exit(1);
@@ -781,7 +955,7 @@ int main(int argc, char *argv[])
 
 	closeConnections(); /* this is important so that we do not finish too early! */
 
-	if(nConnDrops > 0)
+	if(nConnDrops > 0 && !bSilent)
 		printf("-D option initiated %ld connection closures\n", nConnDrops);
 
 	if(!bSilent)

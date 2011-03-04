@@ -71,13 +71,16 @@ addEvent(nsdpoll_ptcp_t *pThis, int id, void *pUsr, int mode, nsd_ptcp_t *pSock,
 	pNew->pUsr = pUsr;
 	pNew->pSock = pSock;
 	pNew->event.events = 0; /* TODO: at some time we should be able to use EPOLLET */
+	//pNew->event.events = EPOLLET;
 	if(mode & NSDPOLL_IN)
 		pNew->event.events |= EPOLLIN;
 	if(mode & NSDPOLL_OUT)
 		pNew->event.events |= EPOLLOUT;
 	pNew->event.data.u64 = (uint64) pNew;
+	pthread_mutex_lock(&pThis->mutEvtLst);
 	pNew->pNext = pThis->pRoot;
 	pThis->pRoot = pNew;
+	pthread_mutex_unlock(&pThis->mutEvtLst);
 	*pEvtLst = pNew;
 
 finalize_it:
@@ -94,6 +97,7 @@ unlinkEvent(nsdpoll_ptcp_t *pThis, int id, void *pUsr, nsdpoll_epollevt_lst_t **
 	nsdpoll_epollevt_lst_t *pPrev = NULL;
 	DEFiRet;
 
+	pthread_mutex_lock(&pThis->mutEvtLst);
 	pEvtLst = pThis->pRoot;
 	while(pEvtLst != NULL && !(pEvtLst->id == id && pEvtLst->pUsr == pUsr)) {
 		pPrev = pEvtLst;
@@ -111,6 +115,7 @@ unlinkEvent(nsdpoll_ptcp_t *pThis, int id, void *pUsr, nsdpoll_epollevt_lst_t **
 		pPrev->pNext = pEvtLst->pNext;
 
 finalize_it:
+	pthread_mutex_unlock(&pThis->mutEvtLst);
 	RETiRet;
 }
 
@@ -144,6 +149,7 @@ BEGINobjConstruct(nsdpoll_ptcp) /* be sure to specify the object type also in EN
 		DBGPRINTF("epoll_create1() could not create fd\n");
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
 	}
+	pthread_mutex_init(&pThis->mutEvtLst, NULL);
 finalize_it:
 ENDobjConstruct(nsdpoll_ptcp)
 
@@ -151,6 +157,9 @@ ENDobjConstruct(nsdpoll_ptcp)
 /* destructor for the nsdpoll_ptcp object */
 BEGINobjDestruct(nsdpoll_ptcp) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(nsdpoll_ptcp)
+	//printf("ndspoll_ptcp destruct, event list root is %p\n", pThis->pRoot);
+#warning cleanup event list is missing!  (at least I think so)
+	pthread_mutex_destroy(&pThis->mutEvtLst);
 ENDobjDestruct(nsdpoll_ptcp)
 
 

@@ -49,6 +49,7 @@ struct nsdpoll_ptcp_s {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
 	int efd;		/* file descriptor used by epoll */
 	nsdpoll_epollevt_lst_t *pRoot;	/* Root of the epoll event list */
+	pthread_mutex_t mutEvtLst;
 };
 
 /* interface is defined in nsd.h, we just implement it! */
