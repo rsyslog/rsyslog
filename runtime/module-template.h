@@ -77,6 +77,16 @@ static rsRetVal modGetType(eModType_t *modType) \
 	DEF_LMOD_STATIC_DATA \
 	MODULE_TYPE(eMOD_LIB)
 
+/* Macro to define whether the module should be kept dynamically linked. 
+ */
+#define MODULE_KEEP_TYPE(x)\
+static rsRetVal modGetKeepType(eModKeepType_t *modKeepType) \
+	{ \
+		*modKeepType = x; \
+		return RS_RET_OK;\
+	}
+#define MODULE_TYPE_NOKEEP MODULE_KEEP_TYPE(eMOD_NOKEEP)
+#define MODULE_TYPE_KEEP MODULE_KEEP_TYPE(eMOD_KEEP)
 
 /* macro to define a unique module id. This must be able to fit in a void*. The
  * module id must be unique inside a running rsyslogd application. It is used to
@@ -342,6 +352,8 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 		*pEtryPoint = modGetID;\
 	} else if(!strcmp((char*) name, "getType")) {\
 		*pEtryPoint = modGetType;\
+	} else if(!strcmp((char*) name, "getKeepType")) {\
+		*pEtryPoint = modGetKeepType;\
 	}
 
 /* the following definition is the standard block for queryEtryPt for output

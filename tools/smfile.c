@@ -46,6 +46,7 @@
 #include "unicode-helper.h"
 
 MODULE_TYPE_STRGEN
+MODULE_TYPE_NOKEEP
 STRGEN_NAME("RSYSLOG_FileFormat")
 
 /* internal structures

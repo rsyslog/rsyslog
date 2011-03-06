@@ -77,6 +77,9 @@ static pthread_mutex_t mutLoadUnload;
 static modInfo_t *pLoadedModules = NULL;	/* list of currently-loaded modules */
 static modInfo_t *pLoadedModulesLast = NULL;	/* tail-pointer */
 
+/* already dlopen()-ed libs */
+static struct dlhandle_s *pHandles = NULL;
+
 /* config settings */
 uchar	*pModDir = NULL; /* read-only after startup */
 
@@ -232,7 +235,9 @@ static void moduleDestruct(modInfo_t *pThis)
 #	ifdef	VALGRIND
 #		warning "dlclose disabled for valgrind"
 #	else
-		dlclose(pThis->pModHdlr);
+		if (pThis->eKeepType == eMOD_NOKEEP) {
+			dlclose(pThis->pModHdlr);
+		}
 #	endif
 	}
 
@@ -413,6 +418,8 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 	strgen_t *pStrgen; /* used for strgen modules */
 	rsRetVal (*GetName)(uchar**);
 	rsRetVal (*modGetType)(eModType_t *pType);
+	rsRetVal (*modGetKeepType)(eModKeepType_t *pKeepType);
+	struct dlhandle_s *pHandle = NULL;
 	DEFiRet;
 
 	assert(modInit != NULL);
@@ -433,6 +440,8 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 	 */
 	CHKiRet((*pNew->modQueryEtryPt)((uchar*)"getType", &modGetType));
 	CHKiRet((*modGetType)(&pNew->eType));
+	CHKiRet((*pNew->modQueryEtryPt)((uchar*)"getKeepType", &modGetKeepType));
+	CHKiRet((*modGetKeepType)(&pNew->eKeepType));
 	dbgprintf("module of type %d being loaded.\n", pNew->eType);
 	
 	/* OK, we know we can successfully work with the module. So we now fill the
@@ -529,10 +538,35 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 	pNew->pszName = (uchar*) strdup((char*)name); /* we do not care if strdup() fails, we can accept that */
 	pNew->pModHdlr = pModHdlr;
 	/* TODO: take this from module */
-	if(pModHdlr == NULL)
+	if(pModHdlr == NULL) {
 		pNew->eLinkType = eMOD_LINK_STATIC;
-	else
+	} else {
 		pNew->eLinkType = eMOD_LINK_DYNAMIC_LOADED;
+
+		/* if we need to keep the linked module, save it */
+		if (pNew->eKeepType == eMOD_KEEP) {
+			/* see if we have this one already */
+			for (pHandle = pHandles; pHandle; pHandle = pHandle->next) {
+				if (!strcmp((char *)name, (char *)pHandle->pszName))
+					break;
+			}
+
+			/* not found, create it */
+			if (!pHandle) {
+				if((pHandle = malloc(sizeof (*pHandle))) == NULL) {
+					ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+				}
+				if((pHandle->pszName = (uchar*) strdup((char*)name)) == NULL) {
+					free(pHandle);
+					ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+				}
+				pHandle->pModHdlr = pModHdlr;
+				pHandle->next = pHandles;
+
+				pHandles = pHandle;
+			}
+		}
+	}
 
 	/* we initialized the structure, now let's add it to the linked list of modules */
 	addModToList(pNew);
@@ -740,6 +774,7 @@ Load(uchar *pModName)
 	modInfo_t *pModInfo;
 	uchar *pModDirCurr, *pModDirNext;
 	int iLoadCnt;
+	struct dlhandle_s *pHandle = NULL;
 
 	assert(pModName != NULL);
 	dbgprintf("Requested to load module '%s'\n", pModName);
@@ -829,7 +864,20 @@ Load(uchar *pModName)
 
 		/* complete load path constructed, so ... GO! */
 		dbgprintf("loading module '%s'\n", szPath);
-		pModHdlr = dlopen((char *) szPath, RTLD_NOW);
+
+		/* see if we have this one already */
+		for (pHandle = pHandles; pHandle; pHandle = pHandle->next) {
+			if (!strcmp((char *)pModName, (char *)pHandle->pszName)) {
+				pModHdlr = pHandle->pModHdlr;
+				break;
+			}
+		}
+
+		/* not found, try to dynamically link it */
+		if (!pModHdlr) {
+			pModHdlr = dlopen((char *) szPath, RTLD_NOW);
+		}
+
 		iLoadCnt++;
 	
 	} while(pModHdlr == NULL && *pModName != '/' && pModDirNext);
