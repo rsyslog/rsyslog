@@ -56,6 +56,7 @@
 #include "unlimited_select.h"
 
 MODULE_TYPE_LIB
+MODULE_TYPE_NOKEEP
 
 /* static data */
 DEFobjStaticHelpers

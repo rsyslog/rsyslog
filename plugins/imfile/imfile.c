@@ -51,6 +51,7 @@
 #include "ruleset.h"
 
 MODULE_TYPE_INPUT	/* must be present for input modules, do not remove */
+MODULE_TYPE_NOKEEP
 
 /* defines */
 

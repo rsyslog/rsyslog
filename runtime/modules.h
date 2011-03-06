@@ -75,12 +75,26 @@ typedef enum eModLinkType_ {
 	eMOD_LINK_ALL			/* special: all linkage types, e.g. for unload */
 } eModLinkType_t;
 
+/* remember which shared libs we dlopen()-ed */
+struct dlhandle_s {
+	uchar	*pszName;
+	void	*pModHdlr;
+	struct	dlhandle_s *next;
+};
+
+/* should this module be kept linked? */
+typedef enum eModKeepType_ {
+	eMOD_NOKEEP,
+	eMOD_KEEP
+} eModKeepType_t;
+
 struct modInfo_s {
 	struct modInfo_s *pPrev;	/* support for creating a double linked module list */
 	struct modInfo_s *pNext;	/* support for creating a linked module list */
 	int		iIFVers;	/* Interface version of module */
 	eModType_t	eType;		/* type of this module */
 	eModLinkType_t	eLinkType;
+	eModKeepType_t	eKeepType;	/* keep the module dynamically linked on unload */
 	uchar*		pszName;	/* printable module name, e.g. for dbgprintf */
 	unsigned	uRefCnt;	/* reference count for this module; 0 -> may be unloaded */
 	/* functions supported by all types of modules */
