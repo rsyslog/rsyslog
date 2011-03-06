@@ -34,7 +34,12 @@ case $1 in
 		;;
    'startup')   # start rsyslogd with default params. $2 is the config file name to use
    		# returns only after successful startup, $3 is the instance (blank or 2!)
-		$valgrind ../tools/rsyslogd -c4 -u2 -n -irsyslog$3.pid -M../runtime/.libs:../.libs -f$srcdir/testsuites/$2 &
+		$valgrind ../tools/rsyslogd -c6 -u2 -n -irsyslog$3.pid -M../runtime/.libs:../.libs -f$srcdir/testsuites/$2 &
+   		$srcdir/diag.sh wait-startup $3
+		;;
+   'startup-vg') # start rsyslogd with default params under valgrind control. $2 is the config file name to use
+   		# returns only after successful startup, $3 is the instance (blank or 2!)
+		valgrind --error-exitcode=10 --malloc-fill=ff --free-fill=fe --leak-check=full ../tools/rsyslogd -c6 -u2 -n -irsyslog$3.pid -M../runtime/.libs:../.libs -f$srcdir/testsuites/$2 &
    		$srcdir/diag.sh wait-startup $3
 		;;
    'wait-startup') # wait for rsyslogd startup ($2 is the instance)
@@ -51,6 +56,18 @@ case $1 in
 		while test -f rsyslog$2.pid; do
 			./msleep 100 # wait 100 milliseconds
 		done
+		if [ -e core.* ]
+		then
+		   echo "ABORT! core file exists, starting interactive shell"
+		   bash
+		   exit 1
+		fi
+		;;
+   'wait-shutdown-vg')  # actually, we wait for rsyslog.pid to be deleted. $2 is the
+   		# instance
+		wait `cat rsyslog.pid`
+		export RSYSLOGD_EXIT=$?
+		echo rsyslogd run exited with $RSYSLOGD_EXIT
 		if [ -e core.* ]
 		then
 		   echo "ABORT! core file exists, starting interactive shell"
