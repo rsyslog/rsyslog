@@ -13,6 +13,7 @@ TESTS = $(TESTRUNS) cfg.sh \
 	rulesetmultiqueue.sh \
 	manytcp.sh \
 	rsf_getenv.sh \
+	tcp-msgreduc-vg.sh \
 	imtcp_conndrop.sh \
 	imtcp_addtlframedelim.sh \
 	sndrcv.sh \
@@ -210,6 +211,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/imtcp_conndrop.conf \
 	   imtcp_addtlframedelim.sh \
 	   testsuites/imtcp_addtlframedelim.conf \
+	   tcp-msgreduc-vg.sh \
+	   testsuites/./tcp-msgreduc-vg.conf \
 	   inputname.sh \
 	   testsuites/inputname_imtcp.conf \
 	   testsuites/1.inputname_imtcp_12514 \
