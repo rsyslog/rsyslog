@@ -41,6 +41,7 @@
 #include "unicode-helper.h"
 
 MODULE_TYPE_PARSER
+MODULE_TYPE_NOKEEP
 PARSER_NAME("rsyslog.cisconames")
 
 /* internal structures
