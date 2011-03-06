@@ -292,6 +292,7 @@ OnMsgReceived(tcps_sess_t *pSess, uchar *pRcv, int iLenMsg)
 {
 	int iMsgQueueSize;
 	uchar *pszMsg;
+	uchar *pToFree = NULL;
 	uchar cmdBuf[1024];
 	DEFiRet;
 
@@ -303,6 +304,7 @@ OnMsgReceived(tcps_sess_t *pSess, uchar *pRcv, int iLenMsg)
 	 * before proceeding.
 	 */
 	CHKmalloc(pszMsg = MALLOC(sizeof(uchar) * (iLenMsg + 1)));
+	pToFree = pszMsg;
 	memcpy(pszMsg, pRcv, iLenMsg);
 	pszMsg[iLenMsg] = '\0';
 
@@ -322,6 +324,8 @@ OnMsgReceived(tcps_sess_t *pSess, uchar *pRcv, int iLenMsg)
 	}
 
 finalize_it:
+	if(pToFree != NULL)
+		free(pToFree);
 	RETiRet;
 }
 
