@@ -1,8 +1,0 @@
-[Unit]
-Description=Syslog Socket
-
-[Socket]
-ListenDatagram=/dev/log
-
-[Install]
-WantedBy=sockets.target
