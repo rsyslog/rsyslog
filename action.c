@@ -1481,7 +1481,8 @@ helperSubmitToActionQComplexBatch(action_t *pAction, batch_t *pBatch)
 
 	DBGPRINTF("Called action(complex case), logging to %s\n", module.GetStateName(pAction->pMod));
 	for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pBatch->pbShutdownImmediate) ; ++i) {
-		if(pBatch->pElem[i].bFilterOK) {
+		if(   pBatch->pElem[i].bFilterOK
+                   && pBatch->pElem[i].state != BATCH_STATE_DISC) {
 			doActionCallAction(pAction, (msg_t*)(pBatch->pElem[i].pUsrp));
 		}
 	}
