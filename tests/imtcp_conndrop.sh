@@ -6,7 +6,7 @@ echo ===========================================================================
 echo TEST: \[imtcp_conndrop.sh\]: test imtcp with random connection drops
 cat rsyslog.action.1.include
 source $srcdir/diag.sh init
-source $srcdir/diag.sh startup imptcp_large.conf
+source $srcdir/diag.sh startup imtcp_conndrop.conf
 # 100 byte messages to gain more practical data use
 source $srcdir/diag.sh tcpflood -c20 -m50000 -r -d100 -P129 -D
 sleep 4 # due to large messages, we need this time for the tcp receiver to settle...
