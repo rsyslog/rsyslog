@@ -46,6 +46,8 @@ TESTS = $(TESTRUNS) cfg.sh \
 	pipe_noreader.sh \
 	dircreate_dflt.sh \
 	dircreate_off.sh \
+	discard-rptdmsg.sh \
+	discard.sh \
 	queue-persist.sh 
 
 if ENABLE_IMPTCP
@@ -68,7 +70,6 @@ TESTS += omod-if-array.sh \
 	 inputname.sh \
 	 threadingmq.sh \
 	 threadingmqaq.sh \
-	 discard.sh \
 	 badqi.sh \
 	 tabescape_dflt.sh \
 	 tabescape_off.sh \
@@ -212,6 +213,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   omod-if-array.sh \
 	   discard.sh \
 	   testsuites/discard.conf \
+	   discard-rptdmsg.sh \
+	   testsuites/discard-rptdmsg.conf \
 	   diag.sh \
 	   testsuites/diag-common.conf \
 	   testsuites/diag-common2.conf \
