@@ -49,6 +49,7 @@ TESTS = $(TESTRUNS) cfg.sh \
 	imuxsock_traillf_root.sh \
 	imuxsock_ccmiddle_root.sh \
 	discard-rptdmsg.sh \
+	discard-rptdmsg-vg.sh \
 	discard.sh \
 	queue-persist.sh 
 
@@ -223,6 +224,7 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   discard.sh \
 	   testsuites/discard.conf \
 	   discard-rptdmsg.sh \
+	   discard-rptdmsg-vg.sh \
 	   testsuites/discard-rptdmsg.conf \
 	   diag.sh \
 	   testsuites/diag-common.conf \

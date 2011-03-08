@@ -75,6 +75,13 @@ case $1 in
 		   exit 1
 		fi
 		;;
+   'check-exit-vg') # wait for main message queue to be empty. $2 is the instance.
+		if [ "$RSYSLOGD_EXIT" -eq "10" ]
+		then
+			echo "valgrind run FAILED with exceptions - terminating"
+			exit 1
+		fi
+		;;
    'wait-queueempty') # wait for main message queue to be empty. $2 is the instance.
 		if [ "$2" == "2" ]
 		then
