@@ -1,4 +1,12 @@
 ---------------------------------------------------------------------------
+Version 5.6.5  [V5-STABLE] (rgerhards), 2011-03-??
+- bugfix(kind of): tell users that config graph can currently not be
+  generated
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=232
+- bugfix: discard action did not work under some circumstances
+  fixes: http://bugzilla.adiscon.com/show_bug.cgi?id=217
+  (backport from 5.7.8)
+---------------------------------------------------------------------------
 Version 5.6.4  [V5-STABLE] (rgerhards), 2011-03-03
 - bugfix: potential abort condition when $RepeatedMsgReduction set to on
   as well as potentially in a number of other places where MsgDup() was

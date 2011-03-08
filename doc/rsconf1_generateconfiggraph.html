@@ -8,8 +8,14 @@
 <h2>$GenerateConfigGraph</h2>
 <p><b>Type:</b> global configuration directive</p>
 <p><b>Default:</b> </p>
-<p><b>Available Since:</b> 4.3.1</p>
+<p><b>Available Since:</b> 4.3.1 <b>CURRENTLY NOT AVAILABLE</b></p>
 <p><b>Description:</b></p>
+<b>This directive is currently not supported. We had to disable it when we improved the
+rule engine. It is considerable effort to re-enable it. On the other hand, we are about
+to add a new config system, which will make yet another config graph method necessary.
+As such we have decided to currently disable this functionality and re-introduce it when
+the new config system has been instantiated.
+</b></p>
 <p>This directive permits to create (hopefully) good-looking visualizations of rsyslogd's
 configuration. It does not affect rsyslog operation. If the directive is specified multiple
 times, all but the last are ignored. If it is specified, a graph is created. This happens
