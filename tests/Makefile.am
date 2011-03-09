@@ -51,6 +51,7 @@ TESTS +=  \
 	imuxsock_traillf_root.sh \
 	imuxsock_ccmiddle_root.sh \
 	discard-rptdmsg.sh \
+	discard-allmark.sh \
 	discard.sh \
 	queue-persist.sh \
 	arrayqueue.sh \
@@ -60,7 +61,19 @@ endif
 if HAVE_VALGRIND
 TESTS +=  \
 	discard-rptdmsg-vg.sh \
+	discard-allmark-vg.sh \
 	tcp-msgreduc-vg.sh
+endif
+
+if ENABLE_MYSQL_TESTS
+TESTS +=  \
+	mysql-basic.sh \
+	mysql-asyn.sh 
+if HAVE_VALGRIND
+TESTS +=  \
+	mysql-basic-vg.sh \
+	mysql-asyn-vg.sh 
+endif
 endif
 
 if ENABLE_IMPTCP
@@ -236,6 +249,9 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   discard-rptdmsg.sh \
 	   discard-rptdmsg-vg.sh \
 	   testsuites/discard-rptdmsg.conf \
+	   discard-allmark.sh \
+	   discard-allmark-vg.sh \
+	   testsuites/discard-allmark.conf \
 	   diag.sh \
 	   testsuites/diag-common.conf \
 	   testsuites/diag-common2.conf \
@@ -349,6 +365,14 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   imuxsock_ccmiddle_root.sh \
 	   testsuites/imuxsock_ccmiddle_root.conf \
 	   resultdata/imuxsock_ccmiddle.log \
+	   testsuites\mysql-truncate.sql \
+	   testsuites\mysql-select-msg.sql \
+	   mysql-basic.sh \
+	   mysql-basic-vg.sh \
+	   testsuites\mysql-basic.sh \
+	   mysql-asyn.sh \
+	   mysql-asyn-vg.sh \
+	   testsuites\mysql-asyn.sh \
 	   cfg.sh
 
 ourtail_SOURCES = ourtail.c
