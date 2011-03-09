@@ -13,7 +13,6 @@ TESTS = $(TESTRUNS) cfg.sh \
 	rulesetmultiqueue.sh \
 	manytcp.sh \
 	rsf_getenv.sh \
-	tcp-msgreduc-vg.sh \
 	imtcp_conndrop.sh \
 	imtcp_addtlframedelim.sh \
 	sndrcv.sh \
@@ -49,9 +48,14 @@ TESTS = $(TESTRUNS) cfg.sh \
 	imuxsock_traillf_root.sh \
 	imuxsock_ccmiddle_root.sh \
 	discard-rptdmsg.sh \
-	discard-rptdmsg-vg.sh \
 	discard.sh \
 	queue-persist.sh 
+
+if HAVE_VALGRIND
+TESTS +=  \
+	discard-rptdmsg-vg.sh \
+	tcp-msgreduc-vg.sh
+endif
 
 if ENABLE_IMPTCP
 TESTS +=  \

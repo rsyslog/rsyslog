@@ -13,6 +13,10 @@ AC_CONFIG_HEADERS([config.h])
 
 AC_GNU_SOURCE
 
+# check if valgrind is present
+AC_CHECK_PROG(have_valgrind, [valgrind], [yes])
+AM_CONDITIONAL(HAVE_VALGRIND, test x$have_valgrind = xyes)
+
 # check for Java compiler
 AC_CHECK_PROG(HAVE_JAVAC, [javac], [yes])
 if test x"$HAVE_JAVAC" = x""; then
