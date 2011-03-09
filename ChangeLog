@@ -1,5 +1,9 @@
 ---------------------------------------------------------------------------
-Version 5.7.9  [V5-BETA] (rgerhards), 2011-03-??
+Version 5.9.0  [V5-BETA] (rgerhards), 2011-03-??
+- this begins a new devel branch for v5
+- enhanced omhdfs to support batching mode. This permits to increase
+  performance, as we now call the HDFS API with much larger message
+  sizes and far more infrequently
 - bugfix: (regression) omhdfs did no longer compile
 ---------------------------------------------------------------------------
 Version 5.7.8  [V5-BETA] (rgerhards), 2011-03-09
