@@ -65,6 +65,17 @@ TESTS +=  \
 	tcp-msgreduc-vg.sh
 endif
 
+if ENABLE_MYSQL_TESTS
+TESTS +=  \
+	mysql-basic.sh \
+	mysql-asyn.sh 
+if HAVE_VALGRIND
+TESTS +=  \
+	mysql-basic-vg.sh \
+	mysql-asyn-vg.sh 
+endif
+endif
+
 if ENABLE_IMPTCP
 TESTS +=  \
 	manyptcp.sh \
@@ -354,6 +365,14 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   imuxsock_ccmiddle_root.sh \
 	   testsuites/imuxsock_ccmiddle_root.conf \
 	   resultdata/imuxsock_ccmiddle.log \
+	   testsuites\mysql-truncate.sql \
+	   testsuites\mysql-select-msg.sql \
+	   mysql-basic.sh \
+	   mysql-basic-vg.sh \
+	   testsuites\mysql-basic.sh \
+	   mysql-asyn.sh \
+	   mysql-asyn-vg.sh \
+	   testsuites\mysql-asyn.sh \
 	   cfg.sh
 
 ourtail_SOURCES = ourtail.c

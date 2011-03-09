@@ -12,5 +12,5 @@ source $srcdir/diag.sh wait-startup
 ./msleep 1500
 source $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
 source $srcdir/diag.sh wait-shutdown-vg
-source $srcdir/diag.sh wait-shutdown-vg
+source $srcdir/diag.sh check-exit-vg
 source $srcdir/diag.sh exit
