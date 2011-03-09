@@ -365,14 +365,14 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   imuxsock_ccmiddle_root.sh \
 	   testsuites/imuxsock_ccmiddle_root.conf \
 	   resultdata/imuxsock_ccmiddle.log \
-	   testsuites\mysql-truncate.sql \
-	   testsuites\mysql-select-msg.sql \
+	   testsuites/mysql-truncate.sql \
+	   testsuites/mysql-select-msg.sql \
 	   mysql-basic.sh \
 	   mysql-basic-vg.sh \
-	   testsuites\mysql-basic.sh \
+	   testsuites/mysql-basic.conf \
 	   mysql-asyn.sh \
 	   mysql-asyn-vg.sh \
-	   testsuites\mysql-asyn.sh \
+	   testsuites/mysql-asyn.conf \
 	   cfg.sh
 
 ourtail_SOURCES = ourtail.c
