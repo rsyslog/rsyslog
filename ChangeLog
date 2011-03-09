@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------
-Version 5.7.8  [V5-BETA] (rgerhards), 2011-03-??
+Version 5.7.8  [V5-BETA] (rgerhards), 2011-03-09
+- systemd support somewhat improved (can now take over existing log sockt)
 - bugfix: discard action did not work under some circumstances
   fixes: http://bugzilla.adiscon.com/show_bug.cgi?id=217
 - bugfix: file descriptor leak in gnutls netstream driver
