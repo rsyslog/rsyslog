@@ -1,7 +1,10 @@
 if ENABLE_TESTBENCH
 TESTRUNS = rt_init rscript
 check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq msleep randomgen diagtalker uxsockrcvr syslog_caller syslog_inject
-TESTS = $(TESTRUNS) cfg.sh \
+TESTS = $(TESTRUNS) cfg.sh
+
+if ENABLE_IMDIAG
+TESTS +=  \
 	arrayqueue.sh \
 	linkedlistqueue.sh \
 	da-mainmsg-q.sh \
@@ -49,7 +52,10 @@ TESTS = $(TESTRUNS) cfg.sh \
 	imuxsock_ccmiddle_root.sh \
 	discard-rptdmsg.sh \
 	discard.sh \
-	queue-persist.sh 
+	queue-persist.sh \
+	arrayqueue.sh \
+	linkedlistqueue.sh
+endif
 
 if HAVE_VALGRIND
 TESTS +=  \
@@ -89,8 +95,10 @@ TESTS += omod-if-array.sh \
 endif
 
 if ENABLE_OMRULESET
+if ENABLE_IMDIAG
 TESTS += omruleset.sh \
 	 omruleset-queue.sh
+endif
 endif
 
 if ENABLE_EXTENDED_TESTS
@@ -193,9 +201,7 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/rsf_getenv.conf \
 	   diskqueue.sh \
 	   testsuites/diskqueue.conf \
-	   arrayqueue.sh \
 	   testsuites/arrayqueue.conf \
-	   linkedlistqueue.sh \
 	   testsuites/linkedlistqueue.conf \
 	   da-mainmsg-q.sh \
 	   testsuites/da-mainmsg-q.conf \
