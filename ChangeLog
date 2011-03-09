@@ -4,6 +4,8 @@ Version 5.7.9  [V5-BETA] (rgerhards), 2011-03-??
   among others, life tests for ommysql (against a test database) have
   been added, valgrind-based testing enhanced, ...
 - bugfix: (regression) omhdfs did no longer compile
+- bugfix: omlibdbi did not use password from rsyslog.con
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=203
 ---------------------------------------------------------------------------
 Version 5.7.8  [V5-BETA] (rgerhards), 2011-03-09
 - systemd support somewhat improved (can now take over existing log sockt)
