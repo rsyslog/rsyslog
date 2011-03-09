@@ -2,9 +2,10 @@
 Description=System Logging Service
 
 [Service]
+ExecStartPre=/bin/systemctl stop systemd-kmsg-syslogd.service
 ExecStart=@sbindir@/rsyslogd -n -c5
 ExecReload=/bin/kill -HUP $MAINPID
+Sockets=syslog.socket
 
 [Install]
 WantedBy=multi-user.target
-Also=rsyslog.socket
