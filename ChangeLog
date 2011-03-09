@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 5.6.5  [V5-STABLE] (rgerhards), 2011-03-??
+- bugfix: omlibdbi did not use password from rsyslog.con
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=203
 - bugfix(kind of): tell users that config graph can currently not be
   generated
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=232
