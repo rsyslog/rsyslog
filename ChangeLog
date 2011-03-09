@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------
 Version 5.7.9  [V5-BETA] (rgerhards), 2011-03-??
+- improved testbench
 - bugfix: (regression) omhdfs did no longer compile
 ---------------------------------------------------------------------------
 Version 5.7.8  [V5-BETA] (rgerhards), 2011-03-09

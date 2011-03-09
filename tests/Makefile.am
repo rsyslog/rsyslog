@@ -51,6 +51,7 @@ TESTS +=  \
 	imuxsock_traillf_root.sh \
 	imuxsock_ccmiddle_root.sh \
 	discard-rptdmsg.sh \
+	discard-allmark.sh \
 	discard.sh \
 	queue-persist.sh \
 	arrayqueue.sh \
@@ -60,6 +61,7 @@ endif
 if HAVE_VALGRIND
 TESTS +=  \
 	discard-rptdmsg-vg.sh \
+	discard-allmark-vg.sh \
 	tcp-msgreduc-vg.sh
 endif
 
@@ -236,6 +238,9 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   discard-rptdmsg.sh \
 	   discard-rptdmsg-vg.sh \
 	   testsuites/discard-rptdmsg.conf \
+	   discard-allmark.sh \
+	   discard-allmark-vg.sh \
+	   testsuites/discard-allmark.conf \
 	   diag.sh \
 	   testsuites/diag-common.conf \
 	   testsuites/diag-common2.conf \
