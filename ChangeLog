@@ -23,6 +23,8 @@ Version 4.6.6  [v4-stable] (rgerhards), 2010-11-??
 - bugfix: abort if imfile reads file line of more than 64KiB
   Thanks to Peter Eisentraut for reporting and analysing this problem.
   bug tracker: http://bugzilla.adiscon.com/show_bug.cgi?id=221
+- bugfix: omlibdbi did not use password from rsyslog.con
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=203
 - some improvements thanks to clang's static code analyzer
   o overall cleanup (mostly unnecessary writes and otherwise unused stuff)
   o bugfix: fixed a very remote problem in msg.c which could occur when
