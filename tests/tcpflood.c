@@ -62,6 +62,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <netinet/in.h>
+#include <sys/resource.h>
 
 #define EXIT_FAILURE 1
 #define INVALID_SOCKET -1
@@ -377,6 +378,7 @@ int main(int argc, char *argv[])
 	int ret = 0;
 	int opt;
 	struct sigaction sigAct;
+	struct rlimit maxFiles;
 	static char buf[1024];
 
 	srand(time(NULL));	/* seed is good enough for our needs */
@@ -436,6 +438,18 @@ int main(int argc, char *argv[])
 		default:	printf("invalid option '%c' or value missing - terminating...\n", opt);
 				exit (1);
 				break;
+		}
+	}
+
+	if(numConnections > 100) {
+		maxFiles.rlim_cur = numConnections + 50;
+		maxFiles.rlim_max = numConnections + 50;
+		if(setrlimit(RLIMIT_NOFILE, &maxFiles) < 0) {
+			perror("set number of open files");
+			fprintf(stderr,
+			        "could net set sufficiently large number of "
+			        "open files for required connection count!\n");
+			exit(1);
 		}
 	}
 
