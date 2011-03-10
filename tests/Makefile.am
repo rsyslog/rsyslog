@@ -6,7 +6,6 @@ TESTS = $(TESTRUNS) cfg.sh
 if ENABLE_IMDIAG
 TESTS +=  \
 	arrayqueue.sh \
-	linkedlistqueue.sh \
 	da-mainmsg-q.sh \
 	validation-run.sh \
 	imtcp-multiport.sh \
@@ -54,7 +53,6 @@ TESTS +=  \
 	discard-allmark.sh \
 	discard.sh \
 	queue-persist.sh \
-	arrayqueue.sh \
 	linkedlistqueue.sh
 endif
 
@@ -214,7 +212,9 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/rsf_getenv.conf \
 	   diskqueue.sh \
 	   testsuites/diskqueue.conf \
+	   arrayqueue.sh \
 	   testsuites/arrayqueue.conf \
+	   linkedlistqueue.sh \
 	   testsuites/linkedlistqueue.conf \
 	   da-mainmsg-q.sh \
 	   testsuites/da-mainmsg-q.conf \
