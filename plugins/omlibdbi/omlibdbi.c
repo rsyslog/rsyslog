@@ -108,6 +108,11 @@ static void closeConn(instanceData *pData)
 BEGINfreeInstance
 CODESTARTfreeInstance
 	closeConn(pData);
+	free(pData->drvrName);
+	free(pData->host);
+	free(pData->usrName);
+	free(pData->pwd);
+	free(pData->dbName);
 ENDfreeInstance
 
 
@@ -171,7 +176,8 @@ static rsRetVal initConn(instanceData *pData, int bSilent)
 			errmsg.LogError(0, RS_RET_SUSPENDED, "libdbi error: libdbi or libdbi drivers not present on this system - suspending.");
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
 		} else if(iDrvrsLoaded < 0) {
-			errmsg.LogError(0, RS_RET_SUSPENDED, "libdbi error: libdbi could not be initialized - suspending.");
+			errmsg.LogError(0, RS_RET_SUSPENDED, "libdbi error: libdbi could not be "
+				"initialized (do you have any dbi drivers installed?) - suspending.");
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
 		}
 		bDbiInitialized = 1; /* we are done for the rest of our existence... */
@@ -367,6 +373,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionlibdbipassword", 0, eCmdHdlrGetWord, NULL, &pwd, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionlibdbidbname", 0, eCmdHdlrGetWord, NULL, &dbName, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
+	DBGPRINTF("omlibdbi compiled with version %s loaded, libdbi version %s\n", VERSION, dbi_version());
 ENDmodInit
 
 /* vim:set ai:

@@ -63,16 +63,23 @@ TESTS +=  \
 	tcp-msgreduc-vg.sh
 endif
 
+
 if ENABLE_MYSQL_TESTS
 TESTS +=  \
 	mysql-basic.sh \
 	mysql-asyn.sh 
+if ENABLE_OMLIBDBI
+TESTS +=  \
+	libdbi-basic.sh \
+	libdbi-asyn.sh
+endif
 if HAVE_VALGRIND
 TESTS +=  \
 	mysql-basic-vg.sh \
 	mysql-asyn-vg.sh 
 endif
 endif
+
 
 if ENABLE_IMPTCP
 TESTS +=  \
@@ -367,6 +374,10 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   resultdata/imuxsock_ccmiddle.log \
 	   testsuites/mysql-truncate.sql \
 	   testsuites/mysql-select-msg.sql \
+	   libdbi-basic.sh \
+	   testsuites/libdbi-basic.conf \
+	   libdbi-asyn.sh \
+	   testsuites/libdbi-asyn.conf \
 	   mysql-basic.sh \
 	   mysql-basic-vg.sh \
 	   testsuites/mysql-basic.conf \
