@@ -5,9 +5,6 @@
 echo ===============================================================================
 echo TEST: \[random.sh\]: testing random data
 source $srcdir/diag.sh init
-# uncomment for debugging support:
-#export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
-#export RSYSLOG_DEBUGLOG="log"
 source $srcdir/diag.sh startup random.conf
 # generate random data
 ./randomgen -f rsyslog.random.data -s 100000
@@ -17,4 +14,5 @@ source $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done proces
 source $srcdir/diag.sh wait-shutdown       # and wait for it to terminate
 # we do not check anything yet, the point is if rsyslog survived ;)
 # TODO: check for exit message, but we'll notice an abort anyhow, so not that important
+rm -f random.data
 source $srcdir/diag.sh exit
