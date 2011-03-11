@@ -1,6 +1,6 @@
 if ENABLE_TESTBENCH
 TESTRUNS = rt_init rscript
-check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq msleep randomgen diagtalker uxsockrcvr syslog_caller syslog_inject
+check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq msleep randomgen diagtalker uxsockrcvr syslog_caller syslog_inject inputfilegen
 TESTS = $(TESTRUNS) cfg.sh
 
 if ENABLE_IMDIAG
@@ -129,6 +129,13 @@ endif
 
 if ENABLE_EXTENDED_TESTS
 TESTS += random.sh 
+endif
+
+if ENABLE_IMFILE
+TESTS += imfile-basic.sh
+if HAVE_VALGRIND
+TESTS += imfile-basic-vg.sh
+endif
 endif
 
 endif # if ENABLE_TESTBENCH
@@ -336,6 +343,9 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/complex1.conf \
 	   random.sh \
 	   testsuites/random.conf \
+	   imfile-basic.sh \
+	   imfile-basic-vg.sh \
+	   testsuites/imfile-basic.conf \
 	   dynfile_invld_async.sh \
 	   dynfile_invld_sync.sh \
 	   dynfile_cachemiss.sh \
@@ -425,6 +435,9 @@ diagtalker_LDADD = $(SOL_LIBS)
 
 randomgen_SOURCES = randomgen.c
 randomgen_LDADD = $(SOL_LIBS)
+
+inputfilegen_SOURCES = inputfilegen.c
+inputfilegen_LDADD = $(SOL_LIBS)
 
 nettester_SOURCES = nettester.c getline.c
 nettester_LDADD = $(SOL_LIBS)
