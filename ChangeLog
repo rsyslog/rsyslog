@@ -1,4 +1,18 @@
 ---------------------------------------------------------------------------
+Version 6.1.6  [DEVEL] (rgerhards), 2011-03-??
+- improved testbench
+  among others, life tests for ommysql (against a test database) have
+  been added, valgrind-based testing enhanced, ...
+- bugfix: minor memory leak in omlibdbi (< 1k per instance and run)
+- bugfix: (regression) omhdfs did no longer compile
+- bugfix: omlibdbi did not use password from rsyslog.con
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=203
+- systemd support somewhat improved (can now take over existing log sockt)
+- bugfix: discard action did not work under some circumstances
+  fixes: http://bugzilla.adiscon.com/show_bug.cgi?id=217
+- bugfix: file descriptor leak in gnutls netstream driver
+  fixes: http://bugzilla.adiscon.com/show_bug.cgi?id=222
+---------------------------------------------------------------------------
 Version 6.1.5  [DEVEL] (rgerhards), 2011-03-04
 - improved testbench
 - enhanced imtcp to use a pool of worker threads to process incoming
@@ -22,7 +36,6 @@ Version 6.1.5  [DEVEL] (rgerhards), 2011-03-04
   this was a strange problem that could lead to hard to diagnose 
   instability. So if you experience instability, chances are good that
   this fix will help.
-- imported bugfixes and enhancements from 5.7.8
 ---------------------------------------------------------------------------
 Version 6.1.4  [DEVEL] (rgerhards), 2011-02-18
 - bugfix/omhdfs: directive $OMHDFSFileName rendered unusable 
