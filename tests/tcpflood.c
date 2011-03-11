@@ -355,6 +355,7 @@ int main(int argc, char *argv[])
 	int ret = 0;
 	int opt;
 	struct sigaction sigAct;
+	struct rlimit maxFiles;
 	static char buf[1024];
 
 	srand(time(NULL));	/* seed is good enough for our needs */
@@ -431,6 +432,9 @@ int main(int argc, char *argv[])
 		maxFiles.rlim_max = numConnections + 20;
 		if(setrlimit(RLIMIT_NOFILE, &maxFiles) < 0) {
 			perror("setrlimit to increase file handles failed");
+			fprintf(stderr,
+			        "could net set sufficiently large number of "
+			        "open files for required connection count!\n");
 			exit(1);
 		}
 	}
