@@ -86,6 +86,8 @@ typedef struct {
 
 typedef struct _instanceData {
 	file_t *pFile;
+	uchar ioBuf[64*1024];
+	unsigned offsBuf;
 } instanceData;
 
 /* forward definitions (down here, need data types) */
@@ -266,7 +268,8 @@ fileOpen(file_t *pFile)
 		if(errno == ENOENT) {
 			DBGPRINTF("omhdfs: ENOENT trying to append to '%s', now trying create\n",
 				  pFile->name);
-		 	pFile->fh = hdfsOpenFile(pFile->fs, (char*)pFile->name, O_WRONLY|O_CREAT, 0, 0, 0);
+		 	pFile->fh = hdfsOpenFile(pFile->fs,
+						 (char*)pFile->name, O_WRONLY|O_CREAT, 0, 0, 0);
 		}
 	}
 	if(pFile->fh == NULL) {
@@ -281,11 +284,14 @@ finalize_it:
 }
 
 
+/* Note: lenWrite is reset to zero on successful write! */
 static inline rsRetVal
-fileWrite(file_t *pFile, uchar *buf)
+fileWrite(file_t *pFile, uchar *buf, size_t *lenWrite)
 {
-	size_t lenWrite;
 	DEFiRet;
+
+	if(*lenWrite == 0)
+		FINALIZE;
 
 	if(pFile->nUsers > 1)
 		d_pthread_mutex_lock(&pFile->mut);
@@ -300,18 +306,18 @@ fileWrite(file_t *pFile, uchar *buf)
 		}
 	}
 
-	lenWrite = strlen((char*) buf);
-	tSize num_written_bytes = hdfsWrite(pFile->fs, pFile->fh, buf, lenWrite);
-	if((unsigned) num_written_bytes != lenWrite) {
-		errmsg.LogError(errno, RS_RET_ERR_HDFS_WRITE, "omhdfs: failed to write %s, expected %lu bytes, "
-			        "written %lu\n", pFile->name, (unsigned long) lenWrite,
+dbgprintf("XXXXX: omhdfs writing %u bytes\n", *lenWrite);
+	tSize num_written_bytes = hdfsWrite(pFile->fs, pFile->fh, buf, *lenWrite);
+	if((unsigned) num_written_bytes != *lenWrite) {
+		errmsg.LogError(errno, RS_RET_ERR_HDFS_WRITE,
+			        "omhdfs: failed to write %s, expected %lu bytes, "
+			        "written %lu\n", pFile->name, (unsigned long) *lenWrite,
 				(unsigned long) num_written_bytes);
 		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
+	*lenWrite = 0;
 
 finalize_it:
-	if(pFile->nUsers > 1)
-		d_pthread_mutex_unlock(&pFile->mut);
 	RETiRet;
 }
 
@@ -339,6 +345,40 @@ finalize_it:
 
 /* ---END FILE OBJECT---------------------------------------------------- */
 
+/* This adds data to the output buffer and performs an actual write
+ * if the new data does not fit into the buffer. Note that we never write
+ * partial data records. Other actions may write into the same file, and if
+ * we would write partial records, data could become severely mixed up.
+ * Note that we must check of some new data arrived is large than our
+ * buffer. In that case, the new data will written with its own
+ * write operation.
+ */
+static inline rsRetVal
+addData(instanceData *pData, uchar *buf)
+{
+	unsigned len;
+	DEFiRet;
+
+	len = strlen((char*)buf);
+	if(pData->offsBuf + len < sizeof(pData->ioBuf)) {
+		/* new data fits into remaining buffer */
+		memcpy((char*) pData->ioBuf + pData->offsBuf, buf, len);
+		pData->offsBuf += len;
+	} else {
+dbgprintf("XXXXX: not enough room, need to flush\n");
+		CHKiRet(fileWrite(pData->pFile, pData->ioBuf, &pData->offsBuf));
+		if(len >= sizeof(pData->ioBuf)) {
+			CHKiRet(fileWrite(pData->pFile, buf, &len));
+		} else {
+			memcpy((char*) pData->ioBuf + pData->offsBuf, buf, len);
+			pData->offsBuf += len;
+		}
+	}
+
+	iRet = RS_RET_DEFER_COMMIT;
+finalize_it:
+	RETiRet;
+}
 
 BEGINcreateInstance
 CODESTARTcreateInstance
@@ -364,11 +404,29 @@ CODESTARTtryResume
 	}
 ENDtryResume
 
+
+BEGINbeginTransaction
+CODESTARTbeginTransaction
+dbgprintf("omhdfs: beginTransaction\n");
+ENDbeginTransaction
+
+
 BEGINdoAction
 CODESTARTdoAction
-	DBGPRINTF("omuxsock: action to to write to %s\n", pData->pFile->name);
-	iRet = fileWrite(pData->pFile, ppString[0]);
+	DBGPRINTF("omhdfs: action to to write to %s\n", pData->pFile->name);
+	iRet = addData(pData, ppString[0]);
+dbgprintf("omhdfs: done doAction\n");
 ENDdoAction
+
+
+BEGINendTransaction
+CODESTARTendTransaction
+dbgprintf("omhdfs: endTransaction\n");
+	if(pData->offsBuf != 0) {
+		DBGPRINTF("omhdfs: data unwritten at end of transaction, persisting...\n");
+		iRet = fileWrite(pData->pFile, pData->ioBuf, &pData->offsBuf);
+	}
+ENDendTransaction
 
 
 BEGINparseSelectorAct
@@ -415,6 +473,7 @@ CODESTARTparseSelectorAct
 	}
 	fileObjAddUser(pFile);
 	pData->pFile = pFile;
+	pData->offsBuf = 0;
 
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
@@ -465,6 +524,7 @@ ENDmodExit
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
+CODEqueryEtryPt_TXIF_OMOD_QUERIES /* we support the transactional interface! */
 CODEqueryEtryPt_doHUP
 ENDqueryEtryPt
 
@@ -483,5 +543,6 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(regCfSysLineHdlr((uchar *)"omhdfsport", 0, eCmdHdlrInt, NULL, &cs.hdfsPort, NULL, eConfObjAction));
 	CHKiRet(regCfSysLineHdlr((uchar *)"omhdfsdefaulttemplate", 0, eCmdHdlrGetWord, NULL, &cs.dfltTplName, NULL, eConfObjAction));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID, eConfObjAction));
+	DBGPRINTF("omhdfs: module compiled with rsyslog version %s.\n", VERSION);
 CODEmodInit_QueryRegCFSLineHdlr
 ENDmodInit

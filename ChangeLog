@@ -1,5 +1,8 @@
 ---------------------------------------------------------------------------
 Version 6.1.6  [DEVEL] (rgerhards), 2011-03-??
+- enhanced omhdfs to support batching mode. This permits to increase
+  performance, as we now call the HDFS API with much larger message
+  sizes and far more infrequently
 - improved testbench
   among others, life tests for ommysql (against a test database) have
   been added, valgrind-based testing enhanced, ...
@@ -137,6 +140,12 @@ expected that interfaces, even new ones, break during the initial
 - added imptcp, a simplified, Linux-specific and potentielly fast
   syslog plain tcp input plugin (NOT supporting TLS!)
   [ported from v4]
+---------------------------------------------------------------------------
+Version 5.9.0  [V5-DEVEL] (rgerhards), 2011-03-??
+- this begins a new devel branch for v5
+- enhanced omhdfs to support batching mode. This permits to increase
+  performance, as we now call the HDFS API with much larger message
+  sizes and far more infrequently
 ---------------------------------------------------------------------------
 Version 5.7.9  [V5-BETA] (rgerhards), 2011-03-??
 - improved testbench
