@@ -244,6 +244,10 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/diskqueue-fsync.conf \
 	   imtcp-tls-basic.sh \
 	   testsuites/imtcp-tls-basic.conf \
+           tls-certs/ca-key.pem \
+           tls-certs/ca.pem \
+           tls-certs/cert.pem \
+           tls-certs/key.pem \
 	   imtcp-multiport.sh \
 	   testsuites/imtcp-multiport.conf \
 	   udp-msgreduc-orgmsg-vg.sh \

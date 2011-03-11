@@ -924,7 +924,6 @@ int main(int argc, char *argv[])
 		 * connections, we need to make sure we have a high enough
 		 * limit. -- rgerhards, 2010-03-25
 		 */
-		struct rlimit maxFiles;
 		maxFiles.rlim_cur = numConnections + 20;
 		maxFiles.rlim_max = numConnections + 20;
 		if(setrlimit(RLIMIT_NOFILE, &maxFiles) < 0) {
