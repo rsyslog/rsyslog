@@ -125,6 +125,9 @@ endif
 
 if ENABLE_IMFILE
 TESTS += imfile-basic.sh
+if HAVE_VALGRIND
+TESTS += imfile-basic-vg.sh
+endif
 endif
 
 endif # if ENABLE_TESTBENCH
@@ -327,6 +330,7 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   random.sh \
 	   testsuites/random.conf \
 	   imfile-basic.sh \
+	   imfile-basic-vg.sh \
 	   testsuites/imfile-basic.conf \
 	   dynfile_invld_async.sh \
 	   dynfile_invld_sync.sh \
