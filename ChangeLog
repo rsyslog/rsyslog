@@ -22,6 +22,7 @@ Version 6.1.5  [DEVEL] (rgerhards), 2011-03-04
   this was a strange problem that could lead to hard to diagnose 
   instability. So if you experience instability, chances are good that
   this fix will help.
+- imported bugfixes and enhancements from 5.7.8
 ---------------------------------------------------------------------------
 Version 6.1.4  [DEVEL] (rgerhards), 2011-02-18
 - bugfix/omhdfs: directive $OMHDFSFileName rendered unusable 
@@ -124,7 +125,23 @@ expected that interfaces, even new ones, break during the initial
   syslog plain tcp input plugin (NOT supporting TLS!)
   [ported from v4]
 ---------------------------------------------------------------------------
-Version 5.7.7  [V5-BETA] (rgerhards), 2011-03-??
+Version 5.7.9  [V5-BETA] (rgerhards), 2011-03-??
+- improved testbench
+  among others, life tests for ommysql (against a test database) have
+  been added, valgrind-based testing enhanced, ...
+- bugfix: minor memory leak in omlibdbi (< 1k per instance and run)
+- bugfix: (regression) omhdfs did no longer compile
+- bugfix: omlibdbi did not use password from rsyslog.con
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=203
+---------------------------------------------------------------------------
+Version 5.7.8  [V5-BETA] (rgerhards), 2011-03-09
+- systemd support somewhat improved (can now take over existing log sockt)
+- bugfix: discard action did not work under some circumstances
+  fixes: http://bugzilla.adiscon.com/show_bug.cgi?id=217
+- bugfix: file descriptor leak in gnutls netstream driver
+  fixes: http://bugzilla.adiscon.com/show_bug.cgi?id=222
+---------------------------------------------------------------------------
+Version 5.7.7  [V5-BETA] (rgerhards), 2011-03-02
 - bugfix: potential abort condition when $RepeatedMsgReduction set to on
   as well as potentially in a number of other places where MsgDup() was
   used. This only happened when the imudp input module was used and it
@@ -236,7 +253,29 @@ Version 5.7.0  [V5-DEVEL] (rgerhards), 2010-09-16
     thanks to Lennart Poettering for this patch
   * sd-systemd API added as part of rsyslog runtime library
 ---------------------------------------------------------------------------
-Version 5.6.4  [V5-STABLE] (rgerhards), 2011-02-25
+Version 5.6.5  [V5-STABLE] (rgerhards), 2011-03-??
+- bugfix: omlibdbi did not use password from rsyslog.con
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=203
+- bugfix(kind of): tell users that config graph can currently not be
+  generated
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=232
+- bugfix: discard action did not work under some circumstances
+  fixes: http://bugzilla.adiscon.com/show_bug.cgi?id=217
+  (backport from 5.7.8)
+---------------------------------------------------------------------------
+Version 5.6.4  [V5-STABLE] (rgerhards), 2011-03-03
+- bugfix: potential abort condition when $RepeatedMsgReduction set to on
+  as well as potentially in a number of other places where MsgDup() was
+  used. This only happened when the imudp input module was used and it
+  depended on name resolution not yet had taken place. In other words,
+  this was a strange problem that could lead to hard to diagnose 
+  instability. So if you experience instability, chances are good that
+  this fix will help.
+- bugfix: fixed a memory leak and potential abort condition
+  this could happen if multiple rulesets were used and some output batches
+  contained messages belonging to more than one ruleset.
+  fixes: http://bugzilla.adiscon.com/show_bug.cgi?id=226
+  fixes: http://bugzilla.adiscon.com/show_bug.cgi?id=218
 - bugfix: memory leak when $RepeatedMsgReduction on was used
   bug tracker: http://bugzilla.adiscon.com/show_bug.cgi?id=225
 ---------------------------------------------------------------------------
@@ -852,6 +891,11 @@ Version 4.6.6  [v4-stable] (rgerhards), 2010-11-??
 - bugfix: imfile utilizes 32 bit to track offset. Most importantly,
   this problem can not experienced on Fedora 64 bit OS (which has
   64 bit long's!)
+- bugfix: abort if imfile reads file line of more than 64KiB
+  Thanks to Peter Eisentraut for reporting and analysing this problem.
+  bug tracker: http://bugzilla.adiscon.com/show_bug.cgi?id=221
+- bugfix: omlibdbi did not use password from rsyslog.con
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=203
 - some improvements thanks to clang's static code analyzer
   o overall cleanup (mostly unnecessary writes and otherwise unused stuff)
   o bugfix: fixed a very remote problem in msg.c which could occur when

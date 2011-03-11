@@ -1330,6 +1330,11 @@ generateConfigDAG(uchar *pszDAGFile)
 	DEFiRet;
 
 	assert(pszDAGFile != NULL);
+	
+	logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)
+		"Configuration graph generation is unfortunately disabled "
+		"in the current code base.", 0);
+	ABORT_FINALIZE(RS_RET_FILENAME_INVALID);
 
 	if((fp = fopen((char*) pszDAGFile, "w")) == NULL) {
 		logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)

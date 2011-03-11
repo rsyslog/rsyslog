@@ -50,6 +50,7 @@
 #include "hashtable_itr.h"
 
 MODULE_TYPE_OUTPUT
+MODULE_TYPE_NOKEEP
 
 /* internal structures
  */

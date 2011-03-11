@@ -1,9 +1,11 @@
 if ENABLE_TESTBENCH
 TESTRUNS = rt_init rscript
 check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq msleep randomgen diagtalker uxsockrcvr syslog_caller syslog_inject
-TESTS = $(TESTRUNS) cfg.sh \
+TESTS = $(TESTRUNS) cfg.sh
+
+if ENABLE_IMDIAG
+TESTS +=  \
 	arrayqueue.sh \
-	linkedlistqueue.sh \
 	da-mainmsg-q.sh \
 	validation-run.sh \
 	imtcp-multiport.sh \
@@ -50,6 +52,37 @@ TESTS = $(TESTRUNS) cfg.sh \
 	udp-msgreduc-vg.sh \
 	udp-msgreduc-orgmsg-vg.sh \
 	queue-persist.sh 
+	discard-rptdmsg.sh \
+	discard-allmark.sh \
+	discard.sh \
+	queue-persist.sh \
+	linkedlistqueue.sh
+endif
+
+if HAVE_VALGRIND
+TESTS +=  \
+	discard-rptdmsg-vg.sh \
+	discard-allmark-vg.sh \
+	tcp-msgreduc-vg.sh
+endif
+
+
+if ENABLE_MYSQL_TESTS
+TESTS +=  \
+	mysql-basic.sh \
+	mysql-asyn.sh 
+if ENABLE_OMLIBDBI
+TESTS +=  \
+	libdbi-basic.sh \
+	libdbi-asyn.sh
+endif
+if HAVE_VALGRIND
+TESTS +=  \
+	mysql-basic-vg.sh \
+	mysql-asyn-vg.sh 
+endif
+endif
+
 
 if ENABLE_IMPTCP
 TESTS +=  \
@@ -81,7 +114,6 @@ TESTS += omod-if-array.sh \
 	 inputname.sh \
 	 threadingmq.sh \
 	 threadingmqaq.sh \
-	 discard.sh \
 	 badqi.sh \
 	 tabescape_dflt.sh \
 	 tabescape_off.sh \
@@ -89,8 +121,10 @@ TESTS += omod-if-array.sh \
 endif
 
 if ENABLE_OMRULESET
+if ENABLE_IMDIAG
 TESTS += omruleset.sh \
 	 omruleset-queue.sh
+endif
 endif
 
 if ENABLE_EXTENDED_TESTS
@@ -223,6 +257,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/imtcp_conndrop.conf \
 	   imtcp_addtlframedelim.sh \
 	   testsuites/imtcp_addtlframedelim.conf \
+	   tcp-msgreduc-vg.sh \
+	   testsuites/./tcp-msgreduc-vg.conf \
 	   inputname.sh \
 	   testsuites/inputname_imtcp.conf \
 	   testsuites/1.inputname_imtcp_12514 \
@@ -231,6 +267,12 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   omod-if-array.sh \
 	   discard.sh \
 	   testsuites/discard.conf \
+	   discard-rptdmsg.sh \
+	   discard-rptdmsg-vg.sh \
+	   testsuites/discard-rptdmsg.conf \
+	   discard-allmark.sh \
+	   discard-allmark-vg.sh \
+	   testsuites/discard-allmark.conf \
 	   diag.sh \
 	   testsuites/diag-common.conf \
 	   testsuites/diag-common2.conf \
@@ -344,6 +386,18 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   imuxsock_ccmiddle_root.sh \
 	   testsuites/imuxsock_ccmiddle_root.conf \
 	   resultdata/imuxsock_ccmiddle.log \
+	   testsuites/mysql-truncate.sql \
+	   testsuites/mysql-select-msg.sql \
+	   libdbi-basic.sh \
+	   testsuites/libdbi-basic.conf \
+	   libdbi-asyn.sh \
+	   testsuites/libdbi-asyn.conf \
+	   mysql-basic.sh \
+	   mysql-basic-vg.sh \
+	   testsuites/mysql-basic.conf \
+	   mysql-asyn.sh \
+	   mysql-asyn-vg.sh \
+	   testsuites/mysql-asyn.conf \
 	   cfg.sh
 
 ourtail_SOURCES = ourtail.c

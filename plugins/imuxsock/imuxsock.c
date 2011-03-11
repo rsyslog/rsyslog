@@ -56,6 +56,7 @@
 #include "hashtable.h"
 
 MODULE_TYPE_INPUT
+MODULE_TYPE_NOKEEP
 
 /* defines */
 #define MAXFUNIX	50

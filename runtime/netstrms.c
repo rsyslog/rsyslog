@@ -39,6 +39,7 @@
 #include "netstrms.h"
 
 MODULE_TYPE_LIB
+MODULE_TYPE_NOKEEP
 
 /* static data */
 DEFobjStaticHelpers

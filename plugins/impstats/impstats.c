@@ -49,6 +49,7 @@
 #include "prop.h"
 
 MODULE_TYPE_INPUT
+MODULE_TYPE_NOKEEP
 
 /* defines */
 #define DEFAULT_STATS_PERIOD (5 * 60)

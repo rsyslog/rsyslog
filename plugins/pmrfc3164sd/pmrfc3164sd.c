@@ -45,6 +45,7 @@
 #include "unicode-helper.h"
 
 MODULE_TYPE_PARSER
+MODULE_TYPE_NOKEEP
 PARSER_NAME("contrib.rfc3164sd")
 
 /* internal structures

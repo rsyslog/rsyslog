@@ -44,9 +44,6 @@ endif
 #
 if HAVE_SYSTEMD
 
-dist_systemdsystemunit_DATA = \
-	rsyslog.socket
-
 nodist_systemdsystemunit_DATA = \
 	rsyslog.service
 
@@ -241,5 +238,8 @@ DISTCHECK_CONFIGURE_FLAGS=	--enable-gssapi_krb5 \
 				--enable-extended-tests \
 				--enable-impstats \
 				--enable-memcheck \
+				--enable-pmaixforwardedfrom \
+				--enable-pmcisconames \
+				--enable-pmsnare \
 				--with-systemdsystemunitdir=$$dc_install_base/$(systemdsystemunitdir)
 ACLOCAL_AMFLAGS = -I m4

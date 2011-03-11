@@ -73,6 +73,7 @@
 
 
 MODULE_TYPE_LIB
+MODULE_TYPE_NOKEEP
 
 /* defines */
 #define TCPSESS_MAX_DEFAULT 200 /* default for nbr of tcp sessions if no number is given */

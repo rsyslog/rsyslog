@@ -50,6 +50,7 @@
 #include "errmsg.h"
 
 MODULE_TYPE_OUTPUT
+MODULE_TYPE_NOKEEP
 
 /* internal structures
  */
@@ -122,6 +123,11 @@ static void closeConn(instanceData *pData)
 BEGINfreeInstance
 CODESTARTfreeInstance
 	closeConn(pData);
+	free(pData->drvrName);
+	free(pData->host);
+	free(pData->usrName);
+	free(pData->pwd);
+	free(pData->dbName);
 ENDfreeInstance
 
 
@@ -185,7 +191,8 @@ static rsRetVal initConn(instanceData *pData, int bSilent)
 			errmsg.LogError(0, RS_RET_SUSPENDED, "libdbi error: libdbi or libdbi drivers not present on this system - suspending.");
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
 		} else if(iDrvrsLoaded < 0) {
-			errmsg.LogError(0, RS_RET_SUSPENDED, "libdbi error: libdbi could not be initialized - suspending.");
+			errmsg.LogError(0, RS_RET_SUSPENDED, "libdbi error: libdbi could not be "
+				"initialized (do you have any dbi drivers installed?) - suspending.");
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
 		}
 		bDbiInitialized = 1; /* we are done for the rest of our existence... */
@@ -302,7 +309,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	if(cs.dbName  != NULL)
 		if((pData->dbName   = (uchar*) strdup((char*)cs.dbName))   == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	if(cs.pwd     != NULL)
-		if((pData->pwd      = (uchar*) strdup((char*)""))       == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+		if((pData->pwd      = (uchar*) strdup((char*)cs.pwd))       == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 
 	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_RQD_TPL_OPT_SQL, (uchar*) " StdDBFmt"));
 
@@ -356,13 +363,14 @@ SCOPINGmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
-	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionlibdbidriverdirectory", 0, eCmdHdlrGetWord, NULL, &cs.dbiDrvrDir, STD_LOADABLE_MODULE_ID, eConfObjAction));
-	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionlibdbidriver", 0, eCmdHdlrGetWord, NULL, &cs.drvrName, STD_LOADABLE_MODULE_ID, eConfObjAction));
-	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionlibdbihost", 0, eCmdHdlrGetWord, NULL, &cs.host, STD_LOADABLE_MODULE_ID, eConfObjAction));
-	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionlibdbiusername", 0, eCmdHdlrGetWord, NULL, &cs.usrName, STD_LOADABLE_MODULE_ID, eConfObjAction));
-	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionlibdbipassword", 0, eCmdHdlrGetWord, NULL, &cs.pwd, STD_LOADABLE_MODULE_ID, eConfObjAction));
-	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionlibdbidbname", 0, eCmdHdlrGetWord, NULL, &cs.dbName, STD_LOADABLE_MODULE_ID, eConfObjAction));
-	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID, eConfObjAction));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionlibdbidriverdirectory", 0, eCmdHdlrGetWord, NULL, &cs.dbiDrvrDir, STD_LOADABLE_MODULE_ID, eConfObjAction));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionlibdbidriver", 0, eCmdHdlrGetWord, NULL, &cs.drvrName, STD_LOADABLE_MODULE_ID, eConfObjAction));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionlibdbihost", 0, eCmdHdlrGetWord, NULL, &cs.host, STD_LOADABLE_MODULE_ID, eConfObjAction));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionlibdbiusername", 0, eCmdHdlrGetWord, NULL, &cs.usrName, STD_LOADABLE_MODULE_ID, eConfObjAction));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionlibdbipassword", 0, eCmdHdlrGetWord, NULL, &cs.pwd, STD_LOADABLE_MODULE_ID, eConfObjAction));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionlibdbidbname", 0, eCmdHdlrGetWord, NULL, &cs.dbName, STD_LOADABLE_MODULE_ID, eConfObjAction));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID, eConfObjAction));
+	DBGPRINTF("omlibdbi compiled with version %s loaded, libdbi version %s\n", VERSION, dbi_version());
 ENDmodInit
 
 /* vim:set ai:

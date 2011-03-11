@@ -13,6 +13,10 @@ AC_CONFIG_HEADERS([config.h])
 
 AC_GNU_SOURCE
 
+# check if valgrind is present
+AC_CHECK_PROG(have_valgrind, [valgrind], [yes])
+AM_CONDITIONAL(HAVE_VALGRIND, test x$have_valgrind = xyes)
+
 # check for Java compiler
 AC_CHECK_PROG(HAVE_JAVAC, [javac], [yes])
 if test x"$HAVE_JAVAC" = x""; then
@@ -737,6 +741,23 @@ AC_ARG_ENABLE(extended_tests,
 AM_CONDITIONAL(ENABLE_EXTENDED_TESTS, test x$enable_extended_tests = xyes)
 
 
+# capability to enable MySQL testbench tests. This requries that a Syslog database
+# with the default schema has been created on the local (127.0.0.1) MySQL server and
+# a user "rsyslog" with password "testbench" exists, is able to login with default
+# parameters and has sufficient (read: all) privileges on that database.
+# rgerhards, 2011-03-09
+AC_ARG_ENABLE(mysql_tests,
+        [AS_HELP_STRING([--enable-mysql-tests],[enable MySQL specific tests in testbench @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_mysql_tests="yes" ;;
+          no) enable_mysql_tests="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-mysql-tests) ;;
+         esac],
+        [enable_mysql_tests=no]
+)
+AM_CONDITIONAL(ENABLE_MYSQL_TESTS, test x$enable_mysql_tests = xyes)
+
+
 # Mail support (so far we do not need a library, but we need to turn this on and off)
 AC_ARG_ENABLE(mail,
         [AS_HELP_STRING([--enable-mail],[Enable mail support @<:@default=no@:>@])],
@@ -1279,6 +1300,7 @@ echo
 echo "---{ debugging support }---"
 echo "    Testbench enabled:                        $enable_testbench"
 echo "    Extended Testbench enabled:               $enable_extended_tests"
+echo "    MySQL Tests enabled:                      $enable_mysql_tests"
 echo "    Debug mode enabled:                       $enable_debug"
 echo "    Runtime Instrumentation enabled:          $enable_rtinst"
 echo "    Diagnostic tools enabled:                 $enable_diagtools"

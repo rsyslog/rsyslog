@@ -65,6 +65,7 @@
 #include "net.h" /* for permittedPeers, may be removed when this is removed */
 
 MODULE_TYPE_INPUT
+MODULE_TYPE_NOKEEP
 
 /* static data */
 DEF_IMOD_STATIC_DATA
