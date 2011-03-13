@@ -133,13 +133,16 @@ delEvent(nsdpoll_epollevt_lst_t **ppEvtLst) {
 /* Standard-Constructor
  */
 BEGINobjConstruct(nsdpoll_ptcp) /* be sure to specify the object type also in END macro! */
-#	if defined(EPOLL_CLOEXEC) && defined(HAVE_EPOLL_CREATE1)
-		DBGPRINTF("nsdpoll_ptcp uses epoll_create1()\n");
-		pThis->efd = epoll_create1(EPOLL_CLOEXEC);
-#	else
+#if defined(EPOLL_CLOEXEC) && defined(HAVE_EPOLL_CREATE1)
+	DBGPRINTF("nsdpoll_ptcp uses epoll_create1()\n");
+	pThis->efd = epoll_create1(EPOLL_CLOEXEC);
+	if(pThis->efd < 0 && errno == ENOSYS)
+#endif
+	{
 		DBGPRINTF("nsdpoll_ptcp uses epoll_create()\n");
 		pThis->efd = epoll_create(100); /* size is ignored in newer kernels, but 100 is not bad... */
-#	endif
+	}
+
 	if(pThis->efd < 0) {
 		DBGPRINTF("epoll_create1() could not create fd\n");
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
