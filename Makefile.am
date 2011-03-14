@@ -230,5 +230,10 @@ DISTCHECK_CONFIGURE_FLAGS=	--enable-gssapi_krb5 \
 				--enable-impstats \
 				--enable-imptcp \
 				--enable-memcheck \
+				--enable-pmaixforwardedfrom \
+				--enable-pmcisconames \
+				--enable-pmsnare \
+				--enable-imtemplate \
+				--enable-omtemplate \
 				--with-systemdsystemunitdir=$$dc_install_base/$(systemdsystemunitdir)
 ACLOCAL_AMFLAGS = -I m4
