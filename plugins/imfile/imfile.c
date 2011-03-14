@@ -331,6 +331,11 @@ ENDrunInput
  */
 BEGINwillRun
 CODESTARTwillRun
+	/* free config variables we do no longer needed */
+	free(pszFileName);
+	free(pszFileTag);
+	free(pszStateFile);
+
 	if(iFilPtr == 0) {
 		errmsg.LogError(0, RS_RET_NO_RUN, "No files configured to be monitored");
 		ABORT_FINALIZE(RS_RET_NO_RUN);
@@ -398,6 +403,9 @@ CODESTARTafterRun
 			persistStrmState(&files[i]);
 			strm.Destruct(&(files[i].pStrm));
 		}
+		free(files[i].pszFileName);
+		free(files[i].pszTag);
+		free(files[i].pszStateFile);
 	}
 
 	if(pInputName != NULL)

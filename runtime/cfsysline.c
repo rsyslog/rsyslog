@@ -41,6 +41,7 @@
 #include "obj.h"
 #include "errmsg.h"
 #include "srUtils.h"
+#include "unicode-helper.h"
 
 
 /* static data */
@@ -511,6 +512,8 @@ static rsRetVal doGetWord(uchar **pp, rsRetVal (*pSetHdlr)(void*, uchar*), void 
 	CHKiRet(cstrConvSzStrAndDestruct(pStrB, &pNewVal, 0));
 	pStrB = NULL;
 
+	DBGPRINTF("doGetWord: get newval '%s' (len %d), hdlr %p\n",
+		  pNewVal, (int) ustrlen(pNewVal), pSetHdlr);
 	/* we got the word, now set it */
 	if(pSetHdlr == NULL) {
 		/* we should set value directly to var */
