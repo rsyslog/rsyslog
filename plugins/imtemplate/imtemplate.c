@@ -426,7 +426,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	 * variables at all (unlikely, I think...), you can remove this handler.
 	 */
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
-		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
+		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 
 	/* ... do whatever else you need to do, but keep it brief ... */
 

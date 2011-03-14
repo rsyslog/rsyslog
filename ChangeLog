@@ -15,6 +15,8 @@ Version 6.1.6  [DEVEL] (rgerhards), 2011-03-??
   fixes: http://bugzilla.adiscon.com/show_bug.cgi?id=217
 - bugfix: file descriptor leak in gnutls netstream driver
   fixes: http://bugzilla.adiscon.com/show_bug.cgi?id=222
+- fixed compile problem in imtemplate
+  fixes: http://bugzilla.adiscon.com/show_bug.cgi?id=235
 ---------------------------------------------------------------------------
 Version 6.1.5  [DEVEL] (rgerhards), 2011-03-04
 - improved testbench
