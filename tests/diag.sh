@@ -31,7 +31,7 @@ case $1 in
 		rm -f work rsyslog.out.log rsyslog2.out.log rsyslog.out.log.save # common work files
 		rm -rf test-spool test-logdir 
 		rm -f rsyslog.out.*.log rsyslog.random.data work-presort rsyslog.pipe
-		rm -f rsyslog.input rsyslog.conf.tlscert
+		rm -f rsyslog.input rsyslog.conf.tlscert stat-file1
 		echo  -------------------------------------------------------------------------------
 		;;
    'startup')   # start rsyslogd with default params. $2 is the config file name to use

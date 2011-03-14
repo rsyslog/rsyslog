@@ -151,9 +151,11 @@ Version 5.7.9  [V5-BETA] (rgerhards), 2011-03-??
 - improved testbench
   among others, life tests for ommysql (against a test database) have
   been added, valgrind-based testing enhanced, ...
+- enhance: fallback *at runtime* to epoll_create if epoll_create1 is not
+  available. Thanks to Michael Biebl for analysis and patch!
 - bugfix: minor memory leak in omlibdbi (< 1k per instance and run)
 - bugfix: (regression) omhdfs did no longer compile
-- bugfix: omlibdbi did not use password from rsyslog.con
+- bugfix: omlibdbi did not use password from rsyslog.conf
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=203
 ---------------------------------------------------------------------------
 Version 5.7.8  [V5-BETA] (rgerhards), 2011-03-09

@@ -453,13 +453,16 @@ rsRetVal rcvMainLoop(thrdInfo_t *pThrd)
 
 	CHKmalloc(udpEPollEvt = calloc(udpLstnSocks[0], sizeof(struct epoll_event)));
 
-#	if defined(EPOLL_CLOEXEC) && defined(HAVE_EPOLL_CREATE1)
-		DBGPRINTF("imudp uses epoll_create1()\n");
-		efd = epoll_create1(EPOLL_CLOEXEC);
-#	else
+#if defined(EPOLL_CLOEXEC) && defined(HAVE_EPOLL_CREATE1)
+	DBGPRINTF("imudp uses epoll_create1()\n");
+	efd = epoll_create1(EPOLL_CLOEXEC);
+	if(efd < 0 && errno == ENOSYS)
+#endif
+	{
 		DBGPRINTF("imudp uses epoll_create()\n");
 		efd = epoll_create(NUM_EPOLL_EVENTS);
-#	endif
+	}
+
 	if(efd < 0) {
 		DBGPRINTF("epoll_create1() could not create fd\n");
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
