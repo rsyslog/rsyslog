@@ -1050,7 +1050,7 @@ CODESTARTwillRun
 #if defined(EPOLL_CLOEXEC) && defined(HAVE_EPOLL_CREATE1)
 	DBGPRINTF("imptcp uses epoll_create1()\n");
 	epollfd = epoll_create1(EPOLL_CLOEXEC);
-	if(epollfd < 0 && errno ENOSYS)
+	if(epollfd < 0 && errno == ENOSYS)
 #endif
 	{
 		DBGPRINTF("imptcp uses epoll_create()\n");
