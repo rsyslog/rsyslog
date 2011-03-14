@@ -294,11 +294,6 @@ BEGINrunInput
 	int i;
 	int bHadFileData; /* were there at least one file with data during this run? */
 CODESTARTrunInput
-	/* free config vars that are still allocated (at this point, we do no longer need them) */
-	free(pszFileName);
-	free(pszFileTag);
-	free(pszStateFile);
-	
 	pthread_cleanup_push(inputModuleCleanup, NULL);
 	while(glbl.GetGlobalInputTermState() == 0) {
 		do {
