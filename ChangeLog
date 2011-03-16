@@ -130,6 +130,8 @@ Version 5.7.0  [V5-DEVEL] (rgerhards), 2010-09-16
   * sd-systemd API added as part of rsyslog runtime library
 ---------------------------------------------------------------------------
 Version 5.6.5  [V5-STABLE] (rgerhards), 2011-03-??
+- bugfix: failover did not work correctly if repeated msg reduction was on
+  affected directive was: $ActionExecOnlyWhenPreviousIsSuspended on
 - bugfix: omlibdbi did not use password from rsyslog.con
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=203
 - bugfix(kind of): tell users that config graph can currently not be

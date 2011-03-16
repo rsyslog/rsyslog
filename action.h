@@ -100,26 +100,9 @@ rsRetVal actionDestruct(action_t *pThis);
 rsRetVal actionDbgPrint(action_t *pThis);
 rsRetVal actionSetGlobalResumeInterval(int iNewVal);
 rsRetVal actionDoAction(action_t *pAction);
-rsRetVal actionWriteToAction(action_t *pAction);
+rsRetVal actionWriteToAction(action_t *pAction, batch_t *pBatch, int idxBtch);
 rsRetVal actionCallHUPHdlr(action_t *pAction);
 rsRetVal actionClassInit(void);
 rsRetVal addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStringRequest_t *pOMSR, int bSuspended);
 
-#if 1
-#define actionIsSuspended(pThis) ((pThis)->bSuspended == 1)
-#else
-/* The function is a debugging aid */
-inline int actionIsSuspended(action_t *pThis)
-{
-	int i;
-	ASSERT(pThis != NULL);
-	i =  pThis->bSuspended == 1;
-	dbgprintf("in IsSuspend(), returns %d\n", i);
-	return i;
-}
-#endif
-
 #endif /* #ifndef ACTION_H_INCLUDED */
-/*
- * vi:set ai:
- */
