@@ -52,6 +52,11 @@ TESTS +=  \
 	discard-rptdmsg.sh \
 	discard-allmark.sh \
 	discard.sh \
+	failover-basic.sh \
+	failover-rptd.sh \
+	failover-no-rptd.sh \
+	failover-no-basic.sh \
+	queue-persist.sh 
 	queue-persist.sh \
 	linkedlistqueue.sh
 endif
@@ -60,6 +65,10 @@ if HAVE_VALGRIND
 TESTS +=  \
 	discard-rptdmsg-vg.sh \
 	discard-allmark-vg.sh \
+	failover-basic-vg.sh \
+	failover-rptd-vg.sh \
+	failover-no-basic-vg.sh \
+	failover-no-rptd-vg.sh \
 	tcp-msgreduc-vg.sh
 endif
 
@@ -79,7 +88,6 @@ TESTS +=  \
 	mysql-asyn-vg.sh 
 endif
 endif
-
 
 if ENABLE_IMPTCP
 TESTS +=  \
@@ -260,6 +268,18 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   omod-if-array.sh \
 	   discard.sh \
 	   testsuites/discard.conf \
+	   failover-no-rptd.sh \
+	   failover-no-rptd-vg.sh \
+	   testsuites/failover-no-rptd.conf \
+	   failover-no-basic.sh \
+	   failover-no-basic-vg.sh \
+	   testsuites/failover-no-basic.conf \
+	   failover-rptd.sh \
+	   failover-rptd-vg.sh \
+	   testsuites/failover-rptd.conf \
+	   failover-basic.sh \
+	   failover-basic-vg.sh \
+	   testsuites/failover-basic.conf \
 	   discard-rptdmsg.sh \
 	   discard-rptdmsg-vg.sh \
 	   testsuites/discard-rptdmsg.conf \
