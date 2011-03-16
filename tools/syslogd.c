@@ -799,7 +799,7 @@ DEFFUNC_llExecFunc(flushRptdMsgsActions)
 		DBGPRINTF("flush %s: repeated %d times, %d sec.\n",
 		    module.GetStateName(pAction->pMod), pAction->f_prevcount,
 		    repeatinterval[pAction->f_repeatcount]);
-		actionWriteToAction(pAction);
+		actionWriteToAction(pAction, NULL, 0);
 		BACKOFF(pAction);
 	}
 	UnlockObj(pAction);

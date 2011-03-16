@@ -747,7 +747,6 @@ static rsRetVal releaseBatch(action_t *pAction, batch_t *pBatch)
 	ASSERT(pAction != NULL);
 
 	for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pBatch->pbShutdownImmediate) ; ++i) {
-dbgprintf("XXXX: releaseBatch %d: bPrevWasSuspended %d\n", i, pBatch->pElem[i].bPrevWasSuspended);
 		pElem = &(pBatch->pElem[i]);
 		if(pElem->bFilterOK && pElem->state != BATCH_STATE_DISC) {
 			switch(pAction->eParamPassing) {
@@ -935,7 +934,6 @@ tryDoAction(action_t *pAction, batch_t *pBatch, int *pnElem)
 	while(iElemProcessed <= *pnElem && i < pBatch->nElem) {
 		if(*(pBatch->pbShutdownImmediate))
 			ABORT_FINALIZE(RS_RET_FORCE_TERM);
-dbgprintf("XXXX:tryDoAction %d: bExecWhenPrevSusp: %d, bPrevWasSuspended %d ptr %p\n", i, pAction->bExecWhenPrevSusp, pBatch->pElem[i].bPrevWasSuspended, &(pBatch->pElem[i].bPrevWasSuspended));
 		if(   pBatch->pElem[i].bFilterOK
 		   && pBatch->pElem[i].state != BATCH_STATE_DISC//) {
 		   && ((pAction->bExecWhenPrevSusp  == 0) || pBatch->pElem[i].bPrevWasSuspended) ) {
@@ -1001,7 +999,6 @@ submitBatch(action_t *pAction, batch_t *pBatch, int nElem)
 	bDone = 0;
 	do {
 		localRet = tryDoAction(pAction, pBatch, &nElem);
-dbgprintf("XXXX: tryDoAction returns %d\n", localRet);
 		if(localRet == RS_RET_FORCE_TERM) {
 			ABORT_FINALIZE(RS_RET_FORCE_TERM);
 		}
@@ -1021,14 +1018,12 @@ dbgprintf("XXXX: tryDoAction returns %d\n", localRet);
 		} else if(localRet == RS_RET_SUSPENDED) {
 			; /* do nothing, this will retry the full batch */
 		} else if(localRet == RS_RET_ACTION_FAILED) {
-dbgprintf("XXXX: in ACTION_FAILED branch, doneUpTo %d\n", pBatch->iDoneUpTo);
 			/* in this case, everything not yet committed is BAD */
 			for(i = pBatch->iDoneUpTo ; i < wasDoneTo + nElem ; ++i) {
 				if(   pBatch->pElem[i].state != BATCH_STATE_DISC
 				   && pBatch->pElem[i].state != BATCH_STATE_COMM ) {
 					pBatch->pElem[i].state = BATCH_STATE_BAD;
 					pBatch->pElem[i].bPrevWasSuspended = 1;
-dbgprintf("XXXX: setting susps for item %d ptr %p\n", i, &(pBatch->pElem[i].bPrevWasSuspended));
 				}
 			}
 			bDone = 1;
@@ -1071,7 +1066,6 @@ prepareBatch(action_t *pAction, batch_t *pBatch)
 
 	pBatch->iDoneUpTo = 0;
 	for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pBatch->pbShutdownImmediate) ; ++i) {
-dbgprintf("XXXX: prepareBatch %d: bPrevWasSuspended %d\n", i, pBatch->pElem[i].bPrevWasSuspended);
 		pElem = &(pBatch->pElem[i]);
 		if(pElem->bFilterOK && pElem->state != BATCH_STATE_DISC) {
 			pElem->state = BATCH_STATE_RDY;
@@ -1112,7 +1106,6 @@ processBatchMain(action_t *pAction, batch_t *pBatch, int *pbShutdownImmediate)
 	DEFiRet;
 
 	assert(pBatch != NULL);
-dbgprintf("XXXX: running processBatchMain\n");
 
 	pbShutdownImmdtSave = pBatch->pbShutdownImmediate;
 	pBatch->pbShutdownImmediate = pbShutdownImmediate;
@@ -1142,7 +1135,6 @@ dbgprintf("XXXX: running processBatchMain\n");
 		iRet = localRet;
 
 finalize_it:
-dbgprintf("XXXX: exiting processBatchMain\n");
 	pBatch->pbShutdownImmediate = pbShutdownImmdtSave;
 	RETiRet;
 }
@@ -1230,11 +1222,12 @@ doSubmitToActionQ(action_t *pAction, msg_t *pMsg)
 
 /* This function builds up a batch of messages to be (later)
  * submitted to the action queue.
+ * Note: this function is also called from syslogd itself as part of its
+ * flush processing. If so, pBatch will be NULL and idxBtch undefined.
  */
 rsRetVal
 actionWriteToAction(action_t *pAction, batch_t *pBatch, int idxBtch)
 {
-dbgprintf("XXXX: enter actionWriteToAction idx %d\n", idxBtch);
 	msg_t *pMsgSave;	/* to save current message pointer, necessary to restore
 				   it in case it needs to be updated (e.g. repeated msgs) */
 	DEFiRet;
@@ -1327,11 +1320,11 @@ dbgprintf("XXXX: enter actionWriteToAction idx %d\n", idxBtch);
 	pAction->tLastExec = getActNow(pAction); /* re-init time flags */
 	pAction->f_time = pAction->f_pMsg->ttGenTime;
 
-dbgprintf("XXXX:actionWriteToAction %d: bExecWhenPrevSusp: %d, bPrevWasSuspended %d ptr %p\n", idxBtch, pAction->bExecWhenPrevSusp, pBatch->pElem[idxBtch].bPrevWasSuspended, &(pBatch->pElem[idxBtch].bPrevWasSuspended));
 	/* When we reach this point, we have a valid, non-disabled action.
 	 * So let's enqueue our message for execution. -- rgerhards, 2007-07-24
 	 */
-	if(pAction->bExecWhenPrevSusp  == 1 && pBatch->pElem[idxBtch].bPrevWasSuspended) {
+	if(   pBatch != NULL
+	   && (pAction->bExecWhenPrevSusp  == 1 && pBatch->pElem[idxBtch].bPrevWasSuspended)) {
 		/* in that case, we need to create a special batch which reflects the
 		 * suspended state. Otherwise, that information would be dropped inside
 		 * the queue engine. TODO: in later releases (v6?) create a better
@@ -1360,7 +1353,6 @@ dbgprintf("XXXX:actionWriteToAction %d: bExecWhenPrevSusp: %d, bPrevWasSuspended
 		iRet = doSubmitToActionQ(pAction, pAction->f_pMsg);
 	}
 
-dbgprintf("XXXX: action iRet %d\n", iRet);
 	if(iRet == RS_RET_OK)
 		pAction->f_prevcount = 0; /* message processed, so we start a new cycle */
 
@@ -1392,7 +1384,6 @@ doActionCallAction(action_t *pAction, batch_t *pBatch, int idxBtch)
 	msg_t *pMsg;
 	DEFiRet;
 
-dbgprintf("XXXX: enter doActionCallAction\n");
 	pMsg = (msg_t*)(pBatch->pElem[idxBtch].pUsrp);
 	pAction->tActNow = -1; /* we do not yet know our current time (clear prev. value) */
 
@@ -1567,7 +1558,6 @@ helperSubmitToActionQComplexBatch(action_t *pAction, batch_t *pBatch)
 
 	DBGPRINTF("Called action(complex case), logging to %s\n", module.GetStateName(pAction->pMod));
 	for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pBatch->pbShutdownImmediate) ; ++i) {
-dbgprintf("XXXX: helper complex %d: bExecWhenPrevSusp: %d, bPrevWasSuspended %d ptr %p\n", i, pAction->bExecWhenPrevSusp, pBatch->pElem[i].bPrevWasSuspended, &(pBatch->pElem[i].bPrevWasSuspended));
 		if(   pBatch->pElem[i].bFilterOK
                    && pBatch->pElem[i].state != BATCH_STATE_DISC
 		   && ((pAction->bExecWhenPrevSusp  == 0) || pBatch->pElem[i].bPrevWasSuspended) ) {
