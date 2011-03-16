@@ -433,6 +433,9 @@ CODESTARTmodExit
 		net.DestructPermittedPeers(&pPermPeersRoot);
 	}
 
+	/* free some globals to keep valgrind happy */
+	free(pszInputName);
+
 	/* release objects we used */
 	objRelease(net, LM_NET_FILENAME);
 	objRelease(netstrm, LM_NETSTRMS_FILENAME);
