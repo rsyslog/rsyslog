@@ -48,6 +48,9 @@ TESTS = $(TESTRUNS) cfg.sh \
 	dircreate_off.sh \
 	discard-rptdmsg.sh \
 	discard.sh \
+	failover-basic.sh \
+	failover-rptd.sh \
+	failover-no-rptd.sh \
 	queue-persist.sh 
 
 if ENABLE_IMPTCP
@@ -217,6 +220,12 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   omod-if-array.sh \
 	   discard.sh \
 	   testsuites/discard.conf \
+	   failover-no-rptd.sh \
+	   testsuites/failover-no-rptd.conf \
+	   failover-rptd.sh \
+	   testsuites/failover-rptd.conf \
+	   failover-basic.sh \
+	   testsuites/failover-basic.conf \
 	   discard-rptdmsg.sh \
 	   testsuites/discard-rptdmsg.conf \
 	   diag.sh \
