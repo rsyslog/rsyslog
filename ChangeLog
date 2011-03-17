@@ -1,4 +1,7 @@
 ---------------------------------------------------------------------------
+Version 6.1.7  [DEVEL] (rgerhards), 2011-03-??
+- somewhat improved documentation index
+---------------------------------------------------------------------------
 Version 6.1.6  [DEVEL] (rgerhards), 2011-03-14
 - enhanced omhdfs to support batching mode. This permits to increase
   performance, as we now call the HDFS API with much larger message
