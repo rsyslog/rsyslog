@@ -1,4 +1,6 @@
 ---------------------------------------------------------------------------
+Version 5.7.10  [V5-BETA] (rgerhards), 2011-03-??
+---------------------------------------------------------------------------
 Version 5.7.9  [V5-BETA] (rgerhards), 2011-03-16
 - improved testbench
   among others, life tests for ommysql (against a test database) have
