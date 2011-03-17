@@ -63,56 +63,39 @@ DEF_SMOD_STATIC_DATA
  * needed (including their length) and then calculating the actual space required. So when we 
  * finally copy, we know exactly what we need. So we do at most one alloc.
  */
+//#define SQL_STMT "INSERT INTO CDR(date,time,client,view,query,ip) VALUES ('"
+#define SQL_STMT "INSERT INTO bind_test(date,time,client,view,query,ip) VALUES ('"
 BEGINstrgen
 	register int iBuf;
 	uchar *pTimeStamp;
 	size_t lenTimeStamp;
-	uchar *pHOSTNAME;
-	size_t lenHOSTNAME;
-	uchar *pTAG;
-	int lenTAG;
-	uchar *pMSG;
-	size_t lenMSG;
 	size_t lenTotal;
 CODESTARTstrgen
 	/* first obtain all strings and their length (if not fixed) */
 	pTimeStamp = (uchar*) getTimeReported(pMsg, tplFmtRFC3339Date);
 	lenTimeStamp = ustrlen(pTimeStamp);
-	pHOSTNAME = (uchar*) getHOSTNAME(pMsg);
-	lenHOSTNAME = getHOSTNAMELen(pMsg);
-	getTAG(pMsg, &pTAG, &lenTAG);
-	pMSG = getMSG(pMsg);
-	lenMSG = getMSGLen(pMsg);
 
 	/* calculate len, constants for spaces and similar fixed strings */
-	lenTotal = lenTimeStamp + 1 + lenHOSTNAME + 1 + lenTAG + lenMSG + 2;
-	if(pMSG[0] != ' ')
-		++lenTotal; /* then we need to introduce one additional space */
+	lenTotal = lenTimeStamp + 1 + 200 /* test! */ + 2;
 
 	/* now make sure buffer is large enough */
 	if(lenTotal  >= *pLenBuf)
 		CHKiRet(ExtendBuf(ppBuf, pLenBuf, lenTotal));
 
 	/* and concatenate the resulting string */
-	memcpy(*ppBuf, pTimeStamp, lenTimeStamp);
-	iBuf = lenTimeStamp;
-	*(*ppBuf + iBuf++) = ' ';
+	memcpy(*ppBuf, SQL_STMT, sizeof(SQL_STMT) - 1);
+	iBuf = sizeof(SQL_STMT) - 1;
 
-	memcpy(*ppBuf + iBuf, pHOSTNAME, lenHOSTNAME);
-	iBuf += lenHOSTNAME;
-	*(*ppBuf + iBuf++) = ' ';
+	// SQL content:DATE,TIME,CLIENT,VIEW,QUERY,IP); 
 
-	memcpy(*ppBuf + iBuf, pTAG, lenTAG);
-	iBuf += lenTAG;
+	memcpy(*ppBuf + iBuf, pTimeStamp, lenTimeStamp);
+	iBuf += lenTimeStamp;
+	memcpy(*ppBuf + iBuf, "' , '", sizeof("', '") - 1);
+	iBuf += sizeof("', '") - 1;
 
-	if(pMSG[0] != ' ')
-		*(*ppBuf + iBuf++) = ' ';
-	memcpy(*ppBuf + iBuf, pMSG, lenMSG);
-	iBuf += lenMSG;
-
-	/* trailer */
-	*(*ppBuf + iBuf++) = '\n';
-	*(*ppBuf + iBuf) = '\0';
+	/* end of SQL statement/trailer (NUL is contained in string!) */
+	memcpy(*ppBuf + iBuf, "');", sizeof("');"));
+	iBuf += sizeof("');");
 
 finalize_it:
 ENDstrgen
@@ -129,7 +112,7 @@ CODEqueryEtryPt_STD_SMOD_QUERIES
 ENDqueryEtryPt
 
 
-BEGINmodInit(sm_cust_bindcdr)
+BEGINmodInit()
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
