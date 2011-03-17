@@ -9,65 +9,26 @@ typically found in /etc. By default, rsyslogd reads the file
 /etc/rsyslog.conf. This may be changed by a command line option.</p>
 <p><a href="http://wiki.rsyslog.com/index.php/Configuration_Samples">
 Configuration file examples can be found in the rsyslog wiki</a>.</p>
-<p>There is also one sample file provided together with the
-documentation set. If you do not like to read, be sure to have at least
-a quick look at
-<a href="rsyslog-example.conf">rsyslog-example.conf</a>.
-</p>
 <p>While rsyslogd contains enhancements over standard syslogd,
 efforts have been made to keep the configuration file as compatible as
 possible. While, for obvious reasons, <a href="features.html">enhanced
 features</a> require a different config file syntax, rsyslogd
 should be able to work with a standard syslog.conf file. This is
 especially useful while you are migrating from syslogd to rsyslogd.</p>
-<h2><a href="rsyslog_conf_modules.html">Modules</a></h2>
-<h2>Lines</h2>
-Lines can be continued by specifying a backslash ("\") as the last
-character of the line. There is a hard-coded maximum line length of 4K.
-If you need lines larger than that, you need to change compile-time
-settings inside rsyslog and recompile.
-<h2><a href="rsyslog_conf_global.html">Configuration Directives</a></h2>
-<h2>Basic Structure</h2>
-<p>Rsyslog supports standard sysklogd's configuration file format
-and extends it. So in general, you can take a "normal" syslog.conf and
-use it together with rsyslogd. It will understand everything. However,
-to use most of rsyslogd's unique features, you need to add extended
-configuration directives.</p>
-<p>Rsyslogd supports the classical, selector-based rule lines.
-They are still at the heart of it and all actions are initiated via
-rule lines. A rule lines is any line not starting with a $ or the
-comment sign (#). Lines starting with $ carry rsyslog-specific
-directives.</p>
-<p>Every rule line consists of two fields, a selector field and
-an action field. These two fields are separated by one or more spaces
-or tabs. The selector field specifies a pattern of facilities and
-priorities belonging to the specified action.<br>
-<br>
-Lines starting with a hash mark ("#'') and empty lines are ignored.
-</p>
-<h2><a href="rsyslog_conf_templates.html">Templates</a></h2>
-<h2><a href="rsyslog_conf_output.html">Output Channels</a></h2>
-<h2><a href="rsyslog_conf_filter.html">Filter Conditions</a></h2>
-<h2><a href="rsyslog_conf_actions.html">Actions</a></h2>
-<h2><a href="rsyslog_conf_examples.html">Examples</a></h2>
-<p>Here you will find examples for templates and selector lines. I hope
-they are self-explanatory. If not, please see
-www.monitorware.com/rsyslog/ for advise.</p>
-<h2>Configuration File Syntax Differences</h2>
-<p>Rsyslogd uses a slightly different syntax for its
-configuration file than the original BSD sources. Originally all
-messages of a specific priority and above were forwarded to the log
-file. The modifiers "='', "!'' and "!-'' were added to make rsyslogd
-more flexible and to use it in a more intuitive manner.<br>
-<br>
-The original BSD syslogd doesn't understand spaces as separators
-between the selector and the action field.<br>
-<br>
-When compared to syslogd from sysklogd package, rsyslogd offers
-additional
-<a href="features.html">features</a> (like template
-and database support). For obvious reasons, the syntax for defining
-such features is available in rsyslogd, only.</p>
+
+<p><b>Follow the links below to learn more about specific topics:</b></p>
+<ul>
+<li><a href="rsyslog_conf_modules.html">Modules</a></li>
+<li><a href="rsyslog_conf_lines.html">Lines</a></li>
+<li><a href="rsyslog_conf_global.html">Configuration Directives</a></li>
+<li><a href="rsyslog_conf_basic_structure.html">Basic Structure</a></li>
+<li><a href="rsyslog_conf_templates.html">Templates</a></li>
+<li><a href="rsyslog_conf_output.html">Output Channels</a></li>
+<li><a href="rsyslog_conf_filter.html">Filter Conditions</a></li>
+<li><a href="rsyslog_conf_actions.html">Actions</a></li>
+<li><a href="rsyslog_conf_file_syntax_differences.html">Configuration File Syntax Differences</a></li>
+<li><a href="rsyslog_conf_examples.html">Examples</a></li>
+</ul>
 
 <p>[<a href="rsyslog_conf.html">back to top</a>]
 [<a href="manual.html">manual index</a>]
@@ -79,4 +40,4 @@ Copyright &copy; 2008,2009 by <a href="http://www.gerhards.net/rainer">Rainer Ge
 version 3 or higher.</font></p>
 </body>
 </html>
->
+
