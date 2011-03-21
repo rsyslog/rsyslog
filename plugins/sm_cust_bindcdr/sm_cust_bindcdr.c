@@ -49,7 +49,7 @@
 
 MODULE_TYPE_STRGEN
 MODULE_TYPE_NOKEEP
-STRGEN_NAME("Custom_BindCDR")
+STRGEN_NAME("Custom_BindCDR,sql")
 
 /* internal structures
  */

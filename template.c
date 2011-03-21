@@ -880,10 +880,10 @@ tplAddTplMod(struct template *pTpl, uchar** ppRestOfConfLine)
 	 * regular syntax were used, and it make sure the strgen postively
 	 * acknowledged implementing the option. -- rgerhards, 2011-03-21
 	 */
-	if(lenMod > 6 && !strcasecmp((char*) szMod + lenMod - 4, ",stdsql")) {
+	if(lenMod > 6 && !strcasecmp((char*) szMod + lenMod - 7, ",stdsql")) {
 		pTpl->optFormatForSQL = 2;
 		DBGPRINTF("strgen suports the stdsql option\n");
-	} else if(lenMod > 3 && !strcasecmp((char*) szMod+ lenMod - 7, ",sql")) {
+	} else if(lenMod > 3 && !strcasecmp((char*) szMod+ lenMod - 4, ",sql")) {
 		pTpl->optFormatForSQL = 1;
 		DBGPRINTF("strgen suports the sql option\n");
 	}
