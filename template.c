@@ -856,19 +856,37 @@ tplAddTplMod(struct template *pTpl, uchar** ppRestOfConfLine)
 {
 	uchar *pSrc, *pDst;
 	uchar szMod[2048];
+	unsigned lenMod;
 	strgen_t *pStrgen;
 	DEFiRet;
 
 	pSrc = *ppRestOfConfLine;
 	pDst = szMod;
-	while(*pSrc && !isspace(*pSrc) && pDst < &(szMod[sizeof(szMod) - 1])) {
-		*pDst++ = *pSrc++;
+	lenMod = 0;
+	while(*pSrc && !isspace(*pSrc) && lenMod < sizeof(szMod) - 1) {
+		szMod[lenMod] = *pSrc++;
+		lenMod++;
+		
 	}
-	*pDst = '\0';
+	szMod[lenMod] = '\0';
 	*ppRestOfConfLine = pSrc;
 	CHKiRet(strgen.FindStrgen(&pStrgen, szMod));
 	pTpl->pStrgen = pStrgen->pModule->mod.sm.strgen;
-	dbgprintf("template bound to strgen '%s'\n", szMod);
+	DBGPRINTF("template bound to strgen '%s'\n", szMod);
+	/* check if the name potentially contains some well-known options
+	 * Note: we have opted to let the name contain all options. This sounds 
+	 * useful, because the strgen MUST actually implement a specific set
+	 * of options. Doing this via the name looks to the enduser as if the
+	 * regular syntax were used, and it make sure the strgen postively
+	 * acknowledged implementing the option. -- rgerhards, 2011-03-21
+	 */
+	if(lenMod > 6 && !strcasecmp((char*) szMod + lenMod - 4, ",stdsql")) {
+		pTpl->optFormatForSQL = 2;
+		DBGPRINTF("strgen suports the stdsql option\n");
+	} else if(lenMod > 3 && !strcasecmp((char*) szMod+ lenMod - 7, ",sql")) {
+		pTpl->optFormatForSQL = 1;
+		DBGPRINTF("strgen suports the sql option\n");
+	}
 
 finalize_it:
 	RETiRet;
@@ -936,8 +954,7 @@ struct template *tplAddLine(char* pName, uchar** ppRestOfConfLine)
 		/* we simply make the template defunct in this case by setting
 		 * its name to a zero-string. We do not free it, as this would
 		 * require additional code and causes only a very small memory
-		 * consumption. Memory is freed, however, in normal operation
-		 * and most importantly by HUPing syslogd.
+		 * consumption.
 		 */
 		*pTpl->pszName = '\0';
 		return NULL;
