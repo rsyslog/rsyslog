@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 5.6.5  [V5-STABLE] (rgerhards), 2011-03-??
+Version 5.6.5  [V5-STABLE] (rgerhards), 2011-03-22
 - bugfix: failover did not work correctly if repeated msg reduction was on
   affected directive was: $ActionExecOnlyWhenPreviousIsSuspended on
 - bugfix: omlibdbi did not use password from rsyslog.con
