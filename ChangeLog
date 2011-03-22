@@ -1,3 +1,5 @@
+- bugfix: RFC5424 parser confused by empty structured data
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=237
 ---------------------------------------------------------------------------
 Version 5.7.9  [V5-BETA] (rgerhards), 2011-03-16
 - improved testbench
