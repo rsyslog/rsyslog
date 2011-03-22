@@ -43,10 +43,12 @@
 #include <errno.h>
 #include "conf.h"
 #include "syslogd-types.h"
+#include "cfsysline.h"
 #include "template.h"
 #include "msg.h"
 #include "module-template.h"
 #include "unicode-helper.h"
+#include "errmsg.h"
 
 MODULE_TYPE_STRGEN
 MODULE_TYPE_NOKEEP
@@ -55,10 +57,65 @@ STRGEN_NAME("Custom_BindCDR,sql")
 /* internal structures
  */
 DEF_SMOD_STATIC_DATA
+DEFobjCurrIf(errmsg)
+
+/* list of "allowed" IPs */
+typedef struct allowedip_s {
+	uchar *pszIP;
+	struct allowedip_s *next;
+} allowedip_t;
+
+static allowedip_t *root;
 
 
 /* config data */
 
+/* check if the provided IP is (already) in the allowed list
+ */
+static int
+isAllowed(uchar *pszIP)
+{
+	allowedip_t *pallow;
+	int ret = 0;
+
+	for(pallow = root ; pallow != NULL ; pallow = pallow->next) {
+		DBGPRINTF("XXXX: checking allowed IP '%s'\n", pallow->pszIP);
+		if(!ustrcmp(pallow->pszIP, pszIP)) {
+			ret = 1;
+			goto finalize_it;
+		}
+	}
+finalize_it: return ret;
+}
+
+/* This function is called to add an additional allowed IP. It adds
+ * the IP to the linked list of them. An error is emitted if the IP
+ * already exists.
+ */
+static rsRetVal addAllowedIP(void __attribute__((unused)) *pVal, uchar *pNewVal)
+{
+	allowedip_t *pNew;
+	DEFiRet;
+
+	if(isAllowed(pNewVal)) {
+		errmsg.LogError(0, NO_ERRCODE, "error: allowed IP '%s' already configured "
+				"duplicate ignored", pNewVal);
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
+	CHKmalloc(pNew = malloc(sizeof(allowedip_t)));
+	pNew->pszIP = pNewVal;
+	pNew->next = root;
+	root = pNew;
+	DBGPRINTF("sm_cust_bindcdr: allowed IP '%s' added.\n", pNewVal);
+
+finalize_it:
+	if(iRet != RS_RET_OK) {
+		free(pNewVal);
+	}
+
+	RETiRet;
+}
 
 /* This strgen tries to minimize the amount of reallocs be first obtaining pointers to all strings
  * needed (including their length) and then calculating the actual space required. So when we 
@@ -72,9 +129,10 @@ DEF_SMOD_STATIC_DATA
 	iBuf += sizeof("', '") - 1;
 #define SQL_STMT_END "');\n"
 BEGINstrgen
-	register int iBuf;
+	int iBuf;
 	uchar *psz;
 	uchar *pTimeStamp;
+	size_t lenTimeStamp;
 	uchar szClient[64];
 	unsigned lenClient;
 	uchar szView[64];
@@ -83,7 +141,6 @@ BEGINstrgen
 	unsigned lenQuery;
 	uchar szIP[64];
 	unsigned lenIP;
-	size_t lenTimeStamp;
 	size_t lenTotal;
 CODESTARTstrgen
 	/* first create an empty statement. This is to be replaced if
@@ -137,7 +194,6 @@ CODESTARTstrgen
 		psz += sizeof("query: ") - 1; /* skip "label" */
 		/* first find end-of-string to process */
 		while(*psz && (isdigit(*psz) || *psz == '.')) {
-dbgprintf("XXXX: step 1: %c\n", *psz);
 			psz++;
 		}
 		/* now shuffle data */
@@ -167,6 +223,14 @@ dbgprintf("XXXX: step 1: %c\n", *psz);
 
 
 	/* --- strings extracted ---- */
+
+	/* now check if the IP is "allowed", in which case we should not
+	 * insert into the database.
+	 */
+	if(isAllowed(szIP)) {
+		DBGPRINTF("sm_cust_bindcdr: message from allowed IP, ignoring\n");
+		FINALIZE;
+	}
 
 	/* calculate len, constants for spaces and similar fixed strings */
 	lenTotal = lenTimeStamp + lenClient + lenView + lenQuery + lenIP + 5 * 5
@@ -211,7 +275,16 @@ ENDstrgen
 
 
 BEGINmodExit
+	allowedip_t *pallow, *pdel;
 CODESTARTmodExit
+	for(pallow = root ; pallow != NULL ; ) {
+		pdel = pallow;
+		pallow = pallow->next;
+		free(pdel->pszIP);
+		free(pdel);
+	}
+
+	objRelease(errmsg, CORE_COMPONENT);
 ENDmodExit
 
 
@@ -225,6 +298,10 @@ BEGINmodInit()
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
+	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 
+	root = NULL;
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"sgcustombindcdrallowedip", 0, eCmdHdlrGetWord,
+		addAllowedIP, NULL, STD_LOADABLE_MODULE_ID));
 	dbgprintf("rsyslog sm_cust_bindcdr called, compiled with version %s\n", VERSION);
 ENDmodInit
