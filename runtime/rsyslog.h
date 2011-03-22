@@ -137,6 +137,7 @@ typedef uintTiny	propid_t;
 #define PROP_SYS_QHOUR			156
 #define PROP_SYS_MINUTE			157
 #define PROP_SYS_MYHOSTNAME		158
+#define PROP_SYS_BOM			159
 
 
 /* The error codes below are orginally "borrowed" from
