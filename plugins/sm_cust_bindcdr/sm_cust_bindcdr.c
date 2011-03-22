@@ -37,6 +37,7 @@
 #include "config.h"
 #include "rsyslog.h"
 #include <stdlib.h>
+#include <ctype.h>
 #include <string.h>
 #include <assert.h>
 #include <errno.h>
@@ -64,19 +65,112 @@ DEF_SMOD_STATIC_DATA
  * finally copy, we know exactly what we need. So we do at most one alloc.
  */
 //#define SQL_STMT "INSERT INTO CDR(date,time,client,view,query,ip) VALUES ('"
-#define SQL_STMT "INSERT INTO bind_test(date,time,client,view,query,ip) VALUES ('"
+//#define SQL_STMT "INSERT INTO bind_test(`Date`,`time`,client,view,query,ip) VALUES ('"
+#define SQL_STMT "INSERT INTO bind_test(`Date`,ip) VALUES ('"
+#define ADD_SQL_DELIM \
+	memcpy(*ppBuf + iBuf, "', '", sizeof("', '") - 1); \
+	iBuf += sizeof("', '") - 1;
+#define SQL_STMT_END "');\n"
 BEGINstrgen
 	register int iBuf;
+	uchar *psz;
 	uchar *pTimeStamp;
+	uchar szClient[64];
+	unsigned lenClient;
+	uchar szView[64];
+	unsigned lenView;
+	uchar szQuery[64];
+	unsigned lenQuery;
+	uchar szIP[64];
+	unsigned lenIP;
 	size_t lenTimeStamp;
 	size_t lenTotal;
 CODESTARTstrgen
+	/* first create an empty statement. This is to be replaced if
+	 * we have better data to fill in.
+	 */
+	/* now make sure buffer is large enough */
+	if(*pLenBuf < 2)
+		CHKiRet(ExtendBuf(ppBuf, pLenBuf, 2));
+	memcpy(*ppBuf, ";", sizeof(";"));
+
 	/* first obtain all strings and their length (if not fixed) */
 	pTimeStamp = (uchar*) getTimeReported(pMsg, tplFmtRFC3339Date);
 	lenTimeStamp = ustrlen(pTimeStamp);
+	
+	/* "client" */
+	psz = (uchar*) strstr((char*) getMSG(pMsg), "client ");
+	if(psz == NULL) {
+		dbgprintf("Custom_BindCDR: client part in msg missing\n");
+		FINALIZE;
+	} else {
+		psz += sizeof("client ") - 1; /* skip "label" */
+		for(  lenClient = 0
+		    ; *psz && *psz != '#' && lenClient < sizeof(szClient) - 1
+		    ; ++lenClient) {
+			szClient[lenClient] = *psz++;
+		}
+		szClient[lenClient] = '\0';
+	}
+
+	/* "view" */
+	psz = (uchar*) strstr((char*) getMSG(pMsg), "view ");
+	if(psz == NULL) {
+		dbgprintf("Custom_BindCDR: view part in msg missing\n");
+		FINALIZE;
+	} else {
+		psz += sizeof("view ") - 1; /* skip "label" */
+		for(  lenView = 0
+		    ; *psz && *psz != ':' && lenView < sizeof(szView) - 1
+		    ; ++lenView) {
+			szView[lenView] = *psz++;
+		}
+		szView[lenView] = '\0';
+	}
+
+	/* "query" - we must extract just the number, and in reverse! */
+	psz = (uchar*) strstr((char*) getMSG(pMsg), "query: ");
+	if(psz == NULL) {
+		dbgprintf("Custom_BindCDR: query part in msg missing\n");
+		FINALIZE;
+	} else {
+		psz += sizeof("query: ") - 1; /* skip "label" */
+		/* first find end-of-string to process */
+		while(*psz && (isdigit(*psz) || *psz == '.')) {
+dbgprintf("XXXX: step 1: %c\n", *psz);
+			psz++;
+		}
+		/* now shuffle data */
+		for(  lenQuery = 0
+		    ; *psz && *psz != ' ' && lenQuery < sizeof(szQuery) - 1
+		    ; --psz) {
+			if(isdigit(*psz))
+				szQuery[lenQuery++] = *psz;
+		}
+		szQuery[lenQuery] = '\0';
+	}
+
+	/* "ip" */
+	psz = (uchar*) strstr((char*) getMSG(pMsg), "IN TXT + (");
+	if(psz == NULL) {
+		dbgprintf("Custom_BindCDR: ip part in msg missing\n");
+		FINALIZE;
+	} else {
+		psz += sizeof("IN TXT + (") - 1; /* skip "label" */
+		for(  lenIP = 0
+		    ; *psz && *psz != ')' && lenIP < sizeof(szIP) - 1
+		    ; ++lenIP) {
+			szIP[lenIP] = *psz++;
+		}
+		szIP[lenIP] = '\0';
+	}
+
+
+	/* --- strings extracted ---- */
 
 	/* calculate len, constants for spaces and similar fixed strings */
-	lenTotal = lenTimeStamp + 1 + 200 /* test! */ + 2;
+	lenTotal = lenTimeStamp + lenClient + lenView + lenQuery + lenIP + 5 * 5
+		   + sizeof(SQL_STMT) + sizeof(SQL_STMT_END) + 2;
 
 	/* now make sure buffer is large enough */
 	if(lenTotal  >= *pLenBuf)
@@ -90,12 +184,27 @@ CODESTARTstrgen
 
 	memcpy(*ppBuf + iBuf, pTimeStamp, lenTimeStamp);
 	iBuf += lenTimeStamp;
-	memcpy(*ppBuf + iBuf, "' , '", sizeof("', '") - 1);
-	iBuf += sizeof("', '") - 1;
+	ADD_SQL_DELIM
+
+	memcpy(*ppBuf + iBuf, szClient, lenClient);
+	iBuf += lenClient;
+	ADD_SQL_DELIM
+
+	memcpy(*ppBuf + iBuf, szView, lenView);
+	iBuf += lenView;
+	ADD_SQL_DELIM
+
+	memcpy(*ppBuf + iBuf, szQuery, lenQuery);
+	iBuf += lenQuery;
+	ADD_SQL_DELIM
+
+	memcpy(*ppBuf + iBuf, szIP, lenIP);
+	iBuf += lenIP;
+	ADD_SQL_DELIM
 
 	/* end of SQL statement/trailer (NUL is contained in string!) */
-	memcpy(*ppBuf + iBuf, "');", sizeof("');"));
-	iBuf += sizeof("');");
+	memcpy(*ppBuf + iBuf, SQL_STMT_END, sizeof(SQL_STMT_END));
+	iBuf += sizeof(SQL_STMT_END);
 
 finalize_it:
 ENDstrgen
