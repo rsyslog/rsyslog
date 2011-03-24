@@ -303,10 +303,10 @@ rsRetVal parseMsg(msg_t *pMsg)
 			if(pri & ~(LOG_FACMASK|LOG_PRIMASK))
 				pri = DEFUPRI;
 		}
+		pMsg->iFacility = LOG_FAC(pri);
+		pMsg->iSeverity = LOG_PRI(pri);
+		MsgSetAfterPRIOffs(pMsg, msg - pMsg->pszRawMsg);
 	}
-	pMsg->iFacility = LOG_FAC(pri);
-	pMsg->iSeverity = LOG_PRI(pri);
-	MsgSetAfterPRIOffs(pMsg, msg - pMsg->pszRawMsg);
 
 	/* rger 2005-11-24 (happy thanksgiving!): we now need to check if we have
 	 * a traditional syslog message or one formatted according to syslog-protocol.
