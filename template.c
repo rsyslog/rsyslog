@@ -42,10 +42,13 @@
 /* static data */
 DEFobjCurrIf(obj)
 DEFobjCurrIf(errmsg)
-DEFobjCurrIf(regexp)
 DEFobjCurrIf(strgen)
 
+#ifdef FEATURE_REGEXP
+DEFobjCurrIf(regexp)
 static int bFirstRegexpErrmsg = 1; /**< did we already do a "can't load regexp" error message? */
+#endif
+
 static struct template *tplRoot = NULL;	/* the root of the template list */
 static struct template *tplLast = NULL;	/* points to the last element of the template list */
 static struct template *tplLastStatic = NULL; /* last static element of the template list */
@@ -549,10 +552,9 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 	cstr_t *pStrB;
 	struct templateEntry *pTpe;
 	int iNum;	/* to compute numbers */
-	rsRetVal iRetLocal;
-
 #ifdef FEATURE_REGEXP
 	/* APR: variables for regex */
+	rsRetVal iRetLocal;
 	int longitud;
 	unsigned char *regex_char;
 	unsigned char *regex_end;
@@ -1084,11 +1086,13 @@ void tplDeleteAll(void)
 				break;
 			case FIELD:
 				/* check if we have a regexp and, if so, delete it */
+#ifdef FEATURE_REGEXP
 				if(pTpeDel->data.field.has_regex != 0) {
 					if(objUse(regexp, LM_REGEXP_FILENAME) == RS_RET_OK) {
 						regexp.regfree(&(pTpeDel->data.field.re));
 					}
 				}
+#endif
 				break;
 			}
 			/*dbgprintf("\n");*/
@@ -1137,12 +1141,14 @@ void tplDeleteNew(void)
 				free(pTpeDel->data.constant.pConstant);
 				break;
 			case FIELD:
+#ifdef FEATURE_REGEXP
 				/* check if we have a regexp and, if so, delete it */
 				if(pTpeDel->data.field.has_regex != 0) {
 					if(objUse(regexp, LM_REGEXP_FILENAME) == RS_RET_OK) {
 						regexp.regfree(&(pTpeDel->data.field.re));
 					}
 				}
+#endif
 				break;
 			}
 			/*dbgprintf("\n");*/
