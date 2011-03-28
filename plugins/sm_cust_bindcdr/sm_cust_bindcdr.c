@@ -120,6 +120,8 @@ finalize_it:
 /* This strgen tries to minimize the amount of reallocs be first obtaining pointers to all strings
  * needed (including their length) and then calculating the actual space required. So when we 
  * finally copy, we know exactly what we need. So we do at most one alloc.
+ * An actual message sample for what we intend to parse is (one line):
+  <30>Mar 24 13:01:51 named[6085]: 24-Mar-2011 13:01:51.865 queries: info: client 10.0.0.96#39762: view trusted: query: 8.6.0.9.9.4.1.4.6.1.8.3.mobilecrawler.com IN TXT + (10.0.0.96)
  */
 //#define SQL_STMT "INSERT INTO CDR(date,time,client,view,query,ip) VALUES ('"
 //#define SQL_STMT "INSERT INTO bind_test(`Date`,`time`,client,view,query,ip) VALUES ('"
@@ -131,8 +133,12 @@ finalize_it:
 BEGINstrgen
 	int iBuf;
 	uchar *psz;
-	uchar *pTimeStamp;
-	size_t lenTimeStamp;
+	uchar szDate[64];
+	unsigned lenDate;
+	uchar szTime[64];
+	unsigned lenTime;
+	uchar szMSec[64];
+	unsigned lenMSec;
 	uchar szClient[64];
 	unsigned lenClient;
 	uchar szView[64];
@@ -152,9 +158,76 @@ CODESTARTstrgen
 	memcpy(*ppBuf, ";", sizeof(";"));
 
 	/* first obtain all strings and their length (if not fixed) */
-	pTimeStamp = (uchar*) getTimeReported(pMsg, tplFmtRFC3339Date);
-	lenTimeStamp = ustrlen(pTimeStamp);
-	
+	/* Note that there are two date fields present, one in the header
+	 * and one more in the actual message. We use the one from the message
+	 * and parse that our. We check validity based on some fixe fields. In-
+	 * depth verification is probably not worth the effort (CPU time), because
+	 * we do various other checks on the message format below).
+	 */
+	psz = getMSG(pMsg);
+	if(psz[0] == ' ' && psz[3] == '-' && psz[7] == '-') {
+		memcpy(szDate, psz+8,  4);
+		szDate[4] = '-';
+		if(!strncmp((char*)psz+4, "Jan", 3)) {
+			szDate[5] = '0';
+			szDate[6] = '1';
+		} else if(!strncmp((char*)psz+4, "Feb", 3)) {
+			szDate[5] = '0';
+			szDate[6] = '2';
+		} else if(!strncmp((char*)psz+4, "Mar", 3)) {
+			szDate[5] = '0';
+			szDate[6] = '3';
+		} else if(!strncmp((char*)psz+4, "Apr", 3)) {
+			szDate[5] = '0';
+			szDate[6] = '4';
+		} else if(!strncmp((char*)psz+4, "May", 3)) {
+			szDate[5] = '0';
+			szDate[6] = '5';
+		} else if(!strncmp((char*)psz+4, "Jun", 3)) {
+			szDate[5] = '0';
+			szDate[6] = '6';
+		} else if(!strncmp((char*)psz+4, "Jul", 3)) {
+			szDate[5] = '0';
+			szDate[6] = '7';
+		} else if(!strncmp((char*)psz+4, "Aug", 3)) {
+			szDate[5] = '0';
+			szDate[6] = '8';
+		} else if(!strncmp((char*)psz+4, "Sep", 3)) {
+			szDate[5] = '0';
+			szDate[6] = '9';
+		} else if(!strncmp((char*)psz+4, "Oct", 3)) {
+			szDate[5] = '1';
+			szDate[6] = '0';
+		} else if(!strncmp((char*)psz+4, "Nov", 3)) {
+			szDate[5] = '1';
+			szDate[6] = '1';
+		} else if(!strncmp((char*)psz+4, "Dec", 3)) {
+			szDate[5] = '1';
+			szDate[6] = '2';
+		}
+		szDate[7] = '-';
+		szDate[8] = psz[1];
+		szDate[9] = psz[2];
+		szDate[10] = '\0';
+		lenDate = 10;
+	} else {
+		dbgprintf("Custom_BindCDR: date part in msg missing\n");
+		FINALIZE;
+	}
+
+	/* now time (pull both regular time and ms) */
+	if(psz[12] == ' ' && psz[15] == ':' && psz[18] == ':' && psz[21] == '.' && psz[25] == ' ') {
+		memcpy(szTime, (char*)psz+13, 8);
+		szTime[9] = '\0';
+		lenTime = 8;
+		memcpy(szMSec, (char*)psz+22, 3);
+		szMSec[4] = '\0';
+		lenMSec = 3;
+	} else {
+		dbgprintf("Custom_BindCDR: date part in msg missing\n");
+		FINALIZE;
+	}
+
 	/* "client" */
 	psz = (uchar*) strstr((char*) getMSG(pMsg), "client ");
 	if(psz == NULL) {
@@ -233,8 +306,8 @@ CODESTARTstrgen
 	}
 
 	/* calculate len, constants for spaces and similar fixed strings */
-	lenTotal = lenTimeStamp + lenClient + lenView + lenQuery + lenIP + 5 * 5
-		   + sizeof(SQL_STMT) + sizeof(SQL_STMT_END) + 2;
+	lenTotal = lenDate + lenTime + lenMSec + lenClient + lenView + lenQuery
+		   + lenIP + 7 * 5 + sizeof(SQL_STMT) + sizeof(SQL_STMT_END) + 2;
 
 	/* now make sure buffer is large enough */
 	if(lenTotal  >= *pLenBuf)
@@ -246,8 +319,16 @@ CODESTARTstrgen
 
 	// SQL content:DATE,TIME,CLIENT,VIEW,QUERY,IP); 
 
-	memcpy(*ppBuf + iBuf, pTimeStamp, lenTimeStamp);
-	iBuf += lenTimeStamp;
+	memcpy(*ppBuf + iBuf, szDate, lenDate);
+	iBuf += lenDate;
+	ADD_SQL_DELIM
+
+	memcpy(*ppBuf + iBuf, szTime, lenTime);
+	iBuf += lenTime;
+	ADD_SQL_DELIM
+
+	memcpy(*ppBuf + iBuf, szMSec, lenMSec);
+	iBuf += lenMSec;
 	ADD_SQL_DELIM
 
 	memcpy(*ppBuf + iBuf, szClient, lenClient);
@@ -264,7 +345,6 @@ CODESTARTstrgen
 
 	memcpy(*ppBuf + iBuf, szIP, lenIP);
 	iBuf += lenIP;
-	ADD_SQL_DELIM
 
 	/* end of SQL statement/trailer (NUL is contained in string!) */
 	memcpy(*ppBuf + iBuf, SQL_STMT_END, sizeof(SQL_STMT_END));
