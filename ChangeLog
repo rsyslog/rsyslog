@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 5.7.10  [V5-BETA] (rgerhards), 2011-03-??
+- bugfix: ompgsql did not work properly with ANSI SQL strings
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=229
 - bugfix: rsyslog did not build with --disable-regexp configure option
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=243
 - bugfix: PRI was invalid on Solaris for message from local log socket
