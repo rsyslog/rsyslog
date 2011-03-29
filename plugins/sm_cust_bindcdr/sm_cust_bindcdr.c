@@ -79,7 +79,6 @@ isAllowed(uchar *pszIP)
 	int ret = 0;
 
 	for(pallow = root ; pallow != NULL ; pallow = pallow->next) {
-		DBGPRINTF("XXXX: checking allowed IP '%s'\n", pallow->pszIP);
 		if(!ustrcmp(pallow->pszIP, pszIP)) {
 			ret = 1;
 			goto finalize_it;
@@ -123,9 +122,7 @@ finalize_it:
  * An actual message sample for what we intend to parse is (one line):
   <30>Mar 24 13:01:51 named[6085]: 24-Mar-2011 13:01:51.865 queries: info: client 10.0.0.96#39762: view trusted: query: 8.6.0.9.9.4.1.4.6.1.8.3.mobilecrawler.com IN TXT + (10.0.0.96)
  */
-//#define SQL_STMT "INSERT INTO CDR(date,time,client,view,query,ip) VALUES ('"
-//#define SQL_STMT "INSERT INTO bind_test(`Date`,`time`,client,view,query,ip) VALUES ('"
-#define SQL_STMT "INSERT INTO bind_test(`Date`,ip) VALUES ('"
+#define SQL_STMT "INSERT INTO CDR(`Date`,`Time`, timeMS, client, view, query, ip) VALUES ('"
 #define ADD_SQL_DELIM \
 	memcpy(*ppBuf + iBuf, "', '", sizeof("', '") - 1); \
 	iBuf += sizeof("', '") - 1;
@@ -212,7 +209,7 @@ CODESTARTstrgen
 		lenDate = 10;
 	} else {
 		dbgprintf("Custom_BindCDR: date part in msg missing\n");
-		FINALIZE;
+		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
 	/* now time (pull both regular time and ms) */
@@ -225,14 +222,14 @@ CODESTARTstrgen
 		lenMSec = 3;
 	} else {
 		dbgprintf("Custom_BindCDR: date part in msg missing\n");
-		FINALIZE;
+		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
 	/* "client" */
 	psz = (uchar*) strstr((char*) getMSG(pMsg), "client ");
 	if(psz == NULL) {
 		dbgprintf("Custom_BindCDR: client part in msg missing\n");
-		FINALIZE;
+		ABORT_FINALIZE(RS_RET_ERR);
 	} else {
 		psz += sizeof("client ") - 1; /* skip "label" */
 		for(  lenClient = 0
@@ -247,7 +244,7 @@ CODESTARTstrgen
 	psz = (uchar*) strstr((char*) getMSG(pMsg), "view ");
 	if(psz == NULL) {
 		dbgprintf("Custom_BindCDR: view part in msg missing\n");
-		FINALIZE;
+		ABORT_FINALIZE(RS_RET_ERR);
 	} else {
 		psz += sizeof("view ") - 1; /* skip "label" */
 		for(  lenView = 0
@@ -262,10 +259,10 @@ CODESTARTstrgen
 	psz = (uchar*) strstr((char*) getMSG(pMsg), "query: ");
 	if(psz == NULL) {
 		dbgprintf("Custom_BindCDR: query part in msg missing\n");
-		FINALIZE;
+		ABORT_FINALIZE(RS_RET_ERR);
 	} else {
 		psz += sizeof("query: ") - 1; /* skip "label" */
-		/* first find end-of-string to process */
+		/* first find end-of-strihttp://www.rsyslog.com/doc/omruleset.htmlng to process */
 		while(*psz && (isdigit(*psz) || *psz == '.')) {
 			psz++;
 		}
@@ -283,7 +280,7 @@ CODESTARTstrgen
 	psz = (uchar*) strstr((char*) getMSG(pMsg), "IN TXT + (");
 	if(psz == NULL) {
 		dbgprintf("Custom_BindCDR: ip part in msg missing\n");
-		FINALIZE;
+		ABORT_FINALIZE(RS_RET_ERR);
 	} else {
 		psz += sizeof("IN TXT + (") - 1; /* skip "label" */
 		for(  lenIP = 0
@@ -302,7 +299,7 @@ CODESTARTstrgen
 	 */
 	if(isAllowed(szIP)) {
 		DBGPRINTF("sm_cust_bindcdr: message from allowed IP, ignoring\n");
-		FINALIZE;
+		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
 	/* calculate len, constants for spaces and similar fixed strings */
@@ -316,8 +313,6 @@ CODESTARTstrgen
 	/* and concatenate the resulting string */
 	memcpy(*ppBuf, SQL_STMT, sizeof(SQL_STMT) - 1);
 	iBuf = sizeof(SQL_STMT) - 1;
-
-	// SQL content:DATE,TIME,CLIENT,VIEW,QUERY,IP); 
 
 	memcpy(*ppBuf + iBuf, szDate, lenDate);
 	iBuf += lenDate;
