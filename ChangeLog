@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 5.7.10  [V5-BETA] (rgerhards), 2011-03-??
+- bugfix: error return from strgen caused abort, now causes action to be
+  ignored (just like a failed filter)
 - new sample plugin for a strgen to generate sql statement consumable
   by a database plugin
 - bugfix: strgen could not be used together with database outputs
