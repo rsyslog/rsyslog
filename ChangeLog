@@ -5,6 +5,16 @@
 - bugfix: RFC5424 parser confused by empty structured data
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=237
 ---------------------------------------------------------------------------
+Version 5.7.10  [V5-BETA] (rgerhards), 2011-03-??
+- bugfix: error return from strgen caused abort, now causes action to be
+  ignored (just like a failed filter)
+- new sample plugin for a strgen to generate sql statement consumable
+  by a database plugin
+- bugfix: strgen could not be used together with database outputs
+  because the sql/stdsql option could not be specified. This has been
+  solved by permitting the strgen to include the opton inside its name.
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=195
+---------------------------------------------------------------------------
 Version 5.7.9  [V5-BETA] (rgerhards), 2011-03-16
 - improved testbench
   among others, life tests for ommysql (against a test database) have

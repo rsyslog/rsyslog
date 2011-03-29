@@ -1081,6 +1081,20 @@ AC_ARG_ENABLE(cust1,
 AM_CONDITIONAL(ENABLE_CUST1, test x$enable_cust1 = xyes)
 
 
+# A custom strgen that also serves as a sample of how to do
+# SQL-generating strgen's
+AC_ARG_ENABLE(smcustbindcdr,
+        [AS_HELP_STRING([--enable-smcustbindcdr],[Compiles smcustbindcdr module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_smcustbindcdr="yes" ;;
+          no) enable_smcustbindcdr="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-smcustbindcdr) ;;
+         esac],
+        [enable_smcustbindcdr=no]
+)
+AM_CONDITIONAL(ENABLE_SMCUSTBINDCDR, test x$enable_smcustbindcdr = xyes)
+
+
 # settings for the template input module; copy and modify this code
 # if you intend to add your own module. Be sure to replace imtemplate
 # by the actual name of your module.
@@ -1178,6 +1192,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omsnmp/Makefile \
 		plugins/omoracle/Makefile \
 		plugins/omudpspoof/Makefile \
+		plugins/sm_cust_bindcdr/Makefile \
 		plugins/cust1/Makefile \
 		java/Makefile \
 		tests/Makefile])
@@ -1222,6 +1237,9 @@ echo "    pmlastmsg module will be compiled:        $enable_pmlastmsg"
 echo "    pmcisconames module will be compiled:     $enable_pmcisconames"
 echo "    pmaixforwardedfrom module w.be compiled:  $enable_pmaixforwardedfrom"
 echo "    pmsnare module will be compiled:          $enable_pmsnare"
+echo
+echo "---{ strgen modules }---"
+echo "    sm_cust_bindcdr module will be compiled:  $enable_sm_cust_bindcdr"
 echo
 echo "---{ database support }---"
 echo "    MySql support enabled:                    $enable_mysql"
