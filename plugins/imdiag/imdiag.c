@@ -205,7 +205,7 @@ doInjectMsg(int iNum)
 	DEFiRet;
 
 	snprintf((char*)szMsg, sizeof(szMsg)/sizeof(uchar),
-		 "<167>Mar  1 01:00:00 172.20.245.8 tag msgnum:%8.8d:\n", iNum);
+		 "<167>Mar  1 01:00:00 172.20.245.8 tag msgnum:%8.8d:", iNum);
 
 	datetime.getCurrTime(&stTime, &ttGenTime);
 	/* we now create our own message object and submit it to the queue */
@@ -247,6 +247,7 @@ injectMsg(uchar *pszCmd, tcps_sess_t *pSess)
 	}
 
 	CHKiRet(sendResponse(pSess, "%d messages injected\n", nMsgs));
+	DBGPRINTF("imdiag: %d messages injected\n", nMsgs);
 
 finalize_it:
 	RETiRet;
@@ -279,6 +280,7 @@ waitMainQEmpty(tcps_sess_t *pSess)
 	}
 
 	CHKiRet(sendResponse(pSess, "mainqueue empty\n"));
+	DBGPRINTF("imdiag: mainqueue empty\n");
 
 finalize_it:
 	RETiRet;
@@ -314,6 +316,7 @@ OnMsgReceived(tcps_sess_t *pSess, uchar *pRcv, int iLenMsg)
 	if(!ustrcmp(cmdBuf, UCHAR_CONSTANT("getmainmsgqueuesize"))) {
 		CHKiRet(diagGetMainMsgQSize(&iMsgQueueSize));
 		CHKiRet(sendResponse(pSess, "%d\n", iMsgQueueSize));
+		DBGPRINTF("imdiag: %d messages in main queue\n", iMsgQueueSize);
 	} else if(!ustrcmp(cmdBuf, UCHAR_CONSTANT("waitmainqueueempty"))) {
 		CHKiRet(waitMainQEmpty(pSess));
 	} else if(!ustrcmp(cmdBuf, UCHAR_CONSTANT("injectmsg"))) {
