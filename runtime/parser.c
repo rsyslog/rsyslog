@@ -453,10 +453,10 @@ ParsePRI(msg_t *pMsg)
 			if(pri & ~(LOG_FACMASK|LOG_PRIMASK))
 				pri = DEFUPRI;
 		}
+		pMsg->iFacility = LOG_FAC(pri);
+		pMsg->iSeverity = LOG_PRI(pri);
+		MsgSetAfterPRIOffs(pMsg, msg - pMsg->pszRawMsg);
 	}
-	pMsg->iFacility = LOG_FAC(pri);
-	pMsg->iSeverity = LOG_PRI(pri);
-	MsgSetAfterPRIOffs(pMsg, msg - pMsg->pszRawMsg);
 	RETiRet;
 }
 

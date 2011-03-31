@@ -151,13 +151,41 @@ Version 5.9.0  [V5-DEVEL] (rgerhards), 2011-03-??
 - enhanced omhdfs to support batching mode. This permits to increase
   performance, as we now call the HDFS API with much larger message
   sizes and far more infrequently
+- bugfix: failover did not work correctly if repeated msg reduction was on
+  affected directive was: $ActionExecOnlyWhenPreviousIsSuspended on
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=236
 ---------------------------------------------------------------------------
-Version 5.7.9  [V5-BETA] (rgerhards), 2011-03-??
+Version 5.8.0  [V5-stable] (rgerhards), 2011-04-??
+- bugfix: DA queue was never shutdown once it was started
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=241
+---------------------------------------------------------------------------
+Version 5.7.10  [V5-BETA] (rgerhards), 2011-03-29
+- bugfix: ompgsql did not work properly with ANSI SQL strings
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=229
+- bugfix: rsyslog did not build with --disable-regexp configure option
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=243
+- bugfix: PRI was invalid on Solaris for message from local log socket
+- enhance: added $BOM system property to ease writing byte order masks
+- bugfix: RFC5424 parser confused by empty structured data
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=237
+- bugfix: error return from strgen caused abort, now causes action to be
+  ignored (just like a failed filter)
+- new sample plugin for a strgen to generate sql statement consumable
+  by a database plugin
+- bugfix: strgen could not be used together with database outputs
+  because the sql/stdsql option could not be specified. This has been
+  solved by permitting the strgen to include the opton inside its name.
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=195
+---------------------------------------------------------------------------
+Version 5.7.9  [V5-BETA] (rgerhards), 2011-03-16
 - improved testbench
   among others, life tests for ommysql (against a test database) have
   been added, valgrind-based testing enhanced, ...
 - enhance: fallback *at runtime* to epoll_create if epoll_create1 is not
   available. Thanks to Michael Biebl for analysis and patch!
+- bugfix: failover did not work correctly if repeated msg reduction was on
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=236
+  affected directive was: $ActionExecOnlyWhenPreviousIsSuspended on
 - bugfix: minor memory leak in omlibdbi (< 1k per instance and run)
 - bugfix: (regression) omhdfs did no longer compile
 - bugfix: omlibdbi did not use password from rsyslog.conf
@@ -283,6 +311,9 @@ Version 5.7.0  [V5-DEVEL] (rgerhards), 2010-09-16
   * sd-systemd API added as part of rsyslog runtime library
 ---------------------------------------------------------------------------
 Version 5.6.5  [V5-STABLE] (rgerhards), 2011-03-??
+- bugfix: failover did not work correctly if repeated msg reduction was on
+  affected directive was: $ActionExecOnlyWhenPreviousIsSuspended on
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=236
 - bugfix: omlibdbi did not use password from rsyslog.con
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=203
 - bugfix(kind of): tell users that config graph can currently not be

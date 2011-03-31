@@ -10,7 +10,7 @@
 #valgrind="valgrind --tool=helgrind --log-fd=1"
 #valgrind="valgrind --tool=exp-ptrcheck --log-fd=1"
 #set -o xtrace
-#export RSYSLOG_DEBUG="debug nostdout"
+#export RSYSLOG_DEBUG="debug nologfuncflow nostdout"
 #export RSYSLOG_DEBUGLOG="log"
 case $1 in
    'init')	$srcdir/killrsyslog.sh # kill rsyslogd if it runs for some reason
@@ -84,15 +84,27 @@ case $1 in
 			exit 1
 		fi
 		;;
+   'get-mainqueuesize') # show the current main queue size
+		if [ "$2" == "2" ]
+		then
+			echo getmainmsgqueuesize | ./diagtalker -p13501
+		else
+			echo getmainmsgqueuesize | ./diagtalker
+		fi
+		;;
    'wait-queueempty') # wait for main message queue to be empty. $2 is the instance.
 		if [ "$2" == "2" ]
 		then
-			echo WaitMainQueueEmpty | ./diagtalker
+			echo WaitMainQueueEmpty | ./diagtalker -p13501
 		else
 			echo WaitMainQueueEmpty | ./diagtalker
 		fi
 		;;
    'shutdown-when-empty') # shut rsyslogd down when main queue is empty. $2 is the instance.
+		if [ "$2" == "2" ]
+		then
+		   echo Shutting down instance 2
+		fi
    		$srcdir/diag.sh wait-queueempty $2
 		kill `cat rsyslog$2.pid`
 		# note: we do not wait for the actual termination!

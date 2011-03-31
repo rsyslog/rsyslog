@@ -142,7 +142,7 @@ static int parseRFCStructuredData(uchar **pp2parse, uchar *pResult, int *pLenStr
 	 * structured data. There may also be \] inside the structured data, which
 	 * do NOT terminate an element.
 	 */
-	if(lenStr == 0 || *p2parse != '[')
+	if(lenStr == 0 || (*p2parse != '[' && *p2parse != '-'))
 		return 1; /* this is NOT structured data! */
 
 	if(*p2parse == '-') { /* empty structured data? */
@@ -211,7 +211,6 @@ static int parseRFCStructuredData(uchar **pp2parse, uchar *pResult, int *pLenStr
  *
  * rger, 2005-11-24
  */
-//static int parseRFCSyslogMsg(msg_t *pMsg, int flags)
 BEGINparse
 	uchar *p2parse;
 	uchar *pBuf = NULL;
