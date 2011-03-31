@@ -444,6 +444,8 @@ rsRetVal propNameToID(cstr_t *pCSPropName, propid_t *pPropID)
 		*pPropID = PROP_SYS_MINUTE;
 	} else if(!strcmp((char*) pName, "$myhostname")) {
 		*pPropID = PROP_SYS_MYHOSTNAME;
+	} else if(!strcmp((char*) pName, "$bom")) {
+		*pPropID = PROP_SYS_BOM;
 	} else {
 		*pPropID = PROP_INVALID;
 		iRet = RS_RET_VAR_NOT_FOUND;
@@ -525,6 +527,8 @@ uchar *propIDToName(propid_t propID)
 			return UCHAR_CONSTANT("$MINUTE");
 		case PROP_SYS_MYHOSTNAME:
 			return UCHAR_CONSTANT("$MYHOSTNAME");
+		case PROP_SYS_BOM:
+			return UCHAR_CONSTANT("$BOM");
 		default:
 			return UCHAR_CONSTANT("*invalid property id*");
 	}
@@ -2426,6 +2430,12 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			break;
 		case PROP_SYS_MYHOSTNAME:
 			pRes = glbl.GetLocalHostName();
+			break;
+		case PROP_SYS_BOM:
+			if(*pbMustBeFreed == 1)
+				free(pRes);
+			pRes = (uchar*) "\xEF\xBB\xBF";
+			*pbMustBeFreed = 0;
 			break;
 		default:
 			/* there is no point in continuing, we may even otherwise render the

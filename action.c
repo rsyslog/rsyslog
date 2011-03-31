@@ -1071,7 +1071,8 @@ prepareBatch(action_t *pAction, batch_t *pBatch)
 		pElem = &(pBatch->pElem[i]);
 		if(pElem->bFilterOK && pElem->state != BATCH_STATE_DISC) {
 			pElem->state = BATCH_STATE_RDY;
-			prepareDoActionParams(pAction, pElem);
+			if(prepareDoActionParams(pAction, pElem) != RS_RET_OK)
+				pElem->bFilterOK = FALSE;
 		}
 	}
 	RETiRet;

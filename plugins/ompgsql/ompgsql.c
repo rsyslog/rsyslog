@@ -149,8 +149,13 @@ static rsRetVal initPgSQL(instanceData *pData, int bSilent)
 
 	dbgprintf("host=%s dbname=%s uid=%s\n",pData->f_dbsrv,pData->f_dbname,pData->f_dbuid);
 
+	/* Force PostgreSQL to use ANSI-SQL conforming strings, otherwise we may
+	 * get all sorts of side effects (e.g.: backslash escapes) and warnings
+	 */
+	const char *PgConnectionOptions = "-c standard_conforming_strings=on";
+
 	/* Connect to database */
-	if((pData->f_hpgsql=PQsetdbLogin(pData->f_dbsrv, NULL, NULL, NULL,
+	if((pData->f_hpgsql=PQsetdbLogin(pData->f_dbsrv, NULL, PgConnectionOptions, NULL,
 				pData->f_dbname, pData->f_dbuid, pData->f_dbpwd)) == NULL) {
 		reportDBError(pData, bSilent);
 		closePgSQL(pData); /* ignore any error we may get */

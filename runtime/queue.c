@@ -1774,8 +1774,12 @@ qqueueChkStopWrkrDA(qqueue_t *pThis)
 {
 	DEFiRet;
 
+//DBGPRINTF("XXXX: chkStopWrkrDA called, low watermark %d, phys Size %d\n", pThis->iLowWtrMrk, getPhysicalQueueSize(pThis));
 	if(pThis->bEnqOnly) {
 		iRet = RS_RET_TERMINATE_WHEN_IDLE;
+	}
+	if(getPhysicalQueueSize(pThis) <= pThis->iLowWtrMrk) {
+		iRet = RS_RET_TERMINATE_NOW;
 	}
 
 	RETiRet;

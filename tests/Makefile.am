@@ -56,8 +56,7 @@ TESTS +=  \
 	failover-rptd.sh \
 	failover-no-rptd.sh \
 	failover-no-basic.sh \
-	queue-persist.sh 
-	queue-persist.sh \
+	rcvr_fail_restore.sh \
 	linkedlistqueue.sh
 endif
 
@@ -289,6 +288,9 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   diag.sh \
 	   testsuites/diag-common.conf \
 	   testsuites/diag-common2.conf \
+           rcvr_fail_restore.sh \
+	   testsuites/rcvr_fail_restore_rcvr.conf \
+	   testsuites/rcvr_fail_restore_sender.conf \
            daqueue-persist.sh \
 	   daqueue-persist-drvr.sh \
 	   queue-persist.sh \
