@@ -1,4 +1,8 @@
 ---------------------------------------------------------------------------
+Version 5.8.0  [V5-stable] (rgerhards), 2011-04-??
+- bugfix: DA queue was never shutdown once it was started
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=241
+---------------------------------------------------------------------------
 Version 5.7.10  [V5-BETA] (rgerhards), 2011-03-29
 - bugfix: ompgsql did not work properly with ANSI SQL strings
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=229
