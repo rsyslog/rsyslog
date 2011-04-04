@@ -15,7 +15,7 @@
 # uncomment for debugging support:
 source $srcdir/diag.sh init
 # start up the instances
-#export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
+#export RSYSLOG_DEBUG="debug nostdout"
 #export RSYSLOG_DEBUGLOG="log"
 source $srcdir/diag.sh startup $1_rcvr.conf 
 source $srcdir/diag.sh wait-startup
@@ -32,6 +32,7 @@ sleep 2 # make sure all data is received in input buffers
 source $srcdir/diag.sh shutdown-when-empty 2
 source $srcdir/diag.sh wait-shutdown 2
 # now it is time to stop the receiver as well
+echo "Shutting down instance 1 (receiver)"
 source $srcdir/diag.sh shutdown-when-empty
 source $srcdir/diag.sh wait-shutdown
 

@@ -170,6 +170,10 @@ static char *getFwdPt(instanceData *pData)
  * This, for example, is needed after something went wrong.
  * This function is void because it "can not" fail.
  * rgerhards, 2008-06-04
+ * Note that we DO NOT discard the current buffer contents
+ * (if any). This permits us to save data between sessions. In
+ * the wort case, some duplication occurs, but we do not
+ * loose data.
  */
 static inline void
 DestructTCPInstanceData(instanceData *pData)
