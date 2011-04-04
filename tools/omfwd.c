@@ -306,22 +306,17 @@ static rsRetVal
 TCPSendBuf(instanceData *pData, uchar *buf, unsigned len)
 {
 	DEFiRet;
+	unsigned alreadySent;
 	ssize_t lenSend;
 
-	lenSend = len;
+	alreadySent = 0;
 dbgprintf("omfwd: XXXX: pData %p, pNetStrm %p\n", pData, pData->pNetstrm);
 	netstrm.CheckConnection(pData->pNetstrm); /* hack for plain tcp syslog - see ptcp driver for details */
-	CHKiRet(netstrm.Send(pData->pNetstrm, buf, &lenSend));
-	DBGPRINTF("omfwd: TCP sent %ld bytes, requested %u\n", (long) lenSend, len);
-
-	if(lenSend != len) {
-		/* no real error, could "just" not send everything... 
-		 * For the time being, we ignore this...
-		 * rgerhards, 2005-10-25
-		 */
-		dbgprintf("message not completely (tcp)send, ignoring %ld\n", (long) lenSend);
-		usleep(1000); /* experimental - might be benefitial in this situation */
-		/* TODO: we need to revisit this code -- rgerhards, 2007-12-28 */
+	while(alreadySent != len) {
+		lenSend = len - alreadySent;
+		CHKiRet(netstrm.Send(pData->pNetstrm, buf+alreadySent, &lenSend));
+		DBGPRINTF("omfwd: TCP sent %ld bytes, requested %u\n", (long) lenSend, len - alreadySent);
+		alreadySent += lenSend;
 	}
 
 finalize_it:
