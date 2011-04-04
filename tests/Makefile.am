@@ -18,6 +18,7 @@ TESTS +=  \
 	imtcp_conndrop.sh \
 	imtcp_addtlframedelim.sh \
 	sndrcv.sh \
+	sndrcv_tls_anon.sh \
 	sndrcv_gzip.sh \
 	sndrcv_udp.sh \
 	sndrcv_udp_nonstdpt.sh \
@@ -337,6 +338,9 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   sndrcv_gzip.sh \
 	   testsuites/sndrcv_gzip_sender.conf \
 	   testsuites/sndrcv_gzip_rcvr.conf \
+	   sndrcv_tls_anon.sh \
+	   testsuites/sndrcv_tls_anon_sender.conf \
+	   testsuites/sndrcv_tls_anon_rcvr.conf \
 	   pipeaction.sh \
 	   testsuites/pipeaction.conf \
 	   pipe_noreader.sh \
