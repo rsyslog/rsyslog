@@ -201,6 +201,14 @@ range from 0 to 3 (for the four quater hours that are in each hour)</td>
 <td>The name of the current host as it knows itself (probably useful
 for filtering in a generic way)</td>
 </tr>
+<tr>
+<td><b>$!&lt;name&gt;</b></td>
+<td>This is the "bridge" to syslog message normalization (via
+<a href="mmnormalize.html">mmnormalize</a>): name is a name defined
+inside the normalization rule. It has the value selected by the rule
+or none if no rule with this field did match.
+</td>
+</tr>
 </tbody>
 </table>
 <p>Properties starting with a $-sign are so-called system
