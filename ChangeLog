@@ -1,6 +1,9 @@
 ---------------------------------------------------------------------------
 Version 5.8.0  [V5-stable] (rgerhards), 2011-04-??
 - bugfix: race condition in deferred name resolution
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=238
+  Special thanks to Marcin for his persistence in helping to solve this
+  bug.
 - bugfix: DA queue was never shutdown once it was started
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=241
 ---------------------------------------------------------------------------
