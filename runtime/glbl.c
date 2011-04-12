@@ -31,6 +31,9 @@
 #include "config.h"
 #include <stdlib.h>
 #include <sys/socket.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #include <assert.h>
 
 #include "rsyslog.h"
@@ -40,6 +43,7 @@
 #include "glbl.h"
 #include "prop.h"
 #include "atomic.h"
+#include "errmsg.h"
 
 /* some defaults */
 #ifndef DFLT_NETSTRM_DRVR
@@ -49,6 +53,7 @@
 /* static data */
 DEFobjStaticHelpers
 DEFobjCurrIf(prop)
+DEFobjCurrIf(errmsg)
 
 /* static data
  * For this object, these variables are obviously what makes the "meat" of the
@@ -65,6 +70,7 @@ static int option_DisallowWarning = 1;	/* complain if message from disallowed se
 static int bDisableDNS = 0; /* don't look up IP addresses of remote messages */
 static prop_t *propLocalHostName = NULL;/* our hostname as FQDN - read-only after startup */
 static uchar *LocalHostName = NULL;/* our hostname  - read-only after startup */
+static uchar *LocalHostNameOverride = NULL;/* user-overridden hostname - read-only after startup */
 static uchar *LocalFQDNName = NULL;/* our hostname as FQDN - read-only after startup */
 static uchar *LocalDomain;	/* our local domain name  - read-only after startup */
 static char **StripDomains = NULL;/* these domains may be stripped before writing logs  - r/o after s.u., never touched by init */
@@ -146,6 +152,35 @@ static void SetGlobalInputTermination(void)
 }
 
 
+/* This function is used to set the global work directory name. 
+ * It verifies that the provided directory actually exists and
+ * emits an error message if not.
+ * rgerhards, 2011-02-16
+ */
+static rsRetVal setWorkDir(void __attribute__((unused)) *pVal, uchar *pNewVal)
+{
+	DEFiRet;
+	struct stat sb;
+
+	if(stat((char*) pNewVal, &sb) != 0) {
+		errmsg.LogError(0, RS_RET_ERR_WRKDIR, "$WorkDirectory: %s can not be "
+				"accessed, probably does not exist - directive ignored", pNewVal);
+		ABORT_FINALIZE(RS_RET_ERR_WRKDIR);
+	}
+
+	if(!S_ISDIR(sb.st_mode)) {
+		errmsg.LogError(0, RS_RET_ERR_WRKDIR, "$WorkDirectory: %s not a directory - directive ignored", 
+				pNewVal);
+		ABORT_FINALIZE(RS_RET_ERR_WRKDIR);
+	}
+
+	free(pszWorkDir);
+	pszWorkDir = pNewVal;
+
+finalize_it:
+	RETiRet;
+}
+
 /* return our local hostname. if it is not set, "[localhost]" is returned
  */
 static uchar*
@@ -179,14 +214,19 @@ GenerateLocalHostNameProperty(void)
 		prop.Destruct(&propLocalHostName);
 
 	CHKiRet(prop.Construct(&propLocalHostName));
-	if(LocalHostName == NULL)
-		pszName = (uchar*) "[localhost]";
-	else {
-		if(GetPreserveFQDN() == 1)
-			pszName = LocalFQDNName;
-		else
-			pszName = LocalHostName;
+	if(LocalHostNameOverride == NULL) {
+		if(LocalHostName == NULL)
+			pszName = (uchar*) "[localhost]";
+		else {
+			if(GetPreserveFQDN() == 1)
+				pszName = LocalFQDNName;
+			else
+				pszName = LocalHostName;
+		}
+	} else { /* local hostname is overriden via config */
+		pszName = LocalHostNameOverride;
 	}
+	DBGPRINTF("GenerateLocalHostName uses '%s'\n", pszName);
 	CHKiRet(prop.SetString(propLocalHostName, pszName, ustrlen(pszName)));
 	CHKiRet(prop.ConstructFinalize(propLocalHostName));
 
@@ -322,6 +362,10 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 		free(pszDfltNetstrmDrvrCertFile);
 		pszDfltNetstrmDrvrCertFile = NULL;
 	}
+	if(LocalHostNameOverride != NULL) {
+		free(LocalHostNameOverride);
+		LocalHostNameOverride = NULL;
+	}
 	if(pszWorkDir != NULL) {
 		free(pszWorkDir);
 		pszWorkDir = NULL;
@@ -344,14 +388,16 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 BEGINAbstractObjClassInit(glbl, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
 	CHKiRet(objUse(prop, CORE_COMPONENT));
+	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 
 	/* register config handlers (TODO: we need to implement a way to unregister them) */
-	CHKiRet(regCfSysLineHdlr((uchar *)"workdirectory", 0, eCmdHdlrGetWord, NULL, &pszWorkDir, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"workdirectory", 0, eCmdHdlrGetWord, setWorkDir, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"dropmsgswithmaliciousdnsptrrecords", 0, eCmdHdlrBinary, NULL, &bDropMalPTRMsgs, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdriver", 0, eCmdHdlrGetWord, NULL, &pszDfltNetstrmDrvr, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdrivercafile", 0, eCmdHdlrGetWord, NULL, &pszDfltNetstrmDrvrCAF, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdriverkeyfile", 0, eCmdHdlrGetWord, NULL, &pszDfltNetstrmDrvrKeyFile, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdrivercertfile", 0, eCmdHdlrGetWord, NULL, &pszDfltNetstrmDrvrCertFile, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"localhostname", 0, eCmdHdlrGetWord, NULL, &LocalHostNameOverride, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"optimizeforuniprocessor", 0, eCmdHdlrBinary, NULL, &bOptimizeUniProc, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"preservefqdn", 0, eCmdHdlrBinary, NULL, &bPreserveFQDN, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, NULL));
@@ -376,6 +422,7 @@ BEGINObjClassExit(glbl, OBJ_IS_CORE_MODULE) /* class, version */
 		free(pszWorkDir);
 	if(LocalHostName != NULL)
 		free(LocalHostName);
+	free(LocalHostNameOverride);
 	if(LocalFQDNName != NULL)
 		free(LocalFQDNName);
 	objRelease(prop, CORE_COMPONENT);

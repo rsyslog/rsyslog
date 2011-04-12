@@ -24,6 +24,18 @@ directive configuration system.
 a non-standard port for the MySQL server. The default is 0, which means the
 system default port is used. There is no need to specify this directive unless
 you know the server is running on a non-standard listen port.
+<li><b>$OmMySQLConfigFile &lt;file name&gt;</b><br>Permits the selection
+of an optional MySQL Client Library configuration file (my.cnf) for extended
+configuration functionality. The use of this configuration directive is necessary 
+only if you have a non-standard environment or if fine-grained control over the
+database connection is desired.</li>
+<li><b>$OmMySQLConfigSection &lt;string&gt;</b><br>Permits the selection of the
+section within the configuration file specified by the <b>$OmMySQLConfigFile</b> directive.
+<br>This will likely only be used where the database administrator provides a single
+configuration file with multiple profiles.
+<br>This configuration directive is ignored unless <b>$OmMySQLConfigFile</b> is also used
+in the rsyslog configration file.
+<br>If omitted, the MySQL Client Library default of &quot;client&quot; will be used.</li>
 <li>Action parameters:
 <br><b>:ommysql:database-server,database-name,database-userid,database-password</b>
 <br>All parameters should be filled in for a successful connect.

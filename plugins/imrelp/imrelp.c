@@ -47,6 +47,7 @@
 #include "prop.h"
 
 MODULE_TYPE_INPUT
+MODULE_TYPE_NOKEEP
 
 /* static data */
 DEF_IMOD_STATIC_DATA

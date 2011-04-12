@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([rsyslog],[5.6.5],[rsyslog@lists.adiscon.com])
+AC_INIT([rsyslog],[5.8.0],[rsyslog@lists.adiscon.com])
 AM_INIT_AUTOMAKE
 
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
@@ -12,6 +12,10 @@ AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_HEADERS([config.h])
 
 AC_GNU_SOURCE
+
+# check if valgrind is present
+AC_CHECK_PROG(have_valgrind, [valgrind], [yes])
+AM_CONDITIONAL(HAVE_VALGRIND, test x$have_valgrind = xyes)
 
 # check for Java compiler
 AC_CHECK_PROG(HAVE_JAVAC, [javac], [yes])
@@ -109,6 +113,11 @@ AC_FUNC_STAT
 AC_FUNC_STRERROR_R
 AC_FUNC_VPRINTF
 AC_CHECK_FUNCS([flock basename alarm clock_gettime gethostbyname gethostname gettimeofday localtime_r memset mkdir regcomp select setid socket strcasecmp strchr strdup strerror strndup strnlen strrchr strstr strtol strtoul uname ttyname_r getline malloc_trim prctl epoll_create epoll_create1 fdatasync lseek64])
+
+# the check below is probably ugly. If someone knows how to do it in a better way, please
+# let me know! -- rgerhards, 2010-10-06
+AC_CHECK_DECL([SCM_CREDENTIALS], [AC_DEFINE(HAVE_SCM_CREDENTIALS, [1], [set define])], [], [#include <sys/types.h>
+#include <sys/socket.h>])
 
 # Check for MAXHOSTNAMELEN
 AC_MSG_CHECKING(for MAXHOSTNAMELEN)
@@ -269,6 +278,36 @@ if test "x$enable_pthreads" != "xno"; then
   )
 fi
 
+AC_CHECK_FUNCS(
+    [pthread_setschedparam],
+    [
+      rsyslog_have_pthread_setschedparam=yes
+    ],
+    [
+      rsyslog_have_pthread_setschedparam=no
+    ]
+)
+AC_CHECK_HEADERS(
+    [sched.h],
+    [
+      rsyslog_have_sched_h=yes
+    ],
+    [
+      rsyslog_have_sched_h=no
+    ]
+)
+if test "$rsyslog_have_pthread_setschedparam" = "yes" -a "$rsyslog_have_sched_h" = "yes"; then
+	save_LIBS=$LIBS
+	LIBS=
+	AC_SEARCH_LIBS(sched_get_priority_max, rt)
+	if test "x$ac_cv_search" != "xno"; then
+		AC_CHECK_FUNCS(sched_get_priority_max)
+	fi
+	IMUDP_LIBS=$LIBS
+	AC_SUBST(IMUDP_LIBS)
+	LIBS=$save_LIBS
+fi
+
 
 # klog
 AC_ARG_ENABLE(klog,
@@ -358,6 +397,16 @@ AC_ARG_ENABLE(unlimited_select,
 if test "$enable_unlimited_select" = "yes"; then
         AC_DEFINE(USE_UNLIMITED_SELECT, 1, [If defined, the select() syscall won't be limited to a particular number of file descriptors.])
 fi
+
+
+# support for systemd unit files
+AC_ARG_WITH([systemdsystemunitdir],
+        AS_HELP_STRING([--with-systemdsystemunitdir=DIR], [Directory for systemd service files]),
+        [], [with_systemdsystemunitdir=$($PKG_CONFIG --variable=systemdsystemunitdir systemd)])
+if test "x$with_systemdsystemunitdir" != xno; then
+        AC_SUBST([systemdsystemunitdir], [$with_systemdsystemunitdir])
+fi
+AM_CONDITIONAL(HAVE_SYSTEMD, [test -n "$with_systemdsystemunitdir" -a "x$with_systemdsystemunitdir" != xno ])
 
 
 # debug
@@ -507,7 +556,7 @@ AC_SUBST(PGSQL_LIBS)
 
 # oracle (OCI) support
 AC_ARG_ENABLE(oracle,
-	[AS_HELP_STRING([--enable-oracle],[Enable native Oracle database support @<:@default=no@:>@])],
+	[AS_HELP_STRING([--enable-oracle],[Enable native Oracle database support @<:@default=no@:>@]. (Check your ORACLE_HOME environment variable!))],
 	[case "${enableval}" in
 	 yes) enable_oracle="yes" ;;
 	 no) enable_oracle="no" ;;
@@ -516,23 +565,41 @@ AC_ARG_ENABLE(oracle,
 	[enable_oracle=no]
 )
 if test "x$enable_oracle" = "xyes"; then
-    AC_CHECK_PROG(
-	[HAVE_ORACLE_CONFIG],
-	[oracle-instantclient-config],
-	[yes],,,
-	)
-    if test "x${HAVE_ORACLE_CONFIG}" != "xyes"; then
-	AC_MSG_FAILURE([oracle-instantclient-config not found in PATH])
+   if test -d "$ORACLE_HOME"
+   then
+       AC_CHECK_LIB([occi], [OCIEnvCreate],
+                    [ORACLE_CFLAGS=-I$ORACLE_HOME/rdbms/public]
+		    [ORACLE_LIBS=-L$ORACLE_HOME/lib -locci],
+		    [AC_MSG_FAILURE([Oracle (OCI) library is missing: wrong oracle home])],
+		    [-I$ORACLE_HOME/rdbms/public/ -L$ORACLE_HOME/lib -locci -lclntsh ]
+		 )
+    elif test -d "$ORACLE_LIB_PATH" -a -d "$ORACLE_INCLUDE_PATH"
+    then
+       AC_CHECK_LIB([occi], [OCIEnvCreate],
+                    [ORACLE_CFLAGS=-I$ORACLE_INCLUDE_PATH]
+		    [ORACLE_LIBS=-L$ORACLE_LIB_PATH -locci],
+		    [AC_MSG_FAILURE([Oracle (OCI) library is missing: wrong oracle directories])],
+		    [-I$ORACLE_INCLUDE_PATH -L$ORACLE_LIB_PATH -locci -lclntsh ]
+		 )
+    else
+        AC_CHECK_PROG(
+      	    [HAVE_ORACLE_CONFIG],
+            [oracle-instantclient-config],
+            [yes],,,
+            )
+        if test "x${HAVE_ORACLE_CONFIG}" != "xyes"; then
+           AC_MSG_FAILURE([oracle-instantclient-config not found in PATH])
+        fi
+        AC_CHECK_LIB(
+		[occi],
+        	[OCIEnvCreate],
+        	[ORACLE_CFLAGS="`oracle-instantclient-config --cflags`"
+        	ORACLE_LIBS="`oracle-instantclient-config --libs`"
+        	],
+        	[AC_MSG_FAILURE([Oracle (OCI) libraray is missing])],
+        	[`oracle-instantclient-config --libs --cflags`]
+        	)
     fi
-    AC_CHECK_LIB(
-	[occi],
-	[OCIEnvCreate],
-	[ORACLE_CFLAGS="`oracle-instantclient-config --cflags`"
-	ORACLE_LIBS="`oracle-instantclient-config --libs`"
-	],
-	[AC_MSG_FAILURE([Oracle (OCI) libraray is missing])],
-	[`oracle-instantclient-config --libs --cflags`]
-	)
 fi
 AM_CONDITIONAL(ENABLE_ORACLE, test x$enable_oracle = xyes)
 AC_SUBST(ORACLE_CFLAGS)
@@ -669,6 +736,23 @@ AC_ARG_ENABLE(extended_tests,
 AM_CONDITIONAL(ENABLE_EXTENDED_TESTS, test x$enable_extended_tests = xyes)
 
 
+# capability to enable MySQL testbench tests. This requries that a Syslog database
+# with the default schema has been created on the local (127.0.0.1) MySQL server and
+# a user "rsyslog" with password "testbench" exists, is able to login with default
+# parameters and has sufficient (read: all) privileges on that database.
+# rgerhards, 2011-03-09
+AC_ARG_ENABLE(mysql_tests,
+        [AS_HELP_STRING([--enable-mysql-tests],[enable MySQL specific tests in testbench @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_mysql_tests="yes" ;;
+          no) enable_mysql_tests="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-mysql-tests) ;;
+         esac],
+        [enable_mysql_tests=no]
+)
+AM_CONDITIONAL(ENABLE_MYSQL_TESTS, test x$enable_mysql_tests = xyes)
+
+
 # Mail support (so far we do not need a library, but we need to turn this on and off)
 AC_ARG_ENABLE(mail,
         [AS_HELP_STRING([--enable-mail],[Enable mail support @<:@default=no@:>@])],
@@ -738,7 +822,7 @@ AC_SUBST(LIBLOGGING_LIBS)
 # enable/disable the testbench (e.g. because some important parts
 # are missing)
 AC_ARG_ENABLE(testbench,
-        [AS_HELP_STRING([--enable-testbench],[file input module enabled @<:@default=yes@:>@])],
+        [AS_HELP_STRING([--enable-testbench],[testbench enabled @<:@default=yes@:>@])],
         [case "${enableval}" in
          yes) enable_testbench="yes" ;;
           no) enable_testbench="no" ;;
@@ -764,7 +848,7 @@ AM_CONDITIONAL(ENABLE_IMFILE, test x$enable_imfile = xyes)
 
 # settings for the door input module (under solaris, thus default off)
 AC_ARG_ENABLE(imsolaris,
-        [AS_HELP_STRING([--enable-imsolaris],[door input module enabled @<:@default=no@:>@])],
+        [AS_HELP_STRING([--enable-imsolaris],[solaris input module enabled @<:@default=no@:>@])],
         [case "${enableval}" in
          yes) enable_imsolaris="yes" ;;
           no) enable_imsolaris="no" ;;
@@ -785,6 +869,19 @@ AC_ARG_ENABLE(imptcp,
         [enable_imptcp=no]
 )
 AM_CONDITIONAL(ENABLE_IMPTCP, test x$enable_imptcp = xyes)
+
+
+# settings for the pstats input module
+AC_ARG_ENABLE(impstats,
+        [AS_HELP_STRING([--enable-impstats],[periodic statistics module enabled @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_impstats="yes" ;;
+          no) enable_impstats="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-impstats) ;;
+         esac],
+        [enable_impstats=no]
+)
+AM_CONDITIONAL(ENABLE_IMPSTATS, test x$enable_impstats = xyes)
 
 
 # settings for the omprog output module
@@ -856,6 +953,45 @@ AC_ARG_ENABLE(pmlastmsg,
 AM_CONDITIONAL(ENABLE_PMLASTMSG, test x$enable_pmlastmsg = xyes)
 
 
+# settings for pmcisconames
+AC_ARG_ENABLE(pmcisconames,
+        [AS_HELP_STRING([--enable-pmcisconames],[Compiles cisconames parser module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_pmcisconames="yes" ;;
+          no) enable_pmcisconames="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-pmcisconames) ;;
+         esac],
+        [enable_pmcisconames=no]
+)
+AM_CONDITIONAL(ENABLE_PMCISCONAMES, test x$enable_pmcisconames = xyes)
+
+
+# settings for pmaixforwardedfrom
+AC_ARG_ENABLE(pmaixforwardedfrom,
+        [AS_HELP_STRING([--enable-pmaixforwardedfrom],[Compiles aixforwardedfrom parser module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_pmaixforwardedfrom="yes" ;;
+          no) enable_pmaixforwardedfrom="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-pmaixforwardedfrom) ;;
+         esac],
+        [enable_pmaixforwardedfrom=no]
+)
+AM_CONDITIONAL(ENABLE_PMAIXFORWARDEDFROM, test x$enable_pmaixforwardedfrom = xyes)
+
+
+# settings for pmsnare
+AC_ARG_ENABLE(pmsnare,
+        [AS_HELP_STRING([--enable-pmsnare],[Compiles snare parser module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_pmsnare="yes" ;;
+          no) enable_pmsnare="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-pmsnare) ;;
+         esac],
+        [enable_pmsnare=no]
+)
+AM_CONDITIONAL(ENABLE_PMSNARE, test x$enable_pmsnare = xyes)
+
+
 # settings for pmrfc3164sd
 AC_ARG_ENABLE(pmrfc3164sd,
         [AS_HELP_STRING([--enable-pmrfc3164sd],[Compiles rfc3164sd parser module @<:@default=no@:>@])],
@@ -919,7 +1055,7 @@ AC_SUBST(RELP_LIBS)
 
 # settings for omuxsock
 AC_ARG_ENABLE(omuxsock,
-        [AS_HELP_STRING([--enable-omuxsock],[Compiles stdout module @<:@default=no@:>@])],
+        [AS_HELP_STRING([--enable-omuxsock],[Compiles omuxsock module @<:@default=no@:>@])],
         [case "${enableval}" in
          yes) enable_omuxsock="yes" ;;
           no) enable_omuxsock="no" ;;
@@ -934,7 +1070,7 @@ AM_CONDITIONAL(ENABLE_OMUXSOCK, test x$enable_omuxsock = xyes)
 # part of rsyslog, into the build process. It is named cust1, so that
 # additional such modules can easily be added.
 AC_ARG_ENABLE(cust1,
-        [AS_HELP_STRING([--enable-cust1],[Compiles stdout module @<:@default=no@:>@])],
+        [AS_HELP_STRING([--enable-cust1],[Compiles cust1 module @<:@default=no@:>@])],
         [case "${enableval}" in
          yes) enable_cust1="yes" ;;
           no) enable_cust1="no" ;;
@@ -943,6 +1079,20 @@ AC_ARG_ENABLE(cust1,
         [enable_cust1=no]
 )
 AM_CONDITIONAL(ENABLE_CUST1, test x$enable_cust1 = xyes)
+
+
+# A custom strgen that also serves as a sample of how to do
+# SQL-generating strgen's
+AC_ARG_ENABLE(smcustbindcdr,
+        [AS_HELP_STRING([--enable-smcustbindcdr],[Compiles smcustbindcdr module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_smcustbindcdr="yes" ;;
+          no) enable_smcustbindcdr="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-smcustbindcdr) ;;
+         esac],
+        [enable_smcustbindcdr=no]
+)
+AM_CONDITIONAL(ENABLE_SMCUSTBINDCDR, test x$enable_smcustbindcdr = xyes)
 
 
 # settings for the template input module; copy and modify this code
@@ -985,6 +1135,23 @@ AM_CONDITIONAL(ENABLE_OMTEMPLATE, test x$enable_omtemplate = xyes)
 # end of copy template - be sure to search for omtemplate to find everything!
 
 
+# settings for the omhdfs;
+AC_ARG_ENABLE(omhdfs,
+        [AS_HELP_STRING([--enable-omhdfs],[Compiles omhdfs template module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_omhdfs="yes" ;;
+          no) enable_omhdfs="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-omhdfs) ;;
+         esac],
+        [enable_omhdfs=no]
+)
+#
+# you may want to do some library checks here - see snmp, mysql, pgsql modules
+# for samples
+#
+AM_CONDITIONAL(ENABLE_OMHDFS, test x$enable_omhdfs = xyes)
+
+
 AC_CONFIG_FILES([Makefile \
 		runtime/Makefile \
 		tools/Makefile \
@@ -998,16 +1165,21 @@ AC_CONFIG_FILES([Makefile \
 		plugins/imklog/Makefile \
 		plugins/imtemplate/Makefile \
 		plugins/omtemplate/Makefile \
+		plugins/omhdfs/Makefile \
 		plugins/omprog/Makefile \
 		plugins/omstdout/Makefile \
 		plugins/pmrfc3164sd/Makefile \
 		plugins/pmlastmsg/Makefile \
+		plugins/pmcisconames/Makefile \
+		plugins/pmsnare/Makefile \
+		plugins/pmaixforwardedfrom/Makefile \
 		plugins/omruleset/Makefile \
 		plugins/omdbalerting/Makefile \
 		plugins/omuxsock/Makefile \
 		plugins/imfile/Makefile \
 		plugins/imsolaris/Makefile \
 		plugins/imptcp/Makefile \
+		plugins/impstats/Makefile \
 		plugins/imrelp/Makefile \
 		plugins/imdiag/Makefile \
 		plugins/omtesting/Makefile \
@@ -1020,6 +1192,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omsnmp/Makefile \
 		plugins/omoracle/Makefile \
 		plugins/omudpspoof/Makefile \
+		plugins/sm_cust_bindcdr/Makefile \
 		plugins/cust1/Makefile \
 		java/Makefile \
 		tests/Makefile])
@@ -1044,12 +1217,14 @@ echo "    plain tcp input module enabled:           $enable_imptcp"
 echo "    imdiag enabled:                           $enable_imdiag"
 echo "    file input module enabled:                $enable_imfile"
 echo "    Solaris input module enabled:             $enable_imsolaris"
+echo "    periodic statistics module enabled:       $enable_impstats"
 echo "    input template module will be compiled:   $enable_imtemplate"
 echo
 echo "---{ output plugins }---"
 echo "    Mail support enabled:                     $enable_mail"
 echo "    omprog module will be compiled:           $enable_omprog"
 echo "    omstdout module will be compiled:         $enable_omstdout"
+echo "    omhdfs module will be compiled:           $enable_omhdfs"
 echo "    omruleset module will be compiled:        $enable_omruleset"
 echo "    omdbalerting module will be compiled:     $enable_omdbalerting"
 echo "    omudpspoof module will be compiled:       $enable_omudpspoof"
@@ -1059,6 +1234,12 @@ echo
 echo "---{ parser modules }---"
 echo "    pmrfc3164sd module will be compiled:      $enable_pmrfc3164sd"
 echo "    pmlastmsg module will be compiled:        $enable_pmlastmsg"
+echo "    pmcisconames module will be compiled:     $enable_pmcisconames"
+echo "    pmaixforwardedfrom module w.be compiled:  $enable_pmaixforwardedfrom"
+echo "    pmsnare module will be compiled:          $enable_pmsnare"
+echo
+echo "---{ strgen modules }---"
+echo "    sm_cust_bindcdr module will be compiled:  $enable_sm_cust_bindcdr"
 echo
 echo "---{ database support }---"
 echo "    MySql support enabled:                    $enable_mysql"
@@ -1075,6 +1256,7 @@ echo
 echo "---{ debugging support }---"
 echo "    Testbench enabled:                        $enable_testbench"
 echo "    Extended Testbench enabled:               $enable_extended_tests"
+echo "    MySQL Tests enabled:                      $enable_mysql_tests"
 echo "    Debug mode enabled:                       $enable_debug"
 echo "    Runtime Instrumentation enabled:          $enable_rtinst"
 echo "    Diagnostic tools enabled:                 $enable_diagtools"

@@ -456,12 +456,12 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
-	closeConnections();
+	closeConnections(); /* this is important so that we do not finish too early! */
 
 	if(nConnDrops > 0)
 		printf("-D option initiated %ld connection closures\n", nConnDrops);
+
 	printf("End of tcpflood Run\n");
 
-	closeConnections(); /* this is important so that we do not finish too early! */
 	exit(ret);
 }

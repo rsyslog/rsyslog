@@ -25,6 +25,7 @@
  */
 #ifndef INCLUDED_RSYSLOG_H
 #define INCLUDED_RSYSLOG_H
+#include <pthread.h>
 #include "typedefs.h"
 
 /* ############################################################# *
@@ -95,7 +96,6 @@
 #define CORE_FEATURE_BATCHING	1
 /*#define CORE_FEATURE_whatever 2 ... and so on ... */
 
-
 #ifndef _PATH_CONSOLE
 #define _PATH_CONSOLE	"/dev/console"
 #endif
@@ -137,6 +137,7 @@ typedef uintTiny	propid_t;
 #define PROP_SYS_QHOUR			156
 #define PROP_SYS_MINUTE			157
 #define PROP_SYS_MYHOSTNAME		158
+#define PROP_SYS_BOM			159
 
 
 /* The error codes below are orginally "borrowed" from
@@ -335,6 +336,12 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_EPOLL_CR_FAILED = -2173, /**< epoll_create() failed */
 	RS_RET_EPOLL_CTL_FAILED = -2174, /**< epoll_ctl() failed */
 	RS_RET_INTERNAL_ERROR = -2175, /**< rsyslogd internal error, unexpected code path reached */
+	RS_RET_ERR_CRE_AFUX = -2176, /**< error creating AF_UNIX socket (and binding it) */
+	RS_RET_RATE_LIMITED = -2177, /**< some messages discarded due to exceeding a rate limit */
+	RS_RET_ERR_HDFS_WRITE = -2178, /**< error writing to HDFS */
+	RS_RET_ERR_HDFS_OPEN = -2179, /**< error during hdfsOpen (e.g. file does not exist) */
+	RS_RET_FILE_NOT_SPECIFIED = -2180, /**< file name not configured where this was required */
+	RS_RET_ERR_WRKDIR = -2181, /**< problems with the rsyslog working directory */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */
@@ -409,6 +416,12 @@ typedef enum rsObjectID rsObjID;
 #define RSFREEOBJ(x) free(x)
 #else
 #define RSFREEOBJ(x) {(x)->OID = OIDrsFreed; free(x);}
+#endif
+
+#ifdef HAVE_PTHREAD_SETSCHEDPARAM
+extern struct sched_param default_sched_param;
+extern pthread_attr_t default_thread_attr;
+extern int default_thr_sched_policy;
 #endif
 
 

@@ -101,12 +101,14 @@ thrdTerminateNonCancel(thrdInfo_t *pThis)
 	do {
 		d_pthread_mutex_lock(&pThis->mutThrd);
 		pthread_kill(pThis->thrdID, SIGTTIN);
-		timeoutComp(&tTimeout, 10); /* a fixed 10ms timeout, do after lock (may take long!) */
+		timeoutComp(&tTimeout, 1000); /* a fixed 1sec timeout */
 		ret = d_pthread_cond_timedwait(&pThis->condThrdTerm, &pThis->mutThrd, &tTimeout);
 		d_pthread_mutex_unlock(&pThis->mutThrd);
 		if(Debug) {
 			if(ret == ETIMEDOUT) {
-				dbgprintf("input thread term: had a timeout waiting on thread termination\n");
+				dbgprintf("input thread term: timeout expired waiting on thread termination - canceling\n");
+				pthread_cancel(pThis->thrdID);
+				pThis->bIsActive = 0;
 			} else if(ret == 0) {
 				dbgprintf("input thread term: thread returned normally and is terminated\n");
 			} else {
@@ -194,8 +196,8 @@ static void* thrdStarter(void *arg)
 	 * keep the thread debugger happer, it would not really be necessary with
 	 * the logic we employ...)
 	 */
-	pThis->bIsActive = 0;
 	d_pthread_mutex_lock(&pThis->mutThrd);
+	pThis->bIsActive = 0;
 	pthread_cond_signal(&pThis->condThrdTerm);
 	d_pthread_mutex_unlock(&pThis->mutThrd);
 
@@ -219,7 +221,13 @@ rsRetVal thrdCreate(rsRetVal (*thrdMain)(thrdInfo_t*), rsRetVal(*afterRun)(thrdI
 	pThis->pUsrThrdMain = thrdMain;
 	pThis->pAfterRun = afterRun;
 	pThis->bNeedsCancel = bNeedsCancel;
-	pthread_create(&pThis->thrdID, NULL, thrdStarter, pThis);
+	pthread_create(&pThis->thrdID,
+#ifdef HAVE_PTHREAD_SETSCHEDPARAM
+			   &default_thread_attr,
+#else
+			   NULL,
+#endif
+			   thrdStarter, pThis);
 	CHKiRet(llAppend(&llThrds, NULL, pThis));
 
 finalize_it:

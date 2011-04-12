@@ -156,7 +156,6 @@ BEGINinterface(strm) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetFileName)(strm_t *pThis, uchar *pszName, size_t iLenName);
 	rsRetVal (*ReadChar)(strm_t *pThis, uchar *pC);
 	rsRetVal (*UnreadChar)(strm_t *pThis, uchar c);
-	rsRetVal (*ReadLine)(strm_t *pThis, cstr_t **ppCStr);
 	rsRetVal (*SeekCurrOffs)(strm_t *pThis);
 	rsRetVal (*Write)(strm_t *pThis, uchar *pBuf, size_t lenBuf);
 	rsRetVal (*WriteChar)(strm_t *pThis, uchar c);
@@ -183,8 +182,10 @@ BEGINinterface(strm) /* name must also be changed in ENDinterface macro! */
 	INTERFACEpropSetMeth(strm, iSizeLimit, off_t);
 	INTERFACEpropSetMeth(strm, iFlushInterval, int);
 	INTERFACEpropSetMeth(strm, pszSizeLimitCmd, uchar*);
+	/* v6 added */
+	rsRetVal (*ReadLine)(strm_t *pThis, cstr_t **ppCStr, int mode);
 ENDinterface(strm)
-#define strmCURR_IF_VERSION 5 /* increment whenever you change the interface structure! */
+#define strmCURR_IF_VERSION 6 /* increment whenever you change the interface structure! */
 
 
 /* prototypes */

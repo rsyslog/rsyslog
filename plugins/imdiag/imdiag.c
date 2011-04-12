@@ -57,6 +57,7 @@
 #include "net.h" /* for permittedPeers, may be removed when this is removed */
 
 MODULE_TYPE_INPUT
+MODULE_TYPE_NOKEEP
 
 /* static data */
 DEF_IMOD_STATIC_DATA
@@ -204,7 +205,7 @@ doInjectMsg(int iNum)
 	DEFiRet;
 
 	snprintf((char*)szMsg, sizeof(szMsg)/sizeof(uchar),
-		 "<167>Mar  1 01:00:00 172.20.245.8 tag msgnum:%8.8d:\n", iNum);
+		 "<167>Mar  1 01:00:00 172.20.245.8 tag msgnum:%8.8d:", iNum);
 
 	datetime.getCurrTime(&stTime, &ttGenTime);
 	/* we now create our own message object and submit it to the queue */
@@ -246,6 +247,7 @@ injectMsg(uchar *pszCmd, tcps_sess_t *pSess)
 	}
 
 	CHKiRet(sendResponse(pSess, "%d messages injected\n", nMsgs));
+	DBGPRINTF("imdiag: %d messages injected\n", nMsgs);
 
 finalize_it:
 	RETiRet;
@@ -278,6 +280,7 @@ waitMainQEmpty(tcps_sess_t *pSess)
 	}
 
 	CHKiRet(sendResponse(pSess, "mainqueue empty\n"));
+	DBGPRINTF("imdiag: mainqueue empty\n");
 
 finalize_it:
 	RETiRet;
@@ -291,6 +294,7 @@ OnMsgReceived(tcps_sess_t *pSess, uchar *pRcv, int iLenMsg)
 {
 	int iMsgQueueSize;
 	uchar *pszMsg;
+	uchar *pToFree = NULL;
 	uchar cmdBuf[1024];
 	DEFiRet;
 
@@ -302,6 +306,7 @@ OnMsgReceived(tcps_sess_t *pSess, uchar *pRcv, int iLenMsg)
 	 * before proceeding.
 	 */
 	CHKmalloc(pszMsg = MALLOC(sizeof(uchar) * (iLenMsg + 1)));
+	pToFree = pszMsg;
 	memcpy(pszMsg, pRcv, iLenMsg);
 	pszMsg[iLenMsg] = '\0';
 
@@ -311,6 +316,7 @@ OnMsgReceived(tcps_sess_t *pSess, uchar *pRcv, int iLenMsg)
 	if(!ustrcmp(cmdBuf, UCHAR_CONSTANT("getmainmsgqueuesize"))) {
 		CHKiRet(diagGetMainMsgQSize(&iMsgQueueSize));
 		CHKiRet(sendResponse(pSess, "%d\n", iMsgQueueSize));
+		DBGPRINTF("imdiag: %d messages in main queue\n", iMsgQueueSize);
 	} else if(!ustrcmp(cmdBuf, UCHAR_CONSTANT("waitmainqueueempty"))) {
 		CHKiRet(waitMainQEmpty(pSess));
 	} else if(!ustrcmp(cmdBuf, UCHAR_CONSTANT("injectmsg"))) {
@@ -321,6 +327,8 @@ OnMsgReceived(tcps_sess_t *pSess, uchar *pRcv, int iLenMsg)
 	}
 
 finalize_it:
+	if(pToFree != NULL)
+		free(pToFree);
 	RETiRet;
 }
 
@@ -427,6 +435,9 @@ CODESTARTmodExit
 	if(pPermPeersRoot != NULL) {
 		net.DestructPermittedPeers(&pPermPeersRoot);
 	}
+
+	/* free some globals to keep valgrind happy */
+	free(pszInputName);
 
 	/* release objects we used */
 	objRelease(net, LM_NET_FILENAME);

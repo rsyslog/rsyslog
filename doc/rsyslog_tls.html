@@ -162,25 +162,11 @@ similar "smart" command on the client. It should show up in the
 respective server log file. If you dig out your sniffer, you should see
 that the traffic on the wire is actually protected.</p>
 <h3>Limitations</h3>
-<p>The current implementation has a number of limitations. These
-are
-being worked on. Most importantly, neither the client nor the server
-are authenticated. So while the message transfer is encrypted, you can
-not be sure which peer you are talking to. Please note that this is a
-limitation found in most real-world SSL syslog systems. Of course, that
-is not an excuse for not yet providing this feature - but it tells you
-that it is acceptable and can be worked around by proper firewalling,
-ACLs and other organizational measures. Mutual authentication will be
-added shortly to rsyslog.</p>
-<p>Secondly, the plain tcp syslog listener
-can currently listen to a single port, in a single mode. So if you use
-a TLS-based listener, you can not run unencrypted syslog on the same
-instance at the same time. A work-around is to run a second rsyslogd
-instance. This limitation, too, is scheduled to be removed soon.</p>
 <p>The
 RELP transport can currently not be protected by TLS. A work-around is
 to use stunnel. TLS support for RELP will be added once plain TCP
-syslog has sufficiently matured.</p>
+syslog has sufficiently matured and there either is some time left to do this
+or we find a sponsor ;).</p>
 <h2>Certificates</h2>
 <p>In order to be really secure, certificates are needed. This is
 a short summary on how to generate the necessary certificates with

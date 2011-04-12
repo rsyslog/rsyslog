@@ -1306,7 +1306,7 @@ dbgGetRuntimeOptions(void)
 		while(dbgGetRTOptNamVal(&pszOpts, &optname, &optval)) {
 			if(!strcasecmp((char*)optname, "help")) {
 				fprintf(stderr,
-					"rsyslogd runtime debug support - help requested, rsyslog terminates\n\n"
+					"rsyslogd " VERSION " runtime debug support - help requested, rsyslog terminates\n\n"
 					"environment variables:\n"
 					"addional logfile: export RSYSLOG_DEBUGFILE=\"/path/to/file\"\n"
 					"to set: export RSYSLOG_DEBUG=\"cmd cmd cmd\"\n\n"
@@ -1354,7 +1354,7 @@ dbgGetRuntimeOptions(void)
 				bAbortTrace = 0;
 			} else if(!strcasecmp((char*)optname, "filetrace")) {
 				if(*optval == '\0') {
-					fprintf(stderr, "Error: logfile debug option requires filename, "
+					fprintf(stderr, "rsyslogd " VERSION " error: logfile debug option requires filename, "
 						"e.g. \"logfile=debug.c\"\n");
 					exit(1);
 				} else {
@@ -1362,7 +1362,7 @@ dbgGetRuntimeOptions(void)
 					dbgPrintNameAdd(optval, &printNameFileRoot);
 				}
 			} else {
-				fprintf(stderr, "Error: invalid debug option '%s', value '%s' - ignored\n",
+				fprintf(stderr, "rsyslogd " VERSION " error: invalid debug option '%s', value '%s' - ignored\n",
 					optval, optname);
 			}
 		}

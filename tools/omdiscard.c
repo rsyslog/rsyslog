@@ -38,12 +38,14 @@
 #include "module-template.h"
 
 MODULE_TYPE_OUTPUT
+MODULE_TYPE_NOKEEP
 
 /* internal structures
  */
 DEF_OMOD_STATIC_DATA
 
 typedef struct _instanceData {
+    	char dummy;
 } instanceData;
 
 /* we do not need a createInstance()!

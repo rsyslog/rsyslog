@@ -36,7 +36,12 @@ case $1 in
 		;;
    'startup')   # start rsyslogd with default params. $2 is the config file name to use
    		# returns only after successful startup, $3 is the instance (blank or 2!)
-		$valgrind ../tools/rsyslogd -c4 -u2 -n -irsyslog$3.pid -M../runtime/.libs:../.libs -f$srcdir/testsuites/$2 &
+		$valgrind ../tools/rsyslogd -c6 -u2 -n -irsyslog$3.pid -M../runtime/.libs:../.libs -f$srcdir/testsuites/$2 &
+   		$srcdir/diag.sh wait-startup $3
+		;;
+   'startup-vg') # start rsyslogd with default params under valgrind control. $2 is the config file name to use
+   		# returns only after successful startup, $3 is the instance (blank or 2!)
+		valgrind --error-exitcode=10 --malloc-fill=ff --free-fill=fe --leak-check=full ../tools/rsyslogd -c6 -u2 -n -irsyslog$3.pid -M../runtime/.libs:../.libs -f$srcdir/testsuites/$2 &
    		$srcdir/diag.sh wait-startup $3
 		;;
    'wait-startup') # wait for rsyslogd startup ($2 is the instance)
@@ -60,15 +65,46 @@ case $1 in
 		   exit 1
 		fi
 		;;
+   'wait-shutdown-vg')  # actually, we wait for rsyslog.pid to be deleted. $2 is the
+   		# instance
+		wait `cat rsyslog.pid`
+		export RSYSLOGD_EXIT=$?
+		echo rsyslogd run exited with $RSYSLOGD_EXIT
+		if [ -e core.* ]
+		then
+		   echo "ABORT! core file exists, starting interactive shell"
+		   bash
+		   exit 1
+		fi
+		;;
+   'check-exit-vg') # wait for main message queue to be empty. $2 is the instance.
+		if [ "$RSYSLOGD_EXIT" -eq "10" ]
+		then
+			echo "valgrind run FAILED with exceptions - terminating"
+			exit 1
+		fi
+		;;
+   'get-mainqueuesize') # show the current main queue size
+		if [ "$2" == "2" ]
+		then
+			echo getmainmsgqueuesize | ./diagtalker -p13501
+		else
+			echo getmainmsgqueuesize | ./diagtalker
+		fi
+		;;
    'wait-queueempty') # wait for main message queue to be empty. $2 is the instance.
 		if [ "$2" == "2" ]
 		then
-			echo WaitMainQueueEmpty | ./diagtalker
+			echo WaitMainQueueEmpty | ./diagtalker -p13501
 		else
 			echo WaitMainQueueEmpty | ./diagtalker
 		fi
 		;;
    'shutdown-when-empty') # shut rsyslogd down when main queue is empty. $2 is the instance.
+		if [ "$2" == "2" ]
+		then
+		   echo Shutting down instance 2
+		fi
    		$srcdir/diag.sh wait-queueempty $2
 		kill `cat rsyslog$2.pid`
 		# note: we do not wait for the actual termination!

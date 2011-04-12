@@ -58,6 +58,7 @@
 #include "errmsg.h"
 #include "datetime.h"
 #include "unicode-helper.h"
+#include "statsobj.h"
 #include "msg.h" /* TODO: remove once we remove MsgAddRef() call */
 
 #ifdef OS_SOLARIS
@@ -70,6 +71,7 @@ DEFobjCurrIf(glbl)
 DEFobjCurrIf(strm)
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(datetime)
+DEFobjCurrIf(statsobj)
 
 /* forward-definitions */
 static inline rsRetVal doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, void *pUsr);
@@ -244,6 +246,7 @@ qqueueAdviseMaxWorkers(qqueue_t *pThis)
 
 	if(!pThis->bEnqOnly) {
 		if(pThis->bIsDA && getLogicalQueueSize(pThis) >= pThis->iHighWtrMrk) {
+			DBGOPRINT((obj_t*) pThis, "(re)activating DA worker\n");
 			wtpAdviseMaxWorkers(pThis->pWtpDA, 1); /* disk queues have always one worker */
 		} else {
 			if(getLogicalQueueSize(pThis) == 0) {
@@ -1214,7 +1217,6 @@ rsRetVal qqueueConstruct(qqueue_t **ppThis, queueType_t qType, int iWorkerThread
 	/* set some water marks so that we have useful defaults if none are set specifically */
 	pThis->iFullDlyMrk  = iMaxQueueSize - (iMaxQueueSize / 100) *  3; /* default 97% */
 	pThis->iLightDlyMrk = iMaxQueueSize - (iMaxQueueSize / 100) * 30; /* default 70% */
-
 	pThis->lenSpoolDir = ustrlen(pThis->pszSpoolDir);
 	pThis->iMaxFileSize = 1024 * 1024; /* default is 1 MiB */
 	pThis->iQueueSize = 0;
@@ -1500,7 +1502,7 @@ DequeueConsumable(qqueue_t *pThis, wti_t *pWti)
 	 * now that we dequeue batches of pointers, this is much less an issue...
 	 * rgerhards, 2009-04-22
 	 */
-	if(iQueueSize < pThis->iFullDlyMrk / 2) {
+	if(iQueueSize < pThis->iFullDlyMrk / 2 || glbl.GetGlobalInputTermState() == 1) {
 		pthread_cond_broadcast(&pThis->belowFullDlyWtrMrk);
 	}
 
@@ -1772,8 +1774,12 @@ qqueueChkStopWrkrDA(qqueue_t *pThis)
 {
 	DEFiRet;
 
+//DBGPRINTF("XXXX: chkStopWrkrDA called, low watermark %d, phys Size %d\n", pThis->iLowWtrMrk, getPhysicalQueueSize(pThis));
 	if(pThis->bEnqOnly) {
 		iRet = RS_RET_TERMINATE_WHEN_IDLE;
+	}
+	if(getPhysicalQueueSize(pThis) <= pThis->iLowWtrMrk) {
+		iRet = RS_RET_TERMINATE_NOW;
 	}
 
 	RETiRet;
@@ -1822,6 +1828,8 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 {
 	DEFiRet;
 	uchar pszBuf[64];
+	int wrk;
+	uchar *qName;
 	size_t lenBuf;
 
 	ASSERT(pThis != NULL);
@@ -1843,7 +1851,6 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 	}
 
 	pthread_mutex_init(&pThis->mutThrdMgmt, NULL);
-	pthread_cond_init (&pThis->condDAReady, NULL);
 	pthread_cond_init (&pThis->notFull, NULL);
 	pthread_cond_init (&pThis->notEmpty, NULL);
 	pthread_cond_init (&pThis->belowFullDlyWtrMrk, NULL);
@@ -1851,6 +1858,16 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 
 	/* call type-specific constructor */
 	CHKiRet(pThis->qConstruct(pThis)); /* this also sets bIsDA */
+
+	/* re-adjust some params if required */
+	if(pThis->bIsDA) {
+		/* if we are in DA mode, we must make sure full delayable messages do not
+		 * initiate going to disk!
+		 */
+		wrk = pThis->iHighWtrMrk - (pThis->iHighWtrMrk / 100) * 50; /* 50% of high water mark */
+		if(wrk < pThis->iFullDlyMrk)
+			pThis->iFullDlyMrk = wrk;
+	}
 
 	DBGOPRINT((obj_t*) pThis, "type %d, enq-only %d, disk assisted %d, maxFileSz %lld, lqsize %d, pqsize %d, child %d, "
 				  "full delay %d, light delay %d, deq batch size %d starting\n",
@@ -1890,6 +1907,27 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 	 */
 	qqueueAdviseMaxWorkers(pThis);
 	pThis->bQueueStarted = 1;
+
+	/* support statistics gathering */
+	qName = obj.GetName((obj_t*)pThis);
+	CHKiRet(statsobj.Construct(&pThis->statsobj));
+	CHKiRet(statsobj.SetName(pThis->statsobj, qName));
+	CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("size"),
+		ctrType_Int, &pThis->iQueueSize));
+
+	STATSCOUNTER_INIT(pThis->ctrEnqueued, pThis->mutCtrEnqueued);
+	CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("enqueued"),
+		ctrType_IntCtr, &pThis->ctrEnqueued));
+
+	STATSCOUNTER_INIT(pThis->ctrFull, pThis->mutCtrFull);
+	CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("full"),
+		ctrType_IntCtr, &pThis->ctrFull));
+
+	pThis->ctrMaxqsize = 0;
+	CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("maxqsize"),
+		ctrType_Int, &pThis->ctrMaxqsize));
+
+	CHKiRet(statsobj.ConstructFinalize(pThis->statsobj));
 
 finalize_it:
 	RETiRet;
@@ -2110,7 +2148,6 @@ CODESTARTobjDestruct(qqueue)
 		free(pThis->mut);
 	}
 	pthread_mutex_destroy(&pThis->mutThrdMgmt);
-	pthread_cond_destroy(&pThis->condDAReady);
 	pthread_cond_destroy(&pThis->notFull);
 	pthread_cond_destroy(&pThis->notEmpty);
 	pthread_cond_destroy(&pThis->belowFullDlyWtrMrk);
@@ -2124,6 +2161,10 @@ CODESTARTobjDestruct(qqueue)
 
 	free(pThis->pszFilePrefix);
 	free(pThis->pszSpoolDir);
+
+	/* some queues do not provide stats and thus have no statsobj! */
+	if(pThis->statsobj != NULL)
+		statsobj.Destruct(&pThis->statsobj);
 ENDobjDestruct(qqueue)
 
 
@@ -2183,6 +2224,7 @@ doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, void *pUsr)
 	DEFiRet;
 	struct timespec t;
 
+	STATSCOUNTER_INC(pThis->ctrEnqueued, pThis->mutCtrEnqueued);
 	/* first check if we need to discard this message (which will cause CHKiRet() to exit)
 	 */
 	CHKiRet(qqueueChkDiscardMsg(pThis, pThis->iQueueSize, pUsr));
@@ -2230,6 +2272,7 @@ doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, void *pUsr)
 	      	  && pThis->tVars.disk.sizeOnDisk > pThis->sizeOnDiskMax)) {
 		DBGOPRINT((obj_t*) pThis, "enqueueMsg: queue FULL - waiting to drain.\n");
 		timeoutComp(&t, pThis->toEnq);
+		STATSCOUNTER_INC(pThis->ctrFull, pThis->mutCtrFull);
 // TODO : handle enqOnly => discard!
 		if(pthread_cond_timedwait(&pThis->notFull, pThis->mut, &t) != 0) {
 			DBGOPRINT((obj_t*) pThis, "enqueueMsg: cond timeout, dropping message!\n");
@@ -2240,6 +2283,7 @@ doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, void *pUsr)
 
 	/* and finally enqueue the message */
 	CHKiRet(qqueueAdd(pThis, pUsr));
+	STATSCOUNTER_SETMAX_NOMUT(pThis->ctrMaxqsize, pThis->iQueueSize);
 
 finalize_it:
 	RETiRet;
@@ -2419,6 +2463,7 @@ BEGINObjClassInit(qqueue, 1, OBJ_IS_CORE_MODULE)
 	CHKiRet(objUse(strm, CORE_COMPONENT));
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	CHKiRet(objUse(statsobj, CORE_COMPONENT));
 
 	/* now set our own handlers */
 	OBJSetMethodHandler(objMethod_SETPROPERTY, qqueueSetProperty);

@@ -1,7 +1,7 @@
 /* A yet very simple tool to talk to imdiag (this replaces the
  * previous Java implementation in order to get fewer dependencies).
  *
- * Copyright 2010 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2010,2011 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -126,7 +126,7 @@ doProcessing()
 		len = strlen(line);
 		sendCmd(fd, line, len);
 		waitRsp(fd, line, sizeof(line));
-		printf("imdiag: %s", line);
+		printf("imdiag[%d]: %s", targetPort, line);
 	}
 }
 
@@ -139,7 +139,7 @@ int main(int argc, char *argv[])
 	int ret = 0;
 	int opt;
 
-	while((opt = getopt(argc, argv, "f:t:p:c:C:m:i:I:P:d:n:M:rB")) != -1) {
+	while((opt = getopt(argc, argv, "t:p:")) != -1) {
 		switch (opt) {
 		case 't':	targetIP = optarg;
 				break;

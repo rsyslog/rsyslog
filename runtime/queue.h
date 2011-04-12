@@ -29,6 +29,7 @@
 #include "wtp.h"
 #include "batch.h"
 #include "stream.h"
+#include "statsobj.h"
 
 /* support for the toDelete list */
 typedef struct toDeleteLst_s toDeleteLst_t;
@@ -123,7 +124,6 @@ struct queue_s {
 	pthread_cond_t notFull, notEmpty;
 	pthread_cond_t belowFullDlyWtrMrk; /* below eFLOWCTL_FULL_DELAY watermark */
 	pthread_cond_t belowLightDlyWtrMrk; /* below eFLOWCTL_FULL_DELAY watermark */
-	pthread_cond_t condDAReady;/* signalled when the DA queue is fully initialized and ready for processing */
 	int bThrdStateChanged;		/* at least one thread state has changed if 1 */
 	/* end sync variables */
 	/* the following variables are always present, because they
@@ -165,6 +165,11 @@ struct queue_s {
 	} tVars;
 	DEF_ATOMIC_HELPER_MUT(mutQueueSize);
 	DEF_ATOMIC_HELPER_MUT(mutLogDeq);
+	/* for statistics subsystem */
+	statsobj_t *statsobj;
+	STATSCOUNTER_DEF(ctrEnqueued, mutCtrEnqueued);
+	STATSCOUNTER_DEF(ctrFull, mutCtrFull);
+	int ctrMaxqsize;
 };
 
 

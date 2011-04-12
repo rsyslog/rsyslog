@@ -61,7 +61,8 @@ struct msg {
 				        once data has entered the queue, this property is no longer needed. */
 	pthread_mutex_t mut;
 	int	iRefCount;	/* reference counter (0 = unused) */
-	sbool	bDoLock;	 /* use the mutex? */
+	sbool	bDoLock;	/* use the mutex? */
+	sbool	bAlreadyFreed;	/* aid to help detect a well-hidden bad bug -- TODO: remove when no longer needed */
 	short	iSeverity;	/* the severity 0..7 */
 	short	iFacility;	/* Facility code 0 .. 23*/
 	short	offAfterPRI;	/* offset, at which raw message WITHOUT PRI part starts in pszRawMsg */

@@ -39,6 +39,22 @@ lmgssutil_la_LDFLAGS = -module -avoid-version
 lmgssutil_la_LIBADD = $(GSS_LIBS)
 endif
 
+#
+# systemd support
+#
+if HAVE_SYSTEMD
+
+nodist_systemdsystemunit_DATA = \
+	rsyslog.service
+
+CLEANFILES = \
+	rsyslog.service
+
+%.service: %.service.in
+	$(AM_V_GEN)sed -e 's,@sbindir\@,$(sbindir),g' $< > $@
+
+endif
+
 EXTRA_DIST = \
 	freebsd/rsyslogd \
 	slackware/rc.rsyslogd \
@@ -47,7 +63,8 @@ EXTRA_DIST = \
 	COPYING.LESSER \
 	contrib/gnutls/ca.pem \
 	contrib/gnutls/cert.pem \
-	contrib/gnutls/key.pem
+	contrib/gnutls/key.pem \
+	rsyslog.service.in
 
 SUBDIRS = doc runtime . plugins/immark plugins/imuxsock plugins/imtcp plugins/imudp plugins/omtesting
 
@@ -57,6 +74,10 @@ endif
 
 if ENABLE_IMKLOG
 SUBDIRS += plugins/imklog
+endif
+
+if ENABLE_IMPSTATS
+SUBDIRS += plugins/impstats
 endif
 
 if ENABLE_IMSOLARIS
@@ -91,12 +112,28 @@ if ENABLE_CUST1
 SUBDIRS += plugins/cust1
 endif
 
+if ENABLE_SMCUSTBINDCDR
+SUBDIRS += plugins/sm_cust_bindcdr
+endif
+
 if ENABLE_IMTEMPLATE
 SUBDIRS += plugins/imtemplate
 endif
 
 if ENABLE_OMSTDOUT
 SUBDIRS += plugins/omstdout
+endif
+
+if ENABLE_PMCISCONAMES
+SUBDIRS += plugins/pmcisconames
+endif
+
+if ENABLE_PMAIXFORWARDEDFROM
+SUBDIRS += plugins/pmaixforwardedfrom
+endif
+
+if ENABLE_PMSNARE
+SUBDIRS += plugins/pmsnare
 endif
 
 if ENABLE_PMLASTMSG
@@ -121,6 +158,10 @@ endif
 
 if ENABLE_OMUXSOCK
 SUBDIRS += plugins/omuxsock
+endif
+
+if ENABLE_OMHDFS
+SUBDIRS += plugins/omhdfs
 endif
 
 if ENABLE_OMTEMPLATE
@@ -187,8 +228,16 @@ DISTCHECK_CONFIGURE_FLAGS=	--enable-gssapi_krb5 \
 				--enable-omruleset \
 				--enable-omprog \
 				--enable-imdiag \
+				--enable-imptcp \
 				--enable-omuxsock \
 				--enable-extended-tests \
+				--enable-impstats \
 				--enable-imptcp \
-				--enable-memcheck
+				--enable-memcheck \
+				--enable-pmaixforwardedfrom \
+				--enable-pmcisconames \
+				--enable-pmsnare \
+				--enable-imtemplate \
+				--enable-omtemplate \
+				--with-systemdsystemunitdir=$$dc_install_base/$(systemdsystemunitdir)
 ACLOCAL_AMFLAGS = -I m4

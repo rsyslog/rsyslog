@@ -46,6 +46,8 @@ librsyslog_la_SOURCES = \
 	modules.h \
 	apc.c \
 	apc.h \
+	statsobj.c \
+	statsobj.h \
 	sync.c \
 	sync.h \
 	expr.c \
@@ -82,6 +84,8 @@ librsyslog_la_SOURCES = \
 	prop.h \
 	cfsysline.c \
 	cfsysline.h \
+	sd-daemon.c \
+	sd-daemon.h \
 	\
 	\
 	../action.h \
@@ -92,6 +96,12 @@ librsyslog_la_SOURCES = \
 	../parse.c \
 	../parse.h \
 	\
+	hashtable.c \
+	hashtable.h \
+	hashtable_itr.c \
+	hashtable_itr.h \
+	hashtable_private.h \
+	\
 	../outchannel.c \
 	../outchannel.h \
 	../template.c \
@@ -100,9 +110,9 @@ librsyslog_la_SOURCES = \
 # runtime or will no longer be needed. -- rgerhards, 2008-06-13
 
 if WITH_MODDIRS
-librsyslog_la_CPPFLAGS = -D_PATH_MODDIR=\"$(pkglibdir)/:$(moddirs)\" $(PTHREADS_CFLAGS)
+librsyslog_la_CPPFLAGS = -DSD_EXPORT_SYMBOLS -D_PATH_MODDIR=\"$(pkglibdir)/:$(moddirs)\" $(PTHREADS_CFLAGS)
 else
-librsyslog_la_CPPFLAGS = -D_PATH_MODDIR=\"$(pkglibdir)/\" -I$(top_srcdir) $(PTHREADS_CFLAGS)
+librsyslog_la_CPPFLAGS = -DSD_EXPORT_SYMBOLS -D_PATH_MODDIR=\"$(pkglibdir)/\" -I$(top_srcdir) $(PTHREADS_CFLAGS)
 endif
 #librsyslog_la_LDFLAGS = -module -avoid-version
 librsyslog_la_LIBADD =  $(DL_LIBS) $(RT_LIBS)
@@ -178,3 +188,6 @@ lmnsd_gtls_la_LDFLAGS = -module -avoid-version
 lmnsd_gtls_la_LIBADD = $(GNUTLS_LIBS)
 endif
 
+update-systemd:
+       curl http://cgit.freedesktop.org/systemd/plain/src/sd-daemon.c > sd-daemon.c
+       curl http://cgit.freedesktop.org/systemd/plain/src/sd-daemon.h > sd-daemon.h

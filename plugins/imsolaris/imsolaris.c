@@ -85,6 +85,7 @@
 #include "sun_cddl.h"
 
 MODULE_TYPE_INPUT
+MODULE_TYPE_NOKEEP
 
 /* defines */
 #define PATH_LOG	"/dev/log"

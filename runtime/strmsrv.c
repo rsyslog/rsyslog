@@ -75,6 +75,7 @@
 #include "unicode-helper.h"
 
 MODULE_TYPE_LIB
+MODULE_TYPE_NOKEEP
 
 /* defines */
 #define STRMSESS_MAX_DEFAULT 200 /* default for nbr of strm sessions if no number is given */
