@@ -223,7 +223,7 @@ processBatch(batch_t *pBatch)
 	DEFiRet;
 	assert(pBatch != NULL);
 
-dbgprintf("ZZZ: processBatch: batch of %d elements must be processed\n", pBatch->nElem);
+	DBGPRINTF("processBatch: batch of %d elements must be processed\n", pBatch->nElem);
 	if(pBatch->bSingleRuleset) {
 		pThis = batchGetRuleset(pBatch);
 		if(pThis == NULL)
@@ -235,7 +235,7 @@ dbgprintf("ZZZ: processBatch: batch of %d elements must be processed\n", pBatch-
 	}
 
 finalize_it:
-dbgprintf("ruleset.ProcessMsg() returns %d\n", iRet);
+	DBGPRINTF("ruleset.ProcessMsg() returns %d\n", iRet);
 	RETiRet;
 }
 

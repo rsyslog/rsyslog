@@ -57,6 +57,15 @@ instructs imtcp to emit a message if the remote peer closes a connection.<br>
 after loading imtcp, otherwise it may have no effect.</li>
 <li><b>$InputTCPServerRun</b> &lt;port&gt;<br>
 Starts a TCP server on selected port</li>
+<li><b>$InputTCPFlowControl</b> &lt;<b>on</b>/off&gt;<br>
+This setting specifies whether some message flow control shall be exercised on the
+related TCP input. If set to on, messages are handled as "light delayable", which means
+the sender is throttled a bit when the queue becomes near-full. This is done in order
+to preserve some queue space for inputs that can not throttle (like UDP), but it
+may have some undesired effect in some configurations. Still, we consider this as
+a useful setting and thus it is the default. To turn the handling off, simply
+configure that explicitely.
+</li>
 <li><b>$InputTCPMaxListeners</b> &lt;number&gt;<br>
 Sets the maximum number of listeners (server ports) supported. Default is 20. This must be set before the first $InputTCPServerRun directive.</li>
 <li><b>$InputTCPMaxSessions</b> &lt;number&gt;<br> Sets the maximum number of sessions supported. Default is 200. This must be set before the first $InputTCPServerRun directive</li>

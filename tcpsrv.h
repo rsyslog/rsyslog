@@ -56,6 +56,7 @@ struct tcpsrv_s {
 	permittedPeers_t *pPermPeers;/**< driver's permitted peers */
 	sbool bEmitMsgOnClose;	/**< emit an informational message when the remote peer closes connection */
 	sbool bUsingEPoll;	/**< are we in epoll mode (means we do not need to keep track of sessions!) */
+	sbool bUseFlowControl;	/**< use flow control (make light delayable) */
 	int iLstnCurr;		/**< max nbr of listeners currently supported */
 	netstrm_t **ppLstn;	/**< our netstream listners */
 	tcpLstnPortList_t **ppLstnPort; /**< pointer to relevant listen port description */
@@ -133,8 +134,10 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetNotificationOnRemoteClose)(tcpsrv_t *pThis, int bNewVal); /* 2009-10-01 */
 	/* added v9 -- rgerhards, 2010-03-01 */
 	rsRetVal (*SetbDisableLFDelim)(tcpsrv_t*, int);
+	/* added v10 -- rgerhards, 2011-04-01 */
+	rsRetVal (*SetUseFlowControl)(tcpsrv_t*, int);
 ENDinterface(tcpsrv)
-#define tcpsrvCURR_IF_VERSION 9 /* increment whenever you change the interface structure! */
+#define tcpsrvCURR_IF_VERSION 10 /* increment whenever you change the interface structure! */
 /* change for v4:
  * - SetAddtlFrameDelim() added -- rgerhards, 2008-12-10
  * - SetInputName() added -- rgerhards, 2008-12-10

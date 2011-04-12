@@ -3,7 +3,7 @@
  *
  * File begun on 2007-12-21 by RGerhards (extracted from syslogd.c)
  *
- * Copyright 2007, 2009 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2011 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -88,6 +88,7 @@ static int iStrmDrvrMode = 0; /* mode for stream driver, driver-dependent (0 mos
 static int bEmitMsgOnClose = 0; /* emit an informational message on close by remote peer */
 static int iAddtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER; /* addtl frame delimiter, e.g. for netscreen, default none */
 static int bDisableLFDelim = 0; /* disbale standard LF delimiter */
+static int bUseFlowControl = 1; /* use flow control, what means indicate ourselfs a "light delayable" */
 static uchar *pszStrmDrvrAuthMode = NULL; /* authentication mode to use */
 static uchar *pszInputName = NULL; /* value for inputname property, NULL is OK and handled by core engine */
 static ruleset_t *pBindRuleset = NULL; /* ruleset to bind listener to (use system default if unspecified) */
@@ -199,6 +200,7 @@ static rsRetVal addTCPListener(void __attribute__((unused)) *pVal, uchar *pNewVa
 		CHKiRet(tcpsrv.SetCBOnRegularClose(pOurTcpsrv, onRegularClose));
 		CHKiRet(tcpsrv.SetCBOnErrClose(pOurTcpsrv, onErrClose));
 		CHKiRet(tcpsrv.SetDrvrMode(pOurTcpsrv, iStrmDrvrMode));
+		CHKiRet(tcpsrv.SetUseFlowControl(pOurTcpsrv, bUseFlowControl));
 		CHKiRet(tcpsrv.SetAddtlFrameDelim(pOurTcpsrv, iAddtlFrameDelim));
 		CHKiRet(tcpsrv.SetbDisableLFDelim(pOurTcpsrv, bDisableLFDelim));
 		CHKiRet(tcpsrv.SetNotificationOnRemoteClose(pOurTcpsrv, bEmitMsgOnClose));
@@ -289,6 +291,7 @@ resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unus
 	iTCPSessMax = 200;
 	iTCPLstnMax = 20;
 	iStrmDrvrMode = 0;
+	bUseFlowControl = 0;
 	bEmitMsgOnClose = 0;
 	iAddtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
 	bDisableLFDelim = 0;
@@ -344,6 +347,8 @@ CODEmodInit_QueryRegCFSLineHdlr
 				   eCmdHdlrGetWord, NULL, &pszInputName, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpserverbindruleset"), 0,
 				   eCmdHdlrGetWord, setRuleset, NULL, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpflowcontrol"), 0,
+				   eCmdHdlrBinary, NULL, &bUseFlowControl, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("resetconfigvariables"), 1, eCmdHdlrCustomHandler,
 		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 ENDmodInit

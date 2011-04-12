@@ -874,6 +874,7 @@ BEGINobjConstruct(tcpsrv) /* be sure to specify the object type also in END macr
 	pThis->addtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
 	pThis->bDisableLFDelim = 0;
 	pThis->OnMsgReceive = NULL;
+	pThis->bUseFlowControl = 1;
 ENDobjConstruct(tcpsrv)
 
 
@@ -1149,6 +1150,18 @@ SetLstnMax(tcpsrv_t *pThis, int iMax)
 }
 
 
+/* set if flow control shall be supported
+ */
+static rsRetVal
+SetUseFlowControl(tcpsrv_t *pThis, int bUseFlowControl)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, tcpsrv);
+	pThis->bUseFlowControl = bUseFlowControl;
+	RETiRet;
+}
+
+
 /* set max number of sessions
  * this must be called before ConstructFinalize, or it will have no effect!
  * rgerhards, 2009-04-09
@@ -1191,6 +1204,7 @@ CODESTARTobjQueryInterface(tcpsrv)
 	pIf->SetAddtlFrameDelim = SetAddtlFrameDelim;
 	pIf->SetbDisableLFDelim = SetbDisableLFDelim;
 	pIf->SetSessMax = SetSessMax;
+	pIf->SetUseFlowControl = SetUseFlowControl;
 	pIf->SetLstnMax = SetLstnMax;
 	pIf->SetDrvrMode = SetDrvrMode;
 	pIf->SetDrvrAuthMode = SetDrvrAuthMode;
