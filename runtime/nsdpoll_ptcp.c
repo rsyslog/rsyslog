@@ -159,9 +159,19 @@ ENDobjConstruct(nsdpoll_ptcp)
 
 /* destructor for the nsdpoll_ptcp object */
 BEGINobjDestruct(nsdpoll_ptcp) /* be sure to specify the object type also in END and CODESTART macros! */
+	nsdpoll_epollevt_lst_t *node;
+	nsdpoll_epollevt_lst_t *nextnode;
 CODESTARTobjDestruct(nsdpoll_ptcp)
-	//printf("ndspoll_ptcp destruct, event list root is %p\n", pThis->pRoot);
-#warning cleanup event list is missing!  (at least I think so)
+	/* we check if the epoll list still holds entries. This may happen, but
+	 * is a bit unusual.
+	 */
+	if(pThis->pRoot != NULL) {
+		for(node = pThis->pRoot ; node != NULL ; node = nextnode) {
+			nextnode = node->pNext;
+			dbgprintf("nsdpoll_ptcp destruct, need to destruct node %p\n", node);
+			delEvent(&node);
+		}
+	}
 	pthread_mutex_destroy(&pThis->mutEvtLst);
 ENDobjDestruct(nsdpoll_ptcp)
 

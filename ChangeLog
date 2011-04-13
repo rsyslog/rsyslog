@@ -5,6 +5,9 @@ Version 6.1.7  [DEVEL] (rgerhards), 2011-03-??
 - somewhat improved documentation index
 - bugfix: enhanced imudp config processing code disabled due to wrong
   merge (affected UDP realtime capabilities)
+- bugfix (kind of): memory leak with tcp reception epoll handler
+  This was an extremely unlikely leak and, if it happend, quite small.
+  Still it is better to handle this border case.
 ---------------------------------------------------------------------------
 Version 6.1.6  [DEVEL] (rgerhards), 2011-03-14
 - enhanced omhdfs to support batching mode. This permits to increase
