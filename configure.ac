@@ -37,7 +37,7 @@ PKG_PROG_PKG_CONFIG
 
 # modules we require
 PKG_CHECK_MODULES(LIBESTR, libestr >= 0.1.0)
-PKG_CHECK_MODULES(LIBEE, libee >= 0.1.0)
+PKG_CHECK_MODULES(LIBEE, libee >= 0.3.1)
 
 case "${host}" in
   *-*-linux*)

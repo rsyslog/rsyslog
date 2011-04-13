@@ -65,7 +65,7 @@ typedef struct _instanceData {
 } instanceData;
 
 typedef struct configSettings_s {
-	uchar *rulebase;		/**< name of sample db to use */
+	uchar *rulebase;		/**< name of normalization rulebase to use */
 	sbool bUseRawMsg;	/**< use %rawmsg% instead of %msg% */
 } configSettings_t;
 
@@ -150,7 +150,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	}
 
 	if(cs.rulebase == NULL) {
-		errmsg.LogError(0, RS_RET_NO_RULESET, "error: no sample database was specified, use "
+		errmsg.LogError(0, RS_RET_NO_RULESET, "error: no normalization rulebase was specified, use "
 				"$MMNormalizeSampleDB directive first!");
 		ABORT_FINALIZE(RS_RET_NO_RULESET);
 	}
@@ -182,7 +182,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	}
 	ln_setEECtx(pData->ctxln, pData->ctxee);
 	if(ln_loadSamples(pData->ctxln, (char*) cs.rulebase) != 0) {
-		errmsg.LogError(0, RS_RET_NO_RULESET, "error: sample db '%s' could not be loaded "
+		errmsg.LogError(0, RS_RET_NO_RULESET, "error: normalization rulebase '%s' could not be loaded "
 				"cannot activate action", cs.rulebase);
 		ee_exitCtx(pData->ctxee);
 		ln_exitCtx(pData->ctxln);

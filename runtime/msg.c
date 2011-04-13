@@ -2256,20 +2256,20 @@ static uchar *getNOW(eNOWType eNow)
 static inline void
 getCEEPropVal(msg_t *pMsg, es_str_t *propName, uchar **pRes, int *buflen, unsigned short *pbMustBeFreed)
 {
-	struct ee_field *field;
-	es_str_t *str;
+	es_str_t *str = NULL;
+	int r;
 
 	if(*pbMustBeFreed)
 		free(*pRes);
 	*pRes = NULL;
 
 	if(pMsg->event == NULL) goto finalize_it;
-	if((field = ee_getEventField(pMsg->event, propName)) == NULL)
-		goto finalize_it;
-	/* right now, we always extract data from the first field value. A reason for this
-	 * is that as of now (2010-12-01) liblognorm never populates more than one ;)
-	 */
-	if((str = ee_getFieldValueAsStr(field, 0)) == NULL) goto finalize_it;
+	r = ee_getEventFieldAsString(pMsg->event, propName, &str);
+
+	if(r != EE_OK) {
+		DBGPRINTF("msgGtCEEVar: libee error %d during ee_getEventFieldAsString\n", r);
+		FINALIZE;
+	}
 	*pRes = (unsigned char*) es_str2cstr(str, "#000");
 	es_deleteStr(str);
 	*buflen = (int) ustrlen(*pRes);
@@ -2489,6 +2489,7 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			break;
 		case PROP_CEE:
 			getCEEPropVal(pMsg, propName, &pRes, &bufLen, pbMustBeFreed);
+			break;
 		case PROP_SYS_BOM:
 			if(*pbMustBeFreed == 1)
 				free(pRes);
@@ -3110,7 +3111,7 @@ msgGetCEEVar(msg_t *pMsg, cstr_t *propName, var_t **ppVar)
 	cstr_t *pstrProp;
 	es_str_t *str = NULL;
 	es_str_t *epropName = NULL;
-	struct ee_field *field;
+	int r;
 
 	ISOBJ_TYPE_assert(pMsg, msg);
 	ASSERT(propName != NULL);
@@ -3121,14 +3122,10 @@ msgGetCEEVar(msg_t *pMsg, cstr_t *propName, var_t **ppVar)
 	CHKiRet(var.ConstructFinalize(pVar));
 
 	epropName = es_newStrFromBuf((char*)propName->pBuf, propName->iStrLen);
-	if((field = ee_getEventField(pMsg->event, epropName)) != NULL) {
-		/* right now, we always extract data from the first field value. A reason for this
-		 * is that as of now (2010-12-01) liblognorm never populates more than one ;)
-		 */
-		str = ee_getFieldValueAsStr(field, 0);
-	}
+	r = ee_getEventFieldAsString(pMsg->event, epropName, &str);
 
-	if(str == NULL) {
+	if(r != EE_OK) {
+		DBGPRINTF("msgGtCEEVar: libee error %d during ee_getEventFieldAsString\n", r);
 		CHKiRet(cstrConstruct(&pstrProp));
 		CHKiRet(cstrFinalize(pstrProp));
 	} else {

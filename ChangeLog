@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------
 Version 6.1.7  [DEVEL] (rgerhards), 2011-03-??
+- added log classification capabilities (via mmnormalize & tags)
 - speeded up tcp forwarding by reducing number of API calls
 - somewhat improved documentation index
 ---------------------------------------------------------------------------
