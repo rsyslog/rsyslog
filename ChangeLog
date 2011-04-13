@@ -3,6 +3,8 @@ Version 6.1.7  [DEVEL] (rgerhards), 2011-03-??
 - added log classification capabilities (via mmnormalize & tags)
 - speeded up tcp forwarding by reducing number of API calls
 - somewhat improved documentation index
+- bugfix: enhanced imudp config processing code disabled due to wrong
+  merge (affected UDP realtime capabilities)
 ---------------------------------------------------------------------------
 Version 6.1.6  [DEVEL] (rgerhards), 2011-03-14
 - enhanced omhdfs to support batching mode. This permits to increase
