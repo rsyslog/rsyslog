@@ -1,5 +1,8 @@
 ---------------------------------------------------------------------------
 Version 4.6.6  [v4-stable] (rgerhards), 2010-11-??
+- bugfix: IPv6-address could not be specified in omrelp
+  this was due to improper parsing of ":"
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=250
 - bugfix: imfile potentially duplicates lines
   This can happen when 0 bytes are read from the input file, and some
   writer appends data to the file BEFORE we check if a rollover happens.
