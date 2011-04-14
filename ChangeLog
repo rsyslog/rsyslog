@@ -1,4 +1,8 @@
 ---------------------------------------------------------------------------
+Version 5.8.1  [V5-stable] (rgerhards), 2011-04-??
+- bugfix: $myhostname not available in RainerScript (and no error message)
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=233
+---------------------------------------------------------------------------
 Version 5.8.0  [V5-stable] (rgerhards), 2011-04-12
 
 This is the new v5-stable branch, importing all feature from the 5.7.x

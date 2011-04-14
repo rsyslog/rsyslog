@@ -288,7 +288,7 @@ BEGINCMPOP(CMP_NEQ) /* remember to change the name also in the END macro! */
 	case VARTYPE_STR:
 		bRes = rsCStrCStrCmp(operand1->val.pStr, operand2->val.pStr);
 		break;
-ENDCMPOP(CMP_EQ)
+ENDCMPOP(CMP_NEQ)
 
 BEGINCMPOP(CMP_LT) /* remember to change the name also in the END macro! */
 	case VARTYPE_NUMBER:
@@ -474,6 +474,15 @@ CODESTARTop(PUSHSYSVAR)
 	CHKiRet(sysvar.GetVar(pOp->operand.pVar->val.pStr, &pVal));
 	vmstk.Push(pThis->pStk, pVal);
 finalize_it:
+	if(Debug && iRet != RS_RET_OK) {
+		if(iRet == RS_RET_SYSVAR_NOT_FOUND) {
+			DBGPRINTF("rainerscript: sysvar '%s' not found\n",
+				  rsCStrGetSzStrNoNULL(pOp->operand.pVar->val.pStr));
+		} else {
+			DBGPRINTF("rainerscript: error %d trying to obtain sysvar '%s'\n",
+				  iRet, rsCStrGetSzStrNoNULL(pOp->operand.pVar->val.pStr));
+		}
+	}
 ENDop(PUSHSYSVAR)
 
 /* The function call operation is only very roughly implemented. While the plumbing
@@ -666,9 +675,11 @@ execProg(vm_t *pThis, vmprg_t *pProg)
 	ISOBJ_TYPE_assert(pThis, vm);
 	ISOBJ_TYPE_assert(pProg, vmprg);
 
-#define doOP(OP) case opcode_##OP: CHKiRet(op##OP(pThis, pCurrOp)); break
+#define doOP(OP) case opcode_##OP: DBGPRINTF("rainerscript: opcode %s\n", #OP); \
+				   CHKiRet(op##OP(pThis, pCurrOp)); break
 	pCurrOp = pProg->vmopRoot; /* TODO: do this via a method! */
 	while(pCurrOp != NULL && pCurrOp->opcode != opcode_END_PROG) {
+		DBGPRINTF("rainerscript: executing step, opcode %d...\n", pCurrOp->opcode);
 		switch(pCurrOp->opcode) {
 			doOP(OR);
 			doOP(AND);
@@ -695,8 +706,8 @@ execProg(vm_t *pThis, vmprg_t *pProg)
 			doOP(UNARY_MINUS);
 			doOP(FUNC_CALL);
 			default:
-				ABORT_FINALIZE(RS_RET_INVALID_VMOP);
 				dbgoprint((obj_t*) pThis, "invalid instruction %d in vmprg\n", pCurrOp->opcode);
+				ABORT_FINALIZE(RS_RET_INVALID_VMOP);
 				break;
 		}
 		/* so far, we have plain sequential execution, so on to next... */
@@ -709,6 +720,7 @@ execProg(vm_t *pThis, vmprg_t *pProg)
 	 */
 
 finalize_it:
+	DBGPRINTF("rainerscript: script execution terminated with state %d\n", iRet);
 	RETiRet;
 }
 

@@ -41,6 +41,7 @@
 DEFobjStaticHelpers
 DEFobjCurrIf(var)
 DEFobjCurrIf(datetime)
+DEFobjCurrIf(glbl)
 
 
 /* Standard-Constructor
@@ -146,6 +147,8 @@ GetVar(cstr_t *pstrVarName, var_t **ppVar)
 		CHKiRet(getNOW(NOW_HOUR, &pstrProp));
 	} else if(!rsCStrSzStrCmp(pstrVarName, (uchar*)"minute", sizeof("minute") - 1)) {
 		CHKiRet(getNOW(NOW_MINUTE, &pstrProp));
+	} else if(!rsCStrSzStrCmp(pstrVarName, (uchar*)"myhostname", sizeof("myhostname") - 1)) {
+		CHKiRet(rsCStrConstructFromszStr(&pstrProp, glbl.GetLocalHostName()));
 	} else {
 		ABORT_FINALIZE(RS_RET_SYSVAR_NOT_FOUND);
 	}
@@ -191,6 +194,7 @@ BEGINObjClassInit(sysvar, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
 	CHKiRet(objUse(var, CORE_COMPONENT));
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
+	CHKiRet(objUse(glbl, CORE_COMPONENT));
 
 	/* set our own handlers */
 	OBJSetMethodHandler(objMethod_CONSTRUCTION_FINALIZER, sysvarConstructFinalize);
