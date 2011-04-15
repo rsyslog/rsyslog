@@ -173,7 +173,7 @@ shouldProcessThisMessage(rule_t *pRule, msg_t *pMsg, sbool *bProcessMsg)
 
 	if(pRule->f_filter_type == FILTER_PRI) {
 		/* skip messages that are incorrect priority */
-dbgprintf("testing filter, f_pmask %d\n", pRule->f_filterData.f_pmask[pMsg->iFacility]);
+		dbgprintf("testing filter, f_pmask %d\n", pRule->f_filterData.f_pmask[pMsg->iFacility]);
 		if ( (pRule->f_filterData.f_pmask[pMsg->iFacility] == TABLE_NOPRI) || \
 		    ((pRule->f_filterData.f_pmask[pMsg->iFacility] & (1<<pMsg->iSeverity)) == 0) )
 			bRet = 0;
@@ -185,7 +185,7 @@ dbgprintf("testing filter, f_pmask %d\n", pRule->f_filterData.f_pmask[pMsg->iFac
 		CHKiRet(vm.SetMsg(pVM, pMsg));
 		CHKiRet(vm.ExecProg(pVM, pRule->f_filterData.f_expr->pVmprg));
 		CHKiRet(vm.PopBoolFromStack(pVM, &pResult));
-		dbgprintf("result of expression evaluation: %lld\n", pResult->val.num);
+		dbgprintf("result of rainerscript filter evaluation: %lld\n", pResult->val.num);
 		/* VM is destructed on function exit */
 		bRet = (pResult->val.num) ? 1 : 0;
 	} else {

@@ -10,6 +10,18 @@ Version 5.9.0  [V5-DEVEL] (rgerhards), 2011-03-??
   affected directive was: $ActionExecOnlyWhenPreviousIsSuspended on
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=236
 ---------------------------------------------------------------------------
+Version 5.8.1  [V5-stable] (rgerhards), 2011-04-??
+- bugfix: $myhostname not available in RainerScript (and no error message)
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=233
+- bugfix: doc for impstats had wrong config statements
+  also, config statements were named a bit inconsistent, resolved that
+  problem by introducing an alias and only documenting the consistent
+  statements
+  Thanks to Marcin for bringing up this problem.
+- bugfix: IPv6-address could not be specified in omrelp
+  this was due to improper parsing of ":"
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=250
+---------------------------------------------------------------------------
 Version 5.8.0  [V5-stable] (rgerhards), 2011-04-12
 
 This is the new v5-stable branch, importing all feature from the 5.7.x
@@ -795,6 +807,9 @@ Version 4.7.0  [v4-devel] (rgerhards), 2010-04-14
 - imported changes from 4.5.6 and below
 ---------------------------------------------------------------------------
 Version 4.6.6  [v4-stable] (rgerhards), 2010-11-??
+- bugfix: IPv6-address could not be specified in omrelp
+  this was due to improper parsing of ":"
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=250
 - bugfix: imfile potentially duplicates lines
   This can happen when 0 bytes are read from the input file, and some
   writer appends data to the file BEFORE we check if a rollover happens.
