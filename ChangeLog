@@ -7,6 +7,9 @@ Version 5.8.1  [V5-stable] (rgerhards), 2011-04-??
   problem by introducing an alias and only documenting the consistent
   statements
   Thanks to Marcin for bringing up this problem.
+- bugfix: IPv6-address could not be specified in omrelp
+  this was due to improper parsing of ":"
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=250
 ---------------------------------------------------------------------------
 Version 5.8.0  [V5-stable] (rgerhards), 2011-04-12
 
