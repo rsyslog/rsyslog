@@ -1,7 +1,8 @@
 ---------------------------------------------------------------------------
-Version 6.1.7  [DEVEL] (rgerhards), 2011-03-??
+Version 6.1.7  [DEVEL] (rgerhards), 2011-04-15
 - added log classification capabilities (via mmnormalize & tags)
 - speeded up tcp forwarding by reducing number of API calls
+  this especially speeds up TLS processing
 - somewhat improved documentation index
 - bugfix: enhanced imudp config processing code disabled due to wrong
   merge (affected UDP realtime capabilities)
