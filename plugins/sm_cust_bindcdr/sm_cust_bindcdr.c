@@ -122,7 +122,8 @@ finalize_it:
  * An actual message sample for what we intend to parse is (one line):
   <30>Mar 24 13:01:51 named[6085]: 24-Mar-2011 13:01:51.865 queries: info: client 10.0.0.96#39762: view trusted: query: 8.6.0.9.9.4.1.4.6.1.8.3.mobilecrawler.com IN TXT + (10.0.0.96)
  */
-#define SQL_STMT "INSERT INTO CDR(`Date`,`Time`, timeMS, client, view, query, ip) VALUES ('"
+//previos dev: #define SQL_STMT "INSERT INTO CDR(`Date`,`Time`, timeMS, client, view, query, ip) VALUES ('"
+#define SQL_STMT "INSERT INTO CDR(`date`,ip,user,dest) VALUES ('"
 #define ADD_SQL_DELIM \
 	memcpy(*ppBuf + iBuf, "', '", sizeof("', '") - 1); \
 	iBuf += sizeof("', '") - 1;
@@ -316,16 +317,21 @@ CODESTARTstrgen
 
 	memcpy(*ppBuf + iBuf, szDate, lenDate);
 	iBuf += lenDate;
-	ADD_SQL_DELIM
+	/* prviously: ADD_SQL_DELIM */
+	*(*ppBuf + iBuf) = ' ';
+	++iBuf;
 
 	memcpy(*ppBuf + iBuf, szTime, lenTime);
 	iBuf += lenTime;
 	ADD_SQL_DELIM
 
+	/* we shall now discard this part
 	memcpy(*ppBuf + iBuf, szMSec, lenMSec);
 	iBuf += lenMSec;
 	ADD_SQL_DELIM
+	*/
 
+	/* Note that this seem to be the IP to use */
 	memcpy(*ppBuf + iBuf, szClient, lenClient);
 	iBuf += lenClient;
 	ADD_SQL_DELIM
@@ -336,10 +342,12 @@ CODESTARTstrgen
 
 	memcpy(*ppBuf + iBuf, szQuery, lenQuery);
 	iBuf += lenQuery;
-	ADD_SQL_DELIM
+	/* this is now the last field, so we dont need: ADD_SQL_DELIM */
 
+	/* no longer to be included
 	memcpy(*ppBuf + iBuf, szIP, lenIP);
 	iBuf += lenIP;
+	*/
 
 	/* end of SQL statement/trailer (NUL is contained in string!) */
 	memcpy(*ppBuf + iBuf, SQL_STMT_END, sizeof(SQL_STMT_END));
