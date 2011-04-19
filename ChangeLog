@@ -1,6 +1,7 @@
 ---------------------------------------------------------------------------
 Version 5.9.0  [V5-DEVEL] (rgerhards), 2011-03-??
 - this begins a new devel branch for v5
+- added support for user-level PRI provided via systemd
 - added new config directive $InputTCPFlowControl to select if tcp
   received messages shall be flagged as light delayable or not.
 - enhanced omhdfs to support batching mode. This permits to increase
