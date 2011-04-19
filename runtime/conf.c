@@ -70,6 +70,7 @@
 #include "ctok_token.h"
 #include "rule.h"
 #include "ruleset.h"
+#include "rsconf.h"
 #include "unicode-helper.h"
 
 #ifdef OS_SOLARIS
@@ -95,8 +96,6 @@ DEFobjCurrIf(ruleset)
 ecslConfObjType currConfObj = eConfObjGlobal; /* to support scoping - which config object is currently active? */
 int bConfStrictScoping = 0;	/* force strict scoping during config processing? */
 
-
-static int iNbrActions = 0; /* number of currently defined actions */
 
 /* The following module-global variables are used for building
  * tag and host selector lines during startup and config reload.
@@ -479,7 +478,7 @@ processConfFile(rsconf_t *conf, uchar *pConfFile)
 
 	/* we probably have one selector left to be added - so let's do that now */
 	if(pCurrRule != NULL) {
-		CHKiRet(ruleset.AddRule(rule.GetAssRuleset(pCurrRule), &pCurrRule));
+		CHKiRet(ruleset.AddRule(conf, rule.GetAssRuleset(pCurrRule), &pCurrRule));
 	}
 
 	/* close the configuration file */
@@ -1095,7 +1094,7 @@ finalize_it:
 /* process the action part of a selector line
  * rgerhards, 2007-08-01
  */
-static rsRetVal cflineDoAction(uchar **p, action_t **ppAction)
+static rsRetVal cflineDoAction(rsconf_t *conf, uchar **p, action_t **ppAction)
 {
 	DEFiRet;
 	modInfo_t *pMod;
@@ -1132,7 +1131,7 @@ static rsRetVal cflineDoAction(uchar **p, action_t **ppAction)
 					pAction->f_ReduceRepeated = 0;
 				}
 				pAction->eState = ACT_STATE_RDY; /* action is enabled */
-				iNbrActions++;	/* one more active action! */
+				conf->actions.nbrActions++;	/* one more active action! */
 			}
 			break;
 		}
@@ -1182,7 +1181,7 @@ cflineClassic(rsconf_t *conf, uchar *p, rule_t **ppRule)
 		 * all.  -- rgerhards, 2007-08-01
 		 */
 		if(*ppRule != NULL) {
-			CHKiRet(ruleset.AddRule(rule.GetAssRuleset(*ppRule), ppRule));
+			CHKiRet(ruleset.AddRule(conf, rule.GetAssRuleset(*ppRule), ppRule));
 		}
 		CHKiRet(rule.Construct(ppRule)); /* create "fresh" selector */
 		CHKiRet(rule.SetAssRuleset(*ppRule, ruleset.GetCurrent())); /* create "fresh" selector */
@@ -1190,7 +1189,7 @@ cflineClassic(rsconf_t *conf, uchar *p, rule_t **ppRule)
 		CHKiRet(cflineDoFilter(&p, *ppRule)); /* pull filters */
 	}
 
-	CHKiRet(cflineDoAction(&p, &pAction));
+	CHKiRet(cflineDoAction(conf, &p, &pAction));
 	CHKiRet(llAppend(&(*ppRule)->llActList,  NULL, (void*) pAction));
 
 finalize_it:
@@ -1241,7 +1240,7 @@ GetNbrActActions(rsconf_t *conf, int *piNbrActions)
 {
 	DEFiRet;
 	assert(piNbrActions != NULL);
-	*piNbrActions = iNbrActions;
+	*piNbrActions = conf->actions.nbrActions;
 	RETiRet;
 }
 

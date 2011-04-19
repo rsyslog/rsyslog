@@ -543,7 +543,7 @@ setRuleset(void __attribute__((unused)) *pVal, uchar *pszName)
 	rsRetVal localRet;
 	DEFiRet;
 
-	localRet = ruleset.GetRuleset(&pRuleset, pszName);
+	localRet = ruleset.GetRuleset(ourConf, &pRuleset, pszName);
 	if(localRet == RS_RET_NOT_FOUND) {
 		errmsg.LogError(0, NO_ERRCODE, "error: ruleset '%s' not found - ignored", pszName);
 	}

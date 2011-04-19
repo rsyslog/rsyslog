@@ -40,27 +40,35 @@ struct ruleset_s {
 /* interfaces */
 BEGINinterface(ruleset) /* name must also be changed in ENDinterface macro! */
 	INTERFACEObjDebugPrint(ruleset);
-	rsRetVal (*DebugPrintAll)(void);
+	rsRetVal (*DebugPrintAll)(rsconf_t *conf);
 	rsRetVal (*Construct)(ruleset_t **ppThis);
-	rsRetVal (*ConstructFinalize)(ruleset_t __attribute__((unused)) *pThis);
+	rsRetVal (*ConstructFinalize)(rsconf_t *conf, ruleset_t __attribute__((unused)) *pThis);
 	rsRetVal (*Destruct)(ruleset_t **ppThis);
-	rsRetVal (*IterateAllActions)(rsRetVal (*pFunc)(void*, void*), void* pParam);
-	rsRetVal (*DestructAllActions)(void);
-	rsRetVal (*AddRule)(ruleset_t *pThis, rule_t **ppRule);
-	rsRetVal (*SetName)(ruleset_t *pThis, uchar *pszName);
+	rsRetVal (*IterateAllActions)(rsconf_t *conf, rsRetVal (*pFunc)(void*, void*), void* pParam);
+	rsRetVal (*DestructAllActions)(rsconf_t *conf);
+	rsRetVal (*AddRule)(rsconf_t *conf, ruleset_t *pThis, rule_t **ppRule);
+	rsRetVal (*SetName)(rsconf_t *conf, ruleset_t *pThis, uchar *pszName);
 	rsRetVal (*ProcessBatch)(batch_t*);
-	rsRetVal (*GetRuleset)(ruleset_t **ppThis, uchar*);
-	rsRetVal (*SetDefaultRuleset)(uchar*);
-	rsRetVal (*SetCurrRuleset)(uchar*);
+	rsRetVal (*GetRuleset)(rsconf_t *conf, ruleset_t **ppThis, uchar*);
+	rsRetVal (*SetDefaultRuleset)(rsconf_t *conf, uchar*);
+	rsRetVal (*SetCurrRuleset)(rsconf_t *conf, uchar*);
 	ruleset_t* (*GetCurrent)(void);
 	qqueue_t* (*GetRulesetQueue)(ruleset_t*);
 	/* v3, 2009-11-04 */
 	parserList_t* (*GetParserList)(msg_t *);
+	/* v5, 2011-04-19
+	 * added support for the rsconf object -- fundamental change
+	 */
 ENDinterface(ruleset)
-#define rulesetCURR_IF_VERSION 4 /* increment whenever you change the interface structure! */
+#define rulesetCURR_IF_VERSION 5 /* increment whenever you change the interface structure! */
 
 
 /* prototypes */
 PROTOTYPEObj(ruleset);
 
+/* TODO: remove these -- currently done dirty for config file
+ * redo -- rgerhards, 2011-04-19
+ */
+rsRetVal rulesetDestructForLinkedList(void *pData);
+rsRetVal rulesetKeyDestruct(void __attribute__((unused)) *pData);
 #endif /* #ifndef INCLUDED_RULESET_H */

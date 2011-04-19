@@ -4,7 +4,7 @@
  *
  * Module begun 2009-06-10 by Rainer Gerhards
  *
- * Copyright 2009 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2009-2011 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *

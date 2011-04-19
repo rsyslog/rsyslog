@@ -1,7 +1,7 @@
 /* ruleset.c - rsyslog's ruleset object
  *
- * We have a two-way structure of linked lists: one global linked list
- * (llAllRulesets) hold alls rule sets that we know. Included in each
+ * We have a two-way structure of linked lists: one config-specifc linked list
+ * (conf->rulesets.llRulesets) hold alls rule sets that we know. Included in each
  * list is a list of rules (which contain a list of actions, but that's
  * a different story).
  *
@@ -11,7 +11,7 @@
  *
  * Module begun 2009-06-10 by Rainer Gerhards
  *
- * Copyright 2009 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2009-2011 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -34,7 +34,7 @@
 
 #include "config.h"
 #include <stdlib.h>
-#include <string.h>
+////#include <string.h>
 #include <assert.h>
 #include <ctype.h>
 
@@ -48,6 +48,7 @@
 #include "parser.h"
 #include "batch.h"
 #include "unicode-helper.h"
+#include "rsconf.h"
 #include "dirty.h" /* for main ruleset queue creation */
 
 /* static data */
@@ -56,25 +57,25 @@ DEFobjCurrIf(errmsg)
 DEFobjCurrIf(rule)
 DEFobjCurrIf(parser)
 
-linkedList_t llRulesets; /* this is NOT a pointer - no typo here ;) */
 ruleset_t *pCurrRuleset = NULL; /* currently "active" ruleset */
 ruleset_t *pDfltRuleset = NULL; /* current default ruleset, e.g. for binding to actions which have no other */
 
 /* forward definitions */
 static rsRetVal processBatch(batch_t *pBatch);
 
-/* ---------- linked-list key handling functions ---------- */
+
+/* ---------- linked-list key handling functions (ruleset) ---------- */
 
 /* destructor for linked list keys.
  */
-static rsRetVal keyDestruct(void __attribute__((unused)) *pData)
+rsRetVal
+rulesetKeyDestruct(void __attribute__((unused)) *pData)
 {
 	free(pData);
 	return RS_RET_OK;
 }
+/* ---------- END linked-list key handling functions (ruleset) ---------- */
 
-
-/* ---------- END linked-list key handling functions ---------- */
 
 
 /* driver to iterate over all of this ruleset actions */
@@ -122,7 +123,7 @@ DEFFUNC_llExecFunc(doIterateAllActions)
  * must be done or a shutdown is pending.
  */
 static rsRetVal
-iterateAllActions(rsRetVal (*pFunc)(void*, void*), void* pParam)
+iterateAllActions(rsconf_t *conf, rsRetVal (*pFunc)(void*, void*), void* pParam)
 {
 	iterateAllActions_t params;
 	DEFiRet;
@@ -130,7 +131,7 @@ iterateAllActions(rsRetVal (*pFunc)(void*, void*), void* pParam)
 
 	params.pFunc = pFunc;
 	params.pParam = pParam;
-	CHKiRet(llExecFunc(&llRulesets, doIterateAllActions, &params));
+	CHKiRet(llExecFunc(&(conf->rulesets.llRulesets), doIterateAllActions, &params));
 
 finalize_it:
 	RETiRet;
@@ -255,7 +256,7 @@ GetParserList(msg_t *pMsg)
  * of checks and ignore the rule if it does not pass them.
  */
 static rsRetVal
-addRule(ruleset_t *pThis, rule_t **ppRule)
+addRule(rsconf_t *conf, ruleset_t *pThis, rule_t **ppRule)
 {
 	int iActionCnt;
 	DEFiRet;
@@ -278,7 +279,7 @@ finalize_it:
 
 
 /* set name for ruleset */
-static rsRetVal setName(ruleset_t *pThis, uchar *pszName)
+static rsRetVal setName(rsconf_t *conf, ruleset_t *pThis, uchar *pszName)
 {
 	DEFiRet;
 	free(pThis->pszName);
@@ -316,13 +317,13 @@ GetRulesetQueue(ruleset_t *pThis)
 /* Find the ruleset with the given name and return a pointer to its object.
  */
 static rsRetVal
-GetRuleset(ruleset_t **ppRuleset, uchar *pszName)
+GetRuleset(rsconf_t *conf, ruleset_t **ppRuleset, uchar *pszName)
 {
 	DEFiRet;
 	assert(ppRuleset != NULL);
 	assert(pszName != NULL);
 
-	CHKiRet(llFind(&llRulesets, pszName, (void*) ppRuleset));
+	CHKiRet(llFind(&(conf->rulesets.llRulesets), pszName, (void*) ppRuleset));
 
 finalize_it:
 	RETiRet;
@@ -332,13 +333,13 @@ finalize_it:
 /* Set a new default rule set. If the default can not be found, no change happens.
  */
 static rsRetVal
-SetDefaultRuleset(uchar *pszName)
+SetDefaultRuleset(rsconf_t *conf, uchar *pszName)
 {
 	ruleset_t *pRuleset;
 	DEFiRet;
 	assert(pszName != NULL);
 
-	CHKiRet(GetRuleset(&pRuleset, pszName));
+	CHKiRet(GetRuleset(conf, &pRuleset, pszName));
 	pDfltRuleset = pRuleset;
 	dbgprintf("default rule set changed to %p: '%s'\n", pRuleset, pszName);
 
@@ -350,13 +351,13 @@ finalize_it:
 /* Set a new current rule set. If the ruleset can not be found, no change happens.
  */
 static rsRetVal
-SetCurrRuleset(uchar *pszName)
+SetCurrRuleset(rsconf_t *conf, uchar *pszName)
 {
 	ruleset_t *pRuleset;
 	DEFiRet;
 	assert(pszName != NULL);
 
-	CHKiRet(GetRuleset(&pRuleset, pszName));
+	CHKiRet(GetRuleset(conf, &pRuleset, pszName));
 	pCurrRuleset = pRuleset;
 	dbgprintf("current rule set changed to %p: '%s'\n", pRuleset, pszName);
 
@@ -389,7 +390,7 @@ ENDobjConstruct(ruleset)
  * This also adds the rule set to the list of all known rulesets.
  */
 static rsRetVal
-rulesetConstructFinalize(ruleset_t *pThis)
+rulesetConstructFinalize(rsconf_t *conf, ruleset_t *pThis)
 {
 	uchar *keyName;
 	DEFiRet;
@@ -400,7 +401,7 @@ rulesetConstructFinalize(ruleset_t *pThis)
 	 * two separate copies.
 	 */
 	CHKmalloc(keyName = ustrdup(pThis->pszName));
-	CHKiRet(llAppend(&llRulesets, keyName, pThis));
+	CHKiRet(llAppend(&(conf->rulesets.llRulesets), keyName, pThis));
 
 	/* this now also is the new current ruleset */
 	pCurrRuleset = pThis;
@@ -428,17 +429,6 @@ CODESTARTobjDestruct(ruleset)
 	free(pThis->pszName);
 ENDobjDestruct(ruleset)
 
-/* this is a special destructor for the linkedList class. LinkedList does NOT
- * provide a pointer to the pointer, but rather the raw pointer itself. So we 
- * must map this, otherwise the destructor will abort.
- */
-static rsRetVal
-rulesetDestructForLinkedList(void *pData)
-{
-	ruleset_t *pThis = (ruleset_t*) pData;
-	return rulesetDestruct(&pThis);
-}
-
 
 /* destruct ALL rule sets that reside in the system. This must
  * be callable before unloading this module as the module may
@@ -447,16 +437,27 @@ rulesetDestructForLinkedList(void *pData)
  * everything runs stable again. -- rgerhards, 2009-06-10
  */
 static rsRetVal
-destructAllActions(void)
+destructAllActions(rsconf_t *conf)
 {
 	DEFiRet;
 
-	CHKiRet(llDestroy(&llRulesets));
-	CHKiRet(llInit(&llRulesets, rulesetDestructForLinkedList, keyDestruct, strcasecmp));
+	CHKiRet(llDestroy(&(conf->rulesets.llRulesets)));
+	CHKiRet(llInit(&(conf->rulesets.llRulesets), rulesetDestructForLinkedList, rulesetKeyDestruct, strcasecmp));
 	pDfltRuleset = NULL;
 
 finalize_it:
 	RETiRet;
+}
+
+/* this is a special destructor for the linkedList class. LinkedList does NOT
+ * provide a pointer to the pointer, but rather the raw pointer itself. So we 
+ * must map this, otherwise the destructor will abort.
+ */
+rsRetVal
+rulesetDestructForLinkedList(void *pData)
+{
+	ruleset_t *pThis = (ruleset_t*) pData;
+	return rulesetDestruct(&pThis);
 }
 
 /* helper for debugPrint(), initiates rule printing */
@@ -480,11 +481,11 @@ DEFFUNC_llExecFunc(doDebugPrintAll)
 /* debug print all rulesets
  */
 static rsRetVal
-debugPrintAll(void)
+debugPrintAll(rsconf_t *conf)
 {
 	DEFiRet;
 	dbgprintf("All Rulesets:\n");
-	llExecFunc(&llRulesets, doDebugPrintAll, NULL);
+	llExecFunc(&(conf->rulesets.llRulesets), doDebugPrintAll, NULL);
 	dbgprintf("End of Rulesets.\n");
 	RETiRet;
 }
@@ -604,7 +605,6 @@ ENDobjQueryInterface(ruleset)
  * rgerhards, 2009-04-06
  */
 BEGINObjClassExit(ruleset, OBJ_IS_CORE_MODULE) /* class, version */
-	llDestroy(&llRulesets);
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(rule, CORE_COMPONENT);
 	objRelease(parser, CORE_COMPONENT);
@@ -623,9 +623,6 @@ BEGINObjClassInit(ruleset, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* set our own handlers */
 	OBJSetMethodHandler(objMethod_DEBUGPRINT, rulesetDebugPrint);
 	OBJSetMethodHandler(objMethod_CONSTRUCTION_FINALIZER, rulesetConstructFinalize);
-
-	/* prepare global data */
-	CHKiRet(llInit(&llRulesets, rulesetDestructForLinkedList, keyDestruct, strcasecmp));
 
 	/* config file handlers */
 	CHKiRet(regCfSysLineHdlr((uchar *)"rulesetparser", 0, eCmdHdlrGetWord, rulesetAddParser, NULL, NULL, eConfObjGlobal));

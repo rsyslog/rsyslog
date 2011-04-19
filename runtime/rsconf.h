@@ -23,6 +23,8 @@
 #ifndef INCLUDED_RSCONF_H
 #define INCLUDED_RSCONF_H
 
+#include "linkedlist.h"
+
 /* --- configuration objects (the plan is to have ALL upper layers in this file) --- */
 
 /* the following structure is a container for all known templates
@@ -39,6 +41,12 @@ struct actions_s {
 	unsigned nbrActions;		/* number of actions */
 };
 
+
+struct rulesets_s {
+	linkedList_t llRulesets; /* this is NOT a pointer - no typo here ;) */
+};
+
+
 /* --- end configuration objects --- */
 
 /* the rsconf object */
@@ -46,6 +54,7 @@ struct rsconf_s {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
 	templates_t templates;
 	actions_t actions;
+	rulesets_t rulesets;
 };
 
 

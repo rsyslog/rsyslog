@@ -815,7 +815,7 @@ DEFFUNC_llExecFunc(flushRptdMsgsActions)
 static void
 doFlushRptdMsgs(void)
 {
-	ruleset.IterateAllActions(flushRptdMsgsActions, NULL);
+	ruleset.IterateAllActions(ourConf, flushRptdMsgsActions, NULL);
 }
 
 
@@ -1026,7 +1026,7 @@ freeAllDynMemForTermination(void)
 static inline void
 destructAllActions(void)
 {
-	ruleset.DestructAllActions();
+	ruleset.DestructAllActions(ourConf);
 	bHaveMainQueue = 0; // flag that internal messages need to be temporarily stored
 }
 
@@ -1439,7 +1439,7 @@ finalize_it:
  */
 static void dbgPrintInitInfo(void)
 {
-	ruleset.DebugPrintAll();
+	ruleset.DebugPrintAll(ourConf);
 	DBGPRINTF("\n");
 	if(bDebugPrintTemplateList)
 		tplPrintList(ourConf);
@@ -1614,8 +1614,8 @@ init(void)
 
 	/* construct the default ruleset */
 	ruleset.Construct(&pRuleset);
-	ruleset.SetName(pRuleset, UCHAR_CONSTANT("RSYSLOG_DefaultRuleset"));
-	ruleset.ConstructFinalize(pRuleset);
+	ruleset.SetName(ourConf, pRuleset, UCHAR_CONSTANT("RSYSLOG_DefaultRuleset"));
+	ruleset.ConstructFinalize(ourConf, pRuleset);
 
 	/* open the configuration file */
 	localRet = conf.processConfFile(ourConf, ConfFile);
@@ -1654,7 +1654,7 @@ init(void)
 		} else {
 			DBGPRINTF("error %d obtaining controlling terminal, not using that emergency rule\n", errno);
 		}
-		ruleset.AddRule(ruleset.GetCurrent(), &pRule);
+		ruleset.AddRule(ourConf, ruleset.GetCurrent(), &pRule);
 	}
 
 	legacyOptsHook();
@@ -1758,7 +1758,7 @@ setDefaultRuleset(void __attribute__((unused)) *pVal, uchar *pszName)
 {
 	DEFiRet;
 
-	CHKiRet(ruleset.SetDefaultRuleset(pszName));
+	CHKiRet(ruleset.SetDefaultRuleset(ourConf, pszName));
 
 finalize_it:
 	free(pszName); /* no longer needed */
@@ -1797,13 +1797,13 @@ setCurrRuleset(void __attribute__((unused)) *pVal, uchar *pszName)
 	rsRetVal localRet;
 	DEFiRet;
 
-	localRet = ruleset.SetCurrRuleset(pszName);
+	localRet = ruleset.SetCurrRuleset(ourConf, pszName);
 
 	if(localRet == RS_RET_NOT_FOUND) {
 		DBGPRINTF("begin new current rule set '%s'\n", pszName);
 		CHKiRet(ruleset.Construct(&pRuleset));
-		CHKiRet(ruleset.SetName(pRuleset, pszName));
-		CHKiRet(ruleset.ConstructFinalize(pRuleset));
+		CHKiRet(ruleset.SetName(ourConf, pRuleset, pszName));
+		CHKiRet(ruleset.ConstructFinalize(ourConf, pRuleset));
 	} else {
 		ABORT_FINALIZE(localRet);
 	}
@@ -1913,7 +1913,7 @@ doHUP(void)
 		logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)buf, 0);
 	}
 
-	ruleset.IterateAllActions(doHUPActions, NULL);
+	ruleset.IterateAllActions(ourConf, doHUPActions, NULL);
 }
 
 

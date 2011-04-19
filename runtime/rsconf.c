@@ -27,10 +27,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <string.h>
 
 #include "rsyslog.h"
 #include "obj.h"
 #include "srUtils.h"
+#include "ruleset.h"
 #include "rsconf.h"
 
 /* static data */
@@ -40,6 +42,12 @@ DEFobjStaticHelpers
 /* Standard-Constructor
  */
 BEGINobjConstruct(rsconf) /* be sure to specify the object type also in END macro! */
+	pThis->templates.root = NULL;
+	pThis->templates.last = NULL;
+	pThis->templates.lastStatic = NULL;
+	pThis->actions.nbrActions = 0;
+	CHKiRet(llInit(&pThis->rulesets.llRulesets, rulesetDestructForLinkedList, rulesetKeyDestruct, strcasecmp));
+finalize_it:
 ENDobjConstruct(rsconf)
 
 
@@ -57,9 +65,7 @@ rsRetVal rsconfConstructFinalize(rsconf_t __attribute__((unused)) *pThis)
 /* destructor for the rsconf object */
 BEGINobjDestruct(rsconf) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(rsconf)
-	pThis->templates.root = NULL;
-	pThis->templates.last = NULL;
-	pThis->templates.lastStatic = NULL;
+	llDestroy(&(pThis->rulesets.llRulesets));
 ENDobjDestruct(rsconf)
 
 
