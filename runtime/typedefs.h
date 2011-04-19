@@ -81,6 +81,7 @@ typedef struct strgenList_s strgenList_t;
 typedef struct statsobj_s statsobj_t;
 typedef struct nsd_epworkset_s nsd_epworkset_t;
 typedef struct templates_s templates_t;
+typedef struct actions_s actions_t;
 typedef struct rsconf_s rsconf_t;
 typedef rsRetVal (*prsf_t)(struct vmstk_s*, int);	/* pointer to a RainerScript function */
 typedef uint64 qDeqID;	/* queue Dequeue order ID. 32 bits is considered dangerously few */

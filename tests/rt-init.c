@@ -26,6 +26,7 @@
 #include "testbench.h"
 #include <stdio.h>	/* must be last, else we get a zlib compile error on some platforms */
 
+rsconf_t *ourConf;
 MODULE_TYPE_TESTBENCH
 
 BEGINInit

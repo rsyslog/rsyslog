@@ -34,12 +34,18 @@ struct templates_s {
 	struct template *lastStatic; /* last static element of the template list */
 };
 
+
+struct actions_s {
+	unsigned nbrActions;		/* number of actions */
+};
+
 /* --- end configuration objects --- */
 
 /* the rsconf object */
 struct rsconf_s {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
 	templates_t templates;
+	actions_t actions;
 };
 
 

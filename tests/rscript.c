@@ -33,6 +33,7 @@
 #include "ctok.h"
 #include "expr.h"
 
+rsconf_t *ourConf;
 MODULE_TYPE_TESTBENCH
 /* define addtional objects we need for our tests */
 DEFobjCurrIf(expr)

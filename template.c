@@ -50,13 +50,6 @@ DEFobjCurrIf(regexp)
 static int bFirstRegexpErrmsg = 1; /**< did we already do a "can't load regexp" error message? */
 #endif
 
-#if 0
-
-static struct template *conf->templates.root = NULL;        /* the root of the template list */
-static struct template *tplLast = NULL;        
-static struct template *conf->templates.lastStatic = NULL; 
-#endif
-
 
 /* helper to tplToString and strgen's, extends buffer */
 #define ALLOC_INC 128

@@ -898,7 +898,7 @@ void legacyOptsHook(void)
 			errno = 0;
 			errmsg.LogError(0, NO_ERRCODE, "Warning: backward compatibility layer added to following "
 				        "directive to rsyslog.conf: %s", pThis->line);
-			conf.cfsysline(pThis->line);
+			conf.cfsysline(ourConf, pThis->line);
 		}
 		pThis = pThis->next;
 	}
@@ -1618,8 +1618,8 @@ init(void)
 	ruleset.ConstructFinalize(pRuleset);
 
 	/* open the configuration file */
-	localRet = conf.processConfFile(ConfFile);
-	CHKiRet(conf.GetNbrActActions(&iNbrActions));
+	localRet = conf.processConfFile(ourConf, ConfFile);
+	CHKiRet(conf.GetNbrActActions(ourConf, &iNbrActions));
 
 	if(localRet != RS_RET_OK) {
 		errmsg.LogError(0, localRet, "CONFIG ERROR: could not interpret master config file '%s'.", ConfFile);
@@ -1644,13 +1644,13 @@ init(void)
 		 */
 		char szTTYNameBuf[128];
 		rule_t *pRule = NULL; /* initialization to NULL is *vitally* important! */
-		conf.cfline(UCHAR_CONSTANT("*.ERR\t" _PATH_CONSOLE), &pRule);
-		conf.cfline(UCHAR_CONSTANT("syslog.*\t" _PATH_CONSOLE), &pRule);
-		conf.cfline(UCHAR_CONSTANT("*.PANIC\t*"), &pRule);
-		conf.cfline(UCHAR_CONSTANT("syslog.*\troot"), &pRule);
+		conf.cfline(ourConf, UCHAR_CONSTANT("*.ERR\t" _PATH_CONSOLE), &pRule);
+		conf.cfline(ourConf, UCHAR_CONSTANT("syslog.*\t" _PATH_CONSOLE), &pRule);
+		conf.cfline(ourConf, UCHAR_CONSTANT("*.PANIC\t*"), &pRule);
+		conf.cfline(ourConf, UCHAR_CONSTANT("syslog.*\troot"), &pRule);
 		if(ttyname_r(0, szTTYNameBuf, sizeof(szTTYNameBuf)) == 0) {
 			snprintf(cbuf,sizeof(cbuf), "*.*\t%s", szTTYNameBuf);
-			conf.cfline((uchar*)cbuf, &pRule);
+			conf.cfline(ourConf, (uchar*)cbuf, &pRule);
 		} else {
 			DBGPRINTF("error %d obtaining controlling terminal, not using that emergency rule\n", errno);
 		}
@@ -1985,6 +1985,44 @@ mainloop(void)
 }
 
 
+/* this method is needed to shuffle the current conf object down to the
+ * IncludeConfig handler.
+ */
+static rsRetVal
+doNameLine(void *pVal, uchar *pNewVal)
+{
+	DEFiRet;
+	iRet = conf.doNameLine(ourConf, pVal, pNewVal);
+	free(pNewVal);
+	RETiRet;
+}
+
+
+/* this method is needed to shuffle the current conf object down to the
+ * IncludeConfig handler.
+ */
+static rsRetVal
+doModLoad(void *pVal, uchar *pNewVal)
+{
+	DEFiRet;
+	iRet = conf.doModLoad(ourConf, pVal, pNewVal);
+	free(pNewVal);
+	RETiRet;
+}
+
+
+/* this method is needed to shuffle the current conf object down to the
+ * IncludeConfig handler.
+ */
+static rsRetVal
+doIncludeLine(void *pVal, uchar *pNewVal)
+{
+	DEFiRet;
+	iRet = conf.doIncludeLine(ourConf, pVal, pNewVal);
+	free(pNewVal);
+	RETiRet;
+}
+
 /* load build-in modules
  * very first version begun on 2007-07-23 by rgerhards
  */
@@ -2071,11 +2109,11 @@ static rsRetVal loadBuildInModules(void)
 	CHKiRet(regCfSysLineHdlr((uchar *)"abortonuncleanconfig", 0, eCmdHdlrBinary, NULL, &bAbortOnUncleanConfig, NULL, eConfObjGlobal));
 	CHKiRet(regCfSysLineHdlr((uchar *)"repeatedmsgreduction", 0, eCmdHdlrBinary, NULL, &bReduceRepeatMsgs, NULL, eConfObjGlobal));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionresumeinterval", 0, eCmdHdlrInt, setActionResumeInterval, NULL, NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"template", 0, eCmdHdlrCustomHandler, conf.doNameLine, (void*)DIR_TEMPLATE, NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"outchannel", 0, eCmdHdlrCustomHandler, conf.doNameLine, (void*)DIR_OUTCHANNEL, NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"allowedsender", 0, eCmdHdlrCustomHandler, conf.doNameLine, (void*)DIR_ALLOWEDSENDER, NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"modload", 0, eCmdHdlrCustomHandler, conf.doModLoad, NULL, NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"includeconfig", 0, eCmdHdlrCustomHandler, conf.doIncludeLine, NULL, NULL, eConfObjGlobal));
+	CHKiRet(regCfSysLineHdlr((uchar *)"template", 0, eCmdHdlrCustomHandler, doNameLine, (void*)DIR_TEMPLATE, NULL, eConfObjGlobal));
+	CHKiRet(regCfSysLineHdlr((uchar *)"outchannel", 0, eCmdHdlrCustomHandler, doNameLine, (void*)DIR_OUTCHANNEL, NULL, eConfObjGlobal));
+	CHKiRet(regCfSysLineHdlr((uchar *)"allowedsender", 0, eCmdHdlrCustomHandler, doNameLine, (void*)DIR_ALLOWEDSENDER, NULL, eConfObjGlobal));
+	CHKiRet(regCfSysLineHdlr((uchar *)"modload", 0, eCmdHdlrCustomHandler, doModLoad, NULL, NULL, eConfObjGlobal));
+	CHKiRet(regCfSysLineHdlr((uchar *)"includeconfig", 0, eCmdHdlrCustomHandler, doIncludeLine, NULL, NULL, eConfObjGlobal));
 	CHKiRet(regCfSysLineHdlr((uchar *)"umask", 0, eCmdHdlrFileCreateMode, setUmask, NULL, NULL, eConfObjGlobal));
 	CHKiRet(regCfSysLineHdlr((uchar *)"maxopenfiles", 0, eCmdHdlrInt, setMaxFiles, NULL, NULL, eConfObjGlobal));
 	CHKiRet(regCfSysLineHdlr((uchar *)"debugprinttemplatelist", 0, eCmdHdlrBinary, NULL, &bDebugPrintTemplateList, NULL, eConfObjGlobal));

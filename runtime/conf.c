@@ -12,7 +12,7 @@
  * the selector lines (e.g. *.info). That code is scheduled for removal
  * as part of RainerScript. After this is done, we can change licenses.
  *
- * Copyright 2008 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2011 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -77,8 +77,8 @@
 #endif
 
 /* forward definitions */
-static rsRetVal cfline(uchar *line, rule_t **pfCurr);
-static rsRetVal processConfFile(uchar *pConfFile);
+static rsRetVal cfline(rsconf_t *conf, uchar *line, rule_t **pfCurr);
+static rsRetVal processConfFile(rsconf_t *conf, uchar *pConfFile);
 
 
 /* static data */
@@ -117,7 +117,7 @@ static cstr_t *pDfltProgNameCmp = NULL;
  * indeed a directory.
  * rgerhards, 2007-08-01
  */
-static rsRetVal doIncludeDirectory(uchar *pDirName)
+static rsRetVal doIncludeDirectory(rsconf_t *conf, uchar *pDirName)
 {
 	DEFiRet;
 	int iEntriesDone = 0;
@@ -167,7 +167,7 @@ static rsRetVal doIncludeDirectory(uchar *pDirName)
 		memcpy(szFullFileName + iDirNameLen, res->d_name, iFileNameLen);
 		*(szFullFileName + iDirNameLen + iFileNameLen) = '\0';
 		dbgprintf("including file '%s'\n", szFullFileName);
-		processConfFile(szFullFileName);
+		processConfFile(conf, szFullFileName);
 		/* we deliberately ignore the iRet of processConfFile() - this is because
 		 * failure to process one file does not mean all files will fail. By ignoring,
 		 * we retry with the next file, which is the best thing we can do. -- rgerhards, 2007-08-01
@@ -196,7 +196,7 @@ finalize_it:
  * rgerhards, 2007-08-01
  */
 rsRetVal
-doIncludeLine(uchar **pp, __attribute__((unused)) void* pVal)
+doIncludeLine(rsconf_t *conf, uchar **pp, __attribute__((unused)) void* pVal)
 {
 	DEFiRet;
 	char pattern[MAXFNAME];
@@ -234,10 +234,10 @@ doIncludeLine(uchar **pp, __attribute__((unused)) void* pVal)
 
 		if(S_ISREG(fileInfo.st_mode)) { /* config file */
 			dbgprintf("requested to include config file '%s'\n", cfgFile);
-			iRet = processConfFile(cfgFile);
+			iRet = processConfFile(conf, cfgFile);
 		} else if(S_ISDIR(fileInfo.st_mode)) { /* config directory */
 			dbgprintf("requested to include directory '%s'\n", cfgFile);
-			iRet = doIncludeDirectory(cfgFile);
+			iRet = doIncludeDirectory(conf, cfgFile);
 		} else { /* TODO: shall we handle symlinks or not? */
 			dbgprintf("warning: unable to process IncludeConfig directive '%s'\n", cfgFile);
 		}
@@ -253,7 +253,7 @@ finalize_it:
 /* process a $ModLoad config line.
  */
 rsRetVal
-doModLoad(uchar **pp, __attribute__((unused)) void* pVal)
+doModLoad(rsconf_t * conf, uchar **pp, __attribute__((unused)) void* pVal)
 {
 	DEFiRet;
 	uchar szName[512];
@@ -297,7 +297,7 @@ finalize_it:
  *    generalized.
  */
 rsRetVal
-doNameLine(uchar **pp, void* pVal)
+doNameLine(rsconf_t *conf, uchar **pp, void* pVal)
 {
 	DEFiRet;
 	uchar *p;
@@ -356,7 +356,7 @@ finalize_it:
  * 2004-11-17 rgerhards
  */
 rsRetVal
-cfsysline(uchar *p)
+cfsysline(rsconf_t *conf, uchar *p)
 {
 	DEFiRet;
 	uchar szCmd[64];
@@ -397,7 +397,7 @@ finalize_it:
  * started with code from init() by rgerhards on 2007-07-31
  */
 static rsRetVal
-processConfFile(uchar *pConfFile)
+processConfFile(rsconf_t *conf, uchar *pConfFile)
 {
 	int iLnNbr = 0;
 	FILE *cf;
@@ -464,7 +464,7 @@ processConfFile(uchar *pConfFile)
 		/* we now have the complete line, and are positioned at the first non-whitespace
 		 * character. So let's process it
 		 */
-		if(cfline(cbuf, &pCurrRule) != RS_RET_OK) {
+		if(cfline(conf, cbuf, &pCurrRule) != RS_RET_OK) {
 			/* we log a message, but otherwise ignore the error. After all, the next
 			 * line can be correct.  -- rgerhards, 2007-08-02
 			 */
@@ -960,7 +960,7 @@ dbgprintf("XXX: fiop is %u\n", (unsigned) f->f_filterData.prop.operation);
  * from the config file ("+/-hostname"). It stores it for further reference.
  * rgerhards 2005-10-19
  */
-static rsRetVal cflineProcessHostSelector(uchar **pline)
+static rsRetVal cflineProcessHostSelector(rsconf_t *conf, uchar **pline)
 {
 	DEFiRet;
 
@@ -1010,7 +1010,7 @@ finalize_it:
  * from the config file ("!tagname"). It stores it for further reference.
  * rgerhards 2005-10-18
  */
-static rsRetVal cflineProcessTagSelector(uchar **pline)
+static rsRetVal cflineProcessTagSelector(rsconf_t *conf, uchar **pline)
 {
 	DEFiRet;
 
@@ -1160,7 +1160,7 @@ static rsRetVal cflineDoAction(uchar **p, action_t **ppAction)
  * of the master config file!).
  */
 static rsRetVal
-cflineClassic(uchar *p, rule_t **ppRule)
+cflineClassic(rsconf_t *conf, uchar *p, rule_t **ppRule)
 {
 	DEFiRet;
 	action_t *pAction;
@@ -1203,7 +1203,7 @@ finalize_it:
  * rgerhards, 2007-08-01
  */
 static rsRetVal
-cfline(uchar *line, rule_t **pfCurr)
+cfline(rsconf_t *conf, uchar *line, rule_t **pfCurr)
 {
 	DEFiRet;
 
@@ -1214,18 +1214,18 @@ cfline(uchar *line, rule_t **pfCurr)
 	/* check type of line and call respective processing */
 	switch(*line) {
 		case '!':
-			iRet = cflineProcessTagSelector(&line);
+			iRet = cflineProcessTagSelector(conf, &line);
 			break;
 		case '+':
 		case '-':
-			iRet = cflineProcessHostSelector(&line);
+			iRet = cflineProcessHostSelector(conf, &line);
 			break;
 		case '$':
 			++line; /* eat '$' */
-			iRet = cfsysline(line);
+			iRet = cfsysline(conf, line);
 			break;
 		default:
-			iRet = cflineClassic(line, pfCurr);
+			iRet = cflineClassic(conf, line, pfCurr);
 			break;
 	}
 
@@ -1237,7 +1237,7 @@ cfline(uchar *line, rule_t **pfCurr)
  * rgerhards, 2008-07-28
  */
 static rsRetVal
-GetNbrActActions(int *piNbrActions)
+GetNbrActActions(rsconf_t *conf, int *piNbrActions)
 {
 	DEFiRet;
 	assert(piNbrActions != NULL);
