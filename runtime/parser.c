@@ -496,7 +496,7 @@ ParseMsg(msg_t *pMsg)
 	 * will cause it to happen. After that, access to the unsanitized message is no
 	 * loger possible.
 	 */
-	pParserList = ruleset.GetParserList(pMsg);
+	pParserList = ruleset.GetParserList(ourConf, pMsg);
 	if(pParserList == NULL) {
 		pParserList = pDfltParsLst;
 	}

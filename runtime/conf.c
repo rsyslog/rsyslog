@@ -1184,7 +1184,7 @@ cflineClassic(rsconf_t *conf, uchar *p, rule_t **ppRule)
 			CHKiRet(ruleset.AddRule(conf, rule.GetAssRuleset(*ppRule), ppRule));
 		}
 		CHKiRet(rule.Construct(ppRule)); /* create "fresh" selector */
-		CHKiRet(rule.SetAssRuleset(*ppRule, ruleset.GetCurrent())); /* create "fresh" selector */
+		CHKiRet(rule.SetAssRuleset(*ppRule, ruleset.GetCurrent(conf))); /* create "fresh" selector */
 		CHKiRet(rule.ConstructFinalize(*ppRule)); /* create "fresh" selector */
 		CHKiRet(cflineDoFilter(&p, *ppRule)); /* pull filters */
 	}

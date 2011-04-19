@@ -1654,7 +1654,7 @@ init(void)
 		} else {
 			DBGPRINTF("error %d obtaining controlling terminal, not using that emergency rule\n", errno);
 		}
-		ruleset.AddRule(ourConf, ruleset.GetCurrent(), &pRule);
+		ruleset.AddRule(ourConf, ruleset.GetCurrent(ourConf), &pRule);
 	}
 
 	legacyOptsHook();

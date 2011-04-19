@@ -34,7 +34,6 @@
 
 #include "config.h"
 #include <stdlib.h>
-////#include <string.h>
 #include <assert.h>
 #include <ctype.h>
 
@@ -56,9 +55,6 @@ DEFobjStaticHelpers
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(rule)
 DEFobjCurrIf(parser)
-
-ruleset_t *pCurrRuleset = NULL; /* currently "active" ruleset */
-ruleset_t *pDfltRuleset = NULL; /* current default ruleset, e.g. for binding to actions which have no other */
 
 /* forward definitions */
 static rsRetVal processBatch(batch_t *pBatch);
@@ -228,7 +224,7 @@ processBatch(batch_t *pBatch)
 	if(pBatch->bSingleRuleset) {
 		pThis = batchGetRuleset(pBatch);
 		if(pThis == NULL)
-			pThis = pDfltRuleset;
+			pThis = ourConf->rulesets.pDflt;
 		ISOBJ_TYPE_assert(pThis, ruleset);
 		CHKiRet(llExecFunc(&pThis->llRules, processBatchDoRules, pBatch));
 	} else {
@@ -246,9 +242,9 @@ finalize_it:
  * rgerhards, 2009-11-04
  */
 static parserList_t*
-GetParserList(msg_t *pMsg)
+GetParserList(rsconf_t *conf, msg_t *pMsg)
 {
-	return (pMsg->pRuleset == NULL) ? pDfltRuleset->pParserLst : pMsg->pRuleset->pParserLst;
+	return (pMsg->pRuleset == NULL) ? conf->rulesets.pDflt->pParserLst : pMsg->pRuleset->pParserLst;
 }
 
 
@@ -295,9 +291,9 @@ finalize_it:
  * is really much more natural to return the pointer directly.
  */
 static ruleset_t*
-GetCurrent(void)
+GetCurrent(rsconf_t *conf)
 {
-	return pCurrRuleset;
+	return conf->rulesets.pCurr;
 }
 
 
@@ -340,7 +336,7 @@ SetDefaultRuleset(rsconf_t *conf, uchar *pszName)
 	assert(pszName != NULL);
 
 	CHKiRet(GetRuleset(conf, &pRuleset, pszName));
-	pDfltRuleset = pRuleset;
+	conf->rulesets.pDflt = pRuleset;
 	dbgprintf("default rule set changed to %p: '%s'\n", pRuleset, pszName);
 
 finalize_it:
@@ -358,7 +354,7 @@ SetCurrRuleset(rsconf_t *conf, uchar *pszName)
 	assert(pszName != NULL);
 
 	CHKiRet(GetRuleset(conf, &pRuleset, pszName));
-	pCurrRuleset = pRuleset;
+	conf->rulesets.pCurr = pRuleset;
 	dbgprintf("current rule set changed to %p: '%s'\n", pRuleset, pszName);
 
 finalize_it:
@@ -404,11 +400,11 @@ rulesetConstructFinalize(rsconf_t *conf, ruleset_t *pThis)
 	CHKiRet(llAppend(&(conf->rulesets.llRulesets), keyName, pThis));
 
 	/* this now also is the new current ruleset */
-	pCurrRuleset = pThis;
+	conf->rulesets.pCurr = pThis;
 
 	/* and also the default, if so far none has been set */
-	if(pDfltRuleset == NULL)
-		pDfltRuleset = pThis;
+	if(conf->rulesets.pDflt == NULL)
+		conf->rulesets.pDflt = pThis;
 
 finalize_it:
 	RETiRet;
@@ -443,7 +439,7 @@ destructAllActions(rsconf_t *conf)
 
 	CHKiRet(llDestroy(&(conf->rulesets.llRulesets)));
 	CHKiRet(llInit(&(conf->rulesets.llRulesets), rulesetDestructForLinkedList, rulesetKeyDestruct, strcasecmp));
-	pDfltRuleset = NULL;
+	conf->rulesets.pDflt = NULL;
 
 finalize_it:
 	RETiRet;
@@ -498,18 +494,18 @@ debugPrintAll(rsconf_t *conf)
  * considered acceptable for the time being.
  * rgerhards, 2009-10-27
  */
-static rsRetVal
-rulesetCreateQueue(void __attribute__((unused)) *pVal, int *pNewVal)
+static inline rsRetVal
+doRulesetCreateQueue(rsconf_t *conf, int *pNewVal)
 {
 	DEFiRet;
 
-	if(pCurrRuleset == NULL) {
+	if(conf->rulesets.pCurr == NULL) {
 		errmsg.LogError(0, RS_RET_NO_CURR_RULESET, "error: currently no specific ruleset specified, thus a "
 				"queue can not be added to it");
 		ABORT_FINALIZE(RS_RET_NO_CURR_RULESET);
 	}
 
-	if(pCurrRuleset->pQueue != NULL) {
+	if(conf->rulesets.pCurr->pQueue != NULL) {
 		errmsg.LogError(0, RS_RET_RULES_QUEUE_EXISTS, "error: ruleset already has a main queue, can not "
 				"add another one");
 		ABORT_FINALIZE(RS_RET_RULES_QUEUE_EXISTS);
@@ -519,12 +515,17 @@ rulesetCreateQueue(void __attribute__((unused)) *pVal, int *pNewVal)
 		FINALIZE; /* if it is turned off, we do not need to change anything ;) */
 
 	dbgprintf("adding a ruleset-specific \"main\" queue");
-	CHKiRet(createMainQueue(&pCurrRuleset->pQueue, UCHAR_CONSTANT("ruleset")));
+	CHKiRet(createMainQueue(&conf->rulesets.pCurr->pQueue, UCHAR_CONSTANT("ruleset")));
 
 finalize_it:
 	RETiRet;
 }
 
+static rsRetVal
+rulesetCreateQueue(void __attribute__((unused)) *pVal, int *pNewVal)
+{
+	return doRulesetCreateQueue(ourConf, pNewVal);
+}
 
 /* Add a ruleset specific parser to the ruleset. Note that adding the first
  * parser automatically disables the default parsers. If they are needed as well,
@@ -536,12 +537,12 @@ finalize_it:
  * rgerhards, 2009-11-04
  */
 static rsRetVal
-rulesetAddParser(void __attribute__((unused)) *pVal, uchar *pName)
+doRulesetAddParser(rsconf_t *conf, uchar *pName)
 {
 	parser_t *pParser;
 	DEFiRet;
 
-	assert(pCurrRuleset != NULL); 
+	assert(conf->rulesets.pCurr != NULL); 
 
 	CHKiRet(objUse(parser, CORE_COMPONENT));
 	iRet = parser.FindParser(&pParser, pName);
@@ -554,15 +555,21 @@ rulesetAddParser(void __attribute__((unused)) *pVal, uchar *pName)
 		FINALIZE;
 	}
 
-	CHKiRet(parser.AddParserToList(&pCurrRuleset->pParserLst, pParser));
+	CHKiRet(parser.AddParserToList(&conf->rulesets.pCurr->pParserLst, pParser));
 
-	dbgprintf("added parser '%s' to ruleset '%s'\n", pName, pCurrRuleset->pszName);
-RUNLOG_VAR("%p", pCurrRuleset->pParserLst);
+	dbgprintf("added parser '%s' to ruleset '%s'\n", pName, conf->rulesets.pCurr->pszName);
+RUNLOG_VAR("%p", conf->rulesets.pCurr->pParserLst);
 
 finalize_it:
 	d_free(pName); /* no longer needed */
 
 	RETiRet;
+}
+
+static rsRetVal
+rulesetAddParser(void __attribute__((unused)) *pVal, uchar *pName)
+{
+	return doRulesetAddParser(ourConf, pName);
 }
 
 

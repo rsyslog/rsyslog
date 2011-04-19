@@ -44,6 +44,10 @@ struct actions_s {
 
 struct rulesets_s {
 	linkedList_t llRulesets; /* this is NOT a pointer - no typo here ;) */
+
+	/* support for legacy rsyslog.conf format */
+	ruleset_t *pCurr; /* currently "active" ruleset */
+	ruleset_t *pDflt; /* current default ruleset, e.g. for binding to actions which have no other */
 };
 
 

@@ -52,10 +52,10 @@ BEGINinterface(ruleset) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*GetRuleset)(rsconf_t *conf, ruleset_t **ppThis, uchar*);
 	rsRetVal (*SetDefaultRuleset)(rsconf_t *conf, uchar*);
 	rsRetVal (*SetCurrRuleset)(rsconf_t *conf, uchar*);
-	ruleset_t* (*GetCurrent)(void);
+	ruleset_t* (*GetCurrent)(rsconf_t *conf);
 	qqueue_t* (*GetRulesetQueue)(ruleset_t*);
 	/* v3, 2009-11-04 */
-	parserList_t* (*GetParserList)(msg_t *);
+	parserList_t* (*GetParserList)(rsconf_t *conf, msg_t *);
 	/* v5, 2011-04-19
 	 * added support for the rsconf object -- fundamental change
 	 */
