@@ -186,12 +186,28 @@ rsRetVal imklogLogIntMsg(int priority, char *fmt, ...)
 rsRetVal Syslog(int priority, uchar *pMsg)
 {
 	DEFiRet;
+	int pri = -1;
 	rsRetVal localRet;
 
-	/* Output using syslog */
-	localRet = parsePRI(&pMsg, &priority);
-	if(localRet != RS_RET_INVALID_PRI && localRet != RS_RET_OK)
-		FINALIZE;
+	/* first check if we have two PRIs. This can happen in case of systemd,
+	 * in which case the second PRI is the rigth one.
+	 * TODO: added kernel timestamp support to this PoC. -- rgerhards, 2011-03-18
+	 */
+	if(pMsg[3] == '<') { /* could be a pri... */
+		uchar *pMsgTmp = pMsg + 3;
+		localRet = parsePRI(&pMsgTmp, &pri);
+		if(localRet == RS_RET_OK && pri >= 8 && pri <= 192) {
+			/* *this* is our PRI */
+			DBGPRINTF("imklog detected secondary PRI in klog msg\n");
+			pMsg = pMsgTmp;
+			priority = pri;
+		}
+	}
+	if(pri == -1) {
+		localRet = parsePRI(&pMsg, &priority);
+		if(localRet != RS_RET_INVALID_PRI && localRet != RS_RET_OK)
+			FINALIZE;
+	}
 	/* if we don't get the pri, we use whatever we were supplied */
 
 	/* ignore non-kernel messages if not permitted */
