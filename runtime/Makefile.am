@@ -20,6 +20,8 @@ librsyslog_la_SOURCES = \
 	unlimited_select.h \
 	conf.c \
 	conf.h \
+	rsconf.c \
+	rsconf.h \
 	parser.h \
 	parser.c \
 	strgen.h \

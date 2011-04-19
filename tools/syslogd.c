@@ -21,7 +21,7 @@
  * For further information, please see http://www.rsyslog.com
  *
  * rsyslog - An Enhanced syslogd Replacement.
- * Copyright 2003-2009 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2003-2011 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -135,6 +135,7 @@
 #include "net.h"
 #include "vm.h"
 #include "prop.h"
+#include "rsconf.h"
 #include "sd-daemon.h"
 
 /* definitions for objects we access */
@@ -149,6 +150,7 @@ DEFobjCurrIf(rule)
 DEFobjCurrIf(ruleset)
 DEFobjCurrIf(prop)
 DEFobjCurrIf(parser)
+DEFobjCurrIf(rsconf)
 DEFobjCurrIf(net) /* TODO: make go away! */
 
 
@@ -197,6 +199,8 @@ static rsRetVal GlobalClassExit(void);
 #ifndef _PATH_TTY
 #	define _PATH_TTY	"/dev/tty"
 #endif
+
+rsconf_t *ourConf;				/* our config object */
 
 static prop_t *pInternalInputName = NULL;	/* there is only one global inputName for all internally-generated messages */
 static prop_t *pLocalHostIP = NULL;		/* there is only one global IP for all internally-generated messages */
@@ -1087,7 +1091,7 @@ die(int sig)
 	 * ourselfs, this makes finding memory leaks a lot
 	 * easier.
 	 */
-	tplDeleteAll();
+	tplDeleteAll(ourConf);
 
 	/* de-init some modules */
 	modExitIminternal();
@@ -1438,7 +1442,7 @@ static void dbgPrintInitInfo(void)
 	ruleset.DebugPrintAll();
 	DBGPRINTF("\n");
 	if(bDebugPrintTemplateList)
-		tplPrintList();
+		tplPrintList(ourConf);
 	if(bDebugPrintModuleList)
 		module.PrintList();
 	ochPrintList();
@@ -2147,29 +2151,32 @@ static rsRetVal mainThread()
 	DEFiRet;
 	uchar *pTmp;
 
+	/* we need to init the config object first! */
+	CHKiRet(rsconf.Construct(&ourConf));
+
 	/* initialize the build-in templates */
 	pTmp = template_DebugFormat;
-	tplAddLine("RSYSLOG_DebugFormat", &pTmp);
+	tplAddLine(ourConf, "RSYSLOG_DebugFormat", &pTmp);
 	pTmp = template_SyslogProtocol23Format;
-	tplAddLine("RSYSLOG_SyslogProtocol23Format", &pTmp);
+	tplAddLine(ourConf, "RSYSLOG_SyslogProtocol23Format", &pTmp);
 	pTmp = template_FileFormat; /* new format for files with high-precision stamp */
-	tplAddLine("RSYSLOG_FileFormat", &pTmp);
+	tplAddLine(ourConf, "RSYSLOG_FileFormat", &pTmp);
 	pTmp = template_TraditionalFileFormat;
-	tplAddLine("RSYSLOG_TraditionalFileFormat", &pTmp);
+	tplAddLine(ourConf, "RSYSLOG_TraditionalFileFormat", &pTmp);
 	pTmp = template_WallFmt;
-	tplAddLine(" WallFmt", &pTmp);
+	tplAddLine(ourConf, " WallFmt", &pTmp);
 	pTmp = template_ForwardFormat;
-	tplAddLine("RSYSLOG_ForwardFormat", &pTmp);
+	tplAddLine(ourConf, "RSYSLOG_ForwardFormat", &pTmp);
 	pTmp = template_TraditionalForwardFormat;
-	tplAddLine("RSYSLOG_TraditionalForwardFormat", &pTmp);
+	tplAddLine(ourConf, "RSYSLOG_TraditionalForwardFormat", &pTmp);
 	pTmp = template_StdUsrMsgFmt;
-	tplAddLine(" StdUsrMsgFmt", &pTmp);
+	tplAddLine(ourConf, " StdUsrMsgFmt", &pTmp);
 	pTmp = template_StdDBFmt;
-	tplAddLine(" StdDBFmt", &pTmp);
+	tplAddLine(ourConf, " StdDBFmt", &pTmp);
         pTmp = template_StdPgSQLFmt;
-        tplLastStaticInit(tplAddLine(" StdPgSQLFmt", &pTmp));
+        tplAddLine(ourConf, " StdPgSQLFmt", &pTmp);
         pTmp = template_spoofadr;
-        tplLastStaticInit(tplAddLine("RSYSLOG_omudpspoofDfltSourceTpl", &pTmp));
+        tplLastStaticInit(ourConf, tplAddLine(ourConf, "RSYSLOG_omudpspoofDfltSourceTpl", &pTmp));
 
 	CHKiRet(init());
 
@@ -2261,6 +2268,8 @@ InitGlobalClasses(void)
 	CHKiRet(objUse(prop,     CORE_COMPONENT));
 	pErrObj = "parser";
 	CHKiRet(objUse(parser,     CORE_COMPONENT));
+	pErrObj = "rsconf";
+	CHKiRet(objUse(rsconf,     CORE_COMPONENT));
 
 	/* intialize some dummy classes that are not part of the runtime */
 	pErrObj = "action";
@@ -2306,6 +2315,7 @@ GlobalClassExit(void)
 	objRelease(expr,     CORE_COMPONENT);
 	vmClassExit();					/* this is hack, currently core_modules do not get this automatically called */
 	parserClassExit();					/* this is hack, currently core_modules do not get this automatically called */
+	rsconfClassExit();					/* this is hack, currently core_modules do not get this automatically called */
 	objRelease(datetime, CORE_COMPONENT);
 
 	/* TODO: implement the rest of the deinit */

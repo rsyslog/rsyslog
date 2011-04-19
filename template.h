@@ -117,14 +117,14 @@ ENDinterface(tpl)
 PROTOTYPEObj(tpl);
 
 
-struct template* tplConstruct(void);
-struct template *tplAddLine(char* pName, unsigned char** pRestOfConfLine);
-struct template *tplFind(char *pName, int iLenName);
+//struct template* tplConstruct(void);
+struct template *tplAddLine(rsconf_t *conf, char* pName, unsigned char** pRestOfConfLine);
+struct template *tplFind(rsconf_t *conf, char *pName, int iLenName);
 int tplGetEntryCount(struct template *pTpl);
-void tplDeleteAll(void);
-void tplDeleteNew(void);
-void tplPrintList(void);
-void tplLastStaticInit(struct template *tpl);
+void tplDeleteAll(rsconf_t *conf);
+void tplDeleteNew(rsconf_t *conf);
+void tplPrintList(rsconf_t *conf);
+void tplLastStaticInit(rsconf_t *conf, struct template *tpl);
 rsRetVal ExtendBuf(uchar **pBuf, size_t *pLenBuf, size_t iMinSize);
 /* note: if a compiler warning for undefined type tells you to look at this
  * code line below, the actual cause is that you currently MUST include template.h

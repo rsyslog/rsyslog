@@ -75,6 +75,7 @@
 #include "datetime.h"
 #include "queue.h"
 #include "conf.h"
+#include "rsconf.h"
 #include "glbl.h"
 #include "errmsg.h"
 #include "prop.h"
@@ -209,6 +210,8 @@ rsrtInit(char **ppErrObj, obj_if_t *pObjIF)
 		CHKiRet(parserClassInit(NULL));
 		if(ppErrObj != NULL) *ppErrObj = "strgen";
 		CHKiRet(strgenClassInit(NULL));
+		if(ppErrObj != NULL) *ppErrObj = "rsconf";
+		CHKiRet(rsconfClassInit(NULL));
 
 		/* dummy "classes" */
 		if(ppErrObj != NULL) *ppErrObj = "str";

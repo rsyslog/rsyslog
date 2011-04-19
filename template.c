@@ -37,6 +37,7 @@
 #include "obj.h"
 #include "errmsg.h"
 #include "strgen.h"
+#include "rsconf.h"
 #include "unicode-helper.h"
 
 /* static data */
@@ -49,10 +50,12 @@ DEFobjCurrIf(regexp)
 static int bFirstRegexpErrmsg = 1; /**< did we already do a "can't load regexp" error message? */
 #endif
 
-static struct template *tplRoot = NULL;	/* the root of the template list */
-static struct template *tplLast = NULL;	/* points to the last element of the template list */
-static struct template *tplLastStatic = NULL; /* last static element of the template list */
+#if 0
 
+static struct template *conf->templates.root = NULL;        /* the root of the template list */
+static struct template *tplLast = NULL;        
+static struct template *conf->templates.lastStatic = NULL; 
+#endif
 
 
 /* helper to tplToString and strgen's, extends buffer */
@@ -357,7 +360,8 @@ struct templateEntry* tpeConstruct(struct template *pTpl)
 /* Constructs a template list object. Returns pointer to it
  * or NULL (if it fails).
  */
-struct template* tplConstruct(void)
+static struct template*
+tplConstruct(rsconf_t *conf)
 {
 	struct template *pTpl;
 	if((pTpl = calloc(1, sizeof(struct template))) == NULL)
@@ -366,12 +370,12 @@ struct template* tplConstruct(void)
 	/* basic initialisation is done via calloc() - need to
 	 * initialize only values != 0. */
 
-	if(tplLast == NULL)	{
+	if(conf->templates.last == NULL)	{
 		/* we are the first element! */
-		tplRoot = tplLast = pTpl;
+		conf->templates.root = conf->templates.last = pTpl;
 	} else {
-		tplLast->pNext = pTpl;
-		tplLast = pTpl;
+		conf->templates.last->pNext = pTpl;
+		conf->templates.last = pTpl;
 	}
 
 	return(pTpl);
@@ -907,7 +911,7 @@ finalize_it:
 /* Add a new template line
  * returns pointer to new object if it succeeds, NULL otherwise.
  */
-struct template *tplAddLine(char* pName, uchar** ppRestOfConfLine)
+struct template *tplAddLine(rsconf_t *conf, char* pName, uchar** ppRestOfConfLine)
 {
 	struct template *pTpl;
  	unsigned char *p;
@@ -919,7 +923,7 @@ struct template *tplAddLine(char* pName, uchar** ppRestOfConfLine)
 	assert(pName != NULL);
 	assert(ppRestOfConfLine != NULL);
 
-	if((pTpl = tplConstruct()) == NULL)
+	if((pTpl = tplConstruct(conf)) == NULL)
 		return NULL;
 	
 	pTpl->iLenName = strlen(pName);
@@ -1046,13 +1050,13 @@ struct template *tplAddLine(char* pName, uchar** ppRestOfConfLine)
  * NULL otherwise.
  * rgerhards 2004-11-17
  */
-struct template *tplFind(char *pName, int iLenName)
+struct template *tplFind(rsconf_t *conf, char *pName, int iLenName)
 {
 	struct template *pTpl;
 
 	assert(pName != NULL);
 
-	pTpl = tplRoot;
+	pTpl = conf->templates.root;
 	while(pTpl != NULL &&
 	      !(pTpl->iLenName == iLenName &&
 	        !strcmp(pTpl->pszName, pName)
@@ -1070,13 +1074,13 @@ struct template *tplFind(char *pName, int iLenName)
  * "normal" debugging. Uncomment them, if they are needed.
  * rgerhards, 2007-07-05
  */
-void tplDeleteAll(void)
+void tplDeleteAll(rsconf_t *conf)
 {
 	struct template *pTpl, *pTplDel;
 	struct templateEntry *pTpe, *pTpeDel;
 	BEGINfunc
 
-	pTpl = tplRoot;
+	pTpl = conf->templates.root;
 	while(pTpl != NULL) {
 		/* dbgprintf("Delete Template: Name='%s'\n ", pTpl->pszName == NULL? "NULL" : pTpl->pszName);*/
 		pTpe = pTpl->pEntryRoot;
@@ -1122,19 +1126,19 @@ void tplDeleteAll(void)
 /* Destroy all templates obtained from conf file
  * preserving hardcoded ones. This is called from init().
  */
-void tplDeleteNew(void)
+void tplDeleteNew(rsconf_t *conf)
 {
 	struct template *pTpl, *pTplDel;
 	struct templateEntry *pTpe, *pTpeDel;
 
 	BEGINfunc
 
-	if(tplRoot == NULL || tplLastStatic == NULL)
+	if(conf->templates.root == NULL || conf->templates.lastStatic == NULL)
 		return;
 
-	pTpl = tplLastStatic->pNext;
-	tplLastStatic->pNext = NULL;
-	tplLast = tplLastStatic;
+	pTpl = conf->templates.lastStatic->pNext;
+	conf->templates.lastStatic->pNext = NULL;
+	conf->templates.last = conf->templates.lastStatic;
 	while(pTpl != NULL) {
 		/* dbgprintf("Delete Template: Name='%s'\n ", pTpl->pszName == NULL? "NULL" : pTpl->pszName);*/
 		pTpe = pTpl->pEntryRoot;
@@ -1177,20 +1181,20 @@ void tplDeleteNew(void)
 }
 
 /* Store the pointer to the last hardcoded teplate */
-void tplLastStaticInit(struct template *tpl)
+void tplLastStaticInit(rsconf_t *conf, struct template *tpl)
 {
-	tplLastStatic = tpl;
+	conf->templates.lastStatic = tpl;
 }
 
 /* Print the template structure. This is more or less a 
  * debug or test aid, but anyhow I think it's worth it...
  */
-void tplPrintList(void)
+void tplPrintList(rsconf_t *conf)
 {
 	struct template *pTpl;
 	struct templateEntry *pTpe;
 
-	pTpl = tplRoot;
+	pTpl = conf->templates.root;
 	while(pTpl != NULL) {
 		dbgprintf("Template: Name='%s' ", pTpl->pszName == NULL? "NULL" : pTpl->pszName);
 		if(pTpl->optFormatForSQL == 1)

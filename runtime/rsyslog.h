@@ -486,6 +486,11 @@ rsRetVal rsrtSetErrLogger(rsRetVal (*errLogger)(int, uchar*));
  */
 #define EMPTY_STRUCT
 
+/* TODO: remove this -- this is only for transition of the config system */
+extern rsconf_t *ourConf; /* defined by syslogd.c, a hack for functions that do not
+			     yet receive a copy, so that we can incrementially 
+			     compile and change... -- rgerhars, 2011-04-19 */
+
 #endif /* multi-include protection */
 /* vim:set ai:
  */
