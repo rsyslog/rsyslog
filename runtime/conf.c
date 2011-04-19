@@ -1,4 +1,4 @@
-/* The legacy config file handler (not yet a real object)
+/* The config file handler (not yet a real object)
  *
  * This file is based on an excerpt from syslogd.c, which dates back
  * much later. I began the file on 2008-02-19 as part of the modularization
@@ -60,7 +60,7 @@
 #include "modules.h"
 #include "outchannel.h"
 #include "stringbuf.h"
-#include "legacyconf.h"
+#include "conf.h"
 #include "stringbuf.h"
 #include "srUtils.h"
 #include "errmsg.h"

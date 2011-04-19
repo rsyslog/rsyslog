@@ -53,7 +53,7 @@
 #include "dirty.h"
 #include "syslogd-types.h"
 #include "module-template.h"
-#include "legacyconf.h"
+#include "conf.h"
 #include "cfsysline.h"
 
 MODULE_TYPE_OUTPUT

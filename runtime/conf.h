@@ -1,4 +1,4 @@
-/* Definitions for the legacy config file handling (not yet an object).
+/* Definitions for config file handling (not yet an object).
  *
  * Copyright 2008 Rainer Gerhards and Adiscon GmbH.
  *

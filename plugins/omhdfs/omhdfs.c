@@ -41,7 +41,7 @@
 #include "syslogd-types.h"
 #include "srUtils.h"
 #include "template.h"
-#include "legacyconf.h"
+#include "conf.h"
 #include "cfsysline.h"
 #include "module-template.h"
 #include "unicode-helper.h"

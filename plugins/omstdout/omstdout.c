@@ -35,7 +35,7 @@
 #include <signal.h>
 #include <errno.h>
 #include <unistd.h>
-#include "legacyconf.h"
+#include "conf.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
 #include "template.h"

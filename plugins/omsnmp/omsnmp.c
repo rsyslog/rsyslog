@@ -36,7 +36,7 @@
 #include <netdb.h>
 #include <ctype.h>
 #include <assert.h>
-#include "legacyconf.h"
+#include "conf.h"
 #include "syslogd-types.h"
 #include "cfsysline.h"
 #include "module-template.h"

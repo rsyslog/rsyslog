@@ -39,7 +39,7 @@
 
 #include "cfsysline.h"
 #include "obj.h"
-#include "legacyconf.h"
+#include "conf.h"
 #include "errmsg.h"
 #include "srUtils.h"
 #include "unicode-helper.h"

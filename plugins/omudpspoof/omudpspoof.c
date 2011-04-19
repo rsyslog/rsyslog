@@ -60,7 +60,7 @@
 #ifdef USE_NETZIP
 #include <zlib.h>
 #endif
-#include "legacyconf.h"
+#include "conf.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
 #include "net.h"

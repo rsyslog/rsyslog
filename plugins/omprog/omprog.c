@@ -36,7 +36,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <wait.h>
-#include "legacyconf.h"
+#include "conf.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
 #include "template.h"

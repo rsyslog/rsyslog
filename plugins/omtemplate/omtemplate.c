@@ -36,7 +36,7 @@
 #include <signal.h>
 #include <errno.h>
 #include <time.h>
-#include "legacyconf.h"
+#include "conf.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
 #include "template.h"

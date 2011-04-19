@@ -33,7 +33,7 @@
 #include <errno.h>
 #include <ctype.h>
 #include "syslogd.h"
-#include "legacyconf.h"
+#include "conf.h"
 #include "syslogd-types.h"
 #include "template.h"
 #include "msg.h"

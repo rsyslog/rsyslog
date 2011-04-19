@@ -41,7 +41,7 @@
 #include <string.h>
 #include <assert.h>
 #include <errno.h>
-#include "legacyconf.h"
+#include "conf.h"
 #include "syslogd-types.h"
 #include "cfsysline.h"
 #include "template.h"
