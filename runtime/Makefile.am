@@ -18,8 +18,8 @@ librsyslog_la_SOURCES = \
 	glbl.h \
 	glbl.c \
 	unlimited_select.h \
-	conf.c \
-	conf.h \
+	legacyconf.c \
+	legacyconf.h \
 	parser.h \
 	parser.c \
 	strgen.h \

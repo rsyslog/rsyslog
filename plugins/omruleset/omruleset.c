@@ -39,7 +39,7 @@
 #include <signal.h>
 #include <errno.h>
 #include <unistd.h>
-#include "conf.h"
+#include "legacyconf.h"
 #include "syslogd-types.h"
 #include "template.h"
 #include "module-template.h"

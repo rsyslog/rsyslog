@@ -124,7 +124,7 @@
 #include "wti.h"
 #include "queue.h"
 #include "stream.h"
-#include "conf.h"
+#include "legacyconf.h"
 #include "errmsg.h"
 #include "datetime.h"
 #include "parser.h"

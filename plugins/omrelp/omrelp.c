@@ -36,7 +36,7 @@
 #include <errno.h>
 #include <ctype.h>
 #include <librelp.h>
-#include "conf.h"
+#include "legacyconf.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
 #include "cfsysline.h"

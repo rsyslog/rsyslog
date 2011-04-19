@@ -74,7 +74,7 @@
 #include "vmprg.h"
 #include "datetime.h"
 #include "queue.h"
-#include "conf.h"
+#include "legacyconf.h"
 #include "glbl.h"
 #include "errmsg.h"
 #include "prop.h"

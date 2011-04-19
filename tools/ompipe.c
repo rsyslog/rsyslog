@@ -53,7 +53,7 @@
 #include "omfile.h" /* for dirty trick: access to $ActionFileDefaultTemplate value */
 #include "cfsysline.h"
 #include "module-template.h"
-#include "conf.h"
+#include "legacyconf.h"
 #include "errmsg.h"
 
 MODULE_TYPE_OUTPUT

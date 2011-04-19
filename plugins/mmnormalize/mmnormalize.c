@@ -38,7 +38,7 @@
 #include <libestr.h>
 #include <libee/libee.h>
 #include <liblognorm.h>
-#include "conf.h"
+#include "legacyconf.h"
 #include "syslogd-types.h"
 #include "template.h"
 #include "module-template.h"

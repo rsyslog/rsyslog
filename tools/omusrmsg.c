@@ -74,7 +74,7 @@
 #include "srUtils.h"
 #include "stringbuf.h"
 #include "syslogd-types.h"
-#include "conf.h"
+#include "legacyconf.h"
 #include "omusrmsg.h"
 #include "module-template.h"
 #include "errmsg.h"

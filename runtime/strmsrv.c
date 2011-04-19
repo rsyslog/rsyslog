@@ -64,7 +64,7 @@
 #include "module-template.h"
 #include "net.h"
 #include "srUtils.h"
-#include "conf.h"
+#include "legacyconf.h"
 #include "strmsrv.h"
 #include "obj.h"
 #include "glbl.h"

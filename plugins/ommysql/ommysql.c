@@ -36,7 +36,7 @@
 #include <errno.h>
 #include <time.h>
 #include <mysql.h>
-#include "conf.h"
+#include "legacyconf.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
 #include "template.h"

@@ -41,7 +41,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <unistd.h>
-#include "conf.h"
+#include "legacyconf.h"
 #include "srUtils.h"
 #include "template.h"
 #include "msg.h"
