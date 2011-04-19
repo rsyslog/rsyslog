@@ -2,7 +2,7 @@
  *
  * Module begun 2011-04-19 by Rainer Gerhards
  *
- * Copyright 2007, 2008 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2011 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -33,15 +33,24 @@
 #include "obj.h"
 #include "srUtils.h"
 #include "ruleset.h"
+#include "modules.h"
 #include "rsconf.h"
+#include "cfsysline.h"
 
 /* static data */
 DEFobjStaticHelpers
+DEFobjCurrIf(ruleset)
+DEFobjCurrIf(module)
 
 
 /* Standard-Constructor
  */
 BEGINobjConstruct(rsconf) /* be sure to specify the object type also in END macro! */
+	pThis->globals.bDebugPrintTemplateList = 1;
+	pThis->globals.bDebugPrintModuleList = 1;
+	pThis->globals.bDebugPrintCfSysLineHandlerList = 1;
+	pThis->globals.bLogStatusMsgs = DFLT_bLogStatusMsgs;
+	pThis->globals.bErrMsgToStderr = 1;
 	pThis->templates.root = NULL;
 	pThis->templates.last = NULL;
 	pThis->templates.lastStatic = NULL;
@@ -71,6 +80,26 @@ ENDobjDestruct(rsconf)
 
 /* DebugPrint support for the rsconf object */
 BEGINobjDebugPrint(rsconf) /* be sure to specify the object type also in END and CODESTART macros! */
+	dbgprintf("configuration object %p\n", pThis);
+	dbgprintf("Global Settings:\n");
+	dbgprintf("  bDebugPrintTemplateList.............: %d\n",
+		  pThis->globals.bDebugPrintTemplateList);
+	dbgprintf("  bDebugPrintModuleList               : %d\n",
+		  pThis->globals.bDebugPrintModuleList);
+	dbgprintf("  bDebugPrintCfSysLineHandlerList.....: %d\n",
+		  pThis->globals.bDebugPrintCfSysLineHandlerList);
+	dbgprintf("  bLogStatusMsgs                      : %d\n",
+		  pThis->globals.bLogStatusMsgs);
+	dbgprintf("  bErrMsgToStderr.....................: %d\n",
+		  pThis->globals.bErrMsgToStderr);
+	ruleset.DebugPrintAll(pThis);
+	DBGPRINTF("\n");
+	if(pThis->globals.bDebugPrintTemplateList)
+		tplPrintList(pThis);
+	if(pThis->globals.bDebugPrintModuleList)
+		module.PrintList();
+	if(pThis->globals.bDebugPrintCfSysLineHandlerList)
+		dbgPrintCfSysLineHandlers();
 CODESTARTobjDebugPrint(rsconf)
 ENDobjDebugPrint(rsconf)
 
@@ -102,6 +131,8 @@ ENDobjQueryInterface(rsconf)
  */
 BEGINObjClassInit(rsconf, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
+	CHKiRet(objUse(ruleset, CORE_COMPONENT));
+	CHKiRet(objUse(module, CORE_COMPONENT));
 
 	/* now set our own handlers */
 	OBJSetMethodHandler(objMethod_DEBUGPRINT, rsconfDebugPrint);
@@ -112,6 +143,8 @@ ENDObjClassInit(rsconf)
 /* De-initialize the rsconf class.
  */
 BEGINObjClassExit(rsconf, OBJ_IS_CORE_MODULE) /* class, version */
+	objRelease(ruleset, CORE_COMPONENT);
+	objRelease(module, CORE_COMPONENT);
 ENDObjClassExit(rsconf)
 
 /* vi:set ai:

@@ -586,6 +586,13 @@ doFacility(uchar **pp, rsRetVal (*pSetHdlr)(void*, int), void *pVal)
 }
 
 
+static rsRetVal
+doGoneAway(uchar **pp, rsRetVal (*pSetHdlr)(void*, int), void *pVal)
+{
+	errmsg.LogError(0, RS_RET_CMD_GONE_AWAY, "config directive is no longer supported -- ignored");
+	return RS_RET_CMD_GONE_AWAY;
+}
+
 /* Implements the severity syntax.
  * rgerhards, 2008-02-14
  */
@@ -716,6 +723,9 @@ static rsRetVal cslchCallHdlr(cslCmdHdlr_t *pThis, uchar **ppConfLine)
 		break;
 	case eCmdHdlrGetWord:
 		pHdlr = doGetWord;
+		break;
+	case eCmdHdlrGoneAway:
+		pHdlr = doGoneAway;
 		break;
 	default:
 		iRet = RS_RET_NOT_IMPLEMENTED;

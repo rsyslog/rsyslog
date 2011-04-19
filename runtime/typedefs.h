@@ -82,6 +82,8 @@ typedef struct statsobj_s statsobj_t;
 typedef struct nsd_epworkset_s nsd_epworkset_t;
 typedef struct templates_s templates_t;
 typedef struct rulesets_s rulesets_t;
+typedef struct globals_s globals_t;
+typedef struct defaults_s defaults_t;
 typedef struct actions_s actions_t;
 typedef struct rsconf_s rsconf_t;
 typedef rsRetVal (*prsf_t)(struct vmstk_s*, int);	/* pointer to a RainerScript function */
@@ -150,7 +152,8 @@ typedef enum cslCmdHdlrType {
 	eCmdHdlrGetChar,
 	eCmdHdlrFacility,
 	eCmdHdlrSeverity,
-	eCmdHdlrGetWord
+	eCmdHdlrGetWord,
+	eCmdHdlrGoneAway		/* statment existed, but is no longer supported */
 } ecslCmdHdrlType;
 
 

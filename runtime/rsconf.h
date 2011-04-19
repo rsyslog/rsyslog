@@ -27,9 +27,32 @@
 
 /* --- configuration objects (the plan is to have ALL upper layers in this file) --- */
 
-/* the following structure is a container for all known templates
- * inside a specific configuration. -- rgerhards 2011-04-19
+/* globals are data items that are really global, and can be set only
+ * once (at least in theory, because the legacy system permits them to 
+ * be re-set as often as the user likes).
  */
+struct globals_s {
+	int bDebugPrintTemplateList;
+	int bDebugPrintModuleList;
+	int bDebugPrintCfSysLineHandlerList;
+	int bLogStatusMsgs;	/* log rsyslog start/stop/HUP messages? */
+	int bErrMsgToStderr;	/* print error messages to stderr (in addition to everything else)? */
+};
+
+/* (global) defaults are global in the sense that they are accessible
+ * to all code, but they can change value and other objects (like
+ * actions) actually copy the value a global had at the time the action
+ * was defined. In that sense, a global default is just that, a default,
+ * wich can (and will) be changed in the course of config file
+ * processing. Once the config file has been processed, defaults
+ * can be dropped. The current code does not do this for simplicity.
+ * That is not a problem, because the defaults do not take up much memory.
+ * At a later stage, we may think about dropping them. -- rgerhards, 2011-04-19
+ */
+struct defaults_s {
+};
+
+
 struct templates_s {
 	struct template *root;	/* the root of the template list */
 	struct template *last;	/* points to the last element of the template list */
@@ -56,9 +79,17 @@ struct rulesets_s {
 /* the rsconf object */
 struct rsconf_s {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
+	globals_t globals;
+	defaults_t defaults;
 	templates_t templates;
 	actions_t actions;
 	rulesets_t rulesets;
+	/* note: rulesets include the complete output part:
+	 *  - rules
+	 *  - filter (as part of the action)
+	 *  - actions
+	 * Of course, we need to debate if we shall change that some time...
+	 */
 };
 
 
@@ -74,5 +105,8 @@ ENDinterface(rsconf)
 
 /* prototypes */
 PROTOTYPEObj(rsconf);
+
+/* some defaults (to be removed?) */
+#define DFLT_bLogStatusMsgs 1
 
 #endif /* #ifndef INCLUDED_RSCONF_H */

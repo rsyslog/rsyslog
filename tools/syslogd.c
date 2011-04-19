@@ -238,12 +238,6 @@ legacyOptsLL_t *pLegacyOptsLL = NULL;
 int	iCompatibilityMode = 0;		/* version we should be compatible with; 0 means sysklogd. It is
 					   the default, so if no -c<n> option is given, we make ourselvs
 					   as compatible to sysklogd as possible. */
-#define DFLT_bLogStatusMsgs 1
-static int	bLogStatusMsgs = DFLT_bLogStatusMsgs;	/* log rsyslog start/stop/HUP messages? */
-static int	bDebugPrintTemplateList = 1;/* output template list in debug mode? */
-static int	bDebugPrintCfSysLineHandlerList = 1;/* output cfsyslinehandler list in debug mode? */
-static int	bDebugPrintModuleList = 1;/* output module list in debug mode? */
-static int	bErrMsgToStderr = 1; /* print error messages to stderr (in addition to everything else)? */
 int 	bReduceRepeatMsgs; /* reduce repeated message - 0 - no, 1 - yes */
 int 	bAbortOnUncleanConfig = 0; /* abort run (rather than starting with partial config) if there was any issue in conf */
 /* end global config file state variables */
@@ -292,10 +286,10 @@ static int iMainMsgQueueDeqtWinToHr = 25;			/* hour begin of time frame when que
  */
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
-	bLogStatusMsgs = DFLT_bLogStatusMsgs;
-	bDebugPrintTemplateList = 1;
-	bDebugPrintCfSysLineHandlerList = 1;
-	bDebugPrintModuleList = 1;
+	ourConf->globals.bLogStatusMsgs = DFLT_bLogStatusMsgs;
+	ourConf->globals.bDebugPrintTemplateList = 1;
+	ourConf->globals.bDebugPrintCfSysLineHandlerList = 1;
+	ourConf->globals.bDebugPrintModuleList = 1;
 	bReduceRepeatMsgs = 0;
 	bAbortOnUncleanConfig = 0;
 	free(pszMainMsgQFName);
@@ -569,7 +563,7 @@ logmsgInternal(int iErr, int pri, uchar *msg, int flags)
 	 * permits us to process unmodified config files which otherwise contain a
 	 * supressor statement.
 	 */
-	if(((Debug == DEBUG_FULL || NoFork) && bErrMsgToStderr) || iConfigVerify) {
+	if(((Debug == DEBUG_FULL || NoFork) && ourConf->globals.bErrMsgToStderr) || iConfigVerify) {
 		if(LOG_PRI(pri) == LOG_ERR)
 			fprintf(stderr, "rsyslogd: %s\n", msg);
 	}
@@ -1064,7 +1058,7 @@ die(int sig)
 	thrdTerminateAll();
 
 	/* and THEN send the termination log message (see long comment above) */
-	if(sig && bLogStatusMsgs) {
+	if(sig && ourConf->globals.bLogStatusMsgs) {
 		(void) snprintf(buf, sizeof(buf) / sizeof(char),
 		 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
 		 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"]" " exiting on signal %d.",
@@ -1439,16 +1433,9 @@ finalize_it:
  */
 static void dbgPrintInitInfo(void)
 {
-	ruleset.DebugPrintAll(ourConf);
-	DBGPRINTF("\n");
-	if(bDebugPrintTemplateList)
-		tplPrintList(ourConf);
-	if(bDebugPrintModuleList)
-		module.PrintList();
+	dbgprintf("The following is the old-style, to-be-replaced, current config dump at the end "
+		  " of the config load process ;)\n");
 	ochPrintList();
-
-	if(bDebugPrintCfSysLineHandlerList)
-		dbgPrintCfSysLineHandlers();
 
 	DBGPRINTF("Messages with malicious PTR DNS Records are %sdropped.\n",
 		  glbl.GetDropMalPTRMsgs() ? "" : "not ");
@@ -1621,6 +1608,9 @@ init(void)
 	localRet = conf.processConfFile(ourConf, ConfFile);
 	CHKiRet(conf.GetNbrActActions(ourConf, &iNbrActions));
 
+	dbgprintf("rsyslog finished loading initial config %p\n", ourConf);
+	rsconf.DebugPrint(ourConf);
+
 	if(localRet != RS_RET_OK) {
 		errmsg.LogError(0, localRet, "CONFIG ERROR: could not interpret master config file '%s'.", ConfFile);
 		bHadConfigErr = 1;
@@ -1736,7 +1726,7 @@ init(void)
 	/* we now generate the startup message. It now includes everything to
 	 * identify this instance. -- rgerhards, 2005-08-17
 	 */
-	if(bLogStatusMsgs) {
+	if(ourConf->globals.bLogStatusMsgs) {
                snprintf(bufStartUpMsg, sizeof(bufStartUpMsg)/sizeof(char),
 			 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
 			 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"] start",
@@ -1762,25 +1752,6 @@ setDefaultRuleset(void __attribute__((unused)) *pVal, uchar *pszName)
 
 finalize_it:
 	free(pszName); /* no longer needed */
-	RETiRet;
-}
-
-
-
-/* Put the rsyslog main thread to sleep for n seconds. This was introduced as
- * a quick and dirty workaround for a privilege drop race in regard to listener
- * startup, which itself was a result of the not-yet-done proper coding of
- * privilege drop code (quite some effort). It may be useful for other occasions, too.
- * is specified).
- * rgerhards, 2009-06-12
- */
-static rsRetVal
-putToSleep(void __attribute__((unused)) *pVal, int iNewVal)
-{
-	DEFiRet;
-	DBGPRINTF("rsyslog main thread put to sleep via $sleep %d directive...\n", iNewVal);
-	srSleep(iNewVal, 0);
-	DBGPRINTF("rsyslog main thread continues after $sleep %d\n", iNewVal);
 	RETiRet;
 }
 
@@ -1904,7 +1875,7 @@ doHUP(void)
 {
 	char buf[512];
 
-	if(bLogStatusMsgs) {
+	if(ourConf->globals.bLogStatusMsgs) {
 		snprintf(buf, sizeof(buf) / sizeof(char),
 			 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION
 			 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"] rsyslogd was HUPed",
@@ -2026,7 +1997,7 @@ doIncludeLine(void *pVal, uchar *pNewVal)
 /* load build-in modules
  * very first version begun on 2007-07-23 by rgerhards
  */
-static rsRetVal loadBuildInModules(void)
+static rsRetVal loadBuildInModules(rsconf_t *config)
 {
 	DEFiRet;
 
@@ -2080,10 +2051,10 @@ static rsRetVal loadBuildInModules(void)
 	 * is that rsyslog will terminate if we can not register our built-in config commands.
 	 * This, I think, is the right thing to do. -- rgerhards, 2007-07-31
 	 */
-	CHKiRet(regCfSysLineHdlr((uchar *)"logrsyslogstatusmessages", 0, eCmdHdlrBinary, NULL, &bLogStatusMsgs, NULL, eConfObjGlobal));
+	CHKiRet(regCfSysLineHdlr((uchar *)"logrsyslogstatusmessages", 0, eCmdHdlrBinary, NULL, &ourConf->globals.bLogStatusMsgs, NULL, eConfObjGlobal));
 	CHKiRet(regCfSysLineHdlr((uchar *)"defaultruleset", 0, eCmdHdlrGetWord, setDefaultRuleset, NULL, NULL, eConfObjGlobal));
 	CHKiRet(regCfSysLineHdlr((uchar *)"ruleset", 0, eCmdHdlrGetWord, setCurrRuleset, NULL, NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"sleep", 0, eCmdHdlrInt, putToSleep, NULL, NULL, eConfObjGlobal));
+	CHKiRet(regCfSysLineHdlr((uchar *)"sleep", 0, eCmdHdlrGoneAway, NULL, NULL, NULL, eConfObjGlobal));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuefilename", 0, eCmdHdlrGetWord, NULL, &pszMainMsgQFName, NULL, eConfObjGlobal));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuesize", 0, eCmdHdlrInt, NULL, &iMainMsgQueueSize, NULL, eConfObjGlobal));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuehighwatermark", 0, eCmdHdlrInt, NULL, &iMainMsgQHighWtrMark, NULL, eConfObjGlobal));
@@ -2116,14 +2087,14 @@ static rsRetVal loadBuildInModules(void)
 	CHKiRet(regCfSysLineHdlr((uchar *)"includeconfig", 0, eCmdHdlrCustomHandler, doIncludeLine, NULL, NULL, eConfObjGlobal));
 	CHKiRet(regCfSysLineHdlr((uchar *)"umask", 0, eCmdHdlrFileCreateMode, setUmask, NULL, NULL, eConfObjGlobal));
 	CHKiRet(regCfSysLineHdlr((uchar *)"maxopenfiles", 0, eCmdHdlrInt, setMaxFiles, NULL, NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"debugprinttemplatelist", 0, eCmdHdlrBinary, NULL, &bDebugPrintTemplateList, NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"debugprintmodulelist", 0, eCmdHdlrBinary, NULL, &bDebugPrintModuleList, NULL, eConfObjGlobal));
+	CHKiRet(regCfSysLineHdlr((uchar *)"debugprinttemplatelist", 0, eCmdHdlrBinary, NULL, &(config->globals.bDebugPrintTemplateList), NULL, eConfObjGlobal));
+	CHKiRet(regCfSysLineHdlr((uchar *)"debugprintmodulelist", 0, eCmdHdlrBinary, NULL, &(config->globals.bDebugPrintModuleList), NULL, eConfObjGlobal));
 	CHKiRet(regCfSysLineHdlr((uchar *)"debugprintcfsyslinehandlerlist", 0, eCmdHdlrBinary,
-		 NULL, &bDebugPrintCfSysLineHandlerList, NULL, eConfObjGlobal));
+		 NULL, &(config->globals.bDebugPrintCfSysLineHandlerList), NULL, eConfObjGlobal));
 	CHKiRet(regCfSysLineHdlr((uchar *)"moddir", 0, eCmdHdlrGetWord, NULL, &pModDir, NULL, eConfObjGlobal));
 	CHKiRet(regCfSysLineHdlr((uchar *)"generateconfiggraph", 0, eCmdHdlrGetWord, NULL, &pszConfDAGFile, NULL, eConfObjGlobal));
 	CHKiRet(regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"errormessagestostderr", 0, eCmdHdlrBinary, NULL, &bErrMsgToStderr, NULL, eConfObjGlobal));
+	CHKiRet(regCfSysLineHdlr((uchar *)"errormessagestostderr", 0, eCmdHdlrBinary, NULL, &ourConf->globals.bErrMsgToStderr, NULL, eConfObjGlobal));
 	CHKiRet(regCfSysLineHdlr((uchar *)"maxmessagesize", 0, eCmdHdlrSize, setMaxMsgSize, NULL, NULL, eConfObjGlobal));
 	CHKiRet(regCfSysLineHdlr((uchar *)"privdroptouser", 0, eCmdHdlrUID, NULL, &uidDropPriv, NULL, eConfObjGlobal));
 	CHKiRet(regCfSysLineHdlr((uchar *)"privdroptouserid", 0, eCmdHdlrInt, NULL, &uidDropPriv, NULL, eConfObjGlobal));
@@ -2188,9 +2159,6 @@ static rsRetVal mainThread()
 {
 	DEFiRet;
 	uchar *pTmp;
-
-	/* we need to init the config object first! */
-	CHKiRet(rsconf.Construct(&ourConf));
 
 	/* initialize the build-in templates */
 	pTmp = template_DebugFormat;
@@ -2260,7 +2228,7 @@ static rsRetVal mainThread()
 	if(!(Debug == DEBUG_FULL || NoFork)) {
 		close(1);
 		close(2);
-		bErrMsgToStderr = 0;
+		ourConf->globals.bErrMsgToStderr = 0;
 	}
 
 	mainloop();
@@ -2743,6 +2711,9 @@ int realMain(int argc, char **argv)
 	for(p = LocalDomain ; *p ; p++)
 		*p = (char)tolower((int)*p);
 
+	/* we need to init the config object first! */
+	CHKiRet(rsconf.Construct(&ourConf));
+
 	/* we now have our hostname and can set it inside the global vars.
 	 * TODO: think if all of this would better be a runtime function
 	 * rgerhards, 2008-04-17
@@ -2758,7 +2729,7 @@ int realMain(int argc, char **argv)
 		exit(1); /* "good" exit, leaving at init for fatal error */
 	}
 
-	if((iRet = loadBuildInModules()) != RS_RET_OK) {
+	if((iRet = loadBuildInModules(ourConf)) != RS_RET_OK) {
 		fprintf(stderr, "fatal error: could not activate built-in modules. Error code %d.\n",
 			iRet);
 		exit(1); /* "good" exit, leaving at init for fatal error */
