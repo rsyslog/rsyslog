@@ -24,8 +24,35 @@
 #define INCLUDED_RSCONF_H
 
 #include "linkedlist.h"
+#include "queue.h"
 
 /* --- configuration objects (the plan is to have ALL upper layers in this file) --- */
+
+/* queue config parameters. TODO: move to queue.c? */
+struct queuecnf_s {
+	int iMainMsgQueueSize;		/* size of the main message queue above */
+	int iMainMsgQHighWtrMark;	/* high water mark for disk-assisted queues */
+	int iMainMsgQLowWtrMark;	/* low water mark for disk-assisted queues */
+	int iMainMsgQDiscardMark;	/* begin to discard messages */
+	int iMainMsgQDiscardSeverity;	/* by default, discard nothing to prevent unintentional loss */
+	int iMainMsgQueueNumWorkers;	/* number of worker threads for the mm queue above */
+	queueType_t MainMsgQueType;	/* type of the main message queue above */
+	uchar *pszMainMsgQFName;	/* prefix for the main message queue file */
+	int64 iMainMsgQueMaxFileSize;
+	int iMainMsgQPersistUpdCnt;	/* persist queue info every n updates */
+	int bMainMsgQSyncQeueFiles;	/* sync queue files on every write? */
+	int iMainMsgQtoQShutdown;	/* queue shutdown (ms) */ 
+	int iMainMsgQtoActShutdown;	/* action shutdown (in phase 2) */ 
+	int iMainMsgQtoEnq;		/* timeout for queue enque */ 
+	int iMainMsgQtoWrkShutdown;	/* timeout for worker thread shutdown */
+	int iMainMsgQWrkMinMsgs;	/* minimum messages per worker needed to start a new one */
+	int iMainMsgQDeqSlowdown;	/* dequeue slowdown (simple rate limiting) */
+	int64 iMainMsgQueMaxDiskSpace;	/* max disk space allocated 0 ==> unlimited */
+	int64 iMainMsgQueDeqBatchSize;	/* dequeue batch size */
+	int bMainMsgQSaveOnShutdown;	/* save queue on shutdown (when DA enabled)? */
+	int iMainMsgQueueDeqtWinFromHr;	/* hour begin of time frame when queue is to be dequeued */
+	int iMainMsgQueueDeqtWinToHr;	/* hour begin of time frame when queue is to be dequeued */
+};
 
 /* globals are data items that are really global, and can be set only
  * once (at least in theory, because the legacy system permits them to 
@@ -36,7 +63,19 @@ struct globals_s {
 	int bDebugPrintModuleList;
 	int bDebugPrintCfSysLineHandlerList;
 	int bLogStatusMsgs;	/* log rsyslog start/stop/HUP messages? */
-	int bErrMsgToStderr;	/* print error messages to stderr (in addition to everything else)? */
+	int bErrMsgToStderr;	/* print error messages to stderr
+				  (in addition to everything else)? */
+	int bAbortOnUncleanConfig; /* abort run (rather than starting with partial
+				      config) if there was any issue in conf */
+	int uidDropPriv;	/* user-id to which priveleges should be dropped to */
+	int gidDropPriv;	/* group-id to which priveleges should be dropped to */
+	uchar *pszConfDAGFile;	/* name of config DAG file, non-NULL means generate one */
+
+	// TODO are the following ones defaults?
+	int bReduceRepeatMsgs; /* reduce repeated message - 0 - no, 1 - yes */
+
+	//TODO: other representation for main queue? Or just load it differently?
+	queuecnf_t mainQ;	/* main queue paramters */
 };
 
 /* (global) defaults are global in the sense that they are accessible

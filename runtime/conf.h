@@ -33,7 +33,7 @@ extern int bConfStrictScoping;	/* force strict scoping during config processing?
 
 /* interfaces */
 BEGINinterface(conf) /* name must also be changed in ENDinterface macro! */
-	rsRetVal (*doNameLine)(rsconf_t *conf, uchar **pp, void* pVal);
+	rsRetVal (*doNameLine)(uchar **pp, void* pVal);
 	rsRetVal (*cfsysline)(rsconf_t *conf, uchar *p);
 	rsRetVal (*doModLoad)(rsconf_t *conf, uchar **pp, __attribute__((unused)) void* pVal);
 	rsRetVal (*doIncludeLine)(rsconf_t *conf, uchar **pp, __attribute__((unused)) void* pVal);

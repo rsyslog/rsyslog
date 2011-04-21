@@ -296,7 +296,7 @@ finalize_it:
  *    generalized.
  */
 rsRetVal
-doNameLine(rsconf_t *conf, uchar **pp, void* pVal)
+doNameLine(uchar **pp, void* pVal)
 {
 	DEFiRet;
 	uchar *p;
@@ -324,7 +324,7 @@ doNameLine(rsconf_t *conf, uchar **pp, void* pVal)
 	
 	switch(eDir) {
 		case DIR_TEMPLATE: 
-			tplAddLine(ourConf, szName, &p);
+			tplAddLine(loadConf, szName, &p);
 			break;
 		case DIR_OUTCHANNEL: 
 			ochAddLine(szName, &p);
@@ -1125,7 +1125,7 @@ static rsRetVal cflineDoAction(rsconf_t *conf, uchar **p, action_t **ppAction)
 			if((iRet = addAction(&pAction, pMod, pModData, pOMSR, (iRet == RS_RET_SUSPENDED)? 1 : 0)) == RS_RET_OK) {
 				/* now check if the module is compatible with select features */
 				if(pMod->isCompatibleWithFeature(sFEATURERepeatedMsgReduction) == RS_RET_OK)
-					pAction->f_ReduceRepeated = bReduceRepeatMsgs;
+					pAction->f_ReduceRepeated = loadConf->globals.bReduceRepeatMsgs;
 				else {
 					dbgprintf("module is incompatible with RepeatedMsgReduction - turned off\n");
 					pAction->f_ReduceRepeated = 0;

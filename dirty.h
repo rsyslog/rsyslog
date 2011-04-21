@@ -41,7 +41,6 @@ rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName);
  */
 extern int MarkInterval;
 extern int repeatinterval[2];
-extern int  bReduceRepeatMsgs;
 extern qqueue_t *pMsgQueue;				/* the main message queue */
 #define	MAXREPEAT ((int)((sizeof(repeatinterval) / sizeof(repeatinterval[0])) - 1))
 #define	REPEATTIME(f)	((f)->f_time + repeatinterval[(f)->f_repeatcount])

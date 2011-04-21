@@ -587,7 +587,9 @@ doFacility(uchar **pp, rsRetVal (*pSetHdlr)(void*, int), void *pVal)
 
 
 static rsRetVal
-doGoneAway(uchar **pp, rsRetVal (*pSetHdlr)(void*, int), void *pVal)
+doGoneAway(__attribute__((unused)) uchar **pp,
+	   __attribute__((unused)) rsRetVal (*pSetHdlr)(void*, int),
+	   __attribute__((unused)) void *pVal)
 {
 	errmsg.LogError(0, RS_RET_CMD_GONE_AWAY, "config directive is no longer supported -- ignored");
 	return RS_RET_CMD_GONE_AWAY;

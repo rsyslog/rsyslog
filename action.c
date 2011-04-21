@@ -81,6 +81,7 @@
 #include "errmsg.h"
 #include "batch.h"
 #include "wti.h"
+#include "rsconf.h"
 #include "datetime.h"
 #include "unicode-helper.h"
 #include "atomic.h"
@@ -1679,9 +1680,10 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStringReques
 	pAction->pMod = pMod;
 	pAction->pModData = pModData;
 	/* now check if the module is compatible with select features */
-	if(pMod->isCompatibleWithFeature(sFEATURERepeatedMsgReduction) == RS_RET_OK)
-		pAction->f_ReduceRepeated = bReduceRepeatMsgs;
-	else {
+	if(pMod->isCompatibleWithFeature(sFEATURERepeatedMsgReduction) == RS_RET_OK) {
+dbgprintf("XXXX: loadConf is %p in action.c\n", loadConf);
+		pAction->f_ReduceRepeated = loadConf->globals.bReduceRepeatMsgs;
+	} else {
 		DBGPRINTF("module is incompatible with RepeatedMsgReduction - turned off\n");
 		pAction->f_ReduceRepeated = 0;
 	}

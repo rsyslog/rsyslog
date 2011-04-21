@@ -238,8 +238,6 @@ legacyOptsLL_t *pLegacyOptsLL = NULL;
 int	iCompatibilityMode = 0;		/* version we should be compatible with; 0 means sysklogd. It is
 					   the default, so if no -c<n> option is given, we make ourselvs
 					   as compatible to sysklogd as possible. */
-int 	bReduceRepeatMsgs; /* reduce repeated message - 0 - no, 1 - yes */
-int 	bAbortOnUncleanConfig = 0; /* abort run (rather than starting with partial config) if there was any issue in conf */
 /* end global config file state variables */
 
 int	MarkInterval = 20 * 60;	/* interval between marks in seconds - read-only after startup */
@@ -249,73 +247,11 @@ static int	bHaveMainQueue = 0;/* set to 1 if the main queue - in queueing mode -
 				 * If the main queue is either not yet ready or not running in 
 				 * queueing mode (mode DIRECT!), then this is set to 0.
 				 */
-static int uidDropPriv = 0;	/* user-id to which priveleges should be dropped to (AFTER init()!) */
-static int gidDropPriv = 0;	/* group-id to which priveleges should be dropped to (AFTER init()!) */
 
 extern	int errno;
 
-static uchar *pszConfDAGFile = NULL;				/* name of config DAG file, non-NULL means generate one */
 /* main message queue and its configuration parameters */
 qqueue_t *pMsgQueue = NULL;				/* the main message queue */
-static int iMainMsgQueueSize = 10000;				/* size of the main message queue above */
-static int iMainMsgQHighWtrMark = 8000;				/* high water mark for disk-assisted queues */
-static int iMainMsgQLowWtrMark = 2000;				/* low water mark for disk-assisted queues */
-static int iMainMsgQDiscardMark = 9800;				/* begin to discard messages */
-static int iMainMsgQDiscardSeverity = 8;			/* by default, discard nothing to prevent unintentional loss */
-static int iMainMsgQueueNumWorkers = 1;				/* number of worker threads for the mm queue above */
-static queueType_t MainMsgQueType = QUEUETYPE_FIXED_ARRAY;	/* type of the main message queue above */
-static uchar *pszMainMsgQFName = NULL;				/* prefix for the main message queue file */
-static int64 iMainMsgQueMaxFileSize = 1024*1024;
-static int iMainMsgQPersistUpdCnt = 0;				/* persist queue info every n updates */
-static int bMainMsgQSyncQeueFiles = 0;				/* sync queue files on every write? */
-static int iMainMsgQtoQShutdown = 1500;				/* queue shutdown (ms) */ 
-static int iMainMsgQtoActShutdown = 1000;			/* action shutdown (in phase 2) */ 
-static int iMainMsgQtoEnq = 2000;				/* timeout for queue enque */ 
-static int iMainMsgQtoWrkShutdown = 60000;			/* timeout for worker thread shutdown */
-static int iMainMsgQWrkMinMsgs = 100;				/* minimum messages per worker needed to start a new one */
-static int iMainMsgQDeqSlowdown = 0;				/* dequeue slowdown (simple rate limiting) */
-static int64 iMainMsgQueMaxDiskSpace = 0;			/* max disk space allocated 0 ==> unlimited */
-static int64 iMainMsgQueDeqBatchSize = 32;			/* dequeue batch size */
-static int bMainMsgQSaveOnShutdown = 1;				/* save queue on shutdown (when DA enabled)? */
-static int iMainMsgQueueDeqtWinFromHr = 0;			/* hour begin of time frame when queue is to be dequeued */
-static int iMainMsgQueueDeqtWinToHr = 25;			/* hour begin of time frame when queue is to be dequeued */
-
-
-/* Reset config variables to default values.
- * rgerhards, 2007-07-17
- */
-static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
-{
-	ourConf->globals.bLogStatusMsgs = DFLT_bLogStatusMsgs;
-	ourConf->globals.bDebugPrintTemplateList = 1;
-	ourConf->globals.bDebugPrintCfSysLineHandlerList = 1;
-	ourConf->globals.bDebugPrintModuleList = 1;
-	bReduceRepeatMsgs = 0;
-	bAbortOnUncleanConfig = 0;
-	free(pszMainMsgQFName);
-	pszMainMsgQFName = NULL;
-	iMainMsgQueueSize = 10000;
-	iMainMsgQHighWtrMark = 8000;
-	iMainMsgQLowWtrMark = 2000;
-	iMainMsgQDiscardMark = 9800;
-	iMainMsgQDiscardSeverity = 8;
-	iMainMsgQueMaxFileSize = 1024 * 1024;
-	iMainMsgQueueNumWorkers = 1;
-	iMainMsgQPersistUpdCnt = 0;
-	bMainMsgQSyncQeueFiles = 0;
-	iMainMsgQtoQShutdown = 1500;
-	iMainMsgQtoActShutdown = 1000;
-	iMainMsgQtoEnq = 2000;
-	iMainMsgQtoWrkShutdown = 60000;
-	iMainMsgQWrkMinMsgs = 100;
-	iMainMsgQDeqSlowdown = 0;
-	bMainMsgQSaveOnShutdown = 1;
-	MainMsgQueType = QUEUETYPE_FIXED_ARRAY;
-	iMainMsgQueMaxDiskSpace = 0;
-	iMainMsgQueDeqBatchSize = 32;
-
-	return RS_RET_OK;
-}
 
 
 /* hardcoded standard templates (used for defaults) */
@@ -1009,9 +945,7 @@ static void doDie(int sig)
 static void
 freeAllDynMemForTermination(void)
 {
-	free(pszMainMsgQFName);
-	free(pModDir);
-	free(pszConfDAGFile);
+	free(ourConf->globals.pszConfDAGFile);
 }
 
 
@@ -1058,7 +992,6 @@ die(int sig)
 	thrdTerminateAll();
 
 	/* and THEN send the termination log message (see long comment above) */
-dbgprintf("XXXX: runConf %p\n", runConf);
 	if(sig && runConf->globals.bLogStatusMsgs) {
 		(void) snprintf(buf, sizeof(buf) / sizeof(char),
 		 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
@@ -1135,59 +1068,6 @@ dbgprintf("XXXX: runConf %p\n", runConf);
 static void doexit()
 {
 	exit(0); /* "good" exit, only during child-creation */
-}
-
-
-/* set the maximum message size */
-static rsRetVal setMaxMsgSize(void __attribute__((unused)) *pVal, long iNewVal)
-{
-	return glbl.SetMaxLine(iNewVal);
-}
-
-
-/* set the action resume interval */
-static rsRetVal setActionResumeInterval(void __attribute__((unused)) *pVal, int iNewVal)
-{
-	return actionSetGlobalResumeInterval(iNewVal);
-}
-
-
-/* set the processes max number ob files (upon configuration request)
- * 2009-04-14 rgerhards
- */
-static rsRetVal setMaxFiles(void __attribute__((unused)) *pVal, int iFiles)
-{
-	struct rlimit maxFiles;
-	char errStr[1024];
-	DEFiRet;
-
-	maxFiles.rlim_cur = iFiles;
-	maxFiles.rlim_max = iFiles;
-
-	if(setrlimit(RLIMIT_NOFILE, &maxFiles) < 0) {
-		/* NOTE: under valgrind, we seem to be unable to extend the size! */
-		rs_strerror_r(errno, errStr, sizeof(errStr));
-		errmsg.LogError(0, RS_RET_ERR_RLIM_NOFILE, "could not set process file limit to %d: %s [kernel max %ld]",
-				iFiles, errStr, (long) maxFiles.rlim_max);
-		ABORT_FINALIZE(RS_RET_ERR_RLIM_NOFILE);
-	}
-#ifdef USE_UNLIMITED_SELECT
-	glbl.SetFdSetSize(howmany(iFiles, __NFDBITS) * sizeof (fd_mask));
-#endif
-	DBGPRINTF("Max number of files set to %d [kernel max %ld].\n", iFiles, (long) maxFiles.rlim_max);
-
-finalize_it:
-	RETiRet;
-}
-
-
-/* set the processes umask (upon configuration request) */
-static rsRetVal setUmask(void __attribute__((unused)) *pVal, int iUmask)
-{
-	umask(iUmask);
-	DBGPRINTF("umask set to 0%3.3o.\n", iUmask);
-
-	return RS_RET_OK;
 }
 
 
@@ -1441,25 +1321,6 @@ static void dbgPrintInitInfo(void)
 	DBGPRINTF("Messages with malicious PTR DNS Records are %sdropped.\n",
 		  glbl.GetDropMalPTRMsgs() ? "" : "not ");
 
-	DBGPRINTF("Main queue size %d messages.\n", iMainMsgQueueSize);
-	DBGPRINTF("Main queue worker threads: %d, wThread shutdown: %d, Perists every %d updates.\n",
-		  iMainMsgQueueNumWorkers, iMainMsgQtoWrkShutdown, iMainMsgQPersistUpdCnt);
-	DBGPRINTF("Main queue timeouts: shutdown: %d, action completion shutdown: %d, enq: %d\n",
-		   iMainMsgQtoQShutdown, iMainMsgQtoActShutdown, iMainMsgQtoEnq);
-	DBGPRINTF("Main queue watermarks: high: %d, low: %d, discard: %d, discard-severity: %d\n",
-		   iMainMsgQHighWtrMark, iMainMsgQLowWtrMark, iMainMsgQDiscardMark, iMainMsgQDiscardSeverity);
-	DBGPRINTF("Main queue save on shutdown %d, max disk space allowed %lld\n",
-		   bMainMsgQSaveOnShutdown, iMainMsgQueMaxDiskSpace);
-	/* TODO: add
-	iActionRetryCount = 0;
-	iActionRetryInterval = 30000;
-       static int iMainMsgQtoWrkMinMsgs = 100;
-	static int iMainMsgQbSaveOnShutdown = 1;
-	iMainMsgQueMaxDiskSpace = 0;
-	setQPROP(qqueueSetiMinMsgsPerWrkr, "$MainMsgQueueWorkerThreadMinimumMessages", 100);
-	setQPROP(qqueueSetbSaveOnShutdown, "$MainMsgQueueSaveOnShutdown", 1);
-	 */
-	DBGPRINTF("Work Directory: '%s'.\n", glbl.GetWorkDir());
 }
 
 
@@ -1528,12 +1389,12 @@ rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName)
 	DEFiRet;
 
 	/* switch the message object to threaded operation, if necessary */
-	if(MainMsgQueType == QUEUETYPE_DIRECT || iMainMsgQueueNumWorkers > 1) {
+	if(ourConf->globals.mainQ.MainMsgQueType == QUEUETYPE_DIRECT || ourConf->globals.mainQ.iMainMsgQueueNumWorkers > 1) {
 		MsgEnableThreadSafety();
 	}
 
 	/* create message queue */
-	CHKiRet_Hdlr(qqueueConstruct(ppQueue, MainMsgQueType, iMainMsgQueueNumWorkers, iMainMsgQueueSize, msgConsumer)) {
+	CHKiRet_Hdlr(qqueueConstruct(ppQueue, ourConf->globals.mainQ.MainMsgQueType, ourConf->globals.mainQ.iMainMsgQueueNumWorkers, ourConf->globals.mainQ.iMainMsgQueueSize, msgConsumer)) {
 		/* no queue is fatal, we need to give up in that case... */
 		errmsg.LogError(0, iRet, "could not create (ruleset) main message queue"); \
 	}
@@ -1550,25 +1411,25 @@ rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName)
 		errmsg.LogError(0, NO_ERRCODE, "Invalid " #directive ", error %d. Ignored, running with default setting", iRet); \
 	}
 
-	setQPROP(qqueueSetMaxFileSize, "$MainMsgQueueFileSize", iMainMsgQueMaxFileSize);
-	setQPROP(qqueueSetsizeOnDiskMax, "$MainMsgQueueMaxDiskSpace", iMainMsgQueMaxDiskSpace);
-	setQPROP(qqueueSetiDeqBatchSize, "$MainMsgQueueDequeueBatchSize", iMainMsgQueDeqBatchSize);
-	setQPROPstr(qqueueSetFilePrefix, "$MainMsgQueueFileName", pszMainMsgQFName);
-	setQPROP(qqueueSetiPersistUpdCnt, "$MainMsgQueueCheckpointInterval", iMainMsgQPersistUpdCnt);
-	setQPROP(qqueueSetbSyncQueueFiles, "$MainMsgQueueSyncQueueFiles", bMainMsgQSyncQeueFiles);
-	setQPROP(qqueueSettoQShutdown, "$MainMsgQueueTimeoutShutdown", iMainMsgQtoQShutdown );
-	setQPROP(qqueueSettoActShutdown, "$MainMsgQueueTimeoutActionCompletion", iMainMsgQtoActShutdown);
-	setQPROP(qqueueSettoWrkShutdown, "$MainMsgQueueWorkerTimeoutThreadShutdown", iMainMsgQtoWrkShutdown);
-	setQPROP(qqueueSettoEnq, "$MainMsgQueueTimeoutEnqueue", iMainMsgQtoEnq);
-	setQPROP(qqueueSetiHighWtrMrk, "$MainMsgQueueHighWaterMark", iMainMsgQHighWtrMark);
-	setQPROP(qqueueSetiLowWtrMrk, "$MainMsgQueueLowWaterMark", iMainMsgQLowWtrMark);
-	setQPROP(qqueueSetiDiscardMrk, "$MainMsgQueueDiscardMark", iMainMsgQDiscardMark);
-	setQPROP(qqueueSetiDiscardSeverity, "$MainMsgQueueDiscardSeverity", iMainMsgQDiscardSeverity);
-	setQPROP(qqueueSetiMinMsgsPerWrkr, "$MainMsgQueueWorkerThreadMinimumMessages", iMainMsgQWrkMinMsgs);
-	setQPROP(qqueueSetbSaveOnShutdown, "$MainMsgQueueSaveOnShutdown", bMainMsgQSaveOnShutdown);
-	setQPROP(qqueueSetiDeqSlowdown, "$MainMsgQueueDequeueSlowdown", iMainMsgQDeqSlowdown);
-	setQPROP(qqueueSetiDeqtWinFromHr,  "$MainMsgQueueDequeueTimeBegin", iMainMsgQueueDeqtWinFromHr);
-	setQPROP(qqueueSetiDeqtWinToHr,    "$MainMsgQueueDequeueTimeEnd", iMainMsgQueueDeqtWinToHr);
+	setQPROP(qqueueSetMaxFileSize, "$MainMsgQueueFileSize", ourConf->globals.mainQ.iMainMsgQueMaxFileSize);
+	setQPROP(qqueueSetsizeOnDiskMax, "$MainMsgQueueMaxDiskSpace", ourConf->globals.mainQ.iMainMsgQueMaxDiskSpace);
+	setQPROP(qqueueSetiDeqBatchSize, "$MainMsgQueueDequeueBatchSize", ourConf->globals.mainQ.iMainMsgQueDeqBatchSize);
+	setQPROPstr(qqueueSetFilePrefix, "$MainMsgQueueFileName", ourConf->globals.mainQ.pszMainMsgQFName);
+	setQPROP(qqueueSetiPersistUpdCnt, "$MainMsgQueueCheckpointInterval", ourConf->globals.mainQ.iMainMsgQPersistUpdCnt);
+	setQPROP(qqueueSetbSyncQueueFiles, "$MainMsgQueueSyncQueueFiles", ourConf->globals.mainQ.bMainMsgQSyncQeueFiles);
+	setQPROP(qqueueSettoQShutdown, "$MainMsgQueueTimeoutShutdown", ourConf->globals.mainQ.iMainMsgQtoQShutdown );
+	setQPROP(qqueueSettoActShutdown, "$MainMsgQueueTimeoutActionCompletion", ourConf->globals.mainQ.iMainMsgQtoActShutdown);
+	setQPROP(qqueueSettoWrkShutdown, "$MainMsgQueueWorkerTimeoutThreadShutdown", ourConf->globals.mainQ.iMainMsgQtoWrkShutdown);
+	setQPROP(qqueueSettoEnq, "$MainMsgQueueTimeoutEnqueue", ourConf->globals.mainQ.iMainMsgQtoEnq);
+	setQPROP(qqueueSetiHighWtrMrk, "$MainMsgQueueHighWaterMark", ourConf->globals.mainQ.iMainMsgQHighWtrMark);
+	setQPROP(qqueueSetiLowWtrMrk, "$MainMsgQueueLowWaterMark", ourConf->globals.mainQ.iMainMsgQLowWtrMark);
+	setQPROP(qqueueSetiDiscardMrk, "$MainMsgQueueDiscardMark", ourConf->globals.mainQ.iMainMsgQDiscardMark);
+	setQPROP(qqueueSetiDiscardSeverity, "$MainMsgQueueDiscardSeverity", ourConf->globals.mainQ.iMainMsgQDiscardSeverity);
+	setQPROP(qqueueSetiMinMsgsPerWrkr, "$MainMsgQueueWorkerThreadMinimumMessages", ourConf->globals.mainQ.iMainMsgQWrkMinMsgs);
+	setQPROP(qqueueSetbSaveOnShutdown, "$MainMsgQueueSaveOnShutdown", ourConf->globals.mainQ.bMainMsgQSaveOnShutdown);
+	setQPROP(qqueueSetiDeqSlowdown, "$MainMsgQueueDequeueSlowdown", ourConf->globals.mainQ.iMainMsgQDeqSlowdown);
+	setQPROP(qqueueSetiDeqtWinFromHr,  "$MainMsgQueueDequeueTimeBegin", ourConf->globals.mainQ.iMainMsgQueueDeqtWinFromHr);
+	setQPROP(qqueueSetiDeqtWinToHr,    "$MainMsgQueueDequeueTimeEnd", ourConf->globals.mainQ.iMainMsgQueueDeqtWinToHr);
 
 #	undef setQPROP
 #	undef setQPROPstr
@@ -1592,7 +1453,6 @@ init(void)
 	rsRetVal localRet;
 	int iNbrActions;
 	int bHadConfigErr = 0;
-	ruleset_t *pRuleset;
 	char cbuf[BUFSIZ];
 	char bufStartUpMsg[512];
 	struct sigaction sigAct;
@@ -1648,28 +1508,28 @@ init(void)
 	legacyOptsHook();
 
 	/* some checks */
-	if(iMainMsgQueueNumWorkers < 1) {
+	if(ourConf->globals.mainQ.iMainMsgQueueNumWorkers < 1) {
 		errmsg.LogError(0, NO_ERRCODE, "$MainMsgQueueNumWorkers must be at least 1! Set to 1.\n");
-		iMainMsgQueueNumWorkers = 1;
+		ourConf->globals.mainQ.iMainMsgQueueNumWorkers = 1;
 	}
 
-	if(MainMsgQueType == QUEUETYPE_DISK) {
+	if(ourConf->globals.mainQ.MainMsgQueType == QUEUETYPE_DISK) {
 		errno = 0;	/* for logerror! */
 		if(glbl.GetWorkDir() == NULL) {
 			errmsg.LogError(0, NO_ERRCODE, "No $WorkDirectory specified - can not run main message queue in 'disk' mode. "
 				 "Using 'FixedArray' instead.\n");
-			MainMsgQueType = QUEUETYPE_FIXED_ARRAY;
+			ourConf->globals.mainQ.MainMsgQueType = QUEUETYPE_FIXED_ARRAY;
 		}
-		if(pszMainMsgQFName == NULL) {
+		if(ourConf->globals.mainQ.pszMainMsgQFName == NULL) {
 			errmsg.LogError(0, NO_ERRCODE, "No $MainMsgQueueFileName specified - can not run main message queue in "
 				 "'disk' mode. Using 'FixedArray' instead.\n");
-			MainMsgQueType = QUEUETYPE_FIXED_ARRAY;
+			ourConf->globals.mainQ.MainMsgQueType = QUEUETYPE_FIXED_ARRAY;
 		}
 	}
 
 	/* check if we need to generate a config DAG and, if so, do that */
-	if(pszConfDAGFile != NULL)
-		generateConfigDAG(pszConfDAGFile);
+	if(ourConf->globals.pszConfDAGFile != NULL)
+		generateConfigDAG(ourConf->globals.pszConfDAGFile);
 
 	/* we are done checking the config - now validate if we should actually run or not.
 	 * If not, terminate. -- rgerhards, 2008-07-25
@@ -1682,7 +1542,8 @@ init(void)
 		ABORT_FINALIZE(RS_RET_VALIDATION_RUN);
 	}
 
-	if(bAbortOnUncleanConfig && bHadConfigErr) {
+#warning restructure following if to use return value of loadConf
+	if(loadConf->globals.bAbortOnUncleanConfig && bHadConfigErr) {
 		fprintf(stderr, "rsyslogd: $AbortOnUncleanConfig is set, and config is not clean.\n"
 		                "Check error log for details, fix errors and restart. As a last\n"
 				"resort, you may want to remove $AbortOnUncleanConfig to permit a\n"
@@ -1697,7 +1558,7 @@ init(void)
 		exit(1);
 	}
 
-	bHaveMainQueue = (MainMsgQueType == QUEUETYPE_DIRECT) ? 0 : 1;
+	bHaveMainQueue = (ourConf->globals.mainQ.MainMsgQueType == QUEUETYPE_DIRECT) ? 0 : 1;
 	DBGPRINTF("Main processing queue is initialized and running\n");
 
 	/* the output part and the queue is now ready to run. So it is a good time
@@ -1734,81 +1595,6 @@ init(void)
 	}
 
 finalize_it:
-	RETiRet;
-}
-
-
-/* Switch the default ruleset (that, what servcies bind to if nothing specific
- * is specified).
- * rgerhards, 2009-06-12
- */
-static rsRetVal
-setDefaultRuleset(void __attribute__((unused)) *pVal, uchar *pszName)
-{
-	DEFiRet;
-
-	CHKiRet(ruleset.SetDefaultRuleset(ourConf, pszName));
-
-finalize_it:
-	free(pszName); /* no longer needed */
-	RETiRet;
-}
-
-
-/* Switch to either an already existing rule set or start a new one. The
- * named rule set becomes the new "current" rule set (what means that new
- * actions are added to it).
- * rgerhards, 2009-06-12
- */
-static rsRetVal
-setCurrRuleset(void __attribute__((unused)) *pVal, uchar *pszName)
-{
-	ruleset_t *pRuleset;
-	rsRetVal localRet;
-	DEFiRet;
-
-	localRet = ruleset.SetCurrRuleset(ourConf, pszName);
-
-	if(localRet == RS_RET_NOT_FOUND) {
-		DBGPRINTF("begin new current rule set '%s'\n", pszName);
-		CHKiRet(ruleset.Construct(&pRuleset));
-		CHKiRet(ruleset.SetName(ourConf, pRuleset, pszName));
-		CHKiRet(ruleset.ConstructFinalize(ourConf, pRuleset));
-	} else {
-		ABORT_FINALIZE(localRet);
-	}
-
-finalize_it:
-	free(pszName); /* no longer needed */
-	RETiRet;
-}
-
-
-/* set the main message queue mode
- * rgerhards, 2008-01-03
- */
-static rsRetVal setMainMsgQueType(void __attribute__((unused)) *pVal, uchar *pszType)
-{
-	DEFiRet;
-
-	if (!strcasecmp((char *) pszType, "fixedarray")) {
-		MainMsgQueType = QUEUETYPE_FIXED_ARRAY;
-		DBGPRINTF("main message queue type set to FIXED_ARRAY\n");
-	} else if (!strcasecmp((char *) pszType, "linkedlist")) {
-		MainMsgQueType = QUEUETYPE_LINKEDLIST;
-		DBGPRINTF("main message queue type set to LINKEDLIST\n");
-	} else if (!strcasecmp((char *) pszType, "disk")) {
-		MainMsgQueType = QUEUETYPE_DISK;
-		DBGPRINTF("main message queue type set to DISK\n");
-	} else if (!strcasecmp((char *) pszType, "direct")) {
-		MainMsgQueType = QUEUETYPE_DIRECT;
-		DBGPRINTF("main message queue type set to DIRECT (no queueing at all)\n");
-	} else {
-		errmsg.LogError(0, RS_RET_INVALID_PARAMS, "unknown mainmessagequeuetype parameter: %s", (char *) pszType);
-		iRet = RS_RET_INVALID_PARAMS;
-	}
-	free(pszType); /* no longer needed */
-
 	RETiRet;
 }
 
@@ -1913,7 +1699,7 @@ mainloop(void)
 		 * powertop, for example). In that case, we primarily wait for a signal,
 		 * but a once-a-day wakeup should be quite acceptable. -- rgerhards, 2008-06-09
 		 */
-		tvSelectTimeout.tv_sec = (bReduceRepeatMsgs == 1) ? TIMERINTVL : 86400 /*1 day*/;
+		tvSelectTimeout.tv_sec = (runConf->globals.bReduceRepeatMsgs == 1) ? TIMERINTVL : 86400 /*1 day*/;
 		//tvSelectTimeout.tv_sec = TIMERINTVL; /* TODO: change this back to the above code when we have a better solution for apc */
 		tvSelectTimeout.tv_usec = 0;
 		select(1, NULL, NULL, NULL, &tvSelectTimeout);
@@ -1941,7 +1727,7 @@ mainloop(void)
 		 * for the time being, I think the remaining risk can be accepted.
 		 * rgerhards, 2008-01-10
  		 */
-		if(bReduceRepeatMsgs == 1)
+		if(runConf->globals.bReduceRepeatMsgs == 1)
 			doFlushRptdMsgs();
 
 		if(bHadHUP) {
@@ -1954,49 +1740,10 @@ mainloop(void)
 	ENDfunc
 }
 
-
-/* this method is needed to shuffle the current conf object down to the
- * IncludeConfig handler.
- */
-static rsRetVal
-doNameLine(void *pVal, uchar *pNewVal)
-{
-	DEFiRet;
-	iRet = conf.doNameLine(ourConf, pVal, pNewVal);
-	free(pNewVal);
-	RETiRet;
-}
-
-
-/* this method is needed to shuffle the current conf object down to the
- * IncludeConfig handler.
- */
-static rsRetVal
-doModLoad(void *pVal, uchar *pNewVal)
-{
-	DEFiRet;
-	iRet = conf.doModLoad(ourConf, pVal, pNewVal);
-	free(pNewVal);
-	RETiRet;
-}
-
-
-/* this method is needed to shuffle the current conf object down to the
- * IncludeConfig handler.
- */
-static rsRetVal
-doIncludeLine(void *pVal, uchar *pNewVal)
-{
-	DEFiRet;
-	iRet = conf.doIncludeLine(ourConf, pVal, pNewVal);
-	free(pNewVal);
-	RETiRet;
-}
-
 /* load build-in modules
  * very first version begun on 2007-07-23 by rgerhards
  */
-static rsRetVal loadBuildInModules(rsconf_t *config)
+static rsRetVal loadBuildInModules()
 {
 	DEFiRet;
 
@@ -2042,63 +1789,6 @@ static rsRetVal loadBuildInModules(rsconf_t *config)
 	CHKiRet(module.doModInit(modInitsmtradfile, UCHAR_CONSTANT("builtin-smtradfile"), NULL));
 	CHKiRet(module.doModInit(modInitsmfwd, UCHAR_CONSTANT("builtin-smfwd"), NULL));
 	CHKiRet(module.doModInit(modInitsmtradfwd, UCHAR_CONSTANT("builtin-smtradfwd"), NULL));
-
-	/* ok, initialization of the command handler probably does not 100% belong right in
-	 * this space here. However, with the current design, this is actually quite a good
-	 * place to put it. We might decide to shuffle it around later, but for the time
-	 * being, the code has found its home here. A not-just-sideeffect of this decision
-	 * is that rsyslog will terminate if we can not register our built-in config commands.
-	 * This, I think, is the right thing to do. -- rgerhards, 2007-07-31
-	 */
-	CHKiRet(regCfSysLineHdlr((uchar *)"logrsyslogstatusmessages", 0, eCmdHdlrBinary, NULL, &ourConf->globals.bLogStatusMsgs, NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"defaultruleset", 0, eCmdHdlrGetWord, setDefaultRuleset, NULL, NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"ruleset", 0, eCmdHdlrGetWord, setCurrRuleset, NULL, NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"sleep", 0, eCmdHdlrGoneAway, NULL, NULL, NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuefilename", 0, eCmdHdlrGetWord, NULL, &pszMainMsgQFName, NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuesize", 0, eCmdHdlrInt, NULL, &iMainMsgQueueSize, NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuehighwatermark", 0, eCmdHdlrInt, NULL, &iMainMsgQHighWtrMark, NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuelowwatermark", 0, eCmdHdlrInt, NULL, &iMainMsgQLowWtrMark, NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuediscardmark", 0, eCmdHdlrInt, NULL, &iMainMsgQDiscardMark, NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuediscardseverity", 0, eCmdHdlrSeverity, NULL, &iMainMsgQDiscardSeverity, NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuecheckpointinterval", 0, eCmdHdlrInt, NULL, &iMainMsgQPersistUpdCnt, NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuesyncqueuefiles", 0, eCmdHdlrBinary, NULL, &bMainMsgQSyncQeueFiles, NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuetype", 0, eCmdHdlrGetWord, setMainMsgQueType, NULL, NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueueworkerthreads", 0, eCmdHdlrInt, NULL, &iMainMsgQueueNumWorkers, NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuetimeoutshutdown", 0, eCmdHdlrInt, NULL, &iMainMsgQtoQShutdown, NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuetimeoutactioncompletion", 0, eCmdHdlrInt, NULL, &iMainMsgQtoActShutdown, NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuetimeoutenqueue", 0, eCmdHdlrInt, NULL, &iMainMsgQtoEnq, NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueueworkertimeoutthreadshutdown", 0, eCmdHdlrInt, NULL, &iMainMsgQtoWrkShutdown, NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuedequeueslowdown", 0, eCmdHdlrInt, NULL, &iMainMsgQDeqSlowdown, NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueueworkerthreadminimummessages", 0, eCmdHdlrInt, NULL, &iMainMsgQWrkMinMsgs, NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuemaxfilesize", 0, eCmdHdlrSize, NULL, &iMainMsgQueMaxFileSize, NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuedequeuebatchsize", 0, eCmdHdlrSize, NULL, &iMainMsgQueDeqBatchSize, NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuemaxdiskspace", 0, eCmdHdlrSize, NULL, &iMainMsgQueMaxDiskSpace, NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuesaveonshutdown", 0, eCmdHdlrBinary, NULL, &bMainMsgQSaveOnShutdown, NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuedequeuetimebegin", 0, eCmdHdlrInt, NULL, &iMainMsgQueueDeqtWinFromHr, NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuedequeuetimeend", 0, eCmdHdlrInt, NULL, &iMainMsgQueueDeqtWinToHr, NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"abortonuncleanconfig", 0, eCmdHdlrBinary, NULL, &bAbortOnUncleanConfig, NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"repeatedmsgreduction", 0, eCmdHdlrBinary, NULL, &bReduceRepeatMsgs, NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionresumeinterval", 0, eCmdHdlrInt, setActionResumeInterval, NULL, NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"template", 0, eCmdHdlrCustomHandler, doNameLine, (void*)DIR_TEMPLATE, NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"outchannel", 0, eCmdHdlrCustomHandler, doNameLine, (void*)DIR_OUTCHANNEL, NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"allowedsender", 0, eCmdHdlrCustomHandler, doNameLine, (void*)DIR_ALLOWEDSENDER, NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"modload", 0, eCmdHdlrCustomHandler, doModLoad, NULL, NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"includeconfig", 0, eCmdHdlrCustomHandler, doIncludeLine, NULL, NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"umask", 0, eCmdHdlrFileCreateMode, setUmask, NULL, NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"maxopenfiles", 0, eCmdHdlrInt, setMaxFiles, NULL, NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"debugprinttemplatelist", 0, eCmdHdlrBinary, NULL, &(config->globals.bDebugPrintTemplateList), NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"debugprintmodulelist", 0, eCmdHdlrBinary, NULL, &(config->globals.bDebugPrintModuleList), NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"debugprintcfsyslinehandlerlist", 0, eCmdHdlrBinary,
-		 NULL, &(config->globals.bDebugPrintCfSysLineHandlerList), NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"moddir", 0, eCmdHdlrGetWord, NULL, &pModDir, NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"generateconfiggraph", 0, eCmdHdlrGetWord, NULL, &pszConfDAGFile, NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"errormessagestostderr", 0, eCmdHdlrBinary, NULL, &ourConf->globals.bErrMsgToStderr, NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"maxmessagesize", 0, eCmdHdlrSize, setMaxMsgSize, NULL, NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"privdroptouser", 0, eCmdHdlrUID, NULL, &uidDropPriv, NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"privdroptouserid", 0, eCmdHdlrInt, NULL, &uidDropPriv, NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"privdroptogroup", 0, eCmdHdlrGID, NULL, &gidDropPriv, NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"privdroptogroupid", 0, eCmdHdlrGID, NULL, &gidDropPriv, NULL, eConfObjGlobal));
 
 finalize_it:
 	RETiRet;
@@ -2202,12 +1892,12 @@ static rsRetVal mainThread()
 	 * drop privileges at all. Doing it correctly, requires a change in architecture, which
 	 * we should do over time. TODO -- rgerhards, 2008-11-19
 	 */
-	if(gidDropPriv != 0) {
-		doDropPrivGid(gidDropPriv);
+	if(ourConf->globals.gidDropPriv != 0) {
+		doDropPrivGid(ourConf->globals.gidDropPriv);
 	}
 
-	if(uidDropPriv != 0) {
-		doDropPrivUid(uidDropPriv);
+	if(ourConf->globals.uidDropPriv != 0) {
+		doDropPrivUid(ourConf->globals.uidDropPriv);
 	}
 
 	/* finally let the inputs run... */
@@ -2874,7 +2564,7 @@ int realMain(int argc, char **argv)
 
 
 	/* begin config load */
-	if((iRet = loadBuildInModules(ourConf)) != RS_RET_OK) {
+	if((iRet = loadBuildInModules()) != RS_RET_OK) {
 		fprintf(stderr, "fatal error: could not activate built-in modules. Error code %d.\n",
 			iRet);
 		exit(1); /* "good" exit, leaving at init for fatal error */

@@ -55,6 +55,7 @@
 #endif
 
 #include "cfsysline.h"
+#include "rsconf.h"
 #include "modules.h"
 #include "errmsg.h"
 #include "parser.h"
@@ -80,9 +81,7 @@ static modInfo_t *pLoadedModulesLast = NULL;	/* tail-pointer */
 /* already dlopen()-ed libs */
 static struct dlhandle_s *pHandles = NULL;
 
-/* config settings */
-uchar	*pModDir = NULL; /* read-only after startup */
-
+static uchar *pModDir;		/* directory where loadable modules are found */
 
 /* we provide a set of dummy functions for modules that do not support the
  * some interfaces.
@@ -801,7 +800,8 @@ Load(uchar *pModName)
 		pModInfo = GetNxt(pModInfo);
 	}
 
-	pModDirCurr = (uchar *)((pModDir == NULL) ? _PATH_MODDIR : (char *)pModDir);
+	pModDirCurr = (uchar *)((pModDir == NULL) ?
+		      _PATH_MODDIR : (char *)pModDir);
 	pModDirNext = NULL;
 	pModHdlr    = NULL;
 	iLoadCnt    = 0;
@@ -1013,6 +1013,7 @@ CODESTARTObjClassExit(module)
 	 * TODO: add again: pthread_mutex_destroy(&mutLoadUnload);
 	 */
 
+	free(pModDir);
 #	ifdef DEBUG
 	modUsrPrintAll(); /* debug aid - TODO: integrate with debug.c, at least the settings! */
 #	endif

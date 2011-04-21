@@ -175,7 +175,4 @@ ENDinterface(module)
 /* prototypes */
 PROTOTYPEObj(module);
 
-/* TODO: remove them below (means move the config init code) -- rgerhards, 2008-02-19 */
-extern uchar *pModDir; /* read-only after startup */
-
 #endif /* #ifndef MODULES_H_INCLUDED */
