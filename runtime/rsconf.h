@@ -99,12 +99,20 @@ BEGINinterface(rsconf) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Construct)(rsconf_t **ppThis);
 	rsRetVal (*ConstructFinalize)(rsconf_t __attribute__((unused)) *pThis);
 	rsRetVal (*Destruct)(rsconf_t **ppThis);
+	rsRetVal (*Load)(rsconf_t **ppThis, uchar *confFile);
+	rsRetVal (*Activate)(rsconf_t *ppThis);
 ENDinterface(rsconf)
-#define rsconfCURR_IF_VERSION 1 /* increment whenever you change the interface above! */
+// TODO: switch version to 1 for first "complete" version!!!! 2011-04-20
+#define rsconfCURR_IF_VERSION 0 /* increment whenever you change the interface above! */
 
 
 /* prototypes */
 PROTOTYPEObj(rsconf);
+
+/* globally-visible external data */
+extern rsconf_t *runConf;/* the currently running config */
+extern rsconf_t *loadConf;/* the config currently being loaded (no concurrent config load supported!) */
+
 
 /* some defaults (to be removed?) */
 #define DFLT_bLogStatusMsgs 1

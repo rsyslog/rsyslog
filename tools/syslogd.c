@@ -563,7 +563,7 @@ logmsgInternal(int iErr, int pri, uchar *msg, int flags)
 	 * permits us to process unmodified config files which otherwise contain a
 	 * supressor statement.
 	 */
-	if(((Debug == DEBUG_FULL || NoFork) && ourConf->globals.bErrMsgToStderr) || iConfigVerify) {
+	if(((Debug == DEBUG_FULL || NoFork) && runConf->globals.bErrMsgToStderr) || iConfigVerify) {
 		if(LOG_PRI(pri) == LOG_ERR)
 			fprintf(stderr, "rsyslogd: %s\n", msg);
 	}
@@ -809,7 +809,7 @@ DEFFUNC_llExecFunc(flushRptdMsgsActions)
 static void
 doFlushRptdMsgs(void)
 {
-	ruleset.IterateAllActions(ourConf, flushRptdMsgsActions, NULL);
+	ruleset.IterateAllActions(runConf, flushRptdMsgsActions, NULL);
 }
 
 
@@ -1020,7 +1020,7 @@ freeAllDynMemForTermination(void)
 static inline void
 destructAllActions(void)
 {
-	ruleset.DestructAllActions(ourConf);
+	ruleset.DestructAllActions(runConf);
 	bHaveMainQueue = 0; // flag that internal messages need to be temporarily stored
 }
 
@@ -1058,7 +1058,8 @@ die(int sig)
 	thrdTerminateAll();
 
 	/* and THEN send the termination log message (see long comment above) */
-	if(sig && ourConf->globals.bLogStatusMsgs) {
+dbgprintf("XXXX: runConf %p\n", runConf);
+	if(sig && runConf->globals.bLogStatusMsgs) {
 		(void) snprintf(buf, sizeof(buf) / sizeof(char),
 		 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
 		 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"]" " exiting on signal %d.",
@@ -1085,7 +1086,7 @@ die(int sig)
 	 * ourselfs, this makes finding memory leaks a lot
 	 * easier.
 	 */
-	tplDeleteAll(ourConf);
+	tplDeleteAll(runConf);
 
 	/* de-init some modules */
 	modExitIminternal();
@@ -1598,11 +1599,7 @@ init(void)
 	DEFiRet;
 
 	DBGPRINTF("rsyslog %s - called init()\n", VERSION);
-
-	/* construct the default ruleset */
-	ruleset.Construct(&pRuleset);
-	ruleset.SetName(ourConf, pRuleset, UCHAR_CONSTANT("RSYSLOG_DefaultRuleset"));
-	ruleset.ConstructFinalize(ourConf, pRuleset);
+#if 1
 
 	/* open the configuration file */
 	localRet = conf.processConfFile(ourConf, ConfFile);
@@ -1646,6 +1643,7 @@ init(void)
 		}
 		ruleset.AddRule(ourConf, ruleset.GetCurrent(ourConf), &pRule);
 	}
+#endif
 
 	legacyOptsHook();
 
@@ -1721,6 +1719,7 @@ init(void)
 	sigAct.sa_handler = sighup_handler;
 	sigaction(SIGHUP, &sigAct, NULL);
 
+	CHKiRet(rsconf.Activate(ourConf));
 	DBGPRINTF(" started.\n");
 
 	/* we now generate the startup message. It now includes everything to
@@ -2187,7 +2186,7 @@ static rsRetVal mainThread()
 	CHKiRet(init());
 
 	if(Debug && debugging_on) {
-		DBGPRINTF("Debugging enabled, SIGUSR1 to turn off debugging.\n");
+		dbgprintf("Debugging enabled, SIGUSR1 to turn off debugging.\n");
 	}
 
 	/* Send a signal to the parent so it can terminate.
@@ -2711,9 +2710,6 @@ int realMain(int argc, char **argv)
 	for(p = LocalDomain ; *p ; p++)
 		*p = (char)tolower((int)*p);
 
-	/* we need to init the config object first! */
-	CHKiRet(rsconf.Construct(&ourConf));
-
 	/* we now have our hostname and can set it inside the global vars.
 	 * TODO: think if all of this would better be a runtime function
 	 * rgerhards, 2008-04-17
@@ -2729,11 +2725,6 @@ int realMain(int argc, char **argv)
 		exit(1); /* "good" exit, leaving at init for fatal error */
 	}
 
-	if((iRet = loadBuildInModules(ourConf)) != RS_RET_OK) {
-		fprintf(stderr, "fatal error: could not activate built-in modules. Error code %d.\n",
-			iRet);
-		exit(1); /* "good" exit, leaving at init for fatal error */
-	}
 
 	/* END core initializations - we now come back to carrying out command line options*/
 
@@ -2878,10 +2869,23 @@ int realMain(int argc, char **argv)
 	if(iRet != RS_RET_END_OF_LINKEDLIST)
 		FINALIZE;
 
+	CHKiRet(rsconf.Load(&ourConf, ConfFile));
+	
+
+
+	/* begin config load */
+	if((iRet = loadBuildInModules(ourConf)) != RS_RET_OK) {
+		fprintf(stderr, "fatal error: could not activate built-in modules. Error code %d.\n",
+			iRet);
+		exit(1); /* "good" exit, leaving at init for fatal error */
+	}
 	if(iConfigVerify) {
 		fprintf(stderr, "rsyslogd: version %s, config validation run (level %d), master config %s\n",
 			VERSION, iConfigVerify, ConfFile);
 	}
+
+
+
 
 	if(bChDirRoot) {
 		if(chdir("/") != 0)
