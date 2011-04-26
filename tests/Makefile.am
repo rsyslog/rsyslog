@@ -1,5 +1,5 @@
 if ENABLE_TESTBENCH
-TESTRUNS = rt_init rscript
+# TODO: reenable TESTRUNS = rt_init rscript
 check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq msleep randomgen diagtalker uxsockrcvr syslog_caller syslog_inject inputfilegen
 TESTS = $(TESTRUNS) cfg.sh
 

@@ -12,6 +12,13 @@ Version 6.1.7  [DEVEL] (rgerhards), 2011-04-15
 - bugfix: IPv6-address could not be specified in omrelp
   this was due to improper parsing of ":"
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=250
+- bugfix: do not open files with full privileges, if privs will be dropped
+  This make the privilege drop code more bulletproof, but breaks Ubuntu's
+  work-around for log files created by external programs with the wrong
+  user and/or group. Note that it was long said that this "functionality"
+  would break once we go for serious privilege drop code, so hopefully
+  nobody still depends on it (and, if so, they lost...).
+- bugfix: pipes not opened in full priv mode when privs are to be dropped
 ---------------------------------------------------------------------------
 Version 6.1.6  [DEVEL] (rgerhards), 2011-03-14
 - enhanced omhdfs to support batching mode. This permits to increase
