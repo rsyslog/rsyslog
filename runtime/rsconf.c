@@ -632,6 +632,37 @@ finalize_it:
 }
 
 
+/* validate the current configuration, generate error messages, do 
+ * optimizations, etc, etc,...
+ */
+static inline rsRetVal
+validateConf(void)
+{
+	DEFiRet;
+
+	/* some checks */
+	if(ourConf->globals.mainQ.iMainMsgQueueNumWorkers < 1) {
+		errmsg.LogError(0, NO_ERRCODE, "$MainMsgQueueNumWorkers must be at least 1! Set to 1.\n");
+		ourConf->globals.mainQ.iMainMsgQueueNumWorkers = 1;
+	}
+
+	if(ourConf->globals.mainQ.MainMsgQueType == QUEUETYPE_DISK) {
+		errno = 0;	/* for logerror! */
+		if(glbl.GetWorkDir() == NULL) {
+			errmsg.LogError(0, NO_ERRCODE, "No $WorkDirectory specified - can not run main message queue in 'disk' mode. "
+				 "Using 'FixedArray' instead.\n");
+			ourConf->globals.mainQ.MainMsgQueType = QUEUETYPE_FIXED_ARRAY;
+		}
+		if(ourConf->globals.mainQ.pszMainMsgQFName == NULL) {
+			errmsg.LogError(0, NO_ERRCODE, "No $MainMsgQueueFileName specified - can not run main message queue in "
+				 "'disk' mode. Using 'FixedArray' instead.\n");
+			ourConf->globals.mainQ.MainMsgQueType = QUEUETYPE_FIXED_ARRAY;
+		}
+	}
+	RETiRet;
+}
+
+
 /* Load a configuration. This will do all necessary steps to create
  * the in-memory representation of the configuration, including support
  * for multiple configuration languages.
@@ -650,18 +681,14 @@ load(rsconf_t **cnf, uchar *confFile)
 
 	CHKiRet(rsconfConstruct(&loadConf));
 ourConf = loadConf; // TODO: remove, once ourConf is gone!
-dbgprintf("XXXX: loadConf is %p\n", loadConf);
 
 	CHKiRet(loadBuildInModules());
 	CHKiRet(initLegacyConf());
 
-#if 1
-dbgprintf("XXXX: 2, conf=%p\n", conf.processConfFile);
 	/* open the configuration file */
 	localRet = conf.processConfFile(loadConf, confFile);
 	CHKiRet(conf.GetNbrActActions(loadConf, &iNbrActions));
 
-dbgprintf("XXXX: 4\n");
 	if(localRet != RS_RET_OK) {
 		errmsg.LogError(0, localRet, "CONFIG ERROR: could not interpret master config file '%s'.", confFile);
 		bHadConfigErr = 1;
@@ -671,10 +698,8 @@ dbgprintf("XXXX: 4\n");
 		bHadConfigErr = 1;
 	}
 
-dbgprintf("XXXX: 10\n");
 	if((localRet != RS_RET_OK && localRet != RS_RET_NONFATAL_CONFIG_ERR) || iNbrActions == 0) {
 
-dbgprintf("XXXX: 20\n");
 		/* rgerhards: this code is executed to set defaults when the
 		 * config file could not be opened. We might think about
 		 * abandoning the run in this case - but this, too, is not
@@ -701,15 +726,14 @@ dbgprintf("XXXX: 20\n");
 		ruleset.AddRule(loadConf, ruleset.GetCurrent(loadConf), &pRule);
 	}
 
-#endif
-
+	CHKiRet(validateConf());
 
 	/* all OK, pass loaded conf to caller */
 	*cnf = loadConf;
 // TODO: enable this once all config code is moved to here!	loadConf = NULL;
 
 	dbgprintf("rsyslog finished loading initial config %p\n", loadConf);
-//	rsconfDebugPrint(loadConf);
+	rsconfDebugPrint(loadConf);
 
 finalize_it:
 	RETiRet;
