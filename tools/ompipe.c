@@ -72,6 +72,7 @@ DEFobjCurrIf(errmsg)
 typedef struct _instanceData {
 	uchar	f_fname[MAXFNAME];/* pipe or template name (display only) */
 	short	fd;		  /* pipe descriptor for (current) pipe */
+	sbool	bHadError;	  /* did we already have/report an error on this pipe? */
 } instanceData;
 
 
@@ -101,6 +102,17 @@ preparePipe(instanceData *pData)
 {
 	DEFiRet;
 	pData->fd = open((char*) pData->f_fname, O_RDWR|O_NONBLOCK|O_CLOEXEC);
+	if(pData->fd < 0 ) {
+		pData->fd = -1;
+		if(!pData->bHadError) {
+			char errStr[1024];
+			rs_strerror_r(errno, errStr, sizeof(errStr));
+			errmsg.LogError(0, RS_RET_NO_FILE_ACCESS, "Could no open output pipe '%s': %s",
+				        pData->f_fname, errStr);
+			pData->bHadError = 1;
+		}
+		DBGPRINTF("Error opening log pipe: %s\n", pData->f_fname);
+	}
 	RETiRet;
 }
 
@@ -150,6 +162,7 @@ finalize_it:
 BEGINcreateInstance
 CODESTARTcreateInstance
 	pData->fd = -1;
+	pData->bHadError = 0;
 ENDcreateInstance
 
 
@@ -204,11 +217,6 @@ CODESTARTparseSelectorAct
 	 */
 	preparePipe(pData);
 		
-	if(pData->fd < 0 ) {
-		pData->fd = -1;
-		DBGPRINTF("Error opening log pipe: %s\n", pData->f_fname);
-		errmsg.LogError(0, RS_RET_NO_FILE_ACCESS, "Could no open output pipe '%s'", pData->f_fname);
-	}
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 

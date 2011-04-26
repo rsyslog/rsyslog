@@ -6,6 +6,7 @@ Version 5.9.0  [V5-DEVEL] (rgerhards), 2011-03-??
   user and/or group. Note that it was long said that this "functionality"
   would break once we go for serious privilege drop code, so hopefully
   nobody still depends on it (and, if so, they lost...).
+- bugfix: pipes not opened in full priv mode when privs are to be dropped
 - this begins a new devel branch for v5
 - added support for user-level PRI provided via systemd
 - added new config directive $InputTCPFlowControl to select if tcp
