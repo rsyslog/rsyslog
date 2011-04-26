@@ -108,18 +108,6 @@
 #include "action.h"
 #include "iminternal.h"
 #include "cfsysline.h"
-#include "omshell.h"
-#include "omusrmsg.h"
-#include "omfwd.h"
-#include "omfile.h"
-#include "ompipe.h"
-#include "omdiscard.h"
-#include "pmrfc5424.h"
-#include "pmrfc3164.h"
-#include "smfile.h"
-#include "smtradfile.h"
-#include "smfwd.h"
-#include "smtradfwd.h"
 #include "threads.h"
 #include "wti.h"
 #include "queue.h"
@@ -252,21 +240,6 @@ extern	int errno;
 
 /* main message queue and its configuration parameters */
 qqueue_t *pMsgQueue = NULL;				/* the main message queue */
-
-
-/* hardcoded standard templates (used for defaults) */
-static uchar template_DebugFormat[] = "\"Debug line with all properties:\nFROMHOST: '%FROMHOST%', fromhost-ip: '%fromhost-ip%', HOSTNAME: '%HOSTNAME%', PRI: %PRI%,\nsyslogtag '%syslogtag%', programname: '%programname%', APP-NAME: '%APP-NAME%', PROCID: '%PROCID%', MSGID: '%MSGID%',\nTIMESTAMP: '%TIMESTAMP%', STRUCTURED-DATA: '%STRUCTURED-DATA%',\nmsg: '%msg%'\nescaped msg: '%msg:::drop-cc%'\ninputname: %inputname% rawmsg: '%rawmsg%'\n\n\"";
-static uchar template_SyslogProtocol23Format[] = "\"<%PRI%>1 %TIMESTAMP:::date-rfc3339% %HOSTNAME% %APP-NAME% %PROCID% %MSGID% %STRUCTURED-DATA% %msg%\n\"";
-static uchar template_TraditionalFileFormat[] = "=RSYSLOG_TraditionalFileFormat";
-static uchar template_FileFormat[] = "=RSYSLOG_FileFormat";
-static uchar template_ForwardFormat[] = "=RSYSLOG_ForwardFormat";
-static uchar template_TraditionalForwardFormat[] = "=RSYSLOG_TraditionalForwardFormat";
-static uchar template_WallFmt[] = "\"\r\n\7Message from syslogd@%HOSTNAME% at %timegenerated% ...\r\n %syslogtag%%msg%\n\r\"";
-static uchar template_StdUsrMsgFmt[] = "\" %syslogtag%%msg%\n\r\"";
-static uchar template_StdDBFmt[] = "\"insert into SystemEvents (Message, Facility, FromHost, Priority, DeviceReportedTime, ReceivedAt, InfoUnitID, SysLogTag) values ('%msg%', %syslogfacility%, '%HOSTNAME%', %syslogpriority%, '%timereported:::date-mysql%', '%timegenerated:::date-mysql%', %iut%, '%syslogtag%')\",SQL";
-static uchar template_StdPgSQLFmt[] = "\"insert into SystemEvents (Message, Facility, FromHost, Priority, DeviceReportedTime, ReceivedAt, InfoUnitID, SysLogTag) values ('%msg%', %syslogfacility%, '%HOSTNAME%', %syslogpriority%, '%timereported:::date-pgsql%', '%timegenerated:::date-pgsql%', %iut%, '%syslogtag%')\",STDSQL";
-static uchar template_spoofadr[] = "\"%fromhost-ip%\"";
-/* end templates */
 
 
 /* up to the next comment, prototypes that should be removed by reordering */
@@ -499,7 +472,7 @@ logmsgInternal(int iErr, int pri, uchar *msg, int flags)
 	 * permits us to process unmodified config files which otherwise contain a
 	 * supressor statement.
 	 */
-	if(((Debug == DEBUG_FULL || NoFork) && runConf->globals.bErrMsgToStderr) || iConfigVerify) {
+	if(((Debug == DEBUG_FULL || NoFork) && ourConf->globals.bErrMsgToStderr) || iConfigVerify) {
 		if(LOG_PRI(pri) == LOG_ERR)
 			fprintf(stderr, "rsyslogd: %s\n", msg);
 	}
@@ -1458,53 +1431,6 @@ init(void)
 	struct sigaction sigAct;
 	DEFiRet;
 
-	DBGPRINTF("rsyslog %s - called init()\n", VERSION);
-#if 1
-
-	/* open the configuration file */
-	localRet = conf.processConfFile(ourConf, ConfFile);
-	CHKiRet(conf.GetNbrActActions(ourConf, &iNbrActions));
-
-	dbgprintf("rsyslog finished loading initial config %p\n", ourConf);
-	rsconf.DebugPrint(ourConf);
-
-	if(localRet != RS_RET_OK) {
-		errmsg.LogError(0, localRet, "CONFIG ERROR: could not interpret master config file '%s'.", ConfFile);
-		bHadConfigErr = 1;
-	} else if(iNbrActions == 0) {
-		errmsg.LogError(0, RS_RET_NO_ACTIONS, "CONFIG ERROR: there are no active actions configured. Inputs will "
-			 "run, but no output whatsoever is created.");
-		bHadConfigErr = 1;
-	}
-
-	if((localRet != RS_RET_OK && localRet != RS_RET_NONFATAL_CONFIG_ERR) || iNbrActions == 0) {
-		/* rgerhards: this code is executed to set defaults when the
-		 * config file could not be opened. We might think about
-		 * abandoning the run in this case - but this, too, is not
-		 * very clever... So we stick with what we have.
-		 * We ignore any errors while doing this - we would be lost anyhow...
-		 */
-		errmsg.LogError(0, NO_ERRCODE, "EMERGENCY CONFIGURATION ACTIVATED - fix rsyslog config file!");
-
-		/* note: we previously used _POSIY_TTY_NAME_MAX+1, but this turned out to be
-		 * too low on linux... :-S   -- rgerhards, 2008-07-28
-		 */
-		char szTTYNameBuf[128];
-		rule_t *pRule = NULL; /* initialization to NULL is *vitally* important! */
-		conf.cfline(ourConf, UCHAR_CONSTANT("*.ERR\t" _PATH_CONSOLE), &pRule);
-		conf.cfline(ourConf, UCHAR_CONSTANT("syslog.*\t" _PATH_CONSOLE), &pRule);
-		conf.cfline(ourConf, UCHAR_CONSTANT("*.PANIC\t*"), &pRule);
-		conf.cfline(ourConf, UCHAR_CONSTANT("syslog.*\troot"), &pRule);
-		if(ttyname_r(0, szTTYNameBuf, sizeof(szTTYNameBuf)) == 0) {
-			snprintf(cbuf,sizeof(cbuf), "*.*\t%s", szTTYNameBuf);
-			conf.cfline(ourConf, (uchar*)cbuf, &pRule);
-		} else {
-			DBGPRINTF("error %d obtaining controlling terminal, not using that emergency rule\n", errno);
-		}
-		ruleset.AddRule(ourConf, ruleset.GetCurrent(ourConf), &pRule);
-	}
-#endif
-
 	legacyOptsHook();
 
 	/* some checks */
@@ -1740,61 +1666,6 @@ mainloop(void)
 	ENDfunc
 }
 
-/* load build-in modules
- * very first version begun on 2007-07-23 by rgerhards
- */
-static rsRetVal loadBuildInModules()
-{
-	DEFiRet;
-
-	if((iRet = module.doModInit(modInitFile, UCHAR_CONSTANT("builtin-file"), NULL)) != RS_RET_OK) {
-		RETiRet;
-	}
-	if((iRet = module.doModInit(modInitPipe, UCHAR_CONSTANT("builtin-pipe"), NULL)) != RS_RET_OK) {
-		RETiRet;
-	}
-#ifdef SYSLOG_INET
-	if((iRet = module.doModInit(modInitFwd, UCHAR_CONSTANT("builtin-fwd"), NULL)) != RS_RET_OK) {
-		RETiRet;
-	}
-#endif
-	if((iRet = module.doModInit(modInitShell, UCHAR_CONSTANT("builtin-shell"), NULL)) != RS_RET_OK) {
-		RETiRet;
-	}
-	if((iRet = module.doModInit(modInitDiscard, UCHAR_CONSTANT("builtin-discard"), NULL)) != RS_RET_OK) {
-		RETiRet;
-	}
-
-	/* dirty, but this must be for the time being: the usrmsg module must always be
-	 * loaded as last module. This is because it processes any type of action selector.
-	 * If we load it before other modules, these others will never have a chance of
-	 * working with the config file. We may change that implementation so that a user name
-	 * must start with an alnum, that would definitely help (but would it break backwards
-	 * compatibility?). * rgerhards, 2007-07-23
-	 * User names now must begin with:
-	 *   [a-zA-Z0-9_.]
-	 */
-	CHKiRet(module.doModInit(modInitUsrMsg, (uchar*) "builtin-usrmsg", NULL));
-
-	/* load build-in parser modules */
-	CHKiRet(module.doModInit(modInitpmrfc5424, UCHAR_CONSTANT("builtin-pmrfc5424"), NULL));
-	CHKiRet(module.doModInit(modInitpmrfc3164, UCHAR_CONSTANT("builtin-pmrfc3164"), NULL));
-
-	/* and set default parser modules (order is *very* important, legacy (3164) parse needs to go last! */
-	CHKiRet(parser.AddDfltParser(UCHAR_CONSTANT("rsyslog.rfc5424")));
-	CHKiRet(parser.AddDfltParser(UCHAR_CONSTANT("rsyslog.rfc3164")));
-
-	/* load build-in strgen modules */
-	CHKiRet(module.doModInit(modInitsmfile, UCHAR_CONSTANT("builtin-smfile"), NULL));
-	CHKiRet(module.doModInit(modInitsmtradfile, UCHAR_CONSTANT("builtin-smtradfile"), NULL));
-	CHKiRet(module.doModInit(modInitsmfwd, UCHAR_CONSTANT("builtin-smfwd"), NULL));
-	CHKiRet(module.doModInit(modInitsmtradfwd, UCHAR_CONSTANT("builtin-smtradfwd"), NULL));
-
-finalize_it:
-	RETiRet;
-}
-
-
 /* print version and compile-time setting information.
  */
 static void printVersion(void)
@@ -1847,31 +1718,6 @@ static void printVersion(void)
 static rsRetVal mainThread()
 {
 	DEFiRet;
-	uchar *pTmp;
-
-	/* initialize the build-in templates */
-	pTmp = template_DebugFormat;
-	tplAddLine(ourConf, "RSYSLOG_DebugFormat", &pTmp);
-	pTmp = template_SyslogProtocol23Format;
-	tplAddLine(ourConf, "RSYSLOG_SyslogProtocol23Format", &pTmp);
-	pTmp = template_FileFormat; /* new format for files with high-precision stamp */
-	tplAddLine(ourConf, "RSYSLOG_FileFormat", &pTmp);
-	pTmp = template_TraditionalFileFormat;
-	tplAddLine(ourConf, "RSYSLOG_TraditionalFileFormat", &pTmp);
-	pTmp = template_WallFmt;
-	tplAddLine(ourConf, " WallFmt", &pTmp);
-	pTmp = template_ForwardFormat;
-	tplAddLine(ourConf, "RSYSLOG_ForwardFormat", &pTmp);
-	pTmp = template_TraditionalForwardFormat;
-	tplAddLine(ourConf, "RSYSLOG_TraditionalForwardFormat", &pTmp);
-	pTmp = template_StdUsrMsgFmt;
-	tplAddLine(ourConf, " StdUsrMsgFmt", &pTmp);
-	pTmp = template_StdDBFmt;
-	tplAddLine(ourConf, " StdDBFmt", &pTmp);
-        pTmp = template_StdPgSQLFmt;
-        tplAddLine(ourConf, " StdPgSQLFmt", &pTmp);
-        pTmp = template_spoofadr;
-        tplLastStaticInit(ourConf, tplAddLine(ourConf, "RSYSLOG_omudpspoofDfltSourceTpl", &pTmp));
 
 	CHKiRet(init());
 
@@ -2561,21 +2407,10 @@ int realMain(int argc, char **argv)
 
 	CHKiRet(rsconf.Load(&ourConf, ConfFile));
 	
-
-
-	/* begin config load */
-	if((iRet = loadBuildInModules()) != RS_RET_OK) {
-		fprintf(stderr, "fatal error: could not activate built-in modules. Error code %d.\n",
-			iRet);
-		exit(1); /* "good" exit, leaving at init for fatal error */
-	}
 	if(iConfigVerify) {
 		fprintf(stderr, "rsyslogd: version %s, config validation run (level %d), master config %s\n",
 			VERSION, iConfigVerify, ConfFile);
 	}
-
-
-
 
 	if(bChDirRoot) {
 		if(chdir("/") != 0)

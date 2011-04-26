@@ -46,6 +46,19 @@
 #include "action.h"
 #include "glbl.h"
 #include "unicode-helper.h"
+#include "omshell.h"
+#include "omusrmsg.h"
+#include "omfwd.h"
+#include "omfile.h"
+#include "ompipe.h"
+#include "omdiscard.h"
+#include "pmrfc5424.h"
+#include "pmrfc3164.h"
+#include "smfile.h"
+#include "smtradfile.h"
+#include "smfwd.h"
+#include "smtradfwd.h"
+#include "parser.h"
 
 /* static data */
 DEFobjStaticHelpers
@@ -54,10 +67,26 @@ DEFobjCurrIf(module)
 DEFobjCurrIf(conf)
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
+DEFobjCurrIf(parser)
 
 /* exported static data */
 rsconf_t *runConf = NULL;/* the currently running config */
 rsconf_t *loadConf = NULL;/* the config currently being loaded (no concurrent config load supported!) */
+
+/* hardcoded standard templates (used for defaults) */
+static uchar template_DebugFormat[] = "\"Debug line with all properties:\nFROMHOST: '%FROMHOST%', fromhost-ip: '%fromhost-ip%', HOSTNAME: '%HOSTNAME%', PRI: %PRI%,\nsyslogtag '%syslogtag%', programname: '%programname%', APP-NAME: '%APP-NAME%', PROCID: '%PROCID%', MSGID: '%MSGID%',\nTIMESTAMP: '%TIMESTAMP%', STRUCTURED-DATA: '%STRUCTURED-DATA%',\nmsg: '%msg%'\nescaped msg: '%msg:::drop-cc%'\ninputname: %inputname% rawmsg: '%rawmsg%'\n\n\"";
+static uchar template_SyslogProtocol23Format[] = "\"<%PRI%>1 %TIMESTAMP:::date-rfc3339% %HOSTNAME% %APP-NAME% %PROCID% %MSGID% %STRUCTURED-DATA% %msg%\n\"";
+static uchar template_TraditionalFileFormat[] = "=RSYSLOG_TraditionalFileFormat";
+static uchar template_FileFormat[] = "=RSYSLOG_FileFormat";
+static uchar template_ForwardFormat[] = "=RSYSLOG_ForwardFormat";
+static uchar template_TraditionalForwardFormat[] = "=RSYSLOG_TraditionalForwardFormat";
+static uchar template_WallFmt[] = "\"\r\n\7Message from syslogd@%HOSTNAME% at %timegenerated% ...\r\n %syslogtag%%msg%\n\r\"";
+static uchar template_StdUsrMsgFmt[] = "\" %syslogtag%%msg%\n\r\"";
+static uchar template_StdDBFmt[] = "\"insert into SystemEvents (Message, Facility, FromHost, Priority, DeviceReportedTime, ReceivedAt, InfoUnitID, SysLogTag) values ('%msg%', %syslogfacility%, '%HOSTNAME%', %syslogpriority%, '%timereported:::date-mysql%', '%timegenerated:::date-mysql%', %iut%, '%syslogtag%')\",SQL";
+static uchar template_StdPgSQLFmt[] = "\"insert into SystemEvents (Message, Facility, FromHost, Priority, DeviceReportedTime, ReceivedAt, InfoUnitID, SysLogTag) values ('%msg%', %syslogfacility%, '%HOSTNAME%', %syslogpriority%, '%timereported:::date-pgsql%', '%timegenerated:::date-pgsql%', %iut%, '%syslogtag%')\",STDSQL";
+static uchar template_spoofadr[] = "\"%fromhost-ip%\"";
+/* end templates */
+
 
 /* Standard-Constructor
  */
@@ -390,13 +419,69 @@ setModDir(void __attribute__((unused)) *pVal, uchar* pszNewVal)
 }
 
 
+/* load build-in modules
+ * very first version begun on 2007-07-23 by rgerhards
+ */
+static rsRetVal
+loadBuildInModules()
+{
+	DEFiRet;
+
+	CHKiRet(module.doModInit(modInitFile, UCHAR_CONSTANT("builtin-file"), NULL));
+	CHKiRet(module.doModInit(modInitPipe, UCHAR_CONSTANT("builtin-pipe"), NULL));
+	CHKiRet(module.doModInit(modInitShell, UCHAR_CONSTANT("builtin-shell"), NULL));
+	CHKiRet(module.doModInit(modInitDiscard, UCHAR_CONSTANT("builtin-discard"), NULL));
+#	ifdef SYSLOG_INET
+	CHKiRet(module.doModInit(modInitFwd, UCHAR_CONSTANT("builtin-fwd"), NULL));
+#	endif
+
+	/* dirty, but this must be for the time being: the usrmsg module must always be
+	 * loaded as last module. This is because it processes any type of action selector.
+	 * If we load it before other modules, these others will never have a chance of
+	 * working with the config file. We may change that implementation so that a user name
+	 * must start with an alnum, that would definitely help (but would it break backwards
+	 * compatibility?). * rgerhards, 2007-07-23
+	 * User names now must begin with:
+	 *   [a-zA-Z0-9_.]
+	 */
+	CHKiRet(module.doModInit(modInitUsrMsg, (uchar*) "builtin-usrmsg", NULL));
+
+	/* load build-in parser modules */
+	CHKiRet(module.doModInit(modInitpmrfc5424, UCHAR_CONSTANT("builtin-pmrfc5424"), NULL));
+	CHKiRet(module.doModInit(modInitpmrfc3164, UCHAR_CONSTANT("builtin-pmrfc3164"), NULL));
+
+	/* and set default parser modules. Order is *very* important, legacy
+	 * (3164) parser needs to go last! */
+	CHKiRet(parser.AddDfltParser(UCHAR_CONSTANT("rsyslog.rfc5424")));
+	CHKiRet(parser.AddDfltParser(UCHAR_CONSTANT("rsyslog.rfc3164")));
+
+	/* load build-in strgen modules */
+	CHKiRet(module.doModInit(modInitsmfile, UCHAR_CONSTANT("builtin-smfile"), NULL));
+	CHKiRet(module.doModInit(modInitsmtradfile, UCHAR_CONSTANT("builtin-smtradfile"), NULL));
+	CHKiRet(module.doModInit(modInitsmfwd, UCHAR_CONSTANT("builtin-smfwd"), NULL));
+	CHKiRet(module.doModInit(modInitsmtradfwd, UCHAR_CONSTANT("builtin-smtradfwd"), NULL));
+
+finalize_it:
+	if(iRet != RS_RET_OK) {
+		/* we need to do fprintf, as we do not yet have an error reporting system
+		 * in place.
+		 */
+		fprintf(stderr, "fatal error: could not activate built-in modules. Error code %d.\n",
+			iRet);
+	}
+	RETiRet;
+}
+
+
 /* intialize the legacy config system */
 static inline rsRetVal 
 initLegacyConf(void)
 {
 	DEFiRet;
+	uchar *pTmp;
 	ruleset_t *pRuleset;
 
+	DBGPRINTF("doing legacy config system init\n");
 	/* construct the default ruleset */
 	ruleset.Construct(&pRuleset);
 	ruleset.SetName(loadConf, pRuleset, UCHAR_CONSTANT("RSYSLOG_DefaultRuleset"));
@@ -518,6 +603,30 @@ initLegacyConf(void)
 	CHKiRet(regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
 		resetConfigVariables, NULL, NULL, eConfObjGlobal));
 
+	/* initialize the build-in templates */
+	pTmp = template_DebugFormat;
+	tplAddLine(ourConf, "RSYSLOG_DebugFormat", &pTmp);
+	pTmp = template_SyslogProtocol23Format;
+	tplAddLine(ourConf, "RSYSLOG_SyslogProtocol23Format", &pTmp);
+	pTmp = template_FileFormat; /* new format for files with high-precision stamp */
+	tplAddLine(ourConf, "RSYSLOG_FileFormat", &pTmp);
+	pTmp = template_TraditionalFileFormat;
+	tplAddLine(ourConf, "RSYSLOG_TraditionalFileFormat", &pTmp);
+	pTmp = template_WallFmt;
+	tplAddLine(ourConf, " WallFmt", &pTmp);
+	pTmp = template_ForwardFormat;
+	tplAddLine(ourConf, "RSYSLOG_ForwardFormat", &pTmp);
+	pTmp = template_TraditionalForwardFormat;
+	tplAddLine(ourConf, "RSYSLOG_TraditionalForwardFormat", &pTmp);
+	pTmp = template_StdUsrMsgFmt;
+	tplAddLine(ourConf, " StdUsrMsgFmt", &pTmp);
+	pTmp = template_StdDBFmt;
+	tplAddLine(ourConf, " StdDBFmt", &pTmp);
+        pTmp = template_StdPgSQLFmt;
+        tplAddLine(ourConf, " StdPgSQLFmt", &pTmp);
+        pTmp = template_spoofadr;
+        tplLastStaticInit(ourConf, tplAddLine(ourConf, "RSYSLOG_omudpspoofDfltSourceTpl", &pTmp));
+
 finalize_it:
 	RETiRet;
 }
@@ -543,9 +652,10 @@ load(rsconf_t **cnf, uchar *confFile)
 ourConf = loadConf; // TODO: remove, once ourConf is gone!
 dbgprintf("XXXX: loadConf is %p\n", loadConf);
 
+	CHKiRet(loadBuildInModules());
 	CHKiRet(initLegacyConf());
 
-#if 0
+#if 1
 dbgprintf("XXXX: 2, conf=%p\n", conf.processConfFile);
 	/* open the configuration file */
 	localRet = conf.processConfFile(loadConf, confFile);
@@ -639,6 +749,7 @@ BEGINObjClassInit(rsconf, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	CHKiRet(objUse(conf, CORE_COMPONENT));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
+	CHKiRet(objUse(parser, CORE_COMPONENT));
 
 	/* now set our own handlers */
 	OBJSetMethodHandler(objMethod_DEBUGPRINT, rsconfDebugPrint);
@@ -654,6 +765,7 @@ BEGINObjClassExit(rsconf, OBJ_IS_CORE_MODULE) /* class, version */
 	objRelease(conf, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
+	objRelease(parser, CORE_COMPONENT);
 ENDObjClassExit(rsconf)
 
 /* vi:set ai:
