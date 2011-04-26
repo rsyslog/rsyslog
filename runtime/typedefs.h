@@ -87,6 +87,7 @@ typedef struct globals_s globals_t;
 typedef struct defaults_s defaults_t;
 typedef struct actions_s actions_t;
 typedef struct rsconf_s rsconf_t;
+typedef struct outchannels_s outchannels_t;
 typedef rsRetVal (*prsf_t)(struct vmstk_s*, int);	/* pointer to a RainerScript function */
 typedef uint64 qDeqID;	/* queue Dequeue order ID. 32 bits is considered dangerously few */
 

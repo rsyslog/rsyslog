@@ -1280,23 +1280,6 @@ finalize_it:
 }
 
 
-/* print debug information as part of init(). This pretty much
- * outputs the whole config of rsyslogd. I've moved this code
- * out of init() to clean it somewhat up.
- * rgerhards, 2007-07-31
- */
-static void dbgPrintInitInfo(void)
-{
-	dbgprintf("The following is the old-style, to-be-replaced, current config dump at the end "
-		  " of the config load process ;)\n");
-	ochPrintList();
-
-	DBGPRINTF("Messages with malicious PTR DNS Records are %sdropped.\n",
-		  glbl.GetDropMalPTRMsgs() ? "" : "not ");
-
-}
-
-
 /* Actually run the input modules.  This happens after privileges are dropped,
  * if that is requested.
  */
@@ -1441,31 +1424,31 @@ init(void)
 	 * If not, terminate. -- rgerhards, 2008-07-25
 	 */
 	if(iConfigVerify) {
-		if(bHadConfigErr) {
-			/* a bit dirty, but useful... */
-			exit(1);
-		}
-		ABORT_FINALIZE(RS_RET_VALIDATION_RUN);
-	}
-
-#warning restructure following if to use return value of loadConf
-	if(loadConf->globals.bAbortOnUncleanConfig && bHadConfigErr) {
-		fprintf(stderr, "rsyslogd: $AbortOnUncleanConfig is set, and config is not clean.\n"
-		                "Check error log for details, fix errors and restart. As a last\n"
-				"resort, you may want to remove $AbortOnUncleanConfig to permit a\n"
-				"startup with a dirty config.\n");
-		exit(2);
-	}
-
-	/* create message queue */
-	CHKiRet_Hdlr(createMainQueue(&pMsgQueue, UCHAR_CONSTANT("main Q"))) {
-		/* no queue is fatal, we need to give up in that case... */
-		fprintf(stderr, "fatal error %d: could not create message queue - rsyslogd can not run!\n", iRet);
+	if(bHadConfigErr) {
+		/* a bit dirty, but useful... */
 		exit(1);
 	}
+	ABORT_FINALIZE(RS_RET_VALIDATION_RUN);
+}
 
-	bHaveMainQueue = (ourConf->globals.mainQ.MainMsgQueType == QUEUETYPE_DIRECT) ? 0 : 1;
-	DBGPRINTF("Main processing queue is initialized and running\n");
+#warning restructure following if to use return value of loadConf
+if(loadConf->globals.bAbortOnUncleanConfig && bHadConfigErr) {
+	fprintf(stderr, "rsyslogd: $AbortOnUncleanConfig is set, and config is not clean.\n"
+			"Check error log for details, fix errors and restart. As a last\n"
+			"resort, you may want to remove $AbortOnUncleanConfig to permit a\n"
+			"startup with a dirty config.\n");
+	exit(2);
+}
+
+/* create message queue */
+CHKiRet_Hdlr(createMainQueue(&pMsgQueue, UCHAR_CONSTANT("main Q"))) {
+	/* no queue is fatal, we need to give up in that case... */
+	fprintf(stderr, "fatal error %d: could not create message queue - rsyslogd can not run!\n", iRet);
+	exit(1);
+}
+
+bHaveMainQueue = (ourConf->globals.mainQ.MainMsgQueType == QUEUETYPE_DIRECT) ? 0 : 1;
+DBGPRINTF("Main processing queue is initialized and running\n");
 
 	/* the output part and the queue is now ready to run. So it is a good time
 	 * to initialize the inputs. Please note that the net code above should be
@@ -1476,10 +1459,6 @@ init(void)
 	 * persisted to disk. -- rgerhards
 	 */
 	startInputModules();
-
-	if(Debug) {
-		dbgPrintInitInfo();
-	}
 
 	memset(&sigAct, 0, sizeof (sigAct));
 	sigemptyset(&sigAct.sa_mask);

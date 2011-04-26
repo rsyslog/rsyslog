@@ -59,6 +59,7 @@
 #include "smfwd.h"
 #include "smtradfwd.h"
 #include "parser.h"
+#include "outchannel.h"
 
 /* static data */
 DEFobjStaticHelpers
@@ -162,6 +163,8 @@ BEGINobjDebugPrint(rsconf) /* be sure to specify the object type also in END and
 		  pThis->globals.bLogStatusMsgs);
 	dbgprintf("  bErrMsgToStderr.....................: %d\n",
 		  pThis->globals.bErrMsgToStderr);
+	dbgprintf("  drop Msgs with malicious PTR Record : %d\n",
+		  glbl.GetDropMalPTRMsgs());
 	ruleset.DebugPrintAll(pThis);
 	DBGPRINTF("\n");
 	if(pThis->globals.bDebugPrintTemplateList)
@@ -190,6 +193,7 @@ BEGINobjDebugPrint(rsconf) /* be sure to specify the object type also in END and
 	setQPROP(qqueueSetbSaveOnShutdown, "$MainMsgQueueSaveOnShutdown", 1);
 	 */
 	DBGPRINTF("Work Directory: '%s'.\n", glbl.GetWorkDir());
+	ochPrintList();
 CODESTARTobjDebugPrint(rsconf)
 ENDobjDebugPrint(rsconf)
 

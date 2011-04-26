@@ -91,6 +91,11 @@ struct globals_s {
 struct defaults_s {
 };
 
+/* outchannel-specific data */
+struct outchannels_s {
+	struct outchannel *ochRoot;	/* the root of the outchannel list */
+	struct outchannel *ochLast;	/* points to the last element of the outchannel list */
+};
 
 struct templates_s {
 	struct template *root;	/* the root of the template list */
@@ -121,6 +126,7 @@ struct rsconf_s {
 	globals_t globals;
 	defaults_t defaults;
 	templates_t templates;
+	outchannels_t och;
 	actions_t actions;
 	rulesets_t rulesets;
 	/* note: rulesets include the complete output part:
