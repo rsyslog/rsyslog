@@ -1,5 +1,11 @@
 ---------------------------------------------------------------------------
 Version 5.9.0  [V5-DEVEL] (rgerhards), 2011-03-??
+- bugfix: do not open files with full privileges, if privs will be dropped
+  This make the privilege drop code more bulletproof, but breaks Ubuntu's
+  work-around for log files created by external programs with the wrong
+  user and/or group. Note that it was long said that this "functionality"
+  would break once we go for serious privilege drop code, so hopefully
+  nobody still depends on it (and, if so, they lost...).
 - this begins a new devel branch for v5
 - added support for user-level PRI provided via systemd
 - added new config directive $InputTCPFlowControl to select if tcp
