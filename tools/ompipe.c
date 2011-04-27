@@ -221,11 +221,6 @@ CODESTARTparseSelectorAct
 	 */
 	CHKiRet(cflineParseFileName(p, (uchar*) pData->f_fname, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS,
 				       (pszFileDfltTplName == NULL) ? (uchar*)"RSYSLOG_FileFormat" : pszFileDfltTplName));
-
-	/* at this stage, we ignore the return value of preparePipe, this is taken
-	 * care of in later steps. -- rgerhards, 2009-03-19
-	 */
-	preparePipe(pData);
 		
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct

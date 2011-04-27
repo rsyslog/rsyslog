@@ -798,18 +798,6 @@ CODESTARTparseSelectorAct
 	pData->iIOBufSize = (int) cs.iIOBufSize;
 	pData->iFlushInterval = cs.iFlushInterval;
 	pData->bUseAsyncWriter = cs.bUseAsyncWriter;
-
-	if(pData->bDynamicName == 0) {
-		/* try open and emit error message if not possible. At this stage, we ignore the
-		 * return value of prepareFile, this is taken care of in later steps.
-		 */
-		prepareFile(pData, pData->f_fname);
-		        
-	  	if(pData->pStrm == NULL) {
-			DBGPRINTF("Error opening log file: %s\n", pData->f_fname);
-			errmsg.LogError(0, RS_RET_NO_FILE_ACCESS, "Could no open output file '%s'", pData->f_fname);
-		}
-	}
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
@@ -897,7 +885,7 @@ SCOPINGmodInit
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"filecreatemode", 0, eCmdHdlrFileCreateMode, NULL, &cs.fCreateMode, STD_LOADABLE_MODULE_ID, eConfObjAction));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"createdirs", 0, eCmdHdlrBinary, NULL, &cs.bCreateDirs, STD_LOADABLE_MODULE_ID, eConfObjAction));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"failonchownfailure", 0, eCmdHdlrBinary, NULL, &cs.bFailOnChown, STD_LOADABLE_MODULE_ID, eConfObjAction));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omfileForceChown", 0, eCmdHdlrGoneAway, NULL, NULL, STD_LOADABLE_MODULE_ID, eConfObjAction));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omfileforcechown", 0, eCmdHdlrGoneAway, NULL, NULL, STD_LOADABLE_MODULE_ID, eConfObjAction));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionfileenablesync", 0, eCmdHdlrBinary, NULL, &cs.bEnableSync, STD_LOADABLE_MODULE_ID, eConfObjAction));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionfiledefaulttemplate", 0, eCmdHdlrGetWord, NULL, &cs.pszFileDfltTplName, NULL, eConfObjAction));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID, eConfObjAction));
