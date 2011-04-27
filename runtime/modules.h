@@ -159,7 +159,7 @@ struct modInfo_s {
 /* interfaces */
 BEGINinterface(module) /* name must also be changed in ENDinterface macro! */
 	modInfo_t *(*GetNxt)(modInfo_t *pThis);
-	modInfo_t *(*GetNxtType)(modInfo_t *pThis, eModType_t rqtdType);
+	modInfo_t *(*GetNxtCnfType)(rsconf_t *cnf, modInfo_t *pThis, eModType_t rqtdType);
 	uchar *(*GetName)(modInfo_t *pThis);
 	uchar *(*GetStateName)(modInfo_t *pThis);
 	rsRetVal (*Use)(char *srcFile, modInfo_t *pThis);	/**< must be called before a module is used (ref counting) */
@@ -172,7 +172,9 @@ BEGINinterface(module) /* name must also be changed in ENDinterface macro! */
 ENDinterface(module)
 #define moduleCURR_IF_VERSION 2 /* increment whenever you change the interface structure! */
 /* Changes: 
- * v2 - added param bCondLoad to Load call - 2011-04-27
+ * v2 
+ * - added param bCondLoad to Load call - 2011-04-27
+ * - removed GetNxtType, added GetNxtCnfType - 2011-04-27
  */
 
 /* prototypes */

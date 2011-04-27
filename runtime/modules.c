@@ -335,7 +335,7 @@ addModToGlblList(modInfo_t *pThis)
 
 /* Add a module to the config module list for current loadConf
  */
-static inline rsRetVal
+rsRetVal
 addModToCnfList(modInfo_t *pThis)
 {
 	cfgmodules_etry_t *pNew;
@@ -401,18 +401,31 @@ static modInfo_t *GetNxt(modInfo_t *pThis)
 
 
 /* this function is like GetNxt(), but it returns pointers to
- * modules of specific type only.
- * rgerhards, 2007-07-24
+ * modules of specific type only. Only modules from the provided
+ * config are returned. Note that processing speed could be improved,
+ * but this is really not relevant, as config file loading is not really
+ * something we are concerned about in regard to runtime.
  */
-static modInfo_t *GetNxtType(modInfo_t *pThis, eModType_t rqtdType)
+static modInfo_t *GetNxtCnfType(rsconf_t *cnf, modInfo_t *pThis, eModType_t rqtdType)
 {
-	modInfo_t *pMod = pThis;
+	cfgmodules_etry_t *node;
 
-	do {
-		pMod = GetNxt(pMod);
-	} while(!(pMod == NULL || pMod->eType == rqtdType)); /* warning: do ... while() */
+	if(pThis == NULL) { /* start at beginning of module list */
+		node = cnf->modules.root;
+	} else { /* start at last location - then we need to find the module in the config list */
+		for(node = cnf->modules.root ; node != NULL && node->pMod != pThis ; node = node->next)
+			/*search only, all done in for() */;
+		if(node != NULL)
+			node = node->next; /* skip to NEXT element in list */
+	}
 
-	return pMod;
+dbgprintf("XXXX: entering node, ptr %p: %s\n", node, (node == NULL)? "":modGetName(node->pMod));
+	while(node != NULL && node->pMod->eType != rqtdType) {
+		node = node->next; /* warning: do ... while() */
+dbgprintf("XXXX: in loop, ptr %p: %s\n", node, (node == NULL)? "":modGetName(node->pMod));
+	}
+
+	return (node == NULL) ? NULL : node->pMod;
 }
 
 
@@ -1111,7 +1124,7 @@ CODESTARTobjQueryInterface(module)
 	 * of course, also affects the "if" above).
 	 */
 	pIf->GetNxt = GetNxt;
-	pIf->GetNxtType = GetNxtType;
+	pIf->GetNxtCnfType = GetNxtCnfType;
 	pIf->GetName = modGetName;
 	pIf->GetStateName = modGetStateName;
 	pIf->PrintList = modPrintList;

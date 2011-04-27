@@ -1105,7 +1105,7 @@ static rsRetVal cflineDoAction(rsconf_t *conf, uchar **p, action_t **ppAction)
 	ASSERT(ppAction != NULL);
 
 	/* loop through all modules and see if one picks up the line */
-	pMod = module.GetNxtType(NULL, eMOD_OUT);
+	pMod = module.GetNxtCnfType(conf, NULL, eMOD_OUT);
 	/* Note: clang static analyzer reports that pMod mybe == NULL. However, this is
 	 * not possible, because we have the built-in output modules which are always
 	 * present. Anyhow, we guard this by an assert. -- rgerhards, 2010-12-16
@@ -1144,7 +1144,7 @@ static rsRetVal cflineDoAction(rsconf_t *conf, uchar **p, action_t **ppAction)
 			dbgprintf("error %d parsing config line\n", (int) iRet);
 			break;
 		}
-		pMod = module.GetNxtType(pMod, eMOD_OUT);
+		pMod = module.GetNxtCnfType(conf, pMod, eMOD_OUT);
 	}
 
 	*ppAction = pAction;
@@ -1287,7 +1287,7 @@ setActionScope(void)
 
 	/* now tell each action to start the scope */
 	pMod = NULL;
-	while((pMod = module.GetNxtType(pMod, eMOD_OUT)) != NULL) {
+	while((pMod = module.GetNxtCnfType(loadConf, pMod, eMOD_OUT)) != NULL) {
 		DBGPRINTF("beginning scope on module %s\n", pMod->pszName);
 		pMod->mod.om.newScope();
 	}
@@ -1312,7 +1312,7 @@ unsetActionScope(void)
 
 	/* now tell each action to restore the scope */
 	pMod = NULL;
-	while((pMod = module.GetNxtType(pMod, eMOD_OUT)) != NULL) {
+	while((pMod = module.GetNxtCnfType(loadConf, pMod, eMOD_OUT)) != NULL) {
 		DBGPRINTF("exiting scope on module %s\n", pMod->pszName);
 		pMod->mod.om.restoreScope();
 	}

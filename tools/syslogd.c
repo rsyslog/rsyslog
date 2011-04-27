@@ -2176,7 +2176,7 @@ int realMain(int argc, char **argv)
 					"startup with a dirty config.\n");
 			exit(2);
 		}
-		iRet = RS_RET_OK;
+		localRet = RS_RET_OK;
 	}
 	CHKiRet(localRet);
 

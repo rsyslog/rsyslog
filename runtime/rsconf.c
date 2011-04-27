@@ -301,7 +301,7 @@ runInputModules(void)
 
 	BEGINfunc
 	/* loop through all modules and activate them (brr...) */
-	pMod = module.GetNxtType(NULL, eMOD_IN);
+	pMod = module.GetNxtCnfType(runConf, NULL, eMOD_IN);
 	while(pMod != NULL) {
 		if(pMod->mod.im.bCanRun) {
 			/* activate here */
@@ -309,7 +309,7 @@ runInputModules(void)
 				       0 : 1;
 			thrdCreate(pMod->mod.im.runInput, pMod->mod.im.afterRun, bNeedsCancel);
 		}
-	pMod = module.GetNxtType(pMod, eMOD_IN);
+	pMod = module.GetNxtCnfType(runConf, pMod, eMOD_IN);
 	}
 
 	ENDfunc
@@ -317,11 +317,7 @@ runInputModules(void)
 }
 
 
-/* Start the input modules. This function will probably undergo big changes
- * while we implement the input module interface. For now, it does the most
- * important thing to get at least my poor initial input modules up and
- * running. Almost no config option is taken.
- * rgerhards, 2007-12-14
+/* Make the input modules check if they are ready to start.
  */
 static rsRetVal
 startInputModules(void)
@@ -330,14 +326,14 @@ startInputModules(void)
 	modInfo_t *pMod;
 
 	/* loop through all modules and activate them (brr...) */
-	pMod = module.GetNxtType(NULL, eMOD_IN);
+	pMod = module.GetNxtCnfType(runConf, NULL, eMOD_IN);
 	while(pMod != NULL) {
 		iRet = pMod->mod.im.willRun();
 		pMod->mod.im.bCanRun = (iRet == RS_RET_OK);
 		if(!pMod->mod.im.bCanRun) {
 			DBGPRINTF("module %lx will not run, iRet %d\n", (unsigned long) pMod, iRet);
 		}
-	pMod = module.GetNxtType(pMod, eMOD_IN);
+	pMod = module.GetNxtCnfType(runConf, pMod, eMOD_IN);
 	}
 
 	ENDfunc
@@ -355,6 +351,8 @@ activate(rsconf_t *cnf)
 {
 	DEFiRet;
 
+	/* at this point, we "switch" over to the running conf */
+	runConf = cnf;
 #	if	0 /* currently the DAG is not supported -- code missing! */
 	/* TODO: re-enable this functionality some time later! */
 	/* check if we need to generate a config DAG and, if so, do that */
@@ -377,7 +375,6 @@ activate(rsconf_t *cnf)
 	/* finally let the inputs run... */
 	runInputModules();
 
-	runConf = cnf;
 	dbgprintf("configuration %p activated\n", cnf);
 
 finalize_it:
@@ -589,6 +586,7 @@ regBuildInModule(rsRetVal (*modInit)(), uchar *name, void *pModHdlr)
 	modInfo_t *pMod;
 	DEFiRet;
 	CHKiRet(module.doModInit(modInit, name, pModHdlr, &pMod));
+	addModToCnfList(pMod);
 finalize_it:
 	RETiRet;
 }
@@ -694,8 +692,6 @@ initLegacyConf(void)
 
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionresumeinterval", 0, eCmdHdlrInt,
 		setActionResumeInterval, NULL, NULL, eConfObjGlobal));
-	//CHKiRet(regCfSysLineHdlr((uchar *)"modload", 0, eCmdHdlrCustomHandler,
-		//doModLoad, NULL, NULL, eConfObjGlobal));
 	CHKiRet(regCfSysLineHdlr((uchar *)"modload", 0, eCmdHdlrCustomHandler,
 		conf.doModLoad, NULL, NULL, eConfObjGlobal));
 	CHKiRet(regCfSysLineHdlr((uchar *)"includeconfig", 0, eCmdHdlrCustomHandler,
