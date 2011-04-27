@@ -280,10 +280,14 @@ dropPrivileges(rsconf_t *cnf)
 	 */
 	if(cnf->globals.gidDropPriv != 0) {
 		doDropPrivGid(ourConf->globals.gidDropPriv);
+		DBGPRINTF("group privileges have been dropped to gid %u\n", (unsigned) 
+			  ourConf->globals.gidDropPriv);
 	}
 
 	if(cnf->globals.uidDropPriv != 0) {
 		doDropPrivUid(ourConf->globals.uidDropPriv);
+		DBGPRINTF("user privileges have been dropped to uid %u\n", (unsigned) 
+			  ourConf->globals.uidDropPriv);
 	}
 
 	RETiRet;
@@ -300,7 +304,6 @@ runInputModules(void)
 	int bNeedsCancel;
 
 	BEGINfunc
-	/* loop through all modules and activate them (brr...) */
 	pMod = module.GetNxtCnfType(runConf, NULL, eMOD_IN);
 	while(pMod != NULL) {
 		if(pMod->mod.im.bCanRun) {
@@ -325,7 +328,6 @@ startInputModules(void)
 	DEFiRet;
 	modInfo_t *pMod;
 
-	/* loop through all modules and activate them (brr...) */
 	pMod = module.GetNxtCnfType(runConf, NULL, eMOD_IN);
 	while(pMod != NULL) {
 		iRet = pMod->mod.im.willRun();
