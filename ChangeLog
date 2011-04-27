@@ -1,5 +1,10 @@
 ---------------------------------------------------------------------------
 Version 5.8.1  [V5-stable] (rgerhards), 2011-04-??
+- bugfix: rate-limiting inside imuxsock did not work 100% correct
+  reason was that a global config variable was invalidly accessed where a
+  listener variable should have been used.
+  Also performance-improved the case when rate limiting is turned off (this
+  is a very unintrusive change, thus done directly to the stable version).
 - bugfix: $myhostname not available in RainerScript (and no error message)
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=233
 - bugfix: doc for impstats had wrong config statements
