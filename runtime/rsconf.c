@@ -380,18 +380,6 @@ finalize_it:
  * TODO: move to conf.c?
  */
 
-/* this method is needed to shuffle the current conf object down to the
- * IncludeConfig handler.
- */
-static rsRetVal
-doModLoad(void *pVal, uchar *pNewVal)
-{
-	DEFiRet;
-	iRet = conf.doModLoad(ourConf, pVal, pNewVal);
-	free(pNewVal);
-	RETiRet;
-}
-
 /* legacy config system: set the action resume interval */
 static rsRetVal setActionResumeInterval(void __attribute__((unused)) *pVal, int iNewVal)
 {
@@ -685,8 +673,10 @@ initLegacyConf(void)
 
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionresumeinterval", 0, eCmdHdlrInt,
 		setActionResumeInterval, NULL, NULL, eConfObjGlobal));
+	//CHKiRet(regCfSysLineHdlr((uchar *)"modload", 0, eCmdHdlrCustomHandler,
+		//doModLoad, NULL, NULL, eConfObjGlobal));
 	CHKiRet(regCfSysLineHdlr((uchar *)"modload", 0, eCmdHdlrCustomHandler,
-		doModLoad, NULL, NULL, eConfObjGlobal));
+		conf.doModLoad, NULL, NULL, eConfObjGlobal));
 	CHKiRet(regCfSysLineHdlr((uchar *)"includeconfig", 0, eCmdHdlrCustomHandler,
 		doIncludeLine, NULL, NULL, eConfObjGlobal));
 	CHKiRet(regCfSysLineHdlr((uchar *)"umask", 0, eCmdHdlrFileCreateMode,

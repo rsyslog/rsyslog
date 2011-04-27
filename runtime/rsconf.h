@@ -91,6 +91,11 @@ struct globals_s {
 struct defaults_s {
 };
 
+
+/* list of modules loaded in this configuration (config specific module list) */
+struct cfgmodules_s {
+};
+
 /* outchannel-specific data */
 struct outchannels_s {
 	struct outchannel *ochRoot;	/* the root of the outchannel list */
@@ -123,6 +128,7 @@ struct rulesets_s {
 /* the rsconf object */
 struct rsconf_s {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
+	cfgmodules_t modules;
 	globals_t globals;
 	defaults_t defaults;
 	templates_t templates;

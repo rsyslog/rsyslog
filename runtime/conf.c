@@ -249,10 +249,9 @@ finalize_it:
 }
 
 
-/* process a $ModLoad config line.
- */
+/* process a $ModLoad config line.  */
 rsRetVal
-doModLoad(rsconf_t * conf, uchar **pp, __attribute__((unused)) void* pVal)
+doModLoad(uchar **pp, __attribute__((unused)) void* pVal)
 {
 	DEFiRet;
 	uchar szName[512];
