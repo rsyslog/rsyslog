@@ -203,7 +203,7 @@ static int bFinished = 0;	/* used by termination signal handler, read-only excep
 				 * is either 0 or the number of the signal that requested the
  				 * termination.
 				 */
-static int iConfigVerify = 0;	/* is this just a config verify run? */
+int iConfigVerify = 0;	/* is this just a config verify run? */
 
 /* Intervals at which we flush out "message repeated" messages,
  * in seconds after previous message is logged.  After each flush,
@@ -1043,57 +1043,7 @@ static void doexit()
 	exit(0); /* "good" exit, only during child-creation */
 }
 
-
-/* drop to specified group
- * if something goes wrong, the function never returns
- * Note that such an abort can cause damage to on-disk structures, so we should
- * re-design the "interface" in the long term. -- rgerhards, 2008-11-26
- */
-static void doDropPrivGid(int iGid)
-{
-	int res;
-	uchar szBuf[1024];
-
-	res = setgroups(0, NULL); /* remove all supplementary group IDs */
-	if(res) {
-		perror("could not remove supplemental group IDs");
-		exit(1);
-	}
-	DBGPRINTF("setgroups(0, NULL): %d\n", res);
-	res = setgid(iGid);
-	if(res) {
-		/* if we can not set the userid, this is fatal, so let's unconditionally abort */
-		perror("could not set requested group id");
-		exit(1);
-	}
-	DBGPRINTF("setgid(%d): %d\n", iGid, res);
-	snprintf((char*)szBuf, sizeof(szBuf)/sizeof(uchar), "rsyslogd's groupid changed to %d", iGid);
-	logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, szBuf, 0);
-}
-
-
-/* drop to specified user
- * if something goes wrong, the function never returns
- * Note that such an abort can cause damage to on-disk structures, so we should
- * re-design the "interface" in the long term. -- rgerhards, 2008-11-19
- */
-static void doDropPrivUid(int iUid)
-{
-	int res;
-	uchar szBuf[1024];
-
-	res = setuid(iUid);
-	if(res) {
-		/* if we can not set the userid, this is fatal, so let's unconditionally abort */
-		perror("could not set requested userid");
-		exit(1);
-	}
-	DBGPRINTF("setuid(%d): %d\n", iUid, res);
-	snprintf((char*)szBuf, sizeof(szBuf)/sizeof(uchar), "rsyslogd's userid changed to %d", iUid);
-	logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, szBuf, 0);
-}
-
-
+#if 0 /* TODO: re-enable, currently not used */
 /* helper to generateConfigDAG, to print out all actions via
  * the llExecFunc() facility.
  * rgerhards, 2007-08-02
@@ -1278,61 +1228,7 @@ generateConfigDAG(uchar *pszDAGFile)
 finalize_it:
 	RETiRet;
 }
-
-
-/* Actually run the input modules.  This happens after privileges are dropped,
- * if that is requested.
- */
-static rsRetVal
-runInputModules(void)
-{
-	modInfo_t *pMod;
-	int bNeedsCancel;
-
-	BEGINfunc
-	/* loop through all modules and activate them (brr...) */
-	pMod = module.GetNxtType(NULL, eMOD_IN);
-	while(pMod != NULL) {
-		if(pMod->mod.im.bCanRun) {
-			/* activate here */
-			bNeedsCancel = (pMod->isCompatibleWithFeature(sFEATURENonCancelInputTermination) == RS_RET_OK) ?
-				       0 : 1;
-			thrdCreate(pMod->mod.im.runInput, pMod->mod.im.afterRun, bNeedsCancel);
-		}
-	pMod = module.GetNxtType(pMod, eMOD_IN);
-	}
-
-	ENDfunc
-	return RS_RET_OK; /* intentional: we do not care about module errors */
-}
-
-
-/* Start the input modules. This function will probably undergo big changes
- * while we implement the input module interface. For now, it does the most
- * important thing to get at least my poor initial input modules up and
- * running. Almost no config option is taken.
- * rgerhards, 2007-12-14
- */
-static rsRetVal
-startInputModules(void)
-{
-	DEFiRet;
-	modInfo_t *pMod;
-
-	/* loop through all modules and activate them (brr...) */
-	pMod = module.GetNxtType(NULL, eMOD_IN);
-	while(pMod != NULL) {
-		iRet = pMod->mod.im.willRun();
-		pMod->mod.im.bCanRun = (iRet == RS_RET_OK);
-		if(!pMod->mod.im.bCanRun) {
-			DBGPRINTF("module %lx will not run, iRet %d\n", (unsigned long) pMod, iRet);
-		}
-	pMod = module.GetNxtType(pMod, eMOD_IN);
-	}
-
-	ENDfunc
-	return RS_RET_OK; /* intentional: we do not care about module errors */
-}
+#endif
 
 
 /* create a main message queue, now also used for ruleset queues. This function
@@ -1406,59 +1302,22 @@ rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName)
 static rsRetVal
 init(void)
 {
-	rsRetVal localRet;
-	int iNbrActions;
-	int bHadConfigErr = 0;
-	char cbuf[BUFSIZ];
 	char bufStartUpMsg[512];
 	struct sigaction sigAct;
 	DEFiRet;
 
 	legacyOptsHook();
 
-	/* check if we need to generate a config DAG and, if so, do that */
-	if(ourConf->globals.pszConfDAGFile != NULL)
-		generateConfigDAG(ourConf->globals.pszConfDAGFile);
 
-	/* we are done checking the config - now validate if we should actually run or not.
-	 * If not, terminate. -- rgerhards, 2008-07-25
-	 */
-	if(iConfigVerify) {
-	if(bHadConfigErr) {
-		/* a bit dirty, but useful... */
+	/* create message queue */
+	CHKiRet_Hdlr(createMainQueue(&pMsgQueue, UCHAR_CONSTANT("main Q"))) {
+		/* no queue is fatal, we need to give up in that case... */
+		fprintf(stderr, "fatal error %d: could not create message queue - rsyslogd can not run!\n", iRet);
 		exit(1);
 	}
-	ABORT_FINALIZE(RS_RET_VALIDATION_RUN);
-}
 
-#warning restructure following if to use return value of loadConf
-if(loadConf->globals.bAbortOnUncleanConfig && bHadConfigErr) {
-	fprintf(stderr, "rsyslogd: $AbortOnUncleanConfig is set, and config is not clean.\n"
-			"Check error log for details, fix errors and restart. As a last\n"
-			"resort, you may want to remove $AbortOnUncleanConfig to permit a\n"
-			"startup with a dirty config.\n");
-	exit(2);
-}
-
-/* create message queue */
-CHKiRet_Hdlr(createMainQueue(&pMsgQueue, UCHAR_CONSTANT("main Q"))) {
-	/* no queue is fatal, we need to give up in that case... */
-	fprintf(stderr, "fatal error %d: could not create message queue - rsyslogd can not run!\n", iRet);
-	exit(1);
-}
-
-bHaveMainQueue = (ourConf->globals.mainQ.MainMsgQueType == QUEUETYPE_DIRECT) ? 0 : 1;
-DBGPRINTF("Main processing queue is initialized and running\n");
-
-	/* the output part and the queue is now ready to run. So it is a good time
-	 * to initialize the inputs. Please note that the net code above should be
-	 * shuffled to down here once we have everything in input modules.
-	 * rgerhards, 2007-12-14
-	 * NOTE: as of 2009-06-29, the input modules are initialized, but not yet run.
-	 * Keep in mind. though, that the outputs already run if the queue was
-	 * persisted to disk. -- rgerhards
-	 */
-	startInputModules();
+	bHaveMainQueue = (ourConf->globals.mainQ.MainMsgQueType == QUEUETYPE_DIRECT) ? 0 : 1;
+	DBGPRINTF("Main processing queue is initialized and running\n");
 
 	memset(&sigAct, 0, sizeof (sigAct));
 	sigemptyset(&sigAct.sa_mask);
@@ -1669,67 +1528,6 @@ static void printVersion(void)
 	printf("\nSee http://www.rsyslog.com for more information.\n");
 }
 
-
-/* This function is called after initial initalization. It is used to
- * move code out of the too-long main() function.
- * rgerhards, 2007-10-17
- */
-static rsRetVal mainThread()
-{
-	DEFiRet;
-
-	CHKiRet(init());
-
-	if(Debug && debugging_on) {
-		dbgprintf("Debugging enabled, SIGUSR1 to turn off debugging.\n");
-	}
-
-	/* Send a signal to the parent so it can terminate.
-	 */
-	if(myPid != ppid)
-		kill(ppid, SIGTERM);
-
-
-	/* If instructed to do so, we now drop privileges. Note that this is not 100% secure,
-	 * because outputs are already running at this time. However, we can implement
-	 * dropping of privileges rather quickly and it will work in many cases. While it is not
-	 * the ultimate solution, the current one is still much better than not being able to
-	 * drop privileges at all. Doing it correctly, requires a change in architecture, which
-	 * we should do over time. TODO -- rgerhards, 2008-11-19
-	 */
-	if(ourConf->globals.gidDropPriv != 0) {
-		doDropPrivGid(ourConf->globals.gidDropPriv);
-	}
-
-	if(ourConf->globals.uidDropPriv != 0) {
-		doDropPrivUid(ourConf->globals.uidDropPriv);
-	}
-
-	/* finally let the inputs run... */
-	runInputModules();
-
-	/* END OF INTIALIZATION
-	 */
-	DBGPRINTF("initialization completed, transitioning to regular run mode\n");
-
-	/* close stderr and stdout if they are kept open during a fork. Note that this
-	 * may introduce subtle security issues: if we are in a jail, one may break out of
-	 * it via these descriptors. But if I close them earlier, error messages will (once
-	 * again) not be emitted to the user that starts the daemon. As root jail support
-	 * is still in its infancy (and not really done), we currently accept this issue.
-	 * rgerhards, 2009-06-29
-	 */
-	if(!(Debug == DEBUG_FULL || NoFork)) {
-		close(1);
-		close(2);
-		ourConf->globals.bErrMsgToStderr = 0;
-	}
-
-	mainloop();
-
-finalize_it:
-	RETiRet;
-}
 
 
 /* Method to initialize all global classes and use the objects that we need.
@@ -2033,8 +1831,7 @@ doGlblProcessInit(void)
  */
 int realMain(int argc, char **argv)
 {
-	DEFiRet;
-
+	rsRetVal localRet;
 	register uchar *p;
 	int ch;
 	struct hostent *hent;
@@ -2050,6 +1847,7 @@ int realMain(int argc, char **argv)
 	uchar *LocalDomain;
 	uchar *LocalFQDNName;
 	char cwdbuf[128]; /* buffer to obtain/display current working directory */
+	DEFiRet;
 
 	/* first, parse the command line options. We do not carry out any actual work, just
 	 * see what we should do. This relieves us from certain anomalies and we can process
@@ -2364,18 +2162,28 @@ int realMain(int argc, char **argv)
 	if(iRet != RS_RET_END_OF_LINKEDLIST)
 		FINALIZE;
 
-	CHKiRet(rsconf.Load(&ourConf, ConfFile));
-	
 	if(iConfigVerify) {
 		fprintf(stderr, "rsyslogd: version %s, config validation run (level %d), master config %s\n",
 			VERSION, iConfigVerify, ConfFile);
 	}
 
+	localRet = rsconf.Load(&ourConf, ConfFile);
+	if(localRet == RS_RET_NONFATAL_CONFIG_ERR) {
+		if(loadConf->globals.bAbortOnUncleanConfig) {
+			fprintf(stderr, "rsyslogd: $AbortOnUncleanConfig is set, and config is not clean.\n"
+					"Check error log for details, fix errors and restart. As a last\n"
+					"resort, you may want to remove $AbortOnUncleanConfig to permit a\n"
+					"startup with a dirty config.\n");
+			exit(2);
+		}
+		iRet = RS_RET_OK;
+	}
+	CHKiRet(localRet);
+
 	if(bChDirRoot) {
 		if(chdir("/") != 0)
 			fprintf(stderr, "Can not do 'cd /' - still trying to run\n");
 	}
-
 
 	/* process compatibility mode settings */
 	if(iCompatibilityMode < 4) {
@@ -2406,7 +2214,34 @@ int realMain(int argc, char **argv)
 	if(!iConfigVerify)
 		CHKiRet(doGlblProcessInit());
 
-	CHKiRet(mainThread());
+	CHKiRet(init());
+
+	if(Debug && debugging_on) {
+		dbgprintf("Debugging enabled, SIGUSR1 to turn off debugging.\n");
+	}
+
+	/* Send a signal to the parent so it can terminate.  */
+	if(myPid != ppid)
+		kill(ppid, SIGTERM);
+
+
+	/* END OF INTIALIZATION */
+	DBGPRINTF("initialization completed, transitioning to regular run mode\n");
+
+	/* close stderr and stdout if they are kept open during a fork. Note that this
+	 * may introduce subtle security issues: if we are in a jail, one may break out of
+	 * it via these descriptors. But if I close them earlier, error messages will (once
+	 * again) not be emitted to the user that starts the daemon. As root jail support
+	 * is still in its infancy (and not really done), we currently accept this issue.
+	 * rgerhards, 2009-06-29
+	 */
+	if(!(Debug == DEBUG_FULL || NoFork)) {
+		close(1);
+		close(2);
+		ourConf->globals.bErrMsgToStderr = 0;
+	}
+
+	mainloop();
 
 	/* do any de-init's that need to be done AFTER this comment */
 

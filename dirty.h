@@ -42,6 +42,7 @@ rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName);
 extern int MarkInterval;
 extern int repeatinterval[2];
 extern qqueue_t *pMsgQueue;				/* the main message queue */
+extern int iConfigVerify;				/* is this just a config verify run? */
 #define	MAXREPEAT ((int)((sizeof(repeatinterval) / sizeof(repeatinterval[0])) - 1))
 #define	REPEATTIME(f)	((f)->f_time + repeatinterval[(f)->f_repeatcount])
 #define	BACKOFF(f)	{ if (++(f)->f_repeatcount > MAXREPEAT) \

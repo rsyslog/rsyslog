@@ -29,6 +29,8 @@
 #include <assert.h>
 #include <string.h>
 #include <errno.h>
+#include <unistd.h>
+#include <grp.h>
 #include <sys/resource.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -60,6 +62,8 @@
 #include "smtradfwd.h"
 #include "parser.h"
 #include "outchannel.h"
+#include "threads.h"
+#include "dirty.h"
 
 /* static data */
 DEFobjStaticHelpers
@@ -198,6 +202,139 @@ CODESTARTobjDebugPrint(rsconf)
 ENDobjDebugPrint(rsconf)
 
 
+/* drop to specified group
+ * if something goes wrong, the function never returns
+ * Note that such an abort can cause damage to on-disk structures, so we should
+ * re-design the "interface" in the long term. -- rgerhards, 2008-11-26
+ */
+static void doDropPrivGid(int iGid)
+{
+	int res;
+	uchar szBuf[1024];
+
+	res = setgroups(0, NULL); /* remove all supplementary group IDs */
+	if(res) {
+		perror("could not remove supplemental group IDs");
+		exit(1);
+	}
+	DBGPRINTF("setgroups(0, NULL): %d\n", res);
+	res = setgid(iGid);
+	if(res) {
+		/* if we can not set the userid, this is fatal, so let's unconditionally abort */
+		perror("could not set requested group id");
+		exit(1);
+	}
+	DBGPRINTF("setgid(%d): %d\n", iGid, res);
+	snprintf((char*)szBuf, sizeof(szBuf)/sizeof(uchar), "rsyslogd's groupid changed to %d", iGid);
+	logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, szBuf, 0);
+}
+
+
+/* drop to specified user
+ * if something goes wrong, the function never returns
+ * Note that such an abort can cause damage to on-disk structures, so we should
+ * re-design the "interface" in the long term. -- rgerhards, 2008-11-19
+ */
+static void doDropPrivUid(int iUid)
+{
+	int res;
+	uchar szBuf[1024];
+
+	res = setuid(iUid);
+	if(res) {
+		/* if we can not set the userid, this is fatal, so let's unconditionally abort */
+		perror("could not set requested userid");
+		exit(1);
+	}
+	DBGPRINTF("setuid(%d): %d\n", iUid, res);
+	snprintf((char*)szBuf, sizeof(szBuf)/sizeof(uchar), "rsyslogd's userid changed to %d", iUid);
+	logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, szBuf, 0);
+}
+
+
+
+/* drop privileges. This will drop to the configured privileges, if
+ * set by the user. After this method has been executed, the previous
+ * privileges can no be re-gained.
+ */
+static inline rsRetVal
+dropPrivileges(rsconf_t *cnf)
+{
+	DEFiRet;
+
+	/* If instructed to do so, we now drop privileges. Note that this is not 100% secure,
+	 * because outputs are already running at this time. However, we can implement
+	 * dropping of privileges rather quickly and it will work in many cases. While it is not
+	 * the ultimate solution, the current one is still much better than not being able to
+	 * drop privileges at all. Doing it correctly, requires a change in architecture, which
+	 * we should do over time. TODO -- rgerhards, 2008-11-19
+	 */
+	if(cnf->globals.gidDropPriv != 0) {
+		doDropPrivGid(ourConf->globals.gidDropPriv);
+	}
+
+	if(cnf->globals.uidDropPriv != 0) {
+		doDropPrivUid(ourConf->globals.uidDropPriv);
+	}
+
+	RETiRet;
+}
+
+
+/* Actually run the input modules.  This happens after privileges are dropped,
+ * if that is requested.
+ */
+static rsRetVal
+runInputModules(void)
+{
+	modInfo_t *pMod;
+	int bNeedsCancel;
+
+	BEGINfunc
+	/* loop through all modules and activate them (brr...) */
+	pMod = module.GetNxtType(NULL, eMOD_IN);
+	while(pMod != NULL) {
+		if(pMod->mod.im.bCanRun) {
+			/* activate here */
+			bNeedsCancel = (pMod->isCompatibleWithFeature(sFEATURENonCancelInputTermination) == RS_RET_OK) ?
+				       0 : 1;
+			thrdCreate(pMod->mod.im.runInput, pMod->mod.im.afterRun, bNeedsCancel);
+		}
+	pMod = module.GetNxtType(pMod, eMOD_IN);
+	}
+
+	ENDfunc
+	return RS_RET_OK; /* intentional: we do not care about module errors */
+}
+
+
+/* Start the input modules. This function will probably undergo big changes
+ * while we implement the input module interface. For now, it does the most
+ * important thing to get at least my poor initial input modules up and
+ * running. Almost no config option is taken.
+ * rgerhards, 2007-12-14
+ */
+static rsRetVal
+startInputModules(void)
+{
+	DEFiRet;
+	modInfo_t *pMod;
+
+	/* loop through all modules and activate them (brr...) */
+	pMod = module.GetNxtType(NULL, eMOD_IN);
+	while(pMod != NULL) {
+		iRet = pMod->mod.im.willRun();
+		pMod->mod.im.bCanRun = (iRet == RS_RET_OK);
+		if(!pMod->mod.im.bCanRun) {
+			DBGPRINTF("module %lx will not run, iRet %d\n", (unsigned long) pMod, iRet);
+		}
+	pMod = module.GetNxtType(pMod, eMOD_IN);
+	}
+
+	ENDfunc
+	return RS_RET_OK; /* intentional: we do not care about module errors */
+}
+
 /* Activate an already-loaded configuration. The configuration will become
  * the new running conf (if successful). Note that in theory this method may
  * be called when there already is a running conf. In practice, the current
@@ -208,8 +345,33 @@ rsRetVal
 activate(rsconf_t *cnf)
 {
 	DEFiRet;
+
+#	if	0 /* currently the DAG is not supported -- code missing! */
+	/* TODO: re-enable this functionality some time later! */
+	/* check if we need to generate a config DAG and, if so, do that */
+	if(ourConf->globals.pszConfDAGFile != NULL)
+		generateConfigDAG(ourConf->globals.pszConfDAGFile);
+#	endif
+
+	/* the output part and the queue is now ready to run. So it is a good time
+	 * to initialize the inputs. Please note that the net code above should be
+	 * shuffled to down here once we have everything in input modules.
+	 * rgerhards, 2007-12-14
+	 * NOTE: as of 2009-06-29, the input modules are initialized, but not yet run.
+	 * Keep in mind. though, that the outputs already run if the queue was
+	 * persisted to disk. -- rgerhards
+	 */
+	startInputModules();
+
+	CHKiRet(dropPrivileges(cnf));
+
+	/* finally let the inputs run... */
+	runInputModules();
+
 	runConf = cnf;
 	dbgprintf("configuration %p activated\n", cnf);
+
+finalize_it:
 	RETiRet;
 }
 
@@ -732,6 +894,14 @@ ourConf = loadConf; // TODO: remove, once ourConf is gone!
 
 	CHKiRet(validateConf());
 
+	/* we are done checking the config - now validate if we should actually run or not.
+	 * If not, terminate. -- rgerhards, 2008-07-25
+	 * TODO: iConfigVerify -- should it be pulled from the config, or leave as is (option)?
+	 */
+	if(iConfigVerify) {
+		ABORT_FINALIZE(RS_RET_VALIDATION_RUN);
+	}
+
 	/* all OK, pass loaded conf to caller */
 	*cnf = loadConf;
 // TODO: enable this once all config code is moved to here!	loadConf = NULL;
@@ -739,6 +909,9 @@ ourConf = loadConf; // TODO: remove, once ourConf is gone!
 	dbgprintf("rsyslog finished loading initial config %p\n", loadConf);
 	rsconfDebugPrint(loadConf);
 
+	/* return warning state if we had some acceptable problems */
+	if(bHadConfigErr)
+		iRet = RS_RET_NONFATAL_CONFIG_ERR;
 finalize_it:
 	RETiRet;
 }
