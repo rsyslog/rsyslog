@@ -432,7 +432,8 @@ finalize_it:
 
 /* find ratelimiter to use for this message. Currently, we use the
  * pid, but may change to cgroup later (probably via a config switch).
- * Returns NULL if not found.
+ * Returns NULL if not found or rate-limiting not activated for this
+ * listener (the latter being a performance enhancement).
  */
 static inline rsRetVal
 findRatelimiter(lstn_t *pLstn, struct ucred *cred, rs_ratelimit_state_t **prl)
@@ -444,6 +445,10 @@ findRatelimiter(lstn_t *pLstn, struct ucred *cred, rs_ratelimit_state_t **prl)
 
 	if(cred == NULL)
 		FINALIZE;
+	if(pLstn->ratelimitInterval == 0) {
+		*prl = NULL;
+		FINALIZE;
+	}
 
 	rl = hashtable_search(pLstn->ht, &cred->pid);
 	if(rl == NULL) {
@@ -454,7 +459,7 @@ findRatelimiter(lstn_t *pLstn, struct ucred *cred, rs_ratelimit_state_t **prl)
 		CHKmalloc(rl = malloc(sizeof(rs_ratelimit_state_t)));
 		CHKmalloc(keybuf = malloc(sizeof(pid_t)));
 		*keybuf = cred->pid;
-		initRatelimitState(rl, ratelimitInterval, pLstn->ratelimitBurst);
+		initRatelimitState(rl, pLstn->ratelimitInterval, pLstn->ratelimitBurst);
 		r = hashtable_insert(pLstn->ht, keybuf, rl);
 		if(r == 0)
 			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
