@@ -155,6 +155,8 @@ ENDobjDestruct(rsconf)
 
 /* DebugPrint support for the rsconf object */
 BEGINobjDebugPrint(rsconf) /* be sure to specify the object type also in END and CODESTART macros! */
+	cfgmodules_etry_t *modNode;
+
 	dbgprintf("configuration object %p\n", pThis);
 	dbgprintf("Global Settings:\n");
 	dbgprintf("  bDebugPrintTemplateList.............: %d\n",
@@ -170,7 +172,7 @@ BEGINobjDebugPrint(rsconf) /* be sure to specify the object type also in END and
 	dbgprintf("  drop Msgs with malicious PTR Record : %d\n",
 		  glbl.GetDropMalPTRMsgs());
 	ruleset.DebugPrintAll(pThis);
-	DBGPRINTF("\n");
+	dbgprintf("\n");
 	if(pThis->globals.bDebugPrintTemplateList)
 		tplPrintList(pThis);
 	if(pThis->globals.bDebugPrintModuleList)
@@ -178,14 +180,17 @@ BEGINobjDebugPrint(rsconf) /* be sure to specify the object type also in END and
 	if(pThis->globals.bDebugPrintCfSysLineHandlerList)
 		dbgPrintCfSysLineHandlers();
 	// TODO: The following code needs to be "streamlined", so far just moved over...
-	DBGPRINTF("Main queue size %d messages.\n", pThis->globals.mainQ.iMainMsgQueueSize);
-	DBGPRINTF("Main queue worker threads: %d, wThread shutdown: %d, Perists every %d updates.\n",
-		  pThis->globals.mainQ.iMainMsgQueueNumWorkers, pThis->globals.mainQ.iMainMsgQtoWrkShutdown, pThis->globals.mainQ.iMainMsgQPersistUpdCnt);
-	DBGPRINTF("Main queue timeouts: shutdown: %d, action completion shutdown: %d, enq: %d\n",
-		   pThis->globals.mainQ.iMainMsgQtoQShutdown, pThis->globals.mainQ.iMainMsgQtoActShutdown, pThis->globals.mainQ.iMainMsgQtoEnq);
-	DBGPRINTF("Main queue watermarks: high: %d, low: %d, discard: %d, discard-severity: %d\n",
-		   pThis->globals.mainQ.iMainMsgQHighWtrMark, pThis->globals.mainQ.iMainMsgQLowWtrMark, pThis->globals.mainQ.iMainMsgQDiscardMark, pThis->globals.mainQ.iMainMsgQDiscardSeverity);
-	DBGPRINTF("Main queue save on shutdown %d, max disk space allowed %lld\n",
+	dbgprintf("Main queue size %d messages.\n", pThis->globals.mainQ.iMainMsgQueueSize);
+	dbgprintf("Main queue worker threads: %d, wThread shutdown: %d, Perists every %d updates.\n",
+		  pThis->globals.mainQ.iMainMsgQueueNumWorkers,
+		  pThis->globals.mainQ.iMainMsgQtoWrkShutdown, pThis->globals.mainQ.iMainMsgQPersistUpdCnt);
+	dbgprintf("Main queue timeouts: shutdown: %d, action completion shutdown: %d, enq: %d\n",
+		   pThis->globals.mainQ.iMainMsgQtoQShutdown,
+		   pThis->globals.mainQ.iMainMsgQtoActShutdown, pThis->globals.mainQ.iMainMsgQtoEnq);
+	dbgprintf("Main queue watermarks: high: %d, low: %d, discard: %d, discard-severity: %d\n",
+		   pThis->globals.mainQ.iMainMsgQHighWtrMark, pThis->globals.mainQ.iMainMsgQLowWtrMark,
+		   pThis->globals.mainQ.iMainMsgQDiscardMark, pThis->globals.mainQ.iMainMsgQDiscardSeverity);
+	dbgprintf("Main queue save on shutdown %d, max disk space allowed %lld\n",
 		   pThis->globals.mainQ.bMainMsgQSaveOnShutdown, pThis->globals.mainQ.iMainMsgQueMaxDiskSpace);
 	/* TODO: add
 	iActionRetryCount = 0;
@@ -196,8 +201,12 @@ BEGINobjDebugPrint(rsconf) /* be sure to specify the object type also in END and
 	setQPROP(qqueueSetiMinMsgsPerWrkr, "$MainMsgQueueWorkerThreadMinimumMessages", 100);
 	setQPROP(qqueueSetbSaveOnShutdown, "$MainMsgQueueSaveOnShutdown", 1);
 	 */
-	DBGPRINTF("Work Directory: '%s'.\n", glbl.GetWorkDir());
+	dbgprintf("Work Directory: '%s'.\n", glbl.GetWorkDir());
 	ochPrintList();
+	dbgprintf("Modules used in this configuration:\n");
+	for(modNode = pThis->modules.root ; modNode != NULL ; modNode = modNode->next) {
+		dbgprintf("    %s\n", module.GetName(modNode->pMod));
+	}
 CODESTARTobjDebugPrint(rsconf)
 ENDobjDebugPrint(rsconf)
 
@@ -573,6 +582,18 @@ setModDir(void __attribute__((unused)) *pVal, uchar* pszNewVal)
 }
 
 
+/* "load" a build in module and register it for the current load config */
+static rsRetVal
+regBuildInModule(rsRetVal (*modInit)(), uchar *name, void *pModHdlr)
+{
+	modInfo_t *pMod;
+	DEFiRet;
+	CHKiRet(module.doModInit(modInit, name, pModHdlr, &pMod));
+finalize_it:
+	RETiRet;
+}
+
+
 /* load build-in modules
  * very first version begun on 2007-07-23 by rgerhards
  */
@@ -581,12 +602,12 @@ loadBuildInModules()
 {
 	DEFiRet;
 
-	CHKiRet(module.doModInit(modInitFile, UCHAR_CONSTANT("builtin-file"), NULL));
-	CHKiRet(module.doModInit(modInitPipe, UCHAR_CONSTANT("builtin-pipe"), NULL));
-	CHKiRet(module.doModInit(modInitShell, UCHAR_CONSTANT("builtin-shell"), NULL));
-	CHKiRet(module.doModInit(modInitDiscard, UCHAR_CONSTANT("builtin-discard"), NULL));
+	CHKiRet(regBuildInModule(modInitFile, UCHAR_CONSTANT("builtin-file"), NULL));
+	CHKiRet(regBuildInModule(modInitPipe, UCHAR_CONSTANT("builtin-pipe"), NULL));
+	CHKiRet(regBuildInModule(modInitShell, UCHAR_CONSTANT("builtin-shell"), NULL));
+	CHKiRet(regBuildInModule(modInitDiscard, UCHAR_CONSTANT("builtin-discard"), NULL));
 #	ifdef SYSLOG_INET
-	CHKiRet(module.doModInit(modInitFwd, UCHAR_CONSTANT("builtin-fwd"), NULL));
+	CHKiRet(regBuildInModule(modInitFwd, UCHAR_CONSTANT("builtin-fwd"), NULL));
 #	endif
 
 	/* dirty, but this must be for the time being: the usrmsg module must always be
@@ -598,11 +619,11 @@ loadBuildInModules()
 	 * User names now must begin with:
 	 *   [a-zA-Z0-9_.]
 	 */
-	CHKiRet(module.doModInit(modInitUsrMsg, (uchar*) "builtin-usrmsg", NULL));
+	CHKiRet(regBuildInModule(modInitUsrMsg, (uchar*) "builtin-usrmsg", NULL));
 
 	/* load build-in parser modules */
-	CHKiRet(module.doModInit(modInitpmrfc5424, UCHAR_CONSTANT("builtin-pmrfc5424"), NULL));
-	CHKiRet(module.doModInit(modInitpmrfc3164, UCHAR_CONSTANT("builtin-pmrfc3164"), NULL));
+	CHKiRet(regBuildInModule(modInitpmrfc5424, UCHAR_CONSTANT("builtin-pmrfc5424"), NULL));
+	CHKiRet(regBuildInModule(modInitpmrfc3164, UCHAR_CONSTANT("builtin-pmrfc3164"), NULL));
 
 	/* and set default parser modules. Order is *very* important, legacy
 	 * (3164) parser needs to go last! */
@@ -610,10 +631,10 @@ loadBuildInModules()
 	CHKiRet(parser.AddDfltParser(UCHAR_CONSTANT("rsyslog.rfc3164")));
 
 	/* load build-in strgen modules */
-	CHKiRet(module.doModInit(modInitsmfile, UCHAR_CONSTANT("builtin-smfile"), NULL));
-	CHKiRet(module.doModInit(modInitsmtradfile, UCHAR_CONSTANT("builtin-smtradfile"), NULL));
-	CHKiRet(module.doModInit(modInitsmfwd, UCHAR_CONSTANT("builtin-smfwd"), NULL));
-	CHKiRet(module.doModInit(modInitsmtradfwd, UCHAR_CONSTANT("builtin-smtradfwd"), NULL));
+	CHKiRet(regBuildInModule(modInitsmfile, UCHAR_CONSTANT("builtin-smfile"), NULL));
+	CHKiRet(regBuildInModule(modInitsmtradfile, UCHAR_CONSTANT("builtin-smtradfile"), NULL));
+	CHKiRet(regBuildInModule(modInitsmfwd, UCHAR_CONSTANT("builtin-smfwd"), NULL));
+	CHKiRet(regBuildInModule(modInitsmtradfwd, UCHAR_CONSTANT("builtin-smtradfwd"), NULL));
 
 finalize_it:
 	if(iRet != RS_RET_OK) {

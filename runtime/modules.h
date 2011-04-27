@@ -166,11 +166,14 @@ BEGINinterface(module) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Release)(char *srcFile, modInfo_t **ppThis);	/**< release a module (ref counting) */
 	void (*PrintList)(void);
 	rsRetVal (*UnloadAndDestructAll)(eModLinkType_t modLinkTypesToUnload);
-	rsRetVal (*doModInit)(rsRetVal (*modInit)(), uchar *name, void *pModHdlr);
-	rsRetVal (*Load)(uchar *name);
+	rsRetVal (*doModInit)(rsRetVal (*modInit)(), uchar *name, void *pModHdlr, modInfo_t **pNew);
+	rsRetVal (*Load)(uchar *name, sbool bConfLoad);
 	rsRetVal (*SetModDir)(uchar *name);
 ENDinterface(module)
-#define moduleCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
+#define moduleCURR_IF_VERSION 2 /* increment whenever you change the interface structure! */
+/* Changes: 
+ * v2 - added param bCondLoad to Load call - 2011-04-27
+ */
 
 /* prototypes */
 PROTOTYPEObj(module);

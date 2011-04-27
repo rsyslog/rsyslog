@@ -93,7 +93,13 @@ struct defaults_s {
 
 
 /* list of modules loaded in this configuration (config specific module list) */
+struct cfgmodules_etry_s {
+	cfgmodules_etry_t *next;
+	modInfo_t *pMod;
+};
+
 struct cfgmodules_s {
+	cfgmodules_etry_t *root;
 };
 
 /* outchannel-specific data */

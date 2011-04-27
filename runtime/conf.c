@@ -279,7 +279,7 @@ doModLoad(uchar **pp, __attribute__((unused)) void* pVal)
 	else
 		pModName = szName;
 
-	CHKiRet(module.Load(pModName));
+	CHKiRet(module.Load(pModName, 1));
 
 finalize_it:
 	RETiRet;

@@ -1154,7 +1154,7 @@ UseObj(char *srcFile, uchar *pObjName, uchar *pObjFile, interface_t *pIf)
 		if(pObjFile == NULL) {
 			FINALIZE; /* no chance, we have lost... */
 		} else {
-			CHKiRet(module.Load(pObjFile));
+			CHKiRet(module.Load(pObjFile, 0));
 			/* NOW, we must find it or we have a problem... */
 			CHKiRet(FindObjInfo(pStr, &pObjInfo));
 		}

@@ -318,7 +318,7 @@ static uchar *modGetStateName(modInfo_t *pThis)
 /* Add a module to the loaded module linked list
  */
 static inline void
-addModToList(modInfo_t *pThis)
+addModToGlblList(modInfo_t *pThis)
 {
 	assert(pThis != NULL);
 
@@ -330,6 +330,53 @@ addModToList(modInfo_t *pThis)
 		pLoadedModulesLast->pNext = pThis;
 		pLoadedModulesLast = pThis;
 	}
+}
+
+
+/* Add a module to the config module list for current loadConf
+ */
+static inline rsRetVal
+addModToCnfList(modInfo_t *pThis)
+{
+	cfgmodules_etry_t *pNew;
+	cfgmodules_etry_t *pLast;
+	DEFiRet;
+	assert(pThis != NULL);
+
+	if(loadConf == NULL) {
+		/* we are in an early init state */
+		FINALIZE;
+	}
+
+	/* check for duplicates and, as a side-activity, identify last node */
+	pLast = loadConf->modules.root; 
+	if(pLast != NULL) {
+		while(1) { /* loop broken inside */
+			if(pLast->pMod == pThis) {
+				DBGPRINTF("module '%s' already in this config\n", modGetName(pThis));
+				FINALIZE;
+			}
+			if(pLast->next == NULL)
+				break;
+			pLast = pLast -> next;
+		}
+	}
+
+	/* if we reach this point, pLast is the tail pointer */
+
+	CHKmalloc(pNew = MALLOC(sizeof(cfgmodules_etry_t)));
+	pNew->next = NULL;
+	pNew->pMod = pThis;
+
+	if(pLast == NULL) {
+		loadConf->modules.root = pNew;
+	} else {
+		/* there already exist entries */
+		pLast->next = pNew;
+	}
+
+finalize_it:
+	RETiRet;
 }
 
 
@@ -407,7 +454,8 @@ finalize_it:
  * everything needed to fully initialize the module.
  */
 static rsRetVal
-doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_t*), uchar *name, void *pModHdlr)
+doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_t*),
+	  uchar *name, void *pModHdlr, modInfo_t **pNewModule)
 {
 	rsRetVal localRet;
 	modInfo_t *pNew = NULL;
@@ -569,12 +617,14 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 	}
 
 	/* we initialized the structure, now let's add it to the linked list of modules */
-	addModToList(pNew);
+	addModToGlblList(pNew);
+	*pNewModule = pNew;
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
 		if(pNew != NULL)
 			moduleDestruct(pNew);
+		*pNewModule = NULL;
 	}
 
 	RETiRet;
@@ -753,6 +803,27 @@ modUnloadAndDestructAll(eModLinkType_t modLinkTypesToUnload)
 	RETiRet;
 }
 
+/* find module with given name in global list */
+static inline rsRetVal
+findModule(uchar *pModName, int iModNameLen, modInfo_t **pMod)
+{
+	modInfo_t *pModInfo;
+	uchar *pModNameCmp;
+	DEFiRet;
+
+	pModInfo = GetNxt(NULL);
+	while(pModInfo != NULL) {
+		if(!strncmp((char *) pModName, (char *) (pModNameCmp = modGetName(pModInfo)), iModNameLen) &&
+		   (!*(pModNameCmp + iModNameLen) || !strcmp((char *) pModNameCmp + iModNameLen, ".so"))) {
+			dbgprintf("Module '%s' found\n", pModName);
+			break;
+		}
+		pModInfo = GetNxt(pModInfo);
+	}
+	*pMod = pModInfo;
+	RETiRet;
+}
+
 
 /* load a module and initialize it, based on doModLoad() from conf.c
  * rgerhards, 2008-03-05
@@ -762,15 +833,20 @@ modUnloadAndDestructAll(eModLinkType_t modLinkTypesToUnload)
  * configuration file processing, which is executed on a single thread. Should we
  * change that design at any stage (what is unlikely), we need to find a
  * replacement.
+ * rgerhards, 2011-04-27:
+ * Parameter "bConfLoad" tells us if the load was triggered by a config handler, in
+ * which case we need to tie the loaded module to the current config. If bConfLoad == 0,
+ * the system loads a module for internal reasons, this is not directly tied to a
+ * configuration. We could also think if it would be useful to add only certain types
+ * of modules, but the current implementation at least looks simpler.
  */
 static rsRetVal
-Load(uchar *pModName)
+Load(uchar *pModName, sbool bConfLoad)
 {
 	DEFiRet;
 	
 	size_t iPathLen, iModNameLen;
 	uchar szPath[PATH_MAX];
-	uchar *pModNameCmp;
 	int bHasExtension;
         void *pModHdlr, *pModInit;
 	modInfo_t *pModInfo;
@@ -790,14 +866,12 @@ Load(uchar *pModName)
 	} else
 		bHasExtension = FALSE;
 
-	pModInfo = GetNxt(NULL);
-	while(pModInfo != NULL) {
-		if(!strncmp((char *) pModName, (char *) (pModNameCmp = modGetName(pModInfo)), iModNameLen) &&
-		   (!*(pModNameCmp + iModNameLen) || !strcmp((char *) pModNameCmp + iModNameLen, ".so"))) {
-			dbgprintf("Module '%s' already loaded\n", pModName);
-			ABORT_FINALIZE(RS_RET_OK);
-		}
-		pModInfo = GetNxt(pModInfo);
+	CHKiRet(findModule(pModName, iModNameLen, &pModInfo));
+	if(pModInfo != NULL) {
+		if(bConfLoad)
+			addModToCnfList(pModInfo);
+		dbgprintf("Module '%s' already loaded\n", pModName);
+		FINALIZE;
 	}
 
 	pModDirCurr = (uchar *)((pModDir == NULL) ?
@@ -825,7 +899,8 @@ Load(uchar *pModName)
 				}
 				break;
 			} else if(iPathLen > sizeof(szPath) - 1) {
-				errmsg.LogError(0, NO_ERRCODE, "could not load module '%s', module path too long\n", pModName);
+				errmsg.LogError(0, NO_ERRCODE, "could not load module '%s', "
+						"module path too long\n", pModName);
 				ABORT_FINALIZE(RS_RET_MODULE_LOAD_ERR_PATHLEN);
 			}
 
@@ -851,17 +926,13 @@ Load(uchar *pModName)
 
 		/* now see if we have an extension and, if not, append ".so" */
 		if(!bHasExtension) {
-			/* we do not have an extension and so need to add ".so"
-			 * TODO: I guess this is highly importable, so we should change the
-			 * algo over time... -- rgerhards, 2008-03-05
-			 */
-			/* ... so now add the extension */
 			strncat((char *) szPath, ".so", sizeof(szPath) - strlen((char*) szPath) - 1);
 			iPathLen += 3;
 		}
 
 		if(iPathLen + strlen((char*) pModName) >= sizeof(szPath)) {
-			errmsg.LogError(0, RS_RET_MODULE_LOAD_ERR_PATHLEN, "could not load module '%s', path too long\n", pModName);
+			errmsg.LogError(0, RS_RET_MODULE_LOAD_ERR_PATHLEN,
+					"could not load module '%s', path too long\n", pModName);
 			ABORT_FINALIZE(RS_RET_MODULE_LOAD_ERR_PATHLEN);
 		}
 
@@ -887,7 +958,8 @@ Load(uchar *pModName)
 
 	if(!pModHdlr) {
 		if(iLoadCnt) {
-			errmsg.LogError(0, RS_RET_MODULE_LOAD_ERR_DLOPEN, "could not load module '%s', dlopen: %s\n", szPath, dlerror());
+			errmsg.LogError(0, RS_RET_MODULE_LOAD_ERR_DLOPEN,
+					"could not load module '%s', dlopen: %s\n", szPath, dlerror());
 		} else {
 			errmsg.LogError(0, NO_ERRCODE, "could not load module '%s', ModDir was '%s'\n", szPath,
 			                               ((pModDir == NULL) ? _PATH_MODDIR : (char *)pModDir));
@@ -895,15 +967,19 @@ Load(uchar *pModName)
 		ABORT_FINALIZE(RS_RET_MODULE_LOAD_ERR_DLOPEN);
 	}
 	if(!(pModInit = dlsym(pModHdlr, "modInit"))) {
-		errmsg.LogError(0, RS_RET_MODULE_LOAD_ERR_NO_INIT, "could not load module '%s', dlsym: %s\n", szPath, dlerror());
+		errmsg.LogError(0, RS_RET_MODULE_LOAD_ERR_NO_INIT,
+			 	"could not load module '%s', dlsym: %s\n", szPath, dlerror());
 		dlclose(pModHdlr);
 		ABORT_FINALIZE(RS_RET_MODULE_LOAD_ERR_NO_INIT);
 	}
-	if((iRet = doModInit(pModInit, (uchar*) pModName, pModHdlr)) != RS_RET_OK) {
-		errmsg.LogError(0, RS_RET_MODULE_LOAD_ERR_INIT_FAILED, "could not load module '%s', rsyslog error %d\n", szPath, iRet);
+	if((iRet = doModInit(pModInit, (uchar*) pModName, pModHdlr, &pModInfo)) != RS_RET_OK) {
+		errmsg.LogError(0, RS_RET_MODULE_LOAD_ERR_INIT_FAILED,
+				"could not load module '%s', rsyslog error %d\n", szPath, iRet);
 		dlclose(pModHdlr);
 		ABORT_FINALIZE(RS_RET_MODULE_LOAD_ERR_INIT_FAILED);
 	}
+	if(bConfLoad)
+		addModToCnfList(pModInfo);
 
 finalize_it:
 	pthread_mutex_unlock(&mutLoadUnload);
