@@ -342,6 +342,26 @@ startInputModules(void)
 	return RS_RET_OK; /* intentional: we do not care about module errors */
 }
 
+
+/* activate the main queue */
+static inline rsRetVal
+activateMainQueue()
+{
+	DEFiRet;
+	/* create message queue */
+	CHKiRet_Hdlr(createMainQueue(&pMsgQueue, UCHAR_CONSTANT("main Q"))) {
+		/* no queue is fatal, we need to give up in that case... */
+		fprintf(stderr, "fatal error %d: could not create message queue - rsyslogd can not run!\n", iRet);
+		FINALIZE;
+	}
+
+	bHaveMainQueue = (ourConf->globals.mainQ.MainMsgQueType == QUEUETYPE_DIRECT) ? 0 : 1;
+	DBGPRINTF("Main processing queue is initialized and running\n");
+finalize_it:
+	RETiRet;
+}
+
+
 /* Activate an already-loaded configuration. The configuration will become
  * the new running conf (if successful). Note that in theory this method may
  * be called when there already is a running conf. In practice, the current
@@ -374,6 +394,7 @@ activate(rsconf_t *cnf)
 
 	CHKiRet(dropPrivileges(cnf));
 
+	CHKiRet(activateMainQueue());
 	/* finally let the inputs run... */
 	runInputModules();
 

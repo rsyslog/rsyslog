@@ -231,7 +231,7 @@ int	iCompatibilityMode = 0;		/* version we should be compatible with; 0 means sy
 int	MarkInterval = 20 * 60;	/* interval between marks in seconds - read-only after startup */
 int      send_to_all = 0;        /* send message to all IPv4/IPv6 addresses */
 static int	NoFork = 0; 	/* don't fork - don't run in daemon mode - read-only after startup */
-static int	bHaveMainQueue = 0;/* set to 1 if the main queue - in queueing mode - is available
+int	bHaveMainQueue = 0;/* set to 1 if the main queue - in queueing mode - is available
 				 * If the main queue is either not yet ready or not running in 
 				 * queueing mode (mode DIRECT!), then this is set to 0.
 				 */
@@ -1307,17 +1307,6 @@ init(void)
 	DEFiRet;
 
 	legacyOptsHook();
-
-
-	/* create message queue */
-	CHKiRet_Hdlr(createMainQueue(&pMsgQueue, UCHAR_CONSTANT("main Q"))) {
-		/* no queue is fatal, we need to give up in that case... */
-		fprintf(stderr, "fatal error %d: could not create message queue - rsyslogd can not run!\n", iRet);
-		exit(1);
-	}
-
-	bHaveMainQueue = (ourConf->globals.mainQ.MainMsgQueType == QUEUETYPE_DIRECT) ? 0 : 1;
-	DBGPRINTF("Main processing queue is initialized and running\n");
 
 	memset(&sigAct, 0, sizeof (sigAct));
 	sigemptyset(&sigAct.sa_mask);
