@@ -394,6 +394,7 @@ activate(rsconf_t *cnf)
 
 	CHKiRet(dropPrivileges(cnf));
 
+	CHKiRet(activateActions());
 	CHKiRet(activateMainQueue());
 	/* finally let the inputs run... */
 	runInputModules();

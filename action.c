@@ -85,6 +85,7 @@
 #include "datetime.h"
 #include "unicode-helper.h"
 #include "atomic.h"
+#include "ruleset.h"
 
 #define NO_TIME_PROVIDED 0 /* indicate we do not provide any cached time */
 
@@ -100,6 +101,7 @@ DEFobjCurrIf(obj)
 DEFobjCurrIf(datetime)
 DEFobjCurrIf(module)
 DEFobjCurrIf(errmsg)
+DEFobjCurrIf(ruleset)
 
 
 typedef struct configSettings_s {
@@ -381,7 +383,6 @@ actionConstructFinalize(action_t *pThis)
 		   cs.bActionQSaveOnShutdown, cs.iActionQueMaxDiskSpace);
  	
 
-	CHKiRet(qqueueStart(pThis->pQueue));
 	DBGPRINTF("Action %p: queue %p created\n", pThis, pThis->pQueue);
 	
 	/* and now reset the queue params (see comment in its function header!) */
@@ -1452,6 +1453,33 @@ finalize_it:
 }
 
 
+/* helper to activateActions, it activates a specific action.
+ */
+DEFFUNC_llExecFunc(doActivateActions)
+{
+	action_t *pThis = (action_t*) pData;
+	BEGINfunc
+	qqueueStart(pThis->pQueue);
+	DBGPRINTF("Action %p: queue %p started\n", pThis, pThis->pQueue);
+	ENDfunc
+	return RS_RET_OK; /* we ignore errors, we can not do anything either way */
+}
+
+
+/* This function "activates" the action after privileges have been dropped. Currently,
+ * this means that the queues are started.
+ * rgerhards, 2011-05-02
+ */
+rsRetVal
+activateActions(void)
+{
+	DEFiRet;
+	iRet = ruleset.IterateAllActions(ourConf, doActivateActions, NULL);
+	RETiRet;
+}
+
+
+
 /* This submits the message to the action queue in case where we need to handle
  * bWriteAllMarkMessage == FALSE only. Note that we use a non-blocking CAS loop
  * for the synchronization. Here, we just modify the filter condition to be false when
@@ -1784,6 +1812,7 @@ rsRetVal actionClassInit(void)
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	CHKiRet(objUse(module, CORE_COMPONENT));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	CHKiRet(objUse(ruleset, CORE_COMPONENT));
 
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionname", 0, eCmdHdlrGetWord, NULL, &cs.pszActionName, NULL, eConfObjAction));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuefilename", 0, eCmdHdlrGetWord, NULL, &cs.pszActionQFName, NULL, eConfObjAction));
