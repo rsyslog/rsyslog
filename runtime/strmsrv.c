@@ -521,6 +521,7 @@ Run(strmsrv_t *pThis)
 	strms_sess_t *pNewSess;
 	nssel_t *pSel;
 	ssize_t iRcvd;
+	rsRetVal localRet;
 
 	ISOBJ_TYPE_assert(pThis, strmsrv);
 
@@ -580,11 +581,12 @@ Run(strmsrv_t *pThis)
 					break;
 				case RS_RET_OK:
 					/* valid data received, process it! */
-					if(strms_sess.DataRcvd(pThis->pSessions[iSTRMSess], buf, iRcvd) != RS_RET_OK) {
+					localRet = strms_sess.DataRcvd(pThis->pSessions[iSTRMSess], buf, iRcvd);
+					if(localRet != RS_RET_OK) {
 						/* in this case, something went awfully wrong.
 						 * We are instructed to terminate the session.
 						 */
-						errmsg.LogError(0, NO_ERRCODE, "Tearing down STRM Session %d - see "
+						errmsg.LogError(0, localRet, "Tearing down STRM Session %d - see "
 							    "previous messages for reason(s)\n", iSTRMSess);
 						pThis->pOnErrClose(pThis->pSessions[iSTRMSess]);
 						strms_sess.Destruct(&pThis->pSessions[iSTRMSess]);
