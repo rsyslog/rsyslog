@@ -518,7 +518,8 @@ doReceive(tcpsrv_t *pThis, tcps_sess_t **ppSess, nspoll_t *pPoll)
 		break;
 	case RS_RET_OK:
 		/* valid data received, process it! */
-		if((localRet = tcps_sess.DataRcvd(*ppSess, buf, iRcvd)) != RS_RET_OK) {
+		localRet = tcps_sess.DataRcvd(*ppSess, buf, iRcvd);
+		if(localRet != RS_RET_OK && localRet != RS_RET_QUEUE_FULL) {
 			/* in this case, something went awfully wrong.
 			 * We are instructed to terminate the session.
 			 */
