@@ -6,6 +6,8 @@ Version 4.7.4  [v4-???] (rgerhards), 2010-11-??
   directives (namely FQDN settings) did not have any effect
 - bugfix: atomic increment for msg object may not work correct on all
   platforms. Thanks to Chris Metcalf for the patch
+- bugfix: a slightly more informative error message when a TCP
+  connections is aborted
 ---------------------------------------------------------------------------
 Version 4.7.3  [v4-devel] (rgerhards), 2010-11-25
 - bugfix(important): problem in TLS handling could cause rsyslog to loop

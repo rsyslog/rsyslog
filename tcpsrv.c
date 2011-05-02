@@ -471,6 +471,7 @@ static rsRetVal
 Run(tcpsrv_t *pThis)
 {
 	DEFiRet;
+	rsRetVal localRet;
 	int nfds;
 	int i;
 	int iTCPSess;
@@ -545,12 +546,13 @@ Run(tcpsrv_t *pThis)
 					break;
 				case RS_RET_OK:
 					/* valid data received, process it! */
-					if(tcps_sess.DataRcvd(pThis->pSessions[iTCPSess], buf, iRcvd) != RS_RET_OK) {
+					localRet = tcps_sess.DataRcvd(pThis->pSessions[iTCPSess], buf, iRcvd);
+					if(localRet != RS_RET_OK) {
 						/* in this case, something went awfully wrong.
 						 * We are instructed to terminate the session.
 						 */
-						errmsg.LogError(0, NO_ERRCODE, "Tearing down TCP Session %d - see "
-							    "previous messages for reason(s)\n", iTCPSess);
+						errmsg.LogError(0, localRet, "Tearing down TCP Session %d - see "
+							    "previous messages for reason(s)", iTCPSess);
 						pThis->pOnErrClose(pThis->pSessions[iTCPSess]);
 						tcps_sess.Destruct(&pThis->pSessions[iTCPSess]);
 					}
