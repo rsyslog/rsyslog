@@ -469,7 +469,6 @@ DataRcvd(tcps_sess_t *pThis, char *pData, size_t iLen)
 	char *pEnd;
 	DEFiRet;
 
-//printf("DataRcvd: %p\n", pThis);
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
 	assert(pData != NULL);
 	assert(iLen > 0);

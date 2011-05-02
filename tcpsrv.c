@@ -530,9 +530,7 @@ doReceive(tcpsrv_t *pThis, tcps_sess_t **ppSess, nspoll_t *pPoll)
 			errmsg.LogError(0, RS_RET_PEER_CLOSED_CONN, "Netstream session %p closed by remote peer %s.\n",
 					(*ppSess)->pStrm, pszPeer);
 		}
-		//pthread_mutex_lock(&mut);
 		CHKiRet(closeSess(pThis, ppSess, pPoll));
-		//pthread_mutex_unlock(&mut);
 		break;
 	case RS_RET_RETRY:
 		/* we simply ignore retry - this is not an error, but we also have not received anything */
