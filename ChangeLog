@@ -8,6 +8,11 @@ Version 5.9.0  [V5-DEVEL] (rgerhards), 2011-03-??
   nobody still depends on it (and, if so, they lost...).
 - bugfix: pipes not opened in full priv mode when privs are to be dropped
 - this begins a new devel branch for v5
+- better handling of queue i/o errors in disk queues. This is kind of a
+  bugfix, but a very intrusive one, this it goes into the devel version
+  first. Right now, "file not found" is handled and leads to the new
+  emergency mode, in which disk action is stopped and the queue run
+  in direct mode. An error message is emited if this happens.
 - added support for user-level PRI provided via systemd
 - added new config directive $InputTCPFlowControl to select if tcp
   received messages shall be flagged as light delayable or not.
