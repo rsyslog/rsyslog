@@ -2172,7 +2172,7 @@ static rsRetVal mainThread()
 	pTmp = template_StdDBFmt;
 	tplAddLine(" StdDBFmt", &pTmp);
         pTmp = template_StdPgSQLFmt;
-        tplLastStaticInit(tplAddLine(" StdPgSQLFmt", &pTmp));
+        tplAddLine(" StdPgSQLFmt", &pTmp);
         pTmp = template_spoofadr;
         tplLastStaticInit(tplAddLine("RSYSLOG_omudpspoofDfltSourceTpl", &pTmp));
 
