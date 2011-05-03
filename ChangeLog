@@ -806,6 +806,12 @@ Version 4.6.6  [v4-stable] (rgerhards), 2010-11-??
 - bugfix: IPv6-address could not be specified in omrelp
   this was due to improper parsing of ":"
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=250
+- bugfix: memory and file descriptor leak in stream processing
+  Leaks could occur under some circumstances if the file stream handler
+  errored out during the open call. Among others, this could cause very
+  big memory leaks if there were a problem with unreadable disk queue
+  files. In regard to the memory leak, this
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=256
 - bugfix: imfile potentially duplicates lines
   This can happen when 0 bytes are read from the input file, and some
   writer appends data to the file BEFORE we check if a rollover happens.

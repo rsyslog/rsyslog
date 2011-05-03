@@ -259,6 +259,7 @@ static rsRetVal strmOpenFile(strm_t *pThis)
 
 	if(pThis->fd != -1)
 		ABORT_FINALIZE(RS_RET_OK);
+	pThis->pszCurrFName = NULL; /* used to prevent mem leak in case of error */
 
 	if(pThis->pszFName == NULL)
 		ABORT_FINALIZE(RS_RET_FILE_PREFIX_MISSING);
@@ -290,6 +291,16 @@ static rsRetVal strmOpenFile(strm_t *pThis)
 		  (pThis->tOperationsMode == STREAMMODE_READ) ? "READ" : "WRITE", pThis->fd);
 
 finalize_it:
+	if(iRet != RS_RET_OK) {
+		if(pThis->pszCurrFName != NULL) {
+			free(pThis->pszCurrFName);
+			pThis->pszCurrFName = NULL; /* just to prevent mis-adressing down the road... */
+		}
+		if(pThis->fd != -1) {
+			close(pThis->fd);
+			pThis->fd = -1;
+		}
+	}
 	RETiRet;
 }
 
