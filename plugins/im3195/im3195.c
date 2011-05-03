@@ -58,6 +58,11 @@ DEF_IMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
 
 /* configuration settings */
+
+typedef struct {
+	EMPTY_STRUCT;
+} modConfData_t;
+
 static int listenPort = 601;
 
 /* we use a global API object below, because this listener is
@@ -87,6 +92,31 @@ void OnReceive(srAPIObj __attribute__((unused)) *pMyAPI, srSLMGObj* pSLMG)
 	parseAndSubmitMessage(fromHost, fromHostIP, pszRawMsg, strlen((char*)pszRawMsg),
 		PARSE_HOSTNAME, eFLOWCTL_FULL_DELAY, (uchar*)"im3195", NULL, 0);
 }
+
+
+BEGINbeginCnfLoad
+CODESTARTbeginCnfLoad
+ENDbeginCnfLoad
+
+
+BEGINendCnfLoad
+CODESTARTendCnfLoad
+ENDendCnfLoad
+
+
+BEGINcheckCnf
+CODESTARTcheckCnf
+ENDcheckCnf
+
+
+BEGINactivateCnf
+CODESTARTactivateCnf
+ENDactivateCnf
+
+
+BEGINfreeCnf
+CODESTARTfreeCnf
+ENDfreeCnf
 
 
 BEGINrunInput

@@ -78,6 +78,10 @@ static prop_t *pRcvIPDummy = NULL;
 
 
 /* config settings */
+typedef struct {
+	EMPTY_STRUCT;
+} modConfData_t;
+
 static int iTCPSessMax = 20; /* max number of sessions */
 static int iStrmDrvrMode = 0; /* mode for stream driver, driver-dependent (0 mostly means plain tcp) */
 static uchar *pszStrmDrvrAuthMode = NULL; /* authentication mode to use */
@@ -382,6 +386,31 @@ finalize_it:
 	}
 	RETiRet;
 }
+
+
+BEGINbeginCnfLoad
+CODESTARTbeginCnfLoad
+ENDbeginCnfLoad
+
+
+BEGINendCnfLoad
+CODESTARTendCnfLoad
+ENDendCnfLoad
+
+
+BEGINcheckCnf
+CODESTARTcheckCnf
+ENDcheckCnf
+
+
+BEGINactivateCnf
+CODESTARTactivateCnf
+ENDactivateCnf
+
+
+BEGINfreeCnf
+CODESTARTfreeCnf
+ENDfreeCnf
 
 /* This function is called to gather input.
  */

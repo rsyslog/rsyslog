@@ -69,6 +69,11 @@ typedef struct configSettings_s {
 	int iSeverity;
 } configSettings_t;
 
+typedef struct {
+	EMPTY_STRUCT;
+} modConfData_t;
+
+
 static configSettings_t cs;
 
 static prop_t *pInputName = NULL;
@@ -137,6 +142,31 @@ generateStatsMsgs(void)
 {
 	statsobj.GetAllStatsLines(doStatsLine, NULL);
 }
+
+
+BEGINbeginCnfLoad
+CODESTARTbeginCnfLoad
+ENDbeginCnfLoad
+
+
+BEGINendCnfLoad
+CODESTARTendCnfLoad
+ENDendCnfLoad
+
+
+BEGINcheckCnf
+CODESTARTcheckCnf
+ENDcheckCnf
+
+
+BEGINactivateCnf
+CODESTARTactivateCnf
+ENDactivateCnf
+
+
+BEGINfreeCnf
+CODESTARTfreeCnf
+ENDfreeCnf
 
 
 BEGINrunInput

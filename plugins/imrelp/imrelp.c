@@ -60,6 +60,10 @@ static prop_t *pInputName = NULL;	/* there is only one global inputName for all 
 
 
 /* config settings */
+typedef struct {
+	EMPTY_STRUCT;
+} modConfData_t;
+
 static int iTCPSessMax = 200; /* max number of sessions */
 
 
@@ -116,6 +120,31 @@ static rsRetVal addListener(void __attribute__((unused)) *pVal, uchar *pNewVal)
 finalize_it:
 	RETiRet;
 }
+
+
+BEGINbeginCnfLoad
+CODESTARTbeginCnfLoad
+ENDbeginCnfLoad
+
+
+BEGINendCnfLoad
+CODESTARTendCnfLoad
+ENDendCnfLoad
+
+
+BEGINcheckCnf
+CODESTARTcheckCnf
+ENDcheckCnf
+
+
+BEGINactivateCnf
+CODESTARTactivateCnf
+ENDactivateCnf
+
+
+BEGINfreeCnf
+CODESTARTfreeCnf
+ENDfreeCnf
 
 /* This function is called to gather input.
  */

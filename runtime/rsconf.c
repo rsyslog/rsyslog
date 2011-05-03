@@ -294,25 +294,94 @@ dropPrivileges(rsconf_t *cnf)
 }
 
 
+/* Tell input modules that the config parsing stage is over.  */
+static rsRetVal
+tellInputsConfigLoadDone(void)
+{
+	cfgmodules_etry_t *node;
+
+	BEGINfunc
+	DBGPRINTF("telling inputs that config load for %p is done\n", loadConf);
+	node = module.GetNxtCnfType(loadConf, NULL, eMOD_IN);
+	while(node != NULL) {
+		node->pMod->mod.im.endCnfLoad(node->modCnf);
+		node = module.GetNxtCnfType(runConf, node, eMOD_IN);
+	}
+
+	ENDfunc
+	return RS_RET_OK; /* intentional: we do not care about module errors */
+}
+
+
+/* Tell input modules to verify config object */
+static rsRetVal
+tellInputsCheckConfig(void)
+{
+	cfgmodules_etry_t *node;
+	rsRetVal localRet;
+
+	BEGINfunc
+	DBGPRINTF("telling inputs to check config %p\n", loadConf);
+	node = module.GetNxtCnfType(loadConf, NULL, eMOD_IN);
+	while(node != NULL) {
+		localRet = node->pMod->mod.im.checkCnf(node->modCnf);
+		DBGPRINTF("module %s tells us config can %sbe activated\n",
+				  node->pMod->pszName, (localRet == RS_RET_OK) ? "" : "NOT ");
+		if(localRet == RS_RET_OK) {
+			node->canActivate = 1;
+		} else {
+			node->canActivate = 0;
+		}
+		node = module.GetNxtCnfType(runConf, node, eMOD_IN);
+	}
+
+	ENDfunc
+	return RS_RET_OK; /* intentional: we do not care about module errors */
+}
+
+
+/* Tell input modules to activate current running config */
+static rsRetVal
+tellInputsActivateConfig(void)
+{
+	cfgmodules_etry_t *node;
+
+	BEGINfunc
+	DBGPRINTF("telling inputs to activate config %p\n", runConf);
+	node = module.GetNxtCnfType(runConf, NULL, eMOD_IN);
+	while(node != NULL) {
+		if(node->canActivate) {
+			DBGPRINTF("activating config %p for module %s\n",
+				  runConf, node->pMod->pszName);
+			node->pMod->mod.im.activateCnf(node->modCnf);
+		}
+		node = module.GetNxtCnfType(runConf, node, eMOD_IN);
+	}
+
+	ENDfunc
+	return RS_RET_OK; /* intentional: we do not care about module errors */
+}
+
+
 /* Actually run the input modules.  This happens after privileges are dropped,
  * if that is requested.
  */
 static rsRetVal
 runInputModules(void)
 {
-	modInfo_t *pMod;
+	cfgmodules_etry_t *node;
 	int bNeedsCancel;
 
 	BEGINfunc
-	pMod = module.GetNxtCnfType(runConf, NULL, eMOD_IN);
-	while(pMod != NULL) {
-		if(pMod->mod.im.bCanRun) {
+	node = module.GetNxtCnfType(runConf, NULL, eMOD_IN);
+	while(node != NULL) {
+		if(node->pMod->mod.im.bCanRun) {
 			/* activate here */
-			bNeedsCancel = (pMod->isCompatibleWithFeature(sFEATURENonCancelInputTermination) == RS_RET_OK) ?
+			bNeedsCancel = (node->pMod->isCompatibleWithFeature(sFEATURENonCancelInputTermination) == RS_RET_OK) ?
 				       0 : 1;
-			thrdCreate(pMod->mod.im.runInput, pMod->mod.im.afterRun, bNeedsCancel);
+			thrdCreate(node->pMod->mod.im.runInput, node->pMod->mod.im.afterRun, bNeedsCancel);
 		}
-	pMod = module.GetNxtCnfType(runConf, pMod, eMOD_IN);
+		node = module.GetNxtCnfType(runConf, node, eMOD_IN);
 	}
 
 	ENDfunc
@@ -326,16 +395,16 @@ static rsRetVal
 startInputModules(void)
 {
 	DEFiRet;
-	modInfo_t *pMod;
+	cfgmodules_etry_t *node;
 
-	pMod = module.GetNxtCnfType(runConf, NULL, eMOD_IN);
-	while(pMod != NULL) {
-		iRet = pMod->mod.im.willRun();
-		pMod->mod.im.bCanRun = (iRet == RS_RET_OK);
-		if(!pMod->mod.im.bCanRun) {
-			DBGPRINTF("module %lx will not run, iRet %d\n", (unsigned long) pMod, iRet);
+	node = module.GetNxtCnfType(runConf, NULL, eMOD_IN);
+	while(node != NULL) {
+		iRet = node->pMod->mod.im.willRun();
+		node->pMod->mod.im.bCanRun = (iRet == RS_RET_OK);
+		if(!node->pMod->mod.im.bCanRun) {
+			DBGPRINTF("module %lx will not run, iRet %d\n", (unsigned long) node->pMod, iRet);
 		}
-	pMod = module.GetNxtCnfType(runConf, pMod, eMOD_IN);
+		node = module.GetNxtCnfType(runConf, node, eMOD_IN);
 	}
 
 	ENDfunc
@@ -381,6 +450,8 @@ activate(rsconf_t *cnf)
 	if(ourConf->globals.pszConfDAGFile != NULL)
 		generateConfigDAG(ourConf->globals.pszConfDAGFile);
 #	endif
+	tellInputsConfigLoadDone();
+	tellInputsCheckConfig();
 
 	/* the output part and the queue is now ready to run. So it is a good time
 	 * to initialize the inputs. Please note that the net code above should be
@@ -390,6 +461,7 @@ activate(rsconf_t *cnf)
 	 * Keep in mind. though, that the outputs already run if the queue was
 	 * persisted to disk. -- rgerhards
 	 */
+	tellInputsActivateConfig();
 	startInputModules();
 
 	CHKiRet(dropPrivileges(cnf));

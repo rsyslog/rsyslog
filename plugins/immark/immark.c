@@ -10,7 +10,7 @@
  * of the "old" message code without any modifications. However, it
  * helps to have things at the right place one we go to the meat of it.
  *
- * Copyright 2007 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2011 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -54,13 +54,55 @@ MODULE_TYPE_NOKEEP
 /* Module static data */
 DEF_IMOD_STATIC_DATA
 DEFobjCurrIf(glbl)
+DEFobjCurrIf(errmsg)
+
 static int iMarkMessagePeriod = DEFAULT_MARK_PERIOD;
+typedef struct {
+	int iMarkMessagePeriod;
+} modConfData_t;
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
 	if(eFeat == sFEATURENonCancelInputTermination)
 		iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
+
+
+BEGINafterRun
+CODESTARTafterRun
+ENDafterRun
+
+
+BEGINbeginCnfLoad
+CODESTARTbeginCnfLoad
+ENDbeginCnfLoad
+
+
+BEGINendCnfLoad
+CODESTARTendCnfLoad
+	pModConf->iMarkMessagePeriod = iMarkMessagePeriod;
+ENDendCnfLoad
+
+
+BEGINcheckCnf
+CODESTARTcheckCnf
+	if(pModConf->iMarkMessagePeriod == 0) {
+		errmsg.LogError(0, NO_ERRCODE, "immark: mark message period must not be 0, can not run");
+		ABORT_FINALIZE(RS_RET_NO_RUN);	/* we can not run with this error */
+	}
+finalize_it:
+ENDcheckCnf
+
+
+BEGINactivateCnf
+CODESTARTactivateCnf
+	MarkInterval = pModConf->iMarkMessagePeriod;
+ENDactivateCnf
+
+
+BEGINfreeCnf
+CODESTARTfreeCnf
+ENDfreeCnf
 
 
 /* This function is called to gather input. It must terminate only
@@ -82,7 +124,7 @@ CODESTARTrunInput
 	 * right into the sleep below.
 	 */
 	while(1) {
-		srSleep(iMarkMessagePeriod, 0); /* seconds, micro seconds */
+		srSleep(MarkInterval, 0); /* seconds, micro seconds */
 
 		if(glbl.GetGlobalInputTermState() == 1)
 			break; /* terminate input! */
@@ -95,19 +137,14 @@ ENDrunInput
 BEGINwillRun
 CODESTARTwillRun
 	/* We set the global MarkInterval to what is configured here -- rgerhards, 2008-07-15 */
-	MarkInterval = iMarkMessagePeriod;
-	if(iMarkMessagePeriod == 0)
+	if(MarkInterval == 0)
 		iRet = RS_RET_NO_RUN;
 ENDwillRun
 
 
-BEGINafterRun
-CODESTARTafterRun
-ENDafterRun
-
-
 BEGINmodExit
 CODESTARTmodExit
+	objRelease(errmsg, CORE_COMPONENT);
 ENDmodExit
 
 
@@ -120,7 +157,6 @@ ENDqueryEtryPt
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
 	iMarkMessagePeriod = DEFAULT_MARK_PERIOD;
-
 	return RS_RET_OK;
 }
 
@@ -129,8 +165,13 @@ CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"markmessageperiod", 0, eCmdHdlrInt, NULL, &iMarkMessagePeriod, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+
+	/* legacy config handlers */
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"markmessageperiod", 0, eCmdHdlrInt, NULL,
+		&iMarkMessagePeriod, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
+		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 ENDmodInit
 /* vi:set ai:
  */

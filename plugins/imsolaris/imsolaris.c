@@ -99,6 +99,10 @@ DEFobjCurrIf(prop)
 
 
 /* config settings */
+typedef struct {
+	EMPTY_STRUCT;
+} modConfData_t;
+
 static prop_t *pInputName = NULL;	/* our inputName currently is always "imuxsock", and this will hold it */
 static char *LogName = NULL;	/* the log socket name TODO: make configurable! */
 
@@ -300,6 +304,31 @@ finalize_it:
 
 	RETiRet;
 }
+
+
+BEGINbeginCnfLoad
+CODESTARTbeginCnfLoad
+ENDbeginCnfLoad
+
+
+BEGINendCnfLoad
+CODESTARTendCnfLoad
+ENDendCnfLoad
+
+
+BEGINcheckCnf
+CODESTARTcheckCnf
+ENDcheckCnf
+
+
+BEGINactivateCnf
+CODESTARTactivateCnf
+ENDactivateCnf
+
+
+BEGINfreeCnf
+CODESTARTfreeCnf
+ENDfreeCnf
 
 
 /* This function is called to gather input. */

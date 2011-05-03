@@ -67,6 +67,11 @@ DEFobjCurrIf(glbl)
 DEFobjCurrIf(prop)
 
 /* configuration settings */
+
+typedef struct {
+	EMPTY_STRUCT;
+} modConfData_t;
+
 int dbgPrintSymbols = 0; /* this one is extern so the helpers can access it! */
 int symbols_twice = 0;
 int use_syscall = 0;
@@ -247,6 +252,31 @@ CODESTARTrunInput
 	}
 finalize_it:
 ENDrunInput
+
+
+BEGINbeginCnfLoad
+CODESTARTbeginCnfLoad
+ENDbeginCnfLoad
+
+
+BEGINendCnfLoad
+CODESTARTendCnfLoad
+ENDendCnfLoad
+
+
+BEGINcheckCnf
+CODESTARTcheckCnf
+ENDcheckCnf
+
+
+BEGINactivateCnf
+CODESTARTactivateCnf
+ENDactivateCnf
+
+
+BEGINfreeCnf
+CODESTARTfreeCnf
+ENDfreeCnf
 
 
 BEGINwillRun

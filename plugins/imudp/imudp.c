@@ -92,6 +92,11 @@ static int iTimeRequery = TIME_REQUERY_DFLT;/* how often is time to be queried i
 
 /* config settings */
 
+typedef struct {
+	EMPTY_STRUCT;
+} modConfData_t;
+
+
 static rsRetVal check_scheduling_priority(int report_error)
 {
     	DEFiRet;
@@ -568,6 +573,31 @@ rsRetVal rcvMainLoop(thrdInfo_t *pThrd)
 	RETiRet;
 }
 #endif /* #if HAVE_EPOLL_CREATE1 */
+
+
+BEGINbeginCnfLoad
+CODESTARTbeginCnfLoad
+ENDbeginCnfLoad
+
+
+BEGINendCnfLoad
+CODESTARTendCnfLoad
+ENDendCnfLoad
+
+
+BEGINcheckCnf
+CODESTARTcheckCnf
+ENDcheckCnf
+
+
+BEGINactivateCnf
+CODESTARTactivateCnf
+ENDactivateCnf
+
+
+BEGINfreeCnf
+CODESTARTfreeCnf
+ENDfreeCnf
 
 /* This function is called to gather input.
  * Note that udpLstnSocks must be non-NULL because otherwise we would not have

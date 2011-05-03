@@ -1095,24 +1095,26 @@ finalize_it:
  */
 static rsRetVal cflineDoAction(rsconf_t *conf, uchar **p, action_t **ppAction)
 {
-	DEFiRet;
 	modInfo_t *pMod;
+	cfgmodules_etry_t *node;
 	omodStringRequest_t *pOMSR;
 	action_t *pAction = NULL;
 	void *pModData;
+	DEFiRet;
 
 	ASSERT(p != NULL);
 	ASSERT(ppAction != NULL);
 
 	/* loop through all modules and see if one picks up the line */
-	pMod = module.GetNxtCnfType(conf, NULL, eMOD_OUT);
-	/* Note: clang static analyzer reports that pMod mybe == NULL. However, this is
+	node = module.GetNxtCnfType(conf, NULL, eMOD_OUT);
+	/* Note: clang static analyzer reports that node maybe == NULL. However, this is
 	 * not possible, because we have the built-in output modules which are always
 	 * present. Anyhow, we guard this by an assert. -- rgerhards, 2010-12-16
 	 */
-	assert(pMod != NULL);
-	while(pMod != NULL) {
+	assert(node != NULL);
+	while(node != NULL) {
 		pOMSR = NULL;
+		pMod = node->pMod;
 		iRet = pMod->mod.om.parseSelectorAct(p, &pModData, &pOMSR);
 		dbgprintf("tried selector action for %s: %d\n", module.GetName(pMod), iRet);
 		if(iRet == RS_RET_OK || iRet == RS_RET_SUSPENDED) {
@@ -1144,7 +1146,7 @@ static rsRetVal cflineDoAction(rsconf_t *conf, uchar **p, action_t **ppAction)
 			dbgprintf("error %d parsing config line\n", (int) iRet);
 			break;
 		}
-		pMod = module.GetNxtCnfType(conf, pMod, eMOD_OUT);
+		node = module.GetNxtCnfType(conf, node, eMOD_OUT);
 	}
 
 	*ppAction = pAction;
@@ -1279,17 +1281,17 @@ static inline rsRetVal
 setActionScope(void)
 {
 	DEFiRet;
-	modInfo_t *pMod;
+	cfgmodules_etry_t *node;
 
 	currConfObj = eConfObjAction;
 	DBGPRINTF("entering action scope\n");
 	CHKiRet(actionNewScope());
 
 	/* now tell each action to start the scope */
-	pMod = NULL;
-	while((pMod = module.GetNxtCnfType(loadConf, pMod, eMOD_OUT)) != NULL) {
-		DBGPRINTF("beginning scope on module %s\n", pMod->pszName);
-		pMod->mod.om.newScope();
+	node = NULL;
+	while((node = module.GetNxtCnfType(loadConf, node, eMOD_OUT)) != NULL) {
+		DBGPRINTF("beginning scope on module %s\n", node->pMod->pszName);
+		node->pMod->mod.om.newScope();
 	}
 
 finalize_it:
@@ -1304,17 +1306,17 @@ static inline rsRetVal
 unsetActionScope(void)
 {
 	DEFiRet;
-	modInfo_t *pMod;
+	cfgmodules_etry_t *node;
 
 	currConfObj = eConfObjAction;
 	DBGPRINTF("exiting action scope\n");
 	CHKiRet(actionRestoreScope());
 
 	/* now tell each action to restore the scope */
-	pMod = NULL;
-	while((pMod = module.GetNxtCnfType(loadConf, pMod, eMOD_OUT)) != NULL) {
-		DBGPRINTF("exiting scope on module %s\n", pMod->pszName);
-		pMod->mod.om.restoreScope();
+	node = NULL;
+	while((node = module.GetNxtCnfType(loadConf, node, eMOD_OUT)) != NULL) {
+		DBGPRINTF("exiting scope on module %s\n", node->pMod->pszName);
+		node->pMod->mod.om.restoreScope();
 	}
 
 finalize_it:

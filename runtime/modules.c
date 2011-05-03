@@ -362,11 +362,18 @@ addModToCnfList(modInfo_t *pThis)
 		}
 	}
 
-	/* if we reach this point, pLast is the tail pointer */
+	/* if we reach this point, pLast is the tail pointer and this module is new
+	 * inside the currently loaded config. So, iff it is an input module, let's
+	 * pass it a pointer which it can populate with a pointer to its module conf.
+	 */
 
 	CHKmalloc(pNew = MALLOC(sizeof(cfgmodules_etry_t)));
 	pNew->next = NULL;
 	pNew->pMod = pThis;
+
+	if(pThis->eType == eMOD_IN) {
+		CHKiRet(pThis->mod.im.beginCnfLoad(&pNew->modCnf));
+	}
 
 	if(pLast == NULL) {
 		loadConf->modules.root = pNew;
@@ -401,31 +408,27 @@ static modInfo_t *GetNxt(modInfo_t *pThis)
 
 
 /* this function is like GetNxt(), but it returns pointers to
+ * the configmodules entry, which than can be used to obtain the
+ * actual module pointer. Note that it returns those for
  * modules of specific type only. Only modules from the provided
  * config are returned. Note that processing speed could be improved,
  * but this is really not relevant, as config file loading is not really
  * something we are concerned about in regard to runtime.
  */
-static modInfo_t *GetNxtCnfType(rsconf_t *cnf, modInfo_t *pThis, eModType_t rqtdType)
+static cfgmodules_etry_t
+*GetNxtCnfType(rsconf_t *cnf, cfgmodules_etry_t *node, eModType_t rqtdType)
 {
-	cfgmodules_etry_t *node;
-
-	if(pThis == NULL) { /* start at beginning of module list */
+	if(node == NULL) { /* start at beginning of module list */
 		node = cnf->modules.root;
-	} else { /* start at last location - then we need to find the module in the config list */
-		for(node = cnf->modules.root ; node != NULL && node->pMod != pThis ; node = node->next)
-			/*search only, all done in for() */;
-		if(node != NULL)
-			node = node->next; /* skip to NEXT element in list */
+	} else {
+		node = node->next;
 	}
 
-dbgprintf("XXXX: entering node, ptr %p: %s\n", node, (node == NULL)? "":modGetName(node->pMod));
 	while(node != NULL && node->pMod->eType != rqtdType) {
 		node = node->next; /* warning: do ... while() */
-dbgprintf("XXXX: in loop, ptr %p: %s\n", node, (node == NULL)? "":modGetName(node->pMod));
 	}
 
-	return (node == NULL) ? NULL : node->pMod;
+	return node;
 }
 
 
@@ -518,6 +521,11 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 	/* ... and now the module-specific interfaces */
 	switch(pNew->eType) {
 		case eMOD_IN:
+			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"beginCnfLoad", &pNew->mod.im.beginCnfLoad));
+			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"endCnfLoad", &pNew->mod.im.endCnfLoad));
+			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"freeCnf", &pNew->mod.im.freeCnf));
+			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"checkCnf", &pNew->mod.im.checkCnf));
+			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"activateCnf", &pNew->mod.im.activateCnf));
 			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"runInput", &pNew->mod.im.runInput));
 			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"willRun", &pNew->mod.im.willRun));
 			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"afterRun", &pNew->mod.im.afterRun));
@@ -697,6 +705,9 @@ static void modPrintList(void)
 			break;
 		case eMOD_IN:
 			dbgprintf("Input Module Entry Points\n");
+			dbgprintf("\tbeginCnfLoad:       0x%lx\n", (unsigned long) pMod->mod.im.beginCnfLoad);
+			dbgprintf("\tendCnfLoad:         0x%lx\n", (unsigned long) pMod->mod.im.endCnfLoad);
+			dbgprintf("\tfreeCnf:            0x%lx\n", (unsigned long) pMod->mod.im.freeCnf);
 			dbgprintf("\trunInput:           0x%lx\n", (unsigned long) pMod->mod.im.runInput);
 			dbgprintf("\twillRun:            0x%lx\n", (unsigned long) pMod->mod.im.willRun);
 			dbgprintf("\tafterRun:           0x%lx\n", (unsigned long) pMod->mod.im.afterRun);
@@ -928,7 +939,8 @@ Load(uchar *pModName, sbool bConfLoad)
 					szPath[iPathLen++] = '/';
 					szPath[iPathLen] = '\0';
 				} else {
-					errmsg.LogError(0, RS_RET_MODULE_LOAD_ERR_PATHLEN, "could not load module '%s', path too long\n", pModName);
+					errmsg.LogError(0, RS_RET_MODULE_LOAD_ERR_PATHLEN,
+						"could not load module '%s', path too long\n", pModName);
 					ABORT_FINALIZE(RS_RET_MODULE_LOAD_ERR_PATHLEN);
 				}
 			}

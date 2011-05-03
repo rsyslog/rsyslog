@@ -87,6 +87,11 @@ DEFobjCurrIf(parser)
 DEFobjCurrIf(datetime)
 DEFobjCurrIf(statsobj)
 
+
+typedef struct {
+	EMPTY_STRUCT;
+} modConfData_t;
+
 statsobj_t *modStats;
 STATSCOUNTER_DEF(ctrSubmit, mutCtrSubmit)
 STATSCOUNTER_DEF(ctrLostRatelimit, mutCtrLostRatelimit)
@@ -682,6 +687,31 @@ finalize_it:
 
 	RETiRet;
 }
+
+
+BEGINbeginCnfLoad
+CODESTARTbeginCnfLoad
+ENDbeginCnfLoad
+
+
+BEGINendCnfLoad
+CODESTARTendCnfLoad
+ENDendCnfLoad
+
+
+BEGINcheckCnf
+CODESTARTcheckCnf
+ENDcheckCnf
+
+
+BEGINactivateCnf
+CODESTARTactivateCnf
+ENDactivateCnf
+
+
+BEGINfreeCnf
+CODESTARTfreeCnf
+ENDfreeCnf
 
 
 /* This function is called to gather input. */

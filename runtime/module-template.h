@@ -459,6 +459,16 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 		*pEtryPoint = willRun;\
 	} else if(!strcmp((char*) name, "afterRun")) {\
 		*pEtryPoint = afterRun;\
+	} else if(!strcmp((char*) name, "beginCnfLoad")) {\
+		*pEtryPoint = beginCnfLoad;\
+	} else if(!strcmp((char*) name, "endCnfLoad")) {\
+		*pEtryPoint = endCnfLoad;\
+	} else if(!strcmp((char*) name, "checkCnf")) {\
+		*pEtryPoint = checkCnf;\
+	} else if(!strcmp((char*) name, "activateCnf")) {\
+		*pEtryPoint = activateCnf;\
+	} else if(!strcmp((char*) name, "freeCnf")) {\
+		*pEtryPoint = freeCnf;\
 	}
 
 /* the following definition is the standard block for queryEtryPt for LIBRARY
@@ -596,6 +606,110 @@ static rsRetVal modExit(void)\
 #define CODESTARTmodExit 
 
 #define ENDmodExit \
+	RETiRet;\
+}
+
+
+/* beginCnfLoad()
+ * This is a function tells an input module that a new config load begins.
+ * The core passes in a handle to the new module-specific module conf to
+ * the module. -- rgerards, 2011-05-03
+ */
+#define BEGINbeginCnfLoad \
+static rsRetVal beginCnfLoad(modConfData_t **ptr)\
+{\
+	modConfData_t *pModConf; \
+	DEFiRet;
+
+#define CODESTARTbeginCnfLoad \
+	if((pModConf = calloc(1, sizeof(modConfData_t))) == NULL) {\
+		*ptr = NULL;\
+		ENDfunc \
+		return RS_RET_OUT_OF_MEMORY;\
+	}
+
+#define ENDbeginCnfLoad \
+	*ptr = pModConf;\
+	RETiRet;\
+}
+
+
+/* endCnfLoad()
+ * This is a function tells an input module that the current config load ended.
+ * It gets a last chance to make changes to its in-memory config object. After 
+ * this call, the config object must no longer be changed.
+ * The pModConf pointer passed into the module must no longer be used.
+ * rgerards, 2011-05-03
+ */
+#define BEGINendCnfLoad \
+static rsRetVal endCnfLoad(modConfData_t *ptr)\
+{\
+	modConfData_t *pModConf = (modConfData_t*) ptr; \
+	DEFiRet;
+
+#define CODESTARTendCnfLoad
+
+#define ENDendCnfLoad \
+	RETiRet;\
+}
+
+
+/* checkCnf()
+ * Check the provided config object for errors, inconsistencies and other things
+ * that do not work out.
+ * NOTE: no part of the config must be activated, so some checks that require
+ * activation can not be done in this entry point. They must be done in the 
+ * activateConf() stage, where the caller must also be prepared for error
+ * returns.
+ * rgerhards, 2011-05-03
+ */
+#define BEGINcheckCnf \
+static rsRetVal checkCnf(modConfData_t *ptr)\
+{\
+	modConfData_t *pModConf = (modConfData_t*) ptr; \
+	DEFiRet;
+
+#define CODESTARTcheckCnf
+
+#define ENDcheckCnf \
+	RETiRet;\
+}
+
+
+/* activateCnf()
+ * This activates the provided config, and may report errors if they are detected
+ * during activation.
+ * rgerhards, 2011-05-03
+ */
+#define BEGINactivateCnf \
+static rsRetVal activateCnf(modConfData_t *ptr)\
+{\
+	modConfData_t *pModConf = (modConfData_t*) ptr; \
+	DEFiRet;
+
+#define CODESTARTactivateCnf
+
+#define ENDactivateCnf \
+	RETiRet;\
+}
+
+
+/* freeCnf()
+ * This is a function tells an input module that it must free all data
+ * associated with the passed-in module config.
+ * rgerhards, 2011-05-03
+ */
+#define BEGINfreeCnf \
+static rsRetVal freeCnf(void *ptr)\
+{\
+	modConfData_t *pModConf = (modConfData_t*) ptr; \
+	DEFiRet;
+
+#define CODESTARTfreeCnf
+
+#define ENDfreeCnf \
+	if(pModConf != NULL)\
+		free(pModConf); /* we need to free this in any case */\
 	RETiRet;\
 }
 

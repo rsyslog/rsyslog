@@ -95,6 +95,35 @@ DEF_IMOD_STATIC_DATA	/* must be present, starts static data */
 /* static int imtemplateWhateverVar = 0; */
 
 /* config settings */
+typedef struct {
+	EMPTY_STRUCT;
+} modConfData_t;
+
+
+
+BEGINbeginCnfLoad
+CODESTARTbeginCnfLoad
+ENDbeginCnfLoad
+
+
+BEGINendCnfLoad
+CODESTARTendCnfLoad
+ENDendCnfLoad
+
+
+BEGINcheckCnf
+CODESTARTcheckCnf
+ENDcheckCnf
+
+
+BEGINactivateCnf
+CODESTARTactivateCnf
+ENDactivateCnf
+
+
+BEGINfreeCnf
+CODESTARTfreeCnf
+ENDfreeCnf
 
 
 /* You may add any functions that you feel are useful for your needs. No specific restrictions

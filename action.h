@@ -106,5 +106,6 @@ rsRetVal actionClassInit(void);
 rsRetVal addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStringRequest_t *pOMSR, int bSuspended);
 rsRetVal actionNewScope(void);
 rsRetVal actionRestoreScope(void);
+rsRetVal activateActions(void);
 
 #endif /* #ifndef ACTION_H_INCLUDED */

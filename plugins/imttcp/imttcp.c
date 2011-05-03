@@ -135,6 +135,10 @@ DEFobjCurrIf(ruleset)
 
 
 /* config settings */
+typedef struct {
+	EMPTY_STRUCT;
+} modConfData_t;
+
 typedef struct configSettings_s {
 	int bEmitMsgOnClose;		/* emit an informational message on close by remote peer */
 	int iAddtlFrameDelim;		/* addtl frame delimiter, e.g. for netscreen, default none */
@@ -983,6 +987,31 @@ startupListeners()
 
 	RETiRet;
 }
+
+
+BEGINbeginCnfLoad
+CODESTARTbeginCnfLoad
+ENDbeginCnfLoad
+
+
+BEGINendCnfLoad
+CODESTARTendCnfLoad
+ENDendCnfLoad
+
+
+BEGINcheckCnf
+CODESTARTcheckCnf
+ENDcheckCnf
+
+
+BEGINactivateCnf
+CODESTARTactivateCnf
+ENDactivateCnf
+
+
+BEGINfreeCnf
+CODESTARTfreeCnf
+ENDfreeCnf
 
 /* This function is called to gather input.
  */

@@ -104,6 +104,10 @@ typedef struct gss_sess_s {
 
 
 /* config variables */
+typedef struct {
+	EMPTY_STRUCT;
+} modConfData_t;
+
 static int iTCPSessMax = 200; /* max number of sessions */
 static char *gss_listen_service_name = NULL;
 static int bPermitPlainTcp = 0; /* plain tcp syslog allowed on GSSAPI port? */
@@ -639,6 +643,31 @@ TCPSessGSSDeinit(void)
 	}
 	RETiRet;
 }
+
+
+BEGINbeginCnfLoad
+CODESTARTbeginCnfLoad
+ENDbeginCnfLoad
+
+
+BEGINendCnfLoad
+CODESTARTendCnfLoad
+ENDendCnfLoad
+
+
+BEGINcheckCnf
+CODESTARTcheckCnf
+ENDcheckCnf
+
+
+BEGINactivateCnf
+CODESTARTactivateCnf
+ENDactivateCnf
+
+
+BEGINfreeCnf
+CODESTARTfreeCnf
+ENDfreeCnf
 
 /* This function is called to gather input.
  */

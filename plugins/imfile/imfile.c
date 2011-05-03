@@ -83,6 +83,10 @@ typedef struct fileInfo_s {
 static rsRetVal persistStrmState(fileInfo_t *pInfo);
 
 /* config variables */
+typedef struct {
+	EMPTY_STRUCT;
+} modConfData_t;
+
 static uchar *pszFileName = NULL;
 static uchar *pszFileTag = NULL;
 static uchar *pszStateFile = NULL;
@@ -320,6 +324,31 @@ ENDrunInput
 #pragma GCC diagnostic warning "-Wempty-body"
 	/* END no-touch zone                                                                          *
 	 * ------------------------------------------------------------------------------------------ */
+
+
+BEGINbeginCnfLoad
+CODESTARTbeginCnfLoad
+ENDbeginCnfLoad
+
+
+BEGINendCnfLoad
+CODESTARTendCnfLoad
+ENDendCnfLoad
+
+
+BEGINcheckCnf
+CODESTARTcheckCnf
+ENDcheckCnf
+
+
+BEGINactivateCnf
+CODESTARTactivateCnf
+ENDactivateCnf
+
+
+BEGINfreeCnf
+CODESTARTfreeCnf
+ENDfreeCnf
 
 
 /* The function is called by rsyslog before runInput() is called. It is a last chance

@@ -198,6 +198,11 @@ static int iMaxLine; /* maximum size of a single message */
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal);
 static rsRetVal addLstn(ptcpsrv_t *pSrv, int sock);
 
+typedef struct {
+	EMPTY_STRUCT;
+} modConfData_t;
+
+
 
 /* some simple constructors/destructors */
 static void
@@ -1143,6 +1148,31 @@ wrkr(void *myself)
 
 	return NULL;
 }
+
+
+BEGINbeginCnfLoad
+CODESTARTbeginCnfLoad
+ENDbeginCnfLoad
+
+
+BEGINendCnfLoad
+CODESTARTendCnfLoad
+ENDendCnfLoad
+
+
+BEGINcheckCnf
+CODESTARTcheckCnf
+ENDcheckCnf
+
+
+BEGINactivateCnf
+CODESTARTactivateCnf
+ENDactivateCnf
+
+
+BEGINfreeCnf
+CODESTARTfreeCnf
+ENDfreeCnf
 
 
 /* This function is called to gather input.
