@@ -99,6 +99,7 @@ struct cfgmodules_etry_s {
 	/* the following data is input module specific */
 	void *modCnf;		/* pointer to the input module conf */
 	sbool canActivate;	/* OK to activate this config? */
+	sbool canRun;		/* OK to run this config? */
 };
 
 struct cfgmodules_s {

@@ -375,8 +375,8 @@ runInputModules(void)
 	BEGINfunc
 	node = module.GetNxtCnfType(runConf, NULL, eMOD_IN);
 	while(node != NULL) {
-		if(node->pMod->mod.im.bCanRun) {
-			/* activate here */
+		if(node->canRun) {
+			DBGPRINTF("running module %s with config %p\n", node->pMod->pszName, node);
 			bNeedsCancel = (node->pMod->isCompatibleWithFeature(sFEATURENonCancelInputTermination) == RS_RET_OK) ?
 				       0 : 1;
 			thrdCreate(node->pMod->mod.im.runInput, node->pMod->mod.im.afterRun, bNeedsCancel);
@@ -399,10 +399,14 @@ startInputModules(void)
 
 	node = module.GetNxtCnfType(runConf, NULL, eMOD_IN);
 	while(node != NULL) {
-		iRet = node->pMod->mod.im.willRun();
-		node->pMod->mod.im.bCanRun = (iRet == RS_RET_OK);
-		if(!node->pMod->mod.im.bCanRun) {
-			DBGPRINTF("module %lx will not run, iRet %d\n", (unsigned long) node->pMod, iRet);
+		if(node->canActivate) {
+			iRet = node->pMod->mod.im.willRun();
+			node->canRun = (iRet == RS_RET_OK);
+			if(!node->canRun) {
+				DBGPRINTF("module %s will not run, iRet %d\n", node->pMod->pszName, iRet);
+			}
+		} else {
+			node->canRun = 0;
 		}
 		node = module.GetNxtCnfType(runConf, node, eMOD_IN);
 	}

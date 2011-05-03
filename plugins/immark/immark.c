@@ -136,9 +136,6 @@ ENDrunInput
 
 BEGINwillRun
 CODESTARTwillRun
-	/* We set the global MarkInterval to what is configured here -- rgerhards, 2008-07-15 */
-	if(MarkInterval == 0)
-		iRet = RS_RET_NO_RUN;
 ENDwillRun
 
 
