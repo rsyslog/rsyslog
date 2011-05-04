@@ -616,7 +616,7 @@ static rsRetVal modExit(void)\
  * the module. -- rgerards, 2011-05-03
  */
 #define BEGINbeginCnfLoad \
-static rsRetVal beginCnfLoad(modConfData_t **ptr)\
+static rsRetVal beginCnfLoad(modConfData_t **ptr, rsconf_t *pConf)\
 {\
 	modConfData_t *pModConf; \
 	DEFiRet;

@@ -345,6 +345,7 @@ static rsRetVal
 tellInputsActivateConfig(void)
 {
 	cfgmodules_etry_t *node;
+	rsRetVal localRet;
 
 	BEGINfunc
 	DBGPRINTF("telling inputs to activate config %p\n", runConf);
@@ -353,7 +354,12 @@ tellInputsActivateConfig(void)
 		if(node->canActivate) {
 			DBGPRINTF("activating config %p for module %s\n",
 				  runConf, node->pMod->pszName);
-			node->pMod->mod.im.activateCnf(node->modCnf);
+			localRet = node->pMod->mod.im.activateCnf(node->modCnf);
+			if(localRet != RS_RET_OK) {
+				errmsg.LogError(0, localRet, "activation of module %s failed",
+						node->pMod->pszName);
+			node->canActivate = 0; /* in a sense, could not activate... */
+			}
 		}
 		node = module.GetNxtCnfType(runConf, node, eMOD_IN);
 	}

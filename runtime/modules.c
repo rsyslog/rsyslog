@@ -372,7 +372,7 @@ addModToCnfList(modInfo_t *pThis)
 	pNew->pMod = pThis;
 
 	if(pThis->eType == eMOD_IN) {
-		CHKiRet(pThis->mod.im.beginCnfLoad(&pNew->modCnf));
+		CHKiRet(pThis->mod.im.beginCnfLoad(&pNew->modCnf, loadConf));
 	}
 
 	if(pLast == NULL) {

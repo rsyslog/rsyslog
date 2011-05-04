@@ -116,7 +116,7 @@ struct modInfo_s {
 	rsRetVal (*createInstance)();
 	union	{
 		struct {/* data for input modules */
-			rsRetVal (*beginCnfLoad)(void*newCnf);
+			rsRetVal (*beginCnfLoad)(void*newCnf, rsconf_t *pConf);
 			rsRetVal (*endCnfLoad)(void*Cnf);
 			rsRetVal (*checkCnf)(void*Cnf);
 			rsRetVal (*activateCnf)(void*Cnf);	/* make provided config the running conf */

@@ -76,124 +76,94 @@ static time_t ttLastDiscard = 0;	/* timestamp when a message from a non-permitte
 static int *udpLstnSocks = NULL;	/* Internet datagram sockets, first element is nbr of elements
 					 * read-only after init(), but beware of restart! */
 static ruleset_t **udpRulesets = NULL;	/* ruleset to be used with sockets in question (entry 0 is empty) */
-static uchar *pszBindAddr = NULL;	/* IP to bind socket to */
 static uchar *pRcvBuf = NULL;		/* receive buffer (for a single packet). We use a global and alloc
 					 * it so that we can check available memory in willRun() and request
 					 * termination if we can not get it. -- rgerhards, 2007-12-27
 					 */
 static prop_t *pInputName = NULL;	/* our inputName currently is always "imudp", and this will hold it */
-static uchar *pszSchedPolicy = NULL;	/* scheduling policy string */
-static int iSchedPolicy;		/* scheduling policy as SCHED_xxx */
-static int iSchedPrio;			/* scheduling priority */
-static int seen_iSchedPrio = 0;		/* have we seen scheduling priority in the config file? */
-static ruleset_t *pBindRuleset = NULL;	/* ruleset to bind listener to (use system default if unspecified) */
+
 #define TIME_REQUERY_DFLT 2
-static int iTimeRequery = TIME_REQUERY_DFLT;/* how often is time to be queried inside tight recv loop? 0=always */
+#define SCHED_PRIO_UNSET -12345678	/* a value that indicates that the scheduling priority has not been set */
+/* config vars for legacy config system */
+static struct configSettings_s {
+	uchar *pszBindAddr;		/* IP to bind socket to */
+	uchar *pszSchedPolicy;		/* scheduling policy string */
+	uchar *pszBindRuleset;		/* name of Ruleset to bind to */
+	int iSchedPrio;			/* scheduling priority */
+	int iTimeRequery;		/* how often is time to be queried inside tight recv loop? 0=always */
+} cs;
 
 /* config settings */
 
+typedef struct instanceConf_s {
+	uchar *pszBindAddr;		/* IP to bind socket to */
+	uchar *pszBindPort;		/* Port to bind socket to */
+	uchar *pszBindRuleset;		/* name of ruleset to bind to */
+	ruleset_t *pBindRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
+	struct instanceConf_s *next;
+} instanceConf_t;
+
 typedef struct {
-	EMPTY_STRUCT;
+	rsconf_t *pConf;		/* our overall config object */
+	instanceConf_t *root, *tail;
+	uchar *pszSchedPolicy;		/* scheduling policy string */
+	int iSchedPolicy;		/* scheduling policy as SCHED_xxx */
+	int iSchedPrio;			/* scheduling priority */
+	int iTimeRequery;		/* how often is time to be queried inside tight recv loop? 0=always */
 } modConfData_t;
+static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
+static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current load process */
 
 
-static rsRetVal check_scheduling_priority(int report_error)
-{
-    	DEFiRet;
 
-#ifdef HAVE_SCHED_GET_PRIORITY_MAX
-	if (iSchedPrio < sched_get_priority_min(iSchedPolicy) ||
-	    iSchedPrio > sched_get_priority_max(iSchedPolicy)) {
-	    	if (report_error)
-		    	errmsg.LogError(errno, NO_ERRCODE,
-				"imudp: scheduling priority %d out of range (%d - %d)"
-				" for scheduling policy '%s' - ignoring settings",
-				iSchedPrio,
-				sched_get_priority_min(iSchedPolicy),
-				sched_get_priority_max(iSchedPolicy),
-				pszSchedPolicy);
-		ABORT_FINALIZE(RS_RET_VALIDATION_RUN);
-	}
-#endif
 
-finalize_it:
-	RETiRet;
-}
-
-/* Set scheduling priority in the supplied variable (will be iSchedPrio)
- * and record that we have seen the directive (in seen_iSchedPrio).
+/* This function is called when a new listener instace shall be added to 
+ * the current config object via the legacy config system. It just shuffles
+ * all parameters to the listener in-memory instance.
+ * rgerhards, 2011-05-04
  */
-static rsRetVal set_scheduling_priority(void *pVal, int value)
+static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 {
+	instanceConf_t *inst;
 	DEFiRet;
-
-	if (seen_iSchedPrio) {
-		errmsg.LogError(0, NO_ERRCODE, "directive already seen");
-		ABORT_FINALIZE(RS_RET_VALIDATION_RUN);
-	}
-	*(int *)pVal = value;
-	seen_iSchedPrio = 1;
-	if (pszSchedPolicy != NULL)
-	    	CHKiRet(check_scheduling_priority(1));
-
-finalize_it:
-	RETiRet;
-}
-
-/* Set scheduling policy in iSchedPolicy */
-static rsRetVal set_scheduling_policy(void *pVal, uchar *pNewVal)
-{
-    	int have_sched_policy = 0;
-	DEFiRet;
-
-	if (pszSchedPolicy != NULL) {
-	    	errmsg.LogError(0, NO_ERRCODE, "directive already seen");
-		ABORT_FINALIZE(RS_RET_VALIDATION_RUN);
-	}
-	*((uchar**)pVal) = pNewVal;	/* pVal is pszSchedPolicy */
-	if (0) { /* trick to use conditional compilation */
-#ifdef SCHED_FIFO
-	} else if (!strcasecmp((char*)pszSchedPolicy, "fifo")) {
-		iSchedPolicy = SCHED_FIFO;
-		have_sched_policy = 1;
-#endif
-#ifdef SCHED_RR
-	} else if (!strcasecmp((char*)pszSchedPolicy, "rr")) {
-		iSchedPolicy = SCHED_RR;
-		have_sched_policy = 1;
-#endif
-#ifdef SCHED_OTHER
-	} else if (!strcasecmp((char*)pszSchedPolicy, "other")) {
-		iSchedPolicy = SCHED_OTHER;
-		have_sched_policy = 1;
-#endif
+	CHKmalloc(inst = MALLOC(sizeof(instanceConf_t)));
+	CHKmalloc(inst->pszBindPort = ustrdup((pNewVal == NULL || *pNewVal == '\0')
+				 	       ? (uchar*) "514" : pNewVal));
+	if((cs.pszBindAddr == NULL) || (cs.pszBindAddr[0] == '\0')) {
+		inst->pszBindAddr = NULL;
 	} else {
-		errmsg.LogError(errno, NO_ERRCODE,
-			    "imudp: invalid scheduling policy '%s' "
-			    "- ignoring setting", pszSchedPolicy);
+		CHKmalloc(inst->pszBindAddr = ustrdup(cs.pszBindAddr));
 	}
-	if (have_sched_policy == 0) {
-	    	free(pszSchedPolicy);
-		pszSchedPolicy = NULL;
-		ABORT_FINALIZE(RS_RET_VALIDATION_RUN);
+	if((cs.pszBindRuleset == NULL) || (cs.pszBindRuleset[0] == '\0')) {
+		inst->pszBindRuleset = NULL;
+	} else {
+		CHKmalloc(inst->pszBindRuleset = ustrdup(cs.pszBindRuleset));
 	}
-	if (seen_iSchedPrio)
-	    	CHKiRet(check_scheduling_priority(1));
+	inst->pBindRuleset = NULL;
+	inst->next = NULL;
+
+	/* node created, let's add to config */
+	if(loadModConf->tail == NULL) {
+		loadModConf->tail = loadModConf->root = inst;
+	} else {
+		loadModConf->tail->next = inst;
+		loadModConf->tail = inst;
+	}
 
 finalize_it:
+	free(pNewVal);
 	RETiRet;
 }
 
 
 /* This function is called when a new listener shall be added. It takes
- * the configured parameters, tries to bind the socket and, if that
+ * the instance config description, tries to bind the socket and, if that
  * succeeds, adds it to the list of existing listen sockets.
- * rgerhards, 2007-12-27
  */
-static rsRetVal addListner(void __attribute__((unused)) *pVal, uchar *pNewVal)
+static inline rsRetVal
+addListner(instanceConf_t *inst)
 {
 	DEFiRet;
-	uchar *bindAddr;
 	int *newSocks;
 	int *tmpSocks;
 	int iSrc, iDst;
@@ -202,17 +172,11 @@ static rsRetVal addListner(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	/* check which address to bind to. We could do this more compact, but have not
 	 * done so in order to make the code more readable. -- rgerhards, 2007-12-27
 	 */
-	if(pszBindAddr == NULL)
-		bindAddr = NULL;
-	else if(pszBindAddr[0] == '*' && pszBindAddr[1] == '\0')
-		bindAddr = NULL;
-	else
-		bindAddr = pszBindAddr;
 
-	DBGPRINTF("Trying to open syslog UDP ports at %s:%s.\n",
-		  (bindAddr == NULL) ? (uchar*)"*" : bindAddr, pNewVal);
+	DBGPRINTF("imudp: trying to open port at %s:%s.\n",
+		  (inst->pszBindAddr == NULL) ? (uchar*)"*" : inst->pszBindAddr, inst->pszBindPort);
 
-	newSocks = net.create_udp_socket(bindAddr, (pNewVal == NULL || *pNewVal == '\0') ? (uchar*) "514" : pNewVal, 1);
+	newSocks = net.create_udp_socket(inst->pszBindAddr, inst->pszBindPort, 1);
 	if(newSocks != NULL) {
 		/* we now need to add the new sockets to the existing set */
 		if(udpLstnSocks == NULL) {
@@ -220,7 +184,7 @@ static rsRetVal addListner(void __attribute__((unused)) *pVal, uchar *pNewVal)
 			udpLstnSocks = newSocks;
 			CHKmalloc(udpRulesets = (ruleset_t**) MALLOC(sizeof(ruleset_t*) * (newSocks[0] + 1)));
 			for(iDst = 1 ; iDst <= newSocks[0] ; ++iDst)
-				udpRulesets[iDst] = pBindRuleset;
+				udpRulesets[iDst] = inst->pBindRuleset;
 		} else {
 			/* we need to add them */
 			tmpSocks = (int*) MALLOC(sizeof(int) * (1 + newSocks[0] + udpLstnSocks[0]));
@@ -243,7 +207,7 @@ static rsRetVal addListner(void __attribute__((unused)) *pVal, uchar *pNewVal)
 				}
 				for(iSrc = 1 ; iSrc <= newSocks[0] ; ++iSrc, ++iDst) {
 					tmpSocks[iDst] = newSocks[iSrc];
-					tmpRulesets[iDst] = pBindRuleset;
+					tmpRulesets[iDst] = inst->pBindRuleset;
 				}
 				tmpSocks[0] = udpLstnSocks[0] + newSocks[0];
 				free(newSocks);
@@ -256,30 +220,34 @@ static rsRetVal addListner(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	}
 
 finalize_it:
-	free(pNewVal); /* in any case, this is no longer needed */
-
 	RETiRet;
 }
 
 
-/* accept a new ruleset to bind. Checks if it exists and complains, if not */
-static rsRetVal
-setRuleset(void __attribute__((unused)) *pVal, uchar *pszName)
+/* Check provided ruleset name in conf and store a direct
+ * pointer to it, if valid.
+ */
+static inline rsRetVal
+checkRuleset(modConfData_t *modConf, instanceConf_t *inst)
 {
 	ruleset_t *pRuleset;
 	rsRetVal localRet;
 	DEFiRet;
 
-	localRet = ruleset.GetRuleset(ourConf, &pRuleset, pszName);
+	if(inst->pszBindRuleset == NULL)
+		FINALIZE;
+
+	localRet = ruleset.GetRuleset(modConf->pConf, &pRuleset, inst->pszBindRuleset);
 	if(localRet == RS_RET_NOT_FOUND) {
-		errmsg.LogError(0, NO_ERRCODE, "error: ruleset '%s' not found - ignored", pszName);
+		errmsg.LogError(0, NO_ERRCODE, "imudp: ruleset '%s' for %s:%s not found - "
+				"using default ruleset instead", inst->pszBindRuleset,
+				inst->pszBindAddr == NULL ? "*" : inst->pszBindAddr,
+				inst->pszBindPort);
 	}
 	CHKiRet(localRet);
-	pBindRuleset = pRuleset;
-	DBGPRINTF("imudp current bind ruleset %p: '%s'\n", pRuleset, pszName);
+	inst->pBindRuleset = pRuleset;
 
 finalize_it:
-	free(pszName); /* no longer needed */
 	RETiRet;
 }
 
@@ -368,7 +336,7 @@ processSocket(thrdInfo_t *pThrd, int fd, struct sockaddr_storage *frominetPrev, 
 		DBGPRINTF("recv(%d,%d),acl:%d,msg:%s\n", fd, (int) lenRcvBuf, *pbIsPermitted, pRcvBuf);
 
 		if(*pbIsPermitted != 0)  {
-			if((iTimeRequery == 0) || (iNbrTimeUsed++ % iTimeRequery) == 0) {
+			if((runModConf->iTimeRequery == 0) || (iNbrTimeUsed++ % runModConf->iTimeRequery) == 0) {
 				datetime.getCurrTime(&stTime, &ttGenTime);
 			}
 			/* we now create our own message object and submit it to the queue */
@@ -394,41 +362,127 @@ finalize_it:
 	RETiRet;
 }
 
-static void set_thread_schedparam(void)
+
+/* check configured scheduling priority.
+ * Precondition: iSchedPolicy must have been set
+ */
+static inline rsRetVal
+checkSchedulingPriority(modConfData_t *modConf)
 {
+    	DEFiRet;
+
+#ifdef HAVE_SCHED_GET_PRIORITY_MAX
+	if(   modConf->iSchedPrio < sched_get_priority_min(modConf->iSchedPolicy)
+	   || modConf->iSchedPrio > sched_get_priority_max(modConf->iSchedPolicy)) {
+		errmsg.LogError(0, NO_ERRCODE,
+			"imudp: scheduling priority %d out of range (%d - %d)"
+			" for scheduling policy '%s' - ignoring settings",
+			modConf->iSchedPrio,
+			sched_get_priority_min(modConf->iSchedPolicy),
+			sched_get_priority_max(modConf->iSchedPolicy),
+			modConf->pszSchedPolicy);
+		ABORT_FINALIZE(RS_RET_VALIDATION_RUN);
+	}
+#endif
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* check scheduling policy string and, if valid, set its 
+ * numeric equivalent in current load config
+ */
+static rsRetVal
+checkSchedulingPolicy(modConfData_t *modConf)
+{
+	DEFiRet;
+
+	if (0) { /* trick to use conditional compilation */
+#ifdef SCHED_FIFO
+	} else if (!strcasecmp((char*)modConf->pszSchedPolicy, "fifo")) {
+		modConf->iSchedPolicy = SCHED_FIFO;
+#endif
+#ifdef SCHED_RR
+	} else if (!strcasecmp((char*)modConf->pszSchedPolicy, "rr")) {
+		modConf->iSchedPolicy = SCHED_RR;
+#endif
+#ifdef SCHED_OTHER
+	} else if (!strcasecmp((char*)modConf->pszSchedPolicy, "other")) {
+		modConf->iSchedPolicy = SCHED_OTHER;
+#endif
+	} else {
+		errmsg.LogError(errno, NO_ERRCODE,
+			    "imudp: invalid scheduling policy '%s' "
+			    "- ignoring setting", modConf->pszSchedPolicy);
+		ABORT_FINALIZE(RS_RET_ERR_SCHED_PARAMS);
+	}
+finalize_it:
+	RETiRet;
+}
+
+/* checks scheduling parameters during config check phase */
+static rsRetVal
+checkSchedParam(modConfData_t *modConf)
+{
+	DEFiRet;
+
+	if(modConf->pszSchedPolicy != NULL && modConf->iSchedPrio == SCHED_PRIO_UNSET) {
+		errmsg.LogError(0, RS_RET_ERR_SCHED_PARAMS,
+			"imudp: scheduling policy set, but without priority - ignoring settings");
+		ABORT_FINALIZE(RS_RET_ERR_SCHED_PARAMS);
+	} else if(modConf->pszSchedPolicy == NULL && modConf->iSchedPrio != SCHED_PRIO_UNSET) {
+		errmsg.LogError(0, RS_RET_ERR_SCHED_PARAMS,
+			"imudp: scheduling priority set, but without policy - ignoring settings");
+		ABORT_FINALIZE(RS_RET_ERR_SCHED_PARAMS);
+	} else if(modConf->pszSchedPolicy != NULL && modConf->iSchedPrio != SCHED_PRIO_UNSET) {
+		/* we have parameters set, so check them */
+		CHKiRet(checkSchedulingPolicy(modConf));
+		CHKiRet(checkSchedulingPriority(modConf));
+	} else { /* nothing set */
+		modConf->iSchedPrio = SCHED_PRIO_UNSET; /* prevents doing the activation call */
+	}
+#ifndef HAVE_PTHREAD_SETSCHEDPARAM
+	errmsg.LogError(0, NO_ERRCODE,
+		"imudp: cannot set thread scheduling policy, "
+		"pthread_setschedparam() not available");
+	ABORT_FINALIZE(RS_RET_ERR_SCHED_PARAMS);
+#endif
+
+finalize_it:
+	if(iRet != RS_RET_OK)
+		modConf->iSchedPrio = SCHED_PRIO_UNSET; /* prevents doing the activation call */
+
+	RETiRet;
+}
+
+/* set the configured scheduling policy (if possible) */
+static rsRetVal
+setSchedParams(modConfData_t *modConf)
+{
+	DEFiRet;
+
+#	ifdef HAVE_PTHREAD_SETSCHEDPARAM
+	int err;
 	struct sched_param sparam;
 
-	if (pszSchedPolicy != NULL && seen_iSchedPrio == 0) {
-		errmsg.LogError(0, NO_ERRCODE,
-			"imudp: scheduling policy set, but without priority - ignoring settings");
-	} else if (pszSchedPolicy == NULL && seen_iSchedPrio != 0) {
-		errmsg.LogError(0, NO_ERRCODE,
-			"imudp: scheduling priority set, but without policy - ignoring settings");
-	} else if (pszSchedPolicy != NULL && seen_iSchedPrio != 0 &&
-		   check_scheduling_priority(0) == 0) {
-#ifndef HAVE_PTHREAD_SETSCHEDPARAM
-	    	errmsg.LogError(0, NO_ERRCODE,
-			"imudp: cannot set thread scheduling policy, "
-			"pthread_setschedparam() not available");
-#else
-		int err;
+	if(modConf->iSchedPrio == SCHED_PRIO_UNSET)
+		FINALIZE;
 
-		memset(&sparam, 0, sizeof sparam);
-		sparam.sched_priority = iSchedPrio;
-		dbgprintf("imudp trying to set sched policy to '%s', prio %d\n",
-			  pszSchedPolicy, iSchedPrio);
-		err = pthread_setschedparam(pthread_self(), iSchedPolicy, &sparam);
-		if (err != 0) {
-			errmsg.LogError(err, NO_ERRCODE, "imudp: pthread_setschedparam() failed");
-		}
-#endif
+	memset(&sparam, 0, sizeof sparam);
+	sparam.sched_priority = modConf->iSchedPrio;
+	dbgprintf("imudp trying to set sched policy to '%s', prio %d\n",
+		  modConf->pszSchedPolicy, modConf->iSchedPrio);
+	err = pthread_setschedparam(pthread_self(), modConf->iSchedPolicy, &sparam);
+	if(err != 0) {
+		errmsg.LogError(err, NO_ERRCODE, "imudp: pthread_setschedparam() failed - ignoring");
 	}
+#	endif
 
-	if (pszSchedPolicy != NULL) {
-	    	free(pszSchedPolicy);
-		pszSchedPolicy = NULL;
-	}
+finalize_it:
+	RETiRet;
 }
+
 
 /* This function implements the main reception loop. Depending on the environment,
  * we either use the traditional (but slower) select() or the Linux-specific epoll()
@@ -452,7 +506,6 @@ rsRetVal rcvMainLoop(thrdInfo_t *pThrd)
 	/* start "name caching" algo by making sure the previous system indicator
 	 * is invalidated.
 	 */
-	set_thread_schedparam();
 	bIsPermitted = 0;
 	memset(&frominetPrev, 0, sizeof(frominetPrev));
 
@@ -523,14 +576,12 @@ rsRetVal rcvMainLoop(thrdInfo_t *pThrd)
 	/* start "name caching" algo by making sure the previous system indicator
 	 * is invalidated.
 	 */
-	set_thread_schedparam();
 	bIsPermitted = 0;
 	memset(&frominetPrev, 0, sizeof(frominetPrev));
 	DBGPRINTF("imudp uses select()\n");
 
 	while(1) {
-		/* Add the Unix Domain Sockets to the list of read
-		 * descriptors.
+		/* Add the Unix Domain Sockets to the list of read descriptors.
 		 * rgerhards 2005-08-01: we must now check if there are
 		 * any local sockets to listen to at all. If the -o option
 		 * is given without -a, we do not need to listen at all..
@@ -577,21 +628,73 @@ rsRetVal rcvMainLoop(thrdInfo_t *pThrd)
 
 BEGINbeginCnfLoad
 CODESTARTbeginCnfLoad
+	loadModConf = pModConf;
+	pModConf->pConf = pConf;
+	/* init legacy config vars */
+	cs.pszBindRuleset = NULL;
+	cs.pszSchedPolicy = NULL;
+	cs.pszBindAddr = NULL;
+	cs.iSchedPrio = SCHED_PRIO_UNSET;
+	cs.iTimeRequery = TIME_REQUERY_DFLT;
 ENDbeginCnfLoad
 
 
 BEGINendCnfLoad
 CODESTARTendCnfLoad
+	/* persist module-specific settings from legacy config system
+	 * TODO: when we add the new config system, we must decide on priority
+	 * already-set module options should not be overwritable by the legacy
+	 * system (though this is debatable and should at least trigger an error
+	 * message if the equivalent legacy option is selected as well)
+	 * rgerhards, 2011-05-04
+	 */
+	loadModConf->iSchedPrio = cs.iSchedPrio;
+	loadModConf->iTimeRequery = cs.iTimeRequery;
+	if((cs.pszSchedPolicy == NULL) || (cs.pszSchedPolicy[0] == '\0')) {
+		loadModConf->pszSchedPolicy = NULL;
+	} else {
+		CHKmalloc(loadModConf->pszSchedPolicy = ustrdup(cs.pszSchedPolicy));
+	}
+
+finalize_it:
+	loadModConf = NULL; /* done loading */
+	/* free legacy config vars */
+	free(cs.pszBindRuleset);
+	free(cs.pszSchedPolicy);
+	free(cs.pszBindAddr);
 ENDendCnfLoad
 
 
 BEGINcheckCnf
+	instanceConf_t *inst;
 CODESTARTcheckCnf
+	checkSchedParam(pModConf); /* this can not cause fatal errors */
+	for(inst = pModConf->root ; inst != NULL ; inst = inst->next) {
+		checkRuleset(pModConf, inst);
+	}
 ENDcheckCnf
 
 
 BEGINactivateCnf
+	instanceConf_t *inst;
 CODESTARTactivateCnf
+	runModConf = pModConf;
+	for(inst = runModConf->root ; inst != NULL ; inst = inst->next) {
+		addListner(inst);
+	}
+	/* if we could not set up any listners, there is no point in running... */
+	if(udpLstnSocks == NULL) {
+		errmsg.LogError(errno, NO_ERRCODE, "imudp: no listeners could be started, "
+				"input not activated.\n");
+		ABORT_FINALIZE(RS_RET_NO_RUN);
+	}
+
+	setSchedParams(pModConf);
+
+	/* caching various settings */
+	iMaxLine = glbl.GetMaxLine();
+	CHKmalloc(pRcvBuf = MALLOC((iMaxLine + 1) * sizeof(char)));
+finalize_it:
 ENDactivateCnf
 
 
@@ -612,22 +715,8 @@ ENDrunInput
 /* initialize and return if will run or not */
 BEGINwillRun
 CODESTARTwillRun
-	/* we need to create the inputName property (only once during our lifetime) */
-	CHKiRet(prop.Construct(&pInputName));
-	CHKiRet(prop.SetString(pInputName, UCHAR_CONSTANT("imudp"), sizeof("imudp") - 1));
-	CHKiRet(prop.ConstructFinalize(pInputName));
-
 	net.PrintAllowedSenders(1); /* UDP */
 	net.HasRestrictions(UCHAR_CONSTANT("UDP"), &bDoACLCheck); /* UDP */
-
-	/* if we could not set up any listners, there is no point in running... */
-	if(udpLstnSocks == NULL)
-		ABORT_FINALIZE(RS_RET_NO_RUN);
-
-	iMaxLine = glbl.GetMaxLine();
-
-	CHKmalloc(pRcvBuf = MALLOC((iMaxLine + 1) * sizeof(char)));
-finalize_it:
 ENDwillRun
 
 
@@ -645,13 +734,14 @@ CODESTARTafterRun
 		free(pRcvBuf);
 		pRcvBuf = NULL;
 	}
-	if(pInputName != NULL)
-		prop.Destruct(&pInputName);
 ENDafterRun
 
 
 BEGINmodExit
 CODESTARTmodExit
+	if(pInputName != NULL)
+		prop.Destruct(&pInputName);
+
 	/* release what we no longer need */
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
@@ -677,11 +767,20 @@ ENDqueryEtryPt
 
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
-	if(pszBindAddr != NULL) {
-		free(pszBindAddr);
-		pszBindAddr = NULL;
+	if(cs.pszBindAddr != NULL) {
+		free(cs.pszBindAddr);
+		cs.pszBindAddr = NULL;
 	}
-	iTimeRequery = TIME_REQUERY_DFLT;/* the default is to query only every second time */
+	if(cs.pszSchedPolicy != NULL) {
+		free(cs.pszSchedPolicy);
+		cs.pszSchedPolicy = NULL;
+	}
+	if(cs.pszBindRuleset != NULL) {
+		free(cs.pszBindRuleset);
+		cs.pszBindRuleset = NULL;
+	}
+	cs.iSchedPrio = SCHED_PRIO_UNSET;
+	cs.iTimeRequery = TIME_REQUERY_DFLT;/* the default is to query only every second time */
 	return RS_RET_OK;
 }
 
@@ -697,19 +796,24 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(ruleset, CORE_COMPONENT));
 	CHKiRet(objUse(net, LM_NET_FILENAME));
 
+	/* we need to create the inputName property (only once during our lifetime) */
+	CHKiRet(prop.Construct(&pInputName));
+	CHKiRet(prop.SetString(pInputName, UCHAR_CONSTANT("imudp"), sizeof("imudp") - 1));
+	CHKiRet(prop.ConstructFinalize(pInputName));
+
 	/* register config file handlers */
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputudpserverbindruleset", 0, eCmdHdlrGetWord,
-		setRuleset, NULL, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+		NULL, &cs.pszBindRuleset, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"udpserverrun", 0, eCmdHdlrGetWord,
-		addListner, NULL, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+		addInstance, NULL, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"udpserveraddress", 0, eCmdHdlrGetWord,
-		NULL, &pszBindAddr, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+		NULL, &cs.pszBindAddr, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"imudpschedulingpolicy", 0, eCmdHdlrGetWord,
-		&set_scheduling_policy, NULL, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+		NULL, &cs.pszSchedPolicy, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"imudpschedulingpriority", 0, eCmdHdlrInt,
-		&set_scheduling_priority, NULL, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+		NULL, &cs.iSchedPrio, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"udpservertimerequery", 0, eCmdHdlrInt,
-		NULL, &iTimeRequery, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+		NULL, &cs.iTimeRequery, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
 		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 ENDmodInit
