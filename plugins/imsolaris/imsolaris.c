@@ -99,9 +99,9 @@ DEFobjCurrIf(prop)
 
 
 /* config settings */
-typedef struct {
+struct modConfData_s {
 	EMPTY_STRUCT;
-} modConfData_t;
+};
 
 static prop_t *pInputName = NULL;	/* our inputName currently is always "imuxsock", and this will hold it */
 static char *LogName = NULL;	/* the log socket name TODO: make configurable! */

@@ -104,9 +104,9 @@ typedef struct gss_sess_s {
 
 
 /* config variables */
-typedef struct {
+struct modConfData_s {
 	EMPTY_STRUCT;
-} modConfData_t;
+};
 
 static int iTCPSessMax = 200; /* max number of sessions */
 static char *gss_listen_service_name = NULL;

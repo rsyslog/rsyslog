@@ -60,9 +60,9 @@ static prop_t *pInputName = NULL;	/* there is only one global inputName for all 
 
 
 /* config settings */
-typedef struct {
+struct modConfData_s {
 	EMPTY_STRUCT;
-} modConfData_t;
+};
 
 static int iTCPSessMax = 200; /* max number of sessions */
 

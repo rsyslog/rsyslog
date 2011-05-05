@@ -88,9 +88,9 @@ DEFobjCurrIf(datetime)
 DEFobjCurrIf(statsobj)
 
 
-typedef struct {
+struct modConfData_s {
 	EMPTY_STRUCT;
-} modConfData_t;
+};
 
 statsobj_t *modStats;
 STATSCOUNTER_DEF(ctrSubmit, mutCtrSubmit)

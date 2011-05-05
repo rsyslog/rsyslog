@@ -93,27 +93,26 @@ static struct configSettings_s {
 	int iTimeRequery;		/* how often is time to be queried inside tight recv loop? 0=always */
 } cs;
 
-/* config settings */
-
-typedef struct instanceConf_s {
+struct instanceConf_s {
 	uchar *pszBindAddr;		/* IP to bind socket to */
 	uchar *pszBindPort;		/* Port to bind socket to */
 	uchar *pszBindRuleset;		/* name of ruleset to bind to */
 	ruleset_t *pBindRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
 	struct instanceConf_s *next;
-} instanceConf_t;
+};
 
-typedef struct {
+struct modConfData_s {
 	rsconf_t *pConf;		/* our overall config object */
 	instanceConf_t *root, *tail;
 	uchar *pszSchedPolicy;		/* scheduling policy string */
 	int iSchedPolicy;		/* scheduling policy as SCHED_xxx */
 	int iSchedPrio;			/* scheduling priority */
 	int iTimeRequery;		/* how often is time to be queried inside tight recv loop? 0=always */
-} modConfData_t;
+};
 static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
 static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current load process */
 
+#include "im-helper.h" /* must be included AFTER the type definitions! */
 
 
 
@@ -126,6 +125,7 @@ static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 {
 	instanceConf_t *inst;
 	DEFiRet;
+
 	CHKmalloc(inst = MALLOC(sizeof(instanceConf_t)));
 	CHKmalloc(inst->pszBindPort = ustrdup((pNewVal == NULL || *pNewVal == '\0')
 				 	       ? (uchar*) "514" : pNewVal));
@@ -224,31 +224,13 @@ finalize_it:
 }
 
 
-/* Check provided ruleset name in conf and store a direct
- * pointer to it, if valid.
- */
-static inline rsRetVal
-checkRuleset(modConfData_t *modConf, instanceConf_t *inst)
+static inline void
+std_checkRuleset_genErrMsg(__attribute__((unused)) modConfData_t *modConf, instanceConf_t *inst)
 {
-	ruleset_t *pRuleset;
-	rsRetVal localRet;
-	DEFiRet;
-
-	if(inst->pszBindRuleset == NULL)
-		FINALIZE;
-
-	localRet = ruleset.GetRuleset(modConf->pConf, &pRuleset, inst->pszBindRuleset);
-	if(localRet == RS_RET_NOT_FOUND) {
-		errmsg.LogError(0, NO_ERRCODE, "imudp: ruleset '%s' for %s:%s not found - "
-				"using default ruleset instead", inst->pszBindRuleset,
-				inst->pszBindAddr == NULL ? "*" : inst->pszBindAddr,
-				inst->pszBindPort);
-	}
-	CHKiRet(localRet);
-	inst->pBindRuleset = pRuleset;
-
-finalize_it:
-	RETiRet;
+	errmsg.LogError(0, NO_ERRCODE, "imudp: ruleset '%s' for %s:%s not found - "
+			"using default ruleset instead", inst->pszBindRuleset,
+			inst->pszBindAddr == NULL ? "*" : (char*) inst->pszBindAddr,
+			inst->pszBindPort);
 }
 
 
@@ -670,7 +652,7 @@ BEGINcheckCnf
 CODESTARTcheckCnf
 	checkSchedParam(pModConf); /* this can not cause fatal errors */
 	for(inst = pModConf->root ; inst != NULL ; inst = inst->next) {
-		checkRuleset(pModConf, inst);
+		std_checkRuleset(pModConf, inst);
 	}
 ENDcheckCnf
 

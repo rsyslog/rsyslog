@@ -95,10 +95,9 @@ DEF_IMOD_STATIC_DATA	/* must be present, starts static data */
 /* static int imtemplateWhateverVar = 0; */
 
 /* config settings */
-typedef struct {
+struct modConfData_s {
 	EMPTY_STRUCT;
-} modConfData_t;
-
+};
 
 
 BEGINbeginCnfLoad

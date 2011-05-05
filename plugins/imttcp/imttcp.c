@@ -135,9 +135,9 @@ DEFobjCurrIf(ruleset)
 
 
 /* config settings */
-typedef struct {
+struct modConfData_s {
 	EMPTY_STRUCT;
-} modConfData_t;
+};
 
 typedef struct configSettings_s {
 	int bEmitMsgOnClose;		/* emit an informational message on close by remote peer */

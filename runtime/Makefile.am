@@ -13,6 +13,7 @@ librsyslog_la_SOURCES = \
 	batch.h \
 	syslogd-types.h \
 	module-template.h \
+	im-helper.h \
 	obj-types.h \
 	nsd.h \
 	glbl.h \

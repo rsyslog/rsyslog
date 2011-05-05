@@ -68,9 +68,9 @@ DEFobjCurrIf(prop)
 
 /* configuration settings */
 
-typedef struct {
+struct modConfData_s {
 	EMPTY_STRUCT;
-} modConfData_t;
+};
 
 int dbgPrintSymbols = 0; /* this one is extern so the helpers can access it! */
 int symbols_twice = 0;

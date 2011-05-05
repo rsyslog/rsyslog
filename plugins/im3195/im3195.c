@@ -59,9 +59,9 @@ DEFobjCurrIf(errmsg)
 
 /* configuration settings */
 
-typedef struct {
+struct modConfData_s {
 	EMPTY_STRUCT;
-} modConfData_t;
+};
 
 static int listenPort = 601;
 

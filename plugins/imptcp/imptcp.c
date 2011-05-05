@@ -198,9 +198,9 @@ static int iMaxLine; /* maximum size of a single message */
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal);
 static rsRetVal addLstn(ptcpsrv_t *pSrv, int sock);
 
-typedef struct {
+struct modConfData_s {
 	EMPTY_STRUCT;
-} modConfData_t;
+};
 
 
 

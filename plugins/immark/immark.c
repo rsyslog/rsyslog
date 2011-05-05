@@ -57,9 +57,9 @@ DEFobjCurrIf(glbl)
 DEFobjCurrIf(errmsg)
 
 static int iMarkMessagePeriod = DEFAULT_MARK_PERIOD;
-typedef struct {
+struct modConfData_s {
 	int iMarkMessagePeriod;
-} modConfData_t;
+};
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature

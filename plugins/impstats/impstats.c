@@ -69,9 +69,9 @@ typedef struct configSettings_s {
 	int iSeverity;
 } configSettings_t;
 
-typedef struct {
+struct modConfData_s {
 	EMPTY_STRUCT;
-} modConfData_t;
+};
 
 
 static configSettings_t cs;

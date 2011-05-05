@@ -584,7 +584,6 @@ finalize_it:\
 #define CODEmodInit_QueryRegCFSLineHdlr \
 	CHKiRet(pHostQueryEtryPt((uchar*)"regCfSysLineHdlr", &omsdRegCFSLineHdlr));
 
-#endif /* #ifndef MODULE_TEMPLATE_H_INCLUDED */
 
 /* modExit()
  * This is the counterpart to modInit(). It destroys a module and makes it ready for
@@ -852,6 +851,8 @@ static rsRetVal GetStrgenName(uchar **ppSz)\
 	return RS_RET_OK;\
 }
 
+
+#endif /* #ifndef MODULE_TEMPLATE_H_INCLUDED */
 
 /* vim:set ai:
  */

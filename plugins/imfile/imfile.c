@@ -83,9 +83,9 @@ typedef struct fileInfo_s {
 static rsRetVal persistStrmState(fileInfo_t *pInfo);
 
 /* config variables */
-typedef struct {
+struct modConfData_s {
 	EMPTY_STRUCT;
-} modConfData_t;
+};
 
 static uchar *pszFileName = NULL;
 static uchar *pszFileTag = NULL;
