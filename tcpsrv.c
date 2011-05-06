@@ -897,7 +897,6 @@ tcpsrvConstructFinalize(tcpsrv_t *pThis)
 	/* set up listeners */
 	CHKmalloc(pThis->ppLstn = calloc(pThis->iLstnMax, sizeof(netstrm_t*)));
 	CHKmalloc(pThis->ppLstnPort = calloc(pThis->iLstnMax, sizeof(tcpLstnPortList_t*)));
-dbgprintf("XXXX: open sockets (tcpsrv)\n");
 	iRet = pThis->OpenLstnSocks(pThis);
 
 finalize_it:

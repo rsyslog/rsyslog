@@ -486,7 +486,7 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 #endif
 	           ) {
 			/* TODO: check if *we* bound the socket - else we *have* an error! */
-                        dbgprintf("error %d while binding tcp socket", errno);
+                        dbgprintf("error %d while binding tcp socket\n", errno);
                 	close(sock);
 			sock = -1;
                         continue;
@@ -498,7 +498,7 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 			 * to a fixed, reasonable, limit that should work. Only if
 			 * that fails, too, we give up.
 			 */
-			dbgprintf("listen with a backlog of %d failed - retrying with default of 32.",
+			dbgprintf("listen with a backlog of %d failed - retrying with default of 32.\n",
 				   iSessMax / 10 + 5);
 			if(listen(sock, 32) < 0) {
 				dbgprintf("tcp listen error %d, suspending\n", errno);
@@ -531,7 +531,7 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 		 	  "- this may or may not be an error indication.\n", numSocks, maxs);
 
         if(numSocks == 0) {
-		dbgprintf("No TCP listen sockets could successfully be initialized");
+		dbgprintf("No TCP listen sockets could successfully be initialized\n");
 		ABORT_FINALIZE(RS_RET_COULD_NOT_BIND);
 	}
 

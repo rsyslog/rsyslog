@@ -357,7 +357,7 @@ tellModulesActivateConfigPrePrivDrop(void)
 		if(   node->pMod->beginCnfLoad != NULL
 		   && node->pMod->activateCnfPrePrivDrop != NULL
 		   && node->canActivate) {
-			DBGPRINTF("activating config %p for module %s\n",
+			DBGPRINTF("pre priv drop activating config %p for module %s\n",
 				  runConf, node->pMod->pszName);
 			localRet = node->pMod->activateCnfPrePrivDrop(node->modCnf);
 			if(localRet != RS_RET_OK) {

@@ -339,6 +339,7 @@ CODESTARTactivateCnfPrePrivDrop
 	}
 	if(pOurTcpsrv == NULL)
 		ABORT_FINALIZE(RS_RET_NO_RUN);
+	CHKiRet(tcpsrv.ConstructFinalize(pOurTcpsrv));
 finalize_it:
 ENDactivateCnfPrePrivDrop
 
@@ -357,12 +358,7 @@ ENDfreeCnf
  */
 BEGINrunInput
 CODESTARTrunInput
-	/* TODO: we must be careful to start the listener here. Currently, tcpsrv.c seems to
-	 * do that in ConstructFinalize
-	 */
-	CHKiRet(tcpsrv.ConstructFinalize(pOurTcpsrv));
 	iRet = tcpsrv.Run(pOurTcpsrv);
-finalize_it:
 ENDrunInput
 
 
