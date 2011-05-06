@@ -40,11 +40,13 @@
 #include <libee/libee.h>
 #include <liblognorm.h>
 #include "conf.h"
+#include "msg.h"
 #include "syslogd-types.h"
 #include "template.h"
 #include "module-template.h"
 #include "errmsg.h"
 #include "cfsysline.h"
+#include "unicode-helper.h"
 #include "dirty.h"
 
 MODULE_TYPE_OUTPUT
@@ -61,6 +63,8 @@ DEF_OMOD_STATIC_DATA
 
 typedef struct _instanceData {
 	uchar *pszTagName;
+	uchar *pszTagID;	/* chaced: name plus trailig shlash (for compares) */
+	int lenTagID;		/* cached length of tag ID, for performance reasons */
 } instanceData;
 
 typedef struct configSettings_s {
@@ -92,6 +96,8 @@ ENDisCompatibleWithFeature
 
 BEGINfreeInstance
 CODESTARTfreeInstance
+	free(pData->pszTagName);
+	free(pData->pszTagID);
 ENDfreeInstance
 
 
@@ -105,11 +111,66 @@ BEGINtryResume
 CODESTARTtryResume
 ENDtryResume
 
+/* get string up to the next SP or '/'. Stops at max size.
+ * dst, lenDst (receive buffer) must be given. lenDst is
+ * max length on entry and actual length on exit.
+ */
+static int
+getTagComponent(uchar *tag, uchar *dst, int *lenDst)
+{
+	int end = *lenDst - 1; /* -1 for NUL-char! */
+	int i;
+
+	i = 0;
+dbgprintf("XXXX: getTagComponent tag on input: '%s'(%p)\n", tag, tag);
+	if(tag[i] != '/')
+		goto done;
+	++tag;
+	while(i < end && tag[i] != '\0' && tag[i] != ' ' && tag[i] != '/') {
+		dst[i] = tag[i];
+		++i;
+	}
+	dst[i] = '\0';
+dbgprintf("XXXX: getTagComponent dst on output: '%s', len %d\n", dst, i);
+	*lenDst = i;
+done:
+	return i;
+}
+
+
 BEGINdoAction
+	int lenTAG;
+	int lenSever;
+	int lenHost;
 	msg_t *pMsg;
+	uchar *pszTag;
+	uchar pszSever[512];
+	uchar pszHost[512];
 CODESTARTdoAction
 	pMsg = (msg_t*) ppString[0];
 	dbgprintf("XXXX: mmsnmptrapd called with pMsg %p\n", pMsg);
+	getTAG(pMsg, &pszTag, &lenTAG);
+	if(strncmp((char*)pszTag, (char*)pData->pszTagID, pData->lenTagID)) {
+		DBGPRINTF("tag '%s' not matching, mmsnmptrapd ignoring this message\n",
+			  pszTag);
+		FINALIZE;
+	}
+
+	lenSever = sizeof(pszSever);
+dbgprintf("XXXX: pszTag: '%s', lenID %d\n", pszTag, pData->lenTagID);
+	getTagComponent(pszTag+pData->lenTagID-1, pszSever, &lenSever);
+	lenHost = sizeof(pszHost);
+	getTagComponent(pszTag+pData->lenTagID+lenSever, pszHost, &lenHost);
+	dbgprintf("XXXX: mmsnmptrapd sever '%s'(%d), host '%s'(%d)\n", pszSever, lenSever, pszHost,lenHost);
+
+	if(pszHost[lenHost-1] == ':') {
+		pszHost[lenHost-1] = '\0';
+		--lenHost;
+	}
+	/* now apply new settings */
+	MsgSetTAG(pMsg, pData->pszTagName, pData->lenTagID);
+	MsgSetHOSTNAME(pMsg, pszHost, lenHost);
+finalize_it:
 ENDdoAction
 
 
@@ -134,7 +195,22 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_TPL_AS_MSG, (uchar*) "RSYSLOG_FileFormat"));
 
 	/* finally build the instance */
-	pData->pszTagName = cs.pszTagName;
+	if(cs.pszTagName == NULL) {
+		pData->pszTagName = (uchar*) strdup("snmptrapd:");
+		pData->pszTagID = (uchar*) strdup("snmptrapd/");
+	} else {
+		int lenTag = ustrlen(cs.pszTagName);
+		/* new tag value (with colon at the end) */
+		CHKmalloc(pData->pszTagName = MALLOC(lenTag + 2));
+		memcpy(pData->pszTagName, cs.pszTagName, lenTag);
+		memcpy(pData->pszTagName+lenTag, ":", 2);
+		/* tag ID for comparisions */
+		CHKmalloc(pData->pszTagID = MALLOC(lenTag + 2));
+		memcpy(pData->pszTagID, cs.pszTagName, lenTag);
+		memcpy(pData->pszTagID+lenTag, "/", 2);
+		free(cs.pszTagName); /* no longer needed */
+	}
+	pData->lenTagID = ustrlen(pData->pszTagID);
 
 	/* all config vars auto-reset! */
 	cs.pszTagName = NULL;
