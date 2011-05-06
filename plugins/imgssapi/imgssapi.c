@@ -645,6 +645,7 @@ TCPSessGSSDeinit(void)
 }
 
 
+#if 0 /* can be used to integrate into new config system */
 BEGINbeginCnfLoad
 CODESTARTbeginCnfLoad
 ENDbeginCnfLoad
@@ -668,6 +669,7 @@ ENDactivateCnf
 BEGINfreeCnf
 CODESTARTfreeCnf
 ENDfreeCnf
+#endif
 
 /* This function is called to gather input.
  */

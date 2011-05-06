@@ -459,7 +459,14 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 		*pEtryPoint = willRun;\
 	} else if(!strcmp((char*) name, "afterRun")) {\
 		*pEtryPoint = afterRun;\
-	} else if(!strcmp((char*) name, "beginCnfLoad")) {\
+	}
+
+
+/* the following block is to be added for modules that support the v2
+ * config system.
+ */
+#define CODEqueryEtryPt_STD_CONF2_QUERIES \
+	  else if(!strcmp((char*) name, "beginCnfLoad")) {\
 		*pEtryPoint = beginCnfLoad;\
 	} else if(!strcmp((char*) name, "endCnfLoad")) {\
 		*pEtryPoint = endCnfLoad;\

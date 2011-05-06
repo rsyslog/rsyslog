@@ -94,6 +94,7 @@ void OnReceive(srAPIObj __attribute__((unused)) *pMyAPI, srSLMGObj* pSLMG)
 }
 
 
+#if 0
 BEGINbeginCnfLoad
 CODESTARTbeginCnfLoad
 ENDbeginCnfLoad
@@ -117,6 +118,7 @@ ENDactivateCnf
 BEGINfreeCnf
 CODESTARTfreeCnf
 ENDfreeCnf
+#endif
 
 
 BEGINrunInput

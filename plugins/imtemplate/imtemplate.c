@@ -100,6 +100,7 @@ struct modConfData_s {
 };
 
 
+#if 0 /* can be used to integrate into new config system */
 BEGINbeginCnfLoad
 CODESTARTbeginCnfLoad
 ENDbeginCnfLoad
@@ -123,6 +124,7 @@ ENDactivateCnf
 BEGINfreeCnf
 CODESTARTfreeCnf
 ENDfreeCnf
+#endif
 
 
 /* You may add any functions that you feel are useful for your needs. No specific restrictions

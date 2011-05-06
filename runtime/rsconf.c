@@ -301,10 +301,11 @@ tellInputsConfigLoadDone(void)
 	cfgmodules_etry_t *node;
 
 	BEGINfunc
-	DBGPRINTF("telling inputs that config load for %p is done\n", loadConf);
-	node = module.GetNxtCnfType(loadConf, NULL, eMOD_IN);
+	DBGPRINTF("telling modules that config load for %p is done\n", loadConf);
+	node = module.GetNxtCnfType(loadConf, NULL, eMOD_ANY);
 	while(node != NULL) {
-		node->pMod->mod.im.endCnfLoad(node->modCnf);
+		if(node->pMod->beginCnfLoad != NULL)
+			node->pMod->endCnfLoad(node->modCnf);
 		node = module.GetNxtCnfType(runConf, node, eMOD_IN);
 	}
 
@@ -321,16 +322,18 @@ tellInputsCheckConfig(void)
 	rsRetVal localRet;
 
 	BEGINfunc
-	DBGPRINTF("telling inputs to check config %p\n", loadConf);
-	node = module.GetNxtCnfType(loadConf, NULL, eMOD_IN);
+	DBGPRINTF("telling modules to check config %p\n", loadConf);
+	node = module.GetNxtCnfType(loadConf, NULL, eMOD_ANY);
 	while(node != NULL) {
-		localRet = node->pMod->mod.im.checkCnf(node->modCnf);
-		DBGPRINTF("module %s tells us config can %sbe activated\n",
-				  node->pMod->pszName, (localRet == RS_RET_OK) ? "" : "NOT ");
-		if(localRet == RS_RET_OK) {
-			node->canActivate = 1;
-		} else {
-			node->canActivate = 0;
+		if(node->pMod->beginCnfLoad != NULL) {
+			localRet = node->pMod->checkCnf(node->modCnf);
+			DBGPRINTF("module %s tells us config can %sbe activated\n",
+					  node->pMod->pszName, (localRet == RS_RET_OK) ? "" : "NOT ");
+			if(localRet == RS_RET_OK) {
+				node->canActivate = 1;
+			} else {
+				node->canActivate = 0;
+			}
 		}
 		node = module.GetNxtCnfType(runConf, node, eMOD_IN);
 	}
@@ -348,13 +351,13 @@ tellInputsActivateConfig(void)
 	rsRetVal localRet;
 
 	BEGINfunc
-	DBGPRINTF("telling inputs to activate config %p\n", runConf);
-	node = module.GetNxtCnfType(runConf, NULL, eMOD_IN);
+	DBGPRINTF("telling modules to activate config %p\n", runConf);
+	node = module.GetNxtCnfType(runConf, NULL, eMOD_ANY);
 	while(node != NULL) {
-		if(node->canActivate) {
+		if(node->pMod->beginCnfLoad != NULL && node->canActivate) {
 			DBGPRINTF("activating config %p for module %s\n",
 				  runConf, node->pMod->pszName);
-			localRet = node->pMod->mod.im.activateCnf(node->modCnf);
+			localRet = node->pMod->activateCnf(node->modCnf);
 			if(localRet != RS_RET_OK) {
 				errmsg.LogError(0, localRet, "activation of module %s failed",
 						node->pMod->pszName);

@@ -57,7 +57,8 @@ typedef enum eModType_ {
 	eMOD_OUT = 1,	/* output module */
 	eMOD_LIB = 2,	/* library module */
 	eMOD_PARSER = 3,/* parser module */
-	eMOD_STRGEN = 4	/* strgen module */
+	eMOD_STRGEN = 4,/* strgen module */
+	eMOD_ANY = 5	/* meta-name for "any type of module" -- to be used in function calls */
 } eModType_t;
 
 
@@ -110,17 +111,19 @@ struct modInfo_s {
 	rsRetVal (*modExit)(void);		/* called before termination or module unload */
 	rsRetVal (*modGetID)(void **);		/* get its unique ID from module */
 	rsRetVal (*doHUP)(void *);		/* non-restart type HUP handler */
+	/* v2 config system specific */
+	rsRetVal (*beginCnfLoad)(void*newCnf, rsconf_t *pConf);
+	rsRetVal (*endCnfLoad)(void*Cnf);
+	rsRetVal (*checkCnf)(void*Cnf);
+	rsRetVal (*activateCnf)(void*Cnf);	/* make provided config the running conf */
+	rsRetVal (*freeCnf)(void*Cnf);
+	/* end v2 config system specific */
 	/* below: create an instance of this module. Most importantly the module
 	 * can allocate instance memory in this call.
 	 */
 	rsRetVal (*createInstance)();
 	union	{
 		struct {/* data for input modules */
-			rsRetVal (*beginCnfLoad)(void*newCnf, rsconf_t *pConf);
-			rsRetVal (*endCnfLoad)(void*Cnf);
-			rsRetVal (*checkCnf)(void*Cnf);
-			rsRetVal (*activateCnf)(void*Cnf);	/* make provided config the running conf */
-			rsRetVal (*freeCnf)(void*Cnf);
 /* TODO: remove? */rsRetVal (*willRun)(void); 		/* check if the current config will be able to run*/
 			rsRetVal (*runInput)(thrdInfo_t*);	/* function to gather input and submit to queue */
 			rsRetVal (*afterRun)(thrdInfo_t*);	/* function to gather input and submit to queue */

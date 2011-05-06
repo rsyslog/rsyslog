@@ -371,8 +371,9 @@ addModToCnfList(modInfo_t *pThis)
 	pNew->next = NULL;
 	pNew->pMod = pThis;
 
-	if(pThis->eType == eMOD_IN) {
-		CHKiRet(pThis->mod.im.beginCnfLoad(&pNew->modCnf, loadConf));
+dbgprintf("XXXX: beginCnfLoad %p\n", pThis->beginCnfLoad);
+	if(pThis->beginCnfLoad != NULL) {
+		CHKiRet(pThis->beginCnfLoad(&pNew->modCnf, loadConf));
 	}
 
 	if(pLast == NULL) {
@@ -424,8 +425,10 @@ static cfgmodules_etry_t
 		node = node->next;
 	}
 
-	while(node != NULL && node->pMod->eType != rqtdType) {
-		node = node->next; /* warning: do ... while() */
+	if(rqtdType != eMOD_ANY) { /* if any, we already have the right one! */
+		while(node != NULL && node->pMod->eType != rqtdType) {
+			node = node->next; /* warning: do ... while() */
+		}
 	}
 
 	return node;
@@ -518,14 +521,21 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 	else if(localRet != RS_RET_OK)
 		ABORT_FINALIZE(localRet);
 
+	/* optional calls for new config system */
+	localRet = (*pNew->modQueryEtryPt)((uchar*)"beginCnfLoad", &pNew->beginCnfLoad);
+	if(localRet == RS_RET_OK) {
+		CHKiRet((*pNew->modQueryEtryPt)((uchar*)"endCnfLoad", &pNew->endCnfLoad));
+		CHKiRet((*pNew->modQueryEtryPt)((uchar*)"freeCnf", &pNew->freeCnf));
+		CHKiRet((*pNew->modQueryEtryPt)((uchar*)"checkCnf", &pNew->checkCnf));
+		CHKiRet((*pNew->modQueryEtryPt)((uchar*)"activateCnf", &pNew->activateCnf));
+	} else if(localRet == RS_RET_MODULE_ENTRY_POINT_NOT_FOUND) {
+		pNew->beginCnfLoad = NULL; /* flag as non-present */
+	} else {
+		ABORT_FINALIZE(localRet);
+	}
 	/* ... and now the module-specific interfaces */
 	switch(pNew->eType) {
 		case eMOD_IN:
-			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"beginCnfLoad", &pNew->mod.im.beginCnfLoad));
-			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"endCnfLoad", &pNew->mod.im.endCnfLoad));
-			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"freeCnf", &pNew->mod.im.freeCnf));
-			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"checkCnf", &pNew->mod.im.checkCnf));
-			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"activateCnf", &pNew->mod.im.activateCnf));
 			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"runInput", &pNew->mod.im.runInput));
 			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"willRun", &pNew->mod.im.willRun));
 			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"afterRun", &pNew->mod.im.afterRun));
@@ -601,6 +611,10 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 			CHKiRet(strgen.SetName(pStrgen, pName));
 			CHKiRet(strgen.SetModPtr(pStrgen, pNew));
 			CHKiRet(strgen.ConstructFinalize(pStrgen));
+			break;
+		case eMOD_ANY: /* this is mostly to keep the compiler happy! */
+			DBGPRINTF("PROGRAM ERROR: eMOD_ANY set as module type\n");
+			assert(0);
 			break;
 	}
 
@@ -681,12 +695,19 @@ static void modPrintList(void)
 		case eMOD_STRGEN:
 			dbgprintf("strgen");
 			break;
+		case eMOD_ANY: /* this is mostly to keep the compiler happy! */
+			DBGPRINTF("PROGRAM ERROR: eMOD_ANY set as module type\n");
+			assert(0);
+			break;
 		}
 		dbgprintf(" module.\n");
 		dbgprintf("Entry points:\n");
 		dbgprintf("\tqueryEtryPt:        0x%lx\n", (unsigned long) pMod->modQueryEtryPt);
 		dbgprintf("\tdbgPrintInstInfo:   0x%lx\n", (unsigned long) pMod->dbgPrintInstInfo);
 		dbgprintf("\tfreeInstance:       0x%lx\n", (unsigned long) pMod->freeInstance);
+		dbgprintf("\tbeginCnfLoad:       0x%lx\n", (unsigned long) pMod->beginCnfLoad);
+		dbgprintf("\tendCnfLoad:         0x%lx\n", (unsigned long) pMod->endCnfLoad);
+		dbgprintf("\tfreeCnf:            0x%lx\n", (unsigned long) pMod->freeCnf);
 		switch(pMod->eType) {
 		case eMOD_OUT:
 			dbgprintf("Output Module Entry Points:\n");
@@ -705,9 +726,6 @@ static void modPrintList(void)
 			break;
 		case eMOD_IN:
 			dbgprintf("Input Module Entry Points\n");
-			dbgprintf("\tbeginCnfLoad:       0x%lx\n", (unsigned long) pMod->mod.im.beginCnfLoad);
-			dbgprintf("\tendCnfLoad:         0x%lx\n", (unsigned long) pMod->mod.im.endCnfLoad);
-			dbgprintf("\tfreeCnf:            0x%lx\n", (unsigned long) pMod->mod.im.freeCnf);
 			dbgprintf("\trunInput:           0x%lx\n", (unsigned long) pMod->mod.im.runInput);
 			dbgprintf("\twillRun:            0x%lx\n", (unsigned long) pMod->mod.im.willRun);
 			dbgprintf("\tafterRun:           0x%lx\n", (unsigned long) pMod->mod.im.afterRun);
@@ -721,6 +739,8 @@ static void modPrintList(void)
 		case eMOD_STRGEN:
 			dbgprintf("Strgen Module Entry Points\n");
 			dbgprintf("\tstrgen:            0x%lx\n", (unsigned long) pMod->mod.sm.strgen);
+			break;
+		case eMOD_ANY: /* this is mostly to keep the compiler happy! */
 			break;
 		}
 		dbgprintf("\n");
