@@ -657,9 +657,9 @@ CODESTARTcheckCnf
 ENDcheckCnf
 
 
-BEGINactivateCnf
+BEGINactivateCnfPrePrivDrop
 	instanceConf_t *inst;
-CODESTARTactivateCnf
+CODESTARTactivateCnfPrePrivDrop
 	runModConf = pModConf;
 	for(inst = runModConf->root ; inst != NULL ; inst = inst->next) {
 		addListner(inst);
@@ -672,7 +672,12 @@ CODESTARTactivateCnf
 	}
 
 	setSchedParams(pModConf);
+finalize_it:
+ENDactivateCnfPrePrivDrop
 
+
+BEGINactivateCnf
+CODESTARTactivateCnf
 	/* caching various settings */
 	iMaxLine = glbl.GetMaxLine();
 	CHKmalloc(pRcvBuf = MALLOC((iMaxLine + 1) * sizeof(char)));
@@ -745,6 +750,7 @@ BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_IMOD_QUERIES
 CODEqueryEtryPt_STD_CONF2_QUERIES
+CODEqueryEtryPt_STD_CONF2_PREPRIVDROP_QUERIES
 CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
 ENDqueryEtryPt
 

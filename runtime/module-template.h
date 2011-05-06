@@ -478,6 +478,15 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 		*pEtryPoint = freeCnf;\
 	}
 
+
+/* the following block is to be added for modules that require
+ * pre priv drop activation support.
+ */
+#define CODEqueryEtryPt_STD_CONF2_PREPRIVDROP_QUERIES \
+	  else if(!strcmp((char*) name, "activateCnfPrePrivDrop")) {\
+		*pEtryPoint = activateCnfPrePrivDrop;\
+	}
+
 /* the following definition is the standard block for queryEtryPt for LIBRARY
  * modules. This can be used if no specific handling (e.g. to cover version
  * differences) is needed.
@@ -622,7 +631,7 @@ static rsRetVal modExit(void)\
  * the module. -- rgerards, 2011-05-03
  */
 #define BEGINbeginCnfLoad \
-static rsRetVal beginCnfLoad(modConfData_t **ptr, rsconf_t *pConf)\
+static rsRetVal beginCnfLoad(modConfData_t **ptr, __attribute__((unused)) rsconf_t *pConf)\
 {\
 	modConfData_t *pModConf; \
 	DEFiRet;
@@ -650,7 +659,7 @@ static rsRetVal beginCnfLoad(modConfData_t **ptr, rsconf_t *pConf)\
 #define BEGINendCnfLoad \
 static rsRetVal endCnfLoad(modConfData_t *ptr)\
 {\
-	modConfData_t *pModConf = (modConfData_t*) ptr; \
+	modConfData_t __attribute__((unused)) *pModConf = (modConfData_t*) ptr; \
 	DEFiRet;
 
 #define CODESTARTendCnfLoad
@@ -672,12 +681,32 @@ static rsRetVal endCnfLoad(modConfData_t *ptr)\
 #define BEGINcheckCnf \
 static rsRetVal checkCnf(modConfData_t *ptr)\
 {\
-	modConfData_t *pModConf = (modConfData_t*) ptr; \
+	modConfData_t __attribute__((unused)) *pModConf = (modConfData_t*) ptr; \
 	DEFiRet;
 
 #define CODESTARTcheckCnf
 
 #define ENDcheckCnf \
+	RETiRet;\
+}
+
+
+/* activateCnfPrePrivDrop()
+ * Initial config activation, before dropping privileges. This is an optional
+ * entry points that should only be implemented by those module that really need
+ * it. Processing should be limited to the minimum possible. Main activation
+ * should happen in the normal activateCnf() call.
+ * rgerhards, 2011-05-06
+ */
+#define BEGINactivateCnfPrePrivDrop \
+static rsRetVal activateCnfPrePrivDrop(modConfData_t *ptr)\
+{\
+	modConfData_t *pModConf = (modConfData_t*) ptr; \
+	DEFiRet;
+
+#define CODESTARTactivateCnfPrePrivDrop
+
+#define ENDactivateCnfPrePrivDrop \
 	RETiRet;\
 }
 
@@ -690,7 +719,7 @@ static rsRetVal checkCnf(modConfData_t *ptr)\
 #define BEGINactivateCnf \
 static rsRetVal activateCnf(modConfData_t *ptr)\
 {\
-	modConfData_t *pModConf = (modConfData_t*) ptr; \
+	modConfData_t __attribute__((unused)) *pModConf = (modConfData_t*) ptr; \
 	DEFiRet;
 
 #define CODESTARTactivateCnf

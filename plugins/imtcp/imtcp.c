@@ -266,6 +266,7 @@ addListner(modConfData_t *modConf, instanceConf_t *inst)
 	}
 
 	/* initialized, now add socket and listener params */
+	DBGPRINTF("imtcp: trying to add port *:%s\n", inst->pszBindPort);
 	CHKiRet(tcpsrv.SetRuleset(pOurTcpsrv, inst->pBindRuleset));
 	CHKiRet(tcpsrv.SetInputName(pOurTcpsrv, inst->pszInputName == NULL ?
 						UCHAR_CONSTANT("imtcp") : inst->pszInputName));
@@ -329,9 +330,9 @@ CODESTARTcheckCnf
 ENDcheckCnf
 
 
-BEGINactivateCnf
+BEGINactivateCnfPrePrivDrop
 	instanceConf_t *inst;
-CODESTARTactivateCnf
+CODESTARTactivateCnfPrePrivDrop
 	runModConf = pModConf;
 	for(inst = runModConf->root ; inst != NULL ; inst = inst->next) {
 		addListner(pModConf, inst);
@@ -339,6 +340,12 @@ CODESTARTactivateCnf
 	if(pOurTcpsrv == NULL)
 		ABORT_FINALIZE(RS_RET_NO_RUN);
 finalize_it:
+ENDactivateCnfPrePrivDrop
+
+
+BEGINactivateCnf
+CODESTARTactivateCnf
+	/* sorry, nothing to do here... */
 ENDactivateCnf
 
 
@@ -422,6 +429,7 @@ BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_IMOD_QUERIES
 CODEqueryEtryPt_STD_CONF2_QUERIES
+CODEqueryEtryPt_STD_CONF2_PREPRIVDROP_QUERIES
 CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
 ENDqueryEtryPt
 

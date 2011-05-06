@@ -371,7 +371,6 @@ addModToCnfList(modInfo_t *pThis)
 	pNew->next = NULL;
 	pNew->pMod = pThis;
 
-dbgprintf("XXXX: beginCnfLoad %p\n", pThis->beginCnfLoad);
 	if(pThis->beginCnfLoad != NULL) {
 		CHKiRet(pThis->beginCnfLoad(&pNew->modCnf, loadConf));
 	}
@@ -528,6 +527,12 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 		CHKiRet((*pNew->modQueryEtryPt)((uchar*)"freeCnf", &pNew->freeCnf));
 		CHKiRet((*pNew->modQueryEtryPt)((uchar*)"checkCnf", &pNew->checkCnf));
 		CHKiRet((*pNew->modQueryEtryPt)((uchar*)"activateCnf", &pNew->activateCnf));
+		localRet = (*pNew->modQueryEtryPt)((uchar*)"activateCnfPrePrivDrop", &pNew->activateCnfPrePrivDrop);
+		if(localRet == RS_RET_MODULE_ENTRY_POINT_NOT_FOUND) {
+			pNew->activateCnfPrePrivDrop = NULL;
+		} else {
+			CHKiRet(localRet);
+		}
 	} else if(localRet == RS_RET_MODULE_ENTRY_POINT_NOT_FOUND) {
 		pNew->beginCnfLoad = NULL; /* flag as non-present */
 	} else {
@@ -706,7 +711,9 @@ static void modPrintList(void)
 		dbgprintf("\tdbgPrintInstInfo:   0x%lx\n", (unsigned long) pMod->dbgPrintInstInfo);
 		dbgprintf("\tfreeInstance:       0x%lx\n", (unsigned long) pMod->freeInstance);
 		dbgprintf("\tbeginCnfLoad:       0x%lx\n", (unsigned long) pMod->beginCnfLoad);
-		dbgprintf("\tendCnfLoad:         0x%lx\n", (unsigned long) pMod->endCnfLoad);
+		dbgprintf("\tcheckCnf:           0x%lx\n", (unsigned long) pMod->checkCnf);
+		dbgprintf("\tactivateCnfPrePrivDrop: 0x%lx\n", (unsigned long) pMod->activateCnfPrePrivDrop);
+		dbgprintf("\tactivateCnf:        0x%lx\n", (unsigned long) pMod->activateCnf);
 		dbgprintf("\tfreeCnf:            0x%lx\n", (unsigned long) pMod->freeCnf);
 		switch(pMod->eType) {
 		case eMOD_OUT:

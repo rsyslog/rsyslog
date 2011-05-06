@@ -296,7 +296,7 @@ dropPrivileges(rsconf_t *cnf)
 
 /* Tell input modules that the config parsing stage is over.  */
 static rsRetVal
-tellInputsConfigLoadDone(void)
+tellModulesConfigLoadDone(void)
 {
 	cfgmodules_etry_t *node;
 
@@ -316,7 +316,7 @@ tellInputsConfigLoadDone(void)
 
 /* Tell input modules to verify config object */
 static rsRetVal
-tellInputsCheckConfig(void)
+tellModulesCheckConfig(void)
 {
 	cfgmodules_etry_t *node;
 	rsRetVal localRet;
@@ -343,9 +343,40 @@ tellInputsCheckConfig(void)
 }
 
 
-/* Tell input modules to activate current running config */
+/* Tell modules to activate current running config (pre privilege drop) */
 static rsRetVal
-tellInputsActivateConfig(void)
+tellModulesActivateConfigPrePrivDrop(void)
+{
+	cfgmodules_etry_t *node;
+	rsRetVal localRet;
+
+	BEGINfunc
+	DBGPRINTF("telling modules to activate config (before dropping privs) %p\n", runConf);
+	node = module.GetNxtCnfType(runConf, NULL, eMOD_ANY);
+	while(node != NULL) {
+		if(   node->pMod->beginCnfLoad != NULL
+		   && node->pMod->activateCnfPrePrivDrop != NULL
+		   && node->canActivate) {
+			DBGPRINTF("activating config %p for module %s\n",
+				  runConf, node->pMod->pszName);
+			localRet = node->pMod->activateCnfPrePrivDrop(node->modCnf);
+			if(localRet != RS_RET_OK) {
+				errmsg.LogError(0, localRet, "activation of module %s failed",
+						node->pMod->pszName);
+			node->canActivate = 0; /* in a sense, could not activate... */
+			}
+		}
+		node = module.GetNxtCnfType(runConf, node, eMOD_IN);
+	}
+
+	ENDfunc
+	return RS_RET_OK; /* intentional: we do not care about module errors */
+}
+
+
+/* Tell modules to activate current running config */
+static rsRetVal
+tellModulesActivateConfig(void)
 {
 	cfgmodules_etry_t *node;
 	rsRetVal localRet;
@@ -398,7 +429,7 @@ runInputModules(void)
 }
 
 
-/* Make the input modules check if they are ready to start.
+/* Make the modules check if they are ready to start.
  */
 static rsRetVal
 startInputModules(void)
@@ -463,8 +494,8 @@ activate(rsconf_t *cnf)
 	if(ourConf->globals.pszConfDAGFile != NULL)
 		generateConfigDAG(ourConf->globals.pszConfDAGFile);
 #	endif
-	tellInputsConfigLoadDone();
-	tellInputsCheckConfig();
+	tellModulesConfigLoadDone();
+	tellModulesCheckConfig();
 
 	/* the output part and the queue is now ready to run. So it is a good time
 	 * to initialize the inputs. Please note that the net code above should be
@@ -474,11 +505,12 @@ activate(rsconf_t *cnf)
 	 * Keep in mind. though, that the outputs already run if the queue was
 	 * persisted to disk. -- rgerhards
 	 */
-	tellInputsActivateConfig();
-	startInputModules();
+	tellModulesActivateConfigPrePrivDrop();
 
 	CHKiRet(dropPrivileges(cnf));
 
+	tellModulesActivateConfig();
+	startInputModules();
 	CHKiRet(activateActions());
 	CHKiRet(activateMainQueue());
 	/* finally let the inputs run... */

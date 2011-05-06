@@ -115,6 +115,7 @@ struct modInfo_s {
 	rsRetVal (*beginCnfLoad)(void*newCnf, rsconf_t *pConf);
 	rsRetVal (*endCnfLoad)(void*Cnf);
 	rsRetVal (*checkCnf)(void*Cnf);
+	rsRetVal (*activateCnfPrePrivDrop)(void*Cnf);
 	rsRetVal (*activateCnf)(void*Cnf);	/* make provided config the running conf */
 	rsRetVal (*freeCnf)(void*Cnf);
 	/* end v2 config system specific */
