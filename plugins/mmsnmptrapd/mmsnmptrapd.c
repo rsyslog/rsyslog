@@ -169,7 +169,6 @@ getSubstring(uchar **psrc, uchar delim, uchar *dst, int lenDst)
 	while(dstwrk > dst && isspace(*dst))
 		--dstwrk; /* trim trailing spaces */
 	*++dstwrk = '\0';
-dbgprintf("XXXX: getSubstring out: '%s', out '%s', ret %d\n", src, dst, (int) (dstwrk -dst));
 	
 	/* final results */
 	if(*src == delim)
@@ -190,7 +189,6 @@ getTagComponent(uchar *tag, uchar *dst, int *lenDst)
 	int i;
 
 	i = 0;
-dbgprintf("XXXX: getTagComponent tag on input: '%s'(%p)\n", tag, tag);
 	if(tag[i] != '/')
 		goto done;
 	++tag;
