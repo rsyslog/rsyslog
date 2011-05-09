@@ -169,8 +169,19 @@ Version 5.9.0  [V5-DEVEL] (rgerhards), 2011-03-??
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=236
 ---------------------------------------------------------------------------
 Version 5.8.1  [V5-stable] (rgerhards), 2011-04-??
+- bugfix: rate-limiting inside imuxsock did not work 100% correct
+  reason was that a global config variable was invalidly accessed where a
+  listener variable should have been used.
+  Also performance-improved the case when rate limiting is turned off (this
+  is a very unintrusive change, thus done directly to the stable version).
 - bugfix: $myhostname not available in RainerScript (and no error message)
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=233
+- bugfix: memory and file descriptor leak in stream processing
+  Leaks could occur under some circumstances if the file stream handler
+  errored out during the open call. Among others, this could cause very
+  big memory leaks if there were a problem with unreadable disk queue
+  files. In regard to the memory leak, this
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=256
 - bugfix: doc for impstats had wrong config statements
   also, config statements were named a bit inconsistent, resolved that
   problem by introducing an alias and only documenting the consistent
@@ -179,6 +190,11 @@ Version 5.8.1  [V5-stable] (rgerhards), 2011-04-??
 - bugfix: IPv6-address could not be specified in omrelp
   this was due to improper parsing of ":"
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=250
+- bugfix: TCP connection invalidly aborted when messages needed to be
+  discarded (due to QUEUE_FULL or similar problem)
+- bugfix: $LocalHostName was not honored under all circumstances
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=258
+- bugfix(minor): improper template function call in syslogd.c
 ---------------------------------------------------------------------------
 Version 5.8.0  [V5-stable] (rgerhards), 2011-04-12
 
@@ -965,9 +981,19 @@ Version 4.7.0  [v4-devel] (rgerhards), 2010-04-14
 - imported changes from 4.5.6 and below
 ---------------------------------------------------------------------------
 Version 4.6.6  [v4-stable] (rgerhards), 2010-11-??
+- bugfix: invalid storage type for config variables
+- bugfix: stream driver mode was not correctly set on tcp ouput on big
+  endian systems.
+  thanks varmojfekoj for the patch
 - bugfix: IPv6-address could not be specified in omrelp
   this was due to improper parsing of ":"
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=250
+- bugfix: memory and file descriptor leak in stream processing
+  Leaks could occur under some circumstances if the file stream handler
+  errored out during the open call. Among others, this could cause very
+  big memory leaks if there were a problem with unreadable disk queue
+  files. In regard to the memory leak, this
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=256
 - bugfix: imfile potentially duplicates lines
   This can happen when 0 bytes are read from the input file, and some
   writer appends data to the file BEFORE we check if a rollover happens.
@@ -993,6 +1019,10 @@ Version 4.6.6  [v4-stable] (rgerhards), 2010-11-??
   bug tracker: http://bugzilla.adiscon.com/show_bug.cgi?id=221
 - bugfix: omlibdbi did not use password from rsyslog.con
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=203
+- bugfix: TCP connection invalidly aborted when messages needed to be
+  discarded (due to QUEUE_FULL or similar problem)
+- bugfix: a slightly more informative error message when a TCP
+  connections is aborted
 - some improvements thanks to clang's static code analyzer
   o overall cleanup (mostly unnecessary writes and otherwise unused stuff)
   o bugfix: fixed a very remote problem in msg.c which could occur when
