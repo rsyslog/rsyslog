@@ -101,7 +101,7 @@ typedef struct _instanceData {
 /* config data */
 static uchar *pszTplName = NULL; /* name of the default template to use */
 static uchar *pszStrmDrvr = NULL; /* name of the stream driver to use */
-static short iStrmDrvrMode = 0; /* mode for stream driver, driver-dependent (0 mostly means plain tcp) */
+static int iStrmDrvrMode = 0; /* mode for stream driver, driver-dependent (0 mostly means plain tcp) */
 static short bResendLastOnRecon = 0; /* should the last message be re-sent on a successful reconnect? */
 static uchar *pszStrmDrvrAuthMode = NULL; /* authentication mode to use */
 static int iUDPRebindInterval = 0;	/* support for automatic re-binding (load balancers!). 0 - no rebind */
