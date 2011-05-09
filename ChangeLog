@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------
 Version 4.6.6  [v4-stable] (rgerhards), 2010-11-??
+- bugfix: invalid storage type for config variables
 - bugfix: stream driver mode was not correctly set on tcp ouput on big
   endian systems.
   thanks varmojfekoj for the patch
