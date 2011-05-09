@@ -1,5 +1,8 @@
 ---------------------------------------------------------------------------
 Version 5.9.0  [V5-DEVEL] (rgerhards), 2011-03-??
+- added capability for imtcp to activate keep-alive packets at the
+  socket layer.
+  reference: http://kb.monitorware.com/post20791.html
 - bugfix: do not open files with full privileges, if privs will be dropped
   This make the privilege drop code more bulletproof, but breaks Ubuntu's
   work-around for log files created by external programs with the wrong

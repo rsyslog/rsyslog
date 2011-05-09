@@ -82,6 +82,7 @@ static permittedPeers_t *pPermPeersRoot = NULL;
 
 
 /* config settings */
+static int bKeepAlive = 0;		/* support keep-alive packets */
 static int iTCPSessMax = 200; /* max number of sessions */
 static int iTCPLstnMax = 20; /* max number of sessions */
 static int iStrmDrvrMode = 0; /* mode for stream driver, driver-dependent (0 mostly means plain tcp) */
@@ -192,6 +193,7 @@ static rsRetVal addTCPListener(void __attribute__((unused)) *pVal, uchar *pNewVa
 
 	if(pOurTcpsrv == NULL) {
 		CHKiRet(tcpsrv.Construct(&pOurTcpsrv));
+		CHKiRet(tcpsrv.SetKeepAlive(pOurTcpsrv, bKeepAlive));
 		CHKiRet(tcpsrv.SetSessMax(pOurTcpsrv, iTCPSessMax));
 		CHKiRet(tcpsrv.SetLstnMax(pOurTcpsrv, iTCPLstnMax));
 		CHKiRet(tcpsrv.SetCBIsPermittedHost(pOurTcpsrv, isPermittedHost));
@@ -289,6 +291,7 @@ static rsRetVal
 resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
 	iTCPSessMax = 200;
+	bKeepAlive = 0;
 	iTCPLstnMax = 20;
 	iStrmDrvrMode = 0;
 	bUseFlowControl = 0;
@@ -327,6 +330,8 @@ CODEmodInit_QueryRegCFSLineHdlr
 	/* register config file handlers */
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpserverrun"), 0, eCmdHdlrGetWord,
 				   addTCPListener, NULL, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpserverkeepalive"), 0, eCmdHdlrBinary,
+				   NULL, &bKeepAlive, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpmaxsessions"), 0, eCmdHdlrInt,
 				   NULL, &iTCPSessMax, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpmaxlisteners"), 0, eCmdHdlrInt,
