@@ -36,9 +36,10 @@
 #include <signal.h>
 #include <errno.h>
 #include <unistd.h>
+#include <ctype.h>
+#include <liblognorm.h>
 #include <libestr.h>
 #include <libee/libee.h>
-#include <liblognorm.h>
 #include "conf.h"
 #include "msg.h"
 #include "syslogd-types.h"
@@ -61,14 +62,22 @@ DEFobjCurrIf(errmsg);
  */
 DEF_OMOD_STATIC_DATA
 
+struct severMap_s {
+	uchar *name;
+	int code;
+	struct severMap_s *next;
+};
+
 typedef struct _instanceData {
 	uchar *pszTagName;
-	uchar *pszTagID;	/* chaced: name plus trailig shlash (for compares) */
+	uchar *pszTagID;	/* chaced: name plus trailing shlash (for compares) */
 	int lenTagID;		/* cached length of tag ID, for performance reasons */
+	struct severMap_s *severMap;
 } instanceData;
 
 typedef struct configSettings_s {
 	uchar *pszTagName;	/**< name of tag start value that indicates snmptrapd initiated message */
+	uchar *pszSeverityMapping; /**< severitystring to numerical code mapping for snmptrapd string */
 } configSettings_t;
 configSettings_t cs;
 
@@ -79,6 +88,7 @@ SCOPING_SUPPORT; /* must be set AFTER configSettings_t is defined */
 BEGINinitConfVars		/* (re)set config variables to default values */
 CODESTARTinitConfVars 
 	cs.pszTagName = NULL;
+	cs.pszSeverityMapping = NULL;
 	resetConfigVariables(NULL, NULL);
 ENDinitConfVars
 #endif
@@ -95,7 +105,14 @@ ENDisCompatibleWithFeature
 
 
 BEGINfreeInstance
+	struct severMap_s *node, *nodeDel;
 CODESTARTfreeInstance
+	for(node = pData->severMap ; node != NULL ; ) {
+		nodeDel = node;
+		node = node->next;
+		free(nodeDel->name);
+		free(nodeDel);
+	}
 	free(pData->pszTagName);
 	free(pData->pszTagID);
 ENDfreeInstance
@@ -110,6 +127,57 @@ ENDdbgPrintInstInfo
 BEGINtryResume
 CODESTARTtryResume
 ENDtryResume
+
+
+/* check if a string is numeric (int) */
+static inline int
+isNumeric(uchar *str)
+{
+	int r = 1;
+	if(*str == '-' || *str == '+')
+		++str;
+	while(*str) {
+		if(!isdigit(*str)) {
+			r = 0;
+			goto done;
+		}
+		++str;
+	}
+done:
+	return r;
+}
+
+/* get a substring delimited by a character (or end of string). The
+ * string is trimmed, that is leading and trailing spaces are removed.
+ * The caller must provide a buffer which shall receive the substring.
+ * String length is returned as result. The input string is updated
+ * on exit, so that it may be used for another query starting at that
+ * position.
+ */
+static int
+getSubstring(uchar **psrc, uchar delim, uchar *dst, int lenDst)
+{
+	uchar *dstwrk = dst;
+	uchar *src = *psrc;
+	while(*src && isspace(*src)) {
+		++src;	/* trim leading spaces */
+	}
+	while(*src && *src != delim && --lenDst > 0) {
+		*dstwrk++ = *src++;
+	}
+	dstwrk--;
+	while(dstwrk > dst && isspace(*dst))
+		--dstwrk; /* trim trailing spaces */
+	*++dstwrk = '\0';
+dbgprintf("XXXX: getSubstring out: '%s', out '%s', ret %d\n", src, dst, (int) (dstwrk -dst));
+	
+	/* final results */
+	if(*src == delim)
+		++src;
+	*psrc = src;
+	return(dstwrk - dst);
+}
+
 
 /* get string up to the next SP or '/'. Stops at max size.
  * dst, lenDst (receive buffer) must be given. lenDst is
@@ -138,10 +206,30 @@ done:
 }
 
 
+/* lookup severity code based on provided severity
+ * returns -1 if severity could not be found.
+ */
+static inline int
+lookupSeverityCode(instanceData *pData, uchar *sever)
+{
+	struct severMap_s *node;
+	int sevCode = -1;
+
+	for(node = pData->severMap ; node != NULL ; node = node->next) {
+		if(!ustrcmp(node->name, sever)) {
+			sevCode = node->code;
+			break;
+		}
+	}
+	return sevCode;
+}
+
+
 BEGINdoAction
 	int lenTAG;
 	int lenSever;
 	int lenHost;
+	int sevCode;
 	msg_t *pMsg;
 	uchar *pszTag;
 	uchar pszSever[512];
@@ -167,11 +255,62 @@ dbgprintf("XXXX: pszTag: '%s', lenID %d\n", pszTag, pData->lenTagID);
 		pszHost[lenHost-1] = '\0';
 		--lenHost;
 	}
+	sevCode = lookupSeverityCode(pData, pszSever);
+dbgprintf("XXXX: severity for message is %d\n", sevCode);
 	/* now apply new settings */
 	MsgSetTAG(pMsg, pData->pszTagName, pData->lenTagID);
 	MsgSetHOSTNAME(pMsg, pszHost, lenHost);
+	if(sevCode != -1)
+		pMsg->iSeverity = sevCode; /* we update like the parser does! */
 finalize_it:
 ENDdoAction
+
+
+/* Build the severity mapping table based on user-provided configuration
+ * settings.
+ */
+static inline rsRetVal
+buildSeverityMapping(instanceData *pData)
+{
+	uchar pszSev[512];
+	uchar pszSevCode[512];
+	int sevCode;
+	uchar *mapping;
+	struct severMap_s *node;
+	DEFiRet;
+
+	mapping = cs.pszSeverityMapping;
+
+	while(1) {	/* broken inside when all entries are processed */
+		if(getSubstring(&mapping, '/', pszSev, sizeof(pszSev)) == 0) {
+			FINALIZE;
+		}
+		if(getSubstring(&mapping, ',', pszSevCode, sizeof(pszSevCode)) == 0) {
+			errmsg.LogError(0, RS_RET_ERR, "error: invalid severity mapping, cannot "
+					"extract code. given: '%s'\n", cs.pszSeverityMapping);
+			ABORT_FINALIZE(RS_RET_ERR);
+		}
+		sevCode = atoi((char*) pszSevCode);
+		if(!isNumeric(pszSevCode))
+			sevCode = -1;
+		if(sevCode < 0 || sevCode > 7) {
+			errmsg.LogError(0, RS_RET_ERR, "error: severity code %d outside of valid "
+					"range 0..7 (was string '%s')\n", sevCode, pszSevCode);
+			ABORT_FINALIZE(RS_RET_ERR);
+		}
+		CHKmalloc(node = MALLOC(sizeof(struct severMap_s)));
+		CHKmalloc(node->name = ustrdup(pszSev));
+		node->code = sevCode;
+		/* we enqueue at the top, so the two lines below do all we need! */
+		node->next = pData->severMap;
+		pData->severMap = node;
+		DBGPRINTF("mmsnmptrapd: severity string '%s' mapped to code %d\n",
+			  pszSev, sevCode);
+	}
+
+finalize_it:
+	RETiRet;
+}
 
 
 BEGINparseSelectorAct
@@ -211,9 +350,14 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		free(cs.pszTagName); /* no longer needed */
 	}
 	pData->lenTagID = ustrlen(pData->pszTagID);
+	if(cs.pszSeverityMapping != NULL) {
+		CHKiRet(buildSeverityMapping(pData));
+	}
 
 	/* all config vars auto-reset! */
 	cs.pszTagName = NULL;
+	free(cs.pszSeverityMapping);
+	cs.pszSeverityMapping = NULL;
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
@@ -238,6 +382,8 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	DEFiRet;
 	free(cs.pszTagName);
 	cs.pszTagName = NULL;
+	free(cs.pszSeverityMapping);
+	cs.pszSeverityMapping = NULL;
 	RETiRet;
 }
 
@@ -272,9 +418,15 @@ CODEmodInit_QueryRegCFSLineHdlr
 	}
 
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+
+	/* TODO: config vars ininit can be replaced by commented-out code above in v6 */
+	cs.pszTagName = NULL;
+	cs.pszSeverityMapping = NULL;
 	
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"mmsnmptrapdtag", 0, eCmdHdlrInt,
 				    NULL, &cs.pszTagName, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"mmsnmptrapdseveritymapping", 0, eCmdHdlrGetWord,
+				    NULL, &cs.pszSeverityMapping, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
 				    resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
