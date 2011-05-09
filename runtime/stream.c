@@ -259,6 +259,7 @@ static rsRetVal strmOpenFile(strm_t *pThis)
 
 	if(pThis->fd != -1)
 		ABORT_FINALIZE(RS_RET_OK);
+	pThis->pszCurrFName = NULL; /* used to prevent mem leak in case of error */
 
 	if(pThis->pszFName == NULL)
 		ABORT_FINALIZE(RS_RET_FILE_PREFIX_MISSING);
@@ -290,6 +291,16 @@ static rsRetVal strmOpenFile(strm_t *pThis)
 		  (pThis->tOperationsMode == STREAMMODE_READ) ? "READ" : "WRITE", pThis->fd);
 
 finalize_it:
+	if(iRet != RS_RET_OK) {
+		if(pThis->pszCurrFName != NULL) {
+			free(pThis->pszCurrFName);
+			pThis->pszCurrFName = NULL; /* just to prevent mis-adressing down the road... */
+		}
+		if(pThis->fd != -1) {
+			close(pThis->fd);
+			pThis->fd = -1;
+		}
+	}
 	RETiRet;
 }
 
@@ -401,6 +412,12 @@ finalize_it:
  * If we are monitoring a file, someone may have rotated it. In this case, we
  * also need to close it and reopen it under the same name.
  * rgerhards, 2008-02-13
+ * The previous code also did a check for file truncation, in which case the
+ * file was considered rewritten. However, this potential border case turned
+ * out to be a big trouble spot on busy systems. It caused massive message
+ * duplication (I guess stat() can return a too-low number under some
+ * circumstances). So starting as of now, we only check the inode number and
+ * a file change is detected only if the inode changes. -- rgerhards, 2011-01-10
  */
 static rsRetVal
 strmHandleEOFMonitor(strm_t *pThis)
@@ -410,23 +427,18 @@ strmHandleEOFMonitor(strm_t *pThis)
 	struct stat statName;
 
 	ISOBJ_TYPE_assert(pThis, strm);
-	/* find inodes of both current descriptor as well as file now in file
-	 * system. If they are different, the file has been rotated (or
-	 * otherwise rewritten). We also check the size, because the inode
-	 * does not change if the file is truncated (this, BTW, is also a case
-	 * where we actually loose log lines, because we can not do anything
-	 * against truncation...). We do NOT rely on the time of last
-	 * modificaton because that may not be available under all
-	 * circumstances. -- rgerhards, 2008-02-13
-	 */
 	if(fstat(pThis->fd, &statOpen) == -1)
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
 	if(stat((char*) pThis->pszCurrFName, &statName) == -1)
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
-	if(statOpen.st_ino == statName.st_ino && pThis->iCurrOffs == statName.st_size) {
+	DBGPRINTF("stream checking for file change on '%s', inode %u/%u",
+	  pThis->pszCurrFName, (unsigned) statOpen.st_ino,
+	  (unsigned) statName.st_ino);
+	if(statOpen.st_ino == statName.st_ino) {
 		ABORT_FINALIZE(RS_RET_EOF);
 	} else {
 		/* we had a file change! */
+		DBGPRINTF("we had a file change on '%s'\n", pThis->pszCurrFName);
 		CHKiRet(strmCloseFile(pThis));
 		CHKiRet(strmOpenFile(pThis));
 	}

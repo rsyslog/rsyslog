@@ -287,7 +287,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	if(dbName  != NULL)
 		if((pData->dbName   = (uchar*) strdup((char*)dbName))   == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	if(pwd     != NULL)
-		if((pData->pwd      = (uchar*) strdup((char*)""))       == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+		if((pData->pwd      = (uchar*) strdup((char*)pwd))       == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 
 	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_RQD_TPL_OPT_SQL, (uchar*) " StdDBFmt"));
 

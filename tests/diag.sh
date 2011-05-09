@@ -22,6 +22,7 @@ case $1 in
 		rm -f work rsyslog.out.log rsyslog.out.log.save # common work files
 		rm -f rsyslog.out.*.log work-presort
 		rm -rf test-spool
+		rm -f rsyslog.input
 		rm -f core.* vgcore.*
 		mkdir test-spool
 		;;
@@ -30,6 +31,7 @@ case $1 in
 		rm -f work rsyslog.out.log rsyslog.out.log.save # common work files
 		rm -f rsyslog.out.*.log rsyslog.random.data work-presort
 		rm -rf test-spool
+		rm -f rsyslog.input
 		;;
    'startup')   # start rsyslogd with default params. $2 is the config file name to use
    		# returns only after successful startup, $3 is the instance (blank or 2!)
