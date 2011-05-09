@@ -23,6 +23,8 @@ Version 5.8.1  [V5-stable] (rgerhards), 2011-04-??
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=250
 - bugfix: TCP connection invalidly aborted when messages needed to be
   discarded (due to QUEUE_FULL or similar problem)
+- bugfix: $LocalHostName was not honored under all circumstances
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=258
 - bugfix(minor): improper template function call in syslogd.c
 ---------------------------------------------------------------------------
 Version 5.8.0  [V5-stable] (rgerhards), 2011-04-12
