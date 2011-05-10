@@ -1,5 +1,13 @@
 ---------------------------------------------------------------------------
 Version 5.8.1  [V5-stable] (rgerhards), 2011-04-??
+- new module mmsnmptrapd, a sample message modification module
+  This can be useful to reformat snmptrapd messages and also serves as
+  a sample for how to write message modification modules using the
+  output module interface. Note that we introduced this new 
+  functionality directly into the stable release, as it does not 
+  modify the core and as such cannot have any side-effects if it is
+  not used (and thus the risk is solely on users requiring that
+  functionality).
 - bugfix: rate-limiting inside imuxsock did not work 100% correct
   reason was that a global config variable was invalidly accessed where a
   listener variable should have been used.

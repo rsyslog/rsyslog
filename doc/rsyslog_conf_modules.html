@@ -99,6 +99,15 @@ the methods the engine provides. They could be used, for example, to:
 <li>anonymize message content
 <li>add dynamically computed content to message (fields)
 </ul>
+<p>Message modification modules are usually written for one specific task and thus
+usually are not generic enough to be reused. However, existing module's code is
+probably an excellent starting base for writing a new module. Currently, the following
+modules existin inside the source tree
+<ul>
+<li><a href="mmsnmptrapd.html">mmsnmptrapd</a> - uses information provided by snmptrapd inside
+the tag to correct the original sender system and priority of messages. Implemented via
+the output module interface.
+</ul>
 
 <a name="lm"></a><h2>String Generator Modules</h2>
 <p>String generator modules are used, as the name implies, to generate strings based
