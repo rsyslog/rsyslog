@@ -37,9 +37,6 @@
 #include <errno.h>
 #include <unistd.h>
 #include <ctype.h>
-#include <liblognorm.h>
-#include <libestr.h>
-#include <libee/libee.h>
 #include "conf.h"
 #include "msg.h"
 #include "syslogd-types.h"
