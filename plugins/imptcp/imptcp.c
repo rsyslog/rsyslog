@@ -88,6 +88,7 @@ DEFobjCurrIf(ruleset)
 
 /* config settings */
 typedef struct configSettings_s {
+	int bKeepAlive;			/* support keep-alive packets */
 	int bEmitMsgOnClose;		/* emit an informational message on close by remote peer */
 	int iAddtlFrameDelim;		/* addtl frame delimiter, e.g. for netscreen, default none */
 	uchar *pszInputName;		/* value for inputname property, NULL is OK and handled by core engine */
@@ -111,13 +112,14 @@ struct ptcpsrv_s {
 	ptcpsrv_t *pNext;		/* linked list maintenance */
 	uchar *port;			/* Port to listen to */
 	uchar *lstnIP;			/* which IP we should listen on? */
-	int bEmitMsgOnClose;
 	int iAddtlFrameDelim;
 	uchar *pszInputName;
 	prop_t *pInputName;		/* InputName in (fast to process) property format */
 	ruleset_t *pRuleset;
 	ptcplstn_t *pLstn;		/* root of our listeners */
 	ptcpsess_t *pSess;		/* root of our sessions */
+	sbool bKeepAlive;		/* support keep-alive packets */
+	sbool bEmitMsgOnClose;
 };
 
 /* the ptcp session object. Describes a single active session.
@@ -429,12 +431,35 @@ finalize_it:
 }
 
 
+/* Enable KEEPALIVE handling on the socket.  */
+static inline rsRetVal
+EnableKeepAlive(int sock)
+{
+	int ret;
+	int optval;
+	socklen_t optlen;
+	DEFiRet;
+
+	optval = 1;
+	optlen = sizeof(optval);
+	ret = setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &optval, optlen);
+	if(ret < 0) {
+		dbgprintf("EnableKeepAlive socket call returns error %d\n", ret);
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
+	dbgprintf("KEEPALIVE enabled for socket %d\n", sock);
+
+finalize_it:
+	RETiRet;
+}
+
 
 /* accept an incoming connection request
  * rgerhards, 2008-04-22
  */
 static rsRetVal
-AcceptConnReq(int sock, int *newSock, prop_t **peerName, prop_t **peerIP)
+AcceptConnReq(ptcplstn_t *pLstn, int *newSock, prop_t **peerName, prop_t **peerIP)
 {
 	int sockflags;
 	struct sockaddr_storage addr;
@@ -443,13 +468,17 @@ AcceptConnReq(int sock, int *newSock, prop_t **peerName, prop_t **peerIP)
 
 	DEFiRet;
 
-	iNewSock = accept(sock, (struct sockaddr*) &addr, &addrlen);
+	iNewSock = accept(pLstn->sock, (struct sockaddr*) &addr, &addrlen);
 	if(iNewSock < 0) {
 		if(errno == EAGAIN || errno == EWOULDBLOCK)
 			ABORT_FINALIZE(RS_RET_NO_MORE_DATA);
 		ABORT_FINALIZE(RS_RET_ACCEPT_ERR);
 	}
 
+	if(pLstn->pSrv->bKeepAlive)
+		EnableKeepAlive(iNewSock);	/* we ignore errors, best to do! */
+
+	
 	CHKiRet(getPeerNames(peerName, peerIP, (struct sockaddr*) &addr));
 
 	/* set the new socket to non-blocking IO */
@@ -883,6 +912,7 @@ static rsRetVal addTCPListener(void __attribute__((unused)) *pVal, uchar *pNewVa
 	CHKmalloc(pSrv = malloc(sizeof(ptcpsrv_t)));
 	pSrv->pSess = NULL;
 	pSrv->pLstn = NULL;
+	pSrv->bKeepAlive = cs.bKeepAlive;
 	pSrv->bEmitMsgOnClose = cs.bEmitMsgOnClose;
 	pSrv->port = pNewVal;
 	pSrv->iAddtlFrameDelim = cs.iAddtlFrameDelim;
@@ -946,7 +976,7 @@ lstnActivity(ptcplstn_t *pLstn)
 
 	DBGPRINTF("imptcp: new connection on listen socket %d\n", pLstn->sock);
 	while(1) {
-		localRet = AcceptConnReq(pLstn->sock, &newSock, &peerName, &peerIP);
+		localRet = AcceptConnReq(pLstn, &newSock, &peerName, &peerIP);
 		if(localRet == RS_RET_NO_MORE_DATA)
 			break;
 		CHKiRet(localRet);
@@ -1145,6 +1175,7 @@ static rsRetVal
 resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
 	cs.bEmitMsgOnClose = 0;
+	cs.bKeepAlive = 0;
 	cs.iAddtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
 	free(cs.pszInputName);
 	cs.pszInputName = NULL;
@@ -1177,6 +1208,8 @@ CODEmodInit_QueryRegCFSLineHdlr
 	/* register config file handlers */
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputptcpserverrun"), 0, eCmdHdlrGetWord,
 				   addTCPListener, NULL, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputptcpserverkeepalive"), 0, eCmdHdlrBinary,
+				   NULL, &cs.bKeepAlive, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputptcpservernotifyonconnectionclose"), 0,
 				   eCmdHdlrBinary, NULL, &cs.bEmitMsgOnClose, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputptcpserveraddtlframedelimiter"), 0, eCmdHdlrInt,

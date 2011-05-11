@@ -1,7 +1,8 @@
 ---------------------------------------------------------------------------
 Version 5.9.0  [V5-DEVEL] (rgerhards), 2011-03-??
-- added capability for imtcp to activate keep-alive packets at the
-  socket layer.
+- added capability for imtcp and imptcp to activate keep-alive packets
+  at the socket layer. This has not been added to imttcp, as the latter is
+  only an experimental module, and one which did not prove to be useful.
   reference: http://kb.monitorware.com/post20791.html
 - bugfix: do not open files with full privileges, if privs will be dropped
   This make the privilege drop code more bulletproof, but breaks Ubuntu's
