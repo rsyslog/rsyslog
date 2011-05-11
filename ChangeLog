@@ -1,5 +1,15 @@
 ---------------------------------------------------------------------------
 Version 4.6.6  [v4-stable] (rgerhards), 2010-11-??
+- bugfix: invalid processing in QUEUE_FULL condition
+  If the the multi-submit interface was used and a QUEUE_FULL condition
+  occured, the failed message was properly destructed. However, the
+  rest of the input batch, if it existed, was not processed. So this
+  lead to potential loss of messages and a memory leak. The potential
+  loss of messages was IMHO minor, because they would have been dropped
+  in most cases due to the queue remaining full, but very few lucky ones
+  from the batch may have made it. Anyhow, this has now been changed so
+  that the rest of the batch is properly tried to be enqueued and, if
+  not possible, destructed.
 - bugfix: invalid storage type for config variables
 - bugfix: stream driver mode was not correctly set on tcp ouput on big
   endian systems.
