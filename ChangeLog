@@ -1,5 +1,15 @@
 ---------------------------------------------------------------------------
 Version 5.8.1  [V5-stable] (rgerhards), 2011-04-??
+- bugfix: invalid processing in QUEUE_FULL condition
+  If the the multi-submit interface was used and a QUEUE_FULL condition
+  occured, the failed message was properly destructed. However, the
+  rest of the input batch, if it existed, was not processed. So this
+  lead to potential loss of messages and a memory leak. The potential
+  loss of messages was IMHO minor, because they would have been dropped
+  in most cases due to the queue remaining full, but very few lucky ones
+  from the batch may have made it. Anyhow, this has now been changed so
+  that the rest of the batch is properly tried to be enqueued and, if
+  not possible, destructed.
 - new module mmsnmptrapd, a sample message modification module
   This can be useful to reformat snmptrapd messages and also serves as
   a sample for how to write message modification modules using the
