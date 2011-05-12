@@ -989,30 +989,6 @@ startupListeners()
 }
 
 
-BEGINbeginCnfLoad
-CODESTARTbeginCnfLoad
-ENDbeginCnfLoad
-
-
-BEGINendCnfLoad
-CODESTARTendCnfLoad
-ENDendCnfLoad
-
-
-BEGINcheckCnf
-CODESTARTcheckCnf
-ENDcheckCnf
-
-
-BEGINactivateCnf
-CODESTARTactivateCnf
-ENDactivateCnf
-
-
-BEGINfreeCnf
-CODESTARTfreeCnf
-ENDfreeCnf
-
 /* This function is called to gather input.
  */
 BEGINrunInput
