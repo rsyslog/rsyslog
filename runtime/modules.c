@@ -368,6 +368,7 @@ addModToCnfList(modInfo_t *pThis)
 	 */
 
 	CHKmalloc(pNew = MALLOC(sizeof(cfgmodules_etry_t)));
+	pNew->canActivate = 1;
 	pNew->next = NULL;
 	pNew->pMod = pThis;
 
