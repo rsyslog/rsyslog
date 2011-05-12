@@ -6,7 +6,7 @@
  *
  * File begun on 2007-12-20 by RGerhards (extracted from syslogd.c)
  *
- * Copyright 2007-2010 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2011 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -68,6 +68,9 @@ MODULE_TYPE_NOKEEP
 #endif
 #endif
 
+/* forward definitions */
+static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal);
+
 /* emulate struct ucred for platforms that do not have it */
 #ifndef HAVE_SCM_CREDENTIALS
 struct ucred { int pid; };
@@ -87,10 +90,6 @@ DEFobjCurrIf(parser)
 DEFobjCurrIf(datetime)
 DEFobjCurrIf(statsobj)
 
-
-struct modConfData_s {
-	EMPTY_STRUCT;
-};
 
 statsobj_t *modStats;
 STATSCOUNTER_DEF(ctrSubmit, mutCtrSubmit)
@@ -153,26 +152,56 @@ static int startIndexUxLocalSockets; /* process fd from that index on (used to
 static int nfd = 1; /* number of Unix sockets open / read-only after startup */
 static int sd_fds = 0;			/* number of systemd activated sockets */
 
-/* config settings */
-static int bOmitLocalLogging = 0;
-static uchar *pLogSockName = NULL;
-static uchar *pLogHostName = NULL;	/* host name to use with this socket */
-static int bUseFlowCtl = 0;		/* use flow control or not (if yes, only LIGHT is used! */
-static int bIgnoreTimestamp = 1;	/* ignore timestamps present in the incoming message? */
-static int bWritePid = 0;		/* use credentials from recvmsg() and fixup PID in TAG */
-static int bWritePidSysSock = 0;	/* use credentials from recvmsg() and fixup PID in TAG */
+/* config vars for legacy config system */
 #define DFLT_bCreatePath 0
-static int bCreatePath = DFLT_bCreatePath; /* auto-create socket path? */
 #define DFLT_ratelimitInterval 5
-static int ratelimitInterval = DFLT_ratelimitInterval;	/* interval in seconds, 0 = off */
-static int ratelimitIntervalSysSock = DFLT_ratelimitInterval;
 #define DFLT_ratelimitBurst 200
-static int ratelimitBurst = DFLT_ratelimitBurst;	/* max nbr of messages in interval */
-static int ratelimitBurstSysSock = DFLT_ratelimitBurst;	/* max nbr of messages in interval */
 #define DFLT_ratelimitSeverity 1			/* do not rate-limit emergency messages */
-static int ratelimitSeverity = DFLT_ratelimitSeverity;
-static int ratelimitSeveritySysSock = DFLT_ratelimitSeverity;
+static struct configSettings_s {
+	int bOmitLocalLogging;
+	uchar *pLogSockName;
+	uchar *pLogHostName;		/* host name to use with this socket */
+	int bUseFlowCtl;		/* use flow control or not (if yes, only LIGHT is used! */
+	int bIgnoreTimestamp;		/* ignore timestamps present in the incoming message? */
+	int bWritePid;			/* use credentials from recvmsg() and fixup PID in TAG */
+	int bWritePidSysSock;		/* use credentials from recvmsg() and fixup PID in TAG */
+	int bCreatePath;		/* auto-create socket path? */
+	int ratelimitInterval;		/* interval in seconds, 0 = off */
+	int ratelimitIntervalSysSock;
+	int ratelimitBurst;		/* max nbr of messages in interval */
+	int ratelimitBurstSysSock;
+	int ratelimitSeverity;
+	int ratelimitSeveritySysSock;
+} cs;
 
+struct instanceConf_s {
+	uchar *sockName;
+	uchar *pLogHostName;		/* host name to use with this socket */
+	int bUseFlowCtl;		/* use flow control or not (if yes, only LIGHT is used! */
+	int bIgnoreTimestamp;		/* ignore timestamps present in the incoming message? */
+	int bWritePid;			/* use credentials from recvmsg() and fixup PID in TAG */
+	int bCreatePath;		/* auto-create socket path? */
+	int ratelimitInterval;		/* interval in seconds, 0 = off */
+	int ratelimitBurst;		/* max nbr of messages in interval */
+	int ratelimitSeverity;
+	struct instanceConf_s *next;
+};
+
+struct modConfData_s {
+	rsconf_t *pConf;		/* our overall config object */
+	instanceConf_t *root, *tail;
+	uchar *pLogSockName;
+	int bOmitLocalLogging;
+	int bWritePidSysSock;
+	int ratelimitIntervalSysSock;
+	int ratelimitBurstSysSock;
+	int ratelimitSeveritySysSock;
+};
+static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
+static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current load process */
+
+/* we do not use this, because we do not bind to a ruleset so far
+ * enable when this is changed: #include "im-helper.h" */ /* must be included AFTER the type definitions! */
 
 
 static void 
@@ -261,6 +290,53 @@ static rsRetVal setSystemLogFlowControl(void __attribute__((unused)) *pVal, int 
 	RETiRet;
 }
 
+
+/* This function is called when a new listen socket instace shall be added to 
+ * the current config object via the legacy config system. It just shuffles
+ * all parameters to the listener in-memory instance.
+ * rgerhards, 2011-05-12
+ */
+static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
+{
+	instanceConf_t *inst;
+	DEFiRet;
+
+	if(pNewVal == NULL || pNewVal[0] == '\0') {
+		errmsg.LogError(0, RS_RET_SOCKNAME_MISSING , "imuxsock: socket name must be specified, "
+			        "but is not - listener not created\n");
+		if(pNewVal != NULL)
+			free(pNewVal);
+		ABORT_FINALIZE(RS_RET_SOCKNAME_MISSING);
+	}
+
+	CHKmalloc(inst = MALLOC(sizeof(instanceConf_t)));
+	inst->sockName = pNewVal;
+	inst->ratelimitInterval = cs.ratelimitInterval;
+	inst->ratelimitBurst = cs.ratelimitBurst;
+	inst->ratelimitSeverity = cs.ratelimitSeverity;
+	inst->bUseFlowCtl = cs.bUseFlowCtl;
+	inst->bIgnoreTimestamp = cs.bIgnoreTimestamp;
+	inst->bCreatePath = cs.bCreatePath;
+	inst->bWritePid = cs.bWritePid;
+	inst->next = NULL;
+
+	/* node created, let's add to config */
+	if(loadModConf->tail == NULL) {
+		loadModConf->tail = loadModConf->root = inst;
+	} else {
+		loadModConf->tail->next = inst;
+		loadModConf->tail = inst;
+	}
+
+	/* some legacy conf processing */
+	free(cs.pLogHostName); /* reset hostname for next socket */
+	cs.pLogHostName = NULL;
+
+finalize_it:
+	RETiRet;
+}
+
+
 /* add an additional listen socket. Socket names are added
  * until the array is filled up. It is never reset, only at
  * module unload.
@@ -270,47 +346,45 @@ static rsRetVal setSystemLogFlowControl(void __attribute__((unused)) *pVal, int 
  * added capability to specify hostname for socket -- rgerhards, 2008-08-01
  */
 static rsRetVal
-addLstnSocketName(void __attribute__((unused)) *pVal, uchar *pNewVal)
+addListner(instanceConf_t *inst)
 {
 	DEFiRet;
 
 	if(nfd < MAXFUNIX) {
-		if(*pNewVal == ':') {
+		if(*inst->sockName == ':') {
 			listeners[nfd].bParseHost = 1;
 		} else {
 			listeners[nfd].bParseHost = 0;
 		}
 		CHKiRet(prop.Construct(&(listeners[nfd].hostName)));
-		if(pLogHostName == NULL) {
-			CHKiRet(prop.SetString(listeners[nfd].hostName, glbl.GetLocalHostName(), ustrlen(glbl.GetLocalHostName())));
+		if(inst->pLogHostName == NULL) {
+			CHKiRet(prop.SetString(listeners[nfd].hostName, glbl.GetLocalHostName(),
+				ustrlen(glbl.GetLocalHostName())));
 		} else {
-			CHKiRet(prop.SetString(listeners[nfd].hostName, pLogHostName, ustrlen(pLogHostName)));
-			/* reset hostname for next socket */
-			free(pLogHostName);
-			pLogHostName = NULL;
+			CHKiRet(prop.SetString(listeners[nfd].hostName, inst->pLogHostName, ustrlen(inst->pLogHostName)));
 		}
 		CHKiRet(prop.ConstructFinalize(listeners[nfd].hostName));
-		if(ratelimitInterval > 0) {
+		if(inst->ratelimitInterval > 0) {
 			if((listeners[nfd].ht = create_hashtable(100, hash_from_key_fn, key_equals_fn, NULL)) == NULL) {
-				/* in this case, we simply turn of rate-limiting */
+				/* in this case, we simply turn off rate-limiting */
 				dbgprintf("imuxsock: turning off rate limiting because we could not "
 					  "create hash table\n");
-				ratelimitInterval = 0;
+				inst->ratelimitInterval = 0;
 			}
 		}
-		listeners[nfd].ratelimitInterval = ratelimitInterval;
-		listeners[nfd].ratelimitBurst = ratelimitBurst;
-		listeners[nfd].ratelimitSev = ratelimitSeverity;
-		listeners[nfd].flowCtl = bUseFlowCtl ? eFLOWCTL_LIGHT_DELAY : eFLOWCTL_NO_DELAY;
-		listeners[nfd].flags = bIgnoreTimestamp ? IGNDATE : NOFLAG;
-		listeners[nfd].bCreatePath = bCreatePath;
-		listeners[nfd].sockName = pNewVal;
-		listeners[nfd].bUseCreds = (bWritePid || ratelimitInterval) ? 1 : 0;
-		listeners[nfd].bWritePid = bWritePid;
+		listeners[nfd].ratelimitInterval = inst->ratelimitInterval;
+		listeners[nfd].ratelimitBurst = inst->ratelimitBurst;
+		listeners[nfd].ratelimitSev = inst->ratelimitSeverity;
+		listeners[nfd].flowCtl = inst->bUseFlowCtl ? eFLOWCTL_LIGHT_DELAY : eFLOWCTL_NO_DELAY;
+		listeners[nfd].flags = inst->bIgnoreTimestamp ? IGNDATE : NOFLAG;
+		listeners[nfd].bCreatePath = inst->bCreatePath;
+		listeners[nfd].sockName = ustrdup(inst->sockName);
+		listeners[nfd].bUseCreds = (inst->bWritePid || inst->ratelimitInterval) ? 1 : 0;
+		listeners[nfd].bWritePid = inst->bWritePid;
 		nfd++;
 	} else {
 		errmsg.LogError(0, NO_ERRCODE, "Out of unix socket name descriptors, ignoring %s\n",
-			 pNewVal);
+			 inst->sockName);
 	}
 
 finalize_it:
@@ -689,19 +763,106 @@ finalize_it:
 }
 
 
+/* activate current listeners */
+static inline rsRetVal
+activateListeners()
+{
+	register int i;
+	int actSocks;
+	DEFiRet;
+
+	/* first apply some config settings */
+#	ifdef OS_SOLARIS
+		/* under solaris, we must NEVER process the local log socket, because
+		 * it is implemented there differently. If we used it, we would actually
+		 * delete it and render the system partly unusable. So don't do that.
+		 * rgerhards, 2010-03-26
+		 */
+		startIndexUxLocalSockets = 1;
+#	else
+		startIndexUxLocalSockets = runModConf->bOmitLocalLogging ? 1 : 0;
+#	endif
+	if(runModConf->pLogSockName != NULL)
+		listeners[0].sockName = runModConf->pLogSockName;
+	if(runModConf->ratelimitIntervalSysSock > 0) {
+		if((listeners[0].ht = create_hashtable(100, hash_from_key_fn, key_equals_fn, NULL)) == NULL) {
+			/* in this case, we simply turn of rate-limiting */
+			errmsg.LogError(0, NO_ERRCODE, "imuxsock: turning off rate limiting because we could not "
+				  "create hash table\n");
+			runModConf->ratelimitIntervalSysSock = 0;
+		}
+	}
+	listeners[0].ratelimitInterval = runModConf->ratelimitIntervalSysSock;
+	listeners[0].ratelimitBurst = runModConf->ratelimitBurstSysSock;
+	listeners[0].ratelimitSev = runModConf->ratelimitSeveritySysSock;
+	listeners[0].bUseCreds = (runModConf->bWritePidSysSock || runModConf->ratelimitIntervalSysSock) ? 1 : 0;
+	listeners[0].bWritePid = runModConf->bWritePidSysSock;
+
+	sd_fds = sd_listen_fds(0);
+	if(sd_fds < 0) {
+		errmsg.LogError(-sd_fds, NO_ERRCODE, "imuxsock: Failed to acquire systemd socket");
+		ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
+	}
+
+	/* initialize and return if will run or not */
+	actSocks = 0;
+	for (i = startIndexUxLocalSockets ; i < nfd ; i++) {
+		if(openLogSocket(&(listeners[i])) == RS_RET_OK) {
+			++actSocks;
+			dbgprintf("imuxsock: Opened UNIX socket '%s' (fd %d).\n",
+				  listeners[i].sockName, listeners[i].fd);
+		}
+	}
+
+	if(actSocks == 0) {
+		errmsg.LogError(0, NO_ERRCODE, "imuxsock does not run because we could not aquire any socket\n");
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
+finalize_it:
+	RETiRet;
+}
+
+
+
 BEGINbeginCnfLoad
 CODESTARTbeginCnfLoad
+	loadModConf = pModConf;
+	pModConf->pConf = pConf;
+	/* reset legacy config vars */
+	resetConfigVariables(NULL, NULL);
 ENDbeginCnfLoad
 
 
 BEGINendCnfLoad
 CODESTARTendCnfLoad
+	/* persist module-specific settings from legacy config system */
+	loadModConf->bOmitLocalLogging = cs.bOmitLocalLogging;
+	loadModConf->pLogSockName = cs.pLogSockName;
+
+	loadModConf = NULL; /* done loading */
+	/* free legacy config vars */
+	free(cs.pLogHostName);
+	cs.pLogSockName = NULL;
+	cs.pLogHostName = NULL;
 ENDendCnfLoad
 
 
 BEGINcheckCnf
 CODESTARTcheckCnf
 ENDcheckCnf
+
+
+BEGINactivateCnfPrePrivDrop
+	instanceConf_t *inst;
+CODESTARTactivateCnfPrePrivDrop
+	runModConf = pModConf;
+	for(inst = runModConf->root ; inst != NULL ; inst = inst->next) {
+		addListner(inst);
+	}
+	CHKiRet(activateListeners());
+finalize_it:
+ENDactivateCnfPrePrivDrop
 
 
 BEGINactivateCnf
@@ -711,6 +872,7 @@ ENDactivateCnf
 
 BEGINfreeCnf
 CODESTARTfreeCnf
+	free(pModConf->pLogSockName);
 ENDfreeCnf
 
 
@@ -781,68 +943,12 @@ ENDrunInput
 
 BEGINwillRun
 CODESTARTwillRun
-	register int i;
-	int actSocks;
-
-	/* first apply some config settings */
-#	ifdef OS_SOLARIS
-		/* under solaris, we must NEVER process the local log socket, because
-		 * it is implemented there differently. If we used it, we would actually
-		 * delete it and render the system partly unusable. So don't do that.
-		 * rgerhards, 2010-03-26
-		 */
-		startIndexUxLocalSockets = 1;
-#	else
-		startIndexUxLocalSockets = bOmitLocalLogging ? 1 : 0;
-#	endif
-	if(pLogSockName != NULL)
-		listeners[0].sockName = pLogSockName;
-	if(ratelimitIntervalSysSock > 0) {
-		if((listeners[0].ht = create_hashtable(100, hash_from_key_fn, key_equals_fn, NULL)) == NULL) {
-			/* in this case, we simply turn of rate-limiting */
-			dbgprintf("imuxsock: turning off rate limiting because we could not "
-				  "create hash table\n");
-			ratelimitIntervalSysSock = 0;
-		}
-	}
-	listeners[0].ratelimitInterval = ratelimitIntervalSysSock;
-	listeners[0].ratelimitBurst = ratelimitBurstSysSock;
-	listeners[0].ratelimitSev = ratelimitSeveritySysSock;
-	listeners[0].bUseCreds = (bWritePidSysSock || ratelimitIntervalSysSock) ? 1 : 0;
-	listeners[0].bWritePid = bWritePidSysSock;
-
-	sd_fds = sd_listen_fds(0);
-	if (sd_fds < 0) {
-		errmsg.LogError(-sd_fds, NO_ERRCODE, "imuxsock: Failed to acquire systemd socket");
-		ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
-	}
-
-	/* initialize and return if will run or not */
-	actSocks = 0;
-	for (i = startIndexUxLocalSockets ; i < nfd ; i++) {
-		if(openLogSocket(&(listeners[i])) == RS_RET_OK) {
-			++actSocks;
-			dbgprintf("imuxsock: Opened UNIX socket '%s' (fd %d).\n", listeners[i].sockName, listeners[i].fd);
-		}
-	}
-
-	if(actSocks == 0) {
-		errmsg.LogError(0, NO_ERRCODE, "imuxsock does not run because we could not aquire any socket\n");
-		ABORT_FINALIZE(RS_RET_ERR);
-	}
-
-	/* we need to create the inputName property (only once during our lifetime) */
-	CHKiRet(prop.Construct(&pInputName));
-	CHKiRet(prop.SetString(pInputName, UCHAR_CONSTANT("imuxsock"), sizeof("imuxsock") - 1));
-	CHKiRet(prop.ConstructFinalize(pInputName));
-
-finalize_it:
 ENDwillRun
 
 
 BEGINafterRun
-CODESTARTafterRun
 	int i;
+CODESTARTafterRun
 	/* do cleanup here */
 	/* Close the UNIX sockets. */
        for (i = 0; i < nfd; i++)
@@ -865,21 +971,17 @@ CODESTARTafterRun
 			DBGPRINTF("imuxsock: unlinking unix socket file[%d] %s\n", i, listeners[i].sockName);
 			unlink((char*) listeners[i].sockName);
 		}
-	/* free no longer needed string */
-	free(pLogSockName);
-	free(pLogHostName);
 
 	discardLogSockets();
 	nfd = 1;
-
-	if(pInputName != NULL)
-		prop.Destruct(&pInputName);
-
 ENDafterRun
 
 
 BEGINmodExit
 CODESTARTmodExit
+	if(pInputName != NULL)
+		prop.Destruct(&pInputName);
+
 	statsobj.Destruct(&modStats);
 
 	objRelease(parser, CORE_COMPONENT);
@@ -901,34 +1003,29 @@ ENDisCompatibleWithFeature
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_IMOD_QUERIES
+CODEqueryEtryPt_STD_CONF2_QUERIES
+CODEqueryEtryPt_STD_CONF2_PREPRIVDROP_QUERIES
 CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
 ENDqueryEtryPt
 
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
-	bOmitLocalLogging = 0;
-	if(pLogSockName != NULL) {
-		free(pLogSockName);
-		pLogSockName = NULL;
-	}
-	if(pLogHostName != NULL) {
-		free(pLogHostName);
-		pLogHostName = NULL;
-	}
-
-	discardLogSockets();
-	nfd = 1;
-	bIgnoreTimestamp = 1;
-	bUseFlowCtl = 0;
-	bWritePid = 0;
-	bWritePidSysSock = 0;
-	bCreatePath = DFLT_bCreatePath;
-	ratelimitInterval = DFLT_ratelimitInterval;
-	ratelimitIntervalSysSock = DFLT_ratelimitInterval;
-	ratelimitBurst = DFLT_ratelimitBurst;
-	ratelimitBurstSysSock = DFLT_ratelimitBurst;
-	ratelimitSeverity = DFLT_ratelimitSeverity;
-	ratelimitSeveritySysSock = DFLT_ratelimitSeverity;
+	free(cs.pLogSockName);
+	cs.pLogSockName = NULL;
+	free(cs.pLogHostName);
+	cs.bOmitLocalLogging = 0;
+	cs.pLogHostName = NULL;
+	cs.bIgnoreTimestamp = 1;
+	cs.bUseFlowCtl = 0;
+	cs.bWritePid = 0;
+	cs.bWritePidSysSock = 0;
+	cs.bCreatePath = DFLT_bCreatePath;
+	cs.ratelimitInterval = DFLT_ratelimitInterval;
+	cs.ratelimitIntervalSysSock = DFLT_ratelimitInterval;
+	cs.ratelimitBurst = DFLT_ratelimitBurst;
+	cs.ratelimitBurstSysSock = DFLT_ratelimitBurst;
+	cs.ratelimitSeverity = DFLT_ratelimitSeverity;
+	cs.ratelimitSeveritySysSock = DFLT_ratelimitSeverity;
 
 	return RS_RET_OK;
 }
@@ -947,6 +1044,15 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(parser, CORE_COMPONENT));
 
 	dbgprintf("imuxsock version %s initializing\n", PACKAGE_VERSION);
+
+	/* init legacy config vars */
+	cs.pLogSockName = NULL;
+	cs.pLogHostName = NULL;	/* host name to use with this socket */
+
+	/* we need to create the inputName property (only once during our lifetime) */
+	CHKiRet(prop.Construct(&pInputName));
+	CHKiRet(prop.SetString(pInputName, UCHAR_CONSTANT("imuxsock"), sizeof("imuxsock") - 1));
+	CHKiRet(prop.ConstructFinalize(pInputName));
 
 	/* init system log socket settings */
 	listeners[0].flags = IGNDATE;
@@ -975,27 +1081,27 @@ CODEmodInit_QueryRegCFSLineHdlr
 
 	/* register config file handlers */
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omitlocallogging", 0, eCmdHdlrBinary,
-		NULL, &bOmitLocalLogging, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+		NULL, &cs.bOmitLocalLogging, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputunixlistensocketignoremsgtimestamp", 0, eCmdHdlrBinary,
-		NULL, &bIgnoreTimestamp, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+		NULL, &cs.bIgnoreTimestamp, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"systemlogsocketname", 0, eCmdHdlrGetWord,
-		NULL, &pLogSockName, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+		NULL, &cs.pLogSockName, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputunixlistensockethostname", 0, eCmdHdlrGetWord,
-		NULL, &pLogHostName, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+		NULL, &cs.pLogHostName, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputunixlistensocketflowcontrol", 0, eCmdHdlrBinary,
-		NULL, &bUseFlowCtl, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+		NULL, &cs.bUseFlowCtl, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputunixlistensocketcreatepath", 0, eCmdHdlrBinary,
-		NULL, &bCreatePath, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+		NULL, &cs.bCreatePath, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"addunixlistensocket", 0, eCmdHdlrGetWord,
-		addLstnSocketName, NULL, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+		addInstance, NULL, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputunixlistensocketusepidfromsystem", 0, eCmdHdlrBinary,
-		NULL, &bWritePid, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+		NULL, &cs.bWritePid, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"imuxsockratelimitinterval", 0, eCmdHdlrInt,
-		NULL, &ratelimitInterval, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+		NULL, &cs.ratelimitInterval, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"imuxsockratelimitburst", 0, eCmdHdlrInt,
-		NULL, &ratelimitBurst, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+		NULL, &cs.ratelimitBurst, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"imuxsockratelimitseverity", 0, eCmdHdlrInt,
-		NULL, &ratelimitSeverity, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+		NULL, &cs.ratelimitSeverity, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
 		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	/* the following one is a (dirty) trick: the system log socket is not added via
@@ -1009,13 +1115,13 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"systemlogsocketflowcontrol", 0, eCmdHdlrBinary,
 		setSystemLogFlowControl, NULL, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"systemlogusepidfromsystem", 0, eCmdHdlrBinary,
-		NULL, &bWritePidSysSock, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+		NULL, &cs.bWritePidSysSock, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"systemlogratelimitinterval", 0, eCmdHdlrInt,
-		NULL, &ratelimitIntervalSysSock, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+		NULL, &cs.ratelimitIntervalSysSock, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"systemlogratelimitburst", 0, eCmdHdlrInt,
-		NULL, &ratelimitBurstSysSock, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+		NULL, &cs.ratelimitBurstSysSock, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"systemlogratelimitseverity", 0, eCmdHdlrInt,
-		NULL, &ratelimitSeveritySysSock, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+		NULL, &cs.ratelimitSeveritySysSock, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	
 	/* support statistics gathering */
 	CHKiRet(statsobj.Construct(&modStats));
