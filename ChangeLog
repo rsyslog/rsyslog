@@ -4,6 +4,8 @@ Version 5.9.0  [V5-DEVEL] (rgerhards), 2011-03-??
   at the socket layer. This has not been added to imttcp, as the latter is
   only an experimental module, and one which did not prove to be useful.
   reference: http://kb.monitorware.com/post20791.html
+- added support to control KEEPALIVE settings in imptcp
+  this has not yet been added to imtcp, but could be done on request.
 - bugfix: do not open files with full privileges, if privs will be dropped
   This make the privilege drop code more bulletproof, but breaks Ubuntu's
   work-around for log files created by external programs with the wrong

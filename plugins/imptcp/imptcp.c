@@ -50,6 +50,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/epoll.h>
+#include <netinet/tcp.h>
 #if HAVE_FCNTL_H
 #include <fcntl.h>
 #endif
@@ -89,6 +90,9 @@ DEFobjCurrIf(ruleset)
 /* config settings */
 typedef struct configSettings_s {
 	int bKeepAlive;			/* support keep-alive packets */
+	int iKeepAliveIntvl;
+	int iKeepAliveProbes;
+	int iKeepAliveTime;
 	int bEmitMsgOnClose;		/* emit an informational message on close by remote peer */
 	int iAddtlFrameDelim;		/* addtl frame delimiter, e.g. for netscreen, default none */
 	uchar *pszInputName;		/* value for inputname property, NULL is OK and handled by core engine */
@@ -113,6 +117,9 @@ struct ptcpsrv_s {
 	uchar *port;			/* Port to listen to */
 	uchar *lstnIP;			/* which IP we should listen on? */
 	int iAddtlFrameDelim;
+	int iKeepAliveIntvl;
+	int iKeepAliveProbes;
+	int iKeepAliveTime;
 	uchar *pszInputName;
 	prop_t *pInputName;		/* InputName in (fast to process) property format */
 	ruleset_t *pRuleset;
@@ -433,7 +440,7 @@ finalize_it:
 
 /* Enable KEEPALIVE handling on the socket.  */
 static inline rsRetVal
-EnableKeepAlive(int sock)
+EnableKeepAlive(ptcplstn_t *pLstn, int sock)
 {
 	int ret;
 	int optval;
@@ -446,6 +453,51 @@ EnableKeepAlive(int sock)
 	if(ret < 0) {
 		dbgprintf("EnableKeepAlive socket call returns error %d\n", ret);
 		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
+#	if defined(TCP_KEEPCNT)
+	if(pLstn->pSrv->iKeepAliveProbes > 0) {
+		optval = pLstn->pSrv->iKeepAliveProbes;
+		optlen = sizeof(optval);
+		ret = setsockopt(sock, SOL_TCP, TCP_KEEPCNT, &optval, optlen);
+	} else {
+		ret = 0;
+	}
+#	else
+	ret = -1;
+#	endif
+	if(ret < 0) {
+		errmsg.LogError(ret, NO_ERRCODE, "imptcp cannot set keepalive probes - ignored");
+	}
+
+#	if defined(TCP_KEEPCNT)
+	if(pLstn->pSrv->iKeepAliveTime > 0) {
+		optval = pLstn->pSrv->iKeepAliveTime;
+		optlen = sizeof(optval);
+		ret = setsockopt(sock, SOL_TCP, TCP_KEEPIDLE, &optval, optlen);
+	} else {
+		ret = 0;
+	}
+#	else
+	ret = -1;
+#	endif
+	if(ret < 0) {
+		errmsg.LogError(ret, NO_ERRCODE, "imptcp cannot set keepalive time - ignored");
+	}
+
+#	if defined(TCP_KEEPCNT)
+	if(pLstn->pSrv->iKeepAliveIntvl > 0) {
+		optval = pLstn->pSrv->iKeepAliveIntvl;
+		optlen = sizeof(optval);
+		ret = setsockopt(sock, SOL_TCP, TCP_KEEPINTVL, &optval, optlen);
+	} else {
+		ret = 0;
+	}
+#	else
+	ret = -1;
+#	endif
+	if(ret < 0) {
+		errmsg.LogError(errno, NO_ERRCODE, "imptcp cannot set keepalive intvl - ignored");
 	}
 
 	dbgprintf("KEEPALIVE enabled for socket %d\n", sock);
@@ -476,7 +528,7 @@ AcceptConnReq(ptcplstn_t *pLstn, int *newSock, prop_t **peerName, prop_t **peerI
 	}
 
 	if(pLstn->pSrv->bKeepAlive)
-		EnableKeepAlive(iNewSock);	/* we ignore errors, best to do! */
+		EnableKeepAlive(pLstn, iNewSock);/* we ignore errors, best to do! */
 
 	
 	CHKiRet(getPeerNames(peerName, peerIP, (struct sockaddr*) &addr));
@@ -913,6 +965,9 @@ static rsRetVal addTCPListener(void __attribute__((unused)) *pVal, uchar *pNewVa
 	pSrv->pSess = NULL;
 	pSrv->pLstn = NULL;
 	pSrv->bKeepAlive = cs.bKeepAlive;
+	pSrv->iKeepAliveIntvl = cs.iKeepAliveTime;
+	pSrv->iKeepAliveProbes = cs.iKeepAliveProbes;
+	pSrv->iKeepAliveTime = cs.iKeepAliveTime;
 	pSrv->bEmitMsgOnClose = cs.bEmitMsgOnClose;
 	pSrv->port = pNewVal;
 	pSrv->iAddtlFrameDelim = cs.iAddtlFrameDelim;
@@ -1176,6 +1231,9 @@ resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unus
 {
 	cs.bEmitMsgOnClose = 0;
 	cs.bKeepAlive = 0;
+	cs.iKeepAliveProbes = 0;
+	cs.iKeepAliveTime = 0;
+	cs.iKeepAliveIntvl = 0;
 	cs.iAddtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
 	free(cs.pszInputName);
 	cs.pszInputName = NULL;
@@ -1210,6 +1268,12 @@ CODEmodInit_QueryRegCFSLineHdlr
 				   addTCPListener, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputptcpserverkeepalive"), 0, eCmdHdlrBinary,
 				   NULL, &cs.bKeepAlive, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputptcpserverkeepalive_probes"), 0, eCmdHdlrInt,
+				   NULL, &cs.iKeepAliveProbes, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputptcpserverkeepalive_time"), 0, eCmdHdlrInt,
+				   NULL, &cs.iKeepAliveTime, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputptcpserverkeepalive_intvl"), 0, eCmdHdlrInt,
+				   NULL, &cs.iKeepAliveIntvl, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputptcpservernotifyonconnectionclose"), 0,
 				   eCmdHdlrBinary, NULL, &cs.bEmitMsgOnClose, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputptcpserveraddtlframedelimiter"), 0, eCmdHdlrInt,
