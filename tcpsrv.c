@@ -547,7 +547,7 @@ Run(tcpsrv_t *pThis)
 				case RS_RET_OK:
 					/* valid data received, process it! */
 					localRet = tcps_sess.DataRcvd(pThis->pSessions[iTCPSess], buf, iRcvd);
-					if(localRet != RS_RET_OK) {
+					if(localRet != RS_RET_OK && localRet != RS_RET_QUEUE_FULL) {
 						/* in this case, something went awfully wrong.
 						 * We are instructed to terminate the session.
 						 */
