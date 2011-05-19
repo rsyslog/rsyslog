@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 5.8.1  [V5-stable] (rgerhards), 2011-04-??
+Version 5.8.1  [V5-stable] (rgerhards), 2011-05-19
 - bugfix: invalid processing in QUEUE_FULL condition
   If the the multi-submit interface was used and a QUEUE_FULL condition
   occured, the failed message was properly destructed. However, the
