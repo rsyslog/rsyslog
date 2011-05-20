@@ -2206,6 +2206,7 @@ qqueueEnqObj(qqueue_t *pThis, flowControl_t flowCtlType, void *pUsr)
 			objDestruct(pUsr);
 			ABORT_FINALIZE(RS_RET_QUEUE_FULL);
 		}
+		dbgoprint((obj_t*) pThis, "enqueueMsg: wait solved queue full condition, enqueing\n");
 	}
 
 	/* and finally enqueue the message */
@@ -2292,6 +2293,7 @@ doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, void *pUsr)
 			objDestruct(pUsr);
 			ABORT_FINALIZE(RS_RET_QUEUE_FULL);
 		}
+		dbgoprint((obj_t*) pThis, "enqueueMsg: wait solved queue full condition, enqueing\n");
 	}
 
 	/* and finally enqueue the message */
@@ -2315,6 +2317,7 @@ qqueueMultiEnqObj(qqueue_t *pThis, multi_submit_t *pMultiSub)
 {
 	int iCancelStateSave;
 	int i;
+	rsRetVal localRet;
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, qqueue);
@@ -2326,8 +2329,9 @@ qqueueMultiEnqObj(qqueue_t *pThis, multi_submit_t *pMultiSub)
 	}
 
 	for(i = 0 ; i < pMultiSub->nElem ; ++i) {
-dbgprintf("queueMultiEnq: %d\n", i);
-		CHKiRet(doEnqSingleObj(pThis, pMultiSub->ppMsgs[i]->flowCtlType, (void*)pMultiSub->ppMsgs[i]));
+		localRet = doEnqSingleObj(pThis, pMultiSub->ppMsgs[i]->flowCtlType, (void*)pMultiSub->ppMsgs[i]);
+		if(localRet != RS_RET_OK && localRet != RS_RET_QUEUE_FULL)
+			ABORT_FINALIZE(localRet);
 	}
 
 finalize_it:
