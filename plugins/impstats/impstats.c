@@ -70,8 +70,13 @@ typedef struct configSettings_s {
 } configSettings_t;
 
 struct modConfData_s {
-	EMPTY_STRUCT;
+	rsconf_t *pConf;		/* our overall config object */
+	int iStatsInterval;
+	int iFacility;
+	int iSeverity;
 };
+static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
+static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current load process */
 
 
 static configSettings_t cs;
@@ -110,8 +115,8 @@ doSubmitMsg(uchar *line)
 	MsgSetRcvFromIP(pMsg, pLocalHostIP);
 	MsgSetMSGoffs(pMsg, 0);
 	MsgSetTAG(pMsg, UCHAR_CONSTANT("rsyslogd-pstats:"), sizeof("rsyslogd-pstats:") - 1);
-	pMsg->iFacility = cs.iFacility;
-	pMsg->iSeverity = cs.iSeverity;
+	pMsg->iFacility = runModConf->iFacility;
+	pMsg->iSeverity = runModConf->iSeverity;
 	pMsg->msgFlags  = 0;
 
 	submitMsg(pMsg);
@@ -146,21 +151,43 @@ generateStatsMsgs(void)
 
 BEGINbeginCnfLoad
 CODESTARTbeginCnfLoad
+	loadModConf = pModConf;
+	pModConf->pConf = pConf;
+	/* init legacy config vars */
+	initConfigSettings();
 ENDbeginCnfLoad
 
 
 BEGINendCnfLoad
 CODESTARTendCnfLoad
+	/* persist module-specific settings from legacy config system */
+	loadModConf->iStatsInterval = cs.iStatsInterval;
+	loadModConf->iFacility = cs.iFacility;
+	loadModConf->iSeverity = cs.iSeverity;
 ENDendCnfLoad
 
 
 BEGINcheckCnf
 CODESTARTcheckCnf
+	if(pModConf->iStatsInterval == 0) {
+		errmsg.LogError(0, NO_ERRCODE, "impstats: stats interval zero not permitted, using "
+				"defaul of %d seconds", DEFAULT_STATS_PERIOD);
+		pModConf->iStatsInterval = DEFAULT_STATS_PERIOD;
+	}
 ENDcheckCnf
 
 
 BEGINactivateCnf
+	rsRetVal localRet;
 CODESTARTactivateCnf
+	runModConf = pModConf;
+	DBGPRINTF("impstats: stats interval %d seconds\n", runModConf->iStatsInterval);
+	localRet = statsobj.EnableStats();
+	if(localRet != RS_RET_OK) {
+		errmsg.LogError(0, localRet, "impstats: error enabling statistics gathering");
+		ABORT_FINALIZE(RS_RET_NO_RUN);
+	}
+finalize_it:
 ENDactivateCnf
 
 
@@ -176,7 +203,7 @@ CODESTARTrunInput
 	 * right into the sleep below.
 	 */
 	while(1) {
-		srSleep(cs.iStatsInterval, 0); /* seconds, micro seconds */
+		srSleep(runModConf->iStatsInterval, 0); /* seconds, micro seconds */
 
 		if(glbl.GetGlobalInputTermState() == 1)
 			break; /* terminate input! */
@@ -187,17 +214,7 @@ ENDrunInput
 
 
 BEGINwillRun
-	rsRetVal localRet;
 CODESTARTwillRun
-	DBGPRINTF("impstats: stats interval %d seconds\n", cs.iStatsInterval);
-	if(cs.iStatsInterval == 0)
-		ABORT_FINALIZE(RS_RET_NO_RUN);
-	localRet = statsobj.EnableStats();
-	if(localRet != RS_RET_OK) {
-		errmsg.LogError(0, localRet, "impstat: error enabling statistics gathering");
-		ABORT_FINALIZE(RS_RET_NO_RUN);
-	}
-finalize_it:
 ENDwillRun
 
 
@@ -222,6 +239,7 @@ ENDmodExit
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_IMOD_QUERIES
+CODEqueryEtryPt_STD_CONF2_QUERIES
 CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
 ENDqueryEtryPt
 
