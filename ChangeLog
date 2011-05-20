@@ -168,7 +168,25 @@ Version 5.9.0  [V5-DEVEL] (rgerhards), 2011-03-??
   affected directive was: $ActionExecOnlyWhenPreviousIsSuspended on
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=236
 ---------------------------------------------------------------------------
-Version 5.8.1  [V5-stable] (rgerhards), 2011-04-??
+Version 5.8.1  [V5-stable] (rgerhards), 2011-05-19
+- bugfix: invalid processing in QUEUE_FULL condition
+  If the the multi-submit interface was used and a QUEUE_FULL condition
+  occured, the failed message was properly destructed. However, the
+  rest of the input batch, if it existed, was not processed. So this
+  lead to potential loss of messages and a memory leak. The potential
+  loss of messages was IMHO minor, because they would have been dropped
+  in most cases due to the queue remaining full, but very few lucky ones
+  from the batch may have made it. Anyhow, this has now been changed so
+  that the rest of the batch is properly tried to be enqueued and, if
+  not possible, destructed.
+- new module mmsnmptrapd, a sample message modification module
+  This can be useful to reformat snmptrapd messages and also serves as
+  a sample for how to write message modification modules using the
+  output module interface. Note that we introduced this new 
+  functionality directly into the stable release, as it does not 
+  modify the core and as such cannot have any side-effects if it is
+  not used (and thus the risk is solely on users requiring that
+  functionality).
 - bugfix: rate-limiting inside imuxsock did not work 100% correct
   reason was that a global config variable was invalidly accessed where a
   listener variable should have been used.
@@ -981,6 +999,16 @@ Version 4.7.0  [v4-devel] (rgerhards), 2010-04-14
 - imported changes from 4.5.6 and below
 ---------------------------------------------------------------------------
 Version 4.6.6  [v4-stable] (rgerhards), 2010-11-??
+- bugfix: invalid processing in QUEUE_FULL condition
+  If the the multi-submit interface was used and a QUEUE_FULL condition
+  occured, the failed message was properly destructed. However, the
+  rest of the input batch, if it existed, was not processed. So this
+  lead to potential loss of messages and a memory leak. The potential
+  loss of messages was IMHO minor, because they would have been dropped
+  in most cases due to the queue remaining full, but very few lucky ones
+  from the batch may have made it. Anyhow, this has now been changed so
+  that the rest of the batch is properly tried to be enqueued and, if
+  not possible, destructed.
 - bugfix: invalid storage type for config variables
 - bugfix: stream driver mode was not correctly set on tcp ouput on big
   endian systems.

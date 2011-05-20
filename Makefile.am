@@ -168,6 +168,10 @@ if ENABLE_OMTEMPLATE
 SUBDIRS += plugins/omtemplate
 endif
 
+if ENABLE_MMSNMPTRAPD
+SUBDIRS += plugins/mmsnmptrapd
+endif
+
 if ENABLE_IMFILE
 SUBDIRS += plugins/imfile
 endif
@@ -247,5 +251,6 @@ DISTCHECK_CONFIGURE_FLAGS=	--enable-gssapi_krb5 \
 				--enable-pmsnare \
 				--enable-imtemplate \
 				--enable-omtemplate \
+				--enable-mmsnmptrapd \
 				--with-systemdsystemunitdir=$$dc_install_base/$(systemdsystemunitdir)
 ACLOCAL_AMFLAGS = -I m4

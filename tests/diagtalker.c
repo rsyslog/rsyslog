@@ -70,6 +70,9 @@ int openConn(int *fd)
 			}
 		}
 	} 
+	if(retries > 0) {
+		fprintf(stderr, "connection established.\n");
+	}
 
 	*fd = sock;
 	return 0;
