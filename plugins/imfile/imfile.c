@@ -326,30 +326,6 @@ ENDrunInput
 	 * ------------------------------------------------------------------------------------------ */
 
 
-BEGINbeginCnfLoad
-CODESTARTbeginCnfLoad
-ENDbeginCnfLoad
-
-
-BEGINendCnfLoad
-CODESTARTendCnfLoad
-ENDendCnfLoad
-
-
-BEGINcheckCnf
-CODESTARTcheckCnf
-ENDcheckCnf
-
-
-BEGINactivateCnf
-CODESTARTactivateCnf
-ENDactivateCnf
-
-
-BEGINfreeCnf
-CODESTARTfreeCnf
-ENDfreeCnf
-
 
 /* The function is called by rsyslog before runInput() is called. It is a last chance
  * to set up anything specific. Most importantly, it can be used to tell rsyslog if the
