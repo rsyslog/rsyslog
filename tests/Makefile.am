@@ -155,6 +155,12 @@ test_files = testbench.h runtime-dummy.c
 
 EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   validation-run.sh \
+	   testsuites/x.509/ca.pem \
+	   testsuites/x.509/ca-key.pem \
+	   testsuites/x.509/client-cert.pem \
+	   testsuites/x.509/client-key.pem \
+	   testsuites/x.509/machine-cert.pem \
+	   testsuites/x.509/machine-key.pem \
 	   testsuites/invalid.conf \
 	   testsuites/valid.conf \
 	   cfg.sh \

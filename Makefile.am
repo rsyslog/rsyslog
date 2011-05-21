@@ -224,6 +224,7 @@ SUBDIRS += tests
 # in a make distcheck is so that we detect code that accidently was not updated
 # when some global update happened.
 DISTCHECK_CONFIGURE_FLAGS=	--enable-gssapi_krb5 \
+				--enable-gnutls \
 				--enable-imfile \
 				--enable-snmp \
 				--enable-pgsql \

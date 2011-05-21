@@ -1,4 +1,10 @@
 ---------------------------------------------------------------------------
+Version 6.1.8  [BETA] (rgerhards), 2011-05-20
+- official new beta version (note that in a sense 6.1.7 was already beta,
+  so we may release the first stable v6 earlier than usual)
+- new module mmsnmptrapd, a sample message modification module
+- import of minor bug fixes from v4 & v5
+---------------------------------------------------------------------------
 Version 6.1.7  [DEVEL] (rgerhards), 2011-04-15
 - added log classification capabilities (via mmnormalize & tags)
 - speeded up tcp forwarding by reducing number of API calls
