@@ -43,6 +43,7 @@
 #include "dirty.h"
 #include "syslogd-types.h"
 #include "cfsysline.h"
+#include "conf.h"
 #include "srUtils.h"
 #include "template.h"
 #include "module-template.h"

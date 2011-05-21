@@ -64,8 +64,6 @@ struct modConfData_s {
 	EMPTY_STRUCT;
 };
 
-static int iTCPSessMax = 200; /* max number of sessions */
-
 
 /* ------------------------------ callbacks ------------------------------ */
 #if 0
@@ -202,7 +200,6 @@ ENDmodExit
 static rsRetVal
 resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
-	iTCPSessMax = 200;
 	return RS_RET_OK;
 }
 
@@ -226,8 +223,6 @@ CODEmodInit_QueryRegCFSLineHdlr
 	/* register config file handlers */
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputrelpserverrun", 0, eCmdHdlrGetWord,
 				   addListener, NULL, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputrelpmaxsessions", 0, eCmdHdlrInt,
-				   NULL, &iTCPSessMax, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
 		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 ENDmodInit

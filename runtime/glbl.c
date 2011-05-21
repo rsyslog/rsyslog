@@ -188,6 +188,11 @@ GetLocalHostName(void)
 {
 	uchar *pszRet;
 
+	if(LocalHostNameOverride != NULL) {
+		pszRet = LocalHostNameOverride;
+		goto done;
+	}
+
 	if(LocalHostName == NULL)
 		pszRet = (uchar*) "[localhost]";
 	else {
@@ -196,6 +201,7 @@ GetLocalHostName(void)
 		else
 			pszRet = LocalHostName;
 	}
+done:
 	return(pszRet);
 }
 

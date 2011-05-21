@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([rsyslog],[6.1.7],[rsyslog@lists.adiscon.com])
+AC_INIT([rsyslog],[6.1.8],[rsyslog@lists.adiscon.com])
 AM_INIT_AUTOMAKE
 
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
@@ -1171,6 +1171,19 @@ AM_CONDITIONAL(ENABLE_OMTEMPLATE, test x$enable_omtemplate = xyes)
 # end of copy template - be sure to search for omtemplate to find everything!
 
 
+# settings for mmsnmptrapd message modification module
+AC_ARG_ENABLE(mmsnmptrapd,
+        [AS_HELP_STRING([--enable-mmsnmptrapd],[Compiles mmsnmptrapd module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_mmsnmptrapd="yes" ;;
+          no) enable_mmsnmptrapd="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-mmsnmptrapd) ;;
+         esac],
+        [enable_mmsnmptrapd=no]
+)
+AM_CONDITIONAL(ENABLE_MMSNMPTRAPD, test x$enable_mmsnmptrapd = xyes)
+
+
 # settings for the omhdfs;
 AC_ARG_ENABLE(omhdfs,
         [AS_HELP_STRING([--enable-omhdfs],[Compiles omhdfs template module @<:@default=no@:>@])],
@@ -1250,6 +1263,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omudpspoof/Makefile \
 		plugins/mmnormalize/Makefile \
 		plugins/sm_cust_bindcdr/Makefile \
+		plugins/mmsnmptrapd/Makefile \
 		plugins/cust1/Makefile \
 		java/Makefile \
 		tests/Makefile])
@@ -1299,6 +1313,7 @@ echo "    pmsnare module will be compiled:          $enable_pmsnare"
 echo
 echo "---{ message modification modules }---"
 echo "    mmnormalize module will be compiled:      $enable_mmnormalize"
+echo "    mmsnmptrapd module will be compiled:      $enable_mmsnmptrapd"
 echo
 echo "---{ strgen modules }---"
 echo "    sm_cust_bindcdr module will be compiled:  $enable_sm_cust_bindcdr"

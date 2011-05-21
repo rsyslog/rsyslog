@@ -168,6 +168,10 @@ if ENABLE_OMTEMPLATE
 SUBDIRS += plugins/omtemplate
 endif
 
+if ENABLE_MMSNMPTRAPD
+SUBDIRS += plugins/mmsnmptrapd
+endif
+
 if ENABLE_IMFILE
 SUBDIRS += plugins/imfile
 endif
@@ -220,6 +224,7 @@ SUBDIRS += tests
 # in a make distcheck is so that we detect code that accidently was not updated
 # when some global update happened.
 DISTCHECK_CONFIGURE_FLAGS=	--enable-gssapi_krb5 \
+				--enable-gnutls \
 				--enable-imfile \
 				--enable-snmp \
 				--enable-pgsql \
@@ -247,5 +252,6 @@ DISTCHECK_CONFIGURE_FLAGS=	--enable-gssapi_krb5 \
 				--enable-pmsnare \
 				--enable-imtemplate \
 				--enable-omtemplate \
+				--enable-mmsnmptrapd \
 				--with-systemdsystemunitdir=$$dc_install_base/$(systemdsystemunitdir)
 ACLOCAL_AMFLAGS = -I m4
