@@ -93,12 +93,33 @@ typedef struct configSettings_s {
 	int iAddtlFrameDelim;		/* addtl frame delimiter, e.g. for netscreen, default none */
 	uchar *pszInputName;		/* value for inputname property, NULL is OK and handled by core engine */
 	uchar *lstnIP;			/* which IP we should listen on? */
-	ruleset_t *pRuleset;		/* ruleset to bind listener to (use system default if unspecified) */
+	uchar *pszBindRuleset;
 	int wrkrMax;			/* max number of workers (actually "helper workers") */
 } configSettings_t;
-
 static configSettings_t cs;
 
+struct instanceConf_s {
+	int bEmitMsgOnClose;
+	int iAddtlFrameDelim;
+	uchar *pszBindPort;		/* port to bind to */
+	uchar *pszBindAddr;		/* IP to bind socket to */
+	uchar *pszBindRuleset;		/* name of ruleset to bind to */
+	uchar *pszInputName;		/* value for inputname property, NULL is OK and handled by core engine */
+	ruleset_t *pBindRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
+	struct instanceConf_s *next;
+};
+
+
+struct modConfData_s {
+	rsconf_t *pConf;		/* our overall config object */
+	instanceConf_t *root, *tail;
+	int wrkrMax;
+};
+
+static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
+static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current load process */
+
+#include "im-helper.h" /* must be included AFTER the type definitions! */
 /* data elements describing our running config */
 typedef struct ptcpsrv_s ptcpsrv_t;
 typedef struct ptcplstn_s ptcplstn_t;
@@ -198,11 +219,6 @@ static int iMaxLine; /* maximum size of a single message */
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal);
 static rsRetVal addLstn(ptcpsrv_t *pSrv, int sock);
 
-struct modConfData_s {
-	EMPTY_STRUCT;
-};
-
-
 
 /* some simple constructors/destructors */
 static void
@@ -250,7 +266,7 @@ startupSrv(ptcpsrv_t *pSrv)
 
 	lstnIP = pSrv->lstnIP == NULL ? UCHAR_CONSTANT("") : pSrv->lstnIP;
 
-	DBGPRINTF("imptcp creating listen socket on server '%s', port %s\n", lstnIP, pSrv->port);
+	DBGPRINTF("imptcp: creating listen socket on server '%s', port %s\n", lstnIP, pSrv->port);
 
         memset(&hints, 0, sizeof(hints));
         hints.ai_flags = AI_PASSIVE;
@@ -695,7 +711,8 @@ initConfigSettings(void)
 	cs.wrkrMax = 2;
 	cs.iAddtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
 	cs.pszInputName = NULL;
-	cs.pRuleset = NULL;
+	cs.pszBindRuleset = NULL;
+	cs.pszInputName = NULL;
 	cs.lstnIP = NULL;
 }
 
@@ -854,44 +871,78 @@ finalize_it:
 }
 
 
-/* accept a new ruleset to bind. Checks if it exists and complains, if not */
-static rsRetVal setRuleset(void __attribute__((unused)) *pVal, uchar *pszName)
+/* This function is called when a new listener instace shall be added to 
+ * the current config object via the legacy config system. It just shuffles
+ * all parameters to the listener in-memory instance.
+ */
+static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 {
-	ruleset_t *pRuleset;
-	rsRetVal localRet;
+	instanceConf_t *inst;
 	DEFiRet;
 
-	localRet = ruleset.GetRuleset(ourConf, &pRuleset, pszName);
-	if(localRet == RS_RET_NOT_FOUND) {
-		errmsg.LogError(0, NO_ERRCODE, "error: ruleset '%s' not found - ignored", pszName);
+	CHKmalloc(inst = MALLOC(sizeof(instanceConf_t)));
+	if(pNewVal == NULL || *pNewVal == '\0') {
+		errmsg.LogError(0, NO_ERRCODE, "imptcp: port number must be specified, listener ignored");
 	}
-	CHKiRet(localRet);
-	cs.pRuleset = pRuleset;
-	DBGPRINTF("imptcp current bind ruleset %p: '%s'\n", pRuleset, pszName);
+	if((pNewVal == NULL) || (pNewVal == '\0')) {
+		inst->pszBindPort = NULL;
+	} else {
+		CHKmalloc(inst->pszBindPort = ustrdup(pNewVal));
+	}
+	if((cs.lstnIP == NULL) || (cs.lstnIP[0] == '\0')) {
+		inst->pszBindAddr = NULL;
+	} else {
+		CHKmalloc(inst->pszBindAddr = ustrdup(cs.lstnIP));
+	}
+	if((cs.pszBindRuleset == NULL) || (cs.pszBindRuleset[0] == '\0')) {
+		inst->pszBindRuleset = NULL;
+	} else {
+		CHKmalloc(inst->pszBindRuleset = ustrdup(cs.pszBindRuleset));
+	}
+	if((cs.pszInputName == NULL) || (cs.pszInputName[0] == '\0')) {
+		inst->pszInputName = NULL;
+	} else {
+		CHKmalloc(inst->pszInputName = ustrdup(cs.pszInputName));
+	}
+	inst->pBindRuleset = NULL;
+	inst->bEmitMsgOnClose = cs.bEmitMsgOnClose;
+	inst->iAddtlFrameDelim = cs.iAddtlFrameDelim;
+	inst->next = NULL;
+
+	/* node created, let's add to config */
+	if(loadModConf->tail == NULL) {
+		loadModConf->tail = loadModConf->root = inst;
+	} else {
+		loadModConf->tail->next = inst;
+		loadModConf->tail = inst;
+	}
 
 finalize_it:
-	free(pszName); /* no longer needed */
+	free(pNewVal);
 	RETiRet;
 }
 
 
-static rsRetVal addTCPListener(void __attribute__((unused)) *pVal, uchar *pNewVal)
+static inline rsRetVal
+addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 {
 	DEFiRet;
 	ptcpsrv_t *pSrv;
 
-	CHKmalloc(pSrv = malloc(sizeof(ptcpsrv_t)));
+	CHKmalloc(pSrv = MALLOC(sizeof(ptcpsrv_t)));
 	pthread_mutex_init(&pSrv->mutSessLst, NULL);
 	pSrv->pSess = NULL;
 	pSrv->pLstn = NULL;
-	pSrv->bEmitMsgOnClose = cs.bEmitMsgOnClose;
-	pSrv->port = pNewVal;
-	pSrv->iAddtlFrameDelim = cs.iAddtlFrameDelim;
-	cs.pszInputName = NULL;	/* moved over to pSrv, we do not own */
-	pSrv->lstnIP = cs.lstnIP;
-	cs.lstnIP = NULL;	/* moved over to pSrv, we do not own */
-	pSrv->pRuleset = cs.pRuleset;
-	pSrv->pszInputName = (cs.pszInputName == NULL) ?  UCHAR_CONSTANT("imptcp") : cs.pszInputName;
+	pSrv->bEmitMsgOnClose = inst->bEmitMsgOnClose;
+	CHKmalloc(pSrv->port = ustrdup(inst->pszBindPort));
+	pSrv->iAddtlFrameDelim = inst->iAddtlFrameDelim;
+	if(inst->pszBindAddr == NULL)
+		pSrv->lstnIP = NULL;
+	else {
+		CHKmalloc(pSrv->lstnIP = ustrdup(inst->pszBindAddr));
+	}
+	pSrv->pRuleset = inst->pBindRuleset;
+	pSrv->pszInputName = (inst->pszInputName == NULL) ?  UCHAR_CONSTANT("imptcp") : ustrdup(inst->pszInputName);
 	CHKiRet(prop.Construct(&pSrv->pInputName));
 	CHKiRet(prop.SetString(pSrv->pInputName, pSrv->pszInputName, ustrlen(pSrv->pszInputName)));
 	CHKiRet(prop.ConstructFinalize(pSrv->pInputName));
@@ -920,11 +971,11 @@ startWorkerPool(void)
 {
 	int i;
 	wrkrRunning = 0;
-	if(cs.wrkrMax > 16)
-		cs.wrkrMax = 16; /* TODO: make dynamic? */
+	if(runModConf->wrkrMax > 16)
+		runModConf->wrkrMax = 16; /* TODO: make dynamic? */
 	pthread_mutex_init(&wrkrMut, NULL);
 	pthread_cond_init(&wrkrIdle, NULL);
-	for(i = 0 ; i < cs.wrkrMax ; ++i) {
+	for(i = 0 ; i < runModConf->wrkrMax ; ++i) {
 		/* init worker info structure! */
 		pthread_cond_init(&wrkrInfo[i].run, NULL);
 		wrkrInfo[i].event = NULL;
@@ -940,7 +991,7 @@ static inline void
 stopWorkerPool(void)
 {
 	int i;
-	for(i = 0 ; i < cs.wrkrMax ; ++i) {
+	for(i = 0 ; i < runModConf->wrkrMax ; ++i) {
 		pthread_cond_signal(&wrkrInfo[i].run); /* awake wrkr if not running */
 		pthread_join(wrkrInfo[i].tid, NULL);
 		DBGPRINTF("imptcp: info: worker %d was called %llu times\n", i, wrkrInfo[i].numCalled);
@@ -960,15 +1011,29 @@ static inline rsRetVal
 startupServers()
 {
 	DEFiRet;
+	rsRetVal localRet, lastErr;
+	int iOK;
+	int iAll;
 	ptcpsrv_t *pSrv;
 
+	iAll = iOK = 0;
+	lastErr = RS_RET_ERR;
 	pSrv = pSrvRoot;
 	while(pSrv != NULL) {
 		DBGPRINTF("imptcp: starting up server for port %s, name '%s'\n", pSrv->port, pSrv->pszInputName);
-		startupSrv(pSrv);
+		localRet = startupSrv(pSrv);
+		if(localRet == RS_RET_OK)
+			iOK++;
+		else
+			lastErr = localRet;
+		++iAll;
 		pSrv = pSrv->pNext;
 	}
 
+	DBGPRINTF("imptcp: %d out of %d servers started successfully\n", iOK, iAll);
+	if(iOK == 0)	/* iff all fails, we report an error */
+		iRet = lastErr;
+		
 	RETiRet;
 }
 
@@ -1088,9 +1153,9 @@ processWorkSet(int nEvents, struct epoll_event events[])
 		} else {
 			pthread_mutex_lock(&wrkrMut);
 			/* check if there is a free worker */
-			for(i = 0 ; (i < cs.wrkrMax) && (wrkrInfo[i].event != NULL) ; ++i)
+			for(i = 0 ; (i < runModConf->wrkrMax) && (wrkrInfo[i].event != NULL) ; ++i)
 				/*do search*/;
-			if(i < cs.wrkrMax) {
+			if(i < runModConf->wrkrMax) {
 				/* worker free -> use it! */
 				wrkrInfo[i].event = events+iEvt;
 				++wrkrRunning;
@@ -1152,26 +1217,99 @@ wrkr(void *myself)
 
 BEGINbeginCnfLoad
 CODESTARTbeginCnfLoad
+	loadModConf = pModConf;
+	pModConf->pConf = pConf;
+	/* init legacy config vars */
+	initConfigSettings();
 ENDbeginCnfLoad
 
 
 BEGINendCnfLoad
 CODESTARTendCnfLoad
+	/* persist module-specific settings from legacy config system */
+	loadModConf->wrkrMax = cs.wrkrMax;
+
+	loadModConf = NULL; /* done loading */
+	/* free legacy config vars */
+	free(cs.pszInputName);
+	free(cs.lstnIP);
 ENDendCnfLoad
 
 
+/* function to generate error message if framework does not find requested ruleset */
+static inline void
+std_checkRuleset_genErrMsg(__attribute__((unused)) modConfData_t *modConf, instanceConf_t *inst)
+{
+	errmsg.LogError(0, NO_ERRCODE, "imptcp: ruleset '%s' for port %s not found - "
+			"using default ruleset instead", inst->pszBindRuleset,
+			inst->pszBindPort);
+}
 BEGINcheckCnf
+	instanceConf_t *inst;
 CODESTARTcheckCnf
+	for(inst = pModConf->root ; inst != NULL ; inst = inst->next) {
+		std_checkRuleset(pModConf, inst);
+	}
 ENDcheckCnf
+
+
+BEGINactivateCnfPrePrivDrop
+	instanceConf_t *inst;
+CODESTARTactivateCnfPrePrivDrop
+	iMaxLine = glbl.GetMaxLine(); /* get maximum size we currently support */
+
+	runModConf = pModConf;
+	for(inst = runModConf->root ; inst != NULL ; inst = inst->next) {
+		addListner(pModConf, inst);
+	}
+	if(pSrvRoot == NULL) {
+		errmsg.LogError(0, RS_RET_NO_LSTN_DEFINED, "imptcp: no ptcp server defined, module can not run.");
+		ABORT_FINALIZE(RS_RET_NO_RUN);
+	}
+#if defined(EPOLL_CLOEXEC) && defined(HAVE_EPOLL_CREATE1)
+	DBGPRINTF("imptcp uses epoll_create1()\n");
+	epollfd = epoll_create1(EPOLL_CLOEXEC);
+	if(epollfd < 0 && errno == ENOSYS)
+#endif
+	{
+		DBGPRINTF("imptcp uses epoll_create()\n");
+		/* reading the docs, the number of epoll events passed to
+		 * epoll_create() seems not to be used at all in kernels. So
+		 * we just provide "a" number, happens to be 10.
+		 */
+		epollfd = epoll_create(10);
+	}
+
+	if(epollfd < 0) {
+		errmsg.LogError(0, RS_RET_EPOLL_CR_FAILED, "error: epoll_create() failed");
+		ABORT_FINALIZE(RS_RET_NO_RUN);
+	}
+
+	/* start up servers, but do not yet read input data */
+	CHKiRet(startupServers());
+	DBGPRINTF("imptcp started up, but not yet receiving data\n");
+finalize_it:
+ENDactivateCnfPrePrivDrop
 
 
 BEGINactivateCnf
 CODESTARTactivateCnf
+	/* nothing to do, all done pre priv drop */
 ENDactivateCnf
 
 
 BEGINfreeCnf
+	instanceConf_t *inst, *del;
 CODESTARTfreeCnf
+	for(inst = pModConf->root ; inst != NULL ; ) {
+		free(inst->pszBindPort);
+		free(inst->pszBindAddr);
+		free(inst->pszBindRuleset);
+		free(inst->pszInputName);
+		del = inst;
+		inst = inst->next;
+		free(del);
+	}
 ENDfreeCnf
 
 
@@ -1197,37 +1335,6 @@ ENDrunInput
 /* initialize and return if will run or not */
 BEGINwillRun
 CODESTARTwillRun
-	/* first apply some config settings */
-	iMaxLine = glbl.GetMaxLine(); /* get maximum size we currently support */
-
-	if(pSrvRoot == NULL) {
-		errmsg.LogError(0, RS_RET_NO_LSTN_DEFINED, "error: no ptcp server defined, module can not run.");
-		ABORT_FINALIZE(RS_RET_NO_RUN);
-	}
-
-#if defined(EPOLL_CLOEXEC) && defined(HAVE_EPOLL_CREATE1)
-	DBGPRINTF("imptcp uses epoll_create1()\n");
-	epollfd = epoll_create1(EPOLL_CLOEXEC);
-	if(epollfd < 0 && errno == ENOSYS)
-#endif
-	{
-		DBGPRINTF("imptcp uses epoll_create()\n");
-		/* reading the docs, the number of epoll events passed to
-		 * epoll_create() seems not to be used at all in kernels. So
-		 * we just provide "a" number, happens to be 10.
-		 */
-		epollfd = epoll_create(10);
-	}
-
-	if(epollfd < 0) {
-		errmsg.LogError(0, RS_RET_EPOLL_CR_FAILED, "error: epoll_create() failed");
-		ABORT_FINALIZE(RS_RET_NO_RUN);
-	}
-
-	/* start up servers, but do not yet read input data */
-	CHKiRet(startupServers());
-	DBGPRINTF("imptcp started up, but not yet receiving data\n");
-finalize_it:
 ENDwillRun
 
 
@@ -1318,6 +1425,8 @@ ENDisCompatibleWithFeature
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_IMOD_QUERIES
+CODEqueryEtryPt_STD_CONF2_QUERIES
+CODEqueryEtryPt_STD_CONF2_PREPRIVDROP_QUERIES
 CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
 ENDqueryEtryPt
 
@@ -1339,9 +1448,12 @@ CODEmodInit_QueryRegCFSLineHdlr
 	pthread_attr_init(&wrkrThrdAttr);
 	pthread_attr_setstacksize(&wrkrThrdAttr, 2048*1024);
 
+	/* init legacy config settings */
+	initConfigSettings();
+
 	/* register config file handlers */
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputptcpserverrun"), 0, eCmdHdlrGetWord,
-				   addTCPListener, NULL, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+				   addInstance, NULL, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputptcpservernotifyonconnectionclose"), 0,
 				   eCmdHdlrBinary, NULL, &cs.bEmitMsgOnClose, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputptcpserveraddtlframedelimiter"), 0, eCmdHdlrInt,
@@ -1353,7 +1465,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputptcpserverlistenip"), 0,
 				   eCmdHdlrGetWord, NULL, &cs.lstnIP, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputptcpserverbindruleset"), 0,
-				   eCmdHdlrGetWord, setRuleset, NULL, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+				   eCmdHdlrGetWord, NULL, cs.pszBindRuleset, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("resetconfigvariables"), 1, eCmdHdlrCustomHandler,
 		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 ENDmodInit
