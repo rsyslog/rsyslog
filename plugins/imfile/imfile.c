@@ -72,6 +72,7 @@ typedef struct fileInfo_s {
 	uchar *pszStateFile; /* file in which state between runs is to be stored */
 	int iFacility;
 	int iSeverity;
+	int maxLinesAtOnce;
 	int nRecords; /**< How many records did we process before persisting the stream? */
 	int iPersistStateInterval; /**< how often should state be persisted? (0=on close only) */
 	strm_t *pStrm;	/* its stream (NULL if not assigned) */
@@ -93,6 +94,7 @@ static int iPersistStateInterval = 0;	/* how often if state file to be persisted
 static int iFacility = 128; /* local0 */
 static int iSeverity = 5;  /* notice, as of rfc 3164 */
 static int readMode = 0;  /* mode to use for ReadMultiLine call */
+static int maxLinesAtOnce = 10240;	/* how many lines to process in a row? */
 static ruleset_t *pBindRuleset = NULL;	/* ruleset to bind listener to (use system default if unspecified) */
 
 static int iFilPtr = 0;		/* number of files to be monitored; pointer to next free spot during config */
@@ -210,6 +212,7 @@ static void pollFileCancelCleanup(void *pArg)
 static rsRetVal pollFile(fileInfo_t *pThis, int *pbHadFileData)
 {
 	cstr_t *pCStr = NULL;
+	int nProcessed = 0;
 	DEFiRet;
 
 	ASSERT(pbHadFileData != NULL);
@@ -224,7 +227,10 @@ static rsRetVal pollFile(fileInfo_t *pThis, int *pbHadFileData)
 
 	/* loop below will be exited when strmReadLine() returns EOF */
 	while(glbl.GetGlobalInputTermState() == 0) {
+		if(pThis->maxLinesAtOnce != 0 && nProcessed >= pThis->maxLinesAtOnce)
+			break;
 		CHKiRet(strm.ReadLine(pThis->pStrm, &pCStr, pThis->readMode));
+		++nProcessed;
 		*pbHadFileData = 1; /* this is just a flag, so set it and forget it */
 		CHKiRet(enqLine(pThis, pCStr)); /* process line */
 		rsCStrDestruct(&pCStr); /* discard string (must be done by us!) */
@@ -233,7 +239,6 @@ static rsRetVal pollFile(fileInfo_t *pThis, int *pbHadFileData)
 			pThis->nRecords = 0;
 		}
 	}
-	/* NOTE: This is usually not reached due to loop exit via CHKiRet() only! */
 
 finalize_it:
 	if(pThis->multiSub.nElem > 0) {
@@ -484,6 +489,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	iSeverity = 5;  /* notice, as of rfc 3164 */
 	readMode = 0;
 	pBindRuleset = NULL;
+	maxLinesAtOnce = 10240;
 
 	RETiRet;
 }
@@ -527,6 +533,7 @@ static rsRetVal addMonitor(void __attribute__((unused)) *pVal, uchar *pNewVal)
 		pThis->multiSub.nElem = 0;
 		pThis->iSeverity = iSeverity;
 		pThis->iFacility = iFacility;
+		pThis->maxLinesAtOnce = maxLinesAtOnce;
 		pThis->iPersistStateInterval = iPersistStateInterval;
 		pThis->nRecords = 0;
 		pThis->readMode = readMode;
@@ -604,6 +611,8 @@ CODEmodInit_QueryRegCFSLineHdlr
 	  	NULL, &iPollInterval, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfilereadmode", 0, eCmdHdlrInt,
 	  	NULL, &readMode, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfilemaxlinesatonce", 0, eCmdHdlrSize,
+	  	NULL, &maxLinesAtOnce, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfilepersiststateinterval", 0, eCmdHdlrInt,
 	  	NULL, &iPersistStateInterval, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfilebindruleset", 0, eCmdHdlrGetWord,
