@@ -64,6 +64,7 @@ DEFobjCurrIf(strm)
 DEFobjCurrIf(prop)
 DEFobjCurrIf(ruleset)
 
+#define NUM_MULTISUB 1024 /* max number of submits -- TODO: make configurable */
 typedef struct fileInfo_s {
 	uchar *pszFileName;
 	uchar *pszTag;
@@ -76,6 +77,7 @@ typedef struct fileInfo_s {
 	strm_t *pStrm;	/* its stream (NULL if not assigned) */
 	int readMode;	/* which mode to use in ReadMulteLine call? */
 	ruleset_t *pRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
+	multi_submit_t multiSub;
 } fileInfo_t;
 
 
@@ -122,7 +124,9 @@ static rsRetVal enqLine(fileInfo_t *pInfo, cstr_t *cstrLine)
 	pMsg->iFacility = LOG_FAC(pInfo->iFacility);
 	pMsg->iSeverity = LOG_PRI(pInfo->iSeverity);
 	MsgSetRuleset(pMsg, pInfo->pRuleset);
-	CHKiRet(submitMsg(pMsg));
+	pInfo->multiSub.ppMsgs[pInfo->multiSub.nElem++] = pMsg;
+	if(pInfo->multiSub.nElem == pInfo->multiSub.maxElem)
+		CHKiRet(multiSubmitMsg(&pInfo->multiSub));
 finalize_it:
 	RETiRet;
 }
@@ -229,8 +233,13 @@ static rsRetVal pollFile(fileInfo_t *pThis, int *pbHadFileData)
 			pThis->nRecords = 0;
 		}
 	}
+	/* NOTE: This is usually not reached due to loop exit via CHKiRet() only! */
 
 finalize_it:
+	if(pThis->multiSub.nElem > 0) {
+		/* submit everything that was not yet submitted */
+		CHKiRet(multiSubmitMsg(&pThis->multiSub));
+	}
 		; /*EMPTY STATEMENT - needed to keep compiler happy - see below! */
 	/* Note: the problem above is that pthread:cleanup_pop() is a macro which
 	 * evaluates to something like "} while(0);". So the code would become
@@ -513,6 +522,9 @@ static rsRetVal addMonitor(void __attribute__((unused)) *pVal, uchar *pNewVal)
 			pThis->pszStateFile = (uchar*) strdup((char*) pszStateFile);
 		}
 
+		CHKmalloc(pThis->multiSub.ppMsgs = MALLOC(NUM_MULTISUB * sizeof(msg_t*)));
+		pThis->multiSub.maxElem = NUM_MULTISUB;
+		pThis->multiSub.nElem = 0;
 		pThis->iSeverity = iSeverity;
 		pThis->iFacility = iFacility;
 		pThis->iPersistStateInterval = iPersistStateInterval;
