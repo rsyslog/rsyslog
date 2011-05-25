@@ -85,15 +85,15 @@ static enum LOGSRC {none, proc, kernel} logsrc;
 extern int ksyslog(int type, char *buf, int len);
 
 
-static uchar *GetPath(void)
+static uchar *GetPath(modConfData_t *pModConf)
 {
-	return pszPath ? pszPath : UCHAR_CONSTANT(_PATH_KLOG);
+	return pModConf->pszPath ? pModConf->pszPath : UCHAR_CONSTANT(_PATH_KLOG);
 }
 
-static void CloseLogSrc(void)
+static void CloseLogSrc(modConfData_t *pModConf)
 {
 	/* Turn on logging of messages to console, but only if a log level was speficied */
-	if(console_log_level != -1)
+	if(pModConf->console_log_level != -1)
 		ksyslog(7, NULL, 0);
   
         /* Shutdown the log sources. */
@@ -114,13 +114,13 @@ static void CloseLogSrc(void)
 }
 
 
-static enum LOGSRC GetKernelLogSrc(void)
+static enum LOGSRC GetKernelLogSrc(modConfData_t *pModConf)
 {
 	auto struct stat sb;
 
 	/* Set level of kernel console messaging.. */
-	if (   (console_log_level != -1) &&
-	       (ksyslog(8, NULL, console_log_level) < 0) &&
+	if (   (pModConf->console_log_level != -1) &&
+	       (ksyslog(8, NULL, pModConf->console_log_level) < 0) &&
 	     (errno == EINVAL) )
 	{
 		/*
@@ -137,8 +137,8 @@ static enum LOGSRC GetKernelLogSrc(void)
 	 * First do a stat to determine whether or not the proc based
 	 * file system is available to get kernel messages from.
 	 */
-	if ( use_syscall ||
-	    ((stat((char*)GetPath(), &sb) < 0) && (errno == ENOENT)) )
+	if ( pModConf->use_syscall ||
+	    ((stat((char*)GetPath(pModConf), &sb) < 0) && (errno == ENOENT)) )
 	{
 	  	/* Initialize kernel logging. */
 	  	ksyslog(1, NULL, 0);
@@ -147,14 +147,14 @@ static enum LOGSRC GetKernelLogSrc(void)
 		return(kernel);
 	}
 
-	if ( (kmsg = open((char*)GetPath(), O_RDONLY|O_CLOEXEC)) < 0 )
+	if ( (kmsg = open((char*)GetPath(pModConf), O_RDONLY|O_CLOEXEC)) < 0 )
 	{
 		imklogLogIntMsg(LOG_ERR, "imklog: Cannot open proc file system, %d.\n", errno);
 		ksyslog(7, NULL, 0);
 		return(none);
 	}
 
-	imklogLogIntMsg(LOG_INFO, "imklog %s, log source = %s started.", VERSION, GetPath());
+	imklogLogIntMsg(LOG_INFO, "imklog %s, log source = %s started.", VERSION, GetPath(pModConf));
 	return(proc);
 }
 
@@ -200,7 +200,7 @@ static int copyin( uchar *line,      int space,
  * original text.  Just in case somebody wants to run their own Oops
  * analysis on the syslog, e.g. ksymoops.
  */
-static void LogLine(char *ptr, int len)
+static void LogLine(modConfData_t *pModConf, char *ptr, int len)
 {
     enum parse_state_enum {
         PARSING_TEXT,
@@ -278,7 +278,7 @@ static void LogLine(char *ptr, int len)
 	          Syslog(LOG_INFO, line_buff);
                   line  = line_buff;
                   space = sizeof(line_buff)-1;
-		  if (symbols_twice) {
+		  if(pModConf->symbols_twice) {
 		      if (symbols_expanded) {
 			  /* reprint this line without symbol lookup */
 			  symbols_expanded = 0;
@@ -376,8 +376,7 @@ static void LogLine(char *ptr, int len)
                value  = strtoul((char*)(sym_start+1), (char **) 0, 16);
                *(line-1) = '>';  /* put back delim */
 
-               if ( !symbol_lookup || (symbol = LookupSymbol(value, &sym)) == (char *)0 )
-               {
+               if(!pModConf->symbol_lookup || (symbol = LookupSymbol(value, &sym)) == (char *)0 ) {
                   parse_state = PARSING_TEXT;
                   break;
                }
@@ -415,7 +414,7 @@ static void LogLine(char *ptr, int len)
 }
 
 
-static void LogKernelLine(void)
+static void LogKernelLine(modConfData_t *pModConf)
 {
 	auto int rdcnt;
 
@@ -433,12 +432,12 @@ static void LogKernelLine(void)
 		imklogLogIntMsg(LOG_ERR, "imklog Error return from sys_sycall: %d\n", errno);
 	}
 	else
-		LogLine(log_buffer, rdcnt);
+		LogLine(pModConf, log_buffer, rdcnt);
 	return;
 }
 
 
-static void LogProcLine(void)
+static void LogProcLine(modConfData_t *pModConf)
 {
 	auto int rdcnt;
 
@@ -454,7 +453,7 @@ static void LogProcLine(void)
 			return;
 		imklogLogIntMsg(LOG_ERR, "Cannot read proc file system: %d - %s.", errno, strerror(errno));
 	} else {
-		LogLine(log_buffer, rdcnt);
+		LogLine(pModConf, log_buffer, rdcnt);
         }
 
 	return;
@@ -464,15 +463,15 @@ static void LogProcLine(void)
 /* to be called in the module's WillRun entry point
  * rgerhards, 2008-04-09
  */
-rsRetVal klogLogKMsg(void)
+rsRetVal klogLogKMsg(modConfData_t *pModConf)
 {
         DEFiRet;
         switch(logsrc) {
                 case kernel:
-                        LogKernelLine();
+                        LogKernelLine(pModConf);
                         break;
                 case proc:
-                        LogProcLine();
+                        LogProcLine(pModConf);
                         break;
                 case none:
                         /* TODO: We need to handle this case here somewhat more intelligent 
@@ -489,19 +488,19 @@ rsRetVal klogLogKMsg(void)
 /* to be called in the module's WillRun entry point
  * rgerhards, 2008-04-09
  */
-rsRetVal klogWillRun(void)
+rsRetVal klogWillRun(modConfData_t *pModConf)
 {
         DEFiRet;
 	/* Initialize this module. If that fails, we tell the engine we don't like to run */
 	/* Determine where kernel logging information is to come from. */
-	logsrc = GetKernelLogSrc();
+	logsrc = GetKernelLogSrc(pModConf);
 	if(logsrc == none) {
 		iRet = RS_RET_NO_KERNEL_LOGSRC;
 	} else {
-		if (symbol_lookup) {
-			symbol_lookup  = (InitKsyms(symfile) == 1);
-			symbol_lookup |= InitMsyms();
-			if (symbol_lookup == 0) {
+		if(pModConf->symbol_lookup) {
+			pModConf->symbol_lookup  = (InitKsyms(pModConf) == 1);
+			pModConf->symbol_lookup |= InitMsyms();
+			if(pModConf->symbol_lookup == 0) {
 				imklogLogIntMsg(LOG_WARNING, "cannot find any symbols, turning off symbol lookups");
 			}
 		}
@@ -514,12 +513,12 @@ rsRetVal klogWillRun(void)
 /* to be called in the module's AfterRun entry point
  * rgerhards, 2008-04-09
  */
-rsRetVal klogAfterRun(void)
+rsRetVal klogAfterRun(modConfData_t *pModConf)
 {
         DEFiRet;
 	/* cleanup here */
 	if(logsrc != none)
-		CloseLogSrc();
+		CloseLogSrc(pModConf);
 
 	DeinitKsyms();
 	DeinitMsyms();

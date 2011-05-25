@@ -139,11 +139,11 @@ static char *system_maps[] =
 
 
 /* Function prototypes. */
-static char *FindSymbolFile(void);
+static char *FindSymbolFile(modConfData_t *);
 static int AddSymbol(unsigned long, char*);
 static void FreeSymbols(void);
 static int CheckVersion(char *);
-static int CheckMapVersion(char *);
+static int CheckMapVersion(modConfData_t *, char *);
 
 
 /*************************************************************************
@@ -152,7 +152,7 @@ static int CheckMapVersion(char *);
  * Purpose:	This function is responsible for initializing and loading
  *		the data tables used by the kernel address translations.
  *
- * Arguements:	(char *) mapfile
+ * Arguements:	(char *) mapfile (taken from config)
  *
  *			mapfile:->	A pointer to a complete path
  *					specification of the file containing
@@ -163,7 +163,7 @@ static int CheckMapVersion(char *);
  *		A boolean style context is returned.  The return value will
  *		be true if initialization was successful.  False if not.
  **************************************************************************/
-extern int InitKsyms(char *mapfile)
+extern int InitKsyms(modConfData_t *pModConf)
 {
 	auto char	type,
 			sym[512];
@@ -182,20 +182,20 @@ extern int InitKsyms(char *mapfile)
 
 
 	/* Search for and open the file containing the kernel symbols. */
-	if ( mapfile != NULL ) {
-		if ( (sym_file = fopen(mapfile, "r")) == NULL )
+	if ( pModConf->symfile != NULL ) {
+		if ( (sym_file = fopen(pModConf->symfile, "r")) == NULL )
 		{
-			imklogLogIntMsg(LOG_WARNING, "Cannot open map file: %s.", mapfile);
+			imklogLogIntMsg(LOG_WARNING, "Cannot open map file: %s.", pModConf->symfile);
 			return(0);
 		}
 	} else {
-		if ( (mapfile = FindSymbolFile()) == NULL ) {
+		if ( (pModConf->symfile = FindSymbolFile(pModConf)) == NULL ) {
 			imklogLogIntMsg(LOG_WARNING, "Cannot find map file.");
 			dbgprintf("Cannot find map file.\n");
 			return(0);
 		}
 		
-		if ( (sym_file = fopen(mapfile, "r")) == NULL ) {
+		if ( (sym_file = fopen(pModConf->symfile, "r")) == NULL ) {
 			imklogLogIntMsg(LOG_WARNING, "Cannot open map file.");
 			dbgprintf("Cannot open map file.\n");
 			return(0);
@@ -216,7 +216,7 @@ extern int InitKsyms(char *mapfile)
 			fclose(sym_file);
 			return(0);
 		}
-		if(dbgPrintSymbols)
+		if(pModConf->dbgPrintSymbols)
 			dbgprintf("Address: %lx, Type: %c, Symbol: %s\n", address, type, sym);
 
 		if ( AddSymbol(address, sym) == 0 ) {
@@ -230,7 +230,7 @@ extern int InitKsyms(char *mapfile)
 	}
 	
 
-	imklogLogIntMsg(LOG_INFO, "Loaded %d symbols from %s.", num_syms, mapfile);
+	imklogLogIntMsg(LOG_INFO, "Loaded %d symbols from %s.", num_syms, pModConf->symfile);
 	switch(version) {
 	    case -1:
 		imklogLogIntMsg(LOG_WARNING, "Symbols do not match kernel version.");
@@ -290,7 +290,7 @@ extern void DeinitKsyms(void)
  *		caller which points to the name of the file containing
  *		the symbol table to be used.
  **************************************************************************/
-static char *FindSymbolFile(void)
+static char *FindSymbolFile(modConfData_t *pModConf)
 {
 	auto char	*file = NULL,
 			**mf = system_maps;
@@ -310,7 +310,7 @@ static char *FindSymbolFile(void)
 		snprintf(mysymfile, sizeof(mysymfile), "%s-%s", *mf, utsname.release);
 		dbgprintf("Trying %s.\n", mysymfile);
 		if((sym_file = fopen(mysymfile, "r")) != NULL) {
-			if(CheckMapVersion(mysymfile) == 1)
+			if(CheckMapVersion(pModConf, mysymfile) == 1)
 				file = mysymfile;
 			fclose(sym_file);
 		}
@@ -318,7 +318,7 @@ static char *FindSymbolFile(void)
 			sprintf (mysymfile, "%s", *mf);
 			dbgprintf("Trying %s.\n", mysymfile);
 			if((sym_file = fopen(mysymfile, "r")) != NULL ) {
-				if (CheckMapVersion(mysymfile) == 1)
+				if (CheckMapVersion(pModConf, mysymfile) == 1)
 					file = mysymfile;
 				fclose(sym_file);
 			}
@@ -454,7 +454,7 @@ static int CheckVersion(char *version)
  *			1:->	The executing kernel is of the same version
  *				as the version of the map file.
  **************************************************************************/
-static int CheckMapVersion(char *fname)
+static int CheckMapVersion(modConfData_t *pModConf, char *fname)
 {
 	int	version;
 	FILE	*sym_file;
@@ -477,7 +477,7 @@ static int CheckMapVersion(char *fname)
 				fclose(sym_file);
 				return(0);
 			}
-			if(dbgPrintSymbols)
+			if(pModConf->dbgPrintSymbols)
 				dbgprintf("Address: %lx, Type: %c, Symbol: %s\n", address, type, sym);
 			version = CheckVersion(sym);
 		}

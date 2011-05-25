@@ -30,22 +30,37 @@
 #include "rsyslog.h"
 #include "dirty.h"
 
+/* we need to have the modConf type present in all submodules */
+struct modConfData_s {
+	int dbgPrintSymbols;
+	int symbols_twice;
+	int use_syscall;
+	int symbol_lookup;
+	int bPermitNonKernel;
+	int iFacilIntMsg;
+	uchar *pszPath;
+	int console_log_level;
+	char *symfile; 
+	rsconf_t *pConf;
+};
+
 /* interface to "drivers"
  * the platform specific drivers must implement these entry points. Only one
  * driver may be active at any given time, thus we simply rely on the linker
  * to resolve the addresses.
  * rgerhards, 2008-04-09
  */
-rsRetVal klogLogKMsg(void);
-rsRetVal klogWillRun(void);
-rsRetVal klogAfterRun(void);
-int klogFacilIntMsg(void);
+rsRetVal klogLogKMsg(modConfData_t *pModConf);
+rsRetVal klogWillRun(modConfData_t *pModConf);
+rsRetVal klogAfterRun(modConfData_t *pModConf);
+int klogFacilIntMsg();
 
 /* the following data members may be accessed by the "drivers"
  * I admit this is not the cleanest way to doing things, but I honestly
  * believe it is appropriate for the job that needs to be done.
  * rgerhards, 2008-04-09
  */
+#if 0
 extern int symbols_twice;
 extern int use_syscall;
 extern int symbol_lookup;
@@ -53,6 +68,7 @@ extern char *symfile;
 extern int console_log_level;
 extern int dbgPrintSymbols;
 extern uchar *pszPath;
+#endif
 
 /* the functions below may be called by the drivers */
 rsRetVal imklogLogIntMsg(int priority, char *fmt, ...) __attribute__((format(printf,2, 3)));
@@ -60,7 +76,7 @@ rsRetVal Syslog(int priority, uchar *msg);
 
 /* prototypes */
 extern int klog_getMaxLine(void); /* work-around for klog drivers to get configured max line size */
-extern int InitKsyms(char *);
+extern int InitKsyms(modConfData_t*);
 extern void DeinitKsyms(void);
 extern int InitMsyms(void);
 extern void DeinitMsyms(void);
