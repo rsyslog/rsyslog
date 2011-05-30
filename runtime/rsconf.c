@@ -1003,7 +1003,7 @@ ourConf = loadConf; // TODO: remove, once ourConf is gone!
 	localRet = conf.processConfFile(loadConf, confFile);
 	CHKiRet(conf.GetNbrActActions(loadConf, &iNbrActions));
 
-	if(localRet != RS_RET_OK) {
+	if(localRet != RS_RET_OK && localRet != RS_RET_NONFATAL_CONFIG_ERR) {
 		errmsg.LogError(0, localRet, "CONFIG ERROR: could not interpret master config file '%s'.", confFile);
 		bHadConfigErr = 1;
 	} else if(iNbrActions == 0) {
@@ -1042,12 +1042,20 @@ ourConf = loadConf; // TODO: remove, once ourConf is gone!
 
 	CHKiRet(validateConf());
 
+
+	/* return warning state if we had some acceptable problems */
+	if(bHadConfigErr) {
+		iRet = RS_RET_NONFATAL_CONFIG_ERR;
+	}
+
 	/* we are done checking the config - now validate if we should actually run or not.
 	 * If not, terminate. -- rgerhards, 2008-07-25
 	 * TODO: iConfigVerify -- should it be pulled from the config, or leave as is (option)?
 	 */
 	if(iConfigVerify) {
-		ABORT_FINALIZE(RS_RET_VALIDATION_RUN);
+		if(iRet == RS_RET_OK)
+			iRet = RS_RET_VALIDATION_RUN;
+		FINALIZE;
 	}
 
 	/* all OK, pass loaded conf to caller */
@@ -1057,9 +1065,6 @@ ourConf = loadConf; // TODO: remove, once ourConf is gone!
 	dbgprintf("rsyslog finished loading initial config %p\n", loadConf);
 	rsconfDebugPrint(loadConf);
 
-	/* return warning state if we had some acceptable problems */
-	if(bHadConfigErr)
-		iRet = RS_RET_NONFATAL_CONFIG_ERR;
 finalize_it:
 	RETiRet;
 }

@@ -2165,6 +2165,10 @@ int realMain(int argc, char **argv)
 					"startup with a dirty config.\n");
 			exit(2);
 		}
+		if(iConfigVerify) {
+			/* a bit dirty, but useful... */
+			exit(1);
+		}
 		localRet = RS_RET_OK;
 	}
 	CHKiRet(localRet);
