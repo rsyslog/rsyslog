@@ -37,7 +37,7 @@ echo "local directory"
 #
 # check empty config file
 #
-../tools/rsyslogd -c4 -N1 -f/dev/null 2>&1 |./ourtail |head -2 > tmp
+../tools/rsyslogd -c4 -N1 -f/dev/null -M../runtime/.libs:../.libs 2>&1 |./ourtail |head -2 > tmp
 cmp tmp $srcdir/DevNull.cfgtest
 if [ ! $? -eq 0 ]; then
 echo "DevNull.cfgtest failed"
@@ -52,7 +52,7 @@ fi;
 #
 # check missing config file
 #
-../tools/rsyslogd -c4 -N1 -f/This/does/not/exist 2>&1 |./ourtail |head -2 > tmp
+../tools/rsyslogd -c4 -N1 -M../runtime/.libs:../.libs -f/This/does/not/exist 2>&1 |./ourtail |head -2 > tmp
 cmp tmp $srcdir/NoExistFile.cfgtest
 if [ ! $? -eq 0 ]; then
 echo "NoExistFile.cfgtest failed"
