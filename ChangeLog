@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
-Version 6.3.0  [DEVEL] (rgerhards), 2011-??-??
+Version 6.3.0  [DEVEL] (rgerhards), 2011-06-01
+- introduced new config system
+  http://blog.gerhards.net/2011/06/new-rsyslog-config-system-materializes.html
 ---------------------------------------------------------------------------
 Version 6.1.8  [BETA] (rgerhards), 2011-05-20
 - official new beta version (note that in a sense 6.1.7 was already beta,
