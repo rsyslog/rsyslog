@@ -101,6 +101,7 @@ BEGINobjConstruct(rsconf) /* be sure to specify the object type also in END macr
 	pThis->globals.bDebugPrintCfSysLineHandlerList = 1;
 	pThis->globals.bLogStatusMsgs = DFLT_bLogStatusMsgs;
 	pThis->globals.bErrMsgToStderr = 1;
+	pThis->globals.umask = -1;
 	pThis->templates.root = NULL;
 	pThis->templates.last = NULL;
 	pThis->templates.lastStatic = NULL;
@@ -475,6 +476,19 @@ finalize_it:
 }
 
 
+/* set the processes umask (upon configuration request) */
+static inline rsRetVal
+setUmask(int iUmask)
+{
+	if(iUmask != -1) {
+		umask(iUmask);
+		DBGPRINTF("umask set to 0%3.3o.\n", iUmask);
+	}
+
+	return RS_RET_OK;
+}
+
+
 /* Activate an already-loaded configuration. The configuration will become
  * the new running conf (if successful). Note that in theory this method may
  * be called when there already is a running conf. In practice, the current
@@ -495,6 +509,7 @@ activate(rsconf_t *cnf)
 		generateConfigDAG(ourConf->globals.pszConfDAGFile);
 #	endif
 	tellModulesConfigLoadDone();
+	setUmask(cnf->globals.umask);
 	tellModulesCheckConfig();
 
 	/* the output part and the queue is now ready to run. So it is a good time
@@ -544,18 +559,6 @@ doIncludeLine(void *pVal, uchar *pNewVal)
 	iRet = conf.doIncludeLine(ourConf, pVal, pNewVal);
 	free(pNewVal);
 	RETiRet;
-}
-
-
-/* set the processes umask (upon configuration request) */
-static rsRetVal
-setUmask(void __attribute__((unused)) *pVal, int iUmask)
-{
-#warning this *really* needs to be done differently!
-	umask(iUmask);
-	DBGPRINTF("umask set to 0%3.3o.\n", iUmask);
-
-	return RS_RET_OK;
 }
 
 
@@ -828,6 +831,8 @@ initLegacyConf(void)
 		NULL, &loadConf->globals.gidDropPriv, NULL, eConfObjGlobal));
 	CHKiRet(regCfSysLineHdlr((uchar *)"generateconfiggraph", 0, eCmdHdlrGetWord,
 		NULL, &loadConf->globals.pszConfDAGFile, NULL, eConfObjGlobal));
+	CHKiRet(regCfSysLineHdlr((uchar *)"umask", 0, eCmdHdlrFileCreateMode,
+		NULL, &loadConf->globals.umask, NULL, eConfObjGlobal));
 	CHKiRet(regCfSysLineHdlr((uchar *)"maxopenfiles", 0, eCmdHdlrInt,
 		setMaxFiles, NULL, NULL, eConfObjGlobal));
 
@@ -837,8 +842,6 @@ initLegacyConf(void)
 		conf.doModLoad, NULL, NULL, eConfObjGlobal));
 	CHKiRet(regCfSysLineHdlr((uchar *)"includeconfig", 0, eCmdHdlrCustomHandler,
 		doIncludeLine, NULL, NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"umask", 0, eCmdHdlrFileCreateMode,
-		setUmask, NULL, NULL, eConfObjGlobal));
 	CHKiRet(regCfSysLineHdlr((uchar *)"maxmessagesize", 0, eCmdHdlrSize,
 		setMaxMsgSize, NULL, NULL, eConfObjGlobal));
 	CHKiRet(regCfSysLineHdlr((uchar *)"defaultruleset", 0, eCmdHdlrGetWord,

@@ -69,6 +69,7 @@ struct globals_s {
 				      config) if there was any issue in conf */
 	int uidDropPriv;	/* user-id to which priveleges should be dropped to */
 	int gidDropPriv;	/* group-id to which priveleges should be dropped to */
+	int umask;		/* umask to use */
 	uchar *pszConfDAGFile;	/* name of config DAG file, non-NULL means generate one */
 
 	// TODO are the following ones defaults?
