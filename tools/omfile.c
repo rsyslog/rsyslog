@@ -177,15 +177,15 @@ typedef struct configSettings_s {
 	int64	iIOBufSize;	/* size of an io buffer */
 	int	iFlushInterval; 	/* how often flush the output buffer on inactivity? */
 	int	bUseAsyncWriter;	/* should we enable asynchronous writing? */
-	uchar	*pszFileDfltTplName; /* name of the default template to use */
 	EMPTY_STRUCT
 } configSettings_t;
+uchar	*pszFileDfltTplName; /* name of the default template to use */
 
 SCOPING_SUPPORT; /* must be set AFTER configSettings_t is defined */
 
 BEGINinitConfVars		/* (re)set config variables to default values */
 CODESTARTinitConfVars 
-	cs.pszFileDfltTplName = NULL; /* make sure this can be free'ed! */
+	pszFileDfltTplName = NULL; /* make sure this can be free'ed! */
 	iRet = resetConfigVariables(NULL, NULL); /* params are dummies */
 ENDinitConfVars
 
@@ -849,8 +849,8 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	cs.iIOBufSize = IOBUF_DFLT_SIZE;
 	cs.iFlushInterval = FLUSH_INTRVL_DFLT;
 	cs.bUseAsyncWriter = USE_ASYNCWRITER_DFLT;
-	free(cs.pszFileDfltTplName);
-	cs.pszFileDfltTplName = NULL;
+	free(pszFileDfltTplName);
+	pszFileDfltTplName = NULL;
 
 	return RS_RET_OK;
 }
@@ -914,7 +914,7 @@ SCOPINGmodInit
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"failonchownfailure", 0, eCmdHdlrBinary, NULL, &cs.bFailOnChown, STD_LOADABLE_MODULE_ID, eConfObjAction));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omfileForceChown", 0, eCmdHdlrBinary, NULL, &cs.bForceChown, STD_LOADABLE_MODULE_ID, eConfObjAction));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionfileenablesync", 0, eCmdHdlrBinary, NULL, &cs.bEnableSync, STD_LOADABLE_MODULE_ID, eConfObjAction));
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionfiledefaulttemplate", 0, eCmdHdlrGetWord, NULL, &cs.pszFileDfltTplName, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionfiledefaulttemplate", 0, eCmdHdlrGetWord, NULL, &pszFileDfltTplName, NULL, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID, eConfObjAction));
 ENDmodInit
 /* vi:set ai:
