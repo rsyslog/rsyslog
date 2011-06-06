@@ -1,5 +1,6 @@
 /* generate an input file suitable for use by the testbench
  * Copyright (C) 2011 by Rainer Gerhards and Adiscon GmbH.
+ * usage: ./inputfilegen num-lines > file
  * Part of rsyslog, licensed under GPLv3
  */
 #include <stdio.h>

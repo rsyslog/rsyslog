@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 5.9.0  [V5-DEVEL] (rgerhards), 2011-03-??
+- imfile: added $InputFileMaxLinesAtOnce directive
+- enhanced imfile to support input batching
 - added capability for imtcp and imptcp to activate keep-alive packets
   at the socket layer. This has not been added to imttcp, as the latter is
   only an experimental module, and one which did not prove to be useful.
@@ -29,7 +31,17 @@ Version 5.9.0  [V5-DEVEL] (rgerhards), 2011-03-??
   affected directive was: $ActionExecOnlyWhenPreviousIsSuspended on
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=236
 ---------------------------------------------------------------------------
-Version 5.8.1  [V5-stable] (rgerhards), 2011-04-??
+Version 5.8.1  [V5-stable] (rgerhards), 2011-05-19
+- bugfix: invalid processing in QUEUE_FULL condition
+  If the the multi-submit interface was used and a QUEUE_FULL condition
+  occured, the failed message was properly destructed. However, the
+  rest of the input batch, if it existed, was not processed. So this
+  lead to potential loss of messages and a memory leak. The potential
+  loss of messages was IMHO minor, because they would have been dropped
+  in most cases due to the queue remaining full, but very few lucky ones
+  from the batch may have made it. Anyhow, this has now been changed so
+  that the rest of the batch is properly tried to be enqueued and, if
+  not possible, destructed.
 - new module mmsnmptrapd, a sample message modification module
   This can be useful to reformat snmptrapd messages and also serves as
   a sample for how to write message modification modules using the
