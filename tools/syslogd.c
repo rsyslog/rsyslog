@@ -124,6 +124,7 @@
 #include "vm.h"
 #include "prop.h"
 #include "rsconf.h"
+#include "dnscache.h"
 #include "sd-daemon.h"
 
 /* definitions for objects we access */
@@ -1567,6 +1568,7 @@ InitGlobalClasses(void)
 	/* TODO: the dependency on net shall go away! -- rgerhards, 2008-03-07 */
 	pErrObj = "net";
 	CHKiRet(objUse(net, LM_NET_FILENAME));
+	dnscacheInit();
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
@@ -1615,6 +1617,7 @@ GlobalClassExit(void)
 	CHKiRet(objUse(errmsg,   CORE_COMPONENT));
 	CHKiRet(objUse(module,   CORE_COMPONENT));
 #endif
+	dnscacheDeinit();
 	rsrtExit(); /* *THIS* *MUST/SHOULD?* always be the first class initilizer being called (except debug)! */
 
 	RETiRet;
