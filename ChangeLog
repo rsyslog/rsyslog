@@ -1,7 +1,7 @@
 ---------------------------------------------------------------------------
 Version 6.3.1  [DEVEL] (rgerhards), 2011-06-01
 - added a first implementation of a DNS name cache
-  this still has a couple of weaknesses, like no size limit, no expiration
+  this still has a couple of weaknesses, like no expiration
   of entries, suboptimal algorithms -- but it should perform better than
   what we had previously. Implementation will be improved based on
   feedback during the next couple of releases

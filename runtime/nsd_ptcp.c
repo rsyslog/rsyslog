@@ -251,10 +251,8 @@ Abort(nsd_t *pNsd)
 static rsRetVal
 FillRemHost(nsd_ptcp_t *pThis, struct sockaddr *pAddr)
 {
-	int error;
 	uchar szIP[NI_MAXHOST] = "";
 	uchar szHname[NI_MAXHOST] = "";
-	struct addrinfo hints, *res;
 	size_t len;
 	
 	DEFiRet;

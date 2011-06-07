@@ -31,6 +31,7 @@
 
 #include "rsyslog.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <signal.h>
 #include <netdb.h>
 #include <unistd.h>
@@ -51,13 +52,16 @@ struct dnscache_entry_s {
 	uchar *pszHostFQDN;
 	uchar *ip;
 	struct dnscache_entry_s *next;
+	unsigned nUsed;
 };
 typedef struct dnscache_entry_s dnscache_entry_t;
 struct dnscache_s {
 	pthread_rwlock_t rwlock;
 	dnscache_entry_t *root;
+	unsigned nEntries;
 };
 typedef struct dnscache_s dnscache_t;
+#define MAX_CACHE_ENTRIES 1000
 
 
 /* static data */
@@ -73,6 +77,7 @@ dnscacheInit(void)
 {
 	DEFiRet;
 	dnsCache.root = NULL;
+	dnsCache.nEntries = 0;
 	pthread_rwlock_init(&dnsCache.rwlock, NULL);
 	CHKiRet(objGetObjInterface(&obj)); /* this provides the root pointer for all other queries */
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
@@ -94,6 +99,18 @@ dnscacheDeinit(void)
 }
 
 
+/* destruct a cache entry.
+ * Precondition: entry must already be unlinked from list
+ */
+static inline void
+entryDestruct(dnscache_entry_t *etry)
+{
+	free(etry->pszHostFQDN);
+	free(etry->ip);
+	free(etry);
+}
+
+
 static inline dnscache_entry_t*
 findEntry(struct sockaddr_storage *addr)
 {
@@ -102,6 +119,8 @@ findEntry(struct sockaddr_storage *addr)
 	    ; etry != NULL && !memcmp(addr, &etry->addr, sizeof(struct sockaddr_storage))
 	    ; etry = etry->next)
 		/* just search, no other processing necessary */;
+	if(etry != NULL)
+		++etry->nUsed; /* this is *not* atomic, but we can live with an occasional loss! */
 	return etry;
 }
 
@@ -219,11 +238,45 @@ finalize_it:
 	RETiRet;
 }
 
+
+/* evict an entry from the cache. We should try to evict one that does
+ * not decrease the hit rate that much, but we do not try to hard currently
+ * (as the base cache data structure may change).
+ * This MUST NOT be called when the cache is empty!
+ * rgerhards, 2011-06-06
+ */
+static inline void
+evictEntry(void)
+{
+	dnscache_entry_t *prev, *evict, *prevEvict, *etry;
+	unsigned lowest;
+
+	prev = prevEvict = NULL;
+	evict = dnsCache.root;
+	lowest = evict->nUsed;
+	for(etry = dnsCache.root->next ; etry != NULL ; etry = etry->next) {
+		if(etry->nUsed < lowest) {
+			evict = etry;
+			lowest = etry->nUsed;
+			prevEvict = prev;
+		}
+		prev = etry;
+	}
+
+	/* found lowest, unlink */
+	if(prevEvict == NULL) { /* remove root? */
+		dnsCache.root = evict->next;
+	} else {
+		prevEvict = evict->next;
+	}
+	entryDestruct(evict);
+}
+
+
 /* add a new entry to the cache. This means the address is resolved and
  * then added to the cache.
  */
-//static inline rsRetVal
-static rsRetVal
+static inline rsRetVal
 addEntry(struct sockaddr_storage *addr, dnscache_entry_t **pEtry)
 {
 	uchar pszHostFQDN[NI_MAXHOST];
@@ -234,6 +287,7 @@ addEntry(struct sockaddr_storage *addr, dnscache_entry_t **pEtry)
 	CHKmalloc(etry = MALLOC(sizeof(dnscache_entry_t)));
 	CHKmalloc(etry->pszHostFQDN = ustrdup(pszHostFQDN));
 	CHKmalloc(etry->ip = ustrdup(ip));
+	etry->nUsed = 0;
 	*pEtry = etry;
 
 	/* add to list. Currently, we place the new element always at
@@ -241,6 +295,9 @@ addEntry(struct sockaddr_storage *addr, dnscache_entry_t **pEtry)
 	 */
 	pthread_rwlock_unlock(&dnsCache.rwlock); /* release read lock */
 	pthread_rwlock_wrlock(&dnsCache.rwlock); /* and re-aquire for writing */
+	if(dnsCache.nEntries >= MAX_CACHE_ENTRIES) {
+		evictEntry();
+	}
 	etry->next = dnsCache.root;
 	dnsCache.root = etry;
 	pthread_rwlock_unlock(&dnsCache.rwlock);
