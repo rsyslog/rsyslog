@@ -249,7 +249,7 @@ Abort(nsd_t *pNsd)
  * rgerhards, 2008-03-31
  */
 static rsRetVal
-FillRemHost(nsd_ptcp_t *pThis, struct sockaddr *pAddr)
+FillRemHost(nsd_ptcp_t *pThis, struct sockaddr_storage *pAddr)
 {
 	uchar szIP[NI_MAXHOST] = "";
 	uchar szHname[NI_MAXHOST] = "";
@@ -314,7 +314,7 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 	 * of this function. -- rgerhards, 2008-12-01
 	 */
 	memcpy(&pNew->remAddr, &addr, sizeof(struct sockaddr_storage));
-	CHKiRet(FillRemHost(pNew, (struct sockaddr*) &addr));
+	CHKiRet(FillRemHost(pNew, &addr));
 
 	/* set the new socket to non-blocking IO -TODO:do we really need to do this here? Do we always want it? */
 	if((sockflags = fcntl(iNewSock, F_GETFL)) != -1) {

@@ -115,10 +115,11 @@ static inline dnscache_entry_t*
 findEntry(struct sockaddr_storage *addr)
 {
 	dnscache_entry_t *etry;
-	for(  etry = dnsCache.root
-	    ; etry != NULL && !memcmp(addr, &etry->addr, sizeof(struct sockaddr_storage))
-	    ; etry = etry->next)
-		/* just search, no other processing necessary */;
+	for(etry = dnsCache.root ; etry != NULL ; etry = etry->next) {
+		if(SALEN((struct sockaddr*)addr) == SALEN((struct sockaddr*) &etry->addr) 
+		   && !memcmp(addr, &etry->addr, SALEN((struct sockaddr*) addr)))
+			break; /* in this case, we found our entry */
+	}
 	if(etry != NULL)
 		++etry->nUsed; /* this is *not* atomic, but we can live with an occasional loss! */
 	return etry;
@@ -287,6 +288,7 @@ addEntry(struct sockaddr_storage *addr, dnscache_entry_t **pEtry)
 	CHKmalloc(etry = MALLOC(sizeof(dnscache_entry_t)));
 	CHKmalloc(etry->pszHostFQDN = ustrdup(pszHostFQDN));
 	CHKmalloc(etry->ip = ustrdup(ip));
+	memcpy(&etry->addr, addr, SALEN((struct sockaddr*) addr));
 	etry->nUsed = 0;
 	*pEtry = etry;
 
