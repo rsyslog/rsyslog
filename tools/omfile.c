@@ -238,6 +238,7 @@ rsRetVal setDynaFileCacheSize(void __attribute__((unused)) *pVal, int iNewVal)
 rsRetVal goneAway(void __attribute__((unused)) *pVal, int iNewVal)
 {
 	errmsg.LogError(0, RS_RET_ERR, "directive $omfileForceChown is no longer supported");
+	return RS_RET_ERR;
 }
 
 
