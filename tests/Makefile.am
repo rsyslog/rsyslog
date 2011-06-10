@@ -108,6 +108,7 @@ TESTS +=  \
 if HAVE_VALGRIND
 TESTS += imtcp-tls-basic-vg.sh \
 	 imtcp_conndrop_tls-vg.sh 
+	 manytcp-too-few-tls-vg.sh 
 endif
 endif
 
@@ -274,6 +275,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/udp-msgreduc-orgmsg-vg.conf \
 	   udp-msgreduc-vg.sh \
 	   testsuites/udp-msgreduc-vg.conf \
+	   manytcp-too-few-tls.sh \
+	   testsuites/manytcp-too-few-tls.conf \
 	   manytcp.sh \
 	   testsuites/manytcp.conf \
 	   manyptcp.sh \

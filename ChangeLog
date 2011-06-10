@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------
+Version 6.3.2  [DEVEL] (rgerhards), 2011-06-07
+- bugfix: memory leak in imtcp & subsystems under some circumstances
+  This leak is tied to error conditions which lead to incorrect cleanup
+  of some data structures.
+---------------------------------------------------------------------------
 Version 6.3.1  [DEVEL] (rgerhards), 2011-06-07
 - added a first implementation of a DNS name cache
   this still has a couple of weaknesses, like no expiration of entries,
