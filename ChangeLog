@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------
+Version 5.8.2  [V5-stable] (rgerhards), 2011-06-??
+- bugfix: memory leak in imtcp & subsystems under some circumstances
+  This leak is tied to error conditions which lead to incorrect cleanup
+  of some data structures. [backport from v6]
+---------------------------------------------------------------------------
 Version 5.8.1  [V5-stable] (rgerhards), 2011-05-19
 - bugfix: invalid processing in QUEUE_FULL condition
   If the the multi-submit interface was used and a QUEUE_FULL condition

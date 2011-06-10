@@ -556,6 +556,7 @@ RunSelect(tcpsrv_t *pThis)
 	int bIsReady;
 	tcps_sess_t *pNewSess;
 	nssel_t *pSel = NULL;
+	rsRetVal localRet;
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 
@@ -604,8 +605,8 @@ RunSelect(tcpsrv_t *pThis)
 		while(nfds && iTCPSess != -1) {
 			if(glbl.GetGlobalInputTermState() == 1)
 				ABORT_FINALIZE(RS_RET_FORCE_TERM);
-			CHKiRet(nssel.IsReady(pSel, pThis->pSessions[iTCPSess]->pStrm, NSDSEL_RD, &bIsReady, &nfds));
-			if(bIsReady) {
+			localRet = nssel.IsReady(pSel, pThis->pSessions[iTCPSess]->pStrm, NSDSEL_RD, &bIsReady, &nfds);
+			if(bIsReady || localRet != RS_RET_OK) {
 				doReceive(pThis, &pThis->pSessions[iTCPSess], NULL);
 				--nfds; /* indicate we have processed one */
 			}
@@ -618,7 +619,9 @@ finalize_it: /* this is a very special case - this time only we do not exit the 
 	      * crashed, which made sense (the rest of the engine was not prepared for
 	      * that) -- rgerhards, 2008-05-19
 	      */
-		/*EMPTY*/;
+		if(pSel != NULL) { /* cleanup missing? happens during err exit! */
+			nssel.Destruct(&pSel);
+		}
 	}
 
 	/* note that this point is usually not reached */
