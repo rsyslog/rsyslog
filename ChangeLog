@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 5.9.0  [V5-DEVEL] (rgerhards), 2011-03-??
+Version 5.9.0  [V5-DEVEL] (rgerhards), 2011-06-08
 - imfile: added $InputFileMaxLinesAtOnce directive
 - enhanced imfile to support input batching
 - added capability for imtcp and imptcp to activate keep-alive packets

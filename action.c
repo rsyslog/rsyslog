@@ -293,7 +293,7 @@ actionConstructFinalize(action_t *pThis)
 	if(pThis->pszName == NULL) {
 		snprintf((char*) pszQName, sizeof(pszQName)/sizeof(uchar), "action %d queue", iActionNbr);
 	} else {
-		strncpy(pszQName, pThis->pszName, sizeof(pszQName));
+		ustrncpy(pszQName, pThis->pszName, sizeof(pszQName));
 		pszQName[63] = '\0'; /* to be on the save side */
 	}
 
