@@ -103,7 +103,12 @@ if ENABLE_GNUTLS
 TESTS +=  \
 	sndrcv_tls_anon.sh \
 	sndrcv_tls_anon_rebind.sh \
-	imtcp-tls-basic.sh
+	imtcp-tls-basic.sh \
+	imtcp_conndrop_tls.sh 
+if HAVE_VALGRIND
+TESTS += imtcp-tls-basic-vg.sh \
+	 imtcp_conndrop_tls-vg.sh 
+endif
 endif
 
 if ENABLE_OMUXSOCK
