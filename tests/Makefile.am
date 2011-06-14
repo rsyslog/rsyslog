@@ -96,6 +96,12 @@ TESTS +=  \
 	imptcp_conndrop.sh 
 endif
 
+if ENABLE_GNUTLS
+if HAVE_VALGRIND
+TESTS += manytcp-too-few-tls.sh
+endif
+endif
+
 if ENABLE_OMUXSOCK
 TESTS += uxsock_simple.sh
 endif
