@@ -104,6 +104,9 @@ TESTS +=  \
 	sndrcv_tls_anon.sh \
 	sndrcv_tls_anon_rebind.sh \
 	imtcp-tls-basic.sh
+if HAVE_VALGRIND
+TESTS += manytcp-too-few-tls.sh
+endif
 endif
 
 if ENABLE_OMUXSOCK

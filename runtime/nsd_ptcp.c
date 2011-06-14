@@ -334,6 +334,12 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 
 	iNewSock = accept(pThis->sock, (struct sockaddr*) &addr, &addrlen);
 	if(iNewSock < 0) {
+		if(Debug) {
+			char errStr[1024];
+			rs_strerror_r(errno, errStr, sizeof(errStr));
+			dbgprintf("nds_ptcp: error accepting connection on socket %d, errno %d: %s\n",
+				  pThis->sock, errno, errStr);
+		}
 		ABORT_FINALIZE(RS_RET_ACCEPT_ERR);
 	}
 

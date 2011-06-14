@@ -1099,6 +1099,7 @@ gtlsEndSess(nsd_gtls_t *pThis)
 			}
 		}
 		gnutls_deinit(pThis->sess);
+		pThis->bHaveSess = 0;
 	}
 	RETiRet;
 }
@@ -1152,8 +1153,8 @@ CODESTARTobjDestruct(nsd_gtls)
 		gnutls_x509_crt_deinit(pThis->ourCert);
 	if(pThis->bOurKeyIsInit)
 		gnutls_x509_privkey_deinit(pThis->ourKey);
-#warning need more checks if the new gnutls_deinit() breaks things during normal operations
-//	gnutls_deinit(pThis->sess); /* see ln 600 pThis->bInSess as something to check? */
+	if(pThis->bHaveSess)
+		gnutls_deinit(pThis->sess);
 ENDobjDestruct(nsd_gtls)
 
 
