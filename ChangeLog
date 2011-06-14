@@ -1,8 +1,8 @@
 ---------------------------------------------------------------------------
-Version 6.1.9  [BETA] (rgerhards), 2011-0?-??
+Version 6.1.9  [BETA] (rgerhards), 2011-06-14
 - bugfix: memory leak in imtcp & subsystems under some circumstances
   This leak is tied to error conditions which lead to incorrect cleanup
-  of some data structures. [backport from v6].3
+  of some data structures. [backport from v6.3]
 - bugfix: $ActionFileDefaultTemplate did not work
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=262
 ---------------------------------------------------------------------------
