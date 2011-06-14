@@ -622,7 +622,9 @@ finalize_it: /* this is a very special case - this time only we do not exit the 
 	      * crashed, which made sense (the rest of the engine was not prepared for
 	      * that) -- rgerhards, 2008-05-19
 	      */
-		/*EMPTY*/;
+		if(pSel != NULL) { /* cleanup missing? happens during err exit! */
+			nssel.Destruct(&pSel);
+		}
 	}
 
 	/* note that this point is usually not reached */
