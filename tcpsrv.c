@@ -477,7 +477,7 @@ Run(tcpsrv_t *pThis)
 	int iTCPSess;
 	int bIsReady;
 	tcps_sess_t *pNewSess;
-	nssel_t *pSel;
+	nssel_t *pSel = NULL;
 	ssize_t iRcvd;
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
@@ -521,8 +521,8 @@ Run(tcpsrv_t *pThis)
 		/* now check the sessions */
 		iTCPSess = TCPSessGetNxtSess(pThis, -1);
 		while(nfds && iTCPSess != -1) {
-			CHKiRet(nssel.IsReady(pSel, pThis->pSessions[iTCPSess]->pStrm, NSDSEL_RD, &bIsReady, &nfds));
-			if(bIsReady) {
+			localRet = nssel.IsReady(pSel, pThis->pSessions[iTCPSess]->pStrm, NSDSEL_RD, &bIsReady, &nfds);
+			if(bIsReady || localRet != RS_RET_OK) {
 				char buf[128*1024]; /* reception buffer - may hold a partial or multiple messages */
 				dbgprintf("netstream %p with new data\n", pThis->pSessions[iTCPSess]->pStrm);
 
@@ -576,7 +576,9 @@ finalize_it: /* this is a very special case - this time only we do not exit the 
 	      * crashed, which made sense (the rest of the engine was not prepared for
 	      * that) -- rgerhards, 2008-05-19
 	      */
-		/*EMPTY*/;
+		if(pSel != NULL) { /* cleanup missing? happens during err exit! */
+			nssel.Destruct(&pSel);
+		}
 	}
 
 	/* note that this point is usually not reached */
