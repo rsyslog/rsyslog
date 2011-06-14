@@ -96,6 +96,12 @@ TESTS +=  \
 	imptcp_conndrop.sh 
 endif
 
+if ENABLE_GNUTLS
+if HAVE_VALGRIND
+TESTS += manytcp-too-few-tls.sh
+endif
+endif
+
 if ENABLE_OMUXSOCK
 TESTS += uxsock_simple.sh
 endif
@@ -426,7 +432,8 @@ uxsockrcvr_SOURCES = uxsockrcvr.c
 uxsockrcvr_LDADD = $(SOL_LIBS)
 
 tcpflood_SOURCES = tcpflood.c
-tcpflood_LDADD = $(SOL_LIBS)
+tcpflood_CPPFLAGS =  $(PTHREADS_CFLAGS)
+tcpflood_LDADD = $(SOL_LIBS) $(PTHREADS_LIBS)
 
 syslog_caller_SOURCES = syslog_caller.c
 syslog_caller_LDADD = $(SOL_LIBS)

@@ -177,6 +177,7 @@ doRetry(nsd_gtls_t *pNsd)
 finalize_it:
 	if(iRet != RS_RET_OK && iRet != RS_RET_CLOSED && iRet != RS_RET_RETRY)
 		pNsd->bAbortConn = 1; /* request abort */
+dbgprintf("XXXXXX: doRetry: iRet %d, pNsd->bAbortConn %d\n", iRet, pNsd->bAbortConn);
 	RETiRet;
 }
 

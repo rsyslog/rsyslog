@@ -560,6 +560,7 @@ RunSelect(tcpsrv_t *pThis)
 	int bIsReady;
 	tcps_sess_t *pNewSess;
 	nssel_t *pSel = NULL;
+	rsRetVal localRet;
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 
@@ -608,8 +609,8 @@ RunSelect(tcpsrv_t *pThis)
 		while(nfds && iTCPSess != -1) {
 			if(glbl.GetGlobalInputTermState() == 1)
 				ABORT_FINALIZE(RS_RET_FORCE_TERM);
-			CHKiRet(nssel.IsReady(pSel, pThis->pSessions[iTCPSess]->pStrm, NSDSEL_RD, &bIsReady, &nfds));
-			if(bIsReady) {
+			localRet = nssel.IsReady(pSel, pThis->pSessions[iTCPSess]->pStrm, NSDSEL_RD, &bIsReady, &nfds);
+			if(bIsReady || localRet != RS_RET_OK) {
 				doReceive(pThis, &pThis->pSessions[iTCPSess], NULL);
 				--nfds; /* indicate we have processed one */
 			}
