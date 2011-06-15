@@ -342,6 +342,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_ERR_HDFS_OPEN = -2179, /**< error during hdfsOpen (e.g. file does not exist) */
 	RS_RET_FILE_NOT_SPECIFIED = -2180, /**< file name not configured where this was required */
 	RS_RET_ERR_WRKDIR = -2181, /**< problems with the rsyslog working directory */
+	RS_RET_WRN_WRKDIR = -2182, /**< correctable problems with the rsyslog working directory */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */
