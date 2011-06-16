@@ -55,6 +55,9 @@ Version 4.6.6  [v4-stable] (rgerhards), 2010-11-??
   discarded (due to QUEUE_FULL or similar problem)
 - bugfix: a slightly more informative error message when a TCP
   connections is aborted
+- bugfix: timestamp was incorrectly calculated for timezones with minute
+  offset
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=271
 - some improvements thanks to clang's static code analyzer
   o overall cleanup (mostly unnecessary writes and otherwise unused stuff)
   o bugfix: fixed a very remote problem in msg.c which could occur when
@@ -688,6 +691,9 @@ version before switching to this one.
   Thanks to Ken for providing the patch
 ---------------------------------------------------------------------------
 Version 3.22.4 [v3-stable] (rgerhards), 2010-??-??
+- bugfix: timestamp was incorrectly calculated for timezones with minute
+  offset
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=271
 - improved some code based on clang static analyzer results
 ---------------------------------------------------------------------------
 Version 3.22.3 [v3-stable] (rgerhards), 2010-11-24
