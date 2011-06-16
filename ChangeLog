@@ -1,5 +1,8 @@
 ---------------------------------------------------------------------------
 Version 3.22.4 [v3-stable] (rgerhards), 2010-??-??
+- bugfix: timestamp was incorrectly calculated for timezones with minute
+  offset
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=271
 - improved some code based on clang static analyzer results
 ---------------------------------------------------------------------------
 Version 3.22.3 [v3-stable] (rgerhards), 2010-11-24

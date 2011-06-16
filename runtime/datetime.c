@@ -112,7 +112,7 @@ static void getCurrTime(struct syslogTime *t)
 	else
 		t->OffsetMode = '+';
 	t->OffsetHour = lBias / 3600;
-	t->OffsetMinute = lBias % 3600;
+	t->OffsetMinute = (lBias % 3600) / 60;
 }
 
 
