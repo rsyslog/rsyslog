@@ -266,6 +266,7 @@ static rsRetVal
 processBatch(rule_t *pThis, batch_t *pBatch)
 {
 	int i;
+	rsRetVal localRet;
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, rule);
@@ -273,9 +274,14 @@ processBatch(rule_t *pThis, batch_t *pBatch)
 
 	/* first check the filters and reset status variables */
 	for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pBatch->pbShutdownImmediate) ; ++i) {
-		CHKiRet(shouldProcessThisMessage(pThis, (msg_t*)(pBatch->pElem[i].pUsrp),
-						 &(pBatch->pElem[i].bFilterOK)));
-		// TODO: really abort on error? 2010-06-10
+		localRet = shouldProcessThisMessage(pThis, (msg_t*)(pBatch->pElem[i].pUsrp),
+						    &(pBatch->pElem[i].bFilterOK));
+		if(localRet != RS_RET_OK) {
+			DBGPRINTF("processBatch: iRet %d returned from shouldProcessThisMessage, "
+			          "ignoring message\n", localRet);
+			
+			pBatch->pElem[i].bFilterOK = 0;
+		}
 		if(pBatch->pElem[i].bFilterOK) {
 			/* re-init only when actually needed (cache write cost!) */
 			pBatch->pElem[i].bPrevWasSuspended = 0;
