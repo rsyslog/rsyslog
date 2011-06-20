@@ -68,9 +68,18 @@ messages that shall be rate-limited.
 be obtained from the log socket itself. If so, the TAG part of the message is rewritten.
 It is recommended to turn this option on, but the default is "off" to keep compatible
 with earlier versions of rsyslog. This option was introduced in 5.7.0.</li>
+<li><b>$InputUnixListenSocketUseSysTimeStamp</b> [<b>on</b>/off] instructs imuxsock
+to obtain message time from the system (via control messages) insted of using time
+recorded inside the message. This may be most useful in combination with systemd. Note:
+this option was introduced with version 5.9.1. Due to the usefulness of it, we
+decided to enable it by default. As such, 5.9.1 and above behave slightly different
+than previous versions. However, we do not see how this could negatively affect
+existing environments.<br>
 <li><b>$SystemLogSocketIgnoreMsgTimestamp</b> [<b>on</b>/off]<br>
 Ignore timestamps included in the messages, applies to messages received via the system log socket.</li>
-<li><b>$OmitLocalLogging</b> (imuxsock) [on/<b>off</b>] -- former -o option</li>
+<li><b>$OmitLocalLogging</b> (imuxsock) [on/<b>off</b>] -- former -o option;
+do NOT listen for the local log socket. This is most useful if you run multiple
+instances of rsyslogd where only one shall handle the system log socket.</li>
 <li><b>$SystemLogSocketName</b> &lt;name-of-socket&gt; -- former -p option</li>
 <li><b>$SystemLogFlowControl</b> [on/<b>off</b>] - specifies if flow control should be applied
 to the system log socket.</li>
@@ -87,6 +96,7 @@ burst in number of messages. Default is 200.
 <li><b>$SystemLogRateLimitSeverity</b> [numerical severity] - specifies the severity of
 messages that shall be rate-limited.
 </li>
+<li><b>$SystemLogUseSysTimeStamp</b> [<b>on</b>/off] the same as $InputUnixListenSocketUseSysTimeStamp, but for the system log socket.
 <li><b>$InputUnixListenSocketCreatePath</b> [on/<b>off</b>] - create directories in the socket path
 if they do not already exist. They are created with 0755 permissions with the owner being the process under
 which rsyslogd runs. The default is not to create directories. Keep in mind, though, that rsyslogd always

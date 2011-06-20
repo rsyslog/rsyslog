@@ -1,5 +1,14 @@
 ---------------------------------------------------------------------------
 Version 5.9.1  [V5-DEVEL] (rgerhards), 2011-06-??
+- added support for obtaining timestamp from system for imuxsock
+  This permits to read the time a message was submitted to the system
+  log socket. Most importantly, this is provided in microsecond resolution.
+  So we are able to obtain high precision timestampis even for messages
+  that were - as is usual - not formatted with them. This also simplifies
+  things in regard to local time calculation in chroot environments.
+  Many thanks to Lennart Poettering for suggesting this feature,
+  providing some guidance on implementing it and coordinating getting the
+  necessary support into the Linux kernel.
 - bugfix: timestamp was incorrectly calculated for timezones with minute
   offset
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=271
