@@ -1,8 +1,8 @@
 # This file is part of the rsyslog project, released under GPLv3
 echo ===============================================================================
-echo \[failover-async.sh\]: async test for failover functionality
+echo \[failover-double.sh\]: test for double failover functionality
 source $srcdir/diag.sh init
-source $srcdir/diag.sh startup failover-async.conf
+source $srcdir/diag.sh startup failover-double.conf
 source $srcdir/diag.sh injectmsg  0 5000
 echo doing shutdown
 source $srcdir/diag.sh shutdown-when-empty
