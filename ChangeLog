@@ -1,7 +1,8 @@
 ---------------------------------------------------------------------------
 Version 5.8.2  [V5-stable] (rgerhards), 2011-06-??
 - bugfix: problems in failover action handling
-  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=270 (not yet confirmed!)
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=270
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=254
 - bugfix: memory leak in imtcp & subsystems under some circumstances
   This leak is tied to error conditions which lead to incorrect cleanup
   of some data structures. [backport from v6]
