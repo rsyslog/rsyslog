@@ -18,6 +18,7 @@ TESTS +=  \
 	imtcp_conndrop.sh \
 	imtcp_addtlframedelim.sh \
 	sndrcv.sh \
+	sndrcv_failover.sh \
 	sndrcv_gzip.sh \
 	sndrcv_udp.sh \
 	sndrcv_udp_nonstdpt.sh \
@@ -55,6 +56,8 @@ TESTS +=  \
 	discard-rptdmsg.sh \
 	discard-allmark.sh \
 	discard.sh \
+	failover-async.sh \
+	failover-double.sh \
 	failover-basic.sh \
 	failover-rptd.sh \
 	failover-no-rptd.sh \
@@ -105,7 +108,8 @@ TESTS +=  \
 	sndrcv_tls_anon_rebind.sh \
 	imtcp-tls-basic.sh
 if HAVE_VALGRIND
-TESTS += manytcp-too-few-tls.sh
+# This test does not work on v5 as we keep DH params
+#TESTS += manytcp-too-few-tls.sh
 endif
 endif
 
@@ -308,6 +312,10 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   failover-basic.sh \
 	   failover-basic-vg.sh \
 	   testsuites/failover-basic.conf \
+	   failover-async.sh \
+	   testsuites/failover-async.conf \
+	   failover-double.sh \
+	   testsuites/failover-double.conf \
 	   discard-rptdmsg.sh \
 	   discard-rptdmsg-vg.sh \
 	   testsuites/discard-rptdmsg.conf \
@@ -330,6 +338,10 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   threadingmqaq.sh \
 	   testsuites/threadingmqaq.conf \
 	   sndrcv_drvr.sh \
+	   sndrcv_drvr_noexit.sh \
+	   sndrcv_failover.sh \
+	   testsuites/sndrcv_failover_sender.conf \
+	   testsuites/sndrcv_failover_rcvr.conf \
 	   sndrcv.sh \
 	   testsuites/sndrcv_sender.conf \
 	   testsuites/sndrcv_rcvr.conf \

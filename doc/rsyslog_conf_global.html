@@ -279,7 +279,21 @@ default may change as uniprocessor systems become less common. [available since 
 <li>$PreserveFQDN [on/<b>off</b>) - if set to off (legacy default to remain compatible
 to sysklogd), the domain part from a name that is within the same domain as the receiving
 system is stripped. If set to on, full names are always used.</li>
-<li>$WorkDirectory &lt;name&gt; (directory for spool and other work files)</li>
+<li>$WorkDirectory &lt;name&gt; (directory for spool and other work files.
+Do <b>not</b> use trailing slashes)</li>
+<li>$UDPServerAddress &lt;IP&gt; (imudp) -- local IP
+address (or name) the UDP listens should bind to</li>
+<li>$UDPServerRun &lt;port&gt; (imudp) -- former
+-r&lt;port&gt; option, default 514, start UDP server on this
+port, "*" means all addresses</li>
+<li>$UDPServerTimeRequery &lt;nbr-of-times&gt; (imudp) -- this is a performance
+optimization. Getting the system time is very costly. With this setting, imudp can
+be instructed to obtain the precise time only once every n-times. This logic is
+only activated if messages come in at a very fast rate, so doing less frequent
+time calls should usually be acceptable. The default value is two, because we have
+seen that even without optimization the kernel often returns twice the identical time.
+You can set this value as high as you like, but do so at your own risk. The higher
+the value, the less precise the timestamp.
 <li><a href="droppriv.html">$PrivDropToGroup</a></li>
 <li><a href="droppriv.html">$PrivDropToGroupID</a></li>
 <li><a href="droppriv.html">$PrivDropToUser</a></li>
