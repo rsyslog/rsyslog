@@ -1678,6 +1678,7 @@ static rsRetVal
 ConsumerReg(qqueue_t *pThis, wti_t *pWti)
 {
 	int iCancelStateSave;
+	int bNeedReLock = 0;	/**< do we need to lock the mutex again? */
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, qqueue);
@@ -1687,6 +1688,7 @@ ConsumerReg(qqueue_t *pThis, wti_t *pWti)
 
 	/* we now have a non-idle batch of work, so we can release the queue mutex and process it */
 	d_pthread_mutex_unlock(pThis->mut);
+	bNeedReLock = 1;
 
 	/* at this spot, we may be cancelled */
 	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &iCancelStateSave);
@@ -1706,12 +1708,14 @@ ConsumerReg(qqueue_t *pThis, wti_t *pWti)
 	/* but now cancellation is no longer permitted */
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
 
-	/* now we are done, but need to re-aquire the mutex */
-	d_pthread_mutex_lock(pThis->mut);
-
 finalize_it:
-	dbgprintf("regular consumer finished, iret=%d, szlog %d sz phys %d\n", iRet,
+	DBGPRINTF("regular consumer finished, iret=%d, szlog %d sz phys %d\n", iRet,
 	          getLogicalQueueSize(pThis), getPhysicalQueueSize(pThis));
+
+	/* now we are done, but potentially need to re-aquire the mutex */
+	if(bNeedReLock)
+		d_pthread_mutex_lock(pThis->mut);
+
 	RETiRet;
 }
 
