@@ -279,7 +279,6 @@ processBatch(rule_t *pThis, batch_t *pBatch)
 		if(localRet != RS_RET_OK) {
 			DBGPRINTF("processBatch: iRet %d returned from shouldProcessThisMessage, "
 			          "ignoring message\n", localRet);
-			
 			pBatch->pElem[i].bFilterOK = 0;
 		}
 		if(pBatch->pElem[i].bFilterOK) {
