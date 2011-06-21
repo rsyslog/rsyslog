@@ -1,8 +1,19 @@
 ---------------------------------------------------------------------------
-Version 6.3.2  [DEVEL] (rgerhards), 2011-06-07
+Version 6.3.2  [DEVEL] (rgerhards), 2011-06-??
 - bugfix: memory leak in imtcp & subsystems under some circumstances
   This leak is tied to error conditions which lead to incorrect cleanup
   of some data structures.
+- bugfix: problems in failover action handling
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=270
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=254
+- bugfix: mutex was invalidly left unlocked during action processing
+  At least one case where this can occur is during thread shutdown, which
+  may be initiated by lower activity. In most cases, this is quite
+  unlikely to happen. However, if it does, data structures may be 
+  corrupted which could lead to fatal failure and segfault. I detected
+  this via a testbench test, not a user report. But I assume that some
+  users may have had unreproducable aborts that were cause by this bug.
+- bugfix/improvement:$WorkDirectory now gracefully handles trailing slashes
 ---------------------------------------------------------------------------
 Version 6.3.1  [DEVEL] (rgerhards), 2011-06-07
 - added a first implementation of a DNS name cache
@@ -14,6 +25,26 @@ Version 6.3.1  [DEVEL] (rgerhards), 2011-06-07
 Version 6.3.0  [DEVEL] (rgerhards), 2011-06-01
 - introduced new config system
   http://blog.gerhards.net/2011/06/new-rsyslog-config-system-materializes.html
+---------------------------------------------------------------------------
+Version 6.1.9  [BETA] (rgerhards), 2011-06-14
+- bugfix: problems in failover action handling
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=270
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=254
+- bugfix: mutex was invalidly left unlocked during action processing
+  At least one case where this can occur is during thread shutdown, which
+  may be initiated by lower activity. In most cases, this is quite
+  unlikely to happen. However, if it does, data structures may be 
+  corrupted which could lead to fatal failure and segfault. I detected
+  this via a testbench test, not a user report. But I assume that some
+  users may have had unreproducable aborts that were cause by this bug.
+- bugfix/improvement:$WorkDirectory now gracefully handles trailing slashes
+---------------------------------------------------------------------------
+Version 6.1.9  [BETA] (rgerhards), 2011-06-14
+- bugfix: memory leak in imtcp & subsystems under some circumstances
+  This leak is tied to error conditions which lead to incorrect cleanup
+  of some data structures. [backport from v6.3]
+- bugfix: $ActionFileDefaultTemplate did not work
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=262
 ---------------------------------------------------------------------------
 Version 6.1.8  [BETA] (rgerhards), 2011-05-20
 - official new beta version (note that in a sense 6.1.7 was already beta,
@@ -204,6 +235,22 @@ Version 5.9.0  [V5-DEVEL] (rgerhards), 2011-03-??
 - bugfix: failover did not work correctly if repeated msg reduction was on
   affected directive was: $ActionExecOnlyWhenPreviousIsSuspended on
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=236
+---------------------------------------------------------------------------
+Version 5.8.2  [V5-stable] (rgerhards), 2011-06-21
+- bugfix: problems in failover action handling
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=270
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=254
+- bugfix: mutex was invalidly left unlocked during action processing
+  At least one case where this can occur is during thread shutdown, which
+  may be initiated by lower activity. In most cases, this is quite
+  unlikely to happen. However, if it does, data structures may be 
+  corrupted which could lead to fatal failure and segfault. I detected
+  this via a testbench test, not a user report. But I assume that some
+  users may have had unreproducable aborts that were cause by this bug.
+- bugfix: memory leak in imtcp & subsystems under some circumstances
+  This leak is tied to error conditions which lead to incorrect cleanup
+  of some data structures. [backport from v6]
+- bugfix/improvement:$WorkDirectory now gracefully handles trailing slashes
 ---------------------------------------------------------------------------
 Version 5.8.1  [V5-stable] (rgerhards), 2011-05-19
 - bugfix: invalid processing in QUEUE_FULL condition
@@ -1036,6 +1083,9 @@ Version 4.7.0  [v4-devel] (rgerhards), 2010-04-14
 - imported changes from 4.5.6 and below
 ---------------------------------------------------------------------------
 Version 4.6.6  [v4-stable] (rgerhards), 2010-11-??
+- bugfix: memory leak in imtcp & subsystems under some circumstances
+  This leak is tied to error conditions which lead to incorrect cleanup
+  of some data structures. [backport from v6, limited testing under v4]
 - bugfix: invalid processing in QUEUE_FULL condition
   If the the multi-submit interface was used and a QUEUE_FULL condition
   occured, the failed message was properly destructed. However, the
@@ -1088,6 +1138,9 @@ Version 4.6.6  [v4-stable] (rgerhards), 2010-11-??
   discarded (due to QUEUE_FULL or similar problem)
 - bugfix: a slightly more informative error message when a TCP
   connections is aborted
+- bugfix: timestamp was incorrectly calculated for timezones with minute
+  offset
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=271
 - some improvements thanks to clang's static code analyzer
   o overall cleanup (mostly unnecessary writes and otherwise unused stuff)
   o bugfix: fixed a very remote problem in msg.c which could occur when
@@ -1726,6 +1779,9 @@ version before switching to this one.
   Thanks to Ken for providing the patch
 ---------------------------------------------------------------------------
 Version 3.22.4 [v3-stable] (rgerhards), 2010-??-??
+- bugfix: timestamp was incorrectly calculated for timezones with minute
+  offset
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=271
 - improved some code based on clang static analyzer results
 ---------------------------------------------------------------------------
 Version 3.22.3 [v3-stable] (rgerhards), 2010-11-24

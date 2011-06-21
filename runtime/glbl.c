@@ -159,8 +159,29 @@ static void SetGlobalInputTermination(void)
  */
 static rsRetVal setWorkDir(void __attribute__((unused)) *pVal, uchar *pNewVal)
 {
-	DEFiRet;
+	size_t lenDir;
+	int i;
 	struct stat sb;
+	DEFiRet;
+
+	/* remove trailing slashes */
+	lenDir = ustrlen(pNewVal);
+	i = lenDir - 1;
+	while(i > 0 && pNewVal[i] == '/') {
+		--i;
+	}
+
+	if(i < 0) {
+		errmsg.LogError(0, RS_RET_ERR_WRKDIR, "$WorkDirectory: empty value "
+				"- directive ignored");
+		ABORT_FINALIZE(RS_RET_ERR_WRKDIR);
+	}
+
+	if(i != (int) lenDir - 1) {
+		pNewVal[i+1] = '\0';
+		errmsg.LogError(0, RS_RET_WRN_WRKDIR, "$WorkDirectory: trailing slashes "
+			"removed, new value is '%s'", pNewVal);
+	}
 
 	if(stat((char*) pNewVal, &sb) != 0) {
 		errmsg.LogError(0, RS_RET_ERR_WRKDIR, "$WorkDirectory: %s can not be "
