@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 5.8.2  [V5-stable] (rgerhards), 2011-06-??
+Version 5.8.2  [V5-stable] (rgerhards), 2011-06-21
 - bugfix: problems in failover action handling
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=270
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=254

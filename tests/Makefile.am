@@ -101,7 +101,8 @@ endif
 
 if ENABLE_GNUTLS
 if HAVE_VALGRIND
-TESTS += manytcp-too-few-tls.sh
+# This test does not work on v5 as we keep DH params
+#TESTS += manytcp-too-few-tls.sh
 endif
 endif
 
