@@ -1,4 +1,16 @@
 ---------------------------------------------------------------------------
+Version 6.1.10  [BETA] (rgerhards), 2011-06-22
+- bugfix: problems in failover action handling
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=270
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=254
+- bugfix: mutex was invalidly left unlocked during action processing
+  At least one case where this can occur is during thread shutdown, which
+  may be initiated by lower activity. In most cases, this is quite
+  unlikely to happen. However, if it does, data structures may be 
+  corrupted which could lead to fatal failure and segfault. I detected
+  this via a testbench test, not a user report. But I assume that some
+  users may have had unreproducable aborts that were cause by this bug.
+---------------------------------------------------------------------------
 Version 6.1.9  [BETA] (rgerhards), 2011-06-14
 - bugfix: problems in failover action handling
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=270
