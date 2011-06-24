@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 4.6.6  [v4-stable] (rgerhards), 2010-11-??
+Version 4.6.6  [v4-stable] (rgerhards), 2011-06-24
 - bugfix: memory leak in imtcp & subsystems under some circumstances
   This leak is tied to error conditions which lead to incorrect cleanup
   of some data structures. [backport from v6, limited testing under v4]
