@@ -1,5 +1,10 @@
 ---------------------------------------------------------------------------
 Version 5.9.1  [V5-DEVEL] (rgerhards), 2011-06-??
+- added support for obtaining timestamp for kernel message from message
+  If the kernel time-stamps messages, time is now take from that
+  timestamp instead of the system time when the message was read. This
+  provides much better accuracy. Thanks to Lennart Poettering for
+  suggesting this feature and his help during implementation.
 - added support for obtaining timestamp from system for imuxsock
   This permits to read the time a message was submitted to the system
   log socket. Most importantly, this is provided in microsecond resolution.

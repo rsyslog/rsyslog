@@ -155,18 +155,18 @@ readklog(void)
 
 		for (p = (char*)pRcv; (q = strchr(p, '\n')) != NULL; p = q + 1) {
 			*q = '\0';
-			Syslog(LOG_INFO, (uchar*) p);
+			Syslog(LOG_INFO, (uchar*) p, NULL);
 		}
 		len = strlen(p);
 		if (len >= iMaxLine - 1) {
-			Syslog(LOG_INFO, (uchar*)p);
+			Syslog(LOG_INFO, (uchar*)p, NULL);
 			len = 0;
 		}
 		if (len > 0)
 			memmove(pRcv, p, len + 1);
 	}
 	if (len > 0)
-		Syslog(LOG_INFO, pRcv);
+		Syslog(LOG_INFO, pRcv, NULL);
 
 	if(pRcv != NULL && (size_t) iMaxLine >= sizeof(bufRcv) - 1)
 		free(pRcv);

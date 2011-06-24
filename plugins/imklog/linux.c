@@ -28,6 +28,8 @@
 #include "rsyslog.h"
 #include <stdlib.h>
 #include <stdio.h>
+#include <ctype.h>
+#include <time.h>
 #include <assert.h>
 #include <signal.h>
 #include <string.h>
@@ -181,6 +183,96 @@ static int copyin( uchar *line,      int space,
     return(i);
 }
 
+
+/* submit a message to imklog Syslog() API. In this function, we check if 
+ * a kernel timestamp is present and, if so, extract and strip it.
+ * Note: this is an extra processing step. We should revisit the whole
+ * idea in v6 and remove all that old stuff that we do not longer need
+ * (like symbol resolution). <-- TODO 
+ * Special thanks to Lennart Poettering for suggesting on how to convert
+ * the kernel timestamp to a realtime timestamp. This method depends on 
+ * the fact the the kernel timestamp is written using the monotonic clock.
+ * Shall that change (very unlikely), this code must be changed as well. Note
+ * that due to the way we generate the delta, we are unable to write the
+ * absolutely correc timestamp (system call overhead of the clock calls
+ * prevents us from doing so). However, the difference is very minor.
+ * rgerhards, 201106-24
+ */
+static void
+submitSyslog(int pri, uchar *buf)
+{
+	long secs;
+	long nsecs;
+	long secOffs;
+	long nsecOffs;
+	unsigned i;
+	unsigned bufsize;
+	struct timespec monotonic, realtime;
+	struct timeval tv;
+	struct timeval *tp = NULL;
+
+	if(buf[3] != '[')
+		goto done;
+	DBGPRINTF("imklog: kernel timestamp detected, extracting it\n");
+
+	/* we now try to parse the timestamp. iff it parses, we assume
+	 * it is a timestamp. Otherwise we know for sure it is no ts ;)
+	 */
+	i = 4; /* first digit after '[' */
+	secs = 0;
+	while(buf[i] && isdigit(buf[i])) {
+		secs = secs * 10 + buf[i] - '0';
+		++i;
+	}
+	if(buf[i] != '.') {
+		DBGPRINTF("no dot --> no kernel timestamp\n");
+		goto done; /* no TS! */
+	}
+	
+	++i; /* skip dot */
+	nsecs = 0;
+	while(buf[i] && isdigit(buf[i])) {
+		nsecs = nsecs * 10 + buf[i] - '0';
+		++i;
+	}
+	if(buf[i] != ']') {
+		DBGPRINTF("no trailing ']' --> no kernel timestamp\n");
+		goto done; /* no TS! */
+	}
+	++i; /* skip ']' */
+
+	/* we have a timestamp */
+	DBGPRINTF("kernel timestamp is %ld %ld\n", secs, nsecs);
+	bufsize= strlen((char*)buf);
+	memcpy(buf+3, buf+i, bufsize - i + 1);
+
+	clock_gettime(CLOCK_MONOTONIC, &monotonic);
+	clock_gettime(CLOCK_REALTIME, &realtime);
+	secOffs = realtime.tv_sec - monotonic.tv_sec;
+	nsecOffs = realtime.tv_nsec - monotonic.tv_nsec;
+	if(nsecOffs < 0) {
+		secOffs--;
+		nsecOffs += 1000000000l;
+	}
+	monotonic.tv_sec, monotonic.tv_nsec,
+	realtime.tv_sec, realtime.tv_nsec,
+	secOffs, nsecOffs);
+	
+	nsecs +=nsecOffs;
+	if(nsecs > 999999999l) {
+		secs++;
+		nsecs -= 1000000000l;
+	}
+	secs += secOffs;
+	tv.tv_sec = secs;
+	tv.tv_usec = nsecs / 1000;
+	tp = &tv;
+
+done:
+	Syslog(pri, buf, tp);
+}
+
+
 /*
  * Messages are separated by "\n".  Messages longer than
  * LOG_LINE_LENGTH are broken up.
@@ -235,7 +327,7 @@ static void LogLine(char *ptr, int len)
 	    //dbgprintf("Line buffer full:\n");
        	    //dbgprintf("\tLine: %s\n", line);
 
-            Syslog(LOG_INFO, line_buff);
+            submitSyslog(LOG_INFO, line_buff);
             line  = line_buff;
             space = sizeof(line_buff)-1;
             parse_state = PARSING_TEXT;
@@ -254,28 +346,24 @@ static void LogLine(char *ptr, int len)
                space -= delta;
                len   -= delta;
 
-               if( space == 0 || len == 0 )
-               {
+               if( space == 0 || len == 0 ) {
 		  break;  /* full line_buff or end of input buffer */
                }
 
-               if( *ptr == '\0' )  /* zero byte */
-               {
+               if( *ptr == '\0' )  /* zero byte */ {
                   ptr++;	/* skip zero byte */
                   space -= 1;
                   len   -= 1;
-
 		  break;
 	       }
 
-               if( *ptr == '\n' )  /* newline */
-               {
+               if( *ptr == '\n' )  /* newline */ {
                   ptr++;	/* skip newline */
                   space -= 1;
                   len   -= 1;
 
                   *line = 0;  /* force null terminator */
-	          Syslog(LOG_INFO, line_buff);
+	          submitSyslog(LOG_INFO, line_buff);
                   line  = line_buff;
                   space = sizeof(line_buff)-1;
 		  if (symbols_twice) {
@@ -285,9 +373,7 @@ static void LogLine(char *ptr, int len)
 			  skip_symbol_lookup = 1;
 			  ptr = save_ptr;
 			  len = save_len;
-		      }
-		      else
-		      {
+		      } else {
 			  skip_symbol_lookup = 0;
 			  save_ptr = ptr;
 			  save_len = len;
@@ -295,8 +381,7 @@ static void LogLine(char *ptr, int len)
 		  }
                   break;
                }
-               if( *ptr == '[' )   /* possible kernel symbol */
-               {
+               if( *ptr == '[' )   /* possible kernel symbol */ {
                   *line++ = *ptr++;
                   space -= 1;
                   len   -= 1;
@@ -310,8 +395,7 @@ static void LogLine(char *ptr, int len)
                break;
         
         case PARSING_SYMSTART:
-               if( *ptr != '<' )
-               {
+               if( *ptr != '<' ) {
                   parse_state = PARSING_TEXT;        /* not a symbol */
                   break;
                }
