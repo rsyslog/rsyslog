@@ -1,5 +1,22 @@
 ---------------------------------------------------------------------------
 Version 6.3.2  [DEVEL] (rgerhards), 2011-06-??
+- added support for obtaining timestamp for kernel message from message
+  If the kernel time-stamps messages, time is now take from that
+  timestamp instead of the system time when the message was read. This
+  provides much better accuracy. Thanks to Lennart Poettering for
+  suggesting this feature and his help during implementation.
+- added support for obtaining timestamp from system for imuxsock
+  This permits to read the time a message was submitted to the system
+  log socket. Most importantly, this is provided in microsecond resolution.
+  So we are able to obtain high precision timestampis even for messages
+  that were - as is usual - not formatted with them. This also simplifies
+  things in regard to local time calculation in chroot environments.
+  Many thanks to Lennart Poettering for suggesting this feature,
+  providing some guidance on implementing it and coordinating getting the
+  necessary support into the Linux kernel.
+- bugfix: timestamp was incorrectly calculated for timezones with minute
+  offset
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=271
 - bugfix: memory leak in imtcp & subsystems under some circumstances
   This leak is tied to error conditions which lead to incorrect cleanup
   of some data structures.
@@ -25,19 +42,6 @@ Version 6.3.1  [DEVEL] (rgerhards), 2011-06-07
 Version 6.3.0  [DEVEL] (rgerhards), 2011-06-01
 - introduced new config system
   http://blog.gerhards.net/2011/06/new-rsyslog-config-system-materializes.html
----------------------------------------------------------------------------
-Version 6.1.9  [BETA] (rgerhards), 2011-06-14
-- bugfix: problems in failover action handling
-  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=270
-  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=254
-- bugfix: mutex was invalidly left unlocked during action processing
-  At least one case where this can occur is during thread shutdown, which
-  may be initiated by lower activity. In most cases, this is quite
-  unlikely to happen. However, if it does, data structures may be 
-  corrupted which could lead to fatal failure and segfault. I detected
-  this via a testbench test, not a user report. But I assume that some
-  users may have had unreproducable aborts that were cause by this bug.
-- bugfix/improvement:$WorkDirectory now gracefully handles trailing slashes
 ---------------------------------------------------------------------------
 Version 6.1.9  [BETA] (rgerhards), 2011-06-14
 - bugfix: memory leak in imtcp & subsystems under some circumstances
@@ -217,7 +221,50 @@ expected that interfaces, even new ones, break during the initial
   syslog plain tcp input plugin (NOT supporting TLS!)
   [ported from v4]
 ---------------------------------------------------------------------------
-Version 5.9.0  [V5-DEVEL] (rgerhards), 2011-03-??
+Version 5.9.1  [V5-DEVEL] (rgerhards), 2011-06-??
+- added support for obtaining timestamp for kernel message from message
+  If the kernel time-stamps messages, time is now take from that
+  timestamp instead of the system time when the message was read. This
+  provides much better accuracy. Thanks to Lennart Poettering for
+  suggesting this feature and his help during implementation.
+- added support for obtaining timestamp from system for imuxsock
+  This permits to read the time a message was submitted to the system
+  log socket. Most importantly, this is provided in microsecond resolution.
+  So we are able to obtain high precision timestampis even for messages
+  that were - as is usual - not formatted with them. This also simplifies
+  things in regard to local time calculation in chroot environments.
+  Many thanks to Lennart Poettering for suggesting this feature,
+  providing some guidance on implementing it and coordinating getting the
+  necessary support into the Linux kernel.
+- bugfix: timestamp was incorrectly calculated for timezones with minute
+  offset
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=271
+- bugfix: problems in failover action handling
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=270
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=254
+- bugfix: mutex was invalidly left unlocked during action processing
+  At least one case where this can occur is during thread shutdown, which
+  may be initiated by lower activity. In most cases, this is quite
+  unlikely to happen. However, if it does, data structures may be 
+  corrupted which could lead to fatal failure and segfault. I detected
+  this via a testbench test, not a user report. But I assume that some
+  users may have had unreproducable aborts that were cause by this bug.
+- bugfix: memory leak in imtcp & subsystems under some circumstances
+  This leak is tied to error conditions which lead to incorrect cleanup
+  of some data structures. [backport from v6]
+- bugfix/improvement:$WorkDirectory now gracefully handles trailing slashes
+---------------------------------------------------------------------------
+Version 5.9.0  [V5-DEVEL] (rgerhards), 2011-06-08
+- imfile: added $InputFileMaxLinesAtOnce directive
+- enhanced imfile to support input batching
+- added capability for imtcp and imptcp to activate keep-alive packets
+  at the socket layer. This has not been added to imttcp, as the latter is
+  only an experimental module, and one which did not prove to be useful.
+  reference: http://kb.monitorware.com/post20791.html
+- added support to control KEEPALIVE settings in imptcp
+  this has not yet been added to imtcp, but could be done on request.
+- $ActionName is now also used for naming of queues in impstats
+  as well as in the debug output
 - bugfix: do not open files with full privileges, if privs will be dropped
   This make the privilege drop code more bulletproof, but breaks Ubuntu's
   work-around for log files created by external programs with the wrong
@@ -226,6 +273,11 @@ Version 5.9.0  [V5-DEVEL] (rgerhards), 2011-03-??
   nobody still depends on it (and, if so, they lost...).
 - bugfix: pipes not opened in full priv mode when privs are to be dropped
 - this begins a new devel branch for v5
+- better handling of queue i/o errors in disk queues. This is kind of a
+  bugfix, but a very intrusive one, this it goes into the devel version
+  first. Right now, "file not found" is handled and leads to the new
+  emergency mode, in which disk action is stopped and the queue run
+  in direct mode. An error message is emited if this happens.
 - added support for user-level PRI provided via systemd
 - added new config directive $InputTCPFlowControl to select if tcp
   received messages shall be flagged as light delayable or not.
@@ -519,6 +571,8 @@ Version 5.6.2  [V5-STABLE] (rgerhards), 2010-11-30
 - added the $InputFilePersistStateInterval config directive to imfile
 - changed imfile so that the state file is never deleted (makes imfile
   more robust in regard to fatal failures)
+- bugfix: a slightly more informative error message when a TCP
+  connections is aborted
 ---------------------------------------------------------------------------
 Version 5.6.1  [V5-STABLE] (rgerhards), 2010-11-24
 - bugfix(important): problem in TLS handling could cause rsyslog to loop

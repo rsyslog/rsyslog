@@ -45,7 +45,25 @@ can be found at the <a href="http://www.rsyslog.com/Article321.phtml">Cisco tcp 
 page.
 <li>$InputPTCPServerNotifyOnConnectionClose [on/<b>off</b>]<br>
 instructs imptcp to emit a message if the remote peer closes a connection.<br>
-<li>$InputPTCPServerRun &lt;port&gt;<br>
+<li><b>$InputPTCPServerKeepAlive</b> &lt;on/<b>off</b>&gt;<br>
+enable of disable keep-alive packets at the tcp socket layer. The default is
+to disable them.</li>
+<li><b>$InputPTCPServerKeepAlive_probes</b> &lt;number&gt;<br>
+The number of unacknowledged probes to send before considering the connection dead and notifying the application layer.
+The default, 0, means that the operating system defaults are used. This has only 
+effect if keep-alive is enabled. The functionality may not be available on
+all platforms.
+<li><b>$InputPTCPServerKeepAlive_intvl</b> &lt;number&gt;<br>
+The interval between subsequential keepalive probes, regardless of what the connection has exchanged in the meantime.
+The default, 0, means that the operating system defaults are used. This has only 
+effect if keep-alive is enabled. The functionality may not be available on
+all platforms.
+<li><b>$InputPTCPServerKeepAlive_time</b> &lt;number&gt;<br>
+The interval between the last data packet sent (simple ACKs are not considered data) and the first keepalive probe; after the connection is marked to need keepalive, this counter is not used any further.
+The default, 0, means that the operating system defaults are used. This has only 
+effect if keep-alive is enabled. The functionality may not be available on
+all platforms.
+<li><b>$InputPTCPServerRun</b> &lt;port&gt;<br>
 Starts a TCP server on selected port</li>
 <li>$InputPTCPServerInputName &lt;name&gt;<br>
 Sets a name for the inputname property. If no name is set "imptcp" is used by default. Setting a 

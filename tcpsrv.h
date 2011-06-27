@@ -48,6 +48,7 @@ struct tcpLstnPortList_s {
 /* the tcpsrv object */
 struct tcpsrv_s {
 	BEGINobjInstance;	/**< Data to implement generic object - MUST be the first data element! */
+	int bUseKeepAlive;	/**< use socket layer KEEPALIVE handling? */
 	netstrms_t *pNS;	/**< pointer to network stream subsystem */
 	int iDrvrMode;		/**< mode of the stream driver to use */
 	uchar *pszDrvrAuthMode;	/**< auth mode of the stream driver to use */
@@ -136,8 +137,10 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetbDisableLFDelim)(tcpsrv_t*, int);
 	/* added v10 -- rgerhards, 2011-04-01 */
 	rsRetVal (*SetUseFlowControl)(tcpsrv_t*, int);
+	/* added v11 -- rgerhards, 2011-05-09 */
+	rsRetVal (*SetKeepAlive)(tcpsrv_t*, int);
 ENDinterface(tcpsrv)
-#define tcpsrvCURR_IF_VERSION 10 /* increment whenever you change the interface structure! */
+#define tcpsrvCURR_IF_VERSION 11 /* increment whenever you change the interface structure! */
 /* change for v4:
  * - SetAddtlFrameDelim() added -- rgerhards, 2008-12-10
  * - SetInputName() added -- rgerhards, 2008-12-10

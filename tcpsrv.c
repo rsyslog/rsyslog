@@ -415,6 +415,10 @@ SessAccept(tcpsrv_t *pThis, tcpLstnPortList_t *pLstnInfo, tcps_sess_t **ppSess, 
 		ABORT_FINALIZE(RS_RET_MAX_SESS_REACHED);
 	}
 
+	if(pThis->bUseKeepAlive) {
+		CHKiRet(netstrm.EnableKeepAlive(pNewStrm));
+	}
+
 	/* we found a free spot and can construct our session object */
 	CHKiRet(tcps_sess.Construct(&pSess));
 	CHKiRet(tcps_sess.SetTcpsrv(pSess, pThis));
@@ -1025,6 +1029,15 @@ SetUsrP(tcpsrv_t *pThis, void *pUsr)
 }
 
 static rsRetVal
+SetKeepAlive(tcpsrv_t *pThis, int iVal)
+{
+	DEFiRet;
+	dbgprintf("tcpsrv: keep-alive set to %d\n", iVal);
+	pThis->bUseKeepAlive = iVal;
+	RETiRet;
+}
+
+static rsRetVal
 SetOnMsgReceive(tcpsrv_t *pThis, rsRetVal (*OnMsgReceive)(tcps_sess_t*, uchar*, int))
 {
 	DEFiRet;
@@ -1203,6 +1216,7 @@ CODESTARTobjQueryInterface(tcpsrv)
 	pIf->create_tcp_socket = create_tcp_socket;
 	pIf->Run = Run;
 
+	pIf->SetKeepAlive = SetKeepAlive;
 	pIf->SetUsrP = SetUsrP;
 	pIf->SetInputName = SetInputName;
 	pIf->SetAddtlFrameDelim = SetAddtlFrameDelim;

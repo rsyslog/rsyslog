@@ -55,6 +55,9 @@ so be prepared to wrangle with that!
 instructs imtcp to emit a message if the remote peer closes a connection.<br>
 <b>Important:</b> This directive is global to all listeners and must be given right
 after loading imtcp, otherwise it may have no effect.</li>
+<li><b>$InputTCPServerKeepAlive</b> &lt;on/<b>off</b>&gt;<br>
+enable of disable keep-alive packets at the tcp socket layer. The default is
+to disable them.</li>
 <li><b>$InputTCPServerRun</b> &lt;port&gt;<br>
 Starts a TCP server on selected port</li>
 <li><b>$InputTCPFlowControl</b> &lt;<b>on</b>/off&gt;<br>

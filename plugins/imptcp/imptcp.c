@@ -50,6 +50,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/epoll.h>
+#include <netinet/tcp.h>
 #if HAVE_FCNTL_H
 #include <fcntl.h>
 #endif
@@ -89,6 +90,10 @@ static void * wrkr(void *myself);
 
 /* config settings */
 typedef struct configSettings_s {
+	int bKeepAlive;			/* support keep-alive packets */
+	int iKeepAliveIntvl;
+	int iKeepAliveProbes;
+	int iKeepAliveTime;
 	int bEmitMsgOnClose;		/* emit an informational message on close by remote peer */
 	int iAddtlFrameDelim;		/* addtl frame delimiter, e.g. for netscreen, default none */
 	uchar *pszInputName;		/* value for inputname property, NULL is OK and handled by core engine */
@@ -99,6 +104,10 @@ typedef struct configSettings_s {
 static configSettings_t cs;
 
 struct instanceConf_s {
+	int bKeepAlive;			/* support keep-alive packets */
+	int iKeepAliveIntvl;
+	int iKeepAliveProbes;
+	int iKeepAliveTime;
 	int bEmitMsgOnClose;
 	int iAddtlFrameDelim;
 	uchar *pszBindPort;		/* port to bind to */
@@ -134,14 +143,18 @@ struct ptcpsrv_s {
 	ptcpsrv_t *pNext;		/* linked list maintenance */
 	uchar *port;			/* Port to listen to */
 	uchar *lstnIP;			/* which IP we should listen on? */
-	int bEmitMsgOnClose;
 	int iAddtlFrameDelim;
+	int iKeepAliveIntvl;
+	int iKeepAliveProbes;
+	int iKeepAliveTime;
 	uchar *pszInputName;
 	prop_t *pInputName;		/* InputName in (fast to process) property format */
 	ruleset_t *pRuleset;
 	ptcplstn_t *pLstn;		/* root of our listeners */
 	ptcpsess_t *pSess;		/* root of our sessions */
 	pthread_mutex_t mutSessLst;
+	sbool bKeepAlive;		/* support keep-alive packets */
+	sbool bEmitMsgOnClose;
 };
 
 /* the ptcp session object. Describes a single active session.
@@ -458,12 +471,80 @@ finalize_it:
 }
 
 
+/* Enable KEEPALIVE handling on the socket.  */
+static inline rsRetVal
+EnableKeepAlive(ptcplstn_t *pLstn, int sock)
+{
+	int ret;
+	int optval;
+	socklen_t optlen;
+	DEFiRet;
+
+	optval = 1;
+	optlen = sizeof(optval);
+	ret = setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &optval, optlen);
+	if(ret < 0) {
+		dbgprintf("EnableKeepAlive socket call returns error %d\n", ret);
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
+#	if defined(TCP_KEEPCNT)
+	if(pLstn->pSrv->iKeepAliveProbes > 0) {
+		optval = pLstn->pSrv->iKeepAliveProbes;
+		optlen = sizeof(optval);
+		ret = setsockopt(sock, SOL_TCP, TCP_KEEPCNT, &optval, optlen);
+	} else {
+		ret = 0;
+	}
+#	else
+	ret = -1;
+#	endif
+	if(ret < 0) {
+		errmsg.LogError(ret, NO_ERRCODE, "imptcp cannot set keepalive probes - ignored");
+	}
+
+#	if defined(TCP_KEEPCNT)
+	if(pLstn->pSrv->iKeepAliveTime > 0) {
+		optval = pLstn->pSrv->iKeepAliveTime;
+		optlen = sizeof(optval);
+		ret = setsockopt(sock, SOL_TCP, TCP_KEEPIDLE, &optval, optlen);
+	} else {
+		ret = 0;
+	}
+#	else
+	ret = -1;
+#	endif
+	if(ret < 0) {
+		errmsg.LogError(ret, NO_ERRCODE, "imptcp cannot set keepalive time - ignored");
+	}
+
+#	if defined(TCP_KEEPCNT)
+	if(pLstn->pSrv->iKeepAliveIntvl > 0) {
+		optval = pLstn->pSrv->iKeepAliveIntvl;
+		optlen = sizeof(optval);
+		ret = setsockopt(sock, SOL_TCP, TCP_KEEPINTVL, &optval, optlen);
+	} else {
+		ret = 0;
+	}
+#	else
+	ret = -1;
+#	endif
+	if(ret < 0) {
+		errmsg.LogError(errno, NO_ERRCODE, "imptcp cannot set keepalive intvl - ignored");
+	}
+
+	dbgprintf("KEEPALIVE enabled for socket %d\n", sock);
+
+finalize_it:
+	RETiRet;
+}
+
 
 /* accept an incoming connection request
  * rgerhards, 2008-04-22
  */
 static rsRetVal
-AcceptConnReq(int sock, int *newSock, prop_t **peerName, prop_t **peerIP)
+AcceptConnReq(ptcplstn_t *pLstn, int *newSock, prop_t **peerName, prop_t **peerIP)
 {
 	int sockflags;
 	struct sockaddr_storage addr;
@@ -472,13 +553,17 @@ AcceptConnReq(int sock, int *newSock, prop_t **peerName, prop_t **peerIP)
 
 	DEFiRet;
 
-	iNewSock = accept(sock, (struct sockaddr*) &addr, &addrlen);
+	iNewSock = accept(pLstn->sock, (struct sockaddr*) &addr, &addrlen);
 	if(iNewSock < 0) {
 		if(errno == EAGAIN || errno == EWOULDBLOCK)
 			ABORT_FINALIZE(RS_RET_NO_MORE_DATA);
 		ABORT_FINALIZE(RS_RET_ACCEPT_ERR);
 	}
 
+	if(pLstn->pSrv->bKeepAlive)
+		EnableKeepAlive(pLstn, iNewSock);/* we ignore errors, best to do! */
+
+	
 	CHKiRet(getPeerNames(peerName, peerIP, (struct sockaddr*) &addr));
 
 	/* set the new socket to non-blocking IO */
@@ -905,6 +990,10 @@ static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 		CHKmalloc(inst->pszInputName = ustrdup(cs.pszInputName));
 	}
 	inst->pBindRuleset = NULL;
+	inst->bKeepAlive = cs.bKeepAlive;
+	inst->iKeepAliveIntvl = cs.iKeepAliveTime;
+	inst->iKeepAliveProbes = cs.iKeepAliveProbes;
+	inst->iKeepAliveTime = cs.iKeepAliveTime;
 	inst->bEmitMsgOnClose = cs.bEmitMsgOnClose;
 	inst->iAddtlFrameDelim = cs.iAddtlFrameDelim;
 	inst->next = NULL;
@@ -933,6 +1022,10 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 	pthread_mutex_init(&pSrv->mutSessLst, NULL);
 	pSrv->pSess = NULL;
 	pSrv->pLstn = NULL;
+	pSrv->bKeepAlive = inst->bKeepAlive;
+	pSrv->iKeepAliveIntvl = inst->iKeepAliveTime;
+	pSrv->iKeepAliveProbes = inst->iKeepAliveProbes;
+	pSrv->iKeepAliveTime = inst->iKeepAliveTime;
 	pSrv->bEmitMsgOnClose = inst->bEmitMsgOnClose;
 	CHKmalloc(pSrv->port = ustrdup(inst->pszBindPort));
 	pSrv->iAddtlFrameDelim = inst->iAddtlFrameDelim;
@@ -1052,7 +1145,7 @@ lstnActivity(ptcplstn_t *pLstn)
 
 	DBGPRINTF("imptcp: new connection on listen socket %d\n", pLstn->sock);
 	while(glbl.GetGlobalInputTermState() == 0) {
-		localRet = AcceptConnReq(pLstn->sock, &newSock, &peerName, &peerIP);
+		localRet = AcceptConnReq(pLstn, &newSock, &peerName, &peerIP);
 		if(localRet == RS_RET_NO_MORE_DATA || glbl.GetGlobalInputTermState() == 1)
 			break;
 		CHKiRet(localRet);
@@ -1406,6 +1499,10 @@ resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unus
 {
 	cs.bEmitMsgOnClose = 0;
 	cs.wrkrMax = 2;
+	cs.bKeepAlive = 0;
+	cs.iKeepAliveProbes = 0;
+	cs.iKeepAliveTime = 0;
+	cs.iKeepAliveIntvl = 0;
 	cs.iAddtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
 	free(cs.pszInputName);
 	cs.pszInputName = NULL;
@@ -1453,6 +1550,14 @@ CODEmodInit_QueryRegCFSLineHdlr
 	/* register config file handlers */
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputptcpserverrun"), 0, eCmdHdlrGetWord,
 				   addInstance, NULL, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputptcpserverkeepalive"), 0, eCmdHdlrBinary,
+				   NULL, &cs.bKeepAlive, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputptcpserverkeepalive_probes"), 0, eCmdHdlrInt,
+				   NULL, &cs.iKeepAliveProbes, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputptcpserverkeepalive_time"), 0, eCmdHdlrInt,
+				   NULL, &cs.iKeepAliveTime, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputptcpserverkeepalive_intvl"), 0, eCmdHdlrInt,
+				   NULL, &cs.iKeepAliveIntvl, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputptcpservernotifyonconnectionclose"), 0,
 				   eCmdHdlrBinary, NULL, &cs.bEmitMsgOnClose, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputptcpserveraddtlframedelimiter"), 0, eCmdHdlrInt,

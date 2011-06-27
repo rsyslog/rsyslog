@@ -140,6 +140,7 @@ typedef struct lstn_s {
 	sbool bCreatePath;	/* auto-creation of socket directory? */
 	sbool bUseCreds;	/* pull original creator credentials from socket */
 	sbool bWritePid;	/* write original PID into tag */
+	sbool bUseSysTimeStamp;	/* use timestamp from system (instead of from message) */
 } lstn_t;
 static lstn_t listeners[MAXFUNIX];
 
@@ -163,6 +164,8 @@ static struct configSettings_s {
 	uchar *pLogHostName;		/* host name to use with this socket */
 	int bUseFlowCtl;		/* use flow control or not (if yes, only LIGHT is used! */
 	int bIgnoreTimestamp;		/* ignore timestamps present in the incoming message? */
+	int bUseSysTimeStamp;		/* use timestamp from system (rather than from message) */
+	int bUseSysTimeStampSysSock;	/* same, for system log socket */
 	int bWritePid;			/* use credentials from recvmsg() and fixup PID in TAG */
 	int bWritePidSysSock;		/* use credentials from recvmsg() and fixup PID in TAG */
 	int bCreatePath;		/* auto-create socket path? */
@@ -177,9 +180,10 @@ static struct configSettings_s {
 struct instanceConf_s {
 	uchar *sockName;
 	uchar *pLogHostName;		/* host name to use with this socket */
-	int bUseFlowCtl;		/* use flow control or not (if yes, only LIGHT is used! */
-	int bIgnoreTimestamp;		/* ignore timestamps present in the incoming message? */
-	int bWritePid;			/* use credentials from recvmsg() and fixup PID in TAG */
+	sbool bUseFlowCtl;		/* use flow control or not (if yes, only LIGHT is used! */
+	sbool bIgnoreTimestamp;		/* ignore timestamps present in the incoming message? */
+	sbool bWritePid;		/* use credentials from recvmsg() and fixup PID in TAG */
+	sbool bUseSysTimeStamp;		/* use timestamp from system (instead of from message) */
 	int bCreatePath;		/* auto-create socket path? */
 	int ratelimitInterval;		/* interval in seconds, 0 = off */
 	int ratelimitBurst;		/* max nbr of messages in interval */
@@ -191,11 +195,12 @@ struct modConfData_s {
 	rsconf_t *pConf;		/* our overall config object */
 	instanceConf_t *root, *tail;
 	uchar *pLogSockName;
-	int bOmitLocalLogging;
-	int bWritePidSysSock;
 	int ratelimitIntervalSysSock;
 	int ratelimitBurstSysSock;
 	int ratelimitSeveritySysSock;
+	sbool bOmitLocalLogging;
+	sbool bWritePidSysSock;
+	sbool bUseSysTimeStamp;
 };
 static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
 static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current load process */
@@ -317,6 +322,7 @@ static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	inst->bUseFlowCtl = cs.bUseFlowCtl;
 	inst->bIgnoreTimestamp = cs.bIgnoreTimestamp;
 	inst->bCreatePath = cs.bCreatePath;
+	inst->bUseSysTimeStamp = cs.bUseSysTimeStamp;
 	inst->bWritePid = cs.bWritePid;
 	inst->next = NULL;
 
@@ -381,6 +387,7 @@ addListner(instanceConf_t *inst)
 		listeners[nfd].sockName = ustrdup(inst->sockName);
 		listeners[nfd].bUseCreds = (inst->bWritePid || inst->ratelimitInterval) ? 1 : 0;
 		listeners[nfd].bWritePid = inst->bWritePid;
+		listeners[nfd].bUseSysTimeStamp = inst->bUseSysTimeStamp;
 		nfd++;
 	} else {
 		errmsg.LogError(0, NO_ERRCODE, "Out of unix socket name descriptors, ignoring %s\n",
@@ -494,6 +501,10 @@ openLogSocket(lstn_t *pLstn)
 			errmsg.LogError(errno, NO_ERRCODE, "set SCM_CREDENTIALS failed on '%s'", pLstn->sockName);
 			pLstn->bUseCreds = 0;
 		}
+// TODO: move to its own #if
+		if(setsockopt(pLstn->fd, SOL_SOCKET, SO_TIMESTAMP, &one, sizeof(one)) != 0) {
+			errmsg.LogError(errno, NO_ERRCODE, "set SO_TIMESTAMP failed on '%s'", pLstn->sockName);
+		}
 	}
 #	else /* HAVE_SCM_CREDENTIALS */
 	pLstn->bUseCreds = 0;
@@ -584,7 +595,7 @@ fixPID(uchar *bufTAG, int *lenTag, struct ucred *cred)
  * can also mangle it if necessary.
  */
 static inline rsRetVal
-SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred)
+SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct timeval *ts)
 {
 	msg_t *pMsg;
 	int lenMsg;
@@ -623,7 +634,13 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred)
 		findRatelimiter(pLstn, cred, &ratelimiter); /* ignore error, better so than others... */
 	}
 
-	datetime.getCurrTime(&st, &tt);
+	if(ts == NULL) {
+		datetime.getCurrTime(&st, &tt);
+	} else {
+		datetime.timeval2syslogTime(ts, &st);
+		tt = ts->tv_sec;
+	}
+
 	if(ratelimiter != NULL && !withinRatelimit(ratelimiter, tt, cred->pid)) {
 		STATSCOUNTER_INC(ctrLostRatelimit, mutCtrLostRatelimit);
 		FINALIZE;
@@ -643,8 +660,26 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred)
 
 	parse++; lenMsg--; /* '>' */
 
-	if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &parse, &lenMsg) != RS_RET_OK) {
-		DBGPRINTF("we have a problem, invalid timestamp in msg!\n");
+	if(ts == NULL) {
+		if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &parse, &lenMsg) != RS_RET_OK) {
+			DBGPRINTF("we have a problem, invalid timestamp in msg!\n");
+		}
+	} else { /* if we pulled the time from the system, we need to update the message text */
+		if(lenMsg >= 16) {
+			/* RFC3164 timestamp is 16 bytes long, so assuming a valid stamp,
+			 * we can fixup the message. If the part is smaller, the stamp can
+			 * not be valid and we do not touch the message. Note that there may
+			 * be some scenarios where the message is larg enough but the stamp is
+			 * still invalid. In those cases we will destruct part of the message,
+			 * but this case is considered extremely unlikely and thus not handled
+			 * specifically. -- rgerhards, 2011-06-20
+			 */
+			datetime.formatTimestamp3164(&st, (char*)parse, 0);
+			parse[15] = ' '; /* re-write \0 from fromatTimestamp3164 by SP */
+			/* update "counters" to reflect processed timestamp */
+			parse += 16;
+			lenMsg -= 16;
+		}
 	}
 
 	/* pull tag */
@@ -695,6 +730,7 @@ static rsRetVal readSocket(lstn_t *pLstn)
 	struct cmsghdr *cm;
 #	endif
 	struct ucred *cred;
+	struct timeval *ts;
 	uchar bufRcv[4096+1];
 	char aux[128];
 	uchar *pRcv = NULL; /* receive buffer */
@@ -733,21 +769,32 @@ static rsRetVal readSocket(lstn_t *pLstn)
 	dbgprintf("Message from UNIX socket: #%d\n", pLstn->fd);
 	if(iRcvd > 0) {
 		cred = NULL;
-#		if HAVE_SCM_CREDENTIALS
-		if(pLstn->bUseCreds) {
+		ts = NULL;
+		if(pLstn->bUseCreds || pLstn->bUseSysTimeStamp) {
 			dbgprintf("XXX: pre CM loop, length of control message %d\n", (int) msgh.msg_controllen);
-			for (cm = CMSG_FIRSTHDR(&msgh); cm; cm = CMSG_NXTHDR(&msgh, cm)) {
+			for(cm = CMSG_FIRSTHDR(&msgh); cm; cm = CMSG_NXTHDR(&msgh, cm)) {
 				dbgprintf("XXX: in CM loop, %d, %d\n", cm->cmsg_level, cm->cmsg_type);
-				if (cm->cmsg_level == SOL_SOCKET && cm->cmsg_type == SCM_CREDENTIALS) {
+#				if HAVE_SCM_CREDENTIALS
+				if(   pLstn->bUseCreds
+				   && cm->cmsg_level == SOL_SOCKET && cm->cmsg_type == SCM_CREDENTIALS) {
 					cred = (struct ucred*) CMSG_DATA(cm);
 					dbgprintf("XXX: got credentials pid %d\n", (int) cred->pid);
 					break;
 				}
+#				endif /* HAVE_SCM_CREDENTIALS */
+#				if HAVE_SO_TIMESTAMP
+				if(   pLstn->bUseSysTimeStamp 
+				   && cm->cmsg_level == SOL_SOCKET && cm->cmsg_type == SO_TIMESTAMP) {
+					ts = (struct timeval *)CMSG_DATA(cm);
+					dbgprintf("XXX: got timestamp %ld.%ld\n",
+					  	(long) ts->tv_sec, (long) ts->tv_usec);
+					break;
+				}
+#				endif /* HAVE_SO_TIMESTAMP */
 			}
 			dbgprintf("XXX: post CM loop\n");
 		}
-#		endif /* HAVE_SCM_CREDENTIALS */
-		CHKiRet(SubmitMsg(pRcv, iRcvd, pLstn, cred));
+		CHKiRet(SubmitMsg(pRcv, iRcvd, pLstn, cred, ts));
 	} else if(iRcvd < 0 && errno != EINTR) {
 		char errStr[1024];
 		rs_strerror_r(errno, errStr, sizeof(errStr));
@@ -797,6 +844,7 @@ activateListeners()
 	listeners[0].ratelimitSev = runModConf->ratelimitSeveritySysSock;
 	listeners[0].bUseCreds = (runModConf->bWritePidSysSock || runModConf->ratelimitIntervalSysSock) ? 1 : 0;
 	listeners[0].bWritePid = runModConf->bWritePidSysSock;
+	listeners[0].bUseSysTimeStamp = runModConf->bUseSysTimeStamp;
 
 	sd_fds = sd_listen_fds(0);
 	if(sd_fds < 0) {
@@ -1017,6 +1065,8 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	cs.pLogHostName = NULL;
 	cs.bIgnoreTimestamp = 1;
 	cs.bUseFlowCtl = 0;
+	cs.bUseSysTimeStamp = 1;
+	cs.bUseSysTimeStampSysSock = 1;
 	cs.bWritePid = 0;
 	cs.bWritePidSysSock = 0;
 	cs.bCreatePath = DFLT_bCreatePath;
@@ -1063,6 +1113,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	listeners[0].bParseHost = 0;
 	listeners[0].bUseCreds = 0;
 	listeners[0].bCreatePath = 0;
+	listeners[0].bUseSysTimeStamp = 1;
 
 	/* initialize socket names */
 	for(i = 1 ; i < MAXFUNIX ; ++i) {
@@ -1092,6 +1143,8 @@ CODEmodInit_QueryRegCFSLineHdlr
 		NULL, &cs.bUseFlowCtl, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputunixlistensocketcreatepath", 0, eCmdHdlrBinary,
 		NULL, &cs.bCreatePath, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputunixlistensocketusesystimestamp", 0, eCmdHdlrBinary,
+		NULL, &cs.bUseSysTimeStamp, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"addunixlistensocket", 0, eCmdHdlrGetWord,
 		addInstance, NULL, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputunixlistensocketusepidfromsystem", 0, eCmdHdlrBinary,
@@ -1114,6 +1167,8 @@ CODEmodInit_QueryRegCFSLineHdlr
 		setSystemLogTimestampIgnore, NULL, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"systemlogsocketflowcontrol", 0, eCmdHdlrBinary,
 		setSystemLogFlowControl, NULL, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"systemlogusesystimestamp", 0, eCmdHdlrBinary,
+		NULL, &cs.bUseSysTimeStampSysSock, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"systemlogusepidfromsystem", 0, eCmdHdlrBinary,
 		NULL, &cs.bWritePidSysSock, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"systemlogratelimitinterval", 0, eCmdHdlrInt,

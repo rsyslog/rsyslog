@@ -327,7 +327,12 @@ actionConstructFinalize(action_t *pThis)
 	ASSERT(pThis != NULL);
 
 	/* find a name for our queue */
-	snprintf((char*) pszQName, sizeof(pszQName)/sizeof(uchar), "action %d queue", iActionNbr);
+	if(pThis->pszName == NULL) {
+		snprintf((char*) pszQName, sizeof(pszQName)/sizeof(uchar), "action %d queue", iActionNbr);
+	} else {
+		ustrncpy(pszQName, pThis->pszName, sizeof(pszQName));
+		pszQName[63] = '\0'; /* to be on the save side */
+	}
 
 	/* now check if we can run the action in "firehose mode" during stage one of 
 	 * its processing (that is before messages are enqueued into the action q).

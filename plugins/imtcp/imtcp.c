@@ -88,6 +88,7 @@ static struct configSettings_s {
 	int iTCPSessMax;
 	int iTCPLstnMax;
 	int iStrmDrvrMode;
+	int bKeepAlive;
 	int bEmitMsgOnClose;
 	int iAddtlFrameDelim;
 	int bDisableLFDelim;
@@ -112,10 +113,11 @@ struct modConfData_s {
 	int iTCPSessMax; /* max number of sessions */
 	int iTCPLstnMax; /* max number of sessions */
 	int iStrmDrvrMode; /* mode for stream driver, driver-dependent (0 mostly means plain tcp) */
-	int bEmitMsgOnClose; /* emit an informational message on close by remote peer */
 	int iAddtlFrameDelim; /* addtl frame delimiter, e.g. for netscreen, default none */
-	int bDisableLFDelim; /* disable standard LF delimiter */
-	int bUseFlowControl; /* use flow control, what means indicate ourselfs a "light delayable" */
+	sbool bDisableLFDelim; /* disable standard LF delimiter */
+	sbool bUseFlowControl; /* use flow control, what means indicate ourselfs a "light delayable" */
+	sbool bKeepAlive;
+	sbool bEmitMsgOnClose; /* emit an informational message on close by remote peer */
 	uchar *pszStrmDrvrAuthMode; /* authentication mode to use */
 };
 
@@ -249,6 +251,7 @@ addListner(modConfData_t *modConf, instanceConf_t *inst)
 		CHKiRet(tcpsrv.SetCBOnRegularClose(pOurTcpsrv, onRegularClose));
 		CHKiRet(tcpsrv.SetCBOnErrClose(pOurTcpsrv, onErrClose));
 		/* params */
+		CHKiRet(tcpsrv.SetKeepAlive(pOurTcpsrv, modConf->bKeepAlive));
 		CHKiRet(tcpsrv.SetSessMax(pOurTcpsrv, modConf->iTCPSessMax));
 		CHKiRet(tcpsrv.SetLstnMax(pOurTcpsrv, modConf->iTCPLstnMax));
 		CHKiRet(tcpsrv.SetDrvrMode(pOurTcpsrv, modConf->iStrmDrvrMode));
@@ -300,6 +303,7 @@ CODESTARTendCnfLoad
 	pModConf->iAddtlFrameDelim = cs.iAddtlFrameDelim;
 	pModConf->bDisableLFDelim = cs.bDisableLFDelim;
 	pModConf->bUseFlowControl = cs.bUseFlowControl;
+	pModConf->bKeepAlive = cs.bKeepAlive;
 	if((cs.pszStrmDrvrAuthMode == NULL) || (cs.pszStrmDrvrAuthMode[0] == '\0')) {
 		loadModConf->pszStrmDrvrAuthMode = NULL;
 		free(cs.pszStrmDrvrAuthMode);
@@ -409,6 +413,7 @@ resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unus
 	cs.iTCPLstnMax = 20;
 	cs.iStrmDrvrMode = 0;
 	cs.bUseFlowControl = 0;
+	cs.bKeepAlive = 0;
 	cs.bEmitMsgOnClose = 0;
 	cs.iAddtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
 	cs.bDisableLFDelim = 0;
@@ -446,6 +451,8 @@ CODEmodInit_QueryRegCFSLineHdlr
 	/* register config file handlers */
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpserverrun"), 0, eCmdHdlrGetWord,
 				   addInstance, NULL, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpserverkeepalive"), 0, eCmdHdlrBinary,
+				   NULL, &cs.bKeepAlive, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpmaxsessions"), 0, eCmdHdlrInt,
 				   NULL, &cs.iTCPSessMax, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpmaxlisteners"), 0, eCmdHdlrInt,

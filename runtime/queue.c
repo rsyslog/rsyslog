@@ -83,6 +83,11 @@ static rsRetVal ConsumerDA(qqueue_t *pThis, wti_t *pWti);
 static rsRetVal batchProcessed(qqueue_t *pThis, wti_t *pWti);
 static rsRetVal qqueueMultiEnqObjNonDirect(qqueue_t *pThis, multi_submit_t *pMultiSub);
 static rsRetVal qqueueMultiEnqObjDirect(qqueue_t *pThis, multi_submit_t *pMultiSub);
+static rsRetVal qAddDirect(qqueue_t *pThis, void* pUsr);
+static rsRetVal qDestructDirect(qqueue_t __attribute__((unused)) *pThis);
+static rsRetVal qConstructDirect(qqueue_t __attribute__((unused)) *pThis);
+static rsRetVal qDelDirect(qqueue_t __attribute__((unused)) *pThis);
+static rsRetVal qDestructDisk(qqueue_t *pThis);
 
 /* some constants for queuePersist () */
 #define QUEUE_CHECKPOINT	1
@@ -583,6 +588,47 @@ static rsRetVal qDelLinkedList(qqueue_t *pThis)
 /* -------------------- disk  -------------------- */
 
 
+/* The following function is used to "save" ourself from being killed by
+ * a fatally failed disk queue. A fatal failure is, for example, if no 
+ * data can be read or written. In that case, the disk support is disabled,
+ * with all on-disk structures kept as-is as much as possible. Instead, the
+ * queue is switched to direct mode, so that at least 
+ * some processing can happen. Of course, this may still have lots of
+ * undesired side-effects, but is probably better than aborting the
+ * syslogd. Note that this function *must* succeed in one way or another, as
+ * we can not recover from failure here. But it may emit different return
+ * states, which can trigger different processing in the higher layers.
+ * rgerhards, 2011-05-03
+ */
+static inline rsRetVal
+queueSwitchToEmergencyMode(qqueue_t *pThis, rsRetVal initiatingError)
+{
+	pThis->iQueueSize = 0;
+	pThis->nLogDeq = 0;
+	qDestructDisk(pThis); /* free disk structures */
+
+	pThis->qType = QUEUETYPE_DIRECT;
+	pThis->qConstruct = qConstructDirect;
+	pThis->qDestruct = qDestructDirect;
+	pThis->qAdd = qAddDirect;
+	pThis->qDel = qDelDirect;
+	pThis->MultiEnq = qqueueMultiEnqObjDirect;
+	if(pThis->pqParent != NULL) {
+		DBGOPRINT((obj_t*) pThis, "DA queue is in emergency mode, disabling DA in parent\n");
+		pThis->pqParent->bIsDA = 0;
+		pThis->pqParent->pqDA = NULL;
+		/* This may have undesired side effects, not sure if I really evaluated
+		 * all. So you know where to look at if you come to this point during
+		 * troubleshooting ;) -- rgerhards, 2011-05-03
+		 */
+	}
+
+	errmsg.LogError(0, initiatingError, "fatal error on disk queue '%s', emergency switch to direct mode",
+			obj.GetName((obj_t*) pThis));
+	return RS_RET_ERR_QUEUE_EMERGENCY;
+}
+
+
 static rsRetVal
 qqueueLoadPersStrmInfoFixup(strm_t *pStrm, qqueue_t __attribute__((unused)) *pThis)
 {
@@ -785,10 +831,7 @@ finalize_it:
 static rsRetVal qDeqDisk(qqueue_t *pThis, void **ppUsr)
 {
 	DEFiRet;
-
-	CHKiRet(obj.Deserialize(ppUsr, (uchar*) "msg", pThis->tVars.disk.pReadDeq, NULL, NULL));
-
-finalize_it:
+	iRet = obj.Deserialize(ppUsr, (uchar*) "msg", pThis->tVars.disk.pReadDeq, NULL, NULL);
 	RETiRet;
 }
 
@@ -1684,7 +1727,18 @@ ConsumerReg(qqueue_t *pThis, wti_t *pWti)
 	ISOBJ_TYPE_assert(pThis, qqueue);
 	ISOBJ_TYPE_assert(pWti, wti);
 
-	CHKiRet(DequeueForConsumer(pThis, pWti));
+	iRet = DequeueForConsumer(pThis, pWti);
+	if(iRet == RS_RET_FILE_NOT_FOUND) {
+		/* This is a fatal condition and means the queue is almost unusable */
+		d_pthread_mutex_unlock(pThis->mut);
+		DBGOPRINT((obj_t*) pThis, "got 'file not found' error %d, queue defunct\n", iRet);
+		iRet = queueSwitchToEmergencyMode(pThis, iRet);
+		// TODO: think about what to return as iRet -- keep RS_RET_FILE_NOT_FOUND?
+		d_pthread_mutex_lock(pThis->mut);
+	}
+	if (iRet != RS_RET_OK) {
+		FINALIZE;
+	}
 
 	/* we now have a non-idle batch of work, so we can release the queue mutex and process it */
 	d_pthread_mutex_unlock(pThis->mut);
@@ -1778,7 +1832,6 @@ qqueueChkStopWrkrDA(qqueue_t *pThis)
 {
 	DEFiRet;
 
-//DBGPRINTF("XXXX: chkStopWrkrDA called, low watermark %d, phys Size %d\n", pThis->iLowWtrMrk, getPhysicalQueueSize(pThis));
 	if(pThis->bEnqOnly) {
 		iRet = RS_RET_TERMINATE_WHEN_IDLE;
 	}

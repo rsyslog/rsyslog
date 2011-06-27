@@ -112,15 +112,21 @@ initConfigSettings(void)
  * rgerhards, 2008-04-12
  */
 static rsRetVal
-enqMsg(uchar *msg, uchar* pszTag, int iFacility, int iSeverity)
+enqMsg(uchar *msg, uchar* pszTag, int iFacility, int iSeverity, struct timeval *tp)
 {
-	DEFiRet;
+	struct syslogTime st;
 	msg_t *pMsg;
+	DEFiRet;
 
 	assert(msg != NULL);
 	assert(pszTag != NULL);
 
-	CHKiRet(msgConstruct(&pMsg));
+	if(tp == NULL) {
+		CHKiRet(msgConstruct(&pMsg));
+	} else {
+		datetime.timeval2syslogTime(tp, &st);
+		CHKiRet(msgConstructWithTime(&pMsg, &st, tp->tv_sec));
+	}
 	MsgSetFlowControlType(pMsg, eFLOWCTL_LIGHT_DELAY);
 	MsgSetInputName(pMsg, pInputName);
 	MsgSetRawMsgWOSize(pMsg, (char*)msg);
@@ -198,16 +204,17 @@ rsRetVal imklogLogIntMsg(int priority, char *fmt, ...)
 }
 
 
-/* log a kernel message 
+/* log a kernel message. If tp is non-NULL, it contains the message creation
+ * time to use.
  * rgerhards, 2008-04-14
  */
-rsRetVal Syslog(int priority, uchar *pMsg)
+rsRetVal Syslog(int priority, uchar *pMsg, struct timeval *tp)
 {
-	DEFiRet;
 	int pri = -1;
 	rsRetVal localRet;
+	DEFiRet;
 
-	/* first check if we have two PRIs. This can happen in case of systemd,
+	/* then check if we have two PRIs. This can happen in case of systemd,
 	 * in which case the second PRI is the rigth one.
 	 * TODO: added kernel timestamp support to this PoC. -- rgerhards, 2011-03-18
 	 */
@@ -232,7 +239,7 @@ rsRetVal Syslog(int priority, uchar *pMsg)
 	if(cs.bPermitNonKernel == 0 && LOG_FAC(priority) != LOG_KERN)
 		FINALIZE; /* silently ignore */
 
-	iRet = enqMsg((uchar*)pMsg, (uchar*) "kernel:", LOG_FAC(priority), LOG_PRI(priority));
+	iRet = enqMsg((uchar*)pMsg, (uchar*) "kernel:", LOG_FAC(priority), LOG_PRI(priority), tp);
 
 finalize_it:
 	RETiRet;

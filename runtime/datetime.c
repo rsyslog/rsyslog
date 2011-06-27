@@ -55,6 +55,47 @@ static const int tenPowers[6] = { 1, 10, 100, 1000, 10000, 100000 };
 /* ------------------------------ methods ------------------------------ */
 
 
+/** 
+ * Convert struct timeval to syslog_time
+ */
+void
+timeval2syslogTime(struct timeval *tp, struct syslogTime *t)
+{
+	struct tm *tm;
+	struct tm tmBuf;
+	long lBias;
+
+	tm = localtime_r((time_t*) &(tp->tv_sec), &tmBuf);
+
+	t->year = tm->tm_year + 1900;
+	t->month = tm->tm_mon + 1;
+	t->day = tm->tm_mday;
+	t->hour = tm->tm_hour;
+	t->minute = tm->tm_min;
+	t->second = tm->tm_sec;
+	t->secfrac = tp->tv_usec;
+	t->secfracPrecision = 6;
+
+#	if __sun
+		/* Solaris uses a different method of exporting the time zone.
+		 * It is UTC - localtime, which is the opposite sign of mins east of GMT.
+		 */
+		lBias = -(daylight ? altzone : timezone);
+#	elif defined(__hpux)
+		lBias = tz.tz_dsttime ? - tz.tz_minuteswest : 0;
+#	else
+		lBias = tm->tm_gmtoff;
+#	endif
+	if(lBias < 0) {
+		t->OffsetMode = '-';
+		lBias *= -1;
+	} else
+		t->OffsetMode = '+';
+	t->OffsetHour = lBias / 3600;
+	t->OffsetMinute = (lBias % 3600) / 60;
+	t->timeType = TIME_TYPE_RFC5424; /* we have a high precision timestamp */
+}
+
 /**
  * Get the current date/time in the best resolution the operating
  * system has to offer (well, actually at most down to the milli-
@@ -74,9 +115,6 @@ static const int tenPowers[6] = { 1, 10, 100, 1000, 10000, 100000 };
 static void getCurrTime(struct syslogTime *t, time_t *ttSeconds)
 {
 	struct timeval tp;
-	struct tm *tm;
-	struct tm tmBuf;
-	long lBias;
 #	if defined(__hpux)
 	struct timezone tz;
 #	endif
@@ -93,37 +131,7 @@ static void getCurrTime(struct syslogTime *t, time_t *ttSeconds)
 	if(ttSeconds != NULL)
 		*ttSeconds = tp.tv_sec;
 
-	tm = localtime_r((time_t*) &(tp.tv_sec), &tmBuf);
-
-	t->year = tm->tm_year + 1900;
-	t->month = tm->tm_mon + 1;
-	t->day = tm->tm_mday;
-	t->hour = tm->tm_hour;
-	t->minute = tm->tm_min;
-	t->second = tm->tm_sec;
-	t->secfrac = tp.tv_usec;
-	t->secfracPrecision = 6;
-
-#	if __sun
-		/* Solaris uses a different method of exporting the time zone.
-		 * It is UTC - localtime, which is the opposite sign of mins east of GMT.
-		 */
-		lBias = -(daylight ? altzone : timezone);
-#	elif defined(__hpux)
-		lBias = tz.tz_dsttime ? - tz.tz_minuteswest : 0;
-#	else
-		lBias = tm->tm_gmtoff;
-#	endif
-	if(lBias < 0)
-	{
-		t->OffsetMode = '-';
-		lBias *= -1;
-	}
-	else
-		t->OffsetMode = '+';
-	t->OffsetHour = lBias / 3600;
-	t->OffsetMinute = (lBias % 3600) / 60;
-	t->timeType = TIME_TYPE_RFC5424; /* we have a high precision timestamp */
+	timeval2syslogTime(&tp, t);
 }
 
 
@@ -861,6 +869,7 @@ CODESTARTobjQueryInterface(datetime)
 	 */
 	pIf->getCurrTime = getCurrTime;
 	pIf->GetTime = getTime;
+	pIf->timeval2syslogTime = timeval2syslogTime;
 	pIf->ParseTIMESTAMP3339 = ParseTIMESTAMP3339;
 	pIf->ParseTIMESTAMP3164 = ParseTIMESTAMP3164;
 	pIf->formatTimestampToMySQL = formatTimestampToMySQL;

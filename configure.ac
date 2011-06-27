@@ -122,6 +122,8 @@ AC_CHECK_FUNCS([flock basename alarm clock_gettime gethostbyname gethostname get
 # let me know! -- rgerhards, 2010-10-06
 AC_CHECK_DECL([SCM_CREDENTIALS], [AC_DEFINE(HAVE_SCM_CREDENTIALS, [1], [set define])], [], [#include <sys/types.h>
 #include <sys/socket.h>])
+AC_CHECK_DECL([SO_TIMESTAMP], [AC_DEFINE(HAVE_SO_TIMESTAMP, [1], [set define])], [], [#include <sys/types.h>
+#include <sys/socket.h>])
 
 # Check for MAXHOSTNAMELEN
 AC_MSG_CHECKING(for MAXHOSTNAMELEN)

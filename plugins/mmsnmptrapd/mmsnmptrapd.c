@@ -414,7 +414,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	cs.pszTagName = NULL;
 	cs.pszSeverityMapping = NULL;
 	
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"mmsnmptrapdtag", 0, eCmdHdlrInt,
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"mmsnmptrapdtag", 0, eCmdHdlrGetWord,
 				    NULL, &cs.pszTagName, STD_LOADABLE_MODULE_ID, eConfObjAction));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"mmsnmptrapdseveritymapping", 0, eCmdHdlrGetWord,
 				    NULL, &cs.pszSeverityMapping, STD_LOADABLE_MODULE_ID, eConfObjAction));
