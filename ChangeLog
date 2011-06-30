@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 5.9.1  [V5-DEVEL] (rgerhards), 2011-06-??
+Version 5.9.1  [V5-DEVEL] (rgerhards), 2011-06-30
 - added support for obtaining timestamp for kernel message from message
   If the kernel time-stamps messages, time is now take from that
   timestamp instead of the system time when the message was read. This

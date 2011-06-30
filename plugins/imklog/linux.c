@@ -254,9 +254,6 @@ submitSyslog(int pri, uchar *buf)
 		secOffs--;
 		nsecOffs += 1000000000l;
 	}
-	monotonic.tv_sec, monotonic.tv_nsec,
-	realtime.tv_sec, realtime.tv_nsec,
-	secOffs, nsecOffs);
 	
 	nsecs +=nsecOffs;
 	if(nsecs > 999999999l) {
