@@ -1,3 +1,8 @@
+%option noyywrap nodefault case-insensitive
+ /*%option noyywrap nodefault case-insensitive */
+
+%x OLDACT
+	/* old-style action expected -- need to parse differently */
 %{
 #include <libestr.h>
 %}
@@ -5,8 +10,32 @@
 %%
 
 
-^[ \t]*[\*a-z]+.[!=;.\*a-z]+	{ printf("PRI: '%s'\n", yytext); }
-.	{ printf("%s", yytext); }
+\$[a-z]+.*$				{ printf("CFSYSLINE: '%s'\n", yytext); }
+
+^[ \t]*:\$?[a-z]+[ ]*,[ ]*!?[a-z]+[ ]*,[ ]*\".*\"	{
+					  printf("PROP-FILT: '%s'\n", yytext);
+					  BEGIN OLDACT;
+					}
+
+^[ \t]*[,\*a-z]+\.[,!=;\.\*a-z]+	{ printf("PRI-FILT: '%s'\n", yytext);
+					  BEGIN OLDACT;
+					}
+  
+#.*\n	/* skip comments in input */
+.|\n	{ if(yytext[0] != '\n') printf("%s", yytext); }
+
+<OLDACT>\* |
+<OLDACT>-\/[^ \t\n]+ |
+<OLDACT>\|[^ \t\n]+ |
+<OLDACT>\/[^ \t\n]+	{ printf("old style action: '%s'\n", yytext);
+			  BEGIN INITIAL;
+			}
+<OLDACT>[ \t\n]
+<OLDACT>.|\n		{ printf("invalid sequence in OLDACT mode: %s\n",
+				 yytext);
+			}
+
+
 
 %%
 int
