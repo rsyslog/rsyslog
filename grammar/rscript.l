@@ -5,6 +5,7 @@
 %%
 
 
+^[ \t]*[\*a-z]+.[!=;.\*a-z]+	{ printf("PRI: '%s'\n", yytext); }
 .	{ printf("%s", yytext); }
 
 %%
