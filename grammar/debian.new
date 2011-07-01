@@ -9,7 +9,7 @@
 #################
 
 module(
- name=imuxsock # provides support for local system logging
+ name="imuxsock" # provides support for local system logging
  )
 $ModLoad imklog   # provides kernel logging support (previously done by rklogd)
 #$ModLoad immark  # provides --MARK-- message capability
@@ -17,8 +17,8 @@ $ModLoad imklog   # provides kernel logging support (previously done by rklogd)
 # provides UDP syslog reception
 #$ModLoad imudp
 #$UDPServerRun 514
-module(name=imudp)
-input(type=imudp port=514)
+module(name="imudp")
+input(type="imudp" port="514")
 
 # provides TCP syslog reception
 #$ModLoad imtcp
@@ -99,7 +99,7 @@ daemon.*;mail.*;\
 	*.=debug;*.=info;\
 	*.=notice;*.=warn	|/dev/xconsole
 
-global (dnscache=yes arg1="1 2" arg2 = "1 2" arg3 ="1=2\"3")
+global (dnscache="yes" arg1="1 2" arg2 = "1 2" arg3 ="1=2\"3")
 # samples added to get full "flavor" of what we need to support...
 :msg, contains, "error" /var/log/somelog
 action(type=omfile target=/var/log/mail/log)
@@ -135,3 +135,30 @@ then	/dev/tty10
 
 *.* rger # write to user (ugly...)
 ruleset name
+
+# FEDORA, a bit more complex config
+# ### begin forwarding rule ###
+# The statement between the begin ... end define a SINGLE forwarding
+# rule. They belong together, do NOT split them. If you create multiple
+# forwarding rules, duplicate the whole block!
+# Remote Logging (we use TCP for reliable delivery)
+#
+# An on-disk queue is created for this action. If the remote host is
+# down, messages are spooled to disk and sent when it is up again.
+#$WorkDirectory /var/spppl/rsyslog # where to place spool files
+#$ActionQueueFileName fwdRule1 # unique name prefix for spool files
+#$ActionQueueMaxDiskSpace 1g   # 1gb space limit (use as much as possible)
+#$ActionQueueSaveOnShutdown on # save messages to disk on shutdown
+#$ActionQueueType LinkedList   # run asynchronously
+#$ActionResumeRetryCount -1    # infinite retries if host is down
+# remote host is: name/ip:port, e.g. 192.168.0.1:514, port optional
+#*.* @@remote-host:514
+# ### end of the forwarding rule ###
+if $msg contains "error" then
+    action(type="omfwd" protocol="tcp" target="10.0.0.1:514"
+           action.retryCount="-1"
+           queue.type="linkedList" queue.fileName="fwdRule" queue.maxDiskSpace="1g"
+           queue.saveOnShutdown="on"
+          )
+    & action(type="omfile" target="/var/log/somelog.log")
+    & action(type="omuser" target="all")

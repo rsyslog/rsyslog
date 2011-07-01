@@ -101,11 +101,10 @@ static int preCommentState;
 <INOBJ>")"				{ printf("OBJ end\n");
 					  BEGIN INITIAL;
 					}
-<INOBJ>[a-z][a-z0-9_]*	{ printf("INOBJ: name '%s'\n", yytext);
+<INOBJ>[a-z][a-z0-9_\.]*	{ printf("INOBJ: name '%s'\n", yytext);
 			}
 <INOBJ>"="		{ printf("INOBJ: equals\n");
 			}
-<INOBJ>[a-z0-9\.,_\+\-\/]* |
 <INOBJ>\"([^"\\]|\\['"?\\abfnrtv]|\\[0-7]{1,3})*\" {
  			  printf("INOBJ: value '%s'\n", yytext);
 			  BEGIN INOBJ;
