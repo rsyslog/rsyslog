@@ -1,0 +1,107 @@
+#  /etc/rsyslog.conf	Configuration file for rsyslog.
+#
+#			For more information see
+#			/usr/share/doc/rsyslog-doc/html/rsyslog_conf.html
+
+
+#################
+#### MODULES ####
+#################
+
+module(
+ name=imuxsock # provides support for local system logging
+ )
+$ModLoad imklog   # provides kernel logging support (previously done by rklogd)
+#$ModLoad immark  # provides --MARK-- message capability
+
+# provides UDP syslog reception
+#$ModLoad imudp
+#$UDPServerRun 514
+module(name=imudp)
+input(type=imudp port=514)
+
+# provides TCP syslog reception
+#$ModLoad imtcp
+#$InputTCPServerRun 514
+
+
+###########################
+#### GLOBAL DIRECTIVES ####
+###########################
+
+#
+# Use traditional timestamp format.
+# To enable high precision timestamps, comment out the following line.
+#
+#$ActionFileDefaultTemplate RSYSLOG_TraditionalFileFormat
+
+#
+# Set the default permissions for all log files.
+#
+$FileOwner root
+$FileGroup adm
+$FileCreateMode 0640
+$DirCreateMode 0755
+$Umask 0022
+
+#
+# Include all config files in /etc/rsyslog.d/
+#
+$IncludeConfig /etc/rsyslog.d/*.conf
+
+
+###############
+#### RULES ####
+###############
+
+#
+# First some standard log files.  Log by facility.
+#
+auth,authpriv.*			/var/log/auth.log
+*.*;auth,authpriv.none		-/var/log/syslog
+#cron.*				/var/log/cron.log
+
+#
+# Some "catch-all" log files.
+#
+*.=debug;\
+	auth,authpriv.none;\
+	news.none;mail.none	-/var/log/debug
+*.=info;*.=notice;*.=warn;\
+	auth,authpriv.none;\
+	cron,daemon.none;\
+	mail,news.none		-/var/log/messages
+
+#
+# Emergencies are sent to everybody logged in.
+#
+*.emerg				*
+
+#
+# I like to have messages displayed on the console, but only on a virtual
+# console I usually leave idle.
+#
+#daemon,mail.*;\
+#	news.=crit;news.=err;news.=notice;\
+#	*.=debug;*.=info;\
+#	*.=notice;*.=warn	/dev/tty8
+
+# The named pipe /dev/xconsole is for the `xconsole' utility.  To use it,
+# you must invoke `xconsole' with the `-file' option:
+# 
+#    $ xconsole -file /dev/xconsole [...]
+#
+# NOTE: adjust the list below, or you'll go crazy if you have a reasonably
+#      busy site..
+#
+daemon.*;mail.*;\
+	news.err;\
+	*.=debug;*.=info;\
+	*.=notice;*.=warn	|/dev/xconsole
+
+global (dnscache=yes arg1="1 2" arg2 = "1 2" arg3 ="1=2\"3")
+# samples added to get full "flavor" of what we need to support...
+:msg, contains, "error" /var/log/somelog
+action(type=omfile target=/var/log/mail/log)
+*.* *  # test
+*.info :ommysql:, tra, la , la # comment (comment to be part of old style line!)

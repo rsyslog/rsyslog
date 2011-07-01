@@ -1,41 +1,65 @@
 %option noyywrap nodefault case-insensitive
  /*%option noyywrap nodefault case-insensitive */
 
-%x OLDACT
-	/* old-style action expected -- need to parse differently */
+%x INOBJ
+	/* INOBJ is selected if we are inside an object (name/value pairs!) */
 %{
 #include <libestr.h>
 %}
 
 %%
 
-
-\$[a-z]+.*$				{ printf("CFSYSLINE: '%s'\n", yytext); }
-
+"global"[ \n\t]*"("			{ printf("OBJ GLOBAL begin\n");
+					  BEGIN INOBJ;
+					}
+"input"[ \n\t]*"("			{ printf("OBJ INPUT begin\n");
+					  BEGIN INOBJ;
+					}
+"module"[ \n\t]*"("			{ printf("OBJ MODULE begin\n");
+					  BEGIN INOBJ;
+					}
+"action"[ \n\t]*"("			{ printf("OBJ ACTION begin\n");
+					  BEGIN INOBJ;
+					}
 ^[ \t]*:\$?[a-z]+[ ]*,[ ]*!?[a-z]+[ ]*,[ ]*\".*\"	{
 					  printf("PROP-FILT: '%s'\n", yytext);
-					  BEGIN OLDACT;
+					  /*BEGIN OLDACT;*/
 					}
 
 ^[ \t]*[,\*a-z]+\.[,!=;\.\*a-z]+	{ printf("PRI-FILT: '%s'\n", yytext);
-					  BEGIN OLDACT;
+					  /*BEGIN OLDACT;*/
 					}
-  
-#.*\n	/* skip comments in input */
-.|\n	{ if(yytext[0] != '\n') printf("%s", yytext); }
 
-<OLDACT>\* |
-<OLDACT>-\/[^ \t\n]+ |
-<OLDACT>\|[^ \t\n]+ |
-<OLDACT>\/[^ \t\n]+	{ printf("old style action: '%s'\n", yytext);
-			  BEGIN INITIAL;
+"*" |
+[\|\.\/\-:][^\n]+			{ printf("old style action: '%s'\n", yytext);
+					}
+
+<INOBJ>")"				{ printf("OBJ end\n");
+					  BEGIN INITIAL;
+					}
+<INOBJ>[a-z][a-z0-9_]*	{ printf("INOBJ: name '%s'\n", yytext);
 			}
-<OLDACT>[ \t\n]
-<OLDACT>.|\n		{ printf("invalid sequence in OLDACT mode: %s\n",
-				 yytext);
+<INOBJ>"="		{ printf("INOBJ: equals\n");
+			}
+<INOBJ>[a-z0-9\.,_\+\-\/]* |
+<INOBJ>\"([^"\\]|\\['"?\\abfnrtv]|\\[0-7]{1,3})*\" {
+ 			  printf("INOBJ: value '%s'\n", yytext);
+			  BEGIN INOBJ;
+			}
+<INOBJ>#.*\n	/* skip comments in input */
+<INOBJ>[ \n\t]
+<INOBJ>.		{ printf("INOBJ: invalid char '%s'\n", yytext); }
+
+ /* CFSYSLINE is valid in all modes */
+\$[a-z]+.*$				{ printf("CFSYSLINE: '%s'\n", yytext); }
+<INOBJ>\$[a-z]+.*$			{ printf("CFSYSLINE: '%s'\n", yytext); }
+
+\#.*\n	/* skip comments in input */
+[\n\t ]	/* drop whitespace */
+.			{ printf("invalid char: %s\n", yytext);
 			}
 
-
+ /*<<EOF>>			{ printf("EOF reached\n"); }*/
 
 %%
 int
