@@ -103,5 +103,35 @@ global (dnscache=yes arg1="1 2" arg2 = "1 2" arg3 ="1=2\"3")
 # samples added to get full "flavor" of what we need to support...
 :msg, contains, "error" /var/log/somelog
 action(type=omfile target=/var/log/mail/log)
-*.* *  # test
+*.* /* comment */ *  # test
 *.info :ommysql:, tra, la , la # comment (comment to be part of old style line!)
+
+# from SUSE:
+if	( \
+	    /* kernel up to warning except of firewall  */ \
+	    ($syslogfacility-text == 'kern')      and      \
+	    ($syslogseverity <= 4 /* warning */ ) and not  \
+	    ($msg contains 'IN=' and $msg contains 'OUT=') \
+	) or ( \
+	    /* up to errors except of facility authpriv */ \
+	    ($syslogseverity <= 3 /* errors  */ ) and not  \
+	    ($syslogfacility-text == 'authpriv')           \
+	) \
+then	/dev/tty10
+&	|/dev/xconsole
+#
+# slightly modified to not use continuation lines
+if	(   /* kernel up to warning except of firewall  */ 
+	    ($syslogfacility-text == 'kern')      and      
+	    ($syslogseverity <= 4 /* warning */ ) and not  
+	    ($msg contains 'IN=' and $msg contains 'OUT=') 
+	) or ( 
+	    /* up to errors except of facility authpriv */ 
+	    ($syslogseverity <= 3 /* errors  */ ) and not  
+	    ($syslogfacility-text == 'authpriv')           
+	) 
+then	/dev/tty10
+&	|/dev/xconsole
+
+*.* rger # write to user (ugly...)
+ruleset name
