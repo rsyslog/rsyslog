@@ -49,4 +49,7 @@ void nvlstPrint(struct nvlst *lst);
 struct cnfobj* cnfobjNew(enum cnfobjType objType, struct nvlst *lst);
 void cnfobjDestruct(struct cnfobj *o);
 void cnfobjPrint(struct cnfobj *o);
+
+/* debug helper */
+void cstrPrint(char *text, es_str_t *estr);
 #endif

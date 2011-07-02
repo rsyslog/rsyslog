@@ -118,3 +118,15 @@ cnfobjPrint(struct cnfobj *o)
 	printf("obj: '%s'\n", cnfobjType2str(o->objType));
 	nvlstPrint(o->nvlst);
 }
+
+/* debug helper */
+void
+cstrPrint(char *text, es_str_t *estr)
+{
+	char *str;
+	printf("in cstrPrint, estr %p\n", estr);
+	str = es_str2cstr(estr, NULL);
+	printf("2: in cstrPrint, estr %p\n", estr);
+	printf("%s%s", text, str);
+	free(str);
+}

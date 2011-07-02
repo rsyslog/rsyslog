@@ -43,82 +43,60 @@ static int preCommentState;
 %%
 
  /* keywords */
-"if"		{ printf("IF\n");
-		  BEGIN EXPR;
-		}
-<EXPR>"then"		{ printf("THEN\n");
-			  BEGIN INITIAL;
-			}
-<EXPR>"or"		{ printf("OR\n"); }
-<EXPR>"and"		{ printf("AND\n"); }
-<EXPR>"not"		{ printf("NOT\n"); }
-<EXPR>"("		{ printf("LPAREN\n"); }
-<EXPR>")"		{ printf("RPAREN\n"); }
-<EXPR>"=="		{ printf("==\n"); }
-<EXPR>"<="		{ printf("<=\n"); }
-<EXPR>">="		{ printf(">=\n"); }
+"if"				{ printf("IF\n"); BEGIN EXPR; }
+<EXPR>"then"			{ printf("THEN\n"); BEGIN INITIAL; }
+<EXPR>"or"			{ printf("OR\n"); }
+<EXPR>"and"			{ printf("AND\n"); }
+<EXPR>"not"			{ printf("NOT\n"); }
+<EXPR>"("			{ printf("LPAREN\n"); }
+<EXPR>")"			{ printf("RPAREN\n"); }
+<EXPR>"=="			{ printf("==\n"); }
+<EXPR>"<="			{ printf("<=\n"); }
+<EXPR>">="			{ printf(">=\n"); }
 <EXPR>"!=" |
-<EXPR>"<>"		{ printf("!=\n"); }
-<EXPR>"<"		{ printf("<\n"); }
-<EXPR>">"		{ printf(">\n"); }
-<EXPR>"contains"	{ printf("CONTAINS\n"); }
-<EXPR>"contains_i"	{ printf("CONTAINS_I\n"); }
-<EXPR>"startswith"	{ printf("STARTSWITH\n"); }
-<EXPR>"startswith_i"	{ printf("STARTSWITH_I\n"); }
-<EXPR>-?0[0-7]+		{ printf("NUMBER (oct) %s\n", yytext); }
-<EXPR>-?0x[0-7a-f]	{ printf("NUMBER (hex) %s\n", yytext); }
-<EXPR>-?([1-9][0-9]*|0)	{ printf("NUMBER (dec) %s\n", yytext); }
-<EXPR>\$[$!]{0,1}[a-z][a-z0-9\-_\.]*		{ printf("VARNAME: '%s'\n", yytext); }
-<EXPR>\'([^'\\]|\\['])*\' { printf("EXPR string: -%s-\n", yytext); }
+<EXPR>"<>"			{ printf("!=\n"); }
+<EXPR>"<"			{ printf("<\n"); }
+<EXPR>">"			{ printf(">\n"); }
+<EXPR>"contains"		{ printf("CONTAINS\n"); }
+<EXPR>"contains_i"		{ printf("CONTAINS_I\n"); }
+<EXPR>"startswith"		{ printf("STARTSWITH\n"); }
+<EXPR>"startswith_i"		{ printf("STARTSWITH_I\n"); }
+<EXPR>-?0[0-7]+			{ printf("NUMBER (oct) %s\n", yytext); }
+<EXPR>-?0x[0-7a-f]		{ printf("NUMBER (hex) %s\n", yytext); }
+<EXPR>-?([1-9][0-9]*|0)		{ printf("NUMBER (dec) %s\n", yytext); }
+<EXPR>\$[$!]{0,1}[a-z][a-z0-9\-_\.]*	{ printf("VARNAME: '%s'\n", yytext); }
+<EXPR>\'([^'\\]|\\['])*\'	 { printf("EXPR string: -%s-\n", yytext); }
 <EXPR>[ \t\n]
-<EXPR>.			{ printf("invalid char in expr: %s\n", yytext); }
-"&"		{ printf("AMPER\n"); }
-"ruleset"	{ printf("RULESET\n"); }
+<EXPR>.				{ printf("invalid char in expr: %s\n", yytext); }
+"&"				{ return '&'; }
+"ruleset"			{ printf("RULESET\n"); }
 
-"global"[ \n\t]*"("			{ yylval.objType = CNFOBJ_GLOBAL;
-					  BEGIN INOBJ; return BEGINOBJ; }
-"input"[ \n\t]*"("			{ yylval.objType = CNFOBJ_INPUT;
-					  BEGIN INOBJ; return BEGINOBJ; }
-"module"[ \n\t]*"("			{ yylval.objType = CNFOBJ_MODULE;
-					  BEGIN INOBJ; return BEGINOBJ; }
-"action"[ \n\t]*"("			{ yylval.objType = CNFOBJ_ACTION;
-					  BEGIN INOBJ; return BEGINOBJ; }
+"global"[ \n\t]*"("		{ yylval.objType = CNFOBJ_GLOBAL;
+				  BEGIN INOBJ; return BEGINOBJ; }
+"input"[ \n\t]*"("		{ yylval.objType = CNFOBJ_INPUT;
+				  BEGIN INOBJ; return BEGINOBJ; }
+"module"[ \n\t]*"("		{ yylval.objType = CNFOBJ_MODULE;
+				  BEGIN INOBJ; return BEGINOBJ; }
+"action"[ \n\t]*"("		{ BEGIN INOBJ; return BEGIN_ACTION; }
 ^[ \t]*:\$?[a-z]+[ ]*,[ ]*!?[a-z]+[ ]*,[ ]*\".*\"	{
-					  printf("PROP-FILT: '%s'\n", yytext);
-					}
-
-^[ \t]*[,\*a-z]+\.[,!=;\.\*a-z]+ { printf("PRI-FILT: '%s'\n", yytext);
+				  printf("PROP-FILT: '%s'\n", yytext);
 				}
+
+^[ \t]*[,\*a-z]+\.[,!=;\.\*a-z]+ { printf("token prifilt '%s'\n", yytext); yylval.s = strdup(yytext); return PRIFILT; }
 
 "*" |
 \/[^*][^\n]* |
-[\|\.\-:][^\n]+			{ printf("old style action: '%s'\n", yytext);
-				}
-
+[\|\.\-:][^\n]+			{ printf("toke legacy_action '%s'\n", yytext);yylval.s = strdup(yytext); return LEGACY_ACTION; }
 [a-z0-9_\-\+]+			{ printf("name: '%s'\n", yytext); }
-
-<INOBJ>")"			{ printf("OBJ end\n");
-				  BEGIN INITIAL;
-				  return ENDOBJ;
-				}
-<INOBJ>[a-z][a-z0-9_\.]*	{ printf("INOBJ: name '%s'\n", yytext);
-				  yylval.estr = es_newStrFromCStr(yytext, yyleng);
-				  return NAME;
-				}
-<INOBJ>"="			{ printf("INOBJ: equals (%s)\n", yytext);
-				  return(yytext[0]);
-				}
+<INOBJ>")"			{ BEGIN INITIAL; return ENDOBJ; }
+<INOBJ>[a-z][a-z0-9_\.]*	{ yylval.estr = es_newStrFromCStr(yytext, yyleng);
+				  return NAME; }
+<INOBJ>"="			{ return(yytext[0]); }
 <INOBJ>\"([^"\\]|\\['"?\\abfnrtv]|\\[0-7]{1,3})*\" {
-				  printf("INOBJ: value '%s'\n", yytext);
 				  yylval.estr = es_newStrFromCStr(yytext+1, yyleng-2);
-				  return VALUE;
-				}
-"/*"				{ preCommentState = YY_START;
-		  		  BEGIN COMMENT;
-				}
-<EXPR>"/*"			{ preCommentState = YY_START;
-				  BEGIN COMMENT;
-				}
+				  return VALUE; }
+"/*"				{ preCommentState = YY_START; BEGIN COMMENT; }
+<EXPR>"/*"			{ preCommentState = YY_START; BEGIN COMMENT; }
 <COMMENT>"*/"			{ BEGIN preCommentState; }
 <COMMENT>([^*]|\n)+|.
 
@@ -127,14 +105,8 @@ static int preCommentState;
 <INOBJ>.			{ printf("INOBJ: invalid char '%s'\n", yytext); }
 
  /* CFSYSLINE is valid in all modes */
-\$[a-z]+.*$			{ printf("CFSYSLINE: '%s'\n", yytext);
-				  yylval.s = yytext;
-				  return CFSYSLINE;
-				}
-<INOBJ>\$[a-z]+.*$		{ printf("CFSYSLINE: '%s'\n", yytext);
-				  yylval.s = yytext;
-				  return CFSYSLINE;
-				}
+\$[a-z]+.*$			{ yylval.s = yytext; return CFSYSLINE; }
+<INOBJ>\$[a-z]+.*$		{ yylval.s = yytext; return CFSYSLINE; }
 
 \#.*\n	/* skip comments in input */
 [\n\t ]	/* drop whitespace */
