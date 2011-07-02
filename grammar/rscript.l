@@ -33,7 +33,10 @@
 	 * compatible to the previous format.
 	 */
 %{
+#include <ctype.h>
 #include <libestr.h>
+#include "utils.h"
+#include "rscript.tab.h"
 static int preCommentState;
 %}
 
@@ -72,68 +75,76 @@ static int preCommentState;
 "&"		{ printf("AMPER\n"); }
 "ruleset"	{ printf("RULESET\n"); }
 
-"global"[ \n\t]*"("			{ printf("OBJ GLOBAL begin\n");
-					  BEGIN INOBJ;
-					}
-"input"[ \n\t]*"("			{ printf("OBJ INPUT begin\n");
-					  BEGIN INOBJ;
-					}
-"module"[ \n\t]*"("			{ printf("OBJ MODULE begin\n");
-					  BEGIN INOBJ;
-					}
-"action"[ \n\t]*"("			{ printf("OBJ ACTION begin\n");
-					  BEGIN INOBJ;
-					}
+"global"[ \n\t]*"("			{ yylval.objType = CNFOBJ_GLOBAL;
+					  BEGIN INOBJ; return BEGINOBJ; }
+"input"[ \n\t]*"("			{ yylval.objType = CNFOBJ_INPUT;
+					  BEGIN INOBJ; return BEGINOBJ; }
+"module"[ \n\t]*"("			{ yylval.objType = CNFOBJ_MODULE;
+					  BEGIN INOBJ; return BEGINOBJ; }
+"action"[ \n\t]*"("			{ yylval.objType = CNFOBJ_ACTION;
+					  BEGIN INOBJ; return BEGINOBJ; }
 ^[ \t]*:\$?[a-z]+[ ]*,[ ]*!?[a-z]+[ ]*,[ ]*\".*\"	{
 					  printf("PROP-FILT: '%s'\n", yytext);
 					}
 
-^[ \t]*[,\*a-z]+\.[,!=;\.\*a-z]+	{ printf("PRI-FILT: '%s'\n", yytext);
-					}
+^[ \t]*[,\*a-z]+\.[,!=;\.\*a-z]+ { printf("PRI-FILT: '%s'\n", yytext);
+				}
 
 "*" |
 \/[^*][^\n]* |
-[\|\.\-:][^\n]+				{ printf("old style action: '%s'\n", yytext);
-					}
+[\|\.\-:][^\n]+			{ printf("old style action: '%s'\n", yytext);
+				}
 
-[a-z0-9_\-\+]+				{ printf("name: '%s'\n", yytext); }
+[a-z0-9_\-\+]+			{ printf("name: '%s'\n", yytext); }
 
-<INOBJ>")"				{ printf("OBJ end\n");
-					  BEGIN INITIAL;
-					}
+<INOBJ>")"			{ printf("OBJ end\n");
+				  BEGIN INITIAL;
+				  return ENDOBJ;
+				}
 <INOBJ>[a-z][a-z0-9_\.]*	{ printf("INOBJ: name '%s'\n", yytext);
-			}
-<INOBJ>"="		{ printf("INOBJ: equals\n");
-			}
+				  yylval.estr = es_newStrFromCStr(yytext, yyleng);
+				  return NAME;
+				}
+<INOBJ>"="			{ printf("INOBJ: equals (%s)\n", yytext);
+				  return(yytext[0]);
+				}
 <INOBJ>\"([^"\\]|\\['"?\\abfnrtv]|\\[0-7]{1,3})*\" {
- 			  printf("INOBJ: value '%s'\n", yytext);
-			  BEGIN INOBJ;
-			}
-"/*"		{ preCommentState = YY_START;
-		  BEGIN COMMENT;
-		}
-<EXPR>"/*"		{ preCommentState = YY_START;
-			  BEGIN COMMENT;
-			}
-<COMMENT>"*/"		{ BEGIN preCommentState; }
+				  printf("INOBJ: value '%s'\n", yytext);
+				  yylval.estr = es_newStrFromCStr(yytext+1, yyleng-2);
+				  return VALUE;
+				}
+"/*"				{ preCommentState = YY_START;
+		  		  BEGIN COMMENT;
+				}
+<EXPR>"/*"			{ preCommentState = YY_START;
+				  BEGIN COMMENT;
+				}
+<COMMENT>"*/"			{ BEGIN preCommentState; }
 <COMMENT>([^*]|\n)+|.
 
 <INOBJ>#.*\n	/* skip comments in input */
 <INOBJ>[ \n\t]
-<INOBJ>.		{ printf("INOBJ: invalid char '%s'\n", yytext); }
+<INOBJ>.			{ printf("INOBJ: invalid char '%s'\n", yytext); }
 
  /* CFSYSLINE is valid in all modes */
-\$[a-z]+.*$				{ printf("CFSYSLINE: '%s'\n", yytext); }
-<INOBJ>\$[a-z]+.*$			{ printf("CFSYSLINE: '%s'\n", yytext); }
+\$[a-z]+.*$			{ printf("CFSYSLINE: '%s'\n", yytext);
+				  yylval.s = yytext;
+				  return CFSYSLINE;
+				}
+<INOBJ>\$[a-z]+.*$		{ printf("CFSYSLINE: '%s'\n", yytext);
+				  yylval.s = yytext;
+				  return CFSYSLINE;
+				}
 
 \#.*\n	/* skip comments in input */
 [\n\t ]	/* drop whitespace */
-.			{ printf("invalid char: %s\n", yytext);
-			}
+.				{ printf("invalid char: %s\n", yytext);
+				}
 
  /*<<EOF>>			{ printf("EOF reached\n"); }*/
 
 %%
+ /*
 int
 main(int argc, char *argv[])
 {
@@ -147,3 +158,4 @@ main(int argc, char *argv[])
 	//yy_switch_to_buffer(bp);
 	yylex();
 }
+*/
