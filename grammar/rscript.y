@@ -24,14 +24,18 @@
 %token <s> LEGACY_ACTION
 %token <s> PRIFILT
 %token <s> PROPFILT
+%token IF
+%token THEN
+%token NUMBER
 
 %type <nvlst> nv nvlst
 %type <obj> obj
 %type <actlst> actlst
 %type <actlst> act
+%type <s> cfsysline
+%type <actlst> block
 
-
-%expect 2
+%expect 3
 /* two shift/reduce conflicts are created by the CFSYSLINE construct, which we
  * unfortunately can not avoid. The problem is that CFSYSLINE can occur both in
  * global context as well as within an action. It's not permitted somewhere else,
@@ -47,17 +51,17 @@ conf:	/* empty (to end recursion) */
 	| cfsysline conf
 	| rule conf
 
-obj: BEGINOBJ nvlst ENDOBJ 		{ $$ = cnfobjNew($1, $2);
+obj:	  BEGINOBJ nvlst ENDOBJ 	{ $$ = cnfobjNew($1, $2);
 					  cnfobjPrint($$);
 					  cnfobjDestruct($$);
 					}
-obj: BEGIN_ACTION nvlst ENDOBJ 		{ struct cnfobj *t = cnfobjNew(CNFOBJ_ACTION, $2);
+	| BEGIN_ACTION nvlst ENDOBJ 	{ struct cnfobj *t = cnfobjNew(CNFOBJ_ACTION, $2);
 					  cnfobjPrint(t);
 					  cnfobjDestruct(t);
 					  printf("XXXX: this is an new-style action!\n");
 					}
-cfsysline: CFSYSLINE			{ printf("XXXX: processing CFSYSLINE: %s\n", $1);
-					}
+cfsysline: CFSYSLINE	 		{ printf("XXXX: processing CFSYSLINE: %s\n", $1); }
+
 nvlst:					{ $$ = NULL; }
 	| nvlst nv 			{ $2->next = $1; $$ = $2; }
 nv: NAME '=' VALUE 			{ $$ = nvlstNew($1, $3); }
@@ -66,12 +70,25 @@ rule:	  PRIFILT actlst		{ printf("PRIFILT: %s\n", $1); free($1);
 					  $2 = cnfactlstReverse($2);
 					  cnfactlstPrint($2); }
 	| PROPFILT actlst
+	| scriptfilt
 
-actlst:	  act 				{ printf("action (end actlst)\n");$$=$1; }
-	| actlst '&' act		{ printf("in actionlist \n");
+scriptfilt: IF NUMBER THEN actlst	{ printf("if filter detected\n"); }
+
+/* note: we can do some limited block-structuring with the v6 engine. In that case,
+ * we must not support additonal filters inside the blocks, so they must consist of
+ * "act", only. We can implement that via the "&" actlist logic.
+ */
+block:	  actlst
+	| block actlst
+	/* v7: | actlst
+	   v7: | block rule */
+
+actlst:	  act 	 			{ printf("action (end actlst)\n");$$=$1; }
+	| actlst '&' act 		{ printf("in actionlist \n");
 					  $3->next = $1; $$ = $3; }
-	| actlst CFSYSLINE		{ printf("in actionlist/CFSYSLINE: %s\n", $2);
+	| actlst cfsysline		{ printf("in actionlist/CFSYSLINE: %s\n", $2);
 					  $$ = cnfactlstAddSysline($1, $2); }
+	| '{' block '}'			{ $$ = $2; }
 					  
 act:	  BEGIN_ACTION nvlst ENDOBJ	{ $$ = cnfactlstNew(CNFACT_V2, $2, NULL); }
 	| LEGACY_ACTION			{ printf("legacy action: '%s'\n", $1);

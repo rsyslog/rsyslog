@@ -43,8 +43,8 @@ static int preCommentState;
 %%
 
  /* keywords */
-"if"				{ printf("IF\n"); BEGIN EXPR; }
-<EXPR>"then"			{ printf("THEN\n"); BEGIN INITIAL; }
+"if"				{ BEGIN EXPR; return IF; }
+<EXPR>"then"			{ BEGIN INITIAL; return THEN; }
 <EXPR>"or"			{ printf("OR\n"); }
 <EXPR>"and"			{ printf("AND\n"); }
 <EXPR>"not"			{ printf("NOT\n"); }
@@ -63,12 +63,14 @@ static int preCommentState;
 <EXPR>"startswith_i"		{ printf("STARTSWITH_I\n"); }
 <EXPR>-?0[0-7]+			{ printf("NUMBER (oct) %s\n", yytext); }
 <EXPR>-?0x[0-7a-f]		{ printf("NUMBER (hex) %s\n", yytext); }
-<EXPR>-?([1-9][0-9]*|0)		{ printf("NUMBER (dec) %s\n", yytext); }
+<EXPR>-?([1-9][0-9]*|0)		{ printf("NUMBER (dec) %s\n", yytext); return NUMBER; }
 <EXPR>\$[$!]{0,1}[a-z][a-z0-9\-_\.]*	{ printf("VARNAME: '%s'\n", yytext); }
 <EXPR>\'([^'\\]|\\['])*\'	 { printf("EXPR string: -%s-\n", yytext); }
 <EXPR>[ \t\n]
 <EXPR>.				{ printf("invalid char in expr: %s\n", yytext); }
 "&"				{ return '&'; }
+"{"				{ return '{'; }
+"}"				{ return '}'; }
 "ruleset"			{ printf("RULESET\n"); }
 
 "global"[ \n\t]*"("		{ yylval.objType = CNFOBJ_GLOBAL;
@@ -86,8 +88,8 @@ static int preCommentState;
 
 "*" |
 \/[^*][^\n]* |
-[\|\.\-:][^\n]+			{ printf("toke legacy_action '%s'\n", yytext);yylval.s = strdup(yytext); return LEGACY_ACTION; }
-[a-z0-9_\-\+]+			{ printf("name: '%s'\n", yytext); }
+[\|\.\-\@:~][^\n]+ |
+[a-z0-9_\-\+]+			{ yylval.s = strdup(yytext); return LEGACY_ACTION; }
 <INOBJ>")"			{ BEGIN INITIAL; return ENDOBJ; }
 <INOBJ>[a-z][a-z0-9_\.]*	{ yylval.estr = es_newStrFromCStr(yytext, yyleng);
 				  return NAME; }
@@ -106,7 +108,6 @@ static int preCommentState;
 
  /* CFSYSLINE is valid in all modes */
 \$[a-z]+.*$			{ yylval.s = strdup(yytext); return CFSYSLINE; }
-<INOBJ>\$[a-z]+.*$		{ yylval.s = strdup(yytext); return CFSYSLINE; }
 
 \#.*\n	/* skip comments in input */
 [\n\t ]	/* drop whitespace */
