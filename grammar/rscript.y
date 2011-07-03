@@ -8,11 +8,13 @@
 
 %union {
 	char *s;
+	long long n;
 	es_str_t *estr;
 	enum cnfobjType objType;
 	struct cnfobj *obj;
 	struct nvlst *nvlst;
 	struct cnfactlst *actlst;
+	struct cnfexpr *expr;
 }
 
 %token <estr> NAME
@@ -26,7 +28,12 @@
 %token <s> PROPFILT
 %token IF
 %token THEN
-%token NUMBER
+%token OR
+%token AND
+%token NOT
+%token VAR
+%token <estr> STRING
+%token <n> NUMBER
 
 %type <nvlst> nv nvlst
 %type <obj> obj
@@ -34,6 +41,12 @@
 %type <actlst> act
 %type <s> cfsysline
 %type <actlst> block
+%type <expr> expr
+
+%left AND OR
+%left '+' '-'
+%left '*' '/' '%'
+%nonassoc UMINUS NOT
 
 %expect 3
 /* two shift/reduce conflicts are created by the CFSYSLINE construct, which we
@@ -72,7 +85,7 @@ rule:	  PRIFILT actlst		{ printf("PRIFILT: %s\n", $1); free($1);
 	| PROPFILT actlst
 	| scriptfilt
 
-scriptfilt: IF NUMBER THEN actlst	{ printf("if filter detected\n"); }
+scriptfilt: IF expr THEN actlst	{ printf("if filter detected, expr:\n"); cnfexprPrint($2,0); }
 
 /* note: we can do some limited block-structuring with the v6 engine. In that case,
  * we must not support additonal filters inside the blocks, so they must consist of
@@ -93,6 +106,17 @@ actlst:	  act 	 			{ printf("action (end actlst)\n");$$=$1; }
 act:	  BEGIN_ACTION nvlst ENDOBJ	{ $$ = cnfactlstNew(CNFACT_V2, $2, NULL); }
 	| LEGACY_ACTION			{ printf("legacy action: '%s'\n", $1);
 					  $$ = cnfactlstNew(CNFACT_LEGACY, NULL, $1); }
+
+expr:	  expr '+' expr			{ $$ = cnfexprNew('+', $1, $3); }
+	| expr '-' expr			{ $$ = cnfexprNew('-', $1, $3); }
+	| expr '*' expr			{ $$ = cnfexprNew('*', $1, $3); }
+	| expr '/' expr			{ $$ = cnfexprNew('/', $1, $3); }
+	| expr '%' expr			{ $$ = cnfexprNew('%', $1, $3); }
+	| '(' expr ')'			{ $$ = $2; printf("( expr)\n"); }
+	| '-' expr %prec UMINUS		{ printf("uminus\n"); $$ = cnfexprNew('M', NULL, $2); }
+	| NUMBER			{ $$ = cnfnumvalNew($1); }
+	| STRING			{ $$ = cnfstringvalNew($1); }
+	| VAR				{ printf("variables not yet implemented!\n"); }
 
 %%
 int yyerror(char *s)

@@ -8,11 +8,9 @@
 void
 readConfFile(FILE *fp, es_str_t **str)
 {
-	int c;
 	char ln[10240];
 	int len, i;
 	int start;	/* start index of to be submitted text */
-	char *fgetsRet;
 	int bContLine = 0;
 
 	*str = es_newStr(4096);
@@ -177,7 +175,7 @@ cnfcfsyslinelstReverse(struct cnfcfsyslinelst *lst)
 	struct cnfcfsyslinelst *curr, *prev;
 
 	if(lst == NULL)
-		return;
+		return NULL;
 	prev = lst;
 	lst = lst->next;
 	prev->next = NULL;
@@ -229,6 +227,75 @@ cnfactlstPrint(struct cnfactlst *actlst)
 		actlst = actlst->next;
 	}
 	printf("----------\n");
+}
+
+struct cnfexpr*
+cnfexprNew(int nodetype, struct cnfexpr *l, struct cnfexpr *r)
+{
+	struct cnfexpr *expr;
+	if((expr = malloc(sizeof(struct cnfexpr))) != NULL) {
+		expr->nodetype = nodetype;
+		expr->l = l;
+		expr->r = r;
+	}
+	return expr;
+}
+
+
+inline static void
+doIndent(indent)
+{
+	int i;
+	for(i = 0 ; i < indent ; ++i)
+		printf("  ");
+}
+void
+cnfexprPrint(struct cnfexpr *expr, int indent)
+{
+	//printf("expr %p, indent %d, type '%c'\n", expr, indent, expr->nodetype);
+	switch(expr->nodetype) {
+	case 'N':
+		doIndent(indent);
+		printf("%lld\n", ((struct cnfnumval*)expr)->val);
+		break;
+	case '+':
+	case '-':
+	case '*':
+	case '/':
+	case '%':
+	case 'M':
+		if(expr->l != NULL)
+			cnfexprPrint(expr->l, indent+1);
+		doIndent(indent);
+		printf("%c\n", (char) expr->nodetype);
+		cnfexprPrint(expr->r, indent+1);
+		break;
+	default:
+		printf("error: unknown nodetype\n");
+		break;
+	}
+}
+
+struct cnfnumval*
+cnfnumvalNew(long long val)
+{
+	struct cnfnumval *numval;
+	if((numval = malloc(sizeof(struct cnfnumval))) != NULL) {
+		numval->nodetype = 'N';
+		numval->val = val;
+	}
+	return numval;
+}
+
+struct cnfstringval*
+cnfstringvalNew(es_str_t *estr)
+{
+	struct cnfstringval *strval;
+	if((strval = malloc(sizeof(struct cnfstringval))) != NULL) {
+		strval->nodetype = 'S';
+		strval->estr = estr;
+	}
+	return strval;
 }
 
 /* debug helper */

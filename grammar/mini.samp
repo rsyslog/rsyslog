@@ -24,7 +24,7 @@ if 1 then { /var/log/log3
 	@@fwd
     	rger
     }
-if 1/*pri("*.*")*/ then {
+if 2*4/5--(10-3)/*pri("*.*")*/ then {
    action(type="omfile" taget="/var/log/log5")
    action(type="omfile" taget="/var/log/log6")
    action(type="omfwd" taget="10.0.0.1" port="514")

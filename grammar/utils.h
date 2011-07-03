@@ -58,6 +58,30 @@ struct cnfactlst {
 	} data;
 };
 
+/* the following structures support expressions, and may (very much later
+ * be the sole foundation for the AST.
+ */
+struct cnfexpr {
+	int nodetype;
+	struct cnfexpr *l;
+	struct cnfexpr *r;
+};
+
+struct cnfnumval {
+	int nodetype;
+	long long val;
+};
+
+struct cnfstringval {
+	int nodetype;
+	es_str_t *estr;
+};
+
+/* future extensions
+struct x {
+	int nodetype;
+};
+*/
 
 void readConfFile(FILE *fp, es_str_t **str);
 struct nvlst* nvlstNew(es_str_t *name, es_str_t *value);
@@ -71,6 +95,10 @@ void cnfactlstDestruct(struct cnfactlst *actlst);
 void cnfactlstPrint(struct cnfactlst *actlst);
 struct cnfactlst* cnfactlstAddSysline(struct cnfactlst* actlst, char *line);
 struct cnfactlst* cnfactlstReverse(struct cnfactlst *actlst);
+struct cnfexpr* cnfexprNew(int nodetype, struct cnfexpr *l, struct cnfexpr *r);
+void cnfexprPrint(struct cnfexpr *expr, int indent);
+struct cnfnumval* cnfnumvalNew(long long val);
+struct cnfstringval* cnfstringvalNew(es_str_t *estr);
 
 /* debug helper */
 void cstrPrint(char *text, es_str_t *estr);

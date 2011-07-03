@@ -45,11 +45,16 @@ static int preCommentState;
  /* keywords */
 "if"				{ BEGIN EXPR; return IF; }
 <EXPR>"then"			{ BEGIN INITIAL; return THEN; }
-<EXPR>"or"			{ printf("OR\n"); }
-<EXPR>"and"			{ printf("AND\n"); }
-<EXPR>"not"			{ printf("NOT\n"); }
-<EXPR>"("			{ printf("LPAREN\n"); }
-<EXPR>")"			{ printf("RPAREN\n"); }
+<EXPR>"or"			{ return OR; }
+<EXPR>"and"			{ return AND; }
+<EXPR>"not"			{ return NOT; }
+<EXPR>"*" |
+<EXPR>"/" |
+<EXPR>"%" |
+<EXPR>"+" |
+<EXPR>"-" |
+<EXPR>"(" |
+<EXPR>")"			{ return yytext[0]; }
 <EXPR>"=="			{ printf("==\n"); }
 <EXPR>"<="			{ printf("<=\n"); }
 <EXPR>">="			{ printf(">=\n"); }
@@ -61,11 +66,12 @@ static int preCommentState;
 <EXPR>"contains_i"		{ printf("CONTAINS_I\n"); }
 <EXPR>"startswith"		{ printf("STARTSWITH\n"); }
 <EXPR>"startswith_i"		{ printf("STARTSWITH_I\n"); }
-<EXPR>-?0[0-7]+			{ printf("NUMBER (oct) %s\n", yytext); }
-<EXPR>-?0x[0-7a-f]		{ printf("NUMBER (hex) %s\n", yytext); }
-<EXPR>-?([1-9][0-9]*|0)		{ printf("NUMBER (dec) %s\n", yytext); return NUMBER; }
-<EXPR>\$[$!]{0,1}[a-z][a-z0-9\-_\.]*	{ printf("VARNAME: '%s'\n", yytext); }
-<EXPR>\'([^'\\]|\\['])*\'	 { printf("EXPR string: -%s-\n", yytext); }
+<EXPR>0[0-7]+			{ printf("NUMBER (oct) %s\n", yytext); }
+<EXPR>0x[0-7a-f]		{ printf("NUMBER (hex) %s\n", yytext); }
+<EXPR>([1-9][0-9]*|0)		{ printf("NUMBER (dec) %s\n", yytext);
+				  yylval.n = atoll(yytext); return NUMBER; }
+<EXPR>\$[$!]{0,1}[a-z][a-z0-9\-_\.]*	{ printf("VARNAME: '%s'\n", yytext); return VAR; }
+<EXPR>\'([^'\\]|\\['])*\'	 { printf("EXPR string: -%s-\n", yytext); return STRING; }
 <EXPR>[ \t\n]
 <EXPR>.				{ printf("invalid char in expr: %s\n", yytext); }
 "&"				{ return '&'; }
