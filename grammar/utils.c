@@ -233,11 +233,20 @@ struct cnfexpr*
 cnfexprNew(int nodetype, struct cnfexpr *l, struct cnfexpr *r)
 {
 	struct cnfexpr *expr;
+
+	/* optimize some constructs during parsing */
+	if(nodetype == 'M' && r->nodetype == 'N') {
+		((struct cnfnumval*)r)->val *= -1;
+		expr = r;
+		goto done;
+	}
+
 	if((expr = malloc(sizeof(struct cnfexpr))) != NULL) {
 		expr->nodetype = nodetype;
 		expr->l = l;
 		expr->r = r;
 	}
+done:
 	return expr;
 }
 
