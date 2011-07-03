@@ -105,8 +105,8 @@ static int preCommentState;
 <INOBJ>.			{ printf("INOBJ: invalid char '%s'\n", yytext); }
 
  /* CFSYSLINE is valid in all modes */
-\$[a-z]+.*$			{ yylval.s = yytext; return CFSYSLINE; }
-<INOBJ>\$[a-z]+.*$		{ yylval.s = yytext; return CFSYSLINE; }
+\$[a-z]+.*$			{ yylval.s = strdup(yytext); return CFSYSLINE; }
+<INOBJ>\$[a-z]+.*$		{ yylval.s = strdup(yytext); return CFSYSLINE; }
 
 \#.*\n	/* skip comments in input */
 [\n\t ]	/* drop whitespace */

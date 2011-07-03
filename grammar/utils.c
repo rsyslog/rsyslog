@@ -74,7 +74,6 @@ nvlstDestruct(struct nvlst *lst)
 	}
 }
 
-
 void
 nvlstPrint(struct nvlst *lst)
 {
@@ -119,14 +118,126 @@ cnfobjPrint(struct cnfobj *o)
 	nvlstPrint(o->nvlst);
 }
 
+
+struct cnfactlst*
+cnfactlstNew(enum cnfactType actType, struct nvlst *lst, char *actLine)
+{
+	struct cnfactlst *actlst;
+
+	if((actlst = malloc(sizeof(struct cnfactlst))) != NULL) {
+		actlst->next = NULL;
+		actlst->syslines = NULL;
+		actlst->actType = actType;
+		if(actType == CNFACT_V2)
+			actlst->data.lst = lst;
+		else
+			actlst->data.legActLine = actLine;
+	}
+	return actlst;
+}
+
+struct cnfactlst*
+cnfactlstAddSysline(struct cnfactlst* actlst, char *line)
+{
+	struct cnfcfsyslinelst *cflst;
+
+	if((cflst = malloc(sizeof(struct cnfcfsyslinelst))) != NULL)   {
+		cflst->next = NULL;
+		cflst->line = line;
+		if(actlst->syslines == NULL) {
+			actlst->syslines = cflst;
+		} else {
+			cflst->next = actlst->syslines;
+			actlst->syslines = cflst;
+		}
+	}
+	return actlst;
+}
+
+void
+cnfactlstDestruct(struct cnfactlst *actlst)
+{
+	struct cnfactlst *toDel;
+
+	while(actlst != NULL) {
+		toDel = actlst;
+		actlst = actlst->next;
+		if(toDel->actType == CNFACT_V2)
+			nvlstDestruct(toDel->data.lst);
+		else
+			free(toDel->data.legActLine);
+		free(toDel);
+	}
+	
+}
+
+static inline struct cnfcfsyslinelst*
+cnfcfsyslinelstReverse(struct cnfcfsyslinelst *lst)
+{
+	struct cnfcfsyslinelst *curr, *prev;
+
+	if(lst == NULL)
+		return;
+	prev = lst;
+	lst = lst->next;
+	prev->next = NULL;
+	while(lst != NULL) {
+		curr = lst;
+		lst = lst->next;
+		curr->next = prev;
+		prev = curr;
+	}
+	return prev;
+}
+
+struct cnfactlst*
+cnfactlstReverse(struct cnfactlst *actlst)
+{
+	struct cnfactlst *curr, *prev;
+
+	prev = actlst;
+	actlst = actlst->next;
+	prev->next = NULL;
+	while(actlst != NULL) {
+		curr = actlst;
+		actlst = actlst->next;
+		curr->syslines = cnfcfsyslinelstReverse(curr->syslines);
+		curr->next = prev;
+		prev = curr;
+	}
+	return prev;
+}
+
+void
+cnfactlstPrint(struct cnfactlst *actlst)
+{
+	struct cnfcfsyslinelst *cflst;
+
+	printf("---------- cnfactlst %p:\n", actlst);
+	while(actlst != NULL) {
+		if(actlst->actType == CNFACT_V2) {
+			printf("V2 action type: ");
+			nvlstPrint(actlst->data.lst);
+		} else {
+			printf("legacy action line: '%s'\n",
+				actlst->data.legActLine);
+		}
+		for(  cflst = actlst->syslines
+		    ; cflst != NULL ; cflst = cflst->next) {
+			printf("cfsysline: '%s'\n", cflst->line);
+		}
+		actlst = actlst->next;
+	}
+	printf("----------\n");
+}
+
 /* debug helper */
 void
 cstrPrint(char *text, es_str_t *estr)
 {
 	char *str;
-	printf("in cstrPrint, estr %p\n", estr);
 	str = es_str2cstr(estr, NULL);
-	printf("2: in cstrPrint, estr %p\n", estr);
 	printf("%s%s", text, str);
 	free(str);
 }
+

@@ -30,6 +30,8 @@ cnfobjType2str(enum cnfobjType ot)
 	}
 }
 
+enum cnfactType { CNFACT_V2, CNFACT_LEGACY };
+
 struct cnfobj {
 	enum cnfobjType objType;
 	struct nvlst *nvlst;
@@ -41,6 +43,21 @@ struct nvlst {
   es_str_t *value;
 };
 
+struct cnfcfsyslinelst {
+	struct cnfcfsyslinelst *next;
+	char *line;
+};
+
+struct cnfactlst {
+	struct cnfactlst *next;
+	struct cnfcfsyslinelst *syslines;
+	enum cnfactType actType;
+	union {
+		struct nvlst *lst;
+		char *legActLine;
+	} data;
+};
+
 
 void readConfFile(FILE *fp, es_str_t **str);
 struct nvlst* nvlstNew(es_str_t *name, es_str_t *value);
@@ -49,6 +66,11 @@ void nvlstPrint(struct nvlst *lst);
 struct cnfobj* cnfobjNew(enum cnfobjType objType, struct nvlst *lst);
 void cnfobjDestruct(struct cnfobj *o);
 void cnfobjPrint(struct cnfobj *o);
+struct cnfactlst* cnfactlstNew(enum cnfactType actType, struct nvlst *lst, char *actLine);
+void cnfactlstDestruct(struct cnfactlst *actlst);
+void cnfactlstPrint(struct cnfactlst *actlst);
+struct cnfactlst* cnfactlstAddSysline(struct cnfactlst* actlst, char *line);
+struct cnfactlst* cnfactlstReverse(struct cnfactlst *actlst);
 
 /* debug helper */
 void cstrPrint(char *text, es_str_t *estr);

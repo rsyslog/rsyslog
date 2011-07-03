@@ -12,6 +12,7 @@
 	enum cnfobjType objType;
 	struct cnfobj *obj;
 	struct nvlst *nvlst;
+	struct cnfactlst *actlst;
 }
 
 %token <estr> NAME
@@ -26,9 +27,20 @@
 
 %type <nvlst> nv nvlst
 %type <obj> obj
-%type <s> actlst
-%type <s> act
+%type <actlst> actlst
+%type <actlst> act
 
+
+%expect 2
+/* two shift/reduce conflicts are created by the CFSYSLINE construct, which we
+ * unfortunately can not avoid. The problem is that CFSYSLINE can occur both in
+ * global context as well as within an action. It's not permitted somewhere else,
+ * but this is suficient for conflicts. The "dangling else" built-in resolution
+ * works well to solve this issue, so we accept it (it's a wonder that our
+ * old style grammar doesn't work at all, so we better do not complain...).
+ * Use "bison -v rscript.y" if more conflicts arise and check rscript.out for
+ * were exactly these conflicts exits.
+ */
 %%
 conf:	/* empty (to end recursion) */
 	| obj conf
@@ -50,15 +62,20 @@ nvlst:					{ $$ = NULL; }
 	| nvlst nv 			{ $2->next = $1; $$ = $2; }
 nv: NAME '=' VALUE 			{ $$ = nvlstNew($1, $3); }
 
-rule:	  PRIFILT actlst		{ printf("PRIFILT: %s\n", $1); free($1); }
+rule:	  PRIFILT actlst		{ printf("PRIFILT: %s\n", $1); free($1);
+					  $2 = cnfactlstReverse($2);
+					  cnfactlstPrint($2); }
 	| PROPFILT actlst
 
-actlst:	  act 				{ printf("action (end actlst) %s\n", $1);$$=$1; }
-	| actlst '&' act		{ printf("in actionlist %s\n", $3); }
-act:	  BEGIN_ACTION nvlst ENDOBJ	{ $$ = "obj"; }
+actlst:	  act 				{ printf("action (end actlst)\n");$$=$1; }
+	| actlst '&' act		{ printf("in actionlist \n");
+					  $3->next = $1; $$ = $3; }
+	| actlst CFSYSLINE		{ printf("in actionlist/CFSYSLINE: %s\n", $2);
+					  $$ = cnfactlstAddSysline($1, $2); }
+					  
+act:	  BEGIN_ACTION nvlst ENDOBJ	{ $$ = cnfactlstNew(CNFACT_V2, $2, NULL); }
 	| LEGACY_ACTION			{ printf("legacy action: '%s'\n", $1);
-					  /*free($1);*/
-					  $$ = $1;}
+					  $$ = cnfactlstNew(CNFACT_LEGACY, NULL, $1); }
 
 %%
 int yyerror(char *s)
