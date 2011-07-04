@@ -60,6 +60,12 @@ struct cnfactlst {
 
 /* the following structures support expressions, and may (very much later
  * be the sole foundation for the AST.
+ *
+ * nodetypes (list not yet complete)
+ * S - string
+ * N - number
+ * V - var
+ * R - rule
  */
 enum cnfFiltType { CNFFILT_NONE, CNFFILT_PRI, CNFFILT_PROP, CNFFILT_SCRIPT };
 static inline char*
@@ -105,6 +111,11 @@ struct cnfstringval {
 	es_str_t *estr;
 };
 
+struct cnfvar {
+	unsigned nodetype;
+	char *name;
+};
+
 /* future extensions
 struct x {
 	int nodetype;
@@ -140,6 +151,7 @@ struct cnfnumval* cnfnumvalNew(long long val);
 struct cnfstringval* cnfstringvalNew(es_str_t *estr);
 struct cnfrule * cnfruleNew(enum cnfFiltType filttype, struct cnfactlst *actlst);
 void cnfrulePrint(struct cnfrule *rule);
+struct cnfvar* cnfvarNew(char *name);
 
 /* debug helper */
 void cstrPrint(char *text, es_str_t *estr);

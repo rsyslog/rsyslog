@@ -35,7 +35,7 @@ extern int yylineno;
 %token OR
 %token AND
 %token NOT
-%token VAR
+%token <s> VAR
 %token <estr> STRING
 %token <n> NUMBER
 %token CMP_EQ
@@ -148,19 +148,10 @@ expr:	  expr AND expr			{ $$ = cnfexprNew(AND, $1, $3); }
 	| '-' expr %prec UMINUS		{ $$ = cnfexprNew('M', NULL, $2); }
 	| NUMBER			{ $$ = (struct cnfexpr*) cnfnumvalNew($1); }
 	| STRING			{ $$ = (struct cnfexpr*) cnfstringvalNew($1); }
-	| VAR				{ printf("variables not yet implemented!\n"); }
+	| VAR				{ $$ = (struct cnfexpr*) cnfvarNew($1); }
 
 %%
 int yyerror(char *s)
 {
-	printf("yyerror called: %s\n", s);
+	printf("parse failure on or before line %d: %s\n", yylineno, s);
 }
-
-/*
-int main()
-{
-	yydebug = 0;
-	return yyparse();
-}
-
-*/

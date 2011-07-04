@@ -82,8 +82,11 @@ char *currfn;			/* name of currently processed file */
 <EXPR>0[0-7]+ |			/* octal number */
 <EXPR>0x[0-7a-f] |		/* hex number, following rule is dec; strtoll handles all! */
 <EXPR>([1-9][0-9]*|0)		{ yylval.n = strtoll(yytext, NULL, 0); return NUMBER; }
-<EXPR>\$[$!]{0,1}[a-z][a-z0-9\-_\.]*	{ printf("VARNAME: '%s'\n", yytext); return VAR; }
-<EXPR>\'([^'\\]|\\['])*\'	 { printf("EXPR string: -%s-\n", yytext); return STRING; }
+<EXPR>\$[$!]{0,1}[a-z][a-z0-9\-_\.]*	{ yylval.s = strdup(yytext); return VAR; }
+<EXPR>\'([^'\\]|\\['])*\'	 { yylval.estr = es_newStrFromBuf(yytext+1, yyleng-2);
+				   return STRING; }
+<EXPR>\"([^"\\]|\\["])*\"	 { yylval.estr = es_newStrFromBuf(yytext+1, yyleng-2);
+				   return STRING; }
 <EXPR>[ \t\n]
 <EXPR>.				{ printf("invalid char in expr: %s\n", yytext); }
 "&"				{ return '&'; }

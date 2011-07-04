@@ -481,6 +481,15 @@ cnfexprPrint(struct cnfexpr *expr, int indent)
 		doIndent(indent);
 		printf("%lld\n", ((struct cnfnumval*)expr)->val);
 		break;
+	case 'V':
+		doIndent(indent);
+		printf("var '%s'\n", ((struct cnfvar*)expr)->name);
+		break;
+	case 'S':
+		doIndent(indent);
+		cstrPrint("string '", ((struct cnfstringval*)expr)->estr);
+		printf("'\n");
+		break;
 	case '+':
 	case '-':
 	case '*':
@@ -520,6 +529,17 @@ cnfstringvalNew(es_str_t *estr)
 		strval->estr = estr;
 	}
 	return strval;
+}
+
+struct cnfvar*
+cnfvarNew(char *name)
+{
+	struct cnfvar *var;
+	if((var = malloc(sizeof(struct cnfvar))) != NULL) {
+		var->nodetype = 'V';
+		var->name = name;
+	}
+	return var;
 }
 
 struct cnfrule *

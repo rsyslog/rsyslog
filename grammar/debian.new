@@ -47,7 +47,7 @@ $Umask 0022
 #
 # Include all config files in /etc/rsyslog.d/
 #
-$IncludeConfig /etc/rsyslog.d/*.conf
+#$IncludeConfig /etc/rsyslog.d/*.conf
 
 
 ###############
@@ -102,7 +102,7 @@ daemon.*;mail.*;\
 global (dnscache="yes" arg1="1 2" arg2 = "1 2" arg3 ="1=2\"3")
 # samples added to get full "flavor" of what we need to support...
 :msg, contains, "error" /var/log/somelog
-action(type=omfile target=/var/log/mail/log)
+action(type="omfile" target="/var/log/mail/log")
 *.* /* comment */ *  # test
 *.info :ommysql:, tra, la , la # comment (comment to be part of old style line!)
 
@@ -134,7 +134,7 @@ then	/dev/tty10
 &	|/dev/xconsole
 
 *.* rger # write to user (ugly...)
-ruleset name
+#ruleset name
 
 # FEDORA, a bit more complex config
 # ### begin forwarding rule ###
