@@ -11,13 +11,23 @@ void
 readConfFile(FILE *fp, es_str_t **str)
 {
 	char ln[10240];
+	char buf[512];
+	int lenBuf;
+	int bWriteLineno = 0;
 	int len, i;
 	int start;	/* start index of to be submitted text */
 	int bContLine = 0;
+	int lineno = 0;
 
 	*str = es_newStr(4096);
 
 	while(fgets(ln, sizeof(ln), fp) != NULL) {
+		++lineno;
+		if(bWriteLineno) {
+			bWriteLineno = 0;
+			lenBuf = sprintf(buf, "PreprocFileLineNumber(%d)\n", lineno);
+			es_addBuf(str, buf, lenBuf);
+		}
 		len = strlen(ln);
 		/* if we are continuation line, we need to drop leading WS */
 		if(bContLine) {
@@ -33,13 +43,15 @@ readConfFile(FILE *fp, es_str_t **str)
 				--i;
 				bContLine = 1;
 			} else {
+				if(bContLine) /* write line number if we had cont line */
+					bWriteLineno = 1;
 				bContLine = 0;
 			}
 			/* add relevant data to buffer */
 			es_addBuf(str, ln+start, i+1 - start);
-			if(!bContLine)
-				es_addChar(str, '\n');
 		}
+		if(!bContLine)
+			es_addChar(str, '\n');
 	}
 	/* indicate end of buffer to flex */
 	es_addChar(str, '\0');

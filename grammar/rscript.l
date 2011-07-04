@@ -13,13 +13,17 @@
   * Released under the GNU GPL v3. For details see LICENSE file.
   */
 
-%option noyywrap nodefault case-insensitive
+%option noyywrap nodefault case-insensitive yylineno
  /*%option noyywrap nodefault case-insensitive */
 
 %x INOBJ
 	/* INOBJ is selected if we are inside an object (name/value pairs!) */
 %x COMMENT
 	/* COMMENT is "the usual trick" to handle C-style comments */
+%x INCL
+	/* INCL is in $IncludeConfig processing (skip to include file) */
+%x LINENO
+	/* LINENO: support for setting the linenumber */
 %x EXPR
 	/* EXPR is a bit ugly, but we need it to support pre v6-syntax. The problem
 	 * is that cfsysline statement start with $..., the same like variables in
@@ -37,7 +41,16 @@
 #include <libestr.h>
 #include "utils.h"
 #include "rscript.tab.h"
-static int preCommentState;
+static int preCommentState;	/* save for lex state before a comment */
+
+struct bufstack {
+	struct bufstack *prev;
+	YY_BUFFER_STATE bs;
+	int lineno;
+	char *fn;
+} *currbs = NULL;
+
+char *currfn;			/* name of currently processed file */
 %}
 
 %%
@@ -77,6 +90,23 @@ static int preCommentState;
 "{"				{ return '{'; }
 "}"				{ return '}'; }
 "ruleset"			{ printf("RULESET\n"); }
+ /* line number support because the "preprocessor" combines lines and so needs
+  * to tell us the real source line.
+  */
+"preprocfilelinenumber("	{ BEGIN LINENO; }
+<LINENO>[0-9]+			{ printf("linno was %d, set to %d\n", yylineno, atoi(yytext) -1);
+				  yylineno = atoi(yytext) - 1; }
+<LINENO>")"			{ BEGIN INITIAL; }
+<LINENO>.|\n
+ /* $IncludeConfig must be detected as part of CFSYSLINE, because this is
+  * always the longest match :-(
+  */
+<INCL>.|\n
+<INCL>[^ \t\n]+			{ if(cnfSetLexFile(yytext) != 0)
+					yyterminate();
+				  BEGIN INITIAL;
+				}
+				
 
 "global"[ \n\t]*"("		{ yylval.objType = CNFOBJ_GLOBAL;
 				  BEGIN INOBJ; return BEGINOBJ; }
@@ -107,28 +137,36 @@ static int preCommentState;
 <COMMENT>"*/"			{ BEGIN preCommentState; }
 <COMMENT>([^*]|\n)+|.
 
-<INOBJ>#.*\n	/* skip comments in input */
+<INOBJ>#.*$	/* skip comments in input */
 <INOBJ>[ \n\t]
 <INOBJ>.			{ printf("INOBJ: invalid char '%s'\n", yytext); }
 
  /* CFSYSLINE is valid in all modes */
-\$[a-z]+.*$			{ yylval.s = strdup(yytext); return CFSYSLINE; }
+\$[a-z]+.*$			{ /* see common on $IncludeConfig above */
+				  if(!strncasecmp(yytext, "$includeconfig ", 14)) {
+					yyless(14);
+				  	BEGIN INCL;
+				  } else {
+					  yylval.s = strdup(yytext);
+					  return CFSYSLINE;
+				  }
+				}
 
 \#.*\n	/* skip comments in input */
 [\n\t ]	/* drop whitespace */
 .				{ printf("invalid char: %s\n", yytext);
 				}
 
- /*<<EOF>>			{ printf("EOF reached\n"); }*/
+<<EOF>>				{ if(popfile() != 0) yyterminate(); }
 
 %%
 /* set a new buffers. Returns 0 on success, something else otherwise. */
 int cnfSetLexFile(char *fname)
 {
-	es_str_t *str;
-	YY_BUFFER_STATE bp;
+	es_str_t *str = NULL;
 	FILE *fp;
 	int r = 0;
+	struct bufstack *bs;
 
 	if(fname == NULL) {
 		fp = stdin;
@@ -141,9 +179,53 @@ int cnfSetLexFile(char *fname)
 	readConfFile(fp, &str);
 	if(fp != stdin)
 		fclose(fp);
-	bp = yy_scan_buffer(es_getBufAddr(str), es_strlen(str));
+	
+	/* maintain stack */
+	if((bs = malloc(sizeof(struct bufstack))) == NULL) {
+		r = 1;
+		goto done;
+	}
+
+	if(currbs != NULL)
+		currbs->lineno = yylineno;
+	bs->prev = currbs;
+	bs->fn = strdup(fname);
+	bs->bs = yy_scan_buffer(es_getBufAddr(str), es_strlen(str));
+	currbs = bs;
+	currfn = bs->fn;
 	yylineno = 1;
 
 done:
+	if(r != 0) {
+		if(str != NULL)
+			es_deleteStr(str);
+	}
 	return r;
+}
+
+
+/* returns 0 on success, something else otherwise */
+int
+popfile(void)
+{
+	struct bufstack *bs = currbs;
+
+	if(bs == NULL)
+		return 1;
+	
+	/* delte current entry */
+	yy_delete_buffer(bs->bs);
+	free(bs->fn);
+
+	/* switch back to previous */
+	currbs = bs->prev;
+	free(bs);
+
+	if(currbs == NULL)
+		return 1; /* all processed */
+	
+	yy_switch_to_buffer(currbs->bs);
+	yylineno = currbs->lineno;
+	currfn = currbs->fn;
+	return 0;
 }

@@ -4,6 +4,7 @@
 #include <libestr.h>
 #include "utils.h"
 #define YYDEBUG 1
+extern int yylineno;
 %}
 
 %union {
