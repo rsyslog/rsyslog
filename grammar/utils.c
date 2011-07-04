@@ -187,7 +187,6 @@ static inline struct cnfcfsyslinelst*
 cnfcfsyslinelstReverse(struct cnfcfsyslinelst *lst)
 {
 	struct cnfcfsyslinelst *curr, *prev;
-printf("syslinerevers on %p\n", lst);
 	if(lst == NULL)
 		return NULL;
 	prev = NULL;
@@ -207,6 +206,7 @@ cnfactlstReverse(struct cnfactlst *actlst)
 
 	prev = NULL;
 	while(actlst != NULL) {
+		//printf("reversing: %s\n", actlst->data.legActLine);
 		curr = actlst;
 		actlst = actlst->next;
 		curr->syslines = cnfcfsyslinelstReverse(curr->syslines);
@@ -221,8 +221,8 @@ cnfactlstPrint(struct cnfactlst *actlst)
 {
 	struct cnfcfsyslinelst *cflst;
 
-	printf("---------- cnfactlst %p:\n", actlst);
 	while(actlst != NULL) {
+		printf("aclst %p: ", actlst);
 		if(actlst->actType == CNFACT_V2) {
 			printf("V2 action type: ");
 			nvlstPrint(actlst->data.lst);
@@ -232,11 +232,10 @@ cnfactlstPrint(struct cnfactlst *actlst)
 		}
 		for(  cflst = actlst->syslines
 		    ; cflst != NULL ; cflst = cflst->next) {
-			printf("cfsysline: '%s'\n", cflst->line);
+			printf("action:cfsysline: '%s'\n", cflst->line);
 		}
 		actlst = actlst->next;
 	}
-	printf("----------\n");
 }
 
 struct cnfexpr*
@@ -305,7 +304,7 @@ cnfexprEval(struct cnfexpr *expr, struct exprret *ret)
 {
 	struct exprret r, l; /* memory for subexpression results */
 
-	printf("eval expr %p, type '%c'(%u)\n", expr, expr->nodetype, expr->nodetype);
+	//printf("eval expr %p, type '%c'(%u)\n", expr, expr->nodetype, expr->nodetype);
 	switch(expr->nodetype) {
 	case CMP_EQ:
 		COMP_NUM_BINOP(==);
@@ -521,6 +520,39 @@ cnfstringvalNew(es_str_t *estr)
 		strval->estr = estr;
 	}
 	return strval;
+}
+
+struct cnfrule *
+cnfruleNew(enum cnfFiltType filttype, struct cnfactlst *actlst)
+{
+	struct cnfrule* cnfrule;
+	if((cnfrule = malloc(sizeof(struct cnfrule))) != NULL) {
+		cnfrule->nodetype = 'R';
+		cnfrule->filttype = filttype;
+		cnfrule->actlst = cnfactlstReverse(actlst);
+	}
+	return cnfrule;
+}
+
+void
+cnfrulePrint(struct cnfrule *rule)
+{
+	printf("------ start rule %p:\n", rule);
+	printf("%s: ", cnfFiltType2str(rule->filttype));
+	switch(rule->filttype) {
+	case CNFFILT_NONE:
+		break;
+	case CNFFILT_PRI:
+	case CNFFILT_PROP:
+		printf("%s\n", rule->filt.s);
+		break;
+	case CNFFILT_SCRIPT:
+		printf("\n");
+		cnfexprPrint(rule->filt.expr, 0);
+		break;
+	}
+	cnfactlstPrint(rule->actlst);
+	printf("------ end rule %p\n", rule);
 }
 
 /* debug helper */

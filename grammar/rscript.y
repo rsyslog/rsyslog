@@ -16,6 +16,7 @@ extern int yylineno;
 	struct nvlst *nvlst;
 	struct cnfactlst *actlst;
 	struct cnfexpr *expr;
+	struct cnfrule *rule;
 }
 
 %token <estr> NAME
@@ -55,6 +56,8 @@ extern int yylineno;
 %type <s> cfsysline
 %type <actlst> block
 %type <expr> expr
+%type <rule> rule
+%type <rule> scriptfilt
 
 %left AND OR
 %left CMP_EQ CMP_NE CMP_LE CMP_GE CMP_LT CMP_GT CMP_CONTAINS CMP_CONTAINSI CMP_STARTSWITH CMP_STARTSWITHI
@@ -73,60 +76,54 @@ extern int yylineno;
  * were exactly these conflicts exits.
  */
 %%
+/* note: we use left recursion below, because that saves stack space AND
+ * offers the right sequence so that we can submit the top-layer objects
+ * one by one.
+ */
 conf:	/* empty (to end recursion) */
-	| obj conf
-	| rule conf			{ printf("RULE processed, back in main\n"); }
-	| cfsysline conf		{ printf("cfsysline: %s\n", $1); }
-	| BSD_TAG_SELECTOR conf		{ printf("BSD tag '%s'\n", $1); }
-	| BSD_HOST_SELECTOR conf	{ printf("BSD host '%s'\n", $1); }
+	| conf obj			{ printf("global:config: ");
+					  cnfobjPrint($2); cnfobjDestruct($2); }
+	| conf rule			{ printf("global:rule processed\n");
+					  cnfrulePrint($2); }
+	| conf cfsysline		{ printf("global:cfsysline: %s\n", $2); }
+	| conf BSD_TAG_SELECTOR		{ printf("global:BSD tag '%s'\n", $2); }
+	| conf BSD_HOST_SELECTOR	{ printf("global:BSD host '%s'\n", $2); }
 
-obj:	  BEGINOBJ nvlst ENDOBJ 	{ $$ = cnfobjNew($1, $2);
-					  cnfobjPrint($$);
-					  cnfobjDestruct($$);
-					}
-	| BEGIN_ACTION nvlst ENDOBJ 	{ struct cnfobj *t = cnfobjNew(CNFOBJ_ACTION, $2);
-					  cnfobjPrint(t);
-					  cnfobjDestruct(t);
-					  printf("XXXX: this is an new-style action!\n");
-					}
-cfsysline: CFSYSLINE	 		{ printf("XXXX: processing CFSYSLINE: %s\n", $1);$$ = $1 }
+obj:	  BEGINOBJ nvlst ENDOBJ 	{ $$ = cnfobjNew($1, $2); }
+	| BEGIN_ACTION nvlst ENDOBJ 	{ $$ = cnfobjNew(CNFOBJ_ACTION, $2); }
+cfsysline: CFSYSLINE	 		{ $$ = $1 }
 
 nvlst:					{ $$ = NULL; }
 	| nvlst nv 			{ $2->next = $1; $$ = $2; }
 nv: NAME '=' VALUE 			{ $$ = nvlstNew($1, $3); }
 
-rule:	  PRIFILT actlst		{ printf("PRIFILT: %s\n", $1); free($1);
-					  $2 = cnfactlstReverse($2);
-					  cnfactlstPrint($2); }
-	| PROPFILT actlst		{ printf("PROPFILT: %s\n", $1); free($1);
-					  $2 = cnfactlstReverse($2);
-					  cnfactlstPrint($2); }
-	| scriptfilt
+rule:	  PRIFILT actlst		{ $$ = cnfruleNew(CNFFILT_PRI, $2); $$->filt.s = $1; }
+	| PROPFILT actlst		{ $$ = cnfruleNew(CNFFILT_PROP, $2); $$->filt.s = $1; }
+	| scriptfilt			{ $$ = $1; }
 
-scriptfilt: IF expr THEN actlst	{ printf("if filter detected, expr:\n"); cnfexprPrint($2,0);
-					  struct exprret r;
-					  cnfexprEval($2, &r);
-					  printf("eval result: %lld\n", r.d.n);
+scriptfilt: IF expr THEN actlst		{ $$ = cnfruleNew(CNFFILT_SCRIPT, $4);
+					  $$->filt.expr = $2;
+					  //struct exprret r;
+					  //cnfexprEval($2, &r);
+					 // printf("eval result: %lld\n", r.d.n);
 					}
 
 /* note: we can do some limited block-structuring with the v6 engine. In that case,
  * we must not support additonal filters inside the blocks, so they must consist of
  * "act", only. We can implement that via the "&" actlist logic.
  */
-block:	  actlst
-	| block actlst
+block:	  actlst			{ $$ = $1; }
+	| block actlst			{ $2->next = $1; $$ = $2; }
 	/* v7: | actlst
 	   v7: | block rule */
 
-actlst:	  act 	 			{ printf("action (end actlst)\n");$$=$1; }
-	| actlst '&' act 		{ printf("in actionlist \n");
-					  $3->next = $1; $$ = $3; }
-	| actlst cfsysline		{ printf("in actionlist/CFSYSLINE: %s\n", $2);
-					  $$ = cnfactlstAddSysline($1, $2); }
+actlst:	  act 	 			{ $$=$1; }
+	| actlst '&' act 		{ $3->next = $1; $$ = $3; }
+	| actlst cfsysline		{ $$ = cnfactlstAddSysline($1, $2); }
 	| '{' block '}'			{ $$ = $2; }
 					  
 act:	  BEGIN_ACTION nvlst ENDOBJ	{ $$ = cnfactlstNew(CNFACT_V2, $2, NULL); }
-	| LEGACY_ACTION			{ printf("legacy action: '%s'\n", $1);
+	| LEGACY_ACTION			{ //printf("legacy action: '%s'\n", $1);
 					  $$ = cnfactlstNew(CNFACT_LEGACY, NULL, $1); }
 
 expr:	  expr AND expr			{ $$ = cnfexprNew(AND, $1, $3); }
@@ -147,8 +144,8 @@ expr:	  expr AND expr			{ $$ = cnfexprNew(AND, $1, $3); }
 	| expr '*' expr			{ $$ = cnfexprNew('*', $1, $3); }
 	| expr '/' expr			{ $$ = cnfexprNew('/', $1, $3); }
 	| expr '%' expr			{ $$ = cnfexprNew('%', $1, $3); }
-	| '(' expr ')'			{ $$ = $2; printf("( expr)\n"); }
-	| '-' expr %prec UMINUS		{ printf("uminus\n"); $$ = cnfexprNew('M', NULL, $2); }
+	| '(' expr ')'			{ $$ = $2; }
+	| '-' expr %prec UMINUS		{ $$ = cnfexprNew('M', NULL, $2); }
 	| NUMBER			{ $$ = (struct cnfexpr*) cnfnumvalNew($1); }
 	| STRING			{ $$ = (struct cnfexpr*) cnfstringvalNew($1); }
 	| VAR				{ printf("variables not yet implemented!\n"); }

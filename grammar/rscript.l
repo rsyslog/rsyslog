@@ -94,8 +94,7 @@ char *currfn;			/* name of currently processed file */
   * to tell us the real source line.
   */
 "preprocfilelinenumber("	{ BEGIN LINENO; }
-<LINENO>[0-9]+			{ printf("linno was %d, set to %d\n", yylineno, atoi(yytext) -1);
-				  yylineno = atoi(yytext) - 1; }
+<LINENO>[0-9]+			{ yylineno = atoi(yytext) - 1; }
 <LINENO>")"			{ BEGIN INITIAL; }
 <LINENO>.|\n
  /* $IncludeConfig must be detected as part of CFSYSLINE, because this is
@@ -116,18 +115,18 @@ char *currfn;			/* name of currently processed file */
 				  BEGIN INOBJ; return BEGINOBJ; }
 "action"[ \n\t]*"("		{ BEGIN INOBJ; return BEGIN_ACTION; }
 ^[ \t]*:\$?[a-z]+[ ]*,[ ]*!?[a-z]+[ ]*,[ ]*\".*\"	{
-				  printf("PROP-FILT: '%s'\n", yytext);
-				  return PROPFILT;
-				}
+				  yylval.s = strdup(yytext); return PROPFILT; }
 
-^[ \t]*[,\*a-z]+\.[,!=;\.\*a-z]+ { printf("token prifilt '%s'\n", yytext); yylval.s = strdup(yytext); return PRIFILT; }
+^[ \t]*[,\*a-z]+\.[,!=;\.\*a-z]+ { yylval.s = strdup(yytext); return PRIFILT; }
 
 "*" |
 \-\/[^*][^\n]* |
 \/[^*][^\n]* |
 :[a-z0-9]+:[^\n]* |
 [\|\.\-\@~][^\n]+ |
-[a-z0-9_][a-z0-9_\-\+]*		{ yylval.s = strdup(yytext); printf("LEGA ACT: '%s'\n", yytext);return LEGACY_ACTION; }
+[a-z0-9_][a-z0-9_\-\+]*		{ yylval.s = strdup(yytext);
+				 // printf("lex: LEGA ACT: '%s'\n", yytext);
+				  return LEGACY_ACTION; }
 <INOBJ>")"			{ BEGIN INITIAL; return ENDOBJ; }
 <INOBJ>[a-z][a-z0-9_\.]*	{ yylval.estr = es_newStrFromCStr(yytext, yyleng);
 				  return NAME; }

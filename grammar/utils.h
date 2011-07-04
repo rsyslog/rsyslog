@@ -61,6 +61,34 @@ struct cnfactlst {
 /* the following structures support expressions, and may (very much later
  * be the sole foundation for the AST.
  */
+enum cnfFiltType { CNFFILT_NONE, CNFFILT_PRI, CNFFILT_PROP, CNFFILT_SCRIPT };
+static inline char*
+cnfFiltType2str(enum cnfFiltType filttype)
+{
+	switch(filttype) {
+	case CNFFILT_NONE:
+		return("filter:none");
+	case CNFFILT_PRI:
+		return("filter:pri");
+	case CNFFILT_PROP:
+		return("filter:prop");
+	case CNFFILT_SCRIPT:
+		return("filter:script");
+	}
+	return("error:invalid_filter_type");	/* should never be reached */
+}
+
+
+struct cnfrule {
+	unsigned nodetype;
+	enum cnfFiltType filttype;
+	union {
+		char *s;
+		struct cnfexpr *expr;
+	} filt;
+	struct cnfactlst *actlst;
+};
+
 struct cnfexpr {
 	unsigned nodetype;
 	struct cnfexpr *l;
@@ -110,6 +138,8 @@ void cnfexprPrint(struct cnfexpr *expr, int indent);
 void cnfexprEval(struct cnfexpr *expr, struct exprret *ret);
 struct cnfnumval* cnfnumvalNew(long long val);
 struct cnfstringval* cnfstringvalNew(es_str_t *estr);
+struct cnfrule * cnfruleNew(enum cnfFiltType filttype, struct cnfactlst *actlst);
+void cnfrulePrint(struct cnfrule *rule);
 
 /* debug helper */
 void cstrPrint(char *text, es_str_t *estr);
