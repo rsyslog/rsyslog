@@ -122,9 +122,10 @@ char *currfn;			/* name of currently processed file */
 ^[ \t]*[,\*a-z]+\.[,!=;\.\*a-z]+ { printf("token prifilt '%s'\n", yytext); yylval.s = strdup(yytext); return PRIFILT; }
 
 "*" |
+\-\/[^*][^\n]* |
 \/[^*][^\n]* |
 [\|\.\-\@:~][^\n]+ |
-[a-z0-9_\-\+]+			{ yylval.s = strdup(yytext); return LEGACY_ACTION; }
+[a-z0-9_][a-z0-9_\-\+]*		{ yylval.s = strdup(yytext); printf("LEGACY_ACT: '%s'\n", yytext);return LEGACY_ACTION; }
 <INOBJ>")"			{ BEGIN INITIAL; return ENDOBJ; }
 <INOBJ>[a-z][a-z0-9_\.]*	{ yylval.estr = es_newStrFromCStr(yytext, yyleng);
 				  return NAME; }
@@ -141,7 +142,6 @@ char *currfn;			/* name of currently processed file */
 <INOBJ>[ \n\t]
 <INOBJ>.			{ printf("INOBJ: invalid char '%s'\n", yytext); }
 
- /* CFSYSLINE is valid in all modes */
 \$[a-z]+.*$			{ /* see common on $IncludeConfig above */
 				  if(!strncasecmp(yytext, "$includeconfig ", 14)) {
 					yyless(14);
@@ -151,6 +151,10 @@ char *currfn;			/* name of currently processed file */
 					  return CFSYSLINE;
 				  }
 				}
+![^ \t\n]+[ \t]*$			{ printf("BSD TAG '%s'\n", yytext); yylval.s = strdup(yytext); return BSD_TAG_SELECTOR; }
+[+-]\*[ \t\n]*#.*$		{ printf("BSD HOST '%s'\n", yytext); yylval.s = strdup(yytext); return BSD_HOST_SELECTOR; }
+[+-]\*[ \t\n]*$			{ printf("BSD HOST '%s'\n", yytext); yylval.s = strdup(yytext); return BSD_HOST_SELECTOR; }
+^[ \t]*[+-][a-z0-9.:-]+[ \t]*$		{ printf("BSD HOST '%s'\n", yytext); yylval.s = strdup(yytext); return BSD_HOST_SELECTOR; }
 
 \#.*\n	/* skip comments in input */
 [\n\t ]	/* drop whitespace */

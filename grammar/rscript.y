@@ -27,6 +27,8 @@ extern int yylineno;
 %token <s> LEGACY_ACTION
 %token <s> PRIFILT
 %token <s> PROPFILT
+%token <s> BSD_TAG_SELECTOR
+%token <s> BSD_HOST_SELECTOR
 %token IF
 %token THEN
 %token OR
@@ -73,8 +75,10 @@ extern int yylineno;
 %%
 conf:	/* empty (to end recursion) */
 	| obj conf
-	| cfsysline conf
 	| rule conf
+	| cfsysline conf
+	| BSD_TAG_SELECTOR conf
+	| BSD_HOST_SELECTOR conf
 
 obj:	  BEGINOBJ nvlst ENDOBJ 	{ $$ = cnfobjNew($1, $2);
 					  cnfobjPrint($$);
