@@ -62,18 +62,18 @@ struct cnfactlst {
  * be the sole foundation for the AST.
  */
 struct cnfexpr {
-	int nodetype;
+	unsigned nodetype;
 	struct cnfexpr *l;
 	struct cnfexpr *r;
 };
 
 struct cnfnumval {
-	int nodetype;
+	unsigned nodetype;
 	long long val;
 };
 
 struct cnfstringval {
-	int nodetype;
+	unsigned nodetype;
 	es_str_t *estr;
 };
 
@@ -82,6 +82,16 @@ struct x {
 	int nodetype;
 };
 */
+
+/* the return value of an expresion evaluation */
+struct exprret {
+	union {
+		es_str_t *estr;
+		long long n;
+	} d;
+	char datatype; /* 'N' - number, 'S' - string */
+};
+
 
 void readConfFile(FILE *fp, es_str_t **str);
 struct nvlst* nvlstNew(es_str_t *name, es_str_t *value);
@@ -95,8 +105,9 @@ void cnfactlstDestruct(struct cnfactlst *actlst);
 void cnfactlstPrint(struct cnfactlst *actlst);
 struct cnfactlst* cnfactlstAddSysline(struct cnfactlst* actlst, char *line);
 struct cnfactlst* cnfactlstReverse(struct cnfactlst *actlst);
-struct cnfexpr* cnfexprNew(int nodetype, struct cnfexpr *l, struct cnfexpr *r);
+struct cnfexpr* cnfexprNew(unsigned nodetype, struct cnfexpr *l, struct cnfexpr *r);
 void cnfexprPrint(struct cnfexpr *expr, int indent);
+void cnfexprEval(struct cnfexpr *expr, struct exprret *ret);
 struct cnfnumval* cnfnumvalNew(long long val);
 struct cnfstringval* cnfstringvalNew(es_str_t *estr);
 

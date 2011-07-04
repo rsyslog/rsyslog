@@ -34,6 +34,12 @@
 %token VAR
 %token <estr> STRING
 %token <n> NUMBER
+%token CMP_EQ
+%token CMP_NE
+%token CMP_LE
+%token CMP_GE
+%token CMP_LT
+%token CMP_GT
 
 %type <nvlst> nv nvlst
 %type <obj> obj
@@ -44,12 +50,13 @@
 %type <expr> expr
 
 %left AND OR
+%left CMP_EQ CMP_NE CMP_LE CMP_GE CMP_LT CMP_GT
 %left '+' '-'
 %left '*' '/' '%'
 %nonassoc UMINUS NOT
 
 %expect 3
-/* two shift/reduce conflicts are created by the CFSYSLINE construct, which we
+/* these shift/reduce conflicts are created by the CFSYSLINE construct, which we
  * unfortunately can not avoid. The problem is that CFSYSLINE can occur both in
  * global context as well as within an action. It's not permitted somewhere else,
  * but this is suficient for conflicts. The "dangling else" built-in resolution
@@ -85,7 +92,11 @@ rule:	  PRIFILT actlst		{ printf("PRIFILT: %s\n", $1); free($1);
 	| PROPFILT actlst
 	| scriptfilt
 
-scriptfilt: IF expr THEN actlst	{ printf("if filter detected, expr:\n"); cnfexprPrint($2,0); }
+scriptfilt: IF expr THEN actlst	{ printf("if filter detected, expr:\n"); cnfexprPrint($2,0);
+					  struct exprret r;
+					  cnfexprEval($2, &r);
+					  printf("eval result: %lld\n", r.d.n);
+					}
 
 /* note: we can do some limited block-structuring with the v6 engine. In that case,
  * we must not support additonal filters inside the blocks, so they must consist of
@@ -107,7 +118,16 @@ act:	  BEGIN_ACTION nvlst ENDOBJ	{ $$ = cnfactlstNew(CNFACT_V2, $2, NULL); }
 	| LEGACY_ACTION			{ printf("legacy action: '%s'\n", $1);
 					  $$ = cnfactlstNew(CNFACT_LEGACY, NULL, $1); }
 
-expr:	  expr '+' expr			{ $$ = cnfexprNew('+', $1, $3); }
+expr:	  expr AND expr			{ $$ = cnfexprNew(AND, $1, $3); }
+	| expr OR expr			{ $$ = cnfexprNew(OR, $1, $3); }
+	| NOT expr			{ $$ = cnfexprNew(NOT, NULL, $2); }
+	| expr CMP_EQ expr		{ $$ = cnfexprNew(CMP_EQ, $1, $3); }
+	| expr CMP_NE expr		{ $$ = cnfexprNew(CMP_NE, $1, $3); }
+	| expr CMP_LE expr		{ $$ = cnfexprNew(CMP_LE, $1, $3); }
+	| expr CMP_GE expr		{ $$ = cnfexprNew(CMP_GE, $1, $3); }
+	| expr CMP_LT expr		{ $$ = cnfexprNew(CMP_LT, $1, $3); }
+	| expr CMP_GT expr		{ $$ = cnfexprNew(CMP_GT, $1, $3); }
+	| expr '+' expr			{ $$ = cnfexprNew('+', $1, $3); }
 	| expr '-' expr			{ $$ = cnfexprNew('-', $1, $3); }
 	| expr '*' expr			{ $$ = cnfexprNew('*', $1, $3); }
 	| expr '/' expr			{ $$ = cnfexprNew('/', $1, $3); }

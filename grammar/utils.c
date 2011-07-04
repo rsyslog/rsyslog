@@ -4,6 +4,7 @@
 #include <ctype.h>
 #include <libestr.h>
 #include "utils.h"
+#include "rscript.tab.h"
 
 void
 readConfFile(FILE *fp, es_str_t **str)
@@ -230,7 +231,7 @@ cnfactlstPrint(struct cnfactlst *actlst)
 }
 
 struct cnfexpr*
-cnfexprNew(int nodetype, struct cnfexpr *l, struct cnfexpr *r)
+cnfexprNew(unsigned nodetype, struct cnfexpr *l, struct cnfexpr *r)
 {
 	struct cnfexpr *expr;
 
@@ -250,6 +251,134 @@ done:
 	return expr;
 }
 
+/* ensure that retval is a number; if string is no number,
+ * emit error message and set number to 0.
+ */
+static inline long long
+exprret2Number(struct exprret *r)
+{
+	if(r->datatype == 'S') {
+		printf("toNumber CONVERSION MISSING\n"); abort();
+	}
+	return r->d.n;
+}
+
+/* ensure that retval is a string; if string is no number,
+ * emit error message and set number to 0.
+ */
+static inline es_str_t *
+exprret2String(struct exprret *r)
+{
+	if(r->datatype == 'N') {
+		printf("toString CONVERSION MISSING\n"); abort();
+	}
+	return r->d.estr;
+}
+
+#define COMP_NUM_BINOP(x) \
+	cnfexprEval(expr->l, &l); \
+	cnfexprEval(expr->r, &r); \
+	ret->datatype = 'N'; \
+	ret->d.n = exprret2Number(&l) x exprret2Number(&r)
+
+/* evaluate an expression.
+ * Note that we try to avoid malloc whenever possible (because on
+ * the large overhead it has, especially on highly threaded programs).
+ * As such, the each caller level must provide buffer space for the
+ * result on its stack during recursion. This permits the callee to store
+ * the return value without malloc. As the value is a somewhat larger
+ * struct, we could otherwise not return it without malloc.
+ * Note that we implement boolean shortcut operations. For our needs, there
+ * simply is no case where full evaluation would make any sense at all.
+ */
+void
+cnfexprEval(struct cnfexpr *expr, struct exprret *ret)
+{
+	struct exprret r, l; /* memory for subexpression results */
+
+	printf("eval expr %p, type '%c'(%u)\n", expr, expr->nodetype, expr->nodetype);
+	switch(expr->nodetype) {
+	case CMP_EQ:
+		COMP_NUM_BINOP(==);
+		break;
+	case CMP_NE:
+		COMP_NUM_BINOP(!=);
+		break;
+	case CMP_LE:
+		COMP_NUM_BINOP(<=);
+		break;
+	case CMP_GE:
+		COMP_NUM_BINOP(>=);
+		break;
+	case CMP_LT:
+		COMP_NUM_BINOP(<);
+		break;
+	case CMP_GT:
+		COMP_NUM_BINOP(>);
+		break;
+	case OR:
+		cnfexprEval(expr->l, &l);
+		ret->datatype = 'N';
+		if(exprret2Number(&l)) {
+			ret->d.n = 1ll;
+		} else {
+			cnfexprEval(expr->r, &r);
+			if(exprret2Number(&r))
+				ret->d.n = 1ll;
+			else 
+				ret->d.n = 0ll;
+		}
+		break;
+	case AND:
+		cnfexprEval(expr->l, &l);
+		ret->datatype = 'N';
+		if(exprret2Number(&l)) {
+			cnfexprEval(expr->r, &r);
+			if(exprret2Number(&r))
+				ret->d.n = 1ll;
+			else 
+				ret->d.n = 0ll;
+		} else {
+			ret->d.n = 0ll;
+		}
+		break;
+	case NOT:
+		cnfexprEval(expr->r, &r);
+		ret->datatype = 'N';
+		ret->d.n = !exprret2Number(&l);
+		break;
+	case 'N':
+		ret->datatype = 'N';
+		ret->d.n = ((struct cnfnumval*)expr)->val;
+		break;
+	case '+':
+		COMP_NUM_BINOP(+);
+		break;
+	case '-':
+		COMP_NUM_BINOP(-);
+		break;
+	case '*':
+		COMP_NUM_BINOP(*);
+		break;
+	case '/':
+		COMP_NUM_BINOP(/);
+		break;
+	case '%':
+		COMP_NUM_BINOP(%);
+		break;
+	case 'M':
+		cnfexprEval(expr->r, &r);
+		ret->datatype = 'N';
+		ret->d.n = -exprret2Number(&r);
+		break;
+	default:
+		ret->datatype = 'N';
+		ret->d.n = 0ll;
+		printf("eval error: unknown nodetype %u\n",
+			(unsigned) expr->nodetype);
+		break;
+	}
+}
 
 inline static void
 doIndent(indent)
@@ -263,6 +392,59 @@ cnfexprPrint(struct cnfexpr *expr, int indent)
 {
 	//printf("expr %p, indent %d, type '%c'\n", expr, indent, expr->nodetype);
 	switch(expr->nodetype) {
+	case CMP_EQ:
+		cnfexprPrint(expr->l, indent+1);
+		doIndent(indent);
+		printf("==\n");
+		cnfexprPrint(expr->r, indent+1);
+		break;
+	case CMP_NE:
+		cnfexprPrint(expr->l, indent+1);
+		doIndent(indent);
+		printf("!=\n");
+		cnfexprPrint(expr->r, indent+1);
+		break;
+	case CMP_LE:
+		cnfexprPrint(expr->l, indent+1);
+		doIndent(indent);
+		printf("<=\n");
+		cnfexprPrint(expr->r, indent+1);
+		break;
+	case CMP_GE:
+		cnfexprPrint(expr->l, indent+1);
+		doIndent(indent);
+		printf(">=\n");
+		cnfexprPrint(expr->r, indent+1);
+		break;
+	case CMP_LT:
+		cnfexprPrint(expr->l, indent+1);
+		doIndent(indent);
+		printf("<\n");
+		cnfexprPrint(expr->r, indent+1);
+		break;
+	case CMP_GT:
+		cnfexprPrint(expr->l, indent+1);
+		doIndent(indent);
+		printf(">\n");
+		cnfexprPrint(expr->r, indent+1);
+		break;
+	case OR:
+		cnfexprPrint(expr->l, indent+1);
+		doIndent(indent);
+		printf("OR\n");
+		cnfexprPrint(expr->r, indent+1);
+		break;
+	case AND:
+		cnfexprPrint(expr->l, indent+1);
+		doIndent(indent);
+		printf("AND\n");
+		cnfexprPrint(expr->r, indent+1);
+		break;
+	case NOT:
+		doIndent(indent);
+		printf("NOT\n");
+		cnfexprPrint(expr->r, indent+1);
+		break;
 	case 'N':
 		doIndent(indent);
 		printf("%lld\n", ((struct cnfnumval*)expr)->val);
@@ -280,7 +462,8 @@ cnfexprPrint(struct cnfexpr *expr, int indent)
 		cnfexprPrint(expr->r, indent+1);
 		break;
 	default:
-		printf("error: unknown nodetype\n");
+		printf("error: unknown nodetype %u\n",
+			(unsigned) expr->nodetype);
 		break;
 	}
 }

@@ -55,21 +55,20 @@ static int preCommentState;
 <EXPR>"-" |
 <EXPR>"(" |
 <EXPR>")"			{ return yytext[0]; }
-<EXPR>"=="			{ printf("==\n"); }
-<EXPR>"<="			{ printf("<=\n"); }
-<EXPR>">="			{ printf(">=\n"); }
+<EXPR>"=="			{ return CMP_EQ; }
+<EXPR>"<="			{ return CMP_LE; }
+<EXPR>">="			{ return CMP_GE; }
 <EXPR>"!=" |
-<EXPR>"<>"			{ printf("!=\n"); }
-<EXPR>"<"			{ printf("<\n"); }
-<EXPR>">"			{ printf(">\n"); }
+<EXPR>"<>"			{ return CMP_NE; }
+<EXPR>"<"			{ return CMP_LT; }
+<EXPR>">"			{ return CMP_GT; }
 <EXPR>"contains"		{ printf("CONTAINS\n"); }
 <EXPR>"contains_i"		{ printf("CONTAINS_I\n"); }
 <EXPR>"startswith"		{ printf("STARTSWITH\n"); }
 <EXPR>"startswith_i"		{ printf("STARTSWITH_I\n"); }
-<EXPR>0[0-7]+			{ printf("NUMBER (oct) %s\n", yytext); }
-<EXPR>0x[0-7a-f]		{ printf("NUMBER (hex) %s\n", yytext); }
-<EXPR>([1-9][0-9]*|0)		{ printf("NUMBER (dec) %s\n", yytext);
-				  yylval.n = atoll(yytext); return NUMBER; }
+<EXPR>0[0-7]+ |			/* octal number */
+<EXPR>0x[0-7a-f] |		/* hex number, following rule is dec; strtoll handles all! */
+<EXPR>([1-9][0-9]*|0)		{ yylval.n = strtoll(yytext, NULL, 0); return NUMBER; }
 <EXPR>\$[$!]{0,1}[a-z][a-z0-9\-_\.]*	{ printf("VARNAME: '%s'\n", yytext); return VAR; }
 <EXPR>\'([^'\\]|\\['])*\'	 { printf("EXPR string: -%s-\n", yytext); return STRING; }
 <EXPR>[ \t\n]
