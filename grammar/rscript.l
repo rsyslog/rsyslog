@@ -62,10 +62,10 @@ static int preCommentState;
 <EXPR>"<>"			{ return CMP_NE; }
 <EXPR>"<"			{ return CMP_LT; }
 <EXPR>">"			{ return CMP_GT; }
-<EXPR>"contains"		{ printf("CONTAINS\n"); }
-<EXPR>"contains_i"		{ printf("CONTAINS_I\n"); }
-<EXPR>"startswith"		{ printf("STARTSWITH\n"); }
-<EXPR>"startswith_i"		{ printf("STARTSWITH_I\n"); }
+<EXPR>"contains"		{ return CMP_CONTAINS; }
+<EXPR>"contains_i"		{ return CMP_CONTAINSI; }
+<EXPR>"startswith"		{ return CMP_STARTSWITH; }
+<EXPR>"startswith_i"		{ return CMP_STARTSWITHI; }
 <EXPR>0[0-7]+ |			/* octal number */
 <EXPR>0x[0-7a-f] |		/* hex number, following rule is dec; strtoll handles all! */
 <EXPR>([1-9][0-9]*|0)		{ yylval.n = strtoll(yytext, NULL, 0); return NUMBER; }
@@ -100,7 +100,7 @@ static int preCommentState;
 				  return NAME; }
 <INOBJ>"="			{ return(yytext[0]); }
 <INOBJ>\"([^"\\]|\\['"?\\abfnrtv]|\\[0-7]{1,3})*\" {
-				  yylval.estr = es_newStrFromCStr(yytext+1, yyleng-2);
+				  yylval.estr = es_newStrFromBuf(yytext+1, yyleng-2);
 				  return VALUE; }
 "/*"				{ preCommentState = YY_START; BEGIN COMMENT; }
 <EXPR>"/*"			{ preCommentState = YY_START; BEGIN COMMENT; }
@@ -122,18 +122,28 @@ static int preCommentState;
  /*<<EOF>>			{ printf("EOF reached\n"); }*/
 
 %%
- /*
-int
-main(int argc, char *argv[])
+/* set a new buffers. Returns 0 on success, something else otherwise. */
+int cnfSetLexFile(char *fname)
 {
 	es_str_t *str;
 	YY_BUFFER_STATE bp;
-	char ln[10240];
+	FILE *fp;
+	int r = 0;
 
-	readConfFile(stdin, &str);
-	//printf("buffer: %s\n", es_getBufAddr(str));
+	if(fname == NULL) {
+		fp = stdin;
+	} else {
+		if((fp = fopen(fname, "r")) == NULL) {
+			r = 1;
+			goto done;
+		}
+	}
+	readConfFile(fp, &str);
+	if(fp != stdin)
+		fclose(fp);
 	bp = yy_scan_buffer(es_getBufAddr(str), es_strlen(str));
-	//yy_switch_to_buffer(bp);
-	yylex();
+	yylineno = 1;
+
+done:
+	return r;
 }
-*/

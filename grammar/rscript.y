@@ -40,6 +40,10 @@
 %token CMP_GE
 %token CMP_LT
 %token CMP_GT
+%token CMP_CONTAINS
+%token CMP_CONTAINSI
+%token CMP_STARTSWITH
+%token CMP_STARTSWITHI
 
 %type <nvlst> nv nvlst
 %type <obj> obj
@@ -50,7 +54,7 @@
 %type <expr> expr
 
 %left AND OR
-%left CMP_EQ CMP_NE CMP_LE CMP_GE CMP_LT CMP_GT
+%left CMP_EQ CMP_NE CMP_LE CMP_GE CMP_LT CMP_GT CMP_CONTAINS CMP_CONTAINSI CMP_STARTSWITH CMP_STARTSWITHI
 %left '+' '-'
 %left '*' '/' '%'
 %nonassoc UMINUS NOT
@@ -127,6 +131,10 @@ expr:	  expr AND expr			{ $$ = cnfexprNew(AND, $1, $3); }
 	| expr CMP_GE expr		{ $$ = cnfexprNew(CMP_GE, $1, $3); }
 	| expr CMP_LT expr		{ $$ = cnfexprNew(CMP_LT, $1, $3); }
 	| expr CMP_GT expr		{ $$ = cnfexprNew(CMP_GT, $1, $3); }
+	| expr CMP_CONTAINS expr	{ $$ = cnfexprNew(CMP_CONTAINS, $1, $3); }
+	| expr CMP_CONTAINSI expr	{ $$ = cnfexprNew(CMP_CONTAINSI, $1, $3); }
+	| expr CMP_STARTSWITH expr	{ $$ = cnfexprNew(CMP_STARTSWITH, $1, $3); }
+	| expr CMP_STARTSWITHI expr	{ $$ = cnfexprNew(CMP_STARTSWITHI, $1, $3); }
 	| expr '+' expr			{ $$ = cnfexprNew('+', $1, $3); }
 	| expr '-' expr			{ $$ = cnfexprNew('-', $1, $3); }
 	| expr '*' expr			{ $$ = cnfexprNew('*', $1, $3); }
@@ -134,8 +142,8 @@ expr:	  expr AND expr			{ $$ = cnfexprNew(AND, $1, $3); }
 	| expr '%' expr			{ $$ = cnfexprNew('%', $1, $3); }
 	| '(' expr ')'			{ $$ = $2; printf("( expr)\n"); }
 	| '-' expr %prec UMINUS		{ printf("uminus\n"); $$ = cnfexprNew('M', NULL, $2); }
-	| NUMBER			{ $$ = cnfnumvalNew($1); }
-	| STRING			{ $$ = cnfstringvalNew($1); }
+	| NUMBER			{ $$ = (struct cnfexpr*) cnfnumvalNew($1); }
+	| STRING			{ $$ = (struct cnfexpr*) cnfstringvalNew($1); }
 	| VAR				{ printf("variables not yet implemented!\n"); }
 
 %%
@@ -144,9 +152,11 @@ int yyerror(char *s)
 	printf("yyerror called: %s\n", s);
 }
 
+/*
 int main()
 {
 	yydebug = 0;
 	return yyparse();
 }
 
+*/

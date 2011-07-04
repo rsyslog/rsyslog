@@ -4,6 +4,7 @@
 #include <ctype.h>
 #include <libestr.h>
 #include "utils.h"
+#include "parserif.h"
 #include "rscript.tab.h"
 
 void
@@ -345,7 +346,7 @@ cnfexprEval(struct cnfexpr *expr, struct exprret *ret)
 	case NOT:
 		cnfexprEval(expr->r, &r);
 		ret->datatype = 'N';
-		ret->d.n = !exprret2Number(&l);
+		ret->d.n = !exprret2Number(&r);
 		break;
 	case 'N':
 		ret->datatype = 'N';
@@ -428,6 +429,30 @@ cnfexprPrint(struct cnfexpr *expr, int indent)
 		printf(">\n");
 		cnfexprPrint(expr->r, indent+1);
 		break;
+	case CMP_CONTAINS:
+		cnfexprPrint(expr->l, indent+1);
+		doIndent(indent);
+		printf("CONTAINS\n");
+		cnfexprPrint(expr->r, indent+1);
+		break;
+	case CMP_CONTAINSI:
+		cnfexprPrint(expr->l, indent+1);
+		doIndent(indent);
+		printf("CONTAINS_I\n");
+		cnfexprPrint(expr->r, indent+1);
+		break;
+	case CMP_STARTSWITH:
+		cnfexprPrint(expr->l, indent+1);
+		doIndent(indent);
+		printf("STARTSWITH\n");
+		cnfexprPrint(expr->r, indent+1);
+		break;
+	case CMP_STARTSWITHI:
+		cnfexprPrint(expr->l, indent+1);
+		doIndent(indent);
+		printf("STARTSWITH_I\n");
+		cnfexprPrint(expr->r, indent+1);
+		break;
 	case OR:
 		cnfexprPrint(expr->l, indent+1);
 		doIndent(indent);
@@ -498,5 +523,18 @@ cstrPrint(char *text, es_str_t *estr)
 	str = es_str2cstr(estr, NULL);
 	printf("%s%s", text, str);
 	free(str);
+}
+
+
+int
+main(int argc, char *argv[])
+{
+	int r;
+
+	cnfSetLexFile(argc == 1 ? NULL : argv[1]);
+	yydebug = 0;
+	r = yyparse();
+	printf("yyparse() returned %d\n", r);
+	return r;
 }
 
