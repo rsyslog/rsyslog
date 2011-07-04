@@ -398,6 +398,7 @@ doIndent(indent)
 void
 cnfexprPrint(struct cnfexpr *expr, int indent)
 {
+	struct cnffparamlst *param;
 	//printf("expr %p, indent %d, type '%c'\n", expr, indent, expr->nodetype);
 	switch(expr->nodetype) {
 	case CMP_EQ:
@@ -477,6 +478,11 @@ cnfexprPrint(struct cnfexpr *expr, int indent)
 		printf("NOT\n");
 		cnfexprPrint(expr->r, indent+1);
 		break;
+	case 'S':
+		doIndent(indent);
+		cstrPrint("string '", ((struct cnfstringval*)expr)->estr);
+		printf("'\n");
+		break;
 	case 'N':
 		doIndent(indent);
 		printf("%lld\n", ((struct cnfnumval*)expr)->val);
@@ -485,10 +491,15 @@ cnfexprPrint(struct cnfexpr *expr, int indent)
 		doIndent(indent);
 		printf("var '%s'\n", ((struct cnfvar*)expr)->name);
 		break;
-	case 'S':
+	case 'F':
 		doIndent(indent);
-		cstrPrint("string '", ((struct cnfstringval*)expr)->estr);
+		cstrPrint("function '", ((struct cnffunc*)expr)->fname);
 		printf("'\n");
+		for(  param = ((struct cnffunc*)expr)->paramlst
+		    ; param != NULL
+		    ; param = param->next) {
+			cnfexprPrint(param->expr, indent+1);
+		}
 		break;
 	case '+':
 	case '-':
@@ -573,6 +584,30 @@ cnfrulePrint(struct cnfrule *rule)
 	}
 	cnfactlstPrint(rule->actlst);
 	printf("------ end rule %p\n", rule);
+}
+
+struct cnffparamlst *
+cnffparamlstNew(struct cnfexpr *expr, struct cnffparamlst *next)
+{
+	struct cnffparamlst* lst;
+	if((lst = malloc(sizeof(struct cnffparamlst))) != NULL) {
+		lst->nodetype = 'P';
+		lst->expr = expr;
+		lst->next = next;
+	}
+	return lst;
+}
+
+struct cnffunc *
+cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst)
+{
+	struct cnffunc* func;
+	if((func = malloc(sizeof(struct cnffunc))) != NULL) {
+		func->nodetype = 'F';
+		func->fname = fname;
+		func->paramlst = paramlst;
+	}
+	return func;
 }
 
 /* debug helper */

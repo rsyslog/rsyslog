@@ -62,10 +62,12 @@ struct cnfactlst {
  * be the sole foundation for the AST.
  *
  * nodetypes (list not yet complete)
- * S - string
+ * F - function
  * N - number
- * V - var
+ * P - fparamlst
  * R - rule
+ * S - string
+ * V - var
  */
 enum cnfFiltType { CNFFILT_NONE, CNFFILT_PRI, CNFFILT_PROP, CNFFILT_SCRIPT };
 static inline char*
@@ -116,6 +118,18 @@ struct cnfvar {
 	char *name;
 };
 
+struct cnffparamlst {
+	unsigned nodetype; /* P */
+	struct cnffparamlst *next;
+	struct cnfexpr *expr;
+};
+
+struct cnffunc {
+	unsigned nodetype;
+	es_str_t *fname;
+	struct cnffparamlst *paramlst;
+};
+
 /* future extensions
 struct x {
 	int nodetype;
@@ -152,6 +166,8 @@ struct cnfstringval* cnfstringvalNew(es_str_t *estr);
 struct cnfrule * cnfruleNew(enum cnfFiltType filttype, struct cnfactlst *actlst);
 void cnfrulePrint(struct cnfrule *rule);
 struct cnfvar* cnfvarNew(char *name);
+struct cnffunc * cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst);
+struct cnffparamlst * cnffparamlstNew(struct cnfexpr *expr, struct cnffparamlst *next);
 
 /* debug helper */
 void cstrPrint(char *text, es_str_t *estr);

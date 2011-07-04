@@ -61,6 +61,7 @@ char *currfn;			/* name of currently processed file */
 <EXPR>"or"			{ return OR; }
 <EXPR>"and"			{ return AND; }
 <EXPR>"not"			{ return NOT; }
+<EXPR>"," |
 <EXPR>"*" |
 <EXPR>"/" |
 <EXPR>"%" |
@@ -88,6 +89,8 @@ char *currfn;			/* name of currently processed file */
 <EXPR>\"([^"\\]|\\["])*\"	 { yylval.estr = es_newStrFromBuf(yytext+1, yyleng-2);
 				   return STRING; }
 <EXPR>[ \t\n]
+<EXPR>[a-z][a-z0-9_]*		{ yylval.estr = es_newStrFromCStr(yytext, yyleng);
+				  return FUNC; }
 <EXPR>.				{ printf("invalid char in expr: %s\n", yytext); }
 "&"				{ return '&'; }
 "{"				{ return '{'; }

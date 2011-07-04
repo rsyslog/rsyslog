@@ -31,10 +31,13 @@ extern int yylineno;
 	struct cnfactlst *actlst;
 	struct cnfexpr *expr;
 	struct cnfrule *rule;
+	struct cnffunc *func;
+	struct cnffparamlst *fparams;
 }
 
 %token <estr> NAME
 %token <estr> VALUE
+%token <estr> FUNC
 %token <objType> BEGINOBJ
 %token ENDOBJ
 %token <s> CFSYSLINE
@@ -72,6 +75,7 @@ extern int yylineno;
 %type <expr> expr
 %type <rule> rule
 %type <rule> scriptfilt
+%type <fparams> fparams
 
 %left AND OR
 %left CMP_EQ CMP_NE CMP_LE CMP_GE CMP_LT CMP_GT CMP_CONTAINS CMP_CONTAINSI CMP_STARTSWITH CMP_STARTSWITHI
@@ -145,9 +149,13 @@ expr:	  expr AND expr			{ $$ = cnfexprNew(AND, $1, $3); }
 	| expr '%' expr			{ $$ = cnfexprNew('%', $1, $3); }
 	| '(' expr ')'			{ $$ = $2; }
 	| '-' expr %prec UMINUS		{ $$ = cnfexprNew('M', NULL, $2); }
+	| FUNC '(' ')'			{ $$ = (struct cnfexpr*) cnffuncNew($1, NULL); }
+	| FUNC '(' fparams ')'		{ $$ = (struct cnfexpr*) cnffuncNew($1, $3); }
 	| NUMBER			{ $$ = (struct cnfexpr*) cnfnumvalNew($1); }
 	| STRING			{ $$ = (struct cnfexpr*) cnfstringvalNew($1); }
 	| VAR				{ $$ = (struct cnfexpr*) cnfvarNew($1); }
+fparams:  expr				{ $$ = cnffparamlstNew($1, NULL); }
+	| expr ',' fparams		{ $$ = cnffparamlstNew($1, $3); }
 
 %%
 int yyerror(char *s)

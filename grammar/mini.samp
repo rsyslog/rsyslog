@@ -30,3 +30,4 @@ if not (1==0) and 2*4/-5--(10-3)>7/*pri("*.*")*/ then {
    action(type="omfwd" taget="10.0.0.1" port="514")
    action(type="omwusr" taget="rger")
 }
+if getenv("user") == "test" then /var/log/testlog
