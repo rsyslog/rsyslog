@@ -1,4 +1,4 @@
- /* lex file for rsyslog config format v2.
+ /* Lex file for rsyslog config format v2 (RainerScript).
   * Please note: this file introduces the new config format, but maintains
   * backward compatibility. In order to do so, the grammar is not 100% clean,
   * but IMHO still sufficiently easy both to understand for programmers
@@ -106,10 +106,7 @@ char *currfn;			/* name of currently processed file */
 <INCL>.|\n
 <INCL>[^ \t\n]+			{ if(cnfSetLexFile(yytext) != 0)
 					yyterminate();
-				  BEGIN INITIAL;
-				}
-				
-
+				  BEGIN INITIAL; }
 "global"[ \n\t]*"("		{ yylval.objType = CNFOBJ_GLOBAL;
 				  BEGIN INOBJ; return BEGINOBJ; }
 "input"[ \n\t]*"("		{ yylval.objType = CNFOBJ_INPUT;
@@ -119,9 +116,7 @@ char *currfn;			/* name of currently processed file */
 "action"[ \n\t]*"("		{ BEGIN INOBJ; return BEGIN_ACTION; }
 ^[ \t]*:\$?[a-z]+[ ]*,[ ]*!?[a-z]+[ ]*,[ ]*\".*\"	{
 				  yylval.s = strdup(yytext); return PROPFILT; }
-
 ^[ \t]*[,\*a-z]+\.[,!=;\.\*a-z]+ { yylval.s = strdup(yytext); return PRIFILT; }
-
 "*" |
 \-\/[^*][^\n]* |
 \/[^*][^\n]* |
@@ -141,11 +136,9 @@ char *currfn;			/* name of currently processed file */
 <EXPR>"/*"			{ preCommentState = YY_START; BEGIN COMMENT; }
 <COMMENT>"*/"			{ BEGIN preCommentState; }
 <COMMENT>([^*]|\n)+|.
-
 <INOBJ>#.*$	/* skip comments in input */
 <INOBJ>[ \n\t]
 <INOBJ>.			{ printf("INOBJ: invalid char '%s'\n", yytext); }
-
 \$[a-z]+.*$			{ /* see common on $IncludeConfig above */
 				  if(!strncasecmp(yytext, "$includeconfig ", 14)) {
 					yyless(14);
@@ -159,12 +152,10 @@ char *currfn;			/* name of currently processed file */
 [+-]\*[ \t\n]*#.*$		{ yylval.s = strdup(yytext); return BSD_HOST_SELECTOR; }
 [+-]\*[ \t\n]*$			{ yylval.s = strdup(yytext); return BSD_HOST_SELECTOR; }
 ^[ \t]*[+-][a-z0-9.:-]+[ \t]*$	{ yylval.s = strdup(yytext); return BSD_HOST_SELECTOR; }
-
 \#.*\n	/* skip comments in input */
 [\n\t ]	/* drop whitespace */
 .				{ printf("invalid char: %s\n", yytext);
 				}
-
 <<EOF>>				{ if(popfile() != 0) yyterminate(); }
 
 %%

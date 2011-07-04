@@ -1,3 +1,17 @@
+ /* Bison file for rsyslog config format v2 (RainerScript).
+  * Please note: this file introduces the new config format, but maintains
+  * backward compatibility. In order to do so, the grammar is not 100% clean,
+  * but IMHO still sufficiently easy both to understand for programmers
+  * maitaining the code as well as users writing the config file. Users are,
+  * of course, encouraged to use new constructs only. But it needs to be noted
+  * that some of the legacy constructs (specifically the in-front-of-action
+  * PRI filter) are very hard to beat in ease of use, at least for simpler
+  * cases. So while we hope that cfsysline support can be dropped some time in
+  * the future, we will probably keep these useful constructs.
+  *
+  * Copyright (C) 2011 by Rainer Gerhards and Adiscon GmbH
+  * Released under the GNU GPL v3. For details see LICENSE file.
+  */
 
 %{
 #include <stdio.h>
@@ -92,40 +106,25 @@ conf:	/* empty (to end recursion) */
 obj:	  BEGINOBJ nvlst ENDOBJ 	{ $$ = cnfobjNew($1, $2); }
 	| BEGIN_ACTION nvlst ENDOBJ 	{ $$ = cnfobjNew(CNFOBJ_ACTION, $2); }
 cfsysline: CFSYSLINE	 		{ $$ = $1 }
-
 nvlst:					{ $$ = NULL; }
 	| nvlst nv 			{ $2->next = $1; $$ = $2; }
-nv: NAME '=' VALUE 			{ $$ = nvlstNew($1, $3); }
-
+nv:	NAME '=' VALUE 			{ $$ = nvlstNew($1, $3); }
 rule:	  PRIFILT actlst		{ $$ = cnfruleNew(CNFFILT_PRI, $2); $$->filt.s = $1; }
 	| PROPFILT actlst		{ $$ = cnfruleNew(CNFFILT_PROP, $2); $$->filt.s = $1; }
 	| scriptfilt			{ $$ = $1; }
 
 scriptfilt: IF expr THEN actlst		{ $$ = cnfruleNew(CNFFILT_SCRIPT, $4);
-					  $$->filt.expr = $2;
-					  //struct exprret r;
-					  //cnfexprEval($2, &r);
-					 // printf("eval result: %lld\n", r.d.n);
-					}
-
-/* note: we can do some limited block-structuring with the v6 engine. In that case,
- * we must not support additonal filters inside the blocks, so they must consist of
- * "act", only. We can implement that via the "&" actlist logic.
- */
+					  $$->filt.expr = $2; }
 block:	  actlst			{ $$ = $1; }
 	| block actlst			{ $2->next = $1; $$ = $2; }
 	/* v7: | actlst
-	   v7: | block rule */
-
+	   v7: | block rule */ /* v7 extensions require new rule engine capabilities! */
 actlst:	  act 	 			{ $$=$1; }
 	| actlst '&' act 		{ $3->next = $1; $$ = $3; }
 	| actlst cfsysline		{ $$ = cnfactlstAddSysline($1, $2); }
 	| '{' block '}'			{ $$ = $2; }
-					  
 act:	  BEGIN_ACTION nvlst ENDOBJ	{ $$ = cnfactlstNew(CNFACT_V2, $2, NULL); }
-	| LEGACY_ACTION			{ //printf("legacy action: '%s'\n", $1);
-					  $$ = cnfactlstNew(CNFACT_LEGACY, NULL, $1); }
-
+	| LEGACY_ACTION			{ $$ = cnfactlstNew(CNFACT_LEGACY, NULL, $1); }
 expr:	  expr AND expr			{ $$ = cnfexprNew(AND, $1, $3); }
 	| expr OR expr			{ $$ = cnfexprNew(OR, $1, $3); }
 	| NOT expr			{ $$ = cnfexprNew(NOT, NULL, $2); }
