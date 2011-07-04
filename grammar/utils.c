@@ -187,12 +187,10 @@ static inline struct cnfcfsyslinelst*
 cnfcfsyslinelstReverse(struct cnfcfsyslinelst *lst)
 {
 	struct cnfcfsyslinelst *curr, *prev;
-
+printf("syslinerevers on %p\n", lst);
 	if(lst == NULL)
 		return NULL;
-	prev = lst;
-	lst = lst->next;
-	prev->next = NULL;
+	prev = NULL;
 	while(lst != NULL) {
 		curr = lst;
 		lst = lst->next;
@@ -207,9 +205,7 @@ cnfactlstReverse(struct cnfactlst *actlst)
 {
 	struct cnfactlst *curr, *prev;
 
-	prev = actlst;
-	actlst = actlst->next;
-	prev->next = NULL;
+	prev = NULL;
 	while(actlst != NULL) {
 		curr = actlst;
 		actlst = actlst->next;
