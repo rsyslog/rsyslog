@@ -75,10 +75,10 @@ extern int yylineno;
 %%
 conf:	/* empty (to end recursion) */
 	| obj conf
-	| rule conf
-	| cfsysline conf
-	| BSD_TAG_SELECTOR conf
-	| BSD_HOST_SELECTOR conf
+	| rule conf			{ printf("RULE processed, back in main\n"); }
+	| cfsysline conf		{ printf("cfsysline: %s\n", $1); }
+	| BSD_TAG_SELECTOR conf		{ printf("BSD tag '%s'\n", $1); }
+	| BSD_HOST_SELECTOR conf	{ printf("BSD host '%s'\n", $1); }
 
 obj:	  BEGINOBJ nvlst ENDOBJ 	{ $$ = cnfobjNew($1, $2);
 					  cnfobjPrint($$);
@@ -89,7 +89,7 @@ obj:	  BEGINOBJ nvlst ENDOBJ 	{ $$ = cnfobjNew($1, $2);
 					  cnfobjDestruct(t);
 					  printf("XXXX: this is an new-style action!\n");
 					}
-cfsysline: CFSYSLINE	 		{ printf("XXXX: processing CFSYSLINE: %s\n", $1); }
+cfsysline: CFSYSLINE	 		{ printf("XXXX: processing CFSYSLINE: %s\n", $1);$$ = $1 }
 
 nvlst:					{ $$ = NULL; }
 	| nvlst nv 			{ $2->next = $1; $$ = $2; }
@@ -98,7 +98,9 @@ nv: NAME '=' VALUE 			{ $$ = nvlstNew($1, $3); }
 rule:	  PRIFILT actlst		{ printf("PRIFILT: %s\n", $1); free($1);
 					  $2 = cnfactlstReverse($2);
 					  cnfactlstPrint($2); }
-	| PROPFILT actlst
+	| PROPFILT actlst		{ printf("PROPFILT: %s\n", $1); free($1);
+					  $2 = cnfactlstReverse($2);
+					  cnfactlstPrint($2); }
 	| scriptfilt
 
 scriptfilt: IF expr THEN actlst	{ printf("if filter detected, expr:\n"); cnfexprPrint($2,0);

@@ -117,6 +117,7 @@ char *currfn;			/* name of currently processed file */
 "action"[ \n\t]*"("		{ BEGIN INOBJ; return BEGIN_ACTION; }
 ^[ \t]*:\$?[a-z]+[ ]*,[ ]*!?[a-z]+[ ]*,[ ]*\".*\"	{
 				  printf("PROP-FILT: '%s'\n", yytext);
+				  return PROPFILT;
 				}
 
 ^[ \t]*[,\*a-z]+\.[,!=;\.\*a-z]+ { printf("token prifilt '%s'\n", yytext); yylval.s = strdup(yytext); return PRIFILT; }
@@ -124,8 +125,9 @@ char *currfn;			/* name of currently processed file */
 "*" |
 \-\/[^*][^\n]* |
 \/[^*][^\n]* |
-[\|\.\-\@:~][^\n]+ |
-[a-z0-9_][a-z0-9_\-\+]*		{ yylval.s = strdup(yytext); printf("LEGACY_ACT: '%s'\n", yytext);return LEGACY_ACTION; }
+:[a-z0-9]+:[^\n]* |
+[\|\.\-\@~][^\n]+ |
+[a-z0-9_][a-z0-9_\-\+]*		{ yylval.s = strdup(yytext); printf("LEGA ACT: '%s'\n", yytext);return LEGACY_ACTION; }
 <INOBJ>")"			{ BEGIN INITIAL; return ENDOBJ; }
 <INOBJ>[a-z][a-z0-9_\.]*	{ yylval.estr = es_newStrFromCStr(yytext, yyleng);
 				  return NAME; }
@@ -151,10 +153,10 @@ char *currfn;			/* name of currently processed file */
 					  return CFSYSLINE;
 				  }
 				}
-![^ \t\n]+[ \t]*$			{ printf("BSD TAG '%s'\n", yytext); yylval.s = strdup(yytext); return BSD_TAG_SELECTOR; }
-[+-]\*[ \t\n]*#.*$		{ printf("BSD HOST '%s'\n", yytext); yylval.s = strdup(yytext); return BSD_HOST_SELECTOR; }
-[+-]\*[ \t\n]*$			{ printf("BSD HOST '%s'\n", yytext); yylval.s = strdup(yytext); return BSD_HOST_SELECTOR; }
-^[ \t]*[+-][a-z0-9.:-]+[ \t]*$		{ printf("BSD HOST '%s'\n", yytext); yylval.s = strdup(yytext); return BSD_HOST_SELECTOR; }
+![^ \t\n]+[ \t]*$		{ yylval.s = strdup(yytext); return BSD_TAG_SELECTOR; }
+[+-]\*[ \t\n]*#.*$		{ yylval.s = strdup(yytext); return BSD_HOST_SELECTOR; }
+[+-]\*[ \t\n]*$			{ yylval.s = strdup(yytext); return BSD_HOST_SELECTOR; }
+^[ \t]*[+-][a-z0-9.:-]+[ \t]*$	{ yylval.s = strdup(yytext); return BSD_HOST_SELECTOR; }
 
 \#.*\n	/* skip comments in input */
 [\n\t ]	/* drop whitespace */
