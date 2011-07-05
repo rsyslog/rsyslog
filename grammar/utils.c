@@ -90,11 +90,11 @@ void
 nvlstPrint(struct nvlst *lst)
 {
 	char *name, *value;
-	printf("nvlst %p:\n", lst);
+	dbgprintf("nvlst %p:\n", lst);
 	while(lst != NULL) {
 		name = es_str2cstr(lst->name, NULL);
 		value = es_str2cstr(lst->value, NULL);
-		printf("\tname: '%s', value '%s'\n", name, value);
+		dbgprintf("\tname: '%s', value '%s'\n", name, value);
 		free(name);
 		free(value);
 		lst = lst->next;
@@ -126,7 +126,7 @@ cnfobjDestruct(struct cnfobj *o)
 void
 cnfobjPrint(struct cnfobj *o)
 {
-	printf("obj: '%s'\n", cnfobjType2str(o->objType));
+	dbgprintf("obj: '%s'\n", cnfobjType2str(o->objType));
 	nvlstPrint(o->nvlst);
 }
 
@@ -206,7 +206,7 @@ cnfactlstReverse(struct cnfactlst *actlst)
 
 	prev = NULL;
 	while(actlst != NULL) {
-		//printf("reversing: %s\n", actlst->data.legActLine);
+		//dbgprintf("reversing: %s\n", actlst->data.legActLine);
 		curr = actlst;
 		actlst = actlst->next;
 		curr->syslines = cnfcfsyslinelstReverse(curr->syslines);
@@ -222,17 +222,17 @@ cnfactlstPrint(struct cnfactlst *actlst)
 	struct cnfcfsyslinelst *cflst;
 
 	while(actlst != NULL) {
-		printf("aclst %p: ", actlst);
+		dbgprintf("aclst %p: ", actlst);
 		if(actlst->actType == CNFACT_V2) {
-			printf("V2 action type: ");
+			dbgprintf("V2 action type: ");
 			nvlstPrint(actlst->data.lst);
 		} else {
-			printf("legacy action line: '%s'\n",
+			dbgprintf("legacy action line: '%s'\n",
 				actlst->data.legActLine);
 		}
 		for(  cflst = actlst->syslines
 		    ; cflst != NULL ; cflst = cflst->next) {
-			printf("action:cfsysline: '%s'\n", cflst->line);
+			dbgprintf("action:cfsysline: '%s'\n", cflst->line);
 		}
 		actlst = actlst->next;
 	}
@@ -266,7 +266,7 @@ static inline long long
 exprret2Number(struct exprret *r)
 {
 	if(r->datatype == 'S') {
-		printf("toNumber CONVERSION MISSING\n"); abort();
+		dbgprintf("toNumber CONVERSION MISSING\n"); abort();
 	}
 	return r->d.n;
 }
@@ -278,7 +278,7 @@ static inline es_str_t *
 exprret2String(struct exprret *r)
 {
 	if(r->datatype == 'N') {
-		printf("toString CONVERSION MISSING\n"); abort();
+		dbgprintf("toString CONVERSION MISSING\n"); abort();
 	}
 	return r->d.estr;
 }
@@ -304,7 +304,7 @@ cnfexprEval(struct cnfexpr *expr, struct exprret *ret)
 {
 	struct exprret r, l; /* memory for subexpression results */
 
-	//printf("eval expr %p, type '%c'(%u)\n", expr, expr->nodetype, expr->nodetype);
+	//dbgprintf("eval expr %p, type '%c'(%u)\n", expr, expr->nodetype, expr->nodetype);
 	switch(expr->nodetype) {
 	case CMP_EQ:
 		COMP_NUM_BINOP(==);
@@ -382,7 +382,7 @@ cnfexprEval(struct cnfexpr *expr, struct exprret *ret)
 	default:
 		ret->datatype = 'N';
 		ret->d.n = 0ll;
-		printf("eval error: unknown nodetype %u\n",
+		dbgprintf("eval error: unknown nodetype %u\n",
 			(unsigned) expr->nodetype);
 		break;
 	}
@@ -393,108 +393,108 @@ doIndent(int indent)
 {
 	int i;
 	for(i = 0 ; i < indent ; ++i)
-		printf("  ");
+		dbgprintf("  ");
 }
 void
 cnfexprPrint(struct cnfexpr *expr, int indent)
 {
 	struct cnffparamlst *param;
-	//printf("expr %p, indent %d, type '%c'\n", expr, indent, expr->nodetype);
+	//dbgprintf("expr %p, indent %d, type '%c'\n", expr, indent, expr->nodetype);
 	switch(expr->nodetype) {
 	case CMP_EQ:
 		cnfexprPrint(expr->l, indent+1);
 		doIndent(indent);
-		printf("==\n");
+		dbgprintf("==\n");
 		cnfexprPrint(expr->r, indent+1);
 		break;
 	case CMP_NE:
 		cnfexprPrint(expr->l, indent+1);
 		doIndent(indent);
-		printf("!=\n");
+		dbgprintf("!=\n");
 		cnfexprPrint(expr->r, indent+1);
 		break;
 	case CMP_LE:
 		cnfexprPrint(expr->l, indent+1);
 		doIndent(indent);
-		printf("<=\n");
+		dbgprintf("<=\n");
 		cnfexprPrint(expr->r, indent+1);
 		break;
 	case CMP_GE:
 		cnfexprPrint(expr->l, indent+1);
 		doIndent(indent);
-		printf(">=\n");
+		dbgprintf(">=\n");
 		cnfexprPrint(expr->r, indent+1);
 		break;
 	case CMP_LT:
 		cnfexprPrint(expr->l, indent+1);
 		doIndent(indent);
-		printf("<\n");
+		dbgprintf("<\n");
 		cnfexprPrint(expr->r, indent+1);
 		break;
 	case CMP_GT:
 		cnfexprPrint(expr->l, indent+1);
 		doIndent(indent);
-		printf(">\n");
+		dbgprintf(">\n");
 		cnfexprPrint(expr->r, indent+1);
 		break;
 	case CMP_CONTAINS:
 		cnfexprPrint(expr->l, indent+1);
 		doIndent(indent);
-		printf("CONTAINS\n");
+		dbgprintf("CONTAINS\n");
 		cnfexprPrint(expr->r, indent+1);
 		break;
 	case CMP_CONTAINSI:
 		cnfexprPrint(expr->l, indent+1);
 		doIndent(indent);
-		printf("CONTAINS_I\n");
+		dbgprintf("CONTAINS_I\n");
 		cnfexprPrint(expr->r, indent+1);
 		break;
 	case CMP_STARTSWITH:
 		cnfexprPrint(expr->l, indent+1);
 		doIndent(indent);
-		printf("STARTSWITH\n");
+		dbgprintf("STARTSWITH\n");
 		cnfexprPrint(expr->r, indent+1);
 		break;
 	case CMP_STARTSWITHI:
 		cnfexprPrint(expr->l, indent+1);
 		doIndent(indent);
-		printf("STARTSWITH_I\n");
+		dbgprintf("STARTSWITH_I\n");
 		cnfexprPrint(expr->r, indent+1);
 		break;
 	case OR:
 		cnfexprPrint(expr->l, indent+1);
 		doIndent(indent);
-		printf("OR\n");
+		dbgprintf("OR\n");
 		cnfexprPrint(expr->r, indent+1);
 		break;
 	case AND:
 		cnfexprPrint(expr->l, indent+1);
 		doIndent(indent);
-		printf("AND\n");
+		dbgprintf("AND\n");
 		cnfexprPrint(expr->r, indent+1);
 		break;
 	case NOT:
 		doIndent(indent);
-		printf("NOT\n");
+		dbgprintf("NOT\n");
 		cnfexprPrint(expr->r, indent+1);
 		break;
 	case 'S':
 		doIndent(indent);
 		cstrPrint("string '", ((struct cnfstringval*)expr)->estr);
-		printf("'\n");
+		dbgprintf("'\n");
 		break;
 	case 'N':
 		doIndent(indent);
-		printf("%lld\n", ((struct cnfnumval*)expr)->val);
+		dbgprintf("%lld\n", ((struct cnfnumval*)expr)->val);
 		break;
 	case 'V':
 		doIndent(indent);
-		printf("var '%s'\n", ((struct cnfvar*)expr)->name);
+		dbgprintf("var '%s'\n", ((struct cnfvar*)expr)->name);
 		break;
 	case 'F':
 		doIndent(indent);
 		cstrPrint("function '", ((struct cnffunc*)expr)->fname);
-		printf("'\n");
+		dbgprintf("'\n");
 		for(  param = ((struct cnffunc*)expr)->paramlst
 		    ; param != NULL
 		    ; param = param->next) {
@@ -510,11 +510,11 @@ cnfexprPrint(struct cnfexpr *expr, int indent)
 		if(expr->l != NULL)
 			cnfexprPrint(expr->l, indent+1);
 		doIndent(indent);
-		printf("%c\n", (char) expr->nodetype);
+		dbgprintf("%c\n", (char) expr->nodetype);
 		cnfexprPrint(expr->r, indent+1);
 		break;
 	default:
-		printf("error: unknown nodetype %u\n",
+		dbgprintf("error: unknown nodetype %u\n",
 			(unsigned) expr->nodetype);
 		break;
 	}
@@ -568,22 +568,22 @@ cnfruleNew(enum cnfFiltType filttype, struct cnfactlst *actlst)
 void
 cnfrulePrint(struct cnfrule *rule)
 {
-	printf("------ start rule %p:\n", rule);
-	printf("%s: ", cnfFiltType2str(rule->filttype));
+	dbgprintf("------ start rule %p:\n", rule);
+	dbgprintf("%s: ", cnfFiltType2str(rule->filttype));
 	switch(rule->filttype) {
 	case CNFFILT_NONE:
 		break;
 	case CNFFILT_PRI:
 	case CNFFILT_PROP:
-		printf("%s\n", rule->filt.s);
+		dbgprintf("%s\n", rule->filt.s);
 		break;
 	case CNFFILT_SCRIPT:
-		printf("\n");
+		dbgprintf("\n");
 		cnfexprPrint(rule->filt.expr, 0);
 		break;
 	}
 	cnfactlstPrint(rule->actlst);
-	printf("------ end rule %p\n", rule);
+	dbgprintf("------ end rule %p\n", rule);
 }
 
 struct cnffparamlst *

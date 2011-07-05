@@ -24,8 +24,38 @@
 #include "config.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include <libestr.h>
 #include "parserif.h"
+
+extern int yylineno;
+
+void
+parser_errmsg(char *fmt, ...)
+{
+	va_list ap;
+	va_start(ap, fmt);
+	printf("error on or before line %d: ", yylineno);
+	vprintf(fmt, ap);
+	printf("\n");
+	va_end(ap);
+}
+
+int
+yyerror(char *s)
+{
+	parser_errmsg("%s", s);
+	return 0;
+}
+
+void
+dbgprintf(char *fmt, ...)
+{
+	va_list ap;
+	va_start(ap, fmt);
+	vfprintf(stdout, fmt, ap);
+	va_end(ap);
+}
 
 void
 cstrPrint(char *text, es_str_t *estr)

@@ -65,7 +65,7 @@ int cnfSetLexFile(char *fname);
 /* somehow, I need these prototype even though the headers are 
  * included. I guess that's some autotools magic I don't understand...
  */
-char *strdup(char*);
+//char *strdup(char*);
 int fileno(FILE *stream);
 
 %}
@@ -209,7 +209,7 @@ cnfSetLexFile(char *fname)
 	if(currbs != NULL)
 		currbs->lineno = yylineno;
 	bs->prev = currbs;
-	bs->fn = strdup(fname);
+	bs->fn = strdup(fname == NULL ? "stdin" : fname);
 	bs->bs = yy_scan_buffer((char*)es_getBufAddr(str), es_strlen(str));
 	currbs = bs;
 	currfn = bs->fn;

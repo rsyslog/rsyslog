@@ -17,6 +17,7 @@
 #include <stdio.h>
 #include <libestr.h>
 #include "utils.h"
+#include "parserif.h"
 #define YYDEBUG 1
 extern int yylineno;
 
@@ -103,13 +104,13 @@ extern int yyerror(char*);
  * one by one.
  */
 conf:	/* empty (to end recursion) */
-	| conf obj			{ printf("global:config: ");
+	| conf obj			{ dbgprintf("global:config: ");
 					  cnfobjPrint($2); cnfobjDestruct($2); }
-	| conf rule			{ printf("global:rule processed\n");
+	| conf rule			{ dbgprintf("global:rule processed\n");
 					  cnfrulePrint($2); }
-	| conf cfsysline		{ printf("global:cfsysline: %s\n", $2); }
-	| conf BSD_TAG_SELECTOR		{ printf("global:BSD tag '%s'\n", $2); }
-	| conf BSD_HOST_SELECTOR	{ printf("global:BSD host '%s'\n", $2); }
+	| conf cfsysline		{ dbgprintf("global:cfsysline: %s\n", $2); }
+	| conf BSD_TAG_SELECTOR		{ dbgprintf("global:BSD tag '%s'\n", $2); }
+	| conf BSD_HOST_SELECTOR	{ dbgprintf("global:BSD host '%s'\n", $2); }
 
 obj:	  BEGINOBJ nvlst ENDOBJ 	{ $$ = cnfobjNew($1, $2); }
 	| BEGIN_ACTION nvlst ENDOBJ 	{ $$ = cnfobjNew(CNFOBJ_ACTION, $2); }
@@ -162,8 +163,10 @@ fparams:  expr				{ $$ = cnffparamlstNew($1, NULL); }
 	| expr ',' fparams		{ $$ = cnffparamlstNew($1, $3); }
 
 %%
+/*
 int yyerror(char *s)
 {
 	printf("parse failure on or before line %d: %s\n", yylineno, s);
 	return 0;
 }
+*/
