@@ -389,7 +389,7 @@ cnfexprEval(struct cnfexpr *expr, struct exprret *ret)
 }
 
 inline static void
-doIndent(indent)
+doIndent(int indent)
 {
 	int i;
 	for(i = 0 ; i < indent ; ++i)
@@ -611,6 +611,7 @@ cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst)
 }
 
 /* debug helper */
+#ifdef STAND_ALONE
 void
 cstrPrint(char *text, es_str_t *estr)
 {
@@ -632,4 +633,5 @@ main(int argc, char *argv[])
 	printf("yyparse() returned %d\n", r);
 	return r;
 }
+#endif /* #ifdef STAND_ALONE */
 

@@ -16,6 +16,10 @@
 %option noyywrap nodefault case-insensitive yylineno
  /*%option noyywrap nodefault case-insensitive */
 
+/* avoid compiler warning: `yyunput' defined but not used */
+%option nounput noinput
+
+
 %x INOBJ
 	/* INOBJ is selected if we are inside an object (name/value pairs!) */
 %x COMMENT
@@ -51,6 +55,9 @@ struct bufstack {
 } *currbs = NULL;
 
 char *currfn;			/* name of currently processed file */
+
+int popfile(void);
+int cnfSetLexFile(char *fname);
 %}
 
 %%
@@ -163,7 +170,8 @@ char *currfn;			/* name of currently processed file */
 
 %%
 /* set a new buffers. Returns 0 on success, something else otherwise. */
-int cnfSetLexFile(char *fname)
+int
+cnfSetLexFile(char *fname)
 {
 	es_str_t *str = NULL;
 	FILE *fp;
@@ -192,7 +200,7 @@ int cnfSetLexFile(char *fname)
 		currbs->lineno = yylineno;
 	bs->prev = currbs;
 	bs->fn = strdup(fname);
-	bs->bs = yy_scan_buffer(es_getBufAddr(str), es_strlen(str));
+	bs->bs = yy_scan_buffer((char*)es_getBufAddr(str), es_strlen(str));
 	currbs = bs;
 	currfn = bs->fn;
 	yylineno = 1;

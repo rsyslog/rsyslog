@@ -24,6 +24,8 @@ if test x"$HAVE_JAVAC" = x""; then
 fi
 
 # Checks for programs.
+AC_PROG_LEX
+AC_PROG_YACC
 AC_PROG_CC
 AM_PROG_CC_C_O
 if test "$GCC" = "yes"
@@ -707,6 +709,7 @@ AC_ARG_ENABLE(rsyslogrt,
 if test "x$enable_rsyslogrt" = "xyes"; then
   RSRT_CFLAGS="-I\$(top_srcdir)/runtime -I\$(top_srcdir)"
   RSRT_LIBS="\$(top_builddir)/runtime/librsyslog.la"
+  CNF_LIBS="\$(top_builddir)/grammar/libgrammar.la"
 fi
 AM_CONDITIONAL(ENABLE_RSYSLOGRT, test x$enable_rsyslogrt = xyes)
 AC_SUBST(RSRT_CFLAGS)
@@ -779,7 +782,7 @@ AM_CONDITIONAL(ENABLE_MAIL, test x$enable_mail = xyes)
 # would complicate things if we first needed to tell them how to enable imdiag.
 # rgerhards, 2008-07-25
 AC_ARG_ENABLE(imdiag,
-        [AS_HELP_STRING([--enable-imdiag],[Enable imdiag @<:@default=yes@:>@])],
+        [AS_HELP_STRING([--enable-imdiag],[Enable imdiag @<:@default=no@:>@])],
         [case "${enableval}" in
          yes) enable_imdiag="yes" ;;
           no) enable_imdiag="no" ;;
@@ -1224,6 +1227,7 @@ AM_CONDITIONAL(ENABLE_OMMONGODB, test x$enable_ommongodb = xyes)
 
 AC_CONFIG_FILES([Makefile \
 		runtime/Makefile \
+		grammar/Makefile \
 		tools/Makefile \
 		doc/Makefile \
 		plugins/imudp/Makefile \
