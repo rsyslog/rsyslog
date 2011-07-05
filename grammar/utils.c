@@ -5,7 +5,7 @@
 #include <libestr.h>
 #include "utils.h"
 #include "parserif.h"
-#include "rscript.tab.h"
+#include "grammar.h"
 
 void
 readConfFile(FILE *fp, es_str_t **str)
@@ -609,29 +609,3 @@ cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst)
 	}
 	return func;
 }
-
-/* debug helper */
-#ifdef STAND_ALONE
-void
-cstrPrint(char *text, es_str_t *estr)
-{
-	char *str;
-	str = es_str2cstr(estr, NULL);
-	printf("%s%s", text, str);
-	free(str);
-}
-
-
-int
-main(int argc, char *argv[])
-{
-	int r;
-
-	cnfSetLexFile(argc == 1 ? NULL : argv[1]);
-	yydebug = 0;
-	r = yyparse();
-	printf("yyparse() returned %d\n", r);
-	return r;
-}
-#endif /* #ifdef STAND_ALONE */
-

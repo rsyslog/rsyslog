@@ -19,6 +19,10 @@
 #include "utils.h"
 #define YYDEBUG 1
 extern int yylineno;
+
+/* keep compile rule cleam of errors */
+extern int yylex(void);
+extern int yyerror(char*);
 %}
 
 %union {
@@ -109,7 +113,7 @@ conf:	/* empty (to end recursion) */
 
 obj:	  BEGINOBJ nvlst ENDOBJ 	{ $$ = cnfobjNew($1, $2); }
 	| BEGIN_ACTION nvlst ENDOBJ 	{ $$ = cnfobjNew(CNFOBJ_ACTION, $2); }
-cfsysline: CFSYSLINE	 		{ $$ = $1 }
+cfsysline: CFSYSLINE	 		{ $$ = $1; }
 nvlst:					{ $$ = NULL; }
 	| nvlst nv 			{ $2->next = $1; $$ = $2; }
 nv:	NAME '=' VALUE 			{ $$ = nvlstNew($1, $3); }
@@ -161,4 +165,5 @@ fparams:  expr				{ $$ = cnffparamlstNew($1, NULL); }
 int yyerror(char *s)
 {
 	printf("parse failure on or before line %d: %s\n", yylineno, s);
+	return 0;
 }

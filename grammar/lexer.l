@@ -42,9 +42,12 @@
 	 */
 %{
 #include <ctype.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <strings.h>
 #include <libestr.h>
 #include "utils.h"
-#include "rscript.tab.h"
+#include "grammar.h"
 static int preCommentState;	/* save for lex state before a comment */
 
 struct bufstack {
@@ -58,6 +61,13 @@ char *currfn;			/* name of currently processed file */
 
 int popfile(void);
 int cnfSetLexFile(char *fname);
+
+/* somehow, I need these prototype even though the headers are 
+ * included. I guess that's some autotools magic I don't understand...
+ */
+char *strdup(char*);
+int fileno(FILE *stream);
+
 %}
 
 %%
