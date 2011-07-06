@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 6.3.2  [DEVEL] (rgerhards), 2011-06-??
+Version 6.3.2  [DEVEL] (rgerhards), 2011-07-06
 - added support for the ":omusrmsg:" syntax in configuring user messages
 - systemd support: set stdout/stderr to null - thx to Lennart for the patch
 - added support for obtaining timestamp for kernel message from message

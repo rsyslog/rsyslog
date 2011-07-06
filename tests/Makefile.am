@@ -267,6 +267,7 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   diskqueue-fsync.sh \
 	   testsuites/diskqueue-fsync.conf \
 	   imtcp-tls-basic.sh \
+	   imtcp-tls-basic-vg.sh \
 	   testsuites/imtcp-tls-basic.conf \
            tls-certs/ca-key.pem \
            tls-certs/ca.pem \
@@ -291,6 +292,9 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   imptcp_conndrop.sh \
 	   testsuites/imptcp_conndrop.conf \
 	   imtcp_conndrop.sh \
+	   testsuites/imtcp_conndrop.conf \
+	   imtcp_conndrop_tls.sh \
+	   imtcp_conndrop_tls-vg.sh \
 	   testsuites/imtcp_conndrop.conf \
 	   imtcp_addtlframedelim.sh \
 	   testsuites/imtcp_addtlframedelim.conf \
@@ -501,12 +505,15 @@ inputfilegen_LDADD = $(SOL_LIBS)
 nettester_SOURCES = nettester.c getline.c
 nettester_LDADD = $(SOL_LIBS)
 
-rt_init_SOURCES = rt-init.c $(test_files)
-rt_init_CPPFLAGS =  -I$(top_srcdir) $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
-rt_init_LDADD = $(RSRT_LIBS) $(ZLIB_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
-rt_init_LDFLAGS = -export-dynamic
+# rtinit tests disabled for the moment - also questionable if they
+# really provide value (after all, everything fails if rtinit fails...)
+#rt_init_SOURCES = rt-init.c $(test_files)
+#rt_init_CPPFLAGS =  -I$(top_srcdir) $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
+#rt_init_LDADD = $(RSRT_LIBS) $(ZLIB_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
+#rt_init_LDFLAGS = -export-dynamic
 
-rscript_SOURCES = rscript.c getline.c $(test_files)
-rscript_CPPFLAGS =  -I$(top_srcdir) $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
-rscript_LDADD = $(RSRT_LIBS) $(ZLIB_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
-rscript_LDFLAGS = -export-dynamic
+# same for basic rscript tests
+#rscript_SOURCES = rscript.c getline.c $(test_files)
+#rscript_CPPFLAGS =  -I$(top_srcdir) $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
+#rscript_LDADD = $(RSRT_LIBS) $(ZLIB_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
+#rscript_LDFLAGS = -export-dynamic
