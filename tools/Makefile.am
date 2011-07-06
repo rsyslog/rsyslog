@@ -36,7 +36,7 @@ rsyslogd_SOURCES = \
 	\
 	../dirty.h
 rsyslogd_CPPFLAGS =  $(PTHREADS_CFLAGS) $(RSRT_CFLAGS) $(CNF_LIBS)
-rsyslogd_LDADD = $(ZLIB_LIBS) $(PTHREADS_LIBS) $(RSRT_LIBS) $(SOL_LIBS) $(LIBEE_LIBS) $(LIBLOGNORM_LIBS)
+rsyslogd_LDADD = $(ZLIB_LIBS) $(PTHREADS_LIBS) $(RSRT_LIBS) $(SOL_LIBS) $(LIBEE_LIBS) $(LIBLOGNORM_LIBS) $(CNF_LIBS) ../grammar/libgrammar.la
 rsyslogd_LDFLAGS = -export-dynamic
 
 if ENABLE_DIAGTOOLS

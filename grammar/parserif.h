@@ -1,5 +1,6 @@
 #ifndef PARSERIF_H_DEFINED
 #define PARSERIF_H_DEFINED
+#include "utils.h"
 int cnfSetLexFile(char*);
 int yyparse();
 int yydebug;

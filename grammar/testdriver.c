@@ -86,15 +86,6 @@ void cnfDoBSDHost(char *ln)
 	 dbgprintf("global:BSD host: %s\n", ln);
 }
 
-void
-cstrPrint(char *text, es_str_t *estr)
-{
-	char *str;
-	str = es_str2cstr(estr, NULL);
-	printf("%s%s", text, str);
-	free(str);
-}
-
 int
 main(int argc, char *argv[])
 {

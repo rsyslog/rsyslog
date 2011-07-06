@@ -609,3 +609,12 @@ cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst)
 	}
 	return func;
 }
+
+void
+cstrPrint(char *text, es_str_t *estr)
+{
+	char *str;
+	str = es_str2cstr(estr, NULL);
+	dbgprintf("%s%s", text, str);
+	free(str);
+}

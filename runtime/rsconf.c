@@ -31,6 +31,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <grp.h>
+#include <stdarg.h>
 #include <sys/resource.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -63,6 +64,7 @@
 #include "parser.h"
 #include "outchannel.h"
 #include "threads.h"
+#include "parserif.h"
 #include "dirty.h"
 
 /* static data */
@@ -92,6 +94,7 @@ static uchar template_StdPgSQLFmt[] = "\"insert into SystemEvents (Message, Faci
 static uchar template_spoofadr[] = "\"%fromhost-ip%\"";
 /* end templates */
 
+void cnfDoCfsysline(char *ln);
 
 /* Standard-Constructor
  */
@@ -210,6 +213,102 @@ BEGINobjDebugPrint(rsconf) /* be sure to specify the object type also in END and
 	}
 CODESTARTobjDebugPrint(rsconf)
 ENDobjDebugPrint(rsconf)
+
+
+rsRetVal
+cnfDoActlst(struct cnfactlst *actlst)
+{
+	struct cnfcfsyslinelst *cflst;
+	rsRetVal localRet;
+	DEFiRet;
+
+	while(actlst != NULL) {
+		dbgprintf("aclst %p: ", actlst);
+		if(actlst->actType == CNFACT_V2) {
+			dbgprintf("V2 action type not yet handled\n");
+		} else {
+			dbgprintf("legacy action line not yet handled:%s\n",
+				actlst->data.legActLine);
+		}
+		for(  cflst = actlst->syslines
+		    ; cflst != NULL ; cflst = cflst->next) {
+			 cnfDoCfsysline(cflst->line);
+		}
+		actlst = actlst->next;
+	}
+	RETiRet;
+}
+
+
+/*------------------------------ interface to flex/bison parser ------------------------------*/
+extern int yylineno;
+
+void
+parser_errmsg(char *fmt, ...)
+{
+	va_list ap;
+	va_start(ap, fmt);
+	// TODO: create useful code ;) 2011-07-06
+	dbgprintf("error on or before line %d: ", yylineno);
+	vprintf(fmt, ap);
+	printf("\n");
+	va_end(ap);
+}
+
+int
+yyerror(char *s)
+{
+	parser_errmsg("%s", s);
+	return 0;
+}
+void cnfDoObj(struct cnfobj *o)
+{
+	dbgprintf("cnf:global:obj: ");
+	cnfobjPrint(o);
+	cnfobjDestruct(o);
+}
+
+void cnfDoRule(struct cnfrule *rule)
+{
+	dbgprintf("cnf:global:rule\n");
+	cnfrulePrint(rule);
+
+	switch(rule->filttype) {
+	case CNFFILT_NONE:
+		break;
+	case CNFFILT_PRI:
+	case CNFFILT_PROP:
+		dbgprintf("%s\n", rule->filt.s);
+		break;
+	case CNFFILT_SCRIPT:
+		dbgprintf("\n");
+		cnfexprPrint(rule->filt.expr, 0);
+		break;
+	}
+	cnfDoActlst(rule->actlst);
+}
+
+void cnfDoCfsysline(char *ln)
+{
+	dbgprintf("cnf:global:cfsysline: %s\n", ln);
+	/* the legacy system needs the "$" stripped */
+	conf.cfsysline(loadConf, (uchar*) ln+1);
+	dbgprintf("cnf:cfsysline call done\n");
+}
+
+void cnfDoBSDTag(char *ln)
+{
+	dbgprintf("cnf:global:BSD tag: %s\n", ln);
+	cflineProcessTagSelector(conf, &line);
+}
+
+void cnfDoBSDHost(char *ln)
+{
+	dbgprintf("cnf:global:BSD host: %s\n", ln);
+	cflineProcessHostSelector(conf, &line);
+}
+/*------------------------------ end interface to flex/bison parser ------------------------------*/
+
 
 
 /* drop to specified group
@@ -994,6 +1093,7 @@ load(rsconf_t **cnf, uchar *confFile)
 	int iNbrActions;
 	int bHadConfigErr = 0;
 	char cbuf[BUFSIZ];
+	int r;
 	DEFiRet;
 
 	CHKiRet(rsconfConstruct(&loadConf));
@@ -1003,6 +1103,12 @@ ourConf = loadConf; // TODO: remove, once ourConf is gone!
 	CHKiRet(initLegacyConf());
 
 	/* open the configuration file */
+	dbgprintf("ZZZZZ: calling cnfSetLexFile(%s)\n", confFile);
+	r = cnfSetLexFile((char*)confFile);
+	dbgprintf("ZZZZZ: cnfSetLexFile returns %d, calling yyparse()\n", r);
+	r = yyparse();
+	dbgprintf("ZZZZZ: yyparse returns %d\n", r);
+	exit(1);
 	localRet = conf.processConfFile(loadConf, confFile);
 	CHKiRet(conf.GetNbrActActions(loadConf, &iNbrActions));
 
