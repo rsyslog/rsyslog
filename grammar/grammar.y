@@ -104,14 +104,11 @@ extern int yyerror(char*);
  * one by one.
  */
 conf:	/* empty (to end recursion) */
-	| conf obj			{ dbgprintf("global:config: ");
-					  cnfobjPrint($2); cnfobjDestruct($2); }
-	| conf rule			{ dbgprintf("global:rule processed\n");
-					  cnfrulePrint($2); }
-	| conf cfsysline		{ dbgprintf("global:cfsysline: %s\n", $2); }
-	| conf BSD_TAG_SELECTOR		{ dbgprintf("global:BSD tag '%s'\n", $2); }
-	| conf BSD_HOST_SELECTOR	{ dbgprintf("global:BSD host '%s'\n", $2); }
-
+	| conf obj			{ cnfDoObj($2); }
+	| conf rule			{ cnfDoRule($2); }
+	| conf cfsysline		{ cnfDoCfsysline($2); }
+	| conf BSD_TAG_SELECTOR		{ cnfDoBSDTag($2); }
+	| conf BSD_HOST_SELECTOR	{ cnfDoBSDHost($2); }
 obj:	  BEGINOBJ nvlst ENDOBJ 	{ $$ = cnfobjNew($1, $2); }
 	| BEGIN_ACTION nvlst ENDOBJ 	{ $$ = cnfobjNew(CNFOBJ_ACTION, $2); }
 cfsysline: CFSYSLINE	 		{ $$ = $1; }

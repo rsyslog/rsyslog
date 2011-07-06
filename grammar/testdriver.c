@@ -26,6 +26,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <libestr.h>
+#include "utils.h"
 #include "parserif.h"
 
 extern int yylineno;
@@ -57,6 +58,34 @@ dbgprintf(char *fmt, ...)
 	va_end(ap);
 }
 
+void cnfDoObj(struct cnfobj *o)
+{
+	dbgprintf("global:obj: ");
+	cnfobjPrint(o);
+	cnfobjDestruct(o);
+}
+
+void cnfDoRule(struct cnfrule *rule)
+{
+	dbgprintf("global:rule processed\n");
+	cnfrulePrint(rule);
+}
+
+void cnfDoCfsysline(char *ln)
+{
+	 dbgprintf("global:cfsysline: %s\n", ln);
+}
+
+void cnfDoBSDTag(char *ln)
+{
+	 dbgprintf("global:BSD tag: %s\n", ln);
+}
+
+void cnfDoBSDHost(char *ln)
+{
+	 dbgprintf("global:BSD host: %s\n", ln);
+}
+
 void
 cstrPrint(char *text, es_str_t *estr)
 {
@@ -65,7 +94,6 @@ cstrPrint(char *text, es_str_t *estr)
 	printf("%s%s", text, str);
 	free(str);
 }
-
 
 int
 main(int argc, char *argv[])
