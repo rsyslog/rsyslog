@@ -255,6 +255,8 @@ finalize_it:
 
 
 /* This function waits until the main queue is drained (size = 0)
+ * To make sure it really is drained, we check three times. Otherwise we
+ * may just see races.
  */
 static rsRetVal
 waitMainQEmpty(tcps_sess_t *pSess)
@@ -264,19 +266,22 @@ waitMainQEmpty(tcps_sess_t *pSess)
 	DEFiRet;
 
 	CHKiRet(diagGetMainMsgQSize(&iMsgQueueSize));
-	while(iMsgQueueSize > 0) {
-		/* DEV DEBUG ONLY if(iPrint++ % 500)
-			printf("imdiag: main msg queue size: %d\n", iMsgQueueSize);
-		*/
-		if(iPrint++ % 500 == 0) 
-			dbgprintf("imdiag sleeping, wait mainq drain, curr size %d\n", iMsgQueueSize);
-		srSleep(0,2);	/* wait a little bit */
-		CHKiRet(diagGetMainMsgQSize(&iMsgQueueSize));
+	while(1) {
 		if(iMsgQueueSize == 0) {
 			/* verify that queue is still empty (else it could just be a race!) */
-			srSleep(1,5);	/* wait a little bit */
+			srSleep(0,250000);/* wait a little bit */
 			CHKiRet(diagGetMainMsgQSize(&iMsgQueueSize));
+			if(iMsgQueueSize == 0) {
+				srSleep(0,500000);/* wait a little bit */
+				CHKiRet(diagGetMainMsgQSize(&iMsgQueueSize));
+			}
 		}
+		if(iMsgQueueSize == 0)
+			break;
+		if(iPrint++ % 500 == 0) 
+			dbgprintf("imdiag sleeping, wait mainq drain, curr size %d\n", iMsgQueueSize);
+		srSleep(0,200000);/* wait a little bit */
+		CHKiRet(diagGetMainMsgQSize(&iMsgQueueSize));
 	}
 
 	CHKiRet(sendResponse(pSess, "mainqueue empty\n"));
