@@ -279,7 +279,9 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	    *   [a-zA-Z0-9_.]
 	    * plus '*' for wall
 	    */
-	if(!*p || !((*p >= 'a' && *p <= 'z') || (*p >= 'A' && *p <= 'Z')
+	if(!strncmp((char*) p, ":omusrmsg:", sizeof(":omusrmsg:") - 1)) {
+		p += sizeof(":omusrmsg:") - 1; /* eat indicator sequence  (-1 because of '\0'!) */
+	} else if(!*p || !((*p >= 'a' && *p <= 'z') || (*p >= 'A' && *p <= 'Z')
 	   || (*p >= '0' && *p <= '9') || *p == '_' || *p == '.' || *p == '*'))
 		ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
 
