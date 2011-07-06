@@ -354,7 +354,7 @@ finalize_it:
  * 2004-11-17 rgerhards
  */
 rsRetVal
-cfsysline(rsconf_t *conf, uchar *p)
+cfsysline(uchar *p)
 {
 	DEFiRet;
 	uchar szCmd[64];
@@ -602,7 +602,7 @@ cflineParseFileName(uchar* p, uchar *pFileName, omodStringRequest_t *pOMSR, int 
  * rgerhards 2005-09-15
  */
 /* GPLv3 - stems back to sysklogd */
-static rsRetVal cflineProcessTradPRIFilter(uchar **pline, register rule_t *pRule)
+rsRetVal cflineProcessTradPRIFilter(uchar **pline, register rule_t *pRule)
 {
 	uchar *p;
 	register uchar *q;
@@ -619,7 +619,7 @@ static rsRetVal cflineProcessTradPRIFilter(uchar **pline, register rule_t *pRule
 	ASSERT(*pline != NULL);
 	ISOBJ_TYPE_assert(pRule, rule);
 
-	dbgprintf(" - traditional PRI filter\n");
+	dbgprintf(" - traditional PRI filter '%s'\n", *pline);
 	errno = 0;	/* keep strerror_r() stuff out of logerror messages */
 
 	pRule->f_filter_type = FILTER_PRI;
@@ -632,7 +632,6 @@ static rsRetVal cflineProcessTradPRIFilter(uchar **pline, register rule_t *pRule
 
 	/* scan through the list of selectors */
 	for (p = *pline; *p && *p != '\t' && *p != ' ';) {
-
 		/* find the end of this facility name list */
 		for (q = p; *q && *q != '\t' && *q++ != '.'; )
 			continue;
@@ -643,8 +642,10 @@ static rsRetVal cflineProcessTradPRIFilter(uchar **pline, register rule_t *pRule
 		*bp = '\0';
 
 		/* skip cruft */
-		while (strchr(",;", *q))
-			q++;
+		if(*q) {
+			while (strchr(",;", *q))
+				q++;
+		}
 
 		/* decode priority name */
 		if ( *buf == '!' ) {
@@ -836,7 +837,7 @@ finalize_it:
  * of the action part. A pointer to that beginnig is passed back to the caller.
  * rgerhards 2005-09-15
  */
-static rsRetVal cflineProcessPropFilter(uchar **pline, register rule_t *f)
+rsRetVal cflineProcessPropFilter(uchar **pline, register rule_t *f)
 {
 	rsParsObj *pPars;
 	cstr_t *pCSCompOp;
@@ -848,7 +849,7 @@ static rsRetVal cflineProcessPropFilter(uchar **pline, register rule_t *f)
 	ASSERT(*pline != NULL);
 	ASSERT(f != NULL);
 
-	dbgprintf(" - property-based filter\n");
+	dbgprintf(" - property-based filter '%s'\n", *pline);
 	errno = 0;	/* keep strerror_r() stuff out of logerror messages */
 
 	f->f_filter_type = FILTER_PROP;
@@ -908,7 +909,6 @@ static rsRetVal cflineProcessPropFilter(uchar **pline, register rule_t *f)
 		iOffset = 0;
 	}
 
-dbgprintf("XXX: offset is %d, string '%s'\n", iOffset, rsCStrGetSzStrNoNULL(pCSCompOp));
 	if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, (uchar*) "contains", 8)) {
 		f->f_filterData.prop.operation = FIOP_CONTAINS;
 	} else if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, (uchar*) "isequal", 7)) {
@@ -927,7 +927,6 @@ dbgprintf("XXX: offset is %d, string '%s'\n", iOffset, rsCStrGetSzStrNoNULL(pCSC
 	}
 	rsCStrDestruct(&pCSCompOp); /* no longer needed */
 
-dbgprintf("XXX: fiop is %u\n", (unsigned) f->f_filterData.prop.operation);
 	if(f->f_filterData.prop.operation != FIOP_ISEMPTY) {
 		/* read compare value */
 		iRet = parsQuotedCStr(pPars, &f->f_filterData.prop.pCSCompValue);
@@ -958,7 +957,7 @@ dbgprintf("XXX: fiop is %u\n", (unsigned) f->f_filterData.prop.operation);
  * from the config file ("+/-hostname"). It stores it for further reference.
  * rgerhards 2005-10-19
  */
-static rsRetVal cflineProcessHostSelector(rsconf_t *conf, uchar **pline)
+rsRetVal cflineProcessHostSelector(uchar **pline)
 {
 	DEFiRet;
 
@@ -1008,7 +1007,7 @@ finalize_it:
  * from the config file ("!tagname"). It stores it for further reference.
  * rgerhards 2005-10-18
  */
-static rsRetVal cflineProcessTagSelector(rsconf_t *conf, uchar **pline)
+rsRetVal cflineProcessTagSelector(uchar **pline)
 {
 	DEFiRet;
 
@@ -1093,7 +1092,7 @@ finalize_it:
 /* process the action part of a selector line
  * rgerhards, 2007-08-01
  */
-static rsRetVal cflineDoAction(rsconf_t *conf, uchar **p, action_t **ppAction)
+rsRetVal cflineDoAction(rsconf_t *conf, uchar **p, action_t **ppAction)
 {
 	modInfo_t *pMod;
 	cfgmodules_etry_t *node;
@@ -1214,15 +1213,15 @@ cfline(rsconf_t *conf, uchar *line, rule_t **pfCurr)
 	/* check type of line and call respective processing */
 	switch(*line) {
 		case '!':
-			iRet = cflineProcessTagSelector(conf, &line);
+			iRet = cflineProcessTagSelector(&line);
 			break;
 		case '+':
 		case '-':
-			iRet = cflineProcessHostSelector(conf, &line);
+			iRet = cflineProcessHostSelector(&line);
 			break;
 		case '$':
 			++line; /* eat '$' */
-			iRet = cfsysline(conf, line);
+			iRet = cfsysline(line);
 			break;
 		default:
 			iRet = cflineClassic(conf, line, pfCurr);

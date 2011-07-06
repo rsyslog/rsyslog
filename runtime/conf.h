@@ -21,6 +21,7 @@
  */
 #ifndef INCLUDED_CONF_H
 #define INCLUDED_CONF_H
+#include "action.h"
 
 /* definitions used for doNameLine to differentiate between different command types
  * (with otherwise identical code). This is a left-over from the previous config
@@ -34,7 +35,7 @@ extern int bConfStrictScoping;	/* force strict scoping during config processing?
 /* interfaces */
 BEGINinterface(conf) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*doNameLine)(uchar **pp, void* pVal);
-	rsRetVal (*cfsysline)(rsconf_t *conf, uchar *p);
+	rsRetVal (*cfsysline)(uchar *p);
 	rsRetVal (*doModLoad)(uchar **pp, __attribute__((unused)) void* pVal);
 	rsRetVal (*doIncludeLine)(rsconf_t *conf, uchar **pp, __attribute__((unused)) void* pVal);
 	rsRetVal (*cfline)(rsconf_t *conf, uchar *line, rule_t **pfCurr);
@@ -48,8 +49,10 @@ BEGINinterface(conf) /* name must also be changed in ENDinterface macro! */
 	 */
 	/* version 5 -- 2011-04-19 rgerhards */
 	/* complete revamp, we now use the rsconf object */
+	/* version 6 -- 2011-07-06 rgerhards */
+	/* again a complete revamp, using flex/bison based parser now */
 ENDinterface(conf)
-#define confCURR_IF_VERSION 5 /* increment whenever you change the interface structure! */
+#define confCURR_IF_VERSION 6 /* increment whenever you change the interface structure! */
 /* in Version 3, entry point "ReInitConf()" was removed, as we do not longer need
  * to support restart-type HUP -- rgerhards, 2009-07-15
  */
@@ -63,5 +66,11 @@ PROTOTYPEObj(conf);
 rsRetVal cflineParseTemplateName(uchar** pp, omodStringRequest_t *pOMSR, int iEntry, int iTplOpts, uchar *dfltTplName);
 rsRetVal cflineParseFileName(uchar* p, uchar *pFileName, omodStringRequest_t *pOMSR, int iEntry, int iTplOpts, uchar *pszTpl);
 
+/* more dirt to cover the new config interface (will go away...) */
+rsRetVal cflineProcessTagSelector(uchar **pline);
+rsRetVal cflineProcessHostSelector(uchar **pline);
+rsRetVal cflineProcessTradPRIFilter(uchar **pline, rule_t *pRule);
+rsRetVal cflineProcessPropFilter(uchar **pline, rule_t *f);
+rsRetVal cflineDoAction(rsconf_t *conf, uchar **p, action_t **ppAction);
 
 #endif /* #ifndef INCLUDED_CONF_H */

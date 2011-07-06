@@ -39,6 +39,7 @@
 #include "rsyslog.h"
 #include "obj.h"
 #include "srUtils.h"
+#include "rule.h"
 #include "ruleset.h"
 #include "modules.h"
 #include "conf.h"
@@ -69,6 +70,7 @@
 
 /* static data */
 DEFobjStaticHelpers
+DEFobjCurrIf(rule)
 DEFobjCurrIf(ruleset)
 DEFobjCurrIf(module)
 DEFobjCurrIf(conf)
@@ -216,10 +218,12 @@ ENDobjDebugPrint(rsconf)
 
 
 rsRetVal
-cnfDoActlst(struct cnfactlst *actlst)
+cnfDoActlst(struct cnfactlst *actlst, rule_t *pRule)
 {
 	struct cnfcfsyslinelst *cflst;
+	action_t *pAction;
 	rsRetVal localRet;
+	uchar *str;
 	DEFiRet;
 
 	while(actlst != NULL) {
@@ -227,8 +231,10 @@ cnfDoActlst(struct cnfactlst *actlst)
 		if(actlst->actType == CNFACT_V2) {
 			dbgprintf("V2 action type not yet handled\n");
 		} else {
-			dbgprintf("legacy action line not yet handled:%s\n",
-				actlst->data.legActLine);
+			dbgprintf("legacy action line:%s\n", actlst->data.legActLine);
+			str = (uchar*) actlst->data.legActLine;
+			iRet = cflineDoAction(loadConf, &str, &pAction);
+			iRet = llAppend(&(pRule)->llActList,  NULL, (void*) pAction);
 		}
 		for(  cflst = actlst->syslines
 		    ; cflst != NULL ; cflst = cflst->next) {
@@ -268,44 +274,77 @@ void cnfDoObj(struct cnfobj *o)
 	cnfobjDestruct(o);
 }
 
-void cnfDoRule(struct cnfrule *rule)
+void cnfDoRule(struct cnfrule *cnfrule)
 {
-	dbgprintf("cnf:global:rule\n");
-	cnfrulePrint(rule);
+	rule_t *pRule;
+	uchar *str;
+	DEFiRet;
 
-	switch(rule->filttype) {
+	dbgprintf("cnf:global:rule\n");
+	cnfrulePrint(cnfrule);
+
+	CHKiRet(rule.Construct(&pRule)); /* create "fresh" selector */
+	CHKiRet(rule.SetAssRuleset(pRule, ruleset.GetCurrent(loadConf))); /* create "fresh" selector */
+	CHKiRet(rule.ConstructFinalize(pRule)); /* create "fresh" selector */
+
+	switch(cnfrule->filttype) {
 	case CNFFILT_NONE:
 		break;
 	case CNFFILT_PRI:
+		str = (uchar*) cnfrule->filt.s;
+		iRet = cflineProcessTradPRIFilter(&str, pRule);
+		break;
 	case CNFFILT_PROP:
-		dbgprintf("%s\n", rule->filt.s);
+		dbgprintf("%s\n", cnfrule->filt.s);
+		str = (uchar*) cnfrule->filt.s;
+		iRet = cflineProcessPropFilter(&str, pRule);
 		break;
 	case CNFFILT_SCRIPT:
-		dbgprintf("\n");
-		cnfexprPrint(rule->filt.expr, 0);
+		dbgprintf("TODO: script filter implementation missing\n");
+		cnfexprPrint(cnfrule->filt.expr, 0);
 		break;
 	}
-	cnfDoActlst(rule->actlst);
+	/* we now check if there are some global (BSD-style) filter conditions
+	 * and, if so, we copy them over. rgerhards, 2005-10-18
+	 */
+#if 0 // TODO: add LATER!
+	if(pDfltProgNameCmp != NULL) {
+		CHKiRet(rsCStrConstructFromCStr(&(f->pCSProgNameComp), pDfltProgNameCmp));
+	}
+
+	if(eDfltHostnameCmpMode != HN_NO_COMP) {
+		f->eHostnameCmpMode = eDfltHostnameCmpMode;
+		CHKiRet(rsCStrConstructFromCStr(&(f->pCSHostnameComp), pDfltHostnameCmp));
+	}
+#endif
+
+	cnfDoActlst(cnfrule->actlst, pRule);
+
+	CHKiRet(ruleset.AddRule(loadConf, rule.GetAssRuleset(pRule), &pRule));
+
+finalize_it:
+	//TODO: do something with error states
+	;
 }
 
 void cnfDoCfsysline(char *ln)
 {
 	dbgprintf("cnf:global:cfsysline: %s\n", ln);
 	/* the legacy system needs the "$" stripped */
-	conf.cfsysline(loadConf, (uchar*) ln+1);
+	conf.cfsysline((uchar*) ln+1);
 	dbgprintf("cnf:cfsysline call done\n");
 }
 
 void cnfDoBSDTag(char *ln)
 {
 	dbgprintf("cnf:global:BSD tag: %s\n", ln);
-	cflineProcessTagSelector(conf, &line);
+	cflineProcessTagSelector((uchar**)&ln);
 }
 
 void cnfDoBSDHost(char *ln)
 {
 	dbgprintf("cnf:global:BSD host: %s\n", ln);
-	cflineProcessHostSelector(conf, &line);
+	cflineProcessHostSelector((uchar**)&ln);
 }
 /*------------------------------ end interface to flex/bison parser ------------------------------*/
 
@@ -1108,8 +1147,7 @@ ourConf = loadConf; // TODO: remove, once ourConf is gone!
 	dbgprintf("ZZZZZ: cnfSetLexFile returns %d, calling yyparse()\n", r);
 	r = yyparse();
 	dbgprintf("ZZZZZ: yyparse returns %d\n", r);
-	exit(1);
-	localRet = conf.processConfFile(loadConf, confFile);
+	//localRet = conf.processConfFile(loadConf, confFile);
 	CHKiRet(conf.GetNbrActActions(loadConf, &iNbrActions));
 
 	if(localRet != RS_RET_OK && localRet != RS_RET_NONFATAL_CONFIG_ERR) {
@@ -1208,6 +1246,7 @@ ENDobjQueryInterface(rsconf)
 BEGINObjClassInit(rsconf, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
 	CHKiRet(objUse(ruleset, CORE_COMPONENT));
+	CHKiRet(objUse(rule, CORE_COMPONENT));
 	CHKiRet(objUse(module, CORE_COMPONENT));
 	CHKiRet(objUse(conf, CORE_COMPONENT));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
@@ -1223,6 +1262,7 @@ ENDObjClassInit(rsconf)
 /* De-initialize the rsconf class.
  */
 BEGINObjClassExit(rsconf, OBJ_IS_CORE_MODULE) /* class, version */
+	objRelease(rule, CORE_COMPONENT);
 	objRelease(ruleset, CORE_COMPONENT);
 	objRelease(module, CORE_COMPONENT);
 	objRelease(conf, CORE_COMPONENT);
