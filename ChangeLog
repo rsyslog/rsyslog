@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 6.3.2  [DEVEL] (rgerhards), 2011-06-??
+- added support for the ":omusrmsg:" syntax in configuring user messages
+- systemd support: set stdout/stderr to null - thx to Lennart for the patch
 - added support for obtaining timestamp for kernel message from message
   If the kernel time-stamps messages, time is now take from that
   timestamp instead of the system time when the message was read. This
@@ -20,6 +22,24 @@ Version 6.3.2  [DEVEL] (rgerhards), 2011-06-??
 - bugfix: memory leak in imtcp & subsystems under some circumstances
   This leak is tied to error conditions which lead to incorrect cleanup
   of some data structures.
+---------------------------------------------------------------------------
+Version 6.1.11  [BETA] (rgerhards), 2011-06-??
+- added support for the ":omusrmsg:" syntax in configuring user messages
+- systemd support: set stdout/stderr to null - thx to Lennart for the patch
+---------------------------------------------------------------------------
+Version 6.1.10  [BETA] (rgerhards), 2011-06-22
+- bugfix: problems in failover action handling
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=270
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=254
+- bugfix: mutex was invalidly left unlocked during action processing
+  At least one case where this can occur is during thread shutdown, which
+  may be initiated by lower activity. In most cases, this is quite
+  unlikely to happen. However, if it does, data structures may be 
+  corrupted which could lead to fatal failure and segfault. I detected
+  this via a testbench test, not a user report. But I assume that some
+  users may have had unreproducable aborts that were cause by this bug.
+---------------------------------------------------------------------------
+Version 6.1.9  [BETA] (rgerhards), 2011-06-14
 - bugfix: problems in failover action handling
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=270
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=254
@@ -287,6 +307,10 @@ Version 5.9.0  [V5-DEVEL] (rgerhards), 2011-06-08
 - bugfix: failover did not work correctly if repeated msg reduction was on
   affected directive was: $ActionExecOnlyWhenPreviousIsSuspended on
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=236
+---------------------------------------------------------------------------
+Version 5.8.3  [V5-stable] (rgerhards), 2011-06-??
+- systemd support: set stdout/stderr to null - thx to Lennart for the patch
+- added support for the ":omusrmsg:" syntax in configuring user messages
 ---------------------------------------------------------------------------
 Version 5.8.2  [V5-stable] (rgerhards), 2011-06-21
 - bugfix: problems in failover action handling
@@ -1136,7 +1160,10 @@ Version 4.7.0  [v4-devel] (rgerhards), 2010-04-14
   Thanks for varmojfekoj for pointing me at this bug.
 - imported changes from 4.5.6 and below
 ---------------------------------------------------------------------------
-Version 4.6.6  [v4-stable] (rgerhards), 2010-11-??
+Version 4.6.7  [v4-stable] (rgerhards), 2011-06-??
+- added support for the ":omusrmsg:" syntax in configuring user messages
+---------------------------------------------------------------------------
+Version 4.6.6  [v4-stable] (rgerhards), 2011-06-24
 - bugfix: memory leak in imtcp & subsystems under some circumstances
   This leak is tied to error conditions which lead to incorrect cleanup
   of some data structures. [backport from v6, limited testing under v4]

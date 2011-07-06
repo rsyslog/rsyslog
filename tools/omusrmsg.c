@@ -289,9 +289,19 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	    *   [a-zA-Z0-9_.]
 	    * plus '*' for wall
 	    */
-	if(!*p || !((*p >= 'a' && *p <= 'z') || (*p >= 'A' && *p <= 'Z')
-	   || (*p >= '0' && *p <= '9') || *p == '_' || *p == '.' || *p == '*'))
+	if(!strncmp((char*) p, ":omusrmsg:", sizeof(":omusrmsg:") - 1)) {
+		p += sizeof(":omusrmsg:") - 1; /* eat indicator sequence  (-1 because of '\0'!) */
+	} else {
+		if(!*p || !((*p >= 'a' && *p <= 'z') || (*p >= 'A' && *p <= 'Z')
+	   || (*p >= '0' && *p <= '9') || *p == '_' || *p == '.' || *p == '*')) {
 		ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
+		} else {
+			errmsg.LogError(0, RS_RET_OUTDATED_STMT,
+			   "action '%s' treated as ':omusrmsg:%s' - please "
+			   "change syntax, '%s' will not be supported in the future",
+			   p, p, p);
+		}
+	}
 
 	CHKiRet(createInstance(&pData));
 
