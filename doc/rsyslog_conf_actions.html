@@ -23,7 +23,7 @@ definition. If you do this, the action will be ignored.</p>
 more precisely a single filter of such a selector line). Each action
 must be on its own line and the line must start with an ampersand
 ('&amp;') character and have no filters. An example would be</p>
-<p><code><b>*.=crit rger<br>
+<p><code><b>*.=crit :omusrmsg:rger<br>
 &amp; root<br>
 &amp; /var/log/critmsgs</b></code></p>
 <p>These three lines send critical messages to the user rger and
@@ -32,7 +32,7 @@ actions per selector is</b> convenient and also <b>offers
 a performance benefit</b>. As the filter needs to be evaluated
 only once, there is less computation required to process the directive
 compared to the otherwise-equal config directives below:</p>
-<p><code><b>*.=crit rger<br>
+<p><code><b>*.=crit :omusrmsg:rger<br>
 *.=crit root<br>
 *.=crit /var/log/critmsgs</b></code></p>
 <p>&nbsp;</p>
@@ -211,13 +211,19 @@ sysklogd,"&lt;%PRI%&gt;%TIMESTAMP% %syslogtag%%msg%\""<br>
 <h3>List of Users</h3>
 <p>Usually critical messages are also directed to "root'' on
 that machine. You can specify a list of users that shall get the
-message by simply writing the login. You may specify more than one user
-by separating them with commas (",''). If they're logged in they get
-the message. Don't think a mail would be sent, that might be too late.</p>
+message by simply writing ":omusrmsg: followed by the login name. For example,
+the send messages to root, use ":omusrmsg:root".
+You may specify more than one user
+by separating them with commas (",''). Do not repeat the ":omusrmsg:" prefix in
+this case. For example, to send data to users root and rger, use
+":omusrmsg:root,rger" (do not use ":omusrmsg:root,:omusrmsg:rger", this is invalid).
+If they're logged in they get
+the message.</p>
 <h3>Everyone logged on</h3>
 <p>Emergency messages often go to all users currently online to
 notify them that something strange is happening with the system. To
-specify this wall(1)-feature use an asterisk ("*'').</p>
+specify this wall(1)-feature use an asterisk as the user message
+destination(":omusrmsg:*'').</p>
 <h3>Call Plugin</h3>
 <p>This is a generic way to call an output plugin. The plugin
 must support this functionality. Actual parameters depend on the
@@ -331,7 +337,7 @@ what you can do with it, see "TEMPLATES" at the top of this document.</p>
 [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
 <p><font size="2">This documentation is part of the
 <a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
-Copyright &copy; 2008 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+Copyright &copy; 2008-2011 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
 <a href="http://www.adiscon.com/">Adiscon</a>. Released under the GNU GPL
 version 2 or higher.</font></p>
 </body>
