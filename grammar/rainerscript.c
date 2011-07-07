@@ -291,8 +291,9 @@ done:
 static inline long long
 exprret2Number(struct exprret *r)
 {
+	long long n;
 	if(r->datatype == 'S') {
-		dbgprintf("toNumber CONVERSION MISSING\n"); abort();
+		n = es_str2num(r->d.estr);
 	}
 	return r->d.n;
 }
@@ -301,22 +302,24 @@ exprret2Number(struct exprret *r)
  * emit error message and set number to 0.
  */
 static inline es_str_t *
-exprret2String(struct exprret *r)
+exprret2String(struct exprret *r, int *bMustFree)
 {
 	if(r->datatype == 'N') {
-		dbgprintf("toString CONVERSION MISSING\n"); abort();
+		*bMustFree = 1;
+		return es_newStrFromNumber(r->d.n);
 	}
+	*bMustFree = 0;
 	return r->d.estr;
 }
 
 #define COMP_NUM_BINOP(x) \
-	cnfexprEval(expr->l, &l); \
-	cnfexprEval(expr->r, &r); \
+	cnfexprEval(expr->l, &l, usrptr); \
+	cnfexprEval(expr->r, &r, usrptr); \
 	ret->datatype = 'N'; \
 	ret->d.n = exprret2Number(&l) x exprret2Number(&r)
 
 /* evaluate an expression.
- * Note that we try to avoid malloc whenever possible (because on
+ * Note that we try to avoid malloc whenever possible (because of
  * the large overhead it has, especially on highly threaded programs).
  * As such, the each caller level must provide buffer space for the
  * result on its stack during recursion. This permits the callee to store
@@ -326,14 +329,35 @@ exprret2String(struct exprret *r)
  * simply is no case where full evaluation would make any sense at all.
  */
 void
-cnfexprEval(struct cnfexpr *expr, struct exprret *ret)
+cnfexprEval(struct cnfexpr *expr, struct exprret *ret, void* usrptr)
 {
 	struct exprret r, l; /* memory for subexpression results */
+	es_str_t *estr;
+	int bMustFree;
 
 	//dbgprintf("eval expr %p, type '%c'(%u)\n", expr, expr->nodetype, expr->nodetype);
 	switch(expr->nodetype) {
 	case CMP_EQ:
-		COMP_NUM_BINOP(==);
+		cnfexprEval(expr->l, &l, usrptr);
+		cnfexprEval(expr->r, &r, usrptr);
+		ret->datatype = 'N';
+		if(l.datatype == 'S') {
+			if(r.datatype == 'S') {
+				ret->d.n = !es_strcmp(l.d.estr, r.d.estr);
+			} else {
+				estr = exprret2String(&r, &bMustFree);
+				ret->d.n = !es_strcmp(l.d.estr, estr);
+				if(bMustFree) es_deleteStr(estr);
+			}
+		} else {
+			if(r.datatype == 'S') {
+				estr = exprret2String(&l, &bMustFree);
+				ret->d.n = !es_strcmp(r.d.estr, estr);
+				if(bMustFree) es_deleteStr(estr);
+			} else {
+				ret->d.n = (l.d.n == r.d.n);
+			}
+		}
 		break;
 	case CMP_NE:
 		COMP_NUM_BINOP(!=);
@@ -351,12 +375,12 @@ cnfexprEval(struct cnfexpr *expr, struct exprret *ret)
 		COMP_NUM_BINOP(>);
 		break;
 	case OR:
-		cnfexprEval(expr->l, &l);
+		cnfexprEval(expr->l, &l, usrptr);
 		ret->datatype = 'N';
 		if(exprret2Number(&l)) {
 			ret->d.n = 1ll;
 		} else {
-			cnfexprEval(expr->r, &r);
+			cnfexprEval(expr->r, &r, usrptr);
 			if(exprret2Number(&r))
 				ret->d.n = 1ll;
 			else 
@@ -364,10 +388,10 @@ cnfexprEval(struct cnfexpr *expr, struct exprret *ret)
 		}
 		break;
 	case AND:
-		cnfexprEval(expr->l, &l);
+		cnfexprEval(expr->l, &l, usrptr);
 		ret->datatype = 'N';
 		if(exprret2Number(&l)) {
-			cnfexprEval(expr->r, &r);
+			cnfexprEval(expr->r, &r, usrptr);
 			if(exprret2Number(&r))
 				ret->d.n = 1ll;
 			else 
@@ -377,13 +401,21 @@ cnfexprEval(struct cnfexpr *expr, struct exprret *ret)
 		}
 		break;
 	case NOT:
-		cnfexprEval(expr->r, &r);
+		cnfexprEval(expr->r, &r, usrptr);
 		ret->datatype = 'N';
 		ret->d.n = !exprret2Number(&r);
 		break;
 	case 'N':
 		ret->datatype = 'N';
 		ret->d.n = ((struct cnfnumval*)expr)->val;
+		break;
+	case 'S':
+		ret->datatype = 'S';
+		ret->d.estr = es_strdup(((struct cnfstringval*)expr)->estr);
+		break;
+	case 'V':
+		ret->datatype = 'S';
+		ret->d.estr = cnfGetVar(((struct cnfvar*)expr)->name, usrptr);
 		break;
 	case '+':
 		COMP_NUM_BINOP(+);
@@ -401,15 +433,15 @@ cnfexprEval(struct cnfexpr *expr, struct exprret *ret)
 		COMP_NUM_BINOP(%);
 		break;
 	case 'M':
-		cnfexprEval(expr->r, &r);
+		cnfexprEval(expr->r, &r, usrptr);
 		ret->datatype = 'N';
 		ret->d.n = -exprret2Number(&r);
 		break;
 	default:
 		ret->datatype = 'N';
 		ret->d.n = 0ll;
-		dbgprintf("eval error: unknown nodetype %u\n",
-			(unsigned) expr->nodetype);
+		dbgprintf("eval error: unknown nodetype %u['%c']\n",
+			(unsigned) expr->nodetype, (char) expr->nodetype);
 		break;
 	}
 }
@@ -419,10 +451,10 @@ cnfexprEval(struct cnfexpr *expr, struct exprret *ret)
  * important.
  */
 int
-cnfexprEvalBool(struct cnfexpr *expr)
+cnfexprEvalBool(struct cnfexpr *expr, void *usrptr)
 {
 	struct exprret ret;
-	cnfexprEval(expr, &ret);
+	cnfexprEval(expr, &ret, usrptr);
 	return exprret2Number(&ret);
 }
 

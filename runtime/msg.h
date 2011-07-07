@@ -170,6 +170,7 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 		  size_t *pPropLen, unsigned short *pbMustBeFreed);
 char *textpri(char *pRes, size_t pResLen, int pri);
 rsRetVal msgGetMsgVar(msg_t *pThis, cstr_t *pstrPropName, var_t **ppVar);
+es_str_t* msgGetMsgVarNew(msg_t *pThis, uchar *name);
 rsRetVal MsgEnableThreadSafety(void);
 uchar *getRcvFrom(msg_t *pM);
 void getTAG(msg_t *pM, uchar **ppBuf, int *piLen);

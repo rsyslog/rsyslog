@@ -16,4 +16,5 @@ void cnfDoRule(struct cnfrule *rule);
 void cnfDoCfsysline(char *ln);
 void cnfDoBSDTag(char *ln);
 void cnfDoBSDHost(char *ln);
+es_str_t *cnfGetVar(char *name, void *usrptr);
 #endif

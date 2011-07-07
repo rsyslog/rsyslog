@@ -222,7 +222,6 @@ cnfDoActlst(struct cnfactlst *actlst, rule_t *pRule)
 {
 	struct cnfcfsyslinelst *cflst;
 	action_t *pAction;
-	rsRetVal localRet;
 	uchar *str;
 	DEFiRet;
 
@@ -280,7 +279,7 @@ void cnfDoRule(struct cnfrule *cnfrule)
 {
 	rule_t *pRule;
 	uchar *str;
-	DEFiRet;
+	rsRetVal iRet = RS_RET_OK; //DEFiRet;
 
 	dbgprintf("cnf:global:rule\n");
 	cnfrulePrint(cnfrule);
@@ -345,6 +344,17 @@ void cnfDoBSDHost(char *ln)
 {
 	dbgprintf("cnf:global:BSD host: %s\n", ln);
 	cflineProcessHostSelector((uchar**)&ln);
+}
+
+es_str_t*
+cnfGetVar(char *name, void *usrptr)
+{
+	es_str_t *estr;
+	dbgprintf("ZZZZ: var '%s' requested", name);
+	if(name[0] == '$') {
+		estr = msgGetMsgVarNew((msg_t*) usrptr, (uchar*)name+1);
+	}
+	return estr;
 }
 /*------------------------------ end interface to flex/bison parser ------------------------------*/
 

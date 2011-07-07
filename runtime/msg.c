@@ -37,6 +37,7 @@
 #include <ctype.h>
 #include <sys/socket.h>
 #include <netdb.h>
+#include <libestr.h>
 #include <libee/libee.h>
 #if HAVE_MALLOC_H
 #  include <malloc.h>
@@ -480,16 +481,13 @@ getRcvFromIP(msg_t *pM)
 }
 
 
-
-/* map a property name (string) to a property ID */
-rsRetVal propNameToID(cstr_t *pCSPropName, propid_t *pPropID)
+/* map a property name (C string) to a property ID */
+rsRetVal
+propNameStrToID(uchar *pName, propid_t *pPropID)
 {
-	uchar *pName;
 	DEFiRet;
 
-	assert(pCSPropName != NULL);
-	assert(pPropID != NULL);
-	pName = rsCStrGetSzStrNoNULL(pCSPropName);
+	assert(pName != NULL);
 
 	/* sometimes there are aliases to the original MonitoWare
 	 * property names. These come after || in the ifs below. */
@@ -573,6 +571,21 @@ rsRetVal propNameToID(cstr_t *pCSPropName, propid_t *pPropID)
 		iRet = RS_RET_VAR_NOT_FOUND;
 	}
 
+	RETiRet;
+}
+
+
+/* map a property name (string) to a property ID */
+rsRetVal
+propNameToID(cstr_t *pCSPropName, propid_t *pPropID)
+{
+	uchar *pName;
+	DEFiRet;
+
+	assert(pCSPropName != NULL);
+	assert(pPropID != NULL);
+	pName = rsCStrGetSzStrNoNULL(pCSPropName);
+	iRet =  propNameStrToID(pName, pPropID);
 	RETiRet;
 }
 
@@ -3187,6 +3200,34 @@ finalize_it:
 		free(pszProp);
 
 	RETiRet;
+}
+
+
+
+/* Return an es_str_t for given message property.
+ */
+es_str_t*
+msgGetMsgVarNew(msg_t *pThis, uchar *name)
+{
+	size_t propLen;
+	uchar *pszProp = NULL;
+	propid_t propid;
+	unsigned short bMustBeFreed = 0;
+	es_str_t *estr;
+
+	ISOBJ_TYPE_assert(pThis, msg);
+
+	/* always call MsgGetProp() without a template specifier */
+	/* TODO: optimize propNameToID() call -- rgerhards, 2009-06-26 */
+	propNameStrToID(name, &propid);
+	pszProp = (uchar*) MsgGetProp(pThis, NULL, propid, NULL, &propLen, &bMustBeFreed);
+
+dbgprintf("ZZZZ: var %s returns '%s'\n", name, pszProp);
+	estr = es_newStrFromCStr((char*)pszProp, propLen);
+	if(bMustBeFreed)
+		free(pszProp);
+
+	return estr;
 }
 
 

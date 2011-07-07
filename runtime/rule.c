@@ -196,7 +196,7 @@ shouldProcessThisMessage(rule_t *pRule, msg_t *pMsg, sbool *bProcessMsg)
 		/* VM is destructed on function exit */
 		bRet = (pResult->val.num) ? 1 : 0;
 #endif
-		bRet = cnfexprEvalBool(pRule->f_filterData.expr);
+		bRet = cnfexprEvalBool(pRule->f_filterData.expr, pMsg);
 		dbgprintf("result of rainerscript filter evaluation: %d\n", bRet);
 	} else {
 		assert(pRule->f_filter_type == FILTER_PROP); /* assert() just in case... */
