@@ -1,9 +1,35 @@
+/* rainerscript.c - routines to support RainerScript config language
+ *
+ * Module begun 2011-07-01 by Rainer Gerhards
+ *
+ * Copyright 2011 Rainer Gerhards and Adiscon GmbH.
+ *
+ * This file is part of the rsyslog runtime library.
+ *
+ * The rsyslog runtime library is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * The rsyslog runtime library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with the rsyslog runtime library.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * A copy of the GPL can be found in the file "COPYING" in this distribution.
+ * A copy of the LGPL can be found in the file "COPYING.LESSER" in this distribution.
+ */
+
+#include "config.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 #include <libestr.h>
-#include "utils.h"
+#include "rainerscript.h"
 #include "parserif.h"
 #include "grammar.h"
 
@@ -386,6 +412,18 @@ cnfexprEval(struct cnfexpr *expr, struct exprret *ret)
 			(unsigned) expr->nodetype);
 		break;
 	}
+}
+
+/* Evaluate an expression as a bool. This is added because expressions are
+ * mostly used inside filters, and so this function is quite common and
+ * important.
+ */
+int
+cnfexprEvalBool(struct cnfexpr *expr)
+{
+	struct exprret ret;
+	cnfexprEval(expr, &ret);
+	return exprret2Number(&ret);
 }
 
 inline static void

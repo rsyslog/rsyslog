@@ -40,6 +40,7 @@
 #include "var.h"
 #include "srUtils.h"
 #include "batch.h"
+#include "parserif.h"
 #include "unicode-helper.h"
 
 /* static data */
@@ -186,14 +187,17 @@ shouldProcessThisMessage(rule_t *pRule, msg_t *pMsg, sbool *bProcessMsg)
 		else
 			bRet = 1;
 	} else if(pRule->f_filter_type == FILTER_EXPR) {
+#if 0
 		CHKiRet(vm.Construct(&pVM));
 		CHKiRet(vm.ConstructFinalize(pVM));
 		CHKiRet(vm.SetMsg(pVM, pMsg));
 		CHKiRet(vm.ExecProg(pVM, pRule->f_filterData.f_expr->pVmprg));
 		CHKiRet(vm.PopBoolFromStack(pVM, &pResult));
-		dbgprintf("result of rainerscript filter evaluation: %lld\n", pResult->val.num);
 		/* VM is destructed on function exit */
 		bRet = (pResult->val.num) ? 1 : 0;
+#endif
+		bRet = cnfexprEvalBool(pRule->f_filterData.expr);
+		dbgprintf("result of rainerscript filter evaluation: %d\n", bRet);
 	} else {
 		assert(pRule->f_filter_type == FILTER_PROP); /* assert() just in case... */
 		pszPropVal = MsgGetProp(pMsg, NULL, pRule->f_filterData.prop.propID,
@@ -356,9 +360,11 @@ CODESTARTobjDestruct(rule)
 			rsCStrRegexDestruct(&pThis->f_filterData.prop.regex_cache);
 		if(pThis->f_filterData.prop.propName != NULL)
 			es_deleteStr(pThis->f_filterData.prop.propName);
+#if 0
 	} else if(pThis->f_filter_type == FILTER_EXPR) {
 		if(pThis->f_filterData.f_expr != NULL)
 			expr.Destruct(&pThis->f_filterData.f_expr);
+#endif
 	}
 
 	llDestroy(&pThis->llActList);

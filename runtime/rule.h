@@ -2,7 +2,7 @@
  *
  * This implements rules within rsyslog.
  *
- * Copyright 2009 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2009-2011 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -28,7 +28,8 @@
 #include "libestr.h"
 #include "linkedlist.h"
 #include "regexp.h"
-#include "expr.h"
+#include "expr.h" // TODO: remove #if 0
+#include "rainerscript.h"
 
 /* the rule object */
 struct rule_s {
@@ -52,6 +53,7 @@ struct rule_s {
 			propid_t propID;		/* ID of the requested property */
 			es_str_t *propName;		/* name of property for CEE-based filters */
 		} prop;
+		struct cnfexpr *expr;			/* expression object */
 		expr_t *f_expr;				/* expression object */
 	} f_filterData;
 

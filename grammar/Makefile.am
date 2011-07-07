@@ -7,8 +7,8 @@ bin_PROGRAMS = testdriver # TODO: make this conditional
 libgrammar_la_SOURCES = \
 	grammar.y \
 	lexer.l \
-	utils.c \
-	utils.h \
+	rainerscript.c \
+	rainerscript.h \
 	grammar.h
 
 testdriver_SOURCES = testdriver.c libgrammar.la

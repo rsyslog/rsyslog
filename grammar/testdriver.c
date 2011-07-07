@@ -26,7 +26,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <libestr.h>
-#include "utils.h"
+#include "rainerscript.h"
 #include "parserif.h"
 
 extern int yylineno;

@@ -1,5 +1,6 @@
 #ifndef INC_UTILS_H
 #define INC_UTILS_H
+#include <stdio.h>
 #include <libestr.h>
 
 enum cnfobjType {
@@ -161,6 +162,7 @@ struct cnfactlst* cnfactlstReverse(struct cnfactlst *actlst);
 struct cnfexpr* cnfexprNew(unsigned nodetype, struct cnfexpr *l, struct cnfexpr *r);
 void cnfexprPrint(struct cnfexpr *expr, int indent);
 void cnfexprEval(struct cnfexpr *expr, struct exprret *ret);
+int cnfexprEvalBool(struct cnfexpr *expr);
 struct cnfnumval* cnfnumvalNew(long long val);
 struct cnfstringval* cnfstringvalNew(es_str_t *estr);
 struct cnfrule * cnfruleNew(enum cnfFiltType filttype, struct cnfactlst *actlst);

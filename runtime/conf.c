@@ -104,9 +104,9 @@ int bConfStrictScoping = 0;	/* force strict scoping during config processing? */
  * be run in a single thread anyways. So there can be no race conditions.
  * rgerhards 2005-10-18
  */
-static EHostnameCmpMode eDfltHostnameCmpMode = HN_NO_COMP;
-static cstr_t *pDfltHostnameCmp = NULL;
-static cstr_t *pDfltProgNameCmp = NULL;
+EHostnameCmpMode eDfltHostnameCmpMode = HN_NO_COMP;
+cstr_t *pDfltHostnameCmp = NULL;
+cstr_t *pDfltProgNameCmp = NULL;
 
 
 /* process a directory and include all of its files into
@@ -763,6 +763,7 @@ rsRetVal cflineProcessTradPRIFilter(uchar **pline, register rule_t *pRule)
 }
 
 
+#if 0
 /* Helper to cfline(). This function processes an "if" type of filter,
  * what essentially means it parses an expression. As usual, 
  * It processes the line up to the beginning of the action part.
@@ -830,6 +831,7 @@ finalize_it:
 
 	RETiRet;
 }
+#endif
 
 
 /* Helper to cfline(). This function takes the filter part of a property
@@ -1061,12 +1063,14 @@ static rsRetVal cflineDoFilter(uchar **pp, rule_t *f)
 		case ':':
 			CHKiRet(cflineProcessPropFilter(pp, f));
 			break;
+#if 0
 		case 'i': /* "if" filter? */
 			if(*(*pp+1) && (*(*pp+1) == 'f') && isspace(*(*pp+2))) {
 				CHKiRet(cflineProcessIfFilter(pp, f));
 				break;
 				}
 			/*FALLTHROUGH*/
+#endif
 		default:
 			CHKiRet(cflineProcessTradPRIFilter(pp, f));
 			break;

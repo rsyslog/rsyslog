@@ -1,6 +1,6 @@
 #ifndef PARSERIF_H_DEFINED
 #define PARSERIF_H_DEFINED
-#include "utils.h"
+#include "rainerscript.h"
 int cnfSetLexFile(char*);
 int yyparse();
 int yydebug;

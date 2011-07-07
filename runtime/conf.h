@@ -72,5 +72,8 @@ rsRetVal cflineProcessHostSelector(uchar **pline);
 rsRetVal cflineProcessTradPRIFilter(uchar **pline, rule_t *pRule);
 rsRetVal cflineProcessPropFilter(uchar **pline, rule_t *f);
 rsRetVal cflineDoAction(rsconf_t *conf, uchar **p, action_t **ppAction);
+extern EHostnameCmpMode eDfltHostnameCmpMode;
+extern cstr_t *pDfltHostnameCmp;
+extern cstr_t *pDfltProgNameCmp;
 
 #endif /* #ifndef INCLUDED_CONF_H */

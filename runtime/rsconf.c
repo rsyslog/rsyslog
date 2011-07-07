@@ -255,7 +255,9 @@ parser_errmsg(char *fmt, ...)
 	va_list ap;
 	va_start(ap, fmt);
 	// TODO: create useful code ;) 2011-07-06
-	dbgprintf("error on or before line %d: ", yylineno);
+	errmsg.LogError(0, NO_ERRCODE, "error during parsing on or before line %d",
+			yylineno);
+dbgprintf("error on or before line %d: ", yylineno);
 	vprintf(fmt, ap);
 	printf("\n");
 	va_end(ap);
@@ -284,8 +286,8 @@ void cnfDoRule(struct cnfrule *cnfrule)
 	cnfrulePrint(cnfrule);
 
 	CHKiRet(rule.Construct(&pRule)); /* create "fresh" selector */
-	CHKiRet(rule.SetAssRuleset(pRule, ruleset.GetCurrent(loadConf))); /* create "fresh" selector */
-	CHKiRet(rule.ConstructFinalize(pRule)); /* create "fresh" selector */
+	CHKiRet(rule.SetAssRuleset(pRule, ruleset.GetCurrent(loadConf)));
+	CHKiRet(rule.ConstructFinalize(pRule));
 
 	switch(cnfrule->filttype) {
 	case CNFFILT_NONE:
@@ -300,23 +302,21 @@ void cnfDoRule(struct cnfrule *cnfrule)
 		iRet = cflineProcessPropFilter(&str, pRule);
 		break;
 	case CNFFILT_SCRIPT:
-		dbgprintf("TODO: script filter implementation missing\n");
-		cnfexprPrint(cnfrule->filt.expr, 0);
+		pRule->f_filter_type = FILTER_EXPR;
+		pRule->f_filterData.f_expr = cnfrule->filt.expr;
 		break;
 	}
 	/* we now check if there are some global (BSD-style) filter conditions
 	 * and, if so, we copy them over. rgerhards, 2005-10-18
 	 */
-#if 0 // TODO: add LATER!
 	if(pDfltProgNameCmp != NULL) {
-		CHKiRet(rsCStrConstructFromCStr(&(f->pCSProgNameComp), pDfltProgNameCmp));
+		CHKiRet(rsCStrConstructFromCStr(&(pRule->pCSProgNameComp), pDfltProgNameCmp));
 	}
 
 	if(eDfltHostnameCmpMode != HN_NO_COMP) {
-		f->eHostnameCmpMode = eDfltHostnameCmpMode;
-		CHKiRet(rsCStrConstructFromCStr(&(f->pCSHostnameComp), pDfltHostnameCmp));
+		pRule->eHostnameCmpMode = eDfltHostnameCmpMode;
+		CHKiRet(rsCStrConstructFromCStr(&(pRule->pCSHostnameComp), pDfltHostnameCmp));
 	}
-#endif
 
 	cnfDoActlst(cnfrule->actlst, pRule);
 
