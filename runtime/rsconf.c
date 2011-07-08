@@ -350,7 +350,7 @@ es_str_t*
 cnfGetVar(char *name, void *usrptr)
 {
 	es_str_t *estr;
-	dbgprintf("ZZZZ: var '%s' requested", name);
+	dbgprintf("ZZZZ: var '%s' requested\n", name);
 	if(name[0] == '$') {
 		estr = msgGetMsgVarNew((msg_t*) usrptr, (uchar*)name+1);
 	}

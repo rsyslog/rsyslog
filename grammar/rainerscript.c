@@ -332,8 +332,9 @@ void
 cnfexprEval(struct cnfexpr *expr, struct exprret *ret, void* usrptr)
 {
 	struct exprret r, l; /* memory for subexpression results */
-	es_str_t *estr;
+	es_str_t *estr_r, *estr_l;
 	int bMustFree;
+	int bMustFree2;
 
 	//dbgprintf("eval expr %p, type '%c'(%u)\n", expr, expr->nodetype, expr->nodetype);
 	switch(expr->nodetype) {
@@ -345,15 +346,15 @@ cnfexprEval(struct cnfexpr *expr, struct exprret *ret, void* usrptr)
 			if(r.datatype == 'S') {
 				ret->d.n = !es_strcmp(l.d.estr, r.d.estr);
 			} else {
-				estr = exprret2String(&r, &bMustFree);
-				ret->d.n = !es_strcmp(l.d.estr, estr);
-				if(bMustFree) es_deleteStr(estr);
+				estr_r = exprret2String(&r, &bMustFree);
+				ret->d.n = !es_strcmp(l.d.estr, estr_r);
+				if(bMustFree) es_deleteStr(estr_r);
 			}
 		} else {
 			if(r.datatype == 'S') {
-				estr = exprret2String(&l, &bMustFree);
-				ret->d.n = !es_strcmp(r.d.estr, estr);
-				if(bMustFree) es_deleteStr(estr);
+				estr_l = exprret2String(&l, &bMustFree);
+				ret->d.n = !es_strcmp(r.d.estr, estr_l);
+				if(bMustFree) es_deleteStr(estr_l);
 			} else {
 				ret->d.n = (l.d.n == r.d.n);
 			}
@@ -373,6 +374,17 @@ cnfexprEval(struct cnfexpr *expr, struct exprret *ret, void* usrptr)
 		break;
 	case CMP_GT:
 		COMP_NUM_BINOP(>);
+		break;
+	case CMP_CONTAINS:
+		cnfexprEval(expr->l, &l, usrptr);
+		cnfexprEval(expr->r, &r, usrptr);
+		estr_r = exprret2String(&r, &bMustFree);
+		estr_l = exprret2String(&l, &bMustFree2);
+		ret->datatype = 'N';
+dbgprintf("ZZZZ: contains ret %d\n", es_strContains(estr_l, estr_r));
+		ret->d.n = es_strContains(estr_l, estr_r) != -1;
+		if(bMustFree) es_deleteStr(estr_r);
+		if(bMustFree2) es_deleteStr(estr_l);
 		break;
 	case OR:
 		cnfexprEval(expr->l, &l, usrptr);
