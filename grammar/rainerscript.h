@@ -128,7 +128,9 @@ struct cnffparamlst {
 struct cnffunc {
 	unsigned nodetype;
 	es_str_t *fname;
-	struct cnffparamlst *paramlst;
+	unsigned short nParams;
+	unsigned short *fID; /* function ID for built-ins, 0 means use name */
+	struct cnfexpr *expr[];
 };
 
 /* future extensions

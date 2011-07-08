@@ -685,6 +685,9 @@ void
 cnfexprPrint(struct cnfexpr *expr, int indent)
 {
 	struct cnffparamlst *param;
+	struct cnffunc *func;
+	int i;
+
 	//dbgprintf("expr %p, indent %d, type '%c'\n", expr, indent, expr->nodetype);
 	switch(expr->nodetype) {
 	case CMP_EQ:
@@ -779,12 +782,11 @@ cnfexprPrint(struct cnfexpr *expr, int indent)
 		break;
 	case 'F':
 		doIndent(indent);
-		cstrPrint("function '", ((struct cnffunc*)expr)->fname);
-		dbgprintf("'\n");
-		for(  param = ((struct cnffunc*)expr)->paramlst
-		    ; param != NULL
-		    ; param = param->next) {
-			cnfexprPrint(param->expr, indent+1);
+		func = (struct cnffunc*) expr;
+		cstrPrint("function '", func->fname);
+		dbgprintf("' (%u params)\n", (unsigned) func->nParams);
+		for(i = 0 ; i < func->nParams ; ++i) {
+			cnfexprPrint(func->expr[i], indent+1);
 		}
 		break;
 	case '+':
@@ -888,10 +890,28 @@ struct cnffunc *
 cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst)
 {
 	struct cnffunc* func;
-	if((func = malloc(sizeof(struct cnffunc))) != NULL) {
+	struct cnffparamlst *param, *toDel;
+	unsigned short i;
+	unsigned short nParams;
+
+	/* we first need to find out how many params we have */
+	nParams = 0;
+	for(param = paramlst ; param != NULL ; param = param->next)
+		++nParams;
+	if((func = malloc(sizeof(struct cnffunc) + (nParams * sizeof(struct cnfexp*))))
+	   != NULL) {
 		func->nodetype = 'F';
 		func->fname = fname;
-		func->paramlst = paramlst;
+		func->nParams = nParams;
+		func->fID = 0;	/* use name */
+		/* shuffle params over to array (access speed!) */
+		param = paramlst;
+		for(i = 0 ; i < nParams ; ++i) {
+			func->expr[i] = param->expr;
+			toDel = param;
+			param = param->next;
+			free(toDel);
+		}
 	}
 	return func;
 }
