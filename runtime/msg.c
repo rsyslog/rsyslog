@@ -3108,9 +3108,8 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 }
 
 
-/* The function returns a cee variable suitable for use with RainerScript. Most importantly, this means
- * that the value is returned in a var_t object. The var_t is constructed inside this function and
- * MUST be freed by the caller.
+/* The function returns a cee variable suitable for use with RainerScript. 
+ * Note: caller must free the returned string.
  * Note that we need to do a lot of conversions between es_str_t and cstr -- this will go away once
  * we have moved larger parts of rsyslog to es_str_t. Acceptable for the moment, especially as we intend
  * to rewrite the script engine as well!
@@ -3131,7 +3130,6 @@ msgGetCEEVarNew(msg_t *pMsg, char *name)
 	}
 
 	epropName = es_newStrFromCStr(name, strlen(name)); // TODO: optimize (in grammar!) 
-dbgprintf("ZZZZ: pmsg->event %p\n", pMsg->event);
 	field = ee_getEventField(pMsg->event, epropName);
 	if(field != NULL) {
 		estr = ee_getFieldValueAsStr(field, 0);
