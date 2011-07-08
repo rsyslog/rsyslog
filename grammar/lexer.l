@@ -72,6 +72,7 @@ struct bufstack {
 	YY_BUFFER_STATE bs;
 	int lineno;
 	char *fn;
+	es_str_t *estr;
 } *currbs = NULL;
 
 char *currfn;			/* name of currently processed file */
@@ -228,6 +229,7 @@ cnfSetLexFile(char *fname)
 	bs->prev = currbs;
 	bs->fn = strdup(fname == NULL ? "stdin" : fname);
 	bs->bs = yy_scan_buffer((char*)es_getBufAddr(str), es_strlen(str));
+	bs->estr = str; /* needed so we can free it later */
 	currbs = bs;
 	currfn = bs->fn;
 	yylineno = 1;
@@ -253,6 +255,7 @@ popfile(void)
 	/* delte current entry */
 	yy_delete_buffer(bs->bs);
 	free(bs->fn);
+	free(bs->estr);
 
 	/* switch back to previous */
 	currbs = bs->prev;

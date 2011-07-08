@@ -1602,7 +1602,6 @@ GlobalClassExit(void)
 	objRelease(ruleset,  CORE_COMPONENT);
 	objRelease(rule,     CORE_COMPONENT);
 	objRelease(expr,     CORE_COMPONENT);
-	vmClassExit();					/* this is hack, currently core_modules do not get this automatically called */
 	parserClassExit();					/* this is hack, currently core_modules do not get this automatically called */
 	rsconfClassExit();					/* this is hack, currently core_modules do not get this automatically called */
 	objRelease(datetime, CORE_COMPONENT);

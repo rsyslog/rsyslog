@@ -5,6 +5,16 @@ pkglib_LTLIBRARIES =
 #pkglib_LTLIBRARIES = librsyslog.la
 
 librsyslog_la_SOURCES = \
+	expr.c \
+	expr.h \
+	vm.c \
+	vm.h \
+	vmstk.c \
+	vmstk.h \
+	vmprg.c \
+	vmprg.h \
+	vmop.c \
+	vmop.h \
 	rsyslog.c \
 	rsyslog.h \
 	typedefs.h \
@@ -55,8 +65,6 @@ librsyslog_la_SOURCES = \
 	statsobj.h \
 	sync.c \
 	sync.h \
-	expr.c \
-	expr.h \
 	ctok.c \
 	ctok.h \
 	ctok_token.c \
@@ -71,14 +79,6 @@ librsyslog_la_SOURCES = \
 	wti.h \
 	sysvar.c \
 	sysvar.h \
-	vm.c \
-	vm.h \
-	vmstk.c \
-	vmstk.h \
-	vmprg.c \
-	vmprg.h \
-	vmop.c \
-	vmop.h \
 	queue.c \
 	queue.h \
 	ruleset.c \

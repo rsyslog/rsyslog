@@ -1152,11 +1152,8 @@ ourConf = loadConf; // TODO: remove, once ourConf is gone!
 	CHKiRet(initLegacyConf());
 
 	/* open the configuration file */
-	dbgprintf("ZZZZZ: calling cnfSetLexFile(%s)\n", confFile);
 	r = cnfSetLexFile((char*)confFile);
-	dbgprintf("ZZZZZ: cnfSetLexFile returns %d, calling yyparse()\n", r);
 	r = yyparse();
-	dbgprintf("ZZZZZ: yyparse returns %d\n", r);
 	//localRet = conf.processConfFile(loadConf, confFile);
 	CHKiRet(conf.GetNbrActActions(loadConf, &iNbrActions));
 

@@ -36,7 +36,6 @@
 #include "action.h"
 #include "rule.h"
 #include "errmsg.h"
-#include "vm.h"
 #include "var.h"
 #include "srUtils.h"
 #include "batch.h"
@@ -46,9 +45,7 @@
 /* static data */
 DEFobjStaticHelpers
 DEFobjCurrIf(errmsg)
-DEFobjCurrIf(expr)
 DEFobjCurrIf(var)
-DEFobjCurrIf(vm)
 
 
 /* support for simple textual representation of FIOP names
@@ -124,7 +121,6 @@ shouldProcessThisMessage(rule_t *pRule, msg_t *pMsg, sbool *bProcessMsg)
 	uchar *pszPropVal;
 	int bRet = 0;
 	size_t propLen;
-	vm_t *pVM = NULL;
 	var_t *pResult = NULL;
 
 	ISOBJ_TYPE_assert(pRule, rule);
@@ -276,9 +272,6 @@ shouldProcessThisMessage(rule_t *pRule, msg_t *pMsg, sbool *bProcessMsg)
 
 finalize_it:
 	/* destruct in any case, not just on error, but it makes error handling much easier */
-	if(pVM != NULL)
-		vm.Destruct(&pVM);
-
 	if(pResult != NULL)
 		var.Destruct(&pResult);
 
@@ -482,9 +475,7 @@ ENDobjQueryInterface(rule)
  */
 BEGINObjClassExit(rule, OBJ_IS_CORE_MODULE) /* class, version */
 	objRelease(errmsg, CORE_COMPONENT);
-	objRelease(expr, CORE_COMPONENT);
 	objRelease(var, CORE_COMPONENT);
-	objRelease(vm, CORE_COMPONENT);
 ENDObjClassExit(rule)
 
 
@@ -495,9 +486,7 @@ ENDObjClassExit(rule)
 BEGINObjClassInit(rule, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
-	CHKiRet(objUse(expr, CORE_COMPONENT));
 	CHKiRet(objUse(var, CORE_COMPONENT));
-	CHKiRet(objUse(vm, CORE_COMPONENT));
 
 	/* set our own handlers */
 	OBJSetMethodHandler(objMethod_DEBUGPRINT, ruleDebugPrint);

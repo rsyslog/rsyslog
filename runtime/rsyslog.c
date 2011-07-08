@@ -182,10 +182,13 @@ rsrtInit(char **ppErrObj, obj_if_t *pObjIF)
 		CHKiRet(ctok_tokenClassInit(NULL));
 		if(ppErrObj != NULL) *ppErrObj = "ctok";
 		CHKiRet(ctokClassInit(NULL));
+#if 1
 		if(ppErrObj != NULL) *ppErrObj = "vmstk";
 		CHKiRet(vmstkClassInit(NULL));
+#endif
 		if(ppErrObj != NULL) *ppErrObj = "sysvar";
 		CHKiRet(sysvarClassInit(NULL));
+#if 1
 		if(ppErrObj != NULL) *ppErrObj = "vm";
 		CHKiRet(vmClassInit(NULL));
 		if(ppErrObj != NULL) *ppErrObj = "vmop";
@@ -194,6 +197,7 @@ rsrtInit(char **ppErrObj, obj_if_t *pObjIF)
 		CHKiRet(vmprgClassInit(NULL));
 		if(ppErrObj != NULL) *ppErrObj = "expr";
 		CHKiRet(exprClassInit(NULL));
+#endif
 		if(ppErrObj != NULL) *ppErrObj = "rule";
 		CHKiRet(ruleClassInit(NULL));
 		if(ppErrObj != NULL) *ppErrObj = "ruleset";

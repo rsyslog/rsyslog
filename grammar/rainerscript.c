@@ -286,14 +286,17 @@ done:
 }
 
 /* ensure that retval is a number; if string is no number,
- * emit error message and set number to 0.
+ * try to convert it to one. The semantics from es_str2num()
+ * are used (bSuccess tells if the conversion went well or not).
  */
 static inline long long
-exprret2Number(struct exprret *r)
+exprret2Number(struct exprret *r, int *bSuccess)
 {
 	long long n;
 	if(r->datatype == 'S') {
-		n = es_str2num(r->d.estr);
+		n = es_str2num(r->d.estr, bSuccess);
+	} else {
+		*bSuccess = 1;
 	}
 	return r->d.n;
 }
@@ -316,7 +319,17 @@ exprret2String(struct exprret *r, int *bMustFree)
 	cnfexprEval(expr->l, &l, usrptr); \
 	cnfexprEval(expr->r, &r, usrptr); \
 	ret->datatype = 'N'; \
-	ret->d.n = exprret2Number(&l) x exprret2Number(&r)
+	ret->d.n = exprret2Number(&l, &convok_l) x exprret2Number(&r, &convok_r)
+
+#define PREP_TWO_STRINGS \
+		cnfexprEval(expr->l, &l, usrptr); \
+		cnfexprEval(expr->r, &r, usrptr); \
+		estr_r = exprret2String(&r, &bMustFree); \
+		estr_l = exprret2String(&l, &bMustFree2)
+
+#define FREE_TWO_STRINGS \
+		if(bMustFree) es_deleteStr(estr_r); \
+		if(bMustFree2) es_deleteStr(estr_l)
 
 /* evaluate an expression.
  * Note that we try to avoid malloc whenever possible (because of
@@ -333,67 +346,239 @@ cnfexprEval(struct cnfexpr *expr, struct exprret *ret, void* usrptr)
 {
 	struct exprret r, l; /* memory for subexpression results */
 	es_str_t *estr_r, *estr_l;
-	int bMustFree;
-	int bMustFree2;
+	int convok_r, convok_l;
+	int bMustFree, bMustFree2;
+	long long n_r, n_l;
 
 	//dbgprintf("eval expr %p, type '%c'(%u)\n", expr, expr->nodetype, expr->nodetype);
 	switch(expr->nodetype) {
+	/* note: comparison operations are extremely similar. The code can be copyied, only
+	 * places flagged with "CMP" need to be changed.
+	 */
 	case CMP_EQ:
 		cnfexprEval(expr->l, &l, usrptr);
 		cnfexprEval(expr->r, &r, usrptr);
 		ret->datatype = 'N';
 		if(l.datatype == 'S') {
 			if(r.datatype == 'S') {
-				ret->d.n = !es_strcmp(l.d.estr, r.d.estr);
+				ret->d.n = !es_strcmp(l.d.estr, r.d.estr); /*CMP*/
 			} else {
-				estr_r = exprret2String(&r, &bMustFree);
-				ret->d.n = !es_strcmp(l.d.estr, estr_r);
-				if(bMustFree) es_deleteStr(estr_r);
+				n_l = exprret2Number(&l, &convok_l);
+				if(convok_l) {
+					ret->d.n = (n_l == r.d.n); /*CMP*/
+				} else {
+					estr_r = exprret2String(&r, &bMustFree);
+					ret->d.n = !es_strcmp(l.d.estr, estr_r); /*CMP*/
+					if(bMustFree) es_deleteStr(estr_r);
+				}
 			}
 		} else {
 			if(r.datatype == 'S') {
-				estr_l = exprret2String(&l, &bMustFree);
-				ret->d.n = !es_strcmp(r.d.estr, estr_l);
-				if(bMustFree) es_deleteStr(estr_l);
+				n_r = exprret2Number(&r, &convok_r);
+				if(convok_r) {
+					ret->d.n = (l.d.n == n_r); /*CMP*/
+				} else {
+					estr_l = exprret2String(&l, &bMustFree);
+					ret->d.n = !es_strcmp(r.d.estr, estr_l); /*CMP*/
+					if(bMustFree) es_deleteStr(estr_l);
+				}
 			} else {
-				ret->d.n = (l.d.n == r.d.n);
+				ret->d.n = (l.d.n == r.d.n); /*CMP*/
 			}
 		}
 		break;
 	case CMP_NE:
-		COMP_NUM_BINOP(!=);
-		break;
-	case CMP_LE:
-		COMP_NUM_BINOP(<=);
-		break;
-	case CMP_GE:
-		COMP_NUM_BINOP(>=);
-		break;
-	case CMP_LT:
-		COMP_NUM_BINOP(<);
-		break;
-	case CMP_GT:
-		COMP_NUM_BINOP(>);
-		break;
-	case CMP_CONTAINS:
 		cnfexprEval(expr->l, &l, usrptr);
 		cnfexprEval(expr->r, &r, usrptr);
-		estr_r = exprret2String(&r, &bMustFree);
-		estr_l = exprret2String(&l, &bMustFree2);
 		ret->datatype = 'N';
-dbgprintf("ZZZZ: contains ret %d\n", es_strContains(estr_l, estr_r));
+		if(l.datatype == 'S') {
+			if(r.datatype == 'S') {
+				ret->d.n = es_strcmp(l.d.estr, r.d.estr); /*CMP*/
+			} else {
+				n_l = exprret2Number(&l, &convok_l);
+				if(convok_l) {
+					ret->d.n = (n_l != r.d.n); /*CMP*/
+				} else {
+					estr_r = exprret2String(&r, &bMustFree);
+					ret->d.n = es_strcmp(l.d.estr, estr_r); /*CMP*/
+					if(bMustFree) es_deleteStr(estr_r);
+				}
+			}
+		} else {
+			if(r.datatype == 'S') {
+				n_r = exprret2Number(&r, &convok_r);
+				if(convok_r) {
+					ret->d.n = (l.d.n != n_r); /*CMP*/
+				} else {
+					estr_l = exprret2String(&l, &bMustFree);
+					ret->d.n = es_strcmp(r.d.estr, estr_l); /*CMP*/
+					if(bMustFree) es_deleteStr(estr_l);
+				}
+			} else {
+				ret->d.n = (l.d.n != r.d.n); /*CMP*/
+			}
+		}
+		break;
+	case CMP_LE:
+		cnfexprEval(expr->l, &l, usrptr);
+		cnfexprEval(expr->r, &r, usrptr);
+		ret->datatype = 'N';
+		if(l.datatype == 'S') {
+			if(r.datatype == 'S') {
+				ret->d.n = es_strcmp(l.d.estr, r.d.estr) <= 0; /*CMP*/
+			} else {
+				n_l = exprret2Number(&l, &convok_l);
+				if(convok_l) {
+					ret->d.n = (n_l <= r.d.n); /*CMP*/
+				} else {
+					estr_r = exprret2String(&r, &bMustFree);
+					ret->d.n = es_strcmp(l.d.estr, estr_r) <= 0; /*CMP*/
+					if(bMustFree) es_deleteStr(estr_r);
+				}
+			}
+		} else {
+			if(r.datatype == 'S') {
+				n_r = exprret2Number(&r, &convok_r);
+				if(convok_r) {
+					ret->d.n = (l.d.n <= n_r); /*CMP*/
+				} else {
+					estr_l = exprret2String(&l, &bMustFree);
+					ret->d.n = es_strcmp(r.d.estr, estr_l) <= 0; /*CMP*/
+					if(bMustFree) es_deleteStr(estr_l);
+				}
+			} else {
+				ret->d.n = (l.d.n <= r.d.n); /*CMP*/
+			}
+		}
+		break;
+	case CMP_GE:
+		cnfexprEval(expr->l, &l, usrptr);
+		cnfexprEval(expr->r, &r, usrptr);
+		ret->datatype = 'N';
+		if(l.datatype == 'S') {
+			if(r.datatype == 'S') {
+				ret->d.n = es_strcmp(l.d.estr, r.d.estr) >= 0; /*CMP*/
+			} else {
+				n_l = exprret2Number(&l, &convok_l);
+				if(convok_l) {
+					ret->d.n = (n_l >= r.d.n); /*CMP*/
+				} else {
+					estr_r = exprret2String(&r, &bMustFree);
+					ret->d.n = es_strcmp(l.d.estr, estr_r) >= 0; /*CMP*/
+					if(bMustFree) es_deleteStr(estr_r);
+				}
+			}
+		} else {
+			if(r.datatype == 'S') {
+				n_r = exprret2Number(&r, &convok_r);
+				if(convok_r) {
+					ret->d.n = (l.d.n >= n_r); /*CMP*/
+				} else {
+					estr_l = exprret2String(&l, &bMustFree);
+					ret->d.n = es_strcmp(r.d.estr, estr_l) >= 0; /*CMP*/
+					if(bMustFree) es_deleteStr(estr_l);
+				}
+			} else {
+				ret->d.n = (l.d.n >= r.d.n); /*CMP*/
+			}
+		}
+		break;
+	case CMP_LT:
+		cnfexprEval(expr->l, &l, usrptr);
+		cnfexprEval(expr->r, &r, usrptr);
+		ret->datatype = 'N';
+		if(l.datatype == 'S') {
+			if(r.datatype == 'S') {
+				ret->d.n = es_strcmp(l.d.estr, r.d.estr) < 0; /*CMP*/
+			} else {
+				n_l = exprret2Number(&l, &convok_l);
+				if(convok_l) {
+					ret->d.n = (n_l < r.d.n); /*CMP*/
+				} else {
+					estr_r = exprret2String(&r, &bMustFree);
+					ret->d.n = es_strcmp(l.d.estr, estr_r) < 0; /*CMP*/
+					if(bMustFree) es_deleteStr(estr_r);
+				}
+			}
+		} else {
+			if(r.datatype == 'S') {
+				n_r = exprret2Number(&r, &convok_r);
+				if(convok_r) {
+					ret->d.n = (l.d.n < n_r); /*CMP*/
+				} else {
+					estr_l = exprret2String(&l, &bMustFree);
+					ret->d.n = es_strcmp(r.d.estr, estr_l) < 0; /*CMP*/
+					if(bMustFree) es_deleteStr(estr_l);
+				}
+			} else {
+				ret->d.n = (l.d.n < r.d.n); /*CMP*/
+			}
+		}
+		break;
+	case CMP_GT:
+		cnfexprEval(expr->l, &l, usrptr);
+		cnfexprEval(expr->r, &r, usrptr);
+		ret->datatype = 'N';
+		if(l.datatype == 'S') {
+			if(r.datatype == 'S') {
+				ret->d.n = es_strcmp(l.d.estr, r.d.estr) > 0; /*CMP*/
+			} else {
+				n_l = exprret2Number(&l, &convok_l);
+				if(convok_l) {
+					ret->d.n = (n_l > r.d.n); /*CMP*/
+				} else {
+					estr_r = exprret2String(&r, &bMustFree);
+					ret->d.n = es_strcmp(l.d.estr, estr_r) > 0; /*CMP*/
+					if(bMustFree) es_deleteStr(estr_r);
+				}
+			}
+		} else {
+			if(r.datatype == 'S') {
+				n_r = exprret2Number(&r, &convok_r);
+				if(convok_r) {
+					ret->d.n = (l.d.n > n_r); /*CMP*/
+				} else {
+					estr_l = exprret2String(&l, &bMustFree);
+					ret->d.n = es_strcmp(r.d.estr, estr_l) > 0; /*CMP*/
+					if(bMustFree) es_deleteStr(estr_l);
+				}
+			} else {
+				ret->d.n = (l.d.n > r.d.n); /*CMP*/
+			}
+		}
+		break;
+	case CMP_STARTSWITH:
+		PREP_TWO_STRINGS;
+		ret->datatype = 'N';
+		ret->d.n = es_strncmp(estr_l, estr_r, estr_r->lenStr) == 0;
+		FREE_TWO_STRINGS;
+		break;
+	case CMP_STARTSWITHI:
+		PREP_TWO_STRINGS;
+		ret->datatype = 'N';
+		ret->d.n = es_strncasecmp(estr_l, estr_r, estr_r->lenStr) == 0;
+		FREE_TWO_STRINGS;
+		break;
+	case CMP_CONTAINS:
+		PREP_TWO_STRINGS;
+		ret->datatype = 'N';
 		ret->d.n = es_strContains(estr_l, estr_r) != -1;
-		if(bMustFree) es_deleteStr(estr_r);
-		if(bMustFree2) es_deleteStr(estr_l);
+		FREE_TWO_STRINGS;
+		break;
+	case CMP_CONTAINSI:
+		PREP_TWO_STRINGS;
+		ret->datatype = 'N';
+		ret->d.n = es_strCaseContains(estr_l, estr_r) != -1;
+		FREE_TWO_STRINGS;
 		break;
 	case OR:
 		cnfexprEval(expr->l, &l, usrptr);
 		ret->datatype = 'N';
-		if(exprret2Number(&l)) {
+		if(exprret2Number(&l, &convok_l)) {
 			ret->d.n = 1ll;
 		} else {
 			cnfexprEval(expr->r, &r, usrptr);
-			if(exprret2Number(&r))
+			if(exprret2Number(&r, &convok_r))
 				ret->d.n = 1ll;
 			else 
 				ret->d.n = 0ll;
@@ -402,9 +587,9 @@ dbgprintf("ZZZZ: contains ret %d\n", es_strContains(estr_l, estr_r));
 	case AND:
 		cnfexprEval(expr->l, &l, usrptr);
 		ret->datatype = 'N';
-		if(exprret2Number(&l)) {
+		if(exprret2Number(&l, &convok_l)) {
 			cnfexprEval(expr->r, &r, usrptr);
-			if(exprret2Number(&r))
+			if(exprret2Number(&r, &convok_r))
 				ret->d.n = 1ll;
 			else 
 				ret->d.n = 0ll;
@@ -415,7 +600,7 @@ dbgprintf("ZZZZ: contains ret %d\n", es_strContains(estr_l, estr_r));
 	case NOT:
 		cnfexprEval(expr->r, &r, usrptr);
 		ret->datatype = 'N';
-		ret->d.n = !exprret2Number(&r);
+		ret->d.n = !exprret2Number(&r, &convok_r);
 		break;
 	case 'N':
 		ret->datatype = 'N';
@@ -447,7 +632,7 @@ dbgprintf("ZZZZ: contains ret %d\n", es_strContains(estr_l, estr_r));
 	case 'M':
 		cnfexprEval(expr->r, &r, usrptr);
 		ret->datatype = 'N';
-		ret->d.n = -exprret2Number(&r);
+		ret->d.n = -exprret2Number(&r, &convok_r);
 		break;
 	default:
 		ret->datatype = 'N';
@@ -465,9 +650,10 @@ dbgprintf("ZZZZ: contains ret %d\n", es_strContains(estr_l, estr_r));
 int
 cnfexprEvalBool(struct cnfexpr *expr, void *usrptr)
 {
+	int convok;
 	struct exprret ret;
 	cnfexprEval(expr, &ret, usrptr);
-	return exprret2Number(&ret);
+	return exprret2Number(&ret, &convok);
 }
 
 inline static void
