@@ -178,6 +178,7 @@ char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt);
 char *getPRI(msg_t *pMsg);
 void getRawMsg(msg_t *pM, uchar **pBuf, int *piLen);
 rsRetVal msgGetCEEVar(msg_t *pThis, cstr_t *propName, var_t **ppVar);
+es_str_t* msgGetCEEVarNew(msg_t *pMsg, char *name);
 
 
 /* TODO: remove these five (so far used in action.c) */

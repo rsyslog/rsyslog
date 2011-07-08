@@ -65,6 +65,7 @@
 #include "parser.h"
 #include "outchannel.h"
 #include "threads.h"
+#include "datetime.h"
 #include "parserif.h"
 #include "dirty.h"
 
@@ -77,6 +78,7 @@ DEFobjCurrIf(conf)
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(parser)
+DEFobjCurrIf(datetime)
 
 /* exported static data */
 rsconf_t *runConf = NULL;/* the currently running config */
@@ -244,6 +246,87 @@ cnfDoActlst(struct cnfactlst *actlst, rule_t *pRule)
 	RETiRet;
 }
 
+/* This function returns the current date in different
+ * variants. It is used to construct the $NOW series of
+ * system properties. The returned buffer must be freed
+ * by the caller when no longer needed. If the function
+ * can not allocate memory, it returns a NULL pointer.
+ * TODO: this was taken from msg.c and we should consolidate it with the code
+ * there. This is especially important when we increase the number of system
+ * variables (what we definitely want to do).
+ */
+typedef enum ENOWType { NOW_NOW, NOW_YEAR, NOW_MONTH, NOW_DAY, NOW_HOUR, NOW_MINUTE } eNOWType;
+static rsRetVal
+getNOW(eNOWType eNow, es_str_t **estr)
+{
+	DEFiRet;
+	uchar szBuf[16];
+	struct syslogTime t;
+	es_size_t len;
+
+	datetime.getCurrTime(&t, NULL);
+	switch(eNow) {
+	case NOW_NOW:
+		len = snprintf((char*) szBuf, sizeof(szBuf)/sizeof(uchar),
+			   	"%4.4d-%2.2d-%2.2d", t.year, t.month, t.day);
+		break;
+	case NOW_YEAR:
+		len = snprintf((char*) szBuf, sizeof(szBuf)/sizeof(uchar), "%4.4d", t.year);
+		break;
+	case NOW_MONTH:
+		len = snprintf((char*) szBuf, sizeof(szBuf)/sizeof(uchar), "%2.2d", t.month);
+		break;
+	case NOW_DAY:
+		len = snprintf((char*) szBuf, sizeof(szBuf)/sizeof(uchar), "%2.2d", t.day);
+		break;
+	case NOW_HOUR:
+		len = snprintf((char*) szBuf, sizeof(szBuf)/sizeof(uchar), "%2.2d", t.hour);
+		break;
+	case NOW_MINUTE:
+		len = snprintf((char*) szBuf, sizeof(szBuf)/sizeof(uchar), "%2.2d", t.minute);
+		break;
+	}
+
+	/* now create a string object out of it and hand that over to the var */
+	*estr = es_newStrFromCStr((char*)szBuf, len);
+
+	RETiRet;
+}
+
+
+
+static inline es_str_t *
+getSysVar(char *name)
+{
+	es_str_t *estr = NULL;
+	rsRetVal iRet = RS_RET_OK;
+
+	if(!strcmp(name, "now")) {
+		CHKiRet(getNOW(NOW_NOW, &estr));
+	} else if(!strcmp(name, "year")) {
+		CHKiRet(getNOW(NOW_YEAR, &estr));
+	} else if(!strcmp(name, "month")) {
+		CHKiRet(getNOW(NOW_MONTH, &estr));
+	} else if(!strcmp(name, "day")) {
+		CHKiRet(getNOW(NOW_DAY, &estr));
+	} else if(!strcmp(name, "hour")) {
+		CHKiRet(getNOW(NOW_HOUR, &estr));
+	} else if(!strcmp(name, "minute")) {
+		CHKiRet(getNOW(NOW_MINUTE, &estr));
+	} else if(!strcmp(name, "myhostname")) {
+		char *hn = (char*)glbl.GetLocalHostName();
+		estr = es_newStrFromCStr(hn, strlen(hn));
+	} else {
+		ABORT_FINALIZE(RS_RET_SYSVAR_NOT_FOUND);
+	}
+finalize_it:
+	if(iRet != RS_RET_OK) {
+		dbgprintf("getSysVar error iRet %d\n", iRet);
+		if(estr == NULL)
+			estr = es_newStrFromCStr("*ERROR*", sizeof("*ERROR*") - 1);
+	}
+	return estr;
+}
 
 /*------------------------------ interface to flex/bison parser ------------------------------*/
 extern int yylineno;
@@ -350,9 +433,19 @@ es_str_t*
 cnfGetVar(char *name, void *usrptr)
 {
 	es_str_t *estr;
-	dbgprintf("ZZZZ: var '%s' requested\n", name);
 	if(name[0] == '$') {
-		estr = msgGetMsgVarNew((msg_t*) usrptr, (uchar*)name+1);
+		if(name[1] == '$')
+			estr = getSysVar(name+2);
+		else if(name[1] == '!')
+			estr = msgGetCEEVarNew((msg_t*) usrptr, name+2);
+		else
+			estr = msgGetMsgVarNew((msg_t*) usrptr, (uchar*)name+1);
+	}
+	if(Debug) {
+		char *s;
+		s = es_str2cstr(estr, NULL);
+		dbgprintf("rainerscript: var '%s': '%s'\n", name, s);
+		free(s);
 	}
 	return estr;
 }
@@ -1258,6 +1351,7 @@ BEGINObjClassInit(rsconf, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	CHKiRet(objUse(conf, CORE_COMPONENT));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
+	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	CHKiRet(objUse(parser, CORE_COMPONENT));
 
 	/* now set our own handlers */
@@ -1275,6 +1369,7 @@ BEGINObjClassExit(rsconf, OBJ_IS_CORE_MODULE) /* class, version */
 	objRelease(conf, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
+	objRelease(datetime, CORE_COMPONENT);
 	objRelease(parser, CORE_COMPONENT);
 ENDObjClassExit(rsconf)
 

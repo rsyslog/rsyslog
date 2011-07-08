@@ -285,6 +285,7 @@ done:
 	return expr;
 }
 
+
 /* ensure that retval is a number; if string is no number,
  * try to convert it to one. The semantics from es_str2num()
  * are used (bSuccess tells if the conversion went well or not).
@@ -315,21 +316,28 @@ exprret2String(struct exprret *r, int *bMustFree)
 	return r->d.estr;
 }
 
+#define FREE_BOTH_RET \
+		if(r.datatype == 'S') es_deleteStr(r.d.estr); \
+		if(l.datatype == 'S') es_deleteStr(l.d.estr)
+
 #define COMP_NUM_BINOP(x) \
 	cnfexprEval(expr->l, &l, usrptr); \
 	cnfexprEval(expr->r, &r, usrptr); \
 	ret->datatype = 'N'; \
-	ret->d.n = exprret2Number(&l, &convok_l) x exprret2Number(&r, &convok_r)
+	ret->d.n = exprret2Number(&l, &convok_l) x exprret2Number(&r, &convok_r); \
+	FREE_BOTH_RET
 
 #define PREP_TWO_STRINGS \
 		cnfexprEval(expr->l, &l, usrptr); \
 		cnfexprEval(expr->r, &r, usrptr); \
 		estr_r = exprret2String(&r, &bMustFree); \
-		estr_l = exprret2String(&l, &bMustFree2)
+		estr_l = exprret2String(&l, &bMustFree2); \
+		FREE_BOTH_RET
 
 #define FREE_TWO_STRINGS \
 		if(bMustFree) es_deleteStr(estr_r); \
-		if(bMustFree2) es_deleteStr(estr_l)
+		if(bMustFree2) es_deleteStr(estr_l); \
+		FREE_BOTH_RET
 
 /* evaluate an expression.
  * Note that we try to avoid malloc whenever possible (because of
@@ -386,6 +394,7 @@ cnfexprEval(struct cnfexpr *expr, struct exprret *ret, void* usrptr)
 				ret->d.n = (l.d.n == r.d.n); /*CMP*/
 			}
 		}
+		FREE_BOTH_RET;
 		break;
 	case CMP_NE:
 		cnfexprEval(expr->l, &l, usrptr);
@@ -418,6 +427,7 @@ cnfexprEval(struct cnfexpr *expr, struct exprret *ret, void* usrptr)
 				ret->d.n = (l.d.n != r.d.n); /*CMP*/
 			}
 		}
+		FREE_BOTH_RET;
 		break;
 	case CMP_LE:
 		cnfexprEval(expr->l, &l, usrptr);
@@ -450,6 +460,7 @@ cnfexprEval(struct cnfexpr *expr, struct exprret *ret, void* usrptr)
 				ret->d.n = (l.d.n <= r.d.n); /*CMP*/
 			}
 		}
+		FREE_BOTH_RET;
 		break;
 	case CMP_GE:
 		cnfexprEval(expr->l, &l, usrptr);
@@ -482,6 +493,7 @@ cnfexprEval(struct cnfexpr *expr, struct exprret *ret, void* usrptr)
 				ret->d.n = (l.d.n >= r.d.n); /*CMP*/
 			}
 		}
+		FREE_BOTH_RET;
 		break;
 	case CMP_LT:
 		cnfexprEval(expr->l, &l, usrptr);
@@ -514,6 +526,7 @@ cnfexprEval(struct cnfexpr *expr, struct exprret *ret, void* usrptr)
 				ret->d.n = (l.d.n < r.d.n); /*CMP*/
 			}
 		}
+		FREE_BOTH_RET;
 		break;
 	case CMP_GT:
 		cnfexprEval(expr->l, &l, usrptr);
@@ -546,6 +559,7 @@ cnfexprEval(struct cnfexpr *expr, struct exprret *ret, void* usrptr)
 				ret->d.n = (l.d.n > r.d.n); /*CMP*/
 			}
 		}
+		FREE_BOTH_RET;
 		break;
 	case CMP_STARTSWITH:
 		PREP_TWO_STRINGS;
@@ -583,6 +597,7 @@ cnfexprEval(struct cnfexpr *expr, struct exprret *ret, void* usrptr)
 			else 
 				ret->d.n = 0ll;
 		}
+		FREE_BOTH_RET;
 		break;
 	case AND:
 		cnfexprEval(expr->l, &l, usrptr);
@@ -596,11 +611,13 @@ cnfexprEval(struct cnfexpr *expr, struct exprret *ret, void* usrptr)
 		} else {
 			ret->d.n = 0ll;
 		}
+		FREE_BOTH_RET;
 		break;
 	case NOT:
 		cnfexprEval(expr->r, &r, usrptr);
 		ret->datatype = 'N';
 		ret->d.n = !exprret2Number(&r, &convok_r);
+		if(r.datatype == 'S') es_deleteStr(r.d.estr);
 		break;
 	case 'N':
 		ret->datatype = 'N';
@@ -633,6 +650,7 @@ cnfexprEval(struct cnfexpr *expr, struct exprret *ret, void* usrptr)
 		cnfexprEval(expr->r, &r, usrptr);
 		ret->datatype = 'N';
 		ret->d.n = -exprret2Number(&r, &convok_r);
+		if(r.datatype == 'S') es_deleteStr(r.d.estr);
 		break;
 	default:
 		ret->datatype = 'N';

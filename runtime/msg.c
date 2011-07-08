@@ -3116,9 +3116,51 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
  * to rewrite the script engine as well!
  * rgerhards, 2010-12-03
  */
+es_str_t*
+msgGetCEEVarNew(msg_t *pMsg, char *name)
+{
+	es_str_t *estr = NULL;
+	es_str_t *epropName = NULL;
+	struct ee_field *field;
+
+	ISOBJ_TYPE_assert(pMsg, msg);
+
+	if(pMsg->event == NULL) {
+		estr = es_newStr(1);
+		goto done;
+	}
+
+	epropName = es_newStrFromCStr(name, strlen(name)); // TODO: optimize (in grammar!) 
+dbgprintf("ZZZZ: pmsg->event %p\n", pMsg->event);
+	field = ee_getEventField(pMsg->event, epropName);
+	if(field != NULL) {
+		estr = ee_getFieldValueAsStr(field, 0);
+	}
+	if(estr == NULL) {
+		DBGPRINTF("msgGetCEEVar: error obtaining var (field=%p, var='%s')\n",
+			  field, name);
+		estr = es_newStrFromCStr("*ERROR*", sizeof("*ERROR*") - 1);
+	}
+	es_deleteStr(epropName);
+
+done:
+	return estr;
+}
+
+
+/* The function returns a cee variable suitable for use with RainerScript. Most importantly, this means
+ * that the value is returned in a var_t object. The var_t is constructed inside this function and
+ * MUST be freed by the caller.
+ * Note that we need to do a lot of conversions between es_str_t and cstr -- this will go away once
+ * we have moved larger parts of rsyslog to es_str_t. Acceptable for the moment, especially as we intend
+ * to rewrite the script engine as well!
+ * rgerhards, 2010-12-03
+ *
+ */
 rsRetVal
 msgGetCEEVar(msg_t *pMsg, cstr_t *propName, var_t **ppVar)
 {
+#warning remove as part of cleanup
 	DEFiRet;
 	var_t *pVar;
 	cstr_t *pstrProp;
