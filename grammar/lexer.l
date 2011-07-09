@@ -134,6 +134,7 @@ int fileno(FILE *stream);
  /* line number support because the "preprocessor" combines lines and so needs
   * to tell us the real source line.
   */
+"stop"				{ dbgprintf("STOP\n"); return STOP; }
 "preprocfilelinenumber("	{ BEGIN LINENO; }
 <LINENO>[0-9]+			{ yylineno = atoi(yytext) - 1; }
 <LINENO>")"			{ BEGIN INITIAL; }
@@ -159,7 +160,7 @@ int fileno(FILE *stream);
 \-\/[^*][^\n]* |
 \/[^*][^\n]* |
 :[a-z0-9]+:[^\n]* |
-[\|\.\-\@~][^\n]+ |
+[\|\.\-\@\^?~>][^\n]+ |
 [a-z0-9_][a-z0-9_\-\+]*		{ yylval.s = strdup(yytext);
 				 // printf("lex: LEGA ACT: '%s'\n", yytext);
 				  return LEGACY_ACTION; }

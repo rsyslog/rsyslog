@@ -63,6 +63,7 @@ extern int yyerror(char*);
 %token ENDOBJ
 %token <s> CFSYSLINE
 %token BEGIN_ACTION
+%token STOP
 %token <s> LEGACY_ACTION
 %token <s> PRIFILT
 %token <s> PROPFILT
