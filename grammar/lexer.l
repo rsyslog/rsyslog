@@ -143,7 +143,7 @@ int fileno(FILE *stream);
   * always the longest match :-(
   */
 <INCL>.|\n
-<INCL>[^ \t\n]+			{ if(cnfSetLexFile(yytext) != 0)
+<INCL>[^ \t\n]+			{ if(cnfDoInclude(yytext) != 0)
 					yyterminate();
 				  BEGIN INITIAL; }
 "global"[ \n\t]*"("		{ yylval.objType = CNFOBJ_GLOBAL;

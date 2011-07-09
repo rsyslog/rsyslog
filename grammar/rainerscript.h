@@ -189,6 +189,7 @@ void cnfrulePrint(struct cnfrule *rule);
 struct cnfvar* cnfvarNew(char *name);
 struct cnffunc * cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst);
 struct cnffparamlst * cnffparamlstNew(struct cnfexpr *expr, struct cnffparamlst *next);
+int cnfDoInclude(char *name);
 
 /* debug helper */
 void cstrPrint(char *text, es_str_t *estr);

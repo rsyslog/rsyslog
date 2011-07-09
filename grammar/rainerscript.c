@@ -28,6 +28,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <glob.h>
+#include <errno.h>
+#include <sys/stat.h>
 #include <libestr.h>
 #include "rainerscript.h"
 #include "parserif.h"
@@ -1048,6 +1051,55 @@ cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst)
 		}
 	}
 	return func;
+}
+
+int
+cnfDoInclude(char *name)
+{
+	char *cfgFile;
+	unsigned i;
+	int result;
+	glob_t cfgFiles;
+	struct stat fileInfo;
+
+	/* Use GLOB_MARK to append a trailing slash for directories.
+	 * Required by doIncludeDirectory().
+	 */
+	result = glob(name, GLOB_MARK, NULL, &cfgFiles);
+	if(result == GLOB_NOSPACE || result == GLOB_ABORTED) {
+#if 0
+		char errStr[1024];
+		rs_strerror_r(errno, errStr, sizeof(errStr));
+		errmsg.LogError(0, RS_RET_FILE_NOT_FOUND, "error accessing config file or directory '%s': %s",
+				pattern, errStr);
+		ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
+#endif
+		dbgprintf("includeconfig glob error %d\n", errno);
+		return 1;
+	}
+
+	for(i = 0; i < cfgFiles.gl_pathc; i++) {
+		cfgFile = cfgFiles.gl_pathv[i];
+
+		if(stat(cfgFile, &fileInfo) != 0) 
+			continue; /* continue with the next file if we can't stat() the file */
+
+		if(S_ISREG(fileInfo.st_mode)) { /* config file */
+			dbgprintf("requested to include config file '%s'\n", cfgFile);
+			cnfSetLexFile(cfgFile);
+		} else if(S_ISDIR(fileInfo.st_mode)) { /* config directory */
+			if(strcmp(name, cfgFile)) {
+				/* do not include ourselves! */
+				dbgprintf("requested to include directory '%s'\n", cfgFile);
+				cnfDoInclude(cfgFile);
+			}
+		} else {
+			dbgprintf("warning: unable to process IncludeConfig directive '%s'\n", cfgFile);
+		}
+	}
+
+	globfree(&cfgFiles);
+	return 0;
 }
 
 void
