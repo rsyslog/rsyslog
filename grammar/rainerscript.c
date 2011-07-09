@@ -398,6 +398,8 @@ doFuncCall(struct cnffunc *func, struct exprret *ret, void* usrptr)
 				  (unsigned) func->fID, fname);
 			free(fname);
 		}
+		ret->datatype = 'N';
+		ret->d.n = 0;
 	}
 }
 
@@ -972,18 +974,46 @@ cnffparamlstNew(struct cnfexpr *expr, struct cnffparamlst *next)
 	return lst;
 }
 
+/* Obtain function id from name AND number of params. Issues the
+ * relevant error messages if errors are detected.
+ */
 static inline enum cnffuncid
-funcName2ID(es_str_t *fname)
+funcName2ID(es_str_t *fname, unsigned short nParams)
 {
 	if(!es_strbufcmp(fname, (unsigned char*)"strlen", sizeof("strlen") - 1)) {
+		if(nParams != 1) {
+			parser_errmsg("number of parameters for strlen() must be one "
+				      "but is %d.", nParams);
+			return CNFFUNC_INVALID;
+		}
 		return CNFFUNC_STRLEN;
 	} else if(!es_strbufcmp(fname, (unsigned char*)"getenv", sizeof("getenv") - 1)) {
+		if(nParams != 1) {
+			parser_errmsg("number of parameters for getenv() must be one "
+				      "but is %d.", nParams);
+			return CNFFUNC_INVALID;
+		}
 		return CNFFUNC_GETENV;
 	} else if(!es_strbufcmp(fname, (unsigned char*)"tolower", sizeof("tolower") - 1)) {
+		if(nParams != 1) {
+			parser_errmsg("number of parameters for tolower() must be one "
+				      "but is %d.", nParams);
+			return CNFFUNC_INVALID;
+		}
 		return CNFFUNC_TOLOWER;
 	} else if(!es_strbufcmp(fname, (unsigned char*)"cstr", sizeof("cstr") - 1)) {
+		if(nParams != 1) {
+			parser_errmsg("number of parameters for cstr() must be one "
+				      "but is %d.", nParams);
+			return CNFFUNC_INVALID;
+		}
 		return CNFFUNC_CSTR;
 	} else if(!es_strbufcmp(fname, (unsigned char*)"cnum", sizeof("cnum") - 1)) {
+		if(nParams != 1) {
+			parser_errmsg("number of parameters for cnum() must be one "
+				      "but is %d.", nParams);
+			return CNFFUNC_INVALID;
+		}
 		return CNFFUNC_CNUM;
 	} else {
 		return CNFFUNC_INVALID;
@@ -1007,7 +1037,7 @@ cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst)
 		func->nodetype = 'F';
 		func->fname = fname;
 		func->nParams = nParams;
-		func->fID = funcName2ID(fname);
+		func->fID = funcName2ID(fname, nParams);
 		/* shuffle params over to array (access speed!) */
 		param = paramlst;
 		for(i = 0 ; i < nParams ; ++i) {
