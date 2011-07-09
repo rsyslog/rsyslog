@@ -166,6 +166,7 @@ struct exprret {
 };
 
 
+int cnfParseBuffer(char *buf, unsigned lenBuf);
 void readConfFile(FILE *fp, es_str_t **str);
 struct nvlst* nvlstNew(es_str_t *name, es_str_t *value);
 void nvlstDestruct(struct nvlst *lst);

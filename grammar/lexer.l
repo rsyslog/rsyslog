@@ -198,6 +198,29 @@ int fileno(FILE *stream);
 <<EOF>>				{ if(popfile() != 0) yyterminate(); }
 
 %%
+int
+cnfParseBuffer(char *buf, unsigned lenBuf)
+{
+	struct bufstack *bs;
+	int r = 0;
+	/* maintain stack */
+	if((bs = malloc(sizeof(struct bufstack))) == NULL) {
+		r = 1;
+		goto done;
+	}
+
+	if(currbs != NULL)
+		currbs->lineno = yylineno;
+	bs->prev = currbs;
+	bs->fn = strdup("*buffer*");
+	bs->bs = yy_scan_buffer(buf, lenBuf);
+	bs->estr = NULL;
+	currbs = bs;
+	currfn = bs->fn;
+	yylineno = 1;
+done:	return r;
+}
+
 /* set a new buffers. Returns 0 on success, something else otherwise. */
 int
 cnfSetLexFile(char *fname)

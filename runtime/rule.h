@@ -54,7 +54,6 @@ struct rule_s {
 			es_str_t *propName;		/* name of property for CEE-based filters */
 		} prop;
 		struct cnfexpr *expr;			/* expression object */
-		expr_t *f_expr;				/* expression object */
 	} f_filterData;
 
 	ruleset_t *pRuleset;	/* associated ruleset */

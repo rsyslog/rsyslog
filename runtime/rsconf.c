@@ -385,7 +385,7 @@ void cnfDoRule(struct cnfrule *cnfrule)
 		break;
 	case CNFFILT_SCRIPT:
 		pRule->f_filter_type = FILTER_EXPR;
-		pRule->f_filterData.f_expr = cnfrule->filt.expr;
+		pRule->f_filterData.expr = cnfrule->filt.expr;
 		break;
 	}
 	/* we now check if there are some global (BSD-style) filter conditions
@@ -790,19 +790,6 @@ static rsRetVal setActionResumeInterval(void __attribute__((unused)) *pVal, int 
 }
 
 
-/* this method is needed to shuffle the current conf object down to the
- * IncludeConfig handler.
- */
-static rsRetVal
-doIncludeLine(void *pVal, uchar *pNewVal)
-{
-	DEFiRet;
-	iRet = conf.doIncludeLine(ourConf, pVal, pNewVal);
-	free(pNewVal);
-	RETiRet;
-}
-
-
 /* set the maximum message size */
 static rsRetVal setMaxMsgSize(void __attribute__((unused)) *pVal, long iNewVal)
 {
@@ -1081,8 +1068,6 @@ initLegacyConf(void)
 		setActionResumeInterval, NULL, NULL, eConfObjGlobal));
 	CHKiRet(regCfSysLineHdlr((uchar *)"modload", 0, eCmdHdlrCustomHandler,
 		conf.doModLoad, NULL, NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"includeconfig", 0, eCmdHdlrCustomHandler,
-		doIncludeLine, NULL, NULL, eConfObjGlobal));
 	CHKiRet(regCfSysLineHdlr((uchar *)"maxmessagesize", 0, eCmdHdlrSize,
 		setMaxMsgSize, NULL, NULL, eConfObjGlobal));
 	CHKiRet(regCfSysLineHdlr((uchar *)"defaultruleset", 0, eCmdHdlrGetWord,
@@ -1236,6 +1221,7 @@ load(rsconf_t **cnf, uchar *confFile)
 	int bHadConfigErr = 0;
 	char cbuf[BUFSIZ];
 	int r;
+	char *emergConf;
 	DEFiRet;
 
 	CHKiRet(rsconfConstruct(&loadConf));
@@ -1246,11 +1232,12 @@ ourConf = loadConf; // TODO: remove, once ourConf is gone!
 
 	/* open the configuration file */
 	r = cnfSetLexFile((char*)confFile);
-	r = yyparse();
-	//localRet = conf.processConfFile(loadConf, confFile);
-	CHKiRet(conf.GetNbrActActions(loadConf, &iNbrActions));
+	if(r == 0) {
+		r = yyparse();
+		conf.GetNbrActActions(loadConf, &iNbrActions);
+	}
 
-	if(localRet != RS_RET_OK && localRet != RS_RET_NONFATAL_CONFIG_ERR) {
+	if(r == 1) {
 		errmsg.LogError(0, localRet, "CONFIG ERROR: could not interpret master config file '%s'.", confFile);
 		bHadConfigErr = 1;
 	} else if(iNbrActions == 0) {
@@ -1259,8 +1246,7 @@ ourConf = loadConf; // TODO: remove, once ourConf is gone!
 		bHadConfigErr = 1;
 	}
 
-	if((localRet != RS_RET_OK && localRet != RS_RET_NONFATAL_CONFIG_ERR) || iNbrActions == 0) {
-
+	if(r == 1 || iNbrActions == 0) {
 		/* rgerhards: this code is executed to set defaults when the
 		 * config file could not be opened. We might think about
 		 * abandoning the run in this case - but this, too, is not
@@ -1268,23 +1254,17 @@ ourConf = loadConf; // TODO: remove, once ourConf is gone!
 		 * We ignore any errors while doing this - we would be lost anyhow...
 		 */
 		errmsg.LogError(0, NO_ERRCODE, "EMERGENCY CONFIGURATION ACTIVATED - fix rsyslog config file!");
-
-		/* note: we previously used _POSIY_TTY_NAME_MAX+1, but this turned out to be
-		 * too low on linux... :-S   -- rgerhards, 2008-07-28
-		 */
-		char szTTYNameBuf[128];
-		rule_t *pRule = NULL; /* initialization to NULL is *vitally* important! */
-		conf.cfline(loadConf, UCHAR_CONSTANT("*.ERR\t" _PATH_CONSOLE), &pRule);
-		conf.cfline(loadConf, UCHAR_CONSTANT("syslog.*\t" _PATH_CONSOLE), &pRule);
-		conf.cfline(loadConf, UCHAR_CONSTANT("*.PANIC\t*"), &pRule);
-		conf.cfline(loadConf, UCHAR_CONSTANT("syslog.*\troot"), &pRule);
-		if(ttyname_r(0, szTTYNameBuf, sizeof(szTTYNameBuf)) == 0) {
-			snprintf(cbuf,sizeof(cbuf), "*.*\t%s", szTTYNameBuf);
-			conf.cfline(loadConf, (uchar*)cbuf, &pRule);
-		} else {
-			DBGPRINTF("error %d obtaining controlling terminal, not using that emergency rule\n", errno);
+		emergConf = 
+			"*.err "    _PATH_CONSOLE "\n"
+			"syslog.*" _PATH_CONSOLE  "\n"
+			"*.panic  :omusrmsg:*"	  "\n"
+			"syslog.* :omusrmsg:root" "\n";
+		cnfParseBuffer(emergConf, strlen(emergConf));
+		r = yyparse();
+		if(r != 0) {
+			fprintf(stderr, "rsyslogd: could not even activate emergency conf - terminating\n");
+			exit(1);
 		}
-		ruleset.AddRule(loadConf, ruleset.GetCurrent(loadConf), &pRule);
 	}
 
 	CHKiRet(validateConf());

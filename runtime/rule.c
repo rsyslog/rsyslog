@@ -183,15 +183,6 @@ shouldProcessThisMessage(rule_t *pRule, msg_t *pMsg, sbool *bProcessMsg)
 		else
 			bRet = 1;
 	} else if(pRule->f_filter_type == FILTER_EXPR) {
-#if 0
-		CHKiRet(vm.Construct(&pVM));
-		CHKiRet(vm.ConstructFinalize(pVM));
-		CHKiRet(vm.SetMsg(pVM, pMsg));
-		CHKiRet(vm.ExecProg(pVM, pRule->f_filterData.f_expr->pVmprg));
-		CHKiRet(vm.PopBoolFromStack(pVM, &pResult));
-		/* VM is destructed on function exit */
-		bRet = (pResult->val.num) ? 1 : 0;
-#endif
 		bRet = cnfexprEvalBool(pRule->f_filterData.expr, pMsg);
 		dbgprintf("result of rainerscript filter evaluation: %d\n", bRet);
 	} else {
