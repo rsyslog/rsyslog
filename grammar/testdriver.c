@@ -30,6 +30,7 @@
 #include "parserif.h"
 
 extern int yylineno;
+int Debug = 1;
 
 void
 parser_errmsg(char *fmt, ...)

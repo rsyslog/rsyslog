@@ -3,6 +3,13 @@
 #include <stdio.h>
 #include <libestr.h>
 
+#define CNFFUNC_MAX_ARGS 32
+	/**< maximum number of arguments that any function can have (among
+	 *   others, this is used to size data structures).
+	 */
+
+extern int Debug; /* 1 if in debug mode, 0 otherwise -- to be enhanced */
+
 enum cnfobjType {
 	CNFOBJ_ACTION,
 	CNFOBJ_GLOBAL,
@@ -125,11 +132,21 @@ struct cnffparamlst {
 	struct cnfexpr *expr;
 };
 
+enum cnffuncid {
+	CNFFUNC_INVALID = 0, /**< defunct entry, do not use (should normally not be present) */
+	CNFFUNC_NAME = 1,   /**< use name to call function (for future use) */
+	CNFFUNC_STRLEN,
+	CNFFUNC_GETENV,
+	CNFFUNC_TOLOWER,
+	CNFFUNC_CSTR,
+	CNFFUNC_CNUM
+};
+
 struct cnffunc {
 	unsigned nodetype;
 	es_str_t *fname;
 	unsigned short nParams;
-	unsigned short *fID; /* function ID for built-ins, 0 means use name */
+	enum cnffuncid fID; /* function ID for built-ins, 0 means use name */
 	struct cnfexpr *expr[];
 };
 

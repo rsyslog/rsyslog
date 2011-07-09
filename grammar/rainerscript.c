@@ -316,6 +316,91 @@ exprret2String(struct exprret *r, int *bMustFree)
 	return r->d.estr;
 }
 
+/* Perform a function call. This has been moved out of cnfExprEval in order
+ * to keep the code small and easier to maintain.
+ */
+static inline void
+doFuncCall(struct cnffunc *func, struct exprret *ret, void* usrptr)
+{
+	char *fname;
+	char *envvar;
+	int bMustFree;
+	es_str_t *estr;
+	char *str;
+	struct exprret r[CNFFUNC_MAX_ARGS];
+
+	dbgprintf("rainerscript: executing function id %d\n", func->fID);
+	switch(func->fID) {
+	case CNFFUNC_STRLEN:
+		if(func->expr[0]->nodetype == 'S') {
+			/* if we already have a string, we do not need to
+			 * do one more recursive call.
+			 */
+			ret->d.n = es_strlen(((struct cnfstringval*) func->expr[0])->estr);
+		} else {
+			cnfexprEval(func->expr[0], &r[0], usrptr);
+			estr = exprret2String(&r[0], &bMustFree);
+			ret->d.n = es_strlen(estr);
+			if(bMustFree) es_deleteStr(estr);
+		}
+		ret->datatype = 'N';
+		break;
+	case CNFFUNC_GETENV:
+		/* note: the optimizer shall have replaced calls to getenv()
+		 * with a constant argument to a single string (once obtained via
+		 * getenv()). So we do NOT need to check if there is just a
+		 * string following.
+		 */
+		cnfexprEval(func->expr[0], &r[0], usrptr);
+		estr = exprret2String(&r[0], &bMustFree);
+		str = (char*) es_str2cstr(estr, NULL);
+		envvar = getenv(str);
+		ret->datatype = 'S';
+		ret->d.estr = es_newStrFromCStr(envvar, strlen(envvar));
+		if(bMustFree) es_deleteStr(estr);
+		if(r[0].datatype == 'S') es_deleteStr(r[0].d.estr);
+		free(str);
+		break;
+	case CNFFUNC_TOLOWER:
+		cnfexprEval(func->expr[0], &r[0], usrptr);
+		estr = exprret2String(&r[0], &bMustFree);
+		if(!bMustFree) /* let caller handle that M) */
+			estr = es_strdup(estr);
+		es_tolower(estr);
+		ret->datatype = 'S';
+		ret->d.estr = estr;
+		break;
+	case CNFFUNC_CSTR:
+		cnfexprEval(func->expr[0], &r[0], usrptr);
+		estr = exprret2String(&r[0], &bMustFree);
+		if(!bMustFree) /* let caller handle that M) */
+			estr = es_strdup(estr);
+		ret->datatype = 'S';
+		ret->d.estr = estr;
+		break;
+	case CNFFUNC_CNUM:
+		if(func->expr[0]->nodetype == 'N') {
+			ret->d.n = ((struct cnfnumval*)func->expr[0])->val;
+		} else if(func->expr[0]->nodetype == 'S') {
+			ret->d.n = es_str2num(((struct cnfstringval*) func->expr[0])->estr,
+					      NULL);
+		} else {
+			cnfexprEval(func->expr[0], &r[0], usrptr);
+			ret->d.n = exprret2Number(&r[0], NULL);
+			if(r[0].datatype == 'S') es_deleteStr(r[0].d.estr);
+		}
+		ret->datatype = 'N';
+		break;
+	default:
+		if(Debug) {
+			fname = es_str2cstr(func->fname, NULL);
+			dbgprintf("rainerscript: invalid function id %u (name '%s')\n",
+				  (unsigned) func->fID, fname);
+			free(fname);
+		}
+	}
+}
+
 #define FREE_BOTH_RET \
 		if(r.datatype == 'S') es_deleteStr(r.d.estr); \
 		if(l.datatype == 'S') es_deleteStr(l.d.estr)
@@ -329,10 +414,9 @@ exprret2String(struct exprret *r, int *bMustFree)
 
 #define PREP_TWO_STRINGS \
 		cnfexprEval(expr->l, &l, usrptr); \
-		cnfexprEval(expr->r, &r, usrptr); \
-		estr_r = exprret2String(&r, &bMustFree); \
 		estr_l = exprret2String(&l, &bMustFree2); \
-		FREE_BOTH_RET
+		cnfexprEval(expr->r, &r, usrptr); \
+		estr_r = exprret2String(&r, &bMustFree)
 
 #define FREE_TWO_STRINGS \
 		if(bMustFree) es_deleteStr(estr_r); \
@@ -652,6 +736,9 @@ cnfexprEval(struct cnfexpr *expr, struct exprret *ret, void* usrptr)
 		ret->d.n = -exprret2Number(&r, &convok_r);
 		if(r.datatype == 'S') es_deleteStr(r.d.estr);
 		break;
+	case 'F':
+		doFuncCall((struct cnffunc*) expr, ret, usrptr);
+		break;
 	default:
 		ret->datatype = 'N';
 		ret->d.n = 0ll;
@@ -684,7 +771,6 @@ doIndent(int indent)
 void
 cnfexprPrint(struct cnfexpr *expr, int indent)
 {
-	struct cnffparamlst *param;
 	struct cnffunc *func;
 	int i;
 
@@ -784,7 +870,7 @@ cnfexprPrint(struct cnfexpr *expr, int indent)
 		doIndent(indent);
 		func = (struct cnffunc*) expr;
 		cstrPrint("function '", func->fname);
-		dbgprintf("' (%u params)\n", (unsigned) func->nParams);
+		dbgprintf("' (id:%d, params:%hu)\n", func->fID, func->nParams);
 		for(i = 0 ; i < func->nParams ; ++i) {
 			cnfexprPrint(func->expr[i], indent+1);
 		}
@@ -886,6 +972,24 @@ cnffparamlstNew(struct cnfexpr *expr, struct cnffparamlst *next)
 	return lst;
 }
 
+static inline enum cnffuncid
+funcName2ID(es_str_t *fname)
+{
+	if(!es_strbufcmp(fname, (unsigned char*)"strlen", sizeof("strlen") - 1)) {
+		return CNFFUNC_STRLEN;
+	} else if(!es_strbufcmp(fname, (unsigned char*)"getenv", sizeof("getenv") - 1)) {
+		return CNFFUNC_GETENV;
+	} else if(!es_strbufcmp(fname, (unsigned char*)"tolower", sizeof("tolower") - 1)) {
+		return CNFFUNC_TOLOWER;
+	} else if(!es_strbufcmp(fname, (unsigned char*)"cstr", sizeof("cstr") - 1)) {
+		return CNFFUNC_CSTR;
+	} else if(!es_strbufcmp(fname, (unsigned char*)"cnum", sizeof("cnum") - 1)) {
+		return CNFFUNC_CNUM;
+	} else {
+		return CNFFUNC_INVALID;
+	}
+}
+
 struct cnffunc *
 cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst)
 {
@@ -903,7 +1007,7 @@ cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst)
 		func->nodetype = 'F';
 		func->fname = fname;
 		func->nParams = nParams;
-		func->fID = 0;	/* use name */
+		func->fID = funcName2ID(fname);
 		/* shuffle params over to array (access speed!) */
 		param = paramlst;
 		for(i = 0 ; i < nParams ; ++i) {
