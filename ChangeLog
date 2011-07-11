@@ -2,6 +2,7 @@
 Version 5.8.3  [V5-stable] (rgerhards), 2011-06-??
 - systemd support: set stdout/stderr to null - thx to Lennart for the patch
 - added support for the ":omusrmsg:" syntax in configuring user messages
+- added support for the ":omfile:" syntax in configuring user messages
 ---------------------------------------------------------------------------
 Version 5.8.2  [V5-stable] (rgerhards), 2011-06-21
 - bugfix: problems in failover action handling
@@ -848,8 +849,9 @@ Version 4.7.0  [v4-devel] (rgerhards), 2010-04-14
   Thanks for varmojfekoj for pointing me at this bug.
 - imported changes from 4.5.6 and below
 ---------------------------------------------------------------------------
-Version 4.6.7  [v4-stable] (rgerhards), 2011-06-??
+Version 4.6.7  [v4-stable] (rgerhards), 2011-07-11
 - added support for the ":omusrmsg:" syntax in configuring user messages
+- added support for the ":omfile:" syntax in configuring user messages
 ---------------------------------------------------------------------------
 Version 4.6.6  [v4-stable] (rgerhards), 2011-06-24
 - bugfix: memory leak in imtcp & subsystems under some circumstances
