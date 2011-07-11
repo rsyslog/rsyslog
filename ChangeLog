@@ -1,8 +1,11 @@
 ---------------------------------------------------------------------------
-Version 5.8.3  [V5-stable] (rgerhards), 2011-06-??
+Version 5.8.3  [V5-stable] (rgerhards), 2011-07-11
 - systemd support: set stdout/stderr to null - thx to Lennart for the patch
 - added support for the ":omusrmsg:" syntax in configuring user messages
 - added support for the ":omfile:" syntax in configuring user messages
+  Note: previous outchannel syntax will generate a warning message. This
+  may be surprising to some users, but it is quite urgent to alert them
+  of the new syntax as v6 can no longer support the previous one.
 ---------------------------------------------------------------------------
 Version 5.8.2  [V5-stable] (rgerhards), 2011-06-21
 - bugfix: problems in failover action handling
