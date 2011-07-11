@@ -382,6 +382,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_EPOLL_CR_FAILED = -2173, /**< epoll_create() failed */
 	RS_RET_EPOLL_CTL_FAILED = -2174, /**< epoll_ctl() failed */
 	RS_RET_INTERNAL_ERROR = -2175, /**< rsyslogd internal error, unexpected code path reached */
+	RS_RET_OUTDATED_STMT = -2184, /**<  some outdated statement/functionality is being used in conf file */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */
