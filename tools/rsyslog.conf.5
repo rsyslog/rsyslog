@@ -272,14 +272,16 @@ Please note that rsyslogd offers a variety of options in regarding to remote
 forwarding. For full details, please see the html documentation.
 
 .SS List of users
-Usually critical messages are also directed to ``root'' on that machine. You can specify a list 
-of users that shall get the message by simply writing the login. You may specify more than one 
-user by separating them with commas (','). If they're logged in they get the message. Don't 
-think a mail would be sent, that might be too late.
+Usually critical messages are also directed to ``root'' on that machine. You
+can specify a list 
+of users that shall get the message by simply writing ":omusrmsg:" followed
+by the login name. You may specify more than one 
+user by separating them with commas (','). If they're logged in they
+get the message (for example: ":omusrmsg:root,user1,user2").
 
 .SS Everyone logged on
 Emergency messages often go to all users currently online to notify them that something strange 
-is happening with the system. To specify this wall(1)-feature use an asterisk ('*').
+is happening with the system. To specify this wall(1)-feature use an ":omusrmsg:*".
 
 .SS Database table
 This allows logging of the message to a database table.
@@ -558,10 +560,10 @@ that space.
 
 Keep in mind that $outchannel just defines a channel with "name". It does not activate it. 
 To do so, you must use a selector line (see below). That selector line includes the channel 
-name plus an $ sign in front of it. A sample might be:
+name plus ":omfile:$" in front of it. A sample might be:
 .sp
 .RS
-*.* $mychannel
+*.* :omfile:$mychannel
 .RE
 
 .SH PROPERTY REPLACER
