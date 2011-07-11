@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 4.7.4  [v4-beta] (rgerhards), 2010-11-??
+Version 4.7.4  [v4-beta] (rgerhards), 2011-07-11
 - added support for the ":omusrmsg:" syntax in configuring user messages
 - added support for the ":omfile:" syntax in configuring user messages
 - added $LocalHostName config directive
