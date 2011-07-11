@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 6.1.11  [BETA] (rgerhards), 2011-06-??
+Version 6.1.11  [BETA] (rgerhards), 2011-07-11
 - systemd support: set stdout/stderr to null - thx to Lennart for the patch
 - added support for the ":omusrmsg:" syntax in configuring user messages
 - added support for the ":omfile:" syntax in configuring user messages
