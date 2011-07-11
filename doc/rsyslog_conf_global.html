@@ -261,7 +261,8 @@ default may change as uniprocessor systems become less common. [available since 
 <li>$PreserveFQDN [on/<b>off</b>) - if set to off (legacy default to remain compatible
 to sysklogd), the domain part from a name that is within the same domain as the receiving
 system is stripped. If set to on, full names are always used.</li>
-<li>$WorkDirectory &lt;name&gt; (directory for spool and other work files)</li>
+<li>$WorkDirectory &lt;name&gt; (directory for spool and other work files.
+Do <b>not</b> use trailing slashes)</li>
 <li>$UDPServerAddress &lt;IP&gt; (imudp) -- local IP
 address (or name) the UDP listens should bind to</li>
 <li>$UDPServerRun &lt;port&gt; (imudp) -- former

@@ -34,7 +34,7 @@ Channels to achieve this. Putting the following directive</p>
 # outchannel definiation
 $outchannel log_rotation,/var/log/log_rotation.log, 52428800,/home/me/./log_rotation_script 
 #  activate the channel and log everything to it 
-*.* $log_rotation
+*.* :omfile:$log_rotation
 # end log rotation via outchannel
 </pre></p> 
 

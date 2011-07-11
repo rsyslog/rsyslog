@@ -686,7 +686,7 @@ AM_CONDITIONAL(ENABLE_MAIL, test x$enable_mail = xyes)
 # would complicate things if we first needed to tell them how to enable imdiag.
 # rgerhards, 2008-07-25
 AC_ARG_ENABLE(imdiag,
-        [AS_HELP_STRING([--enable-imdiag],[Enable imdiag @<:@default=yes@:>@])],
+        [AS_HELP_STRING([--enable-imdiag],[Enable imdiag @<:@default=no@:>@])],
         [case "${enableval}" in
          yes) enable_imdiag="yes" ;;
           no) enable_imdiag="no" ;;
