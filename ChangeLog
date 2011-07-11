@@ -1,6 +1,7 @@
 ---------------------------------------------------------------------------
-Version 4.6.7  [v4-stable] (rgerhards), 2011-06-??
+Version 4.6.7  [v4-stable] (rgerhards), 2011-07-11
 - added support for the ":omusrmsg:" syntax in configuring user messages
+- added support for the ":omfile:" syntax in configuring user messages
 ---------------------------------------------------------------------------
 Version 4.6.6  [v4-stable] (rgerhards), 2011-06-24
 - bugfix: memory leak in imtcp & subsystems under some circumstances
