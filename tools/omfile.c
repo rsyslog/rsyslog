@@ -16,7 +16,7 @@
  * pipes. These have been moved to ompipe, to reduced the entanglement
  * between the two different functionalities. -- rgerhards
  *
- * Copyright 2007-2009 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2011 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -646,6 +646,14 @@ ENDdoAction
 
 BEGINparseSelectorAct
 CODESTARTparseSelectorAct
+	/* Note: the indicator sequence permits us to use '$' to signify
+	 * outchannel, what otherwise is not possible due to truely 
+	 * unresolvable grammar conflicts (*this time no way around*).
+	 * rgerhards, 2011-07-09
+	 */
+	if(!strncmp((char*) p, ":omfile:", sizeof(":omfile:") - 1)) {
+		p += sizeof(":omfile:") - 1;
+	}
 	if(!(*p == '$' || *p == '?' || *p == '/' || *p == '.' || *p == '-'))
 		ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
 
