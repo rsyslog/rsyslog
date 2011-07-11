@@ -66,7 +66,6 @@
 #include "stringbuf.h"
 #include "wti.h"
 #include "wtp.h"
-#include "ctok.h"
 #include "datetime.h"
 #include "queue.h"
 #include "conf.h"
@@ -173,10 +172,6 @@ rsrtInit(char **ppErrObj, obj_if_t *pObjIF)
 		CHKiRet(glblClassInit(NULL));
 		if(ppErrObj != NULL) *ppErrObj = "msg";
 		CHKiRet(msgClassInit(NULL));
-		if(ppErrObj != NULL) *ppErrObj = "ctok_token";
-		CHKiRet(ctok_tokenClassInit(NULL));
-		if(ppErrObj != NULL) *ppErrObj = "ctok";
-		CHKiRet(ctokClassInit(NULL));
 		if(ppErrObj != NULL) *ppErrObj = "sysvar";
 		CHKiRet(sysvarClassInit(NULL));
 		if(ppErrObj != NULL) *ppErrObj = "rule";

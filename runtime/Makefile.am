@@ -55,10 +55,6 @@ librsyslog_la_SOURCES = \
 	statsobj.h \
 	sync.c \
 	sync.h \
-	ctok.c \
-	ctok.h \
-	ctok_token.c \
-	ctok_token.h \
 	stream.c \
 	stream.h \
 	var.c \

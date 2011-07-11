@@ -65,8 +65,6 @@
 #include "srUtils.h"
 #include "errmsg.h"
 #include "net.h"
-#include "ctok.h"
-#include "ctok_token.h"
 #include "rule.h"
 #include "ruleset.h"
 #include "rsconf.h"
@@ -82,8 +80,6 @@ static rsRetVal cfline(rsconf_t *conf, uchar *line, rule_t **pfCurr);
 
 /* static data */
 DEFobjStaticHelpers
-DEFobjCurrIf(ctok)
-DEFobjCurrIf(ctok_token)
 DEFobjCurrIf(module)
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(net)
@@ -1082,8 +1078,6 @@ CODESTARTObjClassExit(conf)
 	}
 
 	/* release objects we no longer need */
-	objRelease(ctok, CORE_COMPONENT);
-	objRelease(ctok_token, CORE_COMPONENT);
 	objRelease(module, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(net, LM_NET_FILENAME);
@@ -1098,8 +1092,6 @@ ENDObjClassExit(conf)
  */
 BEGINAbstractObjClassInit(conf, 1, OBJ_IS_CORE_MODULE) /* class, version - CHANGE class also in END MACRO! */
 	/* request objects we use */
-	CHKiRet(objUse(ctok, CORE_COMPONENT));
-	CHKiRet(objUse(ctok_token, CORE_COMPONENT));
 	CHKiRet(objUse(module, CORE_COMPONENT));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(net, LM_NET_FILENAME)); /* TODO: make this dependcy go away! */
