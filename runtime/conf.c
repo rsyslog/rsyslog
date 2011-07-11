@@ -653,17 +653,14 @@ static rsRetVal cflineProcessTradPRIFilter(uchar **pline, register rule_t *pRule
 			for (bp=buf; *(bp+1); bp++)
 				*bp=*(bp+1);
 			*bp='\0';
-		}
-		else {
+		} else {
 			ignorepri = 0;
 		}
-		if ( *buf == '=' )
-		{
+		if ( *buf == '=' ) {
 			singlpri = 1;
 			pri = decodeSyslogName(&buf[1], syslogPriNames);
 		}
-		else {
-		        singlpri = 0;
+		else { singlpri = 0;
 			pri = decodeSyslogName(buf, syslogPriNames);
 		}
 
@@ -691,17 +688,13 @@ static rsRetVal cflineProcessTradPRIFilter(uchar **pline, register rule_t *pRule
 				  			pRule->f_filterData.f_pmask[i] &= ~(1<<pri);
 						else
 				  			pRule->f_filterData.f_pmask[i] |= (1<<pri);
-					}
-					else
-					{
+					} else {
 						if ( pri == TABLE_ALLPRI ) {
 							if ( ignorepri )
 								pRule->f_filterData.f_pmask[i] = TABLE_NOPRI;
 							else
 								pRule->f_filterData.f_pmask[i] = TABLE_ALLPRI;
-						}
-						else
-						{
+						} else {
 							if ( ignorepri )
 								for (i2= 0; i2 <= pri; ++i2)
 									pRule->f_filterData.f_pmask[i] &= ~(1<<i2);
