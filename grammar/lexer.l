@@ -80,6 +80,8 @@ char *currfn;			/* name of currently processed file */
 int popfile(void);
 int cnfSetLexFile(char *fname);
 
+extern int yydebug;
+
 /* somehow, I need these prototype even though the headers are 
  * included. I guess that's some autotools magic I don't understand...
  */
@@ -155,7 +157,7 @@ int fileno(FILE *stream);
 "action"[ \n\t]*"("		{ BEGIN INOBJ; return BEGIN_ACTION; }
 ^[ \t]*:\$?[a-z]+[ ]*,[ ]*!?[a-z]+[ ]*,[ ]*\".*\"	{
 				  yylval.s = strdup(yytext); return PROPFILT; }
-^[ \t]*[,\*a-z]+\.[,!=;\.\*a-z]+ { yylval.s = strdup(yytext); return PRIFILT; }
+^[ \t]*[a-z][,\*a-z]*[0-7]*\.[,!=;\.\*a-z]+ { yylval.s = strdup(yytext); return PRIFILT; }
 "*" |
 \-\/[^*][^\n]* |
 \/[^*][^\n]* |
@@ -203,6 +205,8 @@ cnfParseBuffer(char *buf, unsigned lenBuf)
 {
 	struct bufstack *bs;
 	int r = 0;
+	yydebug = 1;
+	BEGIN INITIAL;
 	/* maintain stack */
 	if((bs = malloc(sizeof(struct bufstack))) == NULL) {
 		r = 1;

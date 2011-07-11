@@ -1256,9 +1256,10 @@ ourConf = loadConf; // TODO: remove, once ourConf is gone!
 		errmsg.LogError(0, NO_ERRCODE, "EMERGENCY CONFIGURATION ACTIVATED - fix rsyslog config file!");
 		emergConf = 
 			"*.err "    _PATH_CONSOLE "\n"
-			"syslog.*" _PATH_CONSOLE  "\n"
+			"syslog.* " _PATH_CONSOLE "\n"
 			"*.panic  :omusrmsg:*"	  "\n"
 			"syslog.* :omusrmsg:root" "\n";
+dbgprintf("Emer Config '%s'\n",emergConf);
 		cnfParseBuffer(emergConf, strlen(emergConf));
 		r = yyparse();
 		if(r != 0) {
