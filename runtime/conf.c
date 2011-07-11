@@ -75,7 +75,7 @@
 #endif
 
 /* forward definitions */
-static rsRetVal cfline(rsconf_t *conf, uchar *line, rule_t **pfCurr);
+//static rsRetVal cfline(rsconf_t *conf, uchar *line, rule_t **pfCurr);
 
 
 /* static data */
@@ -715,6 +715,7 @@ finalize_it:
 }
 
 
+#if 0
 /* read the filter part of a configuration line and store the filter
  * in the supplied rule_t
  * rgerhards, 2007-08-01
@@ -751,6 +752,7 @@ static rsRetVal cflineDoFilter(uchar **pp, rule_t *f)
 finalize_it:
 	RETiRet;
 }
+#endif
 
 
 /* process the action part of a selector line
@@ -817,6 +819,7 @@ rsRetVal cflineDoAction(rsconf_t *conf, uchar **p, action_t **ppAction)
 }
 
 
+#if 0
 /* Process a configuration file line in traditional "filter selector" format
  * or one that builds upon this format. Note that ppRule may be a NULL pointer,
  * which is valid and happens if there is no previous line (right at the start
@@ -894,6 +897,7 @@ cfline(rsconf_t *conf, uchar *line, rule_t **pfCurr)
 
 	RETiRet;
 }
+#endif
 
 
 /* return the current number of active actions
@@ -926,7 +930,6 @@ CODESTARTobjQueryInterface(conf)
 	pIf->doNameLine = doNameLine;
 	pIf->cfsysline = cfsysline;
 	pIf->doModLoad = doModLoad;
-	pIf->cfline = cfline;
 	pIf->GetNbrActActions = GetNbrActActions;
 
 finalize_it:

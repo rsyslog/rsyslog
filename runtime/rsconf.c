@@ -1206,6 +1206,56 @@ validateConf(void)
 }
 
 
+#if 0
+/* create an emergency rule */
+static inline rsRetVal
+createEmergRule(char *PRIFilt, char *legact)
+{
+	rule_t *pRule;
+	action_t *pAction;
+	DEFiRet;
+
+	CHKiRet(rule.Construct(&pRule)); /* create "fresh" selector */
+	CHKiRet(rule.SetAssRuleset(pRule, ruleset.GetCurrent(loadConf)));
+	CHKiRet(rule.ConstructFinalize(pRule));
+	CHKiRet(cflineProcessTradPRIFilter((uchar**)&PRIFilt, pRule));
+	iRet = cflineDoAction(loadConf, (uchar**)&legact, &pAction);
+	iRet = llAppend(&(pRule)->llActList,  NULL, (void*) pAction);
+	CHKiRet(ruleset.AddRule(loadConf, rule.GetAssRuleset(pRule), &pRule));
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* start up an rsyslog emergency configuration. This is recovery if
+ * the config failed.
+ */
+static inline rsRetVal
+createEmergConf(void)
+{
+	DEFiRet;
+	errmsg.LogError(0, NO_ERRCODE, "EMERGENCY CONFIGURATION ACTIVATED - "
+			"fix rsyslog config file!");
+	/*
+	CHKiRet(rsconfConstruct(&loadConf));
+ourConf = loadConf; // TODO: remove, once ourConf is gone!
+	CHKiRet(loadBuildInModules());
+	CHKiRet(initLegacyConf());
+	*/
+	ruleset.SetDefaultRuleset(loadConf, (uchar*) "RSYSLOG_DefaultRuleset");
+
+	CHKiRet(createEmergRule("*.err",    _PATH_CONSOLE));
+	CHKiRet(createEmergRule("syslog.*", _PATH_CONSOLE));
+	CHKiRet(createEmergRule("*.panic",  ":omusrmsg:*"));
+	CHKiRet(createEmergRule("syslog.*", ":omusrmsg:root"));
+CHKiRet(createEmergRule("*.*", 		"/tmp/emerg"));
+finalize_it:
+	RETiRet;
+}
+#endif
+
+
 /* Load a configuration. This will do all necessary steps to create
  * the in-memory representation of the configuration, including support
  * for multiple configuration languages.
@@ -1219,9 +1269,7 @@ load(rsconf_t **cnf, uchar *confFile)
 	rsRetVal localRet;
 	int iNbrActions;
 	int bHadConfigErr = 0;
-	char cbuf[BUFSIZ];
 	int r;
-	char *emergConf;
 	DEFiRet;
 
 	CHKiRet(rsconfConstruct(&loadConf));
@@ -1253,17 +1301,10 @@ ourConf = loadConf; // TODO: remove, once ourConf is gone!
 		 * very clever... So we stick with what we have.
 		 * We ignore any errors while doing this - we would be lost anyhow...
 		 */
-		errmsg.LogError(0, NO_ERRCODE, "EMERGENCY CONFIGURATION ACTIVATED - fix rsyslog config file!");
-		emergConf = 
-			"*.err "    _PATH_CONSOLE "\n"
-			"syslog.* " _PATH_CONSOLE "\n"
-			"*.panic  :omusrmsg:*"	  "\n"
-			"syslog.* :omusrmsg:root" "\n";
-dbgprintf("Emer Config '%s'\n",emergConf);
-		cnfParseBuffer(emergConf, strlen(emergConf));
-		r = yyparse();
-		if(r != 0) {
-			fprintf(stderr, "rsyslogd: could not even activate emergency conf - terminating\n");
+		// TODO: think about this! iRet = createEmergConf();
+		if(1) { //if(iRet != RS_RET_OK) {
+			fprintf(stderr, "rsyslogd: could not even activate emergency "
+					"conf - terminating\n");
 			exit(1);
 		}
 	}
