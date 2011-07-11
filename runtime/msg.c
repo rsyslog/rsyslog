@@ -47,7 +47,6 @@
 #include "stringbuf.h"
 #include "template.h"
 #include "msg.h"
-#include "var.h"
 #include "datetime.h"
 #include "glbl.h"
 #include "regexp.h"
@@ -3144,104 +3143,6 @@ msgGetCEEVarNew(msg_t *pMsg, char *name)
 done:
 	return estr;
 }
-
-
-/* The function returns a cee variable suitable for use with RainerScript. Most importantly, this means
- * that the value is returned in a var_t object. The var_t is constructed inside this function and
- * MUST be freed by the caller.
- * Note that we need to do a lot of conversions between es_str_t and cstr -- this will go away once
- * we have moved larger parts of rsyslog to es_str_t. Acceptable for the moment, especially as we intend
- * to rewrite the script engine as well!
- * rgerhards, 2010-12-03
- *
- */
-rsRetVal
-msgGetCEEVar(msg_t *pMsg, cstr_t *propName, var_t **ppVar)
-{
-#warning remove as part of cleanup
-	DEFiRet;
-	var_t *pVar;
-	cstr_t *pstrProp;
-	es_str_t *str = NULL;
-	es_str_t *epropName = NULL;
-	int r;
-
-	ISOBJ_TYPE_assert(pMsg, msg);
-	ASSERT(propName != NULL);
-	ASSERT(ppVar != NULL);
-
-	/* make sure we have a var_t instance */
-	CHKiRet(var.Construct(&pVar));
-	CHKiRet(var.ConstructFinalize(pVar));
-
-	epropName = es_newStrFromBuf((char*)propName->pBuf, propName->iStrLen);
-	r = ee_getEventFieldAsString(pMsg->event, epropName, &str);
-
-	if(r != EE_OK) {
-		DBGPRINTF("msgGtCEEVar: libee error %d during ee_getEventFieldAsString\n", r);
-		CHKiRet(cstrConstruct(&pstrProp));
-		CHKiRet(cstrFinalize(pstrProp));
-	} else {
-		CHKiRet(cstrConstructFromESStr(&pstrProp, str));
-	}
-
-	/* now create a string object out of it and hand that over to the var */
-	CHKiRet(var.SetString(pVar, pstrProp));
-	es_deleteStr(str);
-
-	/* finally store var */
-	*ppVar = pVar;
-
-finalize_it:
-	if(epropName != NULL)
-		es_deleteStr(epropName);
-	RETiRet;
-}
-
-
-/* The returns a message variable suitable for use with RainerScript. Most importantly, this means
- * that the value is returned in a var_t object. The var_t is constructed inside this function and
- * MUST be freed by the caller.
- * rgerhards, 2008-02-25
- */
-rsRetVal
-msgGetMsgVar(msg_t *pThis, cstr_t *pstrPropName, var_t **ppVar)
-{
-	DEFiRet;
-	var_t *pVar;
-	size_t propLen;
-	uchar *pszProp = NULL;
-	cstr_t *pstrProp;
-	propid_t propid;
-	unsigned short bMustBeFreed = 0;
-
-	ISOBJ_TYPE_assert(pThis, msg);
-	ASSERT(pstrPropName != NULL);
-	ASSERT(ppVar != NULL);
-
-	/* make sure we have a var_t instance */
-	CHKiRet(var.Construct(&pVar));
-	CHKiRet(var.ConstructFinalize(pVar));
-
-	/* always call MsgGetProp() without a template specifier */
-	/* TODO: optimize propNameToID() call -- rgerhards, 2009-06-26 */
-	propNameToID(pstrPropName, &propid);
-	pszProp = (uchar*) MsgGetProp(pThis, NULL, propid, NULL, &propLen, &bMustBeFreed);
-
-	/* now create a string object out of it and hand that over to the var */
-	CHKiRet(rsCStrConstructFromszStr(&pstrProp, pszProp));
-	CHKiRet(var.SetString(pVar, pstrProp));
-
-	/* finally store var */
-	*ppVar = pVar;
-
-finalize_it:
-	if(bMustBeFreed)
-		free(pszProp);
-
-	RETiRet;
-}
-
 
 
 /* Return an es_str_t for given message property.

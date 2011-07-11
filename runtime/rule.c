@@ -36,7 +36,6 @@
 #include "action.h"
 #include "rule.h"
 #include "errmsg.h"
-#include "var.h"
 #include "srUtils.h"
 #include "batch.h"
 #include "parserif.h"
@@ -121,7 +120,6 @@ shouldProcessThisMessage(rule_t *pRule, msg_t *pMsg, sbool *bProcessMsg)
 	uchar *pszPropVal;
 	int bRet = 0;
 	size_t propLen;
-	var_t *pResult = NULL;
 
 	ISOBJ_TYPE_assert(pRule, rule);
 	assert(pMsg != NULL);
@@ -262,10 +260,6 @@ shouldProcessThisMessage(rule_t *pRule, msg_t *pMsg, sbool *bProcessMsg)
 	}
 
 finalize_it:
-	/* destruct in any case, not just on error, but it makes error handling much easier */
-	if(pResult != NULL)
-		var.Destruct(&pResult);
-
 	*bProcessMsg = bRet;
 	RETiRet;
 }
