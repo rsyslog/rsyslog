@@ -344,11 +344,6 @@ CODESTARTobjDestruct(rule)
 			rsCStrRegexDestruct(&pThis->f_filterData.prop.regex_cache);
 		if(pThis->f_filterData.prop.propName != NULL)
 			es_deleteStr(pThis->f_filterData.prop.propName);
-#if 0
-	} else if(pThis->f_filter_type == FILTER_EXPR) {
-		if(pThis->f_filterData.f_expr != NULL)
-			expr.Destruct(&pThis->f_filterData.f_expr);
-#endif
 	}
 
 	llDestroy(&pThis->llActList);

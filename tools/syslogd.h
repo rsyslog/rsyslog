@@ -27,7 +27,6 @@
 #include "template.h"
 #include "action.h"
 #include "linkedlist.h"
-#include "expr.h"
 
 /* the following prototypes should go away once we have an input
  * module interface -- rgerhards, 2007-12-12

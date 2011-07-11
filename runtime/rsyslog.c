@@ -62,16 +62,11 @@
 
 #include "rsyslog.h"
 #include "obj.h"
-#include "vm.h"
 #include "sysvar.h"
 #include "stringbuf.h"
 #include "wti.h"
 #include "wtp.h"
-#include "expr.h"
 #include "ctok.h"
-#include "vmop.h"
-#include "vmstk.h"
-#include "vmprg.h"
 #include "datetime.h"
 #include "queue.h"
 #include "conf.h"
@@ -182,22 +177,8 @@ rsrtInit(char **ppErrObj, obj_if_t *pObjIF)
 		CHKiRet(ctok_tokenClassInit(NULL));
 		if(ppErrObj != NULL) *ppErrObj = "ctok";
 		CHKiRet(ctokClassInit(NULL));
-#if 1
-		if(ppErrObj != NULL) *ppErrObj = "vmstk";
-		CHKiRet(vmstkClassInit(NULL));
-#endif
 		if(ppErrObj != NULL) *ppErrObj = "sysvar";
 		CHKiRet(sysvarClassInit(NULL));
-#if 1
-		if(ppErrObj != NULL) *ppErrObj = "vm";
-		CHKiRet(vmClassInit(NULL));
-		if(ppErrObj != NULL) *ppErrObj = "vmop";
-		CHKiRet(vmopClassInit(NULL));
-		if(ppErrObj != NULL) *ppErrObj = "vmprg";
-		CHKiRet(vmprgClassInit(NULL));
-		if(ppErrObj != NULL) *ppErrObj = "expr";
-		CHKiRet(exprClassInit(NULL));
-#endif
 		if(ppErrObj != NULL) *ppErrObj = "rule";
 		CHKiRet(ruleClassInit(NULL));
 		if(ppErrObj != NULL) *ppErrObj = "ruleset";

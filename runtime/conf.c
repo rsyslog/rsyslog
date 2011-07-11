@@ -65,7 +65,6 @@
 #include "srUtils.h"
 #include "errmsg.h"
 #include "net.h"
-#include "expr.h"
 #include "ctok.h"
 #include "ctok_token.h"
 #include "rule.h"
@@ -83,7 +82,6 @@ static rsRetVal cfline(rsconf_t *conf, uchar *line, rule_t **pfCurr);
 
 /* static data */
 DEFobjStaticHelpers
-DEFobjCurrIf(expr)
 DEFobjCurrIf(ctok)
 DEFobjCurrIf(ctok_token)
 DEFobjCurrIf(module)
@@ -508,77 +506,6 @@ rsRetVal cflineProcessTradPRIFilter(uchar **pline, register rule_t *pRule)
 }
 
 
-#if 0
-/* Helper to cfline(). This function processes an "if" type of filter,
- * what essentially means it parses an expression. As usual, 
- * It processes the line up to the beginning of the action part.
- * A pointer to that beginnig is passed back to the caller.
- * rgerhards 2008-01-19
- */
-static rsRetVal cflineProcessIfFilter(uchar **pline, register rule_t *f)
-{
-	DEFiRet;
-	ctok_t *tok;
-	ctok_token_t *pToken;
-
-	ASSERT(pline != NULL);
-	ASSERT(*pline != NULL);
-	ASSERT(f != NULL);
-
-	dbgprintf(" - general expression-based filter\n");
-	errno = 0;	/* keep strerror_r() stuff out of logerror messages */
-
-	f->f_filter_type = FILTER_EXPR;
-
-	/* if we come to over here, pline starts with "if ". We just skip that part. */
-	(*pline) += 3;
-
-	/* we first need a tokenizer... */
-	CHKiRet(ctok.Construct(&tok));
-	CHKiRet(ctok.Setpp(tok, *pline));
-	CHKiRet(ctok.ConstructFinalize(tok));
-
-	/* now construct our expression */
-	CHKiRet(expr.Construct(&f->f_filterData.f_expr));
-	CHKiRet(expr.ConstructFinalize(f->f_filterData.f_expr));
-
-	/* ready to go... */
-	CHKiRet(expr.Parse(f->f_filterData.f_expr, tok));
-
-	/* we now need to parse off the "then" - and note an error if it is
-	 * missing...
-	 */
-	CHKiRet(ctok.GetToken(tok, &pToken));
-	if(pToken->tok != ctok_THEN) {
-		ctok_token.Destruct(&pToken);
-		ABORT_FINALIZE(RS_RET_SYNTAX_ERROR);
-	}
-
-	ctok_token.Destruct(&pToken); /* no longer needed */
-
-	/* we are done, so we now need to restore things */
-	CHKiRet(ctok.Getpp(tok, pline));
-	CHKiRet(ctok.Destruct(&tok));
-
-	/* debug support - print vmprg after construction (uncomment to use) */
-	/* vmprgDebugPrint(f->f_filterData.f_expr->pVmprg); */
-
-	/* we now need to skip whitespace to the action part, else we confuse
-	 * the legacy rsyslog conf parser. -- rgerhards, 2008-02-25
-	 */
-	while(isspace(**pline))
-		++(*pline);
-
-finalize_it:
-	if(iRet == RS_RET_SYNTAX_ERROR) {
-		errmsg.LogError(0, RS_RET_SYNTAX_ERROR, "syntax error in expression");
-	}
-
-	RETiRet;
-}
-#endif
-
-
 /* Helper to cfline(). This function takes the filter part of a property
  * based filter and decodes it. It processes the line up to the beginning
  * of the action part. A pointer to that beginnig is passed back to the caller.
@@ -808,14 +735,6 @@ static rsRetVal cflineDoFilter(uchar **pp, rule_t *f)
 		case ':':
 			CHKiRet(cflineProcessPropFilter(pp, f));
 			break;
-#if 0
-		case 'i': /* "if" filter? */
-			if(*(*pp+1) && (*(*pp+1) == 'f') && isspace(*(*pp+2))) {
-				CHKiRet(cflineProcessIfFilter(pp, f));
-				break;
-				}
-			/*FALLTHROUGH*/
-#endif
 		default:
 			CHKiRet(cflineProcessTradPRIFilter(pp, f));
 			break;
@@ -1163,7 +1082,6 @@ CODESTARTObjClassExit(conf)
 	}
 
 	/* release objects we no longer need */
-	objRelease(expr, CORE_COMPONENT);
 	objRelease(ctok, CORE_COMPONENT);
 	objRelease(ctok_token, CORE_COMPONENT);
 	objRelease(module, CORE_COMPONENT);
@@ -1180,7 +1098,6 @@ ENDObjClassExit(conf)
  */
 BEGINAbstractObjClassInit(conf, 1, OBJ_IS_CORE_MODULE) /* class, version - CHANGE class also in END MACRO! */
 	/* request objects we use */
-	CHKiRet(objUse(expr, CORE_COMPONENT));
 	CHKiRet(objUse(ctok, CORE_COMPONENT));
 	CHKiRet(objUse(ctok_token, CORE_COMPONENT));
 	CHKiRet(objUse(module, CORE_COMPONENT));

@@ -28,7 +28,6 @@
 #include "libestr.h"
 #include "linkedlist.h"
 #include "regexp.h"
-#include "expr.h" // TODO: remove #if 0
 #include "rainerscript.h"
 
 /* the rule object */

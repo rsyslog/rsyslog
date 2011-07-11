@@ -5,16 +5,6 @@ pkglib_LTLIBRARIES =
 #pkglib_LTLIBRARIES = librsyslog.la
 
 librsyslog_la_SOURCES = \
-	expr.c \
-	expr.h \
-	vm.c \
-	vm.h \
-	vmstk.c \
-	vmstk.h \
-	vmprg.c \
-	vmprg.h \
-	vmop.c \
-	vmop.h \
 	rsyslog.c \
 	rsyslog.h \
 	typedefs.h \
