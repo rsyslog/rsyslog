@@ -35,7 +35,6 @@
 #include "rsyslog.h"
 #include "obj.h"
 #include "errmsg.h"
-#include "sysvar.h"
 #include "srUtils.h"
 #include "stringbuf.h"
 

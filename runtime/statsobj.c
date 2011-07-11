@@ -36,7 +36,6 @@
 #include "unicode-helper.h"
 #include "obj.h"
 #include "statsobj.h"
-#include "sysvar.h"
 #include "srUtils.h"
 #include "stringbuf.h"
 

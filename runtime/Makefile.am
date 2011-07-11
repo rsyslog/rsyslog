@@ -63,8 +63,6 @@ librsyslog_la_SOURCES = \
 	wtp.h \
 	wti.c \
 	wti.h \
-	sysvar.c \
-	sysvar.h \
 	queue.c \
 	queue.h \
 	ruleset.c \

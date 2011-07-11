@@ -62,7 +62,6 @@
 
 #include "rsyslog.h"
 #include "obj.h"
-#include "sysvar.h"
 #include "stringbuf.h"
 #include "wti.h"
 #include "wtp.h"
@@ -172,8 +171,6 @@ rsrtInit(char **ppErrObj, obj_if_t *pObjIF)
 		CHKiRet(glblClassInit(NULL));
 		if(ppErrObj != NULL) *ppErrObj = "msg";
 		CHKiRet(msgClassInit(NULL));
-		if(ppErrObj != NULL) *ppErrObj = "sysvar";
-		CHKiRet(sysvarClassInit(NULL));
 		if(ppErrObj != NULL) *ppErrObj = "rule";
 		CHKiRet(ruleClassInit(NULL));
 		if(ppErrObj != NULL) *ppErrObj = "ruleset";

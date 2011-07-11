@@ -40,7 +40,6 @@
 #include "obj.h"
 #include "modules.h"
 #include "datetime.h"
-#include "sysvar.h"
 #include "srUtils.h"
 #include "stringbuf.h"
 #include "errmsg.h"
