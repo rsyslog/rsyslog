@@ -720,7 +720,14 @@ CODESTARTparseSelectorAct
 	 */
 	if(!strncmp((char*) p, ":omfile:", sizeof(":omfile:") - 1)) {
 		p += sizeof(":omfile:") - 1;
-	}
+	} else {
+		if(*p == '$') {
+			errmsg.LogError(0, RS_RET_OUTDATED_STMT,
+				"action '%s' treated as ':omfile:%s' - please "
+				"change syntax, '%s' will not be supported in "
+				"rsyslog v6 and above.", p, p, p);
+		}
+	} 
 	if(!(*p == '$' || *p == '?' || *p == '/' || *p == '.' || *p == '-'))
 		ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
 
