@@ -31,6 +31,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <grp.h>
+#include <stdarg.h>
 #include <sys/resource.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -38,6 +39,7 @@
 #include "rsyslog.h"
 #include "obj.h"
 #include "srUtils.h"
+#include "rule.h"
 #include "ruleset.h"
 #include "modules.h"
 #include "conf.h"
@@ -63,16 +65,20 @@
 #include "parser.h"
 #include "outchannel.h"
 #include "threads.h"
+#include "datetime.h"
+#include "parserif.h"
 #include "dirty.h"
 
 /* static data */
 DEFobjStaticHelpers
+DEFobjCurrIf(rule)
 DEFobjCurrIf(ruleset)
 DEFobjCurrIf(module)
 DEFobjCurrIf(conf)
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(parser)
+DEFobjCurrIf(datetime)
 
 /* exported static data */
 rsconf_t *runConf = NULL;/* the currently running config */
@@ -92,6 +98,7 @@ static uchar template_StdPgSQLFmt[] = "\"insert into SystemEvents (Message, Faci
 static uchar template_spoofadr[] = "\"%fromhost-ip%\"";
 /* end templates */
 
+void cnfDoCfsysline(char *ln);
 
 /* Standard-Constructor
  */
@@ -210,6 +217,241 @@ BEGINobjDebugPrint(rsconf) /* be sure to specify the object type also in END and
 	}
 CODESTARTobjDebugPrint(rsconf)
 ENDobjDebugPrint(rsconf)
+
+
+rsRetVal
+cnfDoActlst(struct cnfactlst *actlst, rule_t *pRule)
+{
+	struct cnfcfsyslinelst *cflst;
+	action_t *pAction;
+	uchar *str;
+	DEFiRet;
+
+	while(actlst != NULL) {
+		dbgprintf("aclst %p: ", actlst);
+		if(actlst->actType == CNFACT_V2) {
+			dbgprintf("V2 action type not yet handled\n");
+		} else {
+			dbgprintf("legacy action line:%s\n", actlst->data.legActLine);
+			str = (uchar*) actlst->data.legActLine;
+			iRet = cflineDoAction(loadConf, &str, &pAction);
+			iRet = llAppend(&(pRule)->llActList,  NULL, (void*) pAction);
+		}
+		for(  cflst = actlst->syslines
+		    ; cflst != NULL ; cflst = cflst->next) {
+			 cnfDoCfsysline(cflst->line);
+		}
+		actlst = actlst->next;
+	}
+	RETiRet;
+}
+
+/* This function returns the current date in different
+ * variants. It is used to construct the $NOW series of
+ * system properties. The returned buffer must be freed
+ * by the caller when no longer needed. If the function
+ * can not allocate memory, it returns a NULL pointer.
+ * TODO: this was taken from msg.c and we should consolidate it with the code
+ * there. This is especially important when we increase the number of system
+ * variables (what we definitely want to do).
+ */
+typedef enum ENOWType { NOW_NOW, NOW_YEAR, NOW_MONTH, NOW_DAY, NOW_HOUR, NOW_MINUTE } eNOWType;
+static rsRetVal
+getNOW(eNOWType eNow, es_str_t **estr)
+{
+	DEFiRet;
+	uchar szBuf[16];
+	struct syslogTime t;
+	es_size_t len;
+
+	datetime.getCurrTime(&t, NULL);
+	switch(eNow) {
+	case NOW_NOW:
+		len = snprintf((char*) szBuf, sizeof(szBuf)/sizeof(uchar),
+			   	"%4.4d-%2.2d-%2.2d", t.year, t.month, t.day);
+		break;
+	case NOW_YEAR:
+		len = snprintf((char*) szBuf, sizeof(szBuf)/sizeof(uchar), "%4.4d", t.year);
+		break;
+	case NOW_MONTH:
+		len = snprintf((char*) szBuf, sizeof(szBuf)/sizeof(uchar), "%2.2d", t.month);
+		break;
+	case NOW_DAY:
+		len = snprintf((char*) szBuf, sizeof(szBuf)/sizeof(uchar), "%2.2d", t.day);
+		break;
+	case NOW_HOUR:
+		len = snprintf((char*) szBuf, sizeof(szBuf)/sizeof(uchar), "%2.2d", t.hour);
+		break;
+	case NOW_MINUTE:
+		len = snprintf((char*) szBuf, sizeof(szBuf)/sizeof(uchar), "%2.2d", t.minute);
+		break;
+	}
+
+	/* now create a string object out of it and hand that over to the var */
+	*estr = es_newStrFromCStr((char*)szBuf, len);
+
+	RETiRet;
+}
+
+
+
+static inline es_str_t *
+getSysVar(char *name)
+{
+	es_str_t *estr = NULL;
+	rsRetVal iRet = RS_RET_OK;
+
+	if(!strcmp(name, "now")) {
+		CHKiRet(getNOW(NOW_NOW, &estr));
+	} else if(!strcmp(name, "year")) {
+		CHKiRet(getNOW(NOW_YEAR, &estr));
+	} else if(!strcmp(name, "month")) {
+		CHKiRet(getNOW(NOW_MONTH, &estr));
+	} else if(!strcmp(name, "day")) {
+		CHKiRet(getNOW(NOW_DAY, &estr));
+	} else if(!strcmp(name, "hour")) {
+		CHKiRet(getNOW(NOW_HOUR, &estr));
+	} else if(!strcmp(name, "minute")) {
+		CHKiRet(getNOW(NOW_MINUTE, &estr));
+	} else if(!strcmp(name, "myhostname")) {
+		char *hn = (char*)glbl.GetLocalHostName();
+		estr = es_newStrFromCStr(hn, strlen(hn));
+	} else {
+		ABORT_FINALIZE(RS_RET_SYSVAR_NOT_FOUND);
+	}
+finalize_it:
+	if(iRet != RS_RET_OK) {
+		dbgprintf("getSysVar error iRet %d\n", iRet);
+		if(estr == NULL)
+			estr = es_newStrFromCStr("*ERROR*", sizeof("*ERROR*") - 1);
+	}
+	return estr;
+}
+
+/*------------------------------ interface to flex/bison parser ------------------------------*/
+extern int yylineno;
+
+void
+parser_errmsg(char *fmt, ...)
+{
+	va_list ap;
+	char errBuf[1024];
+
+	va_start(ap, fmt);
+	if(vsnprintf(errBuf, sizeof(errBuf), fmt, ap) == sizeof(errBuf))
+		errBuf[1024] = '\0';
+	errmsg.LogError(0, RS_RET_CONF_PARSE_ERROR,
+			"error during parsing file %s, on or before line %d: %s",
+			cnfcurrfn, yylineno, errBuf);
+	va_end(ap);
+}
+
+int
+yyerror(char *s)
+{
+	parser_errmsg("%s", s);
+	return 0;
+}
+void cnfDoObj(struct cnfobj *o)
+{
+	dbgprintf("cnf:global:obj: ");
+	cnfobjPrint(o);
+	cnfobjDestruct(o);
+}
+
+void cnfDoRule(struct cnfrule *cnfrule)
+{
+	rule_t *pRule;
+	uchar *str;
+	rsRetVal iRet = RS_RET_OK; //DEFiRet;
+
+	dbgprintf("cnf:global:rule\n");
+	cnfrulePrint(cnfrule);
+
+	CHKiRet(rule.Construct(&pRule)); /* create "fresh" selector */
+	CHKiRet(rule.SetAssRuleset(pRule, ruleset.GetCurrent(loadConf)));
+	CHKiRet(rule.ConstructFinalize(pRule));
+
+	switch(cnfrule->filttype) {
+	case CNFFILT_NONE:
+		break;
+	case CNFFILT_PRI:
+		str = (uchar*) cnfrule->filt.s;
+		iRet = cflineProcessTradPRIFilter(&str, pRule);
+		break;
+	case CNFFILT_PROP:
+		dbgprintf("%s\n", cnfrule->filt.s);
+		str = (uchar*) cnfrule->filt.s;
+		iRet = cflineProcessPropFilter(&str, pRule);
+		break;
+	case CNFFILT_SCRIPT:
+		pRule->f_filter_type = FILTER_EXPR;
+		pRule->f_filterData.expr = cnfrule->filt.expr;
+		break;
+	}
+	/* we now check if there are some global (BSD-style) filter conditions
+	 * and, if so, we copy them over. rgerhards, 2005-10-18
+	 */
+	if(pDfltProgNameCmp != NULL) {
+		CHKiRet(rsCStrConstructFromCStr(&(pRule->pCSProgNameComp), pDfltProgNameCmp));
+	}
+
+	if(eDfltHostnameCmpMode != HN_NO_COMP) {
+		pRule->eHostnameCmpMode = eDfltHostnameCmpMode;
+		CHKiRet(rsCStrConstructFromCStr(&(pRule->pCSHostnameComp), pDfltHostnameCmp));
+	}
+
+	cnfDoActlst(cnfrule->actlst, pRule);
+
+	CHKiRet(ruleset.AddRule(loadConf, rule.GetAssRuleset(pRule), &pRule));
+
+finalize_it:
+	//TODO: do something with error states
+	;
+}
+
+void cnfDoCfsysline(char *ln)
+{
+	dbgprintf("cnf:global:cfsysline: %s\n", ln);
+	/* the legacy system needs the "$" stripped */
+	conf.cfsysline((uchar*) ln+1);
+	dbgprintf("cnf:cfsysline call done\n");
+}
+
+void cnfDoBSDTag(char *ln)
+{
+	dbgprintf("cnf:global:BSD tag: %s\n", ln);
+	cflineProcessTagSelector((uchar**)&ln);
+}
+
+void cnfDoBSDHost(char *ln)
+{
+	dbgprintf("cnf:global:BSD host: %s\n", ln);
+	cflineProcessHostSelector((uchar**)&ln);
+}
+
+es_str_t*
+cnfGetVar(char *name, void *usrptr)
+{
+	es_str_t *estr;
+	if(name[0] == '$') {
+		if(name[1] == '$')
+			estr = getSysVar(name+2);
+		else if(name[1] == '!')
+			estr = msgGetCEEVarNew((msg_t*) usrptr, name+2);
+		else
+			estr = msgGetMsgVarNew((msg_t*) usrptr, (uchar*)name+1);
+	}
+	if(Debug) {
+		char *s;
+		s = es_str2cstr(estr, NULL);
+		dbgprintf("rainerscript: var '%s': '%s'\n", name, s);
+		free(s);
+	}
+	return estr;
+}
+/*------------------------------ end interface to flex/bison parser ------------------------------*/
+
 
 
 /* drop to specified group
@@ -549,19 +791,6 @@ static rsRetVal setActionResumeInterval(void __attribute__((unused)) *pVal, int 
 }
 
 
-/* this method is needed to shuffle the current conf object down to the
- * IncludeConfig handler.
- */
-static rsRetVal
-doIncludeLine(void *pVal, uchar *pNewVal)
-{
-	DEFiRet;
-	iRet = conf.doIncludeLine(ourConf, pVal, pNewVal);
-	free(pNewVal);
-	RETiRet;
-}
-
-
 /* set the maximum message size */
 static rsRetVal setMaxMsgSize(void __attribute__((unused)) *pVal, long iNewVal)
 {
@@ -840,8 +1069,6 @@ initLegacyConf(void)
 		setActionResumeInterval, NULL, NULL, eConfObjGlobal));
 	CHKiRet(regCfSysLineHdlr((uchar *)"modload", 0, eCmdHdlrCustomHandler,
 		conf.doModLoad, NULL, NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"includeconfig", 0, eCmdHdlrCustomHandler,
-		doIncludeLine, NULL, NULL, eConfObjGlobal));
 	CHKiRet(regCfSysLineHdlr((uchar *)"maxmessagesize", 0, eCmdHdlrSize,
 		setMaxMsgSize, NULL, NULL, eConfObjGlobal));
 	CHKiRet(regCfSysLineHdlr((uchar *)"defaultruleset", 0, eCmdHdlrGetWord,
@@ -990,10 +1217,8 @@ validateConf(void)
 rsRetVal
 load(rsconf_t **cnf, uchar *confFile)
 {
-	rsRetVal localRet;
 	int iNbrActions;
-	int bHadConfigErr = 0;
-	char cbuf[BUFSIZ];
+	int r;
 	DEFiRet;
 
 	CHKiRet(rsconfConstruct(&loadConf));
@@ -1003,53 +1228,25 @@ ourConf = loadConf; // TODO: remove, once ourConf is gone!
 	CHKiRet(initLegacyConf());
 
 	/* open the configuration file */
-	localRet = conf.processConfFile(loadConf, confFile);
-	CHKiRet(conf.GetNbrActActions(loadConf, &iNbrActions));
-
-	if(localRet != RS_RET_OK && localRet != RS_RET_NONFATAL_CONFIG_ERR) {
-		errmsg.LogError(0, localRet, "CONFIG ERROR: could not interpret master config file '%s'.", confFile);
-		bHadConfigErr = 1;
-	} else if(iNbrActions == 0) {
-		errmsg.LogError(0, RS_RET_NO_ACTIONS, "CONFIG ERROR: there are no active actions configured. Inputs will "
-			 "run, but no output whatsoever is created.");
-		bHadConfigErr = 1;
+	r = cnfSetLexFile((char*)confFile);
+	if(r == 0) {
+		r = yyparse();
+		conf.GetNbrActActions(loadConf, &iNbrActions);
 	}
 
-	if((localRet != RS_RET_OK && localRet != RS_RET_NONFATAL_CONFIG_ERR) || iNbrActions == 0) {
-
-		/* rgerhards: this code is executed to set defaults when the
-		 * config file could not be opened. We might think about
-		 * abandoning the run in this case - but this, too, is not
-		 * very clever... So we stick with what we have.
-		 * We ignore any errors while doing this - we would be lost anyhow...
-		 */
-		errmsg.LogError(0, NO_ERRCODE, "EMERGENCY CONFIGURATION ACTIVATED - fix rsyslog config file!");
-
-		/* note: we previously used _POSIY_TTY_NAME_MAX+1, but this turned out to be
-		 * too low on linux... :-S   -- rgerhards, 2008-07-28
-		 */
-		char szTTYNameBuf[128];
-		rule_t *pRule = NULL; /* initialization to NULL is *vitally* important! */
-		conf.cfline(loadConf, UCHAR_CONSTANT("*.ERR\t" _PATH_CONSOLE), &pRule);
-		conf.cfline(loadConf, UCHAR_CONSTANT("syslog.*\t" _PATH_CONSOLE), &pRule);
-		conf.cfline(loadConf, UCHAR_CONSTANT("*.PANIC\t*"), &pRule);
-		conf.cfline(loadConf, UCHAR_CONSTANT("syslog.*\troot"), &pRule);
-		if(ttyname_r(0, szTTYNameBuf, sizeof(szTTYNameBuf)) == 0) {
-			snprintf(cbuf,sizeof(cbuf), "*.*\t%s", szTTYNameBuf);
-			conf.cfline(loadConf, (uchar*)cbuf, &pRule);
-		} else {
-			DBGPRINTF("error %d obtaining controlling terminal, not using that emergency rule\n", errno);
-		}
-		ruleset.AddRule(loadConf, ruleset.GetCurrent(loadConf), &pRule);
+	if(r == 1) {
+		errmsg.LogError(0, RS_RET_CONF_PARSE_ERROR,
+				"CONFIG ERROR: could not interpret master "
+				"config file '%s'.", confFile);
+		ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
+	} else if(iNbrActions == 0) {
+		errmsg.LogError(0, RS_RET_NO_ACTIONS, "CONFIG ERROR: there are no "
+				"active actions configured. Inputs will "
+			 	"run, but no output whatsoever is created.");
+		ABORT_FINALIZE(RS_RET_NO_ACTIONS);
 	}
 
 	CHKiRet(validateConf());
-
-
-	/* return warning state if we had some acceptable problems */
-	if(bHadConfigErr) {
-		iRet = RS_RET_NONFATAL_CONFIG_ERR;
-	}
 
 	/* we are done checking the config - now validate if we should actually run or not.
 	 * If not, terminate. -- rgerhards, 2008-07-25
@@ -1065,7 +1262,7 @@ ourConf = loadConf; // TODO: remove, once ourConf is gone!
 	*cnf = loadConf;
 // TODO: enable this once all config code is moved to here!	loadConf = NULL;
 
-	dbgprintf("rsyslog finished loading initial config %p\n", loadConf);
+	dbgprintf("rsyslog finished loading master config %p\n", loadConf);
 	rsconfDebugPrint(loadConf);
 
 finalize_it:
@@ -1102,10 +1299,12 @@ ENDobjQueryInterface(rsconf)
 BEGINObjClassInit(rsconf, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
 	CHKiRet(objUse(ruleset, CORE_COMPONENT));
+	CHKiRet(objUse(rule, CORE_COMPONENT));
 	CHKiRet(objUse(module, CORE_COMPONENT));
 	CHKiRet(objUse(conf, CORE_COMPONENT));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
+	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	CHKiRet(objUse(parser, CORE_COMPONENT));
 
 	/* now set our own handlers */
@@ -1117,11 +1316,13 @@ ENDObjClassInit(rsconf)
 /* De-initialize the rsconf class.
  */
 BEGINObjClassExit(rsconf, OBJ_IS_CORE_MODULE) /* class, version */
+	objRelease(rule, CORE_COMPONENT);
 	objRelease(ruleset, CORE_COMPONENT);
 	objRelease(module, CORE_COMPONENT);
 	objRelease(conf, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
+	objRelease(datetime, CORE_COMPONENT);
 	objRelease(parser, CORE_COMPONENT);
 ENDObjClassExit(rsconf)
 

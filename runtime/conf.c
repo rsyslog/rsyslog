@@ -65,9 +65,6 @@
 #include "srUtils.h"
 #include "errmsg.h"
 #include "net.h"
-#include "expr.h"
-#include "ctok.h"
-#include "ctok_token.h"
 #include "rule.h"
 #include "ruleset.h"
 #include "rsconf.h"
@@ -78,15 +75,11 @@
 #endif
 
 /* forward definitions */
-static rsRetVal cfline(rsconf_t *conf, uchar *line, rule_t **pfCurr);
-static rsRetVal processConfFile(rsconf_t *conf, uchar *pConfFile);
+//static rsRetVal cfline(rsconf_t *conf, uchar *line, rule_t **pfCurr);
 
 
 /* static data */
 DEFobjStaticHelpers
-DEFobjCurrIf(expr)
-DEFobjCurrIf(ctok)
-DEFobjCurrIf(ctok_token)
 DEFobjCurrIf(module)
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(net)
@@ -104,149 +97,9 @@ int bConfStrictScoping = 0;	/* force strict scoping during config processing? */
  * be run in a single thread anyways. So there can be no race conditions.
  * rgerhards 2005-10-18
  */
-static EHostnameCmpMode eDfltHostnameCmpMode = HN_NO_COMP;
-static cstr_t *pDfltHostnameCmp = NULL;
-static cstr_t *pDfltProgNameCmp = NULL;
-
-
-/* process a directory and include all of its files into
- * the current config file. There is no specific order of inclusion,
- * files are included in the order they are read from the directory.
- * The caller must have make sure that the provided parameter is
- * indeed a directory.
- * rgerhards, 2007-08-01
- */
-static rsRetVal doIncludeDirectory(rsconf_t *conf, uchar *pDirName)
-{
-	DEFiRet;
-	int iEntriesDone = 0;
-	DIR *pDir;
-	union {
-              struct dirent d;
-              char b[offsetof(struct dirent, d_name) + NAME_MAX + 1];
-	} u;
-	struct dirent *res;
-	size_t iDirNameLen;
-	size_t iFileNameLen;
-	uchar szFullFileName[MAXFNAME];
-
-	ASSERT(pDirName != NULL);
-
-	if((pDir = opendir((char*) pDirName)) == NULL) {
-		errmsg.LogError(errno, RS_RET_FOPEN_FAILURE, "error opening include directory");
-		ABORT_FINALIZE(RS_RET_FOPEN_FAILURE);
-	}
-
-	/* prepare file name buffer */
-	iDirNameLen = strlen((char*) pDirName);
-	memcpy(szFullFileName, pDirName, iDirNameLen);
-
-	/* now read the directory */
-	iEntriesDone = 0;
-	while(readdir_r(pDir, &u.d, &res) == 0) {
-		if(res == NULL)
-			break; /* this also indicates end of directory */
-#		ifdef DT_REG
-		/* TODO: find an alternate way to checking for special files if this is
-		 * not defined. This is currently a known problem on HP UX, but the work-
-		 * around is simple: do not create special files in that directory. So 
-		 * fixing this is actually not the most important thing on earth...
-		 * rgerhards, 2008-03-04
-		 */
-		if(res->d_type != DT_REG)
-			continue; /* we are not interested in special files */
-#		endif
-		if(res->d_name[0] == '.')
-			continue; /* these files we are also not interested in */
-		++iEntriesDone;
-		/* construct filename */
-		iFileNameLen = strlen(res->d_name);
-		if (iFileNameLen > NAME_MAX)
-			iFileNameLen = NAME_MAX;
-		memcpy(szFullFileName + iDirNameLen, res->d_name, iFileNameLen);
-		*(szFullFileName + iDirNameLen + iFileNameLen) = '\0';
-		dbgprintf("including file '%s'\n", szFullFileName);
-		processConfFile(conf, szFullFileName);
-		/* we deliberately ignore the iRet of processConfFile() - this is because
-		 * failure to process one file does not mean all files will fail. By ignoring,
-		 * we retry with the next file, which is the best thing we can do. -- rgerhards, 2007-08-01
-		 */
-	}
-
-	if(iEntriesDone == 0) {
-		/* I just make it a debug output, because I can think of a lot of cases where it
-		 * makes sense not to have any files. E.g. a system maintainer may place a $Include
-		 * into the config file just in case, when additional modules be installed. When none
-		 * are installed, the directory will be empty, which is fine. -- rgerhards 2007-08-01
-		 */
-		dbgprintf("warning: the include directory contained no files - this may be ok.\n");
-	}
-
-finalize_it:
-	if(pDir != NULL)
-		closedir(pDir);
-
-	RETiRet;
-}
-
-
-/* process a $include config line. That type of line requires
- * inclusion of another file.
- * rgerhards, 2007-08-01
- */
-rsRetVal
-doIncludeLine(rsconf_t *conf, uchar **pp, __attribute__((unused)) void* pVal)
-{
-	DEFiRet;
-	char pattern[MAXFNAME];
-	uchar *cfgFile;
-	glob_t cfgFiles;
-	int result;
-	size_t i = 0;
-	struct stat fileInfo;
-
-	ASSERT(pp != NULL);
-	ASSERT(*pp != NULL);
-
-	if(getSubString(pp, (char*) pattern, sizeof(pattern) / sizeof(char), ' ')  != 0) {
-		errmsg.LogError(0, RS_RET_NOT_FOUND, "could not parse config file name");
-		ABORT_FINALIZE(RS_RET_NOT_FOUND);
-	}
-
-	/* Use GLOB_MARK to append a trailing slash for directories.
-	 * Required by doIncludeDirectory().
-	 */
-	result = glob(pattern, GLOB_MARK, NULL, &cfgFiles);
-	if(result == GLOB_NOSPACE || result == GLOB_ABORTED) {
-		char errStr[1024];
-		rs_strerror_r(errno, errStr, sizeof(errStr));
-		errmsg.LogError(0, RS_RET_FILE_NOT_FOUND, "error accessing config file or directory '%s': %s",
-				pattern, errStr);
-		ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
-	}
-
-	for(i = 0; i < cfgFiles.gl_pathc; i++) {
-		cfgFile = (uchar*) cfgFiles.gl_pathv[i];
-
-		if(stat((char*) cfgFile, &fileInfo) != 0) 
-			continue; /* continue with the next file if we can't stat() the file */
-
-		if(S_ISREG(fileInfo.st_mode)) { /* config file */
-			dbgprintf("requested to include config file '%s'\n", cfgFile);
-			iRet = processConfFile(conf, cfgFile);
-		} else if(S_ISDIR(fileInfo.st_mode)) { /* config directory */
-			dbgprintf("requested to include directory '%s'\n", cfgFile);
-			iRet = doIncludeDirectory(conf, cfgFile);
-		} else { /* TODO: shall we handle symlinks or not? */
-			dbgprintf("warning: unable to process IncludeConfig directive '%s'\n", cfgFile);
-		}
-	}
-
-	globfree(&cfgFiles);
-
-finalize_it:
-	RETiRet;
-}
+EHostnameCmpMode eDfltHostnameCmpMode = HN_NO_COMP;
+cstr_t *pDfltHostnameCmp = NULL;
+cstr_t *pDfltProgNameCmp = NULL;
 
 
 /* process a $ModLoad config line.  */
@@ -354,7 +207,7 @@ finalize_it:
  * 2004-11-17 rgerhards
  */
 rsRetVal
-cfsysline(rsconf_t *conf, uchar *p)
+cfsysline(uchar *p)
 {
 	DEFiRet;
 	uchar szCmd[64];
@@ -385,120 +238,6 @@ cfsysline(rsconf_t *conf, uchar *p)
 	}
 
 finalize_it:
-	RETiRet;
-}
-
-
-
-
-/* process a configuration file
- * started with code from init() by rgerhards on 2007-07-31
- */
-static rsRetVal
-processConfFile(rsconf_t *conf, uchar *pConfFile)
-{
-	int iLnNbr = 0;
-	FILE *cf;
-	rule_t *pCurrRule = NULL;
-	uchar *p;
-	uchar cbuf[CFGLNSIZ];
-	uchar *cline;
-	int i;
-	int bHadAnError = 0;
-	uchar *pszOrgLine = NULL;
-	size_t lenLine;
-	DEFiRet;
-	ASSERT(pConfFile != NULL);
-
-	if((cf = fopen((char*)pConfFile, "r")) == NULL) {
-		ABORT_FINALIZE(RS_RET_FOPEN_FAILURE);
-	}
-
-	/* Now process the file.
-	 */
-	cline = cbuf;
-	while (fgets((char*)cline, sizeof(cbuf) - (cline - cbuf), cf) != NULL) {
-		++iLnNbr;
-		/* drop LF - TODO: make it better, replace fgets(), but its clean as it is */
-		lenLine = ustrlen(cline);
-		if(cline[lenLine-1] == '\n') {
-			cline[lenLine-1] = '\0';
-		}
-		free(pszOrgLine);
-		pszOrgLine = ustrdup(cline); /* save if needed for errmsg, NULL ptr is OK */
-		/* check for end-of-section, comments, strip off trailing
-		 * spaces and newline character.
-		 */
-		p = cline;
-		skipWhiteSpace(&p);
-		if (*p == '\0' || *p == '#')
-			continue;
-
-		/* we now need to copy the characters to the begin of line. As this overlaps,
-		 * we can not use strcpy(). -- rgerhards, 2008-03-20
-		 * TODO: review the code at whole - this is highly suspect (but will go away
-		 * once we do the rest of RainerScript).
-		 */
-		for( i = 0 ; p[i] != '\0' ; ++i) {
-			cline[i] = p[i];
-		}
-		cline[i] = '\0';
-
-		for (p = (uchar*) strchr((char*)cline, '\0'); isspace((int) *--p);)
-			/*EMPTY*/;
-		if (*p == '\\') {
-			if ((p - cbuf) > CFGLNSIZ - 30) {
-				/* Oops the buffer is full - what now? */
-				cline = cbuf;
-			} else {
-				*p = 0;
-				cline = p;
-				continue;
-			}
-		}  else
-			cline = cbuf;
-		*++p = '\0'; /* TODO: check this */
-
-		/* we now have the complete line, and are positioned at the first non-whitespace
-		 * character. So let's process it
-		 */
-		if(cfline(conf, cbuf, &pCurrRule) != RS_RET_OK) {
-			/* we log a message, but otherwise ignore the error. After all, the next
-			 * line can be correct.  -- rgerhards, 2007-08-02
-			 */
-			uchar szErrLoc[MAXFNAME + 64];
-			dbgprintf("config line NOT successfully processed\n");
-			snprintf((char*)szErrLoc, sizeof(szErrLoc) / sizeof(uchar),
-				 "%s, line %d", pConfFile, iLnNbr);
-			errmsg.LogError(0, NO_ERRCODE, "the last error occured in %s:\"%s\"", (char*)szErrLoc, (char*)pszOrgLine);
-			bHadAnError = 1;
-		}
-	}
-
-	/* we probably have one selector left to be added - so let's do that now */
-	if(pCurrRule != NULL) {
-		CHKiRet(ruleset.AddRule(conf, rule.GetAssRuleset(pCurrRule), &pCurrRule));
-	}
-
-	/* close the configuration file */
-	fclose(cf);
-
-finalize_it:
-	if(iRet != RS_RET_OK) {
-		char errStr[1024];
-		if(pCurrRule != NULL)
-			rule.Destruct(&pCurrRule);
-
-		rs_strerror_r(errno, errStr, sizeof(errStr));
-		dbgprintf("error %d processing config file '%s'; os error (if any): %s\n",
-			iRet, pConfFile, errStr);
-	}
-
-	free(pszOrgLine);
-
-	if(bHadAnError && (iRet == RS_RET_OK)) { /* a bit dirty, enhance in future releases */
-		iRet = RS_RET_NONFATAL_CONFIG_ERR;
-	}
 	RETiRet;
 }
 
@@ -602,7 +341,7 @@ cflineParseFileName(uchar* p, uchar *pFileName, omodStringRequest_t *pOMSR, int 
  * rgerhards 2005-09-15
  */
 /* GPLv3 - stems back to sysklogd */
-static rsRetVal cflineProcessTradPRIFilter(uchar **pline, register rule_t *pRule)
+rsRetVal cflineProcessTradPRIFilter(uchar **pline, register rule_t *pRule)
 {
 	uchar *p;
 	register uchar *q;
@@ -619,7 +358,7 @@ static rsRetVal cflineProcessTradPRIFilter(uchar **pline, register rule_t *pRule
 	ASSERT(*pline != NULL);
 	ISOBJ_TYPE_assert(pRule, rule);
 
-	dbgprintf(" - traditional PRI filter\n");
+	dbgprintf(" - traditional PRI filter '%s'\n", *pline);
 	errno = 0;	/* keep strerror_r() stuff out of logerror messages */
 
 	pRule->f_filter_type = FILTER_PRI;
@@ -632,7 +371,6 @@ static rsRetVal cflineProcessTradPRIFilter(uchar **pline, register rule_t *pRule
 
 	/* scan through the list of selectors */
 	for (p = *pline; *p && *p != '\t' && *p != ' ';) {
-
 		/* find the end of this facility name list */
 		for (q = p; *q && *q != '\t' && *q++ != '.'; )
 			continue;
@@ -643,8 +381,10 @@ static rsRetVal cflineProcessTradPRIFilter(uchar **pline, register rule_t *pRule
 		*bp = '\0';
 
 		/* skip cruft */
-		while (strchr(",;", *q))
-			q++;
+		if(*q) {
+			while (strchr(",;", *q))
+				q++;
+		}
 
 		/* decode priority name */
 		if ( *buf == '!' ) {
@@ -755,81 +495,12 @@ static rsRetVal cflineProcessTradPRIFilter(uchar **pline, register rule_t *pRule
 }
 
 
-/* Helper to cfline(). This function processes an "if" type of filter,
- * what essentially means it parses an expression. As usual, 
- * It processes the line up to the beginning of the action part.
- * A pointer to that beginnig is passed back to the caller.
- * rgerhards 2008-01-19
- */
-static rsRetVal cflineProcessIfFilter(uchar **pline, register rule_t *f)
-{
-	DEFiRet;
-	ctok_t *tok;
-	ctok_token_t *pToken;
-
-	ASSERT(pline != NULL);
-	ASSERT(*pline != NULL);
-	ASSERT(f != NULL);
-
-	dbgprintf(" - general expression-based filter\n");
-	errno = 0;	/* keep strerror_r() stuff out of logerror messages */
-
-	f->f_filter_type = FILTER_EXPR;
-
-	/* if we come to over here, pline starts with "if ". We just skip that part. */
-	(*pline) += 3;
-
-	/* we first need a tokenizer... */
-	CHKiRet(ctok.Construct(&tok));
-	CHKiRet(ctok.Setpp(tok, *pline));
-	CHKiRet(ctok.ConstructFinalize(tok));
-
-	/* now construct our expression */
-	CHKiRet(expr.Construct(&f->f_filterData.f_expr));
-	CHKiRet(expr.ConstructFinalize(f->f_filterData.f_expr));
-
-	/* ready to go... */
-	CHKiRet(expr.Parse(f->f_filterData.f_expr, tok));
-
-	/* we now need to parse off the "then" - and note an error if it is
-	 * missing...
-	 */
-	CHKiRet(ctok.GetToken(tok, &pToken));
-	if(pToken->tok != ctok_THEN) {
-		ctok_token.Destruct(&pToken);
-		ABORT_FINALIZE(RS_RET_SYNTAX_ERROR);
-	}
-
-	ctok_token.Destruct(&pToken); /* no longer needed */
-
-	/* we are done, so we now need to restore things */
-	CHKiRet(ctok.Getpp(tok, pline));
-	CHKiRet(ctok.Destruct(&tok));
-
-	/* debug support - print vmprg after construction (uncomment to use) */
-	/* vmprgDebugPrint(f->f_filterData.f_expr->pVmprg); */
-
-	/* we now need to skip whitespace to the action part, else we confuse
-	 * the legacy rsyslog conf parser. -- rgerhards, 2008-02-25
-	 */
-	while(isspace(**pline))
-		++(*pline);
-
-finalize_it:
-	if(iRet == RS_RET_SYNTAX_ERROR) {
-		errmsg.LogError(0, RS_RET_SYNTAX_ERROR, "syntax error in expression");
-	}
-
-	RETiRet;
-}
-
-
 /* Helper to cfline(). This function takes the filter part of a property
  * based filter and decodes it. It processes the line up to the beginning
  * of the action part. A pointer to that beginnig is passed back to the caller.
  * rgerhards 2005-09-15
  */
-static rsRetVal cflineProcessPropFilter(uchar **pline, register rule_t *f)
+rsRetVal cflineProcessPropFilter(uchar **pline, register rule_t *f)
 {
 	rsParsObj *pPars;
 	cstr_t *pCSCompOp;
@@ -841,7 +512,7 @@ static rsRetVal cflineProcessPropFilter(uchar **pline, register rule_t *f)
 	ASSERT(*pline != NULL);
 	ASSERT(f != NULL);
 
-	dbgprintf(" - property-based filter\n");
+	dbgprintf(" - property-based filter '%s'\n", *pline);
 	errno = 0;	/* keep strerror_r() stuff out of logerror messages */
 
 	f->f_filter_type = FILTER_PROP;
@@ -901,7 +572,6 @@ static rsRetVal cflineProcessPropFilter(uchar **pline, register rule_t *f)
 		iOffset = 0;
 	}
 
-dbgprintf("XXX: offset is %d, string '%s'\n", iOffset, rsCStrGetSzStrNoNULL(pCSCompOp));
 	if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, (uchar*) "contains", 8)) {
 		f->f_filterData.prop.operation = FIOP_CONTAINS;
 	} else if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, (uchar*) "isequal", 7)) {
@@ -920,7 +590,6 @@ dbgprintf("XXX: offset is %d, string '%s'\n", iOffset, rsCStrGetSzStrNoNULL(pCSC
 	}
 	rsCStrDestruct(&pCSCompOp); /* no longer needed */
 
-dbgprintf("XXX: fiop is %u\n", (unsigned) f->f_filterData.prop.operation);
 	if(f->f_filterData.prop.operation != FIOP_ISEMPTY) {
 		/* read compare value */
 		iRet = parsQuotedCStr(pPars, &f->f_filterData.prop.pCSCompValue);
@@ -951,7 +620,7 @@ dbgprintf("XXX: fiop is %u\n", (unsigned) f->f_filterData.prop.operation);
  * from the config file ("+/-hostname"). It stores it for further reference.
  * rgerhards 2005-10-19
  */
-static rsRetVal cflineProcessHostSelector(rsconf_t *conf, uchar **pline)
+rsRetVal cflineProcessHostSelector(uchar **pline)
 {
 	DEFiRet;
 
@@ -1001,7 +670,7 @@ finalize_it:
  * from the config file ("!tagname"). It stores it for further reference.
  * rgerhards 2005-10-18
  */
-static rsRetVal cflineProcessTagSelector(rsconf_t *conf, uchar **pline)
+rsRetVal cflineProcessTagSelector(uchar **pline)
 {
 	DEFiRet;
 
@@ -1039,6 +708,7 @@ finalize_it:
 }
 
 
+#if 0
 /* read the filter part of a configuration line and store the filter
  * in the supplied rule_t
  * rgerhards, 2007-08-01
@@ -1055,12 +725,6 @@ static rsRetVal cflineDoFilter(uchar **pp, rule_t *f)
 		case ':':
 			CHKiRet(cflineProcessPropFilter(pp, f));
 			break;
-		case 'i': /* "if" filter? */
-			if(*(*pp+1) && (*(*pp+1) == 'f') && isspace(*(*pp+2))) {
-				CHKiRet(cflineProcessIfFilter(pp, f));
-				break;
-				}
-			/*FALLTHROUGH*/
 		default:
 			CHKiRet(cflineProcessTradPRIFilter(pp, f));
 			break;
@@ -1081,12 +745,13 @@ static rsRetVal cflineDoFilter(uchar **pp, rule_t *f)
 finalize_it:
 	RETiRet;
 }
+#endif
 
 
 /* process the action part of a selector line
  * rgerhards, 2007-08-01
  */
-static rsRetVal cflineDoAction(rsconf_t *conf, uchar **p, action_t **ppAction)
+rsRetVal cflineDoAction(rsconf_t *conf, uchar **p, action_t **ppAction)
 {
 	modInfo_t *pMod;
 	cfgmodules_etry_t *node;
@@ -1147,6 +812,7 @@ static rsRetVal cflineDoAction(rsconf_t *conf, uchar **p, action_t **ppAction)
 }
 
 
+#if 0
 /* Process a configuration file line in traditional "filter selector" format
  * or one that builds upon this format. Note that ppRule may be a NULL pointer,
  * which is valid and happens if there is no previous line (right at the start
@@ -1207,15 +873,15 @@ cfline(rsconf_t *conf, uchar *line, rule_t **pfCurr)
 	/* check type of line and call respective processing */
 	switch(*line) {
 		case '!':
-			iRet = cflineProcessTagSelector(conf, &line);
+			iRet = cflineProcessTagSelector(&line);
 			break;
 		case '+':
 		case '-':
-			iRet = cflineProcessHostSelector(conf, &line);
+			iRet = cflineProcessHostSelector(&line);
 			break;
 		case '$':
 			++line; /* eat '$' */
-			iRet = cfsysline(conf, line);
+			iRet = cfsysline(line);
 			break;
 		default:
 			iRet = cflineClassic(conf, line, pfCurr);
@@ -1224,6 +890,7 @@ cfline(rsconf_t *conf, uchar *line, rule_t **pfCurr)
 
 	RETiRet;
 }
+#endif
 
 
 /* return the current number of active actions
@@ -1256,9 +923,6 @@ CODESTARTobjQueryInterface(conf)
 	pIf->doNameLine = doNameLine;
 	pIf->cfsysline = cfsysline;
 	pIf->doModLoad = doModLoad;
-	pIf->doIncludeLine = doIncludeLine;
-	pIf->cfline = cfline;
-	pIf->processConfFile = processConfFile;
 	pIf->GetNbrActActions = GetNbrActActions;
 
 finalize_it:
@@ -1410,9 +1074,6 @@ CODESTARTObjClassExit(conf)
 	}
 
 	/* release objects we no longer need */
-	objRelease(expr, CORE_COMPONENT);
-	objRelease(ctok, CORE_COMPONENT);
-	objRelease(ctok_token, CORE_COMPONENT);
 	objRelease(module, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(net, LM_NET_FILENAME);
@@ -1427,9 +1088,6 @@ ENDObjClassExit(conf)
  */
 BEGINAbstractObjClassInit(conf, 1, OBJ_IS_CORE_MODULE) /* class, version - CHANGE class also in END MACRO! */
 	/* request objects we use */
-	CHKiRet(objUse(expr, CORE_COMPONENT));
-	CHKiRet(objUse(ctok, CORE_COMPONENT));
-	CHKiRet(objUse(ctok_token, CORE_COMPONENT));
 	CHKiRet(objUse(module, CORE_COMPONENT));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(net, LM_NET_FILENAME)); /* TODO: make this dependcy go away! */

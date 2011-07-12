@@ -37,6 +37,7 @@
 #include <ctype.h>
 #include <sys/socket.h>
 #include <netdb.h>
+#include <libestr.h>
 #include <libee/libee.h>
 #if HAVE_MALLOC_H
 #  include <malloc.h>
@@ -46,7 +47,6 @@
 #include "stringbuf.h"
 #include "template.h"
 #include "msg.h"
-#include "var.h"
 #include "datetime.h"
 #include "glbl.h"
 #include "regexp.h"
@@ -480,16 +480,13 @@ getRcvFromIP(msg_t *pM)
 }
 
 
-
-/* map a property name (string) to a property ID */
-rsRetVal propNameToID(cstr_t *pCSPropName, propid_t *pPropID)
+/* map a property name (C string) to a property ID */
+rsRetVal
+propNameStrToID(uchar *pName, propid_t *pPropID)
 {
-	uchar *pName;
 	DEFiRet;
 
-	assert(pCSPropName != NULL);
-	assert(pPropID != NULL);
-	pName = rsCStrGetSzStrNoNULL(pCSPropName);
+	assert(pName != NULL);
 
 	/* sometimes there are aliases to the original MonitoWare
 	 * property names. These come after || in the ifs below. */
@@ -573,6 +570,21 @@ rsRetVal propNameToID(cstr_t *pCSPropName, propid_t *pPropID)
 		iRet = RS_RET_VAR_NOT_FOUND;
 	}
 
+	RETiRet;
+}
+
+
+/* map a property name (string) to a property ID */
+rsRetVal
+propNameToID(cstr_t *pCSPropName, propid_t *pPropID)
+{
+	uchar *pName;
+	DEFiRet;
+
+	assert(pCSPropName != NULL);
+	assert(pPropID != NULL);
+	pName = rsCStrGetSzStrNoNULL(pCSPropName);
+	iRet =  propNameStrToID(pName, pPropID);
 	RETiRet;
 }
 
@@ -3095,98 +3107,68 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 }
 
 
-/* The function returns a cee variable suitable for use with RainerScript. Most importantly, this means
- * that the value is returned in a var_t object. The var_t is constructed inside this function and
- * MUST be freed by the caller.
+/* The function returns a cee variable suitable for use with RainerScript. 
+ * Note: caller must free the returned string.
  * Note that we need to do a lot of conversions between es_str_t and cstr -- this will go away once
  * we have moved larger parts of rsyslog to es_str_t. Acceptable for the moment, especially as we intend
  * to rewrite the script engine as well!
  * rgerhards, 2010-12-03
  */
-rsRetVal
-msgGetCEEVar(msg_t *pMsg, cstr_t *propName, var_t **ppVar)
+es_str_t*
+msgGetCEEVarNew(msg_t *pMsg, char *name)
 {
-	DEFiRet;
-	var_t *pVar;
-	cstr_t *pstrProp;
-	es_str_t *str = NULL;
+	es_str_t *estr = NULL;
 	es_str_t *epropName = NULL;
-	int r;
+	struct ee_field *field;
 
 	ISOBJ_TYPE_assert(pMsg, msg);
-	ASSERT(propName != NULL);
-	ASSERT(ppVar != NULL);
 
-	/* make sure we have a var_t instance */
-	CHKiRet(var.Construct(&pVar));
-	CHKiRet(var.ConstructFinalize(pVar));
-
-	epropName = es_newStrFromBuf((char*)propName->pBuf, propName->iStrLen);
-	r = ee_getEventFieldAsString(pMsg->event, epropName, &str);
-
-	if(r != EE_OK) {
-		DBGPRINTF("msgGtCEEVar: libee error %d during ee_getEventFieldAsString\n", r);
-		CHKiRet(cstrConstruct(&pstrProp));
-		CHKiRet(cstrFinalize(pstrProp));
-	} else {
-		CHKiRet(cstrConstructFromESStr(&pstrProp, str));
+	if(pMsg->event == NULL) {
+		estr = es_newStr(1);
+		goto done;
 	}
 
-	/* now create a string object out of it and hand that over to the var */
-	CHKiRet(var.SetString(pVar, pstrProp));
-	es_deleteStr(str);
+	epropName = es_newStrFromCStr(name, strlen(name)); // TODO: optimize (in grammar!) 
+	field = ee_getEventField(pMsg->event, epropName);
+	if(field != NULL) {
+		estr = ee_getFieldValueAsStr(field, 0);
+	}
+	if(estr == NULL) {
+		DBGPRINTF("msgGetCEEVar: error obtaining var (field=%p, var='%s')\n",
+			  field, name);
+		estr = es_newStrFromCStr("*ERROR*", sizeof("*ERROR*") - 1);
+	}
+	es_deleteStr(epropName);
 
-	/* finally store var */
-	*ppVar = pVar;
-
-finalize_it:
-	if(epropName != NULL)
-		es_deleteStr(epropName);
-	RETiRet;
+done:
+	return estr;
 }
 
 
-/* The returns a message variable suitable for use with RainerScript. Most importantly, this means
- * that the value is returned in a var_t object. The var_t is constructed inside this function and
- * MUST be freed by the caller.
- * rgerhards, 2008-02-25
+/* Return an es_str_t for given message property.
  */
-rsRetVal
-msgGetMsgVar(msg_t *pThis, cstr_t *pstrPropName, var_t **ppVar)
+es_str_t*
+msgGetMsgVarNew(msg_t *pThis, uchar *name)
 {
-	DEFiRet;
-	var_t *pVar;
 	size_t propLen;
 	uchar *pszProp = NULL;
-	cstr_t *pstrProp;
 	propid_t propid;
 	unsigned short bMustBeFreed = 0;
+	es_str_t *estr;
 
 	ISOBJ_TYPE_assert(pThis, msg);
-	ASSERT(pstrPropName != NULL);
-	ASSERT(ppVar != NULL);
-
-	/* make sure we have a var_t instance */
-	CHKiRet(var.Construct(&pVar));
-	CHKiRet(var.ConstructFinalize(pVar));
 
 	/* always call MsgGetProp() without a template specifier */
 	/* TODO: optimize propNameToID() call -- rgerhards, 2009-06-26 */
-	propNameToID(pstrPropName, &propid);
+	propNameStrToID(name, &propid);
 	pszProp = (uchar*) MsgGetProp(pThis, NULL, propid, NULL, &propLen, &bMustBeFreed);
 
-	/* now create a string object out of it and hand that over to the var */
-	CHKiRet(rsCStrConstructFromszStr(&pstrProp, pszProp));
-	CHKiRet(var.SetString(pVar, pstrProp));
-
-	/* finally store var */
-	*ppVar = pVar;
-
-finalize_it:
+dbgprintf("ZZZZ: var %s returns '%s'\n", name, pszProp);
+	estr = es_newStrFromCStr((char*)pszProp, propLen);
 	if(bMustBeFreed)
 		free(pszProp);
 
-	RETiRet;
+	return estr;
 }
 
 

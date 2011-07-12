@@ -66,7 +66,7 @@ EXTRA_DIST = \
 	contrib/gnutls/key.pem \
 	rsyslog.service.in
 
-SUBDIRS = doc runtime . plugins/immark plugins/imuxsock plugins/imtcp plugins/imudp plugins/omtesting
+SUBDIRS = doc runtime grammar . plugins/immark plugins/imuxsock plugins/imtcp plugins/imudp plugins/omtesting
 
 if ENABLE_RSYSLOGD
 SUBDIRS += tools

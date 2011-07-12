@@ -170,6 +170,7 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 		  size_t *pPropLen, unsigned short *pbMustBeFreed);
 char *textpri(char *pRes, size_t pResLen, int pri);
 rsRetVal msgGetMsgVar(msg_t *pThis, cstr_t *pstrPropName, var_t **ppVar);
+es_str_t* msgGetMsgVarNew(msg_t *pThis, uchar *name);
 rsRetVal MsgEnableThreadSafety(void);
 uchar *getRcvFrom(msg_t *pM);
 void getTAG(msg_t *pM, uchar **ppBuf, int *piLen);
@@ -177,6 +178,7 @@ char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt);
 char *getPRI(msg_t *pMsg);
 void getRawMsg(msg_t *pM, uchar **pBuf, int *piLen);
 rsRetVal msgGetCEEVar(msg_t *pThis, cstr_t *propName, var_t **ppVar);
+es_str_t* msgGetCEEVarNew(msg_t *pMsg, char *name);
 
 
 /* TODO: remove these five (so far used in action.c) */

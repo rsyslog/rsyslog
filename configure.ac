@@ -24,6 +24,8 @@ if test x"$HAVE_JAVAC" = x""; then
 fi
 
 # Checks for programs.
+AC_PROG_LEX
+AC_PROG_YACC
 AC_PROG_CC
 AM_PROG_CC_C_O
 if test "$GCC" = "yes"
@@ -36,7 +38,7 @@ AC_CANONICAL_HOST
 PKG_PROG_PKG_CONFIG
 
 # modules we require
-PKG_CHECK_MODULES(LIBESTR, libestr >= 0.1.0)
+PKG_CHECK_MODULES(LIBESTR, libestr >= 0.1.1)
 PKG_CHECK_MODULES(LIBEE, libee >= 0.3.1)
 
 case "${host}" in
@@ -705,8 +707,9 @@ AC_ARG_ENABLE(rsyslogrt,
         [enable_rsyslogrt=yes]
 )
 if test "x$enable_rsyslogrt" = "xyes"; then
-  RSRT_CFLAGS="-I\$(top_srcdir)/runtime -I\$(top_srcdir)"
+  RSRT_CFLAGS="-I\$(top_srcdir)/runtime -I\$(top_srcdir) -I\$(top_srcdir)/grammar"
   RSRT_LIBS="\$(top_builddir)/runtime/librsyslog.la"
+  #??CNF_LIBS="\$(top_builddir)/grammar/libgrammar.la"
 fi
 AM_CONDITIONAL(ENABLE_RSYSLOGRT, test x$enable_rsyslogrt = xyes)
 AC_SUBST(RSRT_CFLAGS)
@@ -1224,6 +1227,7 @@ AM_CONDITIONAL(ENABLE_OMMONGODB, test x$enable_ommongodb = xyes)
 
 AC_CONFIG_FILES([Makefile \
 		runtime/Makefile \
+		grammar/Makefile \
 		tools/Makefile \
 		doc/Makefile \
 		plugins/imudp/Makefile \

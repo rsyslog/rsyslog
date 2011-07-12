@@ -1,0 +1,16 @@
+BUILT_SOURCES = grammar.h
+CLEANFILES = grammar.h grammar.c
+AM_YFLAGS = -d
+noinst_LTLIBRARIES = libgrammar.la
+bin_PROGRAMS = testdriver # TODO: make this conditional
+
+libgrammar_la_SOURCES = \
+	grammar.y \
+	lexer.l \
+	rainerscript.c \
+	rainerscript.h \
+	grammar.h
+
+testdriver_SOURCES = testdriver.c libgrammar.la
+testdriver_LDADD = libgrammar.la
+testdriver_LDFLAGS = -lestr
