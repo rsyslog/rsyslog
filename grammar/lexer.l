@@ -75,7 +75,7 @@ struct bufstack {
 	es_str_t *estr;
 } *currbs = NULL;
 
-char *currfn;			/* name of currently processed file */
+char *cnfcurrfn;			/* name of currently processed file */
 
 int popfile(void);
 int cnfSetLexFile(char *fname);
@@ -220,7 +220,7 @@ cnfParseBuffer(char *buf, unsigned lenBuf)
 	bs->bs = yy_scan_buffer(buf, lenBuf);
 	bs->estr = NULL;
 	currbs = bs;
-	currfn = bs->fn;
+	cnfcurrfn = bs->fn;
 	yylineno = 1;
 done:	return r;
 }
@@ -259,7 +259,7 @@ cnfSetLexFile(char *fname)
 	bs->bs = yy_scan_buffer((char*)es_getBufAddr(str), es_strlen(str));
 	bs->estr = str; /* needed so we can free it later */
 	currbs = bs;
-	currfn = bs->fn;
+	cnfcurrfn = bs->fn;
 	yylineno = 1;
 
 done:
@@ -294,6 +294,6 @@ popfile(void)
 	
 	yy_switch_to_buffer(currbs->bs);
 	yylineno = currbs->lineno;
-	currfn = currbs->fn;
+	cnfcurrfn = currbs->fn;
 	return 0;
 }

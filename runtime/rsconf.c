@@ -335,13 +335,14 @@ void
 parser_errmsg(char *fmt, ...)
 {
 	va_list ap;
+	char errBuf[1024];
+
 	va_start(ap, fmt);
-	// TODO: create useful code ;) 2011-07-06
-	errmsg.LogError(0, NO_ERRCODE, "error during parsing on or before line %d",
-			yylineno);
-dbgprintf("error on or before line %d: ", yylineno);
-	vprintf(fmt, ap);
-	printf("\n");
+	if(vsnprintf(errBuf, sizeof(errBuf), fmt, ap) == sizeof(errBuf))
+		errBuf[1024] = '\0';
+	errmsg.LogError(0, RS_RET_CONF_PARSE_ERROR,
+			"error during parsing file %s, on or before line %d: %s",
+			cnfcurrfn, yylineno, errBuf);
 	va_end(ap);
 }
 
@@ -1206,56 +1207,6 @@ validateConf(void)
 }
 
 
-#if 0
-/* create an emergency rule */
-static inline rsRetVal
-createEmergRule(char *PRIFilt, char *legact)
-{
-	rule_t *pRule;
-	action_t *pAction;
-	DEFiRet;
-
-	CHKiRet(rule.Construct(&pRule)); /* create "fresh" selector */
-	CHKiRet(rule.SetAssRuleset(pRule, ruleset.GetCurrent(loadConf)));
-	CHKiRet(rule.ConstructFinalize(pRule));
-	CHKiRet(cflineProcessTradPRIFilter((uchar**)&PRIFilt, pRule));
-	iRet = cflineDoAction(loadConf, (uchar**)&legact, &pAction);
-	iRet = llAppend(&(pRule)->llActList,  NULL, (void*) pAction);
-	CHKiRet(ruleset.AddRule(loadConf, rule.GetAssRuleset(pRule), &pRule));
-
-finalize_it:
-	RETiRet;
-}
-
-
-/* start up an rsyslog emergency configuration. This is recovery if
- * the config failed.
- */
-static inline rsRetVal
-createEmergConf(void)
-{
-	DEFiRet;
-	errmsg.LogError(0, NO_ERRCODE, "EMERGENCY CONFIGURATION ACTIVATED - "
-			"fix rsyslog config file!");
-	/*
-	CHKiRet(rsconfConstruct(&loadConf));
-ourConf = loadConf; // TODO: remove, once ourConf is gone!
-	CHKiRet(loadBuildInModules());
-	CHKiRet(initLegacyConf());
-	*/
-	ruleset.SetDefaultRuleset(loadConf, (uchar*) "RSYSLOG_DefaultRuleset");
-
-	CHKiRet(createEmergRule("*.err",    _PATH_CONSOLE));
-	CHKiRet(createEmergRule("syslog.*", _PATH_CONSOLE));
-	CHKiRet(createEmergRule("*.panic",  ":omusrmsg:*"));
-	CHKiRet(createEmergRule("syslog.*", ":omusrmsg:root"));
-CHKiRet(createEmergRule("*.*", 		"/tmp/emerg"));
-finalize_it:
-	RETiRet;
-}
-#endif
-
-
 /* Load a configuration. This will do all necessary steps to create
  * the in-memory representation of the configuration, including support
  * for multiple configuration languages.
@@ -1266,9 +1217,7 @@ finalize_it:
 rsRetVal
 load(rsconf_t **cnf, uchar *confFile)
 {
-	rsRetVal localRet;
 	int iNbrActions;
-	int bHadConfigErr = 0;
 	int r;
 	DEFiRet;
 
@@ -1286,36 +1235,18 @@ ourConf = loadConf; // TODO: remove, once ourConf is gone!
 	}
 
 	if(r == 1) {
-		errmsg.LogError(0, localRet, "CONFIG ERROR: could not interpret master config file '%s'.", confFile);
-		bHadConfigErr = 1;
+		errmsg.LogError(0, RS_RET_CONF_PARSE_ERROR,
+				"CONFIG ERROR: could not interpret master "
+				"config file '%s'.", confFile);
+		ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
 	} else if(iNbrActions == 0) {
-		errmsg.LogError(0, RS_RET_NO_ACTIONS, "CONFIG ERROR: there are no active actions configured. Inputs will "
-			 "run, but no output whatsoever is created.");
-		bHadConfigErr = 1;
-	}
-
-	if(r == 1 || iNbrActions == 0) {
-		/* rgerhards: this code is executed to set defaults when the
-		 * config file could not be opened. We might think about
-		 * abandoning the run in this case - but this, too, is not
-		 * very clever... So we stick with what we have.
-		 * We ignore any errors while doing this - we would be lost anyhow...
-		 */
-		// TODO: think about this! iRet = createEmergConf();
-		if(1) { //if(iRet != RS_RET_OK) {
-			fprintf(stderr, "rsyslogd: could not even activate emergency "
-					"conf - terminating\n");
-			exit(1);
-		}
+		errmsg.LogError(0, RS_RET_NO_ACTIONS, "CONFIG ERROR: there are no "
+				"active actions configured. Inputs will "
+			 	"run, but no output whatsoever is created.");
+		ABORT_FINALIZE(RS_RET_NO_ACTIONS);
 	}
 
 	CHKiRet(validateConf());
-
-
-	/* return warning state if we had some acceptable problems */
-	if(bHadConfigErr) {
-		iRet = RS_RET_NONFATAL_CONFIG_ERR;
-	}
 
 	/* we are done checking the config - now validate if we should actually run or not.
 	 * If not, terminate. -- rgerhards, 2008-07-25
@@ -1331,7 +1262,7 @@ ourConf = loadConf; // TODO: remove, once ourConf is gone!
 	*cnf = loadConf;
 // TODO: enable this once all config code is moved to here!	loadConf = NULL;
 
-	dbgprintf("rsyslog finished loading initial config %p\n", loadConf);
+	dbgprintf("rsyslog finished loading master config %p\n", loadConf);
 	rsconfDebugPrint(loadConf);
 
 finalize_it:

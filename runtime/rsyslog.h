@@ -359,6 +359,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_CMD_GONE_AWAY = -2204,/**< config directive existed, but no longer supported */
 	RS_RET_ERR_SCHED_PARAMS = -2205,/**< there is a problem with configured thread scheduling params */
 	RS_RET_SOCKNAME_MISSING = -2206,/**< no socket name configured where one is required */
+	RS_RET_CONF_PARSE_ERROR = -2207,/**< (fatal) error parsing config file */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */
