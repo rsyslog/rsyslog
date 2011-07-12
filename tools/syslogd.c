@@ -215,12 +215,6 @@ int	repeatinterval[2] = { 30, 60 };	/* # of secs before flush */
 
 static pid_t ppid; /* This is a quick and dirty hack used for spliting main/startup thread */
 
-typedef struct legacyOptsLL_s {
-	uchar *line;
-	struct legacyOptsLL_s *next;
-} legacyOptsLL_t;
-legacyOptsLL_t *pLegacyOptsLL = NULL;
-
 /* global variables for config file state */
 int	iCompatibilityMode = 0;		/* version we should be compatible with; 0 means sysklogd. It is
 					   the default, so if no -c<n> option is given, we make ourselvs
@@ -754,132 +748,6 @@ static void debug_switch()
 }
 
 
-void legacyOptsEnq(uchar *line)
-{
-	legacyOptsLL_t *pNew;
-
-	pNew = MALLOC(sizeof(legacyOptsLL_t));
-	if(line == NULL)
-		pNew->line = NULL;
-	else
-		pNew->line = (uchar *) strdup((char *) line);
-	pNew->next = NULL;
-
-	if(pLegacyOptsLL == NULL)
-		pLegacyOptsLL = pNew;
-	else {
-		legacyOptsLL_t *pThis = pLegacyOptsLL;
-
-		while(pThis->next != NULL)
-			pThis = pThis->next;
-		pThis->next = pNew;
-	}
-}
-
-
-void legacyOptsFree(void)
-{
-	legacyOptsLL_t *pThis = pLegacyOptsLL, *pNext;
-
-	while(pThis != NULL) {
-		if(pThis->line != NULL)
-			free(pThis->line);
-		pNext = pThis->next;
-		free(pThis);
-		pThis = pNext;
-	}
-}
-
-
-void legacyOptsHook(void)
-{
-	legacyOptsLL_t *pThis = pLegacyOptsLL;
-
-	while(pThis != NULL) {
-		if(pThis->line != NULL) {
-			errno = 0;
-			errmsg.LogError(0, NO_ERRCODE, "Warning: backward compatibility layer added to following "
-				        "directive to rsyslog.conf: %s", pThis->line);
-			conf.cfsysline(pThis->line);
-		}
-		pThis = pThis->next;
-	}
-}
-
-
-void legacyOptsParseTCP(char ch, char *arg)
-{
-	register int i;
-	register char *pArg = arg;
-	static char conflict = '\0';
-
-	if((conflict == 'g' && ch == 't') || (conflict == 't' && ch == 'g')) {
-		fprintf(stderr, "rsyslogd: If you want to use both -g and -t, use directives instead, -%c ignored.\n", ch);
-		return;
-	} else
-		conflict = ch;
-
-	/* extract port */
-	i = 0;
-	while(isdigit((int) *pArg))
-		i = i * 10 + *pArg++ - '0';
-
-	/* number of sessions */
-	if(*pArg == '\0' || *pArg == ',') {
-		if(ch == 't')
-			legacyOptsEnq((uchar *) "ModLoad imtcp");
-		else if(ch == 'g')
-			legacyOptsEnq((uchar *) "ModLoad imgssapi");
-
-		if(i >= 0 && i <= 65535) {
-			uchar line[30];
-
-			if(ch == 't') {
-				snprintf((char *) line, sizeof(line), "InputTCPServerRun %d", i);
-			} else if(ch == 'g') {
-				snprintf((char *) line, sizeof(line), "InputGSSServerRun %d", i);
-			}
-			legacyOptsEnq(line);
-		} else {
-			if(ch == 't') {
-				fprintf(stderr, "rsyslogd: Invalid TCP listen port %d - changed to 514.\n", i);
-				legacyOptsEnq((uchar *) "InputTCPServerRun 514");
-			} else if(ch == 'g') {
-				fprintf(stderr, "rsyslogd: Invalid GSS listen port %d - changed to 514.\n", i);
-				legacyOptsEnq((uchar *) "InputGSSServerRun 514");
-			}
-		}
-
-		if(*pArg == ',') {
-			++pArg;
-			while(isspace((int) *pArg))
-				++pArg;
-			i = 0;
-			while(isdigit((int) *pArg)) {
-				i = i * 10 + *pArg++ - '0';
-			}
-			if(i > 0) {
-				uchar line[30];
-
-				snprintf((char *) line, sizeof(line), "InputTCPMaxSessions %d", i);
-				legacyOptsEnq(line);
-			} else {
-				if(ch == 't') {
-					fprintf(stderr,	"rsyslogd: TCP session max configured "
-						"to %d [-t %s] - changing to 1.\n", i, arg);
-					legacyOptsEnq((uchar *) "InputTCPMaxSessions 1");
-				} else if (ch == 'g') {
-					fprintf(stderr,	"rsyslogd: GSS session max configured "
-						"to %d [-g %s] - changing to 1.\n", i, arg);
-					legacyOptsEnq((uchar *) "InputTCPMaxSessions 1");
-				}
-			}
-		}
-	} else
-		fprintf(stderr, "rsyslogd: Invalid -t %s command line option.\n", arg);
-}
-
-
 /* doDie() is a signal handler. If called, it sets the bFinished variable
  * to indicate the program should terminate. However, it does not terminate
  * it itself, because that causes issues with multi-threading. The actual
@@ -1002,8 +870,6 @@ die(int sig)
 	 * modules. As such, they are not yet cleared.
 	 */
 	unregCfSysLineHdlrs();
-
-	legacyOptsFree();
 
 	/* destruct our global properties */
 	if(pInternalInputName != NULL)
@@ -1304,8 +1170,6 @@ init(void)
 	char bufStartUpMsg[512];
 	struct sigaction sigAct;
 	DEFiRet;
-
-	legacyOptsHook();
 
 	memset(&sigAct, 0, sizeof (sigAct));
 	sigemptyset(&sigAct.sa_mask);
@@ -1824,11 +1688,9 @@ int realMain(int argc, char **argv)
 	extern int optind;
 	extern char *optarg;
 	int bEOptionWasGiven = 0;
-	int bImUxSockLoaded = 0; /* already generated a $ModLoad imuxsock? */
 	int iHelperUOpt;
 	int bChDirRoot = 1; /* change the current working directory to "/"? */
 	char *arg;	/* for command line option processing */
-	uchar legacyConfLine[80];
 	uchar *LocalHostName;
 	uchar *LocalDomain;
 	uchar *LocalFQDNName;
@@ -1871,6 +1733,9 @@ int realMain(int argc, char **argv)
 		case 'u': /* misc user settings */
 		case 'w': /* disable disallowed host warnings */
 		case 'x': /* disable dns for remote messages */
+		case 'g': /* enable tcp gssapi logging */
+		case 'r': /* accept remote messages */
+		case 't': /* enable tcp logging */
 			CHKiRet(bufOptAdd(ch, optarg));
 			break;
 		case 'c':		/* compatibility mode */
@@ -1881,37 +1746,15 @@ int realMain(int argc, char **argv)
 			Debug = 1;
 			break;
 		case 'e':		/* log every message (no repeat message supression) */
-			fprintf(stderr, "note: -e option is no longer supported, every message is now logged by default\n");
 			bEOptionWasGiven = 1;
-			break;
-		case 'g':		/* enable tcp gssapi logging */
-#if defined(SYSLOG_INET) && defined(USE_GSSAPI)
-			CHKiRet(bufOptAdd('g', optarg));
-#else
-			fprintf(stderr, "rsyslogd: -g not valid - not compiled with gssapi support");
-#endif
 			break;
 		case 'M': /* default module load path -- this MUST be carried out immediately! */
 			glblModPath = (uchar*) optarg;
 			break;
-		case 'r':		/* accept remote messages */
-#ifdef SYSLOG_INET
-			CHKiRet(bufOptAdd(ch, optarg));
-#else
-			fprintf(stderr, "rsyslogd: -r not valid - not compiled with network support\n");
-#endif
-			break;
-		case 't':		/* enable tcp logging */
-#ifdef SYSLOG_INET
-			CHKiRet(bufOptAdd(ch, optarg));
-#else
-			fprintf(stderr, "rsyslogd: -t not valid - not compiled with network support\n");
-#endif
-			break;
 		case 'v': /* MUST be carried out immediately! */
 			printVersion();
 			exit(0); /* exit for -v option - so this is a "good one" */
-               case '?':
+		case '?':
 		default:
 			usage();
 		}
@@ -2020,32 +1863,15 @@ int realMain(int argc, char **argv)
                         send_to_all++;
                         break;
                 case 'a':
-			if(iCompatibilityMode < 3) {
-				if(!bImUxSockLoaded) {
-					legacyOptsEnq((uchar *) "ModLoad imuxsock");
-					bImUxSockLoaded = 1;
-				}
-				snprintf((char *) legacyConfLine, sizeof(legacyConfLine), "addunixlistensocket %s", arg);
-				legacyOptsEnq(legacyConfLine);
-			} else {
-				fprintf(stderr, "error -a is no longer supported, use module imuxsock instead");
-			}
+			fprintf(stderr, "rsyslogd: error -a is no longer supported, use module imuxsock instead");
                         break;
 		case 'f':		/* configuration file */
 			ConfFile = (uchar*) arg;
 			break;
 		case 'g':		/* enable tcp gssapi logging */
-			if(iCompatibilityMode < 3) {
-				legacyOptsParseTCP(ch, arg);
-			} else
-				fprintf(stderr,	"-g option only supported in compatibility modes 0 to 2 - ignored\n");
-			break;
+			fprintf(stderr,	"rsyslogd: -g option no longer supported - ignored\n");
 		case 'h':
-			if(iCompatibilityMode < 3) {
-				errmsg.LogError(0, NO_ERRCODE, "WARNING: -h option is no longer supported - ignored");
-			} else {
-				usage(); /* for v3 and above, it simply is an error */
-			}
+			fprintf(stderr, "rsyslogd: error -h is no longer supported - ignored");
 			break;
 		case 'i':		/* pid file name */
 			PidFile = arg;
@@ -2058,11 +1884,7 @@ int realMain(int argc, char **argv)
 			}
 			break;
 		case 'm':		/* mark interval */
-			if(iCompatibilityMode < 3) {
-				MarkInterval = atoi(arg) * 60;
-			} else
-				fprintf(stderr,
-					"-m option only supported in compatibility modes 0 to 2 - ignored\n");
+			fprintf(stderr, "rsyslogd: error -m is no longer supported - use immark instead");
 			break;
 		case 'n':		/* don't fork */
 			NoFork = 1;
@@ -2071,27 +1893,10 @@ int realMain(int argc, char **argv)
 			iConfigVerify = atoi(arg);
 			break;
                 case 'o':
-			if(iCompatibilityMode < 3) {
-				if(!bImUxSockLoaded) {
-					legacyOptsEnq((uchar *) "ModLoad imuxsock");
-					bImUxSockLoaded = 1;
-				}
-				legacyOptsEnq((uchar *) "OmitLocalLogging");
-			} else {
-				fprintf(stderr, "error -o is no longer supported, use module imuxsock instead");
-			}
+			fprintf(stderr, "error -o is no longer supported, use module imuxsock instead");
                         break;
                 case 'p':
-			if(iCompatibilityMode < 3) {
-				if(!bImUxSockLoaded) {
-					legacyOptsEnq((uchar *) "ModLoad imuxsock");
-					bImUxSockLoaded = 1;
-				}
-				snprintf((char *) legacyConfLine, sizeof(legacyConfLine), "SystemLogSocketName %s", arg);
-				legacyOptsEnq(legacyConfLine);
-			} else {
-				fprintf(stderr, "error -p is no longer supported, use module imuxsock instead");
-			}
+			fprintf(stderr, "error -p is no longer supported, use module imuxsock instead");
 			break;
 		case 'q':               /* add hostname if DNS resolving has failed */
 		        *(net.pACLAddHostnameOnFail) = 1;
@@ -2100,12 +1905,7 @@ int realMain(int argc, char **argv)
 		        *(net.pACLDontResolve) = 1;
 		        break;
 		case 'r':		/* accept remote messages */
-			if(iCompatibilityMode < 3) {
-				legacyOptsEnq((uchar *) "ModLoad imudp");
-				snprintf((char *) legacyConfLine, sizeof(legacyConfLine), "UDPServerRun %s", arg);
-				legacyOptsEnq(legacyConfLine);
-			} else
-				fprintf(stderr, "-r option only supported in compatibility modes 0 to 2 - ignored\n");
+			fprintf(stderr, "rsyslogd: error option -r is no longer supported - ignored");
 			break;
 		case 's':
 			if(glbl.GetStripDomains() != NULL) {
@@ -2115,10 +1915,7 @@ int realMain(int argc, char **argv)
 			}
 			break;
 		case 't':		/* enable tcp logging */
-			if(iCompatibilityMode < 3) {
-				legacyOptsParseTCP(ch, arg);
-			} else
-				fprintf(stderr,	"-t option only supported in compatibility modes 0 to 2 - ignored\n");
+			fprintf(stderr, "rsyslogd: error option -t is no longer supported - ignored");
 			break;
 		case 'T':/* chroot() immediately at program startup, but only for testing, NOT security yet */
 			if(chroot(arg) != 0) {
@@ -2176,25 +1973,7 @@ int realMain(int argc, char **argv)
 	}
 
 	/* process compatibility mode settings */
-	if(iCompatibilityMode < 4) {
-		errmsg.LogError(0, NO_ERRCODE, "WARNING: rsyslogd is running in compatibility mode. Automatically "
-		                            "generated config directives may interfer with your rsyslog.conf settings. "
-					    "We suggest upgrading your config and adding -c5 as the first "
-					    "rsyslogd option.");
-	}
-
-	if(iCompatibilityMode < 3) {
-		if(MarkInterval > 0) {
-			legacyOptsEnq((uchar *) "ModLoad immark");
-			snprintf((char *) legacyConfLine, sizeof(legacyConfLine), "MarkMessagePeriod %d", MarkInterval);
-			legacyOptsEnq(legacyConfLine);
-		}
-		if(!bImUxSockLoaded) {
-			legacyOptsEnq((uchar *) "ModLoad imuxsock");
-		}
-	}
-
-	if(bEOptionWasGiven && iCompatibilityMode < 3) {
+	if(bEOptionWasGiven) {
 		errmsg.LogError(0, NO_ERRCODE, "WARNING: \"message repeated n times\" feature MUST be turned on in "
 					    "rsyslog.conf - CURRENTLY EVERY MESSAGE WILL BE LOGGED. Visit "
 					    "http://www.rsyslog.com/rptdmsgreduction to learn "

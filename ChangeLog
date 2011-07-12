@@ -1,4 +1,8 @@
 ---------------------------------------------------------------------------
+Version 6.3.3  [DEVEL] (rgerhards), 2011-06-??
+- removed compatibility mode as we expect people have adjusted their
+  confs by now
+---------------------------------------------------------------------------
 Version 6.3.2  [DEVEL] (rgerhards), 2011-06-??
 - added support for obtaining timestamp for kernel message from message
   If the kernel time-stamps messages, time is now take from that
