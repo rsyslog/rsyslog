@@ -1,5 +1,9 @@
 ---------------------------------------------------------------------------
 Version 6.3.3  [DEVEL] (rgerhards), 2011-06-??
+- rsyslog.conf format: now parsed by RainerScript parser
+  this provides the necessary base for future enhancements as well as some
+  minor immediate ones
+- performance of script-based filters notably increased
 - removed compatibility mode as we expect people have adjusted their
   confs by now
 - added support for the ":omfile:" syntax for actions
