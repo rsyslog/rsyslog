@@ -158,6 +158,7 @@ int fileno(FILE *stream);
 ^[ \t]*:\$?[a-z]+[ ]*,[ ]*!?[a-z]+[ ]*,[ ]*\".*\"	{
 				  yylval.s = strdup(yytext); return PROPFILT; }
 ^[ \t]*[\*a-z][,\*a-z]*[0-7]*\.[,!=;\.\*a-z]+ { yylval.s = strdup(yytext); return PRIFILT; }
+"~" |
 "*" |
 \-\/[^*][^\n]* |
 \/[^*][^\n]* |
