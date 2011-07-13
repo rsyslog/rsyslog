@@ -154,11 +154,12 @@ then	/dev/tty10
 # remote host is: name/ip:port, e.g. 192.168.0.1:514, port optional
 #*.* @@remote-host:514
 # ### end of the forwarding rule ###
-if $msg contains "error" then
+if $msg contains "error" then {
     action(type="omfwd" protocol="tcp" target="10.0.0.1:514"
            action.retryCount="-1"
            queue.type="linkedList" queue.fileName="fwdRule" queue.maxDiskSpace="1g"
            queue.saveOnShutdown="on"
           )
-    & action(type="omfile" target="/var/log/somelog.log")
-    & action(type="omuser" target="all")
+    action(type="omfile" target="/var/log/somelog.log")
+    action(type="omuser" target="all")
+}
