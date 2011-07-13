@@ -9,6 +9,7 @@ libgrammar_la_SOURCES = \
 	lexer.l \
 	rainerscript.c \
 	rainerscript.h \
+	parserif.h \
 	grammar.h
 
 testdriver_SOURCES = testdriver.c libgrammar.la
