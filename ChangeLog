@@ -1,5 +1,8 @@
 ---------------------------------------------------------------------------
 Version 6.3.4  [DEVEL] (rgerhards), 2011-07-??
+- bugfix: misaddressing in config handler
+  In theory, can cause segfault, in practice this is extremely unlikely
+  Thanks to Marcin for alertig me.
 ---------------------------------------------------------------------------
 Version 6.3.3  [DEVEL] (rgerhards), 2011-07-13
 - rsyslog.conf format: now parsed by RainerScript parser

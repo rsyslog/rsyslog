@@ -339,7 +339,7 @@ parser_errmsg(char *fmt, ...)
 
 	va_start(ap, fmt);
 	if(vsnprintf(errBuf, sizeof(errBuf), fmt, ap) == sizeof(errBuf))
-		errBuf[1024] = '\0';
+		errBuf[1023] = '\0';
 	errmsg.LogError(0, RS_RET_CONF_PARSE_ERROR,
 			"error during parsing file %s, on or before line %d: %s",
 			cnfcurrfn, yylineno, errBuf);
