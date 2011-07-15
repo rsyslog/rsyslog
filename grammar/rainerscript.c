@@ -294,7 +294,7 @@ done:
  * are used (bSuccess tells if the conversion went well or not).
  */
 static inline long long
-exprret2Number(struct exprret *r, int *bSuccess)
+var2Number(struct var *r, int *bSuccess)
 {
 	long long n;
 	if(r->datatype == 'S') {
@@ -309,7 +309,7 @@ exprret2Number(struct exprret *r, int *bSuccess)
  * emit error message and set number to 0.
  */
 static inline es_str_t *
-exprret2String(struct exprret *r, int *bMustFree)
+var2String(struct var *r, int *bMustFree)
 {
 	if(r->datatype == 'N') {
 		*bMustFree = 1;
@@ -323,14 +323,14 @@ exprret2String(struct exprret *r, int *bMustFree)
  * to keep the code small and easier to maintain.
  */
 static inline void
-doFuncCall(struct cnffunc *func, struct exprret *ret, void* usrptr)
+doFuncCall(struct cnffunc *func, struct var *ret, void* usrptr)
 {
 	char *fname;
 	char *envvar;
 	int bMustFree;
 	es_str_t *estr;
 	char *str;
-	struct exprret r[CNFFUNC_MAX_ARGS];
+	struct var r[CNFFUNC_MAX_ARGS];
 
 	dbgprintf("rainerscript: executing function id %d\n", func->fID);
 	switch(func->fID) {
@@ -342,7 +342,7 @@ doFuncCall(struct cnffunc *func, struct exprret *ret, void* usrptr)
 			ret->d.n = es_strlen(((struct cnfstringval*) func->expr[0])->estr);
 		} else {
 			cnfexprEval(func->expr[0], &r[0], usrptr);
-			estr = exprret2String(&r[0], &bMustFree);
+			estr = var2String(&r[0], &bMustFree);
 			ret->d.n = es_strlen(estr);
 			if(bMustFree) es_deleteStr(estr);
 		}
@@ -355,7 +355,7 @@ doFuncCall(struct cnffunc *func, struct exprret *ret, void* usrptr)
 		 * string following.
 		 */
 		cnfexprEval(func->expr[0], &r[0], usrptr);
-		estr = exprret2String(&r[0], &bMustFree);
+		estr = var2String(&r[0], &bMustFree);
 		str = (char*) es_str2cstr(estr, NULL);
 		envvar = getenv(str);
 		ret->datatype = 'S';
@@ -366,7 +366,7 @@ doFuncCall(struct cnffunc *func, struct exprret *ret, void* usrptr)
 		break;
 	case CNFFUNC_TOLOWER:
 		cnfexprEval(func->expr[0], &r[0], usrptr);
-		estr = exprret2String(&r[0], &bMustFree);
+		estr = var2String(&r[0], &bMustFree);
 		if(!bMustFree) /* let caller handle that M) */
 			estr = es_strdup(estr);
 		es_tolower(estr);
@@ -375,7 +375,7 @@ doFuncCall(struct cnffunc *func, struct exprret *ret, void* usrptr)
 		break;
 	case CNFFUNC_CSTR:
 		cnfexprEval(func->expr[0], &r[0], usrptr);
-		estr = exprret2String(&r[0], &bMustFree);
+		estr = var2String(&r[0], &bMustFree);
 		if(!bMustFree) /* let caller handle that M) */
 			estr = es_strdup(estr);
 		ret->datatype = 'S';
@@ -389,7 +389,7 @@ doFuncCall(struct cnffunc *func, struct exprret *ret, void* usrptr)
 					      NULL);
 		} else {
 			cnfexprEval(func->expr[0], &r[0], usrptr);
-			ret->d.n = exprret2Number(&r[0], NULL);
+			ret->d.n = var2Number(&r[0], NULL);
 			if(r[0].datatype == 'S') es_deleteStr(r[0].d.estr);
 		}
 		ret->datatype = 'N';
@@ -414,14 +414,14 @@ doFuncCall(struct cnffunc *func, struct exprret *ret, void* usrptr)
 	cnfexprEval(expr->l, &l, usrptr); \
 	cnfexprEval(expr->r, &r, usrptr); \
 	ret->datatype = 'N'; \
-	ret->d.n = exprret2Number(&l, &convok_l) x exprret2Number(&r, &convok_r); \
+	ret->d.n = var2Number(&l, &convok_l) x var2Number(&r, &convok_r); \
 	FREE_BOTH_RET
 
 #define PREP_TWO_STRINGS \
 		cnfexprEval(expr->l, &l, usrptr); \
-		estr_l = exprret2String(&l, &bMustFree2); \
+		estr_l = var2String(&l, &bMustFree2); \
 		cnfexprEval(expr->r, &r, usrptr); \
-		estr_r = exprret2String(&r, &bMustFree)
+		estr_r = var2String(&r, &bMustFree)
 
 #define FREE_TWO_STRINGS \
 		if(bMustFree) es_deleteStr(estr_r); \
@@ -439,9 +439,9 @@ doFuncCall(struct cnffunc *func, struct exprret *ret, void* usrptr)
  * simply is no case where full evaluation would make any sense at all.
  */
 void
-cnfexprEval(struct cnfexpr *expr, struct exprret *ret, void* usrptr)
+cnfexprEval(struct cnfexpr *expr, struct var *ret, void* usrptr)
 {
-	struct exprret r, l; /* memory for subexpression results */
+	struct var r, l; /* memory for subexpression results */
 	es_str_t *estr_r, *estr_l;
 	int convok_r, convok_l;
 	int bMustFree, bMustFree2;
@@ -460,22 +460,22 @@ cnfexprEval(struct cnfexpr *expr, struct exprret *ret, void* usrptr)
 			if(r.datatype == 'S') {
 				ret->d.n = !es_strcmp(l.d.estr, r.d.estr); /*CMP*/
 			} else {
-				n_l = exprret2Number(&l, &convok_l);
+				n_l = var2Number(&l, &convok_l);
 				if(convok_l) {
 					ret->d.n = (n_l == r.d.n); /*CMP*/
 				} else {
-					estr_r = exprret2String(&r, &bMustFree);
+					estr_r = var2String(&r, &bMustFree);
 					ret->d.n = !es_strcmp(l.d.estr, estr_r); /*CMP*/
 					if(bMustFree) es_deleteStr(estr_r);
 				}
 			}
 		} else {
 			if(r.datatype == 'S') {
-				n_r = exprret2Number(&r, &convok_r);
+				n_r = var2Number(&r, &convok_r);
 				if(convok_r) {
 					ret->d.n = (l.d.n == n_r); /*CMP*/
 				} else {
-					estr_l = exprret2String(&l, &bMustFree);
+					estr_l = var2String(&l, &bMustFree);
 					ret->d.n = !es_strcmp(r.d.estr, estr_l); /*CMP*/
 					if(bMustFree) es_deleteStr(estr_l);
 				}
@@ -493,22 +493,22 @@ cnfexprEval(struct cnfexpr *expr, struct exprret *ret, void* usrptr)
 			if(r.datatype == 'S') {
 				ret->d.n = es_strcmp(l.d.estr, r.d.estr); /*CMP*/
 			} else {
-				n_l = exprret2Number(&l, &convok_l);
+				n_l = var2Number(&l, &convok_l);
 				if(convok_l) {
 					ret->d.n = (n_l != r.d.n); /*CMP*/
 				} else {
-					estr_r = exprret2String(&r, &bMustFree);
+					estr_r = var2String(&r, &bMustFree);
 					ret->d.n = es_strcmp(l.d.estr, estr_r); /*CMP*/
 					if(bMustFree) es_deleteStr(estr_r);
 				}
 			}
 		} else {
 			if(r.datatype == 'S') {
-				n_r = exprret2Number(&r, &convok_r);
+				n_r = var2Number(&r, &convok_r);
 				if(convok_r) {
 					ret->d.n = (l.d.n != n_r); /*CMP*/
 				} else {
-					estr_l = exprret2String(&l, &bMustFree);
+					estr_l = var2String(&l, &bMustFree);
 					ret->d.n = es_strcmp(r.d.estr, estr_l); /*CMP*/
 					if(bMustFree) es_deleteStr(estr_l);
 				}
@@ -526,22 +526,22 @@ cnfexprEval(struct cnfexpr *expr, struct exprret *ret, void* usrptr)
 			if(r.datatype == 'S') {
 				ret->d.n = es_strcmp(l.d.estr, r.d.estr) <= 0; /*CMP*/
 			} else {
-				n_l = exprret2Number(&l, &convok_l);
+				n_l = var2Number(&l, &convok_l);
 				if(convok_l) {
 					ret->d.n = (n_l <= r.d.n); /*CMP*/
 				} else {
-					estr_r = exprret2String(&r, &bMustFree);
+					estr_r = var2String(&r, &bMustFree);
 					ret->d.n = es_strcmp(l.d.estr, estr_r) <= 0; /*CMP*/
 					if(bMustFree) es_deleteStr(estr_r);
 				}
 			}
 		} else {
 			if(r.datatype == 'S') {
-				n_r = exprret2Number(&r, &convok_r);
+				n_r = var2Number(&r, &convok_r);
 				if(convok_r) {
 					ret->d.n = (l.d.n <= n_r); /*CMP*/
 				} else {
-					estr_l = exprret2String(&l, &bMustFree);
+					estr_l = var2String(&l, &bMustFree);
 					ret->d.n = es_strcmp(r.d.estr, estr_l) <= 0; /*CMP*/
 					if(bMustFree) es_deleteStr(estr_l);
 				}
@@ -559,22 +559,22 @@ cnfexprEval(struct cnfexpr *expr, struct exprret *ret, void* usrptr)
 			if(r.datatype == 'S') {
 				ret->d.n = es_strcmp(l.d.estr, r.d.estr) >= 0; /*CMP*/
 			} else {
-				n_l = exprret2Number(&l, &convok_l);
+				n_l = var2Number(&l, &convok_l);
 				if(convok_l) {
 					ret->d.n = (n_l >= r.d.n); /*CMP*/
 				} else {
-					estr_r = exprret2String(&r, &bMustFree);
+					estr_r = var2String(&r, &bMustFree);
 					ret->d.n = es_strcmp(l.d.estr, estr_r) >= 0; /*CMP*/
 					if(bMustFree) es_deleteStr(estr_r);
 				}
 			}
 		} else {
 			if(r.datatype == 'S') {
-				n_r = exprret2Number(&r, &convok_r);
+				n_r = var2Number(&r, &convok_r);
 				if(convok_r) {
 					ret->d.n = (l.d.n >= n_r); /*CMP*/
 				} else {
-					estr_l = exprret2String(&l, &bMustFree);
+					estr_l = var2String(&l, &bMustFree);
 					ret->d.n = es_strcmp(r.d.estr, estr_l) >= 0; /*CMP*/
 					if(bMustFree) es_deleteStr(estr_l);
 				}
@@ -592,22 +592,22 @@ cnfexprEval(struct cnfexpr *expr, struct exprret *ret, void* usrptr)
 			if(r.datatype == 'S') {
 				ret->d.n = es_strcmp(l.d.estr, r.d.estr) < 0; /*CMP*/
 			} else {
-				n_l = exprret2Number(&l, &convok_l);
+				n_l = var2Number(&l, &convok_l);
 				if(convok_l) {
 					ret->d.n = (n_l < r.d.n); /*CMP*/
 				} else {
-					estr_r = exprret2String(&r, &bMustFree);
+					estr_r = var2String(&r, &bMustFree);
 					ret->d.n = es_strcmp(l.d.estr, estr_r) < 0; /*CMP*/
 					if(bMustFree) es_deleteStr(estr_r);
 				}
 			}
 		} else {
 			if(r.datatype == 'S') {
-				n_r = exprret2Number(&r, &convok_r);
+				n_r = var2Number(&r, &convok_r);
 				if(convok_r) {
 					ret->d.n = (l.d.n < n_r); /*CMP*/
 				} else {
-					estr_l = exprret2String(&l, &bMustFree);
+					estr_l = var2String(&l, &bMustFree);
 					ret->d.n = es_strcmp(r.d.estr, estr_l) < 0; /*CMP*/
 					if(bMustFree) es_deleteStr(estr_l);
 				}
@@ -625,22 +625,22 @@ cnfexprEval(struct cnfexpr *expr, struct exprret *ret, void* usrptr)
 			if(r.datatype == 'S') {
 				ret->d.n = es_strcmp(l.d.estr, r.d.estr) > 0; /*CMP*/
 			} else {
-				n_l = exprret2Number(&l, &convok_l);
+				n_l = var2Number(&l, &convok_l);
 				if(convok_l) {
 					ret->d.n = (n_l > r.d.n); /*CMP*/
 				} else {
-					estr_r = exprret2String(&r, &bMustFree);
+					estr_r = var2String(&r, &bMustFree);
 					ret->d.n = es_strcmp(l.d.estr, estr_r) > 0; /*CMP*/
 					if(bMustFree) es_deleteStr(estr_r);
 				}
 			}
 		} else {
 			if(r.datatype == 'S') {
-				n_r = exprret2Number(&r, &convok_r);
+				n_r = var2Number(&r, &convok_r);
 				if(convok_r) {
 					ret->d.n = (l.d.n > n_r); /*CMP*/
 				} else {
-					estr_l = exprret2String(&l, &bMustFree);
+					estr_l = var2String(&l, &bMustFree);
 					ret->d.n = es_strcmp(r.d.estr, estr_l) > 0; /*CMP*/
 					if(bMustFree) es_deleteStr(estr_l);
 				}
@@ -677,11 +677,11 @@ cnfexprEval(struct cnfexpr *expr, struct exprret *ret, void* usrptr)
 	case OR:
 		cnfexprEval(expr->l, &l, usrptr);
 		ret->datatype = 'N';
-		if(exprret2Number(&l, &convok_l)) {
+		if(var2Number(&l, &convok_l)) {
 			ret->d.n = 1ll;
 		} else {
 			cnfexprEval(expr->r, &r, usrptr);
-			if(exprret2Number(&r, &convok_r))
+			if(var2Number(&r, &convok_r))
 				ret->d.n = 1ll;
 			else 
 				ret->d.n = 0ll;
@@ -691,9 +691,9 @@ cnfexprEval(struct cnfexpr *expr, struct exprret *ret, void* usrptr)
 	case AND:
 		cnfexprEval(expr->l, &l, usrptr);
 		ret->datatype = 'N';
-		if(exprret2Number(&l, &convok_l)) {
+		if(var2Number(&l, &convok_l)) {
 			cnfexprEval(expr->r, &r, usrptr);
-			if(exprret2Number(&r, &convok_r))
+			if(var2Number(&r, &convok_r))
 				ret->d.n = 1ll;
 			else 
 				ret->d.n = 0ll;
@@ -705,7 +705,7 @@ cnfexprEval(struct cnfexpr *expr, struct exprret *ret, void* usrptr)
 	case NOT:
 		cnfexprEval(expr->r, &r, usrptr);
 		ret->datatype = 'N';
-		ret->d.n = !exprret2Number(&r, &convok_r);
+		ret->d.n = !var2Number(&r, &convok_r);
 		if(r.datatype == 'S') es_deleteStr(r.d.estr);
 		break;
 	case 'N':
@@ -738,7 +738,7 @@ cnfexprEval(struct cnfexpr *expr, struct exprret *ret, void* usrptr)
 	case 'M':
 		cnfexprEval(expr->r, &r, usrptr);
 		ret->datatype = 'N';
-		ret->d.n = -exprret2Number(&r, &convok_r);
+		ret->d.n = -var2Number(&r, &convok_r);
 		if(r.datatype == 'S') es_deleteStr(r.d.estr);
 		break;
 	case 'F':
@@ -761,9 +761,9 @@ int
 cnfexprEvalBool(struct cnfexpr *expr, void *usrptr)
 {
 	int convok;
-	struct exprret ret;
+	struct var ret;
 	cnfexprEval(expr, &ret, usrptr);
-	return exprret2Number(&ret, &convok);
+	return var2Number(&ret, &convok);
 }
 
 inline static void

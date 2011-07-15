@@ -156,8 +156,14 @@ struct x {
 };
 */
 
-/* the return value of an expresion evaluation */
-struct exprret {
+/* a variant type, for example used for expression evaluation
+ * 2011-07-15/rger: note that there exists a "legacy" object var_t,
+ * which implements the same idea, but in a suboptimal manner. I have
+ * stipped this down as much as possible, but will keep it for a while
+ * to avoid unnecessary complexity during development. TODO: in the long
+ * term, var_t shall be replaced by struct var.
+ */
+struct var {
 	union {
 		es_str_t *estr;
 		long long n;
@@ -181,7 +187,7 @@ struct cnfactlst* cnfactlstAddSysline(struct cnfactlst* actlst, char *line);
 struct cnfactlst* cnfactlstReverse(struct cnfactlst *actlst);
 struct cnfexpr* cnfexprNew(unsigned nodetype, struct cnfexpr *l, struct cnfexpr *r);
 void cnfexprPrint(struct cnfexpr *expr, int indent);
-void cnfexprEval(struct cnfexpr *expr, struct exprret *ret, void *pusr);
+void cnfexprEval(struct cnfexpr *expr, struct var *ret, void *pusr);
 int cnfexprEvalBool(struct cnfexpr *expr, void *usrptr);
 struct cnfnumval* cnfnumvalNew(long long val);
 struct cnfstringval* cnfstringvalNew(es_str_t *estr);
