@@ -2,7 +2,7 @@
  *
  * This implements rulesets within rsyslog.
  *
- * Copyright 2009 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2009-2011 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -46,8 +46,8 @@ BEGINinterface(ruleset) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Destruct)(ruleset_t **ppThis);
 	rsRetVal (*IterateAllActions)(rsconf_t *conf, rsRetVal (*pFunc)(void*, void*), void* pParam);
 	rsRetVal (*DestructAllActions)(rsconf_t *conf);
-	rsRetVal (*AddRule)(rsconf_t *conf, ruleset_t *pThis, rule_t **ppRule);
-	rsRetVal (*SetName)(rsconf_t *conf, ruleset_t *pThis, uchar *pszName);
+	rsRetVal (*AddRule)(ruleset_t *pThis, rule_t **ppRule);
+	rsRetVal (*SetName)(ruleset_t *pThis, uchar *pszName);
 	rsRetVal (*ProcessBatch)(batch_t*);
 	rsRetVal (*GetRuleset)(rsconf_t *conf, ruleset_t **ppThis, uchar*);
 	rsRetVal (*SetDefaultRuleset)(rsconf_t *conf, uchar*);
@@ -58,9 +58,12 @@ BEGINinterface(ruleset) /* name must also be changed in ENDinterface macro! */
 	parserList_t* (*GetParserList)(rsconf_t *conf, msg_t *);
 	/* v5, 2011-04-19
 	 * added support for the rsconf object -- fundamental change
+	 * v6, 2011-07-15
+	 * removed conf ptr from SetName, AddRule as the flex/bison based
+	 * system uses globals in any case.
 	 */
 ENDinterface(ruleset)
-#define rulesetCURR_IF_VERSION 5 /* increment whenever you change the interface structure! */
+#define rulesetCURR_IF_VERSION 6 /* increment whenever you change the interface structure! */
 
 
 /* prototypes */

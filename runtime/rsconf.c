@@ -403,7 +403,7 @@ void cnfDoRule(struct cnfrule *cnfrule)
 
 	cnfDoActlst(cnfrule->actlst, pRule);
 
-	CHKiRet(ruleset.AddRule(loadConf, rule.GetAssRuleset(pRule), &pRule));
+	CHKiRet(ruleset.AddRule(rule.GetAssRuleset(pRule), &pRule));
 
 finalize_it:
 	//TODO: do something with error states
@@ -832,7 +832,7 @@ setCurrRuleset(void __attribute__((unused)) *pVal, uchar *pszName)
 	if(localRet == RS_RET_NOT_FOUND) {
 		DBGPRINTF("begin new current rule set '%s'\n", pszName);
 		CHKiRet(ruleset.Construct(&pRuleset));
-		CHKiRet(ruleset.SetName(ourConf, pRuleset, pszName));
+		CHKiRet(ruleset.SetName(pRuleset, pszName));
 		CHKiRet(ruleset.ConstructFinalize(ourConf, pRuleset));
 	} else {
 		ABORT_FINALIZE(localRet);
@@ -1030,7 +1030,7 @@ initLegacyConf(void)
 	DBGPRINTF("doing legacy config system init\n");
 	/* construct the default ruleset */
 	ruleset.Construct(&pRuleset);
-	ruleset.SetName(loadConf, pRuleset, UCHAR_CONSTANT("RSYSLOG_DefaultRuleset"));
+	ruleset.SetName(pRuleset, UCHAR_CONSTANT("RSYSLOG_DefaultRuleset"));
 	ruleset.ConstructFinalize(loadConf, pRuleset);
 
 	/* now register config handlers */

@@ -252,7 +252,7 @@ GetParserList(rsconf_t *conf, msg_t *pMsg)
  * of checks and ignore the rule if it does not pass them.
  */
 static rsRetVal
-addRule(rsconf_t *conf, ruleset_t *pThis, rule_t **ppRule)
+addRule(ruleset_t *pThis, rule_t **ppRule)
 {
 	int iActionCnt;
 	DEFiRet;
@@ -275,7 +275,7 @@ finalize_it:
 
 
 /* set name for ruleset */
-static rsRetVal setName(rsconf_t *conf, ruleset_t *pThis, uchar *pszName)
+static rsRetVal setName(ruleset_t *pThis, uchar *pszName)
 {
 	DEFiRet;
 	free(pThis->pszName);
