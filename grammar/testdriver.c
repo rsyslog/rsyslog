@@ -88,7 +88,8 @@ void cnfDoBSDHost(char *ln)
 }
 
 es_str_t*
-cnfGetVar(char *name, void *usrptr)
+cnfGetVar(char __attribute__((unused)) *name,
+	  void __attribute__((unused)) *usrptr)
 {
 	es_str_t *estr;
 	estr = es_newStrFromCStr("", 1);

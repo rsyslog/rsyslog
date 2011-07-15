@@ -40,6 +40,22 @@ cnfobjType2str(enum cnfobjType ot)
 
 enum cnfactType { CNFACT_V2, CNFACT_LEGACY };
 
+/* a variant type, for example used for expression evaluation
+ * 2011-07-15/rger: note that there exists a "legacy" object var_t,
+ * which implements the same idea, but in a suboptimal manner. I have
+ * stipped this down as much as possible, but will keep it for a while
+ * to avoid unnecessary complexity during development. TODO: in the long
+ * term, var_t shall be replaced by struct var.
+ */
+struct var {
+	union {
+		es_str_t *estr;
+		struct cnfexpr *expr;
+		long long n;
+	} d;
+	char datatype; /* 'N' number, 'S' string, 'E' expression */
+};
+
 struct cnfobj {
 	enum cnfobjType objType;
 	struct nvlst *nvlst;
@@ -48,7 +64,7 @@ struct cnfobj {
 struct nvlst {
   struct nvlst *next;
   es_str_t *name;
-  es_str_t *value;
+  struct var val;
 };
 
 struct cnfcfsyslinelst {
@@ -156,27 +172,12 @@ struct x {
 };
 */
 
-/* a variant type, for example used for expression evaluation
- * 2011-07-15/rger: note that there exists a "legacy" object var_t,
- * which implements the same idea, but in a suboptimal manner. I have
- * stipped this down as much as possible, but will keep it for a while
- * to avoid unnecessary complexity during development. TODO: in the long
- * term, var_t shall be replaced by struct var.
- */
-struct var {
-	union {
-		es_str_t *estr;
-		long long n;
-	} d;
-	char datatype; /* 'N' - number, 'S' - string */
-};
-
-
 int cnfParseBuffer(char *buf, unsigned lenBuf);
 void readConfFile(FILE *fp, es_str_t **str);
 struct nvlst* nvlstNew(es_str_t *name, es_str_t *value);
 void nvlstDestruct(struct nvlst *lst);
 void nvlstPrint(struct nvlst *lst);
+struct nvlst* nvlstFindName(struct nvlst *lst, es_str_t *name);
 struct cnfobj* cnfobjNew(enum cnfobjType objType, struct nvlst *lst);
 void cnfobjDestruct(struct cnfobj *o);
 void cnfobjPrint(struct cnfobj *o);

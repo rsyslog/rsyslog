@@ -95,7 +95,8 @@ nvlstNew(es_str_t *name, es_str_t *value)
 	if((lst = malloc(sizeof(struct nvlst))) != NULL) {
 		lst->next = NULL;
 		lst->name = name;
-		lst->value = value;
+		lst->val.datatype = 'S';
+		lst->val.d.estr = value;
 	}
 
 	return lst;
@@ -110,7 +111,8 @@ nvlstDestruct(struct nvlst *lst)
 		toDel = lst;
 		lst = lst->next;
 		es_deleteStr(toDel->name);
-		es_deleteStr(toDel->value);
+		if(toDel->val.datatype == 'S')
+			es_deleteStr(toDel->val.d.estr);
 		free(toDel);
 	}
 }
@@ -122,7 +124,8 @@ nvlstPrint(struct nvlst *lst)
 	dbgprintf("nvlst %p:\n", lst);
 	while(lst != NULL) {
 		name = es_str2cstr(lst->name, NULL);
-		value = es_str2cstr(lst->value, NULL);
+		// TODO: support for non-string types
+		value = es_str2cstr(lst->val.d.estr, NULL);
 		dbgprintf("\tname: '%s', value '%s'\n", name, value);
 		free(name);
 		free(value);
@@ -130,12 +133,47 @@ nvlstPrint(struct nvlst *lst)
 	}
 }
 
+/* find a name starting at node lst. Returns node with this
+ * name or NULL, if none found.
+ */
+struct nvlst*
+nvlstFindName(struct nvlst *lst, es_str_t *name)
+{
+	while(lst != NULL && es_strcmp(lst->name, name))
+		lst = lst->next;
+	return lst;
+}
+
+
+/* check if there are duplicate names inside a nvlst and emit
+ * an error message, if so.
+ */
+static inline void
+nvlstChkDupes(struct nvlst *lst)
+{
+	char *cstr;
+
+	while(lst != NULL) {
+		if(nvlstFindName(lst->next, lst->name) != NULL) {
+			cstr = es_str2cstr(lst->name, NULL);
+			parser_errmsg("duplicate parameter '%s' -- "
+			  "interpretation is ambigious, one value "
+			  "will be randomly selected. Fix this problem.",
+			  cstr);
+			free(cstr);
+		}
+		lst = lst->next;
+	}
+}
+
+
 struct cnfobj*
 cnfobjNew(enum cnfobjType objType, struct nvlst *lst)
 {
 	struct cnfobj *o;
 
 	if((o = malloc(sizeof(struct nvlst))) != NULL) {
+		nvlstChkDupes(lst);
 		o->objType = objType;
 		o->nvlst = lst;
 	}
