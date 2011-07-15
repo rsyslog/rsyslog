@@ -64,6 +64,7 @@
 #include <strings.h>
 #include <libestr.h>
 #include "rainerscript.h"
+#include "parserif.h"
 #include "grammar.h"
 static int preCommentState;	/* save for lex state before a comment */
 
@@ -128,11 +129,11 @@ int fileno(FILE *stream);
 <EXPR>[ \t\n]
 <EXPR>[a-z][a-z0-9_]*		{ yylval.estr = es_newStrFromCStr(yytext, yyleng);
 				  return FUNC; }
-<EXPR>.				{ printf("invalid char in expr: %s\n", yytext); }
+<EXPR>.				{ dbgprintf("invalid char in expr: %s\n", yytext); }
 "&"				{ return '&'; }
 "{"				{ return '{'; }
 "}"				{ return '}'; }
-"ruleset"			{ printf("RULESET\n"); }
+"ruleset"			{ dbgprintf("RULESET\n"); }
  /* line number support because the "preprocessor" combines lines and so needs
   * to tell us the real source line.
   */
@@ -180,7 +181,7 @@ int fileno(FILE *stream);
 <COMMENT>([^*]|\n)+|.
 <INOBJ>#.*$	/* skip comments in input */
 <INOBJ>[ \n\t]
-<INOBJ>.			{ printf("INOBJ: invalid char '%s'\n", yytext); }
+<INOBJ>.			{ dbgprintf("INOBJ: invalid char '%s'\n", yytext); }
 \$[a-z]+.*$			{ /* see common on $IncludeConfig above */
 				  if(!strncasecmp(yytext, "$includeconfig ", 14)) {
 					yyless(14);
@@ -196,7 +197,7 @@ int fileno(FILE *stream);
 ^[ \t]*[+-][a-z0-9.:-]+[ \t]*$	{ yylval.s = strdup(yytext); return BSD_HOST_SELECTOR; }
 \#.*\n	/* skip comments in input */
 [\n\t ]	/* drop whitespace */
-.				{ printf("invalid char: %s\n", yytext);
+.				{ dbgprintf("invalid char: %s\n", yytext);
 				}
 <<EOF>>				{ if(popfile() != 0) yyterminate(); }
 
