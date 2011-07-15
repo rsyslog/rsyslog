@@ -58,7 +58,6 @@
 
 /* static data */
 DEFobjStaticHelpers
-DEFobjCurrIf(var)
 DEFobjCurrIf(datetime)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(regexp)
@@ -501,11 +500,6 @@ propNameStrToID(uchar *pName, propid_t *pPropID)
 		*pPropID = PROP_SYSLOGTAG;
 	} else if(!strcmp((char*) pName, "rawmsg")) {
 		*pPropID = PROP_RAWMSG;
-	/* enable this, if someone actually uses UxTradMsg, delete after some  time has
-	 * passed and nobody complained -- rgerhards, 2009-06-16
-	} else if(!strcmp((char*) pName, "uxtradmsg")) {
-		pRes = getUxTradMsg(pMsg);
-	*/
 	} else if(!strcmp((char*) pName, "inputname")) {
 		*pPropID = PROP_INPUTNAME;
 	} else if(!strcmp((char*) pName, "fromhost")) {
@@ -603,12 +597,6 @@ uchar *propIDToName(propid_t propID)
 			return UCHAR_CONSTANT("syslogtag");
 		case PROP_RAWMSG:
 			return UCHAR_CONSTANT("rawmsg");
-		/* enable this, if someone actually uses UxTradMsg, delete after some  time has
-		 * passed and nobody complained -- rgerhards, 2009-06-16
-		case PROP_UXTRADMSG:
-			pRes = getUxTradMsg(pMsg);
-			break;
-		*/
 		case PROP_INPUTNAME:
 			return UCHAR_CONSTANT("inputname");
 		case PROP_FROMHOST:
@@ -985,10 +973,6 @@ msg_t* MsgDup(msg_t* pOld)
 		pNew->pInputName = pOld->pInputName;
 		prop.AddRef(pNew->pInputName);
 	}
-	/* enable this, if someone actually uses UxTradMsg, delete after some time has
-	 * passed and nobody complained -- rgerhards, 2009-06-16
-	pNew->offAfterPRI = pOld->offAfterPRI;
-	*/
 	if(pOld->iLenTAG > 0) {
 		if(pOld->iLenTAG < CONF_TAG_BUFSIZE) {
 			memcpy(pNew->TAG.szBuf, pOld->TAG.szBuf, pOld->iLenTAG);
@@ -1060,10 +1044,6 @@ static rsRetVal MsgSerialize(msg_t *pThis, strm_t *pStrm)
 	objSerializeSCALAR(pStrm, ttGenTime, INT);
 	objSerializeSCALAR(pStrm, tRcvdAt, SYSLOGTIME);
 	objSerializeSCALAR(pStrm, tTIMESTAMP, SYSLOGTIME);
-	/* enable this, if someone actually uses UxTradMsg, delete after some  time has
-	 * passed and nobody complained -- rgerhards, 2009-06-16
-	objSerializeSCALAR(pStrm, offsAfterPRI, SHORT);
-	*/
 
 	CHKiRet(obj.SerializeProp(pStrm, UCHAR_CONSTANT("pszTAG"), PROPTYPE_PSZ, (void*)
 		((pThis->iLenTAG < CONF_TAG_BUFSIZE) ? pThis->TAG.szBuf : pThis->TAG.pszTAG)));
@@ -1255,18 +1235,6 @@ getRawMsg(msg_t *pM, uchar **pBuf, int *piLen)
 		}
 	}
 }
-
-
-/* enable this, if someone actually uses UxTradMsg, delete after some  time has
- * passed and nobody complained -- rgerhards, 2009-06-16
-char *getUxTradMsg(msg_t *pM)
-{
-	if(pM == NULL)
-		return "";
-	else
-		return (char*)pM->pszRawMsg + pM->offAfterPRI;
-}
-*/
 
 
 int getMSGLen(msg_t *pM)
@@ -2378,12 +2346,6 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 		case PROP_RAWMSG:
 			getRawMsg(pMsg, &pRes, &bufLen);
 			break;
-		/* enable this, if someone actually uses UxTradMsg, delete after some  time has
-		 * passed and nobody complained -- rgerhards, 2009-06-16
-		case PROP_UXTRADMSG:
-			pRes = getUxTradMsg(pMsg);
-			break;
-		*/
 		case PROP_INPUTNAME:
 			getInputName(pMsg, &pRes, &bufLen);
 			break;
@@ -3201,11 +3163,6 @@ rsRetVal MsgSetProperty(msg_t *pThis, var_t *pProp)
 		MsgSetMSGoffs(pThis, pProp->val.num);
 	} else if(isProp("pszRawMsg")) {
 		MsgSetRawMsg(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.pStr), cstrLen(pProp->val.pStr));
- 	/* enable this, if someone actually uses UxTradMsg, delete after some  time has
-	 * passed and nobody complained -- rgerhards, 2009-06-16
-	} else if(isProp("offAfterPRI")) {
-		pThis->offAfterPRI = pProp->val.num;
-	*/
 	} else if(isProp("pszUxTradMsg")) {
 		/*IGNORE*/; /* this *was* a property, but does no longer exist */
 	} else if(isProp("pszTAG")) {
@@ -3284,7 +3241,6 @@ rsRetVal msgQueryInterface(void) { return RS_RET_NOT_IMPLEMENTED; }
  */
 BEGINObjClassInit(msg, 1, OBJ_IS_CORE_MODULE)
 	/* request objects we use */
-	CHKiRet(objUse(var, CORE_COMPONENT));
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(prop, CORE_COMPONENT));

@@ -1,4 +1,6 @@
 ---------------------------------------------------------------------------
+Version 6.3.4  [DEVEL] (rgerhards), 2011-07-??
+---------------------------------------------------------------------------
 Version 6.3.3  [DEVEL] (rgerhards), 2011-07-13
 - rsyslog.conf format: now parsed by RainerScript parser
   this provides the necessary base for future enhancements as well as some

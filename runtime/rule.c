@@ -44,7 +44,6 @@
 /* static data */
 DEFobjStaticHelpers
 DEFobjCurrIf(errmsg)
-DEFobjCurrIf(var)
 
 
 /* support for simple textual representation of FIOP names
@@ -455,7 +454,6 @@ ENDobjQueryInterface(rule)
  */
 BEGINObjClassExit(rule, OBJ_IS_CORE_MODULE) /* class, version */
 	objRelease(errmsg, CORE_COMPONENT);
-	objRelease(var, CORE_COMPONENT);
 ENDObjClassExit(rule)
 
 
@@ -466,7 +464,6 @@ ENDObjClassExit(rule)
 BEGINObjClassInit(rule, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
-	CHKiRet(objUse(var, CORE_COMPONENT));
 
 	/* set our own handlers */
 	OBJSetMethodHandler(objMethod_DEBUGPRINT, ruleDebugPrint);
