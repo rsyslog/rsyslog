@@ -356,6 +356,11 @@ void cnfDoObj(struct cnfobj *o)
 {
 	dbgprintf("cnf:global:obj: ");
 	cnfobjPrint(o);
+	switch(o->objType) {
+	case CNFOBJ_GLOBAL:
+		glblProcessCnf(o);
+		break;
+	}
 	cnfobjDestruct(o);
 }
 

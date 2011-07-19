@@ -97,6 +97,7 @@ nvlstNew(es_str_t *name, es_str_t *value)
 		lst->name = name;
 		lst->val.datatype = 'S';
 		lst->val.d.estr = value;
+		lst->bUsed = 0;
 	}
 
 	return lst;
@@ -145,6 +146,18 @@ nvlstFindName(struct nvlst *lst, es_str_t *name)
 }
 
 
+/* find a name starting at node lst. SAme as nvlstFindName, but
+ * for classical C strings. This is useful because the config system
+ * uses C string constants.
+ */
+static inline struct nvlst*
+nvlstFindNameCStr(struct nvlst *lst, char *name)
+{
+	while(lst != NULL && es_strbufcmp(lst->name, (uchar*)name, strlen(name)))
+		lst = lst->next;
+	return lst;
+}
+
 /* check if there are duplicate names inside a nvlst and emit
  * an error message, if so.
  */
@@ -164,6 +177,113 @@ nvlstChkDupes(struct nvlst *lst)
 		}
 		lst = lst->next;
 	}
+}
+
+
+/* check for unused params and emit error message is found. This must
+ * be called after all config params have been pulled from the object
+ * (otherwise the flags are not correctly set).
+ */
+void
+nvlstChkUnused(struct nvlst *lst)
+{
+	char *cstr;
+
+	while(lst != NULL) {
+		if(!lst->bUsed) {
+			cstr = es_str2cstr(lst->name, NULL);
+			parser_errmsg("parameter '%s' not known -- "
+			  "typo in config file?", 
+			  cstr);
+			free(cstr);
+		}
+		lst = lst->next;
+	}
+}
+
+
+/* get a single parameter according to its definition. Helper to
+ * nvlstGetParams.
+ */
+static inline void
+nvlstGetParam(struct nvlst *valnode, struct cnfparamdescr *param,
+	       struct cnfparamvals *vals)
+{
+	dbgprintf("XXXX: in nvlstGetParam, name '%s', type %d\n",
+		  param->name, (int) param->type);
+	switch(param->type) {
+	case eCmdHdlrUID:
+		break;
+	case eCmdHdlrGID:
+		break;
+	case eCmdHdlrBinary:
+		break;
+	case eCmdHdlrFileCreateMode:
+		break;
+	case eCmdHdlrInt:
+		break;
+	case eCmdHdlrSize:
+		break;
+	case eCmdHdlrGetChar:
+		break;
+	case eCmdHdlrFacility:
+		break;
+	case eCmdHdlrSeverity:
+		break;
+	case eCmdHdlrGetWord:
+		break;
+	case eCmdHdlrString:
+		break;
+	case eCmdHdlrGoneAway:
+		parser_errmsg("parameter '%s' is no longer supported",
+			      param->name);
+		break;
+	default:
+		dbgprintf("error: invalid param type\n");
+		break;
+	}
+}
+
+
+/* obtain conf params from an nvlst and emit error messages if
+ * necessary. If an already-existing param value is passed, that is
+ * used. If NULL is passed instead, a new one is allocated. In that case,
+ * it is the caller's duty to free it when no longer needed.
+ * NULL is returned on error, otherwise a pointer to the vals array.
+ */
+struct cnfparamvals*
+nvlstGetParams(struct nvlst *lst, struct cnfparamblk *params,
+	       struct cnfparamvals *vals)
+{
+	int i;
+	struct nvlst *valnode;
+	struct cnfparamdescr *param;
+
+	if(params->version != CNFPARAMBLK_VERSION) {
+		dbgprintf("nvlstGetParams: invalid param block version "
+			  "%d, expected %d\n",
+			  params->version, CNFPARAMBLK_VERSION);
+		return NULL;
+	}
+	
+	if(vals == NULL) {
+		if((vals = malloc(params->nParams *
+				  sizeof(struct cnfparamvals))) == NULL)
+		return NULL;
+	}
+
+	for(i = 0 ; i < params->nParams ; ++i) {
+		param = params->descr + i;
+		if((valnode = nvlstFindNameCStr(lst, param->name)) == NULL)
+			continue;
+		if(vals[i].bUsed) {
+			parser_errmsg("parameter '%s' specified more than once - "
+			  "one instance is ignored. Fix config", param->name);
+			continue;
+		}
+		nvlstGetParam(lst, param, vals + i);
+	}
+	return vals;
 }
 
 
@@ -1139,6 +1259,25 @@ cnfDoInclude(char *name)
 	globfree(&cfgFiles);
 	return 0;
 }
+
+/* find the index (or -1!) for a config param by name. This is used to 
+ * address the parameter array. Of course, we could use with static
+ * indices, but that would create some extra bug potential. So we
+ * resort to names. As we do this only during the initial config parsing
+ * stage the (considerable!) extra overhead is OK. -- rgerhards, 2011-07-19
+ */
+int
+cnfparamGetIdx(struct cnfparamblk *params, char *name)
+{
+	int i;
+	for(i = 0 ; i < params->nParams ; ++i)
+		if(!strcmp(params->descr[i].name, name))
+			break;
+	if(i == params->nParams)
+		i = -1; /* not found */
+	return i;
+}
+
 
 void
 cstrPrint(char *text, es_str_t *estr)

@@ -7,7 +7,7 @@
  *
  * Module begun 2008-04-16 by Rainer Gerhards
  *
- * Copyright 2008 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2011 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -44,6 +44,7 @@
 #include "prop.h"
 #include "atomic.h"
 #include "errmsg.h"
+#include "rainerscript.h"
 
 /* some defaults */
 #ifndef DFLT_NETSTRM_DRVR
@@ -87,6 +88,28 @@ static DEF_ATOMIC_HELPER_MUT(mutTerminateInputs);
 static int iFdSetSize = howmany(FD_SETSIZE, __NFDBITS) * sizeof (fd_mask); /* size of select() bitmask in bytes */
 #endif
 
+
+/* tables for interfacing with the v6 config system */
+static struct cnfparamdescr cnfparamdescr[] = {
+	{ "workdirectory", eCmdHdlrString, 0 },
+	{ "dropmsgswithmaliciousdnsptrrecords", eCmdHdlrBinary, 0 },
+	{ "localhostname", eCmdHdlrGetWord, 0 },
+	{ "preservefqdn", eCmdHdlrBinary, 0 },
+	{ "defaultnetstreamdrivercafile", eCmdHdlrString, 0 },
+	{ "defaultnetstreamdriverkeyfile", eCmdHdlrString, 0 },
+	{ "defaultnetstreamdriver", eCmdHdlrString, 0 },
+};
+static struct cnfparamblk paramblk =
+	{ CNFPARAMBLK_VERSION,
+	  sizeof(cnfparamdescr)/sizeof(struct cnfparamdescr),
+	  cnfparamdescr
+	};
+
+static struct cnfparamvals *cnfparamvals = NULL;
+/* we need to support multiple calls into our param block, so we need
+ * to persist the current settings. Note that this must be re-set
+ * each time a new config load begins (TODO: create interface?)
+ */
 
 /* define a macro for the simple properties' set and get functions
  * (which are always the same). This is only suitable for pretty
@@ -143,7 +166,7 @@ static int GetGlobalInputTermState(void)
 }
 
 
-/* set global termiantion state to "terminate". Note that this is a
+/* set global termination state to "terminate". Note that this is a
  * "once in a lifetime" action which can not be undone. -- gerhards, 2009-07-20
  */
 static void SetGlobalInputTermination(void)
@@ -407,6 +430,17 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 }
 
 
+/* handle a global config object. Note that multiple global config statements
+ * are permitted (because of plugin support), so once we got a param block,
+ * we need to hold to it.
+ * rgerhards, 2011-07-19
+ */
+void
+glblProcessCnf(struct cnfobj *o)
+{
+	cnfparamvals = nvlstGetParams(o->nvlst, &paramblk, cnfparamvals);
+}
+
 
 /* Initialize the glbl class. Must be called as the very first method
  * before anything else is called inside this class.
@@ -455,6 +489,8 @@ BEGINObjClassExit(glbl, OBJ_IS_CORE_MODULE) /* class, version */
 	objRelease(prop, CORE_COMPONENT);
 	DESTROY_ATOMIC_HELPER_MUT(mutTerminateInputs);
 ENDObjClassExit(glbl)
+
+void glblProcessCnf(struct cnfobj *o);
 
 /* vi:set ai:
  */

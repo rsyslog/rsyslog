@@ -2,6 +2,7 @@
 #define INC_UTILS_H
 #include <stdio.h>
 #include <libestr.h>
+#include <typedefs.h>
 
 #define CNFFUNC_MAX_ARGS 32
 	/**< maximum number of arguments that any function can have (among
@@ -65,6 +66,11 @@ struct nvlst {
   struct nvlst *next;
   es_str_t *name;
   struct var val;
+  unsigned char *bUsed;
+  	/**< was this node used during config processing? If not, this
+	 *   indicates an error. After all, the user specified a setting
+	 *   that the software does not know.
+	 */
 };
 
 struct cnfcfsyslinelst {
@@ -172,6 +178,40 @@ struct x {
 };
 */
 
+
+/* the following defines describe the parameter block for puling
+ * config parameters. Note that the focus is on ease and saveness of
+ * use, not performance. For example, we address parameters by name
+ * instead of index, because the former is less error-prone. The (severe)
+ * performance hit does not matter, as it is a one-time hit during config
+ * load but never during actual processing. So there is really no reason
+ * to care.
+ */
+struct cnfparamdescr { /* first the param description */
+	char *name;	/**< not a es_str_t to ease definition in code */
+	ecslCmdHdrlType type;
+	unsigned flags;
+};
+/* flags for cnfparamdescr: */
+#define CNFPARAM_REQUIRED 0x0001
+
+struct cnfparamblk { /* now the actual param block use in API calls */
+	unsigned short version;
+	unsigned short nParams;
+	struct cnfparamdescr *descr;
+};
+#define CNFPARAMBLK_VERSION 1
+	/**< caller must have same version as engine -- else things may
+	 * be messed up. But note that we may support multiple versions
+	 * inside the engine, if at some later stage we want to do
+	 * that. -- rgerhards, 2011-07-15
+	 */
+struct cnfparamvals { /* the values we obtained for param descr. */
+	struct var val;
+	unsigned char bUsed;
+};
+
+
 int cnfParseBuffer(char *buf, unsigned lenBuf);
 void readConfFile(FILE *fp, es_str_t **str);
 struct nvlst* nvlstNew(es_str_t *name, es_str_t *value);
@@ -198,6 +238,9 @@ struct cnfvar* cnfvarNew(char *name);
 struct cnffunc * cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst);
 struct cnffparamlst * cnffparamlstNew(struct cnfexpr *expr, struct cnffparamlst *next);
 int cnfDoInclude(char *name);
+int cnfparamGetIdx(struct cnfparamblk *params, char *name);
+struct cnfparamvals* nvlstGetParams(struct nvlst *lst, struct cnfparamblk *params,
+	       struct cnfparamvals *vals);
 
 /* debug helper */
 void cstrPrint(char *text, es_str_t *estr);
