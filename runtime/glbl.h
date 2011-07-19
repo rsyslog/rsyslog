@@ -32,6 +32,7 @@
 #ifndef GLBL_H_INCLUDED
 #define GLBL_H_INCLUDED
 
+#include "rainerscript.h"
 #include "prop.h"
 
 #define glblGetIOBufSize() 4096 /* size of the IO buffer, e.g. for strm class */
@@ -84,5 +85,8 @@ ENDinterface(glbl)
 
 /* the remaining prototypes */
 PROTOTYPEObj(glbl);
+
+void glblPrepCnf(void);
+void glblProcessCnf(struct cnfobj *o);
 
 #endif /* #ifndef GLBL_H_INCLUDED */

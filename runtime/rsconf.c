@@ -361,6 +361,7 @@ void cnfDoObj(struct cnfobj *o)
 		glblProcessCnf(o);
 		break;
 	}
+	nvlstChkUnused(o->nvlst);
 	cnfobjDestruct(o);
 }
 
@@ -539,6 +540,16 @@ dropPrivileges(rsconf_t *cnf)
 	}
 
 	RETiRet;
+}
+
+
+/* tell the rsysog core (including ourselfs) that the config load is done and
+ * we need to prepare to move over to activate mode.
+ */
+static inline void
+tellCoreConfigLoadDone(void)
+{
+	glblDoneLoadCnf();
 }
 
 
@@ -755,9 +766,7 @@ activate(rsconf_t *cnf)
 	if(ourConf->globals.pszConfDAGFile != NULL)
 		generateConfigDAG(ourConf->globals.pszConfDAGFile);
 #	endif
-	tellModulesConfigLoadDone();
 	setUmask(cnf->globals.umask);
-	tellModulesCheckConfig();
 
 	/* the output part and the queue is now ready to run. So it is a good time
 	 * to initialize the inputs. Please note that the net code above should be
@@ -911,7 +920,7 @@ finalize_it:
 }
 
 
-/* legac config system: reset config variables to default values.  */
+/* legacy config system: reset config variables to default values.  */
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
 	loadConf->globals.bLogStatusMsgs = DFLT_bLogStatusMsgs;
@@ -1251,6 +1260,10 @@ ourConf = loadConf; // TODO: remove, once ourConf is gone!
 		ABORT_FINALIZE(RS_RET_NO_ACTIONS);
 	}
 
+	tellCoreConfigLoadDone();
+	tellModulesConfigLoadDone();
+
+	tellModulesCheckConfig();
 	CHKiRet(validateConf());
 
 	/* we are done checking the config - now validate if we should actually run or not.

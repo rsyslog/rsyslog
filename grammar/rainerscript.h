@@ -217,6 +217,7 @@ void readConfFile(FILE *fp, es_str_t **str);
 struct nvlst* nvlstNew(es_str_t *name, es_str_t *value);
 void nvlstDestruct(struct nvlst *lst);
 void nvlstPrint(struct nvlst *lst);
+void nvlstChkUnused(struct nvlst *lst);
 struct nvlst* nvlstFindName(struct nvlst *lst, es_str_t *name);
 struct cnfobj* cnfobjNew(enum cnfobjType objType, struct nvlst *lst);
 void cnfobjDestruct(struct cnfobj *o);

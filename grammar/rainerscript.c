@@ -158,6 +158,7 @@ nvlstFindNameCStr(struct nvlst *lst, char *name)
 	return lst;
 }
 
+
 /* check if there are duplicate names inside a nvlst and emit
  * an error message, if so.
  */
@@ -247,6 +248,7 @@ nvlstGetParam(struct nvlst *valnode, struct cnfparamdescr *param,
 {
 	dbgprintf("XXXX: in nvlstGetParam, name '%s', type %d\n",
 		  param->name, (int) param->type);
+	valnode->bUsed = 1;
 	val->bUsed = 1;
 	switch(param->type) {
 	case eCmdHdlrUID:
