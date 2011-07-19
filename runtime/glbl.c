@@ -439,6 +439,8 @@ void
 glblProcessCnf(struct cnfobj *o)
 {
 	cnfparamvals = nvlstGetParams(o->nvlst, &paramblk, cnfparamvals);
+	dbgprintf("glbl param blk after glblProcessCnf:\n");
+	cnfparamsPrint(&paramblk, cnfparamvals);
 }
 
 

@@ -202,21 +202,59 @@ nvlstChkUnused(struct nvlst *lst)
 }
 
 
+static inline void
+doGetBinary(struct nvlst *valnode, struct cnfparamdescr *param,
+	  struct cnfparamvals *val)
+{
+	val->val.datatype = 'N';
+	if(!es_strbufcmp(valnode->val.d.estr, (unsigned char*) "on", 2)) {
+		val->val.d.n = 1;
+	} else if(!es_strbufcmp(valnode->val.d.estr, (unsigned char*) "off", 3)) {
+		val->val.d.n = 0;
+	} else {
+		parser_errmsg("parameter '%s' must be \"on\" or \"off\" but "
+		  "is neither. Results unpredictable.", param->name);
+		val->val.d.n = 0;
+	}
+}
+
+
+static inline void
+doGetWord(struct nvlst *valnode, struct cnfparamdescr *param,
+	  struct cnfparamvals *val)
+{
+	es_size_t i;
+	unsigned char *c;
+	val->val.datatype = 'S';
+	val->val.d.estr = es_newStr(32);
+	c = es_getBufAddr(valnode->val.d.estr);
+	for(i = 0 ; i < es_strlen(valnode->val.d.estr) && !isspace(c[i]) ; ++i) {
+		es_addChar(&val->val.d.estr, c[i]);
+	}
+	if(i != es_strlen(valnode->val.d.estr)) {
+		parser_errmsg("parameter '%s' contains whitespace, which is not "
+		  "permitted - data after first whitespace ignored",
+		  param->name);
+	}
+}
+
 /* get a single parameter according to its definition. Helper to
  * nvlstGetParams.
  */
 static inline void
 nvlstGetParam(struct nvlst *valnode, struct cnfparamdescr *param,
-	       struct cnfparamvals *vals)
+	       struct cnfparamvals *val)
 {
 	dbgprintf("XXXX: in nvlstGetParam, name '%s', type %d\n",
 		  param->name, (int) param->type);
+	val->bUsed = 1;
 	switch(param->type) {
 	case eCmdHdlrUID:
 		break;
 	case eCmdHdlrGID:
 		break;
 	case eCmdHdlrBinary:
+		doGetBinary(valnode, param, val);
 		break;
 	case eCmdHdlrFileCreateMode:
 		break;
@@ -231,8 +269,11 @@ nvlstGetParam(struct nvlst *valnode, struct cnfparamdescr *param,
 	case eCmdHdlrSeverity:
 		break;
 	case eCmdHdlrGetWord:
+		doGetWord(valnode, param, val);
 		break;
 	case eCmdHdlrString:
+		val->val.datatype = 'S';
+		val->val.d.estr = es_strdup(valnode->val.d.estr);
 		break;
 	case eCmdHdlrGoneAway:
 		parser_errmsg("parameter '%s' is no longer supported",
@@ -267,9 +308,9 @@ nvlstGetParams(struct nvlst *lst, struct cnfparamblk *params,
 	}
 	
 	if(vals == NULL) {
-		if((vals = malloc(params->nParams *
+		if((vals = calloc(params->nParams,
 				  sizeof(struct cnfparamvals))) == NULL)
-		return NULL;
+			return NULL;
 	}
 
 	for(i = 0 ; i < params->nParams ; ++i) {
@@ -281,11 +322,41 @@ nvlstGetParams(struct nvlst *lst, struct cnfparamblk *params,
 			  "one instance is ignored. Fix config", param->name);
 			continue;
 		}
-		nvlstGetParam(lst, param, vals + i);
+		nvlstGetParam(valnode, param, vals + i);
 	}
 	return vals;
 }
 
+
+void
+cnfparamsPrint(struct cnfparamblk *params, struct cnfparamvals *vals)
+{
+	int i;
+	char *cstr;
+
+	for(i = 0 ; i < params->nParams ; ++i) {
+		dbgprintf("%s: ", params->descr[i].name);
+		if(vals[i].bUsed) {
+			// TODO: other types!
+			switch(vals[i].val.datatype) {
+			case 'S':
+				cstr = es_str2cstr(vals[i].val.d.estr, NULL);
+				dbgprintf(" '%s'", cstr);
+				free(cstr);
+				break;
+			case 'N':
+				dbgprintf("%lld", vals[i].val.d.n);
+				break;
+			default:
+				dbgprintf("(unsupported datatype %c)",
+					  vals[i].val.datatype);
+			}
+		} else {
+			dbgprintf("(unset)");
+		}
+		dbgprintf("\n");
+	}
+}
 
 struct cnfobj*
 cnfobjNew(enum cnfobjType objType, struct nvlst *lst)

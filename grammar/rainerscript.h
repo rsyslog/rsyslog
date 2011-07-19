@@ -241,6 +241,7 @@ int cnfDoInclude(char *name);
 int cnfparamGetIdx(struct cnfparamblk *params, char *name);
 struct cnfparamvals* nvlstGetParams(struct nvlst *lst, struct cnfparamblk *params,
 	       struct cnfparamvals *vals);
+void cnfparamsPrint(struct cnfparamblk *params, struct cnfparamvals *vals);
 
 /* debug helper */
 void cstrPrint(char *text, es_str_t *estr);
