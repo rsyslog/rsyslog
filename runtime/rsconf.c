@@ -805,13 +805,6 @@ static rsRetVal setActionResumeInterval(void __attribute__((unused)) *pVal, int 
 }
 
 
-/* set the maximum message size */
-static rsRetVal setMaxMsgSize(void __attribute__((unused)) *pVal, long iNewVal)
-{
-	return glbl.SetMaxLine(iNewVal);
-}
-
-
 /* Switch the default ruleset (that, what servcies bind to if nothing specific
  * is specified).
  * rgerhards, 2009-06-12
@@ -1083,8 +1076,6 @@ initLegacyConf(void)
 		setActionResumeInterval, NULL, NULL, eConfObjGlobal));
 	CHKiRet(regCfSysLineHdlr((uchar *)"modload", 0, eCmdHdlrCustomHandler,
 		conf.doModLoad, NULL, NULL, eConfObjGlobal));
-	CHKiRet(regCfSysLineHdlr((uchar *)"maxmessagesize", 0, eCmdHdlrSize,
-		setMaxMsgSize, NULL, NULL, eConfObjGlobal));
 	CHKiRet(regCfSysLineHdlr((uchar *)"defaultruleset", 0, eCmdHdlrGetWord,
 		setDefaultRuleset, NULL, NULL, eConfObjGlobal));
 	CHKiRet(regCfSysLineHdlr((uchar *)"ruleset", 0, eCmdHdlrGetWord,

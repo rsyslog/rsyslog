@@ -64,7 +64,7 @@ static uchar *pszWorkDir = NULL;
 static int bOptimizeUniProc = 1;	/* enable uniprocessor optimizations */
 static int bParseHOSTNAMEandTAG = 1;	/* parser modification (based on startup params!) */
 static int bPreserveFQDN = 0;		/* should FQDNs always be preserved? */
-static int iMaxLine = 2048;		/* maximum length of a syslog message */
+static int iMaxLine = 8096;		/* maximum length of a syslog message */
 static int iDefPFFamily = PF_UNSPEC;     /* protocol family (IPv4, IPv6 or both) */
 static int bDropMalPTRMsgs = 0;/* Drop messages which have malicious PTR records during DNS lookup */
 static int option_DisallowWarning = 1;	/* complain if message from disallowed sender is received */
@@ -98,6 +98,7 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "defaultnetstreamdrivercafile", eCmdHdlrString, 0 },
 	{ "defaultnetstreamdriverkeyfile", eCmdHdlrString, 0 },
 	{ "defaultnetstreamdriver", eCmdHdlrString, 0 },
+	{ "maxmessagesize", eCmdHdlrSize, 0 },
 };
 static struct cnfparamblk paramblk =
 	{ CNFPARAMBLK_VERSION,
@@ -423,6 +424,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	bDropMalPTRMsgs = 0;
 	bOptimizeUniProc = 1;
 	bPreserveFQDN = 0;
+	iMaxLine = 8192;
 #ifdef USE_UNLIMITED_SELECT
 	iFdSetSize = howmany(FD_SETSIZE, __NFDBITS) * sizeof (fd_mask);
 #endif
@@ -490,6 +492,8 @@ glblDoneLoadCnf()
 		} else if(!strcmp(paramblk.descr[i].name,
 				"dropmsgswithmaliciousdnsptrrecords")) {
 			bDropMalPTRMsgs = (int) cnfparamvals[i].val.d.n;
+		} else if(!strcmp(paramblk.descr[i].name, "maxmessagesize")) {
+			iMaxLine = (int) cnfparamvals[i].val.d.n;
 		} else {
 			dbgprintf("glblDoneLoadCnf: program error, non-handled "
 			  "param '%s'\n", paramblk.descr[i].name);
@@ -517,6 +521,8 @@ BEGINAbstractObjClassInit(glbl, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	CHKiRet(regCfSysLineHdlr((uchar *)"localhostname", 0, eCmdHdlrGetWord, NULL, &LocalHostNameOverride, NULL, eConfObjGlobal));
 	CHKiRet(regCfSysLineHdlr((uchar *)"optimizeforuniprocessor", 0, eCmdHdlrBinary, NULL, &bOptimizeUniProc, NULL, eConfObjGlobal));
 	CHKiRet(regCfSysLineHdlr((uchar *)"preservefqdn", 0, eCmdHdlrBinary, NULL, &bPreserveFQDN, NULL, eConfObjGlobal));
+	CHKiRet(regCfSysLineHdlr((uchar *)"maxmessagesize", 0, eCmdHdlrSize,
+		NULL, &iMaxLine, NULL, eConfObjGlobal));
 	CHKiRet(regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, NULL, eConfObjGlobal));
 
 	INIT_ATOMIC_HELPER_MUT(mutTerminateInputs);

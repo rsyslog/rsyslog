@@ -204,6 +204,53 @@ nvlstChkUnused(struct nvlst *lst)
 
 
 static inline void
+doGetSize(struct nvlst *valnode, struct cnfparamdescr *param,
+	  struct cnfparamvals *val)
+{
+	unsigned char *c;
+	es_size_t i;
+	long long n;
+	c = es_getBufAddr(valnode->val.d.estr);
+	n = 0;
+	i = 0;
+	while(i < es_strlen(valnode->val.d.estr) && isdigit(*c)) {
+		n = 10 * n + *c - '0';
+		++i;
+		++c;
+	}
+	if(i < es_strlen(valnode->val.d.estr)) {
+		++i;
+		switch(*c) {
+		/* traditional binary-based definitions */
+		case 'k': n *= 1024; break;
+		case 'm': n *= 1024 * 1024; break;
+		case 'g': n *= 1024 * 1024 * 1024; break;
+		case 't': n *= (int64) 1024 * 1024 * 1024 * 1024; break; /* tera */
+		case 'p': n *= (int64) 1024 * 1024 * 1024 * 1024 * 1024; break; /* peta */
+		case 'e': n *= (int64) 1024 * 1024 * 1024 * 1024 * 1024 * 1024; break; /* exa */
+		/* and now the "new" 1000-based definitions */
+		case 'K': n *= 1000; break;
+	        case 'M': n *= 1000000; break;
+                case 'G': n *= 1000000000; break;
+			  /* we need to use the multiplication below because otherwise
+			   * the compiler gets an error during constant parsing */
+                case 'T': n *= (int64) 1000       * 1000000000; break; /* tera */
+                case 'P': n *= (int64) 1000000    * 1000000000; break; /* peta */
+                case 'E': n *= (int64) 1000000000 * 1000000000; break; /* exa */
+		default: --i; break; /* indicates error */
+		}
+	}
+	if(i == es_strlen(valnode->val.d.estr)) {
+		val->val.datatype = 'N';
+		val->val.d.n = n;
+	} else {
+		parser_errmsg("parameter '%s' does not contain a valid size",
+			      param->name);
+	}
+}
+
+
+static inline void
 doGetBinary(struct nvlst *valnode, struct cnfparamdescr *param,
 	  struct cnfparamvals *val)
 {
@@ -263,6 +310,7 @@ nvlstGetParam(struct nvlst *valnode, struct cnfparamdescr *param,
 	case eCmdHdlrInt:
 		break;
 	case eCmdHdlrSize:
+		doGetSize(valnode, param, val);
 		break;
 	case eCmdHdlrGetChar:
 		break;
