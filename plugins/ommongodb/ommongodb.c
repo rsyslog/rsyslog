@@ -31,6 +31,7 @@
 #define MONGO_COLLECTION_NAME_SIZE 128
 
 MODULE_TYPE_OUTPUT
+MODULE_CNFNAME("ommongodb")
 /* internal structures
  */
 DEF_OMOD_STATIC_DATA

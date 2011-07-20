@@ -86,6 +86,7 @@
 
 MODULE_TYPE_INPUT
 MODULE_TYPE_NOKEEP
+MODULE_CNFNAME("imsolaris")
 
 /* defines */
 #define PATH_LOG	"/dev/log"

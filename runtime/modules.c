@@ -485,6 +485,8 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 	rsRetVal (*modGetType)(eModType_t *pType);
 	rsRetVal (*modGetKeepType)(eModKeepType_t *pKeepType);
 	struct dlhandle_s *pHandle = NULL;
+	rsRetVal (*getModCnfName)(uchar **cnfName);
+	uchar *cnfName;
 	DEFiRet;
 
 	assert(modInit != NULL);
@@ -507,7 +509,7 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 	CHKiRet((*modGetType)(&pNew->eType));
 	CHKiRet((*pNew->modQueryEtryPt)((uchar*)"getKeepType", &modGetKeepType));
 	CHKiRet((*modGetKeepType)(&pNew->eKeepType));
-	dbgprintf("module of type %d being loaded.\n", pNew->eType);
+	dbgprintf("module %s of type %d being loaded.\n", name, pNew->eType);
 	
 	/* OK, we know we can successfully work with the module. So we now fill the
 	 * rest of the data elements. First we load the interfaces common to all
@@ -524,6 +526,7 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 	/* optional calls for new config system */
 	localRet = (*pNew->modQueryEtryPt)((uchar*)"beginCnfLoad", &pNew->beginCnfLoad);
 	if(localRet == RS_RET_OK) {
+		dbgprintf("module %s supports rsyslog v6 config interface\n", name);
 		CHKiRet((*pNew->modQueryEtryPt)((uchar*)"endCnfLoad", &pNew->endCnfLoad));
 		CHKiRet((*pNew->modQueryEtryPt)((uchar*)"freeCnf", &pNew->freeCnf));
 		CHKiRet((*pNew->modQueryEtryPt)((uchar*)"checkCnf", &pNew->checkCnf));
@@ -534,6 +537,11 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 		} else {
 			CHKiRet(localRet);
 		}
+		CHKiRet((*pNew->modQueryEtryPt)((uchar*)"getModCnfName", &getModCnfName));
+		getModCnfName(&cnfName);
+		pNew->cnfName = (uchar*) strdup((char*)cnfName);
+			/**< we do not care if strdup() fails, we can accept that */
+		dbgprintf("module config name is '%s'\n", cnfName);
 	} else if(localRet == RS_RET_MODULE_ENTRY_POINT_NOT_FOUND) {
 		pNew->beginCnfLoad = NULL; /* flag as non-present */
 	} else {
@@ -626,7 +634,6 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 
 	pNew->pszName = (uchar*) strdup((char*)name); /* we do not care if strdup() fails, we can accept that */
 	pNew->pModHdlr = pModHdlr;
-	/* TODO: take this from module */
 	if(pModHdlr == NULL) {
 		pNew->eLinkType = eMOD_LINK_STATIC;
 	} else {

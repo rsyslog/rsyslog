@@ -110,6 +110,16 @@ static rsRetVal modGetID(void **pID) \
 		return RS_RET_OK;\
 	}
 
+/* macro to provide the v6 config system module name
+ */
+#define MODULE_CNFNAME(name) \
+static __attribute__((unused)) rsRetVal modGetCnfName(uchar **cnfName) \
+	{ \
+		*cnfName = (uchar*) name; \
+		return RS_RET_OK;\
+	}
+
+
 /* to following macros are used to generate function headers and standard
  * functionality. It works as follows (described on the sample case of
  * createInstance()):
@@ -476,6 +486,8 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 		*pEtryPoint = activateCnf;\
 	} else if(!strcmp((char*) name, "freeCnf")) {\
 		*pEtryPoint = freeCnf;\
+	} else if(!strcmp((char*) name, "getModCnfName")) {\
+		*pEtryPoint = modGetCnfName;\
 	}
 
 

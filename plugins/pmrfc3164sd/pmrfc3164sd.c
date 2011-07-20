@@ -46,6 +46,7 @@
 
 MODULE_TYPE_PARSER
 MODULE_TYPE_NOKEEP
+MODULE_CNFNAME("pmrfc3164sd")
 PARSER_NAME("contrib.rfc3164sd")
 
 /* internal structures

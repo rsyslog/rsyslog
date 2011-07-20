@@ -45,6 +45,7 @@
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
+MODULE_CNFNAME("omdbalerting")
 
 /* internal structures
  */

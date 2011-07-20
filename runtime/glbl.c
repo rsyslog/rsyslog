@@ -465,6 +465,9 @@ glblDoneLoadCnf()
 	int i;
 	unsigned char *cstr;
 
+	if(cnfparamvals == NULL)
+		goto finalize_it;
+
 	for(i = 0 ; i < paramblk.nParams ; ++i) {
 		if(!cnfparamvals[i].bUsed)
 			continue;
@@ -499,6 +502,7 @@ glblDoneLoadCnf()
 			  "param '%s'\n", paramblk.descr[i].name);
 		}
 	}
+finalize_it:	;
 }
 
 

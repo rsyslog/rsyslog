@@ -12,7 +12,7 @@
  *
  * File begun on 2007-07-22 by RGerhards
  *
- * Copyright 2007-2009 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2011 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -99,6 +99,7 @@ struct modInfo_s {
 	eModLinkType_t	eLinkType;
 	eModKeepType_t	eKeepType;	/* keep the module dynamically linked on unload */
 	uchar*		pszName;	/* printable module name, e.g. for dbgprintf */
+	uchar*		cnfName;	/* name to be used in config statements (e.g. 'name="omusrmsg"') */
 	unsigned	uRefCnt;	/* reference count for this module; 0 -> may be unloaded */
 	/* functions supported by all types of modules */
 	rsRetVal (*modInit)(int, int*, rsRetVal(**)());		/* initialize the module */

@@ -57,6 +57,7 @@
 
 MODULE_TYPE_INPUT
 MODULE_TYPE_NOKEEP
+MODULE_CNFNAME("imuxsock")
 
 /* defines */
 #define MAXFUNIX	50
