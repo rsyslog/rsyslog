@@ -178,6 +178,51 @@ configSettings_t cs_save;				/* our saved (scope!) config settings */
  */
 static int iActionNbr = 0;
 
+/* tables for interfacing with the v6 config system */
+static struct cnfparamdescr cnfparamdescr[] = {
+	{ "name", eCmdHdlrGetWord, 0 }, /* legacy: actionname */
+	{ "type", eCmdHdlrString, CNFPARAM_REQUIRED }, /* legacy: actionname */
+	{ "action.writeallmarkmessages", eCmdHdlrBinary, 0 }, /* legacy: actionwriteallmarkmessages */
+	{ "action.execonlyeverynthtime", eCmdHdlrInt, 0 }, /* legacy: actionexeconlyeverynthtime */
+	{ "action.execonlyeverynthtimetimeout", eCmdHdlrInt, 0 }, /* legacy: actionexeconlyeverynthtimetimeout */
+	{ "action.execonlyonceeveryinterval", eCmdHdlrInt, 0 }, /* legacy: actionexeconlyonceeveryinterval */
+	{ "action.execonlywhenpreviousissuspended", eCmdHdlrInt, 0 }, /* legacy: actionexeconlywhenpreviousissuspended */
+	{ "action.repeatedmsgcontainsoriginalmsg", eCmdHdlrBinary, 0 }, /* legacy: repeatedmsgcontainsoriginalmsg */
+	{ "action.resumeretrycount ", eCmdHdlrGetWord, 0 } /* legacy: actionresumeretrycount */
+	//{ "", eCmdHdlrGetWord, 0 }, /* legacy: */
+};
+static struct cnfparamblk paramblk =
+	{ CNFPARAMBLK_VERSION,
+	  sizeof(cnfparamdescr)/sizeof(struct cnfparamdescr),
+	  cnfparamdescr
+	};
+
+/* Still TODO: */
+#if 0
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuefilename", 0, eCmdHdlrGetWord, NULL, &cs.pszActionQFName, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuesize", 0, eCmdHdlrInt, NULL, &cs.iActionQueueSize, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuedequeuebatchsize", 0, eCmdHdlrInt, NULL, &cs.iActionQueueDeqBatchSize, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuemaxdiskspace", 0, eCmdHdlrSize, NULL, &cs.iActionQueMaxDiskSpace, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuehighwatermark", 0, eCmdHdlrInt, NULL, &cs.iActionQHighWtrMark, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuelowwatermark", 0, eCmdHdlrInt, NULL, &cs.iActionQLowWtrMark, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuediscardmark", 0, eCmdHdlrInt, NULL, &cs.iActionQDiscardMark, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuediscardseverity", 0, eCmdHdlrInt, NULL, &cs.iActionQDiscardSeverity, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuecheckpointinterval", 0, eCmdHdlrInt, NULL, &cs.iActionQPersistUpdCnt, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuesyncqueuefiles", 0, eCmdHdlrBinary, NULL, &cs.bActionQSyncQeueFiles, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuetype", 0, eCmdHdlrGetWord, setActionQueType, NULL, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueueworkerthreads", 0, eCmdHdlrInt, NULL, &cs.iActionQueueNumWorkers, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuetimeoutshutdown", 0, eCmdHdlrInt, NULL, &cs.iActionQtoQShutdown, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuetimeoutactioncompletion", 0, eCmdHdlrInt, NULL, &cs.iActionQtoActShutdown, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuetimeoutenqueue", 0, eCmdHdlrInt, NULL, &cs.iActionQtoEnq, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueueworkertimeoutthreadshutdown", 0, eCmdHdlrInt, NULL, &cs.iActionQtoWrkShutdown, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueueworkerthreadminimummessages", 0, eCmdHdlrInt, NULL, &cs.iActionQWrkMinMsgs, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuemaxfilesize", 0, eCmdHdlrSize, NULL, &cs.iActionQueMaxFileSize, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuesaveonshutdown", 0, eCmdHdlrBinary, NULL, &cs.bActionQSaveOnShutdown, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuedequeueslowdown", 0, eCmdHdlrInt, NULL, &cs.iActionQueueDeqSlowdown, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuedequeuetimebegin", 0, eCmdHdlrInt, NULL, &cs.iActionQueueDeqtWinFromHr, NULL, eConfObjAction));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuedequeuetimeend", 0, eCmdHdlrInt, NULL, &cs.iActionQueueDeqtWinToHr, NULL, eConfObjAction));
+#endif
+
 /* ------------------------------ methods ------------------------------ */ 
 
 /* This function returns the "current" time for this action. Current time
@@ -1887,6 +1932,61 @@ actionRestoreScope(void)
 	RETiRet;
 }
 
+
+
+rsRetVal
+actionNewInst(struct nvlst *lst, action_t **ppAction)
+{
+	struct cnfparamvals *paramvals;
+	modInfo_t *pMod;
+	uchar *cnfModName = NULL;
+	DEFiRet;
+
+	paramvals = nvlstGetParams(lst, &paramblk, NULL);
+	if(paramvals == NULL) {
+		iRet = RS_RET_ERR;
+		goto finalize_it;
+	}
+	dbgprintf("action param blk after actionNewInst:\n");
+	cnfparamsPrint(&paramblk, paramvals);
+	if(paramvals[cnfparamGetIdx(&paramblk, "type")].bUsed == 0) {
+		ABORT_FINALIZE(RS_RET_CONF_RQRD_PARAM_MISSING); // TODO: move this into rainerscript handlers
+	}
+	cnfModName = (uchar*)es_str2cstr(paramvals[cnfparamGetIdx(&paramblk, ("type"))].val.d.estr, NULL);
+	if((pMod = module.FindWithCnfName(loadConf, cnfModName, eMOD_OUT)) == NULL) {
+		errmsg.LogError(0, RS_RET_MOD_UNKNOWN, "module name '%s' is unknown", cnfModName);
+		ABORT_FINALIZE(RS_RET_MOD_UNKNOWN);
+	}
+dbgprintf("XXXX:actionNewInst for module '%s'/%p\n", cnfModName, pMod);
+finalize_it:
+	free(cnfModName);
+	RETiRet;
+}
+
+
+/* Process a rsyslog v6 action config object (the now-primary config method).
+ * rgerhards, 2011-07-19
+ */
+rsRetVal
+actionProcessCnf(struct cnfobj *o)
+{
+	DEFiRet;
+#if 0 /* we need to check if we actually need this functionality -- later! */
+	struct cnfparamvals *paramvals;
+
+	paramvals = nvlstGetParams(o->nvlst, &paramblk, NULL);
+	if(paramvals == NULL) {
+		iRet = RS_RET_ERR;
+		goto finalize_it;
+	}
+	DBGPRINTF("action param blk after actionProcessCnf:\n");
+	cnfparamsPrint(&paramblk, paramvals);
+	
+	/* now find module to activate */
+finalize_it:
+#endif
+	RETiRet;
+}
 
 
 /* TODO: we are not yet a real object, the ClassInit here just looks like it is..

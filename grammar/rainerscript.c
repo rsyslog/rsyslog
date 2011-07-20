@@ -146,14 +146,15 @@ nvlstFindName(struct nvlst *lst, es_str_t *name)
 }
 
 
-/* find a name starting at node lst. SAme as nvlstFindName, but
+/* find a name starting at node lst. Same as nvlstFindName, but
  * for classical C strings. This is useful because the config system
  * uses C string constants.
  */
 static inline struct nvlst*
 nvlstFindNameCStr(struct nvlst *lst, char *name)
 {
-	while(lst != NULL && es_strbufcmp(lst->name, (uchar*)name, strlen(name)))
+	es_size_t lenName = strlen(name);
+	while(lst != NULL && es_strcasebufcmp(lst->name, (uchar*)name, lenName))
 		lst = lst->next;
 	return lst;
 }

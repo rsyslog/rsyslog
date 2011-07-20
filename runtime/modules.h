@@ -174,8 +174,9 @@ BEGINinterface(module) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*doModInit)(rsRetVal (*modInit)(), uchar *name, void *pModHdlr, modInfo_t **pNew);
 	rsRetVal (*Load)(uchar *name, sbool bConfLoad);
 	rsRetVal (*SetModDir)(uchar *name);
+	modInfo_t *(*FindWithCnfName)(rsconf_t *cnf, uchar *name, eModType_t rqtdType); /* added v3, 2011-07-19 */
 ENDinterface(module)
-#define moduleCURR_IF_VERSION 2 /* increment whenever you change the interface structure! */
+#define moduleCURR_IF_VERSION 3 /* increment whenever you change the interface structure! */
 /* Changes: 
  * v2 
  * - added param bCondLoad to Load call - 2011-04-27

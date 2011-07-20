@@ -38,7 +38,7 @@ AC_CANONICAL_HOST
 PKG_PROG_PKG_CONFIG
 
 # modules we require
-PKG_CHECK_MODULES(LIBESTR, libestr >= 0.1.1)
+PKG_CHECK_MODULES(LIBESTR, libestr >= 0.1.2)
 PKG_CHECK_MODULES(LIBEE, libee >= 0.3.1)
 
 case "${host}" in

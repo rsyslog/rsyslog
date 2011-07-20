@@ -230,7 +230,8 @@ cnfDoActlst(struct cnfactlst *actlst, rule_t *pRule)
 	while(actlst != NULL) {
 		dbgprintf("aclst %p: ", actlst);
 		if(actlst->actType == CNFACT_V2) {
-			dbgprintf("V2 action type not yet handled\n");
+			dbgprintf("v6+ action object\n");
+			actionNewInst(actlst->data.lst, &pAction);
 		} else {
 			dbgprintf("legacy action line:%s\n", actlst->data.legActLine);
 			str = (uchar*) actlst->data.legActLine;
@@ -359,6 +360,9 @@ void cnfDoObj(struct cnfobj *o)
 	switch(o->objType) {
 	case CNFOBJ_GLOBAL:
 		glblProcessCnf(o);
+		break;
+	case CNFOBJ_ACTION:
+		actionProcessCnf(o);
 		break;
 	}
 	nvlstChkUnused(o->nvlst);

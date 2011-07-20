@@ -107,5 +107,6 @@ rsRetVal addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStr
 rsRetVal actionNewScope(void);
 rsRetVal actionRestoreScope(void);
 rsRetVal activateActions(void);
+rsRetVal actionNewInst(struct nvlst *lst, action_t **ppAction);
 
 #endif /* #ifndef ACTION_H_INCLUDED */

@@ -708,46 +708,6 @@ finalize_it:
 }
 
 
-#if 0
-/* read the filter part of a configuration line and store the filter
- * in the supplied rule_t
- * rgerhards, 2007-08-01
- */
-static rsRetVal cflineDoFilter(uchar **pp, rule_t *f)
-{
-	DEFiRet;
-
-	ASSERT(pp != NULL);
-	ISOBJ_TYPE_assert(f, rule);
-
-	/* check which filter we need to pull... */
-	switch(**pp) {
-		case ':':
-			CHKiRet(cflineProcessPropFilter(pp, f));
-			break;
-		default:
-			CHKiRet(cflineProcessTradPRIFilter(pp, f));
-			break;
-	}
-
-	/* we now check if there are some global (BSD-style) filter conditions
-	 * and, if so, we copy them over. rgerhards, 2005-10-18
-	 */
-	if(pDfltProgNameCmp != NULL) {
-		CHKiRet(rsCStrConstructFromCStr(&(f->pCSProgNameComp), pDfltProgNameCmp));
-	}
-
-	if(eDfltHostnameCmpMode != HN_NO_COMP) {
-		f->eHostnameCmpMode = eDfltHostnameCmpMode;
-		CHKiRet(rsCStrConstructFromCStr(&(f->pCSHostnameComp), pDfltHostnameCmp));
-	}
-
-finalize_it:
-	RETiRet;
-}
-#endif
-
-
 /* process the action part of a selector line
  * rgerhards, 2007-08-01
  */

@@ -427,11 +427,30 @@ static cfgmodules_etry_t
 
 	if(rqtdType != eMOD_ANY) { /* if any, we already have the right one! */
 		while(node != NULL && node->pMod->eType != rqtdType) {
-			node = node->next; /* warning: do ... while() */
+			node = node->next;
 		}
 	}
 
 	return node;
+}
+
+
+/* Find a module with the given conf name and type. Returns NULL if none
+ * can be found, otherwise module found.
+ */
+static modInfo_t *
+FindWithCnfName(rsconf_t *cnf, uchar *name, eModType_t rqtdType)
+{
+	cfgmodules_etry_t *node;
+
+	node = cnf->modules.root;
+	while(node != NULL && node->pMod->eType != rqtdType) {
+		if(!strcasecmp((char*)node->pMod->cnfName, (char*)name))
+			break;
+		node = node->next;
+	}
+
+	return node == NULL ? NULL : node->pMod;
 }
 
 
@@ -1179,6 +1198,7 @@ CODESTARTobjQueryInterface(module)
 	pIf->GetName = modGetName;
 	pIf->GetStateName = modGetStateName;
 	pIf->PrintList = modPrintList;
+	pIf->FindWithCnfName = FindWithCnfName;
 	pIf->UnloadAndDestructAll = modUnloadAndDestructAll;
 	pIf->doModInit = doModInit;
 	pIf->SetModDir = SetModDir;
