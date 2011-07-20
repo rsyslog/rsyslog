@@ -719,13 +719,6 @@ CODESTARTparseSelectorAct
 	 */
 	if(!strncmp((char*) p, ":omfile:", sizeof(":omfile:") - 1)) {
 		p += sizeof(":omfile:") - 1;
-	} else {
-		if(*p == '$') {
-			errmsg.LogError(0, RS_RET_OUTDATED_STMT,
-				"action '%s' treated as ':omfile:%s' - please "
-				"change syntax, '%s' will not be supported in "
-				"rsyslog v6 and above.", p, p, p);
-		}
 	} 
 	if(!(*p == '$' || *p == '?' || *p == '/' || *p == '.' || *p == '-'))
 		ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
@@ -773,23 +766,10 @@ CODESTARTparseSelectorAct
 				calloc(cs.iDynaFileCacheSize, sizeof(dynaFileCacheEntry*)));
 		break;
 
-        /* case '|': while pipe support has been removed, I leave the code in in case we 
-	 *           need high-performance pipes at a later stage (unlikely). -- rgerhards, 2010-02-28
-	 */
 	case '/':
 	case '.':
 		CODE_STD_STRING_REQUESTparseSelectorAct(1)
-		/* we now have *almost* the same semantics for files and pipes, but we still need
-		 * to know we deal with a pipe, because we must do non-blocking opens in that case
-		 * (to keep consistent with traditional semantics and prevent rsyslog from hanging).
-		 */
-		if(*p == '|') {
-			++p;
-			pData->strmType = STREAMTYPE_NAMED_PIPE;
-		} else {
-			pData->strmType = STREAMTYPE_FILE_SINGLE;
-		}
-
+		pData->strmType = STREAMTYPE_FILE_SINGLE;
 		CHKiRet(cflineParseFileName(p, (uchar*) pData->f_fname, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS,
 				               (pszFileDfltTplName == NULL) ? (uchar*)"RSYSLOG_FileFormat" : pszFileDfltTplName));
 		pData->bDynamicName = 0;
