@@ -304,6 +304,54 @@ finalize_it:\
 }
 
 
+/* newActInst()
+ * Extra comments:
+ * This creates a new instance of a the action that implements the call.
+ * This is part of the conf2 (rsyslog v6) config system. It is called by
+ * the core when an action object has been obtained. The output module
+ * must then verify parameters and create a new action instance (if
+ * parameters are acceptable) or return an error code.
+ * On exit, ppModData must point to instance data. Also, a string
+ * request object must be created and filled. A macro is defined
+ * for that.
+ * For the most usual case, we have defined a macro below.
+ * If more than one string is requested, the macro can be used together
+ * with own code that overwrites the entry count. In this case, the
+ * macro must come before the own code. It is recommended to be
+ * placed right after CODESTARTnewActInst.
+ */
+#define BEGINnewActInst \
+static rsRetVal newActInst(struct nvlst *lst, void **ppModData, omodStringRequest_t **ppOMSR)\
+{\
+	DEFiRet;\
+	uchar *p;\
+	instanceData *pData = NULL;
+
+#define CODESTARTnewActInst \
+
+#define CODE_STD_STRING_REQUESTnewActInst(NumStrReqEntries) \
+	CHKiRet(OMSRconstruct(ppOMSR, NumStrReqEntries));
+
+#define CODE_STD_FINALIZERnewActInst \
+finalize_it:\
+	if(iRet == RS_RET_OK || iRet == RS_RET_SUSPENDED) {\
+		*ppModData = pData;\
+	} else {\
+		/* cleanup, we failed */\
+		if(*ppOMSR != NULL) {\
+			OMSRdestruct(*ppOMSR);\
+			*ppOMSR = NULL;\
+		}\
+		if(pData != NULL) {\
+			freeInstance(pData);\
+		} \
+	}
+
+#define ENDnewActInst \
+	RETiRet;\
+}
+
+
 /* tryResume()
  * This entry point is called to check if a module can resume operations. This
  * happens when a module requested that it be suspended. In suspended state,
@@ -473,7 +521,7 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 
 
 /* the following block is to be added for modules that support the v2
- * config system.
+ * config system. The config name is also provided.
  */
 #define CODEqueryEtryPt_STD_CONF2_QUERIES \
 	  else if(!strcmp((char*) name, "beginCnfLoad")) {\
@@ -486,9 +534,8 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 		*pEtryPoint = activateCnf;\
 	} else if(!strcmp((char*) name, "freeCnf")) {\
 		*pEtryPoint = freeCnf;\
-	} else if(!strcmp((char*) name, "getModCnfName")) {\
-		*pEtryPoint = modGetCnfName;\
-	}
+	} \
+	CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES 
 
 
 /* the following block is to be added for modules that require
@@ -497,6 +544,16 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 #define CODEqueryEtryPt_STD_CONF2_PREPRIVDROP_QUERIES \
 	  else if(!strcmp((char*) name, "activateCnfPrePrivDrop")) {\
 		*pEtryPoint = activateCnfPrePrivDrop;\
+	}
+
+/* the following block is to be added for modules that support
+ * their config name. This is required for the rsyslog v6 config
+ * system, especially for outout modules which do not require
+ * the new set of begin/end config settings.
+ */
+#define CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES \
+	  else if(!strcmp((char*) name, "getModCnfName")) {\
+		*pEtryPoint = modGetCnfName;\
 	}
 
 /* the following definition is the standard block for queryEtryPt for LIBRARY

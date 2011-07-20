@@ -71,6 +71,7 @@
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
+MODULE_CNFNAME("omfile")
 
 /* forward definitions */
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal);
@@ -710,6 +711,85 @@ finalize_it:
 ENDdoAction
 
 
+BEGINnewActInst
+CODESTARTnewActInst
+	// TODO: valid lst params
+#if 0
+	CHKiRet(createInstance(&pData));
+
+	if(*p == '-') {
+		pData->bSyncFile = 0;
+		p++;
+	} else {
+		pData->bSyncFile = cs.bEnableSync;
+	}
+
+	switch(*p) {
+        case '$':
+		CODE_STD_STRING_REQUESTnewActInst(1)
+		/* rgerhards 2005-06-21: this is a special setting for output-channel
+		 * definitions. In the long term, this setting will probably replace
+		 * anything else, but for the time being we must co-exist with the
+		 * traditional mode lines.
+		 * rgerhards, 2007-07-24: output-channels will go away. We keep them
+		 * for compatibility reasons, but seems to have been a bad idea.
+		 */
+		CHKiRet(cflineParseOutchannel(pData, p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS));
+		pData->bDynamicName = 0;
+		break;
+
+	case '?': /* This is much like a regular file handle, but we need to obtain
+		   * a template name. rgerhards, 2007-07-03
+		   */
+		CODE_STD_STRING_REQUESTnewActInst(2)
+		++p; /* eat '?' */
+		CHKiRet(cflineParseFileName(p, (uchar*) pData->f_fname, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS,
+				               (pszFileDfltTplName == NULL) ? (uchar*)"RSYSLOG_FileFormat" : pszFileDfltTplName));
+		/* "filename" is actually a template name, we need this as string 1. So let's add it
+		 * to the pOMSR. -- rgerhards, 2007-07-27
+		 */
+		CHKiRet(OMSRsetEntry(*ppOMSR, 1, ustrdup(pData->f_fname), OMSR_NO_RQD_TPL_OPTS));
+
+		pData->bDynamicName = 1;
+		pData->iCurrElt = -1;		  /* no current element */
+		/* we now allocate the cache table */
+		CHKmalloc(pData->dynCache = (dynaFileCacheEntry**)
+				calloc(cs.iDynaFileCacheSize, sizeof(dynaFileCacheEntry*)));
+		break;
+
+	case '/':
+	case '.':
+		CODE_STD_STRING_REQUESTnewActInst(1)
+		pData->strmType = STREAMTYPE_FILE_SINGLE;
+		CHKiRet(cflineParseFileName(p, (uchar*) pData->f_fname, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS,
+				               (pszFileDfltTplName == NULL) ? (uchar*)"RSYSLOG_FileFormat" : pszFileDfltTplName));
+		pData->bDynamicName = 0;
+		break;
+	default:
+		ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
+	}
+
+	/* freeze current paremeters for this action */
+	pData->iSizeLimit = 0; /* default value, use outchannels to configure! */
+	pData->iDynaFileCacheSize = cs.iDynaFileCacheSize;
+	pData->fCreateMode = cs.fCreateMode;
+	pData->fDirCreateMode = cs.fDirCreateMode;
+	pData->bCreateDirs = cs.bCreateDirs;
+	pData->bFailOnChown = cs.bFailOnChown;
+	pData->fileUID = cs.fileUID;
+	pData->fileGID = cs.fileGID;
+	pData->dirUID = cs.dirUID;
+	pData->dirGID = cs.dirGID;
+	pData->iZipLevel = cs.iZipLevel;
+	pData->bFlushOnTXEnd = cs.bFlushOnTXEnd;
+	pData->iIOBufSize = (int) cs.iIOBufSize;
+	pData->iFlushInterval = cs.iFlushInterval;
+	pData->bUseAsyncWriter = cs.bUseAsyncWriter;
+#endif
+CODE_STD_FINALIZERnewActInst
+ENDnewActInst
+
+
 BEGINparseSelectorAct
 CODESTARTparseSelectorAct
 	/* Note: the indicator sequence permits us to use '$' to signify
@@ -851,6 +931,7 @@ CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
 CODEqueryEtryPt_TXIF_OMOD_QUERIES /* we support the transactional interface! */
 CODEqueryEtryPt_doHUP
+CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES 
 ENDqueryEtryPt
 
 

@@ -524,6 +524,15 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 		ABORT_FINALIZE(localRet);
 
 	/* optional calls for new config system */
+	localRet = (*pNew->modQueryEtryPt)((uchar*)"getModCnfName", &getModCnfName);
+	if(localRet == RS_RET_OK) {
+		if(getModCnfName(&cnfName) == RS_RET_OK)
+			pNew->cnfName = (uchar*) strdup((char*)cnfName);
+			  /**< we do not care if strdup() fails, we can accept that */
+		else
+			pNew->cnfName = NULL;
+		dbgprintf("module config name is '%s'\n", cnfName);
+	}
 	localRet = (*pNew->modQueryEtryPt)((uchar*)"beginCnfLoad", &pNew->beginCnfLoad);
 	if(localRet == RS_RET_OK) {
 		dbgprintf("module %s supports rsyslog v6 config interface\n", name);
@@ -537,11 +546,6 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 		} else {
 			CHKiRet(localRet);
 		}
-		CHKiRet((*pNew->modQueryEtryPt)((uchar*)"getModCnfName", &getModCnfName));
-		getModCnfName(&cnfName);
-		pNew->cnfName = (uchar*) strdup((char*)cnfName);
-			/**< we do not care if strdup() fails, we can accept that */
-		dbgprintf("module config name is '%s'\n", cnfName);
 	} else if(localRet == RS_RET_MODULE_ENTRY_POINT_NOT_FOUND) {
 		pNew->beginCnfLoad = NULL; /* flag as non-present */
 	} else {
