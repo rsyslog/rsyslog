@@ -231,8 +231,12 @@ cnfDoActlst(struct cnfactlst *actlst, rule_t *pRule)
 		dbgprintf("aclst %p: ", actlst);
 		if(actlst->actType == CNFACT_V2) {
 			dbgprintf("v6+ action object\n");
-			actionNewInst(actlst->data.lst, &pAction);
-			iRet = llAppend(&(pRule)->llActList,  NULL, (void*) pAction);
+			if(actionNewInst(actlst->data.lst, &pAction) == RS_RET_OK) {
+				iRet = llAppend(&(pRule)->llActList,  NULL, (void*) pAction);
+			} else {
+				errmsg.LogError(0, RS_RET_ERR, "errors occured in file '%s' "
+					"around line %d", actlst->cnfFile, actlst->lineno);
+			}
 		} else {
 			dbgprintf("legacy action line:%s\n", actlst->data.legActLine);
 			str = (uchar*) actlst->data.legActLine;

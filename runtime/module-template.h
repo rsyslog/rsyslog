@@ -325,7 +325,8 @@ static rsRetVal newActInst(uchar __attribute__((unused)) *modName, \
 	struct nvlst *lst, void **ppModData, omodStringRequest_t **ppOMSR)\
 {\
 	DEFiRet;\
-	instanceData *pData = NULL;
+	instanceData *pData = NULL; \
+	*ppOMSR = NULL;
 
 #define CODESTARTnewActInst \
 

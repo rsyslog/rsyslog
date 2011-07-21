@@ -86,6 +86,8 @@ struct cnfactlst {
 		struct nvlst *lst;
 		char *legActLine;
 	} data;
+	char *cnfFile;
+	int lineno;
 };
 
 /* the following structures support expressions, and may (very much later

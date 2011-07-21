@@ -449,6 +449,8 @@ cnfactlstNew(enum cnfactType actType, struct nvlst *lst, char *actLine)
 		actlst->next = NULL;
 		actlst->syslines = NULL;
 		actlst->actType = actType;
+		actlst->lineno = yylineno;
+		actlst->cnfFile = strdup(cnfcurrfn);
 		if(actType == CNFACT_V2)
 			actlst->data.lst = lst;
 		else
@@ -484,6 +486,7 @@ cnfactlstDestruct(struct cnfactlst *actlst)
 	while(actlst != NULL) {
 		toDel = actlst;
 		actlst = actlst->next;
+		free(toDel->cnfFile);
 		cnfcfsyslinelstDestruct(toDel->syslines);
 		if(toDel->actType == CNFACT_V2)
 			nvlstDestruct(toDel->data.lst);

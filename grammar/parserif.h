@@ -3,10 +3,11 @@
 #include "rainerscript.h"
 int cnfSetLexFile(char*);
 int yyparse();
-int yydebug;
 char *cnfcurrfn;
 void dbgprintf(char *fmt, ...) __attribute__((format(printf, 1, 2)));
 void parser_errmsg(char *fmt, ...) __attribute__((format(printf, 1, 2)));
+extern int yydebug;
+extern int yylineno;
 
 /* entry points to be called after the parser has processed the
  * element in question. Actual processing must than be done inside
