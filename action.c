@@ -1964,6 +1964,7 @@ dbgprintf("XXXX:actionNewInst for module '%s'/%p\n", cnfModName, pMod);
 dbgprintf("XXXX:actionNewInst CALLED module '%s'/%p\n", cnfModName, pMod);
 finalize_it:
 	free(cnfModName);
+	cnfparamvalsDestruct(paramvals, &paramblk);
 	RETiRet;
 }
 

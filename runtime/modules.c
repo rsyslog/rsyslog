@@ -240,8 +240,8 @@ static rsRetVal moduleConstruct(modInfo_t **pThis)
 static void moduleDestruct(modInfo_t *pThis)
 {
 	assert(pThis != NULL);
-	if(pThis->pszName != NULL)
-		free(pThis->pszName);
+	free(pThis->pszName);
+	free(pThis->cnfName);
 	if(pThis->pModHdlr != NULL) {
 #	ifdef	VALGRIND
 #		warning "dlclose disabled for valgrind"

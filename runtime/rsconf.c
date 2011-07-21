@@ -417,26 +417,26 @@ void cnfDoRule(struct cnfrule *cnfrule)
 
 finalize_it:
 	//TODO: do something with error states
-	;
+	cnfruleDestruct(cnfrule);
 }
 
 void cnfDoCfsysline(char *ln)
 {
-	dbgprintf("cnf:global:cfsysline: %s\n", ln);
+	DBGPRINTF("cnf:global:cfsysline: %s\n", ln);
 	/* the legacy system needs the "$" stripped */
 	conf.cfsysline((uchar*) ln+1);
-	dbgprintf("cnf:cfsysline call done\n");
+	free(ln); /* cfsysline is just a simple string */
 }
 
 void cnfDoBSDTag(char *ln)
 {
-	dbgprintf("cnf:global:BSD tag: %s\n", ln);
+	DBGPRINTF("cnf:global:BSD tag: %s\n", ln);
 	cflineProcessTagSelector((uchar**)&ln);
 }
 
 void cnfDoBSDHost(char *ln)
 {
-	dbgprintf("cnf:global:BSD host: %s\n", ln);
+	DBGPRINTF("cnf:global:BSD host: %s\n", ln);
 	cflineProcessHostSelector((uchar**)&ln);
 }
 

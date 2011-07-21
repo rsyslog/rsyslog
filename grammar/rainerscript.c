@@ -475,6 +475,7 @@ cnfactlstAddSysline(struct cnfactlst* actlst, char *line)
 	return actlst;
 }
 
+
 void
 cnfactlstDestruct(struct cnfactlst *actlst)
 {
@@ -483,6 +484,7 @@ cnfactlstDestruct(struct cnfactlst *actlst)
 	while(actlst != NULL) {
 		toDel = actlst;
 		actlst = actlst->next;
+		cnfcfsyslinelstDestruct(toDel->syslines);
 		if(toDel->actType == CNFACT_V2)
 			nvlstDestruct(toDel->data.lst);
 		else
@@ -1245,6 +1247,28 @@ cnfrulePrint(struct cnfrule *rule)
 	dbgprintf("------ end rule %p\n", rule);
 }
 
+void
+cnfcfsyslinelstDestruct(struct cnfcfsyslinelst *cfslst)
+{
+	struct cnfcfsyslinelst *toDel;
+	while(cfslst != NULL) {
+		toDel = cfslst;
+		cfslst = cfslst->next;
+		free(toDel->line);
+		free(toDel);
+	}
+}
+
+void
+cnfruleDestruct(struct cnfrule *rule)
+{
+	if(   rule->filttype == CNFFILT_PRI
+	   || rule->filttype == CNFFILT_PROP)
+		free(rule->filt.s);
+	cnfactlstDestruct(rule->actlst);
+	free(rule);
+}
+
 struct cnffparamlst *
 cnffparamlstNew(struct cnfexpr *expr, struct cnffparamlst *next)
 {
@@ -1380,6 +1404,23 @@ cnfDoInclude(char *name)
 
 	globfree(&cfgFiles);
 	return 0;
+}
+
+void
+varDelete(struct var *v)
+{
+	if(v->datatype == 'S')
+		es_deleteStr(v->d.estr);
+}
+
+void
+cnfparamvalsDestruct(struct cnfparamvals *paramvals, struct cnfparamblk *blk)
+{
+	int i;
+	for(i = 0 ; i < blk->nParams ; ++i) {
+		varDelete(&paramvals[i].val);
+	}
+	free(paramvals);
 }
 
 /* find the index (or -1!) for a config param by name. This is used to 

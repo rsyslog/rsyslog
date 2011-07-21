@@ -66,7 +66,7 @@ struct nvlst {
   struct nvlst *next;
   es_str_t *name;
   struct var val;
-  unsigned char *bUsed;
+  unsigned char bUsed;
   	/**< was this node used during config processing? If not, this
 	 *   indicates an error. After all, the user specified a setting
 	 *   that the software does not know.
@@ -234,6 +234,7 @@ int cnfexprEvalBool(struct cnfexpr *expr, void *usrptr);
 struct cnfnumval* cnfnumvalNew(long long val);
 struct cnfstringval* cnfstringvalNew(es_str_t *estr);
 struct cnfrule * cnfruleNew(enum cnfFiltType filttype, struct cnfactlst *actlst);
+void cnfruleDestruct(struct cnfrule *rule);
 void cnfrulePrint(struct cnfrule *rule);
 struct cnfvar* cnfvarNew(char *name);
 struct cnffunc * cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst);
@@ -243,6 +244,9 @@ int cnfparamGetIdx(struct cnfparamblk *params, char *name);
 struct cnfparamvals* nvlstGetParams(struct nvlst *lst, struct cnfparamblk *params,
 	       struct cnfparamvals *vals);
 void cnfparamsPrint(struct cnfparamblk *params, struct cnfparamvals *vals);
+void varDelete(struct var *v);
+void cnfparamvalsDestruct(struct cnfparamvals *paramvals, struct cnfparamblk *blk);
+void cnfcfsyslinelstDestruct(struct cnfcfsyslinelst *cfslst);
 
 /* debug helper */
 void cstrPrint(char *text, es_str_t *estr);
