@@ -232,6 +232,7 @@ cnfDoActlst(struct cnfactlst *actlst, rule_t *pRule)
 		if(actlst->actType == CNFACT_V2) {
 			dbgprintf("v6+ action object\n");
 			actionNewInst(actlst->data.lst, &pAction);
+			iRet = llAppend(&(pRule)->llActList,  NULL, (void*) pAction);
 		} else {
 			dbgprintf("legacy action line:%s\n", actlst->data.legActLine);
 			str = (uchar*) actlst->data.legActLine;

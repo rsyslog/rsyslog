@@ -1942,6 +1942,7 @@ actionNewInst(struct nvlst *lst, action_t **ppAction)
 	uchar *cnfModName = NULL;
 	omodStringRequest_t *pOMSR;
 	void *pModData;
+	action_t *pAction;
 	DEFiRet;
 
 	paramvals = nvlstGetParams(lst, &paramblk, NULL);
@@ -1959,9 +1960,25 @@ actionNewInst(struct nvlst *lst, action_t **ppAction)
 		errmsg.LogError(0, RS_RET_MOD_UNKNOWN, "module name '%s' is unknown", cnfModName);
 		ABORT_FINALIZE(RS_RET_MOD_UNKNOWN);
 	}
-dbgprintf("XXXX:actionNewInst for module '%s'/%p\n", cnfModName, pMod);
-	CHKiRet(pMod->mod.om.newActInst(cnfModName, lst, &pModData, &pOMSR));
-dbgprintf("XXXX:actionNewInst CALLED module '%s'/%p\n", cnfModName, pMod);
+	iRet = pMod->mod.om.newActInst(cnfModName, lst, &pModData, &pOMSR);
+	// TODO: check if RS_RET_SUSPENDED is still valid in v6!
+	if(iRet != RS_RET_OK && iRet != RS_RET_SUSPENDED) {
+		FINALIZE; /* iRet is already set to error state */
+	}
+
+	if((iRet = addAction(&pAction, pMod, pModData, pOMSR, (iRet == RS_RET_SUSPENDED)? 1 : 0)) == RS_RET_OK) {
+		/* now check if the module is compatible with select features */
+		if(pMod->isCompatibleWithFeature(sFEATURERepeatedMsgReduction) == RS_RET_OK)
+			pAction->f_ReduceRepeated = loadConf->globals.bReduceRepeatMsgs;
+		else {
+			DBGPRINTF("module is incompatible with RepeatedMsgReduction - turned off\n");
+			pAction->f_ReduceRepeated = 0;
+		}
+		pAction->eState = ACT_STATE_RDY; /* action is enabled */
+		loadConf->actions.nbrActions++;	/* one more active action! */
+	}
+	*ppAction = pAction;
+
 finalize_it:
 	free(cnfModName);
 	cnfparamvalsDestruct(paramvals, &paramblk);
