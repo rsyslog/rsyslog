@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------
 Version 6.3.4  [DEVEL] (rgerhards), 2011-07-??
+- bugfix: omusrmsg format usr1,usr2 was no longer supported
 - bugfix: misaddressing in config handler
   In theory, can cause segfault, in practice this is extremely unlikely
   Thanks to Marcin for alertig me.

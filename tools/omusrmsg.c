@@ -11,18 +11,7 @@
  * of the "old" message code without any modifications. However, it
  * helps to have things at the right place one we go to the meat of it.
  *
- * Copyright 2007, 2008 Rainer Gerhards and Adiscon GmbH.
- *
- * rgerhards, 2008-07-04 (happy Independence Day!): rsyslog inherited the
- * wall functionality from sysklogd. Sysklogd was single-threaded and could
- * not afford to spent a lot of time inside a single action. Thus, it forked
- * off a new process to do the wall. In rsyslog, however, this creates some
- * grief with the threading model. Also, we do not really need to de-couple
- * processing, because we have ample ways to do it in rsyslog. Plus, the
- * default main message queue will care for a somewhat longer execution time.
- * So in short, the real fix to the problem is an architecture change. From
- * now on, we will not fork off a new process but rather do the notification
- * within the current one. This also reduces system overhead.
+ * Copyright 2007-2011 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -49,6 +38,7 @@
 #include <string.h>
 #include <assert.h>
 #include <signal.h>
+#include <ctype.h>
 #include <sys/param.h>
 #ifdef HAVE_UTMP_H
 #  include <utmp.h>
@@ -88,6 +78,7 @@
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
+MODULE_CNFNAME("omusrmsg")
 
 /* internal structures
  */
@@ -97,6 +88,7 @@ DEFobjCurrIf(errmsg)
 typedef struct _instanceData {
 	int bIsWall; /* 1- is wall, 0 - individual users */
 	char uname[MAXUNAMES][UNAMESZ+1];
+	uchar *tplName;
 } instanceData;
 
 typedef struct configSettings_s {
@@ -104,6 +96,19 @@ typedef struct configSettings_s {
 } configSettings_t;
 
 SCOPING_SUPPORT; /* must be set AFTER configSettings_t is defined */
+
+
+/* tables for interfacing with the v6 config system */
+/* action (instance) parameters */
+static struct cnfparamdescr actpdescr[] = {
+	{ "users", eCmdHdlrString, CNFPARAM_REQUIRED },
+	{ "template", eCmdHdlrGetWord, 0 }
+};
+static struct cnfparamblk actpblk =
+	{ CNFPARAMBLK_VERSION,
+	  sizeof(actpdescr)/sizeof(struct cnfparamdescr),
+	  actpdescr
+	};
 
 BEGINinitConfVars		/* (re)set config variables to default values */
 CODESTARTinitConfVars 
@@ -124,7 +129,7 @@ ENDisCompatibleWithFeature
 
 BEGINfreeInstance
 CODESTARTfreeInstance
-	/* TODO: free the instance pointer (currently a leak, will go away) */
+	free(pData->tplName);
 ENDfreeInstance
 
 
@@ -280,15 +285,111 @@ CODESTARTdoAction
 ENDdoAction
 
 
-BEGINparseSelectorAct
-	uchar *q;
+static inline void
+populateUsers(instanceData *pData, es_str_t *usrs)
+{
 	int i;
+	int iDst;
+	es_size_t iUsr;
+	es_size_t len;
+	uchar *c;
+
+	len = es_strlen(usrs);
+	c = es_getBufAddr(usrs);
+	pData->bIsWall = 0; /* write to individual users */
+	iUsr = 0;
+	for(i = 0 ; i < MAXUNAMES && iUsr < len ; ++i) {
+		for(  iDst = 0
+		    ; iDst < UNAMESZ && iUsr < len && c[iUsr] != ','
+		    ; ++iDst, ++iUsr) {
+			pData->uname[i][iDst] = c[iUsr];
+		}
+		pData->uname[i][iDst] = '\0';
+		DBGPRINTF("omusrmsg: send to user '%s'\n", pData->uname[i]);
+		if(iUsr < len && c[iUsr] != ',') {
+			errmsg.LogError(0, RS_RET_ERR, "user name '%s...' too long - "
+				"ignored", pData->uname[i]);
+			--i;
+			++iUsr;
+			while(iUsr < len && c[iUsr] != ',')
+				++iUsr; /* skip to next name */
+		} else if(iDst == 0) {
+			errmsg.LogError(0, RS_RET_ERR, "no user name given - "
+				"ignored");
+			--i;
+			++iUsr;
+			while(iUsr < len && c[iUsr] != ',')
+				++iUsr; /* skip to next name */
+		}
+		if(iUsr < len) {
+			++iUsr; /* skip "," */
+			while(iUsr < len && isspace(c[iUsr]))
+				++iUsr; /* skip whitespace */
+		}
+	}
+	if(i == MAXUNAMES && iUsr != len) {
+		errmsg.LogError(0, RS_RET_ERR, "omusrmsg supports only up to %d "
+			"user names in a single action - all others have been ignored",
+			MAXUNAMES);
+	}
+}
+
+
+static inline void
+setInstParamDefaults(instanceData *pData)
+{
+	pData->bIsWall = 0;
+	pData->tplName = NULL;
+}
+
+BEGINnewActInst
+	struct cnfparamvals *pvals;
+	int i;
+CODESTARTnewActInst
+	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
+		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
+
+	CHKiRet(createInstance(&pData));
+	setInstParamDefaults(pData);
+
+	CODE_STD_STRING_REQUESTparseSelectorAct(1)
+	for(i = 0 ; i < actpblk.nParams ; ++i) {
+		if(!pvals[i].bUsed)
+			continue;
+		if(!strcmp(actpblk.descr[i].name, "users")) {
+			if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"*", 1)) {
+				pData->bIsWall = 1;
+			} else {
+				populateUsers(pData, pvals[i].val.d.estr);
+			}
+		} else if(!strcmp(actpblk.descr[i].name, "template")) {
+			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else {
+			dbgprintf("omusrmsg: program error, non-handled "
+			  "param '%s'\n", actpblk.descr[i].name);
+		}
+	}
+
+	if(pData->tplName == NULL) {
+		CHKiRet(OMSRsetEntry(*ppOMSR, 0,
+			(uchar*) strdup(pData->bIsWall ? " WallFmt" : " StdUsrMsgFmt"),
+			OMSR_NO_RQD_TPL_OPTS));
+	} else {
+		CHKiRet(OMSRsetEntry(*ppOMSR, 0,
+			(uchar*) strdup((char*) pData->tplName),
+			OMSR_NO_RQD_TPL_OPTS));
+	}
+CODE_STD_FINALIZERnewActInst
+	cnfparamvalsDestruct(pvals, &actpblk);
+ENDnewActInst
+
+
+
+BEGINparseSelectorAct
+	es_str_t *usrs;
 CODESTARTparseSelectorAct
 CODE_STD_STRING_REQUESTparseSelectorAct(1)
-	   /* User names must begin with a gnu e-regex:
-	    *   [a-zA-Z0-9_.]
-	    * plus '*' for wall
-	    */
 	if(!strncmp((char*) p, ":omusrmsg:", sizeof(":omusrmsg:") - 1)) {
 		p += sizeof(":omusrmsg:") - 1; /* eat indicator sequence  (-1 because of '\0'!) */
 	} else {
@@ -311,26 +412,14 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		pData->bIsWall = 1; /* write to all users */
 		CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS, (uchar*) " WallFmt"));
 	} else {
-		/* everything else beginning with the regex above
-		 * is currently treated as a user name -- TODO: is this portable?
-		 */
-		dbgprintf("users: %s\n", p);	/* ASP */
-		pData->bIsWall = 0; /* write to individual users */
-		for (i = 0; i < MAXUNAMES && *p && *p != ';'; i++) {
-			for (q = p; *q && *q != ',' && *q != ';'; )
-				q++;
-			(void) strncpy((char*) pData->uname[i], (char*) p, UNAMESZ);
-			if ((q - p) > UNAMESZ)
-				pData->uname[i][UNAMESZ] = '\0';
-			else
-				pData->uname[i][q - p] = '\0';
-			while (*q == ',' || *q == ' ')
-				q++;
-			p = q;
+		/* everything else is currently treated as a user name */
+		usrs = es_newStr(128);
+		while(*p && *p != ';') {
+			es_addChar(&usrs, *p);
+			++p;
 		}
-		/* done, on to the template
-		 * TODO: we need to handle the case where i >= MAXUNAME!
-		 */
+		populateUsers(pData, usrs);
+		es_deleteStr(usrs);
 		if((iRet = cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS, (uchar*)" StdUsrMsgFmt"))
 			!= RS_RET_OK)
 			goto finalize_it;
@@ -347,6 +436,7 @@ ENDmodExit
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
+CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 ENDqueryEtryPt
 
 
