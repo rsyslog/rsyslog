@@ -36,7 +36,7 @@
 #define	MODULES_H_INCLUDED 1
 
 #include "objomsr.h"
-
+#include "rainerscript.h"
 
 /* the following define defines the current version of the module interface.
  * It can be used by any module which want's to simply prevent version conflicts
@@ -140,6 +140,7 @@ struct modInfo_s {
 			rsRetVal (*parseSelectorAct)(uchar**, void**,omodStringRequest_t**);
 			rsRetVal (*newScope)(void);
 			rsRetVal (*restoreScope)(void);
+			rsRetVal (*newActInst)(uchar *modName, struct nvlst *lst, void **, omodStringRequest_t **);
 		} om;
 		struct { /* data for library modules */
 		    	char dummy;

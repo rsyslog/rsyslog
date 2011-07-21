@@ -88,5 +88,6 @@ PROTOTYPEObj(glbl);
 
 void glblPrepCnf(void);
 void glblProcessCnf(struct cnfobj *o);
+void glblDoneLoadCnf(void);
 
 #endif /* #ifndef GLBL_H_INCLUDED */

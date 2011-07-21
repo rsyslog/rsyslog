@@ -58,6 +58,7 @@
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
+MODULE_CNFNAME("ompipe")
 
 /* internal structures
  */
@@ -244,6 +245,7 @@ BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
 CODEqueryEtryPt_doHUP
+CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES 
 ENDqueryEtryPt
 
 

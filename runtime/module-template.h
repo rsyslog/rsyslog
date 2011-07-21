@@ -321,10 +321,10 @@ finalize_it:\
  * placed right after CODESTARTnewActInst.
  */
 #define BEGINnewActInst \
-static rsRetVal newActInst(struct nvlst *lst, void **ppModData, omodStringRequest_t **ppOMSR)\
+static rsRetVal newActInst(uchar __attribute__((unused)) *modName, \
+	struct nvlst *lst, void **ppModData, omodStringRequest_t **ppOMSR)\
 {\
 	DEFiRet;\
-	uchar *p;\
 	instanceData *pData = NULL;
 
 #define CODESTARTnewActInst \
@@ -534,6 +534,15 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 		*pEtryPoint = activateCnf;\
 	} else if(!strcmp((char*) name, "freeCnf")) {\
 		*pEtryPoint = freeCnf;\
+	} \
+	CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES 
+
+/* the following block is to be added for output modules that support the v2
+ * config system. The config name is also provided.
+ */
+#define CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES \
+	  else if(!strcmp((char*) name, "newActInst")) {\
+		*pEtryPoint = newActInst;\
 	} \
 	CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES 
 

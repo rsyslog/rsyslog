@@ -714,6 +714,7 @@ ENDdoAction
 BEGINnewActInst
 CODESTARTnewActInst
 	// TODO: valid lst params
+	dbgprintf("XXXX: in newActInst (omfile)\n");
 #if 0
 	CHKiRet(createInstance(&pData));
 
@@ -929,6 +930,7 @@ ENDmodExit
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
+CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 CODEqueryEtryPt_TXIF_OMOD_QUERIES /* we support the transactional interface! */
 CODEqueryEtryPt_doHUP
 CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES 

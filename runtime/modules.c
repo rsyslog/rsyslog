@@ -90,17 +90,29 @@ static uchar *pModDir;		/* directory where loadable modules are found */
  * harm. This simplifies things as in action processing we do not need to check
  * if the transactional entry points exist.
  */
-static rsRetVal dummyBeginTransaction() 
+static rsRetVal
+dummyBeginTransaction() 
 {
 	return RS_RET_OK;
 }
-static rsRetVal dummyEndTransaction() 
+static rsRetVal
+dummyEndTransaction() 
 {
 	return RS_RET_OK;
 }
-static rsRetVal dummyIsCompatibleWithFeature() 
+static rsRetVal
+dummyIsCompatibleWithFeature() 
 {
 	return RS_RET_INCOMPATIBLE;
+}
+static rsRetVal
+dummynewActInst(uchar *modName, struct nvlst __attribute__((unused)) *dummy1,
+	  	void __attribute__((unused)) **dummy2, omodStringRequest_t __attribute__((unused)) **dummy3) 
+{
+	errmsg.LogError(0, RS_RET_CONFOBJ_UNSUPPORTED, "config objects are not "
+			"supported by module '%s' -- legacy config options "
+			"MUST be used instead", modName);
+	return RS_RET_CONFOBJ_UNSUPPORTED;
 }
 
 #ifdef DEBUG
@@ -443,11 +455,14 @@ FindWithCnfName(rsconf_t *cnf, uchar *name, eModType_t rqtdType)
 {
 	cfgmodules_etry_t *node;
 
-	node = cnf->modules.root;
-	while(node != NULL && node->pMod->eType != rqtdType) {
+	;
+	for(  node = cnf->modules.root
+	    ; node != NULL
+	    ; node = node->next) {
+		if(node->pMod->eType != rqtdType || node->pMod->cnfName == NULL)
+			continue;
 		if(!strcasecmp((char*)node->pMod->cnfName, (char*)name))
 			break;
-		node = node->next;
 	}
 
 	return node == NULL ? NULL : node->pMod;
@@ -603,6 +618,13 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 			} else if(localRet != RS_RET_OK) {
 				ABORT_FINALIZE(localRet);
 			}
+
+			localRet = (*pNew->modQueryEtryPt)((uchar*)"newActInst", &pNew->mod.om.newActInst);
+			if(localRet == RS_RET_MODULE_ENTRY_POINT_NOT_FOUND) {
+				pNew->mod.om.newActInst = dummynewActInst;
+			} else if(localRet != RS_RET_OK) {
+				ABORT_FINALIZE(localRet);
+			}
 			break;
 		case eMOD_LIB:
 			break;
@@ -749,18 +771,18 @@ static void modPrintList(void)
 		switch(pMod->eType) {
 		case eMOD_OUT:
 			dbgprintf("Output Module Entry Points:\n");
-			dbgprintf("\tdoAction:           0x%lx\n", (unsigned long) pMod->mod.om.doAction);
-			dbgprintf("\tparseSelectorAct:   0x%lx\n", (unsigned long) pMod->mod.om.parseSelectorAct);
-			dbgprintf("\ttryResume:          0x%lx\n", (unsigned long) pMod->tryResume);
-			dbgprintf("\tdoHUP:              0x%lx\n", (unsigned long) pMod->doHUP);
-			dbgprintf("\tnewScope:           0x%lx\n", (unsigned long) pMod->mod.om.newScope);
-			dbgprintf("\trestoreScope:       0x%lx\n", (unsigned long) pMod->mod.om.restoreScope);
-			dbgprintf("\tBeginTransaction:   0x%lx\n", (unsigned long)
-								   ((pMod->mod.om.beginTransaction == dummyBeginTransaction) ?
-								    0 :  pMod->mod.om.beginTransaction));
-			dbgprintf("\tEndTransaction:     0x%lx\n", (unsigned long)
-								   ((pMod->mod.om.endTransaction == dummyEndTransaction) ?
-								    0 :  pMod->mod.om.endTransaction));
+			dbgprintf("\tdoAction:           %p\n", pMod->mod.om.doAction);
+			dbgprintf("\tparseSelectorAct:   %p\n", pMod->mod.om.parseSelectorAct);
+			dbgprintf("\tnewActInst:         %p\n", (pMod->mod.om.newActInst == dummynewActInst) ?
+								    NULL :  pMod->mod.om.newActInst);
+			dbgprintf("\ttryResume:          %p\n", pMod->tryResume);
+			dbgprintf("\tdoHUP:              %p\n", pMod->doHUP);
+			dbgprintf("\tnewScope:           %p\n", pMod->mod.om.newScope);
+			dbgprintf("\trestoreScope:       %p\n", pMod->mod.om.restoreScope);
+			dbgprintf("\tBeginTransaction:   %p\n", ((pMod->mod.om.beginTransaction == dummyBeginTransaction) ?
+								   NULL :  pMod->mod.om.beginTransaction));
+			dbgprintf("\tEndTransaction:     %p\n", ((pMod->mod.om.endTransaction == dummyEndTransaction) ?
+								   NULL :  pMod->mod.om.endTransaction));
 			break;
 		case eMOD_IN:
 			dbgprintf("Input Module Entry Points\n");

@@ -1018,7 +1018,7 @@ tryDoAction(action_t *pAction, batch_t *pBatch, int *pnElem)
 	i = pBatch->iDoneUpTo;	/* all messages below that index are processed */
 	iElemProcessed = 0;
 	iCommittedUpTo = i;
-dbgprintf("XXXXX:     tryDoAction %p, pnElem %d, nElem %d\n", pAction, *pnElem, pBatch->nElem);
+	DBGPRINTF("tryDoAction %p, pnElem %d, nElem %d\n", pAction, *pnElem, pBatch->nElem);
 	while(iElemProcessed <= *pnElem && i < pBatch->nElem) {
 		if(*(pBatch->pbShutdownImmediate))
 			ABORT_FINALIZE(RS_RET_FORCE_TERM);
@@ -1940,6 +1940,8 @@ actionNewInst(struct nvlst *lst, action_t **ppAction)
 	struct cnfparamvals *paramvals;
 	modInfo_t *pMod;
 	uchar *cnfModName = NULL;
+	omodStringRequest_t *pOMSR;
+	void *pModData;
 	DEFiRet;
 
 	paramvals = nvlstGetParams(lst, &paramblk, NULL);
@@ -1958,6 +1960,8 @@ actionNewInst(struct nvlst *lst, action_t **ppAction)
 		ABORT_FINALIZE(RS_RET_MOD_UNKNOWN);
 	}
 dbgprintf("XXXX:actionNewInst for module '%s'/%p\n", cnfModName, pMod);
+	CHKiRet(pMod->mod.om.newActInst(cnfModName, lst, &pModData, &pOMSR));
+dbgprintf("XXXX:actionNewInst CALLED module '%s'/%p\n", cnfModName, pMod);
 finalize_it:
 	free(cnfModName);
 	RETiRet;

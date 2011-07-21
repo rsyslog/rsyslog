@@ -460,7 +460,7 @@ glblCheckCnf()
 }
 
 void
-glblDoneLoadCnf()
+glblDoneLoadCnf(void)
 {
 	int i;
 	unsigned char *cstr;
