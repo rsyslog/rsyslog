@@ -27,6 +27,11 @@ parser chain</a>. It processes all those messages that contain a PRI, then none 
 some spaces and then the exact text (case-insensitive) "last message repeated n times"
 where n must be an integer. All other messages are left untouched.
 
+<p><b>Please note:</b> this parser module makes it possible that these messages
+are properly detected. It does <b>not</b> drop them. If you intend to drop those
+messages, you need to use the usual filter logic in combination with the discard
+action.
+
 <p><b>Configuration Directives</b>:</p>
 <p>There do not currently exist any configuration directives for this module.
 <p><b>Examples:</b></p>
