@@ -34,7 +34,8 @@ rsyslogd_SOURCES = \
 	pidfile.c \
 	pidfile.h \
 	\
-	../dirty.h
+	../dirty.h \
+	../runtime/librsyslog.la
 rsyslogd_CPPFLAGS =  $(PTHREADS_CFLAGS) $(RSRT_CFLAGS) $(CNF_LIBS)
 rsyslogd_LDADD = $(ZLIB_LIBS) $(PTHREADS_LIBS) $(RSRT_LIBS) $(SOL_LIBS) $(LIBEE_LIBS) $(LIBLOGNORM_LIBS) $(CNF_LIBS) ../grammar/libgrammar.la
 rsyslogd_LDFLAGS = -export-dynamic

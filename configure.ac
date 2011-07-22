@@ -17,12 +17,6 @@ AC_GNU_SOURCE
 AC_CHECK_PROG(have_valgrind, [valgrind], [yes])
 AM_CONDITIONAL(HAVE_VALGRIND, test x$have_valgrind = xyes)
 
-# check for Java compiler
-AC_CHECK_PROG(HAVE_JAVAC, [javac], [yes])
-if test x"$HAVE_JAVAC" = x""; then
-        AC_MSG_WARN([no javac found, disabling features depending on it])
-fi
-
 # Checks for programs.
 AC_PROG_LEX
 AC_PROG_YACC
