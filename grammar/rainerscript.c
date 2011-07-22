@@ -30,11 +30,15 @@
 #include <ctype.h>
 #include <glob.h>
 #include <errno.h>
+#include <pwd.h>
+#include <grp.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <libestr.h>
 #include "rainerscript.h"
 #include "parserif.h"
 #include "grammar.h"
+#include "srUtils.h"
 
 void
 readConfFile(FILE *fp, es_str_t **str)
@@ -267,6 +271,104 @@ doGetBinary(struct nvlst *valnode, struct cnfparamdescr *param,
 	}
 }
 
+/* A file create-mode must be a four-digit octal number
+ * starting with '0'.
+ */
+static inline void
+doGetFileCreateMode(struct nvlst *valnode, struct cnfparamdescr *param,
+	  struct cnfparamvals *val)
+{
+	int fmtOK = 0;
+	char *cstr;
+	uchar *c;
+
+	if(es_strlen(valnode->val.d.estr) == 4) {
+		c = es_getBufAddr(valnode->val.d.estr);
+		if(!(   (c[0] == '0')
+		     && (c[1] >= '0' && c[1] <= '7')
+		     && (c[2] >= '0' && c[2] <= '7')
+		     && (c[3] >= '0' && c[3] <= '7')  )  ) {
+			fmtOK = 1;
+		}
+	}
+
+	if(fmtOK) {
+		val->val.datatype = 'N';
+		val->val.d.n = (c[1]-'0') * 64 + (c[2]-'0') * 8 + (c[3]-'0');;
+	} else {
+		cstr = es_str2cstr(valnode->val.d.estr, NULL);
+		parser_errmsg("file modes need to be specified as "
+		  "4-digit octal numbers starting with '0' -"
+		  "parameter '%s=\"%s\"' is not a file mode",
+		param->name, cstr);
+		free(cstr);
+	}
+}
+
+static inline void
+doGetGID(struct nvlst *valnode, struct cnfparamdescr *param,
+	  struct cnfparamvals *val)
+{
+	char *cstr;
+	struct group *resultBuf;
+	struct group wrkBuf;
+	char stringBuf[2048]; /* 2048 has been proven to be large enough */
+
+	cstr = es_str2cstr(valnode->val.d.estr, NULL);
+	getgrnam_r(cstr, &wrkBuf, stringBuf, sizeof(stringBuf), &resultBuf);
+	if(resultBuf == NULL) {
+		parser_errmsg("parameter '%s': ID for group %s could not "
+		  "be found", param->name, cstr);
+	} else {
+		val->val.datatype = 'N';
+		val->val.d.n = resultBuf->gr_gid;
+		dbgprintf("param '%s': uid %d obtained for group '%s'\n",
+		   param->name, (int) resultBuf->gr_gid, cstr);
+	}
+	free(cstr);
+}
+
+static inline void
+doGetUID(struct nvlst *valnode, struct cnfparamdescr *param,
+	  struct cnfparamvals *val)
+{
+	char *cstr;
+	struct passwd *resultBuf;
+	struct passwd wrkBuf;
+	char stringBuf[2048]; /* 2048 has been proven to be large enough */
+
+	cstr = es_str2cstr(valnode->val.d.estr, NULL);
+	getpwnam_r(cstr, &wrkBuf, stringBuf, sizeof(stringBuf), &resultBuf);
+	if(resultBuf == NULL) {
+		parser_errmsg("parameter '%s': ID for user %s could not "
+		  "be found", param->name, cstr);
+	} else {
+		val->val.datatype = 'N';
+		val->val.d.n = resultBuf->pw_uid;
+		dbgprintf("param '%s': uid %d obtained for user '%s'\n",
+		   param->name, (int) resultBuf->pw_uid, cstr);
+	}
+	free(cstr);
+}
+
+/* note: we support all integer formats that es_str2num support,
+ * so hex and octal representations are also valid.
+ */
+static inline void
+doGetInt(struct nvlst *valnode, struct cnfparamdescr *param,
+	  struct cnfparamvals *val)
+{
+	long long n;
+	int bSuccess;
+
+	n = es_str2num(valnode->val.d.estr, &bSuccess);
+	if(!bSuccess) {
+		parser_errmsg("parameter '%s' is not a proper number",
+		  param->name);
+	}
+	val->val.datatype = 'N';
+	val->val.d.n = n;
+}
 
 static inline void
 doGetWord(struct nvlst *valnode, struct cnfparamdescr *param,
@@ -287,6 +389,19 @@ doGetWord(struct nvlst *valnode, struct cnfparamdescr *param,
 	}
 }
 
+static inline void
+doGetChar(struct nvlst *valnode, struct cnfparamdescr *param,
+	  struct cnfparamvals *val)
+{
+	if(es_strlen(valnode->val.d.estr) != 1) {
+		parser_errmsg("parameter '%s' must contain exactly one character "
+		  "but contains %d - cannot be processed",
+		  param->name, es_strlen(valnode->val.d.estr));
+	}
+	val->val.datatype = 'S';
+	val->val.d.estr = es_strdup(valnode->val.d.estr);
+}
+
 /* get a single parameter according to its definition. Helper to
  * nvlstGetParams.
  */
@@ -294,30 +409,45 @@ static inline void
 nvlstGetParam(struct nvlst *valnode, struct cnfparamdescr *param,
 	       struct cnfparamvals *val)
 {
+	uchar *cstr;
+
 	dbgprintf("XXXX: in nvlstGetParam, name '%s', type %d\n",
 		  param->name, (int) param->type);
 	valnode->bUsed = 1;
 	val->bUsed = 1;
 	switch(param->type) {
 	case eCmdHdlrUID:
+		doGetUID(valnode, param, val);
 		break;
 	case eCmdHdlrGID:
+		doGetGID(valnode, param, val);
 		break;
 	case eCmdHdlrBinary:
 		doGetBinary(valnode, param, val);
 		break;
 	case eCmdHdlrFileCreateMode:
+		doGetFileCreateMode(valnode, param, val);
 		break;
 	case eCmdHdlrInt:
+		doGetInt(valnode, param, val);
 		break;
 	case eCmdHdlrSize:
 		doGetSize(valnode, param, val);
 		break;
 	case eCmdHdlrGetChar:
+		doGetChar(valnode, param, val);
 		break;
 	case eCmdHdlrFacility:
+		cstr = (uchar*) es_str2cstr(valnode->val.d.estr, NULL);
+		val->val.datatype = 'N';
+		val->val.d.n = decodeSyslogName(cstr, syslogFacNames);
+		free(cstr);
 		break;
 	case eCmdHdlrSeverity:
+		cstr = (uchar*) es_str2cstr(valnode->val.d.estr, NULL);
+		val->val.datatype = 'N';
+		val->val.d.n = decodeSyslogName(cstr, syslogPriNames);
+		free(cstr);
 		break;
 	case eCmdHdlrGetWord:
 		doGetWord(valnode, param, val);

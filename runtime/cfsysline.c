@@ -3,7 +3,7 @@
  *
  * File begun on 2007-07-30 by RGerhards
  *
- * Copyright (C) 2007, 2008 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright (C) 2007-2011 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -544,7 +544,8 @@ finalize_it:
  * time (TODO). -- rgerhards, 2008-02-14
  */
 static rsRetVal
-doSyslogName(uchar **pp, rsRetVal (*pSetHdlr)(void*, int), void *pVal, syslogName_t *pNameTable)
+doSyslogName(uchar **pp, rsRetVal (*pSetHdlr)(void*, int),
+	  	    void *pVal, syslogName_t *pNameTable)
 {
 	DEFiRet;
 	cstr_t *pStrB;

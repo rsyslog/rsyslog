@@ -430,7 +430,6 @@ void cnfDoCfsysline(char *ln)
 	DBGPRINTF("cnf:global:cfsysline: %s\n", ln);
 	/* the legacy system needs the "$" stripped */
 	conf.cfsysline((uchar*) ln+1);
-	free(ln); /* cfsysline is just a simple string */
 }
 
 void cnfDoBSDTag(char *ln)

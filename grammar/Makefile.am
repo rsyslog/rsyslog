@@ -2,7 +2,7 @@ BUILT_SOURCES = grammar.h
 CLEANFILES = grammar.h grammar.c
 AM_YFLAGS = -d
 noinst_LTLIBRARIES = libgrammar.la
-bin_PROGRAMS = testdriver # TODO: make this conditional
+#bin_PROGRAMS = testdriver # TODO: make this conditional
 
 libgrammar_la_SOURCES = \
 	grammar.y \
