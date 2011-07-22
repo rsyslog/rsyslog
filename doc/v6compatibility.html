@@ -82,8 +82,7 @@ syntax is concerned. Nevertheless, v6 still supports it, but a new syntax is req
 for the action. Let's assume your outchannel is named "channel". The previous syntax was
 <blockquote><code>
 *.* $channel
-</code>
-</blockquote>
+</code> </blockquote>
 This was deprecated in v5 and no longer works in v6. Instead, you need to specify
 <blockquote><code>
 *.* :omfile:$channel
@@ -92,6 +91,41 @@ Note that this syntax is available starting with rsyslog v4. It is important to 
 mind that future versions of rsyslog will require different syntax and/or drop outchannel support
 completely. So if at all possible, avoid using this feature. If you must use it, be prepared for
 future changes and watch announcements very carefully.
+<h2>omusrmsg</h2>
+<p>The omusrmsg module is used to send messages to users. In legacy-legacy
+config format (that is the very old sysklogd style), it was suffucient to use
+just the user name to call this action, like in this example:
+<blockquote><code>
+*.* rgerhards
+</code> </blockquote>
+This format is very ambigious and causes headache (see
+<a href="http://blog.gerhards.net/2011/07/why-omusrmsg-is-evil-and-how-it-is.html">blog post
+on omusrmsg</a> for details). Thus the format has been superseded by this syntax
+(which is legacy format ;-)):
+<blockquote><code>
+*.* :omusrmsg:rgerhards
+</code> </blockquote>
+That syntax is supported since later subversions of version 4.
+<p>Rsyslog v6 still supports the legacy-legacy format, but in a very strict
+sense. For example, if multiple users or templates are given, no spaces
+must be included in the action line. For example, this works up to v5, but no
+longer in v6:
+<blockquote><code>
+*.* rgerhards, bgerhards
+</code> </blockquote>
+To fix it in a way that is compatible with pre-v6, use (note the removed space!):
+<blockquote><code>
+*.* rgerhards,bgerhards
+</code> </blockquote>
+Of course, it probably is better to understand in native v6 format:
+<blockquote><code>
+*.* action(type="omusrmsg" users="rgerhards, bgerhards")
+</code> </blockquote>
+As you see, here you may include spaces between user names.
+<p>In the long term, legacy-legacy format will most probably totally disappear,
+so it is a wise decision to change config files at least to the legacy
+format (with ":omusrmsg:" in front of the name).
+
 <p>[<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
 <p><font size="2">This documentation is part of the
 <a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
