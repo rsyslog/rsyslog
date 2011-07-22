@@ -345,7 +345,10 @@ parser_errmsg(char *fmt, ...)
 
 	va_start(ap, fmt);
 	if(vsnprintf(errBuf, sizeof(errBuf), fmt, ap) == sizeof(errBuf))
-		errBuf[1023] = '\0';
+		errBuf[sizeof(errBuf)-1] = '\0';
+dbgprintf("XXXX: msg: %s\n", errBuf);
+dbgprintf("XXXX: cnfcurrfn: %s\n", cnfcurrfn);
+dbgprintf("XXXX: yylineno: %d\n", yylineno);
 	errmsg.LogError(0, RS_RET_CONF_PARSE_ERROR,
 			"error during parsing file %s, on or before line %d: %s",
 			cnfcurrfn, yylineno, errBuf);
@@ -1258,6 +1261,7 @@ ourConf = loadConf; // TODO: remove, once ourConf is gone!
 			 	"run, but no output whatsoever is created.");
 		ABORT_FINALIZE(RS_RET_NO_ACTIONS);
 	}
+	tellLexEndParsing();
 
 	tellCoreConfigLoadDone();
 	tellModulesConfigLoadDone();

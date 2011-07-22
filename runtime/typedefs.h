@@ -160,6 +160,7 @@ typedef enum cslCmdHdlrType {
 	eCmdHdlrSeverity,
 	eCmdHdlrGetWord,
 	eCmdHdlrString,
+	eCmdHdlrQueueType,
 	eCmdHdlrGoneAway		/* statment existed, but is no longer supported */
 } ecslCmdHdrlType;
 

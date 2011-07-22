@@ -35,9 +35,11 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <libestr.h>
+#include "rsyslog.h"
 #include "rainerscript.h"
 #include "parserif.h"
 #include "grammar.h"
+#include "queue.h"
 #include "srUtils.h"
 
 void
@@ -271,6 +273,30 @@ doGetBinary(struct nvlst *valnode, struct cnfparamdescr *param,
 	}
 }
 
+static inline void
+doGetQueueType(struct nvlst *valnode, struct cnfparamdescr *param,
+	  struct cnfparamvals *val)
+{
+	char *cstr;
+	if(!es_strcasebufcmp(valnode->val.d.estr, (uchar*)"fixedarray", 10)) {
+		val->val.d.n = QUEUETYPE_FIXED_ARRAY;
+	} else if(!es_strcasebufcmp(valnode->val.d.estr, (uchar*)"linkedlist", 10)) {
+		val->val.d.n = QUEUETYPE_LINKEDLIST;
+	} else if(!es_strcasebufcmp(valnode->val.d.estr, (uchar*)"disk", 4)) {
+		val->val.d.n = QUEUETYPE_DISK;
+	} else if(!es_strcasebufcmp(valnode->val.d.estr, (uchar*)"direct", 6)) {
+		val->val.d.n = QUEUETYPE_DIRECT;
+	} else {
+		cstr = es_str2cstr(valnode->val.d.estr, NULL);
+		parser_errmsg("param '%s': unknown queue type: '%s'",
+			      param->name, cstr);
+		free(cstr);
+	}
+dbgprintf("XXXXX: queue type: %d\n", (int)val->val.d.n);
+	val->val.datatype = 'N';
+}
+
+
 /* A file create-mode must be a four-digit octal number
  * starting with '0'.
  */
@@ -416,6 +442,9 @@ nvlstGetParam(struct nvlst *valnode, struct cnfparamdescr *param,
 	valnode->bUsed = 1;
 	val->bUsed = 1;
 	switch(param->type) {
+	case eCmdHdlrQueueType:
+		doGetQueueType(valnode, param, val);
+		break;
 	case eCmdHdlrUID:
 		doGetUID(valnode, param, val);
 		break;

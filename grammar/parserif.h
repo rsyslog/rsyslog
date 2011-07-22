@@ -6,6 +6,7 @@ int yyparse();
 char *cnfcurrfn;
 void dbgprintf(char *fmt, ...) __attribute__((format(printf, 1, 2)));
 void parser_errmsg(char *fmt, ...) __attribute__((format(printf, 1, 2)));
+void tellLexEndParsing(void);
 extern int yydebug;
 extern int yylineno;
 

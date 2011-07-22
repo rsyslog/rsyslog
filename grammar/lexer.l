@@ -182,7 +182,7 @@ int fileno(FILE *stream);
 <INOBJ>#.*$	/* skip comments in input */
 <INOBJ>[ \n\t]
 <INOBJ>.			{ dbgprintf("INOBJ: invalid char '%s'\n", yytext); }
-\$[a-z]+.*$			{ /* see common on $IncludeConfig above */
+\$[a-z]+.*$			{ /* see comment on $IncludeConfig above */
 				  if(!strncasecmp(yytext, "$includeconfig ", 14)) {
 					yyless(14);
 				  	BEGIN INCL;
@@ -282,9 +282,17 @@ popfile(void)
 	if(bs == NULL)
 		return 1;
 	
-	/* delte current entry */
+	/* delete current entry. But we must not free the file name if
+	 * this is the top-level file, because then it may still be used
+	 * in error messages for other processing steps.
+	 * TODO: change this to another method which stores the file
+	 * name inside the config objects. In the longer term, this is
+	 * necessary, as otherwise we may provide wrong file name information
+	 * at the end of include files as well. -- rgerhards, 2011-07-22
+	 */
 	yy_delete_buffer(bs->bs);
-	free(bs->fn);
+	if(bs->prev != NULL)
+		free(bs->fn);
 	free(bs->estr);
 
 	/* switch back to previous */
@@ -298,4 +306,11 @@ popfile(void)
 	yylineno = currbs->lineno;
 	cnfcurrfn = currbs->fn;
 	return 0;
+}
+
+void
+tellLexEndParsing(void)
+{
+	free(cnfcurrfn);
+	cnfcurrfn= NULL;
 }
