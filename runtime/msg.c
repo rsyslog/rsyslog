@@ -1629,13 +1629,19 @@ finalize_it:
 }
 
 
-/* rgerhards, 2005-11-24
+/* al, 2011-07-26: LockMsg to avoid race conditions
  */
 static inline char *getMSGID(msg_t *pM)
 {
-	return (pM->pCSMSGID == NULL) ? "-" : (char*) rsCStrGetSzStrNoNULL(pM->pCSMSGID);
+	if (pM->pCSMSGID == NULL) {
+		return "-"; 
+	}
+	else {
+		MsgLock(pM);
+		return (char*) rsCStrGetSzStrNoNULL(pM->pCSMSGID);
+		MsgUnlock(pM);
+	}
 }
-
 
 /* rgerhards 2009-06-12: set associated ruleset
  */
