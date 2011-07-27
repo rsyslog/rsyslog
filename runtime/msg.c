@@ -1638,8 +1638,9 @@ static inline char *getMSGID(msg_t *pM)
 	}
 	else {
 		MsgLock(pM);
-		return (char*) rsCStrGetSzStrNoNULL(pM->pCSMSGID);
+		char* pszreturn = rsCStrGetSzStrNoNULL(pM->pCSMSGID);
 		MsgUnlock(pM);
+		return (char*) pszreturn; 
 	}
 }
 
