@@ -2505,7 +2505,7 @@ finalize_it:
 
 
 /* take v6 config list and extract the queue params out of it. Hand the
- * param values back to the caler. Caller is responsible for destructing
+ * param values back to the caller. Caller is responsible for destructing
  * them when no longer needed. Caller can use this param block to configure
  * all parameters for a newly created queue with one call to qqueueSetParams().
  * rgerhards, 2011-07-22

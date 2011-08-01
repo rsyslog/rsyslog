@@ -741,7 +741,8 @@ rsRetVal cflineDoAction(rsconf_t *conf, uchar **p, action_t **ppAction)
 			 */
 			if(currConfObj == eConfObjAction)
 				currConfObj = eConfObjActionWaitEnd;
-			if((iRet = addAction(&pAction, pMod, pModData, pOMSR, NULL, (iRet == RS_RET_SUSPENDED)? 1 : 0)) == RS_RET_OK) {
+			if((iRet = addAction(&pAction, pMod, pModData, pOMSR, NULL, NULL,
+					     (iRet == RS_RET_SUSPENDED)? 1 : 0)) == RS_RET_OK) {
 				/* now check if the module is compatible with select features */
 				if(pMod->isCompatibleWithFeature(sFEATURERepeatedMsgReduction) == RS_RET_OK)
 					pAction->f_ReduceRepeated = loadConf->globals.bReduceRepeatMsgs;

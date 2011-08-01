@@ -188,10 +188,10 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "action.execonlyonceeveryinterval", eCmdHdlrInt, 0 }, /* legacy: actionexeconlyonceeveryinterval */
 	{ "action.execonlywhenpreviousissuspended", eCmdHdlrInt, 0 }, /* legacy: actionexeconlywhenpreviousissuspended */
 	{ "action.repeatedmsgcontainsoriginalmsg", eCmdHdlrBinary, 0 }, /* legacy: repeatedmsgcontainsoriginalmsg */
-	{ "action.resumeretrycount ", eCmdHdlrGetWord, 0 } /* legacy: actionresumeretrycount */
-	//{ "", eCmdHdlrGetWord, 0 }, /* legacy: */
+	{ "action.resumeretrycount", eCmdHdlrInt, 0 }, /* legacy: actionresumeretrycount */
+	{ "action.resumeinterval", eCmdHdlrInt, 0 }
 };
-static struct cnfparamblk paramblk =
+static struct cnfparamblk pblk =
 	{ CNFPARAMBLK_VERSION,
 	  sizeof(cnfparamdescr)/sizeof(struct cnfparamdescr),
 	  cnfparamdescr
@@ -310,6 +310,8 @@ rsRetVal actionDestruct(action_t *pThis)
 
 /* create a new action descriptor object
  * rgerhards, 2007-08-01
+ * Note that it is vital to set proper initial values as the v6 config
+ * system depends on these!
  */
 rsRetVal actionConstruct(action_t **ppThis)
 {
@@ -318,9 +320,20 @@ rsRetVal actionConstruct(action_t **ppThis)
 
 	ASSERT(ppThis != NULL);
 	
+	if(cs.pszActionName != NULL) {
+		free(cs.pszActionName);
+		cs.pszActionName = NULL;
+	}
 	CHKmalloc(pThis = (action_t*) calloc(1, sizeof(action_t)));
-	pThis->iResumeInterval = cs.glbliActionResumeInterval;
-	pThis->iResumeRetryCount = cs.glbliActionResumeRetryCount;
+	pThis->iResumeInterval = 30;
+	pThis->iResumeRetryCount = 0;
+	pThis->pszName = NULL;
+	pThis->bWriteAllMarkMsgs = FALSE;
+	pThis->iExecEveryNthOccur = 0;
+	pThis->iExecEveryNthOccurTO = 0;
+	pThis->iSecsExecOnceInterval = 0;
+	pThis->bExecWhenPrevSusp = 0;
+	pThis->bRepMsgHasMsg = 0;
 	pThis->tLastOccur = datetime.GetTime(NULL);	/* done once per action on startup only */
 	pthread_mutex_init(&pThis->mutActExec, NULL);
 	INIT_ATOMIC_HELPER_MUT(pThis->mutCAS);
@@ -1736,6 +1749,47 @@ doSubmitToActionQComplexBatch(action_t *pAction, batch_t *pBatch)
 }
 #pragma GCC diagnostic warning "-Wempty-body"
 
+
+/* apply all params from param block to action. This supports the v6 config system.
+ * Defaults must have been set appropriately during action construct!
+ * rgerhards, 2011-08-01
+ */
+rsRetVal
+actionApplyCnfParam(action_t *pAction, struct cnfparamvals *pvals)
+{
+	int i;
+	for(i = 0 ; i < pblk.nParams ; ++i) {
+		if(!pvals[i].bUsed)
+			continue;
+		if(!strcmp(pblk.descr[i].name, "name")) {
+			pAction->pszName = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(pblk.descr[i].name, "action.writeallmarkmessages")) {
+			pAction->bWriteAllMarkMsgs = pvals[i].val.d.n;
+		} else if(!strcmp(pblk.descr[i].name, "action.execonlyeverynthtime")) {
+			pAction->iExecEveryNthOccur = pvals[i].val.d.n;
+		} else if(!strcmp(pblk.descr[i].name, "action.execonlyeverynthtimetimeout")) {
+			pAction->iExecEveryNthOccurTO = pvals[i].val.d.n;
+		} else if(!strcmp(pblk.descr[i].name, "action.execonlyonceeveryinterval")) {
+			pAction->iSecsExecOnceInterval = pvals[i].val.d.n;
+		} else if(!strcmp(pblk.descr[i].name, "action.execonlywhenpreviousissuspended")) {
+			pAction->bExecWhenPrevSusp = pvals[i].val.d.n;
+		} else if(!strcmp(pblk.descr[i].name, "action.repeatedmsgcontainsoriginalmsg")) {
+			pAction->bRepMsgHasMsg = pvals[i].val.d.n;
+		} else if(!strcmp(pblk.descr[i].name, "action.resumeretrycount")) {
+			pAction->iResumeRetryCount = pvals[i].val.d.n;
+		} else if(!strcmp(pblk.descr[i].name, "action.resumeinterval")) {
+			pAction->iResumeInterval = pvals[i].val.d.n;
+		} else {
+			dbgprintf("action: program error, non-handled "
+			  "param '%s'\n", pblk.descr[i].name);
+		}
+	}
+	cnfparamvalsDestruct(pvals, &pblk);
+	return RS_RET_OK;
+}
+
+
+
 /* add an Action to the current selector
  * The pOMSR is freed, as it is not needed after this function.
  * Note: this function pulls global data that specifies action config state.
@@ -1743,7 +1797,8 @@ doSubmitToActionQComplexBatch(action_t *pAction, batch_t *pBatch)
  */
 rsRetVal
 addAction(action_t **ppAction, modInfo_t *pMod, void *pModData,
-	  omodStringRequest_t *pOMSR, struct cnfparamvals *queueParams, int bSuspended)
+	  omodStringRequest_t *pOMSR, struct cnfparamvals *actParams,
+	  struct cnfparamvals *queueParams, int bSuspended)
 {
 	DEFiRet;
 	int i;
@@ -1760,17 +1815,23 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData,
 	CHKiRet(actionConstruct(&pAction)); /* create action object first */
 	pAction->pMod = pMod;
 	pAction->pModData = pModData;
-	pAction->pszName = cs.pszActionName;
-	cs.pszActionName = NULL;	/* free again! */
-	pAction->bWriteAllMarkMsgs = cs.bActionWriteAllMarkMsgs;
-	cs.bActionWriteAllMarkMsgs = FALSE; /* reset */
-	pAction->bExecWhenPrevSusp = cs.bActExecWhenPrevSusp;
-	pAction->iSecsExecOnceInterval = cs.iActExecOnceInterval;
-	pAction->iExecEveryNthOccur = cs.iActExecEveryNthOccur;
-	pAction->iExecEveryNthOccurTO = cs.iActExecEveryNthOccurTO;
-	pAction->bRepMsgHasMsg = cs.bActionRepMsgHasMsg;
-	cs.iActExecEveryNthOccur = 0; /* auto-reset */
-	cs.iActExecEveryNthOccurTO = 0; /* auto-reset */
+	if(actParams == NULL) { /* use legacy systemn */
+		pAction->pszName = cs.pszActionName;
+		pAction->iResumeInterval = cs.glbliActionResumeInterval;
+		pAction->iResumeRetryCount = cs.glbliActionResumeRetryCount;
+		pAction->bWriteAllMarkMsgs = cs.bActionWriteAllMarkMsgs;
+		pAction->bExecWhenPrevSusp = cs.bActExecWhenPrevSusp;
+		pAction->iSecsExecOnceInterval = cs.iActExecOnceInterval;
+		pAction->iExecEveryNthOccur = cs.iActExecEveryNthOccur;
+		pAction->iExecEveryNthOccurTO = cs.iActExecEveryNthOccurTO;
+		pAction->bRepMsgHasMsg = cs.bActionRepMsgHasMsg;
+		cs.iActExecEveryNthOccur = 0; /* auto-reset */
+		cs.iActExecEveryNthOccurTO = 0; /* auto-reset */
+		cs.bActionWriteAllMarkMsgs = FALSE; /* auto-reset */
+		cs.pszActionName = NULL;	/* free again! */
+	} else {
+		actionApplyCnfParam(pAction, actParams);
+	}
 
 	/* check if we can obtain the template pointers - TODO: move to separate function? */
 	pAction->iNumTpls = OMSRgetEntryCount(pOMSR);
@@ -1927,17 +1988,16 @@ actionNewInst(struct nvlst *lst, action_t **ppAction)
 	action_t *pAction;
 	DEFiRet;
 
-	paramvals = nvlstGetParams(lst, &paramblk, NULL);
+	paramvals = nvlstGetParams(lst, &pblk, NULL);
 	if(paramvals == NULL) {
-		iRet = RS_RET_ERR;
-		goto finalize_it;
+		ABORT_FINALIZE(RS_RET_ERR);
 	}
 	dbgprintf("action param blk after actionNewInst:\n");
-	cnfparamsPrint(&paramblk, paramvals);
-	if(paramvals[cnfparamGetIdx(&paramblk, "type")].bUsed == 0) {
+	cnfparamsPrint(&pblk, paramvals);
+	if(paramvals[cnfparamGetIdx(&pblk, "type")].bUsed == 0) {
 		ABORT_FINALIZE(RS_RET_CONF_RQRD_PARAM_MISSING); // TODO: move this into rainerscript handlers
 	}
-	cnfModName = (uchar*)es_str2cstr(paramvals[cnfparamGetIdx(&paramblk, ("type"))].val.d.estr, NULL);
+	cnfModName = (uchar*)es_str2cstr(paramvals[cnfparamGetIdx(&pblk, ("type"))].val.d.estr, NULL);
 	if((pMod = module.FindWithCnfName(loadConf, cnfModName, eMOD_OUT)) == NULL) {
 		errmsg.LogError(0, RS_RET_MOD_UNKNOWN, "module name '%s' is unknown", cnfModName);
 		ABORT_FINALIZE(RS_RET_MOD_UNKNOWN);
@@ -1950,7 +2010,7 @@ actionNewInst(struct nvlst *lst, action_t **ppAction)
 
 	qqueueDoCnfParams(lst, &queueParams);
 
-	if((iRet = addAction(&pAction, pMod, pModData, pOMSR, queueParams,
+	if((iRet = addAction(&pAction, pMod, pModData, pOMSR, paramvals, queueParams,
 	                    (iRet == RS_RET_SUSPENDED)? 1 : 0)) == RS_RET_OK) {
 		/* now check if the module is compatible with select features */
 		if(pMod->isCompatibleWithFeature(sFEATURERepeatedMsgReduction) == RS_RET_OK)
@@ -1966,7 +2026,7 @@ actionNewInst(struct nvlst *lst, action_t **ppAction)
 
 finalize_it:
 	free(cnfModName);
-	cnfparamvalsDestruct(paramvals, &paramblk);
+	cnfparamvalsDestruct(paramvals, &pblk);
 	RETiRet;
 }
 
@@ -1982,13 +2042,13 @@ actionProcessCnf(struct cnfobj *o)
 // This is for STAND-ALONE actions at the conf file TOP level
 	struct cnfparamvals *paramvals;
 
-	paramvals = nvlstGetParams(o->nvlst, &paramblk, NULL);
+	paramvals = nvlstGetParams(o->nvlst, &pblk, NULL);
 	if(paramvals == NULL) {
 		iRet = RS_RET_ERR;
 		goto finalize_it;
 	}
 	DBGPRINTF("action param blk after actionProcessCnf:\n");
-	cnfparamsPrint(&paramblk, paramvals);
+	cnfparamsPrint(&pblk, paramvals);
 	
 	/* now find module to activate */
 finalize_it:

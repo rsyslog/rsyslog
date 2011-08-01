@@ -103,7 +103,7 @@ rsRetVal actionDoAction(action_t *pAction);
 rsRetVal actionWriteToAction(action_t *pAction);
 rsRetVal actionCallHUPHdlr(action_t *pAction);
 rsRetVal actionClassInit(void);
-rsRetVal addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStringRequest_t *pOMSR, struct cnfparamvals *queueParams, int bSuspended);
+rsRetVal addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStringRequest_t *pOMSR, struct cnfparamvals *actParams, struct cnfparamvals *queueParams, int bSuspended);
 rsRetVal actionNewScope(void);
 rsRetVal actionRestoreScope(void);
 rsRetVal activateActions(void);
