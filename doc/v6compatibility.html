@@ -76,6 +76,10 @@ to check for those cases as this means log data is potentially lost.
 Please note that
 the root problem is the same for earlier versions as well. With them, it was just harder
 to spot why things went wrong (and if at all).
+<h2>Default Batch Sizes</h2>
+<p>Due to their positive effect on performance and comparatively low overhead,
+default batch sizes have been increased. Starting with 6.3.4, the action queues
+have a default batch size of 128 messages.
 <h2>outchannels</h2>
 <p>Outchannels are a to-be-removed feature of rsyslog, at least as far as the config
 syntax is concerned. Nevertheless, v6 still supports it, but a new syntax is required

@@ -363,7 +363,7 @@ actionConstructFinalize(action_t *pThis, struct cnfparamvals *queueParams)
 		snprintf((char*) pszQName, sizeof(pszQName)/sizeof(uchar), "action %d queue", iActionNbr);
 	} else {
 		ustrncpy(pszQName, pThis->pszName, sizeof(pszQName));
-		pszQName[63] = '\0'; /* to be on the save side */
+		pszQName[sizeof(pszQName)-1] = '\0'; /* to be on the save side */
 	}
 
 	/* now check if we can run the action in "firehose mode" during stage one of 
@@ -409,20 +409,20 @@ actionConstructFinalize(action_t *pThis, struct cnfparamvals *queueParams)
 	CHKiRet(qqueueConstruct(&pThis->pQueue, cs.ActionQueType, 1, cs.iActionQueueSize,
 					(rsRetVal (*)(void*, batch_t*, int*))processBatchMain));
 	obj.SetName((obj_t*) pThis->pQueue, pszQName);
-
-	/* ... set some properties ... */
-#	define setQPROP(func, directive, data) \
-	CHKiRet_Hdlr(func(pThis->pQueue, data)) { \
-		errmsg.LogError(0, NO_ERRCODE, "Invalid " #directive ", error %d. Ignored, running with default setting", iRet); \
-	}
-#	define setQPROPstr(func, directive, data) \
-	CHKiRet_Hdlr(func(pThis->pQueue, data, (data == NULL)? 0 : strlen((char*) data))) { \
-		errmsg.LogError(0, NO_ERRCODE, "Invalid " #directive ", error %d. Ignored, running with default setting", iRet); \
-	}
-
 	qqueueSetpUsr(pThis->pQueue, pThis);
-	if(queueParams == NULL) {
-		/* use legacy params */
+
+	if(queueParams == NULL) { /* use legacy params? */
+		/* ... set some properties ... */
+#		define setQPROP(func, directive, data) \
+		CHKiRet_Hdlr(func(pThis->pQueue, data)) { \
+			errmsg.LogError(0, NO_ERRCODE, "Invalid " #directive ", \
+				error %d. Ignored, running with default setting", iRet); \
+		}
+#		define setQPROPstr(func, directive, data) \
+		CHKiRet_Hdlr(func(pThis->pQueue, data, (data == NULL)? 0 : strlen((char*) data))) { \
+			errmsg.LogError(0, NO_ERRCODE, "Invalid " #directive ", \
+				error %d. Ignored, running with default setting", iRet); \
+		}
 		setQPROP(qqueueSetsizeOnDiskMax, "$ActionQueueMaxDiskSpace", cs.iActionQueMaxDiskSpace);
 		setQPROP(qqueueSetiDeqBatchSize, "$ActionQueueDequeueBatchSize", cs.iActionQueueDeqBatchSize);
 		setQPROP(qqueueSetMaxFileSize, "$ActionQueueFileSize", cs.iActionQueMaxFileSize);
@@ -444,6 +444,7 @@ actionConstructFinalize(action_t *pThis, struct cnfparamvals *queueParams)
 		setQPROP(qqueueSetiDeqtWinToHr,    "$ActionQueueDequeueTimeEnd", cs.iActionQueueDeqtWinToHr);
 	} else {
 		/* we have v6-style config params */
+		qqueueSetDefaultsActionQueue(pThis->pQueue);
 		qqueueApplyCnfParam(pThis->pQueue, queueParams);
 	}
 
