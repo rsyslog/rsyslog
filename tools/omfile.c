@@ -938,14 +938,13 @@ CODESTARTparseSelectorAct
 		++p; /* eat '?' */
 		CHKiRet(cflineParseFileName(p, fname, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS,
 				               (pszFileDfltTplName == NULL) ? (uchar*)"RSYSLOG_FileFormat" : pszFileDfltTplName));
+		pData->f_fname = ustrdup(fname);
+		pData->bDynamicName = 1;
+		pData->iCurrElt = -1;		  /* no current element */
 		/* "filename" is actually a template name, we need this as string 1. So let's add it
 		 * to the pOMSR. -- rgerhards, 2007-07-27
 		 */
 		CHKiRet(OMSRsetEntry(*ppOMSR, 1, ustrdup(pData->f_fname), OMSR_NO_RQD_TPL_OPTS));
-
-		pData->f_fname = ustrdup(fname);
-		pData->bDynamicName = 1;
-		pData->iCurrElt = -1;		  /* no current element */
 		/* we now allocate the cache table */
 		CHKmalloc(pData->dynCache = (dynaFileCacheEntry**)
 				calloc(cs.iDynaFileCacheSize, sizeof(dynaFileCacheEntry*)));
