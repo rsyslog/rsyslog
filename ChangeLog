@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 6.3.4  [DEVEL] (rgerhards), 2011-07-??
+Version 6.3.4  [DEVEL] (rgerhards), 2011-08-02
 - added support for action() config object
   * in rsyslog core engine
   * in omfile
