@@ -855,6 +855,9 @@ Version 4.7.0  [v4-devel] (rgerhards), 2010-04-14
   Thanks for varmojfekoj for pointing me at this bug.
 - imported changes from 4.5.6 and below
 ---------------------------------------------------------------------------
+Version 4.6.8  [v4-stable] (rgerhards), 2011-??-??
+- bugfix: potential misadressing in property replacer
+---------------------------------------------------------------------------
 Version 4.6.7  [v4-stable] (rgerhards), 2011-07-11
 - added support for the ":omusrmsg:" syntax in configuring user messages
 - added support for the ":omfile:" syntax in configuring user messages
@@ -1560,6 +1563,7 @@ Version 3.22.4 [v3-stable] (rgerhards), 2010-??-??
   offset
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=271
 - improved some code based on clang static analyzer results
+- bugfix: potential misadressing in property replacer
 ---------------------------------------------------------------------------
 Version 3.22.3 [v3-stable] (rgerhards), 2010-11-24
 - bugfix(important): problem in TLS handling could cause rsyslog to loop
