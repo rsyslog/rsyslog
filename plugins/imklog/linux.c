@@ -156,7 +156,8 @@ static enum LOGSRC GetKernelLogSrc(modConfData_t *pModConf)
 		return(none);
 	}
 
-	imklogLogIntMsg(LOG_INFO, "imklog %s, log source = %s started.", VERSION, GetPath(pModConf));
+	imklogLogIntMsg(LOG_INFO, "imklog %s, log source = %s, fd = %d started.",
+		VERSION, GetPath(pModConf), kmsg);
 	return(proc);
 }
 
@@ -532,7 +533,8 @@ static void LogProcLine(modConfData_t *pModConf)
 	if ( (rdcnt = read(kmsg, log_buffer, sizeof(log_buffer)-1)) < 0 ) {
 		if ( errno == EINTR )
 			return;
-		imklogLogIntMsg(LOG_ERR, "Cannot read proc file system: %d - %s.", errno, strerror(errno));
+		imklogLogIntMsg(LOG_ERR, "Cannot read proc file system: %d - %s "
+			"(fd %d)", errno, strerror(errno), kmsg);
 	} else {
 		LogLine(pModConf, log_buffer, rdcnt);
         }
