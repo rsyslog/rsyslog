@@ -1,6 +1,6 @@
 /* pmaixforwardedfrom.c
  *
- * this detects logs sent by Cisco devices that mangle their syslog output when you tell them to log by name by adding ' :' between the name and the %XXX-X-XXXXXXX: tag
+ * this cleans up messages forwarded from AIX
  * 
  * instead of actually parsing the message, this modifies the message and then falls through to allow a later parser to handle the now modified message
  *
