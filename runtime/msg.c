@@ -2868,6 +2868,7 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 		}
 	}
 
+dbgprintf("prop repl 4, pRes='%s', len %d\n", pRes, bufLen);
 	/* Take care of spurious characters to make the property safe
 	 * for a path definition
 	 */
@@ -2945,7 +2946,13 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 		}
 		
 		/* check for "." and ".." (note the parenthesis in the if condition!) */
-		if((*pRes == '.') && (*(pRes + 1) == '\0' || (*(pRes + 1) == '.' && *(pRes + 2) == '\0'))) {
+		if(*pRes == '\0') {
+			if(*pbMustBeFreed == 1)
+				free(pRes);
+			pRes = UCHAR_CONSTANT("_");
+			bufLen = 1;
+			*pbMustBeFreed = 0;
+		} else if((*pRes == '.') && (*(pRes + 1) == '\0' || (*(pRes + 1) == '.' && *(pRes + 2) == '\0'))) {
 			uchar *pTmp = pRes;
 
 			if(*(pRes + 1) == '\0')
@@ -2954,12 +2961,6 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 				pRes = UCHAR_CONSTANT("_.");;
 			if(*pbMustBeFreed == 1)
 				free(pTmp);
-			*pbMustBeFreed = 0;
-		} else if(*pRes == '\0') {
-			if(*pbMustBeFreed == 1)
-				free(pRes);
-			pRes = UCHAR_CONSTANT("_");
-			bufLen = 1;
 			*pbMustBeFreed = 0;
 		}
 	}
@@ -3032,6 +3033,7 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 		bufLen = ustrlen(pRes);
 	*pPropLen = bufLen;
 
+dbgprintf("end prop repl, pRes='%s', len %d\n", pRes, bufLen);
 	ENDfunc
 	return(pRes);
 }
