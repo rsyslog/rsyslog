@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
-Version 6.3.5  [DEVEL] (al), 2011-??-??
+Version 6.3.5  [DEVEL] (rgerhards/al), 2011-??-??
+- imudp&imtcp now report error if no listener at all was defined
+  Thanks to Marcin for suggesting this error message.
 - bugfix: potential misadressing in property replacer
 ---------------------------------------------------------------------------
 Version 6.3.4  [DEVEL] (rgerhards), 2011-08-02

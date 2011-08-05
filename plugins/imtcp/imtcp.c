@@ -332,6 +332,11 @@ CODESTARTcheckCnf
 	for(inst = pModConf->root ; inst != NULL ; inst = inst->next) {
 		std_checkRuleset(pModConf, inst);
 	}
+	if(pModConf->root == NULL) {
+		errmsg.LogError(0, RS_RET_NO_LISTNERS , "imtcp: module loaded, but "
+				"no listeners defined - no input will be gathered");
+		iRet = RS_RET_NO_LISTNERS;
+	}
 ENDcheckCnf
 
 
