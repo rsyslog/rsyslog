@@ -4,6 +4,7 @@ Version 3.22.4 [v3-stable] (rgerhards), 2010-??-??
   offset
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=271
 - improved some code based on clang static analyzer results
+- bugfix: potential misadressing in property replacer
 ---------------------------------------------------------------------------
 Version 3.22.3 [v3-stable] (rgerhards), 2010-11-24
 - bugfix(important): problem in TLS handling could cause rsyslog to loop

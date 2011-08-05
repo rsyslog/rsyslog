@@ -2314,7 +2314,12 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 		}
 		
 		/* check for "." and ".." (note the parenthesis in the if condition!) */
-		if((*pRes == '.') && (*(pRes + 1) == '\0' || (*(pRes + 1) == '.' && *(pRes + 2) == '\0'))) {
+		if(*pRes == '\0') {
+			if(*pbMustBeFreed == 1)
+				free(pRes);
+			pRes = "_";
+			*pbMustBeFreed = 0;
+		} else if((*pRes == '.') && (*(pRes + 1) == '\0' || (*(pRes + 1) == '.' && *(pRes + 2) == '\0'))) {
 			char *pTmp = pRes;
 
 			if(*(pRes + 1) == '\0')
@@ -2324,12 +2329,7 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			if(*pbMustBeFreed == 1)
 				free(pTmp);
 			*pbMustBeFreed = 0;
-		} else if(*pRes == '\0') {
-			if(*pbMustBeFreed == 1)
-				free(pRes);
-			pRes = "_";
-			*pbMustBeFreed = 0;
-		}
+		} 
 	}
 
 	/* Now drop last LF if present (pls note that this must not be done
