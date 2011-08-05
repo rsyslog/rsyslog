@@ -672,7 +672,7 @@ CODESTARTactivateCnfPrePrivDrop
 	}
 	/* if we could not set up any listners, there is no point in running... */
 	if(udpLstnSocks == NULL) {
-		errmsg.LogError(errno, NO_ERRCODE, "imudp: no listeners could be started, "
+		errmsg.LogError(0, NO_ERRCODE, "imudp: no listeners could be started, "
 				"input not activated.\n");
 		ABORT_FINALIZE(RS_RET_NO_RUN);
 	}
