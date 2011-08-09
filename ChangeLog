@@ -1,5 +1,8 @@
 ---------------------------------------------------------------------------
 Version 5.9.3  [V5-DEVEL] (al), 2011-??-??
+- added capability to emit config error location info for warnings 
+  otherwise, omusrmsg's warning about new config format was not
+  accompanied by problem location.
 - bugfix: potential misadressing in property replacer
 ---------------------------------------------------------------------------
 Version 5.9.2  [V5-DEVEL] (rgerhards), 2011-07-11

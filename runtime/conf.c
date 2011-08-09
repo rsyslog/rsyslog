@@ -403,6 +403,7 @@ processConfFile(uchar *pConfFile)
 	uchar cbuf[CFGLNSIZ];
 	uchar *cline;
 	int i;
+	rsRetVal localRet;
 	int bHadAnError = 0;
 	uchar *pszOrgLine = NULL;
 	size_t lenLine;
@@ -461,16 +462,20 @@ processConfFile(uchar *pConfFile)
 		/* we now have the complete line, and are positioned at the first non-whitespace
 		 * character. So let's process it
 		 */
-		if(cfline(cbuf, &pCurrRule) != RS_RET_OK) {
+		if((localRet = cfline(cbuf, &pCurrRule)) != RS_RET_OK) {
 			/* we log a message, but otherwise ignore the error. After all, the next
 			 * line can be correct.  -- rgerhards, 2007-08-02
 			 */
 			uchar szErrLoc[MAXFNAME + 64];
-			dbgprintf("config line NOT successfully processed\n");
+			if(localRet != RS_RET_OK_WARN) {
+				dbgprintf("config line NOT successfully processed\n");
+				bHadAnError = 1;
+			}
 			snprintf((char*)szErrLoc, sizeof(szErrLoc) / sizeof(uchar),
 				 "%s, line %d", pConfFile, iLnNbr);
-			errmsg.LogError(0, NO_ERRCODE, "the last error occured in %s:\"%s\"", (char*)szErrLoc, (char*)pszOrgLine);
-			bHadAnError = 1;
+			errmsg.LogError(0, NO_ERRCODE, "the last %s occured in %s:\"%s\"",
+				(localRet == RS_RET_OK_WARN) ? "warning" : "error",
+				(char*)szErrLoc, (char*)pszOrgLine);
 		}
 	}
 
@@ -1079,6 +1084,7 @@ static rsRetVal cflineDoAction(uchar **p, action_t **ppAction)
 	omodStringRequest_t *pOMSR;
 	action_t *pAction = NULL;
 	void *pModData;
+	int bHadWarning = 0;
 
 	ASSERT(p != NULL);
 	ASSERT(ppAction != NULL);
@@ -1094,6 +1100,10 @@ static rsRetVal cflineDoAction(uchar **p, action_t **ppAction)
 		pOMSR = NULL;
 		iRet = pMod->mod.om.parseSelectorAct(p, &pModData, &pOMSR);
 		dbgprintf("tried selector action for %s: %d\n", module.GetName(pMod), iRet);
+		if(iRet == RS_RET_OK_WARN) {
+			bHadWarning = 1;
+			iRet = RS_RET_OK;
+		}
 		if(iRet == RS_RET_OK || iRet == RS_RET_SUSPENDED) {
 			if((iRet = addAction(&pAction, pMod, pModData, pOMSR, (iRet == RS_RET_SUSPENDED)? 1 : 0)) == RS_RET_OK) {
 				/* now check if the module is compatible with select features */
@@ -1122,6 +1132,8 @@ static rsRetVal cflineDoAction(uchar **p, action_t **ppAction)
 	}
 
 	*ppAction = pAction;
+	if(iRet == RS_RET_OK && bHadWarning)
+		iRet = RS_RET_OK_WARN;
 	RETiRet;
 }
 
@@ -1136,6 +1148,8 @@ cflineClassic(uchar *p, rule_t **ppRule)
 {
 	DEFiRet;
 	action_t *pAction;
+	rsRetVal localRet;
+	int bHadWarning = 0;
 
 	/* lines starting with '&' have no new filters and just add
 	 * new actions to the currently processed selector.
@@ -1162,10 +1176,17 @@ cflineClassic(uchar *p, rule_t **ppRule)
 		CHKiRet(cflineDoFilter(&p, *ppRule)); /* pull filters */
 	}
 
-	CHKiRet(cflineDoAction(&p, &pAction));
+	localRet = cflineDoAction(&p, &pAction);
+	if(localRet == RS_RET_OK_WARN) {
+		bHadWarning = 1;
+	} else {
+		CHKiRet(localRet);
+	}
 	CHKiRet(llAppend(&(*ppRule)->llActList,  NULL, (void*) pAction));
 
 finalize_it:
+	if(iRet == RS_RET_OK && bHadWarning)
+		iRet = RS_RET_OK_WARN;
 	RETiRet;
 }
 
