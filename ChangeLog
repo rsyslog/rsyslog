@@ -80,6 +80,9 @@ Version 4.7.0  [v4-devel] (rgerhards), 2010-04-14
 ---------------------------------------------------------------------------
 Version 4.6.8  [v4-stable] (rgerhards), 2011-??-??
 - bugfix: potential misadressing in property replacer
+- bugfix: memcpy overflow can occur in allowed sender checkig
+  if a name is resolved to IPv4-mapped-on-IPv6 address
+  Found by Ismail Dönmez at suse
 ---------------------------------------------------------------------------
 Version 4.6.7  [v4-stable] (rgerhards), 2011-07-11
 - added support for the ":omusrmsg:" syntax in configuring user messages
