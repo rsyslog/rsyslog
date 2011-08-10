@@ -722,7 +722,7 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 						SIN(allowIP.addr.NetAddr)->sin_port   = 0;
 						memcpy(&(SIN(allowIP.addr.NetAddr)->sin_addr.s_addr),
 							&(SIN6(res->ai_addr)->sin6_addr.s6_addr32[3]),
-							sizeof (struct sockaddr_in));
+							sizeof (in_addr_t));
 
 						if((iRet = AddAllowedSenderEntry(ppRoot, ppLast, &allowIP,
 								iSignificantBits))
