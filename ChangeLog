@@ -1,6 +1,6 @@
 ---------------------------------------------------------------------------
 Version 5.8.5  [V5-stable] (al), 2011-??-??
-- bugfix: The NULL-Byte for the syslogtag was not copied in MsgDup (msg.c)
+- bugfix: The NUL-Byte for the syslogtag was not copied in MsgDup (msg.c)
 ---------------------------------------------------------------------------
 Version 5.8.4  [V5-stable] (al), 2011-08-10
 - bugfix: potential misadressing in property replacer
