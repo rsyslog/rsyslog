@@ -273,6 +273,7 @@ ENDdoAction
 BEGINparseSelectorAct
 	uchar *q;
 	int i;
+	int bHadWarning = 0;
 CODESTARTparseSelectorAct
 CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	   /* User names must begin with a gnu e-regex:
@@ -290,6 +291,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 			   "action '%s' treated as ':omusrmsg:%s' - please "
 			   "change syntax, '%s' will not be supported in the future",
 			   p, p, p);
+			bHadWarning = 1;
 		}
 	}
 
@@ -325,6 +327,8 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 			!= RS_RET_OK)
 			goto finalize_it;
 	}
+	if(iRet == RS_RET_OK && bHadWarning)
+		iRet = RS_RET_OK_WARN;
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
