@@ -1697,8 +1697,11 @@ static inline void tryEmulateTAG(msg_t *pM, sbool bLockMutex)
 
 	if(bLockMutex == LOCK_MUTEX)
 		MsgLock(pM);
-	if(pM->iLenTAG > 0)
+	if(pM->iLenTAG > 0) {
+		if(bLockMutex == LOCK_MUTEX)
+			MsgUnlock(pM);
 		return; /* done, no need to emulate */
+	}
 	
 	if(getProtocolVersion(pM) == 1) {
 		if(!strcmp(getPROCID(pM, MUTEX_ALREADY_LOCKED), "-")) {
@@ -1708,7 +1711,7 @@ static inline void tryEmulateTAG(msg_t *pM, sbool bLockMutex)
 			/* now we can try to emulate */
 			lenTAG = snprintf((char*)bufTAG, CONF_TAG_MAXSIZE, "%s[%s]",
 					  getAPPNAME(pM, MUTEX_ALREADY_LOCKED), getPROCID(pM, MUTEX_ALREADY_LOCKED));
-			bufTAG[32] = '\0'; /* just to make sure... */
+			bufTAG[sizeof(bufTAG)-1] = '\0'; /* just to make sure... */
 			MsgSetTAG(pM, bufTAG, lenTAG);
 		}
 	}
