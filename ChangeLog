@@ -6,6 +6,7 @@ Version 5.9.3  [V5-DEVEL] (al), 2011-??-??
 - bugfix: potential misadressing in property replacer
 - bugfix: MSGID corruption in RFC5424 parser under some circumstances
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=275
+- bugfix: The NUL-Byte for the syslogtag was not copied in MsgDup (msg.c)
 ---------------------------------------------------------------------------
 Version 5.9.2  [V5-DEVEL] (rgerhards), 2011-07-11
 - systemd support: set stdout/stderr to null - thx to Lennart for the patch
@@ -79,7 +80,10 @@ Version 5.9.0  [V5-DEVEL] (rgerhards), 2011-06-08
   affected directive was: $ActionExecOnlyWhenPreviousIsSuspended on
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=236
 ---------------------------------------------------------------------------
-Version 5.8.4  [V5-stable] (al), 2011-??-??
+Version 5.8.5  [V5-stable] (al), 2011-??-??
+- bugfix: The NUL-Byte for the syslogtag was not copied in MsgDup (msg.c)
+---------------------------------------------------------------------------
+Version 5.8.4  [V5-stable] (al), 2011-08-10
 - bugfix: potential misadressing in property replacer
 - bugfix: memcpy overflow can occur in allowed sender checkig
   if a name is resolved to IPv4-mapped-on-IPv6 address
