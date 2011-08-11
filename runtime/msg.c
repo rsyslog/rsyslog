@@ -975,7 +975,7 @@ msg_t* MsgDup(msg_t* pOld)
 	}
 	if(pOld->iLenTAG > 0) {
 		if(pOld->iLenTAG < CONF_TAG_BUFSIZE) {
-			memcpy(pNew->TAG.szBuf, pOld->TAG.szBuf, pOld->iLenTAG);
+			memcpy(pNew->TAG.szBuf, pOld->TAG.szBuf, pOld->iLenTAG + 1);
 		} else {
 			if((pNew->TAG.pszTAG = srUtilStrDup(pOld->TAG.pszTAG, pOld->iLenTAG)) == NULL) {
 				msgDestruct(&pNew);
