@@ -83,6 +83,7 @@ Version 4.6.8  [v4-stable] (rgerhards), 2011-??-??
 - bugfix: memcpy overflow can occur in allowed sender checkig
   if a name is resolved to IPv4-mapped-on-IPv6 address
   Found by Ismail Dönmez at suse
+- bugfix: The NUL-Byte for the syslogtag was not copied in MsgDup (msg.c)
 ---------------------------------------------------------------------------
 Version 4.6.7  [v4-stable] (rgerhards), 2011-07-11
 - added support for the ":omusrmsg:" syntax in configuring user messages
