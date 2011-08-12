@@ -1661,6 +1661,8 @@ void MsgSetTAG(msg_t *pMsg, uchar* pszBuf, size_t lenBuf)
 	uchar *pBuf;
 	assert(pMsg != NULL);
 
+dbgprintf("MsgSetTAG in: len %d, pszBuf: %s\n", lenBuf, pszBuf);
+
 	freeTAG(pMsg);
 
 	pMsg->iLenTAG = lenBuf;
@@ -1679,6 +1681,8 @@ void MsgSetTAG(msg_t *pMsg, uchar* pszBuf, size_t lenBuf)
 
 	memcpy(pBuf, pszBuf, pMsg->iLenTAG);
 	pBuf[pMsg->iLenTAG] = '\0'; /* this also works with truncation! */
+
+dbgprintf("MsgSetTAG exit: pMsg->iLenTAG %d, pMsg->TAG.szBuf: %s\n", pMsg->iLenTAG, pMsg->TAG.szBuf);
 }
 
 
@@ -1737,6 +1741,7 @@ getTAG(msg_t *pM, uchar **ppBuf, int *piLen)
 			*piLen = pM->iLenTAG;
 		}
 	}
+dbgprintf("getTAG: len %d, buf '%s'\n", *piLen, *ppBuf);
 }
 
 
