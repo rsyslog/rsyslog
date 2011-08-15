@@ -669,6 +669,40 @@ AC_SUBST(SNMP_CFLAGS)
 AC_SUBST(SNMP_LIBS)
 
 
+# elasticsearch support
+AC_ARG_ENABLE(elasticsearch,
+        [AS_HELP_STRING([--enable-elasticsearch],[Enable elasticsearch output module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_elasticsearch="yes" ;;
+          no) enable_elasticsearch="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-elasticsearch) ;;
+         esac],
+        [enable_elasticsearch=no]
+)
+if test "x$enable_elasticsearch" = "xyes"; then
+  AC_CHECK_PROG(
+    [HAVE_CURL_CONFIG],
+    [curl-config],
+    [yes],,,
+  )
+  if test "x${HAVE_CURL_CONFIG}" != "xyes"; then
+    AC_MSG_FAILURE([curl-config not found in PATH])
+  fi
+  AC_CHECK_LIB(
+    [curl],
+    [curl_global_init],
+    [CURL_CFLAGS="`curl-config --cflags`"
+      CURL_LIBS="`curl-config --libs`"
+    ],
+    [AC_MSG_FAILURE([curl library is missing])],
+    [`curl-config --libs --cflags`]
+  )
+fi
+AM_CONDITIONAL(ENABLE_ELASTICSEARCH, test x$enable_elasticsearch = xyes)
+AC_SUBST(CURL_CFLAGS)
+AC_SUBST(CURL_LIBS)
+
+
 # GnuTLS support
 AC_ARG_ENABLE(gnutls,
         [AS_HELP_STRING([--enable-gnutls],[Enable GNU TLS support @<:@default=no@:>@])],
@@ -1205,6 +1239,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omsnmp/Makefile \
 		plugins/omoracle/Makefile \
 		plugins/omudpspoof/Makefile \
+		plugins/omelasticsearch/Makefile \
 		plugins/sm_cust_bindcdr/Makefile \
 		plugins/mmsnmptrapd/Makefile \
 		plugins/cust1/Makefile \
@@ -1239,6 +1274,7 @@ echo "    Mail support enabled:                     $enable_mail"
 echo "    omprog module will be compiled:           $enable_omprog"
 echo "    omstdout module will be compiled:         $enable_omstdout"
 echo "    omhdfs module will be compiled:           $enable_omhdfs"
+echo "    omelasticsearch module will be compiled:  $enable_elasticsearch"
 echo "    omruleset module will be compiled:        $enable_omruleset"
 echo "    omdbalerting module will be compiled:     $enable_omdbalerting"
 echo "    omudpspoof module will be compiled:       $enable_omudpspoof"
