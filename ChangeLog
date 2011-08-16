@@ -80,7 +80,9 @@ Version 5.9.0  [V5-DEVEL] (rgerhards), 2011-06-08
   affected directive was: $ActionExecOnlyWhenPreviousIsSuspended on
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=236
 ---------------------------------------------------------------------------
-Version 5.8.5  [V5-stable] (al), 2011-??-??
+Version 5.8.5  [V5-stable] (rgerhards/al), 2011-??-??
+- bugfix: potential hang condition during tag emulation
+- bugfix: too-early string termination during tag emulation
 - bugfix: The NUL-Byte for the syslogtag was not copied in MsgDup (msg.c)
 ---------------------------------------------------------------------------
 Version 5.8.4  [V5-stable] (al), 2011-08-10
