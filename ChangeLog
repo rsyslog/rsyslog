@@ -84,6 +84,9 @@ Version 5.8.5  [V5-stable] (rgerhards/al), 2011-??-??
 - bugfix: potential hang condition during tag emulation
 - bugfix: too-early string termination during tag emulation
 - bugfix: The NUL-Byte for the syslogtag was not copied in MsgDup (msg.c)
+- bugfix: fixed incorrect state handling for Discard Action (transactions)
+  Note: This caused all messages in a batch to be set to COMMITTED, 
+  even if they were discarded. 
 ---------------------------------------------------------------------------
 Version 5.8.4  [V5-stable] (al), 2011-08-10
 - bugfix: potential misadressing in property replacer

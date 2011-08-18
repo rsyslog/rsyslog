@@ -985,13 +985,17 @@ dbgprintf("XXXXX:     tryDoAction %p, pnElem %d, nElem %d\n", pAction, *pnElem, 
 				/* mark messages as committed */
 				while(iCommittedUpTo <= i) {
 					pBatch->pElem[iCommittedUpTo].bPrevWasSuspended = 0; /* we had success! */
-					pBatch->pElem[iCommittedUpTo++].state = BATCH_STATE_COMM;
+					batchSetElemState(pBatch, iCommittedUpTo, BATCH_STATE_COMM);
+					++iCommittedUpTo;
+					//pBatch->pElem[iCommittedUpTo++].state = BATCH_STATE_COMM;
 				}
 			} else if(localRet == RS_RET_PREVIOUS_COMMITTED) {
 				/* mark messages as committed */
 				while(iCommittedUpTo < i) {
 					pBatch->pElem[iCommittedUpTo].bPrevWasSuspended = 0; /* we had success! */
-					pBatch->pElem[iCommittedUpTo++].state = BATCH_STATE_COMM;
+					batchSetElemState(pBatch, iCommittedUpTo, BATCH_STATE_COMM);
+					++iCommittedUpTo;
+					//pBatch->pElem[iCommittedUpTo++].state = BATCH_STATE_COMM;
 				}
 				pBatch->pElem[i].state = BATCH_STATE_SUB;
 			} else if(localRet == RS_RET_DEFER_COMMIT) {
@@ -1014,6 +1018,15 @@ finalize_it:
 		pBatch->iDoneUpTo = iCommittedUpTo;
 	}
 	RETiRet;
+}
+
+/* debug aid */
+static void displayBatchState(batch_t *pBatch)
+{
+	int i;
+	for(i = 0 ; i < pBatch->nElem ; ++i) {
+		dbgprintf("XXXXX: displayBatchState2 %p[%d]: %d\n", pBatch, i, pBatch->pElem[i].state);
+	}
 }
 
 
