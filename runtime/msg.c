@@ -1653,6 +1653,8 @@ void MsgSetTAG(msg_t *pMsg, uchar* pszBuf, size_t lenBuf)
 	uchar *pBuf;
 	assert(pMsg != NULL);
 
+dbgprintf("MsgSetTAG in: len %d, pszBuf: %s\n", lenBuf, pszBuf);
+
 	freeTAG(pMsg);
 
 	pMsg->iLenTAG = lenBuf;
@@ -1671,6 +1673,8 @@ void MsgSetTAG(msg_t *pMsg, uchar* pszBuf, size_t lenBuf)
 
 	memcpy(pBuf, pszBuf, pMsg->iLenTAG);
 	pBuf[pMsg->iLenTAG] = '\0'; /* this also works with truncation! */
+
+dbgprintf("MsgSetTAG exit: pMsg->iLenTAG %d, pMsg->TAG.szBuf: %s\n", pMsg->iLenTAG, pMsg->TAG.szBuf);
 }
 
 
@@ -1689,8 +1693,11 @@ static inline void tryEmulateTAG(msg_t *pM, sbool bLockMutex)
 
 	if(bLockMutex == LOCK_MUTEX)
 		MsgLock(pM);
-	if(pM->iLenTAG > 0)
+	if(pM->iLenTAG > 0) {
+		if(bLockMutex == LOCK_MUTEX)
+			MsgUnlock(pM);
 		return; /* done, no need to emulate */
+	}
 	
 	if(getProtocolVersion(pM) == 1) {
 		if(!strcmp(getPROCID(pM, MUTEX_ALREADY_LOCKED), "-")) {
@@ -1700,7 +1707,7 @@ static inline void tryEmulateTAG(msg_t *pM, sbool bLockMutex)
 			/* now we can try to emulate */
 			lenTAG = snprintf((char*)bufTAG, CONF_TAG_MAXSIZE, "%s[%s]",
 					  getAPPNAME(pM, MUTEX_ALREADY_LOCKED), getPROCID(pM, MUTEX_ALREADY_LOCKED));
-			bufTAG[32] = '\0'; /* just to make sure... */
+			bufTAG[sizeof(bufTAG)-1] = '\0'; /* just to make sure... */
 			MsgSetTAG(pM, bufTAG, lenTAG);
 		}
 	}
@@ -1726,6 +1733,7 @@ getTAG(msg_t *pM, uchar **ppBuf, int *piLen)
 			*piLen = pM->iLenTAG;
 		}
 	}
+dbgprintf("getTAG: len %d, buf '%s'\n", *piLen, *ppBuf);
 }
 
 

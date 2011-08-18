@@ -93,7 +93,6 @@ static rsRetVal qDestructDisk(qqueue_t *pThis);
 #define QUEUE_CHECKPOINT	1
 #define QUEUE_NO_CHECKPOINT	0
 
-
 /* tables for interfacing with the v6 config system */
 static struct cnfparamdescr cnfpdescr[] = {
 	{ "queue.filename", eCmdHdlrGetWord, 0 },
@@ -127,6 +126,14 @@ static struct cnfparamblk pblk =
 	  cnfpdescr
 	};
 
+/* debug aid */
+static void displayBatchState(batch_t *pBatch)
+{
+	int i;
+	for(i = 0 ; i < pBatch->nElem ; ++i) {
+		dbgprintf("XXXXX: displayBatchState %p[%d]: %d\n", pBatch, i, pBatch->pElem[i].state);
+	}
+}
 
 /***********************************************************************
  * we need a private data structure, the "to-delete" list. As C does
