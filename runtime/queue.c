@@ -88,6 +88,15 @@ static rsRetVal qqueueMultiEnqObjDirect(qqueue_t *pThis, multi_submit_t *pMultiS
 #define QUEUE_CHECKPOINT	1
 #define QUEUE_NO_CHECKPOINT	0
 
+/* debug aid */
+static void displayBatchState(batch_t *pBatch)
+{
+	int i;
+	for(i = 0 ; i < pBatch->nElem ; ++i) {
+		dbgprintf("XXXXX: displayBatchState %p[%d]: %d\n", pBatch, i, pBatch->pElem[i].state);
+	}
+}
+
 /***********************************************************************
  * we need a private data structure, the "to-delete" list. As C does
  * not provide any partly private data structures, we implement this
@@ -882,6 +891,8 @@ rsRetVal qqueueEnqObjDirectBatch(qqueue_t *pThis, batch_t *pBatch)
 
 	ASSERT(pThis != NULL);
 
+dbgprintf("XXXXX: pre call consumer\n");
+displayBatchState(pBatch);
 	/* calling the consumer is quite different here than it is from a worker thread */
 	/* we need to provide the consumer's return value back to the caller because in direct
 	 * mode the consumer probably has a lot to convey (which get's lost in the other modes
@@ -892,6 +903,8 @@ rsRetVal qqueueEnqObjDirectBatch(qqueue_t *pThis, batch_t *pBatch)
 	 */
 	iRet = pThis->pConsumer(pThis->pUsr, pBatch, &pThis->bShutdownImmediate);
 
+dbgprintf("XXXXX: post call consumer\n");
+displayBatchState(pBatch);
 	RETiRet;
 }
 
