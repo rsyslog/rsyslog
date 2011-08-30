@@ -176,9 +176,8 @@ CODESTARTparse
 		 * in RFC3164...). We now receive the full size, but will modify the
 		 * outputs so that only 32 characters max are used by default.
 		 */
-dbgprintf("pmrfc3164:tag:in: lenMsg %d, p2parse: '%s'\n", lenMsg, p2parse);
 		i = 0;
-		while(lenMsg > 0 && *p2parse != ':' && *p2parse != ' ' && i < CONF_TAG_MAXSIZE) {
+		while(lenMsg > 0 && *p2parse != ':' && *p2parse != ' ' && i < CONF_TAG_MAXSIZE - 2) {
 			bufParseTAG[i++] = *p2parse++;
 			--lenMsg;
 		}
@@ -192,7 +191,6 @@ dbgprintf("pmrfc3164:tag:in: lenMsg %d, p2parse: '%s'\n", lenMsg, p2parse);
 		 * is considered OK. So we do not need to check for empty TAG. -- rgerhards, 2009-06-23
 		 */
 		bufParseTAG[i] = '\0';	/* terminate string */
-dbgprintf("pmrfc3164:tag:done: lenMsg %d, i %d, bufParseTAG: '%s'\n", lenMsg, i, bufParseTAG);
 		MsgSetTAG(pMsg, bufParseTAG, i);
 	} else {/* we enter this code area when the user has instructed rsyslog NOT
 		 * to parse HOSTNAME and TAG - rgerhards, 2006-03-13
