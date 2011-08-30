@@ -282,6 +282,18 @@ Version 5.7.3  [V5-BETA] (rgerhards), 2011-02-07
 - added $LocalHostName config directive
 - bugfix: fixed build problems on some platforms
   namely those that have 32bit atomic operations but not 64 bit ones
+---------------------------------------------------------------------------
+Version 4.7.5  [v4-beta] (al), 2011-09-01
+- bugfix/security: off-by-two bug in legacy syslog parser, CVE-2011-3200
+- bugfix: potential misadressing in property replacer
+- bugfix: The NUL-Byte for the syslogtag was not copied in MsgDup (msg.c)
+---------------------------------------------------------------------------
+Version 4.7.4  [v4-beta] (rgerhards), 2011-07-11
+- added support for the ":omusrmsg:" syntax in configuring user messages
+- added support for the ":omfile:" syntax in configuring user messages
+- added $LocalHostName config directive
+- bugfix: PRI was invalid on Solaris for message from local log socket
+>>>>>>> 581daa5418548dda4c9b5438878559a1bbd4b087
 - bugfix: local hostname was pulled too-early, so that some config 
   directives (namely FQDN settings) did not have any effect
 - bugfix: imfile did duplicate messages under some circumstances
