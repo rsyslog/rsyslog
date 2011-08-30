@@ -1294,7 +1294,7 @@ int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 		 * outputs so that only 32 characters max are used by default.
 		 */
 		i = 0;
-		while(lenMsg > 0 && *p2parse != ':' && *p2parse != ' ' && i < CONF_TAG_MAXSIZE) {
+		while(lenMsg > 0 && *p2parse != ':' && *p2parse != ' ' && i < CONF_TAG_MAXSIZE - 2) {
 			bufParseTAG[i++] = *p2parse++;
 			--lenMsg;
 		}
