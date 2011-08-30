@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------
-Version 5.9.3  [V5-DEVEL] (al), 2011-??-??
+Version 5.9.3  [V5-DEVEL] (al), 2011-09-01
+- bugfix/security: off-by-two bug in legacy syslog parser, CVE-2011-3200
 - added capability to emit config error location info for warnings 
   otherwise, omusrmsg's warning about new config format was not
   accompanied by problem location.
@@ -80,7 +81,8 @@ Version 5.9.0  [V5-DEVEL] (rgerhards), 2011-06-08
   affected directive was: $ActionExecOnlyWhenPreviousIsSuspended on
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=236
 ---------------------------------------------------------------------------
-Version 5.8.5  [V5-stable] (rgerhards/al), 2011-??-??
+Version 5.8.5  [V5-stable] (rgerhards/al), 2011-09-01
+- bugfix/security: off-by-two bug in legacy syslog parser, CVE-2011-3200
 - bugfix: potential hang condition during tag emulation
 - bugfix: too-early string termination during tag emulation
 - bugfix: The NUL-Byte for the syslogtag was not copied in MsgDup (msg.c)
@@ -953,11 +955,13 @@ Version 4.7.0  [v4-devel] (rgerhards), 2010-04-14
   Thanks for varmojfekoj for pointing me at this bug.
 - imported changes from 4.5.6 and below
 ---------------------------------------------------------------------------
-Version 4.6.8  [v4-stable] (rgerhards), 2011-??-??
+Version 4.6.8  [v4-stable] (rgerhards), 2011-09-01
+- bugfix/security: off-by-two bug in legacy syslog parser, CVE-2011-3200
 - bugfix: potential misadressing in property replacer
-- bugfix: memcpy overflow can occur in allowed sender checkig
+- bugfix: memcpy overflow can occur in allowed sender checking
   if a name is resolved to IPv4-mapped-on-IPv6 address
   Found by Ismail Dönmez at suse
+- bugfix: The NUL-Byte for the syslogtag was not copied in MsgDup (msg.c)
 ---------------------------------------------------------------------------
 Version 4.6.7  [v4-stable] (rgerhards), 2011-07-11
 - added support for the ":omusrmsg:" syntax in configuring user messages
