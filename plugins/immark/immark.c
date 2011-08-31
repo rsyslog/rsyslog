@@ -87,6 +87,7 @@ CODESTARTrunInput
 		if(glbl.GetGlobalInputTermState() == 1)
 			break; /* terminate input! */
 
+		dbgprintf("immark: injecting mark message\n");
 		logmsgInternal(NO_ERRCODE, LOG_INFO, (uchar*)"-- MARK --", MARK);
 	}
 ENDrunInput

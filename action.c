@@ -966,7 +966,7 @@ tryDoAction(action_t *pAction, batch_t *pBatch, int *pnElem)
 	i = pBatch->iDoneUpTo;	/* all messages below that index are processed */
 	iElemProcessed = 0;
 	iCommittedUpTo = i;
-dbgprintf("XXXXX:     tryDoAction %p, pnElem %d, nElem %d\n", pAction, *pnElem, pBatch->nElem);
+dbgprintf("XXXXX:  tryDoAction %p, pnElem %d, nElem %d\n", pAction, *pnElem, pBatch->nElem);
 	while(iElemProcessed <= *pnElem && i < pBatch->nElem) {
 		if(*(pBatch->pbShutdownImmediate))
 			ABORT_FINALIZE(RS_RET_FORCE_TERM);
@@ -1487,7 +1487,6 @@ doSubmitToActionQNotAllMarkBatch(action_t *pAction, batch_t *pBatch)
 	time_t now = 0;
 	time_t lastAct;
 	int i;
-	int bProcessMarkMsgs = 0;
 	int bModifiedFilter;
 	sbool FilterSave[1024];
 	sbool *pFilterSave;
@@ -1501,33 +1500,32 @@ doSubmitToActionQNotAllMarkBatch(action_t *pAction, batch_t *pBatch)
 
 	bModifiedFilter = 0;
 	for(i = 0 ; i < batchNumMsgs(pBatch) ; ++i) {
+		if(!pBatch->pElem[i].bFilterOK)
+			continue;
 		pFilterSave[i] = pBatch->pElem[i].bFilterOK;
-		if(((msg_t*)(pBatch->pElem[i].pUsrp))->msgFlags & MARK) {
-			/* check if we need to write or not */
-			if(now == 0) {
-				now = datetime.GetTime(NULL); /* good time call - the only one done */
-				/* CAS loop, we write back a bit early, but that's OK... */
-				/* we use reception time, not dequeue time - this is considered more appropriate and
-				 * also faster ;) -- rgerhards, 2008-09-17 */
-				do {
-					lastAct = pAction->f_time;
-					if((now - lastAct) <  MarkInterval / 2) {
-						DBGPRINTF("action was recently called, ignoring mark message\n");
-						bProcessMarkMsgs = 0;
-					} else {
-						bProcessMarkMsgs = 1;
-					}
-				} while(ATOMIC_CAS_time_t(&pAction->f_time, lastAct,
-					((msg_t*)(pBatch->pElem[i].pUsrp))->ttGenTime, &pAction->mutCAS) == 0);
+		if(now == 0) {
+			now = datetime.GetTime(NULL); /* good time call - the only one done */
+		}
+		/* CAS loop, we write back a bit early, but that's OK... */
+		/* we use reception time, not dequeue time - this is considered more appropriate and
+		 * also faster ;) -- rgerhards, 2008-09-17 */
+		do {
+			lastAct = pAction->f_time;
+			if(((msg_t*)(pBatch->pElem[i].pUsrp))->msgFlags & MARK) {
+				if((now - lastAct) < MarkInterval / 2) {
+					pBatch->pElem[i].bFilterOK = 0;
+					bModifiedFilter = 1;
+					DBGPRINTF("action was recently called, ignoring mark message\n");
+					break; /* do not update timestamp for non-written mark messages */
+				}
 			}
-			if(bProcessMarkMsgs) {
-				pBatch->pElem[i].bFilterOK = 0;
-				bModifiedFilter = 1;
-			}
+		} while(ATOMIC_CAS_time_t(&pAction->f_time, lastAct,
+			((msg_t*)(pBatch->pElem[i].pUsrp))->ttGenTime, &pAction->mutCAS) == 0);
+		if(pBatch->pElem[i].bFilterOK) {
+			DBGPRINTF("Called action(NotAllMark), processing batch[%d] via '%s'\n",
+				  i, module.GetStateName(pAction->pMod));
 		}
 	}
-	
-	DBGPRINTF("Called action(NotAllMark), logging to %s\n", module.GetStateName(pAction->pMod));
 
 	iRet = doSubmitToActionQBatch(pAction, pBatch);
 
