@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 4.7.5  [v4-beta] (al), 2011-09-01
+Version 4.7.5  [v4-beta], 2011-09-01
 - bugfix/security: off-by-two bug in legacy syslog parser, CVE-2011-3200
 - bugfix: potential misadressing in property replacer
 - bugfix: The NUL-Byte for the syslogtag was not copied in MsgDup (msg.c)
