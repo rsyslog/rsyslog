@@ -1,6 +1,7 @@
 ---------------------------------------------------------------------------
 Version 5.8.5  [V5-stable] (rgerhards/al), 2011-09-01
 - bugfix/security: off-by-two bug in legacy syslog parser, CVE-2011-3200
+- bugfix: mark message processing did not work correctly
 - bugfix: potential hang condition during tag emulation
 - bugfix: too-early string termination during tag emulation
 - bugfix: The NUL-Byte for the syslogtag was not copied in MsgDup (msg.c)
