@@ -1,6 +1,7 @@
 ---------------------------------------------------------------------------
 Version 6.3.5  [DEVEL] (rgerhards/al), 2011-09-01
 - bugfix/security: off-by-two bug in legacy syslog parser, CVE-2011-3200
+- bugfix: mark message processing did not work correctly
 - imudp&imtcp now report error if no listener at all was defined
   Thanks to Marcin for suggesting this error message.
 - bugfix: potential misadressing in property replacer
@@ -51,6 +52,7 @@ Version 6.3.2  [DEVEL] (rgerhards), 2011-07-06
 ---------------------------------------------------------------------------
 Version 6.1.12  [BETA], 2011-09-01
 - bugfix/security: off-by-two bug in legacy syslog parser, CVE-2011-3200
+- bugfix: mark message processing did not work correctly
 - bugfix: potential misadressing in property replacer
 - bugfix: memcpy overflow can occur in allowed sender checkig
   if a name is resolved to IPv4-mapped-on-IPv6 address
@@ -353,6 +355,7 @@ Version 5.9.0  [V5-DEVEL] (rgerhards), 2011-06-08
 ---------------------------------------------------------------------------
 Version 5.8.5  [V5-stable] (rgerhards/al), 2011-09-01
 - bugfix/security: off-by-two bug in legacy syslog parser, CVE-2011-3200
+- bugfix: mark message processing did not work correctly
 - bugfix: potential hang condition during tag emulation
 - bugfix: too-early string termination during tag emulation
 - bugfix: The NUL-Byte for the syslogtag was not copied in MsgDup (msg.c)
