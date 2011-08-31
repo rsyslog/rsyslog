@@ -1,6 +1,7 @@
 ---------------------------------------------------------------------------
-Version 5.9.3  [V5-DEVEL] (al), 2011-09-01
+Version 5.9.3  [V5-DEVEL], 2011-09-01
 - bugfix/security: off-by-two bug in legacy syslog parser, CVE-2011-3200
+- bugfix: mark message processing did not work correctly
 - added capability to emit config error location info for warnings 
   otherwise, omusrmsg's warning about new config format was not
   accompanied by problem location.
