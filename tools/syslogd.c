@@ -2129,7 +2129,7 @@ static void printVersion(void)
 #else
 	printf("\t32bit Atomic operations supported:\tNo\n");
 #endif
-#ifdef	HAVE_ATOMIC_BUILTINS64
+#ifdef	HAVE_ATOMIC_BUILTINS_64BIT
 	printf("\t64bit Atomic operations supported:\tYes\n");
 #else
 	printf("\t64bit Atomic operations supported:\tNo\n");

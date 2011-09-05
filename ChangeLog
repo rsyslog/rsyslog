@@ -1,4 +1,8 @@
 ---------------------------------------------------------------------------
+Version 5.8.6  [V5-stable] (rgerhards/al), 2011-??-??
+- bugfix: rsyslogd -v always said 64 atomics were not present
+  thanks to mono_matsuko for the patch
+---------------------------------------------------------------------------
 Version 5.8.5  [V5-stable] (rgerhards/al), 2011-09-01
 - bugfix/security: off-by-two bug in legacy syslog parser, CVE-2011-3200
 - bugfix: mark message processing did not work correctly
