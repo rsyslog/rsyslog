@@ -359,7 +359,7 @@ createLogSocket(lstn_t *pLstn)
 	pLstn->fd = socket(AF_UNIX, SOCK_DGRAM, 0);
 	if(pLstn->fd < 0 || bind(pLstn->fd, (struct sockaddr *) &sunx, SUN_LEN(&sunx)) < 0 ||
 	    chmod((char*)pLstn->sockName, 0666) < 0) {
-		errmsg.LogError(errno, NO_ERRCODE, "connot create '%s'", pLstn->sockName);
+		errmsg.LogError(errno, NO_ERRCODE, "cannot create '%s'", pLstn->sockName);
 		dbgprintf("cannot create %s (%d).\n", pLstn->sockName, errno);
 		close(pLstn->fd);
 		pLstn->fd = -1;
@@ -579,8 +579,13 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 	parse++; lenMsg--; /* '>' */
 
 	if(ts == NULL) {
-		if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &parse, &lenMsg) != RS_RET_OK) {
-			DBGPRINTF("we have a problem, invalid timestamp in msg!\n");
+		if((pLstn->flags & IGNDATE)) {
+			parse += 16; /* just skip timestamp */
+			lenMsg -= 16;
+		} else {
+			if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &parse, &lenMsg) != RS_RET_OK) {
+				DBGPRINTF("we have a problem, invalid timestamp in msg!\n");
+			}
 		}
 	} else { /* if we pulled the time from the system, we need to update the message text */
 		if(lenMsg >= 16) {
@@ -603,7 +608,7 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 	/* pull tag */
 
 	i = 0;
-	while(lenMsg > 0 && *parse != ' ' && i < CONF_TAG_MAXSIZE) {
+	while(lenMsg > 0 && *parse != ' ' && i < CONF_TAG_MAXSIZE - 1) {
 		bufParseTAG[i++] = *parse++;
 		--lenMsg;
 	}

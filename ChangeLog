@@ -82,6 +82,13 @@ Version 5.9.0  [V5-DEVEL] (rgerhards), 2011-06-08
   affected directive was: $ActionExecOnlyWhenPreviousIsSuspended on
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=236
 ---------------------------------------------------------------------------
+Version 5.8.6  [V5-stable] (rgerhards/al), 2011-??-??
+- bugfix: imuxsock did no longer ignore message-provided timestamp, if
+  so configured (the *default*). Lead to no longer sub-second timestamps.
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=281
+- bugfix: rsyslogd -v always said 64 atomics were not present
+  thanks to mono_matsuko for the patch
+---------------------------------------------------------------------------
 Version 5.8.5  [V5-stable] (rgerhards/al), 2011-09-01
 - bugfix/security: off-by-two bug in legacy syslog parser, CVE-2011-3200
 - bugfix: mark message processing did not work correctly
@@ -295,7 +302,6 @@ Version 4.7.4  [v4-beta] (rgerhards), 2011-07-11
 - added support for the ":omfile:" syntax in configuring user messages
 - added $LocalHostName config directive
 - bugfix: PRI was invalid on Solaris for message from local log socket
->>>>>>> 581daa5418548dda4c9b5438878559a1bbd4b087
 - bugfix: local hostname was pulled too-early, so that some config 
   directives (namely FQDN settings) did not have any effect
 - bugfix: imfile did duplicate messages under some circumstances
