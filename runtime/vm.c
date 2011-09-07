@@ -34,12 +34,15 @@
 #include "vm.h"
 #include "sysvar.h"
 #include "stringbuf.h"
+#include "unicode-helper.h"
 
 /* static data */
 DEFobjStaticHelpers
 DEFobjCurrIf(vmstk)
 DEFobjCurrIf(var)
 DEFobjCurrIf(sysvar)
+
+static pthread_mutex_t mutGetenv; /* we need to make this global because otherwise we can not guarantee proper init! */
 
 /* ------------------------------ function registry code and structures  ------------------------------ */
 
@@ -542,6 +545,42 @@ finalize_it:
 }
 
 
+/* The getenv function. Note that we guard the OS call by a mutex, as that
+ * function is not guaranteed to be thread-safe. This implementation here is far from
+ * being optimal, at least we should cache the result. This is left TODO for
+ * a later revision.
+ * rgerhards, 2009-11-03
+ */
+static rsRetVal
+rsf_getenv(vmstk_t *pStk, int numOperands)
+{
+	DEFiRet;
+	var_t *operand1;
+	char *envResult;
+	cstr_t *pCstr;
+
+	if(numOperands != 1)
+		ABORT_FINALIZE(RS_RET_INVLD_NBR_ARGUMENTS);
+
+	/* pop args and do operaton (trivial case here...) */
+	vmstk.PopString(pStk, &operand1);
+	d_pthread_mutex_lock(&mutGetenv);
+	envResult = getenv((char*) rsCStrGetSzStr(operand1->val.pStr));
+	DBGPRINTF("rsf_getenv(): envvar '%s', return '%s'\n", rsCStrGetSzStr(operand1->val.pStr),
+		   envResult == NULL ? "(NULL)" : envResult);
+	iRet = rsCStrConstructFromszStr(&pCstr, (envResult == NULL) ? UCHAR_CONSTANT("") : (uchar*)envResult);
+	d_pthread_mutex_unlock(&mutGetenv);
+	if(iRet != RS_RET_OK)
+		FINALIZE; /* need to do this after mutex is unlocked! */
+
+	/* Store result and cleanup */
+	var.SetString(operand1, pCstr);
+	vmstk.Push(pStk, operand1);
+finalize_it:
+	RETiRet;
+}
+
+
 /* The "tolower" function, which converts its sole argument to lower case.
  * Quite honestly, currently this is primarily a test driver for me...
  * rgerhards, 2009-04-06
@@ -759,6 +798,8 @@ BEGINObjClassExit(vm, OBJ_IS_CORE_MODULE) /* class, version */
 	objRelease(sysvar, CORE_COMPONENT);
 	objRelease(var, CORE_COMPONENT);
 	objRelease(vmstk, CORE_COMPONENT);
+
+	pthread_mutex_destroy(&mutGetenv);
 ENDObjClassExit(vm)
 
 
@@ -779,6 +820,9 @@ BEGINObjClassInit(vm, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* register built-in functions // TODO: move to its own module */
 	CHKiRet(rsfrAddFunction((uchar*)"strlen",  rsf_strlen));
 	CHKiRet(rsfrAddFunction((uchar*)"tolower", rsf_tolower));
+	CHKiRet(rsfrAddFunction((uchar*)"getenv",  rsf_getenv));
+
+	pthread_mutex_init(&mutGetenv, NULL);
 
 ENDObjClassInit(vm)
 

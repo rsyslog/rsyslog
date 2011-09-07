@@ -160,6 +160,7 @@ typedef struct queue_s {
 			strm_t *pRead;  /* current file to be read */
 		} disk;
 	} tVars;
+	DEF_ATOMIC_HELPER_MUT(mutQueueSize);
 } qqueue_t;
 
 /* some symbolic constants for easier reference */

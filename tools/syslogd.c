@@ -254,11 +254,14 @@ int	bDropTrailingLF = 1; /* drop trailing LF's on reception? */
 int	iCompatibilityMode = 0;		/* version we should be compatible with; 0 means sysklogd. It is
 					   the default, so if no -c<n> option is given, we make ourselvs
 					   as compatible to sysklogd as possible. */
+#define DFLT_bLogStatusMsgs 1
+static int	bLogStatusMsgs = DFLT_bLogStatusMsgs;	/* log rsyslog start/stop/HUP messages? */
 static int	bDebugPrintTemplateList = 1;/* output template list in debug mode? */
 static int	bDebugPrintCfSysLineHandlerList = 1;/* output cfsyslinehandler list in debug mode? */
 static int	bDebugPrintModuleList = 1;/* output module list in debug mode? */
-uchar	cCCEscapeChar = '\\';/* character to be used to start an escape sequence for control chars */
+uchar	cCCEscapeChar = '#';/* character to be used to start an escape sequence for control chars */
 int 	bEscapeCCOnRcv = 1; /* escape control characters on reception: 0 - no, 1 - yes */
+int    bEscapeTab = 1; /* treat tab as escape control character: 0 - no, 1 - yes */
 static int	bErrMsgToStderr = 1; /* print error messages to stderr (in addition to everything else)? */
 int 	bReduceRepeatMsgs; /* reduce repeated message - 0 - no, 1 - yes */
 int	bActExecWhenPrevSusp; /* execute action only when previous one was suspended? */
@@ -337,12 +340,14 @@ getFIOPName(unsigned iFIOP)
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
 	cCCEscapeChar = '#';
+	bLogStatusMsgs = DFLT_bLogStatusMsgs;
 	bActExecWhenPrevSusp = 0;
 	iActExecOnceInterval = 0;
 	bDebugPrintTemplateList = 1;
 	bDebugPrintCfSysLineHandlerList = 1;
 	bDebugPrintModuleList = 1;
 	bEscapeCCOnRcv = 1; /* default is to escape control characters */
+	bEscapeTab = 1;
 	bReduceRepeatMsgs = 0;
 	free(pszMainMsgQFName);
 	pszMainMsgQFName = NULL;
@@ -371,7 +376,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 
 
 /* hardcoded standard templates (used for defaults) */
-static uchar template_DebugFormat[] = "\"Debug line with all properties:\nFROMHOST: '%FROMHOST%', fromhost-ip: '%fromhost-ip%', HOSTNAME: '%HOSTNAME%', PRI: %PRI%,\nsyslogtag '%syslogtag%', programname: '%programname%', APP-NAME: '%APP-NAME%', PROCID: '%PROCID%', MSGID: '%MSGID%',\nTIMESTAMP: '%TIMESTAMP%', STRUCTURED-DATA: '%STRUCTURED-DATA%',\nmsg: '%msg%'\nescaped msg: '%msg:::drop-cc%'\nrawmsg: '%rawmsg%'\n\n\"";
+static uchar template_DebugFormat[] = "\"Debug line with all properties:\nFROMHOST: '%FROMHOST%', fromhost-ip: '%fromhost-ip%', HOSTNAME: '%HOSTNAME%', PRI: %PRI%,\nsyslogtag '%syslogtag%', programname: '%programname%', APP-NAME: '%APP-NAME%', PROCID: '%PROCID%', MSGID: '%MSGID%',\nTIMESTAMP: '%TIMESTAMP%', STRUCTURED-DATA: '%STRUCTURED-DATA%',\nmsg: '%msg%'\nescaped msg: '%msg:::drop-cc%'\ninputname: %inputname% rawmsg: '%rawmsg%'\n\n\"";
 static uchar template_SyslogProtocol23Format[] = "\"<%PRI%>1 %TIMESTAMP:::date-rfc3339% %HOSTNAME% %APP-NAME% %PROCID% %MSGID% %STRUCTURED-DATA% %msg%\n\"";
 static uchar template_TraditionalFileFormat[] = "\"%TIMESTAMP% %HOSTNAME% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n\"";
 static uchar template_FileFormat[] = "\"%TIMESTAMP:::date-rfc3339% %HOSTNAME% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n\"";
@@ -809,7 +814,7 @@ parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int fla
 			  /* log an error? Very questionable... rgerhards, 2006-11-30 */
 			  /* decided: we do not log an error, it won't help... rger, 2007-06-21 */
 			++pData;
-		} else if(bEscapeCCOnRcv && iscntrl((int) *pData)) {
+		} else if(bEscapeCCOnRcv && iscntrl((int) *pData) && (*pData != '\t' || bEscapeTab)) {
 			/* we are configured to escape control characters. Please note
 			 * that this most probably break non-western character sets like
 			 * Japanese, Korean or Chinese. rgerhards, 2007-07-17
@@ -906,7 +911,7 @@ logmsgInternal(int iErr, int pri, uchar *msg, int flags)
 	 * permits us to process unmodified config files which otherwise contain a
 	 * supressor statement.
 	 */
-	if(((Debug || NoFork) && bErrMsgToStderr) || iConfigVerify) {
+	if(((Debug == DEBUG_FULL || NoFork) && bErrMsgToStderr) || iConfigVerify) {
 		if(LOG_PRI(pri) == LOG_ERR)
 			fprintf(stderr, "rsyslogd: %s\n", msg);
 	}
@@ -1650,10 +1655,10 @@ static void doDie(int sig)
 #	define MSG1 "DoDie called.\n"
 #	define MSG2 "DoDie called 5 times - unconditional exit\n"
 	static int iRetries = 0; /* debug aid */
-	if(Debug)
+	if(Debug == DEBUG_FULL)
 		write(1, MSG1, sizeof(MSG1) - 1);
 	if(iRetries++ == 4) {
-		if(Debug)
+		if(Debug == DEBUG_FULL)
 			write(1, MSG2, sizeof(MSG2) - 1);
 		abort();
 	}
@@ -1719,7 +1724,7 @@ die(int sig)
 	thrdTerminateAll();
 
 	/* and THEN send the termination log message (see long comment above) */
-	if (sig) {
+	if(sig && bLogStatusMsgs) {
 		(void) snprintf(buf, sizeof(buf) / sizeof(char),
 		 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
 		 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"]" " exiting on signal %d.",
@@ -1840,6 +1845,9 @@ static rsRetVal setMaxFiles(void __attribute__((unused)) *pVal, int iFiles)
 				iFiles, errStr, (long) maxFiles.rlim_max);
 		ABORT_FINALIZE(RS_RET_ERR_RLIM_NOFILE);
 	}
+#ifdef USE_UNLIMITED_SELECT
+	glbl.SetFdSetSize(howmany(iFiles, __NFDBITS) * sizeof (fd_mask));
+#endif
 	DBGPRINTF("Max number of files set to %d [kernel max %ld].\n", iFiles, (long) maxFiles.rlim_max);
 
 finalize_it:
@@ -2294,6 +2302,9 @@ init()
 
 	legacyOptsHook();
 
+	/* re-generate local host name property, as the config may have changed our FQDN settings */
+	glbl.GenerateLocalHostNameProperty();
+
 	/* we are now done with reading the configuration. This is the right time to
 	 * free some objects that were just needed for loading it. rgerhards 2005-10-19
 	 */
@@ -2413,11 +2424,13 @@ init()
 	/* we now generate the startup message. It now includes everything to
 	 * identify this instance. -- rgerhards, 2005-08-17
 	 */
-	snprintf(bufStartUpMsg, sizeof(bufStartUpMsg)/sizeof(char), 
-		 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
-		 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"] (re)start",
-		 (int) myPid);
-	logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)bufStartUpMsg, 0);
+	if(bLogStatusMsgs) {
+		snprintf(bufStartUpMsg, sizeof(bufStartUpMsg)/sizeof(char), 
+			 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
+			 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"] (re)start",
+			 (int) myPid);
+		logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)bufStartUpMsg, 0);
+	}
 
 	memset(&sigAct, 0, sizeof (sigAct));
 	sigemptyset(&sigAct.sa_mask);
@@ -2444,6 +2457,25 @@ setDefaultRuleset(void __attribute__((unused)) *pVal, uchar *pszName)
 
 finalize_it:
 	free(pszName); /* no longer needed */
+	RETiRet;
+}
+
+
+
+/* Put the rsyslog main thread to sleep for n seconds. This was introduced as 
+ * a quick and dirty workaround for a privilege drop race in regard to listener
+ * startup, which itself was a result of the not-yet-done proper coding of
+ * privilege drop code (quite some effort). It may be useful for other occasions, too.
+ * is specified).
+ * rgerhards, 2009-06-12
+ */
+static rsRetVal
+putToSleep(void __attribute__((unused)) *pVal, int iNewVal)
+{
+	DEFiRet;
+	DBGPRINTF("rsyslog main thread put to sleep via $sleep %d directive...\n", iNewVal);
+	srSleep(iNewVal, 0);
+	DBGPRINTF("rsyslog main thread continues after $sleep %d\n", iNewVal);
 	RETiRet;
 }
 
@@ -2566,12 +2598,14 @@ doHUP(void)
 {
 	char buf[512];
 
-	snprintf(buf, sizeof(buf) / sizeof(char),
-		 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION
-		 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"] rsyslogd was HUPed, type '%s'.",
-		 (int) myPid, glbl.GetHUPisRestart() ? "restart" : "lightweight");
-		errno = 0;
-	logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)buf, 0);
+	if(bLogStatusMsgs) {
+		snprintf(buf, sizeof(buf) / sizeof(char),
+			 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION
+			 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"] rsyslogd was HUPed, type '%s'.",
+			 (int) myPid, glbl.GetHUPisRestart() ? "restart" : "lightweight");
+			errno = 0;
+		logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)buf, 0);
+	}
 
 	if(glbl.GetHUPisRestart()) {
 		DBGPRINTF("Received SIGHUP, configured to be restart, reloading rsyslogd.\n");
@@ -2695,9 +2729,11 @@ static rsRetVal loadBuildInModules(void)
 	 * is that rsyslog will terminate if we can not register our built-in config commands.
 	 * This, I think, is the right thing to do. -- rgerhards, 2007-07-31
 	 */
+	CHKiRet(regCfSysLineHdlr((uchar *)"logrsyslogstatusmessages", 0, eCmdHdlrBinary, NULL, &bLogStatusMsgs, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionresumeretrycount", 0, eCmdHdlrInt, NULL, &glbliActionResumeRetryCount, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"defaultruleset", 0, eCmdHdlrGetWord, setDefaultRuleset, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"ruleset", 0, eCmdHdlrGetWord, setCurrRuleset, NULL, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"sleep", 0, eCmdHdlrInt, putToSleep, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuefilename", 0, eCmdHdlrGetWord, NULL, &pszMainMsgQFName, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuesize", 0, eCmdHdlrInt, NULL, &iMainMsgQueueSize, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuehighwatermark", 0, eCmdHdlrInt, NULL, &iMainMsgQHighWtrMark, NULL));
@@ -2725,6 +2761,7 @@ static rsRetVal loadBuildInModules(void)
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionresumeinterval", 0, eCmdHdlrInt, setActionResumeInterval, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"controlcharacterescapeprefix", 0, eCmdHdlrGetChar, NULL, &cCCEscapeChar, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"escapecontrolcharactersonreceive", 0, eCmdHdlrBinary, NULL, &bEscapeCCOnRcv, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"escapecontrolcharactertab", 0, eCmdHdlrBinary, NULL, &bEscapeTab, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"droptrailinglfonreception", 0, eCmdHdlrBinary, NULL, &bDropTrailingLF, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"template", 0, eCmdHdlrCustomHandler, conf.doNameLine, (void*)DIR_TEMPLATE, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"outchannel", 0, eCmdHdlrCustomHandler, conf.doNameLine, (void*)DIR_OUTCHANNEL, NULL));
@@ -2882,7 +2919,7 @@ static rsRetVal mainThread()
 	 * is still in its infancy (and not really done), we currently accept this issue.
 	 * rgerhards, 2009-06-29
 	 */
-	if(!(Debug || NoFork)) {
+	if(!(Debug == DEBUG_FULL || NoFork)) {
 		close(1);
 		close(2);
 		bErrMsgToStderr = 0;
@@ -3073,7 +3110,7 @@ doGlblProcessInit(void)
 
 	thrdInit();
 
-	if( !(Debug || NoFork) )
+	if( !(Debug == DEBUG_FULL || NoFork) )
 	{
 		DBGPRINTF("Checking pidfile.\n");
 		if (!check_pid(PidFile))
@@ -3172,6 +3209,7 @@ int realMain(int argc, char **argv)
 	uchar *LocalHostName;
 	uchar *LocalDomain;
 	uchar *LocalFQDNName;
+	char cwdbuf[128]; /* buffer to obtain/display current working directory */
 
 	/* first, parse the command line options. We do not carry out any actual work, just
 	 * see what we should do. This relieves us from certain anomalies and we can process
@@ -3255,11 +3293,12 @@ int realMain(int argc, char **argv)
 		}
 	}
 
-	if ((argc -= optind))
+	if(argc - optind)
 		usage();
 
-	DBGPRINTF("rsyslogd %s startup, compatibility mode %d, module path '%s'\n",
-		  VERSION, iCompatibilityMode, glblModPath == NULL ? "" : (char*)glblModPath);
+	DBGPRINTF("rsyslogd %s startup, compatibility mode %d, module path '%s', cwd:%s\n",
+		  VERSION, iCompatibilityMode, glblModPath == NULL ? "" : (char*)glblModPath,
+		  getcwd(cwdbuf, sizeof(cwdbuf)));
 
 	/* we are done with the initial option parsing and processing. Now we init the system. */
 
@@ -3529,9 +3568,6 @@ int realMain(int argc, char **argv)
 
 	if(!iConfigVerify)
 		CHKiRet(doGlblProcessInit());
-
-	/* re-generate local host name property, as the config may have changed our FQDN settings */
-	glbl.GenerateLocalHostNameProperty();
 
 	CHKiRet(mainThread());
 

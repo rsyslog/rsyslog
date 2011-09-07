@@ -39,6 +39,6 @@ ENDExit
 
 BEGINTest
 CODESTARTTest
-finalize_it:
+/*finalize_it:*/
 	/* room for custom error reporter, leave blank if not needed */
 ENDTest

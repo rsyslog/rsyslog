@@ -46,6 +46,18 @@ Ignore timestamps included in the messages, applies to messages received via the
 <li><b>$SystemLogSocketName</b> &lt;name-of-socket&gt; -- former -p option</li>
 <li><b>$SystemLogFlowControl</b> [on/<b>off</b>] - specifies if flow control should be applied
 to the system log socket.</li>
+<li><b>$InputUnixListenSocketCreatePath</b> [on/<b>off</b>] - create directories in the socket path
+if they do not already exist. They are created with 0755 permissions with the owner being the process under
+which rsyslogd runs. The default is not to create directories. Keep in mind, though, that rsyslogd always
+creates the socket itself if it does not exist (just not the directories by default).
+<br>Note that this statement affects the
+next $AddUnixListenSocket directive that follows in sequence in the configuration file. It never works
+on the system log socket (where it is deemed unnecessary). Also note that it is automatically 
+being reset to &quot;off&quot; after the $AddUnixListenSocket directive, so if you would have it active
+for two additional listen sockets, you need to specify it in front of each one. This option is primarily considered
+useful for defining additional sockets that reside on non-permanent file systems. As rsyslogd probably starts
+up before the daemons that create these sockets, it is a vehicle to enable rsyslogd to listen to those
+sockets even though their directories do not yet exist. [available since 4.7.0 and 5.3.0]</li>
 <li><b>$AddUnixListenSocket</b> &lt;name-of-socket&gt; adds additional unix socket, default none -- former -a option</li>
 <li><b>$InputUnixListenSocketHostName</b> &lt;hostname&gt; permits to override the hostname that
 shall be used inside messages taken from the <b>next</b> $AddUnixListenSocket socket. Note that
@@ -57,26 +69,38 @@ that the local hostname can be overridden in cases where that is desired.</li>
 <br>
 This documentation is sparse and incomplete.
 <p><b>Sample:</b></p>
-<p>The following sample is the minimum setup required to accept syslog messages from applications running on the local system.<br>
+<p>The following sample is the minimum setup required to accept syslog messages from applications running
+on the local system.<br>
 </p>
 <textarea rows="2" cols="70">$ModLoad imuxsock # needs to be done just once
 $SystemLogSocketFlowControl on # enable flow control (use if needed)
 </textarea>
 <p>The following sample is a configuration where rsyslogd pulls logs from two
 jails, and assigns different hostnames to each of the jails: </p>
-<textarea rows="6" cols="60">$ModLoad imuxsock # needs to be done just once
+<textarea rows="6" cols="70">$ModLoad imuxsock # needs to be done just once
 
 $InputUnixListenSocketHostName jail1.example.net
 $AddUnixListenSocket /jail/1/dev/log
 $InputUnixListenSocketHostName jail2.example.net
 $AddUnixListenSocket /jail/2/dev/log
 </textarea>
+<p>The following sample is a configuration where rsyslogd reads the openssh log
+messages via a separate socket, but this socket is created on a temporary file
+system. As rsyslogd starts up before the sshd, it needs to create the socket
+directories, because it otherwise can not open the socket and thus not listen
+to openssh messages. Note that it is vital not to place any other socket between
+the $InputUnixListenSocketCreatePath and the $InputUnixListenSocketHostName.</p>
+<textarea rows="6" cols="70">$ModLoad imuxsock # needs to be done just once
+
+$InputUnixListenSocketCreatePath on # turn on for *next* socket
+$InputUnixListenSocketHostName /var/run/sshd/dev/log
+</textarea>
 <p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>]
 [<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
 <p><font size="2">This documentation is part of the
 <a href="http://www.rsyslog.com/">rsyslog</a>
 project.<br>
-Copyright © 2008 by <a href="http://www.gerhards.net/rainer">Rainer
+Copyright &copy; 2008-2010 by <a href="http://www.gerhards.net/rainer">Rainer
 Gerhards</a> and
 <a href="http://www.adiscon.com/">Adiscon</a>.
 Released under the GNU GPL version 3 or higher.</font></p>

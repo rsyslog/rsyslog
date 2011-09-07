@@ -1,0 +1,80 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Language" content="en">
+<title>Plain TCP Syslog Input Module (imptcp)</title></head>
+<body>
+<a href="rsyslog_conf_modules.html">back</a>
+
+<h1>Plain TCP Syslog Input Module</h1>
+<p><b>Module Name:&nbsp;&nbsp;&nbsp; imptcp</b></p>
+<p><b>Available since: </b>4.7.3+, 5.5.8+
+<p><b>Author: </b>Rainer Gerhards
+&lt;rgerhards@adiscon.com&gt;</p>
+<p><b>Description</b>:</p>
+<p>Provides the ability to receive syslog messages via plain  TCP syslog.
+This is a specialised input plugin tailored for high performance on Linux. It will
+probably not run on any other platform. Also, it does no provide TLS services.
+Encryption can be provided by using <a href="rsyslog_stunnel.html">stunnel</a>.
+<p>This module has no limit on the number of listeners and sessions that can be used.
+<p>Multiple receivers may be configured by
+specifying $InputPTCPServerRun multiple times.
+</p>
+<p><b>Configuration Directives</b>:</p>
+<p>This plugin has config directives similar named as imtcp, but they all have <b>P</b>TCP in
+their name instead of just TCP. Note that only a subset of the parameters are supported.
+<ul>
+<li>$InputPTCPServerAddtlFrameDelimiter &lt;Delimiter&gt;<br>
+This directive permits to specify an additional frame delimiter for plain tcp syslog.
+The industry-standard specifies using the LF character as frame delimiter. Some vendors,
+notable Juniper in their NetScreen products, use an invalid frame delimiter, in Juniper's
+case the NUL character. This directive permits to specify the ASCII value of the delimiter
+in question. Please note that this does not guarantee that all wrong implementations can
+be cured with this directive. It is not even a sure fix with all versions of NetScreen,
+as I suggest the NUL character is the effect of a (common) coding error and thus will
+probably go away at some time in the future. But for the time being, the value 0 can
+probably be used to make rsyslog handle NetScreen's invalid syslog/tcp framing.
+For additional information, see this
+<a href="http://kb.monitorware.com/problem-with-netscreen-log-t1652.html">forum thread</a>.
+<br><b>If this doesn't work for you, please do not blame the rsyslog team. Instead file
+a bug report with Juniper!</b>
+<br>Note that a similar, but worse, issue exists with Cisco's IOS implementation. They do
+not use any framing at all. This is confirmed from Cisco's side, but there seems to be
+very limited interest in fixing this issue. This directive <b>can not</b> fix the Cisco bug.
+That would require much more code changes, which I was unable to do so far. Full details
+can be found at the <a href="http://www.rsyslog.com/Article321.phtml">Cisco tcp syslog anomaly</a>
+page.
+<li>$InputPTCPServerNotifyOnConnectionClose [on/<b>off</b>]<br>
+instructs imptcp to emit a message if the remote peer closes a connection.<br>
+<li>$InputPTCPServerRun &lt;port&gt;<br>
+Starts a TCP server on selected port</li>
+<li>$InputPTCPServerInputName &lt;name&gt;<br>
+Sets a name for the inputname property. If no name is set "imptcp" is used by default. Setting a 
+name is not strictly necessary, but can be useful to apply filtering based on which input
+the message was received from.
+<li>$InputPTCPServerBindRuleset &lt;name&gt;<br>
+Binds specified ruleset to next server defined.
+<li>$InputPTCPServerListenIP &lt;name&gt;<br>
+On multi-homed machines, specifies to which local address the next listerner should
+be bound.
+</ul>
+<b>Caveats/Known Bugs:</b>
+<ul>
+<li>module always binds to all interfaces</li>
+</ul>
+<p><b>Sample:</b></p>
+<p>This sets up a TCP server on port 514:<br>
+</p>
+<textarea rows="15" cols="60">$ModLoad imptcp #
+needs to be done just once
+$InputPTCPServerRun 514
+</textarea>
+<p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>]
+[<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the
+<a href="http://www.rsyslog.com/">rsyslog</a>
+project.<br>
+Copyright &copy; 2010 by <a href="http://www.gerhards.net/rainer">Rainer
+Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>.
+Released under the GNU GPL version 3 or higher.</font></p>
+</body></html>

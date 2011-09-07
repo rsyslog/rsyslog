@@ -285,23 +285,28 @@ rsRetVal parseMsg(msg_t *pMsg)
 	lenMsg = pMsg->iLenRawMsg;
 	msg = pMsg->pszRawMsg;
 	pri = DEFUPRI;
-	if(*msg == '<') {
-		/* while we process the PRI, we also fill the PRI textual representation
-		 * inside the msg object. This may not be ideal from an OOP point of view,
-		 * but it offers us performance...
-		 */
-		pri = 0;
-		while(--lenMsg > 0 && isdigit((int) *++msg)) {
-			pri = 10 * pri + (*msg - '0');
+	if(pMsg->msgFlags & NO_PRI_IN_RAW) {
+		/* In this case, simply do so as if the pri would be right at top */
+		MsgSetAfterPRIOffs(pMsg, 0);
+	} else {
+		if(*msg == '<') {
+			/* while we process the PRI, we also fill the PRI textual representation
+			 * inside the msg object. This may not be ideal from an OOP point of view,
+			 * but it offers us performance...
+			 */
+			pri = 0;
+			while(--lenMsg > 0 && isdigit((int) *++msg)) {
+				pri = 10 * pri + (*msg - '0');
+			}
+			if(*msg == '>')
+				++msg;
+			if(pri & ~(LOG_FACMASK|LOG_PRIMASK))
+				pri = DEFUPRI;
 		}
-		if(*msg == '>')
-			++msg;
-		if(pri & ~(LOG_FACMASK|LOG_PRIMASK))
-			pri = DEFUPRI;
+		pMsg->iFacility = LOG_FAC(pri);
+		pMsg->iSeverity = LOG_PRI(pri);
+		MsgSetAfterPRIOffs(pMsg, msg - pMsg->pszRawMsg);
 	}
-	pMsg->iFacility = LOG_FAC(pri);
-	pMsg->iSeverity = LOG_PRI(pri);
-	MsgSetAfterPRIOffs(pMsg, msg - pMsg->pszRawMsg);
 
 	/* rger 2005-11-24 (happy thanksgiving!): we now need to check if we have
 	 * a traditional syslog message or one formatted according to syslog-protocol.

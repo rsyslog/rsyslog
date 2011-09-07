@@ -103,7 +103,7 @@ CODESTARTdoAction
 		 * So this code here is also more or less an example of how to do that.
 		 * rgerhards, 2009-04-03
 		 */
-		szParams = (char**) (ppString[0]);
+		szParams = (char**)(void*) (ppString[0]);
 		/* In array-passing mode, ppString[] contains a NULL-terminated array
 		 * of char *pointers.
 		 */

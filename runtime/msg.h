@@ -32,6 +32,7 @@
 #include "obj.h"
 #include "syslogd-types.h"
 #include "template.h"
+#include "atomic.h"
 
 
 /* rgerhards 2004-11-08: The following structure represents a
@@ -59,9 +60,9 @@ struct msg {
 	flowControl_t flowCtlType; /**< type of flow control we can apply, for enqueueing, needs not to be persisted because
 				        once data has entered the queue, this property is no longer needed. */
 	pthread_mutex_t mut;
+	int	iRefCount;	/* reference counter (0 = unused) */
 	bool	bDoLock;	 /* use the mutex? */
 	bool	bParseHOSTNAME;	/* should the hostname be parsed from the message? */
-	short	iRefCount;	/* reference counter (0 = unused) */
 	   /* background: the hostname is not present on "regular" messages
 	    * received via UNIX domain sockets from the same machine. However,
 	    * it is available when we have a forwarder (e.g. rfc3195d) using local
@@ -130,6 +131,7 @@ struct msg {
 #define MARK		0x008	/* this message is a mark */
 #define NEEDS_PARSING	0x010	/* raw message, must be parsed before processing can be done */
 #define PARSE_HOSTNAME	0x020	/* parse the hostname during message parsing */
+#define NO_PRI_IN_RAW	0x100	/* rawmsg does not include a PRI (Solaris!), but PRI is already set correctly in the msg object */
 
 
 /* function prototypes

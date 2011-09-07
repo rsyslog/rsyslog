@@ -61,6 +61,7 @@
 
 
 /* define some base data types */
+
 typedef unsigned char uchar;/* get rid of the unhandy "unsigned char" */
 typedef struct thrdInfo thrdInfo_t;
 typedef struct obj_s obj_t;
@@ -78,8 +79,6 @@ typedef struct nsd_gsspi_s nsd_gsspi_t;
 typedef struct nsd_nss_s nsd_nss_t;
 typedef struct nsdsel_ptcp_s nsdsel_ptcp_t;
 typedef struct nsdsel_gtls_s nsdsel_gtls_t;
-typedef obj_t nsd_t;
-typedef obj_t nsdsel_t;
 typedef struct msg msg_t;
 typedef struct prop_s prop_t;
 typedef struct interface_s interface_t;
@@ -97,6 +96,21 @@ typedef rsRetVal (*prsf_t)(struct vmstk_s*, int);	/* pointer to a RainerScript f
 
 typedef struct tcpLstnPortList_s tcpLstnPortList_t; // TODO: rename?
 typedef struct strmLstnPortList_s strmLstnPortList_t; // TODO: rename?
+
+/* under Solaris (actually only SPARC), we need to redefine some types
+ * to be void, so that we get void* pointers. Otherwise, we will see
+ * alignment errors.
+ */
+#ifdef OS_SOLARIS
+	typedef void * obj_t_ptr;
+	typedef void nsd_t;
+	typedef void nsdsel_t;
+#else
+	typedef obj_t *obj_t_ptr;
+	typedef obj_t nsd_t;
+	typedef obj_t nsdsel_t;
+#endif
+
 
 /* some universal 64 bit define... */
 typedef long long int64;
@@ -360,6 +374,15 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_VAR_NOT_FOUND = -2142, /**< variable not found */
 	RS_RET_EMPTY_MSG = -2143, /**< provided (raw) MSG is empty */
 	RS_RET_PEER_CLOSED_CONN = -2144, /**< remote peer closed connection (information, no error) */
+	RS_RET_ERR_OPEN_KLOG = -2145, /**< error opening the kernel log socket (primarily solaris) */
+	RS_RET_ERR_AQ_CONLOG = -2146, /**< error aquiring console log (on solaris) */
+	RS_RET_ERR_DOOR = -2147, /**< some problems with handling the Solaris door functionality */
+	RS_RET_NO_SOCK_CONFIGURED = -2166, /**< no socket (name) was configured where one is required */
+	RS_RET_NO_LSTN_DEFINED = -2172, /**< no listener defined (e.g. inside an input module) */
+	RS_RET_EPOLL_CR_FAILED = -2173, /**< epoll_create() failed */
+	RS_RET_EPOLL_CTL_FAILED = -2174, /**< epoll_ctl() failed */
+	RS_RET_INTERNAL_ERROR = -2175, /**< rsyslogd internal error, unexpected code path reached */
+	RS_RET_OUTDATED_STMT = -2184, /**<  some outdated statement/functionality is being used in conf file */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */

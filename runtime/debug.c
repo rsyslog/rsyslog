@@ -154,7 +154,9 @@ static pthread_key_t keyCallStack;
  */
 static void dbgMutexCancelCleanupHdlr(void *pmut)
 {
-	pthread_mutex_unlock((pthread_mutex_t*) pmut);
+	int ret;
+	ret = pthread_mutex_unlock((pthread_mutex_t*) pmut);
+	assert(ret == 0);
 }
 
 
@@ -844,6 +846,7 @@ dbgprint(obj_t *pObj, char *pszMsg, size_t lenMsg)
 	size_t lenWriteBuf;
 	struct timespec t;
 	uchar *pszObjName = NULL;
+	int ret;
 
 	/* we must get the object name before we lock the mutex, because the object
 	 * potentially calls back into us. If we locked the mutex, we would deadlock
@@ -855,7 +858,8 @@ dbgprint(obj_t *pObj, char *pszMsg, size_t lenMsg)
 		pszObjName = obj.GetName(pObj);
 	}
 
-	pthread_mutex_lock(&mutdbgprint);
+	ret = pthread_mutex_lock(&mutdbgprint);
+	assert(ret == 0); /* make sure mutex operation does not fail */
 	pthread_cleanup_push(dbgMutexCancelCleanupHdlr, &mutdbgprint);
 
 	/* The bWasNL handler does not really work. It works if no thread
@@ -939,6 +943,15 @@ dbgoprint(obj_t *pObj, char *fmt, ...)
 	va_start(ap, fmt);
 	lenWriteBuf = vsnprintf(pszWriteBuf, sizeof(pszWriteBuf), fmt, ap);
 	va_end(ap);
+	if(lenWriteBuf >= sizeof(pszWriteBuf)) {
+		/* prevent buffer overrruns and garbagge display */
+		pszWriteBuf[sizeof(pszWriteBuf) - 5] = '.';
+		pszWriteBuf[sizeof(pszWriteBuf) - 4] = '.';
+		pszWriteBuf[sizeof(pszWriteBuf) - 3] = '.';
+		pszWriteBuf[sizeof(pszWriteBuf) - 2] = '\n';
+		pszWriteBuf[sizeof(pszWriteBuf) - 1] = '\0';
+		lenWriteBuf = sizeof(pszWriteBuf);
+	}
 	dbgprint(pObj, pszWriteBuf, lenWriteBuf);
 }
 
@@ -950,7 +963,7 @@ void
 dbgprintf(char *fmt, ...)
 {
 	va_list ap;
-	char pszWriteBuf[20480];
+	char pszWriteBuf[32*1024];
 	size_t lenWriteBuf;
 
 	if(!(Debug && debugging_on))
@@ -1058,7 +1071,7 @@ int dbgEntrFunc(dbgFuncDB_t **ppFuncDB, const char *file, const char *func, int 
 	}
 
 	/* when we reach this point, we have a fully-initialized FuncDB! */
-	ATOMIC_INC(pFuncDB->nTimesCalled);
+	PREFER_ATOMIC_INC(pFuncDB->nTimesCalled);
 	if(bLogFuncFlow && dbgPrintNameIsInList((const uchar*)pFuncDB->file, printNameFileRoot))
 		dbgprintf("%s:%d: %s: enter\n", pFuncDB->file, pFuncDB->line, pFuncDB->func);
 	if(pThrd->stackPtr >= (int) (sizeof(pThrd->callStack) / sizeof(dbgFuncDB_t*))) {
@@ -1278,11 +1291,11 @@ dbgGetRuntimeOptions(void)
 				/* this is earlier in the process than the -d option, as such it
 				 * allows us to spit out debug messages from the very beginning.
 				 */
-				Debug = 1;
+				Debug = DEBUG_FULL;
 				debugging_on = 1;
 			} else if(!strcasecmp((char*)optname, "debugondemand")) {
 				/* Enables debugging, but turns off debug output */
-				Debug = 1;
+				Debug = DEBUG_ONDEMAND;
 				debugging_on = 1;
 				dbgprintf("Note: debug on demand turned on via configuraton file, "
 					  "use USR1 signal to activate.\n");

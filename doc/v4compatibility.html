@@ -74,4 +74,23 @@ So it is a good idea to become ready for the new version now and also enjoy some
 benefits of the &quot;real restart&quot;, like the better error-reporting capability.
 <p>Note that code complexity reduction (and thus performance improvement) needs the restart-type
 HUP code to be removed, so these changes can (and will) only happen in version 5.
+<h2>outchannels</h2>
+Note: as always documented, outchannels are an experimental feature that may be 
+removed and/or changed in the future.
+There is one concrete change done starting with 4.6.7: let's assume an
+outchannel "mychannel" was defined. Then, this channel could be used inside an
+<code>
+*.* $mychannel
+</code>
+This is still supported and will remain to be supported in v4. However, there is
+a new variant which explicitely tells this is to be handled by omfile. This new
+syntax is as follows:
+<code>
+*.* :omfile:$mychannel
+</code>
+Note that future versions, specifically starting with v6, the older syntax is no
+longer supported. So users are strongly advised to switch to the new syntax. As an
+aid to the conversion process, rsyslog 4.7.4 and above issue a warning message
+if the old-style directive is seen -- but still accept the old syntax without
+any problems.
 </body></html>

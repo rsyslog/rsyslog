@@ -10,7 +10,7 @@
 #valgrind="valgrind --tool=helgrind --log-fd=1"
 #valgrind="valgrind --tool=exp-ptrcheck --log-fd=1"
 #set -o xtrace
-#export RSYSLOG_DEBUG="debug nostdout printmutexaction"
+#export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 #export RSYSLOG_DEBUGLOG="log"
 case $1 in
    'init')	$srcdir/killrsyslog.sh # kill rsyslogd if it runs for some reason
@@ -39,25 +39,26 @@ case $1 in
    		$srcdir/diag.sh wait-startup $3
 		;;
    'wait-startup') # wait for rsyslogd startup ($2 is the instance)
+		while test ! -f rsyslog$2.pid; do
+			./msleep 100 # wait 100 milliseconds
+		done
 		while test ! -f rsyslogd$2.started; do
-			#true
-			sleep 0.1 # if this is not supported by all platforms, use above!
+			./msleep 100 # wait 100 milliseconds
 		done
 		echo "rsyslogd$2 started with pid " `cat rsyslog$2.pid`
 		;;
    'wait-shutdown')  # actually, we wait for rsyslog.pid to be deleted. $2 is the
    		# instance
 		while test -f rsyslog$2.pid; do
-			#true
-			sleep 0.1 # if this is not supported by all platforms, use above!
+			./msleep 100 # wait 100 milliseconds
 		done
 		;;
    'wait-queueempty') # wait for main message queue to be empty. $2 is the instance.
 		if [ "$2" == "2" ]
 		then
-			echo WaitMainQueueEmpty | java -classpath $abs_top_builddir DiagTalker
+			echo WaitMainQueueEmpty | ./diagtalker
 		else
-			echo WaitMainQueueEmpty | java -classpath $abs_top_builddir DiagTalker 13501
+			echo WaitMainQueueEmpty | ./diagtalker
 		fi
 		;;
    'shutdown-when-empty') # shut rsyslogd down when main queue is empty. $2 is the instance.
@@ -79,7 +80,7 @@ case $1 in
 		;;
    'injectmsg') # inject messages via our inject interface (imdiag)
 		echo injecting $3 messages
-		echo injectmsg $2 $3 $4 $5 | java -classpath $abs_top_builddir DiagTalker
+		echo injectmsg $2 $3 $4 $5 | ./diagtalker
 		# TODO: some return state checking? (does it really make sense here?)
 		;;
    'check-mainq-spool') # check if mainqueue spool files exist, if not abort (we just check .qi).
@@ -131,6 +132,13 @@ case $1 in
 		./nettester -t$2 -i$3
 		if [ "$?" -ne "0" ]; then
 		  exit 1
+		fi
+		;;
+   'setzcat')   # find out name of zcat tool
+		if [ `uname` == SunOS ]; then
+		   ZCAT=gzcat
+		else
+		   ZCAT=zcat
 		fi
 		;;
    *)		echo "invalid argument" $1

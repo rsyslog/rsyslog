@@ -80,6 +80,7 @@
 #include "prop.h"
 #include "rule.h"
 #include "ruleset.h"
+#include "atomic.h"
 
 /* forward definitions */
 static rsRetVal dfltErrLogger(int, uchar *errMsg);
@@ -215,6 +216,7 @@ rsrtExit(void)
 		glblClassExit();
 		rulesetClassExit();
 		ruleClassExit();
+
 		objClassExit(); /* *THIS* *MUST/SHOULD?* always be the first class initilizer being called (except debug)! */
 	}
 
