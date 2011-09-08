@@ -30,7 +30,7 @@
 rsRetVal multiSubmitMsg(multi_submit_t *pMultiSub);
 rsRetVal submitMsg(msg_t *pMsg);
 rsRetVal logmsgInternal(int iErr, int pri, uchar *msg, int flags);
-rsRetVal parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int flags, flowControl_t flowCtlTypeu, prop_t *pInputName, struct syslogTime *stTime, time_t ttGenTime);
+rsRetVal parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int flags, flowControl_t flowCtlTypeu, prop_t *pInputName, struct syslogTime *stTime, time_t ttGenTime, ruleset_t *pRuleset);
 rsRetVal diagGetMainMsgQSize(int *piSize); /* for imdiag */
 rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName);
 

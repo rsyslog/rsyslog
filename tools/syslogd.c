@@ -383,7 +383,7 @@ void untty(void)
  */
 rsRetVal
 parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int flags, flowControl_t flowCtlType,
-	prop_t *pInputName, struct syslogTime *stTime, time_t ttGenTime)
+	prop_t *pInputName, struct syslogTime *stTime, time_t ttGenTime, ruleset_t *pRuleset)
 {
 	prop_t *pProp = NULL;
 	msg_t *pMsg;
@@ -399,6 +399,7 @@ parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int fla
 		MsgSetInputName(pMsg, pInputName);
 	MsgSetRawMsg(pMsg, (char*)msg, len);
 	MsgSetFlowControlType(pMsg, flowCtlType);
+	MsgSetRuleset(pMsg, pRuleset);
 	pMsg->msgFlags  = flags | NEEDS_PARSING;
 
 	MsgSetRcvFromStr(pMsg, hname, ustrlen(hname), &pProp);
