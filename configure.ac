@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([rsyslog],[4.6.8],[rsyslog@lists.adiscon.com])
+AC_INIT([rsyslog],[4.8.0],[rsyslog@lists.adiscon.com])
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([ChangeLog])
 AC_CONFIG_MACRO_DIR([m4])
@@ -84,6 +84,7 @@ AC_TYPE_UINT8_T
 AC_HEADER_TIME
 AC_STRUCT_TM
 AC_C_VOLATILE
+AC_C_TYPEOF
 
 sa_includes="\
 $ac_includes_default
@@ -104,7 +105,7 @@ AC_TYPE_SIGNAL
 AC_FUNC_STAT
 AC_FUNC_STRERROR_R
 AC_FUNC_VPRINTF
-AC_CHECK_FUNCS([flock basename alarm clock_gettime gethostbyname gethostname gettimeofday localtime_r memset mkdir regcomp select setid socket strcasecmp strchr strdup strerror strndup strnlen strrchr strstr strtol strtoul uname ttyname_r epoll_wait getline malloc_trim prctl fdatasync lseek64])
+AC_CHECK_FUNCS([flock basename alarm clock_gettime gethostbyname gethostname gettimeofday localtime_r memset mkdir regcomp select setid socket strcasecmp strchr strdup strerror strndup strnlen strrchr strstr strtol strtoul uname ttyname_r epoll_wait getline malloc_trim prctl epoll_create epoll_create1 fdatasync lseek64])
 
 # Check for MAXHOSTNAMELEN
 AC_MSG_CHECKING(for MAXHOSTNAMELEN)
@@ -125,6 +126,9 @@ AC_TRY_COMPILE([
 
 # check for availability of atomic operations
 RS_ATOMIC_OPERATIONS
+
+# fall back to POSIX sems for atomic operations (cpu expensive)
+AC_CHECK_HEADERS([semaphore.h])
 
 
 # Additional module directories
@@ -274,6 +278,7 @@ AC_ARG_ENABLE(klog,
 AM_CONDITIONAL(ENABLE_IMKLOG, test x$enable_klog = xyes)
 AM_CONDITIONAL(ENABLE_IMKLOG_BSD, test x$os_type = xbsd)
 AM_CONDITIONAL(ENABLE_IMKLOG_LINUX, test x$os_type = xlinux)
+AM_CONDITIONAL(ENABLE_IMKLOG_SOLARIS, test x$os_type = xsolaris)
 
 
 #
@@ -333,6 +338,21 @@ AC_ARG_ENABLE([fsstnd],
     AC_MSG_RESULT([yes])
     AC_DEFINE([FSSTND], [1], [Description])
   ])
+
+
+# support for unlimited select() syscall
+AC_ARG_ENABLE(unlimited_select,
+        [AS_HELP_STRING([--enable-unlimited-select],[Enable unlimited select() syscall @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_unlimited_select="yes" ;;
+          no) enable_unlimited_select="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-unlimited-select) ;;
+         esac],
+        [enable_unlimited_select="no"]
+)
+if test "$enable_unlimited_select" = "yes"; then
+        AC_DEFINE(USE_UNLIMITED_SELECT, 1, [If defined, the select() syscall won't be limited to a particular number of file descriptors.])
+fi
 
 
 # debug
@@ -467,7 +487,7 @@ AC_SUBST(PGSQL_LIBS)
 
 # oracle (OCI) support
 AC_ARG_ENABLE(oracle,
-	[AS_HELP_STRING([--enable-oracle],[Enable native Oracle database support @<:@default=no@:>@])],
+	[AS_HELP_STRING([--enable-oracle],[Enable native Oracle database support @<:@default=no@:>@]. (Check your ORACLE_HOME environment variable!))],
 	[case "${enableval}" in
 	 yes) enable_oracle="yes" ;;
 	 no) enable_oracle="no" ;;
@@ -476,23 +496,41 @@ AC_ARG_ENABLE(oracle,
 	[enable_oracle=no]
 )
 if test "x$enable_oracle" = "xyes"; then
-    AC_CHECK_PROG(
-	[HAVE_ORACLE_CONFIG],
-	[oracle-instantclient-config],
-	[yes],,,
-	)
-    if test "x${HAVE_ORACLE_CONFIG}" != "xyes"; then
-	AC_MSG_FAILURE([oracle-instantclient-config not found in PATH])
+   if test -d "$ORACLE_HOME"
+   then
+       AC_CHECK_LIB([occi], [OCIEnvCreate],
+                    [ORACLE_CFLAGS=-I$ORACLE_HOME/rdbms/public]
+		    [ORACLE_LIBS=-L$ORACLE_HOME/lib -locci],
+		    [AC_MSG_FAILURE([Oracle (OCI) library is missing: wrong oracle home])],
+		    [-I$ORACLE_HOME/rdbms/public/ -L$ORACLE_HOME/lib -locci -lclntsh ]
+		 )
+    elif test -d "$ORACLE_LIB_PATH" -a -d "$ORACLE_INCLUDE_PATH"
+    then
+       AC_CHECK_LIB([occi], [OCIEnvCreate],
+                    [ORACLE_CFLAGS=-I$ORACLE_INCLUDE_PATH]
+		    [ORACLE_LIBS=-L$ORACLE_LIB_PATH -locci],
+		    [AC_MSG_FAILURE([Oracle (OCI) library is missing: wrong oracle directories])],
+		    [-I$ORACLE_INCLUDE_PATH -L$ORACLE_LIB_PATH -locci -lclntsh ]
+		 )
+    else
+        AC_CHECK_PROG(
+      	    [HAVE_ORACLE_CONFIG],
+            [oracle-instantclient-config],
+            [yes],,,
+            )
+        if test "x${HAVE_ORACLE_CONFIG}" != "xyes"; then
+           AC_MSG_FAILURE([oracle-instantclient-config not found in PATH])
+        fi
+        AC_CHECK_LIB(
+		[occi],
+        	[OCIEnvCreate],
+        	[ORACLE_CFLAGS="`oracle-instantclient-config --cflags`"
+        	ORACLE_LIBS="`oracle-instantclient-config --libs`"
+        	],
+        	[AC_MSG_FAILURE([Oracle (OCI) libraray is missing])],
+        	[`oracle-instantclient-config --libs --cflags`]
+        	)
     fi
-    AC_CHECK_LIB(
-	[occi],
-	[OCIEnvCreate],
-	[ORACLE_CFLAGS="`oracle-instantclient-config --cflags`"
-	ORACLE_LIBS="`oracle-instantclient-config --libs`"
-	],
-	[AC_MSG_FAILURE([Oracle (OCI) libraray is missing])],
-	[`oracle-instantclient-config --libs --cflags`]
-	)
 fi
 AM_CONDITIONAL(ENABLE_ORACLE, test x$enable_oracle = xyes)
 AC_SUBST(ORACLE_CFLAGS)
@@ -727,6 +765,31 @@ AC_ARG_ENABLE(imfile,
 AM_CONDITIONAL(ENABLE_IMFILE, test x$enable_imfile = xyes)
 
 
+# settings for the door input module (under solaris, thus default off)
+AC_ARG_ENABLE(imsolaris,
+        [AS_HELP_STRING([--enable-imsolaris],[door input module enabled @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_imsolaris="yes" ;;
+          no) enable_imsolaris="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-imsolaris) ;;
+         esac],
+        [enable_imsolaris=no]
+)
+AM_CONDITIONAL(ENABLE_IMSOLARIS, test x$enable_imsolaris = xyes)
+
+# settings for the ptcp input module
+AC_ARG_ENABLE(imptcp,
+        [AS_HELP_STRING([--enable-imptcp],[plain tcp input module enabled @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_imptcp="yes" ;;
+          no) enable_imptcp="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-imptcp) ;;
+         esac],
+        [enable_imptcp=no]
+)
+AM_CONDITIONAL(ENABLE_IMPTCP, test x$enable_imptcp = xyes)
+
+
 # settings for the omprog output module
 AC_ARG_ENABLE(omprog,
         [AS_HELP_STRING([--enable-omprog],[Compiles omprog module @<:@default=no@:>@])],
@@ -751,6 +814,20 @@ AC_ARG_ENABLE(omstdout,
         [enable_omstdout=no]
 )
 AM_CONDITIONAL(ENABLE_OMSTDOUT, test x$enable_omstdout = xyes)
+
+
+# settings for omuxsock
+AC_ARG_ENABLE(omuxsock,
+        [AS_HELP_STRING([--enable-omuxsock],[Compiles stdout module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_omuxsock="yes" ;;
+          no) enable_omuxsock="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-omuxsock) ;;
+         esac],
+        [enable_omuxsock=no]
+)
+AM_CONDITIONAL(ENABLE_OMUXSOCK, test x$enable_omuxsock = xyes)
+
 
 # This provides a vehicle to integrate custom modules, that are not
 # part of rsyslog, into the build process. It is named cust1, so that
@@ -827,7 +904,10 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omtemplate/Makefile \
 		plugins/omprog/Makefile \
 		plugins/omstdout/Makefile \
+		plugins/omuxsock/Makefile \
 		plugins/imfile/Makefile \
+		plugins/imsolaris/Makefile \
+		plugins/imptcp/Makefile \
 		plugins/imrelp/Makefile \
 		plugins/imdiag/Makefile \
 		plugins/omtesting/Makefile \
@@ -854,17 +934,21 @@ echo "    Zlib compression support enabled:         $enable_zlib"
 echo "    rsyslog runtime will be built:            $enable_rsyslogrt"
 echo "    rsyslogd will be built:                   $enable_rsyslogd"
 echo "    custom module 1 will be built:            $enable_cust1"
+echo "    Unlimited select() support enabled:       $enable_unlimited_select"
 echo
 echo "---{ input plugins }---"
 echo "    Klog functionality enabled:               $enable_klog ($os_type)"
+echo "    plain tcp input module enabled:           $enable_imptcp"
 echo "    imdiag enabled:                           $enable_imdiag"
 echo "    file input module enabled:                $enable_imfile"
+echo "    Solaris input module enabled:             $enable_imsolaris"
 echo "    input template module will be compiled:   $enable_imtemplate"
 echo
 echo "---{ output plugins }---"
 echo "    Mail support enabled:                     $enable_mail"
 echo "    omprog module will be compiled:           $enable_omprog"
 echo "    omstdout module will be compiled:         $enable_omstdout"
+echo "    omuxsock module will be compiled:         $enable_omuxsock"
 echo "    output template module will be compiled:  $enable_omtemplate"
 echo
 echo "---{ database support }---"

@@ -51,13 +51,25 @@ of a and b should be tested as "a &lt;&gt; b". The "not" operator
 should be reserved to cases where it actually is needed to form a
 complex boolean expression. In those cases, parenthesis are highly
 recommended.
+<h2>Functions</h2>
+<p>RainerScript supports a currently quite limited set of functions:
+<ul>
+<li>getenv(str) - like the OS call, returns the value of the environment
+variable, if it exists. Returns an empty string if it does not exist.
+<li>strlen(str) - returns the length of the provided string
+<li>tolower(str) - converts the provided string into lowercase
+</ul>
+<p>The following example can be used to build a dynamic filter based on some environment
+variable:
+<pre>
+if $msg contains getenv('TRIGGERVAR') then /path/to/errfile
+</pre>
 <p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>]
 [<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
 <p><font size="2">This documentation is part of the
 <a href="http://www.rsyslog.com/">rsyslog</a>
 project.<br>
-Copyright © 2008 by <a href="http://www.gerhards.net/rainer">Rainer
-Gerhards</a> and
+Copyright &copy; 2008, 2009 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
 <a href="http://www.adiscon.com/">Adiscon</a>.
 Released under the GNU GPL version 3 or higher.</font></p>
 </body></html>

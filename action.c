@@ -200,7 +200,7 @@ rsRetVal actionDestruct(action_t *pThis)
 
 	/* message ptr cleanup */
 	for(i = 0 ; i < pThis->iNumTpls ; ++i) {
-		if(pThis->ppMsgs[i] != NULL) {
+		if(((uchar**)pThis->ppMsgs)[i] != NULL) {
 			switch(pThis->eParamPassing) {
 			case ACT_ARRAY_PASSING:
 #if 0 /* later! */
@@ -214,7 +214,7 @@ rsRetVal actionDestruct(action_t *pThis)
 #endif
 				break;
 			case ACT_STRING_PASSING:
-				d_free(pThis->ppMsgs[i]);
+				d_free(((uchar**)pThis->ppMsgs)[i]);
 				break;
 			default:
 				assert(0);
@@ -475,10 +475,10 @@ actionCallDoAction(action_t *pAction, msg_t *pMsg)
 	for(i = 0 ; i < pAction->iNumTpls ; ++i) {
 		switch(pAction->eParamPassing) {
 			case ACT_STRING_PASSING:
-				CHKiRet(tplToString(pAction->ppTpl[i], pMsg, &(pAction->ppMsgs[i]), &(pAction->lenMsgs[i])));
+				CHKiRet(tplToString(pAction->ppTpl[i], pMsg, &(((uchar**)pAction->ppMsgs)[i]), &(pAction->lenMsgs[i])));
 				break;
 			case ACT_ARRAY_PASSING:
-				CHKiRet(tplToArray(pAction->ppTpl[i], pMsg, (uchar***) &(pAction->ppMsgs[i])));
+				CHKiRet(tplToArray(pAction->ppTpl[i], pMsg, (uchar***) &(((uchar**)pAction->ppMsgs)[i])));
 				break;
 			default:assert(0); /* software bug if this happens! */
 		}
@@ -526,16 +526,16 @@ actionCallDoAction(action_t *pAction, msg_t *pMsg)
 finalize_it:
 	/* cleanup */
 	for(i = 0 ; i < pAction->iNumTpls ; ++i) {
-		if(pAction->ppMsgs[i] != NULL) {
+		if(((uchar**)pAction->ppMsgs)[i] != NULL) {
 			switch(pAction->eParamPassing) {
 			case ACT_ARRAY_PASSING:
 				iArr = 0;
-				while(((char **)pAction->ppMsgs[i])[iArr] != NULL) {
-					d_free(((char **)pAction->ppMsgs[i])[iArr++]);
-					((char **)pAction->ppMsgs[i])[iArr++] = NULL;
+				while((((uchar***)pAction->ppMsgs)[i][iArr]) != NULL) {
+					d_free(((uchar ***)pAction->ppMsgs)[i][iArr++]);
+					((uchar ***)pAction->ppMsgs)[i][iArr++] = NULL;
 				}
-				d_free(pAction->ppMsgs[i]);
-				pAction->ppMsgs[i] = NULL;
+				d_free(((uchar**)pAction->ppMsgs)[i]);
+				((uchar**)pAction->ppMsgs)[i] = NULL;
 				break;
 			case ACT_STRING_PASSING:
 				break;

@@ -24,6 +24,7 @@
  */
 #ifndef INCLUDED_PROP_H
 #define INCLUDED_PROP_H
+#include "atomic.h"
 
 /* the prop object */
 struct prop_s {
@@ -34,6 +35,7 @@ struct prop_s {
 		uchar sz[CONF_PROP_BUFSIZE];
 	} szVal;
 	int len;		/* we use int intentionally, otherwise we may get some troubles... */
+	DEF_ATOMIC_HELPER_MUT(mutRefCount);
 };
 
 /* interfaces */

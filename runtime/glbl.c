@@ -64,6 +64,7 @@ static int option_DisallowWarning = 1;	/* complain if message from disallowed se
 static int bDisableDNS = 0; /* don't look up IP addresses of remote messages */
 static prop_t *propLocalHostName = NULL;/* our hostname as FQDN - read-only after startup */
 static uchar *LocalHostName = NULL;/* our hostname  - read-only after startup */
+static uchar *LocalHostNameOverride = NULL;/* user-overridden hostname - read-only after startup */
 static uchar *LocalFQDNName = NULL;/* our hostname as FQDN - read-only after startup */
 static uchar *LocalDomain;	/* our local domain name  - read-only after startup */
 static char **StripDomains = NULL;/* these domains may be stripped before writing logs  - r/o after s.u., never touched by init */
@@ -72,6 +73,9 @@ static uchar *pszDfltNetstrmDrvr = NULL; /* module name of default netstream dri
 static uchar *pszDfltNetstrmDrvrCAF = NULL; /* default CA file for the netstrm driver */
 static uchar *pszDfltNetstrmDrvrKeyFile = NULL; /* default key file for the netstrm driver (server) */
 static uchar *pszDfltNetstrmDrvrCertFile = NULL; /* default cert file for the netstrm driver (server) */
+#ifdef USE_UNLIMITED_SELECT
+static int iFdSetSize = howmany(FD_SETSIZE, __NFDBITS) * sizeof (fd_mask); /* size of select() bitmask in bytes */
+#endif
 
 
 /* define a macro for the simple properties' set and get functions
@@ -104,6 +108,9 @@ SIMP_PROP(DisableDNS, bDisableDNS, int)
 SIMP_PROP(LocalDomain, LocalDomain, uchar*)
 SIMP_PROP(StripDomains, StripDomains, char**)
 SIMP_PROP(LocalHosts, LocalHosts, char**)
+#ifdef USE_UNLIMITED_SELECT
+SIMP_PROP(FdSetSize, iFdSetSize, int)
+#endif
 
 SIMP_PROP_SET(LocalFQDNName, LocalFQDNName, uchar*)
 SIMP_PROP_SET(LocalHostName, LocalHostName, uchar*)
@@ -150,14 +157,19 @@ GenerateLocalHostNameProperty(void)
 		prop.Destruct(&propLocalHostName);
 
 	CHKiRet(prop.Construct(&propLocalHostName));
-	if(LocalHostName == NULL)
-		pszName = (uchar*) "[localhost]";
-	else {
-		if(GetPreserveFQDN() == 1)
-			pszName = LocalFQDNName;
-		else
-			pszName = LocalHostName;
+	if(LocalHostNameOverride == NULL) {
+		if(LocalHostName == NULL)
+			pszName = (uchar*) "[localhost]";
+		else {
+			if(GetPreserveFQDN() == 1)
+				pszName = LocalFQDNName;
+			else
+				pszName = LocalHostName;
+		}
+	} else { /* local hostname is overriden via config */
+		pszName = LocalHostNameOverride;
 	}
+	DBGPRINTF("GenerateLocalHostName uses '%s'\n", pszName);
 	CHKiRet(prop.SetString(propLocalHostName, pszName, ustrlen(pszName)));
 	CHKiRet(prop.ConstructFinalize(propLocalHostName));
 
@@ -261,6 +273,9 @@ CODESTARTobjQueryInterface(glbl)
 	SIMP_PROP(DfltNetstrmDrvrCAF)
 	SIMP_PROP(DfltNetstrmDrvrKeyFile)
 	SIMP_PROP(DfltNetstrmDrvrCertFile)
+#ifdef USE_UNLIMITED_SELECT
+	SIMP_PROP(FdSetSize)
+#endif
 #undef	SIMP_PROP
 finalize_it:
 ENDobjQueryInterface(glbl)
@@ -287,6 +302,10 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 		free(pszDfltNetstrmDrvrCertFile);
 		pszDfltNetstrmDrvrCertFile = NULL;
 	}
+	if(LocalHostNameOverride != NULL) {
+		free(LocalHostNameOverride);
+		LocalHostNameOverride = NULL;
+	}
 	if(pszWorkDir != NULL) {
 		free(pszWorkDir);
 		pszWorkDir = NULL;
@@ -295,6 +314,9 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	bOptimizeUniProc = 1;
 	bHUPisRestart = 0;
 	bPreserveFQDN = 0;
+#ifdef USE_UNLIMITED_SELECT
+	iFdSetSize = howmany(FD_SETSIZE, __NFDBITS) * sizeof (fd_mask);
+#endif
 	return RS_RET_OK;
 }
 
@@ -315,6 +337,7 @@ BEGINAbstractObjClassInit(glbl, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdrivercafile", 0, eCmdHdlrGetWord, NULL, &pszDfltNetstrmDrvrCAF, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdriverkeyfile", 0, eCmdHdlrGetWord, NULL, &pszDfltNetstrmDrvrKeyFile, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdrivercertfile", 0, eCmdHdlrGetWord, NULL, &pszDfltNetstrmDrvrCertFile, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"localhostname", 0, eCmdHdlrGetWord, NULL, &LocalHostNameOverride, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"optimizeforuniprocessor", 0, eCmdHdlrBinary, NULL, &bOptimizeUniProc, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"hupisrestart", 0, eCmdHdlrBinary, NULL, &bHUPisRestart, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"preservefqdn", 0, eCmdHdlrBinary, NULL, &bPreserveFQDN, NULL));
@@ -338,6 +361,7 @@ BEGINObjClassExit(glbl, OBJ_IS_CORE_MODULE) /* class, version */
 		free(pszWorkDir);
 	if(LocalHostName != NULL)
 		free(LocalHostName);
+	free(LocalHostNameOverride);
 	if(LocalFQDNName != NULL)
 		free(LocalFQDNName);
 	objRelease(prop, CORE_COMPONENT);

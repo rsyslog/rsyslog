@@ -31,8 +31,6 @@
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
  * A copy of the LGPL can be found in the file "COPYING.LESSER" in this distribution.
  */
-#include "config.h" /* autotools! */
-
 #ifndef INCLUDED_ATOMIC_H
 #define INCLUDED_ATOMIC_H
 
@@ -41,17 +39,28 @@
  * They simply came in too late. -- rgerhards, 2008-04-02
  */
 #ifdef HAVE_ATOMIC_BUILTINS
-#	define ATOMIC_INC(data) ((void) __sync_fetch_and_add(&(data), 1))
+#	define ATOMIC_INC(data, phlpmut) ((void) __sync_fetch_and_add(data, 1))
 #	define ATOMIC_INC_AND_FETCH(data) __sync_fetch_and_add(&(data), 1)
-#	define ATOMIC_DEC(data) ((void) __sync_sub_and_fetch(&(data), 1))
-#	define ATOMIC_DEC_AND_FETCH(data) __sync_sub_and_fetch(&(data), 1)
+#	define ATOMIC_DEC(data, phlpmut) ((void) __sync_sub_and_fetch(data, 1))
+#	define ATOMIC_DEC_AND_FETCH(data, phlpmut) __sync_sub_and_fetch(data, 1)
 #	define ATOMIC_FETCH_32BIT(data) ((unsigned) __sync_fetch_and_and(&(data), 0xffffffff))
 #	define ATOMIC_STORE_1_TO_32BIT(data) __sync_lock_test_and_set(&(data), 1)
-#	define ATOMIC_STORE_0_TO_INT(data) __sync_fetch_and_and(&(data), 0)
-#	define ATOMIC_STORE_1_TO_INT(data) __sync_fetch_and_or(&(data), 1)
+#	define ATOMIC_STORE_0_TO_INT(data, phlpmut) __sync_fetch_and_and(data, 0)
+#	define ATOMIC_STORE_1_TO_INT(data, phlpmut) __sync_fetch_and_or(data, 1)
 #	define ATOMIC_STORE_INT_TO_INT(data, val) __sync_fetch_and_or(&(data), (val))
 #	define ATOMIC_CAS(data, oldVal, newVal) __sync_bool_compare_and_swap(&(data), (oldVal), (newVal));
-#	define ATOMIC_CAS_VAL(data, oldVal, newVal) __sync_val_compare_and_swap(&(data), (oldVal), (newVal));
+#	define ATOMIC_CAS_VAL(data, oldVal, newVal, phlpmut) __sync_val_compare_and_swap(data, (oldVal), (newVal));
+
+	/* functions below are not needed if we have atomics */
+#	define DEF_ATOMIC_HELPER_MUT(x)
+#	define INIT_ATOMIC_HELPER_MUT(x)
+#	define DESTROY_ATOMIC_HELPER_MUT(x) 
+
+	/* the following operations should preferrably be done atomic, but it is
+	 * not fatal if not -- that means we can live with some missed updates. So be
+	 * sure to use these macros only if that really does not matter!
+	 */
+#	define PREFER_ATOMIC_INC(data) ((void) __sync_fetch_and_add(&(data), 1))
 #else
 	/* note that we gained parctical proof that theoretical problems DO occur
 	 * if we do not properly address them. See this blog post for details:
@@ -60,12 +69,63 @@
 	 * simply go ahead and do without them - use mutexes or other things. The
 	 * code needs to be checked against all those cases. -- rgerhards, 2009-01-30
 	 */
+	#include <pthread.h>
+#	define ATOMIC_INC(data, phlpmut)  { \
+		pthread_mutex_lock(phlpmut); \
+		++(*(data)); \
+		pthread_mutex_unlock(phlpmut); \
+	}
+
+#	define ATOMIC_STORE_0_TO_INT(data, hlpmut)  { \
+		pthread_mutex_lock(&hlpmut); \
+		*(data) = 0; \
+		pthread_mutex_unlock(&hlpmut); \
+	}
+
+#	define ATOMIC_STORE_1_TO_INT(data, hlpmut) { \
+		pthread_mutex_lock(&hlpmut); \
+		*(data) = 1; \
+		pthread_mutex_unlock(&hlpmut); \
+	}
+
+	static inline int
+	ATOMIC_CAS_VAL(int *data, int oldVal, int newVal, pthread_mutex_t *phlpmut) {
+		int val;
+		pthread_mutex_lock(phlpmut);
+		if(*data == oldVal) {
+			*data = newVal;
+		}
+		val = *data;
+		pthread_mutex_unlock(phlpmut);
+		return(val);
+	}
+
+#	define ATOMIC_DEC(data, phlpmut)  { \
+		pthread_mutex_lock(phlpmut); \
+		--(*(data)); \
+		pthread_mutex_unlock(phlpmut); \
+	}
+
+	static inline int
+	ATOMIC_DEC_AND_FETCH(int *data, pthread_mutex_t *phlpmut) {
+		int val;
+		pthread_mutex_lock(phlpmut);
+		val = --(*data);
+		pthread_mutex_unlock(phlpmut);
+		return(val);
+	}
+#if 0
 #	warning "atomic builtins not available, using nul operations - rsyslogd will probably be racy!"
-#	define ATOMIC_INC(data) (++(data))
-#	define ATOMIC_DEC(data) (--(data))
-#	define ATOMIC_DEC_AND_FETCH(data) (--(data))
-#	define ATOMIC_FETCH_32BIT(data) (data)
-#	define ATOMIC_STORE_1_TO_32BIT(data) (data) = 1
+#	define ATOMIC_INC_AND_FETCH(data) (++(data))
+#	define ATOMIC_FETCH_32BIT(data) (data) // TODO: del
+#	define ATOMIC_STORE_1_TO_32BIT(data) (data) = 1 // TODO: del
+#endif
+#	define DEF_ATOMIC_HELPER_MUT(x)  pthread_mutex_t x
+#	define INIT_ATOMIC_HELPER_MUT(x) pthread_mutex_init(&(x), NULL)
+#	define DESTROY_ATOMIC_HELPER_MUT(x) pthread_mutex_init(&(x), NULL)
+
+#	define PREFER_ATOMIC_INC(data) ((void) ++data)
+
 #endif
 
 #endif /* #ifndef INCLUDED_ATOMIC_H */

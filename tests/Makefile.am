@@ -1,12 +1,19 @@
 if ENABLE_TESTBENCH
 TESTRUNS = rt_init rscript
-check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq randomgen inputfilegen
+check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq msleep randomgen diagtalker uxsockrcvr inputfilegen
 TESTS = $(TESTRUNS) cfg.sh \
 	validation-run.sh \
 	imtcp-multiport.sh \
 	diskqueue.sh \
 	diskqueue-fsync.sh \
 	manytcp.sh \
+	rsf_getenv.sh \
+	manyptcp.sh \
+	imptcp_large.sh \
+	imptcp_addtlframedelim.sh \
+	imptcp_conndrop.sh \
+	imtcp_conndrop.sh \
+	imtcp_addtlframedelim.sh \
 	sndrcv.sh \
 	sndrcv_gzip.sh \
 	asynwr_simple.sh \
@@ -25,7 +32,8 @@ TESTS = $(TESTRUNS) cfg.sh \
 	dynfile_invalid2.sh \
 	complex1.sh \
 	queue-persist.sh \
-	pipeaction.sh
+	pipeaction.sh \
+	uxsock_simple.sh \
 	execonlyonce.sh \
 	queue-persist.sh 
 
@@ -48,12 +56,10 @@ if ENABLE_IMFILE
 TESTS += imfile-basic.sh
 endif
 
-check_JAVA = DiagTalker.java
-
 endif # if ENABLE_TESTBENCH
 
 TESTS_ENVIRONMENT = RSYSLOG_MODDIR='$(abs_top_builddir)'/runtime/.libs/
-DISTCLEANFILES=rsyslog.pid '$(abs_top_builddir)'/DiagTalker.class
+DISTCLEANFILES=rsyslog.pid
 test_files = testbench.h runtime-dummy.c
 
 EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
@@ -132,6 +138,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   killrsyslog.sh \
 	   parsertest.sh \
 	   fieldtest.sh \
+	   rsf_getenv.sh \
+	   testsuites/rsf_getenv.conf \
 	   diskqueue.sh \
 	   testsuites/diskqueue.conf \
 	   diskqueue-fsync.sh \
@@ -140,6 +148,18 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/imtcp-multiport.conf \
 	   manytcp.sh \
 	   testsuites/manytcp.conf \
+	   manyptcp.sh \
+	   testsuites/manyptcp.conf \
+	   imptcp_large.sh \
+	   testsuites/imptcp_large.conf \
+	   imptcp_addtlframedelim.sh \
+	   testsuites/imptcp_addtlframedelim.conf \
+	   imptcp_conndrop.sh \
+	   testsuites/imptcp_conndrop.conf \
+	   imtcp_conndrop.sh \
+	   testsuites/imtcp_conndrop.conf \
+	   imtcp_addtlframedelim.sh \
+	   testsuites/imtcp_addtlframedelim.conf \
 	   inputname.sh \
 	   testsuites/inputname_imtcp.conf \
 	   testsuites/1.inputname_imtcp_12514 \
@@ -165,6 +185,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/sndrcv_gzip_rcvr.conf \
 	   pipeaction.sh \
 	   testsuites/pipeaction.conf \
+	   uxsock_simple.sh \
+	   testsuites/uxsock_simple.conf \
 	   asynwr_simple.sh \
 	   testsuites/asynwr_simple.conf \
 	   asynwr_timeout.sh \
@@ -207,14 +229,18 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   execonlyonce.sh \
 	   testsuites/execonlyonce.conf \
 	   testsuites/execonlyonce.data \
-	   DiagTalker.java \
 	   cfg.sh
 
+uxsockrcvr_SOURCES = uxsockrcvr.c
 ourtail_SOURCES = ourtail.c
+msleep_SOURCES = msleep.c
 chkseq_SOURCES = chkseq.c
 
 tcpflood_SOURCES = tcpflood.c
 tcpflood_LDADD = $(SOL_LIBS)
+
+diagtalker_SOURCES = diagtalker.c
+diagtalker_LDADD = $(SOL_LIBS)
 
 randomgen_SOURCES = randomgen.c
 randomgen_LDADD = $(SOL_LIBS)

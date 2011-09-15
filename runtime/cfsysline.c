@@ -217,9 +217,11 @@ static rsRetVal doGetSize(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *
 		case 'K': i *= 1000; ++(*pp); break;
 	        case 'M': i *= 1000000; ++(*pp); break;
                 case 'G': i *= 1000000000; ++(*pp); break;
-                case 'T': i *= (long long) 1000000000000; ++(*pp); break; /* tera */
-                case 'P': i *= (long long) 1000000000000000; ++(*pp); break; /* peta */
-                case 'E': i *= (long long) 1000000000000000000; ++(*pp); break; /* exa */
+			  /* we need to use the multiplication below because otherwise
+			   * the compiler gets an error during constant parsing */
+                case 'T': i *= (int64) 1000       * 1000000000; ++(*pp); break; /* tera */
+                case 'P': i *= (int64) 1000000    * 1000000000; ++(*pp); break; /* peta */
+                case 'E': i *= (int64) 1000000000 * 1000000000; ++(*pp); break; /* exa */
 	}
 
 	/* done */
@@ -951,8 +953,6 @@ finalize_it:
  */
 void dbgPrintCfSysLineHandlers(void)
 {
-	DEFiRet;
-
 	cslCmd_t *pCmd;
 	cslCmdHdlr_t *pCmdHdlr;
 	linkedListCookie_t llCookieCmd;
@@ -974,7 +974,6 @@ void dbgPrintCfSysLineHandlers(void)
 		}
 	}
 	dbgprintf("\n");
-	ENDfunc
 }
 
 

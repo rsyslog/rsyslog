@@ -146,7 +146,7 @@ wtiSetState(wti_t *pThis, qWrkCmd_t tCmd, int bActiveOnly, int bLockMutex)
 				break;
 		}
 		/* apply the new state */
-		unsigned val = ATOMIC_CAS_VAL(pThis->tCurrCmd, tCurrCmd, tCmd);
+		unsigned val = ATOMIC_CAS_VAL((int*)&pThis->tCurrCmd, tCurrCmd, tCmd, &pThis->mutCurrCmd);
 		if(val != tCurrCmd) {
 			DBGPRINTF("wtiSetState PROBLEM, tCurrCmd %d overwritten with %d, wanted to set %d\n", tCurrCmd, val, tCmd);
 		}
@@ -178,7 +178,7 @@ wtiCancelThrd(wti_t *pThis)
 		dbgoprint((obj_t*) pThis, "canceling worker thread, curr stat %d\n", pThis->tCurrCmd);
 		pthread_cancel(pThis->thrdID);
 		wtiSetState(pThis, eWRKTHRD_TERMINATING, 0, MUTEX_ALREADY_LOCKED);
-		ATOMIC_STORE_1_TO_INT(pThis->pWtp->bThrdStateChanged); /* indicate change, so harverster will be called */
+		wtpSetThrdStateChanged(pThis->pWtp, 1); /* indicate change, so harverster will be called */
 	}
 
 	d_pthread_mutex_unlock(&pThis->mut);
@@ -209,6 +209,7 @@ CODESTARTobjDestruct(wti)
 	/* actual destruction */
 	pthread_cond_destroy(&pThis->condExitDone);
 	pthread_mutex_destroy(&pThis->mut);
+	DESTROY_ATOMIC_HELPER_MUT(pThis->mutCurrCmd);
 
 	free(pThis->pszDbgHdr);
 ENDobjDestruct(wti)
@@ -219,6 +220,7 @@ ENDobjDestruct(wti)
 BEGINobjConstruct(wti) /* be sure to specify the object type also in END macro! */
 	pthread_cond_init(&pThis->condExitDone, NULL);
 	pthread_mutex_init(&pThis->mut, NULL);
+	INIT_ATOMIC_HELPER_MUT(pThis->mutCurrCmd);
 ENDobjConstruct(wti)
 
 
@@ -326,8 +328,7 @@ wtiWorkerCancelCleanup(void *arg)
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
 	d_pthread_mutex_lock(&pWtp->mut);
 	wtiSetState(pThis, eWRKTHRD_TERMINATING, 0, MUTEX_ALREADY_LOCKED);
-	/* TODO: sync access? I currently think it is NOT needed -- rgerhards, 2008-01-28 */
-	ATOMIC_STORE_1_TO_INT(pWtp->bThrdStateChanged); /* indicate change, so harverster will be called */
+	wtpSetThrdStateChanged(pWtp, 1); /* indicate change, so harverster will be called */
 
 	d_pthread_mutex_unlock(&pWtp->mut);
 	pthread_setcancelstate(iCancelStateSave, NULL);
@@ -414,7 +415,7 @@ wtiWorker(wti_t *pThis)
 	pWtp->pfOnWorkerShutdown(pWtp->pUsr);
 
 	wtiSetState(pThis, eWRKTHRD_TERMINATING, 0, MUTEX_ALREADY_LOCKED);
-	ATOMIC_STORE_1_TO_INT(pWtp->bThrdStateChanged); /* indicate change, so harverster will be called */
+	wtpSetThrdStateChanged(pWtp, 1); /* indicate change, so harverster will be called */
 	d_pthread_mutex_unlock(&pThis->mut);
 	pthread_setcancelstate(iCancelStateSave, NULL);
 

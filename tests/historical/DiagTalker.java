@@ -1,3 +1,4 @@
+This tool has been replaced by ./tests/diagtalker.c in release 4.7.1
 /* A yet very simple tool to talk to imdiag.
  *
  * Copyright 2009 Rainer Gerhards and Adiscon GmbH.

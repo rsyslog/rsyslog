@@ -26,6 +26,7 @@
 
 #include <pthread.h>
 #include "obj.h"
+#include "atomic.h"
 
 /* commands and states for worker threads. */
 typedef enum {
@@ -79,6 +80,7 @@ typedef struct wtp_s {
 	rsRetVal (*pfOnWorkerShutdown)(void *pUsr);
 	/* end user objects */
 	uchar *pszDbgHdr;	/* header string for debug messages */
+	DEF_ATOMIC_HELPER_MUT(mutThrdStateChanged);
 } wtp_t;
 
 /* some symbolic constants for easier reference */
@@ -100,6 +102,7 @@ rsRetVal wtpSetDbgHdr(wtp_t *pThis, uchar *pszMsg, size_t lenMsg);
 rsRetVal wtpSignalWrkrTermination(wtp_t *pWtp);
 rsRetVal wtpShutdownAll(wtp_t *pThis, wtpState_t tShutdownCmd, struct timespec *ptTimeout);
 int wtpGetCurNumWrkr(wtp_t *pThis, int bLockMutex);
+void wtpSetThrdStateChanged(wtp_t *pThis, int val);
 PROTOTYPEObjClassInit(wtp);
 PROTOTYPEpropSetMethFP(wtp, pfChkStopWrkr, rsRetVal(*pVal)(void*, int));
 PROTOTYPEpropSetMethFP(wtp, pfRateLimiter, rsRetVal(*pVal)(void*));

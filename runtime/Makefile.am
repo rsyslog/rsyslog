@@ -15,6 +15,7 @@ librsyslog_la_SOURCES = \
 	nsd.h \
 	glbl.h \
 	glbl.c \
+	unlimited_select.h \
 	conf.c \
 	conf.h \
 	parser.h \

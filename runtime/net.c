@@ -502,8 +502,8 @@ static inline void MaskIP4 (struct in_addr  *addr, uint8_t bits) {
 	addr->s_addr &= htonl(0xffffffff << (32 - bits));
 }
 
-#define SIN(sa)  ((struct sockaddr_in  *)(sa))
-#define SIN6(sa) ((struct sockaddr_in6 *)(sa))
+#define SIN(sa)  ((struct sockaddr_in  *)(void*)(sa))
+#define SIN6(sa) ((struct sockaddr_in6 *)(void*)(sa))
 
 
 /* This is a cancel-safe getnameinfo() version, because we learned
@@ -1165,12 +1165,12 @@ void debugListenInfo(int fd, char *type)
 		switch(sa.sa_family) {
 		case PF_INET:
 			szFamily = "IPv4";
-			ipv4 = (struct sockaddr_in*) &sa;
+			ipv4 = (struct sockaddr_in*)(void*) &sa;
 			port = ntohs(ipv4->sin_port);
 			break;
 		case PF_INET6:
 			szFamily = "IPv6";
-			ipv6 = (struct sockaddr_in6*) &sa;
+			ipv6 = (struct sockaddr_in6*)(void*) &sa;
 			port = ntohs(ipv6->sin6_port);
 			break;
 		default:

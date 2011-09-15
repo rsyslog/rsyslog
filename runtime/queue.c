@@ -110,7 +110,7 @@ static inline void queueDrain(qqueue_t *pThis)
 	ASSERT(pThis != NULL);
 
 	/* iQueueSize is not decremented by qDel(), so we need to do it ourselves */
-	while(ATOMIC_DEC_AND_FETCH(pThis->iQueueSize) > 0) {
+	while(ATOMIC_DEC_AND_FETCH(&pThis->iQueueSize, &pThis->mutQueueSize) > 0) {
 		pThis->qDel(pThis, &pUsr);
 		if(pUsr != NULL) {
 			objDestruct(pUsr);
@@ -1027,7 +1027,7 @@ qqueueAdd(qqueue_t *pThis, void *pUsr)
 	CHKiRet(pThis->qAdd(pThis, pUsr));
 
 	if(pThis->qType != QUEUETYPE_DIRECT) {
-		ATOMIC_INC(pThis->iQueueSize);
+		ATOMIC_INC(&pThis->iQueueSize, &pThis->mutQueueSize);
 		dbgoprint((obj_t*) pThis, "entry added, size now %d entries\n", pThis->iQueueSize);
 	}
 
@@ -1056,7 +1056,7 @@ qqueueDel(qqueue_t *pThis, void *pUsr)
 		iRet = qqueueGetUngottenObj(pThis, (obj_t**) pUsr);
 	} else {
 		iRet = pThis->qDel(pThis, pUsr);
-		ATOMIC_DEC(pThis->iQueueSize);
+		ATOMIC_DEC(&pThis->iQueueSize, &pThis->mutQueueSize);
 	}
 
 	dbgoprint((obj_t*) pThis, "entry deleted, state %d, size now %d entries\n",
@@ -1343,6 +1343,8 @@ rsRetVal qqueueConstruct(qqueue_t **ppThis, queueType_t qType, int iWorkerThread
 			pThis->qDel = qDelDirect;
 			break;
 	}
+
+	INIT_ATOMIC_HELPER_MUT(pThis->mutQueueSize);
 
 finalize_it:
 	OBJCONSTRUCT_CHECK_SUCCESS_AND_CLEANUP
@@ -2063,6 +2065,8 @@ CODESTARTobjDestruct(qqueue)
 	pthread_cond_destroy(&pThis->notEmpty);
 	pthread_cond_destroy(&pThis->belowFullDlyWtrMrk);
 	pthread_cond_destroy(&pThis->belowLightDlyWtrMrk);
+
+	DESTROY_ATOMIC_HELPER_MUT(pThis->mutQueueSize);
 
 	/* type-specific destructor */
 	iRet = pThis->qDestruct(pThis);

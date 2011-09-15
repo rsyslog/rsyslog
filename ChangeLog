@@ -1,4 +1,96 @@
 ---------------------------------------------------------------------------
+Version 4.8.0  [v4-stable] (rgerhards), 2011-09-07
+***************************************************************************
+* This is a new stable v4 version. It contains all fixes and enhancements *
+* made during the 4.7.x phase as well as those listed below.              *
+* Note: major new development to v4 is concluded  and will only be done   *
+*       for custom projects.                                              *
+***************************************************************************
+There are no changes compared to 4.7.5, just a re-release with the new
+version number as new v4-stable. The most important new feature is Solaris
+support.
+---------------------------------------------------------------------------
+Version 4.7.5  [v4-beta], 2011-09-01
+- bugfix/security: off-by-two bug in legacy syslog parser, CVE-2011-3200
+- bugfix: potential misadressing in property replacer
+- bugfix: The NUL-Byte for the syslogtag was not copied in MsgDup (msg.c)
+---------------------------------------------------------------------------
+Version 4.7.4  [v4-beta] (rgerhards), 2011-07-11
+- added support for the ":omusrmsg:" syntax in configuring user messages
+- added support for the ":omfile:" syntax in configuring user messages
+- added $LocalHostName config directive
+- bugfix: PRI was invalid on Solaris for message from local log socket
+- bugfix: local hostname was pulled too-early, so that some config 
+  directives (namely FQDN settings) did not have any effect
+- bugfix: atomic increment for msg object may not work correct on all
+  platforms. Thanks to Chris Metcalf for the patch
+- bugfix: a slightly more informative error message when a TCP
+  connections is aborted
+---------------------------------------------------------------------------
+Version 4.7.3  [v4-devel] (rgerhards), 2010-11-25
+- bugfix(important): problem in TLS handling could cause rsyslog to loop
+  in a tight loop, effectively disabling functionality and bearing the
+  risk of unresponsiveness of the whole system.
+  Bug tracker: http://bugzilla.adiscon.com/show_bug.cgi?id=194
+- added omuxsock, which permits to write message to local Unix sockets
+  this is the counterpart to imuxsock, enabling fast local forwarding
+- added imptcp, a simplified, Linux-specific and potentielly fast
+  syslog plain tcp input plugin (NOT supporting TLS!)
+- bugfix: a couple of problems that imfile had on some platforms, namely
+  Ubuntu (not their fault, but occured there)
+- bugfix: imfile utilizes 32 bit to track offset. Most importantly,
+  this problem can not experienced on Fedora 64 bit OS (which has
+  64 bit long's!)
+- added the $InputFilePersistStateInterval config directive to imfile
+- changed imfile so that the state file is never deleted (makes imfile
+  more robust in regard to fatal failures)
+---------------------------------------------------------------------------
+Version 4.7.2  [v4-devel] (rgerhards), 2010-05-03
+- bugfix: problems with atomic operations emulaton
+  replaced atomic operation emulation with new code. The previous code
+  seemed to have some issue and also limited concurrency severely. The
+  whole atomic operation emulation has been rewritten.
+- added new $Sleep directive to hold processing for a couple of seconds
+  during startup
+- bugfix: programname filter in ! configuration can not be reset
+  Thanks to Kiss Gabor for the patch.
+---------------------------------------------------------------------------
+Version 4.7.1  [v4-devel] (rgerhards), 2010-04-22
+- Solaris support much improved -- was not truely usable in 4.7.0
+  Solaris is no longer supported in imklog, but rather there is a new
+  plugin imsolaris, which is used to pull local log sources on a Solaris
+  machine.
+- testbench improvement: Java is no longer needed for testing tool creation
+---------------------------------------------------------------------------
+Version 4.7.0  [v4-devel] (rgerhards), 2010-04-14
+- new: support for Solaris added (but not yet the Solaris door API)
+- added function getenv() to RainerScript
+- added new config option $InputUnixListenSocketCreatePath
+  to permit the auto-creation of pathes to additional log sockets. This
+  turns out to be useful if they reside on temporary file systems and
+  rsyslogd starts up before the daemons that create these sockets
+  (rsyslogd always creates the socket itself if it does not exist).
+- added $LogRSyslogStatusMessages configuration directive
+  permitting to turn off rsyslog start/stop/HUP messages. See Debian
+  ticket http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=463793
+- added new config directive $omfileForceChown to (try to) fix some broken
+  system configs.
+  See ticket for details: http://bugzilla.adiscon.com/show_bug.cgi?id=150
+- added $EscapeControlCharacterTab config directive
+  Thanks to Jonathan Bond-Caron for the patch.
+- added option to use unlimited-size select() calls
+  Thanks to varmjofekoj for the patch
+- debugondemand mode caused backgrounding to fail - close to a bug, but I'd
+  consider the ability to background in this mode a new feature...
+- bugfix (kind of): check if TCP connection is still alive if using TLS
+  Thanks to Jonathan Bond-Caron for the patch.
+- imported changes from 4.5.7 and below
+- bugfix: potential segfault when -p command line option was used
+  Thanks for varmojfekoj for pointing me at this bug.
+- bugfix: potential segfaults during queue shutdown
+  (bugs require certain non-standard settings to appear)
+  Thanks to varmojfekoj for the patch [imported from 4.5.8]
+---------------------------------------------------------------------------
 Version 4.6.8  [v4-stable] (rgerhards), 2011-09-01
 - bugfix/security: off-by-two bug in legacy syslog parser, CVE-2011-3200
 - bugfix: potential misadressing in property replacer
@@ -106,12 +198,18 @@ Version 4.6.3  [v4-stable] (rgerhards), 2010-07-07
   message-induced off-by-one error (potential segfault) (see 4.6.2)
   The analysis has been completed and a better fix been crafted and 
   integrated.
+- bugfix: the T/P/E config size specifiers did not work properly under
+  all 32-bit platforms
+- bugfix: local unix system log socket was deleted even when it was
+  not configured
 - some doc fixes; incorrect config samples could cause confusion
   thanks to Anthony Edwards for pointing the problems out
 ---------------------------------------------------------------------------
 Version 4.6.2  [v4-stable] (rgerhards), 2010-03-26
 - new feature: "." action type added to support writing files to relative
   pathes (this is primarily meant as a debug aid)
+- added replacements for atomic instructions on systems that do not
+  support them. [backport of Stefen Sledz' patch for v5)
 - new feature: $OMFileAsyncWriting directive added
   it permits to specifiy if asynchronous writing should be done or not
 - bugfix(temporary): message-induced off-by-one error (potential segfault)

@@ -37,8 +37,10 @@ html_files = \
 	omlibdbi.html \
 	imfile.html \
 	imtcp.html \
+	imptcp.html \
 	imgssapi.html \
 	imrelp.html \
+	imsolaris.html \
 	imuxsock.html \
 	imklog.html \
 	queues.html \
@@ -99,6 +101,7 @@ html_files = \
 	gssapi.html \
 	licensing.html \
 	ommail.html \
+	omuxsock.html \
 	omrelp.html \
 	syslog_parsing.html \
 	troubleshoot.html \

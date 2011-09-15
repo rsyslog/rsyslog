@@ -1,0 +1,47 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Language" content="en">
+<title>Solaris Input Module (imsolaris)</title>
+
+</head>
+<body>
+<a href="rsyslog_conf_modules.html">back</a>
+
+<h1>Solaris Input Module</h1>
+<p><b>Module Name:&nbsp;&nbsp;&nbsp; imsolaris</b></p>
+<p><b>Author: </b>Rainer Gerhards
+&lt;rgerhards@adiscon.com&gt;</p>
+<p><b>Description</b>:</p>
+<p>Reads local Solaris log messages including the kernel log.</p>
+<p>This module is specifically tailored for Solaris. Under Solaris, there
+is no special kernel input device. Instead, both kernel messages as well as
+messages emitted via syslog() are received from a single source.
+<p>This module obeys the Solaris door() mechanism to detect a running syslogd
+instance. As such, only one can be active at one time. If it detects another
+active intance at startup, the module disables itself, but rsyslog will
+continue to run.
+<p><b>Configuration Directives</b>:</p>
+<ul>
+<li><strong>$IMSolarisLogSocketName &lt;name&gt;</strong><br>
+This is the name of the log socket (stream) to read. If not given, /dev/log
+is read.
+</li>
+</ul>
+<b>Caveats/Known Bugs:</b>
+<p>None currently known. For obvious reasons, works on Solaris, only (and compilation
+will most probably fail on any other platform).
+<p><b>Sample:</b></p>
+<p>The following sample pulls messages from the default log source
+<br>
+</p>
+<textarea rows="15" cols="60">$ModLoad imsolaris
+</textarea>
+<p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>]
+[<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the
+<a href="http://www.rsyslog.com/">rsyslog</a>
+project.<br>
+Copyright &copy; 2010 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>.
+Released under the GNU GPL version 3 or higher.</font></p>
+</body></html>
