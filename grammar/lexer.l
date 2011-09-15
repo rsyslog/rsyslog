@@ -156,7 +156,7 @@ int fileno(FILE *stream);
 "module"[ \n\t]*"("		{ yylval.objType = CNFOBJ_MODULE;
 				  BEGIN INOBJ; return BEGINOBJ; }
 "action"[ \n\t]*"("		{ BEGIN INOBJ; return BEGIN_ACTION; }
-^[ \t]*:\$?[a-z]+[ ]*,[ ]*!?[a-z]+[ ]*,[ ]*\".*\"	{
+^[ \t]*:\$?[a-z\-]+[ ]*,[ ]*!?[a-z]+[ ]*,[ ]*\".*\"	{
 				  yylval.s = strdup(yytext); return PROPFILT; }
 ^[ \t]*[\*a-z][,\*a-z]*[0-7]*\.[,!=;\.\*a-z]+ { yylval.s = strdup(yytext); return PRIFILT; }
 "~" |
