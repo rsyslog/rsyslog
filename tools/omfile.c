@@ -749,7 +749,7 @@ CODESTARTparseSelectorAct
 		        
 	  	if(pData->pStrm == NULL) {
 			DBGPRINTF("Error opening log file: %s\n", pData->f_fname);
-			errmsg.LogError(0, RS_RET_NO_FILE_ACCESS, "Could no open output file '%s'", pData->f_fname);
+			errmsg.LogError(0, RS_RET_NO_FILE_ACCESS, "Could not open output file '%s'", pData->f_fname);
 		}
 	}
 CODE_STD_FINALIZERparseSelectorAct
