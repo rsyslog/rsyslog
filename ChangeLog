@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 6.3.6  [DEVEL] 2011-09-??
+Version 6.3.6  [DEVEL] 2011-09-19
 - added $InputRELPServerBindRuleset directive to specify rulesets for RELP
 - bugfix: config parser did not support properties with dashes in them
   inside property-based filters. Thanks to Gerrit Seré for reporting this.
