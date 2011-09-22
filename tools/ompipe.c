@@ -207,7 +207,7 @@ CODESTARTparseSelectorAct
 	if(pData->fd < 0 ) {
 		pData->fd = -1;
 		DBGPRINTF("Error opening log pipe: %s\n", pData->f_fname);
-		errmsg.LogError(0, RS_RET_NO_FILE_ACCESS, "Could no open output pipe '%s'", pData->f_fname);
+		errmsg.LogError(0, RS_RET_NO_FILE_ACCESS, "Could not open output pipe '%s'", pData->f_fname);
 	}
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
