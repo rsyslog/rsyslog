@@ -1753,7 +1753,6 @@ getTAG(msg_t *pM, uchar **ppBuf, int *piLen)
 			*piLen = pM->iLenTAG;
 		}
 	}
-dbgprintf("getTAG: len %d, buf '%s'\n", *piLen, *ppBuf);
 }
 
 
