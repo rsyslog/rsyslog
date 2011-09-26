@@ -388,6 +388,7 @@ ENDnewActInst
 
 BEGINparseSelectorAct
 	es_str_t *usrs;
+	int bHadWarning;
 CODESTARTparseSelectorAct
 CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	if(!strncmp((char*) p, ":omusrmsg:", sizeof(":omusrmsg:") - 1)) {
@@ -395,12 +396,13 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	} else {
 		if(!*p || !((*p >= 'a' && *p <= 'z') || (*p >= 'A' && *p <= 'Z')
 	   || (*p >= '0' && *p <= '9') || *p == '_' || *p == '.' || *p == '*')) {
-		ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
+			ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
 		} else {
 			errmsg.LogError(0, RS_RET_OUTDATED_STMT,
 			   "action '%s' treated as ':omusrmsg:%s' - please "
 			   "change syntax, '%s' will not be supported in the future",
 			   p, p, p);
+			bHadWarning = 1;
 		}
 	}
 
@@ -424,6 +426,8 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 			!= RS_RET_OK)
 			goto finalize_it;
 	}
+	if(iRet == RS_RET_OK && bHadWarning)
+		iRet = RS_RET_OK_WARN;
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 

@@ -716,6 +716,7 @@ rsRetVal cflineDoAction(rsconf_t *conf, uchar **p, action_t **ppAction)
 	modInfo_t *pMod;
 	cfgmodules_etry_t *node;
 	omodStringRequest_t *pOMSR;
+	int bHadWarning = 0;
 	action_t *pAction = NULL;
 	void *pModData;
 	DEFiRet;
@@ -735,6 +736,10 @@ rsRetVal cflineDoAction(rsconf_t *conf, uchar **p, action_t **ppAction)
 		pMod = node->pMod;
 		iRet = pMod->mod.om.parseSelectorAct(p, &pModData, &pOMSR);
 		dbgprintf("tried selector action for %s: %d\n", module.GetName(pMod), iRet);
+		if(iRet == RS_RET_OK_WARN) {
+			bHadWarning = 1;
+			iRet = RS_RET_OK;
+		}
 		if(iRet == RS_RET_OK || iRet == RS_RET_SUSPENDED) {
 			/* advance our config parser state: we now only accept an $End as valid,
 			 * no more action statments.
@@ -769,6 +774,8 @@ rsRetVal cflineDoAction(rsconf_t *conf, uchar **p, action_t **ppAction)
 	}
 
 	*ppAction = pAction;
+	if(iRet == RS_RET_OK && bHadWarning)
+		iRet = RS_RET_OK_WARN;
 	RETiRet;
 }
 

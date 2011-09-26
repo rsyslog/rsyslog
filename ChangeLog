@@ -1,4 +1,14 @@
 ---------------------------------------------------------------------------
+Version 6.3.7  [DEVEL] 2011-0?-??
+- bugfix: imuxsock did no longer ignore message-provided timestamp, if
+  so configured (the *default*). Lead to no longer sub-second timestamps.
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=281
+- bugfix: omfile returns fatal error code for things that go really wrong
+  previously, RS_RET_RESUME was returned, which lead to a loop inside the
+  rule engine as omfile could not really recover.
+- bugfix: rsyslogd -v always said 64 atomics were not present
+  thanks to mono_matsuko for the patch
+---------------------------------------------------------------------------
 Version 6.3.6  [DEVEL] 2011-09-19
 - added $InputRELPServerBindRuleset directive to specify rulesets for RELP
 - bugfix: config parser did not support properties with dashes in them
@@ -286,6 +296,27 @@ expected that interfaces, even new ones, break during the initial
   syslog plain tcp input plugin (NOT supporting TLS!)
   [ported from v4]
 ---------------------------------------------------------------------------
+Version 5.9.4  [V5-DEVEL], 2011-0?-??
+- bugfix: imuxsock did no longer ignore message-provided timestamp, if
+  so configured (the *default*). Lead to no longer sub-second timestamps.
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=281
+- bugfix: omfile returns fatal error code for things that go really wrong
+  previously, RS_RET_RESUME was returned, which lead to a loop inside the
+  rule engine as omfile could not really recover.
+- bugfix: rsyslogd -v always said 64 atomics were not present
+  thanks to mono_matsuko for the patch
+---------------------------------------------------------------------------
+Version 5.9.3  [V5-DEVEL], 2011-09-01
+- bugfix/security: off-by-two bug in legacy syslog parser, CVE-2011-3200
+- bugfix: mark message processing did not work correctly
+- added capability to emit config error location info for warnings 
+  otherwise, omusrmsg's warning about new config format was not
+  accompanied by problem location.
+- bugfix: potential misadressing in property replacer
+- bugfix: MSGID corruption in RFC5424 parser under some circumstances
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=275
+- bugfix: The NUL-Byte for the syslogtag was not copied in MsgDup (msg.c)
+---------------------------------------------------------------------------
 Version 5.9.2  [V5-DEVEL] (rgerhards), 2011-07-11
 - systemd support: set stdout/stderr to null - thx to Lennart for the patch
 - added support for the ":omusrmsg:" syntax in configuring user messages
@@ -357,6 +388,16 @@ Version 5.9.0  [V5-DEVEL] (rgerhards), 2011-06-08
 - bugfix: failover did not work correctly if repeated msg reduction was on
   affected directive was: $ActionExecOnlyWhenPreviousIsSuspended on
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=236
+---------------------------------------------------------------------------
+Version 5.8.6  [V5-stable] (rgerhards/al), 2011-??-??
+- bugfix: imuxsock did no longer ignore message-provided timestamp, if
+  so configured (the *default*). Lead to no longer sub-second timestamps.
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=281
+- bugfix: omfile returns fatal error code for things that go really wrong
+  previously, RS_RET_RESUME was returned, which lead to a loop inside the
+  rule engine as omfile could not really recover.
+- bugfix: rsyslogd -v always said 64 atomics were not present
+  thanks to mono_matsuko for the patch
 ---------------------------------------------------------------------------
 Version 5.8.5  [V5-stable] (rgerhards/al), 2011-09-01
 - bugfix/security: off-by-two bug in legacy syslog parser, CVE-2011-3200
@@ -1175,6 +1216,32 @@ increase.
 - increased ompgsql performance by adapting to new transactional
   output module interface
 ---------------------------------------------------------------------------
+Version 4.8.1  [v4-beta], 2011-09-??
+- bugfix: potential abort if ultra-large file io buffers are used and
+  dynafile cache exhausts address space (primarily a problem on 32 bit
+  platforms)
+---------------------------------------------------------------------------
+Version 4.8.0  [v4-stable] (rgerhards), 2011-09-07
+***************************************************************************
+* This is a new stable v4 version. It contains all fixes and enhancements *
+* made during the 4.7.x phase as well as those listed below.              *
+* Note: major new development to v4 is concluded  and will only be done   *
+*       for custom projects.                                              *
+***************************************************************************
+There are no changes compared to 4.7.5, just a re-release with the new
+version number as new v4-stable. The most important new feature is Solaris
+support.
+---------------------------------------------------------------------------
+Version 4.7.5  [v4-beta], 2011-09-01
+- bugfix/security: off-by-two bug in legacy syslog parser, CVE-2011-3200
+- bugfix: potential misadressing in property replacer
+- bugfix: The NUL-Byte for the syslogtag was not copied in MsgDup (msg.c)
+---------------------------------------------------------------------------
+Version 4.7.4  [v4-beta] (rgerhards), 2011-07-11
+- added support for the ":omusrmsg:" syntax in configuring user messages
+- added support for the ":omfile:" syntax in configuring user messages
+- added $LocalHostName config directive
+- bugfix: PRI was invalid on Solaris for message from local log socket
 Version 4.7.3  [v4-devel] (rgerhards), 2010-11-25
 - added omuxsock, which permits to write message to local Unix sockets
   this is the counterpart to imuxsock, enabling fast local forwarding
