@@ -235,7 +235,8 @@ rsRetVal setDynaFileCacheSize(void __attribute__((unused)) *pVal, int iNewVal)
 }
 
 
-rsRetVal goneAway(void __attribute__((unused)) *pVal, int iNewVal)
+rsRetVal goneAway(void __attribute__((unused)) *pVal,
+	   	  int __attribute__((unused)) iNewVal)
 {
 	errmsg.LogError(0, RS_RET_ERR, "directive $omfileForceChown is no longer supported");
 	return RS_RET_ERR;
@@ -391,6 +392,7 @@ prepareFile(instanceData *pData, uchar *newFileName)
 	int fd;
 	DEFiRet;
 
+	pData->pStrm = NULL;
 	if(access((char*)newFileName, F_OK) != 0) {
 		/* file does not exist, create it (and eventually parent directories */
 		if(pData->bCreateDirs) {
@@ -461,8 +463,10 @@ prepareFile(instanceData *pData, uchar *newFileName)
 	CHKiRet(strm.ConstructFinalize(pData->pStrm));
 	
 finalize_it:
-	if(pData->pStrm == NULL) {
-		DBGPRINTF("Error opening log file: %s\n", pData->f_fname);
+	if(iRet != RS_RET_OK) {
+		if(pData->pStrm != NULL) {
+			strm.Destruct(&pData->pStrm);
+		}
 	}
 	RETiRet;
 }
@@ -540,7 +544,7 @@ prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
 	pData->iCurrElt = -1;
 	/* similarly, we need to set the current pStrm to NULL, because otherwise, if prepareFile() fails,
 	 * we may end up using an old stream. This bug depends on how exactly prepareFile fails,
-	 * but it* could be triggered in the common case of a failed open() system call.
+	 * but it could be triggered in the common case of a failed open() system call.
 	 * rgerhards, 2010-03-22
 	 */
 	pData->pStrm = NULL;
@@ -568,8 +572,8 @@ prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
 	/* Ok, we finally can open the file */
 	localRet = prepareFile(pData, newFileName); /* ignore exact error, we check fd below */
 
-	/* file is either open now or an error state set */ // RG: better check localRet?
-	if(pData->pStrm == NULL) {
+	/* check if we had an error */
+	if(localRet != RS_RET_OK) {
 		/* do not report anything if the message is an internally-generated
 		 * message. Otherwise, we could run into a never-ending loop. The bad
 		 * news is that we also lose errors on startup messages, but so it is.
@@ -577,7 +581,7 @@ prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
 		if(iMsgOpts & INTERNAL_MSG) {
 			DBGPRINTF("Could not open dynaFile, discarding message\n");
 		} else {
-			errmsg.LogError(0, NO_ERRCODE, "Could not open dynamic file '%s' - discarding message", newFileName);
+			errmsg.LogError(0, NO_ERRCODE, "Could not open dynamic file '%s' [state %d] - discarding message", newFileName, localRet);
 		}
 		ABORT_FINALIZE(localRet);
 	}
@@ -651,8 +655,6 @@ finalize_it:
 		/* in v5, we shall return different states for message-caused failure (but only there!) */
 		if(pData->strmType == STREAMTYPE_NAMED_PIPE)
 			iRet = RS_RET_DISABLE_ACTION; /* this is the traditional semantic -- rgerhards, 2010-01-15 */
-		else
-			iRet = RS_RET_SUSPENDED;
 	}
 	RETiRet;
 }
@@ -685,7 +687,8 @@ ENDbeginTransaction
 
 BEGINendTransaction
 CODESTARTendTransaction
-	if(pData->bFlushOnTXEnd) {
+	/* Note: pStrm may be NULL if there was an error opening the stream */
+	if(pData->bFlushOnTXEnd && pData->pStrm != NULL) {
 		CHKiRet(strm.Flush(pData->pStrm));
 	}
 finalize_it:
