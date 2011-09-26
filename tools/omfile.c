@@ -663,8 +663,6 @@ finalize_it:
 		/* in v5, we shall return different states for message-caused failure (but only there!) */
 		if(pData->strmType == STREAMTYPE_NAMED_PIPE)
 			iRet = RS_RET_DISABLE_ACTION; /* this is the traditional semantic -- rgerhards, 2010-01-15 */
-		else
-			iRet = RS_RET_SUSPENDED;
 	}
 	RETiRet;
 }
@@ -697,7 +695,8 @@ ENDbeginTransaction
 
 BEGINendTransaction
 CODESTARTendTransaction
-	if(pData->bFlushOnTXEnd) {
+	/* Note: pStrm may be NULL if there was an error opening the stream */
+	if(pData->bFlushOnTXEnd && pData->pStrm != NULL) {
 		CHKiRet(strm.Flush(pData->pStrm));
 	}
 finalize_it:

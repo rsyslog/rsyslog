@@ -3,6 +3,9 @@ Version 5.8.6  [V5-stable] (rgerhards/al), 2011-??-??
 - bugfix: imuxsock did no longer ignore message-provided timestamp, if
   so configured (the *default*). Lead to no longer sub-second timestamps.
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=281
+- bugfix: omfile returns fatal error code for things that go really wrong
+  previously, RS_RET_RESUME was returned, which lead to a loop inside the
+  rule engine as omfile could not really recover.
 - bugfix: rsyslogd -v always said 64 atomics were not present
   thanks to mono_matsuko for the patch
 ---------------------------------------------------------------------------
