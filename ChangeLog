@@ -1,5 +1,8 @@
 ---------------------------------------------------------------------------
 Version 6.3.7  [DEVEL] 2011-0?-??
+- bugfix: facility local<x> was not correctly interpreted in legacy filters
+  Was only accepted if it was the first PRI in a multi-filter PRI.
+  Thanks to forum user Mark for bringing this to our attention.
 - bugfix: imuxsock did no longer ignore message-provided timestamp, if
   so configured (the *default*). Lead to no longer sub-second timestamps.
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=281
