@@ -6,6 +6,10 @@ Version 5.8.6  [V5-stable] (rgerhards/al), 2011-??-??
 - bugfix: omfile returns fatal error code for things that go really wrong
   previously, RS_RET_RESUME was returned, which lead to a loop inside the
   rule engine as omfile could not really recover.
+- bugfix: imfile did invalid system call under some circumstances
+  when a file that was to be monitored did not exist BUT the state file
+  actually existed. Mostly a cosmetic issue. Root cause was incomplete
+  error checking in stream.c; so patch may affect other code areas.
 - bugfix: rsyslogd -v always said 64 atomics were not present
   thanks to mono_matsuko for the patch
 ---------------------------------------------------------------------------

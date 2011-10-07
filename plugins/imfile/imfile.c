@@ -147,10 +147,10 @@ openFile(fileInfo_t *pThis)
 	/* check if the file exists */
 	if(stat((char*) pszSFNam, &stat_buf) == -1) {
 		if(errno == ENOENT) {
-			/* currently no object! dbgoprint((obj_t*) pThis, "clean startup, no .si file found\n"); */
+			dbgprintf("filemon %p: clean startup, no .si file found\n", pThis);
 			ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
 		} else {
-			/* currently no object! dbgoprint((obj_t*) pThis, "error %d trying to access .si file\n", errno); */
+			dbgprintf("filemon %p: error %d trying to access .si file\n", pThis, errno);
 			ABORT_FINALIZE(RS_RET_IO_ERROR);
 		}
 	}
