@@ -765,7 +765,7 @@ BEGINnewActInst
 	struct cnfparamvals *pvals;
 	int i;
 CODESTARTnewActInst
-	dbgprintf("XXXX: in newActInst (omfile)\n");
+	DBGPRINTF("newActInst (omfile)\n");
 
 	pvals = nvlstGetParams(lst, &actpblk, NULL);
 	if(pvals == NULL) {
@@ -853,41 +853,7 @@ CODESTARTnewActInst
 		pData->iCurrElt = -1;		  /* no current element */
 	}
 // TODO: add	pData->iSizeLimit = 0; /* default value, use outchannels to configure! */
-#if 0
-	switch(*p) {
-        case '$':
-		CODE_STD_STRING_REQUESTnewActInst(1)
-		/* rgerhards 2005-06-21: this is a special setting for output-channel
-		 * definitions. In the long term, this setting will probably replace
-		 * anything else, but for the time being we must co-exist with the
-		 * traditional mode lines.
-		 * rgerhards, 2007-07-24: output-channels will go away. We keep them
-		 * for compatibility reasons, but seems to have been a bad idea.
-		 */
-		CHKiRet(cflineParseOutchannel(pData, p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS));
-		pData->bDynamicName = 0;
-		break;
 
-	case '?': /* This is much like a regular file handle, but we need to obtain
-		   * a template name. rgerhards, 2007-07-03
-		   */
-		CODE_STD_STRING_REQUESTnewActInst(2)
-		++p; /* eat '?' */
-		CHKiRet(cflineParseFileName(p, (uchar*) pData->f_fname, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS,
-				               (pszFileDfltTplName == NULL) ? (uchar*)"RSYSLOG_FileFormat" : pszFileDfltTplName));
-		/* "filename" is actually a template name, we need this as string 1. So let's add it
-		 * to the pOMSR. -- rgerhards, 2007-07-27
-		 */
-		CHKiRet(OMSRsetEntry(*ppOMSR, 1, ustrdup(pData->f_fname), OMSR_NO_RQD_TPL_OPTS));
-
-		pData->bDynamicName = 1;
-		pData->iCurrElt = -1;		  /* no current element */
-		/* we now allocate the cache table */
-		CHKmalloc(pData->dynCache = (dynaFileCacheEntry**)
-				calloc(cs.iDynaFileCacheSize, sizeof(dynaFileCacheEntry*)));
-		break;
-	}
-#endif
 CODE_STD_FINALIZERnewActInst
 	cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst

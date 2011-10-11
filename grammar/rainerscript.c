@@ -437,8 +437,8 @@ nvlstGetParam(struct nvlst *valnode, struct cnfparamdescr *param,
 {
 	uchar *cstr;
 
-	dbgprintf("XXXX: in nvlstGetParam, name '%s', type %d\n",
-		  param->name, (int) param->type);
+	dbgprintf("XXXX: in nvlstGetParam, name '%s', type %d, valnode->bUsed %d\n",
+		  param->name, (int) param->type, valnode->bUsed);
 	valnode->bUsed = 1;
 	val->bUsed = 1;
 	switch(param->type) {

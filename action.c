@@ -1775,6 +1775,8 @@ actionApplyCnfParam(action_t *pAction, struct cnfparamvals *pvals)
 			continue;
 		if(!strcmp(pblk.descr[i].name, "name")) {
 			pAction->pszName = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(pblk.descr[i].name, "type")) {
+			continue; /* this is handled seperately during module select! */
 		} else if(!strcmp(pblk.descr[i].name, "action.writeallmarkmessages")) {
 			pAction->bWriteAllMarkMsgs = pvals[i].val.d.n;
 		} else if(!strcmp(pblk.descr[i].name, "action.execonlyeverynthtime")) {
@@ -1998,6 +2000,7 @@ actionNewInst(struct nvlst *lst, action_t **ppAction)
 	omodStringRequest_t *pOMSR;
 	void *pModData;
 	action_t *pAction;
+	int typeIdx;
 	DEFiRet;
 
 	paramvals = nvlstGetParams(lst, &pblk, NULL);
@@ -2006,7 +2009,9 @@ actionNewInst(struct nvlst *lst, action_t **ppAction)
 	}
 	dbgprintf("action param blk after actionNewInst:\n");
 	cnfparamsPrint(&pblk, paramvals);
-	if(paramvals[cnfparamGetIdx(&pblk, "type")].bUsed == 0) {
+	typeIdx = cnfparamGetIdx(&pblk, "type");
+	if(paramvals[typeIdx].bUsed == 0) {
+		errmsg.LogError(0, RS_RET_CONF_RQRD_PARAM_MISSING, "action type missing");
 		ABORT_FINALIZE(RS_RET_CONF_RQRD_PARAM_MISSING); // TODO: move this into rainerscript handlers
 	}
 	cnfModName = (uchar*)es_str2cstr(paramvals[cnfparamGetIdx(&pblk, ("type"))].val.d.estr, NULL);

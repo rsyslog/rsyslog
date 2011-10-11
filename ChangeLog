@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 6.3.7  [DEVEL] 2011-0?-??
+- improved support for new v6 config system. Now also supported by
+  - omfwd
 - bugfix: facility local<x> was not correctly interpreted in legacy filters
   Was only accepted if it was the first PRI in a multi-filter PRI.
   Thanks to forum user Mark for bringing this to our attention.
