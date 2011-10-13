@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 5.8.6  [V5-stable] 2011-??-??
+- bugfix: $ActionExecOnlyOnce interval did not work properly
+  Thanks to Tomas Heinrich for the patch
 - bugfix: race condition when extracting program name, APPNAME, structured
   data and PROCID (RFC5424 fields) could lead to invalid characters e.g.
   in dynamic file names or during forwarding (general malfunction of these
