@@ -1605,9 +1605,19 @@ static inline int getPROCIDLen(msg_t *pM, sbool bLockMutex)
  */
 char *getPROCID(msg_t *pM, sbool bLockMutex)
 {
+	uchar *pszRet;
+
 	ISOBJ_TYPE_assert(pM, msg);
-	preparePROCID(pM, bLockMutex);
-	return (pM->pCSPROCID == NULL) ? "-" : (char*) cstrGetSzStrNoNULL(pM->pCSPROCID);
+	if(bLockMutex == LOCK_MUTEX)
+		MsgUnlock(pM);
+	preparePROCID(pM, MUTEX_ALREADY_LOCKED);
+	if(pM->pCSPROCID == NULL)
+		pszRet = UCHAR_CONSTANT("");
+	else 
+		pszRet = rsCStrGetSzStrNoNULL(pM->pCSPROCID);
+	if(bLockMutex == LOCK_MUTEX)
+		MsgUnlock(pM);
+	return (char*) pszRet;
 }
 
 
@@ -1834,7 +1844,15 @@ static int getStructuredDataLen(msg_t *pM)
  */
 static inline char *getStructuredData(msg_t *pM)
 {
-	return (pM->pCSStrucData == NULL) ? "-" : (char*) rsCStrGetSzStrNoNULL(pM->pCSStrucData);
+	uchar *pszRet;
+
+	MsgUnlock(pM);
+	if(pM->pCSStrucData == NULL)
+		pszRet = UCHAR_CONSTANT("-");
+	else 
+		pszRet = rsCStrGetSzStrNoNULL(pM->pCSStrucData);
+	MsgUnlock(pM);
+	return (char*) pszRet;
 }
 
 

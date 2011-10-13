@@ -1,7 +1,9 @@
 ---------------------------------------------------------------------------
 Version 5.8.6  [V5-stable] 2011-??-??
-- bugfix: race condition when extracting program name and APPNAME
-  could lead to invalid characters e.g. in dynamic file names
+- bugfix: race condition when extracting program name, APPNAME, structured
+  data and PROCID (RFC5424 fields) could lead to invalid characters e.g.
+  in dynamic file names or during forwarding (general malfunction of these
+  fields in templates, mostly under heavy load)
 - bugfix: imuxsock did no longer ignore message-provided timestamp, if
   so configured (the *default*). Lead to no longer sub-second timestamps.
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=281
