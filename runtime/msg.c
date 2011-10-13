@@ -1873,8 +1873,18 @@ int getProgramNameLen(msg_t *pM, sbool bLockMutex)
  */
 uchar *getProgramName(msg_t *pM, sbool bLockMutex)
 {
-	prepareProgramName(pM, bLockMutex);
-	return (pM->pCSProgName == NULL) ? UCHAR_CONSTANT("") : rsCStrGetSzStrNoNULL(pM->pCSProgName);
+	uchar *pszRet;
+
+	if(bLockMutex == LOCK_MUTEX)
+		MsgUnlock(pM);
+	prepareProgramName(pM, MUTEX_ALREADY_LOCKED);
+	if(pM->pCSProgName == NULL)
+		pszRet = UCHAR_CONSTANT("");
+	else 
+		pszRet = rsCStrGetSzStrNoNULL(pM->pCSProgName);
+	if(bLockMutex == LOCK_MUTEX)
+		MsgUnlock(pM);
+	return pszRet;
 }
 
 
@@ -1920,9 +1930,19 @@ static inline void prepareAPPNAME(msg_t *pM, sbool bLockMutex)
  */
 char *getAPPNAME(msg_t *pM, sbool bLockMutex)
 {
+	uchar *pszRet;
+
 	assert(pM != NULL);
-	prepareAPPNAME(pM, bLockMutex);
-	return (pM->pCSAPPNAME == NULL) ? "" : (char*) rsCStrGetSzStrNoNULL(pM->pCSAPPNAME);
+	if(bLockMutex == LOCK_MUTEX)
+		MsgUnlock(pM);
+	prepareAPPNAME(pM, MUTEX_ALREADY_LOCKED);
+	if(pM->pCSAPPNAME == NULL)
+		pszRet = UCHAR_CONSTANT("");
+	else 
+		pszRet = rsCStrGetSzStrNoNULL(pM->pCSAPPNAME);
+	if(bLockMutex == LOCK_MUTEX)
+		MsgUnlock(pM);
+	return (char*)pszRet;
 }
 
 /* rgerhards, 2005-11-24
