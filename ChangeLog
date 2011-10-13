@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 4.8.1  [v4-beta], 2011-09-??
+- bugfix: $ActionExecOnlyOnce interval did not work properly
+  Thanks to Tomas Heinrich for the patch
 - bugfix: potential abort if ultra-large file io buffers are used and
   dynafile cache exhausts address space (primarily a problem on 32 bit
   platforms)

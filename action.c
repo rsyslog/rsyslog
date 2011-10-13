@@ -716,7 +716,6 @@ actionWriteToAction(action_t *pAction)
 		DBGPRINTF("action not yet ready again to be executed, onceInterval %d, tCurr %d, tNext %d\n",
 			  (int) pAction->iSecsExecOnceInterval, (int) getActNow(pAction),
 			  (int) (pAction->iSecsExecOnceInterval + pAction->tLastExec));
-		pAction->tLastExec = getActNow(pAction); /* re-init time flags */
 		FINALIZE;
 	}
 
