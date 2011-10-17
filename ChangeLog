@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 5.9.4  [V5-DEVEL], 2011-0?-??
+- removed dependency on gcrypt for recently-enough GnuTLS
+  see: http://bugzilla.adiscon.com/show_bug.cgi?id=289
 - bugfix: imuxsock did no longer ignore message-provided timestamp, if
   so configured (the *default*). Lead to no longer sub-second timestamps.
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=281
