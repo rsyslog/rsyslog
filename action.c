@@ -767,7 +767,7 @@ finalize_it:
  */
 static rsRetVal releaseBatch(action_t *pAction, batch_t *pBatch)
 {
-	int iArr;
+	int jArr;
 	int i, j;
 	batch_obj_t *pElem;
 	uchar ***ppMsgs;
@@ -781,15 +781,15 @@ static rsRetVal releaseBatch(action_t *pAction, batch_t *pBatch)
 			switch(pAction->eParamPassing) {
 			case ACT_ARRAY_PASSING:
 				ppMsgs = (uchar***) pElem->staticActParams;
-				for(i = 0 ; i < pAction->iNumTpls ; ++i) {
-					if(((uchar**)ppMsgs)[i] != NULL) {
-						iArr = 0;
-						while(ppMsgs[i][iArr] != NULL) {
-							d_free(ppMsgs[i][iArr++]);
-							ppMsgs[i][iArr++] = NULL;
+				for(j = 0 ; j < pAction->iNumTpls ; ++j) {
+					if(((uchar**)ppMsgs)[j] != NULL) {
+						jArr = 0;
+						while(ppMsgs[j][jArr] != NULL) {
+							d_free(ppMsgs[j][jArr++]);
+							ppMsgs[j][jArr++] = NULL;
 						}
-						d_free(((uchar**)ppMsgs)[i]);
-						((uchar**)ppMsgs)[i] = NULL;
+						d_free(((uchar**)ppMsgs)[j]);
+						((uchar**)ppMsgs)[j] = NULL;
 					}
 				}
 				break;
