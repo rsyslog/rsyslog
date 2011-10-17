@@ -1597,9 +1597,19 @@ static inline int getPROCIDLen(msg_t *pM, sbool bLockMutex)
  */
 char *getPROCID(msg_t *pM, sbool bLockMutex)
 {
+	uchar *pszRet;
+
 	ISOBJ_TYPE_assert(pM, msg);
-	preparePROCID(pM, bLockMutex);
-	return (pM->pCSPROCID == NULL) ? "-" : (char*) cstrGetSzStrNoNULL(pM->pCSPROCID);
+	if(bLockMutex == LOCK_MUTEX)
+		MsgUnlock(pM);
+	preparePROCID(pM, MUTEX_ALREADY_LOCKED);
+	if(pM->pCSPROCID == NULL)
+		pszRet = UCHAR_CONSTANT("");
+	else 
+		pszRet = rsCStrGetSzStrNoNULL(pM->pCSPROCID);
+	if(bLockMutex == LOCK_MUTEX)
+		MsgUnlock(pM);
+	return (char*) pszRet;
 }
 
 
@@ -1826,7 +1836,15 @@ static int getStructuredDataLen(msg_t *pM)
  */
 static inline char *getStructuredData(msg_t *pM)
 {
-	return (pM->pCSStrucData == NULL) ? "-" : (char*) rsCStrGetSzStrNoNULL(pM->pCSStrucData);
+	uchar *pszRet;
+
+	MsgUnlock(pM);
+	if(pM->pCSStrucData == NULL)
+		pszRet = UCHAR_CONSTANT("-");
+	else 
+		pszRet = rsCStrGetSzStrNoNULL(pM->pCSStrucData);
+	MsgUnlock(pM);
+	return (char*) pszRet;
 }
 
 
@@ -1865,8 +1883,18 @@ int getProgramNameLen(msg_t *pM, sbool bLockMutex)
  */
 uchar *getProgramName(msg_t *pM, sbool bLockMutex)
 {
-	prepareProgramName(pM, bLockMutex);
-	return (pM->pCSProgName == NULL) ? UCHAR_CONSTANT("") : rsCStrGetSzStrNoNULL(pM->pCSProgName);
+	uchar *pszRet;
+
+	if(bLockMutex == LOCK_MUTEX)
+		MsgUnlock(pM);
+	prepareProgramName(pM, MUTEX_ALREADY_LOCKED);
+	if(pM->pCSProgName == NULL)
+		pszRet = UCHAR_CONSTANT("");
+	else 
+		pszRet = rsCStrGetSzStrNoNULL(pM->pCSProgName);
+	if(bLockMutex == LOCK_MUTEX)
+		MsgUnlock(pM);
+	return pszRet;
 }
 
 
@@ -1912,9 +1940,19 @@ static inline void prepareAPPNAME(msg_t *pM, sbool bLockMutex)
  */
 char *getAPPNAME(msg_t *pM, sbool bLockMutex)
 {
+	uchar *pszRet;
+
 	assert(pM != NULL);
-	prepareAPPNAME(pM, bLockMutex);
-	return (pM->pCSAPPNAME == NULL) ? "" : (char*) rsCStrGetSzStrNoNULL(pM->pCSAPPNAME);
+	if(bLockMutex == LOCK_MUTEX)
+		MsgUnlock(pM);
+	prepareAPPNAME(pM, MUTEX_ALREADY_LOCKED);
+	if(pM->pCSAPPNAME == NULL)
+		pszRet = UCHAR_CONSTANT("");
+	else 
+		pszRet = rsCStrGetSzStrNoNULL(pM->pCSAPPNAME);
+	if(bLockMutex == LOCK_MUTEX)
+		MsgUnlock(pM);
+	return (char*)pszRet;
 }
 
 /* rgerhards, 2005-11-24

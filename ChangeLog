@@ -5,6 +5,10 @@ Version 6.3.7  [DEVEL] 2011-0?-??
 - bugfix: facility local<x> was not correctly interpreted in legacy filters
   Was only accepted if it was the first PRI in a multi-filter PRI.
   Thanks to forum user Mark for bringing this to our attention.
+- bugfix: race condition when extracting program name, APPNAME, structured
+  data and PROCID (RFC5424 fields) could lead to invalid characters e.g.
+  in dynamic file names or during forwarding (general malfunction of these
+  fields in templates, mostly under heavy load)
 - bugfix: imuxsock did no longer ignore message-provided timestamp, if
   so configured (the *default*). Lead to no longer sub-second timestamps.
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=281
@@ -70,6 +74,23 @@ Version 6.3.2  [DEVEL] (rgerhards), 2011-07-06
   This leak is tied to error conditions which lead to incorrect cleanup
   of some data structures.
 ---------------------------------------------------------------------------
+Version 6.3.1  [DEVEL] (rgerhards), 2011-06-07
+- added a first implementation of a DNS name cache
+  this still has a couple of weaknesses, like no expiration of entries,
+  suboptimal algorithms -- but it should perform much better than
+  what we had previously. Implementation will be improved based on
+  feedback during the next couple of releases
+---------------------------------------------------------------------------
+Version 6.3.0  [DEVEL] (rgerhards), 2011-06-01
+- introduced new config system
+  http://blog.gerhards.net/2011/06/new-rsyslog-config-system-materializes.html
+---------------------------------------------------------------------------
+Version 6.2.0  [v6-stable], 2011-0?-??
+- bugfix: race condition when extracting program name, APPNAME, structured
+  data and PROCID (RFC5424 fields) could lead to invalid characters e.g.
+  in dynamic file names or during forwarding (general malfunction of these
+  fields in templates, mostly under heavy load)
+---------------------------------------------------------------------------
 Version 6.1.12  [BETA], 2011-09-01
 - bugfix/security: off-by-two bug in legacy syslog parser, CVE-2011-3200
 - bugfix: mark message processing did not work correctly
@@ -111,19 +132,6 @@ Version 6.1.9  [BETA] (rgerhards), 2011-06-14
   this via a testbench test, not a user report. But I assume that some
   users may have had unreproducable aborts that were cause by this bug.
 - bugfix/improvement:$WorkDirectory now gracefully handles trailing slashes
----------------------------------------------------------------------------
-Version 6.3.1  [DEVEL] (rgerhards), 2011-06-07
-- added a first implementation of a DNS name cache
-  this still has a couple of weaknesses, like no expiration of entries,
-  suboptimal algorithms -- but it should perform much better than
-  what we had previously. Implementation will be improved based on
-  feedback during the next couple of releases
----------------------------------------------------------------------------
-Version 6.3.0  [DEVEL] (rgerhards), 2011-06-01
-- introduced new config system
-  http://blog.gerhards.net/2011/06/new-rsyslog-config-system-materializes.html
----------------------------------------------------------------------------
-Version 6.1.9  [BETA] (rgerhards), 2011-06-14
 - bugfix: memory leak in imtcp & subsystems under some circumstances
   This leak is tied to error conditions which lead to incorrect cleanup
   of some data structures. [backport from v6.3]
@@ -395,12 +403,25 @@ Version 5.9.0  [V5-DEVEL] (rgerhards), 2011-06-08
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=236
 ---------------------------------------------------------------------------
 Version 5.8.6  [V5-stable] (rgerhards/al), 2011-??-??
+Version 5.8.6  [V5-stable] 2011-??-??
+- bugfix: ActionQueue could malfunction due to index error
+  Thanks to Vlad Grigorescu for the patch
+- bugfix: $ActionExecOnlyOnce interval did not work properly
+  Thanks to Tomas Heinrich for the patch
+- bugfix: race condition when extracting program name, APPNAME, structured
+  data and PROCID (RFC5424 fields) could lead to invalid characters e.g.
+  in dynamic file names or during forwarding (general malfunction of these
+  fields in templates, mostly under heavy load)
 - bugfix: imuxsock did no longer ignore message-provided timestamp, if
   so configured (the *default*). Lead to no longer sub-second timestamps.
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=281
 - bugfix: omfile returns fatal error code for things that go really wrong
   previously, RS_RET_RESUME was returned, which lead to a loop inside the
   rule engine as omfile could not really recover.
+- bugfix: imfile did invalid system call under some circumstances
+  when a file that was to be monitored did not exist BUT the state file
+  actually existed. Mostly a cosmetic issue. Root cause was incomplete
+  error checking in stream.c; so patch may affect other code areas.
 - bugfix: rsyslogd -v always said 64 atomics were not present
   thanks to mono_matsuko for the patch
 ---------------------------------------------------------------------------
@@ -1222,6 +1243,8 @@ increase.
   output module interface
 ---------------------------------------------------------------------------
 Version 4.8.1  [v4-beta], 2011-09-??
+- bugfix: $ActionExecOnlyOnce interval did not work properly
+  Thanks to Tomas Heinrich for the patch
 - bugfix: potential abort if ultra-large file io buffers are used and
   dynafile cache exhausts address space (primarily a problem on 32 bit
   platforms)
