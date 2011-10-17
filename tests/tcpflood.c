@@ -797,7 +797,7 @@ closeTLSSess(int i)
 #	else	/* NO TLS available */
 static void initTLS(void) {}
 static void initTLSSess(int __attribute__((unused)) i) {}
-static int sendTLS(int i, char *buf, int lenBuf) { return 0; }
+static int sendTLS(int __attribute__((unused)) i, char __attribute__((unused)) *buf, int __attribute__((unused)) lenBuf) { return 0; }
 static void closeTLSSess(int __attribute__((unused)) i) {}
 #	endif
 
@@ -889,7 +889,8 @@ int main(int argc, char *argv[])
 #					if defined(ENABLE_GNUTLS)
 						transport = TP_TLS;
 #					else
-						fprintf(stderr, "compiled without TLS support!\n", optarg);
+						fprintf(stderr, "compiled without TLS support: "
+							"\"-Ttls\" not supported!\n");
 						exit(1);
 #					endif
 				} else {

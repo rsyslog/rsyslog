@@ -92,13 +92,25 @@ Version 5.9.0  [V5-DEVEL] (rgerhards), 2011-06-08
   affected directive was: $ActionExecOnlyWhenPreviousIsSuspended on
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=236
 ---------------------------------------------------------------------------
-Version 5.8.6  [V5-stable] (rgerhards/al), 2011-??-??
+Version 5.8.6  [V5-stable] 2011-??-??
+- bugfix: ActionQueue could malfunction due to index error
+  Thanks to Vlad Grigorescu for the patch
+- bugfix: $ActionExecOnlyOnce interval did not work properly
+  Thanks to Tomas Heinrich for the patch
+- bugfix: race condition when extracting program name, APPNAME, structured
+  data and PROCID (RFC5424 fields) could lead to invalid characters e.g.
+  in dynamic file names or during forwarding (general malfunction of these
+  fields in templates, mostly under heavy load)
 - bugfix: imuxsock did no longer ignore message-provided timestamp, if
   so configured (the *default*). Lead to no longer sub-second timestamps.
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=281
 - bugfix: omfile returns fatal error code for things that go really wrong
   previously, RS_RET_RESUME was returned, which lead to a loop inside the
   rule engine as omfile could not really recover.
+- bugfix: imfile did invalid system call under some circumstances
+  when a file that was to be monitored did not exist BUT the state file
+  actually existed. Mostly a cosmetic issue. Root cause was incomplete
+  error checking in stream.c; so patch may affect other code areas.
 - bugfix: rsyslogd -v always said 64 atomics were not present
   thanks to mono_matsuko for the patch
 ---------------------------------------------------------------------------
@@ -920,6 +932,8 @@ increase.
   output module interface
 ---------------------------------------------------------------------------
 Version 4.8.1  [v4-beta], 2011-09-??
+- bugfix: $ActionExecOnlyOnce interval did not work properly
+  Thanks to Tomas Heinrich for the patch
 - bugfix: potential abort if ultra-large file io buffers are used and
   dynafile cache exhausts address space (primarily a problem on 32 bit
   platforms)

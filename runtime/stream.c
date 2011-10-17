@@ -1276,16 +1276,18 @@ static rsRetVal strmSeek(strm_t *pThis, off64_t offs)
 
 	ISOBJ_TYPE_assert(pThis, strm);
 
-	if(pThis->fd == -1)
-		strmOpenFile(pThis);
-	else
-		strmFlushInternal(pThis);
+	if(pThis->fd == -1) {
+		CHKiRet(strmOpenFile(pThis));
+	} else {
+		CHKiRet(strmFlushInternal(pThis));
+	}
 	long long i;
 	DBGOPRINT((obj_t*) pThis, "file %d seek, pos %llu\n", pThis->fd, (long long unsigned) offs);
 	i = lseek64(pThis->fd, offs, SEEK_SET); // TODO: check error!
 	pThis->iCurrOffs = offs; /* we are now at *this* offset */
 	pThis->iBufPtr = 0; /* buffer invalidated */
 
+finalize_it:
 	RETiRet;
 }
 
