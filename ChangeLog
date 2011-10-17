@@ -1,7 +1,13 @@
 ---------------------------------------------------------------------------
-Version 5.8.6  [V5-stable] (rgerhards/al), 2011-??-??
+Version 5.8.6  [V5-stable] 2011-??-??
 - bugfix: ActionQueue could malfunction due to index error
   Thanks to Vlad Grigorescu for the patch
+- bugfix: $ActionExecOnlyOnce interval did not work properly
+  Thanks to Tomas Heinrich for the patch
+- bugfix: race condition when extracting program name, APPNAME, structured
+  data and PROCID (RFC5424 fields) could lead to invalid characters e.g.
+  in dynamic file names or during forwarding (general malfunction of these
+  fields in templates, mostly under heavy load)
 - bugfix: imuxsock did no longer ignore message-provided timestamp, if
   so configured (the *default*). Lead to no longer sub-second timestamps.
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=281
@@ -832,6 +838,8 @@ increase.
   output module interface
 ---------------------------------------------------------------------------
 Version 4.8.1  [v4-beta], 2011-09-??
+- bugfix: $ActionExecOnlyOnce interval did not work properly
+  Thanks to Tomas Heinrich for the patch
 - bugfix: potential abort if ultra-large file io buffers are used and
   dynafile cache exhausts address space (primarily a problem on 32 bit
   platforms)
