@@ -44,13 +44,13 @@ from the syslog message when output is written. Everything outside of the
 percent signs is literal text, which is simply written as specified.</p>
 <p>Thankfully, rsyslog provides message properties for the priority. These are 
 called &quot;PRI&quot;, &quot;syslogfacility&quot; and &quot;syslogpriority&quot; (case is important!). They are numerical 
-values. Starting with rsyslog 1.13.4, there is also a property &quot;PRI-text&quot;, which 
-contains the priority in friendly text format (e.g. &quot;syslog.info&quot;). For the rest 
+values. Starting with rsyslog 1.13.4, there is also a property &quot;pri-text&quot;, which 
+contains the priority in friendly text format (e.g. &quot;local0.err<133>&quot;). For the rest 
 of this article, I assume that you run version 1.13.4 or higher.</p>
 <p>Recording the priority is now a simple matter of adding the respective field 
 to the template. It now looks like this:</p>
 <p align="center">
-<code>$template TraditionalFormatWithPRI,&quot;%PRI-text%: %timegenerated% %HOSTNAME% %syslogtag%%msg:::drop-last-lf%\n&quot;</code>
+<code>$template TraditionalFormatWithPRI,&quot;%pri-text%: %timegenerated% %HOSTNAME% %syslogtag%%msg:::drop-last-lf%\n&quot;</code>
 </p>
 <p>Now we have the right template - but how to write it to a file? You probably 
 have a line like this in your syslog.conf:</p>
