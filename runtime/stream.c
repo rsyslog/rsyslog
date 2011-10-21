@@ -1036,7 +1036,7 @@ asyncWriterThread(void *pPtr)
 				continue; /* now we should have data */
 			}
 			bTimedOut = 0;
-			timeoutComp(&t, pThis->iFlushInterval * 2000); /* *1000 millisconds */ // TODO: check the 2000?!?
+			timeoutComp(&t, pThis->iFlushInterval * 1000); /* *1000 millisconds */
 			if(pThis->bDoTimedWait) {
 				if(pthread_cond_timedwait(&pThis->notEmpty, &pThis->mut, &t) != 0) {
 					int err = errno;
