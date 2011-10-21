@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 5.8.6  [V5-stable] 2011-??-??
+Version 5.8.6  [V5-stable] 2011-10-21
 - bugfix: missing whitespace after property-based filter was not detected
 - bugfix: $OMFileFlushInterval period was doubled - now using correct value
 - bugfix: ActionQueue could malfunction due to index error
