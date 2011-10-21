@@ -924,7 +924,7 @@ static rsRetVal cflineProcessPropFilter(uchar **pline, register rule_t *f)
 	}
 
 	/* skip to action part */
-	if((iRet = parsSkipWhitespace(pPars)) != RS_RET_OK) {
+	if((iRet = parsSkipWhitespace(pPars, 1)) != RS_RET_OK) {
 		errmsg.LogError(0, iRet, "error %d skipping to action part - ignoring selector", iRet);
 		rsParsDestruct(pPars);
 		return(iRet);
