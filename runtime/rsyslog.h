@@ -352,7 +352,8 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_WRN_WRKDIR = -2182, /**< correctable problems with the rsyslog working directory */
 	RS_RET_ERR_QUEUE_EMERGENCY = -2183, /**<  some fatal error caused queue to switch to emergency mode */
 	RS_RET_OUTDATED_STMT = -2184, /**<  some outdated statement/functionality is being used in conf file */
-	RS_RET_OK_WARN = -2185, /**<  config part: everything was OK, but a warning message was emitted */
+	RS_RET_MISSING_WHITESPACE = -2185, /**<  whitespace is missing in some config construct */
+	RS_RET_OK_WARN = -2186, /**<  config part: everything was OK, but a warning message was emitted */
 
 	RS_RET_INVLD_CONF_OBJ= -2200,	/**< invalid config object (e.g. $Begin conf statement) */
 	RS_RET_ERR_LIBEE_INIT = -2201,	/**< cannot obtain libee ctx */

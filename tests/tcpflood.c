@@ -91,8 +91,10 @@
 #include <errno.h>
 #ifdef ENABLE_GNUTLS
 #	include <gnutls/gnutls.h>
-#	include <gcrypt.h>
+#	if GNUTLS_VERSION_NUMBER <= 0x020b00
+#		include <gcrypt.h>
 	GCRY_THREAD_OPTION_PTHREAD_IMPL;
+#	endif
 #endif
 
 #define EXIT_FAILURE 1
@@ -707,7 +709,9 @@ initTLS(void)
 	int r;
 
 	/* order of gcry_control and gnutls_global_init matters! */
+	#if GNUTLS_VERSION_NUMBER <= 0x020b00
 	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
+	#endif
 	gnutls_global_init();
 	/* set debug mode, if so required by the options */
 	if(tlsLogLevel > 0) {

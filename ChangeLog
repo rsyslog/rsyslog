@@ -310,6 +310,8 @@ expected that interfaces, even new ones, break during the initial
   [ported from v4]
 ---------------------------------------------------------------------------
 Version 5.9.4  [V5-DEVEL], 2011-0?-??
+- removed dependency on gcrypt for recently-enough GnuTLS
+  see: http://bugzilla.adiscon.com/show_bug.cgi?id=289
 - bugfix: imuxsock did no longer ignore message-provided timestamp, if
   so configured (the *default*). Lead to no longer sub-second timestamps.
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=281
@@ -402,8 +404,9 @@ Version 5.9.0  [V5-DEVEL] (rgerhards), 2011-06-08
   affected directive was: $ActionExecOnlyWhenPreviousIsSuspended on
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=236
 ---------------------------------------------------------------------------
-Version 5.8.6  [V5-stable] (rgerhards/al), 2011-??-??
-Version 5.8.6  [V5-stable] 2011-??-??
+Version 5.8.6  [V5-stable] 2011-10-21
+- bugfix: missing whitespace after property-based filter was not detected
+- bugfix: $OMFileFlushInterval period was doubled - now using correct value
 - bugfix: ActionQueue could malfunction due to index error
   Thanks to Vlad Grigorescu for the patch
 - bugfix: $ActionExecOnlyOnce interval did not work properly

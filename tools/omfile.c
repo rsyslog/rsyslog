@@ -614,9 +614,10 @@ prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
 		 * news is that we also lose errors on startup messages, but so it is.
 		 */
 		if(iMsgOpts & INTERNAL_MSG) {
-			DBGPRINTF("Could not open dynaFile, discarding message\n");
+			DBGPRINTF("Could not open dynaFile '%s', state %d, discarding message\n",
+				  newFileName, localRet);
 		} else {
-			errmsg.LogError(0, NO_ERRCODE, "Could not open dynamic file '%s' [state %d] - discarding message", newFileName, localRet);
+			errmsg.LogError(0, localRet, "Could not open dynamic file '%s' [state %d] - discarding message", newFileName, localRet);
 		}
 		ABORT_FINALIZE(localRet);
 	}
