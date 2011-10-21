@@ -239,7 +239,8 @@ Version 5.9.0  [V5-DEVEL] (rgerhards), 2011-03-??
   affected directive was: $ActionExecOnlyWhenPreviousIsSuspended on
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=236
 ---------------------------------------------------------------------------
-Version 5.8.6  [V5-stable] 2011-??-??
+Version 5.8.6  [V5-stable] 2011-10-21
+- bugfix: missing whitespace after property-based filter was not detected
 - bugfix: $OMFileFlushInterval period was doubled - now using correct value
 - bugfix: ActionQueue could malfunction due to index error
   Thanks to Vlad Grigorescu for the patch
