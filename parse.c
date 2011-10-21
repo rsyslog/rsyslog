@@ -210,22 +210,32 @@ rsRetVal parsSkipAfterChar(rsParsObj *pThis, char c)
 /* Skip whitespace. Often used to trim parsable entries.
  * Returns with ParsePointer set to first non-whitespace
  * character (or at end of string).
+ * If bRequireOne is set to true, at least one whitespace
+ * must exist, else an error is returned.
  */
-rsRetVal parsSkipWhitespace(rsParsObj *pThis)
+rsRetVal parsSkipWhitespace(rsParsObj *pThis, sbool bRequireOne)
 {
 	register unsigned char *pC;
+	int numSkipped;
+	DEFiRet;
+
 
 	rsCHECKVALIDOBJECT(pThis, OIDrsPars);
 
 	pC = rsCStrGetBufBeg(pThis->pCStr);
 
+	numSkipped = 0;
 	while(pThis->iCurrPos < rsCStrLen(pThis->pCStr)) {
 		if(!isspace((int)*(pC+pThis->iCurrPos)))
 			break;
 		++pThis->iCurrPos;
+		++numSkipped;
 	}
 
-	return RS_RET_OK;
+	if(bRequireOne && numSkipped == 0)
+		iRet = RS_RET_MISSING_WHITESPACE;
+
+	RETiRet;
 }
 
 /* Parse string up to a delimiter.
@@ -252,7 +262,7 @@ rsRetVal parsDelimCStr(rsParsObj *pThis, cstr_t **ppCStr, char cDelim, int bTrim
 	CHKiRet(rsCStrConstruct(&pCStr));
 
 	if(bTrimLeading)
-		parsSkipWhitespace(pThis);
+		parsSkipWhitespace(pThis, 0);
 
 	pC = rsCStrGetBufBeg(pThis->pCStr) + pThis->iCurrPos;
 
@@ -383,7 +393,7 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 
 	CHKiRet(cstrConstruct(&pCStr));
 
-	parsSkipWhitespace(pThis);
+	parsSkipWhitespace(pThis, 0);
 	pC = rsCStrGetBufBeg(pThis->pCStr) + pThis->iCurrPos;
 
 	/* we parse everything until either '/', ',' or
