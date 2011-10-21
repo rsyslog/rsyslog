@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 6.2.0  [v6-stable], 2011-0?-??
+- bugfix (kind of): removed numerical part from pri-text
+  see v6 compatibility document for reasons
 - bugfix: race condition when extracting program name, APPNAME, structured
   data and PROCID (RFC5424 fields) could lead to invalid characters e.g.
   in dynamic file names or during forwarding (general malfunction of these

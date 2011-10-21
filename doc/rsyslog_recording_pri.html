@@ -44,13 +44,13 @@ from the syslog message when output is written. Everything outside of the
 percent signs is literal text, which is simply written as specified.</p>
 <p>Thankfully, rsyslog provides message properties for the priority. These are 
 called &quot;PRI&quot;, &quot;syslogfacility&quot; and &quot;syslogpriority&quot; (case is important!). They are numerical 
-values. Starting with rsyslog 1.13.4, there is also a property &quot;PRI-text&quot;, which 
+values. Starting with rsyslog 1.13.4, there is also a property &quot;pri-text&quot;, which 
 contains the priority in friendly text format (e.g. &quot;syslog.info&quot;). For the rest 
 of this article, I assume that you run version 1.13.4 or higher.</p>
 <p>Recording the priority is now a simple matter of adding the respective field 
 to the template. It now looks like this:</p>
 <p align="center">
-<code>$template TraditionalFormatWithPRI,&quot;%PRI-text%: %timegenerated% %HOSTNAME% %syslogtag%%msg:::drop-last-lf%\n&quot;</code>
+<code>$template TraditionalFormatWithPRI,&quot;%pri-text%: %timegenerated% %HOSTNAME% %syslogtag%%msg:::drop-last-lf%\n&quot;</code>
 </p>
 <p>Now we have the right template - but how to write it to a file? You probably 
 have a line like this in your syslog.conf:</p>
@@ -83,29 +83,29 @@ A little bit of configuration is required.</p>
 <p>Below is some sample data created with the template specified above. Note the 
 priority recording at the start of each line.</p>
 <p>
-<code>kern.info&lt;6&gt;: Jun 15 18:10:38 host kernel: PCI: Sharing IRQ 11 with 00:04.0<br>
-kern.info&lt;6&gt;: Jun 15 18:10:38 host kernel: PCI: Sharing IRQ 11 with 01:00.0<br>
-kern.warn&lt;4&gt;: Jun 15 18:10:38 host kernel: Yenta IRQ list 06b8, PCI irq11<br>
-kern.warn&lt;4&gt;: Jun 15 18:10:38 host kernel: Socket status: 30000006<br>
-kern.warn&lt;4&gt;: Jun 15 18:10:38 host kernel: Yenta IRQ list 06b8, PCI irq11<br>
-kern.warn&lt;4&gt;: Jun 15 18:10:38 host kernel: Socket status: 30000010<br>
-kern.info&lt;6&gt;: Jun 15 18:10:38 host kernel: cs: IO port probe 0x0c00-0x0cff: clean.<br>
-kern.info&lt;6&gt;: Jun 15 18:10:38 host kernel: cs: IO port probe 0x0100-0x04ff: excluding 0x100-0x107 0x378-0x37f 0x4d0-0x4d7<br>
-kern.info&lt;6&gt;: Jun 15 18:10:38 host kernel: cs: IO port probe 0x0a00-0x0aff: clean.<br>
-local7.notice&lt;189&gt;: Jun 15 18:17:24 host dd: 1+0 records out<br>
-local7.notice&lt;189&gt;: Jun 15 18:17:24 host random: Saving random seed: succeeded<br>
-local7.notice&lt;189&gt;: Jun 15 18:17:25 host portmap: portmap shutdown succeeded<br>
-local7.notice&lt;189&gt;: Jun 15 18:17:25 host network: Shutting down interface eth1: succeeded<br>
-local7.notice&lt;189&gt;: Jun 15 18:17:25 host network: Shutting down loopback interface: succeeded<br>
-local7.notice&lt;189&gt;: Jun 15 18:17:25 host pcmcia: Shutting down PCMCIA services: cardmgr<br>
-user.notice&lt;13&gt;: Jun 15 18:17:25 host /etc/hotplug/net.agent: NET unregister event not supported<br>
-local7.notice&lt;189&gt;: Jun 15 18:17:27 host pcmcia: modules.<br>
-local7.notice&lt;189&gt;: Jun 15 18:17:29 host rc: Stopping pcmcia: succeeded<br>
-local7.notice&lt;189&gt;: Jun 15 18:17:30 host rc: Starting killall: succeeded<br>
-syslog.info&lt;46&gt;: Jun 15 18:17:33 host [origin software=&quot;rsyslogd&quot; swVersion=&quot;1.13.3&quot; x-pid=&quot;2464&quot;] exiting on signal 15.<br>
-syslog.info&lt;46&gt;: Jun 18 10:55:47 host [origin software=&quot;rsyslogd&quot; swVersion=&quot;1.13.3&quot; x-pid=&quot;2367&quot;][x-configInfo udpReception=&quot;Yes&quot; udpPort=&quot;514&quot; tcpReception=&quot;Yes&quot; tcpPort=&quot;1470&quot;] restart<br>
-user.notice&lt;13&gt;: Jun 18 10:55:50 host rger: test<br>
-syslog.info&lt;46&gt;: Jun 18 10:55:52 host [origin software=&quot;rsyslogd&quot; swVersion=&quot;1.13.3&quot; x-pid=&quot;2367&quot;] exiting on signal 2.</code></p>
+<code>kern.info: Jun 15 18:10:38 host kernel: PCI: Sharing IRQ 11 with 00:04.0<br>
+kern.info: Jun 15 18:10:38 host kernel: PCI: Sharing IRQ 11 with 01:00.0<br>
+kern.warn: Jun 15 18:10:38 host kernel: Yenta IRQ list 06b8, PCI irq11<br>
+kern.warn: Jun 15 18:10:38 host kernel: Socket status: 30000006<br>
+kern.warn: Jun 15 18:10:38 host kernel: Yenta IRQ list 06b8, PCI irq11<br>
+kern.warn: Jun 15 18:10:38 host kernel: Socket status: 30000010<br>
+kern.info: Jun 15 18:10:38 host kernel: cs: IO port probe 0x0c00-0x0cff: clean.<br>
+kern.info: Jun 15 18:10:38 host kernel: cs: IO port probe 0x0100-0x04ff: excluding 0x100-0x107 0x378-0x37f 0x4d0-0x4d7<br>
+kern.info: Jun 15 18:10:38 host kernel: cs: IO port probe 0x0a00-0x0aff: clean.<br>
+local7.notice: Jun 15 18:17:24 host dd: 1+0 records out<br>
+local7.notice: Jun 15 18:17:24 host random: Saving random seed: succeeded<br>
+local7.notice: Jun 15 18:17:25 host portmap: portmap shutdown succeeded<br>
+local7.notice: Jun 15 18:17:25 host network: Shutting down interface eth1: succeeded<br>
+local7.notice: Jun 15 18:17:25 host network: Shutting down loopback interface: succeeded<br>
+local7.notice: Jun 15 18:17:25 host pcmcia: Shutting down PCMCIA services: cardmgr<br>
+user.notice: Jun 15 18:17:25 host /etc/hotplug/net.agent: NET unregister event not supported<br>
+local7.notice: Jun 15 18:17:27 host pcmcia: modules.<br>
+local7.notice: Jun 15 18:17:29 host rc: Stopping pcmcia: succeeded<br>
+local7.notice: Jun 15 18:17:30 host rc: Starting killall: succeeded<br>
+syslog.info: Jun 15 18:17:33 host [origin software=&quot;rsyslogd&quot; swVersion=&quot;1.13.3&quot; x-pid=&quot;2464&quot;] exiting on signal 15.<br>
+syslog.info: Jun 18 10:55:47 host [origin software=&quot;rsyslogd&quot; swVersion=&quot;1.13.3&quot; x-pid=&quot;2367&quot;][x-configInfo udpReception=&quot;Yes&quot; udpPort=&quot;514&quot; tcpReception=&quot;Yes&quot; tcpPort=&quot;1470&quot;] restart<br>
+user.notice: Jun 18 10:55:50 host rger: test<br>
+syslog.info: Jun 18 10:55:52 host [origin software=&quot;rsyslogd&quot; swVersion=&quot;1.13.3&quot; x-pid=&quot;2367&quot;] exiting on signal 2.</code></p>
 <h2>Feedback Requested</h2>
 <P>I would appreciate feedback on this paper. If you have additional ideas, 
 comments or find bugs, please

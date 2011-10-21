@@ -1,0 +1,43 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><title>Compatibility notes for rsyslog v6</title>
+</head>
+<body>
+<h1>Compatibility Notes for rsyslog v6</h1>
+<p>
+This document describes things to keep in mind when moving from v5 to v6. It 
+does not list enhancements nor does it talk about compatibility concerns introduced
+by earlier versions (for this, see their respective compatibility documents).
+</p>
+<p>Version 6 offers a better config language and some other improvements.
+As the config system has many ties into the rsyslog engine AND all plugins,
+the changes are somewhat intrusive. Note, however, that core processing has
+not been changed much in v6 and will not. So once the configuration is loaded,
+the stability of v6 is quite comparable to v5.
+</p>
+<h2>Property "pri-text"</h2>
+<p>Traditionally, this property did not only return the textual form
+of the pri ("local0.err"), but also appended the numerical value to it
+("local0.err<133>"). This sounds odd and was left unnoticed for some years. 
+In October 2011, this odd behaviour was brought up on the rsyslog mailing list
+by Gregory K. Ruiz-Ade. Code review showed that the behaviour was intentional,
+but no trace of what the intention was when it was introduced could be found.
+The documentation was also unclear, it said no numerical value was present,
+but the samples had it. We agreed that the additional numerical value is
+of disadvantage. We also guessed that this property is very rarely being used,
+otherwise the problem should have been raised much earlier. However, we 
+didn't want to change behaviour in older builds. So v6 was set to clean up
+the situation. In v6, text-pri will always return the textual part only
+("local0.err") and the numerical value will not be contained any longer inside
+the string. If you actually need that value, it can fairly easily be added
+via the template system.
+<p><b>If you have used this property previously and relied on the numerical
+part, you need to update your rsyslog configuration files.</b>
+<h2>Plugin ABI</h2>
+<p>The plugin interface has considerably been changed to support the new
+config language. All plugins need to be upgraded. This usually does not require
+much coding. However, if the new config language shall be supported, more
+changes must be made to plugin code. All project-supported plugins have been
+upgraded, so this compatibility issue is only of interest for you if you have
+custom plugins or use some user-contributed plugins from the rsyslog project
+that are not maintained by the project itself (omoracle is an example).
+</body></html>
