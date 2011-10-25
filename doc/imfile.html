@@ -15,7 +15,9 @@ text file is a file consisting of printable characters with lines
 being&nbsp;delimited by LF.</p>
 <p>The file is read line-by-line and any line read is passed to
 rsyslog's rule engine. The rule engine applies filter conditons and
-selects which actions needs to be carried out.</p>
+selects which actions needs to be carried out. Empty lines are <b>not</b>
+processed, as they would result in empty syslog records. They are simply
+ignored.</p>
 <p>As new lines are written they are taken from the file and
 processed. Please note that this happens based on a polling interval
 and not immediately. The file monitor support file rotation. To fully
