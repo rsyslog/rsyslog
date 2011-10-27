@@ -201,10 +201,14 @@ finalize_it:
 	if(iRet != RS_RET_OK) {
 		if(data.data != NULL)
 			free(data.data);
-		if(pThis->bOurCertIsInit)
+		if(pThis->bOurCertIsInit) {
 			gnutls_x509_crt_deinit(pThis->ourCert);
-		if(pThis->bOurKeyIsInit)
+			pThis->bOurCertIsInit = 0;
+		}
+		if(pThis->bOurKeyIsInit) {
 			gnutls_x509_privkey_deinit(pThis->ourKey);
+			pThis->bOurKeyIsInit = 0;
+		}
 	}
 	RETiRet;
 }
