@@ -5,6 +5,9 @@ Version 6.3.7  [DEVEL] 2011-0?-??
 - bugfix: facility local<x> was not correctly interpreted in legacy filters
   Was only accepted if it was the first PRI in a multi-filter PRI.
   Thanks to forum user Mark for bringing this to our attention.
+- bugfix: potential abort after reading invalid X.509 certificate
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=290
+  Thanks to Tomas Heinrich for the patch
 - bugfix: race condition when extracting program name, APPNAME, structured
   data and PROCID (RFC5424 fields) could lead to invalid characters e.g.
   in dynamic file names or during forwarding (general malfunction of these
@@ -17,6 +20,9 @@ Version 6.3.7  [DEVEL] 2011-0?-??
   rule engine as omfile could not really recover.
 - bugfix: rsyslogd -v always said 64 atomics were not present
   thanks to mono_matsuko for the patch
+- bugfix: potential abort after reading invalid X.509 certificate
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=290
+  Thanks to Tomas Heinrich for the patch
 ---------------------------------------------------------------------------
 Version 6.3.6  [DEVEL] 2011-09-19
 - added $InputRELPServerBindRuleset directive to specify rulesets for RELP
@@ -86,6 +92,8 @@ Version 6.3.0  [DEVEL] (rgerhards), 2011-06-01
   http://blog.gerhards.net/2011/06/new-rsyslog-config-system-materializes.html
 ---------------------------------------------------------------------------
 Version 6.2.0  [v6-stable], 2011-0?-??
+- bugfix (kind of): removed numerical part from pri-text
+  see v6 compatibility document for reasons
 - bugfix: race condition when extracting program name, APPNAME, structured
   data and PROCID (RFC5424 fields) could lead to invalid characters e.g.
   in dynamic file names or during forwarding (general malfunction of these
@@ -403,6 +411,11 @@ Version 5.9.0  [V5-DEVEL] (rgerhards), 2011-06-08
 - bugfix: failover did not work correctly if repeated msg reduction was on
   affected directive was: $ActionExecOnlyWhenPreviousIsSuspended on
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=236
+---------------------------------------------------------------------------
+Version 5.8.7  [V5-stable] 2011-??-??
+- bugfix: potential abort after reading invalid X.509 certificate
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=290
+  Thanks to Tomas Heinrich for the patch
 ---------------------------------------------------------------------------
 Version 5.8.6  [V5-stable] 2011-10-21
 - bugfix: missing whitespace after property-based filter was not detected
@@ -1245,12 +1258,15 @@ increase.
 - increased ompgsql performance by adapting to new transactional
   output module interface
 ---------------------------------------------------------------------------
-Version 4.8.1  [v4-beta], 2011-09-??
+Version 4.8.1  [v4-stable], 2011-09-??
 - bugfix: $ActionExecOnlyOnce interval did not work properly
   Thanks to Tomas Heinrich for the patch
 - bugfix: potential abort if ultra-large file io buffers are used and
   dynafile cache exhausts address space (primarily a problem on 32 bit
   platforms)
+- bugfix: potential abort after reading invalid X.509 certificate
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=290
+  Thanks to Tomas Heinrich for the patch
 ---------------------------------------------------------------------------
 Version 4.8.0  [v4-stable] (rgerhards), 2011-09-07
 ***************************************************************************
