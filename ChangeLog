@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 5.9.4  [V5-DEVEL], 2011-0?-??
+Version 5.9.4  [V5-DEVEL], 2011-11-29
 - imuxsock: added capability to "annotate" messages with "trusted
   information", which contains some properties obtained from the system
   and as such sure to not be faked. This is inspired by the similiar idea
