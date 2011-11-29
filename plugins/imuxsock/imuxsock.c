@@ -34,6 +34,7 @@
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/un.h>
 #include <sys/socket.h>
@@ -135,6 +136,7 @@ typedef struct lstn_s {
 	sbool bParseHost;	/* should parser parse host name?  read-only after startup */
 	sbool bCreatePath;	/* auto-creation of socket directory? */
 	sbool bUseCreds;	/* pull original creator credentials from socket */
+	sbool bAnnotate;	/* annotate events with trusted properties */
 	sbool bWritePid;	/* write original PID into tag */
 	sbool bUseSysTimeStamp;	/* use timestamp from system (instead of from message) */
 } lstn_t;
@@ -159,6 +161,8 @@ static int bWritePid = 0;		/* use credentials from recvmsg() and fixup PID in TA
 static int bWritePidSysSock = 0;	/* use credentials from recvmsg() and fixup PID in TAG */
 static int bUseSysTimeStamp = 1;	/* use timestamp from system (rather than from message) */
 static int bUseSysTimeStampSysSock = 1;	/* same, for system log socket */
+static int bAnnotate = 0;		/* annotate trusted properties */
+static int bAnnotateSysSock = 0;	/* same, for system log socket */
 #define DFLT_bCreatePath 0
 static int bCreatePath = DFLT_bCreatePath; /* auto-create socket path? */
 #define DFLT_ratelimitInterval 5
@@ -303,7 +307,8 @@ addLstnSocketName(void __attribute__((unused)) *pVal, uchar *pNewVal)
 		listeners[nfd].flags = bIgnoreTimestamp ? IGNDATE : NOFLAG;
 		listeners[nfd].bCreatePath = bCreatePath;
 		listeners[nfd].sockName = pNewVal;
-		listeners[nfd].bUseCreds = (bWritePid || ratelimitInterval) ? 1 : 0;
+		listeners[nfd].bUseCreds = (bWritePid || ratelimitInterval || bAnnotate) ? 1 : 0;
+		listeners[nfd].bAnnotate = bAnnotate;
 		listeners[nfd].bWritePid = bWritePid;
 		listeners[nfd].bUseSysTimeStamp = bUseSysTimeStamp;
 		nfd++;
@@ -426,6 +431,7 @@ openLogSocket(lstn_t *pLstn)
 	}
 #	else /* HAVE_SCM_CREDENTIALS */
 	pLstn->bUseCreds = 0;
+	pLstn->bAnnotate = 0;
 #	endif /* HAVE_SCM_CREDENTIALS */
 
 finalize_it:
@@ -508,6 +514,103 @@ fixPID(uchar *bufTAG, int *lenTag, struct ucred *cred)
 }
 
 
+/* Get an "trusted property" from the system. Returns an empty string if the
+ * property can not be obtained. Inspired by similiar functionality inside
+ * journald. Currently works with Linux /proc filesystem, only.
+ */
+static rsRetVal
+getTrustedProp(struct ucred *cred, char *propName, uchar *buf, size_t lenBuf, int *lenProp)
+{
+	int fd;
+	int i;
+	int lenRead;
+	char namebuf[1024];
+	DEFiRet;
+
+	if(snprintf(namebuf, sizeof(namebuf), "/proc/%lu/%s", (long unsigned) cred->pid,
+		propName) >= (int) sizeof(namebuf)) {
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
+	if((fd = open(namebuf, O_RDONLY)) == -1) {
+		DBGPRINTF("error reading '%s'\n", namebuf);
+		*lenProp = 0;
+		FINALIZE;
+	}
+	if((lenRead = read(fd, buf, lenBuf - 1)) == -1) {
+		DBGPRINTF("error reading file data for '%s'\n", namebuf);
+		*lenProp = 0;
+		close(fd);
+		FINALIZE;
+	}
+	
+	/* we strip after the first \n */
+	for(i = 0 ; i < lenRead ; ++i) {
+		if(buf[i] == '\n')
+			break;
+		else if(iscntrl(buf[i]))
+			buf[i] = ' ';
+	}
+	buf[i] = '\0';
+	*lenProp = i;
+
+	close(fd);
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* read the exe trusted property path (so far, /proc fs only)
+ */
+static rsRetVal
+getTrustedExe(struct ucred *cred, uchar *buf, size_t lenBuf, int* lenProp)
+{
+	int lenRead;
+	char namebuf[1024];
+	DEFiRet;
+
+	if(snprintf(namebuf, sizeof(namebuf), "/proc/%lu/exe", (long unsigned) cred->pid)
+		>= (int) sizeof(namebuf)) {
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
+	if((lenRead = readlink(namebuf, (char*)buf, lenBuf - 1)) == -1) {
+		DBGPRINTF("error reading link '%s'\n", namebuf);
+		*lenProp = 0;
+		FINALIZE;
+	}
+	
+	buf[lenRead] = '\0';
+	*lenProp = lenRead;
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* copy a trusted property in escaped mode. That is, the property can contain
+ * any character and so it must be properly quoted AND escaped.
+ * It is assumed the output buffer is large enough. Returns the number of
+ * characters added.
+ */
+static inline int
+copyescaped(uchar *dstbuf, uchar *inbuf, int inlen)
+{
+	int iDst, iSrc;
+
+	*dstbuf = '"';
+	for(iDst=1, iSrc=0 ; iSrc < inlen ; ++iDst, ++iSrc) {
+		if(inbuf[iSrc] == '"' || inbuf[iSrc] == '\\') {
+			dstbuf[iDst++] = '\\';
+		}
+		dstbuf[iDst] = inbuf[iSrc];
+	}
+	dstbuf[iDst++] = '"';
+	return iDst;
+}
+
+
 /* submit received message to the queue engine
  * We now parse the message according to expected format so that we
  * can also mangle it if necessary.
@@ -527,6 +630,11 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 	struct syslogTime st;
 	time_t tt;
 	rs_ratelimit_state_t *ratelimiter = NULL;
+	int lenProp;
+	uchar propBuf[1024];
+	uchar msgbuf[8192];
+	uchar *pmsgbuf;
+	int toffs; /* offset for trusted properties */
 	DEFiRet;
 
 	/* TODO: handle format errors?? */
@@ -563,6 +671,47 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 		STATSCOUNTER_INC(ctrLostRatelimit, mutCtrLostRatelimit);
 		FINALIZE;
 	}
+
+	/* created trusted properties */
+	if(cred != NULL && pLstn->bAnnotate) {
+		if((unsigned) (lenRcv + 4096) < sizeof(msgbuf)) {
+			pmsgbuf = msgbuf;
+		} else {
+			CHKmalloc(pmsgbuf = malloc(lenRcv+4096));
+		}
+		memcpy(pmsgbuf, pRcv, lenRcv);
+		memcpy(pmsgbuf+lenRcv, " @[", 3);
+		toffs = lenRcv + 3; /* next free location */
+		lenProp = snprintf((char*)propBuf, sizeof(propBuf), "_PID=%lu _UID=%lu _GID=%lu",
+			 		(long unsigned) cred->pid, (long unsigned) cred->uid, 
+					(long unsigned) cred->gid);
+		memcpy(pmsgbuf+toffs, propBuf, lenProp);
+		toffs = toffs + lenProp;
+		getTrustedProp(cred, "comm", propBuf, sizeof(propBuf), &lenProp);
+		if(lenProp) {
+			memcpy(pmsgbuf+toffs, " _COMM=", 7);
+			memcpy(pmsgbuf+toffs+7, propBuf, lenProp);
+			toffs = toffs + 7 + lenProp;
+		}
+		getTrustedExe(cred, propBuf, sizeof(propBuf), &lenProp);
+		if(lenProp) {
+			memcpy(pmsgbuf+toffs, " _EXE=", 6);
+			memcpy(pmsgbuf+toffs+6, propBuf, lenProp);
+			toffs = toffs + 6 + lenProp;
+		}
+		getTrustedProp(cred, "cmdline", propBuf, sizeof(propBuf), &lenProp);
+		if(lenProp) {
+			memcpy(pmsgbuf+toffs, " _CMDLINE=", 10);
+			toffs = toffs + 10 + 
+				copyescaped(pmsgbuf+toffs+10, propBuf, lenProp);
+		}
+		/* finalize string */
+		pmsgbuf[toffs] = ']';
+		pmsgbuf[toffs+1] = '\0';
+		pRcv = pmsgbuf;
+		lenRcv = toffs + 1;
+	}
+
 
 	/* we now create our own message object and submit it to the queue */
 	CHKiRet(msgConstructWithTime(&pMsg, &st, tt));
@@ -694,14 +843,11 @@ static rsRetVal readSocket(lstn_t *pLstn)
 		cred = NULL;
 		ts = NULL;
 		if(pLstn->bUseCreds || pLstn->bUseSysTimeStamp) {
-			dbgprintf("XXX: pre CM loop, length of control message %d\n", (int) msgh.msg_controllen);
 			for(cm = CMSG_FIRSTHDR(&msgh); cm; cm = CMSG_NXTHDR(&msgh, cm)) {
-				dbgprintf("XXX: in CM loop, %d, %d\n", cm->cmsg_level, cm->cmsg_type);
 #				if HAVE_SCM_CREDENTIALS
 				if(   pLstn->bUseCreds
 				   && cm->cmsg_level == SOL_SOCKET && cm->cmsg_type == SCM_CREDENTIALS) {
 					cred = (struct ucred*) CMSG_DATA(cm);
-					dbgprintf("XXX: got credentials pid %d\n", (int) cred->pid);
 					break;
 				}
 #				endif /* HAVE_SCM_CREDENTIALS */
@@ -715,7 +861,6 @@ static rsRetVal readSocket(lstn_t *pLstn)
 				}
 #				endif /* HAVE_SO_TIMESTAMP */
 			}
-			dbgprintf("XXX: post CM loop\n");
 		}
 		CHKiRet(SubmitMsg(pRcv, iRcvd, pLstn, cred, ts));
 	} else if(iRcvd < 0 && errno != EINTR) {
@@ -827,8 +972,9 @@ CODESTARTwillRun
 	listeners[0].ratelimitInterval = ratelimitIntervalSysSock;
 	listeners[0].ratelimitBurst = ratelimitBurstSysSock;
 	listeners[0].ratelimitSev = ratelimitSeveritySysSock;
-	listeners[0].bUseCreds = (bWritePidSysSock || ratelimitIntervalSysSock) ? 1 : 0;
+	listeners[0].bUseCreds = (bWritePidSysSock || ratelimitIntervalSysSock || bAnnotateSysSock) ? 1 : 0;
 	listeners[0].bWritePid = bWritePidSysSock;
+	listeners[0].bAnnotate = bAnnotateSysSock;
 	listeners[0].bUseSysTimeStamp = bUseSysTimeStampSysSock;
 
 	sd_fds = sd_listen_fds(0);
@@ -978,6 +1124,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	listeners[0].fd = -1;
 	listeners[0].bParseHost = 0;
 	listeners[0].bUseCreds = 0;
+	listeners[0].bAnnotate = 0;
 	listeners[0].bCreatePath = 0;
 	listeners[0].bUseSysTimeStamp = 1;
 
@@ -1007,6 +1154,8 @@ CODEmodInit_QueryRegCFSLineHdlr
 		NULL, &pLogHostName, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputunixlistensocketflowcontrol", 0, eCmdHdlrBinary,
 		NULL, &bUseFlowCtl, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputunixlistensocketannotate", 0, eCmdHdlrBinary,
+		NULL, &bAnnotate, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputunixlistensocketcreatepath", 0, eCmdHdlrBinary,
 		NULL, &bCreatePath, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputunixlistensocketusepidfromsystem", 0, eCmdHdlrBinary,
@@ -1035,6 +1184,8 @@ CODEmodInit_QueryRegCFSLineHdlr
 		setSystemLogFlowControl, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"systemlogusesystimestamp", 0, eCmdHdlrBinary,
 		NULL, &bUseSysTimeStampSysSock, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"systemlogsocketannotate", 0, eCmdHdlrBinary,
+		NULL, &bAnnotateSysSock, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"systemlogusepidfromsystem", 0, eCmdHdlrBinary,
 		NULL, &bWritePidSysSock, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"systemlogratelimitinterval", 0, eCmdHdlrInt,

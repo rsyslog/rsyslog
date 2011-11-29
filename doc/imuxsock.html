@@ -49,6 +49,15 @@ are places as quickly as possible into the processing queues. If you would like 
 flow control, you need to enable it via the $SystemLogSocketFlowControl and
 $InputUnixListenSocketFlowControl config directives. Just make sure you thought about
 the implications. Note that for many systems, turning on flow control does not hurt.
+<p>Starting with rsyslog 5.9.4,
+<b><a href="http://www.rsyslog.com/what-are-trusted-properties/">trusted syslog properties</a>
+are available</b>. These require a recent enough Linux Kernel and access to the /proc file
+system. In other words, this may not work on all platforms and may not work fully when
+privileges are dropped (depending on how they are dropped). Note that trusted properties
+can be very useful, but also typically cause the message to grow rather large. Also, the
+format of log messages is obviously changed by adding the trusted properties at the end.
+For these reasons, the feature is <b>not enabled by default</b>. If you want to use it,
+you must turn it on (via $SystemLogSocketAnnotate and $InputUnixListenSocketAnnotate).
 <p><b>Configuration Directives</b>:</p>
 <ul>
 <li><b>$InputUnixListenSocketIgnoreMsgTimestamp</b> [<b>on</b>/off]
@@ -115,7 +124,12 @@ shall be used inside messages taken from the <b>next</b> $AddUnixListenSocket so
 the hostname must be specified before the $AddUnixListenSocket configuration directive, and it
 will only affect the next one and then automatically be reset. This functionality is provided so
 that the local hostname can be overridden in cases where that is desired.</li>
+<li><b>$InputUnixListenSocketAnnotate</b> &lt;on/<b>off</b>&gt; turn on annotation/trusted
+properties for the non-system log socket in question.</li>
+<li><b>$SystemLogSocketAnnotate</b> &lt;on/<b>off</b>&gt; turn on annotation/trusted
+properties for the system log socket.</li>
 </ul>
+
 <b>Caveats/Known Bugs:</b><br>
 <ul>
 <li>There is a compile-time limit of 50 concurrent sockets. If you need more, you need to
@@ -151,17 +165,21 @@ $InputUnixListenSocketHostName /var/run/sshd/dev/log
 </textarea>
 <p>The following sample is used to turn off input rate limiting on the system log
 socket.
-<textarea rows="6" cols="70">$ModLoad imuxsock # needs to be done just once
+<textarea rows="4" cols="70">$ModLoad imuxsock # needs to be done just once
 
 $SystemLogRateLimitInterval 0 # turn off rate limiting
+</textarea>
+<p>The following sample is used activate message annotation and thus trusted properties
+on the system log socket.
+<textarea rows="4" cols="70">$ModLoad imuxsock # needs to be done just once
+
+$SystemLogSocketAnnotate on
 </textarea>
 <p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>]
 [<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
 <p><font size="2">This documentation is part of the
-<a href="http://www.rsyslog.com/">rsyslog</a>
-project.<br>
-Copyright &copy; 2008-2010 by <a href="http://www.gerhards.net/rainer">Rainer
-Gerhards</a> and
+<a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
+Copyright &copy; 2008-2011 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
 <a href="http://www.adiscon.com/">Adiscon</a>.
 Released under the GNU GPL version 3 or higher.</font></p>
 </body></html>
