@@ -627,7 +627,7 @@ static rsRetVal actionTryResume(action_t *pThis, int *pbShutdownImmediate)
 		 * here. -- rgerhards, 2009-03-18
 		 */
 		datetime.GetTime(&ttNow); /* cache "now" */
-		if(ttNow > pThis->ttResumeRtry) {
+		if(ttNow >= pThis->ttResumeRtry) {
 			actionSetState(pThis, ACT_STATE_RTRY); /* back to retries */
 		}
 	}
