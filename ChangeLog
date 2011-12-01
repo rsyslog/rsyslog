@@ -811,6 +811,9 @@ version before switching to this one.
   Thanks to Ken for providing the patch
 ---------------------------------------------------------------------------
 Version 3.22.4 [v3-stable] (rgerhards), 2010-??-??
+- bugfix: action resume interval incorrectly handled, thus took longer to
+  resume
+- bugfix: cosmetic: proper constant used instead of number in open call
 - bugfix: timestamp was incorrectly calculated for timezones with minute
   offset
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=271
