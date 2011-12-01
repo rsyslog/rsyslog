@@ -355,7 +355,7 @@ static rsRetVal actionTryResume(action_t *pThis)
 	ttNow = getActNow(pThis); /* cache "now" */
 
 	/* first check if it is time for a re-try */
-	if(ttNow > pThis->ttResumeRtry) {
+	if(ttNow >= pThis->ttResumeRtry) {
 		iRet = pThis->pMod->tryResume(pThis->pModData);
 		if(iRet == RS_RET_SUSPENDED) {
 			/* set new tryResume time */
