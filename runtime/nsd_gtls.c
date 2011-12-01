@@ -110,7 +110,7 @@ readFile(uchar *pszFile, gnutls_datum_t *pBuf)
 
 	pBuf->data = NULL;
 
-	if((fd = open((char*)pszFile, 0)) == -1) {
+	if((fd = open((char*)pszFile, O_RDONLY)) == -1) {
 		errmsg.LogError(0, RS_RET_FILE_NOT_FOUND, "can not read file '%s'", pszFile);
 		ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
 
