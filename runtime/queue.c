@@ -1989,6 +1989,10 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 	CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("full"),
 		ctrType_IntCtr, &pThis->ctrFull));
 
+	STATSCOUNTER_INIT(pThis->ctrDscrd, pThis->mutCtrDscrd);
+	CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("discarded"),
+		ctrType_IntCtr, &pThis->ctrDscrd));
+
 	pThis->ctrMaxqsize = 0;
 	CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("maxqsize"),
 		ctrType_Int, &pThis->ctrMaxqsize));
@@ -2342,6 +2346,7 @@ doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, void *pUsr)
 // TODO : handle enqOnly => discard!
 		if(pthread_cond_timedwait(&pThis->notFull, pThis->mut, &t) != 0) {
 			DBGOPRINT((obj_t*) pThis, "enqueueMsg: cond timeout, dropping message!\n");
+			STATSCOUNTER_INC(pThis->ctrDscrd, pThis->mutCtrDscrd);
 			objDestruct(pUsr);
 			ABORT_FINALIZE(RS_RET_QUEUE_FULL);
 		}

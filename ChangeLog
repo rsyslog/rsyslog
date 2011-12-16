@@ -1,5 +1,9 @@
 ---------------------------------------------------------------------------
 Version 5.9.5  [V5-DEVEL], 2011-11-29
+- new stats counter "discarded" for queue object. Tells how many messages
+  have been discarded due to queue full condition.
+---------------------------------------------------------------------------
+Version 5.9.5  [V5-DEVEL], 2011-11-29
 - enhanced module loader to not rely on PATH_MAX
 ---------------------------------------------------------------------------
 Version 5.9.4  [V5-DEVEL], 2011-11-29
