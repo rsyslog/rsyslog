@@ -265,6 +265,12 @@ rsRetVal actionDestruct(action_t *pThis)
 		qqueueDestruct(&pThis->pQueue);
 	}
 
+	/* destroy stats object, if we have one (may not always be
+	 * be the case, e.g. if turned off)
+	 */
+	if(pThis->statsobj != NULL)
+		statsobj.Destruct(&pThis->statsobj);
+
 	if(pThis->pMod != NULL)
 		pThis->pMod->freeInstance(pThis->pModData);
 
