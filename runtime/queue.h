@@ -169,7 +169,8 @@ struct queue_s {
 	statsobj_t *statsobj;
 	STATSCOUNTER_DEF(ctrEnqueued, mutCtrEnqueued);
 	STATSCOUNTER_DEF(ctrFull, mutCtrFull);
-	STATSCOUNTER_DEF(ctrDscrd, mutCtrDscrd);
+	STATSCOUNTER_DEF(ctrFDscrd, mutCtrFDscrd);
+	STATSCOUNTER_DEF(ctrNFDscrd, mutCtrNFDscrd);
 	int ctrMaxqsize;
 };
 

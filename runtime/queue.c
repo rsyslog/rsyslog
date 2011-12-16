@@ -1355,6 +1355,7 @@ static int qqueueChkDiscardMsg(qqueue_t *pThis, int iQueueSize, void *pUsr)
 		if(iRetLocal == RS_RET_OK && iSeverity >= pThis->iDiscardSeverity) {
 			DBGOPRINT((obj_t*) pThis, "queue nearly full (%d entries), discarded severity %d message\n",
 				  iQueueSize, iSeverity);
+			STATSCOUNTER_INC(pThis->ctrNFDscrd, pThis->mutCtrNFDscrd);
 			objDestruct(pUsr);
 			ABORT_FINALIZE(RS_RET_QUEUE_FULL);
 		} else {
@@ -1989,9 +1990,12 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 	CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("full"),
 		ctrType_IntCtr, &pThis->ctrFull));
 
-	STATSCOUNTER_INIT(pThis->ctrDscrd, pThis->mutCtrDscrd);
-	CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("discarded"),
-		ctrType_IntCtr, &pThis->ctrDscrd));
+	STATSCOUNTER_INIT(pThis->ctrFDscrd, pThis->mutCtrFDscrd);
+	CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("discarded.full"),
+		ctrType_IntCtr, &pThis->ctrFDscrd));
+	STATSCOUNTER_INIT(pThis->ctrNFDscrd, pThis->mutCtrNFDscrd);
+	CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("discarded.nf"),
+		ctrType_IntCtr, &pThis->ctrNFDscrd));
 
 	pThis->ctrMaxqsize = 0;
 	CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("maxqsize"),
@@ -2346,7 +2350,7 @@ doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, void *pUsr)
 // TODO : handle enqOnly => discard!
 		if(pthread_cond_timedwait(&pThis->notFull, pThis->mut, &t) != 0) {
 			DBGOPRINT((obj_t*) pThis, "enqueueMsg: cond timeout, dropping message!\n");
-			STATSCOUNTER_INC(pThis->ctrDscrd, pThis->mutCtrDscrd);
+			STATSCOUNTER_INC(pThis->ctrFDscrd, pThis->mutCtrFDscrd);
 			objDestruct(pUsr);
 			ABORT_FINALIZE(RS_RET_QUEUE_FULL);
 		}
