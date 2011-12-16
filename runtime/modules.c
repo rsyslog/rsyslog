@@ -767,7 +767,6 @@ Load(uchar *pModName)
 	DEFiRet;
 	
 	size_t iPathLen, iModNameLen;
-	uchar szPath[PATH_MAX];
 	uchar *pModNameCmp;
 	int bHasExtension;
         void *pModHdlr, *pModInit;
@@ -775,13 +774,25 @@ Load(uchar *pModName)
 	uchar *pModDirCurr, *pModDirNext;
 	int iLoadCnt;
 	struct dlhandle_s *pHandle = NULL;
+#	ifdef PATH_MAX
+	uchar pathBuf[PATH_MAX+1];
+#	else
+	uchar pathBuf[4096];
+#	endif
+	uchar *pPathBuf = pathBuf;
+	size_t lenPathBuf = sizeof(pathBuf);
 
 	assert(pModName != NULL);
 	dbgprintf("Requested to load module '%s'\n", pModName);
 
+	iModNameLen = strlen((char*)pModName);
+	/* overhead for a full path is potentially 1 byte for a slash,
+	 * three bytes for ".so" and one byte for '\0'.
+	 */
+#	define PATHBUF_OVERHEAD 1 + iModNameLen + 3 + 1
+
 	pthread_mutex_lock(&mutLoadUnload);
 
-	iModNameLen = strlen((char *) pModName);
 	if(iModNameLen > 3 && !strcmp((char *) pModName + iModNameLen - 3, ".so")) {
 		iModNameLen -= 3;
 		bHasExtension = TRUE;
@@ -802,13 +813,19 @@ Load(uchar *pModName)
 	pModDirNext = NULL;
 	pModHdlr    = NULL;
 	iLoadCnt    = 0;
-	do {
-		/* now build our load module name */
+	do {	/* now build our load module name */
 		if(*pModName == '/' || *pModName == '.') {
-			*szPath = '\0';	/* we do not need to append the path - its already in the module name */
+			if(lenPathBuf < PATHBUF_OVERHEAD) {
+				if(pPathBuf != pathBuf) /* already malloc()ed memory? */
+					free(pPathBuf);
+				/* we always alloc enough memory for everything we potentiall need to add */
+				lenPathBuf = PATHBUF_OVERHEAD;
+				CHKmalloc(pPathBuf = malloc(sizeof(char)*lenPathBuf));
+			}
+			*pPathBuf = '\0';	/* we do not need to append the path - its already in the module name */
 			iPathLen = 0;
 		} else {
-			*szPath = '\0';
+			*pPathBuf = '\0';
 
 			iPathLen = strlen((char *)pModDirCurr);
 			pModDirNext = (uchar *)strchr((char *)pModDirCurr, ':');
@@ -821,30 +838,27 @@ Load(uchar *pModName)
 					continue;
 				}
 				break;
-			} else if(iPathLen > sizeof(szPath) - 1) {
-				errmsg.LogError(0, NO_ERRCODE, "could not load module '%s', module path too long\n", pModName);
-				ABORT_FINALIZE(RS_RET_MODULE_LOAD_ERR_PATHLEN);
+			} else if(iPathLen > lenPathBuf - PATHBUF_OVERHEAD) {
+				if(pPathBuf != pathBuf) /* already malloc()ed memory? */
+					free(pPathBuf);
+				/* we always alloc enough memory for everything we potentiall need to add */
+				lenPathBuf = iPathLen + PATHBUF_OVERHEAD;
+				CHKmalloc(pPathBuf = malloc(sizeof(char)*lenPathBuf));
 			}
 
-			strncat((char *) szPath, (char *)pModDirCurr, iPathLen);
-			iPathLen = strlen((char*) szPath);
+			memcpy((char *) pPathBuf, (char *)pModDirCurr, iPathLen);
+			if((pPathBuf[iPathLen - 1] != '/')) {
+				/* we have space, made sure in previous check */
+				pPathBuf[iPathLen++] = '/';
+			}
+			pPathBuf[iPathLen] = '\0';
 
 			if(pModDirNext)
 				pModDirCurr = pModDirNext + 1;
-
-			if((szPath[iPathLen - 1] != '/')) {
-				if((iPathLen <= sizeof(szPath) - 2)) {
-					szPath[iPathLen++] = '/';
-					szPath[iPathLen] = '\0';
-				} else {
-					errmsg.LogError(0, RS_RET_MODULE_LOAD_ERR_PATHLEN, "could not load module '%s', path too long\n", pModName);
-					ABORT_FINALIZE(RS_RET_MODULE_LOAD_ERR_PATHLEN);
-				}
-			}
 		}
 
 		/* ... add actual name ... */
-		strncat((char *) szPath, (char *) pModName, sizeof(szPath) - iPathLen - 1);
+		strncat((char *) pPathBuf, (char *) pModName, lenPathBuf - iPathLen - 1);
 
 		/* now see if we have an extension and, if not, append ".so" */
 		if(!bHasExtension) {
@@ -853,17 +867,12 @@ Load(uchar *pModName)
 			 * algo over time... -- rgerhards, 2008-03-05
 			 */
 			/* ... so now add the extension */
-			strncat((char *) szPath, ".so", sizeof(szPath) - strlen((char*) szPath) - 1);
+			strncat((char *) pPathBuf, ".so", lenPathBuf - strlen((char*) pPathBuf) - 1);
 			iPathLen += 3;
 		}
 
-		if(iPathLen + strlen((char*) pModName) >= sizeof(szPath)) {
-			errmsg.LogError(0, RS_RET_MODULE_LOAD_ERR_PATHLEN, "could not load module '%s', path too long\n", pModName);
-			ABORT_FINALIZE(RS_RET_MODULE_LOAD_ERR_PATHLEN);
-		}
-
 		/* complete load path constructed, so ... GO! */
-		dbgprintf("loading module '%s'\n", szPath);
+		dbgprintf("loading module '%s'\n", pPathBuf);
 
 		/* see if we have this one already */
 		for (pHandle = pHandles; pHandle; pHandle = pHandle->next) {
@@ -875,7 +884,7 @@ Load(uchar *pModName)
 
 		/* not found, try to dynamically link it */
 		if (!pModHdlr) {
-			pModHdlr = dlopen((char *) szPath, RTLD_NOW);
+			pModHdlr = dlopen((char *) pPathBuf, RTLD_NOW);
 		}
 
 		iLoadCnt++;
@@ -884,25 +893,28 @@ Load(uchar *pModName)
 
 	if(!pModHdlr) {
 		if(iLoadCnt) {
-			errmsg.LogError(0, RS_RET_MODULE_LOAD_ERR_DLOPEN, "could not load module '%s', dlopen: %s\n", szPath, dlerror());
+			errmsg.LogError(0, RS_RET_MODULE_LOAD_ERR_DLOPEN, "could not load module '%s', dlopen: %s\n",
+					pPathBuf, dlerror());
 		} else {
-			errmsg.LogError(0, NO_ERRCODE, "could not load module '%s', ModDir was '%s'\n", szPath,
+			errmsg.LogError(0, NO_ERRCODE, "could not load module '%s', ModDir was '%s'\n", pPathBuf,
 			                               ((pModDir == NULL) ? _PATH_MODDIR : (char *)pModDir));
 		}
 		ABORT_FINALIZE(RS_RET_MODULE_LOAD_ERR_DLOPEN);
 	}
 	if(!(pModInit = dlsym(pModHdlr, "modInit"))) {
-		errmsg.LogError(0, RS_RET_MODULE_LOAD_ERR_NO_INIT, "could not load module '%s', dlsym: %s\n", szPath, dlerror());
+		errmsg.LogError(0, RS_RET_MODULE_LOAD_ERR_NO_INIT, "could not load module '%s', dlsym: %s\n", pPathBuf, dlerror());
 		dlclose(pModHdlr);
 		ABORT_FINALIZE(RS_RET_MODULE_LOAD_ERR_NO_INIT);
 	}
 	if((iRet = doModInit(pModInit, (uchar*) pModName, pModHdlr)) != RS_RET_OK) {
-		errmsg.LogError(0, RS_RET_MODULE_LOAD_ERR_INIT_FAILED, "could not load module '%s', rsyslog error %d\n", szPath, iRet);
+		errmsg.LogError(0, RS_RET_MODULE_LOAD_ERR_INIT_FAILED, "could not load module '%s', rsyslog error %d\n", pPathBuf, iRet);
 		dlclose(pModHdlr);
 		ABORT_FINALIZE(RS_RET_MODULE_LOAD_ERR_INIT_FAILED);
 	}
 
 finalize_it:
+	if(pPathBuf != pathBuf) /* used malloc()ed memory? */
+		free(pPathBuf);
 	pthread_mutex_unlock(&mutLoadUnload);
 	RETiRet;
 }
