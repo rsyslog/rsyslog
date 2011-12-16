@@ -23,6 +23,11 @@ Version 6.3.7  [DEVEL] 2011-0?-??
 - bugfix: potential abort after reading invalid X.509 certificate
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=290
   Thanks to Tomas Heinrich for the patch
+- enhanced module loader to not rely on PATH_MAX
+- imuxsock: added capability to "annotate" messages with "trusted
+  information", which contains some properties obtained from the system
+  and as such sure to not be faked. This is inspired by the similiar idea
+  introduced in systemd.
 ---------------------------------------------------------------------------
 Version 6.3.6  [DEVEL] 2011-09-19
 - added $InputRELPServerBindRuleset directive to specify rulesets for RELP
@@ -317,7 +322,14 @@ expected that interfaces, even new ones, break during the initial
   syslog plain tcp input plugin (NOT supporting TLS!)
   [ported from v4]
 ---------------------------------------------------------------------------
-Version 5.9.4  [V5-DEVEL], 2011-0?-??
+Version 5.9.5  [V5-DEVEL], 20??-??-??
+- enhanced module loader to not rely on PATH_MAX
+---------------------------------------------------------------------------
+Version 5.9.4  [V5-DEVEL], 2011-11-29
+- imuxsock: added capability to "annotate" messages with "trusted
+  information", which contains some properties obtained from the system
+  and as such sure to not be faked. This is inspired by the similiar idea
+  introduced in systemd.
 - removed dependency on gcrypt for recently-enough GnuTLS
   see: http://bugzilla.adiscon.com/show_bug.cgi?id=289
 - bugfix: imuxsock did no longer ignore message-provided timestamp, if
