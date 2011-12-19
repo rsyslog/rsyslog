@@ -89,6 +89,9 @@ struct action_s {
 	pthread_mutex_t mutActExec; /* mutex to guard actual execution of doAction for single-threaded modules */
 	uchar *pszName;		/* action name (for documentation) */
 	DEF_ATOMIC_HELPER_MUT(mutCAS);
+	/* for statistics subsystem */
+	statsobj_t *statsobj;
+	STATSCOUNTER_DEF(ctrProcessed, mutCtrProcessed);
 };
 
 
