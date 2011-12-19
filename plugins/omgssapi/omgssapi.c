@@ -362,9 +362,7 @@ static rsRetVal doTryResume(instanceData *pData)
 		}
 		break;
 	case eDestFORW:
-		/* rgerhards, 2007-09-11: this can not happen, but I've included it to
-		 * a) make the compiler happy, b) detect any logic errors */
-		assert(0);
+		/* NOOP */
 		break;
 	}
 

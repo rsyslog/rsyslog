@@ -119,7 +119,7 @@ readFile(uchar *pszFile, gnutls_datum_t *pBuf)
 
 	pBuf->data = NULL;
 
-	if((fd = open((char*)pszFile, 0)) == -1) {
+	if((fd = open((char*)pszFile, O_RDONLY)) == -1) {
 		errmsg.LogError(0, RS_RET_FILE_NOT_FOUND, "can not read file '%s'", pszFile);
 		ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
 
@@ -208,10 +208,14 @@ finalize_it:
 	if(iRet != RS_RET_OK) {
 		if(data.data != NULL)
 			free(data.data);
-		if(pThis->bOurCertIsInit)
+		if(pThis->bOurCertIsInit) {
 			gnutls_x509_crt_deinit(pThis->ourCert);
-		if(pThis->bOurKeyIsInit)
+			pThis->bOurCertIsInit = 0;
+		}
+		if(pThis->bOurKeyIsInit) {
 			gnutls_x509_privkey_deinit(pThis->ourKey);
+			pThis->bOurKeyIsInit = 0;
+		}
 	}
 	RETiRet;
 }
