@@ -92,6 +92,7 @@ struct action_s {
 	/* for statistics subsystem */
 	statsobj_t *statsobj;
 	STATSCOUNTER_DEF(ctrProcessed, mutCtrProcessed);
+	STATSCOUNTER_DEF(ctrFail, mutCtrFail);
 };
 
 
