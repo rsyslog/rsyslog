@@ -114,6 +114,7 @@
 #include "unicode-helper.h"
 #include "atomic.h"
 #include "ruleset.h"
+#include "statsobj.h"
 
 #define NO_TIME_PROVIDED 0 /* indicate we do not provide any cached time */
 
@@ -129,6 +130,7 @@ DEFobjCurrIf(obj)
 DEFobjCurrIf(datetime)
 DEFobjCurrIf(module)
 DEFobjCurrIf(errmsg)
+DEFobjCurrIf(statsobj)
 DEFobjCurrIf(ruleset)
 
 
@@ -291,6 +293,12 @@ rsRetVal actionDestruct(action_t *pThis)
 		qqueueDestruct(&pThis->pQueue);
 	}
 
+	/* destroy stats object, if we have one (may not always be
+	 * be the case, e.g. if turned off)
+	 */
+	if(pThis->statsobj != NULL)
+		statsobj.Destruct(&pThis->statsobj);
+
 	if(pThis->pMod != NULL)
 		pThis->pMod->freeInstance(pThis->pModData);
 
@@ -354,18 +362,42 @@ rsRetVal
 actionConstructFinalize(action_t *pThis, struct cnfparamvals *queueParams)
 {
 	DEFiRet;
-	uchar pszQName[64]; /* friendly name of our queue */
+	uchar pszAName[64]; /* friendly name of our action */
 
 	ASSERT(pThis != NULL);
 
-	/* find a name for our queue */
+	/* generate a friendly name for us action stats */
 	if(pThis->pszName == NULL) {
-		snprintf((char*) pszQName, sizeof(pszQName)/sizeof(uchar), "action %d queue", iActionNbr);
+		snprintf((char*) pszAName, sizeof(pszAName)/sizeof(uchar), "action %d", iActionNbr);
 	} else {
-		ustrncpy(pszQName, pThis->pszName, sizeof(pszQName));
-		pszQName[sizeof(pszQName)-1] = '\0'; /* to be on the save side */
+		ustrncpy(pszAName, pThis->pszName, sizeof(pszAName));
+		pszAName[sizeof(pszAName)-1] = '\0'; /* to be on the save side */
 	}
 
+	/* support statistics gathering */
+	CHKiRet(statsobj.Construct(&pThis->statsobj));
+	CHKiRet(statsobj.SetName(pThis->statsobj, pszAName));
+
+	STATSCOUNTER_INIT(pThis->ctrProcessed, pThis->mutCtrProcessed);
+	CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("processed"),
+		ctrType_IntCtr, &pThis->ctrProcessed));
+
+	STATSCOUNTER_INIT(pThis->ctrFail, pThis->mutCtrFail);
+	CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("failed"),
+		ctrType_IntCtr, &pThis->ctrFail));
+
+	CHKiRet(statsobj.ConstructFinalize(pThis->statsobj));
+
+	/* create our queue */
+
+	/* generate a friendly name for the queue */
+	if(pThis->pszName == NULL) {
+		snprintf((char*) pszAName, sizeof(pszAName)/sizeof(uchar), "action %d queue",
+			 iActionNbr);
+	} else {
+		ustrncpy(pszAName, pThis->pszName, sizeof(pszAName));
+		pszAName[63] = '\0'; /* to be on the save side */
+	}
 	/* now check if we can run the action in "firehose mode" during stage one of 
 	 * its processing (that is before messages are enqueued into the action q).
 	 * This is only possible if some features, which require strict sequence, are
@@ -408,7 +440,7 @@ actionConstructFinalize(action_t *pThis, struct cnfparamvals *queueParams)
 	 */
 	CHKiRet(qqueueConstruct(&pThis->pQueue, cs.ActionQueType, 1, cs.iActionQueueSize,
 					(rsRetVal (*)(void*, batch_t*, int*))processBatchMain));
-	obj.SetName((obj_t*) pThis->pQueue, pszQName);
+	obj.SetName((obj_t*) pThis->pQueue, pszAName);
 	qqueueSetpUsr(pThis->pQueue, pThis);
 
 	if(queueParams == NULL) { /* use legacy params? */
@@ -1124,6 +1156,7 @@ submitBatch(action_t *pAction, batch_t *pBatch, int nElem)
 				   && pBatch->pElem[i].state != BATCH_STATE_COMM ) {
 					pBatch->pElem[i].state = BATCH_STATE_BAD;
 					pBatch->pElem[i].bPrevWasSuspended = 1;
+					STATSCOUNTER_INC(pAction->ctrFail, pAction->mutCtrFail);
 				}
 			}
 			bDone = 1;
@@ -1313,6 +1346,7 @@ doSubmitToActionQ(action_t *pAction, msg_t *pMsg)
 {
 	DEFiRet;
 
+	STATSCOUNTER_INC(pAction->ctrProcessed, pAction->mutCtrProcessed);
 	if(pAction->pQueue->qType == QUEUETYPE_DIRECT)
 		iRet = qqueueEnqObjDirect(pAction->pQueue, (void*) MsgAddRef(pMsg));
 	else
@@ -1616,6 +1650,17 @@ finalize_it:
 	RETiRet;
 }
 
+static inline void
+countStatsBatchEnq(action_t *pAction, batch_t *pBatch)
+{
+	int i;
+	for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pBatch->pbShutdownImmediate) ; ++i) {
+		if(pBatch->pElem[i].bFilterOK) {
+			STATSCOUNTER_INC(pAction->ctrProcessed, pAction->mutCtrProcessed);
+		}
+	}
+}
+
 
 /* enqueue a batch in direct mode. We have put this into its own function just to avoid
  * cluttering the actual submit function.
@@ -1652,13 +1697,16 @@ doQueueEnqObjDirectBatch(action_t *pAction, batch_t *pBatch)
 				pBatch->pElem[i].bFilterOK = 0;
 				bModifiedFilter = 1;
 			}
-			if(pBatch->pElem[i].bFilterOK)
+			if(pBatch->pElem[i].bFilterOK) {
+				STATSCOUNTER_INC(pAction->ctrProcessed, pAction->mutCtrProcessed);
 				bNeedSubmit = 1;
+			}
 			DBGPRINTF("action %p[%d]: filterOK:%d state:%d execWhenPrev:%d prevWasSusp:%d\n",
 				   pAction, i, pBatch->pElem[i].bFilterOK,  pBatch->pElem[i].state,
 				   pAction->bExecWhenPrevSusp, pBatch->pElem[i].bPrevWasSuspended);
 		}
 		if(bNeedSubmit) {
+			/* note: stats were already computed above */
 			iRet = qqueueEnqObjDirectBatch(pAction->pQueue, pBatch);
 		} else {
 			DBGPRINTF("no need to submit batch, all bFilterOK==0\n");
@@ -1673,6 +1721,8 @@ doQueueEnqObjDirectBatch(action_t *pAction, batch_t *pBatch)
 			}
 		}
 	} else {
+		if(GatherStats)
+			countStatsBatchEnq(pAction, pBatch);
 		iRet = qqueueEnqObjDirectBatch(pAction->pQueue, pBatch);
 	}
 
@@ -2083,6 +2133,7 @@ rsRetVal actionClassInit(void)
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	CHKiRet(objUse(module, CORE_COMPONENT));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	CHKiRet(objUse(statsobj, CORE_COMPONENT));
 	CHKiRet(objUse(ruleset, CORE_COMPONENT));
 
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionname", 0, eCmdHdlrGetWord, NULL, &cs.pszActionName, NULL, eConfObjAction));

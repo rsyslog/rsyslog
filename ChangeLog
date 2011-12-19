@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------
 Version 6.3.7  [DEVEL] 2011-0?-??
+- added a couple of new stats objects
 - improved support for new v6 config system. Now also supported by
   - omfwd
 - bugfix: facility local<x> was not correctly interpreted in legacy filters
@@ -322,7 +323,11 @@ expected that interfaces, even new ones, break during the initial
   syslog plain tcp input plugin (NOT supporting TLS!)
   [ported from v4]
 ---------------------------------------------------------------------------
-Version 5.9.5  [V5-DEVEL], 20??-??-??
+Version 5.9.6  [V5-DEVEL], 20??-??-??
+- new stats counters "discarded.nf" and "discarded.full" for queue object.
+  Tells how many messages have been discarded due to queue full condition.
+---------------------------------------------------------------------------
+Version 5.9.5  [V5-DEVEL], 2011-11-29
 - enhanced module loader to not rely on PATH_MAX
 ---------------------------------------------------------------------------
 Version 5.9.4  [V5-DEVEL], 2011-11-29

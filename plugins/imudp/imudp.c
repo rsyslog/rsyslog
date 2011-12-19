@@ -51,6 +51,7 @@
 #include "datetime.h"
 #include "prop.h"
 #include "ruleset.h"
+#include "statsobj.h"
 #include "unicode-helper.h"
 
 MODULE_TYPE_INPUT
@@ -67,6 +68,10 @@ DEFobjCurrIf(net)
 DEFobjCurrIf(datetime)
 DEFobjCurrIf(prop)
 DEFobjCurrIf(ruleset)
+DEFobjCurrIf(statsobj)
+
+statsobj_t *modStats;
+STATSCOUNTER_DEF(ctrSubmit, mutCtrSubmit)
 
 static int bDoACLCheck;			/* are ACL checks neeed? Cached once immediately before listener startup */
 static int iMaxLine;			/* maximum UDP message size supported */
@@ -333,6 +338,7 @@ processSocket(thrdInfo_t *pThrd, int fd, struct sockaddr_storage *frominetPrev, 
 				pMsg->msgFlags  |= NEEDS_ACLCHK_U; /* request ACL check after resolution */
 			CHKiRet(msgSetFromSockinfo(pMsg, &frominet));
 			CHKiRet(submitMsg(pMsg));
+			STATSCOUNTER_INC(ctrSubmit, mutCtrSubmit);
 		}
 	}
 
@@ -735,9 +741,12 @@ CODESTARTmodExit
 	if(pInputName != NULL)
 		prop.Destruct(&pInputName);
 
+	statsobj.Destruct(&modStats);
+
 	/* release what we no longer need */
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
+	objRelease(statsobj, CORE_COMPONENT);
 	objRelease(datetime, CORE_COMPONENT);
 	objRelease(prop, CORE_COMPONENT);
 	objRelease(ruleset, CORE_COMPONENT);
@@ -786,6 +795,7 @@ CODESTARTmodInit
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
+	CHKiRet(objUse(statsobj, CORE_COMPONENT));
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	CHKiRet(objUse(prop, CORE_COMPONENT));
 	CHKiRet(objUse(ruleset, CORE_COMPONENT));
@@ -811,6 +821,13 @@ CODEmodInit_QueryRegCFSLineHdlr
 		NULL, &cs.iTimeRequery, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
 		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+
+	/* support statistics gathering */
+	CHKiRet(statsobj.Construct(&modStats));
+	CHKiRet(statsobj.SetName(modStats, UCHAR_CONSTANT("imudp")));
+	CHKiRet(statsobj.AddCounter(modStats, UCHAR_CONSTANT("submitted"),
+		ctrType_IntCtr, &ctrSubmit));
+	CHKiRet(statsobj.ConstructFinalize(modStats));
 ENDmodInit
 /* vim:set ai:
  */
