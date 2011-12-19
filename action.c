@@ -341,6 +341,10 @@ actionConstructFinalize(action_t *pThis)
 	CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("processed"),
 		ctrType_IntCtr, &pThis->ctrProcessed));
 
+	STATSCOUNTER_INIT(pThis->ctrFail, pThis->mutCtrFail);
+	CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("failed"),
+		ctrType_IntCtr, &pThis->ctrFail));
+
 	CHKiRet(statsobj.ConstructFinalize(pThis->statsobj));
 
 	/* create our queue */
@@ -1099,6 +1103,7 @@ submitBatch(action_t *pAction, batch_t *pBatch, int nElem)
 				   && pBatch->pElem[i].state != BATCH_STATE_COMM ) {
 					pBatch->pElem[i].state = BATCH_STATE_BAD;
 					pBatch->pElem[i].bPrevWasSuspended = 1;
+					STATSCOUNTER_INC(pAction->ctrFail, pAction->mutCtrFail);
 				}
 			}
 			bDone = 1;
