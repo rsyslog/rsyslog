@@ -1617,14 +1617,16 @@ doQueueEnqObjDirectBatch(action_t *pAction, batch_t *pBatch)
 				pBatch->pElem[i].bFilterOK = 0;
 				bModifiedFilter = 1;
 			}
-			if(pBatch->pElem[i].bFilterOK)
+			if(pBatch->pElem[i].bFilterOK) {
+				STATSCOUNTER_INC(pAction->ctrProcessed, pAction->mutCtrProcessed);
 				bNeedSubmit = 1;
+			}
 			DBGPRINTF("action %p[%d]: filterOK:%d state:%d execWhenPrev:%d prevWasSusp:%d\n",
 				   pAction, i, pBatch->pElem[i].bFilterOK,  pBatch->pElem[i].state,
 				   pAction->bExecWhenPrevSusp, pBatch->pElem[i].bPrevWasSuspended);
 		}
 		if(bNeedSubmit) {
-			countStatsBatchEnq(pAction, pBatch);
+			/* note: stats were already computed above */
 			iRet = qqueueEnqObjDirectBatch(pAction->pQueue, pBatch);
 		} else {
 			DBGPRINTF("no need to submit batch, all bFilterOK==0\n");
@@ -1639,7 +1641,8 @@ doQueueEnqObjDirectBatch(action_t *pAction, batch_t *pBatch)
 			}
 		}
 	} else {
-		countStatsBatchEnq(pAction, pBatch);
+		if(GatherStats)
+			countStatsBatchEnq(pAction, pBatch);
 		iRet = qqueueEnqObjDirectBatch(pAction->pQueue, pBatch);
 	}
 
