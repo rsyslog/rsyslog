@@ -25,6 +25,7 @@
 #include "obj.h"
 #include "prop.h"
 #include "tcps_sess.h"
+#include "statsobj.h"
 
 /* support for framing anomalies */
 typedef enum ETCPsyslogFramingAnomaly {
@@ -40,6 +41,8 @@ struct tcpLstnPortList_s {
 	prop_t *pInputName;
 	tcpsrv_t *pSrv;			/**< pointer to higher-level server instance */
 	ruleset_t *pRuleset;		/**< associated ruleset */
+	statsobj_t *stats;		/**< associated stats object */
+	STATSCOUNTER_DEF(ctrSubmit, mutCtrSubmit)
 	tcpLstnPortList_t *pNext;	/**< next port or NULL */
 };
 
