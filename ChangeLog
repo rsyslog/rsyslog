@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------
 Version 5.8.7  [V5-stable] 2011-??-??
+- bugfix: stats counter were not properly initialized on creation
 - bugfix: potential abort after reading invalid X.509 certificate
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=290
   Thanks to Tomas Heinrich for the patch
