@@ -260,6 +260,7 @@ defaultDoSubmitMessage(tcps_sess_t *pThis, struct syslogTime *stTime, time_t ttG
 	CHKiRet(MsgSetRcvFromIP(pMsg, pThis->fromHostIP));
 	MsgSetRuleset(pMsg, pThis->pLstnInfo->pRuleset);
 
+	STATSCOUNTER_INC(pThis->pLstnInfo->ctrSubmit, pThis->pLstnInfo->mutCtrSubmit);
 	if(pMultiSub == NULL) {
 		CHKiRet(submitMsg(pMsg));
 	} else {

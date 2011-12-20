@@ -36,8 +36,8 @@
  *
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
  */
-
 #include "config.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
@@ -90,6 +90,7 @@ DEFobjCurrIf(netstrm)
 DEFobjCurrIf(nssel)
 DEFobjCurrIf(nspoll)
 DEFobjCurrIf(prop)
+DEFobjCurrIf(statsobj)
 
 
 /* add new listener port to listener port list
@@ -99,6 +100,7 @@ static inline rsRetVal
 addNewLstnPort(tcpsrv_t *pThis, uchar *pszPort)
 {
 	tcpLstnPortList_t *pEntry;
+	uchar statname[64];
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
@@ -117,6 +119,15 @@ addNewLstnPort(tcpsrv_t *pThis, uchar *pszPort)
 	/* and add to list */
 	pEntry->pNext = pThis->pLstnPorts;
 	pThis->pLstnPorts = pEntry;
+
+	/* support statistics gathering */
+	CHKiRet(statsobj.Construct(&(pEntry->stats)));
+	snprintf((char*)statname, sizeof(statname), "%s(%s)", pThis->pszInputName, pszPort);
+	statname[sizeof(statname)-1] = '\0'; /* just to be on the save side... */
+	CHKiRet(statsobj.SetName(pEntry->stats, statname));
+	CHKiRet(statsobj.AddCounter(pEntry->stats, UCHAR_CONSTANT("submitted"),
+		ctrType_IntCtr, &(pEntry->ctrSubmit)));
+	CHKiRet(statsobj.ConstructFinalize(pEntry->stats));
 
 finalize_it:
 	RETiRet;
@@ -1096,6 +1107,7 @@ CODESTARTObjClassExit(tcpsrv)
 	objRelease(tcps_sess, DONT_LOAD_LIB);
 	objRelease(conf, CORE_COMPONENT);
 	objRelease(prop, CORE_COMPONENT);
+	objRelease(statsobj, CORE_COMPONENT);
 	objRelease(ruleset, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
@@ -1122,6 +1134,7 @@ BEGINObjClassInit(tcpsrv, 1, OBJ_IS_LOADABLE_MODULE) /* class, version - CHANGE 
 	CHKiRet(objUse(conf, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(ruleset, CORE_COMPONENT));
+	CHKiRet(objUse(statsobj, CORE_COMPONENT));
 	CHKiRet(objUse(prop, CORE_COMPONENT));
 
 	/* set our own handlers */
