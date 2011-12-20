@@ -721,6 +721,7 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 	uchar msgbuf[8192];
 	uchar *pmsgbuf;
 	int toffs; /* offset for trusted properties */
+	struct syslogTime dummyTS;
 	DEFiRet;
 
 	/* TODO: handle format errors?? */
@@ -815,6 +816,10 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 
 	if(ts == NULL) {
 		if((pLstn->flags & IGNDATE)) {
+			/* in this case, we still need to find out if we have a valid
+			 * datestamp or not .. and advance the parse pointer accordingly.
+			 */
+			datetime.ParseTIMESTAMP3164(&dummyTS, &parse, &lenMsg);
 			parse += 16; /* just skip timestamp */
 			lenMsg -= 16;
 		} else {
@@ -823,15 +828,10 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 			}
 		}
 	} else { /* if we pulled the time from the system, we need to update the message text */
-		if(lenMsg >= 16) {
-			/* RFC3164 timestamp is 16 bytes long, so assuming a valid stamp,
-			 * we can fixup the message. If the part is smaller, the stamp can
-			 * not be valid and we do not touch the message. Note that there may
-			 * be some scenarios where the message is larg enough but the stamp is
-			 * still invalid. In those cases we will destruct part of the message,
-			 * but this case is considered extremely unlikely and thus not handled
-			 * specifically. -- rgerhards, 2011-06-20
-			 */
+		uchar *tmpParse = parse; /* just to check correctness of TS */
+		if(datetime.ParseTIMESTAMP3164(&dummyTS, &tmpParse, &lenMsg) == RS_RET_OK) {
+			/* We modify the message only if it contained a valid timestamp,
+			 * otherwise we do not touch it at all. */
 			datetime.formatTimestamp3164(&st, (char*)parse, 0);
 			parse[15] = ' '; /* re-write \0 from fromatTimestamp3164 by SP */
 			/* update "counters" to reflect processed timestamp */
