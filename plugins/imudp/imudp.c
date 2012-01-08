@@ -426,8 +426,7 @@ static void set_thread_schedparam(void)
  * interface. ./configure settings control which one is used.
  * rgerhards, 2009-09-09
  */
-//#if defined(HAVE_EPOLL_CREATE1) || defined(HAVE_EPOLL_CREATE)
-#if 0
+#if defined(HAVE_EPOLL_CREATE1) || defined(HAVE_EPOLL_CREATE)
 #define NUM_EPOLL_EVENTS 10
 rsRetVal rcvMainLoop(thrdInfo_t *pThrd)
 {
