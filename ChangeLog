@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 5.8.7  [V5-stable] 2011-??-??
+- bugfix: instabilities when using RFC5424 header fields
+  Thanks to Kaiwang Chen for the patch
 - bugfix: imuxsock did truncate part of received message if it did not
   contain a proper date. The truncation occured because we removed that
   part of the messages that was expected to be the date.

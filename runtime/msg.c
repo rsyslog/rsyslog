@@ -7,7 +7,7 @@
  * of the "old" message code without any modifications. However, it
  * helps to have things at the right place one we go to the meat of it.
  *
- * Copyright 2007, 2008 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2012 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -1609,7 +1609,7 @@ char *getPROCID(msg_t *pM, sbool bLockMutex)
 
 	ISOBJ_TYPE_assert(pM, msg);
 	if(bLockMutex == LOCK_MUTEX)
-		MsgUnlock(pM);
+		MsgLock(pM);
 	preparePROCID(pM, MUTEX_ALREADY_LOCKED);
 	if(pM->pCSPROCID == NULL)
 		pszRet = UCHAR_CONSTANT("");
@@ -1846,7 +1846,7 @@ static inline char *getStructuredData(msg_t *pM)
 {
 	uchar *pszRet;
 
-	MsgUnlock(pM);
+	MsgLock(pM);
 	if(pM->pCSStrucData == NULL)
 		pszRet = UCHAR_CONSTANT("-");
 	else 
@@ -1894,7 +1894,7 @@ uchar *getProgramName(msg_t *pM, sbool bLockMutex)
 	uchar *pszRet;
 
 	if(bLockMutex == LOCK_MUTEX)
-		MsgUnlock(pM);
+		MsgLock(pM);
 	prepareProgramName(pM, MUTEX_ALREADY_LOCKED);
 	if(pM->pCSProgName == NULL)
 		pszRet = UCHAR_CONSTANT("");
@@ -1952,7 +1952,7 @@ char *getAPPNAME(msg_t *pM, sbool bLockMutex)
 
 	assert(pM != NULL);
 	if(bLockMutex == LOCK_MUTEX)
-		MsgUnlock(pM);
+		MsgLock(pM);
 	prepareAPPNAME(pM, MUTEX_ALREADY_LOCKED);
 	if(pM->pCSAPPNAME == NULL)
 		pszRet = UCHAR_CONSTANT("");
