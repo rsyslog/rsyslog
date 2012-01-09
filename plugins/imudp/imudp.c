@@ -233,11 +233,11 @@ static rsRetVal addListner(void __attribute__((unused)) *pVal, uchar *pNewVal)
 			newnLstn = nLstn + newSocks[0];
 			CHKmalloc(newlcnfinfo = (struct cnfinfo_s*) MALLOC(sizeof(struct cnfinfo_s) * newnLstn));
 			/* ready to copy */
-			iDst = 0;
+			iDst = nLstn;
 			memcpy(newlcnfinfo, lcnfinfo, nLstn * sizeof(struct cnfinfo_s));
 			for(iSrc = 1 ; iSrc <= newSocks[0] ; ++iSrc, ++iDst) {
-				lcnfinfo[iDst].udpLstnSocks = newSocks[iSrc];
-				lcnfinfo[iDst].udpRulesets = pBindRuleset;
+				newlcnfinfo[iDst].udpLstnSocks = newSocks[iSrc];
+				newlcnfinfo[iDst].udpRulesets = pBindRuleset;
 			}
 			free(lcnfinfo);
 			lcnfinfo = newlcnfinfo;
