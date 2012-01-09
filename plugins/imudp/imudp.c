@@ -596,18 +596,14 @@ ENDwillRun
 
 
 BEGINafterRun
+	int i;
 CODESTARTafterRun
 	/* do cleanup here */
 	net.clearAllowedSenders((uchar*)"UDP");
-#warning UDP listen socks must be cloesed! also select must be supported!
-#if 0
-	if(lcnfinfo.udpLstnSocks != NULL) {
-		net.closeUDPListenSockets(lcnfinfo.udpLstnSocks);
-		lcnfinfo.udpLstnSocks = NULL;
-		free(lcnfinfo.udpRulesets);
-		lcnfinfo.udpRulesets = NULL;
-	}
-#endif
+	for (i = 0; i < nLstn ; i++)
+		close(lcnfinfo[i].udpLstnSocks);
+	free(lcnfinfo);
+	lcnfinfo = NULL;
 	if(pRcvBuf != NULL) {
 		free(pRcvBuf);
 		pRcvBuf = NULL;
