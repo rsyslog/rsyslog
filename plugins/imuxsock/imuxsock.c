@@ -565,8 +565,11 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred)
 	parse++; lenMsg--; /* '>' */
 
 	if((pLstn->flags & IGNDATE)) {
-		parse += 16; /* just skip timestamp */
-		lenMsg -= 16;
+		/* in this case, we still need to find out if we have a valid
+		 * datestamp or not .. and advance the parse pointer accordingly.
+		 */
+		struct syslogTime dummy;
+		datetime.ParseTIMESTAMP3164(&dummy, &parse, &lenMsg);
 	} else {
 		if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &parse, &lenMsg) != RS_RET_OK) {
 			DBGPRINTF("we have a problem, invalid timestamp in msg!\n");

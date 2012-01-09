@@ -154,9 +154,11 @@ addCounter(statsobj_t *pThis, uchar *ctrName, statsCtrType_t ctrType, void *pCtr
 	switch(ctrType) {
 	case ctrType_IntCtr:
 		ctr->val.pIntCtr = (intctr_t*) pCtr;
+		*(ctr->val.pIntCtr) = 0;
 		break;
 	case ctrType_Int:
 		ctr->val.pInt = (int*) pCtr;
+		*(ctr->val.pInt) = 0;
 		break;
 	}
 	addCtrToList(pThis, ctr);
