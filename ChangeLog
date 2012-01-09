@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 6.2.0  [v6-stable], 2012-0?-??
+Version 6.2.0  [v6-stable], 2012-01-09
 - bugfix (kind of): removed numerical part from pri-text
   see v6 compatibility document for reasons
 - bugfix: race condition when extracting program name, APPNAME, structured
