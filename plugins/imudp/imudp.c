@@ -73,9 +73,8 @@ statsobj_t *modStats;
 STATSCOUNTER_DEF(ctrSubmit, mutCtrSubmit)
 
 static struct cnfinfo_s {
-int udpLstnSocks;	/* Internet datagram sockets, first element is nbr of elements
-				 * read-only after init(), but beware of restart! */
-ruleset_t *udpRulesets;	/* ruleset to be used with sockets in question (entry 0 is empty) */
+	int sock;		/* socket */
+	ruleset_t *pRuleset;	/* bound ruleset */
 } *lcnfinfo = NULL; /**< the structure contains information needed to configure the listeners */
 static int nLstn = 0;	/**< number of listners */
 
@@ -225,8 +224,8 @@ static rsRetVal addListner(void __attribute__((unused)) *pVal, uchar *pNewVal)
 			nLstn = newSocks[0];
 			CHKmalloc(lcnfinfo = (struct cnfinfo_s*) MALLOC(sizeof(struct cnfinfo_s) * nLstn));
 			for(iDst = 0, iSrc=1 ; iDst < nLstn ; ++iDst, ++iSrc) {
-				lcnfinfo[iDst].udpLstnSocks = newSocks[iSrc];
-				lcnfinfo[iDst].udpRulesets = pBindRuleset;
+				lcnfinfo[iDst].sock = newSocks[iSrc];
+				lcnfinfo[iDst].pRuleset = pBindRuleset;
 			}
 		} else {
 			/* we need to add them */
@@ -236,8 +235,8 @@ static rsRetVal addListner(void __attribute__((unused)) *pVal, uchar *pNewVal)
 			iDst = nLstn;
 			memcpy(newlcnfinfo, lcnfinfo, nLstn * sizeof(struct cnfinfo_s));
 			for(iSrc = 1 ; iSrc <= newSocks[0] ; ++iSrc, ++iDst) {
-				newlcnfinfo[iDst].udpLstnSocks = newSocks[iSrc];
-				newlcnfinfo[iDst].udpRulesets = pBindRuleset;
+				newlcnfinfo[iDst].sock = newSocks[iSrc];
+				newlcnfinfo[iDst].pRuleset = pBindRuleset;
 			}
 			free(lcnfinfo);
 			lcnfinfo = newlcnfinfo;
@@ -310,7 +309,7 @@ processSocket(thrdInfo_t *pThrd, int idxLstn, struct sockaddr_storage *frominetP
 		if(pThrd->bShallStop == TRUE)
 			ABORT_FINALIZE(RS_RET_FORCE_TERM);
 		socklen = sizeof(struct sockaddr_storage);
-		lenRcvBuf = recvfrom(lcnfinfo[idxLstn].udpLstnSocks, (char*) pRcvBuf, iMaxLine, 0, (struct sockaddr *)&frominet, &socklen);
+		lenRcvBuf = recvfrom(lcnfinfo[idxLstn].sock, (char*) pRcvBuf, iMaxLine, 0, (struct sockaddr *)&frominet, &socklen);
 		if(lenRcvBuf < 0) {
 			if(errno != EINTR && errno != EAGAIN) {
 				rs_strerror_r(errno, errStr, sizeof(errStr));
@@ -355,7 +354,7 @@ processSocket(thrdInfo_t *pThrd, int idxLstn, struct sockaddr_storage *frominetP
 			*pbIsPermitted = 1; /* no check -> everything permitted */
 		}
 
-		DBGPRINTF("recv(%d,%d),acl:%d,msg:%s\n", lcnfinfo[idxLstn].udpLstnSocks, (int) lenRcvBuf, *pbIsPermitted, pRcvBuf);
+		DBGPRINTF("recv(%d,%d),acl:%d,msg:%s\n", lcnfinfo[idxLstn].sock, (int) lenRcvBuf, *pbIsPermitted, pRcvBuf);
 
 		if(*pbIsPermitted != 0)  {
 			if((iTimeRequery == 0) || (iNbrTimeUsed++ % iTimeRequery) == 0) {
@@ -365,7 +364,7 @@ processSocket(thrdInfo_t *pThrd, int idxLstn, struct sockaddr_storage *frominetP
 			CHKiRet(msgConstructWithTime(&pMsg, &stTime, ttGenTime));
 			MsgSetRawMsg(pMsg, (char*)pRcvBuf, lenRcvBuf);
 			MsgSetInputName(pMsg, pInputName);
-			MsgSetRuleset(pMsg, lcnfinfo[idxLstn].udpRulesets);
+			MsgSetRuleset(pMsg, lcnfinfo[idxLstn].pRuleset);
 			MsgSetFlowControlType(pMsg, eFLOWCTL_NO_DELAY);
 			pMsg->msgFlags  = NEEDS_PARSING | PARSE_HOSTNAME | NEEDS_DNSRESOL;
 			if(*pbIsPermitted == 2)
@@ -468,13 +467,13 @@ rsRetVal rcvMainLoop(thrdInfo_t *pThrd)
 	 * can not change dyamically.
 	 */
 	for (i = 0; i < nLstn ;  i++) {
-		if (lcnfinfo[i].udpLstnSocks != -1) {
+		if (lcnfinfo[i].sock != -1) {
 			udpEPollEvt[i].events = EPOLLIN | EPOLLET;
 			udpEPollEvt[i].data.u64 = i;
-			if(epoll_ctl(efd, EPOLL_CTL_ADD,  lcnfinfo[i].udpLstnSocks, &(udpEPollEvt[i])) < 0) {
+			if(epoll_ctl(efd, EPOLL_CTL_ADD,  lcnfinfo[i].sock, &(udpEPollEvt[i])) < 0) {
 				rs_strerror_r(errno, errStr, sizeof(errStr));
 				errmsg.LogError(errno, NO_ERRCODE, "epoll_ctrl failed on fd %d with %s\n",
-					lcnfinfo[i].udpLstnSocks, errStr);
+					lcnfinfo[i].sock, errStr);
 			}
 		}
 	}
@@ -530,11 +529,11 @@ rsRetVal rcvMainLoop(thrdInfo_t *pThrd)
 
 		/* Add the UDP listen sockets to the list of read descriptors. */
 		for (i = 0; i < nLstn ; i++) {
-			if (lcnfinfo[i].udpLstnSocks != -1) {
+			if (lcnfinfo[i].sock != -1) {
 				if(Debug)
-					net.debugListenInfo(lcnfinfo[i].udpLstnSocks, "UDP");
-				FD_SET(lcnfinfo[i].udpLstnSocks, &readfds);
-				if(lcnfinfo[i].udpLstnSocks>maxfds) maxfds=lcnfinfo[i].udpLstnSocks;
+					net.debugListenInfo(lcnfinfo[i].sock, "UDP");
+				FD_SET(lcnfinfo[i].sock, &readfds);
+				if(lcnfinfo[i].sock>maxfds) maxfds=lcnfinfo[i].sock;
 			}
 		}
 		if(Debug) {
@@ -551,7 +550,7 @@ rsRetVal rcvMainLoop(thrdInfo_t *pThrd)
 			break; /* terminate input! */
 
 	       for(i = 0; nfds && i < nLstn ; i++) {
-			if(FD_ISSET(lcnfinfo[i].udpLstnSocks, &readfds)) {
+			if(FD_ISSET(lcnfinfo[i].sock, &readfds)) {
 		       		processSocket(pThrd, i, &frominetPrev, &bIsPermitted);
 			--nfds; /* indicate we have processed one descriptor */
 			}
@@ -564,7 +563,7 @@ rsRetVal rcvMainLoop(thrdInfo_t *pThrd)
 #endif /* #if HAVE_EPOLL_CREATE1 */
 
 /* This function is called to gather input.
- * Note that udpLstnSocks must be non-NULL because otherwise we would not have
+ * Note that sock must be non-NULL because otherwise we would not have
  * indicated that we want to run (or we have a programming error ;)). -- rgerhards, 2008-10-02
  */
 BEGINrunInput
@@ -601,7 +600,7 @@ CODESTARTafterRun
 	/* do cleanup here */
 	net.clearAllowedSenders((uchar*)"UDP");
 	for (i = 0; i < nLstn ; i++)
-		close(lcnfinfo[i].udpLstnSocks);
+		close(lcnfinfo[i].sock);
 	free(lcnfinfo);
 	lcnfinfo = NULL;
 	if(pRcvBuf != NULL) {
