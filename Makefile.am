@@ -116,10 +116,6 @@ if ENABLE_SMCUSTBINDCDR
 SUBDIRS += plugins/sm_cust_bindcdr
 endif
 
-if ENABLE_IMTEMPLATE
-SUBDIRS += plugins/imtemplate
-endif
-
 if ENABLE_OMSTDOUT
 SUBDIRS += plugins/omstdout
 endif
@@ -162,10 +158,6 @@ endif
 
 if ENABLE_OMHDFS
 SUBDIRS += plugins/omhdfs
-endif
-
-if ENABLE_OMTEMPLATE
-SUBDIRS += plugins/omtemplate
 endif
 
 if ENABLE_MMSNMPTRAPD
@@ -250,8 +242,6 @@ DISTCHECK_CONFIGURE_FLAGS=	--enable-gssapi_krb5 \
 				--enable-pmaixforwardedfrom \
 				--enable-pmcisconames \
 				--enable-pmsnare \
-				--enable-imtemplate \
-				--enable-omtemplate \
 				--enable-mmsnmptrapd \
 				--with-systemdsystemunitdir=$$dc_install_base/$(systemdsystemunitdir)
 ACLOCAL_AMFLAGS = -I m4

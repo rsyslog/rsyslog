@@ -1,5 +1,9 @@
 ---------------------------------------------------------------------------
 Version 6.3.7  [DEVEL] 2011-0?-??
+- removed imtemplate/omtemplate template modules, as this was waste of time
+  The actual input/output modules are better copy templates. Instead, the
+  now-removed modules cost time for maintenance AND often caused confusion
+  on what their role was.
 - added a couple of new stats objects
 - improved support for new v6 config system. Now also supported by
   - omfwd

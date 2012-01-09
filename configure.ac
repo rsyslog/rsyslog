@@ -1130,46 +1130,6 @@ AC_ARG_ENABLE(smcustbindcdr,
 AM_CONDITIONAL(ENABLE_SMCUSTBINDCDR, test x$enable_smcustbindcdr = xyes)
 
 
-# settings for the template input module; copy and modify this code
-# if you intend to add your own module. Be sure to replace imtemplate
-# by the actual name of your module.
-AC_ARG_ENABLE(imtemplate,
-        [AS_HELP_STRING([--enable-imtemplate],[Compiles imtemplate template module @<:@default=no@:>@])],
-        [case "${enableval}" in
-         yes) enable_imtemplate="yes" ;;
-          no) enable_imtemplate="no" ;;
-           *) AC_MSG_ERROR(bad value ${enableval} for --enable-imtemplate) ;;
-         esac],
-        [enable_imtemplate=no]
-)
-#
-# you may want to do some library checks here - see snmp, mysql, pgsql modules
-# for samples
-#
-AM_CONDITIONAL(ENABLE_IMTEMPLATE, test x$enable_imtemplate = xyes)
-# end of copy template - be sure to search for imtemplate to find everything!
-
-
-# settings for the template output module; copy and modify this code
-# if you intend to add your own module. Be sure to replace omtemplate
-# by the actual name of your module.
-AC_ARG_ENABLE(omtemplate,
-        [AS_HELP_STRING([--enable-omtemplate],[Compiles omtemplate template module @<:@default=no@:>@])],
-        [case "${enableval}" in
-         yes) enable_omtemplate="yes" ;;
-          no) enable_omtemplate="no" ;;
-           *) AC_MSG_ERROR(bad value ${enableval} for --enable-omtemplate) ;;
-         esac],
-        [enable_omtemplate=no]
-)
-#
-# you may want to do some library checks here - see snmp, mysql, pgsql modules
-# for samples
-#
-AM_CONDITIONAL(ENABLE_OMTEMPLATE, test x$enable_omtemplate = xyes)
-# end of copy template - be sure to search for omtemplate to find everything!
-
-
 # settings for mmsnmptrapd message modification module
 AC_ARG_ENABLE(mmsnmptrapd,
         [AS_HELP_STRING([--enable-mmsnmptrapd],[Compiles mmsnmptrapd module @<:@default=no@:>@])],
@@ -1216,7 +1176,7 @@ AC_ARG_ENABLE(ommongodb,
 # for samples
 #
 AM_CONDITIONAL(ENABLE_OMMONGODB, test x$enable_ommongodb = xyes)
-# end of copy template - be sure to search for omtemplate to find everything!
+# end of mongodb code
 
 
 AC_CONFIG_FILES([Makefile \
@@ -1231,8 +1191,6 @@ AC_CONFIG_FILES([Makefile \
 		plugins/imuxsock/Makefile \
 		plugins/immark/Makefile \
 		plugins/imklog/Makefile \
-		plugins/imtemplate/Makefile \
-		plugins/omtemplate/Makefile \
 		plugins/omhdfs/Makefile \
 		plugins/omprog/Makefile \
 		plugins/omstdout/Makefile \
@@ -1290,7 +1248,6 @@ echo "    imdiag enabled:                           $enable_imdiag"
 echo "    file input module enabled:                $enable_imfile"
 echo "    Solaris input module enabled:             $enable_imsolaris"
 echo "    periodic statistics module enabled:       $enable_impstats"
-echo "    input template module will be compiled:   $enable_imtemplate"
 echo
 echo "---{ output plugins }---"
 echo "    Mail support enabled:                     $enable_mail"
@@ -1302,7 +1259,6 @@ echo "    omruleset module will be compiled:        $enable_omruleset"
 echo "    omdbalerting module will be compiled:     $enable_omdbalerting"
 echo "    omudpspoof module will be compiled:       $enable_omudpspoof"
 echo "    omuxsock module will be compiled:         $enable_omuxsock"
-echo "    output template module will be compiled:  $enable_omtemplate"
 echo
 echo "---{ parser modules }---"
 echo "    pmrfc3164sd module will be compiled:      $enable_pmrfc3164sd"
