@@ -2,7 +2,6 @@ html_files = \
 	index.html \
 	bugs.html \
 	debug.html \
-	scoping.html \
 	features.html \
 	generic_design.html \
 	expression.html \

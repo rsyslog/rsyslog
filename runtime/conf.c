@@ -981,9 +981,14 @@ BEGINAbstractObjClassInit(conf, 1, OBJ_IS_CORE_MODULE) /* class, version - CHANG
 	CHKiRet(objUse(rule, CORE_COMPONENT));
 	CHKiRet(objUse(ruleset, CORE_COMPONENT));
 
+ 	/* These commands will NOT be supported -- the new v6.3 config system provides
+	 * far better methods. We will remove the related code soon. -- rgerhards, 2012-01-09
+	 */
+#if 0
 	CHKiRet(regCfSysLineHdlr((uchar *)"begin", 0, eCmdHdlrGetWord, beginConfObj, NULL, NULL, eConfObjGlobal));
 	CHKiRet(regCfSysLineHdlr((uchar *)"end", 0, eCmdHdlrGetWord, endConfObj, NULL, NULL, eConfObjAlways));
 	CHKiRet(regCfSysLineHdlr((uchar *)"strictscoping", 0, eCmdHdlrBinary, NULL, &bConfStrictScoping, NULL, eConfObjGlobal));
+#endif
 	CHKiRet(regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, NULL, eConfObjAction));
 ENDObjClassInit(conf)
 

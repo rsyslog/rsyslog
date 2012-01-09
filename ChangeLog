@@ -9,6 +9,8 @@ Version 6.3.7  [DEVEL] 2011-0?-??
 - bugfix: potential abort after reading invalid X.509 certificate
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=290
   Thanks to Tomas Heinrich for the patch
+- bugfix (kind of): removed numerical part from pri-text
+  see v6 compatibility document for reasons
 - bugfix: race condition when extracting program name, APPNAME, structured
   data and PROCID (RFC5424 fields) could lead to invalid characters e.g.
   in dynamic file names or during forwarding (general malfunction of these
@@ -104,6 +106,9 @@ Version 6.2.0  [v6-stable], 2011-0?-??
   data and PROCID (RFC5424 fields) could lead to invalid characters e.g.
   in dynamic file names or during forwarding (general malfunction of these
   fields in templates, mostly under heavy load)
+- $Begin, $End, $StrictScoping directives have been removed as v6.4 will
+  provide the same functionality in a far better way. So we do not want
+  to clutter the code.
 ---------------------------------------------------------------------------
 Version 6.1.12  [BETA], 2011-09-01
 - bugfix/security: off-by-two bug in legacy syslog parser, CVE-2011-3200
