@@ -117,6 +117,10 @@ with high-precision timestamps and timezone information</li>
 useful if you send&nbsp;messages to other syslogd's or rsyslogd
 below
 version 3.12.5.</li>
+<li><span style="font-weight: bold;">RSYSLOG_SysklogdFileFormat</span>
+- sysklogd compatible log file format. If used with options: $SpaceLFOnReceive on;
+$EscapeControlCharactersOnReceive off; $DropTrailingLFOnReception off,
+the log format will conform to sysklogd log format.</li>
 <li><span style="font-weight: bold;">RSYSLOG_ForwardFormat</span>
 - a new high-precision forwarding format very similar to the
 traditional one, but with high-precision timestamps and timezone
