@@ -55,6 +55,7 @@ extern int bDropTrailingLF;
 extern uchar cCCEscapeChar;
 extern int  bEscapeCCOnRcv;
 extern int  bEscapeTab;
+extern int bSpaceLFOnRcv;
 #ifdef USE_NETZIP
 /* config param: minimum message size to try compression. The smaller
  * the message, the less likely is any compression gain. We check for

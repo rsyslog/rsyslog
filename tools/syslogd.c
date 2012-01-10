@@ -262,6 +262,7 @@ static int	bDebugPrintModuleList = 1;/* output module list in debug mode? */
 uchar	cCCEscapeChar = '#';/* character to be used to start an escape sequence for control chars */
 int 	bEscapeCCOnRcv = 1; /* escape control characters on reception: 0 - no, 1 - yes */
 int    bEscapeTab = 1; /* treat tab as escape control character: 0 - no, 1 - yes */
+int	bSpaceLFOnRcv = 0; /* replace newlines with spaces on reception: 0 - no, 1 - yes */
 static int	bErrMsgToStderr = 1; /* print error messages to stderr (in addition to everything else)? */
 int 	bReduceRepeatMsgs; /* reduce repeated message - 0 - no, 1 - yes */
 int	bActExecWhenPrevSusp; /* execute action only when previous one was suspended? */
@@ -348,6 +349,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	bDebugPrintModuleList = 1;
 	bEscapeCCOnRcv = 1; /* default is to escape control characters */
 	bEscapeTab = 1;
+	bSpaceLFOnRcv = 0;
 	bReduceRepeatMsgs = 0;
 	free(pszMainMsgQFName);
 	pszMainMsgQFName = NULL;
@@ -814,6 +816,9 @@ parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int fla
 			} /* if we do not have space, we simply ignore the '\0'... */
 			  /* log an error? Very questionable... rgerhards, 2006-11-30 */
 			  /* decided: we do not log an error, it won't help... rger, 2007-06-21 */
+			++pData;
+		} else if (bSpaceLFOnRcv && *pData == '\n') {
+			*(pMsg + iMsg++) = ' ';
 			++pData;
 		} else if(bEscapeCCOnRcv && iscntrl((int) *pData) && (*pData != '\t' || bEscapeTab)) {
 			/* we are configured to escape control characters. Please note
@@ -2121,6 +2126,9 @@ static void dbgPrintInitInfo(void)
 	DBGPRINTF("Control characters are %sreplaced upon reception.\n",
 		  bEscapeCCOnRcv? "" : "not ");
 
+	DBGPRINTF("Newlines are %sreplaced upon reception.\n",
+		  bSpaceLFOnRcv? "" : "not ");
+
 	if(bEscapeCCOnRcv)
 		DBGPRINTF("Control character escape sequence prefix is '%c'.\n",
 			cCCEscapeChar);
@@ -2763,6 +2771,7 @@ static rsRetVal loadBuildInModules(void)
 	CHKiRet(regCfSysLineHdlr((uchar *)"controlcharacterescapeprefix", 0, eCmdHdlrGetChar, NULL, &cCCEscapeChar, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"escapecontrolcharactersonreceive", 0, eCmdHdlrBinary, NULL, &bEscapeCCOnRcv, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"escapecontrolcharactertab", 0, eCmdHdlrBinary, NULL, &bEscapeTab, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"spacelfonreceive", 0, eCmdHdlrBinary, NULL, &bSpaceLFOnRcv, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"droptrailinglfonreception", 0, eCmdHdlrBinary, NULL, &bDropTrailingLF, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"template", 0, eCmdHdlrCustomHandler, conf.doNameLine, (void*)DIR_TEMPLATE, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"outchannel", 0, eCmdHdlrCustomHandler, conf.doNameLine, (void*)DIR_OUTCHANNEL, NULL));
