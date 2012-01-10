@@ -354,9 +354,13 @@ SanitizeMsg(msg_t *pMsg)
 	int bNeedSanitize = 0;
 	for(iSrc = 0 ; iSrc < lenMsg ; iSrc++) {
 		if(iscntrl(pszMsg[iSrc])) {
+			if(bSpaceLFOnRcv && pszMsg[iSrc] == '\n')
+				pszMsg[iSrc] = ' ';
+			else
 			if(pszMsg[iSrc] == '\0' || bEscapeCCOnRcv) {
 				bNeedSanitize = 1;
-				break;
+				if (!bSpaceLFOnRcv)
+					break;
 			}
 		} else if(pszMsg[iSrc] > 127 && bEscape8BitChars) {
 			bNeedSanitize = 1;
