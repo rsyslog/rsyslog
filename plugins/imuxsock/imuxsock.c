@@ -713,7 +713,6 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 		lenRcv = toffs + 1;
 	}
 
-
 	/* we now create our own message object and submit it to the queue */
 	CHKiRet(msgConstructWithTime(&pMsg, &st, tt));
 	MsgSetRawMsg(pMsg, (char*)pRcv, lenRcv);
@@ -734,8 +733,6 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 			 * datestamp or not .. and advance the parse pointer accordingly.
 			 */
 			datetime.ParseTIMESTAMP3164(&dummyTS, &parse, &lenMsg);
-			parse += 16; /* just skip timestamp */
-			lenMsg -= 16;
 		} else {
 			if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &parse, &lenMsg) != RS_RET_OK) {
 				DBGPRINTF("we have a problem, invalid timestamp in msg!\n");
@@ -1018,7 +1015,6 @@ CODESTARTafterRun
        /* Clean-up files. */
        for(i = startIndexUxLocalSockets; i < nfd; i++)
 		if (listeners[i].sockName && listeners[i].fd != -1) {
-
 			/* If systemd passed us a socket it is systemd's job to clean it up.
 			 * Do not unlink it -- we will get same socket (node) from systemd
 			 * e.g. on restart again.
