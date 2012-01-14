@@ -467,8 +467,7 @@ CODESTARTdoAction
 	}
 finalize_it:
 #	ifdef USE_NETZIP
-	if(out != NULL)
-		free(out);
+	free(out); /* is NULL if it was never used... */
 #	endif
 ENDdoAction
 
