@@ -396,9 +396,12 @@ CODESTARTtryResume
 ENDtryResume
 
 BEGINdoAction
-	char *psz = NULL; /* temporary buffering */
+	char *psz; /* temporary buffering */
 	register unsigned l;
 	int iMaxLine;
+#	ifdef	USE_NETZIP
+	Bytef *out = NULL; /* for compression */
+#	endif
 CODESTARTdoAction
 	CHKiRet(doTryResume(pData));
 
@@ -422,7 +425,6 @@ CODESTARTdoAction
 	 * rgerhards, 2006-11-30
 	 */
 	if(pData->compressionLevel && (l > CONF_MIN_SIZE_FOR_COMPRESS)) {
-		Bytef *out;
 		uLongf destLen = iMaxLine + iMaxLine/100 +12; /* recommended value from zlib doc */
 		uLong srcLen = l;
 		int ret;
@@ -443,14 +445,11 @@ CODESTARTdoAction
 			 * rgerhards, 2006-11-30
 			 */
 			dbgprintf("Compression failed, sending uncompressed message\n");
-			free(out);
 		} else if(destLen+1 < l) {
 			/* only use compression if there is a gain in using it! */
 			dbgprintf("there is gain in compression, so we do it\n");
 			psz = (char*) out;
 			l = destLen + 1; /* take care for the "z" at message start! */
-		} else {
-			free(out);
 		}
 		++destLen;
 	}
@@ -472,10 +471,8 @@ CODESTARTdoAction
 	}
 finalize_it:
 #	ifdef USE_NETZIP
-	if((psz != NULL) && (psz != (char*) ppString[0]))  {
-		/* we need to free temporary buffer, alloced above - Naoya Nakazawa, 2010-01-11 */
-		free(psz);
-	}
+	if(out != NULL)
+		free(out);
 #	endif
 ENDdoAction
 
