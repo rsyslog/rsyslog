@@ -131,22 +131,6 @@ pData->bIsConnected = 0; // TODO: remove this variable altogether
 }
 
 
-/* get the syslog forward port from selector_t. The passed in
- * struct must be one that is setup for forwarding.
- * rgerhards, 2007-06-28
- * We may change the implementation to try to lookup the port
- * if it is unspecified. So far, we use the IANA default auf 514.
- */
-static char *getFwdPt(instanceData *pData)
-{
-	assert(pData != NULL);
-	if(pData->port == NULL)
-		return("514");
-	else
-		return(pData->port);
-}
-
-
 /* destruct the TCP helper objects
  * This, for example, is needed after something went wrong.
  * This function is void because it "can not" fail.
@@ -345,7 +329,7 @@ static rsRetVal TCPSendInit(void *pvData)
 		}
 		/* params set, now connect */
 		CHKiRet(netstrm.Connect(pData->pNetstrm, glbl.GetDefPFFamily(),
-			(uchar*)getFwdPt(pData), (uchar*)pData->f_hname));
+			(uchar*)pData->port, (uchar*)pData->f_hname));
 	}
 
 finalize_it:
@@ -378,9 +362,9 @@ static rsRetVal doTryResume(instanceData *pData)
 		hints.ai_flags = AI_NUMERICSERV;
 		hints.ai_family = glbl.GetDefPFFamily();
 		hints.ai_socktype = SOCK_DGRAM;
-		if((iErr = (getaddrinfo(pData->f_hname, getFwdPt(pData), &hints, &res))) != 0) {
+		if((iErr = (getaddrinfo(pData->f_hname, pData->port, &hints, &res))) != 0) {
 			dbgprintf("could not get addrinfo for hostname '%s':'%s': %d%s\n",
-				  pData->f_hname, getFwdPt(pData), iErr, gai_strerror(iErr));
+				  pData->f_hname, pData->port, iErr, gai_strerror(iErr));
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
 		}
 		dbgprintf("%s found, resuming.\n", pData->f_hname);
@@ -420,7 +404,7 @@ CODESTARTdoAction
 
 	iMaxLine = glbl.GetMaxLine();
 
-	dbgprintf(" %s:%s/%s\n", pData->f_hname, getFwdPt(pData),
+	dbgprintf(" %s:%s/%s\n", pData->f_hname, pData->port,
 		 pData->protocol == FORW_UDP ? "udp" : "tcp");
 
 	psz = (char*) ppString[0];
@@ -630,11 +614,15 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		if(pData->port == NULL) {
 			errmsg.LogError(0, NO_ERRCODE, "Could not get memory to store syslog forwarding port, "
 				 "using default port, results may not be what you intend\n");
-			/* we leave f_forw.port set to NULL, this is then handled by getFwdPt(). */
+			/* we leave f_forw.port set to NULL, this is then handled below */
 		} else {
 			memcpy(pData->port, tmp, i);
 			*(pData->port + i) = '\0';
 		}
+	}
+	/* check if no port is set. If so, we use the IANA-assigned port of 514 */
+	if(pData->port == NULL) {
+		CHKmalloc(pData->port = strdup("514"));
 	}
 	
 	/* now skip to template */
