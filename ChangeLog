@@ -11,6 +11,8 @@ Version 4.8.1  [v4-stable], 2011-09-??
 - bugfix: potential fatal abort in omgssapi
   Thanks to Tomas Heinrich for the patch.
 - added doc for omprog
+- FQDN hostname for multihomed host was not always set to the correct name
+  if multiple aliases existed. Thanks to Tomas Heinreich for the patch.
 ---------------------------------------------------------------------------
 Version 4.8.0  [v4-stable] (rgerhards), 2011-09-07
 ***************************************************************************
