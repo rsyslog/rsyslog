@@ -2685,8 +2685,28 @@ int realMain(int argc, char **argv)
 		 */
 		hent = gethostbyname((char*)LocalHostName);
 		if(hent) {
+			int i = 0;
+
+			if(hent->h_aliases) {
+				size_t hnlen;
+
+				hnlen = strlen((char *) LocalHostName);
+
+				for (i = 0; hent->h_aliases[i]; i++) {
+					if (!strncmp(hent->h_aliases[i], (char *) LocalHostName, hnlen)
+					    && hent->h_aliases[i][hnlen] == '.') {
+						/* found a matching hostname */
+						break;
+					}
+				}
+			}
+
 			free(LocalHostName);
-			CHKmalloc(LocalHostName = (uchar*)strdup(hent->h_name));
+			if(hent->h_aliases && hent->h_aliases[i]) {
+				CHKmalloc(LocalHostName = (uchar*)strdup(hent->h_aliases[i]));
+			} else {
+				CHKmalloc(LocalHostName = (uchar*)strdup(hent->h_name));
+			}
 
 			if((p = (uchar*)strchr((char*)LocalHostName, '.')))
 			{
