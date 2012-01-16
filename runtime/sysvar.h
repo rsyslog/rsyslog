@@ -1,7 +1,7 @@
 /* The sysvar object. So far, no instance can be defined (makes logically no
  * sense).
  *
- * Copyright 2008 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2012 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
