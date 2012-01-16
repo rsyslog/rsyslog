@@ -1,4 +1,13 @@
 ---------------------------------------------------------------------------
+Version 5.9.6  [V5-DEVEL], 2012-??-??
+- $IMUXSockRateLimitInterval DEFAULT CHANGED, was 5, now 0
+  The new default turns off rate limiting. This was chosen as people
+  experienced problems with rate-limiting activated by default. Now it
+  needs an explicit opt-in by setting this parameter.
+  Thanks to Chris Gaffney for suggesting to make it opt-in; thanks to
+  many unnamed others who already had complained at the time Chris made
+  the suggestion ;-)
+---------------------------------------------------------------------------
 Version 5.9.5  [V5-DEVEL], 2011-11-29
 - new stats counters for imudp and imtcp
 - new stats counters "discarded.nf" and "discarded.full" for queue object.

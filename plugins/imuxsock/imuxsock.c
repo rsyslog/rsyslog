@@ -165,7 +165,7 @@ static int bAnnotate = 0;		/* annotate trusted properties */
 static int bAnnotateSysSock = 0;	/* same, for system log socket */
 #define DFLT_bCreatePath 0
 static int bCreatePath = DFLT_bCreatePath; /* auto-create socket path? */
-#define DFLT_ratelimitInterval 5
+#define DFLT_ratelimitInterval 0
 static int ratelimitInterval = DFLT_ratelimitInterval;	/* interval in seconds, 0 = off */
 static int ratelimitIntervalSysSock = DFLT_ratelimitInterval;
 #define DFLT_ratelimitBurst 200
