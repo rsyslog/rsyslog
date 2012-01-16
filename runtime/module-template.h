@@ -4,25 +4,25 @@
  *
  * File begun on 2007-07-25 by RGerhards
  *
- * Copyright 2007 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007 Adiscon GmbH. This is Adiscon-exclusive code without any other
+ * contributions. *** GPLv3 ***
  *
  * This file is part of the rsyslog runtime library.
  *
- * The rsyslog runtime library is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
+ * Rsyslog is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * The rsyslog runtime library is distributed in the hope that it will be useful,
+ * Rsyslog is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
+ * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU Lesser General Public License
- * along with the rsyslog runtime library.  If not, see <http://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with Rsyslog.  If not, see <http://www.gnu.org/licenses/>.
  *
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
- * A copy of the LGPL can be found in the file "COPYING.LESSER" in this distribution.
  */
 #ifndef	MODULE_TEMPLATE_H_INCLUDED
 #define	MODULE_TEMPLATE_H_INCLUDED 1
