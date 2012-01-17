@@ -36,9 +36,10 @@ struct template {
 	int tpenElements; /* number of elements in templateEntry list */
 	struct templateEntry *pEntryRoot;
 	struct templateEntry *pEntryLast;
-	char optFormatForSQL;	/* in text fields,  0 - do not escape,
-	                         * 1 - escape quotes by double quotes,
-				 * 2 - escape "the MySQL way" 
+	char optFormatEscape;	/* in text fields,  0 - do not escape,
+				 * 1 - escape "the MySQL way" 
+	                         * 2 - escape quotes by double quotes,
+				 * 3 - escape double quotes for JSON.
 				 */
 	/* following are options. All are 0/1 defined (either on or off).
 	 * we use chars because they are faster than bit fields and smaller
@@ -130,7 +131,7 @@ rsRetVal ExtendBuf(uchar **pBuf, size_t *pLenBuf, size_t iMinSize);
  */
 rsRetVal tplToArray(struct template *pTpl, msg_t *pMsg, uchar*** ppArr);
 rsRetVal tplToString(struct template *pTpl, msg_t *pMsg, uchar** ppSz, size_t *);
-rsRetVal doSQLEscape(uchar **pp, size_t *pLen, unsigned short *pbMustBeFreed, int escapeMode);
+rsRetVal doEscape(uchar **pp, size_t *pLen, unsigned short *pbMustBeFreed, int escapeMode);
 
 rsRetVal templateInit();
 

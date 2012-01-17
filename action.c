@@ -1798,7 +1798,7 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStringReques
 		}
 		/* check required template options */
 		if(   (iTplOpts & OMSR_RQD_TPL_OPT_SQL)
-		   && (pAction->ppTpl[i]->optFormatForSQL == 0)) {
+		   && (pAction->ppTpl[i]->optFormatEscape == 0)) {
 			errno = 0;
 			errmsg.LogError(0, RS_RET_RQD_TPLOPT_MISSING, "Action disabled. To use this action, you have to specify "
 				"the SQL or stdSQL option in your template!\n");
