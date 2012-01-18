@@ -326,31 +326,31 @@ CODEmodInit_QueryRegCFSLineHdlr
 
 	/* register config file handlers */
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpserverrun"), 0, eCmdHdlrGetWord,
-				   addTCPListener, NULL, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+				   addTCPListener, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpmaxsessions"), 0, eCmdHdlrInt,
-				   NULL, &iTCPSessMax, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+				   NULL, &iTCPSessMax, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpmaxlisteners"), 0, eCmdHdlrInt,
-				   NULL, &iTCPLstnMax, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+				   NULL, &iTCPLstnMax, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpservernotifyonconnectionclose"), 0,
-				   eCmdHdlrBinary, NULL, &bEmitMsgOnClose, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+				   eCmdHdlrBinary, NULL, &bEmitMsgOnClose, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpserverstreamdrivermode"), 0,
-				   eCmdHdlrInt, NULL, &iStrmDrvrMode, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+				   eCmdHdlrInt, NULL, &iStrmDrvrMode, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpserverstreamdriverauthmode"), 0,
-				   eCmdHdlrGetWord, NULL, &pszStrmDrvrAuthMode, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+				   eCmdHdlrGetWord, NULL, &pszStrmDrvrAuthMode, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpserverstreamdriverpermittedpeer"), 0,
-				   eCmdHdlrGetWord, setPermittedPeer, NULL, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+				   eCmdHdlrGetWord, setPermittedPeer, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpserveraddtlframedelimiter"), 0, eCmdHdlrInt,
-				   NULL, &iAddtlFrameDelim, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+				   NULL, &iAddtlFrameDelim, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpserverdisablelfdelimiter"), 0, eCmdHdlrBinary,
-				   NULL, &bDisableLFDelim, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+				   NULL, &bDisableLFDelim, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpserverinputname"), 0,
-				   eCmdHdlrGetWord, NULL, &pszInputName, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+				   eCmdHdlrGetWord, NULL, &pszInputName, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpserverbindruleset"), 0,
-				   eCmdHdlrGetWord, setRuleset, NULL, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+				   eCmdHdlrGetWord, setRuleset, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpflowcontrol"), 0,
-				   eCmdHdlrBinary, NULL, &bUseFlowControl, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+				   eCmdHdlrBinary, NULL, &bUseFlowControl, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("resetconfigvariables"), 1, eCmdHdlrCustomHandler,
-		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
 
 

@@ -297,15 +297,15 @@ CODEmodInit_QueryRegCFSLineHdlr
 
 	iFacilIntMsg = klogFacilIntMsg();
 
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"debugprintkernelsymbols", 0, eCmdHdlrBinary, NULL, &dbgPrintSymbols, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"klogpath", 0, eCmdHdlrGetWord, NULL, &pszPath, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"klogsymbollookup", 0, eCmdHdlrBinary, NULL, &symbol_lookup, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"klogsymbolstwice", 0, eCmdHdlrBinary, NULL, &symbols_twice, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"klogusesyscallinterface", 0, eCmdHdlrBinary, NULL, &use_syscall, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"klogpermitnonkernelfacility", 0, eCmdHdlrBinary, NULL, &bPermitNonKernel, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"klogconsoleloglevel", 0, eCmdHdlrInt, NULL, &console_log_level, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"kloginternalmsgfacility", 0, eCmdHdlrFacility, NULL, &iFacilIntMsg, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"debugprintkernelsymbols", 0, eCmdHdlrBinary, NULL, &dbgPrintSymbols, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"klogpath", 0, eCmdHdlrGetWord, NULL, &pszPath, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"klogsymbollookup", 0, eCmdHdlrBinary, NULL, &symbol_lookup, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"klogsymbolstwice", 0, eCmdHdlrBinary, NULL, &symbols_twice, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"klogusesyscallinterface", 0, eCmdHdlrBinary, NULL, &use_syscall, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"klogpermitnonkernelfacility", 0, eCmdHdlrBinary, NULL, &bPermitNonKernel, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"klogconsoleloglevel", 0, eCmdHdlrInt, NULL, &console_log_level, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"kloginternalmsgfacility", 0, eCmdHdlrFacility, NULL, &iFacilIntMsg, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
 /* vim:set ai:
  */

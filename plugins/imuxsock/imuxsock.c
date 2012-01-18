@@ -953,29 +953,29 @@ CODEmodInit_QueryRegCFSLineHdlr
 
 	/* register config file handlers */
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omitlocallogging", 0, eCmdHdlrBinary,
-		NULL, &bOmitLocalLogging, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+		NULL, &bOmitLocalLogging, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputunixlistensocketignoremsgtimestamp", 0, eCmdHdlrBinary,
-		NULL, &bIgnoreTimestamp, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+		NULL, &bIgnoreTimestamp, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"systemlogsocketname", 0, eCmdHdlrGetWord,
-		NULL, &pLogSockName, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+		NULL, &pLogSockName, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputunixlistensockethostname", 0, eCmdHdlrGetWord,
-		NULL, &pLogHostName, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+		NULL, &pLogHostName, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputunixlistensocketflowcontrol", 0, eCmdHdlrBinary,
-		NULL, &bUseFlowCtl, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+		NULL, &bUseFlowCtl, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputunixlistensocketcreatepath", 0, eCmdHdlrBinary,
-		NULL, &bCreatePath, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+		NULL, &bCreatePath, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"addunixlistensocket", 0, eCmdHdlrGetWord,
-		addLstnSocketName, NULL, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+		addLstnSocketName, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputunixlistensocketusepidfromsystem", 0, eCmdHdlrBinary,
-		NULL, &bWritePid, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+		NULL, &bWritePid, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"imuxsockratelimitinterval", 0, eCmdHdlrInt,
-		NULL, &ratelimitInterval, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+		NULL, &ratelimitInterval, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"imuxsockratelimitburst", 0, eCmdHdlrInt,
-		NULL, &ratelimitBurst, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+		NULL, &ratelimitBurst, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"imuxsockratelimitseverity", 0, eCmdHdlrInt,
-		NULL, &ratelimitSeverity, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+		NULL, &ratelimitSeverity, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
-		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 	/* the following one is a (dirty) trick: the system log socket is not added via
 	 * an "addUnixListenSocket" config format. As such, it's properties can not be modified
 	 * via $InputUnixListenSocket*". So we need to add a special directive
@@ -983,17 +983,17 @@ CODEmodInit_QueryRegCFSLineHdlr
 	 * rgerhards, 2008-03-06
 	 */
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"systemlogsocketignoremsgtimestamp", 0, eCmdHdlrBinary,
-		setSystemLogTimestampIgnore, NULL, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+		setSystemLogTimestampIgnore, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"systemlogsocketflowcontrol", 0, eCmdHdlrBinary,
-		setSystemLogFlowControl, NULL, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+		setSystemLogFlowControl, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"systemlogusepidfromsystem", 0, eCmdHdlrBinary,
-		NULL, &bWritePidSysSock, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+		NULL, &bWritePidSysSock, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"systemlogratelimitinterval", 0, eCmdHdlrInt,
-		NULL, &ratelimitIntervalSysSock, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+		NULL, &ratelimitIntervalSysSock, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"systemlogratelimitburst", 0, eCmdHdlrInt,
-		NULL, &ratelimitBurstSysSock, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+		NULL, &ratelimitBurstSysSock, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"systemlogratelimitseverity", 0, eCmdHdlrInt,
-		NULL, &ratelimitSeveritySysSock, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+		NULL, &ratelimitSeveritySysSock, STD_LOADABLE_MODULE_ID));
 	
 	/* support statistics gathering */
 	CHKiRet(statsobj.Construct(&modStats));

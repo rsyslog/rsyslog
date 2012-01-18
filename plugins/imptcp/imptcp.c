@@ -1310,21 +1310,21 @@ CODEmodInit_QueryRegCFSLineHdlr
 
 	/* register config file handlers */
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputptcpserverrun"), 0, eCmdHdlrGetWord,
-				   addTCPListener, NULL, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+				   addTCPListener, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputptcpservernotifyonconnectionclose"), 0,
-				   eCmdHdlrBinary, NULL, &cs.bEmitMsgOnClose, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+				   eCmdHdlrBinary, NULL, &cs.bEmitMsgOnClose, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputptcpserveraddtlframedelimiter"), 0, eCmdHdlrInt,
-				   NULL, &cs.iAddtlFrameDelim, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+				   NULL, &cs.iAddtlFrameDelim, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputptcpserverhelperthreads"), 0, eCmdHdlrInt,
-				   NULL, &cs.wrkrMax, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+				   NULL, &cs.wrkrMax, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputptcpserverinputname"), 0,
-				   eCmdHdlrGetWord, NULL, &cs.pszInputName, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+				   eCmdHdlrGetWord, NULL, &cs.pszInputName, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputptcpserverlistenip"), 0,
-				   eCmdHdlrGetWord, NULL, &cs.lstnIP, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+				   eCmdHdlrGetWord, NULL, &cs.lstnIP, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputptcpserverbindruleset"), 0,
-				   eCmdHdlrGetWord, setRuleset, NULL, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+				   eCmdHdlrGetWord, setRuleset, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("resetconfigvariables"), 1, eCmdHdlrCustomHandler,
-		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
 
 

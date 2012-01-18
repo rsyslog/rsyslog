@@ -669,19 +669,19 @@ CODEmodInit_QueryRegCFSLineHdlr
 
 	/* register config file handlers */
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputudpserverbindruleset", 0, eCmdHdlrGetWord,
-		setRuleset, NULL, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+		setRuleset, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"udpserverrun", 0, eCmdHdlrGetWord,
-		addListner, NULL, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+		addListner, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"udpserveraddress", 0, eCmdHdlrGetWord,
-		NULL, &pszBindAddr, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+		NULL, &pszBindAddr, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"imudpschedulingpolicy", 0, eCmdHdlrGetWord,
-		&set_scheduling_policy, NULL, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+		&set_scheduling_policy, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"imudpschedulingpriority", 0, eCmdHdlrInt,
-		&set_scheduling_priority, NULL, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+		&set_scheduling_priority, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"udpservertimerequery", 0, eCmdHdlrInt,
-		NULL, &iTimeRequery, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+		NULL, &iTimeRequery, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
-		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
 /* vim:set ai:
  */

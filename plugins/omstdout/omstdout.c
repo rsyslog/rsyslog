@@ -215,12 +215,12 @@ CODEmodInit_QueryRegCFSLineHdlr
 	if(bArrayPassingSupported) {
 		/* enable config comand only if core supports it */
 		CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionomstdoutarrayinterface", 0, eCmdHdlrBinary, NULL,
-			                   &cs.bUseArrayInterface, STD_LOADABLE_MODULE_ID, eConfObjAction));
+			                   &cs.bUseArrayInterface, STD_LOADABLE_MODULE_ID));
 	}
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionomstdoutensurelfending", 0, eCmdHdlrBinary, NULL,
-				   &cs.bEnsureLFEnding, STD_LOADABLE_MODULE_ID, eConfObjAction));
+				   &cs.bEnsureLFEnding, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
-				    resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID, eConfObjAction));
+				    resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
 
 /* vi:set ai:
