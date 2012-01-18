@@ -356,8 +356,15 @@ void untty(void)
 #else
 {
 	int i;
+	pid_t pid;
 
 	if(!Debug) {
+		pid = getpid();
+		if (setpgid(pid, pid) < 0) {
+			perror("setpgid");
+			exit(1);
+		}
+
 		i = open(_PATH_TTY, O_RDWR|O_CLOEXEC);
 		if (i >= 0) {
 #			if !defined(__hpux)
@@ -1380,7 +1387,6 @@ static void printVersion(void)
 #endif
 	printf("\nSee http://www.rsyslog.com for more information.\n");
 }
-
 
 
 /* Method to initialize all global classes and use the objects that we need.

@@ -4,24 +4,23 @@
  * NOTE: read comments in module-template.h to understand how this file
  *       works!
  *
- * Copyright 2007-2011 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2012 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
- * Rsyslog is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * Rsyslog is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Rsyslog.  If not, see <http://www.gnu.org/licenses/>.
- *
- * A copy of the GPL can be found in the file "COPYING" in this distribution.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *       -or-
+ *       see COPYING.ASL20 in the source distribution
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  *
  * TODO v6 config:
  * - permitted peer *list*
@@ -169,22 +168,6 @@ closeUDPSockets(instanceData *pData)
 	}
 pData->bIsConnected = 0; // TODO: remove this variable altogether
 	RETiRet;
-}
-
-
-/* get the syslog forward port from selector_t. The passed in
- * struct must be one that is setup for forwarding.
- * rgerhards, 2007-06-28
- * We may change the implementation to try to lookup the port
- * if it is unspecified. So far, we use the IANA default auf 514.
- */
-static char *getFwdPt(instanceData *pData)
-{
-	assert(pData != NULL);
-	if(pData->port == NULL)
-		return("514");
-	else
-		return(pData->port);
 }
 
 
@@ -420,7 +403,7 @@ static rsRetVal TCPSendInit(void *pvData)
 		}
 		/* params set, now connect */
 		CHKiRet(netstrm.Connect(pData->pNetstrm, glbl.GetDefPFFamily(),
-			(uchar*)getFwdPt(pData), (uchar*)pData->target));
+			(uchar*)pData->port, (uchar*)pData->target));
 	}
 
 finalize_it:
@@ -453,9 +436,9 @@ static rsRetVal doTryResume(instanceData *pData)
 		hints.ai_flags = AI_NUMERICSERV;
 		hints.ai_family = glbl.GetDefPFFamily();
 		hints.ai_socktype = SOCK_DGRAM;
-		if((iErr = (getaddrinfo(pData->target, getFwdPt(pData), &hints, &res))) != 0) {
+		if((iErr = (getaddrinfo(pData->target, pData->port, &hints, &res))) != 0) {
 			dbgprintf("could not get addrinfo for hostname '%s':'%s': %d%s\n",
-				  pData->target, getFwdPt(pData), iErr, gai_strerror(iErr));
+				  pData->target, pData->port, iErr, gai_strerror(iErr));
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
 		}
 		dbgprintf("%s found, resuming.\n", pData->target);
@@ -494,15 +477,18 @@ ENDbeginTransaction
 
 
 BEGINdoAction
-	char *psz = NULL; /* temporary buffering */
+	char *psz; /* temporary buffering */
 	register unsigned l;
 	int iMaxLine;
+#	ifdef	USE_NETZIP
+	Bytef *out = NULL; /* for compression */
+#	endif
 CODESTARTdoAction
 	CHKiRet(doTryResume(pData));
 
 	iMaxLine = glbl.GetMaxLine();
 
-	dbgprintf(" %s:%s/%s\n", pData->target, getFwdPt(pData),
+	dbgprintf(" %s:%s/%s\n", pData->target, pData->port,
 		 pData->protocol == FORW_UDP ? "udp" : "tcp");
 
 	psz = (char*) ppString[0];
@@ -520,7 +506,6 @@ CODESTARTdoAction
 	 * rgerhards, 2006-11-30
 	 */
 	if(pData->compressionLevel && (l > CONF_MIN_SIZE_FOR_COMPRESS)) {
-		Bytef *out;
 		uLongf destLen = iMaxLine + iMaxLine/100 +12; /* recommended value from zlib doc */
 		uLong srcLen = l;
 		int ret;
@@ -541,14 +526,11 @@ CODESTARTdoAction
 			 * rgerhards, 2006-11-30
 			 */
 			dbgprintf("Compression failed, sending uncompressed message\n");
-			free(out);
 		} else if(destLen+1 < l) {
 			/* only use compression if there is a gain in using it! */
 			dbgprintf("there is gain in compression, so we do it\n");
 			psz = (char*) out;
 			l = destLen + 1; /* take care for the "z" at message start! */
-		} else {
-			free(out);
 		}
 		++destLen;
 	}
@@ -569,10 +551,7 @@ CODESTARTdoAction
 	}
 finalize_it:
 #	ifdef USE_NETZIP
-	if((psz != NULL) && (psz != (char*) ppString[0]))  {
-		/* we need to free temporary buffer, alloced above - Naoya Nakazawa, 2010-01-11 */
-		free(psz);
-	}
+	free(out); /* is NULL if it was never used... */
 #	endif
 ENDdoAction
 
@@ -900,11 +879,15 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		if(pData->port == NULL) {
 			errmsg.LogError(0, NO_ERRCODE, "Could not get memory to store syslog forwarding port, "
 				 "using default port, results may not be what you intend\n");
-			/* we leave f_forw.port set to NULL, this is then handled by getFwdPt(). */
+			/* we leave f_forw.port set to NULL, this is then handled below */
 		} else {
 			memcpy(pData->port, tmp, i);
 			*(pData->port + i) = '\0';
 		}
+	}
+	/* check if no port is set. If so, we use the IANA-assigned port of 514 */
+	if(pData->port == NULL) {
+		CHKmalloc(pData->port = strdup("514"));
 	}
 	
 	/* now skip to template */

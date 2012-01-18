@@ -160,6 +160,10 @@ if ENABLE_OMHDFS
 SUBDIRS += plugins/omhdfs
 endif
 
+if ENABLE_ELASTICSEARCH
+SUBDIRS += plugins/omelasticsearch
+endif
+
 if ENABLE_MMSNMPTRAPD
 SUBDIRS += plugins/mmsnmptrapd
 endif
@@ -243,5 +247,6 @@ DISTCHECK_CONFIGURE_FLAGS=	--enable-gssapi_krb5 \
 				--enable-pmcisconames \
 				--enable-pmsnare \
 				--enable-mmsnmptrapd \
+				--enable-elasticsearch \
 				--with-systemdsystemunitdir=$$dc_install_base/$(systemdsystemunitdir)
 ACLOCAL_AMFLAGS = -I m4

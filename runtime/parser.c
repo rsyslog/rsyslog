@@ -60,6 +60,7 @@ DEFobjCurrIf(ruleset)
 /* config data */
 static uchar cCCEscapeChar = '#';/* character to be used to start an escape sequence for control chars */
 static int bEscapeCCOnRcv = 1; /* escape control characters on reception: 0 - no, 1 - yes */
+static int bSpaceLFOnRcv = 0; /* replace newlines with spaces on reception: 0 - no, 1 - yes */
 static int bEscape8BitChars = 0; /* escape characters > 127 on reception: 0 - no, 1 - yes */
 static int bEscapeTab = 1;	/* escape tab control character when doing CC escapes: 0 - no, 1 - yes */
 static int bDropTrailingLF = 1; /* drop trailing LF's on reception? */
@@ -354,9 +355,13 @@ SanitizeMsg(msg_t *pMsg)
 	int bNeedSanitize = 0;
 	for(iSrc = 0 ; iSrc < lenMsg ; iSrc++) {
 		if(iscntrl(pszMsg[iSrc])) {
+			if(bSpaceLFOnRcv && pszMsg[iSrc] == '\n')
+				pszMsg[iSrc] = ' ';
+			else
 			if(pszMsg[iSrc] == '\0' || bEscapeCCOnRcv) {
 				bNeedSanitize = 1;
-				break;
+				if (!bSpaceLFOnRcv)
+					break;
 			}
 		} else if(pszMsg[iSrc] > 127 && bEscape8BitChars) {
 			bNeedSanitize = 1;
@@ -645,6 +650,7 @@ resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unus
 {
 	cCCEscapeChar = '#';
 	bEscapeCCOnRcv = 1; /* default is to escape control characters */
+	bSpaceLFOnRcv = 0;
 	bEscape8BitChars = 0; /* default is to escape control characters */
 	bEscapeTab = 1; /* default is to escape control characters */
 	bDropTrailingLF = 1; /* default is to drop trailing LF's on reception */
@@ -698,6 +704,7 @@ BEGINObjClassInit(parser, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	CHKiRet(regCfSysLineHdlr((uchar *)"controlcharacterescapeprefix", 0, eCmdHdlrGetChar, NULL, &cCCEscapeChar, NULL, eConfObjGlobal));
 	CHKiRet(regCfSysLineHdlr((uchar *)"droptrailinglfonreception", 0, eCmdHdlrBinary, NULL, &bDropTrailingLF, NULL, eConfObjGlobal));
 	CHKiRet(regCfSysLineHdlr((uchar *)"escapecontrolcharactersonreceive", 0, eCmdHdlrBinary, NULL, &bEscapeCCOnRcv, NULL, eConfObjGlobal));
+	CHKiRet(regCfSysLineHdlr((uchar *)"spacelfonreceive", 0, eCmdHdlrBinary, NULL, &bSpaceLFOnRcv, NULL, eConfObjGlobal));
 	CHKiRet(regCfSysLineHdlr((uchar *)"escape8bitcharactersonreceive", 0, eCmdHdlrBinary, NULL, &bEscape8BitChars, NULL, eConfObjGlobal));
 	CHKiRet(regCfSysLineHdlr((uchar *)"escapecontrolcharactertab", 0, eCmdHdlrBinary, NULL, &bEscapeTab, NULL, eConfObjGlobal));
 	CHKiRet(regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, NULL, eConfObjGlobal));

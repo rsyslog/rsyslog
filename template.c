@@ -50,6 +50,15 @@ DEFobjCurrIf(regexp)
 static int bFirstRegexpErrmsg = 1; /**< did we already do a "can't load regexp" error message? */
 #endif
 
+#warning check this merge
+#if 1
+enum {
+    NO_ESCAPE = 0,
+    SQL_ESCAPE,
+    STDSQL_ESCAPE,
+    JSON_ESCAPE,
+};
+#endif
 
 /* helper to tplToString and strgen's, extends buffer */
 #define ALLOC_INC 128
@@ -120,10 +129,12 @@ rsRetVal tplToString(struct template *pTpl, msg_t *pMsg, uchar **ppBuf, size_t *
 			 * but they are handled in this way because of legacy (don't break any
 			 * existing thing).
 			 */
-			if(pTpl->optFormatForSQL == 1)
-				doSQLEscape(&pVal, &iLenVal, &bMustBeFreed, 1);
-			else if(pTpl->optFormatForSQL == 2)
-				doSQLEscape(&pVal, &iLenVal, &bMustBeFreed, 0);
+			if(pTpl->optFormatEscape == SQL_ESCAPE)
+				doEscape(&pVal, &iLenVal, &bMustBeFreed, SQL_ESCAPE);
+			else if(pTpl->optFormatEscape == JSON_ESCAPE)
+				doEscape(&pVal, &iLenVal, &bMustBeFreed, JSON_ESCAPE);
+			else if(pTpl->optFormatEscape == STDSQL_ESCAPE)
+				doEscape(&pVal, &iLenVal, &bMustBeFreed, STDSQL_ESCAPE);
 		}
 		/* got source, now copy over */
 		if(iLenVal > 0) { /* may be zero depending on property */
@@ -211,27 +222,29 @@ finalize_it:
 }
 
 
-/* Helper to doSQLEscape. This is called if doSQLEscape
+/* Helper to doEscape. This is called if doEscape
  * runs out of memory allocating the escaped string.
  * Then we are in trouble. We can
  * NOT simply return the unmodified string because this
  * may cause SQL injection. But we also can not simply
  * abort the run, this would be a DoS. I think an appropriate
- * measure is to remove the dangerous \' characters. We
+ * measure is to remove the dangerous \' characters (SQL). We
  * replace them by \", which will break the message and
  * signatures eventually present - but this is the
  * best thing we can do now (or does anybody 
  * have a better idea?). rgerhards 2004-11-23
- * added support for "escapeMode" (so doSQLEscape for details).
- * if mode = 1, then backslashes are changed to slashes.
+ * added support for escape mode (see doEscape for details).
+ * if mode = SQL_ESCAPE, then backslashes are changed to slashes.
  * rgerhards 2005-09-22
  */
-static void doSQLEmergencyEscape(register uchar *p, int escapeMode)
+static void doEmergencyEscape(register uchar *p, int mode)
 {
 	while(*p) {
-		if(*p == '\'')
+		if((mode == SQL_ESCAPE||mode == STDSQL_ESCAPE) && *p == '\'')
 			*p = '"';
-		else if((escapeMode == 1) && (*p == '\\'))
+		else if((mode == JSON_ESCAPE) && *p == '"')
+			*p = '\'';
+		else if((mode == SQL_ESCAPE) && *p == '\\')
 			*p = '/';
 		++p;
 	}
@@ -256,14 +269,16 @@ static void doSQLEmergencyEscape(register uchar *p, int escapeMode)
  * smartness depends on config settings. So we add a new option to this
  * function that allows the caller to select if they want to standard or
  * "smart" encoding ;)
- * new parameter escapeMode is 0 - standard sql, 1 - "smart" engines
+ * --
+ * Parameter "mode" is STDSQL_ESCAPE, SQL_ESCAPE "smart" SQL engines, or
+ * JSON_ESCAPE for everyone requiring escaped JSON (e.g. ElasticSearch).
  * 2005-09-22 rgerhards
  */
 rsRetVal
-doSQLEscape(uchar **pp, size_t *pLen, unsigned short *pbMustBeFreed, int escapeMode)
+doEscape(uchar **pp, size_t *pLen, unsigned short *pbMustBeFreed, int mode)
 {
 	DEFiRet;
-	uchar *p;
+	uchar *p = NULL;
 	int iLen;
 	cstr_t *pStrB = NULL;
 	uchar *pszGenerated;
@@ -274,26 +289,32 @@ doSQLEscape(uchar **pp, size_t *pLen, unsigned short *pbMustBeFreed, int escapeM
 	assert(pbMustBeFreed != NULL);
 
 	/* first check if we need to do anything at all... */
-	if(escapeMode == 0)
+	if(mode == STDSQL_ESCAPE)
 		for(p = *pp ; *p && *p != '\'' ; ++p)
 			;
-	else
+	else if(mode == SQL_ESCAPE)
 		for(p = *pp ; *p && *p != '\'' && *p != '\\' ; ++p)
 			;
+	else if(mode == JSON_ESCAPE)
+		for(p = *pp ; *p && *p != '"' ; ++p)
+			;
 	/* when we get out of the loop, we are either at the
-	 * string terminator or the first \'. */
-	if(*p == '\0')
+	 * string terminator or the first character to escape */
+	if(p && *p == '\0')
 		FINALIZE; /* nothing to do in this case! */
 
 	p = *pp;
 	iLen = *pLen;
 	CHKiRet(cstrConstruct(&pStrB));
-	
+
 	while(*p) {
-		if(*p == '\'') {
-			CHKiRet(cstrAppendChar(pStrB, (escapeMode == 0) ? '\'' : '\\'));
+		if((mode == SQL_ESCAPE || mode == STDSQL_ESCAPE) && *p == '\'') {
+			CHKiRet(cstrAppendChar(pStrB, (mode == STDSQL_ESCAPE) ? '\'' : '\\'));
 			iLen++;	/* reflect the extra character */
-		} else if((escapeMode == 1) && (*p == '\\')) {
+		} else if((mode == SQL_ESCAPE) && *p == '\\') {
+			CHKiRet(cstrAppendChar(pStrB, '\\'));
+			iLen++;	/* reflect the extra character */
+		} else if((mode == JSON_ESCAPE) && *p == '"') {
 			CHKiRet(cstrAppendChar(pStrB, '\\'));
 			iLen++;	/* reflect the extra character */
 		}
@@ -312,7 +333,7 @@ doSQLEscape(uchar **pp, size_t *pLen, unsigned short *pbMustBeFreed, int escapeM
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		doSQLEmergencyEscape(*pp, escapeMode);
+		doEmergencyEscape(*pp, mode);
 		if(pStrB != NULL)
 			cstrDestruct(&pStrB);
 	}
@@ -889,11 +910,14 @@ tplAddTplMod(struct template *pTpl, uchar** ppRestOfConfLine)
 	 * acknowledged implementing the option. -- rgerhards, 2011-03-21
 	 */
 	if(lenMod > 6 && !strcasecmp((char*) szMod + lenMod - 7, ",stdsql")) {
-		pTpl->optFormatForSQL = 2;
-		DBGPRINTF("strgen suports the stdsql option\n");
+		pTpl->optFormatEscape = STDSQL_ESCAPE;
+		DBGPRINTF("strgen supports the stdsql option\n");
 	} else if(lenMod > 3 && !strcasecmp((char*) szMod+ lenMod - 4, ",sql")) {
-		pTpl->optFormatForSQL = 1;
-		DBGPRINTF("strgen suports the sql option\n");
+		pTpl->optFormatEscape = SQL_ESCAPE;
+		DBGPRINTF("strgen supports the sql option\n");
+	} else if(lenMod > 4 && !strcasecmp((char*) szMod+ lenMod - 4, ",json")) {
+		pTpl->optFormatEscape = JSON_ESCAPE;
+		DBGPRINTF("strgen supports the json option\n");
 	}
 
 finalize_it:
@@ -1021,11 +1045,13 @@ struct template *tplAddLine(rsconf_t *conf, char* pName, uchar** ppRestOfConfLin
 		 * it anyhow... ;) rgerhards 2004-11-22
 		 */
 		if(!strcmp(optBuf, "stdsql")) {
-			pTpl->optFormatForSQL = 2;
+			pTpl->optFormatEscape = STDSQL_ESCAPE;
+		} else if(!strcmp(optBuf, "json")) {
+			pTpl->optFormatEscape = JSON_ESCAPE;
 		} else if(!strcmp(optBuf, "sql")) {
-			pTpl->optFormatForSQL = 1;
+			pTpl->optFormatEscape = SQL_ESCAPE;
 		} else if(!strcmp(optBuf, "nosql")) {
-			pTpl->optFormatForSQL = 0;
+			pTpl->optFormatEscape = NO_ESCAPE;
 		} else {
 			dbgprintf("Invalid option '%s' ignored.\n", optBuf);
 		}
@@ -1190,9 +1216,11 @@ void tplPrintList(rsconf_t *conf)
 	pTpl = conf->templates.root;
 	while(pTpl != NULL) {
 		dbgprintf("Template: Name='%s' ", pTpl->pszName == NULL? "NULL" : pTpl->pszName);
-		if(pTpl->optFormatForSQL == 1)
+		if(pTpl->optFormatEscape == SQL_ESCAPE)
 			dbgprintf("[SQL-Format (MySQL)] ");
-		else if(pTpl->optFormatForSQL == 2)
+		else if(pTpl->optFormatEscape == JSON_ESCAPE)
+			dbgprintf("[JSON-Escaped Format] ");
+		else if(pTpl->optFormatEscape == STDSQL_ESCAPE)
 			dbgprintf("[SQL-Format (standard SQL)] ");
 		dbgprintf("\n");
 		pTpe = pTpl->pEntryRoot;
