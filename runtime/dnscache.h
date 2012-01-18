@@ -1,6 +1,6 @@
 /* Definitions for dnscache module.
  *
- * Copyright 2011 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2012 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *

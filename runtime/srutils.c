@@ -54,6 +54,8 @@
  * to do it, but over here is also not ideal... -- rgerhards, 2008-02-14
  * rgerhards, 2008-04-16: note in LGPL move: the code tables below exist in
  * the same way in BSD, so it is not a problem to move them from GPLv3 to LGPL.
+ * And nobody modified them since it was under LGPL, so we can also move it
+ * to ASL 2.0.
  */
 syslogName_t	syslogPriNames[] = {
 	{"alert",	LOG_ALERT},
