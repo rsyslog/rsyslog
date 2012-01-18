@@ -192,7 +192,7 @@ static char rcvBuf[128*1024];
 
 /* forward definitions */
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal);
-static rsRetVal addLstn(ptcpsrv_t *pSrv, int sock);
+static rsRetVal addLstn(ptcpsrv_t *pSrv, int sock, int isIPv6);
 
 
 /* some simple constructors/destructors */
@@ -237,6 +237,7 @@ startupSrv(ptcpsrv_t *pSrv)
 	int sockflags;
         struct addrinfo hints, *res = NULL, *r;
 	uchar *lstnIP;
+	int isIPv6 = 0;
 
 	lstnIP = pSrv->lstnIP == NULL ? UCHAR_CONSTANT("") : pSrv->lstnIP;
 
@@ -269,8 +270,9 @@ startupSrv(ptcpsrv_t *pSrv)
                         continue;
                 }
 
-#ifdef IPV6_V6ONLY
                 if(r->ai_family == AF_INET6) {
+			isIPv6 = 1;
+#ifdef IPV6_V6ONLY
                 	int iOn = 1;
 			if(setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY,
 			      (char *)&iOn, sizeof (iOn)) < 0) {
@@ -278,8 +280,8 @@ startupSrv(ptcpsrv_t *pSrv)
 				sock = -1;
 				continue;
                 	}
-                }
 #endif
+                }
        		if(setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char *) &on, sizeof(on)) < 0 ) {
 			DBGPRINTF("error %d setting tcp socket option\n", errno);
                         close(sock);
@@ -341,7 +343,7 @@ startupSrv(ptcpsrv_t *pSrv)
 		/* if we reach this point, we were able to obtain a valid socket, so we can
 		 * create our listener object. -- rgerhards, 2010-08-10
 		 */
-		CHKiRet(addLstn(pSrv, sock));
+		CHKiRet(addLstn(pSrv, sock, isIPv6));
 		++numSocks;
 	}
 
@@ -755,7 +757,7 @@ finalize_it:
 /* add a listener to the server 
  */
 static rsRetVal
-addLstn(ptcpsrv_t *pSrv, int sock)
+addLstn(ptcpsrv_t *pSrv, int sock, int isIPv6)
 {
 	DEFiRet;
 	ptcplstn_t *pLstn;
@@ -766,7 +768,9 @@ addLstn(ptcpsrv_t *pSrv, int sock)
 	pLstn->sock = sock;
 	/* support statistics gathering */
 	CHKiRet(statsobj.Construct(&(pLstn->stats)));
-	snprintf((char*)statname, sizeof(statname), "imptcp(%s)", pSrv->port);
+	snprintf((char*)statname, sizeof(statname), "imptcp(%s/%s/%s)",
+		(pSrv->lstnIP == NULL) ? "*" : (char*)pSrv->lstnIP, pSrv->port,
+		isIPv6 ? "IPv6" : "IPv4");
 	statname[sizeof(statname)-1] = '\0'; /* just to be on the save side... */
 	CHKiRet(statsobj.SetName(pLstn->stats, statname));
 	CHKiRet(statsobj.AddCounter(pLstn->stats, UCHAR_CONSTANT("submitted"),
