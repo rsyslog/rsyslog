@@ -1,6 +1,13 @@
 /* omshell.c
  * This is the implementation of the build-in shell output module.
  *
+ * ************* DO NOT EXTEND THIS MODULE **************
+ * This is pure legacy, omprog has much better and more
+ * secure functionality than this module. It is NOT
+ * recommended to base new work on it!
+ * 2012-01-19 rgerhards
+ * ******************************************************
+ *
  * NOTE: read comments in module-template.h to understand how this file
  *       works!
  *
@@ -55,16 +62,6 @@ DEFobjCurrIf(errmsg)
 typedef struct _instanceData {
 	uchar	progName[MAXFNAME]; /* program  to execute */
 } instanceData;
-
-
-typedef struct configSettings_s {
-	EMPTY_STRUCT	/* remove this when data members are added */
-} configSettings_t;
-static configSettings_t cs;
-
-BEGINinitConfVars		/* (re)set config variables to default values */
-CODESTARTinitConfVars 
-ENDinitConfVars
 
 BEGINcreateInstance
 CODESTARTcreateInstance
@@ -147,7 +144,6 @@ ENDqueryEtryPt
 
 BEGINmodInit(Shell)
 CODESTARTmodInit
-INITLegCnfVars
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
