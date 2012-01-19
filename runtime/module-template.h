@@ -375,38 +375,7 @@ static rsRetVal tryResume(instanceData __attribute__((unused)) *pData)\
 }
 
 
-/* Config scoping system.
- * save current config scope and start a new one. Note that we do NOT implement a
- * stack. Exactly one scope can be saved.
- * We assume standard naming conventions (local confgSettings_t holds all
- * config settings and MUST have been defined before this macro is being used!).
- * Note that initConfVars() must be defined locally as well.
- */
-#define SCOPING_SUPPORT \
-static rsRetVal initConfVars(void);\
-static configSettings_t cs;				/* our current config settings */ \
-static configSettings_t cs_save;			/* our saved (scope!) config settings */ \
-static rsRetVal __attribute__((unused)) newScope(void) \
-{ \
-	DEFiRet; \
-	memcpy(&cs_save, &cs, sizeof(cs)); \
-	iRet = initConfVars(); \
-	RETiRet; \
-} \
-static rsRetVal __attribute__((unused)) restoreScope(void) \
-{ \
-	DEFiRet; \
-	memcpy(&cs, &cs_save, sizeof(cs)); \
-	RETiRet; \
-}
-/* initConfVars()
- * This entry point is called to check if a module can resume operations. This
- * happens when a module requested that it be suspended. In suspended state,
- * the engine periodically tries to resume the module. If that succeeds, normal
- * processing continues. If not, the module will not be called unless a
- * tryResume() call succeeds.
- * Returns RS_RET_OK, if resumption succeeded, RS_RET_SUSPENDED otherwise
- * rgerhard, 2007-08-02
+/* initConfVars() - initialize pre-v6.3-config variables
  */
 #define BEGINinitConfVars \
 static rsRetVal initConfVars(void)\
@@ -634,8 +603,8 @@ rsRetVal modInit##uniqName(int iIFVersRequested __attribute__((unused)), int *ip
 	/* now get the obj interface so that we can access other objects */ \
 	CHKiRet(pObjGetObjInterface(&obj));
 
-/* do those initializations necessary for scoping */
-#define SCOPINGmodInit \
+/* do those initializations necessary for legacy config variables */
+#define INITLegCnfVars \
 	initConfVars();
 
 #define ENDmodInit \

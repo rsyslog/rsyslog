@@ -177,9 +177,8 @@ typedef struct configSettings_s {
 	int	bUseAsyncWriter;	/* should we enable asynchronous writing? */
 	EMPTY_STRUCT
 } configSettings_t;
+static configSettings_t cs;
 uchar	*pszFileDfltTplName; /* name of the default template to use */
-
-SCOPING_SUPPORT; /* must be set AFTER configSettings_t is defined */
 
 /* tables for interfacing with the v6 config system */
 /* action (instance) parameters */
@@ -1010,7 +1009,7 @@ BEGINmodInit(File)
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
-SCOPINGmodInit
+INITLegCnfVars
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(strm, CORE_COMPONENT));
 
