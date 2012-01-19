@@ -70,7 +70,6 @@
 #include "glbl.h"
 #include "stream.h"
 #include "zlibw.h"
-#include "apc.h"
 
 /* stream types */
 typedef enum {
@@ -126,7 +125,6 @@ typedef struct strm_s {
 	sbool bStopWriter;	/* shall writer thread terminate? */
 	sbool bDoTimedWait;	/* instruct writer thread to do a times wait to support flush timeouts */
 	int iFlushInterval; /* flush in which interval - 0, no flushing */
-	apc_id_t apcID;    /* id of current Apc request (used for cancelling) */
 	pthread_mutex_t mut;/* mutex for flush in async mode */
 	pthread_cond_t notFull;
 	pthread_cond_t notEmpty;
@@ -139,7 +137,6 @@ typedef struct strm_s {
 		size_t lenBuf;
 	} asyncBuf[STREAM_ASYNC_NUMBUFS];
 	pthread_t writerThreadID;
-	int apcRequested;  /* is an apc Requested? */
 	/* support for omfile size-limiting commands, special counters, NOT persisted! */
 	off_t	iSizeLimit;	/* file size limit, 0 = no limit */
 	uchar	*pszSizeLimitCmd;	/* command to carry out when size limit is reached */

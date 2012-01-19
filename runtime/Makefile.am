@@ -49,8 +49,6 @@ librsyslog_la_SOURCES = \
 	obj.h \
 	modules.c \
 	modules.h \
-	apc.c \
-	apc.h \
 	statsobj.c \
 	statsobj.h \
 	stream.c \

@@ -103,7 +103,6 @@
 #include "template.h"
 #include "action.h"
 #include "modules.h"
-#include "sync.h"
 #include "cfsysline.h"
 #include "srUtils.h"
 #include "errmsg.h"

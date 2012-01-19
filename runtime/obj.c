@@ -87,7 +87,6 @@
 #include "errmsg.h"
 #include "cfsysline.h"
 #include "unicode-helper.h"
-#include "apc.h"
 #include "datetime.h"
 
 /* static data */
@@ -1331,7 +1330,6 @@ objClassInit(modInfo_t *pModInfo)
 	/* init classes we use (limit to as few as possible!) */
 	CHKiRet(errmsgClassInit(pModInfo));
 	CHKiRet(datetimeClassInit(pModInfo));
-	CHKiRet(apcClassInit(pModInfo));
 	CHKiRet(cfsyslineInit());
 	CHKiRet(varClassInit(pModInfo));
 	CHKiRet(moduleClassInit(pModInfo));
