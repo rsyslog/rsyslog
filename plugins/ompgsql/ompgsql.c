@@ -69,7 +69,7 @@ typedef struct _instanceData {
 typedef struct configSettings_s {
 	EMPTY_STRUCT
 } configSettings_t;
-static configSettings_t cs;
+static configSettings_t __attribute__((unused)) cs;
 
 BEGINinitConfVars		/* (re)set config variables to default values */
 CODESTARTinitConfVars 

@@ -90,8 +90,7 @@ typedef struct _instanceData {
 typedef struct configSettings_s {
 	EMPTY_STRUCT
 } configSettings_t;
-
-static configSettings_t cs;
+static configSettings_t __attribute__((unused)) cs;
 
 
 /* tables for interfacing with the v6 config system */
