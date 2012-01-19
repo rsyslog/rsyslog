@@ -385,6 +385,6 @@ CODEmodInit_QueryRegCFSLineHdlr
 
 	root = NULL;
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"sgcustombindcdrallowedip", 0, eCmdHdlrGetWord,
-		addAllowedIP, NULL, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+		addAllowedIP, NULL, STD_LOADABLE_MODULE_ID));
 	dbgprintf("rsyslog sm_cust_bindcdr called, compiled with version %s\n", VERSION);
 ENDmodInit
