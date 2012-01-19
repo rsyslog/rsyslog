@@ -82,7 +82,6 @@ DEFobjCurrIf(net)
 DEFobjCurrIf(rule)
 DEFobjCurrIf(ruleset)
 
-ecslConfObjType currConfObj = eConfObjGlobal; /* to support scoping - which config object is currently active? */
 int bConfStrictScoping = 0;	/* force strict scoping during config processing? */
 
 
@@ -740,8 +739,6 @@ rsRetVal cflineDoAction(rsconf_t *conf, uchar **p, action_t **ppAction)
 			/* advance our config parser state: we now only accept an $End as valid,
 			 * no more action statments.
 			 */
-			if(currConfObj == eConfObjAction)
-				currConfObj = eConfObjActionWaitEnd;
 			if((iRet = addAction(&pAction, pMod, pModData, pOMSR, NULL, NULL,
 					     (iRet == RS_RET_SUSPENDED)? 1 : 0)) == RS_RET_OK) {
 				/* now check if the module is compatible with select features */
@@ -812,129 +809,12 @@ finalize_it:
 ENDobjQueryInterface(conf)
 
 
-/* switch to a new action scope. This means that we switch the current 
- * mode to action, but it also means we need to clear all scope variables,
- * so that we have a new environment.
- * rgerhards, 2010-07-23
- */
-static inline rsRetVal
-setActionScope(void)
-{
-	DEFiRet;
-	cfgmodules_etry_t *node;
-
-	currConfObj = eConfObjAction;
-	DBGPRINTF("entering action scope\n");
-	CHKiRet(actionNewScope());
-
-	/* now tell each action to start the scope */
-	node = NULL;
-	while((node = module.GetNxtCnfType(loadConf, node, eMOD_OUT)) != NULL) {
-		DBGPRINTF("NO LONGER SUPPORTED beginning scope on module %s\n", node->pMod->pszName);
-	}
-
-finalize_it:
-	RETiRet;
-}
-
-
-/* switch back from action scope.
- * rgerhards, 2010-07-27
- */
-static inline rsRetVal
-unsetActionScope(void)
-{
-	DEFiRet;
-	cfgmodules_etry_t *node;
-
-	currConfObj = eConfObjAction;
-	DBGPRINTF("exiting action scope\n");
-	CHKiRet(actionRestoreScope());
-
-	/* now tell each action to restore the scope */
-	node = NULL;
-	while((node = module.GetNxtCnfType(loadConf, node, eMOD_OUT)) != NULL) {
-		DBGPRINTF("NO LONGER SUPPORTED exiting scope on module %s\n", node->pMod->pszName);
-	}
-
-finalize_it:
-	RETiRet;
-}
-
-
-/* This method is called by our own handlers to begin a new config
- * object ($Begin statement). This also implies a new scope.
- * rgerhards, 2010-07-23
- */
-static rsRetVal
-beginConfObj(void __attribute__((unused)) *pVal, uchar *pszName)
-{
-	DEFiRet;
-
-	if(currConfObj != eConfObjGlobal) {
-		errmsg.LogError(0, RS_RET_CONF_NOT_GLBL, "not in global scope - can not nest $Begin");
-		ABORT_FINALIZE(RS_RET_CONF_NOT_GLBL);
-	}
-
-	if(!strcasecmp((char*)pszName, "action")) {
-		setActionScope();
-	} else {
-		errmsg.LogError(0, RS_RET_INVLD_CONF_OBJ, "invalid config object \"%s\" in $Begin", pszName);
-		ABORT_FINALIZE(RS_RET_INVLD_CONF_OBJ);
-	}
-
-finalize_it:
-	free(pszName); /* no longer needed */
-	RETiRet;
-}
-
-
-/* This method is called to end a config scope and switch
- * back to global scope.
- * rgerhards, 2010-07-23
- */
-static rsRetVal
-endConfObj(void __attribute__((unused)) *pVal, uchar *pszName)
-{
-	DEFiRet;
-
-	if(currConfObj == eConfObjGlobal) {
-		errmsg.LogError(0, RS_RET_CONF_NOT_GLBL, "already in global scope - dangling $End");
-		ABORT_FINALIZE(RS_RET_CONF_IN_GLBL);
-	}
-
-	if(!strcasecmp((char*)pszName, "action")) {
-		if(currConfObj == eConfObjAction) {
-			errmsg.LogError(0, RS_RET_CONF_END_NO_ACT, "$End action but not action specified");
-			/* this is a warning, we continue processing in that case (unscope) */
-		} else if(currConfObj != eConfObjActionWaitEnd) {
-			errmsg.LogError(0, RS_RET_CONF_INVLD_END, "$End not for active config object - "
-							          "nesting error?");
-			ABORT_FINALIZE(RS_RET_CONF_INVLD_END);
-		}
-		currConfObj = eConfObjGlobal;
-		CHKiRet(unsetActionScope());
-	} else {
-		errmsg.LogError(0, RS_RET_INVLD_CONF_OBJ, "invalid config object \"%s\" in $End", pszName);
-		ABORT_FINALIZE(RS_RET_INVLD_CONF_OBJ);
-	}
-
-finalize_it:
-	free(pszName); /* no longer needed */
-	RETiRet;
-}
-
-
-/* Reset config variables to default values. Note that
- * when we are inside an scope, we simply reset this to global.
- * However, $ResetConfigVariables is a global directive, and as such
- * will not be honored inside a scope!
+/* Reset config variables to default values.
  * rgerhards, 2010-07-23
  */
 static rsRetVal
 resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
-	currConfObj = eConfObjGlobal;
 	bConfStrictScoping = 0;
 	return RS_RET_OK;
 }
