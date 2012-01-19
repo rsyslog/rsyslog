@@ -830,8 +830,7 @@ setActionScope(void)
 	/* now tell each action to start the scope */
 	node = NULL;
 	while((node = module.GetNxtCnfType(loadConf, node, eMOD_OUT)) != NULL) {
-		DBGPRINTF("beginning scope on module %s\n", node->pMod->pszName);
-		node->pMod->mod.om.newScope();
+		DBGPRINTF("NO LONGER SUPPORTED beginning scope on module %s\n", node->pMod->pszName);
 	}
 
 finalize_it:
@@ -855,8 +854,7 @@ unsetActionScope(void)
 	/* now tell each action to restore the scope */
 	node = NULL;
 	while((node = module.GetNxtCnfType(loadConf, node, eMOD_OUT)) != NULL) {
-		DBGPRINTF("exiting scope on module %s\n", node->pMod->pszName);
-		node->pMod->mod.om.restoreScope();
+		DBGPRINTF("NO LONGER SUPPORTED exiting scope on module %s\n", node->pMod->pszName);
 	}
 
 finalize_it:

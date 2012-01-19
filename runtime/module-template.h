@@ -386,14 +386,14 @@ static rsRetVal tryResume(instanceData __attribute__((unused)) *pData)\
 static rsRetVal initConfVars(void);\
 static configSettings_t cs;				/* our current config settings */ \
 static configSettings_t cs_save;			/* our saved (scope!) config settings */ \
-static rsRetVal newScope(void) \
+static rsRetVal __attribute__((unused)) newScope(void) \
 { \
 	DEFiRet; \
 	memcpy(&cs_save, &cs, sizeof(cs)); \
 	iRet = initConfVars(); \
 	RETiRet; \
 } \
-static rsRetVal restoreScope(void) \
+static rsRetVal __attribute__((unused)) restoreScope(void) \
 { \
 	DEFiRet; \
 	memcpy(&cs, &cs_save, sizeof(cs)); \
@@ -473,10 +473,6 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 		*pEtryPoint = freeInstance;\
 	} else if(!strcmp((char*) name, "parseSelectorAct")) {\
 		*pEtryPoint = parseSelectorAct;\
-	} else if(!strcmp((char*) name, "newScope")) {\
-		*pEtryPoint = newScope;\
-	} else if(!strcmp((char*) name, "restoreScope")) {\
-		*pEtryPoint = restoreScope;\
 	} else if(!strcmp((char*) name, "isCompatibleWithFeature")) {\
 		*pEtryPoint = isCompatibleWithFeature;\
 	} else if(!strcmp((char*) name, "tryResume")) {\
