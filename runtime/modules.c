@@ -469,8 +469,6 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"doAction", &pNew->mod.om.doAction));
 			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"parseSelectorAct", &pNew->mod.om.parseSelectorAct));
 			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"tryResume", &pNew->tryResume));
-			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"newScope", &pNew->mod.om.newScope));
-			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"restoreScope", &pNew->mod.om.restoreScope));
 			/* try load optional interfaces */
 			localRet = (*pNew->modQueryEtryPt)((uchar*)"doHUP", &pNew->doHUP);
 			if(localRet != RS_RET_OK && localRet != RS_RET_MODULE_ENTRY_POINT_NOT_FOUND)
@@ -624,8 +622,6 @@ static void modPrintList(void)
 			dbgprintf("\tparseSelectorAct:   0x%lx\n", (unsigned long) pMod->mod.om.parseSelectorAct);
 			dbgprintf("\ttryResume:          0x%lx\n", (unsigned long) pMod->tryResume);
 			dbgprintf("\tdoHUP:              0x%lx\n", (unsigned long) pMod->doHUP);
-			dbgprintf("\tnewScope:           0x%lx\n", (unsigned long) pMod->mod.om.newScope);
-			dbgprintf("\trestoreScope:       0x%lx\n", (unsigned long) pMod->mod.om.restoreScope);
 			dbgprintf("\tBeginTransaction:   0x%lx\n", (unsigned long)
 								   ((pMod->mod.om.beginTransaction == dummyBeginTransaction) ?
 								    0 :  pMod->mod.om.beginTransaction));

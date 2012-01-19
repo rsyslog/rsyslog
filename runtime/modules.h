@@ -133,8 +133,6 @@ struct modInfo_s {
 			rsRetVal (*doAction)(uchar**, unsigned, void*);
 			rsRetVal (*endTransaction)(void*);
 			rsRetVal (*parseSelectorAct)(uchar**, void**,omodStringRequest_t**);
-			rsRetVal (*newScope)(void);
-			rsRetVal (*restoreScope)(void);
 		} om;
 		struct { /* data for library modules */
 		    	char dummy;
