@@ -53,8 +53,6 @@ librsyslog_la_SOURCES = \
 	apc.h \
 	statsobj.c \
 	statsobj.h \
-	sync.c \
-	sync.h \
 	stream.c \
 	stream.h \
 	var.c \

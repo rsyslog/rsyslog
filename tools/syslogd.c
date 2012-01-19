@@ -695,7 +695,7 @@ DEFFUNC_llExecFunc(flushRptdMsgsActions)
 	assert(pAction != NULL);
 
 	BEGINfunc
-	LockObj(pAction);
+	d_pthread_mutex_lock(&pAction->mutAction);
 	/* TODO: time() performance: the call below could be moved to
 	 * the beginn of the llExec(). This makes it slightly less correct, but
 	 * in an acceptable way. -- rgerhards, 2008-09-16
@@ -707,7 +707,7 @@ DEFFUNC_llExecFunc(flushRptdMsgsActions)
 		actionWriteToAction(pAction);
 		BACKOFF(pAction);
 	}
-	UnlockObj(pAction);
+	d_pthread_mutex_unlock(&pAction->mutAction);
 
 	ENDfunc
 	return RS_RET_OK; /* we ignore errors, we can not do anything either way */

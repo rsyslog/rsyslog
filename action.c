@@ -305,7 +305,7 @@ rsRetVal actionDestruct(action_t *pThis)
 	if(pThis->f_pMsg != NULL)
 		msgDestruct(&pThis->f_pMsg);
 
-	SYNC_OBJ_TOOL_EXIT(pThis);
+	pthread_mutex_destroy(&pThis->mutAction);
 	pthread_mutex_destroy(&pThis->mutActExec);
 	d_free(pThis->pszName);
 	d_free(pThis->ppTpl);
@@ -344,8 +344,8 @@ rsRetVal actionConstruct(action_t **ppThis)
 	pThis->bRepMsgHasMsg = 0;
 	pThis->tLastOccur = datetime.GetTime(NULL);	/* done once per action on startup only */
 	pthread_mutex_init(&pThis->mutActExec, NULL);
+	pthread_mutex_init(&pThis->mutAction, NULL);
 	INIT_ATOMIC_HELPER_MUT(pThis->mutCAS);
-	SYNC_OBJ_TOOL_INIT(pThis);
 
 	/* indicate we have a new action */
 	++iActionNbr;
@@ -1800,10 +1800,10 @@ doSubmitToActionQComplexBatch(action_t *pAction, batch_t *pBatch)
 {
 	DEFiRet;
 
-	LockObj(pAction);
-	pthread_cleanup_push(mutexCancelCleanup, pAction->Sync_mut);
+	d_pthread_mutex_lock(&pAction->mutAction);
+	pthread_cleanup_push(mutexCancelCleanup, &pAction->mutAction);
 	iRet = helperSubmitToActionQComplexBatch(pAction, pBatch);
-	UnlockObj(pAction);
+	d_pthread_mutex_unlock(&pAction->mutAction);
 	pthread_cleanup_pop(0); /* remove mutex cleanup handler */
 
 	RETiRet;
