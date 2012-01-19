@@ -50,16 +50,6 @@ DEFobjCurrIf(regexp)
 static int bFirstRegexpErrmsg = 1; /**< did we already do a "can't load regexp" error message? */
 #endif
 
-#warning check this merge
-#if 1
-enum {
-    NO_ESCAPE = 0,
-    SQL_ESCAPE,
-    STDSQL_ESCAPE,
-    JSON_ESCAPE,
-};
-#endif
-
 /* helper to tplToString and strgen's, extends buffer */
 #define ALLOC_INC 128
 rsRetVal

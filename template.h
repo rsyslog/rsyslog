@@ -37,11 +37,11 @@ struct template {
 	int tpenElements; /* number of elements in templateEntry list */
 	struct templateEntry *pEntryRoot;
 	struct templateEntry *pEntryLast;
-	char optFormatEscape;	/* in text fields,  0 - do not escape,
-				 * 1 - escape "the MySQL way" 
-	                         * 2 - escape quotes by double quotes,
-				 * 3 - escape double quotes for JSON.
-				 */
+	char optFormatEscape;	/* in text fields, */
+#	define NO_ESCAPE 0	/* 0 - do not escape, */
+#	define SQL_ESCAPE 1	/* 1 - escape "the MySQL way"  */
+#	define STDSQL_ESCAPE 2  /* 2 - escape quotes by double quotes, */
+#	define JSON_ESCAPE 3	/* 3 - escape double quotes for JSON.  */
 	/* following are options. All are 0/1 defined (either on or off).
 	 * we use chars because they are faster than bit fields and smaller
 	 * than short...
