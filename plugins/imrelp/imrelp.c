@@ -306,11 +306,11 @@ CODEmodInit_QueryRegCFSLineHdlr
 
 	/* register config file handlers */
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputrelpserverbindruleset", 0, eCmdHdlrGetWord,
-		NULL, &cs.pszBindRuleset, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+		NULL, &cs.pszBindRuleset, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputrelpserverrun", 0, eCmdHdlrGetWord,
-				   addInstance, NULL, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+				   addInstance, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
-		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 
 	/* we need to create the inputName property (only once during our lifetime) */
 	CHKiRet(prop.Construct(&pInputName));

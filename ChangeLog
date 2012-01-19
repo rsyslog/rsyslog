@@ -14,6 +14,15 @@ Version 6.3.7  [DEVEL] 2011-0?-??
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=290
   Thanks to Tomas Heinrich for the patch
 ---------------------------------------------------------------------------
+Version 6.2.1  [v6-stable], 2012-01-??
+- change plugin config interface to be compatible with pre-v6.2 system
+  The functionality was already removed (because it is superseeded by the
+  v6.3+ config language), but code was still present. I have now removed
+  those parts that affect interface. Full removal will happen in v6.3, in
+  order to limit potential regressions. However, it was considered useful
+  enough to do the interface change in v6-stable; this also eases merging
+  branches!
+---------------------------------------------------------------------------
 Version 6.2.0  [v6-stable], 2012-01-09
 - bugfix (kind of): removed numerical part from pri-text
   see v6 compatibility document for reasons

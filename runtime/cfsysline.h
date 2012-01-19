@@ -29,7 +29,7 @@
  * The short name is cslch (Configfile SysLine CommandHandler)
  */
 struct cslCmdHdlr_s { /* config file sysline parse entry */
-	ecslConfObjType eConfObjType;		/* which config object is this for? */
+	ecslConfObjType __attribute__((deprecated)) eConfObjType;		/* which config object is this for? */
 	ecslCmdHdrlType eType;			/* which type of handler is this? */
 	rsRetVal (*cslCmdHdlr)();		/* function pointer to use with handler (params depending on eType) */
 	void *pData;				/* user-supplied data pointer */
@@ -48,7 +48,7 @@ struct cslCmd_s { /* config file sysline parse entry */
 typedef struct cslCmd_s cslCmd_t;
 
 /* prototypes */
-rsRetVal regCfSysLineHdlr(uchar *pCmdName, int bChainingPermitted, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData, void *pOwnerCookie, ecslConfObjType eConfObjType);
+rsRetVal regCfSysLineHdlr(uchar *pCmdName, int bChainingPermitted, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData, void *pOwnerCookie);
 rsRetVal unregCfSysLineHdlrs(void);
 rsRetVal unregCfSysLineHdlrs4Owner(void *pOwnerCookie);
 rsRetVal processCfSysLineCommand(uchar *pCmd, uchar **p);

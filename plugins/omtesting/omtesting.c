@@ -323,7 +323,7 @@ SCOPINGmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionomtestingechostdout", 0, eCmdHdlrBinary, NULL,
-				   &cs.bEchoStdout, STD_LOADABLE_MODULE_ID, eConfObjAction));
+				   &cs.bEchoStdout, STD_LOADABLE_MODULE_ID));
 	/* we seed the random-number generator in any case... */
 	srand(time(NULL));
 ENDmodInit

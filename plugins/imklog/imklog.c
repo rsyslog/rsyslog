@@ -405,23 +405,23 @@ CODEmodInit_QueryRegCFSLineHdlr
 	initConfigSettings();
 
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"debugprintkernelsymbols", 0, eCmdHdlrBinary,
-			NULL, &cs.dbgPrintSymbols, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+			NULL, &cs.dbgPrintSymbols, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"klogpath", 0, eCmdHdlrGetWord,
-			NULL, &cs.pszPath, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+			NULL, &cs.pszPath, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"klogsymbollookup", 0, eCmdHdlrBinary,
-			NULL, &cs.symbol_lookup, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+			NULL, &cs.symbol_lookup, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"klogsymbolstwice", 0, eCmdHdlrBinary,
-			NULL, &cs.symbols_twice, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+			NULL, &cs.symbols_twice, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"klogusesyscallinterface", 0, eCmdHdlrBinary,
-			NULL, &cs.use_syscall, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+			NULL, &cs.use_syscall, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"klogpermitnonkernelfacility", 0, eCmdHdlrBinary,
-			NULL, &cs.bPermitNonKernel, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+			NULL, &cs.bPermitNonKernel, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"klogconsoleloglevel", 0, eCmdHdlrInt,
-			NULL, &cs.console_log_level, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+			NULL, &cs.console_log_level, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"kloginternalmsgfacility", 0, eCmdHdlrFacility,
-			NULL, &cs.iFacilIntMsg, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+			NULL, &cs.iFacilIntMsg, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
-			resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+			resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
 /* vim:set ai:
  */

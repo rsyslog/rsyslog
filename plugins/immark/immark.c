@@ -168,9 +168,9 @@ CODEmodInit_QueryRegCFSLineHdlr
 
 	/* legacy config handlers */
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"markmessageperiod", 0, eCmdHdlrInt, NULL,
-		&iMarkMessagePeriod, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+		&iMarkMessagePeriod, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
-		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID, eConfObjGlobal));
+		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
 /* vi:set ai:
  */

@@ -667,13 +667,11 @@ static int cslchKeyCompare(void *pKey1, void *pKey2)
 
 /* set data members for this object
  */
-rsRetVal cslchSetEntry(cslCmdHdlr_t *pThis, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(),
-	void *pData, ecslConfObjType eConfObjType)
+rsRetVal cslchSetEntry(cslCmdHdlr_t *pThis, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData)
 {
 	assert(pThis != NULL);
 	assert(eType != eCmdHdlrInvalid);
 
-	pThis->eConfObjType = eConfObjType;
 	pThis->eType = eType;
 	pThis->cslCmdHdlr = pHdlr;
 	pThis->pData = pData;
@@ -793,8 +791,7 @@ finalize_it:
 
 /* add a handler entry to a known command
  */
-static rsRetVal cslcAddHdlr(cslCmd_t *pThis, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData,
-	void *pOwnerCookie, ecslConfObjType eConfObjType)
+static rsRetVal cslcAddHdlr(cslCmd_t *pThis, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData, void *pOwnerCookie)
 {
 	DEFiRet;
 	cslCmdHdlr_t *pCmdHdlr = NULL;
@@ -802,7 +799,7 @@ static rsRetVal cslcAddHdlr(cslCmd_t *pThis, ecslCmdHdrlType eType, rsRetVal (*p
 	assert(pThis != NULL);
 
 	CHKiRet(cslchConstruct(&pCmdHdlr));
-	CHKiRet(cslchSetEntry(pCmdHdlr, eType, pHdlr, pData, eConfObjType));
+	CHKiRet(cslchSetEntry(pCmdHdlr, eType, pHdlr, pData));
 	CHKiRet(llAppend(&pThis->llCmdHdlrs, pOwnerCookie, pCmdHdlr));
 
 finalize_it:
@@ -821,8 +818,7 @@ finalize_it:
  * caller does not need to take care of that. The caller must, however,
  * free pCmdName if he allocated it dynamically! -- rgerhards, 2007-08-09
  */
-rsRetVal regCfSysLineHdlr(uchar *pCmdName, int bChainingPermitted, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData,
-			  void *pOwnerCookie, ecslConfObjType eConfObjType)
+rsRetVal regCfSysLineHdlr(uchar *pCmdName, int bChainingPermitted, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData, void *pOwnerCookie)
 {
 	DEFiRet;
 	cslCmd_t *pThis;
@@ -832,7 +828,7 @@ rsRetVal regCfSysLineHdlr(uchar *pCmdName, int bChainingPermitted, ecslCmdHdrlTy
 	if(iRet == RS_RET_NOT_FOUND) {
 		/* new command */
 		CHKiRet(cslcConstruct(&pThis, bChainingPermitted));
-		CHKiRet_Hdlr(cslcAddHdlr(pThis, eType, pHdlr, pData, pOwnerCookie, eConfObjType)) {
+		CHKiRet_Hdlr(cslcAddHdlr(pThis, eType, pHdlr, pData, pOwnerCookie)) {
 			cslcDestruct(pThis);
 			FINALIZE;
 		}
@@ -852,7 +848,7 @@ rsRetVal regCfSysLineHdlr(uchar *pCmdName, int bChainingPermitted, ecslCmdHdrlTy
 		if(pThis->bChainingPermitted == 0 || bChainingPermitted == 0) {
 			ABORT_FINALIZE(RS_RET_CHAIN_NOT_PERMITTED);
 		}
-		CHKiRet_Hdlr(cslcAddHdlr(pThis, eType, pHdlr, pData, pOwnerCookie, eConfObjType)) {
+		CHKiRet_Hdlr(cslcAddHdlr(pThis, eType, pHdlr, pData, pOwnerCookie)) {
 			cslcDestruct(pThis);
 			FINALIZE;
 		}

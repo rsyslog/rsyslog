@@ -416,11 +416,11 @@ CODEmodInit_QueryRegCFSLineHdlr
 	cs.pszSeverityMapping = NULL;
 	
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"mmsnmptrapdtag", 0, eCmdHdlrGetWord,
-				    NULL, &cs.pszTagName, STD_LOADABLE_MODULE_ID, eConfObjAction));
+				    NULL, &cs.pszTagName, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"mmsnmptrapdseveritymapping", 0, eCmdHdlrGetWord,
-				    NULL, &cs.pszSeverityMapping, STD_LOADABLE_MODULE_ID, eConfObjAction));
+				    NULL, &cs.pszSeverityMapping, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
-				    resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID, eConfObjAction));
+				    resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
 
 /* vi:set ai:

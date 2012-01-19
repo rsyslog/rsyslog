@@ -1054,52 +1054,52 @@ initLegacyConf(void)
 
 	/* now register config handlers */
 	CHKiRet(regCfSysLineHdlr((uchar *)"sleep", 0, eCmdHdlrGoneAway,
-		NULL, NULL, NULL, eConfObjGlobal));
+		NULL, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"logrsyslogstatusmessages", 0, eCmdHdlrBinary,
-		NULL, &loadConf->globals.bLogStatusMsgs, NULL, eConfObjGlobal));
+		NULL, &loadConf->globals.bLogStatusMsgs, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"errormessagestostderr", 0, eCmdHdlrBinary,
-		NULL, &loadConf->globals.bErrMsgToStderr, NULL, eConfObjGlobal));
+		NULL, &loadConf->globals.bErrMsgToStderr, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"abortonuncleanconfig", 0, eCmdHdlrBinary,
-		NULL, &loadConf->globals.bAbortOnUncleanConfig, NULL, eConfObjGlobal));
+		NULL, &loadConf->globals.bAbortOnUncleanConfig, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"repeatedmsgreduction", 0, eCmdHdlrBinary,
-		NULL, &loadConf->globals.bReduceRepeatMsgs, NULL, eConfObjGlobal));
+		NULL, &loadConf->globals.bReduceRepeatMsgs, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"debugprinttemplatelist", 0, eCmdHdlrBinary,
-		NULL, &(loadConf->globals.bDebugPrintTemplateList), NULL, eConfObjGlobal));
+		NULL, &(loadConf->globals.bDebugPrintTemplateList), NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"debugprintmodulelist", 0, eCmdHdlrBinary,
-		NULL, &(loadConf->globals.bDebugPrintModuleList), NULL, eConfObjGlobal));
+		NULL, &(loadConf->globals.bDebugPrintModuleList), NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"debugprintcfsyslinehandlerlist", 0, eCmdHdlrBinary,
-		 NULL, &(loadConf->globals.bDebugPrintCfSysLineHandlerList), NULL, eConfObjGlobal));
+		 NULL, &(loadConf->globals.bDebugPrintCfSysLineHandlerList), NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"privdroptouser", 0, eCmdHdlrUID,
-		NULL, &loadConf->globals.uidDropPriv, NULL, eConfObjGlobal));
+		NULL, &loadConf->globals.uidDropPriv, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"privdroptouserid", 0, eCmdHdlrInt,
-		NULL, &loadConf->globals.uidDropPriv, NULL, eConfObjGlobal));
+		NULL, &loadConf->globals.uidDropPriv, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"privdroptogroup", 0, eCmdHdlrGID,
-		NULL, &loadConf->globals.gidDropPriv, NULL, eConfObjGlobal));
+		NULL, &loadConf->globals.gidDropPriv, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"privdroptogroupid", 0, eCmdHdlrGID,
-		NULL, &loadConf->globals.gidDropPriv, NULL, eConfObjGlobal));
+		NULL, &loadConf->globals.gidDropPriv, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"generateconfiggraph", 0, eCmdHdlrGetWord,
-		NULL, &loadConf->globals.pszConfDAGFile, NULL, eConfObjGlobal));
+		NULL, &loadConf->globals.pszConfDAGFile, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"umask", 0, eCmdHdlrFileCreateMode,
-		NULL, &loadConf->globals.umask, NULL, eConfObjGlobal));
+		NULL, &loadConf->globals.umask, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"maxopenfiles", 0, eCmdHdlrInt,
-		setMaxFiles, NULL, NULL, eConfObjGlobal));
+		setMaxFiles, NULL, NULL));
 
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionresumeinterval", 0, eCmdHdlrInt,
-		setActionResumeInterval, NULL, NULL, eConfObjGlobal));
+		setActionResumeInterval, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"modload", 0, eCmdHdlrCustomHandler,
-		conf.doModLoad, NULL, NULL, eConfObjGlobal));
+		conf.doModLoad, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"defaultruleset", 0, eCmdHdlrGetWord,
-		setDefaultRuleset, NULL, NULL, eConfObjGlobal));
+		setDefaultRuleset, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"ruleset", 0, eCmdHdlrGetWord,
-		setCurrRuleset, NULL, NULL, eConfObjGlobal));
+		setCurrRuleset, NULL, NULL));
 
 	/* handler for "larger" config statements (tie into legacy conf system) */
 	CHKiRet(regCfSysLineHdlr((uchar *)"template", 0, eCmdHdlrCustomHandler,
-		conf.doNameLine, (void*)DIR_TEMPLATE, NULL, eConfObjGlobal));
+		conf.doNameLine, (void*)DIR_TEMPLATE, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"outchannel", 0, eCmdHdlrCustomHandler,
-		conf.doNameLine, (void*)DIR_OUTCHANNEL, NULL, eConfObjGlobal));
+		conf.doNameLine, (void*)DIR_OUTCHANNEL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"allowedsender", 0, eCmdHdlrCustomHandler,
-		conf.doNameLine, (void*)DIR_ALLOWEDSENDER, NULL, eConfObjGlobal));
+		conf.doNameLine, (void*)DIR_ALLOWEDSENDER, NULL));
 
 	/* the following are parameters for the main message queue. I have the
 	 * strong feeling that this needs to go to a different space, but that
@@ -1107,49 +1107,49 @@ initLegacyConf(void)
 	 * rgerhards, 2011-04-21
 	 */
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuefilename", 0, eCmdHdlrGetWord,
-		NULL, &loadConf->globals.mainQ.pszMainMsgQFName, NULL, eConfObjGlobal));
+		NULL, &loadConf->globals.mainQ.pszMainMsgQFName, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuesize", 0, eCmdHdlrInt,
-		NULL, &loadConf->globals.mainQ.iMainMsgQueueSize, NULL, eConfObjGlobal));
+		NULL, &loadConf->globals.mainQ.iMainMsgQueueSize, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuehighwatermark", 0, eCmdHdlrInt,
-		NULL, &loadConf->globals.mainQ.iMainMsgQHighWtrMark, NULL, eConfObjGlobal));
+		NULL, &loadConf->globals.mainQ.iMainMsgQHighWtrMark, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuelowwatermark", 0, eCmdHdlrInt,
-		NULL, &loadConf->globals.mainQ.iMainMsgQLowWtrMark, NULL, eConfObjGlobal));
+		NULL, &loadConf->globals.mainQ.iMainMsgQLowWtrMark, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuediscardmark", 0, eCmdHdlrInt,
-		NULL, &loadConf->globals.mainQ.iMainMsgQDiscardMark, NULL, eConfObjGlobal));
+		NULL, &loadConf->globals.mainQ.iMainMsgQDiscardMark, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuediscardseverity", 0, eCmdHdlrSeverity,
-		NULL, &loadConf->globals.mainQ.iMainMsgQDiscardSeverity, NULL, eConfObjGlobal));
+		NULL, &loadConf->globals.mainQ.iMainMsgQDiscardSeverity, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuecheckpointinterval", 0, eCmdHdlrInt,
-		NULL, &loadConf->globals.mainQ.iMainMsgQPersistUpdCnt, NULL, eConfObjGlobal));
+		NULL, &loadConf->globals.mainQ.iMainMsgQPersistUpdCnt, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuesyncqueuefiles", 0, eCmdHdlrBinary,
-		NULL, &loadConf->globals.mainQ.bMainMsgQSyncQeueFiles, NULL, eConfObjGlobal));
+		NULL, &loadConf->globals.mainQ.bMainMsgQSyncQeueFiles, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuetype", 0, eCmdHdlrGetWord,
-		setMainMsgQueType, NULL, NULL, eConfObjGlobal));
+		setMainMsgQueType, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueueworkerthreads", 0, eCmdHdlrInt,
-		NULL, &loadConf->globals.mainQ.iMainMsgQueueNumWorkers, NULL, eConfObjGlobal));
+		NULL, &loadConf->globals.mainQ.iMainMsgQueueNumWorkers, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuetimeoutshutdown", 0, eCmdHdlrInt,
-		NULL, &loadConf->globals.mainQ.iMainMsgQtoQShutdown, NULL, eConfObjGlobal));
+		NULL, &loadConf->globals.mainQ.iMainMsgQtoQShutdown, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuetimeoutactioncompletion", 0, eCmdHdlrInt,
-		NULL, &loadConf->globals.mainQ.iMainMsgQtoActShutdown, NULL, eConfObjGlobal));
+		NULL, &loadConf->globals.mainQ.iMainMsgQtoActShutdown, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuetimeoutenqueue", 0, eCmdHdlrInt,
-		NULL, &loadConf->globals.mainQ.iMainMsgQtoEnq, NULL, eConfObjGlobal));
+		NULL, &loadConf->globals.mainQ.iMainMsgQtoEnq, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueueworkertimeoutthreadshutdown", 0, eCmdHdlrInt,
-		NULL, &loadConf->globals.mainQ.iMainMsgQtoWrkShutdown, NULL, eConfObjGlobal));
+		NULL, &loadConf->globals.mainQ.iMainMsgQtoWrkShutdown, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuedequeueslowdown", 0, eCmdHdlrInt,
-		NULL, &loadConf->globals.mainQ.iMainMsgQDeqSlowdown, NULL, eConfObjGlobal));
+		NULL, &loadConf->globals.mainQ.iMainMsgQDeqSlowdown, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueueworkerthreadminimummessages", 0, eCmdHdlrInt,
-		NULL, &loadConf->globals.mainQ.iMainMsgQWrkMinMsgs, NULL, eConfObjGlobal));
+		NULL, &loadConf->globals.mainQ.iMainMsgQWrkMinMsgs, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuemaxfilesize", 0, eCmdHdlrSize,
-		NULL, &loadConf->globals.mainQ.iMainMsgQueMaxFileSize, NULL, eConfObjGlobal));
+		NULL, &loadConf->globals.mainQ.iMainMsgQueMaxFileSize, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuedequeuebatchsize", 0, eCmdHdlrSize,
-		NULL, &loadConf->globals.mainQ.iMainMsgQueDeqBatchSize, NULL, eConfObjGlobal));
+		NULL, &loadConf->globals.mainQ.iMainMsgQueDeqBatchSize, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuemaxdiskspace", 0, eCmdHdlrSize,
-		NULL, &loadConf->globals.mainQ.iMainMsgQueMaxDiskSpace, NULL, eConfObjGlobal));
+		NULL, &loadConf->globals.mainQ.iMainMsgQueMaxDiskSpace, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuesaveonshutdown", 0, eCmdHdlrBinary,
-		NULL, &loadConf->globals.mainQ.bMainMsgQSaveOnShutdown, NULL, eConfObjGlobal));
+		NULL, &loadConf->globals.mainQ.bMainMsgQSaveOnShutdown, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuedequeuetimebegin", 0, eCmdHdlrInt,
-		NULL, &loadConf->globals.mainQ.iMainMsgQueueDeqtWinFromHr, NULL, eConfObjGlobal));
+		NULL, &loadConf->globals.mainQ.iMainMsgQueueDeqtWinFromHr, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuedequeuetimeend", 0, eCmdHdlrInt,
-		NULL, &loadConf->globals.mainQ.iMainMsgQueueDeqtWinToHr, NULL, eConfObjGlobal));
+		NULL, &loadConf->globals.mainQ.iMainMsgQueueDeqtWinToHr, NULL));
 	/* moddir is a bit hard problem -- because it actually needs to
 	 * modify a setting that is specific to module.c. The important point
 	 * is that this action MUST actually be carried out during config load,
@@ -1158,11 +1158,11 @@ initLegacyConf(void)
 	 * TODO: think about a clean solution
 	 */
 	CHKiRet(regCfSysLineHdlr((uchar *)"moddir", 0, eCmdHdlrGetWord,
-		setModDir, NULL, NULL, eConfObjGlobal));
+		setModDir, NULL, NULL));
 
 	/* finally, the reset handler */
 	CHKiRet(regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
-		resetConfigVariables, NULL, NULL, eConfObjGlobal));
+		resetConfigVariables, NULL, NULL));
 
 	/* initialize the build-in templates */
 	pTmp = template_DebugFormat;
