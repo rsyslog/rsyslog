@@ -7,6 +7,7 @@ Version 6.2.1  [v6-stable], 2012-01-??
   order to limit potential regressions. However, it was considered useful
   enough to do the interface change in v6-stable; this also eases merging
   branches!
+- re-licensed larger parts of the codebase under the Apache license 2.0
 ---------------------------------------------------------------------------
 Version 6.2.0  [v6-stable], 2012-01-09
 - bugfix (kind of): removed numerical part from pri-text
