@@ -37,6 +37,7 @@ PKG_PROG_PKG_CONFIG
 
 case "${host}" in
   *-*-linux*)
+    AC_DEFINE([OS_LINUX], [1], [Indicator for a Linux OS])
     os_type="linux"
   ;;
   *-*-*darwin*|*-*-freebsd*|*-*-netbsd*|*-*-openbsd*)

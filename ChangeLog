@@ -1,5 +1,10 @@
 ---------------------------------------------------------------------------
 Version 5.9.6  [V5-DEVEL], 2012-??-??
+- refactored imklog linux driver, now combined with BSD driver
+  The Linux driver no longer supports outdated kernel symbol resolution,
+  which was disabled by default for very long. Also overall cleanup,
+  resulting in much smaller code. Linux and BSD are now covered by a
+  single small driver.
 - $IMUXSockRateLimitInterval DEFAULT CHANGED, was 5, now 0
   The new default turns off rate limiting. This was chosen as people
   experienced problems with rate-limiting activated by default. Now it

@@ -1,5 +1,4 @@
 pkglib_LTLIBRARIES = imklog.la
-
 imklog_la_SOURCES = imklog.c imklog.h
 
 # select klog "driver"
@@ -8,7 +7,7 @@ imklog_la_SOURCES += bsd.c
 endif
 
 if ENABLE_IMKLOG_LINUX
-imklog_la_SOURCES += linux.c module.h ksym.c ksyms.h ksym_mod.c
+imklog_la_SOURCES += bsd.c
 endif
 
 imklog_la_CPPFLAGS = -I$(top_srcdir) $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
