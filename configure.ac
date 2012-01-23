@@ -37,6 +37,7 @@ PKG_CHECK_MODULES(LIBEE, libee >= 0.3.1)
 
 case "${host}" in
   *-*-linux*)
+    AC_DEFINE([OS_LINUX], [1], [Indicator for a Linux OS])
     os_type="linux"
   ;;
   *-*-*darwin*|*-*-freebsd*|*-*-netbsd*|*-*-openbsd*)

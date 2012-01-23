@@ -216,15 +216,14 @@ rsRetVal Syslog(int priority, uchar *pMsg, struct timeval *tp)
 	DEFiRet;
 
 	/* then check if we have two PRIs. This can happen in case of systemd,
-	 * in which case the second PRI is the rigth one.
-	 * TODO: added kernel timestamp support to this PoC. -- rgerhards, 2011-03-18
+	 * in which case the second PRI is the right one.
 	 */
-	if(pMsg[3] == '<') { /* could be a pri... */
-		uchar *pMsgTmp = pMsg + 3;
+	if(pMsg[3] == '<' || (pMsg[3] == ' ' && pMsg[4] == '<')) { /* could be a pri... */
+		uchar *pMsgTmp = pMsg + ((pMsg[3] == '<') ? 3 : 4);
 		localRet = parsePRI(&pMsgTmp, &pri);
 		if(localRet == RS_RET_OK && pri >= 8 && pri <= 192) {
 			/* *this* is our PRI */
-			DBGPRINTF("imklog detected secondary PRI in klog msg\n");
+			DBGPRINTF("imklog detected secondary PRI(%d) in klog msg\n", pri);
 			pMsg = pMsgTmp;
 			priority = pri;
 		}
