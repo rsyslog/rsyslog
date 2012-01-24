@@ -1,5 +1,8 @@
 ---------------------------------------------------------------------------
 Version 4.8.1  [v4-stable], 2011-09-??
+- increased max config file line size to 64k
+  We now also emit an error message if even 64k is not enough (not
+  doing so previously may rightfully be considered as a bug)
 - bugfix: $ActionExecOnlyOnce interval did not work properly
   Thanks to Tomas Heinrich for the patch
 - bugfix: potential abort if ultra-large file io buffers are used and
