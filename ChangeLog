@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
-Version 5.9.6  [V5-DEVEL], 2012-??-??
+Version 5.9.5  [V5-DEVEL], 2012-01-27
+- improved impstats subsystem, added many new counters
+- enhanced module loader to not rely on PATH_MAX
 - refactored imklog linux driver, now combined with BSD driver
   The Linux driver no longer supports outdated kernel symbol resolution,
   which was disabled by default for very long. Also overall cleanup,
@@ -12,12 +14,6 @@ Version 5.9.6  [V5-DEVEL], 2012-??-??
   Thanks to Chris Gaffney for suggesting to make it opt-in; thanks to
   many unnamed others who already had complained at the time Chris made
   the suggestion ;-)
----------------------------------------------------------------------------
-Version 5.9.5  [V5-DEVEL], 2011-11-29
-- new stats counters for imudp and imtcp
-- new stats counters "discarded.nf" and "discarded.full" for queue object.
-  Tells how many messages have been discarded due to queue full condition.
-- enhanced module loader to not rely on PATH_MAX
 ---------------------------------------------------------------------------
 Version 5.9.4  [V5-DEVEL], 2011-11-29
 - imuxsock: added capability to "annotate" messages with "trusted
