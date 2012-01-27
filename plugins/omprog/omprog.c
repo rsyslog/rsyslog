@@ -375,6 +375,12 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 
 	CHKiRet(createInstance(&pData));
 
+	if(cs.szBinary == NULL) {
+		errmsg.LogError(0, RS_RET_CONF_RQRD_PARAM_MISSING,
+			"no binary to execute specified");
+		ABORT_FINALIZE(RS_RET_CONF_RQRD_PARAM_MISSING);
+	}
+
 	CHKmalloc(pData->szBinary = (uchar*) strdup((char*)cs.szBinary));
 	/* check if a non-standard template is to be applied */
 	if(*(p-1) == ';')
