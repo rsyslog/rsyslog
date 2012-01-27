@@ -300,6 +300,12 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	p += sizeof(":omprog:") - 1; /* eat indicator sequence  (-1 because of '\0'!) */
 	CHKiRet(createInstance(&pData));
 
+	if(szBinary == NULL) {
+		errmsg.LogError(0, RS_RET_CONF_RQRD_PARAM_MISSING,
+			"no binary to execute specified");
+		ABORT_FINALIZE(RS_RET_CONF_RQRD_PARAM_MISSING);
+	}
+
 	CHKmalloc(pData->szBinary = (uchar*) strdup((char*)szBinary));
 	/* check if a non-standard template is to be applied */
 	if(*(p-1) == ';')

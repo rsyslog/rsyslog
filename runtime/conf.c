@@ -27,7 +27,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#define CFGLNSIZ 4096 /* the maximum size of a configuraton file line, after re-combination */
+#define CFGLNSIZ 64*1024 /* the maximum size of a configuraton file line, after re-combination */
 #include "config.h"
 #include <stdlib.h>
 #include <stdio.h>
@@ -445,6 +445,9 @@ processConfFile(uchar *pConfFile)
 			if ((p - cbuf) > CFGLNSIZ - 30) {
 				/* Oops the buffer is full - what now? */
 				cline = cbuf;
+				dbgprintf("buffer overflow extending config file\n");
+				errmsg.LogError(0, RS_RET_CONFIG_ERROR,
+					"error: config file line %d too long", iLnNbr);
 			} else {
 				*p = 0;
 				cline = p;
