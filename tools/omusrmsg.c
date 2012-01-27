@@ -380,7 +380,6 @@ CODE_STD_FINALIZERnewActInst
 ENDnewActInst
 
 
-
 BEGINparseSelectorAct
 	es_str_t *usrs;
 	int bHadWarning;

@@ -70,15 +70,28 @@ DEFobjCurrIf(errmsg)
 
 
 typedef struct _instanceData {
-	uchar	f_fname[MAXFNAME];/* pipe or template name (display only) */
-	short	fd;		  /* pipe descriptor for (current) pipe */
-	sbool	bHadError;	  /* did we already have/report an error on this pipe? */
+	uchar	*f_fname;	/* pipe or template name (display only) */
+	uchar	*tplName;       /* format template to use */
+	short	fd;		/* pipe descriptor for (current) pipe */
+	sbool	bHadError;	/* did we already have/report an error on this pipe? */
 } instanceData;
 
 typedef struct configSettings_s {
 	EMPTY_STRUCT
 } configSettings_t;
 static configSettings_t __attribute__((unused)) cs;
+
+/* tables for interfacing with the v6 config system */
+/* action (instance) parameters */
+static struct cnfparamdescr actpdescr[] = {
+	{ "pipe", eCmdHdlrString, CNFPARAM_REQUIRED },
+	{ "template", eCmdHdlrGetWord, 0 }
+};
+static struct cnfparamblk actpblk =
+	{ CNFPARAMBLK_VERSION,
+	  sizeof(actpdescr)/sizeof(struct cnfparamdescr),
+	  actpdescr
+	};
 
 BEGINinitConfVars		/* (re)set config variables to default values */
 CODESTARTinitConfVars 
@@ -170,6 +183,7 @@ finalize_it:
 
 BEGINcreateInstance
 CODESTARTcreateInstance
+	pData->f_fname = NULL;
 	pData->fd = -1;
 	pData->bHadError = 0;
 ENDcreateInstance
@@ -177,6 +191,7 @@ ENDcreateInstance
 
 BEGINfreeInstance
 CODESTARTfreeInstance
+	free(pData->f_fname);
 	if(pData->fd != -1)
 		close(pData->fd);
 ENDfreeInstance
@@ -192,6 +207,49 @@ CODESTARTdoAction
 	iRet = writePipe(ppString, pData);
 ENDdoAction
 
+
+static inline void
+setInstParamDefaults(instanceData *pData)
+{
+	pData->tplName = NULL;
+}
+
+BEGINnewActInst
+	struct cnfparamvals *pvals;
+	int i;
+CODESTARTnewActInst
+	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
+		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
+
+	CHKiRet(createInstance(&pData));
+	setInstParamDefaults(pData);
+
+	CODE_STD_STRING_REQUESTparseSelectorAct(1)
+	for(i = 0 ; i < actpblk.nParams ; ++i) {
+		if(!pvals[i].bUsed)
+			continue;
+		if(!strcmp(actpblk.descr[i].name, "pipe")) {
+			pData->f_fname = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "template")) {
+			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else {
+			dbgprintf("ompipe: program error, non-handled "
+			  "param '%s'\n", actpblk.descr[i].name);
+		}
+	}
+
+	if(pData->tplName == NULL) {
+		CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*) "RSYSLOG_FileFormat",
+			OMSR_NO_RQD_TPL_OPTS));
+	} else {
+		CHKiRet(OMSRsetEntry(*ppOMSR, 0,
+			(uchar*) strdup((char*) pData->tplName),
+			OMSR_NO_RQD_TPL_OPTS));
+	}
+CODE_STD_FINALIZERnewActInst
+	cnfparamvalsDestruct(pvals, &actpblk);
+ENDnewActInst
 
 BEGINparseSelectorAct
 CODESTARTparseSelectorAct
@@ -212,12 +270,8 @@ CODESTARTparseSelectorAct
 	}
 
 	CODE_STD_STRING_REQUESTparseSelectorAct(1)
+	CHKmalloc(pData->f_fname = malloc(512));
 	++p;
-	/* rgerhards 2004-11-17: from now, we need to have different
-	 * processing, because after the first comma, the template name
-	 * to use is specified. So we need to scan for the first coma first
-	 * and then look at the rest of the line.
-	 */
 	CHKiRet(cflineParseFileName(p, (uchar*) pData->f_fname, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS,
 				       (pszFileDfltTplName == NULL) ? (uchar*)"RSYSLOG_FileFormat" : pszFileDfltTplName));
 		
@@ -244,6 +298,7 @@ CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
 CODEqueryEtryPt_doHUP
 CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES 
+CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 ENDqueryEtryPt
 
 
