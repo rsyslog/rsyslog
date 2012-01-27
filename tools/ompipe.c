@@ -70,7 +70,7 @@ DEFobjCurrIf(errmsg)
 
 
 typedef struct _instanceData {
-	uchar	*f_fname;	/* pipe or template name (display only) */
+	uchar	*pipe;	/* pipe or template name (display only) */
 	uchar	*tplName;       /* format template to use */
 	short	fd;		/* pipe descriptor for (current) pipe */
 	sbool	bHadError;	/* did we already have/report an error on this pipe? */
@@ -107,7 +107,7 @@ ENDisCompatibleWithFeature
 
 BEGINdbgPrintInstInfo
 CODESTARTdbgPrintInstInfo
-	dbgprintf("pipe %s", pData->f_fname);
+	dbgprintf("pipe %s", pData->pipe);
 	if (pData->fd == -1)
 		dbgprintf(" (unused)");
 ENDdbgPrintInstInfo
@@ -123,17 +123,17 @@ static inline rsRetVal
 preparePipe(instanceData *pData)
 {
 	DEFiRet;
-	pData->fd = open((char*) pData->f_fname, O_RDWR|O_NONBLOCK|O_CLOEXEC);
+	pData->fd = open((char*) pData->pipe, O_RDWR|O_NONBLOCK|O_CLOEXEC);
 	if(pData->fd < 0 ) {
 		pData->fd = -1;
 		if(!pData->bHadError) {
 			char errStr[1024];
 			rs_strerror_r(errno, errStr, sizeof(errStr));
 			errmsg.LogError(0, RS_RET_NO_FILE_ACCESS, "Could no open output pipe '%s': %s",
-				        pData->f_fname, errStr);
+				        pData->pipe, errStr);
 			pData->bHadError = 1;
 		}
-		DBGPRINTF("Error opening log pipe: %s\n", pData->f_fname);
+		DBGPRINTF("Error opening log pipe: %s\n", pData->pipe);
 	}
 	RETiRet;
 }
@@ -173,7 +173,7 @@ static rsRetVal writePipe(uchar **ppString, instanceData *pData)
 		pData->fd = -1; /* tell that fd is no longer open! */
 		iRet = RS_RET_SUSPENDED;
 		errno = e;
-		errmsg.LogError(0, NO_ERRCODE, "%s", pData->f_fname);
+		errmsg.LogError(0, NO_ERRCODE, "%s", pData->pipe);
 	}
 
 finalize_it:
@@ -183,7 +183,7 @@ finalize_it:
 
 BEGINcreateInstance
 CODESTARTcreateInstance
-	pData->f_fname = NULL;
+	pData->pipe = NULL;
 	pData->fd = -1;
 	pData->bHadError = 0;
 ENDcreateInstance
@@ -191,7 +191,7 @@ ENDcreateInstance
 
 BEGINfreeInstance
 CODESTARTfreeInstance
-	free(pData->f_fname);
+	free(pData->pipe);
 	if(pData->fd != -1)
 		close(pData->fd);
 ENDfreeInstance
@@ -203,7 +203,7 @@ ENDtryResume
 
 BEGINdoAction
 CODESTARTdoAction
-	DBGPRINTF(" (%s)\n", pData->f_fname);
+	DBGPRINTF(" (%s)\n", pData->pipe);
 	iRet = writePipe(ppString, pData);
 ENDdoAction
 
@@ -230,7 +230,7 @@ CODESTARTnewActInst
 		if(!pvals[i].bUsed)
 			continue;
 		if(!strcmp(actpblk.descr[i].name, "pipe")) {
-			pData->f_fname = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+			pData->pipe = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "template")) {
 			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else {
@@ -270,9 +270,9 @@ CODESTARTparseSelectorAct
 	}
 
 	CODE_STD_STRING_REQUESTparseSelectorAct(1)
-	CHKmalloc(pData->f_fname = malloc(512));
+	CHKmalloc(pData->pipe = malloc(512));
 	++p;
-	CHKiRet(cflineParseFileName(p, (uchar*) pData->f_fname, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS,
+	CHKiRet(cflineParseFileName(p, (uchar*) pData->pipe, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS,
 				       (pszFileDfltTplName == NULL) ? (uchar*)"RSYSLOG_FileFormat" : pszFileDfltTplName));
 		
 CODE_STD_FINALIZERparseSelectorAct
