@@ -1088,20 +1088,6 @@ AC_ARG_ENABLE(omruleset,
 AM_CONDITIONAL(ENABLE_OMRULESET, test x$enable_omruleset = xyes)
 
 
-# settings for omdbalerting
-AC_ARG_ENABLE(omdbalerting,
-        [AS_HELP_STRING([--enable-omdbalerting],[Compiles omdbalerting module @<:@default=no@:>@])],
-        [case "${enableval}" in
-         yes) enable_omdbalerting="yes" ;;
-          no) enable_omdbalerting="no" ;;
-           *) AC_MSG_ERROR(bad value ${enableval} for --enable-omdbalerting) ;;
-         esac],
-        [enable_omdbalerting=no]
-)
-AM_CONDITIONAL(ENABLE_OMDBALERTING, test x$enable_omdbalerting = xyes)
-
-
-
 # building the GUI (mostly for diagnostic reasons)
 AC_ARG_ENABLE(gui,
         [AS_HELP_STRING([--enable-gui],[Enable GUI programs @<:@default=no@:>@])],
@@ -1235,7 +1221,6 @@ AC_CONFIG_FILES([Makefile \
 		plugins/pmsnare/Makefile \
 		plugins/pmaixforwardedfrom/Makefile \
 		plugins/omruleset/Makefile \
-		plugins/omdbalerting/Makefile \
 		plugins/omuxsock/Makefile \
 		plugins/imfile/Makefile \
 		plugins/imsolaris/Makefile \
@@ -1293,7 +1278,6 @@ echo "    omstdout module will be compiled:         $enable_omstdout"
 echo "    omhdfs module will be compiled:           $enable_omhdfs"
 echo "    omelasticsearch module will be compiled:  $enable_elasticsearch"
 echo "    omruleset module will be compiled:        $enable_omruleset"
-echo "    omdbalerting module will be compiled:     $enable_omdbalerting"
 echo "    omudpspoof module will be compiled:       $enable_omudpspoof"
 echo "    omuxsock module will be compiled:         $enable_omuxsock"
 echo
