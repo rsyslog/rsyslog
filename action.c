@@ -1575,7 +1575,8 @@ countStatsBatchEnq(action_t *pAction, batch_t *pBatch)
 {
 	int i;
 	for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pBatch->pbShutdownImmediate) ; ++i) {
-		if(pBatch->pElem[i].bFilterOK) {
+		if(   pBatch->pElem[i].bFilterOK
+		   && pBatch->pElem[i].state != BATCH_STATE_DISC) {
 			STATSCOUNTER_INC(pAction->ctrProcessed, pAction->mutCtrProcessed);
 		}
 	}
@@ -1617,7 +1618,7 @@ doQueueEnqObjDirectBatch(action_t *pAction, batch_t *pBatch)
 				pBatch->pElem[i].bFilterOK = 0;
 				bModifiedFilter = 1;
 			}
-			if(pBatch->pElem[i].bFilterOK) {
+			if(pBatch->pElem[i].bFilterOK && pBatch->pElem[i].state != BATCH_STATE_DISC) {
 				STATSCOUNTER_INC(pAction->ctrProcessed, pAction->mutCtrProcessed);
 				bNeedSubmit = 1;
 			}
@@ -1629,7 +1630,7 @@ doQueueEnqObjDirectBatch(action_t *pAction, batch_t *pBatch)
 			/* note: stats were already computed above */
 			iRet = qqueueEnqObjDirectBatch(pAction->pQueue, pBatch);
 		} else {
-			DBGPRINTF("no need to submit batch, all bFilterOK==0\n");
+			DBGPRINTF("no need to submit batch, all bFilterOK==0 or discarded\n");
 		}
 		if(bModifiedFilter) {
 			for(i = 0 ; i < batchNumMsgs(pBatch) ; ++i) {
