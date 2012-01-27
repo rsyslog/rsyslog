@@ -736,9 +736,6 @@ rsRetVal cflineDoAction(rsconf_t *conf, uchar **p, action_t **ppAction)
 			iRet = RS_RET_OK;
 		}
 		if(iRet == RS_RET_OK || iRet == RS_RET_SUSPENDED) {
-			/* advance our config parser state: we now only accept an $End as valid,
-			 * no more action statments.
-			 */
 			if((iRet = addAction(&pAction, pMod, pModData, pOMSR, NULL, NULL,
 					     (iRet == RS_RET_SUSPENDED)? 1 : 0)) == RS_RET_OK) {
 				/* now check if the module is compatible with select features */
@@ -752,8 +749,7 @@ rsRetVal cflineDoAction(rsconf_t *conf, uchar **p, action_t **ppAction)
 				conf->actions.nbrActions++;	/* one more active action! */
 			}
 			break;
-		}
-		else if(iRet != RS_RET_CONFLINE_UNPROCESSED) {
+		} else if(iRet != RS_RET_CONFLINE_UNPROCESSED) {
 			/* In this case, the module would have handled the config
 			 * line, but some error occured while doing so. This error should
 			 * already by reported by the module. We do not try any other

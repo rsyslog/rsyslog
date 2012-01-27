@@ -2,6 +2,8 @@
 Version 6.3.7  [DEVEL] 2011-0?-??
 - imported refactored v5.9.6 imklog linux driver, now combined with BSD
   driver
+- bugfix: rsyslog aborted during startup if there is an error in loading
+  an action and legacy configuration mode is used
 - bugfix: bsd klog driver did no longer compile
 - removed imtemplate/omtemplate template modules, as this was waste of time
   The actual input/output modules are better copy templates. Instead, the

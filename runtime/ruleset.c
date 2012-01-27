@@ -266,7 +266,7 @@ addRule(ruleset_t *pThis, rule_t **ppRule)
 		rule.Destruct(ppRule);
 	} else {
 		CHKiRet(llAppend(&pThis->llRules, NULL, *ppRule));
-		dbgprintf("selector line successfully processed\n");
+		dbgprintf("selector line successfully processed, %d actions\n", iActionCnt);
 	}
 
 finalize_it:
