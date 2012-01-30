@@ -1,4 +1,8 @@
 ---------------------------------------------------------------------------
+Version 5.8.8  [V5-stable] 2012-0?-??
+- bugfix: omprog made rsyslog abort on startup if not binary to
+  execute was configured
+---------------------------------------------------------------------------
 Version 5.8.7  [V5-stable] 2012-01-17
 - bugfix: instabilities when using RFC5424 header fields
   Thanks to Kaiwang Chen for the patch
@@ -855,6 +859,11 @@ increase.
   output module interface
 ---------------------------------------------------------------------------
 Version 4.8.1  [v4-stable], 2011-09-??
+- increased max config file line size to 64k
+  We now also emit an error message if even 64k is not enough (not
+  doing so previously may rightfully be considered as a bug)
+- bugfix: omprog made rsyslog abort on startup if not binary to
+  execute was configured
 - bugfix: $ActionExecOnlyOnce interval did not work properly
   Thanks to Tomas Heinrich for the patch
 - bugfix: potential abort if ultra-large file io buffers are used and
