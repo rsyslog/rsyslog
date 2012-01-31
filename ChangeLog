@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 6.3.7  [DEVEL] 2011-0?-??
+Version 6.3.7  [DEVEL] 2012-01-31
 - imported refactored v5.9.6 imklog linux driver, now combined with BSD
   driver
 - bugfix: rsyslog aborted during startup if there is an error in loading
@@ -10,49 +10,15 @@ Version 6.3.7  [DEVEL] 2011-0?-??
   now-removed modules cost time for maintenance AND often caused confusion
   on what their role was.
 - added a couple of new stats objects
-- improved support for new v6 config system. Now also supported by
+- improved support for new v6 config system. The build-in output modules
+  now all support the new config language
 - bugfix: facility local<x> was not correctly interpreted in legacy filters
   Was only accepted if it was the first PRI in a multi-filter PRI.
   Thanks to forum user Mark for bringing this to our attention.
 - bugfix: potential abort after reading invalid X.509 certificate
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=290
   Thanks to Tomas Heinrich for the patch
----------------------------------------------------------------------------
-Version 6.2.1  [v6-stable], 2012-01-??
-- change plugin config interface to be compatible with pre-v6.2 system
-  The functionality was already removed (because it is superseeded by the
-  v6.3+ config language), but code was still present. I have now removed
-  those parts that affect interface. Full removal will happen in v6.3, in
-  order to limit potential regressions. However, it was considered useful
-  enough to do the interface change in v6-stable; this also eases merging
-  branches!
-- re-licensed larger parts of the codebase under the Apache license 2.0
-- bugfix: omprog made rsyslog abort on startup if not binary to
-  execute was configured
----------------------------------------------------------------------------
-Version 6.2.0  [v6-stable], 2012-01-09
-- bugfix (kind of): removed numerical part from pri-text
-  see v6 compatibility document for reasons
-- bugfix: race condition when extracting program name, APPNAME, structured
-  data and PROCID (RFC5424 fields) could lead to invalid characters e.g.
-  in dynamic file names or during forwarding (general malfunction of these
-  fields in templates, mostly under heavy load)
-- bugfix: imuxsock did no longer ignore message-provided timestamp, if
-  so configured (the *default*). Lead to no longer sub-second timestamps.
-  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=281
-- bugfix: omfile returns fatal error code for things that go really wrong
-  previously, RS_RET_RESUME was returned, which lead to a loop inside the
-  rule engine as omfile could not really recover.
-- bugfix: rsyslogd -v always said 64 atomics were not present
-  thanks to mono_matsuko for the patch
-- bugfix: potential abort after reading invalid X.509 certificate
-  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=290
-  Thanks to Tomas Heinrich for the patch
-- enhanced module loader to not rely on PATH_MAX
-- imuxsock: added capability to "annotate" messages with "trusted
-  information", which contains some properties obtained from the system
-  and as such sure to not be faked. This is inspired by the similiar idea
-  introduced in systemd.
+- relicensed larger parts of the code under Apache (ASL) 2.0
 ---------------------------------------------------------------------------
 Version 6.3.6  [DEVEL] 2011-09-19
 - added $InputRELPServerBindRuleset directive to specify rulesets for RELP
@@ -121,16 +87,41 @@ Version 6.3.0  [DEVEL] (rgerhards), 2011-06-01
 - introduced new config system
   http://blog.gerhards.net/2011/06/new-rsyslog-config-system-materializes.html
 ---------------------------------------------------------------------------
-Version 6.2.0  [v6-stable], 2011-0?-??
+Version 6.2.1  [v6-stable], 2012-01-??
+- change plugin config interface to be compatible with pre-v6.2 system
+  The functionality was already removed (because it is superseeded by the
+  v6.3+ config language), but code was still present. I have now removed
+  those parts that affect interface. Full removal will happen in v6.3, in
+  order to limit potential regressions. However, it was considered useful
+  enough to do the interface change in v6-stable; this also eases merging
+  branches!
+- re-licensed larger parts of the codebase under the Apache license 2.0
+- bugfix: omprog made rsyslog abort on startup if not binary to
+  execute was configured
+---------------------------------------------------------------------------
+Version 6.2.0  [v6-stable], 2012-01-09
 - bugfix (kind of): removed numerical part from pri-text
   see v6 compatibility document for reasons
 - bugfix: race condition when extracting program name, APPNAME, structured
   data and PROCID (RFC5424 fields) could lead to invalid characters e.g.
   in dynamic file names or during forwarding (general malfunction of these
   fields in templates, mostly under heavy load)
-- $Begin, $End, $StrictScoping directives have been removed as v6.4 will
-  provide the same functionality in a far better way. So we do not want
-  to clutter the code.
+- bugfix: imuxsock did no longer ignore message-provided timestamp, if
+  so configured (the *default*). Lead to no longer sub-second timestamps.
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=281
+- bugfix: omfile returns fatal error code for things that go really wrong
+  previously, RS_RET_RESUME was returned, which lead to a loop inside the
+  rule engine as omfile could not really recover.
+- bugfix: rsyslogd -v always said 64 atomics were not present
+  thanks to mono_matsuko for the patch
+- bugfix: potential abort after reading invalid X.509 certificate
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=290
+  Thanks to Tomas Heinrich for the patch
+- enhanced module loader to not rely on PATH_MAX
+- imuxsock: added capability to "annotate" messages with "trusted
+  information", which contains some properties obtained from the system
+  and as such sure to not be faked. This is inspired by the similiar idea
+  introduced in systemd.
 ---------------------------------------------------------------------------
 Version 6.1.12  [BETA], 2011-09-01
 - bugfix/security: off-by-two bug in legacy syslog parser, CVE-2011-3200
