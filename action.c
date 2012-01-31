@@ -348,8 +348,13 @@ actionConstructFinalize(action_t *pThis)
 	CHKiRet(statsobj.ConstructFinalize(pThis->statsobj));
 
 	/* create our queue */
-	/* find a name for our queue */
-	snprintf((char*) pszAName, sizeof(pszAName)/sizeof(uchar), "action %d queue", iActionNbr);
+	/* find a (friendly) name for our queue */
+ 	if(pThis->pszName == NULL) {
+		snprintf((char*) pszAName, sizeof(pszAName)/sizeof(uchar), "action %d queue", iActionNbr);
+ 	} else {
+		snprintf((char*) pszAName, sizeof(pszAName)/sizeof(uchar), "%s queue", pThis->pszName);
+ 	}
+	pszAName[63] = '\0'; /* to be on the save side */
 
 	/* now check if we can run the action in "firehose mode" during stage one of 
 	 * its processing (that is before messages are enqueued into the action q).
