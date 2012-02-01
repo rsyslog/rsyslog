@@ -106,8 +106,7 @@ typedef struct configSettings_s {
 		SNMP_TRAP_ENTERPRISESPECIFIC	(6)
 	*/
 } configSettings_t;
-
-SCOPING_SUPPORT; /* must be set AFTER configSettings_t is defined */
+static configSettings_t cs;
 
 BEGINinitConfVars		/* (re)set config variables to default values */
 CODESTARTinitConfVars 
@@ -512,9 +511,9 @@ ENDqueryEtryPt
 
 BEGINmodInit()
 CODESTARTmodInit
-SCOPINGmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
+	initConfVars();
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 
 	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionsnmptransport", 0, eCmdHdlrGetWord, NULL, &cs.pszTransport, STD_LOADABLE_MODULE_ID));

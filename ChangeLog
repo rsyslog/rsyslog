@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 6.3.7  [DEVEL] 2012-01-31
+Version 6.3.7  [DEVEL] 2012-02-01
 - imported refactored v5.9.6 imklog linux driver, now combined with BSD
   driver
 - bugfix: rsyslog aborted during startup if there is an error in loading
