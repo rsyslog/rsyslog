@@ -211,7 +211,7 @@ rsRetVal parsSkipAfterChar(rsParsObj *pThis, char c)
  * If bRequireOne is set to true, at least one whitespace
  * must exist, else an error is returned.
  */
-rsRetVal parsSkipWhitespace(rsParsObj *pThis, sbool bRequireOne)
+rsRetVal parsSkipWhitespace(rsParsObj *pThis)
 {
 	register unsigned char *pC;
 	int numSkipped;
@@ -229,9 +229,6 @@ rsRetVal parsSkipWhitespace(rsParsObj *pThis, sbool bRequireOne)
 		++pThis->iCurrPos;
 		++numSkipped;
 	}
-
-	if(bRequireOne && numSkipped == 0)
-		iRet = RS_RET_MISSING_WHITESPACE;
 
 	RETiRet;
 }
@@ -261,7 +258,7 @@ rsRetVal parsDelimCStr(rsParsObj *pThis, cstr_t **ppCStr, char cDelim, int bTrim
 	CHKiRet(rsCStrConstruct(&pCStr));
 
 	if(bTrimLeading)
-		parsSkipWhitespace(pThis, 0);
+		parsSkipWhitespace(pThis);
 
 	pC = rsCStrGetBufBeg(pThis->pCStr) + pThis->iCurrPos;
 
@@ -392,7 +389,7 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 
 	CHKiRet(cstrConstruct(&pCStr));
 
-	parsSkipWhitespace(pThis, 0);
+	parsSkipWhitespace(pThis);
 	pC = rsCStrGetBufBeg(pThis->pCStr) + pThis->iCurrPos;
 
 	/* we parse everything until either '/', ',' or
