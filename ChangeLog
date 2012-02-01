@@ -2,9 +2,6 @@
 Version 6.3.7  [DEVEL] 2012-02-01
 - imported refactored v5.9.6 imklog linux driver, now combined with BSD
   driver
-- bugfix: rsyslog aborted during startup if there is an error in loading
-  an action and legacy configuration mode is used
-- bugfix: bsd klog driver did no longer compile
 - removed imtemplate/omtemplate template modules, as this was waste of time
   The actual input/output modules are better copy templates. Instead, the
   now-removed modules cost time for maintenance AND often caused confusion
@@ -18,6 +15,10 @@ Version 6.3.7  [DEVEL] 2012-02-01
 - bugfix: potential abort after reading invalid X.509 certificate
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=290
   Thanks to Tomas Heinrich for the patch
+- bufgix: legacy parsing of some filters did not work correctly
+- bugfix: rsyslog aborted during startup if there is an error in loading
+  an action and legacy configuration mode is used
+- bugfix: bsd klog driver did no longer compile
 - relicensed larger parts of the code under Apache (ASL) 2.0
 ---------------------------------------------------------------------------
 Version 6.3.6  [DEVEL] 2011-09-19

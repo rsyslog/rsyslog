@@ -292,7 +292,6 @@ doGetQueueType(struct nvlst *valnode, struct cnfparamdescr *param,
 			      param->name, cstr);
 		free(cstr);
 	}
-dbgprintf("XXXXX: queue type: %d\n", (int)val->val.d.n);
 	val->val.datatype = 'N';
 }
 

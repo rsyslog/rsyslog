@@ -166,7 +166,7 @@ int fileno(FILE *stream);
 :[a-z0-9]+:[^\n]* |
 [\|\.\-\@\^?~>][^\n]+ |
 [a-z0-9_][a-z0-9_\-\+,;]*	{ yylval.s = strdup(yytext);
-				 // printf("lex: LEGA ACT: '%s'\n", yytext);
+				  dbgprintf("lex: LEGA ACT: '%s'\n", yytext);
 				  return LEGACY_ACTION; }
 <INOBJ>")"			{ BEGIN INITIAL; return ENDOBJ; }
 <INOBJ>[a-z][a-z0-9_\.]*	{ yylval.estr = es_newStrFromCStr(yytext, yyleng);
