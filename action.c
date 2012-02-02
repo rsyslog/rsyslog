@@ -1815,10 +1815,11 @@ doSubmitToActionQComplexBatch(action_t *pAction, batch_t *pBatch)
  * Defaults must have been set appropriately during action construct!
  * rgerhards, 2011-08-01
  */
-rsRetVal
+static rsRetVal
 actionApplyCnfParam(action_t *pAction, struct cnfparamvals *pvals)
 {
 	int i;
+	
 	for(i = 0 ; i < pblk.nParams ; ++i) {
 		if(!pvals[i].bUsed)
 			continue;
@@ -1847,7 +1848,6 @@ actionApplyCnfParam(action_t *pAction, struct cnfparamvals *pvals)
 			  "param '%s'\n", pblk.descr[i].name);
 		}
 	}
-	cnfparamvalsDestruct(pvals, &pblk);
 	return RS_RET_OK;
 }
 

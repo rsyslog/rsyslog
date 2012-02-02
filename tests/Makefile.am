@@ -82,6 +82,7 @@ endif
 if ENABLE_MYSQL_TESTS
 TESTS +=  \
 	mysql-basic.sh \
+	mysql-basic-cnf6.sh \
 	mysql-asyn.sh 
 if ENABLE_OMLIBDBI
 TESTS +=  \
@@ -457,8 +458,10 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   libdbi-asyn.sh \
 	   testsuites/libdbi-asyn.conf \
 	   mysql-basic.sh \
+	   mysql-basic-cnf6.sh \
 	   mysql-basic-vg.sh \
 	   testsuites/mysql-basic.conf \
+	   testsuites/mysql-basic-cnf6.conf \
 	   mysql-asyn.sh \
 	   mysql-asyn-vg.sh \
 	   testsuites/mysql-asyn.conf \
