@@ -66,6 +66,7 @@ typedef struct _instanceData {
 	unsigned uLastMySQLErrno;		/* last errno returned by MySQL or 0 if all is well */
 	uchar * f_configfile;			/* MySQL Client Configuration File */
 	uchar * f_configsection;		/* MySQL Client Configuration Section */
+	uchar	*tplName;       /* format template to use */
 } instanceData;
 
 typedef struct configSettings_s {
@@ -74,6 +75,25 @@ typedef struct configSettings_s {
 	uchar *pszMySQLConfigSection;	/* MySQL Client Configuration Section */ 
 } configSettings_t;
 static configSettings_t cs;
+
+/* tables for interfacing with the v6 config system */
+/* action (instance) parameters */
+static struct cnfparamdescr actpdescr[] = {
+	{ "server", eCmdHdlrGetWord, 1 },
+	{ "db", eCmdHdlrGetWord, 1 },
+	{ "uid", eCmdHdlrGetWord, 1 },
+	{ "pwd", eCmdHdlrGetWord, 1 },
+	{ "serverport", eCmdHdlrInt, 0 },
+	{ "mysqlconfig.file", eCmdHdlrGetWord, 0 },
+	{ "mysqlconfig.section", eCmdHdlrGetWord, 0 },
+	{ "template", eCmdHdlrGetWord, 0 }
+};
+static struct cnfparamblk actpblk =
+	{ CNFPARAMBLK_VERSION,
+	  sizeof(actpdescr)/sizeof(struct cnfparamdescr),
+	  actpdescr
+	};
+
 
 BEGINinitConfVars		/* (re)set config variables to default values */
 CODESTARTinitConfVars 
@@ -118,6 +138,9 @@ static void closeMySQL(instanceData *pData)
 
 BEGINfreeInstance
 CODESTARTfreeInstance
+	free(pData->f_configfile);
+	free(pData->f_configsection);
+	free(pData->tplName);
 	closeMySQL(pData);
 ENDfreeInstance
 
@@ -259,6 +282,80 @@ CODESTARTdoAction
 ENDdoAction
 
 
+static inline void
+setInstParamDefaults(instanceData *pData)
+{
+	pData->f_dbsrvPort = 0;
+	pData->f_configfile = NULL;
+	pData->f_configsection = NULL;
+	pData->tplName = NULL;
+	pData->f_hmysql = NULL; /* initialize, but connect only on first message (important for queued mode!) */
+}
+
+
+/* note: we use the fixed-size buffers inside the config object to avoid
+ * changing too much of the previous plumbing. rgerhards, 2012-02-02
+ */
+BEGINnewActInst
+	struct cnfparamvals *pvals;
+	int i;
+	char *cstr;
+CODESTARTnewActInst
+	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
+		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
+
+	CHKiRet(createInstance(&pData));
+	setInstParamDefaults(pData);
+
+	CODE_STD_STRING_REQUESTparseSelectorAct(1)
+	for(i = 0 ; i < actpblk.nParams ; ++i) {
+		if(!pvals[i].bUsed)
+			continue;
+		if(!strcmp(actpblk.descr[i].name, "server")) {
+			cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
+			strncpy(pData->f_dbsrv, cstr, sizeof(pData->f_dbsrv));
+			free(cstr);
+		} else if(!strcmp(actpblk.descr[i].name, "serverport")) {
+			pData->f_dbsrvPort = (int) pvals[i].val.d.n, NULL;
+		} else if(!strcmp(actpblk.descr[i].name, "db")) {
+			cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
+			strncpy(pData->f_dbname, cstr, sizeof(pData->f_dbname));
+			free(cstr);
+		} else if(!strcmp(actpblk.descr[i].name, "uid")) {
+			cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
+			strncpy(pData->f_dbuid, cstr, sizeof(pData->f_dbuid));
+			free(cstr);
+		} else if(!strcmp(actpblk.descr[i].name, "pwd")) {
+			cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
+			strncpy(pData->f_dbpwd, cstr, sizeof(pData->f_dbpwd));
+			free(cstr);
+		} else if(!strcmp(actpblk.descr[i].name, "mysqlconfig.file")) {
+			pData->f_configfile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "mysqlconfig.section")) {
+			pData->f_configsection = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "template")) {
+			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else {
+			dbgprintf("ommysql: program error, non-handled "
+			  "param '%s'\n", actpblk.descr[i].name);
+		}
+	}
+
+	if(pData->tplName == NULL) {
+		CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*) strdup(" StdDBFmt"),
+			OMSR_RQD_TPL_OPT_SQL));
+	} else {
+		CHKiRet(OMSRsetEntry(*ppOMSR, 0,
+			(uchar*) strdup((char*) pData->tplName),
+			OMSR_RQD_TPL_OPT_SQL));
+	}
+CODE_STD_FINALIZERnewActInst
+dbgprintf("XXXX: added param, iRet %d\n", iRet);
+	cnfparamvalsDestruct(pvals, &actpblk);
+ENDnewActInst
+
+
 BEGINparseSelectorAct
 	int iMySQLPropErr = 0;
 CODESTARTparseSelectorAct
@@ -337,6 +434,7 @@ ENDmodExit
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
+CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 ENDqueryEtryPt
 
 
