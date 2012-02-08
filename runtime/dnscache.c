@@ -344,7 +344,7 @@ dbgprintf("XXXX: hostn '%s', ip '%s'\n", etry->pszHostFQDN, etry->ip);
 
 finalize_it:
 	pthread_rwlock_unlock(&dnsCache.rwlock);
-	if(iRet != RS_RET_OK) {
+	if(iRet != RS_RET_OK && iRet != RS_RET_ADDRESS_UNKNOWN) {
 		DBGPRINTF("dnscacheLookup failed with iRet %d\n", iRet);
 		strcpy((char*) pszHostFQDN, "???");
 		strcpy((char*) ip, "???");
