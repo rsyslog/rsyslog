@@ -3,6 +3,7 @@ Version 6.3.8  [DEVEL] 2012-02-??
 - upgraded more plugins to support the new v6 config format:
   - ommysql
   - omlibdbi
+  - omsnmp
 - bugfix: abort during startup when rsyslog.conf v6+ format was used in
   a certain way
 ---------------------------------------------------------------------------
