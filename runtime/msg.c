@@ -421,6 +421,7 @@ resolveDNS(msg_t *pMsg) {
 	uchar fromHostFQDN[NI_MAXHOST];
 	DEFiRet;
 
+dbgprintf("XXXX: in msg/resolveDNS (dnscache)\n");
 	MsgLock(pMsg);
 	CHKiRet(objUse(net, CORE_COMPONENT));
 	if(pMsg->msgFlags & NEEDS_DNSRESOL) {
@@ -431,12 +432,12 @@ resolveDNS(msg_t *pMsg) {
 		}
 	}
 finalize_it:
-	MsgUnlock(pMsg);
 	if(iRet != RS_RET_OK) {
 		/* best we can do: remove property */
 		MsgSetRcvFromStr(pMsg, UCHAR_CONSTANT(""), 0, &propFromHost);
 		prop.Destruct(&propFromHost);
 	}
+	MsgUnlock(pMsg);
 	if(propFromHost != NULL)
 		prop.Destruct(&propFromHost);
 	if(propFromHostIP != NULL)

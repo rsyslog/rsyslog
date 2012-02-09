@@ -179,6 +179,7 @@ resolveAddr(struct sockaddr_storage *addr, uchar *pszHostFQDN, uchar *ip)
 		error = mygetnameinfo((struct sockaddr *)addr, SALEN((struct sockaddr *) addr),
 				    (char*)pszHostFQDN, NI_MAXHOST, NULL, 0, NI_NAMEREQD);
 		
+dbgprintf("dnscache: error %d after 2nd mygetnameinfo\n", error);
 		if(error == 0) {
 			memset (&hints, 0, sizeof (struct addrinfo));
 			hints.ai_flags = AI_NUMERICHOST;
@@ -223,14 +224,14 @@ resolveAddr(struct sockaddr_storage *addr, uchar *pszHostFQDN, uchar *ip)
 
 				error = 1; /* that will trigger using IP address below. */
 			}
-		}		
+		}
 		pthread_sigmask(SIG_SETMASK, &omask, NULL);
 	}
 
+dbgprintf("dnscache: error %d, DisableDNS %d\n", error, glbl.GetDisableDNS());
         if(error || glbl.GetDisableDNS()) {
                 dbgprintf("Host name for your address (%s) unknown\n", ip);
 		strcpy((char*) pszHostFQDN, (char*)ip);
-		ABORT_FINALIZE(RS_RET_ADDRESS_UNKNOWN);
         }
 
 finalize_it:
@@ -344,6 +345,7 @@ dbgprintf("XXXX: hostn '%s', ip '%s'\n", etry->pszHostFQDN, etry->ip);
 
 finalize_it:
 	pthread_rwlock_unlock(&dnsCache.rwlock);
+dbgprintf("XXXX: dnscacheLookup finished, iRet=%d\n", iRet);
 	if(iRet != RS_RET_OK && iRet != RS_RET_ADDRESS_UNKNOWN) {
 		DBGPRINTF("dnscacheLookup failed with iRet %d\n", iRet);
 		strcpy((char*) pszHostFQDN, "???");

@@ -1130,7 +1130,7 @@ rsRetVal cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQDN
 
 	iRet = dnscacheLookup(f, pszHostFQDN, pszIP);
 
-	if(iRet == RS_RET_INVALID_SOURCE || iRet == RS_RET_ADDRESS_UNKNOWN) {
+	if(iRet == RS_RET_INVALID_SOURCE) {
 		strcpy((char*) pszHost, (char*) pszHostFQDN); /* we use whatever was provided as replacement */
 		ABORT_FINALIZE(RS_RET_OK); /* this is handled, we are happy with it */
 	} else if(iRet != RS_RET_OK) {
