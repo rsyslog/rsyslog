@@ -281,7 +281,9 @@ startupSrv(ptcpsrv_t *pSrv)
 				continue;
                 	}
 #endif
-                }
+                } else {
+			isIPv6 = 0;
+		}
        		if(setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char *) &on, sizeof(on)) < 0 ) {
 			DBGPRINTF("error %d setting tcp socket option\n", errno);
                         close(sock);
