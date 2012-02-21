@@ -1,13 +1,15 @@
 ---------------------------------------------------------------------------
 Version 6.3.8  [DEVEL] 2012-02-??
-- bugfix: property $!all-json made rsyslog abort if not normalized data
-  were available
+- added mmjsonparse to support recognizing and parsing JSON enhanced syslog
+  messages
 - upgraded more plugins to support the new v6 config format:
   - ommysql
   - omlibdbi
   - omsnmp
 - bugfix: abort during startup when rsyslog.conf v6+ format was used in
   a certain way
+- bugfix: property $!all-json made rsyslog abort if no normalized data
+  was available
 ---------------------------------------------------------------------------
 Version 6.3.7  [DEVEL] 2012-02-02
 - imported refactored v5.9.6 imklog linux driver, now combined with BSD

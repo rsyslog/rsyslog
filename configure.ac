@@ -33,7 +33,7 @@ PKG_PROG_PKG_CONFIG
 
 # modules we require
 PKG_CHECK_MODULES(LIBESTR, libestr >= 0.1.2)
-PKG_CHECK_MODULES(LIBEE, libee >= 0.3.1)
+PKG_CHECK_MODULES(LIBEE, libee >= 0.4.0)
 
 case "${host}" in
   *-*-linux*)
@@ -840,6 +840,22 @@ AC_SUBST(LOGNORM_CFLAGS)
 AC_SUBST(LOGNORM_LIBS)
 
 
+# mmnjsonparse
+AC_ARG_ENABLE(mmjsonparse,
+        [AS_HELP_STRING([--enable-mmjsonparse],[Enable building mmjsonparse support @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_mmjsonparse="yes" ;;
+          no) enable_mmjsonparse="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-mmjsonparse) ;;
+         esac],
+        [enable_mmjsonparse=no]
+)
+if test "x$enable_mmjsonparse" = "xyes"; then
+	PKG_CHECK_MODULES(LIBLOGNORM, lognorm >= 0.3.1)
+fi
+AM_CONDITIONAL(ENABLE_MMJSONPARSE, test x$enable_mmjsonparse = xyes)
+
+
 # RELP support
 AC_ARG_ENABLE(relp,
         [AS_HELP_STRING([--enable-relp],[Enable RELP support @<:@default=no@:>@])],
@@ -1240,6 +1256,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omoracle/Makefile \
 		plugins/omudpspoof/Makefile \
 		plugins/mmnormalize/Makefile \
+		plugins/mmjsonparse/Makefile \
 		plugins/omelasticsearch/Makefile \
 		plugins/sm_cust_bindcdr/Makefile \
 		plugins/mmsnmptrapd/Makefile \
@@ -1290,6 +1307,7 @@ echo "    pmsnare module will be compiled:          $enable_pmsnare"
 echo
 echo "---{ message modification modules }---"
 echo "    mmnormalize module will be compiled:      $enable_mmnormalize"
+echo "    mmjsonparse module will be compiled:      $enable_mmjsonparse"
 echo "    mmsnmptrapd module will be compiled:      $enable_mmsnmptrapd"
 echo
 echo "---{ strgen modules }---"
