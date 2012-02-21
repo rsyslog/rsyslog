@@ -2505,10 +2505,17 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			pRes = glbl.GetLocalHostName();
 			break;
 		case PROP_CEE_ALL_JSON:
-			ee_fmtEventToJSON(pMsg->event, &str);
-			pRes = (uchar*) es_str2cstr(str, "#000");
-			es_deleteStr(str);
-			*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
+			if(pMsg->event == NULL) {
+			if(*pbMustBeFreed == 1)
+				free(pRes);
+			pRes = (uchar*) "";
+			*pbMustBeFreed = 0;
+			} else {
+				ee_fmtEventToJSON(pMsg->event, &str);
+				pRes = (uchar*) es_str2cstr(str, "#000");
+				es_deleteStr(str);
+				*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
+			}
 			break;
 		case PROP_CEE:
 			getCEEPropVal(pMsg, propName, &pRes, &bufLen, pbMustBeFreed);

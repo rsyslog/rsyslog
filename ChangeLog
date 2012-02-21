@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 6.3.8  [DEVEL] 2012-02-??
+- bugfix: property $!all-json made rsyslog abort if not normalized data
+  were available
 - upgraded more plugins to support the new v6 config format:
   - ommysql
   - omlibdbi
