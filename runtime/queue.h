@@ -201,6 +201,7 @@ PROTOTYPEpropSetMeth(qqueue, toQShutdown, long);
 PROTOTYPEpropSetMeth(qqueue, toActShutdown, long);
 PROTOTYPEpropSetMeth(qqueue, toWrkShutdown, long);
 PROTOTYPEpropSetMeth(qqueue, toEnq, long);
+PROTOTYPEpropSetMeth(qqueue, iLightDlyMrk, int);
 PROTOTYPEpropSetMeth(qqueue, iHighWtrMrk, int);
 PROTOTYPEpropSetMeth(qqueue, iLowWtrMrk, int);
 PROTOTYPEpropSetMeth(qqueue, iDiscardMrk, int);

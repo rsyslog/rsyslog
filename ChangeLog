@@ -1,3 +1,6 @@
+- added configuration directives to customize queue light delay marks
+  $MainMsgQueueLightDelayMark, $ActionQueueLightDelayMark; both
+  specify number of messages starting at which a delay happens.
 ---------------------------------------------------------------------------
 Version 5.8.8  [V5-stable] 2012-0?-??
 - bugfix: omprog made rsyslog abort on startup if not binary to

@@ -262,6 +262,7 @@ static uchar *pszConfDAGFile = NULL;				/* name of config DAG file, non-NULL mea
 qqueue_t *pMsgQueue = NULL;				/* the main message queue */
 static int iMainMsgQueueSize = 10000;				/* size of the main message queue above */
 static int iMainMsgQHighWtrMark = 8000;				/* high water mark for disk-assisted queues */
+static int iMainMsgQLightDlyMark = 7000;			/* light delay mark for disk-assisted queues */
 static int iMainMsgQLowWtrMark = 2000;				/* low water mark for disk-assisted queues */
 static int iMainMsgQDiscardMark = 9800;				/* begin to discard messages */
 static int iMainMsgQDiscardSeverity = 8;			/* by default, discard nothing to prevent unintentional loss */
@@ -300,6 +301,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	pszMainMsgQFName = NULL;
 	iMainMsgQueueSize = 10000;
 	iMainMsgQHighWtrMark = 8000;
+	iMainMsgQLightDlyMark = 7000;
 	iMainMsgQLowWtrMark = 2000;
 	iMainMsgQDiscardMark = 9800;
 	iMainMsgQDiscardSeverity = 8;
@@ -1457,8 +1459,8 @@ static void dbgPrintInitInfo(void)
 		  iMainMsgQueueNumWorkers, iMainMsgQtoWrkShutdown, iMainMsgQPersistUpdCnt);
 	DBGPRINTF("Main queue timeouts: shutdown: %d, action completion shutdown: %d, enq: %d\n",
 		   iMainMsgQtoQShutdown, iMainMsgQtoActShutdown, iMainMsgQtoEnq);
-	DBGPRINTF("Main queue watermarks: high: %d, low: %d, discard: %d, discard-severity: %d\n",
-		   iMainMsgQHighWtrMark, iMainMsgQLowWtrMark, iMainMsgQDiscardMark, iMainMsgQDiscardSeverity);
+	DBGPRINTF("Main queue watermarks: high: %d, low: %d, discard: %d, discard-severity: %d, light-delay %d\n",
+		   iMainMsgQHighWtrMark, iMainMsgQLowWtrMark, iMainMsgQDiscardMark, iMainMsgQDiscardSeverity, iMainMsgQLightDlyMark);
 	DBGPRINTF("Main queue save on shutdown %d, max disk space allowed %lld\n",
 		   bMainMsgQSaveOnShutdown, iMainMsgQueMaxDiskSpace);
 	/* TODO: add
@@ -1574,6 +1576,7 @@ rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName)
 	setQPROP(qqueueSetiHighWtrMrk, "$MainMsgQueueHighWaterMark", iMainMsgQHighWtrMark);
 	setQPROP(qqueueSetiLowWtrMrk, "$MainMsgQueueLowWaterMark", iMainMsgQLowWtrMark);
 	setQPROP(qqueueSetiDiscardMrk, "$MainMsgQueueDiscardMark", iMainMsgQDiscardMark);
+	setQPROP(qqueueSetiLightDlyMrk, "$MainMsgQueueLightDelayMark", iMainMsgQLightDlyMark);
 	setQPROP(qqueueSetiDiscardSeverity, "$MainMsgQueueDiscardSeverity", iMainMsgQDiscardSeverity);
 	setQPROP(qqueueSetiMinMsgsPerWrkr, "$MainMsgQueueWorkerThreadMinimumMessages", iMainMsgQWrkMinMsgs);
 	setQPROP(qqueueSetbSaveOnShutdown, "$MainMsgQueueSaveOnShutdown", bMainMsgQSaveOnShutdown);
@@ -2051,6 +2054,7 @@ static rsRetVal loadBuildInModules(void)
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuehighwatermark", 0, eCmdHdlrInt, NULL, &iMainMsgQHighWtrMark, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuelowwatermark", 0, eCmdHdlrInt, NULL, &iMainMsgQLowWtrMark, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuediscardmark", 0, eCmdHdlrInt, NULL, &iMainMsgQDiscardMark, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuelightdelaymark", 0, eCmdHdlrInt, NULL, &iMainMsgQLightDlyMark, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuediscardseverity", 0, eCmdHdlrSeverity, NULL, &iMainMsgQDiscardSeverity, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuecheckpointinterval", 0, eCmdHdlrInt, NULL, &iMainMsgQPersistUpdCnt, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuesyncqueuefiles", 0, eCmdHdlrBinary, NULL, &bMainMsgQSyncQeueFiles, NULL));
