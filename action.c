@@ -144,7 +144,7 @@ static queueType_t ActionQueType = QUEUETYPE_DIRECT;		/* type of the main messag
 static int iActionQueueSize = 1000;				/* size of the main message queue above */
 static int iActionQueueDeqBatchSize = 16;			/* batch size for action queues */
 static int iActionQHighWtrMark = 800;				/* high water mark for disk-assisted queues */
-static int iActionQLightDlyMrk = 700;				/* light delay mark for disk-assisted queues */
+static int iActionQLightDlyMrk = -1;				/* light delay mark for disk-assisted queues */
 static int iActionQLowWtrMark = 200;				/* low water mark for disk-assisted queues */
 static int iActionQDiscardMark = 9800;				/* begin to discard messages */
 static int iActionQDiscardSeverity = 8;				/* by default, discard nothing to prevent unintentional loss */
@@ -227,7 +227,7 @@ actionResetQueueParams(void)
 	iActionQueueSize = 1000;			/* size of the main message queue above */
 	iActionQueueDeqBatchSize = 16;			/* default batch size */
 	iActionQHighWtrMark = 800;			/* high water mark for disk-assisted queues */
-	iActionQLightDlyMrk = 700;
+	iActionQLightDlyMrk = -1;
 	iActionQLowWtrMark = 200;			/* low water mark for disk-assisted queues */
 	iActionQDiscardMark = 9800;			/* begin to discard messages */
 	iActionQDiscardSeverity = 8;			/* discard warning and above */
@@ -424,7 +424,9 @@ actionConstructFinalize(action_t *pThis)
 	setQPROP(qqueueSettoWrkShutdown, "$ActionQueueWorkerTimeoutThreadShutdown", iActionQtoWrkShutdown);
 	setQPROP(qqueueSettoEnq, "$ActionQueueTimeoutEnqueue", iActionQtoEnq);
 	setQPROP(qqueueSetiHighWtrMrk, "$ActionQueueHighWaterMark", iActionQHighWtrMark);
-	setQPROP(qqueueSetiLightDlyMrk, "$ActionQueueLightDelayMark", iActionQLightDlyMrk);
+	if(iActionQLightDlyMrk > 0) {
+		setQPROP(qqueueSetiLightDlyMrk, "$ActionQueueLightDelayMark", iActionQLightDlyMrk);
+	}
 	setQPROP(qqueueSetiLowWtrMrk, "$ActionQueueLowWaterMark", iActionQLowWtrMark);
 	setQPROP(qqueueSetiDiscardMrk, "$ActionQueueDiscardMark", iActionQDiscardMark);
 	setQPROP(qqueueSetiDiscardSeverity, "$ActionQueueDiscardSeverity", iActionQDiscardSeverity);

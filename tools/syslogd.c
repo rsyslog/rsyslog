@@ -262,7 +262,7 @@ static uchar *pszConfDAGFile = NULL;				/* name of config DAG file, non-NULL mea
 qqueue_t *pMsgQueue = NULL;				/* the main message queue */
 static int iMainMsgQueueSize = 10000;				/* size of the main message queue above */
 static int iMainMsgQHighWtrMark = 8000;				/* high water mark for disk-assisted queues */
-static int iMainMsgQLightDlyMark = 7000;			/* light delay mark for disk-assisted queues */
+static int iMainMsgQLightDlyMark = -1;			/* light delay mark for disk-assisted queues */
 static int iMainMsgQLowWtrMark = 2000;				/* low water mark for disk-assisted queues */
 static int iMainMsgQDiscardMark = 9800;				/* begin to discard messages */
 static int iMainMsgQDiscardSeverity = 8;			/* by default, discard nothing to prevent unintentional loss */
@@ -301,7 +301,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	pszMainMsgQFName = NULL;
 	iMainMsgQueueSize = 10000;
 	iMainMsgQHighWtrMark = 8000;
-	iMainMsgQLightDlyMark = 7000;
+	iMainMsgQLightDlyMark = -1;
 	iMainMsgQLowWtrMark = 2000;
 	iMainMsgQDiscardMark = 9800;
 	iMainMsgQDiscardSeverity = 8;
@@ -1576,7 +1576,9 @@ rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName)
 	setQPROP(qqueueSetiHighWtrMrk, "$MainMsgQueueHighWaterMark", iMainMsgQHighWtrMark);
 	setQPROP(qqueueSetiLowWtrMrk, "$MainMsgQueueLowWaterMark", iMainMsgQLowWtrMark);
 	setQPROP(qqueueSetiDiscardMrk, "$MainMsgQueueDiscardMark", iMainMsgQDiscardMark);
-	setQPROP(qqueueSetiLightDlyMrk, "$MainMsgQueueLightDelayMark", iMainMsgQLightDlyMark);
+	if(iMainMsgQLightDlyMark > 0) {
+		setQPROP(qqueueSetiLightDlyMrk, "$MainMsgQueueLightDelayMark", iMainMsgQLightDlyMark);
+	}
 	setQPROP(qqueueSetiDiscardSeverity, "$MainMsgQueueDiscardSeverity", iMainMsgQDiscardSeverity);
 	setQPROP(qqueueSetiMinMsgsPerWrkr, "$MainMsgQueueWorkerThreadMinimumMessages", iMainMsgQWrkMinMsgs);
 	setQPROP(qqueueSetbSaveOnShutdown, "$MainMsgQueueSaveOnShutdown", bMainMsgQSaveOnShutdown);
