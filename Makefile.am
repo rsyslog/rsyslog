@@ -202,6 +202,10 @@ if ENABLE_MMJSONPARSE
 SUBDIRS += plugins/mmjsonparse
 endif
 
+if ENABLE_MMAUDIT
+SUBDIRS += plugins/mmaudit
+endif
+
 if ENABLE_ORACLE
 SUBDIRS += plugins/omoracle
 endif
