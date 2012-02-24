@@ -107,12 +107,113 @@ BEGINtryResume
 CODESTARTtryResume
 ENDtryResume
 
-#define COOKIE "@cee: "
-#define LEN_COOKIE (sizeof(COOKIE)-1)
+
+static inline void
+skipWhitespace(uchar **buf)
+{
+	while(**buf && isspace(**buf))
+		++(*buf);
+}
+
+
+static inline rsRetVal
+parseName(uchar **buf, char *name, unsigned lenName)
+{
+	unsigned i;
+	skipWhitespace(buf);
+	--lenName; /* reserve space for '\0' */
+	i = 0;
+	while(**buf && **buf != '=' && lenName) {
+//dbgprintf("parseNAme, buf: %s\n", *buf);
+		name[i++] = **buf;
+		++(*buf), --lenName;
+	}
+	name[i] = '\0';
+	return RS_RET_OK;
+}
+
+
+static inline rsRetVal
+parseValue(uchar **buf, char *val, unsigned lenval)
+{
+	char termc;
+	unsigned i;
+	DEFiRet;
+
+	--lenval; /* reserve space for '\0' */
+	i = 0;
+	if(**buf == '\0') {
+		FINALIZE;
+	} else if(**buf == '\'') {
+		termc = '\'';
+		++(*buf);
+	} else if(**buf == '"') {
+		termc = '"';
+		++(*buf);
+	} else {
+		termc = ' ';
+	}
+
+	while(**buf && **buf != termc && lenval) {
+//dbgprintf("parseValue, termc '%c', buf: %s\n", termc, *buf);
+		val[i++] = **buf;
+		++(*buf), --lenval;
+	}
+	val[i] = '\0';
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* parse the audit record and create libee structure
+ */
+static rsRetVal
+audit_parse(instanceData *pData, uchar *buf, struct ee_event **event)
+{
+	struct ee_field *f;
+	struct ee_value *eeval;
+	es_str_t *estr;
+	char name[1024];
+	char val[1024];
+	DEFiRet;
+
+	*event = ee_newEvent(pData->ctxee);
+	if(event == NULL) {
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+	(*event)->fields = ee_newFieldbucket(pData->ctxee);
+
+	while(*buf) {
+//dbgprintf("audit_parse, buf: '%s'\n", buf);
+		CHKiRet(parseName(&buf, name, sizeof(name)));
+		if(*buf != '=') {
+			ABORT_FINALIZE(RS_RET_ERR);
+		}
+		++buf;
+		CHKiRet(parseValue(&buf, val, sizeof(val)));
+
+		estr = es_newStrFromCStr(val, strlen(val));
+		eeval = ee_newValue((*event)->ctx);
+		ee_setStrValue(eeval, estr);
+		f = ee_newFieldFromNV((*event)->ctx, name, eeval);
+		ee_addFieldToBucket((*event)->fields, f);
+dbgprintf("mmaudit: parsed %s=%s\n", name, val);
+	}
+	
+
+finalize_it:
+	RETiRet;
+}
+
+
 BEGINdoAction
 	msg_t *pMsg;
 	uchar *buf;
+	int typeID;
 	struct ee_event *event;
+	int i;
+	char auditID[1024];
 CODESTARTdoAction
 	pMsg = (msg_t*) ppString[0];
 	/* note that we can performance-optimize the interface, but this also
@@ -126,16 +227,39 @@ dbgprintf("mmaudit: msg is '%s'\n", buf);
 		++buf;
 	}
 
-	if(*buf == '\0' || strncmp((char*)buf, COOKIE, LEN_COOKIE)) {
-		DBGPRINTF("mmaudit: no JSON cookie: '%s'\n", buf);
+	if(*buf == '\0' || strncmp((char*)buf, "type=", 5)) {
+		DBGPRINTF("mmaudit: type= undetected: '%s'\n", buf);
 		FINALIZE;
 	}
-	buf += LEN_COOKIE;
-dbgprintf("mmaudit: cookie found, rest of message: '%s'\n", buf);
-	event = ee_newEventFromJSON(pData->ctxee, (char*)buf);
+	buf += 5;
+
+	typeID = 0;
+	while(*buf && isdigit(*buf)) {
+		typeID = typeID * 10 + *buf - '0';
+		++buf;
+	}
+
+	if(*buf == '\0' || strncmp((char*)buf, " audit(", sizeof(" audit(")-1)) {
+		DBGPRINTF("mmaudit: audit( header not found: %s'\n", buf);
+		FINALIZE;
+	}
+	buf += sizeof(" audit(");
+
+	for(i = 0 ; i < (sizeof(auditID)-2) && *buf && *buf != ')' ; ++i) {
+		auditID[i] = *buf++;
+	}
+	auditID[i] = '\0';
+	if(*buf != ')' || *(buf+1) != ':') {
+		DBGPRINTF("mmaudit: trailer '):' not found, no audit record: %s'\n", buf);
+		FINALIZE;
+	}
+	buf += 2;
+
+dbgprintf("mmaudit: cookie found, type %d, auditID '%s', rest of message: '%s'\n", typeID, auditID, buf);
+	audit_parse(pData, buf, &event);
 	if(event == NULL) {
-		DBGPRINTF("mmaudit: JSON parse error, assuming no "
-			  "JSON-enhanced message: '%s'\n", buf);
+		DBGPRINTF("mmaudit: audit parse error, assuming no "
+			  "audit message: '%s'\n", buf);
 		FINALIZE;
 	}
 	/* TODO: in the long term, we need to think about merging & different
