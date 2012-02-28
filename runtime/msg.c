@@ -3151,7 +3151,7 @@ msgGetCEEVarNew(msg_t *pMsg, char *name)
 	epropName = es_newStrFromCStr(name, strlen(name)); // TODO: optimize (in grammar!) 
 	field = ee_getEventField(pMsg->event, epropName);
 	if(field != NULL) {
-		estr = ee_getFieldValueAsStr(field, 0);
+		ee_getFieldAsString(field, &estr);
 	}
 	if(estr == NULL) {
 		DBGPRINTF("msgGetCEEVar: error obtaining var (field=%p, var='%s')\n",
