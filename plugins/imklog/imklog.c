@@ -135,8 +135,8 @@ enqMsg(uchar *msg, uchar* pszTag, int iFacility, int iSeverity, struct timeval *
 	MsgSetRcvFromIP(pMsg, pLocalHostIP);
 	MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName(), ustrlen(glbl.GetLocalHostName()));
 	MsgSetTAG(pMsg, pszTag, ustrlen(pszTag));
-	pMsg->iFacility = LOG_FAC(iFacility);
-	pMsg->iSeverity = LOG_PRI(iSeverity);
+	pMsg->iFacility = iFacility;
+	pMsg->iSeverity = iSeverity;
 	CHKiRet(submitMsg(pMsg));
 
 finalize_it:

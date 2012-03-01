@@ -111,6 +111,8 @@ Version 6.2.1  [v6-stable], 2012-01-??
 - re-licensed larger parts of the codebase under the Apache license 2.0
 - bugfix: omprog made rsyslog abort on startup if not binary to
   execute was configured
+- bugfix: imklog invalidly computed facility and severity
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=313
 ---------------------------------------------------------------------------
 Version 6.2.0  [v6-stable], 2012-01-09
 - bugfix (kind of): removed numerical part from pri-text
@@ -472,6 +474,8 @@ Version 5.9.0  [V5-DEVEL] (rgerhards), 2011-06-08
 Version 5.8.8  [V5-stable] 2012-0?-??
 - bugfix: omprog made rsyslog abort on startup if not binary to
   execute was configured
+- bugfix: imklog invalidly computed facility and severity
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=313
 ---------------------------------------------------------------------------
 Version 5.8.7  [V5-stable] 2012-01-17
 - bugfix: instabilities when using RFC5424 header fields
