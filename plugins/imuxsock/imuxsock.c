@@ -985,6 +985,12 @@ activateListeners()
 #	endif
 	if(runModConf->pLogSockName != NULL)
 		listeners[0].sockName = runModConf->pLogSockName;
+	else if(sd_booted()) {
+		struct stat st;
+		if(stat(SYSTEMD_PATH_LOG, &st) != -1 && S_ISSOCK(st.st_mode)) {
+			listeners[0].sockName = (uchar*) SYSTEMD_PATH_LOG;
+		}
+	}
 	if(runModConf->ratelimitIntervalSysSock > 0) {
 		if((listeners[0].ht = create_hashtable(100, hash_from_key_fn, key_equals_fn, NULL)) == NULL) {
 			/* in this case, we simply turn of rate-limiting */
@@ -1146,71 +1152,6 @@ ENDrunInput
 
 BEGINwillRun
 CODESTARTwillRun
-<<<<<<< HEAD
-=======
-	register int i;
-	int actSocks;
-
-	/* first apply some config settings */
-#	ifdef OS_SOLARIS
-		/* under solaris, we must NEVER process the local log socket, because
-		 * it is implemented there differently. If we used it, we would actually
-		 * delete it and render the system partly unusable. So don't do that.
-		 * rgerhards, 2010-03-26
-		 */
-		startIndexUxLocalSockets = 1;
-#	else
-		startIndexUxLocalSockets = bOmitLocalLogging ? 1 : 0;
-#	endif
-	if(pLogSockName != NULL)
-		listeners[0].sockName = pLogSockName;
-	else if(sd_booted()) {
-		struct stat st;
-		if(stat(SYSTEMD_PATH_LOG, &st) != -1 && S_ISSOCK(st.st_mode)) {
-			listeners[0].sockName = SYSTEMD_PATH_LOG;
-		}
-	}
-	if(ratelimitIntervalSysSock > 0) {
-		if((listeners[0].ht = create_hashtable(100, hash_from_key_fn, key_equals_fn, NULL)) == NULL) {
-			/* in this case, we simply turn of rate-limiting */
-			dbgprintf("imuxsock: turning off rate limiting because we could not "
-				  "create hash table\n");
-			ratelimitIntervalSysSock = 0;
-		}
-	}
-	listeners[0].ratelimitInterval = ratelimitIntervalSysSock;
-	listeners[0].ratelimitBurst = ratelimitBurstSysSock;
-	listeners[0].ratelimitSev = ratelimitSeveritySysSock;
-	listeners[0].bUseCreds = (bWritePidSysSock || ratelimitIntervalSysSock) ? 1 : 0;
-	listeners[0].bWritePid = bWritePidSysSock;
-
-	sd_fds = sd_listen_fds(0);
-	if (sd_fds < 0) {
-		errmsg.LogError(-sd_fds, NO_ERRCODE, "imuxsock: Failed to acquire systemd socket");
-		ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
-	}
-
-	/* initialize and return if will run or not */
-	actSocks = 0;
-	for (i = startIndexUxLocalSockets ; i < nfd ; i++) {
-		if(openLogSocket(&(listeners[i])) == RS_RET_OK) {
-			++actSocks;
-			dbgprintf("imuxsock: Opened UNIX socket '%s' (fd %d).\n", listeners[i].sockName, listeners[i].fd);
-		}
-	}
-
-	if(actSocks == 0) {
-		errmsg.LogError(0, NO_ERRCODE, "imuxsock does not run because we could not aquire any socket\n");
-		ABORT_FINALIZE(RS_RET_ERR);
-	}
-
-	/* we need to create the inputName property (only once during our lifetime) */
-	CHKiRet(prop.Construct(&pInputName));
-	CHKiRet(prop.SetString(pInputName, UCHAR_CONSTANT("imuxsock"), sizeof("imuxsock") - 1));
-	CHKiRet(prop.ConstructFinalize(pInputName));
-
-finalize_it:
->>>>>>> 0bdeeb3c540a0e8e2946119163f9c2a3e0de9cfd
 ENDwillRun
 
 
