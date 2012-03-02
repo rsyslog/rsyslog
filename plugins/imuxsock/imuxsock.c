@@ -69,8 +69,11 @@ MODULE_CNFNAME("imuxsock")
 #define _PATH_LOG	"/dev/log"
 #endif
 #endif
+#ifndef SYSTEMD_JOURNAL
+#define SYSTEMD_JOURNAL  "/run/systemd/journal"
+#endif
 #ifndef SYSTEMD_PATH_LOG
-#define SYSTEMD_PATH_LOG "/run/systemd/journal/syslog"
+#define SYSTEMD_PATH_LOG SYSTEMD_JOURNAL "/syslog"
 #endif
 
 /* forward definitions */
