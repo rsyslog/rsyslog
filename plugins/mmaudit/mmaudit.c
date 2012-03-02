@@ -182,7 +182,6 @@ audit_parse(instanceData *pData, uchar *buf, struct ee_event **event)
 	if(event == NULL) {
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
-	(*event)->fields = ee_newFieldbucket(pData->ctxee);
 
 	while(*buf) {
 //dbgprintf("audit_parse, buf: '%s'\n", buf);
@@ -194,10 +193,8 @@ audit_parse(instanceData *pData, uchar *buf, struct ee_event **event)
 		CHKiRet(parseValue(&buf, val, sizeof(val)));
 
 		estr = es_newStrFromCStr(val, strlen(val));
-		eeval = ee_newValue((*event)->ctx);
-		ee_setStrValue(eeval, estr);
-		f = ee_newFieldFromNV((*event)->ctx, name, eeval);
-		ee_addFieldToBucket((*event)->fields, f);
+		ee_addStrFieldToEvent(*event, name, estr);
+		es_deleteStr(estr);
 dbgprintf("mmaudit: parsed %s=%s\n", name, val);
 	}
 	
@@ -245,7 +242,7 @@ dbgprintf("mmaudit: msg is '%s'\n", buf);
 	}
 	buf += sizeof(" audit(");
 
-	for(i = 0 ; i < (sizeof(auditID)-2) && *buf && *buf != ')' ; ++i) {
+	for(i = 0 ; i < (int) (sizeof(auditID)-2) && *buf && *buf != ')' ; ++i) {
 		auditID[i] = *buf++;
 	}
 	auditID[i] = '\0';
