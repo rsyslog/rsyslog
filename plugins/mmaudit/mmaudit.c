@@ -171,8 +171,6 @@ finalize_it:
 static rsRetVal
 audit_parse(instanceData *pData, uchar *buf, struct ee_event **event)
 {
-	struct ee_field *f;
-	struct ee_value *eeval;
 	es_str_t *estr;
 	char name[1024];
 	char val[1024];
@@ -210,6 +208,7 @@ BEGINdoAction
 	int typeID;
 	struct ee_event *event;
 	int i;
+	es_str_t *estr;
 	char auditID[1024];
 CODESTARTdoAction
 	pMsg = (msg_t*) ppString[0];
@@ -259,6 +258,18 @@ dbgprintf("mmaudit: cookie found, type %d, auditID '%s', rest of message: '%s'\n
 			  "audit message: '%s'\n", buf);
 		FINALIZE;
 	}
+
+	/* we now need to shuffle the "outer" properties into that stream */
+	estr = es_newStrFromCStr(auditID, strlen(auditID));
+	ee_addStrFieldToEvent(event, "audithdr.auditid", estr);
+	es_deleteStr(estr);
+
+	/* we abuse auditID a bit to save space...  (TODO: change!) */
+	snprintf(auditID, sizeof(auditID), "%d", typeID);
+	estr = es_newStrFromCStr(auditID, strlen(auditID));
+	ee_addStrFieldToEvent(event, "audithdr.type", estr);
+	es_deleteStr(estr);
+
 	/* TODO: in the long term, we need to think about merging & different
 	   name spaces (probably best to add the newly-obtained event as a child to
 	   the existing event...)
