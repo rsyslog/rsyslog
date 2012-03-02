@@ -68,8 +68,11 @@ MODULE_TYPE_NOKEEP
 #define _PATH_LOG	"/dev/log"
 #endif
 #endif
+#ifndef SYSTEMD_JOURNAL
+#define SYSTEMD_JOURNAL  "/run/systemd/journal"
+#endif
 #ifndef SYSTEMD_PATH_LOG
-#define SYSTEMD_PATH_LOG "/run/systemd/journal/syslog"
+#define SYSTEMD_PATH_LOG SYSTEMD_JOURNAL "/syslog"
 #endif
 
 /* emulate struct ucred for platforms that do not have it */
@@ -963,7 +966,7 @@ CODESTARTwillRun
 		listeners[0].sockName = pLogSockName;
 	else if(sd_booted()) {
 		struct stat st;
-		if(stat(SYSTEMD_PATH_LOG, &st) != -1 && S_ISSOCK(st.st_mode)) {
+		if(stat(SYSTEMD_JOURNAL, &st) != -1 && S_ISDIR(st.st_mode)) {
 			listeners[0].sockName = SYSTEMD_PATH_LOG;
 		}
 	}
