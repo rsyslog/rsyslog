@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 5.8.8  [V5-stable] 2012-0?-??
+Version 5.8.8  [V5-stable] 2012-03-05
 - bugfix: omprog made rsyslog abort on startup if not binary to
   execute was configured
 - bugfix: imklog invalidly computed facility and severity
