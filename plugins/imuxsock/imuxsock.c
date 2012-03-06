@@ -89,6 +89,7 @@ DEF_IMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(prop)
+DEFobjCurrIf(net)
 DEFobjCurrIf(parser)
 DEFobjCurrIf(datetime)
 DEFobjCurrIf(statsobj)
@@ -157,6 +158,7 @@ static int sd_fds = 0;			/* number of systemd activated sockets */
 /* config settings */
 static int bOmitLocalLogging = 0;
 static uchar *pLogSockName = NULL;
+static uchar *pLocalIPIF = NULL;
 static uchar *pLogHostName = NULL;	/* host name to use with this socket */
 static int bUseFlowCtl = 0;		/* use flow control or not (if yes, only LIGHT is used! */
 static int bIgnoreTimestamp = 1;	/* ignore timestamps present in the incoming message? */
@@ -764,6 +766,8 @@ ENDrunInput
 
 
 BEGINwillRun
+	uchar myIP[128];
+	rsRetVal localRet;
 CODESTARTwillRun
 	register int i;
 	int actSocks;
@@ -784,7 +788,7 @@ CODESTARTwillRun
 	else if(sd_booted()) {
 		struct stat st;
 		if(stat(SYSTEMD_JOURNAL, &st) != -1 && S_ISDIR(st.st_mode)) {
-			listeners[0].sockName = SYSTEMD_PATH_LOG;
+			listeners[0].sockName = (uchar*)SYSTEMD_PATH_LOG;
 		}
 	}
 	if(ratelimitIntervalSysSock > 0) {
@@ -826,6 +830,23 @@ CODESTARTwillRun
 	CHKiRet(prop.SetString(pInputName, UCHAR_CONSTANT("imuxsock"), sizeof("imuxsock") - 1));
 	CHKiRet(prop.ConstructFinalize(pInputName));
 
+	if(pLocalIPIF == NULL) {
+		strcpy((char*)myIP, "127.0.0.1");
+	} else {
+		localRet = net.GetIFIPAddr((uchar*)"eth0", AF_UNSPEC, myIP, (int) sizeof(myIP));
+		if(localRet != RS_RET_OK) {
+			DBGPRINTF("imuxsock: could not obtain my IP, using 127.0.0.1 instead\n");
+			strcpy((char*)myIP, "127.0.0.1");
+		}
+	}
+
+	DBGPRINTF("imuxsock: using '%s' as localhost IP\n", myIP);
+
+	CHKiRet(prop.Construct(&pLocalHostIP));
+	CHKiRet(prop.SetString(pLocalHostIP, myIP, ustrlen(myIP)));
+	CHKiRet(prop.ConstructFinalize(pLocalHostIP));
+
+
 finalize_it:
 ENDwillRun
 
@@ -857,6 +878,7 @@ CODESTARTafterRun
 		}
 	/* free no longer needed string */
 	free(pLogSockName);
+	free(pLocalIPIF);
 	free(pLogHostName);
 
 	discardLogSockets();
@@ -901,6 +923,10 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 		free(pLogSockName);
 		pLogSockName = NULL;
 	}
+	if(pLocalIPIF != NULL) {
+		free(pLocalIPIF);
+		pLocalIPIF = NULL;
+	}
 	if(pLogHostName != NULL) {
 		free(pLogHostName);
 		pLogHostName = NULL;
@@ -931,6 +957,7 @@ CODESTARTmodInit
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
+	CHKiRet(objUse(net, CORE_COMPONENT));
 	CHKiRet(objUse(prop, CORE_COMPONENT));
 	CHKiRet(objUse(statsobj, CORE_COMPONENT));
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
@@ -953,10 +980,6 @@ CODEmodInit_QueryRegCFSLineHdlr
 		listeners[i].sockName = NULL;
 		listeners[i].fd  = -1;
 	}
-
-	CHKiRet(prop.Construct(&pLocalHostIP));
-	CHKiRet(prop.SetString(pLocalHostIP, UCHAR_CONSTANT("127.0.0.1"), sizeof("127.0.0.1") - 1));
-	CHKiRet(prop.ConstructFinalize(pLocalHostIP));
 
 	/* now init listen socket zero, the local log socket */
 	CHKiRet(prop.Construct(&(listeners[0].hostName)));
@@ -988,6 +1011,8 @@ CODEmodInit_QueryRegCFSLineHdlr
 		NULL, &ratelimitSeverity, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
 		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"imuxsocklocalipif", 0, eCmdHdlrGetWord,
+		NULL, &pLocalIPIF, STD_LOADABLE_MODULE_ID));
 	/* the following one is a (dirty) trick: the system log socket is not added via
 	 * an "addUnixListenSocket" config format. As such, it's properties can not be modified
 	 * via $InputUnixListenSocket*". So we need to add a special directive
