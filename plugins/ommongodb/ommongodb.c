@@ -19,6 +19,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#include "config.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -29,7 +30,6 @@
 #include <time.h>
 #include "bson.h"
 #include "mongo.h"
-#include "config.h"
 #include "rsyslog.h"
 #include "conf.h"
 #include "syslogd-types.h"
@@ -52,6 +52,7 @@
 #define MONGO_COLLECTION_NAME_SIZE 128
 
 MODULE_TYPE_OUTPUT
+MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("ommongodb")
 /* internal structures
  */
@@ -60,6 +61,7 @@ DEFobjCurrIf(errmsg)
 
 typedef struct _instanceData {
         mongo_connection conn[1]; /* ptr */
+        //mongo conn[1]; /* ptr */
         mongo_connection_options opts[1];
         mongo_conn_return status;
         char db[MONGO_DB_NAME_SIZE];
@@ -106,29 +108,6 @@ CODESTARTdbgPrintInstInfo
 	/* nothing special here */
 ENDdbgPrintInstInfo
 
-/* log a database error with descriptive message.
- * We check if we have a valid MongoDB handle. If not, we simply
- * report an error
- */
-static void reportDBError(instanceData *pData, int bSilent)
-{
-	char errMsg[512];
-        bson ErrObj;
-
-	ASSERT(pData != NULL);
-
-	/* output log message */
-	errno = 0;
-	if(pData->conn == NULL) {
-		errmsg.LogError(0, NO_ERRCODE, "unknown DB error occured - could not obtain MongoDB handle");
-	} else { /* we can ask mysql for the error description... */
-            //we should handle the error. if bSilent is set then we should print as debug
-                mongo_cmd_get_last_error(pData->conn, pData->db, &ErrObj);
-                bson_destroy(&ErrObj);
-	}
-
-	return;
-}
 
 /* The following function is responsible for initializing a
  * MySQL connection.
