@@ -150,6 +150,10 @@ if ENABLE_OMUDPSPOOF
 SUBDIRS += plugins/omudpspoof
 endif
 
+if ENABLE_OMMONGODB
+SUBDIRS += plugins/ommongodb
+endif
+
 if ENABLE_OMUXSOCK
 SUBDIRS += plugins/omuxsock
 endif
