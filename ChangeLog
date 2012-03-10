@@ -1,6 +1,6 @@
 - added capability to use a local interface IP address as fromhost-ip for
-  imuxsock
-  new config directives: $IMUXSockLocalIPIF
+  imuxsock imklog
+  new config directives: $IMUXSockLocalIPIF, $klogLocalIPIF
 - added configuration directives to customize queue light delay marks
   $MainMsgQueueLightDelayMark, $ActionQueueLightDelayMark; both
   specify number of messages starting at which a delay happens.

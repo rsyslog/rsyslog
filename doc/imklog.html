@@ -36,6 +36,11 @@ processing.<span style="font-weight: bold;"></span></li>
 <li><span style="font-weight: bold;"></span>$DebugPrintKernelSymbols
 [on/<b>off</b>]<br>
 Linux only, ignored on other platforms (but may be specified)</li>
+<li><b>$klogLocalIPIF</b> [interface name] - (available since 5.9.6) - if provided, the IP of the specified
+interface (e.g. "eth0") shall be used as fromhost-ip for imklog-originating messages.
+If this directive is not given OR the interface cannot be found (or has no IP address),
+the default of "127.0.0.1" is used.
+</li>
 <li>$klogSymbolLookup [on/<b>off</b>] --
 disables imklog kernel symbol translation (former klogd -x option). NOTE that 
 this option is counter-productive on recent kernels (>= 2.6) because the

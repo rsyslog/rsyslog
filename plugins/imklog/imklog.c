@@ -44,6 +44,7 @@
 #include <stdarg.h>
 #include <ctype.h>
 #include <stdlib.h>
+#include <sys/socket.h>
 
 #include "dirty.h"
 #include "cfsysline.h"
@@ -52,6 +53,7 @@
 #include "module-template.h"
 #include "datetime.h"
 #include "imklog.h"
+#include "net.h"
 #include "glbl.h"
 #include "prop.h"
 #include "unicode-helper.h"
@@ -64,6 +66,7 @@ DEF_IMOD_STATIC_DATA
 DEFobjCurrIf(datetime)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(prop)
+DEFobjCurrIf(net)
 
 /* configuration settings */
 int dbgPrintSymbols = 0; /* this one is extern so the helpers can access it! */
@@ -71,6 +74,7 @@ int symbols_twice = 0;
 int use_syscall = 0;
 int symbol_lookup = 0; /* on recent kernels > 2.6, the kernel does this */
 int bPermitNonKernel = 0; /* permit logging of messages not having LOG_KERN facility */
+static uchar *pLocalIPIF = NULL;
 int iFacilIntMsg; /* the facility to use for internal messages (set by driver) */
 uchar *pszPath = NULL;
 int console_log_level = -1;
@@ -233,10 +237,22 @@ ENDrunInput
 
 
 BEGINwillRun
+	uchar myIP[128];
+	rsRetVal localRet;
 CODESTARTwillRun
 	/* we need to create the inputName property (only once during our lifetime) */
 	CHKiRet(prop.CreateStringProp(&pInputName, UCHAR_CONSTANT("imklog"), sizeof("imklog") - 1));
-	CHKiRet(prop.CreateStringProp(&pLocalHostIP, UCHAR_CONSTANT("127.0.0.1"), sizeof("127.0.0.1") - 1));
+	if(pLocalIPIF == NULL) {
+		strcpy((char*)myIP, "127.0.0.1");
+	} else {
+		localRet = net.GetIFIPAddr(pLocalIPIF, AF_UNSPEC, myIP, (int) sizeof(myIP));
+		if(localRet != RS_RET_OK) {
+			DBGPRINTF("imuxsock: could not obtain my IP, using 127.0.0.1 instead\n");
+			strcpy((char*)myIP, "127.0.0.1");
+		}
+	}
+	DBGPRINTF("imklog: using '%s' as localhost IP\n", myIP);
+	CHKiRet(prop.CreateStringProp(&pLocalHostIP, myIP, ustrlen(myIP)));
 
         iRet = klogWillRun();
 finalize_it:
@@ -251,6 +267,7 @@ CODESTARTafterRun
 		prop.Destruct(&pInputName);
 	if(pLocalHostIP != NULL)
 		prop.Destruct(&pLocalHostIP);
+	free(pLocalIPIF);
 ENDafterRun
 
 
@@ -258,6 +275,7 @@ BEGINmodExit
 CODESTARTmodExit
 	/* release objects we used */
 	objRelease(glbl, CORE_COMPONENT);
+	objRelease(net, CORE_COMPONENT);
 	objRelease(datetime, CORE_COMPONENT);
 	objRelease(prop, CORE_COMPONENT);
 	if(pszPath != NULL)
@@ -282,6 +300,10 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 		free(pszPath);
 		pszPath = NULL;
 	}
+	if(pLocalIPIF != NULL) {
+		free(pLocalIPIF);
+		pLocalIPIF = NULL;
+	}
 	iFacilIntMsg = klogFacilIntMsg();
 	return RS_RET_OK;
 }
@@ -293,6 +315,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(prop, CORE_COMPONENT));
+	CHKiRet(objUse(net, CORE_COMPONENT));
 
 	iFacilIntMsg = klogFacilIntMsg();
 
@@ -304,6 +327,8 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"klogpermitnonkernelfacility", 0, eCmdHdlrBinary, NULL, &bPermitNonKernel, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"klogconsoleloglevel", 0, eCmdHdlrInt, NULL, &console_log_level, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"kloginternalmsgfacility", 0, eCmdHdlrFacility, NULL, &iFacilIntMsg, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"kloglocalipif", 0, eCmdHdlrGetWord,
+		NULL, &pLocalIPIF, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
 /* vim:set ai:
