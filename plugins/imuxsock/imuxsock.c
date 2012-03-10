@@ -833,7 +833,7 @@ CODESTARTwillRun
 	if(pLocalIPIF == NULL) {
 		strcpy((char*)myIP, "127.0.0.1");
 	} else {
-		localRet = net.GetIFIPAddr((uchar*)"eth0", AF_UNSPEC, myIP, (int) sizeof(myIP));
+		localRet = net.GetIFIPAddr((uchar*)pLocalIPIF, AF_UNSPEC, myIP, (int) sizeof(myIP));
 		if(localRet != RS_RET_OK) {
 			DBGPRINTF("imuxsock: could not obtain my IP, using 127.0.0.1 instead\n");
 			strcpy((char*)myIP, "127.0.0.1");
