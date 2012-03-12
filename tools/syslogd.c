@@ -2725,7 +2725,6 @@ int realMain(int argc, char **argv)
 				CHKmalloc(LocalHostName = (uchar*)strdup(hent->h_aliases[i]));
 			} else {
 				CHKmalloc(LocalHostName = (uchar*)strdup(hent->h_name));
-				int i;
 			}
 
 			if((p = (uchar*)strchr((char*)LocalHostName, '.')))
