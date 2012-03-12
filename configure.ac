@@ -1229,6 +1229,11 @@ AC_ARG_ENABLE(ommongodb,
 # you may want to do some library checks here - see snmp, mysql, pgsql modules
 # for samples
 #
+if test "x$enable_ommongodb" = "xyes"; then
+	PKG_CHECK_MODULES(LIBMONGO_CLIENT, libmongo-client >= 0.1.4)
+	AC_SUBST(LIBMONGO_CLIENT_CFLAGS)
+	AC_SUBST(LIBMONGO_CLIENT_LIBS)
+fi
 AM_CONDITIONAL(ENABLE_OMMONGODB, test x$enable_ommongodb = xyes)
 # end of mongodb code
 
@@ -1309,7 +1314,6 @@ echo
 echo "---{ output plugins }---"
 echo "    Mail support enabled:                     $enable_mail"
 echo "    omprog module will be compiled:           $enable_omprog"
-echo "    output mongodb module will be compiled:   $enable_ommongodb"
 echo "    omstdout module will be compiled:         $enable_omstdout"
 echo "    omhdfs module will be compiled:           $enable_omhdfs"
 echo "    omelasticsearch module will be compiled:  $enable_elasticsearch"
@@ -1337,6 +1341,7 @@ echo "---{ database support }---"
 echo "    MySql support enabled:                    $enable_mysql"
 echo "    libdbi support enabled:                   $enable_libdbi"
 echo "    PostgreSQL support enabled:               $enable_pgsql"
+echo "    mongodb support enabled:                  $enable_ommongodb"
 echo "    Oracle (OCI) support enabled:             $enable_oracle"
 echo
 echo "---{ protocol support }---"

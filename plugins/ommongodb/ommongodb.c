@@ -1,5 +1,8 @@
 /* ommongodb.c
  * Output module for mongodb.
+ * Note: this module uses the libmongo-client library. The original 10gen
+ * mongodb C interface is crap. Obtain the library here:
+ * https://github.com/algernon/libmongo-client
  *
  * Copyright 2007-2012 Rainer Gerhards and Adiscon GmbH.
  *
@@ -28,8 +31,8 @@
 #include <assert.h>
 #include <signal.h>
 #include <time.h>
-#include "bson.h"
-#include "mongo.h"
+#include <mongo.h>
+
 #include "rsyslog.h"
 #include "conf.h"
 #include "syslogd-types.h"
@@ -38,7 +41,6 @@
 #include "module-template.h"
 #include "errmsg.h"
 #include "cfsysline.h"
-#include "mongo-c-driver/src/mongo.h"
 
 #define countof(X) ( (size_t) ( sizeof(X)/sizeof*(X) ) )
 
@@ -60,15 +62,17 @@ DEF_OMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
 
 typedef struct _instanceData {
-        mongo_connection conn[1]; /* ptr */
-        //mongo conn[1]; /* ptr */
+	mongo_sync_connection *conn;
+	// OLD:
+#if 0
         mongo_connection_options opts[1];
         mongo_conn_return status;
+#endif
         char db[MONGO_DB_NAME_SIZE];
         char collection[MONGO_COLLECTION_NAME_SIZE];
         char dbcollection[MONGO_DB_NAME_SIZE + MONGO_COLLECTION_NAME_SIZE + 1];
         unsigned uLastMongoDBErrno;
-	//unsigned iSrvPort;	/* sample: server port */
+	unsigned iSrvPort;	/* sample: server port */
 } instanceData;
 
 char db[_DB_MAXDBLEN+2];
@@ -93,8 +97,8 @@ static void closeMongoDB(instanceData *pData)
 	ASSERT(pData != NULL);
 
 	if(pData->conn != NULL) {
-                mongo_destroy( pData->conn );
-		memset(pData->conn,0x00,sizeof(mongo_connection));
+                mongo_sync_disconnect(pData->conn);
+		pData->conn = NULL;
 	}
 }
 
@@ -121,95 +125,64 @@ static rsRetVal initMongoDB(instanceData *pData, int bSilent)
 	ASSERT(pData->conn == NULL);
 
         //I'm trying to fallback to a default here
+#if 0
         if(pData->opts->port == 0)
          pData->opts->port = 27017;
 
         if(pData->opts->host == 0x00)
             strcpy(pData->opts->host,DEFAULT_SERVER);
 
+#endif
         if(pData->dbcollection == 0x00)
             strcpy(pData->dbcollection,DEFAULT_DB_COLLECTION);
         
-        pData->status = mongo_connect(pData->conn, pData->opts );
+	pData->conn = mongo_sync_connect("127.0.0.1", pData->iSrvPort, TRUE);
+	if(pData->conn == NULL) {
+                errmsg.LogError(0, RS_RET_SUSPENDED, "can not initialize MongoDB handle");
+                ABORT_FINALIZE(RS_RET_SUSPENDED);
+	}
 
-        switch (pData->status) {
-            case mongo_conn_success:
-                fprintf(stderr, "connection succeeded\n" );
-                iRet = RS_RET_OK;
-                break;
-            case mongo_conn_bad_arg:
-                errmsg.LogError(0, RS_RET_SUSPENDED, "can not initialize MongoDB handle");
-                fprintf(stderr, "bad arguments\n" );
-                iRet = RS_RET_SUSPENDED;
-                break;
-            case mongo_conn_no_socket:
-                errmsg.LogError(0, RS_RET_SUSPENDED, "can not initialize MongoDB handle");
-                fprintf(stderr, "no socket\n" );
-                iRet = RS_RET_SUSPENDED;
-                break;
-            case mongo_conn_fail:
-                errmsg.LogError(0, RS_RET_SUSPENDED, "can not initialize MongoDB handle");
-                fprintf(stderr, "connection failed\n" );
-                iRet = RS_RET_SUSPENDED;
-                break;
-            case mongo_conn_not_master:
-                errmsg.LogError(0, RS_RET_SUSPENDED, "can not initialize MongoDB handle");
-                fprintf(stderr, "not master\n" );
-                iRet = RS_RET_SUSPENDED;
-                break;
-        }
+finalize_it:
 	RETiRet;
 }
 
 //we must implement it
 rsRetVal writeMongoDB(uchar *psz, instanceData *pData)
 {
-  char mydate[32];
-  char **szParams;
-  bson b[1];
-  bson_buffer buf[1];
-  bson_buffer_init( buf );
-  bson_append_new_oid(buf, "_id" );
-  memset(mydate,0x00,32);
+	bson *doc;
+	char **szParams;
+	DEFiRet;
 
- 
-  DEFiRet;
-
-  ASSERT(psz != NULL);
-  ASSERT(pData != NULL);
-
-  
- /* see if we are ready to proceed */
- if(pData->conn == NULL) {
+	/* see if we are ready to proceed */
+	if(pData->conn == NULL) {
 		CHKiRet(initMongoDB(pData, 0));
- }
+	}
 
-szParams = (char**)(void*) psz;
-//We can make it beter
-//if you change the fields in your template, we must update it here
-//there is any C_metaprogramming_ninja there? :-)
-if(countof(szParams) > 0)
-{
-    bson_append_string( buf, "msg", szParams[0]);
-    bson_append_string( buf, "facility",szParams[1]);
-    bson_append_string( buf, "hostname", szParams[2] );
-    bson_append_string(buf, "priority",szParams[3]);
-    bson_append_int(buf,"count",countof(szParams));
-    bson_from_buffer( b, buf );
-    mongo_insert(pData->conn, pData->dbcollection, b );
-}
+	szParams = (char**)(void*) psz;
+	doc = bson_build(BSON_TYPE_STRING, "msg", szParams[0], -1,
+			 BSON_TYPE_STRING, "facility", szParams[1], -1,
+			 BSON_TYPE_STRING, "hostname", szParams[2], -1,
+			 BSON_TYPE_STRING, "priority", szParams[3], -1,
+			 BSON_TYPE_NONE);
+	if(doc == NULL) {
+		dbgprintf("ommongodb: error creating BSON doc\n");
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+	bson_finish(doc);
+	if(!mongo_sync_cmd_insert(pData->conn, "syslog.doc", doc, NULL)) {
+		perror ("mongo_sync_cmd_insert()");
+		dbgprintf("ommongodb: insert error\n");
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+	bson_free(doc);
 
-if(b)
-   bson_destroy(b);
-
-
- finalize_it:
+finalize_it:
 	if(iRet == RS_RET_OK) {
 		pData->uLastMongoDBErrno = 0; /* reset error for error supression */
 	}
 
         
- RETiRet;
+	RETiRet;
 }
 
 BEGINtryResume
@@ -237,8 +210,10 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 
         CHKiRet(createInstance(&pData));
         
+#if 0
         if(getSubString(&p, pData->opts->host, MAXHOSTNAMELEN+1, ','))
             strcpy(pData->opts->host,DEFAULT_SERVER);
+#endif
             
         //we must define the max db name
         if(getSubString(&p,pData->db,255,','))
@@ -252,7 +227,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
        	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_TPL_AS_ARRAY, (uchar*) " StdMongoDBFmt"));
         
         
-        pData->opts->port = (unsigned) iSrvPort;	/* set configured port */
+        pData->iSrvPort = iSrvPort;	/* set configured port */
         sprintf(pData->dbcollection,"%s.%s",pData->db,pData->collection);
         CHKiRet(initMongoDB(pData, 0));
 	
@@ -276,6 +251,6 @@ CODESTARTmodInit
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	INITChkCoreFeature(bCoreSupportsBatching, CORE_FEATURE_BATCHING);
-	DBGPRINTF("ompgsql: module compiled with rsyslog version %s.\n", VERSION);
-	DBGPRINTF("ompgsql: %susing transactional output interface.\n", bCoreSupportsBatching ? "" : "not ");
+	DBGPRINTF("ommongodb: module compiled with rsyslog version %s.\n", VERSION);
+	//DBGPRINTF("ommongodb: %susing transactional output interface.\n", bCoreSupportsBatching ? "" : "not ");
 ENDmodInit
