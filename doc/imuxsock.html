@@ -76,6 +76,11 @@ burst in number of messages. Default is 200.
 <li><b>$IMUXSockRateLimitSeverity</b> [numerical severity] - specifies the severity of
 messages that shall be rate-limited.
 </li>
+<li><b>$IMUXSockLocalIPIF</b> [interface name] - (available since 5.9.6) - if provided, the IP of the specified
+interface (e.g. "eth0") shall be used as fromhost-ip for imuxsock-originating messages.
+If this directive is not given OR the interface cannot be found (or has no IP address),
+the default of "127.0.0.1" is used.
+</li>
 <li><b>$InputUnixListenSocketUsePIDFromSystem</b> [on/<b>off</b>] - specifies if the pid being logged shall
 be obtained from the log socket itself. If so, the TAG part of the message is rewritten.
 It is recommended to turn this option on, but the default is "off" to keep compatible
@@ -181,8 +186,10 @@ $SystemLogSocketAnnotate on
 <p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>]
 [<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
 <p><font size="2">This documentation is part of the
-<a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
-Copyright &copy; 2008-2011 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+<a href="http://www.rsyslog.com/">rsyslog</a>
+project.<br>
+Copyright &copy; 2008-2012 by <a href="http://www.gerhards.net/rainer">Rainer
+Gerhards</a> and
 <a href="http://www.adiscon.com/">Adiscon</a>.
 Released under the GNU GPL version 3 or higher.</font></p>
 </body></html>

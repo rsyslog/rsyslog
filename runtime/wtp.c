@@ -309,7 +309,7 @@ wtpWrkrExecCleanup(wti_t *pWti)
 	wtiSetState(pWti, WRKTHRD_STOPPED);
 	ATOMIC_DEC(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd);
 
-	DBGPRINTF("%s: Worker thread %lx, terminated, um workers now %d\n",
+	DBGPRINTF("%s: Worker thread %lx, terminated, num workers now %d\n",
 		  wtpGetDbgHdr(pThis), (unsigned long) pWti,
 		  ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd));
 

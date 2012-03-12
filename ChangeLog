@@ -118,7 +118,17 @@ Version 5.9.0  [V5-DEVEL] (rgerhards), 2011-06-08
   affected directive was: $ActionExecOnlyWhenPreviousIsSuspended on
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=236
 ---------------------------------------------------------------------------
-Version 5.8.8  [V5-stable] 2012-0?-??
+Version 5.8.9  [V5-stable] 2012-03-??
+- bugfix: stopped DA queue was never processed after a restart due to a
+  regression from statistics module
+---------------------------------------------------------------------------
+Version 5.8.8  [V5-stable] 2012-03-05
+- added capability to use a local interface IP address as fromhost-ip for
+  imuxsock imklog
+  new config directives: $IMUXSockLocalIPIF, $klogLocalIPIF
+- added configuration directives to customize queue light delay marks
+  $MainMsgQueueLightDelayMark, $ActionQueueLightDelayMark; both
+  specify number of messages starting at which a delay happens.
 - bugfix: omprog made rsyslog abort on startup if not binary to
   execute was configured
 - bugfix: imklog invalidly computed facility and severity

@@ -144,6 +144,7 @@ static queueType_t ActionQueType = QUEUETYPE_DIRECT;		/* type of the main messag
 static int iActionQueueSize = 1000;				/* size of the main message queue above */
 static int iActionQueueDeqBatchSize = 16;			/* batch size for action queues */
 static int iActionQHighWtrMark = 800;				/* high water mark for disk-assisted queues */
+static int iActionQLightDlyMrk = -1;				/* light delay mark for disk-assisted queues */
 static int iActionQLowWtrMark = 200;				/* low water mark for disk-assisted queues */
 static int iActionQDiscardMark = 9800;				/* begin to discard messages */
 static int iActionQDiscardSeverity = 8;				/* by default, discard nothing to prevent unintentional loss */
@@ -226,6 +227,7 @@ actionResetQueueParams(void)
 	iActionQueueSize = 1000;			/* size of the main message queue above */
 	iActionQueueDeqBatchSize = 16;			/* default batch size */
 	iActionQHighWtrMark = 800;			/* high water mark for disk-assisted queues */
+	iActionQLightDlyMrk = -1;
 	iActionQLowWtrMark = 200;			/* low water mark for disk-assisted queues */
 	iActionQDiscardMark = 9800;			/* begin to discard messages */
 	iActionQDiscardSeverity = 8;			/* discard warning and above */
@@ -423,6 +425,9 @@ actionConstructFinalize(action_t *pThis)
 	setQPROP(qqueueSettoWrkShutdown, "$ActionQueueWorkerTimeoutThreadShutdown", iActionQtoWrkShutdown);
 	setQPROP(qqueueSettoEnq, "$ActionQueueTimeoutEnqueue", iActionQtoEnq);
 	setQPROP(qqueueSetiHighWtrMrk, "$ActionQueueHighWaterMark", iActionQHighWtrMark);
+	if(iActionQLightDlyMrk > 0) {
+		setQPROP(qqueueSetiLightDlyMrk, "$ActionQueueLightDelayMark", iActionQLightDlyMrk);
+	}
 	setQPROP(qqueueSetiLowWtrMrk, "$ActionQueueLowWaterMark", iActionQLowWtrMark);
 	setQPROP(qqueueSetiDiscardMrk, "$ActionQueueDiscardMark", iActionQDiscardMark);
 	setQPROP(qqueueSetiDiscardSeverity, "$ActionQueueDiscardSeverity", iActionQDiscardSeverity);
@@ -1884,6 +1889,7 @@ rsRetVal actionClassInit(void)
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuehighwatermark", 0, eCmdHdlrInt, NULL, &iActionQHighWtrMark, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuelowwatermark", 0, eCmdHdlrInt, NULL, &iActionQLowWtrMark, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuediscardmark", 0, eCmdHdlrInt, NULL, &iActionQDiscardMark, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuelightdelaymark", 0, eCmdHdlrInt, NULL, &iActionQLightDlyMrk, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuediscardseverity", 0, eCmdHdlrInt, NULL, &iActionQDiscardSeverity, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuecheckpointinterval", 0, eCmdHdlrInt, NULL, &iActionQPersistUpdCnt, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuesyncqueuefiles", 0, eCmdHdlrBinary, NULL, &bActionQSyncQeueFiles, NULL));

@@ -244,8 +244,10 @@ static rsRetVal addListner(void __attribute__((unused)) *pVal, uchar *pNewVal)
 				lcnfRoot = newlcnfinfo;
 			if(lcnfLast == NULL)
 				lcnfLast = newlcnfinfo;
-			else
+			else {
 				lcnfLast->next = newlcnfinfo;
+				lcnfLast = newlcnfinfo;
+			}
 		}
 	}
 
