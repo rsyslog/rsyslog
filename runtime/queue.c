@@ -1787,7 +1787,8 @@ qqueueChkStopWrkrDA(qqueue_t *pThis)
 {
 	DEFiRet;
 
-//DBGPRINTF("XXXX: chkStopWrkrDA called, low watermark %d, phys Size %d\n", pThis->iLowWtrMrk, getPhysicalQueueSize(pThis));
+	/*DBGPRINTF("XXXX: chkStopWrkrDA called, low watermark %d, log Size %d, phys Size %d, bEnqOnly %d\n",
+	pThis->iLowWtrMrk, getLogicalQueueSize(pThis), getPhysicalQueueSize(pThis), pThis->bEnqOnly);*/
 	if(pThis->bEnqOnly) {
 		iRet = RS_RET_TERMINATE_WHEN_IDLE;
 	}
@@ -1808,6 +1809,8 @@ static rsRetVal
 ChkStopWrkrReg(qqueue_t *pThis)
 {
 	DEFiRet;
+	/*DBGPRINTF("XXXX: chkStopWrkrReg called, low watermark %d, log Size %d, phys Size %d, bEnqOnly %d\n",
+	pThis->iLowWtrMrk, getLogicalQueueSize(pThis), getPhysicalQueueSize(pThis), pThis->bEnqOnly);*/
 	if(pThis->bEnqOnly) {
 		iRet = RS_RET_TERMINATE_NOW;
 	} else if(pThis->pqParent != NULL) {
@@ -1844,6 +1847,7 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 	int wrk;
 	uchar *qName;
 	size_t lenBuf;
+	int iQueueSizeSave;
 
 	ASSERT(pThis != NULL);
 
@@ -1925,8 +1929,11 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 	qName = obj.GetName((obj_t*)pThis);
 	CHKiRet(statsobj.Construct(&pThis->statsobj));
 	CHKiRet(statsobj.SetName(pThis->statsobj, qName));
+	/* we need to save the queue size, as the stats module initializes it to 0! */
+	iQueueSizeSave = pThis->iQueueSize;
 	CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("size"),
 		ctrType_Int, &pThis->iQueueSize));
+	pThis->iQueueSize = iQueueSizeSave;
 
 	STATSCOUNTER_INIT(pThis->ctrEnqueued, pThis->mutCtrEnqueued);
 	CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("enqueued"),
