@@ -234,6 +234,7 @@ static rsRetVal addListner(void __attribute__((unused)) *pVal, uchar *pNewVal)
 			snprintf((char*)statname, sizeof(statname), "imudp(%s:%s)", bindName, port);
 			statname[sizeof(statname)-1] = '\0'; /* just to be on the save side... */
 			CHKiRet(statsobj.SetName(newlcnfinfo->stats, statname));
+			STATSCOUNTER_INIT(newlcnfinfo->ctrSubmit, newlcnfinfo->mutCtrSubmit);
 			CHKiRet(statsobj.AddCounter(newlcnfinfo->stats, UCHAR_CONSTANT("submitted"),
 				ctrType_IntCtr, &(newlcnfinfo->ctrSubmit)));
 			CHKiRet(statsobj.ConstructFinalize(newlcnfinfo->stats));

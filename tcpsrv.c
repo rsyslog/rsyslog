@@ -128,6 +128,7 @@ addNewLstnPort(tcpsrv_t *pThis, uchar *pszPort)
 	snprintf((char*)statname, sizeof(statname), "%s(%s)", pThis->pszInputName, pszPort);
 	statname[sizeof(statname)-1] = '\0'; /* just to be on the save side... */
 	CHKiRet(statsobj.SetName(pEntry->stats, statname));
+	STATSCOUNTER_INIT(pEntry->ctrSubmit, pEntry->mutCtrSubmit);
 	CHKiRet(statsobj.AddCounter(pEntry->stats, UCHAR_CONSTANT("submitted"),
 		ctrType_IntCtr, &(pEntry->ctrSubmit)));
 	CHKiRet(statsobj.ConstructFinalize(pEntry->stats));
