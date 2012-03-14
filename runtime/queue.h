@@ -171,7 +171,7 @@ struct queue_s {
 	STATSCOUNTER_DEF(ctrFull, mutCtrFull);
 	STATSCOUNTER_DEF(ctrFDscrd, mutCtrFDscrd);
 	STATSCOUNTER_DEF(ctrNFDscrd, mutCtrNFDscrd);
-	int ctrMaxqsize;
+	int ctrMaxqsize; /* NOT guarded by a mutex */
 };
 
 
