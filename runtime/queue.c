@@ -1931,10 +1931,9 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 	CHKiRet(statsobj.Construct(&pThis->statsobj));
 	CHKiRet(statsobj.SetName(pThis->statsobj, qName));
 	/* we need to save the queue size, as the stats module initializes it to 0! */
-	iQueueSizeSave = pThis->iQueueSize;
+	/* iQueueSize is a dual-use counter: no init, no mutex! */
 	CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("size"),
 		ctrType_Int, &pThis->iQueueSize));
-	pThis->iQueueSize = iQueueSizeSave;
 
 	STATSCOUNTER_INIT(pThis->ctrEnqueued, pThis->mutCtrEnqueued);
 	CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("enqueued"),
@@ -1951,7 +1950,7 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 	CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("discarded.nf"),
 		ctrType_IntCtr, &pThis->ctrNFDscrd));
 
-	pThis->ctrMaxqsize = 0;
+	pThis->ctrMaxqsize = 0; /* no mutex needed, thus no init call */
 	CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("maxqsize"),
 		ctrType_Int, &pThis->ctrMaxqsize));
 

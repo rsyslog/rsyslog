@@ -8,6 +8,9 @@
 Version 5.8.9  [V5-stable] 2012-03-??
 - bugfix: stopped DA queue was never processed after a restart due to a
   regression from statistics module
+- added better doc for statsobj interface
+  Thanks to Kaiwang Chen for his suggestions and analysis in regard to the
+  stats subsystem.
 ---------------------------------------------------------------------------
 Version 5.8.8  [V5-stable] 2012-03-05
 - bugfix: omprog made rsyslog abort on startup if not binary to
