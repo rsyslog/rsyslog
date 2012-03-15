@@ -138,6 +138,25 @@ draft-ietf-syslog-protocol</td>
 <td>The contents of the MSGID field from
 IETF draft draft-ietf-syslog-protocol</td>
 </tr>
+<tr>
+<td><b>parsesuccess</b></td>
+<td>This returns the status of the <b>last</b> called higher level parser,
+like mmjsonparse. A higher level parser parses the actual message for additional
+structured data and maintains an extra property table while doing so (this is
+often referred to as "cee data" because the idea was originally rooted in the
+cee effort, only (but has been extended since then). Note that higher level
+parsers must explicitely support (and set) this property. So, depending on the
+parser, it may not be set correctly.
+<br>If the parser properly supports it, the value "OK" means that parsing was
+successfull, while "FAIL" means the parser could not successfully obtain any data.
+Failure state is not necessarily an error. For example, it may simple indicate
+that the cee-enhanced syslog parser (mmjsonparse) did not detect cee-enhanced format,
+what can be totally valid. Using this property, further processing of the message
+can be directed based on this parsing outcome. If no parser has been called at the
+time this property is accessed, it will contain "FAIL".
+<br><b>This property is available since version 6.3.8.</b>
+</td>
+</tr>
 <td><b>inputname</b></td>
 <td>The name of the input module that generated the
 message (e.g. "imuxsock", "imudp"). Note that not all modules

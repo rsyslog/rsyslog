@@ -126,6 +126,9 @@ CODESTARTdoAction
 	r = ln_normalize(pData->ctxln, str, &pMsg->event);
 	if(r != 0) {
 		DBGPRINTF("error %d during ln_normalize\n", r);
+		MsgSetParseSuccess(pMsg, 0);
+	} else {
+		MsgSetParseSuccess(pMsg, 1);
 	}
 	es_deleteStr(str);
 	/***DEBUG***/ // TODO: remove after initial testing - 2010-12-01

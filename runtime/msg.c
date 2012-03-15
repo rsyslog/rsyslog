@@ -535,6 +535,8 @@ propNameStrToID(uchar *pName, propid_t *pPropID)
 		*pPropID = PROP_PROCID;
 	} else if(!strcmp((char*) pName, "msgid")) {
 		*pPropID = PROP_MSGID;
+	} else if(!strcmp((char*) pName, "parsesuccess")) {
+		*pPropID = PROP_PARSESUCCESS;
 	/* here start system properties (those, that do not relate to the message itself */
 	} else if(!strcmp((char*) pName, "$now")) {
 		*pPropID = PROP_SYS_NOW;
@@ -632,6 +634,8 @@ uchar *propIDToName(propid_t propID)
 			return UCHAR_CONSTANT("procid");
 		case PROP_MSGID:
 			return UCHAR_CONSTANT("msgid");
+		case PROP_PARSESUCCESS:
+			return UCHAR_CONSTANT("parsesuccess");
 		case PROP_SYS_NOW:
 			return UCHAR_CONSTANT("$NOW");
 		case PROP_SYS_YEAR:
@@ -694,6 +698,7 @@ static inline rsRetVal msgBaseConstruct(msg_t **ppThis)
 	pM->flowCtlType = 0;
 	pM->bDoLock = 0;
 	pM->bAlreadyFreed = 0;
+	pM->bParseSuccess = 0;
 	pM->iRefCount = 1;
 	pM->iSeverity = -1;
 	pM->iFacility = -1;
@@ -1632,6 +1637,15 @@ finalize_it:
 }
 
 
+/* Return state of last parser. If it had success, "OK" is returned, else
+ * "FAIL". All from the constant pool.
+ */
+static inline char *getParseSuccess(msg_t *pM)
+{
+	return (pM->bParseSuccess) ? "OK" : "FAIL";
+}
+
+
 /* al, 2011-07-26: LockMsg to avoid race conditions
  */
 static inline char *getMSGID(msg_t *pM)
@@ -1645,6 +1659,14 @@ static inline char *getMSGID(msg_t *pM)
 		MsgUnlock(pM);
 		return pszreturn; 
 	}
+}
+
+/* rgerhards 2012-03-15: set parser success (an integer, acutally bool)
+ */
+void MsgSetParseSuccess(msg_t *pMsg, int bSuccess)
+{
+	assert(pMsg != NULL);
+	pMsg->bParseSuccess = bSuccess;
 }
 
 /* rgerhards 2009-06-12: set associated ruleset
@@ -2452,6 +2474,9 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			break;
 		case PROP_MSGID:
 			pRes = (uchar*)getMSGID(pMsg);
+			break;
+		case PROP_PARSESUCCESS:
+			pRes = (uchar*)getParseSuccess(pMsg);
 			break;
 		case PROP_SYS_NOW:
 			if((pRes = getNOW(NOW_NOW)) == NULL) {

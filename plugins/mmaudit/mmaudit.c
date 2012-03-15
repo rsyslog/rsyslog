@@ -210,6 +210,7 @@ BEGINdoAction
 	int i;
 	es_str_t *estr;
 	char auditID[1024];
+	int bSuccess = 0;
 CODESTARTdoAction
 	pMsg = (msg_t*) ppString[0];
 	/* note that we can performance-optimize the interface, but this also
@@ -278,6 +279,7 @@ dbgprintf("mmaudit: cookie found, type %d, auditID '%s', rest of message: '%s'\n
 		ee_deleteEvent(pMsg->event);
 	}
 	pMsg->event = event;
+	bSuccess = 1;
 
 #if 1
 	/***DEBUG***/ // TODO: remove after initial testing - 2010-12-01
@@ -293,6 +295,7 @@ dbgprintf("mmaudit: cookie found, type %d, auditID '%s', rest of message: '%s'\n
 	/***END DEBUG***/
 #endif
 finalize_it:
+	MsgSetParseSuccess(pMsg, bSuccess);
 ENDdoAction
 
 

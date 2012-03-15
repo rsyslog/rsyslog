@@ -105,6 +105,7 @@ BEGINdoAction
 	msg_t *pMsg;
 	uchar *buf;
 	struct ee_event *event;
+	int bSuccess = 0;
 CODESTARTdoAction
 	pMsg = (msg_t*) ppString[0];
 	/* note that we can performance-optimize the interface, but this also
@@ -138,6 +139,7 @@ dbgprintf("mmjsonparse: cookie found, rest of message: '%s'\n", buf);
 		ee_deleteEvent(pMsg->event);
 	}
 	pMsg->event = event;
+	bSuccess = 1;
 
 #if 1
 	/***DEBUG***/ // TODO: remove after initial testing - 2010-12-01
@@ -153,6 +155,7 @@ dbgprintf("mmjsonparse: cookie found, rest of message: '%s'\n", buf);
 	/***END DEBUG***/
 #endif
 finalize_it:
+	MsgSetParseSuccess(pMsg, bSuccess);
 ENDdoAction
 
 

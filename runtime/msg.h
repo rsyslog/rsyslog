@@ -65,6 +65,7 @@ struct msg {
 	int	iRefCount;	/* reference counter (0 = unused) */
 	sbool	bDoLock;	/* use the mutex? */
 	sbool	bAlreadyFreed;	/* aid to help detect a well-hidden bad bug -- TODO: remove when no longer needed */
+	sbool	bParseSuccess;	/* set to reflect state of last executed higher level parser */
 	short	iSeverity;	/* the severity 0..7 */
 	short	iFacility;	/* Facility code 0 .. 23*/
 	short	offAfterPRI;	/* offset, at which raw message WITHOUT PRI part starts in pszRawMsg */
@@ -150,6 +151,7 @@ void MsgSetInputName(msg_t *pMsg, prop_t*);
 rsRetVal MsgSetAPPNAME(msg_t *pMsg, char* pszAPPNAME);
 rsRetVal MsgSetPROCID(msg_t *pMsg, char* pszPROCID);
 rsRetVal MsgSetMSGID(msg_t *pMsg, char* pszMSGID);
+void MsgSetParseSuccess(msg_t *pMsg, int bSuccess);
 void MsgSetTAG(msg_t *pMsg, uchar* pszBuf, size_t lenBuf);
 void MsgSetRuleset(msg_t *pMsg, ruleset_t*);
 rsRetVal MsgSetFlowControlType(msg_t *pMsg, flowControl_t eFlowCtl);
