@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 5.8.9  [V5-stable] 2012-03-??
+- added tool to recover disk queue if .qi file is missing (recover_qi.pl)
+  Thanks to Kaiwang Chen for contributing this tool
 - bugfix: stopped DA queue was never processed after a restart due to a
   regression from statistics module
 - added better doc for statsobj interface
