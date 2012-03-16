@@ -2,7 +2,7 @@
  * Please see syslogd.c for license information.
  * begun 2004-11-17 rgerhards
  *
- * Copyright (C) 2004 by Rainer Gerhards and Adiscon GmbH
+ * Copyright (C) 2004-2012 by Rainer Gerhards and Adiscon GmbH
  *
  * This file is part of rsyslog.
  *
@@ -103,6 +103,7 @@ struct templateEntry {
 				unsigned bSecPathReplace: 1;	/* replace slashes, replace dots, empty string */
 				unsigned bSPIffNo1stSP: 1;	/* replace slashes, replace dots, empty string */
 				unsigned bCSV: 1;		/* format field in CSV (RFC 4180) format */
+				unsigned bJSON: 1;		/* format field JSON escaped */
 			} options;		/* options as bit fields */
 		} field;
 	} data;

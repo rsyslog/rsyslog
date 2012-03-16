@@ -542,7 +542,19 @@ static void doOptions(unsigned char **pp, struct templateEntry *pTpe)
 		 } else if(!strcmp((char*)Buf, "secpath-replace")) {
 			pTpe->data.field.options.bSecPathReplace = 1;
 		 } else if(!strcmp((char*)Buf, "csv")) {
-			pTpe->data.field.options.bCSV = 1;
+		 	if(pTpe->data.field.options.bJSON) {
+				errmsg.LogError(0, NO_ERRCODE, "error: can not specify "
+					"both csv and json options - csv ignored");
+			} else {
+				pTpe->data.field.options.bCSV = 1;
+			}
+		 } else if(!strcmp((char*)Buf, "json")) {
+		 	if(pTpe->data.field.options.bCSV) {
+				errmsg.LogError(0, NO_ERRCODE, "error: can not specify "
+					"both csv and json options - json ignored");
+			} else {
+				pTpe->data.field.options.bJSON = 1;
+			}
 		 } else {
 			dbgprintf("Invalid field option '%s' specified - ignored.\n", Buf);
 		 }
@@ -1279,6 +1291,9 @@ void tplPrintList(rsconf_t *conf)
 				}
 				if(pTpe->data.field.options.bCSV) {
 				  	dbgprintf("[format as CSV (RFC4180)]");
+				}
+				if(pTpe->data.field.options.bJSON) {
+				  	dbgprintf("[format as JSON");
 				}
 				if(pTpe->data.field.options.bDropLastLF) {
 				  	dbgprintf("[drop last LF in msg] ");

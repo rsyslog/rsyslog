@@ -342,6 +342,12 @@ case-insensitive. Currently, the following options are defined:
 <td>convert property text to uppercase only</td>
 </tr>
 <tr>
+<td><b>json</b></td>
+<td>encode the value so that it can be used inside a JSON field. This means
+that several characters (according to the JSON spec) are being escaped, for 
+example US-ASCII LF is replaced by "\n".</td>
+</tr>
+<tr>
 <td valign="top"><b>csv</b></td>
 <td>formats the resulting field (after all modifications) in CSV format
 as specified in <a href="http://www.ietf.org/rfc/rfc4180.txt">RFC 4180</a>.

@@ -1,12 +1,14 @@
 ---------------------------------------------------------------------------
 Version 6.3.8  [DEVEL] 2012-02-??
+- added "json" property replacer option to support JSON encoding on a
+  per-property basis
 - added mmjsonparse to support recognizing and parsing JSON enhanced syslog
   messages
 - upgraded more plugins to support the new v6 config format:
   - ommysql
   - omlibdbi
   - omsnmp
-. added message property parsesuccess to indicate if the last run
+- added message property parsesuccess to indicate if the last run
   higher-level parser could successfully parse the message or not
   (see property replacer html doc for details)
 - bugfix: abort during startup when rsyslog.conf v6+ format was used in

@@ -2334,6 +2334,112 @@ finalize_it:
 	}
 }
 
+
+/* encode a property in JSON escaped format. This is a helper
+ * to MsgGetProp. It needs to update all provided parameters.
+ * Note: Code is borrowed from libee (my own code, so ASL 2.0
+ * is fine with it); this function may later be replaced by
+ * some "better" and more complete implementation (maybe from
+ * libee or its helpers).
+ * For performance reasons, we begin to copy the string only
+ * when we recognice that we actually need to do some escaping.
+ * rgerhards, 2012-03-16
+ */
+static rsRetVal
+jsonEncode(uchar **ppRes, unsigned short *pbMustBeFreed, int *pBufLen)
+{
+	static char hexdigit[16] =
+		{'0', '1', '2', '3', '4', '5', '6', '7', '8',
+		 '9', 'A', 'B', 'C', 'D', 'E', 'F' };
+	unsigned char c;
+	es_size_t i;
+	char numbuf[4];
+	int j;
+	unsigned buflen;
+	uchar *pSrc;
+	es_str_t *dst = NULL;
+	DEFiRet;
+
+	pSrc = *ppRes;
+	buflen = (*pBufLen == -1) ? ustrlen(pSrc) : *pBufLen;
+	for(i = 0 ; i < buflen ; ++i) {
+		c = pSrc[i];
+		if(   (c >= 0x23 && c <= 0x5b)
+		   || (c >= 0x5d /* && c <= 0x10FFFF*/)
+		   || c == 0x20 || c == 0x21) {
+			/* no need to escape */
+			if(dst != NULL)
+				es_addChar(&dst, c);
+		} else {
+			if(dst == NULL) {
+				if(i == 0) {
+					/* we hope we have only few escapes... */
+					dst = es_newStr(buflen+10);
+				} else {
+					dst = es_newStrFromBuf((char*)pSrc, i-1);
+				}
+				if(dst == NULL) {
+					ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+				}
+			}
+			/* we must escape, try RFC4627-defined special sequences first */
+			switch(c) {
+			case '\0':
+				es_addBuf(&dst, "\\u0000", 6);
+				break;
+			case '\"':
+				es_addBuf(&dst, "\\\"", 2);
+				break;
+			case '/':
+				es_addBuf(&dst, "\\/", 2);
+				break;
+			case '\\':
+				es_addBuf(&dst, "\\\\", 2);
+				break;
+			case '\010':
+				es_addBuf(&dst, "\\b", 2);
+				break;
+			case '\014':
+				es_addBuf(&dst, "\\f", 2);
+				break;
+			case '\n':
+				es_addBuf(&dst, "\\n", 2);
+				break;
+			case '\r':
+				es_addBuf(&dst, "\\r", 2);
+				break;
+			case '\t':
+				es_addBuf(&dst, "\\t", 2);
+				break;
+			default:
+				/* TODO : proper Unicode encoding (see header comment) */
+				for(j = 0 ; j < 4 ; ++j) {
+					numbuf[3-j] = hexdigit[c % 16];
+					c = c / 16;
+				}
+				es_addBuf(&dst, "\\u", 2);
+				es_addBuf(&dst, numbuf, 4);
+				break;
+			}
+		}
+	}
+
+	if(dst != NULL) {
+		/* we updated the string and need to replace the
+		 * previous data.
+		 */
+		if(*pbMustBeFreed)
+			free(*ppRes);
+		*ppRes = (uchar*)es_str2cstr(dst, NULL);
+		*pbMustBeFreed = 1;
+		es_deleteStr(dst);
+	}
+
+finalize_it:
+	RETiRet;
+}
+
+
 /* This function returns a string-representation of the 
  * requested message property. This is a generic function used
  * to abstract properties so that these can be easier
@@ -3105,8 +3211,8 @@ dbgprintf("prop repl 4, pRes='%s', len %d\n", pRes, bufLen);
 		}
 	}
 
-	/* finally, we need to check if the property should be formatted in CSV
-	 * format (we use RFC 4180, and always use double quotes). As of this writing,
+	/* finally, we need to check if the property should be formatted in CSV or JSON.
+	 * For CSV we use RFC 4180, and always use double quotes. As of this writing,
 	 * this should be the last action carried out on the property, but in the
 	 * future there may be reasons to change that. -- rgerhards, 2009-04-02
 	 */
@@ -3140,6 +3246,8 @@ dbgprintf("prop repl 4, pRes='%s', len %d\n", pRes, bufLen);
 		pRes = pBStart;
 		bufLen = -1;
 		*pbMustBeFreed = 1;
+	} else if(pTpe->data.field.options.bJSON) {
+		jsonEncode(&pRes, pbMustBeFreed, &bufLen);
 	}
 
 	if(bufLen == -1)
