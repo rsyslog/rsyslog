@@ -49,10 +49,6 @@
 #define DEFAULT_COLLECTION "log"
 #define DEFAULT_DB_COLLECTION "syslog.log"
 
-//i just defined some constants, i couldt not find the limit
-#define MONGO_DB_NAME_SIZE 128
-#define MONGO_COLLECTION_NAME_SIZE 128
-
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("ommongodb")
@@ -63,20 +59,40 @@ DEFobjCurrIf(errmsg)
 
 typedef struct _instanceData {
 	mongo_sync_connection *conn;
-	// OLD:
-#if 0
-        mongo_connection_options opts[1];
-        mongo_conn_return status;
-#endif
-        char db[MONGO_DB_NAME_SIZE];
-        char collection[MONGO_COLLECTION_NAME_SIZE];
-        char dbcollection[MONGO_DB_NAME_SIZE + MONGO_COLLECTION_NAME_SIZE + 1];
+	uchar *server;
+	int port;
+        uchar *db;
+	uchar *collection;
+	uchar *uid;
+	uchar *pwd;
         unsigned uLastMongoDBErrno;
-	unsigned iSrvPort;	/* sample: server port */
+	uchar *tplName;
 } instanceData;
 
-char db[_DB_MAXDBLEN+2];
-static int iSrvPort = 27017;
+
+/* tables for interfacing with the v6 config system */
+/* action (instance) parameters */
+static struct cnfparamdescr actpdescr[] = {
+	{ "server", eCmdHdlrGetWord, 0 },
+	{ "serverport", eCmdHdlrInt, 0 },
+	{ "db", eCmdHdlrGetWord, 0 },
+	{ "collection", eCmdHdlrGetWord, 0 },
+	{ "uid", eCmdHdlrGetWord, 0 },
+	{ "pwd", eCmdHdlrGetWord, 0 },
+	{ "template", eCmdHdlrGetWord, 1 }
+};
+static struct cnfparamblk actpblk =
+	{ CNFPARAMBLK_VERSION,
+	  sizeof(actpdescr)/sizeof(struct cnfparamdescr),
+	  actpdescr
+	};
+
+
+BEGINinitConfVars		/* (re)set config variables to default values */
+CODESTARTinitConfVars 
+ENDinitConfVars
+
+
 BEGINcreateInstance
 CODESTARTcreateInstance
 ENDcreateInstance
@@ -105,7 +121,14 @@ static void closeMongoDB(instanceData *pData)
 BEGINfreeInstance
 CODESTARTfreeInstance
 	closeMongoDB(pData);
+	free(pData->server);
+	free(pData->db);
+	free(pData->collection);
+	free(pData->uid);
+	free(pData->pwd);
+	free(pData->tplName);
 ENDfreeInstance
+
 
 BEGINdbgPrintInstInfo
 CODESTARTdbgPrintInstInfo
@@ -119,24 +142,20 @@ ENDdbgPrintInstInfo
  */
 static rsRetVal initMongoDB(instanceData *pData, int bSilent)
 {
+	char *server;
 	DEFiRet;
 
-	ASSERT(pData != NULL);
-	ASSERT(pData->conn == NULL);
-
-        //I'm trying to fallback to a default here
 #if 0
-        if(pData->opts->port == 0)
-         pData->opts->port = 27017;
-
         if(pData->opts->host == 0x00)
             strcpy(pData->opts->host,DEFAULT_SERVER);
 
-#endif
         if(pData->dbcollection == 0x00)
             strcpy(pData->dbcollection,DEFAULT_DB_COLLECTION);
+#endif
+	server = (pData->server == NULL) ? "127.0.0.1" : (char*) pData->server;
         
-	pData->conn = mongo_sync_connect("127.0.0.1", pData->iSrvPort, TRUE);
+	DBGPRINTF("ommongodb: trying connect to '%s' at port %d\n", server, pData->port);
+	pData->conn = mongo_sync_connect(server, pData->port, TRUE);
 	if(pData->conn == NULL) {
                 errmsg.LogError(0, RS_RET_SUSPENDED, "can not initialize MongoDB handle");
                 ABORT_FINALIZE(RS_RET_SUSPENDED);
@@ -146,7 +165,6 @@ finalize_it:
 	RETiRet;
 }
 
-//we must implement it
 rsRetVal writeMongoDB(uchar *psz, instanceData *pData)
 {
 	bson *doc;
@@ -197,11 +215,80 @@ CODESTARTdoAction
 	iRet = writeMongoDB(ppString[0], pData);
 ENDdoAction
 
+
+static inline void
+setInstParamDefaults(instanceData *pData)
+{
+	pData->server = NULL;
+	pData->port = 27017;
+	pData->db = NULL;
+	pData->collection= NULL;
+	pData->uid = NULL;
+	pData->pwd = NULL;
+	pData->tplName = NULL;
+}
+
+BEGINnewActInst
+	struct cnfparamvals *pvals;
+	int i;
+CODESTARTnewActInst
+dbgprintf("ommongodb: enter newActInst\n");
+	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
+		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
+dbgprintf("ommongodb: newActInst 10\n");
+
+	CHKiRet(createInstance(&pData));
+	setInstParamDefaults(pData);
+dbgprintf("ommongodb: newActInst 20\n");
+
+	CODE_STD_STRING_REQUESTparseSelectorAct(1)
+	for(i = 0 ; i < actpblk.nParams ; ++i) {
+		if(!pvals[i].bUsed)
+			continue;
+		if(!strcmp(actpblk.descr[i].name, "server")) {
+			pData->server = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "serverport")) {
+			pData->port = (int) pvals[i].val.d.n, NULL;
+		} else if(!strcmp(actpblk.descr[i].name, "db")) {
+			pData->db = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "collection")) {
+			pData->collection = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "uid")) {
+			pData->uid = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "pwd")) {
+			pData->pwd = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "template")) {
+			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else {
+			dbgprintf("ommysql: program error, non-handled "
+			  "param '%s'\n", actpblk.descr[i].name);
+		}
+	}
+
+	if(pData->tplName == NULL) {
+dbgprintf("ommongodb: using default template\n");
+		CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*) strdup(" StdDBFmt"),
+			OMSR_TPL_AS_ARRAY));
+	} else {
+dbgprintf("ommongodb: using configured template '%s'\n", pData->tplName);
+		CHKiRet(OMSRsetEntry(*ppOMSR, 0,
+			(uchar*) strdup((char*) pData->tplName),
+			OMSR_TPL_AS_ARRAY));
+	}
+
+CODE_STD_FINALIZERnewActInst
+	cnfparamvalsDestruct(pvals, &actpblk);
+ENDnewActInst
+
+
 BEGINparseSelectorAct
-	//int iMongoDBPropErr = 0;
 CODESTARTparseSelectorAct
 CODE_STD_STRING_REQUESTparseSelectorAct(1)
-       
+	char tmpBuf[256];
+//	ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
+	/* don't use old config interface! */
+#if 1
 	if(!strncmp((char*) p, ":ommongodb:", sizeof(":ommongodb:") - 1)) {
 		p += sizeof(":ommongodb:") - 1; /* eat indicator sequence  (-1 because of '\0'!) */
 	} else {
@@ -216,10 +303,10 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 #endif
             
         //we must define the max db name
-        if(getSubString(&p,pData->db,255,','))
-            strcpy(pData->db,DEFAULT_DATABASE);
-        if(getSubString(&p,pData->collection,255,';'))
-            strcpy(pData->collection,DEFAULT_COLLECTION);
+        if(getSubString(&p,tmpBuf,255,','))
+            ;//strcpy(pData->db,DEFAULT_DATABASE);
+        if(getSubString(&p,tmpBuf,255,';'))
+            ;//strcpy(pData->collection,DEFAULT_COLLECTION);
         if(*(p-1) == ';')
 		--p;	
 
@@ -227,10 +314,8 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
        	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_TPL_AS_ARRAY, (uchar*) " StdMongoDBFmt"));
         
         
-        pData->iSrvPort = iSrvPort;	/* set configured port */
-        sprintf(pData->dbcollection,"%s.%s",pData->db,pData->collection);
         CHKiRet(initMongoDB(pData, 0));
-	
+#endif
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
@@ -243,6 +328,7 @@ ENDmodExit
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
+CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 ENDqueryEtryPt
 
 BEGINmodInit()
