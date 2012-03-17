@@ -371,6 +371,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_NO_LISTNERS = -2212, /**< module loaded, but no listeners are defined */
 	RS_RET_INVLD_PROTOCOL = -2213, /**< invalid protocol specified in config file */
 	RS_RET_CNF_INVLD_FRAMING = -2214, /**< invalid framing specified in config file */
+	RS_RET_LEGA_ACT_NOT_SUPPORTED = -2215, /**< the module (no longer) supports legacy action syntax */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */

@@ -65,6 +65,7 @@ typedef struct _instanceData {
 	uchar *collection;
 	uchar *uid;
 	uchar *pwd;
+	uchar *dbNcoll;
         unsigned uLastMongoDBErrno;
 	uchar *tplName;
 } instanceData;
@@ -145,16 +146,9 @@ static rsRetVal initMongoDB(instanceData *pData, int bSilent)
 	char *server;
 	DEFiRet;
 
-#if 0
-        if(pData->opts->host == 0x00)
-            strcpy(pData->opts->host,DEFAULT_SERVER);
-
-        if(pData->dbcollection == 0x00)
-            strcpy(pData->dbcollection,DEFAULT_DB_COLLECTION);
-#endif
 	server = (pData->server == NULL) ? "127.0.0.1" : (char*) pData->server;
-        
 	DBGPRINTF("ommongodb: trying connect to '%s' at port %d\n", server, pData->port);
+        
 	pData->conn = mongo_sync_connect(server, pData->port, TRUE);
 	if(pData->conn == NULL) {
                 errmsg.LogError(0, RS_RET_SUSPENDED, "can not initialize MongoDB handle");
@@ -187,7 +181,7 @@ rsRetVal writeMongoDB(uchar *psz, instanceData *pData)
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 	bson_finish(doc);
-	if(!mongo_sync_cmd_insert(pData->conn, "syslog.doc", doc, NULL)) {
+	if(!mongo_sync_cmd_insert(pData->conn, pData->dbNcoll, doc, NULL)) {
 		perror ("mongo_sync_cmd_insert()");
 		dbgprintf("ommongodb: insert error\n");
 		ABORT_FINALIZE(RS_RET_ERR);
@@ -231,16 +225,14 @@ setInstParamDefaults(instanceData *pData)
 BEGINnewActInst
 	struct cnfparamvals *pvals;
 	int i;
+	unsigned lendb, lencoll;
 CODESTARTnewActInst
-dbgprintf("ommongodb: enter newActInst\n");
 	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
-dbgprintf("ommongodb: newActInst 10\n");
 
 	CHKiRet(createInstance(&pData));
 	setInstParamDefaults(pData);
-dbgprintf("ommongodb: newActInst 20\n");
 
 	CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	for(i = 0 ; i < actpblk.nParams ; ++i) {
@@ -267,15 +259,30 @@ dbgprintf("ommongodb: newActInst 20\n");
 	}
 
 	if(pData->tplName == NULL) {
-dbgprintf("ommongodb: using default template\n");
 		CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*) strdup(" StdDBFmt"),
 			OMSR_TPL_AS_ARRAY));
 	} else {
-dbgprintf("ommongodb: using configured template '%s'\n", pData->tplName);
 		CHKiRet(OMSRsetEntry(*ppOMSR, 0,
 			(uchar*) strdup((char*) pData->tplName),
 			OMSR_TPL_AS_ARRAY));
 	}
+
+	if(pData->db == NULL)
+		pData->db = (uchar*)strdup("syslog");
+	if(pData->collection == NULL)
+		pData->collection = (uchar*)strdup("log");
+
+	/* we now create a db+collection string as we need to pass this
+	 * into the API and we do not want to generate it each time ;)
+	 * +2 ==> dot as delimiter and \0
+	 */
+	lendb = strlen((char*)pData->db);
+	lencoll = strlen((char*)pData->collection);
+	CHKmalloc(pData->dbNcoll = malloc(lendb+lencoll+2));
+	memcpy(pData->dbNcoll, pData->db, lendb);
+	pData->dbNcoll[lendb] = '.';
+	/* lencoll+1 => copy \0! */
+	memcpy(pData->dbNcoll+lendb+1, pData->collection, lencoll+1);
 
 CODE_STD_FINALIZERnewActInst
 	cnfparamvalsDestruct(pvals, &actpblk);
@@ -286,9 +293,14 @@ BEGINparseSelectorAct
 CODESTARTparseSelectorAct
 CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	char tmpBuf[256];
-//	ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
+	if(!strncmp((char*) p, ":ommongodb:", sizeof(":ommongodb:") - 1)) {
+		errmsg.LogError(0, RS_RET_LEGA_ACT_NOT_SUPPORTED,
+			"ommongodb supports only v6 config format, use: "
+			"action(type=\"ommongodb\" server=...)");
+	}
+	ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
 	/* don't use old config interface! */
-#if 1
+#if 0
 	if(!strncmp((char*) p, ":ommongodb:", sizeof(":ommongodb:") - 1)) {
 		p += sizeof(":ommongodb:") - 1; /* eat indicator sequence  (-1 because of '\0'!) */
 	} else {
@@ -314,7 +326,6 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
        	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_TPL_AS_ARRAY, (uchar*) " StdMongoDBFmt"));
         
         
-        CHKiRet(initMongoDB(pData, 0));
 #endif
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
