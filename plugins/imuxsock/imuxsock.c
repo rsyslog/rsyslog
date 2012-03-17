@@ -1351,10 +1351,13 @@ CODEmodInit_QueryRegCFSLineHdlr
 	/* support statistics gathering */
 	CHKiRet(statsobj.Construct(&modStats));
 	CHKiRet(statsobj.SetName(modStats, UCHAR_CONSTANT("imuxsock")));
+	STATSCOUNTER_INIT(ctrSubmit, mutCtrSubmit);
 	CHKiRet(statsobj.AddCounter(modStats, UCHAR_CONSTANT("submitted"),
 		ctrType_IntCtr, &ctrSubmit));
+	STATSCOUNTER_INIT(ctrLostRatelimit, mutCtrLostRatelimit);
 	CHKiRet(statsobj.AddCounter(modStats, UCHAR_CONSTANT("ratelimit.discarded"),
 		ctrType_IntCtr, &ctrLostRatelimit));
+	STATSCOUNTER_INIT(ctrNumRatelimiters, mutCtrNumRatelimiters);
 	CHKiRet(statsobj.AddCounter(modStats, UCHAR_CONSTANT("ratelimit.numratelimiters"),
 		ctrType_IntCtr, &ctrNumRatelimiters));
 	CHKiRet(statsobj.ConstructFinalize(modStats));

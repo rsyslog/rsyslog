@@ -1,24 +1,22 @@
 /* The statsobj object.
  *
- * Copyright 2010 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2010-2012 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
- * The rsyslog runtime library is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * The rsyslog runtime library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with the rsyslog runtime library.  If not, see <http://www.gnu.org/licenses/>.
- *
- * A copy of the GPL can be found in the file "COPYING" in this distribution.
- * A copy of the LGPL can be found in the file "COPYING.LESSER" in this distribution.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *       -or-
+ *       see COPYING.ASL20 in the source distribution
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 #ifndef INCLUDED_STATSOBJ_H
 #define INCLUDED_STATSOBJ_H
@@ -96,6 +94,31 @@ PROTOTYPEObj(statsobj);
  * Unfortunately, this does not work if counter is e.g. "pThis->ctr".
  * So we decided, for clarity, to always insist on specifying the mutex
  * name (after all, it's just a few more keystrokes...).
+ * --------------------------------------------------------------------
+ *                               NOTE WELL
+ * --------------------------------------------------------------------
+ * There are actually two types of stats counters: "regular" counters,
+ * which are only used for stats purposes and "dual" counters, which 
+ * are primarily used for other purposes but can be included in stats
+ * as well. ALL regular counters MUST be initialized with
+ * STATSCOUNTER_INIT and only be modified by STATSCOUNTER_* functions.
+ * They MUST NOT be used for any other purpose (if this seems to make
+ * sense, consider changing it to a dual counter).
+ * Dual counters are somewhat dangerous in that a single variable is
+ * used for two purposes: the actual application need and stats
+ * counting. However, this is supported for performance reasons, as it
+ * provides insight into the inner engine workings without need for
+ * additional counters (and their maintenance code). Dual counters
+ * MUST NOT be modified by STATSCOUNTER_* functions. Most importantly,
+ * it is expected that the actua application code provides proper
+ * (enough) synchronized access to these counters. Most importantly,
+ * this means they have NO stats-system mutex associated to them.
+ *
+ * The interface function AddCounter() is a read-only function. It 
+ * only provides the stats subsystem with a reference to a counter.
+ * It is irrelevant if the counter is a regular or dual one. For that
+ * reason, AddCounter() must not modify the counter contents, as in
+ * the case of a dual counter application code may be broken.
  */
 #define STATSCOUNTER_DEF(ctr, mut) \
 	intctr_t ctr; \
