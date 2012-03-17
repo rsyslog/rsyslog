@@ -15,6 +15,7 @@ Version 6.3.8  [DEVEL] 2012-02-??
   a certain way
 - bugfix: property $!all-json made rsyslog abort if no normalized data
   was available
+- bugfix: memory leak in array passing output module mode
 ---------------------------------------------------------------------------
 Version 6.3.7  [DEVEL] 2012-02-02
 - imported refactored v5.9.6 imklog linux driver, now combined with BSD
