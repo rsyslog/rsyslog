@@ -121,6 +121,7 @@ Version 6.2.1  [v6-stable], 2012-01-??
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=313
 - bugfix: stopped DA queue was never processed after a restart due to a
   regression from statistics module
+- bugfix: memory leak in array passing output module mode
 ---------------------------------------------------------------------------
 Version 6.2.0  [v6-stable], 2012-01-09
 - bugfix (kind of): removed numerical part from pri-text
@@ -479,7 +480,12 @@ Version 5.9.0  [V5-DEVEL] (rgerhards), 2011-06-08
   affected directive was: $ActionExecOnlyWhenPreviousIsSuspended on
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=236
 ---------------------------------------------------------------------------
-Version 5.8.9  [V5-stable] 2012-03-??
+Version 5.8.10  [V5-stable] 2012-??-??
+- bugfix: memory leak in array passing output module mode
+---------------------------------------------------------------------------
+Version 5.8.9  [V5-stable] 2012-03-15
+- added tool to recover disk queue if .qi file is missing (recover_qi.pl)
+  Thanks to Kaiwang Chen for contributing this tool
 - bugfix: stopped DA queue was never processed after a restart due to a
   regression from statistics module
 - added better doc for statsobj interface
