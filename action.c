@@ -785,8 +785,9 @@ static rsRetVal releaseBatch(action_t *pAction, batch_t *pBatch)
 					if(((uchar**)ppMsgs)[j] != NULL) {
 						jArr = 0;
 						while(ppMsgs[j][jArr] != NULL) {
-							d_free(ppMsgs[j][jArr++]);
-							ppMsgs[j][jArr++] = NULL;
+							d_free(ppMsgs[j][jArr]);
+							ppMsgs[j][jArr] = NULL;
+							++jArr;
 						}
 						d_free(((uchar**)ppMsgs)[j]);
 						((uchar**)ppMsgs)[j] = NULL;
