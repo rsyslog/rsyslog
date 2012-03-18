@@ -171,10 +171,11 @@ rsRetVal writeMongoDB(uchar *psz, instanceData *pData)
 	}
 
 	szParams = (char**)(void*) psz;
-	doc = bson_build(BSON_TYPE_STRING, "msg", szParams[0], -1,
-			 BSON_TYPE_STRING, "facility", szParams[1], -1,
-			 BSON_TYPE_STRING, "hostname", szParams[2], -1,
-			 BSON_TYPE_STRING, "priority", szParams[3], -1,
+	doc = bson_build(BSON_TYPE_STRING, "p_proc", szParams[0], -1,
+			 BSON_TYPE_STRING, "p_sys", szParams[1], -1,
+			 BSON_TYPE_STRING, "time", szParams[2], -1,
+			 BSON_TYPE_STRING, "crit", szParams[3], -1,
+			 BSON_TYPE_STRING, "rawmsg", szParams[4], -1,
 			 BSON_TYPE_NONE);
 	if(doc == NULL) {
 		dbgprintf("ommongodb: error creating BSON doc\n");
@@ -253,7 +254,7 @@ CODESTARTnewActInst
 		} else if(!strcmp(actpblk.descr[i].name, "template")) {
 			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else {
-			dbgprintf("ommysql: program error, non-handled "
+			dbgprintf("ommongodb: program error, non-handled "
 			  "param '%s'\n", actpblk.descr[i].name);
 		}
 	}
