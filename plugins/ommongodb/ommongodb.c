@@ -42,13 +42,6 @@
 #include "errmsg.h"
 #include "cfsysline.h"
 
-#define countof(X) ( (size_t) ( sizeof(X)/sizeof*(X) ) )
-
-#define DEFAULT_SERVER "127.0.0.1"
-#define DEFAULT_DATABASE "syslog"
-#define DEFAULT_COLLECTION "log"
-#define DEFAULT_DB_COLLECTION "syslog.log"
-
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("ommongodb")
@@ -88,16 +81,9 @@ static struct cnfparamblk actpblk =
 	  actpdescr
 	};
 
-
-BEGINinitConfVars		/* (re)set config variables to default values */
-CODESTARTinitConfVars 
-ENDinitConfVars
-
-
 BEGINcreateInstance
 CODESTARTcreateInstance
 ENDcreateInstance
-
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
@@ -111,13 +97,12 @@ ENDisCompatibleWithFeature
 
 static void closeMongoDB(instanceData *pData)
 {
-	ASSERT(pData != NULL);
-
 	if(pData->conn != NULL) {
                 mongo_sync_disconnect(pData->conn);
 		pData->conn = NULL;
 	}
 }
+
 
 BEGINfreeInstance
 CODESTARTfreeInstance
@@ -151,7 +136,9 @@ static rsRetVal initMongoDB(instanceData *pData, int bSilent)
         
 	pData->conn = mongo_sync_connect(server, pData->port, TRUE);
 	if(pData->conn == NULL) {
-                errmsg.LogError(0, RS_RET_SUSPENDED, "can not initialize MongoDB handle");
+		if(!bSilent)
+			errmsg.LogError(0, RS_RET_SUSPENDED,
+					"can not initialize MongoDB handle");
                 ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
 
@@ -182,7 +169,7 @@ rsRetVal writeMongoDB(uchar *psz, instanceData *pData)
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 	bson_finish(doc);
-	if(!mongo_sync_cmd_insert(pData->conn, pData->dbNcoll, doc, NULL)) {
+	if(!mongo_sync_cmd_insert(pData->conn, (char*)pData->dbNcoll, doc, NULL)) {
 		perror ("mongo_sync_cmd_insert()");
 		dbgprintf("ommongodb: insert error\n");
 		ABORT_FINALIZE(RS_RET_ERR);
@@ -293,41 +280,12 @@ ENDnewActInst
 BEGINparseSelectorAct
 CODESTARTparseSelectorAct
 CODE_STD_STRING_REQUESTparseSelectorAct(1)
-	char tmpBuf[256];
 	if(!strncmp((char*) p, ":ommongodb:", sizeof(":ommongodb:") - 1)) {
 		errmsg.LogError(0, RS_RET_LEGA_ACT_NOT_SUPPORTED,
 			"ommongodb supports only v6 config format, use: "
 			"action(type=\"ommongodb\" server=...)");
 	}
 	ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
-	/* don't use old config interface! */
-#if 0
-	if(!strncmp((char*) p, ":ommongodb:", sizeof(":ommongodb:") - 1)) {
-		p += sizeof(":ommongodb:") - 1; /* eat indicator sequence  (-1 because of '\0'!) */
-	} else {
-		ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
-	}
-
-        CHKiRet(createInstance(&pData));
-        
-#if 0
-        if(getSubString(&p, pData->opts->host, MAXHOSTNAMELEN+1, ','))
-            strcpy(pData->opts->host,DEFAULT_SERVER);
-#endif
-            
-        //we must define the max db name
-        if(getSubString(&p,tmpBuf,255,','))
-            ;//strcpy(pData->db,DEFAULT_DATABASE);
-        if(getSubString(&p,tmpBuf,255,';'))
-            ;//strcpy(pData->collection,DEFAULT_COLLECTION);
-        if(*(p-1) == ';')
-		--p;	
-
-        
-       	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_TPL_AS_ARRAY, (uchar*) " StdMongoDBFmt"));
-        
-        
-#endif
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
