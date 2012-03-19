@@ -94,7 +94,6 @@ finalize_it:
 rsRetVal OMSRsetEntry(omodStringRequest_t *pThis, int iEntry, uchar *pTplName, int iTplOpts)
 {
 	assert(pThis != NULL);
-	assert(pTplName != NULL);
 	assert(iEntry < pThis->iNumEntries);
 
 	if(pThis->ppTplName[iEntry] != NULL)

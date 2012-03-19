@@ -1914,7 +1914,9 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData,
 		/* Ok, we got everything, so it now is time to look up the template
 		 * (Hint: templates MUST be defined before they are used!)
 		 */
-		if((pAction->ppTpl[i] = tplFind(ourConf, (char*)pTplName, strlen((char*)pTplName))) == NULL) {
+		if(   !(iTplOpts & OMSR_TPL_AS_MSG)
+		   && (pAction->ppTpl[i] =
+		   	tplFind(ourConf, (char*)pTplName, strlen((char*)pTplName))) == NULL) {
 			snprintf(errMsg, sizeof(errMsg) / sizeof(char),
 				 " Could not find template '%s' - action disabled\n",
 				 pTplName);
