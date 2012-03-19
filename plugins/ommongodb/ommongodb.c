@@ -39,6 +39,7 @@
 #include "srUtils.h"
 #include "template.h"
 #include "module-template.h"
+#include "datetime.h"
 #include "errmsg.h"
 #include "cfsysline.h"
 
@@ -49,6 +50,7 @@ MODULE_CNFNAME("ommongodb")
  */
 DEF_OMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
+DEFobjCurrIf(datetime)
 
 typedef struct _instanceData {
 	mongo_sync_connection *conn;
@@ -59,7 +61,6 @@ typedef struct _instanceData {
 	uchar *uid;
 	uchar *pwd;
 	uchar *dbNcoll;
-        unsigned uLastMongoDBErrno;
 	uchar *tplName;
 } instanceData;
 
@@ -146,10 +147,21 @@ finalize_it:
 	RETiRet;
 }
 
-rsRetVal writeMongoDB(uchar *psz, instanceData *pData)
+
+/* write to mongodb in MSG passing mode, that is without a template.
+ * In this mode, we use the standard document format, which is somewhat
+ * aligned to cee (as described in project lumberjack). Note that this is
+ * a moving target, so we may run out of sync (and stay so to retain
+ * backward compatibility, which we consider pretty important).
+ */
+rsRetVal writeMongoDB_msg(msg_t *pMsg, instanceData *pData)
 {
-	bson *doc;
-	char **szParams;
+	bson *doc = NULL;
+	uchar *p_proc; short unsigned p_proc_free; size_t p_proc_len;
+	uchar *p_hostname; short unsigned p_hostname_free; size_t p_hostname_len;
+	uchar *p_crit; short unsigned p_crit_free; size_t p_crit_len;
+	uchar *p_rawmsg; short unsigned p_rawmsg_free; size_t p_rawmsg_len;
+	char timestamp[64];
 	DEFiRet;
 
 	/* see if we are ready to proceed */
@@ -157,31 +169,37 @@ rsRetVal writeMongoDB(uchar *psz, instanceData *pData)
 		CHKiRet(initMongoDB(pData, 0));
 	}
 
-	szParams = (char**)(void*) psz;
-	doc = bson_build(BSON_TYPE_STRING, "p_proc", szParams[0], -1,
-			 BSON_TYPE_STRING, "p_sys", szParams[1], -1,
-			 BSON_TYPE_STRING, "time", szParams[2], -1,
-			 BSON_TYPE_STRING, "crit", szParams[3], -1,
-			 BSON_TYPE_STRING, "rawmsg", szParams[4], -1,
+	p_proc = MsgGetProp(pMsg, NULL, PROP_PROGRAMNAME, NULL, &p_proc_len, &p_proc_free);
+	p_hostname = MsgGetProp(pMsg, NULL, PROP_HOSTNAME, NULL, &p_hostname_len, &p_hostname_free);
+	p_crit = MsgGetProp(pMsg, NULL, PROP_PRI, NULL, &p_crit_len, &p_crit_free);
+	p_rawmsg = MsgGetProp(pMsg, NULL, PROP_RAWMSG, NULL, &p_rawmsg_len, &p_rawmsg_free);
+	datetime.formatTimestamp3339(&pMsg->tTIMESTAMP, timestamp);
+
+	doc = bson_build(BSON_TYPE_STRING, "p_proc", p_proc, p_proc_len,
+			 BSON_TYPE_STRING, "p_sys", p_hostname, p_hostname_len,
+			 BSON_TYPE_STRING, "time", timestamp, -1,
+			 BSON_TYPE_STRING, "crit", p_crit, p_crit_len,
+			 BSON_TYPE_STRING, "rawmsg", p_rawmsg, p_rawmsg_len,
 			 BSON_TYPE_NONE);
+
+	if(p_proc_free) free(p_proc);
+	if(p_hostname_free) free(p_hostname);
+	if(p_crit_free) free(p_crit);
+	if(p_rawmsg_free) free(p_rawmsg);
+
 	if(doc == NULL) {
 		dbgprintf("ommongodb: error creating BSON doc\n");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 	bson_finish(doc);
 	if(!mongo_sync_cmd_insert(pData->conn, (char*)pData->dbNcoll, doc, NULL)) {
-		perror ("mongo_sync_cmd_insert()");
 		dbgprintf("ommongodb: insert error\n");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
-	bson_free(doc);
 
 finalize_it:
-	if(iRet == RS_RET_OK) {
-		pData->uLastMongoDBErrno = 0; /* reset error for error supression */
-	}
-
-        
+	if(doc != NULL)
+		bson_free(doc);
 	RETiRet;
 }
 
@@ -194,7 +212,9 @@ ENDtryResume
 
 BEGINdoAction
 CODESTARTdoAction
-	iRet = writeMongoDB(ppString[0], pData);
+	if(pData->tplName == NULL) {
+		iRet = writeMongoDB_msg((msg_t*)ppString[0], pData);
+	}
 ENDdoAction
 
 
@@ -247,9 +267,11 @@ CODESTARTnewActInst
 	}
 
 	if(pData->tplName == NULL) {
-		CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*) strdup(" StdDBFmt"),
-			OMSR_TPL_AS_ARRAY));
+		CHKiRet(OMSRsetEntry(*ppOMSR, 0, NULL, OMSR_TPL_AS_MSG));
 	} else {
+		errmsg.LogError(0, RS_RET_LEGA_ACT_NOT_SUPPORTED,
+			"ommongodb: templates are not supported in this version");
+		ABORT_FINALIZE(RS_RET_ERR);
 		CHKiRet(OMSRsetEntry(*ppOMSR, 0,
 			(uchar*) strdup((char*) pData->tplName),
 			OMSR_TPL_AS_ARRAY));
@@ -292,6 +314,8 @@ ENDparseSelectorAct
 
 BEGINmodExit
 CODESTARTmodExit
+	objRelease(errmsg, CORE_COMPONENT);
+	objRelease(datetime, CORE_COMPONENT);
 ENDmodExit
 
 
@@ -306,6 +330,7 @@ CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	INITChkCoreFeature(bCoreSupportsBatching, CORE_FEATURE_BATCHING);
 	DBGPRINTF("ommongodb: module compiled with rsyslog version %s.\n", VERSION);
 	//DBGPRINTF("ommongodb: %susing transactional output interface.\n", bCoreSupportsBatching ? "" : "not ");
