@@ -148,6 +148,28 @@ finalize_it:
 }
 
 
+/* map syslog severity to lumberjack level 
+ * TODO: consider moving this to msg.c - make some dirty "friend" references...
+ * rgerhards, 2012-03-19
+ */
+static  inline char *
+getLumberjackLevel(short severity)
+{
+	switch(severity) {
+		case 0: return "FATAL";
+		case 1:
+		case 2:
+		case 3: return "ERROR";
+		case 4: return "WARN";
+		case 5:
+		case 6: return "INFO";
+		case 7: return "DEBUG";
+		default:DBGPRINTF("ommongodb: invalid syslog severity %u\n", severity);
+			return "INVLD";
+	}
+}
+
+
 /* write to mongodb in MSG passing mode, that is without a template.
  * In this mode, we use the standard document format, which is somewhat
  * aligned to cee (as described in project lumberjack). Note that this is
@@ -157,10 +179,10 @@ finalize_it:
 rsRetVal writeMongoDB_msg(msg_t *pMsg, instanceData *pData)
 {
 	bson *doc = NULL;
-	uchar *p_proc; short unsigned p_proc_free; size_t p_proc_len;
-	uchar *p_hostname; short unsigned p_hostname_free; size_t p_hostname_len;
-	uchar *p_crit; short unsigned p_crit_free; size_t p_crit_len;
-	uchar *p_rawmsg; short unsigned p_rawmsg_free; size_t p_rawmsg_len;
+	uchar *procid; short unsigned procid_free; size_t procid_len;
+	uchar *pid; short unsigned pid_free; size_t pid_len;
+	uchar *sys; short unsigned sys_free; size_t sys_len;
+	uchar *msg; short unsigned msg_free; size_t msg_len;
 	char timestamp[64];
 	DEFiRet;
 
@@ -169,23 +191,24 @@ rsRetVal writeMongoDB_msg(msg_t *pMsg, instanceData *pData)
 		CHKiRet(initMongoDB(pData, 0));
 	}
 
-	p_proc = MsgGetProp(pMsg, NULL, PROP_PROGRAMNAME, NULL, &p_proc_len, &p_proc_free);
-	p_hostname = MsgGetProp(pMsg, NULL, PROP_HOSTNAME, NULL, &p_hostname_len, &p_hostname_free);
-	p_crit = MsgGetProp(pMsg, NULL, PROP_PRI, NULL, &p_crit_len, &p_crit_free);
-	p_rawmsg = MsgGetProp(pMsg, NULL, PROP_RAWMSG, NULL, &p_rawmsg_len, &p_rawmsg_free);
+	procid = MsgGetProp(pMsg, NULL, PROP_PROGRAMNAME, NULL, &procid_len, &procid_free);
+	pid = MsgGetProp(pMsg, NULL, PROP_PROCID, NULL, &pid_len, &pid_free);
+	sys = MsgGetProp(pMsg, NULL, PROP_HOSTNAME, NULL, &sys_len, &sys_free);
+	msg = MsgGetProp(pMsg, NULL, PROP_MSG, NULL, &msg_len, &msg_free);
 	datetime.formatTimestamp3339(&pMsg->tTIMESTAMP, timestamp);
 
-	doc = bson_build(BSON_TYPE_STRING, "p_proc", p_proc, p_proc_len,
-			 BSON_TYPE_STRING, "p_sys", p_hostname, p_hostname_len,
+	doc = bson_build(BSON_TYPE_STRING, "sys", sys, sys_len,
 			 BSON_TYPE_STRING, "time", timestamp, -1,
-			 BSON_TYPE_STRING, "crit", p_crit, p_crit_len,
-			 BSON_TYPE_STRING, "rawmsg", p_rawmsg, p_rawmsg_len,
+			 BSON_TYPE_STRING, "msg", msg, msg_len,
+			 BSON_TYPE_STRING, "procid", procid, procid_len,
+			 BSON_TYPE_STRING, "pid", pid, pid_len,
+			 BSON_TYPE_STRING, "level", getLumberjackLevel(pMsg->iSeverity), -1,
 			 BSON_TYPE_NONE);
 
-	if(p_proc_free) free(p_proc);
-	if(p_hostname_free) free(p_hostname);
-	if(p_crit_free) free(p_crit);
-	if(p_rawmsg_free) free(p_rawmsg);
+	if(procid_free) free(procid);
+	if(pid_free) free(pid);
+	if(sys_free) free(sys);
+	if(msg_free) free(msg);
 
 	if(doc == NULL) {
 		dbgprintf("ommongodb: error creating BSON doc\n");
