@@ -100,7 +100,7 @@ DEFobjCurrIf(statsobj)
  * rgerhards, 2009-05-21
  */
 static inline rsRetVal
-addNewLstnPort(tcpsrv_t *pThis, uchar *pszPort)
+addNewLstnPort(tcpsrv_t *pThis, uchar *pszPort, int bSuppOctetFram)
 {
 	tcpLstnPortList_t *pEntry;
 	uchar statname[64];
@@ -113,6 +113,7 @@ addNewLstnPort(tcpsrv_t *pThis, uchar *pszPort)
 	pEntry->pszPort = pszPort;
 	pEntry->pSrv = pThis;
 	pEntry->pRuleset = pThis->pRuleset;
+	pEntry->bSuppOctetFram = bSuppOctetFram;
 
 	/* we need to create a property */ 
 	CHKiRet(prop.Construct(&pEntry->pInputName));
@@ -143,7 +144,7 @@ finalize_it:
  * rgerhards, 2008-03-20
  */
 static rsRetVal
-configureTCPListen(tcpsrv_t *pThis, uchar *pszPort)
+configureTCPListen(tcpsrv_t *pThis, uchar *pszPort, int bSuppOctetFram)
 {
 	int i;
 	uchar *pPort = pszPort;
@@ -159,7 +160,7 @@ configureTCPListen(tcpsrv_t *pThis, uchar *pszPort)
 	}
 
 	if(i >= 0 && i <= 65535) {
-		CHKiRet(addNewLstnPort(pThis, pszPort));
+		CHKiRet(addNewLstnPort(pThis, pszPort, bSuppOctetFram));
 	} else {
 		errmsg.LogError(0, NO_ERRCODE, "Invalid TCP listen port %s - ignored.\n", pszPort);
 	}

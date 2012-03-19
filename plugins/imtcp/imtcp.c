@@ -83,6 +83,7 @@ static permittedPeers_t *pPermPeersRoot = NULL;
 
 /* config settings */
 static int iTCPSessMax = 200; /* max number of sessions */
+static int bSuppOctetFram = 1; /* octet counted TCP framing supported? */
 static int iTCPLstnMax = 20; /* max number of sessions */
 static int iStrmDrvrMode = 0; /* mode for stream driver, driver-dependent (0 mostly means plain tcp) */
 static int bEmitMsgOnClose = 0; /* emit an informational message on close by remote peer */
@@ -215,7 +216,7 @@ static rsRetVal addTCPListener(void __attribute__((unused)) *pVal, uchar *pNewVa
 	CHKiRet(tcpsrv.SetRuleset(pOurTcpsrv, pBindRuleset));
 	CHKiRet(tcpsrv.SetInputName(pOurTcpsrv, pszInputName == NULL ?
 						UCHAR_CONSTANT("imtcp") : pszInputName));
-	tcpsrv.configureTCPListen(pOurTcpsrv, pNewVal);
+	tcpsrv.configureTCPListen(pOurTcpsrv, pNewVal, bSuppOctetFram);
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
@@ -287,6 +288,7 @@ static rsRetVal
 resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
 	iTCPSessMax = 200;
+	bSuppOctetFram = 1;
 	iTCPLstnMax = 20;
 	iStrmDrvrMode = 0;
 	bEmitMsgOnClose = 0;
@@ -324,6 +326,8 @@ CODEmodInit_QueryRegCFSLineHdlr
 	/* register config file handlers */
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpserverrun"), 0, eCmdHdlrGetWord,
 				   addTCPListener, NULL, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpserversupportoctetcountedframing"), 0, eCmdHdlrBinary,
+				   NULL, &bSuppOctetFram, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpmaxsessions"), 0, eCmdHdlrInt,
 				   NULL, &iTCPSessMax, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpmaxlisteners"), 0, eCmdHdlrInt,
