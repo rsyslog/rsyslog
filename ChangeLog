@@ -2,6 +2,9 @@
 Version 5.9.6  [V5-DEVEL], 2012-03-??
 - bugfix: imklog invalidly computed facility and severity
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=313
+- added configuration directive to disable octet-counted framing
+  for imtcp, directive is $InputTCPServerSupportOctetCountedFraming 
+- added configuration directives to customize queue light delay marks
 ---------------------------------------------------------------------------
 Version 5.9.5  [V5-DEVEL], 2012-01-27
 - improved impstats subsystem, added many new counters

@@ -86,6 +86,12 @@ listener. &lt;id-string&gt; semantics depend on the currently selected
 AuthMode and&nbsp; <a href="netstream.html">network stream driver</a>. PermittedPeers may not be set in anonymous modes.</li>
 <li><b>$InputTCPServerBindRuleset</b> &lt;ruleset&gt;<br>
 Binds the listener to a specific <a href="multi_ruleset.html">ruleset</a>.</li>
+<li><b>$InputTCPSupportOctetCountedFraming</b> &lt;<b>on</b>|off&gt;<br>
+If set to "on", the legacy octed-counted framing (similar to RFC5425 framing) is
+activated. This is the default and should be left unchanged until you know
+very well what you do. It may be useful to turn it off, if you know this framing
+is not used and some senders emit multi-line messages into the message stream.
+</li>
 </ul>
 <b>Caveats/Known Bugs:</b>
 <ul>

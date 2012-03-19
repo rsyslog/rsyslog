@@ -41,6 +41,7 @@ struct tcpLstnPortList_s {
 	tcpsrv_t *pSrv;			/**< pointer to higher-level server instance */
 	ruleset_t *pRuleset;		/**< associated ruleset */
 	statsobj_t *stats;		/**< associated stats object */
+	sbool bSuppOctetFram;	/**< do we support octect-counted framing? (if no->legay only!)*/
 	STATSCOUNTER_DEF(ctrSubmit, mutCtrSubmit)
 	tcpLstnPortList_t *pNext;	/**< next port or NULL */
 };
@@ -93,7 +94,7 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Construct)(tcpsrv_t **ppThis);
 	rsRetVal (*ConstructFinalize)(tcpsrv_t __attribute__((unused)) *pThis);
 	rsRetVal (*Destruct)(tcpsrv_t **ppThis);
-	rsRetVal (*configureTCPListen)(tcpsrv_t*, uchar *pszPort);
+	rsRetVal (*configureTCPListen)(tcpsrv_t*, uchar *pszPort, int bSuppOctetFram);
 	//rsRetVal (*SessAccept)(tcpsrv_t *pThis, tcpLstnPortList_t*, tcps_sess_t **ppSess, netstrm_t *pStrm);
 	rsRetVal (*create_tcp_socket)(tcpsrv_t *pThis);
 	rsRetVal (*Run)(tcpsrv_t *pThis);
@@ -130,11 +131,12 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
 	/* added v11 -- rgerhards, 2011-05-09 */
 	rsRetVal (*SetKeepAlive)(tcpsrv_t*, int);
 ENDinterface(tcpsrv)
-#define tcpsrvCURR_IF_VERSION 11 /* increment whenever you change the interface structure! */
+#define tcpsrvCURR_IF_VERSION 12 /* increment whenever you change the interface structure! */
 /* change for v4:
  * - SetAddtlFrameDelim() added -- rgerhards, 2008-12-10
  * - SetInputName() added -- rgerhards, 2008-12-10
  * change for v5 and up: see above
+ * for v12: param bSuppOctetFram added to configureTCPListen
  */
 
 
