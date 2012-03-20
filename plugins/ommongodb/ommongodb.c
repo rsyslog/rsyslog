@@ -128,13 +128,18 @@ ENDdbgPrintInstInfo
 static void
 reportMongoError(instanceData *pData)
 {
+	char errStr[1024];
+	errmsg.LogError(0, RS_RET_ERR, "ommongodb: error: %s",
+		rs_strerror_r(errno, errStr, sizeof(errStr)));
+#if 0
 	gchar *err;
-	if(mongo_sync_cmd_get_last_error(pData->conn, (gchar*)pData->db, &err)) {
+	if(mongo_sync_cmd_get_last_error(pData->conn, (gchar*)pData->db, &err) == TRUE) {
 		errmsg.LogError(0, RS_RET_ERR, "ommongodb: error: %s", err);
 	} else {
 		errmsg.LogError(0, RS_RET_ERR, "ommongodb: we had an error, but can "
 			"not obtain specifics");
 	}
+#endif
 }
 
 
@@ -227,15 +232,15 @@ rsRetVal writeMongoDB_msg(msg_t *pMsg, instanceData *pData)
 	if(msg_free) free(msg);
 
 	if(doc == NULL) {
-		dbgprintf("ommongodb: error creating BSON doc\n");
 		reportMongoError(pData);
-		ABORT_FINALIZE(RS_RET_ERR);
+		dbgprintf("ommongodb: error creating BSON doc\n");
+		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
 	bson_finish(doc);
 	if(!mongo_sync_cmd_insert(pData->conn, (char*)pData->dbNcoll, doc, NULL)) {
-		dbgprintf("ommongodb: insert error\n");
 		reportMongoError(pData);
-		ABORT_FINALIZE(RS_RET_ERR);
+		dbgprintf("ommongodb: insert error\n");
+		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
 
 finalize_it:
