@@ -123,6 +123,21 @@ CODESTARTdbgPrintInstInfo
 ENDdbgPrintInstInfo
 
 
+/* report error that occured during *last* operation
+ */
+static void
+reportMongoError(instanceData *pData)
+{
+	gchar *err;
+	if(mongo_sync_cmd_get_last_error(pData->conn, (gchar*)pData->db, &err)) {
+		errmsg.LogError(0, RS_RET_ERR, "ommongodb: error: %s", err);
+	} else {
+		errmsg.LogError(0, RS_RET_ERR, "ommongodb: we had an error, but can "
+			"not obtain specifics");
+	}
+}
+
+
 /* The following function is responsible for initializing a
  * MySQL connection.
  * Initially added 2004-10-28 mmeckelein
@@ -137,9 +152,10 @@ static rsRetVal initMongoDB(instanceData *pData, int bSilent)
         
 	pData->conn = mongo_sync_connect(server, pData->port, TRUE);
 	if(pData->conn == NULL) {
-		if(!bSilent)
-			errmsg.LogError(0, RS_RET_SUSPENDED,
-					"can not initialize MongoDB handle");
+		if(!bSilent) {
+			reportMongoError(pData);
+			dbgprintf("ommongodb: can not initialize MongoDB handle");
+		}
                 ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
 
@@ -212,11 +228,13 @@ rsRetVal writeMongoDB_msg(msg_t *pMsg, instanceData *pData)
 
 	if(doc == NULL) {
 		dbgprintf("ommongodb: error creating BSON doc\n");
+		reportMongoError(pData);
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 	bson_finish(doc);
 	if(!mongo_sync_cmd_insert(pData->conn, (char*)pData->dbNcoll, doc, NULL)) {
 		dbgprintf("ommongodb: insert error\n");
+		reportMongoError(pData);
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 

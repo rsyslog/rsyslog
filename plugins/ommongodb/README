@@ -24,9 +24,10 @@ $ModLoad ommongodb # provides mongodb support
 
 then in your /etc/rsyslog.d (check your distribution way to organize the configuration..) you create a file 10-mongodb.conf with the following content:
 
-#if you want to change what is logged in the db, the template, you must change the source code since the keys are hardcoded
-$template StdMongoDBFmt,"%programname%%HOSTNAME%%timestamp%%pri%%rawmsg%"
-*.*     action(type="ommongodb" template="StdMongoDBFmt" db="..." collection="...")
+*.*     action(type="ommongodb" db="..." collection="...")
+
+Note: currently templates are not supported. Ommongodb will pick a default
+schema and use the message object content for that (templateless).
 
 
 TODO
