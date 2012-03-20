@@ -94,6 +94,7 @@ typedef struct configSettings_s {
 	int iKeepAliveProbes;
 	int iKeepAliveTime;
 	int bEmitMsgOnClose;		/* emit an informational message on close by remote peer */
+	int bSuppOctetFram;		/* support octet-counted framing? */
 	int iAddtlFrameDelim;		/* addtl frame delimiter, e.g. for netscreen, default none */
 	uchar *pszInputName;		/* value for inputname property, NULL is OK and handled by core engine */
 	uchar *lstnIP;			/* which IP we should listen on? */
@@ -127,6 +128,7 @@ struct ptcpsrv_s {
 	ptcpsess_t *pSess;		/* root of our sessions */
 	sbool bKeepAlive;		/* support keep-alive packets */
 	sbool bEmitMsgOnClose;
+	sbool bSuppOctetFram;
 };
 
 /* the ptcp session object. Describes a single active session.
@@ -141,6 +143,7 @@ struct ptcpsess_s {
 //--- from tcps_sess.h
 	int iMsg;		 /* index of next char to store in msg */
 	int bAtStrtOfFram;	/* are we at the very beginning of a new frame? */
+	sbool bSuppOctetFram;	/**< copy from listener, to speed up access */
 	enum {
 		eAtStrtFram,
 		eInOctetCnt,
@@ -161,6 +164,7 @@ struct ptcplstn_s {
 	ptcpsrv_t *pSrv;	/* our server */
 	ptcplstn_t *prev, *next;
 	int sock;
+	sbool bSuppOctetFram;
 	epolld_t *epd;
 	statsobj_t *stats;	/* listener stats */
 	STATSCOUNTER_DEF(ctrSubmit, mutCtrSubmit)
@@ -632,7 +636,7 @@ processDataRcvd(ptcpsess_t *pThis, char c, struct syslogTime *stTime, time_t ttG
 	DEFiRet;
 
 	if(pThis->inputState == eAtStrtFram) {
-		if(isdigit((int) c)) {
+		if(pThis->bSuppOctetFram && isdigit((int) c)) {
 			pThis->inputState = eInOctetCnt;
 			pThis->iOctetsRemain = 0;
 			pThis->eFraming = TCP_FRAMING_OCTET_COUNTING;
@@ -771,6 +775,7 @@ static inline void
 initConfigSettings(void)
 {
 	cs.bEmitMsgOnClose = 0;
+	cs.bSuppOctetFram = 1;
 	cs.iAddtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
 	cs.pszInputName = NULL;
 	cs.pRuleset = NULL;
@@ -786,7 +791,7 @@ addEPollSock(epolld_type_t typ, void *ptr, int sock, epolld_t **pEpd)
 	DEFiRet;
 	epolld_t *epd = NULL;
 
-	CHKmalloc(epd = malloc(sizeof(epolld_t)));
+	CHKmalloc(epd = calloc(sizeof(epolld_t), 1));
 	epd->typ = typ;
 	epd->ptr = ptr;
 	*pEpd = epd;
@@ -848,6 +853,7 @@ addLstn(ptcpsrv_t *pSrv, int sock, int isIPv6)
 
 	CHKmalloc(pLstn = malloc(sizeof(ptcplstn_t)));
 	pLstn->pSrv = pSrv;
+	pLstn->bSuppOctetFram = pSrv->bSuppOctetFram;
 	pLstn->sock = sock;
 	/* support statistics gathering */
 	CHKiRet(statsobj.Construct(&(pLstn->stats)));
@@ -888,6 +894,7 @@ addSess(ptcplstn_t *pLstn, int sock, prop_t *peerName, prop_t *peerIP)
 	CHKmalloc(pSess->pMsg = malloc(iMaxLine * sizeof(uchar)));
 	pSess->pLstn = pLstn;
 	pSess->sock = sock;
+	pSess->bSuppOctetFram = pLstn->bSuppOctetFram;
 	pSess->inputState = eAtStrtFram;
 	pSess->iMsg = 0;
 	pSess->bAtStrtOfFram = 1;
@@ -992,6 +999,7 @@ static rsRetVal addTCPListener(void __attribute__((unused)) *pVal, uchar *pNewVa
 	pSrv->iKeepAliveIntvl = cs.iKeepAliveTime;
 	pSrv->iKeepAliveProbes = cs.iKeepAliveProbes;
 	pSrv->iKeepAliveTime = cs.iKeepAliveTime;
+	pSrv->bSuppOctetFram = cs.bSuppOctetFram;
 	pSrv->bEmitMsgOnClose = cs.bEmitMsgOnClose;
 	pSrv->port = pNewVal;
 	pSrv->iAddtlFrameDelim = cs.iAddtlFrameDelim;
@@ -1261,6 +1269,7 @@ resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unus
 	cs.iKeepAliveProbes = 0;
 	cs.iKeepAliveTime = 0;
 	cs.iKeepAliveIntvl = 0;
+	cs.bSuppOctetFram = 1;
 	cs.iAddtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
 	free(cs.pszInputName);
 	cs.pszInputName = NULL;
@@ -1302,6 +1311,8 @@ CODEmodInit_QueryRegCFSLineHdlr
 				   NULL, &cs.iKeepAliveTime, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputptcpserverkeepalive_intvl"), 0, eCmdHdlrInt,
 				   NULL, &cs.iKeepAliveIntvl, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputptcpserversupportoctetcountedframing"), 0, eCmdHdlrBinary,
+				   NULL, &cs.bSuppOctetFram, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputptcpservernotifyonconnectionclose"), 0,
 				   eCmdHdlrBinary, NULL, &cs.bEmitMsgOnClose, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputptcpserveraddtlframedelimiter"), 0, eCmdHdlrInt,

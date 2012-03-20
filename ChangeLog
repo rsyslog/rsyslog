@@ -4,6 +4,10 @@ Version 5.9.6  [V5-DEVEL], 2012-03-??
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=313
 - added configuration directive to disable octet-counted framing
   for imtcp, directive is $InputTCPServerSupportOctetCountedFraming 
+  for imptcp, directive is $InputPTCPServerSupportOctetCountedFraming 
+- added capability to use a local interface IP address as fromhost-ip for
+  imuxsock imklog
+  new config directives: $IMUXSockLocalIPIF, $klogLocalIPIF
 - added configuration directives to customize queue light delay marks
 ---------------------------------------------------------------------------
 Version 5.9.5  [V5-DEVEL], 2012-01-27
