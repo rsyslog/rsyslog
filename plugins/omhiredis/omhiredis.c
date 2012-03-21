@@ -53,7 +53,6 @@ typedef struct _instanceData {
 	redisContext *conn;
 	uchar *server;
 	int port;
-    unsigned uLastHiredisErrno;
 	uchar *tplName;
 } instanceData;
 
@@ -110,7 +109,7 @@ static rsRetVal initHiredis(instanceData *pData, int bSilent)
 	server = (pData->server == NULL) ? "127.0.0.1" : (char*) pData->server;
 	DBGPRINTF("omhiredis: trying connect to '%s' at port %d\n", server, pData->port);
     
-    struct timeval timeout = { 1, 500000 }; // 1.5 seconds
+    struct timeval timeout = { 1, 500000 }; /* 1.5 seconds */
     pData->conn = redisConnectWithTimeout(server, pData->port, timeout);
     if (pData->conn->err) {
         if(!bSilent)
@@ -145,10 +144,6 @@ rsRetVal writeHiredis(uchar *message, instanceData *pData)
     
 
 finalize_it:
-	if(iRet == RS_RET_OK) {
-		pData->uLastHiredisErrno = 0; /* reset error for error supression */
-	}
-        
 	RETiRet;
 }
 
@@ -205,7 +200,7 @@ CODESTARTnewActInst
         ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
     }
 
-    // template string 0 is just a regular string
+    /* template string 0 is just a regular string */
     OMSRsetEntry(*ppOMSR, 0,(uchar*)pData->tplName, OMSR_NO_RQD_TPL_OPTS);
 
 CODE_STD_FINALIZERnewActInst
@@ -216,7 +211,7 @@ ENDnewActInst
 BEGINparseSelectorAct
 CODESTARTparseSelectorAct
 
-// tell the engine we only want one template string
+/* tell the engine we only want one template string */
 CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	if(!strncmp((char*) p, ":omhiredis:", sizeof(":omhiredis:") - 1)) {
 		errmsg.LogError(0, RS_RET_LEGA_ACT_NOT_SUPPORTED,
