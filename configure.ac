@@ -1237,6 +1237,26 @@ fi
 AM_CONDITIONAL(ENABLE_OMMONGODB, test x$enable_ommongodb = xyes)
 # end of mongodb code
 
+# HIREDIS SUPPORT
+
+AC_ARG_ENABLE(omhiredis,
+        [AS_HELP_STRING([--enable-omhiredis],[Compiles omhiredis template module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_omhiredis="yes" ;;
+          no) enable_omhiredis="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-omhiredis) ;;
+         esac],
+        [enable_omhiredis=no]
+)
+#
+if test "x$enable_omhiredis" = "xyes"; then
+	PKG_CHECK_MODULES(HIREDIS, hiredis >= 0.10.1)
+	AC_SUBST(HIREDIS_CFLAGS)
+	AC_SUBST(HIREDIS_LIBS)
+fi
+AM_CONDITIONAL(ENABLE_OMHIREDIS, test x$enable_omhiredis = xyes)
+
+# END HIREDIS SUPPORT
 
 AC_CONFIG_FILES([Makefile \
 		runtime/Makefile \
@@ -1278,6 +1298,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omoracle/Makefile \
 		plugins/omudpspoof/Makefile \
 		plugins/ommongodb/Makefile \
+        plugins/omhiredis/Makefile \
 		plugins/mmnormalize/Makefile \
 		plugins/mmjsonparse/Makefile \
 		plugins/mmaudit/Makefile \
@@ -1342,6 +1363,7 @@ echo "    MySql support enabled:                    $enable_mysql"
 echo "    libdbi support enabled:                   $enable_libdbi"
 echo "    PostgreSQL support enabled:               $enable_pgsql"
 echo "    mongodb support enabled:                  $enable_ommongodb"
+echo "    hiredis support enabled:                  $enable_omhiredis"
 echo "    Oracle (OCI) support enabled:             $enable_oracle"
 echo
 echo "---{ protocol support }---"

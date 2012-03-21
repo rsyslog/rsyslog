@@ -2,6 +2,7 @@
 Version 6.3.8  [DEVEL] 2012-02-??
 - added "json" property replacer option to support JSON encoding on a
   per-property basis
+- added omhiredis (contributed module)
 - added mmjsonparse to support recognizing and parsing JSON enhanced syslog
   messages
 - upgraded more plugins to support the new v6 config format:

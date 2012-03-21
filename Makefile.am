@@ -154,6 +154,10 @@ if ENABLE_OMMONGODB
 SUBDIRS += plugins/ommongodb
 endif
 
+if ENABLE_OMHIREDIS
+SUBDIRS += plugins/omhiredis
+endif
+
 if ENABLE_OMUXSOCK
 SUBDIRS += plugins/omuxsock
 endif
