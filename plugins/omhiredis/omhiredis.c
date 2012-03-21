@@ -92,7 +92,6 @@ BEGINfreeInstance
 CODESTARTfreeInstance
 	closeHiredis(pData);
 	free(pData->server);
-	free(pData->port);
 	free(pData->tplName);
 ENDfreeInstance
 
@@ -133,7 +132,7 @@ rsRetVal writeHiredis(uchar *message, instanceData *pData)
 		CHKiRet(initHiredis(pData, 0));
 	}
 
-    reply = redisCommand(pData->conn, message);
+    reply = redisCommand(pData->conn, (char*)message);
     if (!reply->integer) {
         perror ("redisCommand()");
         dbgprintf("omhiredis: redisCommand error\n");
