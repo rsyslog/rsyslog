@@ -2,8 +2,7 @@
   for imtcp, directive is $InputTCPServerSupportOctetCountedFraming 
   for imptcp, directive is $InputPTCPServerSupportOctetCountedFraming 
 - added capability to use a local interface IP address as fromhost-ip for
-  imuxsock imklog
-  new config directives: $IMUXSockLocalIPIF, $klogLocalIPIF
+  locally originating messages. New directive $LocalHostIPIF
 - added configuration directives to customize queue light delay marks
   $MainMsgQueueLightDelayMark, $ActionQueueLightDelayMark; both
   specify number of messages starting at which a delay happens.
