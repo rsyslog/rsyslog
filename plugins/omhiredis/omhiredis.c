@@ -62,11 +62,11 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "serverport", eCmdHdlrInt, 0 },
 	{ "template", eCmdHdlrGetWord, 1 }
 };
-static struct cnfparamblk actpblk =
-	{ CNFPARAMBLK_VERSION,
-	  sizeof(actpdescr)/sizeof(struct cnfparamdescr),
-	  actpdescr
-	};
+static struct cnfparamblk actpblk = {
+	CNFPARAMBLK_VERSION,
+	sizeof(actpdescr)/sizeof(struct cnfparamdescr),
+	actpdescr
+};
 
 BEGINcreateInstance
 CODESTARTcreateInstance
@@ -81,7 +81,7 @@ ENDisCompatibleWithFeature
 static void closeHiredis(instanceData *pData)
 {
 	if(pData->conn != NULL) {
-        redisFree(pData->conn);
+		redisFree(pData->conn);
 		pData->conn = NULL;
 	}
 }
@@ -109,13 +109,13 @@ static rsRetVal initHiredis(instanceData *pData, int bSilent)
 	server = (pData->server == NULL) ? "127.0.0.1" : (char*) pData->server;
 	DBGPRINTF("omhiredis: trying connect to '%s' at port %d\n", server, pData->port);
     
-    struct timeval timeout = { 1, 500000 }; /* 1.5 seconds */
-    pData->conn = redisConnectWithTimeout(server, pData->port, timeout);
-    if (pData->conn->err) {
-        if(!bSilent)
-            errmsg.LogError(0, RS_RET_SUSPENDED,
-                "can not initialize redis handle");
-                ABORT_FINALIZE(RS_RET_SUSPENDED);
+	struct timeval timeout = { 1, 500000 }; /* 1.5 seconds */
+	pData->conn = redisConnectWithTimeout(server, pData->port, timeout);
+	if (pData->conn->err) {
+		if(!bSilent)
+			errmsg.LogError(0, RS_RET_SUSPENDED,
+				"can not initialize redis handle");
+				ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
 
 finalize_it:
@@ -124,24 +124,22 @@ finalize_it:
 
 rsRetVal writeHiredis(uchar *message, instanceData *pData)
 {
-    redisReply *reply;
+	redisReply *reply;
 	DEFiRet;
 
-	if(pData->conn == NULL) {
+	if(pData->conn == NULL)
 		CHKiRet(initHiredis(pData, 0));
-	}
 
-    reply = redisCommand(pData->conn, (char*)message);
-    if (!reply->integer) {
-	char errStr[1024];
-	DBGPRINTF("omhiredis: redisCommand error: %s",
-		  rs_strerror_r(errno, errStr, sizeof(errStr)));
-        freeReplyObject(reply);
-        ABORT_FINALIZE(RS_RET_ERR);
-    } else {
-        freeReplyObject(reply); 
-    }
-    
+	reply = redisCommand(pData->conn, (char*)message);
+	if (reply->type == REDIS_REPLY_ERROR) {
+		char errStr = reply->str;
+		DBGPRINTF("omhiredis: redisCommand error: %s",
+		rs_strerror_r(errno, errStr, sizeof(errStr)));
+		freeReplyObject(reply);
+		ABORT_FINALIZE(RS_RET_ERR);
+	} else {
+		freeReplyObject(reply); 
+	}
 
 finalize_it:
 	RETiRet;
@@ -149,9 +147,8 @@ finalize_it:
 
 BEGINtryResume
 CODESTARTtryResume
-	if(pData->conn == NULL) {
+	if(pData->conn == NULL)
 		iRet = initHiredis(pData, 1);
-	}
 ENDtryResume
 
 BEGINdoAction
@@ -172,9 +169,8 @@ BEGINnewActInst
 	struct cnfparamvals *pvals;
 	int i;
 CODESTARTnewActInst
-	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
+	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL)
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
-	}
 
 	CHKiRet(createInstance(&pData));
 	setInstParamDefaults(pData);
@@ -183,6 +179,7 @@ CODESTARTnewActInst
 	for(i = 0 ; i < actpblk.nParams ; ++i) {
 		if(!pvals[i].bUsed)
 			continue;
+	
 		if(!strcmp(actpblk.descr[i].name, "server")) {
 			pData->server = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "serverport")) {
@@ -191,17 +188,17 @@ CODESTARTnewActInst
 			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else {
 			dbgprintf("omhiredis: program error, non-handled "
-			  "param '%s'\n", actpblk.descr[i].name);
+				"param '%s'\n", actpblk.descr[i].name);
 		}
 	}
 
-    if(pData->tplName == NULL) {
-        dbgprintf("omhiredis: action requires a template name");
-        ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
-    }
+	if(pData->tplName == NULL) {
+		dbgprintf("omhiredis: action requires a template name");
+		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
 
-    /* template string 0 is just a regular string */
-    OMSRsetEntry(*ppOMSR, 0,(uchar*)pData->tplName, OMSR_NO_RQD_TPL_OPTS);
+	/* template string 0 is just a regular string */
+	OMSRsetEntry(*ppOMSR, 0,(uchar*)pData->tplName, OMSR_NO_RQD_TPL_OPTS);
 
 CODE_STD_FINALIZERnewActInst
 	cnfparamvalsDestruct(pvals, &actpblk);
@@ -213,11 +210,10 @@ CODESTARTparseSelectorAct
 
 /* tell the engine we only want one template string */
 CODE_STD_STRING_REQUESTparseSelectorAct(1)
-	if(!strncmp((char*) p, ":omhiredis:", sizeof(":omhiredis:") - 1)) {
+	if(!strncmp((char*) p, ":omhiredis:", sizeof(":omhiredis:") - 1)) 
 		errmsg.LogError(0, RS_RET_LEGA_ACT_NOT_SUPPORTED,
 			"omhiredis supports only v6 config format, use: "
 			"action(type=\"omhiredis\" server=...)");
-	}
 	ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
