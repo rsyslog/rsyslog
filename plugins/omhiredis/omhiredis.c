@@ -132,9 +132,8 @@ rsRetVal writeHiredis(uchar *message, instanceData *pData)
 
 	reply = redisCommand(pData->conn, (char*)message);
 	if (reply->type == REDIS_REPLY_ERROR) {
-		char errStr = reply->str;
-		DBGPRINTF("omhiredis: redisCommand error: %s",
-		rs_strerror_r(errno, errStr, sizeof(errStr)));
+		errmsg.LogError(0, NO_ERRCODE, "omhiredis: %s", reply->str);
+		dbgprintf("omhiredis: %s\n", reply->str);
 		freeReplyObject(reply);
 		ABORT_FINALIZE(RS_RET_ERR);
 	} else {
@@ -148,7 +147,7 @@ finalize_it:
 BEGINtryResume
 CODESTARTtryResume
 	if(pData->conn == NULL)
-		iRet = initHiredis(pData, 1);
+		iRet = initHiredis(pData, 0);
 ENDtryResume
 
 BEGINdoAction
