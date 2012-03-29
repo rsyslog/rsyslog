@@ -1933,7 +1933,6 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 	int wrk;
 	uchar *qName;
 	size_t lenBuf;
-	int iQueueSizeSave;
 
 	ASSERT(pThis != NULL);
 

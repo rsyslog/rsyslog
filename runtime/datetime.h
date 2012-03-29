@@ -44,8 +44,10 @@ BEGINinterface(datetime) /* name must also be changed in ENDinterface macro! */
 	time_t (*GetTime)(time_t *ttSeconds);
 	/* v6, 2011-06-20 */
 	void (*timeval2syslogTime)(struct timeval *tp, struct syslogTime *t);
+	/* v7, 2012-03-29 */
+	int (*formatTimestampUnix)(struct syslogTime *ts, char*pBuf);
 ENDinterface(datetime)
-#define datetimeCURR_IF_VERSION 6 /* increment whenever you change the interface structure! */
+#define datetimeCURR_IF_VERSION 7 /* increment whenever you change the interface structure! */
 /* interface changes:
  * 1 - initial version
  * 2 - not compatible to 1 - bugfix required ParseTIMESTAMP3164 to accept char ** as

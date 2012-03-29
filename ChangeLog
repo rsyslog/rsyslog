@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 6.3.8  [DEVEL] 2012-02-??
+- added "date-unixtimestamp" property replacer option to format as a
+  unix timestamp (seconds since epoch)
 - added "json" property replacer option to support JSON encoding on a
   per-property basis
 - added omhiredis (contributed module)

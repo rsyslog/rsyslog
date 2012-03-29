@@ -121,6 +121,8 @@ struct msg {
 	char pszTimestamp3339[CONST_LEN_TIMESTAMP_3339 + 1];
 	char pszTIMESTAMP_SecFrac[7]; /* Note: a pointer is 64 bits/8 char, so this is actually fewer than a pointer! */
 	char pszRcvdAt_SecFrac[7];	     /* same as above. Both are fractional seconds for their respective timestamp */
+	char pszTIMESTAMP_Unix[12]; /* almost as small as a pointer! */
+	char pszRcvdAt_Unix[12];
 };
 
 

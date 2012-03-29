@@ -737,6 +737,8 @@ static inline rsRetVal msgBaseConstruct(msg_t **ppThis)
 	pM->pszTimestamp3339[0] = '\0';
 	pM->pszTIMESTAMP_SecFrac[0] = '\0';
 	pM->pszRcvdAt_SecFrac[0] = '\0';
+	pM->pszTIMESTAMP_Unix[0] = '\0';
+	pM->pszRcvdAt_Unix[0] = '\0';
 
 	/* DEV debugging only! dbgprintf("msgConstruct\t0x%x, ref 1\n", (int)pM);*/
 
@@ -1337,6 +1339,13 @@ getTimeReported(msg_t *pM, enum tplFormatTypes eFmt)
 		}
 		MsgUnlock(pM);
 		return(pM->pszTIMESTAMP3339);
+	case tplFmtUnixDate:
+		MsgLock(pM);
+		if(pM->pszTIMESTAMP_Unix[0] == '\0') {
+			datetime.formatTimestampUnix(&pM->tTIMESTAMP, pM->pszTIMESTAMP_Unix);
+		}
+		MsgUnlock(pM);
+		return(pM->pszTIMESTAMP_Unix);
 	case tplFmtSecFrac:
 		if(pM->pszTIMESTAMP_SecFrac[0] == '\0') {
 			MsgLock(pM);
@@ -1416,6 +1425,13 @@ static inline char *getTimeGenerated(msg_t *pM, enum tplFormatTypes eFmt)
 		}
 		MsgUnlock(pM);
 		return(pM->pszRcvdAt3339);
+	case tplFmtUnixDate:
+		MsgLock(pM);
+		if(pM->pszRcvdAt_Unix[0] == '\0') {
+			datetime.formatTimestampUnix(&pM->tRcvdAt, pM->pszRcvdAt_Unix);
+		}
+		MsgUnlock(pM);
+		return(pM->pszRcvdAt_Unix);
 	case tplFmtSecFrac:
 		if(pM->pszRcvdAt_SecFrac[0] == '\0') {
 			MsgLock(pM);

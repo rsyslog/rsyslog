@@ -521,6 +521,8 @@ static void doOptions(unsigned char **pp, struct templateEntry *pTpe)
 			pTpe->data.field.eDateFormat = tplFmtRFC3164BuggyDate;
 		 } else if(!strcmp((char*)Buf, "date-rfc3339")) {
 			pTpe->data.field.eDateFormat = tplFmtRFC3339Date;
+		 } else if(!strcmp((char*)Buf, "date-unixtimestamp")) {
+			pTpe->data.field.eDateFormat = tplFmtUnixDate;
 		 } else if(!strcmp((char*)Buf, "date-subseconds")) {
 			pTpe->data.field.eDateFormat = tplFmtSecFrac;
 		 } else if(!strcmp((char*)Buf, "lowercase")) {
@@ -1257,6 +1259,9 @@ void tplPrintList(rsconf_t *conf)
 					break;
 				case tplFmtRFC3339Date:
 					dbgprintf("[Format as RFC3339-Date] ");
+					break;
+				case tplFmtUnixDate:
+					dbgprintf("[Format as Unix timestamp] ");
 					break;
 				default:
 					dbgprintf("[INVALID eDateFormat %d] ", pTpe->data.field.eDateFormat);
