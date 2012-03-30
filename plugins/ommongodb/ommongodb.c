@@ -191,6 +191,17 @@ getLumberjackLevel(short severity)
 }
 
 
+/* small helper: get integer power of 10 */
+static inline int
+i10pow(int exp)
+{
+	int r = 1;
+	while(exp > 0) {
+		r *= 10;
+		exp--;
+	}
+	return r;
+}
 /* write to mongodb in MSG passing mode, that is without a template.
  * In this mode, we use the standard document format, which is somewhat
  * aligned to cee (as described in project lumberjack). Note that this is
@@ -204,7 +215,8 @@ rsRetVal writeMongoDB_msg(msg_t *pMsg, instanceData *pData)
 	uchar *pid; short unsigned pid_free; size_t pid_len;
 	uchar *sys; short unsigned sys_free; size_t sys_len;
 	uchar *msg; short unsigned msg_free; size_t msg_len;
-	char timestamp[64];
+	gint64 timestamp;
+	int secfrac;
 	DEFiRet;
 
 	/* see if we are ready to proceed */
@@ -216,10 +228,21 @@ rsRetVal writeMongoDB_msg(msg_t *pMsg, instanceData *pData)
 	pid = MsgGetProp(pMsg, NULL, PROP_PROCID, NULL, &pid_len, &pid_free);
 	sys = MsgGetProp(pMsg, NULL, PROP_HOSTNAME, NULL, &sys_len, &sys_free);
 	msg = MsgGetProp(pMsg, NULL, PROP_MSG, NULL, &msg_len, &msg_free);
-	datetime.formatTimestamp3339(&pMsg->tTIMESTAMP, timestamp);
+	timestamp = (gint64) datetime.syslogTime2time_t(&pMsg->tTIMESTAMP) * 1000; /* ms! */
+dbgprintf("ommongodb: timestamp is %lld\n", (long long) timestamp);
+dbgprintf("ommongodb: secfrac is %d, precision %d\n",  pMsg->tTIMESTAMP.secfrac, pMsg->tTIMESTAMP.secfracPrecision);
+	if(pMsg->tTIMESTAMP.secfracPrecision > 3) {
+		secfrac = pMsg->tTIMESTAMP.secfrac / i10pow(pMsg->tTIMESTAMP.secfracPrecision - 3);
+	} else if(pMsg->tTIMESTAMP.secfracPrecision < 3) {
+		secfrac = pMsg->tTIMESTAMP.secfrac * i10pow(3 - pMsg->tTIMESTAMP.secfracPrecision);
+	} else {
+		secfrac = pMsg->tTIMESTAMP.secfrac;
+	}
+	timestamp += secfrac;
+dbgprintf("ommongodb: normalized secfrac is %d, final timestamp  %lld\n", secfrac, (long long) timestamp);
 
 	doc = bson_build(BSON_TYPE_STRING, "sys", sys, sys_len,
-			 BSON_TYPE_STRING, "time", timestamp, -1,
+			 BSON_TYPE_UTC_DATETIME, "time", timestamp,
 			 BSON_TYPE_STRING, "msg", msg, msg_len,
 			 BSON_TYPE_STRING, "procid", procid, procid_len,
 			 BSON_TYPE_STRING, "pid", pid, pid_len,

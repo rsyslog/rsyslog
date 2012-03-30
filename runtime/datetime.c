@@ -851,16 +851,9 @@ int formatTimestamp3164(struct syslogTime *ts, char* pBuf, int bBuggyDay)
 
 
 /**
- * format a timestamp as a UNIX timestamp; subsecond resolution is
- * discarded.
- * Note that this code can use some refactoring. I decided to use it
- * because mktime() requires an upfront TZ update as it works on local
- * time. In any case, it is worth reconsidering to move to mktime() or
- * some other method.
- * Important: pBuf must point to a buffer of at least 11 bytes.
- * rgerhards, 2012-03-29
+ * convert syslog timestamp to time_t
  */
-int formatTimestampUnix(struct syslogTime *ts, char *pBuf)
+time_t syslogTime2time_t(struct syslogTime *ts)
 {
 	long MonthInDays, NumberOfYears, NumberOfDays, i;
 	int utcOffset;
@@ -956,7 +949,23 @@ int formatTimestampUnix(struct syslogTime *ts, char *pBuf)
 	if(ts->OffsetMode == '+')
 		utcOffset *= -1; /* if timestamp is ahead, we need to "go back" to UTC */
 	TimeInUnixFormat += utcOffset;
-	snprintf(pBuf, 11, "%u", (unsigned) TimeInUnixFormat);
+	return TimeInUnixFormat;
+}
+
+
+/**
+ * format a timestamp as a UNIX timestamp; subsecond resolution is
+ * discarded.
+ * Note that this code can use some refactoring. I decided to use it
+ * because mktime() requires an upfront TZ update as it works on local
+ * time. In any case, it is worth reconsidering to move to mktime() or
+ * some other method.
+ * Important: pBuf must point to a buffer of at least 11 bytes.
+ * rgerhards, 2012-03-29
+ */
+int formatTimestampUnix(struct syslogTime *ts, char *pBuf)
+{
+	snprintf(pBuf, 11, "%u", (unsigned) syslogTime2time_t(ts));
 	return 11;
 }
 
@@ -986,6 +995,7 @@ CODESTARTobjQueryInterface(datetime)
 	pIf->formatTimestamp3339 = formatTimestamp3339;
 	pIf->formatTimestamp3164 = formatTimestamp3164;
 	pIf->formatTimestampUnix = formatTimestampUnix;
+	pIf->syslogTime2time_t = syslogTime2time_t;
 finalize_it:
 ENDobjQueryInterface(datetime)
 
