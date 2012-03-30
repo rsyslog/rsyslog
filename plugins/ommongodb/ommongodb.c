@@ -212,10 +212,12 @@ rsRetVal writeMongoDB_msg(msg_t *pMsg, instanceData *pData)
 {
 	bson *doc = NULL;
 	uchar *procid; short unsigned procid_free; size_t procid_len;
+	uchar *tag; short unsigned tag_free; size_t tag_len;
 	uchar *pid; short unsigned pid_free; size_t pid_len;
 	uchar *sys; short unsigned sys_free; size_t sys_len;
 	uchar *msg; short unsigned msg_free; size_t msg_len;
-	gint64 timestamp;
+	int severity, facil;
+	gint64 ts_gen, ts_rcv; /* timestamps: generated, received */
 	int secfrac;
 	DEFiRet;
 
@@ -225,11 +227,14 @@ rsRetVal writeMongoDB_msg(msg_t *pMsg, instanceData *pData)
 	}
 
 	procid = MsgGetProp(pMsg, NULL, PROP_PROGRAMNAME, NULL, &procid_len, &procid_free);
+	tag = MsgGetProp(pMsg, NULL, PROP_SYSLOGTAG, NULL, &tag_len, &tag_free);
 	pid = MsgGetProp(pMsg, NULL, PROP_PROCID, NULL, &pid_len, &pid_free);
 	sys = MsgGetProp(pMsg, NULL, PROP_HOSTNAME, NULL, &sys_len, &sys_free);
 	msg = MsgGetProp(pMsg, NULL, PROP_MSG, NULL, &msg_len, &msg_free);
-	timestamp = (gint64) datetime.syslogTime2time_t(&pMsg->tTIMESTAMP) * 1000; /* ms! */
-dbgprintf("ommongodb: timestamp is %lld\n", (long long) timestamp);
+
+	// TODO: move to datetime? Refactor in any case! rgerhards, 2012-03-30
+	ts_gen = (gint64) datetime.syslogTime2time_t(&pMsg->tTIMESTAMP) * 1000; /* ms! */
+dbgprintf("ommongodb: ts_gen is %lld\n", (long long) ts_gen);
 dbgprintf("ommongodb: secfrac is %d, precision %d\n",  pMsg->tTIMESTAMP.secfrac, pMsg->tTIMESTAMP.secfracPrecision);
 	if(pMsg->tTIMESTAMP.secfracPrecision > 3) {
 		secfrac = pMsg->tTIMESTAMP.secfrac / i10pow(pMsg->tTIMESTAMP.secfracPrecision - 3);
@@ -238,18 +243,35 @@ dbgprintf("ommongodb: secfrac is %d, precision %d\n",  pMsg->tTIMESTAMP.secfrac,
 	} else {
 		secfrac = pMsg->tTIMESTAMP.secfrac;
 	}
-	timestamp += secfrac;
-dbgprintf("ommongodb: normalized secfrac is %d, final timestamp  %lld\n", secfrac, (long long) timestamp);
+	ts_gen += secfrac;
+	ts_rcv = (gint64) datetime.syslogTime2time_t(&pMsg->tRcvdAt) * 1000; /* ms! */
+	if(pMsg->tRcvdAt.secfracPrecision > 3) {
+		secfrac = pMsg->tRcvdAt.secfrac / i10pow(pMsg->tRcvdAt.secfracPrecision - 3);
+	} else if(pMsg->tRcvdAt.secfracPrecision < 3) {
+		secfrac = pMsg->tRcvdAt.secfrac * i10pow(3 - pMsg->tRcvdAt.secfracPrecision);
+	} else {
+		secfrac = pMsg->tRcvdAt.secfrac;
+	}
+	ts_rcv += secfrac;
+
+	/* the following need to be int, but are short, so we need to xlat */
+	severity = pMsg->iSeverity;
+	facil = pMsg->iFacility;
 
 	doc = bson_build(BSON_TYPE_STRING, "sys", sys, sys_len,
-			 BSON_TYPE_UTC_DATETIME, "time", timestamp,
+			 BSON_TYPE_UTC_DATETIME, "time", ts_gen,
+			 BSON_TYPE_UTC_DATETIME, "time_rcvd", ts_rcv,
 			 BSON_TYPE_STRING, "msg", msg, msg_len,
+			 BSON_TYPE_INT32, "syslog_fac", facil,
+			 BSON_TYPE_INT32, "syslog_sever", severity,
+			 BSON_TYPE_STRING, "syslog_tag", tag, tag_len,
 			 BSON_TYPE_STRING, "procid", procid, procid_len,
 			 BSON_TYPE_STRING, "pid", pid, pid_len,
 			 BSON_TYPE_STRING, "level", getLumberjackLevel(pMsg->iSeverity), -1,
 			 BSON_TYPE_NONE);
 
 	if(procid_free) free(procid);
+	if(tag_free) free(tag);
 	if(pid_free) free(pid);
 	if(sys_free) free(sys);
 	if(msg_free) free(msg);
