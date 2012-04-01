@@ -262,14 +262,21 @@ finalize_it:
  * line. If the callback reports an error, processing is stopped.
  */
 static rsRetVal
-getAllStatsLines(rsRetVal(*cb)(void*, cstr_t*), void *usrptr)
+getAllStatsLines(rsRetVal(*cb)(void*, cstr_t*), void *usrptr, statsFmtType_t fmt)
 {
 	statsobj_t *o;
 	cstr_t *cstr;
 	DEFiRet;
 
 	for(o = objRoot ; o != NULL ; o = o->next) {
-		CHKiRet(getStatsLine(o, &cstr));
+		switch(fmt) {
+		case statsFmt_Legacy:
+			CHKiRet(getStatsLine(o, &cstr));
+			break;
+		case statsFmt_JSON:
+			CHKiRet(getStatsLineCEE(o, &cstr));
+			break;
+		}
 		CHKiRet(cb(usrptr, cstr));
 		rsCStrDestruct(&cstr);
 	}

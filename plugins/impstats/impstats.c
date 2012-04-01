@@ -58,6 +58,7 @@ typedef struct configSettings_s {
 	int iStatsInterval;
 	int iFacility;
 	int iSeverity;
+	int bJSON;
 } configSettings_t;
 
 struct modConfData_s {
@@ -65,6 +66,7 @@ struct modConfData_s {
 	int iStatsInterval;
 	int iFacility;
 	int iSeverity;
+	statsFmtType_t statsFmt;
 };
 static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
 static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current load process */
@@ -87,6 +89,7 @@ initConfigSettings(void)
 	cs.iStatsInterval = DEFAULT_STATS_PERIOD;
 	cs.iFacility = DEFAULT_FACILITY;
 	cs.iSeverity = DEFAULT_SEVERITY;
+	cs.bJSON = 0;
 }
 
 
@@ -136,7 +139,7 @@ doStatsLine(void __attribute__((unused)) *usrptr, cstr_t *cstr)
 static inline void
 generateStatsMsgs(void)
 {
-	statsobj.GetAllStatsLines(doStatsLine, NULL);
+	statsobj.GetAllStatsLines(doStatsLine, NULL, runModConf->statsFmt);
 }
 
 
@@ -155,6 +158,7 @@ CODESTARTendCnfLoad
 	loadModConf->iStatsInterval = cs.iStatsInterval;
 	loadModConf->iFacility = cs.iFacility;
 	loadModConf->iSeverity = cs.iSeverity;
+	loadModConf->statsFmt = cs.bJSON ? statsFmt_JSON : statsFmt_Legacy;
 ENDendCnfLoad
 
 
@@ -256,6 +260,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"pstatinterval", 0, eCmdHdlrInt, NULL, &cs.iStatsInterval, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"pstatfacility", 0, eCmdHdlrInt, NULL, &cs.iFacility, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"pstatseverity", 0, eCmdHdlrInt, NULL, &cs.iSeverity, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"pstatjson", 0, eCmdHdlrBinary, NULL, &cs.bJSON, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 
 	CHKiRet(prop.Construct(&pInputName));
