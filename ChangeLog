@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 5.8.10  [V5-stable] 2012-??-??
+- bugfix: segfault if disk-queue was started up with old queue file
+  Thanks to Tomas Heinrich for the patch.
 - bugfix: memory leak in array passing output module mode
 ---------------------------------------------------------------------------
 Version 5.8.9  [V5-stable] 2012-03-15

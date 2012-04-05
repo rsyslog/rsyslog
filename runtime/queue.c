@@ -2018,13 +2018,16 @@ static rsRetVal qqueuePersist(qqueue_t *pThis, int bIsCheckpoint)
 	CHKiRet(obj.EndSerialize(psQIF));
 
 	/* now persist the stream info */
-	CHKiRet(strm.Serialize(pThis->tVars.disk.pWrite, psQIF));
-	CHKiRet(strm.Serialize(pThis->tVars.disk.pReadDel, psQIF));
+	if(pThis->tVars.disk.pWrite != NULL)
+		CHKiRet(strm.Serialize(pThis->tVars.disk.pWrite, psQIF));
+	if(pThis->tVars.disk.pReadDel != NULL)
+		CHKiRet(strm.Serialize(pThis->tVars.disk.pReadDel, psQIF));
 	
 	/* tell the input file object that it must not delete the file on close if the queue
 	 * is non-empty - but only if we are not during a simple checkpoint
 	 */
-	if(bIsCheckpoint != QUEUE_CHECKPOINT) {
+	if(bIsCheckpoint != QUEUE_CHECKPOINT
+	   && pThis->tVars.disk.pReadDel != NULL) {
 		CHKiRet(strm.SetbDeleteOnClose(pThis->tVars.disk.pReadDel, 0));
 	}
 
