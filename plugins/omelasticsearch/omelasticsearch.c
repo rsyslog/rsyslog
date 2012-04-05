@@ -29,7 +29,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <curl/curl.h>
-#include <curl/types.h>
+//#include <curl/types.h>
 #include <curl/easy.h>
 #include <assert.h>
 #include <signal.h>
@@ -46,6 +46,7 @@
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
+MODULE_CNFNAME("omelasticsearch")
 
 /* internal structures */
 DEF_OMOD_STATIC_DATA
@@ -63,15 +64,30 @@ STATSCOUNTER_DEF(indexSuccess, mutIndexSuccess)
  */
 typedef struct curl_slist HEADER;
 typedef struct _instanceData {
+	uchar *server;
+	int port;
+	uchar *searchIndex;
+	uchar *searchType;
+	uchar *tplName;
 	CURL	*curlHandle;	/* libcurl session handle */
 	HEADER	*postHeader;	/* json POST request info */
 } instanceData;
 
-/* config variables */
-static int restPort = 9200;
-static char *hostName = "localhost";
-static char *searchIndex = "system";
-static char *searchType = "events";
+
+/* tables for interfacing with the v6 config system */
+/* action (instance) parameters */
+static struct cnfparamdescr actpdescr[] = {
+	{ "server", eCmdHdlrGetWord, 0 },
+	{ "serverport", eCmdHdlrInt, 0 },
+	{ "searchindex", eCmdHdlrGetWord, 0 },
+	{ "searchtype", eCmdHdlrGetWord, 0 },
+	{ "template", eCmdHdlrGetWord, 1 }
+};
+static struct cnfparamblk actpblk =
+	{ CNFPARAMBLK_VERSION,
+	  sizeof(actpdescr)/sizeof(struct cnfparamdescr),
+	  actpdescr
+	};
 
 BEGINcreateInstance
 CODESTARTcreateInstance
@@ -93,6 +109,10 @@ CODESTARTfreeInstance
 		curl_easy_cleanup(pData->curlHandle);
 		pData->curlHandle = NULL;
 	}
+	free(pData->server);
+	free(pData->searchIndex);
+	free(pData->searchType);
+	free(pData->tplName);
 ENDfreeInstance
 
 BEGINdbgPrintInstInfo
@@ -174,7 +194,7 @@ curlSetup(instanceData *instance)
 	}
 
 	snprintf(restURL, sizeof(restURL)-1, "http://%s:%d/%s/%s",
-		hostName, restPort, searchIndex, searchType);
+		instance->server, instance->port, instance->searchIndex, instance->searchType);
 	header = curl_slist_append(NULL, "Content-Type: text/json; charset=utf-8");
 
 	curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, curlResult);
@@ -189,24 +209,76 @@ curlSetup(instanceData *instance)
 	return RS_RET_OK;
 }
 
+static inline void
+setInstParamDefaults(instanceData *pData)
+{
+	pData->server = NULL;
+	pData->port = 9200;
+	pData->searchIndex = NULL;
+	pData->searchType = NULL;
+	pData->tplName = NULL;
+}
+
+BEGINnewActInst
+	struct cnfparamvals *pvals;
+	int i;
+CODESTARTnewActInst
+	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
+		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
+
+	CHKiRet(createInstance(&pData));
+	setInstParamDefaults(pData);
+
+	CODE_STD_STRING_REQUESTparseSelectorAct(1)
+	for(i = 0 ; i < actpblk.nParams ; ++i) {
+		if(!pvals[i].bUsed)
+			continue;
+		if(!strcmp(actpblk.descr[i].name, "server")) {
+			pData->server = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "serverport")) {
+			pData->port = (int) pvals[i].val.d.n, NULL;
+		} else if(!strcmp(actpblk.descr[i].name, "searchIndex")) {
+			pData->searchIndex = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "searchType")) {
+			pData->searchType = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "template")) {
+			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else {
+			dbgprintf("omelasticsearch: program error, non-handled "
+			  "param '%s'\n", actpblk.descr[i].name);
+		}
+	}
+
+	CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*)strdup((pData->tplName == NULL) ?
+					    " StdJSONFmt" : (char*)pData->tplName),
+		OMSR_NO_RQD_TPL_OPTS));
+
+	if(pData->server == NULL)
+		pData->server = (uchar*) strdup("localhost");
+	if(pData->searchIndex == NULL)
+		pData->searchIndex = (uchar*) strdup("system");
+	if(pData->searchType == NULL)
+		pData->searchType = (uchar*) strdup("events");
+
+CODE_STD_FINALIZERnewActInst
+	cnfparamvalsDestruct(pvals, &actpblk);
+	CHKiRet(curlSetup(pData));
+ENDnewActInst
+
+
 BEGINparseSelectorAct
 CODESTARTparseSelectorAct
 CODE_STD_STRING_REQUESTparseSelectorAct(1)
-	if(strncmp((char*) p, ":omelasticsearch:", sizeof(":omelasticsearch:") - 1)) {
-		ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
+	if(!strncmp((char*) p, ":omelasticsearch:", sizeof(":omelasticsearch:") - 1)) {
+		errmsg.LogError(0, RS_RET_LEGA_ACT_NOT_SUPPORTED,
+			"omelasticsearch supports only v6 config format, use: "
+			"action(type=\"omelasticsearch\" server=...)");
 	}
-	p += sizeof(":omelasticsearch:") - 1; /* eat indicator sequence  (-1 because of '\0'!) */
-	CHKiRet(createInstance(&pData));
-
-	/* check if a non-standard template is to be applied */
-	if(*(p-1) == ';')
-		--p;
-	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS, (uchar*) " StdJSONFmt"));
-
-	/* all good, we can now initialise our private data */
-	CHKiRet(curlSetup(pData));
+	ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
+
 
 BEGINmodExit
 CODESTARTmodExit
@@ -220,18 +292,9 @@ BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
 CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
+CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 ENDqueryEtryPt
 
-static rsRetVal
-resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
-{
-	DEFiRet;
-	restPort = 9200;
-	hostName = "localhost";
-	searchIndex = "system";
-	searchType = "events";
-	RETiRet;
-}
 
 BEGINmodInit()
 CODESTARTmodInit
@@ -239,13 +302,6 @@ CODESTARTmodInit
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(statsobj, CORE_COMPONENT));
-
-	/* register config file handlers */
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"elasticsearchindex", 0, eCmdHdlrGetWord, NULL, &searchIndex, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"elasticsearchtype", 0, eCmdHdlrGetWord, NULL, &searchType, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"elasticsearchhost", 0, eCmdHdlrGetWord, NULL, &hostName, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"elasticsearchport", 0, eCmdHdlrInt, NULL, &restPort, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 
 	if (curl_global_init(CURL_GLOBAL_ALL) != 0) {
 		errmsg.LogError(0, RS_RET_OBJ_CREATION_FAILED, "CURL fail. -elasticsearch indexing disabled");
