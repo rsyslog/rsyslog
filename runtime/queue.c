@@ -2119,7 +2119,8 @@ CODESTARTobjDestruct(qqueue)
 	 * direct queue - because in both cases we have none... ;)
 	 * with a child! -- rgerhards, 2008-01-28
 	 */
-	if(pThis->qType != QUEUETYPE_DIRECT && !pThis->bEnqOnly && pThis->pqParent == NULL)
+	if(pThis->qType != QUEUETYPE_DIRECT && !pThis->bEnqOnly && pThis->pqParent == NULL
+	   && pThis->pWtpReg != NULL)
 		ShutdownWorkers(pThis);
 
 	if(pThis->bIsDA && getPhysicalQueueSize(pThis) > 0 && pThis->bSaveOnShutdown) {
