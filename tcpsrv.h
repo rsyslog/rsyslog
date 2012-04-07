@@ -148,7 +148,7 @@ ENDinterface(tcpsrv)
  * - SetAddtlFrameDelim() added -- rgerhards, 2008-12-10
  * - SetInputName() added -- rgerhards, 2008-12-10
  * change for v5 and up: see above
- * for v10: param bSuppOctetFram added to configureTCPListen
+ * for v12: param bSuppOctetFram added to configureTCPListen
  */
 
 

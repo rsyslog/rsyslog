@@ -155,36 +155,6 @@ finalize_it:
 }
 
 
-/* Parse a number from the configuration line.
- * rgerhards, 2007-07-31
- */
-static rsRetVal doGetInt(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal)
-{
-	uchar *p;
-	DEFiRet;
-	int64 i;	
-
-	assert(pp != NULL);
-	assert(*pp != NULL);
-	
-	CHKiRet(parseIntVal(pp, &i));
-	p = *pp;
-
-	if(pSetHdlr == NULL) {
-		/* we should set value directly to var */
-		*((int*)pVal) = (int) i;
-	} else {
-		/* we set value via a set function */
-		CHKiRet(pSetHdlr(pVal, (int) i));
-	}
-
-	*pp = p;
-
-finalize_it:
-	RETiRet;
-}
-
-
 /* Parse a size from the configuration line. This is basically an integer
  * syntax, but modifiers may be added after the integer (e.g. 1k to mean
  * 1024). The size must immediately follow the number. Note that the
@@ -238,7 +208,44 @@ finalize_it:
 }
 
 
-/* Parse and interpet a $FileCreateMode and $umask line. This function
+/* Parse a number from the configuration line.
+ * rgerhards, 2007-07-31
+ */
+static rsRetVal doGetInt(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal)
+{
+	uchar *p;
+	DEFiRet;
+	int64 i;	
+	uchar errMsg[256];	/* for dynamic error messages */
+
+	assert(pp != NULL);
+	assert(*pp != NULL);
+	
+	CHKiRet(doGetSize(pp, NULL,&i));
+	p = *pp;
+	if(i > 2147483648ll) { /*2^31*/
+		snprintf((char*) errMsg, sizeof(errMsg)/sizeof(uchar),
+		         "value %lld too large for integer argument.", i);
+		errmsg.LogError(0, RS_RET_INVALID_VALUE, "%s", errMsg);
+		ABORT_FINALIZE(RS_RET_INVALID_VALUE);
+	}
+
+	if(pSetHdlr == NULL) {
+		/* we should set value directly to var */
+		*((int*)pVal) = (int) i;
+	} else {
+		/* we set value via a set function */
+		CHKiRet(pSetHdlr(pVal, (int) i));
+	}
+
+	*pp = p;
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* Parse and interpret a $FileCreateMode and $umask line. This function
  * pulls the creation mode and, if successful, stores it
  * into the global variable so that the rest of rsyslogd
  * opens files with that mode. Any previous value will be

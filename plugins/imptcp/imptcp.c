@@ -147,7 +147,6 @@ struct ptcpsrv_s {
 	ptcpsrv_t *pNext;		/* linked list maintenance */
 	uchar *port;			/* Port to listen to */
 	uchar *lstnIP;			/* which IP we should listen on? */
-	sbool bSuppOctetFram;
 	int iAddtlFrameDelim;
 	int iKeepAliveIntvl;
 	int iKeepAliveProbes;
@@ -160,6 +159,7 @@ struct ptcpsrv_s {
 	pthread_mutex_t mutSessLst;
 	sbool bKeepAlive;		/* support keep-alive packets */
 	sbool bEmitMsgOnClose;
+	sbool bSuppOctetFram;
 };
 
 /* the ptcp session object. Describes a single active session.
