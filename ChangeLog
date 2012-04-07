@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 5.9.6  [V5-DEVEL], 2012-03-??
+- permit size modifiers (k,m,g,...) in integer config parameters
+  Thanks to Jo Rhett for the suggestion.
 - bugfix: imklog invalidly computed facility and severity
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=313
 - added configuration directive to disable octet-counted framing
