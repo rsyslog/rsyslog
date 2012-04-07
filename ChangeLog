@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 5.8.10  [V5-stable] 2012-??-??
+Version 5.8.10  [V5-stable] 2012-04-05
 - bugfix: segfault on startup if $actionqueuefilename was missing for disk
   queue config
   Thanks to Tomas Heinrich for the patch.
