@@ -35,7 +35,8 @@ struct tcps_sess_s {
 	tcpLstnPortList_t *pLstnInfo;	/* pointer back to listener info */
 	netstrm_t *pStrm;
 	int iMsg;		 /* index of next char to store in msg */
-	int bAtStrtOfFram;	/* are we at the very beginning of a new frame? */
+	sbool bAtStrtOfFram;	/* are we at the very beginning of a new frame? */
+	sbool bSuppOctetFram;	/**< copy from listener, to speed up access */
 	enum {
 		eAtStrtFram,
 		eInOctetCnt,

@@ -47,6 +47,7 @@
 #include <stdarg.h>
 #include <ctype.h>
 #include <stdlib.h>
+#include <sys/socket.h>
 
 #include "dirty.h"
 #include "cfsysline.h"
@@ -55,6 +56,7 @@
 #include "module-template.h"
 #include "datetime.h"
 #include "imklog.h"
+#include "net.h"
 #include "glbl.h"
 #include "prop.h"
 #include "unicode-helper.h"
@@ -68,6 +70,7 @@ DEF_IMOD_STATIC_DATA
 DEFobjCurrIf(datetime)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(prop)
+DEFobjCurrIf(net)
 
 /* config settings */
 typedef struct configSettings_s {
@@ -359,6 +362,7 @@ CODESTARTmodExit
 
 	/* release objects we used */
 	objRelease(glbl, CORE_COMPONENT);
+	objRelease(net, CORE_COMPONENT);
 	objRelease(datetime, CORE_COMPONENT);
 	objRelease(prop, CORE_COMPONENT);
 ENDmodExit
@@ -394,6 +398,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(prop, CORE_COMPONENT));
+	CHKiRet(objUse(net, CORE_COMPONENT));
 
 	/* we need to create the inputName property (only once during our lifetime) */
 	CHKiRet(prop.CreateStringProp(&pInputName, UCHAR_CONSTANT("imklog"), sizeof("imklog") - 1));

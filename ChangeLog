@@ -1,3 +1,11 @@
+- added configuration directive to disable octet-counted framing
+  for imtcp, directive is $InputTCPServerSupportOctetCountedFraming 
+  for imptcp, directive is $InputPTCPServerSupportOctetCountedFraming 
+- added capability to use a local interface IP address as fromhost-ip for
+  locally originating messages. New directive $LocalHostIPIF
+- added configuration directives to customize queue light delay marks
+  $MainMsgQueueLightDelayMark, $ActionQueueLightDelayMark; both
+  specify number of messages starting at which a delay happens.
 ---------------------------------------------------------------------------
 Version 6.3.8  [DEVEL] 2012-02-??
 - added $PStatJSON directive to permit stats records in JSON format

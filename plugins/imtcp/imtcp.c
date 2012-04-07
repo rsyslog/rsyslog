@@ -88,6 +88,7 @@ static permittedPeers_t *pPermPeersRoot = NULL;
 static struct configSettings_s {
 	int iTCPSessMax;
 	int iTCPLstnMax;
+	int bSuppOctetFram;
 	int iStrmDrvrMode;
 	int bKeepAlive;
 	int bEmitMsgOnClose;
@@ -104,6 +105,7 @@ struct instanceConf_s {
 	uchar *pszBindRuleset;		/* name of ruleset to bind to */
 	ruleset_t *pBindRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
 	uchar *pszInputName;		/* value for inputname property, NULL is OK and handled by core engine */
+	int bSuppOctetFram;
 	struct instanceConf_s *next;
 };
 
@@ -115,6 +117,7 @@ struct modConfData_s {
 	int iTCPLstnMax; /* max number of sessions */
 	int iStrmDrvrMode; /* mode for stream driver, driver-dependent (0 mostly means plain tcp) */
 	int iAddtlFrameDelim; /* addtl frame delimiter, e.g. for netscreen, default none */
+	int bSuppOctetFram;
 	sbool bDisableLFDelim; /* disable standard LF delimiter */
 	sbool bUseFlowControl; /* use flow control, what means indicate ourselfs a "light delayable" */
 	sbool bKeepAlive;
@@ -222,6 +225,7 @@ static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	} else {
 		CHKmalloc(inst->pszInputName = ustrdup(cs.pszInputName));
 	}
+	inst->bSuppOctetFram = cs.bSuppOctetFram;
 	inst->next = NULL;
 
 	/* node created, let's add to config */
@@ -274,7 +278,7 @@ addListner(modConfData_t *modConf, instanceConf_t *inst)
 	CHKiRet(tcpsrv.SetRuleset(pOurTcpsrv, inst->pBindRuleset));
 	CHKiRet(tcpsrv.SetInputName(pOurTcpsrv, inst->pszInputName == NULL ?
 						UCHAR_CONSTANT("imtcp") : inst->pszInputName));
-	tcpsrv.configureTCPListen(pOurTcpsrv, inst->pszBindPort);
+	tcpsrv.configureTCPListen(pOurTcpsrv, inst->pszBindPort, inst->bSuppOctetFram);
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
@@ -301,6 +305,7 @@ CODESTARTendCnfLoad
 	pModConf->iTCPLstnMax = cs.iTCPLstnMax;
 	pModConf->iStrmDrvrMode = cs.iStrmDrvrMode;
 	pModConf->bEmitMsgOnClose = cs.bEmitMsgOnClose;
+	pModConf->bSuppOctetFram = cs.bSuppOctetFram;
 	pModConf->iAddtlFrameDelim = cs.iAddtlFrameDelim;
 	pModConf->bDisableLFDelim = cs.bDisableLFDelim;
 	pModConf->bUseFlowControl = cs.bUseFlowControl;
@@ -417,6 +422,7 @@ resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unus
 {
 	cs.iTCPSessMax = 200;
 	cs.iTCPLstnMax = 20;
+	cs.bSuppOctetFram = 1;
 	cs.iStrmDrvrMode = 0;
 	cs.bUseFlowControl = 0;
 	cs.bKeepAlive = 0;
@@ -459,6 +465,8 @@ CODEmodInit_QueryRegCFSLineHdlr
 				   addInstance, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpserverkeepalive"), 0, eCmdHdlrBinary,
 				   NULL, &cs.bKeepAlive, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpserversupportoctetcountedframing"), 0, eCmdHdlrBinary,
+				   NULL, &cs.bSuppOctetFram, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpmaxsessions"), 0, eCmdHdlrInt,
 				   NULL, &cs.iTCPSessMax, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpmaxlisteners"), 0, eCmdHdlrInt,

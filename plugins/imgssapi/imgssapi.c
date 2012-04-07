@@ -340,7 +340,7 @@ addGSSListener(void __attribute__((unused)) *pVal, uchar *pNewVal)
 		CHKiRet(tcpsrv.SetCBOnRegularClose(pOurTcpsrv, onRegularClose));
 		CHKiRet(tcpsrv.SetCBOnErrClose(pOurTcpsrv, onErrClose));
 		CHKiRet(tcpsrv.SetInputName(pOurTcpsrv, UCHAR_CONSTANT("imgssapi")));
-		tcpsrv.configureTCPListen(pOurTcpsrv, pNewVal);
+		tcpsrv.configureTCPListen(pOurTcpsrv, pNewVal, 1);
 		CHKiRet(tcpsrv.ConstructFinalize(pOurTcpsrv));
 	}
 

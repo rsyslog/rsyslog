@@ -94,6 +94,7 @@ DEF_IMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(prop)
+DEFobjCurrIf(net)
 DEFobjCurrIf(parser)
 DEFobjCurrIf(datetime)
 DEFobjCurrIf(statsobj)
@@ -1253,6 +1254,7 @@ CODESTARTmodInit
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
+	CHKiRet(objUse(net, CORE_COMPONENT));
 	CHKiRet(objUse(prop, CORE_COMPONENT));
 	CHKiRet(objUse(statsobj, CORE_COMPONENT));
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
@@ -1286,10 +1288,6 @@ CODEmodInit_QueryRegCFSLineHdlr
 		listeners[i].sockName = NULL;
 		listeners[i].fd  = -1;
 	}
-
-	CHKiRet(prop.Construct(&pLocalHostIP));
-	CHKiRet(prop.SetString(pLocalHostIP, UCHAR_CONSTANT("127.0.0.1"), sizeof("127.0.0.1") - 1));
-	CHKiRet(prop.ConstructFinalize(pLocalHostIP));
 
 	/* now init listen socket zero, the local log socket */
 	CHKiRet(prop.Construct(&(listeners[0].hostName)));
