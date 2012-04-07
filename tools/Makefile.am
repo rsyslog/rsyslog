@@ -47,4 +47,5 @@ zpipe_LDADD = -lz
 msggen_SOURCES = msggen.c
 endif
 
-EXTRA_DIST = $(man_MANS)
+EXTRA_DIST = $(man_MANS) \
+	recover_qi.pl
