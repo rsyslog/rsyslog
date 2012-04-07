@@ -7,7 +7,17 @@
   $MainMsgQueueLightDelayMark, $ActionQueueLightDelayMark; both
   specify number of messages starting at which a delay happens.
 ---------------------------------------------------------------------------
-Version 5.8.9  [V5-stable] 2012-03-??
+Version 5.8.10  [V5-stable] 2012-??-??
+- bugfix: segfault on startup if $actionqueuefilename was missing for disk
+  queue config
+  Thanks to Tomas Heinrich for the patch.
+- bugfix: segfault if disk-queue was started up with old queue file
+  Thanks to Tomas Heinrich for the patch.
+- bugfix: memory leak in array passing output module mode
+---------------------------------------------------------------------------
+Version 5.8.9  [V5-stable] 2012-03-15
+- added tool to recover disk queue if .qi file is missing (recover_qi.pl)
+  Thanks to Kaiwang Chen for contributing this tool
 - bugfix: stopped DA queue was never processed after a restart due to a
   regression from statistics module
 - added better doc for statsobj interface
