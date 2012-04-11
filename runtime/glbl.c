@@ -468,6 +468,7 @@ BEGINObjClassExit(glbl, OBJ_IS_CORE_MODULE) /* class, version */
 	free(pszDfltNetstrmDrvrKeyFile);
 	free(pszDfltNetstrmDrvrCertFile);
 	free(pszWorkDir);
+	free(LocalDomain);
 	free(LocalHostName);
 	free(LocalHostNameOverride);
 	free(LocalFQDNName);
