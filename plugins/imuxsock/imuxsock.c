@@ -1271,6 +1271,13 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(prop.SetString(pInputName, UCHAR_CONSTANT("imuxsock"), sizeof("imuxsock") - 1));
 	CHKiRet(prop.ConstructFinalize(pInputName));
 
+	/* right now, glbl does not permit per-instance IP address notation. As long as this
+	 * is the case, it is OK to query the HostIP once here at this location. HOWEVER, the
+	 * whole concept is not 100% clean and needs to be addressed on a higher layer.
+	 * TODO / rgerhards, 2012-04-11
+	 */
+	pLocalHostIP = glbl.GetLocalHostIP();
+
 	/* init system log socket settings */
 	listeners[0].flags = IGNDATE;
 	listeners[0].sockName = UCHAR_CONSTANT(_PATH_LOG);
