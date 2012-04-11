@@ -152,15 +152,6 @@ our paper on <a href="multi_ruleset.html">using multiple rule sets in rsyslog</a
 <li><a href="rsconf1_gssforwardservicename.html">$GssForwardServiceName</a></li>
 <li><a href="rsconf1_gsslistenservicename.html">$GssListenServiceName</a></li>
 <li><a href="rsconf1_gssmode.html">$GssMode</a></li>
-<li>$HUPisRestart [on/<b>off</b>] - if set to on, a HUP is a full daemon restart. This means any queued messages are discarded (depending
-on queue configuration, of course) all modules are unloaded and reloaded. This mode keeps compatible with sysklogd, but is
-not recommended for use with rsyslog. To do a full restart, simply stop and start the daemon. The default (since 4.5.1) is "off".
-If it is set to "off", a HUP will only close open files. This is a much quicker action and usually
-the only one that is needed e.g. for log rotation. <b>Restart-type HUPs (value "on") are depricated</b> 
-and will go away in rsyslog v5. So it is a good idea to change anything that needs it, now.
-Usually that should not be a big issue, as the restart-type HUP can easily be replaced by
-something along the lines of &quot;/etc/init.d/rsyslog restart&quot;.
-</li>
 <li><a href="rsconf1_includeconfig.html">$IncludeConfig</a></li><li>MainMsgQueueCheckpointInterval &lt;number&gt;</li>
 <li><b>$LocalHostName</b> [name] - this directive permits to overwrite the system
 hostname with the one specified in the directive. If the directive is given
