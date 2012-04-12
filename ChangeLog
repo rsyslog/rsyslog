@@ -1,7 +1,11 @@
 ---------------------------------------------------------------------------
-Version 5.9.6  [V5-DEVEL], 2012-03-??
+Version 5.9.6  [V5-BETA], 2012-04-12
+- added configuration directives to customize queue light delay marks
 - permit size modifiers (k,m,g,...) in integer config parameters
   Thanks to Jo Rhett for the suggestion.
+- bugfix: hostname was not requeried on HUP
+  Thanks to Per Jessen for reporting this bug and Marius Tomaschewski for
+  his help in testing the fix.
 - bugfix: imklog invalidly computed facility and severity
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=313
 - added configuration directive to disable octet-counted framing
@@ -9,7 +13,6 @@ Version 5.9.6  [V5-DEVEL], 2012-03-??
   for imptcp, directive is $InputPTCPServerSupportOctetCountedFraming 
 - added capability to use a local interface IP address as fromhost-ip for
   locally originating messages. New directive $LocalHostIPIF
-- added configuration directives to customize queue light delay marks
 ---------------------------------------------------------------------------
 Version 5.9.5  [V5-DEVEL], 2012-01-27
 - improved impstats subsystem, added many new counters
