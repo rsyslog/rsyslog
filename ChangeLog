@@ -7,6 +7,11 @@
   $MainMsgQueueLightDelayMark, $ActionQueueLightDelayMark; both
   specify number of messages starting at which a delay happens.
 ---------------------------------------------------------------------------
+Version 5.8.11  [V5-stable] 2012-04-??
+- bugfix: hostname was not requeried on HUP
+  Thanks to Per Jessen for reporting this bug and Marius Tomaschewski for
+  his help in testing the fix.
+---------------------------------------------------------------------------
 Version 5.8.10  [V5-stable] 2012-04-05
 - bugfix: segfault on startup if $actionqueuefilename was missing for disk
   queue config
