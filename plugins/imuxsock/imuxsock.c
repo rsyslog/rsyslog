@@ -379,8 +379,7 @@ addListner(instanceConf_t *inst)
 		}
 		CHKiRet(prop.Construct(&(listeners[nfd].hostName)));
 		if(inst->pLogHostName == NULL) {
-			CHKiRet(prop.SetString(listeners[nfd].hostName, glbl.GetLocalHostName(),
-				ustrlen(glbl.GetLocalHostName())));
+			listeners[nfd].hostName = NULL;
 		} else {
 			CHKiRet(prop.SetString(listeners[nfd].hostName, inst->pLogHostName, ustrlen(inst->pLogHostName)));
 		}
@@ -864,7 +863,7 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 		pMsg->msgFlags  = pLstn->flags;
 	}
 
-	MsgSetRcvFrom(pMsg, pLstn->hostName);
+	MsgSetRcvFrom(pMsg, pLstn->hostName == NULL ? glbl.GetLocalHostNameProp() : pLstn->hostName);
 	CHKiRet(MsgSetRcvFromIP(pMsg, pLocalHostIP));
 	CHKiRet(submitMsg(pMsg));
 
@@ -1297,9 +1296,9 @@ CODEmodInit_QueryRegCFSLineHdlr
 	}
 
 	/* now init listen socket zero, the local log socket */
-	CHKiRet(prop.Construct(&(listeners[0].hostName)));
-	CHKiRet(prop.SetString(listeners[0].hostName, glbl.GetLocalHostName(), ustrlen(glbl.GetLocalHostName())));
-	CHKiRet(prop.ConstructFinalize(listeners[0].hostName));
+	CHKiRet(prop.Construct(&pLocalHostIP));
+	CHKiRet(prop.SetString(pLocalHostIP, UCHAR_CONSTANT("127.0.0.1"), sizeof("127.0.0.1") - 1));
+	CHKiRet(prop.ConstructFinalize(pLocalHostIP));
 
 	/* register config file handlers */
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omitlocallogging", 0, eCmdHdlrBinary,

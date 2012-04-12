@@ -1,18 +1,4 @@
 ---------------------------------------------------------------------------
-Version 5.9.6  [V5-DEVEL], 2012-03-??
-- permit size modifiers (k,m,g,...) in integer config parameters
-  Thanks to Jo Rhett for the suggestion.
-- bugfix: imklog invalidly computed facility and severity
-  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=313
-- added configuration directive to disable octet-counted framing
-  for imtcp, directive is $InputTCPServerSupportOctetCountedFraming 
-  for imptcp, directive is $InputPTCPServerSupportOctetCountedFraming 
-- added capability to use a local interface IP address as fromhost-ip for
-  locally originating messages. New directive $LocalHostIPIF
-- added configuration directives to customize queue light delay marks
-  $MainMsgQueueLightDelayMark, $ActionQueueLightDelayMark; both
-  specify number of messages starting at which a delay happens.
----------------------------------------------------------------------------
 Version 6.3.8  [DEVEL] 2012-02-??
 - added $PStatJSON directive to permit stats records in JSON format
 - added "date-unixtimestamp" property replacer option to format as a
@@ -26,6 +12,9 @@ Version 6.3.8  [DEVEL] 2012-02-??
   - ommysql
   - omlibdbi
   - omsnmp
+- added configuration directives to customize queue light delay marks
+  $MainMsgQueueLightDelayMark, $ActionQueueLightDelayMark; both
+  specify number of messages starting at which a delay happens.
 - added message property parsesuccess to indicate if the last run
   higher-level parser could successfully parse the message or not
   (see property replacer html doc for details)
@@ -34,6 +23,19 @@ Version 6.3.8  [DEVEL] 2012-02-??
 - bugfix: property $!all-json made rsyslog abort if no normalized data
   was available
 - bugfix: memory leak in array passing output module mode
+- added configuration directives to customize queue light delay marks
+- permit size modifiers (k,m,g,...) in integer config parameters
+  Thanks to Jo Rhett for the suggestion.
+- bugfix: hostname was not requeried on HUP
+  Thanks to Per Jessen for reporting this bug and Marius Tomaschewski for
+  his help in testing the fix.
+- bugfix: imklog invalidly computed facility and severity
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=313
+- added configuration directive to disable octet-counted framing
+  for imtcp, directive is $InputTCPServerSupportOctetCountedFraming 
+  for imptcp, directive is $InputPTCPServerSupportOctetCountedFraming 
+- added capability to use a local interface IP address as fromhost-ip for
+  locally originating messages. New directive $LocalHostIPIF
 ---------------------------------------------------------------------------
 Version 6.3.7  [DEVEL] 2012-02-02
 - imported refactored v5.9.6 imklog linux driver, now combined with BSD
@@ -383,6 +385,24 @@ expected that interfaces, even new ones, break during the initial
   syslog plain tcp input plugin (NOT supporting TLS!)
   [ported from v4]
 ---------------------------------------------------------------------------
+Version 5.9.6  [V5-BETA], 2012-04-12
+- added configuration directives to customize queue light delay marks
+- permit size modifiers (k,m,g,...) in integer config parameters
+  Thanks to Jo Rhett for the suggestion.
+- bugfix: hostname was not requeried on HUP
+  Thanks to Per Jessen for reporting this bug and Marius Tomaschewski for
+  his help in testing the fix.
+- bugfix: imklog invalidly computed facility and severity
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=313
+- added configuration directive to disable octet-counted framing
+  for imtcp, directive is $InputTCPServerSupportOctetCountedFraming 
+  for imptcp, directive is $InputPTCPServerSupportOctetCountedFraming 
+- added capability to use a local interface IP address as fromhost-ip for
+  locally originating messages. New directive $LocalHostIPIF
+- added configuration directives to customize queue light delay marks
+  $MainMsgQueueLightDelayMark, $ActionQueueLightDelayMark; both
+  specify number of messages starting at which a delay happens.
+---------------------------------------------------------------------------
 Version 5.9.5  [V5-DEVEL], 2012-01-27
 - improved impstats subsystem, added many new counters
 - enhanced module loader to not rely on PATH_MAX
@@ -497,6 +517,11 @@ Version 5.9.0  [V5-DEVEL] (rgerhards), 2011-06-08
 - bugfix: failover did not work correctly if repeated msg reduction was on
   affected directive was: $ActionExecOnlyWhenPreviousIsSuspended on
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=236
+---------------------------------------------------------------------------
+Version 5.8.11  [V5-stable] 2012-04-??
+- bugfix: hostname was not requeried on HUP
+  Thanks to Per Jessen for reporting this bug and Marius Tomaschewski for
+  his help in testing the fix.
 ---------------------------------------------------------------------------
 Version 5.8.10  [V5-stable] 2012-04-05
 - bugfix: segfault on startup if $actionqueuefilename was missing for disk

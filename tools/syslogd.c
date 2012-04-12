@@ -21,7 +21,7 @@
  * For further information, please see http://www.rsyslog.com
  *
  * rsyslog - An Enhanced syslogd Replacement.
- * Copyright 2003-2011 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2003-2012 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -143,6 +143,7 @@ DEFobjCurrIf(net) /* TODO: make go away! */
 
 /* forward definitions */
 static rsRetVal GlobalClassExit(void);
+static rsRetVal queryLocalHostname(void);
 
 
 #ifndef _PATH_LOGCONF 
@@ -1256,6 +1257,11 @@ DEFFUNC_llExecFunc(doHUPActions)
  * is *NOT* the sighup handler. The signal is recorded by the handler, that record
  * detected inside the mainloop and then this function is called to do the
  * real work. -- rgerhards, 2008-10-22
+ * Note: there is a VERY slim chance of a data race when the hostname is reset.
+ * We prefer to take this risk rather than sync all accesses, because to the best
+ * of my analysis it can not really hurt (the actual property is reference-counted)
+ * but the sync would require some extra CPU for *each* message processed.
+ * rgerhards, 2012-04-11
  */
 static inline void
 doHUP(void)
@@ -1271,6 +1277,7 @@ doHUP(void)
 		logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)buf, 0);
 	}
 
+	queryLocalHostname(); /* re-read our name */
 	ruleset.IterateAllActions(ourConf, doHUPActions, NULL);
 }
 
@@ -1487,6 +1494,93 @@ GlobalClassExit(void)
 }
 
 
+/* query our host and domain names - we need to do this early as we may emit
+ * rgerhards, 2012-04-11
+ */
+static rsRetVal
+queryLocalHostname(void)
+{
+	uchar *LocalHostName;
+	uchar *LocalDomain;
+	uchar *LocalFQDNName;
+	uchar *p;
+	struct hostent *hent;
+	DEFiRet;
+
+	net.getLocalHostname(&LocalFQDNName);
+	CHKmalloc(LocalHostName = (uchar*) strdup((char*)LocalFQDNName));
+	glbl.SetLocalFQDNName(LocalFQDNName); /* set the FQDN before we modify it */
+	if((p = (uchar*)strchr((char*)LocalHostName, '.'))) {
+		*p++ = '\0';
+		LocalDomain = p;
+	} else {
+		LocalDomain = (uchar*)"";
+
+		/* It's not clearly defined whether gethostname()
+		 * should return the simple hostname or the fqdn. A
+		 * good piece of software should be aware of both and
+		 * we want to distribute good software.  Joey
+		 *
+		 * Good software also always checks its return values...
+		 * If syslogd starts up before DNS is up & /etc/hosts
+		 * doesn't have LocalHostName listed, gethostbyname will
+                * return NULL.
+		 */
+		/* TODO: gethostbyname() is not thread-safe, but replacing it is
+		 * not urgent as we do not run on multiple threads here. rgerhards, 2007-09-25
+		 */
+		hent = gethostbyname((char*)LocalHostName);
+		if(hent) {
+			int i = 0;
+
+			if(hent->h_aliases) {
+				size_t hnlen;
+
+				hnlen = strlen((char *) LocalHostName);
+
+				for (i = 0; hent->h_aliases[i]; i++) {
+					if (!strncmp(hent->h_aliases[i], (char *) LocalHostName, hnlen)
+					    && hent->h_aliases[i][hnlen] == '.') {
+						/* found a matching hostname */
+						break;
+					}
+				}
+			}
+
+			free(LocalHostName);
+			if(hent->h_aliases && hent->h_aliases[i]) {
+				CHKmalloc(LocalHostName = (uchar*)strdup(hent->h_aliases[i]));
+			} else {
+				CHKmalloc(LocalHostName = (uchar*)strdup(hent->h_name));
+			}
+
+			if((p = (uchar*)strchr((char*)LocalHostName, '.')))
+			{
+				*p++ = '\0';
+				LocalDomain = p;
+			}
+		}
+	}
+
+	/* LocalDomain is "" or part of LocalHostName, allocate a new string */
+	CHKmalloc(LocalDomain = (uchar*)strdup((char*)LocalDomain));
+
+	/* Convert to lower case to recognize the correct domain laterly */
+	for(p = LocalDomain ; *p ; p++)
+		*p = (char)tolower((int)*p);
+
+	/* we now have our hostname and can set it inside the global vars.
+	 * TODO: think if all of this would better be a runtime function
+	 * rgerhards, 2008-04-17
+	 */
+	glbl.SetLocalHostName(LocalHostName);
+	glbl.SetLocalDomain(LocalDomain);
+	glbl.GenerateLocalHostNameProperty(); /* must be redone after conf processing, FQDN setting may have changed */
+finalize_it:
+	RETiRet;
+}
+
+
 /* some support for command line option parsing. Any non-trivial options must be
  * buffered until the complete command line has been parsed. This is necessary to
  * prevent dependencies between the options. That, in turn, means we need to have
@@ -1689,16 +1783,12 @@ int realMain(int argc, char **argv)
 	rsRetVal localRet;
 	register uchar *p;
 	int ch;
-	struct hostent *hent;
 	extern int optind;
 	extern char *optarg;
 	int bEOptionWasGiven = 0;
 	int iHelperUOpt;
 	int bChDirRoot = 1; /* change the current working directory to "/"? */
 	char *arg;	/* for command line option processing */
-	uchar *LocalHostName;
-	uchar *LocalDomain;
-	uchar *LocalFQDNName;
 	char cwdbuf[128]; /* buffer to obtain/display current working directory */
 	DEFiRet;
 
@@ -1788,78 +1878,13 @@ int realMain(int argc, char **argv)
 
 	/* we need to create the inputName property (only once during our lifetime) */
 	CHKiRet(prop.Construct(&pInternalInputName));
-	CHKiRet(prop.SetString(pInternalInputName, UCHAR_CONSTANT("rsyslogd"), sizeof("rsyslgod") - 1));
+	CHKiRet(prop.SetString(pInternalInputName, UCHAR_CONSTANT("rsyslogd"), sizeof("rsyslogd") - 1));
 	CHKiRet(prop.ConstructFinalize(pInternalInputName));
 
 	/* get our host and domain names - we need to do this early as we may emit
 	 * error log messages, which need the correct hostname. -- rgerhards, 2008-04-04
 	 */
-	net.getLocalHostname(&LocalFQDNName);
-	CHKmalloc(LocalHostName = (uchar*) strdup((char*)LocalFQDNName));
-	glbl.SetLocalFQDNName(LocalFQDNName); /* set the FQDN before we modify it */
-	if((p = (uchar*)strchr((char*)LocalHostName, '.'))) {
-		*p++ = '\0';
-		LocalDomain = p;
-	} else {
-		LocalDomain = (uchar*)"";
-
-		/* It's not clearly defined whether gethostname()
-		 * should return the simple hostname or the fqdn. A
-		 * good piece of software should be aware of both and
-		 * we want to distribute good software.  Joey
-		 *
-		 * Good software also always checks its return values...
-		 * If syslogd starts up before DNS is up & /etc/hosts
-		 * doesn't have LocalHostName listed, gethostbyname will
-                * return NULL.
-		 */
-		/* TODO: gethostbyname() is not thread-safe, but replacing it is
-		 * not urgent as we do not run on multiple threads here. rgerhards, 2007-09-25
-		 */
-		hent = gethostbyname((char*)LocalHostName);
-		if(hent) {
-			int i = 0;
-
-			if(hent->h_aliases) {
-				size_t hnlen;
-
-				hnlen = strlen((char *) LocalHostName);
-
-				for (i = 0; hent->h_aliases[i]; i++) {
-					if (!strncmp(hent->h_aliases[i], (char *) LocalHostName, hnlen)
-					    && hent->h_aliases[i][hnlen] == '.') {
-						/* found a matching hostname */
-						break;
-					}
-				}
-			}
-
-			free(LocalHostName);
-			if(hent->h_aliases && hent->h_aliases[i]) {
-				CHKmalloc(LocalHostName = (uchar*)strdup(hent->h_aliases[i]));
-			} else {
-				CHKmalloc(LocalHostName = (uchar*)strdup(hent->h_name));
-			}
-
-			if((p = (uchar*)strchr((char*)LocalHostName, '.')))
-			{
-				*p++ = '\0';
-				LocalDomain = p;
-			}
-		}
-	}
-
-	/* Convert to lower case to recognize the correct domain laterly */
-	for(p = LocalDomain ; *p ; p++)
-		*p = (char)tolower((int)*p);
-
-	/* we now have our hostname and can set it inside the global vars.
-	 * TODO: think if all of this would better be a runtime function
-	 * rgerhards, 2008-04-17
-	 */
-	glbl.SetLocalHostName(LocalHostName);
-	glbl.SetLocalDomain(LocalDomain);
-	glbl.GenerateLocalHostNameProperty(); /* must be redone after conf processing, FQDN setting may have changed */
+	queryLocalHostname();
 
 	/* initialize the objects */
 	if((iRet = modInitIminternal()) != RS_RET_OK) {
