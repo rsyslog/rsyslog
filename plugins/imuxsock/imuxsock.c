@@ -281,16 +281,16 @@ addLstnSocketName(void __attribute__((unused)) *pVal, uchar *pNewVal)
 		} else {
 			listeners[nfd].bParseHost = 0;
 		}
-		CHKiRet(prop.Construct(&(listeners[nfd].hostName)));
 		if(pLogHostName == NULL) {
-			CHKiRet(prop.SetString(listeners[nfd].hostName, glbl.GetLocalHostName(), ustrlen(glbl.GetLocalHostName())));
+			listeners[nfd].hostName = NULL;
 		} else {
+			CHKiRet(prop.Construct(&(listeners[nfd].hostName)));
 			CHKiRet(prop.SetString(listeners[nfd].hostName, pLogHostName, ustrlen(pLogHostName)));
+			CHKiRet(prop.ConstructFinalize(listeners[nfd].hostName));
 			/* reset hostname for next socket */
 			free(pLogHostName);
 			pLogHostName = NULL;
 		}
-		CHKiRet(prop.ConstructFinalize(listeners[nfd].hostName));
 		if(ratelimitInterval > 0) {
 			if((listeners[nfd].ht = create_hashtable(100, hash_from_key_fn, key_equals_fn, NULL)) == NULL) {
 				/* in this case, we simply turn of rate-limiting */
@@ -602,7 +602,7 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred)
 		pMsg->msgFlags  = pLstn->flags;
 	}
 
-	MsgSetRcvFrom(pMsg, pLstn->hostName);
+	MsgSetRcvFrom(pMsg, pLstn->hostName == NULL ? glbl.GetLocalHostNameProp() : pLstn->hostName);
 	CHKiRet(MsgSetRcvFromIP(pMsg, pLocalHostIP));
 	CHKiRet(submitMsg(pMsg));
 
@@ -864,7 +864,6 @@ CODESTARTafterRun
 
 	if(pInputName != NULL)
 		prop.Destruct(&pInputName);
-
 ENDafterRun
 
 
@@ -957,11 +956,6 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(prop.Construct(&pLocalHostIP));
 	CHKiRet(prop.SetString(pLocalHostIP, UCHAR_CONSTANT("127.0.0.1"), sizeof("127.0.0.1") - 1));
 	CHKiRet(prop.ConstructFinalize(pLocalHostIP));
-
-	/* now init listen socket zero, the local log socket */
-	CHKiRet(prop.Construct(&(listeners[0].hostName)));
-	CHKiRet(prop.SetString(listeners[0].hostName, glbl.GetLocalHostName(), ustrlen(glbl.GetLocalHostName())));
-	CHKiRet(prop.ConstructFinalize(listeners[0].hostName));
 
 	/* register config file handlers */
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omitlocallogging", 0, eCmdHdlrBinary,

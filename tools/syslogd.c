@@ -21,7 +21,7 @@
  * For further information, please see http://www.rsyslog.com
  *
  * rsyslog - An Enhanced syslogd Replacement.
- * Copyright 2003-2009 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2003-2012 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
