@@ -69,10 +69,10 @@ static int bDropMalPTRMsgs = 0;/* Drop messages which have malicious PTR records
 static int option_DisallowWarning = 1;	/* complain if message from disallowed sender is received */
 static int bDisableDNS = 0; /* don't look up IP addresses of remote messages */
 static prop_t *propLocalHostName = NULL;/* our hostname as FQDN - read-only after startup */
-static uchar *LocalHostName = NULL;/* our hostname  - read-only after startup */
+static uchar *LocalHostName = NULL;/* our hostname  - read-only after startup, except HUP */
 static uchar *LocalHostNameOverride = NULL;/* user-overridden hostname - read-only after startup */
-static uchar *LocalFQDNName = NULL;/* our hostname as FQDN - read-only after startup */
-static uchar *LocalDomain;	/* our local domain name  - read-only after startup */
+static uchar *LocalFQDNName = NULL;/* our hostname as FQDN - read-only after startup, except HUP */
+static uchar *LocalDomain = NULL;/* our local domain name  - read-only after startup, except HUP */
 static char **StripDomains = NULL;/* these domains may be stripped before writing logs  - r/o after s.u., never touched by init */
 static char **LocalHosts = NULL;/* these hosts are logged with their hostname  - read-only after startup, never touched by init */
 static uchar *pszDfltNetstrmDrvr = NULL; /* module name of default netstream driver */
@@ -115,15 +115,12 @@ SIMP_PROP(DefPFFamily, iDefPFFamily, int) /* note that in the future we may chec
 SIMP_PROP(DropMalPTRMsgs, bDropMalPTRMsgs, int)
 SIMP_PROP(Option_DisallowWarning, option_DisallowWarning, int)
 SIMP_PROP(DisableDNS, bDisableDNS, int)
-SIMP_PROP(LocalDomain, LocalDomain, uchar*)
 SIMP_PROP(StripDomains, StripDomains, char**)
 SIMP_PROP(LocalHosts, LocalHosts, char**)
 #ifdef USE_UNLIMITED_SELECT
 SIMP_PROP(FdSetSize, iFdSetSize, int)
 #endif
 
-SIMP_PROP_SET(LocalFQDNName, LocalFQDNName, uchar*)
-SIMP_PROP_SET(LocalHostName, LocalHostName, uchar*)
 SIMP_PROP_SET(DfltNetstrmDrvr, pszDfltNetstrmDrvr, uchar*) /* TODO: use custom function which frees existing value */
 SIMP_PROP_SET(DfltNetstrmDrvrCAF, pszDfltNetstrmDrvrCAF, uchar*) /* TODO: use custom function which frees existing value */
 SIMP_PROP_SET(DfltNetstrmDrvrKeyFile, pszDfltNetstrmDrvrKeyFile, uchar*) /* TODO: use custom function which frees existing value */
@@ -202,6 +199,19 @@ finalize_it:
 	RETiRet;
 }
 
+/* set our local hostname. Free previous hostname, if it was already set.
+ * Note that we do now do this in a thread
+ * "once in a lifetime" action which can not be undone. -- gerhards, 2009-07-20
+ */
+static rsRetVal
+SetLocalHostName(uchar *newname)
+{
+	free(LocalHostName);
+	LocalHostName = newname;
+	return RS_RET_OK;
+}
+
+
 /* return our local hostname. if it is not set, "[localhost]" is returned
  */
 static uchar*
@@ -224,6 +234,26 @@ GetLocalHostName(void)
 	}
 done:
 	return(pszRet);
+}
+
+
+/* set our local domain name. Free previous domain, if it was already set.
+ */
+static rsRetVal
+SetLocalDomain(uchar *newname)
+{
+	free(LocalDomain);
+	LocalDomain = newname;
+	return RS_RET_OK;
+}
+
+
+/* return our local hostname. if it is not set, "[localhost]" is returned
+ */
+static uchar*
+GetLocalDomain(void)
+{
+	return LocalDomain;
 }
 
 
@@ -270,6 +300,14 @@ GetLocalHostNameProp(void)
 	return(propLocalHostName);
 }
 
+
+static rsRetVal
+SetLocalFQDNName(uchar *newname)
+{
+	free(LocalFQDNName);
+	LocalFQDNName = newname;
+	return RS_RET_OK;
+}
 
 /* return the current localhost name as FQDN (requires FQDN to be set) 
  * TODO: we should set the FQDN ourselfs in here!
@@ -373,30 +411,18 @@ ENDobjQueryInterface(glbl)
  */
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
-	if(pszDfltNetstrmDrvr != NULL) {
-		free(pszDfltNetstrmDrvr);
-		pszDfltNetstrmDrvr = NULL;
-	}
-	if(pszDfltNetstrmDrvrCAF != NULL) {
-		free(pszDfltNetstrmDrvrCAF);
-		pszDfltNetstrmDrvrCAF = NULL;
-	}
-	if(pszDfltNetstrmDrvrKeyFile != NULL) {
-		free(pszDfltNetstrmDrvrKeyFile);
-		pszDfltNetstrmDrvrKeyFile = NULL;
-	}
-	if(pszDfltNetstrmDrvrCertFile != NULL) {
-		free(pszDfltNetstrmDrvrCertFile);
-		pszDfltNetstrmDrvrCertFile = NULL;
-	}
-	if(LocalHostNameOverride != NULL) {
-		free(LocalHostNameOverride);
-		LocalHostNameOverride = NULL;
-	}
-	if(pszWorkDir != NULL) {
-		free(pszWorkDir);
-		pszWorkDir = NULL;
-	}
+	free(pszDfltNetstrmDrvr);
+	pszDfltNetstrmDrvr = NULL;
+	free(pszDfltNetstrmDrvrCAF);
+	pszDfltNetstrmDrvrCAF = NULL;
+	free(pszDfltNetstrmDrvrKeyFile);
+	pszDfltNetstrmDrvrKeyFile = NULL;
+	free(pszDfltNetstrmDrvrCertFile);
+	pszDfltNetstrmDrvrCertFile = NULL;
+	free(LocalHostNameOverride);
+	LocalHostNameOverride = NULL;
+	free(pszWorkDir);
+	pszWorkDir = NULL;
 	bDropMalPTRMsgs = 0;
 	bOptimizeUniProc = 1;
 	bPreserveFQDN = 0;
@@ -437,21 +463,15 @@ ENDObjClassInit(glbl)
  * rgerhards, 2008-04-17
  */
 BEGINObjClassExit(glbl, OBJ_IS_CORE_MODULE) /* class, version */
-	if(pszDfltNetstrmDrvr != NULL)
-		free(pszDfltNetstrmDrvr);
-	if(pszDfltNetstrmDrvrCAF != NULL)
-		free(pszDfltNetstrmDrvrCAF);
-	if(pszDfltNetstrmDrvrKeyFile != NULL)
-		free(pszDfltNetstrmDrvrKeyFile);
-	if(pszDfltNetstrmDrvrCertFile != NULL)
-		free(pszDfltNetstrmDrvrCertFile);
-	if(pszWorkDir != NULL)
-		free(pszWorkDir);
-	if(LocalHostName != NULL)
-		free(LocalHostName);
+	free(pszDfltNetstrmDrvr);
+	free(pszDfltNetstrmDrvrCAF);
+	free(pszDfltNetstrmDrvrKeyFile);
+	free(pszDfltNetstrmDrvrCertFile);
+	free(pszWorkDir);
+	free(LocalDomain);
+	free(LocalHostName);
 	free(LocalHostNameOverride);
-	if(LocalFQDNName != NULL)
-		free(LocalFQDNName);
+	free(LocalFQDNName);
 	objRelease(prop, CORE_COMPONENT);
 	DESTROY_ATOMIC_HELPER_MUT(mutTerminateInputs);
 ENDObjClassExit(glbl)
