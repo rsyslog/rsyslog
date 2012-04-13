@@ -60,12 +60,12 @@
 						 * rgerhards, 2006-11-30
 						 */
 
-#define CONF_OMOD_NUMSTRINGS_MAXSIZE	2	/* cache for pointers to output module buffer pointers. All
-						 * rsyslog-provided plugins do NOT need more than two buffers. If
+#define CONF_OMOD_NUMSTRINGS_MAXSIZE	3	/* cache for pointers to output module buffer pointers. All
+						 * rsyslog-provided plugins do NOT need more than three buffers. If
 						 * more are needed (future developments, third-parties), rsyslog 
 						 * must be recompiled with a larger parameter. Hardcoding this
 						 * saves us some overhead, both in runtime in code complexity. As
-						 * it is doubtful if ever more than 2 parameters are needed, the
+						 * it is doubtful if ever more than 3 parameters are needed, the
 						 * approach taken here is considered appropriate.
 						 * rgerhards, 2010-06-24
 						 */
@@ -372,6 +372,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_INVLD_PROTOCOL = -2213, /**< invalid protocol specified in config file */
 	RS_RET_CNF_INVLD_FRAMING = -2214, /**< invalid framing specified in config file */
 	RS_RET_LEGA_ACT_NOT_SUPPORTED = -2215, /**< the module (no longer) supports legacy action syntax */
+	RS_RET_MAX_OMSR_REACHED = -2216, /**< max nbr of string requests reached, not supported by core */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */
