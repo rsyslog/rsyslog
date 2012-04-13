@@ -458,7 +458,8 @@ createLogSocket(lstn_t *pLstn)
 	    chmod((char*)pLstn->sockName, 0666) < 0) {
 		errmsg.LogError(errno, NO_ERRCODE, "cannot create '%s'", pLstn->sockName);
 		dbgprintf("cannot create %s (%d).\n", pLstn->sockName, errno);
-		close(pLstn->fd);
+		if(pLstn->fd != -1)
+			close(pLstn->fd);
 		pLstn->fd = -1;
 		ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
 	}
@@ -528,8 +529,10 @@ openLogSocket(lstn_t *pLstn)
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		close(pLstn->fd);
-		pLstn->fd = -1;
+		if(pLstn->fd != -1) {
+			close(pLstn->fd);
+			pLstn->fd = -1;
+		}
 	}
 
 	RETiRet;
