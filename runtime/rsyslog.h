@@ -140,6 +140,7 @@ typedef uintTiny	propid_t;
 #define PROP_CEE			200
 #define PROP_CEE_ALL_JSON		201
 #define PROP_SYS_BOM			159
+#define PROP_SYS_UPTIME			160
 
 
 /* The error codes below are orginally "borrowed" from
