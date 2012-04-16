@@ -331,6 +331,7 @@ static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	CHKmalloc(inst = MALLOC(sizeof(instanceConf_t)));
 	inst->sockName = pNewVal;
 	inst->ratelimitInterval = cs.ratelimitInterval;
+	inst->pLogHostName = cs.pLogHostName;
 	inst->ratelimitBurst = cs.ratelimitBurst;
 	inst->ratelimitSeverity = cs.ratelimitSeverity;
 	inst->bUseFlowCtl = cs.bUseFlowCtl;

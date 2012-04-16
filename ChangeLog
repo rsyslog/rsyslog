@@ -1,6 +1,7 @@
 ---------------------------------------------------------------------------
 Version 6.3.9  [DEVEL] 2012-04-??
-- bugfix/imuxsock: solving abort if hostname was not set
+- bugfix/imuxsock: solving abort if hostname was not set; configured
+  hostname was not used (both merge regressions)
 ---------------------------------------------------------------------------
 Version 6.3.8  [DEVEL] 2012-04-16
 - added $PStatJSON directive to permit stats records in JSON format
