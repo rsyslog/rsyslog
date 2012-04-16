@@ -1,4 +1,7 @@
 ---------------------------------------------------------------------------
+Version 6.3.9  [DEVEL] 2012-04-??
+- bugfix/imuxsock: solving abort if hostname was not set
+---------------------------------------------------------------------------
 Version 6.3.8  [DEVEL] 2012-04-16
 - added $PStatJSON directive to permit stats records in JSON format
 - added "date-unixtimestamp" property replacer option to format as a

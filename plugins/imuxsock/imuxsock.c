@@ -377,13 +377,13 @@ addListner(instanceConf_t *inst)
 		} else {
 			listeners[nfd].bParseHost = 0;
 		}
-		CHKiRet(prop.Construct(&(listeners[nfd].hostName)));
 		if(inst->pLogHostName == NULL) {
 			listeners[nfd].hostName = NULL;
 		} else {
+			CHKiRet(prop.Construct(&(listeners[nfd].hostName)));
 			CHKiRet(prop.SetString(listeners[nfd].hostName, inst->pLogHostName, ustrlen(inst->pLogHostName)));
+			CHKiRet(prop.ConstructFinalize(listeners[nfd].hostName));
 		}
-		CHKiRet(prop.ConstructFinalize(listeners[nfd].hostName));
 		if(inst->ratelimitInterval > 0) {
 			if((listeners[nfd].ht = create_hashtable(100, hash_from_key_fn, key_equals_fn, NULL)) == NULL) {
 				/* in this case, we simply turn off rate-limiting */
