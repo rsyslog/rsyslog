@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 6.3.8  [DEVEL] 2012-02-??
+Version 6.3.8  [DEVEL] 2012-04-16
 - added $PStatJSON directive to permit stats records in JSON format
 - added "date-unixtimestamp" property replacer option to format as a
   unix timestamp (seconds since epoch)
