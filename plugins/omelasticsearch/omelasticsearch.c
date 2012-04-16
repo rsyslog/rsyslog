@@ -4,7 +4,7 @@
  * NOTE: read comments in module-template.h for more specifics!
  *
  * Copyright 2011 Nathan Scott.
- * Copyright 2009 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2009-2012 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -70,8 +70,10 @@ typedef struct _instanceData {
 	uchar *searchIndex;
 	uchar *searchType;
 	uchar *tplName;
+	uchar *timeout;
 	sbool dynSrchIdx;
 	sbool dynSrchType;
+	sbool asyncRepl;
 	CURL	*curlHandle;	/* libcurl session handle */
 	HEADER	*postHeader;	/* json POST request info */
 } instanceData;
@@ -86,6 +88,8 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "searchtype", eCmdHdlrGetWord, 0 },
 	{ "dynsearchindex", eCmdHdlrBinary, 0 },
 	{ "dynsearchtype", eCmdHdlrBinary, 0 },
+	{ "asyncrepl", eCmdHdlrBinary, 0 },
+	{ "timeout", eCmdHdlrGetWord, 0 },
 	{ "template", eCmdHdlrGetWord, 1 }
 };
 static struct cnfparamblk actpblk =
@@ -149,8 +153,21 @@ setCurlURL(instanceData *pData, uchar *tpl1, uchar *tpl2)
 		else 
 			searchType = pData->searchType;
 	}
-	snprintf(restURL, sizeof(restURL)-1, "http://%s:%d/%s/%s",
-		pData->server, pData->port, searchIndex, searchType);
+	if(pData->asyncRepl) {
+		if(pData->timeout != NULL) {
+			snprintf(restURL, sizeof(restURL)-1, "http://%s:%d/%s/%s?"
+				"replication=async&timeout=%s",
+				pData->server, pData->port, searchIndex, searchType,
+				pData->timeout);
+		} else {
+			snprintf(restURL, sizeof(restURL)-1, "http://%s:%d/%s/%s?"
+				"replication=async",
+				pData->server, pData->port, searchIndex, searchType);
+		}
+	} else {
+		snprintf(restURL, sizeof(restURL)-1, "http://%s:%d/%s/%s",
+			pData->server, pData->port, searchIndex, searchType);
+	}
 	curl_easy_setopt(pData->curlHandle, CURLOPT_URL, restURL); 
 	DBGPRINTF("omelasticsearch: using REST URL: '%s'\n", restURL);
 	return RS_RET_OK;
@@ -262,8 +279,10 @@ setInstParamDefaults(instanceData *pData)
 	pData->port = 9200;
 	pData->searchIndex = NULL;
 	pData->searchType = NULL;
+	pData->timeout = NULL;
 	pData->dynSrchIdx = 0;
 	pData->dynSrchType = 0;
+	pData->asyncRepl = 0;
 	pData->tplName = NULL;
 }
 
@@ -294,6 +313,10 @@ CODESTARTnewActInst
 			pData->dynSrchIdx = pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "dynsearchtype")) {
 			pData->dynSrchType = pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "timeout")) {
+			pData->timeout = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "asyncrepl")) {
+			pData->asyncRepl = pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "template")) {
 			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else {
