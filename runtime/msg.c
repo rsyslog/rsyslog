@@ -1057,6 +1057,12 @@ static rsRetVal MsgSerialize(msg_t *pThis, strm_t *pStrm)
 	objSerializePTR(pStrm, pCSAPPNAME, CSTR);
 	objSerializePTR(pStrm, pCSPROCID, CSTR);
 	objSerializePTR(pStrm, pCSMSGID, CSTR);
+	
+	if(pThis->pRuleset != NULL) {
+		rulesetGetName(pThis->pRuleset));
+		CHKiRet(obj.SerializeProp(pStrm, UCHAR_CONSTANT("pszRuleset"), PROPTYPE_PSZ,
+			rulesetGetName(pThis->pRuleset)));
+	}
 
 	/* offset must be serialized after pszRawMsg, because we need that to obtain the correct
 	 * MSG size.
@@ -1663,6 +1669,16 @@ void MsgSetRuleset(msg_t *pMsg, ruleset_t *pRuleset)
 }
 
 
+/* rgerhards 2012-04-18: set associated ruleset (by ruleset name)
+ * If ruleset cannot be found, no update is done.
+ */
+static void
+MsgSetRulesetByName(msg_t *pMsg, cstr_t *rulesetName)
+{
+	rulesetGetRuleset(&(pMsg->pRuleset), rsCStrGetSzStrNoNULL(rulesetName));
+}
+
+
 /* set TAG in msg object
  * (rewritten 2009-06-18 rgerhards)
  */
@@ -1670,8 +1686,6 @@ void MsgSetTAG(msg_t *pMsg, uchar* pszBuf, size_t lenBuf)
 {
 	uchar *pBuf;
 	assert(pMsg != NULL);
-
-dbgprintf("MsgSetTAG in: len %d, pszBuf: %s\n", lenBuf, pszBuf);
 
 	freeTAG(pMsg);
 
@@ -1692,7 +1706,6 @@ dbgprintf("MsgSetTAG in: len %d, pszBuf: %s\n", lenBuf, pszBuf);
 	memcpy(pBuf, pszBuf, pMsg->iLenTAG);
 	pBuf[pMsg->iLenTAG] = '\0'; /* this also works with truncation! */
 
-dbgprintf("MsgSetTAG exit: pMsg->iLenTAG %d, pMsg->TAG.szBuf: %s\n", pMsg->iLenTAG, pMsg->TAG.szBuf);
 }
 
 
@@ -3200,8 +3213,13 @@ rsRetVal MsgSetProperty(msg_t *pThis, var_t *pProp)
 		memcpy(&pThis->tRcvdAt, &pProp->val.vSyslogTime, sizeof(struct syslogTime));
 	} else if(isProp("tTIMESTAMP")) {
 		memcpy(&pThis->tTIMESTAMP, &pProp->val.vSyslogTime, sizeof(struct syslogTime));
+	} else if(isProp("pszRuleset")) {
+		MsgSetRulesetByName(pThis, pProp->val.pStr);
 	} else if(isProp("pszMSG")) {
 		dbgprintf("no longer supported property pszMSG silently ignored\n");
+	} else {
+		dbgprintf("unknown supported property '%s' silently ignored\n",
+			  rsCStrGetSzStrNoNULL(pProp->pcsName));
 	}
 
 finalize_it:
