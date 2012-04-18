@@ -1059,7 +1059,7 @@ static rsRetVal MsgSerialize(msg_t *pThis, strm_t *pStrm)
 	objSerializePTR(pStrm, pCSMSGID, CSTR);
 	
 	if(pThis->pRuleset != NULL) {
-		rulesetGetName(pThis->pRuleset));
+		rulesetGetName(pThis->pRuleset);
 		CHKiRet(obj.SerializeProp(pStrm, UCHAR_CONSTANT("pszRuleset"), PROPTYPE_PSZ,
 			rulesetGetName(pThis->pRuleset)));
 	}
