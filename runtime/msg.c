@@ -36,6 +36,7 @@
 #include <assert.h>
 #include <ctype.h>
 #include <sys/socket.h>
+#include <sys/sysinfo.h>
 #include <netdb.h>
 #include <libestr.h>
 #include <libee/libee.h>
@@ -55,6 +56,7 @@
 #include "ruleset.h"
 #include "prop.h"
 #include "net.h"
+#include "rsconf.h"
 
 /* static data */
 DEFobjStaticHelpers
@@ -562,6 +564,8 @@ propNameStrToID(uchar *pName, propid_t *pPropID)
 		*pPropID = PROP_CEE;
 	} else if(!strcmp((char*) pName, "$bom")) {
 		*pPropID = PROP_SYS_BOM;
+	} else if(!strcmp((char*) pName, "$uptime")) {
+		*pPropID = PROP_SYS_UPTIME;
 	} else {
 		*pPropID = PROP_INVALID;
 		iRet = RS_RET_VAR_NOT_FOUND;
@@ -1069,6 +1073,12 @@ static rsRetVal MsgSerialize(msg_t *pThis, strm_t *pStrm)
 	objSerializePTR(pStrm, pCSAPPNAME, CSTR);
 	objSerializePTR(pStrm, pCSPROCID, CSTR);
 	objSerializePTR(pStrm, pCSMSGID, CSTR);
+	
+	if(pThis->pRuleset != NULL) {
+		rulesetGetName(pThis->pRuleset);
+		CHKiRet(obj.SerializeProp(pStrm, UCHAR_CONSTANT("pszRuleset"), PROPTYPE_PSZ,
+			rulesetGetName(pThis->pRuleset)));
+	}
 
 	/* offset must be serialized after pszRawMsg, because we need that to obtain the correct
 	 * MSG size.
@@ -1691,6 +1701,16 @@ void MsgSetRuleset(msg_t *pMsg, ruleset_t *pRuleset)
 {
 	assert(pMsg != NULL);
 	pMsg->pRuleset = pRuleset;
+}
+
+
+/* rgerhards 2012-04-18: set associated ruleset (by ruleset name)
+ * If ruleset cannot be found, no update is done.
+ */
+static void
+MsgSetRulesetByName(msg_t *pMsg, cstr_t *rulesetName)
+{
+	rulesetGetRuleset(runConf, &(pMsg->pRuleset), rsCStrGetSzStrNoNULL(rulesetName));
 }
 
 
@@ -2673,6 +2693,23 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			pRes = (uchar*) "\xEF\xBB\xBF";
 			*pbMustBeFreed = 0;
 			break;
+		case PROP_SYS_UPTIME:
+			{
+			struct sysinfo s_info;
+
+			if((pRes = (uchar*) MALLOC(sizeof(uchar) * 32)) == NULL) {
+				RET_OUT_OF_MEMORY;
+			}
+			*pbMustBeFreed = 1;
+
+			if(sysinfo(&s_info) < 0) {
+				*pPropLen = sizeof("**SYSCALL FAILED**") - 1;
+				return(UCHAR_CONSTANT("**SYSCALL FAILED**"));
+			}
+
+			snprintf((char*) pRes, sizeof(uchar) * 32, "%ld", s_info.uptime);
+			}
+		break;
 		default:
 			/* there is no point in continuing, we may even otherwise render the
 			 * error message unreadable. rgerhards, 2007-07-10
@@ -3403,8 +3440,13 @@ rsRetVal MsgSetProperty(msg_t *pThis, var_t *pProp)
 		memcpy(&pThis->tRcvdAt, &pProp->val.vSyslogTime, sizeof(struct syslogTime));
 	} else if(isProp("tTIMESTAMP")) {
 		memcpy(&pThis->tTIMESTAMP, &pProp->val.vSyslogTime, sizeof(struct syslogTime));
+	} else if(isProp("pszRuleset")) {
+		MsgSetRulesetByName(pThis, pProp->val.pStr);
 	} else if(isProp("pszMSG")) {
 		dbgprintf("no longer supported property pszMSG silently ignored\n");
+	} else {
+		dbgprintf("unknown supported property '%s' silently ignored\n",
+			  rsCStrGetSzStrNoNULL(pProp->pcsName));
 	}
 
 finalize_it:

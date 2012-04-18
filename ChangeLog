@@ -1,5 +1,9 @@
 ---------------------------------------------------------------------------
 Version 6.3.9  [DEVEL] 2012-04-??
+- bugfix: assigned ruleset was lost when using disk queues
+  This looked quite hard to diagnose for disk-assisted queues, as the
+  pure memory part worked well, but ruleset info was lost for messages
+  stored inside the disk queue.
 - bugfix/imuxsock: solving abort if hostname was not set; configured
   hostname was not used (both merge regressions)
 ---------------------------------------------------------------------------
@@ -523,6 +527,10 @@ Version 5.9.0  [V5-DEVEL] (rgerhards), 2011-06-08
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=236
 ---------------------------------------------------------------------------
 Version 5.8.11  [V5-stable] 2012-04-??
+- bugfix: assigned ruleset was lost when using disk queues
+  This looked quite hard to diagnose for disk-assisted queues, as the
+  pure memory part worked well, but ruleset info was lost for messages
+  stored inside the disk queue.
 - bugfix: hostname was not requeried on HUP
   Thanks to Per Jessen for reporting this bug and Marius Tomaschewski for
   his help in testing the fix.
