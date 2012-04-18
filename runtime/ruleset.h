@@ -54,6 +54,7 @@ BEGINinterface(ruleset) /* name must also be changed in ENDinterface macro! */
 	qqueue_t* (*GetRulesetQueue)(ruleset_t*);
 	/* v3, 2009-11-04 */
 	parserList_t* (*GetParserList)(msg_t *);
+	/* v4 */
 ENDinterface(ruleset)
 #define rulesetCURR_IF_VERSION 4 /* increment whenever you change the interface structure! */
 
@@ -61,4 +62,18 @@ ENDinterface(ruleset)
 /* prototypes */
 PROTOTYPEObj(ruleset);
 
+
+/* Get name associated to ruleset. This function cannot fail (except,
+ * of course, if previously something went really wrong). Returned
+ * pointer is read-only.
+ * rgerhards, 2012-04-18
+ */
+static inline uchar*
+rulesetGetName(ruleset_t *pRuleset)
+{
+	return pRuleset->pszName;
+}
+
+
+rsRetVal rulesetGetRuleset(ruleset_t **ppRuleset, uchar *pszName);
 #endif /* #ifndef INCLUDED_RULESET_H */
