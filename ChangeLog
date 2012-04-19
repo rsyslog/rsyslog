@@ -405,6 +405,8 @@ Version 5.9.6  [V5-BETA], 2012-04-12
   his help in testing the fix.
 - bugfix: imklog invalidly computed facility and severity
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=313
+- bugfix: imptcp input name could not be set
+  config directive was accepted, but had no effect
 - added configuration directive to disable octet-counted framing
   for imtcp, directive is $InputTCPServerSupportOctetCountedFraming 
   for imptcp, directive is $InputPTCPServerSupportOctetCountedFraming 
@@ -530,6 +532,8 @@ Version 5.9.0  [V5-DEVEL] (rgerhards), 2011-06-08
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=236
 ---------------------------------------------------------------------------
 Version 5.8.11  [V5-stable] 2012-04-??
+- bugfix: imptcp input name could not be set
+  config directive was accepted, but had no effect
 - bugfix: assigned ruleset was lost when using disk queues
   This looked quite hard to diagnose for disk-assisted queues, as the
   pure memory part worked well, but ruleset info was lost for messages
