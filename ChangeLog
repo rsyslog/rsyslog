@@ -263,6 +263,8 @@ Version 5.9.0  [V5-DEVEL] (rgerhards), 2011-03-??
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=236
 ---------------------------------------------------------------------------
 Version 5.8.11  [V5-stable] 2012-04-??
+- bugfix: imptcp input name could not be set
+  config directive was accepted, but had no effect
 - bugfix: assigned ruleset was lost when using disk queues
   This looked quite hard to diagnose for disk-assisted queues, as the
   pure memory part worked well, but ruleset info was lost for messages
