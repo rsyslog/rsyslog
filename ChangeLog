@@ -1,3 +1,5 @@
+- bugfix: imptcp input name could not be set
+  config directive was accepted, but had no effect
 - added configuration directive to disable octet-counted framing
   for imtcp, directive is $InputTCPServerSupportOctetCountedFraming 
   for imptcp, directive is $InputPTCPServerSupportOctetCountedFraming 
