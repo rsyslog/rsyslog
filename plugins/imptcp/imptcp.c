@@ -885,14 +885,14 @@ static rsRetVal addTCPListener(void __attribute__((unused)) *pVal, uchar *pNewVa
 	pSrv->bEmitMsgOnClose = cs.bEmitMsgOnClose;
 	pSrv->port = pNewVal;
 	pSrv->iAddtlFrameDelim = cs.iAddtlFrameDelim;
-	cs.pszInputName = NULL;	/* moved over to pSrv, we do not own */
 	pSrv->lstnIP = cs.lstnIP;
-	cs.lstnIP = NULL;	/* moved over to pSrv, we do not own */
 	pSrv->pRuleset = cs.pRuleset;
 	pSrv->pszInputName = (cs.pszInputName == NULL) ?  UCHAR_CONSTANT("imptcp") : cs.pszInputName;
 	CHKiRet(prop.Construct(&pSrv->pInputName));
 	CHKiRet(prop.SetString(pSrv->pInputName, pSrv->pszInputName, ustrlen(pSrv->pszInputName)));
 	CHKiRet(prop.ConstructFinalize(pSrv->pInputName));
+	cs.pszInputName = NULL;	/* moved over to pSrv, we do not own */
+	cs.lstnIP = NULL;	/* moved over to pSrv, we do not own */
 
 	/* add to linked list */
 	pSrv->pNext = pSrvRoot;
