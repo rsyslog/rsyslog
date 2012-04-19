@@ -13,7 +13,7 @@ the value, e.g. by converting all characters to lower case.</p>
 <p>Syslog message properties are used inside templates. They are
 accessed by putting them between percent signs. Properties can be
 modified by the property replacer. The full syntax is as follows:</p>
-<blockquote><b><code>%propname:fromChar:toChar:options%</code></b></blockquote>
+<blockquote><b><code>%propname:fromChar:toChar:options:fieldname%</code></b></blockquote>
 <h2>Available Properties</h2>
 <p><b><code>propname</code></b> is the
 name of the property to access. It is case-insensitive (prior to 3.17.0, they were case-senstive).
@@ -349,7 +349,24 @@ case-insensitive. Currently, the following options are defined:
 <td><b>json</b></td>
 <td>encode the value so that it can be used inside a JSON field. This means
 that several characters (according to the JSON spec) are being escaped, for 
-example US-ASCII LF is replaced by "\n".</td>
+example US-ASCII LF is replaced by "\n".
+The json option cannot be used together with either jsonf or csv options.
+</td>
+</tr>
+<tr>
+<td><b>jsonf</b></td>
+<td><i>(available in 6.3.9+)</i>
+This signifies that the property should be expressed as a json <b>f</b>ield.
+That means not only the property is written, but rather a complete json field in
+the format<br>
+"fieldname"="value"</b>
+where "filedname" is the assigend field name (or the property name if none was assigned)
+and value is the end result of property replacer operation. Note that value supports
+all property replacer options, like substrings, case converson and the like.
+Values are properly json-escaped. However, field names are (currently) not. It is
+expected that proper field names are configured.
+The jsonf option cannot be used together with either json or csv options.
+</td>
 </tr>
 <tr>
 <td valign="top"><b>csv</b></td>
@@ -360,6 +377,7 @@ text, you need to define a proper template. An example is this one:
 <br>$template csvline,"%syslogtag:::csv%,%msg:::csv%"
 <br>Most importantly, you need to provide the commas between the fields
 inside the template.
+The csv option cannot be used together with either json or jsonf options.
 <br><i>This feature was introduced in rsyslog 4.1.6.</i>
 </td>
 </tr>
@@ -465,13 +483,19 @@ Useful for secure pathname generation (with dynafiles).
 them. For example "escape-cc,sp-if-no-1st-sp". If you use conflicting options together,
 the last one will override the previous one. For example, using "escape-cc,drop-cc" will
 use drop-cc and "drop-cc,escape-cc" will use escape-cc mode.
+<h2>Fieldname</h2>
+<p><i>(available in 6.3.9+)</i>
+<p>This field permits to specify a field name for structured-data emitting property replacer
+options. It was initially introduced to support the "jsonf" option, for which it provides
+the capability to set an alternative field name. If it is not specified, it defaults to 
+the property name.
 <h2>Further Links</h2>
 <ul>
 <li>Article on "<a href="rsyslog_recording_pri.html">Recording
 the Priority of Syslog Messages</a>" (describes use of templates
 to record severity and facility of a message)</li>
 <li><a href="rsyslog_conf.html">Configuration file
-syntax</a>, this is where you actually use the property replacer.</li>
+format</a>, this is where you actually use the property replacer.</li>
 </ul>
 <p>[<a href="manual.html">manual index</a>]
 [<a href="rsyslog_conf.html">rsyslog.conf</a>]

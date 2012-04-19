@@ -1,5 +1,8 @@
 ---------------------------------------------------------------------------
 Version 6.3.9  [DEVEL] 2012-04-??
+- added the "jsonf" property replacer option (and fieldname)
+- bugfix: property replacer option "json" could lead to content loss
+  message was truncated if escaping was necessary
 - bugfix: assigned ruleset was lost when using disk queues
   This looked quite hard to diagnose for disk-assisted queues, as the
   pure memory part worked well, but ruleset info was lost for messages

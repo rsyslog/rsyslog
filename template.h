@@ -91,6 +91,7 @@ struct templateEntry {
 			int field_expand;	/* use multiple instances of the field delimiter as a single one? */
 
 			es_str_t *propName;	/**< property name (currently being used for CEE only) */
+			es_str_t *fieldName;	/**< field name to be used for structured output */
 
 			enum tplFormatTypes eDateFormat;
 			enum tplFormatCaseConvTypes eCaseConv;
@@ -101,9 +102,10 @@ struct templateEntry {
 				unsigned bDropLastLF: 1;	/* drop last LF char in msg (PIX!) */
 				unsigned bSecPathDrop: 1;	/* drop slashes, replace dots, empty string */
 				unsigned bSecPathReplace: 1;	/* replace slashes, replace dots, empty string */
-				unsigned bSPIffNo1stSP: 1;	/* replace slashes, replace dots, empty string */
+				unsigned bSPIffNo1stSP: 1;	/* be a space if 1st pos if field is no space*/
 				unsigned bCSV: 1;		/* format field in CSV (RFC 4180) format */
 				unsigned bJSON: 1;		/* format field JSON escaped */
+				unsigned bJSONf: 1;		/* format field JSON *field* (n/v pair) */
 			} options;		/* options as bit fields */
 		} field;
 	} data;
