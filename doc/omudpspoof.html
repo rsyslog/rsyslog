@@ -53,7 +53,7 @@ care about the source port. This example is considered the typical use case for
 omudpspoof.
 </p>
 <textarea rows="5" cols="80">$ModLoad omudpspoof
-$ActionUDPSpoofTargetHost server.example.com
+$ActionOMUDPSpoofTargetHost server.example.com
 *.*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; :omudpspoof:
 </textarea>
 
@@ -64,10 +64,10 @@ source port 514 is used.
 <textarea rows="8" cols="80">$ModLoad omudpspoof
 $template spoofaddr,"192.0.2.1"
 $template spooftemplate,"%rawmsg%"
-$ActionUDPSpoofSourceNameTemplate spoofaddr
-$ActionUDPSpoofTargetHost server.example.com
-$ActionUDPSpoofSourcePortStart 514
-$ActionUDPSpoofSourcePortEnd 514
+$ActionOMUDPSpoofSourceNameTemplate spoofaddr
+$ActionOMUDPSpoofTargetHost server.example.com
+$ActionOMUDPSpoofSourcePortStart 514
+$ActionOMUDPSpoofSourcePortEnd 514
 *.*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; :omudpspoof:;spooftemplate
 </textarea>
 <p>The following sample is similar to the previous, but uses as many defaults as possible.
@@ -77,8 +77,8 @@ have been changed, the previously set defaults will be used!
 </p>
 <textarea rows="5" cols="80">$ModLoad omudpspoof
 $template spoofaddr,"192.0.2.1"
-$ActionUDPSpoofSourceNameTemplate spoofaddr
-$ActionUDPSpoofTargetHost server.example.com
+$ActionOMUDPSpoofSourceNameTemplate spoofaddr
+$ActionOMUDPSpoofTargetHost server.example.com
 *.*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; :omudpspoof:
 </textarea>
 <p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>]
@@ -86,7 +86,7 @@ $ActionUDPSpoofTargetHost server.example.com
 <p><font size="2">This documentation is part of the
 <a href="http://www.rsyslog.com/">rsyslog</a>
 project.<br>
-Copyright &copy; 2009 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+Copyright &copy; 2009-2012 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
 <a href="http://www.adiscon.com/">Adiscon</a>.
 Released under the GNU GPL version 3 or higher.</font></p>
 </body></html>
