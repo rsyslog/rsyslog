@@ -16,7 +16,7 @@ spoof the sender address. Also, it enables to circle through a number of
 source ports.
 <p><b>Configuration Directives</b>:</p>
 <ul>
-<li><b>$ActionOMUDPSpoofSourceNameTemplate</b> &lt;templatename&gt;<br>
+<li><b>$ActionOMOMUDPSpoofSourceNameTemplate</b> &lt;templatename&gt;<br>
 This is the name of the template that contains a
 numerical IP address that is to be used as the source system IP address.
 While it may often be a constant value, it can be generated as usual via the
@@ -28,7 +28,7 @@ So in essence, the default template spoofs the address of the system the message
 was received from. This is considered the most important use case.
 <li><b>$ActionOMUDPSpoofTargetHost</b> &lt;hostname&gt;<br>
 Host that the messages shall be sent to.
-<li><b>$ActionUDPSpoofTargetPort</b> &lt;port&gt;<br>
+<li><b>$ActionOMUDPSpoofTargetPort</b> &lt;port&gt;<br>
 Remote port that the messages shall be sent to.
 <li><b>$ActionOMUDPSpoofDefaultTemplate</b> &lt;templatename&gt;<br>
 This setting instructs omudpspoof to use a template different from the
