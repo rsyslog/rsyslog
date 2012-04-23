@@ -202,7 +202,7 @@ UDPSend(instanceData *pData, uchar *pszSourcename, char *msg, size_t len)
 	struct addrinfo *r;
 	int lsent = 0;
 	int bSendSuccess;
-	int j, build_ip;
+	int j;
 	u_char opt[20];
 	struct sockaddr_in *tempaddr,source_ip;
 	libnet_ptag_t ip, ipo;
@@ -238,7 +238,6 @@ UDPSend(instanceData *pData, uchar *pszSourcename, char *msg, size_t len)
 			DBGPRINTF("Can't build UDP header: %s\n", libnet_geterror(libnet_handle));
 		}
 
-		build_ip = 0;
 		/* this is not a legal options string */
 		for (j = 0; j < 20; j++) {
 			opt[j] = libnet_get_prand(LIBNET_PR2);

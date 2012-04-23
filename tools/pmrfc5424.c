@@ -106,7 +106,7 @@ static int parseRFCField(uchar **pp2parse, uchar *pResult, int *pLenStr)
 
 	/* set the new parse pointer */
 	*pp2parse = p2parse;
-	return 0;
+	return iRet;
 }
 
 
@@ -191,7 +191,7 @@ static int parseRFCStructuredData(uchar **pp2parse, uchar *pResult, int *pLenStr
 	/* set the new parse pointer */
 	*pp2parse = p2parse;
 	*pLenStr = lenStr;
-	return 0;
+	return iRet;
 }
 
 /* parse a RFC5424-formatted syslog message. This function returns

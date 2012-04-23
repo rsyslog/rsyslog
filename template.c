@@ -922,14 +922,13 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 static rsRetVal
 tplAddTplMod(struct template *pTpl, uchar** ppRestOfConfLine)
 {
-	uchar *pSrc, *pDst;
+	uchar *pSrc;
 	uchar szMod[2048];
 	unsigned lenMod;
 	strgen_t *pStrgen;
 	DEFiRet;
 
 	pSrc = *ppRestOfConfLine;
-	pDst = szMod;
 	lenMod = 0;
 	while(*pSrc && !isspace(*pSrc) && lenMod < sizeof(szMod) - 1) {
 		szMod[lenMod] = *pSrc++;

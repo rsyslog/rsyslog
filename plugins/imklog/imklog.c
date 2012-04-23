@@ -194,11 +194,9 @@ rsRetVal imklogLogIntMsg(int priority, char *fmt, ...)
 	DEFiRet;
 	va_list ap;
 	uchar msgBuf[2048]; /* we use the same size as sysklogd to remain compatible */
-	uchar *pLogMsg;
 
 	va_start(ap, fmt);
 	vsnprintf((char*)msgBuf, sizeof(msgBuf) / sizeof(char), fmt, ap);
-	pLogMsg = msgBuf;
 	va_end(ap);
 
 	logmsgInternal(NO_ERRCODE ,priority, msgBuf, 0);
