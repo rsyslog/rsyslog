@@ -743,9 +743,11 @@ var2Number(struct var *r, int *bSuccess)
 	if(r->datatype == 'S') {
 		n = es_str2num(r->d.estr, bSuccess);
 	} else {
-		*bSuccess = 1;
+		n = r->d.n;
+		if(bSuccess)
+			*bSuccess = 1;
 	}
-	return r->d.n;
+	return n;
 }
 
 /* ensure that retval is a string; if string is no number,
