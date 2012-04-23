@@ -493,18 +493,18 @@ static void doOptions(unsigned char **pp, struct templateEntry *pTpe)
 
 	p = *pp;
 
-	while(*p && *p != '%') {
+	while(*p && *p != '%' && *p != ':') {
 		/* outer loop - until end of options */
 		i = 0;
 		while((i < sizeof(Buf) / sizeof(char)) &&
-		      *p && *p != '%' && *p != ',') {
+		      *p && *p != '%' && *p != ':' && *p != ',') {
 			/* inner loop - until end of ONE option */
 			Buf[i++] = tolower((int)*p);
 			++p;
 		}
 		Buf[i] = '\0'; /* terminate */
 		/* check if we need to skip oversize option */
-		while(*p && *p != '%' && *p != ',')
+		while(*p && *p != '%' && *p != ':' && *p != ',')
 			++p;	/* just skip */
 		if(*p == ',')
 			++p; /* eat ',' */
@@ -544,18 +544,25 @@ static void doOptions(unsigned char **pp, struct templateEntry *pTpe)
 		 } else if(!strcmp((char*)Buf, "secpath-replace")) {
 			pTpe->data.field.options.bSecPathReplace = 1;
 		 } else if(!strcmp((char*)Buf, "csv")) {
-		 	if(pTpe->data.field.options.bJSON) {
-				errmsg.LogError(0, NO_ERRCODE, "error: can not specify "
-					"both csv and json options - csv ignored");
+		 	if(pTpe->data.field.options.bJSON || pTpe->data.field.options.bJSONf) {
+				errmsg.LogError(0, NO_ERRCODE, "error: can only specify "
+					"one option out of (json, jsonf, csv) - csv ignored");
 			} else {
 				pTpe->data.field.options.bCSV = 1;
 			}
 		 } else if(!strcmp((char*)Buf, "json")) {
-		 	if(pTpe->data.field.options.bCSV) {
-				errmsg.LogError(0, NO_ERRCODE, "error: can not specify "
-					"both csv and json options - json ignored");
+		 	if(pTpe->data.field.options.bCSV || pTpe->data.field.options.bJSON) {
+				errmsg.LogError(0, NO_ERRCODE, "error: can only specify "
+					"one option out of (json, jsonf, csv) - json ignored");
 			} else {
 				pTpe->data.field.options.bJSON = 1;
+			}
+		 } else if(!strcmp((char*)Buf, "jsonf")) {
+		 	if(pTpe->data.field.options.bCSV || pTpe->data.field.options.bJSON) {
+				errmsg.LogError(0, NO_ERRCODE, "error: can only specify "
+					"one option out of (json, jsonf, csv) - jsonf ignored");
+			} else {
+				pTpe->data.field.options.bJSONf = 1;
 			}
 		 } else {
 			dbgprintf("Invalid field option '%s' specified - ignored.\n", Buf);
@@ -573,7 +580,8 @@ static void doOptions(unsigned char **pp, struct templateEntry *pTpe)
 static int do_Parameter(unsigned char **pp, struct template *pTpl)
 {
 	unsigned char *p;
-	cstr_t *pStrB;
+	cstr_t *pStrProp;
+	cstr_t *pStrField = NULL;
 	struct templateEntry *pTpe;
 	int iNum;	/* to compute numbers */
 #ifdef FEATURE_REGEXP
@@ -590,7 +598,7 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 
 	p = (unsigned char*) *pp;
 
-	if(cstrConstruct(&pStrB) != RS_RET_OK)
+	if(cstrConstruct(&pStrProp) != RS_RET_OK)
 		 return 1;
 
 	if((pTpe = tpeConstruct(pTpl)) == NULL) {
@@ -601,25 +609,24 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 	pTpe->eEntryType = FIELD;
 
 	while(*p && *p != '%' && *p != ':') {
-		cstrAppendChar(pStrB, tolower(*p));
+		cstrAppendChar(pStrProp, tolower(*p));
 		++p; /* do NOT do this in tolower()! */
 	}
 
 	/* got the name */
-	cstrFinalize(pStrB);
+	cstrFinalize(pStrProp);
 
-	if(propNameToID(pStrB, &pTpe->data.field.propid) != RS_RET_OK) {
-		cstrDestruct(&pStrB);
+	if(propNameToID(pStrProp, &pTpe->data.field.propid) != RS_RET_OK) {
+		cstrDestruct(&pStrProp);
 		return 1;
 	}
 	if(pTpe->data.field.propid == PROP_CEE) {
 		/* in CEE case, we need to preserve the actual property name */
-		if((pTpe->data.field.propName = es_newStrFromCStr((char*)cstrGetSzStrNoNULL(pStrB)+2, cstrLen(pStrB)-2)) == NULL) {
-			cstrDestruct(&pStrB);
+		if((pTpe->data.field.propName = es_newStrFromCStr((char*)cstrGetSzStrNoNULL(pStrProp)+2, cstrLen(pStrProp)-2)) == NULL) {
+			cstrDestruct(&pStrProp);
 			return 1;
 		}
 	}
-	cstrDestruct(&pStrB);
 
 	/* Check frompos, if it has an R, then topos should be a regex */
 	if(*p == ':') {
@@ -872,6 +879,34 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 		++p; /* eat ':' */
 		doOptions(&p, pTpe);
 	}
+
+	/* check field name */
+	if(*p == ':') {
+		++p; /* eat ':' */
+		if(cstrConstruct(&pStrField) != RS_RET_OK)
+			 return 1;
+		while(*p != ':' && *p != '%' && *p != '\0') {
+			cstrAppendChar(pStrField, *p);
+			++p;
+		}
+		cstrFinalize(pStrField);
+	}
+
+	/* save field name - if none was given, use the property name instead */
+	if(pStrField == NULL) {
+		if((pTpe->data.field.fieldName =
+		      es_newStrFromCStr((char*)cstrGetSzStrNoNULL(pStrProp), cstrLen(pStrProp))) == NULL) {
+			return 1;
+		}
+	} else {
+		if((pTpe->data.field.fieldName =
+		      es_newStrFromCStr((char*)cstrGetSzStrNoNULL(pStrField), cstrLen(pStrField))) == NULL) {
+			return 1;
+		}
+		cstrDestruct(&pStrField);
+	}
+
+	cstrDestruct(&pStrProp);
 
 	if(*p) ++p; /* eat '%' */
 
@@ -1130,6 +1165,8 @@ void tplDeleteAll(rsconf_t *conf)
 				}
 				if(pTpeDel->data.field.propName != NULL)
 					es_deleteStr(pTpeDel->data.field.propName);
+				if(pTpeDel->data.field.fieldName != NULL)
+					es_deleteStr(pTpeDel->data.field.fieldName);
 #endif
 				break;
 			}

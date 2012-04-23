@@ -11,21 +11,19 @@
  *
  * This file is part of the rsyslog runtime library.
  *
- * The rsyslog runtime library is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * The rsyslog runtime library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with the rsyslog runtime library.  If not, see <http://www.gnu.org/licenses/>.
- *
- * A copy of the GPL can be found in the file "COPYING" in this distribution.
- * A copy of the LGPL can be found in the file "COPYING.LESSER" in this distribution.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *       -or-
+ *       see COPYING.ASL20 in the source distribution
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 #include "config.h"
@@ -45,6 +43,7 @@
 #include "atomic.h"
 #include "errmsg.h"
 #include "rainerscript.h"
+#include "net.h"
 
 /* some defaults */
 #ifndef DFLT_NETSTRM_DRVR
@@ -55,6 +54,7 @@
 DEFobjStaticHelpers
 DEFobjCurrIf(prop)
 DEFobjCurrIf(errmsg)
+DEFobjCurrIf(net)
 
 /* static data
  * For this object, these variables are obviously what makes the "meat" of the
@@ -69,11 +69,12 @@ static int iDefPFFamily = PF_UNSPEC;     /* protocol family (IPv4, IPv6 or both)
 static int bDropMalPTRMsgs = 0;/* Drop messages which have malicious PTR records during DNS lookup */
 static int option_DisallowWarning = 1;	/* complain if message from disallowed sender is received */
 static int bDisableDNS = 0; /* don't look up IP addresses of remote messages */
+static prop_t *propLocalIPIF = NULL;/* IP address to report for the local host (default is 127.0.0.1) */
 static prop_t *propLocalHostName = NULL;/* our hostname as FQDN - read-only after startup */
-static uchar *LocalHostName = NULL;/* our hostname  - read-only after startup */
+static uchar *LocalHostName = NULL;/* our hostname  - read-only after startup, except HUP */
 static uchar *LocalHostNameOverride = NULL;/* user-overridden hostname - read-only after startup */
-static uchar *LocalFQDNName = NULL;/* our hostname as FQDN - read-only after startup */
-static uchar *LocalDomain;	/* our local domain name  - read-only after startup */
+static uchar *LocalFQDNName = NULL;/* our hostname as FQDN - read-only after startup, except HUP */
+static uchar *LocalDomain = NULL;/* our local domain name  - read-only after startup, except HUP */
 static char **StripDomains = NULL;/* these domains may be stripped before writing logs  - r/o after s.u., never touched by init */
 static char **LocalHosts = NULL;/* these hosts are logged with their hostname  - read-only after startup, never touched by init */
 static uchar *pszDfltNetstrmDrvr = NULL; /* module name of default netstream driver */
@@ -139,15 +140,12 @@ SIMP_PROP(DefPFFamily, iDefPFFamily, int) /* note that in the future we may chec
 SIMP_PROP(DropMalPTRMsgs, bDropMalPTRMsgs, int)
 SIMP_PROP(Option_DisallowWarning, option_DisallowWarning, int)
 SIMP_PROP(DisableDNS, bDisableDNS, int)
-SIMP_PROP(LocalDomain, LocalDomain, uchar*)
 SIMP_PROP(StripDomains, StripDomains, char**)
 SIMP_PROP(LocalHosts, LocalHosts, char**)
 #ifdef USE_UNLIMITED_SELECT
 SIMP_PROP(FdSetSize, iFdSetSize, int)
 #endif
 
-SIMP_PROP_SET(LocalFQDNName, LocalFQDNName, uchar*)
-SIMP_PROP_SET(LocalHostName, LocalHostName, uchar*)
 SIMP_PROP_SET(DfltNetstrmDrvr, pszDfltNetstrmDrvr, uchar*) /* TODO: use custom function which frees existing value */
 SIMP_PROP_SET(DfltNetstrmDrvrCAF, pszDfltNetstrmDrvrCAF, uchar*) /* TODO: use custom function which frees existing value */
 SIMP_PROP_SET(DfltNetstrmDrvrKeyFile, pszDfltNetstrmDrvrKeyFile, uchar*) /* TODO: use custom function which frees existing value */
@@ -173,6 +171,60 @@ static int GetGlobalInputTermState(void)
 static void SetGlobalInputTermination(void)
 {
 	ATOMIC_STORE_1_TO_INT(&bTerminateInputs, &mutTerminateInputs);
+}
+
+
+/* set the local host IP address to a specific string. Helper to
+ * small set of functions. No checks done, caller must ensure it is
+ * ok to call. Most importantly, the IP address must not already have 
+ * been set. -- rgerhards, 2012-03-21
+ */
+static inline rsRetVal
+storeLocalHostIPIF(uchar *myIP)
+{
+	DEFiRet;
+	CHKiRet(prop.Construct(&propLocalIPIF));
+	CHKiRet(prop.SetString(propLocalIPIF, myIP, ustrlen(myIP)));
+	CHKiRet(prop.ConstructFinalize(propLocalIPIF));
+	DBGPRINTF("rsyslog/glbl: using '%s' as localhost IP\n", myIP);
+finalize_it:
+	RETiRet;
+}
+
+
+/* This function is used to set the IP address that is to be
+ * reported for the local host. Note that in order to ease things
+ * for the v6 config interface, we do not allow to set this more
+ * than once.
+ * rgerhards, 2012-03-21
+ */
+static rsRetVal
+setLocalHostIPIF(void __attribute__((unused)) *pVal, uchar *pNewVal)
+{
+	uchar myIP[128];
+	rsRetVal localRet;
+	DEFiRet;
+
+	CHKiRet(objUse(net, CORE_COMPONENT));
+
+	if(propLocalIPIF != NULL) {
+		errmsg.LogError(0, RS_RET_ERR, "$LocalHostIPIF is already set "
+				"and cannot be reset; place it at TOP OF rsyslog.conf!");
+		ABORT_FINALIZE(RS_RET_ERR_WRKDIR);
+	}
+
+	localRet = net.GetIFIPAddr(pNewVal, AF_UNSPEC, myIP, (int) sizeof(myIP));
+	if(localRet != RS_RET_OK) {
+		errmsg.LogError(0, RS_RET_ERR, "$LocalHostIPIF: IP address for interface "
+				"'%s' cannnot be obtained - ignoring directive", pNewVal);
+	} else  {
+		storeLocalHostIPIF(myIP);
+	}
+
+
+finalize_it:
+	free(pNewVal); /* no longer needed -> is in prop! */
+	RETiRet;
 }
 
 
@@ -226,6 +278,36 @@ finalize_it:
 	RETiRet;
 }
 
+/* return our local IP.
+ * If no local IP is set, "127.0.0.1" is selected *and* set. This
+ * is an intensional side effect that we do in order to keep things
+ * consistent and avoid config errors (this will make us not accept
+ * setting the local IP address once a module has obtained it - so
+ * it forces the $LocalHostIPIF directive high up in rsyslog.conf)
+ * rgerhards, 2012-03-21
+ */
+static prop_t*
+GetLocalHostIP(void)
+{
+	if(propLocalIPIF == NULL)
+		storeLocalHostIPIF((uchar*)"127.0.0.1");
+	return(propLocalIPIF);
+}
+
+
+/* set our local hostname. Free previous hostname, if it was already set.
+ * Note that we do now do this in a thread
+ * "once in a lifetime" action which can not be undone. -- gerhards, 2009-07-20
+ */
+static rsRetVal
+SetLocalHostName(uchar *newname)
+{
+	free(LocalHostName);
+	LocalHostName = newname;
+	return RS_RET_OK;
+}
+
+
 /* return our local hostname. if it is not set, "[localhost]" is returned
  */
 static uchar*
@@ -248,6 +330,26 @@ GetLocalHostName(void)
 	}
 done:
 	return(pszRet);
+}
+
+
+/* set our local domain name. Free previous domain, if it was already set.
+ */
+static rsRetVal
+SetLocalDomain(uchar *newname)
+{
+	free(LocalDomain);
+	LocalDomain = newname;
+	return RS_RET_OK;
+}
+
+
+/* return our local hostname. if it is not set, "[localhost]" is returned
+ */
+static uchar*
+GetLocalDomain(void)
+{
+	return LocalDomain;
 }
 
 
@@ -294,6 +396,14 @@ GetLocalHostNameProp(void)
 	return(propLocalHostName);
 }
 
+
+static rsRetVal
+SetLocalFQDNName(uchar *newname)
+{
+	free(LocalFQDNName);
+	LocalFQDNName = newname;
+	return RS_RET_OK;
+}
 
 /* return the current localhost name as FQDN (requires FQDN to be set) 
  * TODO: we should set the FQDN ourselfs in here!
@@ -362,6 +472,7 @@ CODESTARTobjQueryInterface(glbl)
 	pIf->GetWorkDir = GetWorkDir;
 	pIf->GenerateLocalHostNameProperty = GenerateLocalHostNameProperty;
 	pIf->GetLocalHostNameProp = GetLocalHostNameProp;
+	pIf->GetLocalHostIP = GetLocalHostIP;
 	pIf->SetGlobalInputTermination = SetGlobalInputTermination;
 	pIf->GetGlobalInputTermState = GetGlobalInputTermState;
 #define SIMP_PROP(name) \
@@ -397,30 +508,18 @@ ENDobjQueryInterface(glbl)
  */
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
-	if(pszDfltNetstrmDrvr != NULL) {
-		free(pszDfltNetstrmDrvr);
-		pszDfltNetstrmDrvr = NULL;
-	}
-	if(pszDfltNetstrmDrvrCAF != NULL) {
-		free(pszDfltNetstrmDrvrCAF);
-		pszDfltNetstrmDrvrCAF = NULL;
-	}
-	if(pszDfltNetstrmDrvrKeyFile != NULL) {
-		free(pszDfltNetstrmDrvrKeyFile);
-		pszDfltNetstrmDrvrKeyFile = NULL;
-	}
-	if(pszDfltNetstrmDrvrCertFile != NULL) {
-		free(pszDfltNetstrmDrvrCertFile);
-		pszDfltNetstrmDrvrCertFile = NULL;
-	}
-	if(LocalHostNameOverride != NULL) {
-		free(LocalHostNameOverride);
-		LocalHostNameOverride = NULL;
-	}
-	if(pszWorkDir != NULL) {
-		free(pszWorkDir);
-		pszWorkDir = NULL;
-	}
+	free(pszDfltNetstrmDrvr);
+	pszDfltNetstrmDrvr = NULL;
+	free(pszDfltNetstrmDrvrCAF);
+	pszDfltNetstrmDrvrCAF = NULL;
+	free(pszDfltNetstrmDrvrKeyFile);
+	pszDfltNetstrmDrvrKeyFile = NULL;
+	free(pszDfltNetstrmDrvrCertFile);
+	pszDfltNetstrmDrvrCertFile = NULL;
+	free(LocalHostNameOverride);
+	LocalHostNameOverride = NULL;
+	free(pszWorkDir);
+	pszWorkDir = NULL;
 	bDropMalPTRMsgs = 0;
 	bOptimizeUniProc = 1;
 	bPreserveFQDN = 0;
@@ -515,7 +614,7 @@ BEGINAbstractObjClassInit(glbl, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	CHKiRet(objUse(prop, CORE_COMPONENT));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 
-	/* register config handlers (TODO: we need to implement a way to unregister them) */
+	/* config handlers are never unregistered and need not be - we are always loaded ;) */
 	CHKiRet(regCfSysLineHdlr((uchar *)"workdirectory", 0, eCmdHdlrGetWord, setWorkDir, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"dropmsgswithmaliciousdnsptrrecords", 0, eCmdHdlrBinary, NULL, &bDropMalPTRMsgs, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdriver", 0, eCmdHdlrGetWord, NULL, &pszDfltNetstrmDrvr, NULL));
@@ -523,6 +622,7 @@ BEGINAbstractObjClassInit(glbl, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdriverkeyfile", 0, eCmdHdlrGetWord, NULL, &pszDfltNetstrmDrvrKeyFile, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdrivercertfile", 0, eCmdHdlrGetWord, NULL, &pszDfltNetstrmDrvrCertFile, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"localhostname", 0, eCmdHdlrGetWord, NULL, &LocalHostNameOverride, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"localhostipif", 0, eCmdHdlrGetWord, setLocalHostIPIF, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"optimizeforuniprocessor", 0, eCmdHdlrBinary, NULL, &bOptimizeUniProc, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"preservefqdn", 0, eCmdHdlrBinary, NULL, &bPreserveFQDN, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"maxmessagesize", 0, eCmdHdlrSize,
@@ -537,21 +637,15 @@ ENDObjClassInit(glbl)
  * rgerhards, 2008-04-17
  */
 BEGINObjClassExit(glbl, OBJ_IS_CORE_MODULE) /* class, version */
-	if(pszDfltNetstrmDrvr != NULL)
-		free(pszDfltNetstrmDrvr);
-	if(pszDfltNetstrmDrvrCAF != NULL)
-		free(pszDfltNetstrmDrvrCAF);
-	if(pszDfltNetstrmDrvrKeyFile != NULL)
-		free(pszDfltNetstrmDrvrKeyFile);
-	if(pszDfltNetstrmDrvrCertFile != NULL)
-		free(pszDfltNetstrmDrvrCertFile);
-	if(pszWorkDir != NULL)
-		free(pszWorkDir);
-	if(LocalHostName != NULL)
-		free(LocalHostName);
+	free(pszDfltNetstrmDrvr);
+	free(pszDfltNetstrmDrvrCAF);
+	free(pszDfltNetstrmDrvrKeyFile);
+	free(pszDfltNetstrmDrvrCertFile);
+	free(pszWorkDir);
+	free(LocalDomain);
+	free(LocalHostName);
 	free(LocalHostNameOverride);
-	if(LocalFQDNName != NULL)
-		free(LocalFQDNName);
+	free(LocalFQDNName);
 	objRelease(prop, CORE_COMPONENT);
 	DESTROY_ATOMIC_HELPER_MUT(mutTerminateInputs);
 ENDObjClassExit(glbl)

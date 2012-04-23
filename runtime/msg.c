@@ -36,6 +36,7 @@
 #include <assert.h>
 #include <ctype.h>
 #include <sys/socket.h>
+#include <sys/sysinfo.h>
 #include <netdb.h>
 #include <libestr.h>
 #include <libee/libee.h>
@@ -55,6 +56,7 @@
 #include "ruleset.h"
 #include "prop.h"
 #include "net.h"
+#include "rsconf.h"
 
 /* static data */
 DEFobjStaticHelpers
@@ -261,6 +263,9 @@ static struct {
 	{ UCHAR_CONSTANT("190"), 5},
 	{ UCHAR_CONSTANT("191"), 5}
 	};
+static char hexdigit[16] =
+	{'0', '1', '2', '3', '4', '5', '6', '7', '8',
+	 '9', 'A', 'B', 'C', 'D', 'E', 'F' };
 
 /*syslog facility names (as of RFC5424) */
 static char *syslog_fac_names[24] = { "kern", "user", "mail", "daemon", "auth", "syslog", "lpr",
@@ -421,7 +426,6 @@ resolveDNS(msg_t *pMsg) {
 	uchar fromHostFQDN[NI_MAXHOST];
 	DEFiRet;
 
-dbgprintf("XXXX: in msg/resolveDNS (dnscache)\n");
 	MsgLock(pMsg);
 	CHKiRet(objUse(net, CORE_COMPONENT));
 	if(pMsg->msgFlags & NEEDS_DNSRESOL) {
@@ -562,6 +566,8 @@ propNameStrToID(uchar *pName, propid_t *pPropID)
 		*pPropID = PROP_CEE;
 	} else if(!strcmp((char*) pName, "$bom")) {
 		*pPropID = PROP_SYS_BOM;
+	} else if(!strcmp((char*) pName, "$uptime")) {
+		*pPropID = PROP_SYS_UPTIME;
 	} else {
 		*pPropID = PROP_INVALID;
 		iRet = RS_RET_VAR_NOT_FOUND;
@@ -1069,6 +1075,12 @@ static rsRetVal MsgSerialize(msg_t *pThis, strm_t *pStrm)
 	objSerializePTR(pStrm, pCSAPPNAME, CSTR);
 	objSerializePTR(pStrm, pCSPROCID, CSTR);
 	objSerializePTR(pStrm, pCSMSGID, CSTR);
+	
+	if(pThis->pRuleset != NULL) {
+		rulesetGetName(pThis->pRuleset);
+		CHKiRet(obj.SerializeProp(pStrm, UCHAR_CONSTANT("pszRuleset"), PROPTYPE_PSZ,
+			rulesetGetName(pThis->pRuleset)));
+	}
 
 	/* offset must be serialized after pszRawMsg, because we need that to obtain the correct
 	 * MSG size.
@@ -1691,6 +1703,16 @@ void MsgSetRuleset(msg_t *pMsg, ruleset_t *pRuleset)
 {
 	assert(pMsg != NULL);
 	pMsg->pRuleset = pRuleset;
+}
+
+
+/* rgerhards 2012-04-18: set associated ruleset (by ruleset name)
+ * If ruleset cannot be found, no update is done.
+ */
+static void
+MsgSetRulesetByName(msg_t *pMsg, cstr_t *rulesetName)
+{
+	rulesetGetRuleset(runConf, &(pMsg->pRuleset), rsCStrGetSzStrNoNULL(rulesetName));
 }
 
 
@@ -2351,6 +2373,85 @@ finalize_it:
 }
 
 
+/* Encode a JSON value and add it to provided string. Note that 
+ * the string object may be NULL. In this case, it is created
+ * if and only if escaping is needed.
+ */
+static rsRetVal
+jsonAddVal(uchar *pSrc, unsigned buflen, es_str_t **dst)
+{
+	unsigned char c;
+	es_size_t i;
+	char numbuf[4];
+	int j;
+	DEFiRet;
+
+	for(i = 0 ; i < buflen ; ++i) {
+		c = pSrc[i];
+		if(   (c >= 0x23 && c <= 0x5b)
+		   || (c >= 0x5d /* && c <= 0x10FFFF*/)
+		   || c == 0x20 || c == 0x21) {
+			/* no need to escape */
+			if(*dst != NULL)
+				es_addChar(dst, c);
+		} else {
+			if(*dst == NULL) {
+				if(i == 0) {
+					/* we hope we have only few escapes... */
+					*dst = es_newStr(buflen+10);
+				} else {
+					*dst = es_newStrFromBuf((char*)pSrc, i-1);
+				}
+				if(*dst == NULL) {
+					ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+				}
+			}
+			/* we must escape, try RFC4627-defined special sequences first */
+			switch(c) {
+			case '\0':
+				es_addBuf(dst, "\\u0000", 6);
+				break;
+			case '\"':
+				es_addBuf(dst, "\\\"", 2);
+				break;
+			case '/':
+				es_addBuf(dst, "\\/", 2);
+				break;
+			case '\\':
+				es_addBuf(dst, "\\\\", 2);
+				break;
+			case '\010':
+				es_addBuf(dst, "\\b", 2);
+				break;
+			case '\014':
+				es_addBuf(dst, "\\f", 2);
+				break;
+			case '\n':
+				es_addBuf(dst, "\\n", 2);
+				break;
+			case '\r':
+				es_addBuf(dst, "\\r", 2);
+				break;
+			case '\t':
+				es_addBuf(dst, "\\t", 2);
+				break;
+			default:
+				/* TODO : proper Unicode encoding (see header comment) */
+				for(j = 0 ; j < 4 ; ++j) {
+					numbuf[3-j] = hexdigit[c % 16];
+					c = c / 16;
+				}
+				es_addBuf(dst, "\\u", 2);
+				es_addBuf(dst, numbuf, 4);
+				break;
+			}
+		}
+	}
+finalize_it:
+	RETiRet;
+}
+
+
 /* encode a property in JSON escaped format. This is a helper
  * to MsgGetProp. It needs to update all provided parameters.
  * Note: Code is borrowed from libee (my own code, so ASL 2.0
@@ -2364,13 +2465,6 @@ finalize_it:
 static rsRetVal
 jsonEncode(uchar **ppRes, unsigned short *pbMustBeFreed, int *pBufLen)
 {
-	static char hexdigit[16] =
-		{'0', '1', '2', '3', '4', '5', '6', '7', '8',
-		 '9', 'A', 'B', 'C', 'D', 'E', 'F' };
-	unsigned char c;
-	es_size_t i;
-	char numbuf[4];
-	int j;
 	unsigned buflen;
 	uchar *pSrc;
 	es_str_t *dst = NULL;
@@ -2378,67 +2472,7 @@ jsonEncode(uchar **ppRes, unsigned short *pbMustBeFreed, int *pBufLen)
 
 	pSrc = *ppRes;
 	buflen = (*pBufLen == -1) ? ustrlen(pSrc) : *pBufLen;
-	for(i = 0 ; i < buflen ; ++i) {
-		c = pSrc[i];
-		if(   (c >= 0x23 && c <= 0x5b)
-		   || (c >= 0x5d /* && c <= 0x10FFFF*/)
-		   || c == 0x20 || c == 0x21) {
-			/* no need to escape */
-			if(dst != NULL)
-				es_addChar(&dst, c);
-		} else {
-			if(dst == NULL) {
-				if(i == 0) {
-					/* we hope we have only few escapes... */
-					dst = es_newStr(buflen+10);
-				} else {
-					dst = es_newStrFromBuf((char*)pSrc, i-1);
-				}
-				if(dst == NULL) {
-					ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-				}
-			}
-			/* we must escape, try RFC4627-defined special sequences first */
-			switch(c) {
-			case '\0':
-				es_addBuf(&dst, "\\u0000", 6);
-				break;
-			case '\"':
-				es_addBuf(&dst, "\\\"", 2);
-				break;
-			case '/':
-				es_addBuf(&dst, "\\/", 2);
-				break;
-			case '\\':
-				es_addBuf(&dst, "\\\\", 2);
-				break;
-			case '\010':
-				es_addBuf(&dst, "\\b", 2);
-				break;
-			case '\014':
-				es_addBuf(&dst, "\\f", 2);
-				break;
-			case '\n':
-				es_addBuf(&dst, "\\n", 2);
-				break;
-			case '\r':
-				es_addBuf(&dst, "\\r", 2);
-				break;
-			case '\t':
-				es_addBuf(&dst, "\\t", 2);
-				break;
-			default:
-				/* TODO : proper Unicode encoding (see header comment) */
-				for(j = 0 ; j < 4 ; ++j) {
-					numbuf[3-j] = hexdigit[c % 16];
-					c = c / 16;
-				}
-				es_addBuf(&dst, "\\u", 2);
-				es_addBuf(&dst, numbuf, 4);
-				break;
-			}
-		}
-	}
+	CHKiRet(jsonAddVal(pSrc, buflen, &dst));
 
 	if(dst != NULL) {
 		/* we updated the string and need to replace the
@@ -2448,8 +2482,49 @@ jsonEncode(uchar **ppRes, unsigned short *pbMustBeFreed, int *pBufLen)
 			free(*ppRes);
 		*ppRes = (uchar*)es_str2cstr(dst, NULL);
 		*pbMustBeFreed = 1;
+		*pBufLen = -1;
 		es_deleteStr(dst);
 	}
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* Format a property as JSON field, that means
+ * "name"="value"
+ * where value is JSON-escaped (here we assume that the name
+ * only contains characters from the valid character set).
+ * Note: this function duplicates code from jsonEncode(). 
+ * TODO: these two functions should be combined, at least if
+ * that makes any sense from a performance PoV - definitely
+ * something to consider at a later stage. rgerhards, 2012-04-19
+ */
+static rsRetVal
+jsonField(struct templateEntry *pTpe, uchar **ppRes, unsigned short *pbMustBeFreed, int *pBufLen)
+{
+	unsigned buflen;
+	uchar *pSrc;
+	es_str_t *dst = NULL;
+	DEFiRet;
+
+	pSrc = *ppRes;
+	buflen = (*pBufLen == -1) ? ustrlen(pSrc) : *pBufLen;
+	/* we hope we have only few escapes... */
+	dst = es_newStr(buflen+es_strlen(pTpe->data.field.fieldName)+15);
+	es_addChar(&dst, '"');
+	es_addStr(&dst, pTpe->data.field.fieldName);
+	es_addBufConstcstr(&dst, "\"=\"");
+	CHKiRet(jsonAddVal(pSrc, buflen, &dst));
+	es_addChar(&dst, '"');
+
+	if(*pbMustBeFreed)
+		free(*ppRes);
+	/* we know we do not have \0 chars - so the size does not change */
+	*pBufLen = es_strlen(dst);
+	*ppRes = (uchar*)es_str2cstr(dst, NULL);
+	*pbMustBeFreed = 1;
+	es_deleteStr(dst);
 
 finalize_it:
 	RETiRet;
@@ -2673,6 +2748,23 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			pRes = (uchar*) "\xEF\xBB\xBF";
 			*pbMustBeFreed = 0;
 			break;
+		case PROP_SYS_UPTIME:
+			{
+			struct sysinfo s_info;
+
+			if((pRes = (uchar*) MALLOC(sizeof(uchar) * 32)) == NULL) {
+				RET_OUT_OF_MEMORY;
+			}
+			*pbMustBeFreed = 1;
+
+			if(sysinfo(&s_info) < 0) {
+				*pPropLen = sizeof("**SYSCALL FAILED**") - 1;
+				return(UCHAR_CONSTANT("**SYSCALL FAILED**"));
+			}
+
+			snprintf((char*) pRes, sizeof(uchar) * 32, "%ld", s_info.uptime);
+			}
+		break;
 		default:
 			/* there is no point in continuing, we may even otherwise render the
 			 * error message unreadable. rgerhards, 2007-07-10
@@ -3264,6 +3356,8 @@ dbgprintf("prop repl 4, pRes='%s', len %d\n", pRes, bufLen);
 		*pbMustBeFreed = 1;
 	} else if(pTpe->data.field.options.bJSON) {
 		jsonEncode(&pRes, pbMustBeFreed, &bufLen);
+	} else if(pTpe->data.field.options.bJSONf) {
+		jsonField(pTpe, &pRes, pbMustBeFreed, &bufLen);
 	}
 
 	if(bufLen == -1)
@@ -3332,7 +3426,6 @@ msgGetMsgVarNew(msg_t *pThis, uchar *name)
 	propNameStrToID(name, &propid);
 	pszProp = (uchar*) MsgGetProp(pThis, NULL, propid, NULL, &propLen, &bMustBeFreed);
 
-dbgprintf("ZZZZ: var %s returns '%s'\n", name, pszProp);
 	estr = es_newStrFromCStr((char*)pszProp, propLen);
 	if(bMustBeFreed)
 		free(pszProp);
@@ -3403,8 +3496,13 @@ rsRetVal MsgSetProperty(msg_t *pThis, var_t *pProp)
 		memcpy(&pThis->tRcvdAt, &pProp->val.vSyslogTime, sizeof(struct syslogTime));
 	} else if(isProp("tTIMESTAMP")) {
 		memcpy(&pThis->tTIMESTAMP, &pProp->val.vSyslogTime, sizeof(struct syslogTime));
+	} else if(isProp("pszRuleset")) {
+		MsgSetRulesetByName(pThis, pProp->val.pStr);
 	} else if(isProp("pszMSG")) {
 		dbgprintf("no longer supported property pszMSG silently ignored\n");
+	} else {
+		dbgprintf("unknown supported property '%s' silently ignored\n",
+			  rsCStrGetSzStrNoNULL(pProp->pcsName));
 	}
 
 finalize_it:

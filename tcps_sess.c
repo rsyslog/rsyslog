@@ -200,6 +200,8 @@ SetLstnInfo(tcps_sess_t *pThis, tcpLstnPortList_t *pLstnInfo)
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
 	assert(pLstnInfo != NULL);
 	pThis->pLstnInfo = pLstnInfo;
+	/* set cached elements */
+	pThis->bSuppOctetFram = pLstnInfo->bSuppOctetFram;
 	RETiRet;
 }
 
@@ -366,7 +368,7 @@ processDataRcvd(tcps_sess_t *pThis, char c, struct syslogTime *stTime, time_t tt
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
 
 	if(pThis->inputState == eAtStrtFram) {
-		if(isdigit((int) c)) {
+		if(pThis->bSuppOctetFram && isdigit((int) c)) {
 			pThis->inputState = eInOctetCnt;
 			pThis->iOctetsRemain = 0;
 			pThis->eFraming = TCP_FRAMING_OCTET_COUNTING;

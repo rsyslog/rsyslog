@@ -16,6 +16,12 @@ available. This processing was redundant and had a lot a drawbacks.
 For details, please see the
 <a href="v4compatibility.html">rsyslog v4 compatibility notes</a> which elaborate
 on the reasons and the (few) things you may need to change.
+<p>Please note that starting with 5.8.11 HUP will also requery the local hostname.
+<h2>Queue on-disk format</h2>
+<p>The queue information file format has been changed. When upgrading from v4 to
+v5, make sure that the queue is emptied and no on-disk structure present. We did
+not go great length in understanding the old format, as there was too little demand
+for that (and it being quite some effort if done right).
 <h2>Queue Worker Thread Shutdown</h2>
 <p>Previous rsyslog versions had the capability to &quot;run&quot; on zero queue worker
 if no work was required. This was done to save a very limited number of resources. However,

@@ -69,7 +69,23 @@ PROTOTYPEObj(ruleset);
 
 /* TODO: remove these -- currently done dirty for config file
  * redo -- rgerhards, 2011-04-19
+ * rgerhards, 2012-04-19: actually, it may be way cooler not to remove
+ * them and use plain c-style conventions at least inside core objects.
  */
 rsRetVal rulesetDestructForLinkedList(void *pData);
 rsRetVal rulesetKeyDestruct(void __attribute__((unused)) *pData);
+
+/* Get name associated to ruleset. This function cannot fail (except,
+ * of course, if previously something went really wrong). Returned
+ * pointer is read-only.
+ * rgerhards, 2012-04-18
+ */
+static inline uchar*
+rulesetGetName(ruleset_t *pRuleset)
+{
+	return pRuleset->pszName;
+}
+
+
+rsRetVal rulesetGetRuleset(rsconf_t *conf, ruleset_t **ppRuleset, uchar *pszName);
 #endif /* #ifndef INCLUDED_RULESET_H */

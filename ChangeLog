@@ -1,6 +1,17 @@
 ---------------------------------------------------------------------------
-Version 6.3.8  [DEVEL] 2012-02-??
-- added $PStatsJSON directive to permit stats records in JSON format
+Version 6.3.9  [DEVEL] 2012-04-??
+- added the "jsonf" property replacer option (and fieldname)
+- bugfix: property replacer option "json" could lead to content loss
+  message was truncated if escaping was necessary
+- bugfix: assigned ruleset was lost when using disk queues
+  This looked quite hard to diagnose for disk-assisted queues, as the
+  pure memory part worked well, but ruleset info was lost for messages
+  stored inside the disk queue.
+- bugfix/imuxsock: solving abort if hostname was not set; configured
+  hostname was not used (both merge regressions)
+---------------------------------------------------------------------------
+Version 6.3.8  [DEVEL] 2012-04-16
+- added $PStatJSON directive to permit stats records in JSON format
 - added "date-unixtimestamp" property replacer option to format as a
   unix timestamp (seconds since epoch)
 - added "json" property replacer option to support JSON encoding on a
@@ -12,6 +23,9 @@ Version 6.3.8  [DEVEL] 2012-02-??
   - ommysql
   - omlibdbi
   - omsnmp
+- added configuration directives to customize queue light delay marks
+  $MainMsgQueueLightDelayMark, $ActionQueueLightDelayMark; both
+  specify number of messages starting at which a delay happens.
 - added message property parsesuccess to indicate if the last run
   higher-level parser could successfully parse the message or not
   (see property replacer html doc for details)
@@ -20,6 +34,19 @@ Version 6.3.8  [DEVEL] 2012-02-??
 - bugfix: property $!all-json made rsyslog abort if no normalized data
   was available
 - bugfix: memory leak in array passing output module mode
+- added configuration directives to customize queue light delay marks
+- permit size modifiers (k,m,g,...) in integer config parameters
+  Thanks to Jo Rhett for the suggestion.
+- bugfix: hostname was not requeried on HUP
+  Thanks to Per Jessen for reporting this bug and Marius Tomaschewski for
+  his help in testing the fix.
+- bugfix: imklog invalidly computed facility and severity
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=313
+- added configuration directive to disable octet-counted framing
+  for imtcp, directive is $InputTCPServerSupportOctetCountedFraming 
+  for imptcp, directive is $InputPTCPServerSupportOctetCountedFraming 
+- added capability to use a local interface IP address as fromhost-ip for
+  locally originating messages. New directive $LocalHostIPIF
 ---------------------------------------------------------------------------
 Version 6.3.7  [DEVEL] 2012-02-02
 - imported refactored v5.9.6 imklog linux driver, now combined with BSD
@@ -369,6 +396,26 @@ expected that interfaces, even new ones, break during the initial
   syslog plain tcp input plugin (NOT supporting TLS!)
   [ported from v4]
 ---------------------------------------------------------------------------
+Version 5.9.6  [V5-BETA], 2012-04-12
+- added configuration directives to customize queue light delay marks
+- permit size modifiers (k,m,g,...) in integer config parameters
+  Thanks to Jo Rhett for the suggestion.
+- bugfix: hostname was not requeried on HUP
+  Thanks to Per Jessen for reporting this bug and Marius Tomaschewski for
+  his help in testing the fix.
+- bugfix: imklog invalidly computed facility and severity
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=313
+- bugfix: imptcp input name could not be set
+  config directive was accepted, but had no effect
+- added configuration directive to disable octet-counted framing
+  for imtcp, directive is $InputTCPServerSupportOctetCountedFraming 
+  for imptcp, directive is $InputPTCPServerSupportOctetCountedFraming 
+- added capability to use a local interface IP address as fromhost-ip for
+  locally originating messages. New directive $LocalHostIPIF
+- added configuration directives to customize queue light delay marks
+  $MainMsgQueueLightDelayMark, $ActionQueueLightDelayMark; both
+  specify number of messages starting at which a delay happens.
+---------------------------------------------------------------------------
 Version 5.9.5  [V5-DEVEL], 2012-01-27
 - improved impstats subsystem, added many new counters
 - enhanced module loader to not rely on PATH_MAX
@@ -484,7 +531,23 @@ Version 5.9.0  [V5-DEVEL] (rgerhards), 2011-06-08
   affected directive was: $ActionExecOnlyWhenPreviousIsSuspended on
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=236
 ---------------------------------------------------------------------------
-Version 5.8.10  [V5-stable] 2012-??-??
+Version 5.8.11  [V5-stable] 2012-04-??
+- bugfix: imptcp input name could not be set
+  config directive was accepted, but had no effect
+- bugfix: assigned ruleset was lost when using disk queues
+  This looked quite hard to diagnose for disk-assisted queues, as the
+  pure memory part worked well, but ruleset info was lost for messages
+  stored inside the disk queue.
+- bugfix: hostname was not requeried on HUP
+  Thanks to Per Jessen for reporting this bug and Marius Tomaschewski for
+  his help in testing the fix.
+---------------------------------------------------------------------------
+Version 5.8.10  [V5-stable] 2012-04-05
+- bugfix: segfault on startup if $actionqueuefilename was missing for disk
+  queue config
+  Thanks to Tomas Heinrich for the patch.
+- bugfix: segfault if disk-queue was started up with old queue file
+  Thanks to Tomas Heinrich for the patch.
 - bugfix: memory leak in array passing output module mode
 ---------------------------------------------------------------------------
 Version 5.8.9  [V5-stable] 2012-03-15
@@ -497,6 +560,12 @@ Version 5.8.9  [V5-stable] 2012-03-15
   stats subsystem.
 ---------------------------------------------------------------------------
 Version 5.8.8  [V5-stable] 2012-03-05
+- added capability to use a local interface IP address as fromhost-ip for
+  imuxsock imklog
+  new config directives: $IMUXSockLocalIPIF, $klogLocalIPIF
+- added configuration directives to customize queue light delay marks
+  $MainMsgQueueLightDelayMark, $ActionQueueLightDelayMark; both
+  specify number of messages starting at which a delay happens.
 - bugfix: omprog made rsyslog abort on startup if not binary to
   execute was configured
 - bugfix: imklog invalidly computed facility and severity

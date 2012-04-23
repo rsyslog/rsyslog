@@ -312,8 +312,8 @@ GetRulesetQueue(ruleset_t *pThis)
 
 /* Find the ruleset with the given name and return a pointer to its object.
  */
-static rsRetVal
-GetRuleset(rsconf_t *conf, ruleset_t **ppRuleset, uchar *pszName)
+rsRetVal
+rulesetGetRuleset(rsconf_t *conf, ruleset_t **ppRuleset, uchar *pszName)
 {
 	DEFiRet;
 	assert(ppRuleset != NULL);
@@ -335,7 +335,7 @@ SetDefaultRuleset(rsconf_t *conf, uchar *pszName)
 	DEFiRet;
 	assert(pszName != NULL);
 
-	CHKiRet(GetRuleset(conf, &pRuleset, pszName));
+	CHKiRet(rulesetGetRuleset(conf, &pRuleset, pszName));
 	conf->rulesets.pDflt = pRuleset;
 	dbgprintf("default rule set changed to %p: '%s'\n", pRuleset, pszName);
 
@@ -353,7 +353,7 @@ SetCurrRuleset(rsconf_t *conf, uchar *pszName)
 	DEFiRet;
 	assert(pszName != NULL);
 
-	CHKiRet(GetRuleset(conf, &pRuleset, pszName));
+	CHKiRet(rulesetGetRuleset(conf, &pRuleset, pszName));
 	conf->rulesets.pCurr = pRuleset;
 	dbgprintf("current rule set changed to %p: '%s'\n", pRuleset, pszName);
 
@@ -497,6 +497,7 @@ debugPrintAll(rsconf_t *conf)
 static inline rsRetVal
 doRulesetCreateQueue(rsconf_t *conf, int *pNewVal)
 {
+	uchar *rulesetMainQName;
 	DEFiRet;
 
 	if(conf->rulesets.pCurr == NULL) {
@@ -515,7 +516,9 @@ doRulesetCreateQueue(rsconf_t *conf, int *pNewVal)
 		FINALIZE; /* if it is turned off, we do not need to change anything ;) */
 
 	dbgprintf("adding a ruleset-specific \"main\" queue");
-	CHKiRet(createMainQueue(&conf->rulesets.pCurr->pQueue, UCHAR_CONSTANT("ruleset")));
+	rulesetMainQName = (conf->rulesets.pCurr->pszName == NULL)? UCHAR_CONSTANT("ruleset") :
+							    conf->rulesets.pCurr->pszName;
+	CHKiRet(createMainQueue(&conf->rulesets.pCurr->pQueue, rulesetMainQName));
 
 finalize_it:
 	RETiRet;
@@ -599,7 +602,7 @@ CODESTARTobjQueryInterface(ruleset)
 	pIf->SetName = setName;
 	pIf->DebugPrintAll = debugPrintAll;
 	pIf->GetCurrent = GetCurrent;
-	pIf->GetRuleset = GetRuleset;
+	pIf->GetRuleset = rulesetGetRuleset;
 	pIf->SetDefaultRuleset = SetDefaultRuleset;
 	pIf->SetCurrRuleset = SetCurrRuleset;
 	pIf->GetRulesetQueue = GetRulesetQueue;

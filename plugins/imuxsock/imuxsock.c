@@ -94,6 +94,7 @@ DEF_IMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(prop)
+DEFobjCurrIf(net)
 DEFobjCurrIf(parser)
 DEFobjCurrIf(datetime)
 DEFobjCurrIf(statsobj)
@@ -330,6 +331,7 @@ static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	CHKmalloc(inst = MALLOC(sizeof(instanceConf_t)));
 	inst->sockName = pNewVal;
 	inst->ratelimitInterval = cs.ratelimitInterval;
+	inst->pLogHostName = cs.pLogHostName;
 	inst->ratelimitBurst = cs.ratelimitBurst;
 	inst->ratelimitSeverity = cs.ratelimitSeverity;
 	inst->bUseFlowCtl = cs.bUseFlowCtl;
@@ -376,14 +378,13 @@ addListner(instanceConf_t *inst)
 		} else {
 			listeners[nfd].bParseHost = 0;
 		}
-		CHKiRet(prop.Construct(&(listeners[nfd].hostName)));
 		if(inst->pLogHostName == NULL) {
-			CHKiRet(prop.SetString(listeners[nfd].hostName, glbl.GetLocalHostName(),
-				ustrlen(glbl.GetLocalHostName())));
+			listeners[nfd].hostName = NULL;
 		} else {
+			CHKiRet(prop.Construct(&(listeners[nfd].hostName)));
 			CHKiRet(prop.SetString(listeners[nfd].hostName, inst->pLogHostName, ustrlen(inst->pLogHostName)));
+			CHKiRet(prop.ConstructFinalize(listeners[nfd].hostName));
 		}
-		CHKiRet(prop.ConstructFinalize(listeners[nfd].hostName));
 		if(inst->ratelimitInterval > 0) {
 			if((listeners[nfd].ht = create_hashtable(100, hash_from_key_fn, key_equals_fn, NULL)) == NULL) {
 				/* in this case, we simply turn off rate-limiting */
@@ -866,7 +867,7 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 		pMsg->msgFlags  = pLstn->flags;
 	}
 
-	MsgSetRcvFrom(pMsg, pLstn->hostName);
+	MsgSetRcvFrom(pMsg, pLstn->hostName == NULL ? glbl.GetLocalHostNameProp() : pLstn->hostName);
 	CHKiRet(MsgSetRcvFromIP(pMsg, pLocalHostIP));
 	CHKiRet(submitMsg(pMsg));
 
@@ -1256,6 +1257,7 @@ CODESTARTmodInit
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
+	CHKiRet(objUse(net, CORE_COMPONENT));
 	CHKiRet(objUse(prop, CORE_COMPONENT));
 	CHKiRet(objUse(statsobj, CORE_COMPONENT));
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
@@ -1271,6 +1273,13 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(prop.Construct(&pInputName));
 	CHKiRet(prop.SetString(pInputName, UCHAR_CONSTANT("imuxsock"), sizeof("imuxsock") - 1));
 	CHKiRet(prop.ConstructFinalize(pInputName));
+
+	/* right now, glbl does not permit per-instance IP address notation. As long as this
+	 * is the case, it is OK to query the HostIP once here at this location. HOWEVER, the
+	 * whole concept is not 100% clean and needs to be addressed on a higher layer.
+	 * TODO / rgerhards, 2012-04-11
+	 */
+	pLocalHostIP = glbl.GetLocalHostIP();
 
 	/* init system log socket settings */
 	listeners[0].flags = IGNDATE;
@@ -1290,14 +1299,10 @@ CODEmodInit_QueryRegCFSLineHdlr
 		listeners[i].fd  = -1;
 	}
 
+	/* now init listen socket zero, the local log socket */
 	CHKiRet(prop.Construct(&pLocalHostIP));
 	CHKiRet(prop.SetString(pLocalHostIP, UCHAR_CONSTANT("127.0.0.1"), sizeof("127.0.0.1") - 1));
 	CHKiRet(prop.ConstructFinalize(pLocalHostIP));
-
-	/* now init listen socket zero, the local log socket */
-	CHKiRet(prop.Construct(&(listeners[0].hostName)));
-	CHKiRet(prop.SetString(listeners[0].hostName, glbl.GetLocalHostName(), ustrlen(glbl.GetLocalHostName())));
-	CHKiRet(prop.ConstructFinalize(listeners[0].hostName));
 
 	/* register config file handlers */
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omitlocallogging", 0, eCmdHdlrBinary,

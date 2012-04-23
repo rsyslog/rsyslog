@@ -54,6 +54,9 @@
 #include <fnmatch.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <ifaddrs.h>
+#include <sys/types.h>
+#include <arpa/inet.h>
 
 #include "syslogd-types.h"
 #include "module-template.h"
@@ -1480,6 +1483,54 @@ finalize_it:
 }
 
 
+/* return the IP address (IPv4/6) for the provided interface. Returns
+ * RS_RET_NOT_FOUND if interface can not be found in interface list.
+ * The family must be correct (AF_INET vs. AF_INET6, AF_UNSPEC means
+ * either of *these two*).
+ * The function re-queries the interface list (at least in theory).
+ * However, it caches entries in order to avoid too-frequent requery.
+ * rgerhards, 2012-03-06
+ */
+static rsRetVal
+getIFIPAddr(uchar *szif, int family, uchar *pszbuf, int lenBuf)
+{
+	struct ifaddrs * ifaddrs = NULL;
+	struct ifaddrs * ifa;
+	void * pAddr;
+	DEFiRet;
+
+ 	if(getifaddrs(&ifaddrs) != 0) {
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
+	for (ifa = ifaddrs; ifa != NULL; ifa = ifa->ifa_next) {
+		if(strcmp(ifa->ifa_name, (char*)szif))
+			continue;
+		if(   (family == AF_INET6 || family == AF_UNSPEC)
+		   && ifa->ifa_addr->sa_family == AF_INET6) {
+			pAddr = &((struct sockaddr_in6 *)ifa->ifa_addr)->sin6_addr;
+			inet_ntop(AF_INET6, pAddr, (char*)pszbuf, lenBuf);
+			break;
+		} else if(/*   (family == AF_INET || family == AF_UNSPEC)
+		         &&*/ ifa->ifa_addr->sa_family == AF_INET) {
+			pAddr = &((struct sockaddr_in *)ifa->ifa_addr)->sin_addr;
+			inet_ntop(AF_INET, pAddr, (char*)pszbuf, lenBuf);
+			break;
+		} 
+	}
+
+	if(ifaddrs != NULL)
+		freeifaddrs(ifaddrs);
+
+	if(ifa == NULL)
+		iRet = RS_RET_NOT_FOUND;
+
+finalize_it:
+	RETiRet;
+
+}
+
+
 /* queryInterface function
  * rgerhards, 2008-03-05
  */
@@ -1511,6 +1562,7 @@ CODESTARTobjQueryInterface(net)
 	pIf->PermittedPeerWildcardMatch = PermittedPeerWildcardMatch;
 	pIf->CmpHost = CmpHost;
 	pIf->HasRestrictions = HasRestrictions;
+	pIf->GetIFIPAddr = getIFIPAddr;
 	/* data members */
 	pIf->pACLAddHostnameOnFail = &ACLAddHostnameOnFail;
 	pIf->pACLDontResolve = &ACLDontResolve;

@@ -75,7 +75,6 @@ static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current lo
 static configSettings_t cs;
 
 static prop_t *pInputName = NULL;
-static prop_t *pLocalHostIP = NULL;
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
@@ -106,7 +105,7 @@ doSubmitMsg(uchar *line)
 	MsgSetRawMsgWOSize(pMsg, (char*)line);
 	MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName(), ustrlen(glbl.GetLocalHostName()));
 	MsgSetRcvFrom(pMsg, glbl.GetLocalHostNameProp());
-	MsgSetRcvFromIP(pMsg, pLocalHostIP);
+	MsgSetRcvFromIP(pMsg, glbl.GetLocalHostIP());
 	MsgSetMSGoffs(pMsg, 0);
 	MsgSetTAG(pMsg, UCHAR_CONSTANT("rsyslogd-pstats:"), sizeof("rsyslogd-pstats:") - 1);
 	pMsg->iFacility = runModConf->iFacility;
@@ -221,7 +220,6 @@ ENDafterRun
 BEGINmodExit
 CODESTARTmodExit
 	prop.Destruct(&pInputName);
-	prop.Destruct(&pLocalHostIP);
 	/* release objects we used */
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(prop, CORE_COMPONENT);
@@ -266,10 +264,6 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(prop.Construct(&pInputName));
 	CHKiRet(prop.SetString(pInputName, UCHAR_CONSTANT("impstats"), sizeof("impstats") - 1));
 	CHKiRet(prop.ConstructFinalize(pInputName));
-
-	CHKiRet(prop.Construct(&pLocalHostIP));
-	CHKiRet(prop.SetString(pLocalHostIP, UCHAR_CONSTANT("127.0.0.1"), sizeof("127.0.0.1") - 1));
-	CHKiRet(prop.ConstructFinalize(pLocalHostIP));
 ENDmodInit
 /* vi:set ai:
  */
