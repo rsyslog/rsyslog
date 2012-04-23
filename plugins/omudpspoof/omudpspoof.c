@@ -422,7 +422,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(2)
 		pData->port = NULL;
 	else 
 		CHKmalloc(pData->port = ustrdup(cs.pszTargetPort));
-	CHKiRet(OMSRsetEntry(*ppOMSR, 1, ustrdup(cs.pszSourceNameTemplate), OMSR_NO_RQD_TPL_OPTS));
+	CHKiRet(OMSRsetEntry(*ppOMSR, 1, ustrdup(sourceTpl), OMSR_NO_RQD_TPL_OPTS));
 	pData->compressionLevel = cs.iCompressionLevel;
 	pData->sourcePort = pData->sourcePortStart = cs.iSourcePortStart;
 	pData->sourcePortEnd = cs.iSourcePortEnd;

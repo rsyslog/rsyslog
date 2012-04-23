@@ -1,6 +1,8 @@
 ---------------------------------------------------------------------------
 Version 6.3.9  [DEVEL] 2012-04-??
 - added the "jsonf" property replacer option (and fieldname)
+- bugfix: omudpspoof did not work correctly if no spoof hostname was
+  configured
 - bugfix: property replacer option "json" could lead to content loss
   message was truncated if escaping was necessary
 - bugfix: assigned ruleset was lost when using disk queues
