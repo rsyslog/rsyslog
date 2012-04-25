@@ -66,6 +66,8 @@ typedef struct curl_slist HEADER;
 typedef struct _instanceData {
 	uchar *server;
 	int port;
+	uchar *uid;
+	uchar *pwd;
 	uchar *searchIndex;
 	uchar *searchType;
 	uchar *tplName;
@@ -83,6 +85,8 @@ typedef struct _instanceData {
 static struct cnfparamdescr actpdescr[] = {
 	{ "server", eCmdHdlrGetWord, 0 },
 	{ "serverport", eCmdHdlrInt, 0 },
+	{ "uid", eCmdHdlrGetWord, 0 },
+	{ "pwd", eCmdHdlrGetWord, 0 },
 	{ "searchindex", eCmdHdlrGetWord, 0 },
 	{ "searchtype", eCmdHdlrGetWord, 0 },
 	{ "dynsearchindex", eCmdHdlrBinary, 0 },
@@ -118,6 +122,8 @@ CODESTARTfreeInstance
 		pData->curlHandle = NULL;
 	}
 	free(pData->server);
+	free(pData->uid);
+	free(pData->pwd);
 	free(pData->searchIndex);
 	free(pData->searchType);
 	free(pData->tplName);
@@ -125,6 +131,7 @@ ENDfreeInstance
 
 BEGINdbgPrintInstInfo
 CODESTARTdbgPrintInstInfo
+	dbgprintf("omelasticsearch, target server %s", pData->server);
 ENDdbgPrintInstInfo
 
 BEGINtryResume
@@ -136,6 +143,7 @@ static rsRetVal
 setCurlURL(instanceData *pData, uchar *tpl1, uchar *tpl2)
 {
 	char restURL[2048];	/* libcurl makes a copy, using the stack here is OK */
+	char authBuf[1024];
 	uchar *searchIndex;
 	uchar *searchType;
 
@@ -168,6 +176,14 @@ setCurlURL(instanceData *pData, uchar *tpl1, uchar *tpl2)
 			pData->server, pData->port, searchIndex, searchType);
 	}
 	curl_easy_setopt(pData->curlHandle, CURLOPT_URL, restURL); 
+
+	if(pData->uid != NULL) {
+		snprintf(authBuf, sizeof(authBuf), "%s:%s", pData->uid,
+			 (pData->pwd == NULL) ? "" : (char*)pData->pwd);
+		//TODO: create better code, check errors!
+		curl_easy_setopt(pData->curlHandle, CURLOPT_USERPWD, authBuf); 
+		curl_easy_setopt(pData->curlHandle, CURLOPT_PROXYAUTH, CURLAUTH_ANY);
+	}
 	DBGPRINTF("omelasticsearch: using REST URL: '%s'\n", restURL);
 	return RS_RET_OK;
 }
@@ -276,6 +292,8 @@ setInstParamDefaults(instanceData *pData)
 {
 	pData->server = NULL;
 	pData->port = 9200;
+	pData->uid = NULL;
+	pData->pwd = NULL;
 	pData->searchIndex = NULL;
 	pData->searchType = NULL;
 	pData->timeout = NULL;
@@ -304,6 +322,10 @@ CODESTARTnewActInst
 			pData->server = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "serverport")) {
 			pData->port = (int) pvals[i].val.d.n, NULL;
+		} else if(!strcmp(actpblk.descr[i].name, "uid")) {
+			pData->uid = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "pwd")) {
+			pData->pwd = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "searchindex")) {
 			pData->searchIndex = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "searchtype")) {
@@ -324,6 +346,12 @@ CODESTARTnewActInst
 		}
 	}
 	
+	if(pData->pwd != NULL && pData->uid == NULL) {
+		errmsg.LogError(0, RS_RET_UID_MISSING,
+			"omelasticsearch: password is provided, but no uid "
+			"- action definition invalid");
+		ABORT_FINALIZE(RS_RET_UID_MISSING);
+	}
 	if(pData->dynSrchIdx && pData->searchIndex == NULL) {
 		errmsg.LogError(0, RS_RET_LEGA_ACT_NOT_SUPPORTED,
 			"omelasticsearch: requested dynamic search index, but no "
