@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------
 Version 6.3.9  [DEVEL] 2012-04-??
+- added capability to specify substrings for field extraction mode
 - added the "jsonf" property replacer option (and fieldname)
 - bugfix: omudpspoof did not work correctly if no spoof hostname was
   configured
