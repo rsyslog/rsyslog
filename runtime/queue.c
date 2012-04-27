@@ -2247,6 +2247,10 @@ doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, void *pUsr)
 	DEFiRet;
 	struct timespec t;
 
+	if(glbl.GetGlobalInputTermState()) {
+		ABORT_FINALIZE(RS_RET_FORCE_TERM);
+	}
+
 	STATSCOUNTER_INC(pThis->ctrEnqueued, pThis->mutCtrEnqueued);
 	/* first check if we need to discard this message (which will cause CHKiRet() to exit)
 	 */
