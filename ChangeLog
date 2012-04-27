@@ -1,3 +1,4 @@
+- added capability to specify substrings for field extraction mode
 ---------------------------------------------------------------------------
 Version 5.9.6  [V5-BETA], 2012-04-12
 - added configuration directives to customize queue light delay marks

@@ -274,6 +274,15 @@ fields in the property is requested. The field number must be placed in
 the "ToChar" parameter. An example where the 3rd field (delimited by
 TAB) from the msg property is extracted is as follows: "%msg:F:3%". The
 same example with semicolon as delimiter is "%msg:F,59:3%".</p>
+<p>The use of fields does not permit to select substrings, what is rather
+unfortunate. To solve this issue, starting with 6.3.9, fromPos and toPos
+can be specified for strings as well. However, the syntax is quite ugly, but
+it was the only way to integrate this functonality into the already-existing
+system. To do so, use ",fromPos" and ",toPos" during field extraction.
+Let's assume you want to extract the substring from position 5 to 9 in the previous
+example. Then, the syntax is as follows: "%msg:F,59,5:3,9%". As you can see,
+"F,59" means field-mode, with semicolon delimiter and ",5" means starting 
+at position 5. Then "3,9" means field 3 and string extraction to position 9.
 <p>Please note that the special characters "F" and "R" are
 case-sensitive. Only upper case works, lower case will return an error.
 There are no white spaces permitted inside the sequence (that will lead

@@ -2536,7 +2536,7 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 		 */
 		iCurrFld = 1;
 		pFld = pRes;
-		while(*pFld && iCurrFld < pTpe->data.field.iToPos) {
+		while(*pFld && iCurrFld < pTpe->data.field.iFieldNr) {
 			/* skip fields until the requested field or end of string is found */
 			while(*pFld && (uchar) *pFld != pTpe->data.field.field_delim)
 				++pFld; /* skip to field terminator */
@@ -2550,9 +2550,9 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 				++iCurrFld;
 			}
 		}
-		dbgprintf("field requested %d, field found %d\n", pTpe->data.field.iToPos, (int) iCurrFld);
+		dbgprintf("field requested %d, field found %d\n", pTpe->data.field.iFieldNr, (int) iCurrFld);
 		
-		if(iCurrFld == pTpe->data.field.iToPos) {
+		if(iCurrFld == pTpe->data.field.iFieldNr) {
 			/* field found, now extract it */
 			/* first of all, we need to find the end */
 			pFldEnd = pFld;
@@ -2586,58 +2586,6 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			*pbMustBeFreed = 0;
 			*pPropLen = sizeof("**FIELD NOT FOUND**") - 1;
 			return UCHAR_CONSTANT("**FIELD NOT FOUND**");
-		}
-	} else if(pTpe->data.field.iFromPos != 0 || pTpe->data.field.iToPos != 0) {
-		/* we need to obtain a private copy */
-		int iFrom, iTo;
-		uchar *pSb;
-		iFrom = pTpe->data.field.iFromPos;
-		iTo = pTpe->data.field.iToPos;
-		/* need to zero-base to and from (they are 1-based!) */
-		if(iFrom > 0)
-			--iFrom;
-		if(iTo > 0)
-			--iTo;
-		if(bufLen == -1)
-			bufLen = ustrlen(pRes);
-		if(iFrom == 0 && iTo >=  bufLen) { 
-			/* in this case, the requested string is a superset of what we already have,
-			 * so there is no need to do any processing. This is a frequent case for size-limited
-			 * fields like TAG in the default forwarding template (so it is a useful optimization
-			 * to check for this condition ;)). -- rgerhards, 2009-07-09
-			 */
-			; /*DO NOTHING*/
-		} else {
-			iLen = iTo - iFrom + 1; /* the +1 is for an actual char, NOT \0! */
-			pBufStart = pBuf = MALLOC((iLen + 1) * sizeof(char));
-			if(pBuf == NULL) {
-				if(*pbMustBeFreed == 1)
-					free(pRes);
-				RET_OUT_OF_MEMORY;
-			}
-			pSb = pRes;
-			if(iFrom) {
-			/* skip to the start of the substring (can't do pointer arithmetic
-			 * because the whole string might be smaller!!)
-			 */
-				while(*pSb && iFrom) {
-					--iFrom;
-					++pSb;
-				}
-			}
-			/* OK, we are at the begin - now let's copy... */
-			bufLen = iLen;
-			while(*pSb && iLen) {
-				*pBuf++ = *pSb;
-				++pSb;
-				--iLen;
-			}
-			*pBuf = '\0';
-			bufLen -= iLen; /* subtract remaining length if the string was smaller! */
-			if(*pbMustBeFreed == 1)
-				free(pRes);
-			pRes = pBufStart;
-			*pbMustBeFreed = 1;
 		}
 #ifdef FEATURE_REGEXP
 	} else {
@@ -2762,6 +2710,60 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			}
 		}
 #endif /* #ifdef FEATURE_REGEXP */
+	}
+
+	if(pTpe->data.field.iFromPos != 0 || pTpe->data.field.iToPos != 0) {
+		/* we need to obtain a private copy */
+		int iFrom, iTo;
+		uchar *pSb;
+		iFrom = pTpe->data.field.iFromPos;
+		iTo = pTpe->data.field.iToPos;
+		/* need to zero-base to and from (they are 1-based!) */
+		if(iFrom > 0)
+			--iFrom;
+		if(iTo > 0)
+			--iTo;
+		if(bufLen == -1)
+			bufLen = ustrlen(pRes);
+		if(iFrom == 0 && iTo >=  bufLen) { 
+			/* in this case, the requested string is a superset of what we already have,
+			 * so there is no need to do any processing. This is a frequent case for size-limited
+			 * fields like TAG in the default forwarding template (so it is a useful optimization
+			 * to check for this condition ;)). -- rgerhards, 2009-07-09
+			 */
+			; /*DO NOTHING*/
+		} else {
+			iLen = iTo - iFrom + 1; /* the +1 is for an actual char, NOT \0! */
+			pBufStart = pBuf = MALLOC((iLen + 1) * sizeof(char));
+			if(pBuf == NULL) {
+				if(*pbMustBeFreed == 1)
+					free(pRes);
+				RET_OUT_OF_MEMORY;
+			}
+			pSb = pRes;
+			if(iFrom) {
+			/* skip to the start of the substring (can't do pointer arithmetic
+			 * because the whole string might be smaller!!)
+			 */
+				while(*pSb && iFrom) {
+					--iFrom;
+					++pSb;
+				}
+			}
+			/* OK, we are at the begin - now let's copy... */
+			bufLen = iLen;
+			while(*pSb && iLen) {
+				*pBuf++ = *pSb;
+				++pSb;
+				--iLen;
+			}
+			*pBuf = '\0';
+			bufLen -= iLen; /* subtract remaining length if the string was smaller! */
+			if(*pbMustBeFreed == 1)
+				free(pRes);
+			pRes = pBufStart;
+			*pbMustBeFreed = 1;
+		}
 	}
 
 	/* now check if we need to do our "SP if first char is non-space" hack logic */
