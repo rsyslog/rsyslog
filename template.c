@@ -715,6 +715,13 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 								pTpe->data.field.field_expand = 1;
 								p ++;
 							}
+							if(*p == ',') { /* real fromPos? */
+								++p;
+								iNum = 0;
+								while(isdigit((int)*p))
+									iNum = iNum * 10 + *p++ - '0';
+								pTpe->data.field.iFromPos = iNum;
+							}
 						  }
 					}
 				} else {
@@ -815,10 +822,24 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 			/* fallthrough to "regular" ToPos code */
 #endif /* #ifdef FEATURE_REGEXP */
 
-			iNum = 0;
-			while(isdigit((int)*p))
-				iNum = iNum * 10 + *p++ - '0';
-			pTpe->data.field.iToPos = iNum;
+			if(pTpe->data.field.has_fields == 1) {
+				iNum = 0;
+				while(isdigit((int)*p))
+					iNum = iNum * 10 + *p++ - '0';
+				pTpe->data.field.iFieldNr = iNum;
+				if(*p == ',') { /* get real toPos? */
+					++p;
+					iNum = 0;
+					while(isdigit((int)*p))
+						iNum = iNum * 10 + *p++ - '0';
+					pTpe->data.field.iToPos = iNum;
+				}
+			} else {
+				iNum = 0;
+				while(isdigit((int)*p))
+					iNum = iNum * 10 + *p++ - '0';
+				pTpe->data.field.iToPos = iNum;
+			}
 			/* skip to next known good */
 			while(*p && *p != '%' && *p != ':') {
 				/* TODO: complain on extra characters */
@@ -830,7 +851,7 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 #endif /* #ifdef FEATURE_REGEXP */
 	}
 
-	if((pTpe->data.field.has_fields == 0) && (pTpe->data.field.iToPos < pTpe->data.field.iFromPos)) {
+	if(pTpe->data.field.iToPos < pTpe->data.field.iFromPos) {
 		iNum = pTpe->data.field.iToPos;
 		pTpe->data.field.iToPos = pTpe->data.field.iFromPos;
 		pTpe->data.field.iFromPos = iNum;
@@ -1252,9 +1273,9 @@ void tplPrintList(void)
 				}
 				if(pTpe->data.field.has_fields == 1) {
 				  	dbgprintf("[substring, field #%d only (delemiter %d)] ",
-						pTpe->data.field.iToPos, pTpe->data.field.field_delim);
-				} else if(pTpe->data.field.iFromPos != 0 ||
-				          pTpe->data.field.iToPos != 0) {
+						pTpe->data.field.iFieldNr, pTpe->data.field.field_delim);
+				}
+				if(pTpe->data.field.iFromPos != 0 || pTpe->data.field.iToPos != 0) {
 				  	dbgprintf("[substring, from character %d to %d] ",
 						pTpe->data.field.iFromPos,
 						pTpe->data.field.iToPos);

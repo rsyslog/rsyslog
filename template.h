@@ -67,6 +67,7 @@ struct templateEntry {
 			propid_t propid;	/* property to be used */
 			unsigned iFromPos;	/* for partial strings only chars from this position ... */
 			unsigned iToPos;	/* up to that one... */
+			unsigned iFieldNr;	/* for field extraction: field to extract */
 #ifdef FEATURE_REGEXP
 			regex_t re;	/* APR: this is the regular expression */
 			short has_regex;
