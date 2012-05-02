@@ -688,7 +688,8 @@ runInputModules(void)
 			DBGPRINTF("running module %s with config %p\n", node->pMod->pszName, node);
 			bNeedsCancel = (node->pMod->isCompatibleWithFeature(sFEATURENonCancelInputTermination) == RS_RET_OK) ?
 				       0 : 1;
-			thrdCreate(node->pMod->mod.im.runInput, node->pMod->mod.im.afterRun, bNeedsCancel);
+			thrdCreate(node->pMod->mod.im.runInput, node->pMod->mod.im.afterRun, bNeedsCancel,
+			           (node->pMod->cnfName == NULL) ? node->pMod->pszName : node->pMod->cnfName);
 		}
 		node = module.GetNxtCnfType(runConf, node, eMOD_IN);
 	}

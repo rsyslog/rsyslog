@@ -31,12 +31,16 @@
 #include <errno.h>
 #include <pthread.h>
 #include <assert.h>
+#if HAVE_SYS_PRCTL_H
+#  include <sys/prctl.h>
+#endif
 
 #include "rsyslog.h"
 #include "dirty.h"
 #include "linkedlist.h"
 #include "threads.h"
 #include "srUtils.h"
+#include "unicode-helper.h"
 
 /* linked list of currently-known threads */
 static linkedList_t llThrds;
@@ -77,6 +81,7 @@ static rsRetVal thrdDestruct(thrdInfo_t *pThis)
 	}
 	pthread_mutex_destroy(&pThis->mutThrd);
 	pthread_cond_destroy(&pThis->condThrdTerm);
+	free(pThis->name);
 	free(pThis);
 
 	RETiRet;
@@ -95,7 +100,8 @@ thrdTerminateNonCancel(thrdInfo_t *pThis)
 	DEFiRet;
 	assert(pThis != NULL);
 
-	DBGPRINTF("request term via SIGTTIN for input thread 0x%x\n", (unsigned) pThis->thrdID);
+	DBGPRINTF("request term via SIGTTIN for input thread '%s' 0x%x\n",
+		  pThis->name, (unsigned) pThis->thrdID);
 	pThis->bShallStop = TRUE;
 	do {
 		d_pthread_mutex_lock(&pThis->mutThrd);
@@ -105,11 +111,11 @@ thrdTerminateNonCancel(thrdInfo_t *pThis)
 		d_pthread_mutex_unlock(&pThis->mutThrd);
 		if(Debug) {
 			if(ret == ETIMEDOUT) {
-				dbgprintf("input thread term: timeout expired waiting on thread termination - canceling\n");
+				dbgprintf("input thread term: timeout expired waiting on thread %s termination - canceling\n", pThis->name);
 				pthread_cancel(pThis->thrdID);
 				pThis->bIsActive = 0;
 			} else if(ret == 0) {
-				dbgprintf("input thread term: thread returned normally and is terminated\n");
+				dbgprintf("input thread term: thread %s returned normally and is terminated\n", pThis->name);
 			} else {
 				char errStr[1024];
 				int err = errno;
@@ -119,7 +125,8 @@ thrdTerminateNonCancel(thrdInfo_t *pThis)
 			}
 		}
 	} while(pThis->bIsActive);
-	DBGPRINTF("non-cancel input thread termination succeeded for thread 0x%x\n", (unsigned) pThis->thrdID);
+	DBGPRINTF("non-cancel input thread termination succeeded for thread %s 0x%x\n",
+		  pThis->name, (unsigned) pThis->thrdID);
 
 	RETiRet;
 }
@@ -169,9 +176,22 @@ static void* thrdStarter(void *arg)
 {
 	DEFiRet;
 	thrdInfo_t *pThis = (thrdInfo_t*) arg;
+#	if HAVE_PRCTL && defined PR_SET_NAME
+	uchar thrdName[32] = "in:";
+#	endif
 
 	assert(pThis != NULL);
 	assert(pThis->pUsrThrdMain != NULL);
+
+#	if HAVE_PRCTL && defined PR_SET_NAME
+	/* set thread name - we ignore if the call fails, has no harsh consequences... */
+	ustrncpy(thrdName+3, pThis->name, 20);
+	if(prctl(PR_SET_NAME, thrdName, 0, 0, 0) != 0) {
+		DBGPRINTF("prctl failed, not setting thread name for '%s'\n", pThis->name);
+	} else {
+		DBGPRINTF("set thread name to '%s'\n", thrdName);
+	}
+#	endif
 
 	/* block all signals */
 	sigset_t sigSet;
@@ -189,7 +209,8 @@ static void* thrdStarter(void *arg)
 	 */
 	iRet = pThis->pUsrThrdMain(pThis);
 
-	dbgprintf("thrdStarter: usrThrdMain 0x%lx returned with iRet %d, exiting now.\n", (unsigned long) pThis->thrdID, iRet);
+	dbgprintf("thrdStarter: usrThrdMain %s - 0x%lx returned with iRet %d, exiting now.\n",
+		  pThis->name, (unsigned long) pThis->thrdID, iRet);
 
 	/* signal master control that we exit (we do the mutex lock mostly to 
 	 * keep the thread debugger happer, it would not really be necessary with
@@ -208,7 +229,7 @@ static void* thrdStarter(void *arg)
  * executing threads. It is added at the end of the list.
  * rgerhards, 2007-12-14
  */
-rsRetVal thrdCreate(rsRetVal (*thrdMain)(thrdInfo_t*), rsRetVal(*afterRun)(thrdInfo_t *), sbool bNeedsCancel)
+rsRetVal thrdCreate(rsRetVal (*thrdMain)(thrdInfo_t*), rsRetVal(*afterRun)(thrdInfo_t *), sbool bNeedsCancel, uchar *name)
 {
 	DEFiRet;
 	thrdInfo_t *pThis;
@@ -220,6 +241,7 @@ rsRetVal thrdCreate(rsRetVal (*thrdMain)(thrdInfo_t*), rsRetVal(*afterRun)(thrdI
 	pThis->pUsrThrdMain = thrdMain;
 	pThis->pAfterRun = afterRun;
 	pThis->bNeedsCancel = bNeedsCancel;
+	pThis->name = ustrdup(name);
 	pthread_create(&pThis->thrdID,
 #ifdef HAVE_PTHREAD_SETSCHEDPARAM
 			   &default_thread_attr,
