@@ -1,5 +1,10 @@
 ---------------------------------------------------------------------------
 Version 5.8.11  [V5-stable] 2012-04-??
+- bugfix: rsyslog did not terminate when delayable inputs were blocked
+  due to unvailable sources. Fixes:
+  http://bugzilla.adiscon.com/show_bug.cgi?id=299
+  Thanks to Marcin M for bringing up this problem and Andre Lorbach
+  for helping to reproduce and fix it.
 - bugfix: active input in "light delay state" could block rsyslog
   termination, at least for prolonged period of time
 - bugfix: imptcp input name could not be set
