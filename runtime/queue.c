@@ -1715,7 +1715,7 @@ ConsumerReg(qqueue_t *pThis, wti_t *pWti)
 	}
 
 	/* but now cancellation is no longer permitted */
-	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
+	pthread_setcancelstate(iCancelStateSave, NULL);
 
 finalize_it:
 	DBGPRINTF("regular consumer finished, iret=%d, szlog %d sz phys %d\n", iRet,
@@ -1768,7 +1768,7 @@ ConsumerDA(qqueue_t *pThis, wti_t *pWti)
 	}
 
 	/* but now cancellation is no longer permitted */
-	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
+	pthread_setcancelstate(iCancelStateSave, NULL);
 
 	/* now we are done, but need to re-aquire the mutex */
 	d_pthread_mutex_lock(pThis->mut);
@@ -1847,7 +1847,6 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 	int wrk;
 	uchar *qName;
 	size_t lenBuf;
-	int iQueueSizeSave;
 
 	ASSERT(pThis != NULL);
 
@@ -2245,7 +2244,12 @@ static inline rsRetVal
 doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, void *pUsr)
 {
 	DEFiRet;
+	int err;
 	struct timespec t;
+
+	if(glbl.GetGlobalInputTermState()) {
+		ABORT_FINALIZE(RS_RET_FORCE_TERM);
+	}
 
 	STATSCOUNTER_INC(pThis->ctrEnqueued, pThis->mutCtrEnqueued);
 	/* first check if we need to discard this message (which will cause CHKiRet() to exit)
@@ -2273,15 +2277,48 @@ doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, void *pUsr)
 	 * It's a side effect, but a good one ;) -- rgerhards, 2008-03-14
 	 */
 	if(flowCtlType == eFLOWCTL_FULL_DELAY) {
+		DBGOPRINT((obj_t*) pThis, "enqueueMsg: FullDelay mark reached for full delayable message "
+		           "- blocking.\n");
 		while(pThis->iQueueSize >= pThis->iFullDlyMrk) {
-			DBGOPRINT((obj_t*) pThis, "enqueueMsg: FullDelay mark reached for full delayable message - blocking.\n");
-			pthread_cond_wait(&pThis->belowFullDlyWtrMrk, pThis->mut); /* TODO error check? But what do then? */
+			/* We have a problem during shutdown if we block eternally. In that
+			 * case, the the input thread cannot be terminated. So we wake up
+			 * from time to time to check for termination.
+			 * TODO/v6(at earliest): check if we could signal the condition during
+			 * shutdown. However, this requires new queue registries and thus is
+			 * far to much change for a stable version (and I am still not sure it
+			 * is worth the effort, given how seldom this situation occurs and how
+			 * few resources the wakeups need). -- rgerhards, 2012-05-03
+			 * In any case, this was the old code (if we do the TODO):
+			 * pthread_cond_wait(&pThis->belowFullDlyWtrMrk, pThis->mut);
+			 */
+			timeoutComp(&t, 1000);
+			err = pthread_cond_timedwait(&pThis->belowLightDlyWtrMrk, pThis->mut, &t);
+			if(err != 0 && err != ETIMEDOUT) {
+				/* Something is really wrong now. Report to debug log and abort the
+				 * wait. That keeps us running, even though we may lose messages.
+				 */
+				DBGOPRINT((obj_t*) pThis, "potential program bug: pthread_cond_timedwait()"
+				          "/fulldelay returned %d\n", err);
+				break;
+				
+			}
+			DBGPRINTF("wti worker in full delay timed out, checking termination...\n");
+			if(glbl.GetGlobalInputTermState()) {
+				ABORT_FINALIZE(RS_RET_FORCE_TERM);
+			}
 		}
 	} else if(flowCtlType == eFLOWCTL_LIGHT_DELAY) {
 		if(pThis->iQueueSize >= pThis->iLightDlyMrk) {
-			DBGOPRINT((obj_t*) pThis, "enqueueMsg: LightDelay mark reached for light delayable message - blocking a bit.\n");
+			DBGOPRINT((obj_t*) pThis, "enqueueMsg: LightDelay mark reached for light "
+			          "delayable message - blocking a bit.\n");
 			timeoutComp(&t, 1000); /* 1000 millisconds = 1 second TODO: make configurable */
-			pthread_cond_timedwait(&pThis->belowLightDlyWtrMrk, pThis->mut, &t); /* TODO error check? But what do then? */
+			err = pthread_cond_timedwait(&pThis->belowLightDlyWtrMrk, pThis->mut, &t);
+			if(err != 0 && err != ETIMEDOUT) {
+				/* Something is really wrong now. Report to debug log */
+				DBGOPRINT((obj_t*) pThis, "potential program bug: pthread_cond_timedwait()"
+				          "/lightdelay returned %d\n", err);
+				
+			}
 		}
 	}
 
@@ -2294,6 +2331,9 @@ doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, void *pUsr)
 	      || (pThis->qType == QUEUETYPE_DISK && pThis->sizeOnDiskMax != 0
 	      	  && pThis->tVars.disk.sizeOnDisk > pThis->sizeOnDiskMax)) {
 		DBGOPRINT((obj_t*) pThis, "enqueueMsg: queue FULL - waiting to drain.\n");
+		if(glbl.GetGlobalInputTermState()) {
+			ABORT_FINALIZE(RS_RET_FORCE_TERM);
+		}
 		timeoutComp(&t, pThis->toEnq);
 		STATSCOUNTER_INC(pThis->ctrFull, pThis->mutCtrFull);
 // TODO : handle enqOnly => discard!
