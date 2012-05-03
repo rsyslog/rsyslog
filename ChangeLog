@@ -12,6 +12,9 @@ Version 6.3.9  [DEVEL] 2012-04-??
   stored inside the disk queue.
 - bugfix/imuxsock: solving abort if hostname was not set; configured
   hostname was not used (both merge regressions)
+ -bugfix/omfile: template action parameter was not accepted
+  (and template name set to "??" if the parameter was used)
+  Thanks to Brian Knox for alerting us on this bug.
 ---------------------------------------------------------------------------
 Version 6.3.8  [DEVEL] 2012-04-16
 - added $PStatJSON directive to permit stats records in JSON format

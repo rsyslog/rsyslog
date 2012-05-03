@@ -838,7 +838,7 @@ CODESTARTnewActInst
 	}
 
 	CHKiRet(OMSRsetEntry(*ppOMSR, 0, ustrdup((pData->tplName == NULL) ?
-					    (uchar*)"RSYSLOG_FileFormat" : (uchar*)"??"),
+					    (uchar*)"RSYSLOG_FileFormat" : pData->tplName),
 		OMSR_NO_RQD_TPL_OPTS));
 
 	if(pData->bDynamicName) {
