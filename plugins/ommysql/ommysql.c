@@ -318,7 +318,11 @@ ENDparseSelectorAct
 
 BEGINmodExit
 CODESTARTmodExit
+#	ifdef HAVE_MYSQL_LIBRARY_INIT
+	mysql_library_end();
+#	else
 	mysql_server_end();
+#	endif
 ENDmodExit
 
 
@@ -348,7 +352,13 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 
 	/* we need to init the MySQL library. If that fails, we cannot run */
-	if(mysql_server_init(0, NULL, NULL)) {
+	if(
+#	ifdef HAVE_MYSQL_LIBRARY_INIT
+	   mysql_library_init(0, NULL, NULL)
+#	else
+	   mysql_server_init(0, NULL, NULL)
+#	endif
+	                                   ) {
 		errmsg.LogError(0, NO_ERRCODE, "ommysql: mysql_server_init() failed, plugin "
 		                "can not run");
 		ABORT_FINALIZE(RS_RET_ERR);
