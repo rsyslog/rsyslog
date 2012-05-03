@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 5.8.11  [V5-stable] 2012-04-??
+Version 5.8.11  [V5-stable] 2012-05-03
 - bugfix: ommysql did not properly init/exit the mysql runtime library
   this could lead to segfaults. Triggering condition: multiple action
   instances using ommysql.  Thanks to Tomas Heinrich for reporting this
