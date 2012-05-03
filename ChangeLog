@@ -1,5 +1,10 @@
 ---------------------------------------------------------------------------
 Version 5.8.11  [V5-stable] 2012-04-??
+- bugfix: ommysql did not properly init/exit the mysql runtime library
+  this could lead to segfaults. Triggering condition: multiple action
+  instances using ommysql.  Thanks to Tomas Heinrich for reporting this
+  problem and providing an initial patch (which my solution is based on,
+  I need to add more code to clean the mess up).
 - bugfix: rsyslog did not terminate when delayable inputs were blocked
   due to unvailable sources. Fixes:
   http://bugzilla.adiscon.com/show_bug.cgi?id=299
