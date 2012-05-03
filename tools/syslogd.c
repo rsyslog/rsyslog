@@ -1781,7 +1781,6 @@ doGlblProcessInit(void)
 int realMain(int argc, char **argv)
 {
 	rsRetVal localRet;
-	register uchar *p;
 	int ch;
 	extern int optind;
 	extern char *optarg;
