@@ -90,7 +90,6 @@ static void closeMySQL(instanceData *pData)
 	ASSERT(pData != NULL);
 
 	if(pData->f_hmysql != NULL) {	/* just to be on the safe side... */
-		mysql_server_end();
 		mysql_close(pData->f_hmysql);	
 		pData->f_hmysql = NULL;
 	}
@@ -319,6 +318,11 @@ ENDparseSelectorAct
 
 BEGINmodExit
 CODESTARTmodExit
+#	ifdef HAVE_MYSQL_LIBRARY_INIT
+	mysql_library_end();
+#	else
+	mysql_server_end();
+#	endif
 ENDmodExit
 
 
@@ -346,6 +350,20 @@ CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+
+	/* we need to init the MySQL library. If that fails, we cannot run */
+	if(
+#	ifdef HAVE_MYSQL_LIBRARY_INIT
+	   mysql_library_init(0, NULL, NULL)
+#	else
+	   mysql_server_init(0, NULL, NULL)
+#	endif
+	                                   ) {
+		errmsg.LogError(0, NO_ERRCODE, "ommysql: mysql_server_init() failed, plugin "
+		                "can not run");
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
 	/* register our config handlers */
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionommysqlserverport", 0, eCmdHdlrInt, NULL, &iSrvPort, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));

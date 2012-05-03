@@ -1,6 +1,16 @@
 ---------------------------------------------------------------------------
 Version 5.9.7  [V5-BETA], 2012-04-??
 - added capability to specify substrings for field extraction mode
+- bugfix: ommysql did not properly init/exit the mysql runtime library
+  this could lead to segfaults. Triggering condition: multiple action
+  instances using ommysql.  Thanks to Tomas Heinrich for reporting this
+  problem and providing an initial patch (which my solution is based on,
+  I need to add more code to clean the mess up).
+- bugfix: rsyslog did not terminate when delayable inputs were blocked
+  due to unvailable sources. Fixes:
+  http://bugzilla.adiscon.com/show_bug.cgi?id=299
+  Thanks to Marcin M for bringing up this problem and Andre Lorbach
+  for helping to reproduce and fix it.
 ---------------------------------------------------------------------------
 Version 5.9.6  [V5-BETA], 2012-04-12
 - added configuration directives to customize queue light delay marks
@@ -134,7 +144,19 @@ Version 5.9.0  [V5-DEVEL] (rgerhards), 2011-06-08
   affected directive was: $ActionExecOnlyWhenPreviousIsSuspended on
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=236
 ---------------------------------------------------------------------------
-Version 5.8.11  [V5-stable] 2012-04-??
+Version 5.8.11  [V5-stable] 2012-05-03
+- bugfix: ommysql did not properly init/exit the mysql runtime library
+  this could lead to segfaults. Triggering condition: multiple action
+  instances using ommysql.  Thanks to Tomas Heinrich for reporting this
+  problem and providing an initial patch (which my solution is based on,
+  I need to add more code to clean the mess up).
+- bugfix: rsyslog did not terminate when delayable inputs were blocked
+  due to unvailable sources. Fixes:
+  http://bugzilla.adiscon.com/show_bug.cgi?id=299
+  Thanks to Marcin M for bringing up this problem and Andre Lorbach
+  for helping to reproduce and fix it.
+- bugfix: active input in "light delay state" could block rsyslog
+  termination, at least for prolonged period of time
 - bugfix: imptcp input name could not be set
   config directive was accepted, but had no effect
 - bugfix: assigned ruleset was lost when using disk queues
@@ -144,6 +166,10 @@ Version 5.8.11  [V5-stable] 2012-04-??
 - bugfix: hostname was not requeried on HUP
   Thanks to Per Jessen for reporting this bug and Marius Tomaschewski for
   his help in testing the fix.
+- bugfix: inside queue.c, some thread cancel states were not correctly
+  reset. While this is a bug, we assume it did have no practical effect
+  because the reset as it was done was set to the state the code actually
+  had at this point. But better fix this...
 ---------------------------------------------------------------------------
 Version 5.8.10  [V5-stable] 2012-04-05
 - bugfix: segfault on startup if $actionqueuefilename was missing for disk

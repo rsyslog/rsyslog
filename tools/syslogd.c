@@ -1498,6 +1498,7 @@ runInputModules(void)
 	pMod = module.GetNxtType(NULL, eMOD_IN);
 	while(pMod != NULL) {
 		if(pMod->mod.im.bCanRun) {
+			DBGPRINTF("trying to start input module '%s'\n", pMod->pszName);
 			/* activate here */
 			bNeedsCancel = (pMod->isCompatibleWithFeature(sFEATURENonCancelInputTermination) == RS_RET_OK) ?
 				       0 : 1;
