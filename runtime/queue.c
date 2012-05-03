@@ -1715,7 +1715,7 @@ ConsumerReg(qqueue_t *pThis, wti_t *pWti)
 	}
 
 	/* but now cancellation is no longer permitted */
-	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
+	pthread_setcancelstate(iCancelStateSave, NULL);
 
 finalize_it:
 	DBGPRINTF("regular consumer finished, iret=%d, szlog %d sz phys %d\n", iRet,
@@ -1768,7 +1768,7 @@ ConsumerDA(qqueue_t *pThis, wti_t *pWti)
 	}
 
 	/* but now cancellation is no longer permitted */
-	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
+	pthread_setcancelstate(iCancelStateSave, NULL);
 
 	/* now we are done, but need to re-aquire the mutex */
 	d_pthread_mutex_lock(pThis->mut);
@@ -1847,7 +1847,6 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 	int wrk;
 	uchar *qName;
 	size_t lenBuf;
-	int iQueueSizeSave;
 
 	ASSERT(pThis != NULL);
 
@@ -2244,8 +2243,8 @@ finalize_it:
 static inline rsRetVal
 doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, void *pUsr)
 {
-	DEFiRet;
 	struct timespec t;
+	DEFiRet;
 
 	if(glbl.GetGlobalInputTermState()) {
 		ABORT_FINALIZE(RS_RET_FORCE_TERM);
@@ -2279,7 +2278,7 @@ doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, void *pUsr)
 	if(flowCtlType == eFLOWCTL_FULL_DELAY) {
 		while(pThis->iQueueSize >= pThis->iFullDlyMrk) {
 			DBGOPRINT((obj_t*) pThis, "enqueueMsg: FullDelay mark reached for full delayable message - blocking.\n");
-			pthread_cond_wait(&pThis->belowFullDlyWtrMrk, pThis->mut); /* TODO error check? But what do then? */
+			pthread_cond_wait(&pThis->belowFullDlyWtrMrk, pThis->mut);
 		}
 	} else if(flowCtlType == eFLOWCTL_LIGHT_DELAY) {
 		if(pThis->iQueueSize >= pThis->iLightDlyMrk) {

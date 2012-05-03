@@ -11,6 +11,10 @@ Version 5.8.11  [V5-stable] 2012-04-??
 - bugfix: hostname was not requeried on HUP
   Thanks to Per Jessen for reporting this bug and Marius Tomaschewski for
   his help in testing the fix.
+- bugfix: inside queue.c, some thread cancel states were not correctly
+  reset. While this is a bug, we assume it did have no practical effect
+  because the reset as it was done was set to the state the code actually
+  had at this point. But better fix this...
 ---------------------------------------------------------------------------
 Version 5.8.10  [V5-stable] 2012-04-05
 - bugfix: segfault on startup if $actionqueuefilename was missing for disk
