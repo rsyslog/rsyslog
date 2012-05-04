@@ -2406,7 +2406,7 @@ queryLocalHostname(void)
 	}
 
 	/* LocalDomain is "" or part of LocalHostName, allocate a new string */
-	CHKmalloc(LocalDomain = (uchar*)strdup(LocalDomain));
+	CHKmalloc(LocalDomain = (uchar*)strdup((char*)LocalDomain));
 
 	/* Convert to lower case to recognize the correct domain laterly */
 	for(p = LocalDomain ; *p ; p++)
