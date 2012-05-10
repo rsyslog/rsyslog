@@ -1,4 +1,12 @@
 ---------------------------------------------------------------------------
+Version 5.9.8  [V5-BETA], 2012-05-??
+- bugfix: disk queue was not persisted on shutdown, regression of fix to
+  http://bugzilla.adiscon.com/show_bug.cgi?id=299
+  The new code also handles the case of shutdown of blocking light and 
+  full delayable sources somewhat smarter and permits, assuming sufficient
+  timouts, to persist message up to the max queue capacity. Also some nits
+  in debug instrumentation have been fixed.
+---------------------------------------------------------------------------
 Version 5.9.7  [V5-BETA], 2012-05-10
 - added capability to specify substrings for field extraction mode
 - bugfix: ommysql did not properly init/exit the mysql runtime library
