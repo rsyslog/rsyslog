@@ -346,7 +346,7 @@ genMsg(char *buf, size_t maxBuf, int *pLenBuf, struct instdata *inst)
 		do {
 			done = 1;
 			*pLenBuf = fread(buf, 1, 1024, dataFP);
-			if(feof(dataFP)) {
+			if(*pLenBuf == 0) {
 				if(--numFileIterations > 0)  {
 					rewind(dataFP);
 					done = 0; /* need new iteration */
@@ -660,7 +660,7 @@ runTests(void)
 	int run;
 
 	stats.totalRuntime = 0;
-	stats.minRuntime = (unsigned long long) 0xffffffffffffffffll;
+	stats.minRuntime = 0xffffffffllu;
 	stats.maxRuntime = 0;
 	stats.numRuns = numRuns;
 	run = 1;

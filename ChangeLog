@@ -1,4 +1,7 @@
 ---------------------------------------------------------------------------
+Version 5.8.12  [V5-stable] 2012-05-03
+- bugfix/tcpflood: sending small test files did not work correctly
+---------------------------------------------------------------------------
 Version 5.8.11  [V5-stable] 2012-05-03
 - bugfix: ommysql did not properly init/exit the mysql runtime library
   this could lead to segfaults. Triggering condition: multiple action
