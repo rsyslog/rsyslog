@@ -11,6 +11,7 @@ Version 5.9.7  [V5-BETA], 2012-04-??
   http://bugzilla.adiscon.com/show_bug.cgi?id=299
   Thanks to Marcin M for bringing up this problem and Andre Lorbach
   for helping to reproduce and fix it.
+- bugfix/tcpflood: sending small test files did not work correctly
 ---------------------------------------------------------------------------
 Version 5.9.6  [V5-BETA], 2012-04-12
 - added configuration directives to customize queue light delay marks
