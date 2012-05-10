@@ -25,6 +25,7 @@ Version 6.2.1  [v6-stable], 2012-01-??
   http://bugzilla.adiscon.com/show_bug.cgi?id=299
   Thanks to Marcin M for bringing up this problem and Andre Lorbach
   for helping to reproduce and fix it.
+- bugfix/tcpflood: sending small test files did not work correctly
 ---------------------------------------------------------------------------
 Version 6.2.0  [v6-stable], 2012-01-09
 - bugfix (kind of): removed numerical part from pri-text
@@ -271,6 +272,9 @@ Version 5.9.0  [V5-DEVEL] (rgerhards), 2011-03-??
 - bugfix: failover did not work correctly if repeated msg reduction was on
   affected directive was: $ActionExecOnlyWhenPreviousIsSuspended on
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=236
+---------------------------------------------------------------------------
+Version 5.8.12  [V5-stable] 2012-05-??
+- bugfix/tcpflood: sending small test files did not work correctly
 ---------------------------------------------------------------------------
 Version 5.8.11  [V5-stable] 2012-05-03
 - bugfix: ommysql did not properly init/exit the mysql runtime library
