@@ -153,6 +153,15 @@ Version 5.9.0  [V5-DEVEL] (rgerhards), 2011-06-08
   affected directive was: $ActionExecOnlyWhenPreviousIsSuspended on
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=236
 ---------------------------------------------------------------------------
+Version 5.8.12  [V5-stable] 2012-05-??
+- bugfix: disk queue was not persisted on shutdown, regression of fix to
+  http://bugzilla.adiscon.com/show_bug.cgi?id=299
+  The new code also handles the case of shutdown of blocking light and 
+  full delayable sources somewhat smarter and permits, assuming sufficient
+  timouts, to persist message up to the max queue capacity. Also some nits
+  in debug instrumentation have been fixed.
+- bugfix/tcpflood: sending small test files did not work correctly
+---------------------------------------------------------------------------
 Version 5.8.11  [V5-stable] 2012-05-03
 - bugfix: ommysql did not properly init/exit the mysql runtime library
   this could lead to segfaults. Triggering condition: multiple action
