@@ -25,6 +25,7 @@ Version 6.3.9  [DEVEL] 2012-04-??
   http://bugzilla.adiscon.com/show_bug.cgi?id=299
   Thanks to Marcin M for bringing up this problem and Andre Lorbach
   for helping to reproduce and fix it.
+- added capability to specify substrings for field extraction mode
 ---------------------------------------------------------------------------
 Version 6.3.8  [DEVEL] 2012-04-16
 - added $PStatJSON directive to permit stats records in JSON format
@@ -421,6 +422,9 @@ expected that interfaces, even new ones, break during the initial
 - added imptcp, a simplified, Linux-specific and potentielly fast
   syslog plain tcp input plugin (NOT supporting TLS!)
   [ported from v4]
+---------------------------------------------------------------------------
+Version 5.9.7  [V5-BETA], 2012-05-??
+- bugfix/tcpflood: sending small test files did not work correctly
 ---------------------------------------------------------------------------
 Version 5.9.6  [V5-BETA], 2012-04-12
 - added configuration directives to customize queue light delay marks
