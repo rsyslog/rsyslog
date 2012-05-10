@@ -2386,10 +2386,6 @@ doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, void *pUsr)
 	int err;
 	struct timespec t;
 
-	if(glbl.GetGlobalInputTermState()) {
-		ABORT_FINALIZE(RS_RET_FORCE_TERM);
-	}
-
 	STATSCOUNTER_INC(pThis->ctrEnqueued, pThis->mutCtrEnqueued);
 	/* first check if we need to discard this message (which will cause CHKiRet() to exit)
 	 */
@@ -2416,9 +2412,7 @@ doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, void *pUsr)
 	 * It's a side effect, but a good one ;) -- rgerhards, 2008-03-14
 	 */
 	if(flowCtlType == eFLOWCTL_FULL_DELAY) {
-		DBGOPRINT((obj_t*) pThis, "enqueueMsg: FullDelay mark reached for full delayable message "
-		           "- blocking.\n");
-		while(pThis->iQueueSize >= pThis->iFullDlyMrk) {
+		while(pThis->iQueueSize >= pThis->iFullDlyMrk&& ! glbl.GetGlobalInputTermState()) {
 			/* We have a problem during shutdown if we block eternally. In that
 			 * case, the the input thread cannot be terminated. So we wake up
 			 * from time to time to check for termination.
@@ -2430,6 +2424,8 @@ doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, void *pUsr)
 			 * In any case, this was the old code (if we do the TODO):
 			 * pthread_cond_wait(&pThis->belowFullDlyWtrMrk, pThis->mut);
 			 */
+			DBGOPRINT((obj_t*) pThis, "enqueueMsg: FullDelay mark reached for full delayable message "
+				   "- blocking, queue size is %d.\n", pThis->iQueueSize);
 			timeoutComp(&t, 1000);
 			err = pthread_cond_timedwait(&pThis->belowLightDlyWtrMrk, pThis->mut, &t);
 			if(err != 0 && err != ETIMEDOUT) {
@@ -2442,11 +2438,8 @@ doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, void *pUsr)
 				
 			}
 			DBGPRINTF("wti worker in full delay timed out, checking termination...\n");
-			if(glbl.GetGlobalInputTermState()) {
-				ABORT_FINALIZE(RS_RET_FORCE_TERM);
-			}
 		}
-	} else if(flowCtlType == eFLOWCTL_LIGHT_DELAY) {
+	} else if(flowCtlType == eFLOWCTL_LIGHT_DELAY && !glbl.GetGlobalInputTermState()) {
 		if(pThis->iQueueSize >= pThis->iLightDlyMrk) {
 			DBGOPRINT((obj_t*) pThis, "enqueueMsg: LightDelay mark reached for light "
 			          "delayable message - blocking a bit.\n");
@@ -2471,6 +2464,7 @@ doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, void *pUsr)
 	      	  && pThis->tVars.disk.sizeOnDisk > pThis->sizeOnDiskMax)) {
 		DBGOPRINT((obj_t*) pThis, "enqueueMsg: queue FULL - waiting to drain.\n");
 		if(glbl.GetGlobalInputTermState()) {
+			DBGOPRINT((obj_t*) pThis, "enqueueMsg: queue FULL, discard due to FORCE_TERM.\n");
 			ABORT_FINALIZE(RS_RET_FORCE_TERM);
 		}
 		timeoutComp(&t, pThis->toEnq);

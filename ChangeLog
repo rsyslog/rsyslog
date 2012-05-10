@@ -26,6 +26,12 @@ Version 6.3.9  [DEVEL] 2012-04-??
   Thanks to Marcin M for bringing up this problem and Andre Lorbach
   for helping to reproduce and fix it.
 - added capability to specify substrings for field extraction mode
+- bugfix: disk queue was not persisted on shutdown, regression of fix to
+  http://bugzilla.adiscon.com/show_bug.cgi?id=299
+  The new code also handles the case of shutdown of blocking light and 
+  full delayable sources somewhat smarter and permits, assuming sufficient
+  timouts, to persist message up to the max queue capacity. Also some nits
+  in debug instrumentation have been fixed.
 ---------------------------------------------------------------------------
 Version 6.3.8  [DEVEL] 2012-04-16
 - added $PStatJSON directive to permit stats records in JSON format
@@ -154,7 +160,15 @@ Version 6.3.0  [DEVEL] (rgerhards), 2011-06-01
 - introduced new config system
   http://blog.gerhards.net/2011/06/new-rsyslog-config-system-materializes.html
 ---------------------------------------------------------------------------
-Version 6.2.1  [v6-stable], 2012-01-??
+Version 6.2.2  [v6-stable], 2012-05-??
+- bugfix: disk queue was not persisted on shutdown, regression of fix to
+  http://bugzilla.adiscon.com/show_bug.cgi?id=299
+  The new code also handles the case of shutdown of blocking light and 
+  full delayable sources somewhat smarter and permits, assuming sufficient
+  timouts, to persist message up to the max queue capacity. Also some nits
+  in debug instrumentation have been fixed.
+---------------------------------------------------------------------------
+Version 6.2.1  [v6-stable], 2012-05-10
 - change plugin config interface to be compatible with pre-v6.2 system
   The functionality was already removed (because it is superseeded by the
   v6.3+ config language), but code was still present. I have now removed
@@ -180,6 +194,7 @@ Version 6.2.1  [v6-stable], 2012-01-??
   http://bugzilla.adiscon.com/show_bug.cgi?id=299
   Thanks to Marcin M for bringing up this problem and Andre Lorbach
   for helping to reproduce and fix it.
+- bugfix/tcpflood: sending small test files did not work correctly
 ---------------------------------------------------------------------------
 Version 6.2.0  [v6-stable], 2012-01-09
 - bugfix (kind of): removed numerical part from pri-text
@@ -560,6 +575,15 @@ Version 5.9.0  [V5-DEVEL] (rgerhards), 2011-06-08
 - bugfix: failover did not work correctly if repeated msg reduction was on
   affected directive was: $ActionExecOnlyWhenPreviousIsSuspended on
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=236
+---------------------------------------------------------------------------
+Version 5.8.12  [V5-stable] 2012-05-??
+- bugfix: disk queue was not persisted on shutdown, regression of fix to
+  http://bugzilla.adiscon.com/show_bug.cgi?id=299
+  The new code also handles the case of shutdown of blocking light and 
+  full delayable sources somewhat smarter and permits, assuming sufficient
+  timouts, to persist message up to the max queue capacity. Also some nits
+  in debug instrumentation have been fixed.
+- bugfix/tcpflood: sending small test files did not work correctly
 ---------------------------------------------------------------------------
 Version 5.8.11  [V5-stable] 2012-05-03
 - bugfix: ommysql did not properly init/exit the mysql runtime library
