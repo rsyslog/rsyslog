@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 6.2.1  [v6-stable], 2012-01-??
+Version 6.2.1  [v6-stable], 2012-05-10
 - change plugin config interface to be compatible with pre-v6.2 system
   The functionality was already removed (because it is superseeded by the
   v6.3+ config language), but code was still present. I have now removed
