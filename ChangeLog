@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 5.9.7  [V5-BETA], 2012-04-??
+Version 5.9.7  [V5-BETA], 2012-05-10
 - added capability to specify substrings for field extraction mode
 - bugfix: ommysql did not properly init/exit the mysql runtime library
   this could lead to segfaults. Triggering condition: multiple action
