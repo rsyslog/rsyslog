@@ -6,6 +6,9 @@ Version 5.8.12  [V5-stable] 2012-05-??
   full delayable sources somewhat smarter and permits, assuming sufficient
   timouts, to persist message up to the max queue capacity. Also some nits
   in debug instrumentation have been fixed.
+- bugfix/omudpspoof: problems, including abort, happend when run on
+  multiple threads. Root cause is that libnet is not thread-safe. 
+  omudpspoof now guards libnet calls with their own mutex.
 - bugfix/tcpflood: sending small test files did not work correctly
 ---------------------------------------------------------------------------
 Version 5.8.11  [V5-stable] 2012-05-03
