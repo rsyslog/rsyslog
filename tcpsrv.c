@@ -625,8 +625,10 @@ wrkr(void *myself)
 		while(me->pSrv == NULL && glbl.GetGlobalInputTermState() == 0) {
 			pthread_cond_wait(&me->run, &wrkrMut);
 		}
-		if(glbl.GetGlobalInputTermState() == 1)
+		if(glbl.GetGlobalInputTermState() == 1) {
+			--wrkrRunning;
 			break;
+		}
 		pthread_mutex_unlock(&wrkrMut);
 
 		++me->numCalled;
