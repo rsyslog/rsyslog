@@ -108,12 +108,17 @@ static struct wrkrInfo_s {
 	tcpsrv_t *pSrv; /* pSrv == NULL -> idle */
 	nspoll_t *pPoll;
 	void *pUsr;
+	sbool enabled;
 	long long unsigned numCalled;	/* how often was this called */
 } wrkrInfo[4];
 static pthread_mutex_t wrkrMut;
 static pthread_cond_t wrkrIdle;
 static int wrkrMax = 4;
 static int wrkrRunning;
+
+/* forward refs */
+static void startWorkerPool(void);
+static void stopWorkerPool(void);
 
 /* add new listener port to listener port list
  * rgerhards, 2009-05-21
@@ -639,6 +644,7 @@ wrkr(void *myself)
 		--wrkrRunning;
 		pthread_cond_signal(&wrkrIdle);
 	}
+	me->enabled = 0; /* indicate we are no longer available */
 	pthread_mutex_unlock(&wrkrMut);
 
 	return NULL;
@@ -668,7 +674,7 @@ processWorkset(tcpsrv_t *pThis, nspoll_t *pPoll, int numEntries, nsd_epworkset_t
 		} else {
 			pthread_mutex_lock(&wrkrMut);
 			/* check if there is a free worker */
-			for(i = 0 ; (i < wrkrMax) && (wrkrInfo[i].pSrv != NULL) ; ++i)
+			for(i = 0 ; (i < wrkrMax) && (wrkrInfo[i].pSrv != NULL) && (wrkrInfo[i].enabled == 0) ; ++i)
 				/*do search*/;
 			if(i < wrkrMax) {
 				/* worker free -> use it! */
@@ -838,6 +844,8 @@ Run(tcpsrv_t *pThis)
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 
+	startWorkerPool();
+
 	/* this is an endless loop - it is terminated by the framework canelling
 	 * this thread. Thus, we also need to instantiate a cancel cleanup handler
 	 * to prevent us from leaking anything. -- rgerhards, 20080-04-24
@@ -889,6 +897,7 @@ Run(tcpsrv_t *pThis)
 finalize_it:
 	if(pPoll != NULL)
 		nspoll.Destruct(&pPoll);
+	stopWorkerPool();
 	RETiRet;
 }
 
@@ -1308,28 +1317,43 @@ BEGINObjClassInit(tcpsrv, 1, OBJ_IS_LOADABLE_MODULE) /* class, version - CHANGE 
 ENDObjClassInit(tcpsrv)
 
 
-/* destroy worker pool structures and wait for workers to terminate
+/* start worker threads
+ * Important: if we fork, this MUST be done AFTER forking
  */
-static inline void
+static void
 startWorkerPool(void)
 {
 	int i;
+	int r;
+	pthread_attr_t sessThrdAttr;
+
 	wrkrRunning = 0;
 	pthread_mutex_init(&wrkrMut, NULL);
 	pthread_cond_init(&wrkrIdle, NULL);
+	pthread_attr_init(&sessThrdAttr);
+	pthread_attr_setstacksize(&sessThrdAttr, 200*1024);
 	for(i = 0 ; i < wrkrMax ; ++i) {
 		/* init worker info structure! */
 		pthread_cond_init(&wrkrInfo[i].run, NULL);
 		wrkrInfo[i].pSrv = NULL;
 		wrkrInfo[i].numCalled = 0;
-		pthread_create(&wrkrInfo[i].tid, NULL, wrkr, &(wrkrInfo[i]));
+		r = pthread_create(&wrkrInfo[i].tid, &sessThrdAttr, wrkr, &(wrkrInfo[i]));
+		if(r == 0) {
+			wrkrInfo[i].enabled = 1;
+		} else {
+			char errStr[1024];
+			wrkrInfo[i].enabled = 0;
+			rs_strerror_r(errno, errStr, sizeof(errStr));
+			errmsg.LogError(0, NO_ERRCODE, "tcpsrv error creating thread %d: "
+			                "%s", i, errStr);
+		}
 	}
-
+	pthread_attr_destroy(&sessThrdAttr);
 }
 
 /* destroy worker pool structures and wait for workers to terminate
  */
-static inline void
+static void
 stopWorkerPool(void)
 {
 	int i;
@@ -1349,9 +1373,6 @@ stopWorkerPool(void)
 
 BEGINmodExit
 CODESTARTmodExit
-dbgprintf("tcpsrv: modExit\n");
-	stopWorkerPool();
-
 	/* de-init in reverse order! */
 	tcpsrvClassExit();
 	tcps_sessClassExit();
@@ -1371,9 +1392,6 @@ CODESTARTmodInit
 	/* Initialize all classes that are in our module - this includes ourselfs */
 	CHKiRet(tcps_sessClassInit(pModInfo));
 	CHKiRet(tcpsrvClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
-
-	startWorkerPool();
-
 ENDmodInit
 
 /* vim:set ai:

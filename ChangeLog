@@ -1,5 +1,9 @@
 ---------------------------------------------------------------------------
 Version 6.3.9  [DEVEL] 2012-04-??
+- bugfix: imtcp could cause hang during reception
+  this also applied to other users of core file tcpsrv.c, but imtcp was
+  by far the most prominent and widely-used, the rest rather exotic
+  (like imdiag)
 - added capability to specify substrings for field extraction mode
 - added the "jsonf" property replacer option (and fieldname)
 - bugfix: omudpspoof did not work correctly if no spoof hostname was
