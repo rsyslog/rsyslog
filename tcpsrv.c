@@ -674,7 +674,7 @@ processWorkset(tcpsrv_t *pThis, nspoll_t *pPoll, int numEntries, nsd_epworkset_t
 		} else {
 			pthread_mutex_lock(&wrkrMut);
 			/* check if there is a free worker */
-			for(i = 0 ; (i < wrkrMax) && (wrkrInfo[i].pSrv != NULL) && (wrkrInfo[i].enabled == 0) ; ++i)
+			for(i = 0 ; (i < wrkrMax) && ((wrkrInfo[i].pSrv != NULL) || (wrkrInfo[i].enabled == 0)) ; ++i)
 				/*do search*/;
 			if(i < wrkrMax) {
 				/* worker free -> use it! */
