@@ -97,6 +97,7 @@ DEFobjCurrIf(nspoll)
 DEFobjCurrIf(prop)
 DEFobjCurrIf(statsobj)
 
+static void startWorkerPool(void);
 
 /* The following structure controls the worker threads. Global data is
  * needed for their access.
@@ -111,14 +112,11 @@ static struct wrkrInfo_s {
 	sbool enabled;
 	long long unsigned numCalled;	/* how often was this called */
 } wrkrInfo[4];
+static sbool bWrkrRunning; /* are the worker threads running? */
 static pthread_mutex_t wrkrMut;
 static pthread_cond_t wrkrIdle;
 static int wrkrMax = 4;
 static int wrkrRunning;
-
-/* forward refs */
-static void startWorkerPool(void);
-static void stopWorkerPool(void);
 
 /* add new listener port to listener port list
  * rgerhards, 2009-05-21
@@ -844,7 +842,15 @@ Run(tcpsrv_t *pThis)
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 
-	startWorkerPool();
+	/* check if we need to start the worker pool. Once it is running, all is
+	 * well. Shutdown is done on modExit.
+	 */
+	d_pthread_mutex_lock(&wrkrMut);
+	if(!bWrkrRunning) {
+		bWrkrRunning = 1;
+		startWorkerPool();
+	}
+	d_pthread_mutex_unlock(&wrkrMut);
 
 	/* this is an endless loop - it is terminated by the framework canelling
 	 * this thread. Thus, we also need to instantiate a cancel cleanup handler
@@ -897,7 +903,6 @@ Run(tcpsrv_t *pThis)
 finalize_it:
 	if(pPoll != NULL)
 		nspoll.Destruct(&pPoll);
-	stopWorkerPool();
 	RETiRet;
 }
 
@@ -1328,7 +1333,6 @@ startWorkerPool(void)
 	pthread_attr_t sessThrdAttr;
 
 	wrkrRunning = 0;
-	pthread_mutex_init(&wrkrMut, NULL);
 	pthread_cond_init(&wrkrIdle, NULL);
 	pthread_attr_init(&sessThrdAttr);
 	pthread_attr_setstacksize(&sessThrdAttr, 200*1024);
@@ -1373,6 +1377,7 @@ stopWorkerPool(void)
 
 BEGINmodExit
 CODESTARTmodExit
+	stopWorkerPool();
 	/* de-init in reverse order! */
 	tcpsrvClassExit();
 	tcps_sessClassExit();
@@ -1388,6 +1393,20 @@ ENDqueryEtryPt
 BEGINmodInit()
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+	/* we just init the worker mutex, but do not start the workers themselves. This is deferred
+	 * to the first call of Run(). Reasons for this:
+	 * 1. depending on load order, tcpsrv gets loaded during rsyslog startup BEFORE 
+	 *    it forks, in which case the workers would be running in the then-killed parent,
+	 *    leading to a defuncnt child (we actually had this bug).
+	 * 2. depending on circumstances, Run() would possibly never be called, in which case
+	 *    the worker threads would be totally useless.
+	 * Note that in order to guarantee a non-racy worker start, we need to guard the
+	 * startup sequence by a mutex, which is why we init it here (no problem with fork()
+	 * in this case as the mutex is a pure-memory structure).
+	 * rgerhards, 2012-05-18
+	 */
+	pthread_mutex_init(&wrkrMut, NULL);
+	bWrkrRunning = 0;
 
 	/* Initialize all classes that are in our module - this includes ourselfs */
 	CHKiRet(tcps_sessClassInit(pModInfo));
