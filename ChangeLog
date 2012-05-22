@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 6.3.9  [DEVEL] 2012-04-??
+Version 6.3.9  [BETA] 2012-05-22
 - bugfix: imtcp could cause hang during reception
   this also applied to other users of core file tcpsrv.c, but imtcp was
   by far the most prominent and widely-used, the rest rather exotic
