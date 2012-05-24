@@ -74,6 +74,7 @@ typedef struct _instanceData {
 	uchar *timeout;
 	sbool dynSrchIdx;
 	sbool dynSrchType;
+	sbool bulkmode;
 	sbool asyncRepl;
 	CURL	*curlHandle;	/* libcurl session handle */
 	HEADER	*postHeader;	/* json POST request info */
@@ -91,6 +92,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "searchtype", eCmdHdlrGetWord, 0 },
 	{ "dynsearchindex", eCmdHdlrBinary, 0 },
 	{ "dynsearchtype", eCmdHdlrBinary, 0 },
+	{ "bulkmode", eCmdHdlrBinary, 0 },
 	{ "asyncrepl", eCmdHdlrBinary, 0 },
 	{ "timeout", eCmdHdlrGetWord, 0 },
 	{ "template", eCmdHdlrGetWord, 1 }
@@ -131,7 +133,19 @@ ENDfreeInstance
 
 BEGINdbgPrintInstInfo
 CODESTARTdbgPrintInstInfo
-	dbgprintf("omelasticsearch, target server %s", pData->server);
+	dbgprintf("omelasticsearch\n");
+	dbgprintf("\ttemplate='%s'\n", pData->tplName);
+	dbgprintf("\tserver='%s'\n", pData->server);
+	dbgprintf("\tserverport=%d\n", pData->port);
+	dbgprintf("\tuid='%s'\n", pData->uid == NULL ? (uchar*)"(not configured)" : pData->uid);
+	dbgprintf("\tpwd=(%s configured)\n", pData->pwd == NULL ? "not " : "");
+	dbgprintf("\tsearch index='%s'\n", pData->searchIndex);
+	dbgprintf("\tsearch index='%s'\n", pData->searchType);
+	dbgprintf("\ttimeout='%s'\n", pData->timeout);
+	dbgprintf("\tdynamic search index=%d\n", pData->dynSrchIdx);
+	dbgprintf("\tdynamic search type=%d\n", pData->dynSrchType);
+	dbgprintf("\tasync replication=%d\n", pData->asyncRepl);
+	dbgprintf("\tbulkmode=%d\n", pData->bulkmode);
 ENDdbgPrintInstInfo
 
 BEGINtryResume
@@ -218,11 +232,29 @@ finalize_it:
 	RETiRet;
 }
 
+BEGINbeginTransaction
+CODESTARTbeginTransaction
+dbgprintf("omelasticsearch: beginTransaction\n");
+ENDbeginTransaction
+
+
 BEGINdoAction
 CODESTARTdoAction
 	CHKiRet(curlPost(pData, ppString[0], ppString[1], ppString[2]));
 finalize_it:
 ENDdoAction
+
+
+BEGINendTransaction
+CODESTARTendTransaction
+dbgprintf("elasticsearch: endTransaction\n");
+#if 0
+	if(pData->offsSndBuf != 0) {
+		iRet = TCPSendBuf(pData, pData->sndBuf, pData->offsSndBuf);
+		pData->offsSndBuf = 0;
+	}
+#endif
+ENDendTransaction
 
 /* elasticsearch POST result string ... useful for debugging */
 size_t
@@ -334,6 +366,8 @@ CODESTARTnewActInst
 			pData->dynSrchIdx = pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "dynsearchtype")) {
 			pData->dynSrchType = pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "bulkmode")) {
+			pData->bulkmode = pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "timeout")) {
 			pData->timeout = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "asyncrepl")) {
@@ -434,6 +468,7 @@ CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
 CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
+CODEqueryEtryPt_TXIF_OMOD_QUERIES /* we support the transactional interface! */
 ENDqueryEtryPt
 
 
