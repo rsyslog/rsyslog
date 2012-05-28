@@ -241,18 +241,21 @@ buildBatch(instanceData *pData, uchar *message, uchar *tpl1, uchar *tpl2)
 {
 	int length = strlen((char *)message);
 	int r;
+	uchar *searchIndex;
+	uchar *searchType;
 	DEFiRet;
 #	define META_STRT "{\"index\":{\"_index\": \""
 #	define META_TYPE "\",\"_type\":\""
 #	define META_END  "\"}}\n"
 
 #warning TODO: use dynamic index/type!
+	getIndexAndType(pData, tpl1, tpl2, &searchIndex, &searchType);
 	r = es_addBuf(&pData->batch.data, META_STRT, sizeof(META_STRT)-1);
-	if(r == 0) r = es_addBuf(&pData->batch.data, (char*)pData->searchIndex,
-				 ustrlen(pData->searchIndex));
+	if(r == 0) r = es_addBuf(&pData->batch.data, (char*)searchIndex,
+				 ustrlen(searchIndex));
 	if(r == 0) r = es_addBuf(&pData->batch.data, META_TYPE, sizeof(META_TYPE)-1);
-	if(r == 0) r = es_addBuf(&pData->batch.data, (char*)pData->searchType,
-				 ustrlen(pData->searchType));
+	if(r == 0) r = es_addBuf(&pData->batch.data, (char*)searchType,
+				 ustrlen(searchType));
 	if(r == 0) r = es_addBuf(&pData->batch.data, META_END, sizeof(META_END)-1);
 	if(r == 0) r = es_addBuf(&pData->batch.data, (char*)message, length);
 	if(r == 0) r = es_addBuf(&pData->batch.data, "\n", sizeof("\n")-1);
