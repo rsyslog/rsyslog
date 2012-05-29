@@ -1,4 +1,14 @@
 ---------------------------------------------------------------------------
+Version 6.3.10  [BETA] 2012-0?-??
+- bugfix: if debug message could end up in log file when forking
+  if rsyslog was set to auto-background (thus fork, the default) and debug
+  mode to stdout was enabled, debug messages ended up in the first log file
+  opened. Currently, stdout logging is completely disabled in forking mode
+  (but writing to the debug log file is still possible). This is a change 
+  in behaviour, which is under review. If it causes problems to you,
+  please let us know.
+  Thanks to Tomas Heinrich for the patch.
+---------------------------------------------------------------------------
 Version 6.3.9  [BETA] 2012-05-22
 - bugfix: imtcp could cause hang during reception
   this also applied to other users of core file tcpsrv.c, but imtcp was
@@ -442,7 +452,26 @@ expected that interfaces, even new ones, break during the initial
   syslog plain tcp input plugin (NOT supporting TLS!)
   [ported from v4]
 ---------------------------------------------------------------------------
-Version 5.9.7  [V5-BETA], 2012-05-??
+Version 5.9.8  [V5-BETA], 2012-05-??
+- bugfix: disk queue was not persisted on shutdown, regression of fix to
+  http://bugzilla.adiscon.com/show_bug.cgi?id=299
+  The new code also handles the case of shutdown of blocking light and 
+  full delayable sources somewhat smarter and permits, assuming sufficient
+  timouts, to persist message up to the max queue capacity. Also some nits
+  in debug instrumentation have been fixed.
+---------------------------------------------------------------------------
+Version 5.9.7  [V5-BETA], 2012-05-10
+- added capability to specify substrings for field extraction mode
+- bugfix: ommysql did not properly init/exit the mysql runtime library
+  this could lead to segfaults. Triggering condition: multiple action
+  instances using ommysql.  Thanks to Tomas Heinrich for reporting this
+  problem and providing an initial patch (which my solution is based on,
+  I need to add more code to clean the mess up).
+- bugfix: rsyslog did not terminate when delayable inputs were blocked
+  due to unvailable sources. Fixes:
+  http://bugzilla.adiscon.com/show_bug.cgi?id=299
+  Thanks to Marcin M for bringing up this problem and Andre Lorbach
+  for helping to reproduce and fix it.
 - bugfix/tcpflood: sending small test files did not work correctly
 ---------------------------------------------------------------------------
 Version 5.9.6  [V5-BETA], 2012-04-12
@@ -587,6 +616,17 @@ Version 5.8.12  [V5-stable] 2012-05-??
   full delayable sources somewhat smarter and permits, assuming sufficient
   timouts, to persist message up to the max queue capacity. Also some nits
   in debug instrumentation have been fixed.
+- bugfix/omudpspoof: problems, including abort, happend when run on
+  multiple threads. Root cause is that libnet is not thread-safe. 
+  omudpspoof now guards libnet calls with their own mutex.
+- bugfix: if debug message could end up in log file when forking
+  if rsyslog was set to auto-background (thus fork, the default) and debug
+  mode to stdout was enabled, debug messages ended up in the first log file
+  opened. Currently, stdout logging is completely disabled in forking mode
+  (but writing to the debug log file is still possible). This is a change 
+  in behaviour, which is under review. If it causes problems to you,
+  please let us know.
+  Thanks to Tomas Heinrich for the patch.
 - bugfix/tcpflood: sending small test files did not work correctly
 ---------------------------------------------------------------------------
 Version 5.8.11  [V5-stable] 2012-05-03
