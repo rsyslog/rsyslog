@@ -9,6 +9,14 @@ Version 5.8.12  [V5-stable] 2012-05-??
 - bugfix/omudpspoof: problems, including abort, happend when run on
   multiple threads. Root cause is that libnet is not thread-safe. 
   omudpspoof now guards libnet calls with their own mutex.
+- bugfix: if debug message could end up in log file when forking
+  if rsyslog was set to auto-background (thus fork, the default) and debug
+  mode to stdout was enabled, debug messages ended up in the first log file
+  opened. Currently, stdout logging is completely disabled in forking mode
+  (but writing to the debug log file is still possible). This is a change 
+  in behaviour, which is under review. If it causes problems to you,
+  please let us know.
+  Thanks to Tomas Heinrich for the patch.
 - bugfix/tcpflood: sending small test files did not work correctly
 ---------------------------------------------------------------------------
 Version 5.8.11  [V5-stable] 2012-05-03

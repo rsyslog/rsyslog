@@ -35,6 +35,7 @@
 /* external static data elements (some time to be replaced) */
 extern int Debug;		/* debug flag  - read-only after startup */
 extern int debugging_on;	 /* read-only, except on sig USR1 */
+extern int stddbg; /* the handle for regular debug output, set to stdout if not forking, -1 otherwise */
 
 /* data types */
 
