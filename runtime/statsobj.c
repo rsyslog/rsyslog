@@ -168,15 +168,18 @@ finalize_it:
 
 /* get all the object's countes together as CEE. */
 static rsRetVal
-getStatsLineCEE(statsobj_t *pThis, cstr_t **ppcstr)
+getStatsLineCEE(statsobj_t *pThis, cstr_t **ppcstr, int cee_cookie)
 {
 	cstr_t *pcstr;
 	ctr_t *pCtr;
 	DEFiRet;
 
 	CHKiRet(cstrConstruct(&pcstr));
-	rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("@cee: {"), 7);
 
+	if (cee_cookie == 1)
+		rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("@cee: "), 6);
+	
+	rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("{"), 1);
 	rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("\""), 1);
 	rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("name"), 4);
 	rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("\""), 1);
@@ -273,8 +276,11 @@ getAllStatsLines(rsRetVal(*cb)(void*, cstr_t*), void *usrptr, statsFmtType_t fmt
 		case statsFmt_Legacy:
 			CHKiRet(getStatsLine(o, &cstr));
 			break;
+		case statsFmt_CEE:
+			CHKiRet(getStatsLineCEE(o, &cstr, 1));
+			break;
 		case statsFmt_JSON:
-			CHKiRet(getStatsLineCEE(o, &cstr));
+			CHKiRet(getStatsLineCEE(o, &cstr, 0));
 			break;
 		}
 		CHKiRet(cb(usrptr, cstr));
