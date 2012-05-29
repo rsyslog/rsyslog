@@ -5,6 +5,7 @@ Version 6.5.0  [devel] 2012-0?-??
   in some speedup (but serious loss of debugging capabilities)
 ---------------------------------------------------------------------------
 Version 6.3.10  [BETA] 2012-0?-??
+- bugfix: invalid free in imptcp could lead to abort during startup
 - bugfix: if debug message could end up in log file when forking
   if rsyslog was set to auto-background (thus fork, the default) and debug
   mode to stdout was enabled, debug messages ended up in the first log file

@@ -1362,6 +1362,8 @@ CODESTARTendCnfLoad
 	/* free legacy config vars */
 	free(cs.pszInputName);
 	free(cs.lstnIP);
+	cs.pszInputName = NULL;
+	cs.lstnIP = NULL;
 ENDendCnfLoad
 
 
