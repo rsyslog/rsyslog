@@ -121,7 +121,7 @@ wtiWakeupThrd(wti_t *pThis)
 	if(wtiGetState(pThis)) {
 		/* we first try the cooperative "cancel" interface */
 		pthread_kill(pThis->thrdID, SIGTTIN);
-		dbgprintf("sent SIGTTIN to worker thread 0x%x\n", (unsigned) pThis->thrdID);
+		DBGPRINTF("sent SIGTTIN to worker thread 0x%x\n", (unsigned) pThis->thrdID);
 	}
 
 	RETiRet;
@@ -148,13 +148,13 @@ wtiCancelThrd(wti_t *pThis)
 	if(wtiGetState(pThis)) {
 		/* we first try the cooperative "cancel" interface */
 		pthread_kill(pThis->thrdID, SIGTTIN);
-		dbgprintf("sent SIGTTIN to worker thread 0x%x, giving it a chance to terminate\n", (unsigned) pThis->thrdID);
+		DBGPRINTF("sent SIGTTIN to worker thread 0x%x, giving it a chance to terminate\n", (unsigned) pThis->thrdID);
 		srSleep(0, 10000);
 	}
 
 	if(wtiGetState(pThis)) {
-		dbgprintf("cooperative worker termination failed, using cancellation...\n");
-		dbgoprint((obj_t*) pThis, "canceling worker thread\n");
+		DBGPRINTF("cooperative worker termination failed, using cancellation...\n");
+		DBGOPRINT((obj_t*) pThis, "canceling worker thread\n");
 		pthread_cancel(pThis->thrdID);
 		/* now wait until the thread terminates... */
 		while(wtiGetState(pThis)) {
@@ -195,7 +195,7 @@ wtiConstructFinalize(wti_t *pThis)
 
 	ISOBJ_TYPE_assert(pThis, wti);
 
-	dbgprintf("%s: finalizing construction of worker instance data\n", wtiGetDbgHdr(pThis));
+	DBGPRINTF("%s: finalizing construction of worker instance data\n", wtiGetDbgHdr(pThis));
 
 	/* initialize our thread instance descriptor (no concurrency here) */
 	pThis->bIsRunning = FALSE; 
@@ -257,7 +257,7 @@ doIdleProcessing(wti_t *pThis, wtp_t *pWtp, int *pbInactivityTOOccured)
 			*pbInactivityTOOccured = 1; /* indicate we had a timeout */
 		}
 	}
-	dbgoprint((obj_t*) pThis, "worker awoke from idle processing\n");
+	DBGOPRINT((obj_t*) pThis, "worker awoke from idle processing\n");
 	ENDfunc
 }
 
@@ -300,7 +300,7 @@ wtiWorker(wti_t *pThis)
 		if(terminateRet == RS_RET_TERMINATE_NOW) {
 			/* we now need to free the old batch */
 			localRet = pWtp->pfObjProcessed(pWtp->pUsr, pThis);
-			dbgoprint((obj_t*) pThis, "terminating worker because of TERMINATE_NOW mode, del iRet %d\n",
+			DBGOPRINT((obj_t*) pThis, "terminating worker because of TERMINATE_NOW mode, del iRet %d\n",
 				 localRet);
 			d_pthread_mutex_unlock(pWtp->pmutUsr);
 			break;
@@ -318,7 +318,7 @@ wtiWorker(wti_t *pThis)
 		} else if(localRet == RS_RET_IDLE) {
 			if(terminateRet == RS_RET_TERMINATE_WHEN_IDLE || bInactivityTOOccured) {
 				d_pthread_mutex_unlock(pWtp->pmutUsr);
-				dbgoprint((obj_t*) pThis, "terminating worker terminateRet=%d, bInactivityTOOccured=%d\n",
+				DBGOPRINT((obj_t*) pThis, "terminating worker terminateRet=%d, bInactivityTOOccured=%d\n",
 					  terminateRet, bInactivityTOOccured);
 				break;	/* end of loop */
 			}

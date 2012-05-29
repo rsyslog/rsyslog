@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([rsyslog],[6.3.9],[rsyslog@lists.adiscon.com])
+AC_INIT([rsyslog],[6.3.8],[rsyslog@lists.adiscon.com])
 AM_INIT_AUTOMAKE
 
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
@@ -442,6 +442,22 @@ AC_ARG_ENABLE(rtinst,
 )
 if test "$enable_rtinst" = "yes"; then
         AC_DEFINE(RTINST, 1, [Defined if runtime instrumentation mode is enabled.])
+fi
+
+
+# total debugless: highest performance, but no way at all to enable debug 
+# logging
+AC_ARG_ENABLE(debugless,
+        [AS_HELP_STRING([--enable-debugless],[Enable runtime instrumentation mode @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_debugless="yes" ;;
+          no) enable_debugless="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-debugless) ;;
+         esac],
+        [enable_debugless="no"]
+)
+if test "$enable_debugless" = "yes"; then
+        AC_DEFINE(DEBUGLESS, 1, [Defined if debugless mode is enabled.])
 fi
 
 
@@ -1394,6 +1410,7 @@ echo "    Extended Testbench enabled:               $enable_extended_tests"
 echo "    MySQL Tests enabled:                      $enable_mysql_tests"
 echo "    Debug mode enabled:                       $enable_debug"
 echo "    Runtime Instrumentation enabled:          $enable_rtinst"
+echo "    (total) debugless mode enabled:           $enable_debugless"
 echo "    Diagnostic tools enabled:                 $enable_diagtools"
 echo "    Enhanced memory checking enabled:         $enable_memcheck"
 echo "    Valgrind support settings enabled:        $enable_valgrind"

@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------
+Version 6.5.0  [devel] 2012-0?-??
+- added --enable-debugless configure option for very high demanding envs
+  This actually at compile time disables a lot of debug code, resulting
+  in some speedup (but serious loss of debugging capabilities)
+---------------------------------------------------------------------------
 Version 6.3.10  [BETA] 2012-0?-??
 - bugfix: if debug message could end up in log file when forking
   if rsyslog was set to auto-background (thus fork, the default) and debug

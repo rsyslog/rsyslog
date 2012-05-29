@@ -143,9 +143,9 @@ DEFFUNC_llExecFunc(processBatchDoRules)
 {
 	rsRetVal iRet;
 	ISOBJ_TYPE_assert(pData, rule);
-	dbgprintf("Processing next rule\n");
+	DBGPRINTF("Processing next rule\n");
 	iRet = rule.ProcessBatch((rule_t*) pData, (batch_t*) pParam);
-dbgprintf("ruleset: get iRet %d from rule.ProcessMsg()\n", iRet);
+	DBGPRINTF("ruleset: get iRet %d from rule.ProcessMsg()\n", iRet);
 	return iRet;
 }
 
@@ -266,7 +266,7 @@ addRule(ruleset_t *pThis, rule_t **ppRule)
 		rule.Destruct(ppRule);
 	} else {
 		CHKiRet(llAppend(&pThis->llRules, NULL, *ppRule));
-		dbgprintf("selector line successfully processed, %d actions\n", iActionCnt);
+		DBGPRINTF("selector line successfully processed, %d actions\n", iActionCnt);
 	}
 
 finalize_it:
@@ -337,7 +337,7 @@ SetDefaultRuleset(rsconf_t *conf, uchar *pszName)
 
 	CHKiRet(rulesetGetRuleset(conf, &pRuleset, pszName));
 	conf->rulesets.pDflt = pRuleset;
-	dbgprintf("default rule set changed to %p: '%s'\n", pRuleset, pszName);
+	DBGPRINTF("default rule set changed to %p: '%s'\n", pRuleset, pszName);
 
 finalize_it:
 	RETiRet;
@@ -355,7 +355,7 @@ SetCurrRuleset(rsconf_t *conf, uchar *pszName)
 
 	CHKiRet(rulesetGetRuleset(conf, &pRuleset, pszName));
 	conf->rulesets.pCurr = pRuleset;
-	dbgprintf("current rule set changed to %p: '%s'\n", pRuleset, pszName);
+	DBGPRINTF("current rule set changed to %p: '%s'\n", pRuleset, pszName);
 
 finalize_it:
 	RETiRet;
@@ -414,7 +414,7 @@ finalize_it:
 /* destructor for the ruleset object */
 BEGINobjDestruct(ruleset) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(ruleset)
-	dbgprintf("destructing ruleset %p, name %p\n", pThis, pThis->pszName);
+	DBGPRINTF("destructing ruleset %p, name %p\n", pThis, pThis->pszName);
 	if(pThis->pQueue != NULL) {
 		qqueueDestruct(&pThis->pQueue);
 	}
@@ -515,7 +515,7 @@ doRulesetCreateQueue(rsconf_t *conf, int *pNewVal)
 	if(pNewVal == 0)
 		FINALIZE; /* if it is turned off, we do not need to change anything ;) */
 
-	dbgprintf("adding a ruleset-specific \"main\" queue");
+	DBGPRINTF("adding a ruleset-specific \"main\" queue");
 	rulesetMainQName = (conf->rulesets.pCurr->pszName == NULL)? UCHAR_CONSTANT("ruleset") :
 							    conf->rulesets.pCurr->pszName;
 	CHKiRet(createMainQueue(&conf->rulesets.pCurr->pQueue, rulesetMainQName));
@@ -560,8 +560,7 @@ doRulesetAddParser(rsconf_t *conf, uchar *pName)
 
 	CHKiRet(parser.AddParserToList(&conf->rulesets.pCurr->pParserLst, pParser));
 
-	dbgprintf("added parser '%s' to ruleset '%s'\n", pName, conf->rulesets.pCurr->pszName);
-RUNLOG_VAR("%p", conf->rulesets.pCurr->pParserLst);
+	DBGPRINTF("added parser '%s' to ruleset '%s'\n", pName, conf->rulesets.pCurr->pszName);
 
 finalize_it:
 	d_free(pName); /* no longer needed */

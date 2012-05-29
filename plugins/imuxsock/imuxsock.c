@@ -388,7 +388,7 @@ addListner(instanceConf_t *inst)
 		if(inst->ratelimitInterval > 0) {
 			if((listeners[nfd].ht = create_hashtable(100, hash_from_key_fn, key_equals_fn, NULL)) == NULL) {
 				/* in this case, we simply turn off rate-limiting */
-				dbgprintf("imuxsock: turning off rate limiting because we could not "
+				DBGPRINTF("imuxsock: turning off rate limiting because we could not "
 					  "create hash table\n");
 				inst->ratelimitInterval = 0;
 			}
@@ -458,7 +458,7 @@ createLogSocket(lstn_t *pLstn)
 	if(pLstn->fd < 0 || bind(pLstn->fd, (struct sockaddr *) &sunx, SUN_LEN(&sunx)) < 0 ||
 	    chmod((char*)pLstn->sockName, 0666) < 0) {
 		errmsg.LogError(errno, NO_ERRCODE, "cannot create '%s'", pLstn->sockName);
-		dbgprintf("cannot create %s (%d).\n", pLstn->sockName, errno);
+		DBGPRINTF("cannot create %s (%d).\n", pLstn->sockName, errno);
 		if(pLstn->fd != -1)
 			close(pLstn->fd);
 		pLstn->fd = -1;
@@ -491,7 +491,7 @@ openLogSocket(lstn_t *pLstn)
 				/* ok, it matches -- just use as is */
 				pLstn->fd = fd;
 
-				dbgprintf("imuxsock: Acquired UNIX socket '%s' (fd %d) from systemd.\n",
+				DBGPRINTF("imuxsock: Acquired UNIX socket '%s' (fd %d) from systemd.\n",
 					pLstn->sockName, pLstn->fd);
 				break;
 			}
@@ -563,7 +563,7 @@ findRatelimiter(lstn_t *pLstn, struct ucred *cred, rs_ratelimit_state_t **prl)
 	rl = hashtable_search(pLstn->ht, &cred->pid);
 	if(rl == NULL) {
 		/* we need to add a new ratelimiter, process not seen before! */
-		dbgprintf("imuxsock: no ratelimiter for pid %lu, creating one\n",
+		DBGPRINTF("imuxsock: no ratelimiter for pid %lu, creating one\n",
 			  (unsigned long) cred->pid);
 		STATSCOUNTER_INC(ctrNumRatelimiters, mutCtrNumRatelimiters);
 		CHKmalloc(rl = malloc(sizeof(rs_ratelimit_state_t)));
@@ -931,7 +931,7 @@ static rsRetVal readSocket(lstn_t *pLstn)
 	msgh.msg_iovlen = 1;
 	iRcvd = recvmsg(pLstn->fd, &msgh, MSG_DONTWAIT);
  
-	dbgprintf("Message from UNIX socket: #%d\n", pLstn->fd);
+	DBGPRINTF("Message from UNIX socket: #%d\n", pLstn->fd);
 	if(iRcvd > 0) {
 		cred = NULL;
 		ts = NULL;
@@ -948,8 +948,6 @@ static rsRetVal readSocket(lstn_t *pLstn)
 				if(   pLstn->bUseSysTimeStamp 
 				   && cm->cmsg_level == SOL_SOCKET && cm->cmsg_type == SO_TIMESTAMP) {
 					ts = (struct timeval *)CMSG_DATA(cm);
-					dbgprintf("XXX: got timestamp %ld.%ld\n",
-					  	(long) ts->tv_sec, (long) ts->tv_usec);
 					break;
 				}
 #				endif /* HAVE_SO_TIMESTAMP */
@@ -959,7 +957,7 @@ static rsRetVal readSocket(lstn_t *pLstn)
 	} else if(iRcvd < 0 && errno != EINTR) {
 		char errStr[1024];
 		rs_strerror_r(errno, errStr, sizeof(errStr));
-		dbgprintf("UNIX socket error: %d = %s.\n", errno, errStr);
+		DBGPRINTF("UNIX socket error: %d = %s.\n", errno, errStr);
 		errmsg.LogError(errno, NO_ERRCODE, "imuxsock: recvfrom UNIX");
 	}
 
@@ -1025,7 +1023,7 @@ activateListeners()
 	for (i = startIndexUxLocalSockets ; i < nfd ; i++) {
 		if(openLogSocket(&(listeners[i])) == RS_RET_OK) {
 			++actSocks;
-			dbgprintf("imuxsock: Opened UNIX socket '%s' (fd %d).\n",
+			DBGPRINTF("imuxsock: Opened UNIX socket '%s' (fd %d).\n",
 				  listeners[i].sockName, listeners[i].fd);
 		}
 	}
@@ -1263,7 +1261,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	CHKiRet(objUse(parser, CORE_COMPONENT));
 
-	dbgprintf("imuxsock version %s initializing\n", PACKAGE_VERSION);
+	DBGPRINTF("imuxsock version %s initializing\n", PACKAGE_VERSION);
 
 	/* init legacy config vars */
 	cs.pLogSockName = NULL;

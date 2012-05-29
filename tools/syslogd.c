@@ -448,7 +448,6 @@ logmsgInternal(int iErr, int pri, uchar *msg, int flags)
 	MsgSetRawMsgWOSize(pMsg, (char*)msg);
 	MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName(), ustrlen(glbl.GetLocalHostName()));
 	MsgSetRcvFrom(pMsg, glbl.GetLocalHostNameProp());
-dbgprintf("ZZZZ: pLocalHostIPIF used!\n");
 	MsgSetRcvFromIP(pMsg, glbl.GetLocalHostIP());
 	MsgSetMSGoffs(pMsg, 0);
 	/* check if we have an error code associated and, if so,

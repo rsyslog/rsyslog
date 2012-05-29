@@ -131,7 +131,7 @@ static void displayBatchState(batch_t *pBatch)
 {
 	int i;
 	for(i = 0 ; i < pBatch->nElem ; ++i) {
-		dbgprintf("XXXXX: displayBatchState %p[%d]: %d\n", pBatch, i, pBatch->pElem[i].state);
+		DBGPRINTF("displayBatchState %p[%d]: %d\n", pBatch, i, pBatch->pElem[i].state);
 	}
 }
 
@@ -1418,7 +1418,8 @@ DoDeleteBatchFromQStore(qqueue_t *pThis, int nElem)
 	/* iQueueSize is not decremented by qDel(), so we need to do it ourselves */
 	ATOMIC_SUB(&pThis->iQueueSize, nElem, &pThis->mutQueueSize);
 	ATOMIC_SUB(&pThis->nLogDeq, nElem, &pThis->mutLogDeq);
-dbgprintf("delete batch from store, new sizes: log %d, phys %d\n", getLogicalQueueSize(pThis), getPhysicalQueueSize(pThis));
+	DBGPRINTF("delete batch from store, new sizes: log %d, phys %d\n",
+		  getLogicalQueueSize(pThis), getPhysicalQueueSize(pThis));
 	++pThis->deqIDDel; /* one more batch dequeued */
 
 	RETiRet;
@@ -1454,7 +1455,7 @@ DeleteBatchFromQStore(qqueue_t *pThis, batch_t *pBatch)
 		DoDeleteBatchFromQStore(pThis, pBatch->nElem);
 	} else {
 		/* can not delete, insert into to-delete list */
-		dbgprintf("not at head of to-delete list, enqueue %d\n", (int) pBatch->deqID);
+		DBGPRINTF("not at head of to-delete list, enqueue %d\n", (int) pBatch->deqID);
 		CHKiRet(tdlAdd(pThis, pBatch->deqID, pBatch->nElem));
 	}
 
@@ -1484,7 +1485,6 @@ DeleteProcessedBatch(qqueue_t *pThis, batch_t *pBatch)
 		pUsr = pBatch->pElem[i].pUsrp;
 		if(   pBatch->pElem[i].state == BATCH_STATE_RDY
 		   || pBatch->pElem[i].state == BATCH_STATE_SUB) {
-dbgprintf("XXX: DeleteProcessedBatch re-enqueue %d of %d, state %d\n", i, pBatch->nElem, pBatch->pElem[i].state);
 			localRet = doEnqSingleObj(pThis, eFLOWCTL_NO_DELAY,
 				       (obj_t*)MsgAddRef((msg_t*) pUsr));
 			++nEnqueued;
@@ -1495,7 +1495,7 @@ dbgprintf("XXX: DeleteProcessedBatch re-enqueue %d of %d, state %d\n", i, pBatch
 		objDestruct(pUsr);
 	}
 
-	dbgprintf("we deleted %d objects and enqueued %d objects\n", i-nEnqueued, nEnqueued);
+	DBGPRINTF("we deleted %d objects and enqueued %d objects\n", i-nEnqueued, nEnqueued);
 
 	if(nEnqueued > 0)
 		qqueueChkPersist(pThis, nEnqueued);
@@ -2674,7 +2674,7 @@ qqueueApplyCnfParam(qqueue_t *pThis, struct cnfparamvals *pvals)
 		} else if(!strcmp(pblk.descr[i].name, "queuedequeuetimend.")) {
 			pThis->iDeqtWinToHr = pvals[i].val.d.n;
 		} else {
-			dbgprintf("queue: program error, non-handled "
+			DBGPRINTF("queue: program error, non-handled "
 			  "param '%s'\n", pblk.descr[i].name);
 		}
 	}

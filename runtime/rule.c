@@ -132,14 +132,14 @@ shouldProcessThisMessage(rule_t *pRule, msg_t *pMsg, sbool *bProcessMsg)
 	} else if(pRule->eHostnameCmpMode == HN_COMP_MATCH) {
 		if(rsCStrSzStrCmp(pRule->pCSHostnameComp, (uchar*) getHOSTNAME(pMsg), getHOSTNAMELen(pMsg))) {
 			/* not equal, so we are already done... */
-			dbgprintf("hostname filter '+%s' does not match '%s'\n", 
+			DBGPRINTF("hostname filter '+%s' does not match '%s'\n", 
 				rsCStrGetSzStrNoNULL(pRule->pCSHostnameComp), getHOSTNAME(pMsg));
 			FINALIZE;
 		}
 	} else { /* must be -hostname */
 		if(!rsCStrSzStrCmp(pRule->pCSHostnameComp, (uchar*) getHOSTNAME(pMsg), getHOSTNAMELen(pMsg))) {
-			/* not equal, so we are already done... */
-			dbgprintf("hostname filter '-%s' does not match '%s'\n", 
+			/* not equal, SO WE ARe already done... */
+			DBGPRINTF("hostname filter '-%s' does not match '%s'\n", 
 				rsCStrGetSzStrNoNULL(pRule->pCSHostnameComp), getHOSTNAME(pMsg));
 			FINALIZE;
 		}
@@ -171,7 +171,7 @@ shouldProcessThisMessage(rule_t *pRule, msg_t *pMsg, sbool *bProcessMsg)
 
 	if(pRule->f_filter_type == FILTER_PRI) {
 		/* skip messages that are incorrect priority */
-		dbgprintf("testing filter, f_pmask %d\n", pRule->f_filterData.f_pmask[pMsg->iFacility]);
+		DBGPRINTF("testing filter, f_pmask %d\n", pRule->f_filterData.f_pmask[pMsg->iFacility]);
 		if ( (pRule->f_filterData.f_pmask[pMsg->iFacility] == TABLE_NOPRI) || \
 		    ((pRule->f_filterData.f_pmask[pMsg->iFacility] & (1<<pMsg->iSeverity)) == 0) )
 			bRet = 0;
@@ -179,7 +179,7 @@ shouldProcessThisMessage(rule_t *pRule, msg_t *pMsg, sbool *bProcessMsg)
 			bRet = 1;
 	} else if(pRule->f_filter_type == FILTER_EXPR) {
 		bRet = cnfexprEvalBool(pRule->f_filterData.expr, pMsg);
-		dbgprintf("result of rainerscript filter evaluation: %d\n", bRet);
+		DBGPRINTF("result of rainerscript filter evaluation: %d\n", bRet);
 	} else {
 		assert(pRule->f_filter_type == FILTER_PROP); /* assert() just in case... */
 		pszPropVal = MsgGetProp(pMsg, NULL, pRule->f_filterData.prop.propID,
@@ -230,21 +230,21 @@ shouldProcessThisMessage(rule_t *pRule, msg_t *pMsg, sbool *bProcessMsg)
 			char *cstr;
 			if(pRule->f_filterData.prop.propID == PROP_CEE) {
 				cstr = es_str2cstr(pRule->f_filterData.prop.propName, NULL);
-				dbgprintf("Filter: check for CEE property '%s' (value '%s') ",
+				DBGPRINTF("Filter: check for CEE property '%s' (value '%s') ",
 					cstr, pszPropVal);
 				free(cstr);
 			} else {
-				dbgprintf("Filter: check for property '%s' (value '%s') ",
+				DBGPRINTF("Filter: check for property '%s' (value '%s') ",
 					propIDToName(pRule->f_filterData.prop.propID), pszPropVal);
 			}
 			if(pRule->f_filterData.prop.isNegated)
-				dbgprintf("NOT ");
+				DBGPRINTF("NOT ");
 			if(pRule->f_filterData.prop.operation == FIOP_ISEMPTY) {
-				dbgprintf("%s : %s\n",
+				DBGPRINTF("%s : %s\n",
 				       getFIOPName(pRule->f_filterData.prop.operation),
 				       bRet ? "TRUE" : "FALSE");
 			} else {
-				dbgprintf("%s '%s': %s\n",
+				DBGPRINTF("%s '%s': %s\n",
 				       getFIOPName(pRule->f_filterData.prop.operation),
 				       rsCStrGetSzStrNoNULL(pRule->f_filterData.prop.pCSCompValue),
 				       bRet ? "TRUE" : "FALSE");
