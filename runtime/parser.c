@@ -180,7 +180,7 @@ AddDfltParser(uchar *pName)
 
 	CHKiRet(FindParser(&pParser, pName));
 	CHKiRet(AddParserToList(&pDfltParsLst, pParser));
-	dbgprintf("Parser '%s' added to default parser set.\n", pName);
+	DBGPRINTF("Parser '%s' added to default parser set.\n", pName);
 	
 finalize_it:
 	RETiRet;
@@ -209,7 +209,7 @@ finalize_it:
 
 BEGINobjDestruct(parser) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(parser)
-	dbgprintf("destructing parser '%s'\n", pThis->pName);
+	DBGPRINTF("destructing parser '%s'\n", pThis->pName);
 	free(pThis->pName);
 ENDobjDestruct(parser)
 
@@ -521,7 +521,7 @@ ParseMsg(msg_t *pMsg)
 			bIsSanitized = TRUE;
 		}
 		localRet = pParser->pModule->mod.pm.parse(pMsg);
-		dbgprintf("Parser '%s' returned %d\n", pParser->pName, localRet);
+		DBGPRINTF("Parser '%s' returned %d\n", pParser->pName, localRet);
 		if(localRet != RS_RET_COULD_NOT_PARSE)
 			break;
 		pParserList = pParserList->pNext;

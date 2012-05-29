@@ -596,7 +596,6 @@ processWorksetItem(tcpsrv_t *pThis, nspoll_t *pPoll, int idx, void *pUsr)
 		iRet = SessAccept(pThis, pThis->ppLstnPort[idx], &pNewSess, pThis->ppLstn[idx]);
 		if(iRet == RS_RET_OK) {
 			if(pPoll != NULL) {
-				dbgprintf("XXXXXX: processWorksetItem trying nspoll.ctl\n");
 				CHKiRet(nspoll.Ctl(pPoll, pNewSess->pStrm, 0, pNewSess, NSDPOLL_IN, NSDPOLL_ADD));
 			}
 			DBGPRINTF("New session created with NSD %p.\n", pNewSess);
@@ -661,7 +660,7 @@ processWorkset(tcpsrv_t *pThis, nspoll_t *pPoll, int numEntries, nsd_epworkset_t
 	int origEntries = numEntries;
 	DEFiRet;
 
-	dbgprintf("tcpsrv: ready to process %d event entries\n", numEntries);
+	DBGPRINTF("tcpsrv: ready to process %d event entries\n", numEntries);
 
 	while(numEntries > 0) {
 		if(glbl.GetGlobalInputTermState() == 1)
@@ -862,21 +861,21 @@ Run(tcpsrv_t *pThis)
 	}
 	if(localRet != RS_RET_OK) {
 		/* fall back to select */
-		dbgprintf("tcpsrv could not use epoll() interface, iRet=%d, using select()\n", localRet);
+		DBGPRINTF("tcpsrv could not use epoll() interface, iRet=%d, using select()\n", localRet);
 		iRet = RunSelect(pThis, workset, sizeof(workset)/sizeof(nsd_epworkset_t));
 		FINALIZE;
 	}
 
-	dbgprintf("tcpsrv uses epoll() interface, nsdpoll driver found\n");
+	DBGPRINTF("tcpsrv uses epoll() interface, nsdpoll driver found\n");
 
 	/* flag that we are in epoll mode */
 	pThis->bUsingEPoll = TRUE;
 
 	/* Add the TCP listen sockets to the list of sockets to monitor */
 	for(i = 0 ; i < pThis->iLstnCurr ; ++i) {
-		dbgprintf("Trying to add listener %d, pUsr=%p\n", i, pThis->ppLstn);
+		DBGPRINTF("Trying to add listener %d, pUsr=%p\n", i, pThis->ppLstn);
 		CHKiRet(nspoll.Ctl(pPoll, pThis->ppLstn[i], i, pThis->ppLstn, NSDPOLL_IN, NSDPOLL_ADD));
-		dbgprintf("Added listener %d\n", i);
+		DBGPRINTF("Added listener %d\n", i);
 	}
 
 	while(1) {
@@ -1064,7 +1063,7 @@ static rsRetVal
 SetKeepAlive(tcpsrv_t *pThis, int iVal)
 {
 	DEFiRet;
-	dbgprintf("tcpsrv: keep-alive set to %d\n", iVal);
+	DBGPRINTF("tcpsrv: keep-alive set to %d\n", iVal);
 	pThis->bUseKeepAlive = iVal;
 	RETiRet;
 }
