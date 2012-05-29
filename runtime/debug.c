@@ -68,7 +68,7 @@ static int bPrintAllDebugOnExit = 0;
 static int bAbortTrace = 1;	/* print a trace after SIGABRT or SIGSEGV */
 static char *pszAltDbgFileName = NULL; /* if set, debug output is *also* sent to here */
 static int altdbg = -1;	/* and the handle for alternate debug output */
-static int stddbg;
+int stddbg = 1; /* the handle for regular debug output, set to stdout if not forking, -1 otherwise */
 
 /* list of files/objects that should be printed */
 typedef struct dbgPrintName_s {
@@ -1297,8 +1297,6 @@ dbgGetRuntimeOptions(void)
 	uchar *optname;
 
 	/* set some defaults */
-	stddbg = 1;
-
 	if((pszOpts = (uchar*) getenv("RSYSLOG_DEBUG")) != NULL) {
 		/* we have options set, so let's process them */
 		while(dbgGetRTOptNamVal(&pszOpts, &optname, &optval)) {

@@ -118,6 +118,7 @@ static int iSourcePortEnd = DFLT_SOURCE_PORT_END;
 /* add some variables needed for libnet */
 libnet_t *libnet_handle;
 char errbuf[LIBNET_ERRBUF_SIZE];
+pthread_mutex_t mutLibnet;
 
 /* forward definitions */
 static rsRetVal doTryResume(instanceData *pData);
@@ -180,6 +181,8 @@ ENDdbgPrintInstInfo
 
 
 /* Send a message via UDP
+ * Note: libnet is not thread-safe, so we need to ensure that only one
+ * instance ever is calling libnet code.
  * rgehards, 2007-12-20
  */
 static inline rsRetVal
@@ -193,6 +196,7 @@ UDPSend(instanceData *pData, uchar *pszSourcename, char *msg, size_t len)
 	struct sockaddr_in *tempaddr,source_ip;
 	libnet_ptag_t ip, ipo;
 	libnet_ptag_t udp;
+	sbool bNeedUnlock = 0;
 	DEFiRet;
 
 	if(pData->pSockArray == NULL) {
@@ -207,6 +211,8 @@ UDPSend(instanceData *pData, uchar *pszSourcename, char *msg, size_t len)
 	inet_pton(AF_INET, (char*)pszSourcename, &(source_ip.sin_addr));
 
 	bSendSuccess = FALSE;
+	d_pthread_mutex_lock(&mutLibnet);
+	bNeedUnlock = 1;
 	for (r = pData->f_addr; r; r = r->ai_next) {
 		tempaddr = (struct sockaddr_in *)r->ai_addr;
 		libnet_clear_packet(libnet_handle);
@@ -267,6 +273,9 @@ UDPSend(instanceData *pData, uchar *pszSourcename, char *msg, size_t len)
 	}
 
 finalize_it:
+	if(bNeedUnlock) {
+		d_pthread_mutex_unlock(&mutLibnet);
+	}
 	RETiRet;
 }
 
@@ -440,6 +449,7 @@ BEGINmodExit
 CODESTARTmodExit
 	/* destroy the libnet state needed for forged UDP sources */
 	libnet_destroy(libnet_handle);
+	pthread_mutex_destroy(&mutLibnet);
 	/* release what we no longer need */
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
@@ -488,6 +498,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 		errmsg.LogError(0, NO_ERRCODE, "Error initializing libnet, can not continue ");
 		ABORT_FINALIZE(RS_RET_ERR_LIBNET_INIT);
 	}
+	pthread_mutex_init(&mutLibnet, NULL);
 
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionomudpspoofdefaulttemplate", 0, eCmdHdlrGetWord, NULL, &pszTplName, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionomudpspoofsourcenametemplate", 0, eCmdHdlrGetWord, NULL, &pszSourceNameTemplate, NULL));

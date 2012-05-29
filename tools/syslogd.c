@@ -2531,6 +2531,9 @@ doGlblProcessInit(void)
 			sigAct.sa_handler = doexit;
 			sigaction(SIGTERM, &sigAct, NULL);
 
+			/* stop writing debug messages to stdout (if debugging is on) */
+			stddbg = -1;
+
 			if (fork()) {
 				/* Parent process
 				 */
