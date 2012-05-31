@@ -7,4 +7,7 @@
 # This file is part of the rsyslog project, released  under GPLv3
 echo ===============================================================================
 echo \[sndrcv_udp.sh\]: testing sending and receiving via udp
+if [ "$EUID" -ne 0 ]; then
+    exit 77 # Not root, skip this test
+fi
 source $srcdir/sndrcv_drvr.sh sndrcv_udp 50

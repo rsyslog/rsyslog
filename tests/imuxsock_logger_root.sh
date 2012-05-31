@@ -2,6 +2,9 @@
 # carry out this test.
 echo \[imuxsock_logger_root.sh\]: test trailing LF handling in imuxsock
 echo This test must be run as root with no other active syslogd
+if [ "$EUID" -ne 0 ]; then
+    exit 77 # Not root, skip this test
+fi
 source $srcdir/diag.sh init
 source $srcdir/diag.sh startup imuxsock_logger_root.conf
 # send a message with trailing LF
