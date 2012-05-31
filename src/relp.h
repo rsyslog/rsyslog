@@ -1,6 +1,6 @@
 /* The RELP (reliable event logging protocol) core protocol library.
  *
- * Copyright 2008 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2012 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of librelp.
  *
@@ -100,6 +100,8 @@ struct relpEngine_s {
 	relpEngSessLst_t *pSessLstLast;
 	int lenSessLst;
 	pthread_mutex_t mutSessLst;
+
+	int bStop;	/* set to 1 to stop server after next select */
 };
 
 
@@ -125,7 +127,6 @@ struct relpEngine_s {
 #endif
 #ifndef RELP_DFLT_WINDOW_SIZE
 #	define RELP_DFLT_WINDOW_SIZE 128 /* 128 unacked frames should be fairly good in most cases */
-//#	define RELP_DFLT_WINDOW_SIZE 2 /* 16 unacked frames should be fairly good in most cases */
 #endif
 
 /* set the default receive buffer size if none is externally configured

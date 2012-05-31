@@ -1,6 +1,6 @@
 /* The RELP (reliable event logging protocol) core protocol library.
  *
- * Copyright 2008 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2012 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of librelp.
  *
@@ -34,6 +34,7 @@
 #include <stdlib.h>
 #include <sys/select.h>
 #include <string.h>
+#include <errno.h>
 #include <assert.h>
 #include "relp.h"
 #include "relpsrv.h"
@@ -307,6 +308,20 @@ finalize_it:
 }
 
 
+/* the setStop method sets a flag that stops the server after the next select.
+ * In order to interrupt the select(), it is suggested to send a signal. If no
+ * signal is sent, it may take rather long to stop the server (until another
+ * machine sends data).
+ */
+relpRetVal relpEngineSetStop(relpEngine_t *pThis)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Engine);
+	pThis->bStop = 1;
+	LEAVE_RELPFUNC;
+}
+
+
 /* The "Run" method starts the relp engine. Most importantly, this means the engine begins
  * to read and write data to its peers. This method must be called on its own thread as it
  * will not return until the engine is finished. Note that the engine itself may (or may
@@ -340,8 +355,8 @@ relpEngineRun(relpEngine_t *pThis)
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Engine);
 
-	/* this is an endless loop - TODO: decide how to terminate */
-	while(1) {
+	pThis->bStop = 0;
+	while(pThis->bStop == 0) {
 	        maxfds = 0;
 	        FD_ZERO(&readfds);
 	        FD_ZERO(&writefds);
@@ -376,12 +391,24 @@ relpEngineRun(relpEngine_t *pThis)
 		}
 
 		/* wait for io to become ready */
+		if(pThis->bStop) break;
 		nfds = select(maxfds+1, (fd_set *) &readfds, &writefds, NULL, NULL);
-pThis->dbgprint("relp select returns, nfds %d\n", nfds);
+		pThis->dbgprint("relp select returns, nfds %d\n", nfds);
+		if(pThis->bStop) break;
+
+		if(nfds == -1) {
+			if(errno == EINTR) {
+				pThis->dbgprint("relp select interrupted\n");
+			} else {
+				pThis->dbgprint("relp select returned error %d\n", errno);
+			}
+			continue;
+		}
 	
 		/* and then start again with the servers (new connection request) */
 		for(pSrvEtry = pThis->pSrvLstRoot ; pSrvEtry != NULL ; pSrvEtry = pSrvEtry->pNext) {
 			for(iSocks = 1 ; iSocks <= relpSrvGetNumLstnSocks(pSrvEtry->pSrv) ; ++iSocks) {
+				if(pThis->bStop) break;
 				sock = relpSrvGetLstnSock(pSrvEtry->pSrv, iSocks);
 				if(FD_ISSET(sock, &readfds)) {
 					pThis->dbgprint("new connect on RELP socket #%d\n", sock);
@@ -398,6 +425,7 @@ pThis->dbgprint("relp accept session returns, iRet %d\n", localRet);
 
 		/* now check if we have some action waiting for sessions */
 		for(pSessEtry = pThis->pSessLstRoot ; pSessEtry != NULL ; ) {
+			if(pThis->bStop) break;
 			pSessEtryNext = pSessEtry->pNext; /* we need to cache this as we may delete the entry! */
 			sock = relpSessGetSock(pSessEtry->pSess);
 			/* read data waiting? */

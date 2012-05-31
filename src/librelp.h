@@ -3,7 +3,7 @@
  * This file is meant to be included by applications using the relp library.
  * For relp library files themselves, include "relp.h".
  *
- * Copyright 2008 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2012 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of librelp.
  *
@@ -146,6 +146,7 @@ relpRetVal relpEngineDestruct(relpEngine_t **ppThis);
 relpRetVal relpEngineSetDbgprint(relpEngine_t *pThis, void (*dbgprint)(char *fmt, ...) __attribute__((format(printf, 1, 2))));
 relpRetVal relpEngineAddListner(relpEngine_t *pThis, unsigned char *pLstnPort);
 relpRetVal relpEngineAddListner2(relpEngine_t *pThis, unsigned char *pLstnPort, void*);
+relpRetVal relpEngineSetStop(relpEngine_t *pThis);
 relpRetVal relpEngineRun(relpEngine_t *pThis);
 relpRetVal relpEngineCltDestruct(relpEngine_t *pThis, relpClt_t **ppClt);
 relpRetVal relpEngineCltConstruct(relpEngine_t *pThis, relpClt_t **ppClt);
