@@ -65,7 +65,6 @@ TESTS +=  \
 	failover-no-basic.sh \
 	rcvr_fail_restore.sh \
 	linkedlistqueue.sh
-endif
 
 if HAVE_VALGRIND
 TESTS +=  \
@@ -76,7 +75,8 @@ TESTS +=  \
 	failover-no-basic-vg.sh \
 	failover-no-rptd-vg.sh \
 	tcp-msgreduc-vg.sh
-endif
+endif # HAVE_VALGRIND
+endif # ENABLE_IMDIAG
 
 
 if ENABLE_MYSQL_TESTS
