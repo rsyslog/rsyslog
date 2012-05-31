@@ -26,6 +26,7 @@ missing
 compile
 rsyslogd
 rsyslog.service
+ylwrap
 *.orig
 rg.conf*
 *.swp
