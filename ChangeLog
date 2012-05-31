@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 6.5.0  [devel] 2012-0?-??
+- imrelp now supports non-cancel thread termination
+  (but now requires at least librelp 1.0.1)
 - added --enable-debugless configure option for very high demanding envs
   This actually at compile time disables a lot of debug code, resulting
   in some speedup (but serious loss of debugging capabilities)

@@ -685,9 +685,10 @@ runInputModules(void)
 	node = module.GetNxtCnfType(runConf, NULL, eMOD_IN);
 	while(node != NULL) {
 		if(node->canRun) {
-			DBGPRINTF("running module %s with config %p\n", node->pMod->pszName, node);
 			bNeedsCancel = (node->pMod->isCompatibleWithFeature(sFEATURENonCancelInputTermination) == RS_RET_OK) ?
 				       0 : 1;
+			DBGPRINTF("running module %s with config %p, term mode: %s\n", node->pMod->pszName, node,
+				  bNeedsCancel ? "cancel" : "cooperative/SIGTTIN");
 			thrdCreate(node->pMod->mod.im.runInput, node->pMod->mod.im.afterRun, bNeedsCancel,
 			           (node->pMod->cnfName == NULL) ? node->pMod->pszName : node->pMod->cnfName);
 		}

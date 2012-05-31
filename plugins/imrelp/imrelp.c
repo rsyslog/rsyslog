@@ -22,7 +22,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #include "config.h"
 #include <stdlib.h>
 #include <assert.h>
@@ -35,6 +34,7 @@
 #include <netdb.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <signal.h>
 #include <librelp.h>
 #include "rsyslog.h"
 #include "dirty.h"
@@ -236,13 +236,39 @@ BEGINfreeCnf
 CODESTARTfreeCnf
 ENDfreeCnf
 
+/* This is used to terminate the plugin. Note that the signal handler blocks
+ * other activity on the thread. As such, it is safe to request the stop. When
+ * we terminate, relpEngine is called, and it's select() loop interrupted. But
+ * only *after this function is done*. So we do not have a race!
+ */
+static void
+doSIGTTIN(int __attribute__((unused)) sig)
+{
+	DBGPRINTF("imrelp: termination requested via SIGTTIN - telling RELP engine\n");
+	relpEngineSetStop(pRelpEngine);
+}
+
+
 /* This function is called to gather input.
  */
 BEGINrunInput
+	sigset_t sigSet;
+	struct sigaction sigAct;
 CODESTARTrunInput
-	/* TODO: we must be careful to start the listener here. Currently, tcpsrv.c seems to
-	 * do that in ConstructFinalize
+	/* we want to support non-cancel input termination. To do so, we must signal librelp
+	 * when to stop. As we run on the same thread, we need to register as SIGTTIN handler,
+	 * which will be used to put the terminating condition into librelp.
 	 */
+	sigfillset(&sigSet);
+	pthread_sigmask(SIG_BLOCK, &sigSet, NULL);
+	sigemptyset(&sigSet);
+	sigaddset(&sigSet, SIGTTIN);
+	pthread_sigmask(SIG_UNBLOCK, &sigSet, NULL);
+	memset(&sigAct, 0, sizeof (sigAct));
+	sigemptyset(&sigAct.sa_mask);
+	sigAct.sa_handler = doSIGTTIN;
+	sigaction(SIGTTIN, &sigAct, NULL);
+
 	iRet = relpEngineRun(pRelpEngine);
 ENDrunInput
 
@@ -284,12 +310,19 @@ resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unus
 }
 
 
+BEGINisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature
+	if(eFeat == sFEATURENonCancelInputTermination)
+		iRet = RS_RET_OK;
+ENDisCompatibleWithFeature
+
 
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_IMOD_QUERIES
 CODEqueryEtryPt_STD_CONF2_QUERIES
 CODEqueryEtryPt_STD_CONF2_PREPRIVDROP_QUERIES
+CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
 ENDqueryEtryPt
 
 
