@@ -2506,7 +2506,7 @@ doGlblProcessInit(void)
 
 	if( !(Debug == DEBUG_FULL || NoFork) )
 	{
-		DBGPRINTF("Checking pidfile.\n");
+		DBGPRINTF("Checking pidfile '%s'.\n", PidFile);
 		if (!check_pid(PidFile))
 		{
 			memset(&sigAct, 0, sizeof (sigAct));
@@ -2579,7 +2579,7 @@ doGlblProcessInit(void)
 	}
 
 	/* tuck my process id away */
-	DBGPRINTF("Writing pidfile %s.\n", PidFile);
+	DBGPRINTF("Writing pidfile '%s'.\n", PidFile);
 	if (!check_pid(PidFile))
 	{
 		if (!write_pid(PidFile))
