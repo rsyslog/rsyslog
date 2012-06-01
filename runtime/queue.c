@@ -2323,20 +2323,25 @@ doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, void *pUsr)
 	while(   (pThis->iMaxQueueSize > 0 && pThis->iQueueSize >= pThis->iMaxQueueSize)
 	      || (pThis->qType == QUEUETYPE_DISK && pThis->sizeOnDiskMax != 0
 	      	  && pThis->tVars.disk.sizeOnDisk > pThis->sizeOnDiskMax)) {
-		DBGOPRINT((obj_t*) pThis, "enqueueMsg: queue FULL - waiting to drain.\n");
-		if(glbl.GetGlobalInputTermState()) {
-			DBGOPRINT((obj_t*) pThis, "enqueueMsg: queue FULL, discard due to FORCE_TERM.\n");
-			ABORT_FINALIZE(RS_RET_FORCE_TERM);
-		}
-		timeoutComp(&t, pThis->toEnq);
 		STATSCOUNTER_INC(pThis->ctrFull, pThis->mutCtrFull);
-// TODO : handle enqOnly => discard!
-		if(pthread_cond_timedwait(&pThis->notFull, pThis->mut, &t) != 0) {
-			DBGOPRINT((obj_t*) pThis, "enqueueMsg: cond timeout, dropping message!\n");
+		if(pThis->toEnq == 0 || pThis->bEnqOnly) {
+			DBGOPRINT((obj_t*) pThis, "enqueueMsg: queue FULL - configured for immediate discarding.\n");
 			objDestruct(pUsr);
 			ABORT_FINALIZE(RS_RET_QUEUE_FULL);
-		}
+		} else {
+			DBGOPRINT((obj_t*) pThis, "enqueueMsg: queue FULL - waiting %dms to drain.\n", pThis->toEnq);
+			if(glbl.GetGlobalInputTermState()) {
+				DBGOPRINT((obj_t*) pThis, "enqueueMsg: queue FULL, discard due to FORCE_TERM.\n");
+				ABORT_FINALIZE(RS_RET_FORCE_TERM);
+			}
+			timeoutComp(&t, pThis->toEnq);
+			if(pthread_cond_timedwait(&pThis->notFull, pThis->mut, &t) != 0) {
+				DBGOPRINT((obj_t*) pThis, "enqueueMsg: cond timeout, dropping message!\n");
+				objDestruct(pUsr);
+				ABORT_FINALIZE(RS_RET_QUEUE_FULL);
+			}
 		dbgoprint((obj_t*) pThis, "enqueueMsg: wait solved queue full condition, enqueing\n");
+		}
 	}
 
 	/* and finally enqueue the message */

@@ -282,12 +282,30 @@ Version 5.9.0  [V5-DEVEL] (rgerhards), 2011-03-??
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=236
 ---------------------------------------------------------------------------
 Version 5.8.12  [V5-stable] 2012-05-??
+- bugfix: delayble source could block action queue, even if there was
+  a disk queue associated with it. The root cause of this problem was
+  that it makes no sense to delay messages once they arrive in the 
+  action queue - the "input" that is being held in that case is the main
+  queue worker, what makes no sense.
+  Thanks to Marcin for alerting us on this problem and providing 
+  instructions to reproduce it.
 - bugfix: disk queue was not persisted on shutdown, regression of fix to
   http://bugzilla.adiscon.com/show_bug.cgi?id=299
   The new code also handles the case of shutdown of blocking light and 
   full delayable sources somewhat smarter and permits, assuming sufficient
   timouts, to persist message up to the max queue capacity. Also some nits
   in debug instrumentation have been fixed.
+- bugfix/omudpspoof: problems, including abort, happend when run on
+  multiple threads. Root cause is that libnet is not thread-safe. 
+  omudpspoof now guards libnet calls with their own mutex.
+- bugfix: if debug message could end up in log file when forking
+  if rsyslog was set to auto-background (thus fork, the default) and debug
+  mode to stdout was enabled, debug messages ended up in the first log file
+  opened. Currently, stdout logging is completely disabled in forking mode
+  (but writing to the debug log file is still possible). This is a change 
+  in behaviour, which is under review. If it causes problems to you,
+  please let us know.
+  Thanks to Tomas Heinrich for the patch.
 - bugfix/tcpflood: sending small test files did not work correctly
 ---------------------------------------------------------------------------
 Version 5.8.11  [V5-stable] 2012-05-03
