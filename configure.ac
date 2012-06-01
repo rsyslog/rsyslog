@@ -1269,6 +1269,44 @@ fi
 AM_CONDITIONAL(ENABLE_OMMONGODB, test x$enable_ommongodb = xyes)
 # end of mongodb code
 
+# BEGIN ZMQ3 INPUT SUPPORT
+AC_ARG_ENABLE(imzmq3,
+        [AS_HELP_STRING([--enable-imzmq3],[Compiles imzmq3 output module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_imzmq3="yes" ;;
+          no) enable_imzmq3="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-imzmq3) ;;
+         esac],
+        [enable_imzmq3=no]
+)
+if test "x$enable_imzmq3" = "xyes"; then
+	PKG_CHECK_MODULES(CZMQ, libczmq >= 1.1.0)
+	AC_SUBST(CZMQ_CFLAGS)
+	AC_SUBST(CZMQ_LIBS)
+fi
+AM_CONDITIONAL(ENABLE_IMZMQ3, test x$enable_imzmq3 = xyes)
+
+# END ZMQ3 INPUT SUPPORT
+
+# BEGIN ZMQ3 OUTPUT SUPPORT
+AC_ARG_ENABLE(omzmq3,
+        [AS_HELP_STRING([--enable-omzmq3],[Compiles omzmq3 output module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_omzmq3="yes" ;;
+          no) enable_omzmq3="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-omzmq3) ;;
+         esac],
+        [enable_omzmq3=no]
+)
+if test "x$enable_omzmq3" = "xyes"; then
+	PKG_CHECK_MODULES(CZMQ, libczmq >= 1.1.0)
+	AC_SUBST(CZMQ_CFLAGS)
+	AC_SUBST(CZMQ_LIBS)
+fi
+AM_CONDITIONAL(ENABLE_OMZMQ3, test x$enable_omzmq3 = xyes)
+
+# END ZMQ3 SUPPORT
+
 # HIREDIS SUPPORT
 
 AC_ARG_ENABLE(omhiredis,
@@ -1319,6 +1357,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/impstats/Makefile \
 		plugins/imrelp/Makefile \
 		plugins/imdiag/Makefile \
+        plugins/imzmq3/Makefile \
 		plugins/omtesting/Makefile \
 		plugins/omgssapi/Makefile \
 		plugins/ommysql/Makefile \
@@ -1331,6 +1370,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omudpspoof/Makefile \
 		plugins/ommongodb/Makefile \
         plugins/omhiredis/Makefile \
+        plugins/omzmq3/Makefile \
 		plugins/mmnormalize/Makefile \
 		plugins/mmjsonparse/Makefile \
 		plugins/mmaudit/Makefile \
@@ -1363,6 +1403,7 @@ echo "    imdiag enabled:                           $enable_imdiag"
 echo "    file input module enabled:                $enable_imfile"
 echo "    Solaris input module enabled:             $enable_imsolaris"
 echo "    periodic statistics module enabled:       $enable_impstats"
+echo "    imzmq3 input module enabled:              $enable_imzmq3"
 echo
 echo "---{ output plugins }---"
 echo "    Mail support enabled:                     $enable_mail"
@@ -1373,6 +1414,7 @@ echo "    omelasticsearch module will be compiled:  $enable_elasticsearch"
 echo "    omruleset module will be compiled:        $enable_omruleset"
 echo "    omudpspoof module will be compiled:       $enable_omudpspoof"
 echo "    omuxsock module will be compiled:         $enable_omuxsock"
+echo "    omzmq3 module will be compiled:           $enable_omzmq3"
 echo
 echo "---{ parser modules }---"
 echo "    pmrfc3164sd module will be compiled:      $enable_pmrfc3164sd"

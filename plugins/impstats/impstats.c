@@ -59,6 +59,7 @@ typedef struct configSettings_s {
 	int iFacility;
 	int iSeverity;
 	int bJSON;
+	int bCEE;
 } configSettings_t;
 
 struct modConfData_s {
@@ -89,6 +90,7 @@ initConfigSettings(void)
 	cs.iFacility = DEFAULT_FACILITY;
 	cs.iSeverity = DEFAULT_SEVERITY;
 	cs.bJSON = 0;
+	cs.bCEE = 0;
 }
 
 
@@ -157,7 +159,13 @@ CODESTARTendCnfLoad
 	loadModConf->iStatsInterval = cs.iStatsInterval;
 	loadModConf->iFacility = cs.iFacility;
 	loadModConf->iSeverity = cs.iSeverity;
-	loadModConf->statsFmt = cs.bJSON ? statsFmt_JSON : statsFmt_Legacy;
+	if (cs.bCEE == 1) {
+		loadModConf->statsFmt = statsFmt_CEE;
+	} else if (cs.bJSON == 1) {
+		loadModConf->statsFmt = statsFmt_JSON;
+	} else {
+		loadModConf->statsFmt = statsFmt_Legacy;
+	}
 ENDendCnfLoad
 
 
@@ -259,6 +267,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"pstatfacility", 0, eCmdHdlrInt, NULL, &cs.iFacility, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"pstatseverity", 0, eCmdHdlrInt, NULL, &cs.iSeverity, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"pstatjson", 0, eCmdHdlrBinary, NULL, &cs.bJSON, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"pstatcee", 0, eCmdHdlrBinary, NULL, &cs.bCEE, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 
 	CHKiRet(prop.Construct(&pInputName));

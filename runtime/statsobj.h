@@ -46,7 +46,8 @@ typedef enum statsCtrType_e {
 /* stats line format types */
 typedef enum statsFmtType_e {
 	statsFmt_Legacy,
-	statsFmt_JSON
+	statsFmt_JSON,
+	statsFmt_CEE
 } statsFmtType_t;
 
 
