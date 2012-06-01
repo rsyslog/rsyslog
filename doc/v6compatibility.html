@@ -112,6 +112,15 @@ to spot why things went wrong (and if at all).
 <p>Due to their positive effect on performance and comparatively low overhead,
 default batch sizes have been increased. Starting with 6.3.4, the action queues
 have a default batch size of 128 messages.
+<h2>Default action queue enqueue timeout</h2>
+<p>This timeout previously was 2seconds, and has been reduced to 50ms (starting with 6.5.0). This change
+was made as a long timeout will caused delays in the associated main queue, something
+that was quite unexpected to users. Now, this can still happen, but the effect is much
+less harsh (but still considerable on a busy system). Also, 50ms should be fairly enough
+for most output sources, except when they are really broken (like network disconnect). If
+they are really broken, even a 2second timeout does not help, so we hopefully get the best
+of both worlds with the new timeout. A specific timeout can of course still be configured,
+it is just the timeout that changed.
 <h2>outchannels</h2>
 <p>Outchannels are a to-be-removed feature of rsyslog, at least as far as the config
 syntax is concerned. Nevertheless, v6 still supports it, but a new syntax is required

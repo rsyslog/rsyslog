@@ -262,7 +262,7 @@ actionResetQueueParams(void)
 	cs.bActionQSyncQeueFiles = 0;
 	cs.iActionQtoQShutdown = 0;			/* queue shutdown */ 
 	cs.iActionQtoActShutdown = 1000;		/* action shutdown (in phase 2) */ 
-	cs.iActionQtoEnq = 2000;			/* timeout for queue enque */ 
+	cs.iActionQtoEnq = 50;				/* timeout for queue enque */ 
 	cs.iActionQtoWrkShutdown = 60000;		/* timeout for worker thread shutdown */
 	cs.iActionQWrkMinMsgs = 100;			/* minimum messages per worker needed to start a new one */
 	cs.bActionQSaveOnShutdown = 1;			/* save queue on shutdown (when DA enabled)? */
