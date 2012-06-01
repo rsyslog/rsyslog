@@ -154,6 +154,13 @@ Version 5.9.0  [V5-DEVEL] (rgerhards), 2011-06-08
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=236
 ---------------------------------------------------------------------------
 Version 5.8.12  [V5-stable] 2012-05-??
+- bugfix: delayble source could block action queue, even if there was
+  a disk queue associated with it. The root cause of this problem was
+  that it makes no sense to delay messages once they arrive in the 
+  action queue - the "input" that is being held in that case is the main
+  queue worker, what makes no sense.
+  Thanks to Marcin for alerting us on this problem and providing 
+  instructions to reproduce it.
 - bugfix: disk queue was not persisted on shutdown, regression of fix to
   http://bugzilla.adiscon.com/show_bug.cgi?id=299
   The new code also handles the case of shutdown of blocking light and 
