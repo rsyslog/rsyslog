@@ -1188,16 +1188,16 @@ AM_CONDITIONAL(ENABLE_CUST1, test x$enable_cust1 = xyes)
 
 # A custom strgen that also serves as a sample of how to do
 # SQL-generating strgen's
-AC_ARG_ENABLE(smcustbindcdr,
-        [AS_HELP_STRING([--enable-smcustbindcdr],[Compiles smcustbindcdr module @<:@default=no@:>@])],
+AC_ARG_ENABLE(sm_cust_bindcdr,
+        [AS_HELP_STRING([--enable-sm_cust_bindcdr],[Compiles sm_cust_bindcdr module @<:@default=no@:>@])],
         [case "${enableval}" in
-         yes) enable_smcustbindcdr="yes" ;;
-          no) enable_smcustbindcdr="no" ;;
-           *) AC_MSG_ERROR(bad value ${enableval} for --enable-smcustbindcdr) ;;
+         yes) enable_sm_cust_bindcdr="yes" ;;
+          no) enable_sm_cust_bindcdr="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-sm_cust_bindcdr) ;;
          esac],
-        [enable_smcustbindcdr=no]
+        [enable_sm_cust_bindcdr=no]
 )
-AM_CONDITIONAL(ENABLE_SMCUSTBINDCDR, test x$enable_smcustbindcdr = xyes)
+AM_CONDITIONAL(ENABLE_SMCUSTBINDCDR, test x$enable_sm_cust_bindcdr = xyes)
 
 
 # settings for mmsnmptrapd message modification module
