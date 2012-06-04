@@ -25,6 +25,10 @@ Version 5.8.12  [V5-stable] 2012-05-??
   please let us know.
   Thanks to Tomas Heinrich for the patch.
 - bugfix/tcpflood: sending small test files did not work correctly
+- add small delay (50ms) after sending shutdown message
+  There seem to be cases where the shutdown message is otherwise not
+  processed, not even on an idle system. Thanks to Marcin for
+  bringing this problem up.
 ---------------------------------------------------------------------------
 Version 5.8.11  [V5-stable] 2012-05-03
 - bugfix: ommysql did not properly init/exit the mysql runtime library
