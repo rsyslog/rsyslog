@@ -1,5 +1,12 @@
 ---------------------------------------------------------------------------
-Version 6.3.10  [BETA] 2012-0?-??
+Version 6.3.10  [BETA] 2012-06-04
+- bugfix: delayble source could block action queue, even if there was
+  a disk queue associated with it. The root cause of this problem was
+  that it makes no sense to delay messages once they arrive in the 
+  action queue - the "input" that is being held in that case is the main
+  queue worker, what makes no sense.
+  Thanks to Marcin for alerting us on this problem and providing 
+  instructions to reproduce it.
 - bugfix: invalid free in imptcp could lead to abort during startup
 - bugfix: if debug message could end up in log file when forking
   if rsyslog was set to auto-background (thus fork, the default) and debug
@@ -9,6 +16,9 @@ Version 6.3.10  [BETA] 2012-0?-??
   in behaviour, which is under review. If it causes problems to you,
   please let us know.
   Thanks to Tomas Heinrich for the patch.
+- bugfix: --enable-smcustbindcdr configure directive did not work
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=330
+  Thanks to Ultrabug for the patch.
 ---------------------------------------------------------------------------
 Version 6.3.9  [BETA] 2012-05-22
 - bugfix: imtcp could cause hang during reception
