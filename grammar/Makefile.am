@@ -13,7 +13,7 @@ libgrammar_la_SOURCES = \
 	grammar.h
 libgrammar_la_CPPFLAGS =  $(RSRT_CFLAGS)
 
-testdriver_SOURCES = testdriver.c libgrammar.la
-testdriver_CPPFLAGS =  $(RSRT_CFLAGS)
-testdriver_LDADD = libgrammar.la
-testdriver_LDFLAGS = -lestr
+#testdriver_SOURCES = testdriver.c libgrammar.la
+#testdriver_CPPFLAGS =  $(RSRT_CFLAGS)
+#testdriver_LDADD = libgrammar.la
+#testdriver_LDFLAGS = -lestr

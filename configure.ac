@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([rsyslog],[6.3.8],[rsyslog@lists.adiscon.com])
+AC_INIT([rsyslog],[6.5.0],[rsyslog@lists.adiscon.com])
 AM_INIT_AUTOMAKE
 
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
@@ -768,11 +768,15 @@ AC_ARG_ENABLE(rsyslogrt,
         [enable_rsyslogrt=yes]
 )
 if test "x$enable_rsyslogrt" = "xyes"; then
-  RSRT_CFLAGS="-I\$(top_srcdir)/runtime -I\$(top_srcdir) -I\$(top_srcdir)/grammar"
-  RSRT_LIBS="\$(top_builddir)/runtime/librsyslog.la"
+  RSRT_CFLAGS1="-I\$(top_srcdir)/runtime -I\$(top_srcdir) -I\$(top_srcdir)/grammar"
+  RSRT_LIBS1="\$(top_builddir)/runtime/librsyslog.la"
   #??CNF_LIBS="\$(top_builddir)/grammar/libgrammar.la"
 fi
 AM_CONDITIONAL(ENABLE_RSYSLOGRT, test x$enable_rsyslogrt = xyes)
+RSRT_CFLAGS="\$(RSRT_CFLAGS1) \$(LIBESTR_CFLAGS)"
+RSRT_LIBS="\$(RSRT_LIBS1) \$(LIBESTR_LIBS)"
+AC_SUBST(RSRT_CFLAGS1)
+AC_SUBST(RSRT_LIBS1)
 AC_SUBST(RSRT_CFLAGS)
 AC_SUBST(RSRT_LIBS)
 
@@ -1204,16 +1208,16 @@ AM_CONDITIONAL(ENABLE_CUST1, test x$enable_cust1 = xyes)
 
 # A custom strgen that also serves as a sample of how to do
 # SQL-generating strgen's
-AC_ARG_ENABLE(smcustbindcdr,
-        [AS_HELP_STRING([--enable-smcustbindcdr],[Compiles smcustbindcdr module @<:@default=no@:>@])],
+AC_ARG_ENABLE(sm_cust_bindcdr,
+        [AS_HELP_STRING([--enable-sm_cust_bindcdr],[Compiles sm_cust_bindcdr module @<:@default=no@:>@])],
         [case "${enableval}" in
-         yes) enable_smcustbindcdr="yes" ;;
-          no) enable_smcustbindcdr="no" ;;
-           *) AC_MSG_ERROR(bad value ${enableval} for --enable-smcustbindcdr) ;;
+         yes) enable_sm_cust_bindcdr="yes" ;;
+          no) enable_sm_cust_bindcdr="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-sm_cust_bindcdr) ;;
          esac],
-        [enable_smcustbindcdr=no]
+        [enable_sm_cust_bindcdr=no]
 )
-AM_CONDITIONAL(ENABLE_SMCUSTBINDCDR, test x$enable_smcustbindcdr = xyes)
+AM_CONDITIONAL(ENABLE_SMCUSTBINDCDR, test x$enable_sm_cust_bindcdr = xyes)
 
 
 # settings for mmsnmptrapd message modification module

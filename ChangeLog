@@ -6,7 +6,14 @@ Version 6.5.0  [devel] 2012-0?-??
   This actually at compile time disables a lot of debug code, resulting
   in some speedup (but serious loss of debugging capabilities)
 ---------------------------------------------------------------------------
-Version 6.3.10  [BETA] 2012-0?-??
+Version 6.3.10  [BETA] 2012-06-04
+- bugfix: delayble source could block action queue, even if there was
+  a disk queue associated with it. The root cause of this problem was
+  that it makes no sense to delay messages once they arrive in the 
+  action queue - the "input" that is being held in that case is the main
+  queue worker, what makes no sense.
+  Thanks to Marcin for alerting us on this problem and providing 
+  instructions to reproduce it.
 - bugfix: invalid free in imptcp could lead to abort during startup
 - bugfix: if debug message could end up in log file when forking
   if rsyslog was set to auto-background (thus fork, the default) and debug
@@ -16,6 +23,11 @@ Version 6.3.10  [BETA] 2012-0?-??
   in behaviour, which is under review. If it causes problems to you,
   please let us know.
   Thanks to Tomas Heinrich for the patch.
+- bugfix: --enable-smcustbindcdr configure directive did not work
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=330
+  Thanks to Ultrabug for the patch.
+- bugfix: made rsyslog compile when libestr ist not installed in /usr
+  Thanks to Miloslav Trmač for providing patches and suggestions
 ---------------------------------------------------------------------------
 Version 6.3.9  [BETA] 2012-05-22
 - bugfix: imtcp could cause hang during reception
@@ -189,6 +201,9 @@ Version 6.2.2  [v6-stable], 2012-05-??
   full delayable sources somewhat smarter and permits, assuming sufficient
   timouts, to persist message up to the max queue capacity. Also some nits
   in debug instrumentation have been fixed.
+- bugfix: --enable-smcustbindcdr configure directive did not work
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=330
+  Thanks to Ultrabug for the patch.
 ---------------------------------------------------------------------------
 Version 6.2.1  [v6-stable], 2012-05-10
 - change plugin config interface to be compatible with pre-v6.2 system
