@@ -752,11 +752,15 @@ AC_ARG_ENABLE(rsyslogrt,
         [enable_rsyslogrt=yes]
 )
 if test "x$enable_rsyslogrt" = "xyes"; then
-  RSRT_CFLAGS="-I\$(top_srcdir)/runtime -I\$(top_srcdir) -I\$(top_srcdir)/grammar"
-  RSRT_LIBS="\$(top_builddir)/runtime/librsyslog.la"
+  RSRT_CFLAGS1="-I\$(top_srcdir)/runtime -I\$(top_srcdir) -I\$(top_srcdir)/grammar"
+  RSRT_LIBS1="\$(top_builddir)/runtime/librsyslog.la"
   #??CNF_LIBS="\$(top_builddir)/grammar/libgrammar.la"
 fi
 AM_CONDITIONAL(ENABLE_RSYSLOGRT, test x$enable_rsyslogrt = xyes)
+RSRT_CFLAGS="\$(RSRT_CFLAGS1) \$(LIBESTR_CFLAGS)"
+RSRT_LIBS="\$(RSRT_LIBS1) \$(LIBESTR_LIBS)"
+AC_SUBST(RSRT_CFLAGS1)
+AC_SUBST(RSRT_LIBS1)
 AC_SUBST(RSRT_CFLAGS)
 AC_SUBST(RSRT_LIBS)
 

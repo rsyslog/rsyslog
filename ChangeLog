@@ -19,6 +19,8 @@ Version 6.3.10  [BETA] 2012-06-04
 - bugfix: --enable-smcustbindcdr configure directive did not work
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=330
   Thanks to Ultrabug for the patch.
+- bugfix: made rsyslog compile when libestr ist not installed in /usr
+  Thanks to Miloslav Trmač for providing patches and suggestions
 ---------------------------------------------------------------------------
 Version 6.3.9  [BETA] 2012-05-22
 - bugfix: imtcp could cause hang during reception
