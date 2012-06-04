@@ -6,6 +6,9 @@ Version 6.2.2  [v6-stable], 2012-05-??
   full delayable sources somewhat smarter and permits, assuming sufficient
   timouts, to persist message up to the max queue capacity. Also some nits
   in debug instrumentation have been fixed.
+- bugfix: --enable-smcustbindcdr configure directive did not work
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=330
+  Thanks to Ultrabug for the patch.
 ---------------------------------------------------------------------------
 Version 6.2.1  [v6-stable], 2012-05-10
 - change plugin config interface to be compatible with pre-v6.2 system
