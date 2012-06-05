@@ -1409,6 +1409,9 @@ cnfrulePrint(struct cnfrule *rule)
 	dbgprintf("------ end rule %p\n", rule);
 }
 
+/* note: the sysline itself was already freed during processing
+ * and as such MUST NOT be freed again!
+ */
 void
 cnfcfsyslinelstDestruct(struct cnfcfsyslinelst *cfslst)
 {
@@ -1416,7 +1419,6 @@ cnfcfsyslinelstDestruct(struct cnfcfsyslinelst *cfslst)
 	while(cfslst != NULL) {
 		toDel = cfslst;
 		cfslst = cfslst->next;
-		free(toDel->line);
 		free(toDel);
 	}
 }
