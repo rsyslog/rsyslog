@@ -623,14 +623,13 @@ cnfactlstAddSysline(struct cnfactlst* actlst, char *line)
 	struct cnfcfsyslinelst *cflst;
 
 	if((cflst = malloc(sizeof(struct cnfcfsyslinelst))) != NULL)   {
-		cflst->next = NULL;
 		cflst->line = line;
 		if(actlst->syslines == NULL) {
-			actlst->syslines = cflst;
+			cflst->next = NULL;
 		} else {
 			cflst->next = actlst->syslines;
-			actlst->syslines = cflst;
 		}
+		actlst->syslines = cflst;
 	}
 	return actlst;
 }
