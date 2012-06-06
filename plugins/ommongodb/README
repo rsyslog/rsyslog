@@ -2,21 +2,6 @@ plugin to use MongoDB as backend.
 
 tested in ubuntu 10.04 and ubuntu 10.10
 
-BUILDING THIS PLUGIN
-Right now, it seems to be necessary to copy the 10gen c-driver directly under
-the ./plugins/ommongodb subdirectory. Then, you need to follow their build
-instructions on how to build the mongodb c driver:
-http://api.mongodb.org/c/current/building.html
-
-This is clumpsy, and if someone has ideas on how to improve this situation,
-please drop us a line. For obvious reasons, ./configure does not detect
-a missing mongodb c driver.
-
-In order to successfully build ommongodb, you NEED to use the v0.2 version of
-the mongo c driver. As it looks, the driver breaks API compatibility and the
-curret v0.4 driver seems to have a totally different API (at least this is
-what I currently (2012-03-08) see.
-
 configuration:
 
 in your /etc/rsyslog.conf, together with other modules:

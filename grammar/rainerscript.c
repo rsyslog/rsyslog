@@ -623,14 +623,13 @@ cnfactlstAddSysline(struct cnfactlst* actlst, char *line)
 	struct cnfcfsyslinelst *cflst;
 
 	if((cflst = malloc(sizeof(struct cnfcfsyslinelst))) != NULL)   {
-		cflst->next = NULL;
 		cflst->line = line;
 		if(actlst->syslines == NULL) {
-			actlst->syslines = cflst;
+			cflst->next = NULL;
 		} else {
 			cflst->next = actlst->syslines;
-			actlst->syslines = cflst;
 		}
+		actlst->syslines = cflst;
 	}
 	return actlst;
 }
@@ -1410,6 +1409,9 @@ cnfrulePrint(struct cnfrule *rule)
 	dbgprintf("------ end rule %p\n", rule);
 }
 
+/* note: the sysline itself was already freed during processing
+ * and as such MUST NOT be freed again!
+ */
 void
 cnfcfsyslinelstDestruct(struct cnfcfsyslinelst *cfslst)
 {
@@ -1417,7 +1419,6 @@ cnfcfsyslinelstDestruct(struct cnfcfsyslinelst *cfslst)
 	while(cfslst != NULL) {
 		toDel = cfslst;
 		cfslst = cfslst->next;
-		free(toDel->line);
 		free(toDel);
 	}
 }
