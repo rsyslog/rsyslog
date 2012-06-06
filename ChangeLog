@@ -9,6 +9,21 @@ Version 6.2.2  [v6-stable], 2012-05-??
 - bugfix: --enable-smcustbindcdr configure directive did not work
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=330
   Thanks to Ultrabug for the patch.
+- add small delay (50ms) after sending shutdown message
+  There seem to be cases where the shutdown message is otherwise not
+  processed, not even on an idle system. Thanks to Marcin for
+  bringing this problem up.
+- support for resolving huge groups
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=310
+  Thanks to Alec Warner for the patch
+- bugfix: potential hang due to mutex deadlock
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=316
+  Thanks to Andreas Piesk for reporting&analyzing this bug as well as
+  providing patches and other help in resolving it.
+- bugfix: property PROCID empty instead of proper nilvalue if not present
+  If it is not present, it must have the nilvalue "-" as of RFC5424
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=332
+  Thanks to John N for reporting this issue.
 ---------------------------------------------------------------------------
 Version 6.2.1  [v6-stable], 2012-05-10
 - change plugin config interface to be compatible with pre-v6.2 system
@@ -284,7 +299,14 @@ Version 5.9.0  [V5-DEVEL] (rgerhards), 2011-03-??
   affected directive was: $ActionExecOnlyWhenPreviousIsSuspended on
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=236
 ---------------------------------------------------------------------------
-Version 5.8.12  [V5-stable] 2012-05-??
+Version 5.8.12  [V5-stable] 2012-06-06
+- add small delay (50ms) after sending shutdown message
+  There seem to be cases where the shutdown message is otherwise not
+  processed, not even on an idle system. Thanks to Marcin for
+  bringing this problem up.
+- support for resolving huge groups
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=310
+  Thanks to Alec Warner for the patch
 - bugfix: delayble source could block action queue, even if there was
   a disk queue associated with it. The root cause of this problem was
   that it makes no sense to delay messages once they arrive in the 
@@ -310,6 +332,14 @@ Version 5.8.12  [V5-stable] 2012-05-??
   please let us know.
   Thanks to Tomas Heinrich for the patch.
 - bugfix/tcpflood: sending small test files did not work correctly
+- bugfix: potential hang due to mutex deadlock
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=316
+  Thanks to Andreas Piesk for reporting&analyzing this bug as well as
+  providing patches and other help in resolving it.
+- bugfix: property PROCID empty instead of proper nilvalue if not present
+  If it is not present, it must have the nilvalue "-" as of RFC5424
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=332
+  Thanks to John N for reporting this issue.
 ---------------------------------------------------------------------------
 Version 5.8.11  [V5-stable] 2012-05-03
 - bugfix: ommysql did not properly init/exit the mysql runtime library

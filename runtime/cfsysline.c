@@ -339,11 +339,12 @@ static int doParseOnOffOption(uchar **pp)
  */
 static rsRetVal doGetGID(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal)
 {
-	struct group *pgBuf;
+	struct group *pgBuf = NULL;
 	struct group gBuf;
 	DEFiRet;
 	uchar szName[256];
-	char stringBuf[2048];	/* I hope this is large enough... */
+	int bufSize = 2048;
+	char * stringBuf = NULL;
 
 	assert(pp != NULL);
 	assert(*pp != NULL);
@@ -353,7 +354,17 @@ static rsRetVal doGetGID(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *p
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}
 
-	getgrnam_r((char*)szName, &gBuf, stringBuf, sizeof(stringBuf), &pgBuf);
+
+	CHKmalloc(stringBuf = malloc(bufSize));
+	while(pgBuf == NULL) {
+		errno = 0;
+		getgrnam_r((char*)szName, &gBuf, stringBuf, bufSize, &pgBuf);
+		if((pgBuf == NULL) && (errno == ERANGE)) {
+			/* Increase bufsize and try again.*/
+			bufSize *= 2;
+			CHKmalloc(stringBuf = realloc(stringBuf, bufSize));
+		}
+	}
 
 	if(pgBuf == NULL) {
 		errmsg.LogError(0, RS_RET_NOT_FOUND, "ID for group '%s' could not be found or error", (char*)szName);
@@ -372,6 +383,7 @@ static rsRetVal doGetGID(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *p
 	skipWhiteSpace(pp); /* skip over any whitespace */
 
 finalize_it:
+	free(stringBuf);
 	RETiRet;
 }
 
