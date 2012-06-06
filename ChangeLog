@@ -1,5 +1,8 @@
 ---------------------------------------------------------------------------
 Version 5.8.12  [V5-stable] 2012-05-??
+- support for resolving huge groups
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=310
+  Thanks to Alec Warner for the patch
 - bugfix: delayble source could block action queue, even if there was
   a disk queue associated with it. The root cause of this problem was
   that it makes no sense to delay messages once they arrive in the 

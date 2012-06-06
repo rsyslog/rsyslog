@@ -342,8 +342,8 @@ static rsRetVal doGetGID(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *p
 	struct group gBuf;
 	DEFiRet;
 	uchar szName[256];
-	long bufSize = 2048;
-	char * stringBuf = malloc(bufSize);
+	int bufSize = 2048;
+	char * stringBuf = NULL;
 
 	assert(pp != NULL);
 	assert(*pp != NULL);
@@ -353,13 +353,15 @@ static rsRetVal doGetGID(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *p
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}
 
+
+	CHKmalloc(stringBuf = malloc(bufSize));
 	while(pgBuf == NULL) {
 		errno = 0;
 		getgrnam_r((char*)szName, &gBuf, stringBuf, bufSize, &pgBuf);
 		if((pgBuf == NULL) && (errno == ERANGE)) {
 			/* Increase bufsize and try again.*/
 			bufSize *= 2;
-			stringBuf = realloc(stringBuf, bufSize);
+			CHKmalloc(stringBuf = realloc(stringBuf, bufSize));
 		}
 	}
 
@@ -380,6 +382,7 @@ static rsRetVal doGetGID(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *p
 	skipWhiteSpace(pp); /* skip over any whitespace */
 
 finalize_it:
+	free(stringBuf);
 	RETiRet;
 }
 
