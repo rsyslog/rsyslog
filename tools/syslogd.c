@@ -849,6 +849,11 @@ die(int sig)
 		errno = 0;
 		logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)buf, 0);
 	}
+	/* we sleep for 50ms to give the queue a chance to pick up the exit message;
+	 * otherwise we have seen cases where the message did not make it to log
+	 * files, even on idle systems.
+	 */
+	srSleep(0, 50);
 
 	/* drain queue (if configured so) and stop main queue worker thread pool */
 	DBGPRINTF("Terminating main queue...\n");

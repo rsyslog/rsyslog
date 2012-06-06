@@ -122,4 +122,8 @@ rsRetVal objGetObjInterface(obj_if_t *pIf);
 PROTOTYPEObjClassInit(obj);
 PROTOTYPEObjClassExit(obj);
 
+
+/* the following definition is only for "friends" */
+extern pthread_mutex_t mutObjGlobalOp;	/* mutex to guard global operations of the object system */
+
 #endif /* #ifndef OBJ_H_INCLUDED */
