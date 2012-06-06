@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 5.8.12  [V5-stable] 2012-05-??
+Version 5.8.12  [V5-stable] 2012-06-06
 - add small delay (50ms) after sending shutdown message
   There seem to be cases where the shutdown message is otherwise not
   processed, not even on an idle system. Thanks to Marcin for
