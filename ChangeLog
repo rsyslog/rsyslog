@@ -36,6 +36,10 @@ Version 5.8.12  [V5-stable] 2012-05-??
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=316
   Thanks to Andreas Piesk for reporting&analyzing this bug as well as
   providing patches and other help in resolving it.
+- bugfix: property PROCID empty instead of proper nilvalue if not present
+  If it is not present, it must have the nilvalue "-" as of RFC5424
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=332
+  Thanks to John N for reporting this issue.
 ---------------------------------------------------------------------------
 Version 5.8.11  [V5-stable] 2012-05-03
 - bugfix: ommysql did not properly init/exit the mysql runtime library
