@@ -1618,7 +1618,7 @@ char *getPROCID(msg_t *pM, sbool bLockMutex)
 		MsgLock(pM);
 	preparePROCID(pM, MUTEX_ALREADY_LOCKED);
 	if(pM->pCSPROCID == NULL)
-		pszRet = UCHAR_CONSTANT("");
+		pszRet = UCHAR_CONSTANT("-");
 	else 
 		pszRet = rsCStrGetSzStrNoNULL(pM->pCSPROCID);
 	if(bLockMutex == LOCK_MUTEX)

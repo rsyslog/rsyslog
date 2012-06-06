@@ -97,7 +97,7 @@ DEFobjCurrIf(module)
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(strm)
 static objInfo_t *arrObjInfo[OBJ_NUM_IDS]; /* array with object information pointers */
-static pthread_mutex_t mutObjGlobalOp;	/* mutex to guard global operations of the object system */
+pthread_mutex_t mutObjGlobalOp;	/* mutex to guard global operations of the object system */
 
 
 /* cookies for serialized lines */
@@ -1319,7 +1319,7 @@ objClassInit(modInfo_t *pModInfo)
 	}
 
 	/* the mutex must be recursive, because objects may call into other
-	 * object identifieres recursively.
+	 * object identifiers recursively.
 	 */
 	pthread_mutexattr_init(&mutAttr);
 	pthread_mutexattr_settype(&mutAttr, PTHREAD_MUTEX_RECURSIVE);
