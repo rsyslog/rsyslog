@@ -24,6 +24,8 @@ Version 6.2.2  [v6-stable], 2012-05-??
   If it is not present, it must have the nilvalue "-" as of RFC5424
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=332
   Thanks to John N for reporting this issue.
+- bugfix: did not compile under solaris due to $uptime property code
+  For the time being, $uptime is not supported on Solaris
 ---------------------------------------------------------------------------
 Version 6.2.1  [v6-stable], 2012-05-10
 - change plugin config interface to be compatible with pre-v6.2 system

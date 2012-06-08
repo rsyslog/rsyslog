@@ -2565,6 +2565,10 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			*pbMustBeFreed = 0;
 			break;
 		case PROP_SYS_UPTIME:
+#			ifdef OS_SOLARIS
+			pRes = (uchar*) "UPTIME NOT available under Solaris";
+			*pbMustBeFreed = 0;
+#			else
 			{
 			struct sysinfo s_info;
 
@@ -2580,6 +2584,7 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 
 			snprintf((char*) pRes, sizeof(uchar) * 32, "%ld", s_info.uptime);
 			}
+#			endif
 		break;
 		default:
 			/* there is no point in continuing, we may even otherwise render the
