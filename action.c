@@ -967,7 +967,7 @@ tryDoAction(action_t *pAction, batch_t *pBatch, int *pnElem)
 	i = pBatch->iDoneUpTo;	/* all messages below that index are processed */
 	iElemProcessed = 0;
 	iCommittedUpTo = i;
-dbgprintf("XXXXX:  tryDoAction %p, pnElem %d, nElem %d\n", pAction, *pnElem, pBatch->nElem);
+	DBGPRINTF("tryDoAction %p, pnElem %d, nElem %d\n", pAction, *pnElem, pBatch->nElem);
 	while(iElemProcessed <= *pnElem && i < pBatch->nElem) {
 		if(*(pBatch->pbShutdownImmediate))
 			ABORT_FINALIZE(RS_RET_FORCE_TERM);

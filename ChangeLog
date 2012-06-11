@@ -26,6 +26,8 @@ Version 6.2.2  [v6-stable], 2012-05-??
   Thanks to John N for reporting this issue.
 - bugfix: did not compile under solaris due to $uptime property code
   For the time being, $uptime is not supported on Solaris
+- bugfix: "last message repeated n times" message was missing hostname
+  Thanks to Zdenek Salvet for finding this bug and to Bodik for reporting
 ---------------------------------------------------------------------------
 Version 6.2.1  [v6-stable], 2012-05-10
 - change plugin config interface to be compatible with pre-v6.2 system
@@ -300,6 +302,10 @@ Version 5.9.0  [V5-DEVEL] (rgerhards), 2011-03-??
 - bugfix: failover did not work correctly if repeated msg reduction was on
   affected directive was: $ActionExecOnlyWhenPreviousIsSuspended on
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=236
+---------------------------------------------------------------------------
+Version 5.8.13  [V5-stable] 2012-06-??
+- bugfix: "last message repeated n times" message was missing hostname
+  Thanks to Zdenek Salvet for finding this bug and to Bodik for reporting
 ---------------------------------------------------------------------------
 Version 5.8.12  [V5-stable] 2012-06-06
 - add small delay (50ms) after sending shutdown message
