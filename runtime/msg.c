@@ -982,11 +982,15 @@ msg_t* MsgDup(msg_t* pOld)
 	} else {
 		tmpCOPYSZ(RawMsg);
 	}
-	if(pOld->iLenHOSTNAME < CONF_HOSTNAME_BUFSIZE) {
-		memcpy(pNew->szHOSTNAME, pOld->szHOSTNAME, pOld->iLenHOSTNAME + 1);
-		pNew->pszHOSTNAME = pNew->szHOSTNAME;
+	if(pOld->pszHOSTNAME == NULL) {
+		pNew->pszHOSTNAME = NULL;
 	} else {
-		tmpCOPYSZ(HOSTNAME);
+		if(pOld->iLenHOSTNAME < CONF_HOSTNAME_BUFSIZE) {
+			memcpy(pNew->szHOSTNAME, pOld->szHOSTNAME, pOld->iLenHOSTNAME + 1);
+			pNew->pszHOSTNAME = pNew->szHOSTNAME;
+		} else {
+			tmpCOPYSZ(HOSTNAME);
+		}
 	}
 
 	tmpCOPYCSTR(ProgName);
