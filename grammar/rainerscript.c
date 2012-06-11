@@ -1129,8 +1129,9 @@ cnfexprEval(struct cnfexpr *expr, struct var *ret, void* usrptr)
 				ret->d.n = 1ll;
 			else 
 				ret->d.n = 0ll;
+			if(r.datatype == 'S') es_deleteStr(r.d.estr); 
 		}
-		FREE_BOTH_RET;
+		if(l.datatype == 'S') es_deleteStr(l.d.estr);
 		break;
 	case AND:
 		cnfexprEval(expr->l, &l, usrptr);
@@ -1141,10 +1142,11 @@ cnfexprEval(struct cnfexpr *expr, struct var *ret, void* usrptr)
 				ret->d.n = 1ll;
 			else 
 				ret->d.n = 0ll;
+			if(r.datatype == 'S') es_deleteStr(r.d.estr); 
 		} else {
 			ret->d.n = 0ll;
 		}
-		FREE_BOTH_RET;
+		if(l.datatype == 'S') es_deleteStr(l.d.estr);
 		break;
 	case NOT:
 		cnfexprEval(expr->r, &r, usrptr);
