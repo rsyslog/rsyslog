@@ -6,6 +6,8 @@ Version 6.3.11  [BETA] 2012-06-??
   a shortcut is used).
   Thanks to Lars Peterson for providing the initial bug report and his
   support in solving it.
+- bugfix: "last message repeated n times" message was missing hostname
+  Thanks to Zdenek Salvet for finding this bug and to Bodik for reporting
 ---------------------------------------------------------------------------
 Version 6.3.10  [BETA] 2012-06-04
 - bugfix: delayble source could block action queue, even if there was
@@ -205,6 +207,25 @@ Version 6.2.2  [v6-stable], 2012-05-??
 - bugfix: --enable-smcustbindcdr configure directive did not work
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=330
   Thanks to Ultrabug for the patch.
+- add small delay (50ms) after sending shutdown message
+  There seem to be cases where the shutdown message is otherwise not
+  processed, not even on an idle system. Thanks to Marcin for
+  bringing this problem up.
+- support for resolving huge groups
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=310
+  Thanks to Alec Warner for the patch
+- bugfix: potential hang due to mutex deadlock
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=316
+  Thanks to Andreas Piesk for reporting&analyzing this bug as well as
+  providing patches and other help in resolving it.
+- bugfix: property PROCID empty instead of proper nilvalue if not present
+  If it is not present, it must have the nilvalue "-" as of RFC5424
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=332
+  Thanks to John N for reporting this issue.
+- bugfix: did not compile under solaris due to $uptime property code
+  For the time being, $uptime is not supported on Solaris
+- bugfix: "last message repeated n times" message was missing hostname
+  Thanks to Zdenek Salvet for finding this bug and to Bodik for reporting
 ---------------------------------------------------------------------------
 Version 6.2.1  [v6-stable], 2012-05-10
 - change plugin config interface to be compatible with pre-v6.2 system
@@ -654,6 +675,10 @@ Version 5.9.0  [V5-DEVEL] (rgerhards), 2011-06-08
 - bugfix: failover did not work correctly if repeated msg reduction was on
   affected directive was: $ActionExecOnlyWhenPreviousIsSuspended on
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=236
+---------------------------------------------------------------------------
+Version 5.8.13  [V5-stable] 2012-06-??
+- bugfix: "last message repeated n times" message was missing hostname
+  Thanks to Zdenek Salvet for finding this bug and to Bodik for reporting
 ---------------------------------------------------------------------------
 Version 5.8.12  [V5-stable] 2012-06-06
 - add small delay (50ms) after sending shutdown message
