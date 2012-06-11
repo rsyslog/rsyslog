@@ -28,6 +28,8 @@ Version 5.9.8  [V5-BETA], 2012-05-??
   If it is not present, it must have the nilvalue "-" as of RFC5424
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=332
   Thanks to John N for reporting this issue.
+- bugfix: "last message repeated n times" message was missing hostname
+  Thanks to Zdenek Salvet for finding this bug and to Bodik for reporting
 ---------------------------------------------------------------------------
 Version 5.9.7  [V5-BETA], 2012-05-10
 - added capability to specify substrings for field extraction mode
@@ -174,6 +176,10 @@ Version 5.9.0  [V5-DEVEL] (rgerhards), 2011-06-08
 - bugfix: failover did not work correctly if repeated msg reduction was on
   affected directive was: $ActionExecOnlyWhenPreviousIsSuspended on
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=236
+---------------------------------------------------------------------------
+Version 5.8.13  [V5-stable] 2012-06-??
+- bugfix: "last message repeated n times" message was missing hostname
+  Thanks to Zdenek Salvet for finding this bug and to Bodik for reporting
 ---------------------------------------------------------------------------
 Version 5.8.12  [V5-stable] 2012-06-06
 - add small delay (50ms) after sending shutdown message
