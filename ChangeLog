@@ -1,4 +1,5 @@
 ---------------------------------------------------------------------------
+<<<<<<< HEAD
 Version 6.5.0  [devel] 2012-0?-??
 - imrelp now supports non-cancel thread termination
   (but now requires at least librelp 1.0.1)
@@ -506,6 +507,8 @@ expected that interfaces, even new ones, break during the initial
   syslog plain tcp input plugin (NOT supporting TLS!)
   [ported from v4]
 ---------------------------------------------------------------------------
+=======
+>>>>>>> 0620fc5780fabdfb160524197fd4aa6bb22613e9
 Version 5.9.8  [V5-BETA], 2012-05-??
 - bugfix: delayble source could block action queue, even if there was
   a disk queue associated with it. The root cause of this problem was
@@ -535,6 +538,8 @@ Version 5.9.8  [V5-BETA], 2012-05-??
   If it is not present, it must have the nilvalue "-" as of RFC5424
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=332
   Thanks to John N for reporting this issue.
+- bugfix: "last message repeated n times" message was missing hostname
+  Thanks to Zdenek Salvet for finding this bug and to Bodik for reporting
 ---------------------------------------------------------------------------
 Version 5.9.7  [V5-BETA], 2012-05-10
 - added capability to specify substrings for field extraction mode
