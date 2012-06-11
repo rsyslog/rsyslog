@@ -8,6 +8,14 @@ Version 6.5.0  [devel] 2012-0?-??
 - added new 0mq plugins (via czmq lib)
   Thanks to David Kelly for contributing these modules
 ---------------------------------------------------------------------------
+Version 6.3.11  [BETA] 2012-06-??
+- bugfix: expression-based filters with AND/OR could segfault
+  due to a problem with boolean shortcut operations. From the user's
+  perspective, the segfault is almost non-deterministic (it occurs when
+  a shortcut is used).
+  Thanks to Lars Peterson for providing the initial bug report and his
+  support in solving it.
+---------------------------------------------------------------------------
 Version 6.3.10  [BETA] 2012-06-04
 - bugfix: delayble source could block action queue, even if there was
   a disk queue associated with it. The root cause of this problem was
