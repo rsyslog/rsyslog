@@ -163,7 +163,8 @@ enum cnffuncid {
 	CNFFUNC_GETENV,
 	CNFFUNC_TOLOWER,
 	CNFFUNC_CSTR,
-	CNFFUNC_CNUM
+	CNFFUNC_CNUM,
+	CNFFUNC_RE_MATCH
 };
 
 struct cnffunc {

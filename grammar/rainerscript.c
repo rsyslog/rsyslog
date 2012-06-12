@@ -838,6 +838,11 @@ doFuncCall(struct cnffunc *func, struct var *ret, void* usrptr)
 		}
 		ret->datatype = 'N';
 		break;
+	case CNFFUNC_RE_MATCH:
+		dbgprintf("TODO: implement re_match()\n");
+		ret->d.n = 1;
+		ret->datatype = 'N';
+		break;
 	default:
 		if(Debug) {
 			fname = es_str2cstr(func->fname, NULL);
@@ -891,7 +896,7 @@ cnfexprEval(struct cnfexpr *expr, struct var *ret, void* usrptr)
 	int bMustFree, bMustFree2;
 	long long n_r, n_l;
 
-	//dbgprintf("eval expr %p, type '%c'(%u)\n", expr, expr->nodetype, expr->nodetype);
+	dbgprintf("eval expr %p, type '%c'(%u)\n", expr, expr->nodetype, expr->nodetype);
 	switch(expr->nodetype) {
 	/* note: comparison operations are extremely similar. The code can be copyied, only
 	 * places flagged with "CMP" need to be changed.
@@ -1453,6 +1458,9 @@ cnffparamlstNew(struct cnfexpr *expr, struct cnffparamlst *next)
 static inline enum cnffuncid
 funcName2ID(es_str_t *fname, unsigned short nParams)
 {
+{ char *s;s=es_str2cstr(fname, NULL);
+dbgprintf("ZZZZ: func: '%s', nParams: %d\n", s, nParams);
+free(s);}
 	if(!es_strbufcmp(fname, (unsigned char*)"strlen", sizeof("strlen") - 1)) {
 		if(nParams != 1) {
 			parser_errmsg("number of parameters for strlen() must be one "
@@ -1488,6 +1496,13 @@ funcName2ID(es_str_t *fname, unsigned short nParams)
 			return CNFFUNC_INVALID;
 		}
 		return CNFFUNC_CNUM;
+	} else if(!es_strbufcmp(fname, (unsigned char*)"re_match", sizeof("re_match") - 1)) {
+		if(nParams != 2) {
+			parser_errmsg("number of parameters for re_match() must be two "
+				      "but is %d.", nParams);
+			return CNFFUNC_INVALID;
+		}
+		return CNFFUNC_RE_MATCH;
 	} else {
 		return CNFFUNC_INVALID;
 	}
