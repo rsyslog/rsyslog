@@ -1,5 +1,4 @@
 ---------------------------------------------------------------------------
-<<<<<<< HEAD
 Version 6.5.0  [devel] 2012-0?-??
 - imrelp now supports non-cancel thread termination
   (but now requires at least librelp 1.0.1)
@@ -507,8 +506,6 @@ expected that interfaces, even new ones, break during the initial
   syslog plain tcp input plugin (NOT supporting TLS!)
   [ported from v4]
 ---------------------------------------------------------------------------
-=======
->>>>>>> 0620fc5780fabdfb160524197fd4aa6bb22613e9
 Version 5.9.8  [V5-BETA], 2012-05-??
 - bugfix: delayble source could block action queue, even if there was
   a disk queue associated with it. The root cause of this problem was
