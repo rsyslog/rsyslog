@@ -125,6 +125,7 @@
 #include "rsconf.h"
 #include "dnscache.h"
 #include "sd-daemon.h"
+#include "rainerscript.h"
 
 /* definitions for objects we access */
 DEFobjCurrIf(obj)
@@ -1445,6 +1446,7 @@ InitGlobalClasses(void)
 	pErrObj = "net";
 	CHKiRet(objUse(net, LM_NET_FILENAME));
 	dnscacheInit();
+	initRainerscript();
 
 finalize_it:
 	if(iRet != RS_RET_OK) {

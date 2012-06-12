@@ -172,6 +172,7 @@ struct cnffunc {
 	es_str_t *fname;
 	unsigned short nParams;
 	enum cnffuncid fID; /* function ID for built-ins, 0 means use name */
+	void *funcdata;	/* global data for function-specific use (e.g. compiled regex) */
 	struct cnfexpr *expr[];
 };
 
@@ -250,6 +251,7 @@ void cnfparamsPrint(struct cnfparamblk *params, struct cnfparamvals *vals);
 void varDelete(struct var *v);
 void cnfparamvalsDestruct(struct cnfparamvals *paramvals, struct cnfparamblk *blk);
 void cnfcfsyslinelstDestruct(struct cnfcfsyslinelst *cfslst);
+rsRetVal initRainerscript(void);
 
 /* debug helper */
 void cstrPrint(char *text, es_str_t *estr);

@@ -41,6 +41,11 @@
 #include "grammar.h"
 #include "queue.h"
 #include "srUtils.h"
+#include "regexp.h"
+#include "obj.h"
+
+DEFobjCurrIf(obj)
+DEFobjCurrIf(regexp)
 
 void
 readConfFile(FILE *fp, es_str_t **str)
@@ -1458,9 +1463,6 @@ cnffparamlstNew(struct cnfexpr *expr, struct cnffparamlst *next)
 static inline enum cnffuncid
 funcName2ID(es_str_t *fname, unsigned short nParams)
 {
-{ char *s;s=es_str2cstr(fname, NULL);
-dbgprintf("ZZZZ: func: '%s', nParams: %d\n", s, nParams);
-free(s);}
 	if(!es_strbufcmp(fname, (unsigned char*)"strlen", sizeof("strlen") - 1)) {
 		if(nParams != 1) {
 			parser_errmsg("number of parameters for strlen() must be one "
@@ -1508,6 +1510,41 @@ free(s);}
 	}
 }
 
+
+static inline rsRetVal
+initFunc_re_match(struct cnffunc *func)
+{
+	rsRetVal localRet;
+	char *regex = NULL;
+	regex_t *re;
+	DEFiRet;
+
+	func->funcdata = NULL;
+	if(func->expr[1]->nodetype != 'S') {
+		parser_errmsg("param 2 of re_match() must be a constant string");
+		FINALIZE;
+	}
+
+	CHKmalloc(re = malloc(sizeof(regex_t)));
+	func->funcdata = re;
+
+	regex = es_str2cstr(((struct cnfstringval*) func->expr[1])->estr, NULL);
+	
+	if((localRet = objUse(regexp, LM_REGEXP_FILENAME)) == RS_RET_OK) {
+		if(regexp.regcomp(re, (char*) regex, REG_EXTENDED) != 0) {
+			parser_errmsg("cannot compile regex '%s'", regex);
+			ABORT_FINALIZE(RS_RET_ERR);
+		}
+	} else { /* regexp object could not be loaded */
+		parser_errmsg("could not load regex support - regex ignored");
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
+finalize_it:
+	free(regex);
+	RETiRet;
+}
+
 struct cnffunc *
 cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst)
 {
@@ -1533,6 +1570,14 @@ cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst)
 			toDel = param;
 			param = param->next;
 			free(toDel);
+		}
+		/* some functions require special initialization */
+		switch(func->fID) {
+			case CNFFUNC_RE_MATCH:
+				/* need to compile the regexp in param 2, so this MUST be a constant */
+				initFunc_re_match(func);
+				break;
+			default:break;
 		}
 	}
 	return func;
@@ -1630,4 +1675,14 @@ cstrPrint(char *text, es_str_t *estr)
 	str = es_str2cstr(estr, NULL);
 	dbgprintf("%s%s", text, str);
 	free(str);
+}
+
+/* init must be called once before any parsing of the script files start */
+rsRetVal
+initRainerscript(void)
+{
+	DEFiRet;
+	CHKiRet(objGetObjInterface(&obj));
+finalize_it:
+	RETiRet;
 }

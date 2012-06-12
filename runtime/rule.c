@@ -336,6 +336,7 @@ CODESTARTobjDestruct(rule)
 		if(pThis->f_filterData.prop.propName != NULL)
 			es_deleteStr(pThis->f_filterData.prop.propName);
 	}
+#warning: need to destroy expression based filter!
 
 	llDestroy(&pThis->llActList);
 ENDobjDestruct(rule)
