@@ -414,6 +414,7 @@ setInstParamDefaults(instanceData *pData)
 	pData->dynSrchIdx = 0;
 	pData->dynSrchType = 0;
 	pData->asyncRepl = 0;
+	pData->bulkmode = 0;
 	pData->tplName = NULL;
 }
 
