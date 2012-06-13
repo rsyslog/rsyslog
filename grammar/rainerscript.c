@@ -754,8 +754,7 @@ var2Number(struct var *r, int *bSuccess)
 	return n;
 }
 
-/* ensure that retval is a string; if string is no number,
- * emit error message and set number to 0.
+/* ensure that retval is a string
  */
 static inline es_str_t *
 var2String(struct var *r, int *bMustFree)
@@ -779,6 +778,7 @@ doFuncCall(struct cnffunc *func, struct var *ret, void* usrptr)
 	int bMustFree;
 	es_str_t *estr;
 	char *str;
+	int retval;
 	struct var r[CNFFUNC_MAX_ARGS];
 
 	dbgprintf("rainerscript: executing function id %d\n", func->fID);
@@ -844,9 +844,21 @@ doFuncCall(struct cnffunc *func, struct var *ret, void* usrptr)
 		ret->datatype = 'N';
 		break;
 	case CNFFUNC_RE_MATCH:
-		dbgprintf("TODO: implement re_match()\n");
-		ret->d.n = 1;
+		cnfexprEval(func->expr[0], &r[0], usrptr);
+		estr = var2String(&r[0], &bMustFree);
+		str = es_str2cstr(estr, NULL);
+		retval = regexp.regexec(func->funcdata, str, 0, NULL, 0);
+		if(retval == 0)
+			ret->d.n = 1;
+		else {
+			ret->d.n = 0;
+			if(retval != REG_NOMATCH) {
+				DBGPRINTF("re_match: regexec returned error %d\n", retval);
+			}
+		}
 		ret->datatype = 'N';
+		if(bMustFree) es_deleteStr(estr);
+		free(str);
 		break;
 	default:
 		if(Debug) {
