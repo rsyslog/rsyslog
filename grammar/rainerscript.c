@@ -821,6 +821,7 @@ doFuncCall(struct cnffunc *func, struct var *ret, void* usrptr)
 		es_tolower(estr);
 		ret->datatype = 'S';
 		ret->d.estr = estr;
+		if(r[0].datatype == 'S') es_deleteStr(r[0].d.estr);
 		break;
 	case CNFFUNC_CSTR:
 		cnfexprEval(func->expr[0], &r[0], usrptr);
@@ -829,6 +830,7 @@ doFuncCall(struct cnffunc *func, struct var *ret, void* usrptr)
 			estr = es_strdup(estr);
 		ret->datatype = 'S';
 		ret->d.estr = estr;
+		if(r[0].datatype == 'S') es_deleteStr(r[0].d.estr);
 		break;
 	case CNFFUNC_CNUM:
 		if(func->expr[0]->nodetype == 'N') {
@@ -859,6 +861,7 @@ doFuncCall(struct cnffunc *func, struct var *ret, void* usrptr)
 		ret->datatype = 'N';
 		if(bMustFree) es_deleteStr(estr);
 		free(str);
+		if(r[0].datatype == 'S') es_deleteStr(r[0].d.estr);
 		break;
 	default:
 		if(Debug) {
@@ -1220,6 +1223,77 @@ cnfexprEval(struct cnfexpr *expr, struct var *ret, void* usrptr)
 		break;
 	}
 }
+
+//---------------------------------------------------------
+
+static inline void
+cnffuncDestruct(struct cnffunc *func)
+{
+	unsigned short i;
+
+	for(i = 0 ; i < func->nParams ; ++i) {
+		cnfexprDestruct(func->expr[i]);
+	}
+	/* some functions require special destruction */
+	switch(func->fID) {
+		case CNFFUNC_RE_MATCH:
+			regexp.regfree(func->funcdata);
+			free(func->funcdata);
+			break;
+		default:break;
+	}
+}
+
+/* Destruct an expression and all sub-expressions contained in it.
+ */
+void
+cnfexprDestruct(struct cnfexpr *expr)
+{
+
+	dbgprintf("cnfexprDestruct expr %p, type '%c'(%u)\n", expr, expr->nodetype, expr->nodetype);
+	switch(expr->nodetype) {
+	case CMP_NE:
+	case CMP_EQ:
+	case CMP_LE:
+	case CMP_GE:
+	case CMP_LT:
+	case CMP_GT:
+	case CMP_STARTSWITH:
+	case CMP_STARTSWITHI:
+	case CMP_CONTAINS:
+	case CMP_CONTAINSI:
+	case OR:
+	case AND:
+	case '+':
+	case '-':
+	case '*':
+	case '/':
+	case '%': /* binary */
+		cnfexprDestruct(expr->l);
+		cnfexprDestruct(expr->r);
+		break;
+	case NOT: 
+	case 'M': /* unary */
+		cnfexprDestruct(expr->r);
+		break;
+	case 'N':
+		break;
+	case 'S':
+		es_deleteStr(((struct cnfstringval*)expr)->estr);
+		break;
+	case 'V':
+		free(((struct cnfvar*)expr)->name);
+		break;
+	case 'F':
+		cnffuncDestruct((struct cnffunc*)expr);
+		break;
+	default:break;
+	}
+	free(expr);
+}
+
+//---- END
+
 
 /* Evaluate an expression as a bool. This is added because expressions are
  * mostly used inside filters, and so this function is quite common and

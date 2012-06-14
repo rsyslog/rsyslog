@@ -335,6 +335,8 @@ CODESTARTobjDestruct(rule)
 			rsCStrRegexDestruct(&pThis->f_filterData.prop.regex_cache);
 		if(pThis->f_filterData.prop.propName != NULL)
 			es_deleteStr(pThis->f_filterData.prop.propName);
+	} else if(pThis->f_filter_type == FILTER_EXPR) {
+		cnfexprDestruct(pThis->f_filterData.expr);
 	}
 #warning: need to destroy expression based filter!
 

@@ -235,6 +235,7 @@ struct cnfexpr* cnfexprNew(unsigned nodetype, struct cnfexpr *l, struct cnfexpr 
 void cnfexprPrint(struct cnfexpr *expr, int indent);
 void cnfexprEval(struct cnfexpr *expr, struct var *ret, void *pusr);
 int cnfexprEvalBool(struct cnfexpr *expr, void *usrptr);
+void cnfexprDestruct(struct cnfexpr *expr);
 struct cnfnumval* cnfnumvalNew(long long val);
 struct cnfstringval* cnfstringvalNew(es_str_t *estr);
 struct cnfrule * cnfruleNew(enum cnfFiltType filttype, struct cnfactlst *actlst);
