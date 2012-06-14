@@ -1239,6 +1239,7 @@ cnffuncDestruct(struct cnffunc *func)
 		case CNFFUNC_RE_MATCH:
 			regexp.regfree(func->funcdata);
 			free(func->funcdata);
+			free(func->fname);
 			break;
 		default:break;
 	}
