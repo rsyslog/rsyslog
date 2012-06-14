@@ -262,6 +262,7 @@ destructSrv(ptcpsrv_t *pSrv)
 {
 	prop.Destruct(&pSrv->pInputName);
 	pthread_mutex_destroy(&pSrv->mutSessLst);
+	free(pSrv->pszInputName);
 	free(pSrv->port);
 	free(pSrv);
 }
@@ -1071,7 +1072,7 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 		CHKmalloc(pSrv->lstnIP = ustrdup(inst->pszBindAddr));
 	}
 	pSrv->pRuleset = inst->pBindRuleset;
-	pSrv->pszInputName = (inst->pszInputName == NULL) ?  UCHAR_CONSTANT("imptcp") : ustrdup(inst->pszInputName);
+	pSrv->pszInputName = ustrdup((inst->pszInputName == NULL) ?  UCHAR_CONSTANT("imptcp") : inst->pszInputName);
 	CHKiRet(prop.Construct(&pSrv->pInputName));
 	CHKiRet(prop.SetString(pSrv->pInputName, pSrv->pszInputName, ustrlen(pSrv->pszInputName)));
 	CHKiRet(prop.ConstructFinalize(pSrv->pInputName));
