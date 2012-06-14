@@ -206,7 +206,9 @@ Version 6.3.0  [DEVEL] (rgerhards), 2011-06-01
 - introduced new config system
   http://blog.gerhards.net/2011/06/new-rsyslog-config-system-materializes.html
 ---------------------------------------------------------------------------
-Version 6.2.2  [v6-stable], 2012-05-??
+Version 6.2.2  [v6-stable], 2012-06-13
+- build system improvements and spec file templates
+  Thanks to Abby Edwards for providing these enhancements
 - bugfix: disk queue was not persisted on shutdown, regression of fix to
   http://bugzilla.adiscon.com/show_bug.cgi?id=299
   The new code also handles the case of shutdown of blocking light and 
