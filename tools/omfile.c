@@ -121,7 +121,7 @@ struct s_dynaFileCacheEntry {
 typedef struct s_dynaFileCacheEntry dynaFileCacheEntry;
 
 
-#define IOBUF_DFLT_SIZE 1024	/* default size for io buffers */
+#define IOBUF_DFLT_SIZE 4096	/* default size for io buffers */
 #define FLUSH_INTRVL_DFLT 1 	/* default buffer flush interval (in seconds) */
 #define USE_ASYNCWRITER_DFLT 0 	/* default buffer use async writer */
 #define FLUSHONTX_DFLT 1 	/* default for flush on TX end */
