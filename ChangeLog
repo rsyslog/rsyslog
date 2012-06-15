@@ -308,6 +308,11 @@ Version 5.9.0  [V5-DEVEL] (rgerhards), 2011-03-??
 Version 5.8.13  [V5-stable] 2012-06-??
 - bugfix: "last message repeated n times" message was missing hostname
   Thanks to Zdenek Salvet for finding this bug and to Bodik for reporting
+- bugfix "$PreserveFQDN on" was not honored in some modules
+  Thanks to bodik for reporting this bug.
+- bugfix: randomized IP option header in omudpspoof caused problems
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=327
+  Thanks to Rick Brown for helping to test out the patch.
 ---------------------------------------------------------------------------
 Version 5.8.12  [V5-stable] 2012-06-06
 - add small delay (50ms) after sending shutdown message

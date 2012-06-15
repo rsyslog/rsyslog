@@ -24,7 +24,7 @@
  * rgerhards, 2009-07-10
  *
  * Copyright 2009 David Lang (spoofing code)
- * Copyright 2009 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2009-2012 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -205,8 +205,6 @@ UDPSend(instanceData *pData, uchar *pszSourcename, char *msg, size_t len)
 	struct addrinfo *r;
 	int lsent = 0;
 	int bSendSuccess;
-	int j, build_ip;
-	u_char opt[20];
 	struct sockaddr_in *tempaddr,source_ip;
 	libnet_ptag_t ip, ipo;
 	libnet_ptag_t udp;
@@ -244,17 +242,8 @@ UDPSend(instanceData *pData, uchar *pszSourcename, char *msg, size_t len)
 			DBGPRINTF("Can't build UDP header: %s\n", libnet_geterror(libnet_handle));
 		}
 
-		build_ip = 0;
-		/* this is not a legal options string */
-		for (j = 0; j < 20; j++) {
-			opt[j] = libnet_get_prand(LIBNET_PR2);
-		}
-		ipo = libnet_build_ipv4_options(opt, 20, libnet_handle, ipo);
-		if (ipo == -1) {
-			DBGPRINTF("Can't build IP options: %s\n", libnet_geterror(libnet_handle));
-		}
 		ip = libnet_build_ipv4(
-			LIBNET_IPV4_H + 20 + len + LIBNET_UDP_H, /* length */
+			LIBNET_IPV4_H +  len + LIBNET_UDP_H, /* length */
 			0,				/* TOS */
 			242,				/* IP ID */
 			0,				/* IP Frag */
