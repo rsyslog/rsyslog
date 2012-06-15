@@ -2217,6 +2217,7 @@ static rsRetVal mainThread()
 	if(myPid != ppid)
 		kill(ppid, SIGTERM);
 
+	glbl.GenerateLocalHostNameProperty(); /* regenerate, FQDN setting may have changed */
 
 	/* If instructed to do so, we now drop privileges. Note that this is not 100% secure,
 	 * because outputs are already running at this time. However, we can implement
