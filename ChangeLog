@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 6.3.11  [BETA] 2012-06-??
+Version 6.3.11  [BETA] 2012-06-18
 - bugfix: expression-based filters with AND/OR could segfault
   due to a problem with boolean shortcut operations. From the user's
   perspective, the segfault is almost non-deterministic (it occurs when
