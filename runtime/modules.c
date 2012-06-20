@@ -11,7 +11,7 @@
  *
  * File begun on 2007-07-22 by RGerhards
  *
- * Copyright 2007-2011 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2012 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -74,6 +74,18 @@ static modInfo_t *pLoadedModulesLast = NULL;	/* tail-pointer */
 static struct dlhandle_s *pHandles = NULL;
 
 static uchar *pModDir;		/* directory where loadable modules are found */
+
+/* tables for interfacing with the v6 config system */
+/* action (instance) parameters */
+static struct cnfparamdescr actpdescr[] = {
+	{ "load", eCmdHdlrGetWord, 1 }
+};
+static struct cnfparamblk pblk =
+	{ CNFPARAMBLK_VERSION,
+	  sizeof(actpdescr)/sizeof(struct cnfparamdescr),
+	  actpdescr
+	};
+
 
 /* we provide a set of dummy functions for modules that do not support the
  * some interfaces.
@@ -931,9 +943,10 @@ findModule(uchar *pModName, int iModNameLen, modInfo_t **pMod)
  * the system loads a module for internal reasons, this is not directly tied to a
  * configuration. We could also think if it would be useful to add only certain types
  * of modules, but the current implementation at least looks simpler.
+ * Note: pvals = NULL means legacy config system
  */
 static rsRetVal
-Load(uchar *pModName, sbool bConfLoad)
+Load(uchar *pModName, sbool bConfLoad, struct cnfparamvals *pvals)
 {
 	DEFiRet;
 	
@@ -954,7 +967,7 @@ Load(uchar *pModName, sbool bConfLoad)
 	size_t lenPathBuf = sizeof(pathBuf);
 
 	assert(pModName != NULL);
-	dbgprintf("Requested to load module '%s'\n", pModName);
+	DBGPRINTF("Requested to load module '%s'\n", pModName);
 
 	iModNameLen = strlen((char*)pModName);
 	/* overhead for a full path is potentially 1 byte for a slash,
@@ -1089,6 +1102,39 @@ finalize_it:
 	if(pPathBuf != pathBuf) /* used malloc()ed memory? */
 		free(pPathBuf);
 	pthread_mutex_unlock(&mutObjGlobalOp);
+	RETiRet;
+}
+
+
+/* the v6+ way of loading modules: process a "module(...)" directive.
+ * rgerhards, 2012-06-20
+ */
+rsRetVal
+modulesProcessCnf(struct cnfobj *o)
+{
+	struct cnfparamvals *pvals;
+	uchar *cnfModName = NULL;
+	int typeIdx;
+	DEFiRet;
+
+	pvals = nvlstGetParams(o->nvlst, &pblk, NULL);
+	if(pvals == NULL) {
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+	DBGPRINTF("modulesProcessCnf params:\n");
+	cnfparamsPrint(&pblk, pvals);
+	typeIdx = cnfparamGetIdx(&pblk, "load");
+	if(pvals[typeIdx].bUsed == 0) {
+		errmsg.LogError(0, RS_RET_CONF_RQRD_PARAM_MISSING, "module type missing");
+		ABORT_FINALIZE(RS_RET_CONF_RQRD_PARAM_MISSING);
+	}
+
+	cnfModName = (uchar*)es_str2cstr(pvals[typeIdx].val.d.estr, NULL);
+	iRet = Load(cnfModName, 1, pvals);
+	
+finalize_it:
+	free(cnfModName);
+	cnfparamvalsDestruct(pvals, &pblk);
 	RETiRet;
 }
 

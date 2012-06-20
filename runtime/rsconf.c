@@ -368,6 +368,9 @@ void cnfDoObj(struct cnfobj *o)
 	case CNFOBJ_GLOBAL:
 		glblProcessCnf(o);
 		break;
+	case CNFOBJ_MODULE:
+		modulesProcessCnf(o);
+		break;
 	case CNFOBJ_ACTION:
 		actionProcessCnf(o);
 		break;

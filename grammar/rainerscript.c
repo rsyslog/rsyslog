@@ -682,7 +682,6 @@ cnfactlstReverse(struct cnfactlst *actlst)
 
 	prev = NULL;
 	while(actlst != NULL) {
-		//dbgprintf("reversing: %s\n", actlst->data.legActLine);
 		curr = actlst;
 		actlst = actlst->next;
 		curr->syslines = cnfcfsyslinelstReverse(curr->syslines);

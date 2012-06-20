@@ -171,19 +171,26 @@ BEGINinterface(module) /* name must also be changed in ENDinterface macro! */
 	void (*PrintList)(void);
 	rsRetVal (*UnloadAndDestructAll)(eModLinkType_t modLinkTypesToUnload);
 	rsRetVal (*doModInit)(rsRetVal (*modInit)(), uchar *name, void *pModHdlr, modInfo_t **pNew);
-	rsRetVal (*Load)(uchar *name, sbool bConfLoad);
+	rsRetVal (*Load)(uchar *name, sbool bConfLoad, struct cnfparamvals *pvals);
 	rsRetVal (*SetModDir)(uchar *name);
 	modInfo_t *(*FindWithCnfName)(rsconf_t *cnf, uchar *name, eModType_t rqtdType); /* added v3, 2011-07-19 */
 ENDinterface(module)
-#define moduleCURR_IF_VERSION 3 /* increment whenever you change the interface structure! */
+#define moduleCURR_IF_VERSION 4 /* increment whenever you change the interface structure! */
 /* Changes: 
  * v2 
  * - added param bCondLoad to Load call - 2011-04-27
  * - removed GetNxtType, added GetNxtCnfType - 2011-04-27
+ * v3 (see above)
+ * v4
+ * - added thrid parameter to Load() - 2012-06-20
  */
 
 /* prototypes */
 PROTOTYPEObj(module);
+/* in v6, we go back to in-core static link for core objects, at least those
+ * that are not called from plugins.
+ */
+rsRetVal modulesProcessCnf(struct cnfobj *o);
 
 /* TODO: remove "dirty" calls! */
 rsRetVal addModToCnfList(modInfo_t *pThis);
