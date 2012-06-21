@@ -180,7 +180,26 @@ typedef struct configSettings_s {
 static configSettings_t cs;
 uchar	*pszFileDfltTplName; /* name of the default template to use */
 
+struct modConfData_s {
+	rsconf_t *pConf;	/* our overall config object */
+	struct cnfparamvals* vals; /* vals kept to detect re-set options */
+	uchar 	*tplName;	/* default template */
+};
+
+static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
+static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current exec process */
+
 /* tables for interfacing with the v6 config system */
+/* module-global parameters */
+static struct cnfparamdescr modpdescr[] = {
+	{ "template", eCmdHdlrGetWord, 0 },
+};
+static struct cnfparamblk modpblk =
+	{ CNFPARAMBLK_VERSION,
+	  sizeof(modpdescr)/sizeof(struct cnfparamdescr),
+	  modpdescr
+	};
+
 /* action (instance) parameters */
 static struct cnfparamdescr actpdescr[] = {
 	{ "dynafilecachesize", eCmdHdlrInt, 0 }, /* legacy: dynafilecachesize */
@@ -201,13 +220,27 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "file", eCmdHdlrString, 0 },     /* either "file" or ... */
 	{ "dynafile", eCmdHdlrString, 0 }, /* "dynafile" MUST be present */
 	{ "template", eCmdHdlrGetWord, 0 },
-	//{ "", eCmdHdlrGetWord, 0 }, /* legacy:  */
 };
 static struct cnfparamblk actpblk =
 	{ CNFPARAMBLK_VERSION,
 	  sizeof(actpdescr)/sizeof(struct cnfparamdescr),
 	  actpdescr
 	};
+
+
+/* this function gets the default template. It coordinates action between
+ * old-style and new-style configuration parts.
+ */
+static inline uchar*
+getDfltTpl(void)
+{
+	if(loadModConf != NULL && loadModConf->tplName != NULL)
+		return loadModConf->tplName;
+	else if(pszFileDfltTplName == NULL)
+		return (uchar*)"RSYSLOG_FileFormat";
+	else
+		return pszFileDfltTplName;
+}
 
 
 BEGINinitConfVars		/* (re)set config variables to default values */
@@ -244,6 +277,30 @@ CODESTARTdbgPrintInstInfo
 		  pData->fDirCreateMode, pData->fCreateMode);
 	dbgprintf("\tfail if owner/group can not be set: %s\n", pData->bFailOnChown ? "yes" : "no");
 ENDdbgPrintInstInfo
+
+
+
+/* set the default template to be used
+ * This is a module-global parameter, and as such needs special handling. It needs to
+ * be coordinated with values set via the v2 config system (rsyslog v6+). What we do
+ * is we do not permit this directive after the v2 config system has been used to set
+ * the parameter.
+ */
+rsRetVal
+setLegacyDfltTpl(void __attribute__((unused)) *pVal, uchar* newVal)
+{
+	DEFiRet;
+
+	if(loadModConf != NULL && loadModConf->tplName != NULL) {
+		errmsg.LogError(0, RS_RET_ERR, "omfile default template already set via module "
+			"global parameter - can no longer be changed");
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+	free(pszFileDfltTplName);
+	pszFileDfltTplName = newVal;
+finalize_it:
+	RETiRet;
+}
 
 
 /* set the dynaFile cache size. Does some limit checking.
@@ -333,8 +390,7 @@ static rsRetVal cflineParseOutchannel(instanceData *pData, uchar* p, omodStringR
 	 */
 	pData->pszSizeLimitCmd = pOch->cmdOnSizeLimit;
 
-	iRet = cflineParseTemplateName(&p, pOMSR, iEntry, iTplOpts,
-				       (pszFileDfltTplName == NULL) ? (uchar*)"RSYSLOG_FileFormat" : pszFileDfltTplName);
+	iRet = cflineParseTemplateName(&p, pOMSR, iEntry, iTplOpts, getDfltTpl());
 
 finalize_it:
 	RETiRet;
@@ -690,6 +746,72 @@ finalize_it:
 }
 
 
+BEGINbeginCnfLoad
+CODESTARTbeginCnfLoad
+	loadModConf = pModConf;
+	pModConf->pConf = pConf;
+	pModConf->tplName = NULL;
+ENDbeginCnfLoad
+
+BEGINsetModCnf
+	struct cnfparamvals *pvals;
+	int i;
+CODESTARTsetModCnf
+	loadModConf->vals = nvlstGetParams(lst, &modpblk, loadModConf->vals);
+	if(loadModConf->vals == NULL) {
+		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "error processing module "
+				"config parameters [module(...)]");
+		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
+	pvals = loadModConf->vals;
+
+	if(Debug) {
+		dbgprintf("module (global) param blk for omfile:\n");
+		cnfparamsPrint(&modpblk, pvals);
+	}
+
+	for(i = 0 ; i < modpblk.nParams ; ++i) {
+		if(!pvals[i].bUsed)
+			continue;
+		if(!strcmp(modpblk.descr[i].name, "template")) {
+			loadModConf->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+			if(pszFileDfltTplName != NULL) {
+				errmsg.LogError(0, RS_RET_DUP_PARAM, "omfile: warning: default template "
+						"was already set via legacy directive - may lead to inconsistent "
+						"results.");
+			}
+		} else {
+			dbgprintf("omfile: program error, non-handled "
+			  "param '%s' in beginCnfLoad\n", modpblk.descr[i].name);
+		}
+	}
+finalize_it:
+ENDsetModCnf
+
+BEGINendCnfLoad
+CODESTARTendCnfLoad
+	/* persist module-specific settings from legacy config system */
+	//...
+
+	loadModConf = NULL; /* done loading */
+	/* free legacy config vars */
+	//...
+ENDendCnfLoad
+
+BEGINcheckCnf
+CODESTARTcheckCnf
+ENDcheckCnf
+
+BEGINactivateCnf
+CODESTARTactivateCnf
+	runModConf = pModConf;
+ENDactivateCnf
+
+BEGINfreeCnf
+CODESTARTfreeCnf
+ENDfreeCnf
+
+
 BEGINcreateInstance
 CODESTARTcreateInstance
 	pData->pStrm = NULL;
@@ -837,9 +959,7 @@ CODESTARTnewActInst
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
 
-	CHKiRet(OMSRsetEntry(*ppOMSR, 0, ustrdup((pData->tplName == NULL) ?
-					    (uchar*)"RSYSLOG_FileFormat" : pData->tplName),
-		OMSR_NO_RQD_TPL_OPTS));
+	CHKiRet(OMSRsetEntry(*ppOMSR, 0, ustrdup(getDfltTpl()), OMSR_NO_RQD_TPL_OPTS));
 
 	if(pData->bDynamicName) {
 		/* "filename" is actually a template name, we need this as string 1. So let's add it
@@ -902,8 +1022,7 @@ CODESTARTparseSelectorAct
 		   */
 		CODE_STD_STRING_REQUESTparseSelectorAct(2)
 		++p; /* eat '?' */
-		CHKiRet(cflineParseFileName(p, fname, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS,
-				               (pszFileDfltTplName == NULL) ? (uchar*)"RSYSLOG_FileFormat" : pszFileDfltTplName));
+		CHKiRet(cflineParseFileName(p, fname, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS, getDfltTpl()));
 		pData->f_fname = ustrdup(fname);
 		pData->bDynamicName = 1;
 		pData->iCurrElt = -1;		  /* no current element */
@@ -919,8 +1038,7 @@ CODESTARTparseSelectorAct
 	case '/':
 	case '.':
 		CODE_STD_STRING_REQUESTparseSelectorAct(1)
-		CHKiRet(cflineParseFileName(p, fname, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS,
-				               (pszFileDfltTplName == NULL) ? (uchar*)"RSYSLOG_FileFormat" : pszFileDfltTplName));
+		CHKiRet(cflineParseFileName(p, fname, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS, getDfltTpl()));
 		pData->f_fname = ustrdup(fname);
 		pData->bDynamicName = 0;
 		break;
@@ -999,6 +1117,8 @@ ENDmodExit
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
+CODEqueryEtryPt_STD_CONF2_QUERIES
+CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 CODEqueryEtryPt_TXIF_OMOD_QUERIES /* we support the transactional interface! */
 CODEqueryEtryPt_doHUP
@@ -1033,7 +1153,7 @@ INITLegCnfVars
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"failonchownfailure", 0, eCmdHdlrBinary, NULL, &cs.bFailOnChown, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omfileforcechown", 0, eCmdHdlrGoneAway, NULL, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionfileenablesync", 0, eCmdHdlrBinary, NULL, &cs.bEnableSync, STD_LOADABLE_MODULE_ID));
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionfiledefaulttemplate", 0, eCmdHdlrGetWord, NULL, &pszFileDfltTplName, NULL));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionfiledefaulttemplate", 0, eCmdHdlrGetWord, setLegacyDfltTpl, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
 /* vi:set ai:

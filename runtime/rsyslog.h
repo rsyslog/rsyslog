@@ -374,6 +374,9 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_CNF_INVLD_FRAMING = -2214, /**< invalid framing specified in config file */
 	RS_RET_LEGA_ACT_NOT_SUPPORTED = -2215, /**< the module (no longer) supports legacy action syntax */
 	RS_RET_MAX_OMSR_REACHED = -2216, /**< max nbr of string requests reached, not supported by core */
+	/* reserved for pre-v6.5 */
+	RS_RET_DUP_PARAM = -2220, /**< config parameter is given more than once */
+	RS_RET_MODULE_ALREADY_IN_CONF = -2221, /**< module already in current configuration */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */

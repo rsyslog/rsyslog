@@ -349,7 +349,8 @@ addModToGlblList(modInfo_t *pThis)
 }
 
 
-/* Add a module to the config module list for current loadConf
+/* Add a module to the config module list for current loadConf and
+ * provide its config params to it.
  */
 rsRetVal
 addModToCnfList(modInfo_t *pThis)
@@ -370,11 +371,16 @@ addModToCnfList(modInfo_t *pThis)
 		while(1) { /* loop broken inside */
 			if(pLast->pMod == pThis) {
 				DBGPRINTF("module '%s' already in this config\n", modGetName(pThis));
+				if(strncmp((char*)modGetName(pThis), "builtin:", sizeof("builtin:")-1)) {
+					errmsg.LogError(0, RS_RET_MODULE_ALREADY_IN_CONF,
+					   "module '%s' already in this config, cannot be added\n", modGetName(pThis));
+					ABORT_FINALIZE(RS_RET_MODULE_ALREADY_IN_CONF);
+				}
 				FINALIZE;
 			}
 			if(pLast->next == NULL)
 				break;
-			pLast = pLast -> next;
+			pLast = pLast->next;
 		}
 	}
 
@@ -547,7 +553,7 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 	CHKiRet((*modGetType)(&pNew->eType));
 	CHKiRet((*pNew->modQueryEtryPt)((uchar*)"getKeepType", &modGetKeepType));
 	CHKiRet((*modGetKeepType)(&pNew->eKeepType));
-	dbgprintf("module %s of type %d being loaded.\n", name, pNew->eType);
+	dbgprintf("module %s of type %d being loaded (keepType=%d).\n", name, pNew->eType, pNew->eKeepType);
 	
 	/* OK, we know we can successfully work with the module. So we now fill the
 	 * rest of the data elements. First we load the interfaces common to all
@@ -558,6 +564,11 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 	localRet = (*pNew->modQueryEtryPt)((uchar*)"isCompatibleWithFeature", &pNew->isCompatibleWithFeature);
 	if(localRet == RS_RET_MODULE_ENTRY_POINT_NOT_FOUND)
 		pNew->isCompatibleWithFeature = dummyIsCompatibleWithFeature;
+	else if(localRet != RS_RET_OK)
+		ABORT_FINALIZE(localRet);
+	localRet = (*pNew->modQueryEtryPt)((uchar*)"setModCnf", &pNew->setModCnf);
+	if(localRet == RS_RET_MODULE_ENTRY_POINT_NOT_FOUND)
+		pNew->setModCnf = NULL;
 	else if(localRet != RS_RET_OK)
 		ABORT_FINALIZE(localRet);
 
@@ -766,6 +777,7 @@ static void modPrintList(void)
 		dbgprintf("\tdbgPrintInstInfo:   0x%lx\n", (unsigned long) pMod->dbgPrintInstInfo);
 		dbgprintf("\tfreeInstance:       0x%lx\n", (unsigned long) pMod->freeInstance);
 		dbgprintf("\tbeginCnfLoad:       0x%lx\n", (unsigned long) pMod->beginCnfLoad);
+		dbgprintf("\tSetModCnf:          0x%lx\n", (unsigned long) pMod->setModCnf);
 		dbgprintf("\tcheckCnf:           0x%lx\n", (unsigned long) pMod->checkCnf);
 		dbgprintf("\tactivateCnfPrePrivDrop: 0x%lx\n", (unsigned long) pMod->activateCnfPrePrivDrop);
 		dbgprintf("\tactivateCnf:        0x%lx\n", (unsigned long) pMod->activateCnf);
@@ -946,12 +958,9 @@ findModule(uchar *pModName, int iModNameLen, modInfo_t **pMod)
  * Note: pvals = NULL means legacy config system
  */
 static rsRetVal
-Load(uchar *pModName, sbool bConfLoad, struct cnfparamvals *pvals)
+Load(uchar *pModName, sbool bConfLoad, struct nvlst *lst)
 {
-	DEFiRet;
-	
 	size_t iPathLen, iModNameLen;
-	uchar *pModNameCmp;
 	int bHasExtension;
         void *pModHdlr, *pModInit;
 	modInfo_t *pModInfo;
@@ -965,6 +974,8 @@ Load(uchar *pModName, sbool bConfLoad, struct cnfparamvals *pvals)
 #	endif
 	uchar *pPathBuf = pathBuf;
 	size_t lenPathBuf = sizeof(pathBuf);
+	rsRetVal localRet;
+	DEFiRet;
 
 	assert(pModName != NULL);
 	DBGPRINTF("Requested to load module '%s'\n", pModName);
@@ -985,9 +996,19 @@ Load(uchar *pModName, sbool bConfLoad, struct cnfparamvals *pvals)
 
 	CHKiRet(findModule(pModName, iModNameLen, &pModInfo));
 	if(pModInfo != NULL) {
-		if(bConfLoad)
-			addModToCnfList(pModInfo);
-		dbgprintf("Module '%s' already loaded\n", pModName);
+		DBGPRINTF("Module '%s' already loaded\n", pModName);
+		if(bConfLoad) {
+			localRet = addModToCnfList(pModInfo);
+			if(pModInfo->setModCnf != NULL && localRet == RS_RET_OK) {
+				if(!strncmp((char*)pModName, "builtin:", sizeof("builtin:")-1)) {
+					/* for built-in moules, we need to call setModConf, 
+					 * because there is no way to set parameters at load
+					 * time for obvious reasons...
+					 */
+					pModInfo->setModCnf(lst);
+				}
+			}
+		}
 		FINALIZE;
 	}
 
@@ -1095,8 +1116,12 @@ Load(uchar *pModName, sbool bConfLoad, struct cnfparamvals *pvals)
 		dlclose(pModHdlr);
 		ABORT_FINALIZE(RS_RET_MODULE_LOAD_ERR_INIT_FAILED);
 	}
-	if(bConfLoad)
+
+	if(bConfLoad) {
 		addModToCnfList(pModInfo);
+		if(pModInfo->setModCnf != NULL)
+			pModInfo->setModCnf(lst);
+	}
 
 finalize_it:
 	if(pPathBuf != pathBuf) /* used malloc()ed memory? */
@@ -1130,7 +1155,7 @@ modulesProcessCnf(struct cnfobj *o)
 	}
 
 	cnfModName = (uchar*)es_str2cstr(pvals[typeIdx].val.d.estr, NULL);
-	iRet = Load(cnfModName, 1, pvals);
+	iRet = Load(cnfModName, 1, o->nvlst);
 	
 finalize_it:
 	free(cnfModName);

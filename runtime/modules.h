@@ -12,7 +12,7 @@
  *
  * File begun on 2007-07-22 by RGerhards
  *
- * Copyright 2007-2011 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2012 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -114,6 +114,7 @@ struct modInfo_s {
 	rsRetVal (*doHUP)(void *);		/* non-restart type HUP handler */
 	/* v2 config system specific */
 	rsRetVal (*beginCnfLoad)(void*newCnf, rsconf_t *pConf);
+	rsRetVal (*setModCnf)(struct nvlst *lst);
 	rsRetVal (*endCnfLoad)(void*Cnf);
 	rsRetVal (*checkCnf)(void*Cnf);
 	rsRetVal (*activateCnfPrePrivDrop)(void*Cnf);
@@ -152,9 +153,7 @@ struct modInfo_s {
 	} mod;
 	void *pModHdlr; /* handler to the dynamic library holding the module */
 #	ifdef DEBUG
-	/* we add some home-grown support to track our users (and detect who does not free us). In
-	 * the long term, this should probably be migrated into debug.c (TODO). -- rgerhards, 2008-03-11
-	 */
+	/* we add some home-grown support to track our users (and detect who does not free us). */
 	modUsr_t *pModUsrRoot;
 #	endif
 };
@@ -171,7 +170,7 @@ BEGINinterface(module) /* name must also be changed in ENDinterface macro! */
 	void (*PrintList)(void);
 	rsRetVal (*UnloadAndDestructAll)(eModLinkType_t modLinkTypesToUnload);
 	rsRetVal (*doModInit)(rsRetVal (*modInit)(), uchar *name, void *pModHdlr, modInfo_t **pNew);
-	rsRetVal (*Load)(uchar *name, sbool bConfLoad, struct cnfparamvals *pvals);
+	rsRetVal (*Load)(uchar *name, sbool bConfLoad, struct nvlst *lst);
 	rsRetVal (*SetModDir)(uchar *name);
 	modInfo_t *(*FindWithCnfName)(rsconf_t *cnf, uchar *name, eModType_t rqtdType); /* added v3, 2011-07-19 */
 ENDinterface(module)
@@ -192,6 +191,5 @@ PROTOTYPEObj(module);
  */
 rsRetVal modulesProcessCnf(struct cnfobj *o);
 
-/* TODO: remove "dirty" calls! */
 rsRetVal addModToCnfList(modInfo_t *pThis);
 #endif /* #ifndef MODULES_H_INCLUDED */

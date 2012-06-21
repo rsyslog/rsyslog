@@ -111,5 +111,6 @@ rsRetVal actionNewScope(void);
 rsRetVal actionRestoreScope(void);
 rsRetVal activateActions(void);
 rsRetVal actionNewInst(struct nvlst *lst, action_t **ppAction);
+rsRetVal actionProcessCnf(struct cnfobj *o);
 
 #endif /* #ifndef ACTION_H_INCLUDED */
