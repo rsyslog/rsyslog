@@ -136,6 +136,16 @@ Note that this syntax is available starting with rsyslog v4. It is important to 
 mind that future versions of rsyslog will require different syntax and/or drop outchannel support
 completely. So if at all possible, avoid using this feature. If you must use it, be prepared for
 future changes and watch announcements very carefully.
+<h2>ompipe default template</h2>
+<p>Starting with 6.5.0, ompipe does no longer use the omfile default template.
+Instead, the default template must be set via the module load statement.
+An example is
+<blockquote><code>
+module(load="builtin:ompipe" template="myDefaultTemplate")
+</code> </blockquote>
+<p>For obvious reasons, the default template must be defined somewhere in
+the config file, otherwise errors will happen during the config load
+phase.
 <h2>omusrmsg</h2>
 <p>The omusrmsg module is used to send messages to users. In legacy-legacy
 config format (that is the very old sysklogd style), it was suffucient to use
