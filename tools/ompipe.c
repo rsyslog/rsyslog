@@ -225,7 +225,7 @@ CODESTARTsetModCnf
 	}
 
 	if(Debug) {
-		dbgprintf("module (global) param blk for omfile:\n");
+		dbgprintf("module (global) param blk for ompipe:\n");
 		cnfparamsPrint(&modpblk, pvals);
 	}
 
@@ -235,12 +235,12 @@ CODESTARTsetModCnf
 		if(!strcmp(modpblk.descr[i].name, "template")) {
 			loadModConf->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 			if(pszFileDfltTplName != NULL) {
-				errmsg.LogError(0, RS_RET_DUP_PARAM, "omfile: warning: default template "
+				errmsg.LogError(0, RS_RET_DUP_PARAM, "ompipe: warning: default template "
 						"was already set via legacy directive - may lead to inconsistent "
 						"results.");
 			}
 		} else {
-			dbgprintf("omfile: program error, non-handled "
+			dbgprintf("ompipe: program error, non-handled "
 			  "param '%s' in beginCnfLoad\n", modpblk.descr[i].name);
 		}
 	}
