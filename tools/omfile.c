@@ -791,12 +791,10 @@ ENDsetModCnf
 
 BEGINendCnfLoad
 CODESTARTendCnfLoad
-	/* persist module-specific settings from legacy config system */
-	//...
-
 	loadModConf = NULL; /* done loading */
 	/* free legacy config vars */
-	//...
+	free(pszFileDfltTplName);
+	pszFileDfltTplName = NULL;
 ENDendCnfLoad
 
 BEGINcheckCnf
@@ -1111,7 +1109,6 @@ BEGINmodExit
 CODESTARTmodExit
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(strm, CORE_COMPONENT);
-	free(pszFileDfltTplName);
 	DESTROY_ATOMIC_HELPER_MUT(mutClock);
 ENDmodExit
 
