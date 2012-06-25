@@ -175,13 +175,11 @@ freeCnf(rsconf_t *pThis)
 /* destructor for the rsconf object */
 BEGINobjDestruct(rsconf) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(rsconf)
-dbgprintf("AAA: rsconfObjDesctruct called\n");
 	freeCnf(pThis);
 	tplDeleteAll(pThis);
 	free(pThis->globals.mainQ.pszMainMsgQFName);
 	free(pThis->globals.pszConfDAGFile);
 	llDestroy(&(pThis->rulesets.llRulesets));
-dbgprintf("AAA: rsconfObjDesctruct exit\n");
 ENDobjDestruct(rsconf)
 
 

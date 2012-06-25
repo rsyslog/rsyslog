@@ -125,7 +125,7 @@ int write_pid (char *pidfile)
       char errStr[1024];
       rs_strerror_r(errno, errStr, sizeof(errStr));
       printf("Can't write pid , %s.\n", errStr);
-      close(fd);
+      fclose(f);
       return 0;
   }
   fflush(f);
@@ -135,11 +135,11 @@ int write_pid (char *pidfile)
       char errStr[1024];
       rs_strerror_r(errno, errStr, sizeof(errStr));
       printf("Can't unlock pidfile %s, %s.\n", pidfile, errStr);
-      close(fd);
+      fclose(f);
       return 0;
   }
 #endif
-  close(fd);
+  fclose(f);
 
   return pid;
 }
