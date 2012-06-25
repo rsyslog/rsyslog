@@ -111,7 +111,6 @@ typedef struct configSettings_s {
 	uchar *pszSourceNameTemplate; /* name of the template containing the spoofing address */
 	uchar *pszTargetHost;
 	uchar *pszTargetPort;
-	int iCompressionLevel;	/* zlib compressionlevel, the usual values */
 	int iSourcePortStart;
 	int iSourcePortEnd;
 } configSettings_t;
@@ -123,7 +122,6 @@ CODESTARTinitConfVars
 	cs.pszSourceNameTemplate = NULL;
 	cs.pszTargetHost = NULL;
 	cs.pszTargetPort = NULL;
-	cs.iCompressionLevel = 0;
 	cs.iSourcePortStart = DFLT_SOURCE_PORT_START;
 	cs.iSourcePortEnd = DFLT_SOURCE_PORT_END;
 ENDinitConfVars
@@ -421,7 +419,6 @@ CODE_STD_STRING_REQUESTparseSelectorAct(2)
 	else 
 		CHKmalloc(pData->port = ustrdup(cs.pszTargetPort));
 	CHKiRet(OMSRsetEntry(*ppOMSR, 1, ustrdup(sourceTpl), OMSR_NO_RQD_TPL_OPTS));
-	pData->compressionLevel = cs.iCompressionLevel;
 	pData->sourcePort = pData->sourcePortStart = cs.iSourcePortStart;
 	pData->sourcePortEnd = cs.iSourcePortEnd;
 
@@ -474,7 +471,6 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 {
 	freeConfigVars();
 	/* we now must reset all non-string values */
-	cs.iCompressionLevel = 0;
 	cs.iSourcePortStart = DFLT_SOURCE_PORT_START;
 	cs.iSourcePortEnd = DFLT_SOURCE_PORT_END;
 	return RS_RET_OK;
@@ -510,7 +506,6 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionomudpspooftargetport", 0, eCmdHdlrGetWord, NULL, &cs.pszTargetPort, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionomudpspoofsourceportstart", 0, eCmdHdlrInt, NULL, &cs.iSourcePortStart, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionomudpspoofsourceportend", 0, eCmdHdlrInt, NULL, &cs.iSourcePortEnd, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionomudpcompressionlevel", 0, eCmdHdlrInt, NULL, &cs.iCompressionLevel, NULL));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
 
