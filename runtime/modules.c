@@ -1001,11 +1001,19 @@ Load(uchar *pModName, sbool bConfLoad, struct nvlst *lst)
 			localRet = addModToCnfList(pModInfo);
 			if(pModInfo->setModCnf != NULL && localRet == RS_RET_OK) {
 				if(!strncmp((char*)pModName, "builtin:", sizeof("builtin:")-1)) {
-					/* for built-in moules, we need to call setModConf, 
-					 * because there is no way to set parameters at load
-					 * time for obvious reasons...
-					 */
-					pModInfo->setModCnf(lst);
+					if(pModInfo->bSetModCnfCalled) {
+						errmsg.LogError(0, RS_RET_DUP_PARAM,
+						    "parameters for built-in module %s already set - ignored\n",
+						    pModName);
+						ABORT_FINALIZE(RS_RET_DUP_PARAM);
+					} else {
+						/* for built-in moules, we need to call setModConf, 
+						 * because there is no way to set parameters at load
+						 * time for obvious reasons...
+						 */
+						pModInfo->setModCnf(lst);
+						pModInfo->bSetModCnfCalled = 1;
+					}
 				}
 			}
 		}
@@ -1119,8 +1127,10 @@ Load(uchar *pModName, sbool bConfLoad, struct nvlst *lst)
 
 	if(bConfLoad) {
 		addModToCnfList(pModInfo);
-		if(pModInfo->setModCnf != NULL)
+		if(pModInfo->setModCnf != NULL) {
 			pModInfo->setModCnf(lst);
+			pModInfo->bSetModCnfCalled = 1;
+		}
 	}
 
 finalize_it:

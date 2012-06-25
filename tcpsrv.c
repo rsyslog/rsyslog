@@ -132,7 +132,7 @@ addNewLstnPort(tcpsrv_t *pThis, uchar *pszPort, int bSuppOctetFram)
 
 	/* create entry */
 	CHKmalloc(pEntry = MALLOC(sizeof(tcpLstnPortList_t)));
-	pEntry->pszPort = pszPort;
+	CHKmalloc(pEntry->pszPort = ustrdup(pszPort));
 	pEntry->pSrv = pThis;
 	pEntry->pRuleset = pThis->pRuleset;
 	pEntry->bSuppOctetFram = bSuppOctetFram;

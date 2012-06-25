@@ -1085,8 +1085,16 @@ ENDactivateCnf
 
 
 BEGINfreeCnf
+	instanceConf_t *inst, *del;
 CODESTARTfreeCnf
 	free(pModConf->pLogSockName);
+	for(inst = pModConf->root ; inst != NULL ; ) {
+		free(inst->sockName);
+		free(inst->pLogHostName);
+		del = inst;
+		inst = inst->next;
+		free(del);
+	}
 ENDfreeCnf
 
 

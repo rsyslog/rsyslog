@@ -64,6 +64,7 @@
 #include "threads.h"
 #include "datetime.h"
 #include "parserif.h"
+#include "modules.h"
 #include "dirty.h"
 
 /* static data */
@@ -151,11 +152,36 @@ rsRetVal rsconfConstructFinalize(rsconf_t __attribute__((unused)) *pThis)
 }
 
 
+/* call freeCnf() module entry points AND free the module entries themselfes.
+ */
+static inline void
+freeCnf(rsconf_t *pThis)
+{
+	cfgmodules_etry_t *etry, *del;
+	etry = pThis->modules.root;
+	while(etry != NULL) {
+		if(etry->pMod->beginCnfLoad != NULL) {
+			dbgprintf("calling freeCnf(%p) for module '%s'\n",
+				  etry->modCnf, (char*) module.GetName(etry->pMod));
+			etry->pMod->freeCnf(etry->modCnf);
+		}
+		del = etry;
+		etry = etry->next;
+		free(del);
+	}
+}
+
+
 /* destructor for the rsconf object */
 BEGINobjDestruct(rsconf) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(rsconf)
+dbgprintf("AAA: rsconfObjDesctruct called\n");
+	freeCnf(pThis);
+	tplDeleteAll(pThis);
 	free(pThis->globals.mainQ.pszMainMsgQFName);
+	free(pThis->globals.pszConfDAGFile);
 	llDestroy(&(pThis->rulesets.llRulesets));
+dbgprintf("AAA: rsconfObjDesctruct exit\n");
 ENDobjDestruct(rsconf)
 
 

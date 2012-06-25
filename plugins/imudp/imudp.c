@@ -751,7 +751,16 @@ ENDactivateCnf
 
 
 BEGINfreeCnf
+	instanceConf_t *inst, *del;
 CODESTARTfreeCnf
+	for(inst = pModConf->root ; inst != NULL ; ) {
+		free(inst->pszBindPort);
+		free(inst->pszBindAddr);
+		free(inst->pBindRuleset);
+		del = inst;
+		inst = inst->next;
+		free(del);
+	}
 ENDfreeCnf
 
 /* This function is called to gather input.

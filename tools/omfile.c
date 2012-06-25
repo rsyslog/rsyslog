@@ -182,7 +182,6 @@ uchar	*pszFileDfltTplName; /* name of the default template to use */
 
 struct modConfData_s {
 	rsconf_t *pConf;	/* our overall config object */
-	struct cnfparamvals* vals; /* vals kept to detect re-set options */
 	uchar 	*tplName;	/* default template */
 };
 
@@ -292,6 +291,7 @@ setLegacyDfltTpl(void __attribute__((unused)) *pVal, uchar* newVal)
 	DEFiRet;
 
 	if(loadModConf != NULL && loadModConf->tplName != NULL) {
+		free(newVal);
 		errmsg.LogError(0, RS_RET_ERR, "omfile default template already set via module "
 			"global parameter - can no longer be changed");
 		ABORT_FINALIZE(RS_RET_ERR);
@@ -754,16 +754,15 @@ CODESTARTbeginCnfLoad
 ENDbeginCnfLoad
 
 BEGINsetModCnf
-	struct cnfparamvals *pvals;
+	struct cnfparamvals *pvals = NULL;
 	int i;
 CODESTARTsetModCnf
-	loadModConf->vals = nvlstGetParams(lst, &modpblk, loadModConf->vals);
-	if(loadModConf->vals == NULL) {
+	pvals = nvlstGetParams(lst, &modpblk, NULL);
+	if(pvals == NULL) {
 		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "error processing module "
 				"config parameters [module(...)]");
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
-	pvals = loadModConf->vals;
 
 	if(Debug) {
 		dbgprintf("module (global) param blk for omfile:\n");
@@ -786,6 +785,8 @@ CODESTARTsetModCnf
 		}
 	}
 finalize_it:
+	if(pvals != NULL)
+		cnfparamvalsDestruct(pvals, &modpblk);
 ENDsetModCnf
 
 BEGINendCnfLoad
@@ -809,6 +810,7 @@ ENDactivateCnf
 
 BEGINfreeCnf
 CODESTARTfreeCnf
+	free(pModConf->tplName);
 ENDfreeCnf
 
 

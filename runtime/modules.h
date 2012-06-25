@@ -101,6 +101,7 @@ struct modInfo_s {
 	uchar*		pszName;	/* printable module name, e.g. for dbgprintf */
 	uchar*		cnfName;	/* name to be used in config statements (e.g. 'name="omusrmsg"') */
 	unsigned	uRefCnt;	/* reference count for this module; 0 -> may be unloaded */
+	sbool		bSetModCnfCalled;/* is setModCnf already called? Needed for built-in modules */
 	/* functions supported by all types of modules */
 	rsRetVal (*modInit)(int, int*, rsRetVal(**)());		/* initialize the module */
 		/* be sure to support version handshake! */
@@ -181,7 +182,7 @@ ENDinterface(module)
  * - removed GetNxtType, added GetNxtCnfType - 2011-04-27
  * v3 (see above)
  * v4
- * - added thrid parameter to Load() - 2012-06-20
+ * - added third parameter to Load() - 2012-06-20
  */
 
 /* prototypes */
