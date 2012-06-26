@@ -80,6 +80,7 @@ static struct lstn_s {
 	STATSCOUNTER_DEF(ctrSubmit, mutCtrSubmit)
 } *lcnfRoot = NULL, *lcnfLast = NULL;
 
+static int bLegacyCnfModGlobalsPermitted;/* are legacy module-global config parameters permitted? */
 static int bDoACLCheck;			/* are ACL checks neeed? Cached once immediately before listener startup */
 static int iMaxLine;			/* maximum UDP message size supported */
 static time_t ttLastDiscard = 0;	/* timestamp when a message from a non-permitted sender was last discarded
@@ -643,6 +644,7 @@ CODESTARTbeginCnfLoad
 	loadModConf->iTimeRequery = TIME_REQUERY_DFLT;
 	loadModConf->iSchedPrio = SCHED_PRIO_UNSET;
 	loadModConf->pszSchedPolicy = NULL;
+	bLegacyCnfModGlobalsPermitted = 1;
 	/* init legacy config vars */
 	cs.pszBindRuleset = NULL;
 	cs.pszSchedPolicy = NULL;
@@ -686,6 +688,7 @@ CODESTARTsetModCnf
 	/* remove all of our legacy handlers, as they can not used in addition
 	 * the the new-style config method.
 	 */
+	bLegacyCnfModGlobalsPermitted = 0;
 	loadModConf->configSetViaV2Method = 1;
 
 finalize_it:
@@ -884,12 +887,16 @@ CODEmodInit_QueryRegCFSLineHdlr
 		addInstance, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"udpserveraddress", 0, eCmdHdlrGetWord,
 		NULL, &cs.pszBindAddr, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"imudpschedulingpolicy", 0, eCmdHdlrGetWord,
-		NULL, &cs.pszSchedPolicy, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"imudpschedulingpriority", 0, eCmdHdlrInt,
-		NULL, &cs.iSchedPrio, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"udpservertimerequery", 0, eCmdHdlrInt,
-		NULL, &cs.iTimeRequery, STD_LOADABLE_MODULE_ID));
+	/* module-global config params - will be disabled in configs that are loaded
+	 * via module(...).
+	 */
+	CHKiRet(regCfSysLineHdlr2((uchar *)"imudpschedulingpolicy", 0, eCmdHdlrGetWord,
+		NULL, &cs.pszSchedPolicy, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
+	CHKiRet(regCfSysLineHdlr2((uchar *)"imudpschedulingpriority", 0, eCmdHdlrInt,
+		NULL, &cs.iSchedPrio, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
+	CHKiRet(regCfSysLineHdlr2((uchar *)"udpservertimerequery", 0, eCmdHdlrInt,
+		NULL, &cs.iTimeRequery, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
+
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
 		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit

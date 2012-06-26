@@ -686,7 +686,7 @@ static int cslchKeyCompare(void *pKey1, void *pKey2)
 
 /* set data members for this object
  */
-rsRetVal cslchSetEntry(cslCmdHdlr_t *pThis, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData)
+rsRetVal cslchSetEntry(cslCmdHdlr_t *pThis, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData, int *permitted)
 {
 	assert(pThis != NULL);
 	assert(eType != eCmdHdlrInvalid);
@@ -694,6 +694,7 @@ rsRetVal cslchSetEntry(cslCmdHdlr_t *pThis, ecslCmdHdrlType eType, rsRetVal (*pH
 	pThis->eType = eType;
 	pThis->cslCmdHdlr = pHdlr;
 	pThis->pData = pData;
+	pThis->permitted = permitted;
 
 	return RS_RET_OK;
 }
@@ -810,7 +811,7 @@ finalize_it:
 
 /* add a handler entry to a known command
  */
-static rsRetVal cslcAddHdlr(cslCmd_t *pThis, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData, void *pOwnerCookie)
+static rsRetVal cslcAddHdlr(cslCmd_t *pThis, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData, void *pOwnerCookie, int *permitted)
 {
 	DEFiRet;
 	cslCmdHdlr_t *pCmdHdlr = NULL;
@@ -818,7 +819,7 @@ static rsRetVal cslcAddHdlr(cslCmd_t *pThis, ecslCmdHdrlType eType, rsRetVal (*p
 	assert(pThis != NULL);
 
 	CHKiRet(cslchConstruct(&pCmdHdlr));
-	CHKiRet(cslchSetEntry(pCmdHdlr, eType, pHdlr, pData));
+	CHKiRet(cslchSetEntry(pCmdHdlr, eType, pHdlr, pData, permitted));
 	CHKiRet(llAppend(&pThis->llCmdHdlrs, pOwnerCookie, pCmdHdlr));
 
 finalize_it:
@@ -836,8 +837,16 @@ finalize_it:
  * buffer is automatically destroyed when the element is freed, the
  * caller does not need to take care of that. The caller must, however,
  * free pCmdName if he allocated it dynamically! -- rgerhards, 2007-08-09
+ * Parameter permitted has been added to support the v2 config system. With it,
+ * we can tell the legacy system (us here!) to check if a config directive is
+ * still permitted. For example, the v2 system will disable module global
+ * paramters if the are supplied via the native v2 callbacks. In order not
+ * to break exisiting modules, we have renamed the rgCfSysLinHdlr routine to
+ * version 2 and added a new one with the original name. It just calls the
+ * v2 function and supplies a "don't care (NULL)" pointer as this argument.
+ * rgerhards, 2012-06-26
  */
-rsRetVal regCfSysLineHdlr(uchar *pCmdName, int bChainingPermitted, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData, void *pOwnerCookie)
+rsRetVal regCfSysLineHdlr2(uchar *pCmdName, int bChainingPermitted, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData, void *pOwnerCookie, int *permitted)
 {
 	DEFiRet;
 	cslCmd_t *pThis;
@@ -847,7 +856,7 @@ rsRetVal regCfSysLineHdlr(uchar *pCmdName, int bChainingPermitted, ecslCmdHdrlTy
 	if(iRet == RS_RET_NOT_FOUND) {
 		/* new command */
 		CHKiRet(cslcConstruct(&pThis, bChainingPermitted));
-		CHKiRet_Hdlr(cslcAddHdlr(pThis, eType, pHdlr, pData, pOwnerCookie)) {
+		CHKiRet_Hdlr(cslcAddHdlr(pThis, eType, pHdlr, pData, pOwnerCookie, permitted)) {
 			cslcDestruct(pThis);
 			FINALIZE;
 		}
@@ -867,13 +876,20 @@ rsRetVal regCfSysLineHdlr(uchar *pCmdName, int bChainingPermitted, ecslCmdHdrlTy
 		if(pThis->bChainingPermitted == 0 || bChainingPermitted == 0) {
 			ABORT_FINALIZE(RS_RET_CHAIN_NOT_PERMITTED);
 		}
-		CHKiRet_Hdlr(cslcAddHdlr(pThis, eType, pHdlr, pData, pOwnerCookie)) {
+		CHKiRet_Hdlr(cslcAddHdlr(pThis, eType, pHdlr, pData, pOwnerCookie, permitted)) {
 			cslcDestruct(pThis);
 			FINALIZE;
 		}
 	}
 
 finalize_it:
+	RETiRet;
+}
+
+rsRetVal regCfSysLineHdlr(uchar *pCmdName, int bChainingPermitted, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData, void *pOwnerCookie)
+{
+	DEFiRet;
+	iRet = regCfSysLineHdlr2(pCmdName, bChainingPermitted, eType, pHdlr, pData, pOwnerCookie, NULL);
 	RETiRet;
 }
 
@@ -947,7 +963,8 @@ rsRetVal processCfSysLineCommand(uchar *pCmdName, uchar **p)
 	iRet = llFind(&llCmdList, (void *) pCmdName, (void*) &pCmd);
 
 	if(iRet == RS_RET_NOT_FOUND) {
-		errmsg.LogError(0, RS_RET_NOT_FOUND, "invalid or yet-unknown config file command - have you forgotten to load a module?");
+		errmsg.LogError(0, RS_RET_NOT_FOUND, "invalid or yet-unknown config file command '%s' - "
+			"have you forgotten to load a module?", pCmdName);
 	}
 
 	if(iRet != RS_RET_OK)
@@ -964,7 +981,12 @@ rsRetVal processCfSysLineCommand(uchar *pCmdName, uchar **p)
 		 * necessary). -- rgerhards, 2007-07-31
 		 */
 		pHdlrP = *p;
-		if((iRet = cslchCallHdlr(pCmdHdlr, &pHdlrP)) == RS_RET_OK) {
+		if(pCmdHdlr->permitted != NULL && !*(pCmdHdlr->permitted)) {
+			errmsg.LogError(0, RS_RET_PARAM_NOT_PERMITTED, "command '%s' is currently not "
+				"permitted - did you already set it via a RainerScript command (v6+ config)?",
+				pCmdName);
+			ABORT_FINALIZE(RS_RET_PARAM_NOT_PERMITTED);
+		} else if((iRet = cslchCallHdlr(pCmdHdlr, &pHdlrP)) == RS_RET_OK) {
 			bWasOnceOK = 1;
 			pOKp = pHdlrP;
 		}

@@ -33,6 +33,7 @@ struct cslCmdHdlr_s { /* config file sysline parse entry */
 	ecslCmdHdrlType eType;			/* which type of handler is this? */
 	rsRetVal (*cslCmdHdlr)();		/* function pointer to use with handler (params depending on eType) */
 	void *pData;				/* user-supplied data pointer */
+	int *permitted;				/* is this parameter currently permitted? (NULL=don't check) */
 };
 typedef struct cslCmdHdlr_s cslCmdHdlr_t;
 
@@ -49,6 +50,7 @@ typedef struct cslCmd_s cslCmd_t;
 
 /* prototypes */
 rsRetVal regCfSysLineHdlr(uchar *pCmdName, int bChainingPermitted, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData, void *pOwnerCookie);
+rsRetVal regCfSysLineHdlr2(uchar *pCmdName, int bChainingPermitted, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData, void *pOwnerCookie, int *permitted);
 rsRetVal unregCfSysLineHdlrs(void);
 rsRetVal unregCfSysLineHdlrs4Owner(void *pOwnerCookie);
 rsRetVal processCfSysLineCommand(uchar *pCmd, uchar **p);
