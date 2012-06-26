@@ -1011,7 +1011,8 @@ Load(uchar *pModName, sbool bConfLoad, struct nvlst *lst)
 						 * because there is no way to set parameters at load
 						 * time for obvious reasons...
 						 */
-						pModInfo->setModCnf(lst);
+						if(lst != NULL)
+							pModInfo->setModCnf(lst);
 						pModInfo->bSetModCnfCalled = 1;
 					}
 				}
@@ -1128,7 +1129,8 @@ Load(uchar *pModName, sbool bConfLoad, struct nvlst *lst)
 	if(bConfLoad) {
 		addModToCnfList(pModInfo);
 		if(pModInfo->setModCnf != NULL) {
-			pModInfo->setModCnf(lst);
+			if(lst != NULL)
+				pModInfo->setModCnf(lst);
 			pModInfo->bSetModCnfCalled = 1;
 		}
 	}
