@@ -81,8 +81,7 @@ static struct cnfparamdescr modpdescr[] = {
 	{ "interval", eCmdHdlrInt, 0 },
 	{ "facility", eCmdHdlrInt, 0 },
 	{ "severity", eCmdHdlrInt, 0 },
-	{ "format", eCmdHdlrGetWord, 0 },
-	{ "cee", eCmdHdlrInt, 0 }
+	{ "format", eCmdHdlrGetWord, 0 }
 };
 static struct cnfparamblk modpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -221,6 +220,7 @@ CODESTARTsetModCnf
 				errmsg.LogError(0, RS_RET_ERR, "impstats: invalid format %s",
 						mode);
 			}
+			free(mode);
 		} else {
 			dbgprintf("impstats: program error, non-handled "
 			  "param '%s' in beginCnfLoad\n", modpblk.descr[i].name);
@@ -241,7 +241,6 @@ ENDsetModCnf
 
 BEGINendCnfLoad
 CODESTARTendCnfLoad
-dbgprintf("AAA: impstats, v2 config set: %d\n", loadModConf->configSetViaV2Method);
 	if(!loadModConf->configSetViaV2Method) {
 		/* persist module-specific settings from legacy config system */
 		loadModConf->iStatsInterval = cs.iStatsInterval;
