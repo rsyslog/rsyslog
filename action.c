@@ -327,10 +327,6 @@ rsRetVal actionConstruct(action_t **ppThis)
 
 	ASSERT(ppThis != NULL);
 	
-	if(cs.pszActionName != NULL) {
-		free(cs.pszActionName);
-		cs.pszActionName = NULL;
-	}
 	CHKmalloc(pThis = (action_t*) calloc(1, sizeof(action_t)));
 	pThis->iResumeInterval = 30;
 	pThis->iResumeRetryCount = 0;
