@@ -327,10 +327,6 @@ rsRetVal actionConstruct(action_t **ppThis)
 
 	ASSERT(ppThis != NULL);
 	
-	if(cs.pszActionName != NULL) {
-		free(cs.pszActionName);
-		cs.pszActionName = NULL;
-	}
 	CHKmalloc(pThis = (action_t*) calloc(1, sizeof(action_t)));
 	pThis->iResumeInterval = 30;
 	pThis->iResumeRetryCount = 0;
@@ -2012,34 +2008,6 @@ initConfigVariables(void)
 	}
 	actionResetQueueParams();
 }
-
-
-/* save our config and create a new scope. Note that things are messed up if
- * this is called while the config is already saved (we currently do not
- * have a stack as the design is we need none!
- * rgerhards, 2010-07-23
- */
-rsRetVal
-actionNewScope(void)
-{
-	DEFiRet;
-	memcpy(&cs_save, &cs, sizeof(cs));
-	initConfigVariables();
-	RETiRet;
-}
-
-
-/* restore previously saved scope.
- * rgerhards, 2010-07-23
- */
-rsRetVal
-actionRestoreScope(void)
-{
-	DEFiRet;
-	memcpy(&cs, &cs_save, sizeof(cs));
-	RETiRet;
-}
-
 
 
 rsRetVal

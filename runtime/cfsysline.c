@@ -947,7 +947,8 @@ rsRetVal processCfSysLineCommand(uchar *pCmdName, uchar **p)
 	iRet = llFind(&llCmdList, (void *) pCmdName, (void*) &pCmd);
 
 	if(iRet == RS_RET_NOT_FOUND) {
-		errmsg.LogError(0, RS_RET_NOT_FOUND, "invalid or yet-unknown config file command - have you forgotten to load a module?");
+		errmsg.LogError(0, RS_RET_NOT_FOUND, "invalid or yet-unknown config file command '%s' - "
+			"have you forgotten to load a module?", pCmdName);
 	}
 
 	if(iRet != RS_RET_OK)
