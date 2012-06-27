@@ -6,7 +6,7 @@
  *
  * File begun on 2007-12-20 by RGerhards (extracted from syslogd.c)
  *
- * Copyright 2007-2011 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2012 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -172,8 +172,10 @@ static struct configSettings_s {
 	int bOmitLocalLogging;
 	uchar *pLogSockName;
 	uchar *pLogHostName;		/* host name to use with this socket */
-	int bUseFlowCtl;		/* use flow control or not (if yes, only LIGHT is used! */
+	int bUseFlowCtl;		/* use flow control or not (if yes, only LIGHT is used!) */
+	int bUseFlowCtlSysSock;	
 	int bIgnoreTimestamp;		/* ignore timestamps present in the incoming message? */
+	int bIgnoreTimestampSysSock;
 	int bUseSysTimeStamp;		/* use timestamp from system (rather than from message) */
 	int bUseSysTimeStampSysSock;	/* same, for system log socket */
 	int bWritePid;			/* use credentials from recvmsg() and fixup PID in TAG */
@@ -211,13 +213,35 @@ struct modConfData_s {
 	int ratelimitIntervalSysSock;
 	int ratelimitBurstSysSock;
 	int ratelimitSeveritySysSock;
+	int bAnnotateSysSock;
+	sbool bIgnoreTimestamp;		/* ignore timestamps present in the incoming message? */
+	sbool bUseFlowCtl;		/* use flow control or not (if yes, only LIGHT is used! */
 	sbool bOmitLocalLogging;
 	sbool bWritePidSysSock;
-	int bAnnotateSysSock;
 	sbool bUseSysTimeStamp;
+	sbool configSetViaV2Method;
 };
 static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
 static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current load process */
+
+/* module-global parameters */
+static struct cnfparamdescr modpdescr[] = {
+	{ "syssock.use", eCmdHdlrBinary, 0 },
+	{ "syssock.name", eCmdHdlrGetWord, 0 },
+	{ "syssock.ignoretimestamp", eCmdHdlrBinary, 0 },
+	{ "syssock.flowcontrol", eCmdHdlrBinary, 0 },
+	{ "syssock.usesystimestamp", eCmdHdlrBinary, 0 },
+	{ "syssock.annotate", eCmdHdlrBinary, 0 },
+	{ "syssock.usepidfromsystem", eCmdHdlrBinary, 0 },
+	{ "syssock.ratelimit.interval", eCmdHdlrInt, 0 },
+	{ "syssock.ratelimit.burst", eCmdHdlrInt, 0 },
+	{ "syssock.ratelimit.severity", eCmdHdlrInt, 0 }
+};
+static struct cnfparamblk modpblk =
+	{ CNFPARAMBLK_VERSION,
+	  sizeof(modpdescr)/sizeof(struct cnfparamdescr),
+	  modpdescr
+	};
 
 /* we do not use this, because we do not bind to a ruleset so far
  * enable when this is changed: #include "im-helper.h" */ /* must be included AFTER the type definitions! */
@@ -232,6 +256,8 @@ initRatelimitState(struct rs_ratelimit_state *rs, unsigned short interval, unsig
 	rs->missed = 0;
 	rs->begin = 0;
 }
+
+static int bLegacyCnfModGlobalsPermitted;/* are legacy module-global config parameters permitted? */
 
 
 /* ratelimiting support, modelled after the linux kernel
@@ -286,27 +312,6 @@ withinRatelimit(struct rs_ratelimit_state *rs, time_t tt, pid_t pid)
 
 finalize_it:
 	return ret;
-}
-
-
-/* set the timestamp ignore / not ignore option for the system
- * log socket. This must be done separtely, as it is not added via a command
- * but present by default. -- rgerhards, 2008-03-06
- */
-static rsRetVal setSystemLogTimestampIgnore(void __attribute__((unused)) *pVal, int iNewVal)
-{
-	DEFiRet;
-	listeners[0].flags = iNewVal ? IGNDATE : NOFLAG;
-	RETiRet;
-}
-
-/* set flowcontrol for the system log socket
- */
-static rsRetVal setSystemLogFlowControl(void __attribute__((unused)) *pVal, int iNewVal)
-{
-	DEFiRet;
-	listeners[0].flowCtl = iNewVal ? eFLOWCTL_LIGHT_DELAY : eFLOWCTL_NO_DELAY;
-	RETiRet;
 }
 
 
@@ -1011,6 +1016,8 @@ activateListeners()
 	listeners[0].bWritePid = runModConf->bWritePidSysSock;
 	listeners[0].bAnnotate = runModConf->bAnnotateSysSock;
 	listeners[0].bUseSysTimeStamp = runModConf->bUseSysTimeStamp;
+	listeners[0].flags = runModConf->bIgnoreTimestamp ? IGNDATE : NOFLAG;
+	listeners[0].flowCtl = runModConf->bUseFlowCtl ? eFLOWCTL_LIGHT_DELAY : eFLOWCTL_NO_DELAY;
 
 	sd_fds = sd_listen_fds(0);
 	if(sd_fds < 0) {
@@ -1043,16 +1050,87 @@ BEGINbeginCnfLoad
 CODESTARTbeginCnfLoad
 	loadModConf = pModConf;
 	pModConf->pConf = pConf;
+	/* init our settings */
+	pModConf->pLogSockName = NULL;
+	pModConf->bOmitLocalLogging = 0;
+	pModConf->bIgnoreTimestamp = 1;
+	pModConf->bUseFlowCtl = 0;
+	pModConf->bUseSysTimeStamp = 1;
+	pModConf->bWritePidSysSock = 0;
+	pModConf->bAnnotateSysSock = 0;
+	pModConf->ratelimitIntervalSysSock = DFLT_ratelimitInterval;
+	pModConf->ratelimitBurstSysSock = DFLT_ratelimitBurst;
+	pModConf->ratelimitSeveritySysSock = DFLT_ratelimitSeverity;
+	bLegacyCnfModGlobalsPermitted = 1;
 	/* reset legacy config vars */
 	resetConfigVariables(NULL, NULL);
 ENDbeginCnfLoad
 
 
+BEGINsetModCnf
+	struct cnfparamvals *pvals = NULL;
+	int i;
+CODESTARTsetModCnf
+	pvals = nvlstGetParams(lst, &modpblk, NULL);
+	if(pvals == NULL) {
+		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "error processing module "
+				"config parameters [module(...)]");
+		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
+
+	if(Debug) {
+		dbgprintf("module (global) param blk for imuxsock:\n");
+		cnfparamsPrint(&modpblk, pvals);
+	}
+
+	for(i = 0 ; i < modpblk.nParams ; ++i) {
+		if(!pvals[i].bUsed)
+			continue;
+		if(!strcmp(modpblk.descr[i].name, "syssock.use")) {
+			loadModConf->bOmitLocalLogging = ((int) pvals[i].val.d.n) ? 0 : 1;
+		} else if(!strcmp(modpblk.descr[i].name, "syssock.name")) {
+			loadModConf->pLogSockName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(modpblk.descr[i].name, "syssock.ignoretimestamp")) {
+			loadModConf->bIgnoreTimestamp = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "syssock.flowcontrol")) {
+			loadModConf->bUseFlowCtl = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "syssock.usesystimestamp")) {
+			loadModConf->bUseSysTimeStamp = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "syssock.annotate")) {
+			loadModConf->bAnnotateSysSock = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "syssock.usepidfromsystem")) {
+			loadModConf->bWritePidSysSock = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "syssock.ratelimit.interval")) {
+			loadModConf->ratelimitIntervalSysSock = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "syssock.ratelimit.burst")) {
+			loadModConf->ratelimitBurstSysSock = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "syssock.ratelimit.severity")) {
+			loadModConf->ratelimitSeveritySysSock = (int) pvals[i].val.d.n;
+		} else {
+			dbgprintf("imuxsock: program error, non-handled "
+			  "param '%s' in beginCnfLoad\n", modpblk.descr[i].name);
+		}
+	}
+
+	/* disable legacy module-global config directives */
+	bLegacyCnfModGlobalsPermitted = 0;
+	loadModConf->configSetViaV2Method = 1;
+
+finalize_it:
+	if(pvals != NULL)
+		cnfparamvalsDestruct(pvals, &modpblk);
+ENDsetModCnf
+
+
 BEGINendCnfLoad
 CODESTARTendCnfLoad
-	/* persist module-specific settings from legacy config system */
-	loadModConf->bOmitLocalLogging = cs.bOmitLocalLogging;
-	loadModConf->pLogSockName = cs.pLogSockName;
+	if(!loadModConf->configSetViaV2Method) {
+		/* persist module-specific settings from legacy config system */
+		loadModConf->bOmitLocalLogging = cs.bOmitLocalLogging;
+		loadModConf->pLogSockName = cs.pLogSockName;
+		loadModConf->bIgnoreTimestamp = cs.bIgnoreTimestampSysSock;
+		loadModConf->bUseFlowCtl = cs.bUseFlowCtlSysSock;
+	}
 
 	loadModConf = NULL; /* done loading */
 	/* free legacy config vars */
@@ -1225,6 +1303,7 @@ BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_IMOD_QUERIES
 CODEqueryEtryPt_STD_CONF2_QUERIES
+CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
 CODEqueryEtryPt_STD_CONF2_PREPRIVDROP_QUERIES
 CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
 ENDqueryEtryPt
@@ -1237,7 +1316,9 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	cs.bOmitLocalLogging = 0;
 	cs.pLogHostName = NULL;
 	cs.bIgnoreTimestamp = 1;
+	cs.bIgnoreTimestampSysSock = 1;
 	cs.bUseFlowCtl = 0;
+	cs.bUseFlowCtlSysSock = 0;
 	cs.bUseSysTimeStamp = 1;
 	cs.bUseSysTimeStampSysSock = 1;
 	cs.bWritePid = 0;
@@ -1311,12 +1392,8 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(prop.ConstructFinalize(pLocalHostIP));
 
 	/* register config file handlers */
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omitlocallogging", 0, eCmdHdlrBinary,
-		NULL, &cs.bOmitLocalLogging, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputunixlistensocketignoremsgtimestamp", 0, eCmdHdlrBinary,
 		NULL, &cs.bIgnoreTimestamp, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"systemlogsocketname", 0, eCmdHdlrGetWord,
-		NULL, &cs.pLogSockName, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputunixlistensockethostname", 0, eCmdHdlrGetWord,
 		NULL, &cs.pLogHostName, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputunixlistensocketflowcontrol", 0, eCmdHdlrBinary,
@@ -1345,22 +1422,26 @@ CODEmodInit_QueryRegCFSLineHdlr
 	 * for that. We should revisit all of that once we have the new config format...
 	 * rgerhards, 2008-03-06
 	 */
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"systemlogsocketignoremsgtimestamp", 0, eCmdHdlrBinary,
-		setSystemLogTimestampIgnore, NULL, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"systemlogsocketflowcontrol", 0, eCmdHdlrBinary,
-		setSystemLogFlowControl, NULL, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"systemlogusesystimestamp", 0, eCmdHdlrBinary,
-		NULL, &cs.bUseSysTimeStampSysSock, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"systemlogsocketannotate", 0, eCmdHdlrBinary,
-		NULL, &cs.bAnnotateSysSock, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"systemlogusepidfromsystem", 0, eCmdHdlrBinary,
-		NULL, &cs.bWritePidSysSock, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"systemlogratelimitinterval", 0, eCmdHdlrInt,
-		NULL, &cs.ratelimitIntervalSysSock, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"systemlogratelimitburst", 0, eCmdHdlrInt,
-		NULL, &cs.ratelimitBurstSysSock, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"systemlogratelimitseverity", 0, eCmdHdlrInt,
-		NULL, &cs.ratelimitSeveritySysSock, STD_LOADABLE_MODULE_ID));
+	CHKiRet(regCfSysLineHdlr2((uchar *)"omitlocallogging", 0, eCmdHdlrBinary,
+		NULL, &cs.bOmitLocalLogging, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
+	CHKiRet(regCfSysLineHdlr2((uchar *)"systemlogsocketname", 0, eCmdHdlrGetWord,
+		NULL, &cs.pLogSockName, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
+	CHKiRet(regCfSysLineHdlr2((uchar *)"systemlogsocketignoremsgtimestamp", 0, eCmdHdlrBinary,
+		NULL, &cs.bIgnoreTimestampSysSock, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
+	CHKiRet(regCfSysLineHdlr2((uchar *)"systemlogsocketflowcontrol", 0, eCmdHdlrBinary,
+		NULL, &cs.bUseFlowCtlSysSock, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
+	CHKiRet(regCfSysLineHdlr2((uchar *)"systemlogusesystimestamp", 0, eCmdHdlrBinary,
+		NULL, &cs.bUseSysTimeStampSysSock, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
+	CHKiRet(regCfSysLineHdlr2((uchar *)"systemlogsocketannotate", 0, eCmdHdlrBinary,
+		NULL, &cs.bAnnotateSysSock, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
+	CHKiRet(regCfSysLineHdlr2((uchar *)"systemlogusepidfromsystem", 0, eCmdHdlrBinary,
+		NULL, &cs.bWritePidSysSock, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
+	CHKiRet(regCfSysLineHdlr2((uchar *)"systemlogratelimitinterval", 0, eCmdHdlrInt,
+		NULL, &cs.ratelimitIntervalSysSock, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
+	CHKiRet(regCfSysLineHdlr2((uchar *)"systemlogratelimitburst", 0, eCmdHdlrInt,
+		NULL, &cs.ratelimitBurstSysSock, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
+	CHKiRet(regCfSysLineHdlr2((uchar *)"systemlogratelimitseverity", 0, eCmdHdlrInt,
+		NULL, &cs.ratelimitSeveritySysSock, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
 	
 	/* support statistics gathering */
 	CHKiRet(statsobj.Construct(&modStats));
