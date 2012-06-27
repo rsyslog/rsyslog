@@ -755,7 +755,6 @@ CODESTARTactivateCnf
 	/* caching various settings */
 	iMaxLine = glbl.GetMaxLine();
 	CHKmalloc(pRcvBuf = MALLOC((iMaxLine + 1) * sizeof(char)));
-dbgprintf("AAA: timerequery %d\n", runModConf->iTimeRequery);
 finalize_it:
 ENDactivateCnf
 
