@@ -43,7 +43,7 @@ case "${host}" in
   *-*-linux*)
     os_type="linux"
   ;;
-  *-*-*darwin*|*-*-freebsd*|*-*-netbsd*|*-*-openbsd*)
+  *-*-*darwin*|*-*-dragonfly*|*-*-freebsd*|*-*-netbsd*|*-*-openbsd*)
     AC_DEFINE([OS_BSD], [1], [Indicator for a BSD OS])
     os_type="bsd"
   ;;
