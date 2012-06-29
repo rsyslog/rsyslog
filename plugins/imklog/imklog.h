@@ -31,13 +31,6 @@
 
 /* we need to have the modConf type present in all submodules */
 struct modConfData_s {
-	/* DEAD */
-	int dbgPrintSymbols;
-	int symbols_twice;
-	int use_syscall;
-	int symbol_lookup;
-	char *symfile; 
-	/* end DEAD */
 	rsconf_t *pConf;
 	int iFacilIntMsg;
 	uchar *pszPath;

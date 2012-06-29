@@ -76,11 +76,6 @@ DEFobjCurrIf(errmsg)
 
 /* config settings */
 typedef struct configSettings_s {
-	int dbgPrintSymbols; /* DEAD this one is extern so the helpers can access it! */
-	int symbols_twice; /* DEAD */
-	int use_syscall; /* DEAD */
-	int symbol_lookup; /* DEAD on recent kernels > 2.6, the kernel does this */
-	char *symfile; /* TODO: actually unsued currently! */
 	int bPermitNonKernel; /* permit logging of messages not having LOG_KERN facility */
 	int iFacilIntMsg; /* the facility to use for internal messages (set by driver) */
 	uchar *pszPath;
@@ -114,10 +109,6 @@ static prop_t *pLocalHostIP = NULL;	/* a pseudo-constant propterty for 127.0.0.1
 static inline void
 initConfigSettings(void)
 {
-	cs.dbgPrintSymbols = 0;
-	cs.symbols_twice = 0;
-	cs.use_syscall = 0;
-	cs.symbol_lookup = 0;
 	cs.bPermitNonKernel = 0;
 	cs.console_log_level = -1;
 	cs.pszPath = NULL;
@@ -353,9 +344,6 @@ BEGINendCnfLoad
 CODESTARTendCnfLoad
 	if(!loadModConf->configSetViaV2Method) {
 		/* persist module-specific settings from legacy config system */
-		loadModConf->dbgPrintSymbols = cs.dbgPrintSymbols;
-		loadModConf->symbols_twice = cs.symbols_twice;
-		loadModConf->use_syscall = cs.use_syscall;
 		loadModConf->bPermitNonKernel = cs.bPermitNonKernel;
 		loadModConf->iFacilIntMsg = cs.iFacilIntMsg;
 		loadModConf->console_log_level = cs.console_log_level;
@@ -367,14 +355,6 @@ CODESTARTendCnfLoad
 			loadModConf->pszPath = cs.pszPath;
 		}
 		cs.pszPath = NULL;
-		if((cs.symfile == NULL) || (cs.symfile[0] == '\0')) {
-			loadModConf->symfile = NULL;
-			if(cs.symfile != NULL)
-				free(cs.symfile);
-		} else {
-			loadModConf->symfile = cs.symfile;
-		}
-		cs.symfile = NULL;
 	}
 
 	loadModConf = NULL; /* done loading */
@@ -440,10 +420,6 @@ ENDqueryEtryPt
 
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
-	cs.dbgPrintSymbols = 0;
-	cs.symbols_twice = 0;
-	cs.use_syscall = 0;
-	cs.symbol_lookup = 0;
 	cs.bPermitNonKernel = 0;
 	if(cs.pszPath != NULL) {
 		free(cs.pszPath);
@@ -474,12 +450,12 @@ CODEmodInit_QueryRegCFSLineHdlr
 			NULL, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(regCfSysLineHdlr2((uchar *)"klogpath", 0, eCmdHdlrGetWord,
 			NULL, &cs.pszPath, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"klogsymbollookup", 0, eCmdHdlrBinary,
-			NULL, &cs.symbol_lookup, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"klogsymbolstwice", 0, eCmdHdlrBinary,
-			NULL, &cs.symbols_twice, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"klogusesyscallinterface", 0, eCmdHdlrBinary,
-			NULL, &cs.use_syscall, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"klogsymbollookup", 0, eCmdHdlrGoneAway,
+			NULL, NULL, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"klogsymbolstwice", 0, eCmdHdlrGoneAway,
+			NULL, NULL, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"klogusesyscallinterface", 0, eCmdHdlrGoneAway,
+			NULL, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(regCfSysLineHdlr2((uchar *)"klogpermitnonkernelfacility", 0, eCmdHdlrBinary,
 			NULL, &cs.bPermitNonKernel, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
 	CHKiRet(regCfSysLineHdlr2((uchar *)"klogconsoleloglevel", 0, eCmdHdlrInt,
