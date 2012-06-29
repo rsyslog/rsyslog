@@ -116,18 +116,15 @@ doModLoad(uchar **pp, __attribute__((unused)) void* pVal)
 	skipWhiteSpace(pp); /* skip over any whitespace */
 
 	/* this below is a quick and dirty hack to provide compatibility with the
-	 * $ModLoad MySQL forward compatibility statement. TODO: clean this up
-	 * For the time being, it is clean enough, it just needs to be done
-	 * differently when we have a full design for loadable plug-ins. For the
-	 * time being, we just mangle the names a bit.
-	 * rgerhards, 2007-08-14
+	 * $ModLoad MySQL forward compatibility statement. This needs to be supported
+	 * for legacy format.
 	 */
 	if(!strcmp((char*) szName, "MySQL"))
 		pModName = (uchar*) "ommysql.so";
 	else
 		pModName = szName;
 
-	CHKiRet(module.Load(pModName, 1));
+	CHKiRet(module.Load(pModName, 1, NULL));
 
 finalize_it:
 	RETiRet;

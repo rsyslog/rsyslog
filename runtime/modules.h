@@ -12,7 +12,7 @@
  *
  * File begun on 2007-07-22 by RGerhards
  *
- * Copyright 2007-2011 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2012 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -101,6 +101,7 @@ struct modInfo_s {
 	uchar*		pszName;	/* printable module name, e.g. for dbgprintf */
 	uchar*		cnfName;	/* name to be used in config statements (e.g. 'name="omusrmsg"') */
 	unsigned	uRefCnt;	/* reference count for this module; 0 -> may be unloaded */
+	sbool		bSetModCnfCalled;/* is setModCnf already called? Needed for built-in modules */
 	/* functions supported by all types of modules */
 	rsRetVal (*modInit)(int, int*, rsRetVal(**)());		/* initialize the module */
 		/* be sure to support version handshake! */
@@ -114,6 +115,7 @@ struct modInfo_s {
 	rsRetVal (*doHUP)(void *);		/* non-restart type HUP handler */
 	/* v2 config system specific */
 	rsRetVal (*beginCnfLoad)(void*newCnf, rsconf_t *pConf);
+	rsRetVal (*setModCnf)(struct nvlst *lst);
 	rsRetVal (*endCnfLoad)(void*Cnf);
 	rsRetVal (*checkCnf)(void*Cnf);
 	rsRetVal (*activateCnfPrePrivDrop)(void*Cnf);
@@ -152,9 +154,7 @@ struct modInfo_s {
 	} mod;
 	void *pModHdlr; /* handler to the dynamic library holding the module */
 #	ifdef DEBUG
-	/* we add some home-grown support to track our users (and detect who does not free us). In
-	 * the long term, this should probably be migrated into debug.c (TODO). -- rgerhards, 2008-03-11
-	 */
+	/* we add some home-grown support to track our users (and detect who does not free us). */
 	modUsr_t *pModUsrRoot;
 #	endif
 };
@@ -171,20 +171,26 @@ BEGINinterface(module) /* name must also be changed in ENDinterface macro! */
 	void (*PrintList)(void);
 	rsRetVal (*UnloadAndDestructAll)(eModLinkType_t modLinkTypesToUnload);
 	rsRetVal (*doModInit)(rsRetVal (*modInit)(), uchar *name, void *pModHdlr, modInfo_t **pNew);
-	rsRetVal (*Load)(uchar *name, sbool bConfLoad);
+	rsRetVal (*Load)(uchar *name, sbool bConfLoad, struct nvlst *lst);
 	rsRetVal (*SetModDir)(uchar *name);
 	modInfo_t *(*FindWithCnfName)(rsconf_t *cnf, uchar *name, eModType_t rqtdType); /* added v3, 2011-07-19 */
 ENDinterface(module)
-#define moduleCURR_IF_VERSION 3 /* increment whenever you change the interface structure! */
+#define moduleCURR_IF_VERSION 4 /* increment whenever you change the interface structure! */
 /* Changes: 
  * v2 
  * - added param bCondLoad to Load call - 2011-04-27
  * - removed GetNxtType, added GetNxtCnfType - 2011-04-27
+ * v3 (see above)
+ * v4
+ * - added third parameter to Load() - 2012-06-20
  */
 
 /* prototypes */
 PROTOTYPEObj(module);
+/* in v6, we go back to in-core static link for core objects, at least those
+ * that are not called from plugins.
+ */
+rsRetVal modulesProcessCnf(struct cnfobj *o);
 
-/* TODO: remove "dirty" calls! */
 rsRetVal addModToCnfList(modInfo_t *pThis);
 #endif /* #ifndef MODULES_H_INCLUDED */

@@ -115,6 +115,16 @@ typedef struct configSettings_s {
 static configSettings_t cs;
 
 /* tables for interfacing with the v6 config system */
+/* module-global parameters */
+static struct cnfparamdescr modpdescr[] = {
+	{ "template", eCmdHdlrGetWord, 0 },
+};
+static struct cnfparamblk modpblk =
+	{ CNFPARAMBLK_VERSION,
+	  sizeof(modpdescr)/sizeof(struct cnfparamdescr),
+	  modpdescr
+	};
+
 /* action (instance) parameters */
 static struct cnfparamdescr actpdescr[] = {
 	{ "target", eCmdHdlrGetWord, 0 },
@@ -135,6 +145,14 @@ static struct cnfparamblk actpblk =
 	  actpdescr
 	};
 
+struct modConfData_s {
+	rsconf_t *pConf;	/* our overall config object */
+	uchar 	*tplName;	/* default template */
+};
+
+static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
+static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current exec process */
+
 
 BEGINinitConfVars		/* (re)set config variables to default values */
 CODESTARTinitConfVars 
@@ -150,6 +168,44 @@ ENDinitConfVars
 
 
 static rsRetVal doTryResume(instanceData *pData);
+
+/* this function gets the default template. It coordinates action between
+ * old-style and new-style configuration parts.
+ */
+static inline uchar*
+getDfltTpl(void)
+{
+	if(loadModConf != NULL && loadModConf->tplName != NULL)
+		return loadModConf->tplName;
+	else if(cs.pszTplName == NULL)
+		return (uchar*)"RSYSLOG_TraditionalForwardFormat";
+	else
+		return cs.pszTplName;
+}
+
+
+/* set the default template to be used
+ * This is a module-global parameter, and as such needs special handling. It needs to
+ * be coordinated with values set via the v2 config system (rsyslog v6+). What we do
+ * is we do not permit this directive after the v2 config system has been used to set
+ * the parameter.
+ */
+static rsRetVal
+setLegacyDfltTpl(void __attribute__((unused)) *pVal, uchar* newVal)
+{
+	DEFiRet;
+
+	if(loadModConf != NULL && loadModConf->tplName != NULL) {
+		free(newVal);
+		errmsg.LogError(0, RS_RET_ERR, "omfwd default template already set via module "
+			"global parameter - can no longer be changed");
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+	free(cs.pszTplName);
+	cs.pszTplName = newVal;
+finalize_it:
+	RETiRet;
+}
 
 /* Close the UDP sockets.
  * rgerhards, 2009-05-29
@@ -188,6 +244,72 @@ DestructTCPInstanceData(instanceData *pData)
 	if(pData->pNS != NULL)
 		netstrms.Destruct(&pData->pNS);
 }
+
+
+BEGINbeginCnfLoad
+CODESTARTbeginCnfLoad
+	loadModConf = pModConf;
+	pModConf->pConf = pConf;
+	pModConf->tplName = NULL;
+ENDbeginCnfLoad
+
+BEGINsetModCnf
+	struct cnfparamvals *pvals = NULL;
+	int i;
+CODESTARTsetModCnf
+	pvals = nvlstGetParams(lst, &modpblk, NULL);
+	if(pvals == NULL) {
+		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "error processing module "
+				"config parameters [module(...)]");
+		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
+
+	if(Debug) {
+		dbgprintf("module (global) param blk for omfwd:\n");
+		cnfparamsPrint(&modpblk, pvals);
+	}
+
+	for(i = 0 ; i < modpblk.nParams ; ++i) {
+		if(!pvals[i].bUsed)
+			continue;
+		if(!strcmp(modpblk.descr[i].name, "template")) {
+			loadModConf->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+			if(cs.pszTplName != NULL) {
+				errmsg.LogError(0, RS_RET_DUP_PARAM, "omfwd: warning: default template "
+						"was already set via legacy directive - may lead to inconsistent "
+						"results.");
+			}
+		} else {
+			dbgprintf("omfwd: program error, non-handled "
+			  "param '%s' in beginCnfLoad\n", modpblk.descr[i].name);
+		}
+	}
+finalize_it:
+	if(pvals != NULL)
+		cnfparamvalsDestruct(pvals, &modpblk);
+ENDsetModCnf
+
+BEGINendCnfLoad
+CODESTARTendCnfLoad
+	loadModConf = NULL; /* done loading */
+	/* free legacy config vars */
+	free(cs.pszTplName);
+	cs.pszTplName = NULL;
+ENDendCnfLoad
+
+BEGINcheckCnf
+CODESTARTcheckCnf
+ENDcheckCnf
+
+BEGINactivateCnf
+CODESTARTactivateCnf
+	runModConf = pModConf;
+ENDactivateCnf
+
+BEGINfreeCnf
+CODESTARTfreeCnf
+	free(pModConf->tplName);
+ENDfreeCnf
 
 BEGINcreateInstance
 CODESTARTcreateInstance
@@ -750,9 +872,7 @@ CODESTARTnewActInst
 	}
 	CODE_STD_STRING_REQUESTnewActInst(1)
 
-	CHKiRet(OMSRsetEntry(*ppOMSR, 0, ustrdup((pData->tplName == NULL) ?
-					    (uchar*)"RSYSLOG_TraditionalForwardFormat" : (uchar*)pData->tplName),
-		OMSR_NO_RQD_TPL_OPTS));
+	CHKiRet(OMSRsetEntry(*ppOMSR, 0, ustrdup(getDfltTpl()), OMSR_NO_RQD_TPL_OPTS));
 
 	CHKiRet(initTCP(pData));
 CODE_STD_FINALIZERnewActInst
@@ -908,8 +1028,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 				 cs.iTCPRebindInterval : cs.iUDPRebindInterval;
 
 	/* process template */
-	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS,
-		(cs.pszTplName == NULL) ? (uchar*)"RSYSLOG_TraditionalForwardFormat" : cs.pszTplName));
+	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS, getDfltTpl()));
 
 	if(pData->protocol == FORW_TCP) {
 		pData->bResendLastOnRecon = cs.bResendLastOnRecon;
@@ -935,8 +1054,6 @@ ENDparseSelectorAct
 static void
 freeConfigVars(void)
 {
-	free(cs.pszTplName);
-	cs.pszTplName = NULL;
 	free(cs.pszStrmDrvr);
 	cs.pszStrmDrvr = NULL;
 	free(cs.pszStrmDrvrAuthMode);
@@ -962,6 +1079,8 @@ ENDmodExit
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
+CODEqueryEtryPt_STD_CONF2_QUERIES
+CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 CODEqueryEtryPt_TXIF_OMOD_QUERIES /* we support the transactional interface! */
 ENDqueryEtryPt
@@ -993,7 +1112,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(net,LM_NET_FILENAME));
 
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionforwarddefaulttemplate", 0, eCmdHdlrGetWord, NULL, &cs.pszTplName, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionforwarddefaulttemplate", 0, eCmdHdlrGetWord, setLegacyDfltTpl, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionsendtcprebindinterval", 0, eCmdHdlrInt, NULL, &cs.iTCPRebindInterval, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionsendudprebindinterval", 0, eCmdHdlrInt, NULL, &cs.iUDPRebindInterval, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionsendstreamdriver", 0, eCmdHdlrGetWord, NULL, &cs.pszStrmDrvr, NULL));

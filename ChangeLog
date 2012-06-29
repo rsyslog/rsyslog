@@ -2,6 +2,12 @@
 Version 6.5.0  [devel] 2012-0?-??
 - imrelp now supports non-cancel thread termination
   (but now requires at least librelp 1.0.1)
+- implemented freeCnf() module interface
+  This was actually not present in older versions, even though some modules
+  already used it. The implementation was now done, and not in 6.3/6.4 
+  because the resulting memory leak was ultra-slim and the new interface
+  handling has some potential to seriously break things. Not the kind of
+  thing you want to add in late beta state, if avoidable.
 - added --enable-debugless configure option for very high demanding envs
   This actually at compile time disables a lot of debug code, resulting
   in some speedup (but serious loss of debugging capabilities)

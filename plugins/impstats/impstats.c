@@ -68,14 +68,38 @@ struct modConfData_s {
 	int iFacility;
 	int iSeverity;
 	statsFmtType_t statsFmt;
+	sbool configSetViaV2Method;
 };
 static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
 static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current load process */
 
-
 static configSettings_t cs;
-
+static int bLegacyCnfModGlobalsPermitted;/* are legacy module-global config parameters permitted? */
 static prop_t *pInputName = NULL;
+
+/* module-global parameters */
+static struct cnfparamdescr modpdescr[] = {
+	{ "interval", eCmdHdlrInt, 0 },
+	{ "facility", eCmdHdlrInt, 0 },
+	{ "severity", eCmdHdlrInt, 0 },
+	{ "format", eCmdHdlrGetWord, 0 }
+};
+static struct cnfparamblk modpblk =
+	{ CNFPARAMBLK_VERSION,
+	  sizeof(modpdescr)/sizeof(struct cnfparamdescr),
+	  modpdescr
+	};
+
+BEGINmodExit
+CODESTARTmodExit
+	prop.Destruct(&pInputName);
+	/* release objects we used */
+	objRelease(glbl, CORE_COMPONENT);
+	objRelease(prop, CORE_COMPONENT);
+	objRelease(errmsg, CORE_COMPONENT);
+	objRelease(statsobj, CORE_COMPONENT);
+ENDmodExit
+
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
@@ -148,23 +172,86 @@ BEGINbeginCnfLoad
 CODESTARTbeginCnfLoad
 	loadModConf = pModConf;
 	pModConf->pConf = pConf;
+	/* init our settings */
+	loadModConf->configSetViaV2Method = 0;
+	loadModConf->iStatsInterval = DEFAULT_STATS_PERIOD;
+	loadModConf->iFacility = DEFAULT_FACILITY;
+	loadModConf->iSeverity = DEFAULT_SEVERITY;
+	loadModConf->statsFmt = statsFmt_Legacy;
+	bLegacyCnfModGlobalsPermitted = 1;
 	/* init legacy config vars */
 	initConfigSettings();
 ENDbeginCnfLoad
 
 
+BEGINsetModCnf
+	struct cnfparamvals *pvals = NULL;
+	char *mode;
+	int i;
+CODESTARTsetModCnf
+	pvals = nvlstGetParams(lst, &modpblk, NULL);
+	if(pvals == NULL) {
+		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "error processing module "
+				"config parameters [module(...)]");
+		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
+
+	if(Debug) {
+		dbgprintf("module (global) param blk for impstats:\n");
+		cnfparamsPrint(&modpblk, pvals);
+	}
+
+	for(i = 0 ; i < modpblk.nParams ; ++i) {
+		if(!pvals[i].bUsed)
+			continue;
+		if(!strcmp(modpblk.descr[i].name, "interval")) {
+			loadModConf->iStatsInterval = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "facility")) {
+			loadModConf->iFacility = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "severity")) {
+			loadModConf->iSeverity = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "format")) {
+			mode = es_str2cstr(pvals[i].val.d.estr, NULL);
+			if(!strcasecmp(mode, "json")) {
+				loadModConf->statsFmt = statsFmt_JSON;
+			} else if(!strcasecmp(mode, "cee")) {
+				loadModConf->statsFmt = statsFmt_CEE;
+			} else if(!strcasecmp(mode, "legacy")) {
+				loadModConf->statsFmt = statsFmt_Legacy;
+			} else {
+				errmsg.LogError(0, RS_RET_ERR, "impstats: invalid format %s",
+						mode);
+			}
+			free(mode);
+		} else {
+			dbgprintf("impstats: program error, non-handled "
+			  "param '%s' in beginCnfLoad\n", modpblk.descr[i].name);
+		}
+	}
+
+	loadModConf->configSetViaV2Method = 1;
+	bLegacyCnfModGlobalsPermitted = 0;
+
+finalize_it:
+	if(pvals != NULL)
+		cnfparamvalsDestruct(pvals, &modpblk);
+ENDsetModCnf
+
+
 BEGINendCnfLoad
 CODESTARTendCnfLoad
-	/* persist module-specific settings from legacy config system */
-	loadModConf->iStatsInterval = cs.iStatsInterval;
-	loadModConf->iFacility = cs.iFacility;
-	loadModConf->iSeverity = cs.iSeverity;
-	if (cs.bCEE == 1) {
-		loadModConf->statsFmt = statsFmt_CEE;
-	} else if (cs.bJSON == 1) {
-		loadModConf->statsFmt = statsFmt_JSON;
-	} else {
-		loadModConf->statsFmt = statsFmt_Legacy;
+	if(!loadModConf->configSetViaV2Method) {
+		/* persist module-specific settings from legacy config system */
+		loadModConf->iStatsInterval = cs.iStatsInterval;
+		loadModConf->iFacility = cs.iFacility;
+		loadModConf->iSeverity = cs.iSeverity;
+		if (cs.bCEE == 1) {
+			loadModConf->statsFmt = statsFmt_CEE;
+		} else if (cs.bJSON == 1) {
+			loadModConf->statsFmt = statsFmt_JSON;
+		} else {
+			loadModConf->statsFmt = statsFmt_Legacy;
+		}
 	}
 ENDendCnfLoad
 
@@ -173,7 +260,7 @@ BEGINcheckCnf
 CODESTARTcheckCnf
 	if(pModConf->iStatsInterval == 0) {
 		errmsg.LogError(0, NO_ERRCODE, "impstats: stats interval zero not permitted, using "
-				"defaul of %d seconds", DEFAULT_STATS_PERIOD);
+				"default of %d seconds", DEFAULT_STATS_PERIOD);
 		pModConf->iStatsInterval = DEFAULT_STATS_PERIOD;
 	}
 ENDcheckCnf
@@ -225,22 +312,11 @@ CODESTARTafterRun
 ENDafterRun
 
 
-BEGINmodExit
-CODESTARTmodExit
-	prop.Destruct(&pInputName);
-	/* release objects we used */
-	objRelease(glbl, CORE_COMPONENT);
-	objRelease(prop, CORE_COMPONENT);
-	objRelease(errmsg, CORE_COMPONENT);
-	objRelease(statsobj, CORE_COMPONENT);
-ENDmodExit
-
-
-
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_IMOD_QUERIES
 CODEqueryEtryPt_STD_CONF2_QUERIES
+CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
 CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
 ENDqueryEtryPt
 
@@ -262,12 +338,12 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(statsobj, CORE_COMPONENT));
 	/* the pstatsinverval is an alias to support a previous screwed-up syntax... */
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"pstatsinterval", 0, eCmdHdlrInt, NULL, &cs.iStatsInterval, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"pstatinterval", 0, eCmdHdlrInt, NULL, &cs.iStatsInterval, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"pstatfacility", 0, eCmdHdlrInt, NULL, &cs.iFacility, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"pstatseverity", 0, eCmdHdlrInt, NULL, &cs.iSeverity, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"pstatjson", 0, eCmdHdlrBinary, NULL, &cs.bJSON, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"pstatcee", 0, eCmdHdlrBinary, NULL, &cs.bCEE, STD_LOADABLE_MODULE_ID));
+	CHKiRet(regCfSysLineHdlr2((uchar *)"pstatsinterval", 0, eCmdHdlrInt, NULL, &cs.iStatsInterval, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
+	CHKiRet(regCfSysLineHdlr2((uchar *)"pstatinterval", 0, eCmdHdlrInt, NULL, &cs.iStatsInterval, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
+	CHKiRet(regCfSysLineHdlr2((uchar *)"pstatfacility", 0, eCmdHdlrInt, NULL, &cs.iFacility, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
+	CHKiRet(regCfSysLineHdlr2((uchar *)"pstatseverity", 0, eCmdHdlrInt, NULL, &cs.iSeverity, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
+	CHKiRet(regCfSysLineHdlr2((uchar *)"pstatjson", 0, eCmdHdlrBinary, NULL, &cs.bJSON, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
+	CHKiRet(regCfSysLineHdlr2((uchar *)"pstatcee", 0, eCmdHdlrBinary, NULL, &cs.bCEE, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 
 	CHKiRet(prop.Construct(&pInputName));

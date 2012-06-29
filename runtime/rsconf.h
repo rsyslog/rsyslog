@@ -97,8 +97,8 @@ struct defaults_s {
 struct cfgmodules_etry_s {
 	cfgmodules_etry_t *next;
 	modInfo_t *pMod;
-	/* the following data is input module specific */
 	void *modCnf;		/* pointer to the input module conf */
+	/* the following data is input module specific */
 	sbool canActivate;	/* OK to activate this config? */
 	sbool canRun;		/* OK to run this config? */
 };

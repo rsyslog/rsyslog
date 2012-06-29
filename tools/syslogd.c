@@ -786,18 +786,6 @@ static void doDie(int sig)
 }
 
 
-/* This function frees all dynamically allocated memory for program termination.
- * It must be called only immediately before exit(). It is primarily an aid
- * for memory debuggers, which prevents cluttered outupt.
- * rgerhards, 2008-03-20
- */
-static void
-freeAllDynMemForTermination(void)
-{
-	free(ourConf->globals.pszConfDAGFile);
-}
-
-
 /* Finalize and destruct all actions.
  */
 static inline void
@@ -867,14 +855,16 @@ die(int sig)
 	destructAllActions();
 
 	DBGPRINTF("all primary multi-thread sources have been terminated - now doing aux cleanup...\n");
+
+	DBGPRINTF("destructing current config...\n");
+	rsconf.Destruct(&runConf);
+
 	/* rger 2005-02-22
 	 * now clean up the in-memory structures. OK, the OS
 	 * would also take care of that, but if we do it
 	 * ourselfs, this makes finding memory leaks a lot
 	 * easier.
 	 */
-	tplDeleteAll(runConf);
-
 	/* de-init some modules */
 	modExitIminternal();
 
@@ -898,15 +888,8 @@ die(int sig)
 	/* dbgClassExit MUST be the last one, because it de-inits the debug system */
 	dbgClassExit();
 
-	/* free all remaining memory blocks - this is not absolutely necessary, but helps
-	 * us keep memory debugger logs clean and this is in aid in developing. It doesn't
-	 * cost much time, so we do it always. -- rgerhards, 2008-03-20
-	 */
-	freeAllDynMemForTermination();
-	/* NO CODE HERE - feeelAllDynMemForTermination() must be the last thing before exit()! */
-
+	/* NO CODE HERE - dbgClassExit() must be the last thing before exit()! */
 	remove_pid(PidFile);
-
 	exit(0); /* "good" exit, this is the terminator function for rsyslog [die()] */
 }
 

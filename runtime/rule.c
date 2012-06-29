@@ -338,7 +338,6 @@ CODESTARTobjDestruct(rule)
 	} else if(pThis->f_filter_type == FILTER_EXPR) {
 		cnfexprDestruct(pThis->f_filterData.expr);
 	}
-#warning: need to destroy expression based filter!
 
 	llDestroy(&pThis->llActList);
 ENDobjDestruct(rule)

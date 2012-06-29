@@ -64,6 +64,7 @@
 #include "threads.h"
 #include "datetime.h"
 #include "parserif.h"
+#include "modules.h"
 #include "dirty.h"
 
 /* static data */
@@ -151,10 +152,33 @@ rsRetVal rsconfConstructFinalize(rsconf_t __attribute__((unused)) *pThis)
 }
 
 
+/* call freeCnf() module entry points AND free the module entries themselfes.
+ */
+static inline void
+freeCnf(rsconf_t *pThis)
+{
+	cfgmodules_etry_t *etry, *del;
+	etry = pThis->modules.root;
+	while(etry != NULL) {
+		if(etry->pMod->beginCnfLoad != NULL) {
+			dbgprintf("calling freeCnf(%p) for module '%s'\n",
+				  etry->modCnf, (char*) module.GetName(etry->pMod));
+			etry->pMod->freeCnf(etry->modCnf);
+		}
+		del = etry;
+		etry = etry->next;
+		free(del);
+	}
+}
+
+
 /* destructor for the rsconf object */
 BEGINobjDestruct(rsconf) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(rsconf)
+	freeCnf(pThis);
+	tplDeleteAll(pThis);
 	free(pThis->globals.mainQ.pszMainMsgQFName);
+	free(pThis->globals.pszConfDAGFile);
 	llDestroy(&(pThis->rulesets.llRulesets));
 ENDobjDestruct(rsconf)
 
@@ -367,6 +391,9 @@ void cnfDoObj(struct cnfobj *o)
 	switch(o->objType) {
 	case CNFOBJ_GLOBAL:
 		glblProcessCnf(o);
+		break;
+	case CNFOBJ_MODULE:
+		modulesProcessCnf(o);
 		break;
 	case CNFOBJ_ACTION:
 		actionProcessCnf(o);
@@ -993,12 +1020,12 @@ loadBuildInModules()
 {
 	DEFiRet;
 
-	CHKiRet(regBuildInModule(modInitFile, UCHAR_CONSTANT("builtin-file"), NULL));
-	CHKiRet(regBuildInModule(modInitPipe, UCHAR_CONSTANT("builtin-pipe"), NULL));
+	CHKiRet(regBuildInModule(modInitFile, UCHAR_CONSTANT("builtin:omfile"), NULL));
+	CHKiRet(regBuildInModule(modInitPipe, UCHAR_CONSTANT("builtin:ompipe"), NULL));
 	CHKiRet(regBuildInModule(modInitShell, UCHAR_CONSTANT("builtin-shell"), NULL));
-	CHKiRet(regBuildInModule(modInitDiscard, UCHAR_CONSTANT("builtin-discard"), NULL));
+	CHKiRet(regBuildInModule(modInitDiscard, UCHAR_CONSTANT("builtin:omdiscard"), NULL));
 #	ifdef SYSLOG_INET
-	CHKiRet(regBuildInModule(modInitFwd, UCHAR_CONSTANT("builtin-fwd"), NULL));
+	CHKiRet(regBuildInModule(modInitFwd, UCHAR_CONSTANT("builtin:omfwd"), NULL));
 #	endif
 
 	/* dirty, but this must be for the time being: the usrmsg module must always be
@@ -1010,11 +1037,11 @@ loadBuildInModules()
 	 * User names now must begin with:
 	 *   [a-zA-Z0-9_.]
 	 */
-	CHKiRet(regBuildInModule(modInitUsrMsg, (uchar*) "builtin-usrmsg", NULL));
+	CHKiRet(regBuildInModule(modInitUsrMsg, (uchar*) "builtin:omusrmsg", NULL));
 
 	/* load build-in parser modules */
-	CHKiRet(regBuildInModule(modInitpmrfc5424, UCHAR_CONSTANT("builtin-pmrfc5424"), NULL));
-	CHKiRet(regBuildInModule(modInitpmrfc3164, UCHAR_CONSTANT("builtin-pmrfc3164"), NULL));
+	CHKiRet(regBuildInModule(modInitpmrfc5424, UCHAR_CONSTANT("builtin:pmrfc5424"), NULL));
+	CHKiRet(regBuildInModule(modInitpmrfc3164, UCHAR_CONSTANT("builtin:pmrfc3164"), NULL));
 
 	/* and set default parser modules. Order is *very* important, legacy
 	 * (3164) parser needs to go last! */
@@ -1022,10 +1049,10 @@ loadBuildInModules()
 	CHKiRet(parser.AddDfltParser(UCHAR_CONSTANT("rsyslog.rfc3164")));
 
 	/* load build-in strgen modules */
-	CHKiRet(regBuildInModule(modInitsmfile, UCHAR_CONSTANT("builtin-smfile"), NULL));
-	CHKiRet(regBuildInModule(modInitsmtradfile, UCHAR_CONSTANT("builtin-smtradfile"), NULL));
-	CHKiRet(regBuildInModule(modInitsmfwd, UCHAR_CONSTANT("builtin-smfwd"), NULL));
-	CHKiRet(regBuildInModule(modInitsmtradfwd, UCHAR_CONSTANT("builtin-smtradfwd"), NULL));
+	CHKiRet(regBuildInModule(modInitsmfile, UCHAR_CONSTANT("builtin:smfile"), NULL));
+	CHKiRet(regBuildInModule(modInitsmtradfile, UCHAR_CONSTANT("builtin:smtradfile"), NULL));
+	CHKiRet(regBuildInModule(modInitsmfwd, UCHAR_CONSTANT("builtin:smfwd"), NULL));
+	CHKiRet(regBuildInModule(modInitsmtradfwd, UCHAR_CONSTANT("builtin:smtradfwd"), NULL));
 
 finalize_it:
 	if(iRet != RS_RET_OK) {

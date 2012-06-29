@@ -553,10 +553,12 @@ glblProcessCnf(struct cnfobj *o)
 	cnfparamsPrint(&paramblk, cnfparamvals);
 }
 
+#if 0 /* TODO: finally remove? rgerhards, 2012-06-20 */
 rsRetVal
 glblCheckCnf()
 {
 }
+#endif
 
 void
 glblDoneLoadCnf(void)

@@ -109,5 +109,6 @@ rsRetVal actionClassInit(void);
 rsRetVal addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStringRequest_t *pOMSR, struct cnfparamvals *actParams, struct cnfparamvals *queueParams, int bSuspended);
 rsRetVal activateActions(void);
 rsRetVal actionNewInst(struct nvlst *lst, action_t **ppAction);
+rsRetVal actionProcessCnf(struct cnfobj *o);
 
 #endif /* #ifndef ACTION_H_INCLUDED */
