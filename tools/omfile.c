@@ -229,7 +229,7 @@ CODESTARTdbgPrintInstInfo
 		dbgprintf("[dynamic]\n");
 	} else { /* regular file */
 		dbgprintf("%s%s\n", pData->f_fname,
-			  (pData->pStrm == NULL) ? " (unused)" : "");
+			  (pData->pStrm == NULL) ? " (closed)" : "");
 	}
 
 	dbgprintf("\ttemplate='%s'\n", pData->f_fname);
