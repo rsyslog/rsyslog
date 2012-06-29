@@ -772,7 +772,8 @@ rsRetVal actionDbgPrint(action_t *pThis)
 
 	dbgprintf("%s: ", module.GetStateName(pThis->pMod));
 	pThis->pMod->dbgPrintInstInfo(pThis->pModData);
-	dbgprintf("\n\tInstance data: 0x%lx\n", (unsigned long) pThis->pModData);
+	dbgprintf("\n");
+	dbgprintf("\tInstance data: 0x%lx\n", (unsigned long) pThis->pModData);
 	dbgprintf("\tRepeatedMsgReduction: %d\n", pThis->f_ReduceRepeated);
 	dbgprintf("\tResume Interval: %d\n", pThis->iResumeInterval);
 	if(pThis->eState == ACT_STATE_SUSP) {

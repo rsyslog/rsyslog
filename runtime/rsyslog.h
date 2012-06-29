@@ -374,6 +374,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_CNF_INVLD_FRAMING = -2214, /**< invalid framing specified in config file */
 	RS_RET_LEGA_ACT_NOT_SUPPORTED = -2215, /**< the module (no longer) supports legacy action syntax */
 	RS_RET_MAX_OMSR_REACHED = -2216, /**< max nbr of string requests reached, not supported by core */
+	RS_RET_UID_MISSING = -2217,	/**< a user id is missing (but e.g. a password provided) */
 	/* reserved for pre-v6.5 */
 	RS_RET_DUP_PARAM = -2220, /**< config parameter is given more than once */
 	RS_RET_MODULE_ALREADY_IN_CONF = -2221, /**< module already in current configuration */

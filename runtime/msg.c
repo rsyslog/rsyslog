@@ -2404,7 +2404,7 @@ jsonAddVal(uchar *pSrc, unsigned buflen, es_str_t **dst)
 					/* we hope we have only few escapes... */
 					*dst = es_newStr(buflen+10);
 				} else {
-					*dst = es_newStrFromBuf((char*)pSrc, i-1);
+					*dst = es_newStrFromBuf((char*)pSrc, i);
 				}
 				if(*dst == NULL) {
 					ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
