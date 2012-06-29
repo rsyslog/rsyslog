@@ -1,4 +1,11 @@
 ---------------------------------------------------------------------------
+Version 6.3.13  [BETA] 2012-06-??
+- support for elasticsearch via omelasticsearch added
+  Note that this module has been tested quite well by a number of folks,
+  and this is why we merge in new functionality in a late beta stage.
+  Even if problems would exist, only users of omelasticsearch would
+  experience them, making it a pretty safe addition.
+---------------------------------------------------------------------------
 Version 6.3.12  [BETA] 2012-06-18
 - bugfix: $ActionName was not properly honored
   Thanks to Abby Edwards for alerting us
