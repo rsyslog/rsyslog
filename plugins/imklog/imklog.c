@@ -121,7 +121,6 @@ initConfigSettings(void)
 	cs.bPermitNonKernel = 0;
 	cs.console_log_level = -1;
 	cs.pszPath = NULL;
-	cs.symfile = NULL; 
 	cs.iFacilIntMsg = klogFacilIntMsg();
 }
 
@@ -379,9 +378,6 @@ CODESTARTendCnfLoad
 	}
 
 	loadModConf = NULL; /* done loading */
-	/* free legacy config vars */
-	free(cs.symfile);
-	cs.symfile = NULL;
 ENDendCnfLoad
 
 
@@ -447,7 +443,6 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	cs.dbgPrintSymbols = 0;
 	cs.symbols_twice = 0;
 	cs.use_syscall = 0;
-	cs.symfile = NULL;
 	cs.symbol_lookup = 0;
 	cs.bPermitNonKernel = 0;
 	if(cs.pszPath != NULL) {

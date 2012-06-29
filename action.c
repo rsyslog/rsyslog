@@ -2010,34 +2010,6 @@ initConfigVariables(void)
 }
 
 
-/* save our config and create a new scope. Note that things are messed up if
- * this is called while the config is already saved (we currently do not
- * have a stack as the design is we need none!
- * rgerhards, 2010-07-23
- */
-rsRetVal
-actionNewScope(void)
-{
-	DEFiRet;
-	memcpy(&cs_save, &cs, sizeof(cs));
-	initConfigVariables();
-	RETiRet;
-}
-
-
-/* restore previously saved scope.
- * rgerhards, 2010-07-23
- */
-rsRetVal
-actionRestoreScope(void)
-{
-	DEFiRet;
-	memcpy(&cs, &cs_save, sizeof(cs));
-	RETiRet;
-}
-
-
-
 rsRetVal
 actionNewInst(struct nvlst *lst, action_t **ppAction)
 {
