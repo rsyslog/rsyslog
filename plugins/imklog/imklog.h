@@ -31,16 +31,19 @@
 
 /* we need to have the modConf type present in all submodules */
 struct modConfData_s {
+	/* DEAD */
 	int dbgPrintSymbols;
 	int symbols_twice;
 	int use_syscall;
 	int symbol_lookup;
-	int bPermitNonKernel;
+	char *symfile; 
+	/* end DEAD */
+	rsconf_t *pConf;
 	int iFacilIntMsg;
 	uchar *pszPath;
 	int console_log_level;
-	char *symfile; 
-	rsconf_t *pConf;
+	sbool bPermitNonKernel;
+	sbool configSetViaV2Method;
 };
 
 /* interface to "drivers"
@@ -53,21 +56,6 @@ rsRetVal klogLogKMsg(modConfData_t *pModConf);
 rsRetVal klogWillRun(modConfData_t *pModConf);
 rsRetVal klogAfterRun(modConfData_t *pModConf);
 int klogFacilIntMsg();
-
-/* the following data members may be accessed by the "drivers"
- * I admit this is not the cleanest way to doing things, but I honestly
- * believe it is appropriate for the job that needs to be done.
- * rgerhards, 2008-04-09
- */
-#if 0
-extern int symbols_twice;
-extern int use_syscall;
-extern int symbol_lookup;
-extern char *symfile; 
-extern int console_log_level;
-extern int dbgPrintSymbols;
-extern uchar *pszPath;
-#endif
 
 /* the functions below may be called by the drivers */
 rsRetVal imklogLogIntMsg(int priority, char *fmt, ...) __attribute__((format(printf,2, 3)));
