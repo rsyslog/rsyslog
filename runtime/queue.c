@@ -224,30 +224,53 @@ finalize_it:
 
 /* methods */
 
+static inline char *
+getQueueTypeName(queueType_t t)
+{
+	char *r;
+
+	switch(t) {
+	case QUEUETYPE_FIXED_ARRAY: 
+		r = "FixedArray";
+	case QUEUETYPE_LINKEDLIST: 
+		r = "LinkedList";
+	case QUEUETYPE_DISK: 
+		r = "Disk";
+	case QUEUETYPE_DIRECT: 
+		r = "Direct";
+	}
+	return r;
+}
 
 void
 qqueueDbgPrint(qqueue_t *pThis)
 {
-	dbgoprint((obj_t*) pThis, "size %d messages.\n", pThis->iMaxQueueSize);
-	dbgoprint((obj_t*) pThis, "worker threads: %d, wThread shutdown: %d, Perists every %d updates.\n",
-		  pThis->iNumWorkerThreads, pThis->toWrkShutdown, pThis->iPersistUpdCnt);
-	dbgoprint((obj_t*) pThis, "queue timeouts: shutdown: %d, action completion shutdown: %d, enq: %d\n",
-		   pThis->toQShutdown, pThis->toActShutdown, pThis->toEnq);
-	dbgoprint((obj_t*) pThis, "queue watermarks: high: %d, low: %d, discard: %d, discard-severity: %d\n",
-		   pThis->iHighWtrMrk, pThis->iLowWtrMrk,
-		   pThis->iDiscardMrk, pThis->iDiscardSeverity);
-	dbgoprint((obj_t*) pThis, "queue save on shutdown %d, max disk space allowed %lld\n",
-		   pThis->bSaveOnShutdown, pThis->sizeOnDiskMax);
-	dbgoprint((obj_t*) pThis, "dequeueBatchSize: %d\n", pThis->iDeqBatchSize);
-	/* TODO: add
-	iActionRetryCount = 0;
-	iActionRetryInterval = 30000;
-       static int iMainMsgQtoWrkMinMsgs = 100;
-	static int iMainMsgQbSaveOnShutdown = 1;
-	iMainMsgQueMaxDiskSpace = 0;
-	setQPROP(qqueueSetiMinMsgsPerWrkr, "$MainMsgQueueWorkerThreadMinimumMessages", 100);
-	setQPROP(qqueueSetbSaveOnShutdown, "$MainMsgQueueSaveOnShutdown", 1);
-	 */
+	dbgoprint((obj_t*) pThis, "parameter dump:\n");
+	dbgoprint((obj_t*) pThis, "queue.filename '%s'\n",
+		(pThis->pszFilePrefix == NULL) ? "[NONE]" : (char*)pThis->pszFilePrefix);
+	dbgoprint((obj_t*) pThis, "queue.size: %d\n", pThis->iMaxQueueSize);
+	dbgoprint((obj_t*) pThis, "queue.dequeuebatchsize: %d\n", pThis->iDeqBatchSize);
+	dbgoprint((obj_t*) pThis, "queue.maxdiskspace: %lld\n", pThis->iMaxFileSize);
+	dbgoprint((obj_t*) pThis, "queue.highwatermark: %d\n", pThis->iHighWtrMrk);
+	dbgoprint((obj_t*) pThis, "queue.lowwatermark: %d\n", pThis->iLowWtrMrk);
+	dbgoprint((obj_t*) pThis, "queue.fulldelaymark: %d\n", pThis->iFullDlyMrk);
+	dbgoprint((obj_t*) pThis, "queue.lightdelaymark: %d\n", pThis->iLightDlyMrk);
+	dbgoprint((obj_t*) pThis, "queue.discardmark: %d\n", pThis->iDiscardMrk);
+	dbgoprint((obj_t*) pThis, "queue.discardseverity: %d\n", pThis->iDiscardSeverity);
+	dbgoprint((obj_t*) pThis, "queue.checkpointinterval: %d\n", pThis->iPersistUpdCnt);
+	dbgoprint((obj_t*) pThis, "queue.syncqueuefiles: %d\n", pThis->bSyncQueueFiles);
+	dbgoprint((obj_t*) pThis, "queue.type: %d [%s]\n", pThis->qType, getQueueTypeName(pThis->qType));
+	dbgoprint((obj_t*) pThis, "queue.workerthreads: %d\n", pThis->iNumWorkerThreads);
+	dbgoprint((obj_t*) pThis, "queue.timeoutshutdown: %d\n", pThis->toQShutdown);
+	dbgoprint((obj_t*) pThis, "queue.timeoutactioncompletion: %d\n", pThis->toActShutdown);
+	dbgoprint((obj_t*) pThis, "queue.timeoutenqueue: %d\n", pThis->toEnq);
+	dbgoprint((obj_t*) pThis, "queue.timeoutworkerthreadshutdown: %d\n", pThis->toWrkShutdown);
+	dbgoprint((obj_t*) pThis, "queue.workerthreadminimummessages: %d\n", pThis->iMinMsgsPerWrkr);
+	dbgoprint((obj_t*) pThis, "queue.maxfilesize: %lld\n", pThis->iMaxFileSize);
+	dbgoprint((obj_t*) pThis, "queue.saveonshutdown: %d\n", pThis->bSaveOnShutdown);
+	dbgoprint((obj_t*) pThis, "queue.dequeueslowdown: %d\n", pThis->iDeqSlowdown);
+	dbgoprint((obj_t*) pThis, "queue.dequeuetimebegin: %d\n", pThis->iDeqtWinFromHr);
+	dbgoprint((obj_t*) pThis, "queuedequeuetimend.: %d\n", pThis->iDeqtWinToHr);
 }
 
 
