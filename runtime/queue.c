@@ -225,6 +225,32 @@ finalize_it:
 /* methods */
 
 
+void
+qqueueDbgPrint(qqueue_t *pThis)
+{
+	dbgoprint((obj_t*) pThis, "size %d messages.\n", pThis->iMaxQueueSize);
+	dbgoprint((obj_t*) pThis, "worker threads: %d, wThread shutdown: %d, Perists every %d updates.\n",
+		  pThis->iNumWorkerThreads, pThis->toWrkShutdown, pThis->iPersistUpdCnt);
+	dbgoprint((obj_t*) pThis, "queue timeouts: shutdown: %d, action completion shutdown: %d, enq: %d\n",
+		   pThis->toQShutdown, pThis->toActShutdown, pThis->toEnq);
+	dbgoprint((obj_t*) pThis, "queue watermarks: high: %d, low: %d, discard: %d, discard-severity: %d\n",
+		   pThis->iHighWtrMrk, pThis->iLowWtrMrk,
+		   pThis->iDiscardMrk, pThis->iDiscardSeverity);
+	dbgoprint((obj_t*) pThis, "queue save on shutdown %d, max disk space allowed %lld\n",
+		   pThis->bSaveOnShutdown, pThis->sizeOnDiskMax);
+	dbgoprint((obj_t*) pThis, "dequeueBatchSize: %d\n", pThis->iDeqBatchSize);
+	/* TODO: add
+	iActionRetryCount = 0;
+	iActionRetryInterval = 30000;
+       static int iMainMsgQtoWrkMinMsgs = 100;
+	static int iMainMsgQbSaveOnShutdown = 1;
+	iMainMsgQueMaxDiskSpace = 0;
+	setQPROP(qqueueSetiMinMsgsPerWrkr, "$MainMsgQueueWorkerThreadMinimumMessages", 100);
+	setQPROP(qqueueSetbSaveOnShutdown, "$MainMsgQueueSaveOnShutdown", 1);
+	 */
+}
+
+
 /* get the physical queue size. Must only be called
  * while mutex is locked!
  * rgerhards, 2008-01-29

@@ -478,9 +478,7 @@ actionConstructFinalize(action_t *pThis, struct cnfparamvals *queueParams)
 #	undef setQPROP
 #	undef setQPROPstr
 
-	dbgoprint((obj_t*) pThis->pQueue, "save on shutdown %d, max disk space allowed %lld\n",
-		   cs.bActionQSaveOnShutdown, cs.iActionQueMaxDiskSpace);
- 	
+	qqueueDbgPrint(pThis->pQueue);
 
 	DBGPRINTF("Action %p: queue %p created\n", pThis, pThis->pQueue);
 	

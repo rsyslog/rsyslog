@@ -195,6 +195,7 @@ rsRetVal qqueueEnqObjDirectBatch(qqueue_t *pThis, batch_t *pBatch);
 rsRetVal qqueueDoCnfParams(struct nvlst *lst, struct cnfparamvals **ppvals);
 rsRetVal qqueueApplyCnfParam(qqueue_t *pThis, struct cnfparamvals *pvals);
 void qqueueSetDefaultsActionQueue(qqueue_t *pThis);
+void qqueueDbgPrint(qqueue_t *pThis);
 
 PROTOTYPEObjClassInit(qqueue);
 PROTOTYPEpropSetMeth(qqueue, iPersistUpdCnt, int);
