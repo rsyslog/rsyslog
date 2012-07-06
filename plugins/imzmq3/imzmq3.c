@@ -491,7 +491,10 @@ static int handlePoll(zloop_t __attribute__((unused)) * loop, zmq_pollitem_t *po
         logmsg->msgFlags = NEEDS_PARSING;
         submitMsg(logmsg);
     }
-
+    
+    /* gotta free the string returned from zstr_recv() */
+    free(buf);
+    
     if( pollerData->thread->bShallStop == TRUE) {
         /* a handler that returns -1 will terminate the 
            czmq reactor loop
