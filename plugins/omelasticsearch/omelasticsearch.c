@@ -143,7 +143,7 @@ CODESTARTdbgPrintInstInfo
 	dbgprintf("\tserver='%s'\n", pData->server);
 	dbgprintf("\tserverport=%d\n", pData->port);
 	dbgprintf("\tuid='%s'\n", pData->uid == NULL ? (uchar*)"(not configured)" : pData->uid);
-	dbgprintf("\tpwd=(%s configured)\n", pData->pwd == NULL ? "not " : "");
+	dbgprintf("\tpwd=(%sconfigured)\n", pData->pwd == NULL ? "not " : "");
 	dbgprintf("\tsearch index='%s'\n", pData->searchIndex);
 	dbgprintf("\tsearch index='%s'\n", pData->searchType);
 	dbgprintf("\ttimeout='%s'\n", pData->timeout);
@@ -155,6 +155,7 @@ ENDdbgPrintInstInfo
 
 BEGINtryResume
 CODESTARTtryResume
+	DBGPRINTF("omelasticsearch: tryResume called\n");
 ENDtryResume
 
 
@@ -188,7 +189,9 @@ setCurlURL(instanceData *pData, uchar *tpl1, uchar *tpl2)
 	uchar *searchIndex;
 	uchar *searchType;
 	es_str_t *url;
+	int rLocal;
 	int r;
+	DEFiRet;
 
 	getIndexAndType(pData, tpl1, tpl2, &searchIndex, &searchType);
 	url = es_newStr(128);
@@ -218,17 +221,23 @@ setCurlURL(instanceData *pData, uchar *tpl1, uchar *tpl2)
 	restURL = es_str2cstr(url, NULL);
 	curl_easy_setopt(pData->curlHandle, CURLOPT_URL, restURL); 
 	es_deleteStr(url);
+	DBGPRINTF("omelasticsearch: using REST URL: '%s'\n", restURL);
 	free(restURL);
 
 	if(pData->uid != NULL) {
-		snprintf(authBuf, sizeof(authBuf), "%s:%s", pData->uid,
-			 (pData->pwd == NULL) ? "" : (char*)pData->pwd);
-		//TODO: create better code, check errors!
+		rLocal = snprintf(authBuf, sizeof(authBuf), "%s:%s", pData->uid,
+			         (pData->pwd == NULL) ? "" : (char*)pData->pwd);
+		if(rLocal != (int) es_strlen(url)) {
+			errmsg.LogError(0, RS_RET_ERR, "omelasticsearch: snprintf failed "
+				"when trying to build auth string (return %d)\n",
+				rLocal);
+			ABORT_FINALIZE(RS_RET_ERR);
+		}
 		curl_easy_setopt(pData->curlHandle, CURLOPT_USERPWD, authBuf); 
 		curl_easy_setopt(pData->curlHandle, CURLOPT_PROXYAUTH, CURLAUTH_ANY);
 	}
-	DBGPRINTF("omelasticsearch: using REST URL: '%s'\n", restURL);
-	return RS_RET_OK;
+finalize_it:
+	RETiRet;
 }
 
 
@@ -248,7 +257,6 @@ buildBatch(instanceData *pData, uchar *message, uchar *tpl1, uchar *tpl2)
 #	define META_TYPE "\",\"_type\":\""
 #	define META_END  "\"}}\n"
 
-#warning TODO: use dynamic index/type!
 	getIndexAndType(pData, tpl1, tpl2, &searchIndex, &searchType);
 	r = es_addBuf(&pData->batch.data, META_STRT, sizeof(META_STRT)-1);
 	if(r == 0) r = es_addBuf(&pData->batch.data, (char*)searchIndex,
@@ -282,13 +290,18 @@ curlPost(instanceData *instance, uchar *message, int msglen, uchar *tpl1, uchar 
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, (char *)message);
 	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, (char *)message); 
 	curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, msglen); 
+dbgprintf("omelasticsearch: do curl_easy_perform()\n");
 	code = curl_easy_perform(curl);
+DBGPRINTF("omelasticsearch: curl_easy_perform() returned %lld\n", (long long) code);
 	switch (code) {
 		case CURLE_COULDNT_RESOLVE_HOST:
 		case CURLE_COULDNT_RESOLVE_PROXY:
 		case CURLE_COULDNT_CONNECT:
 		case CURLE_WRITE_ERROR:
 			STATSCOUNTER_INC(indexConFail, mutIndexConFail);
+			DBGPRINTF("omelasticsearch: we are suspending ourselfs due "
+				  "to failure %lld of curl_easy_perform()\n",
+				  (long long) code);
 			return RS_RET_SUSPENDED;
 		default:
 			STATSCOUNTER_INC(indexSubmit, mutIndexSubmit);
@@ -315,22 +328,25 @@ CODESTARTdoAction
 	if(pData->bulkmode) {
 		CHKiRet(buildBatch(pData, ppString[0], ppString[1], ppString[2]));
 	} else {
+dbgprintf("omelasticsearch: doAction calling curlPost\n");
 		CHKiRet(curlPost(pData, ppString[0], strlen((char*)ppString[0]),
 		                 ppString[1], ppString[2]));
 	}
 finalize_it:
-dbgprintf("omelasticsearch: result doAction: %d\n", iRet);
+dbgprintf("omelasticsearch: result doAction: %d (bulkmode %d)\n", iRet, pData->bulkmode);
 ENDdoAction
 
 
 BEGINendTransaction
 	char *cstr;
 CODESTARTendTransaction
+dbgprintf("omelasticsearch: endTransaction init\n");
 	cstr = es_str2cstr(pData->batch.data, NULL);
-	dbgprintf("elasticsearch: endTransaction, batch: '%s'\n", cstr);
+	dbgprintf("omelasticsearch: endTransaction, batch: '%s'\n", cstr);
 	CHKiRet(curlPost(pData, (uchar*) cstr, strlen(cstr), NULL, NULL));
 finalize_it:
 	free(cstr);
+dbgprintf("omelasticsearch: endTransaction done with %d\n", iRet);
 ENDendTransaction
 
 /* elasticsearch POST result string ... useful for debugging */
@@ -353,11 +369,13 @@ DBGPRINTF("\n");
 	    nmemb > sizeof(ok)-1 &&
 	    strncmp(p, ok, sizeof(ok)-1) == 0) {
 		STATSCOUNTER_INC(indexSuccess, mutIndexSuccess);
+dbgprintf("omelasticsearch ok\n");
 	} else {
+dbgprintf("omelasticsearch fail\n");
 		STATSCOUNTER_INC(indexFailed, mutIndexFailed);
 		if (Debug) {
-			DBGPRINTF("omelasticsearch request: %s\n", jsonData);
-			DBGPRINTF("omelasticsearch result: ");
+			DBGPRINTF("omelasticsearch (fail) request: %s\n", jsonData);
+			DBGPRINTF("omelasticsearch (fail) result: ");
 			for (i = 0; i < nmemb; i++)
 				DBGPRINTF("%c", p[i]);
 			DBGPRINTF("\n");
@@ -470,16 +488,16 @@ CODESTARTnewActInst
 		ABORT_FINALIZE(RS_RET_UID_MISSING);
 	}
 	if(pData->dynSrchIdx && pData->searchIndex == NULL) {
-		errmsg.LogError(0, RS_RET_LEGA_ACT_NOT_SUPPORTED,
+		errmsg.LogError(0, RS_RET_CONFIG_ERROR,
 			"omelasticsearch: requested dynamic search index, but no "
 			"name for index template given - action definition invalid");
-		ABORT_FINALIZE(RS_RET_LEGA_ACT_NOT_SUPPORTED);
+		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 	}
 	if(pData->dynSrchType && pData->searchType == NULL) {
-		errmsg.LogError(0, RS_RET_LEGA_ACT_NOT_SUPPORTED,
+		errmsg.LogError(0, RS_RET_CONFIG_ERROR,
 			"omelasticsearch: requested dynamic search type, but no "
 			"name for type template given - action definition invalid");
-		ABORT_FINALIZE(RS_RET_LEGA_ACT_NOT_SUPPORTED);
+		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 	}
 
 	if(pData->bulkmode) {
