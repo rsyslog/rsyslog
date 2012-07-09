@@ -563,6 +563,7 @@ static rsRetVal rcv_loop(thrdInfo_t* pThrd){
 BEGINrunInput
 CODESTARTrunInput
 	iRet = rcv_loop(pThrd);
+    RETiRet;
 ENDrunInput
 
 
