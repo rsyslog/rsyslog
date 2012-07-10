@@ -1,4 +1,7 @@
 ---------------------------------------------------------------------------
+Version 6.3.13  [BETA] 2012-07-??
+- omelasticsearch: support for parameters parent & dynparent added
+---------------------------------------------------------------------------
 Version 6.3.12  [BETA] 2012-07-02
 - support for elasticsearch via omelasticsearch added
   Note that this module has been tested quite well by a number of folks,
