@@ -153,9 +153,66 @@ CODESTARTdbgPrintInstInfo
 	dbgprintf("\tbulkmode=%d\n", pData->bulkmode);
 ENDdbgPrintInstInfo
 
+
+/* Build basic URL part, which includes hostname and port as follows:
+ * http://hostname:port/
+ * Newly creates an estr for this purpose.
+ */
+static rsRetVal
+setBaseURL(instanceData *pData, es_str_t **url)
+{
+	char portBuf[64];
+	int r;
+	DEFiRet;
+
+	*url = es_newStr(128);
+	snprintf(portBuf, sizeof(portBuf), "%d", pData->port);
+	r = es_addBuf(url, "http://", sizeof("http://")-1);
+	if(r == 0) r = es_addBuf(url, (char*)pData->server, strlen((char*)pData->server));
+	if(r == 0) r = es_addChar(url, ':');
+	if(r == 0) r = es_addBuf(url, portBuf, strlen(portBuf));
+	if(r == 0) r = es_addChar(url, '/');
+	RETiRet;
+}
+
+
+static inline rsRetVal
+checkConn(instanceData *pData)
+{
+	es_str_t *url;
+	CURL *curl = NULL;
+	CURLcode res;
+	char *cstr;
+	DEFiRet;
+
+	setBaseURL(pData, &url);
+	curl = curl_easy_init();
+	if(curl == NULL) {
+		DBGPRINTF("omelasticsearch: checkConn() curl_easy_init() failed\n");
+		ABORT_FINALIZE(RS_RET_SUSPENDED);
+	}
+	cstr = es_str2cstr(url, NULL);
+	curl_easy_setopt(curl, CURLOPT_URL, cstr);
+	free(cstr);
+ 
+	res = curl_easy_perform(curl);
+	if(res != CURLE_OK) {
+		dbgprintf("omelasticsearch: checkConn() curl_easy_perform() "
+			  "failed: %s\n", curl_easy_strerror(res));
+		ABORT_FINALIZE(RS_RET_SUSPENDED);
+	}
+
+finalize_it:
+	if(curl != NULL)
+		curl_easy_cleanup(curl);
+	RETiRet;
+}
+
+
 BEGINtryResume
 CODESTARTtryResume
 	DBGPRINTF("omelasticsearch: tryResume called\n");
+	iRet = checkConn(pData);
 ENDtryResume
 
 
@@ -184,7 +241,6 @@ static rsRetVal
 setCurlURL(instanceData *pData, uchar *tpl1, uchar *tpl2)
 {
 	char authBuf[1024];
-	char portBuf[64];
 	char *restURL;
 	uchar *searchIndex;
 	uchar *searchType;
@@ -194,18 +250,12 @@ setCurlURL(instanceData *pData, uchar *tpl1, uchar *tpl2)
 	DEFiRet;
 
 	getIndexAndType(pData, tpl1, tpl2, &searchIndex, &searchType);
-	url = es_newStr(128);
-	snprintf(portBuf, sizeof(portBuf), "%d", pData->port);
+	setBaseURL(pData, &url);
 
-	r = es_addBuf(&url, "http://", sizeof("http://")-1);
-	if(r == 0) r = es_addBuf(&url, (char*)pData->server, strlen((char*)pData->server));
-	if(r == 0) r = es_addChar(&url, ':');
-	if(r == 0) r = es_addBuf(&url, portBuf, strlen(portBuf));
-	if(r == 0) r = es_addChar(&url, '/');
 	if(pData->bulkmode) {
-		if(r == 0) r = es_addBuf(&url, "_bulk", sizeof("_bulk")-1);
+		r = es_addBuf(&url, "_bulk", sizeof("_bulk")-1);
 	} else {
-		if(r == 0) r = es_addBuf(&url, (char*)searchIndex, ustrlen(searchIndex));
+		r = es_addBuf(&url, (char*)searchIndex, ustrlen(searchIndex));
 		if(r == 0) r = es_addChar(&url, '/');
 		if(r == 0) r = es_addBuf(&url, (char*)searchType, ustrlen(searchType));
 	}
