@@ -13,6 +13,7 @@ Version 6.5.0  [devel] 2012-0?-??
   in some speedup (but serious loss of debugging capabilities)
 - added new 0mq plugins (via czmq lib)
   Thanks to David Kelly for contributing these modules
+- bugfix: omhdfs did no longer compile
 ---------------------------------------------------------------------------
 Version 6.3.13  [BETA] 2012-06-??
 - support for elasticsearch via omelasticsearch added
