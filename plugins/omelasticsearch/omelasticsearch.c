@@ -226,22 +226,22 @@ ENDtryResume
 
 /* get the current index and type for this message */
 static inline void
-getIndexTypeAndParent(instanceData *pData, uchar *tpl1, uchar *tpl2, uchar *tpl3,
+getIndexTypeAndParent(instanceData *pData, uchar **tpls,
 		      uchar **srchIndex, uchar **srchType, uchar **parent)
 {
 	if(pData->dynSrchIdx) {
-		*srchIndex = tpl1;
+		*srchIndex = tpls[1];
 		if(pData->dynSrchType) {
-			*srchType = tpl2;
+			*srchType = tpls[2];
 			if(pData->dynParent) {
-				*parent = tpl3;
+				*parent = tpls[3];
 			} else {
 				*parent = pData->parent;
 			}
 		} else  {
 			*srchType = pData->searchType;
 			if(pData->dynParent) {
-				*parent = tpl2;
+				*parent = tpls[2];
 			} else {
 				*parent = pData->parent;
 			}
@@ -249,16 +249,16 @@ getIndexTypeAndParent(instanceData *pData, uchar *tpl1, uchar *tpl2, uchar *tpl3
 	} else {
 		*srchIndex = pData->searchIndex;
 		if(pData->dynSrchType) {
-			*srchType = tpl1;
+			*srchType = tpls[1];
 			if(pData->dynParent) {
-				*parent = tpl2;
+				*parent = tpls[2];
 			} else {
 				*parent = pData->parent;
 			}
 		} else  {
 			*srchType = pData->searchType;
 			if(pData->dynParent) {
-				*parent = tpl1;
+				*parent = tpls[1];
 			} else {
 				*parent = pData->parent;
 			}
@@ -268,7 +268,7 @@ getIndexTypeAndParent(instanceData *pData, uchar *tpl1, uchar *tpl2, uchar *tpl3
 
 
 static rsRetVal
-setCurlURL(instanceData *pData, uchar *tpl1, uchar *tpl2, uchar *tpl3)
+setCurlURL(instanceData *pData, uchar **tpls)
 {
 	char authBuf[1024];
 	char *restURL;
@@ -280,13 +280,13 @@ setCurlURL(instanceData *pData, uchar *tpl1, uchar *tpl2, uchar *tpl3)
 	int r;
 	DEFiRet;
 
-	getIndexTypeAndParent(pData, tpl1, tpl2, tpl3,
-			      &searchIndex, &searchType, &parent);
 	setBaseURL(pData, &url);
 
 	if(pData->bulkmode) {
 		r = es_addBuf(&url, "_bulk", sizeof("_bulk")-1);
+		parent = NULL;
 	} else {
+		getIndexTypeAndParent(pData, tpls, &searchIndex, &searchType, &parent);
 		r = es_addBuf(&url, (char*)searchIndex, ustrlen(searchIndex));
 		if(r == 0) r = es_addChar(&url, '/');
 		if(r == 0) r = es_addBuf(&url, (char*)searchType, ustrlen(searchType));
@@ -333,7 +333,7 @@ finalize_it:
  * index changes.
  */
 static rsRetVal
-buildBatch(instanceData *pData, uchar *message, uchar *tpl1, uchar *tpl2, uchar *tpl3)
+buildBatch(instanceData *pData, uchar *message, uchar **tpls)
 {
 	int length = strlen((char *)message);
 	int r;
@@ -346,16 +346,20 @@ buildBatch(instanceData *pData, uchar *message, uchar *tpl1, uchar *tpl2, uchar 
 #	define META_PARENT "\",\"_parent\":\""
 #	define META_END  "\"}}\n"
 
-	getIndexTypeAndParent(pData, tpl1, tpl2, tpl3,
-			      &searchIndex, &searchType, &parent);
+	getIndexTypeAndParent(pData, tpls, &searchIndex, &searchType, &parent);
+dbgprintf("AAA: searchIndex: '%s'\n", searchIndex);
+dbgprintf("AAA: searchType: '%s'\n", searchType);
+dbgprintf("AAA: parent: '%s'\n", parent);
 	r = es_addBuf(&pData->batch.data, META_STRT, sizeof(META_STRT)-1);
 	if(r == 0) r = es_addBuf(&pData->batch.data, (char*)searchIndex,
 				 ustrlen(searchIndex));
 	if(r == 0) r = es_addBuf(&pData->batch.data, META_TYPE, sizeof(META_TYPE)-1);
 	if(r == 0) r = es_addBuf(&pData->batch.data, (char*)searchType,
 				 ustrlen(searchType));
-	if(r == 0) r = es_addBuf(&pData->batch.data, META_PARENT, sizeof(META_PARENT)-1);
-	if(r == 0) r = es_addBuf(&pData->batch.data, (char*)parent, ustrlen(parent));
+	if(parent != NULL) {
+		if(r == 0) r = es_addBuf(&pData->batch.data, META_PARENT, sizeof(META_PARENT)-1);
+		if(r == 0) r = es_addBuf(&pData->batch.data, (char*)parent, ustrlen(parent));
+	}
 	if(r == 0) r = es_addBuf(&pData->batch.data, META_END, sizeof(META_END)-1);
 	if(r == 0) r = es_addBuf(&pData->batch.data, (char*)message, length);
 	if(r == 0) r = es_addBuf(&pData->batch.data, "\n", sizeof("\n")-1);
@@ -370,15 +374,14 @@ finalize_it:
 }
 
 static rsRetVal
-curlPost(instanceData *instance, uchar *message, int msglen,
-	 uchar *tpl1, uchar *tpl2, uchar *tpl3)
+curlPost(instanceData *instance, uchar *message, int msglen, uchar **tpls)
 {
 	CURLcode code;
 	CURL *curl = instance->curlHandle;
 	DEFiRet;
 
 	if(instance->dynSrchIdx || instance->dynSrchType || instance->dynParent)
-		CHKiRet(setCurlURL(instance, tpl1, tpl2, tpl3));
+		CHKiRet(setCurlURL(instance, tpls));
 
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, (char *)message);
 	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, (char *)message); 
@@ -419,11 +422,11 @@ ENDbeginTransaction
 BEGINdoAction
 CODESTARTdoAction
 	if(pData->bulkmode) {
-		CHKiRet(buildBatch(pData, ppString[0], ppString[1], ppString[2], ppString[3]));
+		CHKiRet(buildBatch(pData, ppString[0], ppString));
 	} else {
 dbgprintf("omelasticsearch: doAction calling curlPost\n");
 		CHKiRet(curlPost(pData, ppString[0], strlen((char*)ppString[0]),
-		                 ppString[1], ppString[2], ppString[3]));
+		                 ppString));
 	}
 finalize_it:
 dbgprintf("omelasticsearch: result doAction: %d (bulkmode %d)\n", iRet, pData->bulkmode);
@@ -436,7 +439,7 @@ CODESTARTendTransaction
 dbgprintf("omelasticsearch: endTransaction init\n");
 	cstr = es_str2cstr(pData->batch.data, NULL);
 	dbgprintf("omelasticsearch: endTransaction, batch: '%s'\n", cstr);
-	CHKiRet(curlPost(pData, (uchar*) cstr, strlen(cstr), NULL, NULL, NULL));
+	CHKiRet(curlPost(pData, (uchar*) cstr, strlen(cstr), NULL));
 finalize_it:
 	free(cstr);
 dbgprintf("omelasticsearch: endTransaction done with %d\n", iRet);
@@ -501,7 +504,7 @@ curlSetup(instanceData *pData)
 	if(    pData->bulkmode
 	   || (pData->dynSrchIdx == 0 && pData->dynSrchType == 0 && pData->dynParent == 0)) {
 		/* in this case, we know no tpls are involved in the request-->NULL OK! */
-		setCurlURL(pData, NULL, NULL, NULL);
+		setCurlURL(pData, NULL);
 	}
 
 	if(Debug) {
