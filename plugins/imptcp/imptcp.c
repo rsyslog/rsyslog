@@ -1587,7 +1587,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 
 	/* initialize "read-only" thread attributes */
 	pthread_attr_init(&wrkrThrdAttr);
-	pthread_attr_setstacksize(&wrkrThrdAttr, 2048*1024);
+	pthread_attr_setstacksize(&wrkrThrdAttr, 4096*1024);
 
 	/* init legacy config settings */
 	initConfigSettings();

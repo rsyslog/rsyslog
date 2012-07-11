@@ -1,6 +1,9 @@
 ---------------------------------------------------------------------------
 Version 6.3.13  [BETA] 2012-07-??
 - omelasticsearch: support for parameters parent & dynparent added
+- bugfix: imtcp aborted when more than 2 connections were used.
+  Incremented pthread stack size to 4MB for imtcp, imptcp and imttcp
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=342
 ---------------------------------------------------------------------------
 Version 6.3.12  [BETA] 2012-07-02
 - support for elasticsearch via omelasticsearch added

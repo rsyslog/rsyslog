@@ -1335,7 +1335,7 @@ startWorkerPool(void)
 	wrkrRunning = 0;
 	pthread_cond_init(&wrkrIdle, NULL);
 	pthread_attr_init(&sessThrdAttr);
-	pthread_attr_setstacksize(&sessThrdAttr, 200*1024);
+	pthread_attr_setstacksize(&sessThrdAttr, 4096*1024);
 	for(i = 0 ; i < wrkrMax ; ++i) {
 		/* init worker info structure! */
 		pthread_cond_init(&wrkrInfo[i].run, NULL);
