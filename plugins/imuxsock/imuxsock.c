@@ -946,14 +946,12 @@ static rsRetVal readSocket(lstn_t *pLstn)
 				if(   pLstn->bUseCreds
 				   && cm->cmsg_level == SOL_SOCKET && cm->cmsg_type == SCM_CREDENTIALS) {
 					cred = (struct ucred*) CMSG_DATA(cm);
-					break;
 				}
 #				endif /* HAVE_SCM_CREDENTIALS */
 #				if HAVE_SO_TIMESTAMP
 				if(   pLstn->bUseSysTimeStamp 
 				   && cm->cmsg_level == SOL_SOCKET && cm->cmsg_type == SO_TIMESTAMP) {
 					ts = (struct timeval *)CMSG_DATA(cm);
-					break;
 				}
 #				endif /* HAVE_SO_TIMESTAMP */
 			}
@@ -1012,7 +1010,7 @@ activateListeners()
 	listeners[0].ratelimitInterval = runModConf->ratelimitIntervalSysSock;
 	listeners[0].ratelimitBurst = runModConf->ratelimitBurstSysSock;
 	listeners[0].ratelimitSev = runModConf->ratelimitSeveritySysSock;
-	listeners[0].bUseCreds = (runModConf->bWritePidSysSock || runModConf->ratelimitIntervalSysSock) ? 1 : 0;
+	listeners[0].bUseCreds = (runModConf->bWritePidSysSock || runModConf->ratelimitIntervalSysSock || runModConf->bAnnotateSysSock) ? 1 : 0;
 	listeners[0].bWritePid = runModConf->bWritePidSysSock;
 	listeners[0].bAnnotate = runModConf->bAnnotateSysSock;
 	listeners[0].bUseSysTimeStamp = runModConf->bUseSysTimeStamp;
@@ -1130,6 +1128,7 @@ CODESTARTendCnfLoad
 		loadModConf->pLogSockName = cs.pLogSockName;
 		loadModConf->bIgnoreTimestamp = cs.bIgnoreTimestampSysSock;
 		loadModConf->bUseFlowCtl = cs.bUseFlowCtlSysSock;
+		loadModConf->bAnnotateSysSock = cs.bAnnotateSysSock;
 	}
 
 	loadModConf = NULL; /* done loading */
