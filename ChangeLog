@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------
 Version 5.8.13  [V5-stable] 2012-06-??
+- bugfix: DA queue could cause abort
 - bugfix: "last message repeated n times" message was missing hostname
   Thanks to Zdenek Salvet for finding this bug and to Bodik for reporting
 - bugfix "$PreserveFQDN on" was not honored in some modules
