@@ -3206,7 +3206,6 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 		}
 	}
 
-dbgprintf("prop repl 4, pRes='%s', len %d\n", pRes, bufLen);
 	/* Take care of spurious characters to make the property safe
 	 * for a path definition
 	 */
@@ -3375,7 +3374,6 @@ dbgprintf("prop repl 4, pRes='%s', len %d\n", pRes, bufLen);
 		bufLen = ustrlen(pRes);
 	*pPropLen = bufLen;
 
-dbgprintf("end prop repl, pRes='%s', len %d\n", pRes, bufLen);
 	ENDfunc
 	return(pRes);
 }

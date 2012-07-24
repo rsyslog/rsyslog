@@ -1127,7 +1127,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	/* initialize "read-only" thread attributes */
 	pthread_attr_init(&sessThrdAttr);
 	pthread_attr_setdetachstate(&sessThrdAttr, PTHREAD_CREATE_DETACHED);
-	pthread_attr_setstacksize(&sessThrdAttr, 200*1024);
+	pthread_attr_setstacksize(&sessThrdAttr, 4096*1024);
 
 	/* register config file handlers */
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputttcpserverrun"), 0, eCmdHdlrGetWord,

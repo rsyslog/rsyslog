@@ -1587,7 +1587,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 
 	/* initialize "read-only" thread attributes */
 	pthread_attr_init(&wrkrThrdAttr);
-	pthread_attr_setstacksize(&wrkrThrdAttr, 2048*1024);
+	pthread_attr_setstacksize(&wrkrThrdAttr, 4096*1024);
 
 	/* init legacy config settings */
 	initConfigSettings();
@@ -1616,7 +1616,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputptcpserverlistenip"), 0,
 				   eCmdHdlrGetWord, NULL, &cs.lstnIP, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputptcpserverbindruleset"), 0,
-				   eCmdHdlrGetWord, NULL, cs.pszBindRuleset, STD_LOADABLE_MODULE_ID));
+				   eCmdHdlrGetWord, NULL, &cs.pszBindRuleset, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("resetconfigvariables"), 1, eCmdHdlrCustomHandler,
 		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
