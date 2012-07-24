@@ -1,0 +1,118 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Language" content="en">
+<title>Forwarding Output Module</title></head>
+
+<body>
+<a href="rsyslog_conf_modules.html">back</a>
+
+<h1>Forwarding Output Module</h1>
+<p><b>Module Name:&nbsp;&nbsp;&nbsp; omfwd</b></p>
+<p><b>Author: </b>Rainer Gerhards &lt;rgergards@adiscon.com&gt;</p>
+<p><b>Description</b>:</p>
+<p>The omfwd plug-in provides the core functionality of traditional message forwarding via UDP and plain TCP. It is a built-in module that does not need to be loaded. </p>
+<p>&nbsp;</p>
+
+<p><b>Global Configuration Directives</b>:</p>
+<ul>
+	<li><strong>Template </strong>[templateName]<br>
+	sets a new default template for file actions.<br></li>
+	
+</ul>
+<p>&nbsp;</p>
+<p><b>Action specific Configuration Directives</b>:</p>
+<ul>
+	<li><strong>Target </strong>string<br>
+	Name or IP-Address of the system that shall receive messages. Any resolvable name is fine. <br></li><br>
+
+	<li><strong>Port </strong>[Default 514]<br>
+	Name or numerical value of port to use when connecting to target. <br></li><br>
+
+	<li><strong>Protocol </strong>udp/tcp [default udp]<br>
+	Type of protocol to use for forwarding. Note that ``tcp'' means both legacy plain tcp syslog as well as RFC5425-based TCL-encrypted syslog. Which one is selected depends on the protocol drivers set before the action commend. Note that as of 6.3.6, there is no way to specify this within the action itself. <br></li><br>
+
+	<li><strong>TCP_Framing </strong>``traditional'' or ``octet-counted'' [default traditional]<br>
+	Framing-Mode to be for forwarding. This affects only TCP-based protocols. It is ignored for UDP. In protocol engineering, ``framing'' means how multiple messages over the same connection are separated. Usually, this is transparent to users. Unfortunately, the early syslog protocol evolved, and so there are cases where users need to specify the framing. The traditional framing is nontransparent. With it, messages are end when a LF (aka ``line break'', ``return'') is encountered, and the next message starts immediately after the LF. If multi-line messages are received, these are essentially broken up into multiple message, usually with all but the first message segment being incorrectly formatted. The octet-counting framing solves this issue. With it, each message is prefixed with the actual message length, so that a receivers knows exactly where the message ends. Multi-line messages cause no problem here. This mode is very close to the method described in RFC5425 for TLS-enabled syslog. Unfortunately, only few syslogd implementations support octet-counted framing. As such, the traditional framing is set as default, even though it has defects. If it is known that the receiver supports octet-counted framing, it is suggested to use that framing mode.  <br></li><br>
+
+	<li><strong>ZipLevel </strong>0..9 [default 0]<br>
+	Compression level for messages. Rsyslog implements a proprietary capability to zip transmitted messages. Note that compression happens on a message-per-message basis. As such, there is a performance gain only for larger messages. Before compressing a message, rsyslog checks if there is some gain by compression. If so, the message is sent compressed. If not, it is sent uncompressed. As such, it is totally valid that compressed and uncompressed messages are intermixed within a conversation. <br>The compression level is specified via the usual factor of 0 to 9, with 9 being the strongest compression (taking up most processing time) and 0 being no compression at all (taking up no extra processing time). <br></li><br>
+
+	<li><strong>RebindInterval </strong>integer<br>
+	Permits to specify an interval at which the current connection is broken and re-established. This setting is primarily an aid to load balancers. After the configured number of messages has been transmitted, the current connection is terminated and a new one started. Note that this setting applies to both TCP and UDP traffic. For UDP, the new ``connection'' uses a different source port (ports are cycled and not reused too frequently). This usually is perceived as a ``new connection'' by load balancers, which in turn forward messages to another physical target system. <br></li><br>
+
+	<li><strong>StreamDriver </strong>string<br>
+	Set the file owner for directories newly created. Please note that this setting does not affect the owner of directories already existing. The parameter is a user name, for which the userid is obtained by rsyslogd during startup processing. Interim changes to the user mapping are not detected.<br></li><br>
+
+	<li><strong>StreamDriverMode </strong>integer [default 0]<br>
+	mode to use with the stream driver (driver-specific)<br></li><br>
+
+	<li><strong>StreamDriverAuthMode </strong>string<br>
+	authentication mode to use with the stream driver. Note that this directive requires TLS netstream drivers. For all others, it will be ignored. (driver-specific).<br></li><br>
+
+	<li><strong>StreamDriverPermittedPeers </strong>string<br>
+	accepted fingerprint (SHA1) or name of remote peer. Note that this directive requires TLS netstream drivers. For all others, it will be ignored. (driver-specific)<br></li><br>
+
+	<li><strong>ResendLastMSGOnReconnect </strong>on/off<br>
+	Permits to resend the last message when a connection is reconnected. This setting affects TCP-based syslog, only. It is most useful for traditional, plain TCP syslog. Using this protocol, it is not always possible to know which messages were successfully transmitted to the receiver when a connection breaks. In many cases, the last message sent is lost. By switching this setting to "yes", rsyslog will always retransmit the last message when a connection is reestablished. This reduces potential message loss, but comes at the price that some messages may be duplicated (what usually is more acceptable). <br></li><br>
+	
+</ul>
+<p><b>Caveats/Known Bugs:</b></p><ul><li>None.</li></ul>
+<p><b>Sample:</b></p>
+<p>The following command sends all syslog messages to a remote server via TCP port 10514.</p>
+<textarea rows="5" cols="60">Module (path="builtin:omfwd")
+*.* action(type="omfwd" 
+Target="192.168.2.11"
+Port="10514"
+Protocol="tcp"
+)
+</textarea>
+
+<br><br>
+
+<p><b>Legacy Configuration Directives</b>:</p>
+<ul>
+	<li><strong>$ActionForwardDefaultTemplateName </strong>string [templatename]<br>
+	sets a new default template for UDP and plain TCP forwarding action<br></li><br>
+
+	<li><strong>$ActionSendTCPRebindInterval </strong>integer<br>
+	instructs the TCP send action to close and re-open the connection to the remote host every nbr of messages sent. Zero, the default, means that no such processing is done. This directive is useful for use with load-balancers. Note that there is some performance overhead associated with it, so it is advisable to not too often "rebind" the connection (what "too often" actually means depends on your configuration, a rule of thumb is that it should be not be much more often than once per second).<br></li><br>
+
+	<li><strong>$ActionSendUDPRebindInterval </strong>integer<br>
+	instructs the UDP send action to rebind the send socket every nbr of messages sent. Zero, the default, means that no rebind is done. This directive is useful for use with load-balancers.<br></li><br>
+
+	<li><strong>$ActionSendStreamDriver </strong>&lt;driver basename&gt;<br>
+	just like $DefaultNetstreamDriver, but for the specific action <br></li><br>
+
+	<li><strong>$ActionSendStreamDriverMode </strong>&lt;mode&gt; [default 0]<br>
+	mode to use with the stream driver (driver-specific)<br></li><br>
+
+	<li><strong>$ActionSendStreamDriverAuthMode </strong>&lt;mode&gt;<br>
+	authentication mode to use with the stream driver. Note that this directive requires TLS netstream drivers. For all others, it will be ignored. (driver-specific))<br></li><br>
+
+	<li><strong>$ActionSendStreamDriverPermittedPeers </strong>&lt;ID&gt;<br>
+	accepted fingerprint (SHA1) or name of remote peer. Note that this directive requires TLS netstream drivers. For all others, it will be ignored. (driver-specific) <br></li><br>
+
+	<li><strong>$ActionSendResendLastMsgOnReconnect </strong>on/off [default off]<br>
+	specifies if the last message is to be resend when a connecition breaks and has been reconnected. May increase reliability, but comes at the risk of message duplication. <br></li><br>
+
+	<li><strong>$ResetConfigVariables </strong><br>
+	Resets all configuration variables to their default value. Any settings made will not be applied to configuration lines following the $ResetConfigVariables. This is a good method to make sure no side-effects exists from previous directives. This directive has no parameters.<br></li><br>
+	
+</ul>
+
+<p><b>Legacy Sample:</b></p>
+<p>The following command sends all syslog messages to a remote server via TCP port 10514.</p>
+<textarea rows="5" cols="60">$ModLoad omfwd
+*.* @@192.168.2.11:10514
+</textarea>
+
+
+<p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>] [<a href="manual.html">manual 
+index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the
+<a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
+Copyright © 2008 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>. Released under the GNU GPL 
+version 3 or higher.</font></p>
+
+</body></html>
