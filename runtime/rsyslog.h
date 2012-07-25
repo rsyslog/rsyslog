@@ -375,6 +375,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_LEGA_ACT_NOT_SUPPORTED = -2215, /**< the module (no longer) supports legacy action syntax */
 	RS_RET_MAX_OMSR_REACHED = -2216, /**< max nbr of string requests reached, not supported by core */
 	RS_RET_UID_MISSING = -2217,	/**< a user id is missing (but e.g. a password provided) */
+	RS_RET_DATAFAIL = -2218,	/**< data passed to action caused failure */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */
