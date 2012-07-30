@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------
 Version 6.3.13  [BETA] 2012-07-??
+- omelasticsearch: support for writing data errors to local file added
 - omelasticsearch: support for parameters parent & dynparent added
 - bugfix: imtcp aborted when more than 2 connections were used.
   Incremented pthread stack size to 4MB for imtcp, imptcp and imttcp
