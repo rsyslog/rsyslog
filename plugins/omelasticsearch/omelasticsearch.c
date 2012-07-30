@@ -408,8 +408,11 @@ writeDataError(instanceData *pData, cJSON **pReplyRoot, uchar *reqmsg)
 	char errStr[1024];
 	DEFiRet;
 	
-	if(pData->errorFile == NULL)
+	if(pData->errorFile == NULL) {
+		DBGPRINTF("omelasticsearch: no local error logger defined - "
+		          "ignoring ES error information\n");
 		FINALIZE;
+	}
 
 	if(pData->fdErrFile == -1) {
 		pData->fdErrFile = open((char*)pData->errorFile,
@@ -478,7 +481,7 @@ DBGPRINTF("omelasticsearch: %d items in reply\n", numitems);
 		ok = cJSON_GetObjectItem(create, "ok");
 		if(ok == NULL || ok->type != cJSON_True) {
 			DBGPRINTF("omelasticsearch: error in elasticsearch reply: "
-				  "item ok (%p) not ok\n", ok);
+				  "item %d, prop ok (%p) not ok\n", i, ok);
 			ABORT_FINALIZE(RS_RET_DATAFAIL);
 		}
 	}
