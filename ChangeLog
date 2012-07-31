@@ -14,6 +14,8 @@ Version 6.5.0  [devel] 2012-0?-??
 - added new 0mq plugins (via czmq lib)
   Thanks to David Kelly for contributing these modules
 - bugfix: omhdfs did no longer compile
+- bugfix: SystemLogSocketAnnotate did not work correctly
+  Thanks to Miloslav Trmač for the patch
 ---------------------------------------------------------------------------
 Version 6.3.13  [BETA] 2012-07-??
 - omelasticsearch: support for parameters parent & dynparent added
