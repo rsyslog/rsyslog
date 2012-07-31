@@ -859,7 +859,11 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 		fixPID(bufParseTAG, &i, cred);
 	MsgSetTAG(pMsg, bufParseTAG, i);
 
-	MsgSetMSGoffs(pMsg, pMsg->iLenRawMsg - lenMsg);
+	if (pLstn->bAnnotate) {
+		MsgSetMSGoffs(pMsg, pMsg->iLenRawMsg - lenMsg - 16);
+	} else {
+		MsgSetMSGoffs(pMsg, pMsg->iLenRawMsg - lenMsg);
+	}
 
 	if(pLstn->bParseHost) {
 		pMsg->msgFlags  = pLstn->flags | PARSE_HOSTNAME;
