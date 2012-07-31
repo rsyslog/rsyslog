@@ -8,6 +8,10 @@ Version 5.8.13  [V5-stable] 2012-06-??
 - bugfix: randomized IP option header in omudpspoof caused problems
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=327
   Thanks to Rick Brown for helping to test out the patch.
+- bugfix: DA queue fixed handling of bad queue files. If old queue files 
+  existed, they were not truncated when being reused. this could lead to 
+  extra data being read from them and in consequence data format errors, 
+  which could cause trouble to the queue handler. 
 ---------------------------------------------------------------------------
 Version 5.8.12  [V5-stable] 2012-06-06
 - add small delay (50ms) after sending shutdown message
