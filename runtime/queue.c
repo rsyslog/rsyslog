@@ -707,7 +707,7 @@ static rsRetVal qConstructDisk(qqueue_t *pThis)
 		CHKiRet(strm.SetbSync(pThis->tVars.disk.pWrite, pThis->bSyncQueueFiles));
 		CHKiRet(strm.SetDir(pThis->tVars.disk.pWrite, glbl.GetWorkDir(), strlen((char*)glbl.GetWorkDir())));
 		CHKiRet(strm.SetiMaxFiles(pThis->tVars.disk.pWrite, 10000000));
-		CHKiRet(strm.SettOperationsMode(pThis->tVars.disk.pWrite, STREAMMODE_WRITE_TRUNC));
+		CHKiRet(strm.SettOperationsMode(pThis->tVars.disk.pWrite, STREAMMODE_WRITE));
 		CHKiRet(strm.SetsType(pThis->tVars.disk.pWrite, STREAMTYPE_FILE_CIRCULAR));
 		CHKiRet(strm.ConstructFinalize(pThis->tVars.disk.pWrite));
 
