@@ -668,10 +668,8 @@ static rsRetVal objDeserializeProperty(var_t *pProp, strm_t *pStrm)
 finalize_it:
 	if(Debug && iRet != RS_RET_OK) {
 		strm.GetCurrOffset(pStrm, &offs);
-		if(step == 0) {
-			dbgprintf("error %d deserializing property name, offset %lld, step %d\n",
-				  iRet, offs, step);
-		}
+		dbgprintf("error %d deserializing property name, offset %lld, step %d\n",
+			  iRet, offs, step);
 		if(step >= 1) {
 			dbgprintf("error property name: '%s'\n", rsCStrGetSzStrNoNULL(pProp->pcsName));
 		}
