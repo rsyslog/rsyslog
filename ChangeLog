@@ -8,10 +8,15 @@ Version 5.8.13  [V5-stable] 2012-06-??
 - bugfix: randomized IP option header in omudpspoof caused problems
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=327
   Thanks to Rick Brown for helping to test out the patch.
-- bugfix: DA queue fixed handling of bad queue files. If old queue files 
-  existed, they were not truncated when being reused. this could lead to 
-  extra data being read from them and in consequence data format errors, 
-  which could cause trouble to the queue handler. 
+- bugfix: DA queue fixed handling of bad queue files
+  If old queue files existed, they were not truncated when being reused.
+  This could lead to extra data being read from them and in consequence
+  data format errors, which could cause trouble to the queue handler. 
+- bugfix: potential abort if output plugin logged message during shutdown
+  note that none of the rsyslog-provided plugins does this
+  Thanks to bodik and Rohit Prasad for alerting us on this bug and
+  analyzing it.
+  fixes: http://bugzilla.adiscon.com/show_bug.cgi?id=347
 ---------------------------------------------------------------------------
 Version 5.8.12  [V5-stable] 2012-06-06
 - add small delay (50ms) after sending shutdown message
