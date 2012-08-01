@@ -21,6 +21,9 @@ Version 6.3.13  [BETA] 2012-07-??
   Incremented pthread stack size to 4MB for imtcp, imptcp and imttcp
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=342
 - bugfix: imptcp aborted when $InputPTCPServerBindRuleset was used
+- bugfix: problem with cutting first 16 characters from message with
+  bAnnotate
+  Thanks to Milan Bartos for the patch.
 ---------------------------------------------------------------------------
 Version 6.3.12  [BETA] 2012-07-02
 - support for elasticsearch via omelasticsearch added
