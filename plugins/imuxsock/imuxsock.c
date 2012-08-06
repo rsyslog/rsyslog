@@ -149,6 +149,7 @@ typedef struct lstn_s {
 	sbool bCreatePath;	/* auto-creation of socket directory? */
 	sbool bUseCreds;	/* pull original creator credentials from socket */
 	sbool bAnnotate;	/* annotate events with trusted properties */
+	sbool bParseTrusted;	/* parse trusted properties */
 	sbool bWritePid;	/* write original PID into tag */
 	sbool bUseSysTimeStamp;	/* use timestamp from system (instead of from message) */
 } lstn_t;
@@ -162,6 +163,8 @@ static int startIndexUxLocalSockets; /* process fd from that index on (used to
 				   */
 static int nfd = 1; /* number of Unix sockets open / read-only after startup */
 static int sd_fds = 0;			/* number of systemd activated sockets */
+
+static ee_ctx ctxee = NULL;	/* library context */
 
 /* config vars for legacy config system */
 #define DFLT_bCreatePath 0
@@ -189,6 +192,7 @@ static struct configSettings_s {
 	int ratelimitSeveritySysSock;
 	int bAnnotate;			/* annotate trusted properties */
 	int bAnnotateSysSock;		/* same, for system log socket */
+	int bParseTrusted;		/* parse trusted properties */
 } cs;
 
 struct instanceConf_s {
@@ -203,6 +207,7 @@ struct instanceConf_s {
 	int ratelimitBurst;		/* max nbr of messages in interval */
 	int ratelimitSeverity;
 	int bAnnotate;			/* annotate trusted properties */
+	int bParseTrusted;		/* parse trusted properties */
 	struct instanceConf_s *next;
 };
 
@@ -214,6 +219,7 @@ struct modConfData_s {
 	int ratelimitBurstSysSock;
 	int ratelimitSeveritySysSock;
 	int bAnnotateSysSock;
+	int bParseTrusted;
 	sbool bIgnoreTimestamp;		/* ignore timestamps present in the incoming message? */
 	sbool bUseFlowCtl;		/* use flow control or not (if yes, only LIGHT is used! */
 	sbool bOmitLocalLogging;
@@ -345,6 +351,7 @@ static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	inst->bUseSysTimeStamp = cs.bUseSysTimeStamp;
 	inst->bWritePid = cs.bWritePid;
 	inst->bAnnotate = cs.bAnnotate;
+	inst->bParseTrusted = cs.bParseTrusted;
 	inst->next = NULL;
 
 	/* node created, let's add to config */
@@ -407,6 +414,7 @@ addListner(instanceConf_t *inst)
 		listeners[nfd].sockName = ustrdup(inst->sockName);
 		listeners[nfd].bUseCreds = (inst->bWritePid || inst->ratelimitInterval || inst->bAnnotate) ? 1 : 0;
 		listeners[nfd].bAnnotate = inst->bAnnotate;
+		listeners[nfd].bParseTrusted = inst->bParseTrusted;
 		listeners[nfd].bWritePid = inst->bWritePid;
 		listeners[nfd].bUseSysTimeStamp = inst->bUseSysTimeStamp;
 		nfd++;
@@ -712,6 +720,26 @@ copyescaped(uchar *dstbuf, uchar *inbuf, int inlen)
 }
 
 
+/* Creates new field to be added to event
+ * used for SystemLogParseTrusted parsing
+ */
+struct ee_field *
+createNewField(char *fieldname, char *value, int lenValue) {
+	es_str_t *newStr;
+	struct ee_value *newVal;
+	struct ee_field *newField;
+
+	newStr = es_newStrFromBuf(value, (es_size_t) lenValue);
+
+	newVal = ee_newValue(ctxee);
+	ee_setStrValue(newVal, newStr);
+
+	newField = ee_newFieldFromNV(ctxee, fieldname, newVal);
+
+	return newField;
+}
+
+
 /* submit received message to the queue engine
  * We now parse the message according to expected format so that we
  * can also mangle it if necessary.
@@ -737,6 +765,7 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 	uchar *pmsgbuf;
 	int toffs; /* offset for trusted properties */
 	struct syslogTime dummyTS;
+	struct ee_event *event = NULL;
 	DEFiRet;
 
 	/* TODO: handle format errors?? */
@@ -781,37 +810,82 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 		} else {
 			CHKmalloc(pmsgbuf = malloc(lenRcv+4096));
 		}
-		memcpy(pmsgbuf, pRcv, lenRcv);
-		memcpy(pmsgbuf+lenRcv, " @[", 3);
-		toffs = lenRcv + 3; /* next free location */
-		lenProp = snprintf((char*)propBuf, sizeof(propBuf), "_PID=%lu _UID=%lu _GID=%lu",
-			 		(long unsigned) cred->pid, (long unsigned) cred->uid, 
-					(long unsigned) cred->gid);
-		memcpy(pmsgbuf+toffs, propBuf, lenProp);
-		toffs = toffs + lenProp;
-		getTrustedProp(cred, "comm", propBuf, sizeof(propBuf), &lenProp);
-		if(lenProp) {
-			memcpy(pmsgbuf+toffs, " _COMM=", 7);
-			memcpy(pmsgbuf+toffs+7, propBuf, lenProp);
-			toffs = toffs + 7 + lenProp;
+
+		if (pLstn->bParseTrusted) {
+			struct ee_field *newField;
+
+			if(ctxee == NULL) {
+				if((ctxee = ee_initCtx()) == NULL) {
+					errmsg.LogError(0, RS_RET_NO_RULESET, "error: could not initialize libee ctx, cannot "
+			                "activate action");
+					ABORT_FINALIZE(RS_RET_ERR_LIBEE_INIT);
+				}
+			}
+
+			event = ee_newEvent(ctxee);
+
+			/* create value string, create field, and add it to event */
+			lenProp = snprintf((char *)propBuf, sizeof(propBuf), "%lu", (long unsigned) cred->pid);
+			newField = createNewField("pid", (char *)propBuf, lenProp);
+			ee_addFieldToEvent(event, newField);
+
+			lenProp = snprintf((char *)propBuf, sizeof(propBuf), "%lu", (long unsigned) cred->uid);
+			newField = createNewField("uid", (char *)propBuf, lenProp);
+			ee_addFieldToEvent(event, newField);
+
+			lenProp = snprintf((char *)propBuf, sizeof(propBuf), "%lu", (long unsigned) cred->gid);
+			newField = createNewField("gid", (char *)propBuf, lenProp);
+			ee_addFieldToEvent(event, newField);
+
+			getTrustedProp(cred, "comm", propBuf, sizeof(propBuf), &lenProp);
+			newField = createNewField("appname", (char *)propBuf, lenProp);
+			ee_addFieldToEvent(event, newField);
+
+			getTrustedExe(cred, propBuf, sizeof(propBuf), &lenProp);
+			newField = createNewField("exe", (char *)propBuf, lenProp);
+			ee_addFieldToEvent(event, newField);
+
+			getTrustedProp(cred, "cmdline", propBuf, sizeof(propBuf), &lenProp);
+			newField = createNewField("cmd", (char *)propBuf, lenProp);
+			ee_addFieldToEvent(event, newField);
+
+		} else {
+
+			memcpy(pmsgbuf, pRcv, lenRcv);
+			memcpy(pmsgbuf+lenRcv, " @[", 3);
+			toffs = lenRcv + 3; /* next free location */
+			lenProp = snprintf((char*)propBuf, sizeof(propBuf), "_PID=%lu _UID=%lu _GID=%lu",
+				 		(long unsigned) cred->pid, (long unsigned) cred->uid, 
+						(long unsigned) cred->gid);
+			memcpy(pmsgbuf+toffs, propBuf, lenProp);
+			toffs = toffs + lenProp;
+	
+			getTrustedProp(cred, "comm", propBuf, sizeof(propBuf), &lenProp);
+			if(lenProp) {
+				memcpy(pmsgbuf+toffs, " _COMM=", 7);
+				memcpy(pmsgbuf+toffs+7, propBuf, lenProp);
+				toffs = toffs + 7 + lenProp;
+			}
+			getTrustedExe(cred, propBuf, sizeof(propBuf), &lenProp);
+			if(lenProp) {
+				memcpy(pmsgbuf+toffs, " _EXE=", 6);
+				memcpy(pmsgbuf+toffs+6, propBuf, lenProp);
+				toffs = toffs + 6 + lenProp;
+			}
+			getTrustedProp(cred, "cmdline", propBuf, sizeof(propBuf), &lenProp);
+			if(lenProp) {
+				memcpy(pmsgbuf+toffs, " _CMDLINE=", 9);
+				toffs = toffs + 9 + 
+					copyescaped(pmsgbuf+toffs+9, propBuf, lenProp);
+			}
+
+			/* finalize string */
+			pmsgbuf[toffs] = ']';
+			pmsgbuf[toffs+1] = '\0';
+
+			pRcv = pmsgbuf;
+			lenRcv = toffs + 1;
 		}
-		getTrustedExe(cred, propBuf, sizeof(propBuf), &lenProp);
-		if(lenProp) {
-			memcpy(pmsgbuf+toffs, " _EXE=", 6);
-			memcpy(pmsgbuf+toffs+6, propBuf, lenProp);
-			toffs = toffs + 6 + lenProp;
-		}
-		getTrustedProp(cred, "cmdline", propBuf, sizeof(propBuf), &lenProp);
-		if(lenProp) {
-			memcpy(pmsgbuf+toffs, " _CMDLINE=", 10);
-			toffs = toffs + 10 + 
-				copyescaped(pmsgbuf+toffs+10, propBuf, lenProp);
-		}
-		/* finalize string */
-		pmsgbuf[toffs] = ']';
-		pmsgbuf[toffs+1] = '\0';
-		pRcv = pmsgbuf;
-		lenRcv = toffs + 1;
 	}
 
 	/* we now create our own message object and submit it to the queue */
@@ -827,6 +901,14 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 	MsgSetAfterPRIOffs(pMsg, offs);
 
 	parse++; lenMsg--; /* '>' */
+
+	/* event is saved to pMsg */
+	if(pMsg->event != NULL) {
+		ee_deleteEvent(pMsg->event);
+	}
+	if (event != NULL) {
+		pMsg->event = event;
+	}
 
 	if(ts == NULL) {
 		if((pLstn->flags & IGNDATE)) {
@@ -1017,6 +1099,7 @@ activateListeners()
 	listeners[0].bUseCreds = (runModConf->bWritePidSysSock || runModConf->ratelimitIntervalSysSock || runModConf->bAnnotateSysSock) ? 1 : 0;
 	listeners[0].bWritePid = runModConf->bWritePidSysSock;
 	listeners[0].bAnnotate = runModConf->bAnnotateSysSock;
+	listeners[0].bParseTrusted = runModConf->bParseTrusted;
 	listeners[0].bUseSysTimeStamp = runModConf->bUseSysTimeStamp;
 	listeners[0].flags = runModConf->bIgnoreTimestamp ? IGNDATE : NOFLAG;
 	listeners[0].flowCtl = runModConf->bUseFlowCtl ? eFLOWCTL_LIGHT_DELAY : eFLOWCTL_NO_DELAY;
@@ -1060,6 +1143,7 @@ CODESTARTbeginCnfLoad
 	pModConf->bUseSysTimeStamp = 1;
 	pModConf->bWritePidSysSock = 0;
 	pModConf->bAnnotateSysSock = 0;
+	pModConf->bParseTrusted = 0;
 	pModConf->ratelimitIntervalSysSock = DFLT_ratelimitInterval;
 	pModConf->ratelimitBurstSysSock = DFLT_ratelimitBurst;
 	pModConf->ratelimitSeveritySysSock = DFLT_ratelimitSeverity;
@@ -1133,6 +1217,7 @@ CODESTARTendCnfLoad
 		loadModConf->bIgnoreTimestamp = cs.bIgnoreTimestampSysSock;
 		loadModConf->bUseFlowCtl = cs.bUseFlowCtlSysSock;
 		loadModConf->bAnnotateSysSock = cs.bAnnotateSysSock;
+		loadModConf->bParseTrusted = cs.bParseTrusted;
 	}
 
 	loadModConf = NULL; /* done loading */
@@ -1276,6 +1361,8 @@ CODESTARTafterRun
 
 	discardLogSockets();
 	nfd = 1;
+	ee_exitCtx(ctxee);
+	ctxee = NULL;
 ENDafterRun
 
 
@@ -1328,6 +1415,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	cs.bWritePidSysSock = 0;
 	cs.bAnnotate = 0;
 	cs.bAnnotateSysSock = 0;
+	cs.bParseTrusted = 0;
 	cs.bCreatePath = DFLT_bCreatePath;
 	cs.ratelimitInterval = DFLT_ratelimitInterval;
 	cs.ratelimitIntervalSysSock = DFLT_ratelimitInterval;
@@ -1380,6 +1468,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	listeners[0].bParseHost = 0;
 	listeners[0].bUseCreds = 0;
 	listeners[0].bAnnotate = 0;
+	listeners[0].bParseTrusted = 0;
 	listeners[0].bCreatePath = 0;
 	listeners[0].bUseSysTimeStamp = 1;
 
@@ -1437,6 +1526,8 @@ CODEmodInit_QueryRegCFSLineHdlr
 		NULL, &cs.bUseSysTimeStampSysSock, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
 	CHKiRet(regCfSysLineHdlr2((uchar *)"systemlogsocketannotate", 0, eCmdHdlrBinary,
 		NULL, &cs.bAnnotateSysSock, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
+	CHKiRet(regCfSysLineHdlr2((uchar *)"systemlogparsetrusted", 0, eCmdHdlrBinary,
+		NULL, &cs.bParseTrusted, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
 	CHKiRet(regCfSysLineHdlr2((uchar *)"systemlogusepidfromsystem", 0, eCmdHdlrBinary,
 		NULL, &cs.bWritePidSysSock, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
 	CHKiRet(regCfSysLineHdlr2((uchar *)"systemlogratelimitinterval", 0, eCmdHdlrInt,
