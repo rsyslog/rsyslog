@@ -104,6 +104,8 @@ to the system log socket.</li>
 be obtained from the log socket itself. If so, the TAG part of the message is rewritten.
 It is recommended to turn this option on, but the default is "off" to keep compatible
 with earlier versions of rsyslog. This option was introduced in 5.7.0.</li>
+<li><b>$SystemLogParseTrusted</b> [on/<b>off</b>] - specifies if Trusted Properties shall be parsed
+and saved into libee event structure. This option needs $SystemLogSocketAnnotate to be on.</li>
 <li><b>$SystemLogRateLimitInterval</b> [number] - specifies the rate-limiting
 interval in seconds.  Default value is 5 seconds. Set it to 0 to turn rate limiting off.
 </li>
