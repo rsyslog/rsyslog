@@ -1355,7 +1355,10 @@ void tplPrintList(rsconf_t *conf)
 				  	dbgprintf("[format as CSV (RFC4180)]");
 				}
 				if(pTpe->data.field.options.bJSON) {
-				  	dbgprintf("[format as JSON");
+					dbgprintf("[format as JSON] ");
+				}
+				if(pTpe->data.field.options.bJSONf) {
+					dbgprintf("[format as JSON field] ");
 				}
 				if(pTpe->data.field.options.bDropLastLF) {
 				  	dbgprintf("[drop last LF in msg] ");
