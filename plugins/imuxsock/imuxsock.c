@@ -1361,8 +1361,10 @@ CODESTARTafterRun
 
 	discardLogSockets();
 	nfd = 1;
-	ee_exitCtx(ctxee);
-	ctxee = NULL;
+	if(ctxee != NULL) {
+		ee_exitCtx(ctxee);
+		ctxee = NULL;
+	}
 ENDafterRun
 
 
