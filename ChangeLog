@@ -1,5 +1,8 @@
 ---------------------------------------------------------------------------
-Version 6.3.13  [BETA] 2012-07-??
+Version 6.4.0  [BETA] 2012-08-20
+- THIS IS THE FIRST VERSION OF THE 6.4.x STABLE BRANCH
+  It includes all enhancements made in 6.3.x plus what is written in the
+  ChangeLog below. 
 - omelasticsearch: support for parameters parent & dynparent added
 - bugfix: imtcp aborted when more than 2 connections were used.
   Incremented pthread stack size to 4MB for imtcp, imptcp and imttcp
