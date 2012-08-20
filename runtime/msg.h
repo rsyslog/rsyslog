@@ -65,6 +65,7 @@ struct msg {
 	int	iRefCount;	/* reference counter (0 = unused) */
 	sbool	bDoLock;	/* use the mutex? */
 	sbool	bAlreadyFreed;	/* aid to help detect a well-hidden bad bug -- TODO: remove when no longer needed */
+	sbool	bParseSuccess;	/* set to reflect state of last executed higher level parser */
 	short	iSeverity;	/* the severity 0..7 */
 	short	iFacility;	/* Facility code 0 .. 23*/
 	short	offAfterPRI;	/* offset, at which raw message WITHOUT PRI part starts in pszRawMsg */
@@ -120,6 +121,8 @@ struct msg {
 	char pszTimestamp3339[CONST_LEN_TIMESTAMP_3339 + 1];
 	char pszTIMESTAMP_SecFrac[7]; /* Note: a pointer is 64 bits/8 char, so this is actually fewer than a pointer! */
 	char pszRcvdAt_SecFrac[7];	     /* same as above. Both are fractional seconds for their respective timestamp */
+	char pszTIMESTAMP_Unix[12]; /* almost as small as a pointer! */
+	char pszRcvdAt_Unix[12];
 };
 
 
@@ -150,6 +153,7 @@ void MsgSetInputName(msg_t *pMsg, prop_t*);
 rsRetVal MsgSetAPPNAME(msg_t *pMsg, char* pszAPPNAME);
 rsRetVal MsgSetPROCID(msg_t *pMsg, char* pszPROCID);
 rsRetVal MsgSetMSGID(msg_t *pMsg, char* pszMSGID);
+void MsgSetParseSuccess(msg_t *pMsg, int bSuccess);
 void MsgSetTAG(msg_t *pMsg, uchar* pszBuf, size_t lenBuf);
 void MsgSetRuleset(msg_t *pMsg, ruleset_t*);
 rsRetVal MsgSetFlowControlType(msg_t *pMsg, flowControl_t eFlowCtl);
@@ -170,6 +174,7 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 		  size_t *pPropLen, unsigned short *pbMustBeFreed);
 char *textpri(char *pRes, size_t pResLen, int pri);
 rsRetVal msgGetMsgVar(msg_t *pThis, cstr_t *pstrPropName, var_t **ppVar);
+es_str_t* msgGetMsgVarNew(msg_t *pThis, uchar *name);
 rsRetVal MsgEnableThreadSafety(void);
 uchar *getRcvFrom(msg_t *pM);
 void getTAG(msg_t *pM, uchar **ppBuf, int *piLen);
@@ -177,6 +182,7 @@ char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt);
 char *getPRI(msg_t *pMsg);
 void getRawMsg(msg_t *pM, uchar **pBuf, int *piLen);
 rsRetVal msgGetCEEVar(msg_t *pThis, cstr_t *propName, var_t **ppVar);
+es_str_t* msgGetCEEVarNew(msg_t *pMsg, char *name);
 
 
 /* TODO: remove these five (so far used in action.c) */

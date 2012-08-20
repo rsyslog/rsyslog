@@ -52,16 +52,9 @@ BEGINinterface(var) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Construct)(var_t **ppThis);
 	rsRetVal (*ConstructFinalize)(var_t __attribute__((unused)) *pThis);
 	rsRetVal (*Destruct)(var_t **ppThis);
-	rsRetVal (*SetNumber)(var_t *pThis, number_t iVal);
-	rsRetVal (*SetString)(var_t *pThis, cstr_t *pCStr);
-	rsRetVal (*ConvForOperation)(var_t *pThis, var_t *pOther);
-	rsRetVal (*ConvToNumber)(var_t *pThis);
-	rsRetVal (*ConvToBool)(var_t *pThis);
-	rsRetVal (*ConvToString)(var_t *pThis);
-	rsRetVal (*Obj2Str)(var_t *pThis, cstr_t*);
-	rsRetVal (*Duplicate)(var_t *pThis, var_t **ppNew);
 ENDinterface(var)
-#define varCURR_IF_VERSION 1 /* increment whenever you change the interface above! */
+#define varCURR_IF_VERSION 2 /* increment whenever you change the interface above! */
+/* v2 - 2011-07-15/rger: on the way to remove var */
 
 
 /* prototypes */

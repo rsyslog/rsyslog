@@ -1,4 +1,224 @@
 ---------------------------------------------------------------------------
+Version 6.4.0  [V6-STABLE] 2012-08-20
+- THIS IS THE FIRST VERSION OF THE 6.4.x STABLE BRANCH
+  It includes all enhancements made in 6.3.x plus what is written in the
+  ChangeLog below. 
+- omelasticsearch: support for parameters parent & dynparent added
+- bugfix: imtcp aborted when more than 2 connections were used.
+  Incremented pthread stack size to 4MB for imtcp, imptcp and imttcp
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=342
+- bugfix: imptcp aborted when $InputPTCPServerBindRuleset was used
+- bugfix: problem with cutting first 16 characters from message with
+  bAnnotate
+  Thanks to Milan Bartos for the patch.
+---------------------------------------------------------------------------
+Version 6.3.12  [BETA] 2012-07-02
+- support for elasticsearch via omelasticsearch added
+  Note that this module has been tested quite well by a number of folks,
+  and this is why we merge in new functionality in a late beta stage.
+  Even if problems would exist, only users of omelasticsearch would
+  experience them, making it a pretty safe addition.
+- bugfix: $ActionName was not properly honored
+  Thanks to Abby Edwards for alerting us
+---------------------------------------------------------------------------
+Version 6.3.11  [BETA] 2012-06-18
+- bugfix: expression-based filters with AND/OR could segfault
+  due to a problem with boolean shortcut operations. From the user's
+  perspective, the segfault is almost non-deterministic (it occurs when
+  a shortcut is used).
+  Thanks to Lars Peterson for providing the initial bug report and his
+  support in solving it.
+- bugfix: "last message repeated n times" message was missing hostname
+  Thanks to Zdenek Salvet for finding this bug and to Bodik for reporting
+---------------------------------------------------------------------------
+Version 6.3.10  [BETA] 2012-06-04
+- bugfix: delayble source could block action queue, even if there was
+  a disk queue associated with it. The root cause of this problem was
+  that it makes no sense to delay messages once they arrive in the 
+  action queue - the "input" that is being held in that case is the main
+  queue worker, what makes no sense.
+  Thanks to Marcin for alerting us on this problem and providing 
+  instructions to reproduce it.
+- bugfix: invalid free in imptcp could lead to abort during startup
+- bugfix: if debug message could end up in log file when forking
+  if rsyslog was set to auto-background (thus fork, the default) and debug
+  mode to stdout was enabled, debug messages ended up in the first log file
+  opened. Currently, stdout logging is completely disabled in forking mode
+  (but writing to the debug log file is still possible). This is a change 
+  in behaviour, which is under review. If it causes problems to you,
+  please let us know.
+  Thanks to Tomas Heinrich for the patch.
+- bugfix: --enable-smcustbindcdr configure directive did not work
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=330
+  Thanks to Ultrabug for the patch.
+- bugfix: made rsyslog compile when libestr ist not installed in /usr
+  Thanks to Miloslav Trmač for providing patches and suggestions
+---------------------------------------------------------------------------
+Version 6.3.9  [BETA] 2012-05-22
+- bugfix: imtcp could cause hang during reception
+  this also applied to other users of core file tcpsrv.c, but imtcp was
+  by far the most prominent and widely-used, the rest rather exotic
+  (like imdiag)
+- added capability to specify substrings for field extraction mode
+- added the "jsonf" property replacer option (and fieldname)
+- bugfix: omudpspoof did not work correctly if no spoof hostname was
+  configured
+- bugfix: property replacer option "json" could lead to content loss
+  message was truncated if escaping was necessary
+- bugfix: assigned ruleset was lost when using disk queues
+  This looked quite hard to diagnose for disk-assisted queues, as the
+  pure memory part worked well, but ruleset info was lost for messages
+  stored inside the disk queue.
+- bugfix/imuxsock: solving abort if hostname was not set; configured
+  hostname was not used (both merge regressions)
+ -bugfix/omfile: template action parameter was not accepted
+  (and template name set to "??" if the parameter was used)
+  Thanks to Brian Knox for alerting us on this bug.
+- bugfix: ommysql did not properly init/exit the mysql runtime library
+  this could lead to segfaults. Triggering condition: multiple action
+  instances using ommysql.  Thanks to Tomas Heinrich for reporting this
+  problem and providing an initial patch (which my solution is based on,
+  I need to add more code to clean the mess up).
+- bugfix: rsyslog did not terminate when delayable inputs were blocked
+  due to unvailable sources. Fixes:
+  http://bugzilla.adiscon.com/show_bug.cgi?id=299
+  Thanks to Marcin M for bringing up this problem and Andre Lorbach
+  for helping to reproduce and fix it.
+- added capability to specify substrings for field extraction mode
+- bugfix: disk queue was not persisted on shutdown, regression of fix to
+  http://bugzilla.adiscon.com/show_bug.cgi?id=299
+  The new code also handles the case of shutdown of blocking light and 
+  full delayable sources somewhat smarter and permits, assuming sufficient
+  timouts, to persist message up to the max queue capacity. Also some nits
+  in debug instrumentation have been fixed.
+---------------------------------------------------------------------------
+Version 6.3.8  [DEVEL] 2012-04-16
+- added $PStatJSON directive to permit stats records in JSON format
+- added "date-unixtimestamp" property replacer option to format as a
+  unix timestamp (seconds since epoch)
+- added "json" property replacer option to support JSON encoding on a
+  per-property basis
+- added omhiredis (contributed module)
+- added mmjsonparse to support recognizing and parsing JSON enhanced syslog
+  messages
+- upgraded more plugins to support the new v6 config format:
+  - ommysql
+  - omlibdbi
+  - omsnmp
+- added configuration directives to customize queue light delay marks
+  $MainMsgQueueLightDelayMark, $ActionQueueLightDelayMark; both
+  specify number of messages starting at which a delay happens.
+- added message property parsesuccess to indicate if the last run
+  higher-level parser could successfully parse the message or not
+  (see property replacer html doc for details)
+- bugfix: abort during startup when rsyslog.conf v6+ format was used in
+  a certain way
+- bugfix: property $!all-json made rsyslog abort if no normalized data
+  was available
+- bugfix: memory leak in array passing output module mode
+- added configuration directives to customize queue light delay marks
+- permit size modifiers (k,m,g,...) in integer config parameters
+  Thanks to Jo Rhett for the suggestion.
+- bugfix: hostname was not requeried on HUP
+  Thanks to Per Jessen for reporting this bug and Marius Tomaschewski for
+  his help in testing the fix.
+- bugfix: imklog invalidly computed facility and severity
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=313
+- added configuration directive to disable octet-counted framing
+  for imtcp, directive is $InputTCPServerSupportOctetCountedFraming 
+  for imptcp, directive is $InputPTCPServerSupportOctetCountedFraming 
+- added capability to use a local interface IP address as fromhost-ip for
+  locally originating messages. New directive $LocalHostIPIF
+---------------------------------------------------------------------------
+Version 6.3.7  [DEVEL] 2012-02-02
+- imported refactored v5.9.6 imklog linux driver, now combined with BSD
+  driver
+- removed imtemplate/omtemplate template modules, as this was waste of time
+  The actual input/output modules are better copy templates. Instead, the
+  now-removed modules cost time for maintenance AND often caused confusion
+  on what their role was.
+- added a couple of new stats objects
+- improved support for new v6 config system. The build-in output modules
+  now all support the new config language
+- bugfix: facility local<x> was not correctly interpreted in legacy filters
+  Was only accepted if it was the first PRI in a multi-filter PRI.
+  Thanks to forum user Mark for bringing this to our attention.
+- bugfix: potential abort after reading invalid X.509 certificate
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=290
+  Thanks to Tomas Heinrich for the patch
+- bufgix: legacy parsing of some filters did not work correctly
+- bugfix: rsyslog aborted during startup if there is an error in loading
+  an action and legacy configuration mode is used
+- bugfix: bsd klog driver did no longer compile
+- relicensed larger parts of the code under Apache (ASL) 2.0
+---------------------------------------------------------------------------
+Version 6.3.6  [DEVEL] 2011-09-19
+- added $InputRELPServerBindRuleset directive to specify rulesets for RELP
+- bugfix: config parser did not support properties with dashes in them
+  inside property-based filters. Thanks to Gerrit Seré for reporting this.
+---------------------------------------------------------------------------
+Version 6.3.5  [DEVEL] (rgerhards/al), 2011-09-01
+- bugfix/security: off-by-two bug in legacy syslog parser, CVE-2011-3200
+- bugfix: mark message processing did not work correctly
+- imudp&imtcp now report error if no listener at all was defined
+  Thanks to Marcin for suggesting this error message.
+- bugfix: potential misadressing in property replacer
+---------------------------------------------------------------------------
+Version 6.3.4  [DEVEL] (rgerhards), 2011-08-02
+- added support for action() config object
+  * in rsyslog core engine
+  * in omfile
+  * in omusrmsg
+- bugfix: omusrmsg format usr1,usr2 was no longer supported
+- bugfix: misaddressing in config handler
+  In theory, can cause segfault, in practice this is extremely unlikely
+  Thanks to Marcin for alertig me.
+---------------------------------------------------------------------------
+Version 6.3.3  [DEVEL] (rgerhards), 2011-07-13
+- rsyslog.conf format: now parsed by RainerScript parser
+  this provides the necessary base for future enhancements as well as some
+  minor immediate ones. For details see:
+  http://blog.gerhards.net/2011/07/rsyslog-633-config-format-improvements.html
+- performance of script-based filters notably increased
+- removed compatibility mode as we expect people have adjusted their
+  confs by now
+- added support for the ":omfile:" syntax for actions
+---------------------------------------------------------------------------
+Version 6.3.2  [DEVEL] (rgerhards), 2011-07-06
+- added support for the ":omusrmsg:" syntax in configuring user messages
+- systemd support: set stdout/stderr to null - thx to Lennart for the patch
+- added support for obtaining timestamp for kernel message from message
+  If the kernel time-stamps messages, time is now take from that
+  timestamp instead of the system time when the message was read. This
+  provides much better accuracy. Thanks to Lennart Poettering for
+  suggesting this feature and his help during implementation.
+- added support for obtaining timestamp from system for imuxsock
+  This permits to read the time a message was submitted to the system
+  log socket. Most importantly, this is provided in microsecond resolution.
+  So we are able to obtain high precision timestampis even for messages
+  that were - as is usual - not formatted with them. This also simplifies
+  things in regard to local time calculation in chroot environments.
+  Many thanks to Lennart Poettering for suggesting this feature,
+  providing some guidance on implementing it and coordinating getting the
+  necessary support into the Linux kernel.
+- bugfix: timestamp was incorrectly calculated for timezones with minute
+  offset
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=271
+- bugfix: memory leak in imtcp & subsystems under some circumstances
+  This leak is tied to error conditions which lead to incorrect cleanup
+  of some data structures.
+---------------------------------------------------------------------------
+Version 6.3.1  [DEVEL] (rgerhards), 2011-06-07
+- added a first implementation of a DNS name cache
+  this still has a couple of weaknesses, like no expiration of entries,
+  suboptimal algorithms -- but it should perform much better than
+  what we had previously. Implementation will be improved based on
+  feedback during the next couple of releases
+---------------------------------------------------------------------------
+Version 6.3.0  [DEVEL] (rgerhards), 2011-06-01
+- introduced new config system
+  http://blog.gerhards.net/2011/06/new-rsyslog-config-system-materializes.html
+---------------------------------------------------------------------------
 Version 6.2.2  [v6-stable], 2012-06-13
 - build system improvements and spec file templates
   Thanks to Abby Edwards for providing these enhancements
@@ -77,9 +297,11 @@ Version 6.2.0  [v6-stable], 2012-01-09
 - bugfix: potential abort after reading invalid X.509 certificate
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=290
   Thanks to Tomas Heinrich for the patch
-- $Begin, $End, $StrictScoping directives have been removed as v6.4 will
-  provide the same functionality in a far better way. So we do not want
-  to clutter the code.
+- enhanced module loader to not rely on PATH_MAX
+- imuxsock: added capability to "annotate" messages with "trusted
+  information", which contains some properties obtained from the system
+  and as such sure to not be faked. This is inspired by the similiar idea
+  introduced in systemd.
 ---------------------------------------------------------------------------
 Version 6.1.12  [BETA], 2011-09-01
 - bugfix/security: off-by-two bug in legacy syslog parser, CVE-2011-3200
@@ -122,8 +344,6 @@ Version 6.1.9  [BETA] (rgerhards), 2011-06-14
   this via a testbench test, not a user report. But I assume that some
   users may have had unreproducable aborts that were cause by this bug.
 - bugfix/improvement:$WorkDirectory now gracefully handles trailing slashes
----------------------------------------------------------------------------
-Version 6.1.9  [BETA] (rgerhards), 2011-06-14
 - bugfix: memory leak in imtcp & subsystems under some circumstances
   This leak is tied to error conditions which lead to incorrect cleanup
   of some data structures. [backport from v6.3]
@@ -149,6 +369,13 @@ Version 6.1.7  [DEVEL] (rgerhards), 2011-04-15
 - bugfix: IPv6-address could not be specified in omrelp
   this was due to improper parsing of ":"
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=250
+- bugfix: do not open files with full privileges, if privs will be dropped
+  This make the privilege drop code more bulletproof, but breaks Ubuntu's
+  work-around for log files created by external programs with the wrong
+  user and/or group. Note that it was long said that this "functionality"
+  would break once we go for serious privilege drop code, so hopefully
+  nobody still depends on it (and, if so, they lost...).
+- bugfix: pipes not opened in full priv mode when privs are to be dropped
 ---------------------------------------------------------------------------
 Version 6.1.6  [DEVEL] (rgerhards), 2011-03-14
 - enhanced omhdfs to support batching mode. This permits to increase
@@ -294,8 +521,176 @@ expected that interfaces, even new ones, break during the initial
   syslog plain tcp input plugin (NOT supporting TLS!)
   [ported from v4]
 ---------------------------------------------------------------------------
-Version 5.9.0  [V5-DEVEL] (rgerhards), 2011-03-??
+Version 5.9.8  [V5-BETA], 2012-05-??
+- bugfix: delayble source could block action queue, even if there was
+  a disk queue associated with it. The root cause of this problem was
+  that it makes no sense to delay messages once they arrive in the 
+  action queue - the "input" that is being held in that case is the main
+  queue worker, what makes no sense.
+  Thanks to Marcin for alerting us on this problem and providing 
+  instructions to reproduce it.
+- bugfix: disk queue was not persisted on shutdown, regression of fix to
+  http://bugzilla.adiscon.com/show_bug.cgi?id=299
+  The new code also handles the case of shutdown of blocking light and 
+  full delayable sources somewhat smarter and permits, assuming sufficient
+  timouts, to persist message up to the max queue capacity. Also some nits
+  in debug instrumentation have been fixed.
+- add small delay (50ms) after sending shutdown message
+  There seem to be cases where the shutdown message is otherwise not
+  processed, not even on an idle system. Thanks to Marcin for
+  bringing this problem up.
+- support for resolving huge groups
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=310
+  Thanks to Alec Warner for the patch
+- bugfix: potential hang due to mutex deadlock
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=316
+  Thanks to Andreas Piesk for reporting&analyzing this bug as well as
+  providing patches and other help in resolving it.
+- bugfix: property PROCID empty instead of proper nilvalue if not present
+  If it is not present, it must have the nilvalue "-" as of RFC5424
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=332
+  Thanks to John N for reporting this issue.
+---------------------------------------------------------------------------
+Version 5.9.7  [V5-BETA], 2012-05-10
+- added capability to specify substrings for field extraction mode
+- bugfix: ommysql did not properly init/exit the mysql runtime library
+  this could lead to segfaults. Triggering condition: multiple action
+  instances using ommysql.  Thanks to Tomas Heinrich for reporting this
+  problem and providing an initial patch (which my solution is based on,
+  I need to add more code to clean the mess up).
+- bugfix: rsyslog did not terminate when delayable inputs were blocked
+  due to unvailable sources. Fixes:
+  http://bugzilla.adiscon.com/show_bug.cgi?id=299
+  Thanks to Marcin M for bringing up this problem and Andre Lorbach
+  for helping to reproduce and fix it.
+- bugfix/tcpflood: sending small test files did not work correctly
+---------------------------------------------------------------------------
+Version 5.9.6  [V5-BETA], 2012-04-12
+- added configuration directives to customize queue light delay marks
+- permit size modifiers (k,m,g,...) in integer config parameters
+  Thanks to Jo Rhett for the suggestion.
+- bugfix: hostname was not requeried on HUP
+  Thanks to Per Jessen for reporting this bug and Marius Tomaschewski for
+  his help in testing the fix.
+- bugfix: imklog invalidly computed facility and severity
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=313
+- bugfix: imptcp input name could not be set
+  config directive was accepted, but had no effect
+- added configuration directive to disable octet-counted framing
+  for imtcp, directive is $InputTCPServerSupportOctetCountedFraming 
+  for imptcp, directive is $InputPTCPServerSupportOctetCountedFraming 
+- added capability to use a local interface IP address as fromhost-ip for
+  locally originating messages. New directive $LocalHostIPIF
+- added configuration directives to customize queue light delay marks
+  $MainMsgQueueLightDelayMark, $ActionQueueLightDelayMark; both
+  specify number of messages starting at which a delay happens.
+---------------------------------------------------------------------------
+Version 5.9.5  [V5-DEVEL], 2012-01-27
+- improved impstats subsystem, added many new counters
+- enhanced module loader to not rely on PATH_MAX
+- refactored imklog linux driver, now combined with BSD driver
+  The Linux driver no longer supports outdated kernel symbol resolution,
+  which was disabled by default for very long. Also overall cleanup,
+  resulting in much smaller code. Linux and BSD are now covered by a
+  single small driver.
+- $IMUXSockRateLimitInterval DEFAULT CHANGED, was 5, now 0
+  The new default turns off rate limiting. This was chosen as people
+  experienced problems with rate-limiting activated by default. Now it
+  needs an explicit opt-in by setting this parameter.
+  Thanks to Chris Gaffney for suggesting to make it opt-in; thanks to
+  many unnamed others who already had complained at the time Chris made
+  the suggestion ;-)
+---------------------------------------------------------------------------
+Version 5.9.4  [V5-DEVEL], 2011-11-29
+- imuxsock: added capability to "annotate" messages with "trusted
+  information", which contains some properties obtained from the system
+  and as such sure to not be faked. This is inspired by the similiar idea
+  introduced in systemd.
+- removed dependency on gcrypt for recently-enough GnuTLS
+  see: http://bugzilla.adiscon.com/show_bug.cgi?id=289
+- bugfix: imuxsock did no longer ignore message-provided timestamp, if
+  so configured (the *default*). Lead to no longer sub-second timestamps.
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=281
+- bugfix: omfile returns fatal error code for things that go really wrong
+  previously, RS_RET_RESUME was returned, which lead to a loop inside the
+  rule engine as omfile could not really recover.
+- bugfix: rsyslogd -v always said 64 atomics were not present
+  thanks to mono_matsuko for the patch
+---------------------------------------------------------------------------
+Version 5.9.3  [V5-DEVEL], 2011-09-01
+- bugfix/security: off-by-two bug in legacy syslog parser, CVE-2011-3200
+- bugfix: mark message processing did not work correctly
+- added capability to emit config error location info for warnings 
+  otherwise, omusrmsg's warning about new config format was not
+  accompanied by problem location.
+- bugfix: potential misadressing in property replacer
+- bugfix: MSGID corruption in RFC5424 parser under some circumstances
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=275
+- bugfix: The NUL-Byte for the syslogtag was not copied in MsgDup (msg.c)
+---------------------------------------------------------------------------
+Version 5.9.2  [V5-DEVEL] (rgerhards), 2011-07-11
+- systemd support: set stdout/stderr to null - thx to Lennart for the patch
+- added support for the ":omusrmsg:" syntax in configuring user messages
+- added support for the ":omfile:" syntax for actions
+---------------------------------------------------------------------------
+Version 5.9.1  [V5-DEVEL] (rgerhards), 2011-06-30
+- added support for obtaining timestamp for kernel message from message
+  If the kernel time-stamps messages, time is now take from that
+  timestamp instead of the system time when the message was read. This
+  provides much better accuracy. Thanks to Lennart Poettering for
+  suggesting this feature and his help during implementation.
+- added support for obtaining timestamp from system for imuxsock
+  This permits to read the time a message was submitted to the system
+  log socket. Most importantly, this is provided in microsecond resolution.
+  So we are able to obtain high precision timestampis even for messages
+  that were - as is usual - not formatted with them. This also simplifies
+  things in regard to local time calculation in chroot environments.
+  Many thanks to Lennart Poettering for suggesting this feature,
+  providing some guidance on implementing it and coordinating getting the
+  necessary support into the Linux kernel.
+- bugfix: timestamp was incorrectly calculated for timezones with minute
+  offset
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=271
+- bugfix: problems in failover action handling
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=270
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=254
+- bugfix: mutex was invalidly left unlocked during action processing
+  At least one case where this can occur is during thread shutdown, which
+  may be initiated by lower activity. In most cases, this is quite
+  unlikely to happen. However, if it does, data structures may be 
+  corrupted which could lead to fatal failure and segfault. I detected
+  this via a testbench test, not a user report. But I assume that some
+  users may have had unreproducable aborts that were cause by this bug.
+- bugfix: memory leak in imtcp & subsystems under some circumstances
+  This leak is tied to error conditions which lead to incorrect cleanup
+  of some data structures. [backport from v6]
+- bugfix/improvement:$WorkDirectory now gracefully handles trailing slashes
+---------------------------------------------------------------------------
+Version 5.9.0  [V5-DEVEL] (rgerhards), 2011-06-08
+- imfile: added $InputFileMaxLinesAtOnce directive
+- enhanced imfile to support input batching
+- added capability for imtcp and imptcp to activate keep-alive packets
+  at the socket layer. This has not been added to imttcp, as the latter is
+  only an experimental module, and one which did not prove to be useful.
+  reference: http://kb.monitorware.com/post20791.html
+- added support to control KEEPALIVE settings in imptcp
+  this has not yet been added to imtcp, but could be done on request.
+- $ActionName is now also used for naming of queues in impstats
+  as well as in the debug output
+- bugfix: do not open files with full privileges, if privs will be dropped
+  This make the privilege drop code more bulletproof, but breaks Ubuntu's
+  work-around for log files created by external programs with the wrong
+  user and/or group. Note that it was long said that this "functionality"
+  would break once we go for serious privilege drop code, so hopefully
+  nobody still depends on it (and, if so, they lost...).
+- bugfix: pipes not opened in full priv mode when privs are to be dropped
 - this begins a new devel branch for v5
+- better handling of queue i/o errors in disk queues. This is kind of a
+  bugfix, but a very intrusive one, this it goes into the devel version
+  first. Right now, "file not found" is handled and leads to the new
+  emergency mode, in which disk action is stopped and the queue run
+  in direct mode. An error message is emited if this happens.
+- added support for user-level PRI provided via systemd
 - added new config directive $InputTCPFlowControl to select if tcp
   received messages shall be flagged as light delayable or not.
 - enhanced omhdfs to support batching mode. This permits to increase
@@ -314,6 +709,11 @@ Version 5.8.13  [V5-stable] 2012-06-??
 - bugfix: randomized IP option header in omudpspoof caused problems
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=327
   Thanks to Rick Brown for helping to test out the patch.
+- bugfix: potential abort if output plugin logged message during shutdown
+  note that none of the rsyslog-provided plugins does this
+  Thanks to bodik and Rohit Prasad for alerting us on this bug and
+  analyzing it.
+  fixes: http://bugzilla.adiscon.com/show_bug.cgi?id=347
 ---------------------------------------------------------------------------
 Version 5.8.12  [V5-stable] 2012-06-06
 - add small delay (50ms) after sending shutdown message
@@ -402,6 +802,12 @@ Version 5.8.9  [V5-stable] 2012-03-15
   stats subsystem.
 ---------------------------------------------------------------------------
 Version 5.8.8  [V5-stable] 2012-03-05
+- added capability to use a local interface IP address as fromhost-ip for
+  imuxsock imklog
+  new config directives: $IMUXSockLocalIPIF, $klogLocalIPIF
+- added configuration directives to customize queue light delay marks
+  $MainMsgQueueLightDelayMark, $ActionQueueLightDelayMark; both
+  specify number of messages starting at which a delay happens.
 - bugfix: omprog made rsyslog abort on startup if not binary to
   execute was configured
 - bugfix: imklog invalidly computed facility and severity
@@ -468,7 +874,7 @@ Version 5.8.4  [V5-stable] (al), 2011-08-10
 Version 5.8.3  [V5-stable] (rgerhards), 2011-07-11
 - systemd support: set stdout/stderr to null - thx to Lennart for the patch
 - added support for the ":omusrmsg:" syntax in configuring user messages
-- added support for the ":omfile:" syntax in configuring user messages
+- added support for the ":omfile:" syntax for actions
   Note: previous outchannel syntax will generate a warning message. This
   may be surprising to some users, but it is quite urgent to alert them
   of the new syntax as v6 can no longer support the previous one.
@@ -1373,7 +1779,7 @@ Version 4.6.8  [v4-stable] (rgerhards), 2011-09-01
 ---------------------------------------------------------------------------
 Version 4.6.7  [v4-stable] (rgerhards), 2011-07-11
 - added support for the ":omusrmsg:" syntax in configuring user messages
-- added support for the ":omfile:" syntax in configuring user messages
+- added support for the ":omfile:" syntax for actions
 ---------------------------------------------------------------------------
 Version 4.6.6  [v4-stable] (rgerhards), 2011-06-24
 - bugfix: memory leak in imtcp & subsystems under some circumstances

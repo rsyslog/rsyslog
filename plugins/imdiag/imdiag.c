@@ -57,6 +57,7 @@
 
 MODULE_TYPE_INPUT
 MODULE_TYPE_NOKEEP
+MODULE_CNFNAME("imdiag")
 
 /* static data */
 DEF_IMOD_STATIC_DATA
@@ -77,6 +78,10 @@ static prop_t *pRcvIPDummy = NULL;
 
 
 /* config settings */
+struct modConfData_s {
+	EMPTY_STRUCT;
+};
+
 static int iTCPSessMax = 20; /* max number of sessions */
 static int iStrmDrvrMode = 0; /* mode for stream driver, driver-dependent (0 mostly means plain tcp) */
 static uchar *pszStrmDrvrAuthMode = NULL; /* authentication mode to use */
@@ -376,7 +381,8 @@ static rsRetVal addTCPListener(void __attribute__((unused)) *pVal, uchar *pNewVa
 	/* initialized, now add socket */
 	CHKiRet(tcpsrv.SetInputName(pOurTcpsrv, pszInputName == NULL ?
 						UCHAR_CONSTANT("imdiag") : pszInputName));
-	tcpsrv.configureTCPListen(pOurTcpsrv, pNewVal);
+	/* we support octect-cuunted frame (constant 1 below) */
+	tcpsrv.configureTCPListen(pOurTcpsrv, pNewVal, 1);
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
@@ -386,6 +392,33 @@ finalize_it:
 	}
 	RETiRet;
 }
+
+
+#if 0 /* can be used to integrate into new config system */
+BEGINbeginCnfLoad
+CODESTARTbeginCnfLoad
+ENDbeginCnfLoad
+
+
+BEGINendCnfLoad
+CODESTARTendCnfLoad
+ENDendCnfLoad
+
+
+BEGINcheckCnf
+CODESTARTcheckCnf
+ENDcheckCnf
+
+
+BEGINactivateCnf
+CODESTARTactivateCnf
+ENDactivateCnf
+
+
+BEGINfreeCnf
+CODESTARTfreeCnf
+ENDfreeCnf
+#endif
 
 /* This function is called to gather input.
  */

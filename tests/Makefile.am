@@ -1,7 +1,8 @@
 if ENABLE_TESTBENCH
-TESTRUNS = rt_init rscript
+# TODO: reenable TESTRUNS = rt_init rscript
 check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq msleep randomgen diagtalker uxsockrcvr syslog_caller syslog_inject inputfilegen
-TESTS = $(TESTRUNS) cfg.sh
+TESTS = $(TESTRUNS) 
+#TESTS = $(TESTRUNS) cfg.sh
 
 if ENABLE_IMDIAG
 TESTS +=  \
@@ -64,7 +65,6 @@ TESTS +=  \
 	failover-no-basic.sh \
 	rcvr_fail_restore.sh \
 	linkedlistqueue.sh
-endif
 
 if HAVE_VALGRIND
 TESTS +=  \
@@ -75,12 +75,14 @@ TESTS +=  \
 	failover-no-basic-vg.sh \
 	failover-no-rptd-vg.sh \
 	tcp-msgreduc-vg.sh
-endif
+endif # HAVE_VALGRIND
+endif # ENABLE_IMDIAG
 
 
 if ENABLE_MYSQL_TESTS
 TESTS +=  \
 	mysql-basic.sh \
+	mysql-basic-cnf6.sh \
 	mysql-asyn.sh 
 if ENABLE_OMLIBDBI
 TESTS +=  \
@@ -109,8 +111,9 @@ if ENABLE_GNUTLS
 	#sndrcv_tls_anon_rebind.sh \
 	#imtcp-tls-basic.sh
 if HAVE_VALGRIND
-# This test does not work on v5 as we keep DH params
-#TESTS += manytcp-too-few-tls.sh
+TESTS += imtcp-tls-basic-vg.sh \
+	 imtcp_conndrop_tls-vg.sh 
+	 manytcp-too-few-tls-vg.sh 
 endif
 endif
 
@@ -266,6 +269,7 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   diskqueue-fsync.sh \
 	   testsuites/diskqueue-fsync.conf \
 	   imtcp-tls-basic.sh \
+	   imtcp-tls-basic-vg.sh \
 	   testsuites/imtcp-tls-basic.conf \
 	   imtcp-multiport.sh \
 	   testsuites/imtcp-multiport.conf \
@@ -273,6 +277,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/udp-msgreduc-orgmsg-vg.conf \
 	   udp-msgreduc-vg.sh \
 	   testsuites/udp-msgreduc-vg.conf \
+	   manytcp-too-few-tls.sh \
+	   testsuites/manytcp-too-few-tls.conf \
 	   manytcp.sh \
 	   testsuites/manytcp.conf \
 	   manyptcp.sh \
@@ -284,6 +290,9 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   imptcp_conndrop.sh \
 	   testsuites/imptcp_conndrop.conf \
 	   imtcp_conndrop.sh \
+	   testsuites/imtcp_conndrop.conf \
+	   imtcp_conndrop_tls.sh \
+	   imtcp_conndrop_tls-vg.sh \
 	   testsuites/imtcp_conndrop.conf \
 	   imtcp_addtlframedelim.sh \
 	   testsuites/imtcp_addtlframedelim.conf \
@@ -449,8 +458,10 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   libdbi-asyn.sh \
 	   testsuites/libdbi-asyn.conf \
 	   mysql-basic.sh \
+	   mysql-basic-cnf6.sh \
 	   mysql-basic-vg.sh \
 	   testsuites/mysql-basic.conf \
+	   testsuites/mysql-basic-cnf6.conf \
 	   mysql-asyn.sh \
 	   mysql-asyn-vg.sh \
 	   testsuites/mysql-asyn.conf \
@@ -497,12 +508,15 @@ inputfilegen_LDADD = $(SOL_LIBS)
 nettester_SOURCES = nettester.c getline.c
 nettester_LDADD = $(SOL_LIBS)
 
-rt_init_SOURCES = rt-init.c $(test_files)
-rt_init_CPPFLAGS =  -I$(top_srcdir) $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
-rt_init_LDADD = $(RSRT_LIBS) $(ZLIB_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
-rt_init_LDFLAGS = -export-dynamic
+# rtinit tests disabled for the moment - also questionable if they
+# really provide value (after all, everything fails if rtinit fails...)
+#rt_init_SOURCES = rt-init.c $(test_files)
+#rt_init_CPPFLAGS =  -I$(top_srcdir) $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
+#rt_init_LDADD = $(RSRT_LIBS) $(ZLIB_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
+#rt_init_LDFLAGS = -export-dynamic
 
-rscript_SOURCES = rscript.c getline.c $(test_files)
-rscript_CPPFLAGS =  -I$(top_srcdir) $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
-rscript_LDADD = $(RSRT_LIBS) $(ZLIB_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
-rscript_LDFLAGS = -export-dynamic
+# same for basic rscript tests
+#rscript_SOURCES = rscript.c getline.c $(test_files)
+#rscript_CPPFLAGS =  -I$(top_srcdir) $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
+#rscript_LDADD = $(RSRT_LIBS) $(ZLIB_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
+#rscript_LDFLAGS = -export-dynamic

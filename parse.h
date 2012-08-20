@@ -76,7 +76,7 @@ rsRetVal rsParsAssignString(rsParsObj *pThis, cstr_t *pCStr);
 rsRetVal parsInt(rsParsObj *pThis, int* pInt);
 
 /* Skip whitespace. Often used to trim parsable entries. */
-rsRetVal parsSkipWhitespace(rsParsObj *pThis, sbool bRequireOne);
+rsRetVal parsSkipWhitespace(rsParsObj *pThis);
 
 /* Parse string up to a delimiter.
  *

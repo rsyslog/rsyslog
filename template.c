@@ -37,6 +37,7 @@
 #include "obj.h"
 #include "errmsg.h"
 #include "strgen.h"
+#include "rsconf.h"
 #include "unicode-helper.h"
 
 /* static data */
@@ -48,12 +49,6 @@ DEFobjCurrIf(strgen)
 DEFobjCurrIf(regexp)
 static int bFirstRegexpErrmsg = 1; /**< did we already do a "can't load regexp" error message? */
 #endif
-
-static struct template *tplRoot = NULL;	/* the root of the template list */
-static struct template *tplLast = NULL;	/* points to the last element of the template list */
-static struct template *tplLastStatic = NULL; /* last static element of the template list */
-
-
 
 /* helper to tplToString and strgen's, extends buffer */
 #define ALLOC_INC 128
@@ -124,10 +119,12 @@ rsRetVal tplToString(struct template *pTpl, msg_t *pMsg, uchar **ppBuf, size_t *
 			 * but they are handled in this way because of legacy (don't break any
 			 * existing thing).
 			 */
-			if(pTpl->optFormatForSQL == 1)
-				doSQLEscape(&pVal, &iLenVal, &bMustBeFreed, 1);
-			else if(pTpl->optFormatForSQL == 2)
-				doSQLEscape(&pVal, &iLenVal, &bMustBeFreed, 0);
+			if(pTpl->optFormatEscape == SQL_ESCAPE)
+				doEscape(&pVal, &iLenVal, &bMustBeFreed, SQL_ESCAPE);
+			else if(pTpl->optFormatEscape == JSON_ESCAPE)
+				doEscape(&pVal, &iLenVal, &bMustBeFreed, JSON_ESCAPE);
+			else if(pTpl->optFormatEscape == STDSQL_ESCAPE)
+				doEscape(&pVal, &iLenVal, &bMustBeFreed, STDSQL_ESCAPE);
 		}
 		/* got source, now copy over */
 		if(iLenVal > 0) { /* may be zero depending on property */
@@ -215,27 +212,29 @@ finalize_it:
 }
 
 
-/* Helper to doSQLEscape. This is called if doSQLEscape
+/* Helper to doEscape. This is called if doEscape
  * runs out of memory allocating the escaped string.
  * Then we are in trouble. We can
  * NOT simply return the unmodified string because this
  * may cause SQL injection. But we also can not simply
  * abort the run, this would be a DoS. I think an appropriate
- * measure is to remove the dangerous \' characters. We
+ * measure is to remove the dangerous \' characters (SQL). We
  * replace them by \", which will break the message and
  * signatures eventually present - but this is the
  * best thing we can do now (or does anybody 
  * have a better idea?). rgerhards 2004-11-23
- * added support for "escapeMode" (so doSQLEscape for details).
- * if mode = 1, then backslashes are changed to slashes.
+ * added support for escape mode (see doEscape for details).
+ * if mode = SQL_ESCAPE, then backslashes are changed to slashes.
  * rgerhards 2005-09-22
  */
-static void doSQLEmergencyEscape(register uchar *p, int escapeMode)
+static void doEmergencyEscape(register uchar *p, int mode)
 {
 	while(*p) {
-		if(*p == '\'')
+		if((mode == SQL_ESCAPE||mode == STDSQL_ESCAPE) && *p == '\'')
 			*p = '"';
-		else if((escapeMode == 1) && (*p == '\\'))
+		else if((mode == JSON_ESCAPE) && *p == '"')
+			*p = '\'';
+		else if((mode == SQL_ESCAPE) && *p == '\\')
 			*p = '/';
 		++p;
 	}
@@ -260,14 +259,16 @@ static void doSQLEmergencyEscape(register uchar *p, int escapeMode)
  * smartness depends on config settings. So we add a new option to this
  * function that allows the caller to select if they want to standard or
  * "smart" encoding ;)
- * new parameter escapeMode is 0 - standard sql, 1 - "smart" engines
+ * --
+ * Parameter "mode" is STDSQL_ESCAPE, SQL_ESCAPE "smart" SQL engines, or
+ * JSON_ESCAPE for everyone requiring escaped JSON (e.g. ElasticSearch).
  * 2005-09-22 rgerhards
  */
 rsRetVal
-doSQLEscape(uchar **pp, size_t *pLen, unsigned short *pbMustBeFreed, int escapeMode)
+doEscape(uchar **pp, size_t *pLen, unsigned short *pbMustBeFreed, int mode)
 {
 	DEFiRet;
-	uchar *p;
+	uchar *p = NULL;
 	int iLen;
 	cstr_t *pStrB = NULL;
 	uchar *pszGenerated;
@@ -278,26 +279,32 @@ doSQLEscape(uchar **pp, size_t *pLen, unsigned short *pbMustBeFreed, int escapeM
 	assert(pbMustBeFreed != NULL);
 
 	/* first check if we need to do anything at all... */
-	if(escapeMode == 0)
+	if(mode == STDSQL_ESCAPE)
 		for(p = *pp ; *p && *p != '\'' ; ++p)
 			;
-	else
+	else if(mode == SQL_ESCAPE)
 		for(p = *pp ; *p && *p != '\'' && *p != '\\' ; ++p)
 			;
+	else if(mode == JSON_ESCAPE)
+		for(p = *pp ; *p && *p != '"' ; ++p)
+			;
 	/* when we get out of the loop, we are either at the
-	 * string terminator or the first \'. */
-	if(*p == '\0')
+	 * string terminator or the first character to escape */
+	if(p && *p == '\0')
 		FINALIZE; /* nothing to do in this case! */
 
 	p = *pp;
 	iLen = *pLen;
 	CHKiRet(cstrConstruct(&pStrB));
-	
+
 	while(*p) {
-		if(*p == '\'') {
-			CHKiRet(cstrAppendChar(pStrB, (escapeMode == 0) ? '\'' : '\\'));
+		if((mode == SQL_ESCAPE || mode == STDSQL_ESCAPE) && *p == '\'') {
+			CHKiRet(cstrAppendChar(pStrB, (mode == STDSQL_ESCAPE) ? '\'' : '\\'));
 			iLen++;	/* reflect the extra character */
-		} else if((escapeMode == 1) && (*p == '\\')) {
+		} else if((mode == SQL_ESCAPE) && *p == '\\') {
+			CHKiRet(cstrAppendChar(pStrB, '\\'));
+			iLen++;	/* reflect the extra character */
+		} else if((mode == JSON_ESCAPE) && *p == '"') {
 			CHKiRet(cstrAppendChar(pStrB, '\\'));
 			iLen++;	/* reflect the extra character */
 		}
@@ -316,7 +323,7 @@ doSQLEscape(uchar **pp, size_t *pLen, unsigned short *pbMustBeFreed, int escapeM
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		doSQLEmergencyEscape(*pp, escapeMode);
+		doEmergencyEscape(*pp, mode);
 		if(pStrB != NULL)
 			cstrDestruct(&pStrB);
 	}
@@ -357,7 +364,8 @@ struct templateEntry* tpeConstruct(struct template *pTpl)
 /* Constructs a template list object. Returns pointer to it
  * or NULL (if it fails).
  */
-struct template* tplConstruct(void)
+static struct template*
+tplConstruct(rsconf_t *conf)
 {
 	struct template *pTpl;
 	if((pTpl = calloc(1, sizeof(struct template))) == NULL)
@@ -366,12 +374,12 @@ struct template* tplConstruct(void)
 	/* basic initialisation is done via calloc() - need to
 	 * initialize only values != 0. */
 
-	if(tplLast == NULL)	{
+	if(conf->templates.last == NULL)	{
 		/* we are the first element! */
-		tplRoot = tplLast = pTpl;
+		conf->templates.root = conf->templates.last = pTpl;
 	} else {
-		tplLast->pNext = pTpl;
-		tplLast = pTpl;
+		conf->templates.last->pNext = pTpl;
+		conf->templates.last = pTpl;
 	}
 
 	return(pTpl);
@@ -485,18 +493,18 @@ static void doOptions(unsigned char **pp, struct templateEntry *pTpe)
 
 	p = *pp;
 
-	while(*p && *p != '%') {
+	while(*p && *p != '%' && *p != ':') {
 		/* outer loop - until end of options */
 		i = 0;
 		while((i < sizeof(Buf) / sizeof(char)) &&
-		      *p && *p != '%' && *p != ',') {
+		      *p && *p != '%' && *p != ':' && *p != ',') {
 			/* inner loop - until end of ONE option */
 			Buf[i++] = tolower((int)*p);
 			++p;
 		}
 		Buf[i] = '\0'; /* terminate */
 		/* check if we need to skip oversize option */
-		while(*p && *p != '%' && *p != ',')
+		while(*p && *p != '%' && *p != ':' && *p != ',')
 			++p;	/* just skip */
 		if(*p == ',')
 			++p; /* eat ',' */
@@ -513,6 +521,8 @@ static void doOptions(unsigned char **pp, struct templateEntry *pTpe)
 			pTpe->data.field.eDateFormat = tplFmtRFC3164BuggyDate;
 		 } else if(!strcmp((char*)Buf, "date-rfc3339")) {
 			pTpe->data.field.eDateFormat = tplFmtRFC3339Date;
+		 } else if(!strcmp((char*)Buf, "date-unixtimestamp")) {
+			pTpe->data.field.eDateFormat = tplFmtUnixDate;
 		 } else if(!strcmp((char*)Buf, "date-subseconds")) {
 			pTpe->data.field.eDateFormat = tplFmtSecFrac;
 		 } else if(!strcmp((char*)Buf, "lowercase")) {
@@ -534,7 +544,26 @@ static void doOptions(unsigned char **pp, struct templateEntry *pTpe)
 		 } else if(!strcmp((char*)Buf, "secpath-replace")) {
 			pTpe->data.field.options.bSecPathReplace = 1;
 		 } else if(!strcmp((char*)Buf, "csv")) {
-			pTpe->data.field.options.bCSV = 1;
+		 	if(pTpe->data.field.options.bJSON || pTpe->data.field.options.bJSONf) {
+				errmsg.LogError(0, NO_ERRCODE, "error: can only specify "
+					"one option out of (json, jsonf, csv) - csv ignored");
+			} else {
+				pTpe->data.field.options.bCSV = 1;
+			}
+		 } else if(!strcmp((char*)Buf, "json")) {
+		 	if(pTpe->data.field.options.bCSV || pTpe->data.field.options.bJSON) {
+				errmsg.LogError(0, NO_ERRCODE, "error: can only specify "
+					"one option out of (json, jsonf, csv) - json ignored");
+			} else {
+				pTpe->data.field.options.bJSON = 1;
+			}
+		 } else if(!strcmp((char*)Buf, "jsonf")) {
+		 	if(pTpe->data.field.options.bCSV || pTpe->data.field.options.bJSON) {
+				errmsg.LogError(0, NO_ERRCODE, "error: can only specify "
+					"one option out of (json, jsonf, csv) - jsonf ignored");
+			} else {
+				pTpe->data.field.options.bJSONf = 1;
+			}
 		 } else {
 			dbgprintf("Invalid field option '%s' specified - ignored.\n", Buf);
 		 }
@@ -551,7 +580,8 @@ static void doOptions(unsigned char **pp, struct templateEntry *pTpe)
 static int do_Parameter(unsigned char **pp, struct template *pTpl)
 {
 	unsigned char *p;
-	cstr_t *pStrB;
+	cstr_t *pStrProp;
+	cstr_t *pStrField = NULL;
 	struct templateEntry *pTpe;
 	int iNum;	/* to compute numbers */
 #ifdef FEATURE_REGEXP
@@ -568,7 +598,7 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 
 	p = (unsigned char*) *pp;
 
-	if(cstrConstruct(&pStrB) != RS_RET_OK)
+	if(cstrConstruct(&pStrProp) != RS_RET_OK)
 		 return 1;
 
 	if((pTpe = tpeConstruct(pTpl)) == NULL) {
@@ -579,25 +609,24 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 	pTpe->eEntryType = FIELD;
 
 	while(*p && *p != '%' && *p != ':') {
-		cstrAppendChar(pStrB, tolower(*p));
+		cstrAppendChar(pStrProp, tolower(*p));
 		++p; /* do NOT do this in tolower()! */
 	}
 
 	/* got the name */
-	cstrFinalize(pStrB);
+	cstrFinalize(pStrProp);
 
-	if(propNameToID(pStrB, &pTpe->data.field.propid) != RS_RET_OK) {
-		cstrDestruct(&pStrB);
+	if(propNameToID(pStrProp, &pTpe->data.field.propid) != RS_RET_OK) {
+		cstrDestruct(&pStrProp);
 		return 1;
 	}
 	if(pTpe->data.field.propid == PROP_CEE) {
 		/* in CEE case, we need to preserve the actual property name */
-		if((pTpe->data.field.propName = es_newStrFromCStr((char*)cstrGetSzStrNoNULL(pStrB)+2, cstrLen(pStrB)-2)) == NULL) {
-			cstrDestruct(&pStrB);
+		if((pTpe->data.field.propName = es_newStrFromCStr((char*)cstrGetSzStrNoNULL(pStrProp)+2, cstrLen(pStrProp)-2)) == NULL) {
+			cstrDestruct(&pStrProp);
 			return 1;
 		}
 	}
-	cstrDestruct(&pStrB);
 
 	/* Check frompos, if it has an R, then topos should be a regex */
 	if(*p == ':') {
@@ -724,6 +753,13 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 								pTpe->data.field.field_expand = 1;
 								p ++;
 							}
+							if(*p == ',') { /* real fromPos? */
+								++p;
+								iNum = 0;
+								while(isdigit((int)*p))
+									iNum = iNum * 10 + *p++ - '0';
+								pTpe->data.field.iFromPos = iNum;
+							}
 						  }
 					}
 				} else {
@@ -824,10 +860,24 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 			/* fallthrough to "regular" ToPos code */
 #endif /* #ifdef FEATURE_REGEXP */
 
-			iNum = 0;
-			while(isdigit((int)*p))
-				iNum = iNum * 10 + *p++ - '0';
-			pTpe->data.field.iToPos = iNum;
+			if(pTpe->data.field.has_fields == 1) {
+				iNum = 0;
+				while(isdigit((int)*p))
+					iNum = iNum * 10 + *p++ - '0';
+				pTpe->data.field.iFieldNr = iNum;
+				if(*p == ',') { /* get real toPos? */
+					++p;
+					iNum = 0;
+					while(isdigit((int)*p))
+						iNum = iNum * 10 + *p++ - '0';
+					pTpe->data.field.iToPos = iNum;
+				}
+			} else {
+				iNum = 0;
+				while(isdigit((int)*p))
+					iNum = iNum * 10 + *p++ - '0';
+				pTpe->data.field.iToPos = iNum;
+			}
 			/* skip to next known good */
 			while(*p && *p != '%' && *p != ':') {
 				/* TODO: complain on extra characters */
@@ -839,7 +889,7 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 #endif /* #ifdef FEATURE_REGEXP */
 	}
 
-	if((pTpe->data.field.has_fields == 0) && (pTpe->data.field.iToPos < pTpe->data.field.iFromPos)) {
+	if(pTpe->data.field.iToPos < pTpe->data.field.iFromPos) {
 		iNum = pTpe->data.field.iToPos;
 		pTpe->data.field.iToPos = pTpe->data.field.iFromPos;
 		pTpe->data.field.iFromPos = iNum;
@@ -850,6 +900,34 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 		++p; /* eat ':' */
 		doOptions(&p, pTpe);
 	}
+
+	/* check field name */
+	if(*p == ':') {
+		++p; /* eat ':' */
+		if(cstrConstruct(&pStrField) != RS_RET_OK)
+			 return 1;
+		while(*p != ':' && *p != '%' && *p != '\0') {
+			cstrAppendChar(pStrField, *p);
+			++p;
+		}
+		cstrFinalize(pStrField);
+	}
+
+	/* save field name - if none was given, use the property name instead */
+	if(pStrField == NULL) {
+		if((pTpe->data.field.fieldName =
+		      es_newStrFromCStr((char*)cstrGetSzStrNoNULL(pStrProp), cstrLen(pStrProp))) == NULL) {
+			return 1;
+		}
+	} else {
+		if((pTpe->data.field.fieldName =
+		      es_newStrFromCStr((char*)cstrGetSzStrNoNULL(pStrField), cstrLen(pStrField))) == NULL) {
+			return 1;
+		}
+		cstrDestruct(&pStrField);
+	}
+
+	cstrDestruct(&pStrProp);
 
 	if(*p) ++p; /* eat '%' */
 
@@ -865,14 +943,13 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 static rsRetVal
 tplAddTplMod(struct template *pTpl, uchar** ppRestOfConfLine)
 {
-	uchar *pSrc, *pDst;
+	uchar *pSrc;
 	uchar szMod[2048];
 	unsigned lenMod;
 	strgen_t *pStrgen;
 	DEFiRet;
 
 	pSrc = *ppRestOfConfLine;
-	pDst = szMod;
 	lenMod = 0;
 	while(*pSrc && !isspace(*pSrc) && lenMod < sizeof(szMod) - 1) {
 		szMod[lenMod] = *pSrc++;
@@ -892,11 +969,14 @@ tplAddTplMod(struct template *pTpl, uchar** ppRestOfConfLine)
 	 * acknowledged implementing the option. -- rgerhards, 2011-03-21
 	 */
 	if(lenMod > 6 && !strcasecmp((char*) szMod + lenMod - 7, ",stdsql")) {
-		pTpl->optFormatForSQL = 2;
-		DBGPRINTF("strgen suports the stdsql option\n");
+		pTpl->optFormatEscape = STDSQL_ESCAPE;
+		DBGPRINTF("strgen supports the stdsql option\n");
 	} else if(lenMod > 3 && !strcasecmp((char*) szMod+ lenMod - 4, ",sql")) {
-		pTpl->optFormatForSQL = 1;
-		DBGPRINTF("strgen suports the sql option\n");
+		pTpl->optFormatEscape = SQL_ESCAPE;
+		DBGPRINTF("strgen supports the sql option\n");
+	} else if(lenMod > 4 && !strcasecmp((char*) szMod+ lenMod - 4, ",json")) {
+		pTpl->optFormatEscape = JSON_ESCAPE;
+		DBGPRINTF("strgen supports the json option\n");
 	}
 
 finalize_it:
@@ -907,7 +987,7 @@ finalize_it:
 /* Add a new template line
  * returns pointer to new object if it succeeds, NULL otherwise.
  */
-struct template *tplAddLine(char* pName, uchar** ppRestOfConfLine)
+struct template *tplAddLine(rsconf_t *conf, char* pName, uchar** ppRestOfConfLine)
 {
 	struct template *pTpl;
  	unsigned char *p;
@@ -919,7 +999,7 @@ struct template *tplAddLine(char* pName, uchar** ppRestOfConfLine)
 	assert(pName != NULL);
 	assert(ppRestOfConfLine != NULL);
 
-	if((pTpl = tplConstruct()) == NULL)
+	if((pTpl = tplConstruct(conf)) == NULL)
 		return NULL;
 	
 	pTpl->iLenName = strlen(pName);
@@ -1024,11 +1104,13 @@ struct template *tplAddLine(char* pName, uchar** ppRestOfConfLine)
 		 * it anyhow... ;) rgerhards 2004-11-22
 		 */
 		if(!strcmp(optBuf, "stdsql")) {
-			pTpl->optFormatForSQL = 2;
+			pTpl->optFormatEscape = STDSQL_ESCAPE;
+		} else if(!strcmp(optBuf, "json")) {
+			pTpl->optFormatEscape = JSON_ESCAPE;
 		} else if(!strcmp(optBuf, "sql")) {
-			pTpl->optFormatForSQL = 1;
+			pTpl->optFormatEscape = SQL_ESCAPE;
 		} else if(!strcmp(optBuf, "nosql")) {
-			pTpl->optFormatForSQL = 0;
+			pTpl->optFormatEscape = NO_ESCAPE;
 		} else {
 			dbgprintf("Invalid option '%s' ignored.\n", optBuf);
 		}
@@ -1046,13 +1128,13 @@ struct template *tplAddLine(char* pName, uchar** ppRestOfConfLine)
  * NULL otherwise.
  * rgerhards 2004-11-17
  */
-struct template *tplFind(char *pName, int iLenName)
+struct template *tplFind(rsconf_t *conf, char *pName, int iLenName)
 {
 	struct template *pTpl;
 
 	assert(pName != NULL);
 
-	pTpl = tplRoot;
+	pTpl = conf->templates.root;
 	while(pTpl != NULL &&
 	      !(pTpl->iLenName == iLenName &&
 	        !strcmp(pTpl->pszName, pName)
@@ -1070,13 +1152,13 @@ struct template *tplFind(char *pName, int iLenName)
  * "normal" debugging. Uncomment them, if they are needed.
  * rgerhards, 2007-07-05
  */
-void tplDeleteAll(void)
+void tplDeleteAll(rsconf_t *conf)
 {
 	struct template *pTpl, *pTplDel;
 	struct templateEntry *pTpe, *pTpeDel;
 	BEGINfunc
 
-	pTpl = tplRoot;
+	pTpl = conf->templates.root;
 	while(pTpl != NULL) {
 		/* dbgprintf("Delete Template: Name='%s'\n ", pTpl->pszName == NULL? "NULL" : pTpl->pszName);*/
 		pTpe = pTpl->pEntryRoot;
@@ -1103,6 +1185,8 @@ void tplDeleteAll(void)
 				}
 				if(pTpeDel->data.field.propName != NULL)
 					es_deleteStr(pTpeDel->data.field.propName);
+				if(pTpeDel->data.field.fieldName != NULL)
+					es_deleteStr(pTpeDel->data.field.fieldName);
 #endif
 				break;
 			}
@@ -1122,19 +1206,19 @@ void tplDeleteAll(void)
 /* Destroy all templates obtained from conf file
  * preserving hardcoded ones. This is called from init().
  */
-void tplDeleteNew(void)
+void tplDeleteNew(rsconf_t *conf)
 {
 	struct template *pTpl, *pTplDel;
 	struct templateEntry *pTpe, *pTpeDel;
 
 	BEGINfunc
 
-	if(tplRoot == NULL || tplLastStatic == NULL)
+	if(conf->templates.root == NULL || conf->templates.lastStatic == NULL)
 		return;
 
-	pTpl = tplLastStatic->pNext;
-	tplLastStatic->pNext = NULL;
-	tplLast = tplLastStatic;
+	pTpl = conf->templates.lastStatic->pNext;
+	conf->templates.lastStatic->pNext = NULL;
+	conf->templates.last = conf->templates.lastStatic;
 	while(pTpl != NULL) {
 		/* dbgprintf("Delete Template: Name='%s'\n ", pTpl->pszName == NULL? "NULL" : pTpl->pszName);*/
 		pTpe = pTpl->pEntryRoot;
@@ -1177,25 +1261,27 @@ void tplDeleteNew(void)
 }
 
 /* Store the pointer to the last hardcoded teplate */
-void tplLastStaticInit(struct template *tpl)
+void tplLastStaticInit(rsconf_t *conf, struct template *tpl)
 {
-	tplLastStatic = tpl;
+	conf->templates.lastStatic = tpl;
 }
 
 /* Print the template structure. This is more or less a 
  * debug or test aid, but anyhow I think it's worth it...
  */
-void tplPrintList(void)
+void tplPrintList(rsconf_t *conf)
 {
 	struct template *pTpl;
 	struct templateEntry *pTpe;
 
-	pTpl = tplRoot;
+	pTpl = conf->templates.root;
 	while(pTpl != NULL) {
 		dbgprintf("Template: Name='%s' ", pTpl->pszName == NULL? "NULL" : pTpl->pszName);
-		if(pTpl->optFormatForSQL == 1)
+		if(pTpl->optFormatEscape == SQL_ESCAPE)
 			dbgprintf("[SQL-Format (MySQL)] ");
-		else if(pTpl->optFormatForSQL == 2)
+		else if(pTpl->optFormatEscape == JSON_ESCAPE)
+			dbgprintf("[JSON-Escaped Format] ");
+		else if(pTpl->optFormatEscape == STDSQL_ESCAPE)
 			dbgprintf("[SQL-Format (standard SQL)] ");
 		dbgprintf("\n");
 		pTpe = pTpl->pEntryRoot;
@@ -1231,6 +1317,9 @@ void tplPrintList(void)
 				case tplFmtRFC3339Date:
 					dbgprintf("[Format as RFC3339-Date] ");
 					break;
+				case tplFmtUnixDate:
+					dbgprintf("[Format as Unix timestamp] ");
+					break;
 				default:
 					dbgprintf("[INVALID eDateFormat %d] ", pTpe->data.field.eDateFormat);
 				}
@@ -1265,14 +1354,17 @@ void tplPrintList(void)
 				if(pTpe->data.field.options.bCSV) {
 				  	dbgprintf("[format as CSV (RFC4180)]");
 				}
+				if(pTpe->data.field.options.bJSON) {
+				  	dbgprintf("[format as JSON");
+				}
 				if(pTpe->data.field.options.bDropLastLF) {
 				  	dbgprintf("[drop last LF in msg] ");
 				}
 				if(pTpe->data.field.has_fields == 1) {
 				  	dbgprintf("[substring, field #%d only (delemiter %d)] ",
-						pTpe->data.field.iToPos, pTpe->data.field.field_delim);
-				} else if(pTpe->data.field.iFromPos != 0 ||
-				          pTpe->data.field.iToPos != 0) {
+						pTpe->data.field.iFieldNr, pTpe->data.field.field_delim);
+				}
+				if(pTpe->data.field.iFromPos != 0 || pTpe->data.field.iToPos != 0) {
 				  	dbgprintf("[substring, from character %d to %d] ",
 						pTpe->data.field.iFromPos,
 						pTpe->data.field.iToPos);

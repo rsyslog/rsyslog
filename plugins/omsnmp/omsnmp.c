@@ -44,6 +44,7 @@
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
+MODULE_CNFNAME("omsnmp")
 
 /* internal structures
  */
@@ -60,13 +61,12 @@ static oid             objid_sysuptime[] = { 1, 3, 6, 1, 2, 1, 1, 3, 0 };
 
 
 typedef struct _instanceData {
-	uchar	szTransport[OMSNMP_MAXTRANSPORLENGTH+1];	/* Transport - Can be udp, tcp, udp6, tcp6 and other types supported by NET-SNMP */ 
-	uchar	*szTarget;					/* IP/hostname of Snmp Target*/ 
-	uchar	*szTargetAndPort;				/* IP/hostname + Port,needed format for SNMP LIB */ 
-	uchar	szCommunity[OMSNMP_MAXCOMMUNITYLENGHT+1];	/* Snmp Community */ 
-	uchar	szEnterpriseOID[OMSNMP_MAXOIDLENGHT+1];		/* Snmp Enterprise OID - default is (1.3.6.1.4.1.3.1.1 = enterprises.cmu.1.1) */ 
-	uchar	szSnmpTrapOID[OMSNMP_MAXOIDLENGHT+1];		/* Snmp Trap OID - default is (1.3.6.1.4.1.19406.1.2.1 = ADISCON-MONITORWARE-MIB::syslogtrap) */ 
-	uchar	szSyslogMessageOID[OMSNMP_MAXOIDLENGHT+1];	/* Snmp OID used for the Syslog Message:
+	uchar	*szTransport;	/* Transport - Can be udp, tcp, udp6, tcp6 and other types supported by NET-SNMP */ 
+	uchar	*szTarget;	/* IP/hostname of Snmp Target*/ 
+	uchar	*szCommunity;	/* Snmp Community */ 
+	uchar	*szEnterpriseOID;/* Snmp Enterprise OID - default is (1.3.6.1.4.1.3.1.1 = enterprises.cmu.1.1) */ 
+	uchar	*szSnmpTrapOID;	/* Snmp Trap OID - default is (1.3.6.1.4.1.19406.1.2.1 = ADISCON-MONITORWARE-MIB::syslogtrap) */ 
+	uchar	*szSyslogMessageOID;	/* Snmp OID used for the Syslog Message:
 	        * default is 1.3.6.1.4.1.19406.1.1.2.1 - ADISCON-MONITORWARE-MIB::syslogMsg
 		* You will need the ADISCON-MONITORWARE-MIB and ADISCON-MIB mibs installed on the receiver
 		* side in order to decode this mib. 
@@ -80,6 +80,7 @@ typedef struct _instanceData {
 	int iSpecificType;					/* Snmp Specific Type */
 
 	netsnmp_session *snmpsession;						/* Holds to SNMP Session, NULL if not initialized */
+	uchar	*tplName;       /* format template to use */
 } instanceData;
 
 typedef struct configSettings_s {
@@ -105,8 +106,28 @@ typedef struct configSettings_s {
 		SNMP_TRAP_ENTERPRISESPECIFIC	(6)
 	*/
 } configSettings_t;
+static configSettings_t cs;
 
-SCOPING_SUPPORT; /* must be set AFTER configSettings_t is defined */
+/* tables for interfacing with the v6 config system */
+/* action (instance) parameters */
+static struct cnfparamdescr actpdescr[] = {
+	{ "server", eCmdHdlrString, CNFPARAM_REQUIRED },
+	{ "port", eCmdHdlrInt, CNFPARAM_REQUIRED },
+	{ "transport", eCmdHdlrString, CNFPARAM_REQUIRED },
+	{ "version", eCmdHdlrInt, CNFPARAM_REQUIRED },
+	{ "community", eCmdHdlrString, CNFPARAM_REQUIRED },
+	{ "enterpriseoid", eCmdHdlrString, CNFPARAM_REQUIRED },
+	{ "trapoid", eCmdHdlrString, CNFPARAM_REQUIRED },
+	{ "messageoid", eCmdHdlrString, CNFPARAM_REQUIRED },
+	{ "traptype", eCmdHdlrInt, CNFPARAM_REQUIRED },
+	{ "specifictype", eCmdHdlrInt, CNFPARAM_REQUIRED },
+	{ "template", eCmdHdlrGetWord, 0 }
+};
+static struct cnfparamblk actpblk =
+	{ CNFPARAMBLK_VERSION,
+	  sizeof(actpdescr)/sizeof(struct cnfparamdescr),
+	  actpdescr
+	};
 
 BEGINinitConfVars		/* (re)set config variables to default values */
 CODESTARTinitConfVars 
@@ -132,7 +153,6 @@ CODESTARTdbgPrintInstInfo
 	dbgprintf("SNMPTransport: %s\n", pData->szTransport);
 	dbgprintf("SNMPTarget: %s\n", pData->szTarget);
 	dbgprintf("SNMPPort: %d\n", pData->iPort);
-	dbgprintf("SNMPTarget+PortStr: %s\n", pData->szTargetAndPort);
 	dbgprintf("SNMPVersion (0=v1, 1=v2c): %d\n", pData->iSNMPVersion);
 	dbgprintf("Community: %s\n", pData->szCommunity);
 	dbgprintf("EnterpriseOID: %s\n", pData->szEnterpriseOID);
@@ -169,12 +189,17 @@ static rsRetVal omsnmp_exitSession(instanceData *pData)
  */
 static rsRetVal omsnmp_initSession(instanceData *pData)
 {
-	DEFiRet;
 	netsnmp_session session;
+	char szTargetAndPort[MAXHOSTNAMELEN+128]; /* work buffer for specifying a full target and port string */
+	DEFiRet;
 	
 	/* should not happen, but if session is not cleared yet - we do it now! */
 	if (pData->snmpsession != NULL)
 		omsnmp_exitSession(pData);
+
+	snprintf((char*)szTargetAndPort, sizeof(szTargetAndPort), "%s:%s:%d",
+			(pData->szTransport == NULL) ? "udp" : (char*)pData->szTransport,
+			pData->szTarget, pData->iPort == 0 ? 162 : pData->iPort);
 
 	dbgprintf( "omsnmp_initSession: ENTER - Target = '%s' on Port = '%d'\n", pData->szTarget, pData->iPort);
 
@@ -184,13 +209,12 @@ static rsRetVal omsnmp_initSession(instanceData *pData)
 	session.version = pData->iSNMPVersion;
 	session.callback = NULL; /* NOT NEEDED */
 	session.callback_magic = NULL;
-	session.peername = (char*) pData->szTargetAndPort;
+	session.peername = (char*) szTargetAndPort;
 	
 	/* Set SNMP Community */
-	if (session.version == SNMP_VERSION_1 || session.version == SNMP_VERSION_2c)
-	{	
-		session.community = (unsigned char *) pData->szCommunity;
-		session.community_len = strlen((char*) pData->szCommunity);
+	if (session.version == SNMP_VERSION_1 || session.version == SNMP_VERSION_2c) {	
+		session.community = (unsigned char *) pData->szCommunity == NULL ? (uchar*)"public" : pData->szCommunity;
+		session.community_len = strlen((char*) session.community);
 	}
 
 	pData->snmpsession = snmp_open(&session);
@@ -226,16 +250,15 @@ static rsRetVal omsnmp_sendsnmp(instanceData *pData, uchar *psz)
 	dbgprintf( "omsnmp_sendsnmp: ENTER - Syslogmessage = '%s'\n", (char*)psz);
 
 	/* If SNMP Version1 is configured !*/
-	if ( pData->snmpsession->version == SNMP_VERSION_1) 
-	{
+	if(pData->snmpsession->version == SNMP_VERSION_1) {
 		pdu = snmp_pdu_create(SNMP_MSG_TRAP);
 
 		/* Set enterprise */
-		if (!snmp_parse_oid( (char*) pData->szEnterpriseOID, enterpriseoid, &enterpriseoidlen ))
-		{
+		if(!snmp_parse_oid(pData->szEnterpriseOID == NULL ? "1.3.6.1.4.1.3.1.1" : (char*)pData->szEnterpriseOID,
+				   enterpriseoid, &enterpriseoidlen )) {
 			strErr = snmp_api_errstring(snmp_errno);
-			errmsg.LogError(0, RS_RET_DISABLE_ACTION, "omsnmp_sendsnmp: Parsing EnterpriseOID failed '%s' with error '%s' \n", pData->szSyslogMessageOID, strErr);
-			
+			errmsg.LogError(0, RS_RET_DISABLE_ACTION, "omsnmp_sendsnmp: Parsing EnterpriseOID "
+					"failed '%s' with error '%s' \n", pData->szSyslogMessageOID, strErr);
 			ABORT_FINALIZE(RS_RET_DISABLE_ACTION);
 		}
 		pdu->enterprise = (oid *) MALLOC(enterpriseoidlen * sizeof(oid));
@@ -267,8 +290,9 @@ static rsRetVal omsnmp_sendsnmp(instanceData *pData, uchar *psz)
 		snmp_add_var(pdu, objid_sysuptime, sizeof(objid_sysuptime) / sizeof(oid), 't', trap);
 
 		/* Now set the SyslogMessage Trap OID */
-		if ( snmp_add_var(pdu, objid_snmptrap, sizeof(objid_snmptrap) / sizeof(oid), 'o', (char*) pData->szSnmpTrapOID ) != 0)
-		{
+		if ( snmp_add_var(pdu, objid_snmptrap, sizeof(objid_snmptrap) / sizeof(oid), 'o',
+			pData->szSnmpTrapOID == NULL ?  "1.3.6.1.4.1.19406.1.2.1" : (char*) pData->szSnmpTrapOID
+			) != 0) {
 			strErr = snmp_api_errstring(snmp_errno);
 			errmsg.LogError(0, RS_RET_DISABLE_ACTION, "omsnmp_sendsnmp: Adding trap OID failed '%s' with error '%s' \n", pData->szSnmpTrapOID, strErr);
 			ABORT_FINALIZE(RS_RET_DISABLE_ACTION);
@@ -279,18 +303,16 @@ static rsRetVal omsnmp_sendsnmp(instanceData *pData, uchar *psz)
 /*	dbgprintf( "omsnmp_sendsnmp: SyslogMessage '%s'\n", psz );*/
 
 	/* First create new OID object */
-	if (snmp_parse_oid( (char*) pData->szSyslogMessageOID, oidSyslogMessage, &oLen))
-	{
+	if (snmp_parse_oid(pData->szSyslogMessageOID == NULL ?
+			    "1.3.6.1.4.1.19406.1.1.2.1" : (char*)pData->szSyslogMessageOID,
+				oidSyslogMessage, &oLen)) {
 		int iErrCode = snmp_add_var(pdu, oidSyslogMessage, oLen, 's', (char*) psz);
-		if (iErrCode)
-		{
+		if (iErrCode) {
 			const char *str = snmp_api_errstring(iErrCode);
 			errmsg.LogError(0, RS_RET_DISABLE_ACTION,  "omsnmp_sendsnmp: Invalid SyslogMessage OID, error code '%d' - '%s'\n", iErrCode, str );
 			ABORT_FINALIZE(RS_RET_DISABLE_ACTION);
 		}
-	}
-	else
-	{
+	} else {
 		strErr = snmp_api_errstring(snmp_errno);
 		errmsg.LogError(0, RS_RET_DISABLE_ACTION, "omsnmp_sendsnmp: Parsing SyslogMessageOID failed '%s' with error '%s' \n", pData->szSyslogMessageOID, strErr);
 
@@ -345,16 +367,82 @@ CODESTARTfreeInstance
 	/* free snmp Session here */
 	omsnmp_exitSession(pData);
 
-	if(pData->szTarget != NULL)
-		free(pData->szTarget);
-	if(pData->szTargetAndPort != NULL)
-		free(pData->szTargetAndPort);
-
+	free(pData->tplName);
+	free(pData->szTarget);
 ENDfreeInstance
 
 
+static inline void
+setInstParamDefaults(instanceData *pData)
+{
+	pData->tplName = NULL;
+	pData->szCommunity = NULL;
+	pData->szEnterpriseOID = NULL;
+	pData->szSnmpTrapOID = NULL;
+	pData->szSyslogMessageOID = NULL;
+}
+
+BEGINnewActInst
+	struct cnfparamvals *pvals;
+	int i;
+CODESTARTnewActInst
+	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
+		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
+
+	CHKiRet(createInstance(&pData));
+	setInstParamDefaults(pData);
+
+	CODE_STD_STRING_REQUESTparseSelectorAct(1)
+	for(i = 0 ; i < actpblk.nParams ; ++i) {
+		if(!pvals[i].bUsed)
+			continue;
+		if(!strcmp(actpblk.descr[i].name, "server")) {
+			pData->szTarget = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "port")) {
+			pData->iPort = pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "transport")) {
+			pData->szTransport = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "version")) {
+			pData->iSNMPVersion = pvals[i].val.d.n;
+			if(pData->iSNMPVersion < 0 || cs.iSNMPVersion > 1)
+				pData->iSNMPVersion = 1;
+		} else if(!strcmp(actpblk.descr[i].name, "community")) {
+			pData->szCommunity = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "enterpriseoid")) {
+			pData->szEnterpriseOID = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "trapoid")) {
+			pData->szSnmpTrapOID = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "messageoid")) {
+			pData->szSyslogMessageOID = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "traptype")) {
+			pData->iTrapType = pvals[i].val.d.n;
+			if(cs.iTrapType < 0 && cs.iTrapType >= 6)
+				pData->iTrapType = SNMP_TRAP_ENTERPRISESPECIFIC;
+		} else if(!strcmp(actpblk.descr[i].name, "specifictype")) {
+			pData->iSpecificType = pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "template")) {
+			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else {
+			dbgprintf("ompipe: program error, non-handled "
+			  "param '%s'\n", actpblk.descr[i].name);
+		}
+	}
+
+	if(pData->tplName == NULL) {
+		CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*) "RSYSLOG_FileFormat",
+			OMSR_NO_RQD_TPL_OPTS));
+	} else {
+		CHKiRet(OMSRsetEntry(*ppOMSR, 0,
+			(uchar*) strdup((char*) pData->tplName),
+			OMSR_NO_RQD_TPL_OPTS));
+	}
+CODE_STD_FINALIZERnewActInst
+	cnfparamvalsDestruct(pvals, &actpblk);
+ENDnewActInst
+
+
 BEGINparseSelectorAct
-	uchar szTargetAndPort[MAXHOSTNAMELEN+128]; /* work buffer for specifying a full target and port string */
 CODESTARTparseSelectorAct
 CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	if(!strncmp((char*) p, ":omsnmp:", sizeof(":omsnmp:") - 1)) {
@@ -367,55 +455,21 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	if((iRet = createInstance(&pData)) != RS_RET_OK)
 		FINALIZE;
 
-	/* Check Transport */
-	if (cs.pszTransport == NULL) {
-		/* 
-		* Default transport is UDP. Other values supported by NETSNMP are possible as well
-		 */
-		strncpy( (char*) pData->szTransport, "udp", sizeof("udp") );
-	} else {
-		/* Copy Transport */
-		strncpy( (char*) pData->szTransport, (char*) cs.pszTransport, strlen((char*) cs.pszTransport) );
-	}
-
 	/* Check Target */
-	if (cs.pszTarget == NULL) {
+	if(cs.pszTarget == NULL) {
 		ABORT_FINALIZE( RS_RET_PARAM_ERROR );
 	} else {
-		/* Copy Target */
 		CHKmalloc(pData->szTarget = (uchar*) strdup((char*)cs.pszTarget));
 	}
 
-	/* Copy Community */
-	if (cs.pszCommunity == NULL)	/* Failsave */
-		strncpy( (char*) pData->szCommunity, "public", sizeof("public") );
-	else						/* Copy Target */
-		strncpy( (char*) pData->szCommunity, (char*) cs.pszCommunity, strlen((char*) cs.pszCommunity) );
-
-	/* Copy Enterprise OID */
-	if (cs.pszEnterpriseOID == NULL)	/* Failsave */
-		strncpy( (char*) pData->szEnterpriseOID, "1.3.6.1.4.1.3.1.1", sizeof("1.3.6.1.4.1.3.1.1") );
-	else		/* Copy Target */
-		strncpy( (char*) pData->szEnterpriseOID, (char*) cs.pszEnterpriseOID, strlen((char*) cs.pszEnterpriseOID) );
-
-	/* Copy SnmpTrap OID */
-	if (cs.pszSnmpTrapOID == NULL)	/* Failsave */
-		strncpy( (char*) pData->szSnmpTrapOID, "1.3.6.1.4.1.19406.1.2.1", sizeof("1.3.6.1.4.1.19406.1.2.1") );
-	else		/* Copy Target */
-		strncpy( (char*) pData->szSnmpTrapOID, (char*) cs.pszSnmpTrapOID, strlen((char*) cs.pszSnmpTrapOID) );
-
-
-	/* Copy SyslogMessage OID */
-	if (cs.pszSyslogMessageOID == NULL)	/* Failsave */
-		strncpy( (char*) pData->szSyslogMessageOID, "1.3.6.1.4.1.19406.1.1.2.1", sizeof("1.3.6.1.4.1.19406.1.1.2.1") );
-	else						/* Copy Target */
-		strncpy( (char*) pData->szSyslogMessageOID, (char*) cs.pszSyslogMessageOID, strlen((char*) cs.pszSyslogMessageOID) );
-
-	/* Copy Port */
-	if ( cs.iPort == 0)		/* If no Port is set we use the default Port 162 */
-		pData->iPort = 162;
-	else
-		pData->iPort = cs.iPort;
+	/* copy config params */
+	pData->szTransport = (uchar*) ((cs.pszTransport == NULL) ? NULL : strdup((char*)cs.pszTransport));
+	pData->szCommunity = (uchar*) ((cs.pszCommunity == NULL) ? NULL : strdup((char*)cs.pszCommunity));
+	pData->szEnterpriseOID = (uchar*) ((cs.pszEnterpriseOID == NULL) ? NULL : strdup((char*)cs.pszEnterpriseOID));
+	pData->szSnmpTrapOID = (uchar*) ((cs.pszSnmpTrapOID == NULL) ? NULL : strdup((char*)cs.pszSnmpTrapOID));
+	pData->szSyslogMessageOID = (uchar*) ((cs.pszSyslogMessageOID == NULL) ? NULL : strdup((char*)cs.pszSyslogMessageOID));
+	pData->iPort = cs.iPort;
+	pData->iSpecificType = cs.iSpecificType;
 	
 	/* Set SNMPVersion */
 	if ( cs.iSNMPVersion < 0 || cs.iSNMPVersion > 1)		/* Set default to 1 if out of range */
@@ -423,27 +477,16 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	else
 		pData->iSNMPVersion = cs.iSNMPVersion;
 
-	/* Copy SpecificType */
-	if ( cs.iSpecificType == 0)		/* If no iSpecificType is set, we use the default 0 */
-		pData->iSpecificType = 0;
-	else
-		pData->iSpecificType = cs.iSpecificType;
-
 	/* Copy TrapType */
 	if ( cs.iTrapType < 0 && cs.iTrapType >= 6)		/* Only allow values from 0 to 6 !*/
 		pData->iTrapType = SNMP_TRAP_ENTERPRISESPECIFIC;
 	else
 		pData->iTrapType = cs.iTrapType;
 
-	/* Create string for session peername! */
-	snprintf((char*)szTargetAndPort, sizeof(szTargetAndPort), "%s:%s:%d", pData->szTransport, pData->szTarget, pData->iPort);
-	CHKmalloc(pData->szTargetAndPort = (uchar*)strdup((char*)szTargetAndPort));
-	
 	/* Print Debug info */
 	dbgprintf("SNMPTransport: %s\n", pData->szTransport);
 	dbgprintf("SNMPTarget: %s\n", pData->szTarget);
 	dbgprintf("SNMPPort: %d\n", pData->iPort);
-	dbgprintf("SNMPTarget+PortStr: %s\n", pData->szTargetAndPort);
 	dbgprintf("SNMPVersion (0=v1, 1=v2c): %d\n", pData->iSNMPVersion);
 	dbgprintf("Community: %s\n", pData->szCommunity);
 	dbgprintf("EnterpriseOID: %s\n", pData->szEnterpriseOID);
@@ -506,27 +549,29 @@ ENDmodExit
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
+CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES 
+CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 ENDqueryEtryPt
 
 
 BEGINmodInit()
 CODESTARTmodInit
-SCOPINGmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
+	initConfVars();
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 
-	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionsnmptransport", 0, eCmdHdlrGetWord, NULL, &cs.pszTransport, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionsnmptarget", 0, eCmdHdlrGetWord, NULL, &cs.pszTarget, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionsnmptargetport", 0, eCmdHdlrInt, NULL, &cs.iPort, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionsnmpversion", 0, eCmdHdlrInt, NULL, &cs.iSNMPVersion, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionsnmpcommunity", 0, eCmdHdlrGetWord, NULL, &cs.pszCommunity, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionsnmpenterpriseoid", 0, eCmdHdlrGetWord, NULL, &cs.pszEnterpriseOID, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionsnmptrapoid", 0, eCmdHdlrGetWord, NULL, &cs.pszSnmpTrapOID, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionsnmpsyslogmessageoid", 0, eCmdHdlrGetWord, NULL, &cs.pszSyslogMessageOID, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionsnmpspecifictype", 0, eCmdHdlrInt, NULL, &cs.iSpecificType, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionsnmptraptype", 0, eCmdHdlrInt, NULL, &cs.iTrapType, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionsnmptransport", 0, eCmdHdlrGetWord, NULL, &cs.pszTransport, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionsnmptarget", 0, eCmdHdlrGetWord, NULL, &cs.pszTarget, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionsnmptargetport", 0, eCmdHdlrInt, NULL, &cs.iPort, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionsnmpversion", 0, eCmdHdlrInt, NULL, &cs.iSNMPVersion, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionsnmpcommunity", 0, eCmdHdlrGetWord, NULL, &cs.pszCommunity, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionsnmpenterpriseoid", 0, eCmdHdlrGetWord, NULL, &cs.pszEnterpriseOID, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionsnmptrapoid", 0, eCmdHdlrGetWord, NULL, &cs.pszSnmpTrapOID, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionsnmpsyslogmessageoid", 0, eCmdHdlrGetWord, NULL, &cs.pszSyslogMessageOID, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionsnmpspecifictype", 0, eCmdHdlrInt, NULL, &cs.iSpecificType, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionsnmptraptype", 0, eCmdHdlrInt, NULL, &cs.iTrapType, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
 /*
  * vi:set ai:

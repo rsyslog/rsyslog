@@ -110,6 +110,16 @@ static rsRetVal modGetID(void **pID) \
 		return RS_RET_OK;\
 	}
 
+/* macro to provide the v6 config system module name
+ */
+#define MODULE_CNFNAME(name) \
+static __attribute__((unused)) rsRetVal modGetCnfName(uchar **cnfName) \
+	{ \
+		*cnfName = (uchar*) name; \
+		return RS_RET_OK;\
+	}
+
+
 /* to following macros are used to generate function headers and standard
  * functionality. It works as follows (described on the sample case of
  * createInstance()):
@@ -275,7 +285,7 @@ static rsRetVal parseSelectorAct(uchar **pp, void **ppModData, omodStringRequest
 
 #define CODE_STD_FINALIZERparseSelectorAct \
 finalize_it:\
-	if(iRet == RS_RET_OK || iRet == RS_RET_SUSPENDED) {\
+	if(iRet == RS_RET_OK || iRet == RS_RET_OK_WARN || iRet == RS_RET_SUSPENDED) {\
 		*ppModData = pData;\
 		*pp = p;\
 	} else {\
@@ -290,6 +300,55 @@ finalize_it:\
 	}
 
 #define ENDparseSelectorAct \
+	RETiRet;\
+}
+
+
+/* newActInst()
+ * Extra comments:
+ * This creates a new instance of a the action that implements the call.
+ * This is part of the conf2 (rsyslog v6) config system. It is called by
+ * the core when an action object has been obtained. The output module
+ * must then verify parameters and create a new action instance (if
+ * parameters are acceptable) or return an error code.
+ * On exit, ppModData must point to instance data. Also, a string
+ * request object must be created and filled. A macro is defined
+ * for that.
+ * For the most usual case, we have defined a macro below.
+ * If more than one string is requested, the macro can be used together
+ * with own code that overwrites the entry count. In this case, the
+ * macro must come before the own code. It is recommended to be
+ * placed right after CODESTARTnewActInst.
+ */
+#define BEGINnewActInst \
+static rsRetVal newActInst(uchar __attribute__((unused)) *modName, \
+	struct nvlst *lst, void **ppModData, omodStringRequest_t **ppOMSR)\
+{\
+	DEFiRet;\
+	instanceData *pData = NULL; \
+	*ppOMSR = NULL;
+
+#define CODESTARTnewActInst \
+
+#define CODE_STD_STRING_REQUESTnewActInst(NumStrReqEntries) \
+	CHKiRet(OMSRconstruct(ppOMSR, NumStrReqEntries));
+
+#define CODE_STD_FINALIZERnewActInst \
+finalize_it:\
+	if(iRet == RS_RET_OK || iRet == RS_RET_SUSPENDED) {\
+		*ppModData = pData;\
+	} else {\
+		/* cleanup, we failed */\
+		if(*ppOMSR != NULL) {\
+			OMSRdestruct(*ppOMSR);\
+			*ppOMSR = NULL;\
+		}\
+		if(pData != NULL) {\
+			freeInstance(pData);\
+		} \
+	}
+
+#define ENDnewActInst \
 	RETiRet;\
 }
 
@@ -316,38 +375,7 @@ static rsRetVal tryResume(instanceData __attribute__((unused)) *pData)\
 }
 
 
-/* Config scoping system.
- * save current config scope and start a new one. Note that we do NOT implement a
- * stack. Exactly one scope can be saved.
- * We assume standard naming conventions (local confgSettings_t holds all
- * config settings and MUST have been defined before this macro is being used!).
- * Note that initConfVars() must be defined locally as well.
- */
-#define SCOPING_SUPPORT \
-static rsRetVal initConfVars(void);\
-static configSettings_t cs;				/* our current config settings */ \
-static configSettings_t cs_save;			/* our saved (scope!) config settings */ \
-static rsRetVal __attribute__((unused)) newScope(void) \
-{ \
-	DEFiRet; \
-	memcpy(&cs_save, &cs, sizeof(cs)); \
-	iRet = initConfVars(); \
-	RETiRet; \
-} \
-static rsRetVal __attribute__((unused)) restoreScope(void) \
-{ \
-	DEFiRet; \
-	memcpy(&cs, &cs_save, sizeof(cs)); \
-	RETiRet; \
-}
-/* initConfVars()
- * This entry point is called to check if a module can resume operations. This
- * happens when a module requested that it be suspended. In suspended state,
- * the engine periodically tries to resume the module. If that succeeds, normal
- * processing continues. If not, the module will not be called unless a
- * tryResume() call succeeds.
- * Returns RS_RET_OK, if resumption succeeded, RS_RET_SUSPENDED otherwise
- * rgerhard, 2007-08-02
+/* initConfVars() - initialize pre-v6.3-config variables
  */
 #define BEGINinitConfVars \
 static rsRetVal initConfVars(void)\
@@ -457,6 +485,52 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 		*pEtryPoint = afterRun;\
 	}
 
+
+/* the following block is to be added for modules that support the v2
+ * config system. The config name is also provided.
+ */
+#define CODEqueryEtryPt_STD_CONF2_QUERIES \
+	  else if(!strcmp((char*) name, "beginCnfLoad")) {\
+		*pEtryPoint = beginCnfLoad;\
+	} else if(!strcmp((char*) name, "endCnfLoad")) {\
+		*pEtryPoint = endCnfLoad;\
+	} else if(!strcmp((char*) name, "checkCnf")) {\
+		*pEtryPoint = checkCnf;\
+	} else if(!strcmp((char*) name, "activateCnf")) {\
+		*pEtryPoint = activateCnf;\
+	} else if(!strcmp((char*) name, "freeCnf")) {\
+		*pEtryPoint = freeCnf;\
+	} \
+	CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES 
+
+/* the following block is to be added for output modules that support the v2
+ * config system. The config name is also provided.
+ */
+#define CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES \
+	  else if(!strcmp((char*) name, "newActInst")) {\
+		*pEtryPoint = newActInst;\
+	} \
+	CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES 
+
+
+/* the following block is to be added for modules that require
+ * pre priv drop activation support.
+ */
+#define CODEqueryEtryPt_STD_CONF2_PREPRIVDROP_QUERIES \
+	  else if(!strcmp((char*) name, "activateCnfPrePrivDrop")) {\
+		*pEtryPoint = activateCnfPrePrivDrop;\
+	}
+
+/* the following block is to be added for modules that support
+ * their config name. This is required for the rsyslog v6 config
+ * system, especially for outout modules which do not require
+ * the new set of begin/end config settings.
+ */
+#define CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES \
+	  else if(!strcmp((char*) name, "getModCnfName")) {\
+		*pEtryPoint = modGetCnfName;\
+	}
+
 /* the following definition is the standard block for queryEtryPt for LIBRARY
  * modules. This can be used if no specific handling (e.g. to cover version
  * differences) is needed.
@@ -529,8 +603,8 @@ rsRetVal modInit##uniqName(int iIFVersRequested __attribute__((unused)), int *ip
 	/* now get the obj interface so that we can access other objects */ \
 	CHKiRet(pObjGetObjInterface(&obj));
 
-/* do those initializations necessary for scoping */
-#define SCOPINGmodInit \
+/* do those initializations necessary for legacy config variables */
+#define INITLegCnfVars \
 	initConfVars();
 
 #define ENDmodInit \
@@ -570,7 +644,6 @@ finalize_it:\
 #define CODEmodInit_QueryRegCFSLineHdlr \
 	CHKiRet(pHostQueryEtryPt((uchar*)"regCfSysLineHdlr", &omsdRegCFSLineHdlr));
 
-#endif /* #ifndef MODULE_TEMPLATE_H_INCLUDED */
 
 /* modExit()
  * This is the counterpart to modInit(). It destroys a module and makes it ready for
@@ -592,6 +665,130 @@ static rsRetVal modExit(void)\
 #define CODESTARTmodExit 
 
 #define ENDmodExit \
+	RETiRet;\
+}
+
+
+/* beginCnfLoad()
+ * This is a function tells an input module that a new config load begins.
+ * The core passes in a handle to the new module-specific module conf to
+ * the module. -- rgerards, 2011-05-03
+ */
+#define BEGINbeginCnfLoad \
+static rsRetVal beginCnfLoad(modConfData_t **ptr, __attribute__((unused)) rsconf_t *pConf)\
+{\
+	modConfData_t *pModConf; \
+	DEFiRet;
+
+#define CODESTARTbeginCnfLoad \
+	if((pModConf = calloc(1, sizeof(modConfData_t))) == NULL) {\
+		*ptr = NULL;\
+		ENDfunc \
+		return RS_RET_OUT_OF_MEMORY;\
+	}
+
+#define ENDbeginCnfLoad \
+	*ptr = pModConf;\
+	RETiRet;\
+}
+
+
+/* endCnfLoad()
+ * This is a function tells an input module that the current config load ended.
+ * It gets a last chance to make changes to its in-memory config object. After 
+ * this call, the config object must no longer be changed.
+ * The pModConf pointer passed into the module must no longer be used.
+ * rgerards, 2011-05-03
+ */
+#define BEGINendCnfLoad \
+static rsRetVal endCnfLoad(modConfData_t *ptr)\
+{\
+	modConfData_t __attribute__((unused)) *pModConf = (modConfData_t*) ptr; \
+	DEFiRet;
+
+#define CODESTARTendCnfLoad
+
+#define ENDendCnfLoad \
+	RETiRet;\
+}
+
+
+/* checkCnf()
+ * Check the provided config object for errors, inconsistencies and other things
+ * that do not work out.
+ * NOTE: no part of the config must be activated, so some checks that require
+ * activation can not be done in this entry point. They must be done in the 
+ * activateConf() stage, where the caller must also be prepared for error
+ * returns.
+ * rgerhards, 2011-05-03
+ */
+#define BEGINcheckCnf \
+static rsRetVal checkCnf(modConfData_t *ptr)\
+{\
+	modConfData_t __attribute__((unused)) *pModConf = (modConfData_t*) ptr; \
+	DEFiRet;
+
+#define CODESTARTcheckCnf
+
+#define ENDcheckCnf \
+	RETiRet;\
+}
+
+
+/* activateCnfPrePrivDrop()
+ * Initial config activation, before dropping privileges. This is an optional
+ * entry points that should only be implemented by those module that really need
+ * it. Processing should be limited to the minimum possible. Main activation
+ * should happen in the normal activateCnf() call.
+ * rgerhards, 2011-05-06
+ */
+#define BEGINactivateCnfPrePrivDrop \
+static rsRetVal activateCnfPrePrivDrop(modConfData_t *ptr)\
+{\
+	modConfData_t *pModConf = (modConfData_t*) ptr; \
+	DEFiRet;
+
+#define CODESTARTactivateCnfPrePrivDrop
+
+#define ENDactivateCnfPrePrivDrop \
+	RETiRet;\
+}
+
+
+/* activateCnf()
+ * This activates the provided config, and may report errors if they are detected
+ * during activation.
+ * rgerhards, 2011-05-03
+ */
+#define BEGINactivateCnf \
+static rsRetVal activateCnf(modConfData_t *ptr)\
+{\
+	modConfData_t __attribute__((unused)) *pModConf = (modConfData_t*) ptr; \
+	DEFiRet;
+
+#define CODESTARTactivateCnf
+
+#define ENDactivateCnf \
+	RETiRet;\
+}
+
+
+/* freeCnf()
+ * This is a function tells an input module that it must free all data
+ * associated with the passed-in module config.
+ * rgerhards, 2011-05-03
+ */
+#define BEGINfreeCnf \
+static rsRetVal freeCnf(void *ptr)\
+{\
+	modConfData_t *pModConf = (modConfData_t*) ptr; \
+	DEFiRet;
+
+#define CODESTARTfreeCnf
+
+#define ENDfreeCnf \
+	if(pModConf != NULL)\
+		free(pModConf); /* we need to free this in any case */\
 	RETiRet;\
 }
 
@@ -734,6 +931,8 @@ static rsRetVal GetStrgenName(uchar **ppSz)\
 	return RS_RET_OK;\
 }
 
+
+#endif /* #ifndef MODULE_TEMPLATE_H_INCLUDED */
 
 /* vim:set ai:
  */

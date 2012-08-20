@@ -2,8 +2,6 @@
 echo \[manytcp-too-few-tls.sh\]: test concurrent tcp connections
 source $srcdir/diag.sh init
 source $srcdir/diag.sh startup-vg manytcp-too-few-tls.conf
-echo wait for DH param generation -- NOT needed in v6!
-sleep 15
 # the config file specifies exactly 1100 connections
 source $srcdir/diag.sh tcpflood -c1000 -m40000
 # the sleep below is needed to prevent too-early termination of the tcp listener

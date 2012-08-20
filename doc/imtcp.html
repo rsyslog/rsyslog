@@ -55,6 +55,9 @@ so be prepared to wrangle with that!
 instructs imtcp to emit a message if the remote peer closes a connection.<br>
 <b>Important:</b> This directive is global to all listeners and must be given right
 after loading imtcp, otherwise it may have no effect.</li>
+<li><b>$InputTCPServerKeepAlive</b> &lt;on/<b>off</b>&gt;<br>
+enable of disable keep-alive packets at the tcp socket layer. The default is
+to disable them.</li>
 <li><b>$InputTCPServerRun</b> &lt;port&gt;<br>
 Starts a TCP server on selected port</li>
 <li><b>$InputTCPFlowControl</b> &lt;<b>on</b>/off&gt;<br>
@@ -83,6 +86,12 @@ listener. &lt;id-string&gt; semantics depend on the currently selected
 AuthMode and&nbsp; <a href="netstream.html">network stream driver</a>. PermittedPeers may not be set in anonymous modes.</li>
 <li><b>$InputTCPServerBindRuleset</b> &lt;ruleset&gt;<br>
 Binds the listener to a specific <a href="multi_ruleset.html">ruleset</a>.</li>
+<li><b>$InputTCPSupportOctetCountedFraming</b> &lt;<b>on</b>|off&gt;<br>
+If set to "on", the legacy octed-counted framing (similar to RFC5425 framing) is
+activated. This is the default and should be left unchanged until you know
+very well what you do. It may be useful to turn it off, if you know this framing
+is not used and some senders emit multi-line messages into the message stream.
+</li>
 </ul>
 <b>Caveats/Known Bugs:</b>
 <ul>

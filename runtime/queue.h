@@ -169,6 +169,8 @@ struct queue_s {
 	statsobj_t *statsobj;
 	STATSCOUNTER_DEF(ctrEnqueued, mutCtrEnqueued);
 	STATSCOUNTER_DEF(ctrFull, mutCtrFull);
+	STATSCOUNTER_DEF(ctrFDscrd, mutCtrFDscrd);
+	STATSCOUNTER_DEF(ctrNFDscrd, mutCtrNFDscrd);
 	int ctrMaxqsize; /* NOT guarded by a mutex */
 };
 
@@ -190,6 +192,11 @@ rsRetVal qqueueSetFilePrefix(qqueue_t *pThis, uchar *pszPrefix, size_t iLenPrefi
 rsRetVal qqueueConstruct(qqueue_t **ppThis, queueType_t qType, int iWorkerThreads,
 		        int iMaxQueueSize, rsRetVal (*pConsumer)(void*,batch_t*, int*));
 rsRetVal qqueueEnqObjDirectBatch(qqueue_t *pThis, batch_t *pBatch);
+rsRetVal qqueueDoCnfParams(struct nvlst *lst, struct cnfparamvals **ppvals);
+rsRetVal qqueueApplyCnfParam(qqueue_t *pThis, struct cnfparamvals *pvals);
+void qqueueSetDefaultsActionQueue(qqueue_t *pThis);
+void qqueueDbgPrint(qqueue_t *pThis);
+
 PROTOTYPEObjClassInit(qqueue);
 PROTOTYPEpropSetMeth(qqueue, iPersistUpdCnt, int);
 PROTOTYPEpropSetMeth(qqueue, bSyncQueueFiles, int);
@@ -199,6 +206,7 @@ PROTOTYPEpropSetMeth(qqueue, toQShutdown, long);
 PROTOTYPEpropSetMeth(qqueue, toActShutdown, long);
 PROTOTYPEpropSetMeth(qqueue, toWrkShutdown, long);
 PROTOTYPEpropSetMeth(qqueue, toEnq, long);
+PROTOTYPEpropSetMeth(qqueue, iLightDlyMrk, int);
 PROTOTYPEpropSetMeth(qqueue, iHighWtrMrk, int);
 PROTOTYPEpropSetMeth(qqueue, iLowWtrMrk, int);
 PROTOTYPEpropSetMeth(qqueue, iDiscardMrk, int);

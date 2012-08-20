@@ -83,6 +83,7 @@
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
+MODULE_CNFNAME("omudpspoof")
 
 /* internal structures
  */
@@ -114,8 +115,7 @@ typedef struct configSettings_s {
 	int iSourcePortStart;
 	int iSourcePortEnd;
 } configSettings_t;
-
-SCOPING_SUPPORT; /* must be set AFTER configSettings_t is defined */
+static configSettings_t cs;
 
 BEGINinitConfVars		/* (re)set config variables to default values */
 CODESTARTinitConfVars 
@@ -420,7 +420,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(2)
 		pData->port = NULL;
 	else 
 		CHKmalloc(pData->port = ustrdup(cs.pszTargetPort));
-	CHKiRet(OMSRsetEntry(*ppOMSR, 1, ustrdup(cs.pszSourceNameTemplate), OMSR_NO_RQD_TPL_OPTS));
+	CHKiRet(OMSRsetEntry(*ppOMSR, 1, ustrdup(sourceTpl), OMSR_NO_RQD_TPL_OPTS));
 	pData->compressionLevel = cs.iCompressionLevel;
 	pData->sourcePort = pData->sourcePortStart = cs.iSourcePortStart;
 	pData->sourcePortEnd = cs.iSourcePortEnd;
@@ -483,7 +483,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 
 BEGINmodInit()
 CODESTARTmodInit
-SCOPINGmodInit
+INITLegCnfVars
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(glbl, CORE_COMPONENT));

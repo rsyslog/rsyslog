@@ -46,6 +46,7 @@
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
+MODULE_CNFNAME("omuxsock")
 
 /* internal structures
  */
@@ -68,8 +69,7 @@ typedef struct configSettings_s {
 	uchar *tplName; /* name of the default template to use */
 	uchar *sockName; /* name of the default template to use */
 } configSettings_t;
-
-SCOPING_SUPPORT; /* must be set AFTER configSettings_t is defined */
+static configSettings_t cs;
 
 BEGINinitConfVars		/* (re)set config variables to default values */
 CODESTARTinitConfVars 
@@ -306,6 +306,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 
 BEGINmodInit()
 CODESTARTmodInit
+INITLegCnfVars
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(glbl, CORE_COMPONENT));

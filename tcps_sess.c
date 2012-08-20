@@ -200,6 +200,8 @@ SetLstnInfo(tcps_sess_t *pThis, tcpLstnPortList_t *pLstnInfo)
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
 	assert(pLstnInfo != NULL);
 	pThis->pLstnInfo = pLstnInfo;
+	/* set cached elements */
+	pThis->bSuppOctetFram = pLstnInfo->bSuppOctetFram;
 	RETiRet;
 }
 
@@ -261,6 +263,7 @@ defaultDoSubmitMessage(tcps_sess_t *pThis, struct syslogTime *stTime, time_t ttG
 	CHKiRet(MsgSetRcvFromIP(pMsg, pThis->fromHostIP));
 	MsgSetRuleset(pMsg, pThis->pLstnInfo->pRuleset);
 
+	STATSCOUNTER_INC(pThis->pLstnInfo->ctrSubmit, pThis->pLstnInfo->mutCtrSubmit);
 	if(pMultiSub == NULL) {
 		CHKiRet(submitMsg(pMsg));
 	} else {
@@ -365,7 +368,7 @@ processDataRcvd(tcps_sess_t *pThis, char c, struct syslogTime *stTime, time_t tt
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
 
 	if(pThis->inputState == eAtStrtFram) {
-		if(isdigit((int) c)) {
+		if(pThis->bSuppOctetFram && isdigit((int) c)) {
 			pThis->inputState = eInOctetCnt;
 			pThis->iOctetsRemain = 0;
 			pThis->eFraming = TCP_FRAMING_OCTET_COUNTING;
@@ -469,7 +472,6 @@ DataRcvd(tcps_sess_t *pThis, char *pData, size_t iLen)
 	char *pEnd;
 	DEFiRet;
 
-//printf("DataRcvd: %p\n", pThis);
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
 	assert(pData != NULL);
 	assert(iLen > 0);

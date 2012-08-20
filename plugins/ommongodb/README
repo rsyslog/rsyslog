@@ -9,10 +9,10 @@ $ModLoad ommongodb # provides mongodb support
 
 then in your /etc/rsyslog.d (check your distribution way to organize the configuration..) you create a file 10-mongodb.conf with the following content:
 
-#the format for the driver is :ommongodb:ip:db:collection;StdMongoDBFmt
-#if you want to change what is logged in the db, the template, you must change the source code since the keys are hardcoded
-$template StdMongoDBFmt,"%msg%%syslogfacility%%HOSTNAME%%syslogpriority%"
-*.*     :ommongodb:127.0.0.1,syslog,logs;StdMongoDBFmt
+*.*     action(type="ommongodb" db="..." collection="...")
+
+Note: currently templates are not supported. Ommongodb will pick a default
+schema and use the message object content for that (templateless).
 
 
 TODO
@@ -21,3 +21,5 @@ refactor my code :-)
 
 email Victor Pereira <victor.pereira@bigrails.com>
 twitter twitter.com/vpereira
+
+part of this doc by Rainer Gerhards <rgerhards@adiscon.com>

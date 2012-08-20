@@ -49,6 +49,7 @@
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
+MODULE_CNFNAME("mmsnmptrapd")
 
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal);
 
@@ -76,8 +77,7 @@ typedef struct configSettings_s {
 	uchar *pszTagName;	/**< name of tag start value that indicates snmptrapd initiated message */
 	uchar *pszSeverityMapping; /**< severitystring to numerical code mapping for snmptrapd string */
 } configSettings_t;
-
-SCOPING_SUPPORT; /* must be set AFTER configSettings_t is defined */
+static configSettings_t cs;
 
 BEGINinitConfVars		/* (re)set config variables to default values */
 CODESTARTinitConfVars 
@@ -385,7 +385,7 @@ BEGINmodInit()
 	unsigned long opts;
 	int bMsgPassingSupported;
 CODESTARTmodInit
-SCOPINGmodInit
+INITLegCnfVars
 	*ipIFVersProvided = CURR_MOD_IF_VERSION;
 		/* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
@@ -414,7 +414,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	cs.pszTagName = NULL;
 	cs.pszSeverityMapping = NULL;
 	
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"mmsnmptrapdtag", 0, eCmdHdlrInt,
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"mmsnmptrapdtag", 0, eCmdHdlrGetWord,
 				    NULL, &cs.pszTagName, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"mmsnmptrapdseveritymapping", 0, eCmdHdlrGetWord,
 				    NULL, &cs.pszSeverityMapping, STD_LOADABLE_MODULE_ID));

@@ -50,6 +50,7 @@
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
+MODULE_CNFNAME("omruleset")
 
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal);
 
@@ -73,8 +74,7 @@ typedef struct configSettings_s {
 	ruleset_t *pRuleset;	/* ruleset to enqueue message to (NULL = Default, not recommended) */
 	uchar *pszRulesetName;
 } configSettings_t;
-
-SCOPING_SUPPORT; /* must be set AFTER configSettings_t is defined */
+static configSettings_t cs;
 
 BEGINinitConfVars		/* (re)set config variables to default values */
 CODESTARTinitConfVars 
@@ -131,7 +131,7 @@ setRuleset(void __attribute__((unused)) *pVal, uchar *pszName)
 	rsRetVal localRet;
 	DEFiRet;
 
-	localRet = ruleset.GetRuleset(&cs.pRuleset, pszName);
+	localRet = ruleset.GetRuleset(ourConf, &cs.pRuleset, pszName);
 	if(localRet == RS_RET_NOT_FOUND) {
 		errmsg.LogError(0, RS_RET_RULESET_NOT_FOUND, "error: ruleset '%s' not found - ignored", pszName);
 	}
@@ -214,7 +214,7 @@ BEGINmodInit()
 	unsigned long opts;
 	int bMsgPassingSupported;		/* does core support template passing as an array? */
 CODESTARTmodInit
-SCOPINGmodInit
+INITLegCnfVars
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	/* check if the rsyslog core supports parameter passing code */

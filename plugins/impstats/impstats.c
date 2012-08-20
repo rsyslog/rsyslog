@@ -40,6 +40,7 @@
 
 MODULE_TYPE_INPUT
 MODULE_TYPE_NOKEEP
+MODULE_CNFNAME("impstats")
 
 /* defines */
 #define DEFAULT_STATS_PERIOD (5 * 60)
@@ -57,12 +58,23 @@ typedef struct configSettings_s {
 	int iStatsInterval;
 	int iFacility;
 	int iSeverity;
+	int bJSON;
 } configSettings_t;
+
+struct modConfData_s {
+	rsconf_t *pConf;		/* our overall config object */
+	int iStatsInterval;
+	int iFacility;
+	int iSeverity;
+	statsFmtType_t statsFmt;
+};
+static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
+static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current load process */
+
 
 static configSettings_t cs;
 
 static prop_t *pInputName = NULL;
-static prop_t *pLocalHostIP = NULL;
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
@@ -76,6 +88,7 @@ initConfigSettings(void)
 	cs.iStatsInterval = DEFAULT_STATS_PERIOD;
 	cs.iFacility = DEFAULT_FACILITY;
 	cs.iSeverity = DEFAULT_SEVERITY;
+	cs.bJSON = 0;
 }
 
 
@@ -92,11 +105,11 @@ doSubmitMsg(uchar *line)
 	MsgSetRawMsgWOSize(pMsg, (char*)line);
 	MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName(), ustrlen(glbl.GetLocalHostName()));
 	MsgSetRcvFrom(pMsg, glbl.GetLocalHostNameProp());
-	MsgSetRcvFromIP(pMsg, pLocalHostIP);
+	MsgSetRcvFromIP(pMsg, glbl.GetLocalHostIP());
 	MsgSetMSGoffs(pMsg, 0);
 	MsgSetTAG(pMsg, UCHAR_CONSTANT("rsyslogd-pstats:"), sizeof("rsyslogd-pstats:") - 1);
-	pMsg->iFacility = cs.iFacility;
-	pMsg->iSeverity = cs.iSeverity;
+	pMsg->iFacility = runModConf->iFacility;
+	pMsg->iSeverity = runModConf->iSeverity;
 	pMsg->msgFlags  = 0;
 
 	submitMsg(pMsg);
@@ -125,8 +138,56 @@ doStatsLine(void __attribute__((unused)) *usrptr, cstr_t *cstr)
 static inline void
 generateStatsMsgs(void)
 {
-	statsobj.GetAllStatsLines(doStatsLine, NULL);
+	statsobj.GetAllStatsLines(doStatsLine, NULL, runModConf->statsFmt);
 }
+
+
+BEGINbeginCnfLoad
+CODESTARTbeginCnfLoad
+	loadModConf = pModConf;
+	pModConf->pConf = pConf;
+	/* init legacy config vars */
+	initConfigSettings();
+ENDbeginCnfLoad
+
+
+BEGINendCnfLoad
+CODESTARTendCnfLoad
+	/* persist module-specific settings from legacy config system */
+	loadModConf->iStatsInterval = cs.iStatsInterval;
+	loadModConf->iFacility = cs.iFacility;
+	loadModConf->iSeverity = cs.iSeverity;
+	loadModConf->statsFmt = cs.bJSON ? statsFmt_JSON : statsFmt_Legacy;
+ENDendCnfLoad
+
+
+BEGINcheckCnf
+CODESTARTcheckCnf
+	if(pModConf->iStatsInterval == 0) {
+		errmsg.LogError(0, NO_ERRCODE, "impstats: stats interval zero not permitted, using "
+				"defaul of %d seconds", DEFAULT_STATS_PERIOD);
+		pModConf->iStatsInterval = DEFAULT_STATS_PERIOD;
+	}
+ENDcheckCnf
+
+
+BEGINactivateCnf
+	rsRetVal localRet;
+CODESTARTactivateCnf
+	runModConf = pModConf;
+	DBGPRINTF("impstats: stats interval %d seconds\n", runModConf->iStatsInterval);
+	localRet = statsobj.EnableStats();
+	if(localRet != RS_RET_OK) {
+		errmsg.LogError(0, localRet, "impstats: error enabling statistics gathering");
+		ABORT_FINALIZE(RS_RET_NO_RUN);
+	}
+finalize_it:
+ENDactivateCnf
+
+
+BEGINfreeCnf
+CODESTARTfreeCnf
+ENDfreeCnf
 
 
 BEGINrunInput
@@ -136,7 +197,7 @@ CODESTARTrunInput
 	 * right into the sleep below.
 	 */
 	while(1) {
-		srSleep(cs.iStatsInterval, 0); /* seconds, micro seconds */
+		srSleep(runModConf->iStatsInterval, 0); /* seconds, micro seconds */
 
 		if(glbl.GetGlobalInputTermState() == 1)
 			break; /* terminate input! */
@@ -147,17 +208,7 @@ ENDrunInput
 
 
 BEGINwillRun
-	rsRetVal localRet;
 CODESTARTwillRun
-	DBGPRINTF("impstats: stats interval %d seconds\n", cs.iStatsInterval);
-	if(cs.iStatsInterval == 0)
-		ABORT_FINALIZE(RS_RET_NO_RUN);
-	localRet = statsobj.EnableStats();
-	if(localRet != RS_RET_OK) {
-		errmsg.LogError(0, localRet, "impstat: error enabling statistics gathering");
-		ABORT_FINALIZE(RS_RET_NO_RUN);
-	}
-finalize_it:
 ENDwillRun
 
 
@@ -169,7 +220,6 @@ ENDafterRun
 BEGINmodExit
 CODESTARTmodExit
 	prop.Destruct(&pInputName);
-	prop.Destruct(&pLocalHostIP);
 	/* release objects we used */
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(prop, CORE_COMPONENT);
@@ -182,6 +232,7 @@ ENDmodExit
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_IMOD_QUERIES
+CODEqueryEtryPt_STD_CONF2_QUERIES
 CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
 ENDqueryEtryPt
 
@@ -207,15 +258,12 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"pstatinterval", 0, eCmdHdlrInt, NULL, &cs.iStatsInterval, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"pstatfacility", 0, eCmdHdlrInt, NULL, &cs.iFacility, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"pstatseverity", 0, eCmdHdlrInt, NULL, &cs.iSeverity, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"pstatjson", 0, eCmdHdlrBinary, NULL, &cs.bJSON, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 
 	CHKiRet(prop.Construct(&pInputName));
 	CHKiRet(prop.SetString(pInputName, UCHAR_CONSTANT("impstats"), sizeof("impstats") - 1));
 	CHKiRet(prop.ConstructFinalize(pInputName));
-
-	CHKiRet(prop.Construct(&pLocalHostIP));
-	CHKiRet(prop.SetString(pLocalHostIP, UCHAR_CONSTANT("127.0.0.1"), sizeof("127.0.0.1") - 1));
-	CHKiRet(prop.ConstructFinalize(pLocalHostIP));
 ENDmodInit
 /* vi:set ai:
  */

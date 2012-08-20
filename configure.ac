@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([rsyslog],[6.2.2],[rsyslog@lists.adiscon.com])
+AC_INIT([rsyslog],[6.4.0],[rsyslog@lists.adiscon.com])
 AM_INIT_AUTOMAKE
 
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
@@ -17,13 +17,9 @@ AC_GNU_SOURCE
 AC_CHECK_PROG(have_valgrind, [valgrind], [yes])
 AM_CONDITIONAL(HAVE_VALGRIND, test x$have_valgrind = xyes)
 
-# check for Java compiler
-AC_CHECK_PROG(HAVE_JAVAC, [javac], [yes])
-if test x"$HAVE_JAVAC" = x""; then
-        AC_MSG_WARN([no javac found, disabling features depending on it])
-fi
-
 # Checks for programs.
+AC_PROG_LEX
+AC_PROG_YACC
 AC_PROG_CC
 AM_PROG_CC_C_O
 if test "$GCC" = "yes"
@@ -36,11 +32,12 @@ AC_CANONICAL_HOST
 PKG_PROG_PKG_CONFIG
 
 # modules we require
-PKG_CHECK_MODULES(LIBESTR, libestr >= 0.1.0)
-PKG_CHECK_MODULES(LIBEE, libee >= 0.3.1)
+PKG_CHECK_MODULES(LIBESTR, libestr >= 0.1.2)
+PKG_CHECK_MODULES(LIBEE, libee >= 0.4.0)
 
 case "${host}" in
   *-*-linux*)
+    AC_DEFINE([OS_LINUX], [1], [Indicator for a Linux OS])
     os_type="linux"
   ;;
   *-*-*darwin*|*-*-dragonfly*|*-*-freebsd*|*-*-netbsd*|*-*-openbsd*)
@@ -121,6 +118,8 @@ AC_CHECK_FUNCS([flock basename alarm clock_gettime gethostbyname gethostname get
 # the check below is probably ugly. If someone knows how to do it in a better way, please
 # let me know! -- rgerhards, 2010-10-06
 AC_CHECK_DECL([SCM_CREDENTIALS], [AC_DEFINE(HAVE_SCM_CREDENTIALS, [1], [set define])], [], [#include <sys/types.h>
+#include <sys/socket.h>])
+AC_CHECK_DECL([SO_TIMESTAMP], [AC_DEFINE(HAVE_SO_TIMESTAMP, [1], [set define])], [], [#include <sys/types.h>
 #include <sys/socket.h>])
 
 # Check for MAXHOSTNAMELEN
@@ -689,6 +688,40 @@ AC_SUBST(SNMP_CFLAGS)
 AC_SUBST(SNMP_LIBS)
 
 
+# elasticsearch support
+AC_ARG_ENABLE(elasticsearch,
+        [AS_HELP_STRING([--enable-elasticsearch],[Enable elasticsearch output module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_elasticsearch="yes" ;;
+          no) enable_elasticsearch="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-elasticsearch) ;;
+         esac],
+        [enable_elasticsearch=no]
+)
+if test "x$enable_elasticsearch" = "xyes"; then
+  AC_CHECK_PROG(
+    [HAVE_CURL_CONFIG],
+    [curl-config],
+    [yes],,,
+  )
+  if test "x${HAVE_CURL_CONFIG}" != "xyes"; then
+    AC_MSG_FAILURE([curl-config not found in PATH])
+  fi
+  AC_CHECK_LIB(
+    [curl],
+    [curl_global_init],
+    [CURL_CFLAGS="`curl-config --cflags`"
+      CURL_LIBS="`curl-config --libs`"
+    ],
+    [AC_MSG_FAILURE([curl library is missing])],
+    [`curl-config --libs --cflags`]
+  )
+fi
+AM_CONDITIONAL(ENABLE_ELASTICSEARCH, test x$enable_elasticsearch = xyes)
+AC_SUBST(CURL_CFLAGS)
+AC_SUBST(CURL_LIBS)
+
+
 # GnuTLS support
 AC_ARG_ENABLE(gnutls,
         [AS_HELP_STRING([--enable-gnutls],[Enable GNU TLS support @<:@default=no@:>@])],
@@ -719,10 +752,15 @@ AC_ARG_ENABLE(rsyslogrt,
         [enable_rsyslogrt=yes]
 )
 if test "x$enable_rsyslogrt" = "xyes"; then
-  RSRT_CFLAGS="-I\$(top_srcdir)/runtime -I\$(top_srcdir)"
-  RSRT_LIBS="\$(top_builddir)/runtime/librsyslog.la"
+  RSRT_CFLAGS1="-I\$(top_srcdir)/runtime -I\$(top_srcdir) -I\$(top_srcdir)/grammar"
+  RSRT_LIBS1="\$(top_builddir)/runtime/librsyslog.la"
+  #??CNF_LIBS="\$(top_builddir)/grammar/libgrammar.la"
 fi
 AM_CONDITIONAL(ENABLE_RSYSLOGRT, test x$enable_rsyslogrt = xyes)
+RSRT_CFLAGS="\$(RSRT_CFLAGS1) \$(LIBESTR_CFLAGS)"
+RSRT_LIBS="\$(RSRT_LIBS1) \$(LIBESTR_LIBS)"
+AC_SUBST(RSRT_CFLAGS1)
+AC_SUBST(RSRT_LIBS1)
 AC_SUBST(RSRT_CFLAGS)
 AC_SUBST(RSRT_LIBS)
 
@@ -820,6 +858,39 @@ fi
 AM_CONDITIONAL(ENABLE_MMNORMALIZE, test x$enable_mmnormalize = xyes)
 AC_SUBST(LOGNORM_CFLAGS)
 AC_SUBST(LOGNORM_LIBS)
+
+
+# mmnjsonparse
+AC_ARG_ENABLE(mmjsonparse,
+        [AS_HELP_STRING([--enable-mmjsonparse],[Enable building mmjsonparse support @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_mmjsonparse="yes" ;;
+          no) enable_mmjsonparse="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-mmjsonparse) ;;
+         esac],
+        [enable_mmjsonparse=no]
+)
+if test "x$enable_mmjsonparse" = "xyes"; then
+	PKG_CHECK_MODULES(LIBLOGNORM, lognorm >= 0.3.1)
+fi
+AM_CONDITIONAL(ENABLE_MMJSONPARSE, test x$enable_mmjsonparse = xyes)
+
+
+
+# mmaudit
+AC_ARG_ENABLE(mmaudit,
+        [AS_HELP_STRING([--enable-mmaudit],[Enable building mmaudit support @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_mmaudit="yes" ;;
+          no) enable_mmaudit="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-mmaudit) ;;
+         esac],
+        [enable_mmaudit=no]
+)
+if test "x$enable_mmaudit" = "xyes"; then
+	PKG_CHECK_MODULES(LIBLOGNORM, lognorm >= 0.3.1)
+fi
+AM_CONDITIONAL(ENABLE_MMAUDIT, test x$enable_mmaudit = xyes)
 
 
 # RELP support
@@ -1070,20 +1141,6 @@ AC_ARG_ENABLE(omruleset,
 AM_CONDITIONAL(ENABLE_OMRULESET, test x$enable_omruleset = xyes)
 
 
-# settings for omdbalerting
-AC_ARG_ENABLE(omdbalerting,
-        [AS_HELP_STRING([--enable-omdbalerting],[Compiles omdbalerting module @<:@default=no@:>@])],
-        [case "${enableval}" in
-         yes) enable_omdbalerting="yes" ;;
-          no) enable_omdbalerting="no" ;;
-           *) AC_MSG_ERROR(bad value ${enableval} for --enable-omdbalerting) ;;
-         esac],
-        [enable_omdbalerting=no]
-)
-AM_CONDITIONAL(ENABLE_OMDBALERTING, test x$enable_omdbalerting = xyes)
-
-
-
 # building the GUI (mostly for diagnostic reasons)
 AC_ARG_ENABLE(gui,
         [AS_HELP_STRING([--enable-gui],[Enable GUI programs @<:@default=no@:>@])],
@@ -1147,46 +1204,6 @@ AC_ARG_ENABLE(sm_cust_bindcdr,
 AM_CONDITIONAL(ENABLE_SMCUSTBINDCDR, test x$enable_sm_cust_bindcdr = xyes)
 
 
-# settings for the template input module; copy and modify this code
-# if you intend to add your own module. Be sure to replace imtemplate
-# by the actual name of your module.
-AC_ARG_ENABLE(imtemplate,
-        [AS_HELP_STRING([--enable-imtemplate],[Compiles imtemplate template module @<:@default=no@:>@])],
-        [case "${enableval}" in
-         yes) enable_imtemplate="yes" ;;
-          no) enable_imtemplate="no" ;;
-           *) AC_MSG_ERROR(bad value ${enableval} for --enable-imtemplate) ;;
-         esac],
-        [enable_imtemplate=no]
-)
-#
-# you may want to do some library checks here - see snmp, mysql, pgsql modules
-# for samples
-#
-AM_CONDITIONAL(ENABLE_IMTEMPLATE, test x$enable_imtemplate = xyes)
-# end of copy template - be sure to search for imtemplate to find everything!
-
-
-# settings for the template output module; copy and modify this code
-# if you intend to add your own module. Be sure to replace omtemplate
-# by the actual name of your module.
-AC_ARG_ENABLE(omtemplate,
-        [AS_HELP_STRING([--enable-omtemplate],[Compiles omtemplate template module @<:@default=no@:>@])],
-        [case "${enableval}" in
-         yes) enable_omtemplate="yes" ;;
-          no) enable_omtemplate="no" ;;
-           *) AC_MSG_ERROR(bad value ${enableval} for --enable-omtemplate) ;;
-         esac],
-        [enable_omtemplate=no]
-)
-#
-# you may want to do some library checks here - see snmp, mysql, pgsql modules
-# for samples
-#
-AM_CONDITIONAL(ENABLE_OMTEMPLATE, test x$enable_omtemplate = xyes)
-# end of copy template - be sure to search for omtemplate to find everything!
-
-
 # settings for mmsnmptrapd message modification module
 AC_ARG_ENABLE(mmsnmptrapd,
         [AS_HELP_STRING([--enable-mmsnmptrapd],[Compiles mmsnmptrapd module @<:@default=no@:>@])],
@@ -1232,12 +1249,38 @@ AC_ARG_ENABLE(ommongodb,
 # you may want to do some library checks here - see snmp, mysql, pgsql modules
 # for samples
 #
+if test "x$enable_ommongodb" = "xyes"; then
+	PKG_CHECK_MODULES(LIBMONGO_CLIENT, libmongo-client >= 0.1.4)
+	AC_SUBST(LIBMONGO_CLIENT_CFLAGS)
+	AC_SUBST(LIBMONGO_CLIENT_LIBS)
+fi
 AM_CONDITIONAL(ENABLE_OMMONGODB, test x$enable_ommongodb = xyes)
-# end of copy template - be sure to search for omtemplate to find everything!
+# end of mongodb code
 
+# HIREDIS SUPPORT
+
+AC_ARG_ENABLE(omhiredis,
+        [AS_HELP_STRING([--enable-omhiredis],[Compiles omhiredis template module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_omhiredis="yes" ;;
+          no) enable_omhiredis="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-omhiredis) ;;
+         esac],
+        [enable_omhiredis=no]
+)
+#
+if test "x$enable_omhiredis" = "xyes"; then
+	PKG_CHECK_MODULES(HIREDIS, hiredis >= 0.10.1)
+	AC_SUBST(HIREDIS_CFLAGS)
+	AC_SUBST(HIREDIS_LIBS)
+fi
+AM_CONDITIONAL(ENABLE_OMHIREDIS, test x$enable_omhiredis = xyes)
+
+# END HIREDIS SUPPORT
 
 AC_CONFIG_FILES([Makefile \
 		runtime/Makefile \
+		grammar/Makefile \
 		tools/Makefile \
 		doc/Makefile \
 		plugins/imudp/Makefile \
@@ -1247,8 +1290,6 @@ AC_CONFIG_FILES([Makefile \
 		plugins/imuxsock/Makefile \
 		plugins/immark/Makefile \
 		plugins/imklog/Makefile \
-		plugins/imtemplate/Makefile \
-		plugins/omtemplate/Makefile \
 		plugins/omhdfs/Makefile \
 		plugins/omprog/Makefile \
 		plugins/omstdout/Makefile \
@@ -1258,7 +1299,6 @@ AC_CONFIG_FILES([Makefile \
 		plugins/pmsnare/Makefile \
 		plugins/pmaixforwardedfrom/Makefile \
 		plugins/omruleset/Makefile \
-		plugins/omdbalerting/Makefile \
 		plugins/omuxsock/Makefile \
 		plugins/imfile/Makefile \
 		plugins/imsolaris/Makefile \
@@ -1277,7 +1317,12 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omsnmp/Makefile \
 		plugins/omoracle/Makefile \
 		plugins/omudpspoof/Makefile \
+		plugins/ommongodb/Makefile \
+        plugins/omhiredis/Makefile \
 		plugins/mmnormalize/Makefile \
+		plugins/mmjsonparse/Makefile \
+		plugins/mmaudit/Makefile \
+		plugins/omelasticsearch/Makefile \
 		plugins/sm_cust_bindcdr/Makefile \
 		plugins/mmsnmptrapd/Makefile \
 		plugins/cust1/Makefile \
@@ -1306,19 +1351,16 @@ echo "    imdiag enabled:                           $enable_imdiag"
 echo "    file input module enabled:                $enable_imfile"
 echo "    Solaris input module enabled:             $enable_imsolaris"
 echo "    periodic statistics module enabled:       $enable_impstats"
-echo "    input template module will be compiled:   $enable_imtemplate"
 echo
 echo "---{ output plugins }---"
 echo "    Mail support enabled:                     $enable_mail"
 echo "    omprog module will be compiled:           $enable_omprog"
-echo "    output mongodb module will be compiled:   $enable_ommongodb"
 echo "    omstdout module will be compiled:         $enable_omstdout"
 echo "    omhdfs module will be compiled:           $enable_omhdfs"
+echo "    omelasticsearch module will be compiled:  $enable_elasticsearch"
 echo "    omruleset module will be compiled:        $enable_omruleset"
-echo "    omdbalerting module will be compiled:     $enable_omdbalerting"
 echo "    omudpspoof module will be compiled:       $enable_omudpspoof"
 echo "    omuxsock module will be compiled:         $enable_omuxsock"
-echo "    output template module will be compiled:  $enable_omtemplate"
 echo
 echo "---{ parser modules }---"
 echo "    pmrfc3164sd module will be compiled:      $enable_pmrfc3164sd"
@@ -1329,6 +1371,8 @@ echo "    pmsnare module will be compiled:          $enable_pmsnare"
 echo
 echo "---{ message modification modules }---"
 echo "    mmnormalize module will be compiled:      $enable_mmnormalize"
+echo "    mmjsonparse module will be compiled:      $enable_mmjsonparse"
+echo "    mmjaduit module will be compiled:         $enable_mmaudit"
 echo "    mmsnmptrapd module will be compiled:      $enable_mmsnmptrapd"
 echo
 echo "---{ strgen modules }---"
@@ -1338,6 +1382,8 @@ echo "---{ database support }---"
 echo "    MySql support enabled:                    $enable_mysql"
 echo "    libdbi support enabled:                   $enable_libdbi"
 echo "    PostgreSQL support enabled:               $enable_pgsql"
+echo "    mongodb support enabled:                  $enable_ommongodb"
+echo "    hiredis support enabled:                  $enable_omhiredis"
 echo "    Oracle (OCI) support enabled:             $enable_oracle"
 echo
 echo "---{ protocol support }---"

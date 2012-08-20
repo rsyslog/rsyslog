@@ -42,6 +42,7 @@
 
 MODULE_TYPE_PARSER
 MODULE_TYPE_NOKEEP
+MODULE_CNFNAME("pmaixforwardedfrom")
 PARSER_NAME("rsyslog.aixforwardedfrom")
 
 /* internal structures

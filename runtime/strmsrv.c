@@ -765,7 +765,7 @@ static rsRetVal
 SetKeepAlive(strmsrv_t *pThis, int iVal)
 {
 	DEFiRet;
-	dbgprintf("keep-alive set to %d\n", iVal);
+	dbgprintf("strmsrv: keep-alive set to %d\n", iVal);
 	pThis->bUseKeepAlive = iVal;
 	RETiRet;
 }

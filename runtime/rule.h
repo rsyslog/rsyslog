@@ -26,7 +26,7 @@
 #include "libestr.h"
 #include "linkedlist.h"
 #include "regexp.h"
-#include "expr.h"
+#include "rainerscript.h"
 
 /* the rule object */
 struct rule_s {
@@ -50,7 +50,7 @@ struct rule_s {
 			propid_t propID;		/* ID of the requested property */
 			es_str_t *propName;		/* name of property for CEE-based filters */
 		} prop;
-		expr_t *f_expr;				/* expression object */
+		struct cnfexpr *expr;			/* expression object */
 	} f_filterData;
 
 	ruleset_t *pRuleset;	/* associated ruleset */

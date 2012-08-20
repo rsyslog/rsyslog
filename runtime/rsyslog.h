@@ -60,12 +60,12 @@
 						 * rgerhards, 2006-11-30
 						 */
 
-#define CONF_OMOD_NUMSTRINGS_MAXSIZE	2	/* cache for pointers to output module buffer pointers. All
-						 * rsyslog-provided plugins do NOT need more than two buffers. If
+#define CONF_OMOD_NUMSTRINGS_MAXSIZE	3	/* cache for pointers to output module buffer pointers. All
+						 * rsyslog-provided plugins do NOT need more than three buffers. If
 						 * more are needed (future developments, third-parties), rsyslog 
 						 * must be recompiled with a larger parameter. Hardcoding this
 						 * saves us some overhead, both in runtime in code complexity. As
-						 * it is doubtful if ever more than 2 parameters are needed, the
+						 * it is doubtful if ever more than 3 parameters are needed, the
 						 * approach taken here is considered appropriate.
 						 * rgerhards, 2010-06-24
 						 */
@@ -128,6 +128,7 @@ typedef uintTiny	propid_t;
 #define PROP_APP_NAME			20
 #define PROP_PROCID			21
 #define PROP_MSGID			22
+#define PROP_PARSESUCCESS		23
 #define PROP_SYS_NOW			150
 #define PROP_SYS_YEAR			151
 #define PROP_SYS_MONTH			152
@@ -351,14 +352,30 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_FILE_NOT_SPECIFIED = -2180, /**< file name not configured where this was required */
 	RS_RET_ERR_WRKDIR = -2181, /**< problems with the rsyslog working directory */
 	RS_RET_WRN_WRKDIR = -2182, /**< correctable problems with the rsyslog working directory */
+	RS_RET_ERR_QUEUE_EMERGENCY = -2183, /**<  some fatal error caused queue to switch to emergency mode */
 	RS_RET_OUTDATED_STMT = -2184, /**<  some outdated statement/functionality is being used in conf file */
 	RS_RET_MISSING_WHITESPACE = -2185, /**<  whitespace is missing in some config construct */
+	RS_RET_OK_WARN = -2186, /**<  config part: everything was OK, but a warning message was emitted */
 
 	RS_RET_INVLD_CONF_OBJ= -2200,	/**< invalid config object (e.g. $Begin conf statement) */
 	RS_RET_ERR_LIBEE_INIT = -2201,	/**< cannot obtain libee ctx */
 	RS_RET_ERR_LIBLOGNORM_INIT = -2202,/**< cannot obtain liblognorm ctx */
 	RS_RET_ERR_LIBLOGNORM_SAMPDB_LOAD = -2203,/**< liblognorm sampledb load failed */
+	RS_RET_CMD_GONE_AWAY = -2204,/**< config directive existed, but no longer supported */
+	RS_RET_ERR_SCHED_PARAMS = -2205,/**< there is a problem with configured thread scheduling params */
+	RS_RET_SOCKNAME_MISSING = -2206,/**< no socket name configured where one is required */
+	RS_RET_CONF_PARSE_ERROR = -2207,/**< (fatal) error parsing config file */
 	RS_RET_CONF_RQRD_PARAM_MISSING = -2208,/**< required parameter in config object is missing */
+	RS_RET_MOD_UNKNOWN = -2209,/**< module (config name) is unknown */
+	RS_RET_CONFOBJ_UNSUPPORTED = -2210,/**< config objects (v6 conf) are not supported here */
+	RS_RET_MISSING_CNFPARAMS = -2211, /**< missing configuration parameters */
+	RS_RET_NO_LISTNERS = -2212, /**< module loaded, but no listeners are defined */
+	RS_RET_INVLD_PROTOCOL = -2213, /**< invalid protocol specified in config file */
+	RS_RET_CNF_INVLD_FRAMING = -2214, /**< invalid framing specified in config file */
+	RS_RET_LEGA_ACT_NOT_SUPPORTED = -2215, /**< the module (no longer) supports legacy action syntax */
+	RS_RET_MAX_OMSR_REACHED = -2216, /**< max nbr of string requests reached, not supported by core */
+	RS_RET_UID_MISSING = -2217,	/**< a user id is missing (but e.g. a password provided) */
+
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */
 
@@ -489,6 +506,11 @@ rsRetVal rsrtSetErrLogger(rsRetVal (*errLogger)(int, uchar*));
  * are already defined. -- rgerhards, 2010-07-26
  */
 #define EMPTY_STRUCT
+
+/* TODO: remove this -- this is only for transition of the config system */
+extern rsconf_t *ourConf; /* defined by syslogd.c, a hack for functions that do not
+			     yet receive a copy, so that we can incrementially 
+			     compile and change... -- rgerhars, 2011-04-19 */
 
 #endif /* multi-include protection */
 /* vim:set ai:

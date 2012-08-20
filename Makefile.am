@@ -70,7 +70,7 @@ EXTRA_DIST = \
 	contrib/gnutls/key.pem \
 	rsyslog.service.in
 
-SUBDIRS = doc runtime . plugins/immark plugins/imuxsock plugins/imtcp plugins/imudp plugins/omtesting
+SUBDIRS = doc runtime grammar . plugins/immark plugins/imuxsock plugins/imtcp plugins/imudp plugins/omtesting
 
 if ENABLE_RSYSLOGD
 SUBDIRS += tools
@@ -120,10 +120,6 @@ if ENABLE_SMCUSTBINDCDR
 SUBDIRS += plugins/sm_cust_bindcdr
 endif
 
-if ENABLE_IMTEMPLATE
-SUBDIRS += plugins/imtemplate
-endif
-
 if ENABLE_OMSTDOUT
 SUBDIRS += plugins/omstdout
 endif
@@ -152,12 +148,16 @@ if ENABLE_OMRULESET
 SUBDIRS += plugins/omruleset
 endif
 
-if ENABLE_OMDBALERTING
-SUBDIRS += plugins/omdbalerting
-endif
-
 if ENABLE_OMUDPSPOOF
 SUBDIRS += plugins/omudpspoof
+endif
+
+if ENABLE_OMMONGODB
+SUBDIRS += plugins/ommongodb
+endif
+
+if ENABLE_OMHIREDIS
+SUBDIRS += plugins/omhiredis
 endif
 
 if ENABLE_OMUXSOCK
@@ -168,8 +168,8 @@ if ENABLE_OMHDFS
 SUBDIRS += plugins/omhdfs
 endif
 
-if ENABLE_OMTEMPLATE
-SUBDIRS += plugins/omtemplate
+if ENABLE_ELASTICSEARCH
+SUBDIRS += plugins/omelasticsearch
 endif
 
 if ENABLE_MMSNMPTRAPD
@@ -206,6 +206,14 @@ endif
 
 if ENABLE_MMNORMALIZE
 SUBDIRS += plugins/mmnormalize
+endif
+
+if ENABLE_MMJSONPARSE
+SUBDIRS += plugins/mmjsonparse
+endif
+
+if ENABLE_MMAUDIT
+SUBDIRS += plugins/mmaudit
 endif
 
 if ENABLE_ORACLE
@@ -254,8 +262,7 @@ DISTCHECK_CONFIGURE_FLAGS=	--enable-gssapi_krb5 \
 				--enable-pmaixforwardedfrom \
 				--enable-pmcisconames \
 				--enable-pmsnare \
-				--enable-imtemplate \
-				--enable-omtemplate \
 				--enable-mmsnmptrapd \
+				--enable-elasticsearch \
 				--with-systemdsystemunitdir=$$dc_install_base/$(systemdsystemunitdir)
 ACLOCAL_AMFLAGS = -I m4

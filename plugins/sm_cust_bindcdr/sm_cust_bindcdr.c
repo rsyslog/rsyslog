@@ -52,6 +52,7 @@
 
 MODULE_TYPE_STRGEN
 MODULE_TYPE_NOKEEP
+MODULE_CNFNAME("sm_cust_bindcdr")
 STRGEN_NAME("Custom_BindCDR,sql")
 
 /* internal structures

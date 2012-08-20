@@ -34,7 +34,6 @@
 #include "unicode-helper.h"
 #include "obj.h"
 #include "statsobj.h"
-#include "sysvar.h"
 #include "srUtils.h"
 #include "stringbuf.h"
 
@@ -167,6 +166,56 @@ finalize_it:
 	RETiRet;
 }
 
+/* get all the object's countes together as CEE. */
+static rsRetVal
+getStatsLineCEE(statsobj_t *pThis, cstr_t **ppcstr)
+{
+	cstr_t *pcstr;
+	ctr_t *pCtr;
+	DEFiRet;
+
+	CHKiRet(cstrConstruct(&pcstr));
+	rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("@cee: {"), 7);
+
+	rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("\""), 1);
+	rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("name"), 4);
+	rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("\""), 1);
+	rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT(":"), 1);
+	rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("\""), 1);
+	rsCStrAppendStr(pcstr, pThis->name);
+	rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("\""), 1);
+	rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT(","), 1);
+
+	/* now add all counters to this line */
+	pthread_mutex_lock(&pThis->mutCtr);
+	for(pCtr = pThis->ctrRoot ; pCtr != NULL ; pCtr = pCtr->next) {
+		rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("\""), 1);
+		rsCStrAppendStr(pcstr, pCtr->name);
+		rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("\""), 1);
+		cstrAppendChar(pcstr, ':');
+		switch(pCtr->ctrType) {
+		case ctrType_IntCtr:
+			rsCStrAppendInt(pcstr, *(pCtr->val.pIntCtr)); // TODO: OK?????
+			break;
+		case ctrType_Int:
+			rsCStrAppendInt(pcstr, *(pCtr->val.pInt));
+			break;
+		}
+		if (pCtr->next != NULL) {
+			cstrAppendChar(pcstr, ',');
+		} else {
+			cstrAppendChar(pcstr, '}');
+		}
+
+	}
+	pthread_mutex_unlock(&pThis->mutCtr);
+
+	CHKiRet(cstrFinalize(pcstr));
+	*ppcstr = pcstr;
+
+finalize_it:
+	RETiRet;
+}
 
 /* get all the object's countes together with object name as one line.
  */
@@ -213,14 +262,21 @@ finalize_it:
  * line. If the callback reports an error, processing is stopped.
  */
 static rsRetVal
-getAllStatsLines(rsRetVal(*cb)(void*, cstr_t*), void *usrptr)
+getAllStatsLines(rsRetVal(*cb)(void*, cstr_t*), void *usrptr, statsFmtType_t fmt)
 {
 	statsobj_t *o;
 	cstr_t *cstr;
 	DEFiRet;
 
 	for(o = objRoot ; o != NULL ; o = o->next) {
-		CHKiRet(getStatsLine(o, &cstr));
+		switch(fmt) {
+		case statsFmt_Legacy:
+			CHKiRet(getStatsLine(o, &cstr));
+			break;
+		case statsFmt_JSON:
+			CHKiRet(getStatsLineCEE(o, &cstr));
+			break;
+		}
 		CHKiRet(cb(usrptr, cstr));
 		rsCStrDestruct(&cstr);
 	}

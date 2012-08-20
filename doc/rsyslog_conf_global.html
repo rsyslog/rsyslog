@@ -143,6 +143,7 @@ our paper on <a href="multi_ruleset.html">using multiple rule sets in rsyslog</a
 <li><a href="rsconf1_escape8bitcharsonreceive.html">$Escape8BitCharactersOnReceive</a></li>
 <li><a href="rsconf1_escapecontrolcharactersonreceive.html">$EscapeControlCharactersOnReceive</a></li>
 <li><b>$EscapeControlCharactersOnReceive</b> [<b>on</b>|off] - escape USASCII HT character</li>
+<li>$SpaceLFOnReceive [on/<b>off</b>] - instructs rsyslogd to replace LF with spaces during message reception (sysklogd compatibility aid)</li>
 <li>$ErrorMessagesToStderr [<b>on</b>|off] - direct rsyslogd error message to stderr (in addition to other targets)</li>
 <li><a href="rsconf1_failonchownfailure.html">$FailOnChownFailure</a></li>
 <li><a href="rsconf1_filecreatemode.html">$FileCreateMode</a></li>
@@ -292,9 +293,22 @@ the value, the less precise the timestamp.
 <li><b>$Sleep</b> &lt;seconds&gt; - puts the rsyslog main thread to sleep for the specified
 number of seconds immediately when the directive is encountered. You should have a
 good reason for using this directive!</li>
+<li><b>$LocalHostIPIF</b>  &lt;interface name&gt; - (available since 5.9.6) - if provided, the IP of the specified
+interface (e.g. "eth0") shall be used as fromhost-ip for locall-originating messages.
+If this directive is not given OR the interface cannot be found (or has no IP address),
+the default of "127.0.0.1" is used. Note that this directive can be given only
+once. Trying to reset will result in an error message and the new value will
+be ignored. Please note that modules must have support for obtaining the local
+IP address set via this directive. While this is the case for rsyslog-provided
+modules, it may not always be the case for contributed plugins.
+<br><b>Important:</b> This directive shall be placed <b>right at the top of
+rsyslog.conf</b>. Otherwise, if error messages are triggered before this directive
+is processed, rsyslog will fix the local host IP to "127.0.0.1", what than can
+not be reset.
+</li>
 <li><a href="rsconf1_umask.html">$UMASK</a></li>
 </ul>
-<p><b>Where &lt;size_nbr&gt; is specified above,</b>
+<p><b>Where &lt;size_nbr&gt; or integers are specified above,</b>
 modifiers can be used after the number part. For example, 1k means
 1024. Supported are k(ilo), m(ega), g(iga), t(era), p(eta) and e(xa).
 Lower case letters refer to the traditional binary defintion (e.g. 1m
@@ -302,7 +316,7 @@ equals 1,048,576) whereas upper case letters refer to their new
 1000-based definition (e.g 1M equals 1,000,000).</p>
 <p>Numbers may include '.' and ',' for readability. So you can
 for example specify either "1000" or "1,000" with the same result.
-Please note that rsyslogd simply ignores the punctuation. Form it's
+Please note that rsyslogd simply ignores the punctuation. From it's
 point of view, "1,,0.0.,.,0" also has the value 1000. </p>
 
 <p>[<a href="manual.html">manual index</a>]

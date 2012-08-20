@@ -12,7 +12,7 @@
  * long term, but it is good to have it out of syslogd.c. Maybe this here is
  * an interim location ;)
  *
- * Copyright 2007, 2008 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2011 Rainer Gerhards and Adiscon GmbH.
  *
  * rgerhards, 2008-04-16: I changed this code to LGPL today. I carefully analyzed
  * that it does not borrow code from the original sysklogd and that I have 
@@ -54,6 +54,9 @@
 #include <fnmatch.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <ifaddrs.h>
+#include <sys/types.h>
+#include <arpa/inet.h>
 
 #include "syslogd-types.h"
 #include "module-template.h"
@@ -62,6 +65,7 @@
 #include "obj.h"
 #include "errmsg.h"
 #include "net.h"
+#include "dnscache.h"
 
 #ifdef OS_SOLARIS
 #	define	s6_addr32	_S6_un._S6_u32
@@ -1064,108 +1068,6 @@ should_use_so_bsdcompat(void)
 #define SO_BSDCOMPAT 0
 #endif
 
-/* get the hostname of the message source. This was originally in cvthname()
- * but has been moved out of it because of clarity and fuctional separation.
- * It must be provided by the socket we received the message on as well as
- * a NI_MAXHOST size large character buffer for the FQDN.
- * 2008-05-16 rgerhards: added field for IP address representation. Must also
- * be NI_MAXHOST size large.
- *
- * Please see http://www.hmug.org/man/3/getnameinfo.php (under Caveats)
- * for some explanation of the code found below. We do by default not
- * discard message where we detected malicouos DNS PTR records. However,
- * there is a user-configurabel option that will tell us if
- * we should abort. For this, the return value tells the caller if the
- * message should be processed (1) or discarded (0).
- */
-static rsRetVal
-gethname(struct sockaddr_storage *f, uchar *pszHostFQDN, uchar *ip)
-{
-	DEFiRet;
-	int error;
-	sigset_t omask, nmask;
-	struct addrinfo hints, *res;
-	
-	assert(f != NULL);
-	assert(pszHostFQDN != NULL);
-
-        error = mygetnameinfo((struct sockaddr *)f, SALEN((struct sockaddr *)f),
-			    (char*) ip, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
-
-        if (error) {
-                dbgprintf("Malformed from address %s\n", gai_strerror(error));
-		strcpy((char*) pszHostFQDN, "???");
-		strcpy((char*) ip, "???");
-		ABORT_FINALIZE(RS_RET_INVALID_SOURCE);
-	}
-
-	if(!glbl.GetDisableDNS()) {
-		sigemptyset(&nmask);
-		sigaddset(&nmask, SIGHUP);
-		pthread_sigmask(SIG_BLOCK, &nmask, &omask);
-
-		error = mygetnameinfo((struct sockaddr *)f, SALEN((struct sockaddr *) f),
-				    (char*)pszHostFQDN, NI_MAXHOST, NULL, 0, NI_NAMEREQD);
-		
-		if (error == 0) {
-			memset (&hints, 0, sizeof (struct addrinfo));
-			hints.ai_flags = AI_NUMERICHOST;
-
-			/* we now do a lookup once again. This one should fail,
-			 * because we should not have obtained a non-numeric address. If
-			 * we got a numeric one, someone messed with DNS!
-			 */
-			if (getaddrinfo ((char*)pszHostFQDN, NULL, &hints, &res) == 0) {
-				uchar szErrMsg[1024];
-				freeaddrinfo (res);
-				/* OK, we know we have evil. The question now is what to do about
-				 * it. One the one hand, the message might probably be intended
-				 * to harm us. On the other hand, losing the message may also harm us.
-				 * Thus, the behaviour is controlled by the $DropMsgsWithMaliciousDnsPTRRecords
-				 * option. If it tells us we should discard, we do so, else we proceed,
-				 * but log an error message together with it.
-				 * time being, we simply drop the name we obtained and use the IP - that one
-				 * is OK in any way. We do also log the error message. rgerhards, 2007-07-16
-		 		 */
-		 		if(glbl.GetDropMalPTRMsgs() == 1) {
-					snprintf((char*)szErrMsg, sizeof(szErrMsg) / sizeof(uchar),
-						 "Malicious PTR record, message dropped "
-						 "IP = \"%s\" HOST = \"%s\"",
-						 ip, pszHostFQDN);
-					errmsg.LogError(0, RS_RET_MALICIOUS_ENTITY, "%s", szErrMsg);
-					pthread_sigmask(SIG_SETMASK, &omask, NULL);
-					ABORT_FINALIZE(RS_RET_MALICIOUS_ENTITY);
-				}
-
-				/* Please note: we deal with a malicous entry. Thus, we have crafted
-				 * the snprintf() below so that all text is in front of the entry - maybe
-				 * it contains characters that make the message unreadable
-				 * (OK, I admit this is more or less impossible, but I am paranoid...)
-				 * rgerhards, 2007-07-16
-				 */
-				snprintf((char*)szErrMsg, sizeof(szErrMsg) / sizeof(uchar),
-					 "Malicious PTR record (message accepted, but used IP "
-					 "instead of PTR name: IP = \"%s\" HOST = \"%s\"",
-					 ip, pszHostFQDN);
-				errmsg.LogError(0, NO_ERRCODE, "%s", szErrMsg);
-
-				error = 1; /* that will trigger using IP address below. */
-			}
-		}		
-		pthread_sigmask(SIG_SETMASK, &omask, NULL);
-	}
-
-        if(error || glbl.GetDisableDNS()) {
-                dbgprintf("Host name for your address (%s) unknown\n", ip);
-		strcpy((char*) pszHostFQDN, (char*)ip);
-		ABORT_FINALIZE(RS_RET_ADDRESS_UNKNOWN);
-        }
-
-finalize_it:
-	RETiRet;
-}
-
-
 
 /* print out which socket we are listening on. This is only
  * a debug aid. rgerhards, 2007-07-02
@@ -1229,9 +1131,9 @@ rsRetVal cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQDN
 	assert(pszHost != NULL);
 	assert(pszHostFQDN != NULL);
 
-	iRet = gethname(f, pszHostFQDN, pszIP);
+	iRet = dnscacheLookup(f, pszHostFQDN, pszIP);
 
-	if(iRet == RS_RET_INVALID_SOURCE || iRet == RS_RET_ADDRESS_UNKNOWN) {
+	if(iRet == RS_RET_INVALID_SOURCE) {
 		strcpy((char*) pszHost, (char*) pszHostFQDN); /* we use whatever was provided as replacement */
 		ABORT_FINALIZE(RS_RET_OK); /* this is handled, we are happy with it */
 	} else if(iRet != RS_RET_OK) {
@@ -1581,6 +1483,54 @@ finalize_it:
 }
 
 
+/* return the IP address (IPv4/6) for the provided interface. Returns
+ * RS_RET_NOT_FOUND if interface can not be found in interface list.
+ * The family must be correct (AF_INET vs. AF_INET6, AF_UNSPEC means
+ * either of *these two*).
+ * The function re-queries the interface list (at least in theory).
+ * However, it caches entries in order to avoid too-frequent requery.
+ * rgerhards, 2012-03-06
+ */
+static rsRetVal
+getIFIPAddr(uchar *szif, int family, uchar *pszbuf, int lenBuf)
+{
+	struct ifaddrs * ifaddrs = NULL;
+	struct ifaddrs * ifa;
+	void * pAddr;
+	DEFiRet;
+
+ 	if(getifaddrs(&ifaddrs) != 0) {
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
+	for (ifa = ifaddrs; ifa != NULL; ifa = ifa->ifa_next) {
+		if(strcmp(ifa->ifa_name, (char*)szif))
+			continue;
+		if(   (family == AF_INET6 || family == AF_UNSPEC)
+		   && ifa->ifa_addr->sa_family == AF_INET6) {
+			pAddr = &((struct sockaddr_in6 *)ifa->ifa_addr)->sin6_addr;
+			inet_ntop(AF_INET6, pAddr, (char*)pszbuf, lenBuf);
+			break;
+		} else if(/*   (family == AF_INET || family == AF_UNSPEC)
+		         &&*/ ifa->ifa_addr->sa_family == AF_INET) {
+			pAddr = &((struct sockaddr_in *)ifa->ifa_addr)->sin_addr;
+			inet_ntop(AF_INET, pAddr, (char*)pszbuf, lenBuf);
+			break;
+		} 
+	}
+
+	if(ifaddrs != NULL)
+		freeifaddrs(ifaddrs);
+
+	if(ifa == NULL)
+		iRet = RS_RET_NOT_FOUND;
+
+finalize_it:
+	RETiRet;
+
+}
+
+
 /* queryInterface function
  * rgerhards, 2008-03-05
  */
@@ -1612,6 +1562,7 @@ CODESTARTobjQueryInterface(net)
 	pIf->PermittedPeerWildcardMatch = PermittedPeerWildcardMatch;
 	pIf->CmpHost = CmpHost;
 	pIf->HasRestrictions = HasRestrictions;
+	pIf->GetIFIPAddr = getIFIPAddr;
 	/* data members */
 	pIf->pACLAddHostnameOnFail = &ACLAddHostnameOnFail;
 	pIf->pACLDontResolve = &ACLDontResolve;

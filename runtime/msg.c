@@ -38,6 +38,7 @@
 #include <sys/socket.h>
 #include <sys/sysinfo.h>
 #include <netdb.h>
+#include <libestr.h>
 #include <libee/libee.h>
 #if HAVE_MALLOC_H
 #  include <malloc.h>
@@ -47,7 +48,6 @@
 #include "stringbuf.h"
 #include "template.h"
 #include "msg.h"
-#include "var.h"
 #include "datetime.h"
 #include "glbl.h"
 #include "regexp.h"
@@ -56,10 +56,10 @@
 #include "ruleset.h"
 #include "prop.h"
 #include "net.h"
+#include "rsconf.h"
 
 /* static data */
 DEFobjStaticHelpers
-DEFobjCurrIf(var)
 DEFobjCurrIf(datetime)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(regexp)
@@ -263,6 +263,9 @@ static struct {
 	{ UCHAR_CONSTANT("190"), 5},
 	{ UCHAR_CONSTANT("191"), 5}
 	};
+static char hexdigit[16] =
+	{'0', '1', '2', '3', '4', '5', '6', '7', '8',
+	 '9', 'A', 'B', 'C', 'D', 'E', 'F' };
 
 /*syslog facility names (as of RFC5424) */
 static char *syslog_fac_names[24] = { "kern", "user", "mail", "daemon", "auth", "syslog", "lpr",
@@ -433,12 +436,12 @@ resolveDNS(msg_t *pMsg) {
 		}
 	}
 finalize_it:
-	MsgUnlock(pMsg);
 	if(iRet != RS_RET_OK) {
 		/* best we can do: remove property */
 		MsgSetRcvFromStr(pMsg, UCHAR_CONSTANT(""), 0, &propFromHost);
 		prop.Destruct(&propFromHost);
 	}
+	MsgUnlock(pMsg);
 	if(propFromHost != NULL)
 		prop.Destruct(&propFromHost);
 	if(propFromHostIP != NULL)
@@ -481,16 +484,13 @@ getRcvFromIP(msg_t *pM)
 }
 
 
-
-/* map a property name (string) to a property ID */
-rsRetVal propNameToID(cstr_t *pCSPropName, propid_t *pPropID)
+/* map a property name (C string) to a property ID */
+rsRetVal
+propNameStrToID(uchar *pName, propid_t *pPropID)
 {
-	uchar *pName;
 	DEFiRet;
 
-	assert(pCSPropName != NULL);
-	assert(pPropID != NULL);
-	pName = rsCStrGetSzStrNoNULL(pCSPropName);
+	assert(pName != NULL);
 
 	/* sometimes there are aliases to the original MonitoWare
 	 * property names. These come after || in the ifs below. */
@@ -505,11 +505,6 @@ rsRetVal propNameToID(cstr_t *pCSPropName, propid_t *pPropID)
 		*pPropID = PROP_SYSLOGTAG;
 	} else if(!strcmp((char*) pName, "rawmsg")) {
 		*pPropID = PROP_RAWMSG;
-	/* enable this, if someone actually uses UxTradMsg, delete after some  time has
-	 * passed and nobody complained -- rgerhards, 2009-06-16
-	} else if(!strcmp((char*) pName, "uxtradmsg")) {
-		pRes = getUxTradMsg(pMsg);
-	*/
 	} else if(!strcmp((char*) pName, "inputname")) {
 		*pPropID = PROP_INPUTNAME;
 	} else if(!strcmp((char*) pName, "fromhost")) {
@@ -544,6 +539,8 @@ rsRetVal propNameToID(cstr_t *pCSPropName, propid_t *pPropID)
 		*pPropID = PROP_PROCID;
 	} else if(!strcmp((char*) pName, "msgid")) {
 		*pPropID = PROP_MSGID;
+	} else if(!strcmp((char*) pName, "parsesuccess")) {
+		*pPropID = PROP_PARSESUCCESS;
 	/* here start system properties (those, that do not relate to the message itself */
 	} else if(!strcmp((char*) pName, "$now")) {
 		*pPropID = PROP_SYS_NOW;
@@ -580,6 +577,21 @@ rsRetVal propNameToID(cstr_t *pCSPropName, propid_t *pPropID)
 }
 
 
+/* map a property name (string) to a property ID */
+rsRetVal
+propNameToID(cstr_t *pCSPropName, propid_t *pPropID)
+{
+	uchar *pName;
+	DEFiRet;
+
+	assert(pCSPropName != NULL);
+	assert(pPropID != NULL);
+	pName = rsCStrGetSzStrNoNULL(pCSPropName);
+	iRet =  propNameStrToID(pName, pPropID);
+	RETiRet;
+}
+
+
 /* map a property ID to a name string (useful for displaying) */
 uchar *propIDToName(propid_t propID)
 {
@@ -594,12 +606,6 @@ uchar *propIDToName(propid_t propID)
 			return UCHAR_CONSTANT("syslogtag");
 		case PROP_RAWMSG:
 			return UCHAR_CONSTANT("rawmsg");
-		/* enable this, if someone actually uses UxTradMsg, delete after some  time has
-		 * passed and nobody complained -- rgerhards, 2009-06-16
-		case PROP_UXTRADMSG:
-			pRes = getUxTradMsg(pMsg);
-			break;
-		*/
 		case PROP_INPUTNAME:
 			return UCHAR_CONSTANT("inputname");
 		case PROP_FROMHOST:
@@ -634,6 +640,8 @@ uchar *propIDToName(propid_t propID)
 			return UCHAR_CONSTANT("procid");
 		case PROP_MSGID:
 			return UCHAR_CONSTANT("msgid");
+		case PROP_PARSESUCCESS:
+			return UCHAR_CONSTANT("parsesuccess");
 		case PROP_SYS_NOW:
 			return UCHAR_CONSTANT("$NOW");
 		case PROP_SYS_YEAR:
@@ -696,6 +704,7 @@ static inline rsRetVal msgBaseConstruct(msg_t **ppThis)
 	pM->flowCtlType = 0;
 	pM->bDoLock = 0;
 	pM->bAlreadyFreed = 0;
+	pM->bParseSuccess = 0;
 	pM->iRefCount = 1;
 	pM->iSeverity = -1;
 	pM->iFacility = -1;
@@ -734,6 +743,8 @@ static inline rsRetVal msgBaseConstruct(msg_t **ppThis)
 	pM->pszTimestamp3339[0] = '\0';
 	pM->pszTIMESTAMP_SecFrac[0] = '\0';
 	pM->pszRcvdAt_SecFrac[0] = '\0';
+	pM->pszTIMESTAMP_Unix[0] = '\0';
+	pM->pszRcvdAt_Unix[0] = '\0';
 
 	/* DEV debugging only! dbgprintf("msgConstruct\t0x%x, ref 1\n", (int)pM);*/
 
@@ -976,10 +987,6 @@ msg_t* MsgDup(msg_t* pOld)
 		pNew->pInputName = pOld->pInputName;
 		prop.AddRef(pNew->pInputName);
 	}
-	/* enable this, if someone actually uses UxTradMsg, delete after some time has
-	 * passed and nobody complained -- rgerhards, 2009-06-16
-	pNew->offAfterPRI = pOld->offAfterPRI;
-	*/
 	if(pOld->iLenTAG > 0) {
 		if(pOld->iLenTAG < CONF_TAG_BUFSIZE) {
 			memcpy(pNew->TAG.szBuf, pOld->TAG.szBuf, pOld->iLenTAG + 1);
@@ -1055,10 +1062,6 @@ static rsRetVal MsgSerialize(msg_t *pThis, strm_t *pStrm)
 	objSerializeSCALAR(pStrm, ttGenTime, INT);
 	objSerializeSCALAR(pStrm, tRcvdAt, SYSLOGTIME);
 	objSerializeSCALAR(pStrm, tTIMESTAMP, SYSLOGTIME);
-	/* enable this, if someone actually uses UxTradMsg, delete after some  time has
-	 * passed and nobody complained -- rgerhards, 2009-06-16
-	objSerializeSCALAR(pStrm, offsAfterPRI, SHORT);
-	*/
 
 	CHKiRet(obj.SerializeProp(pStrm, UCHAR_CONSTANT("pszTAG"), PROPTYPE_PSZ, (void*)
 		((pThis->iLenTAG < CONF_TAG_BUFSIZE) ? pThis->TAG.szBuf : pThis->TAG.pszTAG)));
@@ -1258,18 +1261,6 @@ getRawMsg(msg_t *pM, uchar **pBuf, int *piLen)
 }
 
 
-/* enable this, if someone actually uses UxTradMsg, delete after some  time has
- * passed and nobody complained -- rgerhards, 2009-06-16
-char *getUxTradMsg(msg_t *pM)
-{
-	if(pM == NULL)
-		return "";
-	else
-		return (char*)pM->pszRawMsg + pM->offAfterPRI;
-}
-*/
-
-
 int getMSGLen(msg_t *pM)
 {
 	return((pM == NULL) ? 0 : pM->iLenMSG);
@@ -1364,6 +1355,13 @@ getTimeReported(msg_t *pM, enum tplFormatTypes eFmt)
 		}
 		MsgUnlock(pM);
 		return(pM->pszTIMESTAMP3339);
+	case tplFmtUnixDate:
+		MsgLock(pM);
+		if(pM->pszTIMESTAMP_Unix[0] == '\0') {
+			datetime.formatTimestampUnix(&pM->tTIMESTAMP, pM->pszTIMESTAMP_Unix);
+		}
+		MsgUnlock(pM);
+		return(pM->pszTIMESTAMP_Unix);
 	case tplFmtSecFrac:
 		if(pM->pszTIMESTAMP_SecFrac[0] == '\0') {
 			MsgLock(pM);
@@ -1443,6 +1441,13 @@ static inline char *getTimeGenerated(msg_t *pM, enum tplFormatTypes eFmt)
 		}
 		MsgUnlock(pM);
 		return(pM->pszRcvdAt3339);
+	case tplFmtUnixDate:
+		MsgLock(pM);
+		if(pM->pszRcvdAt_Unix[0] == '\0') {
+			datetime.formatTimestampUnix(&pM->tRcvdAt, pM->pszRcvdAt_Unix);
+		}
+		MsgUnlock(pM);
+		return(pM->pszRcvdAt_Unix);
 	case tplFmtSecFrac:
 		if(pM->pszRcvdAt_SecFrac[0] == '\0') {
 			MsgLock(pM);
@@ -1664,6 +1669,15 @@ finalize_it:
 }
 
 
+/* Return state of last parser. If it had success, "OK" is returned, else
+ * "FAIL". All from the constant pool.
+ */
+static inline char *getParseSuccess(msg_t *pM)
+{
+	return (pM->bParseSuccess) ? "OK" : "FAIL";
+}
+
+
 /* al, 2011-07-26: LockMsg to avoid race conditions
  */
 static inline char *getMSGID(msg_t *pM)
@@ -1677,6 +1691,14 @@ static inline char *getMSGID(msg_t *pM)
 		MsgUnlock(pM);
 		return pszreturn; 
 	}
+}
+
+/* rgerhards 2012-03-15: set parser success (an integer, acutally bool)
+ */
+void MsgSetParseSuccess(msg_t *pMsg, int bSuccess)
+{
+	assert(pMsg != NULL);
+	pMsg->bParseSuccess = bSuccess;
 }
 
 /* rgerhards 2009-06-12: set associated ruleset
@@ -1694,7 +1716,7 @@ void MsgSetRuleset(msg_t *pMsg, ruleset_t *pRuleset)
 static void
 MsgSetRulesetByName(msg_t *pMsg, cstr_t *rulesetName)
 {
-	rulesetGetRuleset(&(pMsg->pRuleset), rsCStrGetSzStrNoNULL(rulesetName));
+	rulesetGetRuleset(runConf, &(pMsg->pRuleset), rsCStrGetSzStrNoNULL(rulesetName));
 }
 
 
@@ -1724,7 +1746,6 @@ void MsgSetTAG(msg_t *pMsg, uchar* pszBuf, size_t lenBuf)
 
 	memcpy(pBuf, pszBuf, pMsg->iLenTAG);
 	pBuf[pMsg->iLenTAG] = '\0'; /* this also works with truncation! */
-
 }
 
 
@@ -2355,6 +2376,165 @@ finalize_it:
 	}
 }
 
+
+/* Encode a JSON value and add it to provided string. Note that 
+ * the string object may be NULL. In this case, it is created
+ * if and only if escaping is needed.
+ */
+static rsRetVal
+jsonAddVal(uchar *pSrc, unsigned buflen, es_str_t **dst)
+{
+	unsigned char c;
+	es_size_t i;
+	char numbuf[4];
+	int j;
+	DEFiRet;
+
+	for(i = 0 ; i < buflen ; ++i) {
+		c = pSrc[i];
+		if(   (c >= 0x23 && c <= 0x5b)
+		   || (c >= 0x5d /* && c <= 0x10FFFF*/)
+		   || c == 0x20 || c == 0x21) {
+			/* no need to escape */
+			if(*dst != NULL)
+				es_addChar(dst, c);
+		} else {
+			if(*dst == NULL) {
+				if(i == 0) {
+					/* we hope we have only few escapes... */
+					*dst = es_newStr(buflen+10);
+				} else {
+					*dst = es_newStrFromBuf((char*)pSrc, i);
+				}
+				if(*dst == NULL) {
+					ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+				}
+			}
+			/* we must escape, try RFC4627-defined special sequences first */
+			switch(c) {
+			case '\0':
+				es_addBuf(dst, "\\u0000", 6);
+				break;
+			case '\"':
+				es_addBuf(dst, "\\\"", 2);
+				break;
+			case '/':
+				es_addBuf(dst, "\\/", 2);
+				break;
+			case '\\':
+				es_addBuf(dst, "\\\\", 2);
+				break;
+			case '\010':
+				es_addBuf(dst, "\\b", 2);
+				break;
+			case '\014':
+				es_addBuf(dst, "\\f", 2);
+				break;
+			case '\n':
+				es_addBuf(dst, "\\n", 2);
+				break;
+			case '\r':
+				es_addBuf(dst, "\\r", 2);
+				break;
+			case '\t':
+				es_addBuf(dst, "\\t", 2);
+				break;
+			default:
+				/* TODO : proper Unicode encoding (see header comment) */
+				for(j = 0 ; j < 4 ; ++j) {
+					numbuf[3-j] = hexdigit[c % 16];
+					c = c / 16;
+				}
+				es_addBuf(dst, "\\u", 2);
+				es_addBuf(dst, numbuf, 4);
+				break;
+			}
+		}
+	}
+finalize_it:
+	RETiRet;
+}
+
+
+/* encode a property in JSON escaped format. This is a helper
+ * to MsgGetProp. It needs to update all provided parameters.
+ * Note: Code is borrowed from libee (my own code, so ASL 2.0
+ * is fine with it); this function may later be replaced by
+ * some "better" and more complete implementation (maybe from
+ * libee or its helpers).
+ * For performance reasons, we begin to copy the string only
+ * when we recognice that we actually need to do some escaping.
+ * rgerhards, 2012-03-16
+ */
+static rsRetVal
+jsonEncode(uchar **ppRes, unsigned short *pbMustBeFreed, int *pBufLen)
+{
+	unsigned buflen;
+	uchar *pSrc;
+	es_str_t *dst = NULL;
+	DEFiRet;
+
+	pSrc = *ppRes;
+	buflen = (*pBufLen == -1) ? ustrlen(pSrc) : *pBufLen;
+	CHKiRet(jsonAddVal(pSrc, buflen, &dst));
+
+	if(dst != NULL) {
+		/* we updated the string and need to replace the
+		 * previous data.
+		 */
+		if(*pbMustBeFreed)
+			free(*ppRes);
+		*ppRes = (uchar*)es_str2cstr(dst, NULL);
+		*pbMustBeFreed = 1;
+		*pBufLen = -1;
+		es_deleteStr(dst);
+	}
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* Format a property as JSON field, that means
+ * "name"="value"
+ * where value is JSON-escaped (here we assume that the name
+ * only contains characters from the valid character set).
+ * Note: this function duplicates code from jsonEncode(). 
+ * TODO: these two functions should be combined, at least if
+ * that makes any sense from a performance PoV - definitely
+ * something to consider at a later stage. rgerhards, 2012-04-19
+ */
+static rsRetVal
+jsonField(struct templateEntry *pTpe, uchar **ppRes, unsigned short *pbMustBeFreed, int *pBufLen)
+{
+	unsigned buflen;
+	uchar *pSrc;
+	es_str_t *dst = NULL;
+	DEFiRet;
+
+	pSrc = *ppRes;
+	buflen = (*pBufLen == -1) ? ustrlen(pSrc) : *pBufLen;
+	/* we hope we have only few escapes... */
+	dst = es_newStr(buflen+es_strlen(pTpe->data.field.fieldName)+15);
+	es_addChar(&dst, '"');
+	es_addStr(&dst, pTpe->data.field.fieldName);
+	es_addBufConstcstr(&dst, "\"=\"");
+	CHKiRet(jsonAddVal(pSrc, buflen, &dst));
+	es_addChar(&dst, '"');
+
+	if(*pbMustBeFreed)
+		free(*ppRes);
+	/* we know we do not have \0 chars - so the size does not change */
+	*pBufLen = es_strlen(dst);
+	*ppRes = (uchar*)es_str2cstr(dst, NULL);
+	*pbMustBeFreed = 1;
+	es_deleteStr(dst);
+
+finalize_it:
+	RETiRet;
+}
+
+
 /* This function returns a string-representation of the 
  * requested message property. This is a generic function used
  * to abstract properties so that these can be easier
@@ -2438,12 +2618,6 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 		case PROP_RAWMSG:
 			getRawMsg(pMsg, &pRes, &bufLen);
 			break;
-		/* enable this, if someone actually uses UxTradMsg, delete after some  time has
-		 * passed and nobody complained -- rgerhards, 2009-06-16
-		case PROP_UXTRADMSG:
-			pRes = getUxTradMsg(pMsg);
-			break;
-		*/
 		case PROP_INPUTNAME:
 			getInputName(pMsg, &pRes, &bufLen);
 			break;
@@ -2502,6 +2676,9 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 		case PROP_MSGID:
 			pRes = (uchar*)getMSGID(pMsg);
 			break;
+		case PROP_PARSESUCCESS:
+			pRes = (uchar*)getParseSuccess(pMsg);
+			break;
 		case PROP_SYS_NOW:
 			if((pRes = getNOW(NOW_NOW)) == NULL) {
 				RET_OUT_OF_MEMORY;
@@ -2554,10 +2731,17 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			pRes = glbl.GetLocalHostName();
 			break;
 		case PROP_CEE_ALL_JSON:
-			ee_fmtEventToJSON(pMsg->event, &str);
-			pRes = (uchar*) es_str2cstr(str, "#000");
-			es_deleteStr(str);
-			*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
+			if(pMsg->event == NULL) {
+			if(*pbMustBeFreed == 1)
+				free(pRes);
+			pRes = (uchar*) "";
+			*pbMustBeFreed = 0;
+			} else {
+				ee_fmtEventToJSON(pMsg->event, &str);
+				pRes = (uchar*) es_str2cstr(str, "#000");
+				es_deleteStr(str);
+				*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
+			}
 			break;
 		case PROP_CEE:
 			getCEEPropVal(pMsg, propName, &pRes, &bufLen, pbMustBeFreed);
@@ -2624,7 +2808,7 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 		 */
 		iCurrFld = 1;
 		pFld = pRes;
-		while(*pFld && iCurrFld < pTpe->data.field.iToPos) {
+		while(*pFld && iCurrFld < pTpe->data.field.iFieldNr) {
 			/* skip fields until the requested field or end of string is found */
 			while(*pFld && (uchar) *pFld != pTpe->data.field.field_delim)
 				++pFld; /* skip to field terminator */
@@ -2638,9 +2822,9 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 				++iCurrFld;
 			}
 		}
-		dbgprintf("field requested %d, field found %d\n", pTpe->data.field.iToPos, (int) iCurrFld);
+		dbgprintf("field requested %d, field found %d\n", pTpe->data.field.iFieldNr, (int) iCurrFld);
 		
-		if(iCurrFld == pTpe->data.field.iToPos) {
+		if(iCurrFld == pTpe->data.field.iFieldNr) {
 			/* field found, now extract it */
 			/* first of all, we need to find the end */
 			pFldEnd = pFld;
@@ -2674,58 +2858,6 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			*pbMustBeFreed = 0;
 			*pPropLen = sizeof("**FIELD NOT FOUND**") - 1;
 			return UCHAR_CONSTANT("**FIELD NOT FOUND**");
-		}
-	} else if(pTpe->data.field.iFromPos != 0 || pTpe->data.field.iToPos != 0) {
-		/* we need to obtain a private copy */
-		int iFrom, iTo;
-		uchar *pSb;
-		iFrom = pTpe->data.field.iFromPos;
-		iTo = pTpe->data.field.iToPos;
-		/* need to zero-base to and from (they are 1-based!) */
-		if(iFrom > 0)
-			--iFrom;
-		if(iTo > 0)
-			--iTo;
-		if(bufLen == -1)
-			bufLen = ustrlen(pRes);
-		if(iFrom == 0 && iTo >=  bufLen) { 
-			/* in this case, the requested string is a superset of what we already have,
-			 * so there is no need to do any processing. This is a frequent case for size-limited
-			 * fields like TAG in the default forwarding template (so it is a useful optimization
-			 * to check for this condition ;)). -- rgerhards, 2009-07-09
-			 */
-			; /*DO NOTHING*/
-		} else {
-			iLen = iTo - iFrom + 1; /* the +1 is for an actual char, NOT \0! */
-			pBufStart = pBuf = MALLOC((iLen + 1) * sizeof(char));
-			if(pBuf == NULL) {
-				if(*pbMustBeFreed == 1)
-					free(pRes);
-				RET_OUT_OF_MEMORY;
-			}
-			pSb = pRes;
-			if(iFrom) {
-			/* skip to the start of the substring (can't do pointer arithmetic
-			 * because the whole string might be smaller!!)
-			 */
-				while(*pSb && iFrom) {
-					--iFrom;
-					++pSb;
-				}
-			}
-			/* OK, we are at the begin - now let's copy... */
-			bufLen = iLen;
-			while(*pSb && iLen) {
-				*pBuf++ = *pSb;
-				++pSb;
-				--iLen;
-			}
-			*pBuf = '\0';
-			bufLen -= iLen; /* subtract remaining length if the string was smaller! */
-			if(*pbMustBeFreed == 1)
-				free(pRes);
-			pRes = pBufStart;
-			*pbMustBeFreed = 1;
 		}
 #ifdef FEATURE_REGEXP
 	} else {
@@ -2850,6 +2982,60 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			}
 		}
 #endif /* #ifdef FEATURE_REGEXP */
+	}
+
+	if(pTpe->data.field.iFromPos != 0 || pTpe->data.field.iToPos != 0) {
+		/* we need to obtain a private copy */
+		int iFrom, iTo;
+		uchar *pSb;
+		iFrom = pTpe->data.field.iFromPos;
+		iTo = pTpe->data.field.iToPos;
+		/* need to zero-base to and from (they are 1-based!) */
+		if(iFrom > 0)
+			--iFrom;
+		if(iTo > 0)
+			--iTo;
+		if(bufLen == -1)
+			bufLen = ustrlen(pRes);
+		if(iFrom == 0 && iTo >=  bufLen) { 
+			/* in this case, the requested string is a superset of what we already have,
+			 * so there is no need to do any processing. This is a frequent case for size-limited
+			 * fields like TAG in the default forwarding template (so it is a useful optimization
+			 * to check for this condition ;)). -- rgerhards, 2009-07-09
+			 */
+			; /*DO NOTHING*/
+		} else {
+			iLen = iTo - iFrom + 1; /* the +1 is for an actual char, NOT \0! */
+			pBufStart = pBuf = MALLOC((iLen + 1) * sizeof(char));
+			if(pBuf == NULL) {
+				if(*pbMustBeFreed == 1)
+					free(pRes);
+				RET_OUT_OF_MEMORY;
+			}
+			pSb = pRes;
+			if(iFrom) {
+			/* skip to the start of the substring (can't do pointer arithmetic
+			 * because the whole string might be smaller!!)
+			 */
+				while(*pSb && iFrom) {
+					--iFrom;
+					++pSb;
+				}
+			}
+			/* OK, we are at the begin - now let's copy... */
+			bufLen = iLen;
+			while(*pSb && iLen) {
+				*pBuf++ = *pSb;
+				++pSb;
+				--iLen;
+			}
+			*pBuf = '\0';
+			bufLen -= iLen; /* subtract remaining length if the string was smaller! */
+			if(*pbMustBeFreed == 1)
+				free(pRes);
+			pRes = pBufStart;
+			*pbMustBeFreed = 1;
+		}
 	}
 
 	/* now check if we need to do our "SP if first char is non-space" hack logic */
@@ -3020,7 +3206,6 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 		}
 	}
 
-dbgprintf("prop repl 4, pRes='%s', len %d\n", pRes, bufLen);
 	/* Take care of spurious characters to make the property safe
 	 * for a path definition
 	 */
@@ -3144,8 +3329,8 @@ dbgprintf("prop repl 4, pRes='%s', len %d\n", pRes, bufLen);
 		}
 	}
 
-	/* finally, we need to check if the property should be formatted in CSV
-	 * format (we use RFC 4180, and always use double quotes). As of this writing,
+	/* finally, we need to check if the property should be formatted in CSV or JSON.
+	 * For CSV we use RFC 4180, and always use double quotes. As of this writing,
 	 * this should be the last action carried out on the property, but in the
 	 * future there may be reasons to change that. -- rgerhards, 2009-04-02
 	 */
@@ -3179,110 +3364,82 @@ dbgprintf("prop repl 4, pRes='%s', len %d\n", pRes, bufLen);
 		pRes = pBStart;
 		bufLen = -1;
 		*pbMustBeFreed = 1;
+	} else if(pTpe->data.field.options.bJSON) {
+		jsonEncode(&pRes, pbMustBeFreed, &bufLen);
+	} else if(pTpe->data.field.options.bJSONf) {
+		jsonField(pTpe, &pRes, pbMustBeFreed, &bufLen);
 	}
 
 	if(bufLen == -1)
 		bufLen = ustrlen(pRes);
 	*pPropLen = bufLen;
 
-dbgprintf("end prop repl, pRes='%s', len %d\n", pRes, bufLen);
 	ENDfunc
 	return(pRes);
 }
 
 
-/* The function returns a cee variable suitable for use with RainerScript. Most importantly, this means
- * that the value is returned in a var_t object. The var_t is constructed inside this function and
- * MUST be freed by the caller.
+/* The function returns a cee variable suitable for use with RainerScript. 
+ * Note: caller must free the returned string.
  * Note that we need to do a lot of conversions between es_str_t and cstr -- this will go away once
  * we have moved larger parts of rsyslog to es_str_t. Acceptable for the moment, especially as we intend
  * to rewrite the script engine as well!
  * rgerhards, 2010-12-03
  */
-rsRetVal
-msgGetCEEVar(msg_t *pMsg, cstr_t *propName, var_t **ppVar)
+es_str_t*
+msgGetCEEVarNew(msg_t *pMsg, char *name)
 {
-	DEFiRet;
-	var_t *pVar;
-	cstr_t *pstrProp;
-	es_str_t *str = NULL;
+	es_str_t *estr = NULL;
 	es_str_t *epropName = NULL;
-	int r;
+	struct ee_field *field;
 
 	ISOBJ_TYPE_assert(pMsg, msg);
-	ASSERT(propName != NULL);
-	ASSERT(ppVar != NULL);
 
-	/* make sure we have a var_t instance */
-	CHKiRet(var.Construct(&pVar));
-	CHKiRet(var.ConstructFinalize(pVar));
-
-	epropName = es_newStrFromBuf((char*)propName->pBuf, propName->iStrLen);
-	r = ee_getEventFieldAsString(pMsg->event, epropName, &str);
-
-	if(r != EE_OK) {
-		DBGPRINTF("msgGtCEEVar: libee error %d during ee_getEventFieldAsString\n", r);
-		CHKiRet(cstrConstruct(&pstrProp));
-		CHKiRet(cstrFinalize(pstrProp));
-	} else {
-		CHKiRet(cstrConstructFromESStr(&pstrProp, str));
+	if(pMsg->event == NULL) {
+		estr = es_newStr(1);
+		goto done;
 	}
 
-	/* now create a string object out of it and hand that over to the var */
-	CHKiRet(var.SetString(pVar, pstrProp));
-	es_deleteStr(str);
+	epropName = es_newStrFromCStr(name, strlen(name)); // TODO: optimize (in grammar!) 
+	field = ee_getEventField(pMsg->event, epropName);
+	if(field != NULL) {
+		ee_getFieldAsString(field, &estr);
+	}
+	if(estr == NULL) {
+		DBGPRINTF("msgGetCEEVar: error obtaining var (field=%p, var='%s')\n",
+			  field, name);
+		estr = es_newStrFromCStr("*ERROR*", sizeof("*ERROR*") - 1);
+	}
+	es_deleteStr(epropName);
 
-	/* finally store var */
-	*ppVar = pVar;
-
-finalize_it:
-	if(epropName != NULL)
-		es_deleteStr(epropName);
-	RETiRet;
+done:
+	return estr;
 }
 
 
-/* The returns a message variable suitable for use with RainerScript. Most importantly, this means
- * that the value is returned in a var_t object. The var_t is constructed inside this function and
- * MUST be freed by the caller.
- * rgerhards, 2008-02-25
+/* Return an es_str_t for given message property.
  */
-rsRetVal
-msgGetMsgVar(msg_t *pThis, cstr_t *pstrPropName, var_t **ppVar)
+es_str_t*
+msgGetMsgVarNew(msg_t *pThis, uchar *name)
 {
-	DEFiRet;
-	var_t *pVar;
 	size_t propLen;
 	uchar *pszProp = NULL;
-	cstr_t *pstrProp;
 	propid_t propid;
 	unsigned short bMustBeFreed = 0;
+	es_str_t *estr;
 
 	ISOBJ_TYPE_assert(pThis, msg);
-	ASSERT(pstrPropName != NULL);
-	ASSERT(ppVar != NULL);
-
-	/* make sure we have a var_t instance */
-	CHKiRet(var.Construct(&pVar));
-	CHKiRet(var.ConstructFinalize(pVar));
 
 	/* always call MsgGetProp() without a template specifier */
 	/* TODO: optimize propNameToID() call -- rgerhards, 2009-06-26 */
-	propNameToID(pstrPropName, &propid);
+	propNameStrToID(name, &propid);
 	pszProp = (uchar*) MsgGetProp(pThis, NULL, propid, NULL, &propLen, &bMustBeFreed);
 
-	/* now create a string object out of it and hand that over to the var */
-	CHKiRet(rsCStrConstructFromszStr(&pstrProp, pszProp));
-	CHKiRet(var.SetString(pVar, pstrProp));
-
-	/* finally store var */
-	*ppVar = pVar;
-
-finalize_it:
+	estr = es_newStrFromCStr((char*)pszProp, propLen);
 	if(bMustBeFreed)
 		free(pszProp);
 
-	RETiRet;
+	return estr;
 }
 
 
@@ -3315,11 +3472,6 @@ rsRetVal MsgSetProperty(msg_t *pThis, var_t *pProp)
 		MsgSetMSGoffs(pThis, pProp->val.num);
 	} else if(isProp("pszRawMsg")) {
 		MsgSetRawMsg(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.pStr), cstrLen(pProp->val.pStr));
- 	/* enable this, if someone actually uses UxTradMsg, delete after some  time has
-	 * passed and nobody complained -- rgerhards, 2009-06-16
-	} else if(isProp("offAfterPRI")) {
-		pThis->offAfterPRI = pProp->val.num;
-	*/
 	} else if(isProp("pszUxTradMsg")) {
 		/*IGNORE*/; /* this *was* a property, but does no longer exist */
 	} else if(isProp("pszTAG")) {
@@ -3403,7 +3555,6 @@ rsRetVal msgQueryInterface(void) { return RS_RET_NOT_IMPLEMENTED; }
  */
 BEGINObjClassInit(msg, 1, OBJ_IS_CORE_MODULE)
 	/* request objects we use */
-	CHKiRet(objUse(var, CORE_COMPONENT));
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(prop, CORE_COMPONENT));

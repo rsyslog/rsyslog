@@ -48,9 +48,11 @@
 #include "module-template.h"
 #include "debug.h"
 #include "errmsg.h"
+#include "conf.h"
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
+MODULE_CNFNAME("omlibdbi")
 
 /* internal structures
  */
@@ -59,6 +61,7 @@ DEFobjCurrIf(errmsg)
 static int bDbiInitialized = 0;	/* dbi_initialize() can only be called one - this keeps track of it */
 
 typedef struct _instanceData {
+	uchar *dbiDrvrDir;	/* where do the dbi drivers reside? */
 	dbi_conn conn;		/* handle to database */
 	uchar *drvrName;	/* driver to use */
 	uchar *host;		/* host to connect to */
@@ -66,6 +69,7 @@ typedef struct _instanceData {
 	uchar *pwd;		/* password for connect */
 	uchar *dbName;		/* database to use */
 	unsigned uLastDBErrno;	/* last errno returned by libdbi or 0 if all is well */
+	uchar	*tplName;       /* format template to use */
 } instanceData;
 
 typedef struct configSettings_s {
@@ -76,8 +80,25 @@ typedef struct configSettings_s {
 	uchar *pwd;		/* password for connect */
 	uchar *dbName;		/* database to use */
 } configSettings_t;
+static configSettings_t cs;
 
-SCOPING_SUPPORT; /* must be set AFTER configSettings_t is defined */
+/* tables for interfacing with the v6 config system */
+/* action (instance) parameters */
+static struct cnfparamdescr actpdescr[] = {
+	{ "server", eCmdHdlrGetWord, 1 },
+	{ "db", eCmdHdlrGetWord, 1 },
+	{ "uid", eCmdHdlrGetWord, 1 },
+	{ "pwd", eCmdHdlrGetWord, 1 },
+	{ "driverdirectory", eCmdHdlrGetWord, 0 },
+	{ "driver", eCmdHdlrGetWord, 1 },
+	{ "template", eCmdHdlrGetWord, 0 }
+};
+static struct cnfparamblk actpblk =
+	{ CNFPARAMBLK_VERSION,
+	  sizeof(actpdescr)/sizeof(struct cnfparamdescr),
+	  actpdescr
+	};
+
 
 BEGINinitConfVars		/* (re)set config variables to default values */
 CODESTARTinitConfVars 
@@ -123,6 +144,7 @@ static void closeConn(instanceData *pData)
 BEGINfreeInstance
 CODESTARTfreeInstance
 	closeConn(pData);
+	free(pData->dbiDrvrDir);
 	free(pData->drvrName);
 	free(pData->host);
 	free(pData->usrName);
@@ -183,9 +205,9 @@ static rsRetVal initConn(instanceData *pData, int bSilent)
 	if(bDbiInitialized == 0) {
 		/* we need to init libdbi first */
 #		ifdef HAVE_DBI_R
-		iDrvrsLoaded = dbi_initialize_r((char*) cs.dbiDrvrDir, &dbiInst);
+		iDrvrsLoaded = dbi_initialize_r((char*) pData->dbiDrvrDir, &dbiInst);
 #		else
-		iDrvrsLoaded = dbi_initialize((char*) cs.dbiDrvrDir);
+		iDrvrsLoaded = dbi_initialize((char*) pData->dbiDrvrDir);
 #		endif
 		if(iDrvrsLoaded == 0) {
 			errmsg.LogError(0, RS_RET_SUSPENDED, "libdbi error: libdbi or libdbi drivers not present on this system - suspending.");
@@ -280,6 +302,62 @@ CODESTARTdoAction
 ENDdoAction
 
 
+static inline void
+setInstParamDefaults(instanceData *pData)
+{
+	pData->tplName = NULL;
+}
+
+
+BEGINnewActInst
+	struct cnfparamvals *pvals;
+	int i;
+CODESTARTnewActInst
+	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
+		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
+
+	CHKiRet(createInstance(&pData));
+	setInstParamDefaults(pData);
+
+	CODE_STD_STRING_REQUESTparseSelectorAct(1)
+	for(i = 0 ; i < actpblk.nParams ; ++i) {
+		if(!pvals[i].bUsed)
+			continue;
+		if(!strcmp(actpblk.descr[i].name, "server")) {
+			pData->host = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "db")) {
+			pData->dbName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "uid")) {
+			pData->usrName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "pwd")) {
+			pData->pwd = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "driverdirectory")) {
+			pData->dbiDrvrDir = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "driver")) {
+			pData->drvrName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "template")) {
+			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else {
+			dbgprintf("ommysql: program error, non-handled "
+			  "param '%s'\n", actpblk.descr[i].name);
+		}
+	}
+
+	if(pData->tplName == NULL) {
+		CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*) strdup(" StdDBFmt"),
+			OMSR_RQD_TPL_OPT_SQL));
+	} else {
+		CHKiRet(OMSRsetEntry(*ppOMSR, 0,
+			(uchar*) strdup((char*) pData->tplName),
+			OMSR_RQD_TPL_OPT_SQL));
+	}
+CODE_STD_FINALIZERnewActInst
+dbgprintf("XXXX: added param, iRet %d\n", iRet);
+	cnfparamvalsDestruct(pvals, &actpblk);
+ENDnewActInst
+
+
 BEGINparseSelectorAct
 CODESTARTparseSelectorAct
 CODE_STD_STRING_REQUESTparseSelectorAct(1)
@@ -310,6 +388,8 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		if((pData->dbName   = (uchar*) strdup((char*)cs.dbName))   == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	if(cs.pwd     != NULL)
 		if((pData->pwd      = (uchar*) strdup((char*)cs.pwd))       == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	if(cs.dbiDrvrDir != NULL)
+		if((pData->dbiDrvrDir = (uchar*) strdup((char*)cs.dbiDrvrDir)) == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 
 	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_RQD_TPL_OPT_SQL, (uchar*) " StdDBFmt"));
 
@@ -333,6 +413,7 @@ ENDmodExit
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
+CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 ENDqueryEtryPt
 
 
@@ -359,7 +440,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 
 BEGINmodInit()
 CODESTARTmodInit
-SCOPINGmodInit
+INITLegCnfVars
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));

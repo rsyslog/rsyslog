@@ -51,12 +51,18 @@
 
 MODULE_TYPE_INPUT
 MODULE_TYPE_NOKEEP
+MODULE_CNFNAME("im3195")
 
 /* Module static data */
 DEF_IMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
 
 /* configuration settings */
+
+struct modConfData_s {
+	EMPTY_STRUCT;
+};
+
 static int listenPort = 601;
 
 /* we use a global API object below, because this listener is
@@ -84,8 +90,35 @@ void OnReceive(srAPIObj __attribute__((unused)) *pMyAPI, srSLMGObj* pSLMG)
 	srSLMGGetRawMSG(pSLMG, &pszRawMsg);
 
 	parseAndSubmitMessage(fromHost, fromHostIP, pszRawMsg, strlen((char*)pszRawMsg),
-		PARSE_HOSTNAME, eFLOWCTL_FULL_DELAY, (uchar*)"im3195", NULL, 0);
+		PARSE_HOSTNAME, eFLOWCTL_FULL_DELAY, (uchar*)"im3195", NULL, 0, NULL);
 }
+
+
+#if 0
+BEGINbeginCnfLoad
+CODESTARTbeginCnfLoad
+ENDbeginCnfLoad
+
+
+BEGINendCnfLoad
+CODESTARTendCnfLoad
+ENDendCnfLoad
+
+
+BEGINcheckCnf
+CODESTARTcheckCnf
+ENDcheckCnf
+
+
+BEGINactivateCnf
+CODESTARTactivateCnf
+ENDactivateCnf
+
+
+BEGINfreeCnf
+CODESTARTfreeCnf
+ENDfreeCnf
+#endif
 
 
 BEGINrunInput

@@ -8,11 +8,14 @@ librsyslog_la_SOURCES = \
 	rsyslog.c \
 	rsyslog.h \
 	typedefs.h \
+	dnscache.c \
+	dnscache.h \
 	unicode-helper.h \
 	atomic.h \
 	batch.h \
 	syslogd-types.h \
 	module-template.h \
+	im-helper.h \
 	obj-types.h \
 	nsd.h \
 	glbl.h \
@@ -20,6 +23,8 @@ librsyslog_la_SOURCES = \
 	unlimited_select.h \
 	conf.c \
 	conf.h \
+	rsconf.c \
+	rsconf.h \
 	parser.h \
 	parser.c \
 	strgen.h \
@@ -44,18 +49,8 @@ librsyslog_la_SOURCES = \
 	obj.h \
 	modules.c \
 	modules.h \
-	apc.c \
-	apc.h \
 	statsobj.c \
 	statsobj.h \
-	sync.c \
-	sync.h \
-	expr.c \
-	expr.h \
-	ctok.c \
-	ctok.h \
-	ctok_token.c \
-	ctok_token.h \
 	stream.c \
 	stream.h \
 	var.c \
@@ -64,16 +59,6 @@ librsyslog_la_SOURCES = \
 	wtp.h \
 	wti.c \
 	wti.h \
-	sysvar.c \
-	sysvar.h \
-	vm.c \
-	vm.h \
-	vmstk.c \
-	vmstk.h \
-	vmprg.c \
-	vmprg.h \
-	vmop.c \
-	vmop.h \
 	queue.c \
 	queue.h \
 	ruleset.c \
@@ -110,9 +95,9 @@ librsyslog_la_SOURCES = \
 # runtime or will no longer be needed. -- rgerhards, 2008-06-13
 
 if WITH_MODDIRS
-librsyslog_la_CPPFLAGS = -DSD_EXPORT_SYMBOLS -D_PATH_MODDIR=\"$(pkglibdir)/:$(moddirs)\" $(PTHREADS_CFLAGS) $(LIBEE_CFLAGS)
+librsyslog_la_CPPFLAGS = -DSD_EXPORT_SYMBOLS -D_PATH_MODDIR=\"$(pkglibdir)/:$(moddirs)\" $(PTHREADS_CFLAGS) $(LIBEE_CFLAGS) -I\$(top_srcdir)/tools
 else
-librsyslog_la_CPPFLAGS = -DSD_EXPORT_SYMBOLS -D_PATH_MODDIR=\"$(pkglibdir)/\" -I$(top_srcdir) $(PTHREADS_CFLAGS) $(LIBEE_CFLAGS)
+librsyslog_la_CPPFLAGS = -DSD_EXPORT_SYMBOLS -D_PATH_MODDIR=\"$(pkglibdir)/\" -I$(top_srcdir) $(PTHREADS_CFLAGS) $(LIBEE_CFLAGS) -I\$(top_srcdir)/tools -I\$(top_srcdir)/grammar
 endif
 #librsyslog_la_LDFLAGS = -module -avoid-version
 librsyslog_la_LIBADD =  $(DL_LIBS) $(RT_LIBS) $(LIBEE_LIBS)

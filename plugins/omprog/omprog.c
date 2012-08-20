@@ -45,6 +45,7 @@
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
+MODULE_CNFNAME("omprog")
 
 /* internal structures
  */
@@ -53,6 +54,7 @@ DEFobjCurrIf(errmsg)
 
 typedef struct _instanceData {
 	uchar *szBinary;	/* name of binary to call */
+	uchar *tplName;		/* assigned output template */
 	pid_t pid;		/* pid of currently running process */
 	int fdPipe;		/* file descriptor to write to */
 	int bIsRunning;		/* is binary currently running? 0-no, 1-yes */
@@ -61,8 +63,20 @@ typedef struct _instanceData {
 typedef struct configSettings_s {
 	uchar *szBinary;	/* name of binary to call */
 } configSettings_t;
+static configSettings_t cs;
 
-SCOPING_SUPPORT; /* must be set AFTER configSettings_t is defined */
+
+/* tables for interfacing with the v6 config system */
+/* action (instance) parameters */
+static struct cnfparamdescr actpdescr[] = {
+	{ "binary", eCmdHdlrString, CNFPARAM_REQUIRED },
+	{ "template", eCmdHdlrGetWord, 0 }
+};
+static struct cnfparamblk actpblk =
+	{ CNFPARAMBLK_VERSION,
+	  sizeof(actpdescr)/sizeof(struct cnfparamdescr),
+	  actpdescr
+	};
 
 BEGINinitConfVars		/* (re)set config variables to default values */
 CODESTARTinitConfVars 
@@ -298,6 +312,51 @@ CODESTARTdoAction
 ENDdoAction
 
 
+static inline void
+setInstParamDefaults(instanceData *pData)
+{
+	pData->szBinary = NULL;
+	pData->fdPipe = -1;
+	pData->bIsRunning = 0;
+}
+
+BEGINnewActInst
+	struct cnfparamvals *pvals;
+	int i;
+CODESTARTnewActInst
+	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
+		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
+
+	CHKiRet(createInstance(&pData));
+	setInstParamDefaults(pData);
+
+	CODE_STD_STRING_REQUESTparseSelectorAct(1)
+	for(i = 0 ; i < actpblk.nParams ; ++i) {
+		if(!pvals[i].bUsed)
+			continue;
+		if(!strcmp(actpblk.descr[i].name, "binary")) {
+			pData->szBinary = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "template")) {
+			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else {
+			dbgprintf("omprog: program error, non-handled "
+			  "param '%s'\n", actpblk.descr[i].name);
+		}
+	}
+
+	if(pData->tplName == NULL) {
+		CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*) "RSYSLOG_FileFormat",
+			OMSR_NO_RQD_TPL_OPTS));
+	} else {
+		CHKiRet(OMSRsetEntry(*ppOMSR, 0,
+			(uchar*) strdup((char*) pData->tplName),
+			OMSR_NO_RQD_TPL_OPTS));
+	}
+CODE_STD_FINALIZERnewActInst
+	cnfparamvalsDestruct(pvals, &actpblk);
+ENDnewActInst
+
 BEGINparseSelectorAct
 CODESTARTparseSelectorAct
 CODE_STD_STRING_REQUESTparseSelectorAct(1)
@@ -308,6 +367,12 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 
 	/* ok, if we reach this point, we have something for us */
 	p += sizeof(":omprog:") - 1; /* eat indicator sequence  (-1 because of '\0'!) */
+	if(cs.szBinary == NULL) {
+		errmsg.LogError(0, RS_RET_CONF_RQRD_PARAM_MISSING,
+			"no binary to execute specified");
+		ABORT_FINALIZE(RS_RET_CONF_RQRD_PARAM_MISSING);
+	}
+
 	CHKiRet(createInstance(&pData));
 
 	if(cs.szBinary == NULL) {
@@ -337,6 +402,8 @@ ENDmodExit
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
+CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES 
+CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 ENDqueryEtryPt
 
 
@@ -354,7 +421,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 
 BEGINmodInit()
 CODESTARTmodInit
-SCOPINGmodInit
+INITLegCnfVars
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));

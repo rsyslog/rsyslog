@@ -38,7 +38,6 @@
 #include "obj.h"
 #include "modules.h"
 #include "datetime.h"
-#include "sysvar.h"
 #include "srUtils.h"
 #include "stringbuf.h"
 #include "errmsg.h"
@@ -52,6 +51,47 @@ static const int tenPowers[6] = { 1, 10, 100, 1000, 10000, 100000 };
 
 /* ------------------------------ methods ------------------------------ */
 
+
+/** 
+ * Convert struct timeval to syslog_time
+ */
+void
+timeval2syslogTime(struct timeval *tp, struct syslogTime *t)
+{
+	struct tm *tm;
+	struct tm tmBuf;
+	long lBias;
+
+	tm = localtime_r((time_t*) &(tp->tv_sec), &tmBuf);
+
+	t->year = tm->tm_year + 1900;
+	t->month = tm->tm_mon + 1;
+	t->day = tm->tm_mday;
+	t->hour = tm->tm_hour;
+	t->minute = tm->tm_min;
+	t->second = tm->tm_sec;
+	t->secfrac = tp->tv_usec;
+	t->secfracPrecision = 6;
+
+#	if __sun
+		/* Solaris uses a different method of exporting the time zone.
+		 * It is UTC - localtime, which is the opposite sign of mins east of GMT.
+		 */
+		lBias = -(daylight ? altzone : timezone);
+#	elif defined(__hpux)
+		lBias = tz.tz_dsttime ? - tz.tz_minuteswest : 0;
+#	else
+		lBias = tm->tm_gmtoff;
+#	endif
+	if(lBias < 0) {
+		t->OffsetMode = '-';
+		lBias *= -1;
+	} else
+		t->OffsetMode = '+';
+	t->OffsetHour = lBias / 3600;
+	t->OffsetMinute = (lBias % 3600) / 60;
+	t->timeType = TIME_TYPE_RFC5424; /* we have a high precision timestamp */
+}
 
 /**
  * Get the current date/time in the best resolution the operating
@@ -72,9 +112,6 @@ static const int tenPowers[6] = { 1, 10, 100, 1000, 10000, 100000 };
 static void getCurrTime(struct syslogTime *t, time_t *ttSeconds)
 {
 	struct timeval tp;
-	struct tm *tm;
-	struct tm tmBuf;
-	long lBias;
 #	if defined(__hpux)
 	struct timezone tz;
 #	endif
@@ -91,37 +128,7 @@ static void getCurrTime(struct syslogTime *t, time_t *ttSeconds)
 	if(ttSeconds != NULL)
 		*ttSeconds = tp.tv_sec;
 
-	tm = localtime_r((time_t*) &(tp.tv_sec), &tmBuf);
-
-	t->year = tm->tm_year + 1900;
-	t->month = tm->tm_mon + 1;
-	t->day = tm->tm_mday;
-	t->hour = tm->tm_hour;
-	t->minute = tm->tm_min;
-	t->second = tm->tm_sec;
-	t->secfrac = tp.tv_usec;
-	t->secfracPrecision = 6;
-
-#	if __sun
-		/* Solaris uses a different method of exporting the time zone.
-		 * It is UTC - localtime, which is the opposite sign of mins east of GMT.
-		 */
-		lBias = -(daylight ? altzone : timezone);
-#	elif defined(__hpux)
-		lBias = tz.tz_dsttime ? - tz.tz_minuteswest : 0;
-#	else
-		lBias = tm->tm_gmtoff;
-#	endif
-	if(lBias < 0)
-	{
-		t->OffsetMode = '-';
-		lBias *= -1;
-	}
-	else
-		t->OffsetMode = '+';
-	t->OffsetHour = lBias / 3600;
-	t->OffsetMinute = (lBias % 3600) / 60;
-	t->timeType = TIME_TYPE_RFC5424; /* we have a high precision timestamp */
+	timeval2syslogTime(&tp, t);
 }
 
 
@@ -843,6 +850,126 @@ int formatTimestamp3164(struct syslogTime *ts, char* pBuf, int bBuggyDay)
 }
 
 
+/**
+ * convert syslog timestamp to time_t
+ */
+time_t syslogTime2time_t(struct syslogTime *ts)
+{
+	long MonthInDays, NumberOfYears, NumberOfDays, i;
+	int utcOffset;
+	time_t TimeInUnixFormat;
+
+	/* Counting how many Days have passed since the 01.01 of the
+	 * selected Year (Month level), according to the selected Month*/
+
+	switch(ts->month)
+	{
+		case 1:
+			MonthInDays = 0;         //until 01 of January
+			break;
+		case 2:
+			MonthInDays = 31;        //until 01 of February - leap year handling down below!
+			break;
+		case 3:
+			MonthInDays = 59;        //until 01 of March
+			break;
+		case 4:
+			MonthInDays = 90;        //until 01 of April
+			break;
+		case 5:
+			MonthInDays = 120;       //until 01 of Mai
+			break;
+		case 6:
+			MonthInDays = 151;       //until 01 of June
+			break;
+		case 7:
+			MonthInDays = 181;       //until 01 of July
+			break;
+		case 8:
+			MonthInDays = 212;       //until 01 of August
+			break;
+		case 9:
+			MonthInDays = 243;       //until 01 of September
+			break;
+		case 10:
+			MonthInDays = 273;       //until 01 of Oktober
+			break;
+		case 11:
+			MonthInDays = 304;       //until 01 of November
+			break;
+		case 12:
+			MonthInDays = 334;       //until 01 of December
+			break;
+	}	
+
+
+	/*	1) Counting how many Years have passed since 1970
+		2) Counting how many Days have passed since the 01.01 of the selected Year
+			(Day level) according to the Selected Month and Day. Last day doesn't count,
+			it should be until last day
+		3) Calculating this period (NumberOfDays) in seconds*/
+
+	NumberOfYears = ts->year - 1970;										
+	NumberOfDays = MonthInDays + ts->day - 1;
+	TimeInUnixFormat = NumberOfYears * 31536000 + NumberOfDays * 86400;
+
+	/* Now we need to adjust the number of years for leap
+	 * year processing. If we are in Jan or Feb, this year
+	 * will never be considered - because we haven't arrived
+	 * at then end of Feb right now. [Feb, 29th in a leap year
+	 * is handled correctly, because the day (29) is correctly
+	 * added to the date serial]
+	 */
+	if(ts->month < 3)
+		NumberOfYears--;
+
+	/*...AND ADDING ONE DAY FOR EACH YEAR WITH 366 DAYS
+	 * note that we do not handle 2000 any special, as it was a
+	 * leap year. The current code works OK until 2100, when it will
+	 * break. As we do not process future dates, we accept that fate...
+	 * the whole thing could be refactored by a table-based approach.
+	 */
+	for(i = 1;i <= NumberOfYears; i++)
+	{
+	/*	If i = 2 we have 1972, which was a Year with 366 Days
+		and if (i + 2) Mod (4) = 0 we have a Year after 1972
+		which is also a Year with 366 Days (repeated every 4 Years) */
+		if ((i == 2) || (((i + 2) % 4) == 0))
+		{	/*Year with 366 Days!!!*/
+			TimeInUnixFormat += 86400;
+		}	
+	}
+
+	/*Add Hours, minutes and seconds */
+	TimeInUnixFormat += ts->hour*60*60;
+	TimeInUnixFormat += ts->minute*60;
+	TimeInUnixFormat += ts->second;
+	/* do UTC offset */
+	utcOffset = ts->OffsetHour*3600 + ts->OffsetMinute*60;
+	if(ts->OffsetMode == '+')
+		utcOffset *= -1; /* if timestamp is ahead, we need to "go back" to UTC */
+	TimeInUnixFormat += utcOffset;
+	return TimeInUnixFormat;
+}
+
+
+/**
+ * format a timestamp as a UNIX timestamp; subsecond resolution is
+ * discarded.
+ * Note that this code can use some refactoring. I decided to use it
+ * because mktime() requires an upfront TZ update as it works on local
+ * time. In any case, it is worth reconsidering to move to mktime() or
+ * some other method.
+ * Important: pBuf must point to a buffer of at least 11 bytes.
+ * rgerhards, 2012-03-29
+ */
+int formatTimestampUnix(struct syslogTime *ts, char *pBuf)
+{
+	snprintf(pBuf, 11, "%u", (unsigned) syslogTime2time_t(ts));
+	return 11;
+}
+
+
 /* queryInterface function
  * rgerhards, 2008-03-05
  */
@@ -859,6 +986,7 @@ CODESTARTobjQueryInterface(datetime)
 	 */
 	pIf->getCurrTime = getCurrTime;
 	pIf->GetTime = getTime;
+	pIf->timeval2syslogTime = timeval2syslogTime;
 	pIf->ParseTIMESTAMP3339 = ParseTIMESTAMP3339;
 	pIf->ParseTIMESTAMP3164 = ParseTIMESTAMP3164;
 	pIf->formatTimestampToMySQL = formatTimestampToMySQL;
@@ -866,6 +994,8 @@ CODESTARTobjQueryInterface(datetime)
 	pIf->formatTimestampSecFrac = formatTimestampSecFrac;
 	pIf->formatTimestamp3339 = formatTimestamp3339;
 	pIf->formatTimestamp3164 = formatTimestamp3164;
+	pIf->formatTimestampUnix = formatTimestampUnix;
+	pIf->syslogTime2time_t = syslogTime2time_t;
 finalize_it:
 ENDobjQueryInterface(datetime)
 

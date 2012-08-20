@@ -36,7 +36,6 @@
 #include "rsyslog.h"
 #include "obj.h"
 #include "errmsg.h"
-#include "sysvar.h"
 #include "srUtils.h"
 #include "stringbuf.h"
 
@@ -84,13 +83,13 @@ LogError(int iErrno, int iErrCode, char *fmt, ... )
 
 	if(iErrno != 0) {
 		rs_strerror_r(iErrno, errStr, sizeof(errStr));
-		if(iErrCode == NO_ERRCODE) {
+		if(iErrCode == NO_ERRCODE || iErrCode == RS_RET_ERR) {
 			snprintf(msg, sizeof(msg), "%s: %s", buf, errStr);
 		} else {
 			snprintf(msg, sizeof(msg), "%s: %s [try http://www.rsyslog.com/e/%d ]", buf, errStr, iErrCode * -1);
 		}
 	} else {
-		if(iErrCode == NO_ERRCODE) {
+		if(iErrCode == NO_ERRCODE || iErrCode == RS_RET_ERR) {
 			snprintf(msg, sizeof(msg), "%s", buf);
 		} else {
 			snprintf(msg, sizeof(msg), "%s [try http://www.rsyslog.com/e/%d ]", buf, iErrCode * -1);

@@ -87,7 +87,6 @@
 #include "errmsg.h"
 #include "cfsysline.h"
 #include "unicode-helper.h"
-#include "apc.h"
 #include "datetime.h"
 
 /* static data */
@@ -611,6 +610,8 @@ static rsRetVal objDeserializeProperty(var_t *pProp, strm_t *pStrm)
 	number_t i;
 	number_t iLen;
 	uchar c;
+	int step = 0; /* which step was successful? */
+	int64 offs;
 
 	assert(pProp != NULL);
 
@@ -631,13 +632,16 @@ static rsRetVal objDeserializeProperty(var_t *pProp, strm_t *pStrm)
 		NEXTC;
 	}
 	CHKiRet(cstrFinalize(pProp->pcsName));
+	step = 1;
 
 	/* property type */
 	CHKiRet(objDeserializeNumber(&i, pStrm));
 	pProp->varType = i;
+	step = 2;
 
 	/* size (needed for strings) */
 	CHKiRet(objDeserializeNumber(&iLen, pStrm));
+	step = 3;
 
 	/* we now need to deserialize the value */
 	switch(pProp->varType) {
@@ -654,12 +658,44 @@ static rsRetVal objDeserializeProperty(var_t *pProp, strm_t *pStrm)
 			dbgprintf("invalid VARTYPE %d\n", pProp->varType);
 			break;
 	}
+	step = 4;
 
 	/* we should now be at the end of the line. So the next char must be \n */
 	NEXTC;
 	if(c != '\n') ABORT_FINALIZE(RS_RET_INVALID_PROPFRAME);
 
 finalize_it:
+	if(Debug && iRet != RS_RET_OK) {
+		strm.GetCurrOffset(pStrm, &offs);
+		dbgprintf("error %d deserializing property name, offset %lld, step %d\n",
+			  iRet, offs, step);
+		if(step >= 1) {
+			dbgprintf("error property name: '%s'\n", rsCStrGetSzStrNoNULL(pProp->pcsName));
+		}
+		if(step >= 2) {
+			dbgprintf("error var type: '%d'\n", pProp->varType);
+		}
+		if(step >= 3) {
+			dbgprintf("error len: '%d'\n", (int) iLen);
+		}
+		if(step >= 4) {
+			switch(pProp->varType) {
+				case VARTYPE_STR:
+					dbgprintf("error data string: '%s'\n",
+						  rsCStrGetSzStrNoNULL(pProp->val.pStr));
+					break;
+				case VARTYPE_NUMBER:
+					dbgprintf("error number: %d\n", (int) pProp->val.num);
+					break;
+				case VARTYPE_SYSLOGTIME:
+					dbgprintf("syslog time was successfully parsed (but "
+					          "is not displayed\n");
+					break;
+				default:
+					break;
+			}
+		}
+	}
 	RETiRet;
 }
 
@@ -1152,7 +1188,7 @@ UseObj(char *srcFile, uchar *pObjName, uchar *pObjFile, interface_t *pIf)
 		if(pObjFile == NULL) {
 			FINALIZE; /* no chance, we have lost... */
 		} else {
-			CHKiRet(module.Load(pObjFile));
+			CHKiRet(module.Load(pObjFile, 0));
 			/* NOW, we must find it or we have a problem... */
 			CHKiRet(FindObjInfo(pStr, &pObjInfo));
 		}
@@ -1331,7 +1367,6 @@ objClassInit(modInfo_t *pModInfo)
 	/* init classes we use (limit to as few as possible!) */
 	CHKiRet(errmsgClassInit(pModInfo));
 	CHKiRet(datetimeClassInit(pModInfo));
-	CHKiRet(apcClassInit(pModInfo));
 	CHKiRet(cfsyslineInit());
 	CHKiRet(varClassInit(pModInfo));
 	CHKiRet(moduleClassInit(pModInfo));

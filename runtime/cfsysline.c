@@ -155,36 +155,6 @@ finalize_it:
 }
 
 
-/* Parse a number from the configuration line.
- * rgerhards, 2007-07-31
- */
-static rsRetVal doGetInt(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal)
-{
-	uchar *p;
-	DEFiRet;
-	int64 i;	
-
-	assert(pp != NULL);
-	assert(*pp != NULL);
-	
-	CHKiRet(parseIntVal(pp, &i));
-	p = *pp;
-
-	if(pSetHdlr == NULL) {
-		/* we should set value directly to var */
-		*((int*)pVal) = (int) i;
-	} else {
-		/* we set value via a set function */
-		CHKiRet(pSetHdlr(pVal, (int) i));
-	}
-
-	*pp = p;
-
-finalize_it:
-	RETiRet;
-}
-
-
 /* Parse a size from the configuration line. This is basically an integer
  * syntax, but modifiers may be added after the integer (e.g. 1k to mean
  * 1024). The size must immediately follow the number. Note that the
@@ -238,7 +208,44 @@ finalize_it:
 }
 
 
-/* Parse and interpet a $FileCreateMode and $umask line. This function
+/* Parse a number from the configuration line.
+ * rgerhards, 2007-07-31
+ */
+static rsRetVal doGetInt(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal)
+{
+	uchar *p;
+	DEFiRet;
+	int64 i;	
+	uchar errMsg[256];	/* for dynamic error messages */
+
+	assert(pp != NULL);
+	assert(*pp != NULL);
+	
+	CHKiRet(doGetSize(pp, NULL,&i));
+	p = *pp;
+	if(i > 2147483648ll) { /*2^31*/
+		snprintf((char*) errMsg, sizeof(errMsg)/sizeof(uchar),
+		         "value %lld too large for integer argument.", i);
+		errmsg.LogError(0, RS_RET_INVALID_VALUE, "%s", errMsg);
+		ABORT_FINALIZE(RS_RET_INVALID_VALUE);
+	}
+
+	if(pSetHdlr == NULL) {
+		/* we should set value directly to var */
+		*((int*)pVal) = (int) i;
+	} else {
+		/* we set value via a set function */
+		CHKiRet(pSetHdlr(pVal, (int) i));
+	}
+
+	*pp = p;
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* Parse and interpret a $FileCreateMode and $umask line. This function
  * pulls the creation mode and, if successful, stores it
  * into the global variable so that the rest of rsyslogd
  * opens files with that mode. Any previous value will be
@@ -554,7 +561,8 @@ finalize_it:
  * time (TODO). -- rgerhards, 2008-02-14
  */
 static rsRetVal
-doSyslogName(uchar **pp, rsRetVal (*pSetHdlr)(void*, int), void *pVal, syslogName_t *pNameTable)
+doSyslogName(uchar **pp, rsRetVal (*pSetHdlr)(void*, int),
+	  	    void *pVal, syslogName_t *pNameTable)
 {
 	DEFiRet;
 	cstr_t *pStrB;
@@ -595,6 +603,15 @@ doFacility(uchar **pp, rsRetVal (*pSetHdlr)(void*, int), void *pVal)
 	RETiRet;
 }
 
+
+static rsRetVal
+doGoneAway(__attribute__((unused)) uchar **pp,
+	   __attribute__((unused)) rsRetVal (*pSetHdlr)(void*, int),
+	   __attribute__((unused)) void *pVal)
+{
+	errmsg.LogError(0, RS_RET_CMD_GONE_AWAY, "config directive is no longer supported -- ignored");
+	return RS_RET_CMD_GONE_AWAY;
+}
 
 /* Implements the severity syntax.
  * rgerhards, 2008-02-14
@@ -724,6 +741,9 @@ static rsRetVal cslchCallHdlr(cslCmdHdlr_t *pThis, uchar **ppConfLine)
 		break;
 	case eCmdHdlrGetWord:
 		pHdlr = doGetWord;
+		break;
+	case eCmdHdlrGoneAway:
+		pHdlr = doGoneAway;
 		break;
 	default:
 		iRet = RS_RET_NOT_IMPLEMENTED;
@@ -927,7 +947,8 @@ rsRetVal processCfSysLineCommand(uchar *pCmdName, uchar **p)
 	iRet = llFind(&llCmdList, (void *) pCmdName, (void*) &pCmd);
 
 	if(iRet == RS_RET_NOT_FOUND) {
-		errmsg.LogError(0, RS_RET_NOT_FOUND, "invalid or yet-unknown config file command - have you forgotten to load a module?");
+		errmsg.LogError(0, RS_RET_NOT_FOUND, "invalid or yet-unknown config file command '%s' - "
+			"have you forgotten to load a module?", pCmdName);
 	}
 
 	if(iRet != RS_RET_OK)
@@ -936,25 +957,17 @@ rsRetVal processCfSysLineCommand(uchar *pCmdName, uchar **p)
 	llCookieCmdHdlr = NULL;
 	bWasOnceOK = 0;
 	while((iRetLL = llGetNextElt(&pCmd->llCmdHdlrs, &llCookieCmdHdlr, (void*)&pCmdHdlr)) == RS_RET_OK) {
-		/* check if handler is valid in current scope */
-		if(pCmdHdlr->eConfObjType == eConfObjAlways ||
-		   (bConfStrictScoping == 0 && currConfObj == eConfObjGlobal) ||
-		   pCmdHdlr->eConfObjType == currConfObj) {
-			/* for the time being, we ignore errors during handlers. The
-			 * reason is that handlers are independent. An error in one
-			 * handler does not necessarily mean that another one will
-			 * fail, too. Later, we might add a config variable to control
-			 * this behaviour (but I am not sure if that is really
-			 * necessary). -- rgerhards, 2007-07-31
-			 */
-			pHdlrP = *p;
-			if((iRet = cslchCallHdlr(pCmdHdlr, &pHdlrP)) == RS_RET_OK) {
-				bWasOnceOK = 1;
-				pOKp = pHdlrP;
-			}
-		} else {
-			errmsg.LogError(0, RS_RET_CONF_INVLD_SCOPE, "config command invalid for current scope");
-			bHadScopingErr = 1;
+		/* for the time being, we ignore errors during handlers. The
+		 * reason is that handlers are independent. An error in one
+		 * handler does not necessarily mean that another one will
+		 * fail, too. Later, we might add a config variable to control
+		 * this behaviour (but I am not sure if that is really
+		 * necessary). -- rgerhards, 2007-07-31
+		 */
+		pHdlrP = *p;
+		if((iRet = cslchCallHdlr(pCmdHdlr, &pHdlrP)) == RS_RET_OK) {
+			bWasOnceOK = 1;
+			pOKp = pHdlrP;
 		}
 	}
 

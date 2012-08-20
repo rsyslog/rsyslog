@@ -312,7 +312,10 @@ wtiWorker(wti_t *pThis)
 		 */
 		localRet = pWtp->pfDoWork(pWtp->pUsr, pThis);
 
-		if(localRet == RS_RET_IDLE) {
+		if(localRet == RS_RET_ERR_QUEUE_EMERGENCY) {
+			d_pthread_mutex_unlock(pWtp->pmutUsr);
+			break;	/* end of loop */
+		} else if(localRet == RS_RET_IDLE) {
 			if(terminateRet == RS_RET_TERMINATE_WHEN_IDLE || bInactivityTOOccured) {
 				d_pthread_mutex_unlock(pWtp->pmutUsr);
 				dbgoprint((obj_t*) pThis, "terminating worker terminateRet=%d, bInactivityTOOccured=%d\n",

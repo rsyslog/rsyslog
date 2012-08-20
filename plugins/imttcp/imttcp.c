@@ -122,6 +122,7 @@
 
 MODULE_TYPE_INPUT
 MODULE_TYPE_NOKEEP
+MODULE_CNFNAME("imttcp")
 
 /* static data */
 DEF_IMOD_STATIC_DATA
@@ -135,6 +136,10 @@ DEFobjCurrIf(ruleset)
 
 
 /* config settings */
+struct modConfData_s {
+	EMPTY_STRUCT;
+};
+
 typedef struct configSettings_s {
 	int bEmitMsgOnClose;		/* emit an informational message on close by remote peer */
 	int iAddtlFrameDelim;		/* addtl frame delimiter, e.g. for netscreen, default none */
@@ -808,7 +813,7 @@ static rsRetVal setRuleset(void __attribute__((unused)) *pVal, uchar *pszName)
 	rsRetVal localRet;
 	DEFiRet;
 
-	localRet = ruleset.GetRuleset(&pRuleset, pszName);
+	localRet = ruleset.GetRuleset(ourConf, &pRuleset, pszName);
 	if(localRet == RS_RET_NOT_FOUND) {
 		errmsg.LogError(0, NO_ERRCODE, "error: ruleset '%s' not found - ignored", pszName);
 	}
@@ -984,6 +989,7 @@ startupListeners()
 	RETiRet;
 }
 
+
 /* This function is called to gather input.
  */
 BEGINrunInput
@@ -1121,7 +1127,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	/* initialize "read-only" thread attributes */
 	pthread_attr_init(&sessThrdAttr);
 	pthread_attr_setdetachstate(&sessThrdAttr, PTHREAD_CREATE_DETACHED);
-	pthread_attr_setstacksize(&sessThrdAttr, 200*1024);
+	pthread_attr_setstacksize(&sessThrdAttr, 4096*1024);
 
 	/* register config file handlers */
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputttcpserverrun"), 0, eCmdHdlrGetWord,

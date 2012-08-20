@@ -49,6 +49,15 @@ are places as quickly as possible into the processing queues. If you would like 
 flow control, you need to enable it via the $SystemLogSocketFlowControl and
 $InputUnixListenSocketFlowControl config directives. Just make sure you thought about
 the implications. Note that for many systems, turning on flow control does not hurt.
+<p>Starting with rsyslog 5.9.4,
+<b><a href="http://www.rsyslog.com/what-are-trusted-properties/">trusted syslog properties</a>
+are available</b>. These require a recent enough Linux Kernel and access to the /proc file
+system. In other words, this may not work on all platforms and may not work fully when
+privileges are dropped (depending on how they are dropped). Note that trusted properties
+can be very useful, but also typically cause the message to grow rather large. Also, the
+format of log messages is obviously changed by adding the trusted properties at the end.
+For these reasons, the feature is <b>not enabled by default</b>. If you want to use it,
+you must turn it on (via $SystemLogSocketAnnotate and $InputUnixListenSocketAnnotate).
 <p><b>Configuration Directives</b>:</p>
 <ul>
 <li><b>$InputUnixListenSocketIgnoreMsgTimestamp</b> [<b>on</b>/off]
@@ -56,7 +65,10 @@ the implications. Note that for many systems, turning on flow control does not h
 <li><b>$InputUnixListenSocketFlowControl</b> [on/<b>off</b>] - specifies if flow control should be applied
 to the next socket.</li>
 <li><b>$IMUXSockRateLimitInterval</b> [number] - specifies the rate-limiting
-interval in seconds.  Default value is 5 seconds. Set it to 0 to turn rate limiting off.
+interval in seconds.  Default value is 0, which turns off rate limiting. Set it to a number
+of seconds (5 recommended) to activate rate-limiting. The default of 0 has been choosen in 5.9.6+,
+as people experienced problems with this feature activated by default. Now it needs an
+explicit opt-in by setting this parameter.
 </li>
 <li><b>$IMUXSockRateLimitBurst</b> [number] - specifies the rate-limiting
 burst in number of messages. Default is 200.
@@ -64,13 +76,27 @@ burst in number of messages. Default is 200.
 <li><b>$IMUXSockRateLimitSeverity</b> [numerical severity] - specifies the severity of
 messages that shall be rate-limited.
 </li>
+<li><b>$IMUXSockLocalIPIF</b> [interface name] - (available since 5.9.6) - if provided, the IP of the specified
+interface (e.g. "eth0") shall be used as fromhost-ip for imuxsock-originating messages.
+If this directive is not given OR the interface cannot be found (or has no IP address),
+the default of "127.0.0.1" is used.
+</li>
 <li><b>$InputUnixListenSocketUsePIDFromSystem</b> [on/<b>off</b>] - specifies if the pid being logged shall
 be obtained from the log socket itself. If so, the TAG part of the message is rewritten.
 It is recommended to turn this option on, but the default is "off" to keep compatible
 with earlier versions of rsyslog. This option was introduced in 5.7.0.</li>
+<li><b>$InputUnixListenSocketUseSysTimeStamp</b> [<b>on</b>/off] instructs imuxsock
+to obtain message time from the system (via control messages) insted of using time
+recorded inside the message. This may be most useful in combination with systemd. Note:
+this option was introduced with version 5.9.1. Due to the usefulness of it, we
+decided to enable it by default. As such, 5.9.1 and above behave slightly different
+than previous versions. However, we do not see how this could negatively affect
+existing environments.<br>
 <li><b>$SystemLogSocketIgnoreMsgTimestamp</b> [<b>on</b>/off]<br>
 Ignore timestamps included in the messages, applies to messages received via the system log socket.</li>
-<li><b>$OmitLocalLogging</b> (imuxsock) [on/<b>off</b>] -- former -o option</li>
+<li><b>$OmitLocalLogging</b> (imuxsock) [on/<b>off</b>] -- former -o option;
+do NOT listen for the local log socket. This is most useful if you run multiple
+instances of rsyslogd where only one shall handle the system log socket.</li>
 <li><b>$SystemLogSocketName</b> &lt;name-of-socket&gt; -- former -p option</li>
 <li><b>$SystemLogFlowControl</b> [on/<b>off</b>] - specifies if flow control should be applied
 to the system log socket.</li>
@@ -87,6 +113,7 @@ burst in number of messages. Default is 200.
 <li><b>$SystemLogRateLimitSeverity</b> [numerical severity] - specifies the severity of
 messages that shall be rate-limited.
 </li>
+<li><b>$SystemLogUseSysTimeStamp</b> [<b>on</b>/off] the same as $InputUnixListenSocketUseSysTimeStamp, but for the system log socket.
 <li><b>$InputUnixListenSocketCreatePath</b> [on/<b>off</b>] - create directories in the socket path
 if they do not already exist. They are created with 0755 permissions with the owner being the process under
 which rsyslogd runs. The default is not to create directories. Keep in mind, though, that rsyslogd always
@@ -105,7 +132,12 @@ shall be used inside messages taken from the <b>next</b> $AddUnixListenSocket so
 the hostname must be specified before the $AddUnixListenSocket configuration directive, and it
 will only affect the next one and then automatically be reset. This functionality is provided so
 that the local hostname can be overridden in cases where that is desired.</li>
+<li><b>$InputUnixListenSocketAnnotate</b> &lt;on/<b>off</b>&gt; turn on annotation/trusted
+properties for the non-system log socket in question.</li>
+<li><b>$SystemLogSocketAnnotate</b> &lt;on/<b>off</b>&gt; turn on annotation/trusted
+properties for the system log socket.</li>
 </ul>
+
 <b>Caveats/Known Bugs:</b><br>
 <ul>
 <li>There is a compile-time limit of 50 concurrent sockets. If you need more, you need to
@@ -141,16 +173,22 @@ $InputUnixListenSocketHostName /var/run/sshd/dev/log
 </textarea>
 <p>The following sample is used to turn off input rate limiting on the system log
 socket.
-<textarea rows="6" cols="70">$ModLoad imuxsock # needs to be done just once
+<textarea rows="4" cols="70">$ModLoad imuxsock # needs to be done just once
 
 $SystemLogRateLimitInterval 0 # turn off rate limiting
+</textarea>
+<p>The following sample is used activate message annotation and thus trusted properties
+on the system log socket.
+<textarea rows="4" cols="70">$ModLoad imuxsock # needs to be done just once
+
+$SystemLogSocketAnnotate on
 </textarea>
 <p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>]
 [<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
 <p><font size="2">This documentation is part of the
 <a href="http://www.rsyslog.com/">rsyslog</a>
 project.<br>
-Copyright &copy; 2008-2010 by <a href="http://www.gerhards.net/rainer">Rainer
+Copyright &copy; 2008-2012 by <a href="http://www.gerhards.net/rainer">Rainer
 Gerhards</a> and
 <a href="http://www.adiscon.com/">Adiscon</a>.
 Released under the GNU GPL version 3 or higher.</font></p>

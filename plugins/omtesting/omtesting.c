@@ -57,6 +57,7 @@
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
+MODULE_CNFNAME("omtesting")
 
 /* internal structures
  */
@@ -78,8 +79,7 @@ typedef struct _instanceData {
 typedef struct configSettings_s {
 	int bEchoStdout;	/* echo non-failed messages to stdout */
 } configSettings_t;
-
-SCOPING_SUPPORT; /* must be set AFTER configSettings_t is defined */
+static configSettings_t cs;
 
 BEGINinitConfVars		/* (re)set config variables to default values */
 CODESTARTinitConfVars 
@@ -318,7 +318,7 @@ ENDqueryEtryPt
 
 BEGINmodInit()
 CODESTARTmodInit
-SCOPINGmodInit
+INITLegCnfVars
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionomtestingechostdout", 0, eCmdHdlrBinary, NULL,

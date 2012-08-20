@@ -2,7 +2,7 @@
  * Please see syslogd.c for license information.
  * begun 2004-11-17 rgerhards
  *
- * Copyright (C) 2004 by Rainer Gerhards and Adiscon GmbH
+ * Copyright (C) 2004-2012 by Rainer Gerhards and Adiscon GmbH
  *
  * This file is part of rsyslog.
  *
@@ -37,10 +37,11 @@ struct template {
 	int tpenElements; /* number of elements in templateEntry list */
 	struct templateEntry *pEntryRoot;
 	struct templateEntry *pEntryLast;
-	char optFormatForSQL;	/* in text fields,  0 - do not escape,
-	                         * 1 - escape quotes by double quotes,
-				 * 2 - escape "the MySQL way" 
-				 */
+	char optFormatEscape;	/* in text fields, */
+#	define NO_ESCAPE 0	/* 0 - do not escape, */
+#	define SQL_ESCAPE 1	/* 1 - escape "the MySQL way"  */
+#	define STDSQL_ESCAPE 2  /* 2 - escape quotes by double quotes, */
+#	define JSON_ESCAPE 3	/* 3 - escape double quotes for JSON.  */
 	/* following are options. All are 0/1 defined (either on or off).
 	 * we use chars because they are faster than bit fields and smaller
 	 * than short...
@@ -50,7 +51,7 @@ struct template {
 enum EntryTypes { UNDEFINED = 0, CONSTANT = 1, FIELD = 2 };
 enum tplFormatTypes { tplFmtDefault = 0, tplFmtMySQLDate = 1,
                       tplFmtRFC3164Date = 2, tplFmtRFC3339Date = 3, tplFmtPgSQLDate = 4,
-		      tplFmtSecFrac = 5, tplFmtRFC3164BuggyDate = 6};
+		      tplFmtSecFrac = 5, tplFmtRFC3164BuggyDate = 6, tplFmtUnixDate};
 enum tplFormatCaseConvTypes { tplCaseConvNo = 0, tplCaseConvUpper = 1, tplCaseConvLower = 2 };
 
 #include "msg.h"
@@ -68,6 +69,7 @@ struct templateEntry {
 			propid_t propid;	/* property to be used */
 			unsigned iFromPos;	/* for partial strings only chars from this position ... */
 			unsigned iToPos;	/* up to that one... */
+			unsigned iFieldNr;	/* for field extraction: field to extract */
 #ifdef FEATURE_REGEXP
 			regex_t re;	/* APR: this is the regular expression */
 			short has_regex;
@@ -90,6 +92,7 @@ struct templateEntry {
 			int field_expand;	/* use multiple instances of the field delimiter as a single one? */
 
 			es_str_t *propName;	/**< property name (currently being used for CEE only) */
+			es_str_t *fieldName;	/**< field name to be used for structured output */
 
 			enum tplFormatTypes eDateFormat;
 			enum tplFormatCaseConvTypes eCaseConv;
@@ -100,8 +103,10 @@ struct templateEntry {
 				unsigned bDropLastLF: 1;	/* drop last LF char in msg (PIX!) */
 				unsigned bSecPathDrop: 1;	/* drop slashes, replace dots, empty string */
 				unsigned bSecPathReplace: 1;	/* replace slashes, replace dots, empty string */
-				unsigned bSPIffNo1stSP: 1;	/* replace slashes, replace dots, empty string */
+				unsigned bSPIffNo1stSP: 1;	/* be a space if 1st pos if field is no space*/
 				unsigned bCSV: 1;		/* format field in CSV (RFC 4180) format */
+				unsigned bJSON: 1;		/* format field JSON escaped */
+				unsigned bJSONf: 1;		/* format field JSON *field* (n/v pair) */
 			} options;		/* options as bit fields */
 		} field;
 	} data;
@@ -117,14 +122,14 @@ ENDinterface(tpl)
 PROTOTYPEObj(tpl);
 
 
-struct template* tplConstruct(void);
-struct template *tplAddLine(char* pName, unsigned char** pRestOfConfLine);
-struct template *tplFind(char *pName, int iLenName);
+//struct template* tplConstruct(void);
+struct template *tplAddLine(rsconf_t *conf, char* pName, unsigned char** pRestOfConfLine);
+struct template *tplFind(rsconf_t *conf, char *pName, int iLenName);
 int tplGetEntryCount(struct template *pTpl);
-void tplDeleteAll(void);
-void tplDeleteNew(void);
-void tplPrintList(void);
-void tplLastStaticInit(struct template *tpl);
+void tplDeleteAll(rsconf_t *conf);
+void tplDeleteNew(rsconf_t *conf);
+void tplPrintList(rsconf_t *conf);
+void tplLastStaticInit(rsconf_t *conf, struct template *tpl);
 rsRetVal ExtendBuf(uchar **pBuf, size_t *pLenBuf, size_t iMinSize);
 /* note: if a compiler warning for undefined type tells you to look at this
  * code line below, the actual cause is that you currently MUST include template.h
@@ -133,7 +138,7 @@ rsRetVal ExtendBuf(uchar **pBuf, size_t *pLenBuf, size_t iMinSize);
  */
 rsRetVal tplToArray(struct template *pTpl, msg_t *pMsg, uchar*** ppArr);
 rsRetVal tplToString(struct template *pTpl, msg_t *pMsg, uchar** ppSz, size_t *);
-rsRetVal doSQLEscape(uchar **pp, size_t *pLen, unsigned short *pbMustBeFreed, int escapeMode);
+rsRetVal doEscape(uchar **pp, size_t *pLen, unsigned short *pbMustBeFreed, int escapeMode);
 
 rsRetVal templateInit();
 

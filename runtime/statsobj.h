@@ -43,6 +43,12 @@ typedef enum statsCtrType_e {
 	ctrType_Int
 } statsCtrType_t;
 
+/* stats line format types */
+typedef enum statsFmtType_e {
+	statsFmt_Legacy,
+	statsFmt_JSON
+} statsFmtType_t;
+
 
 /* helper entity, the counter */
 typedef struct ctr_s {
@@ -76,11 +82,15 @@ BEGINinterface(statsobj) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Destruct)(statsobj_t **ppThis);
 	rsRetVal (*SetName)(statsobj_t *pThis, uchar *name);
 	rsRetVal (*GetStatsLine)(statsobj_t *pThis, cstr_t **ppcstr);
-	rsRetVal (*GetAllStatsLines)(rsRetVal(*cb)(void*, cstr_t*), void *usrptr);
+	rsRetVal (*GetAllStatsLines)(rsRetVal(*cb)(void*, cstr_t*), void *usrptr, statsFmtType_t fmt);
 	rsRetVal (*AddCounter)(statsobj_t *pThis, uchar *ctrName, statsCtrType_t ctrType, void *pCtr);
 	rsRetVal (*EnableStats)(void);
 ENDinterface(statsobj)
-#define statsobjCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
+#define statsobjCURR_IF_VERSION 10 /* increment whenever you change the interface structure! */
+/* Changes
+ * v2-v9 rserved for future use in "older" version branches
+ * v10, 2012-04-01: GetAllStatsLines got fmt parameter
+ */
 
 
 /* prototypes */

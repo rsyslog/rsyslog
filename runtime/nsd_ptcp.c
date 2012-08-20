@@ -50,6 +50,7 @@
 #include "nsdsel_ptcp.h"
 #include "nsdpoll_ptcp.h"
 #include "nsd_ptcp.h"
+#include "dnscache.h"
 
 MODULE_TYPE_LIB
 MODULE_TYPE_NOKEEP
@@ -248,50 +249,17 @@ Abort(nsd_t *pNsd)
  * rgerhards, 2008-03-31
  */
 static rsRetVal
-FillRemHost(nsd_ptcp_t *pThis, struct sockaddr *pAddr)
+FillRemHost(nsd_ptcp_t *pThis, struct sockaddr_storage *pAddr)
 {
-	int error;
 	uchar szIP[NI_MAXHOST] = "";
 	uchar szHname[NI_MAXHOST] = "";
-	struct addrinfo hints, *res;
 	size_t len;
 	
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, nsd_ptcp);
 	assert(pAddr != NULL);
 
-        error = getnameinfo(pAddr, SALEN(pAddr), (char*)szIP, sizeof(szIP), NULL, 0, NI_NUMERICHOST);
-
-        if(error) {
-                dbgprintf("Malformed from address %s\n", gai_strerror(error));
-		strcpy((char*)szHname, "???");
-		strcpy((char*)szIP, "???");
-		ABORT_FINALIZE(RS_RET_INVALID_HNAME);
-	}
-
-	if(!glbl.GetDisableDNS()) {
-		error = getnameinfo(pAddr, SALEN(pAddr), (char*)szHname, NI_MAXHOST, NULL, 0, NI_NAMEREQD);
-		if(error == 0) {
-			memset (&hints, 0, sizeof (struct addrinfo));
-			hints.ai_flags = AI_NUMERICHOST;
-			hints.ai_socktype = SOCK_STREAM;
-			/* we now do a lookup once again. This one should fail,
-			 * because we should not have obtained a non-numeric address. If
-			 * we got a numeric one, someone messed with DNS!
-			 */
-			if(getaddrinfo((char*)szHname, NULL, &hints, &res) == 0) {
-				freeaddrinfo (res);
-				/* OK, we know we have evil, so let's indicate this to our caller */
-				snprintf((char*)szHname, NI_MAXHOST, "[MALICIOUS:IP=%s]", szIP);
-				dbgprintf("Malicious PTR record, IP = \"%s\" HOST = \"%s\"", szIP, szHname);
-				iRet = RS_RET_MALICIOUS_HNAME;
-			}
-		} else {
-			strcpy((char*)szHname, (char*)szIP);
-		}
-	} else {
-		strcpy((char*)szHname, (char*)szIP);
-	}
+	CHKiRet(dnscacheLookup(pAddr, szHname, szIP));
 
 	/* We now have the names, so now let's allocate memory and store them permanently.
 	 * (side note: we may hold on to these values for quite a while, thus we trim their
@@ -352,7 +320,7 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 	 * of this function. -- rgerhards, 2008-12-01
 	 */
 	memcpy(&pNew->remAddr, &addr, sizeof(struct sockaddr_storage));
-	CHKiRet(FillRemHost(pNew, (struct sockaddr*) &addr));
+	CHKiRet(FillRemHost(pNew, &addr));
 
 	/* set the new socket to non-blocking IO -TODO:do we really need to do this here? Do we always want it? */
 	if((sockflags = fcntl(iNewSock, F_GETFL)) != -1) {
@@ -492,7 +460,7 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 #endif
 	           ) {
 			/* TODO: check if *we* bound the socket - else we *have* an error! */
-                        dbgprintf("error %d while binding tcp socket", errno);
+                        dbgprintf("error %d while binding tcp socket\n", errno);
                 	close(sock);
 			sock = -1;
                         continue;
@@ -504,7 +472,7 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 			 * to a fixed, reasonable, limit that should work. Only if
 			 * that fails, too, we give up.
 			 */
-			dbgprintf("listen with a backlog of %d failed - retrying with default of 32.",
+			dbgprintf("listen with a backlog of %d failed - retrying with default of 32.\n",
 				   iSessMax / 10 + 5);
 			if(listen(sock, 32) < 0) {
 				dbgprintf("tcp listen error %d, suspending\n", errno);
@@ -537,7 +505,7 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 		 	  "- this may or may not be an error indication.\n", numSocks, maxs);
 
         if(numSocks == 0) {
-		dbgprintf("No TCP listen sockets could successfully be initialized");
+		dbgprintf("No TCP listen sockets could successfully be initialized\n");
 		ABORT_FINALIZE(RS_RET_COULD_NOT_BIND);
 	}
 

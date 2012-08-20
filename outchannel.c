@@ -35,11 +35,8 @@
 #include <assert.h>
 #include "stringbuf.h"
 #include "outchannel.h"
-#include "dirty.h"
+#include "rsconf.h"
 #include "debug.h"
-
-static struct outchannel *ochRoot = NULL;	/* the root of the outchannel list */
-static struct outchannel *ochLast = NULL;	/* points to the last element of the outchannel list */
 
 /* Constructs a outchannel list object. Returns pointer to it
  * or NULL (if it fails).
@@ -53,14 +50,14 @@ struct outchannel* ochConstruct(void)
 	/* basic initialisaion is done via calloc() - need to
 	 * initialize only values != 0. */
 
-	if(ochLast == NULL)
+	if(loadConf->och.ochLast == NULL)
 	{ /* we are the first element! */
-		ochRoot = ochLast = pOch;
+		loadConf->och.ochRoot = loadConf->och.ochLast = pOch;
 	}
 	else
 	{
-		ochLast->pNext = pOch;
-		ochLast = pOch;
+		loadConf->och.ochLast->pNext = pOch;
+		loadConf->och.ochLast = pOch;
 	}
 
 	return(pOch);
@@ -249,7 +246,7 @@ struct outchannel *ochFind(char *pName, int iLenName)
 
 	assert(pName != NULL);
 
-	pOch = ochRoot;
+	pOch = loadConf->och.ochRoot;
 	while(pOch != NULL &&
 	      !(pOch->iLenName == iLenName &&
 	        !strcmp(pOch->pszName, pName)
@@ -268,7 +265,7 @@ void ochDeleteAll(void)
 {
 	struct outchannel *pOch, *pOchDel;
 
-	pOch = ochRoot;
+	pOch = loadConf->och.ochRoot;
 	while(pOch != NULL) {
 		dbgprintf("Delete Outchannel: Name='%s'\n ", pOch->pszName == NULL? "NULL" : pOch->pszName);
 		pOchDel = pOch;
@@ -287,7 +284,7 @@ void ochPrintList(void)
 {
 	struct outchannel *pOch;
 
-	pOch = ochRoot;
+	pOch = loadConf->och.ochRoot;
 	while(pOch != NULL) {
 		dbgprintf("Outchannel: Name='%s'\n", pOch->pszName == NULL? "NULL" : pOch->pszName);
 		dbgprintf("\tFile Template: '%s'\n", pOch->pszFileTemplate == NULL ? "NULL" : (char*) pOch->pszFileTemplate);

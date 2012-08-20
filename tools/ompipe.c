@@ -57,6 +57,7 @@
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
+MODULE_CNFNAME("ompipe")
 
 /* internal structures
  */
@@ -69,15 +70,28 @@ DEFobjCurrIf(errmsg)
 
 
 typedef struct _instanceData {
-	uchar	f_fname[MAXFNAME];/* pipe or template name (display only) */
-	short	fd;		  /* pipe descriptor for (current) pipe */
+	uchar	*pipe;	/* pipe or template name (display only) */
+	uchar	*tplName;       /* format template to use */
+	short	fd;		/* pipe descriptor for (current) pipe */
+	sbool	bHadError;	/* did we already have/report an error on this pipe? */
 } instanceData;
 
 typedef struct configSettings_s {
 	EMPTY_STRUCT
 } configSettings_t;
+static configSettings_t __attribute__((unused)) cs;
 
-SCOPING_SUPPORT; /* must be set AFTER configSettings_t is defined */
+/* tables for interfacing with the v6 config system */
+/* action (instance) parameters */
+static struct cnfparamdescr actpdescr[] = {
+	{ "pipe", eCmdHdlrString, CNFPARAM_REQUIRED },
+	{ "template", eCmdHdlrGetWord, 0 }
+};
+static struct cnfparamblk actpblk =
+	{ CNFPARAMBLK_VERSION,
+	  sizeof(actpdescr)/sizeof(struct cnfparamdescr),
+	  actpdescr
+	};
 
 BEGINinitConfVars		/* (re)set config variables to default values */
 CODESTARTinitConfVars 
@@ -93,7 +107,7 @@ ENDisCompatibleWithFeature
 
 BEGINdbgPrintInstInfo
 CODESTARTdbgPrintInstInfo
-	dbgprintf("pipe %s", pData->f_fname);
+	dbgprintf("pipe %s", pData->pipe);
 	if (pData->fd == -1)
 		dbgprintf(" (unused)");
 ENDdbgPrintInstInfo
@@ -109,7 +123,18 @@ static inline rsRetVal
 preparePipe(instanceData *pData)
 {
 	DEFiRet;
-	pData->fd = open((char*) pData->f_fname, O_RDWR|O_NONBLOCK|O_CLOEXEC);
+	pData->fd = open((char*) pData->pipe, O_RDWR|O_NONBLOCK|O_CLOEXEC);
+	if(pData->fd < 0 ) {
+		pData->fd = -1;
+		if(!pData->bHadError) {
+			char errStr[1024];
+			rs_strerror_r(errno, errStr, sizeof(errStr));
+			errmsg.LogError(0, RS_RET_NO_FILE_ACCESS, "Could no open output pipe '%s': %s",
+				        pData->pipe, errStr);
+			pData->bHadError = 1;
+		}
+		DBGPRINTF("Error opening log pipe: %s\n", pData->pipe);
+	}
 	RETiRet;
 }
 
@@ -148,7 +173,7 @@ static rsRetVal writePipe(uchar **ppString, instanceData *pData)
 		pData->fd = -1; /* tell that fd is no longer open! */
 		iRet = RS_RET_SUSPENDED;
 		errno = e;
-		errmsg.LogError(0, NO_ERRCODE, "%s", pData->f_fname);
+		errmsg.LogError(0, NO_ERRCODE, "%s", pData->pipe);
 	}
 
 finalize_it:
@@ -158,12 +183,15 @@ finalize_it:
 
 BEGINcreateInstance
 CODESTARTcreateInstance
+	pData->pipe = NULL;
 	pData->fd = -1;
+	pData->bHadError = 0;
 ENDcreateInstance
 
 
 BEGINfreeInstance
 CODESTARTfreeInstance
+	free(pData->pipe);
 	if(pData->fd != -1)
 		close(pData->fd);
 ENDfreeInstance
@@ -175,10 +203,53 @@ ENDtryResume
 
 BEGINdoAction
 CODESTARTdoAction
-	DBGPRINTF(" (%s)\n", pData->f_fname);
+	DBGPRINTF(" (%s)\n", pData->pipe);
 	iRet = writePipe(ppString, pData);
 ENDdoAction
 
+
+static inline void
+setInstParamDefaults(instanceData *pData)
+{
+	pData->tplName = NULL;
+}
+
+BEGINnewActInst
+	struct cnfparamvals *pvals;
+	int i;
+CODESTARTnewActInst
+	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
+		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
+
+	CHKiRet(createInstance(&pData));
+	setInstParamDefaults(pData);
+
+	CODE_STD_STRING_REQUESTparseSelectorAct(1)
+	for(i = 0 ; i < actpblk.nParams ; ++i) {
+		if(!pvals[i].bUsed)
+			continue;
+		if(!strcmp(actpblk.descr[i].name, "pipe")) {
+			pData->pipe = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "template")) {
+			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else {
+			dbgprintf("ompipe: program error, non-handled "
+			  "param '%s'\n", actpblk.descr[i].name);
+		}
+	}
+
+	if(pData->tplName == NULL) {
+		CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*) "RSYSLOG_FileFormat",
+			OMSR_NO_RQD_TPL_OPTS));
+	} else {
+		CHKiRet(OMSRsetEntry(*ppOMSR, 0,
+			(uchar*) strdup((char*) pData->tplName),
+			OMSR_NO_RQD_TPL_OPTS));
+	}
+CODE_STD_FINALIZERnewActInst
+	cnfparamvalsDestruct(pvals, &actpblk);
+ENDnewActInst
 
 BEGINparseSelectorAct
 CODESTARTparseSelectorAct
@@ -199,25 +270,11 @@ CODESTARTparseSelectorAct
 	}
 
 	CODE_STD_STRING_REQUESTparseSelectorAct(1)
+	CHKmalloc(pData->pipe = malloc(512));
 	++p;
-	/* rgerhards 2004-11-17: from now, we need to have different
-	 * processing, because after the first comma, the template name
-	 * to use is specified. So we need to scan for the first coma first
-	 * and then look at the rest of the line.
-	 */
-	CHKiRet(cflineParseFileName(p, (uchar*) pData->f_fname, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS,
+	CHKiRet(cflineParseFileName(p, (uchar*) pData->pipe, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS,
 				       (pszFileDfltTplName == NULL) ? (uchar*)"RSYSLOG_FileFormat" : pszFileDfltTplName));
-
-	/* at this stage, we ignore the return value of preparePipe, this is taken
-	 * care of in later steps. -- rgerhards, 2009-03-19
-	 */
-	preparePipe(pData);
 		
-	if(pData->fd < 0 ) {
-		pData->fd = -1;
-		DBGPRINTF("Error opening log pipe: %s\n", pData->f_fname);
-		errmsg.LogError(0, RS_RET_NO_FILE_ACCESS, "Could not open output pipe '%s'", pData->f_fname);
-	}
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
@@ -240,12 +297,14 @@ BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
 CODEqueryEtryPt_doHUP
+CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES 
+CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 ENDqueryEtryPt
 
 
 BEGINmodInit(Pipe)
 CODESTARTmodInit
-SCOPINGmodInit
+INITLegCnfVars
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));

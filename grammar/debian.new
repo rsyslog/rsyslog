@@ -1,0 +1,165 @@
+#  /etc/rsyslog.conf	Configuration file for rsyslog.
+#
+#			For more information see
+#			/usr/share/doc/rsyslog-doc/html/rsyslog_conf.html
+
+
+#################
+#### MODULES ####
+#################
+
+module(
+ name="imuxsock" # provides support for local system logging
+ )
+$ModLoad imklog   # provides kernel logging support (previously done by rklogd)
+#$ModLoad immark  # provides --MARK-- message capability
+
+# provides UDP syslog reception
+#$ModLoad imudp
+#$UDPServerRun 514
+module(name="imudp")
+input(type="imudp" port="514")
+
+# provides TCP syslog reception
+#$ModLoad imtcp
+#$InputTCPServerRun 514
+
+
+###########################
+#### GLOBAL DIRECTIVES ####
+###########################
+
+#
+# Use traditional timestamp format.
+# To enable high precision timestamps, comment out the following line.
+#
+#$ActionFileDefaultTemplate RSYSLOG_TraditionalFileFormat
+
+#
+# Set the default permissions for all log files.
+#
+$FileOwner root
+$FileGroup adm
+$FileCreateMode 0640
+$DirCreateMode 0755
+$Umask 0022
+
+#
+# Include all config files in /etc/rsyslog.d/
+#
+#$IncludeConfig /etc/rsyslog.d/*.conf
+
+
+###############
+#### RULES ####
+###############
+
+#
+# First some standard log files.  Log by facility.
+#
+auth,authpriv.*			/var/log/auth.log
+*.*;auth,authpriv.none		-/var/log/syslog
+#cron.*				/var/log/cron.log
+
+#
+# Some "catch-all" log files.
+#
+*.=debug;\
+	auth,authpriv.none;\
+	news.none;mail.none	-/var/log/debug
+*.=info;*.=notice;*.=warn;\
+	auth,authpriv.none;\
+	cron,daemon.none;\
+	mail,news.none		-/var/log/messages
+
+#
+# Emergencies are sent to everybody logged in.
+#
+*.emerg				*
+
+#
+# I like to have messages displayed on the console, but only on a virtual
+# console I usually leave idle.
+#
+#daemon,mail.*;\
+#	news.=crit;news.=err;news.=notice;\
+#	*.=debug;*.=info;\
+#	*.=notice;*.=warn	/dev/tty8
+
+# The named pipe /dev/xconsole is for the `xconsole' utility.  To use it,
+# you must invoke `xconsole' with the `-file' option:
+# 
+#    $ xconsole -file /dev/xconsole [...]
+#
+# NOTE: adjust the list below, or you'll go crazy if you have a reasonably
+#      busy site..
+#
+daemon.*;mail.*;\
+	news.err;\
+	*.=debug;*.=info;\
+	*.=notice;*.=warn	|/dev/xconsole
+
+global (dnscache="yes" arg1="1 2" arg2 = "1 2" arg3 ="1=2\"3")
+# samples added to get full "flavor" of what we need to support...
+:msg, contains, "error" /var/log/somelog
+action(type="omfile" target="/var/log/mail/log")
+*.* /* comment */ *  # test
+*.info :ommysql:, tra, la , la # comment (comment to be part of old style line!)
+
+# from SUSE:
+if	( \
+	    /* kernel up to warning except of firewall  */ \
+	    ($syslogfacility-text == 'kern')      and      \
+	    ($syslogseverity <= 4 /* warning */ ) and not  \
+	    ($msg contains 'IN=' and $msg contains 'OUT=') \
+	) or ( \
+	    /* up to errors except of facility authpriv */ \
+	    ($syslogseverity <= 3 /* errors  */ ) and not  \
+	    ($syslogfacility-text == 'authpriv')           \
+	) \
+then	/dev/tty10
+&	|/dev/xconsole
+#
+# slightly modified to not use continuation lines
+if	(   /* kernel up to warning except of firewall  */ 
+	    ($syslogfacility-text == 'kern')      and      
+	    ($syslogseverity <= 4 /* warning */ ) and not  
+	    ($msg contains 'IN=' and $msg contains 'OUT=') 
+	) or ( 
+	    /* up to errors except of facility authpriv */ 
+	    ($syslogseverity <= 3 /* errors  */ ) and not  
+	    ($syslogfacility-text == 'authpriv')           
+	) 
+then	/dev/tty10
+&	|/dev/xconsole
+
+*.* rger # write to user (ugly...)
+#ruleset name
+
+# FEDORA, a bit more complex config
+# ### begin forwarding rule ###
+# The statement between the begin ... end define a SINGLE forwarding
+# rule. They belong together, do NOT split them. If you create multiple
+# forwarding rules, duplicate the whole block!
+# Remote Logging (we use TCP for reliable delivery)
+#
+# An on-disk queue is created for this action. If the remote host is
+# down, messages are spooled to disk and sent when it is up again.
+#$WorkDirectory /var/spppl/rsyslog # where to place spool files
+#$ActionQueueFileName fwdRule1 # unique name prefix for spool files
+#$ActionQueueMaxDiskSpace 1g   # 1gb space limit (use as much as possible)
+#$ActionQueueSaveOnShutdown on # save messages to disk on shutdown
+#$ActionQueueType LinkedList   # run asynchronously
+#$ActionResumeRetryCount -1    # infinite retries if host is down
+# remote host is: name/ip:port, e.g. 192.168.0.1:514, port optional
+#*.* @@remote-host:514
+# ### end of the forwarding rule ###
+if $msg contains "error" then {
+    action(type="omfwd" protocol="tcp" target="10.0.0.1:514"
+           action.retryCount="-1"
+           queue.type="linkedList" queue.fileName="fwdRule" queue.maxDiskSpace="1g"
+           queue.saveOnShutdown="on"
+          )
+    action(type="omfile" target="/var/log/somelog.log")
+    action(type="omuser" target="all")
+}

@@ -4,30 +4,26 @@
  * NOTE: read comments in module-template.h to understand how this file
  *       works!
  *
- * File begun on 2007-07-20 by RGerhards (extracted from syslogd.c)
- * This file is under development and has not yet arrived at being fully
- * self-contained and a real object. So far, it is mostly an excerpt
- * of the "old" message code without any modifications. However, it
- * helps to have things at the right place one we go to the meat of it.
- *
- * Copyright 2007, 2009 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2012 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
- * Rsyslog is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *       -or-
+ *       see COPYING.ASL20 in the source distribution
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  *
- * Rsyslog is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Rsyslog.  If not, see <http://www.gnu.org/licenses/>.
- *
- * A copy of the GPL can be found in the file "COPYING" in this distribution.
+ * TODO v6 config:
+ * - permitted peer *list*
  */
 #include "config.h"
 #include "rsyslog.h"
@@ -62,9 +58,11 @@
 #include "module-template.h"
 #include "glbl.h"
 #include "errmsg.h"
+#include "unicode-helper.h"
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
+MODULE_CNFNAME("omfwd")
 
 /* internal structures
  */
@@ -77,25 +75,27 @@ DEFobjCurrIf(netstrm)
 DEFobjCurrIf(tcpclt)
 
 typedef struct _instanceData {
+	uchar 	*tplName;	/* name of assigned template */
 	netstrms_t *pNS; /* netstream subsystem */
 	netstrm_t *pNetstrm; /* our output netstream */
 	uchar *pszStrmDrvr;
 	uchar *pszStrmDrvrAuthMode;
 	permittedPeers_t *pPermPeers;
 	int iStrmDrvrMode;
-	char	*f_hname;
+	char	*target;
 	int *pSockArray;	/* sockets to use for UDP */
 	int bIsConnected;  /* are we connected to remote host? 0 - no, 1 - yes, UDP means addr resolved */
 	struct addrinfo *f_addr;
 	int compressionLevel;	/* 0 - no compression, else level for zlib */
 	char *port;
 	int protocol;
-	int iUDPRebindInterval;	/* rebind interval */
-	int iTCPRebindInterval;	/* rebind interval */
+	int iRebindInterval;	/* rebind interval */
 	int nXmit;		/* number of transmissions since last (re-)bind */
 #	define	FORW_UDP 0
 #	define	FORW_TCP 1
 	/* following fields for TCP-based delivery */
+	TCPFRAMINGMODE tcp_framing;
+	int bResendLastOnRecon; /* should the last message be re-sent on a successful reconnect? */
 	tcpclt_t *pTCPClt;	/* our tcpclt object */
 	uchar sndBuf[16*1024];	/* this is intensionally fixed -- see no good reason to make configurable */
 	unsigned offsSndBuf;	/* next free spot in send buffer */
@@ -108,12 +108,33 @@ typedef struct configSettings_s {
 	int iStrmDrvrMode; /* mode for stream driver, driver-dependent (0 mostly means plain tcp) */
 	int bResendLastOnRecon; /* should the last message be re-sent on a successful reconnect? */
 	uchar *pszStrmDrvrAuthMode; /* authentication mode to use */
-	int iUDPRebindInterval;	/* support for automatic re-binding (load balancers!). 0 - no rebind */
 	int iTCPRebindInterval;	/* support for automatic re-binding (load balancers!). 0 - no rebind */
+	int iUDPRebindInterval;	/* support for automatic re-binding (load balancers!). 0 - no rebind */
 	permittedPeers_t *pPermPeers;
 } configSettings_t;
+static configSettings_t cs;
 
-SCOPING_SUPPORT; /* must be set AFTER configSettings_t is defined */
+/* tables for interfacing with the v6 config system */
+/* action (instance) parameters */
+static struct cnfparamdescr actpdescr[] = {
+	{ "target", eCmdHdlrGetWord, 0 },
+	{ "port", eCmdHdlrGetWord, 0 },
+	{ "protocol", eCmdHdlrGetWord, 0 },
+	{ "tcp_framing", eCmdHdlrGetWord, 0 },
+	{ "ziplevel", eCmdHdlrInt, 0 },
+	{ "rebindinterval", eCmdHdlrInt, 0 },
+	{ "streamdriver", eCmdHdlrGetWord, 0 },
+	{ "streamdrivermode", eCmdHdlrInt, 0 },
+	{ "streamdriverauthmode", eCmdHdlrGetWord, 0 },
+	{ "streamdriverpermittedpeers", eCmdHdlrGetWord, 0 },
+	{ "resendlastmsgonreconnect", eCmdHdlrBinary, 0 },
+};
+static struct cnfparamblk actpblk =
+	{ CNFPARAMBLK_VERSION,
+	  sizeof(actpdescr)/sizeof(struct cnfparamdescr),
+	  actpdescr
+	};
+
 
 BEGINinitConfVars		/* (re)set config variables to default values */
 CODESTARTinitConfVars 
@@ -146,22 +167,6 @@ closeUDPSockets(instanceData *pData)
 	}
 pData->bIsConnected = 0; // TODO: remove this variable altogether
 	RETiRet;
-}
-
-
-/* get the syslog forward port from selector_t. The passed in
- * struct must be one that is setup for forwarding.
- * rgerhards, 2007-06-28
- * We may change the implementation to try to lookup the port
- * if it is unspecified. So far, we use the IANA default auf 514.
- */
-static char *getFwdPt(instanceData *pData)
-{
-	assert(pData != NULL);
-	if(pData->port == NULL)
-		return("514");
-	else
-		return(pData->port);
 }
 
 
@@ -208,7 +213,7 @@ CODESTARTfreeInstance
 	}
 
 	free(pData->port);
-	free(pData->f_hname);
+	free(pData->target);
 	free(pData->pszStrmDrvr);
 	free(pData->pszStrmDrvrAuthMode);
 	net.DestructPermittedPeers(&pData->pPermPeers);
@@ -217,7 +222,7 @@ ENDfreeInstance
 
 BEGINdbgPrintInstInfo
 CODESTARTdbgPrintInstInfo
-	dbgprintf("%s", pData->f_hname);
+	dbgprintf("%s", pData->target);
 ENDdbgPrintInstInfo
 
 
@@ -232,7 +237,7 @@ static rsRetVal UDPSend(instanceData *pData, char *msg, size_t len)
 	unsigned lsent = 0;
 	int bSendSuccess;
 
-	if(pData->iUDPRebindInterval && (pData->nXmit++ % pData->iUDPRebindInterval == 0)) {
+	if(pData->iRebindInterval && (pData->nXmit++ % pData->iRebindInterval == 0)) {
 		dbgprintf("omfwd dropping UDP 'connection' (as configured)\n");
 		pData->nXmit = 1;	/* else we have an addtl wrap at 2^31-1 */
 		CHKiRet(closeUDPSockets(pData));
@@ -309,7 +314,6 @@ TCPSendBuf(instanceData *pData, uchar *buf, unsigned len)
 	ssize_t lenSend;
 
 	alreadySent = 0;
-dbgprintf("omfwd: XXXX: pData %p, pNetStrm %p\n", pData, pData->pNetstrm);
 	netstrm.CheckConnection(pData->pNetstrm); /* hack for plain tcp syslog - see ptcp driver for details */
 	while(alreadySent != len) {
 		lenSend = len - alreadySent;
@@ -382,7 +386,7 @@ static rsRetVal TCPSendInit(void *pvData)
 	if(pData->pNetstrm == NULL) {
 		CHKiRet(netstrms.Construct(&pData->pNS));
 		/* the stream driver must be set before the object is finalized! */
-		CHKiRet(netstrms.SetDrvrName(pData->pNS, cs.pszStrmDrvr));
+		CHKiRet(netstrms.SetDrvrName(pData->pNS, pData->pszStrmDrvr));
 		CHKiRet(netstrms.ConstructFinalize(pData->pNS));
 
 		/* now create the actual stream and connect to the server */
@@ -398,7 +402,7 @@ static rsRetVal TCPSendInit(void *pvData)
 		}
 		/* params set, now connect */
 		CHKiRet(netstrm.Connect(pData->pNetstrm, glbl.GetDefPFFamily(),
-			(uchar*)getFwdPt(pData), (uchar*)pData->f_hname));
+			(uchar*)pData->port, (uchar*)pData->target));
 	}
 
 finalize_it:
@@ -424,23 +428,23 @@ static rsRetVal doTryResume(instanceData *pData)
 		FINALIZE;
 
 	/* The remote address is not yet known and needs to be obtained */
-	dbgprintf(" %s\n", pData->f_hname);
+	dbgprintf(" %s\n", pData->target);
 	if(pData->protocol == FORW_UDP) {
 		memset(&hints, 0, sizeof(hints));
 		/* port must be numeric, because config file syntax requires this */
 		hints.ai_flags = AI_NUMERICSERV;
 		hints.ai_family = glbl.GetDefPFFamily();
 		hints.ai_socktype = SOCK_DGRAM;
-		if((iErr = (getaddrinfo(pData->f_hname, getFwdPt(pData), &hints, &res))) != 0) {
+		if((iErr = (getaddrinfo(pData->target, pData->port, &hints, &res))) != 0) {
 			dbgprintf("could not get addrinfo for hostname '%s':'%s': %d%s\n",
-				  pData->f_hname, getFwdPt(pData), iErr, gai_strerror(iErr));
+				  pData->target, pData->port, iErr, gai_strerror(iErr));
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
 		}
-		dbgprintf("%s found, resuming.\n", pData->f_hname);
+		dbgprintf("%s found, resuming.\n", pData->target);
 		pData->f_addr = res;
 		pData->bIsConnected = 1;
 		if(pData->pSockArray == NULL) {
-			pData->pSockArray = net.create_udp_socket((uchar*)pData->f_hname, NULL, 0);
+			pData->pSockArray = net.create_udp_socket((uchar*)pData->target, NULL, 0);
 		}
 	} else {
 		CHKiRet(TCPSendInit((void*)pData));
@@ -472,15 +476,18 @@ ENDbeginTransaction
 
 
 BEGINdoAction
-	char *psz = NULL; /* temporary buffering */
+	char *psz; /* temporary buffering */
 	register unsigned l;
 	int iMaxLine;
+#	ifdef	USE_NETZIP
+	Bytef *out = NULL; /* for compression */
+#	endif
 CODESTARTdoAction
 	CHKiRet(doTryResume(pData));
 
 	iMaxLine = glbl.GetMaxLine();
 
-	dbgprintf(" %s:%s/%s\n", pData->f_hname, getFwdPt(pData),
+	dbgprintf(" %s:%s/%s\n", pData->target, pData->port,
 		 pData->protocol == FORW_UDP ? "udp" : "tcp");
 
 	psz = (char*) ppString[0];
@@ -498,7 +505,6 @@ CODESTARTdoAction
 	 * rgerhards, 2006-11-30
 	 */
 	if(pData->compressionLevel && (l > CONF_MIN_SIZE_FOR_COMPRESS)) {
-		Bytef *out;
 		uLongf destLen = iMaxLine + iMaxLine/100 +12; /* recommended value from zlib doc */
 		uLong srcLen = l;
 		int ret;
@@ -519,14 +525,11 @@ CODESTARTdoAction
 			 * rgerhards, 2006-11-30
 			 */
 			dbgprintf("Compression failed, sending uncompressed message\n");
-			free(out);
 		} else if(destLen+1 < l) {
 			/* only use compression if there is a gain in using it! */
 			dbgprintf("there is gain in compression, so we do it\n");
 			psz = (char*) out;
 			l = destLen + 1; /* take care for the "z" at message start! */
-		} else {
-			free(out);
 		}
 		++destLen;
 	}
@@ -547,10 +550,7 @@ CODESTARTdoAction
 	}
 finalize_it:
 #	ifdef USE_NETZIP
-	if((psz != NULL) && (psz != (char*) ppString[0]))  {
-		/* we need to free temporary buffer, alloced above - Naoya Nakazawa, 2010-01-11 */
-		free(psz);
-	}
+	free(out); /* is NULL if it was never used... */
 #	endif
 ENDdoAction
 
@@ -581,6 +581,184 @@ loadTCPSupport(void)
 finalize_it:
 	RETiRet;
 }
+
+
+/* initialize TCP structures (if necessary) after the instance has been
+ * created.
+ */
+static rsRetVal
+initTCP(instanceData *pData)
+{
+	DEFiRet;
+	if(pData->protocol == FORW_TCP) {
+		/* create our tcpclt */
+		CHKiRet(tcpclt.Construct(&pData->pTCPClt));
+		CHKiRet(tcpclt.SetResendLastOnRecon(pData->pTCPClt, pData->bResendLastOnRecon));
+		/* and set callbacks */
+		CHKiRet(tcpclt.SetSendInit(pData->pTCPClt, TCPSendInit));
+		CHKiRet(tcpclt.SetSendFrame(pData->pTCPClt, TCPSendFrame));
+		CHKiRet(tcpclt.SetSendPrepRetry(pData->pTCPClt, TCPSendPrepRetry));
+		CHKiRet(tcpclt.SetFraming(pData->pTCPClt, pData->tcp_framing));
+		CHKiRet(tcpclt.SetRebindInterval(pData->pTCPClt, pData->iRebindInterval));
+		pData->iStrmDrvrMode = cs.iStrmDrvrMode;
+		if(cs.pszStrmDrvr != NULL)
+			CHKmalloc(pData->pszStrmDrvr = (uchar*)strdup((char*)cs.pszStrmDrvr));
+		if(cs.pszStrmDrvrAuthMode != NULL)
+			CHKmalloc(pData->pszStrmDrvrAuthMode =
+				     (uchar*)strdup((char*)cs.pszStrmDrvrAuthMode));
+	}
+finalize_it:
+	RETiRet;
+}
+
+
+static inline void
+setInstParamDefaults(instanceData *pData)
+{
+	pData->tplName = NULL;
+	pData->protocol = FORW_UDP;
+	pData->tcp_framing = TCP_FRAMING_OCTET_STUFFING;
+	pData->pszStrmDrvr = NULL;
+	pData->pszStrmDrvrAuthMode = NULL;
+	pData->iStrmDrvrMode = 0;
+	pData->iRebindInterval = 0;
+	pData->bResendLastOnRecon = 0; 
+	pData->pPermPeers = NULL;
+	pData->compressionLevel = 0;
+}
+
+BEGINnewActInst
+	struct cnfparamvals *pvals;
+	int i;
+	rsRetVal localRet;
+CODESTARTnewActInst
+	DBGPRINTF("newActInst (omfwd)\n");
+
+	pvals = nvlstGetParams(lst, &actpblk, NULL);
+	if(pvals == NULL) {
+		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "omfwd: either the \"file\" or "
+				"\"dynfile\" parameter must be given");
+		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
+
+	if(Debug) {
+		dbgprintf("action param blk in omfwd:\n");
+		cnfparamsPrint(&actpblk, pvals);
+	}
+
+	CHKiRet(createInstance(&pData));
+	setInstParamDefaults(pData);
+
+	for(i = 0 ; i < actpblk.nParams ; ++i) {
+		if(!pvals[i].bUsed)
+			continue;
+		if(!strcmp(actpblk.descr[i].name, "target")) {
+			pData->target = es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "port")) {
+			pData->port = es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "protocol")) {
+			if(!es_strcasebufcmp(pvals[i].val.d.estr, (uchar*)"udp", 3)) {
+				pData->protocol = FORW_UDP;
+			} else if(!es_strcasebufcmp(pvals[i].val.d.estr, (uchar*)"tcp", 3)) {
+				localRet = loadTCPSupport();
+				if(localRet != RS_RET_OK) {
+					errmsg.LogError(0, localRet, "could not activate network stream modules for TCP "
+							"(internal error %d) - are modules missing?", localRet);
+					ABORT_FINALIZE(localRet);
+				}
+				pData->protocol = FORW_TCP;
+			} else {
+				uchar *str;
+				str = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+				errmsg.LogError(0, RS_RET_INVLD_PROTOCOL,
+						"omfwd: invalid protocol \"%s\"", str);
+				free(str);
+				ABORT_FINALIZE(RS_RET_INVLD_PROTOCOL);
+			}
+		} else if(!strcmp(actpblk.descr[i].name, "tcp_framing")) {
+			if(!es_strcasebufcmp(pvals[i].val.d.estr, (uchar*)"traditional", 11)) {
+				pData->tcp_framing = TCP_FRAMING_OCTET_STUFFING;
+			} else if(!es_strcasebufcmp(pvals[i].val.d.estr, (uchar*)"octet-counted", 13)) {
+				pData->tcp_framing = TCP_FRAMING_OCTET_COUNTING;
+			} else {
+				uchar *str;
+				str = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+				errmsg.LogError(0, RS_RET_CNF_INVLD_FRAMING,
+						"omfwd: invalid framing \"%s\"", str);
+				free(str);
+				ABORT_FINALIZE(RS_RET_CNF_INVLD_FRAMING );
+			}
+		} else if(!strcmp(actpblk.descr[i].name, "rebindinterval")) {
+			pData->iRebindInterval = (int) pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "streamdriver")) {
+			pData->pszStrmDrvr = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "streamdrivermode")) {
+			pData->iStrmDrvrMode = pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "streamdriverauthmode")) {
+			pData->pszStrmDrvrAuthMode = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "streamdriverpermittedpeers")) {
+			uchar *start, *str;
+			uchar save;
+			uchar *p;
+			int lenStr;
+			str = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+			start = str;
+			lenStr = ustrlen(start); /* we need length after '\0' has been dropped... */
+			while(lenStr > 0) {
+				p = start;
+				while(*p && *p != ',' && lenStr--)
+					p++;
+				if(*p == ',') {
+					*p = '\0';
+				}
+				save = *(p+1); /* we always have this, at least the \0 byte at EOS */
+				*(p+1) = '\0';
+				if(*start == '\0') {
+					DBGPRINTF("omfwd: ignoring empty permitted peer\n");
+				} else {
+					dbgprintf("omfwd: adding permitted peer: '%s'\n", start);
+					CHKiRet(net.AddPermittedPeer(&(pData->pPermPeers), start));
+				}
+				start = p+1;
+				if(lenStr)
+					--lenStr;
+				*(p+1) = save;
+			}
+			free(str);
+		} else if(!strcmp(actpblk.descr[i].name, "ziplevel")) {
+#			ifdef USE_NETZIP
+			int complevel = pvals[i].val.d.n;
+			if(complevel >= 0 && complevel <= 10) {
+				pData->compressionLevel = complevel;
+			} else {
+				errmsg.LogError(0, NO_ERRCODE, "Invalid ziplevel %d specified in "
+					 "forwardig action - NOT turning on compression.",
+					 complevel);
+			}
+#			else
+			errmsg.LogError(0, NO_ERRCODE, "Compression requested, but rsyslogd is not compiled "
+				 "with compression support - request ignored.");
+#			endif /* #ifdef USE_NETZIP */
+		} else if(!strcmp(actpblk.descr[i].name, "resendlastmsgonreconnect")) {
+			pData->bResendLastOnRecon = (int) pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "template")) {
+			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else {
+			DBGPRINTF("omfwd: program error, non-handled "
+			  "param '%s'\n", actpblk.descr[i].name);
+		}
+	}
+	CODE_STD_STRING_REQUESTnewActInst(1)
+
+	CHKiRet(OMSRsetEntry(*ppOMSR, 0, ustrdup((pData->tplName == NULL) ?
+					    (uchar*)"RSYSLOG_TraditionalForwardFormat" : (uchar*)pData->tplName),
+		OMSR_NO_RQD_TPL_OPTS));
+
+	CHKiRet(initTCP(pData));
+CODE_STD_FINALIZERnewActInst
+	cnfparamvalsDestruct(pvals, &actpblk);
+ENDnewActInst
+
 
 BEGINparseSelectorAct
 	uchar *q;
@@ -687,6 +865,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 			/* JUST SKIP */;
 	}
 
+	pData->tcp_framing = tcp_framing;
 	pData->port = NULL;
 	if(*p == ':') { /* process port */
 		uchar * tmp;
@@ -699,11 +878,15 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		if(pData->port == NULL) {
 			errmsg.LogError(0, NO_ERRCODE, "Could not get memory to store syslog forwarding port, "
 				 "using default port, results may not be what you intend\n");
-			/* we leave f_forw.port set to NULL, this is then handled by getFwdPt(). */
+			/* we leave f_forw.port set to NULL, this is then handled below */
 		} else {
 			memcpy(pData->port, tmp, i);
 			*(pData->port + i) = '\0';
 		}
+	}
+	/* check if no port is set. If so, we use the IANA-assigned port of 514 */
+	if(pData->port == NULL) {
+		CHKmalloc(pData->port = strdup("514"));
 	}
 	
 	/* now skip to template */
@@ -714,30 +897,22 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	if(*p == ';' || *p == '#' || isspace(*p)) {
 		uchar cTmp = *p;
 		*p = '\0'; /* trick to obtain hostname (later)! */
-		CHKmalloc(pData->f_hname = strdup((char*) q));
+		CHKmalloc(pData->target = strdup((char*) q));
 		*p = cTmp;
 	} else {
-		CHKmalloc(pData->f_hname = strdup((char*) q));
+		CHKmalloc(pData->target = strdup((char*) q));
 	}
 
 	/* copy over config data as needed */
-	pData->iUDPRebindInterval = cs.iUDPRebindInterval;
-	pData->iTCPRebindInterval = cs.iTCPRebindInterval;
+	pData->iRebindInterval = (pData->protocol == FORW_TCP) ?
+				 cs.iTCPRebindInterval : cs.iUDPRebindInterval;
 
 	/* process template */
 	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS,
 		(cs.pszTplName == NULL) ? (uchar*)"RSYSLOG_TraditionalForwardFormat" : cs.pszTplName));
 
 	if(pData->protocol == FORW_TCP) {
-		/* create our tcpclt */
-		CHKiRet(tcpclt.Construct(&pData->pTCPClt));
-		CHKiRet(tcpclt.SetResendLastOnRecon(pData->pTCPClt, cs.bResendLastOnRecon));
-		/* and set callbacks */
-		CHKiRet(tcpclt.SetSendInit(pData->pTCPClt, TCPSendInit));
-		CHKiRet(tcpclt.SetSendFrame(pData->pTCPClt, TCPSendFrame));
-		CHKiRet(tcpclt.SetSendPrepRetry(pData->pTCPClt, TCPSendPrepRetry));
-		CHKiRet(tcpclt.SetFraming(pData->pTCPClt, tcp_framing));
-		CHKiRet(tcpclt.SetRebindInterval(pData->pTCPClt, pData->iTCPRebindInterval));
+		pData->bResendLastOnRecon = cs.bResendLastOnRecon;
 		pData->iStrmDrvrMode = cs.iStrmDrvrMode;
 		if(cs.pszStrmDrvr != NULL)
 			CHKmalloc(pData->pszStrmDrvr = (uchar*)strdup((char*)cs.pszStrmDrvr));
@@ -749,7 +924,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 			cs.pPermPeers = NULL;
 		}
 	}
-
+	CHKiRet(initTCP(pData));
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
@@ -780,7 +955,6 @@ CODESTARTmodExit
 	objRelease(netstrm, LM_NETSTRMS_FILENAME);
 	objRelease(netstrms, LM_NETSTRMS_FILENAME);
 	objRelease(tcpclt, LM_TCPCLT_FILENAME);
-
 	freeConfigVars();
 ENDmodExit
 
@@ -788,6 +962,7 @@ ENDmodExit
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
+CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 CODEqueryEtryPt_TXIF_OMOD_QUERIES /* we support the transactional interface! */
 ENDqueryEtryPt
 
@@ -811,7 +986,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 
 BEGINmodInit(Fwd)
 CODESTARTmodInit
-SCOPINGmodInit
+INITLegCnfVars
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(glbl, CORE_COMPONENT));

@@ -811,10 +811,80 @@ b) we push the failed message back to the main queue, but with an indication
 that it failed in an action. This is harder to implement and most importantly
 harder to understand/configure, but more flexible
 
-\section{Network Stream Subsystem}
-The idea of network streams was introduced when we implemented RFC5425 (syslog over TLS) in 2008. The core idea is to encapsulate all stream-oriented network data transfer into a single transport layer and make the upper layers independent of actual transport being used. This is in line with the traditional layer approaches in communication systems.
+\section{Configuration System}
+The configration system found in all versions up to v5 is based on sysklogd's
+legacy. It does not have any clear distinction between config load and
+activation. Starting with v6, a new config system is build. That new system
+offers the necessary distinction. In the long term, the configuration language
+will be enhanced towards the more flexible and easy to use RainerScript idea.
 
-Under this system, the upper layer provides plugins to send and receive streams of syslog data. Framing is provided by the upper layer. The upper layer itself is integrated in input and output plugins, which then are used to provide application-level syslog message objects to and from the rsyslog core. To these upper layers, the netstream layer provides reliable and sequenced message delivery with much of the same semantics as a usual TCP stream.
+\section{Plugin Interface}
+This section describes some aspects of the plugin interface.
+\subsection{Configuration Related}
+To support the new v2 config system, plugins need to publish a number of entry
+points that will be called by the rsyslog configuration section at various
+stages of the configration load, activation and deactivation process. This list
+may be extended as the configuration interface evolves.
+
+Plugins must not necessarily implement support for the v2 config system. If
+they do, the ``beginCnfLoad'' entry point serves as a flag telling that support
+is available. In that case, all other entry points need to be defined as well.
+If a module does not support the v2 config system, it can still be run, but be
+configured only via the legacy config system. Note that with the old system
+there are also problems with droping privileges. So a legacy module may not
+work correctly if privileges are dropped.
+
+The following entry points are available:
+\begin{enumerate}
+ \item \emph{beginCnfLoad} -- called when a new config load begins. Only one
+config load can be active at one time (no concurrent loads).
+ \item \emph{endCnfLoad} -- called when config load ends. This gives the module
+a chance to do final changes and some cleanup.
+ \item \emph{checkCnf} -- called by the framework to verify a configuration.
+ \item \emph{activateCnfPrePrivDrop} -- called by the framework to activate a
+configuration before privileges are dropped. This is an optional entry point
+that shall only be implemented by plugins that need the do some processing
+before rsyslog drops privileges. Processing inside this entry point should be
+limited to what is absolutely necessary. The main activation work should be
+done in activateCnf() as usual. 
+ \item \emph{activateCnf} -- called by the framework to activate a
+configuration. 
+\item \emph{freeCnf} -- called by the framework to free
+(deallocate) a configuration. 
+\end{enumerate}
+
+In the current implementation, entry points are sequentially called as given
+above. However, this will change. It is guaranteed that
+\begin{itemize}
+ \item beginCnfLoad() will be followed by a matching endCnfLoad() and there
+will be no new call to beginCnfLoad() before endCnfLoad() has been called. This
+means no nested config load needs to be supported,
+ \item checkCnf() may be called at any time, even during a config load phase.
+However, the config to check is a fully loaded one.
+ \item activateCnfPrePrivDrop(), if provided, will always be called before
+activateCnf() is called. No other config-related calls will be made in between.
+\end{itemize}
+
+\subsubsection{Output Modules}
+The v1 config load system for output modules seems to provide all functionality
+necessary to support the v2 system as well. As such, we currently do not
+require output modules to implement the new calls to be fully supported by the
+v2 system.
+
+\section{Network Stream Subsystem}
+The idea of network streams was introduced when we implemented RFC5425 (syslog
+over TLS) in 2008. The core idea is to encapsulate all stream-oriented network
+data transfer into a single transport layer and make the upper layers
+independent of actual transport being used. This is in line with the traditional
+layer approaches in communication systems.
+
+Under this system, the upper layer provides plugins to send and receive streams
+of syslog data. Framing is provided by the upper layer. The upper layer itself
+is integrated in input and output plugins, which then are used to provide
+application-level syslog message objects to and from the rsyslog core. To these
+upper layers, the netstream layer provides reliable and sequenced message
+delivery with much of the same semantics as a usual TCP stream.
+
 
 \begin{figure}
 \begin{center}

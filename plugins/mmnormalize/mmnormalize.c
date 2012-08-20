@@ -48,6 +48,7 @@
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
+MODULE_CNFNAME("mmnormalize")
 
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal);
 
@@ -68,8 +69,7 @@ typedef struct configSettings_s {
 	uchar *rulebase;		/**< name of normalization rulebase to use */
 	sbool bUseRawMsg;	/**< use %rawmsg% instead of %msg% */
 } configSettings_t;
-
-SCOPING_SUPPORT; /* must be set AFTER configSettings_t is defined */
+static configSettings_t cs;
 
 BEGINinitConfVars		/* (re)set config variables to default values */
 CODESTARTinitConfVars 
@@ -126,6 +126,9 @@ CODESTARTdoAction
 	r = ln_normalize(pData->ctxln, str, &pMsg->event);
 	if(r != 0) {
 		DBGPRINTF("error %d during ln_normalize\n", r);
+		MsgSetParseSuccess(pMsg, 0);
+	} else {
+		MsgSetParseSuccess(pMsg, 1);
 	}
 	es_deleteStr(str);
 	/***DEBUG***/ // TODO: remove after initial testing - 2010-12-01
@@ -237,7 +240,7 @@ BEGINmodInit()
 	unsigned long opts;
 	int bMsgPassingSupported;
 CODESTARTmodInit
-SCOPINGmodInit
+INITLegCnfVars
 	*ipIFVersProvided = CURR_MOD_IF_VERSION;
 		/* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr

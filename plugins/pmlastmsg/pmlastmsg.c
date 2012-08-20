@@ -48,6 +48,7 @@
 
 MODULE_TYPE_PARSER
 MODULE_TYPE_NOKEEP
+MODULE_CNFNAME("pmlastmsg")
 PARSER_NAME("rsyslog.lastline")
 
 /* internal structures

@@ -60,11 +60,14 @@ rsRetVal OMSRdestruct(omodStringRequest_t *pThis)
  */
 rsRetVal OMSRconstruct(omodStringRequest_t **ppThis, int iNumEntries)
 {
-	omodStringRequest_t *pThis;
+	omodStringRequest_t *pThis = NULL;
 	DEFiRet;
 
 	assert(ppThis != NULL);
 	assert(iNumEntries >= 0);
+	if(iNumEntries > CONF_OMOD_NUMSTRINGS_MAXSIZE) {
+		ABORT_FINALIZE(RS_RET_MAX_OMSR_REACHED);
+	}
 	CHKmalloc(pThis = calloc(1, sizeof(omodStringRequest_t)));
 
 	/* got the structure, so fill it */
@@ -94,7 +97,6 @@ finalize_it:
 rsRetVal OMSRsetEntry(omodStringRequest_t *pThis, int iEntry, uchar *pTplName, int iTplOpts)
 {
 	assert(pThis != NULL);
-	assert(pTplName != NULL);
 	assert(iEntry < pThis->iNumEntries);
 
 	if(pThis->ppTplName[iEntry] != NULL)

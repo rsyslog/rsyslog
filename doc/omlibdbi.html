@@ -54,32 +54,38 @@ dlopen()ed plugin (as omlibdbi is). So in short, you probably save you
 a lot of headache if you make sure you have at least libdbi version
 0.8.3 on your system.
 </p>
-<p><b>Configuration Directives</b>:</p>
+<p><b>Action Parameters</b>:</p>
 <ul>
-<li><span style="font-weight: bold;">$ActionLibdbiDriverDirectory /path/to/dbd/drivers</span><br>This
-is a global setting. It points libdbi to its driver directory. Usually,
-you do not need to set it. If you installed libdbi-driver's at a
-non-standard location, you may need to specify the directory here. If
-you are unsure, do <span style="font-weight: bold;">not</span> use this configuration directive. Usually, everything works just fine.<strong></strong></li><li><strong>$ActionLibdbiDriver drivername</strong><br>
+<li><b>server</b><br>Name or address of the MySQL server
+<li><b>db</b><br>Database to use
+<li><b>uid</b><br>logon userid used to connect to server. Must have proper permissions.
+<li><b>pwd</b><br>the user's password
+<li><b>template</b><br>Template to use when submitting messages.
+<li><b>driver</b><br>
 Name of the dbidriver to use, see libdbi-drivers documentation. As a
 quick excerpt, at least those were available at the time of this
 writiting "mysql" (suggest to use ommysql instead), "firebird" (Firbird
 and InterBase), "ingres", "msql", "Oracle", "sqlite", "sqlite3",
 "freetds" (for Microsoft SQL and Sybase) and "pgsql" (suggest to use
 ompgsql instead).</li>
-<li><span style="font-weight: bold;">$ActionLibdbiHost
-hostname</span><br>
+<li><b>driverdirectory</b><br>
+Path to the libdbi drivers. Usually,
+you do not need to set it. If you installed libdbi-drivers at a
+non-standard location, you may need to specify the directory here. If
+you are unsure, do <b>not</b> use this configuration directive.
+Usually, everything works just fine.</li>
+</ul>
+<p><b>Legacy (pre-v6) Configuration Directives</b>:</p>
+<ul>
+<li><b>$ActionLibdbiDriverDirectory /path/to/dbd/drivers</b>
+- like the driverdirectory action parameter.
+<li><strong>$ActionLibdbiDriver drivername</strong><br> - like the drivername action parameter.
+<li><span style="font-weight: bold;">$ActionLibdbiHost hostname</span> - like the server action parameter
 The host to connect to.</li>
-<li><span style="font-weight: bold;">$ActionLibdbiUserName
-user</span><br>
-The user used to connect to the database.</li>
-<li><span style="font-weight: bold;">$ActionlibdbiPassword</span><br>
-That user's password.</li>
-<li><span style="font-weight: bold;">$ActionlibdbiDBName
-db</span><br>
-The database that shall be written to.</li>
-<li><span style="font-weight: bold;">selector
-line: :omlibdbi:<span style="font-style: italic;">;template</span></span><br>
+<li><b>$ActionLibdbiUserName user</b> - like the uid action parameter
+<li><b>$ActionlibdbiPassword</b> - like the pwd action parameter
+<li><b>$ActionlibdbiDBName db</b> - like the db action parameter
+<li><b>selector line: :omlibdbi:<i>;template</i></b><br>
 executes the recently configured omlibdbi action. The ;template part is
 optional. If no template is provided, a default template is used (which
 is currently optimized for MySQL - sorry, folks...)</li>
@@ -108,7 +114,14 @@ database "syslog_db" on mysqlsever.example.com. The server is MySQL and
 being accessed under the account of "user" with password "pwd" (if you
 have empty passwords, just remove the $ActionLibdbiPassword line).<br>
 </p>
-<textarea rows="15" cols="60">$ModLoad omlibdbi
+<textarea rows="5" cols="60">$ModLoad omlibdbi
+*.* action(type="omlibdbi" driver="mysql"
+           server="mysqlserver.example.com" db="syslog_db"
+	   uid="user" pwd="pwd"
+</textarea>
+<p><b>Sample:</b></p>
+<p>The same as above, but in legacy config format (pre rsyslog-v6):
+<textarea rows="10" cols="60">$ModLoad omlibdbi
 $ActionLibdbiDriver mysql
 $ActionLibdbiHost mysqlserver.example.com
 $ActionLibdbiUserName user
@@ -121,8 +134,7 @@ $ActionLibdbiDBName syslog_db
 <p><font size="2">This documentation is part of the
 <a href="http://www.rsyslog.com/">rsyslog</a>
 project.<br>
-Copyright © 2008 by <a href="http://www.gerhards.net/rainer">Rainer
-Gerhards</a> and
+Copyright &copy; 2008-2012 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
 <a href="http://www.adiscon.com/">Adiscon</a>.
-Released under the GNU GPL version 3 or higher.</font></p>
+Released under the ASL 2.0.</font></p>
 </body></html>

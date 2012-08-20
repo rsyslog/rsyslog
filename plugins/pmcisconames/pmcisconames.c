@@ -42,6 +42,7 @@
 
 MODULE_TYPE_PARSER
 MODULE_TYPE_NOKEEP
+MODULE_CNFNAME("pmcisconames")
 PARSER_NAME("rsyslog.cisconames")
 
 /* internal structures

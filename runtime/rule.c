@@ -34,18 +34,14 @@
 #include "action.h"
 #include "rule.h"
 #include "errmsg.h"
-#include "vm.h"
-#include "var.h"
 #include "srUtils.h"
 #include "batch.h"
+#include "parserif.h"
 #include "unicode-helper.h"
 
 /* static data */
 DEFobjStaticHelpers
 DEFobjCurrIf(errmsg)
-DEFobjCurrIf(expr)
-DEFobjCurrIf(var)
-DEFobjCurrIf(vm)
 
 
 /* support for simple textual representation of FIOP names
@@ -121,8 +117,6 @@ shouldProcessThisMessage(rule_t *pRule, msg_t *pMsg, sbool *bProcessMsg)
 	uchar *pszPropVal;
 	int bRet = 0;
 	size_t propLen;
-	vm_t *pVM = NULL;
-	var_t *pResult = NULL;
 
 	ISOBJ_TYPE_assert(pRule, rule);
 	assert(pMsg != NULL);
@@ -184,14 +178,8 @@ shouldProcessThisMessage(rule_t *pRule, msg_t *pMsg, sbool *bProcessMsg)
 		else
 			bRet = 1;
 	} else if(pRule->f_filter_type == FILTER_EXPR) {
-		CHKiRet(vm.Construct(&pVM));
-		CHKiRet(vm.ConstructFinalize(pVM));
-		CHKiRet(vm.SetMsg(pVM, pMsg));
-		CHKiRet(vm.ExecProg(pVM, pRule->f_filterData.f_expr->pVmprg));
-		CHKiRet(vm.PopBoolFromStack(pVM, &pResult));
-		dbgprintf("result of rainerscript filter evaluation: %lld\n", pResult->val.num);
-		/* VM is destructed on function exit */
-		bRet = (pResult->val.num) ? 1 : 0;
+		bRet = cnfexprEvalBool(pRule->f_filterData.expr, pMsg);
+		dbgprintf("result of rainerscript filter evaluation: %d\n", bRet);
 	} else {
 		assert(pRule->f_filter_type == FILTER_PROP); /* assert() just in case... */
 		pszPropVal = MsgGetProp(pMsg, NULL, pRule->f_filterData.prop.propID,
@@ -269,13 +257,6 @@ shouldProcessThisMessage(rule_t *pRule, msg_t *pMsg, sbool *bProcessMsg)
 	}
 
 finalize_it:
-	/* destruct in any case, not just on error, but it makes error handling much easier */
-	if(pVM != NULL)
-		vm.Destruct(&pVM);
-
-	if(pResult != NULL)
-		var.Destruct(&pResult);
-
 	*bProcessMsg = bRet;
 	RETiRet;
 }
@@ -354,9 +335,6 @@ CODESTARTobjDestruct(rule)
 			rsCStrRegexDestruct(&pThis->f_filterData.prop.regex_cache);
 		if(pThis->f_filterData.prop.propName != NULL)
 			es_deleteStr(pThis->f_filterData.prop.propName);
-	} else if(pThis->f_filter_type == FILTER_EXPR) {
-		if(pThis->f_filterData.f_expr != NULL)
-			expr.Destruct(&pThis->f_filterData.f_expr);
 	}
 
 	llDestroy(&pThis->llActList);
@@ -474,9 +452,6 @@ ENDobjQueryInterface(rule)
  */
 BEGINObjClassExit(rule, OBJ_IS_CORE_MODULE) /* class, version */
 	objRelease(errmsg, CORE_COMPONENT);
-	objRelease(expr, CORE_COMPONENT);
-	objRelease(var, CORE_COMPONENT);
-	objRelease(vm, CORE_COMPONENT);
 ENDObjClassExit(rule)
 
 
@@ -487,9 +462,6 @@ ENDObjClassExit(rule)
 BEGINObjClassInit(rule, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
-	CHKiRet(objUse(expr, CORE_COMPONENT));
-	CHKiRet(objUse(var, CORE_COMPONENT));
-	CHKiRet(objUse(vm, CORE_COMPONENT));
 
 	/* set our own handlers */
 	OBJSetMethodHandler(objMethod_DEBUGPRINT, ruleDebugPrint);

@@ -59,6 +59,7 @@
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
+MODULE_CNFNAME("omgssapi")
 
 
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal);
@@ -94,18 +95,12 @@ typedef enum gss_mode_e {
 	GSSMODE_ENC
 } gss_mode_t;
 
-typedef struct configSettings_s {
+static struct configSettings_s {
 	uchar	*pszTplName; /* name of the default template to use */
 	char *gss_base_service_name;
 	gss_mode_t gss_mode;
-} configSettings_t;
+} cs;
 
-SCOPING_SUPPORT; /* must be set AFTER configSettings_t is defined */
-
-BEGINinitConfVars		/* (re)set config variables to default values */
-CODESTARTinitConfVars 
-	resetConfigVariables(NULL, NULL);
-ENDinitConfVars
 
 /* get the syslog forward port from selector_t. The passed in
  * struct must be one that is setup for forwarding.
@@ -698,7 +693,6 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 
 BEGINmodInit()
 CODESTARTmodInit
-SCOPINGmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));

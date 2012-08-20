@@ -1,6 +1,6 @@
 /* Definitions for network-related stuff.
  *
- * Copyright 2007, 2008 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2012 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -151,11 +151,13 @@ BEGINinterface(net) /* name must also be changed in ENDinterface macro! */
 	/* v6 interface additions - 2009-11-16 */
 	rsRetVal (*HasRestrictions)(uchar *, int *bHasRestrictions);
 	int (*isAllowedSender2)(uchar *pszType, struct sockaddr *pFrom, const char *pszFromHost, int bChkDNS);
+	/* v7 interface additions - 2012-03-06 */
+	rsRetVal (*GetIFIPAddr)(uchar *szif, int family, uchar *pszbuf, int lenBuf);
 	/* data members - these should go away over time... TODO */
 	int    *pACLAddHostnameOnFail; /* add hostname to acl when DNS resolving has failed */
 	int    *pACLDontResolve;       /* add hostname to acl instead of resolving it to IP(s) */
 ENDinterface(net)
-#define netCURR_IF_VERSION 6 /* increment whenever you change the interface structure! */
+#define netCURR_IF_VERSION 7 /* increment whenever you change the interface structure! */
 
 /* prototypes */
 PROTOTYPEObj(net);

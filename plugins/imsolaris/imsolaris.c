@@ -86,6 +86,7 @@
 
 MODULE_TYPE_INPUT
 MODULE_TYPE_NOKEEP
+MODULE_CNFNAME("imsolaris")
 
 /* defines */
 #define PATH_LOG	"/dev/log"
@@ -99,6 +100,10 @@ DEFobjCurrIf(prop)
 
 
 /* config settings */
+struct modConfData_s {
+	EMPTY_STRUCT;
+};
+
 static prop_t *pInputName = NULL;	/* our inputName currently is always "imuxsock", and this will hold it */
 static char *LogName = NULL;	/* the log socket name TODO: make configurable! */
 
@@ -300,6 +305,31 @@ finalize_it:
 
 	RETiRet;
 }
+
+
+BEGINbeginCnfLoad
+CODESTARTbeginCnfLoad
+ENDbeginCnfLoad
+
+
+BEGINendCnfLoad
+CODESTARTendCnfLoad
+ENDendCnfLoad
+
+
+BEGINcheckCnf
+CODESTARTcheckCnf
+ENDcheckCnf
+
+
+BEGINactivateCnf
+CODESTARTactivateCnf
+ENDactivateCnf
+
+
+BEGINfreeCnf
+CODESTARTfreeCnf
+ENDfreeCnf
 
 
 /* This function is called to gather input. */

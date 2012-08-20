@@ -34,6 +34,7 @@
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/un.h>
 #include <sys/socket.h>
@@ -57,6 +58,7 @@
 
 MODULE_TYPE_INPUT
 MODULE_TYPE_NOKEEP
+MODULE_CNFNAME("imuxsock")
 
 /* defines */
 #define MAXFUNIX	50
@@ -74,6 +76,9 @@ MODULE_TYPE_NOKEEP
 #define SYSTEMD_PATH_LOG SYSTEMD_JOURNAL "/syslog"
 #endif
 
+/* forward definitions */
+static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal);
+
 /* emulate struct ucred for platforms that do not have it */
 #ifndef HAVE_SCM_CREDENTIALS
 struct ucred { int pid; };
@@ -89,9 +94,11 @@ DEF_IMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(prop)
+DEFobjCurrIf(net)
 DEFobjCurrIf(parser)
 DEFobjCurrIf(datetime)
 DEFobjCurrIf(statsobj)
+
 
 statsobj_t *modStats;
 STATSCOUNTER_DEF(ctrSubmit, mutCtrSubmit)
@@ -141,7 +148,9 @@ typedef struct lstn_s {
 	sbool bParseHost;	/* should parser parse host name?  read-only after startup */
 	sbool bCreatePath;	/* auto-creation of socket directory? */
 	sbool bUseCreds;	/* pull original creator credentials from socket */
+	sbool bAnnotate;	/* annotate events with trusted properties */
 	sbool bWritePid;	/* write original PID into tag */
+	sbool bUseSysTimeStamp;	/* use timestamp from system (instead of from message) */
 } lstn_t;
 static lstn_t listeners[MAXFUNIX];
 
@@ -154,26 +163,64 @@ static int startIndexUxLocalSockets; /* process fd from that index on (used to
 static int nfd = 1; /* number of Unix sockets open / read-only after startup */
 static int sd_fds = 0;			/* number of systemd activated sockets */
 
-/* config settings */
-static int bOmitLocalLogging = 0;
-static uchar *pLogSockName = NULL;
-static uchar *pLogHostName = NULL;	/* host name to use with this socket */
-static int bUseFlowCtl = 0;		/* use flow control or not (if yes, only LIGHT is used! */
-static int bIgnoreTimestamp = 1;	/* ignore timestamps present in the incoming message? */
-static int bWritePid = 0;		/* use credentials from recvmsg() and fixup PID in TAG */
-static int bWritePidSysSock = 0;	/* use credentials from recvmsg() and fixup PID in TAG */
+/* config vars for legacy config system */
 #define DFLT_bCreatePath 0
-static int bCreatePath = DFLT_bCreatePath; /* auto-create socket path? */
-#define DFLT_ratelimitInterval 5
-static int ratelimitInterval = DFLT_ratelimitInterval;	/* interval in seconds, 0 = off */
-static int ratelimitIntervalSysSock = DFLT_ratelimitInterval;
+#define DFLT_ratelimitInterval 0
 #define DFLT_ratelimitBurst 200
-static int ratelimitBurst = DFLT_ratelimitBurst;	/* max nbr of messages in interval */
-static int ratelimitBurstSysSock = DFLT_ratelimitBurst;	/* max nbr of messages in interval */
 #define DFLT_ratelimitSeverity 1			/* do not rate-limit emergency messages */
-static int ratelimitSeverity = DFLT_ratelimitSeverity;
-static int ratelimitSeveritySysSock = DFLT_ratelimitSeverity;
+static struct configSettings_s {
+	int bOmitLocalLogging;
+	uchar *pLogSockName;
+	uchar *pLogHostName;		/* host name to use with this socket */
+	int bUseFlowCtl;		/* use flow control or not (if yes, only LIGHT is used! */
+	int bIgnoreTimestamp;		/* ignore timestamps present in the incoming message? */
+	int bUseSysTimeStamp;		/* use timestamp from system (rather than from message) */
+	int bUseSysTimeStampSysSock;	/* same, for system log socket */
+	int bWritePid;			/* use credentials from recvmsg() and fixup PID in TAG */
+	int bWritePidSysSock;		/* use credentials from recvmsg() and fixup PID in TAG */
+	int bCreatePath;		/* auto-create socket path? */
+	int ratelimitInterval;		/* interval in seconds, 0 = off */
+	int ratelimitIntervalSysSock;
+	int ratelimitBurst;		/* max nbr of messages in interval */
+	int ratelimitBurstSysSock;
+	int ratelimitSeverity;
+	int ratelimitSeveritySysSock;
+	int bAnnotate;			/* annotate trusted properties */
+	int bAnnotateSysSock;		/* same, for system log socket */
+} cs;
 
+struct instanceConf_s {
+	uchar *sockName;
+	uchar *pLogHostName;		/* host name to use with this socket */
+	sbool bUseFlowCtl;		/* use flow control or not (if yes, only LIGHT is used! */
+	sbool bIgnoreTimestamp;		/* ignore timestamps present in the incoming message? */
+	sbool bWritePid;		/* use credentials from recvmsg() and fixup PID in TAG */
+	sbool bUseSysTimeStamp;		/* use timestamp from system (instead of from message) */
+	int bCreatePath;		/* auto-create socket path? */
+	int ratelimitInterval;		/* interval in seconds, 0 = off */
+	int ratelimitBurst;		/* max nbr of messages in interval */
+	int ratelimitSeverity;
+	int bAnnotate;			/* annotate trusted properties */
+	struct instanceConf_s *next;
+};
+
+struct modConfData_s {
+	rsconf_t *pConf;		/* our overall config object */
+	instanceConf_t *root, *tail;
+	uchar *pLogSockName;
+	int ratelimitIntervalSysSock;
+	int ratelimitBurstSysSock;
+	int ratelimitSeveritySysSock;
+	sbool bOmitLocalLogging;
+	sbool bWritePidSysSock;
+	int bAnnotateSysSock;
+	sbool bUseSysTimeStamp;
+};
+static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
+static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current load process */
+
+/* we do not use this, because we do not bind to a ruleset so far
+ * enable when this is changed: #include "im-helper.h" */ /* must be included AFTER the type definitions! */
 
 
 static void 
@@ -262,6 +309,56 @@ static rsRetVal setSystemLogFlowControl(void __attribute__((unused)) *pVal, int 
 	RETiRet;
 }
 
+
+/* This function is called when a new listen socket instace shall be added to 
+ * the current config object via the legacy config system. It just shuffles
+ * all parameters to the listener in-memory instance.
+ * rgerhards, 2011-05-12
+ */
+static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
+{
+	instanceConf_t *inst;
+	DEFiRet;
+
+	if(pNewVal == NULL || pNewVal[0] == '\0') {
+		errmsg.LogError(0, RS_RET_SOCKNAME_MISSING , "imuxsock: socket name must be specified, "
+			        "but is not - listener not created\n");
+		if(pNewVal != NULL)
+			free(pNewVal);
+		ABORT_FINALIZE(RS_RET_SOCKNAME_MISSING);
+	}
+
+	CHKmalloc(inst = MALLOC(sizeof(instanceConf_t)));
+	inst->sockName = pNewVal;
+	inst->ratelimitInterval = cs.ratelimitInterval;
+	inst->pLogHostName = cs.pLogHostName;
+	inst->ratelimitBurst = cs.ratelimitBurst;
+	inst->ratelimitSeverity = cs.ratelimitSeverity;
+	inst->bUseFlowCtl = cs.bUseFlowCtl;
+	inst->bIgnoreTimestamp = cs.bIgnoreTimestamp;
+	inst->bCreatePath = cs.bCreatePath;
+	inst->bUseSysTimeStamp = cs.bUseSysTimeStamp;
+	inst->bWritePid = cs.bWritePid;
+	inst->bAnnotate = cs.bAnnotate;
+	inst->next = NULL;
+
+	/* node created, let's add to config */
+	if(loadModConf->tail == NULL) {
+		loadModConf->tail = loadModConf->root = inst;
+	} else {
+		loadModConf->tail->next = inst;
+		loadModConf->tail = inst;
+	}
+
+	/* some legacy conf processing */
+	free(cs.pLogHostName); /* reset hostname for next socket */
+	cs.pLogHostName = NULL;
+
+finalize_it:
+	RETiRet;
+}
+
+
 /* add an additional listen socket. Socket names are added
  * until the array is filled up. It is never reset, only at
  * module unload.
@@ -271,47 +368,46 @@ static rsRetVal setSystemLogFlowControl(void __attribute__((unused)) *pVal, int 
  * added capability to specify hostname for socket -- rgerhards, 2008-08-01
  */
 static rsRetVal
-addLstnSocketName(void __attribute__((unused)) *pVal, uchar *pNewVal)
+addListner(instanceConf_t *inst)
 {
 	DEFiRet;
 
 	if(nfd < MAXFUNIX) {
-		if(*pNewVal == ':') {
+		if(*inst->sockName == ':') {
 			listeners[nfd].bParseHost = 1;
 		} else {
 			listeners[nfd].bParseHost = 0;
 		}
-		if(pLogHostName == NULL) {
+		if(inst->pLogHostName == NULL) {
 			listeners[nfd].hostName = NULL;
 		} else {
 			CHKiRet(prop.Construct(&(listeners[nfd].hostName)));
-			CHKiRet(prop.SetString(listeners[nfd].hostName, pLogHostName, ustrlen(pLogHostName)));
+			CHKiRet(prop.SetString(listeners[nfd].hostName, inst->pLogHostName, ustrlen(inst->pLogHostName)));
 			CHKiRet(prop.ConstructFinalize(listeners[nfd].hostName));
-			/* reset hostname for next socket */
-			free(pLogHostName);
-			pLogHostName = NULL;
 		}
-		if(ratelimitInterval > 0) {
+		if(inst->ratelimitInterval > 0) {
 			if((listeners[nfd].ht = create_hashtable(100, hash_from_key_fn, key_equals_fn, NULL)) == NULL) {
-				/* in this case, we simply turn of rate-limiting */
+				/* in this case, we simply turn off rate-limiting */
 				dbgprintf("imuxsock: turning off rate limiting because we could not "
 					  "create hash table\n");
-				ratelimitInterval = 0;
+				inst->ratelimitInterval = 0;
 			}
 		}
-		listeners[nfd].ratelimitInterval = ratelimitInterval;
-		listeners[nfd].ratelimitBurst = ratelimitBurst;
-		listeners[nfd].ratelimitSev = ratelimitSeverity;
-		listeners[nfd].flowCtl = bUseFlowCtl ? eFLOWCTL_LIGHT_DELAY : eFLOWCTL_NO_DELAY;
-		listeners[nfd].flags = bIgnoreTimestamp ? IGNDATE : NOFLAG;
-		listeners[nfd].bCreatePath = bCreatePath;
-		listeners[nfd].sockName = pNewVal;
-		listeners[nfd].bUseCreds = (bWritePid || ratelimitInterval) ? 1 : 0;
-		listeners[nfd].bWritePid = bWritePid;
+		listeners[nfd].ratelimitInterval = inst->ratelimitInterval;
+		listeners[nfd].ratelimitBurst = inst->ratelimitBurst;
+		listeners[nfd].ratelimitSev = inst->ratelimitSeverity;
+		listeners[nfd].flowCtl = inst->bUseFlowCtl ? eFLOWCTL_LIGHT_DELAY : eFLOWCTL_NO_DELAY;
+		listeners[nfd].flags = inst->bIgnoreTimestamp ? IGNDATE : NOFLAG;
+		listeners[nfd].bCreatePath = inst->bCreatePath;
+		listeners[nfd].sockName = ustrdup(inst->sockName);
+		listeners[nfd].bUseCreds = (inst->bWritePid || inst->ratelimitInterval || inst->bAnnotate) ? 1 : 0;
+		listeners[nfd].bAnnotate = inst->bAnnotate;
+		listeners[nfd].bWritePid = inst->bWritePid;
+		listeners[nfd].bUseSysTimeStamp = inst->bUseSysTimeStamp;
 		nfd++;
 	} else {
 		errmsg.LogError(0, NO_ERRCODE, "Out of unix socket name descriptors, ignoring %s\n",
-			 pNewVal);
+			 inst->sockName);
 	}
 
 finalize_it:
@@ -363,7 +459,8 @@ createLogSocket(lstn_t *pLstn)
 	    chmod((char*)pLstn->sockName, 0666) < 0) {
 		errmsg.LogError(errno, NO_ERRCODE, "cannot create '%s'", pLstn->sockName);
 		dbgprintf("cannot create %s (%d).\n", pLstn->sockName, errno);
-		close(pLstn->fd);
+		if(pLstn->fd != -1)
+			close(pLstn->fd);
 		pLstn->fd = -1;
 		ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
 	}
@@ -421,15 +518,22 @@ openLogSocket(lstn_t *pLstn)
 			errmsg.LogError(errno, NO_ERRCODE, "set SCM_CREDENTIALS failed on '%s'", pLstn->sockName);
 			pLstn->bUseCreds = 0;
 		}
+// TODO: move to its own #if
+		if(setsockopt(pLstn->fd, SOL_SOCKET, SO_TIMESTAMP, &one, sizeof(one)) != 0) {
+			errmsg.LogError(errno, NO_ERRCODE, "set SO_TIMESTAMP failed on '%s'", pLstn->sockName);
+		}
 	}
 #	else /* HAVE_SCM_CREDENTIALS */
 	pLstn->bUseCreds = 0;
+	pLstn->bAnnotate = 0;
 #	endif /* HAVE_SCM_CREDENTIALS */
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		close(pLstn->fd);
-		pLstn->fd = -1;
+		if(pLstn->fd != -1) {
+			close(pLstn->fd);
+			pLstn->fd = -1;
+		}
 	}
 
 	RETiRet;
@@ -506,12 +610,109 @@ fixPID(uchar *bufTAG, int *lenTag, struct ucred *cred)
 }
 
 
+/* Get an "trusted property" from the system. Returns an empty string if the
+ * property can not be obtained. Inspired by similiar functionality inside
+ * journald. Currently works with Linux /proc filesystem, only.
+ */
+static rsRetVal
+getTrustedProp(struct ucred *cred, char *propName, uchar *buf, size_t lenBuf, int *lenProp)
+{
+	int fd;
+	int i;
+	int lenRead;
+	char namebuf[1024];
+	DEFiRet;
+
+	if(snprintf(namebuf, sizeof(namebuf), "/proc/%lu/%s", (long unsigned) cred->pid,
+		propName) >= (int) sizeof(namebuf)) {
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
+	if((fd = open(namebuf, O_RDONLY)) == -1) {
+		DBGPRINTF("error reading '%s'\n", namebuf);
+		*lenProp = 0;
+		FINALIZE;
+	}
+	if((lenRead = read(fd, buf, lenBuf - 1)) == -1) {
+		DBGPRINTF("error reading file data for '%s'\n", namebuf);
+		*lenProp = 0;
+		close(fd);
+		FINALIZE;
+	}
+	
+	/* we strip after the first \n */
+	for(i = 0 ; i < lenRead ; ++i) {
+		if(buf[i] == '\n')
+			break;
+		else if(iscntrl(buf[i]))
+			buf[i] = ' ';
+	}
+	buf[i] = '\0';
+	*lenProp = i;
+
+	close(fd);
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* read the exe trusted property path (so far, /proc fs only)
+ */
+static rsRetVal
+getTrustedExe(struct ucred *cred, uchar *buf, size_t lenBuf, int* lenProp)
+{
+	int lenRead;
+	char namebuf[1024];
+	DEFiRet;
+
+	if(snprintf(namebuf, sizeof(namebuf), "/proc/%lu/exe", (long unsigned) cred->pid)
+		>= (int) sizeof(namebuf)) {
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
+	if((lenRead = readlink(namebuf, (char*)buf, lenBuf - 1)) == -1) {
+		DBGPRINTF("error reading link '%s'\n", namebuf);
+		*lenProp = 0;
+		FINALIZE;
+	}
+	
+	buf[lenRead] = '\0';
+	*lenProp = lenRead;
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* copy a trusted property in escaped mode. That is, the property can contain
+ * any character and so it must be properly quoted AND escaped.
+ * It is assumed the output buffer is large enough. Returns the number of
+ * characters added.
+ */
+static inline int
+copyescaped(uchar *dstbuf, uchar *inbuf, int inlen)
+{
+	int iDst, iSrc;
+
+	*dstbuf = '"';
+	for(iDst=1, iSrc=0 ; iSrc < inlen ; ++iDst, ++iSrc) {
+		if(inbuf[iSrc] == '"' || inbuf[iSrc] == '\\') {
+			dstbuf[iDst++] = '\\';
+		}
+		dstbuf[iDst] = inbuf[iSrc];
+	}
+	dstbuf[iDst++] = '"';
+	return iDst;
+}
+
+
 /* submit received message to the queue engine
  * We now parse the message according to expected format so that we
  * can also mangle it if necessary.
  */
 static inline rsRetVal
-SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred)
+SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct timeval *ts)
 {
 	msg_t *pMsg;
 	int lenMsg;
@@ -525,6 +726,12 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred)
 	struct syslogTime st;
 	time_t tt;
 	rs_ratelimit_state_t *ratelimiter = NULL;
+	int lenProp;
+	uchar propBuf[1024];
+	uchar msgbuf[8192];
+	uchar *pmsgbuf;
+	int toffs; /* offset for trusted properties */
+	struct syslogTime dummyTS;
 	DEFiRet;
 
 	/* TODO: handle format errors?? */
@@ -550,10 +757,56 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred)
 		findRatelimiter(pLstn, cred, &ratelimiter); /* ignore error, better so than others... */
 	}
 
-	datetime.getCurrTime(&st, &tt);
+	if(ts == NULL) {
+		datetime.getCurrTime(&st, &tt);
+	} else {
+		datetime.timeval2syslogTime(ts, &st);
+		tt = ts->tv_sec;
+	}
+
 	if(ratelimiter != NULL && !withinRatelimit(ratelimiter, tt, cred->pid)) {
 		STATSCOUNTER_INC(ctrLostRatelimit, mutCtrLostRatelimit);
 		FINALIZE;
+	}
+
+	/* created trusted properties */
+	if(cred != NULL && pLstn->bAnnotate) {
+		if((unsigned) (lenRcv + 4096) < sizeof(msgbuf)) {
+			pmsgbuf = msgbuf;
+		} else {
+			CHKmalloc(pmsgbuf = malloc(lenRcv+4096));
+		}
+		memcpy(pmsgbuf, pRcv, lenRcv);
+		memcpy(pmsgbuf+lenRcv, " @[", 3);
+		toffs = lenRcv + 3; /* next free location */
+		lenProp = snprintf((char*)propBuf, sizeof(propBuf), "_PID=%lu _UID=%lu _GID=%lu",
+			 		(long unsigned) cred->pid, (long unsigned) cred->uid, 
+					(long unsigned) cred->gid);
+		memcpy(pmsgbuf+toffs, propBuf, lenProp);
+		toffs = toffs + lenProp;
+		getTrustedProp(cred, "comm", propBuf, sizeof(propBuf), &lenProp);
+		if(lenProp) {
+			memcpy(pmsgbuf+toffs, " _COMM=", 7);
+			memcpy(pmsgbuf+toffs+7, propBuf, lenProp);
+			toffs = toffs + 7 + lenProp;
+		}
+		getTrustedExe(cred, propBuf, sizeof(propBuf), &lenProp);
+		if(lenProp) {
+			memcpy(pmsgbuf+toffs, " _EXE=", 6);
+			memcpy(pmsgbuf+toffs+6, propBuf, lenProp);
+			toffs = toffs + 6 + lenProp;
+		}
+		getTrustedProp(cred, "cmdline", propBuf, sizeof(propBuf), &lenProp);
+		if(lenProp) {
+			memcpy(pmsgbuf+toffs, " _CMDLINE=", 10);
+			toffs = toffs + 10 + 
+				copyescaped(pmsgbuf+toffs+10, propBuf, lenProp);
+		}
+		/* finalize string */
+		pmsgbuf[toffs] = ']';
+		pmsgbuf[toffs+1] = '\0';
+		pRcv = pmsgbuf;
+		lenRcv = toffs + 1;
 	}
 
 	/* we now create our own message object and submit it to the queue */
@@ -570,15 +823,27 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred)
 
 	parse++; lenMsg--; /* '>' */
 
-	if((pLstn->flags & IGNDATE)) {
-		/* in this case, we still need to find out if we have a valid
-		 * datestamp or not .. and advance the parse pointer accordingly.
-		 */
-		struct syslogTime dummy;
-		datetime.ParseTIMESTAMP3164(&dummy, &parse, &lenMsg);
-	} else {
-		if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &parse, &lenMsg) != RS_RET_OK) {
-			DBGPRINTF("we have a problem, invalid timestamp in msg!\n");
+	if(ts == NULL) {
+		if((pLstn->flags & IGNDATE)) {
+			/* in this case, we still need to find out if we have a valid
+			 * datestamp or not .. and advance the parse pointer accordingly.
+			 */
+			datetime.ParseTIMESTAMP3164(&dummyTS, &parse, &lenMsg);
+		} else {
+			if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &parse, &lenMsg) != RS_RET_OK) {
+				DBGPRINTF("we have a problem, invalid timestamp in msg!\n");
+			}
+		}
+	} else { /* if we pulled the time from the system, we need to update the message text */
+		uchar *tmpParse = parse; /* just to check correctness of TS */
+		if(datetime.ParseTIMESTAMP3164(&dummyTS, &tmpParse, &lenMsg) == RS_RET_OK) {
+			/* We modify the message only if it contained a valid timestamp,
+			 * otherwise we do not touch it at all. */
+			datetime.formatTimestamp3164(&st, (char*)parse, 0);
+			parse[15] = ' '; /* re-write \0 from fromatTimestamp3164 by SP */
+			/* update "counters" to reflect processed timestamp */
+			parse += 16;
+			lenMsg -= 16;
 		}
 	}
 
@@ -594,7 +859,11 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred)
 		fixPID(bufParseTAG, &i, cred);
 	MsgSetTAG(pMsg, bufParseTAG, i);
 
-	MsgSetMSGoffs(pMsg, pMsg->iLenRawMsg - lenMsg);
+	if (pLstn->bAnnotate) {
+		MsgSetMSGoffs(pMsg, pMsg->iLenRawMsg - lenMsg - 16);
+	} else {
+		MsgSetMSGoffs(pMsg, pMsg->iLenRawMsg - lenMsg);
+	}
 
 	if(pLstn->bParseHost) {
 		pMsg->msgFlags  = pLstn->flags | PARSE_HOSTNAME;
@@ -630,6 +899,7 @@ static rsRetVal readSocket(lstn_t *pLstn)
 	struct cmsghdr *cm;
 #	endif
 	struct ucred *cred;
+	struct timeval *ts;
 	uchar bufRcv[4096+1];
 	char aux[128];
 	uchar *pRcv = NULL; /* receive buffer */
@@ -668,21 +938,28 @@ static rsRetVal readSocket(lstn_t *pLstn)
 	dbgprintf("Message from UNIX socket: #%d\n", pLstn->fd);
 	if(iRcvd > 0) {
 		cred = NULL;
-#		if HAVE_SCM_CREDENTIALS
-		if(pLstn->bUseCreds) {
-			dbgprintf("XXX: pre CM loop, length of control message %d\n", (int) msgh.msg_controllen);
-			for (cm = CMSG_FIRSTHDR(&msgh); cm; cm = CMSG_NXTHDR(&msgh, cm)) {
-				dbgprintf("XXX: in CM loop, %d, %d\n", cm->cmsg_level, cm->cmsg_type);
-				if (cm->cmsg_level == SOL_SOCKET && cm->cmsg_type == SCM_CREDENTIALS) {
+		ts = NULL;
+		if(pLstn->bUseCreds || pLstn->bUseSysTimeStamp) {
+			for(cm = CMSG_FIRSTHDR(&msgh); cm; cm = CMSG_NXTHDR(&msgh, cm)) {
+#				if HAVE_SCM_CREDENTIALS
+				if(   pLstn->bUseCreds
+				   && cm->cmsg_level == SOL_SOCKET && cm->cmsg_type == SCM_CREDENTIALS) {
 					cred = (struct ucred*) CMSG_DATA(cm);
-					dbgprintf("XXX: got credentials pid %d\n", (int) cred->pid);
 					break;
 				}
+#				endif /* HAVE_SCM_CREDENTIALS */
+#				if HAVE_SO_TIMESTAMP
+				if(   pLstn->bUseSysTimeStamp 
+				   && cm->cmsg_level == SOL_SOCKET && cm->cmsg_type == SO_TIMESTAMP) {
+					ts = (struct timeval *)CMSG_DATA(cm);
+					dbgprintf("XXX: got timestamp %ld.%ld\n",
+					  	(long) ts->tv_sec, (long) ts->tv_usec);
+					break;
+				}
+#				endif /* HAVE_SO_TIMESTAMP */
 			}
-			dbgprintf("XXX: post CM loop\n");
 		}
-#		endif /* HAVE_SCM_CREDENTIALS */
-		CHKiRet(SubmitMsg(pRcv, iRcvd, pLstn, cred));
+		CHKiRet(SubmitMsg(pRcv, iRcvd, pLstn, cred, ts));
 	} else if(iRcvd < 0 && errno != EINTR) {
 		char errStr[1024];
 		rs_strerror_r(errno, errStr, sizeof(errStr));
@@ -696,6 +973,127 @@ finalize_it:
 
 	RETiRet;
 }
+
+
+/* activate current listeners */
+static inline rsRetVal
+activateListeners()
+{
+	register int i;
+	int actSocks;
+	DEFiRet;
+
+	/* first apply some config settings */
+#	ifdef OS_SOLARIS
+		/* under solaris, we must NEVER process the local log socket, because
+		 * it is implemented there differently. If we used it, we would actually
+		 * delete it and render the system partly unusable. So don't do that.
+		 * rgerhards, 2010-03-26
+		 */
+		startIndexUxLocalSockets = 1;
+#	else
+		startIndexUxLocalSockets = runModConf->bOmitLocalLogging ? 1 : 0;
+#	endif
+	if(runModConf->pLogSockName != NULL)
+		listeners[0].sockName = runModConf->pLogSockName;
+	else if(sd_booted()) {
+		struct stat st;
+		if(stat(SYSTEMD_PATH_LOG, &st) != -1 && S_ISSOCK(st.st_mode)) {
+			listeners[0].sockName = (uchar*) SYSTEMD_PATH_LOG;
+		}
+	}
+	if(runModConf->ratelimitIntervalSysSock > 0) {
+		if((listeners[0].ht = create_hashtable(100, hash_from_key_fn, key_equals_fn, NULL)) == NULL) {
+			/* in this case, we simply turn of rate-limiting */
+			errmsg.LogError(0, NO_ERRCODE, "imuxsock: turning off rate limiting because we could not "
+				  "create hash table\n");
+			runModConf->ratelimitIntervalSysSock = 0;
+		}
+	}
+	listeners[0].ratelimitInterval = runModConf->ratelimitIntervalSysSock;
+	listeners[0].ratelimitBurst = runModConf->ratelimitBurstSysSock;
+	listeners[0].ratelimitSev = runModConf->ratelimitSeveritySysSock;
+	listeners[0].bUseCreds = (runModConf->bWritePidSysSock || runModConf->ratelimitIntervalSysSock) ? 1 : 0;
+	listeners[0].bWritePid = runModConf->bWritePidSysSock;
+	listeners[0].bAnnotate = runModConf->bAnnotateSysSock;
+	listeners[0].bUseSysTimeStamp = runModConf->bUseSysTimeStamp;
+
+	sd_fds = sd_listen_fds(0);
+	if(sd_fds < 0) {
+		errmsg.LogError(-sd_fds, NO_ERRCODE, "imuxsock: Failed to acquire systemd socket");
+		ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
+	}
+
+	/* initialize and return if will run or not */
+	actSocks = 0;
+	for (i = startIndexUxLocalSockets ; i < nfd ; i++) {
+		if(openLogSocket(&(listeners[i])) == RS_RET_OK) {
+			++actSocks;
+			dbgprintf("imuxsock: Opened UNIX socket '%s' (fd %d).\n",
+				  listeners[i].sockName, listeners[i].fd);
+		}
+	}
+
+	if(actSocks == 0) {
+		errmsg.LogError(0, NO_ERRCODE, "imuxsock does not run because we could not aquire any socket\n");
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
+finalize_it:
+	RETiRet;
+}
+
+
+
+BEGINbeginCnfLoad
+CODESTARTbeginCnfLoad
+	loadModConf = pModConf;
+	pModConf->pConf = pConf;
+	/* reset legacy config vars */
+	resetConfigVariables(NULL, NULL);
+ENDbeginCnfLoad
+
+
+BEGINendCnfLoad
+CODESTARTendCnfLoad
+	/* persist module-specific settings from legacy config system */
+	loadModConf->bOmitLocalLogging = cs.bOmitLocalLogging;
+	loadModConf->pLogSockName = cs.pLogSockName;
+
+	loadModConf = NULL; /* done loading */
+	/* free legacy config vars */
+	free(cs.pLogHostName);
+	cs.pLogSockName = NULL;
+	cs.pLogHostName = NULL;
+ENDendCnfLoad
+
+
+BEGINcheckCnf
+CODESTARTcheckCnf
+ENDcheckCnf
+
+
+BEGINactivateCnfPrePrivDrop
+	instanceConf_t *inst;
+CODESTARTactivateCnfPrePrivDrop
+	runModConf = pModConf;
+	for(inst = runModConf->root ; inst != NULL ; inst = inst->next) {
+		addListner(inst);
+	}
+	CHKiRet(activateListeners());
+finalize_it:
+ENDactivateCnfPrePrivDrop
+
+
+BEGINactivateCnf
+CODESTARTactivateCnf
+ENDactivateCnf
+
+
+BEGINfreeCnf
+CODESTARTfreeCnf
+	free(pModConf->pLogSockName);
+ENDfreeCnf
 
 
 /* This function is called to gather input. */
@@ -765,74 +1163,12 @@ ENDrunInput
 
 BEGINwillRun
 CODESTARTwillRun
-	register int i;
-	int actSocks;
-
-	/* first apply some config settings */
-#	ifdef OS_SOLARIS
-		/* under solaris, we must NEVER process the local log socket, because
-		 * it is implemented there differently. If we used it, we would actually
-		 * delete it and render the system partly unusable. So don't do that.
-		 * rgerhards, 2010-03-26
-		 */
-		startIndexUxLocalSockets = 1;
-#	else
-		startIndexUxLocalSockets = bOmitLocalLogging ? 1 : 0;
-#	endif
-	if(pLogSockName != NULL)
-		listeners[0].sockName = pLogSockName;
-	else if(sd_booted()) {
-		struct stat st;
-		if(stat(SYSTEMD_JOURNAL, &st) != -1 && S_ISDIR(st.st_mode)) {
-			listeners[0].sockName = (uchar*) SYSTEMD_PATH_LOG;
-		}
-	}
-	if(ratelimitIntervalSysSock > 0) {
-		if((listeners[0].ht = create_hashtable(100, hash_from_key_fn, key_equals_fn, NULL)) == NULL) {
-			/* in this case, we simply turn of rate-limiting */
-			dbgprintf("imuxsock: turning off rate limiting because we could not "
-				  "create hash table\n");
-			ratelimitIntervalSysSock = 0;
-		}
-	}
-	listeners[0].ratelimitInterval = ratelimitIntervalSysSock;
-	listeners[0].ratelimitBurst = ratelimitBurstSysSock;
-	listeners[0].ratelimitSev = ratelimitSeveritySysSock;
-	listeners[0].bUseCreds = (bWritePidSysSock || ratelimitIntervalSysSock) ? 1 : 0;
-	listeners[0].bWritePid = bWritePidSysSock;
-
-	sd_fds = sd_listen_fds(0);
-	if (sd_fds < 0) {
-		errmsg.LogError(-sd_fds, NO_ERRCODE, "imuxsock: Failed to acquire systemd socket");
-		ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
-	}
-
-	/* initialize and return if will run or not */
-	actSocks = 0;
-	for (i = startIndexUxLocalSockets ; i < nfd ; i++) {
-		if(openLogSocket(&(listeners[i])) == RS_RET_OK) {
-			++actSocks;
-			dbgprintf("imuxsock: Opened UNIX socket '%s' (fd %d).\n", listeners[i].sockName, listeners[i].fd);
-		}
-	}
-
-	if(actSocks == 0) {
-		errmsg.LogError(0, NO_ERRCODE, "imuxsock does not run because we could not aquire any socket\n");
-		ABORT_FINALIZE(RS_RET_ERR);
-	}
-
-	/* we need to create the inputName property (only once during our lifetime) */
-	CHKiRet(prop.Construct(&pInputName));
-	CHKiRet(prop.SetString(pInputName, UCHAR_CONSTANT("imuxsock"), sizeof("imuxsock") - 1));
-	CHKiRet(prop.ConstructFinalize(pInputName));
-
-finalize_it:
 ENDwillRun
 
 
 BEGINafterRun
-CODESTARTafterRun
 	int i;
+CODESTARTafterRun
 	/* do cleanup here */
 	/* Close the UNIX sockets. */
        for (i = 0; i < nfd; i++)
@@ -842,7 +1178,6 @@ CODESTARTafterRun
        /* Clean-up files. */
        for(i = startIndexUxLocalSockets; i < nfd; i++)
 		if (listeners[i].sockName && listeners[i].fd != -1) {
-
 			/* If systemd passed us a socket it is systemd's job to clean it up.
 			 * Do not unlink it -- we will get same socket (node) from systemd
 			 * e.g. on restart again.
@@ -855,20 +1190,17 @@ CODESTARTafterRun
 			DBGPRINTF("imuxsock: unlinking unix socket file[%d] %s\n", i, listeners[i].sockName);
 			unlink((char*) listeners[i].sockName);
 		}
-	/* free no longer needed string */
-	free(pLogSockName);
-	free(pLogHostName);
 
 	discardLogSockets();
 	nfd = 1;
-
-	if(pInputName != NULL)
-		prop.Destruct(&pInputName);
 ENDafterRun
 
 
 BEGINmodExit
 CODESTARTmodExit
+	if(pInputName != NULL)
+		prop.Destruct(&pInputName);
+
 	statsobj.Destruct(&modStats);
 
 	objRelease(parser, CORE_COMPONENT);
@@ -890,34 +1222,33 @@ ENDisCompatibleWithFeature
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_IMOD_QUERIES
+CODEqueryEtryPt_STD_CONF2_QUERIES
+CODEqueryEtryPt_STD_CONF2_PREPRIVDROP_QUERIES
 CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
 ENDqueryEtryPt
 
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
-	bOmitLocalLogging = 0;
-	if(pLogSockName != NULL) {
-		free(pLogSockName);
-		pLogSockName = NULL;
-	}
-	if(pLogHostName != NULL) {
-		free(pLogHostName);
-		pLogHostName = NULL;
-	}
-
-	discardLogSockets();
-	nfd = 1;
-	bIgnoreTimestamp = 1;
-	bUseFlowCtl = 0;
-	bWritePid = 0;
-	bWritePidSysSock = 0;
-	bCreatePath = DFLT_bCreatePath;
-	ratelimitInterval = DFLT_ratelimitInterval;
-	ratelimitIntervalSysSock = DFLT_ratelimitInterval;
-	ratelimitBurst = DFLT_ratelimitBurst;
-	ratelimitBurstSysSock = DFLT_ratelimitBurst;
-	ratelimitSeverity = DFLT_ratelimitSeverity;
-	ratelimitSeveritySysSock = DFLT_ratelimitSeverity;
+	free(cs.pLogSockName);
+	cs.pLogSockName = NULL;
+	free(cs.pLogHostName);
+	cs.bOmitLocalLogging = 0;
+	cs.pLogHostName = NULL;
+	cs.bIgnoreTimestamp = 1;
+	cs.bUseFlowCtl = 0;
+	cs.bUseSysTimeStamp = 1;
+	cs.bUseSysTimeStampSysSock = 1;
+	cs.bWritePid = 0;
+	cs.bWritePidSysSock = 0;
+	cs.bAnnotate = 0;
+	cs.bAnnotateSysSock = 0;
+	cs.bCreatePath = DFLT_bCreatePath;
+	cs.ratelimitInterval = DFLT_ratelimitInterval;
+	cs.ratelimitIntervalSysSock = DFLT_ratelimitInterval;
+	cs.ratelimitBurst = DFLT_ratelimitBurst;
+	cs.ratelimitBurstSysSock = DFLT_ratelimitBurst;
+	cs.ratelimitSeverity = DFLT_ratelimitSeverity;
+	cs.ratelimitSeveritySysSock = DFLT_ratelimitSeverity;
 
 	return RS_RET_OK;
 }
@@ -930,12 +1261,29 @@ CODESTARTmodInit
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
+	CHKiRet(objUse(net, CORE_COMPONENT));
 	CHKiRet(objUse(prop, CORE_COMPONENT));
 	CHKiRet(objUse(statsobj, CORE_COMPONENT));
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	CHKiRet(objUse(parser, CORE_COMPONENT));
 
 	dbgprintf("imuxsock version %s initializing\n", PACKAGE_VERSION);
+
+	/* init legacy config vars */
+	cs.pLogSockName = NULL;
+	cs.pLogHostName = NULL;	/* host name to use with this socket */
+
+	/* we need to create the inputName property (only once during our lifetime) */
+	CHKiRet(prop.Construct(&pInputName));
+	CHKiRet(prop.SetString(pInputName, UCHAR_CONSTANT("imuxsock"), sizeof("imuxsock") - 1));
+	CHKiRet(prop.ConstructFinalize(pInputName));
+
+	/* right now, glbl does not permit per-instance IP address notation. As long as this
+	 * is the case, it is OK to query the HostIP once here at this location. HOWEVER, the
+	 * whole concept is not 100% clean and needs to be addressed on a higher layer.
+	 * TODO / rgerhards, 2012-04-11
+	 */
+	pLocalHostIP = glbl.GetLocalHostIP();
 
 	/* init system log socket settings */
 	listeners[0].flags = IGNDATE;
@@ -945,7 +1293,9 @@ CODEmodInit_QueryRegCFSLineHdlr
 	listeners[0].fd = -1;
 	listeners[0].bParseHost = 0;
 	listeners[0].bUseCreds = 0;
+	listeners[0].bAnnotate = 0;
 	listeners[0].bCreatePath = 0;
+	listeners[0].bUseSysTimeStamp = 1;
 
 	/* initialize socket names */
 	for(i = 1 ; i < MAXFUNIX ; ++i) {
@@ -953,33 +1303,38 @@ CODEmodInit_QueryRegCFSLineHdlr
 		listeners[i].fd  = -1;
 	}
 
+	/* now init listen socket zero, the local log socket */
 	CHKiRet(prop.Construct(&pLocalHostIP));
 	CHKiRet(prop.SetString(pLocalHostIP, UCHAR_CONSTANT("127.0.0.1"), sizeof("127.0.0.1") - 1));
 	CHKiRet(prop.ConstructFinalize(pLocalHostIP));
 
 	/* register config file handlers */
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omitlocallogging", 0, eCmdHdlrBinary,
-		NULL, &bOmitLocalLogging, STD_LOADABLE_MODULE_ID));
+		NULL, &cs.bOmitLocalLogging, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputunixlistensocketignoremsgtimestamp", 0, eCmdHdlrBinary,
-		NULL, &bIgnoreTimestamp, STD_LOADABLE_MODULE_ID));
+		NULL, &cs.bIgnoreTimestamp, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"systemlogsocketname", 0, eCmdHdlrGetWord,
-		NULL, &pLogSockName, STD_LOADABLE_MODULE_ID));
+		NULL, &cs.pLogSockName, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputunixlistensockethostname", 0, eCmdHdlrGetWord,
-		NULL, &pLogHostName, STD_LOADABLE_MODULE_ID));
+		NULL, &cs.pLogHostName, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputunixlistensocketflowcontrol", 0, eCmdHdlrBinary,
-		NULL, &bUseFlowCtl, STD_LOADABLE_MODULE_ID));
+		NULL, &cs.bUseFlowCtl, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputunixlistensocketannotate", 0, eCmdHdlrBinary,
+		NULL, &cs.bAnnotate, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputunixlistensocketcreatepath", 0, eCmdHdlrBinary,
-		NULL, &bCreatePath, STD_LOADABLE_MODULE_ID));
+		NULL, &cs.bCreatePath, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputunixlistensocketusesystimestamp", 0, eCmdHdlrBinary,
+		NULL, &cs.bUseSysTimeStamp, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"addunixlistensocket", 0, eCmdHdlrGetWord,
-		addLstnSocketName, NULL, STD_LOADABLE_MODULE_ID));
+		addInstance, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputunixlistensocketusepidfromsystem", 0, eCmdHdlrBinary,
-		NULL, &bWritePid, STD_LOADABLE_MODULE_ID));
+		NULL, &cs.bWritePid, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"imuxsockratelimitinterval", 0, eCmdHdlrInt,
-		NULL, &ratelimitInterval, STD_LOADABLE_MODULE_ID));
+		NULL, &cs.ratelimitInterval, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"imuxsockratelimitburst", 0, eCmdHdlrInt,
-		NULL, &ratelimitBurst, STD_LOADABLE_MODULE_ID));
+		NULL, &cs.ratelimitBurst, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"imuxsockratelimitseverity", 0, eCmdHdlrInt,
-		NULL, &ratelimitSeverity, STD_LOADABLE_MODULE_ID));
+		NULL, &cs.ratelimitSeverity, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
 		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 	/* the following one is a (dirty) trick: the system log socket is not added via
@@ -992,14 +1347,18 @@ CODEmodInit_QueryRegCFSLineHdlr
 		setSystemLogTimestampIgnore, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"systemlogsocketflowcontrol", 0, eCmdHdlrBinary,
 		setSystemLogFlowControl, NULL, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"systemlogusesystimestamp", 0, eCmdHdlrBinary,
+		NULL, &cs.bUseSysTimeStampSysSock, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"systemlogsocketannotate", 0, eCmdHdlrBinary,
+		NULL, &cs.bAnnotateSysSock, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"systemlogusepidfromsystem", 0, eCmdHdlrBinary,
-		NULL, &bWritePidSysSock, STD_LOADABLE_MODULE_ID));
+		NULL, &cs.bWritePidSysSock, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"systemlogratelimitinterval", 0, eCmdHdlrInt,
-		NULL, &ratelimitIntervalSysSock, STD_LOADABLE_MODULE_ID));
+		NULL, &cs.ratelimitIntervalSysSock, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"systemlogratelimitburst", 0, eCmdHdlrInt,
-		NULL, &ratelimitBurstSysSock, STD_LOADABLE_MODULE_ID));
+		NULL, &cs.ratelimitBurstSysSock, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"systemlogratelimitseverity", 0, eCmdHdlrInt,
-		NULL, &ratelimitSeveritySysSock, STD_LOADABLE_MODULE_ID));
+		NULL, &cs.ratelimitSeveritySysSock, STD_LOADABLE_MODULE_ID));
 	
 	/* support statistics gathering */
 	CHKiRet(statsobj.Construct(&modStats));

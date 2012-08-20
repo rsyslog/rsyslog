@@ -38,30 +38,42 @@ struct ruleset_s {
 /* interfaces */
 BEGINinterface(ruleset) /* name must also be changed in ENDinterface macro! */
 	INTERFACEObjDebugPrint(ruleset);
-	rsRetVal (*DebugPrintAll)(void);
+	rsRetVal (*DebugPrintAll)(rsconf_t *conf);
 	rsRetVal (*Construct)(ruleset_t **ppThis);
-	rsRetVal (*ConstructFinalize)(ruleset_t __attribute__((unused)) *pThis);
+	rsRetVal (*ConstructFinalize)(rsconf_t *conf, ruleset_t __attribute__((unused)) *pThis);
 	rsRetVal (*Destruct)(ruleset_t **ppThis);
-	rsRetVal (*IterateAllActions)(rsRetVal (*pFunc)(void*, void*), void* pParam);
-	rsRetVal (*DestructAllActions)(void);
+	rsRetVal (*IterateAllActions)(rsconf_t *conf, rsRetVal (*pFunc)(void*, void*), void* pParam);
+	rsRetVal (*DestructAllActions)(rsconf_t *conf);
 	rsRetVal (*AddRule)(ruleset_t *pThis, rule_t **ppRule);
 	rsRetVal (*SetName)(ruleset_t *pThis, uchar *pszName);
 	rsRetVal (*ProcessBatch)(batch_t*);
-	rsRetVal (*GetRuleset)(ruleset_t **ppThis, uchar*);
-	rsRetVal (*SetDefaultRuleset)(uchar*);
-	rsRetVal (*SetCurrRuleset)(uchar*);
-	ruleset_t* (*GetCurrent)(void);
+	rsRetVal (*GetRuleset)(rsconf_t *conf, ruleset_t **ppThis, uchar*);
+	rsRetVal (*SetDefaultRuleset)(rsconf_t *conf, uchar*);
+	rsRetVal (*SetCurrRuleset)(rsconf_t *conf, uchar*);
+	ruleset_t* (*GetCurrent)(rsconf_t *conf);
 	qqueue_t* (*GetRulesetQueue)(ruleset_t*);
 	/* v3, 2009-11-04 */
-	parserList_t* (*GetParserList)(msg_t *);
-	/* v4 */
+	parserList_t* (*GetParserList)(rsconf_t *conf, msg_t *);
+	/* v5, 2011-04-19
+	 * added support for the rsconf object -- fundamental change
+	 * v6, 2011-07-15
+	 * removed conf ptr from SetName, AddRule as the flex/bison based
+	 * system uses globals in any case.
+	 */
 ENDinterface(ruleset)
-#define rulesetCURR_IF_VERSION 4 /* increment whenever you change the interface structure! */
+#define rulesetCURR_IF_VERSION 6 /* increment whenever you change the interface structure! */
 
 
 /* prototypes */
 PROTOTYPEObj(ruleset);
 
+/* TODO: remove these -- currently done dirty for config file
+ * redo -- rgerhards, 2011-04-19
+ * rgerhards, 2012-04-19: actually, it may be way cooler not to remove
+ * them and use plain c-style conventions at least inside core objects.
+ */
+rsRetVal rulesetDestructForLinkedList(void *pData);
+rsRetVal rulesetKeyDestruct(void __attribute__((unused)) *pData);
 
 /* Get name associated to ruleset. This function cannot fail (except,
  * of course, if previously something went really wrong). Returned
@@ -75,5 +87,5 @@ rulesetGetName(ruleset_t *pRuleset)
 }
 
 
-rsRetVal rulesetGetRuleset(ruleset_t **ppRuleset, uchar *pszName);
+rsRetVal rulesetGetRuleset(rsconf_t *conf, ruleset_t **ppRuleset, uchar *pszName);
 #endif /* #ifndef INCLUDED_RULESET_H */

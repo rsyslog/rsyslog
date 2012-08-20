@@ -26,7 +26,6 @@
 #define	ACTION_H_INCLUDED 1
 
 #include "syslogd-types.h"
-#include "sync.h"
 #include "queue.h"
 
 /* external data - this is to be removed when we change the action
@@ -85,17 +84,21 @@ struct action_s {
 				 * processed - it is also used to detect duplicates.
 				 */
 	qqueue_t *pQueue;	/* action queue */
-	SYNC_OBJ_TOOL;		/* required for mutex support */
+	pthread_mutex_t mutAction; /* primary action mutex */
 	pthread_mutex_t mutActExec; /* mutex to guard actual execution of doAction for single-threaded modules */
 	uchar *pszName;		/* action name (for documentation) */
 	DEF_ATOMIC_HELPER_MUT(mutCAS);
+	/* for statistics subsystem */
+	statsobj_t *statsobj;
+	STATSCOUNTER_DEF(ctrProcessed, mutCtrProcessed);
+	STATSCOUNTER_DEF(ctrFail, mutCtrFail);
 };
 
 
 /* function prototypes
  */
 rsRetVal actionConstruct(action_t **ppThis);
-rsRetVal actionConstructFinalize(action_t *pThis);
+rsRetVal actionConstructFinalize(action_t *pThis, struct cnfparamvals *queueParams);
 rsRetVal actionDestruct(action_t *pThis);
 rsRetVal actionDbgPrint(action_t *pThis);
 rsRetVal actionSetGlobalResumeInterval(int iNewVal);
@@ -103,8 +106,8 @@ rsRetVal actionDoAction(action_t *pAction);
 rsRetVal actionWriteToAction(action_t *pAction);
 rsRetVal actionCallHUPHdlr(action_t *pAction);
 rsRetVal actionClassInit(void);
-rsRetVal addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStringRequest_t *pOMSR, int bSuspended);
-rsRetVal actionNewScope(void);
-rsRetVal actionRestoreScope(void);
+rsRetVal addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStringRequest_t *pOMSR, struct cnfparamvals *actParams, struct cnfparamvals *queueParams, int bSuspended);
+rsRetVal activateActions(void);
+rsRetVal actionNewInst(struct nvlst *lst, action_t **ppAction);
 
 #endif /* #ifndef ACTION_H_INCLUDED */

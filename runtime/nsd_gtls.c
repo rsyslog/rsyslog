@@ -29,7 +29,9 @@
 #include <string.h>
 #include <gnutls/gnutls.h>
 #include <gnutls/x509.h>
-#include <gcrypt.h>
+#if GNUTLS_VERSION_NUMBER <= 0x020b00
+#	include <gcrypt.h>
+#endif
 #include <errno.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -53,7 +55,9 @@
 #define CRLFILE "crl.pem"
 
 
+#if GNUTLS_VERSION_NUMBER <= 0x020b00
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
+#endif
 MODULE_TYPE_LIB
 MODULE_TYPE_KEEP
 
@@ -565,7 +569,9 @@ gtlsGlblInit(void)
 	DEFiRet;
 
 	/* gcry_control must be called first, so that the thread system is correctly set up */
+	#if GNUTLS_VERSION_NUMBER <= 0x020b00
 	gcry_control (GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
+	#endif
 	CHKgnutls(gnutls_global_init());
 	
 	/* X509 stuff */

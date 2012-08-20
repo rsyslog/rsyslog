@@ -12,7 +12,7 @@
  *
  * File begun on 2007-07-22 by RGerhards
  *
- * Copyright 2007-2009 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2011 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -36,7 +36,7 @@
 #define	MODULES_H_INCLUDED 1
 
 #include "objomsr.h"
-
+#include "rainerscript.h"
 
 /* the following define defines the current version of the module interface.
  * It can be used by any module which want's to simply prevent version conflicts
@@ -57,7 +57,8 @@ typedef enum eModType_ {
 	eMOD_OUT = 1,	/* output module */
 	eMOD_LIB = 2,	/* library module */
 	eMOD_PARSER = 3,/* parser module */
-	eMOD_STRGEN = 4	/* strgen module */
+	eMOD_STRGEN = 4,/* strgen module */
+	eMOD_ANY = 5	/* meta-name for "any type of module" -- to be used in function calls */
 } eModType_t;
 
 
@@ -98,6 +99,7 @@ struct modInfo_s {
 	eModLinkType_t	eLinkType;
 	eModKeepType_t	eKeepType;	/* keep the module dynamically linked on unload */
 	uchar*		pszName;	/* printable module name, e.g. for dbgprintf */
+	uchar*		cnfName;	/* name to be used in config statements (e.g. 'name="omusrmsg"') */
 	unsigned	uRefCnt;	/* reference count for this module; 0 -> may be unloaded */
 	/* functions supported by all types of modules */
 	rsRetVal (*modInit)(int, int*, rsRetVal(**)());		/* initialize the module */
@@ -110,19 +112,22 @@ struct modInfo_s {
 	rsRetVal (*modExit)(void);		/* called before termination or module unload */
 	rsRetVal (*modGetID)(void **);		/* get its unique ID from module */
 	rsRetVal (*doHUP)(void *);		/* non-restart type HUP handler */
-	/* below: parse a configuration line - return if processed
-	 * or not. If not, must be parsed to next module.
-	 */
-	rsRetVal (*parseConfigLine)(uchar **pConfLine);
+	/* v2 config system specific */
+	rsRetVal (*beginCnfLoad)(void*newCnf, rsconf_t *pConf);
+	rsRetVal (*endCnfLoad)(void*Cnf);
+	rsRetVal (*checkCnf)(void*Cnf);
+	rsRetVal (*activateCnfPrePrivDrop)(void*Cnf);
+	rsRetVal (*activateCnf)(void*Cnf);	/* make provided config the running conf */
+	rsRetVal (*freeCnf)(void*Cnf);
+	/* end v2 config system specific */
 	/* below: create an instance of this module. Most importantly the module
 	 * can allocate instance memory in this call.
 	 */
 	rsRetVal (*createInstance)();
-	/* TODO: pass pointer to msg submit function to IM  rger, 2007-12-14 */
 	union	{
 		struct {/* data for input modules */
+/* TODO: remove? */rsRetVal (*willRun)(void); 		/* check if the current config will be able to run*/
 			rsRetVal (*runInput)(thrdInfo_t*);	/* function to gather input and submit to queue */
-			rsRetVal (*willRun)(void); 		/* function to gather input and submit to queue */
 			rsRetVal (*afterRun)(thrdInfo_t*);	/* function to gather input and submit to queue */
 			int bCanRun;	/* cached value of whether willRun() succeeded */
 		} im;
@@ -133,6 +138,7 @@ struct modInfo_s {
 			rsRetVal (*doAction)(uchar**, unsigned, void*);
 			rsRetVal (*endTransaction)(void*);
 			rsRetVal (*parseSelectorAct)(uchar**, void**,omodStringRequest_t**);
+			rsRetVal (*newActInst)(uchar *modName, struct nvlst *lst, void **, omodStringRequest_t **);
 		} om;
 		struct { /* data for library modules */
 		    	char dummy;
@@ -157,23 +163,28 @@ struct modInfo_s {
 /* interfaces */
 BEGINinterface(module) /* name must also be changed in ENDinterface macro! */
 	modInfo_t *(*GetNxt)(modInfo_t *pThis);
-	modInfo_t *(*GetNxtType)(modInfo_t *pThis, eModType_t rqtdType);
+	cfgmodules_etry_t *(*GetNxtCnfType)(rsconf_t *cnf, cfgmodules_etry_t *pThis, eModType_t rqtdType);
 	uchar *(*GetName)(modInfo_t *pThis);
 	uchar *(*GetStateName)(modInfo_t *pThis);
 	rsRetVal (*Use)(char *srcFile, modInfo_t *pThis);	/**< must be called before a module is used (ref counting) */
 	rsRetVal (*Release)(char *srcFile, modInfo_t **ppThis);	/**< release a module (ref counting) */
 	void (*PrintList)(void);
 	rsRetVal (*UnloadAndDestructAll)(eModLinkType_t modLinkTypesToUnload);
-	rsRetVal (*doModInit)(rsRetVal (*modInit)(), uchar *name, void *pModHdlr);
-	rsRetVal (*Load)(uchar *name);
+	rsRetVal (*doModInit)(rsRetVal (*modInit)(), uchar *name, void *pModHdlr, modInfo_t **pNew);
+	rsRetVal (*Load)(uchar *name, sbool bConfLoad);
 	rsRetVal (*SetModDir)(uchar *name);
+	modInfo_t *(*FindWithCnfName)(rsconf_t *cnf, uchar *name, eModType_t rqtdType); /* added v3, 2011-07-19 */
 ENDinterface(module)
-#define moduleCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
+#define moduleCURR_IF_VERSION 3 /* increment whenever you change the interface structure! */
+/* Changes: 
+ * v2 
+ * - added param bCondLoad to Load call - 2011-04-27
+ * - removed GetNxtType, added GetNxtCnfType - 2011-04-27
+ */
 
 /* prototypes */
 PROTOTYPEObj(module);
 
-/* TODO: remove them below (means move the config init code) -- rgerhards, 2008-02-19 */
-extern uchar *pModDir; /* read-only after startup */
-
+/* TODO: remove "dirty" calls! */
+rsRetVal addModToCnfList(modInfo_t *pThis);
 #endif /* #ifndef MODULES_H_INCLUDED */

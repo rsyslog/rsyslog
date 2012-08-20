@@ -8,7 +8,7 @@
  * the right code in question): For performance reasons, this module
  * uses different methods of message submission based on the user-selected
  * configuration. This code is similar, but can not be abstracted because
- * of the performanse-affecting differences in it. As such, it is often
+ * of the performance-affecting differences in it. As such, it is often
  * necessary to triple-check that everything works well in *all* modes.
  * The different modes (and calling sequence) are:
  *
@@ -103,15 +103,17 @@
 #include "template.h"
 #include "action.h"
 #include "modules.h"
-#include "sync.h"
 #include "cfsysline.h"
 #include "srUtils.h"
 #include "errmsg.h"
 #include "batch.h"
 #include "wti.h"
+#include "rsconf.h"
 #include "datetime.h"
 #include "unicode-helper.h"
 #include "atomic.h"
+#include "ruleset.h"
+#include "statsobj.h"
 
 #define NO_TIME_PROVIDED 0 /* indicate we do not provide any cached time */
 
@@ -127,6 +129,8 @@ DEFobjCurrIf(obj)
 DEFobjCurrIf(datetime)
 DEFobjCurrIf(module)
 DEFobjCurrIf(errmsg)
+DEFobjCurrIf(statsobj)
+DEFobjCurrIf(ruleset)
 
 
 typedef struct configSettings_s {
@@ -174,6 +178,25 @@ configSettings_t cs_save;				/* our saved (scope!) config settings */
  * counting. -- rgerhards, 2008-01-29
  */
 static int iActionNbr = 0;
+
+/* tables for interfacing with the v6 config system */
+static struct cnfparamdescr cnfparamdescr[] = {
+	{ "name", eCmdHdlrGetWord, 0 }, /* legacy: actionname */
+	{ "type", eCmdHdlrString, CNFPARAM_REQUIRED }, /* legacy: actionname */
+	{ "action.writeallmarkmessages", eCmdHdlrBinary, 0 }, /* legacy: actionwriteallmarkmessages */
+	{ "action.execonlyeverynthtime", eCmdHdlrInt, 0 }, /* legacy: actionexeconlyeverynthtime */
+	{ "action.execonlyeverynthtimetimeout", eCmdHdlrInt, 0 }, /* legacy: actionexeconlyeverynthtimetimeout */
+	{ "action.execonlyonceeveryinterval", eCmdHdlrInt, 0 }, /* legacy: actionexeconlyonceeveryinterval */
+	{ "action.execonlywhenpreviousissuspended", eCmdHdlrInt, 0 }, /* legacy: actionexeconlywhenpreviousissuspended */
+	{ "action.repeatedmsgcontainsoriginalmsg", eCmdHdlrBinary, 0 }, /* legacy: repeatedmsgcontainsoriginalmsg */
+	{ "action.resumeretrycount", eCmdHdlrInt, 0 }, /* legacy: actionresumeretrycount */
+	{ "action.resumeinterval", eCmdHdlrInt, 0 }
+};
+static struct cnfparamblk pblk =
+	{ CNFPARAMBLK_VERSION,
+	  sizeof(cnfparamdescr)/sizeof(struct cnfparamdescr),
+	  cnfparamdescr
+	};
 
 /* ------------------------------ methods ------------------------------ */ 
 
@@ -269,13 +292,19 @@ rsRetVal actionDestruct(action_t *pThis)
 		qqueueDestruct(&pThis->pQueue);
 	}
 
+	/* destroy stats object, if we have one (may not always be
+	 * be the case, e.g. if turned off)
+	 */
+	if(pThis->statsobj != NULL)
+		statsobj.Destruct(&pThis->statsobj);
+
 	if(pThis->pMod != NULL)
 		pThis->pMod->freeInstance(pThis->pModData);
 
 	if(pThis->f_pMsg != NULL)
 		msgDestruct(&pThis->f_pMsg);
 
-	SYNC_OBJ_TOOL_EXIT(pThis);
+	pthread_mutex_destroy(&pThis->mutAction);
 	pthread_mutex_destroy(&pThis->mutActExec);
 	d_free(pThis->pszName);
 	d_free(pThis->ppTpl);
@@ -288,6 +317,8 @@ rsRetVal actionDestruct(action_t *pThis)
 
 /* create a new action descriptor object
  * rgerhards, 2007-08-01
+ * Note that it is vital to set proper initial values as the v6 config
+ * system depends on these!
  */
 rsRetVal actionConstruct(action_t **ppThis)
 {
@@ -297,12 +328,19 @@ rsRetVal actionConstruct(action_t **ppThis)
 	ASSERT(ppThis != NULL);
 	
 	CHKmalloc(pThis = (action_t*) calloc(1, sizeof(action_t)));
-	pThis->iResumeInterval = cs.glbliActionResumeInterval;
-	pThis->iResumeRetryCount = cs.glbliActionResumeRetryCount;
+	pThis->iResumeInterval = 30;
+	pThis->iResumeRetryCount = 0;
+	pThis->pszName = NULL;
+	pThis->bWriteAllMarkMsgs = FALSE;
+	pThis->iExecEveryNthOccur = 0;
+	pThis->iExecEveryNthOccurTO = 0;
+	pThis->iSecsExecOnceInterval = 0;
+	pThis->bExecWhenPrevSusp = 0;
+	pThis->bRepMsgHasMsg = 0;
 	pThis->tLastOccur = datetime.GetTime(NULL);	/* done once per action on startup only */
 	pthread_mutex_init(&pThis->mutActExec, NULL);
+	pthread_mutex_init(&pThis->mutAction, NULL);
 	INIT_ATOMIC_HELPER_MUT(pThis->mutCAS);
-	SYNC_OBJ_TOOL_INIT(pThis);
 
 	/* indicate we have a new action */
 	++iActionNbr;
@@ -316,16 +354,45 @@ finalize_it:
 /* action construction finalizer
  */
 rsRetVal
-actionConstructFinalize(action_t *pThis)
+actionConstructFinalize(action_t *pThis, struct cnfparamvals *queueParams)
 {
 	DEFiRet;
-	uchar pszQName[64]; /* friendly name of our queue */
+	uchar pszAName[64]; /* friendly name of our action */
 
 	ASSERT(pThis != NULL);
 
-	/* find a name for our queue */
-	snprintf((char*) pszQName, sizeof(pszQName)/sizeof(uchar), "action %d queue", iActionNbr);
+	/* generate a friendly name for us action stats */
+	if(pThis->pszName == NULL) {
+		snprintf((char*) pszAName, sizeof(pszAName)/sizeof(uchar), "action %d", iActionNbr);
+	} else {
+		ustrncpy(pszAName, pThis->pszName, sizeof(pszAName));
+		pszAName[sizeof(pszAName)-1] = '\0'; /* to be on the save side */
+	}
 
+	/* support statistics gathering */
+	CHKiRet(statsobj.Construct(&pThis->statsobj));
+	CHKiRet(statsobj.SetName(pThis->statsobj, pszAName));
+
+	STATSCOUNTER_INIT(pThis->ctrProcessed, pThis->mutCtrProcessed);
+	CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("processed"),
+		ctrType_IntCtr, &pThis->ctrProcessed));
+
+	STATSCOUNTER_INIT(pThis->ctrFail, pThis->mutCtrFail);
+	CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("failed"),
+		ctrType_IntCtr, &pThis->ctrFail));
+
+	CHKiRet(statsobj.ConstructFinalize(pThis->statsobj));
+
+	/* create our queue */
+
+	/* generate a friendly name for the queue */
+	if(pThis->pszName == NULL) {
+		snprintf((char*) pszAName, sizeof(pszAName)/sizeof(uchar), "action %d queue",
+			 iActionNbr);
+	} else {
+		ustrncpy(pszAName, pThis->pszName, sizeof(pszAName));
+		pszAName[63] = '\0'; /* to be on the save side */
+	}
 	/* now check if we can run the action in "firehose mode" during stage one of 
 	 * its processing (that is before messages are enqueued into the action q).
 	 * This is only possible if some features, which require strict sequence, are
@@ -368,47 +435,51 @@ actionConstructFinalize(action_t *pThis)
 	 */
 	CHKiRet(qqueueConstruct(&pThis->pQueue, cs.ActionQueType, 1, cs.iActionQueueSize,
 					(rsRetVal (*)(void*, batch_t*, int*))processBatchMain));
-	obj.SetName((obj_t*) pThis->pQueue, pszQName);
-
-	/* ... set some properties ... */
-#	define setQPROP(func, directive, data) \
-	CHKiRet_Hdlr(func(pThis->pQueue, data)) { \
-		errmsg.LogError(0, NO_ERRCODE, "Invalid " #directive ", error %d. Ignored, running with default setting", iRet); \
-	}
-#	define setQPROPstr(func, directive, data) \
-	CHKiRet_Hdlr(func(pThis->pQueue, data, (data == NULL)? 0 : strlen((char*) data))) { \
-		errmsg.LogError(0, NO_ERRCODE, "Invalid " #directive ", error %d. Ignored, running with default setting", iRet); \
-	}
-
+	obj.SetName((obj_t*) pThis->pQueue, pszAName);
 	qqueueSetpUsr(pThis->pQueue, pThis);
-	setQPROP(qqueueSetsizeOnDiskMax, "$ActionQueueMaxDiskSpace", cs.iActionQueMaxDiskSpace);
-	setQPROP(qqueueSetiDeqBatchSize, "$ActionQueueDequeueBatchSize", cs.iActionQueueDeqBatchSize);
-	setQPROP(qqueueSetMaxFileSize, "$ActionQueueFileSize", cs.iActionQueMaxFileSize);
-	setQPROPstr(qqueueSetFilePrefix, "$ActionQueueFileName", cs.pszActionQFName);
-	setQPROP(qqueueSetiPersistUpdCnt, "$ActionQueueCheckpointInterval", cs.iActionQPersistUpdCnt);
-	setQPROP(qqueueSetbSyncQueueFiles, "$ActionQueueSyncQueueFiles", cs.bActionQSyncQeueFiles);
-	setQPROP(qqueueSettoQShutdown, "$ActionQueueTimeoutShutdown", cs.iActionQtoQShutdown );
-	setQPROP(qqueueSettoActShutdown, "$ActionQueueTimeoutActionCompletion", cs.iActionQtoActShutdown);
-	setQPROP(qqueueSettoWrkShutdown, "$ActionQueueWorkerTimeoutThreadShutdown", cs.iActionQtoWrkShutdown);
-	setQPROP(qqueueSettoEnq, "$ActionQueueTimeoutEnqueue", cs.iActionQtoEnq);
-	setQPROP(qqueueSetiHighWtrMrk, "$ActionQueueHighWaterMark", cs.iActionQHighWtrMark);
-	setQPROP(qqueueSetiLowWtrMrk, "$ActionQueueLowWaterMark", cs.iActionQLowWtrMark);
-	setQPROP(qqueueSetiDiscardMrk, "$ActionQueueDiscardMark", cs.iActionQDiscardMark);
-	setQPROP(qqueueSetiDiscardSeverity, "$ActionQueueDiscardSeverity", cs.iActionQDiscardSeverity);
-	setQPROP(qqueueSetiMinMsgsPerWrkr, "$ActionQueueWorkerThreadMinimumMessages", cs.iActionQWrkMinMsgs);
-	setQPROP(qqueueSetbSaveOnShutdown, "$ActionQueueSaveOnShutdown", cs.bActionQSaveOnShutdown);
-	setQPROP(qqueueSetiDeqSlowdown,    "$ActionQueueDequeueSlowdown", cs.iActionQueueDeqSlowdown);
-	setQPROP(qqueueSetiDeqtWinFromHr,  "$ActionQueueDequeueTimeBegin", cs.iActionQueueDeqtWinFromHr);
-	setQPROP(qqueueSetiDeqtWinToHr,    "$ActionQueueDequeueTimeEnd", cs.iActionQueueDeqtWinToHr);
+
+	if(queueParams == NULL) { /* use legacy params? */
+		/* ... set some properties ... */
+#		define setQPROP(func, directive, data) \
+		CHKiRet_Hdlr(func(pThis->pQueue, data)) { \
+			errmsg.LogError(0, NO_ERRCODE, "Invalid " #directive ", \
+				error %d. Ignored, running with default setting", iRet); \
+		}
+#		define setQPROPstr(func, directive, data) \
+		CHKiRet_Hdlr(func(pThis->pQueue, data, (data == NULL)? 0 : strlen((char*) data))) { \
+			errmsg.LogError(0, NO_ERRCODE, "Invalid " #directive ", \
+				error %d. Ignored, running with default setting", iRet); \
+		}
+		setQPROP(qqueueSetsizeOnDiskMax, "$ActionQueueMaxDiskSpace", cs.iActionQueMaxDiskSpace);
+		setQPROP(qqueueSetiDeqBatchSize, "$ActionQueueDequeueBatchSize", cs.iActionQueueDeqBatchSize);
+		setQPROP(qqueueSetMaxFileSize, "$ActionQueueFileSize", cs.iActionQueMaxFileSize);
+		setQPROPstr(qqueueSetFilePrefix, "$ActionQueueFileName", cs.pszActionQFName);
+		setQPROP(qqueueSetiPersistUpdCnt, "$ActionQueueCheckpointInterval", cs.iActionQPersistUpdCnt);
+		setQPROP(qqueueSetbSyncQueueFiles, "$ActionQueueSyncQueueFiles", cs.bActionQSyncQeueFiles);
+		setQPROP(qqueueSettoQShutdown, "$ActionQueueTimeoutShutdown", cs.iActionQtoQShutdown );
+		setQPROP(qqueueSettoActShutdown, "$ActionQueueTimeoutActionCompletion", cs.iActionQtoActShutdown);
+		setQPROP(qqueueSettoWrkShutdown, "$ActionQueueWorkerTimeoutThreadShutdown", cs.iActionQtoWrkShutdown);
+		setQPROP(qqueueSettoEnq, "$ActionQueueTimeoutEnqueue", cs.iActionQtoEnq);
+		setQPROP(qqueueSetiHighWtrMrk, "$ActionQueueHighWaterMark", cs.iActionQHighWtrMark);
+		setQPROP(qqueueSetiLowWtrMrk, "$ActionQueueLowWaterMark", cs.iActionQLowWtrMark);
+		setQPROP(qqueueSetiDiscardMrk, "$ActionQueueDiscardMark", cs.iActionQDiscardMark);
+		setQPROP(qqueueSetiDiscardSeverity, "$ActionQueueDiscardSeverity", cs.iActionQDiscardSeverity);
+		setQPROP(qqueueSetiMinMsgsPerWrkr, "$ActionQueueWorkerThreadMinimumMessages", cs.iActionQWrkMinMsgs);
+		setQPROP(qqueueSetbSaveOnShutdown, "$ActionQueueSaveOnShutdown", cs.bActionQSaveOnShutdown);
+		setQPROP(qqueueSetiDeqSlowdown,    "$ActionQueueDequeueSlowdown", cs.iActionQueueDeqSlowdown);
+		setQPROP(qqueueSetiDeqtWinFromHr,  "$ActionQueueDequeueTimeBegin", cs.iActionQueueDeqtWinFromHr);
+		setQPROP(qqueueSetiDeqtWinToHr,    "$ActionQueueDequeueTimeEnd", cs.iActionQueueDeqtWinToHr);
+	} else {
+		/* we have v6-style config params */
+		qqueueSetDefaultsActionQueue(pThis->pQueue);
+		qqueueApplyCnfParam(pThis->pQueue, queueParams);
+	}
 
 #	undef setQPROP
 #	undef setQPROPstr
 
-	dbgoprint((obj_t*) pThis->pQueue, "save on shutdown %d, max disk space allowed %lld\n",
-		   cs.bActionQSaveOnShutdown, cs.iActionQueMaxDiskSpace);
- 	
+	qqueueDbgPrint(pThis->pQueue);
 
-	CHKiRet(qqueueStart(pThis->pQueue));
 	DBGPRINTF("Action %p: queue %p created\n", pThis, pThis->pQueue);
 	
 	/* and now reset the queue params (see comment in its function header!) */
@@ -699,7 +770,8 @@ rsRetVal actionDbgPrint(action_t *pThis)
 
 	dbgprintf("%s: ", module.GetStateName(pThis->pMod));
 	pThis->pMod->dbgPrintInstInfo(pThis->pModData);
-	dbgprintf("\n\tInstance data: 0x%lx\n", (unsigned long) pThis->pModData);
+	dbgprintf("\n");
+	dbgprintf("\tInstance data: 0x%lx\n", (unsigned long) pThis->pModData);
 	dbgprintf("\tRepeatedMsgReduction: %d\n", pThis->f_ReduceRepeated);
 	dbgprintf("\tResume Interval: %d\n", pThis->iResumeInterval);
 	if(pThis->eState == ACT_STATE_SUSP) {
@@ -1079,6 +1151,7 @@ submitBatch(action_t *pAction, batch_t *pBatch, int nElem)
 				   && pBatch->pElem[i].state != BATCH_STATE_COMM ) {
 					pBatch->pElem[i].state = BATCH_STATE_BAD;
 					pBatch->pElem[i].bPrevWasSuspended = 1;
+					STATSCOUNTER_INC(pAction->ctrFail, pAction->mutCtrFail);
 				}
 			}
 			bDone = 1;
@@ -1268,6 +1341,7 @@ doSubmitToActionQ(action_t *pAction, msg_t *pMsg)
 {
 	DEFiRet;
 
+	STATSCOUNTER_INC(pAction->ctrProcessed, pAction->mutCtrProcessed);
 	if(pAction->pQueue->qType == QUEUETYPE_DIRECT)
 		iRet = qqueueEnqObjDirect(pAction->pQueue, (void*) MsgAddRef(pMsg));
 	else
@@ -1473,6 +1547,33 @@ finalize_it:
 }
 
 
+/* helper to activateActions, it activates a specific action.
+ */
+DEFFUNC_llExecFunc(doActivateActions)
+{
+	action_t *pThis = (action_t*) pData;
+	BEGINfunc
+	qqueueStart(pThis->pQueue);
+	DBGPRINTF("Action %p: queue %p started\n", pThis, pThis->pQueue);
+	ENDfunc
+	return RS_RET_OK; /* we ignore errors, we can not do anything either way */
+}
+
+
+/* This function "activates" the action after privileges have been dropped. Currently,
+ * this means that the queues are started.
+ * rgerhards, 2011-05-02
+ */
+rsRetVal
+activateActions(void)
+{
+	DEFiRet;
+	iRet = ruleset.IterateAllActions(ourConf, doActivateActions, NULL);
+	RETiRet;
+}
+
+
+
 /* This submits the message to the action queue in case where we need to handle
  * bWriteAllMarkMessage == FALSE only. Note that we use a non-blocking CAS loop
  * for the synchronization. Here, we just modify the filter condition to be false when
@@ -1544,6 +1645,18 @@ finalize_it:
 	RETiRet;
 }
 
+static inline void
+countStatsBatchEnq(action_t *pAction, batch_t *pBatch)
+{
+	int i;
+	for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pBatch->pbShutdownImmediate) ; ++i) {
+		if(   pBatch->pElem[i].bFilterOK
+		   && pBatch->pElem[i].state != BATCH_STATE_DISC) {
+			STATSCOUNTER_INC(pAction->ctrProcessed, pAction->mutCtrProcessed);
+		}
+	}
+}
+
 
 /* enqueue a batch in direct mode. We have put this into its own function just to avoid
  * cluttering the actual submit function.
@@ -1580,16 +1693,19 @@ doQueueEnqObjDirectBatch(action_t *pAction, batch_t *pBatch)
 				pBatch->pElem[i].bFilterOK = 0;
 				bModifiedFilter = 1;
 			}
-			if(pBatch->pElem[i].bFilterOK)
+			if(pBatch->pElem[i].bFilterOK && pBatch->pElem[i].state != BATCH_STATE_DISC) {
+				STATSCOUNTER_INC(pAction->ctrProcessed, pAction->mutCtrProcessed);
 				bNeedSubmit = 1;
+			}
 			DBGPRINTF("action %p[%d]: filterOK:%d state:%d execWhenPrev:%d prevWasSusp:%d\n",
 				   pAction, i, pBatch->pElem[i].bFilterOK,  pBatch->pElem[i].state,
 				   pAction->bExecWhenPrevSusp, pBatch->pElem[i].bPrevWasSuspended);
 		}
 		if(bNeedSubmit) {
+			/* note: stats were already computed above */
 			iRet = qqueueEnqObjDirectBatch(pAction->pQueue, pBatch);
 		} else {
-			DBGPRINTF("no need to submit batch, all bFilterOK==0\n");
+			DBGPRINTF("no need to submit batch, all bFilterOK==0 or discarded\n");
 		}
 		if(bModifiedFilter) {
 			for(i = 0 ; i < batchNumMsgs(pBatch) ; ++i) {
@@ -1601,6 +1717,8 @@ doQueueEnqObjDirectBatch(action_t *pAction, batch_t *pBatch)
 			}
 		}
 	} else {
+		if(GatherStats)
+			countStatsBatchEnq(pAction, pBatch);
 		iRet = qqueueEnqObjDirectBatch(pAction->pQueue, pBatch);
 	}
 
@@ -1678,15 +1796,58 @@ doSubmitToActionQComplexBatch(action_t *pAction, batch_t *pBatch)
 {
 	DEFiRet;
 
-	LockObj(pAction);
-	pthread_cleanup_push(mutexCancelCleanup, pAction->Sync_mut);
+	d_pthread_mutex_lock(&pAction->mutAction);
+	pthread_cleanup_push(mutexCancelCleanup, &pAction->mutAction);
 	iRet = helperSubmitToActionQComplexBatch(pAction, pBatch);
-	UnlockObj(pAction);
+	d_pthread_mutex_unlock(&pAction->mutAction);
 	pthread_cleanup_pop(0); /* remove mutex cleanup handler */
 
 	RETiRet;
 }
 #pragma GCC diagnostic warning "-Wempty-body"
+
+
+/* apply all params from param block to action. This supports the v6 config system.
+ * Defaults must have been set appropriately during action construct!
+ * rgerhards, 2011-08-01
+ */
+static rsRetVal
+actionApplyCnfParam(action_t *pAction, struct cnfparamvals *pvals)
+{
+	int i;
+	
+	for(i = 0 ; i < pblk.nParams ; ++i) {
+		if(!pvals[i].bUsed)
+			continue;
+		if(!strcmp(pblk.descr[i].name, "name")) {
+			pAction->pszName = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(pblk.descr[i].name, "type")) {
+			continue; /* this is handled seperately during module select! */
+		} else if(!strcmp(pblk.descr[i].name, "action.writeallmarkmessages")) {
+			pAction->bWriteAllMarkMsgs = pvals[i].val.d.n;
+		} else if(!strcmp(pblk.descr[i].name, "action.execonlyeverynthtime")) {
+			pAction->iExecEveryNthOccur = pvals[i].val.d.n;
+		} else if(!strcmp(pblk.descr[i].name, "action.execonlyeverynthtimetimeout")) {
+			pAction->iExecEveryNthOccurTO = pvals[i].val.d.n;
+		} else if(!strcmp(pblk.descr[i].name, "action.execonlyonceeveryinterval")) {
+			pAction->iSecsExecOnceInterval = pvals[i].val.d.n;
+		} else if(!strcmp(pblk.descr[i].name, "action.execonlywhenpreviousissuspended")) {
+			pAction->bExecWhenPrevSusp = pvals[i].val.d.n;
+		} else if(!strcmp(pblk.descr[i].name, "action.repeatedmsgcontainsoriginalmsg")) {
+			pAction->bRepMsgHasMsg = pvals[i].val.d.n;
+		} else if(!strcmp(pblk.descr[i].name, "action.resumeretrycount")) {
+			pAction->iResumeRetryCount = pvals[i].val.d.n;
+		} else if(!strcmp(pblk.descr[i].name, "action.resumeinterval")) {
+			pAction->iResumeInterval = pvals[i].val.d.n;
+		} else {
+			dbgprintf("action: program error, non-handled "
+			  "param '%s'\n", pblk.descr[i].name);
+		}
+	}
+	return RS_RET_OK;
+}
+
+
 
 /* add an Action to the current selector
  * The pOMSR is freed, as it is not needed after this function.
@@ -1694,7 +1855,9 @@ doSubmitToActionQComplexBatch(action_t *pAction, batch_t *pBatch)
  * rgerhards, 2007-07-27
  */
 rsRetVal
-addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStringRequest_t *pOMSR, int bSuspended)
+addAction(action_t **ppAction, modInfo_t *pMod, void *pModData,
+	  omodStringRequest_t *pOMSR, struct cnfparamvals *actParams,
+	  struct cnfparamvals *queueParams, int bSuspended)
 {
 	DEFiRet;
 	int i;
@@ -1706,22 +1869,28 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStringReques
 	assert(ppAction != NULL);
 	assert(pMod != NULL);
 	assert(pOMSR != NULL);
-	DBGPRINTF("Module %s processed this config line.\n", module.GetName(pMod));
+	DBGPRINTF("Module %s processes this action.\n", module.GetName(pMod));
 
 	CHKiRet(actionConstruct(&pAction)); /* create action object first */
 	pAction->pMod = pMod;
 	pAction->pModData = pModData;
-	pAction->pszName = cs.pszActionName;
-	cs.pszActionName = NULL;	/* free again! */
-	pAction->bWriteAllMarkMsgs = cs.bActionWriteAllMarkMsgs;
-	cs.bActionWriteAllMarkMsgs = FALSE; /* reset */
-	pAction->bExecWhenPrevSusp = cs.bActExecWhenPrevSusp;
-	pAction->iSecsExecOnceInterval = cs.iActExecOnceInterval;
-	pAction->iExecEveryNthOccur = cs.iActExecEveryNthOccur;
-	pAction->iExecEveryNthOccurTO = cs.iActExecEveryNthOccurTO;
-	pAction->bRepMsgHasMsg = cs.bActionRepMsgHasMsg;
-	cs.iActExecEveryNthOccur = 0; /* auto-reset */
-	cs.iActExecEveryNthOccurTO = 0; /* auto-reset */
+	if(actParams == NULL) { /* use legacy systemn */
+		pAction->pszName = cs.pszActionName;
+		pAction->iResumeInterval = cs.glbliActionResumeInterval;
+		pAction->iResumeRetryCount = cs.glbliActionResumeRetryCount;
+		pAction->bWriteAllMarkMsgs = cs.bActionWriteAllMarkMsgs;
+		pAction->bExecWhenPrevSusp = cs.bActExecWhenPrevSusp;
+		pAction->iSecsExecOnceInterval = cs.iActExecOnceInterval;
+		pAction->iExecEveryNthOccur = cs.iActExecEveryNthOccur;
+		pAction->iExecEveryNthOccurTO = cs.iActExecEveryNthOccurTO;
+		pAction->bRepMsgHasMsg = cs.bActionRepMsgHasMsg;
+		cs.iActExecEveryNthOccur = 0; /* auto-reset */
+		cs.iActExecEveryNthOccurTO = 0; /* auto-reset */
+		cs.bActionWriteAllMarkMsgs = FALSE; /* auto-reset */
+		cs.pszActionName = NULL;	/* free again! */
+	} else {
+		actionApplyCnfParam(pAction, actParams);
+	}
 
 	/* check if we can obtain the template pointers - TODO: move to separate function? */
 	pAction->iNumTpls = OMSRgetEntryCount(pOMSR);
@@ -1740,7 +1909,9 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStringReques
 		/* Ok, we got everything, so it now is time to look up the template
 		 * (Hint: templates MUST be defined before they are used!)
 		 */
-		if((pAction->ppTpl[i] = tplFind((char*)pTplName, strlen((char*)pTplName))) == NULL) {
+		if(   !(iTplOpts & OMSR_TPL_AS_MSG)
+		   && (pAction->ppTpl[i] =
+		   	tplFind(ourConf, (char*)pTplName, strlen((char*)pTplName))) == NULL) {
 			snprintf(errMsg, sizeof(errMsg) / sizeof(char),
 				 " Could not find template '%s' - action disabled\n",
 				 pTplName);
@@ -1750,7 +1921,7 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStringReques
 		}
 		/* check required template options */
 		if(   (iTplOpts & OMSR_RQD_TPL_OPT_SQL)
-		   && (pAction->ppTpl[i]->optFormatForSQL == 0)) {
+		   && (pAction->ppTpl[i]->optFormatEscape == 0)) {
 			errno = 0;
 			errmsg.LogError(0, RS_RET_RQD_TPLOPT_MISSING, "Action disabled. To use this action, you have to specify "
 				"the SQL or stdSQL option in your template!\n");
@@ -1772,9 +1943,9 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStringReques
 	pAction->pMod = pMod;
 	pAction->pModData = pModData;
 	/* now check if the module is compatible with select features */
-	if(pMod->isCompatibleWithFeature(sFEATURERepeatedMsgReduction) == RS_RET_OK)
-		pAction->f_ReduceRepeated = bReduceRepeatMsgs;
-	else {
+	if(pMod->isCompatibleWithFeature(sFEATURERepeatedMsgReduction) == RS_RET_OK) {
+		pAction->f_ReduceRepeated = loadConf->globals.bReduceRepeatMsgs;
+	} else {
 		DBGPRINTF("module is incompatible with RepeatedMsgReduction - turned off\n");
 		pAction->f_ReduceRepeated = 0;
 	}
@@ -1783,7 +1954,7 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStringReques
 	if(bSuspended)
 		actionSuspend(pAction, datetime.GetTime(NULL)); /* "good" time call, only during init and unavoidable */
 
-	CHKiRet(actionConstructFinalize(pAction));
+	CHKiRet(actionConstructFinalize(pAction, queueParams));
 	
 	/* TODO: if we exit here, we have a memory leak... */
 
@@ -1838,32 +2009,88 @@ initConfigVariables(void)
 }
 
 
-/* save our config and create a new scope. Note that things are messed up if
- * this is called while the config is already saved (we currently do not
- * have a stack as the design is we need none!
- * rgerhards, 2010-07-23
- */
 rsRetVal
-actionNewScope(void)
+actionNewInst(struct nvlst *lst, action_t **ppAction)
 {
+	struct cnfparamvals *paramvals;
+	struct cnfparamvals *queueParams;
+	modInfo_t *pMod;
+	uchar *cnfModName = NULL;
+	omodStringRequest_t *pOMSR;
+	void *pModData;
+	action_t *pAction;
+	int typeIdx;
 	DEFiRet;
-	memcpy(&cs_save, &cs, sizeof(cs));
-	initConfigVariables();
+
+	paramvals = nvlstGetParams(lst, &pblk, NULL);
+	if(paramvals == NULL) {
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+	dbgprintf("action param blk after actionNewInst:\n");
+	cnfparamsPrint(&pblk, paramvals);
+	typeIdx = cnfparamGetIdx(&pblk, "type");
+	if(paramvals[typeIdx].bUsed == 0) {
+		errmsg.LogError(0, RS_RET_CONF_RQRD_PARAM_MISSING, "action type missing");
+		ABORT_FINALIZE(RS_RET_CONF_RQRD_PARAM_MISSING); // TODO: move this into rainerscript handlers
+	}
+	cnfModName = (uchar*)es_str2cstr(paramvals[cnfparamGetIdx(&pblk, ("type"))].val.d.estr, NULL);
+	if((pMod = module.FindWithCnfName(loadConf, cnfModName, eMOD_OUT)) == NULL) {
+		errmsg.LogError(0, RS_RET_MOD_UNKNOWN, "module name '%s' is unknown", cnfModName);
+		ABORT_FINALIZE(RS_RET_MOD_UNKNOWN);
+	}
+	iRet = pMod->mod.om.newActInst(cnfModName, lst, &pModData, &pOMSR);
+	// TODO: check if RS_RET_SUSPENDED is still valid in v6!
+	if(iRet != RS_RET_OK && iRet != RS_RET_SUSPENDED) {
+		FINALIZE; /* iRet is already set to error state */
+	}
+
+	qqueueDoCnfParams(lst, &queueParams);
+
+	if((iRet = addAction(&pAction, pMod, pModData, pOMSR, paramvals, queueParams,
+	                    (iRet == RS_RET_SUSPENDED)? 1 : 0)) == RS_RET_OK) {
+		/* now check if the module is compatible with select features */
+		if(pMod->isCompatibleWithFeature(sFEATURERepeatedMsgReduction) == RS_RET_OK)
+			pAction->f_ReduceRepeated = loadConf->globals.bReduceRepeatMsgs;
+		else {
+			DBGPRINTF("module is incompatible with RepeatedMsgReduction - turned off\n");
+			pAction->f_ReduceRepeated = 0;
+		}
+		pAction->eState = ACT_STATE_RDY; /* action is enabled */
+		loadConf->actions.nbrActions++;	/* one more active action! */
+	}
+	*ppAction = pAction;
+
+finalize_it:
+	free(cnfModName);
+	cnfparamvalsDestruct(paramvals, &pblk);
 	RETiRet;
 }
 
 
-/* restore previously saved scope.
- * rgerhards, 2010-07-23
+/* Process a rsyslog v6 action config object (the now-primary config method).
+ * rgerhards, 2011-07-19
  */
 rsRetVal
-actionRestoreScope(void)
+actionProcessCnf(struct cnfobj *o)
 {
 	DEFiRet;
-	memcpy(&cs, &cs_save, sizeof(cs));
+#if 0 /* we need to check if we actually need this functionality -- later! */
+// This is for STAND-ALONE actions at the conf file TOP level
+	struct cnfparamvals *paramvals;
+
+	paramvals = nvlstGetParams(o->nvlst, &pblk, NULL);
+	if(paramvals == NULL) {
+		iRet = RS_RET_ERR;
+		goto finalize_it;
+	}
+	DBGPRINTF("action param blk after actionProcessCnf:\n");
+	cnfparamsPrint(&pblk, paramvals);
+	
+	/* now find module to activate */
+finalize_it:
+#endif
 	RETiRet;
 }
-
 
 
 /* TODO: we are not yet a real object, the ClassInit here just looks like it is..
@@ -1876,6 +2103,8 @@ rsRetVal actionClassInit(void)
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	CHKiRet(objUse(module, CORE_COMPONENT));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	CHKiRet(objUse(statsobj, CORE_COMPONENT));
+	CHKiRet(objUse(ruleset, CORE_COMPONENT));
 
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionname", 0, eCmdHdlrGetWord, NULL, &cs.pszActionName, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuefilename", 0, eCmdHdlrGetWord, NULL, &cs.pszActionQFName, NULL));

@@ -63,6 +63,7 @@
 
 MODULE_TYPE_INPUT
 MODULE_TYPE_NOKEEP
+MODULE_CNFNAME("imgssapi")
 
 /* defines */
 #define ALLOWEDMETHOD_GSS 2
@@ -104,6 +105,10 @@ typedef struct gss_sess_s {
 
 
 /* config variables */
+struct modConfData_s {
+	EMPTY_STRUCT;
+};
+
 static int iTCPSessMax = 200; /* max number of sessions */
 static char *gss_listen_service_name = NULL;
 static int bPermitPlainTcp = 0; /* plain tcp syslog allowed on GSSAPI port? */
@@ -335,7 +340,7 @@ addGSSListener(void __attribute__((unused)) *pVal, uchar *pNewVal)
 		CHKiRet(tcpsrv.SetCBOnRegularClose(pOurTcpsrv, onRegularClose));
 		CHKiRet(tcpsrv.SetCBOnErrClose(pOurTcpsrv, onErrClose));
 		CHKiRet(tcpsrv.SetInputName(pOurTcpsrv, UCHAR_CONSTANT("imgssapi")));
-		tcpsrv.configureTCPListen(pOurTcpsrv, pNewVal);
+		tcpsrv.configureTCPListen(pOurTcpsrv, pNewVal, 1);
 		CHKiRet(tcpsrv.ConstructFinalize(pOurTcpsrv));
 	}
 
@@ -639,6 +644,33 @@ TCPSessGSSDeinit(void)
 	}
 	RETiRet;
 }
+
+
+#if 0 /* can be used to integrate into new config system */
+BEGINbeginCnfLoad
+CODESTARTbeginCnfLoad
+ENDbeginCnfLoad
+
+
+BEGINendCnfLoad
+CODESTARTendCnfLoad
+ENDendCnfLoad
+
+
+BEGINcheckCnf
+CODESTARTcheckCnf
+ENDcheckCnf
+
+
+BEGINactivateCnf
+CODESTARTactivateCnf
+ENDactivateCnf
+
+
+BEGINfreeCnf
+CODESTARTfreeCnf
+ENDfreeCnf
+#endif
 
 /* This function is called to gather input.
  */

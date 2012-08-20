@@ -59,6 +59,7 @@
 
 MODULE_TYPE_PARSER
 MODULE_TYPE_NOKEEP
+MODULE_CNFNAME("pmsnare")
 PARSER_NAME("rsyslog.snare")
 
 /* internal structures
