@@ -630,11 +630,19 @@ submitMsg(msg_t *pMsg)
 	ISOBJ_TYPE_assert(pMsg, msg);
 
 	pRuleset = MsgGetRuleset(pMsg);
-
 	pQueue = (pRuleset == NULL) ? pMsgQueue : ruleset.GetRulesetQueue(pRuleset);
+
+	/* if a plugin logs a message during shutdown, the queue may no longer exist */
+	if(pQueue == NULL) {
+		DBGPRINTF("submitMsg() could not submit message - "
+			  "queue does (no longer?) exist - ignored\n");
+		FINALIZE;
+	}
+
 	MsgPrepareEnqueue(pMsg);
 	qqueueEnqObj(pQueue, pMsg->flowCtlType, (void*) pMsg);
 
+finalize_it:
 	RETiRet;
 }
 
@@ -655,12 +663,20 @@ multiSubmitMsg(multi_submit_t *pMultiSub)
 	if(pMultiSub->nElem == 0)
 		FINALIZE;
 
+	pRuleset = MsgGetRuleset(pMultiSub->ppMsgs[0]);
+	pQueue = (pRuleset == NULL) ? pMsgQueue : ruleset.GetRulesetQueue(pRuleset);
+
+	/* if a plugin logs a message during shutdown, the queue may no longer exist */
+	if(pQueue == NULL) {
+		DBGPRINTF("multiSubmitMsg() could not submit message - "
+			  "queue does (no longer?) exist - ignored\n");
+		FINALIZE;
+	}
+
 	for(i = 0 ; i < pMultiSub->nElem ; ++i) {
 		MsgPrepareEnqueue(pMultiSub->ppMsgs[i]);
 	}
 
-	pRuleset = MsgGetRuleset(pMultiSub->ppMsgs[0]);
-	pQueue = (pRuleset == NULL) ? pMsgQueue : ruleset.GetRulesetQueue(pRuleset);
 	iRet = pQueue->MultiEnq(pQueue, pMultiSub);
 	pMultiSub->nElem = 0;
 
