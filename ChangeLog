@@ -16,6 +16,8 @@ Version 6.5.0  [devel] 2012-0?-??
 - bugfix: omhdfs did no longer compile
 - bugfix: SystemLogSocketAnnotate did not work correctly
   Thanks to Miloslav Trmač for the patch
+- $SystemLogParseTrusted config file option
+  Thanks to Milan Bartos for the patch
 ---------------------------------------------------------------------------
 Version 6.3.13  [BETA] 2012-07-??
 - omelasticsearch: support for parameters parent & dynparent added
