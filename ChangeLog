@@ -13,6 +13,10 @@ Version 5.8.13  [V5-stable] 2012-06-??
   Thanks to bodik and Rohit Prasad for alerting us on this bug and
   analyzing it.
   fixes: http://bugzilla.adiscon.com/show_bug.cgi?id=347
+- bugfix: multiple main queues with same queue file name was not detected
+  This lead to queue file corruption. While the root cause is a config
+  error, it is a bug that this important and hard to find config error
+  was not detected by rsyslog.
 ---------------------------------------------------------------------------
 Version 5.8.12  [V5-stable] 2012-06-06
 - add small delay (50ms) after sending shutdown message

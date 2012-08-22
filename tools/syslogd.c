@@ -231,6 +231,11 @@ typedef struct legacyOptsLL_s {
 } legacyOptsLL_t;
 legacyOptsLL_t *pLegacyOptsLL = NULL;
 
+struct queuefilenames_s {
+	struct queuefilenames_s *next;
+	uchar *name;
+} *queuefilenames = NULL;
+
 /* global variables for config file state */
 int	iCompatibilityMode = 0;		/* version we should be compatible with; 0 means sysklogd. It is
 					   the default, so if no -c<n> option is given, we make ourselvs
@@ -1031,6 +1036,14 @@ static void doDie(int sig)
 static void
 freeAllDynMemForTermination(void)
 {
+	struct queuefilenames_s *qfn, *qfnDel;
+
+	for(qfn = queuefilenames ; qfn != NULL ; ) {
+		qfnDel = qfn;
+		qfn = qfn->next;
+		free(qfnDel->name);
+		free(qfnDel);
+	}
 	free(pszMainMsgQFName);
 	free(pModDir);
 	free(pszConfDAGFile);
@@ -1559,6 +1572,10 @@ startInputModules(void)
  */
 rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName)
 {
+	struct queuefilenames_s *qfn;
+	uchar *qfname = NULL;
+	static int qfn_renamenum = 0;
+	uchar qfrenamebuf[1024];
 	DEFiRet;
 
 	/* switch the message object to threaded operation, if necessary */
@@ -1584,10 +1601,32 @@ rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName)
 		errmsg.LogError(0, NO_ERRCODE, "Invalid " #directive ", error %d. Ignored, running with default setting", iRet); \
 	}
 
+	if(pszMainMsgQFName != NULL) {
+		/* check if the queue file name is unique, else emit an error */
+		for(qfn = queuefilenames ; qfn != NULL ; qfn = qfn->next) {
+			dbgprintf("check queue file name '%s' vs '%s'\n", qfn->name, pszMainMsgQFName);
+			if(!ustrcmp(qfn->name, pszMainMsgQFName)) {
+				snprintf((char*)qfrenamebuf, sizeof(qfrenamebuf), "%d-%s-%s",
+					 ++qfn_renamenum, pszMainMsgQFName, 
+					 (pszQueueName == NULL) ? "NONAME" : (char*)pszQueueName);
+				qfname = ustrdup(qfrenamebuf);
+				errmsg.LogError(0, NO_ERRCODE, "Error: queue file name '%s' already in use "
+					" - using '%s' instead", pszMainMsgQFName, qfname);
+				break;
+			}
+		}
+		if(qfname == NULL)
+			qfname = ustrdup(pszMainMsgQFName);
+		qfn = malloc(sizeof(struct queuefilenames_s));
+		qfn->name = qfname;
+		qfn->next = queuefilenames;
+		queuefilenames = qfn;
+	}
+
 	setQPROP(qqueueSetMaxFileSize, "$MainMsgQueueFileSize", iMainMsgQueMaxFileSize);
 	setQPROP(qqueueSetsizeOnDiskMax, "$MainMsgQueueMaxDiskSpace", iMainMsgQueMaxDiskSpace);
 	setQPROP(qqueueSetiDeqBatchSize, "$MainMsgQueueDequeueBatchSize", iMainMsgQueDeqBatchSize);
-	setQPROPstr(qqueueSetFilePrefix, "$MainMsgQueueFileName", pszMainMsgQFName);
+	setQPROPstr(qqueueSetFilePrefix, "$MainMsgQueueFileName", qfname);
 	setQPROP(qqueueSetiPersistUpdCnt, "$MainMsgQueueCheckpointInterval", iMainMsgQPersistUpdCnt);
 	setQPROP(qqueueSetbSyncQueueFiles, "$MainMsgQueueSyncQueueFiles", bMainMsgQSyncQeueFiles);
 	setQPROP(qqueueSettoQShutdown, "$MainMsgQueueTimeoutShutdown", iMainMsgQtoQShutdown );
