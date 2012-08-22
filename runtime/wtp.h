@@ -27,8 +27,8 @@
 #include "atomic.h"
 
 /* states for worker threads. */
-#define WRKTHRD_STOPPED  FALSE
-#define WRKTHRD_RUNNING  TRUE
+#define WRKTHRD_STOPPED  RSFALSE
+#define WRKTHRD_RUNNING  RSTRUE
 
 
 /* possible states of a worker thread pool */

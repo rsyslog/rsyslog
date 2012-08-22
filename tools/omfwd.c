@@ -207,12 +207,12 @@ static rsRetVal UDPSend(instanceData *pData, char *msg, size_t len)
 		 * call fails. Then, lsent has the error status, even though
 		 * the sendto() succeeded. -- rgerhards, 2007-06-22
 		 */
-		bSendSuccess = FALSE;
+		bSendSuccess = RSFALSE;
 		for (r = pData->f_addr; r; r = r->ai_next) {
 			for (i = 0; i < *pData->pSockArray; i++) {
 			       lsent = sendto(pData->pSockArray[i+1], msg, len, 0, r->ai_addr, r->ai_addrlen);
 				if (lsent == len) {
-					bSendSuccess = TRUE;
+					bSendSuccess = RSTRUE;
 					break;
 				} else {
 					int eno = errno;
@@ -225,7 +225,7 @@ static rsRetVal UDPSend(instanceData *pData, char *msg, size_t len)
 			       break;
 		}
 		/* finished looping */
-		if (bSendSuccess == FALSE) {
+		if (bSendSuccess == RSFALSE) {
 			dbgprintf("error forwarding via udp, suspending\n");
 			iRet = RS_RET_SUSPENDED;
 		}

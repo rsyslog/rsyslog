@@ -20,7 +20,7 @@
  * - actionWriteToAction
  * - qqueueEnqObj
  *   (now queue engine processing)
- * if(pThis->bWriteAllMarkMsgs == FALSE) - this is the DEFAULT
+ * if(pThis->bWriteAllMarkMsgs == RSFALSE) - this is the DEFAULT
  * - doSubmitToActionQNotAllMarkBatch
  * - doSubmitToActionQBatch (and from here like in the else case below!)
  * else
@@ -137,7 +137,7 @@ static int glbliActionResumeInterval = 30;
 int glbliActionResumeRetryCount = 0;		/* how often should suspended actions be retried? */
 static int bActionRepMsgHasMsg = 0;		/* last messsage repeated... has msg fragment in it */
 
-static int bActionWriteAllMarkMsgs = FALSE;			/* should all mark messages be unconditionally written? */
+static int bActionWriteAllMarkMsgs = RSFALSE;			/* should all mark messages be unconditionally written? */
 static uchar *pszActionName;					/* short name for the action */
 /* action queue and its configuration parameters */
 static queueType_t ActionQueType = QUEUETYPE_DIRECT;		/* type of the main message queue above */
@@ -377,7 +377,7 @@ actionConstructFinalize(action_t *pThis)
 			  pThis->iSecsExecOnceInterval
 			  );
 		pThis->submitToActQ = doSubmitToActionQComplexBatch;
-	} else if(pThis->bWriteAllMarkMsgs == FALSE) {
+	} else if(pThis->bWriteAllMarkMsgs == RSFALSE) {
 		/* nearly full-speed submission mode, default case */
 		pThis->submitToActQ = doSubmitToActionQNotAllMarkBatch;
 	} else {
@@ -1164,7 +1164,7 @@ prepareBatch(action_t *pAction, batch_t *pBatch)
 		if(pElem->bFilterOK && pElem->state != BATCH_STATE_DISC) {
 			pElem->state = BATCH_STATE_RDY;
 			if(prepareDoActionParams(pAction, pElem) != RS_RET_OK)
-				pElem->bFilterOK = FALSE;
+				pElem->bFilterOK = RSFALSE;
 		}
 	}
 	RETiRet;
@@ -1456,7 +1456,7 @@ doActionCallAction(action_t *pAction, batch_t *pBatch, int idxBtch)
 	pAction->tActNow = -1; /* we do not yet know our current time (clear prev. value) */
 
 	/* don't output marks to recently written outputs */
-	if(pAction->bWriteAllMarkMsgs == FALSE
+	if(pAction->bWriteAllMarkMsgs == RSFALSE
 	   && (pMsg->msgFlags & MARK) && (getActNow(pAction) - pAction->f_time) < MarkInterval / 2) {
 		ABORT_FINALIZE(RS_RET_OK);
 	}
@@ -1512,7 +1512,7 @@ finalize_it:
 
 
 /* This submits the message to the action queue in case where we need to handle
- * bWriteAllMarkMessage == FALSE only. Note that we use a non-blocking CAS loop
+ * bWriteAllMarkMessage == RSFALSE only. Note that we use a non-blocking CAS loop
  * for the synchronization. Here, we just modify the filter condition to be false when
  * a mark message must not be written. However, in this case we must save the previous
  * filter as we may need it in the next action (potential future optimization: check if this is
@@ -1769,7 +1769,7 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStringReques
 	pAction->pszName = pszActionName;
 	pszActionName = NULL;	/* free again! */
 	pAction->bWriteAllMarkMsgs = bActionWriteAllMarkMsgs;
-	bActionWriteAllMarkMsgs = FALSE; /* reset */
+	bActionWriteAllMarkMsgs = RSFALSE; /* reset */
 	pAction->bExecWhenPrevSusp = bActExecWhenPrevSusp;
 	pAction->iSecsExecOnceInterval = iActExecOnceInterval;
 	pAction->iExecEveryNthOccur = iActExecEveryNthOccur;

@@ -1172,7 +1172,7 @@ doZipWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf)
 {
 	z_stream zstrm;
 	int zRet;	/* zlib return state */
-	sbool bzInitDone = FALSE;
+	sbool bzInitDone = RSFALSE;
 	DEFiRet;
 	assert(pThis != NULL);
 	assert(pBuf != NULL);
@@ -1188,7 +1188,7 @@ doZipWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf)
 		DBGPRINTF("error %d returned from zlib/deflateInit2()\n", zRet);
 		ABORT_FINALIZE(RS_RET_ZLIB_ERR);
 	}
-	bzInitDone = TRUE;
+	bzInitDone = RSTRUE;
 
 	/* now doing the compression */
 	zstrm.next_in = (Bytef*) pBuf;	/* as of zlib doc, this must be set BEFORE DeflateInit2 */

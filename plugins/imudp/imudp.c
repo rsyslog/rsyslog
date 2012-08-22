@@ -314,7 +314,7 @@ processSocket(thrdInfo_t *pThrd, struct lstn_s *lstn, struct sockaddr_storage *f
 	assert(pThrd != NULL);
 	iNbrTimeUsed = 0;
 	while(1) { /* loop is terminated if we have a bad receive, done below in the body */
-		if(pThrd->bShallStop == TRUE)
+		if(pThrd->bShallStop == RSTRUE)
 			ABORT_FINALIZE(RS_RET_FORCE_TERM);
 		socklen = sizeof(struct sockaddr_storage);
 		lenRcvBuf = recvfrom(lstn->sock, (char*) pRcvBuf, iMaxLine, 0, (struct sockaddr *)&frominet, &socklen);
@@ -499,7 +499,7 @@ rsRetVal rcvMainLoop(thrdInfo_t *pThrd)
 		nfds = epoll_wait(efd, currEvt, NUM_EPOLL_EVENTS, -1);
 		DBGPRINTF("imudp: epoll_wait() returned with %d fds\n", nfds);
 
-		if(pThrd->bShallStop == TRUE)
+		if(pThrd->bShallStop == RSTRUE)
 			break; /* terminate input! */
 
 		for(i = 0 ; i < nfds ; ++i) {

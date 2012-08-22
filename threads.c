@@ -96,7 +96,7 @@ thrdTerminateNonCancel(thrdInfo_t *pThis)
 	assert(pThis != NULL);
 
 	DBGPRINTF("request term via SIGTTIN for input thread 0x%x\n", (unsigned) pThis->thrdID);
-	pThis->bShallStop = TRUE;
+	pThis->bShallStop = RSTRUE;
 	do {
 		d_pthread_mutex_lock(&pThis->mutThrd);
 		pthread_kill(pThis->thrdID, SIGTTIN);
