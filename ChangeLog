@@ -178,6 +178,7 @@ Version 5.9.0  [V5-DEVEL] (rgerhards), 2011-06-08
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=236
 ---------------------------------------------------------------------------
 Version 5.8.13  [V5-stable] 2012-06-??
+- bugfix: DA queue could cause abort
 - bugfix: "last message repeated n times" message was missing hostname
   Thanks to Zdenek Salvet for finding this bug and to Bodik for reporting
 - bugfix "$PreserveFQDN on" was not honored in some modules
@@ -185,6 +186,15 @@ Version 5.8.13  [V5-stable] 2012-06-??
 - bugfix: randomized IP option header in omudpspoof caused problems
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=327
   Thanks to Rick Brown for helping to test out the patch.
+- bugfix: potential abort if output plugin logged message during shutdown
+  note that none of the rsyslog-provided plugins does this
+  Thanks to bodik and Rohit Prasad for alerting us on this bug and
+  analyzing it.
+  fixes: http://bugzilla.adiscon.com/show_bug.cgi?id=347
+- bugfix: multiple main queues with same queue file name was not detected
+  This lead to queue file corruption. While the root cause is a config
+  error, it is a bug that this important and hard to find config error
+  was not detected by rsyslog.
 ---------------------------------------------------------------------------
 Version 5.8.12  [V5-stable] 2012-06-06
 - add small delay (50ms) after sending shutdown message

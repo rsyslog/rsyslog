@@ -500,7 +500,7 @@ debugPrintAll(void)
 static rsRetVal
 rulesetCreateQueue(void __attribute__((unused)) *pVal, int *pNewVal)
 {
-	uchar *rulesetMainQName;
+	uchar *rsname;
 	DEFiRet;
 
 	if(pCurrRuleset == NULL) {
@@ -518,10 +518,9 @@ rulesetCreateQueue(void __attribute__((unused)) *pVal, int *pNewVal)
 	if(pNewVal == 0)
 		FINALIZE; /* if it is turned off, we do not need to change anything ;) */
 
-	dbgprintf("adding a ruleset-specific \"main\" queue");
-	rulesetMainQName = (pCurrRuleset->pszName == NULL)? UCHAR_CONSTANT("ruleset") :
-							    pCurrRuleset->pszName;
-	CHKiRet(createMainQueue(&pCurrRuleset->pQueue, rulesetMainQName));
+	rsname = (pCurrRuleset->pszName == NULL) ? (uchar*) "[ruleset]" : pCurrRuleset->pszName;
+	DBGPRINTF("adding a ruleset-specific \"main\" queue for ruleset '%s'\n", rsname);
+	CHKiRet(createMainQueue(&pCurrRuleset->pQueue, rsname));
 
 finalize_it:
 	RETiRet;
