@@ -518,7 +518,7 @@ rulesetCreateQueue(void __attribute__((unused)) *pVal, int *pNewVal)
 	if(pNewVal == 0)
 		FINALIZE; /* if it is turned off, we do not need to change anything ;) */
 
-	rsname = (pCurrRuleset->pszName == NULL) ? (uchar*) "[NONAME]" : pCurrRuleset->pszName;
+	rsname = (pCurrRuleset->pszName == NULL) ? (uchar*) "[ruleset]" : pCurrRuleset->pszName;
 	DBGPRINTF("adding a ruleset-specific \"main\" queue for ruleset '%s'\n", rsname);
 	CHKiRet(createMainQueue(&pCurrRuleset->pQueue, rsname));
 
