@@ -1010,6 +1010,7 @@ asyncWriterThread(void *pPtr)
 	struct timespec t;
 	sbool bTimedOut = 0;
 	strm_t *pThis = (strm_t*) pPtr;
+	int err;
 	ISOBJ_TYPE_assert(pThis, strm);
 
 	BEGINfunc
@@ -1036,8 +1037,7 @@ asyncWriterThread(void *pPtr)
 			bTimedOut = 0;
 			timeoutComp(&t, pThis->iFlushInterval * 1000); /* *1000 millisconds */
 			if(pThis->bDoTimedWait) {
-				if(pthread_cond_timedwait(&pThis->notEmpty, &pThis->mut, &t) != 0) {
-					int err = errno;
+				if((err = pthread_cond_timedwait(&pThis->notEmpty, &pThis->mut, &t)) != 0) {
 					if(err == ETIMEDOUT) {
 						bTimedOut = 1;
 					} else {
