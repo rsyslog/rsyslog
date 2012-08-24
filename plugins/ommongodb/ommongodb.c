@@ -120,6 +120,7 @@ ENDfreeInstance
 BEGINdbgPrintInstInfo
 CODESTARTdbgPrintInstInfo
 	/* nothing special here */
+	(void)pData;
 ENDdbgPrintInstInfo
 
 
@@ -139,6 +140,8 @@ reportMongoError(instanceData *pData)
 		errmsg.LogError(0, RS_RET_ERR, "ommongodb: we had an error, but can "
 			"not obtain specifics");
 	}
+#else
+	(void)pData;
 #endif
 }
 
