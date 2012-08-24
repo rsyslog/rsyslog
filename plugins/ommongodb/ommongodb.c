@@ -30,8 +30,12 @@
 #include <errno.h>
 #include <assert.h>
 #include <signal.h>
+#include <stdint.h>
 #include <time.h>
 #include <mongo.h>
+#include <json/json.h>
+/* For struct json_object_iter, should not be necessary in future versions */
+#include <json/json_object_private.h>
 
 #include "rsyslog.h"
 #include "conf.h"
@@ -42,6 +46,7 @@
 #include "datetime.h"
 #include "errmsg.h"
 #include "cfsysline.h"
+#include "unicode-helper.h"
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
@@ -54,6 +59,7 @@ DEFobjCurrIf(datetime)
 
 typedef struct _instanceData {
 	mongo_sync_connection *conn;
+	struct json_tokener *json_tokener; /* only if (tplName != NULL) */
 	uchar *server;
 	int port;
         uchar *db;
@@ -108,11 +114,14 @@ static void closeMongoDB(instanceData *pData)
 BEGINfreeInstance
 CODESTARTfreeInstance
 	closeMongoDB(pData);
+	if (pData->json_tokener != NULL)
+		json_tokener_free(pData->json_tokener);
 	free(pData->server);
 	free(pData->db);
 	free(pData->collection);
 	free(pData->uid);
 	free(pData->pwd);
+	free(pData->dbNcoll);
 	free(pData->tplName);
 ENDfreeInstance
 
@@ -280,6 +289,165 @@ dbgprintf("ommongodb: secfrac is %d, precision %d\n",  pMsg->tTIMESTAMP.secfrac,
 	return doc;
 }
 
+static bson *BSONFromJSONArray(struct json_object *json);
+static bson *BSONFromJSONObject(struct json_object *json);
+
+/* Append a BSON variant of json to doc using name.  Return TRUE on success */
+static gboolean
+BSONAppendJSONObject(bson *doc, const gchar *name, struct json_object *json)
+{
+	switch(json_object_get_type(json)) {
+	case json_type_boolean:
+		return bson_append_boolean(doc, name,
+					   json_object_get_boolean(json));
+	case json_type_double:
+		return bson_append_double(doc, name,
+					  json_object_get_double(json));
+	case json_type_int: {
+		int64_t i;
+
+		/* FIXME: the future version will have get_int64 */
+		i = json_object_get_int(json);
+		if (i >= INT32_MIN && i <= INT32_MAX)
+			return bson_append_int32(doc, name, i);
+		else
+			return bson_append_int64(doc, name, i);
+	}
+	case json_type_object: {
+		bson *sub;
+		gboolean ok;
+
+		sub = BSONFromJSONObject(json);
+		if (sub == NULL)
+			return FALSE;
+		ok = bson_append_document(doc, name, sub);
+		bson_free(sub);
+		return ok;
+	}
+	case json_type_array: {
+		bson *sub;
+		gboolean ok;
+
+		sub = BSONFromJSONArray(json);
+		if (sub == NULL)
+			return FALSE;
+		ok = bson_append_document(doc, name, sub);
+		bson_free(sub);
+		return ok;
+	}
+	case json_type_string:
+		return bson_append_string(doc, name,
+					  json_object_get_string(json), -1);
+
+	default:
+		return FALSE;
+	}
+}
+
+/* Return a BSON variant of json, which must be a json_type_array */
+static bson *
+BSONFromJSONArray(struct json_object *json)
+{
+	/* Way more than necessary */
+	bson *doc = NULL;
+	size_t i, array_len;
+
+	doc = bson_new();
+	if(doc == NULL)
+		goto error;
+
+	array_len = json_object_array_length(json);
+	for (i = 0; i < array_len; i++) {
+		char buf[sizeof(size_t) * CHAR_BIT + 1];
+
+		if ((size_t)snprintf(buf, sizeof(buf), "%zu", i) >= sizeof(buf))
+			goto error;
+		if (BSONAppendJSONObject(doc, buf,
+					 json_object_array_get_idx(json, i))
+		    == FALSE)
+			goto error;
+	}
+
+	if(bson_finish(doc) == FALSE)
+		goto error;
+
+	return doc;
+
+error:
+	if(doc != NULL)
+		bson_free(doc);
+	return NULL;
+}
+
+/* Return a BSON variant of json, which must be a json_type_object */
+static bson *
+BSONFromJSONObject(struct json_object *json)
+{
+	bson *doc = NULL;
+	struct json_object_iter it;
+
+	doc = bson_new();
+	if(doc == NULL)
+		goto error;
+
+	json_object_object_foreachC(json, it) {
+		if (BSONAppendJSONObject(doc, it.key, it.val) == FALSE)
+			goto error;
+	}
+
+	if(bson_finish(doc) == FALSE)
+		goto error;
+
+	return doc;
+
+error:
+	if(doc != NULL)
+		bson_free(doc);
+	return NULL;
+}
+
+/* Return a BSON document based on user's JSON string. */
+static bson *
+BSONFromJSONString(instanceData *pData, const char *json_string)
+{
+	size_t json_string_len;
+	struct json_object *json;
+	bson *doc = NULL;
+	const char *error_message;
+
+	json_tokener_reset(pData->json_tokener);
+
+	json_string_len = strlen(json_string);
+	json = json_tokener_parse_ex(pData->json_tokener,
+				     json_string, json_string_len);
+	error_message = NULL;
+	if(json == NULL) {
+		enum json_tokener_error err;
+
+		err = pData->json_tokener->err;
+		if(err != json_tokener_continue)
+			error_message = json_tokener_errors[err];
+		else
+			error_message = "Unterminated input";
+	} else if((size_t)pData->json_tokener->char_offset < json_string_len)
+		error_message = "Extra characters after JSON object";
+	else if(!json_object_is_type(json, json_type_object))
+		error_message = "JSON value is not an object";
+	if(error_message != NULL) {
+		/* FIXME: is dbgprintf() the correct way to report the error? */
+		dbgprintf("ommongodb: Error parsing JSON '%s': %s\n",
+			  json_string, error_message);
+		goto done;
+	}
+
+	doc = BSONFromJSONObject(json);
+
+done:
+	if(json != NULL)
+		json_object_put(json);
+	return doc;
+}
+
 BEGINtryResume
 CODESTARTtryResume
 	if(pData->conn == NULL) {
@@ -297,6 +465,8 @@ CODESTARTdoAction
 
 	if(pData->tplName == NULL) {
 		doc = getDefaultBSON((msg_t*)ppString[0]);
+	} else {
+		doc = BSONFromJSONString(pData, (const char *)ppString[0]);
 	}
 	if(doc == NULL) {
 		dbgprintf("ommongodb: error creating BSON doc\n");
@@ -366,12 +536,9 @@ CODESTARTnewActInst
 	if(pData->tplName == NULL) {
 		CHKiRet(OMSRsetEntry(*ppOMSR, 0, NULL, OMSR_TPL_AS_MSG));
 	} else {
-		errmsg.LogError(0, RS_RET_LEGA_ACT_NOT_SUPPORTED,
-			"ommongodb: templates are not supported in this version");
-		ABORT_FINALIZE(RS_RET_ERR);
-		CHKiRet(OMSRsetEntry(*ppOMSR, 0,
-			(uchar*) strdup((char*) pData->tplName),
-			OMSR_TPL_AS_ARRAY));
+		CHKiRet(OMSRsetEntry(*ppOMSR, 0, ustrdup(pData->tplName),
+				     OMSR_NO_RQD_TPL_OPTS));
+		CHKmalloc(pData->json_tokener = json_tokener_new());
 	}
 
 	if(pData->db == NULL)

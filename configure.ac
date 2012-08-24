@@ -1279,14 +1279,13 @@ AC_ARG_ENABLE(ommongodb,
          esac],
         [enable_ommongodb=no]
 )
-#
-# you may want to do some library checks here - see snmp, mysql, pgsql modules
-# for samples
-#
 if test "x$enable_ommongodb" = "xyes"; then
 	PKG_CHECK_MODULES(LIBMONGO_CLIENT, libmongo-client >= 0.1.4)
 	AC_SUBST(LIBMONGO_CLIENT_CFLAGS)
 	AC_SUBST(LIBMONGO_CLIENT_LIBS)
+	PKG_CHECK_MODULES([JSON_C], [json])
+	AC_SUBST([JSON_CFLAGS])
+	AC_SUBST([JSON_LIBS])
 fi
 AM_CONDITIONAL(ENABLE_OMMONGODB, test x$enable_ommongodb = xyes)
 # end of mongodb code
