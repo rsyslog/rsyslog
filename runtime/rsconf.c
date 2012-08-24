@@ -386,6 +386,7 @@ yyerror(char *s)
 }
 void cnfDoObj(struct cnfobj *o)
 {
+int bChkUnuse = 1; // TODO: Delete
 	dbgprintf("cnf:global:obj: ");
 	cnfobjPrint(o);
 	switch(o->objType) {
@@ -398,7 +399,16 @@ void cnfDoObj(struct cnfobj *o)
 	case CNFOBJ_ACTION:
 		actionProcessCnf(o);
 		break;
+	case CNFOBJ_TPL:
+		//processTemplate(o);
+bChkUnuse = 0;
+		break;
+	case CNFOBJ_PROPERTY:
+		//processTemplate(o);
+bChkUnuse = 0;
+		break;
 	}
+if(bChkUnuse)
 	nvlstChkUnused(o->nvlst);
 	cnfobjDestruct(o);
 }

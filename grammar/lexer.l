@@ -9,7 +9,7 @@
   * cases. So while we hope that cfsysline support can be dropped some time in
   * the future, we will probably keep these useful constructs.
   *
-  * Copyright 2011 Rainer Gerhards and Adiscon GmbH.
+  * Copyright 2011-2012 Rainer Gerhards and Adiscon GmbH.
   *
   * This file is part of the rsyslog runtime library.
   *
@@ -151,6 +151,12 @@ int fileno(FILE *stream);
 				  BEGIN INITIAL; }
 "global"[ \n\t]*"("		{ yylval.objType = CNFOBJ_GLOBAL;
 				  BEGIN INOBJ; return BEGINOBJ; }
+"template"[ \n\t]*"("		{ yylval.objType = CNFOBJ_TPL;
+				  BEGIN INOBJ; return BEGIN_TPL; }
+"property"[ \n\t]*"("		{ yylval.objType = CNFOBJ_PROPERTY;
+				  BEGIN INOBJ; return BEGIN_PROPERTY; }
+"constant"[ \n\t]*"("		{ yylval.objType = CNFOBJ_CONSTANT;
+				  BEGIN INOBJ; return BEGIN_CONSTANT; }
 "input"[ \n\t]*"("		{ yylval.objType = CNFOBJ_INPUT;
 				  BEGIN INOBJ; return BEGINOBJ; }
 "module"[ \n\t]*"("		{ yylval.objType = CNFOBJ_MODULE;

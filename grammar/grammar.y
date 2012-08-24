@@ -63,6 +63,9 @@ extern int yyerror(char*);
 %token ENDOBJ
 %token <s> CFSYSLINE
 %token BEGIN_ACTION
+%token BEGIN_PROPERTY
+%token BEGIN_CONSTANT
+%token BEGIN_TPL
 %token STOP
 %token <s> LEGACY_ACTION
 %token <s> PRIFILT
@@ -89,7 +92,7 @@ extern int yyerror(char*);
 %token CMP_STARTSWITHI
 
 %type <nvlst> nv nvlst
-%type <obj> obj
+%type <obj> obj propconst
 %type <actlst> actlst
 %type <actlst> act
 %type <s> cfsysline
@@ -128,6 +131,15 @@ conf:	/* empty (to end recursion) */
 	| conf BSD_HOST_SELECTOR	{ cnfDoBSDHost($2); }
 obj:	  BEGINOBJ nvlst ENDOBJ 	{ $$ = cnfobjNew($1, $2); }
 	| BEGIN_ACTION nvlst ENDOBJ 	{ $$ = cnfobjNew(CNFOBJ_ACTION, $2); }
+        | BEGIN_TPL nvlst ENDOBJ	{ $$ = cnfobjNew(CNFOBJ_TPL, $2);  dbgprintf("processing template() without {}\n"); }
+        | BEGIN_TPL nvlst ENDOBJ '{' propconst '}'
+					{ $$ = cnfobjNew(CNFOBJ_TPL, $2); dbgprintf("processing template() WITH {}\n"); }
+/* TODO: NOTE:
+   propconst is the NEXT step. It is just included as an experiment and needs
+   to be replaced.
+*/
+propconst: BEGIN_PROPERTY nvlst ENDOBJ	{ $$ = cnfobjNew(CNFOBJ_PROPERTY, $2);
+					  dbgprintf("processed property()\n"); }
 cfsysline: CFSYSLINE	 		{ $$ = $1; }
 nvlst:					{ $$ = NULL; }
 	| nvlst nv 			{ $2->next = $1; $$ = $2; }
