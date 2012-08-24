@@ -205,13 +205,14 @@ i10pow(int exp)
 	}
 	return r;
 }
-/* write to mongodb in MSG passing mode, that is without a template.
+/* Return a BSON document when an user hasn't specified a template.
  * In this mode, we use the standard document format, which is somewhat
  * aligned to cee (as described in project lumberjack). Note that this is
  * a moving target, so we may run out of sync (and stay so to retain
  * backward compatibility, which we consider pretty important).
  */
-rsRetVal writeMongoDB_msg(msg_t *pMsg, instanceData *pData)
+static bson *
+getDefaultBSON(msg_t *pMsg)
 {
 	bson *doc = NULL;
 	uchar *procid; short unsigned procid_free; size_t procid_len;
@@ -222,12 +223,6 @@ rsRetVal writeMongoDB_msg(msg_t *pMsg, instanceData *pData)
 	int severity, facil;
 	gint64 ts_gen, ts_rcv; /* timestamps: generated, received */
 	int secfrac;
-	DEFiRet;
-
-	/* see if we are ready to proceed */
-	if(pData->conn == NULL) {
-		CHKiRet(initMongoDB(pData, 0));
-	}
 
 	procid = MsgGetProp(pMsg, NULL, PROP_PROGRAMNAME, NULL, &procid_len, &procid_free);
 	tag = MsgGetProp(pMsg, NULL, PROP_SYSLOGTAG, NULL, &tag_len, &tag_free);
@@ -279,22 +274,10 @@ dbgprintf("ommongodb: secfrac is %d, precision %d\n",  pMsg->tTIMESTAMP.secfrac,
 	if(sys_free) free(sys);
 	if(msg_free) free(msg);
 
-	if(doc == NULL) {
-		reportMongoError(pData);
-		dbgprintf("ommongodb: error creating BSON doc\n");
-		ABORT_FINALIZE(RS_RET_SUSPENDED);
-	}
+	if(doc == NULL)
+		return doc;
 	bson_finish(doc);
-	if(!mongo_sync_cmd_insert(pData->conn, (char*)pData->dbNcoll, doc, NULL)) {
-		reportMongoError(pData);
-		dbgprintf("ommongodb: insert error\n");
-		ABORT_FINALIZE(RS_RET_SUSPENDED);
-	}
-
-finalize_it:
-	if(doc != NULL)
-		bson_free(doc);
-	RETiRet;
+	return doc;
 }
 
 BEGINtryResume
@@ -305,10 +288,30 @@ CODESTARTtryResume
 ENDtryResume
 
 BEGINdoAction
+	bson *doc = NULL;
 CODESTARTdoAction
-	if(pData->tplName == NULL) {
-		iRet = writeMongoDB_msg((msg_t*)ppString[0], pData);
+	/* see if we are ready to proceed */
+	if(pData->conn == NULL) {
+		CHKiRet(initMongoDB(pData, 0));
 	}
+
+	if(pData->tplName == NULL) {
+		doc = getDefaultBSON((msg_t*)ppString[0]);
+	}
+	if(doc == NULL) {
+		dbgprintf("ommongodb: error creating BSON doc\n");
+		/* FIXME: is this a correct return code? */
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+	if(!mongo_sync_cmd_insert(pData->conn, (char*)pData->dbNcoll, doc, NULL)) {
+		reportMongoError(pData);
+		dbgprintf("ommongodb: insert error\n");
+		ABORT_FINALIZE(RS_RET_SUSPENDED);
+	}
+
+finalize_it:
+	if(doc != NULL)
+		bson_free(doc);
 ENDdoAction
 
 
