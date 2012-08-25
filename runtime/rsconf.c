@@ -387,7 +387,8 @@ yyerror(char *s)
 }
 void cnfDoObj(struct cnfobj *o)
 {
-int bChkUnuse = 1; // TODO: Delete
+	int bChkUnuse = 1;
+
 	dbgprintf("cnf:global:obj: ");
 	cnfobjPrint(o);
 	switch(o->objType) {
@@ -405,12 +406,12 @@ int bChkUnuse = 1; // TODO: Delete
 		break;
 	case CNFOBJ_PROPERTY:
 	case CNFOBJ_CONSTANT:
-		//processTemplate(o);
-bChkUnuse = 0;
+		/* these types are processed at a later stage */
+		bChkUnuse = 0;
 		break;
 	}
-if(bChkUnuse)
-	nvlstChkUnused(o->nvlst);
+	if(bChkUnuse)
+		nvlstChkUnused(o->nvlst);
 	cnfobjDestruct(o);
 }
 

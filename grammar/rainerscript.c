@@ -113,6 +113,24 @@ cnfobjPrint(o);
 	return lst;
 }
 
+/* add object to end of object list, always returns pointer to root object */
+struct objlst*
+objlstAdd(struct objlst *root, struct cnfobj *o)
+{
+	struct objlst *l;
+	struct objlst *newl;
+	
+	newl = objlstNew(o);
+	if(root == 0) {
+		root = newl;
+	} else { /* find last, linear search ok, as only during config phase */
+		for(l = root ; l->next != NULL ; l = l->next)
+			;
+		l->next = newl;
+	}
+	return root;
+}
+
 void
 objlstDestruct(struct objlst *lst)
 {

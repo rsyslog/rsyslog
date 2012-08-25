@@ -137,13 +137,10 @@ obj:	  BEGINOBJ nvlst ENDOBJ 	{ $$ = cnfobjNew($1, $2); }
         | BEGIN_TPL nvlst ENDOBJ '{' propconst '}'
 					{ $$ = cnfobjNew(CNFOBJ_TPL, $2);
 					  $$->subobjs = $5;
-					  dbgprintf("processing template() WITH {}\n"); }
+					  dbgprintf("processing template() WITH {}, subobj=%p\n", $5); }
 propconst:				{ $$ = NULL; }
-	| propconst property		{ if($1 == NULL)
-						$$ = objlstNew($2);
-					  else
-						$1->next = objlstNew($2); }
-	| propconst constant		{ /*$2->next = $1; $$ = $2;*/ }
+	| propconst property		{ $$ = objlstAdd($1, $2); }
+	| propconst constant		{ $$ = objlstAdd($1, $2); }
 property: BEGIN_PROPERTY nvlst ENDOBJ	{ $$ = cnfobjNew(CNFOBJ_PROPERTY, $2);
 					  dbgprintf("processed property()\n"); }
 constant: BEGIN_CONSTANT nvlst ENDOBJ	{ $$ = cnfobjNew(CNFOBJ_CONSTANT, $2);

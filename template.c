@@ -66,6 +66,35 @@ static struct cnfparamblk pblk =
 	  cnfparamdescr
 	};
 
+static struct cnfparamdescr cnfparamdescrProperty[] = {
+	{ "name", eCmdHdlrString, 1 },
+	{ "outname", eCmdHdlrString, 0 },
+	{ "dateformat", eCmdHdlrString, 0 },
+	{ "caseconversion", eCmdHdlrString, 0 },
+	{ "controlcharacters", eCmdHdlrString, 0 },
+	{ "securepath", eCmdHdlrString, 0 },
+	{ "format", eCmdHdlrString, 0 },
+	{ "droplastlf", eCmdHdlrBinary, 0 },
+	{ "spifno1stsp", eCmdHdlrBinary, 0 }
+};
+static struct cnfparamblk pblkProperty =
+	{ CNFPARAMBLK_VERSION,
+	  sizeof(cnfparamdescrProperty)/sizeof(struct cnfparamdescr),
+	  cnfparamdescrProperty
+	};
+
+static struct cnfparamdescr cnfparamdescrConstant[] = {
+	{ "value", eCmdHdlrString, 1 },
+	{ "outname", eCmdHdlrString, 0 },
+	{ "format", eCmdHdlrString, 0 }
+};
+static struct cnfparamblk pblkConstant =
+	{ CNFPARAMBLK_VERSION,
+	  sizeof(cnfparamdescrConstant)/sizeof(struct cnfparamdescr),
+	  cnfparamdescrConstant
+	};
+
+
 #ifdef FEATURE_REGEXP
 DEFobjCurrIf(regexp)
 static int bFirstRegexpErrmsg = 1; /**< did we already do a "can't load regexp" error message? */
@@ -1146,6 +1175,227 @@ struct template *tplAddLine(rsconf_t *conf, char* pName, uchar** ppRestOfConfLin
 	return(pTpl);
 }
 
+static rsRetVal
+createConstantTpe(struct template *pTpl, struct cnfobj *o)
+{
+	struct templateEntry *pTpe;
+	es_str_t *value;
+	int i;
+	struct cnfparamvals *pvals;
+	DEFiRet;
+
+	/* pull params */
+	pvals = nvlstGetParams(o->nvlst, &pblkConstant, NULL);
+	cnfparamsPrint(&pblkConstant, pvals);
+	
+	for(i = 0 ; i < pblkConstant.nParams ; ++i) {
+		if(!pvals[i].bUsed)
+			continue;
+		if(!strcmp(pblkConstant.descr[i].name, "value")) {
+			value = pvals[i].val.d.estr;
+		} else if(!strcmp(pblkConstant.descr[i].name, "format")) {
+			errmsg.LogError(0, RS_RET_ERR, "paramter 'format' is currently not "
+				"supported for 'constant' template parts - ignored");
+		} else if(!strcmp(pblkConstant.descr[i].name, "outname")) {
+			errmsg.LogError(0, RS_RET_ERR, "paramter 'outname' is currently not "
+				"supported for 'constant' template parts - ignored");
+		} else {
+			dbgprintf("template:constantTpe: program error, non-handled "
+			  "param '%s'\n", pblkConstant.descr[i].name);
+		}
+	}
+
+	/* sanity check */
+
+	/* apply */
+	CHKmalloc(pTpe = tpeConstruct(pTpl));
+	es_unescapeStr(value);
+	pTpe->eEntryType = CONSTANT;
+	pTpe->data.constant.iLenConstant = es_strlen(value);
+	pTpe->data.constant.pConstant = (uchar*)es_str2cstr(value, NULL);
+
+finalize_it:
+	RETiRet;
+}
+
+static rsRetVal
+createPropertyTpe(struct template *pTpl, struct cnfobj *o)
+{
+	struct templateEntry *pTpe;
+	cstr_t *name;
+	es_str_t *estrname;
+	es_str_t *outname = NULL;
+	int i;
+	int droplastlf = 0;
+	int spifno1stsp = 0;
+	struct cnfparamvals *pvals;
+	enum {F_NONE, F_CSV, F_JSON, F_JSONF} formatType = F_NONE;
+	enum {CC_NONE, CC_ESCAPE, CC_SPACE, CC_DROP} controlchr = CC_NONE;
+	enum {SP_NONE, SP_DROP, SP_REPLACE} secpath = SP_NONE;
+	enum tplFormatCaseConvTypes caseconv = tplCaseConvNo;
+	enum tplFormatTypes datefmt = tplFmtDefault;
+	DEFiRet;
+
+	/* pull params */
+	pvals = nvlstGetParams(o->nvlst, &pblkProperty, NULL);
+	cnfparamsPrint(&pblkProperty, pvals);
+	
+	for(i = 0 ; i < pblkProperty.nParams ; ++i) {
+		if(!pvals[i].bUsed)
+			continue;
+		if(!strcmp(pblkProperty.descr[i].name, "name")) {
+			estrname = es_strdup(pvals[i].val.d.estr);
+			/* TODO: unify strings!!! */
+			rsCStrConstructFromszStr(&name,
+				(uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
+		} else if(!strcmp(pblkProperty.descr[i].name, "droplastlf")) {
+			droplastlf = pvals[i].val.d.n;
+		} else if(!strcmp(pblkProperty.descr[i].name, "spifno1stsp")) {
+			spifno1stsp = pvals[i].val.d.n;
+		} else if(!strcmp(pblkProperty.descr[i].name, "outname")) {
+			outname = es_strdup(pvals[i].val.d.estr);
+		} else if(!strcmp(pblkProperty.descr[i].name, "format")) {
+			if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"csv", sizeof("csv")-1)) {
+				formatType = F_CSV;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"json", sizeof("json")-1)) {
+				formatType = F_JSON;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"jsonf", sizeof("jsonf")-1)) {
+				formatType = F_JSONF;
+			} else {
+				uchar *typeStr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
+				errmsg.LogError(0, RS_RET_ERR, "invalid format type '%s' for property",
+					typeStr);
+				free(typeStr);
+				ABORT_FINALIZE(RS_RET_ERR);
+			}
+		} else if(!strcmp(pblkProperty.descr[i].name, "controlcharacters")) {
+			if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"escape", sizeof("escape")-1)) {
+				controlchr = CC_ESCAPE;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"space", sizeof("space")-1)) {
+				controlchr = CC_SPACE;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"drop", sizeof("drop")-1)) {
+				controlchr = CC_DROP;
+			} else {
+				uchar *typeStr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
+				errmsg.LogError(0, RS_RET_ERR, "invalid controlcharacter mode '%s' for property",
+					typeStr);
+				free(typeStr);
+				ABORT_FINALIZE(RS_RET_ERR);
+			}
+		} else if(!strcmp(pblkProperty.descr[i].name, "securepath")) {
+			if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"drop", sizeof("drop")-1)) {
+				secpath = SP_DROP;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"replace", sizeof("replace")-1)) {
+				secpath = SP_REPLACE;
+			} else {
+				uchar *typeStr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
+				errmsg.LogError(0, RS_RET_ERR, "invalid securepath mode '%s' for property",
+					typeStr);
+				free(typeStr);
+				ABORT_FINALIZE(RS_RET_ERR);
+			}
+		} else if(!strcmp(pblkProperty.descr[i].name, "caseconversion")) {
+			if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"lower", sizeof("lower")-1)) {
+				caseconv = tplCaseConvLower;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"upper", sizeof("upper")-1)) {
+				caseconv = tplCaseConvUpper;
+			} else {
+				uchar *typeStr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
+				errmsg.LogError(0, RS_RET_ERR, "invalid caseconversion type '%s' for property",
+					typeStr);
+				free(typeStr);
+				ABORT_FINALIZE(RS_RET_ERR);
+			}
+		} else if(!strcmp(pblkProperty.descr[i].name, "dateformat")) {
+			if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"mysql", sizeof("mysql")-1)) {
+				datefmt = tplFmtMySQLDate;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"pgsql", sizeof("pgsql")-1)) {
+				datefmt = tplFmtPgSQLDate;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"rfc3164", sizeof("rfc3164")-1)) {
+				datefmt = tplFmtRFC3164Date;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"rfc3164-buggyday", sizeof("rfc3164-buggyday")-1)) {
+				datefmt = tplFmtRFC3164BuggyDate;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"rfc3339", sizeof("rfc3339")-1)) {
+				datefmt = tplFmtRFC3339Date;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"unixtimestamp", sizeof("unixtimestamp")-1)) {
+				datefmt = tplFmtUnixDate;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"subseconds", sizeof("subseconds")-1)) {
+				datefmt = tplFmtSecFrac;
+			} else {
+				uchar *typeStr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
+				errmsg.LogError(0, RS_RET_ERR, "invalid date format '%s' for property",
+					typeStr);
+				free(typeStr);
+				ABORT_FINALIZE(RS_RET_ERR);
+			}
+		} else {
+			dbgprintf("template:propertyTpe: program error, non-handled "
+			  "param '%s'\n", pblkProperty.descr[i].name);
+		}
+	}
+	if(outname == NULL)
+		outname = es_strdup(estrname);
+
+	/* sanity check */
+
+	/* apply */
+	CHKmalloc(pTpe = tpeConstruct(pTpl));
+	pTpe->eEntryType = FIELD;
+	CHKiRet(propNameToID(name, &pTpe->data.field.propid));
+	if(pTpe->data.field.propid == PROP_CEE) {
+		/* in CEE case, we need to preserve the actual property name */
+		pTpe->data.field.propName = estrname;
+	} else {
+		es_deleteStr(estrname);
+	}
+	pTpe->data.field.options.bDropLastLF = droplastlf;
+	pTpe->data.field.options.bSPIffNo1stSP = spifno1stsp;
+	pTpe->data.field.eCaseConv = caseconv;
+	switch(formatType) {
+	case F_NONE:
+		/* all set ;) */
+		break;
+	case F_CSV:
+		pTpe->data.field.options.bCSV = 1;
+		break;
+	case F_JSON:
+		pTpe->data.field.options.bJSON = 1;
+		break;
+	case F_JSONF:
+		pTpe->data.field.options.bJSONf = 1;
+		break;
+	}
+	switch(controlchr) {
+	case CC_NONE:
+		/* all set ;) */
+		break;
+	case CC_ESCAPE:
+		pTpe->data.field.options.bEscapeCC = 1;
+		break;
+	case CC_SPACE:
+		pTpe->data.field.options.bSpaceCC = 1;
+		break;
+	case CC_DROP:
+		pTpe->data.field.options.bDropCC = 1;
+		break;
+	}
+	switch(secpath) {
+	case SP_NONE:
+		/* all set ;) */
+		break;
+	case SP_DROP:
+		pTpe->data.field.options.bSecPathDrop = 1;
+		break;
+	case SP_REPLACE:
+		pTpe->data.field.options.bSecPathReplace = 1;
+		break;
+	}
+	pTpe->data.field.fieldName = outname;
+	pTpe->data.field.eDateFormat = datefmt;
+finalize_it:
+	RETiRet;
+}
+
 /* create a template in list mode, is build from sub-objects */
 static rsRetVal
 createListTpl(struct template *pTpl, struct cnfobj *o)
@@ -1153,12 +1403,24 @@ createListTpl(struct template *pTpl, struct cnfobj *o)
 	struct objlst *lst;
 	DEFiRet;
 
-	dbgprintf("AAAA: create template from subobjs\n");
+	dbgprintf("create template from subobjs\n");
 	objlstPrint(o->subobjs);
 
 	for(lst = o->subobjs ; lst != NULL ; lst = lst->next) {
-		dbgprintf("AAAA: subjobject entry %p\n", lst);
+		switch(lst->obj->objType) {
+		case CNFOBJ_PROPERTY:
+			CHKiRet(createPropertyTpe(pTpl, lst->obj));
+			break;
+		case CNFOBJ_CONSTANT:
+			CHKiRet(createConstantTpe(pTpl, lst->obj));
+			break;
+		default:dbgprintf("program error: invalid object type %d "
+				  "in createLstTpl\n", lst->obj->objType);
+			break;
+		}
+		nvlstChkUnused(lst->obj->nvlst);
 	}
+finalize_it:
 	RETiRet;
 }
 
