@@ -215,16 +215,6 @@ int	repeatinterval[2] = { 30, 60 };	/* # of secs before flush */
 
 static pid_t ppid; /* This is a quick and dirty hack used for spliting main/startup thread */
 
-#if 0
-#warning need this?
-//=======
-typedef struct legacyOptsLL_s {
-	uchar *line;
-	struct legacyOptsLL_s *next;
-} legacyOptsLL_t;
-legacyOptsLL_t *pLegacyOptsLL = NULL;
-#endif
-
 struct queuefilenames_s {
 	struct queuefilenames_s *next;
 	uchar *name;
