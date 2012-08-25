@@ -344,7 +344,7 @@ UDPSend(instanceData *pData, uchar *pszSourcename, char *msg, size_t len)
 
 	inet_pton(AF_INET, (char*)pszSourcename, &(source_ip.sin_addr));
 
-	bSendSuccess = FALSE;
+	bSendSuccess = RSFALSE;
 	d_pthread_mutex_lock(&mutLibnet);
 	bNeedUnlock = 1;
 	for (r = pData->f_addr; r; r = r->ai_next) {
@@ -387,12 +387,12 @@ UDPSend(instanceData *pData, uchar *pszSourcename, char *msg, size_t len)
 		if (lsent == -1) {
 			DBGPRINTF("Write error: %s\n", libnet_geterror(libnet_handle));
 		} else {
-			bSendSuccess = TRUE;
+			bSendSuccess = RSTRUE;
 			break;
 		}
 	}
 	/* finished looping */
-	if (bSendSuccess == FALSE) {
+	if (bSendSuccess == RSFALSE) {
 		DBGPRINTF("error forwarding via udp, suspending\n");
 		iRet = RS_RET_SUSPENDED;
 	}

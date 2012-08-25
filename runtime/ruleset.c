@@ -497,7 +497,7 @@ debugPrintAll(rsconf_t *conf)
 static inline rsRetVal
 doRulesetCreateQueue(rsconf_t *conf, int *pNewVal)
 {
-	uchar *rulesetMainQName;
+	uchar *rsname;
 	DEFiRet;
 
 	if(conf->rulesets.pCurr == NULL) {
@@ -515,10 +515,9 @@ doRulesetCreateQueue(rsconf_t *conf, int *pNewVal)
 	if(pNewVal == 0)
 		FINALIZE; /* if it is turned off, we do not need to change anything ;) */
 
-	DBGPRINTF("adding a ruleset-specific \"main\" queue");
-	rulesetMainQName = (conf->rulesets.pCurr->pszName == NULL)? UCHAR_CONSTANT("ruleset") :
-							    conf->rulesets.pCurr->pszName;
-	CHKiRet(createMainQueue(&conf->rulesets.pCurr->pQueue, rulesetMainQName));
+	rsname = (conf->rulesets.pCurr->pszName == NULL) ? (uchar*) "[ruleset]" : conf->rulesets.pCurr->pszName;
+	DBGPRINTF("adding a ruleset-specific \"main\" queue for ruleset '%s'\n", rsname);
+	CHKiRet(createMainQueue(&conf->rulesets.pCurr->pQueue, rsname));
 
 finalize_it:
 	RETiRet;

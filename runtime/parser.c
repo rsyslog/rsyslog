@@ -311,7 +311,7 @@ SanitizeMsg(msg_t *pMsg)
 	size_t iDst;
 	size_t iMaxLine;
 	size_t maxDest;
-	sbool bUpdatedLen = FALSE;
+	sbool bUpdatedLen = RSFALSE;
 	uchar szSanBuf[32*1024]; /* buffer used for sanitizing a string */
 
 	assert(pMsg != NULL);
@@ -326,7 +326,7 @@ SanitizeMsg(msg_t *pMsg)
 	 */
 	if(pszMsg[lenMsg-1] == '\0') {
 		DBGPRINTF("dropped NUL at very end of message\n");
-		bUpdatedLen = TRUE;
+		bUpdatedLen = RSTRUE;
 		lenMsg--;
 	}
 
@@ -339,7 +339,7 @@ SanitizeMsg(msg_t *pMsg)
 		DBGPRINTF("dropped LF at very end of message (DropTrailingLF is set)\n");
 		lenMsg--;
 		pszMsg[lenMsg] = '\0';
-		bUpdatedLen = TRUE;
+		bUpdatedLen = RSTRUE;
 	}
 
 	/* it is much quicker to sweep over the message and see if it actually
@@ -370,7 +370,7 @@ SanitizeMsg(msg_t *pMsg)
 	}
 
 	if(!bNeedSanitize) {
-		if(bUpdatedLen == TRUE)
+		if(bUpdatedLen == RSTRUE)
 			MsgSetRawMsgSize(pMsg, lenMsg);
 		FINALIZE;
 	}
@@ -508,17 +508,17 @@ ParseMsg(msg_t *pMsg)
 	DBGPRINTF("parse using parser list %p%s.\n", pParserList,
 		  (pParserList == pDfltParsLst) ? " (the default list)" : "");
 
-	bIsSanitized = FALSE;
-	bPRIisParsed = FALSE;
+	bIsSanitized = RSFALSE;
+	bPRIisParsed = RSFALSE;
 	while(pParserList != NULL) {
 		pParser = pParserList->pParser;
-		if(pParser->bDoSanitazion && bIsSanitized == FALSE) {
+		if(pParser->bDoSanitazion && bIsSanitized == RSFALSE) {
 			CHKiRet(SanitizeMsg(pMsg));
-			if(pParser->bDoPRIParsing && bPRIisParsed == FALSE) {
+			if(pParser->bDoPRIParsing && bPRIisParsed == RSFALSE) {
 				CHKiRet(ParsePRI(pMsg));
-				bPRIisParsed = TRUE;
+				bPRIisParsed = RSTRUE;
 			}
-			bIsSanitized = TRUE;
+			bIsSanitized = RSTRUE;
 		}
 		localRet = pParser->pModule->mod.pm.parse(pMsg);
 		DBGPRINTF("Parser '%s' returned %d\n", pParser->pName, localRet);
