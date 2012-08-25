@@ -1243,12 +1243,17 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 	int topos = -1;
 	int fieldnum = -1;
 	int fielddelim = 9; /* default is HT (USACSII 9) */
+	int re_matchToUse = 0;
+	int re_submatchToUse = 0;
+	char *re_expr = NULL;
 	struct cnfparamvals *pvals;
 	enum {F_NONE, F_CSV, F_JSON, F_JSONF} formatType = F_NONE;
 	enum {CC_NONE, CC_ESCAPE, CC_SPACE, CC_DROP} controlchr = CC_NONE;
 	enum {SP_NONE, SP_DROP, SP_REPLACE} secpath = SP_NONE;
 	enum tplFormatCaseConvTypes caseconv = tplCaseConvNo;
 	enum tplFormatTypes datefmt = tplFmtDefault;
+	enum tplRegexType re_type = TPL_REGEX_BRE;
+	enum tlpRegexNoMatchType re_nomatchType = TPL_REGEX_NOMATCH_USE_DFLTSTR;
 	DEFiRet;
 
 	/* pull params */
@@ -1277,6 +1282,40 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 			fieldnum = pvals[i].val.d.n;
 		} else if(!strcmp(pblkProperty.descr[i].name, "field.delimiter")) {
 			fielddelim = pvals[i].val.d.n;
+		} else if(!strcmp(pblkProperty.descr[i].name, "regex.expression")) {
+			re_expr = es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(pblkProperty.descr[i].name, "regex.type")) {
+			if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"BRE", sizeof("BRE")-1)) {
+				re_type = TPL_REGEX_BRE;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"ERE", sizeof("ERE")-1)) {
+				re_type = TPL_REGEX_ERE;
+			} else {
+				uchar *typeStr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
+				errmsg.LogError(0, RS_RET_ERR, "invalid regex.type '%s' for property",
+					typeStr);
+				free(typeStr);
+				ABORT_FINALIZE(RS_RET_ERR);
+			}
+		} else if(!strcmp(pblkProperty.descr[i].name, "regex.nomatchmode")) {
+			if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"DFLT", sizeof("DFLT")-1)) {
+				re_nomatchType = TPL_REGEX_NOMATCH_USE_DFLTSTR;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"BLANK", sizeof("BLANK")-1)) {
+				re_nomatchType = TPL_REGEX_NOMATCH_USE_BLANK;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"FIELD", sizeof("FIELD")-1)) {
+				re_nomatchType = TPL_REGEX_NOMATCH_USE_WHOLE_FIELD;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"ZERO", sizeof("ZERO")-1)) {
+				re_nomatchType = TPL_REGEX_NOMATCH_USE_ZERO;
+			} else {
+				uchar *typeStr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
+				errmsg.LogError(0, RS_RET_ERR, "invalid format type '%s' for property",
+					typeStr);
+				free(typeStr);
+				ABORT_FINALIZE(RS_RET_ERR);
+			}
+		} else if(!strcmp(pblkProperty.descr[i].name, "regex.match")) {
+			re_matchToUse = pvals[i].val.d.n;
+		} else if(!strcmp(pblkProperty.descr[i].name, "regex.submatch")) {
+			re_submatchToUse = pvals[i].val.d.n;
 		} else if(!strcmp(pblkProperty.descr[i].name, "format")) {
 			if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"csv", sizeof("csv")-1)) {
 				formatType = F_CSV;
@@ -1369,6 +1408,11 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 			topos, frompos);
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
+	if(fieldnum != -1 && re_expr != NULL) {
+		errmsg.LogError(0, RS_RET_ERR, "both field extraction and regex extraction "
+				"specified - this is not possible, remove one");
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
 
 	/* apply */
 	CHKmalloc(pTpe = tpeConstruct(pTpl));
@@ -1433,6 +1477,34 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 		pTpe->data.field.iFromPos = frompos;
 		pTpe->data.field.iToPos = topos;
 	}
+	if(re_expr != NULL) {
+		rsRetVal iRetLocal;
+		pTpe->data.field.typeRegex = re_type;
+		pTpe->data.field.nomatchAction = re_nomatchType;
+		pTpe->data.field.iMatchToUse = re_matchToUse;
+		pTpe->data.field.iSubMatchToUse = re_submatchToUse;
+		pTpe->data.field.has_regex = 1;
+		if((iRetLocal = objUse(regexp, LM_REGEXP_FILENAME)) == RS_RET_OK) {
+			int iOptions;
+			iOptions = (pTpe->data.field.typeRegex == TPL_REGEX_ERE) ? REG_EXTENDED : 0;
+			if(regexp.regcomp(&(pTpe->data.field.re), (char*) re_expr, iOptions) != 0) {
+				dbgprintf("error: can not compile regex: '%s'\n", re_expr);
+				errmsg.LogError(0, NO_ERRCODE, "error compiling regex '%s'", re_expr);
+				pTpe->data.field.has_regex = 2;
+				ABORT_FINALIZE(RS_RET_ERR);
+			}
+		} else {
+			/* regexp object could not be loaded */
+			if(bFirstRegexpErrmsg) { /* prevent flood of messages, maybe even an endless loop! */
+				bFirstRegexpErrmsg = 0;
+				errmsg.LogError(0, NO_ERRCODE, "regexp library could not be loaded (error %d), "
+						"regexp ignored", iRetLocal);
+			}
+			pTpe->data.field.has_regex = 2;
+			ABORT_FINALIZE(RS_RET_ERR);
+		}
+	}
+
 finalize_it:
 	RETiRet;
 }
