@@ -869,7 +869,7 @@ Run(tcpsrv_t *pThis)
 	DBGPRINTF("tcpsrv uses epoll() interface, nsdpoll driver found\n");
 
 	/* flag that we are in epoll mode */
-	pThis->bUsingEPoll = TRUE;
+	pThis->bUsingEPoll = RSTRUE;
 
 	/* Add the TCP listen sockets to the list of sockets to monitor */
 	for(i = 0 ; i < pThis->iLstnCurr ; ++i) {

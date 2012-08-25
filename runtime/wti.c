@@ -86,7 +86,7 @@ rsRetVal
 wtiSetAlwaysRunning(wti_t *pThis)
 {
 	ISOBJ_TYPE_assert(pThis, wti);
-	pThis->bAlwaysRunning = TRUE;
+	pThis->bAlwaysRunning = RSTRUE;
 	return RS_RET_OK;
 }
 
@@ -198,7 +198,7 @@ wtiConstructFinalize(wti_t *pThis)
 	DBGPRINTF("%s: finalizing construction of worker instance data\n", wtiGetDbgHdr(pThis));
 
 	/* initialize our thread instance descriptor (no concurrency here) */
-	pThis->bIsRunning = FALSE; 
+	pThis->bIsRunning = RSFALSE; 
 
 	/* we now alloc the array for user pointers. We obtain the max from the queue itself. */
 	CHKiRet(pThis->pWtp->pfGetDeqBatchSize(pThis->pWtp->pUsr, &iDeqBatchSize));
