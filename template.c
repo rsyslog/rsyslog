@@ -74,6 +74,17 @@ static struct cnfparamdescr cnfparamdescrProperty[] = {
 	{ "controlcharacters", eCmdHdlrString, 0 },
 	{ "securepath", eCmdHdlrString, 0 },
 	{ "format", eCmdHdlrString, 0 },
+// From here
+	{ "position.from", eCmdHdlrInt, 0 },
+	{ "position.to", eCmdHdlrInt, 0 },
+	{ "field.number", eCmdHdlrInt, 0 },
+	{ "field.delimiter", eCmdHdlrInt, 0 },
+	{ "regex.expression", eCmdHdlrString, 0 },
+	{ "regex.type", eCmdHdlrString, 0 },
+	{ "regex.nomatchmode", eCmdHdlrString, 0 },
+	{ "regex.match", eCmdHdlrInt, 0 },
+	{ "regex.submatch", eCmdHdlrInt, 0 },
+//-- to here
 	{ "droplastlf", eCmdHdlrBinary, 0 },
 	{ "spifno1stsp", eCmdHdlrBinary, 0 }
 };
@@ -1228,6 +1239,10 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 	int i;
 	int droplastlf = 0;
 	int spifno1stsp = 0;
+	int frompos = -1;
+	int topos = -1;
+	int fieldnum = -1;
+	int fielddelim = 9; /* default is HT (USACSII 9) */
 	struct cnfparamvals *pvals;
 	enum {F_NONE, F_CSV, F_JSON, F_JSONF} formatType = F_NONE;
 	enum {CC_NONE, CC_ESCAPE, CC_SPACE, CC_DROP} controlchr = CC_NONE;
@@ -1254,6 +1269,14 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 			spifno1stsp = pvals[i].val.d.n;
 		} else if(!strcmp(pblkProperty.descr[i].name, "outname")) {
 			outname = es_strdup(pvals[i].val.d.estr);
+		} else if(!strcmp(pblkProperty.descr[i].name, "position.from")) {
+			frompos = pvals[i].val.d.n;
+		} else if(!strcmp(pblkProperty.descr[i].name, "position.to")) {
+			topos = pvals[i].val.d.n;
+		} else if(!strcmp(pblkProperty.descr[i].name, "field.number")) {
+			fieldnum = pvals[i].val.d.n;
+		} else if(!strcmp(pblkProperty.descr[i].name, "field.delimiter")) {
+			fielddelim = pvals[i].val.d.n;
 		} else if(!strcmp(pblkProperty.descr[i].name, "format")) {
 			if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"csv", sizeof("csv")-1)) {
 				formatType = F_CSV;
@@ -1337,6 +1360,15 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 		outname = es_strdup(estrname);
 
 	/* sanity check */
+	if(topos == -1 && frompos != -1)
+		topos = 2000000000; /* large enough ;) */
+	if(frompos == -1 && topos != -1)
+		frompos = 0;
+	if(topos < frompos) {
+		errmsg.LogError(0, RS_RET_ERR, "position.to=%d is lower than postion.from=%d\n",
+			topos, frompos);
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
 
 	/* apply */
 	CHKmalloc(pTpe = tpeConstruct(pTpl));
@@ -1392,6 +1424,15 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 	}
 	pTpe->data.field.fieldName = outname;
 	pTpe->data.field.eDateFormat = datefmt;
+	if(fieldnum != -1) {
+		pTpe->data.field.has_fields = 1;
+		pTpe->data.field.iFieldNr = fieldnum;
+		pTpe->data.field.field_delim = fielddelim;
+	}
+	if(frompos != -1) {
+		pTpe->data.field.iFromPos = frompos;
+		pTpe->data.field.iToPos = topos;
+	}
 finalize_it:
 	RETiRet;
 }
