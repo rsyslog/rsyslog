@@ -1146,11 +1146,23 @@ struct template *tplAddLine(rsconf_t *conf, char* pName, uchar** ppRestOfConfLin
 	return(pTpl);
 }
 
+/* create a template in list mode, is build from sub-objects */
+static rsRetVal
+createListTpl(struct template *pTpl, struct cnfobj *o)
+{
+	struct objlst *lst;
+	DEFiRet;
 
+	dbgprintf("AAAA: create template from subobjs\n");
+	objlstPrint(o->subobjs);
 
-// v6 - ASL 2.0!
-/* Add a new template via the v6 config system.
- */
+	for(lst = o->subobjs ; lst != NULL ; lst = lst->next) {
+		dbgprintf("AAAA: subjobject entry %p\n", lst);
+	}
+	RETiRet;
+}
+
+/* Add a new template via the v6 config system.  */
 rsRetVal
 tplProcessCnf(struct cnfobj *o)
 {
@@ -1159,8 +1171,8 @@ tplProcessCnf(struct cnfobj *o)
 	int lenName;
 	char *name = NULL;
 	uchar *tplStr = NULL;
+	uchar *plugin = NULL;
 	uchar *p;
-	uchar *plugin;
 	enum { T_STRING, T_PLUGIN, T_LIST } tplType;
 	int i;
 	int o_sql=0, o_stdsql=0, o_json=0; /* options */
@@ -1170,7 +1182,6 @@ tplProcessCnf(struct cnfobj *o)
 
 	pvals = nvlstGetParams(o->nvlst, &pblk, NULL);
 	cnfparamsPrint(&pblk, pvals);
-
 	
 	for(i = 0 ; i < pblk.nParams ; ++i) {
 		if(!pvals[i].bUsed)
@@ -1185,9 +1196,6 @@ tplProcessCnf(struct cnfobj *o)
 				tplType = T_PLUGIN;
 			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"list", sizeof("list")-1)) {
 				tplType = T_LIST;
-				errmsg.LogError(0, RS_RET_ERR, "template type 'list' is not "
-					"supported in this rsyslog version");
-				ABORT_FINALIZE(RS_RET_ERR);
 			} else {
 				uchar *typeStr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
 				errmsg.LogError(0, RS_RET_ERR, "invalid template type '%s'",
@@ -1228,13 +1236,26 @@ tplProcessCnf(struct cnfobj *o)
 	if(plugin  == NULL) {
 		if(tplType == T_PLUGIN) {
 			errmsg.LogError(0, RS_RET_ERR, "template '%s' of type plugin needs "
-				"plugin parameter - ignored", name);
+				"plugin parameter", name);
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
 	} else {
 		if(tplType != T_PLUGIN) {
 			errmsg.LogError(0, RS_RET_ERR, "template '%s' is not a plugin "
 				"template but has a plugin specified - ignored", name);
+		}
+	}
+
+	if(o->subobjs  == NULL) {
+		if(tplType == T_LIST) {
+			errmsg.LogError(0, RS_RET_ERR, "template '%s' of type list has "
+				"has no parameters specified", name);
+			ABORT_FINALIZE(RS_RET_ERR);
+		}
+	} else {
+		if(tplType != T_LIST) {
+			errmsg.LogError(0, RS_RET_ERR, "template '%s' is not a list "
+				"template but has parameters specified - ignored", name);
 		}
 	}
 
@@ -1279,6 +1300,9 @@ tplProcessCnf(struct cnfobj *o)
 						pTpl->pszName, localRet);
 				ABORT_FINALIZE(localRet);
 			}
+			break;
+	case T_LIST:	createListTpl(pTpl, o);
+			break;
 	}
 	
 	pTpl->optFormatEscape = NO_ESCAPE;
@@ -1303,8 +1327,6 @@ finalize_it:
 
 	RETiRet;
 }
-
-// END v6
 
 
 /* Find a template object based on name. Search

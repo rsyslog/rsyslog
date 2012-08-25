@@ -49,6 +49,7 @@ extern int yyerror(char*);
 	enum cnfobjType objType;
 	struct cnfobj *obj;
 	struct nvlst *nvlst;
+	struct objlst *objlst;
 	struct cnfactlst *actlst;
 	struct cnfexpr *expr;
 	struct cnfrule *rule;
@@ -92,7 +93,8 @@ extern int yyerror(char*);
 %token CMP_STARTSWITHI
 
 %type <nvlst> nv nvlst
-%type <obj> obj propconst
+%type <obj> obj property constant
+%type <objlst> propconst
 %type <actlst> actlst
 %type <actlst> act
 %type <s> cfsysline
@@ -133,13 +135,19 @@ obj:	  BEGINOBJ nvlst ENDOBJ 	{ $$ = cnfobjNew($1, $2); }
 	| BEGIN_ACTION nvlst ENDOBJ 	{ $$ = cnfobjNew(CNFOBJ_ACTION, $2); }
         | BEGIN_TPL nvlst ENDOBJ	{ $$ = cnfobjNew(CNFOBJ_TPL, $2);  dbgprintf("processing template() without {}\n"); }
         | BEGIN_TPL nvlst ENDOBJ '{' propconst '}'
-					{ $$ = cnfobjNew(CNFOBJ_TPL, $2); dbgprintf("processing template() WITH {}\n"); }
-/* TODO: NOTE:
-   propconst is the NEXT step. It is just included as an experiment and needs
-   to be replaced.
-*/
-propconst: BEGIN_PROPERTY nvlst ENDOBJ	{ $$ = cnfobjNew(CNFOBJ_PROPERTY, $2);
+					{ $$ = cnfobjNew(CNFOBJ_TPL, $2);
+					  $$->subobjs = $5;
+					  dbgprintf("processing template() WITH {}\n"); }
+propconst:				{ $$ = NULL; }
+	| propconst property		{ if($1 == NULL)
+						$$ = objlstNew($2);
+					  else
+						$1->next = objlstNew($2); }
+	| propconst constant		{ /*$2->next = $1; $$ = $2;*/ }
+property: BEGIN_PROPERTY nvlst ENDOBJ	{ $$ = cnfobjNew(CNFOBJ_PROPERTY, $2);
 					  dbgprintf("processed property()\n"); }
+constant: BEGIN_CONSTANT nvlst ENDOBJ	{ $$ = cnfobjNew(CNFOBJ_CONSTANT, $2);
+					  dbgprintf("processed constant()\n"); }
 cfsysline: CFSYSLINE	 		{ $$ = $1; }
 nvlst:					{ $$ = NULL; }
 	| nvlst nv 			{ $2->next = $1; $$ = $2; }

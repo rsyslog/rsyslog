@@ -38,6 +38,15 @@ cnfobjType2str(enum cnfobjType ot)
 	case CNFOBJ_MODULE:
 		return "module";
 		break;
+	case CNFOBJ_TPL:
+		return "template";
+		break;
+	case CNFOBJ_PROPERTY:
+		return "property";
+		break;
+	case CNFOBJ_CONSTANT:
+		return "constant";
+		break;
 	default:return "error: invalid cnfobjType";
 	}
 }
@@ -63,6 +72,12 @@ struct var {
 struct cnfobj {
 	enum cnfobjType objType;
 	struct nvlst *nvlst;
+	struct objlst *subobjs;
+};
+
+struct objlst {
+	struct objlst *next;
+	struct cnfobj *obj;
 };
 
 struct nvlst {
@@ -221,6 +236,9 @@ struct cnfparamvals { /* the values we obtained for param descr. */
 
 int cnfParseBuffer(char *buf, unsigned lenBuf);
 void readConfFile(FILE *fp, es_str_t **str);
+struct objlst* objlstNew(struct cnfobj *obj);
+void objlstDestruct(struct objlst *lst);
+void objlstPrint(struct objlst *lst);
 struct nvlst* nvlstNew(es_str_t *name, es_str_t *value);
 void nvlstDestruct(struct nvlst *lst);
 void nvlstPrint(struct nvlst *lst);

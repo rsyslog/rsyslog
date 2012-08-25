@@ -98,6 +98,44 @@ readConfFile(FILE *fp, es_str_t **str)
 	es_addChar(str, '\0');
 }
 
+struct objlst*
+objlstNew(struct cnfobj *o)
+{
+	struct objlst *lst;
+
+	if((lst = malloc(sizeof(struct objlst))) != NULL) {
+		lst->next = NULL;
+		lst->obj = o;
+	}
+dbgprintf("AAAA: creating new objlst\n");
+cnfobjPrint(o);
+
+	return lst;
+}
+
+void
+objlstDestruct(struct objlst *lst)
+{
+	struct objlst *toDel;
+
+	while(lst != NULL) {
+		toDel = lst;
+		lst = lst->next;
+		// TODO: delete object
+		free(toDel);
+	}
+}
+
+void
+objlstPrint(struct objlst *lst)
+{
+	dbgprintf("objlst %p:\n", lst);
+	while(lst != NULL) {
+		cnfobjPrint(lst->obj);
+		lst = lst->next;
+	}
+}
+
 struct nvlst*
 nvlstNew(es_str_t *name, es_str_t *value)
 {
@@ -581,6 +619,7 @@ cnfobjNew(enum cnfobjType objType, struct nvlst *lst)
 		nvlstChkDupes(lst);
 		o->objType = objType;
 		o->nvlst = lst;
+		o->subobjs = NULL;
 	}
 
 	return o;

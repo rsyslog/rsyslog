@@ -404,6 +404,7 @@ int bChkUnuse = 1; // TODO: Delete
 		tplProcessCnf(o);
 		break;
 	case CNFOBJ_PROPERTY:
+	case CNFOBJ_CONSTANT:
 		//processTemplate(o);
 bChkUnuse = 0;
 		break;
