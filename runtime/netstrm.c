@@ -250,7 +250,7 @@ EnableKeepAlive(netstrm_t *pThis)
 
 
 /* check connection - slim wrapper for NSD driver function */
-static void
+static rsRetVal
 CheckConnection(netstrm_t *pThis)
 {
 	ISOBJ_TYPE_assert(pThis, netstrm);

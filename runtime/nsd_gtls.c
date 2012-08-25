@@ -1316,13 +1316,16 @@ finalize_it:
  * This is a dummy here. For details, check function common in ptcp driver.
  * rgerhards, 2008-06-09
  */
-static void
+static rsRetVal
 CheckConnection(nsd_t __attribute__((unused)) *pNsd)
 {
+	DEFiRet;
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 	ISOBJ_TYPE_assert(pThis, nsd_gtls);
 
-	nsd_ptcp.CheckConnection(pThis->pTcp);
+	CHKiRet(nsd_ptcp.CheckConnection(pThis->pTcp));
+finalize_it:
+	RETiRet;
 }
 
 

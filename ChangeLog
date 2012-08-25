@@ -25,6 +25,9 @@ Version 6.4.1  [V6-STABLE] 2012-08-??
   occurs with legacy config action syntax. This was a regression
   caused by an incorrect merge in to the 6.3.x codebase.
   Thanks to Stefano Mason for alerting us of this bug.
+- bugfix: Fixed TCP CheckConnection handling in omfwd.c. Interface needed 
+  to be changed in lower stream classes. Syslog TCP Sending is now resumed
+  properly. 
 ---------------------------------------------------------------------------
 Version 6.4.0  [V6-STABLE] 2012-08-20
 - THIS IS THE FIRST VERSION OF THE 6.4.x STABLE BRANCH

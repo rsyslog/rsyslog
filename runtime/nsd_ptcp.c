@@ -694,9 +694,10 @@ finalize_it:
  * http://blog.gerhards.net/2008/06/getting-bit-more-reliability-from-plain.html
  * rgerhards, 2008-06-09
  */
-static void
+static rsRetVal
 CheckConnection(nsd_t *pNsd)
 {
+	DEFiRet;
 	int rc;
 	char msgbuf[1]; /* dummy */
 	nsd_ptcp_t *pThis = (nsd_ptcp_t*) pNsd;
@@ -709,7 +710,10 @@ CheckConnection(nsd_t *pNsd)
 		 * need to close our side, too.
 		 */
 		sockClose(&pThis->sock);
+		ABORT_FINALIZE(RS_RET_IO_ERROR);
 	}
+finalize_it:
+	RETiRet;
 }
 
 
