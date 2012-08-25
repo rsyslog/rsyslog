@@ -68,6 +68,7 @@ enum tplRegexType { TPL_REGEX_BRE = 0, /* posix BRE */
 struct templateEntry {
 	struct templateEntry *pNext;
 	enum EntryTypes eEntryType;
+	es_str_t *fieldName;	/**< field name to be used for structured output */
 	union {
 		struct {
 			uchar *pConstant;	/* pointer to constant value */
@@ -99,7 +100,6 @@ struct templateEntry {
 #endif
 
 			es_str_t *propName;	/**< property name (currently being used for CEE only) */
-			es_str_t *fieldName;	/**< field name to be used for structured output */
 
 			enum tplFormatTypes eDateFormat;
 			enum tplFormatCaseConvTypes eCaseConv;

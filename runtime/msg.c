@@ -2515,9 +2515,9 @@ jsonField(struct templateEntry *pTpe, uchar **ppRes, unsigned short *pbMustBeFre
 	pSrc = *ppRes;
 	buflen = (*pBufLen == -1) ? ustrlen(pSrc) : *pBufLen;
 	/* we hope we have only few escapes... */
-	dst = es_newStr(buflen+es_strlen(pTpe->data.field.fieldName)+15);
+	dst = es_newStr(buflen+es_strlen(pTpe->fieldName)+15);
 	es_addChar(&dst, '"');
-	es_addStr(&dst, pTpe->data.field.fieldName);
+	es_addStr(&dst, pTpe->fieldName);
 	es_addBufConstcstr(&dst, "\"=\"");
 	CHKiRet(jsonAddVal(pSrc, buflen, &dst));
 	es_addChar(&dst, '"');

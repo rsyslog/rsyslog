@@ -74,7 +74,6 @@ static struct cnfparamdescr cnfparamdescrProperty[] = {
 	{ "controlcharacters", eCmdHdlrString, 0 },
 	{ "securepath", eCmdHdlrString, 0 },
 	{ "format", eCmdHdlrString, 0 },
-// From here
 	{ "position.from", eCmdHdlrInt, 0 },
 	{ "position.to", eCmdHdlrInt, 0 },
 	{ "field.number", eCmdHdlrInt, 0 },
@@ -84,7 +83,6 @@ static struct cnfparamdescr cnfparamdescrProperty[] = {
 	{ "regex.nomatchmode", eCmdHdlrString, 0 },
 	{ "regex.match", eCmdHdlrInt, 0 },
 	{ "regex.submatch", eCmdHdlrInt, 0 },
-//-- to here
 	{ "droplastlf", eCmdHdlrBinary, 0 },
 	{ "spifno1stsp", eCmdHdlrBinary, 0 }
 };
@@ -97,7 +95,6 @@ static struct cnfparamblk pblkProperty =
 static struct cnfparamdescr cnfparamdescrConstant[] = {
 	{ "value", eCmdHdlrString, 1 },
 	{ "outname", eCmdHdlrString, 0 },
-	{ "format", eCmdHdlrString, 0 }
 };
 static struct cnfparamblk pblkConstant =
 	{ CNFPARAMBLK_VERSION,
@@ -980,12 +977,12 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 
 	/* save field name - if none was given, use the property name instead */
 	if(pStrField == NULL) {
-		if((pTpe->data.field.fieldName =
+		if((pTpe->fieldName =
 		      es_newStrFromCStr((char*)cstrGetSzStrNoNULL(pStrProp), cstrLen(pStrProp))) == NULL) {
 			return 1;
 		}
 	} else {
-		if((pTpe->data.field.fieldName =
+		if((pTpe->fieldName =
 		      es_newStrFromCStr((char*)cstrGetSzStrNoNULL(pStrField), cstrLen(pStrField))) == NULL) {
 			return 1;
 		}
@@ -1193,6 +1190,7 @@ createConstantTpe(struct template *pTpl, struct cnfobj *o)
 	es_str_t *value;
 	int i;
 	struct cnfparamvals *pvals;
+	es_str_t *outname = NULL;
 	DEFiRet;
 
 	/* pull params */
@@ -1204,12 +1202,8 @@ createConstantTpe(struct template *pTpl, struct cnfobj *o)
 			continue;
 		if(!strcmp(pblkConstant.descr[i].name, "value")) {
 			value = pvals[i].val.d.estr;
-		} else if(!strcmp(pblkConstant.descr[i].name, "format")) {
-			errmsg.LogError(0, RS_RET_ERR, "paramter 'format' is currently not "
-				"supported for 'constant' template parts - ignored");
 		} else if(!strcmp(pblkConstant.descr[i].name, "outname")) {
-			errmsg.LogError(0, RS_RET_ERR, "paramter 'outname' is currently not "
-				"supported for 'constant' template parts - ignored");
+			outname = es_strdup(pvals[i].val.d.estr);
 		} else {
 			dbgprintf("template:constantTpe: program error, non-handled "
 			  "param '%s'\n", pblkConstant.descr[i].name);
@@ -1222,6 +1216,7 @@ createConstantTpe(struct template *pTpl, struct cnfobj *o)
 	CHKmalloc(pTpe = tpeConstruct(pTpl));
 	es_unescapeStr(value);
 	pTpe->eEntryType = CONSTANT;
+	pTpe->fieldName = outname;
 	pTpe->data.constant.iLenConstant = es_strlen(value);
 	pTpe->data.constant.pConstant = (uchar*)es_str2cstr(value, NULL);
 
@@ -1466,7 +1461,7 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 		pTpe->data.field.options.bSecPathReplace = 1;
 		break;
 	}
-	pTpe->data.field.fieldName = outname;
+	pTpe->fieldName = outname;
 	pTpe->data.field.eDateFormat = datefmt;
 	if(fieldnum != -1) {
 		pTpe->data.field.has_fields = 1;
@@ -1767,8 +1762,8 @@ void tplDeleteAll(rsconf_t *conf)
 				}
 				if(pTpeDel->data.field.propName != NULL)
 					es_deleteStr(pTpeDel->data.field.propName);
-				if(pTpeDel->data.field.fieldName != NULL)
-					es_deleteStr(pTpeDel->data.field.fieldName);
+				if(pTpeDel->fieldName != NULL)
+					es_deleteStr(pTpeDel->fieldName);
 #endif
 				break;
 			}

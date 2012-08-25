@@ -133,18 +133,16 @@ conf:	/* empty (to end recursion) */
 	| conf BSD_HOST_SELECTOR	{ cnfDoBSDHost($2); }
 obj:	  BEGINOBJ nvlst ENDOBJ 	{ $$ = cnfobjNew($1, $2); }
 	| BEGIN_ACTION nvlst ENDOBJ 	{ $$ = cnfobjNew(CNFOBJ_ACTION, $2); }
-        | BEGIN_TPL nvlst ENDOBJ	{ $$ = cnfobjNew(CNFOBJ_TPL, $2);  dbgprintf("processing template() without {}\n"); }
+        | BEGIN_TPL nvlst ENDOBJ	{ $$ = cnfobjNew(CNFOBJ_TPL, $2); }
         | BEGIN_TPL nvlst ENDOBJ '{' propconst '}'
 					{ $$ = cnfobjNew(CNFOBJ_TPL, $2);
 					  $$->subobjs = $5;
-					  dbgprintf("processing template() WITH {}, subobj=%p\n", $5); }
+					}
 propconst:				{ $$ = NULL; }
 	| propconst property		{ $$ = objlstAdd($1, $2); }
 	| propconst constant		{ $$ = objlstAdd($1, $2); }
-property: BEGIN_PROPERTY nvlst ENDOBJ	{ $$ = cnfobjNew(CNFOBJ_PROPERTY, $2);
-					  dbgprintf("processed property()\n"); }
-constant: BEGIN_CONSTANT nvlst ENDOBJ	{ $$ = cnfobjNew(CNFOBJ_CONSTANT, $2);
-					  dbgprintf("processed constant()\n"); }
+property: BEGIN_PROPERTY nvlst ENDOBJ	{ $$ = cnfobjNew(CNFOBJ_PROPERTY, $2); }
+constant: BEGIN_CONSTANT nvlst ENDOBJ	{ $$ = cnfobjNew(CNFOBJ_CONSTANT, $2); }
 cfsysline: CFSYSLINE	 		{ $$ = $1; }
 nvlst:					{ $$ = NULL; }
 	| nvlst nv 			{ $2->next = $1; $$ = $2; }
