@@ -141,6 +141,7 @@ rsRetVal tplToString(struct template *pTpl, msg_t *pMsg, uchar** ppSz, size_t *)
 rsRetVal doEscape(uchar **pp, size_t *pLen, unsigned short *pbMustBeFreed, int escapeMode);
 
 rsRetVal templateInit();
+rsRetVal tplProcessCnf(struct cnfobj *o);
 
 #endif /* #ifndef TEMPLATE_H_INCLUDED */
 /* vim:set ai:

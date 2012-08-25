@@ -66,6 +66,7 @@
 #include "parserif.h"
 #include "modules.h"
 #include "dirty.h"
+#include "template.h"
 
 /* static data */
 DEFobjStaticHelpers
@@ -400,8 +401,7 @@ int bChkUnuse = 1; // TODO: Delete
 		actionProcessCnf(o);
 		break;
 	case CNFOBJ_TPL:
-		//processTemplate(o);
-bChkUnuse = 0;
+		tplProcessCnf(o);
 		break;
 	case CNFOBJ_PROPERTY:
 		//processTemplate(o);

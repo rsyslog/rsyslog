@@ -2,7 +2,7 @@
  * Please see syslogd.c for license information.
  * begun 2004-11-17 rgerhards
  *
- * Copyright 2004, 2007 Rainer Gerhards and Adiscon
+ * Copyright 2004-2012 Rainer Gerhards and Adiscon
  *
  * This file is part of rsyslog.
  *
@@ -44,6 +44,22 @@
 DEFobjCurrIf(obj)
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(strgen)
+
+/* tables for interfacing with the v6 config system */
+static struct cnfparamdescr cnfparamdescr[] = {
+	{ "name", eCmdHdlrString, 1 },
+	{ "type", eCmdHdlrString, 0 },
+	{ "string", eCmdHdlrString, 0 },
+	{ "plugin", eCmdHdlrString, 0 },
+	{ "option.stdsql", eCmdHdlrBinary, 0 },
+	{ "option.sql", eCmdHdlrBinary, 0 },
+	{ "option.json", eCmdHdlrBinary, 0 }
+};
+static struct cnfparamblk pblk =
+	{ CNFPARAMBLK_VERSION,
+	  sizeof(cnfparamdescr)/sizeof(struct cnfparamdescr),
+	  cnfparamdescr
+	};
 
 #ifdef FEATURE_REGEXP
 DEFobjCurrIf(regexp)
@@ -1120,6 +1136,166 @@ struct template *tplAddLine(rsconf_t *conf, char* pName, uchar** ppRestOfConfLin
 
 	return(pTpl);
 }
+
+
+
+// v6 - ASL 2.0!
+/* Add a new template via the v6 config system.
+ */
+rsRetVal
+tplProcessCnf(struct cnfobj *o)
+{
+	struct template *pTpl = NULL;
+	struct cnfparamvals *pvals;
+	int lenName;
+	char *name = NULL;
+	uchar *tplStr = NULL;
+	uchar *p;
+	uchar *plugin;
+	enum { T_STRING, T_PLUGIN, T_LIST } tplType;
+	int i;
+	int o_sql=0, o_stdsql=0, o_json=0; /* options */
+	int numopts;
+	rsRetVal localRet;
+	DEFiRet;
+
+	pvals = nvlstGetParams(o->nvlst, &pblk, NULL);
+	cnfparamsPrint(&pblk, pvals);
+
+	
+	for(i = 0 ; i < pblk.nParams ; ++i) {
+		if(!pvals[i].bUsed)
+			continue;
+		if(!strcmp(pblk.descr[i].name, "name")) {
+			lenName = es_strlen(pvals[i].val.d.estr);
+			name = es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(pblk.descr[i].name, "type")) {
+			if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"string", sizeof("string")-1)) {
+				tplType = T_STRING;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"plugin", sizeof("plugin")-1)) {
+				tplType = T_PLUGIN;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"list", sizeof("list")-1)) {
+				tplType = T_LIST;
+				errmsg.LogError(0, RS_RET_ERR, "template type 'list' is not "
+					"supported in this rsyslog version");
+				ABORT_FINALIZE(RS_RET_ERR);
+			} else {
+				uchar *typeStr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
+				errmsg.LogError(0, RS_RET_ERR, "invalid template type '%s'",
+					typeStr);
+				free(typeStr);
+				ABORT_FINALIZE(RS_RET_ERR);
+			}
+		} else if(!strcmp(pblk.descr[i].name, "string")) {
+			tplStr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(pblk.descr[i].name, "plugin")) {
+			plugin = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(pblk.descr[i].name, "option.stdsql")) {
+			o_stdsql = pvals[i].val.d.n;
+		} else if(!strcmp(pblk.descr[i].name, "option.sql")) {
+			o_sql = pvals[i].val.d.n;
+		} else if(!strcmp(pblk.descr[i].name, "option.json")) {
+			o_json = pvals[i].val.d.n;
+		} else {
+			dbgprintf("template: program error, non-handled "
+			  "param '%s'\n", pblk.descr[i].name);
+		}
+	}
+
+	/* do config sanity checks */
+	if(tplStr  == NULL) {
+		if(tplType == T_STRING) {
+			errmsg.LogError(0, RS_RET_ERR, "template '%s' of type string needs "
+				"string parameter", name);
+			ABORT_FINALIZE(RS_RET_ERR);
+		}
+	} else {
+		if(tplType != T_STRING) {
+			errmsg.LogError(0, RS_RET_ERR, "template '%s' is not a string "
+				"template but has a string specified - ignored", name);
+		}
+	}
+
+	if(plugin  == NULL) {
+		if(tplType == T_PLUGIN) {
+			errmsg.LogError(0, RS_RET_ERR, "template '%s' of type plugin needs "
+				"plugin parameter - ignored", name);
+			ABORT_FINALIZE(RS_RET_ERR);
+		}
+	} else {
+		if(tplType != T_PLUGIN) {
+			errmsg.LogError(0, RS_RET_ERR, "template '%s' is not a plugin "
+				"template but has a plugin specified - ignored", name);
+		}
+	}
+
+	numopts = 0;
+	if(o_sql) ++numopts;
+	if(o_stdsql) ++numopts;
+	if(o_json) ++numopts;
+	if(numopts > 1) {
+		errmsg.LogError(0, RS_RET_ERR, "template '%s' has multiple incompatible "
+			"options of sql, stdsql or json specified", name);
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
+	/* config ok */
+	if((pTpl = tplConstruct(loadConf)) == NULL) {
+		DBGPRINTF("template.c: tplConstruct failed!\n");
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+	pTpl->pszName = name;
+	pTpl->iLenName = lenName;
+	
+	switch(tplType) {
+	case T_STRING:	p = tplStr;
+			while(*p) {
+				switch(*p) {
+					case '%': /* parameter */
+						++p; /* eat '%' */
+						do_Parameter(&p, pTpl);
+						break;
+					default: /* constant */
+						do_Constant(&p, pTpl);
+						break;
+				}
+			}
+			break;
+	case T_PLUGIN:	p = plugin;
+			/* TODO: the use of tplAddTplMod() can be improved! */
+			localRet = tplAddTplMod(pTpl, &p);
+			if(localRet != RS_RET_OK) {
+				errmsg.LogError(0, localRet, "template '%s': error %d "
+						"defining template via plugin (strgen) module",
+						pTpl->pszName, localRet);
+				ABORT_FINALIZE(localRet);
+			}
+	}
+	
+	pTpl->optFormatEscape = NO_ESCAPE;
+	if(o_stdsql)
+		pTpl->optFormatEscape = STDSQL_ESCAPE;
+	else if(o_sql)
+		pTpl->optFormatEscape = SQL_ESCAPE;
+	else if(o_json)
+		pTpl->optFormatEscape = JSON_ESCAPE;
+
+finalize_it:
+	if(iRet != RS_RET_OK) {
+		if(pTpl != NULL) {
+			/* we simply make the template defunct in this case by setting
+			 * its name to a zero-string. We do not free it, as this would
+			 * require additional code and causes only a very small memory
+			 * consumption. TODO: maybe in next iteration...
+			 */
+			*pTpl->pszName = '\0';
+		}
+	}
+
+	RETiRet;
+}
+
+// END v6
 
 
 /* Find a template object based on name. Search
