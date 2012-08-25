@@ -215,6 +215,21 @@ int	repeatinterval[2] = { 30, 60 };	/* # of secs before flush */
 
 static pid_t ppid; /* This is a quick and dirty hack used for spliting main/startup thread */
 
+#if 0
+#warning need this?
+//=======
+typedef struct legacyOptsLL_s {
+	uchar *line;
+	struct legacyOptsLL_s *next;
+} legacyOptsLL_t;
+legacyOptsLL_t *pLegacyOptsLL = NULL;
+#endif
+
+struct queuefilenames_s {
+	struct queuefilenames_s *next;
+	uchar *name;
+} *queuefilenames = NULL;
+
 /* global variables for config file state */
 int	iCompatibilityMode = 0;		/* version we should be compatible with; 0 means sysklogd. It is
 					   the default, so if no -c<n> option is given, we make ourselvs
@@ -811,6 +826,14 @@ static void
 freeAllDynMemForTermination(void)
 {
 	free(ourConf->globals.pszConfDAGFile);
+	struct queuefilenames_s *qfn, *qfnDel;
+
+	for(qfn = queuefilenames ; qfn != NULL ; ) {
+		qfnDel = qfn;
+		qfn = qfn->next;
+		free(qfnDel->name);
+		free(qfnDel);
+	}
 }
 
 
@@ -1131,6 +1154,10 @@ finalize_it:
  */
 rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName)
 {
+	struct queuefilenames_s *qfn;
+	uchar *qfname = NULL;
+	static int qfn_renamenum = 0;
+	uchar qfrenamebuf[1024];
 	DEFiRet;
 
 	/* switch the message object to threaded operation, if necessary */
@@ -1156,25 +1183,47 @@ rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName)
 		errmsg.LogError(0, NO_ERRCODE, "Invalid " #directive ", error %d. Ignored, running with default setting", iRet); \
 	}
 
-	setQPROP(qqueueSetMaxFileSize, "$MainMsgQueueFileSize", ourConf->globals.mainQ.iMainMsgQueMaxFileSize);
-	setQPROP(qqueueSetsizeOnDiskMax, "$MainMsgQueueMaxDiskSpace", ourConf->globals.mainQ.iMainMsgQueMaxDiskSpace);
-	setQPROP(qqueueSetiDeqBatchSize, "$MainMsgQueueDequeueBatchSize", ourConf->globals.mainQ.iMainMsgQueDeqBatchSize);
-	setQPROPstr(qqueueSetFilePrefix, "$MainMsgQueueFileName", ourConf->globals.mainQ.pszMainMsgQFName);
-	setQPROP(qqueueSetiPersistUpdCnt, "$MainMsgQueueCheckpointInterval", ourConf->globals.mainQ.iMainMsgQPersistUpdCnt);
-	setQPROP(qqueueSetbSyncQueueFiles, "$MainMsgQueueSyncQueueFiles", ourConf->globals.mainQ.bMainMsgQSyncQeueFiles);
-	setQPROP(qqueueSettoQShutdown, "$MainMsgQueueTimeoutShutdown", ourConf->globals.mainQ.iMainMsgQtoQShutdown );
-	setQPROP(qqueueSettoActShutdown, "$MainMsgQueueTimeoutActionCompletion", ourConf->globals.mainQ.iMainMsgQtoActShutdown);
-	setQPROP(qqueueSettoWrkShutdown, "$MainMsgQueueWorkerTimeoutThreadShutdown", ourConf->globals.mainQ.iMainMsgQtoWrkShutdown);
-	setQPROP(qqueueSettoEnq, "$MainMsgQueueTimeoutEnqueue", ourConf->globals.mainQ.iMainMsgQtoEnq);
-	setQPROP(qqueueSetiHighWtrMrk, "$MainMsgQueueHighWaterMark", ourConf->globals.mainQ.iMainMsgQHighWtrMark);
-	setQPROP(qqueueSetiLowWtrMrk, "$MainMsgQueueLowWaterMark", ourConf->globals.mainQ.iMainMsgQLowWtrMark);
-	setQPROP(qqueueSetiDiscardMrk, "$MainMsgQueueDiscardMark", ourConf->globals.mainQ.iMainMsgQDiscardMark);
-	setQPROP(qqueueSetiDiscardSeverity, "$MainMsgQueueDiscardSeverity", ourConf->globals.mainQ.iMainMsgQDiscardSeverity);
-	setQPROP(qqueueSetiMinMsgsPerWrkr, "$MainMsgQueueWorkerThreadMinimumMessages", ourConf->globals.mainQ.iMainMsgQWrkMinMsgs);
-	setQPROP(qqueueSetbSaveOnShutdown, "$MainMsgQueueSaveOnShutdown", ourConf->globals.mainQ.bMainMsgQSaveOnShutdown);
-	setQPROP(qqueueSetiDeqSlowdown, "$MainMsgQueueDequeueSlowdown", ourConf->globals.mainQ.iMainMsgQDeqSlowdown);
-	setQPROP(qqueueSetiDeqtWinFromHr,  "$MainMsgQueueDequeueTimeBegin", ourConf->globals.mainQ.iMainMsgQueueDeqtWinFromHr);
-	setQPROP(qqueueSetiDeqtWinToHr,    "$MainMsgQueueDequeueTimeEnd", ourConf->globals.mainQ.iMainMsgQueueDeqtWinToHr);
+	if(ourConf->globals.mainQ.pszMainMsgQFName != NULL) {
+		/* check if the queue file name is unique, else emit an error */
+		for(qfn = queuefilenames ; qfn != NULL ; qfn = qfn->next) {
+			dbgprintf("check queue file name '%s' vs '%s'\n", qfn->name, ourConf->globals.mainQ.pszMainMsgQFName );
+			if(!ustrcmp(qfn->name, ourConf->globals.mainQ.pszMainMsgQFName)) {
+				snprintf((char*)qfrenamebuf, sizeof(qfrenamebuf), "%d-%s-%s",
+					 ++qfn_renamenum, ourConf->globals.mainQ.pszMainMsgQFName,  
+					 (pszQueueName == NULL) ? "NONAME" : (char*)pszQueueName);
+				qfname = ustrdup(qfrenamebuf);
+				errmsg.LogError(0, NO_ERRCODE, "Error: queue file name '%s' already in use "
+					" - using '%s' instead", ourConf->globals.mainQ.pszMainMsgQFName, qfname);
+				break;
+			}
+		}
+		if(qfname == NULL)
+			qfname = ustrdup(ourConf->globals.mainQ.pszMainMsgQFName);
+		qfn = malloc(sizeof(struct queuefilenames_s));
+		qfn->name = qfname;
+		qfn->next = queuefilenames;
+		queuefilenames = qfn;
+	}
+
+ 	setQPROP(qqueueSetMaxFileSize, "$MainMsgQueueFileSize", ourConf->globals.mainQ.iMainMsgQueMaxFileSize);
+ 	setQPROP(qqueueSetsizeOnDiskMax, "$MainMsgQueueMaxDiskSpace", ourConf->globals.mainQ.iMainMsgQueMaxDiskSpace);
+ 	setQPROP(qqueueSetiDeqBatchSize, "$MainMsgQueueDequeueBatchSize", ourConf->globals.mainQ.iMainMsgQueDeqBatchSize);
+ 	setQPROPstr(qqueueSetFilePrefix, "$MainMsgQueueFileName", qfname);
+ 	setQPROP(qqueueSetiPersistUpdCnt, "$MainMsgQueueCheckpointInterval", ourConf->globals.mainQ.iMainMsgQPersistUpdCnt);
+ 	setQPROP(qqueueSetbSyncQueueFiles, "$MainMsgQueueSyncQueueFiles", ourConf->globals.mainQ.bMainMsgQSyncQeueFiles);
+ 	setQPROP(qqueueSettoQShutdown, "$MainMsgQueueTimeoutShutdown", ourConf->globals.mainQ.iMainMsgQtoQShutdown );
+ 	setQPROP(qqueueSettoActShutdown, "$MainMsgQueueTimeoutActionCompletion", ourConf->globals.mainQ.iMainMsgQtoActShutdown);
+ 	setQPROP(qqueueSettoWrkShutdown, "$MainMsgQueueWorkerTimeoutThreadShutdown", ourConf->globals.mainQ.iMainMsgQtoWrkShutdown);
+ 	setQPROP(qqueueSettoEnq, "$MainMsgQueueTimeoutEnqueue", ourConf->globals.mainQ.iMainMsgQtoEnq);
+ 	setQPROP(qqueueSetiHighWtrMrk, "$MainMsgQueueHighWaterMark", ourConf->globals.mainQ.iMainMsgQHighWtrMark);
+ 	setQPROP(qqueueSetiLowWtrMrk, "$MainMsgQueueLowWaterMark", ourConf->globals.mainQ.iMainMsgQLowWtrMark);
+ 	setQPROP(qqueueSetiDiscardMrk, "$MainMsgQueueDiscardMark", ourConf->globals.mainQ.iMainMsgQDiscardMark);
+ 	setQPROP(qqueueSetiDiscardSeverity, "$MainMsgQueueDiscardSeverity", ourConf->globals.mainQ.iMainMsgQDiscardSeverity);
+ 	setQPROP(qqueueSetiMinMsgsPerWrkr, "$MainMsgQueueWorkerThreadMinimumMessages", ourConf->globals.mainQ.iMainMsgQWrkMinMsgs);
+ 	setQPROP(qqueueSetbSaveOnShutdown, "$MainMsgQueueSaveOnShutdown", ourConf->globals.mainQ.bMainMsgQSaveOnShutdown);
+ 	setQPROP(qqueueSetiDeqSlowdown, "$MainMsgQueueDequeueSlowdown", ourConf->globals.mainQ.iMainMsgQDeqSlowdown);
+ 	setQPROP(qqueueSetiDeqtWinFromHr,  "$MainMsgQueueDequeueTimeBegin", ourConf->globals.mainQ.iMainMsgQueueDeqtWinFromHr);
+ 	setQPROP(qqueueSetiDeqtWinToHr,    "$MainMsgQueueDequeueTimeEnd", ourConf->globals.mainQ.iMainMsgQueueDeqtWinToHr);
 
 #	undef setQPROP
 #	undef setQPROPstr

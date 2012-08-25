@@ -2814,11 +2814,13 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 				++pFld; /* skip to field terminator */
 			if(*pFld == pTpe->data.field.field_delim) {
 				++pFld; /* eat it */
+#ifdef STRICT_GPLV3
 				if (pTpe->data.field.field_expand != 0) {
 					while (*pFld == pTpe->data.field.field_delim) {
 						++pFld;
 					}
 				}
+#endif
 				++iCurrFld;
 			}
 		}

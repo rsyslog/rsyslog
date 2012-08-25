@@ -148,7 +148,9 @@ endif
 endif
 
 if ENABLE_EXTENDED_TESTS
-TESTS += random.sh 
+# random.sh is temporarily disabled as it needs some work
+# to rsyslog core to complete in reasonable time
+#TESTS += random.sh 
 endif
 
 if ENABLE_IMFILE

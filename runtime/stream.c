@@ -1010,6 +1010,7 @@ asyncWriterThread(void *pPtr)
 	struct timespec t;
 	sbool bTimedOut = 0;
 	strm_t *pThis = (strm_t*) pPtr;
+	int err;
 	ISOBJ_TYPE_assert(pThis, strm);
 
 	BEGINfunc
@@ -1036,8 +1037,7 @@ asyncWriterThread(void *pPtr)
 			bTimedOut = 0;
 			timeoutComp(&t, pThis->iFlushInterval * 1000); /* *1000 millisconds */
 			if(pThis->bDoTimedWait) {
-				if(pthread_cond_timedwait(&pThis->notEmpty, &pThis->mut, &t) != 0) {
-					int err = errno;
+				if((err = pthread_cond_timedwait(&pThis->notEmpty, &pThis->mut, &t)) != 0) {
 					if(err == ETIMEDOUT) {
 						bTimedOut = 1;
 					} else {
@@ -1170,7 +1170,7 @@ doZipWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf)
 {
 	z_stream zstrm;
 	int zRet;	/* zlib return state */
-	sbool bzInitDone = FALSE;
+	sbool bzInitDone = RSFALSE;
 	DEFiRet;
 	assert(pThis != NULL);
 	assert(pBuf != NULL);
@@ -1186,7 +1186,7 @@ doZipWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf)
 		DBGPRINTF("error %d returned from zlib/deflateInit2()\n", zRet);
 		ABORT_FINALIZE(RS_RET_ZLIB_ERR);
 	}
-	bzInitDone = TRUE;
+	bzInitDone = RSTRUE;
 
 	/* now doing the compression */
 	zstrm.next_in = (Bytef*) pBuf;	/* as of zlib doc, this must be set BEFORE DeflateInit2 */

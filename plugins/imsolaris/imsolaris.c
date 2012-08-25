@@ -252,12 +252,12 @@ getMsgs(thrdInfo_t *pThrd, int timeout)
 		CHKmalloc(pRcv = (uchar*) malloc(sizeof(uchar) * (iMaxLine + 1)));
 	}
 
-	 while(pThrd->bShallStop != TRUE) {
+	 while(pThrd->bShallStop != RSTRUE) {
 		DBGPRINTF("imsolaris: waiting for next message (timeout %d)...\n", timeout);
 		if(timeout == 0) {
 			nfds = poll(&sun_Pfd, 1, timeout); /* wait without timeout */
 
-			if(pThrd->bShallStop == TRUE) {
+			if(pThrd->bShallStop == RSTRUE) {
 				break;
 			}
 

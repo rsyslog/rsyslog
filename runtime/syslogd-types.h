@@ -31,8 +31,9 @@
 #include <syslog.h>
 #endif
 
-#define FALSE 0
-#define TRUE 1
+/* we use RSTRUE/FALSE to prevent name claches with other packages */
+#define RSFALSE 0
+#define RSTRUE 1
 
 #ifdef UT_NAMESIZE
 # define UNAMESZ	UT_NAMESIZE	/* length of a login name */

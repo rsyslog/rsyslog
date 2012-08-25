@@ -41,8 +41,6 @@
 #include <assert.h>
 #include <sys/wait.h>
 #include <ctype.h>
-#define TRUE 1
-#define FALSE 0
 #include "srUtils.h"
 #include "obj.h"
 
@@ -128,11 +126,11 @@ rsRetVal srUtilItoA(char *pBuf, int iLenBuf, number_t iToConv)
 
 	if(iToConv < 0)
 	{
-		bIsNegative = TRUE;
+		bIsNegative = RSTRUE;
 		iToConv *= -1;
 	}
 	else
-		bIsNegative = FALSE;
+		bIsNegative = RSFALSE;
 
 	/* first generate a string with the digits in the reverse direction */
 	i = 0;
@@ -148,7 +146,7 @@ rsRetVal srUtilItoA(char *pBuf, int iLenBuf, number_t iToConv)
 		return RS_RET_PROVIDED_BUFFER_TOO_SMALL;
 
 	/* then move it to the right direction... */
-	if(bIsNegative == TRUE)
+	if(bIsNegative == RSTRUE)
 		*pBuf++ = '-';
 	while(i >= 0)
 		*pBuf++ = szBuf[i--];

@@ -634,11 +634,11 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 			/* check some features */
 			localRet = pNew->isCompatibleWithFeature(sFEATUREAutomaticSanitazion);
 			if(localRet == RS_RET_OK){
-				CHKiRet(parser.SetDoSanitazion(pParser, TRUE));
+				CHKiRet(parser.SetDoSanitazion(pParser, RSTRUE));
 			}
 			localRet = pNew->isCompatibleWithFeature(sFEATUREAutomaticPRIParsing);
 			if(localRet == RS_RET_OK){
-				CHKiRet(parser.SetDoPRIParsing(pParser, TRUE));
+				CHKiRet(parser.SetDoPRIParsing(pParser, RSTRUE));
 			}
 
 			CHKiRet(parser.SetName(pParser, pName));
@@ -966,9 +966,9 @@ Load(uchar *pModName, sbool bConfLoad)
 
 	if(iModNameLen > 3 && !strcmp((char *) pModName + iModNameLen - 3, ".so")) {
 		iModNameLen -= 3;
-		bHasExtension = TRUE;
+		bHasExtension = RSTRUE;
 	} else
-		bHasExtension = FALSE;
+		bHasExtension = RSFALSE;
 
 	CHKiRet(findModule(pModName, iModNameLen, &pModInfo));
 	if(pModInfo != NULL) {
