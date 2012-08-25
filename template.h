@@ -1,25 +1,30 @@
 /* This is the header for template processing code of rsyslog.
- * Please see syslogd.c for license information.
  * begun 2004-11-17 rgerhards
  *
- * Copyright (C) 2004 by Rainer Gerhards and Adiscon GmbH
+ * Copyright 2004-2012 Rainer Gerhards and Adiscon
  *
  * This file is part of rsyslog.
  *
- * Rsyslog is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *       -or-
+ *       see COPYING.ASL20 in the source distribution
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  *
- * Rsyslog is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Rsyslog.  If not, see <http://www.gnu.org/licenses/>.
- *
- * A copy of the GPL can be found in the file "COPYING" in this distribution.
+ * Note: there is a tiny bit of code left where I could not get any response
+ * from the author if this code can be placed under ASL2.0. I have guarded this
+ * with #ifdef STRICT_GPLV3. Only if that macro is defined, the code will be
+ * compiled. Otherwise this feature is not present. The plan is to do a 
+ * different implementation in the future to get rid of this problem.
+ * rgerhards, 2012-08-25
  */
 
 #ifndef	TEMPLATE_H_INCLUDED
@@ -86,7 +91,9 @@ struct templateEntry {
 #endif
 			unsigned has_fields; /* support for field-counting: field to extract */
 			unsigned char field_delim; /* support for field-counting: field delemiter char */
+#ifdef STRICT_GPLV3
 			int field_expand;	/* use multiple instances of the field delimiter as a single one? */
+#endif
 
 			enum tplFormatTypes eDateFormat;
 			enum tplFormatCaseConvTypes eCaseConv;
