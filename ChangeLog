@@ -24,6 +24,18 @@ Version 6.4.1  [V6-STABLE] 2012-08-??
   This lead to queue file corruption. While the root cause is a config
   error, it is a bug that this important and hard to find config error
   was not detected by rsyslog.
+- bugfix: "jsonf" property replacer option did generate invalid JSON
+  in JSON, we have "fieldname":"value", but the option emitted 
+  "fieldname"="value". Interestingly, this was accepted by a couple
+  of sinks, most importantly elasticsearch. Now the correct format is
+  emitted, which causes a remote chance that some things that relied on
+  the wrong format will break.
+  Thanks to Miloslav Trmač for the patch
+- change $!all-json did emit an empty (thus non-JSON) string if no libee
+  data was present. It now emits {} and thus valid JSON. There is a
+  small risk that this may break some things that relied on the previous
+  inconsistency.
+  Thanks to Miloslav Trmač for the patch
 ---------------------------------------------------------------------------
 Version 6.4.0  [V6-STABLE] 2012-08-20
 - THIS IS THE FIRST VERSION OF THE 6.4.x STABLE BRANCH

@@ -2734,7 +2734,7 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			if(pMsg->event == NULL) {
 			if(*pbMustBeFreed == 1)
 				free(pRes);
-			pRes = (uchar*) "";
+			pRes = (uchar*) "{}";
 			*pbMustBeFreed = 0;
 			} else {
 				ee_fmtEventToJSON(pMsg->event, &str);
