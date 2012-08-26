@@ -542,6 +542,8 @@ propNameStrToID(uchar *pName, propid_t *pPropID)
 		*pPropID = PROP_MSGID;
 	} else if(!strcmp((char*) pName, "parsesuccess")) {
 		*pPropID = PROP_PARSESUCCESS;
+	} else if(!strcmp((char*) pName, "uuid")) {
+		*pPropID = PROP_UUID;
 	/* here start system properties (those, that do not relate to the message itself */
 	} else if(!strcmp((char*) pName, "$now")) {
 		*pPropID = PROP_SYS_NOW;
@@ -569,8 +571,6 @@ propNameStrToID(uchar *pName, propid_t *pPropID)
 		*pPropID = PROP_SYS_BOM;
 	} else if(!strcmp((char*) pName, "$uptime")) {
 		*pPropID = PROP_SYS_UPTIME;
-	} else if(!strcmp((char*) pName, "uuid")) {
-		*pPropID = PROP_UUID;
 	} else {
 		*pPropID = PROP_INVALID;
 		iRet = RS_RET_VAR_NOT_FOUND;
@@ -1252,22 +1252,26 @@ char *getProtocolVersionString(msg_t *pM)
 	return(pM->iProtocolVersion ? "1" : "0");
 }
 
-void msgSetUUID(msg_t *pM)
+/* note: libuuid seems not to be thread-safe, so we need
+ * to get some safeguards in place.
+ */
+static void msgSetUUID(msg_t *pM)
 {
-	dbgprintf("[MsgSetUUID] START\n");
-	assert(pM != NULL);
-
-	dbgprintf("[MsgSetUUID] pM NOT null \n");
-
 	size_t lenRes = sizeof(uuid_t) * 2 + 1;
 	char hex_char [] = "0123456789ABCDEF";
 	unsigned int byte_nbr;
 	uuid_t uuid;
+	static pthread_mutex_t mutUUID = PTHREAD_MUTEX_INITIALIZER;
+
+	dbgprintf("[MsgSetUUID] START\n");
+	assert(pM != NULL);
 
 	if((pM->pszUUID = (uchar*) MALLOC(lenRes)) == NULL) {
 		pM->pszUUID = (uchar *)"";
 	} else {
+		pthread_mutex_lock(&mutUUID);
 		uuid_generate(uuid);
+		pthread_mutex_unlock(&mutUUID);
 		for (byte_nbr = 0; byte_nbr < sizeof (uuid_t); byte_nbr++) {
 			pM->pszUUID[byte_nbr * 2 + 0] = hex_char[uuid [byte_nbr] >> 4];
 			pM->pszUUID[byte_nbr * 2 + 1] = hex_char[uuid [byte_nbr] & 15];
@@ -1289,10 +1293,12 @@ void getUUID(msg_t *pM, uchar **pBuf, int *piLen)
 	} else {
 		if(pM->pszUUID == NULL) {
 			dbgprintf("[getUUID] pM->pszUUID is NULL\n");
-
-			msgSetUUID(pM);
-		} else {
-			/* UUID already there we reuse it */
+			MsgLock(pM);
+			/* re-query, things may have changed in the mean time... */
+			if(pM->pszUUID == NULL)
+				msgSetUUID(pM);
+			MsgUnlock(pM);
+		} else { /* UUID already there we reuse it */
 			dbgprintf("[getUUID] pM->pszUUID already exists\n");
 		}
 		*pBuf = pM->pszUUID;
@@ -2732,6 +2738,9 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 		case PROP_MSGID:
 			pRes = (uchar*)getMSGID(pMsg);
 			break;
+		case PROP_UUID:
+			getUUID(pMsg, &pRes, &bufLen);
+			break;
 		case PROP_PARSESUCCESS:
 			pRes = (uchar*)getParseSuccess(pMsg);
 			break;
@@ -2829,9 +2838,6 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			snprintf((char*) pRes, sizeof(uchar) * 32, "%ld", s_info.uptime);
 			}
 #			endif
-		break;
-		case PROP_UUID:
-			getUUID(pMsg, &pRes, &bufLen);
 		break;
 		default:
 			/* there is no point in continuing, we may even otherwise render the
