@@ -43,6 +43,7 @@
 #if HAVE_MALLOC_H
 #  include <malloc.h>
 #endif
+#include <uuid/uuid.h>
 #include "rsyslog.h"
 #include "srUtils.h"
 #include "stringbuf.h"
@@ -568,6 +569,8 @@ propNameStrToID(uchar *pName, propid_t *pPropID)
 		*pPropID = PROP_SYS_BOM;
 	} else if(!strcmp((char*) pName, "$uptime")) {
 		*pPropID = PROP_SYS_UPTIME;
+	} else if(!strcmp((char*) pName, "uuid")) {
+		*pPropID = PROP_UUID;
 	} else {
 		*pPropID = PROP_INVALID;
 		iRet = RS_RET_VAR_NOT_FOUND;
@@ -666,6 +669,8 @@ uchar *propIDToName(propid_t propID)
 			return UCHAR_CONSTANT("$!all-json");
 		case PROP_SYS_BOM:
 			return UCHAR_CONSTANT("$BOM");
+		case PROP_UUID:
+			return UCHAR_CONSTANT("uuid");
 		default:
 			return UCHAR_CONSTANT("*invalid property id*");
 	}
@@ -745,6 +750,7 @@ static inline rsRetVal msgBaseConstruct(msg_t **ppThis)
 	pM->pszRcvdAt_SecFrac[0] = '\0';
 	pM->pszTIMESTAMP_Unix[0] = '\0';
 	pM->pszRcvdAt_Unix[0] = '\0';
+	pM->pszUUID = NULL;
 
 	/* DEV debugging only! dbgprintf("msgConstruct\t0x%x, ref 1\n", (int)pM);*/
 
@@ -875,6 +881,8 @@ CODESTARTobjDestruct(msg)
 			rsCStrDestruct(&pThis->pCSMSGID);
 		if(pThis->event != NULL)
 			ee_deleteEvent(pThis->event);
+		if(pThis->pszUUID != NULL)
+			free(pThis->pszUUID);
 #	ifndef HAVE_ATOMIC_BUILTINS
 		MsgUnlock(pThis);
 # 	endif
@@ -1080,6 +1088,8 @@ static rsRetVal MsgSerialize(msg_t *pThis, strm_t *pStrm)
 	objSerializePTR(pStrm, pCSPROCID, CSTR);
 	objSerializePTR(pStrm, pCSMSGID, CSTR);
 	
+	objSerializePTR(pStrm, pszUUID, PSZ);
+
 	if(pThis->pRuleset != NULL) {
 		rulesetGetName(pThis->pRuleset);
 		CHKiRet(obj.SerializeProp(pStrm, UCHAR_CONSTANT("pszRuleset"), PROPTYPE_PSZ,
@@ -1242,6 +1252,54 @@ char *getProtocolVersionString(msg_t *pM)
 	return(pM->iProtocolVersion ? "1" : "0");
 }
 
+void msgSetUUID(msg_t *pM)
+{
+	dbgprintf("[MsgSetUUID] START\n");
+	assert(pM != NULL);
+
+	dbgprintf("[MsgSetUUID] pM NOT null \n");
+
+	size_t lenRes = sizeof(uuid_t) * 2 + 1;
+	char hex_char [] = "0123456789ABCDEF";
+	unsigned int byte_nbr;
+	uuid_t uuid;
+
+	if((pM->pszUUID = (uchar*) MALLOC(lenRes)) == NULL) {
+		pM->pszUUID = (uchar *)"";
+	} else {
+		uuid_generate(uuid);
+		for (byte_nbr = 0; byte_nbr < sizeof (uuid_t); byte_nbr++) {
+			pM->pszUUID[byte_nbr * 2 + 0] = hex_char[uuid [byte_nbr] >> 4];
+			pM->pszUUID[byte_nbr * 2 + 1] = hex_char[uuid [byte_nbr] & 15];
+		}
+
+		dbgprintf("[MsgSetUUID] UUID : %s LEN: %d \n", pM->pszUUID, (int)lenRes);
+		pM->pszUUID[lenRes] = '\0';
+	}
+	dbgprintf("[MsgSetUUID] END\n");
+}
+
+void getUUID(msg_t *pM, uchar **pBuf, int *piLen)
+{
+	dbgprintf("[getUUID] START\n");
+	if(pM == NULL) {
+		dbgprintf("[getUUID] pM is NULL\n");
+		*pBuf=	UCHAR_CONSTANT("");
+		*piLen = 0;
+	} else {
+		if(pM->pszUUID == NULL) {
+			dbgprintf("[getUUID] pM->pszUUID is NULL\n");
+
+			msgSetUUID(pM);
+		} else {
+			/* UUID already there we reuse it */
+			dbgprintf("[getUUID] pM->pszUUID already exists\n");
+		}
+		*pBuf = pM->pszUUID;
+		*piLen = sizeof(uuid_t) * 2;
+	}
+	dbgprintf("[getUUID] END\n");
+}
 
 void
 getRawMsg(msg_t *pM, uchar **pBuf, int *piLen)
@@ -1908,7 +1966,6 @@ static inline char *getStructuredData(msg_t *pM)
 	return (char*) pszRet;
 }
 
-
 /* check if we have a ProgramName, and, if not, try to aquire/emulate it.
  * rgerhards, 2009-06-26
  */
@@ -2231,7 +2288,6 @@ rsRetVal MsgReplaceMSG(msg_t *pThis, uchar* pszMSG, int lenMSG)
 finalize_it:
 	RETiRet;
 }
-
 
 /* set raw message in message object. Size of message is provided.
  * The function makes sure that the stored rawmsg is properly
@@ -2773,6 +2829,9 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			snprintf((char*) pRes, sizeof(uchar) * 32, "%ld", s_info.uptime);
 			}
 #			endif
+		break;
+		case PROP_UUID:
+			getUUID(pMsg, &pRes, &bufLen);
 		break;
 		default:
 			/* there is no point in continuing, we may even otherwise render the
