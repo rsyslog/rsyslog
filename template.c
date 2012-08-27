@@ -50,6 +50,59 @@ DEFobjCurrIf(obj)
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(strgen)
 
+/* tables for interfacing with the v6 config system */
+static struct cnfparamdescr cnfparamdescr[] = {
+	{ "name", eCmdHdlrString, 1 },
+	{ "type", eCmdHdlrString, 0 },
+	{ "string", eCmdHdlrString, 0 },
+	{ "plugin", eCmdHdlrString, 0 },
+	{ "option.stdsql", eCmdHdlrBinary, 0 },
+	{ "option.sql", eCmdHdlrBinary, 0 },
+	{ "option.json", eCmdHdlrBinary, 0 }
+};
+static struct cnfparamblk pblk =
+	{ CNFPARAMBLK_VERSION,
+	  sizeof(cnfparamdescr)/sizeof(struct cnfparamdescr),
+	  cnfparamdescr
+	};
+
+static struct cnfparamdescr cnfparamdescrProperty[] = {
+	{ "name", eCmdHdlrString, 1 },
+	{ "outname", eCmdHdlrString, 0 },
+	{ "dateformat", eCmdHdlrString, 0 },
+	{ "caseconversion", eCmdHdlrString, 0 },
+	{ "controlcharacters", eCmdHdlrString, 0 },
+	{ "securepath", eCmdHdlrString, 0 },
+	{ "format", eCmdHdlrString, 0 },
+	{ "position.from", eCmdHdlrInt, 0 },
+	{ "position.to", eCmdHdlrInt, 0 },
+	{ "field.number", eCmdHdlrInt, 0 },
+	{ "field.delimiter", eCmdHdlrInt, 0 },
+	{ "regex.expression", eCmdHdlrString, 0 },
+	{ "regex.type", eCmdHdlrString, 0 },
+	{ "regex.nomatchmode", eCmdHdlrString, 0 },
+	{ "regex.match", eCmdHdlrInt, 0 },
+	{ "regex.submatch", eCmdHdlrInt, 0 },
+	{ "droplastlf", eCmdHdlrBinary, 0 },
+	{ "spifno1stsp", eCmdHdlrBinary, 0 }
+};
+static struct cnfparamblk pblkProperty =
+	{ CNFPARAMBLK_VERSION,
+	  sizeof(cnfparamdescrProperty)/sizeof(struct cnfparamdescr),
+	  cnfparamdescrProperty
+	};
+
+static struct cnfparamdescr cnfparamdescrConstant[] = {
+	{ "value", eCmdHdlrString, 1 },
+	{ "outname", eCmdHdlrString, 0 },
+};
+static struct cnfparamblk pblkConstant =
+	{ CNFPARAMBLK_VERSION,
+	  sizeof(cnfparamdescrConstant)/sizeof(struct cnfparamdescr),
+	  cnfparamdescrConstant
+	};
+
+
 #ifdef FEATURE_REGEXP
 DEFobjCurrIf(regexp)
 static int bFirstRegexpErrmsg = 1; /**< did we already do a "can't load regexp" error message? */
@@ -924,12 +977,12 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 
 	/* save field name - if none was given, use the property name instead */
 	if(pStrField == NULL) {
-		if((pTpe->data.field.fieldName =
+		if((pTpe->fieldName =
 		      es_newStrFromCStr((char*)cstrGetSzStrNoNULL(pStrProp), cstrLen(pStrProp))) == NULL) {
 			return 1;
 		}
 	} else {
-		if((pTpe->data.field.fieldName =
+		if((pTpe->fieldName =
 		      es_newStrFromCStr((char*)cstrGetSzStrNoNULL(pStrField), cstrLen(pStrField))) == NULL) {
 			return 1;
 		}
@@ -1130,6 +1183,521 @@ struct template *tplAddLine(rsconf_t *conf, char* pName, uchar** ppRestOfConfLin
 	return(pTpl);
 }
 
+static rsRetVal
+createConstantTpe(struct template *pTpl, struct cnfobj *o)
+{
+	struct templateEntry *pTpe;
+	es_str_t *value;
+	int i;
+	struct cnfparamvals *pvals;
+	es_str_t *outname = NULL;
+	DEFiRet;
+
+	/* pull params */
+	pvals = nvlstGetParams(o->nvlst, &pblkConstant, NULL);
+	cnfparamsPrint(&pblkConstant, pvals);
+	
+	for(i = 0 ; i < pblkConstant.nParams ; ++i) {
+		if(!pvals[i].bUsed)
+			continue;
+		if(!strcmp(pblkConstant.descr[i].name, "value")) {
+			value = pvals[i].val.d.estr;
+		} else if(!strcmp(pblkConstant.descr[i].name, "outname")) {
+			outname = es_strdup(pvals[i].val.d.estr);
+		} else {
+			dbgprintf("template:constantTpe: program error, non-handled "
+			  "param '%s'\n", pblkConstant.descr[i].name);
+		}
+	}
+
+	/* sanity check */
+
+	/* apply */
+	CHKmalloc(pTpe = tpeConstruct(pTpl));
+	es_unescapeStr(value);
+	pTpe->eEntryType = CONSTANT;
+	pTpe->fieldName = outname;
+	pTpe->data.constant.iLenConstant = es_strlen(value);
+	pTpe->data.constant.pConstant = (uchar*)es_str2cstr(value, NULL);
+
+finalize_it:
+	RETiRet;
+}
+
+static rsRetVal
+createPropertyTpe(struct template *pTpl, struct cnfobj *o)
+{
+	struct templateEntry *pTpe;
+	cstr_t *name;
+	es_str_t *estrname;
+	es_str_t *outname = NULL;
+	int i;
+	int droplastlf = 0;
+	int spifno1stsp = 0;
+	int frompos = -1;
+	int topos = -1;
+	int fieldnum = -1;
+	int fielddelim = 9; /* default is HT (USACSII 9) */
+	int re_matchToUse = 0;
+	int re_submatchToUse = 0;
+	char *re_expr = NULL;
+	struct cnfparamvals *pvals;
+	enum {F_NONE, F_CSV, F_JSON, F_JSONF} formatType = F_NONE;
+	enum {CC_NONE, CC_ESCAPE, CC_SPACE, CC_DROP} controlchr = CC_NONE;
+	enum {SP_NONE, SP_DROP, SP_REPLACE} secpath = SP_NONE;
+	enum tplFormatCaseConvTypes caseconv = tplCaseConvNo;
+	enum tplFormatTypes datefmt = tplFmtDefault;
+	enum tplRegexType re_type = TPL_REGEX_BRE;
+	enum tlpRegexNoMatchType re_nomatchType = TPL_REGEX_NOMATCH_USE_DFLTSTR;
+	DEFiRet;
+
+	/* pull params */
+	pvals = nvlstGetParams(o->nvlst, &pblkProperty, NULL);
+	cnfparamsPrint(&pblkProperty, pvals);
+	
+	for(i = 0 ; i < pblkProperty.nParams ; ++i) {
+		if(!pvals[i].bUsed)
+			continue;
+		if(!strcmp(pblkProperty.descr[i].name, "name")) {
+			estrname = es_strdup(pvals[i].val.d.estr);
+			/* TODO: unify strings!!! */
+			rsCStrConstructFromszStr(&name,
+				(uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
+		} else if(!strcmp(pblkProperty.descr[i].name, "droplastlf")) {
+			droplastlf = pvals[i].val.d.n;
+		} else if(!strcmp(pblkProperty.descr[i].name, "spifno1stsp")) {
+			spifno1stsp = pvals[i].val.d.n;
+		} else if(!strcmp(pblkProperty.descr[i].name, "outname")) {
+			outname = es_strdup(pvals[i].val.d.estr);
+		} else if(!strcmp(pblkProperty.descr[i].name, "position.from")) {
+			frompos = pvals[i].val.d.n;
+		} else if(!strcmp(pblkProperty.descr[i].name, "position.to")) {
+			topos = pvals[i].val.d.n;
+		} else if(!strcmp(pblkProperty.descr[i].name, "field.number")) {
+			fieldnum = pvals[i].val.d.n;
+		} else if(!strcmp(pblkProperty.descr[i].name, "field.delimiter")) {
+			fielddelim = pvals[i].val.d.n;
+		} else if(!strcmp(pblkProperty.descr[i].name, "regex.expression")) {
+			re_expr = es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(pblkProperty.descr[i].name, "regex.type")) {
+			if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"BRE", sizeof("BRE")-1)) {
+				re_type = TPL_REGEX_BRE;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"ERE", sizeof("ERE")-1)) {
+				re_type = TPL_REGEX_ERE;
+			} else {
+				uchar *typeStr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
+				errmsg.LogError(0, RS_RET_ERR, "invalid regex.type '%s' for property",
+					typeStr);
+				free(typeStr);
+				ABORT_FINALIZE(RS_RET_ERR);
+			}
+		} else if(!strcmp(pblkProperty.descr[i].name, "regex.nomatchmode")) {
+			if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"DFLT", sizeof("DFLT")-1)) {
+				re_nomatchType = TPL_REGEX_NOMATCH_USE_DFLTSTR;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"BLANK", sizeof("BLANK")-1)) {
+				re_nomatchType = TPL_REGEX_NOMATCH_USE_BLANK;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"FIELD", sizeof("FIELD")-1)) {
+				re_nomatchType = TPL_REGEX_NOMATCH_USE_WHOLE_FIELD;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"ZERO", sizeof("ZERO")-1)) {
+				re_nomatchType = TPL_REGEX_NOMATCH_USE_ZERO;
+			} else {
+				uchar *typeStr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
+				errmsg.LogError(0, RS_RET_ERR, "invalid format type '%s' for property",
+					typeStr);
+				free(typeStr);
+				ABORT_FINALIZE(RS_RET_ERR);
+			}
+		} else if(!strcmp(pblkProperty.descr[i].name, "regex.match")) {
+			re_matchToUse = pvals[i].val.d.n;
+		} else if(!strcmp(pblkProperty.descr[i].name, "regex.submatch")) {
+			re_submatchToUse = pvals[i].val.d.n;
+		} else if(!strcmp(pblkProperty.descr[i].name, "format")) {
+			if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"csv", sizeof("csv")-1)) {
+				formatType = F_CSV;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"json", sizeof("json")-1)) {
+				formatType = F_JSON;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"jsonf", sizeof("jsonf")-1)) {
+				formatType = F_JSONF;
+			} else {
+				uchar *typeStr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
+				errmsg.LogError(0, RS_RET_ERR, "invalid format type '%s' for property",
+					typeStr);
+				free(typeStr);
+				ABORT_FINALIZE(RS_RET_ERR);
+			}
+		} else if(!strcmp(pblkProperty.descr[i].name, "controlcharacters")) {
+			if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"escape", sizeof("escape")-1)) {
+				controlchr = CC_ESCAPE;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"space", sizeof("space")-1)) {
+				controlchr = CC_SPACE;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"drop", sizeof("drop")-1)) {
+				controlchr = CC_DROP;
+			} else {
+				uchar *typeStr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
+				errmsg.LogError(0, RS_RET_ERR, "invalid controlcharacter mode '%s' for property",
+					typeStr);
+				free(typeStr);
+				ABORT_FINALIZE(RS_RET_ERR);
+			}
+		} else if(!strcmp(pblkProperty.descr[i].name, "securepath")) {
+			if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"drop", sizeof("drop")-1)) {
+				secpath = SP_DROP;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"replace", sizeof("replace")-1)) {
+				secpath = SP_REPLACE;
+			} else {
+				uchar *typeStr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
+				errmsg.LogError(0, RS_RET_ERR, "invalid securepath mode '%s' for property",
+					typeStr);
+				free(typeStr);
+				ABORT_FINALIZE(RS_RET_ERR);
+			}
+		} else if(!strcmp(pblkProperty.descr[i].name, "caseconversion")) {
+			if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"lower", sizeof("lower")-1)) {
+				caseconv = tplCaseConvLower;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"upper", sizeof("upper")-1)) {
+				caseconv = tplCaseConvUpper;
+			} else {
+				uchar *typeStr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
+				errmsg.LogError(0, RS_RET_ERR, "invalid caseconversion type '%s' for property",
+					typeStr);
+				free(typeStr);
+				ABORT_FINALIZE(RS_RET_ERR);
+			}
+		} else if(!strcmp(pblkProperty.descr[i].name, "dateformat")) {
+			if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"mysql", sizeof("mysql")-1)) {
+				datefmt = tplFmtMySQLDate;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"pgsql", sizeof("pgsql")-1)) {
+				datefmt = tplFmtPgSQLDate;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"rfc3164", sizeof("rfc3164")-1)) {
+				datefmt = tplFmtRFC3164Date;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"rfc3164-buggyday", sizeof("rfc3164-buggyday")-1)) {
+				datefmt = tplFmtRFC3164BuggyDate;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"rfc3339", sizeof("rfc3339")-1)) {
+				datefmt = tplFmtRFC3339Date;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"unixtimestamp", sizeof("unixtimestamp")-1)) {
+				datefmt = tplFmtUnixDate;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"subseconds", sizeof("subseconds")-1)) {
+				datefmt = tplFmtSecFrac;
+			} else {
+				uchar *typeStr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
+				errmsg.LogError(0, RS_RET_ERR, "invalid date format '%s' for property",
+					typeStr);
+				free(typeStr);
+				ABORT_FINALIZE(RS_RET_ERR);
+			}
+		} else {
+			dbgprintf("template:propertyTpe: program error, non-handled "
+			  "param '%s'\n", pblkProperty.descr[i].name);
+		}
+	}
+	if(outname == NULL)
+		outname = es_strdup(estrname);
+
+	/* sanity check */
+	if(topos == -1 && frompos != -1)
+		topos = 2000000000; /* large enough ;) */
+	if(frompos == -1 && topos != -1)
+		frompos = 0;
+	if(topos < frompos) {
+		errmsg.LogError(0, RS_RET_ERR, "position.to=%d is lower than postion.from=%d\n",
+			topos, frompos);
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+	if(fieldnum != -1 && re_expr != NULL) {
+		errmsg.LogError(0, RS_RET_ERR, "both field extraction and regex extraction "
+				"specified - this is not possible, remove one");
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
+	/* apply */
+	CHKmalloc(pTpe = tpeConstruct(pTpl));
+	pTpe->eEntryType = FIELD;
+	CHKiRet(propNameToID(name, &pTpe->data.field.propid));
+	if(pTpe->data.field.propid == PROP_CEE) {
+		/* in CEE case, we need to preserve the actual property name */
+		pTpe->data.field.propName = estrname;
+	} else {
+		es_deleteStr(estrname);
+	}
+	pTpe->data.field.options.bDropLastLF = droplastlf;
+	pTpe->data.field.options.bSPIffNo1stSP = spifno1stsp;
+	pTpe->data.field.eCaseConv = caseconv;
+	switch(formatType) {
+	case F_NONE:
+		/* all set ;) */
+		break;
+	case F_CSV:
+		pTpe->data.field.options.bCSV = 1;
+		break;
+	case F_JSON:
+		pTpe->data.field.options.bJSON = 1;
+		break;
+	case F_JSONF:
+		pTpe->data.field.options.bJSONf = 1;
+		break;
+	}
+	switch(controlchr) {
+	case CC_NONE:
+		/* all set ;) */
+		break;
+	case CC_ESCAPE:
+		pTpe->data.field.options.bEscapeCC = 1;
+		break;
+	case CC_SPACE:
+		pTpe->data.field.options.bSpaceCC = 1;
+		break;
+	case CC_DROP:
+		pTpe->data.field.options.bDropCC = 1;
+		break;
+	}
+	switch(secpath) {
+	case SP_NONE:
+		/* all set ;) */
+		break;
+	case SP_DROP:
+		pTpe->data.field.options.bSecPathDrop = 1;
+		break;
+	case SP_REPLACE:
+		pTpe->data.field.options.bSecPathReplace = 1;
+		break;
+	}
+	pTpe->fieldName = outname;
+	pTpe->data.field.eDateFormat = datefmt;
+	if(fieldnum != -1) {
+		pTpe->data.field.has_fields = 1;
+		pTpe->data.field.iFieldNr = fieldnum;
+		pTpe->data.field.field_delim = fielddelim;
+	}
+	if(frompos != -1) {
+		pTpe->data.field.iFromPos = frompos;
+		pTpe->data.field.iToPos = topos;
+	}
+	if(re_expr != NULL) {
+		rsRetVal iRetLocal;
+		pTpe->data.field.typeRegex = re_type;
+		pTpe->data.field.nomatchAction = re_nomatchType;
+		pTpe->data.field.iMatchToUse = re_matchToUse;
+		pTpe->data.field.iSubMatchToUse = re_submatchToUse;
+		pTpe->data.field.has_regex = 1;
+		if((iRetLocal = objUse(regexp, LM_REGEXP_FILENAME)) == RS_RET_OK) {
+			int iOptions;
+			iOptions = (pTpe->data.field.typeRegex == TPL_REGEX_ERE) ? REG_EXTENDED : 0;
+			if(regexp.regcomp(&(pTpe->data.field.re), (char*) re_expr, iOptions) != 0) {
+				dbgprintf("error: can not compile regex: '%s'\n", re_expr);
+				errmsg.LogError(0, NO_ERRCODE, "error compiling regex '%s'", re_expr);
+				pTpe->data.field.has_regex = 2;
+				ABORT_FINALIZE(RS_RET_ERR);
+			}
+		} else {
+			/* regexp object could not be loaded */
+			if(bFirstRegexpErrmsg) { /* prevent flood of messages, maybe even an endless loop! */
+				bFirstRegexpErrmsg = 0;
+				errmsg.LogError(0, NO_ERRCODE, "regexp library could not be loaded (error %d), "
+						"regexp ignored", iRetLocal);
+			}
+			pTpe->data.field.has_regex = 2;
+			ABORT_FINALIZE(RS_RET_ERR);
+		}
+	}
+
+finalize_it:
+	RETiRet;
+}
+
+/* create a template in list mode, is build from sub-objects */
+static rsRetVal
+createListTpl(struct template *pTpl, struct cnfobj *o)
+{
+	struct objlst *lst;
+	DEFiRet;
+
+	dbgprintf("create template from subobjs\n");
+	objlstPrint(o->subobjs);
+
+	for(lst = o->subobjs ; lst != NULL ; lst = lst->next) {
+		switch(lst->obj->objType) {
+		case CNFOBJ_PROPERTY:
+			CHKiRet(createPropertyTpe(pTpl, lst->obj));
+			break;
+		case CNFOBJ_CONSTANT:
+			CHKiRet(createConstantTpe(pTpl, lst->obj));
+			break;
+		default:dbgprintf("program error: invalid object type %d "
+				  "in createLstTpl\n", lst->obj->objType);
+			break;
+		}
+		nvlstChkUnused(lst->obj->nvlst);
+	}
+finalize_it:
+	RETiRet;
+}
+
+/* Add a new template via the v6 config system.  */
+rsRetVal
+tplProcessCnf(struct cnfobj *o)
+{
+	struct template *pTpl = NULL;
+	struct cnfparamvals *pvals;
+	int lenName;
+	char *name = NULL;
+	uchar *tplStr = NULL;
+	uchar *plugin = NULL;
+	uchar *p;
+	enum { T_STRING, T_PLUGIN, T_LIST } tplType;
+	int i;
+	int o_sql=0, o_stdsql=0, o_json=0; /* options */
+	int numopts;
+	rsRetVal localRet;
+	DEFiRet;
+
+	pvals = nvlstGetParams(o->nvlst, &pblk, NULL);
+	cnfparamsPrint(&pblk, pvals);
+	
+	for(i = 0 ; i < pblk.nParams ; ++i) {
+		if(!pvals[i].bUsed)
+			continue;
+		if(!strcmp(pblk.descr[i].name, "name")) {
+			lenName = es_strlen(pvals[i].val.d.estr);
+			name = es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(pblk.descr[i].name, "type")) {
+			if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"string", sizeof("string")-1)) {
+				tplType = T_STRING;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"plugin", sizeof("plugin")-1)) {
+				tplType = T_PLUGIN;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"list", sizeof("list")-1)) {
+				tplType = T_LIST;
+			} else {
+				uchar *typeStr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
+				errmsg.LogError(0, RS_RET_ERR, "invalid template type '%s'",
+					typeStr);
+				free(typeStr);
+				ABORT_FINALIZE(RS_RET_ERR);
+			}
+		} else if(!strcmp(pblk.descr[i].name, "string")) {
+			tplStr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(pblk.descr[i].name, "plugin")) {
+			plugin = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(pblk.descr[i].name, "option.stdsql")) {
+			o_stdsql = pvals[i].val.d.n;
+		} else if(!strcmp(pblk.descr[i].name, "option.sql")) {
+			o_sql = pvals[i].val.d.n;
+		} else if(!strcmp(pblk.descr[i].name, "option.json")) {
+			o_json = pvals[i].val.d.n;
+		} else {
+			dbgprintf("template: program error, non-handled "
+			  "param '%s'\n", pblk.descr[i].name);
+		}
+	}
+
+	/* do config sanity checks */
+	if(tplStr  == NULL) {
+		if(tplType == T_STRING) {
+			errmsg.LogError(0, RS_RET_ERR, "template '%s' of type string needs "
+				"string parameter", name);
+			ABORT_FINALIZE(RS_RET_ERR);
+		}
+	} else {
+		if(tplType != T_STRING) {
+			errmsg.LogError(0, RS_RET_ERR, "template '%s' is not a string "
+				"template but has a string specified - ignored", name);
+		}
+	}
+
+	if(plugin  == NULL) {
+		if(tplType == T_PLUGIN) {
+			errmsg.LogError(0, RS_RET_ERR, "template '%s' of type plugin needs "
+				"plugin parameter", name);
+			ABORT_FINALIZE(RS_RET_ERR);
+		}
+	} else {
+		if(tplType != T_PLUGIN) {
+			errmsg.LogError(0, RS_RET_ERR, "template '%s' is not a plugin "
+				"template but has a plugin specified - ignored", name);
+		}
+	}
+
+	if(o->subobjs  == NULL) {
+		if(tplType == T_LIST) {
+			errmsg.LogError(0, RS_RET_ERR, "template '%s' of type list has "
+				"has no parameters specified", name);
+			ABORT_FINALIZE(RS_RET_ERR);
+		}
+	} else {
+		if(tplType != T_LIST) {
+			errmsg.LogError(0, RS_RET_ERR, "template '%s' is not a list "
+				"template but has parameters specified - ignored", name);
+		}
+	}
+
+	numopts = 0;
+	if(o_sql) ++numopts;
+	if(o_stdsql) ++numopts;
+	if(o_json) ++numopts;
+	if(numopts > 1) {
+		errmsg.LogError(0, RS_RET_ERR, "template '%s' has multiple incompatible "
+			"options of sql, stdsql or json specified", name);
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
+	/* config ok */
+	if((pTpl = tplConstruct(loadConf)) == NULL) {
+		DBGPRINTF("template.c: tplConstruct failed!\n");
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+	pTpl->pszName = name;
+	pTpl->iLenName = lenName;
+	
+	switch(tplType) {
+	case T_STRING:	p = tplStr;
+			while(*p) {
+				switch(*p) {
+					case '%': /* parameter */
+						++p; /* eat '%' */
+						do_Parameter(&p, pTpl);
+						break;
+					default: /* constant */
+						do_Constant(&p, pTpl);
+						break;
+				}
+			}
+			break;
+	case T_PLUGIN:	p = plugin;
+			/* TODO: the use of tplAddTplMod() can be improved! */
+			localRet = tplAddTplMod(pTpl, &p);
+			if(localRet != RS_RET_OK) {
+				errmsg.LogError(0, localRet, "template '%s': error %d "
+						"defining template via plugin (strgen) module",
+						pTpl->pszName, localRet);
+				ABORT_FINALIZE(localRet);
+			}
+			break;
+	case T_LIST:	createListTpl(pTpl, o);
+			break;
+	}
+	
+	pTpl->optFormatEscape = NO_ESCAPE;
+	if(o_stdsql)
+		pTpl->optFormatEscape = STDSQL_ESCAPE;
+	else if(o_sql)
+		pTpl->optFormatEscape = SQL_ESCAPE;
+	else if(o_json)
+		pTpl->optFormatEscape = JSON_ESCAPE;
+
+finalize_it:
+	if(iRet != RS_RET_OK) {
+		if(pTpl != NULL) {
+			/* we simply make the template defunct in this case by setting
+			 * its name to a zero-string. We do not free it, as this would
+			 * require additional code and causes only a very small memory
+			 * consumption. TODO: maybe in next iteration...
+			 */
+			*pTpl->pszName = '\0';
+		}
+	}
+
+	RETiRet;
+}
+
 
 /* Find a template object based on name. Search
  * currently is case-senstive (should we change?).
@@ -1194,8 +1762,8 @@ void tplDeleteAll(rsconf_t *conf)
 				}
 				if(pTpeDel->data.field.propName != NULL)
 					es_deleteStr(pTpeDel->data.field.propName);
-				if(pTpeDel->data.field.fieldName != NULL)
-					es_deleteStr(pTpeDel->data.field.fieldName);
+				if(pTpeDel->fieldName != NULL)
+					es_deleteStr(pTpeDel->fieldName);
 #endif
 				break;
 			}

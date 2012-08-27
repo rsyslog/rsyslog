@@ -124,6 +124,7 @@ struct msg {
 	char pszRcvdAt_SecFrac[7];	     /* same as above. Both are fractional seconds for their respective timestamp */
 	char pszTIMESTAMP_Unix[12]; /* almost as small as a pointer! */
 	char pszRcvdAt_Unix[12];
+    uchar *pszUUID; /* The message's UUID */
 };
 
 
@@ -185,7 +186,6 @@ void getRawMsg(msg_t *pM, uchar **pBuf, int *piLen);
 rsRetVal msgGetCEEVar(msg_t *pThis, cstr_t *propName, var_t **ppVar);
 es_str_t* msgGetCEEVarNew(msg_t *pMsg, char *name);
 rsRetVal msgAddJSON(msg_t *pM, uchar *name, struct json_object *json);
-
 
 /* TODO: remove these five (so far used in action.c) */
 uchar *getMSG(msg_t *pM);
