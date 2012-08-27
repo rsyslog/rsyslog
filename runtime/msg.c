@@ -42,7 +42,6 @@
 #include <json/json.h>
 /* For struct json_object_iter, should not be necessary in future versions */
 #include <json/json_object_private.h>
-#include <libee/libee.h>
 #if HAVE_MALLOC_H
 #  include <malloc.h>
 #endif
@@ -740,7 +739,6 @@ static inline rsRetVal msgBaseConstruct(msg_t **ppThis)
 	pM->pRcvFromIP = NULL;
 	pM->rcvFrom.pRcvFrom = NULL;
 	pM->pRuleset = NULL;
-	pM->event = NULL;
 	pM->json = NULL;
 	memset(&pM->tRcvdAt, 0, sizeof(pM->tRcvdAt));
 	memset(&pM->tTIMESTAMP, 0, sizeof(pM->tTIMESTAMP));
@@ -881,8 +879,6 @@ CODESTARTobjDestruct(msg)
 			rsCStrDestruct(&pThis->pCSMSGID);
 		if(pThis->json != NULL)
 			json_object_put(pThis->json);
-		if(pThis->event != NULL)
-			ee_deleteEvent(pThis->event);
 #	ifndef HAVE_ATOMIC_BUILTINS
 		MsgUnlock(pThis);
 # 	endif
@@ -2349,47 +2345,7 @@ static uchar *getNOW(eNOWType eNow)
 #undef tmpBUFSIZE /* clean up */
 
 
-#if 0 // old code for reference, remove
-/* Get a CEE-Property from libee. This function probably should be
- * placed somewhere else, but this smells like a big restructuring
- * useful in any case. So for the time being, I'll simply leave the
- * function here, as the context seems good enough. -- rgerhards, 2010-12-01
- */
-static inline void
-getCEEPropVal(msg_t *pMsg, es_str_t *propName, uchar **pRes, int *buflen, unsigned short *pbMustBeFreed)
-{
-	es_str_t *str = NULL;
-	int r;
-
-	if(*pbMustBeFreed)
-		free(*pRes);
-	*pRes = NULL;
-
-	if(pMsg->event == NULL) goto finalize_it;
-	r = ee_getEventFieldAsString(pMsg->event, propName, &str);
-
-	if(r != EE_OK) {
-		DBGPRINTF("msgGtCEEVar: libee error %d during ee_getEventFieldAsString\n", r);
-		FINALIZE;
-	}
-	*pRes = (unsigned char*) es_str2cstr(str, "#000");
-	es_deleteStr(str);
-	*buflen = (int) ustrlen(*pRes);
-	*pbMustBeFreed = 1;
-
-finalize_it:
-	if(*pRes == NULL) {
-		/* could not find any value, so set it to empty */
-		*pRes = (unsigned char*)"";
-		*pbMustBeFreed = 0;
-	}
-}
-#endif
-/* Get a CEE-Property from libee. This function probably should be
- * placed somewhere else, but this smells like a big restructuring
- * useful in any case. So for the time being, I'll simply leave the
- * function here, as the context seems good enough. -- rgerhards, 2010-12-01
- */
+/* Get a CEE-Property */
 static inline rsRetVal
 getCEEPropVal(msg_t *pM, es_str_t *propName, uchar **pRes, int *buflen, unsigned short *pbMustBeFreed)
 {
@@ -3440,29 +3396,25 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 es_str_t*
 msgGetCEEVarNew(msg_t *pMsg, char *name)
 {
+	uchar *leaf;
+	char *val;
 	es_str_t *estr = NULL;
-	es_str_t *epropName = NULL;
-	struct ee_field *field;
+	struct json_object *json, *parent;
 
 	ISOBJ_TYPE_assert(pMsg, msg);
 
-	if(pMsg->event == NULL) {
+	if(pMsg->json == NULL) {
 		estr = es_newStr(1);
 		goto done;
 	}
-
-	epropName = es_newStrFromCStr(name, strlen(name)); // TODO: optimize (in grammar!) 
-	field = ee_getEventField(pMsg->event, epropName);
-	if(field != NULL) {
-		ee_getFieldAsString(field, &estr);
+	leaf = jsonPathGetLeaf((uchar*)name, strlen(name));
+	if(jsonPathFindParent(pMsg, (uchar*)name, leaf, &parent, 1) != RS_RET_OK) {
+		estr = es_newStr(1);
+		goto done;
 	}
-	if(estr == NULL) {
-		DBGPRINTF("msgGetCEEVar: error obtaining var (field=%p, var='%s')\n",
-			  field, name);
-		estr = es_newStrFromCStr("*ERROR*", sizeof("*ERROR*") - 1);
-	}
-	es_deleteStr(epropName);
-
+	json = json_object_object_get(parent, (char*)leaf);
+	val = (char*)json_object_get_string(json);
+	estr = es_newStrFromCStr(val, strlen(val));
 done:
 	return estr;
 }

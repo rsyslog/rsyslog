@@ -110,9 +110,8 @@ struct msg {
 				   it obviously is solved in way or another...). */
 	struct syslogTime tRcvdAt;/* time the message entered this program */
 	struct syslogTime tTIMESTAMP;/* (parsed) value of the timestamp */
-	struct ee_event	*event;	/**< libee event */
-	/* some fixed-size buffers to save malloc()/free() for frequently used fields (from the default templates) */
 	struct json_object *json;
+	/* some fixed-size buffers to save malloc()/free() for frequently used fields (from the default templates) */
 	uchar szRawMsg[CONF_RAWMSG_BUFSIZE];	/* most messages are small, and these are stored here (without malloc/free!) */
 	uchar szHOSTNAME[CONF_HOSTNAME_BUFSIZE];
 	union {
