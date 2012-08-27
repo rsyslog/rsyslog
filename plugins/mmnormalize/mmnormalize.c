@@ -4,9 +4,12 @@
  *
  * NOTE: read comments in module-template.h for details on the calling interface!
  *
+ * TODO: check if we can replace libee via JSON system - currently that part
+ * is pretty inefficient... rgerhards, 2012-08-27
+ *
  * File begun on 2010-01-01 by RGerhards
  *
- * Copyright 2010 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2010-2012 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -37,6 +40,7 @@
 #include <unistd.h>
 #include <libestr.h>
 #include <libee/libee.h>
+#include <json/json.h>
 #include <liblognorm.h>
 #include "conf.h"
 #include "syslogd-types.h"
@@ -108,8 +112,12 @@ BEGINdoAction
 	msg_t *pMsg;
 	es_str_t *str;
 	uchar *buf;
+	char *cstrJSON;
 	int len;
 	int r;
+	struct ee_event	*event = NULL;
+	struct json_tokener *tokener;
+	struct json_object *json;
 CODESTARTdoAction
 	pMsg = (msg_t*) ppString[0];
 	/* note that we can performance-optimize the interface, but this also
@@ -123,7 +131,7 @@ CODESTARTdoAction
 		len = getMSGLen(pMsg);
 	}
 	str = es_newStrFromCStr((char*)buf, len);
-	r = ln_normalize(pData->ctxln, str, &pMsg->event);
+	r = ln_normalize(pData->ctxln, str, &event);
 	if(r != 0) {
 		DBGPRINTF("error %d during ln_normalize\n", r);
 		MsgSetParseSuccess(pMsg, 0);
@@ -131,16 +139,20 @@ CODESTARTdoAction
 		MsgSetParseSuccess(pMsg, 1);
 	}
 	es_deleteStr(str);
-	/***DEBUG***/ // TODO: remove after initial testing - 2010-12-01
-			{
-			char *cstr;
-			ee_fmtEventToJSON(pMsg->event, &str);
-			cstr = es_str2cstr(str, NULL);
-			dbgprintf("mmnormalize generated: %s\n", cstr);
-			free(cstr);
-			es_deleteStr(str);
-			}
-	/***END DEBUG***/
+
+	/* reformat to our json data struct */
+	// TODO: this is all extremly ineffcient!
+	ee_fmtEventToJSON(event, &str);
+	cstrJSON = es_str2cstr(str, NULL);
+	dbgprintf("mmnormalize generated: %s\n", cstrJSON);
+
+	tokener = json_tokener_new();
+	json = json_tokener_parse_ex(tokener, cstrJSON, strlen((char*)cstrJSON));
+	json_tokener_free(tokener);
+ 	msgAddJSON(pMsg, (uchar*)"!", json);
+
+	free(cstrJSON);
+	es_deleteStr(str);
 ENDdoAction
 
 
