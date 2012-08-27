@@ -674,6 +674,21 @@ AM_CONDITIONAL(ENABLE_OMLIBDBI, test x$enable_libdbi = xyes)
 AC_SUBST(LIBDBI_CFLAGS)
 AC_SUBST(LIBDBI_LIBS)
 
+# libuuid support
+AC_CHECK_HEADERS(
+  [uuid/uuid.h],,
+  [AC_MSG_FAILURE([libuuid is missing])]
+)
+AC_CHECK_LIB(
+  [uuid],
+  [uuid_generate],
+  [LIBUUID_CFLAGS=""
+   LIBUUID_LIBS="-luuid"
+  ],
+  [AC_MSG_FAILURE([libuuid library is missing])]
+)
+AC_SUBST(LIBUUID_CFLAGS)
+AC_SUBST(LIBUUID_LIBS)
 
 # SNMP support
 AC_ARG_ENABLE(snmp,

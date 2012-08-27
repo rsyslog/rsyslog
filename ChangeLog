@@ -18,6 +18,10 @@ Version 6.5.0  [devel] 2012-0?-??
   Thanks to Miloslav Trmač for the patch
 - $SystemLogParseTrusted config file option
   Thanks to Milan Bartos for the patch
+- added new uuid message property
+  Thanks to Jérôme Renard for the idea and patches.
+  Note: patches were released under ASL 2.0, see
+  http://bugzilla.adiscon.com/show_bug.cgi?id=353
 ---------------------------------------------------------------------------
 Version 6.4.1  [V6-STABLE] 2012-08-??
 - bugfix: multiple main queues with same queue file name were not detected
