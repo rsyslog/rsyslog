@@ -67,7 +67,6 @@ DEFobjCurrIf(errmsg);
 DEF_OMOD_STATIC_DATA
 
 typedef struct _instanceData {
-	ee_ctx ctxee;		/**< context to be used for libee */
 } instanceData;
 
 typedef struct configSettings_s {
@@ -93,7 +92,6 @@ ENDisCompatibleWithFeature
 
 BEGINfreeInstance
 CODESTARTfreeInstance
-	ee_exitCtx(pData->ctxee);
 ENDfreeInstance
 
 
@@ -169,17 +167,20 @@ finalize_it:
 /* parse the audit record and create libee structure
  */
 static rsRetVal
-audit_parse(instanceData *pData, uchar *buf, struct ee_event **event)
+audit_parse(uchar *buf, struct json_object **jsonRoot)
 {
-	es_str_t *estr;
+	struct json_object *json;
+	struct json_object *jval;
 	char name[1024];
 	char val[1024];
 	DEFiRet;
 
-	*event = ee_newEvent(pData->ctxee);
-	if(event == NULL) {
+	*jsonRoot = json_object_new_object();
+	if(*jsonRoot == NULL) {
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
+	json = json_object_new_object();
+	json_object_object_add(*jsonRoot, "data", json);
 
 	while(*buf) {
 //dbgprintf("audit_parse, buf: '%s'\n", buf);
@@ -189,10 +190,8 @@ audit_parse(instanceData *pData, uchar *buf, struct ee_event **event)
 		}
 		++buf;
 		CHKiRet(parseValue(&buf, val, sizeof(val)));
-
-		estr = es_newStrFromCStr(val, strlen(val));
-		ee_addStrFieldToEvent(*event, name, estr);
-		es_deleteStr(estr);
+		jval = json_object_new_string(val);
+		json_object_object_add(json, name, jval);
 dbgprintf("mmaudit: parsed %s=%s\n", name, val);
 	}
 	
@@ -206,9 +205,10 @@ BEGINdoAction
 	msg_t *pMsg;
 	uchar *buf;
 	int typeID;
-	struct ee_event *event;
+	struct json_object *jsonRoot;
+	struct json_object *json;
+	struct json_object *jval;
 	int i;
-	es_str_t *estr;
 	char auditID[1024];
 	int bSuccess = 0;
 CODESTARTdoAction
@@ -252,48 +252,24 @@ dbgprintf("mmaudit: msg is '%s'\n", buf);
 	}
 	buf += 2;
 
-dbgprintf("mmaudit: cookie found, type %d, auditID '%s', rest of message: '%s'\n", typeID, auditID, buf);
-	audit_parse(pData, buf, &event);
-	if(event == NULL) {
+	audit_parse(buf, &jsonRoot);
+	if(jsonRoot == NULL) {
 		DBGPRINTF("mmaudit: audit parse error, assuming no "
 			  "audit message: '%s'\n", buf);
 		FINALIZE;
 	}
 
 	/* we now need to shuffle the "outer" properties into that stream */
-	estr = es_newStrFromCStr(auditID, strlen(auditID));
-	ee_addStrFieldToEvent(event, "audithdr.auditid", estr);
-	es_deleteStr(estr);
+	json = json_object_new_object();
+	json_object_object_add(jsonRoot, "hdr", json);
+	jval = json_object_new_string(auditID);
+	json_object_object_add(json, "auditid", jval);
+	jval = json_object_new_int(typeID);
+	json_object_object_add(json, "type", jval);
 
-	/* we abuse auditID a bit to save space...  (TODO: change!) */
-	snprintf(auditID, sizeof(auditID), "%d", typeID);
-	estr = es_newStrFromCStr(auditID, strlen(auditID));
-	ee_addStrFieldToEvent(event, "audithdr.type", estr);
-	es_deleteStr(estr);
-
-	/* TODO: in the long term, we need to think about merging & different
-	   name spaces (probably best to add the newly-obtained event as a child to
-	   the existing event...)
-	*/
-	if(pMsg->event != NULL) {
-		ee_deleteEvent(pMsg->event);
-	}
-	pMsg->event = event;
+ 	msgAddJSON(pMsg, (uchar*)"!audit", jsonRoot);
 	bSuccess = 1;
 
-#if 1
-	/***DEBUG***/ // TODO: remove after initial testing - 2010-12-01
-			{
-			char *cstr;
-			es_str_t *str;
-			ee_fmtEventToJSON(pMsg->event, &str);
-			cstr = es_str2cstr(str, NULL);
-			dbgprintf("mmaudit generated: %s\n", cstr);
-			free(cstr);
-			es_deleteStr(str);
-			}
-	/***END DEBUG***/
-#endif
 finalize_it:
 	MsgSetParseSuccess(pMsg, bSuccess);
 ENDdoAction
@@ -318,13 +294,6 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	 * the format specified (if any) is always ignored.
 	 */
 	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_TPL_AS_MSG, (uchar*) "RSYSLOG_FileFormat"));
-
-	/* finally build the instance */
-	if((pData->ctxee = ee_initCtx()) == NULL) {
-		errmsg.LogError(0, RS_RET_NO_RULESET, "error: could not initialize libee ctx, cannot "
-				"activate action");
-		ABORT_FINALIZE(RS_RET_ERR_LIBEE_INIT);
-	}
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
