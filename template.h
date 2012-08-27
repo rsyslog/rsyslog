@@ -58,6 +58,9 @@ enum tplFormatTypes { tplFmtDefault = 0, tplFmtMySQLDate = 1,
                       tplFmtRFC3164Date = 2, tplFmtRFC3339Date = 3, tplFmtPgSQLDate = 4,
 		      tplFmtSecFrac = 5, tplFmtRFC3164BuggyDate = 6, tplFmtUnixDate};
 enum tplFormatCaseConvTypes { tplCaseConvNo = 0, tplCaseConvUpper = 1, tplCaseConvLower = 2 };
+enum tplRegexType { TPL_REGEX_BRE = 0, /* posix BRE */
+		    TPL_REGEX_ERE = 1  /* posix ERE */
+		  };
 
 #include "msg.h"
 
@@ -65,6 +68,7 @@ enum tplFormatCaseConvTypes { tplCaseConvNo = 0, tplCaseConvUpper = 1, tplCaseCo
 struct templateEntry {
 	struct templateEntry *pNext;
 	enum EntryTypes eEntryType;
+	es_str_t *fieldName;	/**< field name to be used for structured output */
 	union {
 		struct {
 			uchar *pConstant;	/* pointer to constant value */
@@ -80,11 +84,8 @@ struct templateEntry {
 			short has_regex;
 			short iMatchToUse;/* which match should be obtained (10 max) */
 			short iSubMatchToUse;/* which submatch should be obtained (10 max) */
-			enum {
-				TPL_REGEX_BRE = 0, /* posix BRE */
-				TPL_REGEX_ERE = 1  /* posix ERE */
-			} typeRegex;
-			enum {
+			enum tplRegexType typeRegex;
+			enum tlpRegexNoMatchType {
 				TPL_REGEX_NOMATCH_USE_DFLTSTR = 0, /* use the (old style) default "**NO MATCH**" string */
 				TPL_REGEX_NOMATCH_USE_BLANK = 1, /* use a blank string */
 				TPL_REGEX_NOMATCH_USE_WHOLE_FIELD = 2, /* use the full field contents that we were searching in*/
@@ -99,7 +100,6 @@ struct templateEntry {
 #endif
 
 			es_str_t *propName;	/**< property name (currently being used for CEE only) */
-			es_str_t *fieldName;	/**< field name to be used for structured output */
 
 			enum tplFormatTypes eDateFormat;
 			enum tplFormatCaseConvTypes eCaseConv;
@@ -148,6 +148,7 @@ rsRetVal tplToString(struct template *pTpl, msg_t *pMsg, uchar** ppSz, size_t *)
 rsRetVal doEscape(uchar **pp, size_t *pLen, unsigned short *pbMustBeFreed, int escapeMode);
 
 rsRetVal templateInit();
+rsRetVal tplProcessCnf(struct cnfobj *o);
 
 #endif /* #ifndef TEMPLATE_H_INCLUDED */
 /* vim:set ai:

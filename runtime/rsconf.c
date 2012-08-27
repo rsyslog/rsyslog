@@ -66,6 +66,7 @@
 #include "parserif.h"
 #include "modules.h"
 #include "dirty.h"
+#include "template.h"
 
 /* static data */
 DEFobjStaticHelpers
@@ -386,6 +387,8 @@ yyerror(char *s)
 }
 void cnfDoObj(struct cnfobj *o)
 {
+	int bChkUnuse = 1;
+
 	dbgprintf("cnf:global:obj: ");
 	cnfobjPrint(o);
 	switch(o->objType) {
@@ -398,8 +401,17 @@ void cnfDoObj(struct cnfobj *o)
 	case CNFOBJ_ACTION:
 		actionProcessCnf(o);
 		break;
+	case CNFOBJ_TPL:
+		tplProcessCnf(o);
+		break;
+	case CNFOBJ_PROPERTY:
+	case CNFOBJ_CONSTANT:
+		/* these types are processed at a later stage */
+		bChkUnuse = 0;
+		break;
 	}
-	nvlstChkUnused(o->nvlst);
+	if(bChkUnuse)
+		nvlstChkUnused(o->nvlst);
 	cnfobjDestruct(o);
 }
 

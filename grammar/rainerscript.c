@@ -98,6 +98,62 @@ readConfFile(FILE *fp, es_str_t **str)
 	es_addChar(str, '\0');
 }
 
+struct objlst*
+objlstNew(struct cnfobj *o)
+{
+	struct objlst *lst;
+
+	if((lst = malloc(sizeof(struct objlst))) != NULL) {
+		lst->next = NULL;
+		lst->obj = o;
+	}
+dbgprintf("AAAA: creating new objlst\n");
+cnfobjPrint(o);
+
+	return lst;
+}
+
+/* add object to end of object list, always returns pointer to root object */
+struct objlst*
+objlstAdd(struct objlst *root, struct cnfobj *o)
+{
+	struct objlst *l;
+	struct objlst *newl;
+	
+	newl = objlstNew(o);
+	if(root == 0) {
+		root = newl;
+	} else { /* find last, linear search ok, as only during config phase */
+		for(l = root ; l->next != NULL ; l = l->next)
+			;
+		l->next = newl;
+	}
+	return root;
+}
+
+void
+objlstDestruct(struct objlst *lst)
+{
+	struct objlst *toDel;
+
+	while(lst != NULL) {
+		toDel = lst;
+		lst = lst->next;
+		// TODO: delete object
+		free(toDel);
+	}
+}
+
+void
+objlstPrint(struct objlst *lst)
+{
+	dbgprintf("objlst %p:\n", lst);
+	while(lst != NULL) {
+		cnfobjPrint(lst->obj);
+		lst = lst->next;
+	}
+}
+
 struct nvlst*
 nvlstNew(es_str_t *name, es_str_t *value)
 {
@@ -581,6 +637,7 @@ cnfobjNew(enum cnfobjType objType, struct nvlst *lst)
 		nvlstChkDupes(lst);
 		o->objType = objType;
 		o->nvlst = lst;
+		o->subobjs = NULL;
 	}
 
 	return o;

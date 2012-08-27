@@ -49,6 +49,7 @@ extern int yyerror(char*);
 	enum cnfobjType objType;
 	struct cnfobj *obj;
 	struct nvlst *nvlst;
+	struct objlst *objlst;
 	struct cnfactlst *actlst;
 	struct cnfexpr *expr;
 	struct cnfrule *rule;
@@ -63,6 +64,9 @@ extern int yyerror(char*);
 %token ENDOBJ
 %token <s> CFSYSLINE
 %token BEGIN_ACTION
+%token BEGIN_PROPERTY
+%token BEGIN_CONSTANT
+%token BEGIN_TPL
 %token STOP
 %token <s> LEGACY_ACTION
 %token <s> PRIFILT
@@ -89,7 +93,8 @@ extern int yyerror(char*);
 %token CMP_STARTSWITHI
 
 %type <nvlst> nv nvlst
-%type <obj> obj
+%type <obj> obj property constant
+%type <objlst> propconst
 %type <actlst> actlst
 %type <actlst> act
 %type <s> cfsysline
@@ -128,6 +133,16 @@ conf:	/* empty (to end recursion) */
 	| conf BSD_HOST_SELECTOR	{ cnfDoBSDHost($2); }
 obj:	  BEGINOBJ nvlst ENDOBJ 	{ $$ = cnfobjNew($1, $2); }
 	| BEGIN_ACTION nvlst ENDOBJ 	{ $$ = cnfobjNew(CNFOBJ_ACTION, $2); }
+        | BEGIN_TPL nvlst ENDOBJ	{ $$ = cnfobjNew(CNFOBJ_TPL, $2); }
+        | BEGIN_TPL nvlst ENDOBJ '{' propconst '}'
+					{ $$ = cnfobjNew(CNFOBJ_TPL, $2);
+					  $$->subobjs = $5;
+					}
+propconst:				{ $$ = NULL; }
+	| propconst property		{ $$ = objlstAdd($1, $2); }
+	| propconst constant		{ $$ = objlstAdd($1, $2); }
+property: BEGIN_PROPERTY nvlst ENDOBJ	{ $$ = cnfobjNew(CNFOBJ_PROPERTY, $2); }
+constant: BEGIN_CONSTANT nvlst ENDOBJ	{ $$ = cnfobjNew(CNFOBJ_CONSTANT, $2); }
 cfsysline: CFSYSLINE	 		{ $$ = $1; }
 nvlst:					{ $$ = NULL; }
 	| nvlst nv 			{ $2->next = $1; $$ = $2; }
