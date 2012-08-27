@@ -164,8 +164,6 @@ static int startIndexUxLocalSockets; /* process fd from that index on (used to
 static int nfd = 1; /* number of Unix sockets open / read-only after startup */
 static int sd_fds = 0;			/* number of systemd activated sockets */
 
-static ee_ctx ctxee = NULL;	/* library context */
-
 /* config vars for legacy config system */
 #define DFLT_bCreatePath 0
 #define DFLT_ratelimitInterval 0
@@ -720,6 +718,7 @@ copyescaped(uchar *dstbuf, uchar *inbuf, int inlen)
 }
 
 
+#if 0
 /* Creates new field to be added to event
  * used for SystemLogParseTrusted parsing
  */
@@ -738,6 +737,7 @@ createNewField(char *fieldname, char *value, int lenValue) {
 
 	return newField;
 }
+#endif
 
 
 /* submit received message to the queue engine
@@ -765,7 +765,7 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 	uchar *pmsgbuf;
 	int toffs; /* offset for trusted properties */
 	struct syslogTime dummyTS;
-	struct ee_event *event = NULL;
+	struct json_object *json = NULL, *jval;
 	DEFiRet;
 
 	/* TODO: handle format errors?? */
@@ -812,45 +812,24 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 		}
 
 		if (pLstn->bParseTrusted) {
-			struct ee_field *newField;
-
-			if(ctxee == NULL) {
-				if((ctxee = ee_initCtx()) == NULL) {
-					errmsg.LogError(0, RS_RET_NO_RULESET, "error: could not initialize libee ctx, cannot "
-			                "activate action");
-					ABORT_FINALIZE(RS_RET_ERR_LIBEE_INIT);
-				}
-			}
-
-			event = ee_newEvent(ctxee);
-
-			/* create value string, create field, and add it to event */
-			lenProp = snprintf((char *)propBuf, sizeof(propBuf), "%lu", (long unsigned) cred->pid);
-			newField = createNewField("pid", (char *)propBuf, lenProp);
-			ee_addFieldToEvent(event, newField);
-
-			lenProp = snprintf((char *)propBuf, sizeof(propBuf), "%lu", (long unsigned) cred->uid);
-			newField = createNewField("uid", (char *)propBuf, lenProp);
-			ee_addFieldToEvent(event, newField);
-
-			lenProp = snprintf((char *)propBuf, sizeof(propBuf), "%lu", (long unsigned) cred->gid);
-			newField = createNewField("gid", (char *)propBuf, lenProp);
-			ee_addFieldToEvent(event, newField);
-
+			json = json_object_new_object();
+			/* create value string, create field, and add it */
+			jval = json_object_new_int(cred->pid);
+			json_object_object_add(json, "pid", jval);
+			jval = json_object_new_int(cred->uid);
+			json_object_object_add(json, "uid", jval);
+			jval = json_object_new_int(cred->gid);
+			json_object_object_add(json, "gid", jval);
 			getTrustedProp(cred, "comm", propBuf, sizeof(propBuf), &lenProp);
-			newField = createNewField("appname", (char *)propBuf, lenProp);
-			ee_addFieldToEvent(event, newField);
-
+			jval = json_object_new_string((char*)propBuf);
+			json_object_object_add(json, "appname", jval);
 			getTrustedExe(cred, propBuf, sizeof(propBuf), &lenProp);
-			newField = createNewField("exe", (char *)propBuf, lenProp);
-			ee_addFieldToEvent(event, newField);
-
+			jval = json_object_new_string((char*)propBuf);
+			json_object_object_add(json, "exe", jval);
 			getTrustedProp(cred, "cmdline", propBuf, sizeof(propBuf), &lenProp);
-			newField = createNewField("cmd", (char *)propBuf, lenProp);
-			ee_addFieldToEvent(event, newField);
-
+			jval = json_object_new_string((char*)propBuf);
+			json_object_object_add(json, "cmd", jval);
 		} else {
-
 			memcpy(pmsgbuf, pRcv, lenRcv);
 			memcpy(pmsgbuf+lenRcv, " @[", 3);
 			toffs = lenRcv + 3; /* next free location */
@@ -902,12 +881,8 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 
 	parse++; lenMsg--; /* '>' */
 
-	/* event is saved to pMsg */
-	if(pMsg->event != NULL) {
-		ee_deleteEvent(pMsg->event);
-	}
-	if (event != NULL) {
-		pMsg->event = event;
+	if(json != NULL) {
+		msgAddJSON(pMsg, (uchar*)"!trusted", json);
 	}
 
 	if(ts == NULL) {
@@ -1361,10 +1336,6 @@ CODESTARTafterRun
 
 	discardLogSockets();
 	nfd = 1;
-	if(ctxee != NULL) {
-		ee_exitCtx(ctxee);
-		ctxee = NULL;
-	}
 ENDafterRun
 
 
