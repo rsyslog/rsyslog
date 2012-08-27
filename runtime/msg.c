@@ -39,6 +39,9 @@
 #include <sys/sysinfo.h>
 #include <netdb.h>
 #include <libestr.h>
+#include <json/json.h>
+/* For struct json_object_iter, should not be necessary in future versions */
+#include <json/json_object_private.h>
 #include <libee/libee.h>
 #if HAVE_MALLOC_H
 #  include <malloc.h>
@@ -290,6 +293,8 @@ static pthread_mutex_t mutTrimCtr;	 /* mutex to handle malloc trim */
 
 /* some forward declarations */
 static int getAPPNAMELen(msg_t *pM, sbool bLockMutex);
+static rsRetVal jsonPathFindParent(msg_t *pM, uchar *name, uchar *leaf, struct json_object **parent, int bCreate);
+static uchar * jsonPathGetLeaf(uchar *name, int lenName);
 
 
 /* The following functions will support advanced output module
@@ -736,6 +741,7 @@ static inline rsRetVal msgBaseConstruct(msg_t **ppThis)
 	pM->rcvFrom.pRcvFrom = NULL;
 	pM->pRuleset = NULL;
 	pM->event = NULL;
+	pM->json = NULL;
 	memset(&pM->tRcvdAt, 0, sizeof(pM->tRcvdAt));
 	memset(&pM->tTIMESTAMP, 0, sizeof(pM->tTIMESTAMP));
 	pM->TAG.pszTAG = NULL;
@@ -873,6 +879,8 @@ CODESTARTobjDestruct(msg)
 			rsCStrDestruct(&pThis->pCSPROCID);
 		if(pThis->pCSMSGID != NULL)
 			rsCStrDestruct(&pThis->pCSMSGID);
+		if(pThis->json != NULL)
+			json_object_put(pThis->json);
 		if(pThis->event != NULL)
 			ee_deleteEvent(pThis->event);
 #	ifndef HAVE_ATOMIC_BUILTINS
@@ -2341,6 +2349,7 @@ static uchar *getNOW(eNOWType eNow)
 #undef tmpBUFSIZE /* clean up */
 
 
+#if 0 // old code for reference, remove
 /* Get a CEE-Property from libee. This function probably should be
  * placed somewhere else, but this smells like a big restructuring
  * useful in any case. So for the time being, I'll simply leave the
@@ -2374,6 +2383,48 @@ finalize_it:
 		*pRes = (unsigned char*)"";
 		*pbMustBeFreed = 0;
 	}
+}
+#endif
+/* Get a CEE-Property from libee. This function probably should be
+ * placed somewhere else, but this smells like a big restructuring
+ * useful in any case. So for the time being, I'll simply leave the
+ * function here, as the context seems good enough. -- rgerhards, 2010-12-01
+ */
+static inline rsRetVal
+getCEEPropVal(msg_t *pM, es_str_t *propName, uchar **pRes, int *buflen, unsigned short *pbMustBeFreed)
+{
+	uchar *name = NULL;
+	uchar *leaf;
+	struct json_object *parent;
+	struct json_object *field;
+	DEFiRet;
+
+	if(*pbMustBeFreed)
+		free(*pRes);
+	*pRes = NULL;
+dbgprintf("AAAA: enter getCEEProp\n");
+	// TODO: mutex?
+	if(pM->json == NULL) goto finalize_it;
+
+	name = (uchar*)es_str2cstr(propName, NULL);
+dbgprintf("AAAA: name to search '%s'\n", name);
+	leaf = jsonPathGetLeaf(name, ustrlen(name));
+dbgprintf("AAAA: leaf '%s'\n", leaf);
+	CHKiRet(jsonPathFindParent(pM, name, leaf, &parent, 1));
+	field = json_object_object_get(parent, (char*)leaf);
+	*pRes = (uchar*) strdup(json_object_get_string(field));
+dbgprintf("AAAA: json_object_get_string() returns '%s'\n", *pRes);
+	*buflen = (int) ustrlen(*pRes);
+	*pbMustBeFreed = 1;
+
+finalize_it:
+	free(name);
+	if(*pRes == NULL) {
+		/* could not find any value, so set it to empty */
+		*pRes = (unsigned char*)"";
+		*pbMustBeFreed = 0;
+	}
+	RETiRet;
 }
 
 
@@ -2586,7 +2637,6 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 	uchar *pBuf;
 	int iLen;
 	short iOffs;
-	es_str_t *str; /* for CEE handling, temp. string */
 
 	BEGINfunc
 	assert(pMsg != NULL);
@@ -2731,16 +2781,15 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			pRes = glbl.GetLocalHostName();
 			break;
 		case PROP_CEE_ALL_JSON:
-			if(pMsg->event == NULL) {
-			if(*pbMustBeFreed == 1)
-				free(pRes);
-			pRes = (uchar*) "";
-			*pbMustBeFreed = 0;
+			if(pMsg->json == NULL) {
+				if(*pbMustBeFreed == 1)
+					free(pRes);
+				pRes = (uchar*) "{}";
+				bufLen = 2;
+				*pbMustBeFreed = 0;
 			} else {
-				ee_fmtEventToJSON(pMsg->event, &str);
-				pRes = (uchar*) es_str2cstr(str, "#000");
-				es_deleteStr(str);
-				*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
+				pRes = (uchar*)strdup(json_object_get_string(pMsg->json));
+				*pbMustBeFreed = 1;
 			}
 			break;
 		case PROP_CEE:
@@ -3547,6 +3596,115 @@ MsgGetSeverity(obj_t_ptr pThis, int *piSeverity)
 	return RS_RET_OK;
 }
 
+
+static uchar *
+jsonPathGetLeaf(uchar *name, int lenName)
+{
+	int i;
+	for(i = lenName ; name[i] != '!' && i >= 0 ; --i)
+		/* just skip */;
+	if(name[i] == '!')
+		++i;
+	return name + i;
+}
+
+
+static rsRetVal
+jsonPathFindNext(struct json_object *root, uchar **name, uchar *leaf,
+		 struct json_object **found, int bCreate)
+{
+	uchar namebuf[1024];
+	struct json_object *json;
+	size_t i;
+	uchar *p = *name;
+	DEFiRet;
+
+	if(*p == '!')
+		++p;
+	for(i = 0 ; *p && *p != '!' && p != leaf && i < sizeof(namebuf)-1 ; ++i, ++p)
+		namebuf[i] = *p;
+	if(i == 0) {
+		namebuf[i] = '\0';
+		dbgprintf("AAAA: next JSONP elt: '%s'\n", namebuf);
+		json = json_object_object_get(root, (char*)namebuf);
+	} else
+		json = root;
+	if(json == NULL) {
+		if(!bCreate) {
+			ABORT_FINALIZE(RS_RET_JNAME_INVALID);
+		} else {
+			json = json_object_new_object();
+			json_object_object_add(root, (char*)namebuf, json);
+		}
+	}
+
+	*name = p;
+	*found = json;
+finalize_it:
+	RETiRet;
+}
+
+static rsRetVal
+jsonPathFindParent(msg_t *pM, uchar *name, uchar *leaf, struct json_object **parent, int bCreate)
+{
+	DEFiRet;
+	*parent = pM->json;
+	while(name < leaf-1) {
+		jsonPathFindNext(*parent, &name, leaf, parent, bCreate);
+dbgprintf("AAAA: name %p, leaf %p\n", name, leaf);
+	}
+	RETiRet;
+}
+
+static rsRetVal
+jsonMerge(struct json_object *existing, struct json_object *json)
+{
+	/* TODO: check & handle duplicate names */
+	DEFiRet;
+	struct json_object_iter it;
+
+	json_object_object_foreachC(json, it) {
+dbgprintf("AAAA jsonMerge adds '%s'\n", it.key);
+		json_object_object_add(existing, it.key, it.val);
+	}
+	/* TODO: we need to free what we no longer need. But that means I 
+	 * must be totally clear on the refcounting first ;) --> later
+	 */
+	RETiRet;
+}
+
+rsRetVal
+msgAddJSON(msg_t *pM, uchar *name, struct json_object *json)
+{
+	/* TODO: error checks! This is a quick&dirty PoC! */
+	struct json_object *parent, *leafnode;
+	uchar *leaf;
+	DEFiRet;
+
+	MsgLock(pM);
+	if(name[0] == '!' && name[1] == '\0') {
+		if(pM->json == NULL)
+			pM->json = json;
+		else
+			CHKiRet(jsonMerge(pM->json, json));
+	} else {
+		if(pM->json == NULL) {
+			/* now we need a root obj */
+			pM->json = json_object_new_object();
+		}
+		leaf = jsonPathGetLeaf(name, ustrlen(name));
+		CHKiRet(jsonPathFindParent(pM, name, leaf, &parent, 1));
+		leafnode = json_object_object_get(parent, (char*)leaf);
+		if(leafnode == NULL)
+			json_object_object_add(parent, (char*)leaf, json);
+		else
+			CHKiRet(jsonMerge(pM->json, json));
+	}
+
+finalize_it:
+	MsgUnlock(pM);
+	RETiRet;
+}
 
 /* dummy */
 rsRetVal msgQueryInterface(void) { return RS_RET_NOT_IMPLEMENTED; }

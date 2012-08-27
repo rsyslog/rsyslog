@@ -36,7 +36,7 @@
 #include <unistd.h>
 #include <ctype.h>
 #include <libestr.h>
-#include <libee/libee.h>
+#include <json/json.h>
 #include "conf.h"
 #include "syslogd-types.h"
 #include "template.h"
@@ -59,7 +59,7 @@ DEFobjCurrIf(errmsg);
 DEF_OMOD_STATIC_DATA
 
 typedef struct _instanceData {
-	ee_ctx ctxee;		/**< context to be used for libee */
+	struct json_tokener *tokener;
 } instanceData;
 
 typedef struct configSettings_s {
@@ -85,7 +85,8 @@ ENDisCompatibleWithFeature
 
 BEGINfreeInstance
 CODESTARTfreeInstance
-	ee_exitCtx(pData->ctxee);
+	if(pData->tokener != NULL)
+		json_tokener_free(pData->tokener);
 ENDfreeInstance
 
 
@@ -99,12 +100,54 @@ BEGINtryResume
 CODESTARTtryResume
 ENDtryResume
 
+
+static rsRetVal
+processJSON(instanceData *pData, msg_t *pMsg, char *buf, size_t lenBuf)
+{
+	struct json_object *json;
+	const char *errMsg;
+	DEFiRet;
+
+	dbgprintf("mmjsonparse: toParse: '%s'\n", buf);
+	json_tokener_reset(pData->tokener);
+
+	json = json_tokener_parse_ex(pData->tokener, buf, lenBuf);
+	if(Debug) {
+		errMsg = NULL;
+		if(json == NULL) {
+			enum json_tokener_error err;
+
+			err = pData->tokener->err;
+			if(err != json_tokener_continue)
+				errMsg = json_tokener_errors[err];
+			else
+				errMsg = "Unterminated input";
+		} else if((size_t)pData->tokener->char_offset < lenBuf)
+			errMsg = "Extra characters after JSON object";
+		else if(!json_object_is_type(json, json_type_object))
+			errMsg = "JSON value is not an object";
+		if(errMsg != NULL) {
+			dbgprintf("mmjsonparse: Error parsing JSON '%s': %s\n",
+					buf, errMsg);
+		}
+	}
+	if(json == NULL
+	   || ((size_t)pData->tokener->char_offset < lenBuf)
+	   || (!json_object_is_type(json, json_type_object))) {
+		FINALIZE; /* just don't set property */
+	}
+ 
+ 	msgAddJSON(pMsg, (uchar*)"!", json);
+dbgprintf("AAAA: The msg json object: %s\n",json_object_to_json_string(pMsg->json));
+finalize_it:
+	RETiRet;
+}
+
 #define COOKIE "@cee: "
 #define LEN_COOKIE (sizeof(COOKIE)-1)
 BEGINdoAction
 	msg_t *pMsg;
 	uchar *buf;
-	struct ee_event *event;
 	int bSuccess = 0;
 CODESTARTdoAction
 	pMsg = (msg_t*) ppString[0];
@@ -125,23 +168,10 @@ dbgprintf("mmjsonparse: msg is '%s'\n", buf);
 	}
 	buf += LEN_COOKIE;
 dbgprintf("mmjsonparse: cookie found, rest of message: '%s'\n", buf);
-	event = ee_newEventFromJSON(pData->ctxee, (char*)buf);
-	if(event == NULL) {
-		DBGPRINTF("mmjsonparse: JSON parse error, assuming no "
-			  "JSON-enhanced message: '%s'\n", buf);
-		FINALIZE;
-	}
-	/* TODO: in the long term, we need to think about merging & different
-	   name spaces (probably best to add the newly-obtained event as a child to
-	   the existing event...)
-	*/
-	if(pMsg->event != NULL) {
-		ee_deleteEvent(pMsg->event);
-	}
-	pMsg->event = event;
+	CHKiRet(processJSON(pData, pMsg, (char*) buf, strlen((char*)buf)));
 	bSuccess = 1;
 
-#if 1
+#if 0
 	/***DEBUG***/ // TODO: remove after initial testing - 2010-12-01
 			{
 			char *cstr;
@@ -180,10 +210,11 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_TPL_AS_MSG, (uchar*) "RSYSLOG_FileFormat"));
 
 	/* finally build the instance */
-	if((pData->ctxee = ee_initCtx()) == NULL) {
-		errmsg.LogError(0, RS_RET_NO_RULESET, "error: could not initialize libee ctx, cannot "
-				"activate action");
-		ABORT_FINALIZE(RS_RET_ERR_LIBEE_INIT);
+	pData->tokener = json_tokener_new();
+	if(pData->tokener == NULL) {
+		errmsg.LogError(0, RS_RET_ERR, "error: could not create json "
+				"tokener, cannot activate action");
+		ABORT_FINALIZE(RS_RET_ERR);
 	}
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct

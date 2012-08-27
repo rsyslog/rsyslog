@@ -627,7 +627,7 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 	}
 	if(pTpe->data.field.propid == PROP_CEE) {
 		/* in CEE case, we need to preserve the actual property name */
-		if((pTpe->data.field.propName = es_newStrFromCStr((char*)cstrGetSzStrNoNULL(pStrProp)+2, cstrLen(pStrProp)-2)) == NULL) {
+		if((pTpe->data.field.propName = es_newStrFromCStr((char*)cstrGetSzStrNoNULL(pStrProp)+1, cstrLen(pStrProp)-1)) == NULL) {
 			cstrDestruct(&pStrProp);
 			return 1;
 		}

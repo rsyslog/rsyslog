@@ -380,6 +380,11 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_MODULE_ALREADY_IN_CONF = -2221, /**< module already in current configuration */
 	RS_RET_PARAM_NOT_PERMITTED = -2222, /**< legacy parameter no longer permitted (usally already set by v2) */
 
+	/**** up to 2300 is reserved for v6 use ****/
+	RS_RET_JNAME_NO_ROOT = -2301, /**< root element is missing in JSON path */
+	RS_RET_JNAME_INVALID = -2302, /**< JSON path is invalid */
+	RS_RET_JSON_PARSE_ERR = -2303, /**< we had a problem parsing JSON (or extra data) */
+
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */
 

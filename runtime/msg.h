@@ -3,7 +3,7 @@
  *
  * File begun on 2007-07-13 by RGerhards (extracted from syslogd.c)
  *
- * Copyright 2007-2009 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2012 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -30,6 +30,7 @@
 
 #include <pthread.h>
 #include <libestr.h>
+#include <json/json.h>
 #include "obj.h"
 #include "syslogd-types.h"
 #include "template.h"
@@ -111,6 +112,7 @@ struct msg {
 	struct syslogTime tTIMESTAMP;/* (parsed) value of the timestamp */
 	struct ee_event	*event;	/**< libee event */
 	/* some fixed-size buffers to save malloc()/free() for frequently used fields (from the default templates) */
+	struct json_object *json;
 	uchar szRawMsg[CONF_RAWMSG_BUFSIZE];	/* most messages are small, and these are stored here (without malloc/free!) */
 	uchar szHOSTNAME[CONF_HOSTNAME_BUFSIZE];
 	union {
@@ -183,6 +185,7 @@ char *getPRI(msg_t *pMsg);
 void getRawMsg(msg_t *pM, uchar **pBuf, int *piLen);
 rsRetVal msgGetCEEVar(msg_t *pThis, cstr_t *propName, var_t **ppVar);
 es_str_t* msgGetCEEVarNew(msg_t *pMsg, char *name);
+rsRetVal msgAddJSON(msg_t *pM, uchar *name, struct json_object *json);
 
 
 /* TODO: remove these five (so far used in action.c) */
