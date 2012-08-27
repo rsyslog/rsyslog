@@ -170,20 +170,6 @@ dbgprintf("mmjsonparse: msg is '%s'\n", buf);
 dbgprintf("mmjsonparse: cookie found, rest of message: '%s'\n", buf);
 	CHKiRet(processJSON(pData, pMsg, (char*) buf, strlen((char*)buf)));
 	bSuccess = 1;
-
-#if 0
-	/***DEBUG***/ // TODO: remove after initial testing - 2010-12-01
-			{
-			char *cstr;
-			es_str_t *str;
-			ee_fmtEventToJSON(pMsg->event, &str);
-			cstr = es_str2cstr(str, NULL);
-			dbgprintf("mmjsonparse generated: %s\n", cstr);
-			free(cstr);
-			es_deleteStr(str);
-			}
-	/***END DEBUG***/
-#endif
 finalize_it:
 	MsgSetParseSuccess(pMsg, bSuccess);
 ENDdoAction
