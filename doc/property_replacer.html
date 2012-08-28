@@ -236,7 +236,7 @@ or none if no rule with this field did match.
 <p>Properties starting with a $-sign are so-called system
 properties. These do NOT stem from the message but are rather
 internally-generated.</p>
-<h2>Character Positions</h2>
+<h2>Legacy Character Positions</h2>
 <p><b><code>FromChar</code></b> and <b><code>toChar</code></b>
 are used to build substrings. They specify the offset within the string
 that should be copied. Offset counting starts at 1, so if you need to
@@ -304,15 +304,6 @@ fields in the property is requested. The field number must be placed in
 the "ToChar" parameter. An example where the 3rd field (delimited by
 TAB) from the msg property is extracted is as follows: "%msg:F:3%". The
 same example with semicolon as delimiter is "%msg:F,59:3%".</p>
-<p>The use of fields does not permit to select substrings, what is rather
-unfortunate. To solve this issue, starting with 6.3.9, fromPos and toPos
-can be specified for strings as well. However, the syntax is quite ugly, but
-it was the only way to integrate this functonality into the already-existing
-system. To do so, use ",fromPos" and ",toPos" during field extraction.
-Let's assume you want to extract the substring from position 5 to 9 in the previous
-example. Then, the syntax is as follows: "%msg:F,59,5:3,9%". As you can see,
-"F,59" means field-mode, with semicolon delimiter and ",5" means starting 
-at position 5. Then "3,9" means field 3 and string extraction to position 9.
 <p>Please note that the special characters "F" and "R" are
 case-sensitive. Only upper case works, lower case will return an error.
 There are no white spaces permitted inside the sequence (that will lead
@@ -342,6 +333,239 @@ It is modeled after perl compatible regular expressions.
 
 <h2>Property Options</h2>
 <b><code>property options</code></b> are
+case-insensitive. They are available as of version 6.5.0.
+Currently, the following options are defined:
+<p></p>
+<table>
+<tbody>
+<tr>
+<td><b>Name</b></td>
+<td>New format. Name of the template / property / constant.</td>
+</tr>
+<tr>
+<td><b>Outname</b></td>
+<td>This field permits to specify a field name for structured-data emitting property replacer options.
+If used for a constant a template with line style, unpredictable behaviour can occur.</td>
+</tr>
+<tr>
+<td><b>CaseConversion</b></td>
+<td>New format. Additional values below.</td>
+</tr>
+<tr>
+<td>upper</td>
+<td>convert property to lowercase only</td>
+</tr>
+<tr>
+<td>lower</td>
+<td>convert property text to uppercase only</td>
+</tr>
+<tr>
+<td><b>DateFormat</b></td>
+<td>New format, additional parameter is needed. See below.</td>
+</tr>
+<tr>
+<td>mysql</td>
+<td>format as mysql date</td>
+</tr>
+<tr>
+<td>pgsql</td>
+<td>format as pgsql date</td>
+</tr>
+<tr>
+<td>rfc3164</td>
+<td>format as RFC 3164 date</td>
+</tr>
+<tr>
+<tr>
+<td valign="top">rfc3164-buggyday</td>
+<td>similar to date-rfc3164, but emulates a common coding error: RFC 3164 demands
+that a space is written for single-digit days. With this option, a zero is
+written instead. This format seems to be used by syslog-ng and the
+date-rfc3164-buggyday option can be used in migration scenarios where otherwise
+lots of scripts would need to be adjusted. It is recommended <i>not</i> to use this
+option when forwarding to remote hosts - they may treat the date as invalid
+(especially when parsing strictly according to RFC 3164).</td>
+<br><i>This feature was introduced in rsyslog 4.6.2 and v4 versions above and
+5.5.3 and all versions above.</i>
+</tr>
+<tr>
+<td>rfc3339</td>
+<td>format as RFC 3339 date</td>
+</tr>
+<tr>
+<td>unixtimestamp</td>
+<td>format as unix timestamp (seconds since epoch)</td>
+</tr>
+<tr>
+<td>subseconds</td>
+<td>just the subseconds of a timestamp (always 0 for a low precision timestamp)</td>
+</tr>
+<tr>
+<td><b>ControlCharacters</b></td>
+<td>Option values for how to process control characters</td>
+</tr>
+<tr>
+<td valign="top">escape</td>
+<td>replace control characters (ASCII value 127 and values
+less then 32) with an escape sequence. The sequnce is
+"#&lt;charval&gt;" where charval is the 3-digit decimal value
+of the control character. For example, a tabulator would be replaced by
+"#009".<br>
+Note: using this option requires that <a href="rsconf1_escapecontrolcharactersonreceive.html">$EscapeControlCharactersOnReceive</a>
+is set to off.</td>
+</tr>
+<tr>
+<td valign="top">space</td>
+<td>replace control characters by spaces<br>
+Note: using this option requires that <a href="rsconf1_escapecontrolcharactersonreceive.html">$EscapeControlCharactersOnReceive</a>
+is set to off.</td>
+</tr>
+<tr>
+<td valign="top">drop</td>
+<td>drop control characters - the resulting string will
+neither contain control characters, escape sequences nor any other
+replacement character like space.<br>
+Note: using this option requires that <a href="rsconf1_escapecontrolcharactersonreceive.html">$EscapeControlCharactersOnReceive</a>
+is set to off.</td>
+</tr>
+<tr>
+<td><b>SecurePath</b></td>
+<td>Option values for securing path templates.</td>
+</tr>
+<tr>
+<td valign="top">drop</td>
+<td>Drops slashes inside the field (e.g. "a/b" becomes "ab").
+Useful for secure pathname generation (with dynafiles).
+</td>
+</tr>
+<tr>
+<td valign="top">replace</td>
+<td>Replace slashes inside the field by an underscore. (e.g. "a/b" becomes "a_b").
+Useful for secure pathname generation (with dynafiles).
+</td>
+</tr>
+<tr>
+<td><b>Format</b></td>
+<td>Option values for the general output format.</td>
+</tr>
+<tr>
+<td>json</td>
+<td>encode the value so that it can be used inside a JSON field. This means
+that several characters (according to the JSON spec) are being escaped, for 
+example US-ASCII LF is replaced by "\n".
+The json option cannot be used together with either jsonf or csv options.
+</td>
+</tr>
+<tr>
+<td>jsonf</td>
+<td><i>(available in 6.3.9+)</i>
+This signifies that the property should be expressed as a json <b>f</b>ield.
+That means not only the property is written, but rather a complete json field in
+the format<br>
+"fieldname"="value"</b>
+where "filedname" is the assigend field name (or the property name if none was assigned)
+and value is the end result of property replacer operation. Note that value supports
+all property replacer options, like substrings, case converson and the like.
+Values are properly json-escaped. However, field names are (currently) not. It is
+expected that proper field names are configured.
+The jsonf option cannot be used together with either json or csv options.
+</td>
+</tr>
+<tr>
+<td valign="top">csv</td>
+<td>formats the resulting field (after all modifications) in CSV format
+as specified in <a href="http://www.ietf.org/rfc/rfc4180.txt">RFC 4180</a>.
+Rsyslog will always use double quotes. Note that in order to have full CSV-formatted
+text, you need to define a proper template. An example is this one:
+<br>$template csvline,"%syslogtag:::csv%,%msg:::csv%"
+<br>Most importantly, you need to provide the commas between the fields
+inside the template.
+The csv option cannot be used together with either json or jsonf options.
+<br><i>This feature was introduced in rsyslog 4.1.6.</i>
+</td>
+</tr>
+<tr>
+<td><b>droplastlf</b></td>
+<td>The last LF in the message (if any), is dropped.
+Especially useful for PIX.</td>
+</tr>
+<tr>
+<td valign="top"><b>spifno1stsp</b></td>
+<td>This option looks scary and should probably not be used by a user. For any field
+given, it returns either a single space character or no character at all. Field content
+is never returned. A space is returned if (and only if) the first character of the
+field's content is NOT a space. This option is kind of a hack to solve a problem rooted
+in RFC 3164: 3164 specifies no delimiter between the syslog tag sequence and the actual
+message text. Almost all implementation in fact delemit the two by a space. As of
+RFC 3164, this space is part of the message text itself. This leads to a problem when
+building the message (e.g. when writing to disk or forwarding). Should a delimiting
+space be included if the message does not start with one? If not, the tag is immediately
+followed by another non-space character, which can lead some log parsers to misinterpret
+what is the tag and what the message. The problem finally surfaced when the klog module
+was restructured and the tag correctly written. It exists with other message sources,
+too. The solution was the introduction of this special property replacer option. Now,
+the default template can contain a conditional space, which exists only if the
+message does not start with one. While this does not solve all issues, it should
+work good enough in the far majority of all cases. If you read this text and have
+no idea of what it is talking about - relax: this is a good indication you will never
+need this option. Simply forget about it ;)
+</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><b>New character position</b></td>
+<td>In addition to the above mentioned Character Positions in the legacy format,
+positions can be determined by specifying the correct options for the properties.
+Again, this is mostly for using the list format.</td>
+</tr>
+<tr>
+<td>position.From</td>
+<td>Character position in the property to start from.</td>
+</tr>
+<tr>
+<td>position.To</td>
+<td>Character position that determines the end for extraction. If the value is "$"
+then the end of the string will be used.</td>
+</tr>
+<tr>
+<td>field.Number</td>
+<td>The number of the field, which should be used for the search operation with Regex.</td>
+</tr>
+<tr>
+<td>field.Delimiter</td>
+<td>The Character that should delimit a field. Example: ",". Everything in a
+property until this character is considered a field.</td>
+</tr>
+<tr>
+<td>regex.Expression</td>
+<td>Value to be compared to property.</td>
+</tr>
+<tr>
+<td>regex.Type</td>
+<td>Values BRE or ERE</td>
+</tr>
+<tr>
+<td>regex.NoMatchMode</td>
+<td>DFLT, BLANK, ZERO, FIELD</td>
+</tr>
+<tr>
+<td>regex.Match</td>
+<td>Match to use.</td>
+</tr>
+<tr>
+<td>regex.Submatch</td>
+<td>Submatch to use. Values 0-9 whereas 0 = All</td>
+</tr>
+</tbody>
+</table>
+
+
+
+<h2>Legacy Property Options</h2>
+<b><code>property options</code></b> are
 case-insensitive. Currently, the following options are defined:
 <p></p>
 <table>
@@ -368,7 +592,7 @@ The json option cannot be used together with either jsonf or csv options.
 This signifies that the property should be expressed as a json <b>f</b>ield.
 That means not only the property is written, but rather a complete json field in
 the format<br>
-"fieldname":"value"</b>
+"fieldname"="value"</b>
 where "filedname" is the assigend field name (or the property name if none was assigned)
 and value is the end result of property replacer operation. Note that value supports
 all property replacer options, like substrings, case converson and the like.
