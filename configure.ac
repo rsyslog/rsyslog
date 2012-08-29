@@ -34,6 +34,9 @@ PKG_PROG_PKG_CONFIG
 # modules we require
 PKG_CHECK_MODULES(LIBESTR, libestr >= 0.1.2)
 PKG_CHECK_MODULES(LIBEE, libee >= 0.4.0)
+PKG_CHECK_MODULES([JSON_C], [json])
+AC_SUBST([JSON_CFLAGS])
+AC_SUBST([JSON_LIBS])
 
 case "${host}" in
   *-*-linux*)
@@ -788,8 +791,8 @@ if test "x$enable_rsyslogrt" = "xyes"; then
   #??CNF_LIBS="\$(top_builddir)/grammar/libgrammar.la"
 fi
 AM_CONDITIONAL(ENABLE_RSYSLOGRT, test x$enable_rsyslogrt = xyes)
-RSRT_CFLAGS="\$(RSRT_CFLAGS1) \$(LIBESTR_CFLAGS)"
-RSRT_LIBS="\$(RSRT_LIBS1) \$(LIBESTR_LIBS)"
+RSRT_CFLAGS="\$(RSRT_CFLAGS1) \$(LIBESTR_CFLAGS) \$(JSON_C_FLAGS)"
+RSRT_LIBS="\$(RSRT_LIBS1) \$(LIBESTR_LIBS) \$(JSON_C_LIBS)"
 AC_SUBST(RSRT_CFLAGS1)
 AC_SUBST(RSRT_LIBS1)
 AC_SUBST(RSRT_CFLAGS)
