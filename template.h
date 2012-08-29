@@ -68,7 +68,8 @@ enum tplRegexType { TPL_REGEX_BRE = 0, /* posix BRE */
 struct templateEntry {
 	struct templateEntry *pNext;
 	enum EntryTypes eEntryType;
-	es_str_t *fieldName;	/**< field name to be used for structured output */
+	uchar *fieldName;	/**< field name to be used for structured output */
+	int lenFieldName;
 	union {
 		struct {
 			uchar *pConstant;	/* pointer to constant value */

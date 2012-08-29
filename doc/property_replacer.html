@@ -345,7 +345,11 @@ Currently, the following options are defined:
 <tr>
 <td><b>Outname</b></td>
 <td>This field permits to specify a field name for structured-data emitting property replacer options.
-If used for a constant a template with line style, unpredictable behaviour can occur.</td>
+It is most useful to set, for example, the name for JSON-based fields (like used in ommngodb). For
+text-based modules, it is simply ignored.
+If not specified, the original property name is used, with the exception of properties starting with
+"$!", where that prefix is removed. Note that unnamaned constants are NOT forwarded to output modules
+that expect structure (like ommnogodb). To pass constants, an outname must be set.
 </tr>
 <tr>
 <td><b>CaseConversion</b></td>
