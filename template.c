@@ -85,6 +85,7 @@ static struct cnfparamdescr cnfparamdescrProperty[] = {
 	{ "regex.match", eCmdHdlrInt, 0 },
 	{ "regex.submatch", eCmdHdlrInt, 0 },
 	{ "droplastlf", eCmdHdlrBinary, 0 },
+	{ "optional", eCmdHdlrBinary, 0 },
 	{ "spifno1stsp", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk pblkProperty =
@@ -1282,6 +1283,7 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 	int i;
 	int droplastlf = 0;
 	int spifno1stsp = 0;
+	int optional = 0;
 	int frompos = -1;
 	int topos = -1;
 	int fieldnum = -1;
@@ -1312,6 +1314,8 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 			cstrFinalize(name);
 		} else if(!strcmp(pblkProperty.descr[i].name, "droplastlf")) {
 			droplastlf = pvals[i].val.d.n;
+		} else if(!strcmp(pblkProperty.descr[i].name, "optional")) {
+			optional = pvals[i].val.d.n;
 		} else if(!strcmp(pblkProperty.descr[i].name, "spifno1stsp")) {
 			spifno1stsp = pvals[i].val.d.n;
 		} else if(!strcmp(pblkProperty.descr[i].name, "outname")) {
@@ -1473,6 +1477,7 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 	}
 	pTpe->data.field.options.bDropLastLF = droplastlf;
 	pTpe->data.field.options.bSPIffNo1stSP = spifno1stsp;
+	pTpe->data.field.options.bOptionalField = optional;
 	pTpe->data.field.eCaseConv = caseconv;
 	switch(formatType) {
 	case F_NONE:
