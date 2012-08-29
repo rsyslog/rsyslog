@@ -406,48 +406,6 @@ error:
 	return NULL;
 }
 
-/* Return a BSON document based on user's JSON string. */
-static bson *
-BSONFromJSONString(instanceData *pData, const char *json_string)
-{
-	size_t json_string_len;
-	struct json_object *json;
-	bson *doc = NULL;
-	const char *error_message;
-
-	json_tokener_reset(pData->json_tokener);
-
-	json_string_len = strlen(json_string);
-	json = json_tokener_parse_ex(pData->json_tokener,
-				     json_string, json_string_len);
-	error_message = NULL;
-	if(json == NULL) {
-		enum json_tokener_error err;
-
-		err = pData->json_tokener->err;
-		if(err != json_tokener_continue)
-			error_message = json_tokener_errors[err];
-		else
-			error_message = "Unterminated input";
-	} else if((size_t)pData->json_tokener->char_offset < json_string_len)
-		error_message = "Extra characters after JSON object";
-	else if(!json_object_is_type(json, json_type_object))
-		error_message = "JSON value is not an object";
-	if(error_message != NULL) {
-		/* FIXME: is dbgprintf() the correct way to report the error? */
-		dbgprintf("ommongodb: Error parsing JSON '%s': %s\n",
-			  json_string, error_message);
-		goto done;
-	}
-
-	doc = BSONFromJSONObject(json);
-
-done:
-	if(json != NULL)
-		json_object_put(json);
-	return doc;
-}
-
 BEGINtryResume
 CODESTARTtryResume
 	if(pData->conn == NULL) {
@@ -466,7 +424,7 @@ CODESTARTdoAction
 	if(pData->tplName == NULL) {
 		doc = getDefaultBSON((msg_t*)ppString[0]);
 	} else {
-		doc = BSONFromJSONString(pData, (const char *)ppString[0]);
+		doc = BSONFromJSONObject((struct json_object *)ppString[0]);
 	}
 	if(doc == NULL) {
 		dbgprintf("ommongodb: error creating BSON doc\n");
@@ -537,7 +495,7 @@ CODESTARTnewActInst
 		CHKiRet(OMSRsetEntry(*ppOMSR, 0, NULL, OMSR_TPL_AS_MSG));
 	} else {
 		CHKiRet(OMSRsetEntry(*ppOMSR, 0, ustrdup(pData->tplName),
-				     OMSR_NO_RQD_TPL_OPTS));
+				     OMSR_TPL_AS_JSON));
 		CHKmalloc(pData->json_tokener = json_tokener_new());
 	}
 
@@ -590,6 +548,10 @@ CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 ENDqueryEtryPt
 
 BEGINmodInit()
+	rsRetVal localRet;
+	rsRetVal (*pomsrGetSupportedTplOpts)(unsigned long *pOpts);
+	unsigned long opts;
+	int bJSONPassingSupported;
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
@@ -597,5 +559,22 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	INITChkCoreFeature(bCoreSupportsBatching, CORE_FEATURE_BATCHING);
 	DBGPRINTF("ommongodb: module compiled with rsyslog version %s.\n", VERSION);
-	//DBGPRINTF("ommongodb: %susing transactional output interface.\n", bCoreSupportsBatching ? "" : "not ");
+
+	/* check if the rsyslog core supports parameter passing code */
+	bJSONPassingSupported = 0;
+	localRet = pHostQueryEtryPt((uchar*)"OMSRgetSupportedTplOpts",
+				    &pomsrGetSupportedTplOpts);
+	if(localRet == RS_RET_OK) {
+		/* found entry point, so let's see if core supports msg passing */
+		CHKiRet((*pomsrGetSupportedTplOpts)(&opts));
+		if(opts & OMSR_TPL_AS_JSON)
+			bJSONPassingSupported = 1;
+	} else if(localRet != RS_RET_ENTRY_POINT_NOT_FOUND) {
+		ABORT_FINALIZE(localRet); /* Something else went wrong, not acceptable */
+	}
+	if(!bJSONPassingSupported) {
+		DBGPRINTF("ommongodb: JSON-passing is not supported by rsyslog core, "
+			  "can not continue.\n");
+		ABORT_FINALIZE(RS_RET_NO_JSON_PASSING);
+	}
 ENDmodInit
