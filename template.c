@@ -663,6 +663,8 @@ static void doOptions(unsigned char **pp, struct templateEntry *pTpe)
 			} else {
 				pTpe->data.field.options.bJSONf = 1;
 			}
+		 } else if(!strcmp((char*)Buf, "optional-field")) {
+			 pTpe->data.field.options.bOptionalField = 1;
 		 } else {
 			dbgprintf("Invalid field option '%s' specified - ignored.\n", Buf);
 		 }
@@ -1987,6 +1989,9 @@ void tplPrintList(rsconf_t *conf)
 				}
 				if(pTpe->data.field.options.bJSONf) {
 					dbgprintf("[format as JSON field] ");
+				}
+				if(pTpe->data.field.options.bOptionalField) {
+					dbgprintf("[optional field - skip in field template if not present] ");
 				}
 				if(pTpe->data.field.options.bDropLastLF) {
 				  	dbgprintf("[drop last LF in msg] ");
