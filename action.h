@@ -74,7 +74,8 @@ struct action_s {
 	int	f_repeatcount;	/* number of "repeated" msgs */
 	rsRetVal (*submitToActQ)(action_t *, batch_t *);/* function submit message to action queue */
 	rsRetVal (*qConstruct)(struct queue_s *pThis);
-	enum 	{ ACT_STRING_PASSING = 0, ACT_ARRAY_PASSING = 1, ACT_MSG_PASSING }
+	enum 	{ ACT_STRING_PASSING = 0, ACT_ARRAY_PASSING = 1, ACT_MSG_PASSING = 2,
+		  ACT_JSON_PASSING = 3}
 		eParamPassing;	/* mode of parameter passing to action */
 	int	iNumTpls;	/* number of array entries for template element below */
 	struct template **ppTpl;/* array of template to use - strings must be passed to doAction

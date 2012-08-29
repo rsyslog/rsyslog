@@ -98,6 +98,7 @@
 #include <strings.h>
 #include <time.h>
 #include <errno.h>
+#include <json/json.h>
 
 #include "dirty.h"
 #include "template.h"
@@ -803,6 +804,7 @@ static rsRetVal prepareDoActionParams(action_t *pAction, batch_obj_t *pElem)
 {
 	int i;
 	msg_t *pMsg;
+	struct json_object *json;
 	DEFiRet;
 
 	ASSERT(pAction != NULL);
@@ -822,6 +824,10 @@ static rsRetVal prepareDoActionParams(action_t *pAction, batch_obj_t *pElem)
 				break;
 			case ACT_MSG_PASSING:
 				pElem->staticActParams[i] = (void*) pMsg;
+				break;
+			case ACT_JSON_PASSING:
+				CHKiRet(tplToJSON(pAction->ppTpl[i], pMsg, &json));
+				pElem->staticActParams[i] = (void*) json;
 				break;
 			default:dbgprintf("software bug/error: unknown pAction->eParamPassing %d in prepareDoActionParams\n",
 					   (int) pAction->eParamPassing);
@@ -883,6 +889,13 @@ static rsRetVal releaseBatch(action_t *pAction, batch_t *pBatch)
 				 */
 				for(j = 0 ; j < pAction->iNumTpls ; ++j) {
 					((uchar**)pElem->staticActParams)[j] = NULL;
+				}
+				break;
+			case ACT_JSON_PASSING:
+				for(j = 0 ; j < pAction->iNumTpls ; ++j) {
+					json_object_put((struct json_object*)
+							pElem->staticActParams[j]);
+					pElem->staticActParams[j] = NULL;
 				}
 				break;
 			}
@@ -1093,16 +1106,6 @@ finalize_it:
 	}
 	RETiRet;
 }
-
-/* debug aid */
-static void displayBatchState(batch_t *pBatch)
-{
-	int i;
-	for(i = 0 ; i < pBatch->nElem ; ++i) {
-		dbgprintf("XXXXX: displayBatchState2 %p[%d]: %d\n", pBatch, i, pBatch->pElem[i].state);
-	}
-}
-
 
 /* submit a batch for actual action processing.
  * The first nElem elements are processed. This function calls itself
@@ -1933,6 +1936,8 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData,
 			pAction->eParamPassing = ACT_ARRAY_PASSING;
 		} else if(iTplOpts & OMSR_TPL_AS_MSG) {
 			pAction->eParamPassing = ACT_MSG_PASSING;
+		} else if(iTplOpts & OMSR_TPL_AS_JSON) {
+			pAction->eParamPassing = ACT_JSON_PASSING;
 		} else {
 			pAction->eParamPassing = ACT_STRING_PASSING;
 		}

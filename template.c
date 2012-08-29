@@ -34,6 +34,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <assert.h>
+#include <json/json.h>
 #include "stringbuf.h"
 #include "syslogd-types.h"
 #include "template.h"
@@ -266,6 +267,50 @@ rsRetVal tplToArray(struct template *pTpl, msg_t *pMsg, uchar*** ppArr)
 finalize_it:
 	*ppArr = (iRet == RS_RET_OK) ? pArr : NULL;
 
+	RETiRet;
+}
+
+
+/* This functions converts a template into a json object.
+ * For further general details, see the very similar funtion
+ * tpltoString().
+ * rgerhards, 2012-08-29
+ */
+rsRetVal tplToJSON(struct template *pTpl, msg_t *pMsg, struct json_object **pjson)
+{
+	struct templateEntry *pTpe;
+	char *cstr;
+	size_t propLen;
+	unsigned short bMustBeFreed;
+	uchar *pVal;
+	struct json_object *json, *jsonf;
+	DEFiRet;
+
+	assert(pTpl != NULL);
+	assert(pMsg != NULL);
+	assert(json != NULL);
+
+	json = json_object_new_object();
+	for(pTpe = pTpl->pEntryRoot ; pTpe != NULL ; pTpe = pTpe->pNext) {
+		if(pTpe->eEntryType == CONSTANT) {
+			if(pTpe->fieldName == NULL)
+				continue;
+			jsonf = json_object_new_string((char*) pTpe->data.constant.pConstant);
+		} else 	if(pTpe->eEntryType == FIELD) {
+			pVal = (uchar*) MsgGetProp(pMsg, pTpe, pTpe->data.field.propid,
+						   pTpe->data.field.propName,  &propLen, &bMustBeFreed);
+			jsonf = json_object_new_string_len((char*)pVal, propLen);
+			if(bMustBeFreed) { /* json-c makes its own private copy! */
+				free(pVal);
+			}
+		}
+		/* TODO: unify strings, handling currently quite inefficient! */
+		cstr = es_str2cstr(pTpe->fieldName, NULL);
+		json_object_object_add(json, cstr, jsonf);
+		free(cstr);
+	}
+
+	*pjson = (iRet == RS_RET_OK) ? json : NULL;
 	RETiRet;
 }
 

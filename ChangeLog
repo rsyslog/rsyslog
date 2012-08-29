@@ -1,5 +1,10 @@
 ---------------------------------------------------------------------------
-Version 6.5.0  [devel] 2012-0?-??
+Version 6.5.1  [devel] 2012-08-??
+- added pure JSON output plugin parameter passing mode
+- ommongodb now supports templates
+- bugfix: imtcp could abort on exit due to invalid free()
+---------------------------------------------------------------------------
+Version 6.5.0  [devel] 2012-08-28
 - imrelp now supports non-cancel thread termination
   (but now requires at least librelp 1.0.1)
 - implemented freeCnf() module interface
@@ -18,6 +23,7 @@ Version 6.5.0  [devel] 2012-0?-??
   Thanks to Miloslav Trmač for the patch
 - $SystemLogParseTrusted config file option
   Thanks to Milan Bartos for the patch
+- added template config directive
 - added new uuid message property
   Thanks to Jérôme Renard for the idea and patches.
   Note: patches were released under ASL 2.0, see

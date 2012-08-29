@@ -380,6 +380,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_DUP_PARAM = -2220, /**< config parameter is given more than once */
 	RS_RET_MODULE_ALREADY_IN_CONF = -2221, /**< module already in current configuration */
 	RS_RET_PARAM_NOT_PERMITTED = -2222, /**< legacy parameter no longer permitted (usally already set by v2) */
+	RS_RET_NO_JSON_PASSING = -2223, /**< rsyslog core does not support JSON-passing plugin API */
 
 	/**** up to 2300 is reserved for v6 use ****/
 	RS_RET_JNAME_NO_ROOT = -2301, /**< root element is missing in JSON path */

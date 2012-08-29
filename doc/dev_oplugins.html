@@ -143,6 +143,11 @@ omstdout, you can see how a plugin may deal with the situation.
 array-passing capability not blindly be used.</b> In such cases, we can not guard the
 plugin from segfaulting and if the plugin (as currently always) is run within 
 rsyslog's process space, that results in a segfault for rsyslog. So do not do this.
+<p>Another possible mode is OMSR_TPL_AS_JSON, where instead of the template
+a json-c memory object tree is passed to the module. The module can extract data
+via json-c API calls. It MUST NOT modify the provided structure. This mode is 
+primarily aimed at plugins that need to process tree-like data, as found
+for example in MongoDB or ElasticSearch.
 <h3>Batching of Messages</h3>
 <p>Starting with rsyslog 4.3.x, batching of output messages is supported. Previously, only
 a single-message interface was supported.
