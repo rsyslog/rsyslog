@@ -823,6 +823,9 @@ static rsRetVal prepareDoActionParams(action_t *pAction, batch_obj_t *pElem)
 			case ACT_MSG_PASSING:
 				pElem->staticActParams[i] = (void*) pMsg;
 				break;
+			case ACT_JSON_PASSING:
+				// TODO: implement
+				break;
 			default:dbgprintf("software bug/error: unknown pAction->eParamPassing %d in prepareDoActionParams\n",
 					   (int) pAction->eParamPassing);
 				assert(0); /* software bug if this happens! */
@@ -874,6 +877,7 @@ static rsRetVal releaseBatch(action_t *pAction, batch_t *pBatch)
 				break;
 			case ACT_STRING_PASSING:
 			case ACT_MSG_PASSING:
+			case ACT_JSON_PASSING:
 				/* nothing to do in that case */
 				/* TODO ... and yet we do something ;) This is considered not
 				 * really needed, but I was not bold enough to remove that while
@@ -1933,6 +1937,8 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData,
 			pAction->eParamPassing = ACT_ARRAY_PASSING;
 		} else if(iTplOpts & OMSR_TPL_AS_MSG) {
 			pAction->eParamPassing = ACT_MSG_PASSING;
+		} else if(iTplOpts & OMSR_TPL_AS_JSON) {
+			pAction->eParamPassing = ACT_JSON_PASSING;
 		} else {
 			pAction->eParamPassing = ACT_STRING_PASSING;
 		}

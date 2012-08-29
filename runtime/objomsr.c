@@ -149,7 +149,8 @@ OMSRgetSupportedTplOpts(unsigned long *pOpts)
 {
 	DEFiRet;
 	assert(pOpts != NULL);
-	*pOpts = OMSR_RQD_TPL_OPT_SQL | OMSR_TPL_AS_ARRAY | OMSR_TPL_AS_MSG;
+	*pOpts = OMSR_RQD_TPL_OPT_SQL | OMSR_TPL_AS_ARRAY | OMSR_TPL_AS_MSG
+		 | OMSR_TPL_AS_JSON;
 	RETiRet;
 }
 
