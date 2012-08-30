@@ -85,7 +85,7 @@ static struct cnfparamdescr cnfparamdescrProperty[] = {
 	{ "regex.match", eCmdHdlrInt, 0 },
 	{ "regex.submatch", eCmdHdlrInt, 0 },
 	{ "droplastlf", eCmdHdlrBinary, 0 },
-	{ "optional", eCmdHdlrBinary, 0 },
+	{ "mandatory", eCmdHdlrBinary, 0 },
 	{ "spifno1stsp", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk pblkProperty =
@@ -296,15 +296,18 @@ rsRetVal tplToJSON(struct template *pTpl, msg_t *pMsg, struct json_object **pjso
 			if(pTpe->fieldName == NULL)
 				continue;
 			jsonf = json_object_new_string((char*) pTpe->data.constant.pConstant);
+			json_object_object_add(json, (char*)pTpe->fieldName, jsonf);
 		} else 	if(pTpe->eEntryType == FIELD) {
 			pVal = (uchar*) MsgGetProp(pMsg, pTpe, pTpe->data.field.propid,
 						   pTpe->data.field.propName,  &propLen, &bMustBeFreed);
-			jsonf = json_object_new_string_len((char*)pVal, propLen);
+			if(pTpe->data.field.options.bMandatory || propLen > 0) {
+				jsonf = json_object_new_string_len((char*)pVal, propLen);
+				json_object_object_add(json, (char*)pTpe->fieldName, jsonf);
+			}
 			if(bMustBeFreed) { /* json-c makes its own private copy! */
 				free(pVal);
 			}
 		}
-		json_object_object_add(json, (char*)pTpe->fieldName, jsonf);
 	}
 
 	*pjson = (iRet == RS_RET_OK) ? json : NULL;
@@ -664,8 +667,8 @@ static void doOptions(unsigned char **pp, struct templateEntry *pTpe)
 			} else {
 				pTpe->data.field.options.bJSONf = 1;
 			}
-		 } else if(!strcmp((char*)Buf, "optional-field")) {
-			 pTpe->data.field.options.bOptionalField = 1;
+		 } else if(!strcmp((char*)Buf, "mandatory-field")) {
+			 pTpe->data.field.options.bMandatory = 1;
 		 } else {
 			dbgprintf("Invalid field option '%s' specified - ignored.\n", Buf);
 		 }
@@ -1283,7 +1286,7 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 	int i;
 	int droplastlf = 0;
 	int spifno1stsp = 0;
-	int optional = 0;
+	int mandatory = 0;
 	int frompos = -1;
 	int topos = -1;
 	int fieldnum = -1;
@@ -1314,8 +1317,8 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 			cstrFinalize(name);
 		} else if(!strcmp(pblkProperty.descr[i].name, "droplastlf")) {
 			droplastlf = pvals[i].val.d.n;
-		} else if(!strcmp(pblkProperty.descr[i].name, "optional")) {
-			optional = pvals[i].val.d.n;
+		} else if(!strcmp(pblkProperty.descr[i].name, "mandatory")) {
+			mandatory = pvals[i].val.d.n;
 		} else if(!strcmp(pblkProperty.descr[i].name, "spifno1stsp")) {
 			spifno1stsp = pvals[i].val.d.n;
 		} else if(!strcmp(pblkProperty.descr[i].name, "outname")) {
@@ -1477,7 +1480,7 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 	}
 	pTpe->data.field.options.bDropLastLF = droplastlf;
 	pTpe->data.field.options.bSPIffNo1stSP = spifno1stsp;
-	pTpe->data.field.options.bOptionalField = optional;
+	pTpe->data.field.options.bMandatory = mandatory;
 	pTpe->data.field.eCaseConv = caseconv;
 	switch(formatType) {
 	case F_NONE:
@@ -1995,8 +1998,8 @@ void tplPrintList(rsconf_t *conf)
 				if(pTpe->data.field.options.bJSONf) {
 					dbgprintf("[format as JSON field] ");
 				}
-				if(pTpe->data.field.options.bOptionalField) {
-					dbgprintf("[optional field - skip in field template if not present] ");
+				if(pTpe->data.field.options.bMandatory) {
+					dbgprintf("[mandatory field] ");
 				}
 				if(pTpe->data.field.options.bDropLastLF) {
 				  	dbgprintf("[drop last LF in msg] ");

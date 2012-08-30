@@ -115,7 +115,7 @@ struct templateEntry {
 				unsigned bCSV: 1;		/* format field in CSV (RFC 4180) format */
 				unsigned bJSON: 1;		/* format field JSON escaped */
 				unsigned bJSONf: 1;		/* format field JSON *field* (n/v pair) */
-				unsigned bOptionalField: 1;	/* optional field - skip in field template if not present */
+				unsigned bMandatory: 1;		/* mandatory field - emit even if empty */
 			} options;		/* options as bit fields */
 		} field;
 	} data;
