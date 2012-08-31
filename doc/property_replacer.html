@@ -345,7 +345,11 @@ Currently, the following options are defined:
 <tr>
 <td><b>Outname</b></td>
 <td>This field permits to specify a field name for structured-data emitting property replacer options.
-If used for a constant a template with line style, unpredictable behaviour can occur.</td>
+It is most useful to set, for example, the name for JSON-based fields (like used in ommngodb). For
+text-based modules, it is simply ignored.
+If not specified, the original property name is used, with the exception of properties starting with
+"$!", where that prefix is removed. Note that unnamaned constants are NOT forwarded to output modules
+that expect structure (like ommnogodb). To pass constants, an outname must be set.
 </tr>
 <tr>
 <td><b>CaseConversion</b></td>
@@ -709,6 +713,12 @@ Useful for secure pathname generation (with dynafiles).
 <td>Replace slashes inside the field by an underscore. (e.g. "a/b" becomes "a_b").
 Useful for secure pathname generation (with dynafiles).
 </td>
+</tr>
+<tr>
+<td><b>mandatory-field</b></td>
+<td>In templates that are used for building field lists (in particular, ommongodb), include 
+this field, even if it is empty (or NULL). If not set, the field will be removed from
+the output field set if empty. The latter is the default case.
 </tr>
 </tbody>
 </table>

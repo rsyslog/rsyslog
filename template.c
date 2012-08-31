@@ -85,6 +85,7 @@ static struct cnfparamdescr cnfparamdescrProperty[] = {
 	{ "regex.match", eCmdHdlrInt, 0 },
 	{ "regex.submatch", eCmdHdlrInt, 0 },
 	{ "droplastlf", eCmdHdlrBinary, 0 },
+	{ "mandatory", eCmdHdlrBinary, 0 },
 	{ "spifno1stsp", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk pblkProperty =
@@ -279,7 +280,6 @@ finalize_it:
 rsRetVal tplToJSON(struct template *pTpl, msg_t *pMsg, struct json_object **pjson)
 {
 	struct templateEntry *pTpe;
-	char *cstr;
 	size_t propLen;
 	unsigned short bMustBeFreed;
 	uchar *pVal;
@@ -296,18 +296,18 @@ rsRetVal tplToJSON(struct template *pTpl, msg_t *pMsg, struct json_object **pjso
 			if(pTpe->fieldName == NULL)
 				continue;
 			jsonf = json_object_new_string((char*) pTpe->data.constant.pConstant);
+			json_object_object_add(json, (char*)pTpe->fieldName, jsonf);
 		} else 	if(pTpe->eEntryType == FIELD) {
 			pVal = (uchar*) MsgGetProp(pMsg, pTpe, pTpe->data.field.propid,
 						   pTpe->data.field.propName,  &propLen, &bMustBeFreed);
-			jsonf = json_object_new_string_len((char*)pVal, propLen);
+			if(pTpe->data.field.options.bMandatory || propLen > 0) {
+				jsonf = json_object_new_string_len((char*)pVal, propLen);
+				json_object_object_add(json, (char*)pTpe->fieldName, jsonf);
+			}
 			if(bMustBeFreed) { /* json-c makes its own private copy! */
 				free(pVal);
 			}
 		}
-		/* TODO: unify strings, handling currently quite inefficient! */
-		cstr = es_str2cstr(pTpe->fieldName, NULL);
-		json_object_object_add(json, cstr, jsonf);
-		free(cstr);
 	}
 
 	*pjson = (iRet == RS_RET_OK) ? json : NULL;
@@ -667,6 +667,8 @@ static void doOptions(unsigned char **pp, struct templateEntry *pTpe)
 			} else {
 				pTpe->data.field.options.bJSONf = 1;
 			}
+		 } else if(!strcmp((char*)Buf, "mandatory-field")) {
+			 pTpe->data.field.options.bMandatory = 1;
 		 } else {
 			dbgprintf("Invalid field option '%s' specified - ignored.\n", Buf);
 		 }
@@ -1022,17 +1024,21 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 
 	/* save field name - if none was given, use the property name instead */
 	if(pStrField == NULL) {
-		if((pTpe->fieldName =
-		      es_newStrFromCStr((char*)cstrGetSzStrNoNULL(pStrProp), cstrLen(pStrProp))) == NULL) {
-			return 1;
+		if(pTpe->data.field.propid == PROP_CEE) {
+			/* in CEE case, we remove "$!" from the fieldname - it's just our indicator */
+			pTpe->fieldName = ustrdup(cstrGetSzStrNoNULL(pStrProp)+2);
+			pTpe->lenFieldName = cstrLen(pStrProp)-2;
+		} else {
+			pTpe->fieldName = ustrdup(cstrGetSzStrNoNULL(pStrProp));
+			pTpe->lenFieldName = cstrLen(pStrProp);
 		}
 	} else {
-		if((pTpe->fieldName =
-		      es_newStrFromCStr((char*)cstrGetSzStrNoNULL(pStrField), cstrLen(pStrField))) == NULL) {
-			return 1;
-		}
+		pTpe->fieldName = ustrdup(cstrGetSzStrNoNULL(pStrField));
+		pTpe->lenFieldName = cstrLen(pStrProp);
 		cstrDestruct(&pStrField);
 	}
+	if(pTpe->fieldName == NULL)
+		return 1;
 
 	cstrDestruct(&pStrProp);
 
@@ -1235,7 +1241,7 @@ createConstantTpe(struct template *pTpl, struct cnfobj *o)
 	es_str_t *value;
 	int i;
 	struct cnfparamvals *pvals;
-	es_str_t *outname = NULL;
+	uchar *outname = NULL;
 	DEFiRet;
 
 	/* pull params */
@@ -1248,7 +1254,7 @@ createConstantTpe(struct template *pTpl, struct cnfobj *o)
 		if(!strcmp(pblkConstant.descr[i].name, "value")) {
 			value = pvals[i].val.d.estr;
 		} else if(!strcmp(pblkConstant.descr[i].name, "outname")) {
-			outname = es_strdup(pvals[i].val.d.estr);
+			outname = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else {
 			dbgprintf("template:constantTpe: program error, non-handled "
 			  "param '%s'\n", pblkConstant.descr[i].name);
@@ -1262,6 +1268,8 @@ createConstantTpe(struct template *pTpl, struct cnfobj *o)
 	es_unescapeStr(value);
 	pTpe->eEntryType = CONSTANT;
 	pTpe->fieldName = outname;
+	if(outname != NULL)
+		pTpe->lenFieldName = ustrlen(outname);
 	pTpe->data.constant.iLenConstant = es_strlen(value);
 	pTpe->data.constant.pConstant = (uchar*)es_str2cstr(value, NULL);
 
@@ -1274,11 +1282,11 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 {
 	struct templateEntry *pTpe;
 	cstr_t *name;
-	es_str_t *estrname;
-	es_str_t *outname = NULL;
+	uchar *outname = NULL;
 	int i;
 	int droplastlf = 0;
 	int spifno1stsp = 0;
+	int mandatory = 0;
 	int frompos = -1;
 	int topos = -1;
 	int fieldnum = -1;
@@ -1304,16 +1312,17 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 		if(!pvals[i].bUsed)
 			continue;
 		if(!strcmp(pblkProperty.descr[i].name, "name")) {
-			estrname = es_strdup(pvals[i].val.d.estr);
-			/* TODO: unify strings!!! */
 			rsCStrConstructFromszStr(&name,
 				(uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
+			cstrFinalize(name);
 		} else if(!strcmp(pblkProperty.descr[i].name, "droplastlf")) {
 			droplastlf = pvals[i].val.d.n;
+		} else if(!strcmp(pblkProperty.descr[i].name, "mandatory")) {
+			mandatory = pvals[i].val.d.n;
 		} else if(!strcmp(pblkProperty.descr[i].name, "spifno1stsp")) {
 			spifno1stsp = pvals[i].val.d.n;
 		} else if(!strcmp(pblkProperty.descr[i].name, "outname")) {
-			outname = es_strdup(pvals[i].val.d.estr);
+			outname = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(pblkProperty.descr[i].name, "position.from")) {
 			frompos = pvals[i].val.d.n;
 		} else if(!strcmp(pblkProperty.descr[i].name, "position.to")) {
@@ -1435,8 +1444,14 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 			  "param '%s'\n", pblkProperty.descr[i].name);
 		}
 	}
-	if(outname == NULL)
-		outname = es_strdup(estrname);
+	if(outname == NULL) {
+		uchar *psz = cstrGetSzStrNoNULL(name);
+		/* we need to drop "$!" prefix, if present */
+		if(!strncmp((char*)psz, "$!", 2))
+			outname = ustrdup(psz + 2);
+		else
+			outname = ustrdup(psz);
+	}
 
 	/* sanity check */
 	if(topos == -1 && frompos != -1)
@@ -1460,12 +1475,12 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 	CHKiRet(propNameToID(name, &pTpe->data.field.propid));
 	if(pTpe->data.field.propid == PROP_CEE) {
 		/* in CEE case, we need to preserve the actual property name */
-		pTpe->data.field.propName = estrname;
-	} else {
-		es_deleteStr(estrname);
+		pTpe->data.field.propName = es_newStrFromCStr((char*)cstrGetSzStrNoNULL(name)+2,
+							      cstrLen(name)-2);
 	}
 	pTpe->data.field.options.bDropLastLF = droplastlf;
 	pTpe->data.field.options.bSPIffNo1stSP = spifno1stsp;
+	pTpe->data.field.options.bMandatory = mandatory;
 	pTpe->data.field.eCaseConv = caseconv;
 	switch(formatType) {
 	case F_NONE:
@@ -1506,7 +1521,9 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 		pTpe->data.field.options.bSecPathReplace = 1;
 		break;
 	}
-	pTpe->fieldName = outname;
+	pTpe->fieldName = ustrdup(outname);
+	if(outname != NULL)
+		pTpe->lenFieldName = ustrlen(outname);
 	pTpe->data.field.eDateFormat = datefmt;
 	if(fieldnum != -1) {
 		pTpe->data.field.has_fields = 1;
@@ -1807,11 +1824,10 @@ void tplDeleteAll(rsconf_t *conf)
 				}
 				if(pTpeDel->data.field.propName != NULL)
 					es_deleteStr(pTpeDel->data.field.propName);
-				if(pTpeDel->fieldName != NULL)
-					es_deleteStr(pTpeDel->fieldName);
 #endif
 				break;
 			}
+			free(pTpeDel->fieldName);
 			/*dbgprintf("\n");*/
 			free(pTpeDel);
 		}
@@ -1981,6 +1997,9 @@ void tplPrintList(rsconf_t *conf)
 				}
 				if(pTpe->data.field.options.bJSONf) {
 					dbgprintf("[format as JSON field] ");
+				}
+				if(pTpe->data.field.options.bMandatory) {
+					dbgprintf("[mandatory field] ");
 				}
 				if(pTpe->data.field.options.bDropLastLF) {
 				  	dbgprintf("[drop last LF in msg] ");
