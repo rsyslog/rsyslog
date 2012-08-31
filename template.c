@@ -44,6 +44,7 @@
 #include "errmsg.h"
 #include "strgen.h"
 #include "rsconf.h"
+#include "msg.h"
 #include "unicode-helper.h"
 
 /* static data */
@@ -284,6 +285,7 @@ rsRetVal tplToJSON(struct template *pTpl, msg_t *pMsg, struct json_object **pjso
 	unsigned short bMustBeFreed;
 	uchar *pVal;
 	struct json_object *json, *jsonf;
+	rsRetVal localRet;
 	DEFiRet;
 
 	assert(pTpl != NULL);
@@ -298,14 +300,33 @@ rsRetVal tplToJSON(struct template *pTpl, msg_t *pMsg, struct json_object **pjso
 			jsonf = json_object_new_string((char*) pTpe->data.constant.pConstant);
 			json_object_object_add(json, (char*)pTpe->fieldName, jsonf);
 		} else 	if(pTpe->eEntryType == FIELD) {
-			pVal = (uchar*) MsgGetProp(pMsg, pTpe, pTpe->data.field.propid,
-						   pTpe->data.field.propName,  &propLen, &bMustBeFreed);
-			if(pTpe->data.field.options.bMandatory || propLen > 0) {
-				jsonf = json_object_new_string_len((char*)pVal, propLen);
-				json_object_object_add(json, (char*)pTpe->fieldName, jsonf);
-			}
-			if(bMustBeFreed) { /* json-c makes its own private copy! */
-				free(pVal);
+			if(pTpe->data.field.propid == PROP_CEE) {
+				localRet = msgGetCEEPropJSON(pMsg, pTpe->data.field.propName, &jsonf);
+				if(localRet == RS_RET_OK) {
+					json_object_object_add(json, (char*)pTpe->fieldName, jsonf);
+				} else {
+					DBGPRINTF("tplToJSON: error %d looking up property\n",
+						  localRet);
+#if 0	/* TODO: as it looks, there currently is no way to define Null field values in json-c...
+	         we need to think how we will handle that.
+	 */
+					if(pTpe->data.field.options.bMandatory) {
+						jsonf = json_object_new(json_type_null); //json_object_new_null();
+						json_object_object_add(json, (char*)pTpe->fieldName, jsonf);
+					}
+#endif
+				}
+			} else  {
+				pVal = (uchar*) MsgGetProp(pMsg, pTpe, pTpe->data.field.propid,
+							   pTpe->data.field.propName,  &propLen,
+							   &bMustBeFreed);
+				if(pTpe->data.field.options.bMandatory || propLen > 0) {
+					jsonf = json_object_new_string_len((char*)pVal, propLen);
+					json_object_object_add(json, (char*)pTpe->fieldName, jsonf);
+				}
+				if(bMustBeFreed) { /* json-c makes its own private copy! */
+					free(pVal);
+				}
 			}
 		}
 	}
@@ -1475,8 +1496,8 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 	CHKiRet(propNameToID(name, &pTpe->data.field.propid));
 	if(pTpe->data.field.propid == PROP_CEE) {
 		/* in CEE case, we need to preserve the actual property name */
-		pTpe->data.field.propName = es_newStrFromCStr((char*)cstrGetSzStrNoNULL(name)+2,
-							      cstrLen(name)-2);
+		pTpe->data.field.propName = es_newStrFromCStr((char*)cstrGetSzStrNoNULL(name)+1,
+							      cstrLen(name)-1);
 	}
 	pTpe->data.field.options.bDropLastLF = droplastlf;
 	pTpe->data.field.options.bSPIffNo1stSP = spifno1stsp;

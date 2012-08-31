@@ -2407,7 +2407,7 @@ static uchar *getNOW(eNOWType eNow)
 #undef tmpBUFSIZE /* clean up */
 
 
-/* Get a CEE-Property */
+/* Get a CEE-Property as string value*/
 static inline rsRetVal
 getCEEPropVal(msg_t *pM, es_str_t *propName, uchar **pRes, int *buflen, unsigned short *pbMustBeFreed)
 {
@@ -2442,6 +2442,39 @@ finalize_it:
 		*pRes = (unsigned char*)"";
 		*pbMustBeFreed = 0;
 	}
+	RETiRet;
+}
+
+
+/* Get a CEE-Property as native json object
+ */
+rsRetVal
+msgGetCEEPropJSON(msg_t *pM, es_str_t *propName, struct json_object **pjson)
+{
+	uchar *name = NULL;
+	uchar *leaf;
+	struct json_object *parent;
+	struct json_object *field;
+	DEFiRet;
+
+dbgprintf("AAAA: enter getCEEPropJSON\n");
+	// TODO: mutex?
+	if(pM->json == NULL) {
+		ABORT_FINALIZE(RS_RET_NOT_FOUND);
+	}
+
+	name = (uchar*)es_str2cstr(propName, NULL);
+dbgprintf("AAAA: name to search '%s'\n", name);
+	leaf = jsonPathGetLeaf(name, ustrlen(name));
+dbgprintf("AAAA: leaf '%s'\n", leaf);
+	CHKiRet(jsonPathFindParent(pM, name, leaf, &parent, 1));
+	*pjson = json_object_object_get(parent, (char*)leaf);
+	if(*pjson == NULL) {
+		ABORT_FINALIZE(RS_RET_NOT_FOUND);
+	}
+
+finalize_it:
+	free(name);
 	RETiRet;
 }
 
