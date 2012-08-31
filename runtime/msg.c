@@ -2454,7 +2454,6 @@ msgGetCEEPropJSON(msg_t *pM, es_str_t *propName, struct json_object **pjson)
 	uchar *name = NULL;
 	uchar *leaf;
 	struct json_object *parent;
-	struct json_object *field;
 	DEFiRet;
 
 dbgprintf("AAAA: enter getCEEPropJSON\n");
@@ -3715,11 +3714,14 @@ jsonMerge(struct json_object *existing, struct json_object *json)
 
 	json_object_object_foreachC(json, it) {
 dbgprintf("AAAA jsonMerge adds '%s'\n", it.key);
-		json_object_object_add(existing, it.key, it.val);
+		json_object_object_add(existing, it.key,
+			json_object_get(it.val));
 	}
-	/* TODO: we need to free what we no longer need. But that means I 
-	 * must be totally clear on the refcounting first ;) --> later
+	/* note: json-c does ref counting. We added all descandants refcounts
+	 * in the loop above. So when we now free(_put) the root object, only
+	 * root gets freed().
 	 */
+	json_object_put(json);
 	RETiRet;
 }
 
