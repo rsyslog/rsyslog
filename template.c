@@ -1297,7 +1297,7 @@ static rsRetVal
 createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 {
 	struct templateEntry *pTpe;
-	cstr_t *name;
+	cstr_t *name = NULL;
 	uchar *outname = NULL;
 	int i;
 	int droplastlf = 0;
@@ -1582,6 +1582,8 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 	}
 
 finalize_it:
+	if(name != NULL)
+		rsCStrDestruct(&name);
 	RETiRet;
 }
 
