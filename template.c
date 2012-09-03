@@ -1582,6 +1582,8 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 	}
 
 finalize_it:
+	if(pvals != NULL)
+		cnfparamvalsDestruct(pvals, &pblkProperty);
 	if(name != NULL)
 		rsCStrDestruct(&name);
 	RETiRet;
@@ -1767,6 +1769,8 @@ tplProcessCnf(struct cnfobj *o)
 		pTpl->optFormatEscape = JSON_ESCAPE;
 
 finalize_it:
+	if(pvals != NULL)
+		cnfparamvalsDestruct(pvals, &pblk);
 	if(iRet != RS_RET_OK) {
 		if(pTpl != NULL) {
 			/* we simply make the template defunct in this case by setting
