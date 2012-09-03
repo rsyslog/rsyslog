@@ -1328,9 +1328,12 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 		if(!pvals[i].bUsed)
 			continue;
 		if(!strcmp(pblkProperty.descr[i].name, "name")) {
-			rsCStrConstructFromszStr(&name,
-				(uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
+			char *tmp;
+
+			tmp = es_str2cstr(pvals[i].val.d.estr, NULL);
+			rsCStrConstructFromszStr(&name, (uchar*)tmp);
 			cstrFinalize(name);
+			free(tmp);
 		} else if(!strcmp(pblkProperty.descr[i].name, "droplastlf")) {
 			droplastlf = pvals[i].val.d.n;
 		} else if(!strcmp(pblkProperty.descr[i].name, "mandatory")) {
