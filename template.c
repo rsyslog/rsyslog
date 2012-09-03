@@ -1540,7 +1540,7 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 		pTpe->data.field.options.bSecPathReplace = 1;
 		break;
 	}
-	pTpe->fieldName = ustrdup(outname);
+	pTpe->fieldName = outname;
 	if(outname != NULL)
 		pTpe->lenFieldName = ustrlen(outname);
 	pTpe->data.field.eDateFormat = datefmt;
