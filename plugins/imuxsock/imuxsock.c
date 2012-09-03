@@ -817,15 +817,18 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 			json_object_object_add(json, "uid", jval);
 			jval = json_object_new_int(cred->gid);
 			json_object_object_add(json, "gid", jval);
-			getTrustedProp(cred, "comm", propBuf, sizeof(propBuf), &lenProp);
-			jval = json_object_new_string((char*)propBuf);
-			json_object_object_add(json, "appname", jval);
-			getTrustedExe(cred, propBuf, sizeof(propBuf), &lenProp);
-			jval = json_object_new_string((char*)propBuf);
-			json_object_object_add(json, "exe", jval);
-			getTrustedProp(cred, "cmdline", propBuf, sizeof(propBuf), &lenProp);
-			jval = json_object_new_string((char*)propBuf);
-			json_object_object_add(json, "cmd", jval);
+			if(getTrustedProp(cred, "comm", propBuf, sizeof(propBuf), &lenProp) == RS_RET_OK) {
+				jval = json_object_new_string((char*)propBuf);
+				json_object_object_add(json, "appname", jval);
+			}
+			if(getTrustedExe(cred, propBuf, sizeof(propBuf), &lenProp) == RS_RET_OK) {
+				jval = json_object_new_string((char*)propBuf);
+				json_object_object_add(json, "exe", jval);
+			}
+			if(getTrustedProp(cred, "cmdline", propBuf, sizeof(propBuf), &lenProp) == RS_RET_OK) {
+				jval = json_object_new_string((char*)propBuf);
+				json_object_object_add(json, "cmd", jval);
+			}
 		} else {
 			memcpy(pmsgbuf, pRcv, lenRcv);
 			memcpy(pmsgbuf+lenRcv, " @[", 3);
