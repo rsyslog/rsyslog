@@ -307,14 +307,9 @@ rsRetVal tplToJSON(struct template *pTpl, msg_t *pMsg, struct json_object **pjso
 				} else {
 					DBGPRINTF("tplToJSON: error %d looking up property\n",
 						  localRet);
-#if 0	/* TODO: as it looks, there currently is no way to define Null field values in json-c...
-	         we need to think how we will handle that.
-	 */
 					if(pTpe->data.field.options.bMandatory) {
-						jsonf = json_object_new(json_type_null); //json_object_new_null();
-						json_object_object_add(json, (char*)pTpe->fieldName, jsonf);
+						json_object_object_add(json, (char*)pTpe->fieldName, NULL);
 					}
-#endif
 				}
 			} else  {
 				pVal = (uchar*) MsgGetProp(pMsg, pTpe, pTpe->data.field.propid,
