@@ -139,7 +139,7 @@ objlstDestruct(struct objlst *lst)
 	while(lst != NULL) {
 		toDel = lst;
 		lst = lst->next;
-		// TODO: delete object
+		cnfobjDestruct(toDel->obj);
 		free(toDel);
 	}
 }
@@ -648,6 +648,7 @@ cnfobjDestruct(struct cnfobj *o)
 {
 	if(o != NULL) {
 		nvlstDestruct(o->nvlst);
+		objlstDestruct(o->subobjs);
 		free(o);
 	}
 }
