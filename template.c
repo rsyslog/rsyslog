@@ -303,7 +303,7 @@ rsRetVal tplToJSON(struct template *pTpl, msg_t *pMsg, struct json_object **pjso
 			if(pTpe->data.field.propid == PROP_CEE) {
 				localRet = msgGetCEEPropJSON(pMsg, pTpe->data.field.propName, &jsonf);
 				if(localRet == RS_RET_OK) {
-					json_object_object_add(json, (char*)pTpe->fieldName, jsonf);
+					json_object_object_add(json, (char*)pTpe->fieldName, json_object_get(jsonf));
 				} else {
 					DBGPRINTF("tplToJSON: error %d looking up property\n",
 						  localRet);
