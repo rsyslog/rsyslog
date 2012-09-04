@@ -370,9 +370,6 @@ parser_errmsg(char *fmt, ...)
 	va_start(ap, fmt);
 	if(vsnprintf(errBuf, sizeof(errBuf), fmt, ap) == sizeof(errBuf))
 		errBuf[sizeof(errBuf)-1] = '\0';
-dbgprintf("XXXX: msg: %s\n", errBuf);
-dbgprintf("XXXX: cnfcurrfn: %s\n", cnfcurrfn);
-dbgprintf("XXXX: yylineno: %d\n", yylineno);
 	errmsg.LogError(0, RS_RET_CONF_PARSE_ERROR,
 			"error during parsing file %s, on or before line %d: %s",
 			cnfcurrfn, yylineno, errBuf);
@@ -415,6 +412,7 @@ void cnfDoObj(struct cnfobj *o)
 	cnfobjDestruct(o);
 }
 
+#if 0
 void cnfDoRule(struct cnfrule *cnfrule)
 {
 	rule_t *pRule;
@@ -465,6 +463,7 @@ finalize_it:
 	//TODO: do something with error states
 	cnfruleDestruct(cnfrule);
 }
+#endif
 
 void cnfDoScript(struct cnfstmt *script)
 {

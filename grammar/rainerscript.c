@@ -37,6 +37,7 @@
 #include <libestr.h>
 #include "rsyslog.h"
 #include "rainerscript.h"
+#include "conf.h"
 #include "parserif.h"
 #include "grammar.h"
 #include "queue.h"
@@ -46,6 +47,37 @@
 
 DEFobjCurrIf(obj)
 DEFobjCurrIf(regexp)
+
+static char*
+getFIOPName(unsigned iFIOP)
+{
+	char *pRet;
+	switch(iFIOP) {
+		case FIOP_CONTAINS:
+			pRet = "contains";
+			break;
+		case FIOP_ISEQUAL:
+			pRet = "isequal";
+			break;
+		case FIOP_STARTSWITH:
+			pRet = "startswith";
+			break;
+		case FIOP_REGEX:
+			pRet = "regex";
+			break;
+		case FIOP_EREREGEX:
+			pRet = "ereregex";
+			break;
+		case FIOP_ISEMPTY:
+			pRet = "isempty";
+			break;
+		default:
+			pRet = "NOP";
+			break;
+	}
+	return pRet;
+}
+
 
 void
 readConfFile(FILE *fp, es_str_t **str)
@@ -1531,26 +1563,42 @@ cnfstmtPrint(struct cnfstmt *root, int indent)
 			break;
 		case S_IF:
 			doIndent(indent); dbgprintf("IF\n");
-			cnfexprPrint(stmt->d.cond.expr, indent+1);
+			cnfexprPrint(stmt->d.s_if.expr, indent+1);
 			doIndent(indent); dbgprintf("THEN\n");
-			cnfstmtPrint(stmt->d.cond.t_then, indent+1);
-			if(stmt->d.cond.t_else != NULL) {
+			cnfstmtPrint(stmt->d.s_if.t_then, indent+1);
+			if(stmt->d.s_if.t_else != NULL) {
 				doIndent(indent); dbgprintf("ELSE\n");
-				cnfstmtPrint(stmt->d.cond.t_else, indent+1);
+				cnfstmtPrint(stmt->d.s_if.t_else, indent+1);
 			}
 			doIndent(indent); dbgprintf("END IF\n");
 			break;
 		case S_PRIFILT:
 			doIndent(indent); dbgprintf("PRIFILT '%s'\n", stmt->printable);
 			//cnfexprPrint(stmt->d.cond.expr, indent+1);
-			cnfstmtPrint(stmt->d.cond.t_then, indent+1);
+			cnfstmtPrint(stmt->d.s_prifilt.t_then, indent+1);
 			doIndent(indent); dbgprintf("END PRIFILT\n");
 			break;
 		case S_PROPFILT:
 			doIndent(indent); dbgprintf("PROPFILT\n");
-			cnfexprPrint(stmt->d.cond.expr, indent+1);
+			doIndent(indent); dbgprintf("\tProperty.: '%s'\n",
+				propIDToName(stmt->d.s_propfilt.propID));
+			if(stmt->d.s_propfilt.propName != NULL) {
+				char *cstr;
+				cstr = es_str2cstr(stmt->d.s_propfilt.propName, NULL);
+				doIndent(indent);
+				dbgprintf("\tCEE-Prop.: '%s'\n", cstr);
+				free(cstr);
+			}
+			doIndent(indent); dbgprintf("\tOperation: ");
+			if(stmt->d.s_propfilt.isNegated)
+				dbgprintf("NOT ");
+			dbgprintf("'%s'\n", getFIOPName(stmt->d.s_propfilt.operation));
+			if(stmt->d.s_propfilt.pCSCompValue != NULL) {
+				doIndent(indent); dbgprintf("\tValue....: '%s'\n",
+				       rsCStrGetSzStrNoNULL(stmt->d.s_propfilt.pCSCompValue));
+			}
 			doIndent(indent); dbgprintf("THEN\n");
-			cnfstmtPrint(stmt->d.cond.t_then, indent+1);
+			cnfstmtPrint(stmt->d.s_propfilt.t_then, indent+1);
 			doIndent(indent); dbgprintf("END PROPFILT\n");
 			break;
 		default:
@@ -1601,6 +1649,30 @@ cnfstmtNew(unsigned s_type)
 	if((cnfstmt = malloc(sizeof(struct cnfstmt))) != NULL) {
 		cnfstmt->nodetype = s_type;
 		cnfstmt->next = NULL;
+	}
+	return cnfstmt;
+}
+
+struct cnfstmt *
+cnfstmtNewPRIFILT(char *prifilt, struct cnfstmt *t_then)
+{
+	struct cnfstmt* cnfstmt;
+	if((cnfstmt = cnfstmtNew(S_PRIFILT)) != NULL) {
+		cnfstmt->printable = (uchar*)strdup(prifilt);
+		cnfstmt->d.s_prifilt.t_then = t_then;
+		DecodePRIFilter((uchar*)prifilt, cnfstmt->d.s_prifilt.pmask);
+	}
+	return cnfstmt;
+}
+
+struct cnfstmt *
+cnfstmtNewPROPFILT(char *propfilt, struct cnfstmt *t_then)
+{
+	struct cnfstmt* cnfstmt;
+	if((cnfstmt = cnfstmtNew(S_PROPFILT)) != NULL) {
+		cnfstmt->printable = (uchar*)strdup(propfilt);
+		cnfstmt->d.s_propfilt.t_then = t_then;
+		DecodePropFilter((uchar*)propfilt, cnfstmt);
 	}
 	return cnfstmt;
 }

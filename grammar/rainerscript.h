@@ -3,7 +3,14 @@
 #include <stdio.h>
 #include <libestr.h>
 #include <typedefs.h>
+#include <sys/types.h>
+#include <regex.h>
+//#include "stringbuf.h"
 
+/* TODO: make this hack cleaner... we have circular definitions, so we need: */
+
+
+#define	LOG_NFACILITIES	24	/* current number of syslog facilities */
 #define CNFFUNC_MAX_ARGS 32
 	/**< maximum number of arguments that any function can have (among
 	 *   others, this is used to size data structures).
@@ -163,7 +170,20 @@ struct cnfstmt {	/* base statement, for simple types */
 			struct cnfexpr *expr;
 			struct cnfstmt *t_then;
 			struct cnfstmt *t_else;
-		} cond;
+		} s_if;
+		struct {
+			uchar pmask[LOG_NFACILITIES+1];	/* priority mask */
+			struct cnfstmt *t_then;
+		} s_prifilt;
+		struct {
+			fiop_t operation;
+			regex_t *regex_cache;/* cache for compiled REs, if used */
+			struct cstr_s *pCSCompValue;/* value to "compare" against */
+			sbool isNegated;
+			uintTiny propID;/* ID of the requested property */
+			es_str_t *propName;/* name of property for CEE-based filters */
+			struct cnfstmt *t_then;
+		} s_propfilt;
 		struct action_s *act;
 	} d;
 };
@@ -297,7 +317,10 @@ void cnfcfsyslinelstDestruct(struct cnfcfsyslinelst *cfslst);
 struct cnfstmt * cnfstmtNew(unsigned s_type);
 void cnfstmtPrint(struct cnfstmt *stmt, int indent);
 struct cnfstmt* scriptAddStmt(struct cnfstmt *root, struct cnfstmt *s);
+struct objlst* objlstAdd(struct objlst *root, struct cnfobj *o);
 char *rmLeadingSpace(char *s);
+struct cnfstmt * cnfstmtNewPRIFILT(char *prifilt, struct cnfstmt *t_then);
+struct cnfstmt * cnfstmtNewPROPFILT(char *propfilt, struct cnfstmt *t_then);
 rsRetVal initRainerscript(void);
 
 /* debug helper */
