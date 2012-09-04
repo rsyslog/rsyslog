@@ -130,6 +130,25 @@ objlstAdd(struct objlst *root, struct cnfobj *o)
 	return root;
 }
 
+/* add stmt to current script, always return root stmt pointer */
+struct cnfstmt*
+scriptAddStmt(struct cnfstmt *root, struct cnfstmt *s)
+{
+	struct cnfstmt *l;
+dbgprintf("RRRR: scriptAddStmt(%p, %p): ", root, s);
+	
+	if(root == NULL) {
+		root = s;
+dbgprintf("root set to %p\n", s);
+	} else { /* find last, linear search ok, as only during config phase */
+		for(l = root ; l->next != NULL ; l = l->next)
+			;
+		l->next = s;
+dbgprintf("%p->next = %p\n", l, s);
+	}
+	return root;
+}
+
 void
 objlstDestruct(struct objlst *lst)
 {
@@ -1498,45 +1517,47 @@ cnfexprPrint(struct cnfexpr *expr, int indent)
 	}
 }
 void
-cnfstmtPrint(struct cnfstmt *stmt, int indent)
+cnfstmtPrint(struct cnfstmt *root, int indent)
 {
+	struct cnfstmt *stmt;
 	//dbgprintf("stmt %p, indent %d, type '%c'\n", expr, indent, expr->nodetype);
-	switch(stmt->nodetype) {
-	case S_STOP:
-		doIndent(indent); dbgprintf("STOP\n");
-		break;
-	case S_ACT:
-		doIndent(indent); dbgprintf("ACTION %p\n", stmt->d.act);
-		break;
-	case S_IF:
-		doIndent(indent); dbgprintf("IF\n");
-		cnfexprPrint(stmt->d.cond.expr, indent+1);
-		doIndent(indent); dbgprintf("THEN\n");
-		cnfstmtPrint(stmt->d.cond.t_then, indent+1);
-		if(stmt->d.cond.t_else != NULL) {
-			doIndent(indent); dbgprintf("ELSE\n");
-			cnfstmtPrint(stmt->d.cond.t_else, indent+1);
+	for(stmt = root ; stmt != NULL ; stmt = stmt->next) {
+		switch(stmt->nodetype) {
+		case S_STOP:
+			doIndent(indent); dbgprintf("STOP\n");
+			break;
+		case S_ACT:
+			doIndent(indent); dbgprintf("ACTION %p (%s)\n", stmt->d.act, stmt->printable);
+			break;
+		case S_IF:
+			doIndent(indent); dbgprintf("IF\n");
+			cnfexprPrint(stmt->d.cond.expr, indent+1);
+			doIndent(indent); dbgprintf("THEN\n");
+			cnfstmtPrint(stmt->d.cond.t_then, indent+1);
+			if(stmt->d.cond.t_else != NULL) {
+				doIndent(indent); dbgprintf("ELSE\n");
+				cnfstmtPrint(stmt->d.cond.t_else, indent+1);
+			}
+			doIndent(indent); dbgprintf("END IF\n");
+			break;
+		case S_PRIFILT:
+			doIndent(indent); dbgprintf("PRIFILT '%s'\n", stmt->printable);
+			//cnfexprPrint(stmt->d.cond.expr, indent+1);
+			cnfstmtPrint(stmt->d.cond.t_then, indent+1);
+			doIndent(indent); dbgprintf("END PRIFILT\n");
+			break;
+		case S_PROPFILT:
+			doIndent(indent); dbgprintf("PROPFILT\n");
+			cnfexprPrint(stmt->d.cond.expr, indent+1);
+			doIndent(indent); dbgprintf("THEN\n");
+			cnfstmtPrint(stmt->d.cond.t_then, indent+1);
+			doIndent(indent); dbgprintf("END PROPFILT\n");
+			break;
+		default:
+			dbgprintf("error: unknown stmt type %u\n",
+				(unsigned) stmt->nodetype);
+			break;
 		}
-		doIndent(indent); dbgprintf("END IF\n");
-		break;
-	case S_PRIFILT:
-		doIndent(indent); dbgprintf("PRIFILT '%s'\n", stmt->d.cond.printable);
-		//cnfexprPrint(stmt->d.cond.expr, indent+1);
-		doIndent(indent); dbgprintf("THEN\n");
-		cnfstmtPrint(stmt->d.cond.t_then, indent+1);
-		doIndent(indent); dbgprintf("END PRIFILT\n");
-		break;
-	case S_PROPFILT:
-		doIndent(indent); dbgprintf("PROPFILT\n");
-		cnfexprPrint(stmt->d.cond.expr, indent+1);
-		doIndent(indent); dbgprintf("THEN\n");
-		cnfstmtPrint(stmt->d.cond.t_then, indent+1);
-		doIndent(indent); dbgprintf("END PROPFILT\n");
-		break;
-	default:
-		dbgprintf("error: unknown stmt type %u\n",
-			(unsigned) stmt->nodetype);
-		break;
 	}
 }
 
@@ -1871,6 +1892,15 @@ cstrPrint(char *text, es_str_t *estr)
 	str = es_str2cstr(estr, NULL);
 	dbgprintf("%s%s", text, str);
 	free(str);
+}
+
+char *
+rmLeadingSpace(char *s)
+{
+	char *p;
+	for(p = s ; *p && isspace(*p) ; ++p)
+		;
+	return(p);
 }
 
 /* init must be called once before any parsing of the script files start */

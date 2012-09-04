@@ -145,8 +145,8 @@ nvlst:					{ $$ = NULL; }
 	| nvlst nv 			{ $2->next = $1; $$ = $2; }
 nv:	NAME '=' VALUE 			{ $$ = nvlstNew($1, $3); }
 script:	  stmt				{ $$ = $1; dbgprintf("RRRR: root stmt\n"); }
-	| script stmt			{ $2->next = $1; $$ = $2; dbgprintf("RRRR: stmt in list\n"); }
-stmt:	  actlst			{ $$ = $1; dbgprintf("RRRR: have stmt:actlst\n"); }
+	| script stmt			{ $$ = scriptAddStmt($1, $2); dbgprintf("RRRR: stmt in list:\n");cnfstmtPrint($2, 0);dbgprintf("\n"); }
+stmt:	  actlst			{ $$ = $1; dbgprintf("RRRR: have stmt:actlst %p\n", $1); }
 	| STOP				{ $$ = cnfstmtNew(S_STOP);
 					  dbgprintf("RRRR: have STOP\n"); }
 	| IF expr THEN block 		{ $$ = cnfstmtNew(S_IF);
@@ -160,20 +160,24 @@ stmt:	  actlst			{ $$ = $1; dbgprintf("RRRR: have stmt:actlst\n"); }
 					  $$->d.cond.t_else = $6;
 					  dbgprintf("RRRR: have s_if \n"); }
 	| PRIFILT block			{ $$ = cnfstmtNew(S_PRIFILT);
-					  $$->d.cond.printable = $1;
+					  $$->printable = $1;
 					  $$->d.cond.expr = $1;
 					  $$->d.cond.t_then = $2;
-					  dbgprintf("RRRR: have s_prifilt\n"); }
+					  dbgprintf("RRRR: have s_prifilt %p\n", $2);cnfstmtPrint($2, 0);dbgprintf("\n");  }
 	| PROPFILT block		{ $$ = cnfstmtNew(S_PROPFILT);
 					  $$->d.cond.expr = $1;
 					  $$->d.cond.t_then = $2;
 					  dbgprintf("RRRR: have s_propfilt\n"); }
-block:    stmt				{ $$ = $1; dbgprintf("RRRR: have block:stmt\n"); }
+block:    stmt				{ $$ = $1; dbgprintf("RRRR: have block:stmt %p\n", $1); }
 	| '{' script '}'		{ $$ = $2; dbgprintf("RRRR: have block:script\n"); }
-actlst:	  s_act				{ $$ = $1; dbgprintf("RRRR: have s_act\n"); }
-	| actlst '&' s_act 		{ $3->next = $1; $$ = $3; dbgprintf("RRRR: have actlst actlst:s_act\n"); }
-s_act:	  BEGIN_ACTION nvlst ENDOBJ	{ $$ = cnfstmtNew(S_ACT); dbgprintf("RRRR: action object\n"); }
-	| LEGACY_ACTION			{ $$ = cnfstmtNew(S_ACT); dbgprintf("RRRR: legacy action\n"); }
+actlst:	  s_act				{ $$ = $1; dbgprintf("RRRR: have s_act, %p\n", $1); }
+	| actlst '&' s_act 		{ $$ = scriptAddStmt($1, $3); dbgprintf("RRRR: have actlst actlst:s_act\n"); }
+s_act:	  BEGIN_ACTION nvlst ENDOBJ	{ $$ = cnfstmtNew(S_ACT);
+					  $$->printable="action()";
+					  dbgprintf("RRRR: action object\n"); }
+	| LEGACY_ACTION			{ $$ = cnfstmtNew(S_ACT);
+					  $$->printable = $1;
+					  dbgprintf("RRRR: legacy action\n"); }
 /*
 rule:	  PRIFILT actlst		{ $$ = cnfruleNew(CNFFILT_PRI, $2); $$->filt.s = $1; }
 	| PROPFILT actlst		{ $$ = cnfruleNew(CNFFILT_PROP, $2); $$->filt.s = $1; }

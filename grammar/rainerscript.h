@@ -157,10 +157,10 @@ struct cnfrule {
 struct cnfstmt {	/* base statement, for simple types */
 	unsigned nodetype;
 	struct cnfstmt *next;
+	uchar *printable; /* printable text for debugging */
 	union {
 		struct {
 			struct cnfexpr *expr;
-			uchar *printable; /* printable expr for debugging */
 			struct cnfstmt *t_then;
 			struct cnfstmt *t_else;
 		} cond;
@@ -296,6 +296,8 @@ void cnfparamvalsDestruct(struct cnfparamvals *paramvals, struct cnfparamblk *bl
 void cnfcfsyslinelstDestruct(struct cnfcfsyslinelst *cfslst);
 struct cnfstmt * cnfstmtNew(unsigned s_type);
 void cnfstmtPrint(struct cnfstmt *stmt, int indent);
+struct cnfstmt* scriptAddStmt(struct cnfstmt *root, struct cnfstmt *s);
+char *rmLeadingSpace(char *s);
 rsRetVal initRainerscript(void);
 
 /* debug helper */
