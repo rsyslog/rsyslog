@@ -1519,8 +1519,8 @@ cnfstmtPrint(struct cnfstmt *stmt, int indent)
 		doIndent(indent); dbgprintf("END IF\n");
 		break;
 	case S_PRIFILT:
-		doIndent(indent); dbgprintf("PRIFILT\n");
-		cnfexprPrint(stmt->d.cond.expr, indent+1);
+		doIndent(indent); dbgprintf("PRIFILT '%s'\n", stmt->d.cond.printable);
+		//cnfexprPrint(stmt->d.cond.expr, indent+1);
 		doIndent(indent); dbgprintf("THEN\n");
 		cnfstmtPrint(stmt->d.cond.t_then, indent+1);
 		doIndent(indent); dbgprintf("END PRIFILT\n");

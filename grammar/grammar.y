@@ -53,7 +53,7 @@ extern int yyerror(char*);
 	struct objlst *objlst;
 	struct cnfactlst *actlst;
 	struct cnfexpr *expr;
-	struct cnfrule *rule;
+	/*struct cnfrule *rule;*/
 	struct cnffunc *func;
 	struct cnffparamlst *fparams;
 }
@@ -102,7 +102,7 @@ extern int yyerror(char*);
 %type <actlst> block
 */
 %type <expr> expr
-%type <stmt> stmt block script
+%type <stmt> stmt s_act actlst block script
 /*
 %type <rule> rule
 %type <rule> scriptfilt
@@ -146,7 +146,7 @@ nvlst:					{ $$ = NULL; }
 nv:	NAME '=' VALUE 			{ $$ = nvlstNew($1, $3); }
 script:	  stmt				{ $$ = $1; dbgprintf("RRRR: root stmt\n"); }
 	| script stmt			{ $2->next = $1; $$ = $2; dbgprintf("RRRR: stmt in list\n"); }
-stmt:	  s_act				{ $$ = cnfstmtNew(S_ACT); dbgprintf("RRRR: have s_act\n"); }
+stmt:	  actlst			{ $$ = $1; dbgprintf("RRRR: have stmt:actlst\n"); }
 	| STOP				{ $$ = cnfstmtNew(S_STOP);
 					  dbgprintf("RRRR: have STOP\n"); }
 	| IF expr THEN block 		{ $$ = cnfstmtNew(S_IF);
@@ -160,6 +160,7 @@ stmt:	  s_act				{ $$ = cnfstmtNew(S_ACT); dbgprintf("RRRR: have s_act\n"); }
 					  $$->d.cond.t_else = $6;
 					  dbgprintf("RRRR: have s_if \n"); }
 	| PRIFILT block			{ $$ = cnfstmtNew(S_PRIFILT);
+					  $$->d.cond.printable = $1;
 					  $$->d.cond.expr = $1;
 					  $$->d.cond.t_then = $2;
 					  dbgprintf("RRRR: have s_prifilt\n"); }
@@ -169,6 +170,10 @@ stmt:	  s_act				{ $$ = cnfstmtNew(S_ACT); dbgprintf("RRRR: have s_act\n"); }
 					  dbgprintf("RRRR: have s_propfilt\n"); }
 block:    stmt				{ $$ = $1; dbgprintf("RRRR: have block:stmt\n"); }
 	| '{' script '}'		{ $$ = $2; dbgprintf("RRRR: have block:script\n"); }
+actlst:	  s_act				{ $$ = $1; dbgprintf("RRRR: have s_act\n"); }
+	| actlst '&' s_act 		{ $3->next = $1; $$ = $3; dbgprintf("RRRR: have actlst actlst:s_act\n"); }
+s_act:	  BEGIN_ACTION nvlst ENDOBJ	{ $$ = cnfstmtNew(S_ACT); dbgprintf("RRRR: action object\n"); }
+	| LEGACY_ACTION			{ $$ = cnfstmtNew(S_ACT); dbgprintf("RRRR: legacy action\n"); }
 /*
 rule:	  PRIFILT actlst		{ $$ = cnfruleNew(CNFFILT_PRI, $2); $$->filt.s = $1; }
 	| PROPFILT actlst		{ $$ = cnfruleNew(CNFFILT_PROP, $2); $$->filt.s = $1; }
@@ -185,8 +190,6 @@ actlst:	  act 	 			{ $$=$1; }
 	| actlst cfsysline		{ $$ = cnfactlstAddSysline($1, $2); }
 	| '{' block '}'			{ $$ = $2; }
 */
-s_act:	  BEGIN_ACTION nvlst ENDOBJ	{ dbgprintf("RRRR: action object\n"); }
-	| LEGACY_ACTION			{ dbgprintf("RRRR: legacy action\n"); }
 expr:	  expr AND expr			{ $$ = cnfexprNew(AND, $1, $3); }
 	| expr OR expr			{ $$ = cnfexprNew(OR, $1, $3); }
 	| NOT expr			{ $$ = cnfexprNew(NOT, NULL, $2); }

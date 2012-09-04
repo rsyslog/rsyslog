@@ -160,6 +160,7 @@ struct cnfstmt {	/* base statement, for simple types */
 	union {
 		struct {
 			struct cnfexpr *expr;
+			uchar *printable; /* printable expr for debugging */
 			struct cnfstmt *t_then;
 			struct cnfstmt *t_else;
 		} cond;
