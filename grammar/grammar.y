@@ -161,12 +161,8 @@ block:    stmt				{ $$ = $1; }
 	| '{' script '}'		{ $$ = $2; }
 actlst:	  s_act				{ $$ = $1; }
 	| actlst '&' s_act 		{ $$ = scriptAddStmt($1, $3); }
-s_act:	  BEGIN_ACTION nvlst ENDOBJ	{ $$ = cnfstmtNewAct($2);
-					  $$->printable="action()";
-					  dbgprintf("RRRR: action object\n"); }
-	| LEGACY_ACTION			{ $$ = cnfstmtNew(S_ACT);
-					  $$->printable = (uchar*) $1;
-					  dbgprintf("RRRR: legacy action\n"); }
+s_act:	  BEGIN_ACTION nvlst ENDOBJ	{ $$ = cnfstmtNewAct($2); }
+	| LEGACY_ACTION			{ $$ = cnfstmtNewLegaAct($1); }
 expr:	  expr AND expr			{ $$ = cnfexprNew(AND, $1, $3); }
 	| expr OR expr			{ $$ = cnfexprNew(OR, $1, $3); }
 	| NOT expr			{ $$ = cnfexprNew(NOT, NULL, $2); }

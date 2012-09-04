@@ -39,6 +39,7 @@
 #include "rainerscript.h"
 #include "conf.h"
 #include "parserif.h"
+#include "rsconf.h"
 #include "grammar.h"
 #include "queue.h"
 #include "srUtils.h"
@@ -1555,6 +1556,9 @@ cnfstmtPrint(struct cnfstmt *root, int indent)
 	//dbgprintf("stmt %p, indent %d, type '%c'\n", expr, indent, expr->nodetype);
 	for(stmt = root ; stmt != NULL ; stmt = stmt->next) {
 		switch(stmt->nodetype) {
+		case S_NOP:
+			doIndent(indent); dbgprintf("NOP\n");
+			break;
 		case S_STOP:
 			doIndent(indent); dbgprintf("STOP\n");
 			break;
@@ -1691,6 +1695,27 @@ cnfstmtNewAct(struct nvlst *lst)
 		goto done;
 	}
 	cnfstmt->printable = (uchar*)"action()";
+done:	return cnfstmt;
+}
+
+struct cnfstmt *
+cnfstmtNewLegaAct(uchar *actline)
+{
+	struct cnfstmt* cnfstmt;
+	rsRetVal localRet;
+	if((cnfstmt = cnfstmtNew(S_ACT)) == NULL) 
+		goto done;
+	cnfstmt->printable = (uchar*)strdup((char*)actline);
+	localRet = cflineDoAction(loadConf, &actline, &cnfstmt->d.act);
+	if(localRet != RS_RET_OK && localRet != RS_RET_OK_WARN) {
+		parser_errmsg("%s occured in file '%s' around line %d",
+			      (localRet == RS_RET_OK_WARN) ? "warnings" : "errors",
+			      cnfcurrfn, yylineno);
+		if(localRet != RS_RET_OK_WARN) {
+			cnfstmt->nodetype = S_NOP; /* disable action! */
+			goto done;
+		}
+	}
 done:	return cnfstmt;
 }
 

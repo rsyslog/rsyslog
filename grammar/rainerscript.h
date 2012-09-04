@@ -323,6 +323,7 @@ char *rmLeadingSpace(char *s);
 struct cnfstmt * cnfstmtNewPRIFILT(char *prifilt, struct cnfstmt *t_then);
 struct cnfstmt * cnfstmtNewPROPFILT(char *propfilt, struct cnfstmt *t_then);
 struct cnfstmt * cnfstmtNewAct(struct nvlst *lst);
+struct cnfstmt * cnfstmtNewLegaAct(uchar *actline);
 rsRetVal initRainerscript(void);
 
 /* debug helper */
