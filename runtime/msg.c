@@ -2420,16 +2420,20 @@ getCEEPropVal(msg_t *pM, es_str_t *propName, uchar **pRes, int *buflen, unsigned
 	if(*pbMustBeFreed)
 		free(*pRes);
 	*pRes = NULL;
-dbgprintf("AAAA: enter getCEEProp\n");
+dbgprintf("AAAA: enter getCEEPropVal\n");
 	// TODO: mutex?
 	if(pM->json == NULL) goto finalize_it;
 
-	name = (uchar*)es_str2cstr(propName, NULL);
+	if(!es_strbufcmp(propName, (uchar*)"!", 1)) {
+		field = pM->json;
+	} else {
+		name = (uchar*)es_str2cstr(propName, NULL);
 dbgprintf("AAAA: name to search '%s'\n", name);
-	leaf = jsonPathGetLeaf(name, ustrlen(name));
+		leaf = jsonPathGetLeaf(name, ustrlen(name));
 dbgprintf("AAAA: leaf '%s'\n", leaf);
-	CHKiRet(jsonPathFindParent(pM, name, leaf, &parent, 1));
-	field = json_object_object_get(parent, (char*)leaf);
+		CHKiRet(jsonPathFindParent(pM, name, leaf, &parent, 1));
+		field = json_object_object_get(parent, (char*)leaf);
+	}
 	*pRes = (uchar*) strdup(json_object_get_string(field));
 dbgprintf("AAAA: json_object_get_string() returns '%s'\n", *pRes);
 	*buflen = (int) ustrlen(*pRes);
@@ -2462,6 +2466,10 @@ dbgprintf("AAAA: enter getCEEPropJSON\n");
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}
 
+	if(!es_strbufcmp(propName, (uchar*)"!", 1)) {
+		*pjson = pM->json;
+		FINALIZE;
+	}
 	name = (uchar*)es_str2cstr(propName, NULL);
 dbgprintf("AAAA: name to search '%s'\n", name);
 	leaf = jsonPathGetLeaf(name, ustrlen(name));

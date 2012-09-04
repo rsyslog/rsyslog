@@ -303,18 +303,13 @@ rsRetVal tplToJSON(struct template *pTpl, msg_t *pMsg, struct json_object **pjso
 			if(pTpe->data.field.propid == PROP_CEE) {
 				localRet = msgGetCEEPropJSON(pMsg, pTpe->data.field.propName, &jsonf);
 				if(localRet == RS_RET_OK) {
-					json_object_object_add(json, (char*)pTpe->fieldName, jsonf);
+					json_object_object_add(json, (char*)pTpe->fieldName, json_object_get(jsonf));
 				} else {
 					DBGPRINTF("tplToJSON: error %d looking up property\n",
 						  localRet);
-#if 0	/* TODO: as it looks, there currently is no way to define Null field values in json-c...
-	         we need to think how we will handle that.
-	 */
 					if(pTpe->data.field.options.bMandatory) {
-						jsonf = json_object_new(json_type_null); //json_object_new_null();
-						json_object_object_add(json, (char*)pTpe->fieldName, jsonf);
+						json_object_object_add(json, (char*)pTpe->fieldName, NULL);
 					}
-#endif
 				}
 			} else  {
 				pVal = (uchar*) MsgGetProp(pMsg, pTpe, pTpe->data.field.propid,
@@ -1302,7 +1297,7 @@ static rsRetVal
 createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 {
 	struct templateEntry *pTpe;
-	cstr_t *name;
+	cstr_t *name = NULL;
 	uchar *outname = NULL;
 	int i;
 	int droplastlf = 0;
@@ -1333,9 +1328,12 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 		if(!pvals[i].bUsed)
 			continue;
 		if(!strcmp(pblkProperty.descr[i].name, "name")) {
-			rsCStrConstructFromszStr(&name,
-				(uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
+			char *tmp;
+
+			tmp = es_str2cstr(pvals[i].val.d.estr, NULL);
+			rsCStrConstructFromszStr(&name, (uchar*)tmp);
 			cstrFinalize(name);
+			free(tmp);
 		} else if(!strcmp(pblkProperty.descr[i].name, "droplastlf")) {
 			droplastlf = pvals[i].val.d.n;
 		} else if(!strcmp(pblkProperty.descr[i].name, "mandatory")) {
@@ -1542,7 +1540,7 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 		pTpe->data.field.options.bSecPathReplace = 1;
 		break;
 	}
-	pTpe->fieldName = ustrdup(outname);
+	pTpe->fieldName = outname;
 	if(outname != NULL)
 		pTpe->lenFieldName = ustrlen(outname);
 	pTpe->data.field.eDateFormat = datefmt;
@@ -1584,6 +1582,10 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 	}
 
 finalize_it:
+	if(pvals != NULL)
+		cnfparamvalsDestruct(pvals, &pblkProperty);
+	if(name != NULL)
+		rsCStrDestruct(&name);
 	RETiRet;
 }
 
@@ -1767,6 +1769,8 @@ tplProcessCnf(struct cnfobj *o)
 		pTpl->optFormatEscape = JSON_ESCAPE;
 
 finalize_it:
+	if(pvals != NULL)
+		cnfparamvalsDestruct(pvals, &pblk);
 	if(iRet != RS_RET_OK) {
 		if(pTpl != NULL) {
 			/* we simply make the template defunct in this case by setting

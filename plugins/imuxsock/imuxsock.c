@@ -641,14 +641,12 @@ getTrustedProp(struct ucred *cred, char *propName, uchar *buf, size_t lenBuf, in
 
 	if((fd = open(namebuf, O_RDONLY)) == -1) {
 		DBGPRINTF("error reading '%s'\n", namebuf);
-		*lenProp = 0;
-		FINALIZE;
+		ABORT_FINALIZE(RS_RET_ERR);
 	}
 	if((lenRead = read(fd, buf, lenBuf - 1)) == -1) {
 		DBGPRINTF("error reading file data for '%s'\n", namebuf);
-		*lenProp = 0;
 		close(fd);
-		FINALIZE;
+		ABORT_FINALIZE(RS_RET_ERR);
 	}
 	
 	/* we strip after the first \n */
@@ -684,8 +682,7 @@ getTrustedExe(struct ucred *cred, uchar *buf, size_t lenBuf, int* lenProp)
 
 	if((lenRead = readlink(namebuf, (char*)buf, lenBuf - 1)) == -1) {
 		DBGPRINTF("error reading link '%s'\n", namebuf);
-		*lenProp = 0;
-		FINALIZE;
+		ABORT_FINALIZE(RS_RET_ERR);
 	}
 	
 	buf[lenRead] = '\0';
@@ -820,15 +817,18 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 			json_object_object_add(json, "uid", jval);
 			jval = json_object_new_int(cred->gid);
 			json_object_object_add(json, "gid", jval);
-			getTrustedProp(cred, "comm", propBuf, sizeof(propBuf), &lenProp);
-			jval = json_object_new_string((char*)propBuf);
-			json_object_object_add(json, "appname", jval);
-			getTrustedExe(cred, propBuf, sizeof(propBuf), &lenProp);
-			jval = json_object_new_string((char*)propBuf);
-			json_object_object_add(json, "exe", jval);
-			getTrustedProp(cred, "cmdline", propBuf, sizeof(propBuf), &lenProp);
-			jval = json_object_new_string((char*)propBuf);
-			json_object_object_add(json, "cmd", jval);
+			if(getTrustedProp(cred, "comm", propBuf, sizeof(propBuf), &lenProp) == RS_RET_OK) {
+				jval = json_object_new_string((char*)propBuf);
+				json_object_object_add(json, "appname", jval);
+			}
+			if(getTrustedExe(cred, propBuf, sizeof(propBuf), &lenProp) == RS_RET_OK) {
+				jval = json_object_new_string((char*)propBuf);
+				json_object_object_add(json, "exe", jval);
+			}
+			if(getTrustedProp(cred, "cmdline", propBuf, sizeof(propBuf), &lenProp) == RS_RET_OK) {
+				jval = json_object_new_string((char*)propBuf);
+				json_object_object_add(json, "cmd", jval);
+			}
 		} else {
 			memcpy(pmsgbuf, pRcv, lenRcv);
 			memcpy(pmsgbuf+lenRcv, " @[", 3);
@@ -839,20 +839,17 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 			memcpy(pmsgbuf+toffs, propBuf, lenProp);
 			toffs = toffs + lenProp;
 	
-			getTrustedProp(cred, "comm", propBuf, sizeof(propBuf), &lenProp);
-			if(lenProp) {
+			if(getTrustedProp(cred, "comm", propBuf, sizeof(propBuf), &lenProp) == RS_RET_OK) {
 				memcpy(pmsgbuf+toffs, " _COMM=", 7);
 				memcpy(pmsgbuf+toffs+7, propBuf, lenProp);
 				toffs = toffs + 7 + lenProp;
 			}
-			getTrustedExe(cred, propBuf, sizeof(propBuf), &lenProp);
-			if(lenProp) {
+			if(getTrustedExe(cred, propBuf, sizeof(propBuf), &lenProp) == RS_RET_OK) {
 				memcpy(pmsgbuf+toffs, " _EXE=", 6);
 				memcpy(pmsgbuf+toffs+6, propBuf, lenProp);
 				toffs = toffs + 6 + lenProp;
 			}
-			getTrustedProp(cred, "cmdline", propBuf, sizeof(propBuf), &lenProp);
-			if(lenProp) {
+			if(getTrustedProp(cred, "cmdline", propBuf, sizeof(propBuf), &lenProp) == RS_RET_OK) {
 				memcpy(pmsgbuf+toffs, " _CMDLINE=", 9);
 				toffs = toffs + 9 + 
 					copyescaped(pmsgbuf+toffs+9, propBuf, lenProp);
