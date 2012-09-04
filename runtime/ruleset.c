@@ -11,7 +11,7 @@
  *
  * Module begun 2009-06-10 by Rainer Gerhards
  *
- * Copyright 2009-2011 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2009-2012 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -248,6 +248,20 @@ GetParserList(rsconf_t *conf, msg_t *pMsg)
 }
 
 
+/* Add a script block to the current ruleset */
+static void
+addScript(ruleset_t *pThis, struct cnfstmt *script)
+{
+	if(pThis->last == NULL)
+		pThis->root = pThis->last = script;
+	else {
+		pThis->last->next = script;
+		pThis->last = script;
+	}
+dbgprintf("RRRR: ruleset added script, script total now is:\n");
+	cnfstmtPrint(pThis->root, 0);
+}
+
 /* Add a new rule to the end of the current rule set. We do a number
  * of checks and ignore the rule if it does not pass them.
  */
@@ -378,6 +392,8 @@ doRuleDestruct(void *pData)
  */
 BEGINobjConstruct(ruleset) /* be sure to specify the object type also in END macro! */
 	CHKiRet(llInit(&pThis->llRules, doRuleDestruct, NULL, NULL));
+	pThis->root = NULL;
+	pThis->last = NULL;
 finalize_it:
 ENDobjConstruct(ruleset)
 
@@ -423,6 +439,7 @@ CODESTARTobjDestruct(ruleset)
 	}
 	llDestroy(&pThis->llRules);
 	free(pThis->pszName);
+	// TODO: free rainerscript root (not look at last)
 ENDobjDestruct(ruleset)
 
 
@@ -596,6 +613,7 @@ CODESTARTobjQueryInterface(ruleset)
 	pIf->IterateAllActions = iterateAllActions;
 	pIf->DestructAllActions = destructAllActions;
 	pIf->AddRule = addRule;
+	pIf->AddScript = addScript;
 	pIf->ProcessBatch = processBatch;
 	pIf->SetName = setName;
 	pIf->DebugPrintAll = debugPrintAll;

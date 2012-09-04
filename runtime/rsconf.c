@@ -466,6 +466,14 @@ finalize_it:
 	cnfruleDestruct(cnfrule);
 }
 
+void cnfDoScript(struct cnfstmt *script)
+{
+	// TODO: streamline this, call directly into ruleset from grammar.y
+	// TODO: BSD-Style blocks?
+	dbgprintf("cnf:global:script\n");
+	ruleset.AddScript(ruleset.GetCurrent(loadConf), script);
+}
+
 void cnfDoCfsysline(char *ln)
 {
 	DBGPRINTF("cnf:global:cfsysline: %s\n", ln);

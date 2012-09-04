@@ -126,8 +126,7 @@ extern int yyerror(char*);
  */
 conf:	/* empty (to end recursion) */
 	| conf obj			{ cnfDoObj($2); }
-	| conf stmt			{ dbgprintf("RRRR: top-level stmt:\n");
-					  cnfstmtPrint($2, 0); }
+	| conf stmt			{ cnfDoScript($2); }
 	| conf BSD_TAG_SELECTOR		{ cnfDoBSDTag($2); }
 	| conf BSD_HOST_SELECTOR	{ cnfDoBSDHost($2); }
 obj:	  BEGINOBJ nvlst ENDOBJ 	{ $$ = cnfobjNew($1, $2); }
@@ -144,56 +143,35 @@ constant: BEGIN_CONSTANT nvlst ENDOBJ	{ $$ = cnfobjNew(CNFOBJ_CONSTANT, $2); }
 nvlst:					{ $$ = NULL; }
 	| nvlst nv 			{ $2->next = $1; $$ = $2; }
 nv:	NAME '=' VALUE 			{ $$ = nvlstNew($1, $3); }
-script:	  stmt				{ $$ = $1; dbgprintf("RRRR: root stmt\n"); }
-	| script stmt			{ $$ = scriptAddStmt($1, $2); dbgprintf("RRRR: stmt in list:\n");cnfstmtPrint($2, 0);dbgprintf("\n"); }
-stmt:	  actlst			{ $$ = $1; dbgprintf("RRRR: have stmt:actlst %p\n", $1); }
-	| STOP				{ $$ = cnfstmtNew(S_STOP);
-					  dbgprintf("RRRR: have STOP\n"); }
+script:	  stmt				{ $$ = $1; }
+	| script stmt			{ $$ = scriptAddStmt($1, $2); }
+stmt:	  actlst			{ $$ = $1; }
+	| STOP				{ $$ = cnfstmtNew(S_STOP); }
 	| IF expr THEN block 		{ $$ = cnfstmtNew(S_IF);
 					  $$->d.cond.expr = $2;
 					  $$->d.cond.t_then = $4;
-					  $$->d.cond.t_else = NULL;
-					  dbgprintf("RRRR: have s_if \n"); }
+					  $$->d.cond.t_else = NULL; }
 	| IF expr THEN block ELSE block	{ $$ = cnfstmtNew(S_IF);
 					  $$->d.cond.expr = $2;
 					  $$->d.cond.t_then = $4;
-					  $$->d.cond.t_else = $6;
-					  dbgprintf("RRRR: have s_if \n"); }
+					  $$->d.cond.t_else = $6; }
 	| PRIFILT block			{ $$ = cnfstmtNew(S_PRIFILT);
 					  $$->printable = $1;
 					  $$->d.cond.expr = $1;
-					  $$->d.cond.t_then = $2;
-					  dbgprintf("RRRR: have s_prifilt %p\n", $2);cnfstmtPrint($2, 0);dbgprintf("\n");  }
+					  $$->d.cond.t_then = $2; }
 	| PROPFILT block		{ $$ = cnfstmtNew(S_PROPFILT);
 					  $$->d.cond.expr = $1;
-					  $$->d.cond.t_then = $2;
-					  dbgprintf("RRRR: have s_propfilt\n"); }
-block:    stmt				{ $$ = $1; dbgprintf("RRRR: have block:stmt %p\n", $1); }
-	| '{' script '}'		{ $$ = $2; dbgprintf("RRRR: have block:script\n"); }
-actlst:	  s_act				{ $$ = $1; dbgprintf("RRRR: have s_act, %p\n", $1); }
-	| actlst '&' s_act 		{ $$ = scriptAddStmt($1, $3); dbgprintf("RRRR: have actlst actlst:s_act\n"); }
+					  $$->d.cond.t_then = $2; }
+block:    stmt				{ $$ = $1; }
+	| '{' script '}'		{ $$ = $2; }
+actlst:	  s_act				{ $$ = $1; }
+	| actlst '&' s_act 		{ $$ = scriptAddStmt($1, $3); }
 s_act:	  BEGIN_ACTION nvlst ENDOBJ	{ $$ = cnfstmtNew(S_ACT);
 					  $$->printable="action()";
 					  dbgprintf("RRRR: action object\n"); }
 	| LEGACY_ACTION			{ $$ = cnfstmtNew(S_ACT);
 					  $$->printable = $1;
 					  dbgprintf("RRRR: legacy action\n"); }
-/*
-rule:	  PRIFILT actlst		{ $$ = cnfruleNew(CNFFILT_PRI, $2); $$->filt.s = $1; }
-	| PROPFILT actlst		{ $$ = cnfruleNew(CNFFILT_PROP, $2); $$->filt.s = $1; }
-	| scriptfilt			{ $$ = $1; }
-
-scriptfilt: IF expr THEN actlst		{ $$ = cnfruleNew(CNFFILT_SCRIPT, $4);
-					  $$->filt.expr = $2; }
-block:	  actlst			{ $$ = $1; }
-	| block actlst			{ $2->next = $1; $$ = $2; }
-	/ * v7: | actlst
-	   v7: | block rule  v7 extensions require new rule engine capabilities! * /
-actlst:	  act 	 			{ $$=$1; }
-	| actlst '&' act 		{ $3->next = $1; $$ = $3; }
-	| actlst cfsysline		{ $$ = cnfactlstAddSysline($1, $2); }
-	| '{' block '}'			{ $$ = $2; }
-*/
 expr:	  expr AND expr			{ $$ = cnfexprNew(AND, $1, $3); }
 	| expr OR expr			{ $$ = cnfexprNew(OR, $1, $3); }
 	| NOT expr			{ $$ = cnfexprNew(NOT, NULL, $2); }
