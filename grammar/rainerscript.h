@@ -132,6 +132,7 @@ struct cnfactlst {
 #define S_PROPFILT 4002
 #define S_IF 4003
 #define S_ACT 4004
+#define S_NOP 4005	/* usually used to disable some statement */
 
 enum cnfFiltType { CNFFILT_NONE, CNFFILT_PRI, CNFFILT_PROP, CNFFILT_SCRIPT };
 static inline char*
@@ -321,6 +322,7 @@ struct objlst* objlstAdd(struct objlst *root, struct cnfobj *o);
 char *rmLeadingSpace(char *s);
 struct cnfstmt * cnfstmtNewPRIFILT(char *prifilt, struct cnfstmt *t_then);
 struct cnfstmt * cnfstmtNewPROPFILT(char *propfilt, struct cnfstmt *t_then);
+struct cnfstmt * cnfstmtNewAct(struct nvlst *lst);
 rsRetVal initRainerscript(void);
 
 /* debug helper */

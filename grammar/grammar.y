@@ -161,7 +161,7 @@ block:    stmt				{ $$ = $1; }
 	| '{' script '}'		{ $$ = $2; }
 actlst:	  s_act				{ $$ = $1; }
 	| actlst '&' s_act 		{ $$ = scriptAddStmt($1, $3); }
-s_act:	  BEGIN_ACTION nvlst ENDOBJ	{ $$ = cnfstmtNew(S_ACT);
+s_act:	  BEGIN_ACTION nvlst ENDOBJ	{ $$ = cnfstmtNewAct($2);
 					  $$->printable="action()";
 					  dbgprintf("RRRR: action object\n"); }
 	| LEGACY_ACTION			{ $$ = cnfstmtNew(S_ACT);

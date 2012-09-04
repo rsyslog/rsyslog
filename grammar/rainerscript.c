@@ -1677,6 +1677,23 @@ cnfstmtNewPROPFILT(char *propfilt, struct cnfstmt *t_then)
 	return cnfstmt;
 }
 
+struct cnfstmt *
+cnfstmtNewAct(struct nvlst *lst)
+{
+	struct cnfstmt* cnfstmt;
+	if((cnfstmt = cnfstmtNew(S_ACT)) == NULL) 
+		goto done;
+	if(actionNewInst(lst, &cnfstmt->d.act) != RS_RET_OK) {
+	// TODO:RS_RET_WARN?
+		parser_errmsg("errors occured in file '%s' around line %d",
+			      cnfcurrfn, yylineno);
+		cnfstmt->nodetype = S_NOP; /* disable action! */
+		goto done;
+	}
+	cnfstmt->printable = (uchar*)"action()";
+done:	return cnfstmt;
+}
+
 struct cnfrule *
 cnfruleNew(enum cnfFiltType filttype, struct cnfactlst *actlst)
 {
