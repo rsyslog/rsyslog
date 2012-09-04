@@ -9,7 +9,7 @@
   * cases. So while we hope that cfsysline support can be dropped some time in
   * the future, we will probably keep these useful constructs.
   *
-  * Copyright 2011 Rainer Gerhards and Adiscon GmbH.
+  * Copyright 2011-2012 Rainer Gerhards and Adiscon GmbH.
   *
   * This file is part of the rsyslog runtime library.
   *
@@ -48,6 +48,7 @@ extern int yyerror(char*);
 	es_str_t *estr;
 	enum cnfobjType objType;
 	struct cnfobj *obj;
+	struct cnfstmt *stmt;
 	struct nvlst *nvlst;
 	struct objlst *objlst;
 	struct cnfactlst *actlst;
@@ -75,6 +76,7 @@ extern int yyerror(char*);
 %token <s> BSD_HOST_SELECTOR
 %token IF
 %token THEN
+%token ELSE
 %token OR
 %token AND
 %token NOT
@@ -100,6 +102,7 @@ extern int yyerror(char*);
 %type <actlst> block
 */
 %type <expr> expr
+%type <stmt> stmt block script
 /*
 %type <rule> rule
 %type <rule> scriptfilt
@@ -112,15 +115,9 @@ extern int yyerror(char*);
 %left '*' '/' '%'
 %nonassoc UMINUS NOT
 
-/*%expect 3*/
-/* these shift/reduce conflicts are created by the CFSYSLINE construct, which we
- * unfortunately can not avoid. The problem is that CFSYSLINE can occur both in
- * global context as well as within an action. It's not permitted somewhere else,
- * but this is suficient for conflicts. The "dangling else" built-in resolution
- * works well to solve this issue, so we accept it (it's a wonder that our
- * old style grammar doesn't work at all, so we better do not complain...).
- * Use "bison -v grammar.y" if more conflicts arise and check grammar.output for
- * were exactly these conflicts exits.
+%expect 1 /* dangling else */
+/* If more erors show up, Use "bison -v grammar.y" if more conflicts arise and
+ * check grammar.output for were exactly these conflicts exits.
  */
 %%
 /* note: we use left recursion below, because that saves stack space AND
@@ -129,7 +126,8 @@ extern int yyerror(char*);
  */
 conf:	/* empty (to end recursion) */
 	| conf obj			{ cnfDoObj($2); }
-	| conf stmt			{ dbgprintf("RRRR: top-level stmt"); }
+	| conf stmt			{ dbgprintf("RRRR: top-level stmt:\n");
+					  cnfstmtPrint($2, 0); }
 	| conf BSD_TAG_SELECTOR		{ cnfDoBSDTag($2); }
 	| conf BSD_HOST_SELECTOR	{ cnfDoBSDHost($2); }
 obj:	  BEGINOBJ nvlst ENDOBJ 	{ $$ = cnfobjNew($1, $2); }
@@ -146,15 +144,31 @@ constant: BEGIN_CONSTANT nvlst ENDOBJ	{ $$ = cnfobjNew(CNFOBJ_CONSTANT, $2); }
 nvlst:					{ $$ = NULL; }
 	| nvlst nv 			{ $2->next = $1; $$ = $2; }
 nv:	NAME '=' VALUE 			{ $$ = nvlstNew($1, $3); }
-script:	  stmt				{ dbgprintf("RRRR: root stmt\n"); }
-	| script stmt			{ dbgprintf("RRRR: stmt in list\n"); }
-stmt:	  s_act				{ dbgprintf("RRRR: have s_act\n"); }
-	| STOP				{ dbgprintf("RRRR: have STOP\n"); }
-	| IF expr THEN block 		{ dbgprintf("RRRR: have s_if \n"); }
-	| PRIFILT block			{ dbgprintf("RRRR: have s_prifilt\n"); }
-	| PROPFILT block		{ dbgprintf("RRRR: have s_propfilt\n"); }
-block:    stmt				{ dbgprintf("RRRR: have block:stmt\n"); }
-	| '{' script '}'		{ dbgprintf("RRRR: have block:script\n"); }
+script:	  stmt				{ $$ = $1; dbgprintf("RRRR: root stmt\n"); }
+	| script stmt			{ $2->next = $1; $$ = $2; dbgprintf("RRRR: stmt in list\n"); }
+stmt:	  s_act				{ $$ = cnfstmtNew(S_ACT); dbgprintf("RRRR: have s_act\n"); }
+	| STOP				{ $$ = cnfstmtNew(S_STOP);
+					  dbgprintf("RRRR: have STOP\n"); }
+	| IF expr THEN block 		{ $$ = cnfstmtNew(S_IF);
+					  $$->d.cond.expr = $2;
+					  $$->d.cond.t_then = $4;
+					  $$->d.cond.t_else = NULL;
+					  dbgprintf("RRRR: have s_if \n"); }
+	| IF expr THEN block ELSE block	{ $$ = cnfstmtNew(S_IF);
+					  $$->d.cond.expr = $2;
+					  $$->d.cond.t_then = $4;
+					  $$->d.cond.t_else = $6;
+					  dbgprintf("RRRR: have s_if \n"); }
+	| PRIFILT block			{ $$ = cnfstmtNew(S_PRIFILT);
+					  $$->d.cond.expr = $1;
+					  $$->d.cond.t_then = $2;
+					  dbgprintf("RRRR: have s_prifilt\n"); }
+	| PROPFILT block		{ $$ = cnfstmtNew(S_PROPFILT);
+					  $$->d.cond.expr = $1;
+					  $$->d.cond.t_then = $2;
+					  dbgprintf("RRRR: have s_propfilt\n"); }
+block:    stmt				{ $$ = $1; dbgprintf("RRRR: have block:stmt\n"); }
+	| '{' script '}'		{ $$ = $2; dbgprintf("RRRR: have block:script\n"); }
 /*
 rule:	  PRIFILT actlst		{ $$ = cnfruleNew(CNFFILT_PRI, $2); $$->filt.s = $1; }
 	| PROPFILT actlst		{ $$ = cnfruleNew(CNFFILT_PROP, $2); $$->filt.s = $1; }

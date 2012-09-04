@@ -138,6 +138,7 @@ int fileno(FILE *stream);
   * to tell us the real source line.
   */
 "stop"				{ dbgprintf("STOP\n"); return STOP; }
+"else"				{ dbgprintf("STOP\n"); return ELSE; }
 "preprocfilelinenumber("	{ BEGIN LINENO; }
 <LINENO>[0-9]+			{ yylineno = atoi(yytext) - 1; }
 <LINENO>")"			{ BEGIN INITIAL; }

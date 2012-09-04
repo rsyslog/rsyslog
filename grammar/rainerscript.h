@@ -118,7 +118,14 @@ struct cnfactlst {
  * R - rule
  * S - string
  * V - var
+ * ... plus the S_* #define's below:
  */
+#define S_STOP 4000
+#define S_PRIFILT 4001
+#define S_PROPFILT 4002
+#define S_IF 4003
+#define S_ACT 4004
+
 enum cnfFiltType { CNFFILT_NONE, CNFFILT_PRI, CNFFILT_PROP, CNFFILT_SCRIPT };
 static inline char*
 cnfFiltType2str(enum cnfFiltType filttype)
@@ -145,6 +152,19 @@ struct cnfrule {
 		struct cnfexpr *expr;
 	} filt;
 	struct cnfactlst *actlst;
+};
+
+struct cnfstmt {	/* base statement, for simple types */
+	unsigned nodetype;
+	struct cnfstmt *next;
+	union {
+		struct {
+			struct cnfexpr *expr;
+			struct cnfstmt *t_then;
+			struct cnfstmt *t_else;
+		} cond;
+		struct action_s *act;
+	} d;
 };
 
 struct cnfexpr {
@@ -273,6 +293,8 @@ void cnfparamsPrint(struct cnfparamblk *params, struct cnfparamvals *vals);
 void varDelete(struct var *v);
 void cnfparamvalsDestruct(struct cnfparamvals *paramvals, struct cnfparamblk *blk);
 void cnfcfsyslinelstDestruct(struct cnfcfsyslinelst *cfslst);
+struct cnfstmt * cnfstmtNew(unsigned s_type);
+void cnfstmtPrint(struct cnfstmt *stmt, int indent);
 rsRetVal initRainerscript(void);
 
 /* debug helper */

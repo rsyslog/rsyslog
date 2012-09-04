@@ -107,7 +107,6 @@ objlstNew(struct cnfobj *o)
 		lst->next = NULL;
 		lst->obj = o;
 	}
-dbgprintf("AAAA: creating new objlst\n");
 cnfobjPrint(o);
 
 	return lst;
@@ -1497,6 +1496,48 @@ cnfexprPrint(struct cnfexpr *expr, int indent)
 		break;
 	}
 }
+void
+cnfstmtPrint(struct cnfstmt *stmt, int indent)
+{
+	//dbgprintf("stmt %p, indent %d, type '%c'\n", expr, indent, expr->nodetype);
+	switch(stmt->nodetype) {
+	case S_STOP:
+		doIndent(indent); dbgprintf("STOP\n");
+		break;
+	case S_ACT:
+		doIndent(indent); dbgprintf("ACTION %p\n", stmt->d.act);
+		break;
+	case S_IF:
+		doIndent(indent); dbgprintf("IF\n");
+		cnfexprPrint(stmt->d.cond.expr, indent+1);
+		doIndent(indent); dbgprintf("THEN\n");
+		cnfstmtPrint(stmt->d.cond.t_then, indent+1);
+		if(stmt->d.cond.t_else != NULL) {
+			doIndent(indent); dbgprintf("ELSE\n");
+			cnfstmtPrint(stmt->d.cond.t_else, indent+1);
+		}
+		doIndent(indent); dbgprintf("END IF\n");
+		break;
+	case S_PRIFILT:
+		doIndent(indent); dbgprintf("PRIFILT\n");
+		cnfexprPrint(stmt->d.cond.expr, indent+1);
+		doIndent(indent); dbgprintf("THEN\n");
+		cnfstmtPrint(stmt->d.cond.t_then, indent+1);
+		doIndent(indent); dbgprintf("END PRIFILT\n");
+		break;
+	case S_PROPFILT:
+		doIndent(indent); dbgprintf("PROPFILT\n");
+		cnfexprPrint(stmt->d.cond.expr, indent+1);
+		doIndent(indent); dbgprintf("THEN\n");
+		cnfstmtPrint(stmt->d.cond.t_then, indent+1);
+		doIndent(indent); dbgprintf("END PROPFILT\n");
+		break;
+	default:
+		dbgprintf("error: unknown stmt type %u\n",
+			(unsigned) stmt->nodetype);
+		break;
+	}
+}
 
 struct cnfnumval*
 cnfnumvalNew(long long val)
@@ -1529,6 +1570,17 @@ cnfvarNew(char *name)
 		var->name = name;
 	}
 	return var;
+}
+
+struct cnfstmt *
+cnfstmtNew(unsigned s_type)
+{
+	struct cnfstmt* cnfstmt;
+	if((cnfstmt = malloc(sizeof(struct cnfstmt))) != NULL) {
+		cnfstmt->nodetype = s_type;
+		cnfstmt->next = NULL;
+	}
+	return cnfstmt;
 }
 
 struct cnfrule *
