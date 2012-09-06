@@ -1635,6 +1635,7 @@ cnfstringvalNew(es_str_t *estr)
 	return strval;
 }
 
+
 struct cnfvar*
 cnfvarNew(char *name)
 {
@@ -1657,12 +1658,57 @@ cnfstmtNew(unsigned s_type)
 	return cnfstmt;
 }
 
+void
+cnfstmtDestruct(struct cnfstmt *root)
+{
+	struct cnfstmt *stmt, *todel;
+	for(stmt = root ; stmt != NULL ; ) {
+		switch(stmt->nodetype) {
+		case S_NOP:
+		case S_STOP:
+			break;
+		case S_ACT:
+dbgprintf("XXXX: destruct action %p\n", stmt->d.act);
+			actionDestruct(stmt->d.act);
+			break;
+		case S_IF:
+			cnfexprDestruct(stmt->d.s_if.expr);
+			if(stmt->d.s_if.t_then != NULL) {
+				cnfstmtDestruct(stmt->d.s_if.t_then);
+			}
+			if(stmt->d.s_if.t_else != NULL) {
+				cnfstmtDestruct(stmt->d.s_if.t_else);
+			}
+			break;
+		case S_PRIFILT:
+			cnfstmtDestruct(stmt->d.s_prifilt.t_then);
+			break;
+		case S_PROPFILT:
+			if(stmt->d.s_propfilt.propName != NULL)
+				es_deleteStr(stmt->d.s_propfilt.propName);
+			if(stmt->d.s_propfilt.regex_cache != NULL)
+				rsCStrRegexDestruct(&stmt->d.s_propfilt.regex_cache);
+			if(stmt->d.s_propfilt.pCSCompValue != NULL)
+				cstrDestruct(&stmt->d.s_propfilt.pCSCompValue);
+			cnfstmtDestruct(stmt->d.s_propfilt.t_then);
+			break;
+		default:
+			dbgprintf("error: unknown stmt type during destruct %u\n",
+				(unsigned) stmt->nodetype);
+			break;
+		}
+		todel = stmt;
+		stmt = stmt->next;
+		free(todel);
+	}
+}
+
 struct cnfstmt *
 cnfstmtNewPRIFILT(char *prifilt, struct cnfstmt *t_then)
 {
 	struct cnfstmt* cnfstmt;
 	if((cnfstmt = cnfstmtNew(S_PRIFILT)) != NULL) {
-		cnfstmt->printable = (uchar*)strdup(prifilt);
+		cnfstmt->printable = (uchar*)prifilt;
 		cnfstmt->d.s_prifilt.t_then = t_then;
 		DecodePRIFilter((uchar*)prifilt, cnfstmt->d.s_prifilt.pmask);
 	}
@@ -1676,6 +1722,9 @@ cnfstmtNewPROPFILT(char *propfilt, struct cnfstmt *t_then)
 	if((cnfstmt = cnfstmtNew(S_PROPFILT)) != NULL) {
 		cnfstmt->printable = (uchar*)strdup(propfilt);
 		cnfstmt->d.s_propfilt.t_then = t_then;
+		cnfstmt->d.s_propfilt.propName = NULL;
+		cnfstmt->d.s_propfilt.regex_cache = NULL;
+		cnfstmt->d.s_propfilt.pCSCompValue = NULL;
 		DecodePropFilter((uchar*)propfilt, cnfstmt);
 	}
 	return cnfstmt;

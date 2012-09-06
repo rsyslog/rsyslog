@@ -665,7 +665,7 @@ CODESTARTobjDestruct(ruleset)
 		parser.DestructParserList(&pThis->pParserLst);
 	}
 	free(pThis->pszName);
-	// TODO: free rainerscript root (not look at last)
+	cnfstmtDestruct(pThis->root);
 ENDobjDestruct(ruleset)
 
 
