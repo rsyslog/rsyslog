@@ -63,7 +63,7 @@ BEGINinterface(nsd) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetMode)(nsd_t *pThis, int mode); /* sets a driver specific mode - see driver doc for details */
 	rsRetVal (*SetAuthMode)(nsd_t *pThis, uchar*); /* sets a driver specific mode - see driver doc for details */
 	rsRetVal (*SetPermPeers)(nsd_t *pThis, permittedPeers_t*); /* sets driver permitted peers for auth needs */
-	void     (*CheckConnection)(nsd_t *pThis);	/* This is a trick mostly for plain tcp syslog */
+	rsRetVal (*CheckConnection)(nsd_t *pThis);	/* This is a trick mostly for plain tcp syslog */
 	rsRetVal (*GetSock)(nsd_t *pThis, int *pSock);
 	rsRetVal (*SetSock)(nsd_t *pThis, int sock);
 	/* GetSock() and SetSock() return an error if the driver does not use plain
@@ -80,9 +80,10 @@ BEGINinterface(nsd) /* name must also be changed in ENDinterface macro! */
 	/* v5 */
 	rsRetVal (*EnableKeepAlive)(nsd_t *pThis);
 ENDinterface(nsd)
-#define nsdCURR_IF_VERSION 5 /* increment whenever you change the interface structure! */
+#define nsdCURR_IF_VERSION 6 /* increment whenever you change the interface structure! */
 /* interface version 4 added GetRemAddr()
  * interface version 5 added EnableKeepAlive() -- rgerhards, 2009-06-02
+ * interface version 6 changed return of CheckConnection from void to rsRetVal -- alorbach, 2012-09-06
  */
 
 /* interface  for the select call */
