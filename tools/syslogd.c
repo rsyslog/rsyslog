@@ -119,7 +119,6 @@
 #include "batch.h"
 #include "unicode-helper.h"
 #include "ruleset.h"
-#include "rule.h"
 #include "net.h"
 #include "prop.h"
 #include "rsconf.h"
@@ -134,7 +133,6 @@ DEFobjCurrIf(datetime) /* TODO: make go away! */
 DEFobjCurrIf(conf)
 DEFobjCurrIf(module)
 DEFobjCurrIf(errmsg)
-DEFobjCurrIf(rule)
 DEFobjCurrIf(ruleset)
 DEFobjCurrIf(prop)
 DEFobjCurrIf(parser)
@@ -1453,8 +1451,6 @@ InitGlobalClasses(void)
 	CHKiRet(objUse(module,   CORE_COMPONENT));
 	pErrObj = "datetime";
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
-	pErrObj = "rule";
-	CHKiRet(objUse(rule,     CORE_COMPONENT));
 	pErrObj = "ruleset";
 	CHKiRet(objUse(ruleset,  CORE_COMPONENT));
 	pErrObj = "conf";
@@ -1508,7 +1504,6 @@ GlobalClassExit(void)
 	objRelease(prop,     CORE_COMPONENT);
 	objRelease(conf,     CORE_COMPONENT);
 	objRelease(ruleset,  CORE_COMPONENT);
-	objRelease(rule,     CORE_COMPONENT);
 	parserClassExit();					/* this is hack, currently core_modules do not get this automatically called */
 	rsconfClassExit();					/* this is hack, currently core_modules do not get this automatically called */
 	objRelease(datetime, CORE_COMPONENT);

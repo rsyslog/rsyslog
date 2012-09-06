@@ -136,23 +136,6 @@ finalize_it:
 }
 
 
-
-/* helper to processBatch(), used to call the configured actions. It is
- * executed from within llExecFunc() of the action list.
- * rgerhards, 2007-08-02
- */
-DEFFUNC_llExecFunc(processBatchDoRules)
-{
-	rsRetVal iRet;
-	ISOBJ_TYPE_assert(pData, rule);
-	DBGPRINTF("Processing next rule\n");
-	iRet = rule.ProcessBatch((rule_t*) pData, (batch_t*) pParam);
-	DBGPRINTF("ruleset: get iRet %d from rule.ProcessMsg()\n", iRet);
-	return iRet;
-}
-
-
-
 /* This function is similar to processBatch(), but works on a batch that
  * contains rules from multiple rulesets. In this case, we can not push
  * the whole batch through the ruleset. Instead, we examine it and
@@ -536,31 +519,6 @@ dbgprintf("RRRR: ruleset added script, script total now is:\n");
 	cnfstmtPrint(pThis->root, 0);
 }
 
-/* Add a new rule to the end of the current rule set. We do a number
- * of checks and ignore the rule if it does not pass them.
- */
-static rsRetVal
-addRule(ruleset_t *pThis, rule_t **ppRule)
-{
-	int iActionCnt;
-	DEFiRet;
-
-	ISOBJ_TYPE_assert(pThis, ruleset);
-	ISOBJ_TYPE_assert(*ppRule, rule);
-
-	CHKiRet(llGetNumElts(&(*ppRule)->llActList, &iActionCnt));
-	if(iActionCnt == 0) {
-		errmsg.LogError(0, NO_ERRCODE, "warning: selector line without actions will be discarded");
-		rule.Destruct(ppRule);
-	} else {
-		CHKiRet(llAppend(&pThis->llRules, NULL, *ppRule));
-		DBGPRINTF("selector line successfully processed, %d actions\n", iActionCnt);
-	}
-
-finalize_it:
-	RETiRet;
-}
-
 
 /* set name for ruleset */
 static rsRetVal setName(ruleset_t *pThis, uchar *pszName)
@@ -747,16 +705,11 @@ rulesetDestructForLinkedList(void *pData)
 	return rulesetDestruct(&pThis);
 }
 
-/* helper for debugPrint(), initiates rule printing */
-DEFFUNC_llExecFunc(doDebugPrintRule)
-{
-	return rule.DebugPrint((rule_t*) pData);
-}
 /* debugprint for the ruleset object */
 BEGINobjDebugPrint(ruleset) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDebugPrint(ruleset)
 	dbgoprint((obj_t*) pThis, "rsyslog ruleset %s:\n", pThis->pszName);
-	llExecFunc(&pThis->llRules, doDebugPrintRule, NULL);
+	cnfstmtPrint(pThis->root, 0);
 ENDobjDebugPrint(ruleset)
 
 
@@ -886,7 +839,6 @@ CODESTARTobjQueryInterface(ruleset)
 
 	pIf->IterateAllActions = iterateAllActions;
 	pIf->DestructAllActions = destructAllActions;
-	pIf->AddRule = addRule;
 	pIf->AddScript = addScript;
 	pIf->ProcessBatch = processBatch;
 	pIf->SetName = setName;
@@ -918,7 +870,7 @@ ENDObjClassExit(ruleset)
 BEGINObjClassInit(ruleset, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
-	CHKiRet(objUse(rule, CORE_COMPONENT));
+//TODO:finally delete!	CHKiRet(objUse(rule, CORE_COMPONENT));
 
 	/* set our own handlers */
 	OBJSetMethodHandler(objMethod_DEBUGPRINT, rulesetDebugPrint);

@@ -61,7 +61,6 @@
 #include "srUtils.h"
 #include "errmsg.h"
 #include "net.h"
-#include "rule.h"
 #include "ruleset.h"
 #include "rsconf.h"
 #include "unicode-helper.h"
@@ -79,7 +78,6 @@ DEFobjStaticHelpers
 DEFobjCurrIf(module)
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(net)
-DEFobjCurrIf(rule)
 DEFobjCurrIf(ruleset)
 
 int bConfStrictScoping = 0;	/* force strict scoping during config processing? */
@@ -798,7 +796,6 @@ CODESTARTObjClassExit(conf)
 	objRelease(module, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(net, LM_NET_FILENAME);
-	objRelease(rule, CORE_COMPONENT);
 	objRelease(ruleset, CORE_COMPONENT);
 ENDObjClassExit(conf)
 
@@ -812,7 +809,6 @@ BEGINAbstractObjClassInit(conf, 1, OBJ_IS_CORE_MODULE) /* class, version - CHANG
 	CHKiRet(objUse(module, CORE_COMPONENT));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(net, LM_NET_FILENAME)); /* TODO: make this dependcy go away! */
-	CHKiRet(objUse(rule, CORE_COMPONENT));
 	CHKiRet(objUse(ruleset, CORE_COMPONENT));
 
  	/* These commands will NOT be supported -- the new v6.3 config system provides

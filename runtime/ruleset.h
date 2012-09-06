@@ -44,9 +44,7 @@ BEGINinterface(ruleset) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Construct)(ruleset_t **ppThis);
 	rsRetVal (*ConstructFinalize)(rsconf_t *conf, ruleset_t __attribute__((unused)) *pThis);
 	rsRetVal (*Destruct)(ruleset_t **ppThis);
-	rsRetVal (*IterateAllActions)(rsconf_t *conf, rsRetVal (*pFunc)(void*, void*), void* pParam);
 	rsRetVal (*DestructAllActions)(rsconf_t *conf);
-	rsRetVal (*AddRule)(ruleset_t *pThis, rule_t **ppRule);
 	rsRetVal (*SetName)(ruleset_t *pThis, uchar *pszName);
 	rsRetVal (*ProcessBatch)(batch_t*);
 	rsRetVal (*GetRuleset)(rsconf_t *conf, ruleset_t **ppThis, uchar*);
@@ -63,6 +61,8 @@ BEGINinterface(ruleset) /* name must also be changed in ENDinterface macro! */
 	 * system uses globals in any case.
 	 */
 	/* v7, 2012-09-04 */
+	/* AddRule() removed */
+	/*TODO:REMOVE*/rsRetVal (*IterateAllActions)(rsconf_t *conf, rsRetVal (*pFunc)(void*, void*), void* pParam);
 	void (*AddScript)(ruleset_t *pThis, struct cnfstmt *script);
 ENDinterface(ruleset)
 #define rulesetCURR_IF_VERSION 7 /* increment whenever you change the interface structure! */

@@ -36,7 +36,6 @@
 #include "rsyslog.h"
 #include "obj.h"
 #include "srUtils.h"
-#include "rule.h"
 #include "ruleset.h"
 #include "modules.h"
 #include "conf.h"
@@ -70,7 +69,6 @@
 
 /* static data */
 DEFobjStaticHelpers
-DEFobjCurrIf(rule)
 DEFobjCurrIf(ruleset)
 DEFobjCurrIf(module)
 DEFobjCurrIf(conf)
@@ -241,40 +239,6 @@ BEGINobjDebugPrint(rsconf) /* be sure to specify the object type also in END and
 CODESTARTobjDebugPrint(rsconf)
 ENDobjDebugPrint(rsconf)
 
-
-rsRetVal
-cnfDoActlst(struct cnfactlst *actlst, rule_t *pRule)
-{
-	struct cnfcfsyslinelst *cflst;
-	action_t *pAction;
-	uchar *str;
-	DEFiRet;
-
-	while(actlst != NULL) {
-		dbgprintf("aclst %p: ", actlst);
-		if(actlst->actType == CNFACT_V2) {
-			dbgprintf("v6+ action object\n");
-			if(actionNewInst(actlst->data.lst, &pAction) == RS_RET_OK) {
-				iRet = llAppend(&(pRule)->llActList,  NULL, (void*) pAction);
-			} else {
-				errmsg.LogError(0, RS_RET_ERR, "errors occured in file '%s' "
-					"around line %d", actlst->cnfFile, actlst->lineno);
-			}
-		} else {
-			dbgprintf("legacy action line:%s\n", actlst->data.legActLine);
-			str = (uchar*) actlst->data.legActLine;
-			CHKiRet(cflineDoAction(loadConf, &str, &pAction));
-			iRet = llAppend(&(pRule)->llActList,  NULL, (void*) pAction);
-		}
-		for(  cflst = actlst->syslines
-		    ; cflst != NULL ; cflst = cflst->next) {
-			 cnfDoCfsysline(cflst->line);
-		}
-		actlst = actlst->next;
-	}
-finalize_it:
-	RETiRet;
-}
 
 /* This function returns the current date in different
  * variants. It is used to construct the $NOW series of
@@ -1370,7 +1334,6 @@ ENDobjQueryInterface(rsconf)
 BEGINObjClassInit(rsconf, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
 	CHKiRet(objUse(ruleset, CORE_COMPONENT));
-	CHKiRet(objUse(rule, CORE_COMPONENT));
 	CHKiRet(objUse(module, CORE_COMPONENT));
 	CHKiRet(objUse(conf, CORE_COMPONENT));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
@@ -1387,7 +1350,6 @@ ENDObjClassInit(rsconf)
 /* De-initialize the rsconf class.
  */
 BEGINObjClassExit(rsconf, OBJ_IS_CORE_MODULE) /* class, version */
-	objRelease(rule, CORE_COMPONENT);
 	objRelease(ruleset, CORE_COMPONENT);
 	objRelease(module, CORE_COMPONENT);
 	objRelease(conf, CORE_COMPONENT);
