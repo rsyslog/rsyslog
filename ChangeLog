@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------
-Version 1.0.1 (rgerhards), 2012-05-31
+Version 1.0.1 (rgerhards), 2012-09-06
 - added capability to stop server without canceling its thread
 - bugfix: interrupt of select() was not properly handled
   However, this caused no actual failure, just some unnecessary code
