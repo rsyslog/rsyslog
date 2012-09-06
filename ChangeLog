@@ -1,8 +1,10 @@
 ---------------------------------------------------------------------------
-Version 6.5.1  [devel] 2012-08-??
+Version 7.1.0  [devel] 2012-09-06
+- added support for hierarchical properties (CEE/lumberjack)
 - added pure JSON output plugin parameter passing mode
 - ommongodb now supports templates
 - bugfix: imtcp could abort on exit due to invalid free()
+- imported bugfixes from 6.4.1
 ---------------------------------------------------------------------------
 Version 6.5.0  [devel] 2012-08-28
 - imrelp now supports non-cancel thread termination
@@ -29,7 +31,7 @@ Version 6.5.0  [devel] 2012-08-28
   Note: patches were released under ASL 2.0, see
   http://bugzilla.adiscon.com/show_bug.cgi?id=353
 ---------------------------------------------------------------------------
-Version 6.4.1  [V6-STABLE] 2012-08-??
+Version 6.4.1  [V6-STABLE] 2012-09-06
 - bugfix: multiple main queues with same queue file name were not detected
   This lead to queue file corruption. While the root cause is a config
   error, it is a bug that this important and hard to find config error
@@ -57,7 +59,8 @@ Version 6.4.1  [V6-STABLE] 2012-08-??
   Thanks to Stefano Mason for alerting us of this bug.
 - bugfix: Fixed TCP CheckConnection handling in omfwd.c. Interface needed 
   to be changed in lower stream classes. Syslog TCP Sending is now resumed
-  properly. 
+  properly. Unfixed, that lead to non-detection of downstate of remote
+  hosts.
 ---------------------------------------------------------------------------
 Version 6.4.0  [V6-STABLE] 2012-08-20
 - THIS IS THE FIRST VERSION OF THE 6.4.x STABLE BRANCH
