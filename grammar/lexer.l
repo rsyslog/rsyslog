@@ -164,7 +164,7 @@ int fileno(FILE *stream);
 				  BEGIN INOBJ; return BEGINOBJ; }
 "action"[ \n\t]*"("		{ dbgprintf("RRRR: lexer: %s\n", yytext); BEGIN INOBJ; return BEGIN_ACTION; }
 ^[ \t]*:\$?[a-z\-]+[ ]*,[ ]*!?[a-z]+[ ]*,[ ]*\".*\"	{
-				  yylval.s = strdup(yytext); return PROPFILT; }
+				  yylval.s = strdup(rmLeadingSpace(yytext)); return PROPFILT; }
 ^[ \t]*[\*a-z][,\*a-z]*[0-7]*\.[,!=;\.\*a-z0-7]+ { yylval.s = strdup(rmLeadingSpace(yytext)); return PRIFILT; }
 "~" |
 "*" |

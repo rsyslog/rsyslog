@@ -49,7 +49,7 @@
 DEFobjCurrIf(obj)
 DEFobjCurrIf(regexp)
 
-static char*
+char*
 getFIOPName(unsigned iFIOP)
 {
 	char *pRet;
