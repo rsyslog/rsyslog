@@ -239,7 +239,6 @@ DISTCHECK_CONFIGURE_FLAGS=	--enable-gssapi_krb5 \
 				--enable-gnutls \
 				--enable-imfile \
 				--enable-snmp \
-				--enable-pgsql \
 				--enable-libdbi \
 				--enable-mysql \
 				--enable-relp \
@@ -256,7 +255,6 @@ DISTCHECK_CONFIGURE_FLAGS=	--enable-gssapi_krb5 \
 				--enable-imptcp \
 				--enable-imttcp \
 				--enable-omuxsock \
-				--enable-extended-tests \
 				--enable-impstats \
 				--enable-memcheck \
 				--enable-pmaixforwardedfrom \
@@ -264,5 +262,8 @@ DISTCHECK_CONFIGURE_FLAGS=	--enable-gssapi_krb5 \
 				--enable-pmsnare \
 				--enable-mmsnmptrapd \
 				--enable-elasticsearch \
-				--with-systemdsystemunitdir=$$dc_install_base/$(systemdsystemunitdir)
+				--with-systemdsystemunitdir=$$dc_install_base/$(systemdsystemunitdir) 
+# temporarily disable these checks for make distcheck 2012-09-06 rgerhards
+#				--enable-extended-tests \
+#				--enable-pgsql \
 ACLOCAL_AMFLAGS = -I m4
