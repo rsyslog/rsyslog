@@ -248,6 +248,7 @@ cnfDoActlst(struct cnfactlst *actlst, rule_t *pRule)
 	struct cnfcfsyslinelst *cflst;
 	action_t *pAction;
 	uchar *str;
+	rsRetVal localRet;
 	DEFiRet;
 
 	while(actlst != NULL) {
@@ -261,9 +262,22 @@ cnfDoActlst(struct cnfactlst *actlst, rule_t *pRule)
 					"around line %d", actlst->cnfFile, actlst->lineno);
 			}
 		} else {
-			dbgprintf("legacy action line:%s\n", actlst->data.legActLine);
+			DBGPRINTF("legacy action line:%s\n", actlst->data.legActLine);
 			str = (uchar*) actlst->data.legActLine;
-			CHKiRet(cflineDoAction(loadConf, &str, &pAction));
+			if((localRet = cflineDoAction(loadConf, &str, &pAction)) != RS_RET_OK) {
+				uchar szErrLoc[MAXFNAME + 64];
+				if(localRet != RS_RET_OK_WARN) {
+					DBGPRINTF("legacy action line NOT successfully processed\n");
+				}
+				snprintf((char*)szErrLoc, sizeof(szErrLoc) / sizeof(uchar),
+					 "%s, line %d", actlst->cnfFile, actlst->lineno);
+				errmsg.LogError(0, NO_ERRCODE, "the last %s occured in %s:\"%s\"",
+					(localRet == RS_RET_OK_WARN) ? "warning" : "error",
+					(char*)szErrLoc, (char*)actlst->data.legActLine);
+				if(localRet != RS_RET_OK_WARN) {
+					ABORT_FINALIZE(localRet);
+				}
+			}
 			iRet = llAppend(&(pRule)->llActList,  NULL, (void*) pAction);
 		}
 		for(  cflst = actlst->syslines

@@ -436,7 +436,7 @@ TCPSendBuf(instanceData *pData, uchar *buf, unsigned len)
 	ssize_t lenSend;
 
 	alreadySent = 0;
-	netstrm.CheckConnection(pData->pNetstrm); /* hack for plain tcp syslog - see ptcp driver for details */
+	CHKiRet(netstrm.CheckConnection(pData->pNetstrm)); /* hack for plain tcp syslog - see ptcp driver for details */
 	while(alreadySent != len) {
 		lenSend = len - alreadySent;
 		CHKiRet(netstrm.Send(pData->pNetstrm, buf+alreadySent, &lenSend));
@@ -445,6 +445,12 @@ TCPSendBuf(instanceData *pData, uchar *buf, unsigned len)
 	}
 
 finalize_it:
+	if(iRet != RS_RET_OK) {
+		/* error! */
+		dbgprintf("TCPSendBuf error %d, destruct TCP Connection!\n", iRet);
+		DestructTCPInstanceData(pData);
+		iRet = RS_RET_SUSPENDED;
+	}
 	RETiRet;
 }
 
@@ -489,6 +495,7 @@ static rsRetVal TCPSendPrepRetry(void *pvData)
 {
 	DEFiRet;
 	instanceData *pData = (instanceData *) pvData;
+dbgprintf("TCPSendPrepRetry performs a DestructTCPInstanceData\n");
 
 	assert(pData != NULL);
 	DestructTCPInstanceData(pData);
@@ -506,6 +513,7 @@ static rsRetVal TCPSendInit(void *pvData)
 
 	assert(pData != NULL);
 	if(pData->pNetstrm == NULL) {
+		dbgprintf("TCPSendInit CREATE\n");
 		CHKiRet(netstrms.Construct(&pData->pNS));
 		/* the stream driver must be set before the object is finalized! */
 		CHKiRet(netstrms.SetDrvrName(pData->pNS, pData->pszStrmDrvr));
@@ -529,6 +537,7 @@ static rsRetVal TCPSendInit(void *pvData)
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
+		dbgprintf("TCPSendInit FAILED with %d.\n", iRet);
 		DestructTCPInstanceData(pData);
 	}
 
