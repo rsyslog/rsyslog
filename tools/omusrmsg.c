@@ -385,6 +385,7 @@ BEGINparseSelectorAct
 	int bHadWarning;
 CODESTARTparseSelectorAct
 CODE_STD_STRING_REQUESTparseSelectorAct(1)
+	bHadWarning = 0;
 	if(!strncmp((char*) p, ":omusrmsg:", sizeof(":omusrmsg:") - 1)) {
 		p += sizeof(":omusrmsg:") - 1; /* eat indicator sequence  (-1 because of '\0'!) */
 	} else {
