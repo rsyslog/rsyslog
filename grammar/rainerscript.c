@@ -1699,14 +1699,14 @@ done:	return cnfstmt;
 }
 
 struct cnfstmt *
-cnfstmtNewLegaAct(uchar *actline)
+cnfstmtNewLegaAct(char *actline)
 {
 	struct cnfstmt* cnfstmt;
 	rsRetVal localRet;
 	if((cnfstmt = cnfstmtNew(S_ACT)) == NULL) 
 		goto done;
 	cnfstmt->printable = (uchar*)strdup((char*)actline);
-	localRet = cflineDoAction(loadConf, &actline, &cnfstmt->d.act);
+	localRet = cflineDoAction(loadConf, (uchar**)&actline, &cnfstmt->d.act);
 	if(localRet != RS_RET_OK && localRet != RS_RET_OK_WARN) {
 		parser_errmsg("%s occured in file '%s' around line %d",
 			      (localRet == RS_RET_OK_WARN) ? "warnings" : "errors",

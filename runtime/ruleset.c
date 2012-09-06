@@ -40,7 +40,6 @@
 #include "cfsysline.h"
 #include "msg.h"
 #include "ruleset.h"
-#include "rule.h"
 #include "errmsg.h"
 #include "parser.h"
 #include "batch.h"
@@ -54,7 +53,6 @@
 /* static data */
 DEFobjStaticHelpers
 DEFobjCurrIf(errmsg)
-DEFobjCurrIf(rule)
 DEFobjCurrIf(parser)
 
 /* forward definitions */
@@ -75,45 +73,56 @@ rulesetKeyDestruct(void __attribute__((unused)) *pData)
 /* ---------- END linked-list key handling functions (ruleset) ---------- */
 
 
+/* iterate over all actions in a script (stmt subtree) */
+static void
+scriptIterateAllActions(struct cnfstmt *root, rsRetVal (*pFunc)(void*, void*), void* pParam)
+{
+	struct cnfstmt *stmt;
+	for(stmt = root ; stmt != NULL ; stmt = stmt->next) {
+		switch(stmt->nodetype) {
+		case S_NOP:
+		case S_STOP:
+			break;
+		case S_ACT:
+			DBGPRINTF("iterateAllActions calling into action %p\n", stmt->d.act);
+			pFunc(stmt->d.act, pParam);
+			break;
+		case S_IF:
+			if(stmt->d.s_if.t_then != NULL)
+				scriptIterateAllActions(stmt->d.s_if.t_then,
+							pFunc, pParam);
+			if(stmt->d.s_if.t_else != NULL)
+				scriptIterateAllActions(stmt->d.s_if.t_else,
+							pFunc, pParam);
+			break;
+		case S_PRIFILT:
+			scriptIterateAllActions(stmt->d.s_prifilt.t_then,
+						pFunc, pParam);
+			break;
+		case S_PROPFILT:
+			scriptIterateAllActions(stmt->d.s_propfilt.t_then,
+						pFunc, pParam);
+			break;
+		default:
+			dbgprintf("error: unknown stmt type %u during iterateAll\n",
+				(unsigned) stmt->nodetype);
+			break;
+		}
+	}
+}
 
 /* driver to iterate over all of this ruleset actions */
 typedef struct iterateAllActions_s {
 	rsRetVal (*pFunc)(void*, void*);
 	void *pParam;
 } iterateAllActions_t;
-DEFFUNC_llExecFunc(doIterateRulesetActions)
-{
-	DEFiRet;
-	rule_t* pRule = (rule_t*) pData;
-	iterateAllActions_t *pMyParam = (iterateAllActions_t*) pParam;
-	iRet = rule.IterateAllActions(pRule, pMyParam->pFunc, pMyParam->pParam);
-	RETiRet;
-}
-/* iterate over all actions of THIS rule set.
- */
-static rsRetVal
-iterateRulesetAllActions(ruleset_t *pThis, rsRetVal (*pFunc)(void*, void*), void* pParam)
-{
-	iterateAllActions_t params;
-	DEFiRet;
-	assert(pFunc != NULL);
-
-	params.pFunc = pFunc;
-	params.pParam = pParam;
-	CHKiRet(llExecFunc(&(pThis->llRules), doIterateRulesetActions, &params));
-
-finalize_it:
-	RETiRet;
-}
-
-
 /* driver to iterate over all actions */
 DEFFUNC_llExecFunc(doIterateAllActions)
 {
 	DEFiRet;
 	ruleset_t* pThis = (ruleset_t*) pData;
 	iterateAllActions_t *pMyParam = (iterateAllActions_t*) pParam;
-	iRet = iterateRulesetAllActions(pThis, pMyParam->pFunc, pMyParam->pParam);
+	scriptIterateAllActions(pThis->root, pMyParam->pFunc, pMyParam->pParam);
 	RETiRet;
 }
 /* iterate over ALL actions present in the WHOLE system.
@@ -608,25 +617,11 @@ finalize_it:
 }
 
 
-/* destructor we need to destruct rules inside our linked list contents.
- */
-static rsRetVal
-doRuleDestruct(void *pData)
-{
-	rule_t *pRule = (rule_t *) pData;
-	DEFiRet;
-	rule.Destruct(&pRule);
-	RETiRet;
-}
-
-
 /* Standard-Constructor
  */
 BEGINobjConstruct(ruleset) /* be sure to specify the object type also in END macro! */
-	CHKiRet(llInit(&pThis->llRules, doRuleDestruct, NULL, NULL));
 	pThis->root = NULL;
 	pThis->last = NULL;
-finalize_it:
 ENDobjConstruct(ruleset)
 
 
@@ -669,7 +664,6 @@ CODESTARTobjDestruct(ruleset)
 	if(pThis->pParserLst != NULL) {
 		parser.DestructParserList(&pThis->pParserLst);
 	}
-	llDestroy(&pThis->llRules);
 	free(pThis->pszName);
 	// TODO: free rainerscript root (not look at last)
 ENDobjDestruct(ruleset)
@@ -858,7 +852,6 @@ ENDobjQueryInterface(ruleset)
  */
 BEGINObjClassExit(ruleset, OBJ_IS_CORE_MODULE) /* class, version */
 	objRelease(errmsg, CORE_COMPONENT);
-	objRelease(rule, CORE_COMPONENT);
 	objRelease(parser, CORE_COMPONENT);
 ENDObjClassExit(ruleset)
 
@@ -870,7 +863,6 @@ ENDObjClassExit(ruleset)
 BEGINObjClassInit(ruleset, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
-//TODO:finally delete!	CHKiRet(objUse(rule, CORE_COMPONENT));
 
 	/* set our own handlers */
 	OBJSetMethodHandler(objMethod_DEBUGPRINT, rulesetDebugPrint);

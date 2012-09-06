@@ -29,7 +29,6 @@
 /* the ruleset object */
 struct ruleset_s {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
-	linkedList_t llRules;	/* this is NOT a pointer - no typo here ;) */
 	uchar *pszName;		/* name of our ruleset */
 	qqueue_t *pQueue;	/* "main" message queue, if the ruleset has its own (else NULL) */
 	struct cnfstmt *root;
