@@ -72,7 +72,6 @@
 #include "glbl.h"
 #include "errmsg.h"
 #include "prop.h"
-#include "rule.h"
 #include "ruleset.h"
 #include "parser.h"
 #include "strgen.h"

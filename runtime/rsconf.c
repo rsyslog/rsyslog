@@ -376,59 +376,6 @@ void cnfDoObj(struct cnfobj *o)
 	cnfobjDestruct(o);
 }
 
-#if 0
-void cnfDoRule(struct cnfrule *cnfrule)
-{
-	rule_t *pRule;
-	uchar *str;
-	rsRetVal iRet = RS_RET_OK; //DEFiRet;
-
-	dbgprintf("cnf:global:rule\n");
-	cnfrulePrint(cnfrule);
-
-	CHKiRet(rule.Construct(&pRule)); /* create "fresh" selector */
-	CHKiRet(rule.SetAssRuleset(pRule, ruleset.GetCurrent(loadConf)));
-	CHKiRet(rule.ConstructFinalize(pRule));
-
-	switch(cnfrule->filttype) {
-	case CNFFILT_NONE:
-		break;
-	case CNFFILT_PRI:
-		str = (uchar*) cnfrule->filt.s;
-		iRet = cflineProcessTradPRIFilter(&str, pRule);
-		break;
-	case CNFFILT_PROP:
-		dbgprintf("%s\n", cnfrule->filt.s);
-		str = (uchar*) cnfrule->filt.s;
-		iRet = cflineProcessPropFilter(&str, pRule);
-		break;
-	case CNFFILT_SCRIPT:
-		pRule->f_filter_type = FILTER_EXPR;
-		pRule->f_filterData.expr = cnfrule->filt.expr;
-		break;
-	}
-	/* we now check if there are some global (BSD-style) filter conditions
-	 * and, if so, we copy them over. rgerhards, 2005-10-18
-	 */
-	if(pDfltProgNameCmp != NULL) {
-		CHKiRet(rsCStrConstructFromCStr(&(pRule->pCSProgNameComp), pDfltProgNameCmp));
-	}
-
-	if(eDfltHostnameCmpMode != HN_NO_COMP) {
-		pRule->eHostnameCmpMode = eDfltHostnameCmpMode;
-		CHKiRet(rsCStrConstructFromCStr(&(pRule->pCSHostnameComp), pDfltHostnameCmp));
-	}
-
-	cnfDoActlst(cnfrule->actlst, pRule);
-
-	CHKiRet(ruleset.AddRule(rule.GetAssRuleset(pRule), &pRule));
-
-finalize_it:
-	//TODO: do something with error states
-	cnfruleDestruct(cnfrule);
-}
-#endif
-
 void cnfDoScript(struct cnfstmt *script)
 {
 	// TODO: streamline this, call directly into ruleset from grammar.y
