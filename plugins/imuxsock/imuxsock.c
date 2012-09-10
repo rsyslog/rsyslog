@@ -879,7 +879,10 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 	parse++; lenMsg--; /* '>' */
 
 	if(json != NULL) {
-		msgAddJSON(pMsg, (uchar*)"!trusted", json);
+		/* as per lumberjack spec, these properties need to go into
+		 * the CEE root.
+		 */
+		msgAddJSON(pMsg, (uchar*)"!", json);
 	}
 
 	if(ts == NULL) {
