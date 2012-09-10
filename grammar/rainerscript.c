@@ -2,7 +2,7 @@
  *
  * Module begun 2011-07-01 by Rainer Gerhards
  *
- * Copyright 2011 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2011-2012 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -711,116 +711,6 @@ cnfobjPrint(struct cnfobj *o)
 	nvlstPrint(o->nvlst);
 }
 
-
-struct cnfactlst*
-cnfactlstNew(enum cnfactType actType, struct nvlst *lst, char *actLine)
-{
-	struct cnfactlst *actlst;
-
-	if((actlst = malloc(sizeof(struct cnfactlst))) != NULL) {
-		actlst->next = NULL;
-		actlst->syslines = NULL;
-		actlst->actType = actType;
-		actlst->lineno = yylineno;
-		actlst->cnfFile = strdup(cnfcurrfn);
-		if(actType == CNFACT_V2)
-			actlst->data.lst = lst;
-		else
-			actlst->data.legActLine = actLine;
-	}
-	return actlst;
-}
-
-struct cnfactlst*
-cnfactlstAddSysline(struct cnfactlst* actlst, char *line)
-{
-	struct cnfcfsyslinelst *cflst;
-
-	if((cflst = malloc(sizeof(struct cnfcfsyslinelst))) != NULL)   {
-		cflst->line = line;
-		if(actlst->syslines == NULL) {
-			cflst->next = NULL;
-		} else {
-			cflst->next = actlst->syslines;
-		}
-		actlst->syslines = cflst;
-	}
-	return actlst;
-}
-
-
-void
-cnfactlstDestruct(struct cnfactlst *actlst)
-{
-	struct cnfactlst *toDel;
-
-	while(actlst != NULL) {
-		toDel = actlst;
-		actlst = actlst->next;
-		free(toDel->cnfFile);
-		cnfcfsyslinelstDestruct(toDel->syslines);
-		if(toDel->actType == CNFACT_V2)
-			nvlstDestruct(toDel->data.lst);
-		else
-			free(toDel->data.legActLine);
-		free(toDel);
-	}
-	
-}
-
-static inline struct cnfcfsyslinelst*
-cnfcfsyslinelstReverse(struct cnfcfsyslinelst *lst)
-{
-	struct cnfcfsyslinelst *curr, *prev;
-	if(lst == NULL)
-		return NULL;
-	prev = NULL;
-	while(lst != NULL) {
-		curr = lst;
-		lst = lst->next;
-		curr->next = prev;
-		prev = curr;
-	}
-	return prev;
-}
-
-struct cnfactlst*
-cnfactlstReverse(struct cnfactlst *actlst)
-{
-	struct cnfactlst *curr, *prev;
-
-	prev = NULL;
-	while(actlst != NULL) {
-		curr = actlst;
-		actlst = actlst->next;
-		curr->syslines = cnfcfsyslinelstReverse(curr->syslines);
-		curr->next = prev;
-		prev = curr;
-	}
-	return prev;
-}
-
-void
-cnfactlstPrint(struct cnfactlst *actlst)
-{
-	struct cnfcfsyslinelst *cflst;
-
-	while(actlst != NULL) {
-		dbgprintf("aclst %p: ", actlst);
-		if(actlst->actType == CNFACT_V2) {
-			dbgprintf("V2 action type: ");
-			nvlstPrint(actlst->data.lst);
-		} else {
-			dbgprintf("legacy action line: '%s'\n",
-				actlst->data.legActLine);
-		}
-		for(  cflst = actlst->syslines
-		    ; cflst != NULL ; cflst = cflst->next) {
-			dbgprintf("action:cfsysline: '%s'\n", cflst->line);
-		}
-		actlst = actlst->next;
-	}
-}
 
 struct cnfexpr*
 cnfexprNew(unsigned nodetype, struct cnfexpr *l, struct cnfexpr *r)
@@ -1766,63 +1656,6 @@ cnfstmtNewLegaAct(char *actline)
 		}
 	}
 done:	return cnfstmt;
-}
-
-struct cnfrule *
-cnfruleNew(enum cnfFiltType filttype, struct cnfactlst *actlst)
-{
-	struct cnfrule* cnfrule;
-	if((cnfrule = malloc(sizeof(struct cnfrule))) != NULL) {
-		cnfrule->nodetype = 'R';
-		cnfrule->filttype = filttype;
-		cnfrule->actlst = cnfactlstReverse(actlst);
-	}
-	return cnfrule;
-}
-
-void
-cnfrulePrint(struct cnfrule *rule)
-{
-	dbgprintf("------ start rule %p:\n", rule);
-	dbgprintf("%s: ", cnfFiltType2str(rule->filttype));
-	switch(rule->filttype) {
-	case CNFFILT_NONE:
-		break;
-	case CNFFILT_PRI:
-	case CNFFILT_PROP:
-		dbgprintf("%s\n", rule->filt.s);
-		break;
-	case CNFFILT_SCRIPT:
-		dbgprintf("\n");
-		cnfexprPrint(rule->filt.expr, 0);
-		break;
-	}
-	cnfactlstPrint(rule->actlst);
-	dbgprintf("------ end rule %p\n", rule);
-}
-
-/* note: the sysline itself was already freed during processing
- * and as such MUST NOT be freed again!
- */
-void
-cnfcfsyslinelstDestruct(struct cnfcfsyslinelst *cfslst)
-{
-	struct cnfcfsyslinelst *toDel;
-	while(cfslst != NULL) {
-		toDel = cfslst;
-		cfslst = cfslst->next;
-		free(toDel);
-	}
-}
-
-void
-cnfruleDestruct(struct cnfrule *rule)
-{
-	if(   rule->filttype == CNFFILT_PRI
-	   || rule->filttype == CNFFILT_PROP)
-		free(rule->filt.s);
-	cnfactlstDestruct(rule->actlst);
-	free(rule);
 }
 
 struct cnffparamlst *

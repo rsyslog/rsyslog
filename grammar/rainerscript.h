@@ -98,23 +98,6 @@ struct nvlst {
 	 */
 };
 
-struct cnfcfsyslinelst {
-	struct cnfcfsyslinelst *next;
-	char *line;
-};
-
-struct cnfactlst {
-	struct cnfactlst *next;
-	struct cnfcfsyslinelst *syslines;
-	enum cnfactType actType;
-	union {
-		struct nvlst *lst;
-		char *legActLine;
-	} data;
-	char *cnfFile;
-	int lineno;
-};
-
 /* the following structures support expressions, and may (very much later
  * be the sole foundation for the AST.
  *
@@ -151,16 +134,6 @@ cnfFiltType2str(enum cnfFiltType filttype)
 	return("error:invalid_filter_type");	/* should never be reached */
 }
 
-
-struct cnfrule {
-	unsigned nodetype;
-	enum cnfFiltType filttype;
-	union {
-		char *s;
-		struct cnfexpr *expr;
-	} filt;
-	struct cnfactlst *actlst;
-};
 
 struct cnfstmt {	/* base statement, for simple types */
 	unsigned nodetype;
@@ -289,11 +262,6 @@ struct nvlst* nvlstFindName(struct nvlst *lst, es_str_t *name);
 struct cnfobj* cnfobjNew(enum cnfobjType objType, struct nvlst *lst);
 void cnfobjDestruct(struct cnfobj *o);
 void cnfobjPrint(struct cnfobj *o);
-struct cnfactlst* cnfactlstNew(enum cnfactType actType, struct nvlst *lst, char *actLine);
-void cnfactlstDestruct(struct cnfactlst *actlst);
-void cnfactlstPrint(struct cnfactlst *actlst);
-struct cnfactlst* cnfactlstAddSysline(struct cnfactlst* actlst, char *line);
-struct cnfactlst* cnfactlstReverse(struct cnfactlst *actlst);
 struct cnfexpr* cnfexprNew(unsigned nodetype, struct cnfexpr *l, struct cnfexpr *r);
 void cnfexprPrint(struct cnfexpr *expr, int indent);
 void cnfexprEval(struct cnfexpr *expr, struct var *ret, void *pusr);
@@ -301,9 +269,6 @@ int cnfexprEvalBool(struct cnfexpr *expr, void *usrptr);
 void cnfexprDestruct(struct cnfexpr *expr);
 struct cnfnumval* cnfnumvalNew(long long val);
 struct cnfstringval* cnfstringvalNew(es_str_t *estr);
-struct cnfrule * cnfruleNew(enum cnfFiltType filttype, struct cnfactlst *actlst);
-void cnfruleDestruct(struct cnfrule *rule);
-void cnfrulePrint(struct cnfrule *rule);
 struct cnfvar* cnfvarNew(char *name);
 struct cnffunc * cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst);
 struct cnffparamlst * cnffparamlstNew(struct cnfexpr *expr, struct cnffparamlst *next);
@@ -314,7 +279,6 @@ struct cnfparamvals* nvlstGetParams(struct nvlst *lst, struct cnfparamblk *param
 void cnfparamsPrint(struct cnfparamblk *params, struct cnfparamvals *vals);
 void varDelete(struct var *v);
 void cnfparamvalsDestruct(struct cnfparamvals *paramvals, struct cnfparamblk *blk);
-void cnfcfsyslinelstDestruct(struct cnfcfsyslinelst *cfslst);
 struct cnfstmt * cnfstmtNew(unsigned s_type);
 void cnfstmtPrint(struct cnfstmt *stmt, int indent);
 struct cnfstmt* scriptAddStmt(struct cnfstmt *root, struct cnfstmt *s);

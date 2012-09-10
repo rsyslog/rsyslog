@@ -6,8 +6,7 @@
   * of course, encouraged to use new constructs only. But it needs to be noted
   * that some of the legacy constructs (specifically the in-front-of-action
   * PRI filter) are very hard to beat in ease of use, at least for simpler
-  * cases. So while we hope that cfsysline support can be dropped some time in
-  * the future, we will probably keep these useful constructs.
+  * cases.
   *
   * Copyright 2011-2012 Rainer Gerhards and Adiscon GmbH.
   *
@@ -37,7 +36,7 @@
 #define YYDEBUG 1
 extern int yylineno;
 
-/* keep compile rule cleam of errors */
+/* keep compile rule clean of errors */
 extern int yylex(void);
 extern int yyerror(char*);
 %}
@@ -51,9 +50,7 @@ extern int yyerror(char*);
 	struct cnfstmt *stmt;
 	struct nvlst *nvlst;
 	struct objlst *objlst;
-	struct cnfactlst *actlst;
 	struct cnfexpr *expr;
-	/*struct cnfrule *rule;*/
 	struct cnffunc *func;
 	struct cnffparamlst *fparams;
 }
@@ -63,7 +60,6 @@ extern int yyerror(char*);
 %token <estr> FUNC
 %token <objType> BEGINOBJ
 %token ENDOBJ
-%token <s> CFSYSLINE
 %token BEGIN_ACTION
 %token BEGIN_PROPERTY
 %token BEGIN_CONSTANT
