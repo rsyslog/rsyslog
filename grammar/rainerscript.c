@@ -1468,7 +1468,6 @@ cnfstmtPrint(struct cnfstmt *root, int indent)
 			break;
 		case S_PRIFILT:
 			doIndent(indent); dbgprintf("PRIFILT '%s'\n", stmt->printable);
-			//cnfexprPrint(stmt->d.cond.expr, indent+1);
 			cnfstmtPrint(stmt->d.s_prifilt.t_then, indent+1);
 			doIndent(indent); dbgprintf("END PRIFILT\n");
 			break;
@@ -1543,6 +1542,7 @@ cnfstmtNew(unsigned s_type)
 	struct cnfstmt* cnfstmt;
 	if((cnfstmt = malloc(sizeof(struct cnfstmt))) != NULL) {
 		cnfstmt->nodetype = s_type;
+		cnfstmt->printable = NULL;
 		cnfstmt->next = NULL;
 	}
 	return cnfstmt;
@@ -1558,7 +1558,6 @@ cnfstmtDestruct(struct cnfstmt *root)
 		case S_STOP:
 			break;
 		case S_ACT:
-dbgprintf("XXXX: destruct action %p\n", stmt->d.act);
 			actionDestruct(stmt->d.act);
 			break;
 		case S_IF:
@@ -1587,6 +1586,7 @@ dbgprintf("XXXX: destruct action %p\n", stmt->d.act);
 				(unsigned) stmt->nodetype);
 			break;
 		}
+		free(stmt->printable);
 		todel = stmt;
 		stmt = stmt->next;
 		free(todel);
@@ -1610,7 +1610,7 @@ cnfstmtNewPROPFILT(char *propfilt, struct cnfstmt *t_then)
 {
 	struct cnfstmt* cnfstmt;
 	if((cnfstmt = cnfstmtNew(S_PROPFILT)) != NULL) {
-		cnfstmt->printable = (uchar*)strdup(propfilt);
+		cnfstmt->printable = (uchar*)propfilt;
 		cnfstmt->d.s_propfilt.t_then = t_then;
 		cnfstmt->d.s_propfilt.propName = NULL;
 		cnfstmt->d.s_propfilt.regex_cache = NULL;
@@ -1633,7 +1633,7 @@ cnfstmtNewAct(struct nvlst *lst)
 		cnfstmt->nodetype = S_NOP; /* disable action! */
 		goto done;
 	}
-	cnfstmt->printable = (uchar*)"action()";
+	cnfstmt->printable = (uchar*)strdup("action()");
 done:	return cnfstmt;
 }
 

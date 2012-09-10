@@ -162,7 +162,7 @@ int fileno(FILE *stream);
 				  BEGIN INOBJ; return BEGINOBJ; }
 "module"[ \n\t]*"("		{ yylval.objType = CNFOBJ_MODULE;
 				  BEGIN INOBJ; return BEGINOBJ; }
-"action"[ \n\t]*"("		{ dbgprintf("RRRR: lexer: %s\n", yytext); BEGIN INOBJ; return BEGIN_ACTION; }
+"action"[ \n\t]*"("		{ BEGIN INOBJ; return BEGIN_ACTION; }
 ^[ \t]*:\$?[a-z\-]+[ ]*,[ ]*!?[a-z]+[ ]*,[ ]*\".*\"	{
 				  yylval.s = strdup(rmLeadingSpace(yytext)); return PROPFILT; }
 ^[ \t]*[\*a-z][,\*a-z]*[0-7]*\.[,!=;\.\*a-z0-7]+ { yylval.s = strdup(rmLeadingSpace(yytext)); return PRIFILT; }
@@ -192,9 +192,6 @@ int fileno(FILE *stream);
 					yyless(14);
 				  	BEGIN INCL;
 				  } else {
-					  /*yylval.s = strdup(yytext);
-					  return CFSYSLINE;*/
-					  dbgprintf("RRRR: have CFSYSLINE/lexer: %s\n", yytext);
 					  cnfDoCfsysline(strdup(yytext)); 
 				  }
 				}
