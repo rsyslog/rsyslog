@@ -2434,10 +2434,15 @@ dbgprintf("AAAA: leaf '%s'\n", leaf);
 		CHKiRet(jsonPathFindParent(pM, name, leaf, &parent, 1));
 		field = json_object_object_get(parent, (char*)leaf);
 	}
-	*pRes = (uchar*) strdup(json_object_get_string(field));
+	if(field == 0) {
+		*pRes = (uchar*) "";
+		*pbMustBeFreed = 0;
+	} else {
+		*pRes = (uchar*) strdup(json_object_get_string(field));
 dbgprintf("AAAA: json_object_get_string() returns '%s'\n", *pRes);
-	*buflen = (int) ustrlen(*pRes);
-	*pbMustBeFreed = 1;
+		*buflen = (int) ustrlen(*pRes);
+		*pbMustBeFreed = 1;
+	}
 
 finalize_it:
 	free(name);

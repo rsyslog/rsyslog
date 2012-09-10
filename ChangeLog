@@ -1,4 +1,12 @@
 ---------------------------------------------------------------------------
+Version 7.1.1  [devel] 2012-09-??
+- imuxsock now stores trusted properties by default in the CEE root
+  This was done in order to keep compatible with other implementations of
+  the lumberjack schema
+  Thanks to Miloslav Trmač for pointing to this.
+- bugfix: string-generating templates caused abort if CEE field could not
+  be found
+---------------------------------------------------------------------------
 Version 7.1.0  [devel] 2012-09-06
 - added support for hierarchical properties (CEE/lumberjack)
 - added pure JSON output plugin parameter passing mode
