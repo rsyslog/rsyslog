@@ -3,7 +3,14 @@
 #include <stdio.h>
 #include <libestr.h>
 #include <typedefs.h>
+#include <sys/types.h>
+#include <regex.h>
+//#include "stringbuf.h"
 
+/* TODO: make this hack cleaner... we have circular definitions, so we need: */
+
+
+#define	LOG_NFACILITIES	24	/* current number of syslog facilities */
 #define CNFFUNC_MAX_ARGS 32
 	/**< maximum number of arguments that any function can have (among
 	 *   others, this is used to size data structures).
@@ -91,23 +98,6 @@ struct nvlst {
 	 */
 };
 
-struct cnfcfsyslinelst {
-	struct cnfcfsyslinelst *next;
-	char *line;
-};
-
-struct cnfactlst {
-	struct cnfactlst *next;
-	struct cnfcfsyslinelst *syslines;
-	enum cnfactType actType;
-	union {
-		struct nvlst *lst;
-		char *legActLine;
-	} data;
-	char *cnfFile;
-	int lineno;
-};
-
 /* the following structures support expressions, and may (very much later
  * be the sole foundation for the AST.
  *
@@ -118,7 +108,15 @@ struct cnfactlst {
  * R - rule
  * S - string
  * V - var
+ * ... plus the S_* #define's below:
  */
+#define S_STOP 4000
+#define S_PRIFILT 4001
+#define S_PROPFILT 4002
+#define S_IF 4003
+#define S_ACT 4004
+#define S_NOP 4005	/* usually used to disable some statement */
+
 enum cnfFiltType { CNFFILT_NONE, CNFFILT_PRI, CNFFILT_PROP, CNFFILT_SCRIPT };
 static inline char*
 cnfFiltType2str(enum cnfFiltType filttype)
@@ -137,14 +135,31 @@ cnfFiltType2str(enum cnfFiltType filttype)
 }
 
 
-struct cnfrule {
+struct cnfstmt {	/* base statement, for simple types */
 	unsigned nodetype;
-	enum cnfFiltType filttype;
+	struct cnfstmt *next;
+	uchar *printable; /* printable text for debugging */
 	union {
-		char *s;
-		struct cnfexpr *expr;
-	} filt;
-	struct cnfactlst *actlst;
+		struct {
+			struct cnfexpr *expr;
+			struct cnfstmt *t_then;
+			struct cnfstmt *t_else;
+		} s_if;
+		struct {
+			uchar pmask[LOG_NFACILITIES+1];	/* priority mask */
+			struct cnfstmt *t_then;
+		} s_prifilt;
+		struct {
+			fiop_t operation;
+			regex_t *regex_cache;/* cache for compiled REs, if used */
+			struct cstr_s *pCSCompValue;/* value to "compare" against */
+			sbool isNegated;
+			uintTiny propID;/* ID of the requested property */
+			es_str_t *propName;/* name of property for CEE-based filters */
+			struct cnfstmt *t_then;
+		} s_propfilt;
+		struct action_s *act;
+	} d;
 };
 
 struct cnfexpr {
@@ -247,11 +262,6 @@ struct nvlst* nvlstFindName(struct nvlst *lst, es_str_t *name);
 struct cnfobj* cnfobjNew(enum cnfobjType objType, struct nvlst *lst);
 void cnfobjDestruct(struct cnfobj *o);
 void cnfobjPrint(struct cnfobj *o);
-struct cnfactlst* cnfactlstNew(enum cnfactType actType, struct nvlst *lst, char *actLine);
-void cnfactlstDestruct(struct cnfactlst *actlst);
-void cnfactlstPrint(struct cnfactlst *actlst);
-struct cnfactlst* cnfactlstAddSysline(struct cnfactlst* actlst, char *line);
-struct cnfactlst* cnfactlstReverse(struct cnfactlst *actlst);
 struct cnfexpr* cnfexprNew(unsigned nodetype, struct cnfexpr *l, struct cnfexpr *r);
 void cnfexprPrint(struct cnfexpr *expr, int indent);
 void cnfexprEval(struct cnfexpr *expr, struct var *ret, void *pusr);
@@ -259,9 +269,6 @@ int cnfexprEvalBool(struct cnfexpr *expr, void *usrptr);
 void cnfexprDestruct(struct cnfexpr *expr);
 struct cnfnumval* cnfnumvalNew(long long val);
 struct cnfstringval* cnfstringvalNew(es_str_t *estr);
-struct cnfrule * cnfruleNew(enum cnfFiltType filttype, struct cnfactlst *actlst);
-void cnfruleDestruct(struct cnfrule *rule);
-void cnfrulePrint(struct cnfrule *rule);
 struct cnfvar* cnfvarNew(char *name);
 struct cnffunc * cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst);
 struct cnffparamlst * cnffparamlstNew(struct cnfexpr *expr, struct cnffparamlst *next);
@@ -272,7 +279,17 @@ struct cnfparamvals* nvlstGetParams(struct nvlst *lst, struct cnfparamblk *param
 void cnfparamsPrint(struct cnfparamblk *params, struct cnfparamvals *vals);
 void varDelete(struct var *v);
 void cnfparamvalsDestruct(struct cnfparamvals *paramvals, struct cnfparamblk *blk);
-void cnfcfsyslinelstDestruct(struct cnfcfsyslinelst *cfslst);
+struct cnfstmt * cnfstmtNew(unsigned s_type);
+void cnfstmtPrint(struct cnfstmt *stmt, int indent);
+struct cnfstmt* scriptAddStmt(struct cnfstmt *root, struct cnfstmt *s);
+struct objlst* objlstAdd(struct objlst *root, struct cnfobj *o);
+char *rmLeadingSpace(char *s);
+struct cnfstmt * cnfstmtNewPRIFILT(char *prifilt, struct cnfstmt *t_then);
+struct cnfstmt * cnfstmtNewPROPFILT(char *propfilt, struct cnfstmt *t_then);
+struct cnfstmt * cnfstmtNewAct(struct nvlst *lst);
+struct cnfstmt * cnfstmtNewLegaAct(char *actline);
+void cnfstmtDestruct(struct cnfstmt *root);
+char* getFIOPName(unsigned iFIOP);
 rsRetVal initRainerscript(void);
 
 /* debug helper */

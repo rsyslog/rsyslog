@@ -15,7 +15,7 @@ extern int yylineno;
  * these functions.
  */
 void cnfDoObj(struct cnfobj *o);
-void cnfDoRule(struct cnfrule *rule);
+void cnfDoScript(struct cnfstmt *script);
 void cnfDoCfsysline(char *ln);
 void cnfDoBSDTag(char *ln);
 void cnfDoBSDHost(char *ln);

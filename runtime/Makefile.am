@@ -63,8 +63,6 @@ librsyslog_la_SOURCES = \
 	queue.h \
 	ruleset.c \
 	ruleset.h \
-	rule.c \
-	rule.h \
 	prop.c \
 	prop.h \
 	cfsysline.c \

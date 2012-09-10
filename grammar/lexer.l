@@ -138,6 +138,7 @@ int fileno(FILE *stream);
   * to tell us the real source line.
   */
 "stop"				{ dbgprintf("STOP\n"); return STOP; }
+"else"				{ dbgprintf("STOP\n"); return ELSE; }
 "preprocfilelinenumber("	{ BEGIN LINENO; }
 <LINENO>[0-9]+			{ yylineno = atoi(yytext) - 1; }
 <LINENO>")"			{ BEGIN INITIAL; }
@@ -163,17 +164,15 @@ int fileno(FILE *stream);
 				  BEGIN INOBJ; return BEGINOBJ; }
 "action"[ \n\t]*"("		{ BEGIN INOBJ; return BEGIN_ACTION; }
 ^[ \t]*:\$?[a-z\-]+[ ]*,[ ]*!?[a-z]+[ ]*,[ ]*\".*\"	{
-				  yylval.s = strdup(yytext); return PROPFILT; }
-^[ \t]*[\*a-z][,\*a-z]*[0-7]*\.[,!=;\.\*a-z0-7]+ { yylval.s = strdup(yytext); return PRIFILT; }
+				  yylval.s = strdup(rmLeadingSpace(yytext)); return PROPFILT; }
+^[ \t]*[\*a-z][,\*a-z]*[0-7]*\.[,!=;\.\*a-z0-7]+ { yylval.s = strdup(rmLeadingSpace(yytext)); return PRIFILT; }
 "~" |
 "*" |
 \-\/[^*][^\n]* |
 \/[^*][^\n]* |
 :[a-z0-9]+:[^\n]* |
 [\|\.\-\@\^?~>][^\n]+ |
-[a-z0-9_][a-z0-9_\-\+,;]*	{ yylval.s = strdup(yytext);
-				  dbgprintf("lex: LEGA ACT: '%s'\n", yytext);
-				  return LEGACY_ACTION; }
+[a-z0-9_][a-z0-9_\-\+,;]*	{ yylval.s = yytext; return LEGACY_ACTION; }
 <INOBJ>")"			{ BEGIN INITIAL; return ENDOBJ; }
 <INOBJ>[a-z][a-z0-9_\.]*	{ yylval.estr = es_newStrFromCStr(yytext, yyleng);
 				  return NAME; }
@@ -193,8 +192,7 @@ int fileno(FILE *stream);
 					yyless(14);
 				  	BEGIN INCL;
 				  } else {
-					  yylval.s = strdup(yytext);
-					  return CFSYSLINE;
+					  cnfDoCfsysline(strdup(yytext)); 
 				  }
 				}
 ![^ \t\n]+[ \t]*$		{ yylval.s = strdup(yytext); return BSD_TAG_SELECTOR; }

@@ -6,10 +6,9 @@
   * of course, encouraged to use new constructs only. But it needs to be noted
   * that some of the legacy constructs (specifically the in-front-of-action
   * PRI filter) are very hard to beat in ease of use, at least for simpler
-  * cases. So while we hope that cfsysline support can be dropped some time in
-  * the future, we will probably keep these useful constructs.
+  * cases.
   *
-  * Copyright 2011 Rainer Gerhards and Adiscon GmbH.
+  * Copyright 2011-2012 Rainer Gerhards and Adiscon GmbH.
   *
   * This file is part of the rsyslog runtime library.
   *
@@ -37,7 +36,7 @@
 #define YYDEBUG 1
 extern int yylineno;
 
-/* keep compile rule cleam of errors */
+/* keep compile rule clean of errors */
 extern int yylex(void);
 extern int yyerror(char*);
 %}
@@ -48,11 +47,10 @@ extern int yyerror(char*);
 	es_str_t *estr;
 	enum cnfobjType objType;
 	struct cnfobj *obj;
+	struct cnfstmt *stmt;
 	struct nvlst *nvlst;
 	struct objlst *objlst;
-	struct cnfactlst *actlst;
 	struct cnfexpr *expr;
-	struct cnfrule *rule;
 	struct cnffunc *func;
 	struct cnffparamlst *fparams;
 }
@@ -62,7 +60,6 @@ extern int yyerror(char*);
 %token <estr> FUNC
 %token <objType> BEGINOBJ
 %token ENDOBJ
-%token <s> CFSYSLINE
 %token BEGIN_ACTION
 %token BEGIN_PROPERTY
 %token BEGIN_CONSTANT
@@ -75,6 +72,7 @@ extern int yyerror(char*);
 %token <s> BSD_HOST_SELECTOR
 %token IF
 %token THEN
+%token ELSE
 %token OR
 %token AND
 %token NOT
@@ -95,13 +93,16 @@ extern int yyerror(char*);
 %type <nvlst> nv nvlst
 %type <obj> obj property constant
 %type <objlst> propconst
-%type <actlst> actlst
+/*%type <actlst> actlst
 %type <actlst> act
-%type <s> cfsysline
 %type <actlst> block
+*/
 %type <expr> expr
+%type <stmt> stmt s_act actlst block script
+/*
 %type <rule> rule
 %type <rule> scriptfilt
+*/
 %type <fparams> fparams
 
 %left AND OR
@@ -110,15 +111,9 @@ extern int yyerror(char*);
 %left '*' '/' '%'
 %nonassoc UMINUS NOT
 
-%expect 3
-/* these shift/reduce conflicts are created by the CFSYSLINE construct, which we
- * unfortunately can not avoid. The problem is that CFSYSLINE can occur both in
- * global context as well as within an action. It's not permitted somewhere else,
- * but this is suficient for conflicts. The "dangling else" built-in resolution
- * works well to solve this issue, so we accept it (it's a wonder that our
- * old style grammar doesn't work at all, so we better do not complain...).
- * Use "bison -v rscript.y" if more conflicts arise and check rscript.out for
- * were exactly these conflicts exits.
+%expect 1 /* dangling else */
+/* If more erors show up, Use "bison -v grammar.y" if more conflicts arise and
+ * check grammar.output for were exactly these conflicts exits.
  */
 %%
 /* note: we use left recursion below, because that saves stack space AND
@@ -127,12 +122,10 @@ extern int yyerror(char*);
  */
 conf:	/* empty (to end recursion) */
 	| conf obj			{ cnfDoObj($2); }
-	| conf rule			{ cnfDoRule($2); }
-	| conf cfsysline		{ cnfDoCfsysline($2); }
+	| conf stmt			{ cnfDoScript($2); }
 	| conf BSD_TAG_SELECTOR		{ cnfDoBSDTag($2); }
 	| conf BSD_HOST_SELECTOR	{ cnfDoBSDHost($2); }
 obj:	  BEGINOBJ nvlst ENDOBJ 	{ $$ = cnfobjNew($1, $2); }
-	| BEGIN_ACTION nvlst ENDOBJ 	{ $$ = cnfobjNew(CNFOBJ_ACTION, $2); }
         | BEGIN_TPL nvlst ENDOBJ	{ $$ = cnfobjNew(CNFOBJ_TPL, $2); }
         | BEGIN_TPL nvlst ENDOBJ '{' propconst '}'
 					{ $$ = cnfobjNew(CNFOBJ_TPL, $2);
@@ -143,26 +136,29 @@ propconst:				{ $$ = NULL; }
 	| propconst constant		{ $$ = objlstAdd($1, $2); }
 property: BEGIN_PROPERTY nvlst ENDOBJ	{ $$ = cnfobjNew(CNFOBJ_PROPERTY, $2); }
 constant: BEGIN_CONSTANT nvlst ENDOBJ	{ $$ = cnfobjNew(CNFOBJ_CONSTANT, $2); }
-cfsysline: CFSYSLINE	 		{ $$ = $1; }
 nvlst:					{ $$ = NULL; }
 	| nvlst nv 			{ $2->next = $1; $$ = $2; }
 nv:	NAME '=' VALUE 			{ $$ = nvlstNew($1, $3); }
-rule:	  PRIFILT actlst		{ $$ = cnfruleNew(CNFFILT_PRI, $2); $$->filt.s = $1; }
-	| PROPFILT actlst		{ $$ = cnfruleNew(CNFFILT_PROP, $2); $$->filt.s = $1; }
-	| scriptfilt			{ $$ = $1; }
-
-scriptfilt: IF expr THEN actlst		{ $$ = cnfruleNew(CNFFILT_SCRIPT, $4);
-					  $$->filt.expr = $2; }
-block:	  actlst			{ $$ = $1; }
-	| block actlst			{ $2->next = $1; $$ = $2; }
-	/* v7: | actlst
-	   v7: | block rule */ /* v7 extensions require new rule engine capabilities! */
-actlst:	  act 	 			{ $$=$1; }
-	| actlst '&' act 		{ $3->next = $1; $$ = $3; }
-	| actlst cfsysline		{ $$ = cnfactlstAddSysline($1, $2); }
-	| '{' block '}'			{ $$ = $2; }
-act:	  BEGIN_ACTION nvlst ENDOBJ	{ $$ = cnfactlstNew(CNFACT_V2, $2, NULL); }
-	| LEGACY_ACTION			{ $$ = cnfactlstNew(CNFACT_LEGACY, NULL, $1); }
+script:	  stmt				{ $$ = $1; }
+	| script stmt			{ $$ = scriptAddStmt($1, $2); }
+stmt:	  actlst			{ $$ = $1; }
+	| STOP				{ $$ = cnfstmtNew(S_STOP); }
+	| IF expr THEN block 		{ $$ = cnfstmtNew(S_IF);
+					  $$->d.s_if.expr = $2;
+					  $$->d.s_if.t_then = $4;
+					  $$->d.s_if.t_else = NULL; }
+	| IF expr THEN block ELSE block	{ $$ = cnfstmtNew(S_IF);
+					  $$->d.s_if.expr = $2;
+					  $$->d.s_if.t_then = $4;
+					  $$->d.s_if.t_else = $6; }
+	| PRIFILT block			{ $$ = cnfstmtNewPRIFILT($1, $2); }
+	| PROPFILT block		{ $$ = cnfstmtNewPROPFILT($1, $2); }
+block:    stmt				{ $$ = $1; }
+	| '{' script '}'		{ $$ = $2; }
+actlst:	  s_act				{ $$ = $1; }
+	| actlst '&' s_act 		{ $$ = scriptAddStmt($1, $3); }
+s_act:	  BEGIN_ACTION nvlst ENDOBJ	{ $$ = cnfstmtNewAct($2); }
+	| LEGACY_ACTION			{ $$ = cnfstmtNewLegaAct($1); }
 expr:	  expr AND expr			{ $$ = cnfexprNew(AND, $1, $3); }
 	| expr OR expr			{ $$ = cnfexprNew(OR, $1, $3); }
 	| NOT expr			{ $$ = cnfexprNew(NOT, NULL, $2); }

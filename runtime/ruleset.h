@@ -29,9 +29,10 @@
 /* the ruleset object */
 struct ruleset_s {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
-	linkedList_t llRules;	/* this is NOT a pointer - no typo here ;) */
 	uchar *pszName;		/* name of our ruleset */
 	qqueue_t *pQueue;	/* "main" message queue, if the ruleset has its own (else NULL) */
+	struct cnfstmt *root;
+	struct cnfstmt *last;
 	parserList_t *pParserLst;/* list of parsers to use for this ruleset */
 };
 
@@ -42,9 +43,7 @@ BEGINinterface(ruleset) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Construct)(ruleset_t **ppThis);
 	rsRetVal (*ConstructFinalize)(rsconf_t *conf, ruleset_t __attribute__((unused)) *pThis);
 	rsRetVal (*Destruct)(ruleset_t **ppThis);
-	rsRetVal (*IterateAllActions)(rsconf_t *conf, rsRetVal (*pFunc)(void*, void*), void* pParam);
 	rsRetVal (*DestructAllActions)(rsconf_t *conf);
-	rsRetVal (*AddRule)(ruleset_t *pThis, rule_t **ppRule);
 	rsRetVal (*SetName)(ruleset_t *pThis, uchar *pszName);
 	rsRetVal (*ProcessBatch)(batch_t*);
 	rsRetVal (*GetRuleset)(rsconf_t *conf, ruleset_t **ppThis, uchar*);
@@ -60,8 +59,12 @@ BEGINinterface(ruleset) /* name must also be changed in ENDinterface macro! */
 	 * removed conf ptr from SetName, AddRule as the flex/bison based
 	 * system uses globals in any case.
 	 */
+	/* v7, 2012-09-04 */
+	/* AddRule() removed */
+	/*TODO:REMOVE*/rsRetVal (*IterateAllActions)(rsconf_t *conf, rsRetVal (*pFunc)(void*, void*), void* pParam);
+	void (*AddScript)(ruleset_t *pThis, struct cnfstmt *script);
 ENDinterface(ruleset)
-#define rulesetCURR_IF_VERSION 6 /* increment whenever you change the interface structure! */
+#define rulesetCURR_IF_VERSION 7 /* increment whenever you change the interface structure! */
 
 
 /* prototypes */

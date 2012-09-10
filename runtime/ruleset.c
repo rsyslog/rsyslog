@@ -11,25 +11,23 @@
  *
  * Module begun 2009-06-10 by Rainer Gerhards
  *
- * Copyright 2009-2011 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2009-2012 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
- * The rsyslog runtime library is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * The rsyslog runtime library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with the rsyslog runtime library.  If not, see <http://www.gnu.org/licenses/>.
- *
- * A copy of the GPL can be found in the file "COPYING" in this distribution.
- * A copy of the LGPL can be found in the file "COPYING.LESSER" in this distribution.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *       -or-
+ *       see COPYING.ASL20 in the source distribution
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 #include "config.h"
@@ -42,22 +40,24 @@
 #include "cfsysline.h"
 #include "msg.h"
 #include "ruleset.h"
-#include "rule.h"
 #include "errmsg.h"
 #include "parser.h"
 #include "batch.h"
 #include "unicode-helper.h"
 #include "rsconf.h"
+#include "action.h"
+#include "rainerscript.h"
+#include "srUtils.h"
 #include "dirty.h" /* for main ruleset queue creation */
 
 /* static data */
 DEFobjStaticHelpers
 DEFobjCurrIf(errmsg)
-DEFobjCurrIf(rule)
 DEFobjCurrIf(parser)
 
 /* forward definitions */
 static rsRetVal processBatch(batch_t *pBatch);
+static rsRetVal scriptExec(struct cnfstmt *root, batch_t *pBatch, sbool *active);
 
 
 /* ---------- linked-list key handling functions (ruleset) ---------- */
@@ -73,45 +73,56 @@ rulesetKeyDestruct(void __attribute__((unused)) *pData)
 /* ---------- END linked-list key handling functions (ruleset) ---------- */
 
 
+/* iterate over all actions in a script (stmt subtree) */
+static void
+scriptIterateAllActions(struct cnfstmt *root, rsRetVal (*pFunc)(void*, void*), void* pParam)
+{
+	struct cnfstmt *stmt;
+	for(stmt = root ; stmt != NULL ; stmt = stmt->next) {
+		switch(stmt->nodetype) {
+		case S_NOP:
+		case S_STOP:
+			break;
+		case S_ACT:
+			DBGPRINTF("iterateAllActions calling into action %p\n", stmt->d.act);
+			pFunc(stmt->d.act, pParam);
+			break;
+		case S_IF:
+			if(stmt->d.s_if.t_then != NULL)
+				scriptIterateAllActions(stmt->d.s_if.t_then,
+							pFunc, pParam);
+			if(stmt->d.s_if.t_else != NULL)
+				scriptIterateAllActions(stmt->d.s_if.t_else,
+							pFunc, pParam);
+			break;
+		case S_PRIFILT:
+			scriptIterateAllActions(stmt->d.s_prifilt.t_then,
+						pFunc, pParam);
+			break;
+		case S_PROPFILT:
+			scriptIterateAllActions(stmt->d.s_propfilt.t_then,
+						pFunc, pParam);
+			break;
+		default:
+			dbgprintf("error: unknown stmt type %u during iterateAll\n",
+				(unsigned) stmt->nodetype);
+			break;
+		}
+	}
+}
 
 /* driver to iterate over all of this ruleset actions */
 typedef struct iterateAllActions_s {
 	rsRetVal (*pFunc)(void*, void*);
 	void *pParam;
 } iterateAllActions_t;
-DEFFUNC_llExecFunc(doIterateRulesetActions)
-{
-	DEFiRet;
-	rule_t* pRule = (rule_t*) pData;
-	iterateAllActions_t *pMyParam = (iterateAllActions_t*) pParam;
-	iRet = rule.IterateAllActions(pRule, pMyParam->pFunc, pMyParam->pParam);
-	RETiRet;
-}
-/* iterate over all actions of THIS rule set.
- */
-static rsRetVal
-iterateRulesetAllActions(ruleset_t *pThis, rsRetVal (*pFunc)(void*, void*), void* pParam)
-{
-	iterateAllActions_t params;
-	DEFiRet;
-	assert(pFunc != NULL);
-
-	params.pFunc = pFunc;
-	params.pParam = pParam;
-	CHKiRet(llExecFunc(&(pThis->llRules), doIterateRulesetActions, &params));
-
-finalize_it:
-	RETiRet;
-}
-
-
 /* driver to iterate over all actions */
 DEFFUNC_llExecFunc(doIterateAllActions)
 {
 	DEFiRet;
 	ruleset_t* pThis = (ruleset_t*) pData;
 	iterateAllActions_t *pMyParam = (iterateAllActions_t*) pParam;
-	iRet = iterateRulesetAllActions(pThis, pMyParam->pFunc, pMyParam->pParam);
+	scriptIterateAllActions(pThis->root, pMyParam->pFunc, pMyParam->pParam);
 	RETiRet;
 }
 /* iterate over ALL actions present in the WHOLE system.
@@ -132,23 +143,6 @@ iterateAllActions(rsconf_t *conf, rsRetVal (*pFunc)(void*, void*), void* pParam)
 finalize_it:
 	RETiRet;
 }
-
-
-
-/* helper to processBatch(), used to call the configured actions. It is
- * executed from within llExecFunc() of the action list.
- * rgerhards, 2007-08-02
- */
-DEFFUNC_llExecFunc(processBatchDoRules)
-{
-	rsRetVal iRet;
-	ISOBJ_TYPE_assert(pData, rule);
-	DBGPRINTF("Processing next rule\n");
-	iRet = rule.ProcessBatch((rule_t*) pData, (batch_t*) pParam);
-	DBGPRINTF("ruleset: get iRet %d from rule.ProcessMsg()\n", iRet);
-	return iRet;
-}
-
 
 
 /* This function is similar to processBatch(), but works on a batch that
@@ -207,6 +201,278 @@ finalize_it:
 	RETiRet;
 }
 
+/* return a new "active" structure for the batch. Free with freeActive(). */
+static inline sbool *newActive(batch_t *pBatch)
+{
+	return malloc(sizeof(sbool) * batchNumMsgs(pBatch));
+	
+}
+static inline void freeActive(sbool *active) { free(active); }
+
+/* for details, see scriptExec() header comment! */
+/* call action for all messages with filter on */
+static rsRetVal
+execAct(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
+{
+	int i;
+	DEFiRet;
+dbgprintf("RRRR: execAct: batch of %d elements, active %p\n", batchNumMsgs(pBatch), active);
+	for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pBatch->pbShutdownImmediate) ; ++i) {
+		if(   pBatch->pElem[i].state != BATCH_STATE_DISC
+		   && (active == NULL || active[i])) {
+			DBGPRINTF("Processing next action [active=%p]\n", active);
+			stmt->d.act->submitToActQ(stmt->d.act, pBatch);
+		}
+	}
+	RETiRet;
+}
+
+/* for details, see scriptExec() header comment! */
+/* "stop" simply discards the filtered items - it's just a (hopefully more intuitive
+ * shortcut for users.
+ */
+static rsRetVal
+execStop(batch_t *pBatch, sbool *active)
+{
+	int i;
+	DEFiRet;
+	for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pBatch->pbShutdownImmediate) ; ++i) {
+		if(   pBatch->pElem[i].state != BATCH_STATE_DISC
+		   && (active == NULL || active[i])) {
+			pBatch->pElem[i].state = BATCH_STATE_DISC;
+		}
+	}
+	RETiRet;
+}
+
+/* for details, see scriptExec() header comment! */
+// save current filter, evaluate new one
+// perform then (if any message)
+// if ELSE given:
+//    set new filter, inverted
+//    perform else (if any messages)
+static rsRetVal
+execIf(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
+{
+	sbool *newAct;
+	int i;
+	sbool bRet;
+	DEFiRet;
+	newAct = newActive(pBatch);
+	for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pBatch->pbShutdownImmediate) ; ++i) {
+		if(pBatch->pElem[i].state == BATCH_STATE_DISC)
+			continue; /* will be ignored in any case */
+		if(active == NULL || active[i]) {
+			bRet = cnfexprEvalBool(stmt->d.s_if.expr,
+					       (msg_t*)(pBatch->pElem[i].pUsrp));
+		} else 
+			bRet = 0;
+		newAct[i] = bRet;
+		DBGPRINTF("batch: item %d: expr eval: %d\n", i, bRet);
+	}
+
+	if(stmt->d.s_if.t_then != NULL) {
+		scriptExec(stmt->d.s_if.t_then, pBatch, newAct);
+	}
+	if(stmt->d.s_if.t_else != NULL) {
+		for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pBatch->pbShutdownImmediate)
+		    ; ++i)
+			if(pBatch->pElem[i].state != BATCH_STATE_DISC)
+				newAct[i] = !newAct[i];
+		scriptExec(stmt->d.s_if.t_else, pBatch, newAct);
+	}
+	freeActive(newAct);
+	RETiRet;
+}
+
+/* for details, see scriptExec() header comment! */
+static void
+execPRIFILT(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
+{
+	sbool *thenAct;
+	msg_t *pMsg;
+	int bRet;
+	int i;
+	thenAct = newActive(pBatch);
+	for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pBatch->pbShutdownImmediate) ; ++i) {
+		if(pBatch->pElem[i].state == BATCH_STATE_DISC)
+			continue; /* will be ignored in any case */
+		pMsg = (msg_t*)(pBatch->pElem[i].pUsrp);
+		if(active == NULL || active[i]) {
+			if( (stmt->d.s_prifilt.pmask[pMsg->iFacility] == TABLE_NOPRI) ||
+			   ((stmt->d.s_prifilt.pmask[pMsg->iFacility]
+			            & (1<<pMsg->iSeverity)) == 0) )
+				bRet = 0;
+			else
+				bRet = 1;
+		} else 
+			bRet = 0;
+		thenAct[i] = bRet;
+		DBGPRINTF("batch: item %d PRIFILT %d\n", i, thenAct[i]);
+	}
+
+dbgprintf("RRRR: PRIFILT calling %p\n", stmt->d.s_prifilt.t_then);
+	scriptExec(stmt->d.s_prifilt.t_then, pBatch, thenAct);
+	freeActive(thenAct);
+}
+
+
+/* helper to execPROPFILT(), as the evaluation itself is quite lengthy */
+static int
+evalPROPFILT(struct cnfstmt *stmt, msg_t *pMsg)
+{
+	unsigned short pbMustBeFreed;
+	uchar *pszPropVal;
+	int bRet = 0;
+	size_t propLen;
+
+	pszPropVal = MsgGetProp(pMsg, NULL, stmt->d.s_propfilt.propID,
+				stmt->d.s_propfilt.propName, &propLen, &pbMustBeFreed);
+
+	/* Now do the compares (short list currently ;)) */
+	switch(stmt->d.s_propfilt.operation ) {
+	case FIOP_CONTAINS:
+		if(rsCStrLocateInSzStr(stmt->d.s_propfilt.pCSCompValue, (uchar*) pszPropVal) != -1)
+			bRet = 1;
+		break;
+	case FIOP_ISEMPTY:
+		if(propLen == 0)
+			bRet = 1; /* process message! */
+		break;
+	case FIOP_ISEQUAL:
+		if(rsCStrSzStrCmp(stmt->d.s_propfilt.pCSCompValue,
+				  pszPropVal, ustrlen(pszPropVal)) == 0)
+			bRet = 1; /* process message! */
+		break;
+	case FIOP_STARTSWITH:
+		if(rsCStrSzStrStartsWithCStr(stmt->d.s_propfilt.pCSCompValue,
+				  pszPropVal, ustrlen(pszPropVal)) == 0)
+			bRet = 1; /* process message! */
+		break;
+	case FIOP_REGEX:
+		if(rsCStrSzStrMatchRegex(stmt->d.s_propfilt.pCSCompValue,
+				(unsigned char*) pszPropVal, 0, &stmt->d.s_propfilt.regex_cache) == RS_RET_OK)
+			bRet = 1;
+		break;
+	case FIOP_EREREGEX:
+		if(rsCStrSzStrMatchRegex(stmt->d.s_propfilt.pCSCompValue,
+				  (unsigned char*) pszPropVal, 1, &stmt->d.s_propfilt.regex_cache) == RS_RET_OK)
+			bRet = 1;
+		break;
+	default:
+		/* here, it handles NOP (for performance reasons) */
+		assert(stmt->d.s_propfilt.operation == FIOP_NOP);
+		bRet = 1; /* as good as any other default ;) */
+		break;
+	}
+
+	/* now check if the value must be negated */
+	if(stmt->d.s_propfilt.isNegated)
+		bRet = (bRet == 1) ?  0 : 1;
+
+	if(Debug) {
+		char *cstr;
+		if(stmt->d.s_propfilt.propID == PROP_CEE) {
+			cstr = es_str2cstr(stmt->d.s_propfilt.propName, NULL);
+			DBGPRINTF("Filter: check for CEE property '%s' (value '%s') ",
+				cstr, pszPropVal);
+			free(cstr);
+		} else {
+			DBGPRINTF("Filter: check for property '%s' (value '%s') ",
+				propIDToName(stmt->d.s_propfilt.propID), pszPropVal);
+		}
+		if(stmt->d.s_propfilt.isNegated)
+			DBGPRINTF("NOT ");
+		if(stmt->d.s_propfilt.operation == FIOP_ISEMPTY) {
+			DBGPRINTF("%s : %s\n",
+			       getFIOPName(stmt->d.s_propfilt.operation),
+			       bRet ? "TRUE" : "FALSE");
+		} else {
+			DBGPRINTF("%s '%s': %s\n",
+			       getFIOPName(stmt->d.s_propfilt.operation),
+			       rsCStrGetSzStrNoNULL(stmt->d.s_propfilt.pCSCompValue),
+			       bRet ? "TRUE" : "FALSE");
+		}
+	}
+
+	/* cleanup */
+	if(pbMustBeFreed)
+		free(pszPropVal);
+	return bRet;
+}
+
+/* for details, see scriptExec() header comment! */
+static void
+execPROPFILT(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
+{
+	sbool *thenAct;
+	msg_t *pMsg;
+	sbool bRet;
+	int i;
+	thenAct = newActive(pBatch);
+	for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pBatch->pbShutdownImmediate) ; ++i) {
+		if(pBatch->pElem[i].state == BATCH_STATE_DISC)
+			continue; /* will be ignored in any case */
+		pMsg = (msg_t*)(pBatch->pElem[i].pUsrp);
+		if(active == NULL || active[i]) {
+			bRet = evalPROPFILT(stmt, (msg_t*)(pBatch->pElem[i].pUsrp));
+		} else 
+			bRet = 0;
+		thenAct[i] = bRet;
+		DBGPRINTF("batch: item %d PROPFILT %d\n", i, thenAct[i]);
+	}
+
+dbgprintf("RRRR: PROPFILT calling %p\n", stmt->d.s_propfilt.t_then);
+	scriptExec(stmt->d.s_propfilt.t_then, pBatch, thenAct);
+	freeActive(thenAct);
+}
+
+/* The rainerscript execution engine. It is debatable if that would be better
+ * contained in grammer/rainerscript.c, HOWEVER, that file focusses primarily
+ * on the parsing and object creation part. So as an actual executor, it is
+ * better suited here.
+ * param active: if NULL, all messages are active (to be processed), if non-null
+ *               this is an array of the same size as the batch. If 1, the message
+ *               is to be processed, otherwise not.
+ * NOTE: this function must receive batches which contain a single ruleset ONLY!
+ * rgerhards, 2012-09-04
+ */
+static rsRetVal
+scriptExec(struct cnfstmt *root, batch_t *pBatch, sbool *active)
+{
+	DEFiRet;
+	struct cnfstmt *stmt;
+
+	for(stmt = root ; stmt != NULL ; stmt = stmt->next) {
+dbgprintf("RRRR: scriptExec: batch of %d elements, active %p, stmt %p, nodetype %u\n", batchNumMsgs(pBatch), active, stmt, stmt->nodetype);
+		switch(stmt->nodetype) {
+		case S_NOP:
+			break;
+		case S_STOP:
+			execStop(pBatch, active);
+			break;
+		case S_ACT:
+			execAct(stmt, pBatch, active);
+			break;
+		case S_IF:
+			execIf(stmt, pBatch, active);
+			break;
+		case S_PRIFILT:
+			execPRIFILT(stmt, pBatch, active);
+			break;
+		case S_PROPFILT:
+			execPROPFILT(stmt, pBatch, active);
+			break;
+		default:
+			dbgprintf("error: unknown stmt type %u during exec\n",
+				(unsigned) stmt->nodetype);
+			break;
+		}
+	}
+	RETiRet;
+}
+
+
 /* Process (consume) a batch of messages. Calls the actions configured.
  * If the whole batch uses a singel ruleset, we can process the batch as 
  * a whole. Otherwise, we need to process it slower, on a message-by-message
@@ -226,7 +492,7 @@ processBatch(batch_t *pBatch)
 		if(pThis == NULL)
 			pThis = ourConf->rulesets.pDflt;
 		ISOBJ_TYPE_assert(pThis, ruleset);
-		CHKiRet(llExecFunc(&pThis->llRules, processBatchDoRules, pBatch));
+		CHKiRet(scriptExec(pThis->root, pBatch, NULL));
 	} else {
 		CHKiRet(processBatchMultiRuleset(pBatch));
 	}
@@ -248,29 +514,18 @@ GetParserList(rsconf_t *conf, msg_t *pMsg)
 }
 
 
-/* Add a new rule to the end of the current rule set. We do a number
- * of checks and ignore the rule if it does not pass them.
- */
-static rsRetVal
-addRule(ruleset_t *pThis, rule_t **ppRule)
+/* Add a script block to the current ruleset */
+static void
+addScript(ruleset_t *pThis, struct cnfstmt *script)
 {
-	int iActionCnt;
-	DEFiRet;
-
-	ISOBJ_TYPE_assert(pThis, ruleset);
-	ISOBJ_TYPE_assert(*ppRule, rule);
-
-	CHKiRet(llGetNumElts(&(*ppRule)->llActList, &iActionCnt));
-	if(iActionCnt == 0) {
-		errmsg.LogError(0, NO_ERRCODE, "warning: selector line without actions will be discarded");
-		rule.Destruct(ppRule);
-	} else {
-		CHKiRet(llAppend(&pThis->llRules, NULL, *ppRule));
-		DBGPRINTF("selector line successfully processed, %d actions\n", iActionCnt);
+	if(pThis->last == NULL)
+		pThis->root = pThis->last = script;
+	else {
+		pThis->last->next = script;
+		pThis->last = script;
 	}
-
-finalize_it:
-	RETiRet;
+dbgprintf("RRRR: ruleset added script, script total now is:\n");
+	cnfstmtPrint(pThis->root, 0);
 }
 
 
@@ -362,23 +617,11 @@ finalize_it:
 }
 
 
-/* destructor we need to destruct rules inside our linked list contents.
- */
-static rsRetVal
-doRuleDestruct(void *pData)
-{
-	rule_t *pRule = (rule_t *) pData;
-	DEFiRet;
-	rule.Destruct(&pRule);
-	RETiRet;
-}
-
-
 /* Standard-Constructor
  */
 BEGINobjConstruct(ruleset) /* be sure to specify the object type also in END macro! */
-	CHKiRet(llInit(&pThis->llRules, doRuleDestruct, NULL, NULL));
-finalize_it:
+	pThis->root = NULL;
+	pThis->last = NULL;
 ENDobjConstruct(ruleset)
 
 
@@ -421,8 +664,8 @@ CODESTARTobjDestruct(ruleset)
 	if(pThis->pParserLst != NULL) {
 		parser.DestructParserList(&pThis->pParserLst);
 	}
-	llDestroy(&pThis->llRules);
 	free(pThis->pszName);
+	cnfstmtDestruct(pThis->root);
 ENDobjDestruct(ruleset)
 
 
@@ -456,16 +699,11 @@ rulesetDestructForLinkedList(void *pData)
 	return rulesetDestruct(&pThis);
 }
 
-/* helper for debugPrint(), initiates rule printing */
-DEFFUNC_llExecFunc(doDebugPrintRule)
-{
-	return rule.DebugPrint((rule_t*) pData);
-}
 /* debugprint for the ruleset object */
 BEGINobjDebugPrint(ruleset) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDebugPrint(ruleset)
 	dbgoprint((obj_t*) pThis, "rsyslog ruleset %s:\n", pThis->pszName);
-	llExecFunc(&pThis->llRules, doDebugPrintRule, NULL);
+	cnfstmtPrint(pThis->root, 0);
 ENDobjDebugPrint(ruleset)
 
 
@@ -595,7 +833,7 @@ CODESTARTobjQueryInterface(ruleset)
 
 	pIf->IterateAllActions = iterateAllActions;
 	pIf->DestructAllActions = destructAllActions;
-	pIf->AddRule = addRule;
+	pIf->AddScript = addScript;
 	pIf->ProcessBatch = processBatch;
 	pIf->SetName = setName;
 	pIf->DebugPrintAll = debugPrintAll;
@@ -614,7 +852,6 @@ ENDobjQueryInterface(ruleset)
  */
 BEGINObjClassExit(ruleset, OBJ_IS_CORE_MODULE) /* class, version */
 	objRelease(errmsg, CORE_COMPONENT);
-	objRelease(rule, CORE_COMPONENT);
 	objRelease(parser, CORE_COMPONENT);
 ENDObjClassExit(ruleset)
 
@@ -626,7 +863,6 @@ ENDObjClassExit(ruleset)
 BEGINObjClassInit(ruleset, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
-	CHKiRet(objUse(rule, CORE_COMPONENT));
 
 	/* set our own handlers */
 	OBJSetMethodHandler(objMethod_DEBUGPRINT, rulesetDebugPrint);

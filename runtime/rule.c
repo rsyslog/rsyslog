@@ -44,6 +44,7 @@ DEFobjStaticHelpers
 DEFobjCurrIf(errmsg)
 
 
+#if 0
 /* support for simple textual representation of FIOP names
  * rgerhards, 2005-09-27
  */
@@ -76,6 +77,7 @@ getFIOPName(unsigned iFIOP)
 	}
 	return pRet;
 }
+#endif
 
 
 /* iterate over all actions, this is often needed, for example when HUP processing 

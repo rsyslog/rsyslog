@@ -36,7 +36,6 @@
 #include "rsyslog.h"
 #include "obj.h"
 #include "srUtils.h"
-#include "rule.h"
 #include "ruleset.h"
 #include "modules.h"
 #include "conf.h"
@@ -70,7 +69,6 @@
 
 /* static data */
 DEFobjStaticHelpers
-DEFobjCurrIf(rule)
 DEFobjCurrIf(ruleset)
 DEFobjCurrIf(module)
 DEFobjCurrIf(conf)
@@ -242,54 +240,6 @@ CODESTARTobjDebugPrint(rsconf)
 ENDobjDebugPrint(rsconf)
 
 
-rsRetVal
-cnfDoActlst(struct cnfactlst *actlst, rule_t *pRule)
-{
-	struct cnfcfsyslinelst *cflst;
-	action_t *pAction;
-	uchar *str;
-	rsRetVal localRet;
-	DEFiRet;
-
-	while(actlst != NULL) {
-		dbgprintf("aclst %p: ", actlst);
-		if(actlst->actType == CNFACT_V2) {
-			dbgprintf("v6+ action object\n");
-			if(actionNewInst(actlst->data.lst, &pAction) == RS_RET_OK) {
-				iRet = llAppend(&(pRule)->llActList,  NULL, (void*) pAction);
-			} else {
-				errmsg.LogError(0, RS_RET_ERR, "errors occured in file '%s' "
-					"around line %d", actlst->cnfFile, actlst->lineno);
-			}
-		} else {
-			DBGPRINTF("legacy action line:%s\n", actlst->data.legActLine);
-			str = (uchar*) actlst->data.legActLine;
-			if((localRet = cflineDoAction(loadConf, &str, &pAction)) != RS_RET_OK) {
-				uchar szErrLoc[MAXFNAME + 64];
-				if(localRet != RS_RET_OK_WARN) {
-					DBGPRINTF("legacy action line NOT successfully processed\n");
-				}
-				snprintf((char*)szErrLoc, sizeof(szErrLoc) / sizeof(uchar),
-					 "%s, line %d", actlst->cnfFile, actlst->lineno);
-				errmsg.LogError(0, NO_ERRCODE, "the last %s occured in %s:\"%s\"",
-					(localRet == RS_RET_OK_WARN) ? "warning" : "error",
-					(char*)szErrLoc, (char*)actlst->data.legActLine);
-				if(localRet != RS_RET_OK_WARN) {
-					ABORT_FINALIZE(localRet);
-				}
-			}
-			iRet = llAppend(&(pRule)->llActList,  NULL, (void*) pAction);
-		}
-		for(  cflst = actlst->syslines
-		    ; cflst != NULL ; cflst = cflst->next) {
-			 cnfDoCfsysline(cflst->line);
-		}
-		actlst = actlst->next;
-	}
-finalize_it:
-	RETiRet;
-}
-
 /* This function returns the current date in different
  * variants. It is used to construct the $NOW series of
  * system properties. The returned buffer must be freed
@@ -384,9 +334,6 @@ parser_errmsg(char *fmt, ...)
 	va_start(ap, fmt);
 	if(vsnprintf(errBuf, sizeof(errBuf), fmt, ap) == sizeof(errBuf))
 		errBuf[sizeof(errBuf)-1] = '\0';
-dbgprintf("XXXX: msg: %s\n", errBuf);
-dbgprintf("XXXX: cnfcurrfn: %s\n", cnfcurrfn);
-dbgprintf("XXXX: yylineno: %d\n", yylineno);
 	errmsg.LogError(0, RS_RET_CONF_PARSE_ERROR,
 			"error during parsing file %s, on or before line %d: %s",
 			cnfcurrfn, yylineno, errBuf);
@@ -429,55 +376,12 @@ void cnfDoObj(struct cnfobj *o)
 	cnfobjDestruct(o);
 }
 
-void cnfDoRule(struct cnfrule *cnfrule)
+void cnfDoScript(struct cnfstmt *script)
 {
-	rule_t *pRule;
-	uchar *str;
-	rsRetVal iRet = RS_RET_OK; //DEFiRet;
-
-	dbgprintf("cnf:global:rule\n");
-	cnfrulePrint(cnfrule);
-
-	CHKiRet(rule.Construct(&pRule)); /* create "fresh" selector */
-	CHKiRet(rule.SetAssRuleset(pRule, ruleset.GetCurrent(loadConf)));
-	CHKiRet(rule.ConstructFinalize(pRule));
-
-	switch(cnfrule->filttype) {
-	case CNFFILT_NONE:
-		break;
-	case CNFFILT_PRI:
-		str = (uchar*) cnfrule->filt.s;
-		iRet = cflineProcessTradPRIFilter(&str, pRule);
-		break;
-	case CNFFILT_PROP:
-		dbgprintf("%s\n", cnfrule->filt.s);
-		str = (uchar*) cnfrule->filt.s;
-		iRet = cflineProcessPropFilter(&str, pRule);
-		break;
-	case CNFFILT_SCRIPT:
-		pRule->f_filter_type = FILTER_EXPR;
-		pRule->f_filterData.expr = cnfrule->filt.expr;
-		break;
-	}
-	/* we now check if there are some global (BSD-style) filter conditions
-	 * and, if so, we copy them over. rgerhards, 2005-10-18
-	 */
-	if(pDfltProgNameCmp != NULL) {
-		CHKiRet(rsCStrConstructFromCStr(&(pRule->pCSProgNameComp), pDfltProgNameCmp));
-	}
-
-	if(eDfltHostnameCmpMode != HN_NO_COMP) {
-		pRule->eHostnameCmpMode = eDfltHostnameCmpMode;
-		CHKiRet(rsCStrConstructFromCStr(&(pRule->pCSHostnameComp), pDfltHostnameCmp));
-	}
-
-	cnfDoActlst(cnfrule->actlst, pRule);
-
-	CHKiRet(ruleset.AddRule(rule.GetAssRuleset(pRule), &pRule));
-
-finalize_it:
-	//TODO: do something with error states
-	cnfruleDestruct(cnfrule);
+	// TODO: streamline this, call directly into ruleset from grammar.y
+	// TODO: BSD-Style blocks?
+	dbgprintf("cnf:global:script\n");
+	ruleset.AddScript(ruleset.GetCurrent(loadConf), script);
 }
 
 void cnfDoCfsysline(char *ln)
@@ -1377,7 +1281,6 @@ ENDobjQueryInterface(rsconf)
 BEGINObjClassInit(rsconf, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
 	CHKiRet(objUse(ruleset, CORE_COMPONENT));
-	CHKiRet(objUse(rule, CORE_COMPONENT));
 	CHKiRet(objUse(module, CORE_COMPONENT));
 	CHKiRet(objUse(conf, CORE_COMPONENT));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
@@ -1394,7 +1297,6 @@ ENDObjClassInit(rsconf)
 /* De-initialize the rsconf class.
  */
 BEGINObjClassExit(rsconf, OBJ_IS_CORE_MODULE) /* class, version */
-	objRelease(rule, CORE_COMPONENT);
 	objRelease(ruleset, CORE_COMPONENT);
 	objRelease(module, CORE_COMPONENT);
 	objRelease(conf, CORE_COMPONENT);

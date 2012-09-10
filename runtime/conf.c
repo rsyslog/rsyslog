@@ -61,17 +61,16 @@
 #include "srUtils.h"
 #include "errmsg.h"
 #include "net.h"
-#include "rule.h"
 #include "ruleset.h"
 #include "rsconf.h"
 #include "unicode-helper.h"
+#include "rainerscript.h"
 
 #ifdef OS_SOLARIS
 #	define NAME_MAX MAXNAMELEN
 #endif
 
 /* forward definitions */
-//static rsRetVal cfline(rsconf_t *conf, uchar *line, rule_t **pfCurr);
 
 
 /* static data */
@@ -79,7 +78,6 @@ DEFobjStaticHelpers
 DEFobjCurrIf(module)
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(net)
-DEFobjCurrIf(rule)
 DEFobjCurrIf(ruleset)
 
 int bConfStrictScoping = 0;	/* force strict scoping during config processing? */
@@ -326,14 +324,9 @@ cflineParseFileName(uchar* p, uchar *pFileName, omodStringRequest_t *pOMSR, int 
 }
 
 
-/* Helper to cfline(). This function takes the filter part of a traditional, PRI
- * based line and decodes the PRIs given in the selector line. It processed the
- * line up to the beginning of the action part. A pointer to that beginnig is
- * passed back to the caller.
- * rgerhards 2005-09-15
- */
+/* Decode a traditional PRI filter */
 /* GPLv3 - stems back to sysklogd */
-rsRetVal cflineProcessTradPRIFilter(uchar **pline, register rule_t *pRule)
+rsRetVal DecodePRIFilter(uchar *pline, uchar pmask[])
 {
 	uchar *p;
 	register uchar *q;
@@ -347,22 +340,15 @@ rsRetVal cflineProcessTradPRIFilter(uchar **pline, register rule_t *pRule)
 	DEFiRet;
 
 	ASSERT(pline != NULL);
-	ASSERT(*pline != NULL);
-	ISOBJ_TYPE_assert(pRule, rule);
 
-	dbgprintf(" - traditional PRI filter '%s'\n", *pline);
-	errno = 0;	/* keep strerror_r() stuff out of logerror messages */
+	dbgprintf("Decoding traditional PRI filter '%s'\n", pline);
 
-	pRule->f_filter_type = FILTER_PRI;
-	/* Note: file structure is pre-initialized to zero because it was
-	 * created with calloc()!
-	 */
 	for (i = 0; i <= LOG_NFACILITIES; i++) {
-		pRule->f_filterData.f_pmask[i] = TABLE_NOPRI;
+		pmask[i] = TABLE_NOPRI;
 	}
 
 	/* scan through the list of selectors */
-	for (p = *pline; *p && *p != '\t' && *p != ' ';) {
+	for (p = pline; *p && *p != '\t' && *p != ' ';) {
 		/* find the end of this facility name list */
 		for (q = p; *q && *q != '\t' && *q++ != '.'; )
 			continue;
@@ -411,28 +397,28 @@ rsRetVal cflineProcessTradPRIFilter(uchar **pline, register rule_t *pRule)
 				for (i = 0; i <= LOG_NFACILITIES; i++) {
 					if ( pri == INTERNAL_NOPRI ) {
 						if ( ignorepri )
-							pRule->f_filterData.f_pmask[i] = TABLE_ALLPRI;
+							pmask[i] = TABLE_ALLPRI;
 						else
-							pRule->f_filterData.f_pmask[i] = TABLE_NOPRI;
+							pmask[i] = TABLE_NOPRI;
 					}
 					else if ( singlpri ) {
 						if ( ignorepri )
-				  			pRule->f_filterData.f_pmask[i] &= ~(1<<pri);
+				  			pmask[i] &= ~(1<<pri);
 						else
-				  			pRule->f_filterData.f_pmask[i] |= (1<<pri);
+				  			pmask[i] |= (1<<pri);
 					} else {
 						if ( pri == TABLE_ALLPRI ) {
 							if ( ignorepri )
-								pRule->f_filterData.f_pmask[i] = TABLE_NOPRI;
+								pmask[i] = TABLE_NOPRI;
 							else
-								pRule->f_filterData.f_pmask[i] = TABLE_ALLPRI;
+								pmask[i] = TABLE_ALLPRI;
 						} else {
 							if ( ignorepri )
 								for (i2= 0; i2 <= pri; ++i2)
-									pRule->f_filterData.f_pmask[i] &= ~(1<<i2);
+									pmask[i] &= ~(1<<i2);
 							else
 								for (i2= 0; i2 <= pri; ++i2)
-									pRule->f_filterData.f_pmask[i] |= (1<<i2);
+									pmask[i] |= (1<<i2);
 						}
 					}
 				}
@@ -447,27 +433,27 @@ rsRetVal cflineProcessTradPRIFilter(uchar **pline, register rule_t *pRule)
 
 				if ( pri == INTERNAL_NOPRI ) {
 					if ( ignorepri )
-						pRule->f_filterData.f_pmask[i >> 3] = TABLE_ALLPRI;
+						pmask[i >> 3] = TABLE_ALLPRI;
 					else
-						pRule->f_filterData.f_pmask[i >> 3] = TABLE_NOPRI;
+						pmask[i >> 3] = TABLE_NOPRI;
 				} else if ( singlpri ) {
 					if ( ignorepri )
-						pRule->f_filterData.f_pmask[i >> 3] &= ~(1<<pri);
+						pmask[i >> 3] &= ~(1<<pri);
 					else
-						pRule->f_filterData.f_pmask[i >> 3] |= (1<<pri);
+						pmask[i >> 3] |= (1<<pri);
 				} else {
 					if ( pri == TABLE_ALLPRI ) {
 						if ( ignorepri )
-							pRule->f_filterData.f_pmask[i >> 3] = TABLE_NOPRI;
+							pmask[i >> 3] = TABLE_NOPRI;
 						else
-							pRule->f_filterData.f_pmask[i >> 3] = TABLE_ALLPRI;
+							pmask[i >> 3] = TABLE_ALLPRI;
 					} else {
 						if ( ignorepri )
 							for (i2= 0; i2 <= pri; ++i2)
-								pRule->f_filterData.f_pmask[i >> 3] &= ~(1<<i2);
+								pmask[i >> 3] &= ~(1<<i2);
 						else
 							for (i2= 0; i2 <= pri; ++i2)
-								pRule->f_filterData.f_pmask[i >> 3] |= (1<<i2);
+								pmask[i >> 3] |= (1<<i2);
 					}
 				}
 			}
@@ -478,11 +464,6 @@ rsRetVal cflineProcessTradPRIFilter(uchar **pline, register rule_t *pRule)
 		p = q;
 	}
 
-	/* skip to action part */
-	while (*p == '\t' || *p == ' ')
-		p++;
-
-	*pline = p;
 	RETiRet;
 }
 
@@ -492,7 +473,7 @@ rsRetVal cflineProcessTradPRIFilter(uchar **pline, register rule_t *pRule)
  * of the action part. A pointer to that beginnig is passed back to the caller.
  * rgerhards 2005-09-15
  */
-rsRetVal cflineProcessPropFilter(uchar **pline, register rule_t *f)
+rsRetVal DecodePropFilter(uchar *pline, struct cnfstmt *stmt)
 {
 	rsParsObj *pPars;
 	cstr_t *pCSCompOp;
@@ -501,16 +482,11 @@ rsRetVal cflineProcessPropFilter(uchar **pline, register rule_t *f)
 	int iOffset; /* for compare operations */
 
 	ASSERT(pline != NULL);
-	ASSERT(*pline != NULL);
-	ASSERT(f != NULL);
 
-	dbgprintf(" - property-based filter '%s'\n", *pline);
-	errno = 0;	/* keep strerror_r() stuff out of logerror messages */
-
-	f->f_filter_type = FILTER_PROP;
+	dbgprintf("Decoding property-based filter '%s'\n", pline);
 
 	/* create parser object starting with line string without leading colon */
-	if((iRet = rsParsConstructFromSz(&pPars, (*pline)+1)) != RS_RET_OK) {
+	if((iRet = rsParsConstructFromSz(&pPars, pline+1)) != RS_RET_OK) {
 		errmsg.LogError(0, iRet, "Error %d constructing parser object - ignoring selector", iRet);
 		return(iRet);
 	}
@@ -522,15 +498,15 @@ rsRetVal cflineProcessPropFilter(uchar **pline, register rule_t *f)
 		rsParsDestruct(pPars);
 		return(iRet);
 	}
-	iRet = propNameToID(pCSPropName, &f->f_filterData.prop.propID);
+	iRet = propNameToID(pCSPropName, &stmt->d.s_propfilt.propID);
 	if(iRet != RS_RET_OK) {
 		errmsg.LogError(0, iRet, "error %d parsing filter property - ignoring selector", iRet);
 		rsParsDestruct(pPars);
 		return(iRet);
 	}
-	if(f->f_filterData.prop.propID == PROP_CEE) {
+	if(stmt->d.s_propfilt.propID == PROP_CEE) {
 		/* in CEE case, we need to preserve the actual property name */
-		if((f->f_filterData.prop.propName =
+		if((stmt->d.s_propfilt.propName =
 		     es_newStrFromBuf((char*)cstrGetSzStrNoNULL(pCSPropName)+2, cstrLen(pCSPropName)-2)) == NULL) {
 			cstrDestruct(&pCSPropName);
 			return(RS_RET_ERR);
@@ -553,55 +529,44 @@ rsRetVal cflineProcessPropFilter(uchar **pline, register rule_t *f)
 	 */
 	if(rsCStrLen(pCSCompOp) > 0) {
 		if(*rsCStrGetBufBeg(pCSCompOp) == '!') {
-			f->f_filterData.prop.isNegated = 1;
+			stmt->d.s_propfilt.isNegated = 1;
 			iOffset = 1; /* ignore '!' */
 		} else {
-			f->f_filterData.prop.isNegated = 0;
+			stmt->d.s_propfilt.isNegated = 0;
 			iOffset = 0;
 		}
 	} else {
-		f->f_filterData.prop.isNegated = 0;
+		stmt->d.s_propfilt.isNegated = 0;
 		iOffset = 0;
 	}
 
 	if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, (uchar*) "contains", 8)) {
-		f->f_filterData.prop.operation = FIOP_CONTAINS;
+		stmt->d.s_propfilt.operation = FIOP_CONTAINS;
 	} else if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, (uchar*) "isequal", 7)) {
-		f->f_filterData.prop.operation = FIOP_ISEQUAL;
+		stmt->d.s_propfilt.operation = FIOP_ISEQUAL;
 	} else if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, (uchar*) "isempty", 7)) {
-		f->f_filterData.prop.operation = FIOP_ISEMPTY;
+		stmt->d.s_propfilt.operation = FIOP_ISEMPTY;
 	} else if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, (uchar*) "startswith", 10)) {
-		f->f_filterData.prop.operation = FIOP_STARTSWITH;
+		stmt->d.s_propfilt.operation = FIOP_STARTSWITH;
 	} else if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, (unsigned char*) "regex", 5)) {
-		f->f_filterData.prop.operation = FIOP_REGEX;
+		stmt->d.s_propfilt.operation = FIOP_REGEX;
 	} else if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, (unsigned char*) "ereregex", 8)) {
-		f->f_filterData.prop.operation = FIOP_EREREGEX;
+		stmt->d.s_propfilt.operation = FIOP_EREREGEX;
 	} else {
 		errmsg.LogError(0, NO_ERRCODE, "error: invalid compare operation '%s' - ignoring selector",
 		           (char*) rsCStrGetSzStrNoNULL(pCSCompOp));
 	}
 	rsCStrDestruct(&pCSCompOp); /* no longer needed */
 
-	if(f->f_filterData.prop.operation != FIOP_ISEMPTY) {
+	if(stmt->d.s_propfilt.operation != FIOP_ISEMPTY) {
 		/* read compare value */
-		iRet = parsQuotedCStr(pPars, &f->f_filterData.prop.pCSCompValue);
+		iRet = parsQuotedCStr(pPars, &stmt->d.s_propfilt.pCSCompValue);
 		if(iRet != RS_RET_OK) {
 			errmsg.LogError(0, iRet, "error %d compare value property - ignoring selector", iRet);
 			rsParsDestruct(pPars);
 			return(iRet);
 		}
 	}
-
-	/* skip to action part */
-	if((iRet = parsSkipWhitespace(pPars)) != RS_RET_OK) {
-		errmsg.LogError(0, iRet, "error %d skipping to action part - ignoring selector", iRet);
-		rsParsDestruct(pPars);
-		return(iRet);
-	}
-
-	/* cleanup */
-	*pline = *pline + rsParsGetParsePointer(pPars) + 1;
-		/* we are adding one for the skipped initial ":" */
 
 	return rsParsDestruct(pPars);
 }
@@ -831,7 +796,6 @@ CODESTARTObjClassExit(conf)
 	objRelease(module, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(net, LM_NET_FILENAME);
-	objRelease(rule, CORE_COMPONENT);
 	objRelease(ruleset, CORE_COMPONENT);
 ENDObjClassExit(conf)
 
@@ -845,7 +809,6 @@ BEGINAbstractObjClassInit(conf, 1, OBJ_IS_CORE_MODULE) /* class, version - CHANG
 	CHKiRet(objUse(module, CORE_COMPONENT));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(net, LM_NET_FILENAME)); /* TODO: make this dependcy go away! */
-	CHKiRet(objUse(rule, CORE_COMPONENT));
 	CHKiRet(objUse(ruleset, CORE_COMPONENT));
 
  	/* These commands will NOT be supported -- the new v6.3 config system provides

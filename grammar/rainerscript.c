@@ -2,7 +2,7 @@
  *
  * Module begun 2011-07-01 by Rainer Gerhards
  *
- * Copyright 2011 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2011-2012 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -37,7 +37,9 @@
 #include <libestr.h>
 #include "rsyslog.h"
 #include "rainerscript.h"
+#include "conf.h"
 #include "parserif.h"
+#include "rsconf.h"
 #include "grammar.h"
 #include "queue.h"
 #include "srUtils.h"
@@ -46,6 +48,37 @@
 
 DEFobjCurrIf(obj)
 DEFobjCurrIf(regexp)
+
+char*
+getFIOPName(unsigned iFIOP)
+{
+	char *pRet;
+	switch(iFIOP) {
+		case FIOP_CONTAINS:
+			pRet = "contains";
+			break;
+		case FIOP_ISEQUAL:
+			pRet = "isequal";
+			break;
+		case FIOP_STARTSWITH:
+			pRet = "startswith";
+			break;
+		case FIOP_REGEX:
+			pRet = "regex";
+			break;
+		case FIOP_EREREGEX:
+			pRet = "ereregex";
+			break;
+		case FIOP_ISEMPTY:
+			pRet = "isempty";
+			break;
+		default:
+			pRet = "NOP";
+			break;
+	}
+	return pRet;
+}
+
 
 void
 readConfFile(FILE *fp, es_str_t **str)
@@ -107,7 +140,6 @@ objlstNew(struct cnfobj *o)
 		lst->next = NULL;
 		lst->obj = o;
 	}
-dbgprintf("AAAA: creating new objlst\n");
 cnfobjPrint(o);
 
 	return lst;
@@ -127,6 +159,25 @@ objlstAdd(struct objlst *root, struct cnfobj *o)
 		for(l = root ; l->next != NULL ; l = l->next)
 			;
 		l->next = newl;
+	}
+	return root;
+}
+
+/* add stmt to current script, always return root stmt pointer */
+struct cnfstmt*
+scriptAddStmt(struct cnfstmt *root, struct cnfstmt *s)
+{
+	struct cnfstmt *l;
+dbgprintf("RRRR: scriptAddStmt(%p, %p): ", root, s);
+	
+	if(root == NULL) {
+		root = s;
+dbgprintf("root set to %p\n", s);
+	} else { /* find last, linear search ok, as only during config phase */
+		for(l = root ; l->next != NULL ; l = l->next)
+			;
+		l->next = s;
+dbgprintf("%p->next = %p\n", l, s);
 	}
 	return root;
 }
@@ -660,116 +711,6 @@ cnfobjPrint(struct cnfobj *o)
 	nvlstPrint(o->nvlst);
 }
 
-
-struct cnfactlst*
-cnfactlstNew(enum cnfactType actType, struct nvlst *lst, char *actLine)
-{
-	struct cnfactlst *actlst;
-
-	if((actlst = malloc(sizeof(struct cnfactlst))) != NULL) {
-		actlst->next = NULL;
-		actlst->syslines = NULL;
-		actlst->actType = actType;
-		actlst->lineno = yylineno;
-		actlst->cnfFile = strdup(cnfcurrfn);
-		if(actType == CNFACT_V2)
-			actlst->data.lst = lst;
-		else
-			actlst->data.legActLine = actLine;
-	}
-	return actlst;
-}
-
-struct cnfactlst*
-cnfactlstAddSysline(struct cnfactlst* actlst, char *line)
-{
-	struct cnfcfsyslinelst *cflst;
-
-	if((cflst = malloc(sizeof(struct cnfcfsyslinelst))) != NULL)   {
-		cflst->line = line;
-		if(actlst->syslines == NULL) {
-			cflst->next = NULL;
-		} else {
-			cflst->next = actlst->syslines;
-		}
-		actlst->syslines = cflst;
-	}
-	return actlst;
-}
-
-
-void
-cnfactlstDestruct(struct cnfactlst *actlst)
-{
-	struct cnfactlst *toDel;
-
-	while(actlst != NULL) {
-		toDel = actlst;
-		actlst = actlst->next;
-		free(toDel->cnfFile);
-		cnfcfsyslinelstDestruct(toDel->syslines);
-		if(toDel->actType == CNFACT_V2)
-			nvlstDestruct(toDel->data.lst);
-		else
-			free(toDel->data.legActLine);
-		free(toDel);
-	}
-	
-}
-
-static inline struct cnfcfsyslinelst*
-cnfcfsyslinelstReverse(struct cnfcfsyslinelst *lst)
-{
-	struct cnfcfsyslinelst *curr, *prev;
-	if(lst == NULL)
-		return NULL;
-	prev = NULL;
-	while(lst != NULL) {
-		curr = lst;
-		lst = lst->next;
-		curr->next = prev;
-		prev = curr;
-	}
-	return prev;
-}
-
-struct cnfactlst*
-cnfactlstReverse(struct cnfactlst *actlst)
-{
-	struct cnfactlst *curr, *prev;
-
-	prev = NULL;
-	while(actlst != NULL) {
-		curr = actlst;
-		actlst = actlst->next;
-		curr->syslines = cnfcfsyslinelstReverse(curr->syslines);
-		curr->next = prev;
-		prev = curr;
-	}
-	return prev;
-}
-
-void
-cnfactlstPrint(struct cnfactlst *actlst)
-{
-	struct cnfcfsyslinelst *cflst;
-
-	while(actlst != NULL) {
-		dbgprintf("aclst %p: ", actlst);
-		if(actlst->actType == CNFACT_V2) {
-			dbgprintf("V2 action type: ");
-			nvlstPrint(actlst->data.lst);
-		} else {
-			dbgprintf("legacy action line: '%s'\n",
-				actlst->data.legActLine);
-		}
-		for(  cflst = actlst->syslines
-		    ; cflst != NULL ; cflst = cflst->next) {
-			dbgprintf("action:cfsysline: '%s'\n", cflst->line);
-		}
-		actlst = actlst->next;
-	}
-}
 
 struct cnfexpr*
 cnfexprNew(unsigned nodetype, struct cnfexpr *l, struct cnfexpr *r)
@@ -1498,6 +1439,68 @@ cnfexprPrint(struct cnfexpr *expr, int indent)
 		break;
 	}
 }
+void
+cnfstmtPrint(struct cnfstmt *root, int indent)
+{
+	struct cnfstmt *stmt;
+	//dbgprintf("stmt %p, indent %d, type '%c'\n", expr, indent, expr->nodetype);
+	for(stmt = root ; stmt != NULL ; stmt = stmt->next) {
+		switch(stmt->nodetype) {
+		case S_NOP:
+			doIndent(indent); dbgprintf("NOP\n");
+			break;
+		case S_STOP:
+			doIndent(indent); dbgprintf("STOP\n");
+			break;
+		case S_ACT:
+			doIndent(indent); dbgprintf("ACTION %p (%s)\n", stmt->d.act, stmt->printable);
+			break;
+		case S_IF:
+			doIndent(indent); dbgprintf("IF\n");
+			cnfexprPrint(stmt->d.s_if.expr, indent+1);
+			doIndent(indent); dbgprintf("THEN\n");
+			cnfstmtPrint(stmt->d.s_if.t_then, indent+1);
+			if(stmt->d.s_if.t_else != NULL) {
+				doIndent(indent); dbgprintf("ELSE\n");
+				cnfstmtPrint(stmt->d.s_if.t_else, indent+1);
+			}
+			doIndent(indent); dbgprintf("END IF\n");
+			break;
+		case S_PRIFILT:
+			doIndent(indent); dbgprintf("PRIFILT '%s'\n", stmt->printable);
+			cnfstmtPrint(stmt->d.s_prifilt.t_then, indent+1);
+			doIndent(indent); dbgprintf("END PRIFILT\n");
+			break;
+		case S_PROPFILT:
+			doIndent(indent); dbgprintf("PROPFILT\n");
+			doIndent(indent); dbgprintf("\tProperty.: '%s'\n",
+				propIDToName(stmt->d.s_propfilt.propID));
+			if(stmt->d.s_propfilt.propName != NULL) {
+				char *cstr;
+				cstr = es_str2cstr(stmt->d.s_propfilt.propName, NULL);
+				doIndent(indent);
+				dbgprintf("\tCEE-Prop.: '%s'\n", cstr);
+				free(cstr);
+			}
+			doIndent(indent); dbgprintf("\tOperation: ");
+			if(stmt->d.s_propfilt.isNegated)
+				dbgprintf("NOT ");
+			dbgprintf("'%s'\n", getFIOPName(stmt->d.s_propfilt.operation));
+			if(stmt->d.s_propfilt.pCSCompValue != NULL) {
+				doIndent(indent); dbgprintf("\tValue....: '%s'\n",
+				       rsCStrGetSzStrNoNULL(stmt->d.s_propfilt.pCSCompValue));
+			}
+			doIndent(indent); dbgprintf("THEN\n");
+			cnfstmtPrint(stmt->d.s_propfilt.t_then, indent+1);
+			doIndent(indent); dbgprintf("END PROPFILT\n");
+			break;
+		default:
+			dbgprintf("error: unknown stmt type %u\n",
+				(unsigned) stmt->nodetype);
+			break;
+		}
+	}
+}
 
 struct cnfnumval*
 cnfnumvalNew(long long val)
@@ -1521,6 +1524,7 @@ cnfstringvalNew(es_str_t *estr)
 	return strval;
 }
 
+
 struct cnfvar*
 cnfvarNew(char *name)
 {
@@ -1532,61 +1536,126 @@ cnfvarNew(char *name)
 	return var;
 }
 
-struct cnfrule *
-cnfruleNew(enum cnfFiltType filttype, struct cnfactlst *actlst)
+struct cnfstmt *
+cnfstmtNew(unsigned s_type)
 {
-	struct cnfrule* cnfrule;
-	if((cnfrule = malloc(sizeof(struct cnfrule))) != NULL) {
-		cnfrule->nodetype = 'R';
-		cnfrule->filttype = filttype;
-		cnfrule->actlst = cnfactlstReverse(actlst);
+	struct cnfstmt* cnfstmt;
+	if((cnfstmt = malloc(sizeof(struct cnfstmt))) != NULL) {
+		cnfstmt->nodetype = s_type;
+		cnfstmt->printable = NULL;
+		cnfstmt->next = NULL;
 	}
-	return cnfrule;
+	return cnfstmt;
 }
 
 void
-cnfrulePrint(struct cnfrule *rule)
+cnfstmtDestruct(struct cnfstmt *root)
 {
-	dbgprintf("------ start rule %p:\n", rule);
-	dbgprintf("%s: ", cnfFiltType2str(rule->filttype));
-	switch(rule->filttype) {
-	case CNFFILT_NONE:
-		break;
-	case CNFFILT_PRI:
-	case CNFFILT_PROP:
-		dbgprintf("%s\n", rule->filt.s);
-		break;
-	case CNFFILT_SCRIPT:
-		dbgprintf("\n");
-		cnfexprPrint(rule->filt.expr, 0);
-		break;
+	struct cnfstmt *stmt, *todel;
+	for(stmt = root ; stmt != NULL ; ) {
+		switch(stmt->nodetype) {
+		case S_NOP:
+		case S_STOP:
+			break;
+		case S_ACT:
+			actionDestruct(stmt->d.act);
+			break;
+		case S_IF:
+			cnfexprDestruct(stmt->d.s_if.expr);
+			if(stmt->d.s_if.t_then != NULL) {
+				cnfstmtDestruct(stmt->d.s_if.t_then);
+			}
+			if(stmt->d.s_if.t_else != NULL) {
+				cnfstmtDestruct(stmt->d.s_if.t_else);
+			}
+			break;
+		case S_PRIFILT:
+			cnfstmtDestruct(stmt->d.s_prifilt.t_then);
+			break;
+		case S_PROPFILT:
+			if(stmt->d.s_propfilt.propName != NULL)
+				es_deleteStr(stmt->d.s_propfilt.propName);
+			if(stmt->d.s_propfilt.regex_cache != NULL)
+				rsCStrRegexDestruct(&stmt->d.s_propfilt.regex_cache);
+			if(stmt->d.s_propfilt.pCSCompValue != NULL)
+				cstrDestruct(&stmt->d.s_propfilt.pCSCompValue);
+			cnfstmtDestruct(stmt->d.s_propfilt.t_then);
+			break;
+		default:
+			dbgprintf("error: unknown stmt type during destruct %u\n",
+				(unsigned) stmt->nodetype);
+			break;
+		}
+		free(stmt->printable);
+		todel = stmt;
+		stmt = stmt->next;
+		free(todel);
 	}
-	cnfactlstPrint(rule->actlst);
-	dbgprintf("------ end rule %p\n", rule);
 }
 
-/* note: the sysline itself was already freed during processing
- * and as such MUST NOT be freed again!
- */
-void
-cnfcfsyslinelstDestruct(struct cnfcfsyslinelst *cfslst)
+struct cnfstmt *
+cnfstmtNewPRIFILT(char *prifilt, struct cnfstmt *t_then)
 {
-	struct cnfcfsyslinelst *toDel;
-	while(cfslst != NULL) {
-		toDel = cfslst;
-		cfslst = cfslst->next;
-		free(toDel);
+	struct cnfstmt* cnfstmt;
+	if((cnfstmt = cnfstmtNew(S_PRIFILT)) != NULL) {
+		cnfstmt->printable = (uchar*)prifilt;
+		cnfstmt->d.s_prifilt.t_then = t_then;
+		DecodePRIFilter((uchar*)prifilt, cnfstmt->d.s_prifilt.pmask);
 	}
+	return cnfstmt;
 }
 
-void
-cnfruleDestruct(struct cnfrule *rule)
+struct cnfstmt *
+cnfstmtNewPROPFILT(char *propfilt, struct cnfstmt *t_then)
 {
-	if(   rule->filttype == CNFFILT_PRI
-	   || rule->filttype == CNFFILT_PROP)
-		free(rule->filt.s);
-	cnfactlstDestruct(rule->actlst);
-	free(rule);
+	struct cnfstmt* cnfstmt;
+	if((cnfstmt = cnfstmtNew(S_PROPFILT)) != NULL) {
+		cnfstmt->printable = (uchar*)propfilt;
+		cnfstmt->d.s_propfilt.t_then = t_then;
+		cnfstmt->d.s_propfilt.propName = NULL;
+		cnfstmt->d.s_propfilt.regex_cache = NULL;
+		cnfstmt->d.s_propfilt.pCSCompValue = NULL;
+		DecodePropFilter((uchar*)propfilt, cnfstmt);
+	}
+	return cnfstmt;
+}
+
+struct cnfstmt *
+cnfstmtNewAct(struct nvlst *lst)
+{
+	struct cnfstmt* cnfstmt;
+	if((cnfstmt = cnfstmtNew(S_ACT)) == NULL) 
+		goto done;
+	if(actionNewInst(lst, &cnfstmt->d.act) != RS_RET_OK) {
+	// TODO:RS_RET_WARN?
+		parser_errmsg("errors occured in file '%s' around line %d",
+			      cnfcurrfn, yylineno);
+		cnfstmt->nodetype = S_NOP; /* disable action! */
+		goto done;
+	}
+	cnfstmt->printable = (uchar*)strdup("action()");
+done:	return cnfstmt;
+}
+
+struct cnfstmt *
+cnfstmtNewLegaAct(char *actline)
+{
+	struct cnfstmt* cnfstmt;
+	rsRetVal localRet;
+	if((cnfstmt = cnfstmtNew(S_ACT)) == NULL) 
+		goto done;
+	cnfstmt->printable = (uchar*)strdup((char*)actline);
+	localRet = cflineDoAction(loadConf, (uchar**)&actline, &cnfstmt->d.act);
+	if(localRet != RS_RET_OK && localRet != RS_RET_OK_WARN) {
+		parser_errmsg("%s occured in file '%s' around line %d",
+			      (localRet == RS_RET_OK_WARN) ? "warnings" : "errors",
+			      cnfcurrfn, yylineno);
+		if(localRet != RS_RET_OK_WARN) {
+			cnfstmt->nodetype = S_NOP; /* disable action! */
+			goto done;
+		}
+	}
+done:	return cnfstmt;
 }
 
 struct cnffparamlst *
@@ -1819,6 +1888,15 @@ cstrPrint(char *text, es_str_t *estr)
 	str = es_str2cstr(estr, NULL);
 	dbgprintf("%s%s", text, str);
 	free(str);
+}
+
+char *
+rmLeadingSpace(char *s)
+{
+	char *p;
+	for(p = s ; *p && isspace(*p) ; ++p)
+		;
+	return(p);
 }
 
 /* init must be called once before any parsing of the script files start */

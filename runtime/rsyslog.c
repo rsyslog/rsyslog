@@ -72,7 +72,6 @@
 #include "glbl.h"
 #include "errmsg.h"
 #include "prop.h"
-#include "rule.h"
 #include "ruleset.h"
 #include "parser.h"
 #include "strgen.h"
@@ -171,8 +170,6 @@ rsrtInit(char **ppErrObj, obj_if_t *pObjIF)
 		CHKiRet(glblClassInit(NULL));
 		if(ppErrObj != NULL) *ppErrObj = "msg";
 		CHKiRet(msgClassInit(NULL));
-		if(ppErrObj != NULL) *ppErrObj = "rule";
-		CHKiRet(ruleClassInit(NULL));
 		if(ppErrObj != NULL) *ppErrObj = "ruleset";
 		CHKiRet(rulesetClassInit(NULL));
 		if(ppErrObj != NULL) *ppErrObj = "wti";
@@ -220,7 +217,6 @@ rsrtExit(void)
 		confClassExit();
 		glblClassExit();
 		rulesetClassExit();
-		ruleClassExit();
 
 		objClassExit(); /* *THIS* *MUST/SHOULD?* always be the first class initilizer being called (except debug)! */
 	}
