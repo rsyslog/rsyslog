@@ -30,6 +30,7 @@
 #ifndef	TEMPLATE_H_INCLUDED
 #define	TEMPLATE_H_INCLUDED 1
 
+#include <json/json.h>
 #include <libestr.h>
 #include "regexp.h"
 #include "stringbuf.h"
@@ -147,6 +148,7 @@ rsRetVal ExtendBuf(uchar **pBuf, size_t *pLenBuf, size_t iMinSize);
  */
 rsRetVal tplToArray(struct template *pTpl, msg_t *pMsg, uchar*** ppArr);
 rsRetVal tplToString(struct template *pTpl, msg_t *pMsg, uchar** ppSz, size_t *);
+rsRetVal tplToJSON(struct template *pTpl, msg_t *pMsg, struct json_object **);
 rsRetVal doEscape(uchar **pp, size_t *pLen, unsigned short *pbMustBeFreed, int escapeMode);
 
 rsRetVal templateInit();
