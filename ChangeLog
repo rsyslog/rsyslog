@@ -1,5 +1,10 @@
 ---------------------------------------------------------------------------
-Version 7.1.1  [devel] 2012-09-??
+Version 7.1.1  [devel] 2012-09-11
+- MAJOR NEW FEATURE: rulengine now fully supports nesting
+  including if ... then ... else ... constructs. This is a big change
+  and it obviously has a lot of bug potential.
+- BSD-style (filter) blocks are no longer supported
+  see http://www.rsyslog.com/g/BSD for details and solution
 - imuxsock now stores trusted properties by default in the CEE root
   This was done in order to keep compatible with other implementations of
   the lumberjack schema
