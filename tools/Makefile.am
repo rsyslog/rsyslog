@@ -40,7 +40,7 @@ rsyslogd_CPPFLAGS =  $(PTHREADS_CFLAGS) $(RSRT_CFLAGS) $(CNF_LIBS)
 # note: it looks like librsyslog.la must be explicitely given on LDDADD,
 # otherwise dependencies are not properly calculated (resulting in a 
 # potentially incomplete build, a problem we had several times...)
-rsyslogd_LDADD = $(ZLIB_LIBS) $(PTHREADS_LIBS) $(RSRT_LIBS) $(SOL_LIBS) $(LIBEE_LIBS) $(LIBLOGNORM_LIBS) $(CNF_LIBS) $(LIBUUID_LIBS) ../grammar/libgrammar.la ../runtime/librsyslog.la
+rsyslogd_LDADD = ../grammar/libgrammar.la ../runtime/librsyslog.la $(ZLIB_LIBS) $(PTHREADS_LIBS) $(RSRT_LIBS) $(SOL_LIBS) $(LIBEE_LIBS) $(LIBLOGNORM_LIBS) $(CNF_LIBS) $(LIBUUID_LIBS) 
 rsyslogd_LDFLAGS = -export-dynamic
 
 if ENABLE_DIAGTOOLS
