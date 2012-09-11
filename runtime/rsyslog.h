@@ -386,6 +386,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_JNAME_NO_ROOT = -2301, /**< root element is missing in JSON path */
 	RS_RET_JNAME_INVALID = -2302, /**< JSON path is invalid */
 	RS_RET_JSON_PARSE_ERR = -2303, /**< we had a problem parsing JSON (or extra data) */
+	RS_RET_BSD_BLOCKS_UNSUPPORTED = -2304, /**< BSD-style config blocks are no longer supported */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */

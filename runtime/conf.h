@@ -62,9 +62,6 @@ PROTOTYPEObj(conf);
 rsRetVal cflineParseTemplateName(uchar** pp, omodStringRequest_t *pOMSR, int iEntry, int iTplOpts, uchar *dfltTplName);
 rsRetVal cflineParseFileName(uchar* p, uchar *pFileName, omodStringRequest_t *pOMSR, int iEntry, int iTplOpts, uchar *pszTpl);
 
-/* more dirt to cover the new config interface (will go away...) */
-rsRetVal cflineProcessTagSelector(uchar **pline);
-rsRetVal cflineProcessHostSelector(uchar **pline);
 rsRetVal DecodePRIFilter(uchar *pline, uchar pmask[]);
 rsRetVal DecodePropFilter(uchar *pline, struct cnfstmt *stmt);
 rsRetVal cflineDoAction(rsconf_t *conf, uchar **p, action_t **ppAction);

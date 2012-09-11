@@ -395,13 +395,21 @@ void cnfDoCfsysline(char *ln)
 void cnfDoBSDTag(char *ln)
 {
 	DBGPRINTF("cnf:global:BSD tag: %s\n", ln);
-	cflineProcessTagSelector((uchar**)&ln);
+	errmsg.LogError(0, RS_RET_BSD_BLOCKS_UNSUPPORTED,
+			"BSD-style blocks are no longer supported in rsyslog, "
+			"see http://www.rsyslog.com/g/BSD for details and a "
+			"solution (Block '%s')", ln);
+	free(ln);
 }
 
 void cnfDoBSDHost(char *ln)
 {
 	DBGPRINTF("cnf:global:BSD host: %s\n", ln);
-	cflineProcessHostSelector((uchar**)&ln);
+	errmsg.LogError(0, RS_RET_BSD_BLOCKS_UNSUPPORTED,
+			"BSD-style blocks are no longer supported in rsyslog, "
+			"see http://www.rsyslog.com/g/BSD for details and a "
+			"solution (Block '%s')", ln);
+	free(ln);
 }
 
 es_str_t*
