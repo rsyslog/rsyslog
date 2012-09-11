@@ -80,6 +80,10 @@ if ENABLE_IMKLOG
 SUBDIRS += plugins/imklog
 endif
 
+if ENABLE_IMKMSG
+SUBDIRS += plugins/imkmsg
+endif
+
 if ENABLE_IMPSTATS
 SUBDIRS += plugins/impstats
 endif
