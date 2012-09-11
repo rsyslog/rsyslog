@@ -850,9 +850,9 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 				toffs = toffs + 6 + lenProp;
 			}
 			if(getTrustedProp(cred, "cmdline", propBuf, sizeof(propBuf), &lenProp) == RS_RET_OK) {
-				memcpy(pmsgbuf+toffs, " _CMDLINE=", 9);
-				toffs = toffs + 9 + 
-					copyescaped(pmsgbuf+toffs+9, propBuf, lenProp);
+				memcpy(pmsgbuf+toffs, " _CMDLINE=", 10);
+				toffs = toffs + 10 + 
+					copyescaped(pmsgbuf+toffs+10, propBuf, lenProp);
 			}
 
 			/* finalize string */
