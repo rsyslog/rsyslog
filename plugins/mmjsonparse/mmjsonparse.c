@@ -149,6 +149,7 @@ BEGINdoAction
 	msg_t *pMsg;
 	uchar *buf;
 	int bSuccess = 0;
+	struct json_object *jval;
 CODESTARTdoAction
 	pMsg = (msg_t*) ppString[0];
 	/* note that we can performance-optimize the interface, but this also
@@ -164,6 +165,14 @@ dbgprintf("mmjsonparse: msg is '%s'\n", buf);
 
 	if(*buf == '\0' || strncmp((char*)buf, COOKIE, LEN_COOKIE)) {
 		DBGPRINTF("mmjsonparse: no JSON cookie: '%s'\n", buf);
+
+		/* create json if necessary and add buf as msg */
+		if (!pMsg->json) {
+			pMsg->json = json_object_new_object();
+		}
+		jval = json_object_new_string((char*)buf);
+		json_object_object_add(pMsg->json, "msg", jval);
+
 		FINALIZE;
 	}
 	buf += LEN_COOKIE;
