@@ -318,6 +318,9 @@ evalPROPFILT(struct cnfstmt *stmt, msg_t *pMsg)
 	int bRet = 0;
 	size_t propLen;
 
+	if(stmt->d.s_propfilt.propID == PROP_INVALID)
+		goto done;
+
 	pszPropVal = MsgGetProp(pMsg, NULL, stmt->d.s_propfilt.propID,
 				stmt->d.s_propfilt.propName, &propLen, &pbMustBeFreed);
 
@@ -390,6 +393,7 @@ evalPROPFILT(struct cnfstmt *stmt, msg_t *pMsg)
 	/* cleanup */
 	if(pbMustBeFreed)
 		free(pszPropVal);
+done:
 	return bRet;
 }
 
