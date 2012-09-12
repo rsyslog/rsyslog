@@ -1725,6 +1725,9 @@ doQueueEnqObjDirectBatch(action_t *pAction, batch_t *pBatch)
 			countStatsBatchEnq(pAction, pBatch);
 		iRet = qqueueEnqObjDirectBatch(pAction->pQueue, pBatch);
 	}
+
+	free(pBatch->active);
+	pBatch->active = activeSave;
 	RETiRet;
 }
 
