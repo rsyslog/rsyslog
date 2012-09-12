@@ -149,9 +149,6 @@ finalize_it:
  * contains rules from multiple rulesets. In this case, we can not push
  * the whole batch through the ruleset. Instead, we examine it and
  * partition it into sub-rulesets which we then push through the system.
- * Note that when we evaluate which message must be processed, we do NOT need
- * to look at bFilterOK, because this value is only set in a later processing
- * stage. Doing so caused a bug during development ;)
  * rgerhards, 2010-06-15
  */
 static inline rsRetVal
@@ -217,13 +214,8 @@ execAct(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
 	int i;
 	DEFiRet;
 dbgprintf("RRRR: execAct: batch of %d elements, active %p\n", batchNumMsgs(pBatch), active);
-	for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pBatch->pbShutdownImmediate) ; ++i) {
-		if(   pBatch->pElem[i].state != BATCH_STATE_DISC
-		   && (active == NULL || active[i])) {
-			DBGPRINTF("Processing next action [active=%p]\n", active);
-			stmt->d.act->submitToActQ(stmt->d.act, pBatch);
-		}
-	}
+	pBatch->active = active;
+	stmt->d.act->submitToActQ(stmt->d.act, pBatch);
 	RETiRet;
 }
 
