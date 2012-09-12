@@ -211,7 +211,6 @@ static inline void freeActive(sbool *active) { free(active); }
 static rsRetVal
 execAct(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
 {
-	int i;
 	DEFiRet;
 dbgprintf("RRRR: execAct: batch of %d elements, active %p\n", batchNumMsgs(pBatch), active);
 	pBatch->active = active;
