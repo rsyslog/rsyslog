@@ -81,7 +81,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 
 /* emulate struct ucred for platforms that do not have it */
 #ifndef HAVE_SCM_CREDENTIALS
-struct ucred { int pid; };
+struct ucred { int pid; uid_t uid; gid_t gid; };
 #endif
 
 /* handle some defines missing on more than one platform */
@@ -486,7 +486,9 @@ static inline rsRetVal
 openLogSocket(lstn_t *pLstn)
 {
 	DEFiRet;
+#	if HAVE_SCM_CREDENTIALS
 	int one;
+#	endif /* HAVE_SCM_CREDENTIALS */
 
 	if(pLstn->sockName[0] == '\0')
 		return -1;
@@ -525,10 +527,6 @@ openLogSocket(lstn_t *pLstn)
 		one = 1;
 		if(setsockopt(pLstn->fd, SOL_SOCKET, SO_PASSCRED, &one, (socklen_t) sizeof(one)) != 0) {
 			errmsg.LogError(errno, NO_ERRCODE, "set SO_PASSCRED failed on '%s'", pLstn->sockName);
-			pLstn->bUseCreds = 0;
-		}
-		if(setsockopt(pLstn->fd, SOL_SOCKET, SCM_CREDENTIALS, &one, sizeof(one)) != 0) {
-			errmsg.LogError(errno, NO_ERRCODE, "set SCM_CREDENTIALS failed on '%s'", pLstn->sockName);
 			pLstn->bUseCreds = 0;
 		}
 // TODO: move to its own #if
@@ -982,14 +980,14 @@ static rsRetVal readSocket(lstn_t *pLstn)
 	int iMaxLine;
 	struct msghdr msgh;
 	struct iovec msgiov;
-#	if HAVE_SCM_CREDENTIALS
 	struct cmsghdr *cm;
-#	endif
 	struct ucred *cred;
 	struct timeval *ts;
 	uchar bufRcv[4096+1];
-	char aux[128];
 	uchar *pRcv = NULL; /* receive buffer */
+#	if HAVE_SCM_CREDENTIALS
+	char aux[128];
+#	endif
 
 	assert(pLstn->fd >= 0);
 
