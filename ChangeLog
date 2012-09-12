@@ -597,6 +597,10 @@ expected that interfaces, even new ones, break during the initial
   syslog plain tcp input plugin (NOT supporting TLS!)
   [ported from v4]
 ---------------------------------------------------------------------------
+Version 5.10.1  [V5-STABLE], 2012-0?-??
+- bugfix: remove invalid socket option call from imuxsock
+  Thanks to Cristian Ionescu-Idbohrn and Jonny Törnbom 
+---------------------------------------------------------------------------
 Version 5.10.0  [V5-STABLE], 2012-08-23
 
 NOTE: this is the new rsyslog v5-stable, incorporating all changes from the
