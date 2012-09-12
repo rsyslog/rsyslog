@@ -1,5 +1,8 @@
 ---------------------------------------------------------------------------
-<<<<<<< HEAD
+Version 6.4.2  [V6-STABLE] 2012-09-??
+- bugfix: remove invalid socket option call from imuxsock
+  Thanks to Cristian Ionescu-Idbohrn and Jonny Törnbom 
+---------------------------------------------------------------------------
 Version 6.4.1  [V6-STABLE] 2012-09-06
 - bugfix: multiple main queues with same queue file name were not detected
   This lead to queue file corruption. While the root cause is a config
@@ -552,11 +555,10 @@ expected that interfaces, even new ones, break during the initial
 - added imptcp, a simplified, Linux-specific and potentielly fast
   syslog plain tcp input plugin (NOT supporting TLS!)
   [ported from v4]
-=======
+---------------------------------------------------------------------------
 Version 5.10.1  [V5-STABLE], 2012-0?-??
 - bugfix: remove invalid socket option call from imuxsock
   Thanks to Cristian Ionescu-Idbohrn and Jonny Törnbom 
->>>>>>> 2d538f14e2bae1407a3fb22c4a5244247dda1e4b
 ---------------------------------------------------------------------------
 Version 5.10.0  [V5-STABLE], 2012-08-23
 
