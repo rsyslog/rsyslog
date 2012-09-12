@@ -976,6 +976,7 @@ static rsRetVal qAddDirect(qqueue_t *pThis, void* pUsr)
 {
 	batch_t singleBatch;
 	batch_obj_t batchObj;
+	sbool active = 1;
 	int i;
 	DEFiRet;
 
@@ -994,9 +995,9 @@ static rsRetVal qAddDirect(qqueue_t *pThis, void* pUsr)
 	memset(&singleBatch, 0, sizeof(batch_t));
 	batchObj.state = BATCH_STATE_RDY;
 	batchObj.pUsrp = (obj_t*) pUsr;
-	batchObj.bFilterOK = 1;
 	singleBatch.nElem = 1; /* there always is only one in direct mode */
 	singleBatch.pElem = &batchObj;
+	singleBatch.active = &active;
 	iRet = pThis->pConsumer(pThis->pUsr, &singleBatch, &pThis->bShutdownImmediate);
 	/* delete the batch string params: TODO: create its own "class" for this */
 	for(i = 0 ; i < CONF_OMOD_NUMSTRINGS_MAXSIZE ; ++i) {
@@ -1596,7 +1597,6 @@ DequeueConsumableElements(qqueue_t *pThis, wti_t *pWti, int *piRemainingQueueSiz
 		/* all well, use this element */
 		pWti->batch.pElem[nDequeued].pUsrp = pUsr;
 		pWti->batch.pElem[nDequeued].state = BATCH_STATE_RDY;
-		pWti->batch.pElem[nDequeued].bFilterOK = 1; // TODO: think again if we can handle that with more performance
 		++nDequeued;
 	}
 

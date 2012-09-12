@@ -51,7 +51,6 @@ struct batch_obj_s {
 	/* work variables for action processing; these are reused for each action (or block of
 	 * actions)
 	 */
-	sbool bFilterOK;	/* work area for filter processing (per action, reused!) */
 	sbool bPrevWasSuspended;
 	/* following are caches to save allocs if not absolutely necessary */
 	uchar *staticActStrings[CONF_OMOD_NUMSTRINGS_MAXSIZE]; /**< for strings */
@@ -83,6 +82,7 @@ struct batch_s {
 	int iDoneUpTo;		/* all messages below this index have state other than RDY */
 	qDeqID	deqID;		/* ID of dequeue operation that generated this batch */
 	int *pbShutdownImmediate;/* end processing of this batch immediately if set to 1 */
+	sbool *active;		/* which messages are active for processing, NULL=all */
 	sbool bSingleRuleset;	/* do all msgs of this batch use a single ruleset? */
 	batch_obj_t *pElem;	/* batch elements */
 };
@@ -129,7 +129,8 @@ batchSetElemState(batch_t *pBatch, int i, batch_state_t newState) {
  */
 static inline int
 batchIsValidElem(batch_t *pBatch, int i) {
-	return(pBatch->pElem[i].bFilterOK && pBatch->pElem[i].state != BATCH_STATE_DISC);
+	return(   (pBatch->active == NULL || pBatch->active[i])
+	       && pBatch->pElem[i].state != BATCH_STATE_DISC);
 }
 
 
