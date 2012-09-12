@@ -386,7 +386,9 @@ static inline rsRetVal
 openLogSocket(lstn_t *pLstn)
 {
 	DEFiRet;
+#	if HAVE_SCM_CREDENTIALS
 	int one;
+#	endif /* HAVE_SCM_CREDENTIALS */
 
 	if(pLstn->sockName[0] == '\0')
 		return -1;
@@ -802,8 +804,10 @@ static rsRetVal readSocket(lstn_t *pLstn)
 	struct ucred *cred;
 	struct timeval *ts;
 	uchar bufRcv[4096+1];
-	char aux[128];
 	uchar *pRcv = NULL; /* receive buffer */
+#	if HAVE_SCM_CREDENTIALS
+	char aux[128];
+#	endif
 
 	assert(pLstn->fd >= 0);
 
