@@ -66,6 +66,7 @@ extern int yyerror(char*);
 %token BEGIN_TPL
 %token STOP
 %token <s> LEGACY_ACTION
+%token <s> LEGACY_RULESET
 %token <s> PRIFILT
 %token <s> PROPFILT
 %token <s> BSD_TAG_SELECTOR
@@ -123,6 +124,7 @@ extern int yyerror(char*);
 conf:	/* empty (to end recursion) */
 	| conf obj			{ cnfDoObj($2); }
 	| conf stmt			{ cnfDoScript($2); }
+	| conf LEGACY_RULESET		{ cnfDoCfsysline($2); }
 	| conf BSD_TAG_SELECTOR		{ cnfDoBSDTag($2); }
 	| conf BSD_HOST_SELECTOR	{ cnfDoBSDHost($2); }
 obj:	  BEGINOBJ nvlst ENDOBJ 	{ $$ = cnfobjNew($1, $2); }

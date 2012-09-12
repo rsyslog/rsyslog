@@ -137,8 +137,8 @@ int fileno(FILE *stream);
  /* line number support because the "preprocessor" combines lines and so needs
   * to tell us the real source line.
   */
-"stop"				{ dbgprintf("STOP\n"); return STOP; }
-"else"				{ dbgprintf("STOP\n"); return ELSE; }
+"stop"				{ return STOP; }
+"else"				{ return ELSE; }
 "preprocfilelinenumber("	{ BEGIN LINENO; }
 <LINENO>[0-9]+			{ yylineno = atoi(yytext) - 1; }
 <LINENO>")"			{ BEGIN INITIAL; }
@@ -191,6 +191,9 @@ int fileno(FILE *stream);
 				  if(!strncasecmp(yytext, "$includeconfig ", 14)) {
 					yyless(14);
 				  	BEGIN INCL;
+				  } else if(!strncasecmp(yytext, "$ruleset ", 8)) {
+					yylval.s = strdup(yytext);
+					return LEGACY_RULESET;
 				  } else {
 					  cnfDoCfsysline(strdup(yytext)); 
 				  }
