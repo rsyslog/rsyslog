@@ -1,22 +1,9 @@
 /* The kernel log module.
  *
- * This is an abstracted module. As Linux and BSD kernel log is conceptually the
- * same, we do not do different input plugins for them but use
- * imklog in both cases, just with different "backend drivers" for
- * the different platforms. This also enables a rsyslog.conf to
- * be used on multiple platforms without the need to take care of
- * what the kernel log is coming from.
- *
- * See platform-specific files (e.g. linux.c, bsd.c) in the plugin's
- * working directory. For other systems with similar kernel logging
- * functionality, no new input plugin shall be written but rather a
- * driver be developed for imklog. Please note that imklog itself is
- * mostly concerned with handling the interface. Any real action happens
- * in the drivers, as things may be pretty different on different
- * platforms.
- *
- * Please note that this file replaces the klogd daemon that was
- * also present in pre-v3 versions of rsyslog.
+ * This is rsyslog Linux only module for reading structured kernel logs.
+ * Module is based on imklog module so it retains its structure
+ * and other part is currently in kmsg.c file instead of this (imkmsg.c)
+ * For more information see that file.
  *
  * To test under Linux:
  * echo test1 > /dev/kmsg
@@ -154,10 +141,10 @@ finalize_it:
 }
 
 
-/* log an imklog-internal message
+/* log an imkmsg-internal message
  * rgerhards, 2008-04-14
  */
-rsRetVal imklogLogIntMsg(int priority, char *fmt, ...)
+rsRetVal imkmsgLogIntMsg(int priority, char *fmt, ...)
 {
 	DEFiRet;
 	va_list ap;

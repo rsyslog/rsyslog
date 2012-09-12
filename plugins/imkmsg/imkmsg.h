@@ -1,9 +1,5 @@
-/* imklog.h
- * These are the definitions for the klog message generation module.
- *
- * File begun on 2007-12-17 by RGerhards
- * Major change: 2008-04-09: switched to a driver interface for 
- *     several platforms
+/* imkmsg.h
+ * These are the definitions for the kmsg message generation module.
  *
  * Copyright 2007-2012 Rainer Gerhards and Adiscon GmbH.
  *
@@ -51,7 +47,7 @@ rsRetVal klogAfterRun(modConfData_t *pModConf);
 int klogFacilIntMsg();
 
 /* the functions below may be called by the drivers */
-rsRetVal imklogLogIntMsg(int priority, char *fmt, ...) __attribute__((format(printf,2, 3)));
+rsRetVal imkmsgLogIntMsg(int priority, char *fmt, ...) __attribute__((format(printf,2, 3)));
 rsRetVal Syslog(int priority, uchar *msg, struct timeval *tp);
 
 /* prototypes */

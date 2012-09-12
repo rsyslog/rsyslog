@@ -1,11 +1,8 @@
 /* imkmsg driver for Linux /dev/kmsg structured logging
  *
- * This contains OS-specific functionality to read the BSD
- * or Linux kernel log. For a general overview, see head comment in
- * imklog.c. This started out as the BSD-specific drivers, but it
- * turned out that on modern Linux the implementation details
- * are very small, and so we use a single driver for both OS's with
- * a little help of conditional compilation.
+ * This contains Linux-specific functionality to read /dev/kmsg
+ * For a general overview, see head comment in imkmsg.c.
+ * This is heavily based on imklog bsd.c file.
  *
  * Copyright 2008-2012 Adiscon GmbH
  *
@@ -49,7 +46,7 @@ static int	fklog = -1;	/* kernel log fd */
 #	define _PATH_KLOG "/dev/kmsg"
 #endif
 
-/* submit a message to imklog Syslog() API. In this function, we parse
+/* submit a message to imkmsg Syslog() API. In this function, we parse
  * necessary information from kernel log line, and make json string
  * from the rest.
  */
@@ -129,8 +126,7 @@ static uchar *GetPath(modConfData_t *pModConf)
 	return pModConf->pszPath ? pModConf->pszPath : (uchar*) _PATH_KLOG;
 }
 
-/* open the kernel log - will be called inside the willRun() imklog
- * entry point. -- rgerhards, 2008-04-09
+/* open the kernel log - will be called inside the willRun() imkmsg entry point
  */
 rsRetVal
 klogWillRun(modConfData_t *pModConf)
@@ -141,7 +137,7 @@ klogWillRun(modConfData_t *pModConf)
 
 	fklog = open((char*)GetPath(pModConf), O_RDONLY, 0);
 	if (fklog < 0) {
-		imklogLogIntMsg(RS_RET_ERR_OPEN_KLOG, "imkmsg: cannot open kernel log(%s): %s.",
+		imkmsgLogIntMsg(RS_RET_ERR_OPEN_KLOG, "imkmsg: cannot open kernel log(%s): %s.",
 			GetPath(pModConf), rs_strerror_r(errno, errmsg, sizeof(errmsg)));
 		ABORT_FINALIZE(RS_RET_ERR_OPEN_KLOG);
 	}
@@ -150,7 +146,7 @@ klogWillRun(modConfData_t *pModConf)
 	if(pModConf->console_log_level != -1) {
 		r = klogctl(8, NULL, pModConf->console_log_level);
 		if(r != 0) {
-			imklogLogIntMsg(LOG_WARNING, "imkmsg: cannot set console log level: %s",
+			imkmsgLogIntMsg(LOG_WARNING, "imkmsg: cannot set console log level: %s",
 				rs_strerror_r(errno, errmsg, sizeof(errmsg)));
 			/* make sure we do not try to re-set! */
 			pModConf->console_log_level = -1;
@@ -161,7 +157,8 @@ finalize_it:
 	RETiRet;
 }
 
-/* Read kernel log while data are available, split into lines.
+/* Read kernel log while data are available, each read() reads one
+ * record of printk buffer.
  */
 static void
 readklog(void)
@@ -195,7 +192,7 @@ XXX not sure if LOG_LINE_MAX is 1024
 #endif
 
 	for (;;) {
-		dbgprintf("imklog(BSD/Linux) waiting for kernel log line\n");
+		dbgprintf("imkmsg waiting for kernel log line\n");
 
 		/* every read() from the opened device node receives one record of the printk buffer */
 		i = read(fklog, pRcv, 1024);
@@ -207,7 +204,7 @@ XXX not sure if LOG_LINE_MAX is 1024
 			/* something went wrong - error or zero length message */
 			if (i < 0 && errno != EINTR && errno != EAGAIN) {
 				/* error occured */
-				imklogLogIntMsg(LOG_ERR,
+				imkmsgLogIntMsg(LOG_ERR,
 				       "imkmsg: error reading kernel log - shutting down: %s",
 					rs_strerror_r(errno, errmsg, sizeof(errmsg)));
 				fklog = -1;
@@ -255,3 +252,4 @@ klogFacilIntMsg(void)
 {
 	return LOG_SYSLOG;
 }
+
