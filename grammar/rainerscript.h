@@ -135,7 +135,7 @@ cnfFiltType2str(enum cnfFiltType filttype)
 }
 
 
-struct cnfstmt {	/* base statement, for simple types */
+struct cnfstmt {
 	unsigned nodetype;
 	struct cnfstmt *next;
 	uchar *printable; /* printable text for debugging */
