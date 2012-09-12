@@ -33,6 +33,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <sys/klog.h>
+#include <json/json.h>
 
 #include "rsyslog.h"
 #include "srUtils.h"
@@ -53,15 +54,20 @@ static int	fklog = -1;	/* kernel log fd */
 static void
 submitSyslog(uchar *buf)
 {
-	struct timeval tv;
 	long offs = 0;
+	struct timeval tv;
 	long int timestamp = 0;
 	struct timespec monotonic;
 	struct timespec realtime;
-	char outMsg[8096];
+	char name[1024];
+	char value[1024];
+	char msg[1024];
 	int priority = 0;
+	long int sequnum = 0;
+	struct json_object *json = NULL, *jval;
 
-	offs = snprintf(outMsg, 8, "%s", "@cee: {");
+	/* create new json object */
+	json = json_object_new_object();
 
 	/* get priority */
 	for (; isdigit(*buf); buf++) {
@@ -69,12 +75,13 @@ submitSyslog(uchar *buf)
 	}
 	buf++;
 
-	/* messages sequence number */
-	offs += snprintf(outMsg+offs, 12, "%s", "\"sequnum\":\"");
-	for (; isdigit(*buf); buf++, offs++) {
-		outMsg[offs] = *buf;
+	/* get messages sequence number and add it to json */
+	for (; isdigit(*buf); buf++) {
+		sequnum = (sequnum * 10) + (*buf - '0');
 	}
 	buf++; /* skip , */
+	jval = json_object_new_int(sequnum);
+	json_object_object_add(json, "sequnum", jval);
 
 	/* get timestamp */
 	for (; isdigit(*buf); buf++) {
@@ -82,34 +89,40 @@ submitSyslog(uchar *buf)
 	}
 	buf++; /* skip ; */
 
-	offs += snprintf(outMsg+offs, 10, "%s", "\",\"msg\":\"");
-
+	/* get message */
+	offs = 0;
 	for (; *buf != '\n' && *buf != '\0'; buf++, offs++) {
-		outMsg[offs] = *buf;
+		msg[offs] = *buf;
 	}
+	msg[offs] = '\0';
+	jval = json_object_new_string((char*)msg);
+	json_object_object_add(json, "msg", jval);
 
 	if (*buf != '\0') /* message has appended properties, skip \n */
 		buf++;
 
 	while (strlen((char *)buf)) {
-		offs += snprintf(outMsg+offs, 4, "%s", "\",\"");
+		/* get name of the property */
 		buf++; /* skip ' ' */
-		for (; *buf != '=' && *buf != ' '; buf++, offs++) { /* separator is = or ' ' */
-			outMsg[offs] = *buf;
+		offs = 0;
+		for (; *buf != '=' && *buf != ' '; buf++, offs++) {
+			name[offs] = *buf;
 		}
-		buf++; /* skip = */
+		name[offs] = '\0';
+		buf++; /* skip = or ' ' */;
 
-		offs += snprintf(outMsg+offs, 4, "%s", "\":\"");
+		offs = 0;
 		for (; *buf != '\n' && *buf != '\0'; buf++, offs++) {
-			outMsg[offs] = *buf;
+			value[offs] = *buf;
+		}
+		value[offs] = '\0';
+		if (*buf != '\0') {
+			buf++; /* another property, skip \n */
 		}
 
-		if (*buf != '\0')
-			buf++; /* another property, skip \n */
+		jval = json_object_new_string((char*)value);
+		json_object_object_add(json, name, jval);
 	}
-	offs += snprintf(outMsg+offs, 3, "%s", "\"}");
-
-	outMsg[offs] = '\0';
 
 	/* calculate timestamp */
 	clock_gettime(CLOCK_MONOTONIC, &monotonic);
@@ -117,7 +130,7 @@ submitSyslog(uchar *buf)
 	tv.tv_sec = realtime.tv_sec + ((timestamp / 1000000l) - monotonic.tv_sec);
 	tv.tv_usec = (realtime.tv_nsec + ((timestamp / 1000000000l) - monotonic.tv_nsec)) / 1000;
 
-	Syslog(priority, (uchar *)outMsg, &tv);
+	Syslog(priority, (uchar *)msg, &tv, json);
 }
 
 
@@ -161,41 +174,17 @@ finalize_it:
  * record of printk buffer.
  */
 static void
-readklog(void)
+readkmsg(void)
 {
 	int i;
-	uchar pRcv[1024+1]; /* LOG_LINE_MAX is 1024 */
+	uchar pRcv[8096+1];
 	char errmsg[2048];
-
-#if 0
-XXX not sure if LOG_LINE_MAX is 1024
--       int iMaxLine;
--       uchar bufRcv[128*1024+1];
-+       uchar pRcv[1024+1]; /* LOG_LINE_MAX is 1024 */
-        char errmsg[2048];
--       uchar *pRcv = NULL; /* receive buffer */
--
--       iMaxLine = klog_getMaxLine();
--
--       /* we optimize performance: if iMaxLine is below our fixed size buffer (which
--        * usually is sufficiently large), we use this buffer. if it is higher, heap memory
--        * is used. We could use alloca() to achive a similar aspect, but there are so
--        * many issues with alloca() that I do not want to take that route.
--        * rgerhards, 2008-09-02
--        */
--       if((size_t) iMaxLine < sizeof(bufRcv) - 1) {
--               pRcv = bufRcv;
--       } else {
--               if((pRcv = (uchar*) MALLOC(sizeof(uchar) * (iMaxLine + 1))) == NULL)
--                       iMaxLine = sizeof(bufRcv) - 1; /* better this than noting */
--       }
-#endif
 
 	for (;;) {
 		dbgprintf("imkmsg waiting for kernel log line\n");
 
 		/* every read() from the opened device node receives one record of the printk buffer */
-		i = read(fklog, pRcv, 1024);
+		i = read(fklog, pRcv, 8096);
 
 		if (i > 0) {
 			/* successful read of message of nonzero length */
@@ -239,7 +228,7 @@ rsRetVal klogAfterRun(modConfData_t *pModConf)
 rsRetVal klogLogKMsg(modConfData_t __attribute__((unused)) *pModConf)
 {
 	DEFiRet;
-	readklog();
+	readkmsg();
 	RETiRet;
 }
 
