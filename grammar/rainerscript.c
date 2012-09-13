@@ -1466,6 +1466,16 @@ cnfstmtPrint(struct cnfstmt *root, int indent)
 			}
 			doIndent(indent); dbgprintf("END IF\n");
 			break;
+		case S_SET:
+			doIndent(indent); dbgprintf("SET %s =\n",
+				          stmt->d.s_set.varname);
+			cnfexprPrint(stmt->d.s_set.expr, indent+1);
+			doIndent(indent); dbgprintf("END SET\n");
+			break;
+		case S_UNSET:
+			doIndent(indent); dbgprintf("UNSET %s\n",
+				          stmt->d.s_unset.varname);
+			break;
 		case S_PRIFILT:
 			doIndent(indent); dbgprintf("PRIFILT '%s'\n", stmt->printable);
 			cnfstmtPrint(stmt->d.s_prifilt.t_then, indent+1);
@@ -1569,6 +1579,13 @@ cnfstmtDestruct(struct cnfstmt *root)
 				cnfstmtDestruct(stmt->d.s_if.t_else);
 			}
 			break;
+		case S_SET:
+			free(stmt->d.s_set.varname);
+			cnfexprDestruct(stmt->d.s_set.expr);
+			break;
+		case S_UNSET:
+			free(stmt->d.s_set.varname);
+			break;
 		case S_PRIFILT:
 			cnfstmtDestruct(stmt->d.s_prifilt.t_then);
 			break;
@@ -1591,6 +1608,27 @@ cnfstmtDestruct(struct cnfstmt *root)
 		stmt = stmt->next;
 		free(todel);
 	}
+}
+
+struct cnfstmt *
+cnfstmtNewSet(char *var, struct cnfexpr *expr)
+{
+	struct cnfstmt* cnfstmt;
+	if((cnfstmt = cnfstmtNew(S_SET)) != NULL) {
+		cnfstmt->d.s_set.varname = (uchar*) var;
+		cnfstmt->d.s_set.expr = expr;
+	}
+	return cnfstmt;
+}
+
+struct cnfstmt *
+cnfstmtNewUnset(char *var)
+{
+	struct cnfstmt* cnfstmt;
+	if((cnfstmt = cnfstmtNew(S_UNSET)) != NULL) {
+		cnfstmt->d.s_unset.varname = (uchar*) var;
+	}
+	return cnfstmt;
 }
 
 struct cnfstmt *
