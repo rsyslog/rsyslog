@@ -206,6 +206,7 @@ static inline sbool *newActive(batch_t *pBatch)
 }
 static inline void freeActive(sbool *active) { free(active); }
 
+
 /* for details, see scriptExec() header comment! */
 /* call action for all messages with filter on */
 static rsRetVal
@@ -215,6 +216,24 @@ execAct(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
 dbgprintf("RRRR: execAct: batch of %d elements, active %p\n", batchNumMsgs(pBatch), active);
 	pBatch->active = active;
 	stmt->d.act->submitToActQ(stmt->d.act, pBatch);
+	RETiRet;
+}
+
+/* for details, see scriptExec() header comment! */
+static rsRetVal
+execSet(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
+{
+	int i;
+	struct var result;
+	DEFiRet;
+	for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pBatch->pbShutdownImmediate) ; ++i) {
+		if(   pBatch->pElem[i].state != BATCH_STATE_DISC
+		   && (active == NULL || active[i])) {
+			cnfexprEval(stmt->d.s_set.expr, &result, pBatch->pElem[i].pUsrp);
+			msgSetJSONFromVar(pBatch->pElem[i].pUsrp, stmt->d.s_set.varname,
+					  &result);
+		}
+	}
 	RETiRet;
 }
 
@@ -451,6 +470,9 @@ dbgprintf("RRRR: scriptExec: batch of %d elements, active %p, stmt %p, nodetype 
 			break;
 		case S_IF:
 			execIf(stmt, pBatch, active);
+			break;
+		case S_SET:
+			execSet(stmt, pBatch, active);
 			break;
 		case S_PRIFILT:
 			execPRIFILT(stmt, pBatch, active);

@@ -2420,7 +2420,6 @@ getCEEPropVal(msg_t *pM, es_str_t *propName, uchar **pRes, int *buflen, unsigned
 	if(*pbMustBeFreed)
 		free(*pRes);
 	*pRes = NULL;
-dbgprintf("AAAA: enter getCEEPropVal\n");
 	// TODO: mutex?
 	if(pM->json == NULL) goto finalize_it;
 
@@ -2428,9 +2427,7 @@ dbgprintf("AAAA: enter getCEEPropVal\n");
 		field = pM->json;
 	} else {
 		name = (uchar*)es_str2cstr(propName, NULL);
-dbgprintf("AAAA: name to search '%s'\n", name);
 		leaf = jsonPathGetLeaf(name, ustrlen(name));
-dbgprintf("AAAA: leaf '%s'\n", leaf);
 		CHKiRet(jsonPathFindParent(pM, name, leaf, &parent, 1));
 		field = json_object_object_get(parent, (char*)leaf);
 	}
@@ -2439,7 +2436,6 @@ dbgprintf("AAAA: leaf '%s'\n", leaf);
 		*pbMustBeFreed = 0;
 	} else {
 		*pRes = (uchar*) strdup(json_object_get_string(field));
-dbgprintf("AAAA: json_object_get_string() returns '%s'\n", *pRes);
 		*buflen = (int) ustrlen(*pRes);
 		*pbMustBeFreed = 1;
 	}
@@ -2465,7 +2461,6 @@ msgGetCEEPropJSON(msg_t *pM, es_str_t *propName, struct json_object **pjson)
 	struct json_object *parent;
 	DEFiRet;
 
-dbgprintf("AAAA: enter getCEEPropJSON\n");
 	// TODO: mutex?
 	if(pM->json == NULL) {
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
@@ -2476,9 +2471,7 @@ dbgprintf("AAAA: enter getCEEPropJSON\n");
 		FINALIZE;
 	}
 	name = (uchar*)es_str2cstr(propName, NULL);
-dbgprintf("AAAA: name to search '%s'\n", name);
 	leaf = jsonPathGetLeaf(name, ustrlen(name));
-dbgprintf("AAAA: leaf '%s'\n", leaf);
 	CHKiRet(jsonPathFindParent(pM, name, leaf, &parent, 1));
 	*pjson = json_object_object_get(parent, (char*)leaf);
 	if(*pjson == NULL) {
@@ -3685,9 +3678,9 @@ jsonPathFindNext(struct json_object *root, uchar **name, uchar *leaf,
 		++p;
 	for(i = 0 ; *p && *p != '!' && p != leaf && i < sizeof(namebuf)-1 ; ++i, ++p)
 		namebuf[i] = *p;
-	if(i == 0) {
+	if(i > 0) {
 		namebuf[i] = '\0';
-		dbgprintf("AAAA: next JSONP elt: '%s'\n", namebuf);
+		dbgprintf("AAAA: next JSONPath elt: '%s'\n", namebuf);
 		json = json_object_object_get(root, (char*)namebuf);
 	} else
 		json = root;
@@ -3713,7 +3706,6 @@ jsonPathFindParent(msg_t *pM, uchar *name, uchar *leaf, struct json_object **par
 	*parent = pM->json;
 	while(name < leaf-1) {
 		jsonPathFindNext(*parent, &name, leaf, parent, bCreate);
-dbgprintf("AAAA: name %p, leaf %p\n", name, leaf);
 	}
 	RETiRet;
 }
@@ -3726,7 +3718,7 @@ jsonMerge(struct json_object *existing, struct json_object *json)
 	struct json_object_iter it;
 
 	json_object_object_foreachC(json, it) {
-dbgprintf("AAAA jsonMerge adds '%s'\n", it.key);
+DBGPRINTF("AAAA jsonMerge adds '%s'\n", it.key);
 		json_object_object_add(existing, it.key,
 			json_object_get(it.val));
 	}
@@ -3762,12 +3754,51 @@ msgAddJSON(msg_t *pM, uchar *name, struct json_object *json)
 		leafnode = json_object_object_get(parent, (char*)leaf);
 		if(leafnode == NULL)
 			json_object_object_add(parent, (char*)leaf, json);
-		else
-			CHKiRet(jsonMerge(pM->json, json));
+		else {
+			if(json_object_get_type(json) == json_type_object) {
+				CHKiRet(jsonMerge(pM->json, json));
+			} else {
+//dbgprintf("AAAA: leafnode already exists, type is %d, update with %d\n", (int)json_object_get_type(leafnode), (int)json_object_get_type(json));
+				/* TODO: improve the code below, however, the current
+				 *       state is not really bad */
+				if(json_object_get_type(leafnode) == json_type_object) {
+					DBGPRINTF("msgAddJSON: trying to update a container "
+						  "node with a leaf, name is '%s' - "
+						  "forbidden\n", name);
+					ABORT_FINALIZE(RS_RET_INVLD_SETOP);
+				}
+				json_object_object_del(parent, (char*)leaf);
+				json_object_object_add(parent, (char*)leaf, json);
+			}
+		}
 	}
 
 finalize_it:
 	MsgUnlock(pM);
+	RETiRet;
+}
+
+rsRetVal
+msgSetJSONFromVar(msg_t *pMsg, uchar *varname, struct var *var)
+{
+	struct json_object *json = NULL;
+	char *cstr;
+	DEFiRet;
+	switch(var->datatype) {
+	case 'S':/* string */
+		cstr = es_str2cstr(var->d.estr, NULL);
+		json = json_object_new_string(cstr);
+		free(cstr);
+		break;
+	case 'N':/* number (integer) */
+		json = json_object_new_int((int) var->d.n);
+		break;
+	default:DBGPRINTF("msgSetJSONFromVar: unsupported datatype %c\n",
+		var->datatype);
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+	msgAddJSON(pMsg, varname+1, json);
+finalize_it:
 	RETiRet;
 }
 
