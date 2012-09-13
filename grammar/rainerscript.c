@@ -1752,6 +1752,6 @@ unescapeStr(uchar *s, int len)
 			++iSrc;
 			++iDst;
 		}
+		s[iDst] = '\0';
 	}
-	s[iDst] = '\0';
 }
