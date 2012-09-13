@@ -188,59 +188,64 @@ shouldProcessThisMessage(rule_t *pRule, msg_t *pMsg, sbool *bProcessMsg)
 		bRet = (pResult->val.num) ? 1 : 0;
 	} else {
 		assert(pRule->f_filter_type == FILTER_PROP); /* assert() just in case... */
-		pszPropVal = MsgGetProp(pMsg, NULL, pRule->f_filterData.prop.propID, &propLen, &pbMustBeFreed);
+		if(pRule->f_filterData.prop.propID == PROP_INVALID) {
+			DBGPRINTF("invalid property ID, filter always returns 0\n");
+			bRet = 0;
+		} else {
+			pszPropVal = MsgGetProp(pMsg, NULL, pRule->f_filterData.prop.propID, &propLen, &pbMustBeFreed);
 
-		/* Now do the compares (short list currently ;)) */
-		switch(pRule->f_filterData.prop.operation ) {
-		case FIOP_CONTAINS:
-			if(rsCStrLocateInSzStr(pRule->f_filterData.prop.pCSCompValue, (uchar*) pszPropVal) != -1)
-				bRet = 1;
-			break;
-		case FIOP_ISEQUAL:
-			if(rsCStrSzStrCmp(pRule->f_filterData.prop.pCSCompValue,
-					  pszPropVal, ustrlen(pszPropVal)) == 0)
-				bRet = 1; /* process message! */
-			break;
-		case FIOP_STARTSWITH:
-			if(rsCStrSzStrStartsWithCStr(pRule->f_filterData.prop.pCSCompValue,
-					  pszPropVal, ustrlen(pszPropVal)) == 0)
-				bRet = 1; /* process message! */
-			break;
-		case FIOP_REGEX:
-			if(rsCStrSzStrMatchRegex(pRule->f_filterData.prop.pCSCompValue,
-					(unsigned char*) pszPropVal, 0, &pRule->f_filterData.prop.regex_cache) == RS_RET_OK)
-				bRet = 1;
-			break;
-		case FIOP_EREREGEX:
-			if(rsCStrSzStrMatchRegex(pRule->f_filterData.prop.pCSCompValue,
-					  (unsigned char*) pszPropVal, 1, &pRule->f_filterData.prop.regex_cache) == RS_RET_OK)
-				bRet = 1;
-			break;
-		default:
-			/* here, it handles NOP (for performance reasons) */
-			assert(pRule->f_filterData.prop.operation == FIOP_NOP);
-			bRet = 1; /* as good as any other default ;) */
-			break;
-		}
+			/* Now do the compares (short list currently ;)) */
+			switch(pRule->f_filterData.prop.operation ) {
+			case FIOP_CONTAINS:
+				if(rsCStrLocateInSzStr(pRule->f_filterData.prop.pCSCompValue, (uchar*) pszPropVal) != -1)
+					bRet = 1;
+				break;
+			case FIOP_ISEQUAL:
+				if(rsCStrSzStrCmp(pRule->f_filterData.prop.pCSCompValue,
+						  pszPropVal, ustrlen(pszPropVal)) == 0)
+					bRet = 1; /* process message! */
+				break;
+			case FIOP_STARTSWITH:
+				if(rsCStrSzStrStartsWithCStr(pRule->f_filterData.prop.pCSCompValue,
+						  pszPropVal, ustrlen(pszPropVal)) == 0)
+					bRet = 1; /* process message! */
+				break;
+			case FIOP_REGEX:
+				if(rsCStrSzStrMatchRegex(pRule->f_filterData.prop.pCSCompValue,
+						(unsigned char*) pszPropVal, 0, &pRule->f_filterData.prop.regex_cache) == RS_RET_OK)
+					bRet = 1;
+				break;
+			case FIOP_EREREGEX:
+				if(rsCStrSzStrMatchRegex(pRule->f_filterData.prop.pCSCompValue,
+						  (unsigned char*) pszPropVal, 1, &pRule->f_filterData.prop.regex_cache) == RS_RET_OK)
+					bRet = 1;
+				break;
+			default:
+				/* here, it handles NOP (for performance reasons) */
+				assert(pRule->f_filterData.prop.operation == FIOP_NOP);
+				bRet = 1; /* as good as any other default ;) */
+				break;
+			}
 
-		/* now check if the value must be negated */
-		if(pRule->f_filterData.prop.isNegated)
-			bRet = (bRet == 1) ?  0 : 1;
-
-		if(Debug) {
-			dbgprintf("Filter: check for property '%s' (value '%s') ",
-			        propIDToName(pRule->f_filterData.prop.propID), pszPropVal);
+			/* now check if the value must be negated */
 			if(pRule->f_filterData.prop.isNegated)
-				dbgprintf("NOT ");
-			dbgprintf("%s '%s': %s\n",
-			       getFIOPName(pRule->f_filterData.prop.operation),
-			       rsCStrGetSzStrNoNULL(pRule->f_filterData.prop.pCSCompValue),
-			       bRet ? "TRUE" : "FALSE");
-		}
+				bRet = (bRet == 1) ?  0 : 1;
 
-		/* cleanup */
-		if(pbMustBeFreed)
-			free(pszPropVal);
+			if(Debug) {
+				dbgprintf("Filter: check for property '%s' (value '%s') ",
+					propIDToName(pRule->f_filterData.prop.propID), pszPropVal);
+				if(pRule->f_filterData.prop.isNegated)
+					dbgprintf("NOT ");
+				dbgprintf("%s '%s': %s\n",
+				       getFIOPName(pRule->f_filterData.prop.operation),
+				       rsCStrGetSzStrNoNULL(pRule->f_filterData.prop.pCSCompValue),
+				       bRet ? "TRUE" : "FALSE");
+			}
+
+			/* cleanup */
+			if(pbMustBeFreed)
+				free(pszPropVal);
+		}
 	}
 
 finalize_it:
@@ -391,12 +396,14 @@ CODESTARTobjDebugPrint(rule)
 	} else {
 		dbgprintf("PROPERTY-BASED Filter:\n");
 		dbgprintf("\tProperty.: '%s'\n", propIDToName(pThis->f_filterData.prop.propID));
-		dbgprintf("\tOperation: ");
-		if(pThis->f_filterData.prop.isNegated)
-			dbgprintf("NOT ");
-		dbgprintf("'%s'\n", getFIOPName(pThis->f_filterData.prop.operation));
-		dbgprintf("\tValue....: '%s'\n",
-		       rsCStrGetSzStrNoNULL(pThis->f_filterData.prop.pCSCompValue));
+		if(pThis->f_filterData.prop.propID != PROP_INVALID) {
+			dbgprintf("\tOperation: ");
+			if(pThis->f_filterData.prop.isNegated)
+				dbgprintf("NOT ");
+			dbgprintf("'%s'\n", getFIOPName(pThis->f_filterData.prop.operation));
+			dbgprintf("\tValue....: '%s'\n",
+			       rsCStrGetSzStrNoNULL(pThis->f_filterData.prop.pCSCompValue));
+		}
 		dbgprintf("\tAction...: ");
 	}
 

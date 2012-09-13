@@ -1,5 +1,9 @@
 ---------------------------------------------------------------------------
 Version 5.10.1  [V5-STABLE], 2012-0?-??
+- bugfix: invalid property name in property-filter could cause abort
+  if action chaining (& operator) was used
+  http://bugzilla.adiscon.com/show_bug.cgi?id=355
+  Thanks to pilou@gmx.com for the bug report
 - bugfix: remove invalid socket option call from imuxsock
   Thanks to Cristian Ionescu-Idbohrn and Jonny Törnbom 
 ---------------------------------------------------------------------------
