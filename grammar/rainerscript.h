@@ -274,6 +274,7 @@ void varDelete(struct var *v);
 void cnfparamvalsDestruct(struct cnfparamvals *paramvals, struct cnfparamblk *blk);
 void cnfcfsyslinelstDestruct(struct cnfcfsyslinelst *cfslst);
 rsRetVal initRainerscript(void);
+void unescapeStr(uchar *s, int len);
 
 /* debug helper */
 void cstrPrint(char *text, es_str_t *estr);
