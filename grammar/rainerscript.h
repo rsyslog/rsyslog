@@ -291,6 +291,7 @@ struct cnfstmt * cnfstmtNewLegaAct(char *actline);
 void cnfstmtDestruct(struct cnfstmt *root);
 char* getFIOPName(unsigned iFIOP);
 rsRetVal initRainerscript(void);
+void unescapeStr(uchar *s, int len);
 
 /* debug helper */
 void cstrPrint(char *text, es_str_t *estr);

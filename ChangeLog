@@ -1,4 +1,15 @@
 ---------------------------------------------------------------------------
+Version 7.1.3  [devel] 2012-09-??
+- bugfix: missing support for escape sequences in RainerScript
+  only \' was supported. Now the usual set is supported. Note that v5
+  used \x as escape where x was any character (e.g. "\n" meant "n" and NOT
+  LF). This also means there is some incompatibility to v5 for well-know
+  sequences. Better break it now than later.
+- bugfix: invalid property name in property-filter could cause abort
+  if action chaining (& operator) was used
+  http://bugzilla.adiscon.com/show_bug.cgi?id=355
+  Thanks to pilou@gmx.com for the bug report
+---------------------------------------------------------------------------
 Version 7.1.2  [devel] 2012-09-12
 - bugfix: messages were duplicated, sometimes massively
   regression from new code in 7.1.1 and reason for early release
@@ -28,6 +39,18 @@ Version 7.1.0  [devel] 2012-09-06
 - bugfix: imtcp could abort on exit due to invalid free()
 - imported bugfixes from 6.4.1
 ---------------------------------------------------------------------------
+Version 6.5.1  [devel] 2012-08-??
+- added pure JSON output plugin parameter passing mode
+- ommongodb now supports templates
+- bugfix: imtcp could abort on exit due to invalid free()
+- bugfix: remove invalid socket option call from imuxsock
+  Thanks to Cristian Ionescu-Idbohrn and Jonny Törnbom 
+- bugfix: missing support for escape sequences in RainerScript
+  only \' was supported. Now the usual set is supported. Note that v5
+  used \x as escape where x was any character (e.g. "\n" meant "n" and NOT
+  LF). This also means there is some incompatibility to v5 for well-know
+  sequences. Better break it now than later.
+---------------------------------------------------------------------------
 Version 6.5.0  [devel] 2012-08-28
 - imrelp now supports non-cancel thread termination
   (but now requires at least librelp 1.0.1)
@@ -52,6 +75,15 @@ Version 6.5.0  [devel] 2012-08-28
   Thanks to Jérôme Renard for the idea and patches.
   Note: patches were released under ASL 2.0, see
   http://bugzilla.adiscon.com/show_bug.cgi?id=353
+---------------------------------------------------------------------------
+Version 6.4.2  [V6-STABLE] 2012-09-??
+- bugfix: remove invalid socket option call from imuxsock
+  Thanks to Cristian Ionescu-Idbohrn and Jonny Törnbom 
+- bugfix: missing support for escape sequences in RainerScript
+  only \' was supported. Now the usual set is supported. Note that v5
+  used \x as escape where x was any character (e.g. "\n" meant "n" and NOT
+  LF). This also means there is some incompatibility to v5 for well-know
+  sequences. Better break it now than later.
 ---------------------------------------------------------------------------
 Version 6.4.1  [V6-STABLE] 2012-09-06
 - bugfix: multiple main queues with same queue file name were not detected
@@ -607,6 +639,10 @@ expected that interfaces, even new ones, break during the initial
   [ported from v4]
 ---------------------------------------------------------------------------
 Version 5.10.1  [V5-STABLE], 2012-0?-??
+- bugfix: invalid property name in property-filter could cause abort
+  if action chaining (& operator) was used
+  http://bugzilla.adiscon.com/show_bug.cgi?id=355
+  Thanks to pilou@gmx.com for the bug report
 - bugfix: remove invalid socket option call from imuxsock
   Thanks to Cristian Ionescu-Idbohrn and Jonny Törnbom 
 ---------------------------------------------------------------------------
