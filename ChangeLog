@@ -2,6 +2,11 @@
 Version 6.4.2  [V6-STABLE] 2012-09-??
 - bugfix: remove invalid socket option call from imuxsock
   Thanks to Cristian Ionescu-Idbohrn and Jonny Törnbom 
+- bugfix: missing support for escape sequences in RainerScript
+  only \' was supported. Now the usual set is supported. Note that v5
+  used \x as escape where x was any character (e.g. "\n" meant "n" and NOT
+  LF). This also means there is some incompatibility to v5 for well-know
+  sequences. Better break it now than later.
 ---------------------------------------------------------------------------
 Version 6.4.1  [V6-STABLE] 2012-09-06
 - bugfix: multiple main queues with same queue file name were not detected

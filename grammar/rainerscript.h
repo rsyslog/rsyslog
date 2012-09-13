@@ -249,6 +249,7 @@ void cnfparamsPrint(struct cnfparamblk *params, struct cnfparamvals *vals);
 void varDelete(struct var *v);
 void cnfparamvalsDestruct(struct cnfparamvals *paramvals, struct cnfparamblk *blk);
 void cnfcfsyslinelstDestruct(struct cnfcfsyslinelst *cfslst);
+void unescapeStr(uchar *s, int len);
 
 /* debug helper */
 void cstrPrint(char *text, es_str_t *estr);

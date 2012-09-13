@@ -1616,3 +1616,142 @@ cstrPrint(char *text, es_str_t *estr)
 	dbgprintf("%s%s", text, str);
 	free(str);
 }
+
+
+/* we need a function to check for octal digits */
+static inline int
+isodigit(uchar c)
+{
+	return(c >= '0' && c <= '7');
+}
+
+/**
+ * Get numerical value of a hex digit. This is a helper function.
+ * @param[in] c a character containing 0..9, A..Z, a..z anything else
+ * is an (undetected) error.
+ */
+static inline int
+hexDigitVal(char c)
+{
+	int r;
+	if(c < 'A')
+		r = c - '0';
+	else if(c < 'a')
+		r = c - 'A' + 10;
+	else
+		r = c - 'a' + 10;
+	return r;
+}
+
+/* Handle the actual unescaping.
+ * a helper to unescapeStr(), to help make the function easier to read.
+ */
+static inline void
+doUnescape(unsigned char *c, int len, int *iSrc, int iDst)
+{
+	if(c[*iSrc] == '\\') {
+		if(++(*iSrc) == len) {
+			/* error, incomplete escape, treat as single char */
+			c[iDst] = '\\';
+		}
+		/* regular case, unescape */
+		switch(c[*iSrc]) {
+		case 'a':
+			c[iDst] = '\007';
+			break;
+		case 'b':
+			c[iDst] = '\b';
+			break;
+		case 'f':
+			c[iDst] = '\014';
+			break;
+		case 'n':
+			c[iDst] = '\n';
+			break;
+		case 'r':
+			c[iDst] = '\r';
+			break;
+		case 't':
+			c[iDst] = '\t';
+			break;
+		case '\'':
+			c[iDst] = '\'';
+			break;
+		case '"':
+			c[iDst] = '"';
+			break;
+		case '?':
+			c[iDst] = '?';
+			break;
+		case '$':
+			c[iDst] = '$';
+			break;
+		case '\\':
+			c[iDst] = '\\';
+			break;
+		case 'x':
+			if(    (*iSrc)+2 >= len
+			   || !isxdigit(c[(*iSrc)+1])
+			   || !isxdigit(c[(*iSrc)+2])) {
+				/* error, incomplete escape, use as is */
+				c[iDst] = '\\';
+				--(*iSrc);
+			}
+			c[iDst] = (hexDigitVal(c[(*iSrc)+1]) << 4) +
+				  hexDigitVal(c[(*iSrc)+2]);
+			*iSrc += 2;
+			break;
+		case '0': /* octal escape */
+		case '1':
+		case '2':
+		case '3':
+		case '4':
+		case '5':
+		case '6':
+		case '7':
+			if(    (*iSrc)+2 >= len
+			   || !isodigit(c[(*iSrc)+1])
+			   || !isodigit(c[(*iSrc)+2])) {
+				/* error, incomplete escape, use as is */
+				c[iDst] = '\\';
+				--(*iSrc);
+			}
+			c[iDst] = ((c[(*iSrc)  ] - '0') << 6) +
+			          ((c[(*iSrc)+1] - '0') << 3) +
+			          ( c[(*iSrc)+2] - '0');
+			*iSrc += 2;
+			break;
+		default:
+			/* error, incomplete escape, indicate by '?' */
+			c[iDst] = '?';
+			break;
+		}
+	} else {
+		/* regular character */
+		c[iDst] = c[*iSrc];
+	}
+}
+
+void
+unescapeStr(uchar *s, int len)
+{
+	int iSrc, iDst;
+	assert(s != NULL);
+
+	/* scan for first escape sequence (if we are luky, there is none!) */
+	iSrc = 0;
+	while(iSrc < len && s[iSrc] != '\\')
+		++iSrc;
+	/* now we have a sequence or end of string. In any case, we process
+	 * all remaining characters (maybe 0!) and unescape.
+	 */
+	if(iSrc != len) {
+		iDst = iSrc;
+		while(iSrc < len) {
+			doUnescape(s, len, &iSrc, iDst);
+			++iSrc;
+			++iDst;
+		}
+	}
+	s[iDst] = '\0';
+}
