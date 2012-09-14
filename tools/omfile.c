@@ -136,6 +136,7 @@ static uid_t	dirGID;		/* GID to be used for newly created directories */
 static int	bCreateDirs = 1;/* auto-create directories for dynaFiles: 0 - no, 1 - yes */
 static int	bEnableSync = 0;/* enable syncing of files (no dash in front of pathname in conf): 0 - no, 1 - yes */
 static int	iZipLevel = 0;	/* zip compression mode (0..9 as usual) */
+static int	bVeryReliableZip = 1;	/* write extra headers for more robustness - degrade compression */
 static sbool	bFlushOnTXEnd = FLUSHONTX_DFLT;/* flush write buffers when transaction has ended? */
 static int64	iIOBufSize = IOBUF_DFLT_SIZE;	/* size of an io buffer */
 static int	iFlushInterval = FLUSH_INTRVL_DFLT; 	/* how often flush the output buffer on inactivity? */
@@ -174,6 +175,7 @@ typedef struct _instanceData {
 	int	iFlushInterval;		/* how fast flush buffer on inactivity? */
 	sbool	bFlushOnTXEnd;		/* flush write buffers when transaction has ended? */
 	sbool	bUseAsyncWriter;	/* use async stream writer? */
+	sbool	bVeryReliableZip;
 } instanceData;
 
 
@@ -457,6 +459,7 @@ prepareFile(instanceData *pData, uchar *newFileName)
 	CHKiRet(strm.SetFName(pData->pStrm, szBaseName, ustrlen(szBaseName)));
 	CHKiRet(strm.SetDir(pData->pStrm, szDirName, ustrlen(szDirName)));
 	CHKiRet(strm.SetiZipLevel(pData->pStrm, pData->iZipLevel));
+	CHKiRet(strm.SetbVeryReliableZip(pData->pStrm, pData->bVeryReliableZip));
 	CHKiRet(strm.SetsIOBufSize(pData->pStrm, (size_t) pData->iIOBufSize));
 	CHKiRet(strm.SettOperationsMode(pData->pStrm, STREAMMODE_WRITE_APPEND));
 	CHKiRet(strm.SettOpenMode(pData->pStrm, fCreateMode));
@@ -698,6 +701,7 @@ BEGINendTransaction
 CODESTARTendTransaction
 	/* Note: pStrm may be NULL if there was an error opening the stream */
 	if(pData->bFlushOnTXEnd && pData->pStrm != NULL) {
+dbgprintf("AAAA: flusing stream, endTx\n");
 		CHKiRet(strm.Flush(pData->pStrm));
 	}
 finalize_it:
@@ -709,6 +713,7 @@ CODESTARTdoAction
 	DBGPRINTF("file to log to: %s\n", pData->f_fname);
 	CHKiRet(writeFile(ppString, iMsgOpts, pData));
 	if(!bCoreSupportsBatching && pData->bFlushOnTXEnd) {
+dbgprintf("AAAA: flusing stream, in Tx\n");
 		CHKiRet(strm.Flush(pData->pStrm));
 	}
 finalize_it:
@@ -817,6 +822,7 @@ CODESTARTparseSelectorAct
 	pData->dirUID = dirUID;
 	pData->dirGID = dirGID;
 	pData->iZipLevel = iZipLevel;
+	pData->bVeryReliableZip = bVeryReliableZip;
 	pData->bFlushOnTXEnd = bFlushOnTXEnd;
 	pData->iIOBufSize = (int) iIOBufSize;
 	pData->iFlushInterval = iFlushInterval;
@@ -854,6 +860,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	bCreateDirs = 1;
 	bEnableSync = 0;
 	iZipLevel = 0;
+	bVeryReliableZip = 1;
 	bFlushOnTXEnd = FLUSHONTX_DFLT;
 	iIOBufSize = IOBUF_DFLT_SIZE;
 	iFlushInterval = FLUSH_INTRVL_DFLT;
@@ -910,6 +917,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	DBGPRINTF("omfile: %susing transactional output interface.\n", bCoreSupportsBatching ? "" : "not ");
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"dynafilecachesize", 0, eCmdHdlrInt, (void*) setDynaFileCacheSize, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omfileziplevel", 0, eCmdHdlrInt, NULL, &iZipLevel, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omfileveryreliablezip", 0, eCmdHdlrBinary, NULL, &bVeryReliableZip, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omfileflushinterval", 0, eCmdHdlrInt, NULL, &iFlushInterval, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omfileasyncwriting", 0, eCmdHdlrBinary, NULL, &bUseAsyncWriter, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omfileflushontxend", 0, eCmdHdlrBinary, NULL, &bFlushOnTXEnd, STD_LOADABLE_MODULE_ID));

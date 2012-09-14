@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------
+Version 5.8.13.c1.1  [custom build] 2012-09-??
+- improved omfile zip writer to increase compression
+  This was achieved by somewhat reducing the robustness of the zip
+  archive. This is controlled by the new setting $OMFileVeryReliableZip.
+---------------------------------------------------------------------------
 Version 5.8.13  [V5-stable] 2012-08-22
 - bugfix: DA queue could cause abort
 - bugfix: "last message repeated n times" message was missing hostname

@@ -234,6 +234,16 @@ in that case by sending rsyslogd a HUP signal.
 <li><b>$OMFileZipLevel</b> 0..9  [default 0] - if greater 0, turns on gzip compression
 of the output file. The higher the number, the better the compression, but also the
 more CPU is required for zipping.</li>
+<li><b>$OMFileVeryReliableZip</b> [<b>on</b>/off] - if OMFileZipLevel is greater 0, 
+then this setting controls if extra headers are written to make the resulting file
+extra hardened against malfunction. If set to off, data appended to previously unclean
+closed files can not be accessed (at least not with standard utilities).
+Note that this risk is usually expected to be bearable. The extra headers considerably
+degrade compression, files with this option set to "on" may be four to five times as
+large as files processed in "off" mode. In v5, this setting defaults to "on" in order
+to maintain compatibility with earlier versions of rsyslog. In v6+, this setting
+will default to "off". So if you use multiple versions, it is best to specify the
+setting in any case, so that it works the same on all versions.
 <li><b>$OMFileIOBufferSize</b> &lt;size_nbr&gt;, default 4k, size of the buffer used to writing output data. The larger the buffer, the potentially better performance is. The default of 4k is quite conservative, it is useful to go up to 64k, and 128K if you used gzip compression (then, even higher sizes may make sense)</li>
 <li><b>$OMFileFlushOnTXEnd</b> &lt;[<b>on</b>/off]&gt;, default on. Omfile has the
 capability to
