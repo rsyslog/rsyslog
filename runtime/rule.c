@@ -171,12 +171,12 @@ shouldProcessThisMessage(rule_t *pRule, msg_t *pMsg, sbool *bProcessMsg)
 
 	if(pRule->f_filter_type == FILTER_PRI) {
 		/* skip messages that are incorrect priority */
-		dbgprintf("testing filter, f_pmask %d\n", pRule->f_filterData.f_pmask[pMsg->iFacility]);
 		if ( (pRule->f_filterData.f_pmask[pMsg->iFacility] == TABLE_NOPRI) || \
 		    ((pRule->f_filterData.f_pmask[pMsg->iFacility] & (1<<pMsg->iSeverity)) == 0) )
 			bRet = 0;
 		else
 			bRet = 1;
+		dbgprintf("testing filter, f_pmask %d, result %d\n", pRule->f_filterData.f_pmask[pMsg->iFacility], bRet);
 	} else if(pRule->f_filter_type == FILTER_EXPR) {
 		bRet = cnfexprEvalBool(pRule->f_filterData.expr, pMsg);
 		dbgprintf("result of rainerscript filter evaluation: %d\n", bRet);
