@@ -3752,9 +3752,9 @@ msgAddJSON(msg_t *pM, uchar *name, struct json_object *json)
 		leaf = jsonPathGetLeaf(name, ustrlen(name));
 		CHKiRet(jsonPathFindParent(pM, name, leaf, &parent, 1));
 		leafnode = json_object_object_get(parent, (char*)leaf);
-		if(leafnode == NULL)
+		if(leafnode == NULL) {
 			json_object_object_add(parent, (char*)leaf, json);
-		else {
+		} else {
 			if(json_object_get_type(json) == json_type_object) {
 				CHKiRet(jsonMerge(pM->json, json));
 			} else {
@@ -3765,9 +3765,17 @@ msgAddJSON(msg_t *pM, uchar *name, struct json_object *json)
 					DBGPRINTF("msgAddJSON: trying to update a container "
 						  "node with a leaf, name is '%s' - "
 						  "forbidden\n", name);
+					json_object_put(json);
 					ABORT_FINALIZE(RS_RET_INVLD_SETOP);
 				}
-				json_object_object_del(parent, (char*)leaf);
+				/* json-c code indicates we can simply replace a
+				 * json type. Unfortunaltely, this is not documented
+				 * as part of the interface spec. We still use it,
+				 * because it speeds up processing. If it does not work
+				 * at some point, use
+				 * json_object_object_del(parent, (char*)leaf);
+				 * before adding. rgerhards, 2012-09-17
+				 */
 				json_object_object_add(parent, (char*)leaf, json);
 			}
 		}
@@ -3810,7 +3818,6 @@ DBGPRINTF("AAAA: unset found JSON value path '%s', " "leaf '%s', leafnode %p\n",
 			DBGPRINTF("deleting JSON value path '%s', "
 				  "leaf '%s', type %d\n",
 				  name, leaf, json_object_get_type(leafnode));
-			json_object_put(leafnode);
 			json_object_object_del(parent, (char*)leaf);
 		}
 	}
