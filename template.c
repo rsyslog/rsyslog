@@ -1256,7 +1256,7 @@ createConstantTpe(struct template *pTpl, struct cnfobj *o)
 	struct templateEntry *pTpe;
 	es_str_t *value;
 	int i;
-	struct cnfparamvals *pvals;
+	struct cnfparamvals *pvals = NULL;
 	uchar *outname = NULL;
 	DEFiRet;
 
@@ -1290,6 +1290,8 @@ createConstantTpe(struct template *pTpl, struct cnfobj *o)
 	pTpe->data.constant.pConstant = (uchar*)es_str2cstr(value, NULL);
 
 finalize_it:
+	if(pvals != NULL)
+		cnfparamvalsDestruct(pvals, &pblkConstant);
 	RETiRet;
 }
 
@@ -1310,7 +1312,7 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 	int re_matchToUse = 0;
 	int re_submatchToUse = 0;
 	char *re_expr = NULL;
-	struct cnfparamvals *pvals;
+	struct cnfparamvals *pvals = NULL;
 	enum {F_NONE, F_CSV, F_JSON, F_JSONF} formatType = F_NONE;
 	enum {CC_NONE, CC_ESCAPE, CC_SPACE, CC_DROP} controlchr = CC_NONE;
 	enum {SP_NONE, SP_DROP, SP_REPLACE} secpath = SP_NONE;
@@ -1328,12 +1330,10 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 		if(!pvals[i].bUsed)
 			continue;
 		if(!strcmp(pblkProperty.descr[i].name, "name")) {
-			char *tmp;
-
-			tmp = es_str2cstr(pvals[i].val.d.estr, NULL);
-			rsCStrConstructFromszStr(&name, (uchar*)tmp);
+			uchar *tmpstr = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+			rsCStrConstructFromszStr(&name, tmpstr);
 			cstrFinalize(name);
-			free(tmp);
+			free(tmpstr);
 		} else if(!strcmp(pblkProperty.descr[i].name, "droplastlf")) {
 			droplastlf = pvals[i].val.d.n;
 		} else if(!strcmp(pblkProperty.descr[i].name, "mandatory")) {
@@ -1622,7 +1622,7 @@ rsRetVal
 tplProcessCnf(struct cnfobj *o)
 {
 	struct template *pTpl = NULL;
-	struct cnfparamvals *pvals;
+	struct cnfparamvals *pvals = NULL;
 	int lenName;
 	char *name = NULL;
 	uchar *tplStr = NULL;
