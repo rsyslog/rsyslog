@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------
-Version 7.1.3  [devel] 2012-09-??
+Version 7.1.3  [devel] 2012-09-17
+- introduced "set" and "unset" config statements
 - bugfix: missing support for escape sequences in RainerScript
   only \' was supported. Now the usual set is supported. Note that v5
   used \x as escape where x was any character (e.g. "\n" meant "n" and NOT
