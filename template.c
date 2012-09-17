@@ -1283,7 +1283,7 @@ static rsRetVal
 createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 {
 	struct templateEntry *pTpe;
-	cstr_t *name;
+	cstr_t *name = NULL;
 	uchar *outname = NULL;
 	int i;
 	int droplastlf = 0;
@@ -1314,9 +1314,10 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 		if(!pvals[i].bUsed)
 			continue;
 		if(!strcmp(pblkProperty.descr[i].name, "name")) {
-			rsCStrConstructFromszStr(&name,
-				(uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
+			uchar *tmpstr = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+			rsCStrConstructFromszStr(&name, tmpstr);
 			cstrFinalize(name);
+			free(tmpstr);
 		} else if(!strcmp(pblkProperty.descr[i].name, "droplastlf")) {
 			droplastlf = pvals[i].val.d.n;
 		} else if(!strcmp(pblkProperty.descr[i].name, "mandatory")) {
@@ -1523,7 +1524,7 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 		pTpe->data.field.options.bSecPathReplace = 1;
 		break;
 	}
-	pTpe->fieldName = ustrdup(outname);
+	pTpe->fieldName = outname;
 	if(outname != NULL)
 		pTpe->lenFieldName = ustrlen(outname);
 	pTpe->data.field.eDateFormat = datefmt;
@@ -1567,6 +1568,8 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 finalize_it:
 	if(pvals != NULL)
 		cnfparamvalsDestruct(pvals, &pblkProperty);
+	if(name != NULL)
+		rsCStrDestruct(&name);
 	RETiRet;
 }
 
