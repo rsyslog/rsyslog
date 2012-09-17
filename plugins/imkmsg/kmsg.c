@@ -134,11 +134,6 @@ submitSyslog(uchar *buf)
 }
 
 
-static uchar *GetPath(modConfData_t *pModConf)
-{
-	return pModConf->pszPath ? pModConf->pszPath : (uchar*) _PATH_KLOG;
-}
-
 /* open the kernel log - will be called inside the willRun() imkmsg entry point
  */
 rsRetVal
@@ -148,10 +143,10 @@ klogWillRun(modConfData_t *pModConf)
 	int r;
 	DEFiRet;
 
-	fklog = open((char*)GetPath(pModConf), O_RDONLY, 0);
+	fklog = open(_PATH_KLOG, O_RDONLY, 0);
 	if (fklog < 0) {
 		imkmsgLogIntMsg(RS_RET_ERR_OPEN_KLOG, "imkmsg: cannot open kernel log(%s): %s.",
-			GetPath(pModConf), rs_strerror_r(errno, errmsg, sizeof(errmsg)));
+			_PATH_KLOG, rs_strerror_r(errno, errmsg, sizeof(errmsg)));
 		ABORT_FINALIZE(RS_RET_ERR_OPEN_KLOG);
 	}
 
