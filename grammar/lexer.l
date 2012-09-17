@@ -96,9 +96,11 @@ int fileno(FILE *stream);
  /* keywords */
 "if"				{ BEGIN EXPR; return IF; }
 <EXPR>"then"			{ BEGIN INITIAL; return THEN; }
+<EXPR>";"			{ BEGIN INITIAL; return ';'; }
 <EXPR>"or"			{ return OR; }
 <EXPR>"and"			{ return AND; }
 <EXPR>"not"			{ return NOT; }
+<EXPR>"=" |
 <EXPR>"," |
 <EXPR>"*" |
 <EXPR>"/" |
@@ -121,7 +123,7 @@ int fileno(FILE *stream);
 <EXPR>0[0-7]+ |			/* octal number */
 <EXPR>0x[0-7a-f] |		/* hex number, following rule is dec; strtoll handles all! */
 <EXPR>([1-9][0-9]*|0)		{ yylval.n = strtoll(yytext, NULL, 0); return NUMBER; }
-<EXPR>\$[$!]{0,1}[a-z][a-z0-9\-_\.]*	{ yylval.s = strdup(yytext); return VAR; }
+<EXPR>\$[$!]{0,1}[a-z][!a-z0-9\-_\.]*	{ yylval.s = strdup(yytext); return VAR; }
 <EXPR>\'([^'\\]|\\['"\\$bntr]|\\x[0-9a-f][0-9a-f]|\\[0-7][0-7][0-7])*\'	 {
 				   yytext[yyleng-1] = '\0';
 				   unescapeStr((uchar*)yytext+1, yyleng-2);
@@ -145,6 +147,8 @@ int fileno(FILE *stream);
   */
 "stop"				{ return STOP; }
 "else"				{ return ELSE; }
+"set"				{ BEGIN EXPR; return SET; }
+"unset"				{ BEGIN EXPR; return UNSET; }
 "preprocfilelinenumber("	{ BEGIN LINENO; }
 <LINENO>[0-9]+			{ yylineno = atoi(yytext) - 1; }
 <LINENO>")"			{ BEGIN INITIAL; }

@@ -116,6 +116,8 @@ struct nvlst {
 #define S_IF 4003
 #define S_ACT 4004
 #define S_NOP 4005	/* usually used to disable some statement */
+#define S_SET 4006
+#define S_UNSET 4007
 
 enum cnfFiltType { CNFFILT_NONE, CNFFILT_PRI, CNFFILT_PROP, CNFFILT_SCRIPT };
 static inline char*
@@ -145,6 +147,13 @@ struct cnfstmt {
 			struct cnfstmt *t_then;
 			struct cnfstmt *t_else;
 		} s_if;
+		struct {
+			uchar *varname;
+			struct cnfexpr *expr;
+		} s_set;
+		struct {
+			uchar *varname;
+		} s_unset;
 		struct {
 			uchar pmask[LOG_NFACILITIES+1];	/* priority mask */
 			struct cnfstmt *t_then;
@@ -288,6 +297,8 @@ struct cnfstmt * cnfstmtNewPRIFILT(char *prifilt, struct cnfstmt *t_then);
 struct cnfstmt * cnfstmtNewPROPFILT(char *propfilt, struct cnfstmt *t_then);
 struct cnfstmt * cnfstmtNewAct(struct nvlst *lst);
 struct cnfstmt * cnfstmtNewLegaAct(char *actline);
+struct cnfstmt * cnfstmtNewSet(char *var, struct cnfexpr *expr);
+struct cnfstmt * cnfstmtNewUnset(char *var);
 void cnfstmtDestruct(struct cnfstmt *root);
 char* getFIOPName(unsigned iFIOP);
 rsRetVal initRainerscript(void);

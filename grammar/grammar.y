@@ -65,6 +65,8 @@ extern int yyerror(char*);
 %token BEGIN_CONSTANT
 %token BEGIN_TPL
 %token STOP
+%token SET
+%token UNSET
 %token <s> LEGACY_ACTION
 %token <s> LEGACY_RULESET
 %token <s> PRIFILT
@@ -153,6 +155,8 @@ stmt:	  actlst			{ $$ = $1; }
 					  $$->d.s_if.expr = $2;
 					  $$->d.s_if.t_then = $4;
 					  $$->d.s_if.t_else = $6; }
+	| SET VAR '=' expr ';'		{ $$ = cnfstmtNewSet($2, $4); }
+	| UNSET VAR ';'			{ $$ = cnfstmtNewUnset($2); }
 	| PRIFILT block			{ $$ = cnfstmtNewPRIFILT($1, $2); }
 	| PROPFILT block		{ $$ = cnfstmtNewPROPFILT($1, $2); }
 block:    stmt				{ $$ = $1; }

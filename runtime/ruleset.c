@@ -206,6 +206,7 @@ static inline sbool *newActive(batch_t *pBatch)
 }
 static inline void freeActive(sbool *active) { free(active); }
 
+
 /* for details, see scriptExec() header comment! */
 /* call action for all messages with filter on */
 static rsRetVal
@@ -215,6 +216,38 @@ execAct(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
 dbgprintf("RRRR: execAct: batch of %d elements, active %p\n", batchNumMsgs(pBatch), active);
 	pBatch->active = active;
 	stmt->d.act->submitToActQ(stmt->d.act, pBatch);
+	RETiRet;
+}
+
+static rsRetVal
+execSet(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
+{
+	int i;
+	struct var result;
+	DEFiRet;
+	for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pBatch->pbShutdownImmediate) ; ++i) {
+		if(   pBatch->pElem[i].state != BATCH_STATE_DISC
+		   && (active == NULL || active[i])) {
+			cnfexprEval(stmt->d.s_set.expr, &result, pBatch->pElem[i].pUsrp);
+			msgSetJSONFromVar((msg_t*)pBatch->pElem[i].pUsrp, stmt->d.s_set.varname,
+					  &result);
+			varDelete(&result);
+		}
+	}
+	RETiRet;
+}
+
+static rsRetVal
+execUnset(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
+{
+	int i;
+	DEFiRet;
+	for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pBatch->pbShutdownImmediate) ; ++i) {
+		if(   pBatch->pElem[i].state != BATCH_STATE_DISC
+		   && (active == NULL || active[i])) {
+			msgUnsetJSON((msg_t*)pBatch->pElem[i].pUsrp, stmt->d.s_unset.varname);
+		}
+	}
 	RETiRet;
 }
 
@@ -302,7 +335,6 @@ execPRIFILT(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
 		DBGPRINTF("batch: item %d PRIFILT %d\n", i, thenAct[i]);
 	}
 
-dbgprintf("RRRR: PRIFILT calling %p\n", stmt->d.s_prifilt.t_then);
 	scriptExec(stmt->d.s_prifilt.t_then, pBatch, thenAct);
 	freeActive(thenAct);
 }
@@ -417,7 +449,6 @@ execPROPFILT(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
 		DBGPRINTF("batch: item %d PROPFILT %d\n", i, thenAct[i]);
 	}
 
-dbgprintf("RRRR: PROPFILT calling %p\n", stmt->d.s_propfilt.t_then);
 	scriptExec(stmt->d.s_propfilt.t_then, pBatch, thenAct);
 	freeActive(thenAct);
 }
@@ -448,6 +479,12 @@ dbgprintf("RRRR: scriptExec: batch of %d elements, active %p, stmt %p, nodetype 
 			break;
 		case S_ACT:
 			execAct(stmt, pBatch, active);
+			break;
+		case S_SET:
+			execSet(stmt, pBatch, active);
+			break;
+		case S_UNSET:
+			execUnset(stmt, pBatch, active);
 			break;
 		case S_IF:
 			execIf(stmt, pBatch, active);
