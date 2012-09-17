@@ -3779,6 +3779,48 @@ finalize_it:
 }
 
 rsRetVal
+msgDelJSON(msg_t *pM, uchar *name)
+{
+	struct json_object *parent, *leafnode;
+	uchar *leaf;
+	DEFiRet;
+
+dbgprintf("AAAA: unset variable '%s'\n", name);
+	MsgLock(pM);
+	if(name[0] == '!' && name[1] == '\0') {
+		/* strange, but I think we should permit this. After all,
+		 * we trust rsyslog.conf to be written by the admin.
+		 */
+		DBGPRINTF("unsetting JSON root object\n");
+		json_object_put(pM->json);
+		pM->json = NULL;
+	} else {
+		if(pM->json == NULL) {
+			/* now we need a root obj */
+			pM->json = json_object_new_object();
+		}
+		leaf = jsonPathGetLeaf(name, ustrlen(name));
+		CHKiRet(jsonPathFindParent(pM, name, leaf, &parent, 1));
+		leafnode = json_object_object_get(parent, (char*)leaf);
+DBGPRINTF("AAAA: unset found JSON value path '%s', " "leaf '%s', leafnode %p\n", name, leaf, leafnode);
+		if(leafnode == NULL) {
+			DBGPRINTF("unset JSON: could not find '%s'\n", name);
+			ABORT_FINALIZE(RS_RET_JNAME_NOTFOUND);
+		} else {
+			DBGPRINTF("deleting JSON value path '%s', "
+				  "leaf '%s', type %d\n",
+				  name, leaf, json_object_get_type(leafnode));
+			json_object_put(leafnode);
+			json_object_object_del(parent, (char*)leaf);
+		}
+	}
+
+finalize_it:
+	MsgUnlock(pM);
+	RETiRet;
+}
+
+rsRetVal
 msgSetJSONFromVar(msg_t *pMsg, uchar *varname, struct var *var)
 {
 	struct json_object *json = NULL;

@@ -387,6 +387,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_JNAME_INVALID = -2302, /**< JSON path is invalid */
 	RS_RET_JSON_PARSE_ERR = -2303, /**< we had a problem parsing JSON (or extra data) */
 	RS_RET_BSD_BLOCKS_UNSUPPORTED = -2304, /**< BSD-style config blocks are no longer supported */
+	RS_RET_JNAME_NOTFOUND = -2305, /**< JSON name not found (does not exist) */
 	RS_RET_INVLD_SETOP = -2305, /**< invalid variable set operation, incompatible type */
 
 	/* RainerScript error messages (range 1000.. 1999) */
