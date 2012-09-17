@@ -1189,6 +1189,14 @@ cnfexprEval(struct cnfexpr *expr, struct var *ret, void* usrptr)
 		ret->datatype = 'S';
 		ret->d.estr = cnfGetVar(((struct cnfvar*)expr)->name, usrptr);
 		break;
+	case '&':
+		/* TODO: think about optimization, should be possible ;) */
+		PREP_TWO_STRINGS;
+		ret->datatype = 'S';
+		ret->d.estr = es_strdup(estr_l);
+		es_addStr(&ret->d.estr, estr_r);
+		FREE_TWO_STRINGS;
+		break;
 	case '+':
 		COMP_NUM_BINOP(+);
 		break;
@@ -1263,6 +1271,7 @@ cnfexprDestruct(struct cnfexpr *expr)
 	case CMP_CONTAINSI:
 	case OR:
 	case AND:
+	case '&':
 	case '+':
 	case '-':
 	case '*':

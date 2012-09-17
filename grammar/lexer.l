@@ -106,6 +106,7 @@ int fileno(FILE *stream);
 <EXPR>"/" |
 <EXPR>"%" |
 <EXPR>"+" |
+<EXPR>"&" |
 <EXPR>"-" |
 <EXPR>"(" |
 <EXPR>")"			{ return yytext[0]; }
