@@ -3846,6 +3846,8 @@ DBGPRINTF("AAAA: unset found JSON value path '%s', " "leaf '%s', leafnode %p\n",
 				  "leaf '%s', type %d\n",
 				  name, leaf, json_object_get_type(leafnode));
 			json_object_object_del(parent, (char*)leaf);
+			// TODO: check for memory leak json-c upstream seems
+			// to suggest that _del() does not decrement refcount
 		}
 	}
 
@@ -3853,6 +3855,53 @@ finalize_it:
 	MsgUnlock(pM);
 	RETiRet;
 }
+
+static inline struct json_object *
+jsonDeepCopy(struct json_object *src)
+{
+	struct json_object *dst = NULL, *json;
+	struct json_object_iter it;
+	int arrayLen, i;
+
+	if(src == NULL) goto done;
+
+	switch(json_object_get_type(src)) {
+	case json_type_boolean:
+		dst = json_object_new_boolean(json_object_get_boolean(src));
+		break;
+	case json_type_double:
+		dst = json_object_new_double(json_object_get_double(src));
+		break;
+	case json_type_int:
+		dst = json_object_new_int(json_object_get_int(src));
+		break;
+	case json_type_string:
+		dst = json_object_new_string(json_object_get_string(src));
+		break;
+	case json_type_object:
+		dst = json_object_new_object();
+		json_object_object_foreachC(src, it) {
+			json = jsonDeepCopy(it.val);
+			json_object_object_add(dst, it.key, json);
+		}
+		break;
+	case json_type_array:
+		arrayLen = json_object_array_length(src);
+		dst = json_object_new_array();
+		for(i = 0 ; i < arrayLen ; ++i) {
+			json = json_object_array_get_idx(src, i);
+			json = jsonDeepCopy(json);
+			json_object_array_add(dst, json);
+		}
+		break;
+	default:DBGPRINTF("jsonDeepCopy(): error unknown type %d\n",
+			 json_object_get_type(src));
+		dst = NULL;
+		break;
+	}
+done:	return dst;
+}
+
 
 rsRetVal
 msgSetJSONFromVar(msg_t *pMsg, uchar *varname, struct var *var)
@@ -3870,7 +3919,7 @@ msgSetJSONFromVar(msg_t *pMsg, uchar *varname, struct var *var)
 		json = json_object_new_int((int) var->d.n);
 		break;
 	case 'J':/* native JSON */
-		json = json_object_get(var->d.json);
+		json = jsonDeepCopy(var->d.json);
 		break;
 	default:DBGPRINTF("msgSetJSONFromVar: unsupported datatype %c\n",
 		var->datatype);
