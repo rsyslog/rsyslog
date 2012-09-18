@@ -3846,8 +3846,6 @@ DBGPRINTF("AAAA: unset found JSON value path '%s', " "leaf '%s', leafnode %p\n",
 				  "leaf '%s', type %d\n",
 				  name, leaf, json_object_get_type(leafnode));
 			json_object_object_del(parent, (char*)leaf);
-			// TODO: check for memory leak json-c upstream seems
-			// to suggest that _del() does not decrement refcount
 		}
 	}
 
