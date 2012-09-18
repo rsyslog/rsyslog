@@ -3869,6 +3869,9 @@ msgSetJSONFromVar(msg_t *pMsg, uchar *varname, struct var *var)
 	case 'N':/* number (integer) */
 		json = json_object_new_int((int) var->d.n);
 		break;
+	case 'J':/* native JSON */
+		json = json_object_get(var->d.json);
+		break;
 	default:DBGPRINTF("msgSetJSONFromVar: unsupported datatype %c\n",
 		var->datatype);
 		ABORT_FINALIZE(RS_RET_ERR);

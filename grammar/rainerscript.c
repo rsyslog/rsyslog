@@ -738,12 +738,14 @@ done:
  * try to convert it to one. The semantics from es_str2num()
  * are used (bSuccess tells if the conversion went well or not).
  */
-static inline long long
+static long long
 var2Number(struct var *r, int *bSuccess)
 {
 	long long n;
 	if(r->datatype == 'S') {
 		n = es_str2num(r->d.estr, bSuccess);
+	} else if(r->datatype == 'J') {
+		n = (r->d.json == NULL) ? 0 : json_object_get_int(r->d.json);
 	} else {
 		n = r->d.n;
 		if(bSuccess)
@@ -757,12 +759,27 @@ var2Number(struct var *r, int *bSuccess)
 static inline es_str_t *
 var2String(struct var *r, int *bMustFree)
 {
+	es_str_t *estr;
+	char *cstr;
+	rs_size_t lenstr;
 	if(r->datatype == 'N') {
 		*bMustFree = 1;
-		return es_newStrFromNumber(r->d.n);
+		estr = es_newStrFromNumber(r->d.n);
+	} else if(r->datatype == 'J') {
+		*bMustFree = 1;
+		if(r->d.json == NULL) {
+			cstr = "",
+			lenstr = 0;
+		} else {
+			cstr = (char*)json_object_get_string(r->d.json);
+			lenstr = strlen(cstr);
+		}
+		estr = es_newStrFromCStr(cstr, lenstr);
+	} else {
+		*bMustFree = 0;
+		estr = r->d.estr;
 	}
-	*bMustFree = 0;
-	return r->d.estr;
+	return estr;
 }
 
 /* Perform a function call. This has been moved out of cnfExprEval in order
@@ -871,6 +888,27 @@ doFuncCall(struct cnffunc *func, struct var *ret, void* usrptr)
 		ret->datatype = 'N';
 		ret->d.n = 0;
 	}
+}
+
+static inline void
+evalVar(struct cnfvar *var, void *usrptr, struct var *ret)
+{
+	rsRetVal localRet;
+	es_str_t *estr;
+	struct json_object *json;
+
+	if(var->name[0] == '$' && var->name[1] == '!') {
+		/* TODO: unify string libs */
+		estr = es_newStrFromBuf(var->name+1, strlen(var->name)-1);
+		localRet = msgGetCEEPropJSON((msg_t*)usrptr, estr, &json);
+		es_deleteStr(estr);
+		ret->datatype = 'J';
+		ret->d.json = (localRet == RS_RET_OK) ? json : NULL;
+	} else {
+		ret->datatype = 'S';
+		ret->d.estr = cnfGetVar(var->name, usrptr);
+	}
+
 }
 
 #define FREE_BOTH_RET \
@@ -1186,8 +1224,7 @@ cnfexprEval(struct cnfexpr *expr, struct var *ret, void* usrptr)
 		ret->d.estr = es_strdup(((struct cnfstringval*)expr)->estr);
 		break;
 	case 'V':
-		ret->datatype = 'S';
-		ret->d.estr = cnfGetVar(((struct cnfvar*)expr)->name, usrptr);
+		evalVar((struct cnfvar*)expr, usrptr, ret);
 		break;
 	case '&':
 		/* TODO: think about optimization, should be possible ;) */
@@ -1430,6 +1467,7 @@ cnfexprPrint(struct cnfexpr *expr, int indent)
 			cnfexprPrint(func->expr[i], indent+1);
 		}
 		break;
+	case '&':
 	case '+':
 	case '-':
 	case '*':
@@ -1443,8 +1481,8 @@ cnfexprPrint(struct cnfexpr *expr, int indent)
 		cnfexprPrint(expr->r, indent+1);
 		break;
 	default:
-		dbgprintf("error: unknown nodetype %u\n",
-			(unsigned) expr->nodetype);
+		dbgprintf("error: unknown nodetype %u['%c']\n",
+			(unsigned) expr->nodetype, (char) expr->nodetype);
 		break;
 	}
 }

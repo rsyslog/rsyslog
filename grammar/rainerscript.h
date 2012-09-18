@@ -72,8 +72,9 @@ struct var {
 		es_str_t *estr;
 		struct cnfexpr *expr;
 		long long n;
+		struct json_object *json;
 	} d;
-	char datatype; /* 'N' number, 'S' string, 'E' expression */
+	char datatype; /* 'N' number, 'S' string, 'E' expression, 'J' JSON */
 };
 
 struct cnfobj {
