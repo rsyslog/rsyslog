@@ -173,7 +173,7 @@ void MsgSetRawMsg(msg_t *pMsg, char* pszRawMsg, size_t lenMsg);
 rsRetVal MsgReplaceMSG(msg_t *pThis, uchar* pszMSG, int lenMSG);
 uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
                   propid_t propid, es_str_t *propName,
-		  size_t *pPropLen, unsigned short *pbMustBeFreed);
+		  rs_size_t *pPropLen, unsigned short *pbMustBeFreed);
 char *textpri(char *pRes, size_t pResLen, int pri);
 rsRetVal msgGetMsgVar(msg_t *pThis, cstr_t *pstrPropName, var_t **ppVar);
 es_str_t* msgGetMsgVarNew(msg_t *pThis, uchar *name);
@@ -186,6 +186,7 @@ void getRawMsg(msg_t *pM, uchar **pBuf, int *piLen);
 rsRetVal msgGetCEEVar(msg_t *pThis, cstr_t *propName, var_t **ppVar);
 es_str_t* msgGetCEEVarNew(msg_t *pMsg, char *name);
 rsRetVal msgAddJSON(msg_t *pM, uchar *name, struct json_object *json);
+rsRetVal getCEEPropVal(msg_t *pM, es_str_t *propName, uchar **pRes, rs_size_t *buflen, unsigned short *pbMustBeFreed);
 
 /* TODO: remove these five (so far used in action.c) */
 uchar *getMSG(msg_t *pM);
@@ -204,6 +205,7 @@ uchar *propIDToName(propid_t propID);
 rsRetVal msgGetCEEPropJSON(msg_t *pM, es_str_t *propName, struct json_object **pjson);
 rsRetVal msgSetJSONFromVar(msg_t *pMsg, uchar *varname, struct var *var);
 rsRetVal msgDelJSON(msg_t *pMsg, uchar *varname);
+rsRetVal jsonFind(msg_t *pM, es_str_t *propName, struct json_object **jsonres);
 
 static inline rsRetVal
 msgUnsetJSON(msg_t *pMsg, uchar *varname) {

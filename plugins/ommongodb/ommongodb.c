@@ -224,11 +224,11 @@ static bson *
 getDefaultBSON(msg_t *pMsg)
 {
 	bson *doc = NULL;
-	uchar *procid; short unsigned procid_free; size_t procid_len;
-	uchar *tag; short unsigned tag_free; size_t tag_len;
-	uchar *pid; short unsigned pid_free; size_t pid_len;
-	uchar *sys; short unsigned sys_free; size_t sys_len;
-	uchar *msg; short unsigned msg_free; size_t msg_len;
+	uchar *procid; short unsigned procid_free; rs_size_t procid_len;
+	uchar *tag; short unsigned tag_free; rs_size_t tag_len;
+	uchar *pid; short unsigned pid_free; rs_size_t pid_len;
+	uchar *sys; short unsigned sys_free; rs_size_t sys_len;
+	uchar *msg; short unsigned msg_free; rs_size_t msg_len;
 	int severity, facil;
 	gint64 ts_gen, ts_rcv; /* timestamps: generated, received */
 	int secfrac;

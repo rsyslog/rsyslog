@@ -58,6 +58,7 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "type", eCmdHdlrString, 0 },
 	{ "string", eCmdHdlrString, 0 },
 	{ "plugin", eCmdHdlrString, 0 },
+	{ "subtree", eCmdHdlrString, 0 },
 	{ "option.stdsql", eCmdHdlrBinary, 0 },
 	{ "option.sql", eCmdHdlrBinary, 0 },
 	{ "option.json", eCmdHdlrBinary, 0 }
@@ -147,7 +148,7 @@ rsRetVal tplToString(struct template *pTpl, msg_t *pMsg, uchar **ppBuf, size_t *
 	size_t iBuf;
 	unsigned short bMustBeFreed = 0;
 	uchar *pVal;
-	size_t iLenVal = 0;
+	rs_size_t iLenVal = 0;
 
 	assert(pTpl != NULL);
 	assert(pMsg != NULL);
@@ -158,6 +159,23 @@ rsRetVal tplToString(struct template *pTpl, msg_t *pMsg, uchar **ppBuf, size_t *
 		CHKiRet(pTpl->pStrgen(pMsg, ppBuf, pLenBuf));
 		FINALIZE;
 	}
+
+	if(pTpl->subtree != NULL) {
+		/* only a single CEE subtree must be provided */
+		/* note: we could optimize the code below, however, this is
+		 * not worth the effort, as this passing mode is not expected
+		 * in subtree mode and so most probably only used for debug & test.
+		 */
+		getCEEPropVal(pMsg, pTpl->subtree, &pVal, &iLenVal, &bMustBeFreed);
+		if(iLenVal >= (rs_size_t)*pLenBuf) /* we reserve one char for the final \0! */
+			CHKiRet(ExtendBuf(ppBuf, pLenBuf, iLenVal + 1));
+		memcpy(*ppBuf, pVal, iLenVal+1);
+		if(bMustBeFreed)
+			free(pVal);
+		FINALIZE;
+	}
+	
+	/* we have a "regular" template with template entries */
 
 	/* loop through the template. We obtain one value
 	 * and copy it over to our dynamic string buffer. Then, we
@@ -233,7 +251,7 @@ rsRetVal tplToArray(struct template *pTpl, msg_t *pMsg, uchar*** ppArr)
 	struct templateEntry *pTpe;
 	uchar **pArr;
 	int iArr;
-	size_t propLen;
+	rs_size_t propLen;
 	unsigned short bMustBeFreed;
 	uchar *pVal;
 
@@ -241,11 +259,24 @@ rsRetVal tplToArray(struct template *pTpl, msg_t *pMsg, uchar*** ppArr)
 	assert(pMsg != NULL);
 	assert(ppArr != NULL);
 
+	if(pTpl->subtree) {
+		/* Note: this mode is untested, as there is no official plugin
+		 *       using array passing, so I simply could not test it.
+		 */
+		CHKmalloc(pArr = calloc(2, sizeof(uchar*)));
+		getCEEPropVal(pMsg, pTpl->subtree, &pVal, &propLen, &bMustBeFreed);
+		if(bMustBeFreed) { /* if it must be freed, it is our own private copy... */
+			pArr[0] = pVal; /* ... so we can use it! */
+		} else {
+			CHKmalloc(pArr[0] = (uchar*)strdup((char*) pVal));
+		}
+		FINALIZE;
+	}
+
 	/* loop through the template. We obtain one value, create a
 	 * private copy (if necessary), add it to the string array
 	 * and then on to the next until we have processed everything.
 	 */
-
 	CHKmalloc(pArr = calloc(pTpl->tpenElements + 1, sizeof(uchar*)));
 	iArr = 0;
 
@@ -278,10 +309,11 @@ finalize_it:
  * tpltoString().
  * rgerhards, 2012-08-29
  */
-rsRetVal tplToJSON(struct template *pTpl, msg_t *pMsg, struct json_object **pjson)
+rsRetVal
+tplToJSON(struct template *pTpl, msg_t *pMsg, struct json_object **pjson)
 {
 	struct templateEntry *pTpe;
-	size_t propLen;
+	rs_size_t propLen;
 	unsigned short bMustBeFreed;
 	uchar *pVal;
 	struct json_object *json, *jsonf;
@@ -291,6 +323,17 @@ rsRetVal tplToJSON(struct template *pTpl, msg_t *pMsg, struct json_object **pjso
 	assert(pTpl != NULL);
 	assert(pMsg != NULL);
 	assert(json != NULL);
+
+	if(pTpl->subtree != NULL){
+		localRet = jsonFind(pMsg, pTpl->subtree, pjson);
+		if(*pjson == NULL) {
+			/* we need to have a root object! */
+			*pjson = json_object_new_object();
+		} else {
+			json_object_get(*pjson); /* inc refcount */
+		}
+		FINALIZE;
+	}
 
 	json = json_object_new_object();
 	for(pTpe = pTpl->pEntryRoot ; pTpe != NULL ; pTpe = pTpe->pNext) {
@@ -325,8 +368,9 @@ rsRetVal tplToJSON(struct template *pTpl, msg_t *pMsg, struct json_object **pjso
 			}
 		}
 	}
-
 	*pjson = (iRet == RS_RET_OK) ? json : NULL;
+
+finalize_it:
 	RETiRet;
 }
 
@@ -384,7 +428,7 @@ static void doEmergencyEscape(register uchar *p, int mode)
  * 2005-09-22 rgerhards
  */
 rsRetVal
-doEscape(uchar **pp, size_t *pLen, unsigned short *pbMustBeFreed, int mode)
+doEscape(uchar **pp, rs_size_t *pLen, unsigned short *pbMustBeFreed, int mode)
 {
 	DEFiRet;
 	uchar *p = NULL;
@@ -1627,8 +1671,9 @@ tplProcessCnf(struct cnfobj *o)
 	char *name = NULL;
 	uchar *tplStr = NULL;
 	uchar *plugin = NULL;
+	es_str_t *subtree = NULL;
 	uchar *p;
-	enum { T_STRING, T_PLUGIN, T_LIST } tplType;
+	enum { T_STRING, T_PLUGIN, T_LIST, T_SUBTREE } tplType;
 	int i;
 	int o_sql=0, o_stdsql=0, o_json=0; /* options */
 	int numopts;
@@ -1651,6 +1696,8 @@ tplProcessCnf(struct cnfobj *o)
 				tplType = T_PLUGIN;
 			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"list", sizeof("list")-1)) {
 				tplType = T_LIST;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"subtree", sizeof("subtree")-1)) {
+				tplType = T_SUBTREE;
 			} else {
 				uchar *typeStr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
 				errmsg.LogError(0, RS_RET_ERR, "invalid template type '%s'",
@@ -1660,6 +1707,8 @@ tplProcessCnf(struct cnfobj *o)
 			}
 		} else if(!strcmp(pblk.descr[i].name, "string")) {
 			tplStr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(pblk.descr[i].name, "subtree")) {
+			subtree = es_strdup(pvals[i].val.d.estr);
 		} else if(!strcmp(pblk.descr[i].name, "plugin")) {
 			plugin = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(pblk.descr[i].name, "option.stdsql")) {
@@ -1698,6 +1747,19 @@ tplProcessCnf(struct cnfobj *o)
 		if(tplType != T_PLUGIN) {
 			errmsg.LogError(0, RS_RET_ERR, "template '%s' is not a plugin "
 				"template but has a plugin specified - ignored", name);
+		}
+	}
+
+	if(subtree  == NULL) {
+		if(tplType == T_SUBTREE) {
+			errmsg.LogError(0, RS_RET_ERR, "template '%s' of type subtree needs "
+				"subtree parameter", name);
+			ABORT_FINALIZE(RS_RET_ERR);
+		}
+	} else {
+		if(tplType != T_SUBTREE) {
+			errmsg.LogError(0, RS_RET_ERR, "template '%s' is not a subtree "
+				"template but has a subtree specified - ignored", name);
 		}
 	}
 
@@ -1757,6 +1819,8 @@ tplProcessCnf(struct cnfobj *o)
 			}
 			break;
 	case T_LIST:	createListTpl(pTpl, o);
+			break;
+	case T_SUBTREE:	pTpl->subtree = subtree;
 			break;
 	}
 	
@@ -1858,8 +1922,8 @@ void tplDeleteAll(rsconf_t *conf)
 		}
 		pTplDel = pTpl;
 		pTpl = pTpl->pNext;
-		if(pTplDel->pszName != NULL)
-			free(pTplDel->pszName);
+		free(pTplDel->pszName);
+		es_deleteStr(pTplDel->subtree);
 		free(pTplDel);
 	}
 	ENDfunc
@@ -1916,8 +1980,8 @@ void tplDeleteNew(rsconf_t *conf)
 		}
 		pTplDel = pTpl;
 		pTpl = pTpl->pNext;
-		if(pTplDel->pszName != NULL)
-			free(pTplDel->pszName);
+		free(pTplDel->pszName);
+		es_deleteStr(pTplDel->subtree);
 		free(pTplDel);
 	}
 	ENDfunc

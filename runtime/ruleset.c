@@ -347,7 +347,7 @@ evalPROPFILT(struct cnfstmt *stmt, msg_t *pMsg)
 	unsigned short pbMustBeFreed;
 	uchar *pszPropVal;
 	int bRet = 0;
-	size_t propLen;
+	rs_size_t propLen;
 
 	if(stmt->d.s_propfilt.propID == PROP_INVALID)
 		goto done;

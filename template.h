@@ -39,7 +39,8 @@ struct template {
 	struct template *pNext;
 	char *pszName;
 	int iLenName;
-	rsRetVal (*pStrgen)(msg_t*, uchar**, size_t *);	/* name of strgen to use (bound if non-NULL!) */
+	rsRetVal (*pStrgen)(msg_t*, uchar**, size_t *);
+	es_str_t *subtree;	/* subtree name for subtree-type templates */
 	int tpenElements; /* number of elements in templateEntry list */
 	struct templateEntry *pEntryRoot;
 	struct templateEntry *pEntryLast;
@@ -149,7 +150,7 @@ rsRetVal ExtendBuf(uchar **pBuf, size_t *pLenBuf, size_t iMinSize);
 rsRetVal tplToArray(struct template *pTpl, msg_t *pMsg, uchar*** ppArr);
 rsRetVal tplToString(struct template *pTpl, msg_t *pMsg, uchar** ppSz, size_t *);
 rsRetVal tplToJSON(struct template *pTpl, msg_t *pMsg, struct json_object **);
-rsRetVal doEscape(uchar **pp, size_t *pLen, unsigned short *pbMustBeFreed, int escapeMode);
+rsRetVal doEscape(uchar **pp, rs_size_t *pLen, unsigned short *pbMustBeFreed, int escapeMode);
 
 rsRetVal templateInit();
 rsRetVal tplProcessCnf(struct cnfobj *o);

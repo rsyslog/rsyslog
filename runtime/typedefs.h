@@ -92,6 +92,8 @@ typedef struct cfgmodules_etry_s cfgmodules_etry_t;
 typedef struct outchannels_s outchannels_t;
 typedef struct modConfData_s modConfData_t;
 typedef struct instanceConf_s instanceConf_t;
+typedef int rs_size_t; /* we do never need more than 2Gig strings, signed permits to
+			* use -1 as a special flag. */
 typedef rsRetVal (*prsf_t)(struct vmstk_s*, int);	/* pointer to a RainerScript function */
 typedef uint64 qDeqID;	/* queue Dequeue order ID. 32 bits is considered dangerously few */
 

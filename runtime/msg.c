@@ -2408,8 +2408,8 @@ static uchar *getNOW(eNOWType eNow)
 
 
 /* Get a CEE-Property as string value*/
-static inline rsRetVal
-getCEEPropVal(msg_t *pM, es_str_t *propName, uchar **pRes, int *buflen, unsigned short *pbMustBeFreed)
+rsRetVal
+getCEEPropVal(msg_t *pM, es_str_t *propName, uchar **pRes, rs_size_t *buflen, unsigned short *pbMustBeFreed)
 {
 	uchar *name = NULL;
 	uchar *leaf;
@@ -2431,10 +2431,7 @@ getCEEPropVal(msg_t *pM, es_str_t *propName, uchar **pRes, int *buflen, unsigned
 		CHKiRet(jsonPathFindParent(pM, name, leaf, &parent, 1));
 		field = json_object_object_get(parent, (char*)leaf);
 	}
-	if(field == 0) {
-		*pRes = (uchar*) "";
-		*pbMustBeFreed = 0;
-	} else {
+	if(field != NULL) {
 		*pRes = (uchar*) strdup(json_object_get_string(field));
 		*buflen = (int) ustrlen(*pRes);
 		*pbMustBeFreed = 1;
@@ -2684,11 +2681,11 @@ finalize_it:
 	*pPropLen = sizeof("**OUT OF MEMORY**") - 1; \
 	return(UCHAR_CONSTANT("**OUT OF MEMORY**"));}
 uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
-                 propid_t propid, es_str_t *propName, size_t *pPropLen,
+                 propid_t propid, es_str_t *propName, rs_size_t *pPropLen,
 		 unsigned short *pbMustBeFreed)
 {
 	uchar *pRes; /* result pointer */
-	int bufLen = -1; /* length of string or -1, if not known */
+	rs_size_t bufLen = -1; /* length of string or -1, if not known */
 	uchar *pBufStart;
 	uchar *pBuf;
 	int iLen;
@@ -3528,7 +3525,7 @@ done:
 es_str_t*
 msgGetMsgVarNew(msg_t *pThis, uchar *name)
 {
-	size_t propLen;
+	rs_size_t propLen;
 	uchar *pszProp = NULL;
 	propid_t propid;
 	unsigned short bMustBeFreed = 0;
@@ -3727,6 +3724,36 @@ DBGPRINTF("AAAA jsonMerge adds '%s'\n", it.key);
 	 * root gets freed().
 	 */
 	json_object_put(json);
+	RETiRet;
+}
+
+/* find a JSON structure element (field or container doesn't matter).  */
+rsRetVal
+jsonFind(msg_t *pM, es_str_t *propName, struct json_object **jsonres)
+{
+	uchar *name = NULL;
+	uchar *leaf;
+	struct json_object *parent;
+	struct json_object *field;
+	DEFiRet;
+
+	if(pM->json == NULL) {
+		field = NULL;
+		goto finalize_it;
+	}
+
+	if(!es_strbufcmp(propName, (uchar*)"!", 1)) {
+		field = pM->json;
+	} else {
+		name = (uchar*)es_str2cstr(propName, NULL);
+		leaf = jsonPathGetLeaf(name, ustrlen(name));
+		CHKiRet(jsonPathFindParent(pM, name, leaf, &parent, 0));
+		field = json_object_object_get(parent, (char*)leaf);
+	}
+	*jsonres = field;
+
+finalize_it:
+	free(name);
 	RETiRet;
 }
 
