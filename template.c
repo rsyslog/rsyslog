@@ -1708,7 +1708,18 @@ tplProcessCnf(struct cnfobj *o)
 		} else if(!strcmp(pblk.descr[i].name, "string")) {
 			tplStr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(pblk.descr[i].name, "subtree")) {
-			subtree = es_strdup(pvals[i].val.d.estr);
+			uchar *st_str = es_getBufAddr(pvals[i].val.d.estr);
+			if(st_str[0] != '$' || st_str[1] != '!') {
+				char *cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
+				errmsg.LogError(0, RS_RET_ERR, "invalid subtree "
+					"parameter, variable must start with '$!' but "
+					"var name is '%s'", cstr);
+				free(cstr);
+				free(name); /* overall assigned */
+				ABORT_FINALIZE(RS_RET_ERR);
+			} else {
+				subtree = es_strdup(pvals[i].val.d.estr);
+			}
 		} else if(!strcmp(pblk.descr[i].name, "plugin")) {
 			plugin = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(pblk.descr[i].name, "option.stdsql")) {
@@ -1820,7 +1831,7 @@ tplProcessCnf(struct cnfobj *o)
 			break;
 	case T_LIST:	createListTpl(pTpl, o);
 			break;
-	case T_SUBTREE:	pTpl->subtree = subtree;
+	case T_SUBTREE:	pTpl->subtree = subtree + 1;
 			break;
 	}
 	
