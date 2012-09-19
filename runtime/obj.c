@@ -665,7 +665,7 @@ static rsRetVal objDeserializeProperty(var_t *pProp, strm_t *pStrm)
 	if(c != '\n') ABORT_FINALIZE(RS_RET_INVALID_PROPFRAME);
 
 finalize_it:
-	if(Debug && iRet != RS_RET_OK) {
+	if(Debug && iRet != RS_RET_OK && iRet != RS_RET_NO_PROPLINE) {
 		strm.GetCurrOffset(pStrm, &offs);
 		dbgprintf("error %d deserializing property name, offset %lld, step %d\n",
 			  iRet, offs, step);
