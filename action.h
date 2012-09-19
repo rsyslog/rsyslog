@@ -36,7 +36,7 @@ extern int glbliActionResumeRetryCount;
 
 
 typedef enum {
-	ACT_STATE_DIED = 0,	/* action permanently failed and now disabled  - MUST BE ZEO! */
+	ACT_STATE_DIED = 0,	/* action permanently failed and now disabled  - MUST BE ZERO! */
 	ACT_STATE_RDY  = 1,	/* action ready, waiting for new transaction */
 	ACT_STATE_ITX  = 2,	/* transaction active, waiting for new data or commit */
 	ACT_STATE_COMM = 3, 	/* transaction finished (a transient state) */
