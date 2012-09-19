@@ -66,6 +66,7 @@ TESTS +=  \
 	rcvr_fail_restore.sh \
 	rscript_contains.sh \
 	cee_simple.sh \
+	cee_diskqueue.sh \
 	linkedlistqueue.sh
 
 if HAVE_VALGRIND
@@ -270,6 +271,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/rscript_contains.conf \
 	   cee_simple.sh \
 	   testsuites/cee_simple.conf \
+	   cee_diskqueue.sh \
+	   testsuites/cee_diskqueue.conf \
 	   linkedlistqueue.sh \
 	   testsuites/linkedlistqueue.conf \
 	   da-mainmsg-q.sh \
