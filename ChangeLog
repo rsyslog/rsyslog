@@ -1,8 +1,10 @@
 ---------------------------------------------------------------------------
-Version 7.1.4  [devel] 2012-09-??
+Version 7.1.4  [devel] 2012-09-19
 - implemented ability for CEE-based properties to be stored in disk queues
-- introduced full JSON support for variable manipulation
-- introduced "subtree"-type tempalates
+- implemented string concatenation in expressions via &-operator
+- implemented json subtree copy in variable assignment
+- implemented full JSON support for variable manipulation
+- introduced "subtree"-type templates
 - bugfix: omfile action did not respect "template" parameter
   ... and used default template in all cases
 - bugfix: MsgDup() did not copy CEE structure
