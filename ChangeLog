@@ -1,7 +1,8 @@
 ---------------------------------------------------------------------------
 Version 7.1.4  [devel] 2012-09-??
+- implemented ability for CEE-based properties to be stored in disk queues
 - introduced full JSON support for variable manipulation
-- intorduced "subtree"-type tempalates
+- introduced "subtree"-type tempalates
 - bugfix: MsgDup() did not copy CEE structure
   This function was called at various places, most importantly during
   "last messages repeated n times" processing and omruleset. If CEE(JSON)

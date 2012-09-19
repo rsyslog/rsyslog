@@ -1090,6 +1090,10 @@ static rsRetVal MsgSerialize(msg_t *pThis, strm_t *pStrm)
 	CHKiRet(obj.SerializeProp(pStrm, UCHAR_CONSTANT("pszRcvFrom"), PROPTYPE_PSZ, (void*) psz));
 	psz = getRcvFromIP(pThis); 
 	CHKiRet(obj.SerializeProp(pStrm, UCHAR_CONSTANT("pszRcvFromIP"), PROPTYPE_PSZ, (void*) psz));
+	if(pThis->json != NULL) {
+		psz = (uchar*) json_object_get_string(pThis->json);
+		CHKiRet(obj.SerializeProp(pStrm, UCHAR_CONSTANT("json"), PROPTYPE_PSZ, (void*) psz));
+	}
 
 	objSerializePTR(pStrm, pCSStrucData, CSTR);
 	objSerializePTR(pStrm, pCSAPPNAME, CSTR);
@@ -3562,6 +3566,8 @@ rsRetVal MsgSetProperty(msg_t *pThis, var_t *pProp)
 	prop_t *myProp;
 	prop_t *propRcvFrom = NULL;
 	prop_t *propRcvFromIP = NULL;
+	struct json_tokener *tokener;
+	struct json_object *json;
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, msg);
@@ -3616,6 +3622,12 @@ rsRetVal MsgSetProperty(msg_t *pThis, var_t *pProp)
 		MsgSetRulesetByName(pThis, pProp->val.pStr);
 	} else if(isProp("pszMSG")) {
 		dbgprintf("no longer supported property pszMSG silently ignored\n");
+	} else if(isProp("json")) {
+		tokener = json_tokener_new();
+		json = json_tokener_parse_ex(tokener, (char*)rsCStrGetSzStrNoNULL(pProp->val.pStr),
+					     cstrLen(pProp->val.pStr));
+		json_tokener_free(tokener);
+		msgAddJSON(pThis, (uchar*)"!", json);
 	} else {
 		dbgprintf("unknown supported property '%s' silently ignored\n",
 			  rsCStrGetSzStrNoNULL(pProp->pcsName));

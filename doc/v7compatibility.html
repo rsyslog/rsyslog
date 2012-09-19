@@ -17,9 +17,17 @@ BSD style blocks are no longer supported (for good reason). See the
 <a href="http://www.rsyslog.com/g/BSD">rsyslog BSD blocks info</a>
 page for more information and how to upgrade your config.
 <p>[<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+
+<h2>CEE-Properties</h2>
+In rsyslog v6, CEE properties could not be used across disk-based queues. If this was
+done, there content was reset. This was a missing feature in v6. In v7, this feature
+has been implemented. Consequently, situations where the previous behaviour were
+desired need now to be solved differently. We do not think that this will cause any
+problems to anyone, especially as in v6 this was announced as a missing feature.
+
 <p><font size="2">This documentation is part of the
 <a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
-Copyright &copy; 2011 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+Copyright &copy; 2011-2012 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
 <a href="http://www.adiscon.com/">Adiscon</a>. Released under the GNU GPL 
 version 2 or higher.</font></p>
 </body></html>
