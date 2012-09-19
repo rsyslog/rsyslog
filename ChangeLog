@@ -1,4 +1,10 @@
 ---------------------------------------------------------------------------
+Version 7.1.4  [devel] 2012-09-??
+- bugfix: MsgDup() did not copy CEE structure
+  This function was called at various places, most importantly during
+  "last messages repeated n times" processing and omruleset. If CEE(JSON)
+  data was present, it was lost as part of the copy process.
+---------------------------------------------------------------------------
 Version 7.1.3  [devel] 2012-09-17
 - introduced "set" and "unset" config statements
 - bugfix: missing support for escape sequences in RainerScript

@@ -295,6 +295,7 @@ static pthread_mutex_t mutTrimCtr;	 /* mutex to handle malloc trim */
 static int getAPPNAMELen(msg_t *pM, sbool bLockMutex);
 static rsRetVal jsonPathFindParent(msg_t *pM, uchar *name, uchar *leaf, struct json_object **parent, int bCreate);
 static uchar * jsonPathGetLeaf(uchar *name, int lenName);
+static struct json_object *jsonDeepCopy(struct json_object *src);
 
 
 /* The following functions will support advanced output module
@@ -1032,6 +1033,9 @@ msg_t* MsgDup(msg_t* pOld)
 	tmpCOPYCSTR(APPNAME);
 	tmpCOPYCSTR(PROCID);
 	tmpCOPYCSTR(MSGID);
+
+	if(pOld->json != NULL)
+		pNew->json = jsonDeepCopy(pOld->json);
 
 	/* we do not copy all other cache properties, as we do not even know
 	 * if they are needed once again. So we let them re-create if needed.
@@ -3854,7 +3858,7 @@ finalize_it:
 	RETiRet;
 }
 
-static inline struct json_object *
+static struct json_object *
 jsonDeepCopy(struct json_object *src)
 {
 	struct json_object *dst = NULL, *json;
