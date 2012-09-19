@@ -1341,12 +1341,18 @@ doSubmitToActionQ(action_t *pAction, msg_t *pMsg)
 {
 	DEFiRet;
 
+	if(pAction->eState == ACT_STATE_DIED) {
+		DBGPRINTF("action %p died, do NOT execute\n", pAction);
+		FINALIZE;
+	}
+
 	STATSCOUNTER_INC(pAction->ctrProcessed, pAction->mutCtrProcessed);
 	if(pAction->pQueue->qType == QUEUETYPE_DIRECT)
 		iRet = qqueueEnqObjDirect(pAction->pQueue, (void*) MsgAddRef(pMsg));
 	else
 		iRet = qqueueEnqObj(pAction->pQueue, eFLOWCTL_NO_DELAY, (void*) MsgAddRef(pMsg));
 
+finalize_it:
 	RETiRet;
 }
 
@@ -1551,9 +1557,18 @@ finalize_it:
  */
 DEFFUNC_llExecFunc(doActivateActions)
 {
+	rsRetVal localRet;
 	action_t *pThis = (action_t*) pData;
 	BEGINfunc
-	qqueueStart(pThis->pQueue);
+	localRet = qqueueStart(pThis->pQueue);
+	if(localRet != RS_RET_OK) {
+		errmsg.LogError(0, localRet, "error starting up action queue");
+		if(localRet == RS_RET_FILE_PREFIX_MISSING) {
+			errmsg.LogError(0, localRet, "file prefix (work directory?) "
+					"is missing");
+		}
+		actionDisable(pThis);
+	}
 	DBGPRINTF("Action %p: queue %p started\n", pThis, pThis->pQueue);
 	ENDfunc
 	return RS_RET_OK; /* we ignore errors, we can not do anything either way */

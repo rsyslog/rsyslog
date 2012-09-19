@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 6.4.2  [V6-STABLE] 2012-09-??
+- bugfix: potential abort, if action queue could not be properly started
+  This most importantly could happen due to configuration errors.
 - bugfix: remove invalid socket option call from imuxsock
   Thanks to Cristian Ionescu-Idbohrn and Jonny Törnbom 
 - bugfix: missing support for escape sequences in RainerScript
