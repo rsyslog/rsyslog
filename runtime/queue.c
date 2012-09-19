@@ -232,12 +232,16 @@ getQueueTypeName(queueType_t t)
 	switch(t) {
 	case QUEUETYPE_FIXED_ARRAY: 
 		r = "FixedArray";
+		break;
 	case QUEUETYPE_LINKEDLIST: 
 		r = "LinkedList";
+		break;
 	case QUEUETYPE_DISK: 
 		r = "Disk";
+		break;
 	case QUEUETYPE_DIRECT: 
 		r = "Direct";
+		break;
 	}
 	return r;
 }
