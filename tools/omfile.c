@@ -885,6 +885,7 @@ setInstParamDefaults(instanceData *pData)
 
 BEGINnewActInst
 	struct cnfparamvals *pvals;
+	uchar *tplToUse;
 	int i;
 CODESTARTnewActInst
 	DBGPRINTF("newActInst (omfile)\n");
@@ -959,7 +960,8 @@ CODESTARTnewActInst
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
 
-	CHKiRet(OMSRsetEntry(*ppOMSR, 0, ustrdup(getDfltTpl()), OMSR_NO_RQD_TPL_OPTS));
+	tplToUse = (pData->tplName == NULL) ? ustrdup(getDfltTpl()) : pData->tplName;
+	CHKiRet(OMSRsetEntry(*ppOMSR, 0, tplToUse, OMSR_NO_RQD_TPL_OPTS));
 
 	if(pData->bDynamicName) {
 		/* "filename" is actually a template name, we need this as string 1. So let's add it
