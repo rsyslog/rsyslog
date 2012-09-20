@@ -756,6 +756,40 @@ debugPrintAll(rsconf_t *conf)
 	RETiRet;
 }
 
+static inline void
+rulesetOptimize(ruleset_t *pRuleset)
+{
+	if(Debug) {
+		dbgprintf("ruleset '%s' before optimization:\n",
+			  pRuleset->pszName);
+		rulesetDebugPrint((ruleset_t*) pRuleset);
+	}
+	cnfstmtOptimize(pRuleset->root);
+	if(Debug) {
+		dbgprintf("ruleset '%s' after optimization:\n",
+			  pRuleset->pszName);
+		rulesetDebugPrint((ruleset_t*) pRuleset);
+	}
+}
+
+/* helper for rulsetOptimizeAll(), optimizes a single ruleset */
+DEFFUNC_llExecFunc(doRulesetOptimizeAll)
+{
+	rulesetOptimize((ruleset_t*) pData);
+	return RS_RET_OK;
+}
+/* optimize all rulesets
+ */
+rsRetVal
+rulesetOptimizeAll(rsconf_t *conf)
+{
+	DEFiRet;
+	dbgprintf("begin ruleset optimization phase\n");
+	llExecFunc(&(conf->rulesets.llRulesets), doRulesetOptimizeAll, NULL);
+	dbgprintf("ruleset optimization phase finished.\n");
+	RETiRet;
+}
+
 
 /* Create a ruleset-specific "main" queue for this ruleset. If one is already
  * defined, an error message is emitted but nothing else is done.

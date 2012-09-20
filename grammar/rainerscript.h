@@ -307,6 +307,7 @@ struct cnfstmt * cnfstmtNewLegaAct(char *actline);
 struct cnfstmt * cnfstmtNewSet(char *var, struct cnfexpr *expr);
 struct cnfstmt * cnfstmtNewUnset(char *var);
 void cnfstmtDestruct(struct cnfstmt *root);
+void cnfstmtOptimize(struct cnfstmt *root);
 char* getFIOPName(unsigned iFIOP);
 rsRetVal initRainerscript(void);
 void unescapeStr(uchar *s, int len);

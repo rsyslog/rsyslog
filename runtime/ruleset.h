@@ -90,5 +90,9 @@ rulesetGetName(ruleset_t *pRuleset)
 }
 
 
+/* we will most probably convert this module back to traditional C
+ * calling sequence, so here we go...
+ */
 rsRetVal rulesetGetRuleset(rsconf_t *conf, ruleset_t **ppRuleset, uchar *pszName);
+rsRetVal rulesetOptimizeAll(rsconf_t *conf);
 #endif /* #ifndef INCLUDED_RULESET_H */

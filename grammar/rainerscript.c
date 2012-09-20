@@ -1862,6 +1862,89 @@ cnfstmtNewLegaAct(char *actline)
 done:	return cnfstmt;
 }
 
+
+/* (recursively) optimize an expression */
+void
+cnfexprOptimize(struct cnfexpr *expr)
+{
+	struct var r, l; /* memory for subexpression results */
+	es_str_t *estr_r, *estr_l;
+	int convok_r, convok_l;
+	int bMustFree, bMustFree2;
+	long long n_r, n_l;
+
+	dbgprintf("optimize expr %p, type '%c'(%u)\n", expr, expr->nodetype, expr->nodetype);
+	switch(expr->nodetype) {
+	case '&':
+		break;
+	case '+':
+		break;
+	case '-':
+		break;
+	case '*':
+		break;
+	case '/':
+		break;
+	case '%':
+		break;
+	default:DBGPRINTF("expr optimizer error: unknown nodetype %u['%c']\n",
+			(unsigned) expr->nodetype, (char) expr->nodetype);
+		break;
+	}
+
+}
+
+/* (recursively) optimize a statement */
+void
+cnfstmtOptimize(struct cnfstmt *root)
+{
+	struct cnfstmt *stmt, *prevstmt;
+
+	prevstmt = NULL;
+	for(stmt = root ; stmt != NULL ; stmt = stmt->next) {
+dbgprintf("RRRR: stmtOptimize: stmt %p, nodetype %u\n", stmt, stmt->nodetype);
+		switch(stmt->nodetype) {
+		case S_NOP:
+			/* unchain NOPs, first NOP remains (TODO?) */
+			if(prevstmt != NULL) {
+				DBGPRINTF("removing NOP\n");
+				prevstmt->next = stmt->next;
+#warning remove memleak, destruct 
+			}
+			break;
+		case S_IF:
+			cnfexprOptimize(stmt->d.s_if.expr);
+			if(stmt->d.s_if.t_then != NULL) {
+				cnfstmtOptimize(stmt->d.s_if.t_then);
+			}
+			if(stmt->d.s_if.t_else != NULL) {
+				cnfstmtOptimize(stmt->d.s_if.t_else);
+			}
+			break;
+		case S_PRIFILT:
+			cnfstmtOptimize(stmt->d.s_prifilt.t_then);
+			break;
+		case S_PROPFILT:
+			cnfstmtOptimize(stmt->d.s_propfilt.t_then);
+			break;
+		case S_SET:
+			cnfexprOptimize(stmt->d.s_set.expr);
+			break;
+		case S_STOP:
+		case S_UNSET:
+		case S_ACT:
+			/* nothing to do */
+			break;
+		default:
+			dbgprintf("error: unknown stmt type %u during optimizer run\n",
+				(unsigned) stmt->nodetype);
+			break;
+		}
+		prevstmt = stmt;
+	}
+}
+
+
 struct cnffparamlst *
 cnffparamlstNew(struct cnfexpr *expr, struct cnffparamlst *next)
 {

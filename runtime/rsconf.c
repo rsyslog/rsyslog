@@ -1234,6 +1234,7 @@ ourConf = loadConf; // TODO: remove, once ourConf is gone!
 		ABORT_FINALIZE(RS_RET_NO_ACTIONS);
 	}
 	tellLexEndParsing();
+	rulesetOptimizeAll(loadConf);
 
 	tellCoreConfigLoadDone();
 	tellModulesConfigLoadDone();
