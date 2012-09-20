@@ -65,6 +65,7 @@ TESTS +=  \
 	failover-no-basic.sh \
 	rcvr_fail_restore.sh \
 	rscript_contains.sh \
+	rscript_field.sh \
 	cee_simple.sh \
 	cee_diskqueue.sh \
 	linkedlistqueue.sh
@@ -269,6 +270,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/arrayqueue.conf \
 	   rscript_contains.sh \
 	   testsuites/rscript_contains.conf \
+	   rscript_field.sh \
+	   testsuites/rscript_field.conf \
 	   cee_simple.sh \
 	   testsuites/cee_simple.conf \
 	   cee_diskqueue.sh \

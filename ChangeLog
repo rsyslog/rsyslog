@@ -1,4 +1,7 @@
 ---------------------------------------------------------------------------
+Version 7.1.5  [devel] 2012-09-??
+- implemented RainerScript field() function
+---------------------------------------------------------------------------
 Version 7.1.4  [devel] 2012-09-19
 - implemented ability for CEE-based properties to be stored in disk queues
 - implemented string concatenation in expressions via &-operator

@@ -744,11 +744,13 @@ var2Number(struct var *r, int *bSuccess)
 	long long n;
 	if(r->datatype == 'S') {
 		n = es_str2num(r->d.estr, bSuccess);
-	} else if(r->datatype == 'J') {
-		n = (r->d.json == NULL) ? 0 : json_object_get_int(r->d.json);
 	} else {
-		n = r->d.n;
-		if(bSuccess)
+		if(r->datatype == 'J') {
+			n = (r->d.json == NULL) ? 0 : json_object_get_int(r->d.json);
+		} else {
+			n = r->d.n;
+		}
+		if(bSuccess != NULL)
 			*bSuccess = 1;
 	}
 	return n;
@@ -782,6 +784,67 @@ var2String(struct var *r, int *bMustFree)
 	return estr;
 }
 
+static uchar*
+var2CString(struct var *r, int *bMustFree)
+{
+	uchar *cstr;
+	es_str_t *estr;
+	estr = var2String(r, bMustFree);
+	cstr = (uchar*) es_str2cstr(estr, NULL);
+	if(*bMustFree)
+		es_deleteStr(estr);
+	*bMustFree = 1;
+	return cstr;
+}
+
+rsRetVal
+doExtractField(uchar *str, uchar delim, int matchnbr, uchar **resstr)
+{
+	int iCurrFld;
+	int iLen;
+	uchar *pBuf;
+	uchar *pFld;
+	uchar *pFldEnd;
+	DEFiRet;
+
+	/* first, skip to the field in question */
+	iCurrFld = 1;
+	pFld = str;
+	while(*pFld && iCurrFld < matchnbr) {
+		/* skip fields until the requested field or end of string is found */
+		while(*pFld && (uchar) *pFld != delim)
+			++pFld; /* skip to field terminator */
+		if(*pFld == delim) {
+			++pFld; /* eat it */
+			++iCurrFld;
+		}
+	}
+	dbgprintf("field() field requested %d, field found %d\n", matchnbr, iCurrFld);
+	
+	if(iCurrFld == matchnbr) {
+		/* field found, now extract it */
+		/* first of all, we need to find the end */
+		pFldEnd = pFld;
+		while(*pFldEnd && *pFldEnd != delim)
+			++pFldEnd;
+		--pFldEnd; /* we are already at the delimiter - so we need to
+			    * step back a little not to copy it as part of the field. */
+		/* we got our end pointer, now do the copy */
+		iLen = pFldEnd - pFld + 1; /* the +1 is for an actual char, NOT \0! */
+		CHKmalloc(pBuf = MALLOC((iLen + 1) * sizeof(char)));
+		/* now copy */
+		memcpy(pBuf, pFld, iLen);
+		pBuf[iLen] = '\0'; /* terminate it */
+		if(*(pFldEnd+1) != '\0')
+			++pFldEnd; /* OK, skip again over delimiter char */
+		*resstr = pBuf;
+	} else {
+		ABORT_FINALIZE(RS_RET_FIELD_NOT_FOUND);
+	}
+finalize_it:
+	RETiRet;
+}
+
 /* Perform a function call. This has been moved out of cnfExprEval in order
  * to keep the code small and easier to maintain.
  */
@@ -793,8 +856,12 @@ doFuncCall(struct cnffunc *func, struct var *ret, void* usrptr)
 	int bMustFree;
 	es_str_t *estr;
 	char *str;
+	uchar *resStr;
 	int retval;
 	struct var r[CNFFUNC_MAX_ARGS];
+	int delim;
+	int matchnbr;
+	rsRetVal localRet;
 
 	dbgprintf("rainerscript: executing function id %d\n", func->fID);
 	switch(func->fID) {
@@ -862,8 +929,7 @@ doFuncCall(struct cnffunc *func, struct var *ret, void* usrptr)
 		break;
 	case CNFFUNC_RE_MATCH:
 		cnfexprEval(func->expr[0], &r[0], usrptr);
-		estr = var2String(&r[0], &bMustFree);
-		str = es_str2cstr(estr, NULL);
+		str = (char*) var2CString(&r[0], &bMustFree);
 		retval = regexp.regexec(func->funcdata, str, 0, NULL, 0);
 		if(retval == 0)
 			ret->d.n = 1;
@@ -874,9 +940,34 @@ doFuncCall(struct cnffunc *func, struct var *ret, void* usrptr)
 			}
 		}
 		ret->datatype = 'N';
-		if(bMustFree) es_deleteStr(estr);
+		if(bMustFree) free(str);
 		free(str);
 		if(r[0].datatype == 'S') es_deleteStr(r[0].d.estr);
+		break;
+	case CNFFUNC_FIELD:
+		cnfexprEval(func->expr[0], &r[0], usrptr);
+		cnfexprEval(func->expr[1], &r[1], usrptr);
+		cnfexprEval(func->expr[2], &r[2], usrptr);
+		str = (char*) var2CString(&r[0], &bMustFree);
+		delim = var2Number(&r[1], NULL);
+		matchnbr = var2Number(&r[2], NULL);
+		localRet = doExtractField((uchar*)str, (char) delim, matchnbr, &resStr);
+dbgprintf("RRRR: field() returns %d, str: '%s'\n", localRet, resStr);
+		if(localRet == RS_RET_OK) {
+			ret->d.estr = es_newStrFromCStr((char*)resStr, strlen((char*)resStr));
+			free(resStr);
+		} else if(localRet == RS_RET_OK) {
+			ret->d.estr = es_newStrFromCStr("***FIELD NOT FOUND***",
+					sizeof("***FIELD NOT FOUND***")-1);
+		} else {
+			ret->d.estr = es_newStrFromCStr("***ERROR in field() FUNCTION***",
+					sizeof("***ERROR in field() FUNCTION***")-1);
+		}
+		ret->datatype = 'S';
+		if(bMustFree) free(str);
+		if(r[0].datatype == 'S') es_deleteStr(r[0].d.estr);
+		if(r[1].datatype == 'S') es_deleteStr(r[1].d.estr);
+		if(r[2].datatype == 'S') es_deleteStr(r[2].d.estr);
 		break;
 	default:
 		if(Debug) {
@@ -1805,6 +1896,13 @@ funcName2ID(es_str_t *fname, unsigned short nParams)
 			return CNFFUNC_INVALID;
 		}
 		return CNFFUNC_RE_MATCH;
+	} else if(!es_strbufcmp(fname, (unsigned char*)"field", sizeof("field") - 1)) {
+		if(nParams != 3) {
+			parser_errmsg("number of parameters for field() must be three "
+				      "but is %d.", nParams);
+			return CNFFUNC_INVALID;
+		}
+		return CNFFUNC_FIELD;
 	} else {
 		return CNFFUNC_INVALID;
 	}

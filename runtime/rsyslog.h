@@ -392,6 +392,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */
+	RS_RET_FIELD_NOT_FOUND = 1002, /**< field() function did not find requested field */
 
 	/* some generic error/status codes */
 	RS_RET_OK = 0,			/**< operation successful */

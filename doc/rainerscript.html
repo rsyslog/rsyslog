@@ -61,6 +61,11 @@ variable, if it exists. Returns an empty string if it does not exist.
 <li>cstr(expr) - converts expr to a string value
 <li>cnum(expr) - converts expr to a number (integer)
 <li>re_match(expr, re) - returns 1, if expr matches re, 0 otherwise
+<li>field(str, delim, matchnbr) - returns a field-based substring. str is the string
+to search, delim is the numerical ascii value of the field delimiter (so that
+non-printable characters can by specified) and matchnbr is the match to search
+for (the first match starts at 1). This works similar as the field based
+property-replacer option.
 </ul>
 <p>The following example can be used to build a dynamic filter based on some environment
 variable:
