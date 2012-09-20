@@ -47,7 +47,7 @@ Version 6.5.0  [devel] 2012-08-28
   Note: patches were released under ASL 2.0, see
   http://bugzilla.adiscon.com/show_bug.cgi?id=353
 ---------------------------------------------------------------------------
-Version 6.4.2  [V6-STABLE] 2012-09-??
+Version 6.4.2  [V6-STABLE] 2012-09-20
 - bugfix: potential abort, if action queue could not be properly started
   This most importantly could happen due to configuration errors.
 - bugfix: remove invalid socket option call from imuxsock
@@ -57,6 +57,7 @@ Version 6.4.2  [V6-STABLE] 2012-09-??
   used \x as escape where x was any character (e.g. "\n" meant "n" and NOT
   LF). This also means there is some incompatibility to v5 for well-know
   sequences. Better break it now than later.
+- bugfix: config validation run did not always return correct return state
 ---------------------------------------------------------------------------
 Version 6.4.1  [V6-STABLE] 2012-09-06
 - bugfix: multiple main queues with same queue file name were not detected
