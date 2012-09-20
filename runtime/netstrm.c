@@ -253,8 +253,11 @@ EnableKeepAlive(netstrm_t *pThis)
 static rsRetVal
 CheckConnection(netstrm_t *pThis)
 {
+	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, netstrm);
-	pThis->Drvr.CheckConnection(pThis->pDrvrData);
+	CHKiRet(pThis->Drvr.CheckConnection(pThis->pDrvrData));
+finalize_it:
+	RETiRet;
 }
 
 
