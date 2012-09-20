@@ -7,4 +7,8 @@
 # This file is part of the rsyslog project, released  under GPLv3
 echo ===============================================================================
 echo \[sndrcv_omudpspoof_nonstdpt.sh\]: testing sending and receiving via omudp
+echo This test must be run as root [raw socket access required]
+if [ "$EUID" -ne 0 ]; then
+    exit 77 # Not root, skip this test
+fi
 source $srcdir/sndrcv_drvr.sh sndrcv_omudpspoof_nonstdpt 50

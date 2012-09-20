@@ -58,6 +58,9 @@ recommended.
 variable, if it exists. Returns an empty string if it does not exist.
 <li>strlen(str) - returns the length of the provided string
 <li>tolower(str) - converts the provided string into lowercase
+<li>cstr(expr) - converts expr to a string value
+<li>cnum(expr) - converts expr to a number (integer)
+<li>re_match(expr, re) - returns 1, if expr matches re, 0 otherwise
 </ul>
 <p>The following example can be used to build a dynamic filter based on some environment
 variable:
@@ -69,7 +72,7 @@ if $msg contains getenv('TRIGGERVAR') then /path/to/errfile
 <p><font size="2">This documentation is part of the
 <a href="http://www.rsyslog.com/">rsyslog</a>
 project.<br>
-Copyright &copy; 2008, 2009 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+Copyright &copy; 2008-2012 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
 <a href="http://www.adiscon.com/">Adiscon</a>.
 Released under the GNU GPL version 3 or higher.</font></p>
 </body></html>
