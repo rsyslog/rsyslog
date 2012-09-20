@@ -1,6 +1,11 @@
 ---------------------------------------------------------------------------
 Version 7.1.5  [devel] 2012-09-??
+- implemented RainerScript prifield() function
 - implemented RainerScript field() function
+- bugfix: invalid free if function re_match() was incorrectly used
+  if the config file parser detected that param 2 was not constant, some
+  data fields were not initialized. The destructor did not care about that.
+  This bug happened only if rsyslog startup was unclean.
 ---------------------------------------------------------------------------
 Version 7.1.4  [devel] 2012-09-19
 - implemented ability for CEE-based properties to be stored in disk queues

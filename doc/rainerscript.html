@@ -66,6 +66,9 @@ to search, delim is the numerical ascii value of the field delimiter (so that
 non-printable characters can by specified) and matchnbr is the match to search
 for (the first match starts at 1). This works similar as the field based
 property-replacer option.
+<li>prifilt(constant) - mimics a traditional PRI-based filter (like "*.*" or
+"mail.info"). The traditional filter string must be given as a <b>constant string</b>.
+Dynamic string evaluation is not permitted (for performance reasons).
 </ul>
 <p>The following example can be used to build a dynamic filter based on some environment
 variable:

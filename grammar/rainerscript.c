@@ -861,6 +861,7 @@ doFuncCall(struct cnffunc *func, struct var *ret, void* usrptr)
 	struct var r[CNFFUNC_MAX_ARGS];
 	int delim;
 	int matchnbr;
+	struct funcData_prifilt *pPrifilt;
 	rsRetVal localRet;
 
 	dbgprintf("rainerscript: executing function id %d\n", func->fID);
@@ -952,7 +953,6 @@ doFuncCall(struct cnffunc *func, struct var *ret, void* usrptr)
 		delim = var2Number(&r[1], NULL);
 		matchnbr = var2Number(&r[2], NULL);
 		localRet = doExtractField((uchar*)str, (char) delim, matchnbr, &resStr);
-dbgprintf("RRRR: field() returns %d, str: '%s'\n", localRet, resStr);
 		if(localRet == RS_RET_OK) {
 			ret->d.estr = es_newStrFromCStr((char*)resStr, strlen((char*)resStr));
 			free(resStr);
@@ -968,6 +968,16 @@ dbgprintf("RRRR: field() returns %d, str: '%s'\n", localRet, resStr);
 		if(r[0].datatype == 'S') es_deleteStr(r[0].d.estr);
 		if(r[1].datatype == 'S') es_deleteStr(r[1].d.estr);
 		if(r[2].datatype == 'S') es_deleteStr(r[2].d.estr);
+		break;
+	case CNFFUNC_PRIFILT:
+		pPrifilt = (struct funcData_prifilt*) func->funcdata;
+		if( (pPrifilt->pmask[((msg_t*)usrptr)->iFacility] == TABLE_NOPRI) ||
+		   ((pPrifilt->pmask[((msg_t*)usrptr)->iFacility]
+			    & (1<<((msg_t*)usrptr)->iSeverity)) == 0) )
+			ret->d.n = 0;
+		else
+			ret->d.n = 1;
+		ret->datatype = 'N';
 		break;
 	default:
 		if(Debug) {
@@ -1371,9 +1381,13 @@ cnffuncDestruct(struct cnffunc *func)
 	/* some functions require special destruction */
 	switch(func->fID) {
 		case CNFFUNC_RE_MATCH:
-			regexp.regfree(func->funcdata);
+			if(func->funcdata != NULL)
+				regexp.regfree(func->funcdata);
 			free(func->funcdata);
 			free(func->fname);
+			break;
+		case CNFFUNC_PRIFILT:
+			free(func->funcdata);
 			break;
 		default:break;
 	}
@@ -1554,6 +1568,18 @@ cnfexprPrint(struct cnfexpr *expr, int indent)
 		func = (struct cnffunc*) expr;
 		cstrPrint("function '", func->fname);
 		dbgprintf("' (id:%d, params:%hu)\n", func->fID, func->nParams);
+		if(func->fID == CNFFUNC_PRIFILT) {
+			struct funcData_prifilt *pD;
+			pD = (struct funcData_prifilt*) func->funcdata;
+			doIndent(indent+1);
+			dbgprintf("pmask: ");
+			for (i = 0; i <= LOG_NFACILITIES; i++)
+				if (pD->pmask[i] == TABLE_NOPRI)
+					dbgprintf(" X ");
+				else
+					dbgprintf("%2X ", pD->pmask[i]);
+			dbgprintf("\n");
+		}
 		for(i = 0 ; i < func->nParams ; ++i) {
 			cnfexprPrint(func->expr[i], indent+1);
 		}
@@ -1903,6 +1929,13 @@ funcName2ID(es_str_t *fname, unsigned short nParams)
 			return CNFFUNC_INVALID;
 		}
 		return CNFFUNC_FIELD;
+	} else if(!es_strbufcmp(fname, (unsigned char*)"prifilt", sizeof("prifilt") - 1)) {
+		if(nParams != 1) {
+			parser_errmsg("number of parameters for prifilt() must be one "
+				      "but is %d.", nParams);
+			return CNFFUNC_INVALID;
+		}
+		return CNFFUNC_PRIFILT;
 	} else {
 		return CNFFUNC_INVALID;
 	}
@@ -1943,6 +1976,29 @@ finalize_it:
 	RETiRet;
 }
 
+
+static inline rsRetVal
+initFunc_prifilt(struct cnffunc *func)
+{
+	struct funcData_prifilt *pData;
+	uchar *cstr;
+	DEFiRet;
+
+	func->funcdata = NULL;
+	if(func->expr[0]->nodetype != 'S') {
+		parser_errmsg("param 1 of prifilt() must be a constant string");
+		FINALIZE;
+	}
+
+	CHKmalloc(pData = calloc(1, sizeof(struct funcData_prifilt)));
+	func->funcdata = pData;
+	cstr = (uchar*)es_str2cstr(((struct cnfstringval*) func->expr[0])->estr, NULL);
+	CHKiRet(DecodePRIFilter(cstr, pData->pmask));
+	free(cstr);
+finalize_it:
+	RETiRet;
+}
+
 struct cnffunc *
 cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst)
 {
@@ -1974,6 +2030,9 @@ cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst)
 			case CNFFUNC_RE_MATCH:
 				/* need to compile the regexp in param 2, so this MUST be a constant */
 				initFunc_re_match(func);
+				break;
+			case CNFFUNC_PRIFILT:
+				initFunc_prifilt(func);
 				break;
 			default:break;
 		}

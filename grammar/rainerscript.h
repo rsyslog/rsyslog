@@ -208,7 +208,8 @@ enum cnffuncid {
 	CNFFUNC_CSTR,
 	CNFFUNC_CNUM,
 	CNFFUNC_RE_MATCH,
-	CNFFUNC_FIELD
+	CNFFUNC_FIELD,
+	CNFFUNC_PRIFILT
 };
 
 struct cnffunc {
@@ -257,6 +258,10 @@ struct cnfparamblk { /* now the actual param block use in API calls */
 struct cnfparamvals { /* the values we obtained for param descr. */
 	struct var val;
 	unsigned char bUsed;
+};
+
+struct funcData_prifilt {
+	uchar pmask[LOG_NFACILITIES+1];	/* priority mask */
 };
 
 
