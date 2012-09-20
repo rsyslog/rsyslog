@@ -66,6 +66,8 @@ TESTS +=  \
 	rcvr_fail_restore.sh \
 	rscript_contains.sh \
 	rscript_field.sh \
+	rscript_stop.sh \
+	rscript_stop2.sh \
 	cee_simple.sh \
 	cee_diskqueue.sh \
 	linkedlistqueue.sh
@@ -272,6 +274,10 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/rscript_contains.conf \
 	   rscript_field.sh \
 	   testsuites/rscript_field.conf \
+	   rscript_stop.sh \
+	   testsuites/rscript_stop.conf \
+	   rscript_stop2.sh \
+	   testsuites/rscript_stop2.conf \
 	   cee_simple.sh \
 	   testsuites/cee_simple.conf \
 	   cee_diskqueue.sh \
