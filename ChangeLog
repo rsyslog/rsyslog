@@ -9,6 +9,7 @@ Version 6.4.2  [V6-STABLE] 2012-09-??
   used \x as escape where x was any character (e.g. "\n" meant "n" and NOT
   LF). This also means there is some incompatibility to v5 for well-know
   sequences. Better break it now than later.
+- bugfix: config validation run did not always return correct return state
 ---------------------------------------------------------------------------
 Version 6.4.1  [V6-STABLE] 2012-09-06
 - bugfix: multiple main queues with same queue file name were not detected
