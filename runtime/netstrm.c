@@ -254,7 +254,7 @@ static rsRetVal
 CheckConnection(netstrm_t *pThis)
 {
 	ISOBJ_TYPE_assert(pThis, netstrm);
-	pThis->Drvr.CheckConnection(pThis->pDrvrData);
+	return pThis->Drvr.CheckConnection(pThis->pDrvrData);
 }
 
 
