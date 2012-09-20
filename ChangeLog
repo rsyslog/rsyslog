@@ -95,6 +95,11 @@ Version 6.5.0  [devel] 2012-08-28
   Note: patches were released under ASL 2.0, see
   http://bugzilla.adiscon.com/show_bug.cgi?id=353
 ---------------------------------------------------------------------------
+Version 6.4.3  [V6-STABLE] 2012-??-??
+- bugfix: sysklogd-emulating standard template was no longer present in v6
+  This was obviously lost during the transition to the new config format.
+  Thanks to Milan Bartos for alerting us and a patch!
+---------------------------------------------------------------------------
 Version 6.4.2  [V6-STABLE] 2012-09-20
 - bugfix: potential abort, if action queue could not be properly started
   This most importantly could happen due to configuration errors.
