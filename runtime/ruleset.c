@@ -346,7 +346,6 @@ execPRIFILT(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
 		for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pBatch->pbShutdownImmediate)
 		    ; ++i)
 			if(pBatch->pElem[i].state != BATCH_STATE_DISC)
-{
 				newAct[i] = !newAct[i];
 		scriptExec(stmt->d.s_prifilt.t_else, pBatch, newAct);
 	}
