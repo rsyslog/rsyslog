@@ -1718,7 +1718,10 @@ tplProcessCnf(struct cnfobj *o)
 				free(name); /* overall assigned */
 				ABORT_FINALIZE(RS_RET_ERR);
 			} else {
-				subtree = es_strdup(pvals[i].val.d.estr);
+				/* TODO: unify strings! */
+				char *cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
+				subtree = es_newStrFromBuf(cstr+1, es_strlen(pvals[i].val.d.estr)-1);
+				free(cstr);
 			}
 		} else if(!strcmp(pblk.descr[i].name, "plugin")) {
 			plugin = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
@@ -1831,7 +1834,7 @@ tplProcessCnf(struct cnfobj *o)
 			break;
 	case T_LIST:	createListTpl(pTpl, o);
 			break;
-	case T_SUBTREE:	pTpl->subtree = subtree + 1;
+	case T_SUBTREE:	pTpl->subtree = subtree;
 			break;
 	}
 	
@@ -1934,7 +1937,8 @@ void tplDeleteAll(rsconf_t *conf)
 		pTplDel = pTpl;
 		pTpl = pTpl->pNext;
 		free(pTplDel->pszName);
-		es_deleteStr(pTplDel->subtree);
+		if(pTplDel->subtree != NULL)
+			es_deleteStr(pTplDel->subtree);
 		free(pTplDel);
 	}
 	ENDfunc
@@ -1992,7 +1996,8 @@ void tplDeleteNew(rsconf_t *conf)
 		pTplDel = pTpl;
 		pTpl = pTpl->pNext;
 		free(pTplDel->pszName);
-		es_deleteStr(pTplDel->subtree);
+		if(pTplDel->subtree != NULL)
+			es_deleteStr(pTplDel->subtree);
 		free(pTplDel);
 	}
 	ENDfunc
