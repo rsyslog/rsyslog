@@ -176,7 +176,7 @@ int fileno(FILE *stream);
 "action"[ \n\t]*"("		{ BEGIN INOBJ; return BEGIN_ACTION; }
 ^[ \t]*:\$?[a-z\-]+[ ]*,[ ]*!?[a-z]+[ ]*,[ ]*\".*\"	{
 				  yylval.s = strdup(rmLeadingSpace(yytext)); return PROPFILT; }
-^[ \t]*[\*a-z][,\*a-z]*[0-7]*[,!=;\.\*a-z0-7]+ { yylval.s = strdup(rmLeadingSpace(yytext)); return PRIFILT; }
+^[ \t]*[\*a-z][\*a-z]*[0-7]*[\.,][,!=;\.\*a-z0-7]+ { yylval.s = strdup(rmLeadingSpace(yytext)); return PRIFILT; }
 "~" |
 "*" |
 \-\/[^*][^\n]* |
