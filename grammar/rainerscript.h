@@ -158,6 +158,7 @@ struct cnfstmt {
 		struct {
 			uchar pmask[LOG_NFACILITIES+1];	/* priority mask */
 			struct cnfstmt *t_then;
+			struct cnfstmt *t_else;
 		} s_prifilt;
 		struct {
 			fiop_t operation;
@@ -167,6 +168,7 @@ struct cnfstmt {
 			uintTiny propID;/* ID of the requested property */
 			es_str_t *propName;/* name of property for CEE-based filters */
 			struct cnfstmt *t_then;
+			struct cnfstmt *t_else;
 		} s_propfilt;
 		struct action_s *act;
 	} d;

@@ -1382,14 +1382,11 @@ cnffuncDestruct(struct cnffunc *func)
 		case CNFFUNC_RE_MATCH:
 			if(func->funcdata != NULL)
 				regexp.regfree(func->funcdata);
-			free(func->funcdata);
-			free(func->fname);
-			break;
-		case CNFFUNC_PRIFILT:
-			free(func->funcdata);
 			break;
 		default:break;
 	}
+	free(func->funcdata);
+	free(func->fname);
 }
 
 /* Destruct an expression and all sub-expressions contained in it.
@@ -1464,6 +1461,22 @@ doIndent(int indent)
 	for(i = 0 ; i < indent ; ++i)
 		dbgprintf("  ");
 }
+
+static void
+pmaskPrint(uchar *pmask, int indent)
+{
+	int i;
+	doIndent(indent);
+	dbgprintf("pmask: ");
+	for (i = 0; i <= LOG_NFACILITIES; i++)
+		if (pmask[i] == TABLE_NOPRI)
+			dbgprintf(" X ");
+		else
+			dbgprintf("%2X ", pmask[i]);
+	dbgprintf("\n");
+}
+
+
 void
 cnfexprPrint(struct cnfexpr *expr, int indent)
 {
@@ -1570,14 +1583,7 @@ cnfexprPrint(struct cnfexpr *expr, int indent)
 		if(func->fID == CNFFUNC_PRIFILT) {
 			struct funcData_prifilt *pD;
 			pD = (struct funcData_prifilt*) func->funcdata;
-			doIndent(indent+1);
-			dbgprintf("pmask: ");
-			for (i = 0; i <= LOG_NFACILITIES; i++)
-				if (pD->pmask[i] == TABLE_NOPRI)
-					dbgprintf(" X ");
-				else
-					dbgprintf("%2X ", pD->pmask[i]);
-			dbgprintf("\n");
+			pmaskPrint(pD->pmask, indent+1);
 		}
 		for(i = 0 ; i < func->nParams ; ++i) {
 			cnfexprPrint(func->expr[i], indent+1);
@@ -1641,7 +1647,12 @@ cnfstmtPrint(struct cnfstmt *root, int indent)
 			break;
 		case S_PRIFILT:
 			doIndent(indent); dbgprintf("PRIFILT '%s'\n", stmt->printable);
+			pmaskPrint(stmt->d.s_prifilt.pmask, indent);
 			cnfstmtPrint(stmt->d.s_prifilt.t_then, indent+1);
+			if(stmt->d.s_prifilt.t_else != NULL) {
+				doIndent(indent); dbgprintf("ELSE\n");
+				cnfstmtPrint(stmt->d.s_prifilt.t_else, indent+1);
+			}
 			doIndent(indent); dbgprintf("END PRIFILT\n");
 			break;
 		case S_PROPFILT:
@@ -1751,6 +1762,7 @@ cnfstmtDestruct(struct cnfstmt *root)
 			break;
 		case S_PRIFILT:
 			cnfstmtDestruct(stmt->d.s_prifilt.t_then);
+			cnfstmtDestruct(stmt->d.s_prifilt.t_else);
 			break;
 		case S_PROPFILT:
 			if(stmt->d.s_propfilt.propName != NULL)
@@ -1801,6 +1813,7 @@ cnfstmtNewPRIFILT(char *prifilt, struct cnfstmt *t_then)
 	if((cnfstmt = cnfstmtNew(S_PRIFILT)) != NULL) {
 		cnfstmt->printable = (uchar*)prifilt;
 		cnfstmt->d.s_prifilt.t_then = t_then;
+		cnfstmt->d.s_prifilt.t_else = NULL;
 		DecodePRIFilter((uchar*)prifilt, cnfstmt->d.s_prifilt.pmask);
 	}
 	return cnfstmt;
@@ -2014,7 +2027,6 @@ removeNOPs(struct cnfstmt *root)
 	if(root == NULL) goto done;
 	stmt = root;
 	while(stmt != NULL) {
-dbgprintf("RRRR: removeNOPs: stmt %p, nodetype %u\n", stmt, stmt->nodetype);
 		if(stmt->nodetype == S_NOP) {
 			if(prevstmt != NULL)
 				/* end chain, is rebuild if more non-NOPs follow */
@@ -2034,6 +2046,41 @@ dbgprintf("RRRR: removeNOPs: stmt %p, nodetype %u\n", stmt, stmt->nodetype);
 done:	return newRoot;
 }
 
+
+static inline void
+cnfstmtOptimizeIf(struct cnfstmt *stmt)
+{
+	struct cnfstmt *t_then, *t_else;
+	struct cnfexpr *expr;
+	struct cnffunc *func;
+	struct funcData_prifilt *prifilt;
+
+	expr = stmt->d.s_if.expr;
+	cnfexprOptimize(expr);
+	stmt->d.s_if.t_then = removeNOPs(stmt->d.s_if.t_then);
+	stmt->d.s_if.t_else = removeNOPs(stmt->d.s_if.t_else);
+	cnfstmtOptimize(stmt->d.s_if.t_then);
+	cnfstmtOptimize(stmt->d.s_if.t_else);
+
+	if(stmt->d.s_if.expr->nodetype == 'F') {
+		func = (struct cnffunc*)expr;
+		   if(func->fID == CNFFUNC_PRIFILT) {
+			DBGPRINTF("optimize IF to PRIFILT\n");
+			t_then = stmt->d.s_if.t_then;
+			t_else = stmt->d.s_if.t_else;
+			stmt->nodetype = S_PRIFILT;
+			prifilt = (struct funcData_prifilt*) func->funcdata;
+			memcpy(stmt->d.s_prifilt.pmask, prifilt->pmask,
+				sizeof(prifilt->pmask));
+			stmt->d.s_prifilt.t_then = t_then;
+			stmt->d.s_prifilt.t_else = t_else;
+			stmt->printable = (uchar*)
+				es_str2cstr(((struct cnfstringval*)func->expr[0])->estr, NULL);
+			cnfexprDestruct(expr);
+		}
+	}
+}
+
 /* (recursively) optimize a statement */
 void
 cnfstmtOptimize(struct cnfstmt *root)
@@ -2044,11 +2091,7 @@ cnfstmtOptimize(struct cnfstmt *root)
 dbgprintf("RRRR: stmtOptimize: stmt %p, nodetype %u\n", stmt, stmt->nodetype);
 		switch(stmt->nodetype) {
 		case S_IF:
-			cnfexprOptimize(stmt->d.s_if.expr);
-			stmt->d.s_if.t_then = removeNOPs(stmt->d.s_if.t_then);
-			stmt->d.s_if.t_else = removeNOPs(stmt->d.s_if.t_else);
-			cnfstmtOptimize(stmt->d.s_if.t_then);
-			cnfstmtOptimize(stmt->d.s_if.t_else);
+			cnfstmtOptimizeIf(stmt);
 			break;
 		case S_PRIFILT:
 			stmt->d.s_prifilt.t_then = removeNOPs(stmt->d.s_prifilt.t_then);
@@ -2232,6 +2275,7 @@ cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst)
 		func->nodetype = 'F';
 		func->fname = fname;
 		func->nParams = nParams;
+		func->funcdata = NULL;
 		func->fID = funcName2ID(fname, nParams);
 		/* shuffle params over to array (access speed!) */
 		param = paramlst;

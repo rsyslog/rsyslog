@@ -69,6 +69,7 @@ TESTS +=  \
 	rscript_stop.sh \
 	rscript_stop2.sh \
 	rscript_prifilt.sh \
+	rscript_optimizer1.sh \
 	cee_simple.sh \
 	cee_diskqueue.sh \
 	linkedlistqueue.sh
@@ -281,6 +282,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/rscript_stop2.conf \
 	   rscript_prifilt.sh \
 	   testsuites/rscript_prifilt.conf \
+	   rscript_optimizer1.sh \
+	   testsuites/rscript_optimizer1.conf \
 	   cee_simple.sh \
 	   testsuites/cee_simple.conf \
 	   cee_diskqueue.sh \

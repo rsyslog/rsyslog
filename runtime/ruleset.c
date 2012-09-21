@@ -96,8 +96,12 @@ scriptIterateAllActions(struct cnfstmt *root, rsRetVal (*pFunc)(void*, void*), v
 							pFunc, pParam);
 			break;
 		case S_PRIFILT:
-			scriptIterateAllActions(stmt->d.s_prifilt.t_then,
-						pFunc, pParam);
+			if(stmt->d.s_prifilt.t_then != NULL)
+				scriptIterateAllActions(stmt->d.s_prifilt.t_then,
+							pFunc, pParam);
+			if(stmt->d.s_prifilt.t_else != NULL)
+				scriptIterateAllActions(stmt->d.s_prifilt.t_else,
+							pFunc, pParam);
 			break;
 		case S_PROPFILT:
 			scriptIterateAllActions(stmt->d.s_propfilt.t_then,
@@ -313,11 +317,11 @@ execIf(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
 static void
 execPRIFILT(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
 {
-	sbool *thenAct;
+	sbool *newAct;
 	msg_t *pMsg;
 	int bRet;
 	int i;
-	thenAct = newActive(pBatch);
+	newAct = newActive(pBatch);
 	for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pBatch->pbShutdownImmediate) ; ++i) {
 		if(pBatch->pElem[i].state == BATCH_STATE_DISC)
 			continue; /* will be ignored in any case */
@@ -331,12 +335,22 @@ execPRIFILT(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
 				bRet = 1;
 		} else 
 			bRet = 0;
-		thenAct[i] = bRet;
-		DBGPRINTF("batch: item %d PRIFILT %d\n", i, thenAct[i]);
+		newAct[i] = bRet;
+		DBGPRINTF("batch: item %d PRIFILT %d\n", i, newAct[i]);
 	}
 
-	scriptExec(stmt->d.s_prifilt.t_then, pBatch, thenAct);
-	freeActive(thenAct);
+	if(stmt->d.s_prifilt.t_then != NULL) {
+		scriptExec(stmt->d.s_prifilt.t_then, pBatch, newAct);
+	}
+	if(stmt->d.s_prifilt.t_else != NULL) {
+		for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pBatch->pbShutdownImmediate)
+		    ; ++i)
+			if(pBatch->pElem[i].state != BATCH_STATE_DISC)
+{
+				newAct[i] = !newAct[i];
+		scriptExec(stmt->d.s_prifilt.t_else, pBatch, newAct);
+	}
+	freeActive(newAct);
 }
 
 
@@ -556,8 +570,6 @@ addScript(ruleset_t *pThis, struct cnfstmt *script)
 		pThis->last->next = script;
 		pThis->last = script;
 	}
-dbgprintf("RRRR: ruleset added script, script total now is:\n");
-	cnfstmtPrint(pThis->root, 0);
 }
 
 
