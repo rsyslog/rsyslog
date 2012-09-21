@@ -49,6 +49,8 @@
 DEFobjCurrIf(obj)
 DEFobjCurrIf(regexp)
 
+void cnfexprOptimize(struct cnfexpr *expr);
+
 char*
 getFIOPName(unsigned iFIOP)
 {
@@ -168,16 +170,13 @@ struct cnfstmt*
 scriptAddStmt(struct cnfstmt *root, struct cnfstmt *s)
 {
 	struct cnfstmt *l;
-dbgprintf("RRRR: scriptAddStmt(%p, %p): ", root, s);
 	
 	if(root == NULL) {
 		root = s;
-dbgprintf("root set to %p\n", s);
 	} else { /* find last, linear search ok, as only during config phase */
 		for(l = root ; l->next != NULL ; l = l->next)
 			;
 		l->next = s;
-dbgprintf("%p->next = %p\n", l, s);
 	}
 	return root;
 }
@@ -1819,7 +1818,6 @@ cnfstmtNewPROPFILT(char *propfilt, struct cnfstmt *t_then)
 		cnfstmt->d.s_propfilt.regex_cache = NULL;
 		cnfstmt->d.s_propfilt.pCSCompValue = NULL;
 		lRet = DecodePropFilter((uchar*)propfilt, cnfstmt);
-dbgprintf("AAAA: DecodePropFilter returns %d\n", lRet);
 	}
 	return cnfstmt;
 }
@@ -1863,68 +1861,201 @@ done:	return cnfstmt;
 }
 
 
+/* returns 1 if the two expressions are constants, 0 otherwise
+ * if both are constants, the expression subtrees are destructed
+ * (this is an aid for constant folding optimizing) 
+ */
+static int
+getConstNumber(struct cnfexpr *expr, long long *l, long long *r)
+{
+	int ret = 0;
+	cnfexprOptimize(expr->l);
+	cnfexprOptimize(expr->r);
+	if(expr->l->nodetype == 'N') {
+		if(expr->r->nodetype == 'N') {
+			ret = 1;
+			*l = ((struct cnfnumval*)expr->l)->val;
+			*r = ((struct cnfnumval*)expr->r)->val;
+			cnfexprDestruct(expr->l);
+			cnfexprDestruct(expr->r);
+		} else if(expr->r->nodetype == 'S') {
+			ret = 1;
+			*l = ((struct cnfnumval*)expr->l)->val;
+			*r = es_str2num(((struct cnfstringval*)expr->r)->estr, NULL);
+			cnfexprDestruct(expr->l);
+			cnfexprDestruct(expr->r);
+		}
+	} else if(expr->l->nodetype == 'S') {
+		if(expr->r->nodetype == 'N') {
+			ret = 1;
+			*l = es_str2num(((struct cnfstringval*)expr->l)->estr, NULL);
+			*r = ((struct cnfnumval*)expr->r)->val;
+			cnfexprDestruct(expr->l);
+			cnfexprDestruct(expr->r);
+		} else if(expr->r->nodetype == 'S') {
+			ret = 1;
+			*l = es_str2num(((struct cnfstringval*)expr->l)->estr, NULL);
+			*r = es_str2num(((struct cnfstringval*)expr->r)->estr, NULL);
+			cnfexprDestruct(expr->l);
+			cnfexprDestruct(expr->r);
+		}
+	}
+	return ret;
+}
+
+
+/* constant folding for string concatenation */
+static inline void
+constFoldConcat(struct cnfexpr *expr)
+{
+	es_str_t *estr;
+	cnfexprOptimize(expr->l);
+	cnfexprOptimize(expr->r);
+	if(expr->l->nodetype == 'S') {
+		if(expr->r->nodetype == 'S') {
+			estr = ((struct cnfstringval*)expr->l)->estr;
+			((struct cnfstringval*)expr->l)->estr = NULL;
+			es_addStr(&estr, ((struct cnfstringval*)expr->r)->estr);
+			cnfexprDestruct(expr->l);
+			cnfexprDestruct(expr->r);
+			expr->nodetype = 'S';
+			((struct cnfstringval*)expr)->estr = estr;
+		} else if(expr->r->nodetype == 'N') {
+			es_str_t *numstr;
+			estr = ((struct cnfstringval*)expr->l)->estr;
+			((struct cnfstringval*)expr->l)->estr = NULL;
+			numstr = es_newStrFromNumber(((struct cnfnumval*)expr->r)->val);
+			es_addStr(&estr, numstr);
+			es_deleteStr(numstr);
+			cnfexprDestruct(expr->l);
+			cnfexprDestruct(expr->r);
+			expr->nodetype = 'S';
+			((struct cnfstringval*)expr)->estr = estr;
+		}
+	} else if(expr->l->nodetype == 'N') {
+		if(expr->r->nodetype == 'S') {
+			estr = es_newStrFromNumber(((struct cnfnumval*)expr->l)->val);
+			es_addStr(&estr, ((struct cnfstringval*)expr->r)->estr);
+			cnfexprDestruct(expr->l);
+			cnfexprDestruct(expr->r);
+			expr->nodetype = 'S';
+			((struct cnfstringval*)expr)->estr = estr;
+		} else if(expr->r->nodetype == 'S') {
+			es_str_t *numstr;
+			estr = es_newStrFromNumber(((struct cnfnumval*)expr->l)->val);
+			numstr = es_newStrFromNumber(((struct cnfnumval*)expr->r)->val);
+			es_addStr(&estr, numstr);
+			es_deleteStr(numstr);
+			cnfexprDestruct(expr->l);
+			cnfexprDestruct(expr->r);
+			expr->nodetype = 'S';
+			((struct cnfstringval*)expr)->estr = estr;
+		}
+	}
+}
+
+
 /* (recursively) optimize an expression */
 void
 cnfexprOptimize(struct cnfexpr *expr)
 {
-	struct var r, l; /* memory for subexpression results */
-	es_str_t *estr_r, *estr_l;
-	int convok_r, convok_l;
-	int bMustFree, bMustFree2;
-	long long n_r, n_l;
+	long long ln, rn;
 
 	dbgprintf("optimize expr %p, type '%c'(%u)\n", expr, expr->nodetype, expr->nodetype);
 	switch(expr->nodetype) {
 	case '&':
+		constFoldConcat(expr);
 		break;
 	case '+':
+		if(getConstNumber(expr, &ln, &rn))  {
+			expr->nodetype = 'N';
+			((struct cnfnumval*)expr)->val = ln + rn;
+		}
 		break;
 	case '-':
+		if(getConstNumber(expr, &ln, &rn))  {
+			expr->nodetype = 'N';
+			((struct cnfnumval*)expr)->val = ln - rn;
+		}
 		break;
 	case '*':
+		if(getConstNumber(expr, &ln, &rn))  {
+			expr->nodetype = 'N';
+			((struct cnfnumval*)expr)->val = ln * rn;
+		}
 		break;
 	case '/':
+		if(getConstNumber(expr, &ln, &rn))  {
+			expr->nodetype = 'N';
+			((struct cnfnumval*)expr)->val = ln / rn;
+		}
 		break;
 	case '%':
+		if(getConstNumber(expr, &ln, &rn))  {
+			expr->nodetype = 'N';
+			((struct cnfnumval*)expr)->val = ln % rn;
+		}
 		break;
-	default:DBGPRINTF("expr optimizer error: unknown nodetype %u['%c']\n",
-			(unsigned) expr->nodetype, (char) expr->nodetype);
+	default:/* nodetype we cannot optimize */
 		break;
 	}
 
+}
+
+/* removes NOPs from a statement list and returns the
+ * first non-NOP entry.
+ */
+static inline struct cnfstmt *
+removeNOPs(struct cnfstmt *root)
+{
+	struct cnfstmt *stmt, *toDel, *prevstmt = NULL;
+	struct cnfstmt *newRoot = NULL;
+	
+	if(root == NULL) goto done;
+	stmt = root;
+	while(stmt != NULL) {
+dbgprintf("RRRR: removeNOPs: stmt %p, nodetype %u\n", stmt, stmt->nodetype);
+		if(stmt->nodetype == S_NOP) {
+			if(prevstmt != NULL)
+				/* end chain, is rebuild if more non-NOPs follow */
+				prevstmt->next = NULL;
+			toDel = stmt;
+			stmt = stmt->next;
+			cnfstmtDestruct(toDel);
+		} else {
+			if(newRoot == NULL)
+				newRoot = stmt;
+			if(prevstmt != NULL)
+				prevstmt->next = stmt;
+			prevstmt = stmt;
+			stmt = stmt->next;
+		}
+	}
+done:	return newRoot;
 }
 
 /* (recursively) optimize a statement */
 void
 cnfstmtOptimize(struct cnfstmt *root)
 {
-	struct cnfstmt *stmt, *prevstmt;
-
-	prevstmt = NULL;
+	struct cnfstmt *stmt;
+	if(root == NULL) goto done;
 	for(stmt = root ; stmt != NULL ; stmt = stmt->next) {
 dbgprintf("RRRR: stmtOptimize: stmt %p, nodetype %u\n", stmt, stmt->nodetype);
 		switch(stmt->nodetype) {
-		case S_NOP:
-			/* unchain NOPs, first NOP remains (TODO?) */
-			if(prevstmt != NULL) {
-				DBGPRINTF("removing NOP\n");
-				prevstmt->next = stmt->next;
-#warning remove memleak, destruct 
-			}
-			break;
 		case S_IF:
 			cnfexprOptimize(stmt->d.s_if.expr);
-			if(stmt->d.s_if.t_then != NULL) {
-				cnfstmtOptimize(stmt->d.s_if.t_then);
-			}
-			if(stmt->d.s_if.t_else != NULL) {
-				cnfstmtOptimize(stmt->d.s_if.t_else);
-			}
+			stmt->d.s_if.t_then = removeNOPs(stmt->d.s_if.t_then);
+			stmt->d.s_if.t_else = removeNOPs(stmt->d.s_if.t_else);
+			cnfstmtOptimize(stmt->d.s_if.t_then);
+			cnfstmtOptimize(stmt->d.s_if.t_else);
 			break;
 		case S_PRIFILT:
+			stmt->d.s_prifilt.t_then = removeNOPs(stmt->d.s_prifilt.t_then);
 			cnfstmtOptimize(stmt->d.s_prifilt.t_then);
 			break;
 		case S_PROPFILT:
+			stmt->d.s_propfilt.t_then = removeNOPs(stmt->d.s_propfilt.t_then);
 			cnfstmtOptimize(stmt->d.s_propfilt.t_then);
 			break;
 		case S_SET:
@@ -1932,16 +2063,18 @@ dbgprintf("RRRR: stmtOptimize: stmt %p, nodetype %u\n", stmt, stmt->nodetype);
 			break;
 		case S_STOP:
 		case S_UNSET:
-		case S_ACT:
-			/* nothing to do */
+		case S_ACT: /* nothing to do */
+			break;
+		case S_NOP:
+			DBGPRINTF("optimizer error: we see a NOP, how come?\n");
 			break;
 		default:
 			dbgprintf("error: unknown stmt type %u during optimizer run\n",
 				(unsigned) stmt->nodetype);
 			break;
 		}
-		prevstmt = stmt;
 	}
+done: /*EMPTY*/;
 }
 
 
