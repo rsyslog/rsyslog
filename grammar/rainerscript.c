@@ -1025,8 +1025,13 @@ evalVar(struct cnfvar *var, void *usrptr, struct var *ret)
 #define PREP_TWO_STRINGS \
 		cnfexprEval(expr->l, &l, usrptr); \
 		estr_l = var2String(&l, &bMustFree2); \
-		cnfexprEval(expr->r, &r, usrptr); \
-		estr_r = var2String(&r, &bMustFree)
+		if(expr->r->nodetype == 'S') { \
+			estr_r = ((struct cnfstringval*)expr->r)->estr;\
+			bMustFree = 0; \
+		} else { \
+			cnfexprEval(expr->r, &r, usrptr); \
+			estr_r = var2String(&r, &bMustFree); \
+		}
 
 #define FREE_TWO_STRINGS \
 		if(bMustFree) es_deleteStr(estr_r); \
