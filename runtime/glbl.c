@@ -553,11 +553,6 @@ glblProcessCnf(struct cnfobj *o)
 	cnfparamsPrint(&paramblk, cnfparamvals);
 }
 
-rsRetVal
-glblCheckCnf()
-{
-}
-
 void
 glblDoneLoadCnf(void)
 {
