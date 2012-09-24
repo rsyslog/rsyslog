@@ -330,6 +330,18 @@ AM_CONDITIONAL(ENABLE_IMKLOG_BSD, test x$os_type = xbsd)
 AM_CONDITIONAL(ENABLE_IMKLOG_LINUX, test x$os_type = xlinux)
 AM_CONDITIONAL(ENABLE_IMKLOG_SOLARIS, test x$os_type = xsolaris)
 
+# kmsg
+AC_ARG_ENABLE(kmsg,
+        [AS_HELP_STRING([--enable-kmsg],[Kmsg structured kernel logs functionality @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_kmsg="yes" ;;
+          no) enable_kmsg="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-kmsg) ;;
+         esac],
+        [enable_kmsg="no"]
+)
+AM_CONDITIONAL(ENABLE_IMKMSG, test x$enable_kmsg = xyes)
+
 
 #
 # SYSLOG_UNIXAF
@@ -1358,6 +1370,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/imuxsock/Makefile \
 		plugins/immark/Makefile \
 		plugins/imklog/Makefile \
+		plugins/imkmsg/Makefile \
 		plugins/omhdfs/Makefile \
 		plugins/omprog/Makefile \
 		plugins/omstdout/Makefile \
@@ -1415,6 +1428,7 @@ echo "    Unlimited select() support enabled:       $enable_unlimited_select"
 echo
 echo "---{ input plugins }---"
 echo "    Klog functionality enabled:               $enable_klog ($os_type)"
+echo "    /dev/kmsg functionality enabled:          $enable_kmsg"
 echo "    plain tcp input module enabled:           $enable_imptcp"
 echo "    threaded plain tcp input module enabled:  $enable_imttcp"
 echo "    imdiag enabled:                           $enable_imdiag"
