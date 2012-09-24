@@ -360,9 +360,6 @@ void cnfDoObj(struct cnfobj *o)
 	case CNFOBJ_MODULE:
 		modulesProcessCnf(o);
 		break;
-	case CNFOBJ_ACTION:
-		actionProcessCnf(o);
-		break;
 	case CNFOBJ_TPL:
 		tplProcessCnf(o);
 		break;
@@ -370,6 +367,10 @@ void cnfDoObj(struct cnfobj *o)
 	case CNFOBJ_CONSTANT:
 		/* these types are processed at a later stage */
 		bChkUnuse = 0;
+		break;
+	default:
+		dbgprintf("cnfDoObj program error: unexpected object type %u\n",
+			 o->objType);
 		break;
 	}
 	if(bChkUnuse)
@@ -380,7 +381,6 @@ void cnfDoObj(struct cnfobj *o)
 void cnfDoScript(struct cnfstmt *script)
 {
 	// TODO: streamline this, call directly into ruleset from grammar.y
-	// TODO: BSD-Style blocks?
 	dbgprintf("cnf:global:script\n");
 	ruleset.AddScript(ruleset.GetCurrent(loadConf), script);
 }

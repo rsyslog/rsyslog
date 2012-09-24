@@ -2095,33 +2095,6 @@ finalize_it:
 	RETiRet;
 }
 
-
-/* Process a rsyslog v6 action config object (the now-primary config method).
- * rgerhards, 2011-07-19
- */
-rsRetVal
-actionProcessCnf(struct cnfobj *o)
-{
-	DEFiRet;
-#if 0 /* we need to check if we actually need this functionality -- later! */
-// This is for STAND-ALONE actions at the conf file TOP level
-	struct cnfparamvals *paramvals;
-
-	paramvals = nvlstGetParams(o->nvlst, &pblk, NULL);
-	if(paramvals == NULL) {
-		iRet = RS_RET_ERR;
-		goto finalize_it;
-	}
-	DBGPRINTF("action param blk after actionProcessCnf:\n");
-	cnfparamsPrint(&pblk, paramvals);
-	
-	/* now find module to activate */
-finalize_it:
-#endif
-	RETiRet;
-}
-
-
 /* TODO: we are not yet a real object, the ClassInit here just looks like it is..
  */
 rsRetVal actionClassInit(void)

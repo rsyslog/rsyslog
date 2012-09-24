@@ -1628,7 +1628,7 @@ cnfstmtPrint(struct cnfstmt *root, int indent)
 			doIndent(indent); dbgprintf("STOP\n");
 			break;
 		case S_ACT:
-			doIndent(indent); dbgprintf("ACTION %p (%s)\n", stmt->d.act, stmt->printable);
+			doIndent(indent); dbgprintf("ACTION %p [%s]\n", stmt->d.act, stmt->printable);
 			break;
 		case S_IF:
 			doIndent(indent); dbgprintf("IF\n");
@@ -1845,6 +1845,7 @@ struct cnfstmt *
 cnfstmtNewAct(struct nvlst *lst)
 {
 	struct cnfstmt* cnfstmt;
+	char namebuf[256];
 	if((cnfstmt = cnfstmtNew(S_ACT)) == NULL) 
 		goto done;
 	if(actionNewInst(lst, &cnfstmt->d.act) != RS_RET_OK) {
@@ -1854,7 +1855,10 @@ cnfstmtNewAct(struct nvlst *lst)
 		cnfstmt->nodetype = S_NOP; /* disable action! */
 		goto done;
 	}
-	cnfstmt->printable = (uchar*)strdup("action()");
+	snprintf(namebuf, sizeof(namebuf)-1, "action(type=\"%s\" ...)",
+		 modGetName(cnfstmt->d.act->pMod));
+	namebuf[255] = '\0'; /* be on safe side */
+	cnfstmt->printable = (uchar*)strdup(namebuf);
 done:	return cnfstmt;
 }
 
