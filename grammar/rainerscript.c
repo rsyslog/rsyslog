@@ -2071,7 +2071,7 @@ cnfstmtOptimizeIf(struct cnfstmt *stmt)
 	if(stmt->d.s_if.expr->nodetype == 'F') {
 		func = (struct cnffunc*)expr;
 		   if(func->fID == CNFFUNC_PRIFILT) {
-			DBGPRINTF("optimize IF to PRIFILT\n");
+			DBGPRINTF("optimizer: change IF to PRIFILT\n");
 			t_then = stmt->d.s_if.t_then;
 			t_else = stmt->d.s_if.t_else;
 			stmt->nodetype = S_PRIFILT;
@@ -2095,7 +2095,8 @@ cnfstmtOptimizeAct(struct cnfstmt *stmt)
 
 	pAct = stmt->d.act;
 	if(!strcmp((char*)modGetName(stmt->d.act->pMod), "builtin:omdiscard")) {
-		DBGPRINTF("RainerScript Optimizer: replacing omdiscard by STOP\n");
+		DBGPRINTF("optimizer: replacing omdiscard by STOP\n");
+		actionDestruct(stmt->d.act);
 		stmt->nodetype = S_STOP;
 	}
 }

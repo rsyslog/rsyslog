@@ -289,6 +289,11 @@ rsRetVal actionDestruct(action_t *pThis)
 	DEFiRet;
 	ASSERT(pThis != NULL);
 
+	if(!strcmp((char*)modGetName(pThis->pMod), "builtin:omdiscard")) {
+		/* discard actions will be optimized out */
+		FINALIZE;
+	}
+
 	if(pThis->pQueue != NULL) {
 		qqueueDestruct(&pThis->pQueue);
 	}
@@ -310,8 +315,8 @@ rsRetVal actionDestruct(action_t *pThis)
 	d_free(pThis->pszName);
 	d_free(pThis->ppTpl);
 
+finalize_it:
 	d_free(pThis);
-	
 	RETiRet;
 }
 
@@ -362,6 +367,10 @@ actionConstructFinalize(action_t *pThis, struct cnfparamvals *queueParams)
 
 	ASSERT(pThis != NULL);
 
+	if(!strcmp((char*)modGetName(pThis->pMod), "builtin:omdiscard")) {
+		/* discard actions will be optimized out */
+		FINALIZE;
+	}
 	/* generate a friendly name for us action stats */
 	if(pThis->pszName == NULL) {
 		snprintf((char*) pszAName, sizeof(pszAName)/sizeof(uchar), "action %d", iActionNbr);
