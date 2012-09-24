@@ -189,8 +189,11 @@ ENDinterface(module)
 PROTOTYPEObj(module);
 /* in v6, we go back to in-core static link for core objects, at least those
  * that are not called from plugins.
+ * ... and we need to know that none of the module functions are called from plugins!
+ * rgerhards, 2012-09-24
  */
 rsRetVal modulesProcessCnf(struct cnfobj *o);
+uchar *modGetName(modInfo_t *pThis);
 
 rsRetVal addModToCnfList(modInfo_t *pThis);
 #endif /* #ifndef MODULES_H_INCLUDED */

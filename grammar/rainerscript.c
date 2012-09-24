@@ -45,6 +45,7 @@
 #include "srUtils.h"
 #include "regexp.h"
 #include "obj.h"
+#include "modules.h"
 
 DEFobjCurrIf(obj)
 DEFobjCurrIf(regexp)
@@ -2086,6 +2087,19 @@ cnfstmtOptimizeIf(struct cnfstmt *stmt)
 	}
 }
 
+
+static inline void
+cnfstmtOptimizeAct(struct cnfstmt *stmt)
+{
+	action_t *pAct;
+
+	pAct = stmt->d.act;
+	if(!strcmp((char*)modGetName(stmt->d.act->pMod), "builtin:omdiscard")) {
+		DBGPRINTF("RainerScript Optimizer: replacing omdiscard by STOP\n");
+		stmt->nodetype = S_STOP;
+	}
+}
+
 /* (recursively) optimize a statement */
 void
 cnfstmtOptimize(struct cnfstmt *root)
@@ -2109,9 +2123,11 @@ dbgprintf("RRRR: stmtOptimize: stmt %p, nodetype %u\n", stmt, stmt->nodetype);
 		case S_SET:
 			cnfexprOptimize(stmt->d.s_set.expr);
 			break;
+		case S_ACT:
+			cnfstmtOptimizeAct(stmt);
+			break;
 		case S_STOP:
-		case S_UNSET:
-		case S_ACT: /* nothing to do */
+		case S_UNSET: /* nothing to do */
 			break;
 		case S_NOP:
 			DBGPRINTF("optimizer error: we see a NOP, how come?\n");
