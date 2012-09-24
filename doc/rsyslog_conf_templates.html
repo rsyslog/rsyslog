@@ -55,6 +55,107 @@ also primarily meant for use with structure-aware outputs, like ommongodb. Howev
 it also works perfectly with text-based outputs. We recommend to use this mode
 if more complex property substitutions needs to be done. In that case, the list-based
 template syntax is much clearer than the simple string-based one.
+<p>The list template contains the template header (with <b>type="list"</b>) and is followed
+by <b>constant</b> and <b>property</b> statements, given in curly braces to signify
+the template statement they belong to. As the name says, <b>constant</b> statements
+describe constant text and <b>property</b> describes property access. There are many options
+to <b>property</b>, described further below. Most of these options are used to extract
+only partial property contents or to modify the text obtained (like to change its case
+to upper or lower case, only).
+<p>To grasp the idea, an actual sample is:
+<br><pre><code>template(name="tpl1" type="list") {
+	constant(value="Syslog MSG is: '")
+	property(name="msg")
+	constant(value="', ")
+	property(name="timereported" dateFormat="rfc3339" caseConversion="lower")
+	constant(value="\n")
+	}
+</code></pre>
+<br>This sample is probably primarily targeted at the usual file-based output.</p>
+
+
+<h4>constant statement</h4>
+<p>This provides a way to specify constant text. The text is used literally. It is
+primarily intended for text-based output, so that some constant text can be included. For
+example, if a complex template is build for file output, one usually needs to finish it
+by a newline, which can be introduced by a constant statement. Here is an actual sample
+of that use case from the rsylsog testbench:
+<br><pre><code>template(name="outfmt" type="list") {
+	property(name="$!usr!msgnum")
+	constant(value="\n")
+}</code></pre>
+The following escape sequences are recogniced inside the constant text:
+<ul>
+<li>\\ - single backslash
+<li>\n - LF
+<li>\ooo - (three octal digits) - represents character with this numerical value (e.g. \101
+equals "A"). Note that three
+octal digits must be given (in contrast to some languagues, where between one and three are valid).
+While we support octal notation, we recommend to use hex notation as this is better known.
+<li>\xhh - (where h is a hex digit) - represents character with this numerical value (e.g. \x41 
+equals "A"). Note that two hexadecimal digits must be given (in contrast to some languagues
+where one or two are valid).
+<li>... some others ... list needs to be extended
+</ul>
+<p>Note: if an unsupported character follows a backslash, this is treated as an error. Behaviour
+is unpredictable in this case.
+<p>To aid usage of the same template both for text-based outputs and structured ones, constant
+text without an "outname" parameter will be ignored when creating the name/value tree
+for structured outputs. So if you want to supply some constant text e.g. to mongodb, you must
+include an outname, as can be seen here:
+<br><pre><code>template(name="outfmt" type="list") {
+	property(name="$!usr!msgnum")
+	constant(value="\n" <b>outname="IWantThisInMyDB"</b>)
+}</code></pre>
+
+The "constant" statement supports the following parameters:
+<ul>
+<li>value - the constant value to use
+<li>outname - output field name (for structured outputs)
+</ul>
+
+
+<h4>property statement</h4>
+<p>This statement is used to include property text. It can access all properties. Also,
+options permit to specify picking only part of a property or modifying it.
+It supports the following parameters:
+<ul>
+<li>name - the name of the property to access
+<li>outname - output field name (for structured outputs)
+<li>dateformat - date format to use (only for date-related properties)
+<li>caseconversion - permits to convert case of the text. supported values are
+"lower" and "upper"
+<li>controlcharacters - specifies how to handle control characters. Supported values are
+"escape", which escapes them, "space", which replaces them by a single space, and
+"drop", which simply removes them from the string.
+<li>securepath - used for creating pathnames suitable for use in dynafile templates
+<li>format - specifiy format on a field basis. Supported values are "csv", for use when
+csv-data is generated, "json", which formats proper json content (but without a field
+header) and "jsonf", which formats as a complete json field.
+<li>position.from - obtain substring starting from this position (1 is the first position)
+<li>position.to - obtain substring up to this position
+<li>field.number - obtain this field match
+<li>field.delimiter - decimal value of delimiter character for field extraction
+<li>regex.expression - expression to use
+<li>regex.type - either ERE or BRE
+<li>regex.nomatchmode - what to do if we have no match
+<li>regex.match - match to use
+<li>regex.submatch - submatch to use
+<li>droplastlf - drop a trailing LF, if it is present
+<li>mandatory - signifies a field as mandatory. If set to "on", this field will always
+be present in data passed to structured outputs, even if it is empty. If "off" (the default)
+empty fields will not be passed to structured outputs. This is especially useful for outputs
+that support dynamic schemas (like ommongodb).
+<li>spifno1stsp - expert options for RFC3164 template processing
+</ul>
+
+
+<h3>subtree</h3>
+<p>Available since rsyslog 7.1.4
+<p>
+In this case, the template is generated based on a complete
+(CEE) subtree. This type of template is most useful for outputs that know how to
+process hierarchical structure, like ommongodb. With that type, the parameter
 <b>subtree</b> must be specified, which tells which subtree to use. For example
 template(name="tpl1" type="subtree" subtree="$!") includes all CEE data, while
 template(name="tpl2" type="subtree" subtree="$!usr!tpl2") includes only the
@@ -68,24 +169,15 @@ you do not have any capability to specify constant text, and as such cannot incl
 line breaks. As a consequence, using this template type for text outputs is usually
 only useful for debugging or very special cases (e.g. where the text is interpreted
 by a JSON parser later on).
-<br>Config example:
-<br><blockquote><code>template(name="tpl1" type="list" option.json="off") {
-	<br>constant(value="Syslog: ")
-	<br>property(name="msg" outname="mymessage")
-	<br>constant(value=" on ")
-	<br>property(name="timereported" dateFormat="rfc3339" caseConversion="lower")
-	<br>constant(value="\n")
-	<br>}
+<h4>Use case</h4>
+<p>A typical use case is to first create a custom subtree and then include it into
+the template, like in this small example:
+<br><blockquote><code>set $!usr!tpl2!msg = $msg;
+<br>set $!usr!tpl2!dataflow = field($msg, 58, 2);
+<br>template(name="tpl2" type="subtree" subtree="$!usr!tpl2") 
 </code></blockquote>
-<h3>subtree</h3>
-<p>Available since rsyslog 7.1.4
-<p>
-In this case, the template is generated based on a complete
-(CEE) subtree. This type of template is most useful for outputs that know how to
-process hierarchical structure, like ommongodb. With that type, the parameter
-<br>Config example:
-<br><blockquote><code>template(name="tpl2" type="subtree" subtree="$!") 
-</code></blockquote>
+<p>Here, we assume that $msg contains various fields, and the data from a field
+is to be extracted and stored - together with the message - as field content.
 <h3>string</h3>
 <p>This closely resembles the legacy template statement. It
 has a mandatory parameter <b>string</b>, which holds the template string to be
@@ -172,38 +264,44 @@ template (name="TraditionalFormat" type="string" string="%timegenerated% %HOSTNA
 <br>
 
 <h3>Examples</h3>
-Here are some real life examples. They will show how to rebuild legacy templates
-with current list style. 
-<br>
-<br>FileFormat: $template FileFormat,"%TIMESTAMP:::date-rfc3339% %HOSTNAME% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n" 
-<br><blockquote><code>template(name="FileFormat" type="list" option.json="off") {
-	<br>property(name="timestamp" dateFormat="rfc3339")
-	<br>constant(value=" ")
-	<br>property(name="hostname")
-	<br>constant(value=" ")
-	<br>property(name="syslogtag")
-	<br>constant(value=" ")
-	<br>property(name="msg" spifno1stsp="on" )
-	<br>property(name="msg" droplastlf="on" )
-	<br>constant(value="\n")
-	<br>}
-</code></blockquote>
+<h4>Standard Template for Writing to Files</h4>
+<p><pre><code>template(name="FileFormat" type="list") {
+	property(name="timestamp" dateFormat="rfc3339")
+	constant(value=" ")
+	property(name="hostname")
+	constant(value=" ")
+	property(name="syslogtag")
+	constant(value=" ")
+	property(name="msg" spifno1stsp="on" )
+	property(name="msg" droplastlf="on" )
+	constant(value="\n")
+	}
+</code></pre>
+<p>The equivalent string template looks like this:
+<br><pre><code>template(name="FileFormat" type="string"
+  string= "%TIMESTAMP% %HOSTNAME% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"
+)</code></pre>
+Note that the template string itself must be on a single line.
 
-<br>ForwardFormat: $template ForwardFormat,"<%PRI%>%TIMESTAMP:::date-rfc3339% %HOSTNAME% %syslogtag:1:32%%msg:::sp-if-no-1st-sp%%msg%"
-<br><blockquote><code>template(name="ForwardFormat" type="list" option.json="off") {,
-	<br>constant(value="&lt;")
-	<br>property(name="PRI")
-	<br>constant(value="&lt;")
-	<br>property(name="timestamp" dateFormat="rfc3339")
-	<br>constant(value=" ")
-	<br>property(name="hostname")
-	<br>constant(value=" ")
-	<br>property(name="syslogtag" position.from="1" position.to="32")
-	<br>constant(value=" ")
-	<br>property(name="msg" spifno1stsp="on" )
-	<br>}
-</code></blockquote>
-
+<h4>Standard Template for Forwarding to a Remote Host (RFC3164 mode)</h4>
+<p><pre><code>template(name="ForwardFormat" type="list") {
+	constant(value="&lt;")
+	property(name="PRI")
+	constant(value="&lt;")
+	property(name="timestamp" dateFormat="rfc3339")
+	constant(value=" ")
+	property(name="hostname")
+	constant(value=" ")
+	property(name="syslogtag" position.from="1" position.to="32")
+	constant(value=" ")
+	property(name="msg" spifno1stsp="on" )
+	}
+</code></pre>
+<p>The equivalent string template looks like this:
+<br><pre><code>template(name="forwardFormat" type="string"
+  string="<%PRI%>%TIMESTAMP:::date-rfc3339% %HOSTNAME% %syslogtag:1:32%%msg:::sp-if-no-1st-sp%%msg%"
+)</code></pre>
+Note that the template string itself must be on a single line.
 <h2>legacy format</h2>
 <p>In pre v6-versions of rsyslog, you need to use the <code>$template</code> 
 statement to configure templates. They provide the equivalent to string- and
@@ -377,11 +475,13 @@ DynFile,"/var/log/system-%HOSTNAME%.log"</code></blockquote>
 selector line. It will result in something like
 "/var/log/system-localhost.log"</p>
 <h3>Legacy String-based Template Samples</h3>
-<p>This section provides some sample of what the default formats would
-look as a text-based template. Hopefully, their description is self-explanatory.
+<p>This section provides some default templates in legacy format, as used in rsyslog
+previous to version 6. Note that this format is still supported, so there is no hard need
+to upgrade existing configurations. However, it is strongly recommended that the legacy
+constructs are not used when crafting new templates.
 Note that each $Template statement is on a <b>single</b> line, but probably broken
 accross several lines for display purposes by your browsers. Lines are separated by
-empty lines.
+empty lines. Keep in mind, that line breaks are important in legacy format.
 <p><code>
 $template FileFormat,"%TIMESTAMP:::date-rfc3339% %HOSTNAME% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"
 <br><br>
