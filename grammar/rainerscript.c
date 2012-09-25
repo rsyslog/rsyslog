@@ -2175,6 +2175,9 @@ dbgprintf("RRRR: stmtOptimize: stmt %p, nodetype %u\n", stmt, stmt->nodetype);
 			cnfstmtOptimizeAct(stmt);
 			break;
 		case S_STOP:
+			if(stmt->next != NULL)
+				parser_errmsg("STOP is followed by unreachable statements!\n");
+			break;
 		case S_UNSET: /* nothing to do */
 			break;
 		case S_NOP:
