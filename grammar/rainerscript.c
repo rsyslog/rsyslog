@@ -51,6 +51,7 @@ DEFobjCurrIf(obj)
 DEFobjCurrIf(regexp)
 
 void cnfexprOptimize(struct cnfexpr *expr);
+static void cnfstmtOptimizePRIFilt(struct cnfstmt *stmt);
 
 char*
 getFIOPName(unsigned iFIOP)
@@ -2087,10 +2088,10 @@ cnfstmtOptimizeIf(struct cnfstmt *stmt)
 			stmt->printable = (uchar*)
 				es_str2cstr(((struct cnfstringval*)func->expr[0])->estr, NULL);
 			cnfexprDestruct(expr);
+			cnfstmtOptimizePRIFilt(stmt);
 		}
 	}
 }
-
 
 static inline void
 cnfstmtOptimizeAct(struct cnfstmt *stmt)
@@ -2103,6 +2104,46 @@ cnfstmtOptimizeAct(struct cnfstmt *stmt)
 		actionDestruct(stmt->d.act);
 		stmt->nodetype = S_STOP;
 	}
+}
+
+static void
+cnfstmtOptimizePRIFilt(struct cnfstmt *stmt)
+{
+	int i;
+	int isAlways = 1;
+	struct cnfstmt *subroot, *last;
+
+	stmt->d.s_prifilt.t_then = removeNOPs(stmt->d.s_prifilt.t_then);
+	cnfstmtOptimize(stmt->d.s_prifilt.t_then);
+
+	for(i = 0; i <= LOG_NFACILITIES; i++)
+		if(stmt->d.s_prifilt.pmask[i] != 0xff) {
+			isAlways = 0;
+			break;
+		}
+	if(!isAlways)
+		goto done;
+
+	DBGPRINTF("optimizer: removing always-true PRIFILT %p\n", stmt);
+	if(stmt->d.s_prifilt.t_else != NULL) {
+		parser_errmsg("error: always-true PRI filter has else part!\n");
+		// TODO: enable (requires changes in action.c) cnfstmtDestruct(stmt->d.s_prifilt.t_else);
+	}
+	subroot = stmt->d.s_prifilt.t_then;
+	if(subroot == NULL) {
+		/* very strange, we set it to NOP, best we can do
+		 * This case is NOT expected in practice
+		 */
+		 stmt->nodetype = S_NOP;
+		 goto done;
+	}
+	for(last = subroot ; last->next != NULL ; last = last->next)
+		/* find last node in subtree */;
+	last->next = stmt->next;
+	memcpy(stmt, subroot, sizeof(struct cnfstmt));
+	free(subroot);
+
+done:	return;
 }
 
 /* (recursively) optimize a statement */
@@ -2118,8 +2159,7 @@ dbgprintf("RRRR: stmtOptimize: stmt %p, nodetype %u\n", stmt, stmt->nodetype);
 			cnfstmtOptimizeIf(stmt);
 			break;
 		case S_PRIFILT:
-			stmt->d.s_prifilt.t_then = removeNOPs(stmt->d.s_prifilt.t_then);
-			cnfstmtOptimize(stmt->d.s_prifilt.t_then);
+			cnfstmtOptimizePRIFilt(stmt);
 			break;
 		case S_PROPFILT:
 			stmt->d.s_propfilt.t_then = removeNOPs(stmt->d.s_propfilt.t_then);
@@ -2143,7 +2183,7 @@ dbgprintf("RRRR: stmtOptimize: stmt %p, nodetype %u\n", stmt, stmt->nodetype);
 			break;
 		}
 	}
-done: /*EMPTY*/;
+done:	return;
 }
 
 
