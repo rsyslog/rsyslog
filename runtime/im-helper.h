@@ -47,7 +47,6 @@ std_checkRuleset(modConfData_t *modConf, instanceConf_t *inst)
 
 	if(inst->pszBindRuleset == NULL)
 		FINALIZE;
-dbgprintf("ZZZZZ: inst->pszBindRuleset %s\n", inst->pszBindRuleset);
 
 	localRet = ruleset.GetRuleset(modConf->pConf, &pRuleset, inst->pszBindRuleset);
 	if(localRet == RS_RET_NOT_FOUND) {
