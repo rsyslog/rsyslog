@@ -2127,7 +2127,7 @@ cnfstmtOptimizePRIFilt(struct cnfstmt *stmt)
 	DBGPRINTF("optimizer: removing always-true PRIFILT %p\n", stmt);
 	if(stmt->d.s_prifilt.t_else != NULL) {
 		parser_errmsg("error: always-true PRI filter has else part!\n");
-		// TODO: enable (requires changes in action.c) cnfstmtDestruct(stmt->d.s_prifilt.t_else);
+		cnfstmtDestruct(stmt->d.s_prifilt.t_else);
 	}
 	subroot = stmt->d.s_prifilt.t_then;
 	if(subroot == NULL) {

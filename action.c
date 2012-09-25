@@ -1616,7 +1616,8 @@ DEFFUNC_llExecFunc(doActivateActions)
 		}
 		actionDisable(pThis);
 	}
-	DBGPRINTF("Action %p: queue %p started\n", pThis, pThis->pQueue);
+	DBGPRINTF("Action %s[%p]: queue %p started\n", modGetName(pThis->pMod),
+		  pThis, pThis->pQueue);
 	ENDfunc
 	return RS_RET_OK; /* we ignore errors, we can not do anything either way */
 }
