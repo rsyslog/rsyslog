@@ -1066,23 +1066,31 @@ cnfexprEval(struct cnfexpr *expr, struct var *ret, void* usrptr)
 	 * places flagged with "CMP" need to be changed.
 	 */
 	case CMP_EQ:
+		/* this is optimized in regard to right param as a PoC for all compOps
+		 * So this is a NOT yet the copy template!
+		 */
 		cnfexprEval(expr->l, &l, usrptr);
-		cnfexprEval(expr->r, &r, usrptr);
 		ret->datatype = 'N';
 		if(l.datatype == 'S') {
-			if(r.datatype == 'S') {
-				ret->d.n = !es_strcmp(l.d.estr, r.d.estr); /*CMP*/
+			if(expr->r->nodetype == 'S') {
+				ret->d.n = !es_strcmp(l.d.estr, ((struct cnfstringval*)expr->r)->estr); /*CMP*/
 			} else {
-				n_l = var2Number(&l, &convok_l);
-				if(convok_l) {
-					ret->d.n = (n_l == r.d.n); /*CMP*/
+				cnfexprEval(expr->r, &r, usrptr);
+				if(r.datatype == 'S') {
+					ret->d.n = !es_strcmp(l.d.estr, r.d.estr); /*CMP*/
 				} else {
-					estr_r = var2String(&r, &bMustFree);
-					ret->d.n = !es_strcmp(l.d.estr, estr_r); /*CMP*/
-					if(bMustFree) es_deleteStr(estr_r);
+					n_l = var2Number(&l, &convok_l);
+					if(convok_l) {
+						ret->d.n = (n_l == r.d.n); /*CMP*/
+					} else {
+						estr_r = var2String(&r, &bMustFree);
+						ret->d.n = !es_strcmp(l.d.estr, estr_r); /*CMP*/
+						if(bMustFree) es_deleteStr(estr_r);
+					}
 				}
 			}
 		} else {
+			cnfexprEval(expr->r, &r, usrptr);
 			if(r.datatype == 'S') {
 				n_r = var2Number(&r, &convok_r);
 				if(convok_r) {
