@@ -313,7 +313,8 @@ finalize_it:
 
 /* get the name of a module
  */
-static uchar *modGetName(modInfo_t *pThis)
+uchar *
+modGetName(modInfo_t *pThis)
 {
 	return((pThis->pszName == NULL) ? (uchar*) "" : pThis->pszName);
 }

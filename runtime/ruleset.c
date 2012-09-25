@@ -48,6 +48,7 @@
 #include "action.h"
 #include "rainerscript.h"
 #include "srUtils.h"
+#include "modules.h"
 #include "dirty.h" /* for main ruleset queue creation */
 
 /* static data */
@@ -217,7 +218,7 @@ static rsRetVal
 execAct(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
 {
 	DEFiRet;
-dbgprintf("RRRR: execAct: batch of %d elements, active %p\n", batchNumMsgs(pBatch), active);
+dbgprintf("RRRR: execAct [%s]: batch of %d elements, active %p\n", modGetName(stmt->d.act->pMod), batchNumMsgs(pBatch), active);
 	pBatch->active = active;
 	stmt->d.act->submitToActQ(stmt->d.act, pBatch);
 	RETiRet;

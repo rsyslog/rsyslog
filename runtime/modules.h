@@ -191,6 +191,7 @@ PROTOTYPEObj(module);
  * that are not called from plugins.
  */
 rsRetVal modulesProcessCnf(struct cnfobj *o);
+uchar *modGetName(modInfo_t *pThis);
 
 rsRetVal addModToCnfList(modInfo_t *pThis);
 #endif /* #ifndef MODULES_H_INCLUDED */
