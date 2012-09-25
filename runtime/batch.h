@@ -129,8 +129,8 @@ batchSetElemState(batch_t *pBatch, int i, batch_state_t newState) {
  */
 static inline int
 batchIsValidElem(batch_t *pBatch, int i) {
-	return(   (pBatch->active == NULL || pBatch->active[i])
-	       && pBatch->pElem[i].state != BATCH_STATE_DISC);
+	return(   (pBatch->pElem[i].state != BATCH_STATE_DISC)
+	       && (pBatch->active == NULL || pBatch->active[i]));
 }
 
 

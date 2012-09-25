@@ -1658,7 +1658,7 @@ doSubmitToActionQNotAllMarkBatch(action_t *pAction, batch_t *pBatch)
 	copyActive(pBatch);
 
 	for(i = 0 ; i < batchNumMsgs(pBatch) ; ++i) {
-		if(!pBatch->active[i])
+		if((pBatch->pElem[i].state == BATCH_STATE_DISC) || !pBatch->active[i])
 			continue;
 		if(now == 0) {
 			now = datetime.GetTime(NULL); /* good time call - the only one done */
