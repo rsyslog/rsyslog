@@ -380,7 +380,6 @@ void cnfDoObj(struct cnfobj *o)
 
 void cnfDoScript(struct cnfstmt *script)
 {
-	// TODO: streamline this, call directly into ruleset from grammar.y
 	dbgprintf("cnf:global:script\n");
 	ruleset.AddScript(ruleset.GetCurrent(loadConf), script);
 }
