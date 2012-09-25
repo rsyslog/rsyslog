@@ -1037,8 +1037,9 @@ evalVar(struct cnfvar *var, void *usrptr, struct var *ret)
 
 #define FREE_TWO_STRINGS \
 		if(bMustFree) es_deleteStr(estr_r); \
+		if(expr->r->nodetype != 'S' && r.datatype == 'S') es_deleteStr(r.d.estr); \
 		if(bMustFree2) es_deleteStr(estr_l); \
-		FREE_BOTH_RET
+		if(l.datatype == 'S') es_deleteStr(l.d.estr)
 
 /* evaluate an expression.
  * Note that we try to avoid malloc whenever possible (because of

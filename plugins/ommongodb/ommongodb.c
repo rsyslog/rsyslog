@@ -296,7 +296,9 @@ static bson *BSONFromJSONObject(struct json_object *json);
 static gboolean
 BSONAppendJSONObject(bson *doc, const gchar *name, struct json_object *json)
 {
-	switch(json_object_get_type(json)) {
+	switch(json != NULL ? json_object_get_type(json) : json_type_null) {
+	case json_type_null:
+		return bson_append_null(doc, name);
 	case json_type_boolean:
 		return bson_append_boolean(doc, name,
 					   json_object_get_boolean(json));
