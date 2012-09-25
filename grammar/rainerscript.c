@@ -1088,6 +1088,7 @@ cnfexprEval(struct cnfexpr *expr, struct var *ret, void* usrptr)
 						if(bMustFree) es_deleteStr(estr_r);
 					}
 				}
+				if(r.datatype == 'S') es_deleteStr(r.d.estr);
 			}
 		} else {
 			cnfexprEval(expr->r, &r, usrptr);
@@ -1103,8 +1104,9 @@ cnfexprEval(struct cnfexpr *expr, struct var *ret, void* usrptr)
 			} else {
 				ret->d.n = (l.d.n == r.d.n); /*CMP*/
 			}
+			if(r.datatype == 'S') es_deleteStr(r.d.estr);
 		}
-		FREE_BOTH_RET;
+		if(l.datatype == 'S') es_deleteStr(l.d.estr);
 		break;
 	case CMP_NE:
 		cnfexprEval(expr->l, &l, usrptr);
