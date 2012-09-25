@@ -2698,6 +2698,7 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 	uchar *pBuf;
 	int iLen;
 	short iOffs;
+	enum tplFormatTypes datefmt;
 
 	BEGINfunc
 	assert(pMsg != NULL);
@@ -2717,7 +2718,11 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			bufLen = getMSGLen(pMsg);
 			break;
 		case PROP_TIMESTAMP:
-			pRes = (uchar*)getTimeReported(pMsg, pTpe->data.field.eDateFormat);
+			if (pTpe != NULL)
+				datefmt = pTpe->data.field.eDateFormat;
+			else
+				datefmt = tplFmtDefault;
+			pRes = (uchar*)getTimeReported(pMsg, datefmt);
 			break;
 		case PROP_HOSTNAME:
 			pRes = (uchar*)getHOSTNAME(pMsg);
@@ -2767,7 +2772,11 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			pRes = (uchar*)getSeverityStr(pMsg);
 			break;
 		case PROP_TIMEGENERATED:
-			pRes = (uchar*)getTimeGenerated(pMsg, pTpe->data.field.eDateFormat);
+			if (pTpe != NULL)
+				datefmt = pTpe->data.field.eDateFormat;
+			else
+				datefmt = tplFmtDefault;
+			pRes = (uchar*)getTimeGenerated(pMsg, datefmt);
 			break;
 		case PROP_PROGRAMNAME:
 			pRes = getProgramName(pMsg, LOCK_MUTEX);
