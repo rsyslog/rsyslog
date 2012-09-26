@@ -157,8 +157,6 @@ scriptfilt: IF expr THEN actlst		{ $$ = cnfruleNew(CNFFILT_SCRIPT, $4);
 					  $$->filt.expr = $2; }
 block:	  actlst			{ $$ = $1; }
 	| block actlst			{ $2->next = $1; $$ = $2; }
-	/* v7: | actlst
-	   v7: | block rule */ /* v7 extensions require new rule engine capabilities! */
 actlst:	  act 	 			{ $$=$1; }
 	| actlst '&' act 		{ $3->next = $1; $$ = $3; }
 	| actlst cfsysline		{ $$ = cnfactlstAddSysline($1, $2); }
