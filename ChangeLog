@@ -1,11 +1,11 @@
 ---------------------------------------------------------------------------
-Version 7.1.5  [devel] 2012-09-??
+Version 7.1.5  [devel] 2012-09-25
 - implemented RainerScript prifield() function
 - implemented RainerScript field() function
 - added new module imkmsg to process structured kernel log
   Thanks to Milan Bartos for contributing this module
-- implemented basic RainerScript optimizer, which will speed up a couple
-  of script operations
+- implemented basic RainerScript optimizer, which will speed up script
+  operations
 - bugfix: invalid free if function re_match() was incorrectly used
   if the config file parser detected that param 2 was not constant, some
   data fields were not initialized. The destructor did not care about that.
