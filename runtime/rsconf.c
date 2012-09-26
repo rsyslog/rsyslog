@@ -101,7 +101,6 @@ static uchar template_StdJSONFmt[] = "\"{\\\"message\\\":\\\"%msg:::json%\\\",\\
 
 /* tables for interfacing with the v6 config system (as far as we need to) */
 static struct cnfparamdescr inppdescr[] = {
-	{ "name", eCmdHdlrGetWord, 0 },
 	{ "type", eCmdHdlrString, CNFPARAM_REQUIRED }
 };
 static struct cnfparamblk inppblk =
@@ -393,8 +392,6 @@ inputProcessCnf(struct cnfobj *o)
 	struct cnfparamvals *pvals;
 	modInfo_t *pMod;
 	uchar *cnfModName = NULL;
-	void *pModData;
-	action_t *pAction;
 	int typeIdx;
 	DEFiRet;
 
