@@ -141,7 +141,6 @@ static struct cnfparamblk inppblk =
 	  inppdescr
 	};
 
-
 #include "im-helper.h" /* must be included AFTER the type definitions! */
 
 /* callbacks */
