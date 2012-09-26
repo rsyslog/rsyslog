@@ -136,9 +136,48 @@ static struct cnfparamblk modpblk =
 	  modpdescr
 	};
 
+/* input instance parameters */
+static struct cnfparamdescr inppdescr[] = {
+	{ "port", eCmdHdlrString, CNFPARAM_REQUIRED }, /* legacy: InputTCPServerRun */
+	{ "address", eCmdHdlrString, 0 },
+	{ "ruleset", eCmdHdlrString, 0 }
+};
+static struct cnfparamblk inppblk =
+	{ CNFPARAMBLK_VERSION,
+	  sizeof(inppdescr)/sizeof(struct cnfparamdescr),
+	  inppdescr
+	};
+
 #include "im-helper.h" /* must be included AFTER the type definitions! */
 
+/* create input instance, set default paramters, and
+ * add it to the list of instances.
+ */
+static rsRetVal
+createInstance(instanceConf_t **pinst)
+{
+	instanceConf_t *inst;
+	DEFiRet;
+	CHKmalloc(inst = MALLOC(sizeof(instanceConf_t)));
+	inst->next = NULL;
+	inst->pBindRuleset = NULL;
 
+	inst->pszBindPort = NULL;
+	inst->pszBindAddr = NULL;
+	inst->pszBindRuleset = NULL;
+
+	/* node created, let's add to config */
+	if(loadModConf->tail == NULL) {
+		loadModConf->tail = loadModConf->root = inst;
+	} else {
+		loadModConf->tail->next = inst;
+		loadModConf->tail = inst;
+	}
+
+	*pinst = inst;
+finalize_it:
+	RETiRet;
+}
 
 /* This function is called when a new listener instace shall be added to 
  * the current config object via the legacy config system. It just shuffles
@@ -150,7 +189,7 @@ static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	instanceConf_t *inst;
 	DEFiRet;
 
-	CHKmalloc(inst = MALLOC(sizeof(instanceConf_t)));
+	CHKiRet(createInstance(&inst));
 	CHKmalloc(inst->pszBindPort = ustrdup((pNewVal == NULL || *pNewVal == '\0')
 				 	       ? (uchar*) "514" : pNewVal));
 	if((cs.pszBindAddr == NULL) || (cs.pszBindAddr[0] == '\0')) {
@@ -165,14 +204,6 @@ static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	}
 	inst->pBindRuleset = NULL;
 	inst->next = NULL;
-
-	/* node created, let's add to config */
-	if(loadModConf->tail == NULL) {
-		loadModConf->tail = loadModConf->root = inst;
-	} else {
-		loadModConf->tail->next = inst;
-		loadModConf->tail = inst;
-	}
 
 finalize_it:
 	free(pNewVal);
@@ -635,6 +666,47 @@ rsRetVal rcvMainLoop(thrdInfo_t *pThrd)
 #endif /* #if HAVE_EPOLL_CREATE1 */
 
 
+BEGINnewInpInst
+	struct cnfparamvals *pvals;
+	instanceConf_t *inst;
+	int i;
+CODESTARTnewInpInst
+	DBGPRINTF("newInpInst (imudp)\n");
+
+	pvals = nvlstGetParams(lst, &inppblk, NULL);
+	if(pvals == NULL) {
+		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS,
+			        "imudp: required parameter are missing\n");
+		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
+
+	if(Debug) {
+		dbgprintf("input param blk in imudp:\n");
+		cnfparamsPrint(&inppblk, pvals);
+	}
+
+	CHKiRet(createInstance(&inst));
+
+	for(i = 0 ; i < inppblk.nParams ; ++i) {
+		if(!pvals[i].bUsed)
+			continue;
+		if(!strcmp(inppblk.descr[i].name, "port")) {
+			inst->pszBindPort = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(inppblk.descr[i].name, "address")) {
+			inst->pszBindAddr = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(inppblk.descr[i].name, "ruleset")) {
+			inst->pszBindRuleset = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else {
+			dbgprintf("imudp: program error, non-handled "
+			  "param '%s'\n", inppblk.descr[i].name);
+		}
+	}
+finalize_it:
+CODE_STD_FINALIZERnewInpInst
+	cnfparamvalsDestruct(pvals, &inppblk);
+ENDnewInpInst
+
+
 BEGINbeginCnfLoad
 CODESTARTbeginCnfLoad
 	loadModConf = pModConf;
@@ -839,6 +911,7 @@ CODEqueryEtryPt_STD_IMOD_QUERIES
 CODEqueryEtryPt_STD_CONF2_QUERIES
 CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
 CODEqueryEtryPt_STD_CONF2_PREPRIVDROP_QUERIES
+CODEqueryEtryPt_STD_CONF2_IMOD_QUERIES
 CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
 ENDqueryEtryPt
 
