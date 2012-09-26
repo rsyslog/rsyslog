@@ -99,6 +99,18 @@ static uchar template_SysklogdFileFormat[] = "\"%TIMESTAMP% %HOSTNAME% %syslogta
 static uchar template_StdJSONFmt[] = "\"{\\\"message\\\":\\\"%msg:::json%\\\",\\\"fromhost\\\":\\\"%HOSTNAME:::json%\\\",\\\"facility\\\":\\\"%syslogfacility-text%\\\",\\\"priority\\\":\\\"%syslogpriority-text%\\\",\\\"timereported\\\":\\\"%timereported:::date-rfc3339%\\\",\\\"timegenerated\\\":\\\"%timegenerated:::date-rfc3339%\\\"}\"";
 /* end templates */
 
+/* tables for interfacing with the v6 config system (as far as we need to) */
+static struct cnfparamdescr inppdescr[] = {
+	{ "name", eCmdHdlrGetWord, 0 },
+	{ "type", eCmdHdlrString, CNFPARAM_REQUIRED }
+};
+static struct cnfparamblk inppblk =
+	{ CNFPARAMBLK_VERSION,
+	  sizeof(inppdescr)/sizeof(struct cnfparamdescr),
+	  inppdescr
+	};
+
+/* forward-definitions */
 void cnfDoCfsysline(char *ln);
 
 /* Standard-Constructor
@@ -373,6 +385,49 @@ finalize_it:
 	return estr;
 }
 
+
+/* Process input() objects */
+rsRetVal
+inputProcessCnf(struct cnfobj *o)
+{
+	struct cnfparamvals *pvals;
+	modInfo_t *pMod;
+	uchar *cnfModName = NULL;
+	void *pModData;
+	action_t *pAction;
+	int typeIdx;
+	DEFiRet;
+
+	pvals = nvlstGetParams(o->nvlst, &inppblk, NULL);
+	if(pvals == NULL) {
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+	DBGPRINTF("input param blk after inputProcessCnf:\n");
+	cnfparamsPrint(&inppblk, pvals);
+	typeIdx = cnfparamGetIdx(&inppblk, "type");
+	if(pvals[typeIdx].bUsed == 0) {
+		errmsg.LogError(0, RS_RET_CONF_RQRD_PARAM_MISSING, "input type missing");
+		ABORT_FINALIZE(RS_RET_CONF_RQRD_PARAM_MISSING); // TODO: move this into rainerscript handlers
+	}
+	cnfModName = (uchar*)es_str2cstr(pvals[typeIdx].val.d.estr, NULL);
+	if((pMod = module.FindWithCnfName(loadConf, cnfModName, eMOD_IN)) == NULL) {
+		errmsg.LogError(0, RS_RET_MOD_UNKNOWN, "input module name '%s' is unknown", cnfModName);
+		ABORT_FINALIZE(RS_RET_MOD_UNKNOWN);
+	}
+	if(pMod->mod.im.newInpInst == NULL) {
+		errmsg.LogError(0, RS_RET_MOD_NO_INPUT_STMT,
+				"input module '%s' does not support input() statement", cnfModName);
+		ABORT_FINALIZE(RS_RET_MOD_NO_INPUT_STMT);
+	}
+dbgprintf("DDDD: ready to roll...\n");
+	CHKiRet(pMod->mod.im.newInpInst(o->nvlst));
+dbgprintf("DDDD: done calling module entry point\n");
+finalize_it:
+	free(cnfModName);
+	cnfparamvalsDestruct(pvals, &inppblk);
+	RETiRet;
+}
+
 /*------------------------------ interface to flex/bison parser ------------------------------*/
 extern int yylineno;
 
@@ -415,6 +470,9 @@ void cnfDoObj(struct cnfobj *o)
 		break;
 	case CNFOBJ_ACTION:
 		actionProcessCnf(o);
+		break;
+	case CNFOBJ_INPUT:
+		inputProcessCnf(o);
 		break;
 	case CNFOBJ_TPL:
 		tplProcessCnf(o);

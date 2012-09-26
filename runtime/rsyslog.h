@@ -381,6 +381,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_MODULE_ALREADY_IN_CONF = -2221, /**< module already in current configuration */
 	RS_RET_PARAM_NOT_PERMITTED = -2222, /**< legacy parameter no longer permitted (usally already set by v2) */
 	RS_RET_NO_JSON_PASSING = -2223, /**< rsyslog core does not support JSON-passing plugin API */
+	RS_RET_MOD_NO_INPUT_STMT = -2224, /**< (input) module does not support input() statement */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */

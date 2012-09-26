@@ -607,6 +607,12 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"willRun", &pNew->mod.im.willRun));
 			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"afterRun", &pNew->mod.im.afterRun));
 			pNew->mod.im.bCanRun = 0;
+			localRet = (*pNew->modQueryEtryPt)((uchar*)"newInpInst", &pNew->mod.im.newInpInst);
+			if(localRet == RS_RET_MODULE_ENTRY_POINT_NOT_FOUND) {
+				pNew->mod.om.newActInst = NULL;
+			} else if(localRet != RS_RET_OK) {
+				ABORT_FINALIZE(localRet);
+			}
 			break;
 		case eMOD_OUT:
 			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"freeInstance", &pNew->freeInstance));
@@ -625,7 +631,8 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 			else if(localRet != RS_RET_OK)
 				ABORT_FINALIZE(localRet);
 
-			localRet = (*pNew->modQueryEtryPt)((uchar*)"endTransaction", &pNew->mod.om.endTransaction);
+			localRet = (*pNew->modQueryEtryPt)((uchar*)"endTransaction",
+				   &pNew->mod.om.endTransaction);
 			if(localRet == RS_RET_MODULE_ENTRY_POINT_NOT_FOUND) {
 				pNew->mod.om.endTransaction = dummyEndTransaction;
 			} else if(localRet != RS_RET_OK) {
