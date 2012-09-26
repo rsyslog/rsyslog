@@ -46,6 +46,7 @@
 #include "unicode-helper.h"
 #include "prop.h"
 #include "ruleset.h"
+#include "glbl.h"
 
 MODULE_TYPE_INPUT
 MODULE_TYPE_NOKEEP
@@ -57,6 +58,7 @@ DEFobjCurrIf(net)
 DEFobjCurrIf(prop)
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(ruleset)
+DEFobjCurrIf(glbl)
 
 /* forward definitions */
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal);
@@ -162,6 +164,9 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 		CHKiRet(relpEngineSetDbgprint(pRelpEngine, dbgprintf));
 		CHKiRet(relpEngineSetEnableCmd(pRelpEngine, (uchar*) "syslog", eRelpCmdState_Required));
 		CHKiRet(relpEngineSetSyslogRcv(pRelpEngine, onSyslogRcv));
+		if (!glbl.GetDisableDNS()) {
+			CHKiRet(relpEngineSetDnsLookupMode(pRelpEngine, 1));
+		}
 	}
 
 	CHKiRet(relpEngineAddListner(pRelpEngine, inst->pszBindPort));
@@ -295,6 +300,7 @@ CODESTARTmodExit
 
 	/* release objects we used */
 	objRelease(ruleset, CORE_COMPONENT);
+	objRelease(glbl, CORE_COMPONENT);
 	objRelease(prop, CORE_COMPONENT);
 	objRelease(net, LM_NET_FILENAME);
 	objRelease(errmsg, CORE_COMPONENT);
@@ -332,6 +338,7 @@ CODESTARTmodInit
 CODEmodInit_QueryRegCFSLineHdlr
 	pRelpEngine = NULL;
 	/* request objects we use */
+	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(prop, CORE_COMPONENT));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(net, LM_NET_FILENAME));
