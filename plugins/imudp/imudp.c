@@ -202,8 +202,6 @@ static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	} else {
 		CHKmalloc(inst->pszBindRuleset = ustrdup(cs.pszBindRuleset));
 	}
-	inst->pBindRuleset = NULL;
-	inst->next = NULL;
 
 finalize_it:
 	free(pNewVal);
@@ -917,18 +915,12 @@ ENDqueryEtryPt
 
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
-	if(cs.pszBindAddr != NULL) {
-		free(cs.pszBindAddr);
-		cs.pszBindAddr = NULL;
-	}
-	if(cs.pszSchedPolicy != NULL) {
-		free(cs.pszSchedPolicy);
-		cs.pszSchedPolicy = NULL;
-	}
-	if(cs.pszBindRuleset != NULL) {
-		free(cs.pszBindRuleset);
-		cs.pszBindRuleset = NULL;
-	}
+	free(cs.pszBindAddr);
+	cs.pszBindAddr = NULL;
+	free(cs.pszSchedPolicy);
+	cs.pszSchedPolicy = NULL;
+	free(cs.pszBindRuleset);
+	cs.pszBindRuleset = NULL;
 	cs.iSchedPrio = SCHED_PRIO_UNSET;
 	cs.iTimeRequery = TIME_REQUERY_DFLT;/* the default is to query only every second time */
 	return RS_RET_OK;
