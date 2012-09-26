@@ -416,9 +416,7 @@ inputProcessCnf(struct cnfobj *o)
 				"input module '%s' does not support input() statement", cnfModName);
 		ABORT_FINALIZE(RS_RET_MOD_NO_INPUT_STMT);
 	}
-dbgprintf("DDDD: ready to roll...\n");
 	CHKiRet(pMod->mod.im.newInpInst(o->nvlst));
-dbgprintf("DDDD: done calling module entry point\n");
 finalize_it:
 	free(cnfModName);
 	cnfparamvalsDestruct(pvals, &inppblk);
