@@ -622,6 +622,8 @@ expected that interfaces, even new ones, break during the initial
   [ported from v4]
 ---------------------------------------------------------------------------
 Version 5.10.1  [V5-STABLE], 2012-0?-??
+- enable DNS resolution in imrelp
+  Thanks to Apollon Oikonomopoulos for the patch
 - bugfix: invalid property name in property-filter could cause abort
   if action chaining (& operator) was used
   http://bugzilla.adiscon.com/show_bug.cgi?id=355
