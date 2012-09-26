@@ -44,6 +44,7 @@
 #include "msg.h"
 #include "unicode-helper.h"
 #include "prop.h"
+#include "glbl.h"
 
 MODULE_TYPE_INPUT
 MODULE_TYPE_NOKEEP
@@ -52,6 +53,7 @@ MODULE_TYPE_NOKEEP
 DEF_IMOD_STATIC_DATA
 DEFobjCurrIf(net)
 DEFobjCurrIf(prop)
+DEFobjCurrIf(glbl)
 
 /* Module static data */
 static relpEngine_t *pRelpEngine;	/* our relp engine */
@@ -104,6 +106,9 @@ static rsRetVal addListener(void __attribute__((unused)) *pVal, uchar *pNewVal)
 		CHKiRet(relpEngineSetDbgprint(pRelpEngine, dbgprintf));
 		CHKiRet(relpEngineSetEnableCmd(pRelpEngine, (uchar*) "syslog", eRelpCmdState_Required));
 		CHKiRet(relpEngineSetSyslogRcv(pRelpEngine, onSyslogRcv));
+		if (!glbl.GetDisableDNS()) {
+			CHKiRet(relpEngineSetDnsLookupMode(pRelpEngine, 1));
+		}
 	}
 
 	CHKiRet(relpEngineAddListner(pRelpEngine, pNewVal));
@@ -162,6 +167,7 @@ CODESTARTmodExit
 		iRet = relpEngineDestruct(&pRelpEngine);
 
 	/* release objects we used */
+	objRelease(glbl, CORE_COMPONENT);
 	objRelease(prop, CORE_COMPONENT);
 	objRelease(net, LM_NET_FILENAME);
 ENDmodExit
@@ -187,6 +193,7 @@ CODESTARTmodInit
 CODEmodInit_QueryRegCFSLineHdlr
 	pRelpEngine = NULL;
 	/* request objects we use */
+	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(prop, CORE_COMPONENT));
 	CHKiRet(objUse(net, LM_NET_FILENAME));
 
