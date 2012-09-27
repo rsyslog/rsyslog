@@ -2091,7 +2091,7 @@ finalize_it:
  * rgerhards, 2011-07-19
  */
 rsRetVal
-actionProcessCnf(struct cnfobj *o)
+actionProcessCnf(struct cnfobj __attribute__((unused)) *o)
 {
 	DEFiRet;
 #if 0 /* we need to check if we actually need this functionality -- later! */
