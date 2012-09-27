@@ -137,7 +137,7 @@ static prop_t *pInputName = NULL;	/* there is only one global inputName for all 
 
 /* module-global parameters */
 static struct cnfparamdescr modpdescr[] = {
-	{ "pollinginterval", eCmdHdlrInt, 0 }
+	{ "pollinginterval", eCmdHdlrPositiveInt, 0 }
 };
 static struct cnfparamblk modpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -543,12 +543,7 @@ CODESTARTsetModCnf
 		if(!pvals[i].bUsed)
 			continue;
 		if(!strcmp(modpblk.descr[i].name, "pollinginterval")) {
-			if(pvals[i].val.d.n < 1) {
-				errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS,
-					"imfile: polling interval cannot be set below 1 - ignored");
-			} else {
-				loadModConf->iPollInterval = (int) pvals[i].val.d.n;
-			}
+			loadModConf->iPollInterval = (int) pvals[i].val.d.n;
 		} else {
 			dbgprintf("imfile: program error, non-handled "
 			  "param '%s' in beginCnfLoad\n", modpblk.descr[i].name);
