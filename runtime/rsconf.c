@@ -1083,10 +1083,13 @@ setModDir(void __attribute__((unused)) *pVal, uchar* pszNewVal)
 static rsRetVal
 regBuildInModule(rsRetVal (*modInit)(), uchar *name, void *pModHdlr)
 {
+	cfgmodules_etry_t *pNew;
+	cfgmodules_etry_t *pLast;
 	modInfo_t *pMod;
 	DEFiRet;
 	CHKiRet(module.doModInit(modInit, name, pModHdlr, &pMod));
-	addModToCnfList(pMod);
+	readyModForCnf(pMod, &pNew, &pLast);
+	addModToCnfList(pNew, pLast);
 finalize_it:
 	RETiRet;
 }

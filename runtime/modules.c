@@ -349,11 +349,13 @@ addModToGlblList(modInfo_t *pThis)
 }
 
 
-/* Add a module to the config module list for current loadConf and
- * provide its config params to it.
+/* ready module for config processing. this includes checking if the module
+ * is already in the config, so this function may return errors. Returns a
+ * pointer to the last module inthe current config. That pointer needs to
+ * be passed to addModToCnfLst() when it is called later in the process.
  */
 rsRetVal
-addModToCnfList(modInfo_t *pThis)
+readyModForCnf(modInfo_t *pThis, cfgmodules_etry_t **ppNew, cfgmodules_etry_t **ppLast)
 {
 	cfgmodules_etry_t *pNew;
 	cfgmodules_etry_t *pLast;
@@ -361,8 +363,7 @@ addModToCnfList(modInfo_t *pThis)
 	assert(pThis != NULL);
 
 	if(loadConf == NULL) {
-		/* we are in an early init state */
-		FINALIZE;
+		FINALIZE; /* we are in an early init state */
 	}
 
 	/* check for duplicates and, as a side-activity, identify last node */
@@ -396,6 +397,36 @@ addModToCnfList(modInfo_t *pThis)
 
 	if(pThis->beginCnfLoad != NULL) {
 		CHKiRet(pThis->beginCnfLoad(&pNew->modCnf, loadConf));
+	}
+
+	*ppLast = pLast;
+	*ppNew = pNew;
+finalize_it:
+	RETiRet;
+}
+
+
+/* abort the creation of a module entry without adding it to the
+ * module list. Needed to prevent mem leaks.
+ */
+static inline void
+abortCnfUse(cfgmodules_etry_t *pNew)
+{
+	free(pNew);
+}
+
+
+/* Add a module to the config module list for current loadConf.
+ * Requires last pointer obtained by readyModForCnf().
+ */
+rsRetVal
+addModToCnfList(cfgmodules_etry_t *pNew, cfgmodules_etry_t *pLast)
+{
+	DEFiRet;
+	assert(pNew != NULL);
+
+	if(loadConf == NULL) {
+		FINALIZE; /* we are in an early init state */
 	}
 
 	if(pLast == NULL) {
@@ -971,6 +1002,8 @@ Load(uchar *pModName, sbool bConfLoad, struct nvlst *lst)
 	int bHasExtension;
         void *pModHdlr, *pModInit;
 	modInfo_t *pModInfo;
+	cfgmodules_etry_t *pNew;
+	cfgmodules_etry_t *pLast;
 	uchar *pModDirCurr, *pModDirNext;
 	int iLoadCnt;
 	struct dlhandle_s *pHandle = NULL;
@@ -1005,8 +1038,9 @@ Load(uchar *pModName, sbool bConfLoad, struct nvlst *lst)
 	if(pModInfo != NULL) {
 		DBGPRINTF("Module '%s' already loaded\n", pModName);
 		if(bConfLoad) {
-			localRet = addModToCnfList(pModInfo);
+			localRet = readyModForCnf(pModInfo, &pNew, &pLast);
 			if(pModInfo->setModCnf != NULL && localRet == RS_RET_OK) {
+				addModToCnfList(pNew, pLast);
 				if(!strncmp((char*)pModName, "builtin:", sizeof("builtin:")-1)) {
 					if(pModInfo->bSetModCnfCalled) {
 						errmsg.LogError(0, RS_RET_DUP_PARAM,
@@ -1134,12 +1168,21 @@ Load(uchar *pModName, sbool bConfLoad, struct nvlst *lst)
 	}
 
 	if(bConfLoad) {
-		addModToCnfList(pModInfo);
+		readyModForCnf(pModInfo, &pNew, &pLast);
 		if(pModInfo->setModCnf != NULL) {
-			if(lst != NULL)
-				pModInfo->setModCnf(lst);
+			if(lst != NULL) {
+				localRet = pModInfo->setModCnf(lst);
+				if(localRet != RS_RET_OK) {
+					errmsg.LogError(0, localRet,
+						"module '%s', failed processing config parameters",
+						pPathBuf);
+					abortCnfUse(pNew);
+					ABORT_FINALIZE(localRet);
+				}
+			}
 			pModInfo->bSetModCnfCalled = 1;
 		}
+		addModToCnfList(pNew, pLast);
 	}
 
 finalize_it:
