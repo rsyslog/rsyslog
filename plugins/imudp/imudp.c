@@ -750,7 +750,7 @@ CODESTARTsetModCnf
 		} else if(!strcmp(modpblk.descr[i].name, "schedulingpolicy")) {
 			loadModConf->pszSchedPolicy = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else {
-			dbgprintf("impstats: program error, non-handled "
+			dbgprintf("imudp: program error, non-handled "
 			  "param '%s' in beginCnfLoad\n", modpblk.descr[i].name);
 		}
 	}
