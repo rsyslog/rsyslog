@@ -1,5 +1,8 @@
 ---------------------------------------------------------------------------
 Version 6.5.1  [devel] 2012-08-??
+- imfile ported to new v6 config interface
+- imfile now supports config parameter for maximum number of submits
+  which is a fine-tuning parameter in regard to input baching
 - added pure JSON output plugin parameter passing mode
 - ommongodb now supports templates
 - bugfix: imtcp could abort on exit due to invalid free()
