@@ -730,13 +730,13 @@ BEGINsetModCnf
 CODESTARTsetModCnf
 	pvals = nvlstGetParams(lst, &modpblk, NULL);
 	if(pvals == NULL) {
-		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "error processing module "
+		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "imudp: error processing module "
 				"config parameters [module(...)]");
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
 
 	if(Debug) {
-		dbgprintf("module (global) param blk for impstats:\n");
+		dbgprintf("module (global) param blk for imudp:\n");
 		cnfparamsPrint(&modpblk, pvals);
 	}
 
