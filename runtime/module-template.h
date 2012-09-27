@@ -353,6 +353,24 @@ finalize_it:\
 }
 
 
+/* newInpInst()
+ * This is basically the equivalent to newActInst() for creating input
+ * module (listener) instances.
+ */
+#define BEGINnewInpInst \
+static rsRetVal newInpInst(struct nvlst *lst)\
+{\
+	DEFiRet;
+
+#define CODESTARTnewInpInst \
+
+#define CODE_STD_FINALIZERnewInpInst
+
+#define ENDnewInpInst \
+	RETiRet;\
+}
+
+
 /* tryResume()
  * This entry point is called to check if a module can resume operations. This
  * happens when a module requested that it be suspended. In suspended state,
@@ -517,6 +535,16 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 #define CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES \
 	  else if(!strcmp((char*) name, "newActInst")) {\
 		*pEtryPoint = newActInst;\
+	} \
+	CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES 
+
+
+/* the following block is to be added for input modules that support the v2
+ * config system. The config name is also provided.
+ */
+#define CODEqueryEtryPt_STD_CONF2_IMOD_QUERIES \
+	  else if(!strcmp((char*) name, "newInpInst")) {\
+		*pEtryPoint = newInpInst;\
 	} \
 	CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES 
 

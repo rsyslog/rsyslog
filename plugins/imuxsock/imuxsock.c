@@ -247,9 +247,29 @@ static struct cnfparamblk modpblk =
 	  modpdescr
 	};
 
+/* input instance parameters */
+static struct cnfparamdescr inppdescr[] = {
+	{ "socket", eCmdHdlrString, CNFPARAM_REQUIRED }, /* legacy: addunixlistensocket */
+	{ "createpath", eCmdHdlrBinary, 0 },
+	{ "parsetrusted", eCmdHdlrBinary, 0 },
+	{ "hostname", eCmdHdlrString, 0 },
+	{ "ignoretimestamp", eCmdHdlrBinary, 0 },
+	{ "flowcontrol", eCmdHdlrBinary, 0 },
+	{ "usesystimestamp", eCmdHdlrBinary, 0 },
+	{ "annotate", eCmdHdlrBinary, 0 },
+	{ "usepidfromsystem", eCmdHdlrBinary, 0 },
+	{ "ratelimit.interval", eCmdHdlrInt, 0 },
+	{ "ratelimit.burst", eCmdHdlrInt, 0 },
+	{ "ratelimit.severity", eCmdHdlrInt, 0 }
+};
+static struct cnfparamblk inppblk =
+	{ CNFPARAMBLK_VERSION,
+	  sizeof(inppdescr)/sizeof(struct cnfparamdescr),
+	  inppdescr
+	};
+
 /* we do not use this, because we do not bind to a ruleset so far
  * enable when this is changed: #include "im-helper.h" */ /* must be included AFTER the type definitions! */
-
 
 static void 
 initRatelimitState(struct rs_ratelimit_state *rs, unsigned short interval, unsigned short burst)
@@ -319,6 +339,43 @@ finalize_it:
 }
 
 
+/* create input instance, set default paramters, and
+ * add it to the list of instances.
+ */
+static rsRetVal
+createInstance(instanceConf_t **pinst)
+{
+	instanceConf_t *inst;
+	DEFiRet;
+	CHKmalloc(inst = MALLOC(sizeof(instanceConf_t)));
+	inst->sockName = NULL;
+	inst->pLogHostName = NULL;
+	inst->ratelimitInterval = DFLT_ratelimitInterval;
+	inst->ratelimitBurst = DFLT_ratelimitSeverity;
+	inst->ratelimitSeverity = DFLT_ratelimitSeverity;
+	inst->bUseFlowCtl = 0;
+	inst->bIgnoreTimestamp = 1;
+	inst->bCreatePath = DFLT_bCreatePath;
+	inst->bUseSysTimeStamp = 1;
+	inst->bWritePid = 0;
+	inst->bAnnotate = 0;
+	inst->bParseTrusted = 0;
+	inst->next = NULL;
+
+	/* node created, let's add to config */
+	if(loadModConf->tail == NULL) {
+		loadModConf->tail = loadModConf->root = inst;
+	} else {
+		loadModConf->tail->next = inst;
+		loadModConf->tail = inst;
+	}
+
+	*pinst = inst;
+finalize_it:
+	RETiRet;
+}
+
+
 /* This function is called when a new listen socket instace shall be added to 
  * the current config object via the legacy config system. It just shuffles
  * all parameters to the listener in-memory instance.
@@ -337,7 +394,7 @@ static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 		ABORT_FINALIZE(RS_RET_SOCKNAME_MISSING);
 	}
 
-	CHKmalloc(inst = MALLOC(sizeof(instanceConf_t)));
+	CHKiRet(createInstance(&inst));
 	inst->sockName = pNewVal;
 	inst->ratelimitInterval = cs.ratelimitInterval;
 	inst->pLogHostName = cs.pLogHostName;
@@ -351,14 +408,6 @@ static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	inst->bAnnotate = cs.bAnnotate;
 	inst->bParseTrusted = cs.bParseTrusted;
 	inst->next = NULL;
-
-	/* node created, let's add to config */
-	if(loadModConf->tail == NULL) {
-		loadModConf->tail = loadModConf->root = inst;
-	} else {
-		loadModConf->tail->next = inst;
-		loadModConf->tail = inst;
-	}
 
 	/* some legacy conf processing */
 	free(cs.pLogHostName); /* reset hostname for next socket */
@@ -1181,6 +1230,65 @@ finalize_it:
 ENDsetModCnf
 
 
+BEGINnewInpInst
+	struct cnfparamvals *pvals;
+	instanceConf_t *inst;
+	int i;
+CODESTARTnewInpInst
+	DBGPRINTF("newInpInst (imuxsock)\n");
+
+	pvals = nvlstGetParams(lst, &inppblk, NULL);
+	if(pvals == NULL) {
+		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS,
+			        "imuxsock: required parameter are missing\n");
+		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
+
+	if(Debug) {
+		dbgprintf("input param blk in imuxsock:\n");
+		cnfparamsPrint(&inppblk, pvals);
+	}
+
+	CHKiRet(createInstance(&inst));
+
+	for(i = 0 ; i < inppblk.nParams ; ++i) {
+		if(!pvals[i].bUsed)
+			continue;
+		if(!strcmp(inppblk.descr[i].name, "socket")) {
+			inst->sockName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(modpblk.descr[i].name, "createpath")) {
+			inst->bCreatePath = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "parsetrusted")) {
+			inst->bParseTrusted = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "hostname")) {
+			inst->pLogHostName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(modpblk.descr[i].name, "ignoretimestamp")) {
+			inst->bIgnoreTimestamp = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "flowcontrol")) {
+			inst->bUseFlowCtl = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "usesystimestamp")) {
+			inst->bUseSysTimeStamp = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "annotate")) {
+			inst->bAnnotate = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "usepidfromsystem")) {
+			inst->bWritePid = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "ratelimit.interval")) {
+			inst->ratelimitInterval = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "ratelimit.burst")) {
+			inst->ratelimitBurst = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "ratelimit.severity")) {
+			inst->ratelimitSeverity = (int) pvals[i].val.d.n;
+		} else {
+			dbgprintf("imuxsock: program error, non-handled "
+			  "param '%s'\n", inppblk.descr[i].name);
+		}
+	}
+finalize_it:
+CODE_STD_FINALIZERnewInpInst
+	cnfparamvalsDestruct(pvals, &inppblk);
+ENDnewInpInst
+
+
 BEGINendCnfLoad
 CODESTARTendCnfLoad
 	if(!loadModConf->configSetViaV2Method) {
@@ -1366,6 +1474,7 @@ CODEqueryEtryPt_STD_IMOD_QUERIES
 CODEqueryEtryPt_STD_CONF2_QUERIES
 CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
 CODEqueryEtryPt_STD_CONF2_PREPRIVDROP_QUERIES
+CODEqueryEtryPt_STD_CONF2_IMOD_QUERIES
 CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
 ENDqueryEtryPt
 

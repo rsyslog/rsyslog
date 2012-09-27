@@ -132,6 +132,26 @@ struct modConfData_s {
 static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
 static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current load process */
 
+/* input instance parameters */
+static struct cnfparamdescr inppdescr[] = {
+	{ "port", eCmdHdlrString, CNFPARAM_REQUIRED }, /* legacy: InputTCPServerRun */
+	{ "address", eCmdHdlrString, 0 },
+	{ "name", eCmdHdlrString, 0 },
+	{ "ruleset", eCmdHdlrString, 0 },
+	{ "supportoctetcountedframing", eCmdHdlrBinary, 0 },
+	{ "notifyonconnectionclose", eCmdHdlrBinary, 0 },
+	{ "keepalive", eCmdHdlrBinary, 0 },
+	{ "keepalive.probes", eCmdHdlrInt, 0 },
+	{ "keepalive.time", eCmdHdlrInt, 0 },
+	{ "keepalive.interval", eCmdHdlrInt, 0 },
+	{ "addtlframedelimiter", eCmdHdlrInt, 0 },
+};
+static struct cnfparamblk inppblk =
+	{ CNFPARAMBLK_VERSION,
+	  sizeof(inppdescr)/sizeof(struct cnfparamdescr),
+	  inppdescr
+	};
+
 #include "im-helper.h" /* must be included AFTER the type definitions! */
 /* data elements describing our running config */
 typedef struct ptcpsrv_s ptcpsrv_t;
@@ -379,7 +399,7 @@ startupSrv(ptcpsrv_t *pSrv)
 #endif
 	           ) {
 			/* TODO: check if *we* bound the socket - else we *have* an error! */
-                        DBGPRINTF("error %d while binding tcp socket", errno);
+                        DBGPRINTF("error %d while binding tcp socket\n", errno);
                 	close(sock);
 			sock = -1;
                         continue;
@@ -986,7 +1006,45 @@ closeSess(ptcpsess_t *pSess)
 	destructSess(pSess);
 
 finalize_it:
-	DBGPRINTF("imtcp: session on socket %d closed with iRet %d.\n", sock, iRet);
+	DBGPRINTF("imptcp: session on socket %d closed with iRet %d.\n", sock, iRet);
+	RETiRet;
+}
+
+
+/* create input instance, set default paramters, and
+ * add it to the list of instances.
+ */
+static rsRetVal
+createInstance(instanceConf_t **pinst)
+{
+	instanceConf_t *inst;
+	DEFiRet;
+	CHKmalloc(inst = MALLOC(sizeof(instanceConf_t)));
+	inst->next = NULL;
+
+	inst->pszBindPort = NULL;
+	inst->pszBindAddr = NULL;
+	inst->pszBindRuleset = NULL;
+	inst->pszInputName = NULL;
+	inst->bSuppOctetFram = 1;
+	inst->bKeepAlive = 0;
+	inst->iKeepAliveIntvl = 0;
+	inst->iKeepAliveProbes = 0;
+	inst->iKeepAliveTime = 0;
+	inst->bEmitMsgOnClose = 0;
+	inst->iAddtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
+	inst->pBindRuleset = NULL;
+
+	/* node created, let's add to config */
+	if(loadModConf->tail == NULL) {
+		loadModConf->tail = loadModConf->root = inst;
+	} else {
+		loadModConf->tail->next = inst;
+		loadModConf->tail = inst;
+	}
+
+	*pinst = inst;
+finalize_it:
 	RETiRet;
 }
 
@@ -1000,7 +1058,7 @@ static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	instanceConf_t *inst;
 	DEFiRet;
 
-	CHKmalloc(inst = MALLOC(sizeof(instanceConf_t)));
+	CHKiRet(createInstance(&inst));
 	if(pNewVal == NULL || *pNewVal == '\0') {
 		errmsg.LogError(0, NO_ERRCODE, "imptcp: port number must be specified, listener ignored");
 	}
@@ -1032,15 +1090,6 @@ static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	inst->iKeepAliveTime = cs.iKeepAliveTime;
 	inst->bEmitMsgOnClose = cs.bEmitMsgOnClose;
 	inst->iAddtlFrameDelim = cs.iAddtlFrameDelim;
-	inst->next = NULL;
-
-	/* node created, let's add to config */
-	if(loadModConf->tail == NULL) {
-		loadModConf->tail = loadModConf->root = inst;
-	} else {
-		loadModConf->tail->next = inst;
-		loadModConf->tail = inst;
-	}
 
 finalize_it:
 	free(pNewVal);
@@ -1213,7 +1262,7 @@ sessActivity(ptcpsess_t *pSess)
 
 		if(lenRcv > 0) {
 			/* have data, process it */
-			DBGPRINTF("imtcp: data(%d) on socket %d: %s\n", lenBuf, pSess->sock, rcvBuf);
+			DBGPRINTF("imptcp: data(%d) on socket %d: %s\n", lenBuf, pSess->sock, rcvBuf);
 			CHKiRet(DataRcvd(pSess, rcvBuf, lenRcv));
 		} else if (lenRcv == 0) {
 			/* session was closed, do clean-up */
@@ -1229,7 +1278,7 @@ sessActivity(ptcpsess_t *pSess)
 		} else {
 			if(errno == EAGAIN || errno == EWOULDBLOCK)
 				break;
-			DBGPRINTF("imtcp: error on session socket %d - closed.\n", pSess->sock);
+			DBGPRINTF("imptcp: error on session socket %d - closed.\n", pSess->sock);
 			closeSess(pSess); /* try clean-up by dropping session */
 			break;
 		}
@@ -1343,6 +1392,63 @@ wrkr(void *myself)
 
 	return NULL;
 }
+
+
+BEGINnewInpInst
+	struct cnfparamvals *pvals;
+	instanceConf_t *inst;
+	int i;
+CODESTARTnewInpInst
+	DBGPRINTF("newInpInst (imptcp)\n");
+
+	pvals = nvlstGetParams(lst, &inppblk, NULL);
+	if(pvals == NULL) {
+		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS,
+			        "imptcp: required parameter are missing\n");
+		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
+
+	if(Debug) {
+		dbgprintf("input param blk in imptcp:\n");
+		cnfparamsPrint(&inppblk, pvals);
+	}
+
+	CHKiRet(createInstance(&inst));
+
+	for(i = 0 ; i < inppblk.nParams ; ++i) {
+		if(!pvals[i].bUsed)
+			continue;
+		if(!strcmp(inppblk.descr[i].name, "port")) {
+			inst->pszBindPort = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(inppblk.descr[i].name, "address")) {
+			inst->pszBindAddr = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(inppblk.descr[i].name, "name")) {
+			inst->pszInputName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(inppblk.descr[i].name, "ruleset")) {
+			inst->pszBindRuleset = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(inppblk.descr[i].name, "supportOctetCountedFraming")) {
+			inst->bSuppOctetFram = (int) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "keepalive")) {
+			inst->bKeepAlive = (int) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "keepalive.probes")) {
+			inst->iKeepAliveProbes = (int) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "keepalive.time")) {
+			inst->iKeepAliveTime = (int) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "keepalive.interval")) {
+			inst->iKeepAliveIntvl = (int) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "addtlframedelimiter")) {
+			inst->iAddtlFrameDelim = (int) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "notifyonconnectionclose")) {
+			inst->bEmitMsgOnClose = (int) pvals[i].val.d.n;
+		} else {
+			dbgprintf("imptcp: program error, non-handled "
+			  "param '%s'\n", inppblk.descr[i].name);
+		}
+	}
+finalize_it:
+CODE_STD_FINALIZERnewInpInst
+	cnfparamvalsDestruct(pvals, &inppblk);
+ENDnewInpInst
 
 
 BEGINbeginCnfLoad
@@ -1568,6 +1674,7 @@ CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_IMOD_QUERIES
 CODEqueryEtryPt_STD_CONF2_QUERIES
 CODEqueryEtryPt_STD_CONF2_PREPRIVDROP_QUERIES
+CODEqueryEtryPt_STD_CONF2_IMOD_QUERIES
 CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
 ENDqueryEtryPt
 

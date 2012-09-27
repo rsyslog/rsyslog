@@ -323,13 +323,14 @@ nvlstChkUnused(struct nvlst *lst)
 }
 
 
-static inline void
+static inline int
 doGetSize(struct nvlst *valnode, struct cnfparamdescr *param,
 	  struct cnfparamvals *val)
 {
 	unsigned char *c;
 	es_size_t i;
 	long long n;
+	int r;
 	c = es_getBufAddr(valnode->val.d.estr);
 	n = 0;
 	i = 0;
@@ -363,17 +364,21 @@ doGetSize(struct nvlst *valnode, struct cnfparamdescr *param,
 	if(i == es_strlen(valnode->val.d.estr)) {
 		val->val.datatype = 'N';
 		val->val.d.n = n;
+		r = 1;
 	} else {
 		parser_errmsg("parameter '%s' does not contain a valid size",
 			      param->name);
+		r = 0;
 	}
+	return r;
 }
 
 
-static inline void
+static inline int
 doGetBinary(struct nvlst *valnode, struct cnfparamdescr *param,
 	  struct cnfparamvals *val)
 {
+	int r = 1;
 	val->val.datatype = 'N';
 	if(!es_strbufcmp(valnode->val.d.estr, (unsigned char*) "on", 2)) {
 		val->val.d.n = 1;
@@ -383,14 +388,17 @@ doGetBinary(struct nvlst *valnode, struct cnfparamdescr *param,
 		parser_errmsg("parameter '%s' must be \"on\" or \"off\" but "
 		  "is neither. Results unpredictable.", param->name);
 		val->val.d.n = 0;
+		r = 0;
 	}
+	return r;
 }
 
-static inline void
+static inline int
 doGetQueueType(struct nvlst *valnode, struct cnfparamdescr *param,
 	  struct cnfparamvals *val)
 {
 	char *cstr;
+	int r = 1;
 	if(!es_strcasebufcmp(valnode->val.d.estr, (uchar*)"fixedarray", 10)) {
 		val->val.d.n = QUEUETYPE_FIXED_ARRAY;
 	} else if(!es_strcasebufcmp(valnode->val.d.estr, (uchar*)"linkedlist", 10)) {
@@ -404,15 +412,17 @@ doGetQueueType(struct nvlst *valnode, struct cnfparamdescr *param,
 		parser_errmsg("param '%s': unknown queue type: '%s'",
 			      param->name, cstr);
 		free(cstr);
+		r = 0;
 	}
 	val->val.datatype = 'N';
+	return r;
 }
 
 
 /* A file create-mode must be a four-digit octal number
  * starting with '0'.
  */
-static inline void
+static inline int
 doGetFileCreateMode(struct nvlst *valnode, struct cnfparamdescr *param,
 	  struct cnfparamvals *val)
 {
@@ -441,13 +451,15 @@ doGetFileCreateMode(struct nvlst *valnode, struct cnfparamdescr *param,
 		param->name, cstr);
 		free(cstr);
 	}
+	return fmtOK;
 }
 
-static inline void
+static inline int
 doGetGID(struct nvlst *valnode, struct cnfparamdescr *param,
 	  struct cnfparamvals *val)
 {
 	char *cstr;
+	int r;
 	struct group *resultBuf;
 	struct group wrkBuf;
 	char stringBuf[2048]; /* 2048 has been proven to be large enough */
@@ -457,20 +469,24 @@ doGetGID(struct nvlst *valnode, struct cnfparamdescr *param,
 	if(resultBuf == NULL) {
 		parser_errmsg("parameter '%s': ID for group %s could not "
 		  "be found", param->name, cstr);
+		r = 0;
 	} else {
 		val->val.datatype = 'N';
 		val->val.d.n = resultBuf->gr_gid;
 		dbgprintf("param '%s': uid %d obtained for group '%s'\n",
 		   param->name, (int) resultBuf->gr_gid, cstr);
+		r = 1;
 	}
 	free(cstr);
+	return r;
 }
 
-static inline void
+static inline int
 doGetUID(struct nvlst *valnode, struct cnfparamdescr *param,
 	  struct cnfparamvals *val)
 {
 	char *cstr;
+	int r;
 	struct passwd *resultBuf;
 	struct passwd wrkBuf;
 	char stringBuf[2048]; /* 2048 has been proven to be large enough */
@@ -480,19 +496,22 @@ doGetUID(struct nvlst *valnode, struct cnfparamdescr *param,
 	if(resultBuf == NULL) {
 		parser_errmsg("parameter '%s': ID for user %s could not "
 		  "be found", param->name, cstr);
+		r = 0;
 	} else {
 		val->val.datatype = 'N';
 		val->val.d.n = resultBuf->pw_uid;
 		dbgprintf("param '%s': uid %d obtained for user '%s'\n",
 		   param->name, (int) resultBuf->pw_uid, cstr);
+		r = 1;
 	}
 	free(cstr);
+	return r;
 }
 
 /* note: we support all integer formats that es_str2num support,
  * so hex and octal representations are also valid.
  */
-static inline void
+static inline int
 doGetInt(struct nvlst *valnode, struct cnfparamdescr *param,
 	  struct cnfparamvals *val)
 {
@@ -506,13 +525,47 @@ doGetInt(struct nvlst *valnode, struct cnfparamdescr *param,
 	}
 	val->val.datatype = 'N';
 	val->val.d.n = n;
+	return bSuccess;
 }
 
-static inline void
+static inline int
+doGetNonNegInt(struct nvlst *valnode, struct cnfparamdescr *param,
+	  struct cnfparamvals *val)
+{
+	int bSuccess;
+
+	if((bSuccess = doGetInt(valnode, param, val))) {
+		if(val->val.d.n < 0) {
+			parser_errmsg("parameter '%s' cannot be less than zero (was %lld)",
+			  param->name, val->val.d.n);
+			bSuccess = 0;
+		}
+	}
+	return bSuccess;
+}
+
+static inline int
+doGetPositiveInt(struct nvlst *valnode, struct cnfparamdescr *param,
+	  struct cnfparamvals *val)
+{
+	int bSuccess;
+
+	if((bSuccess = doGetInt(valnode, param, val))) {
+		if(val->val.d.n < 1) {
+			parser_errmsg("parameter '%s' cannot be less than one (was %lld)",
+			  param->name, val->val.d.n);
+			bSuccess = 0;
+		}
+	}
+	return bSuccess;
+}
+
+static inline int
 doGetWord(struct nvlst *valnode, struct cnfparamdescr *param,
 	  struct cnfparamvals *val)
 {
 	es_size_t i;
+	int r = 1;
 	unsigned char *c;
 	val->val.datatype = 'S';
 	val->val.d.estr = es_newStr(32);
@@ -524,30 +577,36 @@ doGetWord(struct nvlst *valnode, struct cnfparamdescr *param,
 		parser_errmsg("parameter '%s' contains whitespace, which is not "
 		  "permitted - data after first whitespace ignored",
 		  param->name);
+		r = 0;
 	}
+	return r;
 }
 
-static inline void
+static inline int
 doGetChar(struct nvlst *valnode, struct cnfparamdescr *param,
 	  struct cnfparamvals *val)
 {
+	int r = 1;
 	if(es_strlen(valnode->val.d.estr) != 1) {
 		parser_errmsg("parameter '%s' must contain exactly one character "
 		  "but contains %d - cannot be processed",
 		  param->name, es_strlen(valnode->val.d.estr));
+		r = 0;
 	}
 	val->val.datatype = 'S';
 	val->val.d.estr = es_strdup(valnode->val.d.estr);
+	return r;
 }
 
 /* get a single parameter according to its definition. Helper to
- * nvlstGetParams.
+ * nvlstGetParams. returns 1 if success, 0 otherwise
  */
-static inline void
+static inline int
 nvlstGetParam(struct nvlst *valnode, struct cnfparamdescr *param,
 	       struct cnfparamvals *val)
 {
 	uchar *cstr;
+	int r;
 
 	dbgprintf("XXXX: in nvlstGetParam, name '%s', type %d, valnode->bUsed %d\n",
 		  param->name, (int) param->type, valnode->bUsed);
@@ -555,56 +614,68 @@ nvlstGetParam(struct nvlst *valnode, struct cnfparamdescr *param,
 	val->bUsed = 1;
 	switch(param->type) {
 	case eCmdHdlrQueueType:
-		doGetQueueType(valnode, param, val);
+		r = doGetQueueType(valnode, param, val);
 		break;
 	case eCmdHdlrUID:
-		doGetUID(valnode, param, val);
+		r = doGetUID(valnode, param, val);
 		break;
 	case eCmdHdlrGID:
-		doGetGID(valnode, param, val);
+		r = doGetGID(valnode, param, val);
 		break;
 	case eCmdHdlrBinary:
-		doGetBinary(valnode, param, val);
+		r = doGetBinary(valnode, param, val);
 		break;
 	case eCmdHdlrFileCreateMode:
-		doGetFileCreateMode(valnode, param, val);
+		r = doGetFileCreateMode(valnode, param, val);
 		break;
 	case eCmdHdlrInt:
-		doGetInt(valnode, param, val);
+		r = doGetInt(valnode, param, val);
+		break;
+	case eCmdHdlrNonNegInt:
+		r = doGetPositiveInt(valnode, param, val);
+		break;
+	case eCmdHdlrPositiveInt:
+		r = doGetPositiveInt(valnode, param, val);
 		break;
 	case eCmdHdlrSize:
-		doGetSize(valnode, param, val);
+		r = doGetSize(valnode, param, val);
 		break;
 	case eCmdHdlrGetChar:
-		doGetChar(valnode, param, val);
+		r = doGetChar(valnode, param, val);
 		break;
 	case eCmdHdlrFacility:
 		cstr = (uchar*) es_str2cstr(valnode->val.d.estr, NULL);
 		val->val.datatype = 'N';
 		val->val.d.n = decodeSyslogName(cstr, syslogFacNames);
 		free(cstr);
+		r = 1;
 		break;
 	case eCmdHdlrSeverity:
 		cstr = (uchar*) es_str2cstr(valnode->val.d.estr, NULL);
 		val->val.datatype = 'N';
 		val->val.d.n = decodeSyslogName(cstr, syslogPriNames);
 		free(cstr);
+		r = 1;
 		break;
 	case eCmdHdlrGetWord:
-		doGetWord(valnode, param, val);
+		r = doGetWord(valnode, param, val);
 		break;
 	case eCmdHdlrString:
 		val->val.datatype = 'S';
 		val->val.d.estr = es_strdup(valnode->val.d.estr);
+		r = 1;
 		break;
 	case eCmdHdlrGoneAway:
 		parser_errmsg("parameter '%s' is no longer supported",
 			      param->name);
+		r = 1; /* this *is* valid! */
 		break;
 	default:
 		dbgprintf("error: invalid param type\n");
+		r = 0;
 		break;
 	}
+	return r;
 }
 
 
@@ -619,6 +690,8 @@ nvlstGetParams(struct nvlst *lst, struct cnfparamblk *params,
 	       struct cnfparamvals *vals)
 {
 	int i;
+	int bValsWasNULL;
+	int bInError = 0;
 	struct nvlst *valnode;
 	struct cnfparamdescr *param;
 
@@ -630,9 +703,12 @@ nvlstGetParams(struct nvlst *lst, struct cnfparamblk *params,
 	}
 	
 	if(vals == NULL) {
+		bValsWasNULL = 1;
 		if((vals = calloc(params->nParams,
 				  sizeof(struct cnfparamvals))) == NULL)
 			return NULL;
+	} else {
+		bValsWasNULL = 0;
 	}
 
 	for(i = 0 ; i < params->nParams ; ++i) {
@@ -644,8 +720,19 @@ nvlstGetParams(struct nvlst *lst, struct cnfparamblk *params,
 			  "one instance is ignored. Fix config", param->name);
 			continue;
 		}
-		nvlstGetParam(valnode, param, vals + i);
+		if(!nvlstGetParam(valnode, param, vals + i)) {
+			bInError = 1;
+		}
 	}
+
+
+	if(bInError) {
+		if(bValsWasNULL)
+			cnfparamvalsDestruct(vals, params);
+		vals = NULL;
+	}
+
+dbgprintf("DDDD: vals %p\n", vals);
 	return vals;
 }
 
