@@ -88,6 +88,17 @@ struct modConfData_s {
 static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
 static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current load process */
 
+/* input instance parameters */
+static struct cnfparamdescr inppdescr[] = {
+	{ "port", eCmdHdlrString, CNFPARAM_REQUIRED }
+};
+static struct cnfparamblk inppblk =
+	{ CNFPARAMBLK_VERSION,
+	  sizeof(inppdescr)/sizeof(struct cnfparamdescr),
+	  inppdescr
+	};
+
+
 
 /* ------------------------------ callbacks ------------------------------ */
 
@@ -114,6 +125,32 @@ onSyslogRcv(uchar *pHostname, uchar *pIP, uchar *pMsg, size_t lenMsg)
 
 /* ------------------------------ end callbacks ------------------------------ */
 
+/* create input instance, set default paramters, and
+ * add it to the list of instances.
+ */
+static rsRetVal
+createInstance(instanceConf_t **pinst)
+{
+	instanceConf_t *inst;
+	DEFiRet;
+	CHKmalloc(inst = MALLOC(sizeof(instanceConf_t)));
+	inst->next = NULL;
+
+	inst->pszBindPort = NULL;
+
+	/* node created, let's add to config */
+	if(loadModConf->tail == NULL) {
+		loadModConf->tail = loadModConf->root = inst;
+	} else {
+		loadModConf->tail->next = inst;
+		loadModConf->tail = inst;
+	}
+
+	*pinst = inst;
+finalize_it:
+	RETiRet;
+}
+
 
 /* modified to work for module, not instance (as usual) */
 static inline void
@@ -134,21 +171,12 @@ static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	instanceConf_t *inst;
 	DEFiRet;
 
-	CHKmalloc(inst = MALLOC(sizeof(instanceConf_t)));
+	CHKiRet(createInstance(&inst));
 
 	if(pNewVal == NULL || *pNewVal == '\0') {
 		errmsg.LogError(0, NO_ERRCODE, "imrelp: port number must be specified, listener ignored");
 	}
 	inst->pszBindPort = pNewVal;
-	inst->next = NULL;
-
-	/* node created, let's add to config */
-	if(loadModConf->tail == NULL) {
-		loadModConf->tail = loadModConf->root = inst;
-	} else {
-		loadModConf->tail->next = inst;
-		loadModConf->tail = inst;
-	}
 
 finalize_it:
 	RETiRet;
@@ -174,6 +202,43 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 finalize_it:
 	RETiRet;
 }
+
+
+BEGINnewInpInst
+	struct cnfparamvals *pvals;
+	instanceConf_t *inst;
+	int i;
+CODESTARTnewInpInst
+	DBGPRINTF("newInpInst (imrelp)\n");
+
+	pvals = nvlstGetParams(lst, &inppblk, NULL);
+	if(pvals == NULL) {
+		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS,
+			        "imrelp: required parameter are missing\n");
+		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
+
+	if(Debug) {
+		dbgprintf("input param blk in imrelp:\n");
+		cnfparamsPrint(&inppblk, pvals);
+	}
+
+	CHKiRet(createInstance(&inst));
+
+	for(i = 0 ; i < inppblk.nParams ; ++i) {
+		if(!pvals[i].bUsed)
+			continue;
+		if(!strcmp(inppblk.descr[i].name, "port")) {
+			inst->pszBindPort = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else {
+			dbgprintf("imrelp: program error, non-handled "
+			  "param '%s'\n", inppblk.descr[i].name);
+		}
+	}
+finalize_it:
+CODE_STD_FINALIZERnewInpInst
+	cnfparamvalsDestruct(pvals, &inppblk);
+ENDnewInpInst
 
 
 BEGINbeginCnfLoad
@@ -328,6 +393,7 @@ CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_IMOD_QUERIES
 CODEqueryEtryPt_STD_CONF2_QUERIES
 CODEqueryEtryPt_STD_CONF2_PREPRIVDROP_QUERIES
+CODEqueryEtryPt_STD_CONF2_IMOD_QUERIES
 CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
 ENDqueryEtryPt
 

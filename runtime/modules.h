@@ -131,6 +131,7 @@ struct modInfo_s {
 /* TODO: remove? */rsRetVal (*willRun)(void); 		/* check if the current config will be able to run*/
 			rsRetVal (*runInput)(thrdInfo_t*);	/* function to gather input and submit to queue */
 			rsRetVal (*afterRun)(thrdInfo_t*);	/* function to gather input and submit to queue */
+			rsRetVal (*newInpInst)(struct nvlst *lst);
 			int bCanRun;	/* cached value of whether willRun() succeeded */
 		} im;
 		struct {/* data for output modules */
@@ -191,6 +192,6 @@ PROTOTYPEObj(module);
  * that are not called from plugins.
  */
 rsRetVal modulesProcessCnf(struct cnfobj *o);
-
-rsRetVal addModToCnfList(modInfo_t *pThis);
+rsRetVal addModToCnfList(cfgmodules_etry_t *pNew, cfgmodules_etry_t *pLast);
+rsRetVal readyModForCnf(modInfo_t *pThis, cfgmodules_etry_t **ppNew, cfgmodules_etry_t **ppLast);
 #endif /* #ifndef MODULES_H_INCLUDED */

@@ -154,6 +154,8 @@ typedef enum cslCmdHdlrType {
 	eCmdHdlrBinary,
 	eCmdHdlrFileCreateMode,
 	eCmdHdlrInt,
+	eCmdHdlrNonNegInt,
+	eCmdHdlrPositiveInt,
 	eCmdHdlrSize,
 	eCmdHdlrGetChar,
 	eCmdHdlrFacility,
