@@ -414,7 +414,9 @@ startupSrv(ptcpsrv_t *pSrv)
 #endif
 	           ) {
 			/* TODO: check if *we* bound the socket - else we *have* an error! */
-                        DBGPRINTF("error %d while binding tcp socket\n", errno);
+			char errStr[1024];
+			rs_strerror_r(errno, errStr, sizeof(errStr));
+                        dbgprintf("error %d while binding tcp socket: %s\n", errno, errStr);
                 	close(sock);
 			sock = -1;
                         continue;
