@@ -108,6 +108,8 @@ int fileno(FILE *stream);
 <EXPR>"+" |
 <EXPR>"&" |
 <EXPR>"-" |
+<EXPR>"[" |
+<EXPR>"]" |
 <EXPR>"(" |
 <EXPR>")"			{ return yytext[0]; }
 <EXPR>"=="			{ return CMP_EQ; }
@@ -188,10 +190,17 @@ int fileno(FILE *stream);
 <INOBJ>")"			{ BEGIN INITIAL; return ENDOBJ; }
 <INOBJ>[a-z][a-z0-9_\.]*	{ yylval.estr = es_newStrFromCStr(yytext, yyleng);
 				  return NAME; }
+<INOBJ>"," |
+<INOBJ>"[" |
+<INOBJ>"]" |
 <INOBJ>"="			{ return(yytext[0]); }
 <INOBJ>\"([^"\\]|\\['"?\\abfnrtv]|\\[0-7]{1,3})*\" {
-				  yylval.estr = es_newStrFromBuf(yytext+1, yyleng-2);
-				  return VALUE; }
+				   yytext[yyleng-1] = '\0';
+				   unescapeStr((uchar*)yytext+1, yyleng-2);
+				   yylval.estr = es_newStrFromBuf(yytext+1, strlen(yytext)-1);
+				   return STRING; }
+				  /*yylval.estr = es_newStrFromBuf(yytext+1, yyleng-2);
+				  return VALUE; }*/
 "/*"				{ preCommentState = YY_START; BEGIN COMMENT; }
 <EXPR>"/*"			{ preCommentState = YY_START; BEGIN COMMENT; }
 <COMMENT>"*/"			{ BEGIN preCommentState; }

@@ -51,12 +51,12 @@ extern int yyerror(char*);
 	struct nvlst *nvlst;
 	struct objlst *objlst;
 	struct cnfexpr *expr;
+	struct cnfarray *arr;
 	struct cnffunc *func;
 	struct cnffparamlst *fparams;
 }
 
 %token <estr> NAME
-%token <estr> VALUE
 %token <estr> FUNC
 %token <objType> BEGINOBJ
 %token ENDOBJ
@@ -94,6 +94,7 @@ extern int yyerror(char*);
 %token CMP_STARTSWITH
 %token CMP_STARTSWITHI
 
+%type <estr> value
 %type <nvlst> nv nvlst
 %type <obj> obj property constant
 %type <objlst> propconst
@@ -108,6 +109,7 @@ extern int yyerror(char*);
 %type <rule> scriptfilt
 */
 %type <fparams> fparams
+%type <arr> array arrayelt
 
 %left AND OR
 %left CMP_EQ CMP_NE CMP_LE CMP_GE CMP_LT CMP_GT CMP_CONTAINS CMP_CONTAINSI CMP_STARTSWITH CMP_STARTSWITHI
@@ -147,7 +149,9 @@ property: BEGIN_PROPERTY nvlst ENDOBJ	{ $$ = cnfobjNew(CNFOBJ_PROPERTY, $2); }
 constant: BEGIN_CONSTANT nvlst ENDOBJ	{ $$ = cnfobjNew(CNFOBJ_CONSTANT, $2); }
 nvlst:					{ $$ = NULL; }
 	| nvlst nv 			{ $2->next = $1; $$ = $2; }
-nv:	NAME '=' VALUE 			{ $$ = nvlstNew($1, $3); }
+nv:	NAME '=' value 			{ $$ = nvlstNew($1, $3); }
+value:	  STRING			{ $$ = $1; }
+	| array				{ dbgprintf("DDDD: value array\n"); }
 script:	  stmt				{ $$ = $1; }
 	| script stmt			{ $$ = scriptAddStmt($1, $2); }
 stmt:	  actlst			{ $$ = $1; }
@@ -196,8 +200,12 @@ expr:	  expr AND expr			{ $$ = cnfexprNew(AND, $1, $3); }
 	| NUMBER			{ $$ = (struct cnfexpr*) cnfnumvalNew($1); }
 	| STRING			{ $$ = (struct cnfexpr*) cnfstringvalNew($1); }
 	| VAR				{ $$ = (struct cnfexpr*) cnfvarNew($1); }
+	| array				{ $$ = (struct cnfexpr*) $1; }
 fparams:  expr				{ $$ = cnffparamlstNew($1, NULL); }
 	| expr ',' fparams		{ $$ = cnffparamlstNew($1, $3); }
+array:	 '[' arrayelt ']'		{ $$ = $2; }
+arrayelt: STRING			{ $$ = cnfarrayNew($1); }
+	| arrayelt ',' STRING		{ $$ = cnfarrayAdd($1, $3); }
 
 %%
 /*

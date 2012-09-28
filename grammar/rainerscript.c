@@ -1428,6 +1428,13 @@ cnfexprEval(struct cnfexpr *expr, struct var *ret, void* usrptr)
 		ret->datatype = 'S';
 		ret->d.estr = es_strdup(((struct cnfstringval*)expr)->estr);
 		break;
+	case S_ARRAY:
+		/* if an array is used with "normal" operations, it just evaluates
+		 * to its first element.
+		 */
+		ret->datatype = 'S';
+		ret->d.estr = es_strdup(((struct cnfarray*)expr)->arr[0]);
+		break;
 	case 'V':
 		evalVar((struct cnfvar*)expr, usrptr, ret);
 		break;
@@ -1473,6 +1480,17 @@ cnfexprEval(struct cnfexpr *expr, struct var *ret, void* usrptr)
 }
 
 //---------------------------------------------------------
+
+static inline void
+cnfarrayDestruct(struct cnfarray *ar)
+{
+	unsigned short i;
+
+	for(i = 0 ; i < ar->nmemb ; ++i) {
+		es_deleteStr(ar->arr[i]);
+	}
+	free(ar->arr);
+}
 
 static inline void
 cnffuncDestruct(struct cnffunc *func)
@@ -1538,6 +1556,9 @@ cnfexprDestruct(struct cnfexpr *expr)
 	case 'F':
 		cnffuncDestruct((struct cnffunc*)expr);
 		break;
+	case S_ARRAY:
+		cnfarrayDestruct((struct cnfarray*)expr);
+		break;
 	default:break;
 	}
 	free(expr);
@@ -1588,7 +1609,7 @@ cnfexprPrint(struct cnfexpr *expr, int indent)
 	struct cnffunc *func;
 	int i;
 
-	//dbgprintf("expr %p, indent %d, type '%c'\n", expr, indent, expr->nodetype);
+	dbgprintf("expr %p, indent %d, type '%c'\n", expr, indent, expr->nodetype);
 	switch(expr->nodetype) {
 	case CMP_EQ:
 		cnfexprPrint(expr->l, indent+1);
@@ -1671,6 +1692,15 @@ cnfexprPrint(struct cnfexpr *expr, int indent)
 		doIndent(indent);
 		cstrPrint("string '", ((struct cnfstringval*)expr)->estr);
 		dbgprintf("'\n");
+		break;
+	case S_ARRAY:
+dbgprintf("DDDD: %d members\n", ((struct cnfarray*)expr)->nmemb);
+		doIndent(indent); dbgprintf("ARRAY:\n");
+		for(i = 0 ; i < ((struct cnfarray*)expr)->nmemb ; ++i) {
+			doIndent(indent+1);
+			cstrPrint("string '", ((struct cnfarray*)expr)->arr[i]);
+			dbgprintf("'\n");
+		}
 		break;
 	case 'N':
 		doIndent(indent);
@@ -1813,6 +1843,39 @@ cnfstringvalNew(es_str_t *estr)
 	return strval;
 }
 
+/* creates array AND adds first element to it */
+struct cnfarray*
+cnfarrayNew(es_str_t *val)
+{
+	struct cnfarray *ar;
+	if((ar = malloc(sizeof(struct cnfarray))) != NULL) {
+		ar->nodetype = S_ARRAY;
+		ar->nmemb = 1;
+		if((ar->arr = malloc(sizeof(es_str_t*))) == NULL) {
+			free(ar);
+			ar = NULL;
+			goto done;
+		}
+		ar->arr[0] = val;
+	}
+done:	return ar;
+}
+
+/* creates array AND adds first element to it */
+struct cnfarray*
+cnfarrayAdd(struct cnfarray *ar, es_str_t *val)
+{
+	es_str_t **newptr;
+	if((newptr = realloc(ar->arr, (ar->nmemb+1)*sizeof(es_str_t*))) == NULL) {
+		DBGPRINTF("cnfarrayAdd: realloc failed, item ignored, ar->arr=%p\n", ar->arr);
+		goto done;
+	} else {
+		ar->arr = newptr;
+		ar->arr[ar->nmemb] = val;
+		ar->nmemb++;
+	}
+done:	return ar;
+}
 
 struct cnfvar*
 cnfvarNew(char *name)

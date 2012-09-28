@@ -116,6 +116,7 @@ struct nvlst {
  * V - var
  * ... plus the S_* #define's below:
  */
+#define S_ARRAY 3000
 #define S_STOP 4000
 #define S_PRIFILT 4001
 #define S_PROPFILT 4002
@@ -198,6 +199,12 @@ struct cnfstringval {
 struct cnfvar {
 	unsigned nodetype;
 	char *name;
+};
+
+struct cnfarray {
+	unsigned nodetype;
+	int nmemb;
+	es_str_t **arr;
 };
 
 struct cnffparamlst {
@@ -315,6 +322,8 @@ struct cnfstmt * cnfstmtNewSet(char *var, struct cnfexpr *expr);
 struct cnfstmt * cnfstmtNewUnset(char *var);
 void cnfstmtDestruct(struct cnfstmt *root);
 void cnfstmtOptimize(struct cnfstmt *root);
+struct cnfarray* cnfarrayNew(es_str_t *val);
+struct cnfarray* cnfarrayAdd(struct cnfarray *ar, es_str_t *val);
 char* getFIOPName(unsigned iFIOP);
 rsRetVal initRainerscript(void);
 void unescapeStr(uchar *s, int len);
