@@ -142,14 +142,13 @@ int fileno(FILE *stream);
 "&"				{ return '&'; }
 "{"				{ return '{'; }
 "}"				{ return '}'; }
-"ruleset"			{ dbgprintf("RULESET\n"); }
- /* line number support because the "preprocessor" combines lines and so needs
-  * to tell us the real source line.
-  */
 "stop"				{ return STOP; }
 "else"				{ return ELSE; }
 "set"				{ BEGIN EXPR; return SET; }
 "unset"				{ BEGIN EXPR; return UNSET; }
+ /* line number support because the "preprocessor" combines lines and so needs
+  * to tell us the real source line.
+  */
 "preprocfilelinenumber("	{ BEGIN LINENO; }
 <LINENO>[0-9]+			{ yylineno = atoi(yytext) - 1; }
 <LINENO>")"			{ BEGIN INITIAL; }
@@ -165,6 +164,8 @@ int fileno(FILE *stream);
 				  BEGIN INOBJ; return BEGINOBJ; }
 "template"[ \n\t]*"("		{ yylval.objType = CNFOBJ_TPL;
 				  BEGIN INOBJ; return BEGIN_TPL; }
+"ruleset"[ \n\t]*"("		{ yylval.objType = CNFOBJ_RULESET;
+				  BEGIN INOBJ; return BEGIN_RULESET; }
 "property"[ \n\t]*"("		{ yylval.objType = CNFOBJ_PROPERTY;
 				  BEGIN INOBJ; return BEGIN_PROPERTY; }
 "constant"[ \n\t]*"("		{ yylval.objType = CNFOBJ_CONSTANT;

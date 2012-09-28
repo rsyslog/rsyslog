@@ -29,7 +29,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #include "config.h"
 #include <stdlib.h>
 #include <assert.h>
@@ -55,6 +54,16 @@
 DEFobjStaticHelpers
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(parser)
+
+/* tables for interfacing with the v6 config system (as far as we need to) */
+static struct cnfparamdescr rspdescr[] = {
+	{ "name", eCmdHdlrString, CNFPARAM_REQUIRED }
+};
+static struct cnfparamblk rspblk =
+	{ CNFPARAMBLK_VERSION,
+	  sizeof(rspdescr)/sizeof(struct cnfparamdescr),
+	  rspdescr
+	};
 
 /* forward definitions */
 static rsRetVal processBatch(batch_t *pBatch);
@@ -564,6 +573,7 @@ GetParserList(rsconf_t *conf, msg_t *pMsg)
 static void
 addScript(ruleset_t *pThis, struct cnfstmt *script)
 {
+dbgprintf("DDDD: add script %p, ruleset %p\n", script, pThis);
 	if(pThis->last == NULL)
 		pThis->root = pThis->last = script;
 	else {
@@ -574,7 +584,7 @@ addScript(ruleset_t *pThis, struct cnfstmt *script)
 
 
 /* set name for ruleset */
-static rsRetVal setName(ruleset_t *pThis, uchar *pszName)
+static rsRetVal rulesetSetName(ruleset_t *pThis, uchar *pszName)
 {
 	DEFiRet;
 	free(pThis->pszName);
@@ -890,6 +900,47 @@ rulesetAddParser(void __attribute__((unused)) *pVal, uchar *pName)
 }
 
 
+/* Process ruleset() objects */
+rsRetVal
+rulesetProcessCnf(struct cnfobj *o)
+{
+	struct cnfparamvals *pvals;
+	rsRetVal localRet;
+	uchar *rsName = NULL;
+	int nameIdx;
+	ruleset_t *pRuleset;
+	DEFiRet;
+
+	pvals = nvlstGetParams(o->nvlst, &rspblk, NULL);
+	if(pvals == NULL) {
+		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+	}
+	DBGPRINTF("ruleset param blk after rulesetProcessCnf:\n");
+	cnfparamsPrint(&rspblk, pvals);
+	nameIdx = cnfparamGetIdx(&rspblk, "name");
+	rsName = (uchar*)es_str2cstr(pvals[nameIdx].val.d.estr, NULL);
+	localRet = rulesetGetRuleset(loadConf, &pRuleset, rsName);
+	if(localRet == RS_RET_OK) {
+		errmsg.LogError(0, RS_RET_RULESET_EXISTS,
+			"error: ruleset '%s' specified more than once",
+			rsName);
+		cnfstmtDestruct(o->script);
+		ABORT_FINALIZE(RS_RET_RULESET_EXISTS);
+	} else if(localRet != RS_RET_NOT_FOUND) {
+		ABORT_FINALIZE(localRet);
+	}
+	CHKiRet(rulesetConstruct(&pRuleset));
+	CHKiRet(rulesetSetName(pRuleset, rsName));
+	CHKiRet(rulesetConstructFinalize(loadConf, pRuleset));
+	addScript(pRuleset, o->script);
+
+finalize_it:
+	free(rsName);
+	cnfparamvalsDestruct(pvals, &rspblk);
+	RETiRet;
+}
+
+
 /* queryInterface function
  * rgerhards, 2008-02-21
  */
@@ -913,7 +964,7 @@ CODESTARTobjQueryInterface(ruleset)
 	pIf->DestructAllActions = destructAllActions;
 	pIf->AddScript = addScript;
 	pIf->ProcessBatch = processBatch;
-	pIf->SetName = setName;
+	pIf->SetName = rulesetSetName;
 	pIf->DebugPrintAll = debugPrintAll;
 	pIf->GetCurrent = GetCurrent;
 	pIf->GetRuleset = rulesetGetRuleset;

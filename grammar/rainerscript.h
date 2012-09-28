@@ -20,6 +20,7 @@ extern int Debug; /* 1 if in debug mode, 0 otherwise -- to be enhanced */
 
 enum cnfobjType {
 	CNFOBJ_ACTION,
+	CNFOBJ_RULESET,
 	CNFOBJ_GLOBAL,
 	CNFOBJ_INPUT,
 	CNFOBJ_MODULE,
@@ -35,6 +36,9 @@ cnfobjType2str(enum cnfobjType ot)
 	switch(ot) {
 	case CNFOBJ_ACTION:
 		return "action";
+		break;
+	case CNFOBJ_RULESET:
+		return "ruleset";
 		break;
 	case CNFOBJ_GLOBAL:
 		return "global";
@@ -81,6 +85,7 @@ struct cnfobj {
 	enum cnfobjType objType;
 	struct nvlst *nvlst;
 	struct objlst *subobjs;
+	struct cnfstmt *script;
 };
 
 struct objlst {

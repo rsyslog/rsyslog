@@ -732,7 +732,6 @@ nvlstGetParams(struct nvlst *lst, struct cnfparamblk *params,
 		vals = NULL;
 	}
 
-dbgprintf("DDDD: vals %p\n", vals);
 	return vals;
 }
 
@@ -777,6 +776,7 @@ cnfobjNew(enum cnfobjType objType, struct nvlst *lst)
 		o->objType = objType;
 		o->nvlst = lst;
 		o->subobjs = NULL;
+		o->script = NULL;
 	}
 
 	return o;

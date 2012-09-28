@@ -64,6 +64,7 @@ extern int yyerror(char*);
 %token BEGIN_PROPERTY
 %token BEGIN_CONSTANT
 %token BEGIN_TPL
+%token BEGIN_RULESET
 %token STOP
 %token SET
 %token UNSET
@@ -134,6 +135,10 @@ obj:	  BEGINOBJ nvlst ENDOBJ 	{ $$ = cnfobjNew($1, $2); }
         | BEGIN_TPL nvlst ENDOBJ '{' propconst '}'
 					{ $$ = cnfobjNew(CNFOBJ_TPL, $2);
 					  $$->subobjs = $5;
+					}
+        | BEGIN_RULESET nvlst ENDOBJ '{' stmt '}'
+					{ $$ = cnfobjNew(CNFOBJ_RULESET, $2);
+					  $$->script = $5;
 					}
 propconst:				{ $$ = NULL; }
 	| propconst property		{ $$ = objlstAdd($1, $2); }

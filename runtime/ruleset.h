@@ -95,4 +95,5 @@ rulesetGetName(ruleset_t *pRuleset)
  */
 rsRetVal rulesetGetRuleset(rsconf_t *conf, ruleset_t **ppRuleset, uchar *pszName);
 rsRetVal rulesetOptimizeAll(rsconf_t *conf);
+rsRetVal rulesetProcessCnf(struct cnfobj *o);
 #endif /* #ifndef INCLUDED_RULESET_H */

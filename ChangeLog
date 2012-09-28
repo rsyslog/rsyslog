@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------
 Version 7.1.5  [devel] 2012-09-25
+- implemented RainerScript ruleset() statement
 - implemented RainerScript prifield() function
 - implemented RainerScript field() function
 - added new module imkmsg to process structured kernel log

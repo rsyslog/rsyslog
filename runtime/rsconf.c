@@ -412,6 +412,9 @@ void cnfDoObj(struct cnfobj *o)
 	case CNFOBJ_TPL:
 		tplProcessCnf(o);
 		break;
+	case CNFOBJ_RULESET:
+		rulesetProcessCnf(o);
+		break;
 	case CNFOBJ_PROPERTY:
 	case CNFOBJ_CONSTANT:
 		/* these types are processed at a later stage */
