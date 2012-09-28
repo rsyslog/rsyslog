@@ -1,9 +1,13 @@
 ---------------------------------------------------------------------------
 Version 7.1.7  [devel] 2012-09-??
-- implement RainerScript array-based string comparison operations
+- implemented RainerScript array-based string comparison operations
+---------------------------------------------------------------------------
+Version 7.1.6  [devel] 2012-09-28
+- implemented RainerScript input() statement, including support for it
+  in major input plugins
+- implemented RainerScript ruleset() statement
 ---------------------------------------------------------------------------
 Version 7.1.5  [devel] 2012-09-25
-- implemented RainerScript ruleset() statement
 - implemented RainerScript prifield() function
 - implemented RainerScript field() function
 - added new module imkmsg to process structured kernel log
