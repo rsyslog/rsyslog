@@ -1100,6 +1100,41 @@ evalVar(struct cnfvar *var, void *usrptr, struct var *ret)
 
 }
 
+/* perform a string comparision operation against a while array. Semantic is
+ * that one one comparison is true, the whole construct is true.
+ * TODO: we can obviously optimize this process. One idea is to
+ * compile a regex, which should work faster than serial comparison.
+ */
+static int
+evalStrArrayCmp(es_str_t *estr_l, struct cnfarray* ar, int cmpop)
+{
+	int i;
+	int r = 0;
+	for(i = 0 ; (r == 0) && (i < ar->nmemb) ; ++i) {
+		switch(cmpop) {
+		case CMP_EQ:
+			r = es_strcmp(estr_l, ar->arr[i]) == 0;
+			break;
+		case CMP_NE:
+			r = es_strcmp(estr_l, ar->arr[i]) != 0;
+			break;
+		case CMP_STARTSWITH:
+			r = es_strncmp(estr_l, ar->arr[i], es_strlen(ar->arr[i])) == 0;
+			break;
+		case CMP_STARTSWITHI:
+			r = es_strncasecmp(estr_l, ar->arr[i], es_strlen(ar->arr[i])) == 0;
+			break;
+		case CMP_CONTAINS:
+			r = es_strContains(estr_l, ar->arr[i]) != -1;
+			break;
+		case CMP_CONTAINSI:
+			r = es_strCaseContains(estr_l, ar->arr[i]) != -1;
+			break;
+		}
+	}
+	return r;
+}
+
 #define FREE_BOTH_RET \
 		if(r.datatype == 'S') es_deleteStr(r.d.estr); \
 		if(l.datatype == 'S') es_deleteStr(l.d.estr)
@@ -1111,13 +1146,14 @@ evalVar(struct cnfvar *var, void *usrptr, struct var *ret)
 	ret->d.n = var2Number(&l, &convok_l) x var2Number(&r, &convok_r); \
 	FREE_BOTH_RET
 
+/* NOTE: array as right-hand argument MUST be handled by user */
 #define PREP_TWO_STRINGS \
 		cnfexprEval(expr->l, &l, usrptr); \
 		estr_l = var2String(&l, &bMustFree2); \
 		if(expr->r->nodetype == 'S') { \
 			estr_r = ((struct cnfstringval*)expr->r)->estr;\
 			bMustFree = 0; \
-		} else { \
+		} else if(expr->r->nodetype != S_ARRAY) { \
 			cnfexprEval(expr->r, &r, usrptr); \
 			estr_r = var2String(&r, &bMustFree); \
 		}
@@ -1161,6 +1197,8 @@ cnfexprEval(struct cnfexpr *expr, struct var *ret, void* usrptr)
 		if(l.datatype == 'S') {
 			if(expr->r->nodetype == 'S') {
 				ret->d.n = !es_strcmp(l.d.estr, ((struct cnfstringval*)expr->r)->estr); /*CMP*/
+			} else if(expr->r->nodetype == S_ARRAY) {
+				ret->d.n = evalStrArrayCmp(l.d.estr,  (struct cnfarray*) expr->r, CMP_EQ);
 			} else {
 				cnfexprEval(expr->r, &r, usrptr);
 				if(r.datatype == 'S') {
@@ -1200,16 +1238,22 @@ cnfexprEval(struct cnfexpr *expr, struct var *ret, void* usrptr)
 		cnfexprEval(expr->r, &r, usrptr);
 		ret->datatype = 'N';
 		if(l.datatype == 'S') {
-			if(r.datatype == 'S') {
-				ret->d.n = es_strcmp(l.d.estr, r.d.estr); /*CMP*/
+			if(expr->r->nodetype == 'S') {
+				ret->d.n = es_strcmp(l.d.estr, ((struct cnfstringval*)expr->r)->estr); /*CMP*/
+			} else if(expr->r->nodetype == S_ARRAY) {
+				ret->d.n = evalStrArrayCmp(l.d.estr,  (struct cnfarray*) expr->r, CMP_NE);
 			} else {
-				n_l = var2Number(&l, &convok_l);
-				if(convok_l) {
-					ret->d.n = (n_l != r.d.n); /*CMP*/
+				if(r.datatype == 'S') {
+					ret->d.n = es_strcmp(l.d.estr, r.d.estr); /*CMP*/
 				} else {
-					estr_r = var2String(&r, &bMustFree);
-					ret->d.n = es_strcmp(l.d.estr, estr_r); /*CMP*/
-					if(bMustFree) es_deleteStr(estr_r);
+					n_l = var2Number(&l, &convok_l);
+					if(convok_l) {
+						ret->d.n = (n_l != r.d.n); /*CMP*/
+					} else {
+						estr_r = var2String(&r, &bMustFree);
+						ret->d.n = es_strcmp(l.d.estr, estr_r); /*CMP*/
+						if(bMustFree) es_deleteStr(estr_r);
+					}
 				}
 			}
 		} else {
@@ -1363,25 +1407,41 @@ cnfexprEval(struct cnfexpr *expr, struct var *ret, void* usrptr)
 	case CMP_STARTSWITH:
 		PREP_TWO_STRINGS;
 		ret->datatype = 'N';
-		ret->d.n = es_strncmp(estr_l, estr_r, estr_r->lenStr) == 0;
+		if(expr->r->nodetype == S_ARRAY) {
+			ret->d.n = evalStrArrayCmp(estr_l,  (struct cnfarray*) expr->r, CMP_STARTSWITH);
+		} else {
+			ret->d.n = es_strncmp(estr_l, estr_r, estr_r->lenStr) == 0;
+		}
 		FREE_TWO_STRINGS;
 		break;
 	case CMP_STARTSWITHI:
 		PREP_TWO_STRINGS;
 		ret->datatype = 'N';
-		ret->d.n = es_strncasecmp(estr_l, estr_r, estr_r->lenStr) == 0;
+		if(expr->r->nodetype == S_ARRAY) {
+			ret->d.n = evalStrArrayCmp(estr_l,  (struct cnfarray*) expr->r, CMP_STARTSWITHI);
+		} else {
+			ret->d.n = es_strncasecmp(estr_l, estr_r, estr_r->lenStr) == 0;
+		}
 		FREE_TWO_STRINGS;
 		break;
 	case CMP_CONTAINS:
 		PREP_TWO_STRINGS;
 		ret->datatype = 'N';
-		ret->d.n = es_strContains(estr_l, estr_r) != -1;
+		if(expr->r->nodetype == S_ARRAY) {
+			ret->d.n = evalStrArrayCmp(estr_l,  (struct cnfarray*) expr->r, CMP_CONTAINS);
+		} else {
+			ret->d.n = es_strContains(estr_l, estr_r) != -1;
+		}
 		FREE_TWO_STRINGS;
 		break;
 	case CMP_CONTAINSI:
 		PREP_TWO_STRINGS;
 		ret->datatype = 'N';
-		ret->d.n = es_strCaseContains(estr_l, estr_r) != -1;
+		if(expr->r->nodetype == S_ARRAY) {
+			ret->d.n = evalStrArrayCmp(estr_l,  (struct cnfarray*) expr->r, CMP_CONTAINSI);
+		} else {
+			ret->d.n = es_strCaseContains(estr_l, estr_r) != -1;
+		}
 		FREE_TWO_STRINGS;
 		break;
 	case OR:
@@ -1441,6 +1501,10 @@ cnfexprEval(struct cnfexpr *expr, struct var *ret, void* usrptr)
 	case '&':
 		/* TODO: think about optimization, should be possible ;) */
 		PREP_TWO_STRINGS;
+		if(expr->r->nodetype == S_ARRAY) {
+			estr_r = ((struct cnfarray*)expr->r)->arr[0];
+			bMustFree = 0;
+		}
 		ret->datatype = 'S';
 		ret->d.estr = es_strdup(estr_l);
 		es_addStr(&ret->d.estr, estr_r);

@@ -1,4 +1,7 @@
 ---------------------------------------------------------------------------
+Version 7.1.7  [devel] 2012-09-??
+- implement RainerScript array-based string comparison operations
+---------------------------------------------------------------------------
 Version 7.1.5  [devel] 2012-09-25
 - implemented RainerScript ruleset() statement
 - implemented RainerScript prifield() function
