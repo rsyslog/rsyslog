@@ -27,12 +27,36 @@ scenarios also exists with plain tcp syslog. RELP, even with the small
 nits outlined above, is a much more reliable solution than plain tcp
 syslog and so it is highly suggested to use RELP instead of plain tcp.
 Clients send messages to the RELP server via omrelp.</p>
+
 <p><b>Configuration Directives</b>:</p>
 <ul>
-<li>InputRELPServerBindRuleset &lt;name&gt; (available in 6.3.6+)</br>
+<li><b>Ruleset</b> &lt;name&gt; (available in 6.3.6+)</br>
 Binds the specified ruleset to all RELP listeners.
-<li>InputRELPServerRun &lt;port&gt;<br>
+<li><b>Port</b> &lt;port&gt;<br>
 Starts a RELP server on selected port</li>
+</ul>
+<b>Caveats/Known Bugs:</b>
+<ul>
+<li>see description</li>
+<li>To obtain the remote system's IP address, you need to have at least
+librelp 1.0.0 installed. Versions below it return the hostname instead
+of the IP address.</li>
+<li>Contrary to other inputs, the ruleset can only be bound to all listeners,
+not specific ones. This is due to a currently existing limitation in librelp.
+</ul>
+<p><b>Sample:</b></p>
+<p>This sets up a RELP server on port 20514.<br>
+</p>
+<textarea rows="15" cols="60">module(load="/folder/to/rsyslog/plugins/imrelp/.libs/imrelp") # needs to be done just once
+input(type="imrelp" port="20514")
+</textarea>
+
+<p><b>Legacy Configuration Directives</b>:</p>
+<ul>
+<li>InputRELPServerBindRuleset &lt;name&gt; (available in 6.3.6+)</br>
+equivalent to: RuleSet
+<li>InputRELPServerRun &lt;port&gt;<br>
+equivalent to: Port</li>
 </ul>
 <b>Caveats/Known Bugs:</b>
 <ul>

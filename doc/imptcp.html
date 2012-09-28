@@ -19,11 +19,12 @@ Encryption can be provided by using <a href="rsyslog_stunnel.html">stunnel</a>.
 <p>Multiple receivers may be configured by
 specifying $InputPTCPServerRun multiple times.
 </p>
+
 <p><b>Configuration Directives</b>:</p>
 <p>This plugin has config directives similar named as imtcp, but they all have <b>P</b>TCP in
 their name instead of just TCP. Note that only a subset of the parameters are supported.
 <ul>
-<li>$InputPTCPServerAddtlFrameDelimiter &lt;Delimiter&gt;<br>
+<li><b>AddTLFrameDelimiter</b> &lt;Delimiter&gt;<br>
 This directive permits to specify an additional frame delimiter for plain tcp syslog.
 The industry-standard specifies using the LF character as frame delimiter. Some vendors,
 notable Juniper in their NetScreen products, use an invalid frame delimiter, in Juniper's
@@ -43,48 +44,91 @@ very limited interest in fixing this issue. This directive <b>can not</b> fix th
 That would require much more code changes, which I was unable to do so far. Full details
 can be found at the <a href="http://www.rsyslog.com/Article321.phtml">Cisco tcp syslog anomaly</a>
 page.
-<li><b>$InputPTCPSupportOctetCountedFraming</b> &lt;<b>on</b>|off&gt;<br>
+<li><b>SupportOctetCountedFraming</b> &lt;<b>on</b>|off&gt;<br>
 If set to "on", the legacy octed-counted framing (similar to RFC5425 framing) is
 activated. This is the default and should be left unchanged until you know
 very well what you do. It may be useful to turn it off, if you know this framing
 is not used and some senders emit multi-line messages into the message stream.
 </li>
-<li>$InputPTCPServerNotifyOnConnectionClose [on/<b>off</b>]<br>
+<li><b>ServerNotifyOnConnectionClose</b> [on/<b>off</b>]<br>
 instructs imptcp to emit a message if the remote peer closes a connection.<br>
-<li><b>$InputPTCPServerKeepAlive</b> &lt;on/<b>off</b>&gt;<br>
+<li><b>KeepAlive</b> &lt;on/<b>off</b>&gt;<br>
 enable of disable keep-alive packets at the tcp socket layer. The default is
 to disable them.</li>
-<li><b>$InputPTCPServerKeepAlive_probes</b> &lt;number&gt;<br>
+<li><b>KeepAlive.Probes</b> &lt;number&gt;<br>
 The number of unacknowledged probes to send before considering the connection dead and notifying the application layer.
 The default, 0, means that the operating system defaults are used. This has only 
 effect if keep-alive is enabled. The functionality may not be available on
 all platforms.
-<li><b>$InputPTCPServerKeepAlive_intvl</b> &lt;number&gt;<br>
+<li><b>KeepAlive.Interval</b> &lt;number&gt;<br>
 The interval between subsequential keepalive probes, regardless of what the connection has exchanged in the meantime.
 The default, 0, means that the operating system defaults are used. This has only 
 effect if keep-alive is enabled. The functionality may not be available on
 all platforms.
-<li><b>$InputPTCPServerKeepAlive_time</b> &lt;number&gt;<br>
+<li><b>KeepAlive.Time</b> &lt;number&gt;<br>
 The interval between the last data packet sent (simple ACKs are not considered data) and the first keepalive probe; after the connection is marked to need keepalive, this counter is not used any further.
 The default, 0, means that the operating system defaults are used. This has only 
 effect if keep-alive is enabled. The functionality may not be available on
 all platforms.
-<li><b>$InputPTCPServerRun</b> &lt;port&gt;<br>
-Starts a TCP server on selected port</li>
-<li>$InputPTCPServerInputName &lt;name&gt;<br>
+<li><b>Port</b> &lt;number&gt;<br>
+Select a port to listen on</li>
+<li><b>Name</b> &lt;name&gt;<br>
 Sets a name for the inputname property. If no name is set "imptcp" is used by default. Setting a 
 name is not strictly necessary, but can be useful to apply filtering based on which input
 the message was received from.
-<li>$InputPTCPServerBindRuleset &lt;name&gt;<br>
+<li><b>Ruleset</b> &lt;name&gt;<br>
 Binds specified ruleset to next server defined.
+<!--<li>$InputPTCPHelperThreads &lt;number&gt;<br>
+Number of helper worker threads to process incoming messages. These
+threads are utilized to pull data off the network. On a busy system, additional
+helper threads (but not more than there are CPUs/Cores) can help improving
+performance. The default value is two.-->
+<li><b>Address</b> &lt;name&gt;<br>
+On multi-homed machines, specifies to which local address the listerner should be bound.
+</ul>
+<b>Caveats/Known Bugs:</b>
+<ul>
+<li>module always binds to all interfaces</li>
+</ul>
+<p><b>Sample:</b></p>
+<p>This sets up a TCP server on port 514:<br>
+</p>
+<textarea rows="15" cols="60">module(load="/folder/to/rsyslog/plugins/imptcp/.libs/imptcp") # needs to be done just once
+input(type="imptcp" port="514")
+</textarea>
+
+<p><b>Legacy Configuration Directives</b>:</p>
+<p>This plugin has config directives similar named as imtcp, but they all have <b>P</b>TCP in
+their name instead of just TCP. Note that only a subset of the parameters are supported.
+<ul>
+<li>$InputPTCPServerAddtlFrameDelimiter &lt;Delimiter&gt;<br>
+Equivalent to: AddTLFrameDelimiter</li>
+<li><b>$InputPTCPSupportOctetCountedFraming</b> &lt;<b>on</b>|off&gt;<br>
+Equivalent to: SupportOctetCountedFraming 
+</li>
+<li>$InputPTCPServerNotifyOnConnectionClose [on/<b>off</b>]<br>
+Equivalent to: ServerNotifyOnConnectionClose.<br></li>
+<li><b>$InputPTCPServerKeepAlive</b> &lt;on/<b>off</b>&gt;<br>
+Equivalent to: KeepAlive </li>
+<li><b>$InputPTCPServerKeepAlive_probes</b> &lt;number&gt;<br>
+Equivalent to: KeepAlive.Probes</li>
+<li><b>$InputPTCPServerKeepAlive_intvl</b> &lt;number&gt;<br>
+Equivalent to: KeepAlive.Interval </li>
+<li><b>$InputPTCPServerKeepAlive_time</b> &lt;number&gt;<br>
+Equivalent to: KeepAlive.Time</li>
+<li><b>$InputPTCPServerRun</b> &lt;port&gt;<br>
+Equivalent to: Port </li>
+<li>$InputPTCPServerInputName &lt;name&gt;<br>
+Equivalent to: Name </li>
+<li>$InputPTCPServerBindRuleset &lt;name&gt;<br>
+Equivalent to: Ruleset </li>
 <li>$InputPTCPHelperThreads &lt;number&gt;<br>
 Number of helper worker threads to process incoming messages. These
 threads are utilized to pull data off the network. On a busy system, additional
 helper threads (but not more than there are CPUs/Cores) can help improving
 performance. The default value is two.
 <li>$InputPTCPServerListenIP &lt;name&gt;<br>
-On multi-homed machines, specifies to which local address the next listerner should
-be bound.
+Equivalent to: Address </li>
 </ul>
 <b>Caveats/Known Bugs:</b>
 <ul>
