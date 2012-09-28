@@ -90,6 +90,8 @@ DEFobjCurrIf(statsobj)
 /* forward references */
 static void * wrkr(void *myself);
 
+#define DFLT_wrkrMax 2
+
 /* config settings */
 typedef struct configSettings_s {
 	int bKeepAlive;			/* support keep-alive packets */
@@ -127,10 +129,21 @@ struct modConfData_s {
 	rsconf_t *pConf;		/* our overall config object */
 	instanceConf_t *root, *tail;
 	int wrkrMax;
+	sbool configSetViaV2Method;
 };
 
 static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
 static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current load process */
+
+/* module-global parameters */
+static struct cnfparamdescr modpdescr[] = {
+	{ "threads", eCmdHdlrPositiveInt, 0 }
+};
+static struct cnfparamblk modpblk =
+	{ CNFPARAMBLK_VERSION,
+	  sizeof(modpdescr)/sizeof(struct cnfparamdescr),
+	  modpdescr
+	};
 
 /* input instance parameters */
 static struct cnfparamdescr inppdescr[] = {
@@ -153,6 +166,8 @@ static struct cnfparamblk inppblk =
 	};
 
 #include "im-helper.h" /* must be included AFTER the type definitions! */
+static int bLegacyCnfModGlobalsPermitted;/* are legacy module-global config parameters permitted? */
+
 /* data elements describing our running config */
 typedef struct ptcpsrv_s ptcpsrv_t;
 typedef struct ptcplstn_s ptcplstn_t;
@@ -832,7 +847,7 @@ static inline void
 initConfigSettings(void)
 {
 	cs.bEmitMsgOnClose = 0;
-	cs.wrkrMax = 2;
+	cs.wrkrMax = DFLT_wrkrMax;
 	cs.bSuppOctetFram = 1;
 	cs.iAddtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
 	cs.pszInputName = NULL;
@@ -1152,6 +1167,7 @@ startWorkerPool(void)
 	wrkrRunning = 0;
 	if(runModConf->wrkrMax > 16)
 		runModConf->wrkrMax = 16; /* TODO: make dynamic? */
+	DBGPRINTF("imptcp: starting worker pool, %d workers\n", runModConf->wrkrMax);
 	pthread_mutex_init(&wrkrMut, NULL);
 	pthread_cond_init(&wrkrIdle, NULL);
 	for(i = 0 ; i < runModConf->wrkrMax ; ++i) {
@@ -1170,6 +1186,7 @@ static inline void
 stopWorkerPool(void)
 {
 	int i;
+	DBGPRINTF("imptcp: stoping worker pool\n");
 	for(i = 0 ; i < runModConf->wrkrMax ; ++i) {
 		pthread_cond_signal(&wrkrInfo[i].run); /* awake wrkr if not running */
 		pthread_join(wrkrInfo[i].tid, NULL);
@@ -1178,7 +1195,6 @@ stopWorkerPool(void)
 	}
 	pthread_cond_destroy(&wrkrIdle);
 	pthread_mutex_destroy(&wrkrMut);
-
 }
 
 
@@ -1455,15 +1471,60 @@ BEGINbeginCnfLoad
 CODESTARTbeginCnfLoad
 	loadModConf = pModConf;
 	pModConf->pConf = pConf;
+	/* init our settings */
+	loadModConf->wrkrMax = DFLT_wrkrMax;
+	loadModConf->configSetViaV2Method = 0;
+	bLegacyCnfModGlobalsPermitted = 1;
 	/* init legacy config vars */
 	initConfigSettings();
 ENDbeginCnfLoad
 
 
+BEGINsetModCnf
+	struct cnfparamvals *pvals = NULL;
+	int i;
+CODESTARTsetModCnf
+	pvals = nvlstGetParams(lst, &modpblk, NULL);
+	if(pvals == NULL) {
+		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "imptcp: error processing module "
+				"config parameters [module(...)]");
+		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
+
+	if(Debug) {
+		dbgprintf("module (global) param blk for imptcp:\n");
+		cnfparamsPrint(&modpblk, pvals);
+	}
+
+	for(i = 0 ; i < modpblk.nParams ; ++i) {
+		if(!pvals[i].bUsed)
+			continue;
+		if(!strcmp(modpblk.descr[i].name, "threads")) {
+			loadModConf->wrkrMax = (int) pvals[i].val.d.n;
+		} else {
+			dbgprintf("imptcp: program error, non-handled "
+			  "param '%s' in beginCnfLoad\n", modpblk.descr[i].name);
+		}
+	}
+
+	/* remove all of our legacy handlers, as they can not used in addition
+	 * the the new-style config method.
+	 */
+	bLegacyCnfModGlobalsPermitted = 0;
+	loadModConf->configSetViaV2Method = 1;
+
+finalize_it:
+	if(pvals != NULL)
+		cnfparamvalsDestruct(pvals, &modpblk);
+ENDsetModCnf
+
+
 BEGINendCnfLoad
 CODESTARTendCnfLoad
-	/* persist module-specific settings from legacy config system */
-	loadModConf->wrkrMax = cs.wrkrMax;
+	if(!loadModConf->configSetViaV2Method) {
+		/* persist module-specific settings from legacy config system */
+		loadModConf->wrkrMax = cs.wrkrMax;
+	}
 
 	loadModConf = NULL; /* done loading */
 	/* free legacy config vars */
@@ -1647,7 +1708,7 @@ static rsRetVal
 resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
 	cs.bEmitMsgOnClose = 0;
-	cs.wrkrMax = 2;
+	cs.wrkrMax = DFLT_wrkrMax;
 	cs.bKeepAlive = 0;
 	cs.iKeepAliveProbes = 0;
 	cs.iKeepAliveTime = 0;
@@ -1673,6 +1734,7 @@ BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_IMOD_QUERIES
 CODEqueryEtryPt_STD_CONF2_QUERIES
+CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
 CODEqueryEtryPt_STD_CONF2_PREPRIVDROP_QUERIES
 CODEqueryEtryPt_STD_CONF2_IMOD_QUERIES
 CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
@@ -1716,14 +1778,15 @@ CODEmodInit_QueryRegCFSLineHdlr
 				   eCmdHdlrBinary, NULL, &cs.bEmitMsgOnClose, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputptcpserveraddtlframedelimiter"), 0, eCmdHdlrInt,
 				   NULL, &cs.iAddtlFrameDelim, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputptcpserverhelperthreads"), 0, eCmdHdlrInt,
-				   NULL, &cs.wrkrMax, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputptcpserverinputname"), 0,
 				   eCmdHdlrGetWord, NULL, &cs.pszInputName, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputptcpserverlistenip"), 0,
 				   eCmdHdlrGetWord, NULL, &cs.lstnIP, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputptcpserverbindruleset"), 0,
 				   eCmdHdlrGetWord, NULL, &cs.pszBindRuleset, STD_LOADABLE_MODULE_ID));
+	/* module-global parameters */
+	CHKiRet(regCfSysLineHdlr2(UCHAR_CONSTANT("inputptcpserverhelperthreads"), 0, eCmdHdlrInt,
+				   NULL, &cs.wrkrMax, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("resetconfigvariables"), 1, eCmdHdlrCustomHandler,
 		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
