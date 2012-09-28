@@ -98,16 +98,8 @@ extern int yyerror(char*);
 %type <nvlst> nv nvlst
 %type <obj> obj property constant
 %type <objlst> propconst
-/*%type <actlst> actlst
-%type <actlst> act
-%type <actlst> block
-*/
 %type <expr> expr
 %type <stmt> stmt s_act actlst block script
-/*
-%type <rule> rule
-%type <rule> scriptfilt
-*/
 %type <fparams> fparams
 %type <arr> array arrayelt
 
