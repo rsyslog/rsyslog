@@ -347,15 +347,11 @@ inputProcessCnf(struct cnfobj *o)
 
 	pvals = nvlstGetParams(o->nvlst, &inppblk, NULL);
 	if(pvals == NULL) {
-		ABORT_FINALIZE(RS_RET_ERR);
+		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 	}
 	DBGPRINTF("input param blk after inputProcessCnf:\n");
 	cnfparamsPrint(&inppblk, pvals);
 	typeIdx = cnfparamGetIdx(&inppblk, "type");
-	if(pvals[typeIdx].bUsed == 0) {
-		errmsg.LogError(0, RS_RET_CONF_RQRD_PARAM_MISSING, "input type missing");
-		ABORT_FINALIZE(RS_RET_CONF_RQRD_PARAM_MISSING); // TODO: move this into rainerscript handlers
-	}
 	cnfModName = (uchar*)es_str2cstr(pvals[typeIdx].val.d.estr, NULL);
 	if((pMod = module.FindWithCnfName(loadConf, cnfModName, eMOD_IN)) == NULL) {
 		errmsg.LogError(0, RS_RET_MOD_UNKNOWN, "input module name '%s' is unknown", cnfModName);
