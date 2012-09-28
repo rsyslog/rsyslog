@@ -8,6 +8,8 @@ Version 5.10.1  [V5-STABLE], 2012-0?-??
   Thanks to pilou@gmx.com for the bug report
 - bugfix: remove invalid socket option call from imuxsock
   Thanks to Cristian Ionescu-Idbohrn and Jonny Törnbom 
+- bugfix: fixed wrong bufferlength for snprintf in tcpflood.c when using 
+  the -f (dynafiles) option. 
 ---------------------------------------------------------------------------
 Version 5.10.0  [V5-STABLE], 2012-08-23
 
