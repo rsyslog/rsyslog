@@ -562,7 +562,6 @@ finalize_it:
 ENDsetModCnf
 
 
-
 BEGINendCnfLoad
 CODESTARTendCnfLoad
 	if(!loadModConf->configSetViaV2Method) {
