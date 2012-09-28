@@ -1,6 +1,10 @@
 ---------------------------------------------------------------------------
-Version 7.1.5  [devel] 2012-09-25
+Version 7.1.6  [devel] 2012-09-28
+- implemented RainerScript input() statement, including support for it
+  in major input plugins
 - implemented RainerScript ruleset() statement
+---------------------------------------------------------------------------
+Version 7.1.5  [devel] 2012-09-25
 - implemented RainerScript prifield() function
 - implemented RainerScript field() function
 - added new module imkmsg to process structured kernel log
