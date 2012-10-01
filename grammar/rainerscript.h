@@ -74,11 +74,13 @@ enum cnfactType { CNFACT_V2, CNFACT_LEGACY };
 struct var {
 	union {
 		es_str_t *estr;
-		struct cnfexpr *expr;
+		struct cnfarray *ar;
 		long long n;
 		struct json_object *json;
 	} d;
-	char datatype; /* 'N' number, 'S' string, 'E' expression, 'J' JSON */
+	char datatype; /* 'N' number, 'S' string, 'J' JSON, 'A' array
+			* Note: 'A' is only supported during config phase
+			*/
 };
 
 struct cnfobj {
@@ -284,7 +286,9 @@ void readConfFile(FILE *fp, es_str_t **str);
 struct objlst* objlstNew(struct cnfobj *obj);
 void objlstDestruct(struct objlst *lst);
 void objlstPrint(struct objlst *lst);
-struct nvlst* nvlstNew(es_str_t *name, es_str_t *value);
+struct nvlst* nvlstNewArray(struct cnfarray *ar);
+struct nvlst* nvlstNewStr(es_str_t *value);
+struct nvlst* nvlstSetName(struct nvlst *lst, es_str_t *name);
 void nvlstDestruct(struct nvlst *lst);
 void nvlstPrint(struct nvlst *lst);
 void nvlstChkUnused(struct nvlst *lst);
@@ -323,6 +327,7 @@ struct cnfstmt * cnfstmtNewUnset(char *var);
 void cnfstmtDestruct(struct cnfstmt *root);
 void cnfstmtOptimize(struct cnfstmt *root);
 struct cnfarray* cnfarrayNew(es_str_t *val);
+//struct cnfarray* cnfarrayDup(struct cnfarray *old);
 struct cnfarray* cnfarrayAdd(struct cnfarray *ar, es_str_t *val);
 char* getFIOPName(unsigned iFIOP);
 rsRetVal initRainerscript(void);

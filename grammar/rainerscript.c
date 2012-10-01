@@ -51,6 +51,9 @@ DEFobjCurrIf(regexp)
 
 void cnfexprOptimize(struct cnfexpr *expr);
 static void cnfstmtOptimizePRIFilt(struct cnfstmt *stmt);
+static void cnfarrayPrint(struct cnfarray *ar, int indent);
+static void cnfarrayContentDestruct(struct cnfarray *ar);
+static struct cnfarray* cnfarrayDup(struct cnfarray *old);
 
 char*
 getFIOPName(unsigned iFIOP)
@@ -206,18 +209,39 @@ objlstPrint(struct objlst *lst)
 }
 
 struct nvlst*
-nvlstNew(es_str_t *name, es_str_t *value)
+nvlstNewStr(es_str_t *value)
 {
 	struct nvlst *lst;
 
 	if((lst = malloc(sizeof(struct nvlst))) != NULL) {
 		lst->next = NULL;
-		lst->name = name;
 		lst->val.datatype = 'S';
 		lst->val.d.estr = value;
 		lst->bUsed = 0;
 	}
 
+	return lst;
+}
+
+struct nvlst*
+nvlstNewArray(struct cnfarray *ar)
+{
+	struct nvlst *lst;
+
+	if((lst = malloc(sizeof(struct nvlst))) != NULL) {
+		lst->next = NULL;
+		lst->val.datatype = 'A';
+		lst->val.d.ar = ar;
+		lst->bUsed = 0;
+	}
+
+	return lst;
+}
+
+struct nvlst*
+nvlstSetName(struct nvlst *lst, es_str_t *name)
+{
+	lst->name = name;
 	return lst;
 }
 
@@ -230,8 +254,7 @@ nvlstDestruct(struct nvlst *lst)
 		toDel = lst;
 		lst = lst->next;
 		es_deleteStr(toDel->name);
-		if(toDel->val.datatype == 'S')
-			es_deleteStr(toDel->val.d.estr);
+		varDelete(&toDel->val);
 		free(toDel);
 	}
 }
@@ -243,11 +266,21 @@ nvlstPrint(struct nvlst *lst)
 	dbgprintf("nvlst %p:\n", lst);
 	while(lst != NULL) {
 		name = es_str2cstr(lst->name, NULL);
-		// TODO: support for non-string types
-		value = es_str2cstr(lst->val.d.estr, NULL);
-		dbgprintf("\tname: '%s', value '%s'\n", name, value);
+		switch(lst->val.datatype) {
+		case 'A':
+			dbgprintf("\tname: '%s':\n", name);
+			cnfarrayPrint(lst->val.d.ar, 5);
+			break;
+		case 'S':
+			value = es_str2cstr(lst->val.d.estr, NULL);
+			dbgprintf("\tname: '%s', value '%s'\n", name, value);
+			free(value);
+			break;
+		default:dbgprintf("nvlstPrint: unknown type '%c' [%d]\n",
+				lst->val.datatype, lst->val.datatype);
+			break;
+		}
 		free(name);
-		free(value);
 		lst = lst->next;
 	}
 }
@@ -566,6 +599,7 @@ doGetWord(struct nvlst *valnode, struct cnfparamdescr *param,
 	es_size_t i;
 	int r = 1;
 	unsigned char *c;
+
 	val->val.datatype = 'S';
 	val->val.d.estr = es_newStr(32);
 	c = es_getBufAddr(valnode->val.d.estr);
@@ -574,9 +608,33 @@ doGetWord(struct nvlst *valnode, struct cnfparamdescr *param,
 	}
 	if(i != es_strlen(valnode->val.d.estr)) {
 		parser_errmsg("parameter '%s' contains whitespace, which is not "
-		  "permitted - data after first whitespace ignored",
+		  "permitted",
 		  param->name);
 		r = 0;
+	}
+	return r;
+}
+
+static inline int
+doGetArray(struct nvlst *valnode, struct cnfparamdescr *param,
+	  struct cnfparamvals *val)
+{
+	int r = 1;
+
+	switch(valnode->val.datatype) {
+	case 'S':
+		/* a constant string is assumed to be a single-element array */
+		val->val.datatype = 'A';
+		val->val.d.ar = cnfarrayNew(es_strdup(valnode->val.d.estr));
+		break;
+	case 'A':
+		val->val.datatype = 'A';
+		val->val.d.ar = cnfarrayDup(valnode->val.d.ar);
+		break;
+	default:parser_errmsg("parameter '%s' must be an array, but is a "
+			"different datatype", param->name);
+		r = 0;
+		break;
 	}
 	return r;
 }
@@ -607,8 +665,15 @@ nvlstGetParam(struct nvlst *valnode, struct cnfparamdescr *param,
 	uchar *cstr;
 	int r;
 
-	dbgprintf("XXXX: in nvlstGetParam, name '%s', type %d, valnode->bUsed %d\n",
+	DBGPRINTF("nvlstGetParam: name '%s', type %d, valnode->bUsed %d\n",
 		  param->name, (int) param->type, valnode->bUsed);
+	if(valnode->val.datatype != 'S' && param->type != eCmdHdlrArray) {
+		parser_errmsg("parameter '%s' is not a string, which is not "
+		  "permitted",
+		  param->name);
+		r = 0;
+		goto done;
+	}
 	valnode->bUsed = 1;
 	val->bUsed = 1;
 	switch(param->type) {
@@ -664,6 +729,9 @@ nvlstGetParam(struct nvlst *valnode, struct cnfparamdescr *param,
 		val->val.d.estr = es_strdup(valnode->val.d.estr);
 		r = 1;
 		break;
+	case eCmdHdlrArray:
+		r = doGetArray(valnode, param, val);
+		break;
 	case eCmdHdlrGoneAway:
 		parser_errmsg("parameter '%s' is no longer supported",
 			      param->name);
@@ -674,7 +742,7 @@ nvlstGetParam(struct nvlst *valnode, struct cnfparamdescr *param,
 		r = 0;
 		break;
 	}
-	return r;
+done:	return r;
 }
 
 
@@ -750,6 +818,9 @@ cnfparamsPrint(struct cnfparamblk *params, struct cnfparamvals *vals)
 				cstr = es_str2cstr(vals[i].val.d.estr, NULL);
 				dbgprintf(" '%s'", cstr);
 				free(cstr);
+				break;
+			case 'A':
+				cnfarrayPrint(vals[i].val.d.ar, 0);
 				break;
 			case 'N':
 				dbgprintf("%lld", vals[i].val.d.n);
@@ -1544,11 +1615,10 @@ cnfexprEval(struct cnfexpr *expr, struct var *ret, void* usrptr)
 
 //---------------------------------------------------------
 
-static inline void
-cnfarrayDestruct(struct cnfarray *ar)
+static void
+cnfarrayContentDestruct(struct cnfarray *ar)
 {
 	unsigned short i;
-
 	for(i = 0 ; i < ar->nmemb ; ++i) {
 		es_deleteStr(ar->arr[i]);
 	}
@@ -1620,7 +1690,7 @@ cnfexprDestruct(struct cnfexpr *expr)
 		cnffuncDestruct((struct cnffunc*)expr);
 		break;
 	case S_ARRAY:
-		cnfarrayDestruct((struct cnfarray*)expr);
+		cnfarrayContentDestruct((struct cnfarray*)expr);
 		break;
 	default:break;
 	}
@@ -1665,6 +1735,17 @@ pmaskPrint(uchar *pmask, int indent)
 	dbgprintf("\n");
 }
 
+static void
+cnfarrayPrint(struct cnfarray *ar, int indent)
+{
+	int i;
+	doIndent(indent); dbgprintf("ARRAY:\n");
+	for(i = 0 ; i < ar->nmemb ; ++i) {
+		doIndent(indent+1);
+		cstrPrint("string '", ar->arr[i]);
+		dbgprintf("'\n");
+	}
+}
 
 void
 cnfexprPrint(struct cnfexpr *expr, int indent)
@@ -1757,13 +1838,7 @@ cnfexprPrint(struct cnfexpr *expr, int indent)
 		dbgprintf("'\n");
 		break;
 	case S_ARRAY:
-dbgprintf("DDDD: %d members\n", ((struct cnfarray*)expr)->nmemb);
-		doIndent(indent); dbgprintf("ARRAY:\n");
-		for(i = 0 ; i < ((struct cnfarray*)expr)->nmemb ; ++i) {
-			doIndent(indent+1);
-			cstrPrint("string '", ((struct cnfarray*)expr)->arr[i]);
-			dbgprintf("'\n");
-		}
+		cnfarrayPrint((struct cnfarray*)expr, indent);
 		break;
 	case 'N':
 		doIndent(indent);
@@ -1924,7 +1999,6 @@ cnfarrayNew(es_str_t *val)
 done:	return ar;
 }
 
-/* creates array AND adds first element to it */
 struct cnfarray*
 cnfarrayAdd(struct cnfarray *ar, es_str_t *val)
 {
@@ -1938,6 +2012,19 @@ cnfarrayAdd(struct cnfarray *ar, es_str_t *val)
 		ar->nmemb++;
 	}
 done:	return ar;
+}
+
+/* duplicate an array (deep copy) */
+static struct cnfarray*
+cnfarrayDup(struct cnfarray *old)
+{
+	int i;
+	struct cnfarray *ar;
+	ar = cnfarrayNew(es_strdup(old->arr[0]));
+	for(i = 1 ; i < old->nmemb ; ++i) {
+		cnfarrayAdd(ar, es_strdup(old->arr[i]));
+	}
+	return ar;
 }
 
 struct cnfvar*
@@ -2647,8 +2734,16 @@ cnfDoInclude(char *name)
 void
 varDelete(struct var *v)
 {
-	if(v->datatype == 'S')
+	switch(v->datatype) {
+	case 'S':
 		es_deleteStr(v->d.estr);
+		break;
+	case 'A':
+		cnfarrayContentDestruct(v->d.ar);
+		free(v->d.ar);
+		break;
+	default:break;
+	}
 }
 
 void
@@ -2656,7 +2751,9 @@ cnfparamvalsDestruct(struct cnfparamvals *paramvals, struct cnfparamblk *blk)
 {
 	int i;
 	for(i = 0 ; i < blk->nParams ; ++i) {
-		varDelete(&paramvals[i].val);
+		if(paramvals[i].bUsed) {
+			varDelete(&paramvals[i].val);
+		}
 	}
 	free(paramvals);
 }

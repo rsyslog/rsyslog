@@ -94,8 +94,7 @@ extern int yyerror(char*);
 %token CMP_STARTSWITH
 %token CMP_STARTSWITHI
 
-%type <estr> value
-%type <nvlst> nv nvlst
+%type <nvlst> nv nvlst value
 %type <obj> obj property constant
 %type <objlst> propconst
 %type <expr> expr
@@ -141,9 +140,9 @@ property: BEGIN_PROPERTY nvlst ENDOBJ	{ $$ = cnfobjNew(CNFOBJ_PROPERTY, $2); }
 constant: BEGIN_CONSTANT nvlst ENDOBJ	{ $$ = cnfobjNew(CNFOBJ_CONSTANT, $2); }
 nvlst:					{ $$ = NULL; }
 	| nvlst nv 			{ $2->next = $1; $$ = $2; }
-nv:	NAME '=' value 			{ $$ = nvlstNew($1, $3); }
-value:	  STRING			{ $$ = $1; }
-	| array				{ dbgprintf("DDDD: value array\n"); }
+nv:	NAME '=' value 			{ $$ = nvlstSetName($3, $1); }
+value:	  STRING			{ $$ = nvlstNewStr($1); }
+	| array				{ $$ = nvlstNewArray($1); }
 script:	  stmt				{ $$ = $1; }
 	| script stmt			{ $$ = scriptAddStmt($1, $2); }
 stmt:	  actlst			{ $$ = $1; }

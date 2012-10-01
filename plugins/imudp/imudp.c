@@ -138,7 +138,7 @@ static struct cnfparamblk modpblk =
 
 /* input instance parameters */
 static struct cnfparamdescr inppdescr[] = {
-	{ "port", eCmdHdlrString, CNFPARAM_REQUIRED }, /* legacy: InputTCPServerRun */
+	{ "port", eCmdHdlrArray, CNFPARAM_REQUIRED }, /* legacy: InputTCPServerRun */
 	{ "address", eCmdHdlrString, 0 },
 	{ "ruleset", eCmdHdlrString, 0 }
 };
@@ -664,32 +664,20 @@ rsRetVal rcvMainLoop(thrdInfo_t *pThrd)
 #endif /* #if HAVE_EPOLL_CREATE1 */
 
 
-BEGINnewInpInst
-	struct cnfparamvals *pvals;
+static inline rsRetVal
+createListner(es_str_t *port, struct cnfparamvals *pvals)
+{
 	instanceConf_t *inst;
 	int i;
-CODESTARTnewInpInst
-	DBGPRINTF("newInpInst (imudp)\n");
-
-	pvals = nvlstGetParams(lst, &inppblk, NULL);
-	if(pvals == NULL) {
-		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS,
-			        "imudp: required parameter are missing\n");
-		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
-	}
-
-	if(Debug) {
-		dbgprintf("input param blk in imudp:\n");
-		cnfparamsPrint(&inppblk, pvals);
-	}
+	DEFiRet;
 
 	CHKiRet(createInstance(&inst));
-
+	inst->pszBindPort = (uchar*)es_str2cstr(port, NULL);
 	for(i = 0 ; i < inppblk.nParams ; ++i) {
 		if(!pvals[i].bUsed)
 			continue;
 		if(!strcmp(inppblk.descr[i].name, "port")) {
-			inst->pszBindPort = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+			continue;	/* array, handled by caller */
 		} else if(!strcmp(inppblk.descr[i].name, "address")) {
 			inst->pszBindAddr = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "ruleset")) {
@@ -699,6 +687,35 @@ CODESTARTnewInpInst
 			  "param '%s'\n", inppblk.descr[i].name);
 		}
 	}
+finalize_it:
+	RETiRet;
+}
+
+
+BEGINnewInpInst
+	struct cnfparamvals *pvals;
+	int i;
+	int portIdx;
+CODESTARTnewInpInst
+	DBGPRINTF("newInpInst (imudp)\n");
+
+	pvals = nvlstGetParams(lst, &inppblk, NULL);
+	if(pvals == NULL) {
+		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS,
+			        "imudp: required parameter are missing\n");
+		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
+	if(Debug) {
+		dbgprintf("input param blk in imudp:\n");
+		cnfparamsPrint(&inppblk, pvals);
+	}
+
+	portIdx = cnfparamGetIdx(&inppblk, "port");
+	assert(portIdx != -1);
+	for(i = 0 ; i <  pvals[portIdx].val.d.ar->nmemb ; ++i) {
+		createListner(pvals[portIdx].val.d.ar->arr[i], pvals);
+	}
+
 finalize_it:
 CODE_STD_FINALIZERnewInpInst
 	cnfparamvalsDestruct(pvals, &inppblk);
