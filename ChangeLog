@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------
 Version 7.1.8  [devel] 2012-10-??
+- implemented "continue" RainerScript statement
 - bugfix: ruleset(){} directive errornously changed default ruleset
   much like the $ruleset legacy conf statement. This potentially lead
   to statements being assigned to the wrong ruleset.

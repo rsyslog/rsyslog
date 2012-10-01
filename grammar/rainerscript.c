@@ -2129,7 +2129,6 @@ struct cnfstmt *
 cnfstmtNewCall(es_str_t *name)
 {
 	struct cnfstmt* cnfstmt;
-dbgprintf("DDDD: got CALL\n");
 	if((cnfstmt = cnfstmtNew(S_CALL)) != NULL) {
 		cnfstmt->d.s_call.name = name;
 	}
@@ -2144,6 +2143,12 @@ cnfstmtNewUnset(char *var)
 		cnfstmt->d.s_unset.varname = (uchar*) var;
 	}
 	return cnfstmt;
+}
+
+struct cnfstmt *
+cnfstmtNewContinue(void)
+{
+	return cnfstmtNew(S_NOP);
 }
 
 struct cnfstmt *

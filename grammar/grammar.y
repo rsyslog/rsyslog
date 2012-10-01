@@ -68,6 +68,7 @@ extern int yyerror(char*);
 %token STOP
 %token SET
 %token UNSET
+%token CONTINUE
 %token <cnfstmt> CALL
 %token <s> LEGACY_ACTION
 %token <s> LEGACY_RULESET
@@ -161,6 +162,7 @@ stmt:	  actlst			{ $$ = $1; }
 	| PRIFILT block			{ $$ = cnfstmtNewPRIFILT($1, $2); }
 	| PROPFILT block		{ $$ = cnfstmtNewPROPFILT($1, $2); }
 	| CALL NAME			{ $$ = cnfstmtNewCall($2); }
+	| CONTINUE			{ $$ = cnfstmtNewContinue(); }
 block:    stmt				{ $$ = $1; }
 	| '{' script '}'		{ $$ = $2; }
 actlst:	  s_act				{ $$ = $1; }

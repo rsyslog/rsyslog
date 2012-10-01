@@ -156,6 +156,7 @@ int fileno(FILE *stream);
 "call"				{ BEGIN INCALL; return CALL; }
 "set"				{ BEGIN EXPR; return SET; }
 "unset"				{ BEGIN EXPR; return UNSET; }
+"continue"			{ return CONTINUE; }
  /* line number support because the "preprocessor" combines lines and so needs
   * to tell us the real source line.
   */
