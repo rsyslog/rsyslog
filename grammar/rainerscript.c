@@ -2129,6 +2129,7 @@ struct cnfstmt *
 cnfstmtNewCall(es_str_t *name)
 {
 	struct cnfstmt* cnfstmt;
+dbgprintf("DDDD: got CALL\n");
 	if((cnfstmt = cnfstmtNew(S_CALL)) != NULL) {
 		cnfstmt->d.s_call.name = name;
 	}

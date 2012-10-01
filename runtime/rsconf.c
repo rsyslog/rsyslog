@@ -871,6 +871,7 @@ setCurrRuleset(void __attribute__((unused)) *pVal, uchar *pszName)
 		CHKiRet(ruleset.Construct(&pRuleset));
 		CHKiRet(ruleset.SetName(pRuleset, pszName));
 		CHKiRet(ruleset.ConstructFinalize(ourConf, pRuleset));
+		rulesetSetCurrRulesetPtr(pRuleset);
 	} else {
 		ABORT_FINALIZE(localRet);
 	}
@@ -1072,6 +1073,7 @@ initLegacyConf(void)
 	ruleset.Construct(&pRuleset);
 	ruleset.SetName(pRuleset, UCHAR_CONSTANT("RSYSLOG_DefaultRuleset"));
 	ruleset.ConstructFinalize(loadConf, pRuleset);
+	rulesetSetCurrRulesetPtr(pRuleset);
 
 	/* now register config handlers */
 	CHKiRet(regCfSysLineHdlr((uchar *)"sleep", 0, eCmdHdlrGoneAway,

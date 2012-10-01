@@ -657,8 +657,7 @@ finalize_it:
 }
 
 
-/* Set a new current rule set. If the ruleset can not be found, no change happens.
- */
+/* Set a new current rule set. If the ruleset can not be found, no change happens */
 static rsRetVal
 SetCurrRuleset(rsconf_t *conf, uchar *pszName)
 {
@@ -699,9 +698,6 @@ rulesetConstructFinalize(rsconf_t *conf, ruleset_t *pThis)
 	 */
 	CHKmalloc(keyName = ustrdup(pThis->pszName));
 	CHKiRet(llAppend(&(conf->rulesets.llRulesets), keyName, pThis));
-
-	/* this now also is the new current ruleset */
-	conf->rulesets.pCurr = pThis;
 
 	/* and also the default, if so far none has been set */
 	if(conf->rulesets.pDflt == NULL)

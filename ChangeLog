@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------
+Version 7.1.8  [devel] 2012-10-??
+- bugfix: ruleset(){} directive errornously changed default ruleset
+  much like the $ruleset legacy conf statement. This potentially lead
+  to statements being assigned to the wrong ruleset.
+---------------------------------------------------------------------------
 Version 7.1.7  [devel] 2012-10-01
 - implemented RainerScript "call" statement
 - implemented RainerScript array-based string comparison operations

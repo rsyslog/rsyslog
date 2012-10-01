@@ -25,6 +25,7 @@
 
 #include "queue.h"
 #include "linkedlist.h"
+#include "rsconf.h"
 
 /* the ruleset object */
 struct ruleset_s {
@@ -96,4 +97,10 @@ rulesetGetName(ruleset_t *pRuleset)
 rsRetVal rulesetGetRuleset(rsconf_t *conf, ruleset_t **ppRuleset, uchar *pszName);
 rsRetVal rulesetOptimizeAll(rsconf_t *conf);
 rsRetVal rulesetProcessCnf(struct cnfobj *o);
+
+/* Set a current rule set to already-known pointer */
+static inline void
+rulesetSetCurrRulesetPtr(ruleset_t *pRuleset) {
+	loadConf->rulesets.pCurr = pRuleset;
+}
 #endif /* #ifndef INCLUDED_RULESET_H */
