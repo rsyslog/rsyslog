@@ -302,6 +302,35 @@ Note that the template string itself must be on a single line.
   string="<%PRI%>%TIMESTAMP:::date-rfc3339% %HOSTNAME% %syslogtag:1:32%%msg:::sp-if-no-1st-sp%%msg%"
 )</code></pre>
 Note that the template string itself must be on a single line.
+
+<h4>Standard Template for write to the MySQL database</h4>
+<p><pre><code>template(name="StdSQLformat" type="list" option.sql="on") {
+        constant(value="insert into SystemEvents (Message, Facility, FromHost, Priority, DeviceReportedTime, ReceivedAt, InfoUnitID, SysLogTag)")
+        constant(value=" values ('")
+        property(name="msg")
+        constant(value="', ")
+        property(name="syslogfacility")
+        constant(value=", '")
+        property(name="hostname")
+        constant(value="', ")
+        property(name="syslogpriority")
+        constant(value=", '")
+        property(name="timereported" dateFormat="mysql")
+        constant(value="', '")
+        property(name="timegenerated" dateFormat="mysql")
+        constant(value="', ")
+        property(name="iut")
+        constant(value=", '")
+        property(name="syslogtag")
+        constant(value="')")
+        }
+</code></pre>
+<p>The equivalent string template looks like this:
+<br><pre><code>template(name="stdSQLformat" type="string" option.sql="on"
+  string="insert into SystemEvents (Message, Facility, FromHost, Priority, DeviceReportedTime, ReceivedAt, InfoUnitID, SysLogTag) values ('%msg%', %syslogfacility%, '%HOSTNAME%', %syslogpriority%, '%timereported:::date-mysql%', '%timegenerated:::date-mysql%', %iut%, '%syslogtag%')"
+)</code></pre>
+Note that the template string itself must be on a single line.
+
 <h2>legacy format</h2>
 <p>In pre v6-versions of rsyslog, you need to use the <code>$template</code> 
 statement to configure templates. They provide the equivalent to string- and
