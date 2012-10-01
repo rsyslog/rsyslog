@@ -45,6 +45,7 @@
 #include "regexp.h"
 #include "obj.h"
 #include "modules.h"
+#include "ruleset.h"
 
 DEFobjCurrIf(obj)
 DEFobjCurrIf(regexp)
@@ -1887,6 +1888,7 @@ void
 cnfstmtPrint(struct cnfstmt *root, int indent)
 {
 	struct cnfstmt *stmt;
+	char *cstr;
 	//dbgprintf("stmt %p, indent %d, type '%c'\n", expr, indent, expr->nodetype);
 	for(stmt = root ; stmt != NULL ; stmt = stmt->next) {
 		switch(stmt->nodetype) {
@@ -1895,6 +1897,11 @@ cnfstmtPrint(struct cnfstmt *root, int indent)
 			break;
 		case S_STOP:
 			doIndent(indent); dbgprintf("STOP\n");
+			break;
+		case S_CALL:
+			cstr = es_str2cstr(stmt->d.s_call.name, NULL);
+			doIndent(indent); dbgprintf("CALL [%s]\n", cstr);
+			free(cstr);
 			break;
 		case S_ACT:
 			doIndent(indent); dbgprintf("ACTION %p [%s]\n", stmt->d.act, stmt->printable);
@@ -1935,7 +1942,6 @@ cnfstmtPrint(struct cnfstmt *root, int indent)
 			doIndent(indent); dbgprintf("\tProperty.: '%s'\n",
 				propIDToName(stmt->d.s_propfilt.propID));
 			if(stmt->d.s_propfilt.propName != NULL) {
-				char *cstr;
 				cstr = es_str2cstr(stmt->d.s_propfilt.propName, NULL);
 				doIndent(indent);
 				dbgprintf("\tCEE-Prop.: '%s'\n", cstr);
@@ -2061,6 +2067,9 @@ cnfstmtDestruct(struct cnfstmt *root)
 		case S_NOP:
 		case S_STOP:
 			break;
+		case S_CALL:
+			es_deleteStr(stmt->d.s_call.name);
+			break;
 		case S_ACT:
 			actionDestruct(stmt->d.act);
 			break;
@@ -2112,6 +2121,16 @@ cnfstmtNewSet(char *var, struct cnfexpr *expr)
 	if((cnfstmt = cnfstmtNew(S_SET)) != NULL) {
 		cnfstmt->d.s_set.varname = (uchar*) var;
 		cnfstmt->d.s_set.expr = expr;
+	}
+	return cnfstmt;
+}
+
+struct cnfstmt *
+cnfstmtNewCall(es_str_t *name)
+{
+	struct cnfstmt* cnfstmt;
+	if((cnfstmt = cnfstmtNew(S_CALL)) != NULL) {
+		cnfstmt->d.s_call.name = name;
 	}
 	return cnfstmt;
 }
@@ -2461,6 +2480,31 @@ cnfstmtOptimizePRIFilt(struct cnfstmt *stmt)
 done:	return;
 }
 
+/* we abuse "optimize" a bit. Actually, we obtain a ruleset pointer, as
+ * all rulesets are only known later in the process (now!).
+ */
+static void
+cnfstmtOptimizeCall(struct cnfstmt *stmt)
+{
+	ruleset_t *pRuleset;
+	rsRetVal localRet;
+	uchar *rsName;
+
+	rsName = (uchar*) es_str2cstr(stmt->d.s_call.name, NULL);
+	localRet = rulesetGetRuleset(loadConf, &pRuleset, rsName);
+	if(localRet != RS_RET_OK) {
+		/* in that case, we accept that a NOP will "survive" */
+		parser_errmsg("ruleset '%s' cannot be found\n", rsName);
+		es_deleteStr(stmt->d.s_call.name);
+		stmt->nodetype = S_NOP;
+		goto done;
+	}
+	DBGPRINTF("CALL obtained ruleset ptr %p for ruleset %s\n", pRuleset, rsName);
+	stmt->d.s_call.stmt = pRuleset->root;
+done:
+	free(rsName);
+	return;
+}
 /* (recursively) optimize a statement */
 void
 cnfstmtOptimize(struct cnfstmt *root)
@@ -2485,6 +2529,9 @@ dbgprintf("RRRR: stmtOptimize: stmt %p, nodetype %u\n", stmt, stmt->nodetype);
 			break;
 		case S_ACT:
 			cnfstmtOptimizeAct(stmt);
+			break;
+		case S_CALL:
+			cnfstmtOptimizeCall(stmt);
 			break;
 		case S_STOP:
 			if(stmt->next != NULL)

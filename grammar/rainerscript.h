@@ -5,9 +5,6 @@
 #include <typedefs.h>
 #include <sys/types.h>
 #include <regex.h>
-//#include "stringbuf.h"
-
-/* TODO: make this hack cleaner... we have circular definitions, so we need: */
 
 
 #define	LOG_NFACILITIES	24	/* current number of syslog facilities */
@@ -127,6 +124,7 @@ struct nvlst {
 #define S_NOP 4005	/* usually used to disable some statement */
 #define S_SET 4006
 #define S_UNSET 4007
+#define S_CALL 4008
 
 enum cnfFiltType { CNFFILT_NONE, CNFFILT_PRI, CNFFILT_PROP, CNFFILT_SCRIPT };
 static inline char*
@@ -163,6 +161,10 @@ struct cnfstmt {
 		struct {
 			uchar *varname;
 		} s_unset;
+		struct {
+			es_str_t *name;
+			struct cnfstmt *stmt;
+		} s_call;
 		struct {
 			uchar pmask[LOG_NFACILITIES+1];	/* priority mask */
 			struct cnfstmt *t_then;
@@ -324,6 +326,7 @@ struct cnfstmt * cnfstmtNewAct(struct nvlst *lst);
 struct cnfstmt * cnfstmtNewLegaAct(char *actline);
 struct cnfstmt * cnfstmtNewSet(char *var, struct cnfexpr *expr);
 struct cnfstmt * cnfstmtNewUnset(char *var);
+struct cnfstmt * cnfstmtNewCall(es_str_t *name);
 void cnfstmtDestruct(struct cnfstmt *root);
 void cnfstmtOptimize(struct cnfstmt *root);
 struct cnfarray* cnfarrayNew(es_str_t *val);

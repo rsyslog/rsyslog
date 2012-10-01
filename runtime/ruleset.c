@@ -92,6 +92,7 @@ scriptIterateAllActions(struct cnfstmt *root, rsRetVal (*pFunc)(void*, void*), v
 		switch(stmt->nodetype) {
 		case S_NOP:
 		case S_STOP:
+		case S_CALL:/* call does not need to do anything - done in called ruleset! */
 			break;
 		case S_ACT:
 			DBGPRINTF("iterateAllActions calling into action %p\n", stmt->d.act);
@@ -508,6 +509,10 @@ dbgprintf("RRRR: scriptExec: batch of %d elements, active %p, stmt %p, nodetype 
 			break;
 		case S_UNSET:
 			execUnset(stmt, pBatch, active);
+			break;
+		case S_CALL:
+			DBGPRINTF("calling ruleset\n"); // TODO: add Name
+			scriptExec(stmt->d.s_call.stmt, pBatch, active);
 			break;
 		case S_IF:
 			execIf(stmt, pBatch, active);

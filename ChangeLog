@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------
 Version 7.1.7  [devel] 2012-09-??
+- implemented RainerScript "call" statement
 - implemented RainerScript array-based string comparison operations
 - implemented imtcp "permittedPeers" module-global parameter
 - imudp: support for specifying multiple ports via array added

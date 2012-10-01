@@ -45,6 +45,8 @@
 	/* INCL is in $IncludeConfig processing (skip to include file) */
 %x LINENO
 	/* LINENO: support for setting the linenumber */
+%x INCALL
+	/* INCALL: support for the call statement */
 %x EXPR
 	/* EXPR is a bit ugly, but we need it to support pre v6-syntax. The problem
 	 * is that cfsysline statement start with $..., the same like variables in
@@ -141,11 +143,17 @@ int fileno(FILE *stream);
 <EXPR>[a-z][a-z0-9_]*		{ yylval.estr = es_newStrFromCStr(yytext, yyleng);
 				  return FUNC; }
 <EXPR>.				{ dbgprintf("invalid char in expr: %s\n", yytext); }
+<INCALL>[ \t\n]
+<INCALL>.			{ dbgprintf("invalid char in CALL stmt: %s\n", yytext); }
+<INCALL>[a-zA-Z][a-zA-Z0-9_\.]*	{ yylval.estr = es_newStrFromCStr(yytext, yyleng);
+				  BEGIN INITIAL;
+				  return NAME; }
 "&"				{ return '&'; }
 "{"				{ return '{'; }
 "}"				{ return '}'; }
 "stop"				{ return STOP; }
 "else"				{ return ELSE; }
+"call"				{ BEGIN INCALL; return CALL; }
 "set"				{ BEGIN EXPR; return SET; }
 "unset"				{ BEGIN EXPR; return UNSET; }
  /* line number support because the "preprocessor" combines lines and so needs
