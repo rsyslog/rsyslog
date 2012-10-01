@@ -1229,9 +1229,9 @@ evalStrArrayCmp(es_str_t *estr_l, struct cnfarray* ar, int cmpop)
 		}
 
 #define FREE_TWO_STRINGS \
-		if(bMustFree) es_deleteStr(estr_r); \
-		if(expr->r->nodetype != 'S' && r.datatype == 'S') es_deleteStr(r.d.estr); \
-		if(bMustFree2) es_deleteStr(estr_l); \
+		if(bMustFree) es_deleteStr(estr_r);  \
+		if(expr->r->nodetype != S_ARRAY && r.datatype == 'S') es_deleteStr(r.d.estr);  \
+		if(bMustFree2) es_deleteStr(estr_l);  \
 		if(l.datatype == 'S') es_deleteStr(l.d.estr)
 
 /* evaluate an expression.
@@ -1479,6 +1479,7 @@ cnfexprEval(struct cnfexpr *expr, struct var *ret, void* usrptr)
 		ret->datatype = 'N';
 		if(expr->r->nodetype == S_ARRAY) {
 			ret->d.n = evalStrArrayCmp(estr_l,  (struct cnfarray*) expr->r, CMP_STARTSWITH);
+			bMustFree = 0;
 		} else {
 			ret->d.n = es_strncmp(estr_l, estr_r, estr_r->lenStr) == 0;
 		}
@@ -1489,6 +1490,7 @@ cnfexprEval(struct cnfexpr *expr, struct var *ret, void* usrptr)
 		ret->datatype = 'N';
 		if(expr->r->nodetype == S_ARRAY) {
 			ret->d.n = evalStrArrayCmp(estr_l,  (struct cnfarray*) expr->r, CMP_STARTSWITHI);
+			bMustFree = 0;
 		} else {
 			ret->d.n = es_strncasecmp(estr_l, estr_r, estr_r->lenStr) == 0;
 		}
@@ -1499,6 +1501,7 @@ cnfexprEval(struct cnfexpr *expr, struct var *ret, void* usrptr)
 		ret->datatype = 'N';
 		if(expr->r->nodetype == S_ARRAY) {
 			ret->d.n = evalStrArrayCmp(estr_l,  (struct cnfarray*) expr->r, CMP_CONTAINS);
+			bMustFree = 0;
 		} else {
 			ret->d.n = es_strContains(estr_l, estr_r) != -1;
 		}
@@ -1509,6 +1512,7 @@ cnfexprEval(struct cnfexpr *expr, struct var *ret, void* usrptr)
 		ret->datatype = 'N';
 		if(expr->r->nodetype == S_ARRAY) {
 			ret->d.n = evalStrArrayCmp(estr_l,  (struct cnfarray*) expr->r, CMP_CONTAINSI);
+			bMustFree = 0;
 		} else {
 			ret->d.n = es_strCaseContains(estr_l, estr_r) != -1;
 		}
