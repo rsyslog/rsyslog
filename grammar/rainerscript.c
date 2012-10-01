@@ -1223,14 +1223,14 @@ evalStrArrayCmp(es_str_t *estr_l, struct cnfarray* ar, int cmpop)
 		if(expr->r->nodetype == 'S') { \
 			estr_r = ((struct cnfstringval*)expr->r)->estr;\
 			bMustFree = 0; \
-		} else if(expr->r->nodetype != S_ARRAY) { \
+		} else if(expr->r->nodetype != 'A') { \
 			cnfexprEval(expr->r, &r, usrptr); \
 			estr_r = var2String(&r, &bMustFree); \
 		}
 
 #define FREE_TWO_STRINGS \
 		if(bMustFree) es_deleteStr(estr_r);  \
-		if(expr->r->nodetype != S_ARRAY && r.datatype == 'S') es_deleteStr(r.d.estr);  \
+		if(expr->r->nodetype != 'A' && r.datatype == 'S') es_deleteStr(r.d.estr);  \
 		if(bMustFree2) es_deleteStr(estr_l);  \
 		if(l.datatype == 'S') es_deleteStr(l.d.estr)
 
@@ -1267,7 +1267,7 @@ cnfexprEval(struct cnfexpr *expr, struct var *ret, void* usrptr)
 		if(l.datatype == 'S') {
 			if(expr->r->nodetype == 'S') {
 				ret->d.n = !es_strcmp(l.d.estr, ((struct cnfstringval*)expr->r)->estr); /*CMP*/
-			} else if(expr->r->nodetype == S_ARRAY) {
+			} else if(expr->r->nodetype == 'A') {
 				ret->d.n = evalStrArrayCmp(l.d.estr,  (struct cnfarray*) expr->r, CMP_EQ);
 			} else {
 				cnfexprEval(expr->r, &r, usrptr);
@@ -1310,7 +1310,7 @@ cnfexprEval(struct cnfexpr *expr, struct var *ret, void* usrptr)
 		if(l.datatype == 'S') {
 			if(expr->r->nodetype == 'S') {
 				ret->d.n = es_strcmp(l.d.estr, ((struct cnfstringval*)expr->r)->estr); /*CMP*/
-			} else if(expr->r->nodetype == S_ARRAY) {
+			} else if(expr->r->nodetype == 'A') {
 				ret->d.n = evalStrArrayCmp(l.d.estr,  (struct cnfarray*) expr->r, CMP_NE);
 			} else {
 				if(r.datatype == 'S') {
@@ -1477,7 +1477,7 @@ cnfexprEval(struct cnfexpr *expr, struct var *ret, void* usrptr)
 	case CMP_STARTSWITH:
 		PREP_TWO_STRINGS;
 		ret->datatype = 'N';
-		if(expr->r->nodetype == S_ARRAY) {
+		if(expr->r->nodetype == 'A') {
 			ret->d.n = evalStrArrayCmp(estr_l,  (struct cnfarray*) expr->r, CMP_STARTSWITH);
 			bMustFree = 0;
 		} else {
@@ -1488,7 +1488,7 @@ cnfexprEval(struct cnfexpr *expr, struct var *ret, void* usrptr)
 	case CMP_STARTSWITHI:
 		PREP_TWO_STRINGS;
 		ret->datatype = 'N';
-		if(expr->r->nodetype == S_ARRAY) {
+		if(expr->r->nodetype == 'A') {
 			ret->d.n = evalStrArrayCmp(estr_l,  (struct cnfarray*) expr->r, CMP_STARTSWITHI);
 			bMustFree = 0;
 		} else {
@@ -1499,7 +1499,7 @@ cnfexprEval(struct cnfexpr *expr, struct var *ret, void* usrptr)
 	case CMP_CONTAINS:
 		PREP_TWO_STRINGS;
 		ret->datatype = 'N';
-		if(expr->r->nodetype == S_ARRAY) {
+		if(expr->r->nodetype == 'A') {
 			ret->d.n = evalStrArrayCmp(estr_l,  (struct cnfarray*) expr->r, CMP_CONTAINS);
 			bMustFree = 0;
 		} else {
@@ -1510,7 +1510,7 @@ cnfexprEval(struct cnfexpr *expr, struct var *ret, void* usrptr)
 	case CMP_CONTAINSI:
 		PREP_TWO_STRINGS;
 		ret->datatype = 'N';
-		if(expr->r->nodetype == S_ARRAY) {
+		if(expr->r->nodetype == 'A') {
 			ret->d.n = evalStrArrayCmp(estr_l,  (struct cnfarray*) expr->r, CMP_CONTAINSI);
 			bMustFree = 0;
 		} else {
@@ -1562,7 +1562,7 @@ cnfexprEval(struct cnfexpr *expr, struct var *ret, void* usrptr)
 		ret->datatype = 'S';
 		ret->d.estr = es_strdup(((struct cnfstringval*)expr)->estr);
 		break;
-	case S_ARRAY:
+	case 'A':
 		/* if an array is used with "normal" operations, it just evaluates
 		 * to its first element.
 		 */
@@ -1575,7 +1575,7 @@ cnfexprEval(struct cnfexpr *expr, struct var *ret, void* usrptr)
 	case '&':
 		/* TODO: think about optimization, should be possible ;) */
 		PREP_TWO_STRINGS;
-		if(expr->r->nodetype == S_ARRAY) {
+		if(expr->r->nodetype == 'A') {
 			estr_r = ((struct cnfarray*)expr->r)->arr[0];
 			bMustFree = 0;
 		}
@@ -1693,7 +1693,7 @@ cnfexprDestruct(struct cnfexpr *expr)
 	case 'F':
 		cnffuncDestruct((struct cnffunc*)expr);
 		break;
-	case S_ARRAY:
+	case 'A':
 		cnfarrayContentDestruct((struct cnfarray*)expr);
 		break;
 	default:break;
@@ -1841,7 +1841,7 @@ cnfexprPrint(struct cnfexpr *expr, int indent)
 		cstrPrint("string '", ((struct cnfstringval*)expr)->estr);
 		dbgprintf("'\n");
 		break;
-	case S_ARRAY:
+	case 'A':
 		cnfarrayPrint((struct cnfarray*)expr, indent);
 		break;
 	case 'N':
@@ -1991,7 +1991,7 @@ cnfarrayNew(es_str_t *val)
 {
 	struct cnfarray *ar;
 	if((ar = malloc(sizeof(struct cnfarray))) != NULL) {
-		ar->nodetype = S_ARRAY;
+		ar->nodetype = 'A';
 		ar->nmemb = 1;
 		if((ar->arr = malloc(sizeof(es_str_t*))) == NULL) {
 			free(ar);

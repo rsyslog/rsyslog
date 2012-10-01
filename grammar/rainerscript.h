@@ -116,9 +116,9 @@ struct nvlst {
  * R - rule
  * S - string
  * V - var
+ * A - (string) array
  * ... plus the S_* #define's below:
  */
-#define S_ARRAY 3000
 #define S_STOP 4000
 #define S_PRIFILT 4001
 #define S_PROPFILT 4002
