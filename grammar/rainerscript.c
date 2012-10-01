@@ -52,8 +52,6 @@ DEFobjCurrIf(regexp)
 void cnfexprOptimize(struct cnfexpr *expr);
 static void cnfstmtOptimizePRIFilt(struct cnfstmt *stmt);
 static void cnfarrayPrint(struct cnfarray *ar, int indent);
-static void cnfarrayContentDestruct(struct cnfarray *ar);
-static struct cnfarray* cnfarrayDup(struct cnfarray *old);
 
 char*
 getFIOPName(unsigned iFIOP)
@@ -1619,7 +1617,7 @@ cnfexprEval(struct cnfexpr *expr, struct var *ret, void* usrptr)
 
 //---------------------------------------------------------
 
-static void
+void
 cnfarrayContentDestruct(struct cnfarray *ar)
 {
 	unsigned short i;
@@ -2019,7 +2017,7 @@ done:	return ar;
 }
 
 /* duplicate an array (deep copy) */
-static struct cnfarray*
+struct cnfarray*
 cnfarrayDup(struct cnfarray *old)
 {
 	int i;

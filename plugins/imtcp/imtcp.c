@@ -36,7 +36,6 @@
  *
  * rgerhards, 2008-05-19
  */
-
 #include "config.h"
 #include <stdlib.h>
 #include <assert.h>
@@ -62,6 +61,7 @@
 #include "errmsg.h"
 #include "tcpsrv.h"
 #include "ruleset.h"
+#include "rainerscript.h"
 #include "net.h" /* for permittedPeers, may be removed when this is removed */
 
 MODULE_TYPE_INPUT
@@ -123,6 +123,7 @@ struct modConfData_s {
 	sbool bKeepAlive;
 	sbool bEmitMsgOnClose; /* emit an informational message on close by remote peer */
 	uchar *pszStrmDrvrAuthMode; /* authentication mode to use */
+	struct cnfarray *permittedPeers;
 	sbool configSetViaV2Method;
 };
 
@@ -140,6 +141,7 @@ static struct cnfparamdescr modpdescr[] = {
 	{ "maxlistners", eCmdHdlrPositiveInt, 0 },
 	{ "streamdriver.mode", eCmdHdlrPositiveInt, 0 },
 	{ "streamdriver.authmode", eCmdHdlrString, 0 },
+	{ "permittedpeer", eCmdHdlrArray, 0 },
 	{ "keepalive", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk modpblk =
@@ -400,6 +402,7 @@ CODESTARTbeginCnfLoad
 	loadModConf->iAddtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
 	loadModConf->bDisableLFDelim = 0;
 	loadModConf->pszStrmDrvrAuthMode = NULL;
+	loadModConf->permittedPeers = NULL;
 	loadModConf->configSetViaV2Method = 0;
 	bLegacyCnfModGlobalsPermitted = 1;
 	/* init legacy config variables */
@@ -445,8 +448,10 @@ CODESTARTsetModCnf
 			loadModConf->bKeepAlive = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "streamdriver.mode")) {
 			loadModConf->iStrmDrvrMode = (int) pvals[i].val.d.n;
-		} else if(!strcmp(modpblk.descr[i].name, "streamdriver.mode")) {
+		} else if(!strcmp(modpblk.descr[i].name, "streamdriver.authmode")) {
 			loadModConf->pszStrmDrvrAuthMode = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(modpblk.descr[i].name, "permittedpeer")) {
+			loadModConf->permittedPeers = cnfarrayDup(pvals[i].val.d.ar);
 		} else {
 			dbgprintf("imtcp: program error, non-handled "
 			  "param '%s' in beginCnfLoad\n", modpblk.descr[i].name);
@@ -517,8 +522,15 @@ ENDcheckCnf
 
 BEGINactivateCnfPrePrivDrop
 	instanceConf_t *inst;
+	int i;
 CODESTARTactivateCnfPrePrivDrop
 	runModConf = pModConf;
+	if(runModConf->permittedPeers != NULL) {
+		for(i = 0 ; i <  runModConf->permittedPeers->nmemb ; ++i) {
+			setPermittedPeer(NULL, (uchar*)
+			    es_str2cstr(runModConf->permittedPeers->arr[i], NULL));
+		}
+	}
 	for(inst = runModConf->root ; inst != NULL ; inst = inst->next) {
 		addListner(pModConf, inst);
 	}
@@ -538,6 +550,10 @@ ENDactivateCnf
 BEGINfreeCnf
 	instanceConf_t *inst, *del;
 CODESTARTfreeCnf
+	if(runModConf->permittedPeers != NULL) {
+		cnfarrayContentDestruct(runModConf->permittedPeers);
+		free(runModConf->permittedPeers);
+	}
 	for(inst = pModConf->root ; inst != NULL ; ) {
 		free(inst->pszBindPort);
 		free(inst->pszInputName);
@@ -643,8 +659,6 @@ CODEmodInit_QueryRegCFSLineHdlr
 	/* register config file handlers */
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpserverrun"), 0, eCmdHdlrGetWord,
 				   addInstance, NULL, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpserverstreamdriverpermittedpeer"), 0, eCmdHdlrGetWord,
-				   setPermittedPeer, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpserverinputname"), 0, eCmdHdlrGetWord,
 				   NULL, &cs.pszInputName, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpserverbindruleset"), 0, eCmdHdlrGetWord,
@@ -652,6 +666,8 @@ CODEmodInit_QueryRegCFSLineHdlr
 	/* module-global config params - will be disabled in configs that are loaded
 	 * via module(...).
 	 */
+	CHKiRet(regCfSysLineHdlr2(UCHAR_CONSTANT("inputtcpserverstreamdriverpermittedpeer"), 0, eCmdHdlrGetWord,
+			   setPermittedPeer, NULL, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
 	CHKiRet(regCfSysLineHdlr2(UCHAR_CONSTANT("inputtcpserverstreamdriverauthmode"), 0, eCmdHdlrGetWord,
 			   NULL, &cs.pszStrmDrvrAuthMode, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
 	CHKiRet(regCfSysLineHdlr2(UCHAR_CONSTANT("inputtcpserverkeepalive"), 0, eCmdHdlrBinary,
