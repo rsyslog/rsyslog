@@ -573,7 +573,6 @@ GetParserList(rsconf_t *conf, msg_t *pMsg)
 static void
 addScript(ruleset_t *pThis, struct cnfstmt *script)
 {
-dbgprintf("DDDD: add script %p, ruleset %p\n", script, pThis);
 	if(pThis->last == NULL)
 		pThis->root = pThis->last = script;
 	else {
