@@ -138,7 +138,6 @@ processJSON(instanceData *pData, msg_t *pMsg, char *buf, size_t lenBuf)
 	}
  
  	msgAddJSON(pMsg, (uchar*)"!", json);
-dbgprintf("AAAA: The msg json object: %s\n",json_object_to_json_string(pMsg->json));
 finalize_it:
 	RETiRet;
 }
@@ -159,7 +158,6 @@ CODESTARTdoAction
 	 */
 	buf = getMSG(pMsg);
 
-dbgprintf("mmjsonparse: msg is '%s'\n", buf);
 	while(*buf && isspace(*buf)) {
 		++buf;
 	}
@@ -169,7 +167,6 @@ dbgprintf("mmjsonparse: msg is '%s'\n", buf);
 		ABORT_FINALIZE(RS_RET_NO_CEE_MSG);
 	}
 	buf += LEN_COOKIE;
-dbgprintf("mmjsonparse: cookie found, rest of message: '%s'\n", buf);
 	CHKiRet(processJSON(pData, pMsg, (char*) buf, strlen((char*)buf)));
 	bSuccess = 1;
 finalize_it:
