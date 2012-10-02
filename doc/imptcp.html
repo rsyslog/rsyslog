@@ -24,6 +24,17 @@ specifying $InputPTCPServerRun multiple times.
 <p>This plugin has config directives similar named as imtcp, but they all have <b>P</b>TCP in
 their name instead of just TCP. Note that only a subset of the parameters are supported.
 <ul>
+
+<p><b>Global Directives</b>:</p>
+<ul>
+<li>Threads &lt;number&gt;<br>
+Number of helper worker threads to process incoming messages. These
+threads are utilized to pull data off the network. On a busy system, additional
+helper threads (but not more than there are CPUs/Cores) can help improving
+performance. The default value is two.
+</ul>
+<p><b>Action Directives</b>:</p>
+<ul>
 <li><b>AddTLFrameDelimiter</b> &lt;Delimiter&gt;<br>
 This directive permits to specify an additional frame delimiter for plain tcp syslog.
 The industry-standard specifies using the LF character as frame delimiter. Some vendors,
@@ -78,11 +89,6 @@ name is not strictly necessary, but can be useful to apply filtering based on wh
 the message was received from.
 <li><b>Ruleset</b> &lt;name&gt;<br>
 Binds specified ruleset to next server defined.
-<!--<li>$InputPTCPHelperThreads &lt;number&gt;<br>
-Number of helper worker threads to process incoming messages. These
-threads are utilized to pull data off the network. On a busy system, additional
-helper threads (but not more than there are CPUs/Cores) can help improving
-performance. The default value is two.-->
 <li><b>Address</b> &lt;name&gt;<br>
 On multi-homed machines, specifies to which local address the listerner should be bound.
 </ul>

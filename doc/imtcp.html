@@ -21,9 +21,11 @@ can also be provided by using <a href="rsyslog_stunnel.html">stunnel</a>
 $InputTCPServerRun multiple times. This is available since version 4.3.1, earlier
 versions do NOT support it.
 </p>
+
 <p><b>Configuration Directives</b>:</p>
+<p><b>Global Directives</b>:</p>
 <ul>
-<li><b>$InputTCPServerAddtlFrameDelimiter &lt;Delimiter&gt;</b><br>
+<li><b>AddtlFrameDelimiter</b> &lt;Delimiter&gt;<br>
 This directive permits to specify an additional frame delimiter for plain tcp syslog.
 The industry-standard specifies using the LF character as frame delimiter. Some vendors,
 notable Juniper in their NetScreen products, use an invalid frame delimiter, in Juniper's
@@ -43,7 +45,7 @@ very limited interest in fixing this issue. This directive <b>can not</b> fix th
 That would require much more code changes, which I was unable to do so far. Full details
 can be found at the <a href="http://www.rsyslog.com/Article321.phtml">Cisco tcp syslog anomaly</a>
 page.
-<li><b>$InputTCPServerDisableLFDelimiter</b> &lt;on/<b>off</b>&gt; (available since 5.5.3)<br>
+<li><b>DisableLFDelimiter</b> &lt;on/<b>off</b>&gt;<br>
 Industry-strandard plain text tcp syslog uses the LF to delimit syslog frames. However,
 some users brought up the case that it may be useful to define a different delimiter and
 totally disable LF as a delimiter (the use case named were multi-line messages). This mode
@@ -51,16 +53,14 @@ is non-standard and will probably come with a lot of problems. However, as there
 for it and it is relatively easy to support, we do so. Be sure to turn this setting to
 "on" only if you exactly know what you are doing. You may run into all sorts of troubles,
 so be prepared to wrangle with that!
-<li><b>$InputTCPServerNotifyOnConnectionClose</b> [on/<b>off</b>] (available since 4.5.5)<br>
+<li><b>NotifyOnConnectionClose</b> [on/<b>off</b>]<br>
 instructs imtcp to emit a message if the remote peer closes a connection.<br>
 <b>Important:</b> This directive is global to all listeners and must be given right
 after loading imtcp, otherwise it may have no effect.</li>
-<li><b>$InputTCPServerKeepAlive</b> &lt;on/<b>off</b>&gt;<br>
+<li><b>KeepAlive</b> &lt;on/<b>off</b>&gt;<br>
 enable of disable keep-alive packets at the tcp socket layer. The default is
 to disable them.</li>
-<li><b>$InputTCPServerRun</b> &lt;port&gt;<br>
-Starts a TCP server on selected port</li>
-<li><b>$InputTCPFlowControl</b> &lt;<b>on</b>/off&gt;<br>
+<li><b>FlowControl</b> &lt;<b>on</b>/off&gt;<br>
 This setting specifies whether some message flow control shall be exercised on the
 related TCP input. If set to on, messages are handled as "light delayable", which means
 the sender is throttled a bit when the queue becomes near-full. This is done in order
@@ -69,28 +69,85 @@ may have some undesired effect in some configurations. Still, we consider this a
 a useful setting and thus it is the default. To turn the handling off, simply
 configure that explicitely.
 </li>
-<li><b>$InputTCPMaxListeners</b> &lt;number&gt;<br>
+<li><b>MaxListeners</b> &lt;number&gt;<br>
 Sets the maximum number of listeners (server ports) supported. Default is 20. This must be set before the first $InputTCPServerRun directive.</li>
-<li><b>$InputTCPMaxSessions</b> &lt;number&gt;<br> Sets the maximum number of sessions supported. Default is 200. This must be set before the first $InputTCPServerRun directive</li>
-<li><b>$InputTCPServerStreamDriverMode</b> &lt;number&gt;<br>
+<li><b>MaxSessions</b> &lt;number&gt;<br> Sets the maximum number of sessions supported. Default is 200. This must be set before the first $InputTCPServerRun directive</li>
+<li><b>StreamDriver.Mode</b> &lt;number&gt;<br>
 Sets the driver mode for the currently selected <a href="netstream.html">network stream driver</a>. &lt;number&gt; is driver specifc.</li>
-<li><b>$InputTCPServerInputName</b> &lt;name&gt;<br>
+<li><b>StreamDriver.AuthMode</b> &lt;mode-string&gt;<br>
+Sets the authentication mode for the currently selected <a href="netstream.html">network stream driver</a>. &lt;mode-string&gt; is driver specifc.</li>
+<li><b>PermittedPeer</b> &lt;id-string&gt;<br>
+Sets permitted peer IDs. Only these peers are able to connect to the
+listener. &lt;id-string&gt; semantics depend on the currently selected
+AuthMode and&nbsp; <a href="netstream.html">network stream driver</a>. PermittedPeer may not be set in anonymous modes.
+<br>PermittedPeer may be set either to a single peer or an array of peers either of type IP or name, depending on the tls certificate.
+<br>Single peer: PermittedPeer="127.0.0.1"
+<br>Array of peers: PermittedPeer=["test1.example.net","10.1.2.3","test2.example.net","..."]</li>
+</ul>
+<p><b>Action Directives</b>:</p>
+<ul>
+<li><b>Port</b> &lt;port&gt;<br>
+Starts a TCP server on selected port</li>
+<li><b>Name</b> &lt;name&gt;<br>
 Sets a name for the inputname property. If no name is set "imtcp" is used by default. Setting a 
 name is not strictly necessary, but can be useful to apply filtering based on which input
 the message was received from.
-<li><b>$InputTCPServerStreamDriverAuthMode</b> &lt;mode-string&gt;<br>
-Sets the authentication mode for the currently selected <a href="netstream.html">network stream driver</a>. &lt;mode-string&gt; is driver specifc.</li>
-<li><b>$InputTCPServerStreamDriverPermittedPeer</b> &lt;id-string&gt;<br>
-Sets permitted peer IDs. Only these peers are able to connect to the
-listener. &lt;id-string&gt; semantics depend on the currently selected
-AuthMode and&nbsp; <a href="netstream.html">network stream driver</a>. PermittedPeers may not be set in anonymous modes.</li>
-<li><b>$InputTCPServerBindRuleset</b> &lt;ruleset&gt;<br>
+<li><b>Ruleset</b> &lt;ruleset&gt;<br>
 Binds the listener to a specific <a href="multi_ruleset.html">ruleset</a>.</li>
-<li><b>$InputTCPSupportOctetCountedFraming</b> &lt;<b>on</b>|off&gt;<br>
+<li><b>SupportOctetCountedFraming</b> &lt;<b>on</b>|off&gt;<br>
 If set to "on", the legacy octed-counted framing (similar to RFC5425 framing) is
 activated. This is the default and should be left unchanged until you know
 very well what you do. It may be useful to turn it off, if you know this framing
 is not used and some senders emit multi-line messages into the message stream.
+</li>
+</ul>
+<b>Caveats/Known Bugs:</b>
+<ul>
+<li>module always binds to all interfaces</li>
+<li>can not be loaded together with <a href="imgssapi.html">imgssapi</a>
+(which includes the functionality of imtcp)</li>
+</ul>
+<p><b>Example:</b></p>
+<p>This sets up a TCP server on port 514 and permits it to accept up to 500 connections:<br>
+</p>
+<textarea rows="15" cols="60">module(load="/folder/to/rsyslog/plugins/imtcp/.libs/imtcp" MaxSessions="500") # needs to be done just once
+input(type="imtcp" port="514")
+</textarea>
+<p>Note that the global parameters (here: max sessions) need to be set when the module is loaded. Otherwise, the parameters will not apply. 
+</p>
+
+<p><b>Legacy Configuration Directives</b>:</p>
+<ul>
+<li><b>$InputTCPServerAddtlFrameDelimiter &lt;Delimiter&gt;</b><br>
+equivalent to: AddtlFrameDelimiter
+<li><b>$InputTCPServerDisableLFDelimiter</b> &lt;on/<b>off</b>&gt; (available since 5.5.3)<br>
+equivalent to: DisableLFDelimiter
+<li><b>$InputTCPServerNotifyOnConnectionClose</b> [on/<b>off</b>] (available since 4.5.5)<br>
+equivalent to: NotifyOnConnectionClose<br>
+</li>
+<li><b>$InputTCPServerKeepAlive</b> &lt;on/<b>off</b>&gt;<br>
+equivalent to: KeepAlive</li>
+<li><b>$InputTCPServerRun</b> &lt;port&gt;<br>
+equivalent to: Port</li>
+<li><b>$InputTCPFlowControl</b> &lt;<b>on</b>/off&gt;<br>
+equivalent to: FlowControl
+</li>
+<li><b>$InputTCPMaxListeners</b> &lt;number&gt;<br>
+equivalent to: MaxListeners</li>
+<li><b>$InputTCPMaxSessions</b> &lt;number&gt;<br> 
+equivalent to: MaxSessions</li>
+<li><b>$InputTCPServerStreamDriverMode</b> &lt;number&gt;<br>
+equivalent to: StreamDriver.Mode</li>
+<li><b>$InputTCPServerInputName</b> &lt;name&gt;<br>
+equivalent to: Name
+<li><b>$InputTCPServerStreamDriverAuthMode</b> &lt;mode-string&gt;<br>
+equivalent to: StreamDriver.AuthMode</li>
+<li><b>$InputTCPServerStreamDriverPermittedPeer</b> &lt;id-string&gt;<br>
+equivalent to: PermittedPeer.</li>
+<li><b>$InputTCPServerBindRuleset</b> &lt;ruleset&gt;<br>
+equivalent to: Ruleset</a>.</li>
+<li><b>$InputTCPSupportOctetCountedFraming</b> &lt;<b>on</b>|off&gt;<br>
+equivalent to: SupportOctetCountedFraming
 </li>
 </ul>
 <b>Caveats/Known Bugs:</b>
