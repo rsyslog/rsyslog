@@ -1,6 +1,8 @@
 ---------------------------------------------------------------------------
 Version 7.1.8  [devel] 2012-10-??
 - improved module doc
+- added "parser" parameter to ruleset(), so that parser chain can be
+  configured
 - implemented "continue" RainerScript statement
 - bugfix: ruleset(){} directive errornously changed default ruleset
   much like the $ruleset legacy conf statement. This potentially lead

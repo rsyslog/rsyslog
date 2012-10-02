@@ -57,7 +57,8 @@ DEFobjCurrIf(parser)
 
 /* tables for interfacing with the v6 config system (as far as we need to) */
 static struct cnfparamdescr rspdescr[] = {
-	{ "name", eCmdHdlrString, CNFPARAM_REQUIRED }
+	{ "name", eCmdHdlrString, CNFPARAM_REQUIRED },
+	{ "parser", eCmdHdlrArray, 0 }
 };
 static struct cnfparamblk rspblk =
 	{ CNFPARAMBLK_VERSION,
@@ -758,6 +759,8 @@ BEGINobjDebugPrint(ruleset) /* be sure to specify the object type also in END an
 CODESTARTobjDebugPrint(ruleset)
 	dbgoprint((obj_t*) pThis, "rsyslog ruleset %s:\n", pThis->pszName);
 	cnfstmtPrint(pThis->root, 0);
+	dbgoprint((obj_t*) pThis, "ruleset %s assigned parser list:\n", pThis->pszName);
+	printParserList(pThis->pParserLst);
 ENDobjDebugPrint(ruleset)
 
 
@@ -865,12 +868,10 @@ rulesetCreateQueue(void __attribute__((unused)) *pVal, int *pNewVal)
  * rgerhards, 2009-11-04
  */
 static rsRetVal
-doRulesetAddParser(rsconf_t *conf, uchar *pName)
+doRulesetAddParser(ruleset_t *pRuleset, uchar *pName)
 {
 	parser_t *pParser;
 	DEFiRet;
-
-	assert(conf->rulesets.pCurr != NULL); 
 
 	CHKiRet(objUse(parser, CORE_COMPONENT));
 	iRet = parser.FindParser(&pParser, pName);
@@ -883,9 +884,9 @@ doRulesetAddParser(rsconf_t *conf, uchar *pName)
 		FINALIZE;
 	}
 
-	CHKiRet(parser.AddParserToList(&conf->rulesets.pCurr->pParserLst, pParser));
+	CHKiRet(parser.AddParserToList(&pRuleset->pParserLst, pParser));
 
-	DBGPRINTF("added parser '%s' to ruleset '%s'\n", pName, conf->rulesets.pCurr->pszName);
+	DBGPRINTF("added parser '%s' to ruleset '%s'\n", pName, pRuleset->pszName);
 
 finalize_it:
 	d_free(pName); /* no longer needed */
@@ -896,7 +897,7 @@ finalize_it:
 static rsRetVal
 rulesetAddParser(void __attribute__((unused)) *pVal, uchar *pName)
 {
-	return doRulesetAddParser(ourConf, pName);
+	return doRulesetAddParser(ourConf->rulesets.pCurr, pName);
 }
 
 
@@ -907,8 +908,11 @@ rulesetProcessCnf(struct cnfobj *o)
 	struct cnfparamvals *pvals;
 	rsRetVal localRet;
 	uchar *rsName = NULL;
-	int nameIdx;
+	uchar *parserName;
+	int nameIdx, parserIdx;
 	ruleset_t *pRuleset;
+	struct cnfarray *ar;
+	int i;
 	DEFiRet;
 
 	pvals = nvlstGetParams(o->nvlst, &rspblk, NULL);
@@ -933,6 +937,18 @@ rulesetProcessCnf(struct cnfobj *o)
 	CHKiRet(rulesetSetName(pRuleset, rsName));
 	CHKiRet(rulesetConstructFinalize(loadConf, pRuleset));
 	addScript(pRuleset, o->script);
+
+	/* we have only two params, so we do NOT do the usual param loop */
+	parserIdx = cnfparamGetIdx(&rspblk, "parser");
+	if(parserIdx == -1  || !pvals[parserIdx].bUsed)
+		FINALIZE;
+
+	ar = pvals[parserIdx].val.d.ar;
+	for(i = 0 ; i <  ar->nmemb ; ++i) {
+		parserName = (uchar*)es_str2cstr(ar->arr[i], NULL);
+		doRulesetAddParser(pRuleset, parserName);
+		free(parserName);
+	}
 
 finalize_it:
 	free(rsName);

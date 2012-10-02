@@ -143,6 +143,14 @@ finalize_it:
 	RETiRet;
 }
 
+void
+printParserList(parserList_t *pList)
+{
+	while(pList != NULL) {
+		dbgprintf("parser: %s\n", pList->pParser->pName);
+		pList = pList->pNext;
+	}
+}
 
 /* find a parser based on the provided name */
 static rsRetVal

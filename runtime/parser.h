@@ -62,6 +62,7 @@ BEGINinterface(parser) /* name must also be changed in ENDinterface macro! */
 ENDinterface(parser)
 #define parserCURR_IF_VERSION 1 /* increment whenever you change the interface above! */
 
+void printParserList(parserList_t *pList);
 
 /* prototypes */
 PROTOTYPEObj(parser);
