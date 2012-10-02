@@ -62,10 +62,6 @@ typedef struct _instanceData {
 	struct json_tokener *tokener;
 } instanceData;
 
-typedef struct configSettings_s {
-	int dummy; /* remove when the first real parameter is needed */
-} configSettings_t;
-static configSettings_t cs;
 
 BEGINinitConfVars		/* (re)set config variables to default values */
 CODESTARTinitConfVars 
