@@ -382,6 +382,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_PARAM_NOT_PERMITTED = -2222, /**< legacy parameter no longer permitted (usally already set by v2) */
 	RS_RET_NO_JSON_PASSING = -2223, /**< rsyslog core does not support JSON-passing plugin API */
 	RS_RET_MOD_NO_INPUT_STMT = -2224, /**< (input) module does not support input() statement */
+	RS_RET_NO_CEE_MSG = -2225, /**< the message being processed is NOT CEE-enhanced */
 
 	/**** up to 2300 is reserved for v6 use ****/
 	RS_RET_JNAME_NO_ROOT = -2301, /**< root element is missing in JSON path */

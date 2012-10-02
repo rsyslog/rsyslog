@@ -134,7 +134,7 @@ processJSON(instanceData *pData, msg_t *pMsg, char *buf, size_t lenBuf)
 	if(json == NULL
 	   || ((size_t)pData->tokener->char_offset < lenBuf)
 	   || (!json_object_is_type(json, json_type_object))) {
-		FINALIZE; /* just don't set property */
+		ABORT_FINALIZE(RS_RET_NO_CEE_MSG);
 	}
  
  	msgAddJSON(pMsg, (uchar*)"!", json);
@@ -150,6 +150,7 @@ BEGINdoAction
 	uchar *buf;
 	int bSuccess = 0;
 	struct json_object *jval;
+	struct json_object *json;
 CODESTARTdoAction
 	pMsg = (msg_t*) ppString[0];
 	/* note that we can performance-optimize the interface, but this also
@@ -165,21 +166,20 @@ dbgprintf("mmjsonparse: msg is '%s'\n", buf);
 
 	if(*buf == '\0' || strncmp((char*)buf, COOKIE, LEN_COOKIE)) {
 		DBGPRINTF("mmjsonparse: no JSON cookie: '%s'\n", buf);
-
-		/* create json if necessary and add buf as msg */
-		if (!pMsg->json) {
-			pMsg->json = json_object_new_object();
-		}
-		jval = json_object_new_string((char*)buf);
-		json_object_object_add(pMsg->json, "msg", jval);
-
-		FINALIZE;
+		ABORT_FINALIZE(RS_RET_NO_CEE_MSG);
 	}
 	buf += LEN_COOKIE;
 dbgprintf("mmjsonparse: cookie found, rest of message: '%s'\n", buf);
 	CHKiRet(processJSON(pData, pMsg, (char*) buf, strlen((char*)buf)));
 	bSuccess = 1;
 finalize_it:
+	if(iRet == RS_RET_NO_CEE_MSG) {
+		/* add buf as msg */
+		json = json_object_new_object();
+		jval = json_object_new_string((char*)buf);
+		json_object_object_add(json, "msg", jval);
+		msgAddJSON(pMsg, (uchar*)"!", json);
+	}
 	MsgSetParseSuccess(pMsg, bSuccess);
 ENDdoAction
 
