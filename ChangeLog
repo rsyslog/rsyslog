@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------
 Version 6.5.1  [devel] 2012-08-??
+- added tool "logctl" to handle lumberjack logs in MongoDB
 - imfile ported to new v6 config interface
 - imfile now supports config parameter for maximum number of submits
   which is a fine-tuning parameter in regard to input baching

@@ -6,14 +6,14 @@
  *
  * long		short	
 
- * level		l	read records with level x
+ * level	l	read records with level x
  * severity	s	read records with severity x
  * ret		r	number of records to return
  * skip		k	number of records to skip
  * sys		y	read records of system x
  * msg		m	read records with message containing x
- * datef		f	read records starting on time received x
- * dateu		u	read records until time received x
+ * datef	f	read records starting on time received x
+ * dateu	u	read records until time received x
  *
  * examples:
  *
@@ -23,6 +23,7 @@
  * logctl -l "INFO"
  * logctl -s 3
  * logctl -y "ubuntu"
+ *
  * This file is part of rsyslog.
  *
  * Rsyslog is free software: you can redistribute it and/or modify
@@ -40,10 +41,11 @@
  *
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
  */
+#include "config.h"
+#include <stdio.h>
 #include <mongo.h>
 #include <errno.h>
 #include <string.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #include <getopt.h>
