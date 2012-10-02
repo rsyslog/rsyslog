@@ -360,7 +360,7 @@ genMsg(char *buf, size_t maxBuf, int *pLenBuf, struct instdata *inst)
 		} while(!done); /* Attention: do..while()! */
 	} else if(MsgToSend == NULL) {
 		if(dynFileIDs > 0) {
-			snprintf(dynFileIDBuf, maxBuf, "%d:", rand() % dynFileIDs);
+			snprintf(dynFileIDBuf, sizeof(dynFileIDBuf), "%d:", rand() % dynFileIDs);
 		}
 		if(extraDataLen == 0) {
 			*pLenBuf = snprintf(buf, maxBuf, "<%s>Mar  1 01:00:00 172.20.245.8 tag msgnum:%s%8.8d:%c",
