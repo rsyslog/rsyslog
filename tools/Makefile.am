@@ -1,4 +1,5 @@
 sbin_PROGRAMS =
+bin_PROGRAMS =
 man_MANS = rsyslogd.8 rsyslog.conf.5
 
 sbin_PROGRAMS += rsyslogd
@@ -49,6 +50,15 @@ rsyslog_diag_hostname_SOURCES = gethostn.c
 zpipe_SOURCES = zpipe.c
 zpipe_LDADD = -lz
 msggen_SOURCES = msggen.c
+endif
+
+if ENABLE_USERTOOLS
+if ENABLE_OMMONGODB
+bin_PROGRAMS += logctl
+logctl_SOURCES = logctl.c
+logctl_CPPFLAGS =  $(LIBMONGO_CLIENT_CFLAGS)
+logctl_LDADD = $(LIBMONGO_CLIENT_LIBS)
+endif
 endif
 
 EXTRA_DIST = $(man_MANS) \

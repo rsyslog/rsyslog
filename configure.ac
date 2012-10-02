@@ -519,6 +519,18 @@ AC_ARG_ENABLE(diagtools,
 AM_CONDITIONAL(ENABLE_DIAGTOOLS, test x$enable_diagtools = xyes)
 
 
+# compile end-user tools
+AC_ARG_ENABLE(usertools,
+        [AS_HELP_STRING([--enable-usertools],[Enable end user tools @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_usertools="yes" ;;
+          no) enable_usertools="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-usertools) ;;
+         esac],
+        [enable_usertools=no]
+)
+AM_CONDITIONAL(ENABLE_USERTOOLS, test x$enable_usertools = xyes)
+
 
 # MySQL support
 AC_ARG_ENABLE(mysql,
@@ -1486,6 +1498,7 @@ echo "    Debug mode enabled:                       $enable_debug"
 echo "    Runtime Instrumentation enabled:          $enable_rtinst"
 echo "    (total) debugless mode enabled:           $enable_debugless"
 echo "    Diagnostic tools enabled:                 $enable_diagtools"
+echo "    End-User tools enabled:                   $enable_usertools"
 echo "    Enhanced memory checking enabled:         $enable_memcheck"
 echo "    Valgrind support settings enabled:        $enable_valgrind"
 echo
