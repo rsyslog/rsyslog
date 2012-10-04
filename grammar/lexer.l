@@ -188,6 +188,7 @@ int fileno(FILE *stream);
 				  yylval.estr = es_newStrFromBuf(yytext+1, yyleng-2);
 				  return VALUE; }
 "/*"				{ preCommentState = YY_START; BEGIN COMMENT; }
+<INOBJ>"/*"			{ preCommentState = YY_START; BEGIN COMMENT; }
 <EXPR>"/*"			{ preCommentState = YY_START; BEGIN COMMENT; }
 <COMMENT>"*/"			{ BEGIN preCommentState; }
 <COMMENT>([^*]|\n)+|.
