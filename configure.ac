@@ -1352,7 +1352,6 @@ AC_CONFIG_FILES([Makefile \
 		plugins/mmsnmptrapd/Makefile \
 		java/Makefile \
 		tests/Makefile])
-#add on demand: plugins/cust1/Makefile
 AC_OUTPUT
 
 echo "****************************************************"
