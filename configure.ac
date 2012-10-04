@@ -1119,21 +1119,6 @@ AC_ARG_ENABLE(omuxsock,
 AM_CONDITIONAL(ENABLE_OMUXSOCK, test x$enable_omuxsock = xyes)
 
 
-# This provides a vehicle to integrate custom modules, that are not
-# part of rsyslog, into the build process. It is named cust1, so that
-# additional such modules can easily be added.
-AC_ARG_ENABLE(cust1,
-        [AS_HELP_STRING([--enable-cust1],[Compiles cust1 module @<:@default=no@:>@])],
-        [case "${enableval}" in
-         yes) enable_cust1="yes" ;;
-          no) enable_cust1="no" ;;
-           *) AC_MSG_ERROR(bad value ${enableval} for --enable-cust1) ;;
-         esac],
-        [enable_cust1=no]
-)
-AM_CONDITIONAL(ENABLE_CUST1, test x$enable_cust1 = xyes)
-
-
 # A custom strgen that also serves as a sample of how to do
 # SQL-generating strgen's
 AC_ARG_ENABLE(smcustbindcdr,
@@ -1261,7 +1246,6 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omelasticsearch/Makefile \
 		plugins/sm_cust_bindcdr/Makefile \
 		plugins/mmsnmptrapd/Makefile \
-		plugins/cust1/Makefile \
 		java/Makefile \
 		tests/Makefile])
 AC_OUTPUT
@@ -1276,7 +1260,6 @@ echo "    Zlib compression support enabled:         $enable_zlib"
 echo "    rsyslog runtime will be built:            $enable_rsyslogrt"
 echo "    rsyslogd will be built:                   $enable_rsyslogd"
 echo "    GUI components will be built:             $enable_gui"
-echo "    custom module 1 will be built:            $enable_cust1"
 echo "    Unlimited select() support enabled:       $enable_unlimited_select"
 echo
 echo "---{ input plugins }---"
