@@ -116,10 +116,6 @@ if ENABLE_SNMP
 SUBDIRS += plugins/omsnmp
 endif
 
-if ENABLE_CUST1
-SUBDIRS += plugins/cust1
-endif
-
 if ENABLE_SMCUSTBINDCDR
 SUBDIRS += plugins/sm_cust_bindcdr
 endif

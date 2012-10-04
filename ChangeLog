@@ -727,6 +727,7 @@ Version 5.10.1  [V5-STABLE], 2012-0?-??
   Thanks to Cristian Ionescu-Idbohrn and Jonny Törnbom 
 - bugfix: fixed wrong bufferlength for snprintf in tcpflood.c when using 
   the -f (dynafiles) option. 
+- fixed issues in build system (namely related to cust1 dummy plugin)
 ---------------------------------------------------------------------------
 Version 5.10.0  [V5-STABLE], 2012-08-23
 
