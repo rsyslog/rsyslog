@@ -740,27 +740,9 @@ AC_ARG_ENABLE(elasticsearch,
         [enable_elasticsearch=no]
 )
 if test "x$enable_elasticsearch" = "xyes"; then
-  AC_CHECK_PROG(
-    [HAVE_CURL_CONFIG],
-    [curl-config],
-    [yes],,,
-  )
-  if test "x${HAVE_CURL_CONFIG}" != "xyes"; then
-    AC_MSG_FAILURE([curl-config not found in PATH])
-  fi
-  AC_CHECK_LIB(
-    [curl],
-    [curl_global_init],
-    [CURL_CFLAGS="`curl-config --cflags`"
-      CURL_LIBS="`curl-config --libs`"
-    ],
-    [AC_MSG_FAILURE([curl library is missing])],
-    [`curl-config --libs --cflags`]
-  )
+	PKG_CHECK_MODULES([CURL], [libcurl])
 fi
 AM_CONDITIONAL(ENABLE_ELASTICSEARCH, test x$enable_elasticsearch = xyes)
-AC_SUBST(CURL_CFLAGS)
-AC_SUBST(CURL_LIBS)
 
 
 # GnuTLS support
