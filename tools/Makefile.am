@@ -34,8 +34,7 @@ rsyslogd_SOURCES = \
 	pidfile.c \
 	pidfile.h \
 	\
-	../dirty.h \
-	../runtime/librsyslog.la
+	../dirty.h
 rsyslogd_CPPFLAGS =  $(PTHREADS_CFLAGS) $(RSRT_CFLAGS) $(CNF_LIBS)
 # note: it looks like librsyslog.la must be explicitely given on LDDADD,
 # otherwise dependencies are not properly calculated (resulting in a 
