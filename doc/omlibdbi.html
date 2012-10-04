@@ -54,7 +54,23 @@ dlopen()ed plugin (as omlibdbi is). So in short, you probably save you
 a lot of headache if you make sure you have at least libdbi version
 0.8.3 on your system.
 </p>
-<p><b>Action Parameters</b>:</p>
+<p><b>Module Parameters</b></p>
+<ul>
+<li><b>template</b><br>
+The default template to use. This template is used when no template is
+explicitely specified in the action() statement.
+<li><b>driverdirectory</b><br>
+Path to the libdbi drivers. Usually,
+you do not need to set it. If you installed libdbi-drivers at a
+non-standard location, you may need to specify the directory here. If
+you are unsure, do <b>not</b> use this configuration directive.
+Usually, everything works just fine.
+Note that this was an action() paramter in rsyslog versions below 7.3.0.
+However, only the first action's driverdirectory parameter was actually used.
+This has been cleaned up in 7.3.0, where this now is a module paramter.
+</li>
+</ul>
+<p><b>Action Parameters</b></p>
 <ul>
 <li><b>server</b><br>Name or address of the MySQL server
 <li><b>db</b><br>Database to use
@@ -68,24 +84,18 @@ writiting "mysql" (suggest to use ommysql instead), "firebird" (Firbird
 and InterBase), "ingres", "msql", "Oracle", "sqlite", "sqlite3",
 "freetds" (for Microsoft SQL and Sybase) and "pgsql" (suggest to use
 ompgsql instead).</li>
-<li><b>driverdirectory</b><br>
-Path to the libdbi drivers. Usually,
-you do not need to set it. If you installed libdbi-drivers at a
-non-standard location, you may need to specify the directory here. If
-you are unsure, do <b>not</b> use this configuration directive.
-Usually, everything works just fine.</li>
 </ul>
 <p><b>Legacy (pre-v6) Configuration Directives</b>:</p>
+<p>It is strongly recommended NOT to use legacy format.
 <ul>
-<li><b>$ActionLibdbiDriverDirectory /path/to/dbd/drivers</b>
+<li><i>$ActionLibdbiDriverDirectory /path/to/dbd/drivers</i>
 - like the driverdirectory action parameter.
-<li><strong>$ActionLibdbiDriver drivername</strong><br> - like the drivername action parameter.
-<li><span style="font-weight: bold;">$ActionLibdbiHost hostname</span> - like the server action parameter
-The host to connect to.</li>
-<li><b>$ActionLibdbiUserName user</b> - like the uid action parameter
-<li><b>$ActionlibdbiPassword</b> - like the pwd action parameter
-<li><b>$ActionlibdbiDBName db</b> - like the db action parameter
-<li><b>selector line: :omlibdbi:<i>;template</i></b><br>
+<li><i>$ActionLibdbiDriver drivername</i> - like the drivername action parameter
+<li><i>$ActionLibdbiHost hostname</i> - like the server action parameter
+<li><i>$ActionLibdbiUserName user</i> - like the uid action parameter
+<li><i>$ActionlibdbiPassword</i> - like the pwd action parameter
+<li><i>$ActionlibdbiDBName db</i> - like the db action parameter
+<li><i>selector line: :omlibdbi:<code>;template</code></i><br>
 executes the recently configured omlibdbi action. The ;template part is
 optional. If no template is provided, a default template is used (which
 is currently optimized for MySQL - sorry, folks...)</li>
@@ -114,14 +124,14 @@ database "syslog_db" on mysqlsever.example.com. The server is MySQL and
 being accessed under the account of "user" with password "pwd" (if you
 have empty passwords, just remove the $ActionLibdbiPassword line).<br>
 </p>
-<textarea rows="5" cols="60">$ModLoad omlibdbi
+<textarea rows="5" cols="60">module(load="omlibdbi")
 *.* action(type="omlibdbi" driver="mysql"
            server="mysqlserver.example.com" db="syslog_db"
 	   uid="user" pwd="pwd"
 </textarea>
-<p><b>Sample:</b></p>
+<p><b>Legacy Sample:</b></p>
 <p>The same as above, but in legacy config format (pre rsyslog-v6):
-<textarea rows="10" cols="60">$ModLoad omlibdbi
+<textarea rows="8" cols="60">$ModLoad omlibdbi
 $ActionLibdbiDriver mysql
 $ActionLibdbiHost mysqlserver.example.com
 $ActionLibdbiUserName user

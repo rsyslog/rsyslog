@@ -1,4 +1,12 @@
 ---------------------------------------------------------------------------
+Version 7.3.0  [devel] 2012-10-??
+- omlibdbi improvements, added
+  * support for config load phases & module() parameters
+  * support for default templates
+  * driverdirectory is now cleanly a global parameter, but can no longer
+    be specified as an action paramter. Note that in previous versions
+    this parameter was ignored in all but the first action definition
+---------------------------------------------------------------------------
 Version 7.1.9  [beta] 2012-10-??
 - bugfix: comments inside objects (e.g. action()) were not properly handled
 ---------------------------------------------------------------------------

@@ -81,15 +81,36 @@ typedef struct configSettings_s {
 	uchar *dbName;		/* database to use */
 } configSettings_t;
 static configSettings_t cs;
+uchar	*pszFileDfltTplName; /* name of the default template to use */
+
+struct modConfData_s {
+	rsconf_t *pConf;	/* our overall config object */
+	uchar *dbiDrvrDir;	/* where do the dbi drivers reside? */
+	uchar 	*tplName;	/* default template */
+};
+
+static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
+static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current exec process */
+static int bLegacyCnfModGlobalsPermitted;/* are legacy module-global config parameters permitted? */
+
 
 /* tables for interfacing with the v6 config system */
+/* module-global parameters */
+static struct cnfparamdescr modpdescr[] = {
+	{ "template", eCmdHdlrGetWord, 0 },
+	{ "driverdirectory", eCmdHdlrGetWord, 0 }
+};
+static struct cnfparamblk modpblk =
+	{ CNFPARAMBLK_VERSION,
+	  sizeof(modpdescr)/sizeof(struct cnfparamdescr),
+	  modpdescr
+	};
 /* action (instance) parameters */
 static struct cnfparamdescr actpdescr[] = {
 	{ "server", eCmdHdlrGetWord, 1 },
 	{ "db", eCmdHdlrGetWord, 1 },
 	{ "uid", eCmdHdlrGetWord, 1 },
 	{ "pwd", eCmdHdlrGetWord, 1 },
-	{ "driverdirectory", eCmdHdlrGetWord, 0 },
 	{ "driver", eCmdHdlrGetWord, 1 },
 	{ "template", eCmdHdlrGetWord, 0 }
 };
@@ -98,6 +119,20 @@ static struct cnfparamblk actpblk =
 	  sizeof(actpdescr)/sizeof(struct cnfparamdescr),
 	  actpdescr
 	};
+
+/* this function gets the default template. It coordinates action between
+ * old-style and new-style configuration parts.
+ */
+static inline uchar*
+getDfltTpl(void)
+{
+	if(loadModConf != NULL && loadModConf->tplName != NULL)
+		return loadModConf->tplName;
+	else if(pszFileDfltTplName == NULL)
+		return (uchar*)" StdDBFmt";
+	else
+		return pszFileDfltTplName;
+}
 
 
 BEGINinitConfVars		/* (re)set config variables to default values */
@@ -144,7 +179,6 @@ static void closeConn(instanceData *pData)
 BEGINfreeInstance
 CODESTARTfreeInstance
 	closeConn(pData);
-	free(pData->dbiDrvrDir);
 	free(pData->drvrName);
 	free(pData->host);
 	free(pData->usrName);
@@ -302,6 +336,79 @@ CODESTARTdoAction
 ENDdoAction
 
 
+BEGINbeginCnfLoad
+CODESTARTbeginCnfLoad
+	loadModConf = pModConf;
+	pModConf->pConf = pConf;
+	pModConf->tplName = NULL;
+	bLegacyCnfModGlobalsPermitted = 1;
+ENDbeginCnfLoad
+
+BEGINsetModCnf
+	struct cnfparamvals *pvals = NULL;
+	int i;
+CODESTARTsetModCnf
+	pvals = nvlstGetParams(lst, &modpblk, NULL);
+	if(pvals == NULL) {
+		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "omlibdbi: error processing "
+			  	"module config parameters [module(...)]");
+		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
+
+	if(Debug) {
+		dbgprintf("module (global) param blk for omlibdbi:\n");
+		cnfparamsPrint(&modpblk, pvals);
+	}
+
+	for(i = 0 ; i < modpblk.nParams ; ++i) {
+		if(!pvals[i].bUsed)
+			continue;
+		if(!strcmp(modpblk.descr[i].name, "template")) {
+			loadModConf->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+			if(pszFileDfltTplName != NULL) {
+				errmsg.LogError(0, RS_RET_DUP_PARAM, "omlibdbi: warning: default template "
+						"was already set via legacy directive - may lead to inconsistent "
+						"results.");
+			}
+		} else if(!strcmp(modpblk.descr[i].name, "driverdirectory")) {
+			loadModConf->dbiDrvrDir = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else {
+			dbgprintf("omlibdbi: program error, non-handled "
+			  "param '%s' in beginCnfLoad\n", modpblk.descr[i].name);
+		}
+	}
+	bLegacyCnfModGlobalsPermitted = 0;
+finalize_it:
+	if(pvals != NULL)
+		cnfparamvalsDestruct(pvals, &modpblk);
+ENDsetModCnf
+
+BEGINendCnfLoad
+CODESTARTendCnfLoad
+	loadModConf = NULL; /* done loading */
+	/* free legacy config vars */
+	free(pszFileDfltTplName);
+	pszFileDfltTplName = NULL;
+ENDendCnfLoad
+
+BEGINcheckCnf
+CODESTARTcheckCnf
+ENDcheckCnf
+
+BEGINactivateCnf
+CODESTARTactivateCnf
+	runModConf = pModConf;
+ENDactivateCnf
+
+BEGINfreeCnf
+CODESTARTfreeCnf
+	free(pModConf->tplName);
+	free(pModConf->dbiDrvrDir);
+ENDfreeCnf
+
+
+
+
 static inline void
 setInstParamDefaults(instanceData *pData)
 {
@@ -311,6 +418,7 @@ setInstParamDefaults(instanceData *pData)
 
 BEGINnewActInst
 	struct cnfparamvals *pvals;
+	uchar *tplToUse;
 	int i;
 CODESTARTnewActInst
 	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
@@ -332,28 +440,19 @@ CODESTARTnewActInst
 			pData->usrName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "pwd")) {
 			pData->pwd = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if(!strcmp(actpblk.descr[i].name, "driverdirectory")) {
-			pData->dbiDrvrDir = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "driver")) {
 			pData->drvrName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "template")) {
 			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else {
-			dbgprintf("ommysql: program error, non-handled "
+			dbgprintf("omlibdbi: program error, non-handled "
 			  "param '%s'\n", actpblk.descr[i].name);
 		}
 	}
 
-	if(pData->tplName == NULL) {
-		CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*) strdup(" StdDBFmt"),
-			OMSR_RQD_TPL_OPT_SQL));
-	} else {
-		CHKiRet(OMSRsetEntry(*ppOMSR, 0,
-			(uchar*) strdup((char*) pData->tplName),
-			OMSR_RQD_TPL_OPT_SQL));
-	}
+	tplToUse = (pData->tplName == NULL) ? (uchar*)strdup((char*)getDfltTpl()) : pData->tplName;
+	CHKiRet(OMSRsetEntry(*ppOMSR, 0, tplToUse, OMSR_RQD_TPL_OPT_SQL));
 CODE_STD_FINALIZERnewActInst
-dbgprintf("XXXX: added param, iRet %d\n", iRet);
 	cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
 
@@ -380,19 +479,17 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	/* NULL values are supported because drivers have different needs.
 	 * They will err out on connect. -- rgerhards, 2008-02-15
 	 */
-	if(cs.host    != NULL)
-		if((pData->host     = (uchar*) strdup((char*)cs.host))     == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	if(cs.host != NULL)
+		CHKmalloc(pData->host = (uchar*) strdup((char*)cs.host));
 	if(cs.usrName != NULL)
-		if((pData->usrName  = (uchar*) strdup((char*)cs.usrName))  == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-	if(cs.dbName  != NULL)
-		if((pData->dbName   = (uchar*) strdup((char*)cs.dbName))   == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-	if(cs.pwd     != NULL)
-		if((pData->pwd      = (uchar*) strdup((char*)cs.pwd))       == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+		CHKmalloc(pData->usrName = (uchar*) strdup((char*)cs.usrName));
+	if(cs.dbName != NULL)
+		CHKmalloc(pData->dbName = (uchar*) strdup((char*)cs.dbName));
+	if(cs.pwd != NULL)
+		CHKmalloc(pData->pwd = (uchar*) strdup((char*)cs.pwd));
 	if(cs.dbiDrvrDir != NULL)
-		if((pData->dbiDrvrDir = (uchar*) strdup((char*)cs.dbiDrvrDir)) == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-
-	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_RQD_TPL_OPT_SQL, (uchar*) " StdDBFmt"));
-
+		CHKmalloc(loadModConf->dbiDrvrDir = (uchar*) strdup((char*)cs.dbiDrvrDir));
+	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_RQD_TPL_OPT_SQL, getDfltTpl()));
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
@@ -413,6 +510,8 @@ ENDmodExit
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
+CODEqueryEtryPt_STD_CONF2_QUERIES
+CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 ENDqueryEtryPt
 
@@ -444,7 +543,7 @@ INITLegCnfVars
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionlibdbidriverdirectory", 0, eCmdHdlrGetWord, NULL, &cs.dbiDrvrDir, STD_LOADABLE_MODULE_ID));
+	CHKiRet(regCfSysLineHdlr2((uchar *)"actionlibdbidriverdirectory", 0, eCmdHdlrGetWord, NULL, &cs.dbiDrvrDir, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionlibdbidriver", 0, eCmdHdlrGetWord, NULL, &cs.drvrName, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionlibdbihost", 0, eCmdHdlrGetWord, NULL, &cs.host, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionlibdbiusername", 0, eCmdHdlrGetWord, NULL, &cs.usrName, STD_LOADABLE_MODULE_ID));
