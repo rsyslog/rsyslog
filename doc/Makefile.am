@@ -145,6 +145,9 @@ html_files = \
 	rsyslog_queue_pointers.jpeg \
 	rsyslog_queue_pointers2.jpeg \
 	v6compatibility.html \
+	v7compatibility.html \
+	rsyslog_conf_basic_structure.html \
+	imkmsg.html \
 	src/classes.dia
 
 grfx_files = \

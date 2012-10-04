@@ -1,4 +1,7 @@
 ---------------------------------------------------------------------------
+Version 7.1.9  [beta] 2012-10-??
+- bugfix: comments inside objects (e.g. action()) were not properly handled
+---------------------------------------------------------------------------
 Version 7.1.8  [beta] 2012-10-02
 - bugfix: ruleset(){} directive errornously changed default ruleset
   much like the $ruleset legacy conf statement. This potentially lead
