@@ -35,6 +35,7 @@ PKG_PROG_PKG_CONFIG
 PKG_CHECK_MODULES(LIBESTR, libestr >= 0.1.2)
 PKG_CHECK_MODULES(LIBEE, libee >= 0.4.0)
 PKG_CHECK_MODULES([JSON_C], [json])
+PKG_CHECK_MODULES([LIBUUID], [uuid])
 
 case "${host}" in
   *-*-linux*)
@@ -698,22 +699,6 @@ fi
 AM_CONDITIONAL(ENABLE_OMLIBDBI, test x$enable_libdbi = xyes)
 AC_SUBST(LIBDBI_CFLAGS)
 AC_SUBST(LIBDBI_LIBS)
-
-# libuuid support
-AC_CHECK_HEADERS(
-  [uuid/uuid.h],,
-  [AC_MSG_FAILURE([libuuid is missing])]
-)
-AC_CHECK_LIB(
-  [uuid],
-  [uuid_generate],
-  [LIBUUID_CFLAGS=""
-   LIBUUID_LIBS="-luuid"
-  ],
-  [AC_MSG_FAILURE([libuuid library is missing])]
-)
-AC_SUBST(LIBUUID_CFLAGS)
-AC_SUBST(LIBUUID_LIBS)
 
 # SNMP support
 AC_ARG_ENABLE(snmp,
