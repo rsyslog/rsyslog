@@ -35,8 +35,6 @@ PKG_PROG_PKG_CONFIG
 PKG_CHECK_MODULES(LIBESTR, libestr >= 0.1.2)
 PKG_CHECK_MODULES(LIBEE, libee >= 0.4.0)
 PKG_CHECK_MODULES([JSON_C], [json])
-AC_SUBST([JSON_CFLAGS])
-AC_SUBST([JSON_LIBS])
 
 case "${host}" in
   *-*-linux*)
@@ -795,8 +793,6 @@ if test "x$enable_gnutls" = "xyes"; then
 	AC_DEFINE([ENABLE_GNUTLS], [1], [Indicator that GnuTLS is present])
 fi
 AM_CONDITIONAL(ENABLE_GNUTLS, test x$enable_gnutls = xyes)
-AC_SUBST(GNUTLS_CFLAGS)
-AC_SUBST(GNUTLS_LIBS)
 
 
 # support for building the rsyslogd runtime
@@ -914,8 +910,6 @@ if test "x$enable_mmnormalize" = "xyes"; then
 	PKG_CHECK_MODULES(LIBLOGNORM, lognorm >= 0.3.1)
 fi
 AM_CONDITIONAL(ENABLE_MMNORMALIZE, test x$enable_mmnormalize = xyes)
-AC_SUBST(LOGNORM_CFLAGS)
-AC_SUBST(LOGNORM_LIBS)
 
 
 # mmnjsonparse
@@ -965,8 +959,6 @@ if test "x$enable_relp" = "xyes"; then
 	PKG_CHECK_MODULES(RELP, relp >= 1.0.1)
 fi
 AM_CONDITIONAL(ENABLE_RELP, test x$enable_relp = xyes)
-AC_SUBST(RELP_CFLAGS)
-AC_SUBST(RELP_LIBS)
 
 
 # RFC 3195 support
@@ -983,8 +975,6 @@ if test "x$enable_rfc3195" = "xyes"; then
 	PKG_CHECK_MODULES(LIBLOGGING, liblogging >= 0.7.1)
 fi
 AM_CONDITIONAL(ENABLE_RFC3195, test x$enable_rfc3195 = xyes)
-AC_SUBST(LIBLOGGING_CFLAGS)
-AC_SUBST(LIBLOGGING_LIBS)
 
 
 # enable/disable the testbench (e.g. because some important parts
@@ -1217,9 +1207,6 @@ fi
 AM_CONDITIONAL(ENABLE_GUI, test x$enable_gui = xyes)
 
 
-AC_SUBST(RELP_CFLAGS)
-AC_SUBST(RELP_LIBS)
-
 # settings for omuxsock
 AC_ARG_ENABLE(omuxsock,
         [AS_HELP_STRING([--enable-omuxsock],[Compiles omuxsock module @<:@default=no@:>@])],
@@ -1290,8 +1277,6 @@ AC_ARG_ENABLE(ommongodb,
 )
 if test "x$enable_ommongodb" = "xyes"; then
 	PKG_CHECK_MODULES(LIBMONGO_CLIENT, libmongo-client >= 0.1.4)
-	AC_SUBST(LIBMONGO_CLIENT_CFLAGS)
-	AC_SUBST(LIBMONGO_CLIENT_LIBS)
 fi
 AM_CONDITIONAL(ENABLE_OMMONGODB, test x$enable_ommongodb = xyes)
 # end of mongodb code
@@ -1308,8 +1293,6 @@ AC_ARG_ENABLE(imzmq3,
 )
 if test "x$enable_imzmq3" = "xyes"; then
 	PKG_CHECK_MODULES(CZMQ, libczmq >= 1.1.0)
-	AC_SUBST(CZMQ_CFLAGS)
-	AC_SUBST(CZMQ_LIBS)
 fi
 AM_CONDITIONAL(ENABLE_IMZMQ3, test x$enable_imzmq3 = xyes)
 
@@ -1327,8 +1310,6 @@ AC_ARG_ENABLE(omzmq3,
 )
 if test "x$enable_omzmq3" = "xyes"; then
 	PKG_CHECK_MODULES(CZMQ, libczmq >= 1.1.0)
-	AC_SUBST(CZMQ_CFLAGS)
-	AC_SUBST(CZMQ_LIBS)
 fi
 AM_CONDITIONAL(ENABLE_OMZMQ3, test x$enable_omzmq3 = xyes)
 
@@ -1348,8 +1329,6 @@ AC_ARG_ENABLE(omhiredis,
 #
 if test "x$enable_omhiredis" = "xyes"; then
 	PKG_CHECK_MODULES(HIREDIS, hiredis >= 0.10.1)
-	AC_SUBST(HIREDIS_CFLAGS)
-	AC_SUBST(HIREDIS_LIBS)
 fi
 AM_CONDITIONAL(ENABLE_OMHIREDIS, test x$enable_omhiredis = xyes)
 
