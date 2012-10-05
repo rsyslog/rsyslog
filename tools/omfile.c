@@ -156,6 +156,7 @@ typedef struct _instanceData {
 	int	iFlushInterval;		/* how fast flush buffer on inactivity? */
 	sbool	bFlushOnTXEnd;		/* flush write buffers when transaction has ended? */
 	sbool	bUseAsyncWriter;	/* use async stream writer? */
+	sbool	bVeryRobustZip;
 } instanceData;
 
 
@@ -205,6 +206,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "ziplevel", eCmdHdlrInt, 0 }, /* legacy: omfileziplevel */
 	{ "flushinterval", eCmdHdlrInt, 0 }, /* legacy: omfileflushinterval */
 	{ "asyncwriting", eCmdHdlrBinary, 0 }, /* legacy: omfileasyncwriting */
+	{ "veryrobustzip", eCmdHdlrBinary, 0 },
 	{ "flushontxend", eCmdHdlrBinary, 0 }, /* legacy: omfileflushontxend */
 	{ "iobuffersize", eCmdHdlrSize, 0 }, /* legacy: omfileiobuffersize */
 	{ "dirowner", eCmdHdlrUID, 0 }, /* legacy: dirowner */
@@ -269,7 +271,8 @@ CODESTARTdbgPrintInstInfo
 	dbgprintf("\tflush on TX end=%d\n", pData->bFlushOnTXEnd);
 	dbgprintf("\tflush interval=%d\n", pData->iFlushInterval);
 	dbgprintf("\tfile cache size=%d\n", pData->iDynaFileCacheSize);
-	dbgprintf("\tcreate directories: %s\n", pData->bCreateDirs ? "yes" : "no");
+	dbgprintf("\tcreate directories: %s\n", pData->bCreateDirs ? "on" : "off");
+	dbgprintf("\tvery robust zip: %s\n", pData->bCreateDirs ? "on" : "off");
 	dbgprintf("\tfile owner %d, group %d\n", (int) pData->fileUID, (int) pData->fileGID);
 	dbgprintf("\tdirectory owner %d, group %d\n", (int) pData->dirUID, (int) pData->dirGID);
 	dbgprintf("\tdir create mode 0%3.3o, file create mode 0%3.3o\n",
@@ -292,7 +295,7 @@ setLegacyDfltTpl(void __attribute__((unused)) *pVal, uchar* newVal)
 
 	if(loadModConf != NULL && loadModConf->tplName != NULL) {
 		free(newVal);
-		errmsg.LogError(0, RS_RET_ERR, "omfile default template already set via module "
+		errmsg.LogError(0, RS_RET_ERR, "omfile: default template already set via module "
 			"global parameter - can no longer be changed");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
@@ -536,6 +539,7 @@ prepareFile(instanceData *pData, uchar *newFileName)
 	CHKiRet(strm.SetFName(pData->pStrm, szBaseName, ustrlen(szBaseName)));
 	CHKiRet(strm.SetDir(pData->pStrm, szDirName, ustrlen(szDirName)));
 	CHKiRet(strm.SetiZipLevel(pData->pStrm, pData->iZipLevel));
+	CHKiRet(strm.SetbVeryReliableZip(pData->pStrm, pData->bVeryRobustZip));
 	CHKiRet(strm.SetsIOBufSize(pData->pStrm, (size_t) pData->iIOBufSize));
 	CHKiRet(strm.SettOperationsMode(pData->pStrm, STREAMMODE_WRITE_APPEND));
 	CHKiRet(strm.SettOpenMode(pData->pStrm, cs.fCreateMode));
@@ -842,6 +846,7 @@ BEGINendTransaction
 CODESTARTendTransaction
 	/* Note: pStrm may be NULL if there was an error opening the stream */
 	if(pData->bFlushOnTXEnd && pData->pStrm != NULL) {
+dbgprintf("AAAA: flusing stream, endTx\n");
 		CHKiRet(strm.Flush(pData->pStrm));
 	}
 finalize_it:
@@ -853,6 +858,7 @@ CODESTARTdoAction
 	DBGPRINTF("file to log to: %s\n", pData->f_fname);
 	CHKiRet(writeFile(ppString, iMsgOpts, pData));
 	if(!bCoreSupportsBatching && pData->bFlushOnTXEnd) {
+dbgprintf("AAAA: flusing stream, in Tx\n");
 		CHKiRet(strm.Flush(pData->pStrm));
 	}
 finalize_it:
@@ -877,6 +883,7 @@ setInstParamDefaults(instanceData *pData)
 	pData->bCreateDirs = 1;
 	pData->bSyncFile = 0;
 	pData->iZipLevel = 0;
+	pData->bVeryRobustZip = 0;
 	pData->bFlushOnTXEnd = FLUSHONTX_DFLT;
 	pData->iIOBufSize = IOBUF_DFLT_SIZE;
 	pData->iFlushInterval = FLUSH_INTRVL_DFLT;
@@ -914,6 +921,8 @@ CODESTARTnewActInst
 			pData->iZipLevel = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "flushinterval")) {
 			pData->iFlushInterval = pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "veryrobustzip")) {
+			pData->bVeryRobustZip = pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "asyncwriting")) {
 			pData->bUseAsyncWriter = pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "flushontxend")) {
@@ -1063,6 +1072,7 @@ CODESTARTparseSelectorAct
 	pData->iIOBufSize = (int) cs.iIOBufSize;
 	pData->iFlushInterval = cs.iFlushInterval;
 	pData->bUseAsyncWriter = cs.bUseAsyncWriter;
+	pData->bVeryRobustZip = 0;	/* cannot be specified via legacy conf */
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
@@ -1089,7 +1099,6 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	cs.bUseAsyncWriter = USE_ASYNCWRITER_DFLT;
 	free(pszFileDfltTplName);
 	pszFileDfltTplName = NULL;
-
 	return RS_RET_OK;
 }
 

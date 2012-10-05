@@ -124,6 +124,8 @@ typedef struct strm_s {
 	sbool bAsyncWrite;	/* do asynchronous writes (always if a flush interval is given) */
 	sbool bStopWriter;	/* shall writer thread terminate? */
 	sbool bDoTimedWait;	/* instruct writer thread to do a times wait to support flush timeouts */
+	sbool bzInitDone; /* did we do an init of zstrm already? */
+	sbool bVeryReliableZip; /* shall we write interim headers to create a very reliable ZIP file? */
 	int iFlushInterval; /* flush in which interval - 0, no flushing */
 	pthread_mutex_t mut;/* mutex for flush in async mode */
 	pthread_cond_t notFull;
@@ -132,6 +134,7 @@ typedef struct strm_s {
 	unsigned short iEnq;	/* this MUST be unsigned as we use module arithmetic (else invalid indexing happens!) */
 	unsigned short iDeq;	/* this MUST be unsigned as we use module arithmetic (else invalid indexing happens!) */
 	short iCnt;	/* current nbr of elements in buffer */
+	z_stream zstrm;	/* zip stream to use */
 	struct {
 		uchar *pBuf;
 		size_t lenBuf;
@@ -181,8 +184,10 @@ BEGINinterface(strm) /* name must also be changed in ENDinterface macro! */
 	INTERFACEpropSetMeth(strm, pszSizeLimitCmd, uchar*);
 	/* v6 added */
 	rsRetVal (*ReadLine)(strm_t *pThis, cstr_t **ppCStr, int mode);
+	/* v7 added  2012-09-14 */
+	INTERFACEpropSetMeth(strm, bVeryReliableZip, int);
 ENDinterface(strm)
-#define strmCURR_IF_VERSION 6 /* increment whenever you change the interface structure! */
+#define strmCURR_IF_VERSION 7 /* increment whenever you change the interface structure! */
 
 
 /* prototypes */

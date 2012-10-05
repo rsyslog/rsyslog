@@ -6,6 +6,9 @@ Version 7.3.0  [devel] 2012-10-??
   * driverdirectory is now cleanly a global parameter, but can no longer
     be specified as an action paramter. Note that in previous versions
     this parameter was ignored in all but the first action definition
+- improved omfile zip writer to increase compression
+  This was achieved by somewhat reducing the robustness of the zip archive.
+  This is controlled by the new action parameter "VeryReliableZip".
 ---------------------------------------------------------------------------
 Version 7.1.9  [beta] 2012-10-??
 - bugfix: comments inside objects (e.g. action()) were not properly handled
