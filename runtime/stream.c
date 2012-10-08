@@ -1231,7 +1231,6 @@ doZipFinish(strm_t *pThis)
 	DEFiRet;
 	unsigned outavail;
 	assert(pThis != NULL);
-	assert(pBuf != NULL);
 
 	if(!pThis->bzInitDone) {
 		FINALIZE;
