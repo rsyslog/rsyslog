@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 7.3.0  [devel] 2012-10-??
+Version 7.3.0  [devel] 2012-10-09
 - omlibdbi improvements, added
   * support for config load phases & module() parameters
   * support for default templates
