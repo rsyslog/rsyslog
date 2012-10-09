@@ -265,11 +265,11 @@ defaultDoSubmitMessage(tcps_sess_t *pThis, struct syslogTime *stTime, time_t ttG
 
 	STATSCOUNTER_INC(pThis->pLstnInfo->ctrSubmit, pThis->pLstnInfo->mutCtrSubmit);
 	if(pMultiSub == NULL) {
-		CHKiRet(submitMsg(pMsg));
+		CHKiRet(submitMsg2(pMsg, NULL));
 	} else {
 		pMultiSub->ppMsgs[pMultiSub->nElem++] = pMsg;
 		if(pMultiSub->nElem == pMultiSub->maxElem)
-			CHKiRet(multiSubmitMsg(pMultiSub));
+			CHKiRet(multiSubmitMsg2(pMultiSub, NULL));
 	}
 
 
@@ -490,7 +490,7 @@ DataRcvd(tcps_sess_t *pThis, char *pData, size_t iLen)
 
 	if(multiSub.nElem > 0) {
 		/* submit anything that was not yet submitted */
-		CHKiRet(multiSubmitMsg(&multiSub));
+		CHKiRet(multiSubmitMsg2(&multiSub, NULL));
 	}
 
 finalize_it:

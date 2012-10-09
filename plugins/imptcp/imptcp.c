@@ -680,11 +680,11 @@ doSubmitMsg(ptcpsess_t *pThis, struct syslogTime *stTime, time_t ttGenTime, mult
 	STATSCOUNTER_INC(pThis->pLstn->ctrSubmit, pThis->pLstn->mutCtrSubmit);
 
 	if(pMultiSub == NULL) {
-		CHKiRet(submitMsg(pMsg));
+		CHKiRet(submitMsg2(pMsg, NULL));
 	} else {
 		pMultiSub->ppMsgs[pMultiSub->nElem++] = pMsg;
 		if(pMultiSub->nElem == pMultiSub->maxElem)
-			CHKiRet(multiSubmitMsg(pMultiSub));
+			CHKiRet(multiSubmitMsg2(pMultiSub, NULL));
 	}
 
 
@@ -833,7 +833,7 @@ DataRcvd(ptcpsess_t *pThis, char *pData, size_t iLen)
 
 	if(multiSub.nElem > 0) {
 		/* submit anything that was not yet submitted */
-		CHKiRet(multiSubmitMsg(&multiSub));
+		CHKiRet(multiSubmitMsg2(&multiSub, NULL));
 	}
 
 finalize_it:

@@ -125,6 +125,7 @@
 #include "dnscache.h"
 #include "sd-daemon.h"
 #include "rainerscript.h"
+#include "ratelimit.h"
 
 /* definitions for objects we access */
 DEFobjCurrIf(obj)
@@ -417,7 +418,7 @@ parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int fla
 	CHKiRet(prop.Destruct(&pProp));
 	CHKiRet(MsgSetRcvFromIPStr(pMsg, hnameIP, ustrlen(hnameIP), &pProp));
 	CHKiRet(prop.Destruct(&pProp));
-	CHKiRet(submitMsg(pMsg));
+	CHKiRet(submitMsg2(pMsg, NULL));
 
 finalize_it:
 	RETiRet;
@@ -488,7 +489,7 @@ logmsgInternal(int iErr, int pri, uchar *msg, int flags)
                /* we have the queue, so we can simply provide the
 		 * message to the queue engine.
 		 */
-		submitMsg(pMsg);
+		submitMsg2(pMsg, NULL);
 	}
 finalize_it:
 	RETiRet;
@@ -624,7 +625,7 @@ int i;
  * rgerhards, 2008-02-13
  */
 rsRetVal
-submitMsg(msg_t *pMsg)
+submitMsg2(msg_t *pMsg, ratelimit_t *ratelimit)
 {
 	qqueue_t *pQueue;
 	ruleset_t *pRuleset;
@@ -648,6 +649,11 @@ submitMsg(msg_t *pMsg)
 finalize_it:
 	RETiRet;
 }
+rsRetVal
+submitMsg(msg_t *pMsg) /* backward compat. level */
+{
+	return submitMsg2(pMsg, NULL);
+}
 
 
 /* submit multiple messages at once, very similar to submitMsg, just
@@ -655,7 +661,7 @@ finalize_it:
  * rgerhards, 2009-06-16
  */
 rsRetVal
-multiSubmitMsg(multi_submit_t *pMultiSub)
+multiSubmitMsg2(multi_submit_t *pMultiSub, ratelimit_t *ratelimit)
 {
 	int i;
 	qqueue_t *pQueue;
@@ -685,6 +691,11 @@ multiSubmitMsg(multi_submit_t *pMultiSub)
 
 finalize_it:
 	RETiRet;
+}
+rsRetVal
+multiSubmitMsg(multi_submit_t *pMultiSub) /* backward compat. level */
+{
+	return multiSubmitMsg2(pMultiSub, NULL);
 }
 
 
@@ -1268,7 +1279,7 @@ static inline void processImInternal(void)
 	msg_t *pMsg;
 
 	while(iminternalRemoveMsg(&pMsg) == RS_RET_OK) {
-		submitMsg(pMsg);
+		submitMsg2(pMsg, NULL);
 	}
 }
 
@@ -1473,6 +1484,7 @@ InitGlobalClasses(void)
 	CHKiRet(objUse(net, LM_NET_FILENAME));
 	dnscacheInit();
 	initRainerscript();
+	ratelimitModInit();
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
@@ -1511,6 +1523,7 @@ GlobalClassExit(void)
 	/* TODO: implement the rest of the deinit */
 	/* dummy "classes */
 	strExit();
+	ratelimitModExit();
 
 #if 0
 	CHKiRet(objGetObjInterface(&obj)); /* this provides the root pointer for all other queries */

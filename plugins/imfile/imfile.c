@@ -191,7 +191,7 @@ static rsRetVal enqLine(fileInfo_t *pInfo, cstr_t *cstrLine)
 	MsgSetRuleset(pMsg, pInfo->pRuleset);
 	pInfo->multiSub.ppMsgs[pInfo->multiSub.nElem++] = pMsg;
 	if(pInfo->multiSub.nElem == pInfo->multiSub.maxElem)
-		CHKiRet(multiSubmitMsg(&pInfo->multiSub));
+		CHKiRet(multiSubmitMsg2(&pInfo->multiSub, NULL));
 finalize_it:
 	RETiRet;
 }
@@ -306,7 +306,7 @@ static rsRetVal pollFile(fileInfo_t *pThis, int *pbHadFileData)
 finalize_it:
 	if(pThis->multiSub.nElem > 0) {
 		/* submit everything that was not yet submitted */
-		CHKiRet(multiSubmitMsg(&pThis->multiSub));
+		CHKiRet(multiSubmitMsg2(&pThis->multiSub, NULL));
 	}
 		; /*EMPTY STATEMENT - needed to keep compiler happy - see below! */
 	/* Note: the problem above is that pthread:cleanup_pop() is a macro which

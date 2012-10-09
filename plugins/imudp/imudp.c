@@ -383,7 +383,7 @@ processSocket(thrdInfo_t *pThrd, struct lstn_s *lstn, struct sockaddr_storage *f
 			if(*pbIsPermitted == 2)
 				pMsg->msgFlags  |= NEEDS_ACLCHK_U; /* request ACL check after resolution */
 			CHKiRet(msgSetFromSockinfo(pMsg, &frominet));
-			CHKiRet(submitMsg(pMsg));
+			CHKiRet(submitMsg2(pMsg, NULL));
 			STATSCOUNTER_INC(lstn->ctrSubmit, lstn->mutCtrSubmit);
 		}
 	}

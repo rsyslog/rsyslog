@@ -220,7 +220,7 @@ doInjectMsg(int iNum)
 	pMsg->msgFlags  = NEEDS_PARSING | PARSE_HOSTNAME;
 	MsgSetRcvFrom(pMsg, pRcvDummy);
 	CHKiRet(MsgSetRcvFromIP(pMsg, pRcvIPDummy));
-	CHKiRet(submitMsg(pMsg));
+	CHKiRet(submitMsg2(pMsg, NULL));
 
 finalize_it:
 	RETiRet;
