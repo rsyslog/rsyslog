@@ -1,7 +1,7 @@
 ---------------------------------------------------------------------------
-Version 7.1.9  [beta] 2012-10-??
+Version 7.1.9  [beta] 2012-10-09
 - bugfix: comments inside objects (e.g. action()) were not properly handled
-- bugfix: in (non)equa comparisons the position of arrays influenced result
+- bugfix: in (non)equal comparisons the position of arrays influenced result
   This behaviour is OK for "contains"-type of comparisons (which have quite
   different semantics), but not for == and <>, which shall be commutative.
   This has been fixed now, so there is no difference any longer if the
