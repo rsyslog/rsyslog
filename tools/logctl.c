@@ -143,7 +143,6 @@ struct ofields* get_data(struct results *res)
 	struct ofields *fields;
 	const char *msg;
 	const char *prog;
-	const char *level;
 	const char *syslog_tag;
 	gint64 date_r;
 	bson_cursor *c;
@@ -263,7 +262,7 @@ struct select_doc* create_select()
 struct query_doc* create_query(struct queryopt *opt)
 {
 	struct query_doc *qu_doc;
-	bson  *query_what, *order_what, *order_how, *msg_what, *date_what;
+	bson  *query_what, *order_what, *msg_what, *date_what;
 	struct tm tm;
 	time_t t;
 	gint64  	ts;
@@ -417,7 +416,6 @@ int main (int argc, char *argv[])
 	
 	struct queryopt opt;
 	struct ofields *fields;
-	struct bson_doc *doc;
 	struct select_doc *s_doc;
 	struct query_doc *qu_doc;
 	struct db_connect *db_conn;
