@@ -809,7 +809,8 @@ rsRetVal actionDbgPrint(action_t *pThis)
 /* prepare the calling parameters for doAction()
  * rgerhards, 2009-05-07
  */
-static rsRetVal prepareDoActionParams(action_t *pAction, batch_obj_t *pElem)
+static rsRetVal
+prepareDoActionParams(action_t *pAction, batch_obj_t *pElem, struct syslogTime *ttNow)
 {
 	int i;
 	msg_t *pMsg;
@@ -825,17 +826,17 @@ static rsRetVal prepareDoActionParams(action_t *pAction, batch_obj_t *pElem)
 		switch(pAction->eParamPassing) {
 			case ACT_STRING_PASSING:
 				CHKiRet(tplToString(pAction->ppTpl[i], pMsg, &(pElem->staticActStrings[i]),
-					&pElem->staticLenStrings[i]));
+					&pElem->staticLenStrings[i], ttNow));
 				pElem->staticActParams[i] = pElem->staticActStrings[i];
 				break;
 			case ACT_ARRAY_PASSING:
-				CHKiRet(tplToArray(pAction->ppTpl[i], pMsg, (uchar***) &(pElem->staticActParams[i])));
+				CHKiRet(tplToArray(pAction->ppTpl[i], pMsg, (uchar***) &(pElem->staticActParams[i]), ttNow));
 				break;
 			case ACT_MSG_PASSING:
 				pElem->staticActParams[i] = (void*) pMsg;
 				break;
 			case ACT_JSON_PASSING:
-				CHKiRet(tplToJSON(pAction->ppTpl[i], pMsg, &json));
+				CHKiRet(tplToJSON(pAction->ppTpl[i], pMsg, &json, ttNow));
 				pElem->staticActParams[i] = (void*) json;
 				break;
 			default:dbgprintf("software bug/error: unknown pAction->eParamPassing %d in prepareDoActionParams\n",
@@ -1226,14 +1227,16 @@ prepareBatch(action_t *pAction, batch_t *pBatch, sbool **activeSave, int *bMustR
 {
 	int i;
 	batch_obj_t *pElem;
+	struct syslogTime ttNow;
 	DEFiRet;
 
+	datetime.getCurrTime(&ttNow, NULL); // TODO: query time only if required 2012-10-10 rger
 	pBatch->iDoneUpTo = 0;
 	for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pBatch->pbShutdownImmediate) ; ++i) {
 		pElem = &(pBatch->pElem[i]);
 		if(batchIsValidElem(pBatch, i)) {
 			pElem->state = BATCH_STATE_RDY;
-			if(prepareDoActionParams(pAction, pElem) != RS_RET_OK) {
+			if(prepareDoActionParams(pAction, pElem, &ttNow) != RS_RET_OK) {
 				/* make sure we have our copy of "active" array */
 				if(!*bMustRestoreActivePtr) {
 					*activeSave = pBatch->active;
