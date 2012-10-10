@@ -2373,40 +2373,38 @@ char *textpri(char *pRes, size_t pResLen, int pri)
  */
 typedef enum ENOWType { NOW_NOW, NOW_YEAR, NOW_MONTH, NOW_DAY, NOW_HOUR, NOW_HHOUR, NOW_QHOUR, NOW_MINUTE } eNOWType;
 #define tmpBUFSIZE 16	/* size of formatting buffer */
-static uchar *getNOW(eNOWType eNow)
+static uchar *getNOW(eNOWType eNow, struct syslogTime *t)
 {
 	uchar *pBuf;
-	struct syslogTime t;
 
 	if((pBuf = (uchar*) MALLOC(sizeof(uchar) * tmpBUFSIZE)) == NULL) {
 		return NULL;
 	}
 
-	datetime.getCurrTime(&t, NULL);
 	switch(eNow) {
 	case NOW_NOW:
-		snprintf((char*) pBuf, tmpBUFSIZE, "%4.4d-%2.2d-%2.2d", t.year, t.month, t.day);
+		snprintf((char*) pBuf, tmpBUFSIZE, "%4.4d-%2.2d-%2.2d", t->year, t->month, t->day);
 		break;
 	case NOW_YEAR:
-		snprintf((char*) pBuf, tmpBUFSIZE, "%4.4d", t.year);
+		snprintf((char*) pBuf, tmpBUFSIZE, "%4.4d", t->year);
 		break;
 	case NOW_MONTH:
-		snprintf((char*) pBuf, tmpBUFSIZE, "%2.2d", t.month);
+		snprintf((char*) pBuf, tmpBUFSIZE, "%2.2d", t->month);
 		break;
 	case NOW_DAY:
-		snprintf((char*) pBuf, tmpBUFSIZE, "%2.2d", t.day);
+		snprintf((char*) pBuf, tmpBUFSIZE, "%2.2d", t->day);
 		break;
 	case NOW_HOUR:
-		snprintf((char*) pBuf, tmpBUFSIZE, "%2.2d", t.hour);
+		snprintf((char*) pBuf, tmpBUFSIZE, "%2.2d", t->hour);
 		break;
 	case NOW_HHOUR:
-		snprintf((char*) pBuf, tmpBUFSIZE, "%2.2d", t.minute / 30);
+		snprintf((char*) pBuf, tmpBUFSIZE, "%2.2d", t->minute / 30);
 		break;
 	case NOW_QHOUR:
-		snprintf((char*) pBuf, tmpBUFSIZE, "%2.2d", t.minute / 15);
+		snprintf((char*) pBuf, tmpBUFSIZE, "%2.2d", t->minute / 15);
 		break;
 	case NOW_MINUTE:
-		snprintf((char*) pBuf, tmpBUFSIZE, "%2.2d", t.minute);
+		snprintf((char*) pBuf, tmpBUFSIZE, "%2.2d", t->minute);
 		break;
 	}
 
@@ -2673,7 +2671,7 @@ finalize_it:
  * Parameter "bMustBeFreed" is set by this function. It tells the
  * caller whether or not the string returned must be freed by the
  * caller itself. It is is 0, the caller MUST NOT free it. If it is
- * 1, the caller MUST free 1. Handling this wrongly leads to either
+ * 1, the caller MUST free it. Handling this wrongly leads to either
  * a memory leak of a program abort (do to double-frees or frees on
  * the constant memory pool). So be careful to do it right.
  * rgerhards 2004-11-23
@@ -2690,7 +2688,7 @@ finalize_it:
 	return(UCHAR_CONSTANT("**OUT OF MEMORY**"));}
 uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
                  propid_t propid, es_str_t *propName, rs_size_t *pPropLen,
-		 unsigned short *pbMustBeFreed)
+		 unsigned short *pbMustBeFreed, struct syslogTime *ttNow)
 {
 	uchar *pRes; /* result pointer */
 	rs_size_t bufLen = -1; /* length of string or -1, if not known */
@@ -2794,49 +2792,50 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			pRes = (uchar*)getParseSuccess(pMsg);
 			break;
 		case PROP_SYS_NOW:
-			if((pRes = getNOW(NOW_NOW)) == NULL) {
+			if((pRes = getNOW(NOW_NOW, ttNow)) == NULL) {
 				RET_OUT_OF_MEMORY;
 			} else
 				*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
 			break;
 		case PROP_SYS_YEAR:
-			if((pRes = getNOW(NOW_YEAR)) == NULL) {
+			if((pRes = getNOW(NOW_YEAR, ttNow)) == NULL) {
 				RET_OUT_OF_MEMORY;
 			} else
+//TODO set pPropLen!
 				*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
 			break;
 		case PROP_SYS_MONTH:
-			if((pRes = getNOW(NOW_MONTH)) == NULL) {
+			if((pRes = getNOW(NOW_MONTH, ttNow)) == NULL) {
 				RET_OUT_OF_MEMORY;
 			} else
 				*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
 			break;
 		case PROP_SYS_DAY:
-			if((pRes = getNOW(NOW_DAY)) == NULL) {
+			if((pRes = getNOW(NOW_DAY, ttNow)) == NULL) {
 				RET_OUT_OF_MEMORY;
 			} else
 				*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
 			break;
 		case PROP_SYS_HOUR:
-			if((pRes = getNOW(NOW_HOUR)) == NULL) {
+			if((pRes = getNOW(NOW_HOUR, ttNow)) == NULL) {
 				RET_OUT_OF_MEMORY;
 			} else
 				*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
 			break;
 		case PROP_SYS_HHOUR:
-			if((pRes = getNOW(NOW_HHOUR)) == NULL) {
+			if((pRes = getNOW(NOW_HHOUR, ttNow)) == NULL) {
 				RET_OUT_OF_MEMORY;
 			} else
 				*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
 			break;
 		case PROP_SYS_QHOUR:
-			if((pRes = getNOW(NOW_QHOUR)) == NULL) {
+			if((pRes = getNOW(NOW_QHOUR, ttNow)) == NULL) {
 				RET_OUT_OF_MEMORY;
 			} else
 				*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
 			break;
 		case PROP_SYS_MINUTE:
-			if((pRes = getNOW(NOW_MINUTE)) == NULL) {
+			if((pRes = getNOW(NOW_MINUTE, ttNow)) == NULL) {
 				RET_OUT_OF_MEMORY;
 			} else
 				*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
@@ -3544,7 +3543,7 @@ msgGetMsgVarNew(msg_t *pThis, uchar *name)
 	/* always call MsgGetProp() without a template specifier */
 	/* TODO: optimize propNameToID() call -- rgerhards, 2009-06-26 */
 	propNameStrToID(name, &propid);
-	pszProp = (uchar*) MsgGetProp(pThis, NULL, propid, NULL, &propLen, &bMustBeFreed);
+	pszProp = (uchar*) MsgGetProp(pThis, NULL, propid, NULL, &propLen, &bMustBeFreed, NULL);
 
 	estr = es_newStrFromCStr((char*)pszProp, propLen);
 	if(bMustBeFreed)

@@ -45,12 +45,14 @@
 #include "strgen.h"
 #include "rsconf.h"
 #include "msg.h"
+#include "datetime.h"
 #include "unicode-helper.h"
 
 /* static data */
 DEFobjCurrIf(obj)
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(strgen)
+DEFobjCurrIf(datetime)
 
 /* tables for interfacing with the v6 config system */
 static struct cnfparamdescr cnfparamdescr[] = {
@@ -149,6 +151,7 @@ rsRetVal tplToString(struct template *pTpl, msg_t *pMsg, uchar **ppBuf, size_t *
 	unsigned short bMustBeFreed = 0;
 	uchar *pVal;
 	rs_size_t iLenVal = 0;
+	struct syslogTime ttNow;
 
 	assert(pTpl != NULL);
 	assert(pMsg != NULL);
@@ -176,6 +179,7 @@ rsRetVal tplToString(struct template *pTpl, msg_t *pMsg, uchar **ppBuf, size_t *
 	}
 	
 	/* we have a "regular" template with template entries */
+	datetime.getCurrTime(&ttNow, NULL); // TODO: query time only if required 2012-10-10 rger
 
 	/* loop through the template. We obtain one value
 	 * and copy it over to our dynamic string buffer. Then, we
@@ -191,7 +195,8 @@ rsRetVal tplToString(struct template *pTpl, msg_t *pMsg, uchar **ppBuf, size_t *
 			bMustBeFreed = 0;
 		} else 	if(pTpe->eEntryType == FIELD) {
 			pVal = (uchar*) MsgGetProp(pMsg, pTpe, pTpe->data.field.propid,
-						   pTpe->data.field.propName,  &iLenVal, &bMustBeFreed);
+						   pTpe->data.field.propName,  &iLenVal,
+						   &bMustBeFreed, &ttNow);
 			/* we now need to check if we should use SQL option. In this case,
 			 * we must go over the generated string and escape '\'' characters.
 			 * rgerhards, 2005-09-22: the option values below look somewhat misplaced,
@@ -254,6 +259,7 @@ rsRetVal tplToArray(struct template *pTpl, msg_t *pMsg, uchar*** ppArr)
 	rs_size_t propLen;
 	unsigned short bMustBeFreed;
 	uchar *pVal;
+	struct syslogTime ttNow;
 
 	assert(pTpl != NULL);
 	assert(pMsg != NULL);
@@ -273,6 +279,7 @@ rsRetVal tplToArray(struct template *pTpl, msg_t *pMsg, uchar*** ppArr)
 		FINALIZE;
 	}
 
+	datetime.getCurrTime(&ttNow, NULL); // TODO: query time only if required 2012-10-10 rger
 	/* loop through the template. We obtain one value, create a
 	 * private copy (if necessary), add it to the string array
 	 * and then on to the next until we have processed everything.
@@ -286,7 +293,8 @@ rsRetVal tplToArray(struct template *pTpl, msg_t *pMsg, uchar*** ppArr)
 			CHKmalloc(pArr[iArr] = (uchar*)strdup((char*) pTpe->data.constant.pConstant));
 		} else 	if(pTpe->eEntryType == FIELD) {
 			pVal = (uchar*) MsgGetProp(pMsg, pTpe, pTpe->data.field.propid,
-						   pTpe->data.field.propName,  &propLen, &bMustBeFreed);
+						   pTpe->data.field.propName,  &propLen,
+						   &bMustBeFreed, &ttNow);
 			if(bMustBeFreed) { /* if it must be freed, it is our own private copy... */
 				pArr[iArr] = pVal; /* ... so we can use it! */
 			} else {
@@ -318,11 +326,12 @@ tplToJSON(struct template *pTpl, msg_t *pMsg, struct json_object **pjson)
 	uchar *pVal;
 	struct json_object *json, *jsonf;
 	rsRetVal localRet;
+	struct syslogTime ttNow;
 	DEFiRet;
 
 	assert(pTpl != NULL);
 	assert(pMsg != NULL);
-	assert(json != NULL);
+	assert(pjson != NULL);
 
 	if(pTpl->subtree != NULL){
 		localRet = jsonFind(pMsg, pTpl->subtree, pjson);
@@ -336,6 +345,7 @@ tplToJSON(struct template *pTpl, msg_t *pMsg, struct json_object **pjson)
 	}
 
 	json = json_object_new_object();
+	datetime.getCurrTime(&ttNow, NULL); // TODO: query time only if required 2012-10-10 rger
 	for(pTpe = pTpl->pEntryRoot ; pTpe != NULL ; pTpe = pTpe->pNext) {
 		if(pTpe->eEntryType == CONSTANT) {
 			if(pTpe->fieldName == NULL)
@@ -357,7 +367,7 @@ tplToJSON(struct template *pTpl, msg_t *pMsg, struct json_object **pjson)
 			} else  {
 				pVal = (uchar*) MsgGetProp(pMsg, pTpe, pTpe->data.field.propid,
 							   pTpe->data.field.propName,  &propLen,
-							   &bMustBeFreed);
+							   &bMustBeFreed, &ttNow);
 				if(pTpe->data.field.options.bMandatory || propLen > 0) {
 					jsonf = json_object_new_string_len((char*)pVal, propLen);
 					json_object_object_add(json, (char*)pTpe->fieldName, jsonf);
@@ -2140,6 +2150,7 @@ rsRetVal templateInit()
 	DEFiRet;
 	CHKiRet(objGetObjInterface(&obj));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	CHKiRet(objUse(strgen, CORE_COMPONENT));
 
 finalize_it:
