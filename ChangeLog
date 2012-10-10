@@ -10,8 +10,14 @@ Version 7.3.0  [devel] 2012-10-09
   This was achieved by somewhat reducing the robustness of the zip archive.
   This is controlled by the new action parameter "VeryReliableZip".
 ---------------------------------------------------------------------------
-Version 7.1.9  [beta] 2012-10-??
+Version 7.1.9  [beta] 2012-10-09
 - bugfix: comments inside objects (e.g. action()) were not properly handled
+- bugfix: in (non)equal comparisons the position of arrays influenced result
+  This behaviour is OK for "contains"-type of comparisons (which have quite
+  different semantics), but not for == and <>, which shall be commutative.
+  This has been fixed now, so there is no difference any longer if the
+  constant string array is the left or right hand operand. We solved this
+  via the optimizer, as it keeps the actual script execution code small.
 ---------------------------------------------------------------------------
 Version 7.1.8  [beta] 2012-10-02
 - bugfix: ruleset(){} directive errornously changed default ruleset
