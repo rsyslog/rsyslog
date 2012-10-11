@@ -2193,7 +2193,7 @@ cnfstmtNewAct(struct nvlst *lst)
 	if(localRet == RS_RET_OK_WARN) {
 		parser_errmsg("warnings occured in file '%s' around line %d",
 			      cnfcurrfn, yylineno);
-	} else if(actionNewInst(lst, &cnfstmt->d.act) != RS_RET_OK) {
+	} else if(localRet != RS_RET_OK) {
 		parser_errmsg("errors occured in file '%s' around line %d",
 			      cnfcurrfn, yylineno);
 		cnfstmt->nodetype = S_NOP; /* disable action! */
