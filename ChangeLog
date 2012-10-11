@@ -1,5 +1,7 @@
  ---------------------------------------------------------------------------
 Version 7.1.11  [beta] 2012-10-??
+- bugfix: do not crash if set statement is used with date field
+  Thanks to Miloslav Trmač for the patch.
 - added deprecated note to omruleset (plus clue to use "call")
 - added deprecated note to discard action (plus clue to use "stop")
  ---------------------------------------------------------------------------
