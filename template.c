@@ -1753,6 +1753,7 @@ tplProcessCnf(struct cnfobj *o)
 		pTpl->optFormatEscape = JSON_ESCAPE;
 
 finalize_it:
+	free(tplStr);
 	if(pvals != NULL)
 		cnfparamvalsDestruct(pvals, &pblk);
 	if(iRet != RS_RET_OK) {
