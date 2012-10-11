@@ -1,4 +1,7 @@
  ---------------------------------------------------------------------------
+Version 7.1.11  [beta] 2012-10-??
+- added deprecated note to omruleset (plus clue to use "call")
+ ---------------------------------------------------------------------------
 Version 7.1.10  [beta] 2012-10-11
  - bugfix: m4 directory was not present in release tarball
  - bugfix: small memory leak with string-type templates
