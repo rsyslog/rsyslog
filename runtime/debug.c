@@ -927,12 +927,12 @@ dbgprint(obj_t *pObj, char *pszMsg, size_t lenMsg)
 		pszObjName = obj.GetName(pObj);
 	}
 
-//	pthread_mutex_lock(&mutdbgprint);
-//	pthread_cleanup_push(dbgMutexCancelCleanupHdlr, &mutdbgprint);
+	pthread_mutex_lock(&mutdbgprint);
+	pthread_cleanup_push(dbgMutexCancelCleanupHdlr, &mutdbgprint);
 
 	do_dbgprint(pszObjName, pszMsg, lenMsg);
 
-//	pthread_cleanup_pop(1);
+	pthread_cleanup_pop(1);
 }
 #pragma GCC diagnostic warning "-Wempty-body"
 
