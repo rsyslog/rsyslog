@@ -2794,51 +2794,66 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 		case PROP_SYS_NOW:
 			if((pRes = getNOW(NOW_NOW, ttNow)) == NULL) {
 				RET_OUT_OF_MEMORY;
-			} else
-				*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
+			} else {
+				*pbMustBeFreed = 1;
+				*pPropLen = 10;
+			}
 			break;
 		case PROP_SYS_YEAR:
 			if((pRes = getNOW(NOW_YEAR, ttNow)) == NULL) {
 				RET_OUT_OF_MEMORY;
-			} else
-//TODO set pPropLen!
-				*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
+			} else {
+				*pbMustBeFreed = 1;
+				*pPropLen = 4;
+			}
 			break;
 		case PROP_SYS_MONTH:
 			if((pRes = getNOW(NOW_MONTH, ttNow)) == NULL) {
 				RET_OUT_OF_MEMORY;
-			} else
-				*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
+			} else {
+				*pbMustBeFreed = 1;
+				*pPropLen = 2;
+			}
 			break;
 		case PROP_SYS_DAY:
 			if((pRes = getNOW(NOW_DAY, ttNow)) == NULL) {
 				RET_OUT_OF_MEMORY;
-			} else
-				*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
+			} else {
+				*pbMustBeFreed = 1;
+				*pPropLen = 2;
+			}
 			break;
 		case PROP_SYS_HOUR:
 			if((pRes = getNOW(NOW_HOUR, ttNow)) == NULL) {
 				RET_OUT_OF_MEMORY;
-			} else
-				*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
+			} else {
+				*pbMustBeFreed = 1;
+				*pPropLen = 2;
+			}
 			break;
 		case PROP_SYS_HHOUR:
 			if((pRes = getNOW(NOW_HHOUR, ttNow)) == NULL) {
 				RET_OUT_OF_MEMORY;
-			} else
-				*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
+			} else {
+				*pbMustBeFreed = 1;
+				*pPropLen = 2;
+			}
 			break;
 		case PROP_SYS_QHOUR:
 			if((pRes = getNOW(NOW_QHOUR, ttNow)) == NULL) {
 				RET_OUT_OF_MEMORY;
-			} else
-				*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
+			} else {
+				*pbMustBeFreed = 1;
+				*pPropLen = 2;
+			}
 			break;
 		case PROP_SYS_MINUTE:
 			if((pRes = getNOW(NOW_MINUTE, ttNow)) == NULL) {
 				RET_OUT_OF_MEMORY;
-			} else
-				*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
+			} else {
+				*pbMustBeFreed = 1;
+				*pPropLen = 2;
+			}
 			break;
 		case PROP_SYS_MYHOSTNAME:
 			pRes = glbl.GetLocalHostName();
