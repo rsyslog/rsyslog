@@ -820,6 +820,7 @@ ENDcreateInstance
 
 BEGINfreeInstance
 CODESTARTfreeInstance
+	free(pData->tplName);
 	free(pData->f_fname);
 	if(pData->bDynamicName) {
 		dynaFileFreeCache(pData);
