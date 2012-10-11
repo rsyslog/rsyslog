@@ -25,6 +25,23 @@ has been implemented. Consequently, situations where the previous behaviour were
 desired need now to be solved differently. We do not think that this will cause any
 problems to anyone, especially as in v6 this was announced as a missing feature.
 
+<h2>omruleset and discard (~) action are deprecated</h2>
+<p>Both continue to work, but have been replaced by better alternatives.
+<p>The discard action (tilde character) has been replaced by the "stop"
+RainerScript directive. It is considered more intuitive and offers slightly
+better performance.
+<p>The omruleset module has been replaced by the "call" RainerScript directive.
+Call permits to execute a ruleset like a subroutine, and does so with much
+higher performance than omruleset did. Note that omruleset could be run off
+an async queue. This was more a side than a desired effect and is not supported
+by the call statement. If that effect was needed, it can simply be simulated by
+running the called rulesets actions asynchronously (what in any case is the right
+way to handle this).
+<p>Note that the deprecated modules emit warning messages when being used.
+They tell that the construct is deprecated and which statement is to be used
+as replacement. This does <b>not</b> affect operations: both modules are still
+fully operational and will not be removed in the v7 timeframe.
+
 <p><font size="2">This documentation is part of the
 <a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
 Copyright &copy; 2011-2012 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
