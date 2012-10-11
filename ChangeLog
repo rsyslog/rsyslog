@@ -10,6 +10,11 @@ Version 7.3.0  [devel] 2012-10-09
   This was achieved by somewhat reducing the robustness of the zip archive.
   This is controlled by the new action parameter "VeryReliableZip".
 ---------------------------------------------------------------------------
+Version 7.1.10  [beta] 2012-10-11
+ - bugfix: m4 directory was not present in release tarball
+ - bugfix: small memory leak with string-type templates
+ - bugfix: small memory leak when template was specified in omfile
+ ---------------------------------------------------------------------------
 Version 7.1.9  [beta] 2012-10-09
 - bugfix: comments inside objects (e.g. action()) were not properly handled
 - bugfix: in (non)equal comparisons the position of arrays influenced result

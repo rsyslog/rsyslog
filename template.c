@@ -325,10 +325,6 @@ tplToJSON(struct template *pTpl, msg_t *pMsg, struct json_object **pjson, struct
 	rsRetVal localRet;
 	DEFiRet;
 
-	assert(pTpl != NULL);
-	assert(pMsg != NULL);
-	assert(pjson != NULL);
-
 	if(pTpl->subtree != NULL){
 		localRet = jsonFind(pMsg, pTpl->subtree, pjson);
 		if(*pjson == NULL) {
@@ -1884,6 +1880,7 @@ tplProcessCnf(struct cnfobj *o)
 		pTpl->optFormatEscape = JSON_ESCAPE;
 
 finalize_it:
+	free(tplStr);
 	if(pvals != NULL)
 		cnfparamvalsDestruct(pvals, &pblk);
 	if(iRet != RS_RET_OK) {
