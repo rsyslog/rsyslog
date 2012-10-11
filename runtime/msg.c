@@ -2796,7 +2796,7 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 				RET_OUT_OF_MEMORY;
 			} else {
 				*pbMustBeFreed = 1;
-				*pPropLen = 10;
+				bufLen = 10;
 			}
 			break;
 		case PROP_SYS_YEAR:
@@ -2804,7 +2804,7 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 				RET_OUT_OF_MEMORY;
 			} else {
 				*pbMustBeFreed = 1;
-				*pPropLen = 4;
+				bufLen = 4;
 			}
 			break;
 		case PROP_SYS_MONTH:
@@ -2812,7 +2812,7 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 				RET_OUT_OF_MEMORY;
 			} else {
 				*pbMustBeFreed = 1;
-				*pPropLen = 2;
+				bufLen = 2;
 			}
 			break;
 		case PROP_SYS_DAY:
@@ -2820,7 +2820,7 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 				RET_OUT_OF_MEMORY;
 			} else {
 				*pbMustBeFreed = 1;
-				*pPropLen = 2;
+				bufLen = 2;
 			}
 			break;
 		case PROP_SYS_HOUR:
@@ -2828,7 +2828,7 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 				RET_OUT_OF_MEMORY;
 			} else {
 				*pbMustBeFreed = 1;
-				*pPropLen = 2;
+				bufLen = 2;
 			}
 			break;
 		case PROP_SYS_HHOUR:
@@ -2836,7 +2836,7 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 				RET_OUT_OF_MEMORY;
 			} else {
 				*pbMustBeFreed = 1;
-				*pPropLen = 2;
+				bufLen = 2;
 			}
 			break;
 		case PROP_SYS_QHOUR:
@@ -2844,7 +2844,7 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 				RET_OUT_OF_MEMORY;
 			} else {
 				*pbMustBeFreed = 1;
-				*pPropLen = 2;
+				bufLen = 2;
 			}
 			break;
 		case PROP_SYS_MINUTE:
@@ -2852,7 +2852,7 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 				RET_OUT_OF_MEMORY;
 			} else {
 				*pbMustBeFreed = 1;
-				*pPropLen = 2;
+				bufLen = 2;
 			}
 			break;
 		case PROP_SYS_MYHOSTNAME:
