@@ -961,7 +961,7 @@ CODESTARTnewActInst
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
 
-	tplToUse = (pData->tplName == NULL) ? ustrdup(getDfltTpl()) : pData->tplName;
+	tplToUse = ustrdup((pData->tplName == NULL) ? getDfltTpl() : pData->tplName);
 	CHKiRet(OMSRsetEntry(*ppOMSR, 0, tplToUse, OMSR_NO_RQD_TPL_OPTS));
 
 	if(pData->bDynamicName) {
