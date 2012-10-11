@@ -10,10 +10,17 @@ Version 7.3.0  [devel] 2012-10-09
   This was achieved by somewhat reducing the robustness of the zip archive.
   This is controlled by the new action parameter "VeryReliableZip".
 ---------------------------------------------------------------------------
+Version 7.1.11  [beta] 2012-10-??
+- added deprecated note to omruleset (plus clue to use "call")
+- added deprecated note to discard action (plus clue to use "stop")
+ ---------------------------------------------------------------------------
 Version 7.1.10  [beta] 2012-10-11
  - bugfix: m4 directory was not present in release tarball
  - bugfix: small memory leak with string-type templates
  - bugfix: small memory leak when template was specified in omfile
+ - bugfix: some config processing warning messages were treated as errors
+ - bugfix: small memory leak when processing action() statements
+ - bugfix: unknown action() parameters were not reported
  ---------------------------------------------------------------------------
 Version 7.1.9  [beta] 2012-10-09
 - bugfix: comments inside objects (e.g. action()) were not properly handled

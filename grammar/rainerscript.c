@@ -2186,10 +2186,14 @@ cnfstmtNewAct(struct nvlst *lst)
 {
 	struct cnfstmt* cnfstmt;
 	char namebuf[256];
+	rsRetVal localRet;
 	if((cnfstmt = cnfstmtNew(S_ACT)) == NULL) 
 		goto done;
-	if(actionNewInst(lst, &cnfstmt->d.act) != RS_RET_OK) {
-	// TODO:RS_RET_WARN?
+	localRet = actionNewInst(lst, &cnfstmt->d.act);
+	if(localRet == RS_RET_OK_WARN) {
+		parser_errmsg("warnings occured in file '%s' around line %d",
+			      cnfcurrfn, yylineno);
+	} else if(localRet != RS_RET_OK) {
 		parser_errmsg("errors occured in file '%s' around line %d",
 			      cnfcurrfn, yylineno);
 		cnfstmt->nodetype = S_NOP; /* disable action! */
@@ -2199,6 +2203,8 @@ cnfstmtNewAct(struct nvlst *lst)
 		 modGetName(cnfstmt->d.act->pMod));
 	namebuf[255] = '\0'; /* be on safe side */
 	cnfstmt->printable = (uchar*)strdup(namebuf);
+	nvlstChkUnused(lst);
+	nvlstDestruct(lst);
 done:	return cnfstmt;
 }
 

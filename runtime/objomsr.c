@@ -42,9 +42,7 @@ rsRetVal OMSRdestruct(omodStringRequest_t *pThis)
 	/* free the strings */
 	if(pThis->ppTplName != NULL) {
 		for(i = 0 ; i < pThis->iNumEntries ; ++i) {
-			if(pThis->ppTplName[i] != NULL) {
-				free(pThis->ppTplName[i]);
-			}
+			free(pThis->ppTplName[i]);
 		}
 		free(pThis->ppTplName);
 	}
