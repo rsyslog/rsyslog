@@ -11,6 +11,14 @@ Version 7.3.0  [devel] 2012-10-09
   This is controlled by the new action parameter "VeryReliableZip".
 ---------------------------------------------------------------------------
 Version 7.1.11  [beta] 2012-10-??
+- bugfix: do not crash if set statement is used with date field
+  Thanks to Miloslav Trmač for the patch.
+- change lumberjack cookie to "@cee" from "@cee "
+  CEE originally specified the cookie with SP, whereas other lumberjack
+  tools used it without space. In order to keep interop with lumberjack,
+  we now use the cookie without space as well. I hope this can be changed
+  in CEE as well when it is released at a later time.
+  Thanks to Miloslav Trmač for pointing this out and a similiar v7 patch.
 - added deprecated note to omruleset (plus clue to use "call")
 - added deprecated note to discard action (plus clue to use "stop")
  ---------------------------------------------------------------------------
@@ -171,6 +179,12 @@ Version 6.5.0  [devel] 2012-08-28
   http://bugzilla.adiscon.com/show_bug.cgi?id=353
 ---------------------------------------------------------------------------
 Version 6.4.3  [V6-STABLE] 2012-??-??
+- change lumberjack cookie to "@cee" from "@cee "
+  CEE originally specified the cookie with SP, whereas other lumberjack
+  tools used it without space. In order to keep interop with lumberjack,
+  we now use the cookie without space as well. I hope this can be changed
+  in CEE as well when it is released at a later time.
+  Thanks to Miloslav Trmač for pointing this out and a similiar v7 patch.
 - bugfix: comments inside objects (e.g. action()) were not properly handled
 - bugfix: sysklogd-emulating standard template was no longer present in v6
   This was obviously lost during the transition to the new config format.
