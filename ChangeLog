@@ -1,4 +1,12 @@
 ---------------------------------------------------------------------------
+Version 7.3.1  [devel] 2012-10-??
+- change lumberjack cookie to "@cee" from "@cee "
+  CEE originally specified the cookie with SP, whereas other lumberjack
+  tools used it without space. In order to keep interop with lumberjack,
+  we now use the cookie without space as well. I hope this can be changed
+  in CEE as well when it is released at a later time.
+  Thanks to Miloslav Trmač for pointing this out and a similiar v7 patch.
+---------------------------------------------------------------------------
 Version 7.3.0  [devel] 2012-10-09
 - omlibdbi improvements, added
   * support for config load phases & module() parameters
