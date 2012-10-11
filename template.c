@@ -286,10 +286,6 @@ rsRetVal tplToJSON(struct template *pTpl, msg_t *pMsg, struct json_object **pjso
 	struct json_object *json, *jsonf;
 	DEFiRet;
 
-	assert(pTpl != NULL);
-	assert(pMsg != NULL);
-	assert(json != NULL);
-
 	json = json_object_new_object();
 	for(pTpe = pTpl->pEntryRoot ; pTpe != NULL ; pTpe = pTpe->pNext) {
 		if(pTpe->eEntryType == CONSTANT) {
