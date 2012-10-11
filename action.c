@@ -1230,7 +1230,10 @@ prepareBatch(action_t *pAction, batch_t *pBatch, sbool **activeSave, int *bMustR
 	struct syslogTime ttNow;
 	DEFiRet;
 
-	datetime.getCurrTime(&ttNow, NULL); // TODO: query time only if required 2012-10-10 rger
+	if(pAction->requiresDateCall) {
+		datetime.getCurrTime(&ttNow, NULL);
+	}
+
 	pBatch->iDoneUpTo = 0;
 	for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pBatch->pbShutdownImmediate) ; ++i) {
 		pElem = &(pBatch->pElem[i]);
@@ -1878,6 +1881,23 @@ actionApplyCnfParam(action_t *pAction, struct cnfparamvals *pvals)
 	return RS_RET_OK;
 }
 
+/* check if the templates used in this action require a date call
+ * ($NOW family of properties).
+ */
+static inline int
+actionRequiresDateCall(action_t *pAction)
+{
+	int i;
+	int r = 0;
+
+	for(i = 0 ; i < pAction->iNumTpls ; ++i) {
+		if(tplRequiresDateCall(pAction->ppTpl[i])) {
+			r = 1;
+			break;
+		}
+	}
+	return r;
+}
 
 
 /* add an Action to the current selector
@@ -1983,6 +2003,7 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData,
 		pAction->f_ReduceRepeated = 0;
 	}
 	pAction->eState = ACT_STATE_RDY; /* action is enabled */
+	pAction->requiresDateCall = actionRequiresDateCall(pAction);
 
 	if(bSuspended)
 		actionSuspend(pAction, datetime.GetTime(NULL)); /* "good" time call, only during init and unavoidable */

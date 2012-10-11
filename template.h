@@ -142,6 +142,7 @@ void tplDeleteNew(rsconf_t *conf);
 void tplPrintList(rsconf_t *conf);
 void tplLastStaticInit(rsconf_t *conf, struct template *tpl);
 rsRetVal ExtendBuf(uchar **pBuf, size_t *pLenBuf, size_t iMinSize);
+int tplRequiresDateCall(struct template *pTpl);
 /* note: if a compiler warning for undefined type tells you to look at this
  * code line below, the actual cause is that you currently MUST include template.h
  * BEFORE msg.h, even if your code file does not actually need it.
