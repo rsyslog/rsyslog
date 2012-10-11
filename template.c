@@ -828,6 +828,7 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 
 	/* Check frompos, if it has an R, then topos should be a regex */
 	if(*p == ':') {
+		pTpe->bComplexProcessing = 1;
 		++p; /* eat ':' */
 #ifdef FEATURE_REGEXP
 		if(*p == 'R') {
@@ -1388,6 +1389,7 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 	int fielddelim = 9; /* default is HT (USACSII 9) */
 	int re_matchToUse = 0;
 	int re_submatchToUse = 0;
+	int bComplexProcessing = 0;
 	char *re_expr = NULL;
 	struct cnfparamvals *pvals = NULL;
 	enum {F_NONE, F_CSV, F_JSON, F_JSONF} formatType = F_NONE;
@@ -1413,23 +1415,31 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 			free(tmpstr);
 		} else if(!strcmp(pblkProperty.descr[i].name, "droplastlf")) {
 			droplastlf = pvals[i].val.d.n;
+			bComplexProcessing = 1;
 		} else if(!strcmp(pblkProperty.descr[i].name, "mandatory")) {
 			mandatory = pvals[i].val.d.n;
 		} else if(!strcmp(pblkProperty.descr[i].name, "spifno1stsp")) {
 			spifno1stsp = pvals[i].val.d.n;
+			bComplexProcessing = 1;
 		} else if(!strcmp(pblkProperty.descr[i].name, "outname")) {
 			outname = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(pblkProperty.descr[i].name, "position.from")) {
 			frompos = pvals[i].val.d.n;
+			bComplexProcessing = 1;
 		} else if(!strcmp(pblkProperty.descr[i].name, "position.to")) {
 			topos = pvals[i].val.d.n;
+			bComplexProcessing = 1;
 		} else if(!strcmp(pblkProperty.descr[i].name, "field.number")) {
 			fieldnum = pvals[i].val.d.n;
+			bComplexProcessing = 1;
 		} else if(!strcmp(pblkProperty.descr[i].name, "field.delimiter")) {
 			fielddelim = pvals[i].val.d.n;
+			bComplexProcessing = 1;
 		} else if(!strcmp(pblkProperty.descr[i].name, "regex.expression")) {
 			re_expr = es_str2cstr(pvals[i].val.d.estr, NULL);
+			bComplexProcessing = 1;
 		} else if(!strcmp(pblkProperty.descr[i].name, "regex.type")) {
+			bComplexProcessing = 1;
 			if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"BRE", sizeof("BRE")-1)) {
 				re_type = TPL_REGEX_BRE;
 			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"ERE", sizeof("ERE")-1)) {
@@ -1442,6 +1452,7 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
 		} else if(!strcmp(pblkProperty.descr[i].name, "regex.nomatchmode")) {
+			bComplexProcessing = 1;
 			if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"DFLT", sizeof("DFLT")-1)) {
 				re_nomatchType = TPL_REGEX_NOMATCH_USE_DFLTSTR;
 			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"BLANK", sizeof("BLANK")-1)) {
@@ -1458,10 +1469,13 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
 		} else if(!strcmp(pblkProperty.descr[i].name, "regex.match")) {
+			bComplexProcessing = 1;
 			re_matchToUse = pvals[i].val.d.n;
 		} else if(!strcmp(pblkProperty.descr[i].name, "regex.submatch")) {
+			bComplexProcessing = 1;
 			re_submatchToUse = pvals[i].val.d.n;
 		} else if(!strcmp(pblkProperty.descr[i].name, "format")) {
+			bComplexProcessing = 1;
 			if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"csv", sizeof("csv")-1)) {
 				formatType = F_CSV;
 			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"json", sizeof("json")-1)) {
@@ -1476,6 +1490,7 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
 		} else if(!strcmp(pblkProperty.descr[i].name, "controlcharacters")) {
+			bComplexProcessing = 1;
 			if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"escape", sizeof("escape")-1)) {
 				controlchr = CC_ESCAPE;
 			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"space", sizeof("space")-1)) {
@@ -1490,6 +1505,7 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
 		} else if(!strcmp(pblkProperty.descr[i].name, "securepath")) {
+			bComplexProcessing = 1;
 			if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"drop", sizeof("drop")-1)) {
 				secpath = SP_DROP;
 			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"replace", sizeof("replace")-1)) {
@@ -1502,6 +1518,7 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
 		} else if(!strcmp(pblkProperty.descr[i].name, "caseconversion")) {
+			bComplexProcessing = 1;
 			if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"lower", sizeof("lower")-1)) {
 				caseconv = tplCaseConvLower;
 			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"upper", sizeof("upper")-1)) {
@@ -1620,6 +1637,7 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 	pTpe->fieldName = outname;
 	if(outname != NULL)
 		pTpe->lenFieldName = ustrlen(outname);
+	pTpe->bComplexProcessing = bComplexProcessing;
 	pTpe->data.field.eDateFormat = datefmt;
 	if(fieldnum != -1) {
 		pTpe->data.field.has_fields = 1;
@@ -2154,6 +2172,8 @@ void tplPrintList(rsconf_t *conf)
 				}
 				break;
 			}
+			if(pTpe->bComplexProcessing)
+				dbgprintf("[COMPLEX]");
 			dbgprintf("\n");
 			pTpe = pTpe->pNext;
 		}
@@ -2167,8 +2187,6 @@ int tplGetEntryCount(struct template *pTpl)
 	return(pTpl->tpenElements);
 }
 
-/* our init function. TODO: remove once converted to a class
- */
 rsRetVal templateInit()
 {
 	DEFiRet;

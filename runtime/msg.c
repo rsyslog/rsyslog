@@ -2912,7 +2912,7 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 	}
 
 	/* If we did not receive a template pointer, we are already done... */
-	if(pTpe == NULL) {
+	if(pTpe == NULL || !pTpe->bComplexProcessing) {
 		*pPropLen = (bufLen == -1) ? ustrlen(pRes) : bufLen;
 		return pRes;
 	}
@@ -3499,9 +3499,7 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 		jsonField(pTpe, &pRes, pbMustBeFreed, &bufLen);
 	}
 
-	if(bufLen == -1)
-		bufLen = ustrlen(pRes);
-	*pPropLen = bufLen;
+	*pPropLen = (bufLen == -1) ? ustrlen(pRes) : bufLen;
 
 	ENDfunc
 	return(pRes);

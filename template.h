@@ -72,6 +72,7 @@ struct templateEntry {
 	enum EntryTypes eEntryType;
 	uchar *fieldName;	/**< field name to be used for structured output */
 	int lenFieldName;
+	sbool bComplexProcessing; /**< set if complex processing (options, etc) is required */
 	union {
 		struct {
 			uchar *pConstant;	/* pointer to constant value */
