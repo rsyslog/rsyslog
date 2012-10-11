@@ -2203,6 +2203,8 @@ cnfstmtNewAct(struct nvlst *lst)
 		 modGetName(cnfstmt->d.act->pMod));
 	namebuf[255] = '\0'; /* be on safe side */
 	cnfstmt->printable = (uchar*)strdup(namebuf);
+	nvlstChkUnused(lst);
+	nvlstDestruct(lst);
 done:	return cnfstmt;
 }
 

@@ -4,6 +4,8 @@ Version 7.1.10  [beta] 2012-10-11
  - bugfix: small memory leak with string-type templates
  - bugfix: small memory leak when template was specified in omfile
  - bugfix: some config processing warning messages were treated as errors
+ - bugfix: small memory leak when processing action() statements
+ - bugfix: unknown action() parameters were not reported
  ---------------------------------------------------------------------------
 Version 7.1.9  [beta] 2012-10-09
 - bugfix: comments inside objects (e.g. action()) were not properly handled
