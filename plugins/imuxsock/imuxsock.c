@@ -55,6 +55,7 @@
 #include "statsobj.h"
 #include "datetime.h"
 #include "hashtable.h"
+#include "ratelimit.h"
 
 MODULE_TYPE_INPUT
 MODULE_TYPE_NOKEEP
@@ -811,6 +812,10 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 	struct syslogTime dummyTS;
 	struct json_object *json = NULL, *jval;
 	DEFiRet;
+rsRetVal localRet;
+static ratelimit_t *ratelimit = NULL;
+if(ratelimit == NULL)
+	ratelimitNew(&ratelimit);
 
 	/* TODO: handle format errors?? */
 	/* we need to parse the pri first, because we need the severity for
@@ -982,7 +987,14 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 
 	MsgSetRcvFrom(pMsg, pLstn->hostName == NULL ? glbl.GetLocalHostNameProp() : pLstn->hostName);
 	CHKiRet(MsgSetRcvFromIP(pMsg, pLocalHostIP));
-	CHKiRet(submitMsg(pMsg));
+	localRet = ratelimitMsg(pMsg, ratelimit);
+	if(localRet == RS_RET_OK_HAVE_REPMSG) {
+dbgprintf("DDDD: doing repeat submit!\n");
+		CHKiRet(submitMsg2(ratelimitGetRepeatMsg(ratelimit), NULL));
+		localRet = RS_RET_OK;
+	}
+	if(localRet == RS_RET_OK)
+		CHKiRet(submitMsg2(pMsg, NULL));
 
 	STATSCOUNTER_INC(ctrSubmit, mutCtrSubmit);
 finalize_it:

@@ -25,6 +25,28 @@ has been implemented. Consequently, situations where the previous behaviour were
 desired need now to be solved differently. We do not think that this will cause any
 problems to anyone, especially as in v6 this was announced as a missing feature.
 
+<h2>"last message repeated n times" Processing</h2>
+<p>This processing has been optimized and moved to the input side. This results
+in far better performance and also de-couples different sources from the same
+processing. It is now also integrated in to the more generic rate-limiting
+processing. The code works almost as before, with two exceptions:
+<ul>
+<li>The supression amount can be different, as the new algorithm
+    precisely check's a single source, and while that source is being
+    read. The previous algorithm worked on a set of mixed messages
+    from multiple sources.
+<li>The previous algorithm wrote a "last message repeated n times" message
+    at least every 60 seconds. For performance reasons, we do no longer do
+    this but write this message only when a new message arrives or rsyslog
+    is shut down.
+</ul>
+<p>Note that the new algorithms needs support from input modules. If old
+modules which do not have the necessary support are used, duplicate 
+messages will most probably not be detected. Upgrading the module code is
+simple, and all rsyslog-provided plugins support the new method, so this
+should not be a real problem (crafting a solution would result in rather
+complex code - for a case that most probably would never happen).
+
 <p><font size="2">This documentation is part of the
 <a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
 Copyright &copy; 2011-2012 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and

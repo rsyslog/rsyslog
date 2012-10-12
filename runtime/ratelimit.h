@@ -23,10 +23,16 @@
 
 struct ratelimit_s {
 	unsigned nsupp;		/**< nbr of msgs suppressed */
+	msg_t *pMsg;
+	msg_t *repMsg;		/**< repeat message, temporary buffer */
 	/* dummy field list - TODO: implement */
 };
 
 /* prototypes */
+rsRetVal ratelimitNew(ratelimit_t **ppThis);
+rsRetVal ratelimitMsg(msg_t *ppMsg, ratelimit_t *ratelimit);
+msg_t * ratelimitGetRepeatMsg(ratelimit_t *ratelimit);
+void ratelimitDestruct(ratelimit_t *pThis);
 rsRetVal ratelimitModInit(void);
 void ratelimitModExit(void);
 
