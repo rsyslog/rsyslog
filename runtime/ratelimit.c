@@ -282,7 +282,7 @@ ratelimitNew(ratelimit_t **ppThis, char *modname, char *dynname)
 		namebuf[sizeof(namebuf)-1] = '\0'; /* to be on safe side */
 		pThis->name = strdup(namebuf);
 	}
-	pThis->bReduceRepeatMsgs = runConf->globals.bReduceRepeatMsgs;
+	pThis->bReduceRepeatMsgs = loadConf->globals.bReduceRepeatMsgs;
 	*ppThis = pThis;
 finalize_it:
 	RETiRet;
