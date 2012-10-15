@@ -69,6 +69,7 @@
 						 * approach taken here is considered appropriate.
 						 * rgerhards, 2010-06-24
 						 */
+#define CONF_NUM_MULTISUB		1024	/* default number of messages per multisub structure */
 
 /* ############################################################# *
  * #                  End Config Settings                      # *

@@ -801,12 +801,11 @@ processDataRcvd(ptcpsess_t *pThis, char c, struct syslogTime *stTime, time_t ttG
  * we have just received a bunch of data! -- rgerhards, 2009-06-16
  * EXTRACT from tcps_sess.c
  */
-#define NUM_MULTISUB 1024
 static rsRetVal
 DataRcvd(ptcpsess_t *pThis, char *pData, size_t iLen)
 {
 	multi_submit_t multiSub;
-	msg_t *pMsgs[NUM_MULTISUB];
+	msg_t *pMsgs[CONF_NUM_MULTISUB];
 	struct syslogTime stTime;
 	time_t ttGenTime;
 	char *pEnd;
@@ -817,7 +816,7 @@ DataRcvd(ptcpsess_t *pThis, char *pData, size_t iLen)
 
 	datetime.getCurrTime(&stTime, &ttGenTime);
 	multiSub.ppMsgs = pMsgs;
-	multiSub.maxElem = NUM_MULTISUB;
+	multiSub.maxElem = CONF_NUM_MULTISUB;
 	multiSub.nElem = 0;
 
 	 /* We now copy the message to the session buffer. */
@@ -832,7 +831,6 @@ DataRcvd(ptcpsess_t *pThis, char *pData, size_t iLen)
 finalize_it:
 	RETiRet;
 }
-#undef NUM_MULTISUB
 
 
 /****************************************** --END-- TCP SUPPORT FUNCTIONS ***********************************/

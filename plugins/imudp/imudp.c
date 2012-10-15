@@ -305,7 +305,6 @@ std_checkRuleset_genErrMsg(__attribute__((unused)) modConfData_t *modConf, insta
 static inline rsRetVal
 processSocket(thrdInfo_t *pThrd, struct lstn_s *lstn, struct sockaddr_storage *frominetPrev, int *pbIsPermitted)
 {
-	DEFiRet;
 	int iNbrTimeUsed;
 	time_t ttGenTime;
 	struct syslogTime stTime;
@@ -315,9 +314,15 @@ processSocket(thrdInfo_t *pThrd, struct lstn_s *lstn, struct sockaddr_storage *f
 	msg_t *pMsg;
 	prop_t *propFromHost = NULL;
 	prop_t *propFromHostIP = NULL;
+	multi_submit_t multiSub;
+	msg_t *pMsgs[CONF_NUM_MULTISUB];
 	char errStr[1024];
+	DEFiRet;
 
 	assert(pThrd != NULL);
+	multiSub.ppMsgs = pMsgs;
+	multiSub.maxElem = CONF_NUM_MULTISUB;
+	multiSub.nElem = 0;
 	iNbrTimeUsed = 0;
 	while(1) { /* loop is terminated if we have a bad receive, done below in the body */
 		if(pThrd->bShallStop == RSTRUE)
@@ -384,12 +389,15 @@ processSocket(thrdInfo_t *pThrd, struct lstn_s *lstn, struct sockaddr_storage *f
 			if(*pbIsPermitted == 2)
 				pMsg->msgFlags  |= NEEDS_ACLCHK_U; /* request ACL check after resolution */
 			CHKiRet(msgSetFromSockinfo(pMsg, &frominet));
-			CHKiRet(submitMsg(pMsg));
+			CHKiRet(ratelimitAddMsg(lstn->ratelimiter, &multiSub, pMsg));
 			STATSCOUNTER_INC(lstn->ctrSubmit, lstn->mutCtrSubmit);
 		}
 	}
 
+
 finalize_it:
+	multiSubmitFlush(&multiSub);
+
 	if(propFromHost != NULL)
 		prop.Destruct(&propFromHost);
 	if(propFromHostIP != NULL)

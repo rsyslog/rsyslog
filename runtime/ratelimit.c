@@ -122,6 +122,7 @@ ratelimitMsg(ratelimit_t *ratelimit, msg_t *pMsg, msg_t **ppRepMsg)
 				*ppRepMsg = ratelimitGenRepMsg(ratelimit);
 				ratelimit->nsupp = 0;
 			}
+			msgDestruct(&ratelimit->pMsg);
 		}
 		ratelimit->pMsg = MsgAddRef(pMsg);
 	}
