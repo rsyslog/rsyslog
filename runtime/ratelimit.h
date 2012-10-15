@@ -22,7 +22,10 @@
 #define INCLUDED_RATELIMIT_H
 
 struct ratelimit_s {
+	int bActive;	/**< any rate-limiting at all desired? */
+	char *name;	/**< rate limiter name, e.g. for user messages */
 	/* support for Linux kernel-type ratelimiting */
+	int bLinuxLike;	/**< Linux-like rate limiting enabled? */
 	unsigned short interval;
 	unsigned short burst;
 	unsigned done;
@@ -37,11 +40,13 @@ struct ratelimit_s {
 };
 
 /* prototypes */
-rsRetVal ratelimitNew(ratelimit_t **ppThis);
+rsRetVal ratelimitNew(ratelimit_t **ppThis, char *modname, char *dynname);
 void ratelimitSetThreadSafe(ratelimit_t *ratelimit);
+void ratelimitSetLinuxLike(ratelimit_t *ratelimit, unsigned short interval, unsigned short burst);
 rsRetVal ratelimitMsg(ratelimit_t *ratelimit, msg_t *pMsg, msg_t **ppRep);
 rsRetVal ratelimitAddMsg(ratelimit_t *ratelimit, multi_submit_t *pMultiSub, msg_t *pMsg);
 void ratelimitDestruct(ratelimit_t *pThis);
+int ratelimitChecked(ratelimit_t *ratelimit);
 rsRetVal ratelimitModInit(void);
 void ratelimitModExit(void);
 

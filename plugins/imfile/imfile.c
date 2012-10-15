@@ -412,7 +412,7 @@ addListner(instanceConf_t *inst)
 		pThis->lenTag = ustrlen(pThis->pszTag);
 		pThis->pszStateFile = (uchar*) strdup((char*) inst->pszStateFile);
 
-		CHKiRet(ratelimitNew(&pThis->ratelimiter));
+		CHKiRet(ratelimitNew(&pThis->ratelimiter, "imfile", inst->pszFileName));
 		CHKmalloc(pThis->multiSub.ppMsgs = MALLOC(inst->nMultiSub * sizeof(msg_t*)));
 		pThis->multiSub.maxElem = inst->nMultiSub;
 		pThis->multiSub.nElem = 0;

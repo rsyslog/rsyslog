@@ -152,7 +152,7 @@ addNewLstnPort(tcpsrv_t *pThis, uchar *pszPort, int bSuppOctetFram)
 	snprintf((char*)statname, sizeof(statname), "%s(%s)", pThis->pszInputName, pszPort);
 	statname[sizeof(statname)-1] = '\0'; /* just to be on the save side... */
 	CHKiRet(statsobj.SetName(pEntry->stats, statname));
-	CHKiRet(ratelimitNew(&pEntry->ratelimiter));
+	CHKiRet(ratelimitNew(&pEntry->ratelimiter, "tcperver", NULL));
 	STATSCOUNTER_INIT(pEntry->ctrSubmit, pEntry->mutCtrSubmit);
 	CHKiRet(statsobj.AddCounter(pEntry->stats, UCHAR_CONSTANT("submitted"),
 		ctrType_IntCtr, &(pEntry->ctrSubmit)));

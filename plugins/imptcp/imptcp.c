@@ -1121,7 +1121,8 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 	pSrv->iKeepAliveProbes = inst->iKeepAliveProbes;
 	pSrv->iKeepAliveTime = inst->iKeepAliveTime;
 	pSrv->bEmitMsgOnClose = inst->bEmitMsgOnClose;
-	CHKiRet(ratelimitNew(&pSrv->ratelimiter));
+	CHKiRet(ratelimitNew(&pSrv->ratelimiter, "imtcp", (char*)inst->pszBindPort));
+//TODO: add!ratelimitSetLinuxLike(pSrv->ratelimiter, 3, 2);
 	ratelimitSetThreadSafe(pSrv->ratelimiter);
 	CHKmalloc(pSrv->port = ustrdup(inst->pszBindPort));
 	pSrv->iAddtlFrameDelim = inst->iAddtlFrameDelim;

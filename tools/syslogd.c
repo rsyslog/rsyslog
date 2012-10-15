@@ -705,7 +705,6 @@ rsRetVal
 multiSubmitFlush(multi_submit_t *pMultiSub)
 {
 	DEFiRet;
-dbgprintf("DDDD: multiSubmitFlish, nElem %d\n", pMultiSub->nElem);
 	if(pMultiSub->nElem > 0) {
 		iRet = multiSubmitMsg2(pMultiSub);
 	}

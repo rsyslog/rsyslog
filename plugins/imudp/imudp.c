@@ -223,7 +223,7 @@ addListner(instanceConf_t *inst)
 	struct lstn_s *newlcnfinfo;
 	uchar *bindName;
 	uchar *port;
-	uchar statname[64];
+	uchar dispname[64];
 
 	/* check which address to bind to. We could do this more compact, but have not
 	 * done so in order to make the code more readable. -- rgerhards, 2007-12-27
@@ -248,12 +248,12 @@ addListner(instanceConf_t *inst)
 			newlcnfinfo->next = NULL;
 			newlcnfinfo->sock = newSocks[iSrc];
 			newlcnfinfo->pRuleset = inst->pBindRuleset;
-			CHKiRet(ratelimitNew(&newlcnfinfo->ratelimiter));
+			snprintf((char*)dispname, sizeof(dispname), "imudp(%s:%s)", bindName, port);
+			dispname[sizeof(dispname)-1] = '\0'; /* just to be on the save side... */
+			CHKiRet(ratelimitNew(&newlcnfinfo->ratelimiter, dispname, NULL));
 			/* support statistics gathering */
 			CHKiRet(statsobj.Construct(&(newlcnfinfo->stats)));
-			snprintf((char*)statname, sizeof(statname), "imudp(%s:%s)", bindName, port);
-			statname[sizeof(statname)-1] = '\0'; /* just to be on the save side... */
-			CHKiRet(statsobj.SetName(newlcnfinfo->stats, statname));
+			CHKiRet(statsobj.SetName(newlcnfinfo->stats, dispname));
 			STATSCOUNTER_INIT(newlcnfinfo->ctrSubmit, newlcnfinfo->mutCtrSubmit);
 			CHKiRet(statsobj.AddCounter(newlcnfinfo->stats, UCHAR_CONSTANT("submitted"),
 				ctrType_IntCtr, &(newlcnfinfo->ctrSubmit)));
