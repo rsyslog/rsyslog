@@ -118,6 +118,21 @@ finalize_it:
 	RETiRet;
 }
 
+
+/* helper: tell how many messages we lost due to linux-like ratelimiting */
+static inline void
+tellLostCnt(ratelimit_t *ratelimit)
+{
+	uchar msgbuf[1024];
+	if(ratelimit->missed) {
+		snprintf((char*)msgbuf, sizeof(msgbuf),
+			 "%s: %u messages lost due to rate-limiting",
+			 ratelimit->name, ratelimit->missed);
+		logmsgInternal(RS_RET_RATE_LIMITED, LOG_SYSLOG|LOG_INFO, msgbuf, 0);
+		ratelimit->missed = 0;
+	}
+}
+
 /* Linux-like ratelimiting, modelled after the linux kernel
  * returns 1 if message is within rate limit and shall be 
  * processed, 0 otherwise.
@@ -142,13 +157,7 @@ withinRatelimit(ratelimit_t *ratelimit, time_t tt)
 
 	/* resume if we go out of out time window */
 	if(tt > ratelimit->begin + ratelimit->interval) {
-		if(ratelimit->missed) {
-			snprintf((char*)msgbuf, sizeof(msgbuf),
-			         "%s: %u messages lost due to rate-limiting",
-				 ratelimit->name, ratelimit->missed);
-			logmsgInternal(RS_RET_RATE_LIMITED, LOG_SYSLOG|LOG_INFO, msgbuf, 0);
-			ratelimit->missed = 0;
-		}
+		tellLostCnt(ratelimit);
 		ratelimit->begin = 0;
 		ratelimit->done = 0;
 	}
@@ -317,6 +326,7 @@ ratelimitDestruct(ratelimit_t *ratelimit)
 		}
 		msgDestruct(&ratelimit->pMsg);
 	}
+	tellLostCnt(ratelimit);
 	if(ratelimit->bThreadSafe)
 		pthread_mutex_destroy(&ratelimit->mut);
 	free(ratelimit->name);
