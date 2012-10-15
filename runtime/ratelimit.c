@@ -32,6 +32,7 @@
 #include "parser.h"
 #include "unicode-helper.h"
 #include "msg.h"
+#include "rsconf.h"
 #include "dirty.h"
 
 /* definitions for objects we access */
@@ -68,41 +69,17 @@ ratelimitGenRepMsg(ratelimit_t *ratelimit)
 done:	return repMsg;
 }
 
-/* ratelimit a message, that means:
- * - handle "last message repeated n times" logic
- * - handle actual (discarding) rate-limiting
- * This function returns RS_RET_OK, if the caller shall process
- * the message regularly and RS_RET_DISCARD if the caller must
- * discard the message. The caller should also discard the message
- * if another return status occurs. This places some burden on the
- * caller logic, but provides best performance. Demanding this
- * cooperative mode can enable a faulty caller to thrash up part
- * of the system, but we accept that risk (a faulty caller can
- * always do all sorts of evil, so...)
- * If *ppRepMsg != NULL on return, the caller must enqueue that
- * message before the original message.
- */
-rsRetVal
-ratelimitMsg(ratelimit_t *ratelimit, msg_t *pMsg, msg_t **ppRepMsg)
+static inline rsRetVal
+doLastMessageRepeatedNTimes(ratelimit_t *ratelimit, msg_t *pMsg, msg_t **ppRepMsg)
 {
-	rsRetVal localRet;
 	int bNeedUnlockMutex = 0;
 	DEFiRet;
-
-	if((pMsg->msgFlags & NEEDS_PARSING) != 0) {
-		if((localRet = parser.ParseMsg(pMsg)) != RS_RET_OK)  {
-			DBGPRINTF("Message discarded, parsing error %d\n", localRet);
-			ABORT_FINALIZE(RS_RET_DISCARDMSG);
-		}
-	}
 
 	if(ratelimit->bThreadSafe) {
 		pthread_mutex_lock(&ratelimit->mut);
 		bNeedUnlockMutex = 1;
 	}
 
-	*ppRepMsg = NULL;
-	/* suppress duplicate messages */
 	if( ratelimit->pMsg != NULL &&
 	    getMSGLen(pMsg) == getMSGLen(ratelimit->pMsg) &&
 	    !ustrcmp(getMSG(pMsg), getMSG(ratelimit->pMsg)) &&
@@ -130,6 +107,43 @@ ratelimitMsg(ratelimit_t *ratelimit, msg_t *pMsg, msg_t **ppRepMsg)
 finalize_it:
 	if(bNeedUnlockMutex)
 		pthread_mutex_unlock(&ratelimit->mut);
+	RETiRet;
+}
+
+/* ratelimit a message, that means:
+ * - handle "last message repeated n times" logic
+ * - handle actual (discarding) rate-limiting
+ * This function returns RS_RET_OK, if the caller shall process
+ * the message regularly and RS_RET_DISCARD if the caller must
+ * discard the message. The caller should also discard the message
+ * if another return status occurs. This places some burden on the
+ * caller logic, but provides best performance. Demanding this
+ * cooperative mode can enable a faulty caller to thrash up part
+ * of the system, but we accept that risk (a faulty caller can
+ * always do all sorts of evil, so...)
+ * If *ppRepMsg != NULL on return, the caller must enqueue that
+ * message before the original message.
+ */
+rsRetVal
+ratelimitMsg(ratelimit_t *ratelimit, msg_t *pMsg, msg_t **ppRepMsg)
+{
+	rsRetVal localRet;
+	DEFiRet;
+
+#warning be sure to parse only when actually required!
+	if((pMsg->msgFlags & NEEDS_PARSING) != 0) {
+		if((localRet = parser.ParseMsg(pMsg)) != RS_RET_OK)  {
+			DBGPRINTF("Message discarded, parsing error %d\n", localRet);
+			ABORT_FINALIZE(RS_RET_DISCARDMSG);
+		}
+	}
+
+	*ppRepMsg = NULL;
+
+	if(ratelimit->bReduceRepeatMsgs) {
+		CHKiRet(doLastMessageRepeatedNTimes(ratelimit, pMsg, ppRepMsg));
+	}
+finalize_it:
 	RETiRet;
 }
 
@@ -177,6 +191,7 @@ ratelimitNew(ratelimit_t **ppThis)
 	DEFiRet;
 
 	CHKmalloc(pThis = calloc(1, sizeof(ratelimit_t)));
+	pThis->bReduceRepeatMsgs = runConf->globals.bReduceRepeatMsgs;
 	*ppThis = pThis;
 finalize_it:
 	RETiRet;

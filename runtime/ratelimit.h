@@ -22,6 +22,14 @@
 #define INCLUDED_RATELIMIT_H
 
 struct ratelimit_s {
+	/* support for Linux kernel-type ratelimiting */
+	unsigned short interval;
+	unsigned short burst;
+	unsigned done;
+	unsigned missed;
+	time_t begin;
+	/* support for "last message repeated n times */
+	int bReduceRepeatMsgs; /**< shall we do "last message repeated n times" processing? */
 	unsigned nsupp;		/**< nbr of msgs suppressed */
 	msg_t *pMsg;
 	sbool bThreadSafe;	/**< do we need to operate in Thread-Safe mode? */
