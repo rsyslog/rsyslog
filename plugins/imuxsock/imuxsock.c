@@ -995,11 +995,11 @@ if(ratelimit == NULL)
 	localRet = ratelimitMsg(pMsg, ratelimit);
 	if(localRet == RS_RET_OK_HAVE_REPMSG) {
 dbgprintf("DDDD: doing repeat submit!\n");
-		CHKiRet(submitMsg2(ratelimitGetRepeatMsg(ratelimit), NULL));
+		CHKiRet(submitMsg2(ratelimitGetRepeatMsg(ratelimit)));
 		localRet = RS_RET_OK;
 	}
 	if(localRet == RS_RET_OK)
-		CHKiRet(submitMsg2(pMsg, NULL));
+		CHKiRet(submitMsg2(pMsg));
 
 	STATSCOUNTER_INC(ctrSubmit, mutCtrSubmit);
 finalize_it:

@@ -176,7 +176,7 @@ ratelimitDestruct(ratelimit_t *ratelimit)
 			ratelimit->repMsg = ratelimit->pMsg;
 			pMsg = ratelimitGetRepeatMsg(ratelimit);
 			if(pMsg != NULL)
-				submitMsg(pMsg);
+				submitMsg2(pMsg);
 		}
 	} else {
 		msgDestruct(&ratelimit->pMsg);

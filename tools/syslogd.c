@@ -418,7 +418,7 @@ parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int fla
 	CHKiRet(prop.Destruct(&pProp));
 	CHKiRet(MsgSetRcvFromIPStr(pMsg, hnameIP, ustrlen(hnameIP), &pProp));
 	CHKiRet(prop.Destruct(&pProp));
-	CHKiRet(submitMsg2(pMsg, NULL));
+	CHKiRet(submitMsg2(pMsg));
 
 finalize_it:
 	RETiRet;
@@ -489,7 +489,7 @@ logmsgInternal(int iErr, int pri, uchar *msg, int flags)
                /* we have the queue, so we can simply provide the
 		 * message to the queue engine.
 		 */
-		submitMsg2(pMsg, NULL);
+		submitMsg2(pMsg);
 	}
 finalize_it:
 	RETiRet;
@@ -625,7 +625,7 @@ int i;
  * rgerhards, 2008-02-13
  */
 rsRetVal
-submitMsg2(msg_t *pMsg, ratelimit_t *ratelimit)
+submitMsg2(msg_t *pMsg)
 {
 	qqueue_t *pQueue;
 	ruleset_t *pRuleset;
@@ -649,10 +649,11 @@ submitMsg2(msg_t *pMsg, ratelimit_t *ratelimit)
 finalize_it:
 	RETiRet;
 }
+
 rsRetVal
-submitMsg(msg_t *pMsg) /* backward compat. level */
+submitMsg(msg_t *pMsg)
 {
-	return submitMsg2(pMsg, NULL);
+	return submitMsg2(pMsg);
 }
 
 
@@ -661,7 +662,7 @@ submitMsg(msg_t *pMsg) /* backward compat. level */
  * rgerhards, 2009-06-16
  */
 rsRetVal
-multiSubmitMsg2(multi_submit_t *pMultiSub, ratelimit_t *ratelimit)
+multiSubmitMsg2(multi_submit_t *pMultiSub)
 {
 	int i;
 	qqueue_t *pQueue;
@@ -695,7 +696,7 @@ finalize_it:
 rsRetVal
 multiSubmitMsg(multi_submit_t *pMultiSub) /* backward compat. level */
 {
-	return multiSubmitMsg2(pMultiSub, NULL);
+	return multiSubmitMsg2(pMultiSub);
 }
 
 
@@ -717,13 +718,13 @@ dbgprintf("DDDD: have multisub!\n");
 dbgprintf("DDDD: doing repeat submit!\n");
 			pMultiSub->ppMsgs[pMultiSub->nElem++] = ratelimitGetRepeatMsg(ratelimit);
 			if(pMultiSub->nElem == pMultiSub->maxElem)
-				CHKiRet(multiSubmitMsg2(pMultiSub, NULL));
+				CHKiRet(multiSubmitMsg2(pMultiSub));
 			localRet = RS_RET_OK;
 		}
 		if(localRet == RS_RET_OK) {
 			pMultiSub->ppMsgs[pMultiSub->nElem++] = pMsg;
 			if(pMultiSub->nElem == pMultiSub->maxElem)
-				CHKiRet(multiSubmitMsg2(pMultiSub, NULL));
+				CHKiRet(multiSubmitMsg2(pMultiSub));
 		}
 	}
 
@@ -738,7 +739,7 @@ multiSubmitFlush(multi_submit_t *pMultiSub)
 	DEFiRet;
 dbgprintf("DDDD: multiSubmitFlish, nElem %d\n", pMultiSub->nElem);
 	if(pMultiSub->nElem > 0) {
-		iRet = multiSubmitMsg(pMultiSub);
+		iRet = multiSubmitMsg2(pMultiSub);
 	}
 	RETiRet;
 }
@@ -1322,7 +1323,7 @@ static inline void processImInternal(void)
 	msg_t *pMsg;
 
 	while(iminternalRemoveMsg(&pMsg) == RS_RET_OK) {
-		submitMsg2(pMsg, NULL);
+		submitMsg(pMsg);
 	}
 }
 

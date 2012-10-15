@@ -664,7 +664,6 @@ doSubmitMsg(ptcpsess_t *pThis, struct syslogTime *stTime, time_t ttGenTime, mult
 	msg_t *pMsg;
 	ptcpsrv_t *pSrv;
 	DEFiRet;
-dbgprintf("DDDD: in imptcp doSubmitMSg()\n");
 
 	if(pThis->iMsg == 0) {
 		DBGPRINTF("discarding zero-sized message\n");

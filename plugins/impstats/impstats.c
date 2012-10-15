@@ -138,7 +138,7 @@ doSubmitMsg(uchar *line)
 	pMsg->iSeverity = runModConf->iSeverity;
 	pMsg->msgFlags  = 0;
 
-	submitMsg2(pMsg, NULL);
+	submitMsg(pMsg);
 
 finalize_it:
 	RETiRet;

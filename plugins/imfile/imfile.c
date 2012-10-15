@@ -191,7 +191,7 @@ static rsRetVal enqLine(fileInfo_t *pInfo, cstr_t *cstrLine)
 	MsgSetRuleset(pMsg, pInfo->pRuleset);
 	pInfo->multiSub.ppMsgs[pInfo->multiSub.nElem++] = pMsg;
 	if(pInfo->multiSub.nElem == pInfo->multiSub.maxElem)
-		CHKiRet(multiSubmitMsg2(&pInfo->multiSub, NULL));
+		CHKiRet(multiSubmitMsg(&pInfo->multiSub));
 finalize_it:
 	RETiRet;
 }
