@@ -147,9 +147,11 @@ ratelimitAddMsg(ratelimit_t *ratelimit, multi_submit_t *pMultiSub, msg_t *pMsg)
 	DEFiRet;
 
 	if(pMultiSub == NULL) {
-dbgprintf("DDDDD: multiSubmitAddMsg, not checking ratelimiter for single submit!\n");
-#warning missing multisub Implementation?
-		CHKiRet(submitMsg(pMsg));
+		localRet = ratelimitMsg(ratelimit, pMsg, &repMsg);
+		if(repMsg != NULL)
+			CHKiRet(submitMsg2(repMsg));
+		if(localRet == RS_RET_OK)
+			CHKiRet(submitMsg2(pMsg));
 	} else {
 		localRet = ratelimitMsg(ratelimit, pMsg, &repMsg);
 		if(repMsg != NULL) {

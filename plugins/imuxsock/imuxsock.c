@@ -763,28 +763,6 @@ copyescaped(uchar *dstbuf, uchar *inbuf, int inlen)
 }
 
 
-#if 0
-/* Creates new field to be added to event
- * used for SystemLogParseTrusted parsing
- */
-struct ee_field *
-createNewField(char *fieldname, char *value, int lenValue) {
-	es_str_t *newStr;
-	struct ee_value *newVal;
-	struct ee_field *newField;
-
-	newStr = es_newStrFromBuf(value, (es_size_t) lenValue);
-
-	newVal = ee_newValue(ctxee);
-	ee_setStrValue(newVal, newStr);
-
-	newField = ee_newFieldFromNV(ctxee, fieldname, newVal);
-
-	return newField;
-}
-#endif
-
-
 /* submit received message to the queue engine
  * We now parse the message according to expected format so that we
  * can also mangle it if necessary.
@@ -811,14 +789,12 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 	int toffs; /* offset for trusted properties */
 	struct syslogTime dummyTS;
 	struct json_object *json = NULL, *jval;
-	msg_t *repMsg;
 	DEFiRet;
 #warning experimental code needs to be made production-ready!
 /* we need to decide how many ratelimiters we use --> hashtable
    also remove current homegrown ratelimiting functionality and
    replace it with the new one.
  */
-rsRetVal localRet;
 static ratelimit_t *ratelimit = NULL;
 if(ratelimit == NULL)
 	ratelimitNew(&ratelimit);
@@ -993,12 +969,7 @@ if(ratelimit == NULL)
 
 	MsgSetRcvFrom(pMsg, pLstn->hostName == NULL ? glbl.GetLocalHostNameProp() : pLstn->hostName);
 	CHKiRet(MsgSetRcvFromIP(pMsg, pLocalHostIP));
-	localRet = ratelimitMsg(ratelimit, pMsg, &repMsg);
-	if(repMsg != NULL)
-		CHKiRet(submitMsg(repMsg));
-	if(localRet == RS_RET_OK)
-		CHKiRet(submitMsg(pMsg));
-
+	ratelimitAddMsg(ratelimit, NULL, pMsg);
 	STATSCOUNTER_INC(ctrSubmit, mutCtrSubmit);
 finalize_it:
 	RETiRet;
