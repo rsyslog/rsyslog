@@ -42,6 +42,7 @@ struct tcpLstnPortList_s {
 	ruleset_t *pRuleset;		/**< associated ruleset */
 	statsobj_t *stats;		/**< associated stats object */
 	sbool bSuppOctetFram;	/**< do we support octect-counted framing? (if no->legay only!)*/
+	ratelimit_t *ratelimiter;
 	STATSCOUNTER_DEF(ctrSubmit, mutCtrSubmit)
 	tcpLstnPortList_t *pNext;	/**< next port or NULL */
 };

@@ -47,6 +47,7 @@
 #include "msg.h"
 #include "datetime.h"
 #include "prop.h"
+#include "ratelimit.h"
 #include "debug.h"
 
 
@@ -264,14 +265,7 @@ defaultDoSubmitMessage(tcps_sess_t *pThis, struct syslogTime *stTime, time_t ttG
 	MsgSetRuleset(pMsg, pThis->pLstnInfo->pRuleset);
 
 	STATSCOUNTER_INC(pThis->pLstnInfo->ctrSubmit, pThis->pLstnInfo->mutCtrSubmit);
-	if(pMultiSub == NULL) {
-		CHKiRet(submitMsg2(pMsg));
-	} else {
-		pMultiSub->ppMsgs[pMultiSub->nElem++] = pMsg;
-		if(pMultiSub->nElem == pMultiSub->maxElem)
-			CHKiRet(multiSubmitMsg(pMultiSub));
-	}
-
+	ratelimitAddMsg(pThis->pLstnInfo->ratelimiter, pMultiSub, pMsg);
 
 finalize_it:
 	/* reset status variables */
@@ -487,11 +481,7 @@ DataRcvd(tcps_sess_t *pThis, char *pData, size_t iLen)
 	while(pData < pEnd) {
 		CHKiRet(processDataRcvd(pThis, *pData++, &stTime, ttGenTime, &multiSub));
 	}
-
-	if(multiSub.nElem > 0) {
-		/* submit anything that was not yet submitted */
-		CHKiRet(multiSubmitMsg(&multiSub));
-	}
+	iRet = multiSubmitFlush(&multiSub);
 
 finalize_it:
 	RETiRet;

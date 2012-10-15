@@ -580,7 +580,9 @@ ENDwillRun
 
 BEGINafterRun
 CODESTARTafterRun
-	/* do cleanup here */
+	if(pOurTcpsrv != NULL)
+		iRet = tcpsrv.Destruct(&pOurTcpsrv);
+
 	net.clearAllowedSenders(UCHAR_CONSTANT("TCP"));
 ENDafterRun
 
@@ -594,9 +596,6 @@ ENDisCompatibleWithFeature
 
 BEGINmodExit
 CODESTARTmodExit
-	if(pOurTcpsrv != NULL)
-		iRet = tcpsrv.Destruct(&pOurTcpsrv);
-
 	if(pPermPeersRoot != NULL) {
 		net.DestructPermittedPeers(&pPermPeersRoot);
 	}
