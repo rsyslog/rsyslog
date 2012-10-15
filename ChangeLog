@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------
 Version 7.3.1  [devel] 2012-10-??
+- imptcp: support for Linux-Type ratelimiting added
 - imudp: support for input batching added (performance improvement)
 - change lumberjack cookie to "@cee:" from "@cee: "
   CEE originally specified the cookie with SP, whereas other lumberjack

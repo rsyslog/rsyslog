@@ -22,10 +22,8 @@
 #define INCLUDED_RATELIMIT_H
 
 struct ratelimit_s {
-	int bActive;	/**< any rate-limiting at all desired? */
 	char *name;	/**< rate limiter name, e.g. for user messages */
 	/* support for Linux kernel-type ratelimiting */
-	int bLinuxLike;	/**< Linux-like rate limiting enabled? */
 	unsigned short interval;
 	unsigned short burst;
 	unsigned done;

@@ -193,7 +193,7 @@ ratelimitMsg(ratelimit_t *ratelimit, msg_t *pMsg, msg_t **ppRepMsg)
 	DEFiRet;
 
 	*ppRepMsg = NULL;
-	if(ratelimit->bLinuxLike) {
+	if(ratelimit->interval) {
 		if(withinRatelimit(ratelimit, pMsg->ttGenTime) == 0)
 			ABORT_FINALIZE(RS_RET_DISCARDMSG);
 	}
@@ -208,7 +208,7 @@ finalize_it:
 int
 ratelimitChecked(ratelimit_t *ratelimit)
 {
-	return ratelimit->bLinuxLike || ratelimit->bReduceRepeatMsgs;
+	return ratelimit->interval || ratelimit->bReduceRepeatMsgs;
 }
 
 
@@ -274,8 +274,6 @@ ratelimitNew(ratelimit_t **ppThis, char *modname, char *dynname)
 		pThis->name = strdup(namebuf);
 	}
 	pThis->bReduceRepeatMsgs = runConf->globals.bReduceRepeatMsgs;
-	if(pThis->bReduceRepeatMsgs)
-		pThis->bActive = 1;
 	*ppThis = pThis;
 finalize_it:
 	RETiRet;
@@ -291,7 +289,6 @@ ratelimitSetLinuxLike(ratelimit_t *ratelimit, unsigned short interval, unsigned 
 	ratelimit->done = 0;
 	ratelimit->missed = 0;
 	ratelimit->begin = 0;
-	ratelimit->bLinuxLike = 1;
 }
 
 

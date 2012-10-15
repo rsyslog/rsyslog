@@ -13,18 +13,12 @@
 <p><b>Description</b>:</p>
 <p>Provides the ability to receive syslog messages via plain  TCP syslog.
 This is a specialised input plugin tailored for high performance on Linux. It will
-probably not run on any other platform. Also, it does no provide TLS services.
+probably not run on any other platform. Also, it does not provide TLS services.
 Encryption can be provided by using <a href="rsyslog_stunnel.html">stunnel</a>.
 <p>This module has no limit on the number of listeners and sessions that can be used.
-<p>Multiple receivers may be configured by
-specifying $InputPTCPServerRun multiple times.
 </p>
 
 <p><b>Configuration Directives</b>:</p>
-<p>This plugin has config directives similar named as imtcp, but they all have <b>P</b>TCP in
-their name instead of just TCP. Note that only a subset of the parameters are supported.
-<ul>
-
 <p><b>Global Directives</b>:</p>
 <ul>
 <li>Threads &lt;number&gt;<br>
@@ -91,6 +85,13 @@ the message was received from.
 Binds specified ruleset to next server defined.
 <li><b>Address</b> &lt;name&gt;<br>
 On multi-homed machines, specifies to which local address the listerner should be bound.
+<li><b>RateLimit.Interval</b> [number] - (available since 7.3.1) specifies the rate-limiting
+interval in seconds.  Default value is 0, which turns off rate limiting. Set it to a number
+of seconds (5 recommended) to activate rate-limiting.
+</li>
+<li><b>RateLimit.Burst</b> [number] - (available since 7.3.1) specifies the rate-limiting
+burst in number of messages. Default is 10,000.
+</li>
 </ul>
 <b>Caveats/Known Bugs:</b>
 <ul>

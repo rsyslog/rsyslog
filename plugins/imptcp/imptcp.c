@@ -122,6 +122,8 @@ struct instanceConf_s {
 	uchar *pszBindRuleset;		/* name of ruleset to bind to */
 	uchar *pszInputName;		/* value for inputname property, NULL is OK and handled by core engine */
 	ruleset_t *pBindRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
+	int ratelimitInterval;
+	int ratelimitBurst;
 	struct instanceConf_s *next;
 };
 
@@ -159,6 +161,8 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "keepalive.time", eCmdHdlrInt, 0 },
 	{ "keepalive.interval", eCmdHdlrInt, 0 },
 	{ "addtlframedelimiter", eCmdHdlrInt, 0 },
+	{ "ratelimit.interval", eCmdHdlrInt, 0 },
+	{ "ratelimit.burst", eCmdHdlrInt, 0 }
 };
 static struct cnfparamblk inppblk =
 	{ CNFPARAMBLK_VERSION,
@@ -1042,6 +1046,8 @@ createInstance(instanceConf_t **pinst)
 	inst->bEmitMsgOnClose = 0;
 	inst->iAddtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
 	inst->pBindRuleset = NULL;
+	inst->ratelimitBurst = 10000; /* arbitrary high limit */
+	inst->ratelimitInterval = 0; /* off */
 
 	/* node created, let's add to config */
 	if(loadModConf->tail == NULL) {
@@ -1122,7 +1128,7 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 	pSrv->iKeepAliveTime = inst->iKeepAliveTime;
 	pSrv->bEmitMsgOnClose = inst->bEmitMsgOnClose;
 	CHKiRet(ratelimitNew(&pSrv->ratelimiter, "imtcp", (char*)inst->pszBindPort));
-//TODO: add!ratelimitSetLinuxLike(pSrv->ratelimiter, 3, 2);
+	ratelimitSetLinuxLike(pSrv->ratelimiter, inst->ratelimitInterval, inst->ratelimitBurst);
 	ratelimitSetThreadSafe(pSrv->ratelimiter);
 	CHKmalloc(pSrv->port = ustrdup(inst->pszBindPort));
 	pSrv->iAddtlFrameDelim = inst->iAddtlFrameDelim;
@@ -1452,6 +1458,10 @@ CODESTARTnewInpInst
 			inst->iAddtlFrameDelim = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "notifyonconnectionclose")) {
 			inst->bEmitMsgOnClose = (int) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "ratelimit.burst")) {
+			inst->ratelimitBurst = (int) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "ratelimit.interval")) {
+			inst->ratelimitInterval = (int) pvals[i].val.d.n;
 		} else {
 			dbgprintf("imptcp: program error, non-handled "
 			  "param '%s'\n", inppblk.descr[i].name);
