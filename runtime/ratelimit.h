@@ -24,14 +24,15 @@
 struct ratelimit_s {
 	unsigned nsupp;		/**< nbr of msgs suppressed */
 	msg_t *pMsg;
-	msg_t *repMsg;		/**< repeat message, temporary buffer */
-	/* dummy field list - TODO: implement */
+	sbool bThreadSafe;	/**< do we need to operate in Thread-Safe mode? */
+	pthread_mutex_t mut;	/**< mutex if thread-safe operation desired */
 };
 
 /* prototypes */
 rsRetVal ratelimitNew(ratelimit_t **ppThis);
-rsRetVal ratelimitMsg(msg_t *ppMsg, ratelimit_t *ratelimit);
-msg_t * ratelimitGetRepeatMsg(ratelimit_t *ratelimit);
+void ratelimitSetThreadSafe(ratelimit_t *ratelimit);
+rsRetVal ratelimitMsg(ratelimit_t *ratelimit, msg_t *pMsg, msg_t **ppRep);
+rsRetVal ratelimitAddMsg(ratelimit_t *ratelimit, multi_submit_t *pMultiSub, msg_t *pMsg);
 void ratelimitDestruct(ratelimit_t *pThis);
 rsRetVal ratelimitModInit(void);
 void ratelimitModExit(void);

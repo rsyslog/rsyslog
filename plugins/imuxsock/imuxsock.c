@@ -811,6 +811,7 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 	int toffs; /* offset for trusted properties */
 	struct syslogTime dummyTS;
 	struct json_object *json = NULL, *jval;
+	msg_t *repMsg;
 	DEFiRet;
 #warning experimental code needs to be made production-ready!
 /* we need to decide how many ratelimiters we use --> hashtable
@@ -992,14 +993,11 @@ if(ratelimit == NULL)
 
 	MsgSetRcvFrom(pMsg, pLstn->hostName == NULL ? glbl.GetLocalHostNameProp() : pLstn->hostName);
 	CHKiRet(MsgSetRcvFromIP(pMsg, pLocalHostIP));
-	localRet = ratelimitMsg(pMsg, ratelimit);
-	if(localRet == RS_RET_OK_HAVE_REPMSG) {
-dbgprintf("DDDD: doing repeat submit!\n");
-		CHKiRet(submitMsg2(ratelimitGetRepeatMsg(ratelimit)));
-		localRet = RS_RET_OK;
-	}
+	localRet = ratelimitMsg(ratelimit, pMsg, &repMsg);
+	if(repMsg != NULL)
+		CHKiRet(submitMsg(repMsg));
 	if(localRet == RS_RET_OK)
-		CHKiRet(submitMsg2(pMsg));
+		CHKiRet(submitMsg(pMsg));
 
 	STATSCOUNTER_INC(ctrSubmit, mutCtrSubmit);
 finalize_it:

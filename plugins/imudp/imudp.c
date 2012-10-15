@@ -51,6 +51,7 @@
 #include "prop.h"
 #include "ruleset.h"
 #include "statsobj.h"
+#include "ratelimit.h"
 #include "unicode-helper.h"
 
 MODULE_TYPE_INPUT
@@ -75,6 +76,7 @@ static struct lstn_s {
 	int sock;		/* socket */
 	ruleset_t *pRuleset;	/* bound ruleset */
 	statsobj_t *stats;	/* listener stats */
+	ratelimit_t *ratelimiter;
 	STATSCOUNTER_DEF(ctrSubmit, mutCtrSubmit)
 } *lcnfRoot = NULL, *lcnfLast = NULL;
 
@@ -246,6 +248,7 @@ addListner(instanceConf_t *inst)
 			newlcnfinfo->next = NULL;
 			newlcnfinfo->sock = newSocks[iSrc];
 			newlcnfinfo->pRuleset = inst->pBindRuleset;
+			CHKiRet(ratelimitNew(&newlcnfinfo->ratelimiter));
 			/* support statistics gathering */
 			CHKiRet(statsobj.Construct(&(newlcnfinfo->stats)));
 			snprintf((char*)statname, sizeof(statname), "imudp(%s:%s)", bindName, port);
@@ -882,6 +885,7 @@ CODESTARTafterRun
 	net.clearAllowedSenders((uchar*)"UDP");
 	for(lstn = lcnfRoot ; lstn != NULL ; ) {
 		statsobj.Destruct(&(lstn->stats));
+		ratelimitDestruct(lstn->ratelimiter);
 		close(lstn->sock);
 		lstnDel = lstn;
 		lstn = lstn->next;

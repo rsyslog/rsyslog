@@ -682,7 +682,7 @@ doSubmitMsg(ptcpsess_t *pThis, struct syslogTime *stTime, time_t ttGenTime, mult
 	MsgSetRuleset(pMsg, pSrv->pRuleset);
 	STATSCOUNTER_INC(pThis->pLstn->ctrSubmit, pThis->pLstn->mutCtrSubmit);
 
-	multiSubmitAddMsg(pMultiSub, pMsg, pSrv->ratelimiter);
+	ratelimitAddMsg(pSrv->ratelimiter, pMultiSub, pMsg);
 
 finalize_it:
 	/* reset status variables */
@@ -1124,6 +1124,7 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 	pSrv->iKeepAliveTime = inst->iKeepAliveTime;
 	pSrv->bEmitMsgOnClose = inst->bEmitMsgOnClose;
 	CHKiRet(ratelimitNew(&pSrv->ratelimiter));
+	ratelimitSetThreadSafe(pSrv->ratelimiter);
 	CHKmalloc(pSrv->port = ustrdup(inst->pszBindPort));
 	pSrv->iAddtlFrameDelim = inst->iAddtlFrameDelim;
 	if(inst->pszBindAddr == NULL)

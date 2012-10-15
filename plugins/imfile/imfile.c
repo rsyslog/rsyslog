@@ -306,7 +306,7 @@ static rsRetVal pollFile(fileInfo_t *pThis, int *pbHadFileData)
 finalize_it:
 	if(pThis->multiSub.nElem > 0) {
 		/* submit everything that was not yet submitted */
-		CHKiRet(multiSubmitMsg2(&pThis->multiSub, NULL));
+		CHKiRet(multiSubmitMsg(&pThis->multiSub));
 	}
 		; /*EMPTY STATEMENT - needed to keep compiler happy - see below! */
 	/* Note: the problem above is that pthread:cleanup_pop() is a macro which
