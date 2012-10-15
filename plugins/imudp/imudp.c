@@ -109,6 +109,8 @@ struct instanceConf_s {
 	uchar *pszBindPort;		/* Port to bind socket to */
 	uchar *pszBindRuleset;		/* name of ruleset to bind to */
 	ruleset_t *pBindRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
+	int ratelimitInterval;
+	int ratelimitBurst;
 	struct instanceConf_s *next;
 };
 
@@ -140,7 +142,9 @@ static struct cnfparamblk modpblk =
 static struct cnfparamdescr inppdescr[] = {
 	{ "port", eCmdHdlrArray, CNFPARAM_REQUIRED }, /* legacy: InputTCPServerRun */
 	{ "address", eCmdHdlrString, 0 },
-	{ "ruleset", eCmdHdlrString, 0 }
+	{ "ruleset", eCmdHdlrString, 0 },
+	{ "ratelimit.interval", eCmdHdlrInt, 0 },
+	{ "ratelimit.burst", eCmdHdlrInt, 0 }
 };
 static struct cnfparamblk inppblk =
 	{ CNFPARAMBLK_VERSION,
@@ -165,6 +169,8 @@ createInstance(instanceConf_t **pinst)
 	inst->pszBindPort = NULL;
 	inst->pszBindAddr = NULL;
 	inst->pszBindRuleset = NULL;
+	inst->ratelimitBurst = 10000; /* arbitrary high limit */
+	inst->ratelimitInterval = 0; /* off */
 
 	/* node created, let's add to config */
 	if(loadModConf->tail == NULL) {
@@ -250,7 +256,9 @@ addListner(instanceConf_t *inst)
 			newlcnfinfo->pRuleset = inst->pBindRuleset;
 			snprintf((char*)dispname, sizeof(dispname), "imudp(%s:%s)", bindName, port);
 			dispname[sizeof(dispname)-1] = '\0'; /* just to be on the save side... */
-			CHKiRet(ratelimitNew(&newlcnfinfo->ratelimiter, dispname, NULL));
+			CHKiRet(ratelimitNew(&newlcnfinfo->ratelimiter, (char*)dispname, NULL));
+			ratelimitSetLinuxLike(newlcnfinfo->ratelimiter, inst->ratelimitInterval,
+					      inst->ratelimitBurst);
 			/* support statistics gathering */
 			CHKiRet(statsobj.Construct(&(newlcnfinfo->stats)));
 			CHKiRet(statsobj.SetName(newlcnfinfo->stats, dispname));
@@ -691,6 +699,10 @@ createListner(es_str_t *port, struct cnfparamvals *pvals)
 			inst->pszBindAddr = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "ruleset")) {
 			inst->pszBindRuleset = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(inppblk.descr[i].name, "ratelimit.burst")) {
+			inst->ratelimitBurst = (int) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "ratelimit.interval")) {
+			inst->ratelimitInterval = (int) pvals[i].val.d.n;
 		} else {
 			dbgprintf("imudp: program error, non-handled "
 			  "param '%s'\n", inppblk.descr[i].name);
