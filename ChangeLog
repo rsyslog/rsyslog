@@ -1,6 +1,12 @@
 ---------------------------------------------------------------------------
 Version 7.3.1  [devel] 2012-10-??
 - imudp: support for input batching added (performance improvement)
+- change lumberjack cookie to "@cee:" from "@cee: "
+  CEE originally specified the cookie with SP, whereas other lumberjack
+  tools used it without space. In order to keep interop with lumberjack,
+  we now use the cookie without space as well. I hope this can be changed
+  in CEE as well when it is released at a later time.
+  Thanks to Miloslav Trmač for pointing this out and a similiar v7 patch.
 ---------------------------------------------------------------------------
 Version 7.3.0  [devel] 2012-10-09
 - omlibdbi improvements, added
@@ -13,8 +19,34 @@ Version 7.3.0  [devel] 2012-10-09
   This was achieved by somewhat reducing the robustness of the zip archive.
   This is controlled by the new action parameter "VeryReliableZip".
 ---------------------------------------------------------------------------
-Version 7.1.9  [beta] 2012-10-??
+Version 7.1.11  [beta] 2012-10-??
+- bugfix: do not crash if set statement is used with date field
+  Thanks to Miloslav Trmač for the patch.
+- change lumberjack cookie to "@cee" from "@cee "
+  CEE originally specified the cookie with SP, whereas other lumberjack
+  tools used it without space. In order to keep interop with lumberjack,
+  we now use the cookie without space as well. I hope this can be changed
+  in CEE as well when it is released at a later time.
+  Thanks to Miloslav Trmač for pointing this out and a similiar v7 patch.
+- added deprecated note to omruleset (plus clue to use "call")
+- added deprecated note to discard action (plus clue to use "stop")
+ ---------------------------------------------------------------------------
+Version 7.1.10  [beta] 2012-10-11
+ - bugfix: m4 directory was not present in release tarball
+ - bugfix: small memory leak with string-type templates
+ - bugfix: small memory leak when template was specified in omfile
+ - bugfix: some config processing warning messages were treated as errors
+ - bugfix: small memory leak when processing action() statements
+ - bugfix: unknown action() parameters were not reported
+ ---------------------------------------------------------------------------
+Version 7.1.9  [beta] 2012-10-09
 - bugfix: comments inside objects (e.g. action()) were not properly handled
+- bugfix: in (non)equal comparisons the position of arrays influenced result
+  This behaviour is OK for "contains"-type of comparisons (which have quite
+  different semantics), but not for == and <>, which shall be commutative.
+  This has been fixed now, so there is no difference any longer if the
+  constant string array is the left or right hand operand. We solved this
+  via the optimizer, as it keeps the actual script execution code small.
 ---------------------------------------------------------------------------
 Version 7.1.8  [beta] 2012-10-02
 - bugfix: ruleset(){} directive errornously changed default ruleset
@@ -156,6 +188,12 @@ Version 6.5.0  [devel] 2012-08-28
   http://bugzilla.adiscon.com/show_bug.cgi?id=353
 ---------------------------------------------------------------------------
 Version 6.4.3  [V6-STABLE] 2012-??-??
+- change lumberjack cookie to "@cee" from "@cee "
+  CEE originally specified the cookie with SP, whereas other lumberjack
+  tools used it without space. In order to keep interop with lumberjack,
+  we now use the cookie without space as well. I hope this can be changed
+  in CEE as well when it is released at a later time.
+  Thanks to Miloslav Trmač for pointing this out and a similiar v7 patch.
 - bugfix: comments inside objects (e.g. action()) were not properly handled
 - bugfix: sysklogd-emulating standard template was no longer present in v6
   This was obviously lost during the transition to the new config format.

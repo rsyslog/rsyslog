@@ -1173,6 +1173,8 @@ evalVar(struct cnfvar *var, void *usrptr, struct var *ret)
  * that one one comparison is true, the whole construct is true.
  * TODO: we can obviously optimize this process. One idea is to
  * compile a regex, which should work faster than serial comparison.
+ * Note: compiling a regex does NOT work at all. I experimented with that
+ * and it was generally 5 to 10 times SLOWER than what we do here...
  */
 static int
 evalStrArrayCmp(es_str_t *estr_l, struct cnfarray* ar, int cmpop)
@@ -1756,7 +1758,6 @@ cnfexprPrint(struct cnfexpr *expr, int indent)
 	struct cnffunc *func;
 	int i;
 
-	dbgprintf("expr %p, indent %d, type '%c'\n", expr, indent, expr->nodetype);
 	switch(expr->nodetype) {
 	case CMP_EQ:
 		cnfexprPrint(expr->l, indent+1);
@@ -2185,10 +2186,14 @@ cnfstmtNewAct(struct nvlst *lst)
 {
 	struct cnfstmt* cnfstmt;
 	char namebuf[256];
+	rsRetVal localRet;
 	if((cnfstmt = cnfstmtNew(S_ACT)) == NULL) 
 		goto done;
-	if(actionNewInst(lst, &cnfstmt->d.act) != RS_RET_OK) {
-	// TODO:RS_RET_WARN?
+	localRet = actionNewInst(lst, &cnfstmt->d.act);
+	if(localRet == RS_RET_OK_WARN) {
+		parser_errmsg("warnings occured in file '%s' around line %d",
+			      cnfcurrfn, yylineno);
+	} else if(localRet != RS_RET_OK) {
 		parser_errmsg("errors occured in file '%s' around line %d",
 			      cnfcurrfn, yylineno);
 		cnfstmt->nodetype = S_NOP; /* disable action! */
@@ -2198,6 +2203,8 @@ cnfstmtNewAct(struct nvlst *lst)
 		 modGetName(cnfstmt->d.act->pMod));
 	namebuf[255] = '\0'; /* be on safe side */
 	cnfstmt->printable = (uchar*)strdup(namebuf);
+	nvlstChkUnused(lst);
+	nvlstDestruct(lst);
 done:	return cnfstmt;
 }
 
@@ -2322,6 +2329,7 @@ void
 cnfexprOptimize(struct cnfexpr *expr)
 {
 	long long ln, rn;
+	struct cnfexpr *exprswap;
 
 	dbgprintf("optimize expr %p, type '%c'(%u)\n", expr, expr->nodetype, expr->nodetype);
 	switch(expr->nodetype) {
@@ -2358,6 +2366,19 @@ cnfexprOptimize(struct cnfexpr *expr)
 			((struct cnfnumval*)expr)->val = ln % rn;
 		}
 		break;
+	case CMP_NE:
+	case CMP_EQ:
+		if(expr->l->nodetype == 'A') {
+			if(expr->r->nodetype == 'A') {
+				parser_errmsg("warning: '==' or '<>' "
+				  "comparison of two constant string "
+				  "arrays makes no sense");
+			} else { /* swap for simpler execution step */
+				exprswap = expr->l;
+				expr->l = expr->r;
+				expr->r = exprswap;
+			}
+		}
 	default:/* nodetype we cannot optimize */
 		break;
 	}

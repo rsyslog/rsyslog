@@ -1188,7 +1188,7 @@ AM_CONDITIONAL(ENABLE_PMRFC3164SD, test x$enable_pmrfc3164sd = xyes)
 
 # settings for omruleset
 AC_ARG_ENABLE(omruleset,
-        [AS_HELP_STRING([--enable-omruleset],[Compiles ruleset forwarding module @<:@default=yes@:>@])],
+        [AS_HELP_STRING([--enable-omruleset],[Compiles ruleset forwarding module @<:@default=no@:>@])],
         [case "${enableval}" in
          yes) enable_omruleset="yes" ;;
           no) enable_omruleset="no" ;;

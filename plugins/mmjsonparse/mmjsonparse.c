@@ -138,7 +138,7 @@ finalize_it:
 	RETiRet;
 }
 
-#define COOKIE "@cee: "
+#define COOKIE "@cee:"
 #define LEN_COOKIE (sizeof(COOKIE)-1)
 BEGINdoAction
 	msg_t *pMsg;
