@@ -203,8 +203,10 @@ ratelimitMsg(ratelimit_t *ratelimit, msg_t *pMsg, msg_t **ppRepMsg)
 
 	*ppRepMsg = NULL;
 	if(ratelimit->interval) {
-		if(withinRatelimit(ratelimit, pMsg->ttGenTime) == 0)
+		if(withinRatelimit(ratelimit, pMsg->ttGenTime) == 0) {
+			msgDestruct(&pMsg);
 			ABORT_FINALIZE(RS_RET_DISCARDMSG);
+		}
 	}
 	if(ratelimit->bReduceRepeatMsgs) {
 		CHKiRet(doLastMessageRepeatedNTimes(ratelimit, pMsg, ppRepMsg));
