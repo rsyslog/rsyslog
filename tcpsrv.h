@@ -71,6 +71,8 @@ struct tcpsrv_s {
 
 	int addtlFrameDelim;	/**< additional frame delimiter for plain TCP syslog framing (e.g. to handle NetScreen) */
 	int bDisableLFDelim;	/**< if 1, standard LF frame delimiter is disabled (*very dangerous*) */
+	int ratelimitInterval;
+	int ratelimitBurst;
 	tcps_sess_t **pSessions;/**< array of all of our sessions */
 	void *pUsr;		/**< a user-settable pointer (provides extensibility for "derived classes")*/
 	/* callbacks */
@@ -143,8 +145,10 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetUseFlowControl)(tcpsrv_t*, int);
 	/* added v11 -- rgerhards, 2011-05-09 */
 	rsRetVal (*SetKeepAlive)(tcpsrv_t*, int);
+	/* added v13 -- rgerhards, 2012-10-15 */
+	rsRetVal (*SetLinuxLikeRatelimiters)(tcpsrv_t *pThis, int interval, int burst);
 ENDinterface(tcpsrv)
-#define tcpsrvCURR_IF_VERSION 12 /* increment whenever you change the interface structure! */
+#define tcpsrvCURR_IF_VERSION 13 /* increment whenever you change the interface structure! */
 /* change for v4:
  * - SetAddtlFrameDelim() added -- rgerhards, 2008-12-10
  * - SetInputName() added -- rgerhards, 2008-12-10
