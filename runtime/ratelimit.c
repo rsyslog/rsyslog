@@ -29,14 +29,17 @@
 #include "errmsg.h"
 #include "ratelimit.h"
 #include "datetime.h"
+#include "parser.h"
 #include "unicode-helper.h"
 #include "msg.h"
+#include "dirty.h"
 
 /* definitions for objects we access */
 DEFobjStaticHelpers
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(datetime)
+DEFobjCurrIf(parser)
 
 /* static data */
 
@@ -58,7 +61,16 @@ DEFobjCurrIf(datetime)
 rsRetVal
 ratelimitMsg(msg_t *pMsg, ratelimit_t *ratelimit)
 {
+	rsRetVal localRet;
 	DEFiRet;
+
+	if((pMsg->msgFlags & NEEDS_PARSING) != 0) {
+		if((localRet = parser.ParseMsg(pMsg)) != RS_RET_OK)  {
+			DBGPRINTF("Message discarded, parsing error %d\n", localRet);
+			ABORT_FINALIZE(RS_RET_DISCARDMSG);
+		}
+	}
+
 
 	/* suppress duplicate messages */
 	if( ratelimit->pMsg != NULL &&
@@ -94,6 +106,7 @@ ratelimitMsg(msg_t *pMsg, ratelimit_t *ratelimit)
 	}
 
 finalize_it:
+dbgprintf("DDDD: in ratelimitMsg(): %d\n", iRet);
 	RETiRet;
 }
 
@@ -119,16 +132,9 @@ dbgprintf("DDDD: in ratelimitGetRepeatMsg()\n");
 		goto done;
 	}
 
-#warning remove/enable after mailing list feedback
-#if 0	
-	if(pAction->bRepMsgHasMsg == 0) { /* old format repeat message? */
-		lenRepMsg = snprintf((char*)szRepMsg, sizeof(szRepMsg), " last message repeated %d times",
-		    pAction->f_prevcount);
-	} else {
-#endif
-		lenRepMsg = snprintf((char*)szRepMsg, sizeof(szRepMsg), " message repeated %d times: [%.800s]",
-		    ratelimit->nsupp, getMSG(ratelimit->repMsg));
-//	}
+	lenRepMsg = snprintf((char*)szRepMsg, sizeof(szRepMsg),
+				" message repeated %d times: [%.800s]",
+				ratelimit->nsupp, getMSG(ratelimit->repMsg));
 
 	/* We now need to update the other message properties. Please note that digital
 	 * signatures inside the message are invalidated.  */
@@ -143,6 +149,7 @@ dbgprintf("DDDD: in ratelimitGetRepeatMsg()\n");
 done:	return repMsg;
 }
 
+
 rsRetVal
 ratelimitNew(ratelimit_t **ppThis)
 {
@@ -156,9 +163,25 @@ finalize_it:
 }
 
 void
-ratelimitDestruct(ratelimit_t *pThis)
+ratelimitDestruct(ratelimit_t *ratelimit)
 {
-	free(pThis);
+	msg_t *pMsg;
+	if(ratelimit->pMsg != NULL) {
+		if(ratelimit->nsupp > 0) {
+			if(ratelimit->repMsg != NULL) {
+				dbgprintf("ratelimiter/destuct: call sequence error, have "
+				  "previous repeat message - discarding\n");
+				msgDestruct(&ratelimit->repMsg);
+			}
+			ratelimit->repMsg = ratelimit->pMsg;
+			pMsg = ratelimitGetRepeatMsg(ratelimit);
+			if(pMsg != NULL)
+				submitMsg(pMsg);
+		}
+	} else {
+		msgDestruct(&ratelimit->pMsg);
+	}
+	free(ratelimit);
 }
 
 void
@@ -167,6 +190,7 @@ ratelimitModExit(void)
 	objRelease(datetime, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
+	objRelease(parser, CORE_COMPONENT);
 }
 
 rsRetVal
@@ -177,6 +201,7 @@ ratelimitModInit(void)
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	CHKiRet(objUse(parser, CORE_COMPONENT));
 finalize_it:
 	RETiRet;
 }

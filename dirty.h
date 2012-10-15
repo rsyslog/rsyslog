@@ -31,6 +31,8 @@ rsRetVal __attribute__((deprecated)) multiSubmitMsg(multi_submit_t *pMultiSub);
 rsRetVal __attribute__((deprecated)) submitMsg(msg_t *pMsg);
 rsRetVal multiSubmitMsg2(multi_submit_t *pMultiSub, ratelimit_t *ratelimit);
 rsRetVal submitMsg2(msg_t *pMsg, ratelimit_t *ratelimit);
+rsRetVal multiSubmitFlush(multi_submit_t *pMultiSub);
+rsRetVal multiSubmitAddMsg(multi_submit_t *pMultiSub, msg_t *pMsg, ratelimit_t *ratelimit);
 rsRetVal logmsgInternal(int iErr, int pri, uchar *msg, int flags);
 rsRetVal parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int flags, flowControl_t flowCtlTypeu, prop_t *pInputName, struct syslogTime *stTime, time_t ttGenTime, ruleset_t *pRuleset);
 rsRetVal diagGetMainMsgQSize(int *piSize); /* for imdiag */

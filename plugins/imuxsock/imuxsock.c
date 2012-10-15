@@ -812,6 +812,11 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 	struct syslogTime dummyTS;
 	struct json_object *json = NULL, *jval;
 	DEFiRet;
+#warning experimental code needs to be made production-ready!
+/* we need to decide how many ratelimiters we use --> hashtable
+   also remove current homegrown ratelimiting functionality and
+   replace it with the new one.
+ */
 rsRetVal localRet;
 static ratelimit_t *ratelimit = NULL;
 if(ratelimit == NULL)

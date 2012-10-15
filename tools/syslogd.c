@@ -699,6 +699,49 @@ multiSubmitMsg(multi_submit_t *pMultiSub) /* backward compat. level */
 }
 
 
+/* add a message to a multisubmit structure. This handles ratelimiting. IF
+ * pMultiSub == NULL, a single-message enqueue happens. */
+rsRetVal
+multiSubmitAddMsg(multi_submit_t *pMultiSub, msg_t *pMsg, ratelimit_t *ratelimit)
+{
+	rsRetVal localRet;
+	DEFiRet;
+
+	if(pMultiSub == NULL) {
+dbgprintf("DDDD: multiSubmitAddMsg, not checking ratelimiter for single submit!\n");
+		CHKiRet(submitMsg(pMsg));
+	} else {
+dbgprintf("DDDD: have multisub!\n");
+		localRet = ratelimitMsg(pMsg, ratelimit);
+		if(localRet == RS_RET_OK_HAVE_REPMSG) {
+dbgprintf("DDDD: doing repeat submit!\n");
+			pMultiSub->ppMsgs[pMultiSub->nElem++] = ratelimitGetRepeatMsg(ratelimit);
+			if(pMultiSub->nElem == pMultiSub->maxElem)
+				CHKiRet(multiSubmitMsg2(pMultiSub, NULL));
+			localRet = RS_RET_OK;
+		}
+		if(localRet == RS_RET_OK) {
+			pMultiSub->ppMsgs[pMultiSub->nElem++] = pMsg;
+			if(pMultiSub->nElem == pMultiSub->maxElem)
+				CHKiRet(multiSubmitMsg2(pMultiSub, NULL));
+		}
+	}
+
+finalize_it:
+	RETiRet;
+}
+
+/* flush multiSubmit, e.g. at end of read records */
+rsRetVal
+multiSubmitFlush(multi_submit_t *pMultiSub)
+{
+	DEFiRet;
+dbgprintf("DDDD: multiSubmitFlish, nElem %d\n", pMultiSub->nElem);
+	if(pMultiSub->nElem > 0) {
+		iRet = multiSubmitMsg(pMultiSub);
+	}
+	RETiRet;
+}
 
 
 static void
