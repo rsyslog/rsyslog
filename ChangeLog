@@ -1,4 +1,8 @@
- ---------------------------------------------------------------------------
+----------------------------------------------------------------------------
+Version 7.1.12  [beta] 2012-10-??
+- minor updates to better support newer systemd developments
+  Thanks to Michael Biebl for the patches.
+----------------------------------------------------------------------------
 Version 7.1.11  [beta] 2012-10-16
 - bugfix: imuxsock truncated head of received message
   This happened only under some circumstances. Thanks to Marius
@@ -14,7 +18,7 @@ Version 7.1.11  [beta] 2012-10-16
   Thanks to Miloslav Trmač for pointing this out and a similiar v7 patch.
 - added deprecated note to omruleset (plus clue to use "call")
 - added deprecated note to discard action (plus clue to use "stop")
- ---------------------------------------------------------------------------
+---------------------------------------------------------------------------
 Version 7.1.10  [beta] 2012-10-11
  - bugfix: m4 directory was not present in release tarball
  - bugfix: small memory leak with string-type templates
@@ -22,7 +26,7 @@ Version 7.1.10  [beta] 2012-10-11
  - bugfix: some config processing warning messages were treated as errors
  - bugfix: small memory leak when processing action() statements
  - bugfix: unknown action() parameters were not reported
- ---------------------------------------------------------------------------
+---------------------------------------------------------------------------
 Version 7.1.9  [beta] 2012-10-09
 - bugfix: comments inside objects (e.g. action()) were not properly handled
 - bugfix: in (non)equal comparisons the position of arrays influenced result
