@@ -1,5 +1,9 @@
 ---------------------------------------------------------------------------
 Version 5.10.1  [V5-STABLE], 2012-0?-??
+- bugfix: imuxsock truncated head of received message
+  This happened only under some circumstances. Thanks to Marius
+  Tomaschwesky, Florian Piekert and Milan Bartos for their help in
+  solving this issue.
 - enable DNS resolution in imrelp
   Thanks to Apollon Oikonomopoulos for the patch
 - bugfix: invalid property name in property-filter could cause abort
