@@ -2,6 +2,10 @@
 Version 7.1.12  [beta] 2012-10-??
 - minor updates to better support newer systemd developments
   Thanks to Michael Biebl for the patches.
+- cleanup: removed remains of -c option (compatibility mode)
+  both from code & doc and emitted warning message if still used
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=361
+  Thanks to Michael Biebl for reporting & suggestions
 ----------------------------------------------------------------------------
 Version 7.1.11  [beta] 2012-10-16
 - bugfix: imuxsock truncated head of received message
@@ -176,6 +180,10 @@ Version 6.5.0  [devel] 2012-08-28
   http://bugzilla.adiscon.com/show_bug.cgi?id=353
 ---------------------------------------------------------------------------
 Version 6.4.3  [V6-STABLE] 2012-??-??
+- cleanup: removed remains of -c option (compatibility mode)
+  both from code & doc and emitted warning message if still used
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=361
+  Thanks to Michael Biebl for reporting & suggestions
 - bugfix: imuxsock truncated head of received message
   This happened only under some circumstances. Thanks to Marius
   Tomaschwesky, Florian Piekert and Milan Bartos for their help in

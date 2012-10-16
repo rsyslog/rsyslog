@@ -219,11 +219,6 @@ struct queuefilenames_s {
 	uchar *name;
 } *queuefilenames = NULL;
 
-/* global variables for config file state */
-int	iCompatibilityMode = 0;		/* version we should be compatible with; 0 means sysklogd. It is
-					   the default, so if no -c<n> option is given, we make ourselvs
-					   as compatible to sysklogd as possible. */
-/* end global config file state variables */
 
 int	MarkInterval = 20 * 60;	/* interval between marks in seconds - read-only after startup */
 int      send_to_all = 0;        /* send message to all IPv4/IPv6 addresses */
@@ -249,10 +244,9 @@ static void sighup_handler();
 
 static int usage(void)
 {
-	fprintf(stderr, "usage: rsyslogd [-c<version>] [-46AdnqQvwx] [-l<hostlist>] [-s<domainlist>]\n"
+	fprintf(stderr, "usage: rsyslogd [-46AdnqQvwx] [-l<hostlist>] [-s<domainlist>]\n"
 			"                [-f<conffile>] [-i<pidfile>] [-N<level>] [-M<module load path>]\n"
 			"                [-u<number>]\n"
-			"To run rsyslogd in native mode, use \"rsyslogd -c5 <other options>\"\n\n"
 			"For further information see http://www.rsyslog.com/doc\n");
 	exit(1); /* "good" exit - done to terminate usage() */
 }
@@ -1833,10 +1827,7 @@ int realMain(int argc, char **argv)
 	 * split of functionality, this is no longer a problem. Thanks to varmofekoj for
 	 * suggesting this algo.
 	 * Note: where we just need to set some flags and can do so without knowledge
-	 * of other options, we do this during the inital option processing. With later
-	 * versions (if a dependency on -c option is introduced), we must move that code
-	 * to other places, but I think it is quite appropriate and saves code to do this
-        * only when actually neeeded.
+	 * of other options, we do this during the inital option processing.
 	 * rgerhards, 2008-04-04
 	 */
 	while((ch = getopt(argc, argv, "46a:Ac:def:g:hi:l:m:M:nN:op:qQr::s:t:T:u:vwx")) != EOF) {
@@ -1867,7 +1858,7 @@ int realMain(int argc, char **argv)
 			CHKiRet(bufOptAdd(ch, optarg));
 			break;
 		case 'c':		/* compatibility mode */
-			iCompatibilityMode = atoi(optarg);
+			fprintf(stderr, "rsyslogd: error: option -c is no longer supported - ignored");
 			break;
 		case 'd': /* debug - must be handled now, so that debug is active during init! */
 			debugging_on = 1;
@@ -1891,8 +1882,8 @@ int realMain(int argc, char **argv)
 	if(argc - optind)
 		usage();
 
-	DBGPRINTF("rsyslogd %s startup, compatibility mode %d, module path '%s', cwd:%s\n",
-		  VERSION, iCompatibilityMode, glblModPath == NULL ? "" : (char*)glblModPath,
+	DBGPRINTF("rsyslogd %s startup, module path '%s', cwd:%s\n",
+		  VERSION, glblModPath == NULL ? "" : (char*)glblModPath,
 		  getcwd(cwdbuf, sizeof(cwdbuf)));
 
 	/* we are done with the initial option parsing and processing. Now we init the system. */
