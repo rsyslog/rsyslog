@@ -939,7 +939,7 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 	CHKiRet(msgConstructWithTime(&pMsg, &st, tt));
 	MsgSetRawMsg(pMsg, (char*)pRcv, lenRcv);
 	parser.SanitizeMsg(pMsg);
-	lenMsg = pMsg->iLenRawMsg - offs;
+	lenMsg = pMsg->iLenRawMsg - offs; /* SanitizeMsg() may have changed the size */
 	MsgSetInputName(pMsg, pInputName);
 	MsgSetFlowControlType(pMsg, pLstn->flowCtl);
 
@@ -977,7 +977,6 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 			parse[15] = ' '; /* re-write \0 from fromatTimestamp3164 by SP */
 			/* update "counters" to reflect processed timestamp */
 			parse += 16;
-			lenMsg -= 16;
 		}
 	}
 
@@ -992,12 +991,7 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 	if(pLstn->bWritePid)
 		fixPID(bufParseTAG, &i, cred);
 	MsgSetTAG(pMsg, bufParseTAG, i);
-
-	if (pLstn->bAnnotate) {
-		MsgSetMSGoffs(pMsg, pMsg->iLenRawMsg - lenMsg - 16);
-	} else {
-		MsgSetMSGoffs(pMsg, pMsg->iLenRawMsg - lenMsg);
-	}
+	MsgSetMSGoffs(pMsg, pMsg->iLenRawMsg - lenMsg);
 
 	if(pLstn->bParseHost) {
 		pMsg->msgFlags  = pLstn->flags | PARSE_HOSTNAME;

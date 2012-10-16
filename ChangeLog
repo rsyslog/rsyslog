@@ -54,7 +54,11 @@ Version 6.5.0  [devel] 2012-08-28
   http://bugzilla.adiscon.com/show_bug.cgi?id=353
 ---------------------------------------------------------------------------
 Version 6.4.3  [V6-STABLE] 2012-??-??
-- change lumberjack cookie to "@cee" from "@cee "
+- bugfix: imuxsock truncated head of received message
+  This happened only under some circumstances. Thanks to Marius
+  Tomaschwesky, Florian Piekert and Milan Bartos for their help in
+  solving this issue.
+- change lumberjack cookie to "@cee:" from "@cee: "
   CEE originally specified the cookie with SP, whereas other lumberjack
   tools used it without space. In order to keep interop with lumberjack,
   we now use the cookie without space as well. I hope this can be changed
@@ -635,6 +639,10 @@ expected that interfaces, even new ones, break during the initial
   [ported from v4]
 ---------------------------------------------------------------------------
 Version 5.10.1  [V5-STABLE], 2012-0?-??
+- bugfix: imuxsock truncated head of received message
+  This happened only under some circumstances. Thanks to Marius
+  Tomaschwesky, Florian Piekert and Milan Bartos for their help in
+  solving this issue.
 - enable DNS resolution in imrelp
   Thanks to Apollon Oikonomopoulos for the patch
 - bugfix: invalid property name in property-filter could cause abort
