@@ -2,8 +2,7 @@
 Description=System Logging Service
 
 [Service]
-ExecStartPre=/bin/systemctl stop systemd-kmsg-syslogd.service
-ExecStart=@sbindir@/rsyslogd -n -c6
+ExecStart=@sbindir@/rsyslogd -n
 Sockets=syslog.socket
 StandardOutput=null
 
