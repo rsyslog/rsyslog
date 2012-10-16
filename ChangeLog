@@ -1,8 +1,12 @@
  ---------------------------------------------------------------------------
-Version 7.1.11  [beta] 2012-10-??
+Version 7.1.11  [beta] 2012-10-16
+- bugfix: imuxsock truncated head of received message
+  This happened only under some circumstances. Thanks to Marius
+  Tomaschwesky, Florian Piekert and Milan Bartos for their help in
+  solving this issue.
 - bugfix: do not crash if set statement is used with date field
   Thanks to Miloslav Trmač for the patch.
-- change lumberjack cookie to "@cee" from "@cee "
+- change lumberjack cookie to "@cee:" from "@cee: "
   CEE originally specified the cookie with SP, whereas other lumberjack
   tools used it without space. In order to keep interop with lumberjack,
   we now use the cookie without space as well. I hope this can be changed
