@@ -6,6 +6,9 @@ Version 7.1.12  [beta] 2012-10-??
   both from code & doc and emitted warning message if still used
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=361
   Thanks to Michael Biebl for reporting & suggestions
+- bugfix: imklog truncated head of received message
+  This happened only under some circumstances. Thanks to Marius
+  Tomaschwesky and Florian Piekert for their help in solving this issue.
 ----------------------------------------------------------------------------
 Version 7.1.11  [beta] 2012-10-16
 - bugfix: imuxsock truncated head of received message
