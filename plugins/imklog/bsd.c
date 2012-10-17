@@ -92,7 +92,9 @@ submitSyslog(int pri, uchar *buf)
 	/* we now try to parse the timestamp. iff it parses, we assume
 	 * it is a timestamp. Otherwise we know for sure it is no ts ;)
 	 */
-	i = 4; /* first digit after '[' */
+	i = 4; /* space or first digit after '[' */
+	while(buf[i] && isspace(buf[i]))
+		++i; /* skip space */
 	secs = 0;
 	while(buf[i] && isdigit(buf[i])) {
 		secs = secs * 10 + buf[i] - '0';
