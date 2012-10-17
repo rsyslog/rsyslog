@@ -4,7 +4,7 @@ Version 6.4.3  [V6-STABLE] 2012-??-??
   both from code & doc and emitted warning message if still used
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=361
   Thanks to Michael Biebl for reporting & suggestions
-- bugfix: imuxsock truncated head of received message
+- bugfix: imuxsock and imklog truncated head of received message
   This happened only under some circumstances. Thanks to Marius
   Tomaschwesky, Florian Piekert and Milan Bartos for their help in
   solving this issue.
