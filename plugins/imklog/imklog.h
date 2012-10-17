@@ -36,6 +36,7 @@ struct modConfData_s {
 	uchar *pszPath;
 	int console_log_level;
 	sbool bPermitNonKernel;
+	sbool bKeepKernelStamp;  /* keep kernel timestamp instead of interpreting it */
 	sbool configSetViaV2Method;
 };
 

@@ -58,9 +58,6 @@ static int	fklog = -1;	/* kernel log fd */
 #ifdef OS_LINUX
 /* submit a message to imklog Syslog() API. In this function, we check if 
  * a kernel timestamp is present and, if so, extract and strip it.
- * Note: this is an extra processing step. We should revisit the whole
- * idea in v6 and remove all that old stuff that we do not longer need
- * (like symbol resolution). <-- TODO 
  * Note that this is heavily Linux specific and thus is not compiled or
  * used for BSD.
  * Special thanks to Lennart Poettering for suggesting on how to convert
@@ -73,7 +70,7 @@ static int	fklog = -1;	/* kernel log fd */
  * rgerhards, 2011-06-24
  */
 static void
-submitSyslog(int pri, uchar *buf)
+submitSyslog(modConfData_t *pModConf, int pri, uchar *buf)
 {
 	long secs;
 	long nsecs;
@@ -119,8 +116,10 @@ submitSyslog(int pri, uchar *buf)
 
 	/* we have a timestamp */
 	DBGPRINTF("kernel timestamp is %ld %ld\n", secs, nsecs);
-	bufsize= strlen((char*)buf);
-	memmove(buf+3, buf+i, bufsize - i + 1);
+	if(!pModConf->bKeepKernelStamp) {
+		bufsize= strlen((char*)buf);
+		memmove(buf+3, buf+i, bufsize - i + 1);
+	}
 
 	clock_gettime(CLOCK_MONOTONIC, &monotonic);
 	clock_gettime(CLOCK_REALTIME, &realtime);
@@ -146,7 +145,7 @@ done:
 }
 #else	/* now comes the BSD "code" (just a shim) */
 static void
-submitSyslog(int pri, uchar *buf)
+submitSyslog(modConfData_t *pModConf, int pri, uchar *buf)
 {
 	Syslog(pri, buf, NULL);
 }
@@ -196,7 +195,7 @@ finalize_it:
 /* Read kernel log while data are available, split into lines.
  */
 static void
-readklog(void)
+readklog(modConfData_t *pModConf)
 {
 	char *p, *q;
 	int len, i;
@@ -238,18 +237,18 @@ readklog(void)
 
 		for (p = (char*)pRcv; (q = strchr(p, '\n')) != NULL; p = q + 1) {
 			*q = '\0';
-			submitSyslog(LOG_INFO, (uchar*) p);
+			submitSyslog(pModConf, LOG_INFO, (uchar*) p);
 		}
 		len = strlen(p);
 		if (len >= iMaxLine - 1) {
-			submitSyslog(LOG_INFO, (uchar*)p);
+			submitSyslog(pModConf, LOG_INFO, (uchar*)p);
 			len = 0;
 		}
 		if(len > 0)
 			memmove(pRcv, p, len + 1);
 	}
 	if (len > 0)
-		submitSyslog(LOG_INFO, pRcv);
+		submitSyslog(pModConf, LOG_INFO, pRcv);
 
 	if(pRcv != NULL && (size_t) iMaxLine >= sizeof(bufRcv) - 1)
 		free(pRcv);
@@ -278,10 +277,10 @@ rsRetVal klogAfterRun(modConfData_t *pModConf)
  * "message pull" mechanism.
  * rgerhards, 2008-04-09
  */
-rsRetVal klogLogKMsg(modConfData_t __attribute__((unused)) *pModConf)
+rsRetVal klogLogKMsg(modConfData_t *pModConf)
 {
         DEFiRet;
-	readklog();
+	readklog(pModConf);
 	RETiRet;
 }
 

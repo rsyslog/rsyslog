@@ -91,6 +91,7 @@ static int bLegacyCnfModGlobalsPermitted;/* are legacy module-global config para
 static struct cnfparamdescr modpdescr[] = {
 	{ "logpath", eCmdHdlrGetWord, 0 },
 	{ "permitnonkernelfacility", eCmdHdlrBinary, 0 },
+	{ "keepkerneltimestamp", eCmdHdlrBinary, 0 },
 	{ "consoleloglevel", eCmdHdlrInt, 0 },
 	{ "internalmsgfacility", eCmdHdlrFacility, 0 }
 };
@@ -289,6 +290,7 @@ CODESTARTbeginCnfLoad
 	pModConf->pszPath = NULL;
 	pModConf->bPermitNonKernel = 0;
 	pModConf->console_log_level = -1;
+	pModConf->bKeepKernelStamp = 0;
 	pModConf->iFacilIntMsg = klogFacilIntMsg();
 	loadModConf->configSetViaV2Method = 0;
 	bLegacyCnfModGlobalsPermitted = 1;
@@ -322,6 +324,8 @@ CODESTARTsetModCnf
 			loadModConf->bPermitNonKernel = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "consoleloglevel")) {
 			loadModConf->console_log_level= (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "keepkerneltimestamp")) {
+			loadModConf->bKeepKernelStamp = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "internalmsgfacility")) {
 			loadModConf->iFacilIntMsg = (int) pvals[i].val.d.n;
 		} else {
@@ -347,6 +351,7 @@ CODESTARTendCnfLoad
 		loadModConf->bPermitNonKernel = cs.bPermitNonKernel;
 		loadModConf->iFacilIntMsg = cs.iFacilIntMsg;
 		loadModConf->console_log_level = cs.console_log_level;
+		loadModConf->bKeepKernelStamp = 0;
 		if((cs.pszPath == NULL) || (cs.pszPath[0] == '\0')) {
 			loadModConf->pszPath = NULL;
 			if(cs.pszPath != NULL)
