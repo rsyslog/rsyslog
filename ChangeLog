@@ -1,7 +1,9 @@
 ----------------------------------------------------------------------------
-Version 7.1.12  [beta] 2012-10-??
+Version 7.1.12  [beta] 2012-10-18
 - minor updates to better support newer systemd developments
   Thanks to Michael Biebl for the patches.
+- build system cleanup
+  Thanks to Michael Biebl for the patch series.
 - cleanup: removed remains of -c option (compatibility mode)
   both from code & doc and emitted warning message if still used
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=361
