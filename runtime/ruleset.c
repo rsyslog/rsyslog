@@ -378,7 +378,8 @@ evalPROPFILT(struct cnfstmt *stmt, msg_t *pMsg)
 		goto done;
 
 	pszPropVal = MsgGetProp(pMsg, NULL, stmt->d.s_propfilt.propID,
-				stmt->d.s_propfilt.propName, &propLen, &pbMustBeFreed);
+				stmt->d.s_propfilt.propName, &propLen,
+				&pbMustBeFreed, NULL);
 
 	/* Now do the compares (short list currently ;)) */
 	switch(stmt->d.s_propfilt.operation ) {
