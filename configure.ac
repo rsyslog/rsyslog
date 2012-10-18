@@ -35,8 +35,7 @@ PKG_PROG_PKG_CONFIG
 PKG_CHECK_MODULES(LIBESTR, libestr >= 0.1.2)
 PKG_CHECK_MODULES(LIBEE, libee >= 0.4.0)
 PKG_CHECK_MODULES([JSON_C], [json])
-AC_SUBST([JSON_CFLAGS])
-AC_SUBST([JSON_LIBS])
+PKG_CHECK_MODULES([LIBUUID], [uuid])
 
 case "${host}" in
   *-*-linux*)
@@ -701,22 +700,6 @@ AM_CONDITIONAL(ENABLE_OMLIBDBI, test x$enable_libdbi = xyes)
 AC_SUBST(LIBDBI_CFLAGS)
 AC_SUBST(LIBDBI_LIBS)
 
-# libuuid support
-AC_CHECK_HEADERS(
-  [uuid/uuid.h],,
-  [AC_MSG_FAILURE([libuuid is missing])]
-)
-AC_CHECK_LIB(
-  [uuid],
-  [uuid_generate],
-  [LIBUUID_CFLAGS=""
-   LIBUUID_LIBS="-luuid"
-  ],
-  [AC_MSG_FAILURE([libuuid library is missing])]
-)
-AC_SUBST(LIBUUID_CFLAGS)
-AC_SUBST(LIBUUID_LIBS)
-
 # SNMP support
 AC_ARG_ENABLE(snmp,
         [AS_HELP_STRING([--enable-snmp],[Enable SNMP support @<:@default=no@:>@])],
@@ -757,27 +740,9 @@ AC_ARG_ENABLE(elasticsearch,
         [enable_elasticsearch=no]
 )
 if test "x$enable_elasticsearch" = "xyes"; then
-  AC_CHECK_PROG(
-    [HAVE_CURL_CONFIG],
-    [curl-config],
-    [yes],,,
-  )
-  if test "x${HAVE_CURL_CONFIG}" != "xyes"; then
-    AC_MSG_FAILURE([curl-config not found in PATH])
-  fi
-  AC_CHECK_LIB(
-    [curl],
-    [curl_global_init],
-    [CURL_CFLAGS="`curl-config --cflags`"
-      CURL_LIBS="`curl-config --libs`"
-    ],
-    [AC_MSG_FAILURE([curl library is missing])],
-    [`curl-config --libs --cflags`]
-  )
+	PKG_CHECK_MODULES([CURL], [libcurl])
 fi
 AM_CONDITIONAL(ENABLE_ELASTICSEARCH, test x$enable_elasticsearch = xyes)
-AC_SUBST(CURL_CFLAGS)
-AC_SUBST(CURL_LIBS)
 
 
 # GnuTLS support
@@ -795,8 +760,6 @@ if test "x$enable_gnutls" = "xyes"; then
 	AC_DEFINE([ENABLE_GNUTLS], [1], [Indicator that GnuTLS is present])
 fi
 AM_CONDITIONAL(ENABLE_GNUTLS, test x$enable_gnutls = xyes)
-AC_SUBST(GNUTLS_CFLAGS)
-AC_SUBST(GNUTLS_LIBS)
 
 
 # support for building the rsyslogd runtime
@@ -812,7 +775,6 @@ AC_ARG_ENABLE(rsyslogrt,
 if test "x$enable_rsyslogrt" = "xyes"; then
   RSRT_CFLAGS1="-I\$(top_srcdir)/runtime -I\$(top_srcdir) -I\$(top_srcdir)/grammar"
   RSRT_LIBS1="\$(top_builddir)/runtime/librsyslog.la"
-  #??CNF_LIBS="\$(top_builddir)/grammar/libgrammar.la"
 fi
 AM_CONDITIONAL(ENABLE_RSYSLOGRT, test x$enable_rsyslogrt = xyes)
 RSRT_CFLAGS="\$(RSRT_CFLAGS1) \$(LIBESTR_CFLAGS) \$(JSON_C_FLAGS)"
@@ -914,8 +876,6 @@ if test "x$enable_mmnormalize" = "xyes"; then
 	PKG_CHECK_MODULES(LIBLOGNORM, lognorm >= 0.3.1)
 fi
 AM_CONDITIONAL(ENABLE_MMNORMALIZE, test x$enable_mmnormalize = xyes)
-AC_SUBST(LOGNORM_CFLAGS)
-AC_SUBST(LOGNORM_LIBS)
 
 
 # mmnjsonparse
@@ -965,8 +925,6 @@ if test "x$enable_relp" = "xyes"; then
 	PKG_CHECK_MODULES(RELP, relp >= 1.0.1)
 fi
 AM_CONDITIONAL(ENABLE_RELP, test x$enable_relp = xyes)
-AC_SUBST(RELP_CFLAGS)
-AC_SUBST(RELP_LIBS)
 
 
 # RFC 3195 support
@@ -983,8 +941,6 @@ if test "x$enable_rfc3195" = "xyes"; then
 	PKG_CHECK_MODULES(LIBLOGGING, liblogging >= 0.7.1)
 fi
 AM_CONDITIONAL(ENABLE_RFC3195, test x$enable_rfc3195 = xyes)
-AC_SUBST(LIBLOGGING_CFLAGS)
-AC_SUBST(LIBLOGGING_LIBS)
 
 
 # enable/disable the testbench (e.g. because some important parts
@@ -1217,9 +1173,6 @@ fi
 AM_CONDITIONAL(ENABLE_GUI, test x$enable_gui = xyes)
 
 
-AC_SUBST(RELP_CFLAGS)
-AC_SUBST(RELP_LIBS)
-
 # settings for omuxsock
 AC_ARG_ENABLE(omuxsock,
         [AS_HELP_STRING([--enable-omuxsock],[Compiles omuxsock module @<:@default=no@:>@])],
@@ -1290,8 +1243,6 @@ AC_ARG_ENABLE(ommongodb,
 )
 if test "x$enable_ommongodb" = "xyes"; then
 	PKG_CHECK_MODULES(LIBMONGO_CLIENT, libmongo-client >= 0.1.4)
-	AC_SUBST(LIBMONGO_CLIENT_CFLAGS)
-	AC_SUBST(LIBMONGO_CLIENT_LIBS)
 fi
 AM_CONDITIONAL(ENABLE_OMMONGODB, test x$enable_ommongodb = xyes)
 # end of mongodb code
@@ -1308,8 +1259,6 @@ AC_ARG_ENABLE(imzmq3,
 )
 if test "x$enable_imzmq3" = "xyes"; then
 	PKG_CHECK_MODULES(CZMQ, libczmq >= 1.1.0)
-	AC_SUBST(CZMQ_CFLAGS)
-	AC_SUBST(CZMQ_LIBS)
 fi
 AM_CONDITIONAL(ENABLE_IMZMQ3, test x$enable_imzmq3 = xyes)
 
@@ -1327,8 +1276,6 @@ AC_ARG_ENABLE(omzmq3,
 )
 if test "x$enable_omzmq3" = "xyes"; then
 	PKG_CHECK_MODULES(CZMQ, libczmq >= 1.1.0)
-	AC_SUBST(CZMQ_CFLAGS)
-	AC_SUBST(CZMQ_LIBS)
 fi
 AM_CONDITIONAL(ENABLE_OMZMQ3, test x$enable_omzmq3 = xyes)
 
@@ -1348,8 +1295,6 @@ AC_ARG_ENABLE(omhiredis,
 #
 if test "x$enable_omhiredis" = "xyes"; then
 	PKG_CHECK_MODULES(HIREDIS, hiredis >= 0.10.1)
-	AC_SUBST(HIREDIS_CFLAGS)
-	AC_SUBST(HIREDIS_LIBS)
 fi
 AM_CONDITIONAL(ENABLE_OMHIREDIS, test x$enable_omhiredis = xyes)
 
@@ -1407,7 +1352,6 @@ AC_CONFIG_FILES([Makefile \
 		plugins/mmsnmptrapd/Makefile \
 		java/Makefile \
 		tests/Makefile])
-#add on demand: plugins/cust1/Makefile
 AC_OUTPUT
 
 echo "****************************************************"
