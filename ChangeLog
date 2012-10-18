@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 7.3.1  [devel] 2012-10-??
+- optimized template processing performance, especially for $NOW family
+  of properties
 - change lumberjack cookie to "@cee:" from "@cee: "
   CEE originally specified the cookie with SP, whereas other lumberjack
   tools used it without space. In order to keep interop with lumberjack,
