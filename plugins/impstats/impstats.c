@@ -138,7 +138,8 @@ doSubmitMsg(uchar *line)
 	pMsg->iSeverity = runModConf->iSeverity;
 	pMsg->msgFlags  = 0;
 
-	submitMsg(pMsg);
+	/* we do not use rate-limiting, as the stats message always need to be emitted */
+	submitMsg2(pMsg);
 
 finalize_it:
 	RETiRet;
