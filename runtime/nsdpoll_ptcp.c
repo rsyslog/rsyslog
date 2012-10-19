@@ -76,7 +76,7 @@ addEvent(nsdpoll_ptcp_t *pThis, int id, void *pUsr, int mode, nsd_ptcp_t *pSock,
 		pNew->event.events |= EPOLLIN;
 	if(mode & NSDPOLL_OUT)
 		pNew->event.events |= EPOLLOUT;
-	pNew->event.data.u64 = (uint64) pNew;
+	pNew->event.data.ptr = pNew;
 	pthread_mutex_lock(&pThis->mutEvtLst);
 	pNew->pNext = pThis->pRoot;
 	pThis->pRoot = pNew;
@@ -254,7 +254,7 @@ Wait(nsdpoll_t *pNsdpoll, int timeout, int *numEntries, nsd_epworkset_t workset[
 	/* we got valid events, so tell the caller... */
 dbgprintf("epoll returned %d entries\n", nfds);
 	for(i = 0 ; i < nfds ; ++i) {
-		pOurEvt = (nsdpoll_epollevt_lst_t*) event[i].data.u64;
+		pOurEvt = (nsdpoll_epollevt_lst_t*) event[i].data.ptr;
 		workset[i].id = pOurEvt->id;
 		workset[i].pUsr = pOurEvt->pUsr;
 dbgprintf("epoll push ppusr[%d]: %p\n", i, pOurEvt->pUsr);

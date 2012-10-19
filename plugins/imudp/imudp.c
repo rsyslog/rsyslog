@@ -574,7 +574,7 @@ rsRetVal rcvMainLoop(thrdInfo_t *pThrd)
 	for(lstn = lcnfRoot ; lstn != NULL ; lstn = lstn->next) {
 		if(lstn->sock != -1) {
 			udpEPollEvt[i].events = EPOLLIN | EPOLLET;
-			udpEPollEvt[i].data.u64 = (long long unsigned) lstn;
+			udpEPollEvt[i].data.ptr = lstn;
 			if(epoll_ctl(efd, EPOLL_CTL_ADD,  lstn->sock, &(udpEPollEvt[i])) < 0) {
 				rs_strerror_r(errno, errStr, sizeof(errStr));
 				errmsg.LogError(errno, NO_ERRCODE, "epoll_ctrl failed on fd %d with %s\n",
@@ -593,7 +593,7 @@ rsRetVal rcvMainLoop(thrdInfo_t *pThrd)
 			break; /* terminate input! */
 
 		for(i = 0 ; i < nfds ; ++i) {
-			processSocket(pThrd, (struct lstn_s*)currEvt[i].data.u64, &frominetPrev, &bIsPermitted);
+			processSocket(pThrd, currEvt[i].data.ptr, &frominetPrev, &bIsPermitted);
 		}
 	}
 
