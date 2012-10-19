@@ -1,20 +1,25 @@
 ---------------------------------------------------------------------------
-Version 7.3.1  [devel] 2012-10-??
-- bugfix: imuxsock truncated head of received message
-  This happened only under some circumstances. Thanks to Marius
-  Tomaschwesky, Florian Piekert and Milan Bartos for their help in
-  solving this issue.
+Version 7.3.2  [devel] 2012-10-??
 - imtcp: support for Linux-Type ratelimiting added
 - imptcp: support for Linux-Type ratelimiting added
 - imudp enhancements:
   * support for input batching added (performance improvement)
   * support for Linux-Type ratelimiting added
+---------------------------------------------------------------------------
+Version 7.3.1  [devel] 2012-10-19
+- optimized template processing performance, especially for $NOW family
+  of properties
 - change lumberjack cookie to "@cee:" from "@cee: "
   CEE originally specified the cookie with SP, whereas other lumberjack
   tools used it without space. In order to keep interop with lumberjack,
   we now use the cookie without space as well. I hope this can be changed
   in CEE as well when it is released at a later time.
   Thanks to Miloslav Trmač for pointing this out and a similiar v7 patch.
+- bugfix: imuxsock and imklog truncated head of received message
+  This happened only under some circumstances. Thanks to Marius
+  Tomaschwesky, Florian Piekert and Milan Bartos for their help in
+  solving this issue.
+- bugfix: imuxsock did not properly honor $LocalHostIPIF
 ---------------------------------------------------------------------------
 Version 7.3.0  [devel] 2012-10-09
 - omlibdbi improvements, added
@@ -26,7 +31,24 @@ Version 7.3.0  [devel] 2012-10-09
 - improved omfile zip writer to increase compression
   This was achieved by somewhat reducing the robustness of the zip archive.
   This is controlled by the new action parameter "VeryReliableZip".
- ---------------------------------------------------------------------------
+---------------------------------------------------------------------------
+Version 7.1.13  [beta] 2012-10-??
+- bugfix: imuxsock did not properly honor $LocalHostIPIF
+----------------------------------------------------------------------------
+Version 7.1.12  [beta] 2012-10-18
+- minor updates to better support newer systemd developments
+  Thanks to Michael Biebl for the patches.
+- build system cleanup
+  Thanks to Michael Biebl for the patch series.
+- cleanup: removed remains of -c option (compatibility mode)
+  both from code & doc and emitted warning message if still used
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=361
+  Thanks to Michael Biebl for reporting & suggestions
+- bugfix: imklog truncated head of received message
+  This happened only under some circumstances. Thanks to Marius
+  Tomaschwesky and Florian Piekert for their help in solving this issue.
+----------------------------------------------------------------------------
+>>>>>>> b151584d0929759284c0fb0399709e5ca0e29d60
 Version 7.1.11  [beta] 2012-10-16
 - bugfix: imuxsock truncated head of received message
   This happened only under some circumstances. Thanks to Marius
@@ -42,7 +64,7 @@ Version 7.1.11  [beta] 2012-10-16
   Thanks to Miloslav Trmač for pointing this out and a similiar v7 patch.
 - added deprecated note to omruleset (plus clue to use "call")
 - added deprecated note to discard action (plus clue to use "stop")
- ---------------------------------------------------------------------------
+---------------------------------------------------------------------------
 Version 7.1.10  [beta] 2012-10-11
  - bugfix: m4 directory was not present in release tarball
  - bugfix: small memory leak with string-type templates
@@ -50,7 +72,7 @@ Version 7.1.10  [beta] 2012-10-11
  - bugfix: some config processing warning messages were treated as errors
  - bugfix: small memory leak when processing action() statements
  - bugfix: unknown action() parameters were not reported
- ---------------------------------------------------------------------------
+---------------------------------------------------------------------------
 Version 7.1.9  [beta] 2012-10-09
 - bugfix: comments inside objects (e.g. action()) were not properly handled
 - bugfix: in (non)equal comparisons the position of arrays influenced result
@@ -160,8 +182,6 @@ Version 6.5.1  [devel] 2012-08-??
 - added pure JSON output plugin parameter passing mode
 - ommongodb now supports templates
 - bugfix: imtcp could abort on exit due to invalid free()
-- bugfix: remove invalid socket option call from imuxsock
-  Thanks to Cristian Ionescu-Idbohrn and Jonny Törnbom 
 - bugfix: missing support for escape sequences in RainerScript
   only \' was supported. Now the usual set is supported. Note that v5
   used \x as escape where x was any character (e.g. "\n" meant "n" and NOT
@@ -200,7 +220,11 @@ Version 6.5.0  [devel] 2012-08-28
   http://bugzilla.adiscon.com/show_bug.cgi?id=353
 ---------------------------------------------------------------------------
 Version 6.4.3  [V6-STABLE] 2012-??-??
-- bugfix: imuxsock truncated head of received message
+- cleanup: removed remains of -c option (compatibility mode)
+  both from code & doc and emitted warning message if still used
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=361
+  Thanks to Michael Biebl for reporting & suggestions
+- bugfix: imuxsock and imklog truncated head of received message
   This happened only under some circumstances. Thanks to Marius
   Tomaschwesky, Florian Piekert and Milan Bartos for their help in
   solving this issue.
@@ -218,6 +242,7 @@ Version 6.4.3  [V6-STABLE] 2012-??-??
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=358
   This happend to filters of the style "local0,local1.*", where the 
   multiple facilities were comma-separated.
+- bugfix: imuxsock did not properly honor $LocalHostIPIF
 ---------------------------------------------------------------------------
 Version 6.4.2  [V6-STABLE] 2012-09-20
 - bugfix: potential abort, if action queue could not be properly started
@@ -784,8 +809,8 @@ expected that interfaces, even new ones, break during the initial
   syslog plain tcp input plugin (NOT supporting TLS!)
   [ported from v4]
 ---------------------------------------------------------------------------
-Version 5.10.1  [V5-STABLE], 2012-0?-??
-- bugfix: imuxsock truncated head of received message
+Version 5.10.1  [V5-STABLE], 2012-10-17
+- bugfix: imuxsock and imklog truncated head of received message
   This happened only under some circumstances. Thanks to Marius
   Tomaschwesky, Florian Piekert and Milan Bartos for their help in
   solving this issue.

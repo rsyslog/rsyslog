@@ -216,7 +216,7 @@ sun_getkmsg()
 			 */
 
 			remlen = buflen - len;
-			(void) memcpy(buf, &buf[len], remlen);
+			(void) memmove(buf, &buf[len], remlen);
 			dat.maxlen = MAXLINE - remlen;
 			dat.buf = &buf[remlen];
 		} else {

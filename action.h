@@ -70,6 +70,7 @@ struct action_s {
 	void	*pModData;	/* pointer to module data - content is module-specific */
 	sbool	bRepMsgHasMsg;	/* "message repeated..." has msg fragment in it (0-no, 1-yes) */
 	short	f_ReduceRepeated;/* reduce repeated lines 0 - no, 1 - yes */
+	sbool 	requiresDateCall;/* do we need to do a date call before creating templates? */
 	int	f_prevcount;	/* repetition cnt of prevline */
 	int	f_repeatcount;	/* number of "repeated" msgs */
 	rsRetVal (*submitToActQ)(action_t *, batch_t *);/* function submit message to action queue */

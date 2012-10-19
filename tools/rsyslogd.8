@@ -1,7 +1,7 @@
 .\" Copyright 2004-2008 Rainer Gerhards and Adiscon for the rsyslog modifications
 .\" May be distributed under the GNU General Public License
 .\"
-.TH RSYSLOGD 8 "29 July 2008" "Version 3.21.1" "Linux System Administration"
+.TH RSYSLOGD 8 "16 October 2012" "Version 6.4.3" "Linux System Administration"
 .SH NAME
 rsyslogd \- reliable and extended syslogd 
 .SH SYNOPSIS
@@ -93,9 +93,6 @@ the error element is ignored. It is tried to parse the rest of the line.
 
 .LP
 .SH OPTIONS
-.B Note that in version 3 of rsyslog a number of command line options
-.B have been deprecated and replaced with config file directives. The
-.B -c option controls the backward compatibility mode in use.
 .TP
 .BI "\-A"
 When sending UDP messages, there are potentially multiple paths to
@@ -123,26 +120,9 @@ If neither -4 nor -6 is given,
 listens to all configured addresses of the system.
 .TP
 .BI "\-c " "version"
-Selects the desired backward compatibility mode. It must always be the
-first option on the command line, as it influences processing of the
-other options. To use the rsyslog v3 native interface, specify -c3. To
-use compatibility mode , either do not use -c at all or use
--c<version> where 
-.IR version
-is the rsyslog version that it shall be
-compatible with. Using -c0 tells rsyslog to be command-line compatible
-to sysklogd, which is the default if -c is not given.
-.B Please note that rsyslogd issues warning messages if the -c3
-.B command line option is not given.
-This is to alert you that your are running in compatibility
-mode. Compatibility mode interferes with your rsyslog.conf commands and
-may cause some undesired side-effects. It is meant to be used with a
-plain old rsyslog.conf - if you use new features, things become
-messy. So the best advice is to work through this document, convert
-your options and config file and then use rsyslog in native mode. In
-order to aid you in this process, rsyslog logs every
-compatibility-mode config file directive it has generated. So you can
-simply copy them from your logfile and paste them to the config.
+This option has been obsoleted and has no function any longer. It is still
+accepted in order not to break existing scripts. However, future versions
+may not support it.
 .TP
 .B "\-d"
 Turns on debug mode.  Using this the daemon will not proceed a 

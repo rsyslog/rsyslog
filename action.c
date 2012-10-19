@@ -809,7 +809,8 @@ rsRetVal actionDbgPrint(action_t *pThis)
 /* prepare the calling parameters for doAction()
  * rgerhards, 2009-05-07
  */
-static rsRetVal prepareDoActionParams(action_t *pAction, batch_obj_t *pElem)
+static rsRetVal
+prepareDoActionParams(action_t *pAction, batch_obj_t *pElem, struct syslogTime *ttNow)
 {
 	int i;
 	msg_t *pMsg;
@@ -825,17 +826,17 @@ static rsRetVal prepareDoActionParams(action_t *pAction, batch_obj_t *pElem)
 		switch(pAction->eParamPassing) {
 			case ACT_STRING_PASSING:
 				CHKiRet(tplToString(pAction->ppTpl[i], pMsg, &(pElem->staticActStrings[i]),
-					&pElem->staticLenStrings[i]));
+					&pElem->staticLenStrings[i], ttNow));
 				pElem->staticActParams[i] = pElem->staticActStrings[i];
 				break;
 			case ACT_ARRAY_PASSING:
-				CHKiRet(tplToArray(pAction->ppTpl[i], pMsg, (uchar***) &(pElem->staticActParams[i])));
+				CHKiRet(tplToArray(pAction->ppTpl[i], pMsg, (uchar***) &(pElem->staticActParams[i]), ttNow));
 				break;
 			case ACT_MSG_PASSING:
 				pElem->staticActParams[i] = (void*) pMsg;
 				break;
 			case ACT_JSON_PASSING:
-				CHKiRet(tplToJSON(pAction->ppTpl[i], pMsg, &json));
+				CHKiRet(tplToJSON(pAction->ppTpl[i], pMsg, &json, ttNow));
 				pElem->staticActParams[i] = (void*) json;
 				break;
 			default:dbgprintf("software bug/error: unknown pAction->eParamPassing %d in prepareDoActionParams\n",
@@ -1226,14 +1227,19 @@ prepareBatch(action_t *pAction, batch_t *pBatch, sbool **activeSave, int *bMustR
 {
 	int i;
 	batch_obj_t *pElem;
+	struct syslogTime ttNow;
 	DEFiRet;
+
+	if(pAction->requiresDateCall) {
+		datetime.getCurrTime(&ttNow, NULL);
+	}
 
 	pBatch->iDoneUpTo = 0;
 	for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pBatch->pbShutdownImmediate) ; ++i) {
 		pElem = &(pBatch->pElem[i]);
 		if(batchIsValidElem(pBatch, i)) {
 			pElem->state = BATCH_STATE_RDY;
-			if(prepareDoActionParams(pAction, pElem) != RS_RET_OK) {
+			if(prepareDoActionParams(pAction, pElem, &ttNow) != RS_RET_OK) {
 				/* make sure we have our copy of "active" array */
 				if(!*bMustRestoreActivePtr) {
 					*activeSave = pBatch->active;
@@ -1875,6 +1881,23 @@ actionApplyCnfParam(action_t *pAction, struct cnfparamvals *pvals)
 	return RS_RET_OK;
 }
 
+/* check if the templates used in this action require a date call
+ * ($NOW family of properties).
+ */
+static inline int
+actionRequiresDateCall(action_t *pAction)
+{
+	int i;
+	int r = 0;
+
+	for(i = 0 ; i < pAction->iNumTpls ; ++i) {
+		if(tplRequiresDateCall(pAction->ppTpl[i])) {
+			r = 1;
+			break;
+		}
+	}
+	return r;
+}
 
 
 /* add an Action to the current selector
@@ -1980,6 +2003,7 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData,
 		pAction->f_ReduceRepeated = 0;
 	}
 	pAction->eState = ACT_STATE_RDY; /* action is enabled */
+	pAction->requiresDateCall = actionRequiresDateCall(pAction);
 
 	if(bSuspended)
 		actionSuspend(pAction, datetime.GetTime(NULL)); /* "good" time call, only during init and unavoidable */
