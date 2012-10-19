@@ -221,6 +221,7 @@ struct queuefilenames_s {
 } *queuefilenames = NULL;
 
 
+static ratelimit_t *dflt_ratelimiter = NULL; /* ratelimiter for submits without explicit one */
 int	MarkInterval = 20 * 60;	/* interval between marks in seconds - read-only after startup */
 int      send_to_all = 0;        /* send message to all IPv4/IPv6 addresses */
 static int	NoFork = 0; 	/* don't fork - don't run in daemon mode - read-only after startup */
@@ -432,6 +433,12 @@ submitErrMsg(int iErr, uchar *msg)
 }
 
 
+static inline rsRetVal
+submitMsgWithDfltRatelimiter(msg_t *pMsg)
+{
+	return ratelimitAddMsg(dflt_ratelimiter, NULL, pMsg);
+}
+
 /* rgerhards 2004-11-09: the following is a function that can be used
  * to log a message orginating from the syslogd itself.
  */
@@ -483,7 +490,7 @@ logmsgInternal(int iErr, int pri, uchar *msg, int flags)
                /* we have the queue, so we can simply provide the
 		 * message to the queue engine.
 		 */
-		submitMsg2(pMsg);
+		submitMsgWithDfltRatelimiter(pMsg);
 	}
 finalize_it:
 	RETiRet;
@@ -594,7 +601,7 @@ submitMsg2(msg_t *pMsg)
 
 	/* if a plugin logs a message during shutdown, the queue may no longer exist */
 	if(pQueue == NULL) {
-		DBGPRINTF("submitMsg() could not submit message - "
+		DBGPRINTF("submitMsg2() could not submit message - "
 			  "queue does (no longer?) exist - ignored\n");
 		FINALIZE;
 	}
@@ -609,7 +616,7 @@ finalize_it:
 rsRetVal
 submitMsg(msg_t *pMsg)
 {
-	return submitMsg2(pMsg);
+	return submitMsgWithDfltRatelimiter(pMsg);
 }
 
 
@@ -1246,7 +1253,7 @@ static inline void processImInternal(void)
 	msg_t *pMsg;
 
 	while(iminternalRemoveMsg(&pMsg) == RS_RET_OK) {
-		submitMsg(pMsg);
+		submitMsgWithDfltRatelimiter(pMsg);
 	}
 }
 
@@ -2022,6 +2029,9 @@ int realMain(int argc, char **argv)
 		localRet = RS_RET_OK;
 	}
 	CHKiRet(localRet);
+
+	CHKiRet(ratelimitNew(&dflt_ratelimiter, "rsyslogd", NULL));
+	/* TODO: add linux-type limiting capability */
 
 	if(bChDirRoot) {
 		if(chdir("/") != 0)
