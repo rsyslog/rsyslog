@@ -76,6 +76,7 @@ Version 6.4.3  [V6-STABLE] 2012-??-??
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=358
   This happend to filters of the style "local0,local1.*", where the 
   multiple facilities were comma-separated.
+- bugfix: imuxsock did not properly honor $LocalHostIPIF
 ---------------------------------------------------------------------------
 Version 6.4.2  [V6-STABLE] 2012-09-20
 - bugfix: potential abort, if action queue could not be properly started
