@@ -1552,11 +1552,6 @@ CODEmodInit_QueryRegCFSLineHdlr
 		listeners[i].fd  = -1;
 	}
 
-	/* now init listen socket zero, the local log socket */
-	CHKiRet(prop.Construct(&pLocalHostIP));
-	CHKiRet(prop.SetString(pLocalHostIP, UCHAR_CONSTANT("127.0.0.1"), sizeof("127.0.0.1") - 1));
-	CHKiRet(prop.ConstructFinalize(pLocalHostIP));
-
 	/* register config file handlers */
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputunixlistensocketignoremsgtimestamp", 0, eCmdHdlrBinary,
 		NULL, &cs.bIgnoreTimestamp, STD_LOADABLE_MODULE_ID));

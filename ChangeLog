@@ -12,6 +12,7 @@ Version 7.3.1  [devel] 2012-10-??
   This happened only under some circumstances. Thanks to Marius
   Tomaschwesky, Florian Piekert and Milan Bartos for their help in
   solving this issue.
+- bugfix: imuxsock did not properly honor $LocalHostIPIF
 ---------------------------------------------------------------------------
 Version 7.3.0  [devel] 2012-10-09
 - omlibdbi improvements, added
@@ -24,6 +25,9 @@ Version 7.3.0  [devel] 2012-10-09
   This was achieved by somewhat reducing the robustness of the zip archive.
   This is controlled by the new action parameter "VeryReliableZip".
 ---------------------------------------------------------------------------
+Version 7.1.13  [beta] 2012-10-??
+- bugfix: imuxsock did not properly honor $LocalHostIPIF
+----------------------------------------------------------------------------
 Version 7.1.12  [beta] 2012-10-18
 - minor updates to better support newer systemd developments
   Thanks to Michael Biebl for the patches.
@@ -170,8 +174,6 @@ Version 6.5.1  [devel] 2012-08-??
 - added pure JSON output plugin parameter passing mode
 - ommongodb now supports templates
 - bugfix: imtcp could abort on exit due to invalid free()
-- bugfix: remove invalid socket option call from imuxsock
-  Thanks to Cristian Ionescu-Idbohrn and Jonny Törnbom 
 - bugfix: missing support for escape sequences in RainerScript
   only \' was supported. Now the usual set is supported. Note that v5
   used \x as escape where x was any character (e.g. "\n" meant "n" and NOT
@@ -232,6 +234,7 @@ Version 6.4.3  [V6-STABLE] 2012-??-??
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=358
   This happend to filters of the style "local0,local1.*", where the 
   multiple facilities were comma-separated.
+- bugfix: imuxsock did not properly honor $LocalHostIPIF
 ---------------------------------------------------------------------------
 Version 6.4.2  [V6-STABLE] 2012-09-20
 - bugfix: potential abort, if action queue could not be properly started
