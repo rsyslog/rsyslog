@@ -1,4 +1,7 @@
 ---------------------------------------------------------------------------
+Version 6.5.2  [beta] 2012-10-??
+- bugfix: imuxsock did not properly honor $LocalHostIPIF
+---------------------------------------------------------------------------
 Version 6.5.1  [beta] 2012-10-11
 - added tool "logctl" to handle lumberjack logs in MongoDB
 - imfile ported to new v6 config interface
