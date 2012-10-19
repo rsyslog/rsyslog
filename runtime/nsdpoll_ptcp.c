@@ -75,7 +75,7 @@ addEvent(nsdpoll_ptcp_t *pThis, int id, void *pUsr, int mode, nsd_ptcp_t *pSock,
 		pNew->event.events |= EPOLLIN;
 	if(mode & NSDPOLL_OUT)
 		pNew->event.events |= EPOLLOUT;
-	pNew->event.data.u64 = (uint64) pNew;
+	pNew->event.data.ptr = pNew;
 	pNew->pNext = pThis->pRoot;
 	pThis->pRoot = pNew;
 	*pEvtLst = pNew;
@@ -231,7 +231,7 @@ Wait(nsdpoll_t *pNsdpoll, int timeout, int *idRdy, void **ppUsr) {
 	}
 
 	/* we got a valid event, so tell the caller... */
-	pOurEvt = (nsdpoll_epollevt_lst_t*) event.data.u64;
+	pOurEvt = (nsdpoll_epollevt_lst_t*) event.data.ptr;
 	*idRdy = pOurEvt->id;
 	*ppUsr = pOurEvt->pUsr;
 
