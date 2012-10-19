@@ -489,44 +489,6 @@ finalize_it:
 	RETiRet;
 }
 
-/* check message against ACL set
- * rgerhards, 2009-11-16
- */
-#if 0
-static inline rsRetVal
-chkMsgAgainstACL() {
-	/* if we reach this point, we had a good receive and can process the packet received */
-	/* check if we have a different sender than before, if so, we need to query some new values */
-	if(net.CmpHost(&frominet, frominetPrev, socklen) != 0) {
-		CHKiRet(net.cvthname(&frominet, fromHost, fromHostFQDN, fromHostIP));
-		memcpy(frominetPrev, &frominet, socklen); /* update cache indicator */
-		/* Here we check if a host is permitted to send us
-		* syslog messages. If it isn't, we do not further
-		* process the message but log a warning (if we are
-		* configured to do this).
-		* rgerhards, 2005-09-26
-		*/
-		*pbIsPermitted = net.isAllowedSender((uchar*)"UDP",
-						    (struct sockaddr *)&frominet, (char*)fromHostFQDN);
-
-		if(!*pbIsPermitted) {
-			DBGPRINTF("%s is not an allowed sender\n", (char*)fromHostFQDN);
-			if(glbl.GetOption_DisallowWarning) {
-				time_t tt;
-
-				datetime.GetTime(&tt);
-				if(tt > ttLastDiscard + 60) {
-					ttLastDiscard = tt;
-					errmsg.LogError(0, NO_ERRCODE,
-					"UDP message from disallowed sender %s discarded",
-					(char*)fromHost);
-				}
-			}
-		}
-	}
-}
-#endif
-
 
 /* preprocess a batch of messages, that is ready them for actual processing. This is done
  * as a first stage and totally in parallel to any other worker active in the system. So
