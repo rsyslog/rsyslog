@@ -66,7 +66,7 @@ addEvent(nsdpoll_ptcp_t *pThis, int id, void *pUsr, int mode, nsd_ptcp_t *pSock,
 	nsdpoll_epollevt_lst_t *pNew;
 	DEFiRet;
 
-	CHKmalloc(pNew = (nsdpoll_epollevt_lst_t*) malloc(sizeof(nsdpoll_epollevt_lst_t)));
+	CHKmalloc(pNew = (nsdpoll_epollevt_lst_t*) calloc(1, sizeof(nsdpoll_epollevt_lst_t)));
 	pNew->id = id;
 	pNew->pUsr = pUsr;
 	pNew->pSock = pSock;
