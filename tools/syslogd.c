@@ -1858,7 +1858,7 @@ int realMain(int argc, char **argv)
 			CHKiRet(bufOptAdd(ch, optarg));
 			break;
 		case 'c':		/* compatibility mode */
-			fprintf(stderr, "rsyslogd: error: option -c is no longer supported - ignored");
+			fprintf(stderr, "rsyslogd: error: option -c is no longer supported - ignored\n");
 			break;
 		case 'd': /* debug - must be handled now, so that debug is active during init! */
 			debugging_on = 1;

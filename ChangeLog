@@ -1,6 +1,9 @@
 ----------------------------------------------------------------------------
-Version 7.1.13  [beta] 2012-10-??
+Version 7.2.0  [v7-stable] 2012-10-22
+This starts a new stable branch based on 7.1.12 plus the following changes:
 - bugfix: imuxsock did not properly honor $LocalHostIPIF
+- omruleset/omdiscard do no longer issue "deprecated" warings, as 7.1
+  grammar does not permit to use the replacements under all circumstances
 ----------------------------------------------------------------------------
 Version 7.1.12  [beta] 2012-10-18
 - minor updates to better support newer systemd developments
