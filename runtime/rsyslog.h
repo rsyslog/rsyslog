@@ -142,6 +142,7 @@ typedef uintTiny	propid_t;
 #define PROP_CEE_ALL_JSON		201
 #define PROP_SYS_BOM			159
 #define PROP_SYS_UPTIME			160
+#define PROP_UUID               161
 
 
 /* The error codes below are orginally "borrowed" from
@@ -375,6 +376,12 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_LEGA_ACT_NOT_SUPPORTED = -2215, /**< the module (no longer) supports legacy action syntax */
 	RS_RET_MAX_OMSR_REACHED = -2216, /**< max nbr of string requests reached, not supported by core */
 	RS_RET_UID_MISSING = -2217,	/**< a user id is missing (but e.g. a password provided) */
+	/* reserved for pre-v6.5 */
+	RS_RET_DUP_PARAM = -2220, /**< config parameter is given more than once */
+	RS_RET_MODULE_ALREADY_IN_CONF = -2221, /**< module already in current configuration */
+	RS_RET_PARAM_NOT_PERMITTED = -2222, /**< legacy parameter no longer permitted (usally already set by v2) */
+	RS_RET_NO_JSON_PASSING = -2223, /**< rsyslog core does not support JSON-passing plugin API */
+	RS_RET_MOD_NO_INPUT_STMT = -2224, /**< (input) module does not support input() statement */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */

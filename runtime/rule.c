@@ -132,14 +132,14 @@ shouldProcessThisMessage(rule_t *pRule, msg_t *pMsg, sbool *bProcessMsg)
 	} else if(pRule->eHostnameCmpMode == HN_COMP_MATCH) {
 		if(rsCStrSzStrCmp(pRule->pCSHostnameComp, (uchar*) getHOSTNAME(pMsg), getHOSTNAMELen(pMsg))) {
 			/* not equal, so we are already done... */
-			dbgprintf("hostname filter '+%s' does not match '%s'\n", 
+			DBGPRINTF("hostname filter '+%s' does not match '%s'\n", 
 				rsCStrGetSzStrNoNULL(pRule->pCSHostnameComp), getHOSTNAME(pMsg));
 			FINALIZE;
 		}
 	} else { /* must be -hostname */
 		if(!rsCStrSzStrCmp(pRule->pCSHostnameComp, (uchar*) getHOSTNAME(pMsg), getHOSTNAMELen(pMsg))) {
-			/* not equal, so we are already done... */
-			dbgprintf("hostname filter '-%s' does not match '%s'\n", 
+			/* not equal, SO WE ARe already done... */
+			DBGPRINTF("hostname filter '-%s' does not match '%s'\n", 
 				rsCStrGetSzStrNoNULL(pRule->pCSHostnameComp), getHOSTNAME(pMsg));
 			FINALIZE;
 		}
@@ -176,10 +176,10 @@ shouldProcessThisMessage(rule_t *pRule, msg_t *pMsg, sbool *bProcessMsg)
 			bRet = 0;
 		else
 			bRet = 1;
-		dbgprintf("testing filter, f_pmask %d, result %d\n", pRule->f_filterData.f_pmask[pMsg->iFacility], bRet);
+		DBGPRINTF("testing filter, f_pmask %d, result %d\n", pRule->f_filterData.f_pmask[pMsg->iFacility], bRet);
 	} else if(pRule->f_filter_type == FILTER_EXPR) {
 		bRet = cnfexprEvalBool(pRule->f_filterData.expr, pMsg);
-		dbgprintf("result of rainerscript filter evaluation: %d\n", bRet);
+		DBGPRINTF("result of rainerscript filter evaluation: %d\n", bRet);
 	} else {
 		assert(pRule->f_filter_type == FILTER_PROP); /* assert() just in case... */
 		if(pRule->f_filterData.prop.propID == PROP_INVALID) {
@@ -340,6 +340,8 @@ CODESTARTobjDestruct(rule)
 			rsCStrRegexDestruct(&pThis->f_filterData.prop.regex_cache);
 		if(pThis->f_filterData.prop.propName != NULL)
 			es_deleteStr(pThis->f_filterData.prop.propName);
+	} else if(pThis->f_filter_type == FILTER_EXPR) {
+		cnfexprDestruct(pThis->f_filterData.expr);
 	}
 
 	llDestroy(&pThis->llActList);

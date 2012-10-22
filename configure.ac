@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([rsyslog],[6.4.2],[rsyslog@lists.adiscon.com])
+AC_INIT([rsyslog],[6.5.1],[rsyslog@lists.adiscon.com])
 AM_INIT_AUTOMAKE
 
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
@@ -34,6 +34,9 @@ PKG_PROG_PKG_CONFIG
 # modules we require
 PKG_CHECK_MODULES(LIBESTR, libestr >= 0.1.2)
 PKG_CHECK_MODULES(LIBEE, libee >= 0.4.0)
+PKG_CHECK_MODULES([JSON_C], [json])
+AC_SUBST([JSON_CFLAGS])
+AC_SUBST([JSON_LIBS])
 
 case "${host}" in
   *-*-linux*)
@@ -445,6 +448,22 @@ if test "$enable_rtinst" = "yes"; then
 fi
 
 
+# total debugless: highest performance, but no way at all to enable debug 
+# logging
+AC_ARG_ENABLE(debugless,
+        [AS_HELP_STRING([--enable-debugless],[Enable runtime instrumentation mode @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_debugless="yes" ;;
+          no) enable_debugless="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-debugless) ;;
+         esac],
+        [enable_debugless="no"]
+)
+if test "$enable_debugless" = "yes"; then
+        AC_DEFINE(DEBUGLESS, 1, [Defined if debugless mode is enabled.])
+fi
+
+
 # valgrind
 AC_ARG_ENABLE(valgrind,
         [AS_HELP_STRING([--enable-valgrind],[Enable valgrind support settings @<:@default=no@:>@])],
@@ -487,6 +506,18 @@ AC_ARG_ENABLE(diagtools,
 )
 AM_CONDITIONAL(ENABLE_DIAGTOOLS, test x$enable_diagtools = xyes)
 
+
+# compile end-user tools
+AC_ARG_ENABLE(usertools,
+        [AS_HELP_STRING([--enable-usertools],[Enable end user tools @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_usertools="yes" ;;
+          no) enable_usertools="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-usertools) ;;
+         esac],
+        [enable_usertools=no]
+)
+AM_CONDITIONAL(ENABLE_USERTOOLS, test x$enable_usertools = xyes)
 
 
 # MySQL support
@@ -658,6 +689,21 @@ AM_CONDITIONAL(ENABLE_OMLIBDBI, test x$enable_libdbi = xyes)
 AC_SUBST(LIBDBI_CFLAGS)
 AC_SUBST(LIBDBI_LIBS)
 
+# libuuid support
+AC_CHECK_HEADERS(
+  [uuid/uuid.h],,
+  [AC_MSG_FAILURE([libuuid is missing])]
+)
+AC_CHECK_LIB(
+  [uuid],
+  [uuid_generate],
+  [LIBUUID_CFLAGS=""
+   LIBUUID_LIBS="-luuid"
+  ],
+  [AC_MSG_FAILURE([libuuid library is missing])]
+)
+AC_SUBST(LIBUUID_CFLAGS)
+AC_SUBST(LIBUUID_LIBS)
 
 # SNMP support
 AC_ARG_ENABLE(snmp,
@@ -757,8 +803,8 @@ if test "x$enable_rsyslogrt" = "xyes"; then
   #??CNF_LIBS="\$(top_builddir)/grammar/libgrammar.la"
 fi
 AM_CONDITIONAL(ENABLE_RSYSLOGRT, test x$enable_rsyslogrt = xyes)
-RSRT_CFLAGS="\$(RSRT_CFLAGS1) \$(LIBESTR_CFLAGS)"
-RSRT_LIBS="\$(RSRT_LIBS1) \$(LIBESTR_LIBS)"
+RSRT_CFLAGS="\$(RSRT_CFLAGS1) \$(LIBESTR_CFLAGS) \$(JSON_C_FLAGS)"
+RSRT_LIBS="\$(RSRT_LIBS1) \$(LIBESTR_LIBS) \$(JSON_C_LIBS)"
 AC_SUBST(RSRT_CFLAGS1)
 AC_SUBST(RSRT_LIBS1)
 AC_SUBST(RSRT_CFLAGS)
@@ -904,7 +950,7 @@ AC_ARG_ENABLE(relp,
         [enable_relp=no]
 )
 if test "x$enable_relp" = "xyes"; then
-	PKG_CHECK_MODULES(RELP, relp >= 0.1.1)
+	PKG_CHECK_MODULES(RELP, relp >= 1.0.1)
 fi
 AM_CONDITIONAL(ENABLE_RELP, test x$enable_relp = xyes)
 AC_SUBST(RELP_CFLAGS)
@@ -1230,10 +1276,6 @@ AC_ARG_ENABLE(ommongodb,
          esac],
         [enable_ommongodb=no]
 )
-#
-# you may want to do some library checks here - see snmp, mysql, pgsql modules
-# for samples
-#
 if test "x$enable_ommongodb" = "xyes"; then
 	PKG_CHECK_MODULES(LIBMONGO_CLIENT, libmongo-client >= 0.1.4)
 	AC_SUBST(LIBMONGO_CLIENT_CFLAGS)
@@ -1241,6 +1283,44 @@ if test "x$enable_ommongodb" = "xyes"; then
 fi
 AM_CONDITIONAL(ENABLE_OMMONGODB, test x$enable_ommongodb = xyes)
 # end of mongodb code
+
+# BEGIN ZMQ3 INPUT SUPPORT
+AC_ARG_ENABLE(imzmq3,
+        [AS_HELP_STRING([--enable-imzmq3],[Compiles imzmq3 output module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_imzmq3="yes" ;;
+          no) enable_imzmq3="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-imzmq3) ;;
+         esac],
+        [enable_imzmq3=no]
+)
+if test "x$enable_imzmq3" = "xyes"; then
+	PKG_CHECK_MODULES(CZMQ, libczmq >= 1.1.0)
+	AC_SUBST(CZMQ_CFLAGS)
+	AC_SUBST(CZMQ_LIBS)
+fi
+AM_CONDITIONAL(ENABLE_IMZMQ3, test x$enable_imzmq3 = xyes)
+
+# END ZMQ3 INPUT SUPPORT
+
+# BEGIN ZMQ3 OUTPUT SUPPORT
+AC_ARG_ENABLE(omzmq3,
+        [AS_HELP_STRING([--enable-omzmq3],[Compiles omzmq3 output module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_omzmq3="yes" ;;
+          no) enable_omzmq3="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-omzmq3) ;;
+         esac],
+        [enable_omzmq3=no]
+)
+if test "x$enable_omzmq3" = "xyes"; then
+	PKG_CHECK_MODULES(CZMQ, libczmq >= 1.1.0)
+	AC_SUBST(CZMQ_CFLAGS)
+	AC_SUBST(CZMQ_LIBS)
+fi
+AM_CONDITIONAL(ENABLE_OMZMQ3, test x$enable_omzmq3 = xyes)
+
+# END ZMQ3 SUPPORT
 
 # HIREDIS SUPPORT
 
@@ -1292,6 +1372,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/impstats/Makefile \
 		plugins/imrelp/Makefile \
 		plugins/imdiag/Makefile \
+        plugins/imzmq3/Makefile \
 		plugins/omtesting/Makefile \
 		plugins/omgssapi/Makefile \
 		plugins/ommysql/Makefile \
@@ -1304,6 +1385,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omudpspoof/Makefile \
 		plugins/ommongodb/Makefile \
         plugins/omhiredis/Makefile \
+        plugins/omzmq3/Makefile \
 		plugins/mmnormalize/Makefile \
 		plugins/mmjsonparse/Makefile \
 		plugins/mmaudit/Makefile \
@@ -1334,6 +1416,7 @@ echo "    imdiag enabled:                           $enable_imdiag"
 echo "    file input module enabled:                $enable_imfile"
 echo "    Solaris input module enabled:             $enable_imsolaris"
 echo "    periodic statistics module enabled:       $enable_impstats"
+echo "    imzmq3 input module enabled:              $enable_imzmq3"
 echo
 echo "---{ output plugins }---"
 echo "    Mail support enabled:                     $enable_mail"
@@ -1344,6 +1427,7 @@ echo "    omelasticsearch module will be compiled:  $enable_elasticsearch"
 echo "    omruleset module will be compiled:        $enable_omruleset"
 echo "    omudpspoof module will be compiled:       $enable_omudpspoof"
 echo "    omuxsock module will be compiled:         $enable_omuxsock"
+echo "    omzmq3 module will be compiled:           $enable_omzmq3"
 echo
 echo "---{ parser modules }---"
 echo "    pmrfc3164sd module will be compiled:      $enable_pmrfc3164sd"
@@ -1381,7 +1465,9 @@ echo "    Extended Testbench enabled:               $enable_extended_tests"
 echo "    MySQL Tests enabled:                      $enable_mysql_tests"
 echo "    Debug mode enabled:                       $enable_debug"
 echo "    Runtime Instrumentation enabled:          $enable_rtinst"
+echo "    (total) debugless mode enabled:           $enable_debugless"
 echo "    Diagnostic tools enabled:                 $enable_diagtools"
+echo "    End-User tools enabled:                   $enable_usertools"
 echo "    Enhanced memory checking enabled:         $enable_memcheck"
 echo "    Valgrind support settings enabled:        $enable_valgrind"
 echo

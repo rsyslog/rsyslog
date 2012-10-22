@@ -323,7 +323,7 @@ PrepareClose(tcps_sess_t *pThis)
 		 * of message may occur. As such, we process the message in
 		 * this case.
 		 */
-		dbgprintf("Extra data at end of stream in legacy syslog/tcp message - processing\n");
+		DBGPRINTF("Extra data at end of stream in legacy syslog/tcp message - processing\n");
 		datetime.getCurrTime(&stTime, &ttGenTime);
 		defaultDoSubmitMessage(pThis, &stTime, ttGenTime, NULL);
 	}
@@ -382,21 +382,21 @@ processDataRcvd(tcps_sess_t *pThis, char c, struct syslogTime *stTime, time_t tt
 		if(isdigit(c)) {
 			pThis->iOctetsRemain = pThis->iOctetsRemain * 10 + c - '0';
 		} else { /* done with the octet count, so this must be the SP terminator */
-			dbgprintf("TCP Message with octet-counter, size %d.\n", pThis->iOctetsRemain);
+			DBGPRINTF("TCP Message with octet-counter, size %d.\n", pThis->iOctetsRemain);
 			if(c != ' ') {
 				errmsg.LogError(0, NO_ERRCODE, "Framing Error in received TCP message: "
 					    "delimiter is not SP but has ASCII value %d.\n", c);
 			}
 			if(pThis->iOctetsRemain < 1) {
 				/* TODO: handle the case where the octet count is 0! */
-				dbgprintf("Framing Error: invalid octet count\n");
+				DBGPRINTF("Framing Error: invalid octet count\n");
 				errmsg.LogError(0, NO_ERRCODE, "Framing Error in received TCP message: "
 					    "invalid octet count %d.\n", pThis->iOctetsRemain);
 			} else if(pThis->iOctetsRemain > iMaxLine) {
 				/* while we can not do anything against it, we can at least log an indication
 				 * that something went wrong) -- rgerhards, 2008-03-14
 				 */
-				dbgprintf("truncating message with %d octets - max msg size is %d\n",
+				DBGPRINTF("truncating message with %d octets - max msg size is %d\n",
 					  pThis->iOctetsRemain, iMaxLine);
 				errmsg.LogError(0, NO_ERRCODE, "received oversize message: size is %d bytes, "
 					        "max msg size is %d, truncating...\n", pThis->iOctetsRemain, iMaxLine);
@@ -407,7 +407,7 @@ processDataRcvd(tcps_sess_t *pThis, char c, struct syslogTime *stTime, time_t tt
 		assert(pThis->inputState == eInMsg);
 		if(pThis->iMsg >= iMaxLine) {
 			/* emergency, we now need to flush, no matter if we are at end of message or not... */
-			dbgprintf("error: message received is larger than max msg size, we split it\n");
+			DBGPRINTF("error: message received is larger than max msg size, we split it\n");
 			defaultDoSubmitMessage(pThis, stTime, ttGenTime, pMultiSub);
 			/* we might think if it is better to ignore the rest of the
 			 * message than to treat it as a new one. Maybe this is a good

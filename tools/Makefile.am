@@ -1,4 +1,5 @@
 sbin_PROGRAMS =
+bin_PROGRAMS =
 man_MANS = rsyslogd.8 rsyslog.conf.5
 
 sbin_PROGRAMS += rsyslogd
@@ -39,7 +40,7 @@ rsyslogd_CPPFLAGS =  $(PTHREADS_CFLAGS) $(RSRT_CFLAGS) $(CNF_LIBS)
 # note: it looks like librsyslog.la must be explicitely given on LDDADD,
 # otherwise dependencies are not properly calculated (resulting in a 
 # potentially incomplete build, a problem we had several times...)
-rsyslogd_LDADD = $(ZLIB_LIBS) $(PTHREADS_LIBS) $(RSRT_LIBS) $(SOL_LIBS) $(LIBEE_LIBS) $(LIBLOGNORM_LIBS) $(CNF_LIBS) ../grammar/libgrammar.la ../runtime/librsyslog.la
+rsyslogd_LDADD = $(ZLIB_LIBS) $(PTHREADS_LIBS) $(RSRT_LIBS) $(SOL_LIBS) $(LIBEE_LIBS) $(LIBLOGNORM_LIBS) $(CNF_LIBS) $(LIBUUID_LIBS) ../grammar/libgrammar.la ../runtime/librsyslog.la
 rsyslogd_LDFLAGS = -export-dynamic
 
 if ENABLE_DIAGTOOLS
@@ -48,6 +49,15 @@ rsyslog_diag_hostname_SOURCES = gethostn.c
 zpipe_SOURCES = zpipe.c
 zpipe_LDADD = -lz
 msggen_SOURCES = msggen.c
+endif
+
+if ENABLE_USERTOOLS
+if ENABLE_OMMONGODB
+bin_PROGRAMS += logctl
+logctl_SOURCES = logctl.c
+logctl_CPPFLAGS =  $(LIBMONGO_CLIENT_CFLAGS)
+logctl_LDADD = $(LIBMONGO_CLIENT_LIBS)
+endif
 endif
 
 EXTRA_DIST = $(man_MANS) \

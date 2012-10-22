@@ -107,23 +107,41 @@ typedef struct _instanceData {
 #define DFLT_SOURCE_PORT_END   42000
 
 typedef struct configSettings_s {
-	uchar *pszTplName; /* name of the default template to use */
+	uchar *tplName; /* name of the default template to use */
 	uchar *pszSourceNameTemplate; /* name of the template containing the spoofing address */
 	uchar *pszTargetHost;
 	uchar *pszTargetPort;
-	int iCompressionLevel;	/* zlib compressionlevel, the usual values */
 	int iSourcePortStart;
 	int iSourcePortEnd;
 } configSettings_t;
 static configSettings_t cs;
 
+/* module-global parameters */
+static struct cnfparamdescr modpdescr[] = {
+	{ "template", eCmdHdlrGetWord, 0 },
+};
+static struct cnfparamblk modpblk =
+	{ CNFPARAMBLK_VERSION,
+	  sizeof(modpdescr)/sizeof(struct cnfparamdescr),
+	  modpdescr
+	};
+
+struct modConfData_s {
+	rsconf_t *pConf;	/* our overall config object */
+	uchar 	*tplName;	/* default template */
+};
+
+static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
+static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current exec process */
+
+
+
 BEGINinitConfVars		/* (re)set config variables to default values */
 CODESTARTinitConfVars 
-	cs.pszTplName = NULL;
+	cs.tplName = NULL;
 	cs.pszSourceNameTemplate = NULL;
 	cs.pszTargetHost = NULL;
 	cs.pszTargetPort = NULL;
-	cs.iCompressionLevel = 0;
 	cs.iSourcePortStart = DFLT_SOURCE_PORT_START;
 	cs.iSourcePortEnd = DFLT_SOURCE_PORT_END;
 ENDinitConfVars
@@ -137,6 +155,44 @@ pthread_mutex_t mutLibnet;
 /* forward definitions */
 static rsRetVal doTryResume(instanceData *pData);
 
+
+/* this function gets the default template. It coordinates action between
+ * old-style and new-style configuration parts.
+ */
+static inline uchar*
+getDfltTpl(void)
+{
+	if(loadModConf != NULL && loadModConf->tplName != NULL)
+		return loadModConf->tplName;
+	else if(cs.tplName == NULL)
+		return (uchar*)"RSYSLOG_FileFormat";
+	else
+		return cs.tplName;
+}
+
+
+/* set the default template to be used
+ * This is a module-global parameter, and as such needs special handling. It needs to
+ * be coordinated with values set via the v2 config system (rsyslog v6+). What we do
+ * is we do not permit this directive after the v2 config system has been used to set
+ * the parameter.
+ */
+rsRetVal
+setLegacyDfltTpl(void __attribute__((unused)) *pVal, uchar* newVal)
+{
+	DEFiRet;
+
+	if(loadModConf != NULL && loadModConf->tplName != NULL) {
+		free(newVal);
+		errmsg.LogError(0, RS_RET_ERR, "omudpspoof default template already set via module "
+			"global parameter - can no longer be changed");
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+	free(cs.tplName);
+	cs.tplName = newVal;
+finalize_it:
+	RETiRet;
+}
 
 /* Close the UDP sockets.
  * rgerhards, 2009-05-29
@@ -165,6 +221,72 @@ static inline uchar *getFwdPt(instanceData *pData)
 {
 	return (pData->port == NULL) ? UCHAR_CONSTANT("514") : pData->port;
 }
+
+
+BEGINbeginCnfLoad
+CODESTARTbeginCnfLoad
+	loadModConf = pModConf;
+	pModConf->pConf = pConf;
+	pModConf->tplName = NULL;
+ENDbeginCnfLoad
+
+BEGINsetModCnf
+	struct cnfparamvals *pvals = NULL;
+	int i;
+CODESTARTsetModCnf
+	pvals = nvlstGetParams(lst, &modpblk, NULL);
+	if(pvals == NULL) {
+		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "error processing module "
+				"config parameters [module(...)]");
+		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
+
+	if(Debug) {
+		dbgprintf("module (global) param blk for omudpspoof:\n");
+		cnfparamsPrint(&modpblk, pvals);
+	}
+
+	for(i = 0 ; i < modpblk.nParams ; ++i) {
+		if(!pvals[i].bUsed)
+			continue;
+		if(!strcmp(modpblk.descr[i].name, "template")) {
+			loadModConf->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+			if(cs.tplName != NULL) {
+				errmsg.LogError(0, RS_RET_DUP_PARAM, "omudpspoof: warning: default template "
+						"was already set via legacy directive - may lead to inconsistent "
+						"results.");
+			}
+		} else {
+			dbgprintf("omudpspoof: program error, non-handled "
+			  "param '%s' in beginCnfLoad\n", modpblk.descr[i].name);
+		}
+	}
+finalize_it:
+	if(pvals != NULL)
+		cnfparamvalsDestruct(pvals, &modpblk);
+ENDsetModCnf
+
+BEGINendCnfLoad
+CODESTARTendCnfLoad
+	loadModConf = NULL; /* done loading */
+	/* free legacy config vars */
+	free(cs.tplName);
+	cs.tplName = NULL;
+ENDendCnfLoad
+
+BEGINcheckCnf
+CODESTARTcheckCnf
+ENDcheckCnf
+
+BEGINactivateCnf
+CODESTARTactivateCnf
+	runModConf = pModConf;
+ENDactivateCnf
+
+BEGINfreeCnf
+CODESTARTfreeCnf
+	free(pModConf->tplName);
+ENDfreeCnf
 
 
 BEGINcreateInstance
@@ -421,13 +543,12 @@ CODE_STD_STRING_REQUESTparseSelectorAct(2)
 	else 
 		CHKmalloc(pData->port = ustrdup(cs.pszTargetPort));
 	CHKiRet(OMSRsetEntry(*ppOMSR, 1, ustrdup(sourceTpl), OMSR_NO_RQD_TPL_OPTS));
-	pData->compressionLevel = cs.iCompressionLevel;
 	pData->sourcePort = pData->sourcePortStart = cs.iSourcePortStart;
 	pData->sourcePortEnd = cs.iSourcePortEnd;
 
 	/* process template */
 	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS,
-		(cs.pszTplName == NULL) ? (uchar*)"RSYSLOG_TraditionalForwardFormat" : cs.pszTplName));
+		(cs.tplName == NULL) ? (uchar*)"RSYSLOG_TraditionalForwardFormat" : cs.tplName));
 
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
@@ -439,8 +560,8 @@ ENDparseSelectorAct
 static void
 freeConfigVars(void)
 {
-	free(cs.pszTplName);
-	cs.pszTplName = NULL;
+	free(cs.tplName);
+	cs.tplName = NULL;
 	free(cs.pszTargetHost);
 	cs.pszTargetHost = NULL;
 	free(cs.pszTargetPort);
@@ -464,6 +585,8 @@ ENDmodExit
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
+CODEqueryEtryPt_STD_CONF2_QUERIES
+CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
 ENDqueryEtryPt
 
 
@@ -474,7 +597,6 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 {
 	freeConfigVars();
 	/* we now must reset all non-string values */
-	cs.iCompressionLevel = 0;
 	cs.iSourcePortStart = DFLT_SOURCE_PORT_START;
 	cs.iSourcePortEnd = DFLT_SOURCE_PORT_END;
 	return RS_RET_OK;
@@ -504,13 +626,12 @@ CODEmodInit_QueryRegCFSLineHdlr
 	}
 	pthread_mutex_init(&mutLibnet, NULL);
 
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionomudpspoofdefaulttemplate", 0, eCmdHdlrGetWord, NULL, &cs.pszTplName, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionomudpspoofdefaulttemplate", 0, eCmdHdlrGetWord, setLegacyDfltTpl, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionomudpspoofsourcenametemplate", 0, eCmdHdlrGetWord, NULL, &cs.pszSourceNameTemplate, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionomudpspooftargethost", 0, eCmdHdlrGetWord, NULL, &cs.pszTargetHost, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionomudpspooftargetport", 0, eCmdHdlrGetWord, NULL, &cs.pszTargetPort, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionomudpspoofsourceportstart", 0, eCmdHdlrInt, NULL, &cs.iSourcePortStart, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionomudpspoofsourceportend", 0, eCmdHdlrInt, NULL, &cs.iSourcePortEnd, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionomudpcompressionlevel", 0, eCmdHdlrInt, NULL, &cs.iCompressionLevel, NULL));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
 

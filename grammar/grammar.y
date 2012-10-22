@@ -49,6 +49,7 @@ extern int yyerror(char*);
 	enum cnfobjType objType;
 	struct cnfobj *obj;
 	struct nvlst *nvlst;
+	struct objlst *objlst;
 	struct cnfactlst *actlst;
 	struct cnfexpr *expr;
 	struct cnfrule *rule;
@@ -63,8 +64,12 @@ extern int yyerror(char*);
 %token ENDOBJ
 %token <s> CFSYSLINE
 %token BEGIN_ACTION
+%token BEGIN_PROPERTY
+%token BEGIN_CONSTANT
+%token BEGIN_TPL
 %token STOP
 %token <s> LEGACY_ACTION
+%token <s> LEGACY_RULESET
 %token <s> PRIFILT
 %token <s> PROPFILT
 %token <s> BSD_TAG_SELECTOR
@@ -89,7 +94,8 @@ extern int yyerror(char*);
 %token CMP_STARTSWITHI
 
 %type <nvlst> nv nvlst
-%type <obj> obj
+%type <obj> obj property constant
+%type <objlst> propconst
 %type <actlst> actlst
 %type <actlst> act
 %type <s> cfsysline
@@ -124,10 +130,21 @@ conf:	/* empty (to end recursion) */
 	| conf obj			{ cnfDoObj($2); }
 	| conf rule			{ cnfDoRule($2); }
 	| conf cfsysline		{ cnfDoCfsysline($2); }
+	| conf LEGACY_RULESET		{ cnfDoCfsysline($2); }
 	| conf BSD_TAG_SELECTOR		{ cnfDoBSDTag($2); }
 	| conf BSD_HOST_SELECTOR	{ cnfDoBSDHost($2); }
 obj:	  BEGINOBJ nvlst ENDOBJ 	{ $$ = cnfobjNew($1, $2); }
 	| BEGIN_ACTION nvlst ENDOBJ 	{ $$ = cnfobjNew(CNFOBJ_ACTION, $2); }
+        | BEGIN_TPL nvlst ENDOBJ	{ $$ = cnfobjNew(CNFOBJ_TPL, $2); }
+        | BEGIN_TPL nvlst ENDOBJ '{' propconst '}'
+					{ $$ = cnfobjNew(CNFOBJ_TPL, $2);
+					  $$->subobjs = $5;
+					}
+propconst:				{ $$ = NULL; }
+	| propconst property		{ $$ = objlstAdd($1, $2); }
+	| propconst constant		{ $$ = objlstAdd($1, $2); }
+property: BEGIN_PROPERTY nvlst ENDOBJ	{ $$ = cnfobjNew(CNFOBJ_PROPERTY, $2); }
+constant: BEGIN_CONSTANT nvlst ENDOBJ	{ $$ = cnfobjNew(CNFOBJ_CONSTANT, $2); }
 cfsysline: CFSYSLINE	 		{ $$ = $1; }
 nvlst:					{ $$ = NULL; }
 	| nvlst nv 			{ $2->next = $1; $$ = $2; }
@@ -140,8 +157,6 @@ scriptfilt: IF expr THEN actlst		{ $$ = cnfruleNew(CNFFILT_SCRIPT, $4);
 					  $$->filt.expr = $2; }
 block:	  actlst			{ $$ = $1; }
 	| block actlst			{ $2->next = $1; $$ = $2; }
-	/* v7: | actlst
-	   v7: | block rule */ /* v7 extensions require new rule engine capabilities! */
 actlst:	  act 	 			{ $$=$1; }
 	| actlst '&' act 		{ $3->next = $1; $$ = $3; }
 	| actlst cfsysline		{ $$ = cnfactlstAddSysline($1, $2); }

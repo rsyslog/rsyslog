@@ -33,26 +33,31 @@ string generator module, you need to know how to call it. Each such module has a
 which you need to know (look it up in the module doc or ask the developer). Let's assume
 that "mystrgen" is the module name. Then you can define a template for that strgen
 in the following way:
+
+<blockquote><code>template(name="MyTemplateName" type="plugin" string="mystrgen")</code></blockquote>
+<p>Legacy example:</p>
 <blockquote><code>$template MyTemplateName,=mystrgen</code></blockquote>
 (Of course, you must have first loaded the module via $ModLoad).
-<p>The important part is the equal sign: it tells the rsyslog config parser that
+<p>The important part is the equal sign in the legacy format: it tells the rsyslog config parser that
 no string follows but a strgen module name.
 <p>There are no additional parameters but the module name supported. This is because
 there is no way to customize anything inside such a "template" other than by
 modifying the code of the string generator.
 
 <p>So for most use cases, string-generator module based templates are <b>not</b>
-the route to take. Usually, us use <b>string based templates</b> instead.
+the route to take. Usually, we use <b>string based templates</b> instead.
 This is what the rest of the documentation now talks about.
 
 <p>A template consists of a template directive, a name, the
 actual template text and optional options. A sample is:</p>
+<blockquote><code>template(name="MyTemplateName" type="string" string="Example: Text %property% some more text\n" options)</code></blockquote>
+<p>Legacy example:</p>
 <blockquote><code>$template MyTemplateName,"\7Text
 %property% some more text\n",&lt;options&gt;</code></blockquote>
-<p>The "$template" is the template directive. It tells rsyslog
+<p>The "template" (legacy: $template) is the template directive. It tells rsyslog
 that this line contains a template. "MyTemplateName" is the template
 name. All
-other config lines refer to this name. The text within quotes is the
+other config lines refer to this name. The text within "string" is the
 actual template text. The backslash is an escape character, much as it
 is in C. It does all these "cool" things. For example, \7 rings the
 bell (this is an ASCII value), \n is a new line. C programmers and perl
@@ -69,24 +74,30 @@ on this is below, on some lines of the property replacer.<br>
 <br>
 The &lt;options&gt; part is optional. It carries options
 influencing the template as whole. See details below. Be sure NOT to
-mistake template options with property options - the later ones are
+mistake template options with property options - the latter ones are
 processed by the property replacer and apply to a SINGLE property, only
 (and not the whole template).<br>
 <br>
 Template options are case-insensitive. Currently defined are: </p>
-<p><b>sql</b> - format the string suitable for a SQL
+<p><b>option.sql</b> - format the string suitable for a SQL
 statement in MySQL format. This will replace single quotes ("'") and
 the backslash character by their backslash-escaped counterpart ("\'"
 and "\\") inside each field. Please note that in MySQL configuration,
 the <code class="literal">NO_BACKSLASH_ESCAPES</code>
 mode must be turned off for this format to work (this is the default).</p>
-<p><b>stdsql</b> - format the string suitable for a
+<p><b>option.stdsql</b> - format the string suitable for a
 SQL statement that is to be sent to a standards-compliant sql server.
 This will replace single quotes ("'") by two single quotes ("''")
 inside each field. You must use stdsql together with MySQL if in MySQL
 configuration the
 <code class="literal">NO_BACKSLASH_ESCAPES</code> is
 turned on.</p>
+<p><b>option.json</b> - format the string suitable for a
+json statement.
+This will replace single quotes ("'") by two single quotes ("''")
+inside each field.</p>
+<p>At no time, multiple template option should be used. This can cause
+unpredictable behaviour and is against all logic.</p>
 <p>Either the <b>sql</b> or <b>stdsql</b>&nbsp;
 option <b>must</b> be specified when a template is used
 for writing to a database, otherwise injection might occur. Please note
@@ -120,11 +131,41 @@ $template TraditionalFormat,"%timegenerated% %HOSTNAME% %syslogtag%%msg%\n"<br>
 <br>
 Properties can be accessed by the <a href="property_replacer.html">property
 replacer</a> (see there for details).</p>
-<p><b>Please note that templates can also by
+<p>Templates can be used in the form of a <b>list</b> as well. This has been 
+introduced with <b>6.5.0</b> The list consists of two parts which are either 
+a <b>constant</b> or a <b>property</b>. The constants
+are taking the part of "text" that you usually enter in string-based templates. 
+The properties stay variable, as they are a substitute for different values of a 
+certain type. This type of template is extremely useful for complicated cases,
+as it helps you to easily keep an overview over the template. Though, it has
+the disadvantage of needing more effort to create it.</p>
+<br>Config example:
+<br><blockquote><code>template(name="MyTemplate" type="list" option.json="off") {
+	<br>constant(value="Test: ")
+	<br>property(name="msg" outname="mymessage")
+	<br>constant(value=" --!!!-- ")
+	<br>property(name="timereported" dateFormat="rfc3339" caseConversion="lower")
+	<br>constant(value="\n")
+	<br>}
+</code></blockquote>
+<p>First, the general template option will be defined. The values of the template 
+itself get defined in the curly brackets. As it can be seen, we have constants
+and properties in exchange. Whereas constants will be filled with a value and probably
+some options, properties do direct to a property and the options that could be needed
+additional format definitions.</p>
+<p>We suggest to use separate lines for all constants and properties. This
+helps to keep a good overview over the different parts of the template.
+Though, writing it in a single line will work, it is much harder to debug
+if anything goes wrong with the template. </p>
+
+
+<p><b>Please note that templates can also be
 used to generate selector lines with dynamic file names.</b> For
 example, if you would like to split syslog messages from different
 hosts to different files (one per host), you can define the following
 template:</p>
+<blockquote><code>template (name="DynFile" type="string" string="/var/log/system-%HOSTNAME%.log")</code></blockquote>
+<p>Legacy example:</p>
 <blockquote><code>$template
 DynFile,"/var/log/system-%HOSTNAME%.log"</code></blockquote>
 <p>This template can then be used when defining an output
@@ -169,7 +210,7 @@ out, but this may happen.</li>
 is meant to be written to a log file. Do <b>not</b> use for production or remote
 forwarding.</li>
 </ul>
-<h3>String-based Template Samples</h3>
+<h3>Legacy String-based Template Samples</h3>
 <p>This section provides some sample of what the default formats would
 look as a text-based template. Hopefully, their description is self-explanatory.
 Note that each $Template statement is on a <b>single</b> line, but probably broken

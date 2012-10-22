@@ -64,7 +64,9 @@
 #include "threads.h"
 #include "datetime.h"
 #include "parserif.h"
+#include "modules.h"
 #include "dirty.h"
+#include "template.h"
 
 /* static data */
 DEFobjStaticHelpers
@@ -97,6 +99,17 @@ static uchar template_SysklogdFileFormat[] = "\"%TIMESTAMP% %HOSTNAME% %syslogta
 static uchar template_StdJSONFmt[] = "\"{\\\"message\\\":\\\"%msg:::json%\\\",\\\"fromhost\\\":\\\"%HOSTNAME:::json%\\\",\\\"facility\\\":\\\"%syslogfacility-text%\\\",\\\"priority\\\":\\\"%syslogpriority-text%\\\",\\\"timereported\\\":\\\"%timereported:::date-rfc3339%\\\",\\\"timegenerated\\\":\\\"%timegenerated:::date-rfc3339%\\\"}\"";
 /* end templates */
 
+/* tables for interfacing with the v6 config system (as far as we need to) */
+static struct cnfparamdescr inppdescr[] = {
+	{ "type", eCmdHdlrString, CNFPARAM_REQUIRED }
+};
+static struct cnfparamblk inppblk =
+	{ CNFPARAMBLK_VERSION,
+	  sizeof(inppdescr)/sizeof(struct cnfparamdescr),
+	  inppdescr
+	};
+
+/* forward-definitions */
 void cnfDoCfsysline(char *ln);
 
 /* Standard-Constructor
@@ -152,10 +165,33 @@ rsRetVal rsconfConstructFinalize(rsconf_t __attribute__((unused)) *pThis)
 }
 
 
+/* call freeCnf() module entry points AND free the module entries themselfes.
+ */
+static inline void
+freeCnf(rsconf_t *pThis)
+{
+	cfgmodules_etry_t *etry, *del;
+	etry = pThis->modules.root;
+	while(etry != NULL) {
+		if(etry->pMod->beginCnfLoad != NULL) {
+			dbgprintf("calling freeCnf(%p) for module '%s'\n",
+				  etry->modCnf, (char*) module.GetName(etry->pMod));
+			etry->pMod->freeCnf(etry->modCnf);
+		}
+		del = etry;
+		etry = etry->next;
+		free(del);
+	}
+}
+
+
 /* destructor for the rsconf object */
 BEGINobjDestruct(rsconf) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(rsconf)
+	freeCnf(pThis);
+	tplDeleteAll(pThis);
 	free(pThis->globals.mainQ.pszMainMsgQFName);
+	free(pThis->globals.pszConfDAGFile);
 	llDestroy(&(pThis->rulesets.llRulesets));
 ENDobjDestruct(rsconf)
 
@@ -348,6 +384,45 @@ finalize_it:
 	return estr;
 }
 
+
+/* Process input() objects */
+rsRetVal
+inputProcessCnf(struct cnfobj *o)
+{
+	struct cnfparamvals *pvals;
+	modInfo_t *pMod;
+	uchar *cnfModName = NULL;
+	int typeIdx;
+	DEFiRet;
+
+	pvals = nvlstGetParams(o->nvlst, &inppblk, NULL);
+	if(pvals == NULL) {
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+	DBGPRINTF("input param blk after inputProcessCnf:\n");
+	cnfparamsPrint(&inppblk, pvals);
+	typeIdx = cnfparamGetIdx(&inppblk, "type");
+	if(pvals[typeIdx].bUsed == 0) {
+		errmsg.LogError(0, RS_RET_CONF_RQRD_PARAM_MISSING, "input type missing");
+		ABORT_FINALIZE(RS_RET_CONF_RQRD_PARAM_MISSING); // TODO: move this into rainerscript handlers
+	}
+	cnfModName = (uchar*)es_str2cstr(pvals[typeIdx].val.d.estr, NULL);
+	if((pMod = module.FindWithCnfName(loadConf, cnfModName, eMOD_IN)) == NULL) {
+		errmsg.LogError(0, RS_RET_MOD_UNKNOWN, "input module name '%s' is unknown", cnfModName);
+		ABORT_FINALIZE(RS_RET_MOD_UNKNOWN);
+	}
+	if(pMod->mod.im.newInpInst == NULL) {
+		errmsg.LogError(0, RS_RET_MOD_NO_INPUT_STMT,
+				"input module '%s' does not support input() statement", cnfModName);
+		ABORT_FINALIZE(RS_RET_MOD_NO_INPUT_STMT);
+	}
+	CHKiRet(pMod->mod.im.newInpInst(o->nvlst));
+finalize_it:
+	free(cnfModName);
+	cnfparamvalsDestruct(pvals, &inppblk);
+	RETiRet;
+}
+
 /*------------------------------ interface to flex/bison parser ------------------------------*/
 extern int yylineno;
 
@@ -377,17 +452,34 @@ yyerror(char *s)
 }
 void cnfDoObj(struct cnfobj *o)
 {
+	int bChkUnuse = 1;
+
 	dbgprintf("cnf:global:obj: ");
 	cnfobjPrint(o);
 	switch(o->objType) {
 	case CNFOBJ_GLOBAL:
 		glblProcessCnf(o);
 		break;
+	case CNFOBJ_MODULE:
+		modulesProcessCnf(o);
+		break;
 	case CNFOBJ_ACTION:
 		actionProcessCnf(o);
 		break;
+	case CNFOBJ_INPUT:
+		inputProcessCnf(o);
+		break;
+	case CNFOBJ_TPL:
+		tplProcessCnf(o);
+		break;
+	case CNFOBJ_PROPERTY:
+	case CNFOBJ_CONSTANT:
+		/* these types are processed at a later stage */
+		bChkUnuse = 0;
+		break;
 	}
-	nvlstChkUnused(o->nvlst);
+	if(bChkUnuse)
+		nvlstChkUnused(o->nvlst);
 	cnfobjDestruct(o);
 }
 
@@ -701,9 +793,10 @@ runInputModules(void)
 	node = module.GetNxtCnfType(runConf, NULL, eMOD_IN);
 	while(node != NULL) {
 		if(node->canRun) {
-			DBGPRINTF("running module %s with config %p\n", node->pMod->pszName, node);
 			bNeedsCancel = (node->pMod->isCompatibleWithFeature(sFEATURENonCancelInputTermination) == RS_RET_OK) ?
 				       0 : 1;
+			DBGPRINTF("running module %s with config %p, term mode: %s\n", node->pMod->pszName, node,
+				  bNeedsCancel ? "cancel" : "cooperative/SIGTTIN");
 			thrdCreate(node->pMod->mod.im.runInput, node->pMod->mod.im.afterRun, bNeedsCancel,
 			           (node->pMod->cnfName == NULL) ? node->pMod->pszName : node->pMod->cnfName);
 		}
@@ -990,10 +1083,13 @@ setModDir(void __attribute__((unused)) *pVal, uchar* pszNewVal)
 static rsRetVal
 regBuildInModule(rsRetVal (*modInit)(), uchar *name, void *pModHdlr)
 {
+	cfgmodules_etry_t *pNew;
+	cfgmodules_etry_t *pLast;
 	modInfo_t *pMod;
 	DEFiRet;
 	CHKiRet(module.doModInit(modInit, name, pModHdlr, &pMod));
-	addModToCnfList(pMod);
+	readyModForCnf(pMod, &pNew, &pLast);
+	addModToCnfList(pNew, pLast);
 finalize_it:
 	RETiRet;
 }
@@ -1007,12 +1103,12 @@ loadBuildInModules()
 {
 	DEFiRet;
 
-	CHKiRet(regBuildInModule(modInitFile, UCHAR_CONSTANT("builtin-file"), NULL));
-	CHKiRet(regBuildInModule(modInitPipe, UCHAR_CONSTANT("builtin-pipe"), NULL));
+	CHKiRet(regBuildInModule(modInitFile, UCHAR_CONSTANT("builtin:omfile"), NULL));
+	CHKiRet(regBuildInModule(modInitPipe, UCHAR_CONSTANT("builtin:ompipe"), NULL));
 	CHKiRet(regBuildInModule(modInitShell, UCHAR_CONSTANT("builtin-shell"), NULL));
-	CHKiRet(regBuildInModule(modInitDiscard, UCHAR_CONSTANT("builtin-discard"), NULL));
+	CHKiRet(regBuildInModule(modInitDiscard, UCHAR_CONSTANT("builtin:omdiscard"), NULL));
 #	ifdef SYSLOG_INET
-	CHKiRet(regBuildInModule(modInitFwd, UCHAR_CONSTANT("builtin-fwd"), NULL));
+	CHKiRet(regBuildInModule(modInitFwd, UCHAR_CONSTANT("builtin:omfwd"), NULL));
 #	endif
 
 	/* dirty, but this must be for the time being: the usrmsg module must always be
@@ -1024,11 +1120,11 @@ loadBuildInModules()
 	 * User names now must begin with:
 	 *   [a-zA-Z0-9_.]
 	 */
-	CHKiRet(regBuildInModule(modInitUsrMsg, (uchar*) "builtin-usrmsg", NULL));
+	CHKiRet(regBuildInModule(modInitUsrMsg, (uchar*) "builtin:omusrmsg", NULL));
 
 	/* load build-in parser modules */
-	CHKiRet(regBuildInModule(modInitpmrfc5424, UCHAR_CONSTANT("builtin-pmrfc5424"), NULL));
-	CHKiRet(regBuildInModule(modInitpmrfc3164, UCHAR_CONSTANT("builtin-pmrfc3164"), NULL));
+	CHKiRet(regBuildInModule(modInitpmrfc5424, UCHAR_CONSTANT("builtin:pmrfc5424"), NULL));
+	CHKiRet(regBuildInModule(modInitpmrfc3164, UCHAR_CONSTANT("builtin:pmrfc3164"), NULL));
 
 	/* and set default parser modules. Order is *very* important, legacy
 	 * (3164) parser needs to go last! */
@@ -1036,10 +1132,10 @@ loadBuildInModules()
 	CHKiRet(parser.AddDfltParser(UCHAR_CONSTANT("rsyslog.rfc3164")));
 
 	/* load build-in strgen modules */
-	CHKiRet(regBuildInModule(modInitsmfile, UCHAR_CONSTANT("builtin-smfile"), NULL));
-	CHKiRet(regBuildInModule(modInitsmtradfile, UCHAR_CONSTANT("builtin-smtradfile"), NULL));
-	CHKiRet(regBuildInModule(modInitsmfwd, UCHAR_CONSTANT("builtin-smfwd"), NULL));
-	CHKiRet(regBuildInModule(modInitsmtradfwd, UCHAR_CONSTANT("builtin-smtradfwd"), NULL));
+	CHKiRet(regBuildInModule(modInitsmfile, UCHAR_CONSTANT("builtin:smfile"), NULL));
+	CHKiRet(regBuildInModule(modInitsmtradfile, UCHAR_CONSTANT("builtin:smtradfile"), NULL));
+	CHKiRet(regBuildInModule(modInitsmfwd, UCHAR_CONSTANT("builtin:smfwd"), NULL));
+	CHKiRet(regBuildInModule(modInitsmtradfwd, UCHAR_CONSTANT("builtin:smtradfwd"), NULL));
 
 finalize_it:
 	if(iRet != RS_RET_OK) {

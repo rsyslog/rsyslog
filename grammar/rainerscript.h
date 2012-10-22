@@ -16,6 +16,9 @@ enum cnfobjType {
 	CNFOBJ_GLOBAL,
 	CNFOBJ_INPUT,
 	CNFOBJ_MODULE,
+	CNFOBJ_TPL,
+	CNFOBJ_PROPERTY,
+	CNFOBJ_CONSTANT,
 	CNFOBJ_INVALID = 0
 };
 
@@ -34,6 +37,15 @@ cnfobjType2str(enum cnfobjType ot)
 		break;
 	case CNFOBJ_MODULE:
 		return "module";
+		break;
+	case CNFOBJ_TPL:
+		return "template";
+		break;
+	case CNFOBJ_PROPERTY:
+		return "property";
+		break;
+	case CNFOBJ_CONSTANT:
+		return "constant";
 		break;
 	default:return "error: invalid cnfobjType";
 	}
@@ -60,6 +72,12 @@ struct var {
 struct cnfobj {
 	enum cnfobjType objType;
 	struct nvlst *nvlst;
+	struct objlst *subobjs;
+};
+
+struct objlst {
+	struct objlst *next;
+	struct cnfobj *obj;
 };
 
 struct nvlst {
@@ -163,7 +181,8 @@ enum cnffuncid {
 	CNFFUNC_GETENV,
 	CNFFUNC_TOLOWER,
 	CNFFUNC_CSTR,
-	CNFFUNC_CNUM
+	CNFFUNC_CNUM,
+	CNFFUNC_RE_MATCH
 };
 
 struct cnffunc {
@@ -171,6 +190,7 @@ struct cnffunc {
 	es_str_t *fname;
 	unsigned short nParams;
 	enum cnffuncid fID; /* function ID for built-ins, 0 means use name */
+	void *funcdata;	/* global data for function-specific use (e.g. compiled regex) */
 	struct cnfexpr *expr[];
 };
 
@@ -216,6 +236,9 @@ struct cnfparamvals { /* the values we obtained for param descr. */
 
 int cnfParseBuffer(char *buf, unsigned lenBuf);
 void readConfFile(FILE *fp, es_str_t **str);
+struct objlst* objlstNew(struct cnfobj *obj);
+void objlstDestruct(struct objlst *lst);
+void objlstPrint(struct objlst *lst);
 struct nvlst* nvlstNew(es_str_t *name, es_str_t *value);
 void nvlstDestruct(struct nvlst *lst);
 void nvlstPrint(struct nvlst *lst);
@@ -233,6 +256,7 @@ struct cnfexpr* cnfexprNew(unsigned nodetype, struct cnfexpr *l, struct cnfexpr 
 void cnfexprPrint(struct cnfexpr *expr, int indent);
 void cnfexprEval(struct cnfexpr *expr, struct var *ret, void *pusr);
 int cnfexprEvalBool(struct cnfexpr *expr, void *usrptr);
+void cnfexprDestruct(struct cnfexpr *expr);
 struct cnfnumval* cnfnumvalNew(long long val);
 struct cnfstringval* cnfstringvalNew(es_str_t *estr);
 struct cnfrule * cnfruleNew(enum cnfFiltType filttype, struct cnfactlst *actlst);
@@ -249,6 +273,7 @@ void cnfparamsPrint(struct cnfparamblk *params, struct cnfparamvals *vals);
 void varDelete(struct var *v);
 void cnfparamvalsDestruct(struct cnfparamvals *paramvals, struct cnfparamblk *blk);
 void cnfcfsyslinelstDestruct(struct cnfcfsyslinelst *cfslst);
+rsRetVal initRainerscript(void);
 void unescapeStr(uchar *s, int len);
 
 /* debug helper */

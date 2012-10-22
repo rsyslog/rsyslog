@@ -1,0 +1,24 @@
+ZeroMQ 3.x Input Plugin
+
+Building this plugin:
+Requires libzmq and libczmq.  First, install libzmq from the HEAD on github:
+http://github.com/zeromq/libzmq.  You can clone the repository, build, then
+install it.  The directions for doing so are there in the readme.  Then, do
+the same for libczmq: http://github.com/zeromq/czmq.  At some point, the 3.1
+version of libzmq will be released, and a supporting version of libczmq.  
+At that time, you could simply download and install the tarballs instead of
+using git to clone the repositories.  Those tarballs (when available) can 
+be found at http://download.zeromq.org.  As of this writing (5/31/2012), the 
+most recent version of czmq (1.1.0) and libzmq (3.1.0-beta) will not compile
+properly.  
+
+Imzmq3 allows you to push data into rsyslog from a zeromq socket.  The example
+below binds a SUB socket to port 7172, and then any messages with the topic
+"foo" will be pushed into rsyslog.
+
+Example Rsyslog.conf snippet:
+-------------------------------------------------------------------------------
+
+$InputZmq3ServerRun action=BIND,type=SUB,description=tcp://*:7172,subscribe=foo
+
+-------------------------------------------------------------------------------

@@ -1,4 +1,61 @@
 ---------------------------------------------------------------------------
+Version 6.5.2  [beta] 2012-10-??
+- bugfix: imuxsock did not properly honor $LocalHostIPIF
+---------------------------------------------------------------------------
+Version 6.5.1  [beta] 2012-10-11
+- added tool "logctl" to handle lumberjack logs in MongoDB
+- imfile ported to new v6 config interface
+- imfile now supports config parameter for maximum number of submits
+  which is a fine-tuning parameter in regard to input baching
+- added pure JSON output plugin parameter passing mode
+- ommongodb now supports templates
+- bugfix: imtcp could abort on exit due to invalid free()
+- bugfix: remove invalid socket option call from imuxsock
+  Thanks to Cristian Ionescu-Idbohrn and Jonny Törnbom 
+- bugfix: missing support for escape sequences in RainerScript
+  only \' was supported. Now the usual set is supported. Note that v5
+  used \x as escape where x was any character (e.g. "\n" meant "n" and NOT
+  LF). This also means there is some incompatibility to v5 for well-know
+  sequences. Better break it now than later.
+- bugfix: remove invalid socket option call from imuxsock
+  Thanks to Cristian Ionescu-Idbohrn and Jonny Törnbom 
+- bugfix: missing support for escape sequences in RainerScript
+  only \' was supported. Now the usual set is supported. Note that v5
+  used \x as escape where x was any character (e.g. "\n" meant "n" and NOT
+  LF). This also means there is some incompatibility to v5 for well-know
+  sequences. Better break it now than later.
+- bugfix: small memory leaks in template() statements
+  these were one-time memory leaks during startup, so they did NOT grow
+  during runtime
+- bugfix: config validation run did not always return correct return state
+- bugfix: config errors did not always cause statement to fail
+  This could lead to startup with invalid parameters.
+---------------------------------------------------------------------------
+Version 6.5.0  [devel] 2012-08-28
+- imrelp now supports non-cancel thread termination
+  (but now requires at least librelp 1.0.1)
+- implemented freeCnf() module interface
+  This was actually not present in older versions, even though some modules
+  already used it. The implementation was now done, and not in 6.3/6.4 
+  because the resulting memory leak was ultra-slim and the new interface
+  handling has some potential to seriously break things. Not the kind of
+  thing you want to add in late beta state, if avoidable.
+- added --enable-debugless configure option for very high demanding envs
+  This actually at compile time disables a lot of debug code, resulting
+  in some speedup (but serious loss of debugging capabilities)
+- added new 0mq plugins (via czmq lib)
+  Thanks to David Kelly for contributing these modules
+- bugfix: omhdfs did no longer compile
+- bugfix: SystemLogSocketAnnotate did not work correctly
+  Thanks to Miloslav Trmač for the patch
+- $SystemLogParseTrusted config file option
+  Thanks to Milan Bartos for the patch
+- added template config directive
+- added new uuid message property
+  Thanks to Jérôme Renard for the idea and patches.
+  Note: patches were released under ASL 2.0, see
+  http://bugzilla.adiscon.com/show_bug.cgi?id=353
+---------------------------------------------------------------------------
 Version 6.4.3  [V6-STABLE] 2012-??-??
 - cleanup: removed remains of -c option (compatibility mode)
   both from code & doc and emitted warning message if still used

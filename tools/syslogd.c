@@ -125,6 +125,7 @@
 #include "rsconf.h"
 #include "dnscache.h"
 #include "sd-daemon.h"
+#include "rainerscript.h"
 
 /* definitions for objects we access */
 DEFobjCurrIf(obj)
@@ -447,7 +448,6 @@ logmsgInternal(int iErr, int pri, uchar *msg, int flags)
 	MsgSetRawMsgWOSize(pMsg, (char*)msg);
 	MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName(), ustrlen(glbl.GetLocalHostName()));
 	MsgSetRcvFrom(pMsg, glbl.GetLocalHostNameProp());
-dbgprintf("ZZZZ: pLocalHostIPIF used!\n");
 	MsgSetRcvFromIP(pMsg, glbl.GetLocalHostIP());
 	MsgSetMSGoffs(pMsg, 0);
 	/* check if we have an error code associated and, if so,
@@ -801,26 +801,6 @@ static void doDie(int sig)
 }
 
 
-/* This function frees all dynamically allocated memory for program termination.
- * It must be called only immediately before exit(). It is primarily an aid
- * for memory debuggers, which prevents cluttered outupt.
- * rgerhards, 2008-03-20
- */
-static void
-freeAllDynMemForTermination(void)
-{
-	free(ourConf->globals.pszConfDAGFile);
-	struct queuefilenames_s *qfn, *qfnDel;
-
-	for(qfn = queuefilenames ; qfn != NULL ; ) {
-		qfnDel = qfn;
-		qfn = qfn->next;
-		free(qfnDel->name);
-		free(qfnDel);
-	}
-}
-
-
 /* Finalize and destruct all actions.
  */
 static inline void
@@ -890,14 +870,16 @@ die(int sig)
 	destructAllActions();
 
 	DBGPRINTF("all primary multi-thread sources have been terminated - now doing aux cleanup...\n");
+
+	DBGPRINTF("destructing current config...\n");
+	rsconf.Destruct(&runConf);
+
 	/* rger 2005-02-22
 	 * now clean up the in-memory structures. OK, the OS
 	 * would also take care of that, but if we do it
 	 * ourselfs, this makes finding memory leaks a lot
 	 * easier.
 	 */
-	tplDeleteAll(runConf);
-
 	/* de-init some modules */
 	modExitIminternal();
 
@@ -921,15 +903,8 @@ die(int sig)
 	/* dbgClassExit MUST be the last one, because it de-inits the debug system */
 	dbgClassExit();
 
-	/* free all remaining memory blocks - this is not absolutely necessary, but helps
-	 * us keep memory debugger logs clean and this is in aid in developing. It doesn't
-	 * cost much time, so we do it always. -- rgerhards, 2008-03-20
-	 */
-	freeAllDynMemForTermination();
-	/* NO CODE HERE - feeelAllDynMemForTermination() must be the last thing before exit()! */
-
+	/* NO CODE HERE - dbgClassExit() must be the last thing before exit()! */
 	remove_pid(PidFile);
-
 	exit(0); /* "good" exit, this is the terminator function for rsyslog [die()] */
 }
 
@@ -1495,6 +1470,7 @@ InitGlobalClasses(void)
 	pErrObj = "net";
 	CHKiRet(objUse(net, LM_NET_FILENAME));
 	dnscacheInit();
+	initRainerscript();
 
 finalize_it:
 	if(iRet != RS_RET_OK) {

@@ -1,0 +1,62 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Language" content="en">
+<title>Pipe Output Module</title></head>
+
+<body>
+<a href="rsyslog_conf_modules.html">back</a>
+
+<h1>Pipe Output Module</h1>
+<p><b>Module Name:&nbsp;&nbsp;&nbsp; omfwd</b></p>
+<p><b>Author: </b>Rainer Gerhards &lt;rgergards@adiscon.com&gt;</p>
+<p><b>Description</b>:</p>
+<p>The ompipe plug-in provides the core functionality for logging output to named pipes (fifos). It is a built-in module that does not need to be loaded. </p>
+<p>&nbsp;</p>
+
+<p><b>Global Configuration Directives</b>:</p>
+<ul>
+	<li><strong>Template </strong>[templateName]<br>
+	sets a new default template for file actions.<br></li>
+	
+</ul>
+<p>&nbsp;</p>
+<p><b>Action specific Configuration Directives</b>:</p>
+<ul>
+	<li><strong>Pipe </strong>string<br>
+	A fifo or named pipe can be used as a destination for log messages.<br></li><br>
+
+	
+	
+</ul>
+<p><b>Caveats/Known Bugs:</b></p><ul><li>None.</li></ul>
+<p><b>Sample:</b></p>
+<p>The following command sends all syslog messages to a remote server via TCP port 10514.</p>
+<textarea rows="5" cols="60">Module (path="builtin:ompipe")
+*.* action(type="ompipe" 
+Pipe="NameofPipe"
+)
+</textarea>
+
+<br><br>
+
+<p><b>Legacy Configuration Directives</b>:</p>
+<p>rsyslog has support for logging output to named pipes (fifos). A fifo or named pipe can be used as a destination for log messages by prepending a pipe symbol ("|'') to the name of the file. This is handy for debugging. Note that the fifo must be created with the mkfifo(1) command before rsyslogd is started.
+	
+</p>
+
+<p><b>Legacy Sample:</b></p>
+<p>The following command sends all syslog messages to a remote server via TCP port 10514.</p>
+<textarea rows="5" cols="60">$ModLoad ompipe
+*.* |/var/log/pipe
+</textarea>
+
+
+<p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>] [<a href="manual.html">manual 
+index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the
+<a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
+Copyright © 2008 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>. Released under the GNU GPL 
+version 3 or higher.</font></p>
+
+</body></html>

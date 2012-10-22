@@ -4,7 +4,7 @@
  *
  * File begun on 2007-07-25 by RGerhards
  *
- * Copyright 2007 Adiscon GmbH. This is Adiscon-exclusive code without any other
+ * Copyright 2007-2012 Adiscon GmbH. This is Adiscon-exclusive code without any other
  * contributions. *** GPLv3 ***
  *
  * This file is part of the rsyslog runtime library.
@@ -353,6 +353,24 @@ finalize_it:\
 }
 
 
+/* newInpInst()
+ * This is basically the equivalent to newActInst() for creating input
+ * module (listener) instances.
+ */
+#define BEGINnewInpInst \
+static rsRetVal newInpInst(struct nvlst *lst)\
+{\
+	DEFiRet;
+
+#define CODESTARTnewInpInst \
+
+#define CODE_STD_FINALIZERnewInpInst
+
+#define ENDnewInpInst \
+	RETiRet;\
+}
+
+
 /* tryResume()
  * This entry point is called to check if a module can resume operations. This
  * happens when a module requested that it be suspended. In suspended state,
@@ -503,12 +521,30 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 	} \
 	CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES 
 
+/* the following block is to be added for modules that support v2
+ * module global parameters [module(...)]
+ */
+#define CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES \
+	  else if(!strcmp((char*) name, "setModCnf")) {\
+		*pEtryPoint = setModCnf;\
+	} \
+
 /* the following block is to be added for output modules that support the v2
  * config system. The config name is also provided.
  */
 #define CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES \
 	  else if(!strcmp((char*) name, "newActInst")) {\
 		*pEtryPoint = newActInst;\
+	} \
+	CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES 
+
+
+/* the following block is to be added for input modules that support the v2
+ * config system. The config name is also provided.
+ */
+#define CODEqueryEtryPt_STD_CONF2_IMOD_QUERIES \
+	  else if(!strcmp((char*) name, "newInpInst")) {\
+		*pEtryPoint = newInpInst;\
 	} \
 	CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES 
 
@@ -689,6 +725,28 @@ static rsRetVal beginCnfLoad(modConfData_t **ptr, __attribute__((unused)) rsconf
 
 #define ENDbeginCnfLoad \
 	*ptr = pModConf;\
+	RETiRet;\
+}
+
+
+/* setModCnf()
+ * This function permits to set module global parameters via the v2 config
+ * interface. It may be called multiple times, but parameters must not be
+ * set in a conflicting way. The module must use its current config load
+ * context when processing the directives.
+ * Note that lst may be NULL, especially if the module is loaded via the
+ * legacy config system. The module must check for this.
+ * NOTE: This entry point must only be implemented if module global
+ * parameters are actually required.
+ */
+#define BEGINsetModCnf \
+static rsRetVal setModCnf(struct nvlst *lst)\
+{\
+	DEFiRet;
+
+#define CODESTARTsetModCnf 
+
+#define ENDsetModCnf \
 	RETiRet;\
 }
 

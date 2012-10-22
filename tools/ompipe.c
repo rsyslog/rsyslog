@@ -65,10 +65,6 @@ DEF_OMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
 
 
-/* globals for default values */
-/* end globals for default values */
-
-
 typedef struct _instanceData {
 	uchar	*pipe;	/* pipe or template name (display only) */
 	uchar	*tplName;       /* format template to use */
@@ -82,6 +78,16 @@ typedef struct configSettings_s {
 static configSettings_t __attribute__((unused)) cs;
 
 /* tables for interfacing with the v6 config system */
+/* module-global parameters */
+static struct cnfparamdescr modpdescr[] = {
+	{ "template", eCmdHdlrGetWord, 0 },
+};
+static struct cnfparamblk modpblk =
+	{ CNFPARAMBLK_VERSION,
+	  sizeof(modpdescr)/sizeof(struct cnfparamdescr),
+	  modpdescr
+	};
+
 /* action (instance) parameters */
 static struct cnfparamdescr actpdescr[] = {
 	{ "pipe", eCmdHdlrString, CNFPARAM_REQUIRED },
@@ -92,6 +98,25 @@ static struct cnfparamblk actpblk =
 	  sizeof(actpdescr)/sizeof(struct cnfparamdescr),
 	  actpdescr
 	};
+
+struct modConfData_s {
+	rsconf_t *pConf;	/* our overall config object */
+	uchar 	*tplName;	/* default template */
+};
+
+static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
+static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current exec process */
+
+/* this function gets the default template */
+static inline uchar*
+getDfltTpl(void)
+{
+	if(loadModConf != NULL && loadModConf->tplName != NULL)
+		return loadModConf->tplName;
+	else
+		return (uchar*)"RSYSLOG_FileFormat";
+}
+
 
 BEGINinitConfVars		/* (re)set config variables to default values */
 CODESTARTinitConfVars 
@@ -180,6 +205,71 @@ finalize_it:
 	RETiRet;
 }
 
+
+BEGINbeginCnfLoad
+CODESTARTbeginCnfLoad
+	loadModConf = pModConf;
+	pModConf->pConf = pConf;
+	pModConf->tplName = NULL;
+ENDbeginCnfLoad
+
+BEGINsetModCnf
+	struct cnfparamvals *pvals = NULL;
+	int i;
+CODESTARTsetModCnf
+	pvals = nvlstGetParams(lst, &modpblk, NULL);
+	if(pvals == NULL) {
+		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "error processing module "
+				"config parameters [module(...)]");
+		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
+
+	if(Debug) {
+		dbgprintf("module (global) param blk for ompipe:\n");
+		cnfparamsPrint(&modpblk, pvals);
+	}
+
+	for(i = 0 ; i < modpblk.nParams ; ++i) {
+		if(!pvals[i].bUsed)
+			continue;
+		if(!strcmp(modpblk.descr[i].name, "template")) {
+			loadModConf->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+			if(pszFileDfltTplName != NULL) {
+				errmsg.LogError(0, RS_RET_DUP_PARAM, "ompipe: warning: default template "
+						"was already set via legacy directive - may lead to inconsistent "
+						"results.");
+			}
+		} else {
+			dbgprintf("ompipe: program error, non-handled "
+			  "param '%s' in beginCnfLoad\n", modpblk.descr[i].name);
+		}
+	}
+finalize_it:
+	if(pvals != NULL)
+		cnfparamvalsDestruct(pvals, &modpblk);
+ENDsetModCnf
+
+BEGINendCnfLoad
+CODESTARTendCnfLoad
+	loadModConf = NULL; /* done loading */
+	/* free legacy config vars */
+	free(pszFileDfltTplName);
+	pszFileDfltTplName = NULL;
+ENDendCnfLoad
+
+BEGINcheckCnf
+CODESTARTcheckCnf
+ENDcheckCnf
+
+BEGINactivateCnf
+CODESTARTactivateCnf
+	runModConf = pModConf;
+ENDactivateCnf
+
+BEGINfreeCnf
+CODESTARTfreeCnf
+	free(pModConf->tplName);
+ENDfreeCnf
 
 BEGINcreateInstance
 CODESTARTcreateInstance
@@ -273,7 +363,7 @@ CODESTARTparseSelectorAct
 	CHKmalloc(pData->pipe = malloc(512));
 	++p;
 	CHKiRet(cflineParseFileName(p, (uchar*) pData->pipe, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS,
-				       (pszFileDfltTplName == NULL) ? (uchar*)"RSYSLOG_FileFormat" : pszFileDfltTplName));
+				       getDfltTpl()));
 		
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
@@ -297,7 +387,9 @@ BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
 CODEqueryEtryPt_doHUP
+CODEqueryEtryPt_STD_CONF2_QUERIES
 CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES 
+CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 ENDqueryEtryPt
 

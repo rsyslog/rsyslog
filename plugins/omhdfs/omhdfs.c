@@ -67,8 +67,8 @@ typedef struct configSettings_s {
 	uchar *dfltTplName;	/* default template name to use */
 	int hdfsPort;
 } configSettings_t;
+static configSettings_t cs;
 
-SCOPING_SUPPORT; /* must be set AFTER configSettings_t is defined */
 
 BEGINinitConfVars		/* (re)set config variables to default values */
 CODESTARTinitConfVars 

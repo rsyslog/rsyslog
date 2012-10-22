@@ -31,6 +31,10 @@ html_files = \
 	version_naming.html \
 	contributors.html \
 	dev_queue.html \
+	ompipe.html \
+	omfwd.html \
+	omfile.html \
+	omusrmsg.html \
 	omstdout.html \
 	omudpspoof.html \
 	omruleset.html \

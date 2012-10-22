@@ -6,7 +6,7 @@
  *
  * File begun on 2007-12-21 by RGerhards (extracted from syslogd.c)
  *
- * Copyright 2007-2011 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2012 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -80,6 +80,7 @@ static struct lstn_s {
 	STATSCOUNTER_DEF(ctrSubmit, mutCtrSubmit)
 } *lcnfRoot = NULL, *lcnfLast = NULL;
 
+static int bLegacyCnfModGlobalsPermitted;/* are legacy module-global config parameters permitted? */
 static int bDoACLCheck;			/* are ACL checks neeed? Cached once immediately before listener startup */
 static int iMaxLine;			/* maximum UDP message size supported */
 static time_t ttLastDiscard = 0;	/* timestamp when a message from a non-permitted sender was last discarded
@@ -118,13 +119,65 @@ struct modConfData_s {
 	int iSchedPolicy;		/* scheduling policy as SCHED_xxx */
 	int iSchedPrio;			/* scheduling priority */
 	int iTimeRequery;		/* how often is time to be queried inside tight recv loop? 0=always */
+	sbool configSetViaV2Method;
 };
 static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
 static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current load process */
 
+/* module-global parameters */
+static struct cnfparamdescr modpdescr[] = {
+	{ "schedulingpolicy", eCmdHdlrGetWord, 0 },
+	{ "schedulingpriority", eCmdHdlrInt, 0 },
+	{ "timerequery", eCmdHdlrInt, 0 }
+};
+static struct cnfparamblk modpblk =
+	{ CNFPARAMBLK_VERSION,
+	  sizeof(modpdescr)/sizeof(struct cnfparamdescr),
+	  modpdescr
+	};
+
+/* input instance parameters */
+static struct cnfparamdescr inppdescr[] = {
+	{ "port", eCmdHdlrString, CNFPARAM_REQUIRED }, /* legacy: InputTCPServerRun */
+	{ "address", eCmdHdlrString, 0 },
+	{ "ruleset", eCmdHdlrString, 0 }
+};
+static struct cnfparamblk inppblk =
+	{ CNFPARAMBLK_VERSION,
+	  sizeof(inppdescr)/sizeof(struct cnfparamdescr),
+	  inppdescr
+	};
+
 #include "im-helper.h" /* must be included AFTER the type definitions! */
 
+/* create input instance, set default paramters, and
+ * add it to the list of instances.
+ */
+static rsRetVal
+createInstance(instanceConf_t **pinst)
+{
+	instanceConf_t *inst;
+	DEFiRet;
+	CHKmalloc(inst = MALLOC(sizeof(instanceConf_t)));
+	inst->next = NULL;
+	inst->pBindRuleset = NULL;
 
+	inst->pszBindPort = NULL;
+	inst->pszBindAddr = NULL;
+	inst->pszBindRuleset = NULL;
+
+	/* node created, let's add to config */
+	if(loadModConf->tail == NULL) {
+		loadModConf->tail = loadModConf->root = inst;
+	} else {
+		loadModConf->tail->next = inst;
+		loadModConf->tail = inst;
+	}
+
+	*pinst = inst;
+finalize_it:
+	RETiRet;
+}
 
 /* This function is called when a new listener instace shall be added to 
  * the current config object via the legacy config system. It just shuffles
@@ -136,7 +189,7 @@ static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	instanceConf_t *inst;
 	DEFiRet;
 
-	CHKmalloc(inst = MALLOC(sizeof(instanceConf_t)));
+	CHKiRet(createInstance(&inst));
 	CHKmalloc(inst->pszBindPort = ustrdup((pNewVal == NULL || *pNewVal == '\0')
 				 	       ? (uchar*) "514" : pNewVal));
 	if((cs.pszBindAddr == NULL) || (cs.pszBindAddr[0] == '\0')) {
@@ -148,16 +201,6 @@ static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 		inst->pszBindRuleset = NULL;
 	} else {
 		CHKmalloc(inst->pszBindRuleset = ustrdup(cs.pszBindRuleset));
-	}
-	inst->pBindRuleset = NULL;
-	inst->next = NULL;
-
-	/* node created, let's add to config */
-	if(loadModConf->tail == NULL) {
-		loadModConf->tail = loadModConf->root = inst;
-	} else {
-		loadModConf->tail->next = inst;
-		loadModConf->tail = inst;
 	}
 
 finalize_it:
@@ -185,52 +228,6 @@ addListner(instanceConf_t *inst)
 	/* check which address to bind to. We could do this more compact, but have not
 	 * done so in order to make the code more readable. -- rgerhards, 2007-12-27
 	 */
-#if 0 //<<<<<<< HEAD
-
-	DBGPRINTF("imudp: trying to open port at %s:%s.\n",
-		  (inst->pszBindAddr == NULL) ? (uchar*)"*" : inst->pszBindAddr, inst->pszBindPort);
-
-	newSocks = net.create_udp_socket(inst->pszBindAddr, inst->pszBindPort, 1);
-	if(newSocks != NULL) {
-		/* we now need to add the new sockets to the existing set */
-		if(udpLstnSocks == NULL) {
-			/* esay, we can just replace it */
-			udpLstnSocks = newSocks;
-			CHKmalloc(udpRulesets = (ruleset_t**) MALLOC(sizeof(ruleset_t*) * (newSocks[0] + 1)));
-			for(iDst = 1 ; iDst <= newSocks[0] ; ++iDst)
-				udpRulesets[iDst] = inst->pBindRuleset;
-		} else {
-			/* we need to add them */
-			tmpSocks = (int*) MALLOC(sizeof(int) * (1 + newSocks[0] + udpLstnSocks[0]));
-			tmpRulesets = (ruleset_t**) MALLOC(sizeof(ruleset_t*) * (1 + newSocks[0] + udpLstnSocks[0]));
-			if(tmpSocks == NULL || tmpRulesets == NULL) {
-				DBGPRINTF("out of memory trying to allocate udp listen socket array\n");
-				/* in this case, we discard the new sockets but continue with what we
-				 * already have
-				 */
-				free(newSocks);
-				free(tmpSocks);
-				free(tmpRulesets);
-				ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-			} else {
-				/* ready to copy */
-				iDst = 1;
-				for(iSrc = 1 ; iSrc <= udpLstnSocks[0] ; ++iSrc, ++iDst) {
-					tmpSocks[iDst] = udpLstnSocks[iSrc];
-					tmpRulesets[iDst] = udpRulesets[iSrc];
-				}
-				for(iSrc = 1 ; iSrc <= newSocks[0] ; ++iSrc, ++iDst) {
-					tmpSocks[iDst] = newSocks[iSrc];
-					tmpRulesets[iDst] = inst->pBindRuleset;
-				}
-				tmpSocks[0] = udpLstnSocks[0] + newSocks[0];
-				free(newSocks);
-				free(udpLstnSocks);
-				udpLstnSocks = tmpSocks;
-				free(udpRulesets);
-				udpRulesets = tmpRulesets;
-			}
-#else //=======
 	if(inst->pszBindAddr == NULL)
 		bindAddr = NULL;
 	else if(inst->pszBindAddr[0] == '*' && inst->pszBindAddr[1] == '\0')
@@ -270,7 +267,6 @@ addListner(instanceConf_t *inst)
 			else {
 				lcnfLast->next = newlcnfinfo;
 				lcnfLast = newlcnfinfo;
-#endif //>>>>>>> ef34821a2737799f48c3032b9616418e4f7fa34f
 			}
 		}
 	}
@@ -668,10 +664,57 @@ rsRetVal rcvMainLoop(thrdInfo_t *pThrd)
 #endif /* #if HAVE_EPOLL_CREATE1 */
 
 
+BEGINnewInpInst
+	struct cnfparamvals *pvals;
+	instanceConf_t *inst;
+	int i;
+CODESTARTnewInpInst
+	DBGPRINTF("newInpInst (imudp)\n");
+
+	pvals = nvlstGetParams(lst, &inppblk, NULL);
+	if(pvals == NULL) {
+		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS,
+			        "imudp: required parameter are missing\n");
+		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
+
+	if(Debug) {
+		dbgprintf("input param blk in imudp:\n");
+		cnfparamsPrint(&inppblk, pvals);
+	}
+
+	CHKiRet(createInstance(&inst));
+
+	for(i = 0 ; i < inppblk.nParams ; ++i) {
+		if(!pvals[i].bUsed)
+			continue;
+		if(!strcmp(inppblk.descr[i].name, "port")) {
+			inst->pszBindPort = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(inppblk.descr[i].name, "address")) {
+			inst->pszBindAddr = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(inppblk.descr[i].name, "ruleset")) {
+			inst->pszBindRuleset = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else {
+			dbgprintf("imudp: program error, non-handled "
+			  "param '%s'\n", inppblk.descr[i].name);
+		}
+	}
+finalize_it:
+CODE_STD_FINALIZERnewInpInst
+	cnfparamvalsDestruct(pvals, &inppblk);
+ENDnewInpInst
+
+
 BEGINbeginCnfLoad
 CODESTARTbeginCnfLoad
 	loadModConf = pModConf;
 	pModConf->pConf = pConf;
+	/* init our settings */
+	loadModConf->configSetViaV2Method = 0;
+	loadModConf->iTimeRequery = TIME_REQUERY_DFLT;
+	loadModConf->iSchedPrio = SCHED_PRIO_UNSET;
+	loadModConf->pszSchedPolicy = NULL;
+	bLegacyCnfModGlobalsPermitted = 1;
 	/* init legacy config vars */
 	cs.pszBindRuleset = NULL;
 	cs.pszSchedPolicy = NULL;
@@ -681,21 +724,57 @@ CODESTARTbeginCnfLoad
 ENDbeginCnfLoad
 
 
+BEGINsetModCnf
+	struct cnfparamvals *pvals = NULL;
+	int i;
+CODESTARTsetModCnf
+	pvals = nvlstGetParams(lst, &modpblk, NULL);
+	if(pvals == NULL) {
+		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "imudp: error processing module "
+				"config parameters [module(...)]");
+		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
+
+	if(Debug) {
+		dbgprintf("module (global) param blk for imudp:\n");
+		cnfparamsPrint(&modpblk, pvals);
+	}
+
+	for(i = 0 ; i < modpblk.nParams ; ++i) {
+		if(!pvals[i].bUsed)
+			continue;
+		if(!strcmp(modpblk.descr[i].name, "timerequery")) {
+			loadModConf->iTimeRequery = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "schedulingpriority")) {
+			loadModConf->iSchedPrio = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "schedulingpolicy")) {
+			loadModConf->pszSchedPolicy = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else {
+			dbgprintf("imudp: program error, non-handled "
+			  "param '%s' in beginCnfLoad\n", modpblk.descr[i].name);
+		}
+	}
+
+	/* remove all of our legacy handlers, as they can not used in addition
+	 * the the new-style config method.
+	 */
+	bLegacyCnfModGlobalsPermitted = 0;
+	loadModConf->configSetViaV2Method = 1;
+
+finalize_it:
+	if(pvals != NULL)
+		cnfparamvalsDestruct(pvals, &modpblk);
+ENDsetModCnf
+
 BEGINendCnfLoad
 CODESTARTendCnfLoad
-	/* persist module-specific settings from legacy config system
-	 * TODO: when we add the new config system, we must decide on priority
-	 * already-set module options should not be overwritable by the legacy
-	 * system (though this is debatable and should at least trigger an error
-	 * message if the equivalent legacy option is selected as well)
-	 * rgerhards, 2011-05-04
-	 */
-	loadModConf->iSchedPrio = cs.iSchedPrio;
-	loadModConf->iTimeRequery = cs.iTimeRequery;
-	if((cs.pszSchedPolicy == NULL) || (cs.pszSchedPolicy[0] == '\0')) {
-		loadModConf->pszSchedPolicy = NULL;
-	} else {
-		CHKmalloc(loadModConf->pszSchedPolicy = ustrdup(cs.pszSchedPolicy));
+	if(!loadModConf->configSetViaV2Method) {
+		/* persist module-specific settings from legacy config system */
+		loadModConf->iSchedPrio = cs.iSchedPrio;
+		loadModConf->iTimeRequery = cs.iTimeRequery;
+		if((cs.pszSchedPolicy != NULL) && (cs.pszSchedPolicy[0] != '\0')) {
+			CHKmalloc(loadModConf->pszSchedPolicy = ustrdup(cs.pszSchedPolicy));
+		}
 	}
 
 finalize_it:
@@ -751,7 +830,16 @@ ENDactivateCnf
 
 
 BEGINfreeCnf
+	instanceConf_t *inst, *del;
 CODESTARTfreeCnf
+	for(inst = pModConf->root ; inst != NULL ; ) {
+		free(inst->pszBindPort);
+		free(inst->pszBindAddr);
+		free(inst->pBindRuleset);
+		del = inst;
+		inst = inst->next;
+		free(del);
+	}
 ENDfreeCnf
 
 /* This function is called to gather input.
@@ -819,24 +907,20 @@ BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_IMOD_QUERIES
 CODEqueryEtryPt_STD_CONF2_QUERIES
+CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
 CODEqueryEtryPt_STD_CONF2_PREPRIVDROP_QUERIES
+CODEqueryEtryPt_STD_CONF2_IMOD_QUERIES
 CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
 ENDqueryEtryPt
 
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
-	if(cs.pszBindAddr != NULL) {
-		free(cs.pszBindAddr);
-		cs.pszBindAddr = NULL;
-	}
-	if(cs.pszSchedPolicy != NULL) {
-		free(cs.pszSchedPolicy);
-		cs.pszSchedPolicy = NULL;
-	}
-	if(cs.pszBindRuleset != NULL) {
-		free(cs.pszBindRuleset);
-		cs.pszBindRuleset = NULL;
-	}
+	free(cs.pszBindAddr);
+	cs.pszBindAddr = NULL;
+	free(cs.pszSchedPolicy);
+	cs.pszSchedPolicy = NULL;
+	free(cs.pszBindRuleset);
+	cs.pszBindRuleset = NULL;
 	cs.iSchedPrio = SCHED_PRIO_UNSET;
 	cs.iTimeRequery = TIME_REQUERY_DFLT;/* the default is to query only every second time */
 	return RS_RET_OK;
@@ -867,12 +951,16 @@ CODEmodInit_QueryRegCFSLineHdlr
 		addInstance, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"udpserveraddress", 0, eCmdHdlrGetWord,
 		NULL, &cs.pszBindAddr, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"imudpschedulingpolicy", 0, eCmdHdlrGetWord,
-		NULL, &cs.pszSchedPolicy, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"imudpschedulingpriority", 0, eCmdHdlrInt,
-		NULL, &cs.iSchedPrio, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"udpservertimerequery", 0, eCmdHdlrInt,
-		NULL, &cs.iTimeRequery, STD_LOADABLE_MODULE_ID));
+	/* module-global config params - will be disabled in configs that are loaded
+	 * via module(...).
+	 */
+	CHKiRet(regCfSysLineHdlr2((uchar *)"imudpschedulingpolicy", 0, eCmdHdlrGetWord,
+		NULL, &cs.pszSchedPolicy, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
+	CHKiRet(regCfSysLineHdlr2((uchar *)"imudpschedulingpriority", 0, eCmdHdlrInt,
+		NULL, &cs.iSchedPrio, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
+	CHKiRet(regCfSysLineHdlr2((uchar *)"udpservertimerequery", 0, eCmdHdlrInt,
+		NULL, &cs.iTimeRequery, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
+
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
 		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit

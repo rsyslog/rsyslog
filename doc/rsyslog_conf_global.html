@@ -52,10 +52,10 @@ This directive will timeout previous messages seen if they are older
 than 20 minutes. In the example above, the count would now be always 1
 and consequently no rule would ever be triggered.
 
-<li>$ActionFileDefaultTemplate [templateName] - sets a new default template for file actions</li>
-<li>$ActionFileEnableSync [on/<span style="font-weight: bold;">off</span>] - enables file
+<li><a href="omfile.html">$ActionFileDefaultTemplate</a> [templateName] - sets a new default template for file actions</li>
+<li><a href="omfile.html">$ActionFileEnableSync</a> [on/<span style="font-weight: bold;">off</span>] - enables file
 syncing capability of omfile</li>
-<li>$ActionForwardDefaultTemplate [templateName] - sets a new
+<li><a href="omfwd.html">$ActionForwardDefaultTemplate</a> [templateName] - sets a new
 default template for UDP and plain TCP forwarding action</li>
 <li>$ActionGSSForwardDefaultTemplate [templateName] - sets a
 new default template for GSS-API forwarding action</li>
@@ -93,23 +93,23 @@ default 60000 (1 minute)]</li>
 <li>$ActionQueueWorkerThreadMinumumMessages &lt;number&gt;, default 100</li>
 <li><a href="rsconf1_actionresumeinterval.html">$ActionResumeInterval</a></li>
 <li>$ActionResumeRetryCount &lt;number&gt; [default 0, -1 means eternal]</li>
-<li>$ActionSendResendLastMsgOnReconnect &lt;[on/<b>off</b>]&gt; specifies if the last message is to be resend when a connecition breaks and has been reconnected. May increase reliability, but comes at the risk of message duplication.
-<li>$ActionSendStreamDriver &lt;driver basename&gt; just like $DefaultNetstreamDriver, but for the specific action</li>
-<li>$ActionSendStreamDriverMode &lt;mode&gt;, default 0, mode to use with the stream driver (driver-specific)</li>
-<li>$ActionSendStreamDriverAuthMode &lt;mode&gt;,&nbsp; authentication mode to use with the stream driver. Note that this directive requires TLS
+<li><a href="omfwd.html">$ActionSendResendLastMsgOnReconnect</a> &lt;[on/<b>off</b>]&gt; specifies if the last message is to be resend when a connecition breaks and has been reconnected. May increase reliability, but comes at the risk of message duplication.
+<li><a href="omfwd.html">$ActionSendStreamDriver</a> &lt;driver basename&gt; just like $DefaultNetstreamDriver, but for the specific action</li>
+<li><a href="omfwd.html">$ActionSendStreamDriverMode</a> &lt;mode&gt;, default 0, mode to use with the stream driver (driver-specific)</li>
+<li><a href="omfwd.html">$ActionSendStreamDriverAuthMode</a> &lt;mode&gt;,&nbsp; authentication mode to use with the stream driver. Note that this directive requires TLS
 netstream drivers. For all others, it will be ignored.
 (driver-specific)</li>
-<li>$ActionSendStreamDriverPermittedPeer &lt;ID&gt;,&nbsp; accepted fingerprint (SHA1) or name of remote peer. Note that this directive requires TLS
+<li><a href="omfwd.html">$ActionSendStreamDriverPermittedPeer</a> &lt;ID&gt;,&nbsp; accepted fingerprint (SHA1) or name of remote peer. Note that this directive requires TLS
 netstream drivers. For all others, it will be ignored.
 (driver-specific) -<span style="font-weight: bold;"> directive may go away</span>!</li>
-<li><b>$ActionSendTCPRebindInterval</b> nbr</a>- [available since 4.5.1] - instructs the TCP send
+<li><a href="omfwd.html"><b>$ActionSendTCPRebindInterval</b> nbr</a>- [available since 4.5.1] - instructs the TCP send
 action to close and re-open the connection to the remote host every nbr of messages sent.
 Zero, the default, means that no such processing is done. This directive is useful for
 use with load-balancers. Note that there is some performance overhead associated with it,
 so it is advisable to not too often &quot;rebind&quot; the connection (what
 &quot;too often&quot; actually means depends on your configuration, a rule of thumb is
 that it should be not be much more often than once per second).</li>
-<li><b>$ActionSendUDPRebindInterval</b> nbr</a>- [available since 4.3.2] - instructs the UDP send
+<li><a href="omfwd.html"><b>$ActionSendUDPRebindInterval</b> nbr</a>- [available since 4.3.2] - instructs the UDP send
 action to rebind the send socket every nbr of messages sent. Zero, the default, means
 that no rebind is done. This directive is useful for use with load-balancers.</li>
 <li><b>$ActionWriteAllMarkMessages</b> [on/<b>off</b>]- [available since 5.1.5] - normally, mark messages
@@ -133,22 +133,22 @@ functionality.
 the provided <i>name</i> (the default default ruleset is named
 &quot;RSYSLOG_DefaultRuleset&quot;).  It is advised to also read
 our paper on <a href="multi_ruleset.html">using multiple rule sets in rsyslog</a>.</li>
-<li><b>$CreateDirs</b> [<b>on</b>/off] - create directories on an as-needed basis</li>
-<li><a href="rsconf1_dircreatemode.html">$DirCreateMode</a></li>
-<li><a href="rsconf1_dirgroup.html">$DirGroup</a></li>
-<li><a href="rsconf1_dirowner.html">$DirOwner</a></li>
+<li><a href="omfile.html"><b>$CreateDirs</b></a> [<b>on</b>/off] - create directories on an as-needed basis</li>
+<li><a href="omfile.html">$DirCreateMode</a></li>
+<li><a href="omfile.html">$DirGroup</a></li>
+<li><a href="omfile.html">$DirOwner</a></li>
 <li><a href="rsconf1_dropmsgswithmaliciousdnsptrrecords.html">$DropMsgsWithMaliciousDnsPTRRecords</a></li>
 <li><a href="rsconf1_droptrailinglfonreception.html">$DropTrailingLFOnReception</a></li>
-<li><a href="rsconf1_dynafilecachesize.html">$DynaFileCacheSize</a></li>
+<li><a href="omfile.html">$DynaFileCacheSize</a></li>
 <li><a href="rsconf1_escape8bitcharsonreceive.html">$Escape8BitCharactersOnReceive</a></li>
 <li><a href="rsconf1_escapecontrolcharactersonreceive.html">$EscapeControlCharactersOnReceive</a></li>
 <li><b>$EscapeControlCharactersOnReceive</b> [<b>on</b>|off] - escape USASCII HT character</li>
 <li>$SpaceLFOnReceive [on/<b>off</b>] - instructs rsyslogd to replace LF with spaces during message reception (sysklogd compatibility aid)</li>
 <li>$ErrorMessagesToStderr [<b>on</b>|off] - direct rsyslogd error message to stderr (in addition to other targets)</li>
-<li><a href="rsconf1_failonchownfailure.html">$FailOnChownFailure</a></li>
-<li><a href="rsconf1_filecreatemode.html">$FileCreateMode</a></li>
-<li><a href="rsconf1_filegroup.html">$FileGroup</a></li>
-<li><a href="rsconf1_fileowner.html">$FileOwner</a></li>
+<li><a href="omfile.html">$FailOnChownFailure</a></li>
+<li><a href="omfile.html">$FileCreateMode</a></li>
+<li><a href="omfile.html">$FileGroup</a></li>
+<li><a href="omfile.html">$FileOwner</a></li>
 <li><a href="rsconf1_generateconfiggraph.html">$GenerateConfigGraph</a></li>
 <li><a href="rsconf1_gssforwardservicename.html">$GssForwardServiceName</a></li>
 <li><a href="rsconf1_gsslistenservicename.html">$GssListenServiceName</a></li>
@@ -224,7 +224,7 @@ supported in order to be compliant to the upcoming new syslog RFC series.
 <li><a href="rsconf1_maxopenfiles.html">$MaxOpenFiles</a></li>
 <li><a href="rsconf1_moddir.html">$ModDir</a></li>
 <li><a href="rsconf1_modload.html">$ModLoad</a></li>
-<li><b>$OMFileAsyncWriting</b> [on/<b>off</b>], if turned on, the files will be written
+<li><a href="omfile.html"><b>$OMFileAsyncWriting</b></a> [on/<b>off</b>], if turned on, the files will be written
 in asynchronous mode via a separate thread. In that case, double buffers will be used so
 that one buffer can be filled while the other buffer is being written. Note that in order
 to enable $OMFileFlushInterval, $OMFileAsyncWriting must be set to "on". Otherwise, the flush
@@ -232,11 +232,11 @@ interval will be ignored. Also note that when $OMFileFlushOnTXEnd is "on" but
 $OMFileAsyncWriting is off, output will only be written when the buffer is full. This may take
 several hours, or even require a rsyslog shutdown. However, a buffer flush can be forced
 in that case by sending rsyslogd a HUP signal.
-<li><b>$OMFileZipLevel</b> 0..9  [default 0] - if greater 0, turns on gzip compression
+<li><a href="omfile.html"><b>$OMFileZipLevel</b></a> 0..9  [default 0] - if greater 0, turns on gzip compression
 of the output file. The higher the number, the better the compression, but also the
 more CPU is required for zipping.</li>
-<li><b>$OMFileIOBufferSize</b> &lt;size_nbr&gt;, default 4k, size of the buffer used to writing output data. The larger the buffer, the potentially better performance is. The default of 4k is quite conservative, it is useful to go up to 64k, and 128K if you used gzip compression (then, even higher sizes may make sense)</li>
-<li><b>$OMFileFlushOnTXEnd</b> &lt;[<b>on</b>/off]&gt;, default on. Omfile has the
+<li><a href="omfile.html"><b>$OMFileIOBufferSize</b></a> &lt;size_nbr&gt;, default 4k, size of the buffer used to writing output data. The larger the buffer, the potentially better performance is. The default of 4k is quite conservative, it is useful to go up to 64k, and 128K if you used gzip compression (then, even higher sizes may make sense)</li>
+<li><a href="omfile.html"><b>$OMFileFlushOnTXEnd</b></a> &lt;[<b>on</b>/off]&gt;, default on. Omfile has the
 capability to
 write output using a buffered writer. Disk writes are only done when the buffer is
 full. So if an error happens during that write, data is potentially lost. In cases where
@@ -246,7 +246,7 @@ error recovery thus can handle write errors without data loss. Note that this op
 severely reduces the effect of zip compression and should be switched to off
 for that use case. Note that the default -on- is primarily an aid to preserve
 the traditional syslogd behaviour.</li>
-<li><a href="rsconf1_omfileforcechown.html">$omfileForceChown</a> - force ownership change for all files</li>
+<li><a href="omfile.html">$omfileForceChown</a> - force ownership change for all files</li>
 <li><b>$RepeatedMsgContainsOriginalMsg</b> [on/<b>off</b>] - "last message repeated n times" messages, if generated,
 have a different format that contains the message that is being repeated.
 Note that only the first "n" characters are included, with n to be at least 80 characters, most

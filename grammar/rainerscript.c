@@ -41,6 +41,11 @@
 #include "grammar.h"
 #include "queue.h"
 #include "srUtils.h"
+#include "regexp.h"
+#include "obj.h"
+
+DEFobjCurrIf(obj)
+DEFobjCurrIf(regexp)
 
 void
 readConfFile(FILE *fp, es_str_t **str)
@@ -91,6 +96,62 @@ readConfFile(FILE *fp, es_str_t **str)
 	/* indicate end of buffer to flex */
 	es_addChar(str, '\0');
 	es_addChar(str, '\0');
+}
+
+struct objlst*
+objlstNew(struct cnfobj *o)
+{
+	struct objlst *lst;
+
+	if((lst = malloc(sizeof(struct objlst))) != NULL) {
+		lst->next = NULL;
+		lst->obj = o;
+	}
+dbgprintf("AAAA: creating new objlst\n");
+cnfobjPrint(o);
+
+	return lst;
+}
+
+/* add object to end of object list, always returns pointer to root object */
+struct objlst*
+objlstAdd(struct objlst *root, struct cnfobj *o)
+{
+	struct objlst *l;
+	struct objlst *newl;
+	
+	newl = objlstNew(o);
+	if(root == 0) {
+		root = newl;
+	} else { /* find last, linear search ok, as only during config phase */
+		for(l = root ; l->next != NULL ; l = l->next)
+			;
+		l->next = newl;
+	}
+	return root;
+}
+
+void
+objlstDestruct(struct objlst *lst)
+{
+	struct objlst *toDel;
+
+	while(lst != NULL) {
+		toDel = lst;
+		lst = lst->next;
+		cnfobjDestruct(toDel->obj);
+		free(toDel);
+	}
+}
+
+void
+objlstPrint(struct objlst *lst)
+{
+	dbgprintf("objlst %p:\n", lst);
+	while(lst != NULL) {
+		cnfobjPrint(lst->obj);
+		lst = lst->next;
+	}
 }
 
 struct nvlst*
@@ -210,13 +271,14 @@ nvlstChkUnused(struct nvlst *lst)
 }
 
 
-static inline void
+static inline int
 doGetSize(struct nvlst *valnode, struct cnfparamdescr *param,
 	  struct cnfparamvals *val)
 {
 	unsigned char *c;
 	es_size_t i;
 	long long n;
+	int r;
 	c = es_getBufAddr(valnode->val.d.estr);
 	n = 0;
 	i = 0;
@@ -250,17 +312,21 @@ doGetSize(struct nvlst *valnode, struct cnfparamdescr *param,
 	if(i == es_strlen(valnode->val.d.estr)) {
 		val->val.datatype = 'N';
 		val->val.d.n = n;
+		r = 1;
 	} else {
 		parser_errmsg("parameter '%s' does not contain a valid size",
 			      param->name);
+		r = 0;
 	}
+	return r;
 }
 
 
-static inline void
+static inline int
 doGetBinary(struct nvlst *valnode, struct cnfparamdescr *param,
 	  struct cnfparamvals *val)
 {
+	int r = 1;
 	val->val.datatype = 'N';
 	if(!es_strbufcmp(valnode->val.d.estr, (unsigned char*) "on", 2)) {
 		val->val.d.n = 1;
@@ -270,14 +336,17 @@ doGetBinary(struct nvlst *valnode, struct cnfparamdescr *param,
 		parser_errmsg("parameter '%s' must be \"on\" or \"off\" but "
 		  "is neither. Results unpredictable.", param->name);
 		val->val.d.n = 0;
+		r = 0;
 	}
+	return r;
 }
 
-static inline void
+static inline int
 doGetQueueType(struct nvlst *valnode, struct cnfparamdescr *param,
 	  struct cnfparamvals *val)
 {
 	char *cstr;
+	int r = 1;
 	if(!es_strcasebufcmp(valnode->val.d.estr, (uchar*)"fixedarray", 10)) {
 		val->val.d.n = QUEUETYPE_FIXED_ARRAY;
 	} else if(!es_strcasebufcmp(valnode->val.d.estr, (uchar*)"linkedlist", 10)) {
@@ -291,15 +360,17 @@ doGetQueueType(struct nvlst *valnode, struct cnfparamdescr *param,
 		parser_errmsg("param '%s': unknown queue type: '%s'",
 			      param->name, cstr);
 		free(cstr);
+		r = 0;
 	}
 	val->val.datatype = 'N';
+	return r;
 }
 
 
 /* A file create-mode must be a four-digit octal number
  * starting with '0'.
  */
-static inline void
+static inline int
 doGetFileCreateMode(struct nvlst *valnode, struct cnfparamdescr *param,
 	  struct cnfparamvals *val)
 {
@@ -328,13 +399,15 @@ doGetFileCreateMode(struct nvlst *valnode, struct cnfparamdescr *param,
 		param->name, cstr);
 		free(cstr);
 	}
+	return fmtOK;
 }
 
-static inline void
+static inline int
 doGetGID(struct nvlst *valnode, struct cnfparamdescr *param,
 	  struct cnfparamvals *val)
 {
 	char *cstr;
+	int r;
 	struct group *resultBuf;
 	struct group wrkBuf;
 	char stringBuf[2048]; /* 2048 has been proven to be large enough */
@@ -344,20 +417,24 @@ doGetGID(struct nvlst *valnode, struct cnfparamdescr *param,
 	if(resultBuf == NULL) {
 		parser_errmsg("parameter '%s': ID for group %s could not "
 		  "be found", param->name, cstr);
+		r = 0;
 	} else {
 		val->val.datatype = 'N';
 		val->val.d.n = resultBuf->gr_gid;
 		dbgprintf("param '%s': uid %d obtained for group '%s'\n",
 		   param->name, (int) resultBuf->gr_gid, cstr);
+		r = 1;
 	}
 	free(cstr);
+	return r;
 }
 
-static inline void
+static inline int
 doGetUID(struct nvlst *valnode, struct cnfparamdescr *param,
 	  struct cnfparamvals *val)
 {
 	char *cstr;
+	int r;
 	struct passwd *resultBuf;
 	struct passwd wrkBuf;
 	char stringBuf[2048]; /* 2048 has been proven to be large enough */
@@ -367,19 +444,22 @@ doGetUID(struct nvlst *valnode, struct cnfparamdescr *param,
 	if(resultBuf == NULL) {
 		parser_errmsg("parameter '%s': ID for user %s could not "
 		  "be found", param->name, cstr);
+		r = 0;
 	} else {
 		val->val.datatype = 'N';
 		val->val.d.n = resultBuf->pw_uid;
 		dbgprintf("param '%s': uid %d obtained for user '%s'\n",
 		   param->name, (int) resultBuf->pw_uid, cstr);
+		r = 1;
 	}
 	free(cstr);
+	return r;
 }
 
 /* note: we support all integer formats that es_str2num support,
  * so hex and octal representations are also valid.
  */
-static inline void
+static inline int
 doGetInt(struct nvlst *valnode, struct cnfparamdescr *param,
 	  struct cnfparamvals *val)
 {
@@ -393,13 +473,47 @@ doGetInt(struct nvlst *valnode, struct cnfparamdescr *param,
 	}
 	val->val.datatype = 'N';
 	val->val.d.n = n;
+	return bSuccess;
 }
 
-static inline void
+static inline int
+doGetNonNegInt(struct nvlst *valnode, struct cnfparamdescr *param,
+	  struct cnfparamvals *val)
+{
+	int bSuccess;
+
+	if((bSuccess = doGetInt(valnode, param, val))) {
+		if(val->val.d.n < 0) {
+			parser_errmsg("parameter '%s' cannot be less than zero (was %lld)",
+			  param->name, val->val.d.n);
+			bSuccess = 0;
+		}
+	}
+	return bSuccess;
+}
+
+static inline int
+doGetPositiveInt(struct nvlst *valnode, struct cnfparamdescr *param,
+	  struct cnfparamvals *val)
+{
+	int bSuccess;
+
+	if((bSuccess = doGetInt(valnode, param, val))) {
+		if(val->val.d.n < 1) {
+			parser_errmsg("parameter '%s' cannot be less than one (was %lld)",
+			  param->name, val->val.d.n);
+			bSuccess = 0;
+		}
+	}
+	return bSuccess;
+}
+
+static inline int
 doGetWord(struct nvlst *valnode, struct cnfparamdescr *param,
 	  struct cnfparamvals *val)
 {
 	es_size_t i;
+	int r = 1;
 	unsigned char *c;
 	val->val.datatype = 'S';
 	val->val.d.estr = es_newStr(32);
@@ -411,30 +525,36 @@ doGetWord(struct nvlst *valnode, struct cnfparamdescr *param,
 		parser_errmsg("parameter '%s' contains whitespace, which is not "
 		  "permitted - data after first whitespace ignored",
 		  param->name);
+		r = 0;
 	}
+	return r;
 }
 
-static inline void
+static inline int
 doGetChar(struct nvlst *valnode, struct cnfparamdescr *param,
 	  struct cnfparamvals *val)
 {
+	int r = 1;
 	if(es_strlen(valnode->val.d.estr) != 1) {
 		parser_errmsg("parameter '%s' must contain exactly one character "
 		  "but contains %d - cannot be processed",
 		  param->name, es_strlen(valnode->val.d.estr));
+		r = 0;
 	}
 	val->val.datatype = 'S';
 	val->val.d.estr = es_strdup(valnode->val.d.estr);
+	return r;
 }
 
 /* get a single parameter according to its definition. Helper to
- * nvlstGetParams.
+ * nvlstGetParams. returns 1 if success, 0 otherwise
  */
-static inline void
+static inline int
 nvlstGetParam(struct nvlst *valnode, struct cnfparamdescr *param,
 	       struct cnfparamvals *val)
 {
 	uchar *cstr;
+	int r;
 
 	dbgprintf("XXXX: in nvlstGetParam, name '%s', type %d, valnode->bUsed %d\n",
 		  param->name, (int) param->type, valnode->bUsed);
@@ -442,56 +562,68 @@ nvlstGetParam(struct nvlst *valnode, struct cnfparamdescr *param,
 	val->bUsed = 1;
 	switch(param->type) {
 	case eCmdHdlrQueueType:
-		doGetQueueType(valnode, param, val);
+		r = doGetQueueType(valnode, param, val);
 		break;
 	case eCmdHdlrUID:
-		doGetUID(valnode, param, val);
+		r = doGetUID(valnode, param, val);
 		break;
 	case eCmdHdlrGID:
-		doGetGID(valnode, param, val);
+		r = doGetGID(valnode, param, val);
 		break;
 	case eCmdHdlrBinary:
-		doGetBinary(valnode, param, val);
+		r = doGetBinary(valnode, param, val);
 		break;
 	case eCmdHdlrFileCreateMode:
-		doGetFileCreateMode(valnode, param, val);
+		r = doGetFileCreateMode(valnode, param, val);
 		break;
 	case eCmdHdlrInt:
-		doGetInt(valnode, param, val);
+		r = doGetInt(valnode, param, val);
+		break;
+	case eCmdHdlrNonNegInt:
+		r = doGetPositiveInt(valnode, param, val);
+		break;
+	case eCmdHdlrPositiveInt:
+		r = doGetPositiveInt(valnode, param, val);
 		break;
 	case eCmdHdlrSize:
-		doGetSize(valnode, param, val);
+		r = doGetSize(valnode, param, val);
 		break;
 	case eCmdHdlrGetChar:
-		doGetChar(valnode, param, val);
+		r = doGetChar(valnode, param, val);
 		break;
 	case eCmdHdlrFacility:
 		cstr = (uchar*) es_str2cstr(valnode->val.d.estr, NULL);
 		val->val.datatype = 'N';
 		val->val.d.n = decodeSyslogName(cstr, syslogFacNames);
 		free(cstr);
+		r = 1;
 		break;
 	case eCmdHdlrSeverity:
 		cstr = (uchar*) es_str2cstr(valnode->val.d.estr, NULL);
 		val->val.datatype = 'N';
 		val->val.d.n = decodeSyslogName(cstr, syslogPriNames);
 		free(cstr);
+		r = 1;
 		break;
 	case eCmdHdlrGetWord:
-		doGetWord(valnode, param, val);
+		r = doGetWord(valnode, param, val);
 		break;
 	case eCmdHdlrString:
 		val->val.datatype = 'S';
 		val->val.d.estr = es_strdup(valnode->val.d.estr);
+		r = 1;
 		break;
 	case eCmdHdlrGoneAway:
 		parser_errmsg("parameter '%s' is no longer supported",
 			      param->name);
+		r = 1; /* this *is* valid! */
 		break;
 	default:
 		dbgprintf("error: invalid param type\n");
+		r = 0;
 		break;
 	}
+	return r;
 }
 
 
@@ -506,6 +638,8 @@ nvlstGetParams(struct nvlst *lst, struct cnfparamblk *params,
 	       struct cnfparamvals *vals)
 {
 	int i;
+	int bValsWasNULL;
+	int bInError = 0;
 	struct nvlst *valnode;
 	struct cnfparamdescr *param;
 
@@ -517,9 +651,12 @@ nvlstGetParams(struct nvlst *lst, struct cnfparamblk *params,
 	}
 	
 	if(vals == NULL) {
+		bValsWasNULL = 1;
 		if((vals = calloc(params->nParams,
 				  sizeof(struct cnfparamvals))) == NULL)
 			return NULL;
+	} else {
+		bValsWasNULL = 0;
 	}
 
 	for(i = 0 ; i < params->nParams ; ++i) {
@@ -531,8 +668,19 @@ nvlstGetParams(struct nvlst *lst, struct cnfparamblk *params,
 			  "one instance is ignored. Fix config", param->name);
 			continue;
 		}
-		nvlstGetParam(valnode, param, vals + i);
+		if(!nvlstGetParam(valnode, param, vals + i)) {
+			bInError = 1;
+		}
 	}
+
+
+	if(bInError) {
+		if(bValsWasNULL)
+			cnfparamvalsDestruct(vals, params);
+		vals = NULL;
+	}
+
+dbgprintf("DDDD: vals %p\n", vals);
 	return vals;
 }
 
@@ -576,6 +724,7 @@ cnfobjNew(enum cnfobjType objType, struct nvlst *lst)
 		nvlstChkDupes(lst);
 		o->objType = objType;
 		o->nvlst = lst;
+		o->subobjs = NULL;
 	}
 
 	return o;
@@ -586,6 +735,7 @@ cnfobjDestruct(struct cnfobj *o)
 {
 	if(o != NULL) {
 		nvlstDestruct(o->nvlst);
+		objlstDestruct(o->subobjs);
 		free(o);
 	}
 }
@@ -677,7 +827,6 @@ cnfactlstReverse(struct cnfactlst *actlst)
 
 	prev = NULL;
 	while(actlst != NULL) {
-		//dbgprintf("reversing: %s\n", actlst->data.legActLine);
 		curr = actlst;
 		actlst = actlst->next;
 		curr->syslines = cnfcfsyslinelstReverse(curr->syslines);
@@ -749,8 +898,7 @@ var2Number(struct var *r, int *bSuccess)
 	return n;
 }
 
-/* ensure that retval is a string; if string is no number,
- * emit error message and set number to 0.
+/* ensure that retval is a string
  */
 static inline es_str_t *
 var2String(struct var *r, int *bMustFree)
@@ -774,6 +922,7 @@ doFuncCall(struct cnffunc *func, struct var *ret, void* usrptr)
 	int bMustFree;
 	es_str_t *estr;
 	char *str;
+	int retval;
 	struct var r[CNFFUNC_MAX_ARGS];
 
 	dbgprintf("rainerscript: executing function id %d\n", func->fID);
@@ -816,6 +965,7 @@ doFuncCall(struct cnffunc *func, struct var *ret, void* usrptr)
 		es_tolower(estr);
 		ret->datatype = 'S';
 		ret->d.estr = estr;
+		if(r[0].datatype == 'S') es_deleteStr(r[0].d.estr);
 		break;
 	case CNFFUNC_CSTR:
 		cnfexprEval(func->expr[0], &r[0], usrptr);
@@ -824,6 +974,7 @@ doFuncCall(struct cnffunc *func, struct var *ret, void* usrptr)
 			estr = es_strdup(estr);
 		ret->datatype = 'S';
 		ret->d.estr = estr;
+		if(r[0].datatype == 'S') es_deleteStr(r[0].d.estr);
 		break;
 	case CNFFUNC_CNUM:
 		if(func->expr[0]->nodetype == 'N') {
@@ -837,6 +988,24 @@ doFuncCall(struct cnffunc *func, struct var *ret, void* usrptr)
 			if(r[0].datatype == 'S') es_deleteStr(r[0].d.estr);
 		}
 		ret->datatype = 'N';
+		break;
+	case CNFFUNC_RE_MATCH:
+		cnfexprEval(func->expr[0], &r[0], usrptr);
+		estr = var2String(&r[0], &bMustFree);
+		str = es_str2cstr(estr, NULL);
+		retval = regexp.regexec(func->funcdata, str, 0, NULL, 0);
+		if(retval == 0)
+			ret->d.n = 1;
+		else {
+			ret->d.n = 0;
+			if(retval != REG_NOMATCH) {
+				DBGPRINTF("re_match: regexec returned error %d\n", retval);
+			}
+		}
+		ret->datatype = 'N';
+		if(bMustFree) es_deleteStr(estr);
+		free(str);
+		if(r[0].datatype == 'S') es_deleteStr(r[0].d.estr);
 		break;
 	default:
 		if(Debug) {
@@ -891,7 +1060,7 @@ cnfexprEval(struct cnfexpr *expr, struct var *ret, void* usrptr)
 	int bMustFree, bMustFree2;
 	long long n_r, n_l;
 
-	//dbgprintf("eval expr %p, type '%c'(%u)\n", expr, expr->nodetype, expr->nodetype);
+	dbgprintf("eval expr %p, type '%c'(%u)\n", expr, expr->nodetype, expr->nodetype);
 	switch(expr->nodetype) {
 	/* note: comparison operations are extremely similar. The code can be copyied, only
 	 * places flagged with "CMP" need to be changed.
@@ -1199,6 +1368,78 @@ cnfexprEval(struct cnfexpr *expr, struct var *ret, void* usrptr)
 	}
 }
 
+//---------------------------------------------------------
+
+static inline void
+cnffuncDestruct(struct cnffunc *func)
+{
+	unsigned short i;
+
+	for(i = 0 ; i < func->nParams ; ++i) {
+		cnfexprDestruct(func->expr[i]);
+	}
+	/* some functions require special destruction */
+	switch(func->fID) {
+		case CNFFUNC_RE_MATCH:
+			regexp.regfree(func->funcdata);
+			free(func->funcdata);
+			free(func->fname);
+			break;
+		default:break;
+	}
+}
+
+/* Destruct an expression and all sub-expressions contained in it.
+ */
+void
+cnfexprDestruct(struct cnfexpr *expr)
+{
+
+	dbgprintf("cnfexprDestruct expr %p, type '%c'(%u)\n", expr, expr->nodetype, expr->nodetype);
+	switch(expr->nodetype) {
+	case CMP_NE:
+	case CMP_EQ:
+	case CMP_LE:
+	case CMP_GE:
+	case CMP_LT:
+	case CMP_GT:
+	case CMP_STARTSWITH:
+	case CMP_STARTSWITHI:
+	case CMP_CONTAINS:
+	case CMP_CONTAINSI:
+	case OR:
+	case AND:
+	case '+':
+	case '-':
+	case '*':
+	case '/':
+	case '%': /* binary */
+		cnfexprDestruct(expr->l);
+		cnfexprDestruct(expr->r);
+		break;
+	case NOT: 
+	case 'M': /* unary */
+		cnfexprDestruct(expr->r);
+		break;
+	case 'N':
+		break;
+	case 'S':
+		es_deleteStr(((struct cnfstringval*)expr)->estr);
+		break;
+	case 'V':
+		free(((struct cnfvar*)expr)->name);
+		break;
+	case 'F':
+		cnffuncDestruct((struct cnffunc*)expr);
+		break;
+	default:break;
+	}
+	free(expr);
+}
+
+//---- END
+
+
 /* Evaluate an expression as a bool. This is added because expressions are
  * mostly used inside filters, and so this function is quite common and
  * important.
@@ -1488,9 +1729,51 @@ funcName2ID(es_str_t *fname, unsigned short nParams)
 			return CNFFUNC_INVALID;
 		}
 		return CNFFUNC_CNUM;
+	} else if(!es_strbufcmp(fname, (unsigned char*)"re_match", sizeof("re_match") - 1)) {
+		if(nParams != 2) {
+			parser_errmsg("number of parameters for re_match() must be two "
+				      "but is %d.", nParams);
+			return CNFFUNC_INVALID;
+		}
+		return CNFFUNC_RE_MATCH;
 	} else {
 		return CNFFUNC_INVALID;
 	}
+}
+
+
+static inline rsRetVal
+initFunc_re_match(struct cnffunc *func)
+{
+	rsRetVal localRet;
+	char *regex = NULL;
+	regex_t *re;
+	DEFiRet;
+
+	func->funcdata = NULL;
+	if(func->expr[1]->nodetype != 'S') {
+		parser_errmsg("param 2 of re_match() must be a constant string");
+		FINALIZE;
+	}
+
+	CHKmalloc(re = malloc(sizeof(regex_t)));
+	func->funcdata = re;
+
+	regex = es_str2cstr(((struct cnfstringval*) func->expr[1])->estr, NULL);
+	
+	if((localRet = objUse(regexp, LM_REGEXP_FILENAME)) == RS_RET_OK) {
+		if(regexp.regcomp(re, (char*) regex, REG_EXTENDED) != 0) {
+			parser_errmsg("cannot compile regex '%s'", regex);
+			ABORT_FINALIZE(RS_RET_ERR);
+		}
+	} else { /* regexp object could not be loaded */
+		parser_errmsg("could not load regex support - regex ignored");
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
+finalize_it:
+	free(regex);
+	RETiRet;
 }
 
 struct cnffunc *
@@ -1518,6 +1801,14 @@ cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst)
 			toDel = param;
 			param = param->next;
 			free(toDel);
+		}
+		/* some functions require special initialization */
+		switch(func->fID) {
+			case CNFFUNC_RE_MATCH:
+				/* need to compile the regexp in param 2, so this MUST be a constant */
+				initFunc_re_match(func);
+				break;
+			default:break;
 		}
 	}
 	return func;
@@ -1617,6 +1908,15 @@ cstrPrint(char *text, es_str_t *estr)
 	free(str);
 }
 
+/* init must be called once before any parsing of the script files start */
+rsRetVal
+initRainerscript(void)
+{
+	DEFiRet;
+	CHKiRet(objGetObjInterface(&obj));
+finalize_it:
+	RETiRet;
+}
 
 /* we need a function to check for octal digits */
 static inline int

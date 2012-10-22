@@ -1,0 +1,167 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Language" content="en">
+<title>File Output Module</title></head>
+
+<body>
+<a href="rsyslog_conf_modules.html">back</a>
+
+<h1>File Output Module</h1>
+<p><b>Module Name:&nbsp;&nbsp;&nbsp; omfile</b></p>
+<p><b>Author: </b>Rainer Gerhards &lt;rgergards@adiscon.com&gt;</p>
+<p><b>Description</b>:</p>
+<p>The omfile plug-in provides the core functionality of writing messages to files residing inside the local file system (which may actually be remote if methods like NFS are used). Both files named with static names as well files with names based on message content are supported by this module. It is a built-in module that does not need to be loaded. </p>
+<p>&nbsp;</p>
+
+<p><b>Global Configuration Directives</b>:</p>
+<ul>
+	<li><strong>Template </strong>[templateName]<br>
+	sets a new default template for file actions.<br></li>
+	
+</ul>
+<p>&nbsp;</p>
+<p><b>Action specific Configuration Directives</b>:</p>
+<ul>
+	<li><strong>DynaFileCacheSize </strong>(not mandatory, default will be used)<br>
+	Defines a template to be used for the output. <br></li><br>
+
+	<li><strong>ZipLevel </strong>0..9 [default 0]<br>
+	if greater 0, turns on gzip compression of the output file. The higher the number, the better the compression, but also the more CPU is required for zipping.<br></li><br>
+
+	<li><strong>FlushInterval </strong>(not mandatory, default will be used)<br>
+	Defines a template to be used for the output. <br></li><br>
+
+	<li><strong>ASyncWriting </strong>on/off [default off]<br>
+	if turned on, the files will be written in asynchronous mode via a separate thread. In that case, double buffers will be used so that one buffer can be filled while the other buffer is being written. Note that in order to enable FlushInterval, AsyncWriting must be set to "on". Otherwise, the flush interval will be ignored. Also note that when FlushOnTXEnd is "on" but AsyncWriting is off, output will only be written when the buffer is full. This may take several hours, or even require a rsyslog shutdown. However, a buffer flush can be forced in that case by sending rsyslogd a HUP signal. <br></li><br>
+
+	<li><strong>FlushOnTXEnd </strong>on/off [default on]<br>
+	Omfile has the capability to write output using a buffered writer. Disk writes are only done when the buffer is full. So if an error happens during that write, data is potentially lost. In cases where this is unacceptable, set FlushOnTXEnd to on. Then, data is written at the end of each transaction (for pre-v5 this means after each log message) and the usual error recovery thus can handle write errors without data loss. Note that this option severely reduces the effect of zip compression and should be switched to off for that use case. Note that the default -on- is primarily an aid to preserve the traditional syslogd behaviour.<br></li><br>
+
+	<li><strong>IOBufferSize </strong>&lt;size_nbr&gt;, default 4k<br>
+	size of the buffer used to writing output data. The larger the buffer, the potentially better performance is. The default of 4k is quite conservative, it is useful to go up to 64k, and 128K if you used gzip compression (then, even higher sizes may make sense)<br></li><br>
+
+	<li><strong>DirOwner </strong><br>
+	Set the file owner for directories newly created. Please note that this setting does not affect the owner of directories already existing. The parameter is a user name, for which the userid is obtained by rsyslogd during startup processing. Interim changes to the user mapping are not detected.<br></li><br>
+
+	<li><strong>DirGroup </strong><br>
+	Set the group for directories newly created. Please note that this setting does not affect the group of directories already existing. The parameter is a group name, for which the groupid is obtained by rsyslogd on during startup processing. Interim changes to the user mapping are not detected.<br></li><br>
+
+	<li><strong>FileOwner </strong><br>
+	Set the file owner for dynaFiles newly created. Please note that this setting does not affect the owner of files already existing. The parameter is a user name, for which the userid is obtained by rsyslogd during startup processing. Interim changes to the user mapping are not detected.<br></li><br>
+
+	<li><strong>FileGroup </strong><br>
+	Set the group for dynaFiles newly created. Please note that this setting does not affect the group of files already existing. The parameter is a group name, for which the groupid is obtained by rsyslogd during startup processing. Interim changes to the user mapping are not detected.<br></li><br>
+
+	<li><strong>DirCreateMode </strong>[defaul 0700]<br>
+	This is the same as $FileCreateMode, but for directories automatically generated.<br></li><br>
+
+	<li><strong>FileCreateMode </strong>[default 0644]<br>
+	The FileCreateMode directive allows to specify the creation mode with which rsyslogd creates new files. If not specified, the value 0644 is used (which retains backward-compatibility with earlier releases). The value given must always be a 4-digit octal number, with the initial digit being zero. <br>Please note that the actual permission depend on rsyslogd's process umask. If in doubt, use "$umask 0000" right at the beginning of the configuration file to remove any restrictions. <br>FileCreateMode may be specified multiple times. If so, it specifies the creation mode for all selector lines that follow until the next $FileCreateMode directive. Order of lines is vitally important.<br></li><br>
+
+	<li><strong>FailOnCHOwnFailure </strong>on/off [default on]<br>
+	This option modifies behaviour of dynaFile creation. If different owners or groups are specified for new files or directories and rsyslogd fails to set these new owners or groups, it will log an error and NOT write to the file in question if that option is set to "on". If it is set to "off", the error will be ignored and processing continues. Keep in mind, that the files in this case may be (in)accessible by people who should not have permission. The default is "on".<br></li><br>
+
+	<li><strong>CreateDirs </strong>on/off [default on]<br>
+	create directories on an as-needed basis<br></li><br>
+
+	<li><strong>Sync </strong>on/off [default off]<br>
+	enables file syncing capability of omfile.<br></li><br>
+
+	<li><strong>File </strong><br>
+	If the file already exists, new data is appended to it. Existing data is not truncated. If the file does not already exist, it is created. Files are kept open as long as rsyslogd is active. This conflicts with external log file rotation. In order to close a file after rotation, send rsyslogd a HUP signal after the file has been rotated away. <br></li><br>
+
+	<li><strong>DynaFile </strong><br>
+	For each message, the file name is generated based on the given template. Then, this file is opened. As with the ``file'' property, data is appended if the file already exists. If the file does not exist, a new file is created. A cache of recent files is kept. Note that this cache can consume quite some memory (especially if large buffer sizes are used). Files are kept open as long as they stay inside the cache. Currently, files are only evicted from the cache when there is need to do so (due to insufficient cache size). To force-close (and evict) a dynafile from cache, send a HUP signal to rsyslogd. <br></li><br>
+
+	<li><strong>Template </strong>[templateName]<br>
+	sets a new default template for file actions.<br></li><br>
+	
+</ul>
+<p><b>Caveats/Known Bugs:</b></p><ul><li>None.</li></ul>
+<p><b>Sample:</b></p>
+<p>The following command writes all syslog messages into a file.</p>
+<textarea rows="5" cols="60">Module (path="builtin:omfile")
+*.* action(type="omfile" 
+DirCreateMode="0700"
+FileCreateMode="0644"
+File="/var/log/messages")
+</textarea>
+
+<br><br>
+
+<p><b>Legacy Configuration Directives</b>:</p>
+<ul>
+	<li><strong>$DynaFileCacheSize </strong>(not mandatory, default will be used)<br>
+	Defines a template to be used for the output. <br></li><br>
+
+	<li><strong>$OMFileZipLevel </strong>0..9 [default 0]<br>
+	if greater 0, turns on gzip compression of the output file. The higher the number, the better the compression, but also the more CPU is required for zipping.<br></li><br>
+
+	<li><strong>$OMFileFlushInterval </strong>(not mandatory, default will be used)<br>
+	Defines a template to be used for the output. <br></li><br>
+
+	<li><strong>$OMFileASyncWriting </strong>on/off [default off]<br>
+	if turned on, the files will be written in asynchronous mode via a separate thread. In that case, double buffers will be used so that one buffer can be filled while the other buffer is being written. Note that in order to enable FlushInterval, AsyncWriting must be set to "on". Otherwise, the flush interval will be ignored. Also note that when FlushOnTXEnd is "on" but AsyncWriting is off, output will only be written when the buffer is full. This may take several hours, or even require a rsyslog shutdown. However, a buffer flush can be forced in that case by sending rsyslogd a HUP signal. <br></li><br>
+
+	<li><strong>$OMFileFlushOnTXEnd </strong>on/off [default on]<br>
+	Omfile has the capability to write output using a buffered writer. Disk writes are only done when the buffer is full. So if an error happens during that write, data is potentially lost. In cases where this is unacceptable, set FlushOnTXEnd to on. Then, data is written at the end of each transaction (for pre-v5 this means after each log message) and the usual error recovery thus can handle write errors without data loss. Note that this option severely reduces the effect of zip compression and should be switched to off for that use case. Note that the default -on- is primarily an aid to preserve the traditional syslogd behaviour.<br></li><br>
+
+	<li><strong>$OMFileIOBufferSize </strong>&lt;size_nbr&gt;, default 4k<br>
+	size of the buffer used to writing output data. The larger the buffer, the potentially better performance is. The default of 4k is quite conservative, it is useful to go up to 64k, and 128K if you used gzip compression (then, even higher sizes may make sense)<br></li><br>
+
+	<li><strong>$DirOwner </strong><br>
+	Set the file owner for directories newly created. Please note that this setting does not affect the owner of directories already existing. The parameter is a user name, for which the userid is obtained by rsyslogd during startup processing. Interim changes to the user mapping are not detected.<br></li><br>
+
+	<li><strong>$DirGroup </strong><br>
+	Set the group for directories newly created. Please note that this setting does not affect the group of directories already existing. The parameter is a group name, for which the groupid is obtained by rsyslogd on during startup processing. Interim changes to the user mapping are not detected.<br></li><br>
+
+	<li><strong>$FileOwner </strong><br>
+	Set the file owner for dynaFiles newly created. Please note that this setting does not affect the owner of files already existing. The parameter is a user name, for which the userid is obtained by rsyslogd during startup processing. Interim changes to the user mapping are not detected.<br></li><br>
+
+	<li><strong>$FileGroup </strong><br>
+	Set the group for dynaFiles newly created. Please note that this setting does not affect the group of files already existing. The parameter is a group name, for which the groupid is obtained by rsyslogd during startup processing. Interim changes to the user mapping are not detected.<br></li><br>
+
+	<li><strong>$DirCreateMode </strong>[defaul 0700]<br>
+	This is the same as $FileCreateMode, but for directories automatically generated.<br></li><br>
+
+	<li><strong>$FileCreateMode </strong>[default 0644]<br>
+	The FileCreateMode directive allows to specify the creation mode with which rsyslogd creates new files. If not specified, the value 0644 is used (which retains backward-compatibility with earlier releases). The value given must always be a 4-digit octal number, with the initial digit being zero. <br>Please note that the actual permission depend on rsyslogd's process umask. If in doubt, use "$umask 0000" right at the beginning of the configuration file to remove any restrictions. <br>FileCreateMode may be specified multiple times. If so, it specifies the creation mode for all selector lines that follow until the next $FileCreateMode directive. Order of lines is vitally important.<br></li><br>
+
+	<li><strong>$FailOnCHOwnFailure </strong>on/off [default on]<br>
+	This option modifies behaviour of dynaFile creation. If different owners or groups are specified for new files or directories and rsyslogd fails to set these new owners or groups, it will log an error and NOT write to the file in question if that option is set to "on". If it is set to "off", the error will be ignored and processing continues. Keep in mind, that the files in this case may be (in)accessible by people who should not have permission. The default is "on".<br></li><br>
+
+	<li><strong>$F$OMFileForceCHOwn </strong><br>
+	force ownership change for all files<br></li><br>
+
+	<li><strong>$CreateDirs </strong>on/off [default on]<br>
+	create directories on an as-needed basis<br></li><br>
+
+	<li><strong>$ActionFileEnableSync </strong>on/off [default off]<br>
+	enables file syncing capability of omfile.<br></li><br>
+
+	<li><strong>$ActionFileDefaultTemplate </strong>[templateName]<br>
+	sets a new default template for file actions.<br></li><br>
+
+	<li><strong>$ResetConfigVariables </strong><br>
+	Resets all configuration variables to their default value. Any settings made will not be applied to configuration lines following the $ResetConfigVariables. This is a good method to make sure no side-effects exists from previous directives. This directive has no parameters.<br></li><br>
+	
+</ul>
+
+<p><b>Legacy Sample:</b></p>
+<p>The following command writes all syslog messages into a file.</p>
+<textarea rows="5" cols="60">$ModLoad omfile
+$DirCreateMode 0700
+$FileCreateMode 0644
+*.* /var/log/messages
+</textarea>
+
+
+<p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>] [<a href="manual.html">manual 
+index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the
+<a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
+Copyright © 2008 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>. Released under the GNU GPL 
+version 3 or higher.</font></p>
+
+</body></html>

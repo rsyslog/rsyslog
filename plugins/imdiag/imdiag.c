@@ -390,6 +390,7 @@ finalize_it:
 		if(pOurTcpsrv != NULL)
 			tcpsrv.Destruct(&pOurTcpsrv);
 	}
+	free(pNewVal);
 	RETiRet;
 }
 

@@ -123,12 +123,47 @@ struct modConfData_s {
 	sbool bKeepAlive;
 	sbool bEmitMsgOnClose; /* emit an informational message on close by remote peer */
 	uchar *pszStrmDrvrAuthMode; /* authentication mode to use */
+	sbool configSetViaV2Method;
 };
 
 static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
 static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current load process */
 
+/* module-global parameters */
+static struct cnfparamdescr modpdescr[] = {
+	{ "flowcontrol", eCmdHdlrBinary, 0 },
+	{ "disablelfdelimiter", eCmdHdlrBinary, 0 },
+	{ "octetcountedframing", eCmdHdlrBinary, 0 },
+	{ "notifyonconnectionclose", eCmdHdlrBinary, 0 },
+	{ "addtlframedelimiter", eCmdHdlrPositiveInt, 0 },
+	{ "maxsessions", eCmdHdlrPositiveInt, 0 },
+	{ "maxlistners", eCmdHdlrPositiveInt, 0 },
+	{ "streamdriver.mode", eCmdHdlrPositiveInt, 0 },
+	{ "streamdriver.authmode", eCmdHdlrString, 0 },
+	{ "keepalive", eCmdHdlrBinary, 0 }
+};
+static struct cnfparamblk modpblk =
+	{ CNFPARAMBLK_VERSION,
+	  sizeof(modpdescr)/sizeof(struct cnfparamdescr),
+	  modpdescr
+	};
+
+/* input instance parameters */
+static struct cnfparamdescr inppdescr[] = {
+	{ "port", eCmdHdlrString, CNFPARAM_REQUIRED }, /* legacy: InputTCPServerRun */
+	{ "name", eCmdHdlrString, 0 },
+	{ "ruleset", eCmdHdlrString, 0 },
+	{ "supportOctetCountedFraming", eCmdHdlrBinary, 0 }
+};
+static struct cnfparamblk inppblk =
+	{ CNFPARAMBLK_VERSION,
+	  sizeof(inppdescr)/sizeof(struct cnfparamdescr),
+	  inppdescr
+	};
+
 #include "im-helper.h" /* must be included AFTER the type definitions! */
+
+static int bLegacyCnfModGlobalsPermitted;/* are legacy module-global config parameters permitted? */
 
 /* callbacks */
 /* this shall go into a specific ACL module! */
@@ -201,6 +236,34 @@ finalize_it:
 }
 
 
+/* create input instance, set default paramters, and
+ * add it to the list of instances.
+ */
+static rsRetVal
+createInstance(instanceConf_t **pinst)
+{
+	instanceConf_t *inst;
+	DEFiRet;
+	CHKmalloc(inst = MALLOC(sizeof(instanceConf_t)));
+	inst->next = NULL;
+	inst->pszBindRuleset = NULL;
+	inst->pszInputName = NULL;
+	inst->bSuppOctetFram = 1;
+
+	/* node created, let's add to config */
+	if(loadModConf->tail == NULL) {
+		loadModConf->tail = loadModConf->root = inst;
+	} else {
+		loadModConf->tail->next = inst;
+		loadModConf->tail = inst;
+	}
+
+	*pinst = inst;
+finalize_it:
+	RETiRet;
+}
+
+
 /* This function is called when a new listener instace shall be added to 
  * the current config object via the legacy config system. It just shuffles
  * all parameters to the listener in-memory instance.
@@ -211,7 +274,7 @@ static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	instanceConf_t *inst;
 	DEFiRet;
 
-	CHKmalloc(inst = MALLOC(sizeof(instanceConf_t)));
+	CHKiRet(createInstance(&inst));
 
 	CHKmalloc(inst->pszBindPort = ustrdup((pNewVal == NULL || *pNewVal == '\0')
 				 	       ? (uchar*) "10514" : pNewVal));
@@ -226,15 +289,6 @@ static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 		CHKmalloc(inst->pszInputName = ustrdup(cs.pszInputName));
 	}
 	inst->bSuppOctetFram = cs.bSuppOctetFram;
-	inst->next = NULL;
-
-	/* node created, let's add to config */
-	if(loadModConf->tail == NULL) {
-		loadModConf->tail = loadModConf->root = inst;
-	} else {
-		loadModConf->tail->next = inst;
-		loadModConf->tail = inst;
-	}
 
 finalize_it:
 	free(pNewVal);
@@ -288,34 +342,150 @@ finalize_it:
 }
 
 
+BEGINnewInpInst
+	struct cnfparamvals *pvals;
+	instanceConf_t *inst;
+	int i;
+CODESTARTnewInpInst
+	DBGPRINTF("newInpInst (imtcp)\n");
+
+	pvals = nvlstGetParams(lst, &inppblk, NULL);
+	if(pvals == NULL) {
+		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS,
+			        "imtcp: required parameter are missing\n");
+		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
+
+	if(Debug) {
+		dbgprintf("input param blk in imtcp:\n");
+		cnfparamsPrint(&inppblk, pvals);
+	}
+
+	CHKiRet(createInstance(&inst));
+
+	for(i = 0 ; i < inppblk.nParams ; ++i) {
+		if(!pvals[i].bUsed)
+			continue;
+		if(!strcmp(inppblk.descr[i].name, "port")) {
+			inst->pszBindPort = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(inppblk.descr[i].name, "name")) {
+			inst->pszInputName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(inppblk.descr[i].name, "ruleset")) {
+			inst->pszBindRuleset = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(inppblk.descr[i].name, "supportOctetCountedFraming")) {
+			inst->bSuppOctetFram = (int) pvals[i].val.d.n;
+		} else {
+			dbgprintf("imtcp: program error, non-handled "
+			  "param '%s'\n", inppblk.descr[i].name);
+		}
+	}
+finalize_it:
+CODE_STD_FINALIZERnewInpInst
+	cnfparamvalsDestruct(pvals, &inppblk);
+ENDnewInpInst
+
+
 BEGINbeginCnfLoad
 CODESTARTbeginCnfLoad
 	loadModConf = pModConf;
 	pModConf->pConf = pConf;
+	/* init our settings */
+	loadModConf->iTCPSessMax = 200;
+	loadModConf->iTCPLstnMax = 20;
+	loadModConf->bSuppOctetFram = 1;
+	loadModConf->iStrmDrvrMode = 0;
+	loadModConf->bUseFlowControl = 0;
+	loadModConf->bKeepAlive = 0;
+	loadModConf->bEmitMsgOnClose = 0;
+	loadModConf->iAddtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
+	loadModConf->bDisableLFDelim = 0;
+	loadModConf->pszStrmDrvrAuthMode = NULL;
+	loadModConf->configSetViaV2Method = 0;
+	bLegacyCnfModGlobalsPermitted = 1;
 	/* init legacy config variables */
 	cs.pszStrmDrvrAuthMode = NULL;
 	resetConfigVariables(NULL, NULL); /* dummy parameters just to fulfill interface def */
 ENDbeginCnfLoad
 
 
+BEGINsetModCnf
+	struct cnfparamvals *pvals = NULL;
+	int i;
+CODESTARTsetModCnf
+	pvals = nvlstGetParams(lst, &modpblk, NULL);
+	if(pvals == NULL) {
+		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "imtcp: error processing module "
+				"config parameters [module(...)]");
+		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
+
+	if(Debug) {
+		dbgprintf("module (global) param blk for imtcp:\n");
+		cnfparamsPrint(&modpblk, pvals);
+	}
+
+	for(i = 0 ; i < modpblk.nParams ; ++i) {
+		if(!pvals[i].bUsed)
+			continue;
+		if(!strcmp(modpblk.descr[i].name, "flowcontrol")) {
+			loadModConf->bUseFlowControl = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "disablelfdelimiter")) {
+			loadModConf->bDisableLFDelim = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "octetcountedframing")) {
+			loadModConf->bSuppOctetFram = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "notifyonconnectionclose")) {
+			loadModConf->bEmitMsgOnClose = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "addtlframedelimiter")) {
+			loadModConf->iAddtlFrameDelim = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "maxsessions")) {
+			loadModConf->iTCPSessMax = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "maxlistners")) {
+			loadModConf->iTCPLstnMax = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "keepalive")) {
+			loadModConf->bKeepAlive = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "streamdriver.mode")) {
+			loadModConf->iStrmDrvrMode = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "streamdriver.mode")) {
+			loadModConf->pszStrmDrvrAuthMode = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else {
+			dbgprintf("imtcp: program error, non-handled "
+			  "param '%s' in beginCnfLoad\n", modpblk.descr[i].name);
+		}
+	}
+
+	/* remove all of our legacy handlers, as they can not used in addition
+	 * the the new-style config method.
+	 */
+	bLegacyCnfModGlobalsPermitted = 0;
+	loadModConf->configSetViaV2Method = 1;
+
+finalize_it:
+	if(pvals != NULL)
+		cnfparamvalsDestruct(pvals, &modpblk);
+ENDsetModCnf
+
+
 BEGINendCnfLoad
 CODESTARTendCnfLoad
-	/* persist module-specific settings from legacy config system */
-	pModConf->iTCPSessMax = cs.iTCPSessMax;
-	pModConf->iTCPLstnMax = cs.iTCPLstnMax;
-	pModConf->iStrmDrvrMode = cs.iStrmDrvrMode;
-	pModConf->bEmitMsgOnClose = cs.bEmitMsgOnClose;
-	pModConf->bSuppOctetFram = cs.bSuppOctetFram;
-	pModConf->iAddtlFrameDelim = cs.iAddtlFrameDelim;
-	pModConf->bDisableLFDelim = cs.bDisableLFDelim;
-	pModConf->bUseFlowControl = cs.bUseFlowControl;
-	pModConf->bKeepAlive = cs.bKeepAlive;
-	if((cs.pszStrmDrvrAuthMode == NULL) || (cs.pszStrmDrvrAuthMode[0] == '\0')) {
-		loadModConf->pszStrmDrvrAuthMode = NULL;
-		free(cs.pszStrmDrvrAuthMode);
-	} else {
-		loadModConf->pszStrmDrvrAuthMode = cs.pszStrmDrvrAuthMode;
+	if(!loadModConf->configSetViaV2Method) {
+		/* persist module-specific settings from legacy config system */
+		pModConf->iTCPSessMax = cs.iTCPSessMax;
+		pModConf->iTCPLstnMax = cs.iTCPLstnMax;
+		pModConf->iStrmDrvrMode = cs.iStrmDrvrMode;
+		pModConf->bEmitMsgOnClose = cs.bEmitMsgOnClose;
+		pModConf->bSuppOctetFram = cs.bSuppOctetFram;
+		pModConf->iAddtlFrameDelim = cs.iAddtlFrameDelim;
+		pModConf->bDisableLFDelim = cs.bDisableLFDelim;
+		pModConf->bUseFlowControl = cs.bUseFlowControl;
+		pModConf->bKeepAlive = cs.bKeepAlive;
+		if((cs.pszStrmDrvrAuthMode == NULL) || (cs.pszStrmDrvrAuthMode[0] == '\0')) {
+			loadModConf->pszStrmDrvrAuthMode = NULL;
+		} else {
+			loadModConf->pszStrmDrvrAuthMode = cs.pszStrmDrvrAuthMode;
+		}
 	}
+	if((cs.pszStrmDrvrAuthMode == NULL) || (cs.pszStrmDrvrAuthMode[0] == '\0'))
+		free(cs.pszStrmDrvrAuthMode);
 	cs.pszStrmDrvrAuthMode = NULL;
 
 	loadModConf = NULL; /* done loading */
@@ -366,7 +536,15 @@ ENDactivateCnf
 
 
 BEGINfreeCnf
+	instanceConf_t *inst, *del;
 CODESTARTfreeCnf
+	for(inst = pModConf->root ; inst != NULL ; ) {
+		free(inst->pszBindPort);
+		free(inst->pszInputName);
+		del = inst;
+		inst = inst->next;
+		free(del);
+	}
 ENDfreeCnf
 
 /* This function is called to gather input.
@@ -442,7 +620,9 @@ BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_IMOD_QUERIES
 CODEqueryEtryPt_STD_CONF2_QUERIES
+CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
 CODEqueryEtryPt_STD_CONF2_PREPRIVDROP_QUERIES
+CODEqueryEtryPt_STD_CONF2_IMOD_QUERIES
 CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
 ENDqueryEtryPt
 
@@ -463,36 +643,39 @@ CODEmodInit_QueryRegCFSLineHdlr
 	/* register config file handlers */
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpserverrun"), 0, eCmdHdlrGetWord,
 				   addInstance, NULL, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpserverkeepalive"), 0, eCmdHdlrBinary,
-				   NULL, &cs.bKeepAlive, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpserversupportoctetcountedframing"), 0, eCmdHdlrBinary,
-				   NULL, &cs.bSuppOctetFram, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpmaxsessions"), 0, eCmdHdlrInt,
-				   NULL, &cs.iTCPSessMax, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpmaxlisteners"), 0, eCmdHdlrInt,
-				   NULL, &cs.iTCPLstnMax, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpservernotifyonconnectionclose"), 0, eCmdHdlrBinary,
-				   NULL, &cs.bEmitMsgOnClose, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpserverstreamdrivermode"), 0, eCmdHdlrInt,
-				   NULL, &cs.iStrmDrvrMode, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpserverstreamdriverauthmode"), 0, eCmdHdlrGetWord,
-				   NULL, &cs.pszStrmDrvrAuthMode, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpserverstreamdriverpermittedpeer"), 0, eCmdHdlrGetWord,
 				   setPermittedPeer, NULL, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpserveraddtlframedelimiter"), 0, eCmdHdlrInt,
-				   NULL, &cs.iAddtlFrameDelim, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpserverdisablelfdelimiter"), 0, eCmdHdlrBinary,
-				   NULL, &cs.bDisableLFDelim, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpserverinputname"), 0, eCmdHdlrGetWord,
 				   NULL, &cs.pszInputName, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpserverbindruleset"), 0, eCmdHdlrGetWord,
 				   NULL, &cs.pszBindRuleset, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpflowcontrol"), 0, eCmdHdlrBinary,
-				   NULL, &cs.bUseFlowControl, STD_LOADABLE_MODULE_ID));
+	/* module-global config params - will be disabled in configs that are loaded
+	 * via module(...).
+	 */
+	CHKiRet(regCfSysLineHdlr2(UCHAR_CONSTANT("inputtcpserverstreamdriverauthmode"), 0, eCmdHdlrGetWord,
+			   NULL, &cs.pszStrmDrvrAuthMode, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
+	CHKiRet(regCfSysLineHdlr2(UCHAR_CONSTANT("inputtcpserverkeepalive"), 0, eCmdHdlrBinary,
+			   NULL, &cs.bKeepAlive, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
+	CHKiRet(regCfSysLineHdlr2(UCHAR_CONSTANT("inputtcpflowcontrol"), 0, eCmdHdlrBinary,
+			   NULL, &cs.bUseFlowControl, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
+	CHKiRet(regCfSysLineHdlr2(UCHAR_CONSTANT("inputtcpserverdisablelfdelimiter"), 0, eCmdHdlrBinary,
+			   NULL, &cs.bDisableLFDelim, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
+	CHKiRet(regCfSysLineHdlr2(UCHAR_CONSTANT("inputtcpserveraddtlframedelimiter"), 0, eCmdHdlrInt,
+			   NULL, &cs.iAddtlFrameDelim, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
+	CHKiRet(regCfSysLineHdlr2(UCHAR_CONSTANT("inputtcpserversupportoctetcountedframing"), 0, eCmdHdlrBinary,
+			   NULL, &cs.bSuppOctetFram, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
+	CHKiRet(regCfSysLineHdlr2(UCHAR_CONSTANT("inputtcpmaxsessions"), 0, eCmdHdlrInt,
+			   NULL, &cs.iTCPSessMax, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
+	CHKiRet(regCfSysLineHdlr2(UCHAR_CONSTANT("inputtcpmaxlisteners"), 0, eCmdHdlrInt,
+			   NULL, &cs.iTCPLstnMax, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
+	CHKiRet(regCfSysLineHdlr2(UCHAR_CONSTANT("inputtcpservernotifyonconnectionclose"), 0, eCmdHdlrBinary,
+			   NULL, &cs.bEmitMsgOnClose, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
+	CHKiRet(regCfSysLineHdlr2(UCHAR_CONSTANT("inputtcpserverstreamdrivermode"), 0, eCmdHdlrInt,
+			   NULL, &cs.iStrmDrvrMode, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
+
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("resetconfigvariables"), 1, eCmdHdlrCustomHandler,
 				   resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
-
 
 /* vim:set ai:
  */

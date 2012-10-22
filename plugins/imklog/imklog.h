@@ -31,15 +31,12 @@
 
 /* we need to have the modConf type present in all submodules */
 struct modConfData_s {
-	int dbgPrintSymbols;
-	int symbols_twice;
-	int use_syscall;
-	int symbol_lookup;
-	int bPermitNonKernel;
+	rsconf_t *pConf;
 	int iFacilIntMsg;
 	uchar *pszPath;
 	int console_log_level;
-	rsconf_t *pConf;
+	sbool bPermitNonKernel;
+	sbool configSetViaV2Method;
 };
 
 /* interface to "drivers"

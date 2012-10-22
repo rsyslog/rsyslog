@@ -6,20 +6,13 @@ configuration:
 
 in your /etc/rsyslog.conf, together with other modules:
 $ModLoad ommongodb # provides mongodb support
+*.*     action(type="ommongodb" db="..." collection="..." template="...")
 
-then in your /etc/rsyslog.d (check your distribution way to organize the configuration..) you create a file 10-mongodb.conf with the following content:
+Note: if no template is specified, a default schema will be used. That schema
+contains proper data types. However, if a template is specified, only strings
+are supported. This is a restriction of the rsyslog v6 core engine. This 
+changed in v7.
 
-*.*     action(type="ommongodb" db="..." collection="...")
-
-Note: currently templates are not supported. Ommongodb will pick a default
-schema and use the message object content for that (templateless).
-
-
-TODO
-we must ensure that the collection is a capped collection
-refactor my code :-)
-
-email Victor Pereira <victor.pereira@bigrails.com>
-twitter twitter.com/vpereira
-
-part of this doc by Rainer Gerhards <rgerhards@adiscon.com>
+If templates are used, it is suggested to use list-based templates. Constants
+can ONLY be inserted with list-based templates, as only these provide the
+capability to specify a field name (outname parameter).
