@@ -17,7 +17,7 @@
 .\" along with this program; if not, write to the Free Software
 .\" Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111, USA.
 .\"
-.TH RSYSLOG.CONF 5 "11 July 2008" "Version 3.18.0" "Linux System Administration"
+.TH RSYSLOG.CONF 5 "22 October 2012" "Version 7.2.0" "Linux System Administration"
 .SH NAME
 rsyslog.conf \- rsyslogd(8) configuration file
 .SH DESCRIPTION
@@ -334,13 +334,6 @@ Rsyslog offers three different types "filter conditions":
 .sp 0
    * expression-based filters
 .RE
-
-.SS Blocks
-Rsyslogd supports BSD-style blocks inside rsyslog.conf. Each block of lines is separated from 
-the previous block by a program or hostname specification. A block will only log messages 
-corresponding to the most recent program and hostname specifications given. Thus, a block which 
-selects "ppp" as the program, directly followed by a block that selects messages from the 
-hostname "dialhost", then the second block will only log messages from the ppp program on dialhost.
 
 .SS Selectors
 .B Selectors are the traditional way of filtering syslog messages. 
