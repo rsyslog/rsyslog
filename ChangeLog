@@ -1,3 +1,4 @@
+- permited action-like statements (stop, call, ...) in action lists
 ----------------------------------------------------------------------------
 Version 7.1.13  [beta] 2012-10-??
 - bugfix: imuxsock did not properly honor $LocalHostIPIF
