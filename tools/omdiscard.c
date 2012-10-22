@@ -95,13 +95,9 @@ CODE_STD_STRING_REQUESTparseSelectorAct(0)
 
 	if(*p == '~') {
 		dbgprintf("discard\n");
-		/* re-enable in v7.3: requires action list to support 
-		 * action-like statements, something that is too late to
-		 * do in 7.1.
 		errmsg.LogError(0, RS_RET_DEPRECATED, "warning: ~ action "
 			"is deprecated, consider using the 'stop' "
 			"statement instead");
-		 */
 	} else {
 		iRet = RS_RET_CONFLINE_UNPROCESSED;
 	}
