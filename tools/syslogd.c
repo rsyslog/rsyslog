@@ -44,7 +44,6 @@
 #include "rsyslog.h"
 
 #define DEFUPRI		(LOG_USER|LOG_NOTICE)
-#define TIMERINTVL	30		/* interval for checking flush, mark */
 
 #include <unistd.h>
 #include <stdlib.h>
@@ -203,13 +202,6 @@ static int bFinished = 0;	/* used by termination signal handler, read-only excep
  				 * termination.
 				 */
 int iConfigVerify = 0;	/* is this just a config verify run? */
-
-/* Intervals at which we flush out "message repeated" messages,
- * in seconds after previous message is logged.  After each flush,
- * we move to the next interval until we reach the largest.
- * TODO: this shall go into action object! -- rgerhards, 2008-01-29
- */
-int	repeatinterval[2] = { 30, 60 };	/* # of secs before flush */
 
 #define LIST_DELIMITER	':'		/* delimiter between two hosts */
 
@@ -688,43 +680,6 @@ reapchild()
 
 	while(waitpid(-1, NULL, WNOHANG) > 0);
 	errno = saved_errno;
-}
-
-
-/* helper to doFlushRptdMsgs() to flush the individual action links via llExecFunc
- * rgerhards, 2007-08-02
- */
-DEFFUNC_llExecFunc(flushRptdMsgsActions)
-{
-	action_t *pAction = (action_t*) pData;
-	assert(pAction != NULL);
-
-	BEGINfunc
-	d_pthread_mutex_lock(&pAction->mutAction);
-	/* TODO: time() performance: the call below could be moved to
-	 * the beginn of the llExec(). This makes it slightly less correct, but
-	 * in an acceptable way. -- rgerhards, 2008-09-16
-	 */
-	if (pAction->f_prevcount && datetime.GetTime(NULL) >= REPEATTIME(pAction)) {
-		DBGPRINTF("flush %s: repeated %d times, %d sec.\n",
-		    module.GetStateName(pAction->pMod), pAction->f_prevcount,
-		    repeatinterval[pAction->f_repeatcount]);
-		actionWriteToAction(pAction);
-		BACKOFF(pAction);
-	}
-	d_pthread_mutex_unlock(&pAction->mutAction);
-
-	ENDfunc
-	return RS_RET_OK; /* we ignore errors, we can not do anything either way */
-}
-
-
-/* This method flushes repeat messages.
- */
-static void
-doFlushRptdMsgs(void)
-{
-	ruleset.IterateAllActions(runConf, flushRptdMsgsActions, NULL);
 }
 
 
@@ -1320,49 +1275,22 @@ mainloop(void)
 
 	while(!bFinished){
 		/* this is now just a wait - please note that we do use a near-"eternal"
-		 * timeout of 1 day if we do not have repeated message reduction turned on
-		 * (which it is not by default). This enables us to help safe the environment
+		 * timeout of 1 day. This enables us to help safe the environment
 		 * by not unnecessarily awaking rsyslog on a regular tick (just think
 		 * powertop, for example). In that case, we primarily wait for a signal,
 		 * but a once-a-day wakeup should be quite acceptable. -- rgerhards, 2008-06-09
 		 */
-		tvSelectTimeout.tv_sec = (runConf->globals.bReduceRepeatMsgs == 1) ? TIMERINTVL : 86400 /*1 day*/;
-		//tvSelectTimeout.tv_sec = TIMERINTVL; /* TODO: change this back to the above code when we have a better solution for apc */
+		tvSelectTimeout.tv_sec = 86400 /*1 day*/;
 		tvSelectTimeout.tv_usec = 0;
 		select(1, NULL, NULL, NULL, &tvSelectTimeout);
 		if(bFinished)
-			break;	/* exit as quickly as possible - see long comment below */
-
-		/* If we received a HUP signal, we call doFlushRptdMsgs() a bit early. This
- 		 * doesn't matter, because doFlushRptdMsgs() checks timestamps. What may happen,
- 		 * however, is that the too-early call may lead to a bit too-late output
- 		 * of "last message repeated n times" messages. But that is quite acceptable.
- 		 * rgerhards, 2007-12-21
-		 * ... and just to explain, we flush here because that is exactly what the mainloop
-		 * shall do - provide a periodic interval in which not-yet-flushed messages will
-		 * be flushed. Be careful, there is a potential race condition: doFlushRptdMsgs()
-		 * needs to aquire a lock on the action objects. If, however, long-running consumers
-		 * cause the main queue worker threads to lock them for a long time, we may receive
-		 * a starvation condition, resulting in the mainloop being held on lock for an extended
-		 * period of time. That, in turn, could lead to unresponsiveness to termination
-		 * requests. It is especially important that the bFinished flag is checked before
-		 * doFlushRptdMsgs() is called (I know because I ran into that situation). I am
-		 * not yet sure if the remaining probability window of a termination-related
-		 * problem is large enough to justify changing the code - I would consider it
-		 * extremely unlikely that the problem ever occurs in practice. Fixing it would
-		 * require not only a lot of effort but would cost considerable performance. So
-		 * for the time being, I think the remaining risk can be accepted.
-		 * rgerhards, 2008-01-10
- 		 */
-		if(runConf->globals.bReduceRepeatMsgs == 1)
-			doFlushRptdMsgs();
+			break;	/* exit as quickly as possible */
 
 		if(bHadHUP) {
 			doHUP();
 			bHadHUP = 0;
 			continue;
 		}
-		// TODO: remove execScheduled(); /* handle Apc calls (if any) */
 	}
 	ENDfunc
 }

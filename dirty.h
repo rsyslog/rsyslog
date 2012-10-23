@@ -37,19 +37,8 @@ rsRetVal __attribute__((deprecated)) parseAndSubmitMessage(uchar *hname, uchar *
 rsRetVal diagGetMainMsgQSize(int *piSize); /* for imdiag */
 rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName);
 
-/* Intervals at which we flush out "message repeated" messages,
- * in seconds after previous message is logged.  After each flush,
- * we move to the next interval until we reach the largest.
- * TODO: move this to action object! Only action.c and syslogd.c use it.
- */
 extern int MarkInterval;
-extern int repeatinterval[2];
 extern qqueue_t *pMsgQueue;				/* the main message queue */
 extern int iConfigVerify;				/* is this just a config verify run? */
 extern int bHaveMainQueue;
-#define	MAXREPEAT ((int)((sizeof(repeatinterval) / sizeof(repeatinterval[0])) - 1))
-#define	REPEATTIME(f)	((f)->f_time + repeatinterval[(f)->f_repeatcount])
-#define	BACKOFF(f)	{ if (++(f)->f_repeatcount > MAXREPEAT) \
-				 (f)->f_repeatcount = MAXREPEAT; \
-			}
 #endif /* #ifndef DIRTY_H_INCLUDED */
