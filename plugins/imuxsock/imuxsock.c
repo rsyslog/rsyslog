@@ -135,6 +135,7 @@ typedef struct lstn_s {
 	int flowCtl;		/* flow control settings for this socket */
 	int ratelimitInterval;
 	int ratelimitBurst;
+	ratelimit_t *dflt_ratelimiter;/*ratelimiter to apply if none else is to be used */
 	intTiny ratelimitSev;	/* severity level (and below) for which rate-limiting shall apply */
 	struct hashtable *ht;	/* our hashtable for rate-limiting */
 	sbool bParseHost;	/* should parser parse host name?  read-only after startup */
@@ -392,6 +393,10 @@ addListner(instanceConf_t *inst)
 		listeners[nfd].bParseTrusted = inst->bParseTrusted;
 		listeners[nfd].bWritePid = inst->bWritePid;
 		listeners[nfd].bUseSysTimeStamp = inst->bUseSysTimeStamp;
+		CHKiRet(ratelimitNew(&listeners[nfd].dflt_ratelimiter, "imuxsock", NULL));
+		ratelimitSetLinuxLike(listeners[nfd].dflt_ratelimiter,
+				      listeners[nfd].ratelimitInterval,
+				      listeners[nfd].ratelimitBurst);
 		nfd++;
 	} else {
 		errmsg.LogError(0, NO_ERRCODE, "Out of unix socket name descriptors, ignoring %s\n",
@@ -403,7 +408,7 @@ finalize_it:
 }
 
 
-/* discard all log sockets except for "socket" 0. Data for it comes from
+/* discard/Destruct all log sockets except for "socket" 0. Data for it comes from
  * the constant memory pool - and if not, it is freeed via some other pointer.
  */
 static rsRetVal discardLogSockets(void)
@@ -421,6 +426,7 @@ static rsRetVal discardLogSockets(void)
 		if(listeners[i].ht != NULL) {
 			hashtable_destroy(listeners[i].ht, 1); /* 1 => free all values automatically */
 		}
+		ratelimitDestruct(listeners[i].dflt_ratelimiter);
 	}
 
 	return RS_RET_OK;
@@ -570,6 +576,8 @@ findRatelimiter(lstn_t *pLstn, struct ucred *cred, ratelimit_t **prl)
 	*prl = rl;
 
 finalize_it:
+	if(*prl == NULL)
+		*prl = pLstn->dflt_ratelimiter;
 	RETiRet;
 }
 
