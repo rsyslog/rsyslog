@@ -1890,13 +1890,16 @@ actionRequiresDateCall(action_t *pAction)
 	int i;
 	int r = 0;
 
+	if(pAction->eParamPassing == ACT_MSG_PASSING)
+		/* in msg passing mode, we have NO templates! */
+		goto done;
 	for(i = 0 ; i < pAction->iNumTpls ; ++i) {
 		if(tplRequiresDateCall(pAction->ppTpl[i])) {
 			r = 1;
 			break;
 		}
 	}
-	return r;
+done:	return r;
 }
 
 
