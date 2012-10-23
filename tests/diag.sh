@@ -10,8 +10,8 @@
 #valgrind="valgrind --tool=helgrind --log-fd=1"
 #valgrind="valgrind --tool=exp-ptrcheck --log-fd=1"
 #set -o xtrace
-export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction nostdout"
-export RSYSLOG_DEBUGLOG="log"
+#export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction nostdout"
+#export RSYSLOG_DEBUGLOG="log"
 case $1 in
    'init')	$srcdir/killrsyslog.sh # kill rsyslogd if it runs for some reason
 		cp $srcdir/testsuites/diag-common.conf diag-common.conf
@@ -36,12 +36,12 @@ case $1 in
 		;;
    'startup')   # start rsyslogd with default params. $2 is the config file name to use
    		# returns only after successful startup, $3 is the instance (blank or 2!)
-		$valgrind ../tools/rsyslogd -c6 -u2 -n -irsyslog$3.pid -M../runtime/.libs:../.libs -f$srcdir/testsuites/$2 &
+		$valgrind ../tools/rsyslogd -u2 -n -irsyslog$3.pid -M../runtime/.libs:../.libs -f$srcdir/testsuites/$2 &
    		$srcdir/diag.sh wait-startup $3
 		;;
    'startup-vg') # start rsyslogd with default params under valgrind control. $2 is the config file name to use
    		# returns only after successful startup, $3 is the instance (blank or 2!)
-		valgrind --log-fd=1 --error-exitcode=10 --malloc-fill=ff --free-fill=fe --leak-check=full ../tools/rsyslogd -c6 -u2 -n -irsyslog$3.pid -M../runtime/.libs:../.libs -f$srcdir/testsuites/$2 &
+		valgrind --log-fd=1 --error-exitcode=10 --malloc-fill=ff --free-fill=fe --leak-check=full ../tools/rsyslogd -u2 -n -irsyslog$3.pid -M../runtime/.libs:../.libs -f$srcdir/testsuites/$2 &
    		$srcdir/diag.sh wait-startup $3
 		;;
    'wait-startup') # wait for rsyslogd startup ($2 is the instance)
