@@ -214,6 +214,7 @@ struct queuefilenames_s {
 
 
 static ratelimit_t *dflt_ratelimiter = NULL; /* ratelimiter for submits without explicit one */
+static ratelimit_t *internalMsg_ratelimiter = NULL; /* ratelimiter for rsyslog-own messages */
 int	MarkInterval = 20 * 60;	/* interval between marks in seconds - read-only after startup */
 int      send_to_all = 0;        /* send message to all IPv4/IPv6 addresses */
 static int	NoFork = 0; 	/* don't fork - don't run in daemon mode - read-only after startup */
@@ -482,7 +483,8 @@ logmsgInternal(int iErr, int pri, uchar *msg, int flags)
                /* we have the queue, so we can simply provide the
 		 * message to the queue engine.
 		 */
-		submitMsgWithDfltRatelimiter(pMsg);
+		ratelimitAddMsg(internalMsg_ratelimiter, NULL, pMsg);
+		//submitMsgWithDfltRatelimiter(pMsg);
 	}
 finalize_it:
 	RETiRet;
@@ -1958,8 +1960,11 @@ int realMain(int argc, char **argv)
 	}
 	CHKiRet(localRet);
 
-	CHKiRet(ratelimitNew(&dflt_ratelimiter, "rsyslogd", NULL));
+	CHKiRet(ratelimitNew(&dflt_ratelimiter, "rsyslogd", "dflt"));
 	/* TODO: add linux-type limiting capability */
+	CHKiRet(ratelimitNew(&internalMsg_ratelimiter, "rsyslogd", "internal_messages"));
+	ratelimitSetLinuxLike(internalMsg_ratelimiter, 5, 500);
+	/* TODO: make internalMsg ratelimit settings configurable */
 
 	if(bChDirRoot) {
 		if(chdir("/") != 0)
