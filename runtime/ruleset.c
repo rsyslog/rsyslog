@@ -458,14 +458,12 @@ static void
 execPROPFILT(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
 {
 	sbool *thenAct;
-	msg_t *pMsg;
 	sbool bRet;
 	int i;
 	thenAct = newActive(pBatch);
 	for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pBatch->pbShutdownImmediate) ; ++i) {
 		if(pBatch->pElem[i].state == BATCH_STATE_DISC)
 			continue; /* will be ignored in any case */
-		pMsg = (msg_t*)(pBatch->pElem[i].pUsrp);
 		if(active == NULL || active[i]) {
 			bRet = evalPROPFILT(stmt, (msg_t*)(pBatch->pElem[i].pUsrp));
 		} else 
