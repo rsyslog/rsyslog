@@ -2458,7 +2458,7 @@ cnfstmtOptimizeAct(struct cnfstmt *stmt)
 	action_t *pAct;
 
 	pAct = stmt->d.act;
-	if(!strcmp((char*)modGetName(stmt->d.act->pMod), "builtin:omdiscard")) {
+	if(!strcmp((char*)modGetName(pAct->pMod), "builtin:omdiscard")) {
 		DBGPRINTF("optimizer: replacing omdiscard by STOP\n");
 		actionDestruct(stmt->d.act);
 		stmt->nodetype = S_STOP;

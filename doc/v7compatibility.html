@@ -42,6 +42,16 @@ They tell that the construct is deprecated and which statement is to be used
 as replacement. This does <b>not</b> affect operations: both modules are still
 fully operational and will not be removed in the v7 timeframe.
 
+<h2>Retries of output plugins that do not do proper replies</h2>
+<p>Some output plugins may not be able to detect if their target is capable of
+accepting data again after an error (technically, they always return OK when
+TryResume is called). Previously, the rsyslog core engine suspended such an action
+after 1000 succesive failures. This lead to potentially a large amount of
+errors and error messages. Starting with 7.2.1, this has been reduced to 10
+successive failures. This still gives the plugin a chance to recover. In extreme
+cases, a plugin may now enter suspend mode where it previously did not do so.
+In practice, we do NOT expect that.
+
 <p><font size="2">This documentation is part of the
 <a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
 Copyright &copy; 2011-2012 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
