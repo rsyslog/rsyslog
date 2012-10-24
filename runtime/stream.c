@@ -1175,7 +1175,6 @@ static rsRetVal
 doZipWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf, int bFlush)
 {
 	int zRet;	/* zlib return state */
-	sbool bzInitDone = RSFALSE;
 	DEFiRet;
 	unsigned outavail;
 	assert(pThis != NULL);
@@ -1194,7 +1193,6 @@ doZipWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf, int bFlush)
 		}
 		pThis->bzInitDone = RSTRUE;
 	}
-	bzInitDone = RSTRUE;
 
 	/* now doing the compression */
 	pThis->zstrm.next_in = (Bytef*) pBuf;
