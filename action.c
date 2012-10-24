@@ -659,7 +659,7 @@ actionDoRetry(action_t *pThis, time_t ttNow, int *pbShutdownImmediate)
 	iRetries = 0;
 	while((*pbShutdownImmediate == 0) && pThis->eState == ACT_STATE_RTRY) {
 		iRet = pThis->pMod->tryResume(pThis->pModData);
-		if((pThis->iResumeOKinRow > 999) && (pThis->iResumeOKinRow % 1000 == 0)) {
+		if((pThis->iResumeOKinRow > 9) && (pThis->iResumeOKinRow % 10 == 0)) {
 			bTreatOKasSusp = 1;
 			pThis->iResumeOKinRow = 0;
 		} else {
