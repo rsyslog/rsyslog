@@ -1,4 +1,8 @@
 ----------------------------------------------------------------------------
+Version 7.2.1  [v7-stable] 2012-10-??
+- ommongodb rate-limits error messages to prevent spamming the syslog
+  closes (for v7.2): http://bugzilla.adiscon.com/show_bug.cgi?id=366
+----------------------------------------------------------------------------
 Version 7.2.0  [v7-stable] 2012-10-22
 This starts a new stable branch based on 7.1.12 plus the following changes:
 - bugfix: imuxsock did not properly honor $LocalHostIPIF

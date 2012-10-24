@@ -68,6 +68,7 @@ typedef struct _instanceData {
 	uchar *pwd;
 	uchar *dbNcoll;
 	uchar *tplName;
+	int bErrMsgPermitted;	/* only one errmsg permitted per connection */
 } instanceData;
 
 
@@ -139,19 +140,21 @@ static void
 reportMongoError(instanceData *pData)
 {
 	char errStr[1024];
-	errmsg.LogError(0, RS_RET_ERR, "ommongodb: error: %s",
-		rs_strerror_r(errno, errStr, sizeof(errStr)));
-#if 0
 	gchar *err;
-	if(mongo_sync_cmd_get_last_error(pData->conn, (gchar*)pData->db, &err) == TRUE) {
-		errmsg.LogError(0, RS_RET_ERR, "ommongodb: error: %s", err);
-	} else {
-		errmsg.LogError(0, RS_RET_ERR, "ommongodb: we had an error, but can "
-			"not obtain specifics");
+	int eno;
+
+	if(pData->bErrMsgPermitted) {
+		eno = errno;
+		if(mongo_sync_cmd_get_last_error(pData->conn, (gchar*)pData->db, &err) == TRUE) {
+			errmsg.LogError(0, RS_RET_ERR, "ommongodb: error: %s", err);
+		} else {
+			DBGPRINTF("ommongodb: we had an error, but can not obtain specifics, "
+				  "using plain old errno error message generator\n");
+			errmsg.LogError(0, RS_RET_ERR, "ommongodb: error: %s",
+				rs_strerror_r(eno, errStr, sizeof(errStr)));
+		}
+		pData->bErrMsgPermitted = 0;
 	}
-#else
-	(void)pData;
-#endif
 }
 
 
@@ -433,9 +436,11 @@ CODESTARTdoAction
 		/* FIXME: is this a correct return code? */
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
-	if(!mongo_sync_cmd_insert(pData->conn, (char*)pData->dbNcoll, doc, NULL)) {
-		reportMongoError(pData);
+	if(mongo_sync_cmd_insert(pData->conn, (char*)pData->dbNcoll, doc, NULL)) {
+		pData->bErrMsgPermitted = 1;
+	} else {
 		dbgprintf("ommongodb: insert error\n");
+		reportMongoError(pData);
 		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
 
