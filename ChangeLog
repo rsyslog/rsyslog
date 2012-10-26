@@ -1,4 +1,7 @@
 ---------------------------------------------------------------------------
+Version 6.6.1  [v6-stable] 2012-10-??
+- bugfix: build problems on some platforms
+---------------------------------------------------------------------------
 Version 6.6.0  [v6-stable] 2012-10-22
 This starts a new stable branch, based on the 6.5.x series, plus:
 - bugfix: imuxsock did not properly honor $LocalHostIPIF
