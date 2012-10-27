@@ -131,7 +131,7 @@ obj:	  BEGINOBJ nvlst ENDOBJ 	{ $$ = cnfobjNew($1, $2); }
 					{ $$ = cnfobjNew(CNFOBJ_TPL, $2);
 					  $$->subobjs = $5;
 					}
-        | BEGIN_RULESET nvlst ENDOBJ '{' stmt '}'
+        | BEGIN_RULESET nvlst ENDOBJ '{' script '}'
 					{ $$ = cnfobjNew(CNFOBJ_RULESET, $2);
 					  $$->script = $5;
 					}
