@@ -1,5 +1,6 @@
 ----------------------------------------------------------------------------
 Version 7.2.1  [v7-stable] 2012-10-??
+- improved syntax error messages by outputting the error token
 - the rsyslog core now suspeneds actions after 10 failures in a row
   This was former the case after 1,000 failures and could cause rsyslog
   to be spammed/ressources misused. See the v6 compatibility doc for more
