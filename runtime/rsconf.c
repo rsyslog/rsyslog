@@ -67,6 +67,7 @@
 #include "dirty.h"
 #include "template.h"
 
+extern char* yytext;
 /* static data */
 DEFobjStaticHelpers
 DEFobjCurrIf(ruleset)
@@ -390,7 +391,7 @@ parser_errmsg(char *fmt, ...)
 int
 yyerror(char *s)
 {
-	parser_errmsg("%s", s);
+	parser_errmsg("%s on token '%s'", s, yytext);
 	return 0;
 }
 void cnfDoObj(struct cnfobj *o)

@@ -93,6 +93,8 @@
 #include <zlib.h>
 #endif
 
+extern int yydebug; /* interface to flex */
+
 #include <netdb.h>
 
 #include "pidfile.h"
@@ -1830,7 +1832,7 @@ int realMain(int argc, char **argv)
 	 * of other options, we do this during the inital option processing.
 	 * rgerhards, 2008-04-04
 	 */
-	while((ch = getopt(argc, argv, "46a:Ac:def:g:hi:l:m:M:nN:op:qQr::s:t:T:u:vwx")) != EOF) {
+	while((ch = getopt(argc, argv, "46a:Ac:dDef:g:hi:l:m:M:nN:op:qQr::s:t:T:u:vwx")) != EOF) {
 		switch((char)ch) {
                 case '4':
                 case '6':
@@ -1863,6 +1865,10 @@ int realMain(int argc, char **argv)
 		case 'd': /* debug - must be handled now, so that debug is active during init! */
 			debugging_on = 1;
 			Debug = 1;
+			yydebug = 1;
+			break;
+		case 'D': /* BISON debug */
+			yydebug = 1;
 			break;
 		case 'e':		/* log every message (no repeat message supression) */
 			bEOptionWasGiven = 1;
