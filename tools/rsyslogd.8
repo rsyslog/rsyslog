@@ -10,6 +10,7 @@ rsyslogd \- reliable and extended syslogd
 .RB [ " \-6 " ]
 .RB [ " \-A " ]
 .RB [ " \-d " ]
+.RB [ " \-D " ]
 .RB [ " \-f "
 .I config file
 ]
@@ -124,6 +125,11 @@ This option has been obsoleted and has no function any longer. It is still
 accepted in order not to break existing scripts. However, future versions
 may not support it.
 .TP
+.B "\-D"
+Runs the Bison config parser in debug mode. This may help when hard to find
+syntax errors are reported. Please note that the output generated is deeply
+.TP
+technical and orignally targeted towards developers.
 .B "\-d"
 Turns on debug mode.  Using this the daemon will not proceed a 
 .BR fork (2)
