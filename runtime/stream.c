@@ -1128,6 +1128,7 @@ strmPhysWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf)
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, strm);
 
+	DBGPRINTF("strmPhysWrite, stream %p, len %d\n", pThis, (int) lenBuf);
 	if(pThis->fd == -1)
 		CHKiRet(strmOpenFile(pThis));
 
