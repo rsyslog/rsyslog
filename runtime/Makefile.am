@@ -87,10 +87,7 @@ librsyslog_la_SOURCES = \
 	../outchannel.c \
 	../outchannel.h \
 	../template.c \
-	../template.h \
-	\
-	cJSON/cjson.c \
-	cJSON/cjson.h
+	../template.h
 # the files with ../ we need to work on - so that they either become part of the
 # runtime or will no longer be needed. -- rgerhards, 2008-06-13
 

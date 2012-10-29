@@ -37,7 +37,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include "cjson.h"
+#include "cJSON/cjson.h"
 #include "conf.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
