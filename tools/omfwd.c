@@ -138,6 +138,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "streamdriverauthmode", eCmdHdlrGetWord, 0 },
 	{ "streamdriverpermittedpeers", eCmdHdlrGetWord, 0 },
 	{ "resendlastmsgonreconnect", eCmdHdlrBinary, 0 },
+	{ "template", eCmdHdlrGetWord, 0 },
 };
 static struct cnfparamblk actpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -760,6 +761,7 @@ setInstParamDefaults(instanceData *pData)
 
 BEGINnewActInst
 	struct cnfparamvals *pvals;
+	uchar *tplToUse;
 	int i;
 	rsRetVal localRet;
 CODESTARTnewActInst
@@ -881,7 +883,8 @@ CODESTARTnewActInst
 	}
 	CODE_STD_STRING_REQUESTnewActInst(1)
 
-	CHKiRet(OMSRsetEntry(*ppOMSR, 0, ustrdup(getDfltTpl()), OMSR_NO_RQD_TPL_OPTS));
+	tplToUse = ustrdup((pData->tplName == NULL) ? getDfltTpl() : pData->tplName);
+	CHKiRet(OMSRsetEntry(*ppOMSR, 0, tplToUse, OMSR_NO_RQD_TPL_OPTS));
 
 	CHKiRet(initTCP(pData));
 CODE_STD_FINALIZERnewActInst

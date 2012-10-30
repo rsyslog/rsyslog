@@ -1,6 +1,6 @@
 if ENABLE_TESTBENCH
 # TODO: reenable TESTRUNS = rt_init rscript
-check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq msleep randomgen diagtalker uxsockrcvr syslog_caller syslog_inject inputfilegen
+check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq msleep randomgen diagtalker uxsockrcvr syslog_caller syslog_inject inputfilegen minitcpsrv
 TESTS = $(TESTRUNS) 
 #TESTS = $(TESTRUNS) cfg.sh
 
@@ -70,6 +70,7 @@ TESTS +=  \
 	rscript_stop2.sh \
 	rscript_prifilt.sh \
 	rscript_optimizer1.sh \
+	rscript_ruleset_call.sh \
 	cee_simple.sh \
 	cee_diskqueue.sh \
 	linkedlistqueue.sh
@@ -284,6 +285,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/rscript_prifilt.conf \
 	   rscript_optimizer1.sh \
 	   testsuites/rscript_optimizer1.conf \
+	   rscript_ruleset_call.sh \
+	   testsuites/rscript_ruleset_call.conf \
 	   cee_simple.sh \
 	   testsuites/cee_simple.conf \
 	   cee_diskqueue.sh \
@@ -515,6 +518,9 @@ tcpflood_LDADD = $(SOL_LIBS) $(PTHREADS_LIBS) $(GNUTLS_LIBS)
 if ENABLE_GNUTLS
 tcpflood_LDADD += -lgcrypt
 endif
+
+minitcpsrv_SOURCES = minitcpsrvr.c
+minitcpsrv_LDADD = $(SOL_LIBS)
 
 syslog_caller_SOURCES = syslog_caller.c
 syslog_caller_LDADD = $(SOL_LIBS)

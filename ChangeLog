@@ -31,7 +31,10 @@ Version 7.3.0  [devel] 2012-10-09
   This was achieved by somewhat reducing the robustness of the zip archive.
   This is controlled by the new action parameter "VeryReliableZip".
 ----------------------------------------------------------------------------
-Version 7.2.1  [v7-stable] 2012-10-??
+Version 7.2.2  [v7-stable] 2012-10-30
+- bugfix: omfwd did not properly support "template" parameter
+----------------------------------------------------------------------------
+Version 7.2.1  [v7-stable] 2012-10-29
 - bugfix: ruleset()-object did only support a single statement
 - added -D rsyslogd option to enable config parser debug mode
 - improved syntax error messages by outputting the error token
