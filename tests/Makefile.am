@@ -1,6 +1,6 @@
 if ENABLE_TESTBENCH
 # TODO: reenable TESTRUNS = rt_init rscript
-check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq msleep randomgen diagtalker uxsockrcvr syslog_caller syslog_inject inputfilegen
+check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq msleep randomgen diagtalker uxsockrcvr syslog_caller syslog_inject inputfilegen minitcpsrv
 TESTS = $(TESTRUNS) 
 #TESTS = $(TESTRUNS) cfg.sh
 
@@ -518,6 +518,9 @@ tcpflood_LDADD = $(SOL_LIBS) $(PTHREADS_LIBS) $(GNUTLS_LIBS)
 if ENABLE_GNUTLS
 tcpflood_LDADD += -lgcrypt
 endif
+
+minitcpsrv_SOURCES = minitcpsrvr.c
+minitcpsrv_LDADD = $(SOL_LIBS)
 
 syslog_caller_SOURCES = syslog_caller.c
 syslog_caller_LDADD = $(SOL_LIBS)
