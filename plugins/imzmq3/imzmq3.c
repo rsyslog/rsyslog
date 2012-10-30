@@ -375,8 +375,10 @@ static rsRetVal createSocket(socket_info* info, void** sock) {
     zsocket_set_rcvhwm(*sock, info->rcvHWM);
 
     /* Set subscriptions.*/
-    for (ii = 0; ii < sizeof(info->subscriptions)/sizeof(char*); ++ii)
-        zsocket_set_subscribe(*sock, info->subscriptions[ii]);
+    if (info->type == ZMQ_SUB) {
+	    for (ii = 0; ii < sizeof(info->subscriptions)/sizeof(char*); ++ii)
+		zsocket_set_subscribe(*sock, info->subscriptions[ii]);
+    }
 
     
 
