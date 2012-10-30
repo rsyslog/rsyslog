@@ -1,5 +1,10 @@
 ---------------------------------------------------------------------------
 Version 7.3.2  [devel] 2012-10-??
+- imtcp: support for Linux-Type ratelimiting added
+- imptcp: support for Linux-Type ratelimiting added
+- imudp enhancements:
+  * support for input batching added (performance improvement)
+  * support for Linux-Type ratelimiting added
 - permited action-like statements (stop, call, ...) in action lists
 - bugfix: segfault on startup when modules using MSG_PASSING mode are used
 - omelasticsearch: support for writing data errors to local file added
@@ -64,6 +69,7 @@ Version 7.1.12  [beta] 2012-10-18
   This happened only under some circumstances. Thanks to Marius
   Tomaschwesky and Florian Piekert for their help in solving this issue.
 ----------------------------------------------------------------------------
+>>>>>>> b151584d0929759284c0fb0399709e5ca0e29d60
 Version 7.1.11  [beta] 2012-10-16
 - bugfix: imuxsock truncated head of received message
   This happened only under some circumstances. Thanks to Marius

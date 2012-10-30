@@ -17,10 +17,6 @@
 Encryption is natively provided by selecting the approprioate network stream driver and
 can also be provided by using <a href="rsyslog_stunnel.html">stunnel</a>
 (an alternative is the use the <a href="imgssapi.html">imgssapi</a> module).</p>
-<p>Multiple receivers may be configured by specifying
-$InputTCPServerRun multiple times. This is available since version 4.3.1, earlier
-versions do NOT support it.
-</p>
 
 <p><b>Configuration Directives</b>:</p>
 <p><b>Global Directives</b>:</p>
@@ -99,6 +95,13 @@ If set to "on", the legacy octed-counted framing (similar to RFC5425 framing) is
 activated. This is the default and should be left unchanged until you know
 very well what you do. It may be useful to turn it off, if you know this framing
 is not used and some senders emit multi-line messages into the message stream.
+</li>
+<li><b>RateLimit.Interval</b> [number] - (available since 7.3.1) specifies the rate-limiting
+interval in seconds.  Default value is 0, which turns off rate limiting. Set it to a number
+of seconds (5 recommended) to activate rate-limiting.
+</li>
+<li><b>RateLimit.Burst</b> [number] - (available since 7.3.1) specifies the rate-limiting
+burst in number of messages. Default is 10,000.
 </li>
 </ul>
 <b>Caveats/Known Bugs:</b>

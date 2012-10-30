@@ -115,8 +115,8 @@ void cnfDoCfsysline(char *ln);
  */
 BEGINobjConstruct(rsconf) /* be sure to specify the object type also in END macro! */
 	pThis->globals.bDebugPrintTemplateList = 1;
-	pThis->globals.bDebugPrintModuleList = 1;
-	pThis->globals.bDebugPrintCfSysLineHandlerList = 1;
+	pThis->globals.bDebugPrintModuleList = 0;
+	pThis->globals.bDebugPrintCfSysLineHandlerList = 0;
 	pThis->globals.bLogStatusMsgs = DFLT_bLogStatusMsgs;
 	pThis->globals.bErrMsgToStderr = 1;
 	pThis->globals.umask = -1;

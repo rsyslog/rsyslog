@@ -210,7 +210,7 @@ setLocalHostIPIF(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	if(propLocalIPIF != NULL) {
 		errmsg.LogError(0, RS_RET_ERR, "$LocalHostIPIF is already set "
 				"and cannot be reset; place it at TOP OF rsyslog.conf!");
-		ABORT_FINALIZE(RS_RET_ERR_WRKDIR);
+		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
 	localRet = net.GetIFIPAddr(pNewVal, AF_UNSPEC, myIP, (int) sizeof(myIP));

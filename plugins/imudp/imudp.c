@@ -4,8 +4,6 @@
  * NOTE: read comments in module-template.h to understand how this file
  *       works!
  *
- * File begun on 2007-12-21 by RGerhards (extracted from syslogd.c)
- *
  * Copyright 2007-2012 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
@@ -53,6 +51,7 @@
 #include "prop.h"
 #include "ruleset.h"
 #include "statsobj.h"
+#include "ratelimit.h"
 #include "unicode-helper.h"
 
 MODULE_TYPE_INPUT
@@ -77,6 +76,7 @@ static struct lstn_s {
 	int sock;		/* socket */
 	ruleset_t *pRuleset;	/* bound ruleset */
 	statsobj_t *stats;	/* listener stats */
+	ratelimit_t *ratelimiter;
 	STATSCOUNTER_DEF(ctrSubmit, mutCtrSubmit)
 } *lcnfRoot = NULL, *lcnfLast = NULL;
 
@@ -109,6 +109,8 @@ struct instanceConf_s {
 	uchar *pszBindPort;		/* Port to bind socket to */
 	uchar *pszBindRuleset;		/* name of ruleset to bind to */
 	ruleset_t *pBindRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
+	int ratelimitInterval;
+	int ratelimitBurst;
 	struct instanceConf_s *next;
 };
 
@@ -140,7 +142,9 @@ static struct cnfparamblk modpblk =
 static struct cnfparamdescr inppdescr[] = {
 	{ "port", eCmdHdlrArray, CNFPARAM_REQUIRED }, /* legacy: InputTCPServerRun */
 	{ "address", eCmdHdlrString, 0 },
-	{ "ruleset", eCmdHdlrString, 0 }
+	{ "ruleset", eCmdHdlrString, 0 },
+	{ "ratelimit.interval", eCmdHdlrInt, 0 },
+	{ "ratelimit.burst", eCmdHdlrInt, 0 }
 };
 static struct cnfparamblk inppblk =
 	{ CNFPARAMBLK_VERSION,
@@ -165,6 +169,8 @@ createInstance(instanceConf_t **pinst)
 	inst->pszBindPort = NULL;
 	inst->pszBindAddr = NULL;
 	inst->pszBindRuleset = NULL;
+	inst->ratelimitBurst = 10000; /* arbitrary high limit */
+	inst->ratelimitInterval = 0; /* off */
 
 	/* node created, let's add to config */
 	if(loadModConf->tail == NULL) {
@@ -223,7 +229,7 @@ addListner(instanceConf_t *inst)
 	struct lstn_s *newlcnfinfo;
 	uchar *bindName;
 	uchar *port;
-	uchar statname[64];
+	uchar dispname[64];
 
 	/* check which address to bind to. We could do this more compact, but have not
 	 * done so in order to make the code more readable. -- rgerhards, 2007-12-27
@@ -248,11 +254,14 @@ addListner(instanceConf_t *inst)
 			newlcnfinfo->next = NULL;
 			newlcnfinfo->sock = newSocks[iSrc];
 			newlcnfinfo->pRuleset = inst->pBindRuleset;
+			snprintf((char*)dispname, sizeof(dispname), "imudp(%s:%s)", bindName, port);
+			dispname[sizeof(dispname)-1] = '\0'; /* just to be on the save side... */
+			CHKiRet(ratelimitNew(&newlcnfinfo->ratelimiter, (char*)dispname, NULL));
+			ratelimitSetLinuxLike(newlcnfinfo->ratelimiter, inst->ratelimitInterval,
+					      inst->ratelimitBurst);
 			/* support statistics gathering */
 			CHKiRet(statsobj.Construct(&(newlcnfinfo->stats)));
-			snprintf((char*)statname, sizeof(statname), "imudp(%s:%s)", bindName, port);
-			statname[sizeof(statname)-1] = '\0'; /* just to be on the save side... */
-			CHKiRet(statsobj.SetName(newlcnfinfo->stats, statname));
+			CHKiRet(statsobj.SetName(newlcnfinfo->stats, dispname));
 			STATSCOUNTER_INIT(newlcnfinfo->ctrSubmit, newlcnfinfo->mutCtrSubmit);
 			CHKiRet(statsobj.AddCounter(newlcnfinfo->stats, UCHAR_CONSTANT("submitted"),
 				ctrType_IntCtr, &(newlcnfinfo->ctrSubmit)));
@@ -304,7 +313,6 @@ std_checkRuleset_genErrMsg(__attribute__((unused)) modConfData_t *modConf, insta
 static inline rsRetVal
 processSocket(thrdInfo_t *pThrd, struct lstn_s *lstn, struct sockaddr_storage *frominetPrev, int *pbIsPermitted)
 {
-	DEFiRet;
 	int iNbrTimeUsed;
 	time_t ttGenTime;
 	struct syslogTime stTime;
@@ -314,9 +322,15 @@ processSocket(thrdInfo_t *pThrd, struct lstn_s *lstn, struct sockaddr_storage *f
 	msg_t *pMsg;
 	prop_t *propFromHost = NULL;
 	prop_t *propFromHostIP = NULL;
+	multi_submit_t multiSub;
+	msg_t *pMsgs[CONF_NUM_MULTISUB];
 	char errStr[1024];
+	DEFiRet;
 
 	assert(pThrd != NULL);
+	multiSub.ppMsgs = pMsgs;
+	multiSub.maxElem = CONF_NUM_MULTISUB;
+	multiSub.nElem = 0;
 	iNbrTimeUsed = 0;
 	while(1) { /* loop is terminated if we have a bad receive, done below in the body */
 		if(pThrd->bShallStop == RSTRUE)
@@ -383,12 +397,15 @@ processSocket(thrdInfo_t *pThrd, struct lstn_s *lstn, struct sockaddr_storage *f
 			if(*pbIsPermitted == 2)
 				pMsg->msgFlags  |= NEEDS_ACLCHK_U; /* request ACL check after resolution */
 			CHKiRet(msgSetFromSockinfo(pMsg, &frominet));
-			CHKiRet(submitMsg(pMsg));
+			CHKiRet(ratelimitAddMsg(lstn->ratelimiter, &multiSub, pMsg));
 			STATSCOUNTER_INC(lstn->ctrSubmit, lstn->mutCtrSubmit);
 		}
 	}
 
+
 finalize_it:
+	multiSubmitFlush(&multiSub);
+
 	if(propFromHost != NULL)
 		prop.Destruct(&propFromHost);
 	if(propFromHostIP != NULL)
@@ -682,6 +699,10 @@ createListner(es_str_t *port, struct cnfparamvals *pvals)
 			inst->pszBindAddr = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "ruleset")) {
 			inst->pszBindRuleset = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(inppblk.descr[i].name, "ratelimit.burst")) {
+			inst->ratelimitBurst = (int) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "ratelimit.interval")) {
+			inst->ratelimitInterval = (int) pvals[i].val.d.n;
 		} else {
 			dbgprintf("imudp: program error, non-handled "
 			  "param '%s'\n", inppblk.descr[i].name);
@@ -884,6 +905,7 @@ CODESTARTafterRun
 	net.clearAllowedSenders((uchar*)"UDP");
 	for(lstn = lcnfRoot ; lstn != NULL ; ) {
 		statsobj.Destruct(&(lstn->stats));
+		ratelimitDestruct(lstn->ratelimiter);
 		close(lstn->sock);
 		lstnDel = lstn;
 		lstn = lstn->next;

@@ -72,6 +72,7 @@
 #include "nspoll.h"
 #include "errmsg.h"
 #include "ruleset.h"
+#include "ratelimit.h"
 #include "unicode-helper.h"
 
 
@@ -151,6 +152,9 @@ addNewLstnPort(tcpsrv_t *pThis, uchar *pszPort, int bSuppOctetFram)
 	snprintf((char*)statname, sizeof(statname), "%s(%s)", pThis->pszInputName, pszPort);
 	statname[sizeof(statname)-1] = '\0'; /* just to be on the save side... */
 	CHKiRet(statsobj.SetName(pEntry->stats, statname));
+	CHKiRet(ratelimitNew(&pEntry->ratelimiter, "tcperver", NULL));
+	ratelimitSetLinuxLike(pEntry->ratelimiter, pThis->ratelimitInterval, pThis->ratelimitBurst);
+	ratelimitSetThreadSafe(pEntry->ratelimiter);
 	STATSCOUNTER_INIT(pEntry->ctrSubmit, pEntry->mutCtrSubmit);
 	CHKiRet(statsobj.AddCounter(pEntry->stats, UCHAR_CONSTANT("submitted"),
 		ctrType_IntCtr, &(pEntry->ctrSubmit)));
@@ -295,6 +299,7 @@ static void deinit_tcp_listener(tcpsrv_t *pThis)
 	while(pEntry != NULL) {
 		free(pEntry->pszPort);
 		prop.Destruct(&pEntry->pInputName);
+		ratelimitDestruct(pEntry->ratelimiter);
 		pDel = pEntry;
 		pEntry = pEntry->pNext;
 		free(pDel);
@@ -913,6 +918,8 @@ BEGINobjConstruct(tcpsrv) /* be sure to specify the object type also in END macr
 	pThis->addtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
 	pThis->bDisableLFDelim = 0;
 	pThis->OnMsgReceive = NULL;
+	pThis->ratelimitInterval = 0;
+	pThis->ratelimitBurst = 10000;
 	pThis->bUseFlowControl = 1;
 ENDobjConstruct(tcpsrv)
 
@@ -1120,6 +1127,17 @@ finalize_it:
 }
 
 
+/* Set the linux-like ratelimiter settings */
+static rsRetVal
+SetLinuxLikeRatelimiters(tcpsrv_t *pThis, int ratelimitInterval, int ratelimitBurst)
+{
+	DEFiRet;
+	pThis->ratelimitInterval = ratelimitInterval;
+	pThis->ratelimitBurst = ratelimitBurst;
+	RETiRet;
+}
+
+
 /* Set the ruleset (ptr) to use */
 static rsRetVal
 SetRuleset(tcpsrv_t *pThis, ruleset_t *pRuleset)
@@ -1270,6 +1288,7 @@ CODESTARTobjQueryInterface(tcpsrv)
 	pIf->SetCBOnErrClose = SetCBOnErrClose;
 	pIf->SetOnMsgReceive = SetOnMsgReceive;
 	pIf->SetRuleset = SetRuleset;
+	pIf->SetLinuxLikeRatelimiters = SetLinuxLikeRatelimiters;
 	pIf->SetNotificationOnRemoteClose = SetNotificationOnRemoteClose;
 
 finalize_it:

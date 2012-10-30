@@ -48,6 +48,7 @@
 #include "prop.h"
 #include "stringbuf.h"
 #include "ruleset.h"
+#include "ratelimit.h"
 
 MODULE_TYPE_INPUT	/* must be present for input modules, do not remove */
 MODULE_TYPE_NOKEEP
@@ -82,6 +83,7 @@ typedef struct fileInfo_s {
 	strm_t *pStrm;	/* its stream (NULL if not assigned) */
 	int readMode;	/* which mode to use in ReadMulteLine call? */
 	ruleset_t *pRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
+	ratelimit_t *ratelimiter;
 	multi_submit_t multiSub;
 } fileInfo_t;
 
@@ -189,9 +191,7 @@ static rsRetVal enqLine(fileInfo_t *pInfo, cstr_t *cstrLine)
 	pMsg->iFacility = LOG_FAC(pInfo->iFacility);
 	pMsg->iSeverity = LOG_PRI(pInfo->iSeverity);
 	MsgSetRuleset(pMsg, pInfo->pRuleset);
-	pInfo->multiSub.ppMsgs[pInfo->multiSub.nElem++] = pMsg;
-	if(pInfo->multiSub.nElem == pInfo->multiSub.maxElem)
-		CHKiRet(multiSubmitMsg(&pInfo->multiSub));
+	ratelimitAddMsg(pInfo->ratelimiter, &pInfo->multiSub, pMsg);
 finalize_it:
 	RETiRet;
 }
@@ -304,18 +304,7 @@ static rsRetVal pollFile(fileInfo_t *pThis, int *pbHadFileData)
 	}
 
 finalize_it:
-	if(pThis->multiSub.nElem > 0) {
-		/* submit everything that was not yet submitted */
-		CHKiRet(multiSubmitMsg(&pThis->multiSub));
-	}
-		; /*EMPTY STATEMENT - needed to keep compiler happy - see below! */
-	/* Note: the problem above is that pthread:cleanup_pop() is a macro which
-	 * evaluates to something like "} while(0);". So the code would become
-	 * "finalize_it: }", that is a label without a statement. The C standard does
-	 * not permit this. So we add an empty statement "finalize_it: ; }" and
-	 * everybody is happy. Note that without the ;, an error is reported only
-	 * on some platforms/compiler versions. -- rgerhards, 2008-08-15
-	 */
+	multiSubmitFlush(&pThis->multiSub);
 	pthread_cleanup_pop(0);
 
 	if(pCStr != NULL) {
@@ -423,6 +412,7 @@ addListner(instanceConf_t *inst)
 		pThis->lenTag = ustrlen(pThis->pszTag);
 		pThis->pszStateFile = (uchar*) strdup((char*) inst->pszStateFile);
 
+		CHKiRet(ratelimitNew(&pThis->ratelimiter, "imfile", (char*)inst->pszFileName));
 		CHKmalloc(pThis->multiSub.ppMsgs = MALLOC(inst->nMultiSub * sizeof(msg_t*)));
 		pThis->multiSub.maxElem = inst->nMultiSub;
 		pThis->multiSub.nElem = 0;
@@ -773,6 +763,8 @@ CODESTARTafterRun
 			persistStrmState(&files[i]);
 			strm.Destruct(&(files[i].pStrm));
 		}
+		ratelimitDestruct(files[i].ratelimiter);
+		free(files[i].multiSub.ppMsgs);
 		free(files[i].pszFileName);
 		free(files[i].pszTag);
 		free(files[i].pszStateFile);

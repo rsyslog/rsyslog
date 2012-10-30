@@ -127,7 +127,7 @@ static struct cnfparamblk pblk =
 	};
 
 /* debug aid */
-static void displayBatchState(batch_t *pBatch)
+static inline void displayBatchState(batch_t *pBatch)
 {
 	int i;
 	for(i = 0 ; i < pBatch->nElem ; ++i) {

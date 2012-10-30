@@ -120,7 +120,11 @@ CODESTARTdoAction
 		  (char*) pData->pszRulesetName, pData->pRuleset);
 	MsgSetFlowControlType(pMsg, eFLOWCTL_NO_DELAY);
 	MsgSetRuleset(pMsg, pData->pRuleset);
-	submitMsg(pMsg);
+	/* Note: we intentionally use submitMsg2() here, as we process messages
+	 * that were already run through the rate-limiter. So it is (at least)
+	 * questionable if they were rate-limited again.
+	 */
+	submitMsg2(pMsg);
 finalize_it:
 ENDdoAction
 

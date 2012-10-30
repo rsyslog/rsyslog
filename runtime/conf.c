@@ -607,13 +607,8 @@ rsRetVal cflineDoAction(rsconf_t *conf, uchar **p, action_t **ppAction)
 		if(iRet == RS_RET_OK || iRet == RS_RET_SUSPENDED) {
 			if((iRet = addAction(&pAction, pMod, pModData, pOMSR, NULL, NULL,
 					     (iRet == RS_RET_SUSPENDED)? 1 : 0)) == RS_RET_OK) {
-				/* now check if the module is compatible with select features */
-				if(pMod->isCompatibleWithFeature(sFEATURERepeatedMsgReduction) == RS_RET_OK)
-					pAction->f_ReduceRepeated = loadConf->globals.bReduceRepeatMsgs;
-				else {
-					dbgprintf("module is incompatible with RepeatedMsgReduction - turned off\n");
-					pAction->f_ReduceRepeated = 0;
-				}
+				/* here check if the module is compatible with select features
+				 * (currently, we have no such features!) */
 				pAction->eState = ACT_STATE_RDY; /* action is enabled */
 				conf->actions.nbrActions++;	/* one more active action! */
 			}
