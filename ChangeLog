@@ -1,5 +1,13 @@
 ---------------------------------------------------------------------------
-Version 7.3.2  [devel] 2012-10-??
+Version 7.3.2  [devel] 2012-10-30
+- totally reworked ratelimiting and "last message repeated n times"
+  all over rsyslog code. Each of the supported inputs now supports 
+  linux-like ratelimiting (formerly only imuxsock did). Also, the
+  "last message repeated n times" is now processed at the input side
+  and no longer at the output side of rsyslog processing. This 
+  provides the basis for new future additions as well as usually more
+  performance and a much simpler output part (which can be even further
+  refactored).
 - imtcp: support for Linux-Type ratelimiting added
 - imptcp: support for Linux-Type ratelimiting added
 - imudp enhancements:
