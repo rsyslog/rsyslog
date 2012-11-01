@@ -115,6 +115,7 @@ html_files = \
 	gssapi.html \
 	licensing.html \
 	mmnormalize.html \
+	mmjsonparse.html \
 	ommail.html \
 	omuxsock.html \
 	omrelp.html \

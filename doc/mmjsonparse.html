@@ -1,0 +1,45 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<title>CEE/lumberjack JSON support Module (mmjsonparse)</title>
+</head>
+<body>
+<a href="rsyslog_conf_modules.html">back</a>
+
+<h1>Log Message Normalization Module</h1>
+<p><b>Module Name:&nbsp;&nbsp;&nbsp; mmjsonparse</b></p>
+<p><b>Available since: </b>6.6.0+
+<p><b>Author: </b>Rainer Gerhards &lt;rgerhards@adiscon.com&gt;</p>
+<p><b>Description</b>:</p>
+<p>This module provides support for parsing structured log messages
+that follow the CEE/lumberjack spec. The so-called "CEE cookie" is checked
+and, if present, the JSON-encoded structured message content is parsed.
+The properties are than available as original message properties.
+</p>
+<p><b>Action specific Configuration Directives</b>:</p>
+<p>currently none
+<ul>
+<p><b>Legacy Configuration Directives</b>:</p>
+<p>none
+<b>Caveats/Known Bugs:</b>
+<p>None known at this time.
+</ul>
+<p><b>Sample:</b></p>
+<p>This activates the module and applies normalization to all messages:<br>
+</p>
+<textarea rows="2" cols="60">module(load="mmjsonparse")
+action(type="mmjsonparse")
+</textarea>
+<p>The same in legacy format:</p>
+<textarea rows="2" cols="60">$ModLoad mmjsonparse
+*.* :mmjsonparse:
+</textarea>
+<p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>]
+[<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the
+<a href="http://www.rsyslog.com/">rsyslog</a>
+project.<br>
+Copyright &copy; 2012 by <a href="http://www.gerhards.net/rainer">Rainer
+Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>.
+Released under the GNU GPL version 3 or higher.</font></p>
+</body></html>
