@@ -71,7 +71,7 @@ typedef struct _instanceData {
 
 typedef struct configSettings_s {
 	uchar *rulebase;		/**< name of normalization rulebase to use */
-	sbool bUseRawMsg;	/**< use %rawmsg% instead of %msg% */
+	int bUseRawMsg;	/**< use %rawmsg% instead of %msg% */
 } configSettings_t;
 static configSettings_t cs;
 
