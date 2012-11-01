@@ -48,8 +48,10 @@ Version 7.3.0  [devel] 2012-10-09
   This was achieved by somewhat reducing the robustness of the zip archive.
   This is controlled by the new action parameter "VeryReliableZip".
 ----------------------------------------------------------------------------
-Version 7.2.2  [v7-stable] 2012-10-30
+Version 7.2.2  [v7-stable] 2012-10-??
 - bugfix: omfwd did not properly support "template" parameter
+- bugfix: imzmq3 segfault with PULL subscription
+  Thanks to Martin Nilsson for the patch.
 ----------------------------------------------------------------------------
 Version 7.2.1  [v7-stable] 2012-10-29
 - bugfix: ruleset()-object did only support a single statement
@@ -201,6 +203,13 @@ Version 7.1.0  [devel] 2012-09-06
 - ommongodb now supports templates
 - bugfix: imtcp could abort on exit due to invalid free()
 - imported bugfixes from 6.4.1
+---------------------------------------------------------------------------
+Version 6.6.1  [v6-stable] 2012-10-??
+- bugfix: build problems on some platforms
+- bugfix: misaddressing of $mmnormalizeuserawmsg parameter
+  On many platforms, this has no effect at all. At some, it may cause
+  a segfault. The problem occurs only during config phase, no segfault
+  happens when rsyslog has fully started.
 ---------------------------------------------------------------------------
 Version 6.6.0  [v6-stable] 2012-10-22
 This starts a new stable branch, based on the 6.5.x series, plus:
