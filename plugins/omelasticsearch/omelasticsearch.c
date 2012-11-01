@@ -624,7 +624,7 @@ CODESTARTnewActInst
 	if(pData->dynSrchType) ++iNumTpls;
 	if(pData->dynParent) ++iNumTpls;
 	DBGPRINTF("omelasticsearch: requesting %d templates\n", iNumTpls);
-	CODE_STD_STRING_REQUESTparseSelectorAct(iNumTpls)
+	CODE_STD_STRING_REQUESTnewActInst(iNumTpls)
 
 	CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*)strdup((pData->tplName == NULL) ?
 					    " StdJSONFmt" : (char*)pData->tplName),

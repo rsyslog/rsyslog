@@ -315,7 +315,7 @@ CODESTARTnewActInst
 	CHKiRet(createInstance(&pData));
 	setInstParamDefaults(pData);
 
-	CODE_STD_STRING_REQUESTparseSelectorAct(1)
+	CODE_STD_STRING_REQUESTnewActInst(1)
 	for(i = 0 ; i < actpblk.nParams ; ++i) {
 		if(!pvals[i].bUsed)
 			continue;
