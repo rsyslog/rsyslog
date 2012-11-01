@@ -65,6 +65,7 @@ DEF_OMOD_STATIC_DATA
 
 typedef struct _instanceData {
 	sbool bUseRawMsg;	/**< use %rawmsg% instead of %msg% */
+	uchar 	*rulebase;	/**< name of rulebase to use */
 	ln_ctx ctxln;		/**< context to be used for liblognorm */
 	ee_ctx ctxee;		/**< context to be used for libee */
 } instanceData;
@@ -74,6 +75,58 @@ typedef struct configSettings_s {
 	sbool bUseRawMsg;	/**< use %rawmsg% instead of %msg% */
 } configSettings_t;
 static configSettings_t cs;
+
+/* tables for interfacing with the v6 config system */
+/* action (instance) parameters */
+static struct cnfparamdescr actpdescr[] = {
+	{ "rulebase", eCmdHdlrGetWord, 1 },
+	{ "userawmsg", eCmdHdlrBinary, 0 }
+};
+static struct cnfparamblk actpblk =
+	{ CNFPARAMBLK_VERSION,
+	  sizeof(actpdescr)/sizeof(struct cnfparamdescr),
+	  actpdescr
+	};
+
+struct modConfData_s {
+	rsconf_t *pConf;	/* our overall config object */
+};
+
+static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
+static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current exec process */
+
+
+/* to be called to build the libee part of the instance ONCE ALL PARAMETERS ARE CORRECT
+ * (and set within pData!).
+ */
+static rsRetVal
+buildInstance(instanceData *pData)
+{
+	DEFiRet;
+	if((pData->ctxee = ee_initCtx()) == NULL) {
+		errmsg.LogError(0, RS_RET_LIBEE_INIT, "error: could not initialize libee "
+				"ctx, cannot activate action");
+		ABORT_FINALIZE(RS_RET_ERR_LIBEE_INIT);
+	}
+
+	if((pData->ctxln = ln_initCtx()) == NULL) {
+		errmsg.LogError(0, RS_RET_LIBLOGNORM_INIT, "error: could not initialize "
+				"liblognorm ctx, cannot activate action");
+		ee_exitCtx(pData->ctxee);
+		ABORT_FINALIZE(RS_RET_ERR_LIBLOGNORM_INIT);
+	}
+	ln_setEECtx(pData->ctxln, pData->ctxee);
+	if(ln_loadSamples(pData->ctxln, (char*) pData->rulebase) != 0) {
+		errmsg.LogError(0, RS_RET_NO_RULESET, "error: normalization rulebase '%s' "
+				"could not be loaded cannot activate action", cs.rulebase);
+		ee_exitCtx(pData->ctxee);
+		ln_exitCtx(pData->ctxln);
+		ABORT_FINALIZE(RS_RET_ERR_LIBLOGNORM_SAMPDB_LOAD);
+	}
+finalize_it:
+	RETiRet;
+}
+
 
 BEGINinitConfVars		/* (re)set config variables to default values */
 CODESTARTinitConfVars 
@@ -86,6 +139,36 @@ CODESTARTcreateInstance
 ENDcreateInstance
 
 
+BEGINbeginCnfLoad
+CODESTARTbeginCnfLoad
+	loadModConf = pModConf;
+	pModConf->pConf = pConf;
+ENDbeginCnfLoad
+
+
+BEGINendCnfLoad
+CODESTARTendCnfLoad
+	loadModConf = NULL; /* done loading */
+	/* free legacy config vars */
+	free(cs.rulebase);
+	cs.rulebase = NULL;
+ENDendCnfLoad
+
+BEGINcheckCnf
+CODESTARTcheckCnf
+ENDcheckCnf
+
+BEGINactivateCnf
+CODESTARTactivateCnf
+	runModConf = pModConf;
+ENDactivateCnf
+
+BEGINfreeCnf
+CODESTARTfreeCnf
+	free(pModConf->tplName);
+ENDfreeCnf
+
+
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
 ENDisCompatibleWithFeature
@@ -93,6 +176,7 @@ ENDisCompatibleWithFeature
 
 BEGINfreeInstance
 CODESTARTfreeInstance
+	free(pData->rulebase);
 	ee_exitCtx(pData->ctxee);
 	ln_exitCtx(pData->ctxln);
 ENDfreeInstance
@@ -141,7 +225,7 @@ CODESTARTdoAction
 	es_deleteStr(str);
 
 	/* reformat to our json data struct */
-	// TODO: this is all extremly ineffcient!
+	/* TODO: this is all extremly ineffcient! */
 	ee_fmtEventToJSON(event, &str);
 	cstrJSON = es_str2cstr(str, NULL);
 	dbgprintf("mmnormalize generated: %s\n", cstrJSON);
@@ -154,6 +238,57 @@ CODESTARTdoAction
 	free(cstrJSON);
 	es_deleteStr(str);
 ENDdoAction
+
+
+static inline void
+setInstParamDefaults(instanceData *pData)
+{
+	pData->rulebase = NULL;
+	pData->bUseRawMsg = 0;
+}
+
+BEGINnewActInst
+	struct cnfparamvals *pvals;
+	uchar *tplToUse;
+	int i;
+	rsRetVal localRet;
+CODESTARTnewActInst
+	DBGPRINTF("newActInst (mmnormalize)\n");
+
+	pvals = nvlstGetParams(lst, &actpblk, NULL);
+	if(pvals == NULL) {
+		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "mmnormalize: error reading "
+				"config parameters");
+		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
+
+	if(Debug) {
+		dbgprintf("action param blk in mmnormalize:\n");
+		cnfparamsPrint(&actpblk, pvals);
+	}
+
+	CHKiRet(createInstance(&pData));
+	setInstParamDefaults(pData);
+
+	for(i = 0 ; i < actpblk.nParams ; ++i) {
+		if(!pvals[i].bUsed)
+			continue;
+		if(!strcmp(actpblk.descr[i].name, "rulebase")) {
+			pData->rulebase = es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "userawmsg")) {
+			pData->bUseRawMsg = (int) pvals[i].val.d.n;
+		} else {
+			DBGPRINTF("mmnormalize: program error, non-handled "
+			  "param '%s'\n", actpblk.descr[i].name);
+		}
+	}
+	CODE_STD_STRING_REQUESTnewActInst(1)
+	CHKiRet(OMSRsetEntry(*ppOMSR, 0, NULL, OMSR_TPL_AS_MSG));
+
+	iRet = buildInstance(pData);
+CODE_STD_FINALIZERnewActInst
+	cnfparamvalsDestruct(pvals, &actpblk);
+ENDnewActInst
 
 
 BEGINparseSelectorAct
@@ -174,6 +309,12 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	p += sizeof(":mmnormalize:") - 1; /* eat indicator sequence  (-1 because of '\0'!) */
 	CHKiRet(createInstance(&pData));
 
+	pData->rulebase = cs.rulebase;
+	pData->bUseRawMsg = cs.bUseRawMsg;
+	/* all config vars auto-reset! */
+	cs.bUseRawMsg = 0;
+	cs.rulebase = NULL; /* we used it up! */
+
 	/* check if a non-standard template is to be applied */
 	if(*(p-1) == ';')
 		--p;
@@ -181,34 +322,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	 * the format specified (if any) is always ignored.
 	 */
 	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_TPL_AS_MSG, (uchar*) "RSYSLOG_FileFormat"));
-
-	/* finally build the instance */
-	if((pData->ctxee = ee_initCtx()) == NULL) {
-		errmsg.LogError(0, RS_RET_NO_RULESET, "error: could not initialize libee ctx, cannot "
-				"activate action");
-		ABORT_FINALIZE(RS_RET_ERR_LIBEE_INIT);
-	}
-
-	if((pData->ctxln = ln_initCtx()) == NULL) {
-		errmsg.LogError(0, RS_RET_NO_RULESET, "error: could not initialize liblognorm ctx, cannot "
-				"activate action");
-		ee_exitCtx(pData->ctxee);
-		ABORT_FINALIZE(RS_RET_ERR_LIBLOGNORM_INIT);
-	}
-	ln_setEECtx(pData->ctxln, pData->ctxee);
-	if(ln_loadSamples(pData->ctxln, (char*) cs.rulebase) != 0) {
-		errmsg.LogError(0, RS_RET_NO_RULESET, "error: normalization rulebase '%s' could not be loaded "
-				"cannot activate action", cs.rulebase);
-		ee_exitCtx(pData->ctxee);
-		ln_exitCtx(pData->ctxln);
-		ABORT_FINALIZE(RS_RET_ERR_LIBLOGNORM_SAMPDB_LOAD);
-	}
-	pData->bUseRawMsg = cs.bUseRawMsg;
-
-	/* all config vars auto-reset! */
-	cs.bUseRawMsg = 0;
-	free(cs.rulebase);
-	cs.rulebase = NULL;
+	CHKiRet(buildInstance(pData));
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
@@ -222,6 +336,8 @@ ENDmodExit
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
+CODEqueryEtryPt_STD_CONF2_QUERIES
+CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 ENDqueryEtryPt
 
 

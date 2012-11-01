@@ -1,3 +1,6 @@
+---------------------------------------------------------------------------
+Version 7.3.2  [devel] 2012-10-30
+- mmnormalize: support for v6+ config interface added
 - mmjsonparse: support for v6+ config interface added
 ---------------------------------------------------------------------------
 Version 7.3.2  [devel] 2012-10-30

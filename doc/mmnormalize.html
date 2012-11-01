@@ -23,16 +23,26 @@ inspired by the CEE approach.
 <p>Note that mmnormalize should only be called once on each message. Behaviour is
 undifined if multiple calls to mmnormalize happen for the same message.
 </p>
-<p><b>Configuration Directives</b>:</p>
+<p><b>Action specific Configuration Directives</b>:</p>
 <ul>
-<li>$mmnormalizeRuleBase &lt;rulebase-file&gt;<br>
+<li><b>ruleBase</b> [word]<br>
 Specifies which rulebase file is to use. This file is loaded. If there are
 multiple mmnormalize instances, each one can use a different file. However,
 a single instance can use only a single file. This parameter MUST be given,
-because normalization can only happen based on a rulebase.
-<li>$mmnormalizeUseRawMsg &lt;on/off&gt;<br>
+because normalization can only happen based on a rulebase. It is recommended
+that an absolute path name is given.
+<li><b>useRawMsg</b> [boolean]<br>
 Specifies if the raw message should be used for normalization (on) or just the
 MSG part of the message (off). Default is "off".
+</ul>
+<p><b>Legacy Configuration Directives</b>:</p>
+<ul>
+<li>$mmnormalizeRuleBase &lt;rulebase-file&gt; - equivalent to the "ruleBase"
+parameter.
+multiple mmnormalize instances, each one can use a different file. However,
+a single instance can use only a single file. This parameter MUST be given,
+<li>$mmnormalizeUseRawMsg &lt;on/off&gt; - equivalent to the "useRawMsg" 
+parameter.
 </ul>
 <b>Caveats/Known Bugs:</b>
 <p>None known at this time.
@@ -40,8 +50,12 @@ MSG part of the message (off). Default is "off".
 <p><b>Sample:</b></p>
 <p>This activates the module and applies normalization to all messages:<br>
 </p>
-<textarea rows="8" cols="60">$ModLoad mmnormalize
-$mmnormalizeRuleBase rulebase.rb
+<textarea rows="2" cols="60">module(load="mmnormalize")
+action(type="mmnormalize" ruleBase="/path/to/rulebase.rb")
+</textarea>
+<p>The same in legacy format:</p>
+<textarea rows="3" cols="60">$ModLoad mmnormalize
+$mmnormalizeRuleBase /path/to/rulebase.rb
 *.* :mmnormalize:
 </textarea>
 <p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>]
@@ -49,7 +63,7 @@ $mmnormalizeRuleBase rulebase.rb
 <p><font size="2">This documentation is part of the
 <a href="http://www.rsyslog.com/">rsyslog</a>
 project.<br>
-Copyright &copy; 2010 by <a href="http://www.gerhards.net/rainer">Rainer
+Copyright &copy; 2010-2012 by <a href="http://www.gerhards.net/rainer">Rainer
 Gerhards</a> and
 <a href="http://www.adiscon.com/">Adiscon</a>.
 Released under the GNU GPL version 3 or higher.</font></p>
