@@ -62,11 +62,35 @@ typedef struct _instanceData {
 	struct json_tokener *tokener;
 } instanceData;
 
+struct modConfData_s {
+	rsconf_t *pConf;	/* our overall config object */
+};
+static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
+static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current exec process */
 
-BEGINinitConfVars		/* (re)set config variables to default values */
-CODESTARTinitConfVars 
-	resetConfigVariables(NULL, NULL);
-ENDinitConfVars
+
+BEGINbeginCnfLoad
+CODESTARTbeginCnfLoad
+	loadModConf = pModConf;
+	pModConf->pConf = pConf;
+ENDbeginCnfLoad
+
+BEGINendCnfLoad
+CODESTARTendCnfLoad
+ENDendCnfLoad
+
+BEGINcheckCnf
+CODESTARTcheckCnf
+ENDcheckCnf
+
+BEGINactivateCnf
+CODESTARTactivateCnf
+	runModConf = pModConf;
+ENDactivateCnf
+
+BEGINfreeCnf
+CODESTARTfreeCnf
+ENDfreeCnf
 
 
 BEGINcreateInstance
@@ -176,6 +200,22 @@ finalize_it:
 	MsgSetParseSuccess(pMsg, bSuccess);
 ENDdoAction
 
+BEGINnewActInst
+CODESTARTnewActInst
+	/* Note: we currently do not have any parameters, so we do not need
+	 * the lst ptr. However, we will most probably need params in the 
+	 * future.
+	 */
+	DBGPRINTF("newActInst (mmjsonparse)\n");
+
+	CODE_STD_STRING_REQUESTnewActInst(1)
+	CHKiRet(OMSRsetEntry(*ppOMSR, 0, NULL, OMSR_TPL_AS_MSG));
+	CHKiRet(createInstance(&pData));
+	/*setInstParamDefaults(pData);*/
+
+CODE_STD_FINALIZERnewActInst
+/*	cnfparamvalsDestruct(pvals, &actpblk);*/
+ENDnewActInst
 
 BEGINparseSelectorAct
 CODESTARTparseSelectorAct
@@ -217,6 +257,8 @@ ENDmodExit
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
+CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
+CODEqueryEtryPt_STD_CONF2_QUERIES
 ENDqueryEtryPt
 
 
@@ -236,7 +278,6 @@ BEGINmodInit()
 	unsigned long opts;
 	int bMsgPassingSupported;
 CODESTARTmodInit
-INITLegCnfVars
 	*ipIFVersProvided = CURR_MOD_IF_VERSION;
 		/* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr

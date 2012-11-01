@@ -1,3 +1,4 @@
+- mmjsonparse: support for v6+ config interface added
 ---------------------------------------------------------------------------
 Version 7.3.2  [devel] 2012-10-30
 - totally reworked ratelimiting and "last message repeated n times"
