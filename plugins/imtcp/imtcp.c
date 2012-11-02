@@ -550,9 +550,9 @@ ENDactivateCnf
 BEGINfreeCnf
 	instanceConf_t *inst, *del;
 CODESTARTfreeCnf
-	if(runModConf->permittedPeers != NULL) {
-		cnfarrayContentDestruct(runModConf->permittedPeers);
-		free(runModConf->permittedPeers);
+	if(pModConf->permittedPeers != NULL) {
+		cnfarrayContentDestruct(pModConf->permittedPeers);
+		free(pModConf->permittedPeers);
 	}
 	for(inst = pModConf->root ; inst != NULL ; ) {
 		free(inst->pszBindPort);
