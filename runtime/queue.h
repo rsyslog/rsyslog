@@ -135,6 +135,8 @@ struct queue_s {
 	size_t lenSpoolDir;
 	uchar *pszFilePrefix;
 	size_t lenFilePrefix;
+	uchar *pszQIFNam;	/* full .qi file name, based on parts above */
+	size_t lenQIFNam;
 	int iNumberFiles;	/* how many files make up the queue? */
 	int64 iMaxFileSize;	/* max size for a single queue file */
 	int64 sizeOnDiskMax;    /* maximum size on disk allowed */

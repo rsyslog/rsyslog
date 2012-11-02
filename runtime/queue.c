@@ -744,18 +744,12 @@ qqueueTryLoadPersistedInfo(qqueue_t *pThis)
 {
 	DEFiRet;
 	strm_t *psQIF = NULL;
-	uchar pszQIFNam[MAXFNAME];
-	size_t lenQIFNam;
 	struct stat stat_buf;
 
 	ISOBJ_TYPE_assert(pThis, qqueue);
 
-	/* Construct file name */
-	lenQIFNam = snprintf((char*)pszQIFNam, sizeof(pszQIFNam) / sizeof(uchar), "%s/%s.qi",
-			     (char*) glbl.GetWorkDir(), (char*)pThis->pszFilePrefix);
-
 	/* check if the file exists */
-	if(stat((char*) pszQIFNam, &stat_buf) == -1) {
+	if(stat((char*) pThis->pszQIFNam, &stat_buf) == -1) {
 		if(errno == ENOENT) {
 			DBGOPRINT((obj_t*) pThis, "clean startup, no .qi file found\n");
 			ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
@@ -770,7 +764,7 @@ qqueueTryLoadPersistedInfo(qqueue_t *pThis)
 	CHKiRet(strm.Construct(&psQIF));
 	CHKiRet(strm.SettOperationsMode(psQIF, STREAMMODE_READ));
 	CHKiRet(strm.SetsType(psQIF, STREAMTYPE_FILE_SINGLE));
-	CHKiRet(strm.SetFName(psQIF, pszQIFNam, lenQIFNam));
+	CHKiRet(strm.SetFName(psQIF, pThis->pszQIFNam, pThis->lenQIFNam));
 	CHKiRet(strm.ConstructFinalize(psQIF));
 
 	/* first, we try to read the property bag for ourselfs */
@@ -1985,6 +1979,7 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 {
 	DEFiRet;
 	uchar pszBuf[64];
+	uchar pszQIFNam[MAXFNAME];
 	int wrk;
 	uchar *qName;
 	size_t lenBuf;
@@ -2020,6 +2015,12 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 			pThis->MultiEnq = qqueueMultiEnqObjNonDirect;
 			/* special handling */
 			pThis->iNumWorkerThreads = 1; /* we need exactly one worker */
+			/* pre-construct file name for .qi file */
+			pThis->lenQIFNam = snprintf((char*)pszQIFNam, sizeof(pszQIFNam) / sizeof(uchar),
+				"%s/%s.qi", (char*) glbl.GetWorkDir(), (char*)pThis->pszFilePrefix);
+			pThis->pszQIFNam = ustrdup(pszQIFNam);
+			DBGOPRINT((obj_t*) pThis, ".qi file name is '%s', len %d\n", pThis->pszQIFNam,
+				(int) pThis->lenQIFNam);
 			break;
 		case QUEUETYPE_DIRECT:
 			pThis->qConstruct = qConstructDirect;
@@ -2157,8 +2158,6 @@ static rsRetVal qqueuePersist(qqueue_t *pThis, int bIsCheckpoint)
 {
 	DEFiRet;
 	strm_t *psQIF = NULL; /* Queue Info File */
-	uchar pszQIFNam[MAXFNAME];
-	size_t lenQIFNam;
 
 	ASSERT(pThis != NULL);
 
@@ -2176,13 +2175,9 @@ static rsRetVal qqueuePersist(qqueue_t *pThis, int bIsCheckpoint)
 
 	DBGOPRINT((obj_t*) pThis, "persisting queue to disk, %d entries...\n", getPhysicalQueueSize(pThis));
 
-	/* Construct file name */
-	lenQIFNam = snprintf((char*)pszQIFNam, sizeof(pszQIFNam) / sizeof(uchar), "%s/%s.qi",
-			     (char*) glbl.GetWorkDir(), (char*)pThis->pszFilePrefix);
-
 	if((bIsCheckpoint != QUEUE_CHECKPOINT) && (getPhysicalQueueSize(pThis) == 0)) {
 		if(pThis->bNeedDelQIF) {
-			unlink((char*)pszQIFNam);
+			unlink((char*)pThis->pszQIFNam);
 			pThis->bNeedDelQIF = 0;
 		}
 		/* indicate spool file needs to be deleted */
@@ -2195,7 +2190,7 @@ static rsRetVal qqueuePersist(qqueue_t *pThis, int bIsCheckpoint)
 	CHKiRet(strm.SettOperationsMode(psQIF, STREAMMODE_WRITE_TRUNC));
 	CHKiRet(strm.SetbSync(psQIF, pThis->bSyncQueueFiles));
 	CHKiRet(strm.SetsType(psQIF, STREAMTYPE_FILE_SINGLE));
-	CHKiRet(strm.SetFName(psQIF, pszQIFNam, lenQIFNam));
+	CHKiRet(strm.SetFName(psQIF, pThis->pszQIFNam, pThis->lenQIFNam));
 	CHKiRet(strm.ConstructFinalize(psQIF));
 
 	/* first, write the property bag for ourselfs
