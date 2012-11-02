@@ -1099,7 +1099,6 @@ doFuncCall(struct cnffunc *func, struct var *ret, void* usrptr)
 		}
 		ret->datatype = 'N';
 		if(bMustFree) free(str);
-		free(str);
 		if(r[0].datatype == 'S') es_deleteStr(r[0].d.estr);
 		break;
 	case CNFFUNC_FIELD:
