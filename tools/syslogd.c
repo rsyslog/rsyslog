@@ -514,10 +514,10 @@ preprocessBatch(batch_t *pBatch) {
 	DEFiRet;
 
 	bSingleRuleset = 1;
-	batchRuleset = (pBatch->nElem > 0) ? ((msg_t*) pBatch->pElem[0].pUsrp)->pRuleset : NULL;
+	batchRuleset = (pBatch->nElem > 0) ? pBatch->pElem[0].pMsg->pRuleset : NULL;
 	
 	for(i = 0 ; i < pBatch->nElem  && !*(pBatch->pbShutdownImmediate) ; i++) {
-		pMsg = (msg_t*) pBatch->pElem[i].pUsrp;
+		pMsg = pBatch->pElem[i].pMsg;
 		if((pMsg->msgFlags & NEEDS_ACLCHK_U) != 0) {
 			DBGPRINTF("msgConsumer: UDP ACL must be checked for message (hostname-based)\n");
 			if(net.cvthname(pMsg->rcvFrom.pfrominet, fromHost, fromHostFQDN, fromHostIP) != RS_RET_OK)
@@ -603,7 +603,7 @@ submitMsg2(msg_t *pMsg)
 	}
 
 	MsgPrepareEnqueue(pMsg);
-	qqueueEnqObj(pQueue, pMsg->flowCtlType, (void*) pMsg);
+	qqueueEnqMsg(pQueue, pMsg->flowCtlType, pMsg);
 
 finalize_it:
 	RETiRet;
