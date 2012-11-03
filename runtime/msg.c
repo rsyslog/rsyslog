@@ -3665,7 +3665,8 @@ finalize_it:
  * is done, the object is considered ready for full processing.
  * rgerhards, 2008-07-08
  */
-static rsRetVal msgConstructFinalizer(msg_t *pThis)
+rsRetVal
+msgConstructFinalizer(msg_t *pThis)
 {
 	MsgPrepareEnqueue(pThis);
 	return RS_RET_OK;

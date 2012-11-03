@@ -59,7 +59,6 @@
 #include "datetime.h"
 #include "unicode-helper.h"
 #include "statsobj.h"
-#include "msg.h" /* TODO: remove once we remove MsgAddRef() call */
 
 #ifdef OS_SOLARIS
 #	include <sched.h>
@@ -919,7 +918,7 @@ finalize_it:
 static rsRetVal qDeqDisk(qqueue_t *pThis, msg_t **ppMsg)
 {
 	DEFiRet;
-	iRet = obj.Deserialize(ppMsg, (uchar*) "msg", pThis->tVars.disk.pReadDeq, NULL, NULL);
+	iRet = objDeserializeWithMethods(ppMsg, (uchar*) "msg", pThis->tVars.disk.pReadDeq, NULL, NULL, msgConstruct, msgConstructFinalizer, MsgSetProperty);
 	RETiRet;
 }
 
@@ -933,7 +932,7 @@ static rsRetVal qDelDisk(qqueue_t *pThis)
 	int64 offsOut;
 
 	CHKiRet(strm.GetCurrOffset(pThis->tVars.disk.pReadDel, &offsIn));
-	CHKiRet(obj.Deserialize(&pDummyObj, (uchar*) "msg", pThis->tVars.disk.pReadDel, NULL, NULL));
+	CHKiRet(objDeserializeWithMethods(&pDummyObj, (uchar*) "msg", pThis->tVars.disk.pReadDel, NULL, NULL, msgConstruct, msgConstructFinalizer, MsgSetProperty));
 	objDestruct(pDummyObj);
 	CHKiRet(strm.GetCurrOffset(pThis->tVars.disk.pReadDel, &offsOut));
 
