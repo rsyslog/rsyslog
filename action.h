@@ -46,7 +46,6 @@ typedef enum {
 
 /* the following struct defines the action object data structure
  */
-typedef struct action_s action_t;
 struct action_s {
 	time_t	f_time;		/* used for "max. n messages in m seconds" processing */
 	time_t	tActNow;	/* the current time for an action execution. Initially set to -1 and

@@ -71,7 +71,7 @@ struct queue_s {
 	int	iMinMsgsPerWrkr;/* minimum nbr of msgs per worker thread, if more, a new worker is started until max wrkrs */
 	wtp_t	*pWtpDA;
 	wtp_t	*pWtpReg;
-	void	*pUsr;		/* a global, user-supplied pointer. Is passed back to consumer. */
+	action_t *pAction;	/* for action queues, ptr to action object; for main queues unused */
 	int	iUpdsSincePersist;/* nbr of queue updates since the last persist call */
 	int	iPersistUpdCnt;	/* persits queue info after this nbr of updates - 0 -> persist only on shutdown */
 	sbool	bSyncQueueFiles;/* if working with files, sync them after each write? */
@@ -215,7 +215,7 @@ PROTOTYPEpropSetMeth(qqueue, iDiscardMrk, int);
 PROTOTYPEpropSetMeth(qqueue, iDiscardSeverity, int);
 PROTOTYPEpropSetMeth(qqueue, iMinMsgsPerWrkr, int);
 PROTOTYPEpropSetMeth(qqueue, bSaveOnShutdown, int);
-PROTOTYPEpropSetMeth(qqueue, pUsr, void*);
+PROTOTYPEpropSetMeth(qqueue, pAction, action_t*);
 PROTOTYPEpropSetMeth(qqueue, iDeqSlowdown, int);
 PROTOTYPEpropSetMeth(qqueue, sizeOnDiskMax, int64);
 PROTOTYPEpropSetMeth(qqueue, iDeqBatchSize, int);

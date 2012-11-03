@@ -438,7 +438,7 @@ actionConstructFinalize(action_t *pThis, struct cnfparamvals *queueParams)
 	CHKiRet(qqueueConstruct(&pThis->pQueue, cs.ActionQueType, 1, cs.iActionQueueSize,
 					(rsRetVal (*)(void*, batch_t*, int*))processBatchMain));
 	obj.SetName((obj_t*) pThis->pQueue, pszAName);
-	qqueueSetpUsr(pThis->pQueue, pThis);
+	qqueueSetpAction(pThis->pQueue, pThis);
 
 	if(queueParams == NULL) { /* use legacy params? */
 		/* ... set some properties ... */

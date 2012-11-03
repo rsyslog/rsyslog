@@ -411,7 +411,7 @@ StartDA(qqueue_t *pThis)
 	 */
 	pThis->pqDA->pqParent = pThis;
 
-	CHKiRet(qqueueSetpUsr(pThis->pqDA, pThis->pUsr));
+	CHKiRet(qqueueSetpAction(pThis->pqDA, pThis->pAction));
 	CHKiRet(qqueueSetsizeOnDiskMax(pThis->pqDA, pThis->sizeOnDiskMax));
 	CHKiRet(qqueueSetiDeqSlowdown(pThis->pqDA, pThis->iDeqSlowdown));
 	CHKiRet(qqueueSetMaxFileSize(pThis->pqDA, pThis->iMaxFileSize));
@@ -996,7 +996,7 @@ static rsRetVal qAddDirect(qqueue_t *pThis, void* pUsr)
 	singleBatch.nElem = 1; /* there always is only one in direct mode */
 	singleBatch.pElem = &batchObj;
 	singleBatch.active = &active;
-	iRet = pThis->pConsumer(pThis->pUsr, &singleBatch, &pThis->bShutdownImmediate);
+	iRet = pThis->pConsumer(pThis->pAction, &singleBatch, &pThis->bShutdownImmediate);
 	/* delete the batch string params: TODO: create its own "class" for this */
 	for(i = 0 ; i < CONF_OMOD_NUMSTRINGS_MAXSIZE ; ++i) {
 		free(batchObj.staticActStrings[i]);
@@ -1023,7 +1023,7 @@ rsRetVal qqueueEnqObjDirectBatch(qqueue_t *pThis, batch_t *pBatch)
 	 * We use our knowledge about the batch_t structure below, but without that, we
 	 * pay a too-large performance toll... -- rgerhards, 2009-04-22
 	 */
-	iRet = pThis->pConsumer(pThis->pUsr, pBatch, &pThis->bShutdownImmediate);
+	iRet = pThis->pConsumer(pThis->pAction, pBatch, &pThis->bShutdownImmediate);
 
 	RETiRet;
 }
@@ -1835,7 +1835,7 @@ ConsumerReg(qqueue_t *pThis, wti_t *pWti)
 	/* at this spot, we may be cancelled */
 	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &iCancelStateSave);
 
-	CHKiRet(pThis->pConsumer(pThis->pUsr, &pWti->batch, &pThis->bShutdownImmediate));
+	CHKiRet(pThis->pConsumer(pThis->pAction, &pWti->batch, &pThis->bShutdownImmediate));
 
 	/* we now need to check if we should deliberately delay processing a bit
 	 * and, if so, do that. -- rgerhards, 2008-01-30
@@ -2759,7 +2759,7 @@ DEFpropSetMeth(qqueue, iLightDlyMrk, int)
 DEFpropSetMeth(qqueue, bIsDA, int)
 DEFpropSetMeth(qqueue, iMinMsgsPerWrkr, int)
 DEFpropSetMeth(qqueue, bSaveOnShutdown, int)
-DEFpropSetMeth(qqueue, pUsr, void*)
+DEFpropSetMeth(qqueue, pAction, action_t*)
 DEFpropSetMeth(qqueue, iDeqSlowdown, int)
 DEFpropSetMeth(qqueue, iDeqBatchSize, int)
 DEFpropSetMeth(qqueue, sizeOnDiskMax, int64)
