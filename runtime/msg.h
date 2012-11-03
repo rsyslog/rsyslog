@@ -147,7 +147,10 @@ struct msg {
 PROTOTYPEObjClassInit(msg);
 rsRetVal msgConstruct(msg_t **ppThis);
 rsRetVal msgConstructWithTime(msg_t **ppThis, struct syslogTime *stTime, time_t ttGenTime);
+rsRetVal msgConstructForDeserializer(msg_t **ppThis);
+rsRetVal msgConstructFinalizer(msg_t *pThis);
 rsRetVal msgDestruct(msg_t **ppM);
+rsRetVal MsgSetProperty(msg_t *pThis, var_t *pProp);
 msg_t* MsgDup(msg_t* pOld);
 msg_t *MsgAddRef(msg_t *pM);
 void setProtocolVersion(msg_t *pM, int iNewVersion);
@@ -187,6 +190,7 @@ rsRetVal msgGetCEEVar(msg_t *pThis, cstr_t *propName, var_t **ppVar);
 es_str_t* msgGetCEEVarNew(msg_t *pMsg, char *name);
 rsRetVal msgAddJSON(msg_t *pM, uchar *name, struct json_object *json);
 rsRetVal getCEEPropVal(msg_t *pM, es_str_t *propName, uchar **pRes, rs_size_t *buflen, unsigned short *pbMustBeFreed);
+rsRetVal MsgGetSeverity(msg_t *pThis, int *piSeverity);
 
 /* TODO: remove these five (so far used in action.c) */
 uchar *getMSG(msg_t *pM);

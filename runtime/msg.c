@@ -814,6 +814,19 @@ finalize_it:
 }
 
 
+/* Special msg constructor, to be used when an object is deserialized.
+ * we do only the base init as we know the properties will be set in
+ * any case by the deserializer. We still do the "inexpensive" inits
+ * just to be on the safe side. The whole process needs to be
+ * refactored together with the msg serialization subsystem.
+ */
+rsRetVal
+msgConstructForDeserializer(msg_t **ppThis)
+{
+	return msgBaseConstruct(ppThis);
+}
+
+
 /* some free handlers for (slightly) complicated cases... All of them may be called
  * with an empty element.
  */
@@ -3665,7 +3678,8 @@ finalize_it:
  * is done, the object is considered ready for full processing.
  * rgerhards, 2008-07-08
  */
-static rsRetVal msgConstructFinalizer(msg_t *pThis)
+rsRetVal
+msgConstructFinalizer(msg_t *pThis)
 {
 	MsgPrepareEnqueue(pThis);
 	return RS_RET_OK;
@@ -3676,12 +3690,10 @@ static rsRetVal msgConstructFinalizer(msg_t *pThis)
  * satisfies the base object class getSeverity semantics.
  * rgerhards, 2008-01-14
  */
-static rsRetVal
-MsgGetSeverity(obj_t_ptr pThis, int *piSeverity)
+rsRetVal
+MsgGetSeverity(msg_t *pMsg, int *piSeverity)
 {
-	ISOBJ_TYPE_assert(pThis, msg);
-	assert(piSeverity != NULL);
-	*piSeverity = ((msg_t*) pThis)->iSeverity;
+	*piSeverity = pMsg->iSeverity;
 	return RS_RET_OK;
 }
 
@@ -3982,7 +3994,6 @@ BEGINObjClassInit(msg, 1, OBJ_IS_CORE_MODULE)
 	OBJSetMethodHandler(objMethod_SERIALIZE, MsgSerialize);
 	OBJSetMethodHandler(objMethod_SETPROPERTY, MsgSetProperty);
 	OBJSetMethodHandler(objMethod_CONSTRUCTION_FINALIZER, msgConstructFinalizer);
-	OBJSetMethodHandler(objMethod_GETSEVERITY, MsgGetSeverity);
 	/* initially, we have no need to lock message objects */
 	funcLock = MsgLockingDummy;
 	funcUnlock = MsgLockingDummy;

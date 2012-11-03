@@ -438,7 +438,7 @@ actionConstructFinalize(action_t *pThis, struct cnfparamvals *queueParams)
 	CHKiRet(qqueueConstruct(&pThis->pQueue, cs.ActionQueType, 1, cs.iActionQueueSize,
 					(rsRetVal (*)(void*, batch_t*, int*))processBatchMain));
 	obj.SetName((obj_t*) pThis->pQueue, pszAName);
-	qqueueSetpUsr(pThis->pQueue, pThis);
+	qqueueSetpAction(pThis->pQueue, pThis);
 
 	if(queueParams == NULL) { /* use legacy params? */
 		/* ... set some properties ... */
@@ -811,7 +811,7 @@ prepareDoActionParams(action_t *pAction, batch_obj_t *pElem, struct syslogTime *
 	ASSERT(pAction != NULL);
 	ASSERT(pElem != NULL);
 
-	pMsg = (msg_t*) pElem->pUsrp;
+	pMsg = pElem->pMsg;
 	/* here we must loop to process all requested strings */
 	for(i = 0 ; i < pAction->iNumTpls ; ++i) {
 		switch(pAction->eParamPassing) {
@@ -1061,7 +1061,7 @@ tryDoAction(action_t *pAction, batch_t *pBatch, int *pnElem)
 		 * enq side of the queue (see file header comment)! -- rgerhards, 2011-06-15
 		 */
 		if(batchIsValidElem(pBatch, i)) {
-			pMsg = (msg_t*) pBatch->pElem[i].pUsrp;
+			pMsg = pBatch->pElem[i].pMsg;
 			localRet = actionProcessMessage(pAction, pMsg, pBatch->pElem[i].staticActParams,
 							pBatch->pbShutdownImmediate);
 			DBGPRINTF("action %p call returned %d\n", pAction, localRet);
@@ -1392,9 +1392,9 @@ doSubmitToActionQ(action_t *pAction, msg_t *pMsg)
 
 	STATSCOUNTER_INC(pAction->ctrProcessed, pAction->mutCtrProcessed);
 	if(pAction->pQueue->qType == QUEUETYPE_DIRECT)
-		iRet = qqueueEnqObjDirect(pAction->pQueue, (void*) MsgAddRef(pMsg));
+		iRet = qqueueEnqMsgDirect(pAction->pQueue, MsgAddRef(pMsg));
 	else
-		iRet = qqueueEnqObj(pAction->pQueue, eFLOWCTL_NO_DELAY, (void*) MsgAddRef(pMsg));
+		iRet = qqueueEnqMsg(pAction->pQueue, eFLOWCTL_NO_DELAY, MsgAddRef(pMsg));
 
 finalize_it:
 	RETiRet;
@@ -1480,7 +1480,7 @@ doActionCallAction(action_t *pAction, batch_t *pBatch, int idxBtch)
 	msg_t *pMsg;
 	DEFiRet;
 
-	pMsg = (msg_t*)(pBatch->pElem[idxBtch].pUsrp);
+	pMsg = pBatch->pElem[idxBtch].pMsg;
 	pAction->tActNow = -1; /* we do not yet know our current time (clear prev. value) */
 
 	/* don't output marks to recently written outputs */
@@ -1572,7 +1572,7 @@ doSubmitToActionQNotAllMarkBatch(action_t *pAction, batch_t *pBatch)
 		 * also faster ;) -- rgerhards, 2008-09-17 */
 		do {
 			lastAct = pAction->f_time;
-			if(((msg_t*)(pBatch->pElem[i].pUsrp))->msgFlags & MARK) {
+			if(pBatch->pElem[i].pMsg->msgFlags & MARK) {
 				if((now - lastAct) < MarkInterval / 2) {
 					pBatch->active[i] = 0;
 					DBGPRINTF("batch item %d: action was recently called, ignoring "
@@ -1581,7 +1581,7 @@ doSubmitToActionQNotAllMarkBatch(action_t *pAction, batch_t *pBatch)
 				}
 			}
 		} while(ATOMIC_CAS_time_t(&pAction->f_time, lastAct,
-			((msg_t*)(pBatch->pElem[i].pUsrp))->ttGenTime, &pAction->mutCAS) == 0);
+			pBatch->pElem[i].pMsg->ttGenTime, &pAction->mutCAS) == 0);
 		if(pBatch->active[i]) {
 			DBGPRINTF("Called action(NotAllMark), processing batch[%d] via '%s'\n",
 				  i, module.GetStateName(pAction->pMod));
@@ -1684,7 +1684,7 @@ doSubmitToActionQBatch(action_t *pAction, batch_t *pBatch)
 			   pAction->bExecWhenPrevSusp, pBatch->pElem[i].bPrevWasSuspended);
 			if(   batchIsValidElem(pBatch, i) 
 			   && (pAction->bExecWhenPrevSusp == 0 || pBatch->pElem[i].bPrevWasSuspended == 1)) {
-				doSubmitToActionQ(pAction, (msg_t*)(pBatch->pElem[i].pUsrp));
+				doSubmitToActionQ(pAction, pBatch->pElem[i].pMsg);
 			}
 		}
 	}

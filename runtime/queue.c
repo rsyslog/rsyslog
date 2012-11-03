@@ -59,7 +59,6 @@
 #include "datetime.h"
 #include "unicode-helper.h"
 #include "statsobj.h"
-#include "msg.h" /* TODO: remove once we remove MsgAddRef() call */
 
 #ifdef OS_SOLARIS
 #	include <sched.h>
@@ -74,7 +73,7 @@ DEFobjCurrIf(datetime)
 DEFobjCurrIf(statsobj)
 
 /* forward-definitions */
-static inline rsRetVal doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, void *pUsr);
+static inline rsRetVal doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, msg_t *pMsg);
 static rsRetVal qqueueChkPersist(qqueue_t *pThis, int nUpdates);
 static rsRetVal RateLimiter(qqueue_t *pThis);
 static int qqueueChkStopWrkrDA(qqueue_t *pThis);
@@ -83,7 +82,7 @@ static rsRetVal ConsumerDA(qqueue_t *pThis, wti_t *pWti);
 static rsRetVal batchProcessed(qqueue_t *pThis, wti_t *pWti);
 static rsRetVal qqueueMultiEnqObjNonDirect(qqueue_t *pThis, multi_submit_t *pMultiSub);
 static rsRetVal qqueueMultiEnqObjDirect(qqueue_t *pThis, multi_submit_t *pMultiSub);
-static rsRetVal qAddDirect(qqueue_t *pThis, void* pUsr);
+static rsRetVal qAddDirect(qqueue_t *pThis, msg_t *pMsg);
 static rsRetVal qDestructDirect(qqueue_t __attribute__((unused)) *pThis);
 static rsRetVal qConstructDirect(qqueue_t __attribute__((unused)) *pThis);
 static rsRetVal qDelDirect(qqueue_t __attribute__((unused)) *pThis);
@@ -312,16 +311,16 @@ getLogicalQueueSize(qqueue_t *pThis)
  */
 static inline void queueDrain(qqueue_t *pThis)
 {
-	void *pUsr;
+	msg_t *pMsg;
 	ASSERT(pThis != NULL);
 
 	BEGINfunc
 	DBGOPRINT((obj_t*) pThis, "queue (type %d) will lose %d messages, destroying...\n", pThis->qType, pThis->iQueueSize);
 	/* iQueueSize is not decremented by qDel(), so we need to do it ourselves */
 	while(ATOMIC_DEC_AND_FETCH(&pThis->iQueueSize, &pThis->mutQueueSize) > 0) {
-		pThis->qDeq(pThis, &pUsr);
-		if(pUsr != NULL) {
-			objDestruct(pUsr);
+		pThis->qDeq(pThis, &pMsg);
+		if(pMsg != NULL) {
+			msgDestruct(&pMsg);
 		}
 		pThis->qDel(pThis);
 	}
@@ -411,7 +410,7 @@ StartDA(qqueue_t *pThis)
 	 */
 	pThis->pqDA->pqParent = pThis;
 
-	CHKiRet(qqueueSetpUsr(pThis->pqDA, pThis->pUsr));
+	CHKiRet(qqueueSetpAction(pThis->pqDA, pThis->pAction));
 	CHKiRet(qqueueSetsizeOnDiskMax(pThis->pqDA, pThis->sizeOnDiskMax));
 	CHKiRet(qqueueSetiDeqSlowdown(pThis->pqDA, pThis->iDeqSlowdown));
 	CHKiRet(qqueueSetMaxFileSize(pThis->pqDA, pThis->iMaxFileSize));
@@ -546,7 +545,7 @@ static rsRetVal qDestructFixedArray(qqueue_t *pThis)
 }
 
 
-static rsRetVal qAddFixedArray(qqueue_t *pThis, void* in)
+static rsRetVal qAddFixedArray(qqueue_t *pThis, msg_t* in)
 {
 	DEFiRet;
 
@@ -560,7 +559,7 @@ static rsRetVal qAddFixedArray(qqueue_t *pThis, void* in)
 }
 
 
-static rsRetVal qDeqFixedArray(qqueue_t *pThis, void **out)
+static rsRetVal qDeqFixedArray(qqueue_t *pThis, msg_t **out)
 {
 	DEFiRet;
 
@@ -621,7 +620,7 @@ static rsRetVal qDestructLinkedList(qqueue_t __attribute__((unused)) *pThis)
 	RETiRet;
 }
 
-static rsRetVal qAddLinkedList(qqueue_t *pThis, void* pUsr)
+static rsRetVal qAddLinkedList(qqueue_t *pThis, msg_t* pMsg)
 {
 	qLinkedList_t *pEntry;
 	DEFiRet;
@@ -629,7 +628,7 @@ static rsRetVal qAddLinkedList(qqueue_t *pThis, void* pUsr)
 	CHKmalloc((pEntry = (qLinkedList_t*) MALLOC(sizeof(qLinkedList_t))));
 
 	pEntry->pNext = NULL;
-	pEntry->pUsr = pUsr;
+	pEntry->pMsg = pMsg;
 
 	if(pThis->tVars.linklist.pDelRoot == NULL) {
 		pThis->tVars.linklist.pDelRoot = pThis->tVars.linklist.pDeqRoot = pThis->tVars.linklist.pLast = pEntry;
@@ -647,14 +646,13 @@ finalize_it:
 }
 
 
-static rsRetVal qDeqLinkedList(qqueue_t *pThis, obj_t **ppUsr)
+static rsRetVal qDeqLinkedList(qqueue_t *pThis, msg_t **ppMsg)
 {
 	qLinkedList_t *pEntry;
 	DEFiRet;
 
 	pEntry = pThis->tVars.linklist.pDeqRoot;
-	ISOBJ_TYPE_assert(pEntry->pUsr, msg);
-	*ppUsr = pEntry->pUsr;
+	*ppMsg = pEntry->pMsg;
 	pThis->tVars.linklist.pDeqRoot = pEntry->pNext;
 
 	RETiRet;
@@ -744,18 +742,12 @@ qqueueTryLoadPersistedInfo(qqueue_t *pThis)
 {
 	DEFiRet;
 	strm_t *psQIF = NULL;
-	uchar pszQIFNam[MAXFNAME];
-	size_t lenQIFNam;
 	struct stat stat_buf;
 
 	ISOBJ_TYPE_assert(pThis, qqueue);
 
-	/* Construct file name */
-	lenQIFNam = snprintf((char*)pszQIFNam, sizeof(pszQIFNam) / sizeof(uchar), "%s/%s.qi",
-			     (char*) glbl.GetWorkDir(), (char*)pThis->pszFilePrefix);
-
 	/* check if the file exists */
-	if(stat((char*) pszQIFNam, &stat_buf) == -1) {
+	if(stat((char*) pThis->pszQIFNam, &stat_buf) == -1) {
 		if(errno == ENOENT) {
 			DBGOPRINT((obj_t*) pThis, "clean startup, no .qi file found\n");
 			ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
@@ -770,7 +762,7 @@ qqueueTryLoadPersistedInfo(qqueue_t *pThis)
 	CHKiRet(strm.Construct(&psQIF));
 	CHKiRet(strm.SettOperationsMode(psQIF, STREAMMODE_READ));
 	CHKiRet(strm.SetsType(psQIF, STREAMTYPE_FILE_SINGLE));
-	CHKiRet(strm.SetFName(psQIF, pszQIFNam, lenQIFNam));
+	CHKiRet(strm.SetFName(psQIF, pThis->pszQIFNam, pThis->lenQIFNam));
 	CHKiRet(strm.ConstructFinalize(psQIF));
 
 	/* first, we try to read the property bag for ourselfs */
@@ -895,7 +887,7 @@ static rsRetVal qDestructDisk(qqueue_t *pThis)
 	RETiRet;
 }
 
-static rsRetVal qAddDisk(qqueue_t *pThis, void* pUsr)
+static rsRetVal qAddDisk(qqueue_t *pThis, msg_t* pMsg)
 {
 	DEFiRet;
 	number_t nWriteCount;
@@ -903,7 +895,7 @@ static rsRetVal qAddDisk(qqueue_t *pThis, void* pUsr)
 	ASSERT(pThis != NULL);
 
 	CHKiRet(strm.SetWCntr(pThis->tVars.disk.pWrite, &nWriteCount));
-	CHKiRet((objSerialize(pUsr))(pUsr, pThis->tVars.disk.pWrite));
+	CHKiRet((objSerialize(pMsg))(pMsg, pThis->tVars.disk.pWrite));
 	CHKiRet(strm.Flush(pThis->tVars.disk.pWrite));
 	CHKiRet(strm.SetWCntr(pThis->tVars.disk.pWrite, NULL)); /* no more counting for now... */
 
@@ -913,7 +905,7 @@ static rsRetVal qAddDisk(qqueue_t *pThis, void* pUsr)
 	 * the in-memory representation. The instance will be re-created upon
 	 * dequeue. -- rgerhards, 2008-07-09
 	 */
-	objDestruct(pUsr);
+	msgDestruct(&pMsg);
 
 	DBGOPRINT((obj_t*) pThis, "write wrote %lld octets to disk, queue disk size now %lld octets, EnqOnly:%d\n",
 		   nWriteCount, pThis->tVars.disk.sizeOnDisk, pThis->bEnqOnly);
@@ -923,25 +915,37 @@ finalize_it:
 }
 
 
-static rsRetVal qDeqDisk(qqueue_t *pThis, void **ppUsr)
+static rsRetVal qDeqDisk(qqueue_t *pThis, msg_t **ppMsg)
 {
 	DEFiRet;
-	iRet = obj.Deserialize(ppUsr, (uchar*) "msg", pThis->tVars.disk.pReadDeq, NULL, NULL);
+	iRet = objDeserializeWithMethods(ppMsg, (uchar*) "msg", pThis->tVars.disk.pReadDeq, NULL,
+		NULL, msgConstructForDeserializer, msgConstructFinalizer, MsgSetProperty);
 	RETiRet;
 }
 
 
+/* the following function is a dummy to be used for qDelDisk, which (currently) must
+ * provide constructors & others even though it does not really need the object. So
+ * instead of using the real ones, we use the dummy here. That at least saves some time.
+ * Of course, in the longer term the whole process should be refactored.
+ * rgerhards, 2012-11-03
+ */
+static rsRetVal
+qDelDiskCallbackDummy(void)
+{
+	return RS_RET_OK;
+}
 static rsRetVal qDelDisk(qqueue_t *pThis)
 {
-	obj_t *pDummyObj;	/* we need to deserialize it... */
+	obj_t *pDummyObj;	/* another dummy, nothing is created */
 	DEFiRet;
 
 	int64 offsIn;
 	int64 offsOut;
 
 	CHKiRet(strm.GetCurrOffset(pThis->tVars.disk.pReadDel, &offsIn));
-	CHKiRet(obj.Deserialize(&pDummyObj, (uchar*) "msg", pThis->tVars.disk.pReadDel, NULL, NULL));
-	objDestruct(pDummyObj);
+	CHKiRet(objDeserializeWithMethods(&pDummyObj, (uchar*) "msg", pThis->tVars.disk.pReadDel,
+		NULL, NULL, qDelDiskCallbackDummy, qDelDiskCallbackDummy, qDelDiskCallbackDummy));
 	CHKiRet(strm.GetCurrOffset(pThis->tVars.disk.pReadDel, &offsOut));
 
 	/* This time it is a bit tricky: we free disk space only upon file deletion. So we need
@@ -976,7 +980,7 @@ static rsRetVal qDestructDirect(qqueue_t __attribute__((unused)) *pThis)
 	return RS_RET_OK;
 }
 
-static rsRetVal qAddDirect(qqueue_t *pThis, void* pUsr)
+static rsRetVal qAddDirect(qqueue_t *pThis, msg_t* pMsg)
 {
 	batch_t singleBatch;
 	batch_obj_t batchObj;
@@ -998,16 +1002,16 @@ static rsRetVal qAddDirect(qqueue_t *pThis, void* pUsr)
 	memset(&batchObj, 0, sizeof(batch_obj_t));
 	memset(&singleBatch, 0, sizeof(batch_t));
 	batchObj.state = BATCH_STATE_RDY;
-	batchObj.pUsrp = (obj_t*) pUsr;
+	batchObj.pMsg = pMsg;
 	singleBatch.nElem = 1; /* there always is only one in direct mode */
 	singleBatch.pElem = &batchObj;
 	singleBatch.active = &active;
-	iRet = pThis->pConsumer(pThis->pUsr, &singleBatch, &pThis->bShutdownImmediate);
+	iRet = pThis->pConsumer(pThis->pAction, &singleBatch, &pThis->bShutdownImmediate);
 	/* delete the batch string params: TODO: create its own "class" for this */
 	for(i = 0 ; i < CONF_OMOD_NUMSTRINGS_MAXSIZE ; ++i) {
 		free(batchObj.staticActStrings[i]);
 	}
-	objDestruct(pUsr);
+	msgDestruct(&pMsg);
 
 	RETiRet;
 }
@@ -1029,7 +1033,7 @@ rsRetVal qqueueEnqObjDirectBatch(qqueue_t *pThis, batch_t *pBatch)
 	 * We use our knowledge about the batch_t structure below, but without that, we
 	 * pay a too-large performance toll... -- rgerhards, 2009-04-22
 	 */
-	iRet = pThis->pConsumer(pThis->pUsr, pBatch, &pThis->bShutdownImmediate);
+	iRet = pThis->pConsumer(pThis->pAction, pBatch, &pThis->bShutdownImmediate);
 
 	RETiRet;
 }
@@ -1050,13 +1054,13 @@ static rsRetVal qDelDirect(qqueue_t __attribute__((unused)) *pThis)
  * things truely different. -- rgerhards, 2008-02-12
  */
 static rsRetVal
-qqueueAdd(qqueue_t *pThis, void *pUsr)
+qqueueAdd(qqueue_t *pThis, msg_t *pMsg)
 {
 	DEFiRet;
 
 	ASSERT(pThis != NULL);
 
-	CHKiRet(pThis->qAdd(pThis, pUsr));
+	CHKiRet(pThis->qAdd(pThis, pMsg));
 
 	if(pThis->qType != QUEUETYPE_DIRECT) {
 		ATOMIC_INC(&pThis->iQueueSize, &pThis->mutQueueSize);
@@ -1072,7 +1076,7 @@ finalize_it:
 /* generic code to dequeue a queue entry
  */
 static rsRetVal
-qqueueDeq(qqueue_t *pThis, void **ppUsr)
+qqueueDeq(qqueue_t *pThis, msg_t **ppMsg)
 {
 	DEFiRet;
 
@@ -1083,7 +1087,7 @@ qqueueDeq(qqueue_t *pThis, void **ppUsr)
 	 * If we decrement, however, we may lose a message. But that is better than
 	 * losing the whole process because it loops... -- rgerhards, 2008-01-03
 	 */
-	iRet = pThis->qDeq(pThis, ppUsr);
+	iRet = pThis->qDeq(pThis, ppMsg);
 	ATOMIC_INC(&pThis->nLogDeq, &pThis->mutLogDeq);
 
 //	DBGOPRINT((obj_t*) pThis, "entry deleted, size now log %d, phys %d entries\n",
@@ -1426,22 +1430,21 @@ qqueueSetDefaultsActionQueue(qqueue_t *pThis)
  * the return state!
  * rgerhards, 2008-01-24
  */
-static int qqueueChkDiscardMsg(qqueue_t *pThis, int iQueueSize, void *pUsr)
+static int qqueueChkDiscardMsg(qqueue_t *pThis, int iQueueSize, msg_t *pMsg)
 {
 	DEFiRet;
 	rsRetVal iRetLocal;
 	int iSeverity;
 
 	ISOBJ_TYPE_assert(pThis, qqueue);
-	ISOBJ_assert(pUsr);
 
 	if(pThis->iDiscardMrk > 0 && iQueueSize >= pThis->iDiscardMrk) {
-		iRetLocal = objGetSeverity(pUsr, &iSeverity);
+		iRetLocal = MsgGetSeverity(pMsg, &iSeverity);
 		if(iRetLocal == RS_RET_OK && iSeverity >= pThis->iDiscardSeverity) {
 			DBGOPRINT((obj_t*) pThis, "queue nearly full (%d entries), discarded severity %d message\n",
 				  iQueueSize, iSeverity);
 			STATSCOUNTER_INC(pThis->ctrNFDscrd, pThis->mutCtrNFDscrd);
-			objDestruct(pUsr);
+			msgDestruct(&pMsg);
 			ABORT_FINALIZE(RS_RET_QUEUE_FULL);
 		} else {
 			DBGOPRINT((obj_t*) pThis, "queue nearly full (%d entries), but could not drop msg "
@@ -1527,7 +1530,7 @@ static inline rsRetVal
 DeleteProcessedBatch(qqueue_t *pThis, batch_t *pBatch)
 {
 	int i;
-	void *pUsr;
+	msg_t *pMsg;
 	int nEnqueued = 0;
 	rsRetVal localRet;
 	DEFiRet;
@@ -1536,17 +1539,16 @@ DeleteProcessedBatch(qqueue_t *pThis, batch_t *pBatch)
 	assert(pBatch != NULL);
 
 	for(i = 0 ; i < pBatch->nElem ; ++i) {
-		pUsr = pBatch->pElem[i].pUsrp;
+		pMsg = pBatch->pElem[i].pMsg;
 		if(   pBatch->pElem[i].state == BATCH_STATE_RDY
 		   || pBatch->pElem[i].state == BATCH_STATE_SUB) {
-			localRet = doEnqSingleObj(pThis, eFLOWCTL_NO_DELAY,
-				       (obj_t*)MsgAddRef((msg_t*) pUsr));
+			localRet = doEnqSingleObj(pThis, eFLOWCTL_NO_DELAY, MsgAddRef(pMsg));
 			++nEnqueued;
 			if(localRet != RS_RET_OK) {
 				DBGPRINTF("error %d re-enqueuing unprocessed data element - discarded\n", localRet);
 			}
 		}
-		objDestruct(pUsr);
+		msgDestruct(&pMsg);
 	}
 
 	DBGPRINTF("we deleted %d objects and enqueued %d objects\n", i-nEnqueued, nEnqueued);
@@ -1578,7 +1580,7 @@ DequeueConsumableElements(qqueue_t *pThis, wti_t *pWti, int *piRemainingQueueSiz
 	int nDiscarded;
 	int nDeleted;
 	int iQueueSize;
-	void *pUsr;
+	msg_t *pMsg;
 	rsRetVal localRet;
 	DEFiRet;
 
@@ -1587,10 +1589,10 @@ DequeueConsumableElements(qqueue_t *pThis, wti_t *pWti, int *piRemainingQueueSiz
 
 	nDequeued = nDiscarded = 0;
 	while((iQueueSize = getLogicalQueueSize(pThis)) > 0 && nDequeued < pThis->iDeqBatchSize) {
-		CHKiRet(qqueueDeq(pThis, &pUsr));
+		CHKiRet(qqueueDeq(pThis, &pMsg));
 
 		/* check if we should discard this element */
-		localRet = qqueueChkDiscardMsg(pThis, pThis->iQueueSize, pUsr);
+		localRet = qqueueChkDiscardMsg(pThis, pThis->iQueueSize, pMsg);
 		if(localRet == RS_RET_QUEUE_FULL) {
 			++nDiscarded;
 			continue;
@@ -1599,7 +1601,7 @@ DequeueConsumableElements(qqueue_t *pThis, wti_t *pWti, int *piRemainingQueueSiz
 		}
 
 		/* all well, use this element */
-		pWti->batch.pElem[nDequeued].pUsrp = pUsr;
+		pWti->batch.pElem[nDequeued].pMsg = pMsg;
 		pWti->batch.pElem[nDequeued].state = BATCH_STATE_RDY;
 		++nDequeued;
 	}
@@ -1841,7 +1843,7 @@ ConsumerReg(qqueue_t *pThis, wti_t *pWti)
 	/* at this spot, we may be cancelled */
 	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &iCancelStateSave);
 
-	CHKiRet(pThis->pConsumer(pThis->pUsr, &pWti->batch, &pThis->bShutdownImmediate));
+	CHKiRet(pThis->pConsumer(pThis->pAction, &pWti->batch, &pThis->bShutdownImmediate));
 
 	/* we now need to check if we should deliberately delay processing a bit
 	 * and, if so, do that. -- rgerhards, 2008-01-30
@@ -1903,8 +1905,8 @@ ConsumerDA(qqueue_t *pThis, wti_t *pWti)
 		 * the message. So far, we simply assume we always have msg_t, what currently is always the case.
 		 * rgerhards, 2009-05-28
 		 */
-		CHKiRet(qqueueEnqObj(pThis->pqDA, eFLOWCTL_NO_DELAY,
-			(obj_t*)MsgAddRef((msg_t*)(pWti->batch.pElem[i].pUsrp))));
+		CHKiRet(qqueueEnqMsg(pThis->pqDA, eFLOWCTL_NO_DELAY,
+			MsgAddRef(pWti->batch.pElem[i].pMsg)));
 		pWti->batch.pElem[i].state = BATCH_STATE_COMM; /* commited to other queue! */
 	}
 
@@ -1985,6 +1987,7 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 {
 	DEFiRet;
 	uchar pszBuf[64];
+	uchar pszQIFNam[MAXFNAME];
 	int wrk;
 	uchar *qName;
 	size_t lenBuf;
@@ -2007,8 +2010,8 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 			pThis->qConstruct = qConstructLinkedList;
 			pThis->qDestruct = qDestructLinkedList;
 			pThis->qAdd = qAddLinkedList;
-			pThis->qDeq = (rsRetVal (*)(qqueue_t*,void**)) qDeqLinkedList;
-			pThis->qDel = (rsRetVal (*)(qqueue_t*)) qDelLinkedList;
+			pThis->qDeq = qDeqLinkedList;
+			pThis->qDel = qDelLinkedList;
 			pThis->MultiEnq = qqueueMultiEnqObjNonDirect;
 			break;
 		case QUEUETYPE_DISK:
@@ -2020,6 +2023,12 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 			pThis->MultiEnq = qqueueMultiEnqObjNonDirect;
 			/* special handling */
 			pThis->iNumWorkerThreads = 1; /* we need exactly one worker */
+			/* pre-construct file name for .qi file */
+			pThis->lenQIFNam = snprintf((char*)pszQIFNam, sizeof(pszQIFNam) / sizeof(uchar),
+				"%s/%s.qi", (char*) glbl.GetWorkDir(), (char*)pThis->pszFilePrefix);
+			pThis->pszQIFNam = ustrdup(pszQIFNam);
+			DBGOPRINT((obj_t*) pThis, ".qi file name is '%s', len %d\n", pThis->pszQIFNam,
+				(int) pThis->lenQIFNam);
 			break;
 		case QUEUETYPE_DIRECT:
 			pThis->qConstruct = qConstructDirect;
@@ -2157,8 +2166,6 @@ static rsRetVal qqueuePersist(qqueue_t *pThis, int bIsCheckpoint)
 {
 	DEFiRet;
 	strm_t *psQIF = NULL; /* Queue Info File */
-	uchar pszQIFNam[MAXFNAME];
-	size_t lenQIFNam;
 
 	ASSERT(pThis != NULL);
 
@@ -2176,13 +2183,9 @@ static rsRetVal qqueuePersist(qqueue_t *pThis, int bIsCheckpoint)
 
 	DBGOPRINT((obj_t*) pThis, "persisting queue to disk, %d entries...\n", getPhysicalQueueSize(pThis));
 
-	/* Construct file name */
-	lenQIFNam = snprintf((char*)pszQIFNam, sizeof(pszQIFNam) / sizeof(uchar), "%s/%s.qi",
-			     (char*) glbl.GetWorkDir(), (char*)pThis->pszFilePrefix);
-
 	if((bIsCheckpoint != QUEUE_CHECKPOINT) && (getPhysicalQueueSize(pThis) == 0)) {
 		if(pThis->bNeedDelQIF) {
-			unlink((char*)pszQIFNam);
+			unlink((char*)pThis->pszQIFNam);
 			pThis->bNeedDelQIF = 0;
 		}
 		/* indicate spool file needs to be deleted */
@@ -2195,7 +2198,7 @@ static rsRetVal qqueuePersist(qqueue_t *pThis, int bIsCheckpoint)
 	CHKiRet(strm.SettOperationsMode(psQIF, STREAMMODE_WRITE_TRUNC));
 	CHKiRet(strm.SetbSync(psQIF, pThis->bSyncQueueFiles));
 	CHKiRet(strm.SetsType(psQIF, STREAMTYPE_FILE_SINGLE));
-	CHKiRet(strm.SetFName(psQIF, pszQIFNam, lenQIFNam));
+	CHKiRet(strm.SetFName(psQIF, pThis->pszQIFNam, pThis->lenQIFNam));
 	CHKiRet(strm.ConstructFinalize(psQIF));
 
 	/* first, write the property bag for ourselfs
@@ -2437,7 +2440,7 @@ finalize_it:
  * rgerhards, 2009-06-16
  */
 static inline rsRetVal
-doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, void *pUsr)
+doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, msg_t *pMsg)
 {
 	DEFiRet;
 	int err;
@@ -2446,7 +2449,7 @@ doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, void *pUsr)
 	STATSCOUNTER_INC(pThis->ctrEnqueued, pThis->mutCtrEnqueued);
 	/* first check if we need to discard this message (which will cause CHKiRet() to exit)
 	 */
-	CHKiRet(qqueueChkDiscardMsg(pThis, pThis->iQueueSize, pUsr));
+	CHKiRet(qqueueChkDiscardMsg(pThis, pThis->iQueueSize, pMsg));
 
 	/* handle flow control
 	 * There are two different flow control mechanisms: basic and advanced flow control.
@@ -2523,7 +2526,7 @@ doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, void *pUsr)
 		if(pThis->toEnq == 0 || pThis->bEnqOnly) {
 			DBGOPRINT((obj_t*) pThis, "enqueueMsg: queue FULL - configured for immediate discarding.\n");
 			STATSCOUNTER_INC(pThis->ctrFDscrd, pThis->mutCtrFDscrd);
-			objDestruct(pUsr);
+			msgDestruct(&pMsg);
 			ABORT_FINALIZE(RS_RET_QUEUE_FULL);
 		} else {
 			DBGOPRINT((obj_t*) pThis, "enqueueMsg: queue FULL - waiting %dms to drain.\n", pThis->toEnq);
@@ -2535,7 +2538,7 @@ doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, void *pUsr)
 			if(pthread_cond_timedwait(&pThis->notFull, pThis->mut, &t) != 0) {
 				DBGOPRINT((obj_t*) pThis, "enqueueMsg: cond timeout, dropping message!\n");
 				STATSCOUNTER_INC(pThis->ctrFDscrd, pThis->mutCtrFDscrd);
-				objDestruct(pUsr);
+				msgDestruct(&pMsg);
 				ABORT_FINALIZE(RS_RET_QUEUE_FULL);
 			}
 		dbgoprint((obj_t*) pThis, "enqueueMsg: wait solved queue full condition, enqueing\n");
@@ -2543,7 +2546,7 @@ doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, void *pUsr)
 	}
 
 	/* and finally enqueue the message */
-	CHKiRet(qqueueAdd(pThis, pUsr));
+	CHKiRet(qqueueAdd(pThis, pMsg));
 	STATSCOUNTER_SETMAX_NOMUT(pThis->ctrMaxqsize, pThis->iQueueSize);
 
 finalize_it:
@@ -2619,11 +2622,11 @@ finalize_it:
  * Enqueues the new element and awakes worker thread.
  */
 rsRetVal
-qqueueEnqObjDirect(qqueue_t *pThis, void *pUsr)
+qqueueEnqMsgDirect(qqueue_t *pThis, msg_t *pMsg)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, qqueue);
-	iRet = qAddDirect(pThis, pUsr);
+	iRet = qAddDirect(pThis, pMsg);
 	RETiRet;
 }
 
@@ -2632,7 +2635,7 @@ qqueueEnqObjDirect(qqueue_t *pThis, void *pUsr)
  * Enqueues the new element and awakes worker thread.
  */
 rsRetVal
-qqueueEnqObj(qqueue_t *pThis, flowControl_t flowCtlType, void *pUsr)
+qqueueEnqMsg(qqueue_t *pThis, flowControl_t flowCtlType, msg_t *pMsg)
 {
 	DEFiRet;
 	int iCancelStateSave;
@@ -2644,7 +2647,7 @@ qqueueEnqObj(qqueue_t *pThis, flowControl_t flowCtlType, void *pUsr)
 		d_pthread_mutex_lock(pThis->mut);
 	}
 
-	CHKiRet(doEnqSingleObj(pThis, flowCtlType, pUsr));
+	CHKiRet(doEnqSingleObj(pThis, flowCtlType, pMsg));
 
 	qqueueChkPersist(pThis, 1);
 
@@ -2764,7 +2767,7 @@ DEFpropSetMeth(qqueue, iLightDlyMrk, int)
 DEFpropSetMeth(qqueue, bIsDA, int)
 DEFpropSetMeth(qqueue, iMinMsgsPerWrkr, int)
 DEFpropSetMeth(qqueue, bSaveOnShutdown, int)
-DEFpropSetMeth(qqueue, pUsr, void*)
+DEFpropSetMeth(qqueue, pAction, action_t*)
 DEFpropSetMeth(qqueue, iDeqSlowdown, int)
 DEFpropSetMeth(qqueue, iDeqBatchSize, int)
 DEFpropSetMeth(qqueue, sizeOnDiskMax, int64)

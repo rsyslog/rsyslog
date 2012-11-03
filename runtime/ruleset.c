@@ -194,7 +194,7 @@ processBatchMultiRuleset(batch_t *pBatch)
 		for(i = iStart ; i < pBatch->nElem ; ++i) {
 			if(batchElemGetRuleset(pBatch, i) == currRuleset) {
 				/* for performance reasons, we copy only those members that we actually need */
-				snglRuleBatch.pElem[iNew].pUsrp = pBatch->pElem[i].pUsrp;
+				snglRuleBatch.pElem[iNew].pMsg = pBatch->pElem[i].pMsg;
 				snglRuleBatch.pElem[iNew].state = pBatch->pElem[i].state;
 				++iNew;
 				/* We indicate the element also as done, so it will not be processed again */
@@ -244,8 +244,8 @@ execSet(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
 	for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pBatch->pbShutdownImmediate) ; ++i) {
 		if(   pBatch->pElem[i].state != BATCH_STATE_DISC
 		   && (active == NULL || active[i])) {
-			cnfexprEval(stmt->d.s_set.expr, &result, pBatch->pElem[i].pUsrp);
-			msgSetJSONFromVar((msg_t*)pBatch->pElem[i].pUsrp, stmt->d.s_set.varname,
+			cnfexprEval(stmt->d.s_set.expr, &result, pBatch->pElem[i].pMsg);
+			msgSetJSONFromVar(pBatch->pElem[i].pMsg, stmt->d.s_set.varname,
 					  &result);
 			varDelete(&result);
 		}
@@ -261,7 +261,7 @@ execUnset(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
 	for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pBatch->pbShutdownImmediate) ; ++i) {
 		if(   pBatch->pElem[i].state != BATCH_STATE_DISC
 		   && (active == NULL || active[i])) {
-			msgUnsetJSON((msg_t*)pBatch->pElem[i].pUsrp, stmt->d.s_unset.varname);
+			msgUnsetJSON(pBatch->pElem[i].pMsg, stmt->d.s_unset.varname);
 		}
 	}
 	RETiRet;
@@ -303,8 +303,7 @@ execIf(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
 		if(pBatch->pElem[i].state == BATCH_STATE_DISC)
 			continue; /* will be ignored in any case */
 		if(active == NULL || active[i]) {
-			bRet = cnfexprEvalBool(stmt->d.s_if.expr,
-					       (msg_t*)(pBatch->pElem[i].pUsrp));
+			bRet = cnfexprEvalBool(stmt->d.s_if.expr, pBatch->pElem[i].pMsg);
 		} else 
 			bRet = 0;
 		newAct[i] = bRet;
@@ -337,7 +336,7 @@ execPRIFILT(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
 	for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pBatch->pbShutdownImmediate) ; ++i) {
 		if(pBatch->pElem[i].state == BATCH_STATE_DISC)
 			continue; /* will be ignored in any case */
-		pMsg = (msg_t*)(pBatch->pElem[i].pUsrp);
+		pMsg = pBatch->pElem[i].pMsg;
 		if(active == NULL || active[i]) {
 			if( (stmt->d.s_prifilt.pmask[pMsg->iFacility] == TABLE_NOPRI) ||
 			   ((stmt->d.s_prifilt.pmask[pMsg->iFacility]
@@ -466,7 +465,7 @@ execPROPFILT(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
 		if(pBatch->pElem[i].state == BATCH_STATE_DISC)
 			continue; /* will be ignored in any case */
 		if(active == NULL || active[i]) {
-			bRet = evalPROPFILT(stmt, (msg_t*)(pBatch->pElem[i].pUsrp));
+			bRet = evalPROPFILT(stmt, pBatch->pElem[i].pMsg);
 		} else 
 			bRet = 0;
 		thenAct[i] = bRet;

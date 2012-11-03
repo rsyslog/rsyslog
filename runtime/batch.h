@@ -46,7 +46,7 @@ typedef enum {
 /* an object inside a batch, including any information (state!) needed for it to "life".
  */
 struct batch_obj_s {
-	obj_t *pUsrp;		/* pointer to user object (most often message) */
+	msg_t *pMsg;
 	batch_state_t state;	/* associated state */
 	/* work variables for action processing; these are reused for each action (or block of
 	 * actions)
@@ -97,13 +97,13 @@ batchSetSingleRuleset(batch_t *pBatch, sbool val) {
 /* get the batches ruleset (if we have a single ruleset) */
 static inline ruleset_t*
 batchGetRuleset(batch_t *pBatch) {
-	return (pBatch->nElem > 0) ? ((msg_t*) pBatch->pElem[0].pUsrp)->pRuleset : NULL;
+	return (pBatch->nElem > 0) ? pBatch->pElem[0].pMsg->pRuleset : NULL;
 }
 
 /* get the ruleset of a specifc element of the batch (index not verified!) */
 static inline ruleset_t*
 batchElemGetRuleset(batch_t *pBatch, int i) {
-	return ((msg_t*) pBatch->pElem[i].pUsrp)->pRuleset;
+	return pBatch->pElem[i].pMsg->pRuleset;
 }
 
 /* get number of msgs for this batch */
@@ -131,22 +131,6 @@ static inline int
 batchIsValidElem(batch_t *pBatch, int i) {
 	return(   (pBatch->pElem[i].state != BATCH_STATE_DISC)
 	       && (pBatch->active == NULL || pBatch->active[i]));
-}
-
-
-/* copy one batch element to another.
- * This creates a complete duplicate in those cases where
- * it is needed. Use duplication only when absolutely necessary!
- * Note that all working fields are reset to zeros. If that were 
- * not done, we would have potential problems with invalid
- * or double pointer frees.
- * rgerhards, 2010-06-10
- */
-static inline void
-batchCopyElem(batch_obj_t *pDest, batch_obj_t *pSrc) {
-	memset(pDest, 0, sizeof(batch_obj_t));
-	pDest->pUsrp = pSrc->pUsrp;
-	pDest->state = pSrc->state;
 }
 
 
