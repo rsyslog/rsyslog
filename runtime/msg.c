@@ -3676,12 +3676,10 @@ static rsRetVal msgConstructFinalizer(msg_t *pThis)
  * satisfies the base object class getSeverity semantics.
  * rgerhards, 2008-01-14
  */
-static rsRetVal
-MsgGetSeverity(obj_t_ptr pThis, int *piSeverity)
+rsRetVal
+MsgGetSeverity(msg_t *pMsg, int *piSeverity)
 {
-	ISOBJ_TYPE_assert(pThis, msg);
-	assert(piSeverity != NULL);
-	*piSeverity = ((msg_t*) pThis)->iSeverity;
+	*piSeverity = pMsg->iSeverity;
 	return RS_RET_OK;
 }
 
@@ -3982,7 +3980,6 @@ BEGINObjClassInit(msg, 1, OBJ_IS_CORE_MODULE)
 	OBJSetMethodHandler(objMethod_SERIALIZE, MsgSerialize);
 	OBJSetMethodHandler(objMethod_SETPROPERTY, MsgSetProperty);
 	OBJSetMethodHandler(objMethod_CONSTRUCTION_FINALIZER, msgConstructFinalizer);
-	OBJSetMethodHandler(objMethod_GETSEVERITY, MsgGetSeverity);
 	/* initially, we have no need to lock message objects */
 	funcLock = MsgLockingDummy;
 	funcUnlock = MsgLockingDummy;
