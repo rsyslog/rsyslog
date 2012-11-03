@@ -314,7 +314,7 @@ finalize_it:
  * TODO: implement!
  */
 static inline rsRetVal
-validateEntry(dnscache_entry_t *etry, struct sockaddr_storage *addr)
+validateEntry(dnscache_entry_t __attribute__((unused)) *etry, struct sockaddr_storage __attribute__((unused)) *addr)
 {
 	return RS_RET_OK;
 }
