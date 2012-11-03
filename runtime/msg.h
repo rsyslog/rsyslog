@@ -147,6 +147,7 @@ struct msg {
 PROTOTYPEObjClassInit(msg);
 rsRetVal msgConstruct(msg_t **ppThis);
 rsRetVal msgConstructWithTime(msg_t **ppThis, struct syslogTime *stTime, time_t ttGenTime);
+rsRetVal msgConstructForDeserializer(msg_t **ppThis);
 rsRetVal msgConstructFinalizer(msg_t *pThis);
 rsRetVal msgDestruct(msg_t **ppM);
 rsRetVal MsgSetProperty(msg_t *pThis, var_t *pProp);

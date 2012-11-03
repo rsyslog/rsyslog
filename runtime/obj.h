@@ -83,7 +83,6 @@
 		((obj_t*) (pThis))->pObjInfo = pObjInfoOBJ; \
 		((obj_t*) (pThis))->pszName = NULL
 #endif
-#define objDestruct(pThis) (((obj_t*) (pThis))->pObjInfo->objMethods[objMethod_DESTRUCT])(&pThis)
 #define objSerialize(pThis) (((obj_t*) (pThis))->pObjInfo->objMethods[objMethod_SERIALIZE])
 
 #define OBJSetMethodHandler(methodID, pHdlr) \

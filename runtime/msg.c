@@ -814,6 +814,19 @@ finalize_it:
 }
 
 
+/* Special msg constructor, to be used when an object is deserialized.
+ * we do only the base init as we know the properties will be set in
+ * any case by the deserializer. We still do the "inexpensive" inits
+ * just to be on the safe side. The whole process needs to be
+ * refactored together with the msg serialization subsystem.
+ */
+rsRetVal
+msgConstructForDeserializer(msg_t **ppThis)
+{
+	return msgBaseConstruct(ppThis);
+}
+
+
 /* some free handlers for (slightly) complicated cases... All of them may be called
  * with an empty element.
  */

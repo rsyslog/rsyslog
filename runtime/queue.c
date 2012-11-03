@@ -918,22 +918,34 @@ finalize_it:
 static rsRetVal qDeqDisk(qqueue_t *pThis, msg_t **ppMsg)
 {
 	DEFiRet;
-	iRet = objDeserializeWithMethods(ppMsg, (uchar*) "msg", pThis->tVars.disk.pReadDeq, NULL, NULL, msgConstruct, msgConstructFinalizer, MsgSetProperty);
+	iRet = objDeserializeWithMethods(ppMsg, (uchar*) "msg", pThis->tVars.disk.pReadDeq, NULL,
+		NULL, msgConstructForDeserializer, msgConstructFinalizer, MsgSetProperty);
 	RETiRet;
 }
 
 
+/* the following function is a dummy to be used for qDelDisk, which (currently) must
+ * provide constructors & others even though it does not really need the object. So
+ * instead of using the real ones, we use the dummy here. That at least saves some time.
+ * Of course, in the longer term the whole process should be refactored.
+ * rgerhards, 2012-11-03
+ */
+static rsRetVal
+qDelDiskCallbackDummy(void)
+{
+	return RS_RET_OK;
+}
 static rsRetVal qDelDisk(qqueue_t *pThis)
 {
-	obj_t *pDummyObj;	/* we need to deserialize it... */
+	obj_t *pDummyObj;	/* another dummy, nothing is created */
 	DEFiRet;
 
 	int64 offsIn;
 	int64 offsOut;
 
 	CHKiRet(strm.GetCurrOffset(pThis->tVars.disk.pReadDel, &offsIn));
-	CHKiRet(objDeserializeWithMethods(&pDummyObj, (uchar*) "msg", pThis->tVars.disk.pReadDel, NULL, NULL, msgConstruct, msgConstructFinalizer, MsgSetProperty));
-	objDestruct(pDummyObj);
+	CHKiRet(objDeserializeWithMethods(&pDummyObj, (uchar*) "msg", pThis->tVars.disk.pReadDel,
+		NULL, NULL, qDelDiskCallbackDummy, qDelDiskCallbackDummy, qDelDiskCallbackDummy));
 	CHKiRet(strm.GetCurrOffset(pThis->tVars.disk.pReadDel, &offsOut));
 
 	/* This time it is a bit tricky: we free disk space only upon file deletion. So we need
