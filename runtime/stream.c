@@ -343,6 +343,9 @@ static rsRetVal strmCloseFile(strm_t *pThis)
 
 	if(pThis->tOperationsMode != STREAMMODE_READ) {
 		strmFlushInternal(pThis, 0);
+		if(pThis->iZipLevel) {
+			doZipFinish(pThis);
+		}
 		if(pThis->bAsyncWrite) {
 			strmWaitAsyncWriterDone(pThis);
 		}
@@ -780,9 +783,6 @@ BEGINobjDestruct(strm) /* be sure to specify the object type also in END and COD
 	int i;
 CODESTARTobjDestruct(strm)
 	/* we need to stop the ZIP writer */
-	if(pThis->iZipLevel) {
-		doZipFinish(pThis);
-	}
 	if(pThis->bAsyncWrite)
 		/* Note: mutex will be unlocked in stopWriter! */
 		d_pthread_mutex_lock(&pThis->mut);
@@ -1231,11 +1231,9 @@ doZipFinish(strm_t *pThis)
 	assert(pThis != NULL);
 	assert(pBuf != NULL);
 
-	if(!pThis->bzInitDone) {
-		FINALIZE;
-	}
+	if(!pThis->bzInitDone)
+		goto done;
 
-dbgprintf("AAAA: doZipFinish() called\n");
 	pThis->zstrm.avail_in = 0;
 	/* run deflate() on buffer until everything has been compressed */
 	do {
@@ -1257,7 +1255,7 @@ finalize_it:
 	}
 
 	pThis->bzInitDone = 0;
-	RETiRet;
+done:	RETiRet;
 }
 
 /* flush stream output buffer to persistent storage. This can be called at any time
@@ -1423,7 +1421,7 @@ strmWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf)
 	ASSERT(pThis != NULL);
 	ASSERT(pBuf != NULL);
 
-//DBGPRINTF("strmWrite(%p, '%65.65s', %ld);, disabled %d, sizelim %ld, size %lld\n", pThis, pBuf,lenBuf, pThis->bDisabled, pThis->iSizeLimit, pThis->iCurrOffs);
+	/* DEV DEBUG ONLY DBGPRINTF("strmWrite(%p[%s], '%65.65s', %ld);, disabled %d, sizelim %ld, size %lld\n", pThis, pThis->pszCurrFName, pBuf,(long) lenBuf, pThis->bDisabled, (long) pThis->iSizeLimit, (long long) pThis->iCurrOffs); */
 	if(pThis->bAsyncWrite)
 		d_pthread_mutex_lock(&pThis->mut);
 

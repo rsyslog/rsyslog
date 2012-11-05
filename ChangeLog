@@ -1,3 +1,9 @@
+- bugfix: dynafile zip files could be corrupted
+  This could happen if a dynafile was destructed before the first write.
+  In practice, this could happen if few lines were written to a file and
+  it then became evicted from the dynafile cache. This would probably
+  look very random, because it depended on the timing in regard to 
+  message volume and dynafile cache size.
 ---------------------------------------------------------------------------
 Version 5.8.13.c1.1  [custom build] 2012-09-??
 - improved omfile zip writer to increase compression
