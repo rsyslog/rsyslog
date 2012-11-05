@@ -597,7 +597,7 @@ prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
 	   && !ustrcmp(newFileName, pCache[pData->iCurrElt]->pName)) {
 	   	/* great, we are all set */
 		pCache[pData->iCurrElt]->clkTickAccessed = getClockFileAccess();
-		// LRU needs only a strictly monotonically increasing counter, so such a one could do
+		/* LRU needs only a strictly monotonically increasing counter, so such a one could do */
 		FINALIZE;
 	}
 
@@ -847,7 +847,6 @@ BEGINendTransaction
 CODESTARTendTransaction
 	/* Note: pStrm may be NULL if there was an error opening the stream */
 	if(pData->bFlushOnTXEnd && pData->pStrm != NULL) {
-dbgprintf("AAAA: flusing stream, endTx\n");
 		CHKiRet(strm.Flush(pData->pStrm));
 	}
 finalize_it:
@@ -856,10 +855,10 @@ ENDendTransaction
 
 BEGINdoAction
 CODESTARTdoAction
-	DBGPRINTF("file to log to: %s\n", pData->f_fname);
+	DBGPRINTF("file to log to: %s\n",
+		  (pData->bDynamicName) ? ppString[1] : pData->f_fname);
 	CHKiRet(writeFile(ppString, iMsgOpts, pData));
 	if(!bCoreSupportsBatching && pData->bFlushOnTXEnd) {
-dbgprintf("AAAA: flusing stream, in Tx\n");
 		CHKiRet(strm.Flush(pData->pStrm));
 	}
 finalize_it:
