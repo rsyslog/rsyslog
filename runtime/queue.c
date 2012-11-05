@@ -921,7 +921,7 @@ finalize_it:
 static rsRetVal qDeqDisk(qqueue_t *pThis, msg_t **ppMsg)
 {
 	DEFiRet;
-	iRet = objDeserializeWithMethods(ppMsg, (uchar*) "msg", pThis->tVars.disk.pReadDeq, NULL,
+	iRet = objDeserializeWithMethods(ppMsg, (uchar*) "msg", 3, pThis->tVars.disk.pReadDeq, NULL,
 		NULL, msgConstructForDeserializer, msgConstructFinalizer, MsgSetProperty);
 	RETiRet;
 }
@@ -947,7 +947,7 @@ static rsRetVal qDelDisk(qqueue_t *pThis)
 	int64 offsOut;
 
 	CHKiRet(strm.GetCurrOffset(pThis->tVars.disk.pReadDel, &offsIn));
-	CHKiRet(objDeserializeWithMethods(&pDummyObj, (uchar*) "msg", pThis->tVars.disk.pReadDel,
+	CHKiRet(objDeserializeWithMethods(&pDummyObj, (uchar*) "msg", 3, pThis->tVars.disk.pReadDel,
 		NULL, NULL, qDelDiskCallbackDummy, qDelDiskCallbackDummy, qDelDiskCallbackDummy));
 	CHKiRet(strm.GetCurrOffset(pThis->tVars.disk.pReadDel, &offsOut));
 

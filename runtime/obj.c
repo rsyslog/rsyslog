@@ -877,7 +877,7 @@ finalize_it:
  * rgerhards, 2012-11-03
  */
 rsRetVal
-objDeserializeWithMethods(void *ppObj, uchar *pszTypeExpected, strm_t *pStrm, rsRetVal (*fFixup)(obj_t*,void*), void *pUsr, rsRetVal (*objConstruct)(), rsRetVal (*objConstructFinalize)(), rsRetVal (*objSetProperty)())
+objDeserializeWithMethods(void *ppObj, uchar *pszTypeExpected, int lenTypeExpected, strm_t *pStrm, rsRetVal (*fFixup)(obj_t*,void*), void *pUsr, rsRetVal (*objConstruct)(), rsRetVal (*objConstructFinalize)(), rsRetVal (*objSetProperty)())
 {
 	DEFiRet;
 	rsRetVal iRetLocal;
@@ -904,7 +904,7 @@ objDeserializeWithMethods(void *ppObj, uchar *pszTypeExpected, strm_t *pStrm, rs
 		}
 	} while(iRetLocal != RS_RET_OK);
 
-	if(rsCStrSzStrCmp(pstrID, pszTypeExpected, ustrlen(pszTypeExpected))) /* TODO: optimize strlen() - caller shall provide */
+	if(rsCStrSzStrCmp(pstrID, pszTypeExpected, lenTypeExpected))
 		ABORT_FINALIZE(RS_RET_INVALID_OID);
 
 	CHKiRet(objConstruct(&pObj));
