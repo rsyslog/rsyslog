@@ -3619,8 +3619,6 @@ rsRetVal MsgSetProperty(msg_t *pThis, var_t *pProp)
 		MsgSetMSGoffs(pThis, pProp->val.num);
 	} else if(isProp("pszRawMsg")) {
 		MsgSetRawMsg(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.pStr), cstrLen(pProp->val.pStr));
-	} else if(isProp("pszUxTradMsg")) {
-		/*IGNORE*/; /* this *was* a property, but does no longer exist */
 	} else if(isProp("pszTAG")) {
 		MsgSetTAG(pThis, rsCStrGetSzStrNoNULL(pProp->val.pStr), cstrLen(pProp->val.pStr));
 	} else if(isProp("pszInputName")) {
@@ -3654,14 +3652,16 @@ rsRetVal MsgSetProperty(msg_t *pThis, var_t *pProp)
 		memcpy(&pThis->tTIMESTAMP, &pProp->val.vSyslogTime, sizeof(struct syslogTime));
 	} else if(isProp("pszRuleset")) {
 		MsgSetRulesetByName(pThis, pProp->val.pStr);
-	} else if(isProp("pszMSG")) {
-		dbgprintf("no longer supported property pszMSG silently ignored\n");
 	} else if(isProp("json")) {
 		tokener = json_tokener_new();
 		json = json_tokener_parse_ex(tokener, (char*)rsCStrGetSzStrNoNULL(pProp->val.pStr),
 					     cstrLen(pProp->val.pStr));
 		json_tokener_free(tokener);
 		msgAddJSON(pThis, (uchar*)"!", json);
+	} else if(isProp("pszMSG")) {
+		dbgprintf("no longer supported property pszMSG silently ignored\n");
+	} else if(isProp("pszUxTradMsg")) {
+		/*IGNORE*/; /* this *was* a property, but does no longer exist */
 	} else {
 		dbgprintf("unknown supported property '%s' silently ignored\n",
 			  rsCStrGetSzStrNoNULL(pProp->pcsName));
@@ -3992,8 +3992,6 @@ BEGINObjClassInit(msg, 1, OBJ_IS_CORE_MODULE)
 
 	/* set our own handlers */
 	OBJSetMethodHandler(objMethod_SERIALIZE, MsgSerialize);
-	OBJSetMethodHandler(objMethod_SETPROPERTY, MsgSetProperty);
-	OBJSetMethodHandler(objMethod_CONSTRUCTION_FINALIZER, msgConstructFinalizer);
 	/* initially, we have no need to lock message objects */
 	funcLock = MsgLockingDummy;
 	funcUnlock = MsgLockingDummy;
