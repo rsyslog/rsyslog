@@ -1,3 +1,9 @@
+- bugfix: dynafile zip files could be corrupted
+  This could happen if a dynafile was destructed before the first write.
+  In practice, this could happen if few lines were written to a file and
+  it then became evicted from the dynafile cache. This would probably
+  look very random, because it depended on the timing in regard to 
+  message volume and dynafile cache size.
 ---------------------------------------------------------------------------
 Version 7.3.2  [devel] 2012-10-30
 - mmnormalize: support for v6+ config interface added
