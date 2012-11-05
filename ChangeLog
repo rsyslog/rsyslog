@@ -1,3 +1,5 @@
+---------------------------------------------------------------------------
+Version 5.8.13.c1.2  [custom build] 2012-11-05
 - bugfix: dynafile zip files could be corrupted
   This could happen if a dynafile was destructed before the first write.
   In practice, this could happen if few lines were written to a file and
