@@ -59,6 +59,7 @@
 #include "ruleset.h"
 #include "prop.h"
 #include "net.h"
+#include "var.h"
 #include "rsconf.h"
 
 /* static data */
@@ -68,6 +69,7 @@ DEFobjCurrIf(glbl)
 DEFobjCurrIf(regexp)
 DEFobjCurrIf(prop)
 DEFobjCurrIf(net)
+DEFobjCurrIf(var)
 
 static struct {
 	uchar *pszName;
@@ -411,6 +413,16 @@ rsRetVal MsgEnableThreadSafety(void)
 }
 
 /* end locking functions */
+
+
+/* rgerhards 2012-04-18: set associated ruleset (by ruleset name)
+ * If ruleset cannot be found, no update is done.
+ */
+static void
+MsgSetRulesetByName(msg_t *pMsg, cstr_t *rulesetName)
+{
+	rulesetGetRuleset(runConf, &(pMsg->pRuleset), rsCStrGetSzStrNoNULL(rulesetName));
+}
 
 
 static inline int getProtocolVersion(msg_t *pM)
@@ -1133,6 +1145,167 @@ finalize_it:
 }
 
 
+/* This is a helper for MsgDeserialize that re-inits the var object. This
+ * whole construct should be replaced, var is really ready to be retired.
+ * But as an interim help during refactoring let's introduce this function
+ * here (and thus NOT as method of var object!). -- rgerhads, 2012-11-06
+ */
+static inline void
+reinitVar(var_t *pVar)
+{
+	rsCStrDestruct(&pVar->pcsName); /* no longer needed */
+	if(pVar->varType == VARTYPE_STR) {
+		if(pVar->val.pStr != NULL)
+			rsCStrDestruct(&pVar->val.pStr);
+	}
+}
+/* deserialize the message again 
+ * we deserialize the properties in the same order that we serialized them. Except
+ * for some checks to cover downlevel version, we do not need to do all these
+ * CPU intense name checkings.
+ */
+#define isProp(name) !rsCStrSzStrCmp(pVar->pcsName, (uchar*) name, sizeof(name) - 1)
+rsRetVal
+MsgDeserialize(msg_t *pMsg, strm_t *pStrm)
+{
+	prop_t *myProp;
+	prop_t *propRcvFrom = NULL;
+	prop_t *propRcvFromIP = NULL;
+	struct json_tokener *tokener;
+	struct json_object *json;
+	var_t *pVar = NULL;
+	DEFiRet;
+
+	ISOBJ_TYPE_assert(pStrm, strm);
+
+	CHKiRet(var.Construct(&pVar));
+	CHKiRet(var.ConstructFinalize(pVar));
+
+	CHKiRet(objDeserializeProperty(pVar, pStrm));
+	if(isProp("iProtocolVersion")) {
+		setProtocolVersion(pMsg, pVar->val.num);
+		reinitVar(pVar);
+		CHKiRet(objDeserializeProperty(pVar, pStrm));
+	}
+	if(isProp("iSeverity")) {
+		pMsg->iSeverity = pVar->val.num;
+		reinitVar(pVar);
+		CHKiRet(objDeserializeProperty(pVar, pStrm));
+	}
+	if(isProp("iFacility")) {
+		pMsg->iFacility = pVar->val.num;
+		reinitVar(pVar);
+		CHKiRet(objDeserializeProperty(pVar, pStrm));
+	}
+	if(isProp("msgFlags")) {
+		pMsg->msgFlags = pVar->val.num;
+		reinitVar(pVar);
+		CHKiRet(objDeserializeProperty(pVar, pStrm));
+	}
+	if(isProp("ttGenTime")) {
+		pMsg->ttGenTime = pVar->val.num;
+		reinitVar(pVar);
+		CHKiRet(objDeserializeProperty(pVar, pStrm));
+	}
+	if(isProp("tRcvdAt")) {
+		memcpy(&pMsg->tRcvdAt, &pVar->val.vSyslogTime, sizeof(struct syslogTime));
+		reinitVar(pVar);
+		CHKiRet(objDeserializeProperty(pVar, pStrm));
+	}
+	if(isProp("tTIMESTAMP")) {
+		memcpy(&pMsg->tRcvdAt, &pVar->val.vSyslogTime, sizeof(struct syslogTime));
+		reinitVar(pVar);
+		CHKiRet(objDeserializeProperty(pVar, pStrm));
+	}
+	if(isProp("pszTAG")) {
+		MsgSetTAG(pMsg, rsCStrGetSzStrNoNULL(pVar->val.pStr), cstrLen(pVar->val.pStr));
+		reinitVar(pVar);
+		CHKiRet(objDeserializeProperty(pVar, pStrm));
+	}
+	if(isProp("pszRawMsg")) {
+		MsgSetRawMsg(pMsg, (char*) rsCStrGetSzStrNoNULL(pVar->val.pStr), cstrLen(pVar->val.pStr));
+		reinitVar(pVar);
+		CHKiRet(objDeserializeProperty(pVar, pStrm));
+	}
+	if(isProp("pszHOSTNAME")) {
+		MsgSetHOSTNAME(pMsg, rsCStrGetSzStrNoNULL(pVar->val.pStr), rsCStrLen(pVar->val.pStr));
+		reinitVar(pVar);
+		CHKiRet(objDeserializeProperty(pVar, pStrm));
+	}
+	if(isProp("pszInputName")) {
+		/* we need to create a property */ 
+		CHKiRet(prop.Construct(&myProp));
+		CHKiRet(prop.SetString(myProp, rsCStrGetSzStrNoNULL(pVar->val.pStr), rsCStrLen(pVar->val.pStr)));
+		CHKiRet(prop.ConstructFinalize(myProp));
+		MsgSetInputName(pMsg, myProp);
+		prop.Destruct(&myProp);
+		reinitVar(pVar);
+		CHKiRet(objDeserializeProperty(pVar, pStrm));
+	}
+	if(isProp("pszRcvFrom")) {
+		MsgSetRcvFromStr(pMsg, rsCStrGetSzStrNoNULL(pVar->val.pStr), rsCStrLen(pVar->val.pStr), &propRcvFrom);
+		prop.Destruct(&propRcvFrom);
+		reinitVar(pVar);
+		CHKiRet(objDeserializeProperty(pVar, pStrm));
+	}
+	if(isProp("pszRcvFromIP")) {
+		MsgSetRcvFromIPStr(pMsg, rsCStrGetSzStrNoNULL(pVar->val.pStr), rsCStrLen(pVar->val.pStr), &propRcvFromIP);
+		prop.Destruct(&propRcvFromIP);
+		reinitVar(pVar);
+		CHKiRet(objDeserializeProperty(pVar, pStrm));
+	}
+	if(isProp("json")) {
+		tokener = json_tokener_new();
+		json = json_tokener_parse_ex(tokener, (char*)rsCStrGetSzStrNoNULL(pVar->val.pStr),
+					     cstrLen(pVar->val.pStr));
+		reinitVar(pVar);
+		CHKiRet(objDeserializeProperty(pVar, pStrm));
+	}
+	if(isProp("pCSStrucData")) {
+		MsgSetStructuredData(pMsg, (char*) rsCStrGetSzStrNoNULL(pVar->val.pStr));
+		reinitVar(pVar);
+		CHKiRet(objDeserializeProperty(pVar, pStrm));
+	}
+	if(isProp("pCSAPPNAME")) {
+		MsgSetAPPNAME(pMsg, (char*) rsCStrGetSzStrNoNULL(pVar->val.pStr));
+		reinitVar(pVar);
+		CHKiRet(objDeserializeProperty(pVar, pStrm));
+	}
+	if(isProp("pCSPROCID")) {
+		MsgSetPROCID(pMsg, (char*) rsCStrGetSzStrNoNULL(pVar->val.pStr));
+		reinitVar(pVar);
+		CHKiRet(objDeserializeProperty(pVar, pStrm));
+	}
+	if(isProp("pCSMSGID")) {
+		MsgSetMSGID(pMsg, (char*) rsCStrGetSzStrNoNULL(pVar->val.pStr));
+		reinitVar(pVar);
+		CHKiRet(objDeserializeProperty(pVar, pStrm));
+	}
+	if(isProp("pszUUID")) {
+		pMsg->pszUUID = ustrdup(rsCStrGetSzStrNoNULL(pVar->val.pStr));
+		reinitVar(pVar);
+		CHKiRet(objDeserializeProperty(pVar, pStrm));
+	}
+	if(isProp("pszRuleset")) {
+		MsgSetRulesetByName(pMsg, pVar->val.pStr);
+		reinitVar(pVar);
+		CHKiRet(objDeserializeProperty(pVar, pStrm));
+	}
+	/* "offMSG" must always be our last field, so we use this as an
+	 * indicator if the sequence is correct. This is a bit questionable,
+	 * but on the other hand it works decently AND we will probably replace
+	 * the whole persisted format soon in any case. -- rgerhards, 2012-11-06
+	 */
+	if(!isProp("offMSG"))
+		ABORT_FINALIZE(RS_RET_DS_PROP_SEQ_ERR);
+	MsgSetMSGoffs(pMsg, pVar->val.num);
+finalize_it:
+	if(pVar != NULL)
+		var.Destruct(&pVar);
+	RETiRet;
+}
+
+
 /* Increment reference count - see description of the "msg"
  * structure for details. As a convenience to developers,
  * this method returns the msg pointer that is passed to it.
@@ -1796,16 +1969,6 @@ void MsgSetRuleset(msg_t *pMsg, ruleset_t *pRuleset)
 {
 	assert(pMsg != NULL);
 	pMsg->pRuleset = pRuleset;
-}
-
-
-/* rgerhards 2012-04-18: set associated ruleset (by ruleset name)
- * If ruleset cannot be found, no update is done.
- */
-static void
-MsgSetRulesetByName(msg_t *pMsg, cstr_t *rulesetName)
-{
-	rulesetGetRuleset(runConf, &(pMsg->pRuleset), rsCStrGetSzStrNoNULL(rulesetName));
 }
 
 
@@ -3594,6 +3757,7 @@ msgGetMsgVarNew(msg_t *pThis, uchar *name)
  * change over time).
  * rgerhards, 2008-01-07
  */
+#undef isProp
 #define isProp(name) !rsCStrSzStrCmp(pProp->pcsName, (uchar*) name, sizeof(name) - 1)
 rsRetVal MsgSetProperty(msg_t *pThis, var_t *pProp)
 {
@@ -3951,25 +4115,25 @@ done:	return dst;
 
 
 rsRetVal
-msgSetJSONFromVar(msg_t *pMsg, uchar *varname, struct var *var)
+msgSetJSONFromVar(msg_t *pMsg, uchar *varname, struct var *v)
 {
 	struct json_object *json = NULL;
 	char *cstr;
 	DEFiRet;
-	switch(var->datatype) {
+	switch(v->datatype) {
 	case 'S':/* string */
-		cstr = es_str2cstr(var->d.estr, NULL);
+		cstr = es_str2cstr(v->d.estr, NULL);
 		json = json_object_new_string(cstr);
 		free(cstr);
 		break;
 	case 'N':/* number (integer) */
-		json = json_object_new_int((int) var->d.n);
+		json = json_object_new_int((int) v->d.n);
 		break;
 	case 'J':/* native JSON */
-		json = jsonDeepCopy(var->d.json);
+		json = jsonDeepCopy(v->d.json);
 		break;
 	default:DBGPRINTF("msgSetJSONFromVar: unsupported datatype %c\n",
-		var->datatype);
+		v->datatype);
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 	msgAddJSON(pMsg, varname+1, json);
@@ -3989,6 +4153,7 @@ BEGINObjClassInit(msg, 1, OBJ_IS_CORE_MODULE)
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(prop, CORE_COMPONENT));
+	CHKiRet(objUse(var, CORE_COMPONENT));
 
 	/* set our own handlers */
 	OBJSetMethodHandler(objMethod_SERIALIZE, MsgSerialize);

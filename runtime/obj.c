@@ -604,7 +604,7 @@ finalize_it:
 /* Deserialize a single property. Pointer must be positioned at begin of line. Whole line
  * up until the \n is read.
  */
-static rsRetVal objDeserializeProperty(var_t *pProp, strm_t *pStrm)
+rsRetVal objDeserializeProperty(var_t *pProp, strm_t *pStrm)
 {
 	DEFiRet;
 	number_t i;
@@ -877,7 +877,7 @@ finalize_it:
  * rgerhards, 2012-11-03
  */
 rsRetVal
-objDeserializeWithMethods(void *ppObj, uchar *pszTypeExpected, int lenTypeExpected, strm_t *pStrm, rsRetVal (*fFixup)(obj_t*,void*), void *pUsr, rsRetVal (*objConstruct)(), rsRetVal (*objConstructFinalize)(), rsRetVal (*objSetProperty)())
+objDeserializeWithMethods(void *ppObj, uchar *pszTypeExpected, int lenTypeExpected, strm_t *pStrm, rsRetVal (*fFixup)(obj_t*,void*), void *pUsr, rsRetVal (*objConstruct)(), rsRetVal (*objConstructFinalize)(), rsRetVal (*objDeserialize)())
 {
 	DEFiRet;
 	rsRetVal iRetLocal;
@@ -910,7 +910,8 @@ objDeserializeWithMethods(void *ppObj, uchar *pszTypeExpected, int lenTypeExpect
 	CHKiRet(objConstruct(&pObj));
 
 	/* we got the object, now we need to fill the properties */
-	CHKiRet(objDeserializeProperties(pObj, objSetProperty, pStrm));
+	CHKiRet(objDeserialize(pObj, pStrm));
+	CHKiRet(objDeserializeTrailer(pStrm)); /* do trailer checks */
 
 	/* check if we need to call a fixup function that modifies the object
 	 * before it is finalized. -- rgerhards, 2008-01-13
@@ -930,6 +931,39 @@ finalize_it:
 	if(pstrID != NULL)
 		rsCStrDestruct(&pstrID);
 
+	RETiRet;
+}
+
+/* This is a dummy deserializer, to be used for the delete queue reader
+ * specifically. This is kind of a hack, but also to be replace (hopefully) soon
+ * by totally different code. So let's make it as simple as possible...
+ * rgerhards, 2012-11-06
+ */
+rsRetVal
+objDeserializeDummy(obj_t __attribute__((unused)) *pObj, strm_t *pStrm)
+{
+	DEFiRet;
+	var_t *pVar = NULL;
+
+	CHKiRet(var.Construct(&pVar));
+	CHKiRet(var.ConstructFinalize(pVar));
+
+	iRet = objDeserializeProperty(pVar, pStrm);
+	while(iRet == RS_RET_OK) {
+		/* this loop does actually NOGHTING but read the file... */
+		/* re-init var object - TODO: method of var! */
+		rsCStrDestruct(&pVar->pcsName); /* no longer needed */
+		if(pVar->varType == VARTYPE_STR) {
+			if(pVar->val.pStr != NULL)
+				rsCStrDestruct(&pVar->val.pStr);
+		}
+		iRet = objDeserializeProperty(pVar, pStrm);
+	}
+finalize_it:
+	if(iRet == RS_RET_NO_PROPLINE)
+		iRet = RS_RET_OK; /* NO_PROPLINE is OK and a kind of EOF! */
+	if(pVar != NULL)
+		var.Destruct(&pVar);
 	RETiRet;
 }
 

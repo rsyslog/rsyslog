@@ -191,6 +191,7 @@ es_str_t* msgGetCEEVarNew(msg_t *pMsg, char *name);
 rsRetVal msgAddJSON(msg_t *pM, uchar *name, struct json_object *json);
 rsRetVal getCEEPropVal(msg_t *pM, es_str_t *propName, uchar **pRes, rs_size_t *buflen, unsigned short *pbMustBeFreed);
 rsRetVal MsgGetSeverity(msg_t *pThis, int *piSeverity);
+rsRetVal MsgDeserialize(msg_t *pMsg, strm_t *pStrm);
 
 /* TODO: remove these five (so far used in action.c) */
 uchar *getMSG(msg_t *pM);

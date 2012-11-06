@@ -922,7 +922,7 @@ static rsRetVal qDeqDisk(qqueue_t *pThis, msg_t **ppMsg)
 {
 	DEFiRet;
 	iRet = objDeserializeWithMethods(ppMsg, (uchar*) "msg", 3, pThis->tVars.disk.pReadDeq, NULL,
-		NULL, msgConstructForDeserializer, msgConstructFinalizer, MsgSetProperty);
+		NULL, msgConstructForDeserializer, msgConstructFinalizer, MsgDeserialize);
 	RETiRet;
 }
 
@@ -940,7 +940,7 @@ qDelDiskCallbackDummy(void)
 }
 static rsRetVal qDelDisk(qqueue_t *pThis)
 {
-	obj_t *pDummyObj;	/* another dummy, nothing is created */
+	msg_t *pDummyObj;	/* another dummy, nothing is created */
 	DEFiRet;
 
 	int64 offsIn;
@@ -948,7 +948,7 @@ static rsRetVal qDelDisk(qqueue_t *pThis)
 
 	CHKiRet(strm.GetCurrOffset(pThis->tVars.disk.pReadDel, &offsIn));
 	CHKiRet(objDeserializeWithMethods(&pDummyObj, (uchar*) "msg", 3, pThis->tVars.disk.pReadDel,
-		NULL, NULL, qDelDiskCallbackDummy, qDelDiskCallbackDummy, qDelDiskCallbackDummy));
+		NULL, NULL, qDelDiskCallbackDummy, qDelDiskCallbackDummy, objDeserializeDummy));
 	CHKiRet(strm.GetCurrOffset(pThis->tVars.disk.pReadDel, &offsOut));
 
 	/* This time it is a bit tricky: we free disk space only upon file deletion. So we need
