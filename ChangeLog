@@ -1,3 +1,6 @@
+---------------------------------------------------------------------------
+Version 7.3.3  [devel] 2012-11-07
+- improved disk queue performance
 - bugfix: dynafile zip files could be corrupted
   This could happen if a dynafile was destructed before the first write.
   In practice, this could happen if few lines were written to a file and
