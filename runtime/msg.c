@@ -1213,7 +1213,7 @@ MsgDeserialize(msg_t *pMsg, strm_t *pStrm)
 		CHKiRet(objDeserializeProperty(pVar, pStrm));
 	}
 	if(isProp("tTIMESTAMP")) {
-		memcpy(&pMsg->tRcvdAt, &pVar->val.vSyslogTime, sizeof(struct syslogTime));
+		memcpy(&pMsg->tTIMESTAMP, &pVar->val.vSyslogTime, sizeof(struct syslogTime));
 		reinitVar(pVar);
 		CHKiRet(objDeserializeProperty(pVar, pStrm));
 	}
