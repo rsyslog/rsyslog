@@ -1231,7 +1231,7 @@ evalStrArrayCmp(es_str_t *estr_l, struct cnfarray* ar, int cmpop)
 
 #define FREE_TWO_STRINGS \
 		if(bMustFree) es_deleteStr(estr_r);  \
-		if(expr->r->nodetype != 'A' && r.datatype == 'S') es_deleteStr(r.d.estr);  \
+		if(expr->r->nodetype != 'S' && expr->r->nodetype != 'A' && r.datatype == 'S') es_deleteStr(r.d.estr);  \
 		if(bMustFree2) es_deleteStr(estr_l);  \
 		if(l.datatype == 'S') es_deleteStr(l.d.estr)
 
