@@ -7,6 +7,9 @@ Version 7.2.2  [v7-stable] 2012-10-??
 - bugfix: potential abort of imtcp on rsyslogd shutdown
 - bugfix: imzmq3 segfault with PULL subscription
   Thanks to Martin Nilsson for the patch.
+- bugfix: improper handling of backslash in string-type template()s
+- bugfix: leading quote (") in string-type template() lead to thight loop
+  on startup
 ----------------------------------------------------------------------------
 Version 7.2.1  [v7-stable] 2012-10-29
 - bugfix: ruleset()-object did only support a single statement
