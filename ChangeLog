@@ -1,4 +1,10 @@
 ---------------------------------------------------------------------------
+Version 7.3.4  [devel] 2012-11-??
+- bugfix: improper handling of backslash in string-type template()s
+- bugfix: leading quote (") in string-type template() lead to thight loop
+  on startup
+- bugfix: no error msg on invalid field option in legacy/string template
+---------------------------------------------------------------------------
 Version 7.3.3  [devel] 2012-11-07
 - improved disk queue performance
 - bugfix: dynafile zip files could be corrupted
