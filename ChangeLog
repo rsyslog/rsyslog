@@ -8,6 +8,7 @@ Version 6.6.1  [v6-stable] 2012-10-??
 - fix API "glitch" in some plugins
   This did not affect users, but could have caused trouble in the future
   for developers.
+- bugfix: no error msg on invalid field option in legacy/string template
 ---------------------------------------------------------------------------
 Version 6.6.0  [v6-stable] 2012-10-22
 This starts a new stable branch, based on the 6.5.x series, plus:

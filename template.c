@@ -666,7 +666,8 @@ static void doOptions(unsigned char **pp, struct templateEntry *pTpe)
 		 } else if(!strcmp((char*)Buf, "mandatory-field")) {
 			 pTpe->data.field.options.bMandatory = 1;
 		 } else {
-			dbgprintf("Invalid field option '%s' specified - ignored.\n", Buf);
+			errmsg.LogError(0, NO_ERRCODE, "template error: invalid field option '%s' "
+				"specified - ignored", Buf);
 		 }
 	}
 
