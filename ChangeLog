@@ -1,10 +1,3 @@
-- bugfix: potential segfault due to invalid param handling in comparisons
-  This could happen in RainerScript comparisons (like contains); in some
-  cases an unitialized variable was accessed, which could lead to an
-  invalid free and in turn to a segfault.
-  Closes: http://bugzilla.adiscon.com/show_bug.cgi?id=372
-  Thanks to Georgi Georgiev for reporting this bug and his great help
-  in solving it.
 ----------------------------------------------------------------------------
 Version 7.2.2  [v7-stable] 2012-10-??
 - enabled to build without libuuid, at loss of uuid functionality
@@ -22,6 +15,13 @@ Version 7.2.2  [v7-stable] 2012-10-??
 - bugfix: leading quote (") in string-type template() lead to thight loop
   on startup
 - bugfix: no error msg on invalid field option in legacy/string template
+- bugfix: potential segfault due to invalid param handling in comparisons
+  This could happen in RainerScript comparisons (like contains); in some
+  cases an unitialized variable was accessed, which could lead to an
+  invalid free and in turn to a segfault.
+  Closes: http://bugzilla.adiscon.com/show_bug.cgi?id=372
+  Thanks to Georgi Georgiev for reporting this bug and his great help
+  in solving it.
 ----------------------------------------------------------------------------
 Version 7.2.1  [v7-stable] 2012-10-29
 - bugfix: ruleset()-object did only support a single statement
