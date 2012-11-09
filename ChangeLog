@@ -22,6 +22,11 @@ Version 7.2.2  [v7-stable] 2012-10-??
   Closes: http://bugzilla.adiscon.com/show_bug.cgi?id=372
   Thanks to Georgi Georgiev for reporting this bug and his great help
   in solving it.
+- bugfix: no error msg on unreadable $IncludeConfig path
+- bugfix: $IncludeConfig did not correctly process directories
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=376
+  The testbench was also enhanced to check for these cases.
+  Thanks to Georgi Georgiev for the bug report.
 ----------------------------------------------------------------------------
 Version 7.2.1  [v7-stable] 2012-10-29
 - bugfix: ruleset()-object did only support a single statement
@@ -183,6 +188,11 @@ Version 6.6.1  [v6-stable] 2012-10-??
   This did not affect users, but could have caused trouble in the future
   for developers.
 - bugfix: no error msg on invalid field option in legacy/string template
+- bugfix: no error msg on unreadable $IncludeConfig path
+- bugfix: $IncludeConfig did not correctly process directories
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=376
+  The testbench was also enhanced to check for these cases.
+  Thanks to Georgi Georgiev for the bug report.
 ---------------------------------------------------------------------------
 Version 6.6.0  [v6-stable] 2012-10-22
 This starts a new stable branch, based on the 6.5.x series, plus:
