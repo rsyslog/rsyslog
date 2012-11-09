@@ -45,7 +45,9 @@
 #if HAVE_MALLOC_H
 #  include <malloc.h>
 #endif
-#include <uuid/uuid.h>
+#ifdef USE_LIBUUID
+  #include <uuid/uuid.h>
+#endif
 #include "rsyslog.h"
 #include "srUtils.h"
 #include "stringbuf.h"
@@ -559,8 +561,10 @@ propNameStrToID(uchar *pName, propid_t *pPropID)
 		*pPropID = PROP_MSGID;
 	} else if(!strcmp((char*) pName, "parsesuccess")) {
 		*pPropID = PROP_PARSESUCCESS;
+#ifdef USE_LIBUUID
 	} else if(!strcmp((char*) pName, "uuid")) {
 		*pPropID = PROP_UUID;
+#endif
 	/* here start system properties (those, that do not relate to the message itself */
 	} else if(!strcmp((char*) pName, "$now")) {
 		*pPropID = PROP_SYS_NOW;
@@ -1450,6 +1454,7 @@ char *getProtocolVersionString(msg_t *pM)
 	return(pM->iProtocolVersion ? "1" : "0");
 }
 
+#ifdef USE_LIBUUID
 /* note: libuuid seems not to be thread-safe, so we need
  * to get some safeguards in place.
  */
@@ -1504,6 +1509,7 @@ void getUUID(msg_t *pM, uchar **pBuf, int *piLen)
 	}
 	dbgprintf("[getUUID] END\n");
 }
+#endif
 
 void
 getRawMsg(msg_t *pM, uchar **pBuf, int *piLen)
@@ -2970,9 +2976,11 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 		case PROP_MSGID:
 			pRes = (uchar*)getMSGID(pMsg);
 			break;
+#ifdef USE_LIBUUID
 		case PROP_UUID:
 			getUUID(pMsg, &pRes, &bufLen);
 			break;
+#endif
 		case PROP_PARSESUCCESS:
 			pRes = (uchar*)getParseSuccess(pMsg);
 			break;

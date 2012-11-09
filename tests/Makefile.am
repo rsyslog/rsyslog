@@ -73,6 +73,9 @@ TESTS +=  \
 	rscript_ruleset_call.sh \
 	cee_simple.sh \
 	cee_diskqueue.sh \
+	incltest.sh \
+	incltest_dir.sh \
+	incltest_dir_wildcard.sh \
 	linkedlistqueue.sh
 
 if HAVE_VALGRIND
@@ -291,6 +294,13 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/cee_simple.conf \
 	   cee_diskqueue.sh \
 	   testsuites/cee_diskqueue.conf \
+	   incltest.sh \
+	   testsuites/incltest.conf \
+	   incltest_dir.sh \
+	   testsuites/incltest_dir.conf \
+	   incltest_dir_wildcard.sh \
+	   testsuites/incltest_dir_wildcard.conf \
+	   testsuites/incltest.d/include.conf \
 	   linkedlistqueue.sh \
 	   testsuites/linkedlistqueue.conf \
 	   da-mainmsg-q.sh \
