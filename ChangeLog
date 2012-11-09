@@ -1,5 +1,9 @@
 ----------------------------------------------------------------------------
 Version 7.2.2  [v7-stable] 2012-10-??
+- enabled to build without libuuid, at loss of uuid functionality
+  this enables smoother builds on older systems that do not support
+  libuuid. Loss of functionality should usually not matter too much as
+  uuid support has only recently been added and is very seldom used.
 - bugfix: omfwd did not properly support "template" parameter
 - bugfix: potential segfault when re_match() function was used
   Thanks to oxpa for the patch.

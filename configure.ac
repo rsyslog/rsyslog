@@ -35,7 +35,6 @@ PKG_PROG_PKG_CONFIG
 PKG_CHECK_MODULES(LIBESTR, libestr >= 0.1.2)
 PKG_CHECK_MODULES(LIBEE, libee >= 0.4.0)
 PKG_CHECK_MODULES([JSON_C], [json])
-PKG_CHECK_MODULES([LIBUUID], [uuid])
 
 case "${host}" in
   *-*-linux*)
@@ -729,6 +728,23 @@ AC_SUBST(SNMP_CFLAGS)
 AC_SUBST(SNMP_LIBS)
 
 
+# uuid support
+AC_ARG_ENABLE(uuid,
+        [AS_HELP_STRING([--enable-uuid],[Enable support for uuid generation @<:@default=yes@:>@])],
+        [case "${enableval}" in
+         yes) enable_elasticsearch="yes" ;;
+          no) enable_elasticsearch="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-uuid) ;;
+         esac],
+        [enable_uuid=yes]
+)
+if test "x$enable_elasticsearch" = "xyes"; then
+	PKG_CHECK_MODULES([LIBUUID], [uuid])
+	AC_DEFINE(USE_LIBUUID, 1, [Define if you want to enable libuuid support])
+fi
+AM_CONDITIONAL(ENABLE_UUID, test x$enable_uuid = xyes)
+
+
 # elasticsearch support
 AC_ARG_ENABLE(elasticsearch,
         [AS_HELP_STRING([--enable-elasticsearch],[Enable elasticsearch output module @<:@default=no@:>@])],
@@ -1365,6 +1381,7 @@ echo "    rsyslog runtime will be built:            $enable_rsyslogrt"
 echo "    rsyslogd will be built:                   $enable_rsyslogd"
 echo "    GUI components will be built:             $enable_gui"
 echo "    Unlimited select() support enabled:       $enable_unlimited_select"
+echo "    uuid support enabled:                     $enable_uuid"
 echo
 echo "---{ input plugins }---"
 echo "    Klog functionality enabled:               $enable_klog ($os_type)"

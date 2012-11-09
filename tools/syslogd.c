@@ -1419,6 +1419,11 @@ static void printVersion(void)
 #else
 	printf("\tRuntime Instrumentation (slow code):\tNo\n");
 #endif
+#ifdef	USE_LIBUUID
+	printf("\tuuid support:\t\t\t\tYes\n");
+#else
+	printf("\tuuid support:\t\t\t\tNo\n");
+#endif
 	printf("\nSee http://www.rsyslog.com for more information.\n");
 }
 
