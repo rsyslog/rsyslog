@@ -341,27 +341,6 @@ AC_ARG_ENABLE(kmsg,
 AM_CONDITIONAL(ENABLE_IMKMSG, test x$enable_kmsg = xyes)
 
 
-#
-# SYSLOG_UNIXAF
-#
-AC_MSG_CHECKING(for SYSLOG_UNIXAF support)
-AC_ARG_ENABLE([unix],
-  [AS_HELP_STRING([--disable-unix], [Disable support for unix])],
-  [
-    if test "x${enableval}" = "xyes"; then
-      AC_MSG_RESULT([yes])
-      AC_DEFINE([SYSLOG_UNIXAF], [1], [Description])
-    else
-      AC_MSG_RESULT([no])
-    fi
-  ],
-  [
-    # enabled by default
-    AC_MSG_RESULT([yes])
-    AC_DEFINE([SYSLOG_UNIXAF], [1], [Description])
-  ])
-
-
 # inet
 AC_ARG_ENABLE(inet,
         [AS_HELP_STRING([--enable-inet],[Enable networking support @<:@default=yes@:>@])],
