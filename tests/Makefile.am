@@ -65,6 +65,9 @@ TESTS +=  \
 	failover-no-basic.sh \
 	rcvr_fail_restore.sh \
 	rscript_contains.sh \
+	incltest.sh \
+	incltest_dir.sh \
+	incltest_dir_wildcard.sh \
 	linkedlistqueue.sh
 
 if HAVE_VALGRIND
@@ -267,6 +270,13 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/arrayqueue.conf \
 	   rscript_contains.sh \
 	   testsuites/rscript_contains.conf \
+	   incltest.sh \
+	   testsuites/incltest.conf \
+	   incltest_dir.sh \
+	   testsuites/incltest_dir.conf \
+	   incltest_dir_wildcard.sh \
+	   testsuites/incltest_dir_wildcard.conf \
+	   testsuites/incltest.d/include.conf \
 	   linkedlistqueue.sh \
 	   testsuites/linkedlistqueue.conf \
 	   da-mainmsg-q.sh \
