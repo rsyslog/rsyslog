@@ -1,0 +1,192 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<title>Multiple Rulesets in legacy format</title></head>
+<body>
+<h1>Multiple Rulesets in rsyslog</h1>
+<p>Starting with version 4.5.0 and 5.1.1, <a href="http://www.rsyslog.com">rsyslog</a> supports
+multiple rulesets within a single configuration.
+This is especially useful for routing the recpetion of remote messages to a set of specific rules.
+Note that the input module must support binding to non-standard rulesets, so the functionality
+may not be available with all inputs.<p>
+<b>Attention: this guide is shortened and only contains the samples in legacy format.</b>
+Please follow this link to the full guide in the new config format "list": <a href="http://www.rsyslog.com/doc/multi_ruleset.html">http://www.rsyslog.com/doc/multi_ruleset.html<a>
+
+
+<h2>Examples</h2>
+<h3>Split local and remote logging</h3>
+<p>Let's say you have a pretty standard system that logs its local messages to the usual
+bunch of files that are specified in the default rsyslog.conf. As an example, your rsyslog.conf
+might look like this:
+
+<pre>
+# ... module loading ...
+# The authpriv file has restricted access.
+authpriv.*  /var/log/secure
+# Log all the mail messages in one place.
+mail.*      /var/log/maillog
+# Log cron stuff
+cron.*      /var/log/cron
+# Everybody gets emergency messages
+*.emerg     *
+... more ...
+</pre>
+
+<p>Now, you want to add receive messages from a remote system and log these to
+a special file, but you do not want to have these messages written to the files
+specified above. The traditional approach is to add a rule in front of all others that
+filters on the message, processes it and then discards it:
+
+<pre>
+# ... module loading ...
+# process remote messages
+:fromhost-ip, isequal, "192.0.2.1"    /var/log/remotefile
+& ~
+# only messages not from 192.0.21 make it past this point
+
+# The authpriv file has restricted access.
+authpriv.*                            /var/log/secure
+# Log all the mail messages in one place.
+mail.*                                /var/log/maillog
+# Log cron stuff
+cron.*                                /var/log/cron
+# Everybody gets emergency messages
+*.emerg                               *
+... more ...
+</pre>
+
+<p>Note the tilde character, which is the discard action!. Also note that we assume that
+192.0.2.1 is the sole remote sender (to keep it simple).
+
+<p>With multiple rulesets, we can simply define a dedicated ruleset for the remote reception
+case and bind it to the receiver. This may be written as follows:
+
+<pre>
+# ... module loading ...
+# process remote messages
+# define new ruleset and add rules to it:
+$RuleSet remote
+*.*           /var/log/remotefile
+# only messages not from 192.0.21 make it past this point
+
+# bind ruleset to tcp listener
+$InputTCPServerBindRuleset remote
+# and activate it:
+$InputTCPServerRun 10514
+
+# switch back to the default ruleset:
+$RuleSet RSYSLOG_DefaultRuleset
+# The authpriv file has restricted access.
+authpriv.*    /var/log/secure
+# Log all the mail messages in one place.
+mail.*        /var/log/maillog
+# Log cron stuff
+cron.*        /var/log/cron
+# Everybody gets emergency messages
+*.emerg       *
+... more ...
+</pre>
+
+<p>Here, we need to switch back to the default ruleset after we have defined our custom
+one. This is why I recommend a different ordering, which I find more intuitive. The sample
+below has it, and it leads to the same results:
+
+<pre>
+# ... module loading ...
+# at first, this is a copy of the unmodified rsyslog.conf
+# The authpriv file has restricted access.
+authpriv.*    /var/log/secure
+# Log all the mail messages in one place.
+mail.*        /var/log/maillog
+# Log cron stuff
+cron.*        /var/log/cron
+# Everybody gets emergency messages
+*.emerg       *
+... more ...
+# end of the "regular" rsyslog.conf. Now come the new definitions:
+
+# process remote messages
+# define new ruleset and add rules to it:
+$RuleSet remote
+*.*           /var/log/remotefile
+
+# bind ruleset to tcp listener
+$InputTCPServerBindRuleset remote
+# and activate it:
+$InputTCPServerRun 10514
+</pre>
+
+<p>Here, we do not switch back to the default ruleset, because this is not needed as it is
+completely defined when we begin the &quot;remote&quot; ruleset.
+
+<p>Now look at the examples and compare them to the single-ruleset solution. You will notice
+that we do <b>not</b> need a real filter in the multi-ruleset case: we can simply use
+&quot;*.*&quot; as all messages now means all messages that are being processed by this
+rule set and all of them come in via the TCP receiver! This is what makes using multiple
+rulesets so much easier.
+
+<h3>Split local and remote logging for three different ports</h3>
+<p>This example is almost like the first one, but it extends it a little bit. While it is
+very similar, I hope it is different enough to provide a useful example why you may want
+to have more than two rulesets.
+
+<p>Again, we would like to use the &quot;regular&quot; log files for local logging, only. But
+this time we set up three syslog/tcp listeners, each one listening to a different
+port (in this example 10514, 10515, and 10516). Logs received from these receivers shall go into
+different files. Also, logs received from 10516 (and only from that port!) with
+&quot;mail.*&quot; priority, shall be written into a specif file and <b>not</b> be
+written to 10516's general log file.
+
+<p>This is the config:
+
+<pre>
+# ... module loading ...
+# at first, this is a copy of the unmodified rsyslog.conf
+# The authpriv file has restricted access.
+authpriv.* /var/log/secure
+# Log all the mail messages in one place.
+mail.*  /var/log/maillog
+# Log cron stuff
+cron.*  /var/log/cron
+# Everybody gets emergency messages
+*.emerg       *
+... more ...
+# end of the "regular" rsyslog.conf. Now come the new definitions:
+
+# process remote messages
+
+#define rulesets first
+$RuleSet remote10514
+*.*     /var/log/remote10514
+
+$RuleSet remote10515
+*.*     /var/log/remote10515
+
+$RuleSet remote10516
+mail.*	/var/log/mail10516
+&       ~
+# note that the discard-action will prevent this messag from 
+# being written to the remote10516 file - as usual...
+*.*     /var/log/remote10516
+
+# and now define listners bound to the relevant ruleset
+$InputTCPServerBindRuleset remote10514
+$InputTCPServerRun 10514
+
+$InputTCPServerBindRuleset remote10515
+$InputTCPServerRun 10515
+
+$InputTCPServerBindRuleset remote10516
+$InputTCPServerRun 10516
+</pre>
+
+<p>Note that the &quot;mail.*&quot; rule inside the &quot;remote10516&quot; ruleset does
+not affect processing inside any other rule set, including the default rule set.
+
+
+<p>[<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the <a href="http://www.rsyslog.com/">rsyslog</a>
+project.<br>
+Copyright &copy; 2009 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>.
+Released under the GNU GPL version 3 or higher.</font></p>
+</body></html>
