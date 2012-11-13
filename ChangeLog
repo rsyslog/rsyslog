@@ -905,6 +905,10 @@ expected that interfaces, even new ones, break during the initial
   syslog plain tcp input plugin (NOT supporting TLS!)
   [ported from v4]
 ---------------------------------------------------------------------------
+Version 5.10.2  [V5-STABLE], 201?-??-??
+- bugfix: spurios error messages from imuxsock about (non-error) EAGAIN
+  Thanks to Marius Tomaschwesky for the patch.
+---------------------------------------------------------------------------
 Version 5.10.1  [V5-STABLE], 2012-10-17
 - bugfix: imuxsock and imklog truncated head of received message
   This happened only under some circumstances. Thanks to Marius

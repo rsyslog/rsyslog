@@ -131,6 +131,7 @@ html_files = \
 	rsyslog_conf_nomatch.html \
 	queues_analogy.html \
 	multi_ruleset.html \
+	multi_ruleset_legacy_format.html \
 	dev_oplugins.html \
 	free_support.html \
 	imudp.html \
