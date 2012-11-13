@@ -863,7 +863,7 @@ static rsRetVal readSocket(lstn_t *pLstn)
 			}
 		}
 		CHKiRet(SubmitMsg(pRcv, iRcvd, pLstn, cred, ts));
-	} else if(iRcvd < 0 && errno != EINTR) {
+	} else if(iRcvd < 0 && errno != EINTR && errno != EAGAIN) {
 		char errStr[1024];
 		rs_strerror_r(errno, errStr, sizeof(errStr));
 		dbgprintf("UNIX socket error: %d = %s.\n", errno, errStr);
