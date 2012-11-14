@@ -2777,6 +2777,7 @@ cnfDoInclude(char *name)
 			finalName = nameBuf;
 		}
 	}
+
 	/* Use GLOB_MARK to append a trailing slash for directories. */
 	/* Use GLOB_NOMAGIC to detect wildcards that match nothing. */
 	result = glob(finalName, GLOB_MARK | GLOB_NOMAGIC, NULL, &cfgFiles);
@@ -2796,13 +2797,12 @@ cnfDoInclude(char *name)
 
 	for(i = 0; i < cfgFiles.gl_pathc; i++) {
 		cfgFile = cfgFiles.gl_pathv[i];
-
-		if(stat(cfgFile, &fileInfo) != 0)
-		{
+		if(stat(cfgFile, &fileInfo) != 0) {
 			char errStr[1024];
 			rs_strerror_r(errno, errStr, sizeof(errStr));
 			parser_errmsg("error accessing config file or directory '%s': %s",
 					cfgFile, errStr);
+			continue;
 		}
 
 		if(S_ISREG(fileInfo.st_mode)) { /* config file */
