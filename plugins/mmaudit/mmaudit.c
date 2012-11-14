@@ -67,12 +67,8 @@ DEFobjCurrIf(errmsg);
 DEF_OMOD_STATIC_DATA
 
 typedef struct _instanceData {
-} instanceData;
-
-typedef struct configSettings_s {
 	int dummy; /* remove when the first real parameter is needed */
-} configSettings_t;
-static configSettings_t cs;
+} instanceData;
 
 BEGINinitConfVars		/* (re)set config variables to default values */
 CODESTARTinitConfVars 
