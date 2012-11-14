@@ -27,6 +27,9 @@ Version 7.2.2  [v7-stable] 2012-10-??
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=376
   The testbench was also enhanced to check for these cases.
   Thanks to Georgi Georgiev for the bug report.
+- bugfix: make rsyslog compile on kfreebsd again
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=380
+  Thanks to Guillem Jover for the patch.
 ----------------------------------------------------------------------------
 Version 7.2.1  [v7-stable] 2012-10-29
 - bugfix: ruleset()-object did only support a single statement

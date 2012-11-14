@@ -32,7 +32,9 @@
 #include <errno.h>
 #include <string.h>
 #include <ctype.h>
+#ifdef  OS_LINUX
 #include <sys/klog.h>
+#endif
 #include <json/json.h>
 
 #include "rsyslog.h"
