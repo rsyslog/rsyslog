@@ -1096,7 +1096,7 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 		}
 	} else {
 		pTpe->fieldName = ustrdup(cstrGetSzStrNoNULL(pStrField));
-		pTpe->lenFieldName = cstrLen(pStrProp);
+		pTpe->lenFieldName = ustrlen(pTpe->fieldName);
 		cstrDestruct(&pStrField);
 	}
 	if(pTpe->fieldName == NULL)
