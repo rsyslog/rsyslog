@@ -262,7 +262,7 @@ rsRetVal parsDelimCStr(rsParsObj *pThis, cstr_t **ppCStr, char cDelim, int bTrim
 
 	pC = rsCStrGetBufBeg(pThis->pCStr) + pThis->iCurrPos;
 
-	while(pThis->iCurrPos < rsCStrLen(pThis->pCStr) && *pC != cDelim && *pC != ' ') {
+	while(pThis->iCurrPos < rsCStrLen(pThis->pCStr) && *pC != cDelim) {
 		CHKiRet(cstrAppendChar(pCStr, bConvLower ? tolower(*pC) : *pC));
 		++pThis->iCurrPos;
 		++pC;

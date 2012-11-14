@@ -36,6 +36,11 @@ Version 7.2.2  [v7-stable] 2012-10-??
   truncated field names or including extra random data. If the random data
   contained NULs, the rest of the message became unreadable.
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=374
+- bugfix: potential segfault at startup with property-based filter
+  If the property name was followed by a space before the comma, rsyslogd
+  aborted on startup. Note that no segfault could happen if the initial
+  startup went well (this was a problem with the config parser).
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=381
 ----------------------------------------------------------------------------
 Version 7.2.1  [v7-stable] 2012-10-29
 - bugfix: ruleset()-object did only support a single statement

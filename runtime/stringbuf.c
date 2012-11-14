@@ -482,6 +482,8 @@ rsRetVal cstrTrimTrailingWhiteSpace(cstr_t *pThis)
 	register uchar *pC;
 	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
 
+	if(pThis->iStrLen == 0)
+		goto done; /* empty string -> nothing to trim ;) */
 	i = pThis->iStrLen;
 	pC = pThis->pBuf + i - 1;
 	while(i > 0 && isspace((int)*pC)) {
@@ -492,7 +494,7 @@ rsRetVal cstrTrimTrailingWhiteSpace(cstr_t *pThis)
 	pThis->iStrLen = i;
 	pThis->pBuf[pThis->iStrLen] = '0'; /* we always have this space */
 
-	return RS_RET_OK;
+done:	return RS_RET_OK;
 }
 
 /* compare two string objects - works like strcmp(), but operates
