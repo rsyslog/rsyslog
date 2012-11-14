@@ -197,9 +197,14 @@ of the property value. For example, if you search for "val" with
 <p>it will be a match if msg contains "values are in this
 message" but it won't match if the msg contains "There are values in
 this message" (in the later case, contains would match). Please note
-that "startswith" is by far faster than regular expressions. So even
-once they are implemented, it can make very much sense
-(performance-wise) to use "startswith".</p>
+that "startswith" is by far faster than regular expressions. So
+it makes very much sense (performance-wise) to use "startswith".</p>
+<p>Note: when processing syslog messages, please note that $msg usually
+starts with a space. The reason for this is RFC3164. Please read the
+<a href="http://www.rsyslog.com/log-normalization-and-the-leading-space/">detail
+description</a> of what that means to you. In short, you need to make sure
+that you include the first space if you use "startswith", otherwise you will
+not get matches.
 </td>
 </tr>
 <tr>
