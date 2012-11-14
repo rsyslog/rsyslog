@@ -303,7 +303,14 @@ ENDactivateCnf
 
 
 BEGINfreeCnf
+	instanceConf_t *inst, *del;
 CODESTARTfreeCnf
+	for(inst = pModConf->root ; inst != NULL ; ) {
+		free(inst->pszBindPort);
+		del = inst;
+		inst = inst->next;
+		free(del);
+	}
 ENDfreeCnf
 
 /* This is used to terminate the plugin. Note that the signal handler blocks
