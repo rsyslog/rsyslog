@@ -415,7 +415,7 @@ To escape:
 .sp 0
    \\ = \\\\ --> '\\' is used to escape (as in C)
 .sp 0
-$template TraditionalFormat,"%timegenerated% %HOSTNAME% %syslogtag%%msg%\n"
+$template TraditionalFormat,"%timegenerated% %HOSTNAME% %syslogtag%%msg%\\n"
 
 Properties can be accessed by the property replacer (see there for details).
 
@@ -487,7 +487,7 @@ A template that resembles traditional syslogd file output:
 .RS
 $template TraditionalFormat,"%timegenerated% %HOSTNAME%
 .sp 0
-%syslogtag%%msg:::drop-last-lf%\n"
+%syslogtag%%msg:::drop-last-lf%\\n"
 .RE
 
 A template that tells you a little more about the message:
@@ -495,7 +495,7 @@ A template that tells you a little more about the message:
 .RS
 $template precise,"%syslogpriority%,%syslogfacility%,%timegenerated%,%HOSTNAME%,
 .sp 0
-%syslogtag%,%msg%\n"
+%syslogtag%,%msg%\\n"
 .RE
 
 A template for RFC 3164 format:
@@ -507,7 +507,7 @@ $template RFC3164fmt,"<%PRI%>%TIMESTAMP% %HOSTNAME% %syslogtag%%msg%"
 A template for the format traditionally used for user messages:
 .sp
 .RS
-$template usermsg," XXXX%syslogtag%%msg%\n\r"
+$template usermsg," XXXX%syslogtag%%msg%\\n\\r"
 .RE
 
 And a template with the traditional wall-message format:
