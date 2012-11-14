@@ -246,7 +246,8 @@ static rsRetVal dbgPrintInstInfo(void *pModData)\
 	instanceData *pData = NULL;
 
 #define CODESTARTdbgPrintInstInfo \
-	pData = (instanceData*) pModData;
+	pData = (instanceData*) pModData; \
+	(void)pData; /* prevent compiler warning if unused! */
 
 #define ENDdbgPrintInstInfo \
 	RETiRet;\

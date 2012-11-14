@@ -2777,9 +2777,17 @@ cnfDoInclude(char *name)
 			finalName = nameBuf;
 		}
 	}
+
 	/* Use GLOB_MARK to append a trailing slash for directories. */
-	result = glob(finalName, GLOB_MARK, NULL, &cfgFiles);
-	if(result == GLOB_NOSPACE || result == GLOB_ABORTED || cfgFiles.gl_pathc == 0) {
+	/* Use GLOB_NOMAGIC to detect wildcards that match nothing. */
+	result = glob(finalName, GLOB_MARK | GLOB_NOMAGIC, NULL, &cfgFiles);
+
+	/* Silently ignore wildcards that match nothing */
+	if(result == GLOB_NOMATCH) {
+		return 1;
+	}
+
+	if(result == GLOB_NOSPACE || result == GLOB_ABORTED) {
 		char errStr[1024];
 		rs_strerror_r(errno, errStr, sizeof(errStr));
 		parser_errmsg("error accessing config file or directory '%s': %s",
@@ -2789,9 +2797,13 @@ cnfDoInclude(char *name)
 
 	for(i = 0; i < cfgFiles.gl_pathc; i++) {
 		cfgFile = cfgFiles.gl_pathv[i];
-
-		if(stat(cfgFile, &fileInfo) != 0) 
-			continue; /* continue with the next file if we can't stat() the file */
+		if(stat(cfgFile, &fileInfo) != 0) {
+			char errStr[1024];
+			rs_strerror_r(errno, errStr, sizeof(errStr));
+			parser_errmsg("error accessing config file or directory '%s': %s",
+					cfgFile, errStr);
+			continue;
+		}
 
 		if(S_ISREG(fileInfo.st_mode)) { /* config file */
 			dbgprintf("requested to include config file '%s'\n", cfgFile);

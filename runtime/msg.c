@@ -3073,8 +3073,8 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			*pbMustBeFreed = 0;
 			break;
 		case PROP_SYS_UPTIME:
-#			ifdef OS_SOLARIS
-			pRes = (uchar*) "UPTIME NOT available under Solaris";
+#			ifndef HAVE_SYSINFO
+			pRes = (uchar*) "UPTIME NOT available on this system";
 			*pbMustBeFreed = 0;
 #			else
 			{
