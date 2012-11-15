@@ -308,14 +308,6 @@ finalize_it:
 		/* submit everything that was not yet submitted */
 		CHKiRet(multiSubmitMsg(&pThis->multiSub));
 	}
-		; /*EMPTY STATEMENT - needed to keep compiler happy - see below! */
-	/* Note: the problem above is that pthread:cleanup_pop() is a macro which
-	 * evaluates to something like "} while(0);". So the code would become
-	 * "finalize_it: }", that is a label without a statement. The C standard does
-	 * not permit this. So we add an empty statement "finalize_it: ; }" and
-	 * everybody is happy. Note that without the ;, an error is reported only
-	 * on some platforms/compiler versions. -- rgerhards, 2008-08-15
-	 */
 	pthread_cleanup_pop(0);
 
 	if(pCStr != NULL) {
