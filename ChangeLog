@@ -41,6 +41,14 @@ Version 7.2.2  [v7-stable] 2012-10-??
   aborted on startup. Note that no segfault could happen if the initial
   startup went well (this was a problem with the config parser).
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=381
+- bugfix: imfile discarded some file parts
+  File lines that were incomplete (LF missing) *at the time imfile polled
+  the file* were partially discarded. That part of the line that was read 
+  without the LF was discarded, and the rest of the line was submitted in
+  the next polling cycle. This is now changed so that the partial content
+  is saved until the complete line is read. Note that the patch affects
+  only read mode 0.
+  Thanks to Milan Bartos for providing the patch.
 ----------------------------------------------------------------------------
 Version 7.2.1  [v7-stable] 2012-10-29
 - bugfix: ruleset()-object did only support a single statement

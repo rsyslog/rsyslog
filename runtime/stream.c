@@ -589,19 +589,40 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, int mode)
         uchar c;
 	uchar finished;
 
+	rsRetVal readCharRet;
+
+	static cstr_t *prevCStr = NULL;
+
         ASSERT(pThis != NULL);
         ASSERT(ppCStr != NULL);
 
         CHKiRet(cstrConstruct(ppCStr));
 
-        /* now read the line */
+		/* append previous message to current message if necessary */
+		if (prevCStr != NULL) {
+			CHKiRet(cstrAppendCStr(*ppCStr, prevCStr));
+		}
+
         CHKiRet(strmReadChar(pThis, &c));
         if (mode == 0){
-        	while(c != '\n') {
+            while(c != '\n') {
                 	CHKiRet(cstrAppendChar(*ppCStr, c));
-                	CHKiRet(strmReadChar(pThis, &c));
+
+                	readCharRet = strmReadChar(pThis, &c);
+
+					/* end of file has been reached without \n */
+                	if (readCharRet == RS_RET_EOF) {
+						CHKiRet(rsCStrConstructFromCStr(&prevCStr, *ppCStr));
+                	}
+
+                	CHKiRet(readCharRet);
         	}
         	CHKiRet(cstrFinalize(*ppCStr));
+			/* message has been finalized, destruct message from previous */
+			if (prevCStr) {
+				cstrDestruct(&prevCStr);
+				prevCStr = NULL;
+			}
 	}
         if (mode == 1){
 		finished=0;
