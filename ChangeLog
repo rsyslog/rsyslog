@@ -48,7 +48,7 @@ Version 7.2.2  [v7-stable] 2012-10-??
   the next polling cycle. This is now changed so that the partial content
   is saved until the complete line is read. Note that the patch affects
   only read mode 0.
-  Thanks to Milan Bartos for providing the patch.
+  Thanks to Milan Bartos for providing the base idea for the solution.
 ----------------------------------------------------------------------------
 Version 7.2.1  [v7-stable] 2012-10-29
 - bugfix: ruleset()-object did only support a single statement

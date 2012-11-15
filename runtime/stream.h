@@ -141,6 +141,7 @@ typedef struct strm_s {
 	off_t	iSizeLimit;	/* file size limit, 0 = no limit */
 	uchar	*pszSizeLimitCmd;	/* command to carry out when size limit is reached */
 	sbool	bIsTTY;		/* is this a tty file? */
+	cstr_t *prevLineSegment; /* for ReadLine, previous, unwritten part of file */
 } strm_t;
 
 

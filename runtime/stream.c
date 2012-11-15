@@ -585,46 +585,33 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, int mode)
          * mode = 2 LF <not whitespace> mode, a log line starts at the beginning of a line, but following lines that are indented are part of the same log entry
 	 *  This modal interface is not nearly as flexible as being able to define a regex for when a new record starts, but it's also not nearly as hard (or as slow) to implement
          */
-        DEFiRet;
         uchar c;
 	uchar finished;
-
 	rsRetVal readCharRet;
-
-	static cstr_t *prevCStr = NULL;
+        DEFiRet;
 
         ASSERT(pThis != NULL);
         ASSERT(ppCStr != NULL);
 
         CHKiRet(cstrConstruct(ppCStr));
-
-		/* append previous message to current message if necessary */
-		if (prevCStr != NULL) {
-			CHKiRet(cstrAppendCStr(*ppCStr, prevCStr));
-		}
-
         CHKiRet(strmReadChar(pThis, &c));
-        if (mode == 0){
-            while(c != '\n') {
+
+        if(mode == 0) {
+		/* append previous message to current message if necessary */
+		if(pThis->prevLineSegment != NULL) {
+			CHKiRet(cstrAppendCStr(*ppCStr, pThis->prevLineSegment));
+			cstrDestruct(&pThis->prevLineSegment);
+		}
+		while(c != '\n') {
                 	CHKiRet(cstrAppendChar(*ppCStr, c));
-
                 	readCharRet = strmReadChar(pThis, &c);
-
-					/* end of file has been reached without \n */
-                	if (readCharRet == RS_RET_EOF) {
-						CHKiRet(rsCStrConstructFromCStr(&prevCStr, *ppCStr));
+                	if(readCharRet == RS_RET_EOF) {/* end of file reached without \n? */
+				CHKiRet(rsCStrConstructFromCStr(&pThis->prevLineSegment, *ppCStr));
                 	}
-
                 	CHKiRet(readCharRet);
         	}
         	CHKiRet(cstrFinalize(*ppCStr));
-			/* message has been finalized, destruct message from previous */
-			if (prevCStr) {
-				cstrDestruct(&prevCStr);
-				prevCStr = NULL;
-			}
-	}
-        if (mode == 1){
+	} else if(mode == 1) {
 		finished=0;
 		while(finished == 0){
         		if(c != '\n') {
@@ -645,8 +632,7 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, int mode)
 			}
 		}
         	CHKiRet(cstrFinalize(*ppCStr));
-	}
-        if (mode == 2){
+	} else if(mode == 2) {
 		/* indented follow-up lines */
 		finished=0;
 		while(finished == 0){
@@ -699,6 +685,7 @@ BEGINobjConstruct(strm) /* be sure to specify the object type also in END macro!
 	pThis->sType = STREAMTYPE_FILE_SINGLE;
 	pThis->sIOBufSize = glblGetIOBufSize();
 	pThis->tOpenMode = 0600;
+	pThis->prevLineSegment = NULL;
 ENDobjConstruct(strm)
 
 
@@ -1606,6 +1593,8 @@ static rsRetVal strmSerialize(strm_t *pThis, strm_t *pStrm)
 	l = pThis->iCurrOffs;
 	objSerializeSCALAR_VAR(pStrm, iCurrOffs, INT64, l);
 
+	objSerializePTR(pStrm, prevLineSegment, PSZ);
+
 	CHKiRet(obj.EndSerialize(pStrm));
 
 finalize_it:
@@ -1711,6 +1700,8 @@ static rsRetVal strmSetProperty(strm_t *pThis, var_t *pProp)
 		CHKiRet(strmSetiFileNumDigits(pThis, pProp->val.num));
  	} else if(isProp("bDeleteOnClose")) {
 		CHKiRet(strmSetbDeleteOnClose(pThis, pProp->val.num));
+ 	} else if(isProp("prevLineSegment")) {
+		CHKiRet(rsCStrConstructFromCStr(&pThis->prevLineSegment, pProp->val.pStr));
 	}
 
 finalize_it:
