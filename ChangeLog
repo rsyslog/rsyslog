@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------------
-Version 7.2.2  [v7-stable] 2012-10-??
+Version 7.2.2  [v7-stable] 2012-10-16
 - doc improvements
 - enabled to build without libuuid, at loss of uuid functionality
   this enables smoother builds on older systems that do not support
