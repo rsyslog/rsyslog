@@ -365,7 +365,13 @@ static rsRetVal strmCloseFile(strm_t *pThis)
 		pThis->fdDir = -1;
 	}
 
-	if(pThis->bDeleteOnClose && pThis->pszCurrFName != NULL) {
+	if(pThis->bDeleteOnClose) {
+		if(pThis->pszCurrFName == NULL) {
+			CHKiRet(genFileName(&pThis->pszCurrFName, pThis->pszDir, pThis->lenDir,
+					    pThis->pszFName, pThis->lenFName, pThis->iCurrFNum,
+					    pThis->iFileNumDigits));
+		}			
+		DBGPRINTF("strmCloseFile: deleting '%s'\n", pThis->pszCurrFName);
 		if(unlink((char*) pThis->pszCurrFName) == -1) {
 			char errStr[1024];
 			int err = errno;
@@ -373,12 +379,13 @@ static rsRetVal strmCloseFile(strm_t *pThis)
 			DBGPRINTF("error %d unlinking '%s' - ignored: %s\n",
 				   errno, pThis->pszCurrFName, errStr);
 		}
-		free(pThis->pszCurrFName);	/* no longer needed in any case (just for open) */
+		free(pThis->pszCurrFName);
 		pThis->pszCurrFName = NULL;
 	}
 
 	pThis->iCurrOffs = 0;	/* we are back at begin of file */
 
+finalize_it:
 	RETiRet;
 }
 
@@ -1329,6 +1336,56 @@ static rsRetVal strmSeek(strm_t *pThis, off64_t offs)
 finalize_it:
 	RETiRet;
 }
+
+/* multi-file seek, seeks to file number & offset within file. This
+ * is a support function for the queue, in circular mode. DO NOT USE
+ * IT FOR OTHER NEEDS - it may not work as expected. It will
+ * seek to the new position and delete interim files, as it skips them.
+ * Note: this code can be removed when the queue gets a new disk store
+ * handler (if and when it does ;)).
+ * The output parameter bytesDel receives the number of bytes that have
+ * been deleted (if a file is deleted) or 0 if nothing was deleted.
+ * rgerhards, 2012-11-07
+ */
+rsRetVal
+strmMultiFileSeek(strm_t *pThis, int FNum, off64_t offs, off64_t *bytesDel)
+{
+	struct stat statBuf;
+	DEFiRet;
+
+	ISOBJ_TYPE_assert(pThis, strm);
+
+	if(FNum == 0 && offs == 0) { /* happens during queue init */
+		*bytesDel = 0;
+		FINALIZE;
+	}
+
+	if(pThis->iCurrFNum != FNum) {
+		/* Note: we assume that no more than one file is skipped - an
+		 * assumption that is being used also by the whole rest of the
+		 * code and most notably the queue subsystem.
+		 */
+		CHKiRet(genFileName(&pThis->pszCurrFName, pThis->pszDir, pThis->lenDir,
+				    pThis->pszFName, pThis->lenFName, pThis->iCurrFNum,
+				    pThis->iFileNumDigits));
+		stat((char*)pThis->pszCurrFName, &statBuf);
+		*bytesDel = statBuf.st_size;
+		DBGPRINTF("strmMultiFileSeek: detected new filenum, was %d, new %d, "
+			  "deleting '%s' (%lld bytes)\n", pThis->iCurrFNum, FNum,
+			  pThis->pszCurrFName, (long long) *bytesDel);
+		unlink((char*)pThis->pszCurrFName);
+		free(pThis->pszCurrFName);
+		pThis->pszCurrFName = NULL;
+		pThis->iCurrFNum = FNum;
+	} else {
+		*bytesDel = 0;
+	}
+	pThis->iCurrOffs = offs;
+
+finalize_it:
+	RETiRet;
+}
+
 
 
 /* seek to current offset. This is primarily a helper to readjust the OS file
