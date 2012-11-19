@@ -189,8 +189,13 @@ BEGINinterface(strm) /* name must also be changed in ENDinterface macro! */
 ENDinterface(strm)
 #define strmCURR_IF_VERSION 7 /* increment whenever you change the interface structure! */
 
+static inline int
+strmGetCurrFileNum(strm_t *pStrm) {
+	return pStrm->iCurrFNum;
+}
 
 /* prototypes */
 PROTOTYPEObjClassInit(strm);
+rsRetVal strmMultiFileSeek(strm_t *pThis, int fileNum, off64_t offs, off64_t *bytesDel);
 
 #endif /* #ifndef STREAM_H_INCLUDED */

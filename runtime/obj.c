@@ -899,7 +899,8 @@ objDeserializeWithMethods(void *ppObj, uchar *pszTypeExpected, int lenTypeExpect
 	do {
 		iRetLocal = objDeserializeHeader((uchar*) "Obj", &pstrID, &oVers, pStrm);
 		if(iRetLocal != RS_RET_OK) {
-			dbgprintf("objDeserialize error %d during header processing - trying to recover\n", iRetLocal);
+			dbgprintf("objDeserialize error %d during header processing - "
+				  "trying to recover\n", iRetLocal);
 			CHKiRet(objDeserializeTryRecover(pStrm));
 		}
 	} while(iRetLocal != RS_RET_OK);
