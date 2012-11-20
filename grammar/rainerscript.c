@@ -2770,6 +2770,7 @@ cnfDoInclude(char *name)
 	glob_t cfgFiles;
 	struct stat fileInfo;
 	char nameBuf[MAXFNAME+1];
+	char cwdBuf[MAXFNAME+1];
 
 	finalName = name;
 	if(stat(name, &fileInfo) == 0) {
@@ -2793,8 +2794,9 @@ cnfDoInclude(char *name)
 	if(result == GLOB_NOSPACE || result == GLOB_ABORTED) {
 		char errStr[1024];
 		rs_strerror_r(errno, errStr, sizeof(errStr));
-		parser_errmsg("error accessing config file or directory '%s': %s",
-				finalName, errStr);
+		getcwd(cwdBuf, sizeof(cwdBuf));
+		parser_errmsg("error accessing config file or directory '%s' [cwd:%s]: %s",
+				finalName, cwdBuf, errStr);
 		return 1;
 	}
 
@@ -2803,8 +2805,9 @@ cnfDoInclude(char *name)
 		if(stat(cfgFile, &fileInfo) != 0) {
 			char errStr[1024];
 			rs_strerror_r(errno, errStr, sizeof(errStr));
-			parser_errmsg("error accessing config file or directory '%s': %s",
-					cfgFile, errStr);
+			getcwd(cwdBuf, sizeof(cwdBuf));
+			parser_errmsg("error accessing config file or directory '%s' "
+					"[cwd: %s]: %s", cfgFile, cwdBuf, errStr);
 			return 1;
 		}
 
