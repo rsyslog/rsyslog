@@ -2757,6 +2757,9 @@ cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst)
 	return func;
 }
 
+/* returns 0 if everything is OK and config parsing shall continue,
+ * and 1 if things are so wrong that config parsing shall be aborted.
+ */
 int
 cnfDoInclude(char *name)
 {
@@ -2784,7 +2787,7 @@ cnfDoInclude(char *name)
 
 	/* Silently ignore wildcards that match nothing */
 	if(result == GLOB_NOMATCH) {
-		return 1;
+		return 0;
 	}
 
 	if(result == GLOB_NOSPACE || result == GLOB_ABORTED) {
@@ -2802,7 +2805,7 @@ cnfDoInclude(char *name)
 			rs_strerror_r(errno, errStr, sizeof(errStr));
 			parser_errmsg("error accessing config file or directory '%s': %s",
 					cfgFile, errStr);
-			continue;
+			return 1;
 		}
 
 		if(S_ISREG(fileInfo.st_mode)) { /* config file */
