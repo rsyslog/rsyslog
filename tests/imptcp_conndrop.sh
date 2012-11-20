@@ -4,9 +4,8 @@
 # This file is part of the rsyslog project, released  under GPLv3
 echo ====================================================================================
 echo TEST: \[imptcp_conndrop.sh\]: test imptcp with random connection drops
-cat rsyslog.action.1.include
 source $srcdir/diag.sh init
-source $srcdir/diag.sh startup imptcp_large.conf
+source $srcdir/diag.sh startup imptcp_conndrop.conf
 # 100 byte messages to gain more practical data use
 source $srcdir/diag.sh tcpflood -c20 -m50000 -r -d100 -P129 -D
 sleep 4 # due to large messages, we need this time for the tcp receiver to settle...

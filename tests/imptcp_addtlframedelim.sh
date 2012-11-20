@@ -3,7 +3,6 @@
 # This file is part of the rsyslog project, released  under GPLv3
 echo ====================================================================================
 echo TEST: \[imptcp_addtlframedelim.sh\]: test imptcp additional frame delimiter
-cat rsyslog.action.1.include
 source $srcdir/diag.sh init
 source $srcdir/diag.sh startup imptcp_addtlframedelim.conf
 source $srcdir/diag.sh tcpflood -m20000 -F0 -P129

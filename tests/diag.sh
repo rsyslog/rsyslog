@@ -16,7 +16,6 @@ case $1 in
    'init')	$srcdir/killrsyslog.sh # kill rsyslogd if it runs for some reason
 		cp $srcdir/testsuites/diag-common.conf diag-common.conf
 		cp $srcdir/testsuites/diag-common2.conf diag-common2.conf
-		rm -f rsyslog.action.*.include
 		rm -f rsyslogd.started work-*.conf rsyslog.random.data
 		rm -f rsyslogd2.started work-*.conf
 		rm -f work rsyslog.out.log rsyslog2.out.log rsyslog.out.log.save # common work files
@@ -24,6 +23,10 @@ case $1 in
 		rm -f rsyslog.out.*.log work-presort rsyslog.pipe
 		rm -f rsyslog.input rsyslog.empty
 		rm -f core.* vgcore.*
+		# Note: rsyslog.action.*.include must NOT be deleted, as it
+		# is used to setup some parameters BEFORE calling init. This
+		# happens in chained test scripts. Delete on exit is fine,
+		# though.
 		mkdir test-spool
 		;;
    'exit')	rm -f rsyslogd.started work-*.conf diag-common.conf
