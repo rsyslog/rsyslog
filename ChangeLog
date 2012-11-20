@@ -1,4 +1,16 @@
 ----------------------------------------------------------------------------
+Version 7.2.3  [v7-stable] 2012-10-??
+- regression fix: rsyslogd terminated when wild-card $IncludeConfig did not
+  find actual include files. For example, if this directive is present:
+  $IncludeConfig /etc/rsyslog.d/*.conf
+  and there are no *.conf files in /etc/rsyslog.d (but rsyslog.d exists),
+  rsyslogd will emit an error message and terminate. Previous (and expected)
+  behaviour is that an empty file set is no problem. HOWEVER, if the
+  directory itself does not exist, this is flagged as an error and will
+  load to termination (no startup).
+  Unfortunately, this is often the case by default in many distros, so this
+  actually prevents rsyslog startup.
+----------------------------------------------------------------------------
 Version 7.2.2  [v7-stable] 2012-10-16
 - doc improvements
 - enabled to build without libuuid, at loss of uuid functionality
