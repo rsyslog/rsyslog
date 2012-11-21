@@ -119,8 +119,10 @@ submitSyslog(int pri, uchar *buf)
 
 	/* we have a timestamp */
 	DBGPRINTF("kernel timestamp is %ld %ld\n", secs, nsecs);
-	bufsize= strlen((char*)buf);
-	memmove(buf+3, buf+i, bufsize - i + 1);
+	if(!bKeepKernelStamp) {
+		bufsize= strlen((char*)buf);
+		memmove(buf+3, buf+i, bufsize - i + 1);
+	}
 
 	clock_gettime(CLOCK_MONOTONIC, &monotonic);
 	clock_gettime(CLOCK_REALTIME, &realtime);

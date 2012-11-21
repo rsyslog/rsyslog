@@ -65,6 +65,11 @@ Linux only, ignored on other platforms (but may be specified)</li>
 former klogd -2 option<br>
 Linux only, ignored on other platforms (but may be specified)<br style="font-weight: bold;">
 </li>
+<li><b>$klogKeepKernelTimestamp</b> [on/<b>off</b>]
+If enabled, this option causes to keep the [timestamp] provided by the kernel at the begin
+of in each message rather than to remove it, when it could be parsed and converted into
+local time for use as regular message time.
+</li>
 </ul>
 <b>Caveats/Known Bugs:</b>
 <p>This is obviously platform specific and requires platform
