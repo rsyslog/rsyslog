@@ -77,6 +77,7 @@ int symbols_twice = 0;
 int use_syscall = 0;
 int symbol_lookup = 0; /* on recent kernels > 2.6, the kernel does this */
 int bPermitNonKernel = 0; /* permit logging of messages not having LOG_KERN facility */
+int bParseKernelStamp = 0; /* if try to parse kernel timestamps for message time */
 int bKeepKernelStamp = 0; /* keep the kernel timestamp in the message */
 int iFacilIntMsg; /* the facility to use for internal messages (set by driver) */
 uchar *pszPath = NULL;
@@ -306,6 +307,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	symfile = NULL;
 	symbol_lookup = 0;
 	bPermitNonKernel = 0;
+	bParseKernelStamp = 0;
 	bKeepKernelStamp = 0;
 	if(pszPath != NULL) {
 		free(pszPath);
@@ -334,6 +336,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"klogpermitnonkernelfacility", 0, eCmdHdlrBinary, NULL, &bPermitNonKernel, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"klogconsoleloglevel", 0, eCmdHdlrInt, NULL, &console_log_level, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"kloginternalmsgfacility", 0, eCmdHdlrFacility, NULL, &iFacilIntMsg, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"klogparsekerneltimestamp", 0, eCmdHdlrBinary, NULL, &bParseKernelStamp, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"klogkeepkerneltimestamp", 0, eCmdHdlrBinary, NULL, &bKeepKernelStamp, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit

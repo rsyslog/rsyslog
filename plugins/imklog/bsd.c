@@ -85,6 +85,9 @@ submitSyslog(int pri, uchar *buf)
 	struct timeval tv;
 	struct timeval *tp = NULL;
 
+	if(!bParseKernelStamp)
+		goto done;
+
 	if(buf[3] != '[')
 		goto done;
 	DBGPRINTF("imklog: kernel timestamp detected, extracting it\n");

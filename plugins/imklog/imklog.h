@@ -52,6 +52,7 @@ extern char *symfile;
 extern int console_log_level;
 extern int dbgPrintSymbols;
 extern uchar *pszPath;
+extern int bParseKernelStamp;
 extern int bKeepKernelStamp;
 
 /* the functions below may be called by the drivers */
