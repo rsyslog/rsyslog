@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------------
-Version 7.2.3  [v7-stable] 2012-10-??
+Version 7.2.3  [v7-stable] 2012-10-21
 - regression fix: rsyslogd terminated when wild-card $IncludeConfig did not
   find actual include files. For example, if this directive is present:
   $IncludeConfig /etc/rsyslog.d/*.conf
