@@ -1955,6 +1955,8 @@ int realMain(int argc, char **argv)
 	}
 
 	localRet = rsconf.Load(&ourConf, ConfFile);
+	queryLocalHostname();	/* need to re-query to pick up a changed hostname due to config */
+
 	if(localRet == RS_RET_NONFATAL_CONFIG_ERR) {
 		if(loadConf->globals.bAbortOnUncleanConfig) {
 			fprintf(stderr, "rsyslogd: $AbortOnUncleanConfig is set, and config is not clean.\n"
