@@ -73,14 +73,17 @@ static void
 submitSyslog(modConfData_t *pModConf, int pri, uchar *buf)
 {
 	long secs;
-	long nsecs;
+	long usecs;
 	long secOffs;
-	long nsecOffs;
+	long usecOffs;
 	unsigned i;
 	unsigned bufsize;
 	struct timespec monotonic, realtime;
 	struct timeval tv;
 	struct timeval *tp = NULL;
+
+	if(!pModConf->bParseKernelStamp)
+		goto done;
 
 	if(buf[3] != '[')
 		goto done;
@@ -103,9 +106,9 @@ submitSyslog(modConfData_t *pModConf, int pri, uchar *buf)
 	}
 	
 	++i; /* skip dot */
-	nsecs = 0;
+	usecs = 0;
 	while(buf[i] && isdigit(buf[i])) {
-		nsecs = nsecs * 10 + buf[i] - '0';
+		usecs = usecs * 10 + buf[i] - '0';
 		++i;
 	}
 	if(buf[i] != ']') {
@@ -115,7 +118,7 @@ submitSyslog(modConfData_t *pModConf, int pri, uchar *buf)
 	++i; /* skip ']' */
 
 	/* we have a timestamp */
-	DBGPRINTF("kernel timestamp is %ld %ld\n", secs, nsecs);
+	DBGPRINTF("kernel timestamp is %ld %ld\n", secs, usecs);
 	if(!pModConf->bKeepKernelStamp) {
 		bufsize= strlen((char*)buf);
 		memmove(buf+3, buf+i, bufsize - i + 1);
@@ -124,20 +127,20 @@ submitSyslog(modConfData_t *pModConf, int pri, uchar *buf)
 	clock_gettime(CLOCK_MONOTONIC, &monotonic);
 	clock_gettime(CLOCK_REALTIME, &realtime);
 	secOffs = realtime.tv_sec - monotonic.tv_sec;
-	nsecOffs = realtime.tv_nsec - monotonic.tv_nsec;
-	if(nsecOffs < 0) {
+	usecOffs = (realtime.tv_nsec - monotonic.tv_nsec) / 1000;
+	if(usecOffs < 0) {
 		secOffs--;
-		nsecOffs += 1000000000l;
+		usecOffs += 1000000l;
 	}
 	
-	nsecs +=nsecOffs;
-	if(nsecs > 999999999l) {
+	usecs += usecOffs;
+	if(usecs > 999999l) {
 		secs++;
-		nsecs -= 1000000000l;
+		usecs -= 1000000l;
 	}
 	secs += secOffs;
 	tv.tv_sec = secs;
-	tv.tv_usec = nsecs / 1000;
+	tv.tv_usec = usecs;
 	tp = &tv;
 
 done:

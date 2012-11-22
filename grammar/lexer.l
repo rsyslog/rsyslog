@@ -88,7 +88,6 @@ extern int yydebug;
 /* somehow, I need these prototype even though the headers are 
  * included. I guess that's some autotools magic I don't understand...
  */
-//char *strdup(char*);
 int fileno(FILE *stream);
 
 %}

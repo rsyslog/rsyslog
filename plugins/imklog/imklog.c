@@ -77,6 +77,8 @@ DEFobjCurrIf(errmsg)
 /* config settings */
 typedef struct configSettings_s {
 	int bPermitNonKernel; /* permit logging of messages not having LOG_KERN facility */
+	int bParseKernelStamp; /* if try to parse kernel timestamps for message time */
+	int bKeepKernelStamp; /* keep the kernel timestamp in the message */
 	int iFacilIntMsg; /* the facility to use for internal messages (set by driver) */
 	uchar *pszPath;
 	int console_log_level; /* still used for BSD */
@@ -91,8 +93,9 @@ static int bLegacyCnfModGlobalsPermitted;/* are legacy module-global config para
 static struct cnfparamdescr modpdescr[] = {
 	{ "logpath", eCmdHdlrGetWord, 0 },
 	{ "permitnonkernelfacility", eCmdHdlrBinary, 0 },
-	{ "keepkerneltimestamp", eCmdHdlrBinary, 0 },
 	{ "consoleloglevel", eCmdHdlrInt, 0 },
+	{ "parsekerneltimestamp", eCmdHdlrBinary, 0 },
+	{ "keepkerneltimestamp", eCmdHdlrBinary, 0 },
 	{ "internalmsgfacility", eCmdHdlrFacility, 0 }
 };
 static struct cnfparamblk modpblk =
@@ -108,6 +111,8 @@ static inline void
 initConfigSettings(void)
 {
 	cs.bPermitNonKernel = 0;
+	cs.bParseKernelStamp = 0;
+	cs.bKeepKernelStamp = 0;
 	cs.console_log_level = -1;
 	cs.pszPath = NULL;
 	cs.iFacilIntMsg = klogFacilIntMsg();
@@ -287,6 +292,8 @@ CODESTARTbeginCnfLoad
 	/* init our settings */
 	pModConf->pszPath = NULL;
 	pModConf->bPermitNonKernel = 0;
+	pModConf->bParseKernelStamp = 0;
+	pModConf->bKeepKernelStamp = 0;
 	pModConf->console_log_level = -1;
 	pModConf->bKeepKernelStamp = 0;
 	pModConf->iFacilIntMsg = klogFacilIntMsg();
@@ -320,10 +327,12 @@ CODESTARTsetModCnf
 			loadModConf->pszPath = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(modpblk.descr[i].name, "permitnonkernelfacility")) {
 			loadModConf->bPermitNonKernel = (int) pvals[i].val.d.n;
-		} else if(!strcmp(modpblk.descr[i].name, "consoleloglevel")) {
-			loadModConf->console_log_level= (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "parsekerneltimestamp")) {
+			loadModConf->bParseKernelStamp = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "keepkerneltimestamp")) {
 			loadModConf->bKeepKernelStamp = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "consoleloglevel")) {
+			loadModConf->console_log_level= (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "internalmsgfacility")) {
 			loadModConf->iFacilIntMsg = (int) pvals[i].val.d.n;
 		} else {
@@ -347,9 +356,10 @@ CODESTARTendCnfLoad
 	if(!loadModConf->configSetViaV2Method) {
 		/* persist module-specific settings from legacy config system */
 		loadModConf->bPermitNonKernel = cs.bPermitNonKernel;
+		loadModConf->bParseKernelStamp = cs.bParseKernelStamp;
+		loadModConf->bKeepKernelStamp = cs.bKeepKernelStamp;
 		loadModConf->iFacilIntMsg = cs.iFacilIntMsg;
 		loadModConf->console_log_level = cs.console_log_level;
-		loadModConf->bKeepKernelStamp = 0;
 		if((cs.pszPath == NULL) || (cs.pszPath[0] == '\0')) {
 			loadModConf->pszPath = NULL;
 			if(cs.pszPath != NULL)
@@ -424,6 +434,8 @@ ENDqueryEtryPt
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
 	cs.bPermitNonKernel = 0;
+	cs.bParseKernelStamp = 0;
+	cs.bKeepKernelStamp = 0;
 	if(cs.pszPath != NULL) {
 		free(cs.pszPath);
 		cs.pszPath = NULL;
@@ -465,6 +477,10 @@ CODEmodInit_QueryRegCFSLineHdlr
 			NULL, &cs.console_log_level, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
 	CHKiRet(regCfSysLineHdlr2((uchar *)"kloginternalmsgfacility", 0, eCmdHdlrFacility,
 			NULL, &cs.iFacilIntMsg, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
+	CHKiRet(regCfSysLineHdlr2((uchar *)"klogparsekerneltimestamp", 0, eCmdHdlrBinary,
+			NULL, &cs.bParseKernelStamp, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
+	CHKiRet(regCfSysLineHdlr2((uchar *)"klogkeepkerneltimestamp", 0, eCmdHdlrBinary,
+			NULL, &cs.bKeepKernelStamp, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
 			resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit

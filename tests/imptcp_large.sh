@@ -4,7 +4,6 @@
 # This file is part of the rsyslog project, released  under GPLv3
 echo ====================================================================================
 echo TEST: \[imptcp_large.sh\]: test imptcp with large-size messages
-cat rsyslog.action.1.include
 source $srcdir/diag.sh init
 source $srcdir/diag.sh startup imptcp_large.conf
 # send 4000 messages of 10.000bytes plus header max, randomized

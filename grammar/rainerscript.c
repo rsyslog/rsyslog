@@ -2757,6 +2757,9 @@ cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst)
 	return func;
 }
 
+/* returns 0 if everything is OK and config parsing shall continue,
+ * and 1 if things are so wrong that config parsing shall be aborted.
+ */
 int
 cnfDoInclude(char *name)
 {
@@ -2767,6 +2770,7 @@ cnfDoInclude(char *name)
 	glob_t cfgFiles;
 	struct stat fileInfo;
 	char nameBuf[MAXFNAME+1];
+	char cwdBuf[MAXFNAME+1];
 
 	finalName = name;
 	if(stat(name, &fileInfo) == 0) {
@@ -2784,14 +2788,15 @@ cnfDoInclude(char *name)
 
 	/* Silently ignore wildcards that match nothing */
 	if(result == GLOB_NOMATCH) {
-		return 1;
+		return 0;
 	}
 
 	if(result == GLOB_NOSPACE || result == GLOB_ABORTED) {
 		char errStr[1024];
 		rs_strerror_r(errno, errStr, sizeof(errStr));
-		parser_errmsg("error accessing config file or directory '%s': %s",
-				finalName, errStr);
+		getcwd(cwdBuf, sizeof(cwdBuf));
+		parser_errmsg("error accessing config file or directory '%s' [cwd:%s]: %s",
+				finalName, cwdBuf, errStr);
 		return 1;
 	}
 
@@ -2800,9 +2805,10 @@ cnfDoInclude(char *name)
 		if(stat(cfgFile, &fileInfo) != 0) {
 			char errStr[1024];
 			rs_strerror_r(errno, errStr, sizeof(errStr));
-			parser_errmsg("error accessing config file or directory '%s': %s",
-					cfgFile, errStr);
-			continue;
+			getcwd(cwdBuf, sizeof(cwdBuf));
+			parser_errmsg("error accessing config file or directory '%s' "
+					"[cwd: %s]: %s", cfgFile, cwdBuf, errStr);
+			return 1;
 		}
 
 		if(S_ISREG(fileInfo.st_mode)) { /* config file */

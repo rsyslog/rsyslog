@@ -63,7 +63,29 @@ Version 7.3.0  [devel] 2012-10-09
   This was achieved by somewhat reducing the robustness of the zip archive.
   This is controlled by the new action parameter "VeryReliableZip".
 ----------------------------------------------------------------------------
-Version 7.2.2  [v7-stable] 2012-10-??
+Version 7.2.4  [v7-stable] 2012-10-??
+- imklog: added ParseKernelTimestamp parameter (import from 5.10.2)
+  Thanks to Marius Tomaschweski for the patch.
+- imklog: added KeepKernelTimestamp parameter (import from 5.10.2)
+  Thanks to Marius Tomaschweski for the patch.
+- bugfix: imklog mistakenly took kernel timestamp subseconds as nanoseconds
+  ... actually, they are microseconds. So the fractional part of the 
+  timestamp was not properly formatted. (import from 5.10.2)
+  Thanks to Marius Tomaschweski for the bug report and the patch idea.
+----------------------------------------------------------------------------
+Version 7.2.3  [v7-stable] 2012-10-21
+- regression fix: rsyslogd terminated when wild-card $IncludeConfig did not
+  find actual include files. For example, if this directive is present:
+  $IncludeConfig /etc/rsyslog.d/*.conf
+  and there are no *.conf files in /etc/rsyslog.d (but rsyslog.d exists),
+  rsyslogd will emit an error message and terminate. Previous (and expected)
+  behaviour is that an empty file set is no problem. HOWEVER, if the
+  directory itself does not exist, this is flagged as an error and will
+  load to termination (no startup).
+  Unfortunately, this is often the case by default in many distros, so this
+  actually prevents rsyslog startup.
+----------------------------------------------------------------------------
+Version 7.2.2  [v7-stable] 2012-10-16
 - doc improvements
 - enabled to build without libuuid, at loss of uuid functionality
   this enables smoother builds on older systems that do not support
@@ -105,6 +127,14 @@ Version 7.2.2  [v7-stable] 2012-10-??
   aborted on startup. Note that no segfault could happen if the initial
   startup went well (this was a problem with the config parser).
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=381
+- bugfix: imfile discarded some file parts
+  File lines that were incomplete (LF missing) *at the time imfile polled
+  the file* were partially discarded. That part of the line that was read 
+  without the LF was discarded, and the rest of the line was submitted in
+  the next polling cycle. This is now changed so that the partial content
+  is saved until the complete line is read. Note that the patch affects
+  only read mode 0.
+  Thanks to Milan Bartos for providing the base idea for the solution.
 ----------------------------------------------------------------------------
 Version 7.2.1  [v7-stable] 2012-10-29
 - bugfix: ruleset()-object did only support a single statement
@@ -134,13 +164,13 @@ Version 7.1.12  [beta] 2012-10-18
   Thanks to Michael Biebl for reporting & suggestions
 - bugfix: imklog truncated head of received message
   This happened only under some circumstances. Thanks to Marius
-  Tomaschwesky and Florian Piekert for their help in solving this issue.
+  Tomaschewski and Florian Piekert for their help in solving this issue.
 ----------------------------------------------------------------------------
 >>>>>>> b151584d0929759284c0fb0399709e5ca0e29d60
 Version 7.1.11  [beta] 2012-10-16
 - bugfix: imuxsock truncated head of received message
   This happened only under some circumstances. Thanks to Marius
-  Tomaschwesky, Florian Piekert and Milan Bartos for their help in
+  Tomaschewski, Florian Piekert and Milan Bartos for their help in
   solving this issue.
 - bugfix: do not crash if set statement is used with date field
   Thanks to Miloslav Trmač for the patch.
@@ -272,6 +302,23 @@ Version 6.6.1  [v6-stable] 2012-10-??
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=376
   The testbench was also enhanced to check for these cases.
   Thanks to Georgi Georgiev for the bug report.
+- bugfix: spurios error messages from imuxsock about (non-error) EAGAIN
+  Thanks to Marius Tomaschweski for the patch.
+- imklog: added $klogParseKernelTimestamp option
+  When enabled, kernel message [timestamp] is converted for message time.
+  Default is to use receive time as in 5.8.x and before, because the clock
+  used to create the timestamp is not supposed to be as accurate as the
+  monotonic clock (depends on hardware and kernel) resulting in differences
+  between kernel and system messages which occurred at same time.
+  Thanks to Marius Tomaschweski for the patch.
+- imklog: added $klogKeepKernelTimestamp option
+  When enabled, the kernel [timestamp] remains at begin of
+  each message, even it is used for the message time too.
+  Thanks to Marius Tomaschweski for the patch.
+- bugfix: imklog mistakenly took kernel timestamp subseconds as nanoseconds
+  ... actually, they are microseconds. So the fractional part of the 
+  timestamp was not properly formatted.
+  Thanks to Marius Tomaschweski for the bug report and the patch idea.
 ---------------------------------------------------------------------------
 Version 6.6.0  [v6-stable] 2012-10-22
 This starts a new stable branch, based on the 6.5.x series, plus:
@@ -336,7 +383,7 @@ all these patches here are present in 6.6.0.
   Thanks to Michael Biebl for reporting & suggestions
 - bugfix: imuxsock and imklog truncated head of received message
   This happened only under some circumstances. Thanks to Marius
-  Tomaschwesky, Florian Piekert and Milan Bartos for their help in
+  Tomaschweski, Florian Piekert and Milan Bartos for their help in
   solving this issue.
 - change lumberjack cookie to "@cee:" from "@cee: "
   CEE originally specified the cookie with SP, whereas other lumberjack
@@ -921,12 +968,27 @@ expected that interfaces, even new ones, break during the initial
 ---------------------------------------------------------------------------
 Version 5.10.2  [V5-STABLE], 201?-??-??
 - bugfix: spurios error messages from imuxsock about (non-error) EAGAIN
-  Thanks to Marius Tomaschwesky for the patch.
+  Thanks to Marius Tomaschweski for the patch.
+- imklog: added $klogParseKernelTimestamp option
+  When enabled, kernel message [timestamp] is converted for message time.
+  Default is to use receive time as in 5.8.x and before, because the clock
+  used to create the timestamp is not supposed to be as accurate as the
+  monotonic clock (depends on hardware and kernel) resulting in differences
+  between kernel and system messages which occurred at same time.
+  Thanks to Marius Tomaschweski for the patch.
+- imklog: added $klogKeepKernelTimestamp option
+  When enabled, the kernel [timestamp] remains at begin of
+  each message, even it is used for the message time too.
+  Thanks to Marius Tomaschweski for the patch.
+- bugfix: imklog mistakenly took kernel timestamp subseconds as nanoseconds
+  ... actually, they are microseconds. So the fractional part of the 
+  timestamp was not properly formatted.
+  Thanks to Marius Tomaschweski for the bug report and the patch idea.
 ---------------------------------------------------------------------------
 Version 5.10.1  [V5-STABLE], 2012-10-17
 - bugfix: imuxsock and imklog truncated head of received message
   This happened only under some circumstances. Thanks to Marius
-  Tomaschwesky, Florian Piekert and Milan Bartos for their help in
+  Tomaschweski, Florian Piekert and Milan Bartos for their help in
   solving this issue.
 - enable DNS resolution in imrelp
   Thanks to Apollon Oikonomopoulos for the patch

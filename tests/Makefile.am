@@ -76,6 +76,7 @@ TESTS +=  \
 	incltest.sh \
 	incltest_dir.sh \
 	incltest_dir_wildcard.sh \
+	incltest_dir_empty_wildcard.sh \
 	linkedlistqueue.sh
 
 if HAVE_VALGRIND
@@ -298,6 +299,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/incltest.conf \
 	   incltest_dir.sh \
 	   testsuites/incltest_dir.conf \
+	   incltest_dir_empty_wildcard.sh \
+	   testsuites/incltest_dir_empty_wildcard.conf \
 	   incltest_dir_wildcard.sh \
 	   testsuites/incltest_dir_wildcard.conf \
 	   testsuites/incltest.d/include.conf \
