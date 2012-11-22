@@ -65,6 +65,19 @@ Linux only, ignored on other platforms (but may be specified)</li>
 former klogd -2 option<br>
 Linux only, ignored on other platforms (but may be specified)<br style="font-weight: bold;">
 </li>
+<li><b>$klogParseKernelTimestamp</b> [on/<b>off</b>]
+If enabled and the kernel creates a timestamp for its log messages, this timestamp will be
+parsed and converted into regular message time instead to use the receive time of the kernel
+message (as in 5.8.x and before). Default is to not parse the kernel timestamp, because the
+clock used by the kernel to create the timestamps is not supposed to be as accurate as the
+monotonic clock required to convert it. Depending on the hardware and kernel, it can result
+in message time differences between kernel and system messages which occurred at same time.
+</li>
+<li><b>$klogKeepKernelTimestamp</b> [on/<b>off</b>]
+If enabled, this option causes to keep the [timestamp] provided by the kernel at the begin
+of in each message rather than to remove it, when it could be parsed and converted into
+local time for use as regular message time. Only used, when $klogParseKernelTimestamp is on.
+</li>
 </ul>
 <b>Caveats/Known Bugs:</b>
 <p>This is obviously platform specific and requires platform
