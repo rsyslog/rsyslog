@@ -94,6 +94,8 @@ static struct cnfparamdescr modpdescr[] = {
 	{ "logpath", eCmdHdlrGetWord, 0 },
 	{ "permitnonkernelfacility", eCmdHdlrBinary, 0 },
 	{ "consoleloglevel", eCmdHdlrInt, 0 },
+	{ "parsekerneltimestamp", eCmdHdlrBinary, 0 },
+ 	{ "keepkerneltimestamp", eCmdHdlrBinary, 0 },
 	{ "internalmsgfacility", eCmdHdlrFacility, 0 }
 };
 static struct cnfparamblk modpblk =
@@ -323,6 +325,10 @@ CODESTARTsetModCnf
 			loadModConf->pszPath = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(modpblk.descr[i].name, "permitnonkernelfacility")) {
 			loadModConf->bPermitNonKernel = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "parsekerneltimestamp")) {
+			loadModConf->bParseKernelStamp = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "keepkerneltimestamp")) {
+			loadModConf->bKeepKernelStamp = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "consoleloglevel")) {
 			loadModConf->console_log_level= (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "internalmsgfacility")) {
