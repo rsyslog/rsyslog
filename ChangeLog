@@ -1,4 +1,14 @@
 ----------------------------------------------------------------------------
+Version 7.2.4  [v7-stable] 2012-10-??
+- imklog: added ParseKernelTimestamp parameter (import from 5.10.2)
+  Thanks to Marius Tomaschweski for the patch.
+- imklog: added KeepKernelTimestamp parameter (import from 5.10.2)
+  Thanks to Marius Tomaschweski for the patch.
+- bugfix: imklog mistakenly took kernel timestamp subseconds as nanoseconds
+  ... actually, they are microseconds. So the fractional part of the 
+  timestamp was not properly formatted. (import from 5.10.2)
+  Thanks to Marius Tomaschweski for the bug report and the patch idea.
+----------------------------------------------------------------------------
 Version 7.2.3  [v7-stable] 2012-10-21
 - regression fix: rsyslogd terminated when wild-card $IncludeConfig did not
   find actual include files. For example, if this directive is present:
@@ -90,12 +100,12 @@ Version 7.1.12  [beta] 2012-10-18
   Thanks to Michael Biebl for reporting & suggestions
 - bugfix: imklog truncated head of received message
   This happened only under some circumstances. Thanks to Marius
-  Tomaschwesky and Florian Piekert for their help in solving this issue.
+  Tomaschewski and Florian Piekert for their help in solving this issue.
 ----------------------------------------------------------------------------
 Version 7.1.11  [beta] 2012-10-16
 - bugfix: imuxsock truncated head of received message
   This happened only under some circumstances. Thanks to Marius
-  Tomaschwesky, Florian Piekert and Milan Bartos for their help in
+  Tomaschewski, Florian Piekert and Milan Bartos for their help in
   solving this issue.
 - bugfix: do not crash if set statement is used with date field
   Thanks to Miloslav Trmač for the patch.
