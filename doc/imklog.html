@@ -29,16 +29,23 @@ need to specify this configuratin directive - it is included primarily
 for few limited cases where it is needed for good reason. Bottom line:
 if you don't have a good idea why you should use this setting, do not
 touch it.</li>
-<li><span style="font-weight: bold;">PermitNonKernelFacility
-[on/<span style="font-style: italic;">off</span>]<br>
-</span>At least under BSD the kernel log may contain entries
+<li><b>PermitNonKernelFacility [on/<i>off</i>]</b><br>
+At least under BSD the kernel log may contain entries
 with non-kernel facilities. This setting controls how those are
 handled. The default is "off", in which case these messages are
 ignored. Switch it to on to submit non-kernel messages to rsyslog
-processing.<span style="font-weight: bold;"></span></li>
-<li><b>KeepKernelTimeStamp</b> [on/<b>off</b>] --
-<br>if the Kernel creates a timestamp for its log messages, this timestamp will be preserved.
-If disabled, the time when the message is received will be used.<br>
+processing.</li>
+<li><b>ParseKernelTimeStamp</b> [on/<b>off</b>]<br>
+If enabled and the kernel creates a timestamp for its log messages, this timestamp will be
+parsed and converted into regular message time instead to use the receive time of the kernel
+message (as in 5.8.x and before). Default is to not parse the kernel timestamp, because the
+clock used by the kernel to create the timestamps is not supposed to be as accurate as the
+monotonic clock required to convert it. Depending on the hardware and kernel, it can result
+in message time differences between kernel and system messages which occurred at same time.
+<li><b>KeepKernelTimeStamp</b> [on/<b>off</b>]<br>
+If enabled, this option causes to keep the [timestamp] provided by the kernel at the begin
+of in each message rather than to remove it, when it could be parsed and converted into
+local time for use as regular message time. Only used when <b>ParseKernelTimestamp</b> is on.
 <li><b>ConsoleLogLevel</b> [<i>number</i>]
 (former klogd -c option) -- sets the console log level. If specified, only messages with
 up to the specified level are printed to the console. The default is -1, which means that
@@ -60,7 +67,7 @@ parameters are left by default, which is usually a good idea. Please
 note that loading the plugin is sufficient to activate it. No directive
 is needed to start pulling kernel messages.<br>
 </p>
-<textarea rows="15" cols="60">module(load="imklog")
+<textarea rows="4" cols="60">module(load="imklog")
 </textarea>
 <p><b>Legacy Configuration Directives</b>:</p>
 <ul>
@@ -95,19 +102,10 @@ Linux only, ignored on other platforms (but may be specified)</li>
 former klogd -2 option<br>
 Linux only, ignored on other platforms (but may be specified)<br style="font-weight: bold;">
 </li>
-<li><b>$klogParseKernelTimestamp</b> [on/<b>off</b>]
-If enabled and the kernel creates a timestamp for its log messages, this timestamp will be
-parsed and converted into regular message time instead to use the receive time of the kernel
-message (as in 5.8.x and before). Default is to not parse the kernel timestamp, because the
-clock used by the kernel to create the timestamps is not supposed to be as accurate as the
-monotonic clock required to convert it. Depending on the hardware and kernel, it can result
-in message time differences between kernel and system messages which occurred at same time.
-</li>
-<li><b>$klogKeepKernelTimestamp</b> [on/<b>off</b>]
-If enabled, this option causes to keep the [timestamp] provided by the kernel at the begin
-of in each message rather than to remove it, when it could be parsed and converted into
-local time for use as regular message time. Only used, when $klogParseKernelTimestamp is on.
-</li>
+<li><b>$klogParseKernelTimeStamp</b> [on/<b>off</b>]<br>
+equivalent to: ParseKernelTimeStamp</li>
+<li><b>$klogKeepKernelTimeStamp</b> [on/<b>off</b>]<br>
+equivalent to: KeepKernelTimeStamp</li>
 </ul>
 <p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>]
 [<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
