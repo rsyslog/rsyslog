@@ -73,17 +73,20 @@ static int	fklog = -1;	/* kernel log fd */
  * rgerhards, 2011-06-24
  */
 static void
-submitSyslog(int pri, uchar *buf)
+submitSyslog(modConfData_t *pModConf, int pri, uchar *buf)
 {
 	long secs;
-	long nsecs;
+	long usecs;
 	long secOffs;
-	long nsecOffs;
+	long usecOffs;
 	unsigned i;
 	unsigned bufsize;
 	struct timespec monotonic, realtime;
 	struct timeval tv;
 	struct timeval *tp = NULL;
+
+	if(!pModConf->bParseKernelStamp)
+		goto done;
 
 	if(buf[3] != '[')
 		goto done;
@@ -106,9 +109,9 @@ submitSyslog(int pri, uchar *buf)
 	}
 	
 	++i; /* skip dot */
-	nsecs = 0;
+	usecs = 0;
 	while(buf[i] && isdigit(buf[i])) {
-		nsecs = nsecs * 10 + buf[i] - '0';
+		usecs = usecs * 10 + buf[i] - '0';
 		++i;
 	}
 	if(buf[i] != ']') {
@@ -118,27 +121,29 @@ submitSyslog(int pri, uchar *buf)
 	++i; /* skip ']' */
 
 	/* we have a timestamp */
-	DBGPRINTF("kernel timestamp is %ld %ld\n", secs, nsecs);
-	bufsize= strlen((char*)buf);
-	memmove(buf+3, buf+i, bufsize - i + 1);
+	DBGPRINTF("kernel timestamp is %ld %ld\n", secs, usecs);
+	if(!pModConf->bKeepKernelStamp) {
+		bufsize= strlen((char*)buf);
+		memmove(buf+3, buf+i, bufsize - i + 1);
+	}
 
 	clock_gettime(CLOCK_MONOTONIC, &monotonic);
 	clock_gettime(CLOCK_REALTIME, &realtime);
 	secOffs = realtime.tv_sec - monotonic.tv_sec;
-	nsecOffs = realtime.tv_nsec - monotonic.tv_nsec;
-	if(nsecOffs < 0) {
+	usecOffs = (realtime.tv_nsec - monotonic.tv_nsec) / 1000;
+	if(usecOffs < 0) {
 		secOffs--;
-		nsecOffs += 1000000000l;
+		usecOffs += 1000000l;
 	}
 	
-	nsecs +=nsecOffs;
-	if(nsecs > 999999999l) {
+	usecs += usecOffs;
+	if(usecs > 999999l) {
 		secs++;
-		nsecs -= 1000000000l;
+		usecs -= 1000000l;
 	}
 	secs += secOffs;
 	tv.tv_sec = secs;
-	tv.tv_usec = nsecs / 1000;
+	tv.tv_usec = usecs;
 	tp = &tv;
 
 done:
@@ -146,7 +151,7 @@ done:
 }
 #else	/* now comes the BSD "code" (just a shim) */
 static void
-submitSyslog(int pri, uchar *buf)
+submitSyslog(modConfData_t *pModConf, int pri, uchar *buf)
 {
 	Syslog(pri, buf, NULL);
 }
@@ -196,7 +201,7 @@ finalize_it:
 /* Read kernel log while data are available, split into lines.
  */
 static void
-readklog(void)
+readklog(modConfData_t *pModConf)
 {
 	char *p, *q;
 	int len, i;
@@ -238,18 +243,18 @@ readklog(void)
 
 		for (p = (char*)pRcv; (q = strchr(p, '\n')) != NULL; p = q + 1) {
 			*q = '\0';
-			submitSyslog(LOG_INFO, (uchar*) p);
+			submitSyslog(pModConf, LOG_INFO, (uchar*) p);
 		}
 		len = strlen(p);
 		if (len >= iMaxLine - 1) {
-			submitSyslog(LOG_INFO, (uchar*)p);
+			submitSyslog(pModConf, LOG_INFO, (uchar*)p);
 			len = 0;
 		}
 		if(len > 0)
 			memmove(pRcv, p, len + 1);
 	}
 	if (len > 0)
-		submitSyslog(LOG_INFO, pRcv);
+		submitSyslog(pModConf, LOG_INFO, pRcv);
 
 	if(pRcv != NULL && (size_t) iMaxLine >= sizeof(bufRcv) - 1)
 		free(pRcv);
@@ -278,10 +283,10 @@ rsRetVal klogAfterRun(modConfData_t *pModConf)
  * "message pull" mechanism.
  * rgerhards, 2008-04-09
  */
-rsRetVal klogLogKMsg(modConfData_t __attribute__((unused)) *pModConf)
+rsRetVal klogLogKMsg(modConfData_t *pModConf)
 {
         DEFiRet;
-	readklog();
+	readklog(pModConf);
 	RETiRet;
 }
 

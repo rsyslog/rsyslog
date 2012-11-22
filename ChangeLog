@@ -14,6 +14,23 @@ Version 6.6.1  [v6-stable] 2012-10-??
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=376
   The testbench was also enhanced to check for these cases.
   Thanks to Georgi Georgiev for the bug report.
+- bugfix: spurios error messages from imuxsock about (non-error) EAGAIN
+  Thanks to Marius Tomaschweski for the patch.
+- imklog: added $klogParseKernelTimestamp option
+  When enabled, kernel message [timestamp] is converted for message time.
+  Default is to use receive time as in 5.8.x and before, because the clock
+  used to create the timestamp is not supposed to be as accurate as the
+  monotonic clock (depends on hardware and kernel) resulting in differences
+  between kernel and system messages which occurred at same time.
+  Thanks to Marius Tomaschweski for the patch.
+- imklog: added $klogKeepKernelTimestamp option
+  When enabled, the kernel [timestamp] remains at begin of
+  each message, even it is used for the message time too.
+  Thanks to Marius Tomaschweski for the patch.
+- bugfix: imklog mistakenly took kernel timestamp subseconds as nanoseconds
+  ... actually, they are microseconds. So the fractional part of the 
+  timestamp was not properly formatted.
+  Thanks to Marius Tomaschweski for the bug report and the patch idea.
 ---------------------------------------------------------------------------
 Version 6.6.0  [v6-stable] 2012-10-22
 This starts a new stable branch, based on the 6.5.x series, plus:
@@ -82,7 +99,7 @@ all these patches here are present in 6.6.0.
   Thanks to Michael Biebl for reporting & suggestions
 - bugfix: imuxsock and imklog truncated head of received message
   This happened only under some circumstances. Thanks to Marius
-  Tomaschwesky, Florian Piekert and Milan Bartos for their help in
+  Tomaschweski, Florian Piekert and Milan Bartos for their help in
   solving this issue.
 - change lumberjack cookie to "@cee:" from "@cee: "
   CEE originally specified the cookie with SP, whereas other lumberjack
@@ -667,12 +684,27 @@ expected that interfaces, even new ones, break during the initial
 ---------------------------------------------------------------------------
 Version 5.10.2  [V5-STABLE], 201?-??-??
 - bugfix: spurios error messages from imuxsock about (non-error) EAGAIN
-  Thanks to Marius Tomaschwesky for the patch.
+  Thanks to Marius Tomaschweski for the patch.
+- imklog: added $klogParseKernelTimestamp option
+  When enabled, kernel message [timestamp] is converted for message time.
+  Default is to use receive time as in 5.8.x and before, because the clock
+  used to create the timestamp is not supposed to be as accurate as the
+  monotonic clock (depends on hardware and kernel) resulting in differences
+  between kernel and system messages which occurred at same time.
+  Thanks to Marius Tomaschweski for the patch.
+- imklog: added $klogKeepKernelTimestamp option
+  When enabled, the kernel [timestamp] remains at begin of
+  each message, even it is used for the message time too.
+  Thanks to Marius Tomaschweski for the patch.
+- bugfix: imklog mistakenly took kernel timestamp subseconds as nanoseconds
+  ... actually, they are microseconds. So the fractional part of the 
+  timestamp was not properly formatted.
+  Thanks to Marius Tomaschweski for the bug report and the patch idea.
 ---------------------------------------------------------------------------
 Version 5.10.1  [V5-STABLE], 2012-10-17
 - bugfix: imuxsock and imklog truncated head of received message
   This happened only under some circumstances. Thanks to Marius
-  Tomaschwesky, Florian Piekert and Milan Bartos for their help in
+  Tomaschweski, Florian Piekert and Milan Bartos for their help in
   solving this issue.
 - enable DNS resolution in imrelp
   Thanks to Apollon Oikonomopoulos for the patch

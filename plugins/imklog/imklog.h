@@ -36,6 +36,8 @@ struct modConfData_s {
 	uchar *pszPath;
 	int console_log_level;
 	sbool bPermitNonKernel;
+	sbool bParseKernelStamp;
+	sbool bKeepKernelStamp;
 	sbool configSetViaV2Method;
 };
 
