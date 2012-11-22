@@ -1,13 +1,13 @@
 ----------------------------------------------------------------------------
 Version 7.2.4  [v7-stable] 2012-10-??
 - imklog: added ParseKernelTimestamp parameter (import from 5.10.2)
-  Thanks to Marius Tomaschweski for the patch.
+  Thanks to Marius Tomaschewski for the patch.
 - imklog: added KeepKernelTimestamp parameter (import from 5.10.2)
-  Thanks to Marius Tomaschweski for the patch.
+  Thanks to Marius Tomaschewski for the patch.
 - bugfix: imklog mistakenly took kernel timestamp subseconds as nanoseconds
   ... actually, they are microseconds. So the fractional part of the 
   timestamp was not properly formatted. (import from 5.10.2)
-  Thanks to Marius Tomaschweski for the bug report and the patch idea.
+  Thanks to Marius Tomaschewski for the bug report and the patch idea.
 ----------------------------------------------------------------------------
 Version 7.2.3  [v7-stable] 2012-10-21
 - regression fix: rsyslogd terminated when wild-card $IncludeConfig did not
