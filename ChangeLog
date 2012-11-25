@@ -8,6 +8,7 @@ Version 7.2.4  [v7-stable] 2012-10-??
   ... actually, they are microseconds. So the fractional part of the 
   timestamp was not properly formatted. (import from 5.10.2)
   Thanks to Marius Tomaschewski for the bug report and the patch idea.
+- bugfix: supportoctetcountedframing parameter did not work in imptcp
 ----------------------------------------------------------------------------
 Version 7.2.3  [v7-stable] 2012-10-21
 - regression fix: rsyslogd terminated when wild-card $IncludeConfig did not
