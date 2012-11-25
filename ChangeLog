@@ -1,9 +1,19 @@
 ---------------------------------------------------------------------------
-Version 7.3.4  [devel] 2012-11-??
+Version 7.3.4  [devel] 2012-11-23
+- further (and rather drastically) improved disk queue performance
+  we now save one third of the IO calls
+- imklog: added ParseKernelTimestamp parameter (import from 5.10.2)
+  Thanks to Marius Tomaschewski for the patch.
+- imklog: added KeepKernelTimestamp parameter (import from 5.10.2)
+  Thanks to Marius Tomaschewski for the patch.
 - bugfix: improper handling of backslash in string-type template()s
 - bugfix: leading quote (") in string-type template() lead to thight loop
   on startup
 - bugfix: no error msg on invalid field option in legacy/string template
+- bugfix: imklog mistakenly took kernel timestamp subseconds as nanoseconds
+  ... actually, they are microseconds. So the fractional part of the 
+  timestamp was not properly formatted. (import from 5.10.2)
+  Thanks to Marius Tomaschewski for the bug report and the patch idea.
 ---------------------------------------------------------------------------
 Version 7.3.3  [devel] 2012-11-07
 - improved disk queue performance
