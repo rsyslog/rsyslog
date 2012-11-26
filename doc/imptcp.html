@@ -25,7 +25,9 @@ specifying $InputPTCPServerRun multiple times.
 their name instead of just TCP. Note that only a subset of the parameters are supported.
 <ul>
 
-<p><b>Global Directives</b>:</p>
+<p><b>Module Parameters</b>:</p>
+<p>These paramters can be used with the "module()" statement. They apply
+globaly to all inputs defined by the module.
 <ul>
 <li>Threads &lt;number&gt;<br>
 Number of helper worker threads to process incoming messages. These
@@ -33,9 +35,11 @@ threads are utilized to pull data off the network. On a busy system, additional
 helper threads (but not more than there are CPUs/Cores) can help improving
 performance. The default value is two.
 </ul>
-<p><b>Action Directives</b>:</p>
+<p><b>Input Parameters</b>:</p>
+<p>These parameters can be used with the "input()" statement. They apply to the
+input they are specified with.
 <ul>
-<li><b>AddTLFrameDelimiter</b> &lt;Delimiter&gt;<br>
+<li><b>AddtlFrameDelimiter</b> &lt;Delimiter&gt;<br>
 This directive permits to specify an additional frame delimiter for plain tcp syslog.
 The industry-standard specifies using the LF character as frame delimiter. Some vendors,
 notable Juniper in their NetScreen products, use an invalid frame delimiter, in Juniper's
@@ -99,13 +103,11 @@ On multi-homed machines, specifies to which local address the listerner should b
 <p><b>Sample:</b></p>
 <p>This sets up a TCP server on port 514:<br>
 </p>
-<textarea rows="15" cols="60">module(load="/folder/to/rsyslog/plugins/imptcp/.libs/imptcp") # needs to be done just once
+<textarea rows="4" cols="60">module(load="/folder/to/rsyslog/plugins/imptcp/.libs/imptcp") # needs to be done just once
 input(type="imptcp" port="514")
 </textarea>
 
 <p><b>Legacy Configuration Directives</b>:</p>
-<p>This plugin has config directives similar named as imtcp, but they all have <b>P</b>TCP in
-their name instead of just TCP. Note that only a subset of the parameters are supported.
 <ul>
 <li>$InputPTCPServerAddtlFrameDelimiter &lt;Delimiter&gt;<br>
 Equivalent to: AddTLFrameDelimiter</li>
@@ -143,7 +145,7 @@ Equivalent to: Address </li>
 <p><b>Sample:</b></p>
 <p>This sets up a TCP server on port 514:<br>
 </p>
-<textarea rows="15" cols="60">$ModLoad imptcp #
+<textarea rows="3" cols="60">$ModLoad imptcp #
 needs to be done just once
 $InputPTCPServerRun 514
 </textarea>
@@ -152,7 +154,7 @@ $InputPTCPServerRun 514
 <p><font size="2">This documentation is part of the
 <a href="http://www.rsyslog.com/">rsyslog</a>
 project.<br>
-Copyright &copy; 2010 by <a href="http://www.gerhards.net/rainer">Rainer
+Copyright &copy; 2010-2012 by <a href="http://www.gerhards.net/rainer">Rainer
 Gerhards</a> and
 <a href="http://www.adiscon.com/">Adiscon</a>.
 Released under the GNU GPL version 3 or higher.</font></p>
