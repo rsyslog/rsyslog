@@ -36,7 +36,9 @@
 #include <assert.h>
 #include <ctype.h>
 #include <sys/socket.h>
+#if HAVE_SYSINFO_UPTIME
 #include <sys/sysinfo.h>
+#endif
 #include <netdb.h>
 #include <libestr.h>
 #include <json/json.h>
@@ -2773,7 +2775,10 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			*pbMustBeFreed = 0;
 			break;
 		case PROP_SYS_UPTIME:
-#			ifndef HAVE_SYSINFO
+#			ifndef HAVE_SYSINFO_UPTIME
+            /* An alternative on some systems (eg Solaris) is to scan
+             * /var/adm/utmpx for last boot time.
+             */
 			pRes = (uchar*) "UPTIME NOT available on this system";
 			*pbMustBeFreed = 0;
 #			else
