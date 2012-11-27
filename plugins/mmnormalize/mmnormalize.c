@@ -104,13 +104,13 @@ buildInstance(instanceData *pData)
 {
 	DEFiRet;
 	if((pData->ctxee = ee_initCtx()) == NULL) {
-		errmsg.LogError(0, RS_RET_LIBEE_INIT, "error: could not initialize libee "
+		errmsg.LogError(0, RS_RET_ERR_LIBEE_INIT, "error: could not initialize libee "
 				"ctx, cannot activate action");
 		ABORT_FINALIZE(RS_RET_ERR_LIBEE_INIT);
 	}
 
 	if((pData->ctxln = ln_initCtx()) == NULL) {
-		errmsg.LogError(0, RS_RET_LIBLOGNORM_INIT, "error: could not initialize "
+		errmsg.LogError(0, RS_RET_ERR_LIBLOGNORM_INIT, "error: could not initialize "
 				"liblognorm ctx, cannot activate action");
 		ee_exitCtx(pData->ctxee);
 		ABORT_FINALIZE(RS_RET_ERR_LIBLOGNORM_INIT);
@@ -165,7 +165,6 @@ ENDactivateCnf
 
 BEGINfreeCnf
 CODESTARTfreeCnf
-	free(pModConf->tplName);
 ENDfreeCnf
 
 
@@ -249,9 +248,7 @@ setInstParamDefaults(instanceData *pData)
 
 BEGINnewActInst
 	struct cnfparamvals *pvals;
-	uchar *tplToUse;
 	int i;
-	rsRetVal localRet;
 CODESTARTnewActInst
 	DBGPRINTF("newActInst (mmnormalize)\n");
 
@@ -274,7 +271,7 @@ CODESTARTnewActInst
 		if(!pvals[i].bUsed)
 			continue;
 		if(!strcmp(actpblk.descr[i].name, "rulebase")) {
-			pData->rulebase = es_str2cstr(pvals[i].val.d.estr, NULL);
+			pData->rulebase = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "userawmsg")) {
 			pData->bUseRawMsg = (int) pvals[i].val.d.n;
 		} else {
