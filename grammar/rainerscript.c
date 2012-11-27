@@ -3256,12 +3256,16 @@ cnfDoInclude(char *name)
 
 	/* Use GLOB_MARK to append a trailing slash for directories. */
 	/* Use GLOB_NOMAGIC to detect wildcards that match nothing. */
-	result = glob(finalName, GLOB_MARK | GLOB_NOMAGIC, NULL, &cfgFiles);
-
+#ifdef HAVE_GLOB_NOMAGIC
 	/* Silently ignore wildcards that match nothing */
+	result = glob(finalName, GLOB_MARK | GLOB_NOMAGIC, NULL, &cfgFiles);
 	if(result == GLOB_NOMATCH) {
-		return 0;
-	}
+#else
+	result = glob(finalName, GLOB_MARK, NULL, &cfgFiles);
+    if(result == GLOB_NOMATCH && containsGlobWildcard(finalName)) {
+#endif /* HAVE_GLOB_NOMAGIC */
+        return 0;
+    }
 
 	if(result == GLOB_NOSPACE || result == GLOB_ABORTED) {
 		char errStr[1024];
