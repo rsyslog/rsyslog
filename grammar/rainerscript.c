@@ -2794,7 +2794,8 @@ cnfDoInclude(char *name)
 	if(result == GLOB_NOSPACE || result == GLOB_ABORTED) {
 		char errStr[1024];
 		rs_strerror_r(errno, errStr, sizeof(errStr));
-		getcwd(cwdBuf, sizeof(cwdBuf));
+		if(getcwd(cwdBuf, sizeof(cwdBuf)) == NULL)
+			strcpy(cwdBuf, "??getcwd() failed??");
 		parser_errmsg("error accessing config file or directory '%s' [cwd:%s]: %s",
 				finalName, cwdBuf, errStr);
 		return 1;
@@ -2805,7 +2806,8 @@ cnfDoInclude(char *name)
 		if(stat(cfgFile, &fileInfo) != 0) {
 			char errStr[1024];
 			rs_strerror_r(errno, errStr, sizeof(errStr));
-			getcwd(cwdBuf, sizeof(cwdBuf));
+			if(getcwd(cwdBuf, sizeof(cwdBuf)) == NULL)
+				strcpy(cwdBuf, "??getcwd() failed??");
 			parser_errmsg("error accessing config file or directory '%s' "
 					"[cwd: %s]: %s", cfgFile, cwdBuf, errStr);
 			return 1;

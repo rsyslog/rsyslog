@@ -136,9 +136,13 @@ CODESTARTdoAction
 		toWrite = (char*) ppString[0];
 	}
 	len = strlen(toWrite);
-	write(1, toWrite, len); /* 1 is stdout! */
+	/* the following if's are just to silence compiler warnings. If someone 
+	 * actually intends to use this module in production (why???), this code
+	 * needs to be more solid. -- rgerhards, 2012-11-28
+	 */
+	if(write(1, toWrite, len)) {}; /* 1 is stdout! */
 	if(pData->bEnsureLFEnding && toWrite[len-1] != '\n') {
-		write(1, "\n", 1); /* write missing LF */
+		if(write(1, "\n", 1)) {}; /* write missing LF */
 	}
 ENDdoAction
 

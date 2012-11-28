@@ -902,8 +902,12 @@ do_dbgprint(uchar *pszObjName, char *pszMsg, size_t lenMsg)
 		lenCopy = lenMsg;
 	memcpy(pszWriteBuf + offsWriteBuf, pszMsg, lenCopy);
 	offsWriteBuf += lenCopy;
-	if(stddbg != -1) write(stddbg, pszWriteBuf, offsWriteBuf);
-	if(altdbg != -1) write(altdbg, pszWriteBuf, offsWriteBuf);
+	/* the write is included in an "if" just to silence compiler
+	 * warnings. Here, we really don't care if the write fails, we
+	 * have no good response to that in any case... -- rgerhards, 2012-11-28
+	 */
+	if(stddbg != -1) if(write(stddbg, pszWriteBuf, offsWriteBuf)){};
+	if(altdbg != -1) if(write(altdbg, pszWriteBuf, offsWriteBuf)){};
 
 	bWasNL = (pszMsg[lenMsg - 1] == '\n') ? 1 : 0;
 }
