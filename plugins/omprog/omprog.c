@@ -128,7 +128,12 @@ static void execBinary(instanceData *pData, int fdStdin)
 	assert(pData != NULL);
 
 	fclose(stdin);
-	dup(fdStdin);
+	if(dup(fdStdin) == -1) {
+		DBGPRINTF("omprog: dup() failed\n");
+		/* do some more error handling here? Maybe if the module
+		 * gets some more widespread use...
+		 */
+	}
 	//fclose(stdout);
 
 	/* we close all file handles as we fork soon

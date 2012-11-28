@@ -281,6 +281,7 @@ CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION;
 		/* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
+	DBGPRINTF("mmjsonparse: module compiled with rsyslog version %s.\n", VERSION);
 	/* check if the rsyslog core supports parameter passing code */
 	bMsgPassingSupported = 0;
 	localRet = pHostQueryEtryPt((uchar*)"OMSRgetSupportedTplOpts",

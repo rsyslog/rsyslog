@@ -689,6 +689,7 @@ ENDmodExit
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
+CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES 
 ENDqueryEtryPt
 
 

@@ -1444,7 +1444,7 @@ CODESTARTnewInpInst
 			inst->pszInputName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "ruleset")) {
 			inst->pszBindRuleset = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if(!strcmp(inppblk.descr[i].name, "supportOctetCountedFraming")) {
+		} else if(!strcmp(inppblk.descr[i].name, "supportoctetcountedframing")) {
 			inst->bSuppOctetFram = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "keepalive")) {
 			inst->bKeepAlive = (int) pvals[i].val.d.n;
