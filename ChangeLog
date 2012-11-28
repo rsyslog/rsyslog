@@ -1,6 +1,7 @@
 ---------------------------------------------------------------------------
 Version 7.3.5  [devel] 2012-11-??
 - bugfix: mmnormalize build problems
+- bugfix: mmnormalize could abort rsyslog if config parameter was in error
 ---------------------------------------------------------------------------
 Version 7.3.4  [devel] 2012-11-23
 - further (and rather drastically) improved disk queue performance

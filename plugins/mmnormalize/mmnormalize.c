@@ -249,15 +249,18 @@ setInstParamDefaults(instanceData *pData)
 BEGINnewActInst
 	struct cnfparamvals *pvals;
 	int i;
+	int bDestructPValsOnExit;
 CODESTARTnewActInst
 	DBGPRINTF("newActInst (mmnormalize)\n");
 
+	bDestructPValsOnExit = 0;
 	pvals = nvlstGetParams(lst, &actpblk, NULL);
 	if(pvals == NULL) {
 		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "mmnormalize: error reading "
 				"config parameters");
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
+	bDestructPValsOnExit = 1;
 
 	if(Debug) {
 		dbgprintf("action param blk in mmnormalize:\n");
@@ -284,7 +287,8 @@ CODESTARTnewActInst
 
 	iRet = buildInstance(pData);
 CODE_STD_FINALIZERnewActInst
-	cnfparamvalsDestruct(pvals, &actpblk);
+	if(bDestructPValsOnExit)
+		cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
 
 
