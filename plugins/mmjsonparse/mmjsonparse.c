@@ -217,6 +217,7 @@ ENDmodExit
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
+CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES 
 ENDqueryEtryPt
 
 
@@ -240,6 +241,7 @@ INITLegCnfVars
 	*ipIFVersProvided = CURR_MOD_IF_VERSION;
 		/* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
+	DBGPRINTF("mmjsonparse: module compiled with rsyslog version %s.\n", VERSION);
 	/* check if the rsyslog core supports parameter passing code */
 	bMsgPassingSupported = 0;
 	localRet = pHostQueryEtryPt((uchar*)"OMSRgetSupportedTplOpts",

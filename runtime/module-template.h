@@ -113,7 +113,7 @@ static rsRetVal modGetID(void **pID) \
 /* macro to provide the v6 config system module name
  */
 #define MODULE_CNFNAME(name) \
-static __attribute__((unused)) rsRetVal modGetCnfName(uchar **cnfName) \
+static rsRetVal modGetCnfName(uchar **cnfName) \
 	{ \
 		*cnfName = (uchar*) name; \
 		return RS_RET_OK;\
