@@ -411,7 +411,8 @@ void cnfDoObj(struct cnfobj *o)
 		inputProcessCnf(o);
 		break;
 	case CNFOBJ_TPL:
-		tplProcessCnf(o);
+		if(tplProcessCnf(o) != RS_RET_OK)
+			parser_errmsg("error processing template object");
 		break;
 	case CNFOBJ_RULESET:
 		rulesetProcessCnf(o);

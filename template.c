@@ -589,14 +589,15 @@ tplConstruct(rsconf_t *conf)
  * escaped strings (which we are NOT permitted to further escape, this would
  * cause invalid result strings!). Note: if escapes are not permitted,
  * quotes (") are just a regular character and do NOT terminate the constant!
- * returns: 0 - ok, 1 - failure
  */
-static int do_Constant(unsigned char **pp, struct template *pTpl, int bDoEscapes)
+static rsRetVal
+do_Constant(unsigned char **pp, struct template *pTpl, int bDoEscapes)
 {
 	register unsigned char *p;
 	cstr_t *pStrB;
 	struct templateEntry *pTpe;
 	int i;
+	DEFiRet;
 
 	assert(pp != NULL);
 	assert(*pp != NULL);
@@ -604,8 +605,7 @@ static int do_Constant(unsigned char **pp, struct template *pTpl, int bDoEscapes
 
 	p = *pp;
 
-	if(cstrConstruct(&pStrB) != RS_RET_OK)
-		 return 1;
+	CHKiRet(cstrConstruct(&pStrB));
 	/* process the message and expand escapes
 	 * (additional escapes can be added here if needed)
 	 */
@@ -659,7 +659,7 @@ static int do_Constant(unsigned char **pp, struct template *pTpl, int bDoEscapes
 
 	if((pTpe = tpeConstruct(pTpl)) == NULL) {
 		rsCStrDestruct(&pStrB);
-		return 1;
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
 	pTpe->eEntryType = CONSTANT;
 	cstrFinalize(pStrB);
@@ -669,12 +669,12 @@ static int do_Constant(unsigned char **pp, struct template *pTpl, int bDoEscapes
 	 * 2005-09-09 rgerhards
 	 */
 	pTpe->data.constant.iLenConstant = rsCStrLen(pStrB);
-	if(cstrConvSzStrAndDestruct(pStrB, &pTpe->data.constant.pConstant, 0) != RS_RET_OK)
-		return 1;
+	CHKiRet(cstrConvSzStrAndDestruct(pStrB, &pTpe->data.constant.pConstant, 0));
 
 	*pp = p;
 
-	return 0;
+finalize_it:
+	RETiRet;
 }
 
 
@@ -779,11 +779,11 @@ static void doOptions(unsigned char **pp, struct templateEntry *pTpe)
 
 /* helper to tplAddLine. Parses a parameter and generates
  * the necessary structure.
- * returns: 0 - ok, 1 - failure
  */
-static int do_Parameter(unsigned char **pp, struct template *pTpl)
+static rsRetVal
+do_Parameter(uchar **pp, struct template *pTpl)
 {
-	unsigned char *p;
+	uchar *p;
 	cstr_t *pStrProp;
 	cstr_t *pStrField = NULL;
 	struct templateEntry *pTpe;
@@ -795,20 +795,15 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 	unsigned char *regex_char;
 	unsigned char *regex_end;
 #endif
+	DEFiRet;
 
 	assert(pp != NULL);
 	assert(*pp != NULL);
 	assert(pTpl != NULL);
-	p = (unsigned char*) *pp;
 
-	if(cstrConstruct(&pStrProp) != RS_RET_OK)
-		 return 1;
-
-	if((pTpe = tpeConstruct(pTpl)) == NULL) {
-		/* TODO: add handler */
-		dbgprintf("Could not allocate memory for template parameter!\n");
-		return 1;
-	}
+	p = (uchar*) *pp;
+	CHKiRet(cstrConstruct(&pStrProp));
+	CHKmalloc(pTpe = tpeConstruct(pTpl));
 	pTpe->eEntryType = FIELD;
 
 	while(*p && *p != '%' && *p != ':') {
@@ -823,13 +818,13 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 		errmsg.LogError(0, RS_RET_TPL_INVLD_PROP, "template '%s': invalid parameter '%s'",
 				pTpl->pszName, cstrGetSzStrNoNULL(pStrProp));
 		cstrDestruct(&pStrProp);
-		return 1;
+		ABORT_FINALIZE(RS_RET_TPL_INVLD_PROP);
 	}
 	if(pTpe->data.field.propid == PROP_CEE) {
 		/* in CEE case, we need to preserve the actual property name */
 		if((pTpe->data.field.propName = es_newStrFromCStr((char*)cstrGetSzStrNoNULL(pStrProp)+1, cstrLen(pStrProp)-1)) == NULL) {
 			cstrDestruct(&pStrProp);
-			return 1;
+			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 		}
 	}
 
@@ -895,8 +890,8 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 					  * comma itself is already part of the next field.
 					  */
 				} else {
-					errmsg.LogError(0, NO_ERRCODE, "error: invalid regular expression type, rest of line %s",
-				               (char*) p);
+					errmsg.LogError(0, NO_ERRCODE, "template %s error: invalid regular expression type, rest of line %s",
+				               pTpl->pszName, (char*) p);
 				}
 			}
 
@@ -1002,9 +997,7 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 
 #ifdef FEATURE_REGEXP
 		if (pTpe->data.field.has_regex) {
-
 			dbgprintf("debug: has regex \n");
-
 			/* APR 2005-09 I need the string that represent the regex */
 			/* The regex end is: "--end" */
 			/* TODO : this is hardcoded and cant be escaped, please change */
@@ -1020,16 +1013,13 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 				if(regex_char == NULL) {
 					dbgprintf("Could not allocate memory for template parameter!\n");
 					pTpe->data.field.has_regex = 0;
-					return 1;
-					/* TODO: RGer: check if we can recover better... (probably not) */
+					ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 				}
 
 				/* Get the regex string for compiling later */
 				memcpy(regex_char, p, longitud);
 				regex_char[longitud] = '\0';
-
 				dbgprintf("debug: regex detected: '%s'\n", regex_char);
-
 				/* Now i compile the regex */
 				/* Remember that the re is an attribute of the Template entry */
 				if((iRetLocal = objUse(regexp, LM_REGEXP_FILENAME)) == RS_RET_OK) {
@@ -1114,8 +1104,7 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 	/* check field name */
 	if(*p == ':') {
 		++p; /* eat ':' */
-		if(cstrConstruct(&pStrField) != RS_RET_OK)
-			 return 1;
+		CHKiRet(cstrConstruct(&pStrField));
 		while(*p != ':' && *p != '%' && *p != '\0') {
 			cstrAppendChar(pStrField, *p);
 			++p;
@@ -1138,15 +1127,15 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 		pTpe->lenFieldName = ustrlen(pTpe->fieldName);
 		cstrDestruct(&pStrField);
 	}
-	if(pTpe->fieldName == NULL)
-		return 1;
-
+	if(pTpe->fieldName == NULL) {
+		DBGPRINTF("template/do_Parameter: fieldName is NULL!\n");
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	}
 	cstrDestruct(&pStrProp);
-
 	if(*p) ++p; /* eat '%' */
-
 	*pp = p;
-	return 0;
+finalize_it:
+	RETiRet;
 }
 
 
@@ -1274,7 +1263,7 @@ struct template *tplAddLine(rsconf_t *conf, char* pName, uchar** ppRestOfConfLin
 				break;
 			case '%': /* parameter */
 				++p; /* eat '%' */
-				if(do_Parameter(&p, pTpl) != 0) {
+				if(do_Parameter(&p, pTpl) != RS_RET_OK) {
 					dbgprintf("tplAddLine error: parameter invalid");
 					return NULL;
 				};
@@ -1874,10 +1863,7 @@ tplProcessCnf(struct cnfobj *o)
 				switch(*p) {
 					case '%': /* parameter */
 						++p; /* eat '%' */
-						if(do_Parameter(&p, pTpl) != 0) {
-							dbgprintf("tplProcessConf error: parameter invalid");
-							ABORT_FINALIZE(RS_RET_ERR);
-						};
+						CHKiRet(do_Parameter(&p, pTpl));
 						break;
 					default: /* constant */
 						do_Constant(&p, pTpl, 0);
