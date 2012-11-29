@@ -1,5 +1,8 @@
 ---------------------------------------------------------------------------
 Version 7.3.5  [devel] 2012-11-??
+- bugfix: segfault on imuxsock startup if system log socket is used
+  and no ratelimiting supported. Happens only during initial config
+  read phase, once this is over, everything works stable.
 - bugfix: mmnormalize build problems
 - bugfix: mmnormalize could abort rsyslog if config parameter was in error
 - bugfix: no error message for invalid string template parameters

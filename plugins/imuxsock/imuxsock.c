@@ -1040,6 +1040,10 @@ activateListeners()
 	listeners[0].bUseSysTimeStamp = runModConf->bUseSysTimeStamp;
 	listeners[0].flags = runModConf->bIgnoreTimestamp ? IGNDATE : NOFLAG;
 	listeners[0].flowCtl = runModConf->bUseFlowCtl ? eFLOWCTL_LIGHT_DELAY : eFLOWCTL_NO_DELAY;
+	CHKiRet(ratelimitNew(&listeners[0].dflt_ratelimiter, "imuxsock", NULL));
+		ratelimitSetLinuxLike(listeners[0].dflt_ratelimiter,
+		listeners[0].ratelimitInterval,
+		listeners[0].ratelimitBurst);
 
 	sd_fds = sd_listen_fds(0);
 	if(sd_fds < 0) {
