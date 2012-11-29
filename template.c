@@ -2067,8 +2067,14 @@ void tplPrintList(rsconf_t *conf)
 				case tplFmtUnixDate:
 					dbgprintf("[Format as Unix timestamp] ");
 					break;
+				case tplFmtSecFrac:
+					dbgprintf("[fractional seconds, only] ");
+					break;
+				case tplFmtRFC3164BuggyDate:
+					dbgprintf("[Format as buggy RFC3164-Date] ");
+					break;
 				default:
-					dbgprintf("[INVALID eDateFormat %d] ", pTpe->data.field.eDateFormat);
+					dbgprintf("[UNKNOWN eDateFormat %d] ", pTpe->data.field.eDateFormat);
 				}
 				switch(pTpe->data.field.eCaseConv) {
 				case tplCaseConvNo:
