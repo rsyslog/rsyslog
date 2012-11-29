@@ -2,6 +2,13 @@
 Version 7.3.5  [devel] 2012-11-??
 - bugfix: mmnormalize build problems
 - bugfix: mmnormalize could abort rsyslog if config parameter was in error
+- bugfix: no error message for invalid string template parameters
+  rather a malformed template was generated, and error information emitted
+  at runtime. However, this could be quite confusing. Note that with this
+  "bugfix" user experience changes: formerly, rsyslog and the affected
+  actions properly started up, but the actions did not produce proper
+  data. Now, there are startup error messages and the actions are NOT
+  executed (due to missing template due to template error).
 ---------------------------------------------------------------------------
 Version 7.3.4  [devel] 2012-11-23
 - further (and rather drastically) improved disk queue performance

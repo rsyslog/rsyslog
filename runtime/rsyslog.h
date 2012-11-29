@@ -396,6 +396,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_RULESET_EXISTS = -2306,/**< ruleset already exists */
 	RS_RET_DEPRECATED = -2307,/**< deprecated functionality is used */
 	RS_RET_DS_PROP_SEQ_ERR = -2308,/**< property sequence error deserializing object */
+	RS_RET_TPL_INVLD_PROP = -2309,/**< property name error in template (unknown name) */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */

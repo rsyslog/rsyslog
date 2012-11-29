@@ -89,6 +89,16 @@ environments it is highly recommended NOT to use "last message repeated n times"
 processing but rather the other (more efficient) rate-limiting methods. These
 also do NOT require the parsing step to be done during input processing.
 
+<h2>Stricter string-template Processing</h2>
+<p>Previously, no error message for invalid string template parameters
+was generated.
+Rather a malformed template was generated, and error information emitted
+at runtime. However, this could be quite confusing. Note that the new code
+changes user experience: formerly, rsyslog and the affected
+actions properly started up, but the actions did not produce proper
+data. Now, there are startup error messages and the actions are NOT
+executed (due to missing template due to template error).
+
 <p><font size="2">This documentation is part of the
 <a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
 Copyright &copy; 2011-2012 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and

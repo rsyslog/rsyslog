@@ -799,7 +799,6 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 	assert(pp != NULL);
 	assert(*pp != NULL);
 	assert(pTpl != NULL);
-
 	p = (unsigned char*) *pp;
 
 	if(cstrConstruct(&pStrProp) != RS_RET_OK)
@@ -821,6 +820,8 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 	cstrFinalize(pStrProp);
 
 	if(propNameToID(pStrProp, &pTpe->data.field.propid) != RS_RET_OK) {
+		errmsg.LogError(0, RS_RET_TPL_INVLD_PROP, "template '%s': invalid parameter '%s'",
+				pTpl->pszName, cstrGetSzStrNoNULL(pStrProp));
 		cstrDestruct(&pStrProp);
 		return 1;
 	}
@@ -1211,7 +1212,6 @@ struct template *tplAddLine(rsconf_t *conf, char* pName, uchar** ppRestOfConfLin
 
 	assert(pName != NULL);
 	assert(ppRestOfConfLine != NULL);
-
 	if((pTpl = tplConstruct(conf)) == NULL)
 		return NULL;
 	
@@ -1274,7 +1274,10 @@ struct template *tplAddLine(rsconf_t *conf, char* pName, uchar** ppRestOfConfLin
 				break;
 			case '%': /* parameter */
 				++p; /* eat '%' */
-				do_Parameter(&p, pTpl);
+				if(do_Parameter(&p, pTpl) != 0) {
+					dbgprintf("tplAddLine error: parameter invalid");
+					return NULL;
+				};
 				break;
 			default: /* constant */
 				do_Constant(&p, pTpl, 1);
@@ -1871,7 +1874,10 @@ tplProcessCnf(struct cnfobj *o)
 				switch(*p) {
 					case '%': /* parameter */
 						++p; /* eat '%' */
-						do_Parameter(&p, pTpl);
+						if(do_Parameter(&p, pTpl) != 0) {
+							dbgprintf("tplProcessConf error: parameter invalid");
+							ABORT_FINALIZE(RS_RET_ERR);
+						};
 						break;
 					default: /* constant */
 						do_Constant(&p, pTpl, 0);
