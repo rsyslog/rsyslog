@@ -55,7 +55,7 @@ DEFobjCurrIf(strgen)
 /* tables for interfacing with the v6 config system */
 static struct cnfparamdescr cnfparamdescr[] = {
 	{ "name", eCmdHdlrString, 1 },
-	{ "type", eCmdHdlrString, 0 },
+	{ "type", eCmdHdlrString, 1 },
 	{ "string", eCmdHdlrString, 0 },
 	{ "plugin", eCmdHdlrString, 0 },
 	{ "subtree", eCmdHdlrString, 0 },
@@ -1330,7 +1330,7 @@ static rsRetVal
 createConstantTpe(struct template *pTpl, struct cnfobj *o)
 {
 	struct templateEntry *pTpe;
-	es_str_t *value;
+	es_str_t *value = NULL; /* init just to keep compiler happy - mandatory parameter */
 	int i;
 	struct cnfparamvals *pvals = NULL;
 	uchar *outname = NULL;
@@ -1716,13 +1716,14 @@ tplProcessCnf(struct cnfobj *o)
 {
 	struct template *pTpl = NULL;
 	struct cnfparamvals *pvals = NULL;
-	int lenName;
+	int lenName = 0; /* init just to keep compiler happy: mandatory parameter */
 	char *name = NULL;
 	uchar *tplStr = NULL;
 	uchar *plugin = NULL;
 	es_str_t *subtree = NULL;
 	uchar *p;
-	enum { T_STRING, T_PLUGIN, T_LIST, T_SUBTREE } tplType;
+	enum { T_STRING, T_PLUGIN, T_LIST, T_SUBTREE }
+		tplType = T_STRING; /* init just to keep compiler happy: mandatory parameter */
 	int i;
 	int o_sql=0, o_stdsql=0, o_json=0; /* options */
 	int numopts;

@@ -99,6 +99,7 @@ Version 7.2.4  [v7-stable] 2012-10-??
   the to-be-expected "module does not support new style" error message.
   That invalid error message could be quite misleading and actually stop
   people from addressing the real problem (aka "go nuts" ;))
+- bugfix: template "type" parameter is mandatory (but was not)
 ----------------------------------------------------------------------------
 Version 7.2.3  [v7-stable] 2012-10-21
 - regression fix: rsyslogd terminated when wild-card $IncludeConfig did not
