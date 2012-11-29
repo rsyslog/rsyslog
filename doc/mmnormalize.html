@@ -11,26 +11,30 @@
 <p><b>Author: </b>Rainer Gerhards &lt;rgerhards@adiscon.com&gt;</p>
 <p><b>Description</b>:</p>
 <p>This module provides the capability to normalize log messages via
-<a href="http://www.liblognorm.com">liblognorm</a>. Thanks to libee, unstructured text,
+<a href="http://www.liblognorm.com">liblognorm</a>. Thanks to liblognorm, unstructured text,
 like usually found in log messages, can very quickly be parsed and put into
-a normal form. This is done so quickly, that it usually should be possible
+a normal form. This is done so quickly, that it should be possible
 to normalize events in realtime.
-<p>This module is implemented via the output module interface. That means that
+<p>This module is implemented via the output module interface. This means that
 mmnormalize should be called just like an action. After it has been called,
-the normalized message properties are avaialable and can be access. These properties
-are called the "CEE" properties, because liblognorm creates a format that is 
-inspired by the CEE approach.
+the normalized message properties are avaialable and can be accessed. These properties
+are called the "CEE/lumberjack" properties, because liblognorm creates a format that is 
+inspired by the CEE/lumberjack approach.
+<p><b>Please note:</b> CEE/lumberjack properties are different from regular properties.
+They have always "$!" prepended to the property name given in the rulebase. Such a 
+property needs to be called with <b>%$!propertyname%</b>.
 <p>Note that mmnormalize should only be called once on each message. Behaviour is
 undefined if multiple calls to mmnormalize happen for the same message.
 </p>
-<p><b>Action specific Configuration Directives</b>:</p>
+<p><b>Action Parameters</b>:</p>
 <ul>
 <li><b>ruleBase</b> [word]<br>
-Specifies which rulebase file is to use. This file is loaded. If there are
+Specifies which rulebase file is to use. If there are
 multiple mmnormalize instances, each one can use a different file. However,
 a single instance can use only a single file. This parameter MUST be given,
 because normalization can only happen based on a rulebase. It is recommended
-that an absolute path name is given.
+that an absolute path name is given. Information on how to create the rulebase 
+can be found in the <a href="http://www.liblognorm.com/files/manual/index.html">liblognorm manual</a>.
 <li><b>useRawMsg</b> [boolean]<br>
 Specifies if the raw message should be used for normalization (on) or just the
 MSG part of the message (off). Default is "off".
@@ -39,8 +43,6 @@ MSG part of the message (off). Default is "off".
 <ul>
 <li>$mmnormalizeRuleBase &lt;rulebase-file&gt; - equivalent to the "ruleBase"
 parameter.
-multiple mmnormalize instances, each one can use a different file. However,
-a single instance can use only a single file. This parameter MUST be given,
 <li>$mmnormalizeUseRawMsg &lt;on/off&gt; - equivalent to the "useRawMsg" 
 parameter.
 </ul>

@@ -9,6 +9,7 @@ Version 7.3.5  [devel] 2012-11-??
   actions properly started up, but the actions did not produce proper
   data. Now, there are startup error messages and the actions are NOT
   executed (due to missing template due to template error).
+- doc bugfix: corrections and improvements in mmnormalize html doc page
 ---------------------------------------------------------------------------
 Version 7.3.4  [devel] 2012-11-23
 - further (and rather drastically) improved disk queue performance
