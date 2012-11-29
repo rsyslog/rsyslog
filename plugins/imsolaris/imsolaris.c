@@ -212,7 +212,7 @@ readLog(int fd, uchar *pRcv, int iMaxLine)
 		pMsg->iFacility = LOG_FAC(hdr.pri);
 		pMsg->iSeverity = LOG_PRI(hdr.pri);
 		pMsg->msgFlags = NEEDS_PARSING | NO_PRI_IN_RAW;
-		CHKiRet(submitMsg(pMsg, NULL));
+		CHKiRet(submitMsg(pMsg));
 	}
 
 finalize_it:
