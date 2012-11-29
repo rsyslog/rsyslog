@@ -1865,7 +1865,7 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData,
 		   && (pAction->ppTpl[i] =
 		   	tplFind(ourConf, (char*)pTplName, strlen((char*)pTplName))) == NULL) {
 			snprintf(errMsg, sizeof(errMsg) / sizeof(char),
-				 " Could not find template '%s' - action disabled\n",
+				 " Could not find template '%s' - action disabled",
 				 pTplName);
 			errno = 0;
 			errmsg.LogError(0, RS_RET_NOT_FOUND, "%s", errMsg);
