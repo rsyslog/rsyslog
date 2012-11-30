@@ -117,7 +117,7 @@ buildInstance(instanceData *pData)
 	}
 	ln_setEECtx(pData->ctxln, pData->ctxee);
 	if(ln_loadSamples(pData->ctxln, (char*) pData->rulebase) != 0) {
-		errmsg.LogError(0, RS_RET_NO_RULESET, "error: normalization rulebase '%s' "
+		errmsg.LogError(0, RS_RET_NO_RULEBASE, "error: normalization rulebase '%s' "
 				"could not be loaded cannot activate action", cs.rulebase);
 		ee_exitCtx(pData->ctxee);
 		ln_exitCtx(pData->ctxln);
@@ -301,9 +301,9 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	}
 
 	if(cs.rulebase == NULL) {
-		errmsg.LogError(0, RS_RET_NO_RULESET, "error: no normalization rulebase was specified, use "
+		errmsg.LogError(0, RS_RET_NO_RULEBASE, "error: no normalization rulebase was specified, use "
 				"$MMNormalizeSampleDB directive first!");
-		ABORT_FINALIZE(RS_RET_NO_RULESET);
+		ABORT_FINALIZE(RS_RET_NO_RULEBASE);
 	}
 
 	/* ok, if we reach this point, we have something for us */
