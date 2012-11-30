@@ -1116,7 +1116,7 @@ finalize_it:
  * the time being (remember that we want to restructure config processing at large!).
  * rgerhards, 2009-10-27
  */
-rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName)
+rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName, struct cnfparamvals *queueParams)
 {
 	struct queuefilenames_s *qfn;
 	uchar *qfname = NULL;
@@ -1125,7 +1125,7 @@ rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName)
 	DEFiRet;
 
 	/* switch the message object to threaded operation, if necessary */
-	if(ourConf->globals.mainQ.MainMsgQueType == QUEUETYPE_DIRECT || ourConf->globals.mainQ.iMainMsgQueueNumWorkers > 1) {
+	if(queueParams != NULL || ourConf->globals.mainQ.MainMsgQueType == QUEUETYPE_DIRECT || ourConf->globals.mainQ.iMainMsgQueueNumWorkers > 1) {
 		MsgEnableThreadSafety();
 	}
 
@@ -1137,60 +1137,65 @@ rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName)
 	/* name our main queue object (it's not fatal if it fails...) */
 	obj.SetName((obj_t*) (*ppQueue), pszQueueName);
 
-	/* ... set some properties ... */
-#	define setQPROP(func, directive, data) \
-	CHKiRet_Hdlr(func(*ppQueue, data)) { \
-		errmsg.LogError(0, NO_ERRCODE, "Invalid " #directive ", error %d. Ignored, running with default setting", iRet); \
-	}
-#	define setQPROPstr(func, directive, data) \
-	CHKiRet_Hdlr(func(*ppQueue, data, (data == NULL)? 0 : strlen((char*) data))) { \
-		errmsg.LogError(0, NO_ERRCODE, "Invalid " #directive ", error %d. Ignored, running with default setting", iRet); \
-	}
-
-	if(ourConf->globals.mainQ.pszMainMsgQFName != NULL) {
-		/* check if the queue file name is unique, else emit an error */
-		for(qfn = queuefilenames ; qfn != NULL ; qfn = qfn->next) {
-			dbgprintf("check queue file name '%s' vs '%s'\n", qfn->name, ourConf->globals.mainQ.pszMainMsgQFName );
-			if(!ustrcmp(qfn->name, ourConf->globals.mainQ.pszMainMsgQFName)) {
-				snprintf((char*)qfrenamebuf, sizeof(qfrenamebuf), "%d-%s-%s",
-					 ++qfn_renamenum, ourConf->globals.mainQ.pszMainMsgQFName,  
-					 (pszQueueName == NULL) ? "NONAME" : (char*)pszQueueName);
-				qfname = ustrdup(qfrenamebuf);
-				errmsg.LogError(0, NO_ERRCODE, "Error: queue file name '%s' already in use "
-					" - using '%s' instead", ourConf->globals.mainQ.pszMainMsgQFName, qfname);
-				break;
-			}
+	if(queueParams == NULL) { /* use legacy parameters? */
+		/* ... set some properties ... */
+	#	define setQPROP(func, directive, data) \
+		CHKiRet_Hdlr(func(*ppQueue, data)) { \
+			errmsg.LogError(0, NO_ERRCODE, "Invalid " #directive ", error %d. Ignored, running with default setting", iRet); \
 		}
-		if(qfname == NULL)
-			qfname = ustrdup(ourConf->globals.mainQ.pszMainMsgQFName);
-		qfn = malloc(sizeof(struct queuefilenames_s));
-		qfn->name = qfname;
-		qfn->next = queuefilenames;
-		queuefilenames = qfn;
+	#	define setQPROPstr(func, directive, data) \
+		CHKiRet_Hdlr(func(*ppQueue, data, (data == NULL)? 0 : strlen((char*) data))) { \
+			errmsg.LogError(0, NO_ERRCODE, "Invalid " #directive ", error %d. Ignored, running with default setting", iRet); \
+		}
+
+		if(ourConf->globals.mainQ.pszMainMsgQFName != NULL) {
+			/* check if the queue file name is unique, else emit an error */
+			for(qfn = queuefilenames ; qfn != NULL ; qfn = qfn->next) {
+				dbgprintf("check queue file name '%s' vs '%s'\n", qfn->name, ourConf->globals.mainQ.pszMainMsgQFName );
+				if(!ustrcmp(qfn->name, ourConf->globals.mainQ.pszMainMsgQFName)) {
+					snprintf((char*)qfrenamebuf, sizeof(qfrenamebuf), "%d-%s-%s",
+						 ++qfn_renamenum, ourConf->globals.mainQ.pszMainMsgQFName,  
+						 (pszQueueName == NULL) ? "NONAME" : (char*)pszQueueName);
+					qfname = ustrdup(qfrenamebuf);
+					errmsg.LogError(0, NO_ERRCODE, "Error: queue file name '%s' already in use "
+						" - using '%s' instead", ourConf->globals.mainQ.pszMainMsgQFName, qfname);
+					break;
+				}
+			}
+			if(qfname == NULL)
+				qfname = ustrdup(ourConf->globals.mainQ.pszMainMsgQFName);
+			qfn = malloc(sizeof(struct queuefilenames_s));
+			qfn->name = qfname;
+			qfn->next = queuefilenames;
+			queuefilenames = qfn;
+		}
+
+		setQPROP(qqueueSetMaxFileSize, "$MainMsgQueueFileSize", ourConf->globals.mainQ.iMainMsgQueMaxFileSize);
+		setQPROP(qqueueSetsizeOnDiskMax, "$MainMsgQueueMaxDiskSpace", ourConf->globals.mainQ.iMainMsgQueMaxDiskSpace);
+		setQPROP(qqueueSetiDeqBatchSize, "$MainMsgQueueDequeueBatchSize", ourConf->globals.mainQ.iMainMsgQueDeqBatchSize);
+		setQPROPstr(qqueueSetFilePrefix, "$MainMsgQueueFileName", qfname);
+		setQPROP(qqueueSetiPersistUpdCnt, "$MainMsgQueueCheckpointInterval", ourConf->globals.mainQ.iMainMsgQPersistUpdCnt);
+		setQPROP(qqueueSetbSyncQueueFiles, "$MainMsgQueueSyncQueueFiles", ourConf->globals.mainQ.bMainMsgQSyncQeueFiles);
+		setQPROP(qqueueSettoQShutdown, "$MainMsgQueueTimeoutShutdown", ourConf->globals.mainQ.iMainMsgQtoQShutdown );
+		setQPROP(qqueueSettoActShutdown, "$MainMsgQueueTimeoutActionCompletion", ourConf->globals.mainQ.iMainMsgQtoActShutdown);
+		setQPROP(qqueueSettoWrkShutdown, "$MainMsgQueueWorkerTimeoutThreadShutdown", ourConf->globals.mainQ.iMainMsgQtoWrkShutdown);
+		setQPROP(qqueueSettoEnq, "$MainMsgQueueTimeoutEnqueue", ourConf->globals.mainQ.iMainMsgQtoEnq);
+		setQPROP(qqueueSetiHighWtrMrk, "$MainMsgQueueHighWaterMark", ourConf->globals.mainQ.iMainMsgQHighWtrMark);
+		setQPROP(qqueueSetiLowWtrMrk, "$MainMsgQueueLowWaterMark", ourConf->globals.mainQ.iMainMsgQLowWtrMark);
+		setQPROP(qqueueSetiDiscardMrk, "$MainMsgQueueDiscardMark", ourConf->globals.mainQ.iMainMsgQDiscardMark);
+		setQPROP(qqueueSetiDiscardSeverity, "$MainMsgQueueDiscardSeverity", ourConf->globals.mainQ.iMainMsgQDiscardSeverity);
+		setQPROP(qqueueSetiMinMsgsPerWrkr, "$MainMsgQueueWorkerThreadMinimumMessages", ourConf->globals.mainQ.iMainMsgQWrkMinMsgs);
+		setQPROP(qqueueSetbSaveOnShutdown, "$MainMsgQueueSaveOnShutdown", ourConf->globals.mainQ.bMainMsgQSaveOnShutdown);
+		setQPROP(qqueueSetiDeqSlowdown, "$MainMsgQueueDequeueSlowdown", ourConf->globals.mainQ.iMainMsgQDeqSlowdown);
+		setQPROP(qqueueSetiDeqtWinFromHr,  "$MainMsgQueueDequeueTimeBegin", ourConf->globals.mainQ.iMainMsgQueueDeqtWinFromHr);
+		setQPROP(qqueueSetiDeqtWinToHr,    "$MainMsgQueueDequeueTimeEnd", ourConf->globals.mainQ.iMainMsgQueueDeqtWinToHr);
+
+	#	undef setQPROP
+	#	undef setQPROPstr
+	} else { /* use new style config! */
+		qqueueSetDefaultsRulesetQueue(*ppQueue);
+		qqueueApplyCnfParam(*ppQueue, queueParams);
 	}
-
- 	setQPROP(qqueueSetMaxFileSize, "$MainMsgQueueFileSize", ourConf->globals.mainQ.iMainMsgQueMaxFileSize);
- 	setQPROP(qqueueSetsizeOnDiskMax, "$MainMsgQueueMaxDiskSpace", ourConf->globals.mainQ.iMainMsgQueMaxDiskSpace);
- 	setQPROP(qqueueSetiDeqBatchSize, "$MainMsgQueueDequeueBatchSize", ourConf->globals.mainQ.iMainMsgQueDeqBatchSize);
- 	setQPROPstr(qqueueSetFilePrefix, "$MainMsgQueueFileName", qfname);
- 	setQPROP(qqueueSetiPersistUpdCnt, "$MainMsgQueueCheckpointInterval", ourConf->globals.mainQ.iMainMsgQPersistUpdCnt);
- 	setQPROP(qqueueSetbSyncQueueFiles, "$MainMsgQueueSyncQueueFiles", ourConf->globals.mainQ.bMainMsgQSyncQeueFiles);
- 	setQPROP(qqueueSettoQShutdown, "$MainMsgQueueTimeoutShutdown", ourConf->globals.mainQ.iMainMsgQtoQShutdown );
- 	setQPROP(qqueueSettoActShutdown, "$MainMsgQueueTimeoutActionCompletion", ourConf->globals.mainQ.iMainMsgQtoActShutdown);
- 	setQPROP(qqueueSettoWrkShutdown, "$MainMsgQueueWorkerTimeoutThreadShutdown", ourConf->globals.mainQ.iMainMsgQtoWrkShutdown);
- 	setQPROP(qqueueSettoEnq, "$MainMsgQueueTimeoutEnqueue", ourConf->globals.mainQ.iMainMsgQtoEnq);
- 	setQPROP(qqueueSetiHighWtrMrk, "$MainMsgQueueHighWaterMark", ourConf->globals.mainQ.iMainMsgQHighWtrMark);
- 	setQPROP(qqueueSetiLowWtrMrk, "$MainMsgQueueLowWaterMark", ourConf->globals.mainQ.iMainMsgQLowWtrMark);
- 	setQPROP(qqueueSetiDiscardMrk, "$MainMsgQueueDiscardMark", ourConf->globals.mainQ.iMainMsgQDiscardMark);
- 	setQPROP(qqueueSetiDiscardSeverity, "$MainMsgQueueDiscardSeverity", ourConf->globals.mainQ.iMainMsgQDiscardSeverity);
- 	setQPROP(qqueueSetiMinMsgsPerWrkr, "$MainMsgQueueWorkerThreadMinimumMessages", ourConf->globals.mainQ.iMainMsgQWrkMinMsgs);
- 	setQPROP(qqueueSetbSaveOnShutdown, "$MainMsgQueueSaveOnShutdown", ourConf->globals.mainQ.bMainMsgQSaveOnShutdown);
- 	setQPROP(qqueueSetiDeqSlowdown, "$MainMsgQueueDequeueSlowdown", ourConf->globals.mainQ.iMainMsgQDeqSlowdown);
- 	setQPROP(qqueueSetiDeqtWinFromHr,  "$MainMsgQueueDequeueTimeBegin", ourConf->globals.mainQ.iMainMsgQueueDeqtWinFromHr);
- 	setQPROP(qqueueSetiDeqtWinToHr,    "$MainMsgQueueDequeueTimeEnd", ourConf->globals.mainQ.iMainMsgQueueDeqtWinToHr);
-
-#	undef setQPROP
-#	undef setQPROPstr
 
 	/* ... and finally start the queue! */
 	CHKiRet_Hdlr(qqueueStart(*ppQueue)) {

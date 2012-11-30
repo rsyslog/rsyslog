@@ -2,6 +2,14 @@
 Version 7.2.4  [v7-stable] 2012-10-??
 - imklog: added ParseKernelTimestamp parameter (import from 5.10.2)
   Thanks to Marius Tomaschewski for the patch.
+- fix missing functionality: ruleset(){} could not specify ruleset queue
+  The "queue.xxx" parameter set was not supported, and legacy ruleset
+  config statements did not work (by intention). The fix introduces the
+  "queue.xxx" parameter set. It has some regression potential, but only
+  for the new functionality. Note that using that interface it is possible
+  to specify duplicate queue file names, which will cause trouble. This
+  will be solved in v7.3, because there is a too-large regression
+  potential for the v7.2 stable branch.
 - imklog: added KeepKernelTimestamp parameter (import from 5.10.2)
   Thanks to Marius Tomaschewski for the patch.
 - bugfix: imklog mistakenly took kernel timestamp subseconds as nanoseconds

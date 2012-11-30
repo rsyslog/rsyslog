@@ -193,7 +193,9 @@ rsRetVal qqueueConstruct(qqueue_t **ppThis, queueType_t qType, int iWorkerThread
 		        int iMaxQueueSize, rsRetVal (*pConsumer)(void*,batch_t*, int*));
 rsRetVal qqueueEnqObjDirectBatch(qqueue_t *pThis, batch_t *pBatch);
 rsRetVal qqueueDoCnfParams(struct nvlst *lst, struct cnfparamvals **ppvals);
+int queueCnfParamsSet(struct cnfparamvals *pvals);
 rsRetVal qqueueApplyCnfParam(qqueue_t *pThis, struct cnfparamvals *pvals);
+void qqueueSetDefaultsRulesetQueue(qqueue_t *pThis);
 void qqueueSetDefaultsActionQueue(qqueue_t *pThis);
 void qqueueDbgPrint(qqueue_t *pThis);
 
