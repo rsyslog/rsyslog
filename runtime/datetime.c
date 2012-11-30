@@ -900,6 +900,11 @@ time_t syslogTime2time_t(struct syslogTime *ts)
 		case 12:
 			MonthInDays = 334;       //until 01 of December
 			break;
+		default: /* this cannot happen (and would be a program error)
+		          * but we need the code to keep the compiler silent.
+			  */
+			MonthInDays = 0;	/* any value fits ;) */
+			break;
 	}	
 
 

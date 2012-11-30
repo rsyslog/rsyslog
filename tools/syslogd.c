@@ -779,8 +779,11 @@ static void debug_switch()
  * a minimal delay, but it is much cleaner than the approach of doing everything
  * inside the signal handler.
  * rgerhards, 2005-10-26
- * Note: we do not call DBGPRINTF() as this may cause us to block in case something
- * with the threading is wrong.
+ * Note:
+ * - we do not call DBGPRINTF() as this may cause us to block in case something
+ *   with the threading is wrong.
+ * - we do not really care about the return state of write(), but we need this
+ *   strange check we do to silence compiler warnings (thanks, Ubuntu!)
  */
 static void doDie(int sig)
 {
@@ -788,11 +791,13 @@ static void doDie(int sig)
 #	define MSG2 "DoDie called 5 times - unconditional exit\n"
 	static int iRetries = 0; /* debug aid */
 	dbgprintf(MSG1);
-	if(Debug == DEBUG_FULL)
-		write(1, MSG1, sizeof(MSG1) - 1);
+	if(Debug == DEBUG_FULL) {
+		if(write(1, MSG1, sizeof(MSG1) - 1)) {}
+	}
 	if(iRetries++ == 4) {
-		if(Debug == DEBUG_FULL)
-			write(1, MSG2, sizeof(MSG2) - 1);
+		if(Debug == DEBUG_FULL) {
+			if(write(1, MSG2, sizeof(MSG2) - 1)) {}
+		}
 		abort();
 	}
 	bFinished = sig;

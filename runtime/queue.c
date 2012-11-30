@@ -242,6 +242,9 @@ getQueueTypeName(queueType_t t)
 	case QUEUETYPE_DIRECT: 
 		r = "Direct";
 		break;
+	default: 
+		r = "unknown queue type";
+		break;
 	}
 	return r;
 }
