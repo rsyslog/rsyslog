@@ -1,5 +1,7 @@
 ----------------------------------------------------------------------------
 Version 7.2.4  [v7-stable] 2012-10-??
+- enhance: permit RFC3339 timestamp in local log socket messages
+  Thanks to Sebastien Ponce for the patch.
 - imklog: added ParseKernelTimestamp parameter (import from 5.10.2)
   Thanks to Marius Tomaschewski for the patch.
 - fix missing functionality: ruleset(){} could not specify ruleset queue

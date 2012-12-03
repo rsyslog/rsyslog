@@ -937,15 +937,19 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 			/* in this case, we still need to find out if we have a valid
 			 * datestamp or not .. and advance the parse pointer accordingly.
 			 */
-			datetime.ParseTIMESTAMP3164(&dummyTS, &parse, &lenMsg);
+			if (datetime.ParseTIMESTAMP3339(&dummyTS, &parse, &lenMsg) != RS_RET_OK) {
+  				datetime.ParseTIMESTAMP3164(&dummyTS, &parse, &lenMsg);
+			}
 		} else {
-			if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &parse, &lenMsg) != RS_RET_OK) {
+			if(datetime.ParseTIMESTAMP3339(&(pMsg->tTIMESTAMP), &parse, &lenMsg) != RS_RET_OK &&
+			   datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &parse, &lenMsg) != RS_RET_OK) {
 				DBGPRINTF("we have a problem, invalid timestamp in msg!\n");
 			}
 		}
 	} else { /* if we pulled the time from the system, we need to update the message text */
 		uchar *tmpParse = parse; /* just to check correctness of TS */
-		if(datetime.ParseTIMESTAMP3164(&dummyTS, &tmpParse, &lenMsg) == RS_RET_OK) {
+		if(datetime.ParseTIMESTAMP3339(&dummyTS, &tmpParse, &lenMsg) == RS_RET_OK ||
+		   datetime.ParseTIMESTAMP3164(&dummyTS, &tmpParse, &lenMsg) == RS_RET_OK) {
 			/* We modify the message only if it contained a valid timestamp,
 			 * otherwise we do not touch it at all. */
 			datetime.formatTimestamp3164(&st, (char*)parse, 0);
