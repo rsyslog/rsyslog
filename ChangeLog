@@ -34,6 +34,21 @@ Version 6.6.1  [v6-stable] 2012-10-??
 - bugfix: hostname set in rsyslog.conf was not picked up until HUP
   which could also mean "never" or "not for a very long time".
   Thanks to oxpa for providing analysis and a patch
+- bugfix: some message properties could be garbled due to race condition
+  This happened only on very high volume systems, if the same message was
+  being processed by two different actions. This was a regression caused
+  by the new config processor, which did no longer properly enable msg
+  locking in multithreaded cases. The bugfix is actually a refactoring of
+  the msg locking code - we no longer do unlocked operations, as the use
+  case for it has mostly gone away. It is potentially possible only at
+  very low-end systems, and there the small additional overhead of doing
+  the locking does not really hurt. Instead, the removal of that 
+  capability can actually slightly improve performance in common cases,
+  as the code path is smaller and requires slightly less memory writes.
+  That probably outperforms the extra locking overhead (which in the 
+  low-end case always happens in user space, without need for kernel
+  support as we can always directly aquire the lock - there is no
+  contention at all).
 ---------------------------------------------------------------------------
 Version 6.6.0  [v6-stable] 2012-10-22
 This starts a new stable branch, based on the 6.5.x series, plus:

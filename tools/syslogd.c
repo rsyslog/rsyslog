@@ -638,7 +638,6 @@ submitMsg(msg_t *pMsg)
 		FINALIZE;
 	}
 
-	MsgPrepareEnqueue(pMsg);
 	qqueueEnqObj(pQueue, pMsg->flowCtlType, (void*) pMsg);
 
 finalize_it:
@@ -670,10 +669,6 @@ multiSubmitMsg(multi_submit_t *pMultiSub)
 		DBGPRINTF("multiSubmitMsg() could not submit message - "
 			  "queue does (no longer?) exist - ignored\n");
 		FINALIZE;
-	}
-
-	for(i = 0 ; i < pMultiSub->nElem ; ++i) {
-		MsgPrepareEnqueue(pMultiSub->ppMsgs[i]);
 	}
 
 	iRet = pQueue->MultiEnq(pQueue, pMultiSub);
@@ -1118,11 +1113,6 @@ rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName)
 	static int qfn_renamenum = 0;
 	uchar qfrenamebuf[1024];
 	DEFiRet;
-
-	/* switch the message object to threaded operation, if necessary */
-	if(ourConf->globals.mainQ.MainMsgQueType == QUEUETYPE_DIRECT || ourConf->globals.mainQ.iMainMsgQueueNumWorkers > 1) {
-		MsgEnableThreadSafety();
-	}
 
 	/* create message queue */
 	CHKiRet_Hdlr(qqueueConstruct(ppQueue, ourConf->globals.mainQ.MainMsgQueType, ourConf->globals.mainQ.iMainMsgQueueNumWorkers, ourConf->globals.mainQ.iMainMsgQueueSize, msgConsumer)) {

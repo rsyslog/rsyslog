@@ -63,7 +63,6 @@ struct msg {
 				        once data has entered the queue, this property is no longer needed. */
 	pthread_mutex_t mut;
 	int	iRefCount;	/* reference counter (0 = unused) */
-	sbool	bDoLock;	/* use the mutex? */
 	sbool	bAlreadyFreed;	/* aid to help detect a well-hidden bad bug -- TODO: remove when no longer needed */
 	sbool	bParseSuccess;	/* set to reflect state of last executed higher level parser */
 	short	iSeverity;	/* the severity 0..7 */
@@ -176,7 +175,6 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 char *textpri(char *pRes, size_t pResLen, int pri);
 rsRetVal msgGetMsgVar(msg_t *pThis, cstr_t *pstrPropName, var_t **ppVar);
 es_str_t* msgGetMsgVarNew(msg_t *pThis, uchar *name);
-rsRetVal MsgEnableThreadSafety(void);
 uchar *getRcvFrom(msg_t *pM);
 void getTAG(msg_t *pM, uchar **ppBuf, int *piLen);
 char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt);
@@ -199,16 +197,6 @@ int getProgramNameLen(msg_t *pM, sbool bLockMutex);
 uchar *getRcvFrom(msg_t *pM);
 rsRetVal propNameToID(cstr_t *pCSPropName, propid_t *pPropID);
 uchar *propIDToName(propid_t propID);
-
-
-/* The MsgPrepareEnqueue() function is a macro for performance reasons.
- * It needs one global variable to work. This is acceptable, as it gains
- * us quite some performance and is fully abstracted using this header file.
- * The important thing is that no other module is permitted to actually
- * access that global variable! -- rgerhards, 2008-01-05
- */
-extern void (*funcMsgPrepareEnqueue)(msg_t *pMsg);
-#define MsgPrepareEnqueue(pMsg) funcMsgPrepareEnqueue(pMsg)
 
 
 /* ------------------------------ some inline functions ------------------------------ */
