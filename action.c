@@ -429,14 +429,6 @@ actionConstructFinalize(action_t *pThis, struct cnfparamvals *queueParams)
 		pThis->submitToActQ = doSubmitToActionQBatch;
 	}
 
-	/* we need to make a safety check: if the queue is NOT in direct mode, a single 
-	 * message object may be accessed by multiple threads. As such, we need to enable
-	 * msg object thread safety in this case (this costs a bit performance and thus
-	 * is not enabled by default. -- rgerhards, 2008-02-20
-	 */
-	if(cs.ActionQueType != QUEUETYPE_DIRECT)
-		MsgEnableThreadSafety();
-
 	/* create queue */
 	/* action queues always (for now) have just one worker. This may change when
 	 * we begin to implement an interface the enable output modules to request
