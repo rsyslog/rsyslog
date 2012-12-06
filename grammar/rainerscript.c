@@ -802,6 +802,30 @@ nvlstGetParams(struct nvlst *lst, struct cnfparamblk *params,
 }
 
 
+/* check if at least one cnfparamval is actually set 
+ * returns 1 if so, 0 otherwise
+ */
+int
+cnfparamvalsIsSet(struct cnfparamblk *params, struct cnfparamvals *vals)
+{
+	int i;
+
+	if(vals == NULL)
+		return 0;
+	if(params->version != CNFPARAMBLK_VERSION) {
+		dbgprintf("nvlstGetParams: invalid param block version "
+			  "%d, expected %d\n",
+			  params->version, CNFPARAMBLK_VERSION);
+		return 0;
+	}
+	for(i = 0 ; i < params->nParams ; ++i) {
+		if(vals[i].bUsed)
+			return 1;
+	}
+	return 0;
+}
+
+
 void
 cnfparamsPrint(struct cnfparamblk *params, struct cnfparamvals *vals)
 {

@@ -921,7 +921,9 @@ objDeserializeWithMethods(void *ppObj, uchar *pszTypeExpected, int lenTypeExpect
 		CHKiRet(fFixup(pObj, pUsr));
 
 	/* we have a valid object, let's finalize our work and return */
-	CHKiRet(objConstructFinalize(pObj));
+	if(objConstructFinalize != NULL) {
+		CHKiRet(objConstructFinalize(pObj));
+	}
 
 	*((obj_t**) ppObj) = pObj;
 

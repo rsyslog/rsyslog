@@ -292,6 +292,9 @@ getNOW(eNOWType eNow, es_str_t **estr)
 	case NOW_MINUTE:
 		len = snprintf((char*) szBuf, sizeof(szBuf)/sizeof(uchar), "%2.2d", t.minute);
 		break;
+	default:
+		len = snprintf((char*) szBuf, sizeof(szBuf)/sizeof(uchar), "*invld eNow*");
+		break;
 	}
 
 	/* now create a string object out of it and hand that over to the var */
@@ -477,6 +480,9 @@ cnfGetVar(char *name, void *usrptr)
 			estr = msgGetCEEVarNew((msg_t*) usrptr, name+2);
 		else
 			estr = msgGetMsgVarNew((msg_t*) usrptr, (uchar*)name+1);
+	} else { /* if this happens, we have a program logic error */
+		estr = es_newStrFromCStr("err: var must start with $",
+				  strlen("err: var must start with $"));
 	}
 	if(Debug) {
 		char *s;
@@ -753,7 +759,7 @@ activateMainQueue()
 {
 	DEFiRet;
 	/* create message queue */
-	CHKiRet_Hdlr(createMainQueue(&pMsgQueue, UCHAR_CONSTANT("main Q"))) {
+	CHKiRet_Hdlr(createMainQueue(&pMsgQueue, UCHAR_CONSTANT("main Q"), NULL)) {
 		/* no queue is fatal, we need to give up in that case... */
 		fprintf(stderr, "fatal error %d: could not create message queue - rsyslogd can not run!\n", iRet);
 		FINALIZE;

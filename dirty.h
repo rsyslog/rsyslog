@@ -35,7 +35,7 @@ rsRetVal multiSubmitFlush(multi_submit_t *pMultiSub);
 rsRetVal logmsgInternal(int iErr, int pri, uchar *msg, int flags);
 rsRetVal __attribute__((deprecated)) parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int flags, flowControl_t flowCtlTypeu, prop_t *pInputName, struct syslogTime *stTime, time_t ttGenTime, ruleset_t *pRuleset);
 rsRetVal diagGetMainMsgQSize(int *piSize); /* for imdiag */
-rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName);
+rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName, struct cnfparamvals *queueParams);
 
 extern int MarkInterval;
 extern qqueue_t *pMsgQueue;				/* the main message queue */

@@ -844,7 +844,7 @@ doRulesetCreateQueue(rsconf_t *conf, int *pNewVal)
 
 	rsname = (conf->rulesets.pCurr->pszName == NULL) ? (uchar*) "[ruleset]" : conf->rulesets.pCurr->pszName;
 	DBGPRINTF("adding a ruleset-specific \"main\" queue for ruleset '%s'\n", rsname);
-	CHKiRet(createMainQueue(&conf->rulesets.pCurr->pQueue, rsname));
+	CHKiRet(createMainQueue(&conf->rulesets.pCurr->pQueue, rsname, NULL));
 
 finalize_it:
 	RETiRet;
@@ -904,6 +904,7 @@ rsRetVal
 rulesetProcessCnf(struct cnfobj *o)
 {
 	struct cnfparamvals *pvals;
+	struct cnfparamvals *queueParams;
 	rsRetVal localRet;
 	uchar *rsName = NULL;
 	uchar *parserName;
@@ -911,6 +912,7 @@ rulesetProcessCnf(struct cnfobj *o)
 	ruleset_t *pRuleset;
 	struct cnfarray *ar;
 	int i;
+	uchar *rsname;
 	DEFiRet;
 
 	pvals = nvlstGetParams(o->nvlst, &rspblk, NULL);
@@ -938,14 +940,21 @@ rulesetProcessCnf(struct cnfobj *o)
 
 	/* we have only two params, so we do NOT do the usual param loop */
 	parserIdx = cnfparamGetIdx(&rspblk, "parser");
-	if(parserIdx == -1  || !pvals[parserIdx].bUsed)
-		FINALIZE;
+	if(parserIdx != -1  && pvals[parserIdx].bUsed) {
+		ar = pvals[parserIdx].val.d.ar;
+		for(i = 0 ; i <  ar->nmemb ; ++i) {
+			parserName = (uchar*)es_str2cstr(ar->arr[i], NULL);
+			doRulesetAddParser(pRuleset, parserName);
+			free(parserName);
+		}
+	}
 
-	ar = pvals[parserIdx].val.d.ar;
-	for(i = 0 ; i <  ar->nmemb ; ++i) {
-		parserName = (uchar*)es_str2cstr(ar->arr[i], NULL);
-		doRulesetAddParser(pRuleset, parserName);
-		free(parserName);
+	/* pick up ruleset queue parameters */
+	qqueueDoCnfParams(o->nvlst, &queueParams);
+	if(queueCnfParamsSet(queueParams)) {
+		rsname = (pRuleset->pszName == NULL) ? (uchar*) "[ruleset]" : pRuleset->pszName;
+		DBGPRINTF("adding a ruleset-specific \"main\" queue for ruleset '%s'\n", rsname);
+		CHKiRet(createMainQueue(&pRuleset->pQueue, rsname, queueParams));
 	}
 
 finalize_it:
