@@ -711,13 +711,13 @@ AC_SUBST(SNMP_LIBS)
 AC_ARG_ENABLE(uuid,
         [AS_HELP_STRING([--enable-uuid],[Enable support for uuid generation @<:@default=yes@:>@])],
         [case "${enableval}" in
-         yes) enable_elasticsearch="yes" ;;
-          no) enable_elasticsearch="no" ;;
+         yes) enable_uuid="yes" ;;
+          no) enable_uuid="no" ;;
            *) AC_MSG_ERROR(bad value ${enableval} for --enable-uuid) ;;
          esac],
         [enable_uuid=yes]
 )
-if test "x$enable_elasticsearch" = "xyes"; then
+if test "x$enable_uuid" = "xyes"; then
 	PKG_CHECK_MODULES([LIBUUID], [uuid])
 	AC_DEFINE(USE_LIBUUID, 1, [Define if you want to enable libuuid support])
 fi
