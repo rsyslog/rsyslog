@@ -243,22 +243,7 @@ AM_CONDITIONAL(ENABLE_GSSAPI, test x$enable_gssapi_krb5 = xyes)
 
 
 # multithreading via pthreads
-AC_ARG_ENABLE(pthreads,
-        [AS_HELP_STRING([--enable-pthreads],[Enable multithreading via pthreads @<:@default=yes@:>@])],
-        [case "${enableval}" in
-         yes) enable_pthreads="yes" ;;
-          no) enable_pthreads="no" ;;
-           *) AC_MSG_ERROR(bad value ${enableval} for --enable-pthreads) ;;
-         esac],
-        [enable_pthreads=yes]
-)
-
-if test "x$enable_pthreads" = "xno"; then
-	AC_MSG_ERROR(rsyslog v3+ does no longer support single threading mode -- use a previous version for that);
-fi
-
-if test "x$enable_pthreads" != "xno"; then
-  AC_CHECK_HEADERS(
+AC_CHECK_HEADERS(
     [pthread.h],
     [
       AC_CHECK_LIB(
@@ -279,8 +264,7 @@ if test "x$enable_pthreads" != "xno"; then
       )
     ],
     [AC_MSG_FAILURE([pthread is missing])]
-  )
-fi
+)
 
 AC_CHECK_FUNCS(
     [pthread_setschedparam],
