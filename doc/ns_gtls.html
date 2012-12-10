@@ -10,7 +10,7 @@ library</a>.</p>
 <p><b>Available since:</b> 3.19.0 (suggested minimum 3.19.8 and above)</p>
 <p style="font-weight: bold;">Supported Driver Modes</p>
 <ul>
-<li>0 - unencrypted trasmission (just like <a href="ns_ptcp.html">ptcp</a> driver)</li>
+<li>0 - unencrypted transmission (just like <a href="ns_ptcp.html">ptcp</a> driver)</li>
 <li>1 - TLS-protected operation</li>
 </ul>
 Note: mode 0 does not provide any benefit over the ptcp driver. This
@@ -38,7 +38,7 @@ unauthorized access. It is recommended NOT to use this mode.</p>
 <p>x509/certvalid is a nonstandard mode. It validates the remote
 peers certificate, but does not check the subject name. This is 
 weak authentication that may be useful in scenarios where multiple
-devices are deployed and it is sufficient proof of authenticy when
+devices are deployed and it is sufficient proof of authenticity when
 their certificates are signed by the CA the server trusts. This is
 better than anon authentication, but still not recommended.
 <b>Known Problems</b><br>

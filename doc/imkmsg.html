@@ -16,7 +16,7 @@ Milan Bartos
 <p>Reads messages from the /dev/kmsg structured kernel log and submits them to the
 syslog engine.</p>
 <p>
-The printk log buffer constains log records. These records are exported by /dev/kmsg
+The printk log buffer contains log records. These records are exported by /dev/kmsg
 device as structured data in the following format:<br />
   "level,sequnum,timestamp;&lt;message text&gt;\n"<br />
 There could be continuation lines starting with space that contains key/value pairs.<br />

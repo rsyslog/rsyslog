@@ -5,7 +5,7 @@
 <h1>Multiple Rulesets in rsyslog</h1>
 <p>Starting with version 4.5.0 and 5.1.1, <a href="http://www.rsyslog.com">rsyslog</a> supports
 multiple rulesets within a single configuration.
-This is especially useful for routing the recpetion of remote messages to a set of specific rules.
+This is especially useful for routing the reception of remote messages to a set of specific rules.
 Note that the input module must support binding to non-standard rulesets, so the functionality
 may not be available with all inputs.
 <p>In this document, I am using <a href="imtcp.html">imtcp</a>, an input module
@@ -39,7 +39,7 @@ is the name space reserved for rsyslog use). If it finds this directive, it begi
 rule set (if the name was not yet know) or switches to an already-existing one (if the name
 was known). All rules defined between this $RuleSet directive and the next one are appended
 to the named ruleset. Note that the reserved name "RSYSLOG_DefaultRuleset" is used to
-specify rsyslogd's default ruleset. You can use that name whereever you can use a ruleset name,
+specify rsyslogd's default ruleset. You can use that name wherever you can use a ruleset name,
 including when binding an input to it.
 
 <p>Inside a ruleset, messages are processed as described above: they start with the first rule
@@ -48,7 +48,7 @@ there are no more rules or the discard action is executed. Note that with multip
 no longer <b>all</b> rsyslog.conf rules are executed but <b>only</b> those that are 
 contained within the specific ruleset.
 
-<p>Inputs must explicitely bind to rulesets. If they don't do, the default ruleset is bound.
+<p>Inputs must explicitly bind to rulesets. If they don't do, the default ruleset is bound.
 
 <p>This brings up the next question:
 
@@ -58,10 +58,10 @@ it means that a specific input, or part of an input (like a tcp listener) will u
 ruleset to &quot;pass its messages to&quot;. So when a new message arrives, it will be processed
 via the bound ruleset. Rule from all other rulesets are irrelevant and will never be processed.
 <p>This makes multiple rulesets very handy to process local and remote message via
-seperate means: bind the respective receivers to different rule sets, and you do not need
-to seperate the messages by any other method.
+separate means: bind the respective receivers to different rule sets, and you do not need
+to separate the messages by any other method.
 
-<p>Binding to rulesets is input-specifc. For imtcp, this is done via the 
+<p>Binding to rulesets is input-specific. For imtcp, this is done via the
 
 <pre>input(type="imptcp" port="514" ruleset="rulesetname");
 </pre>
@@ -72,7 +72,7 @@ I personally think that it is best to define all rule sets at the top of rsyslog
 define the inputs at the bottom. This kind of reverses the traditional recommended ordering, but
 seems to be a really useful and straightforward way of doing things.
 <h2>Why are rulesets important for different parser configurations?</h2>
-<p>Custom message parsers, used to handle differnet (and potentially otherwise-invalid)
+<p>Custom message parsers, used to handle different (and potentially otherwise-invalid)
 message formats, can be bound to rulesets. So multiple rulesets can be a very useful
 way to handle devices sending messages in different malformed formats in a consistent
 way. Unfortunately, this is not uncommon in the syslog world. An in-depth explanation
@@ -222,7 +222,7 @@ needs to insert messages into the main message queue. So if each of them wants t
 submit a newly arrived message into the queue at the same time, only one can do so
 while the others need to wait. With multiple rulesets, its own queue can be created for each
 ruleset. If now each listener is bound to its own ruleset, concurrent message submission is
-possible. On a machine with a sufficiently large number of corse, this can result in
+possible. On a machine with a sufficiently large number of cores, this can result in
 dramatic performance improvement.
 <p>It is highly advised that high-performance systems define a dedicated ruleset, with a
 dedicated queue for each of the inputs.

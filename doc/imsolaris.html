@@ -18,7 +18,7 @@ is no special kernel input device. Instead, both kernel messages as well as
 messages emitted via syslog() are received from a single source.
 <p>This module obeys the Solaris door() mechanism to detect a running syslogd
 instance. As such, only one can be active at one time. If it detects another
-active intance at startup, the module disables itself, but rsyslog will
+active instance at startup, the module disables itself, but rsyslog will
 continue to run.
 <p><b>Configuration Directives</b>:</p>
 <ul>

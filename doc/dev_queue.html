@@ -80,7 +80,7 @@ and terminating while waiting on the primary queue to fill. In practice, this is
 highly unlikely (but only for the main message queue) because rsyslog issues a 
 startup message. HOWEVER, we can not rely on that, it would introduce a race. If 
 the primary rsyslog thread (the one that issues the message) is scheduled very 
-late and there is a low inactivty timeout for queue workers, the queue worker 
+late and there is a low inactivity timeout for queue workers, the queue worker
 may terminate before the startup message is issued. And if the on-disk queue 
 holds only a few messages, it may become empty before the DA worker is 
 re-initiated again. So it is possible that the DA run mode termination criteria 
@@ -105,7 +105,7 @@ clean shutdown of the DA queue).</p>
 <p>One might think that it would be more natural for the DA queue to detect 
 being idle and shut down itself. However, there are some issues associated with 
 that. Most importantly, all queue worker threads need to be shut down during 
-queue destruction. Only after that has happend, final destruction steps can 
+queue destruction. Only after that has happened, final destruction steps can
 happen (else we would have a myriad of races). However, it is the DA queues 
 worker thread that detects it is empty (empty queue detection always happens at 
 the consumer side and must so). That would lead to the DA queue worker thread to 
@@ -115,7 +115,7 @@ destructed). Obviously, this does not work out (and I didn't even mention the
 other issues - so let's forget about it). As such, the thread that enqueues 
 messages must destruct the queue - and that is the primary queue's DA worker 
 thread.</p>
-<p>There are some subleties due to thread synchronization and the fact that the 
+<p>There are some subtleties due to thread synchronization and the fact that the
 DA consumer may not be running (in a <b>case-2 startup</b>). So it is not 
 trivial to reliably change the queue back from DA run mode to regular run mode. 
 The priority is a clean switch. We accept the fact that there may be situations 
@@ -132,7 +132,7 @@ most probably even lead to worse performance under regular conditions).</p>
 </ol>
 <p>Case 2 is unlikely, but may happen (see info above on a case 2 startup).</p>
 <p><b>The DA worker may also not wait at all,</b> because it is actively 
-executing and shuffeling messages between the queues. In that case, however, the 
+executing and shuffling messages between the queues. In that case, however, the
 program flow passes both of the two wait conditions but simply does not wait.</p>
 <p><b>Finally, the DA worker may be inactive </b>(again, with a case-2 startup). 
 In that case no work(er) at all is executed. Most importantly, without the DA 

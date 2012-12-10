@@ -15,7 +15,7 @@ and pointers than to have nothing.
 <p>The best to get started with rsyslog plugin development is by looking at
 existing plugins. All that start with "om" are <b>o</b>utput <b>m</b>odules. That
 means they are primarily thought of being message sinks. In theory, however, output
-plugins may aggergate other functionality, too. Nobody has taken this route so far
+plugins may aggregate other functionality, too. Nobody has taken this route so far
 so if you would like to do that, it is highly suggested to post your plan on the
 rsyslog mailing list, first (so that we can offer advise).
 <p>The rsyslog distribution tarball contains two plugins that are extremely well
@@ -29,7 +29,7 @@ plugins. It is bare of real functionality but has ample comments. Even if you de
 to start from another plugin (or even from scratch), be sure to read omtemplate source
 and comments first. The omstdout is primarily a testing aide, but offers support for
 the two different parameter-passing conventions plugins can use (plus the way to 
-differentiate between the two). It also is not bare of functionaly, only mostly
+differentiate between the two). It also is not bare of functionality, only mostly
 bare of it ;). But you can actually execute it and play with it.
 <p>In any case, you should also read the comments in ./runtime/module-template.h. 
 Output plugins are build based on a large set of code-generating macros. These 
@@ -65,7 +65,7 @@ that shares a single instanceData structure.
 <p>So as long as you do not mess around with global data, you do not need
 to think about multithreading (and can apply a purely sequential programming
 methodology).
-<p>Please note that duringt the configuraton parsing stage of execution, access to
+<p>Please note that during the configuration parsing stage of execution, access to
 global variables for the configuration system is safe. In that stage, the core will
 only call sequentially into the plugin.
 <h3>Getting Message Data</h3>
@@ -90,7 +90,7 @@ get it into the core (so far, we could accept all such suggestions - no promise,
 request access to the template components. The typical use case seems to be databases, where
 you would like to access properties via specific fields. With that mode, you receive a
 char ** array, where each array element points to one field from the template (from
-left to right). Fields start at arrray index 0 and a NULL pointer means you have
+left to right). Fields start at array index 0 and a NULL pointer means you have
 reached the end of the array (the typical Unix "poor man's linked list in an array"
 design). Note, however, that each of the individual components is a string. It is 
 not a date stamp, number or whatever, but a string. This is because rsyslog processes
@@ -153,19 +153,19 @@ for example in MongoDB or ElasticSearch.
 a single-message interface was supported.
 <p>With the <b>single message</b> plugin interface, each message is passed via a separate call to the plugin.
 Most importantly, the rsyslog engine assumes that each call to the plugin is a complete transaction
-and as such assumes that messages be properly commited after the plugin returns to the engine.
+and as such assumes that messages be properly committed after the plugin returns to the engine.
 <p>With the <b>batching</b> interface, rsyslog employs something along the line of
 &quot;transactions&quot;. Obviously, the rsyslog core can not make non-transactional outputs
 to be fully transactional. But what it can is support that the output tells the core which
-messages have been commited by the output and which not yet. The core can than take care
-of those uncommited messages when problems occur. For example, if a plugin has received
-50 messages but not yet told the core that it commited them, and then returns an error state, the
+messages have been committed by the output and which not yet. The core can than take care
+of those uncommitted messages when problems occur. For example, if a plugin has received
+50 messages but not yet told the core that it committed them, and then returns an error state, the
 core assumes that all these 50 messages were <b>not</b> written to the output. The core then
-requeues all 50 messages and does the usual retry processing. Once the output plugin tells the 
+re-queues all 50 messages and does the usual retry processing. Once the output plugin tells the
 core that it is ready again to accept messages, the rsyslog core will provide it with these 50
-not yet commited messages again (actually, at this point, the rsyslog core no longer knows that
-it is re-submiting the messages). If, in contrary, the plugin had told rsyslog that 40 of these 50
-messages were commited (before it failed), then only 10 would have been requeued and resubmitted.
+not yet committed messages again (actually, at this point, the rsyslog core no longer knows that
+it is re-submitting the messages). If, in contrary, the plugin had told rsyslog that 40 of these 50
+messages were committed (before it failed), then only 10 would have been re-queued and resubmitted.
 <p>In order to provide an efficient implementation, there are some (mild) constraints in that
 transactional model: first of all, rsyslog itself specifies the ultimate transaction boundaries.
 That is, it tells the plugin when a transaction begins and when it must finish. The plugin
@@ -176,7 +176,7 @@ transaction support. Note that batch sizes are variable within the range of 1 to
 maximum limit. Most importantly, that means that plugins may receive batches of single messages,
 so they are required to commit each message individually. If the plugin tries to be &quot;smarter&quot;
 than the rsyslog engine and does not commit messages in those cases (for example), the plugin
-puts message stream integrity at risk: once rsyslog has notified the plugin of transacton end,
+puts message stream integrity at risk: once rsyslog has notified the plugin of transaction end,
 it discards all messages as it considers them committed and save. If now something goes wrong,
 the rsyslog core does not try to recover lost messages (and keep in mind that &quot;goes wrong&quot;
 includes such uncontrollable things like connection loss to a database server). So it is
@@ -191,8 +191,8 @@ This is also under evaluation and, once decided, the core will offer an interfac
 to preserve message stream integrity for properly-crafted plugins).
 <p>The second restriction is that if a plugin makes commits in between (what is perfectly
 legal) those commits must be in-order. So if a commit is made for message ten out of 50,
-this means that messages one to nine are also commited. It would be possible to remove
-this restriction, but we have decided to deliberately introduce it to simpify things.
+this means that messages one to nine are also committed. It would be possible to remove
+this restriction, but we have decided to deliberately introduce it to simplify things.
 <h3>Output Plugin Transaction Interface</h3>
 <p>In order to keep compatible with existing output plugins (and because it introduces
 no complexity), the transactional plugin interface is build on the traditional
@@ -252,7 +252,7 @@ But they convey additional information about the commit status as follows:
 <table border="0">
 <tr>
 <td valign="top"><i>RS_RET_OK</i></td>
-<td>The record and all previous inside the batch has been commited.
+<td>The record and all previous inside the batch has been committed.
 <i>Note:</i> this definition is what makes integrating plugins without the
 transaction being/end calls so easy - this is the traditional "success" return
 state and if every call returns it, there is no need for actually calling
@@ -260,7 +260,7 @@ state and if every call returns it, there is no need for actually calling
 </tr>
 <tr>
 <td valign="top"><i>RS_RET_DEFER_COMMIT</i></td>
-<td>The record has been processed, but is not yet commited. This is the
+<td>The record has been processed, but is not yet committed. This is the
 expected state for transactional-aware plugins.</td>
 </tr>
 <tr>
@@ -269,7 +269,7 @@ expected state for transactional-aware plugins.</td>
 current one not yet. This state is introduced to support sources that fill up
 buffers and commit once a buffer is completely filled. That may occur halfway
 in the next record, so it may be important to be able to tell the
-engine the everything up to the previouos record is commited</td>
+engine the everything up to the previous record is committed</td>
 </tr>
 </table>
 <p>Note that the typical <b>calling cycle</b> is <code>beginTransaction()</code>,
@@ -290,7 +290,7 @@ exists. So we introduce it with that release. What the means is if a rsyslog cor
 not provide this query interface, it is a core that was build before batching support
 was available. So the absence of a query interface indicates that the transactional
 interface is not available. One might now be tempted the think there is no need to do
-the actual check, but is is recommended to ask the rsyslog engine explicitely if
+the actual check, but is is recommended to ask the rsyslog engine explicitly if
 the transactional interface is present and will be honored. This enables us to
 create versions in the future which have, for whatever reason we do not yet know, no
 support for this interface.

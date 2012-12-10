@@ -27,7 +27,7 @@ be replaced by something else.</p>
 <p>There are two environment variables that set several debug settings:
 <ul>
 <li>The "RSYSLOG_DEBUGLOG" (sample: &nbsp;RSYSLOG_DEBUGLOG="/path/to/debuglog/")
-writes (allmost)
+writes (almost)
 all debug message to the specified log file in addition to stdout. Some
 system messages (e.g. segfault or abort message) are not written to the
 file as we can not capture them.
@@ -133,7 +133,7 @@ turned on.
 threads and their calling stack by sending SIGUSR2. However, the usefulness of that
 information is very much depending on rsyslog compile-time settings, must importantly
 the --enable-rtinst configure flag. Note that activating this option causes additional overhead
-and slows down rsyslgod considerable. So if you do that, you need to check if it is
+and slows down rsyslogd considerable. So if you do that, you need to check if it is
 capable to handle the workload. Also, threading behavior is modified by the
 runtime instrumentation.
 <p>Sending SIGUSR2 writes new process state information to the log file each time 
@@ -143,13 +143,13 @@ some diagnostic information on the current processing state. In that case, turni
 on the mutex debugging options (see above) is probably useful.
 <h2>Interpreting the Logs</h2>
 <p>Debug logs are primarily meant for rsyslog developers. But they may still provide valuable
-information to users. Just be warned that logs sometimes contains informaton the looks like
+information to users. Just be warned that logs sometimes contains information the looks like
 an error, but actually is none. We put a lot of extra information into the logs, and there
 are some cases where it is OK for an error to happen, we just wanted to record it inside
 the log. The code handles many cases automatically. So, in short, the log may not make sense to
 you, but it (hopefully) makes sense to a developer. Note that we developers often need
 many lines of the log file, it is relatively rare that a problem can be diagnosed by
-looking at just a couple of (hundered) log records.
+looking at just a couple of (hundred) log records.
 <h2>Security Risks</h2>
 <p>The debug log will reveal potentially sensible information, including user accounts and
 passwords, to anyone able to read the log file. As such, it is recommended to properly
@@ -159,7 +159,7 @@ attack or try to hide some information from the log file. As such, it is suggest
 enable DebugOnDemand mode only for a reason. Note that when no debug mode is enabled,
 SIGUSR1 and SIGUSR2 are completely ignored.
 <p>When running in any of the debug modes (including on demand mode), an interactive 
-instance of rsyslogd can be aborted by pressing ctl-c.
+instance of rsyslogd can be aborted by pressing ctrl-c.
 <p>
 <p>[<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
 <p><font size="2">This documentation is part of the

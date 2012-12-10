@@ -31,7 +31,7 @@ Channels to achieve this. Putting the following directive</p>
 
 <p><pre>
 # start log rotation via outchannel
-# outchannel definiation
+# outchannel definition
 $outchannel log_rotation,/var/log/log_rotation.log, 52428800,/home/me/./log_rotation_script 
 #  activate the channel and log everything to it 
 *.* :omfile:$log_rotation
@@ -49,13 +49,13 @@ mv -f /var/log/log_rotation.log /var/log/log_rotation.log.1
 
 <p>This moves the original log to a kind of backup log file. 
 After the action was successfully performed rsyslog creates a new /var/log/log_rotation.log 
-file and fill it up with new logs. So the latest logs are always in log_roatation.log.</p>
+file and fill it up with new logs. So the latest logs are always in log_rotation.log.</p>
 
 <h2>Conclusion</h2>
 
 <p>With this approach two files for logging are used, each with a maximum size of 50 MB. So 
 we can say we have successfully configured a log rotation which satisfies our requirement. 
-We keep the logs at a fixed-size level of100 MB.</p>
+We keep the logs at a fixed-size level of 100 MB.</p>
 <p>[<a href="manual.html">manual index</a>]
 [<a href="rsyslog_conf.html">rsyslog.conf</a>]
 [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>

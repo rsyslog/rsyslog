@@ -63,13 +63,13 @@ the sender is throttled a bit when the queue becomes near-full. This is done in 
 to preserve some queue space for inputs that can not throttle (like UDP), but it
 may have some undesired effect in some configurations. Still, we consider this as
 a useful setting and thus it is the default. To turn the handling off, simply
-configure that explicitely.
+configure that explicitly.
 </li>
 <li><b>MaxListeners</b> &lt;number&gt;<br>
 Sets the maximum number of listeners (server ports) supported. Default is 20. This must be set before the first $InputTCPServerRun directive.</li>
 <li><b>MaxSessions</b> &lt;number&gt;<br> Sets the maximum number of sessions supported. Default is 200. This must be set before the first $InputTCPServerRun directive</li>
 <li><b>StreamDriver.Mode</b> &lt;number&gt;<br>
-Sets the driver mode for the currently selected <a href="netstream.html">network stream driver</a>. &lt;number&gt; is driver specifc.</li>
+Sets the driver mode for the currently selected <a href="netstream.html">network stream driver</a>. &lt;number&gt; is driver specific.</li>
 <li><b>StreamDriver.AuthMode</b> &lt;mode-string&gt;<br>
 Sets the authentication mode for the currently selected <a href="netstream.html">network stream driver</a>. &lt;mode-string&gt; is driver specifc.</li>
 <li><b>PermittedPeer</b> &lt;id-string&gt;<br>

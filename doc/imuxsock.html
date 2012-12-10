@@ -42,7 +42,7 @@ severity and configure things accordingly.
 To turn off rate limiting, set the interval to zero.
 <p><b>Unix log sockets can be flow-controlled.</b> That is, if processing queues fill up,
 the unix socket reader is blocked for a short while. This may be useful to prevent overruning
-the queues (which may cause exessive disk-io where it actually would not be needed). However,
+the queues (which may cause excessive disk-io where it actually would not be needed). However,
 flow-controlling a log socket (and especially the system log socket) can lead to a very
 unresponsive system. As such, flow control is disabled by default. That means any log records
 are places as quickly as possible into the processing queues. If you would like to have
@@ -124,7 +124,7 @@ module documentation for a more in-depth description.
 to the next socket.</li>
 <li><b>RateLimit.Interval</b> [number] - specifies the rate-limiting
 interval in seconds.  Default value is 0, which turns off rate limiting. Set it to a number
-of seconds (5 recommended) to activate rate-limiting. The default of 0 has been choosen 
+of seconds (5 recommended) to activate rate-limiting. The default of 0 has been chosen
 as people experienced problems with this feature activated by default. Now it needs an
 explicit opt-in by setting this parameter.
 </li>
@@ -144,7 +144,7 @@ be obtained from the log socket itself. If so, the TAG part of the message is re
 It is recommended to turn this option on, but the default is "off" to keep compatible
 with earlier versions of rsyslog. </li>
 <li><b>UseSysTimeStamp</b> [<b>on</b>/off] instructs imuxsock
-to obtain message time from the system (via control messages) insted of using time
+to obtain message time from the system (via control messages) instead of using time
 recorded inside the message. This may be most useful in combination with systemd. Note:
 this option was introduced with version 5.9.1. Due to the usefulness of it, we
 decided to enable it by default. As such, 5.9.1 and above behave slightly different
