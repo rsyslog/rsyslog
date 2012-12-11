@@ -50,9 +50,69 @@
 DEFobjCurrIf(obj)
 DEFobjCurrIf(regexp)
 
-void cnfexprOptimize(struct cnfexpr *expr);
+struct cnfexpr* cnfexprOptimize(struct cnfexpr *expr);
 static void cnfstmtOptimizePRIFilt(struct cnfstmt *stmt);
 static void cnfarrayPrint(struct cnfarray *ar, int indent);
+struct cnffunc * cnffuncNew_prifilt(int fac);
+
+/* debug support: convert token to a human-readable string. Note that
+ * this function only supports a single thread due to a static buffer.
+ * This is deemed a solid solution, as it is intended to be used during
+ * startup, only.
+ * NOTE: This function MUST be updated if new tokens are defined in the
+ *       grammar.
+ */
+char *
+tokenToString(int token)
+{
+	char *tokstr;
+	static char tokbuf[512];
+
+	switch(token) {
+	case NAME: tokstr = "NAME"; break;
+	case FUNC: tokstr = "FUNC"; break;
+	case BEGINOBJ: tokstr ="BEGINOBJ"; break;
+	case ENDOBJ: tokstr ="ENDOBJ"; break;
+	case BEGIN_ACTION: tokstr ="BEGIN_ACTION"; break;
+	case BEGIN_PROPERTY: tokstr ="BEGIN_PROPERTY"; break;
+	case BEGIN_CONSTANT: tokstr ="BEGIN_CONSTANT"; break;
+	case BEGIN_TPL: tokstr ="BEGIN_TPL"; break;
+	case BEGIN_RULESET: tokstr ="BEGIN_RULESET"; break;
+	case STOP: tokstr ="STOP"; break;
+	case SET: tokstr ="SET"; break;
+	case UNSET: tokstr ="UNSET"; break;
+	case CONTINUE: tokstr ="CONTINUE"; break;
+	case CALL: tokstr ="CALL"; break;
+	case LEGACY_ACTION: tokstr ="LEGACY_ACTION"; break;
+	case LEGACY_RULESET: tokstr ="LEGACY_RULESET"; break;
+	case PRIFILT: tokstr ="PRIFILT"; break;
+	case PROPFILT: tokstr ="PROPFILT"; break;
+	case IF: tokstr ="IF"; break;
+	case THEN: tokstr ="THEN"; break;
+	case ELSE: tokstr ="ELSE"; break;
+	case OR: tokstr ="OR"; break;
+	case AND: tokstr ="AND"; break;
+	case NOT: tokstr ="NOT"; break;
+	case VAR: tokstr ="VAR"; break;
+	case STRING: tokstr ="STRING"; break;
+	case NUMBER: tokstr ="NUMBER"; break;
+	case CMP_EQ: tokstr ="CMP_EQ"; break;
+	case CMP_NE: tokstr ="CMP_NE"; break;
+	case CMP_LE: tokstr ="CMP_LE"; break;
+	case CMP_GE: tokstr ="CMP_GE"; break;
+	case CMP_LT: tokstr ="CMP_LT"; break;
+	case CMP_GT: tokstr ="CMP_GT"; break;
+	case CMP_CONTAINS: tokstr ="CMP_CONTAINS"; break;
+	case CMP_CONTAINSI: tokstr ="CMP_CONTAINSI"; break;
+	case CMP_STARTSWITH: tokstr ="CMP_STARTSWITH"; break;
+	case CMP_STARTSWITHI: tokstr ="CMP_STARTSWITHI"; break;
+	case UMINUS: tokstr ="UMINUS"; break;
+	default: snprintf(tokbuf, sizeof(tokbuf), "%c[%d]", token, token); 
+		 tokstr = tokbuf; break;
+	}
+	return tokstr;
+}
+
 
 char*
 getFIOPName(unsigned iFIOP)
@@ -275,8 +335,8 @@ nvlstPrint(struct nvlst *lst)
 			dbgprintf("\tname: '%s', value '%s'\n", name, value);
 			free(value);
 			break;
-		default:dbgprintf("nvlstPrint: unknown type '%c' [%d]\n",
-				lst->val.datatype, lst->val.datatype);
+		default:dbgprintf("nvlstPrint: unknown type '%s'\n",
+				tokenToString(lst->val.datatype));
 			break;
 		}
 		free(name);
@@ -1253,7 +1313,7 @@ cnfexprEval(struct cnfexpr *expr, struct var *ret, void* usrptr)
 	int bMustFree, bMustFree2;
 	long long n_r, n_l;
 
-	dbgprintf("eval expr %p, type '%c'(%u)\n", expr, expr->nodetype, expr->nodetype);
+	dbgprintf("eval expr %p, type '%s'\n", expr, tokenToString(expr->nodetype));
 	switch(expr->nodetype) {
 	/* note: comparison operations are extremely similar. The code can be copyied, only
 	 * places flagged with "CMP" need to be changed.
@@ -1655,7 +1715,7 @@ void
 cnfexprDestruct(struct cnfexpr *expr)
 {
 
-	dbgprintf("cnfexprDestruct expr %p, type '%c'(%u)\n", expr, expr->nodetype, expr->nodetype);
+	dbgprintf("cnfexprDestruct expr %p, type '%s'\n", expr, tokenToString(expr->nodetype));
 	switch(expr->nodetype) {
 	case CMP_NE:
 	case CMP_EQ:
@@ -2323,14 +2383,41 @@ constFoldConcat(struct cnfexpr *expr)
 }
 
 
+/* optimize a comparison with a variable as left-hand operand */
+static inline struct cnfexpr*
+cnfexprOptimize_CMP_var(struct cnfexpr *expr)
+{
+	struct cnffunc *func;
+
+	dbgprintf("VAR, name is '%s'\n", ((struct cnfvar*)expr->l)->name);
+	if(!strcmp("$syslogfacility-text", ((struct cnfvar*)expr->l)->name)) {
+		if(expr->r->nodetype == 'S') {
+			char *cstr = es_str2cstr(((struct cnfstringval*)expr->r)->estr, NULL);
+			int fac = decodeSyslogName((uchar*)cstr, syslogFacNames);
+			if(fac == -1) {
+				parser_errmsg("invalid facility '%s', expression will always "
+					      "evaluate to FALSE", cstr);
+			} else {
+				/* we can acutally optimize! */
+				DBGPRINTF("optimizer: change comparison OP to FUNC prifilt()\n");
+				cnfexprDestruct(expr);
+				func = cnffuncNew_prifilt(fac);
+				expr = (struct cnfexpr*) func;
+			}
+			free(cstr);
+		}
+	}
+	return expr;
+}
+
 /* (recursively) optimize an expression */
-void
+struct cnfexpr*
 cnfexprOptimize(struct cnfexpr *expr)
 {
 	long long ln, rn;
 	struct cnfexpr *exprswap;
 
-	dbgprintf("optimize expr %p, type '%c'(%u)\n", expr, expr->nodetype, expr->nodetype);
+	dbgprintf("optimize expr %p, type '%s'\n", expr, tokenToString(expr->nodetype));
 	switch(expr->nodetype) {
 	case '&':
 		constFoldConcat(expr);
@@ -2367,6 +2454,8 @@ cnfexprOptimize(struct cnfexpr *expr)
 		break;
 	case CMP_NE:
 	case CMP_EQ:
+		expr->l = cnfexprOptimize(expr->l);
+		expr->r = cnfexprOptimize(expr->r);
 		if(expr->l->nodetype == 'A') {
 			if(expr->r->nodetype == 'A') {
 				parser_errmsg("warning: '==' or '<>' "
@@ -2377,11 +2466,22 @@ cnfexprOptimize(struct cnfexpr *expr)
 				expr->l = expr->r;
 				expr->r = exprswap;
 			}
+		} else if(expr->l->nodetype == 'V') {
+			expr = cnfexprOptimize_CMP_var(expr);
 		}
-	default:/* nodetype we cannot optimize */
+		break;
+	case AND:
+	case OR:/* keep recursion goin' on... */
+		expr->l = cnfexprOptimize(expr->l);
+		expr->r = cnfexprOptimize(expr->r);
+		break;
+	case NOT:/* keep recursion goin' on... */
+		expr->r = cnfexprOptimize(expr->r);
+		break;
+	default:/* nodetypes we cannot optimize */
 		break;
 	}
-
+	return expr;
 }
 
 /* removes NOPs from a statement list and returns the
@@ -2715,6 +2815,7 @@ finalize_it:
 	RETiRet;
 }
 
+
 struct cnffunc *
 cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst)
 {
@@ -2756,6 +2857,27 @@ cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst)
 	}
 	return func;
 }
+
+
+/* A special function to create a prifilt() expression during optimization
+ * phase.
+ */
+struct cnffunc *
+cnffuncNew_prifilt(int fac)
+{
+	struct cnffunc* func;
+
+	if((func = malloc(sizeof(struct cnffunc))) != NULL) {
+		func->nodetype = 'F';
+		func->fname = es_newStrFromCStr("prifilt", sizeof("prifilt")-1);
+		func->nParams = 0;
+		func->fID = CNFFUNC_PRIFILT;
+		func->funcdata = calloc(1, sizeof(struct funcData_prifilt));
+		((struct funcData_prifilt *)func->funcdata)->pmask[fac >> 3] = TABLE_ALLPRI;
+	}
+	return func;
+}
+
 
 /* returns 0 if everything is OK and config parsing shall continue,
  * and 1 if things are so wrong that config parsing shall be aborted.
