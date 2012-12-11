@@ -153,7 +153,7 @@ prifiltInvert(struct funcData_prifilt *prifilt)
 	}
 }
 
-/* set prifilt so that it matches for all severities, sev is its numerical
+/* set prifilt so that it matches for some severities, sev is its numerical
  * value. Mode is one of the compop tokens CMP_EQ, CMP_LT, CMP_LE, CMP_GT,
  * CMP_GE, CMP_NE.
  */
@@ -179,6 +179,45 @@ prifiltSetSeverity(struct funcData_prifilt *prifilt, int sev, int mode)
 	}
 	if(mode == CMP_NE)
 		prifiltInvert(prifilt);
+}
+
+/* set prifilt so that it matches for some facilities, fac is its numerical
+ * value. Mode is one of the compop tokens CMP_EQ, CMP_LT, CMP_LE, CMP_GT,
+ * CMP_GE, CMP_NE. For the given facilities, all severities are enabled.
+ * NOTE: fac MUST be in the range 0..24 (not multiplied by 8)!
+ */
+static void
+prifiltSetFacility(struct funcData_prifilt *prifilt, int fac, int mode)
+{
+	int i;
+
+	memset(prifilt->pmask, 0, sizeof(prifilt->pmask));
+	switch(mode) {
+	case CMP_EQ:
+		prifilt->pmask[fac] = TABLE_ALLPRI;
+		break;
+	case CMP_NE:
+		prifilt->pmask[fac] = TABLE_ALLPRI;
+		prifiltInvert(prifilt);
+		break;
+	case CMP_LT:
+		for(i = 0 ; i < fac ; ++i)
+			prifilt->pmask[i] = TABLE_ALLPRI;
+		break;
+	case CMP_LE:
+		for(i = 0 ; i < fac+1 ; ++i)
+			prifilt->pmask[i] = TABLE_ALLPRI;
+		break;
+	case CMP_GE:
+		for(i = fac ; i < LOG_NFACILITIES+1 ; ++i)
+			prifilt->pmask[i] = TABLE_ALLPRI;
+		break;
+	case CMP_GT:
+		for(i = fac+1 ; i < LOG_NFACILITIES+1 ; ++i)
+			prifilt->pmask[i] = TABLE_ALLPRI;
+		break;
+	default:break;
+	}
 }
 
 /* combine a prifilt with AND/OR (the respective token values are
@@ -2441,11 +2480,11 @@ constFoldConcat(struct cnfexpr *expr)
 }
 
 
-/* optimize comparisons with syslog severity. This is a special
+/* optimize comparisons with syslog severity/facility. This is a special
  * handler as the numerical values also support GT, LT, etc ops.
  */
 static inline struct cnfexpr*
-cnfexprOptimize_CMP_severity(struct cnfexpr *expr)
+cnfexprOptimize_CMP_severity_facility(struct cnfexpr *expr)
 {
 	struct cnffunc *func;
 
@@ -2461,6 +2500,20 @@ cnfexprOptimize_CMP_severity(struct cnfexpr *expr)
 			} else {
 				parser_errmsg("invalid syslogseverity %d, expression will always "
 					      "evaluate to FALSE", sev);
+			}
+		}
+	} else if(!strcmp("$syslogfacility", ((struct cnfvar*)expr->l)->name)) {
+		if(expr->r->nodetype == 'N') {
+			int fac = (int) ((struct cnfnumval*)expr->r)->val;
+			if(fac >= 0 && fac <= 24) {
+				DBGPRINTF("optimizer: change comparison OP to FUNC prifilt()\n");
+				func = cnffuncNew_prifilt(0); /* fac is irrelevant, set below... */
+				prifiltSetFacility(func->funcdata, fac, expr->nodetype);
+				cnfexprDestruct(expr);
+				expr = (struct cnfexpr*) func;
+			} else {
+				parser_errmsg("invalid syslogfacility %d, expression will always "
+					      "evaluate to FALSE", fac);
 			}
 		}
 	}
@@ -2495,7 +2548,7 @@ cnfexprOptimize_CMP_var(struct cnfexpr *expr)
 			free(cstr);
 		}
 	} else {
-		expr = cnfexprOptimize_CMP_severity(expr);
+		expr = cnfexprOptimize_CMP_severity_facility(expr);
 	}
 	return expr;
 }
@@ -2605,7 +2658,7 @@ cnfexprOptimize(struct cnfexpr *expr)
 	case CMP_GT:
 		expr->l = cnfexprOptimize(expr->l);
 		expr->r = cnfexprOptimize(expr->r);
-		expr = cnfexprOptimize_CMP_severity(expr);
+		expr = cnfexprOptimize_CMP_severity_facility(expr);
 		break;
 	case CMP_CONTAINS:
 	case CMP_CONTAINSI:
