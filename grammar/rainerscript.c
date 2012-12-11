@@ -153,6 +153,22 @@ prifiltInvert(struct funcData_prifilt *prifilt)
 	}
 }
 
+/* set prifilt so that it matches for all severities, sev is its numerical
+ * value. Mode is one of the compop tokens CMP_EQ, CMP_LT, CMP_LE, CMP_GT,
+ * CMP_GE, CMP_NE.
+ */
+static void
+prifiltSetSeverity(struct funcData_prifilt *prifilt, int sev, int mode)
+{
+	int i;
+	for(i = 0 ; i < LOG_NFACILITIES+1 ; ++i) {
+		if(mode == CMP_EQ || mode == CMP_NE)
+			prifilt->pmask[i] = 1 << sev;
+	}
+	if(mode == CMP_NE)
+		prifiltInvert(prifilt);
+}
+
 /* combine a prifilt with AND/OR (the respective token values are
  * used to keep things simple).
  */
@@ -2440,6 +2456,20 @@ cnfexprOptimize_CMP_var(struct cnfexpr *expr)
 			}
 			free(cstr);
 		}
+	} else if(!strcmp("$syslogseverity", ((struct cnfvar*)expr->l)->name)) {
+		if(expr->r->nodetype == 'N') {
+			int sev = (int) ((struct cnfnumval*)expr->r)->val;
+			if(sev >= 0 && sev <= 7) {
+				DBGPRINTF("optimizer: change comparison OP to FUNC prifilt()\n");
+				func = cnffuncNew_prifilt(0); /* fac is irrelevant, set below... */
+				prifiltSetSeverity(func->funcdata, sev, expr->nodetype);
+				cnfexprDestruct(expr);
+				expr = (struct cnfexpr*) func;
+			} else {
+				parser_errmsg("invalid syslogseverity %d, expression will always "
+					      "evaluate to FALSE", sev);
+			}
+		}
 	}
 	return expr;
 }
@@ -2610,8 +2640,7 @@ cnfstmtOptimizeIf(struct cnfstmt *stmt)
 	struct cnffunc *func;
 	struct funcData_prifilt *prifilt;
 
-	expr = stmt->d.s_if.expr;
-	cnfexprOptimize(expr);
+	expr = stmt->d.s_if.expr = cnfexprOptimize(stmt->d.s_if.expr);
 	stmt->d.s_if.t_then = removeNOPs(stmt->d.s_if.t_then);
 	stmt->d.s_if.t_else = removeNOPs(stmt->d.s_if.t_else);
 	cnfstmtOptimize(stmt->d.s_if.t_then);
@@ -2629,8 +2658,11 @@ cnfstmtOptimizeIf(struct cnfstmt *stmt)
 				sizeof(prifilt->pmask));
 			stmt->d.s_prifilt.t_then = t_then;
 			stmt->d.s_prifilt.t_else = t_else;
-			stmt->printable = (uchar*)
-				es_str2cstr(((struct cnfstringval*)func->expr[0])->estr, NULL);
+			if(func->nParams == 0)
+				stmt->printable = (uchar*)strdup("[Optimizer Result]");
+			else
+				stmt->printable = (uchar*)
+					es_str2cstr(((struct cnfstringval*)func->expr[0])->estr, NULL);
 			cnfexprDestruct(expr);
 			cnfstmtOptimizePRIFilt(stmt);
 		}
@@ -2737,7 +2769,7 @@ dbgprintf("RRRR: stmtOptimize: stmt %p, nodetype %u\n", stmt, stmt->nodetype);
 			cnfstmtOptimize(stmt->d.s_propfilt.t_then);
 			break;
 		case S_SET:
-			cnfexprOptimize(stmt->d.s_set.expr);
+			stmt->d.s_set.expr = cnfexprOptimize(stmt->d.s_set.expr);
 			break;
 		case S_ACT:
 			cnfstmtOptimizeAct(stmt);
