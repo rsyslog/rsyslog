@@ -144,6 +144,15 @@ getFIOPName(unsigned iFIOP)
 	return pRet;
 }
 
+static void
+prifiltInvert(struct funcData_prifilt *prifilt)
+{
+	int i;
+	for(i = 0 ; i < LOG_NFACILITIES+1 ; ++i) {
+		prifilt->pmask[i] = ~prifilt->pmask[i];
+	}
+}
+
 
 void
 readConfFile(FILE *fp, es_str_t **str)
@@ -1715,7 +1724,13 @@ void
 cnfexprDestruct(struct cnfexpr *expr)
 {
 
-	dbgprintf("cnfexprDestruct expr %p, type '%s'\n", expr, tokenToString(expr->nodetype));
+	if(expr == NULL) {
+		/* this is valid and can happen during optimizer run! */
+		DBGPRINTF("cnfexprDestruct got NULL ptr - valid, so doing nothing\n");
+		return;
+	}
+
+	DBGPRINTF("cnfexprDestruct expr %p, type '%s'\n", expr, tokenToString(expr->nodetype));
 	switch(expr->nodetype) {
 	case CMP_NE:
 	case CMP_EQ:
@@ -2383,13 +2398,15 @@ constFoldConcat(struct cnfexpr *expr)
 }
 
 
-/* optimize a comparison with a variable as left-hand operand */
+/* optimize a comparison with a variable as left-hand operand
+ * NOTE: Currently support CMP_EQ, CMP_NE only and code NEEDS 
+ *       TO BE CHANGED for other comparisons!
+ */
 static inline struct cnfexpr*
 cnfexprOptimize_CMP_var(struct cnfexpr *expr)
 {
 	struct cnffunc *func;
 
-	dbgprintf("VAR, name is '%s'\n", ((struct cnfvar*)expr->l)->name);
 	if(!strcmp("$syslogfacility-text", ((struct cnfvar*)expr->l)->name)) {
 		if(expr->r->nodetype == 'S') {
 			char *cstr = es_str2cstr(((struct cnfstringval*)expr->r)->estr, NULL);
@@ -2400,11 +2417,31 @@ cnfexprOptimize_CMP_var(struct cnfexpr *expr)
 			} else {
 				/* we can acutally optimize! */
 				DBGPRINTF("optimizer: change comparison OP to FUNC prifilt()\n");
-				cnfexprDestruct(expr);
 				func = cnffuncNew_prifilt(fac);
+				if(expr->nodetype == CMP_NE)
+					prifiltInvert(func->funcdata);
+				cnfexprDestruct(expr);
 				expr = (struct cnfexpr*) func;
 			}
 			free(cstr);
+		}
+	}
+	return expr;
+}
+
+static inline struct cnfexpr*
+cnfexprOptimize_NOT(struct cnfexpr *expr)
+{
+	struct cnffunc *func;
+
+	if(expr->r->nodetype == 'F') {
+		func = (struct cnffunc *)expr->r;
+		if(func->fID == CNFFUNC_PRIFILT) {
+			DBGPRINTF("optimize NOT prifilt() to inverted prifilt()\n");
+			expr->r = NULL;
+			cnfexprDestruct(expr);
+			prifiltInvert(func->funcdata);
+			expr = (struct cnfexpr*) func;
 		}
 	}
 	return expr;
@@ -2477,6 +2514,7 @@ cnfexprOptimize(struct cnfexpr *expr)
 		break;
 	case NOT:/* keep recursion goin' on... */
 		expr->r = cnfexprOptimize(expr->r);
+		expr = cnfexprOptimize_NOT(expr);
 		break;
 	default:/* nodetypes we cannot optimize */
 		break;
