@@ -153,6 +153,21 @@ prifiltInvert(struct funcData_prifilt *prifilt)
 	}
 }
 
+/* combine a prifilt with AND/OR (the respective token values are
+ * used to keep things simple).
+ */
+static void
+prifiltCombine(struct funcData_prifilt *prifilt, struct funcData_prifilt *prifilt2, int mode)
+{
+	int i;
+	for(i = 0 ; i < LOG_NFACILITIES+1 ; ++i) {
+		if(mode == AND)
+			prifilt->pmask[i] = prifilt->pmask[i] & prifilt2->pmask[i];
+		else
+			prifilt->pmask[i] = prifilt->pmask[i] | prifilt2->pmask[i];
+	}
+}
+
 
 void
 readConfFile(FILE *fp, es_str_t **str)
@@ -2447,6 +2462,27 @@ cnfexprOptimize_NOT(struct cnfexpr *expr)
 	return expr;
 }
 
+static inline struct cnfexpr*
+cnfexprOptimize_AND_OR(struct cnfexpr *expr)
+{
+	struct cnffunc *funcl, *funcr;
+
+	if(expr->l->nodetype == 'F') {
+		if(expr->r->nodetype == 'F') {
+			funcl = (struct cnffunc *)expr->l;
+			funcr = (struct cnffunc *)expr->r;
+			if(funcl->fID == CNFFUNC_PRIFILT && funcr->fID == CNFFUNC_PRIFILT) {
+				DBGPRINTF("optimize combine AND/OR prifilt()\n");
+				expr->l = NULL;
+				prifiltCombine(funcl->funcdata, funcr->funcdata, expr->nodetype);
+				cnfexprDestruct(expr);
+				expr = (struct cnfexpr*) funcl;
+			}
+		}
+	}
+	return expr;
+}
+
 /* (recursively) optimize an expression */
 struct cnfexpr*
 cnfexprOptimize(struct cnfexpr *expr)
@@ -2511,6 +2547,7 @@ cnfexprOptimize(struct cnfexpr *expr)
 	case OR:/* keep recursion goin' on... */
 		expr->l = cnfexprOptimize(expr->l);
 		expr->r = cnfexprOptimize(expr->r);
+		expr = cnfexprOptimize_AND_OR(expr);
 		break;
 	case NOT:/* keep recursion goin' on... */
 		expr->r = cnfexprOptimize(expr->r);
