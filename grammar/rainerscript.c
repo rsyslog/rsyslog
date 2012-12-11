@@ -160,10 +160,22 @@ prifiltInvert(struct funcData_prifilt *prifilt)
 static void
 prifiltSetSeverity(struct funcData_prifilt *prifilt, int sev, int mode)
 {
+	static int lessthanmasks[] = { 0x00, 0x01, 0x03, 0x07, 0x0f, 0x1f, 0x3f, 0x7f, 0xff };
 	int i;
 	for(i = 0 ; i < LOG_NFACILITIES+1 ; ++i) {
 		if(mode == CMP_EQ || mode == CMP_NE)
 			prifilt->pmask[i] = 1 << sev;
+		else if(mode == CMP_LT)
+			prifilt->pmask[i] = lessthanmasks[sev];
+		else if(mode == CMP_LE)
+			prifilt->pmask[i] = lessthanmasks[sev+1];
+		else if(mode == CMP_GT)
+			prifilt->pmask[i] = ~lessthanmasks[sev+1];
+		else if(mode == CMP_GE)
+			prifilt->pmask[i] = ~lessthanmasks[sev];
+		else
+			DBGPRINTF("prifiltSetSeverity: program error, invalid mode %s\n",
+				  tokenToString(mode));
 	}
 	if(mode == CMP_NE)
 		prifiltInvert(prifilt);
@@ -2429,6 +2441,32 @@ constFoldConcat(struct cnfexpr *expr)
 }
 
 
+/* optimize comparisons with syslog severity. This is a special
+ * handler as the numerical values also support GT, LT, etc ops.
+ */
+static inline struct cnfexpr*
+cnfexprOptimize_CMP_severity(struct cnfexpr *expr)
+{
+	struct cnffunc *func;
+
+	if(!strcmp("$syslogseverity", ((struct cnfvar*)expr->l)->name)) {
+		if(expr->r->nodetype == 'N') {
+			int sev = (int) ((struct cnfnumval*)expr->r)->val;
+			if(sev >= 0 && sev <= 7) {
+				DBGPRINTF("optimizer: change comparison OP to FUNC prifilt()\n");
+				func = cnffuncNew_prifilt(0); /* fac is irrelevant, set below... */
+				prifiltSetSeverity(func->funcdata, sev, expr->nodetype);
+				cnfexprDestruct(expr);
+				expr = (struct cnfexpr*) func;
+			} else {
+				parser_errmsg("invalid syslogseverity %d, expression will always "
+					      "evaluate to FALSE", sev);
+			}
+		}
+	}
+	return expr;
+}
+
 /* optimize a comparison with a variable as left-hand operand
  * NOTE: Currently support CMP_EQ, CMP_NE only and code NEEDS 
  *       TO BE CHANGED for other comparisons!
@@ -2456,20 +2494,8 @@ cnfexprOptimize_CMP_var(struct cnfexpr *expr)
 			}
 			free(cstr);
 		}
-	} else if(!strcmp("$syslogseverity", ((struct cnfvar*)expr->l)->name)) {
-		if(expr->r->nodetype == 'N') {
-			int sev = (int) ((struct cnfnumval*)expr->r)->val;
-			if(sev >= 0 && sev <= 7) {
-				DBGPRINTF("optimizer: change comparison OP to FUNC prifilt()\n");
-				func = cnffuncNew_prifilt(0); /* fac is irrelevant, set below... */
-				prifiltSetSeverity(func->funcdata, sev, expr->nodetype);
-				cnfexprDestruct(expr);
-				expr = (struct cnfexpr*) func;
-			} else {
-				parser_errmsg("invalid syslogseverity %d, expression will always "
-					      "evaluate to FALSE", sev);
-			}
-		}
+	} else {
+		expr = cnfexprOptimize_CMP_severity(expr);
 	}
 	return expr;
 }
@@ -2577,6 +2603,10 @@ cnfexprOptimize(struct cnfexpr *expr)
 	case CMP_GE:
 	case CMP_LT:
 	case CMP_GT:
+		expr->l = cnfexprOptimize(expr->l);
+		expr->r = cnfexprOptimize(expr->r);
+		expr = cnfexprOptimize_CMP_severity(expr);
+		break;
 	case CMP_CONTAINS:
 	case CMP_CONTAINSI:
 	case CMP_STARTSWITH:
@@ -2585,12 +2615,12 @@ cnfexprOptimize(struct cnfexpr *expr)
 		expr->r = cnfexprOptimize(expr->r);
 		break;
 	case AND:
-	case OR:/* keep recursion goin' on... */
+	case OR:
 		expr->l = cnfexprOptimize(expr->l);
 		expr->r = cnfexprOptimize(expr->r);
 		expr = cnfexprOptimize_AND_OR(expr);
 		break;
-	case NOT:/* keep recursion goin' on... */
+	case NOT:
 		expr->r = cnfexprOptimize(expr->r);
 		expr = cnfexprOptimize_NOT(expr);
 		break;
