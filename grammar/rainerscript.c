@@ -2547,6 +2547,23 @@ cnfexprOptimize_CMP_var(struct cnfexpr *expr)
 			}
 			free(cstr);
 		}
+	} else if(!strcmp("$syslogseverity-text", ((struct cnfvar*)expr->l)->name)) {
+		if(expr->r->nodetype == 'S') {
+			char *cstr = es_str2cstr(((struct cnfstringval*)expr->r)->estr, NULL);
+			int sev = decodeSyslogName((uchar*)cstr, syslogPriNames);
+			if(sev == -1) {
+				parser_errmsg("invalid syslogseverity '%s', expression will always "
+					      "evaluate to FALSE", cstr);
+			} else {
+				/* we can acutally optimize! */
+				DBGPRINTF("optimizer: change comparison OP to FUNC prifilt()\n");
+				func = cnffuncNew_prifilt(0);
+				prifiltSetSeverity(func->funcdata, sev, expr->nodetype);
+				cnfexprDestruct(expr);
+				expr = (struct cnfexpr*) func;
+			}
+			free(cstr);
+		}
 	} else {
 		expr = cnfexprOptimize_CMP_severity_facility(expr);
 	}
