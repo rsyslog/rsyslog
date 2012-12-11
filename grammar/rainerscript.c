@@ -2543,6 +2543,17 @@ cnfexprOptimize(struct cnfexpr *expr)
 			expr = cnfexprOptimize_CMP_var(expr);
 		}
 		break;
+	case CMP_LE:
+	case CMP_GE:
+	case CMP_LT:
+	case CMP_GT:
+	case CMP_CONTAINS:
+	case CMP_CONTAINSI:
+	case CMP_STARTSWITH:
+	case CMP_STARTSWITHI:
+		expr->l = cnfexprOptimize(expr->l);
+		expr->r = cnfexprOptimize(expr->r);
+		break;
 	case AND:
 	case OR:/* keep recursion goin' on... */
 		expr->l = cnfexprOptimize(expr->l);
