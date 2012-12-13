@@ -1,4 +1,11 @@
 ----------------------------------------------------------------------------
+Version 7.2.5  [v7-stable] 2013-01-??
+- build system cleanup (thanks to Michael Biebl for this!)
+- bugfix: omelasticsearch did not properly compile on some platforms
+  due to missing libmath. Thanks to Michael Biebl for the fix
+- bugfix: invalid DST handling under Solaris
+  Thanks to Scott Severtson for the patch.
+----------------------------------------------------------------------------
 Version 7.2.4  [v7-stable] 2012-12-07
 - enhance: permit RFC3339 timestamp in local log socket messages
   Thanks to Sebastien Ponce for the patch.
