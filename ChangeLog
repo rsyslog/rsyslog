@@ -49,6 +49,8 @@ Version 6.6.1  [v6-stable] 2012-10-??
   low-end case always happens in user space, without need for kernel
   support as we can always directly aquire the lock - there is no
   contention at all).
+- bugfix: invalid DST handling under Solaris
+  Thanks to Scott Severtson for the patch.
 ---------------------------------------------------------------------------
 Version 6.6.0  [v6-stable] 2012-10-22
 This starts a new stable branch, based on the 6.5.x series, plus:
@@ -726,6 +728,8 @@ Version 5.10.2  [V5-STABLE], 201?-??-??
   ... actually, they are microseconds. So the fractional part of the 
   timestamp was not properly formatted.
   Thanks to Marius Tomaschewski for the bug report and the patch idea.
+- bugfix: invalid DST handling under Solaris
+  Thanks to Scott Severtson for the patch.
 ---------------------------------------------------------------------------
 Version 5.10.1  [V5-STABLE], 2012-10-17
 - bugfix: imuxsock and imklog truncated head of received message
