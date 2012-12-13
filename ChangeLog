@@ -17,6 +17,8 @@ Version 5.10.2  [V5-STABLE], 201?-??-??
   ... actually, they are microseconds. So the fractional part of the 
   timestamp was not properly formatted.
   Thanks to Marius Tomaschewski for the bug report and the patch idea.
+- bugfix: invalid DST handling under Solaris
+  Thanks to Scott Severtson for the patch.
 ---------------------------------------------------------------------------
 Version 5.10.1  [V5-STABLE], 2012-10-17
 - bugfix: imuxsock and imklog truncated head of received message

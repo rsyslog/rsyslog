@@ -78,7 +78,7 @@ timeval2syslogTime(struct timeval *tp, struct syslogTime *t)
 		/* Solaris uses a different method of exporting the time zone.
 		 * It is UTC - localtime, which is the opposite sign of mins east of GMT.
 		 */
-		lBias = -(daylight ? altzone : timezone);
+		lBias = -(tm->tm_isdst ? altzone : timezone);
 #	elif defined(__hpux)
 		lBias = tz.tz_dsttime ? - tz.tz_minuteswest : 0;
 #	else
