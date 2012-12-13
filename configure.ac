@@ -243,22 +243,7 @@ AM_CONDITIONAL(ENABLE_GSSAPI, test x$enable_gssapi_krb5 = xyes)
 
 
 # multithreading via pthreads
-AC_ARG_ENABLE(pthreads,
-        [AS_HELP_STRING([--enable-pthreads],[Enable multithreading via pthreads @<:@default=yes@:>@])],
-        [case "${enableval}" in
-         yes) enable_pthreads="yes" ;;
-          no) enable_pthreads="no" ;;
-           *) AC_MSG_ERROR(bad value ${enableval} for --enable-pthreads) ;;
-         esac],
-        [enable_pthreads=yes]
-)
-
-if test "x$enable_pthreads" = "xno"; then
-	AC_MSG_ERROR(rsyslog v3+ does no longer support single threading mode -- use a previous version for that);
-fi
-
-if test "x$enable_pthreads" != "xno"; then
-  AC_CHECK_HEADERS(
+AC_CHECK_HEADERS(
     [pthread.h],
     [
       AC_CHECK_LIB(
@@ -279,8 +264,7 @@ if test "x$enable_pthreads" != "xno"; then
       )
     ],
     [AC_MSG_FAILURE([pthread is missing])]
-  )
-fi
+)
 
 AC_CHECK_FUNCS(
     [pthread_setschedparam],
@@ -711,13 +695,13 @@ AC_SUBST(SNMP_LIBS)
 AC_ARG_ENABLE(uuid,
         [AS_HELP_STRING([--enable-uuid],[Enable support for uuid generation @<:@default=yes@:>@])],
         [case "${enableval}" in
-         yes) enable_elasticsearch="yes" ;;
-          no) enable_elasticsearch="no" ;;
+         yes) enable_uuid="yes" ;;
+          no) enable_uuid="no" ;;
            *) AC_MSG_ERROR(bad value ${enableval} for --enable-uuid) ;;
          esac],
         [enable_uuid=yes]
 )
-if test "x$enable_elasticsearch" = "xyes"; then
+if test "x$enable_uuid" = "xyes"; then
 	PKG_CHECK_MODULES([LIBUUID], [uuid])
 	AC_DEFINE(USE_LIBUUID, 1, [Define if you want to enable libuuid support])
 fi
@@ -736,6 +720,7 @@ AC_ARG_ENABLE(elasticsearch,
 )
 if test "x$enable_elasticsearch" = "xyes"; then
 	PKG_CHECK_MODULES([CURL], [libcurl])
+	LT_LIB_M
 fi
 AM_CONDITIONAL(ENABLE_ELASTICSEARCH, test x$enable_elasticsearch = xyes)
 
