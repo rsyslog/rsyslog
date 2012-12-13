@@ -720,6 +720,7 @@ AC_ARG_ENABLE(elasticsearch,
 )
 if test "x$enable_elasticsearch" = "xyes"; then
 	PKG_CHECK_MODULES([CURL], [libcurl])
+	LT_LIB_M
 fi
 AM_CONDITIONAL(ENABLE_ELASTICSEARCH, test x$enable_elasticsearch = xyes)
 
