@@ -498,10 +498,10 @@ CODESTARTendCnfLoad
 			loadModConf->pszStrmDrvrAuthMode = NULL;
 		} else {
 			loadModConf->pszStrmDrvrAuthMode = cs.pszStrmDrvrAuthMode;
+			cs.pszStrmDrvrAuthMode = NULL;
 		}
 	}
-	if((cs.pszStrmDrvrAuthMode == NULL) || (cs.pszStrmDrvrAuthMode[0] == '\0'))
-		free(cs.pszStrmDrvrAuthMode);
+	free(cs.pszStrmDrvrAuthMode);
 	cs.pszStrmDrvrAuthMode = NULL;
 
 	loadModConf = NULL; /* done loading */
@@ -561,6 +561,7 @@ ENDactivateCnf
 BEGINfreeCnf
 	instanceConf_t *inst, *del;
 CODESTARTfreeCnf
+	free(pModConf->pszStrmDrvrAuthMode);
 	if(pModConf->permittedPeers != NULL) {
 		cnfarrayContentDestruct(pModConf->permittedPeers);
 		free(pModConf->permittedPeers);
