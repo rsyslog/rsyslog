@@ -342,6 +342,7 @@ UDPSend(instanceData *pData, uchar *pszSourcename, char *msg, size_t len)
 		pData->sourcePort = pData->sourcePortStart;
 	}
 
+dbgprintf("DDDD: source '%s', len: %d, msg:'%.256s'\n", pszSourcename, (int) len, msg);
 	inet_pton(AF_INET, (char*)pszSourcename, &(source_ip.sin_addr));
 
 	bSendSuccess = RSFALSE;
