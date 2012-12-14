@@ -524,8 +524,7 @@ char *rs_strerror_r(int errnum, char *buf, size_t buflen) {
 }
 
 
-/*  Decode a symbolic name to a numeric value
- */
+/*  Decode a symbolic name to a numeric value */
 int decodeSyslogName(uchar *name, syslogName_t *codetab)
 {
 	register syslogName_t *c;
@@ -535,22 +534,23 @@ int decodeSyslogName(uchar *name, syslogName_t *codetab)
 	ASSERT(name != NULL);
 	ASSERT(codetab != NULL);
 
-	dbgprintf("symbolic name: %s", name);
-	if (isdigit((int) *name))
-	{
-		dbgprintf("\n");
+	DBGPRINTF("symbolic name: %s", name);
+	if(isdigit((int) *name)) {
+		DBGPRINTF("\n");
 		return (atoi((char*) name));
 	}
 	strncpy((char*) buf, (char*) name, 79);
-	for (p = buf; *p; p++)
+	for(p = buf; *p; p++) {
 		if (isupper((int) *p))
 			*p = tolower((int) *p);
-	for (c = codetab; c->c_name; c++)
-		if (!strcmp((char*) buf, (char*) c->c_name))
-		{
-			dbgprintf(" ==> %d\n", c->c_val);
+	}
+	for(c = codetab; c->c_name; c++) {
+		if(!strcmp((char*) buf, (char*) c->c_name)) {
+			DBGPRINTF(" ==> %d\n", c->c_val);
 			return (c->c_val);
 		}
+	}
+	DBGPRINTF("\n");
 	return (-1);
 }
 

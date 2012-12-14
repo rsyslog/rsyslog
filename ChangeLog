@@ -1,5 +1,9 @@
 ---------------------------------------------------------------------------
 Version 7.3.5  [devel] 2012-11-??
+- enhanced script optimizer to optimize common PRI-based comparisons
+  These constructs are especially used in SUSE default config files,
+  but also by many users (as they are more readable than the equivalent
+  PRI-based filter).
 - bugfix: segfault on imuxsock startup if system log socket is used
   and no ratelimiting supported. Happens only during initial config
   read phase, once this is over, everything works stable.
@@ -14,6 +18,8 @@ Version 7.3.5  [devel] 2012-11-??
   executed (due to missing template due to template error).
 - bugfix[minor]: invalid error code when mmnormalize could not access
   rulebase
+- bugfix(kind of): script optimizer did not work for complex boolean
+  expressions
 - doc bugfix: corrections and improvements in mmnormalize html doc page
 - bugfix: some message properties could be garbled due to race condition
   This happened only on very high volume systems, if the same message was
