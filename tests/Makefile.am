@@ -181,6 +181,10 @@ test_files = testbench.h runtime-dummy.c
 
 EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   validation-run.sh \
+	   tls-certs/ca-key.pem \
+	   tls-certs/ca.pem \
+	   tls-certs/cert.pem \
+	   tls-certs/key.pem \
 	   testsuites/x.509/ca.pem \
 	   testsuites/x.509/ca-key.pem \
 	   testsuites/x.509/client-cert.pem \
