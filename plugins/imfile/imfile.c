@@ -246,6 +246,8 @@ finalize_it:
 		strm.Destruct(&psSF);
 
 	if(iRet != RS_RET_OK) {
+		if(pThis->pStrm != NULL)
+			strm.Destruct(&pThis->pStrm);
 		CHKiRet(strm.Construct(&pThis->pStrm));
 		CHKiRet(strm.SettOperationsMode(pThis->pStrm, STREAMMODE_READ));
 		CHKiRet(strm.SetsType(pThis->pStrm, STREAMTYPE_FILE_MONITOR));
