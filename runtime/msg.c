@@ -1198,6 +1198,7 @@ finalize_it:
 		var.Destruct(&pVar);
 	RETiRet;
 }
+#undef isProp
 
 
 /* Increment reference count - see description of the "msg"

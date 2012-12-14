@@ -622,7 +622,6 @@ submitMsg(msg_t *pMsg)
 rsRetVal
 multiSubmitMsg2(multi_submit_t *pMultiSub)
 {
-	int i;
 	qqueue_t *pQueue;
 	ruleset_t *pRuleset;
 	DEFiRet;

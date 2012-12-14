@@ -405,6 +405,8 @@ writeDataError(instanceData *pData, cJSON **pReplyRoot, uchar *reqmsg)
 	cJSON *errRoot;
 	cJSON *req;
 	cJSON *replyRoot = *pReplyRoot;
+	size_t toWrite;
+	ssize_t wrRet;
 	char errStr[1024];
 	DEFiRet;
 	
@@ -432,8 +434,16 @@ writeDataError(instanceData *pData, cJSON **pReplyRoot, uchar *reqmsg)
 	cJSON_AddItemToObject(errRoot, "request", req);
 	cJSON_AddItemToObject(errRoot, "reply", replyRoot);
 	rendered = cJSON_Print(errRoot);
-DBGPRINTF("omelasticsearch: error record: '%s'\n", rendered);
-	write(pData->fdErrFile, rendered, strlen(rendered));
+	/* we do not do real error-handling on the err file, as this finally complicates
+	 * things way to much.
+	 */
+	DBGPRINTF("omelasticsearch: error record: '%s'\n", rendered);
+	toWrite = strlen(rendered);
+	wrRet = write(pData->fdErrFile, rendered, toWrite);
+	if(wrRet != (ssize_t) toWrite) {
+		DBGPRINTF("omelasticsearch: error %d writing error file, write returns %lld\n",
+			  errno, (long long) wrRet);
+	}
 	free(rendered);
 	cJSON_Delete(errRoot);
 	*pReplyRoot = NULL; /* tell caller not to delete once again! */
