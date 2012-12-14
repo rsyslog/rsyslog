@@ -774,7 +774,6 @@ static rsRetVal objDeserializeProperties(obj_t *pObj, rsRetVal (*objSetProperty)
 
 	ISOBJ_assert(pObj);
 	ISOBJ_TYPE_assert(pStrm, strm);
-	ASSERT(pObjInfo != NULL);
 
 	CHKiRet(var.Construct(&pVar));
 	CHKiRet(var.ConstructFinalize(pVar));
