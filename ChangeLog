@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------
 Version 7.3.5  [devel] 2012-11-??
+- ommysql: addded batching/transaction support
 - enhanced script optimizer to optimize common PRI-based comparisons
   These constructs are especially used in SUSE default config files,
   but also by many users (as they are more readable than the equivalent
@@ -36,6 +37,9 @@ Version 7.3.5  [devel] 2012-11-??
   low-end case always happens in user space, without need for kernel
   support as we can always directly aquire the lock - there is no
   contention at all).
+- build system cleanup (thanks to Michael Biebl for this!)
+- bugfix: omelasticsearch did not properly compile on some platforms
+  due to missing libmath. Thanks to Michael Biebl for the fix
 ---------------------------------------------------------------------------
 Version 7.3.4  [devel] 2012-11-23
 - further (and rather drastically) improved disk queue performance
