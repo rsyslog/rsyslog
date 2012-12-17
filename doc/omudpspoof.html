@@ -14,32 +14,66 @@
 <p>This module is similar to the regular UDP forwarder, but permits to
 spoof the sender address. Also, it enables to circle through a number of
 source ports.
-<p><b>Configuration Directives</b>:</p>
+<p><b>load() Parameters</b>:</p>
 <ul>
-<li><b>$ActionOMOMUDPSpoofSourceNameTemplate</b> &lt;templatename&gt;<br>
-This is the name of the template that contains a
-numerical IP address that is to be used as the source system IP address.
-While it may often be a constant value, it can be generated as usual via the
-property replacer, as long as it is a valid IPv4 address. If not specified, the
-build-in default template RSYSLOG_omudpspoofDfltSourceTpl is used. This template is defined 
-as follows:<br>
-$template RSYSLOG_omudpspoofDfltSourceTpl,"%fromhost-ip%"<br>
-So in essence, the default template spoofs the address of the system the message
-was received from. This is considered the most important use case.
-<li><b>$ActionOMUDPSpoofTargetHost</b> &lt;hostname&gt;<br>
-Host that the messages shall be sent to.
-<li><b>$ActionOMUDPSpoofTargetPort</b> &lt;port&gt;<br>
-Remote port that the messages shall be sent to.
-<li><b>$ActionOMUDPSpoofDefaultTemplate</b> &lt;templatename&gt;<br>
-This setting instructs omudpspoof to use a template different from the
-default template for all of its actions that do not have a template specified
-explicitely.
-<li><b>$ActionOMUDPSpoofSourcePortStart</b> &lt;number&gt;<br>
-Specifies the start value for circeling the source ports. Must be less than or
-equal to the end value. Default is 32000.
-<li><b>$ActionOMUDPSpoofSourcePortEnd</b> &lt;number&gt;<br>
-Specifies the ending value for circeling the source ports. Must be less than or
-equal to the start value. Default is 42000.
+	<li><strong>Template </strong>[templateName]<br>
+	sets a non-standard default template for this module.<br></li>
+	
+</ul>
+<p>&nbsp;</p>
+<p><b>action() parameters</b>:</p>
+<ul>
+	<li><strong>Target </strong>string<br>
+	Name or IP-Address of the system that shall receive messages. Any resolvable name is fine. <br></li><br>
+
+	<li><strong>Port </strong>[Integer, Default 514]<br>
+	Name or numerical value of port to use when connecting to target. <br></li><br>
+
+	<li><b>Template</b>[Word]<br>
+	Template to use as message text.
+	<br></li><br>
+
+	<li><strong>sourcetemplate </strong>[Word]<br>
+	This is the name of the template that contains a
+	numerical IP address that is to be used as the source system IP address.
+	While it may often be a constant value, it can be generated as usual via the
+	property replacer, as long as it is a valid IPv4 address. If not specified, the
+	build-in default template RSYSLOG_omudpspoofDfltSourceTpl is used. This template is defined 
+	as follows:<br>
+	template(name="RSYSLOG_omudpspoofDfltSourceTpl" type="string" string="%fromhost-ip%")<br>
+	So in essence, the default template spoofs the address of the system the message
+	was received from. This is considered the most important use case.
+	<br></li><br>
+
+	<li><b>SourcePortStart</b>[Word]<br>
+	Specifies the start value for circeling the source ports. Must be less than or
+	equal to the end value. Default is 32000.
+	<br></li><br>
+
+	<li><b>SourcePortEnd</b>[Word]<br>
+	Specifies the ending value for circeling the source ports. Must be less than or
+	equal to the start value. Default is 42000.
+	<br></li><br>
+
+	<li><b>mtu</b>[Integer, default 1500]<br>
+	Maximum MTU supported by the network. Default respects Ethernet and must
+	usually not be adjusted. Setting a too-high MTU can lead to message loss,
+	too low to excess message fragmentation. Change only if you really know what
+	you are doing.
+	<br></li><br>
+</ul>
+<p><b>pre-v7 Configuration Directives</b>:</p>
+<ul>
+<li><b>$ActionOMOMUDPSpoofSourceNameTemplate</b> &lt;templatename&gt;
+- equivalent to the "sourceTemplate" parameter.
+<li><b>$ActionOMUDPSpoofTargetHost</b> &lt;hostname&gt; - equivalent to the "target" parameter.
+<li><b>$ActionOMUDPSpoofTargetPort</b> &lt;port&gt; - equivalent to the "target" parameter.
+<li><b>$ActionOMUDPSpoofDefaultTemplate</b> &lt;templatename&gt;
+- equivalent to the "template" load() parameter.
+<li><b>$ActionOMUDPSpoofSourcePortStart</b> &lt;number&gt;
+- equivalent to the "SourcePortStart" parameter.
+<li><b>$ActionOMUDPSpoofSourcePortEnd</b> &lt;number&gt;
+- equivalent to the "SourcePortEnd" parameter.
 </ul>
 <b>Caveats/Known Bugs:</b>
 <ul>
@@ -51,7 +85,7 @@ fragmented, up to a total upper limit of 64K (induced by UDP). Message sizes ove
 64K will be truncated. For older versions, messages over 1472 may be totally discarded
 or truncated, depending on version and environment.
 </ul>
-<p><b>Sample:</b></p>
+<p><b>Legacy Sample (pre-v7):</b></p>
 <p>The following sample forwards all syslog messages in standard form to the
 remote server server.example.com. The original sender's address is used. We do not
 care about the source port. This example is considered the typical use case for
