@@ -45,6 +45,11 @@ equal to the start value. Default is 42000.
 <ul>
 <li><b>IPv6</b> is currently not supported. If you need this capability, please let us
 know via the rsyslog mailing list.
+<li>Versions shipped prior to rsyslog 7.2.5 do not support message sizes over 1472 bytes (more
+pricesely: over the network-supported MTU). Starting with 7.2.5, those messages will be
+fragmented, up to a total upper limit of 64K (induced by UDP). Message sizes over
+64K will be truncated. For older versions, messages over 1472 may be totally discarded
+or truncated, depending on version and environment.
 </ul>
 <p><b>Sample:</b></p>
 <p>The following sample forwards all syslog messages in standard form to the
