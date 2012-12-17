@@ -337,6 +337,12 @@ UDPSend(instanceData *pData, uchar *pszSourcename, char *msg, size_t len)
 		CHKiRet(doTryResume(pData));
 	}
 
+	if(len > 1472) {
+		DBGPRINTF("omudpspoof: msg with length %d truncated to 1472 bytes: '%.768s'\n",
+			  len, msg);
+		len = 1472;
+	}
+
 	ip = ipo = udp = 0;
 	if(pData->sourcePort++ >= pData->sourcePortEnd){
 		pData->sourcePort = pData->sourcePortStart;
