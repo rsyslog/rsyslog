@@ -5,7 +5,7 @@
  * This file builds on UDP spoofing code contributed by 
  * David Lang <david@lang.hm>. I then created a "real" rsyslog module
  * out of that code and omfwd. I decided to make it a separate module because
- * omfwd already mixes up too many things (TCP & UDP & a differnt modes,
+ * omfwd already mixes up too many things (TCP & UDP & a different modes,
  * this has historic reasons), it would not be a good idea to also add
  * spoofing to it. And, looking at the requirements, there is little in 
  * common between omfwd and this module.
@@ -93,8 +93,11 @@ DEFobjCurrIf(glbl)
 DEFobjCurrIf(net)
 
 typedef struct _instanceData {
+	uchar 	*tplName;	/* name of assigned template */
 	uchar	*host;
 	uchar	*port;
+	uchar	*sourceTpl;
+	int	mtu;
 	int	*pSockArray;		/* sockets to use for UDP */
 	int	compressionLevel;	/* 0 - no compression, else level for zlib */
 	struct addrinfo *f_addr;
@@ -115,6 +118,22 @@ typedef struct configSettings_s {
 	int iSourcePortEnd;
 } configSettings_t;
 static configSettings_t cs;
+
+/* action (instance) parameters */
+static struct cnfparamdescr actpdescr[] = {
+	{ "target", eCmdHdlrGetWord, 1 },
+	{ "port", eCmdHdlrGetWord, 0 },
+	{ "sourcetemplate", eCmdHdlrGetWord, 0 },
+	{ "sourceport.start", eCmdHdlrInt, 0 },
+	{ "sourceport.end", eCmdHdlrInt, 0 },
+	{ "mtu", eCmdHdlrInt, 0 },
+	{ "template", eCmdHdlrGetWord, 0 }
+};
+static struct cnfparamblk actpblk =
+	{ CNFPARAMBLK_VERSION,
+	  sizeof(actpdescr)/sizeof(struct cnfparamdescr),
+	  actpdescr
+	};
 
 /* module-global parameters */
 static struct cnfparamdescr modpdescr[] = {
@@ -305,8 +324,10 @@ BEGINfreeInstance
 CODESTARTfreeInstance
 	/* final cleanup */
 	closeUDPSockets(pData);
+	free(pData->tplName);
 	free(pData->port);
 	free(pData->host);
+	free(pData->sourceTpl);
 ENDfreeInstance
 
 
@@ -489,6 +510,9 @@ static rsRetVal doTryResume(instanceData *pData)
 	if(pData->pSockArray != NULL)
 		FINALIZE;
 
+	if(pData->host == NULL)
+		ABORT_FINALIZE(RS_RET_DISABLE_ACTION);
+
 	/* The remote address is not yet known and needs to be obtained */
 	DBGPRINTF("omudpspoof trying resume for '%s'\n", pData->host);
 	memset(&hints, 0, sizeof(hints));
@@ -511,7 +535,8 @@ finalize_it:
 			freeaddrinfo(pData->f_addr);
 			pData->f_addr = NULL;
 		}
-		iRet = RS_RET_SUSPENDED;
+		if(iRet != RS_RET_DISABLE_ACTION)
+			iRet = RS_RET_SUSPENDED;
 	}
 
 	RETiRet;
@@ -587,6 +612,75 @@ finalize_it:
 ENDdoAction
 
 
+static inline void
+setInstParamDefaults(instanceData *pData)
+{
+	pData->tplName = NULL;
+	pData->sourcePortStart = DFLT_SOURCE_PORT_START;
+	pData->sourcePortEnd = DFLT_SOURCE_PORT_END;
+	pData->host = NULL;
+	pData->port = NULL;
+	pData->sourceTpl = (uchar*) strdup("RSYSLOG_omudpspoofDfltSourceTpl");
+	pData->mtu = 1500;
+}
+
+BEGINnewActInst
+	struct cnfparamvals *pvals;
+	uchar *tplToUse;
+	int i;
+CODESTARTnewActInst
+	DBGPRINTF("newActInst (omudpspoof)\n");
+
+	pvals = nvlstGetParams(lst, &actpblk, NULL);
+	if(pvals == NULL) {
+		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "omudpspoof: mandatory "
+		                "parameters missing");
+		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
+
+	if(Debug) {
+		dbgprintf("action param blk in omudpspoof:\n");
+		cnfparamsPrint(&actpblk, pvals);
+	}
+
+	CHKiRet(createInstance(&pData));
+	setInstParamDefaults(pData);
+
+	for(i = 0 ; i < actpblk.nParams ; ++i) {
+		if(!pvals[i].bUsed)
+			continue;
+		if(!strcmp(actpblk.descr[i].name, "target")) {
+			pData->host = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "port")) {
+			pData->port = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "sourcetemplate")) {
+			free(pData->sourceTpl);
+			pData->sourceTpl = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "sourceport.start")) {
+			pData->sourcePortStart = (int) pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "sourceport.end")) {
+			pData->sourcePortEnd = pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "mtu")) {
+			pData->mtu = pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "template")) {
+			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else {
+			DBGPRINTF("omudpspoof: program error, non-handled "
+			  "param '%s'\n", actpblk.descr[i].name);
+		}
+	}
+	CODE_STD_STRING_REQUESTnewActInst(2)
+	pData->sourcePort = pData->sourcePortStart;
+
+	tplToUse = ustrdup((pData->tplName == NULL) ? getDfltTpl() : pData->tplName);
+	CHKiRet(OMSRsetEntry(*ppOMSR, 0, tplToUse, OMSR_NO_RQD_TPL_OPTS));
+	CHKiRet(OMSRsetEntry(*ppOMSR, 1, ustrdup(pData->sourceTpl), OMSR_NO_RQD_TPL_OPTS));
+
+CODE_STD_FINALIZERnewActInst
+	cnfparamvalsDestruct(pvals, &actpblk);
+ENDnewActInst
+
+
 BEGINparseSelectorAct
 	uchar *sourceTpl;
 CODESTARTparseSelectorAct
@@ -657,6 +751,7 @@ ENDmodExit
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
+CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 CODEqueryEtryPt_STD_CONF2_QUERIES
 CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
 ENDqueryEtryPt

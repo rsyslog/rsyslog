@@ -1,5 +1,6 @@
 ----------------------------------------------------------------------------
 Version 7.2.5  [v7-stable] 2013-01-??
+- omudpspoof: add support for new config system
 - omudpspoof: add support for packets larger than 1472 bytes
   On Ethernet, they need to be transmitted in multiple fragments. While
   it is known that fragmentation can cause issues, it is the best choice
