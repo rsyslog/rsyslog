@@ -337,6 +337,12 @@ UDPSend(instanceData *pData, uchar *pszSourcename, char *msg, size_t len)
 		CHKiRet(doTryResume(pData));
 	}
 
+	if(len > 1472) {
+		DBGPRINTF("omudpspoof: msg with length %d truncated to 1472 bytes: '%.768s'\n",
+			  len, msg);
+		len = 1472;
+	}
+
 	ip = ipo = udp = 0;
 	if(pData->sourcePort++ >= pData->sourcePortEnd){
 		pData->sourcePort = pData->sourcePortStart;
@@ -347,7 +353,7 @@ UDPSend(instanceData *pData, uchar *pszSourcename, char *msg, size_t len)
 	bSendSuccess = RSFALSE;
 	d_pthread_mutex_lock(&mutLibnet);
 	bNeedUnlock = 1;
-	for (r = pData->f_addr; r; r = r->ai_next) {
+	for (r = pData->f_addr; r && bSendSuccess == RSFALSE ; r = r->ai_next) {
 		tempaddr = (struct sockaddr_in *)r->ai_addr;
 		libnet_clear_packet(libnet_handle);
 		/* note: libnet does need ports in host order NOT in network byte order! -- rgerhards, 2009-11-12 */
@@ -361,7 +367,7 @@ UDPSend(instanceData *pData, uchar *pszSourcename, char *msg, size_t len)
 			libnet_handle,		/* libnet handle */
 			udp);			/* libnet id */
 		if (udp == -1) {
-			DBGPRINTF("Can't build UDP header: %s\n", libnet_geterror(libnet_handle));
+			DBGPRINTF("omudpspoof: can't build UDP header: %s\n", libnet_geterror(libnet_handle));
 		}
 
 		ip = libnet_build_ipv4(
@@ -379,21 +385,24 @@ UDPSend(instanceData *pData, uchar *pszSourcename, char *msg, size_t len)
 			libnet_handle,			/* libnet handle */
 			ip);				/* libnet id */
 		if (ip == -1) {
-			DBGPRINTF("Can't build IP header: %s\n", libnet_geterror(libnet_handle));
+			DBGPRINTF("omudpspoof: can't build IP header: %s\n", libnet_geterror(libnet_handle));
 		}
 
 		/* Write it to the wire. */
 		lsent = libnet_write(libnet_handle);
-		if (lsent == -1) {
-			DBGPRINTF("Write error: %s\n", libnet_geterror(libnet_handle));
+		if(lsent != LIBNET_IPV4_H+LIBNET_UDP_H+len) {
+			DBGPRINTF("omudpspoof: write error len %d, sent %d: %s\n",
+				  LIBNET_IPV4_H+LIBNET_UDP_H+len, lsent, libnet_geterror(libnet_handle));
+			if(lsent != -1) {
+				bSendSuccess = RSTRUE;
+			}
 		} else {
 			bSendSuccess = RSTRUE;
-			break;
 		}
 	}
 	/* finished looping */
-	if (bSendSuccess == RSFALSE) {
-		DBGPRINTF("error forwarding via udp, suspending\n");
+	if(bSendSuccess == RSFALSE) {
+		DBGPRINTF("omudpspoof: error sending message, suspending\n");
 		iRet = RS_RET_SUSPENDED;
 	}
 
@@ -461,7 +470,9 @@ CODESTARTdoAction
 
 	iMaxLine = glbl.GetMaxLine();
 
-	DBGPRINTF(" %s:%s/udpspoofs\n", pData->host, getFwdPt(pData));
+	//TODO: enable THIS one! DBGPRINTF(" %s:%s/omudpspoof, src '%s', msg strt '%.256s'\n", pData->host,
+	DBGPRINTF(" %s:%s/omudpspoof, src '%s', msg strt '%s'\n", pData->host,
+		  getFwdPt(pData), ppString[1], ppString[0]);
 
 	psz = (char*) ppString[0];
 	l = strlen((char*) psz);
