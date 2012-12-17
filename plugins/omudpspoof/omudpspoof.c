@@ -342,13 +342,12 @@ UDPSend(instanceData *pData, uchar *pszSourcename, char *msg, size_t len)
 		pData->sourcePort = pData->sourcePortStart;
 	}
 
-dbgprintf("DDDD: source '%s', len: %d, msg:'%.256s'\n", pszSourcename, (int) len, msg);
 	inet_pton(AF_INET, (char*)pszSourcename, &(source_ip.sin_addr));
 
 	bSendSuccess = RSFALSE;
 	d_pthread_mutex_lock(&mutLibnet);
 	bNeedUnlock = 1;
-	for (r = pData->f_addr; r; r = r->ai_next) {
+	for (r = pData->f_addr; r && bSendSuccess == RSFALSE ; r = r->ai_next) {
 		tempaddr = (struct sockaddr_in *)r->ai_addr;
 		libnet_clear_packet(libnet_handle);
 		/* note: libnet does need ports in host order NOT in network byte order! -- rgerhards, 2009-11-12 */
@@ -362,7 +361,7 @@ dbgprintf("DDDD: source '%s', len: %d, msg:'%.256s'\n", pszSourcename, (int) len
 			libnet_handle,		/* libnet handle */
 			udp);			/* libnet id */
 		if (udp == -1) {
-			DBGPRINTF("Can't build UDP header: %s\n", libnet_geterror(libnet_handle));
+			DBGPRINTF("omudpspoof: can't build UDP header: %s\n", libnet_geterror(libnet_handle));
 		}
 
 		ip = libnet_build_ipv4(
@@ -380,21 +379,24 @@ dbgprintf("DDDD: source '%s', len: %d, msg:'%.256s'\n", pszSourcename, (int) len
 			libnet_handle,			/* libnet handle */
 			ip);				/* libnet id */
 		if (ip == -1) {
-			DBGPRINTF("Can't build IP header: %s\n", libnet_geterror(libnet_handle));
+			DBGPRINTF("omudpspoof: can't build IP header: %s\n", libnet_geterror(libnet_handle));
 		}
 
 		/* Write it to the wire. */
 		lsent = libnet_write(libnet_handle);
-		if (lsent == -1) {
-			DBGPRINTF("Write error: %s\n", libnet_geterror(libnet_handle));
+		if(lsent != LIBNET_IPV4_H+LIBNET_UDP_H+len) {
+			DBGPRINTF("omudpspoof: write error len %d, sent %d: %s\n",
+				  LIBNET_IPV4_H+LIBNET_UDP_H+len, lsent, libnet_geterror(libnet_handle));
+			if(lsent != -1) {
+				bSendSuccess = RSTRUE;
+			}
 		} else {
 			bSendSuccess = RSTRUE;
-			break;
 		}
 	}
 	/* finished looping */
-	if (bSendSuccess == RSFALSE) {
-		DBGPRINTF("error forwarding via udp, suspending\n");
+	if(bSendSuccess == RSFALSE) {
+		DBGPRINTF("omudpspoof: error sending message, suspending\n");
 		iRet = RS_RET_SUSPENDED;
 	}
 
@@ -462,7 +464,9 @@ CODESTARTdoAction
 
 	iMaxLine = glbl.GetMaxLine();
 
-	DBGPRINTF(" %s:%s/udpspoofs\n", pData->host, getFwdPt(pData));
+	//TODO: enable THIS one! DBGPRINTF(" %s:%s/omudpspoof, src '%s', msg strt '%.256s'\n", pData->host,
+	DBGPRINTF(" %s:%s/omudpspoof, src '%s', msg strt '%s'\n", pData->host,
+		  getFwdPt(pData), ppString[1], ppString[0]);
 
 	psz = (char*) ppString[0];
 	l = strlen((char*) psz);
