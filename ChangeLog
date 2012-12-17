@@ -19,6 +19,9 @@ Version 5.10.2  [V5-STABLE], 201?-??-??
   Thanks to Marius Tomaschewski for the bug report and the patch idea.
 - bugfix: invalid DST handling under Solaris
   Thanks to Scott Severtson for the patch.
+- bugfix[kind of]: omudpspoof discarded messages >1472 bytes (MTU size)
+  it now truncates these message, but ensures they are sent. Note that
+  7.2.5+ will switch to fragmented UDP messages instead (up to 64K)
 ---------------------------------------------------------------------------
 Version 5.10.1  [V5-STABLE], 2012-10-17
 - bugfix: imuxsock and imklog truncated head of received message
