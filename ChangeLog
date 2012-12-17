@@ -1,5 +1,9 @@
 ----------------------------------------------------------------------------
 Version 7.2.5  [v7-stable] 2013-01-??
+- omudpspoof: add support for packets larger than 1472 bytes
+  On Ethernet, they need to be transmitted in multiple fragments. While
+  it is known that fragmentation can cause issues, it is the best choice
+  to be made in that case. Also improved debug output.
 - build system cleanup (thanks to Michael Biebl for this!)
 - bugfix: omelasticsearch did not properly compile on some platforms
   due to missing libmath. Thanks to Michael Biebl for the fix

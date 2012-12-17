@@ -316,6 +316,7 @@ CODESTARTdbgPrintInstInfo
 ENDdbgPrintInstInfo
 
 
+#define MTU 1500 /* min max MTU we support - 1500 for ethernet TODO: config option? */
 /* Send a message via UDP
  * Note: libnet is not thread-safe, so we need to ensure that only one
  * instance ever is calling libnet code.
@@ -331,10 +332,20 @@ UDPSend(instanceData *pData, uchar *pszSourcename, char *msg, size_t len)
 	libnet_ptag_t ip, ipo;
 	libnet_ptag_t udp;
 	sbool bNeedUnlock = 0;
+	/* hdrOffs = fragmentation flags + offset (in bytes)
+	* divided by 8 */
+	unsigned msgOffs, hdrOffs; 
+	unsigned maxPktLen, pktLen;
 	DEFiRet;
 
 	if(pData->pSockArray == NULL) {
 		CHKiRet(doTryResume(pData));
+	}
+
+	if(len > 65528) {
+		DBGPRINTF("omudpspoof: msg with length %d truncated to 64k: '%.768s'\n",
+			  len, msg);
+		len = 65528;
 	}
 
 	ip = ipo = udp = 0;
@@ -349,15 +360,30 @@ UDPSend(instanceData *pData, uchar *pszSourcename, char *msg, size_t len)
 	bNeedUnlock = 1;
 	for (r = pData->f_addr; r && bSendSuccess == RSFALSE ; r = r->ai_next) {
 		tempaddr = (struct sockaddr_in *)r->ai_addr;
+		/* Getting max payload size (must be multiple of 8) */
+		maxPktLen = (MTU - LIBNET_IPV4_H) & ~0x07;
+		msgOffs = 0;
+		/* We're doing (payload size - UDP header size) and not
+		* checking if it's a multiple of 8 because we know the
+		* header is 8 bytes long */
+		if(len > (maxPktLen - LIBNET_UDP_H) ) {
+			hdrOffs = IP_MF;
+			pktLen = maxPktLen - LIBNET_UDP_H;
+		} else {
+			hdrOffs = 0;
+			pktLen = len;
+		}
+		DBGPRINTF("omudpspoof: stage 1: MF:%d, hdrOffs %d, pktLen %d\n",
+			  (hdrOffs & IP_MF) >> 13, (hdrOffs & 0x1FFF) << 3, pktLen);
 		libnet_clear_packet(libnet_handle);
 		/* note: libnet does need ports in host order NOT in network byte order! -- rgerhards, 2009-11-12 */
 		udp = libnet_build_udp(
 			ntohs(pData->sourcePort),/* source port */
 			ntohs(tempaddr->sin_port),/* destination port */
-			LIBNET_UDP_H + len,	/* packet length */
+			pktLen+LIBNET_UDP_H,	/* packet length */
 			0,			/* checksum */
 			(u_char*)msg,		/* payload */
-			len,			/* payload size */
+			pktLen,	                /* payload size */
 			libnet_handle,		/* libnet handle */
 			udp);			/* libnet id */
 		if (udp == -1) {
@@ -365,10 +391,10 @@ UDPSend(instanceData *pData, uchar *pszSourcename, char *msg, size_t len)
 		}
 
 		ip = libnet_build_ipv4(
-			LIBNET_IPV4_H +  len + LIBNET_UDP_H, /* length */
+			LIBNET_IPV4_H+LIBNET_UDP_H+pktLen, /* length */
 			0,				/* TOS */
 			242,				/* IP ID */
-			0,				/* IP Frag */
+			hdrOffs,			/* IP Frag */
 			64,				/* TTL */
 			IPPROTO_UDP,			/* protocol */
 			0,				/* checksum */
@@ -384,20 +410,62 @@ UDPSend(instanceData *pData, uchar *pszSourcename, char *msg, size_t len)
 
 		/* Write it to the wire. */
 		lsent = libnet_write(libnet_handle);
-		if(lsent != LIBNET_IPV4_H+LIBNET_UDP_H+len) {
-			DBGPRINTF("omudpspoof: write error len %d, sent %d: %s\n",
-				  LIBNET_IPV4_H+LIBNET_UDP_H+len, lsent, libnet_geterror(libnet_handle));
+		if(lsent != (int) (LIBNET_IPV4_H+LIBNET_UDP_H+pktLen)) {
+			DBGPRINTF("omudpspoof: write error (total len %d): pktLen %d, sent %d: %s\n",
+				  len, LIBNET_IPV4_H+LIBNET_UDP_H+pktLen, lsent, libnet_geterror(libnet_handle));
 			if(lsent != -1) {
 				bSendSuccess = RSTRUE;
 			}
 		} else {
 			bSendSuccess = RSTRUE;
 		}
-	}
-	/* finished looping */
-	if(bSendSuccess == RSFALSE) {
-		DBGPRINTF("omudpspoof: error sending message, suspending\n");
-		iRet = RS_RET_SUSPENDED;
+		msgOffs += pktLen;
+
+		/* We need to get rid of the UDP header to build the other fragments */
+		libnet_clear_packet(libnet_handle);
+		ip = LIBNET_PTAG_INITIALIZER;
+		while(len > msgOffs ) { /* loop until all payload is sent */
+			/* check if there will be more fragments */
+			if((len - msgOffs) > maxPktLen) {
+				/* In IP's eyes, the UDP header in the first packet
+				* needs to be in the offset, so we add its size to
+				* the payload offset here */
+				hdrOffs = IP_MF + (msgOffs + LIBNET_UDP_H)/8;
+				pktLen = maxPktLen;
+			} else {
+				/* See above */
+				hdrOffs = (msgOffs + LIBNET_UDP_H)/8;
+				pktLen = len - msgOffs;
+			}
+			DBGPRINTF("omudpspoof: stage 2: MF:%d, hdrOffs %d, pktLen %d\n",
+				  (hdrOffs & IP_MF) >> 13, (hdrOffs & 0x1FFF) << 3, pktLen);
+			ip = libnet_build_ipv4(
+				LIBNET_IPV4_H + pktLen,         /* length */
+				0,				/* TOS */
+				242,				/* IP ID */
+				hdrOffs,			/* IP Frag */
+				64,				/* TTL */
+				IPPROTO_UDP,			/* protocol */
+				0,				/* checksum */
+				source_ip.sin_addr.s_addr,
+				tempaddr->sin_addr.s_addr,
+				(u_int8_t*)(msg+msgOffs),	/* payload */
+				pktLen,		/* payload size */
+				libnet_handle,			/* libnet handle */
+				ip);				/* libnet id */
+			if (ip == -1) {
+				DBGPRINTF("omudpspoof: can't build IP fragment header: %s\n", libnet_geterror(libnet_handle));
+			}
+			/* Write it to the wire. */
+			lsent = libnet_write(libnet_handle);
+			if(lsent != (int) (LIBNET_IPV4_H+pktLen)) {
+				DBGPRINTF("omudpspoof: fragment write error len %d, sent %d: %s\n",
+					  LIBNET_IPV4_H+LIBNET_UDP_H+len, lsent, libnet_geterror(libnet_handle));
+				bSendSuccess = RSFALSE;
+				continue;
+			}
+			msgOffs += pktLen;
+		}
 	}
 
 finalize_it:
@@ -422,7 +490,7 @@ static rsRetVal doTryResume(instanceData *pData)
 		FINALIZE;
 
 	/* The remote address is not yet known and needs to be obtained */
-	DBGPRINTF(" %s\n", pData->host);
+	DBGPRINTF("omudpspoof trying resume for '%s'\n", pData->host);
 	memset(&hints, 0, sizeof(hints));
 	/* port must be numeric, because config file syntax requires this */
 	hints.ai_flags = AI_NUMERICSERV;
@@ -464,8 +532,7 @@ CODESTARTdoAction
 
 	iMaxLine = glbl.GetMaxLine();
 
-	//TODO: enable THIS one! DBGPRINTF(" %s:%s/omudpspoof, src '%s', msg strt '%.256s'\n", pData->host,
-	DBGPRINTF(" %s:%s/omudpspoof, src '%s', msg strt '%s'\n", pData->host,
+	DBGPRINTF(" %s:%s/omudpspoof, src '%s', msg strt '%.256s'\n", pData->host,
 		  getFwdPt(pData), ppString[1], ppString[0]);
 
 	psz = (char*) ppString[0];
