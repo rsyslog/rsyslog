@@ -5,7 +5,7 @@
  * This file builds on UDP spoofing code contributed by 
  * David Lang <david@lang.hm>. I then created a "real" rsyslog module
  * out of that code and omfwd. I decided to make it a separate module because
- * omfwd already mixes up too many things (TCP & UDP & a differnt modes,
+ * omfwd already mixes up too many things (TCP & UDP & a different modes,
  * this has historic reasons), it would not be a good idea to also add
  * spoofing to it. And, looking at the requirements, there is little in 
  * common between omfwd and this module.
@@ -93,14 +93,19 @@ DEFobjCurrIf(glbl)
 DEFobjCurrIf(net)
 
 typedef struct _instanceData {
+	uchar 	*tplName;	/* name of assigned template */
 	uchar	*host;
 	uchar	*port;
+	uchar	*sourceTpl;
+	int	mtu;
 	int	*pSockArray;		/* sockets to use for UDP */
-	int	compressionLevel;	/* 0 - no compression, else level for zlib */
 	struct addrinfo *f_addr;
 	u_short sourcePort;
 	u_short sourcePortStart;	/* for sorce port iteration */
 	u_short sourcePortEnd;
+	int	bReportLibnetInitErr; /* help prevent multiple error messages on init err */
+	libnet_t *libnet_handle;
+	char errbuf[LIBNET_ERRBUF_SIZE];
 } instanceData;
 
 #define DFLT_SOURCE_PORT_START 32000
@@ -115,6 +120,22 @@ typedef struct configSettings_s {
 	int iSourcePortEnd;
 } configSettings_t;
 static configSettings_t cs;
+
+/* action (instance) parameters */
+static struct cnfparamdescr actpdescr[] = {
+	{ "target", eCmdHdlrGetWord, 1 },
+	{ "port", eCmdHdlrGetWord, 0 },
+	{ "sourcetemplate", eCmdHdlrGetWord, 0 },
+	{ "sourceport.start", eCmdHdlrInt, 0 },
+	{ "sourceport.end", eCmdHdlrInt, 0 },
+	{ "mtu", eCmdHdlrInt, 0 },
+	{ "template", eCmdHdlrGetWord, 0 }
+};
+static struct cnfparamblk actpblk =
+	{ CNFPARAMBLK_VERSION,
+	  sizeof(actpdescr)/sizeof(struct cnfparamdescr),
+	  actpdescr
+	};
 
 /* module-global parameters */
 static struct cnfparamdescr modpdescr[] = {
@@ -148,8 +169,6 @@ ENDinitConfVars
 
 
 /* add some variables needed for libnet */
-libnet_t *libnet_handle;
-char errbuf[LIBNET_ERRBUF_SIZE];
 pthread_mutex_t mutLibnet;
 
 /* forward definitions */
@@ -291,6 +310,9 @@ ENDfreeCnf
 
 BEGINcreateInstance
 CODESTARTcreateInstance
+	pData->libnet_handle = NULL;
+	pData->mtu = 1500;
+	pData->bReportLibnetInitErr = 1;
 ENDcreateInstance
 
 
@@ -305,8 +327,12 @@ BEGINfreeInstance
 CODESTARTfreeInstance
 	/* final cleanup */
 	closeUDPSockets(pData);
+	free(pData->tplName);
 	free(pData->port);
 	free(pData->host);
+	free(pData->sourceTpl);
+	if(pData->libnet_handle != NULL)
+		libnet_destroy(pData->libnet_handle);
 ENDfreeInstance
 
 
@@ -331,16 +357,20 @@ UDPSend(instanceData *pData, uchar *pszSourcename, char *msg, size_t len)
 	libnet_ptag_t ip, ipo;
 	libnet_ptag_t udp;
 	sbool bNeedUnlock = 0;
+	/* hdrOffs = fragmentation flags + offset (in bytes)
+	* divided by 8 */
+	unsigned msgOffs, hdrOffs; 
+	unsigned maxPktLen, pktLen;
 	DEFiRet;
 
 	if(pData->pSockArray == NULL) {
 		CHKiRet(doTryResume(pData));
 	}
 
-	if(len > 1472) {
-		DBGPRINTF("omudpspoof: msg with length %d truncated to 1472 bytes: '%.768s'\n",
+	if(len > 65528) {
+		DBGPRINTF("omudpspoof: msg with length %d truncated to 64k: '%.768s'\n",
 			  len, msg);
-		len = 1472;
+		len = 65528;
 	}
 
 	ip = ipo = udp = 0;
@@ -355,26 +385,41 @@ UDPSend(instanceData *pData, uchar *pszSourcename, char *msg, size_t len)
 	bNeedUnlock = 1;
 	for (r = pData->f_addr; r && bSendSuccess == RSFALSE ; r = r->ai_next) {
 		tempaddr = (struct sockaddr_in *)r->ai_addr;
-		libnet_clear_packet(libnet_handle);
+		/* Getting max payload size (must be multiple of 8) */
+		maxPktLen = (pData->mtu - LIBNET_IPV4_H) & ~0x07;
+		msgOffs = 0;
+		/* We're doing (payload size - UDP header size) and not
+		* checking if it's a multiple of 8 because we know the
+		* header is 8 bytes long */
+		if(len > (maxPktLen - LIBNET_UDP_H) ) {
+			hdrOffs = IP_MF;
+			pktLen = maxPktLen - LIBNET_UDP_H;
+		} else {
+			hdrOffs = 0;
+			pktLen = len;
+		}
+		DBGPRINTF("omudpspoof: stage 1: MF:%d, hdrOffs %d, pktLen %d\n",
+			  (hdrOffs & IP_MF) >> 13, (hdrOffs & 0x1FFF) << 3, pktLen);
+		libnet_clear_packet(pData->libnet_handle);
 		/* note: libnet does need ports in host order NOT in network byte order! -- rgerhards, 2009-11-12 */
 		udp = libnet_build_udp(
 			ntohs(pData->sourcePort),/* source port */
 			ntohs(tempaddr->sin_port),/* destination port */
-			LIBNET_UDP_H + len,	/* packet length */
+			pktLen+LIBNET_UDP_H,	/* packet length */
 			0,			/* checksum */
 			(u_char*)msg,		/* payload */
-			len,			/* payload size */
-			libnet_handle,		/* libnet handle */
+			pktLen,	                /* payload size */
+			pData->libnet_handle,	/* libnet handle */
 			udp);			/* libnet id */
 		if (udp == -1) {
-			DBGPRINTF("omudpspoof: can't build UDP header: %s\n", libnet_geterror(libnet_handle));
+			DBGPRINTF("omudpspoof: can't build UDP header: %s\n", libnet_geterror(pData->libnet_handle));
 		}
 
 		ip = libnet_build_ipv4(
-			LIBNET_IPV4_H +  len + LIBNET_UDP_H, /* length */
+			LIBNET_IPV4_H+LIBNET_UDP_H+pktLen, /* length */
 			0,				/* TOS */
 			242,				/* IP ID */
-			0,				/* IP Frag */
+			hdrOffs,			/* IP Frag */
 			64,				/* TTL */
 			IPPROTO_UDP,			/* protocol */
 			0,				/* checksum */
@@ -382,31 +427,87 @@ UDPSend(instanceData *pData, uchar *pszSourcename, char *msg, size_t len)
 			tempaddr->sin_addr.s_addr,
 			NULL,				/* payload */
 			0,				/* payload size */
-			libnet_handle,			/* libnet handle */
+			pData->libnet_handle,		/* libnet handle */
 			ip);				/* libnet id */
 		if (ip == -1) {
-			DBGPRINTF("omudpspoof: can't build IP header: %s\n", libnet_geterror(libnet_handle));
+			DBGPRINTF("omudpspoof: can't build IP header: %s\n", libnet_geterror(pData->libnet_handle));
 		}
 
 		/* Write it to the wire. */
-		lsent = libnet_write(libnet_handle);
-		if(lsent != LIBNET_IPV4_H+LIBNET_UDP_H+len) {
-			DBGPRINTF("omudpspoof: write error len %d, sent %d: %s\n",
-				  LIBNET_IPV4_H+LIBNET_UDP_H+len, lsent, libnet_geterror(libnet_handle));
+		lsent = libnet_write(pData->libnet_handle);
+		dbgprintf("DDDD: omudpspoof stage 1 return state %d (expected %d), fd %d\n", lsent,
+		          (int) (LIBNET_IPV4_H+LIBNET_UDP_H+pktLen), pData->libnet_handle->fd);
+		if(lsent != (int) (LIBNET_IPV4_H+LIBNET_UDP_H+pktLen)) {
+			/* note: access to fd is a libnet internal. If a newer version of libnet does
+			 * not expose that member, we should simply remove it. However, while it is there
+			 * it is useful for consolidating with strace output.
+			 */
+			DBGPRINTF("omudpspoof: write error (total len %d): pktLen %d, sent %d, fd %d: %s\n",
+				  len, LIBNET_IPV4_H+LIBNET_UDP_H+pktLen, lsent, pData->libnet_handle->fd,
+				  libnet_geterror(pData->libnet_handle));
 			if(lsent != -1) {
 				bSendSuccess = RSTRUE;
 			}
 		} else {
 			bSendSuccess = RSTRUE;
 		}
-	}
-	/* finished looping */
-	if(bSendSuccess == RSFALSE) {
-		DBGPRINTF("omudpspoof: error sending message, suspending\n");
-		iRet = RS_RET_SUSPENDED;
+		msgOffs += pktLen;
+
+		/* We need to get rid of the UDP header to build the other fragments */
+		libnet_clear_packet(pData->libnet_handle);
+		ip = LIBNET_PTAG_INITIALIZER;
+		while(len > msgOffs ) { /* loop until all payload is sent */
+			/* check if there will be more fragments */
+			if((len - msgOffs) > maxPktLen) {
+				/* In IP's eyes, the UDP header in the first packet
+				* needs to be in the offset, so we add its size to
+				* the payload offset here */
+				hdrOffs = IP_MF + (msgOffs + LIBNET_UDP_H)/8;
+				pktLen = maxPktLen;
+			} else {
+				/* See above */
+				hdrOffs = (msgOffs + LIBNET_UDP_H)/8;
+				pktLen = len - msgOffs;
+			}
+			DBGPRINTF("omudpspoof: stage 2: MF:%d, hdrOffs %d, pktLen %d\n",
+				  (hdrOffs & IP_MF) >> 13, (hdrOffs & 0x1FFF) << 3, pktLen);
+			ip = libnet_build_ipv4(
+				LIBNET_IPV4_H + pktLen,         /* length */
+				0,				/* TOS */
+				242,				/* IP ID */
+				hdrOffs,			/* IP Frag */
+				64,				/* TTL */
+				IPPROTO_UDP,			/* protocol */
+				0,				/* checksum */
+				source_ip.sin_addr.s_addr,
+				tempaddr->sin_addr.s_addr,
+				(u_int8_t*)(msg+msgOffs),	/* payload */
+				pktLen, 			/* payload size */
+				pData->libnet_handle,		/* libnet handle */
+				ip);				/* libnet id */
+			if (ip == -1) {
+				DBGPRINTF("omudpspoof: can't build IP fragment header: %s\n", libnet_geterror(pData->libnet_handle));
+			}
+			/* Write it to the wire. */
+			lsent = libnet_write(pData->libnet_handle);
+			dbgprintf("DDDD: omudpspoof stage 1 return state %d (expected %d)\n", lsent, (int) (LIBNET_IPV4_H+pktLen));
+			if(lsent != (int) (LIBNET_IPV4_H+pktLen)) {
+				DBGPRINTF("omudpspoof: fragment write error len %d, sent %d: %s\n",
+					  LIBNET_IPV4_H+LIBNET_UDP_H+len, lsent, libnet_geterror(pData->libnet_handle));
+				bSendSuccess = RSFALSE;
+				continue;
+			}
+			msgOffs += pktLen;
+		}
 	}
 
 finalize_it:
+	if(iRet != RS_RET_OK) {
+		if(pData->libnet_handle != NULL) {
+			libnet_destroy(pData->libnet_handle);
+			pData->libnet_handle = NULL;
+		}
+	}
 	if(bNeedUnlock) {
 		d_pthread_mutex_unlock(&mutLibnet);
 	}
@@ -427,8 +528,32 @@ static rsRetVal doTryResume(instanceData *pData)
 	if(pData->pSockArray != NULL)
 		FINALIZE;
 
+	if(pData->host == NULL)
+		ABORT_FINALIZE(RS_RET_DISABLE_ACTION);
+
+	if(pData->libnet_handle == NULL) {
+		/* Initialize the libnet library.  Root priviledges are required.
+		 * this initializes a IPv4 socket to use for forging UDP packets.
+		 */
+		pData->libnet_handle = libnet_init(
+		    LIBNET_RAW4,                            /* injection type */
+		    NULL,                                   /* network interface */
+		    pData->errbuf);                         /* errbuf */
+
+		if(pData->libnet_handle == NULL) {
+			if(pData->bReportLibnetInitErr) {
+				errmsg.LogError(0, RS_RET_LIBNET_INIT_FAILED, "omudpsoof: error "
+				                "initializing libnet - are you running as root?");
+				pData->bReportLibnetInitErr = 0;
+			}
+			ABORT_FINALIZE(RS_RET_ERR_LIBNET_INIT);
+		}
+	}
+	DBGPRINTF("omudpspoof: libnit_init() ok\n");
+	pData->bReportLibnetInitErr = 1;
+
 	/* The remote address is not yet known and needs to be obtained */
-	DBGPRINTF(" %s\n", pData->host);
+	DBGPRINTF("omudpspoof trying resume for '%s'\n", pData->host);
 	memset(&hints, 0, sizeof(hints));
 	/* port must be numeric, because config file syntax requires this */
 	hints.ai_flags = AI_NUMERICSERV;
@@ -449,7 +574,8 @@ finalize_it:
 			freeaddrinfo(pData->f_addr);
 			pData->f_addr = NULL;
 		}
-		iRet = RS_RET_SUSPENDED;
+		if(iRet != RS_RET_DISABLE_ACTION)
+			iRet = RS_RET_SUSPENDED;
 	}
 
 	RETiRet;
@@ -463,67 +589,93 @@ ENDtryResume
 
 BEGINdoAction
 	char *psz; /* temporary buffering */
-	register unsigned l;
+	unsigned l;
 	int iMaxLine;
 CODESTARTdoAction
 	CHKiRet(doTryResume(pData));
 
-	iMaxLine = glbl.GetMaxLine();
-
-	//TODO: enable THIS one! DBGPRINTF(" %s:%s/omudpspoof, src '%s', msg strt '%.256s'\n", pData->host,
-	DBGPRINTF(" %s:%s/omudpspoof, src '%s', msg strt '%s'\n", pData->host,
+	DBGPRINTF(" %s:%s/omudpspoof, src '%s', msg strt '%.256s'\n", pData->host,
 		  getFwdPt(pData), ppString[1], ppString[0]);
 
+	iMaxLine = glbl.GetMaxLine();
 	psz = (char*) ppString[0];
 	l = strlen((char*) psz);
 	if((int) l > iMaxLine)
 		l = iMaxLine;
 
-#	ifdef	USE_NETZIP
-	/* Check if we should compress and, if so, do it. We also
-	 * check if the message is large enough to justify compression.
-	 * The smaller the message, the less likely is a gain in compression.
-	 * To save CPU cycles, we do not try to compress very small messages.
-	 * What "very small" means needs to be configured. Currently, it is
-	 * hard-coded but this may be changed to a config parameter.
-	 * rgerhards, 2006-11-30
-	 */
-	if(pData->compressionLevel && (l > CONF_MIN_SIZE_FOR_COMPRESS)) {
-		Bytef *out;
-		uLongf destLen = iMaxLine + iMaxLine/100 +12; /* recommended value from zlib doc */
-		uLong srcLen = l;
-		int ret;
-		/* TODO: optimize malloc sequence? -- rgerhards, 2008-09-02 */
-		CHKmalloc(out = (Bytef*) MALLOC(destLen));
-		out[0] = 'z';
-		out[1] = '\0';
-		ret = compress2((Bytef*) out+1, &destLen, (Bytef*) psz,
-				srcLen, pData->compressionLevel);
-		DBGPRINTF("Compressing message, length was %d now %d, return state  %d.\n",
-			l, (int) destLen, ret);
-		if(ret != Z_OK) {
-			/* if we fail, we complain, but only in debug mode
-			 * Otherwise, we are silent. In any case, we ignore the
-			 * failed compression and just sent the uncompressed
-			 * data, which is still valid. So this is probably the
-			 * best course of action.
-			 * rgerhards, 2006-11-30
-			 */
-			DBGPRINTF("Compression failed, sending uncompressed message\n");
-		} else if(destLen+1 < l) {
-			/* only use compression if there is a gain in using it! */
-			DBGPRINTF("there is gain in compression, so we do it\n");
-			psz = (char*) out;
-			l = destLen + 1; /* take care for the "z" at message start! */
-		}
-		++destLen;
-	}
-#	endif
-
 	CHKiRet(UDPSend(pData, ppString[1], psz, l));
 
 finalize_it:
 ENDdoAction
+
+
+static inline void
+setInstParamDefaults(instanceData *pData)
+{
+	pData->tplName = NULL;
+	pData->sourcePortStart = DFLT_SOURCE_PORT_START;
+	pData->sourcePortEnd = DFLT_SOURCE_PORT_END;
+	pData->host = NULL;
+	pData->port = NULL;
+	pData->sourceTpl = (uchar*) strdup("RSYSLOG_omudpspoofDfltSourceTpl");
+	pData->mtu = 1500;
+}
+
+BEGINnewActInst
+	struct cnfparamvals *pvals;
+	uchar *tplToUse;
+	int i;
+CODESTARTnewActInst
+	DBGPRINTF("newActInst (omudpspoof)\n");
+
+	pvals = nvlstGetParams(lst, &actpblk, NULL);
+	if(pvals == NULL) {
+		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "omudpspoof: mandatory "
+		                "parameters missing");
+		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
+
+	if(Debug) {
+		dbgprintf("action param blk in omudpspoof:\n");
+		cnfparamsPrint(&actpblk, pvals);
+	}
+
+	CHKiRet(createInstance(&pData));
+	setInstParamDefaults(pData);
+
+	for(i = 0 ; i < actpblk.nParams ; ++i) {
+		if(!pvals[i].bUsed)
+			continue;
+		if(!strcmp(actpblk.descr[i].name, "target")) {
+			pData->host = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "port")) {
+			pData->port = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "sourcetemplate")) {
+			free(pData->sourceTpl);
+			pData->sourceTpl = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "sourceport.start")) {
+			pData->sourcePortStart = (int) pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "sourceport.end")) {
+			pData->sourcePortEnd = pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "mtu")) {
+			pData->mtu = pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "template")) {
+			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else {
+			DBGPRINTF("omudpspoof: program error, non-handled "
+			  "param '%s'\n", actpblk.descr[i].name);
+		}
+	}
+	CODE_STD_STRING_REQUESTnewActInst(2)
+	pData->sourcePort = pData->sourcePortStart;
+
+	tplToUse = ustrdup((pData->tplName == NULL) ? getDfltTpl() : pData->tplName);
+	CHKiRet(OMSRsetEntry(*ppOMSR, 0, tplToUse, OMSR_NO_RQD_TPL_OPTS));
+	CHKiRet(OMSRsetEntry(*ppOMSR, 1, ustrdup(pData->sourceTpl), OMSR_NO_RQD_TPL_OPTS));
+
+CODE_STD_FINALIZERnewActInst
+	cnfparamvalsDestruct(pvals, &actpblk);
+ENDnewActInst
 
 
 BEGINparseSelectorAct
@@ -583,7 +735,6 @@ freeConfigVars(void)
 BEGINmodExit
 CODESTARTmodExit
 	/* destroy the libnet state needed for forged UDP sources */
-	libnet_destroy(libnet_handle);
 	pthread_mutex_destroy(&mutLibnet);
 	/* release what we no longer need */
 	objRelease(errmsg, CORE_COMPONENT);
@@ -596,6 +747,7 @@ ENDmodExit
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
+CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 CODEqueryEtryPt_STD_CONF2_QUERIES
 CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
 ENDqueryEtryPt
@@ -623,18 +775,6 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(net,LM_NET_FILENAME));
 
-	/* Initialize the libnet library.  Root priviledges are required.
-	* this initializes a IPv4 socket to use for forging UDP packets.
-	*/
-	libnet_handle = libnet_init(
-	    LIBNET_RAW4,                            /* injection type */
-	    NULL,                                   /* network interface */
-	    errbuf);                                /* errbuf */
-
-	if(libnet_handle == NULL) {
-		errmsg.LogError(0, NO_ERRCODE, "Error initializing libnet, can not continue ");
-		ABORT_FINALIZE(RS_RET_ERR_LIBNET_INIT);
-	}
 	pthread_mutex_init(&mutLibnet, NULL);
 
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionomudpspoofdefaulttemplate", 0, eCmdHdlrGetWord, setLegacyDfltTpl, NULL, NULL));

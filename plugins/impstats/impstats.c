@@ -140,6 +140,8 @@ doSubmitMsg(uchar *line)
 
 	/* we do not use rate-limiting, as the stats message always need to be emitted */
 	submitMsg2(pMsg);
+	DBGPRINTF("impstats: submit [%d,%d] msg '%s'\n", runModConf->iFacility,
+	          runModConf->iSeverity, line);
 
 finalize_it:
 	RETiRet;
