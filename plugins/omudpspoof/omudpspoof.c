@@ -104,6 +104,8 @@ typedef struct _instanceData {
 	u_short sourcePort;
 	u_short sourcePortStart;	/* for sorce port iteration */
 	u_short sourcePortEnd;
+	libnet_t *libnet_handle;
+	char errbuf[LIBNET_ERRBUF_SIZE];
 } instanceData;
 
 #define DFLT_SOURCE_PORT_START 32000
@@ -167,8 +169,6 @@ ENDinitConfVars
 
 
 /* add some variables needed for libnet */
-libnet_t *libnet_handle;
-char errbuf[LIBNET_ERRBUF_SIZE];
 pthread_mutex_t mutLibnet;
 
 /* forward definitions */
@@ -310,6 +310,7 @@ ENDfreeCnf
 
 BEGINcreateInstance
 CODESTARTcreateInstance
+finalize_it:
 ENDcreateInstance
 
 
@@ -379,6 +380,18 @@ UDPSend(instanceData *pData, uchar *pszSourcename, char *msg, size_t len)
 	bSendSuccess = RSFALSE;
 	d_pthread_mutex_lock(&mutLibnet);
 	bNeedUnlock = 1;
+/* Initialize the libnet library.  Root priviledges are required.
+* this initializes a IPv4 socket to use for forging UDP packets.
+*/
+pData->libnet_handle = libnet_init(
+    LIBNET_RAW4,                            /* injection type */
+    NULL,                                   /* network interface */
+    pData->errbuf);                         /* errbuf */
+
+if(pData->libnet_handle == NULL) {
+	errmsg.LogError(0, NO_ERRCODE, "Error initializing libnet, can not continue ");
+	ABORT_FINALIZE(RS_RET_ERR_LIBNET_INIT);
+}
 	for (r = pData->f_addr; r && bSendSuccess == RSFALSE ; r = r->ai_next) {
 		tempaddr = (struct sockaddr_in *)r->ai_addr;
 		/* Getting max payload size (must be multiple of 8) */
@@ -396,7 +409,7 @@ UDPSend(instanceData *pData, uchar *pszSourcename, char *msg, size_t len)
 		}
 		DBGPRINTF("omudpspoof: stage 1: MF:%d, hdrOffs %d, pktLen %d\n",
 			  (hdrOffs & IP_MF) >> 13, (hdrOffs & 0x1FFF) << 3, pktLen);
-		libnet_clear_packet(libnet_handle);
+		libnet_clear_packet(pData->libnet_handle);
 		/* note: libnet does need ports in host order NOT in network byte order! -- rgerhards, 2009-11-12 */
 		udp = libnet_build_udp(
 			ntohs(pData->sourcePort),/* source port */
@@ -405,10 +418,10 @@ UDPSend(instanceData *pData, uchar *pszSourcename, char *msg, size_t len)
 			0,			/* checksum */
 			(u_char*)msg,		/* payload */
 			pktLen,	                /* payload size */
-			libnet_handle,		/* libnet handle */
+			pData->libnet_handle,	/* libnet handle */
 			udp);			/* libnet id */
 		if (udp == -1) {
-			DBGPRINTF("omudpspoof: can't build UDP header: %s\n", libnet_geterror(libnet_handle));
+			DBGPRINTF("omudpspoof: can't build UDP header: %s\n", libnet_geterror(pData->libnet_handle));
 		}
 
 		ip = libnet_build_ipv4(
@@ -423,17 +436,19 @@ UDPSend(instanceData *pData, uchar *pszSourcename, char *msg, size_t len)
 			tempaddr->sin_addr.s_addr,
 			NULL,				/* payload */
 			0,				/* payload size */
-			libnet_handle,			/* libnet handle */
+			pData->libnet_handle,		/* libnet handle */
 			ip);				/* libnet id */
 		if (ip == -1) {
-			DBGPRINTF("omudpspoof: can't build IP header: %s\n", libnet_geterror(libnet_handle));
+			DBGPRINTF("omudpspoof: can't build IP header: %s\n", libnet_geterror(pData->libnet_handle));
 		}
 
 		/* Write it to the wire. */
-		lsent = libnet_write(libnet_handle);
+dbgprintf("DDDD: omudpspoof fd %d\n", pData->libnet_handle->fd);
+		lsent = libnet_write(pData->libnet_handle);
+		dbgprintf("DDDD: omudpspoof stage 1 return state %d (expected %d)\n", lsent, (int) (LIBNET_IPV4_H+LIBNET_UDP_H+pktLen));
 		if(lsent != (int) (LIBNET_IPV4_H+LIBNET_UDP_H+pktLen)) {
 			DBGPRINTF("omudpspoof: write error (total len %d): pktLen %d, sent %d: %s\n",
-				  len, LIBNET_IPV4_H+LIBNET_UDP_H+pktLen, lsent, libnet_geterror(libnet_handle));
+				  len, LIBNET_IPV4_H+LIBNET_UDP_H+pktLen, lsent, libnet_geterror(pData->libnet_handle));
 			if(lsent != -1) {
 				bSendSuccess = RSTRUE;
 			}
@@ -443,7 +458,7 @@ UDPSend(instanceData *pData, uchar *pszSourcename, char *msg, size_t len)
 		msgOffs += pktLen;
 
 		/* We need to get rid of the UDP header to build the other fragments */
-		libnet_clear_packet(libnet_handle);
+		libnet_clear_packet(pData->libnet_handle);
 		ip = LIBNET_PTAG_INITIALIZER;
 		while(len > msgOffs ) { /* loop until all payload is sent */
 			/* check if there will be more fragments */
@@ -472,16 +487,17 @@ UDPSend(instanceData *pData, uchar *pszSourcename, char *msg, size_t len)
 				tempaddr->sin_addr.s_addr,
 				(u_int8_t*)(msg+msgOffs),	/* payload */
 				pktLen,		/* payload size */
-				libnet_handle,			/* libnet handle */
+				pData->libnet_handle,		/* libnet handle */
 				ip);				/* libnet id */
 			if (ip == -1) {
-				DBGPRINTF("omudpspoof: can't build IP fragment header: %s\n", libnet_geterror(libnet_handle));
+				DBGPRINTF("omudpspoof: can't build IP fragment header: %s\n", libnet_geterror(pData->libnet_handle));
 			}
 			/* Write it to the wire. */
-			lsent = libnet_write(libnet_handle);
+			lsent = libnet_write(pData->libnet_handle);
+			dbgprintf("DDDD: omudpspoof stage 1 return state %d (expected %d)\n", lsent, (int) (LIBNET_IPV4_H+pktLen));
 			if(lsent != (int) (LIBNET_IPV4_H+pktLen)) {
 				DBGPRINTF("omudpspoof: fragment write error len %d, sent %d: %s\n",
-					  LIBNET_IPV4_H+LIBNET_UDP_H+len, lsent, libnet_geterror(libnet_handle));
+					  LIBNET_IPV4_H+LIBNET_UDP_H+len, lsent, libnet_geterror(pData->libnet_handle));
 				bSendSuccess = RSFALSE;
 				continue;
 			}
@@ -491,6 +507,7 @@ UDPSend(instanceData *pData, uchar *pszSourcename, char *msg, size_t len)
 
 finalize_it:
 	if(bNeedUnlock) {
+libnet_destroy(pData->libnet_handle);
 		d_pthread_mutex_unlock(&mutLibnet);
 	}
 	RETiRet;
@@ -738,7 +755,6 @@ freeConfigVars(void)
 BEGINmodExit
 CODESTARTmodExit
 	/* destroy the libnet state needed for forged UDP sources */
-	libnet_destroy(libnet_handle);
 	pthread_mutex_destroy(&mutLibnet);
 	/* release what we no longer need */
 	objRelease(errmsg, CORE_COMPONENT);
@@ -779,18 +795,6 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(net,LM_NET_FILENAME));
 
-	/* Initialize the libnet library.  Root priviledges are required.
-	* this initializes a IPv4 socket to use for forging UDP packets.
-	*/
-	libnet_handle = libnet_init(
-	    LIBNET_RAW4,                            /* injection type */
-	    NULL,                                   /* network interface */
-	    errbuf);                                /* errbuf */
-
-	if(libnet_handle == NULL) {
-		errmsg.LogError(0, NO_ERRCODE, "Error initializing libnet, can not continue ");
-		ABORT_FINALIZE(RS_RET_ERR_LIBNET_INIT);
-	}
 	pthread_mutex_init(&mutLibnet, NULL);
 
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionomudpspoofdefaulttemplate", 0, eCmdHdlrGetWord, setLegacyDfltTpl, NULL, NULL));
