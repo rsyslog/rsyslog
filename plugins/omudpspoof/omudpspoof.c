@@ -542,7 +542,7 @@ static rsRetVal doTryResume(instanceData *pData)
 
 		if(pData->libnet_handle == NULL) {
 			if(pData->bReportLibnetInitErr) {
-				errmsg.LogError(0, RS_RET_LIBNET_INIT_FAILED, "omudpsoof: error "
+				errmsg.LogError(0, RS_RET_ERR_LIBNET_INIT, "omudpsoof: error "
 				                "initializing libnet - are you running as root?");
 				pData->bReportLibnetInitErr = 0;
 			}
