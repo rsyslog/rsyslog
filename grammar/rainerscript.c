@@ -1250,6 +1250,10 @@ evalStrArrayCmp(es_str_t *estr_l, struct cnfarray* ar, int cmpop)
 		} else if(expr->r->nodetype != 'A') { \
 			cnfexprEval(expr->r, &r, usrptr); \
 			estr_r = var2String(&r, &bMustFree); \
+		} else { \
+			/* Note: this is not really necessary, but if we do not */ \
+			/* do it, we get a very irritating compiler warning... */ \
+			estr_r = NULL; \
 		}
 
 #define FREE_TWO_STRINGS \
