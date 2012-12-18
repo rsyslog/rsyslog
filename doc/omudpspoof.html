@@ -15,6 +15,10 @@ and David Lang  &lt;david@lang.hm&gt;
 <p>This module is similar to the regular UDP forwarder, but permits to
 spoof the sender address. Also, it enables to circle through a number of
 source ports.
+<p><b>Important:</b> This module requires root priveleges for its low-level
+socket access. As such, the <b>module will not work if rsyslog is configured to
+drop privileges</b>.
+
 <p><b>load() Parameters</b>:</p>
 <ul>
 	<li><strong>Template </strong>[templateName]<br>

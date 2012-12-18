@@ -5,6 +5,11 @@ Version 7.2.5  [v7-stable] 2013-01-??
   On Ethernet, they need to be transmitted in multiple fragments. While
   it is known that fragmentation can cause issues, it is the best choice
   to be made in that case. Also improved debug output.
+- bugfix: omudpspoof failed depending on the execution environment
+  The v7 engine closes fds, and closed some of libnet's fds as well, what
+  lead to problems (unfortunately, at least some libnet versions do not
+  report a proper error state but still "success"...). The order of libnet
+  calls has been adjusted to by in sync with what the core engine does.
 - build system cleanup (thanks to Michael Biebl for this!)
 - bugfix: omelasticsearch did not properly compile on some platforms
   due to missing libmath. Thanks to Michael Biebl for the fix

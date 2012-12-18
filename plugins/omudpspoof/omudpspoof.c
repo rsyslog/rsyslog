@@ -104,6 +104,7 @@ typedef struct _instanceData {
 	u_short sourcePort;
 	u_short sourcePortStart;	/* for sorce port iteration */
 	u_short sourcePortEnd;
+	int	bReportLibnetInitErr; /* help prevent multiple error messages on init err */
 	libnet_t *libnet_handle;
 	char errbuf[LIBNET_ERRBUF_SIZE];
 } instanceData;
@@ -310,7 +311,9 @@ ENDfreeCnf
 
 BEGINcreateInstance
 CODESTARTcreateInstance
+	pData->libnet_handle = NULL;
 	pData->mtu = 1500;
+	pData->bReportLibnetInitErr = 1;
 ENDcreateInstance
 
 
@@ -329,6 +332,8 @@ CODESTARTfreeInstance
 	free(pData->port);
 	free(pData->host);
 	free(pData->sourceTpl);
+	if(pData->libnet_handle != NULL)
+		libnet_destroy(pData->libnet_handle);
 ENDfreeInstance
 
 
@@ -379,18 +384,6 @@ UDPSend(instanceData *pData, uchar *pszSourcename, char *msg, size_t len)
 	bSendSuccess = RSFALSE;
 	d_pthread_mutex_lock(&mutLibnet);
 	bNeedUnlock = 1;
-/* Initialize the libnet library.  Root priviledges are required.
-* this initializes a IPv4 socket to use for forging UDP packets.
-*/
-pData->libnet_handle = libnet_init(
-    LIBNET_RAW4,                            /* injection type */
-    NULL,                                   /* network interface */
-    pData->errbuf);                         /* errbuf */
-
-if(pData->libnet_handle == NULL) {
-	errmsg.LogError(0, NO_ERRCODE, "Error initializing libnet, can not continue ");
-	ABORT_FINALIZE(RS_RET_ERR_LIBNET_INIT);
-}
 	for (r = pData->f_addr; r && bSendSuccess == RSFALSE ; r = r->ai_next) {
 		tempaddr = (struct sockaddr_in *)r->ai_addr;
 		/* Getting max payload size (must be multiple of 8) */
@@ -442,12 +435,17 @@ if(pData->libnet_handle == NULL) {
 		}
 
 		/* Write it to the wire. */
-dbgprintf("DDDD: omudpspoof fd %d\n", pData->libnet_handle->fd);
 		lsent = libnet_write(pData->libnet_handle);
-		dbgprintf("DDDD: omudpspoof stage 1 return state %d (expected %d)\n", lsent, (int) (LIBNET_IPV4_H+LIBNET_UDP_H+pktLen));
+		dbgprintf("DDDD: omudpspoof stage 1 return state %d (expected %d), fd %d\n", lsent,
+		          (int) (LIBNET_IPV4_H+LIBNET_UDP_H+pktLen), pData->libnet_handle->fd);
 		if(lsent != (int) (LIBNET_IPV4_H+LIBNET_UDP_H+pktLen)) {
-			DBGPRINTF("omudpspoof: write error (total len %d): pktLen %d, sent %d: %s\n",
-				  len, LIBNET_IPV4_H+LIBNET_UDP_H+pktLen, lsent, libnet_geterror(pData->libnet_handle));
+			/* note: access to fd is a libnet internal. If a newer version of libnet does
+			 * not expose that member, we should simply remove it. However, while it is there
+			 * it is useful for consolidating with strace output.
+			 */
+			DBGPRINTF("omudpspoof: write error (total len %d): pktLen %d, sent %d, fd %d: %s\n",
+				  len, LIBNET_IPV4_H+LIBNET_UDP_H+pktLen, lsent, pData->libnet_handle->fd,
+				  libnet_geterror(pData->libnet_handle));
 			if(lsent != -1) {
 				bSendSuccess = RSTRUE;
 			}
@@ -485,7 +483,7 @@ dbgprintf("DDDD: omudpspoof fd %d\n", pData->libnet_handle->fd);
 				source_ip.sin_addr.s_addr,
 				tempaddr->sin_addr.s_addr,
 				(u_int8_t*)(msg+msgOffs),	/* payload */
-				pktLen,		/* payload size */
+				pktLen, 			/* payload size */
 				pData->libnet_handle,		/* libnet handle */
 				ip);				/* libnet id */
 			if (ip == -1) {
@@ -505,8 +503,13 @@ dbgprintf("DDDD: omudpspoof fd %d\n", pData->libnet_handle->fd);
 	}
 
 finalize_it:
+	if(iRet != RS_RET_OK) {
+		if(pData->libnet_handle != NULL) {
+			libnet_destroy(pData->libnet_handle);
+			pData->libnet_handle = NULL;
+		}
+	}
 	if(bNeedUnlock) {
-libnet_destroy(pData->libnet_handle);
 		d_pthread_mutex_unlock(&mutLibnet);
 	}
 	RETiRet;
@@ -528,6 +531,27 @@ static rsRetVal doTryResume(instanceData *pData)
 
 	if(pData->host == NULL)
 		ABORT_FINALIZE(RS_RET_DISABLE_ACTION);
+
+	if(pData->libnet_handle == NULL) {
+		/* Initialize the libnet library.  Root priviledges are required.
+		 * this initializes a IPv4 socket to use for forging UDP packets.
+		 */
+		pData->libnet_handle = libnet_init(
+		    LIBNET_RAW4,                            /* injection type */
+		    NULL,                                   /* network interface */
+		    pData->errbuf);                         /* errbuf */
+
+		if(pData->libnet_handle == NULL) {
+			if(pData->bReportLibnetInitErr) {
+				errmsg.LogError(0, RS_RET_LIBNET_INIT_FAILED, "omudpsoof: error "
+				                "initializing libnet - are you running as root?");
+				pData->bReportLibnetInitErr = 0;
+			}
+			ABORT_FINALIZE(RS_RET_ERR_LIBNET_INIT);
+		}
+	}
+	DBGPRINTF("omudpspoof: libnit_init() ok\n");
+	pData->bReportLibnetInitErr = 1;
 
 	/* The remote address is not yet known and needs to be obtained */
 	DBGPRINTF("omudpspoof trying resume for '%s'\n", pData->host);
