@@ -139,6 +139,8 @@ doSubmitMsg(uchar *line)
 	pMsg->msgFlags  = 0;
 
 	submitMsg(pMsg);
+	DBGPRINTF("impstats: submit [%d,%d] msg '%s'\n", runModConf->iFacility,
+	          runModConf->iSeverity, line);
 
 finalize_it:
 	RETiRet;
