@@ -310,7 +310,7 @@ ENDfreeCnf
 
 BEGINcreateInstance
 CODESTARTcreateInstance
-finalize_it:
+	pData->mtu = 1500;
 ENDcreateInstance
 
 
@@ -338,7 +338,6 @@ CODESTARTdbgPrintInstInfo
 ENDdbgPrintInstInfo
 
 
-#define MTU 1500 /* min max MTU we support - 1500 for ethernet TODO: config option? */
 /* Send a message via UDP
  * Note: libnet is not thread-safe, so we need to ensure that only one
  * instance ever is calling libnet code.
@@ -395,7 +394,7 @@ if(pData->libnet_handle == NULL) {
 	for (r = pData->f_addr; r && bSendSuccess == RSFALSE ; r = r->ai_next) {
 		tempaddr = (struct sockaddr_in *)r->ai_addr;
 		/* Getting max payload size (must be multiple of 8) */
-		maxPktLen = (MTU - LIBNET_IPV4_H) & ~0x07;
+		maxPktLen = (pData->mtu - LIBNET_IPV4_H) & ~0x07;
 		msgOffs = 0;
 		/* We're doing (payload size - UDP header size) and not
 		* checking if it's a multiple of 8 because we know the
