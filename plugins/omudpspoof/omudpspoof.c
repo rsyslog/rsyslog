@@ -99,7 +99,6 @@ typedef struct _instanceData {
 	uchar	*sourceTpl;
 	int	mtu;
 	int	*pSockArray;		/* sockets to use for UDP */
-	int	compressionLevel;	/* 0 - no compression, else level for zlib */
 	struct addrinfo *f_addr;
 	u_short sourcePort;
 	u_short sourcePortStart;	/* for sorce port iteration */
@@ -590,61 +589,19 @@ ENDtryResume
 
 BEGINdoAction
 	char *psz; /* temporary buffering */
-	register unsigned l;
+	unsigned l;
 	int iMaxLine;
 CODESTARTdoAction
 	CHKiRet(doTryResume(pData));
 
-	iMaxLine = glbl.GetMaxLine();
-
 	DBGPRINTF(" %s:%s/omudpspoof, src '%s', msg strt '%.256s'\n", pData->host,
 		  getFwdPt(pData), ppString[1], ppString[0]);
 
+	iMaxLine = glbl.GetMaxLine();
 	psz = (char*) ppString[0];
 	l = strlen((char*) psz);
 	if((int) l > iMaxLine)
 		l = iMaxLine;
-
-#	ifdef	USE_NETZIP
-	/* Check if we should compress and, if so, do it. We also
-	 * check if the message is large enough to justify compression.
-	 * The smaller the message, the less likely is a gain in compression.
-	 * To save CPU cycles, we do not try to compress very small messages.
-	 * What "very small" means needs to be configured. Currently, it is
-	 * hard-coded but this may be changed to a config parameter.
-	 * rgerhards, 2006-11-30
-	 */
-	if(pData->compressionLevel && (l > CONF_MIN_SIZE_FOR_COMPRESS)) {
-		Bytef *out;
-		uLongf destLen = iMaxLine + iMaxLine/100 +12; /* recommended value from zlib doc */
-		uLong srcLen = l;
-		int ret;
-		/* TODO: optimize malloc sequence? -- rgerhards, 2008-09-02 */
-		CHKmalloc(out = (Bytef*) MALLOC(destLen));
-		out[0] = 'z';
-		out[1] = '\0';
-		ret = compress2((Bytef*) out+1, &destLen, (Bytef*) psz,
-				srcLen, pData->compressionLevel);
-		DBGPRINTF("Compressing message, length was %d now %d, return state  %d.\n",
-			l, (int) destLen, ret);
-		if(ret != Z_OK) {
-			/* if we fail, we complain, but only in debug mode
-			 * Otherwise, we are silent. In any case, we ignore the
-			 * failed compression and just sent the uncompressed
-			 * data, which is still valid. So this is probably the
-			 * best course of action.
-			 * rgerhards, 2006-11-30
-			 */
-			DBGPRINTF("Compression failed, sending uncompressed message\n");
-		} else if(destLen+1 < l) {
-			/* only use compression if there is a gain in using it! */
-			DBGPRINTF("there is gain in compression, so we do it\n");
-			psz = (char*) out;
-			l = destLen + 1; /* take care for the "z" at message start! */
-		}
-		++destLen;
-	}
-#	endif
 
 	CHKiRet(UDPSend(pData, ppString[1], psz, l));
 
