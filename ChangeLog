@@ -1,10 +1,20 @@
 ---------------------------------------------------------------------------
-Version 7.3.5  [devel] 2012-12-18
+Version 7.3.5  [devel] 2012-12-19
 - ommysql: addded batching/transaction support
 - enhanced script optimizer to optimize common PRI-based comparisons
   These constructs are especially used in SUSE default config files,
   but also by many users (as they are more readable than the equivalent
   PRI-based filter).
+- omudpspoof: add support for new config system
+- omudpspoof: add support for packets larger than 1472 bytes
+  On Ethernet, they need to be transmitted in multiple fragments. While
+  it is known that fragmentation can cause issues, it is the best choice
+  to be made in that case. Also improved debug output.
+- bugfix: omudpspoof failed depending on the execution environment
+  The v7 engine closes fds, and closed some of libnet's fds as well, what
+  lead to problems (unfortunately, at least some libnet versions do not
+  report a proper error state but still "success"...). The order of libnet
+  calls has been adjusted to by in sync with what the core engine does.
 - bugfix: segfault on imuxsock startup if system log socket is used
   and no ratelimiting supported. Happens only during initial config
   read phase, once this is over, everything works stable.
