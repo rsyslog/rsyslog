@@ -299,7 +299,9 @@ execIf(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
 	sbool bRet;
 	DEFiRet;
 	newAct = newActive(pBatch);
-	for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pBatch->pbShutdownImmediate) ; ++i) {
+	for(i = 0 ; i < batchNumMsgs(pBatch) ; ++i) {
+		if(*(pBatch->pbShutdownImmediate))
+			FINALIZE;
 		if(pBatch->pElem[i].state == BATCH_STATE_DISC)
 			continue; /* will be ignored in any case */
 		if(active == NULL || active[i]) {
@@ -315,13 +317,16 @@ execIf(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
 		scriptExec(stmt->d.s_if.t_then, pBatch, newAct);
 	}
 	if(stmt->d.s_if.t_else != NULL) {
-		for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pBatch->pbShutdownImmediate)
-		    ; ++i)
+		for(i = 0 ; i < batchNumMsgs(pBatch) ; ++i) {
+			if(*(pBatch->pbShutdownImmediate))
+				FINALIZE;
 			if(pBatch->pElem[i].state != BATCH_STATE_DISC)
 				newAct[i] = !newAct[i];
+			}
 		scriptExec(stmt->d.s_if.t_else, pBatch, newAct);
 	}
 	freeActive(newAct);
+finalize_it:
 	RETiRet;
 }
 
@@ -334,7 +339,9 @@ execPRIFILT(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
 	int bRet;
 	int i;
 	newAct = newActive(pBatch);
-	for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pBatch->pbShutdownImmediate) ; ++i) {
+	for(i = 0 ; i < batchNumMsgs(pBatch) ; ++i) {
+		if(*(pBatch->pbShutdownImmediate))
+			return;
 		if(pBatch->pElem[i].state == BATCH_STATE_DISC)
 			continue; /* will be ignored in any case */
 		pMsg = (msg_t*)(pBatch->pElem[i].pUsrp);
@@ -355,10 +362,12 @@ execPRIFILT(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
 		scriptExec(stmt->d.s_prifilt.t_then, pBatch, newAct);
 	}
 	if(stmt->d.s_prifilt.t_else != NULL) {
-		for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pBatch->pbShutdownImmediate)
-		    ; ++i)
+		for(i = 0 ; i < batchNumMsgs(pBatch) ; ++i) {
+			if(*(pBatch->pbShutdownImmediate))
+				return;
 			if(pBatch->pElem[i].state != BATCH_STATE_DISC)
 				newAct[i] = !newAct[i];
+			}
 		scriptExec(stmt->d.s_prifilt.t_else, pBatch, newAct);
 	}
 	freeActive(newAct);
@@ -461,7 +470,9 @@ execPROPFILT(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
 	sbool bRet;
 	int i;
 	thenAct = newActive(pBatch);
-	for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pBatch->pbShutdownImmediate) ; ++i) {
+	for(i = 0 ; i < batchNumMsgs(pBatch) ; ++i) {
+		if(*(pBatch->pbShutdownImmediate))
+			return;
 		if(pBatch->pElem[i].state == BATCH_STATE_DISC)
 			continue; /* will be ignored in any case */
 		if(active == NULL || active[i]) {
