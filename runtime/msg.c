@@ -3027,6 +3027,8 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			 */
 			; /*DO NOTHING*/
 		} else {
+			if(iTo > bufLen) /* iTo is very large, if no to-position is set in the template! */
+				iTo = bufLen;
 			iLen = iTo - iFrom + 1; /* the +1 is for an actual char, NOT \0! */
 			pBufStart = pBuf = MALLOC((iLen + 1) * sizeof(char));
 			if(pBuf == NULL) {

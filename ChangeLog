@@ -10,6 +10,9 @@ Version 7.2.5  [v7-stable] 2013-01-??
   shutdown phase*. This affected only the LAST batches being processed. No
   problem existed during the regular run. Could usually only happen on
   very busy systems, which were still busy during shutdown.
+- bugfix: very large memory consumption (and probably out of memory) when
+  FromPos was specified in template, but ToPos not.
+  Thanks to Radu Gheorghe for alerting us of this bug.
 ----------------------------------------------------------------------------
 Version 7.2.4  [v7-stable] 2012-12-07
 - enhance: permit RFC3339 timestamp in local log socket messages
