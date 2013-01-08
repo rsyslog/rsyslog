@@ -61,8 +61,10 @@ timeval2syslogTime(struct timeval *tp, struct syslogTime *t)
 	struct tm *tm;
 	struct tm tmBuf;
 	long lBias;
+	time_t secs;
 
-	tm = localtime_r((time_t*) &(tp->tv_sec), &tmBuf);
+	secs = tp->tv_sec;
+	tm = localtime_r(&secs, &tmBuf);
 
 	t->year = tm->tm_year + 1900;
 	t->month = tm->tm_mon + 1;
