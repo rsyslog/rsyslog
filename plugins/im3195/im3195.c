@@ -180,6 +180,7 @@ CODESTARTmodExit
 		prop.Destruct(&pInputName);
 	/* release objects we used */
 	objRelease(errmsg, CORE_COMPONENT);
+	objRelease(prop, CORE_COMPONENT);
 ENDmodExit
 
 
