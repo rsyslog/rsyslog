@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------------
-Version 7.2.5  [v7-stable] 2013-01-??
+Version 7.2.5  [v7-stable] 2013-01-08
 - build system cleanup (thanks to Michael Biebl for this!)
 - bugfix: omelasticsearch did not properly compile on some platforms
   due to missing libmath. Thanks to Michael Biebl for the fix
