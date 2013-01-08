@@ -18,6 +18,8 @@ Version 7.2.5  [v7-stable] 2013-01-??
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=394
   Thanks to David Hill for the patch [under ASL2.0 as per email conversation
   2013-01-03].
+- bugfix: compile errors in im3195
+  Thanks to Martin Körper for the patch
 ----------------------------------------------------------------------------
 Version 7.2.4  [v7-stable] 2012-12-07
 - enhance: permit RFC3339 timestamp in local log socket messages
