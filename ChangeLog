@@ -125,7 +125,7 @@ Version 7.3.0  [devel] 2012-10-09
   This was achieved by somewhat reducing the robustness of the zip archive.
   This is controlled by the new action parameter "VeryReliableZip".
 ----------------------------------------------------------------------------
-Version 7.2.5  [v7-stable] 2013-01-??
+Version 7.2.6  [v7-stable] 2013-01-??
 - omudpspoof: add support for new config system
 - omudpspoof: add support for packets larger than 1472 bytes
   On Ethernet, they need to be transmitted in multiple fragments. While
@@ -136,6 +136,7 @@ Version 7.2.5  [v7-stable] 2013-01-??
   lead to problems (unfortunately, at least some libnet versions do not
   report a proper error state but still "success"...). The order of libnet
   calls has been adjusted to by in sync with what the core engine does.
+Version 7.2.5  [v7-stable] 2013-01-08
 - build system cleanup (thanks to Michael Biebl for this!)
 - bugfix: omelasticsearch did not properly compile on some platforms
   due to missing libmath. Thanks to Michael Biebl for the fix
