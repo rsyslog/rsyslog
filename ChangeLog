@@ -20,6 +20,8 @@ Version 7.2.5  [v7-stable] 2013-01-??
   2013-01-03].
 - bugfix: compile errors in im3195
   Thanks to Martin Körper for the patch
+- bugfix: doGetFileCreateMode() had invalid validity check ;)
+  Thanks to Chandler Latour for the patch.
 ----------------------------------------------------------------------------
 Version 7.2.4  [v7-stable] 2012-12-07
 - enhance: permit RFC3339 timestamp in local log socket messages
