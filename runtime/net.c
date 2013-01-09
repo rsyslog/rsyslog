@@ -54,11 +54,11 @@
 #include <fnmatch.h>
 #include <fcntl.h>
 #include <unistd.h>
-#if HAVE_GETIFADDR
+#if HAVE_GETIFADDRS
 #include <ifaddrs.h>
 #else
 #include "compat/ifaddrs.h"
-#endif /* HAVE_GETIFADDR */
+#endif /* HAVE_GETIFADDRS */
 #include <sys/types.h>
 #include <arpa/inet.h>
 
