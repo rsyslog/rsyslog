@@ -1,3 +1,5 @@
+#include "config.h"
+#ifndef HAVE_GETIFADDRS
 /*
  * CDDL HEADER START
  *
@@ -23,7 +25,6 @@
  * Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
  */
 
-#ifndef HAVE_GETIFADDRS
 #include <netdb.h>
 #include <nss_dbdefs.h>
 #include <netinet/in.h>

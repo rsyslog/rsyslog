@@ -1,3 +1,5 @@
+#include "config.h"
+#ifndef HAVE_GETIFADDRS
 /*
  * CDDL HEADER START
  *
@@ -84,3 +86,4 @@ extern void freeifaddrs(struct ifaddrs *);
 #endif
 
 #endif	/* _IFADDRS_H */
+#endif /* HAVE_GETIFADDRS */
