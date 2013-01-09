@@ -92,6 +92,9 @@ syslogName_t	syslogFacNames[] = {
 #if defined(LOG_FTP)
 	{"ftp",          LOG_FTP},
 #endif
+#if defined(LOG_AUDIT)
+	{"audit",        LOG_AUDIT},
+#endif
 	{"local0",       LOG_LOCAL0},
 	{"local1",       LOG_LOCAL1},
 	{"local2",       LOG_LOCAL2},

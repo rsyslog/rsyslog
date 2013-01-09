@@ -216,7 +216,8 @@ int fileno(FILE *stream);
 <COMMENT>([^*]|\n)+|.
 <INOBJ>#.*$	/* skip comments in input */
 <INOBJ>[ \n\t]
-<INOBJ>.			{ dbgprintf("INOBJ: invalid char '%s'\n", yytext); }
+<INOBJ>.			{ parser_errmsg("invalid character '%s' - is there an invalid "
+					        "escape sequence somewhere?", yytext); }
 \$[a-z]+.*$			{ /* see comment on $IncludeConfig above */
 				  if(!strncasecmp(yytext, "$includeconfig ", 14)) {
 					yyless(14);
