@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------------
-Version 7.2.6  [v7-stable] 2013-01-??
+Version 7.2.x (?really?)  [v7-stable] 2013-??-??
 - omudpspoof: add support for new config system
 - omudpspoof: add support for packets larger than 1472 bytes
   On Ethernet, they need to be transmitted in multiple fragments. While
@@ -10,6 +10,21 @@ Version 7.2.6  [v7-stable] 2013-01-??
   lead to problems (unfortunately, at least some libnet versions do not
   report a proper error state but still "success"...). The order of libnet
   calls has been adjusted to by in sync with what the core engine does.
+----------------------------------------------------------------------------
+Version 7.2.6  [v7-stable] 2013-01-??
+- slightly improved config parser error messages when invalid escapes happen
+- bugfix: some property-based filter were incorrectly parsed
+  This usually lead to a syntax error on startup and rsyslogd not actually
+  starting up. The problem was the regex, which did not care for double
+  quote characters to follow in the action part - unfortunately something
+  that can frequently happen with v6+ format. An example:
+  :programname, isequal, "as" {action(type="omfile" ...) }
+  Here, the part 
+  :programname, isequal, "as" {action(type="omfile"
+  was treated as the property filter, and the rest as action part.
+  Obviously, this did not work out. Unfortunately, such situations usually
+  resulted in very hard to understand error messages.
+----------------------------------------------------------------------------
 Version 7.2.5  [v7-stable] 2013-01-08
 - build system cleanup (thanks to Michael Biebl for this!)
 - bugfix: omelasticsearch did not properly compile on some platforms

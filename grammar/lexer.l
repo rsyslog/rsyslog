@@ -141,9 +141,13 @@ int fileno(FILE *stream);
 <EXPR>[ \t\n]
 <EXPR>[a-z][a-z0-9_]*		{ yylval.estr = es_newStrFromCStr(yytext, yyleng);
 				  return FUNC; }
-<EXPR>.				{ dbgprintf("invalid char in expr: %s\n", yytext); }
+<EXPR>.				{ parser_errmsg("invalid character '%s' in expression "
+					        "- is there an invalid escape sequence somewhere?",
+						yytext); }
 <INCALL>[ \t\n]
-<INCALL>.			{ dbgprintf("invalid char in CALL stmt: %s\n", yytext); }
+<INCALL>.			{ parser_errmsg("invalid character '%s' in 'call' statement"
+					        "- is there an invalid escape sequence somewhere?",
+						yytext); }
 <INCALL>[a-zA-Z][a-zA-Z0-9_\.]*	{ yylval.estr = es_newStrFromCStr(yytext, yyleng);
 				  BEGIN INITIAL;
 				  return NAME; }
@@ -185,8 +189,11 @@ int fileno(FILE *stream);
 "module"[ \n\t]*"("		{ yylval.objType = CNFOBJ_MODULE;
 				  BEGIN INOBJ; return BEGINOBJ; }
 "action"[ \n\t]*"("		{ BEGIN INOBJ; return BEGIN_ACTION; }
-^[ \t]*:\$?[a-z\-]+[ ]*,[ ]*!?[a-z]+[ ]*,[ ]*\".*\"	{
-				  yylval.s = strdup(rmLeadingSpace(yytext)); return PROPFILT; }
+^[ \t]*:\$?[a-z\-]+[ ]*,[ ]*!?[a-z]+[ ]*,[ ]*\"(\\\"|[^\"])*\"	{
+				  yylval.s = strdup(rmLeadingSpace(yytext));
+				  dbgprintf("lexer: propfilt is '%s'\n", yylval.s);
+				  return PROPFILT;
+				  }
 ^[ \t]*[\*a-z][\*a-z]*[0-7]*[\.,][,!=;\.\*a-z0-7]+ { yylval.s = strdup(rmLeadingSpace(yytext)); return PRIFILT; }
 "~" |
 "*" |
@@ -216,7 +223,9 @@ int fileno(FILE *stream);
 <COMMENT>([^*]|\n)+|.
 <INOBJ>#.*$	/* skip comments in input */
 <INOBJ>[ \n\t]
-<INOBJ>.			{ dbgprintf("INOBJ: invalid char '%s'\n", yytext); }
+<INOBJ>.			{ parser_errmsg("invalid character '%s' in object definition "
+					        "- is there an invalid escape sequence somewhere?",
+						yytext); }
 \$[a-z]+.*$			{ /* see comment on $IncludeConfig above */
 				  if(!strncasecmp(yytext, "$includeconfig ", 14)) {
 					yyless(14);
@@ -234,8 +243,9 @@ int fileno(FILE *stream);
 ^[ \t]*[+-][a-z0-9.:-]+[ \t]*$	{ yylval.s = strdup(yytext); return BSD_HOST_SELECTOR; }
 \#.*\n	/* skip comments in input */
 [\n\t ]	/* drop whitespace */
-.				{ dbgprintf("invalid char: %s\n", yytext);
-				}
+.				{ parser_errmsg("invalid character '%s' "
+					        "- is there an invalid escape sequence somewhere?",
+						yytext); }
 <<EOF>>				{ if(popfile() != 0) yyterminate(); }
 
 %%
