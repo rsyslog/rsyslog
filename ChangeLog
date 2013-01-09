@@ -1,4 +1,7 @@
 ----------------------------------------------------------------------------
+Version 7.2.6  [v7-stable] 2013-01-??
+- slightly improved config parser error messages when invalid escapes happen
+----------------------------------------------------------------------------
 Version 7.2.5  [v7-stable] 2013-01-08
 - build system cleanup (thanks to Michael Biebl for this!)
 - bugfix: omelasticsearch did not properly compile on some platforms
