@@ -172,6 +172,7 @@ finalize_it:
 		jval = json_object_new_string((char*)buf);
 		json_object_object_add(json, "msg", jval);
 		msgAddJSON(pMsg, (uchar*)"!", json);
+		iRet = RS_RET_OK;
 	}
 	MsgSetParseSuccess(pMsg, bSuccess);
 ENDdoAction

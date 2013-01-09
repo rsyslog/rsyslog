@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------------
-Version 7.2.5  [v7-stable] 2013-01-??
+Version 7.2.6  [v7-stable] 2013-01-??
 - omudpspoof: add support for new config system
 - omudpspoof: add support for packets larger than 1472 bytes
   On Ethernet, they need to be transmitted in multiple fragments. While
@@ -10,6 +10,7 @@ Version 7.2.5  [v7-stable] 2013-01-??
   lead to problems (unfortunately, at least some libnet versions do not
   report a proper error state but still "success"...). The order of libnet
   calls has been adjusted to by in sync with what the core engine does.
+Version 7.2.5  [v7-stable] 2013-01-08
 - build system cleanup (thanks to Michael Biebl for this!)
 - bugfix: omelasticsearch did not properly compile on some platforms
   due to missing libmath. Thanks to Michael Biebl for the fix
@@ -20,6 +21,20 @@ Version 7.2.5  [v7-stable] 2013-01-??
   shutdown phase*. This affected only the LAST batches being processed. No
   problem existed during the regular run. Could usually only happen on
   very busy systems, which were still busy during shutdown.
+- bugfix: very large memory consumption (and probably out of memory) when
+  FromPos was specified in template, but ToPos not.
+  Thanks to Radu Gheorghe for alerting us of this bug.
+- bugfix: timeval2syslogTime cause problems on some platforms
+  due to invalid assumption on structure data types.
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=394
+  Thanks to David Hill for the patch [under ASL2.0 as per email conversation
+  2013-01-03].
+- bugfix: compile errors in im3195
+  Thanks to Martin Körper for the patch
+- bugfix: doGetFileCreateMode() had invalid validity check ;)
+  Thanks to Chandler Latour for the patch.
+- bugfix: mmjsonparse errornously returned action error when no CEE cookie
+  was present.
 ----------------------------------------------------------------------------
 Version 7.2.4  [v7-stable] 2012-12-07
 - enhance: permit RFC3339 timestamp in local log socket messages
