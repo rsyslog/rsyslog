@@ -258,7 +258,7 @@ int openConnections(void)
 		return setupUDP();
 
 	if(bShowProgress)
-		write(1, "      open connections", sizeof("      open connections")-1);
+		if(write(1, "      open connections", sizeof("      open connections")-1)){}
 #	ifdef ENABLE_GNUTLS
 	sessArray = calloc(numConnections, sizeof(gnutls_session_t));
 #	endif
@@ -278,7 +278,7 @@ int openConnections(void)
 	}
 	if(bShowProgress) {
 		lenMsg = sprintf(msgBuf, "\r%5.5d open connections\n", i);
-		write(1, msgBuf, lenMsg);
+		if(write(1, msgBuf, lenMsg)) {}
 	}
 
 	return 0;
@@ -303,12 +303,12 @@ void closeConnections(void)
 		return;
 
 	if(bShowProgress)
-		write(1, "      close connections", sizeof("      close connections")-1);
+		if(write(1, "      close connections", sizeof("      close connections")-1)){}
 	for(i = 0 ; i < numConnections ; ++i) {
 		if(i % 10 == 0) {
 			if(bShowProgress) {
 				lenMsg = sprintf(msgBuf, "\r%5.5d", i);
-				write(1, msgBuf, lenMsg);
+				if(write(1, msgBuf, lenMsg)){}
 			}
 		}
 		if(sockArray[i] != -1) {
@@ -325,7 +325,7 @@ void closeConnections(void)
 	}
 	if(bShowProgress) {
 		lenMsg = sprintf(msgBuf, "\r%5.5d close connections\n", i);
-		write(1, msgBuf, lenMsg);
+		if(write(1, msgBuf, lenMsg)){}
 	}
 
 }
