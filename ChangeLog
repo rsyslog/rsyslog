@@ -1,5 +1,8 @@
 ----------------------------------------------------------------------------
 Version 7.2.x (?really?)  [v7-stable] 2013-??-??
+- impstats: added ability to write stats records to local file
+  and avoid going through the syslog log stream. syslog logging can now
+  also be turned off (see doc for details).
 - omudpspoof: add support for new config system
 - omudpspoof: add support for packets larger than 1472 bytes
   On Ethernet, they need to be transmitted in multiple fragments. While
