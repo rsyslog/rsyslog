@@ -857,6 +857,7 @@ BEGINdoAction
 CODESTARTdoAction
 	DBGPRINTF("file to log to: %s\n",
 		  (pData->bDynamicName) ? ppString[1] : pData->f_fname);
+	DBGPRINTF("omfile: start of data: '%.128s'\n", ppString[0]);
 	CHKiRet(writeFile(ppString, iMsgOpts, pData));
 	if(!bCoreSupportsBatching && pData->bFlushOnTXEnd) {
 		CHKiRet(strm.Flush(pData->pStrm));

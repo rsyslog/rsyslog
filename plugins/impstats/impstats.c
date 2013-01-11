@@ -27,6 +27,8 @@
 #include <signal.h>
 #include <string.h>
 #include <pthread.h>
+#include <fcntl.h>
+#include <sys/uio.h>
 #include "dirty.h"
 #include "cfsysline.h"
 #include "module-template.h"
@@ -63,11 +65,14 @@ typedef struct configSettings_s {
 } configSettings_t;
 
 struct modConfData_s {
-	rsconf_t *pConf;		/* our overall config object */
+	rsconf_t *pConf; /* our overall config object */
 	int iStatsInterval;
 	int iFacility;
 	int iSeverity;
+	int logfd; /* fd if logging to file, or -1 if closed */
 	statsFmtType_t statsFmt;
+	sbool bLogToSyslog;
+	char *logfile;
 	sbool configSetViaV2Method;
 };
 static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
@@ -82,6 +87,8 @@ static struct cnfparamdescr modpdescr[] = {
 	{ "interval", eCmdHdlrInt, 0 },
 	{ "facility", eCmdHdlrInt, 0 },
 	{ "severity", eCmdHdlrInt, 0 },
+	{ "log.syslog", eCmdHdlrBinary, 0 },
+	{ "log.file", eCmdHdlrGetWord, 0 },
 	{ "format", eCmdHdlrGetWord, 0 }
 };
 static struct cnfparamblk modpblk =
@@ -120,7 +127,7 @@ initConfigSettings(void)
 
 /* actually submit a message to the rsyslog core
  */
-static inline rsRetVal
+static inline void
 doSubmitMsg(uchar *line)
 {
 	msg_t *pMsg;
@@ -144,8 +151,49 @@ doSubmitMsg(uchar *line)
 	          runModConf->iSeverity, line);
 
 finalize_it:
-	RETiRet;
+	return;
+}
 
+
+/* log stats message to file; limited error handling done */
+static inline void
+doLogToFile(cstr_t *cstr)
+{
+	struct iovec iov[4];
+	ssize_t nwritten;
+	ssize_t nexpect;
+	time_t t;
+	char timebuf[32];
+
+	if(cstrLen(cstr) == 0)
+		goto done;
+	if(runModConf->logfd == -1) {
+		runModConf->logfd = open(runModConf->logfile, O_WRONLY|O_CREAT|O_APPEND|O_CLOEXEC, S_IRUSR|S_IWUSR);
+		if(runModConf->logfd == -1) {
+			dbgprintf("error opening stats file %s\n", runModConf->logfile);
+			goto done;
+		}
+	}
+
+	time(&t);
+	iov[0].iov_base = ctime_r(&t, timebuf);
+	iov[0].iov_len = nexpect = strlen(iov[0].iov_base) - 1; /* -1: strip \n */
+	iov[1].iov_base = ": ";
+	iov[1].iov_len = 2;
+	nexpect += 2;
+	iov[2].iov_base = rsCStrGetSzStrNoNULL(cstr);
+	iov[2].iov_len = (size_t) cstrLen(cstr);
+	nexpect += cstrLen(cstr);
+	iov[3].iov_base = "\n";
+	iov[3].iov_len = 1;
+	nexpect++;
+	nwritten = writev(runModConf->logfd, iov, 4);
+
+	if(nwritten != nexpect) {
+			dbgprintf("error writing stats file %s, nwritten %lld, expected %lld\n",
+				  runModConf->logfile, (long long) nwritten, (long long) nexpect);
+	}
+done:	return;
 }
 
 
@@ -156,7 +204,10 @@ static rsRetVal
 doStatsLine(void __attribute__((unused)) *usrptr, cstr_t *cstr)
 {
 	DEFiRet;
-	doSubmitMsg(rsCStrGetSzStrNoNULL(cstr));
+	if(runModConf->bLogToSyslog)
+		doSubmitMsg(rsCStrGetSzStrNoNULL(cstr));
+	if(runModConf->logfile != NULL)
+		doLogToFile(cstr);
 	RETiRet;
 }
 
@@ -181,6 +232,9 @@ CODESTARTbeginCnfLoad
 	loadModConf->iFacility = DEFAULT_FACILITY;
 	loadModConf->iSeverity = DEFAULT_SEVERITY;
 	loadModConf->statsFmt = statsFmt_Legacy;
+	loadModConf->logfd = -1;
+	loadModConf->logfile = NULL;
+	loadModConf->bLogToSyslog = 1;
 	bLegacyCnfModGlobalsPermitted = 1;
 	/* init legacy config vars */
 	initConfigSettings();
@@ -213,6 +267,10 @@ CODESTARTsetModCnf
 			loadModConf->iFacility = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "severity")) {
 			loadModConf->iSeverity = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "log.syslog")) {
+			loadModConf->bLogToSyslog = (sbool) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "log.file")) {
+			loadModConf->logfile = es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(modpblk.descr[i].name, "format")) {
 			mode = es_str2cstr(pvals[i].val.d.estr, NULL);
 			if(!strcasecmp(mode, "json")) {
@@ -273,7 +331,9 @@ BEGINactivateCnf
 	rsRetVal localRet;
 CODESTARTactivateCnf
 	runModConf = pModConf;
-	DBGPRINTF("impstats: stats interval %d seconds\n", runModConf->iStatsInterval);
+	DBGPRINTF("impstats: stats interval %d seconds, logToSyslog %d, logFile %s\n",
+		  runModConf->iStatsInterval, runModConf->bLogToSyslog,
+		  runModConf->logfile == NULL ? "deactivated" : (char*)runModConf->logfile);
 	localRet = statsobj.EnableStats();
 	if(localRet != RS_RET_OK) {
 		errmsg.LogError(0, localRet, "impstats: error enabling statistics gathering");
@@ -285,6 +345,9 @@ ENDactivateCnf
 
 BEGINfreeCnf
 CODESTARTfreeCnf
+	if(runModConf->logfd != -1)
+		close(runModConf->logfd);
+	free(runModConf->logfile);
 ENDfreeCnf
 
 
@@ -300,6 +363,7 @@ CODESTARTrunInput
 		if(glbl.GetGlobalInputTermState() == 1)
 			break; /* terminate input! */
 
+		DBGPRINTF("impstats: woke up, generating messages\n");
 		generateStatsMsgs();
 	}
 ENDrunInput
