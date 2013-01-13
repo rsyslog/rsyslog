@@ -113,7 +113,7 @@ enqMsg(uchar *msg, uchar* pszTag, int iFacility, int iSeverity, struct timeval *
 	pMsg->iFacility = iFacility;
 	pMsg->iSeverity = iSeverity;
 	pMsg->json = json;
-	CHKiRet(submitMsg(pMsg, NULL));
+	CHKiRet(submitMsg(pMsg));
 
 finalize_it:
 	RETiRet;

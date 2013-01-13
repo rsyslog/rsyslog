@@ -3,6 +3,7 @@ Version 7.3.6  [devel] 2012-12-??
 - impstats: added ability to write stats records to local file
   and avoid going through the syslog log stream. syslog logging can now
   also be turned off (see doc for details).
+- fix compile problem in imklog
 ---------------------------------------------------------------------------
 Version 7.3.5  [devel] 2012-12-19
 - ommysql: addded batching/transaction support
