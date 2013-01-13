@@ -1,6 +1,11 @@
 ----------------------------------------------------------------------------
 Version 7.2.6  [v7-stable] 2013-01-??
 - slightly improved config parser error messages when invalid escapes happen
+- bugfix: omelasticsearch failed when authentication data was provided
+  ... at least in most cases it emitted an error message:
+  "snprintf failed when trying to build auth string"
+  Thanks to Joerg Heinemann for alerting us.
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=404
 - bugfix: some property-based filter were incorrectly parsed
   This usually lead to a syntax error on startup and rsyslogd not actually
   starting up. The problem was the regex, which did not care for double
