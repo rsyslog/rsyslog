@@ -347,7 +347,7 @@ genMsg(char *buf, size_t maxBuf, int *pLenBuf, struct instdata *inst)
 		/* get message from file */
 		do {
 			done = 1;
-			*pLenBuf = fread(buf, 1, 1024, dataFP);
+			*pLenBuf = fread(buf, 1, MAX_EXTRADATA_LEN + 1024, dataFP);
 			if(*pLenBuf == 0) {
 				if(--numFileIterations > 0)  {
 					rewind(dataFP);
@@ -429,6 +429,8 @@ int sendMessages(struct instdata *inst)
 			}
 		}
 		genMsg(buf, sizeof(buf), &lenBuf, inst); /* generate the message to send according to params */
+		if(lenBuf == 0)
+			break;	/* terminate when no message could be generated */
 		if(transport == TP_TCP) {
 			if(sockArray[socknum] == -1) {
 				/* connection was dropped, need to re-establish */

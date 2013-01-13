@@ -49,6 +49,11 @@ FileTrace=vm.c FileTrace=expr.c"</li>
 <li><b>Debug</b> - if present, turns on the debug system and enables debug output
 <li><b>DebugOnDemand</b> - if present, turns on the debug system but does not enable
 debug output itself. You need to send SIGUSR1 to turn it on when desired.
+<li><b>OutputTidToStderr</b> - if present, makes rsyslog output information about
+the thread id (tid) of newly create processesto stderr. Note that not necessarily
+all new threads are reported (depends on the code, e.g. of plugins). This is
+only available under Linux. This usually does NOT work when privileges have
+been dropped (that's not a bug, but the way it is).
 <li><b>help</b> - display a very short list of commands - hopefully a life saver if you can't access the documentation...</li>
 </ul>
 </ul>

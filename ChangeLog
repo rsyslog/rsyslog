@@ -13,6 +13,8 @@ Version 7.2.x (?really?)  [v7-stable] 2013-??-??
   lead to problems (unfortunately, at least some libnet versions do not
   report a proper error state but still "success"...). The order of libnet
   calls has been adjusted to by in sync with what the core engine does.
+- added capability to output thread-id-to-function debug info
+  This is a useful debug aid, but nothing of concern for regular users.
 ----------------------------------------------------------------------------
 Version 7.2.6  [v7-stable] 2013-01-??
 - slightly improved config parser error messages when invalid escapes happen
