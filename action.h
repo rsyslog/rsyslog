@@ -68,7 +68,6 @@ struct action_s {
 	struct modInfo_s *pMod;/* pointer to output module handling this selector */
 	void	*pModData;	/* pointer to module data - content is module-specific */
 	sbool	bRepMsgHasMsg;	/* "message repeated..." has msg fragment in it (0-no, 1-yes) */
-	sbool 	requiresDateCall;/* do we need to do a date call before creating templates? */
 	rsRetVal (*submitToActQ)(action_t *, batch_t *);/* function submit message to action queue */
 	rsRetVal (*qConstruct)(struct queue_s *pThis);
 	enum 	{ ACT_STRING_PASSING = 0, ACT_ARRAY_PASSING = 1, ACT_MSG_PASSING = 2,

@@ -2456,6 +2456,10 @@ static uchar *getNOW(eNOWType eNow, struct syslogTime *t)
 		return NULL;
 	}
 
+	if(t->year == 0) { /* not yet set! */
+		datetime.getCurrTime(t, NULL);
+	}
+
 	switch(eNow) {
 	case NOW_NOW:
 		snprintf((char*) pBuf, tmpBUFSIZE, "%4.4d-%2.2d-%2.2d", t->year, t->month, t->day);

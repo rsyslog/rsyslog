@@ -376,38 +376,6 @@ finalize_it:
 }
 
 
-/* Check if the template requires a date call (actually a cached
- * date structure). This currently is the case for the $NOW family
- * of properties.
- */
-int
-tplRequiresDateCall(struct template *pTpl)
-{
-	struct templateEntry *pTpe;
-	int r = 0;
-
-	if(pTpl->subtree != NULL)
-		goto done;
-
-	for(pTpe = pTpl->pEntryRoot ; pTpe != NULL ; pTpe = pTpe->pNext) {
-		switch(pTpe->data.field.propid) {
-		case PROP_SYS_NOW:
-		case PROP_SYS_YEAR:
-		case PROP_SYS_MONTH:
-		case PROP_SYS_DAY:
-		case PROP_SYS_HOUR:
-		case PROP_SYS_HHOUR:
-		case PROP_SYS_QHOUR:
-		case PROP_SYS_MINUTE:
-			r = 1;
-			goto done;
-		default:break;
-		}
-	}
-done:	return r;
-}
-
-
 /* Helper to doEscape. This is called if doEscape
  * runs out of memory allocating the escaped string.
  * Then we are in trouble. We can

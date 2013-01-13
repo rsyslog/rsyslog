@@ -1213,9 +1213,8 @@ prepareBatch(action_t *pAction, batch_t *pBatch, sbool **activeSave, int *bMustR
 	struct syslogTime ttNow;
 	DEFiRet;
 
-	if(pAction->requiresDateCall) {
-		datetime.getCurrTime(&ttNow, NULL);
-	}
+	/* indicate we have not yet read the date */
+	ttNow.year = 0;
 
 	pBatch->iDoneUpTo = 0;
 	for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pBatch->pbShutdownImmediate) ; ++i) {
@@ -1771,27 +1770,6 @@ actionApplyCnfParam(action_t *pAction, struct cnfparamvals *pvals)
 	return RS_RET_OK;
 }
 
-/* check if the templates used in this action require a date call
- * ($NOW family of properties).
- */
-static inline int
-actionRequiresDateCall(action_t *pAction)
-{
-	int i;
-	int r = 0;
-
-	if(pAction->eParamPassing == ACT_MSG_PASSING)
-		/* in msg passing mode, we have NO templates! */
-		goto done;
-	for(i = 0 ; i < pAction->iNumTpls ; ++i) {
-		if(tplRequiresDateCall(pAction->ppTpl[i])) {
-			r = 1;
-			break;
-		}
-	}
-done:	return r;
-}
-
 
 /* add an Action to the current selector
  * The pOMSR is freed, as it is not needed after this function.
@@ -1890,7 +1868,6 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData,
 	pAction->pModData = pModData;
 	/* check if the module is compatible with select features (currently no such features exist) */
 	pAction->eState = ACT_STATE_RDY; /* action is enabled */
-	pAction->requiresDateCall = actionRequiresDateCall(pAction);
 
 	if(bSuspended)
 		actionSuspend(pAction, datetime.GetTime(NULL)); /* "good" time call, only during init and unavoidable */
