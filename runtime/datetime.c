@@ -305,8 +305,10 @@ ParseTIMESTAMP3339(struct syslogTime *pTime, uchar** ppszTS, int *pLenStr)
 		if(OffsetHour < 0 || OffsetHour > 23)
 			ABORT_FINALIZE(RS_RET_INVLD_TIME);
 
-		if(lenStr == 0 || *pszTS++ != ':')
+		if(lenStr == 0 || *pszTS != ':')
 			ABORT_FINALIZE(RS_RET_INVLD_TIME);
+		--lenStr;
+		pszTS++;
 		OffsetMinute = srSLMGParseInt32(&pszTS, &lenStr);
 		if(OffsetMinute < 0 || OffsetMinute > 59)
 			ABORT_FINALIZE(RS_RET_INVLD_TIME);

@@ -4,6 +4,8 @@ Version 7.3.6  [devel] 2012-12-??
   and avoid going through the syslog log stream. syslog logging can now
   also be turned off (see doc for details).
 - fix compile problem in imklog
+- added capability to output thread-id-to-function debug info
+  This is a useful debug aid, but nothing of concern for regular users.
 ---------------------------------------------------------------------------
 Version 7.3.5  [devel] 2012-12-19
 - ommysql: addded batching/transaction support
@@ -133,6 +135,11 @@ Version 7.3.0  [devel] 2012-10-09
 ----------------------------------------------------------------------------
 Version 7.2.6  [v7-stable] 2013-01-??
 - slightly improved config parser error messages when invalid escapes happen
+- bugfix: omelasticsearch failed when authentication data was provided
+  ... at least in most cases it emitted an error message:
+  "snprintf failed when trying to build auth string"
+  Thanks to Joerg Heinemann for alerting us.
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=404
 - bugfix: some property-based filter were incorrectly parsed
   This usually lead to a syntax error on startup and rsyslogd not actually
   starting up. The problem was the regex, which did not care for double
@@ -1153,6 +1160,8 @@ Version 5.10.2  [V5-STABLE], 201?-??-??
   Thanks to Marius Tomaschewski for the bug report and the patch idea.
 - bugfix: invalid DST handling under Solaris
   Thanks to Scott Severtson for the patch.
+- bugfix: invalid decrement in pm5424 could lead to log truncation
+  Thanks to Tomas Heinrich for the patch.
 - bugfix[kind of]: omudpspoof discarded messages >1472 bytes (MTU size)
   it now truncates these message, but ensures they are sent. Note that
   7.3.5+ will switch to fragmented UDP messages instead (up to 64K)

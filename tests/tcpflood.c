@@ -347,7 +347,7 @@ genMsg(char *buf, size_t maxBuf, int *pLenBuf, struct instdata *inst)
 		/* get message from file */
 		do {
 			done = 1;
-			*pLenBuf = fread(buf, 1, 1024, dataFP);
+			*pLenBuf = fread(buf, 1, MAX_EXTRADATA_LEN + 1024, dataFP);
 			if(*pLenBuf == 0) {
 				if(--numFileIterations > 0)  {
 					rewind(dataFP);

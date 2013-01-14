@@ -383,6 +383,7 @@ wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in 
 	}
 #	endif
 
+	dbgOutputTID((char*)thrdName);
 	pthread_cleanup_push(wtpWrkrExecCancelCleanup, pWti);
 	wtiWorker(pWti);
 	pthread_cleanup_pop(0);
