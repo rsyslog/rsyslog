@@ -429,6 +429,8 @@ int sendMessages(struct instdata *inst)
 			}
 		}
 		genMsg(buf, sizeof(buf), &lenBuf, inst); /* generate the message to send according to params */
+		if(lenBuf == 0)
+			break;	/* terminate when no message could be generated */
 		if(transport == TP_TCP) {
 			if(sockArray[socknum] == -1) {
 				/* connection was dropped, need to re-establish */
