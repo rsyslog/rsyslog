@@ -75,6 +75,18 @@ DEFobjCurrIf(prop)
 DEFobjCurrIf(net)
 DEFobjCurrIf(var)
 
+static char *two_digits[100] = {
+	"00", "01", "02", "03", "04", "05", "06", "07", "08", "09",
+	"10", "11", "12", "13", "14", "15", "16", "17", "18", "19",
+	"20", "21", "22", "23", "24", "25", "26", "27", "28", "29",
+	"30", "31", "32", "33", "34", "35", "36", "37", "38", "39",
+	"40", "41", "42", "43", "44", "45", "46", "47", "48", "49",
+	"50", "51", "52", "53", "54", "55", "56", "57", "58", "59",
+	"60", "61", "62", "63", "64", "65", "66", "67", "68", "69",
+	"70", "71", "72", "73", "74", "75", "76", "77", "78", "79",
+	"80", "81", "82", "83", "84", "85", "86", "87", "88", "89",
+	"90", "91", "92", "93", "94", "95", "96", "97", "98", "99"};
+
 static struct {
 	uchar *pszName;
 	short lenName;
@@ -2466,28 +2478,34 @@ static uchar *getNOW(eNOWType eNow, struct syslogTime *t)
 
 	switch(eNow) {
 	case NOW_NOW:
-		snprintf((char*) pBuf, tmpBUFSIZE, "%4.4d-%2.2d-%2.2d", t->year, t->month, t->day);
+		memcpy(pBuf, two_digits[t->year/100], 2);
+		memcpy(pBuf+2, two_digits[t->year%100], 2);
+		pBuf[4] = '-';
+		memcpy(pBuf+5, two_digits[(int)t->month], 2);
+		pBuf[7] = '-';
+		memcpy(pBuf+8, two_digits[(int)t->day], 3);
 		break;
 	case NOW_YEAR:
-		snprintf((char*) pBuf, tmpBUFSIZE, "%4.4d", t->year);
+		memcpy(pBuf, two_digits[t->year/100], 2);
+		memcpy(pBuf+2, two_digits[t->year%100], 3);
 		break;
 	case NOW_MONTH:
-		snprintf((char*) pBuf, tmpBUFSIZE, "%2.2d", t->month);
+		memcpy(pBuf, two_digits[(int)t->month], 3);
 		break;
 	case NOW_DAY:
-		snprintf((char*) pBuf, tmpBUFSIZE, "%2.2d", t->day);
+		memcpy(pBuf, two_digits[(int)t->day], 3);
 		break;
 	case NOW_HOUR:
-		snprintf((char*) pBuf, tmpBUFSIZE, "%2.2d", t->hour);
+		memcpy(pBuf, two_digits[(int)t->hour], 3);
 		break;
 	case NOW_HHOUR:
-		snprintf((char*) pBuf, tmpBUFSIZE, "%2.2d", t->minute / 30);
+		memcpy(pBuf, two_digits[t->hour/30], 3);
 		break;
 	case NOW_QHOUR:
-		snprintf((char*) pBuf, tmpBUFSIZE, "%2.2d", t->minute / 15);
+		memcpy(pBuf, two_digits[t->hour/15], 3);
 		break;
 	case NOW_MINUTE:
-		snprintf((char*) pBuf, tmpBUFSIZE, "%2.2d", t->minute);
+		memcpy(pBuf, two_digits[(int)t->minute], 3);
 		break;
 	}
 
