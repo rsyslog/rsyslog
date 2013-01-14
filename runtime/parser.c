@@ -382,7 +382,9 @@ SanitizeMsg(msg_t *pMsg)
 		FINALIZE;
 	}
 
-	/* now copy over the message and sanitize it */
+	/* now copy over the message and sanitize it. Note that up to iSrc-1 there was
+	 * obviously no need to sanitize, so we can go over that quickly...
+	 */
 	iMaxLine = glbl.GetMaxLine();
 	maxDest = lenMsg * 4; /* message can grow at most four-fold */
 	if(maxDest > iMaxLine)
@@ -391,7 +393,11 @@ SanitizeMsg(msg_t *pMsg)
 		pDst = szSanBuf;
 	else 
 		CHKmalloc(pDst = MALLOC(sizeof(uchar) * (iMaxLine + 1)));
-	iSrc = iDst = 0;
+	if(iSrc > 0) {
+		iSrc--; /* go back to where everything is OK */
+		memcpy(pDst, pszMsg, iSrc); /* fast copy known good */
+	}
+	iDst = iSrc;
 	while(iSrc < lenMsg && iDst < maxDest - 3) { /* leave some space if last char must be escaped */
 		if((pszMsg[iSrc] < 32) && (pszMsg[iSrc] != '\t' || bEscapeTab)) {
 			/* note: \0 must always be escaped, the rest of the code currently
