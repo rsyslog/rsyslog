@@ -314,7 +314,7 @@ setCurlURL(instanceData *pData, uchar **tpls)
 	if(pData->uid != NULL) {
 		rLocal = snprintf(authBuf, sizeof(authBuf), "%s:%s", pData->uid,
 			         (pData->pwd == NULL) ? "" : (char*)pData->pwd);
-		if(rLocal != (int) es_strlen(url)) {
+		if(rLocal < 1) {
 			errmsg.LogError(0, RS_RET_ERR, "omelasticsearch: snprintf failed "
 				"when trying to build auth string (return %d)\n",
 				rLocal);
