@@ -401,12 +401,12 @@ evalPROPFILT(struct cnfstmt *stmt, msg_t *pMsg)
 		break;
 	case FIOP_ISEQUAL:
 		if(rsCStrSzStrCmp(stmt->d.s_propfilt.pCSCompValue,
-				  pszPropVal, ustrlen(pszPropVal)) == 0)
+				  pszPropVal, propLen) == 0)
 			bRet = 1; /* process message! */
 		break;
 	case FIOP_STARTSWITH:
 		if(rsCStrSzStrStartsWithCStr(stmt->d.s_propfilt.pCSCompValue,
-				  pszPropVal, ustrlen(pszPropVal)) == 0)
+				  pszPropVal, propLen) == 0)
 			bRet = 1; /* process message! */
 		break;
 	case FIOP_REGEX:
