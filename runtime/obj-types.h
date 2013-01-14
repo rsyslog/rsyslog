@@ -282,14 +282,12 @@ rsRetVal objName##ClassExit(void) \
 	rsRetVal OBJ##Destruct(OBJ##_t __attribute__((unused)) **ppThis) \
 	{ \
 		DEFiRet; \
-		int iCancelStateSave; \
 		OBJ##_t *pThis; 
 
 #define CODESTARTobjDestruct(OBJ) \
 		ASSERT(ppThis != NULL); \
 		pThis = *ppThis; \
-		ISOBJ_TYPE_assert(pThis, OBJ); \
-		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
+		ISOBJ_TYPE_assert(pThis, OBJ);
 
 /* note: there was a long-time bug in the macro below that lead to *ppThis = NULL
  * only when the object was actually destructed. I discovered this issue during 
@@ -309,7 +307,6 @@ rsRetVal objName##ClassExit(void) \
 			free(pThis); \
 		} \
 		*ppThis = NULL; \
-		pthread_setcancelstate(iCancelStateSave, NULL); \
 		RETiRet; \
 	} 
 
