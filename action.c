@@ -874,15 +874,6 @@ static rsRetVal releaseBatch(action_t *pAction, batch_t *pBatch)
 			case ACT_STRING_PASSING:
 			case ACT_MSG_PASSING:
 				/* nothing to do in that case */
-				/* TODO ... and yet we do something ;) This is considered not
-				 * really needed, but I was not bold enough to remove that while
-				 * fixing the stable. It should be removed in a devel version
-				 * soon (I really don't see a reason why we would need it).
-				 * rgerhards, 2010-12-16
-				 */
-				for(j = 0 ; j < pAction->iNumTpls ; ++j) {
-					((uchar**)pElem->staticActParams)[j] = NULL;
-				}
 				break;
 			case ACT_JSON_PASSING:
 				for(j = 0 ; j < pAction->iNumTpls ; ++j) {
