@@ -281,9 +281,15 @@ static char *syslog_fac_names[24] = { "kern", "user", "mail", "daemon", "auth", 
 			    	      "news", "uucp", "cron", "authpriv", "ftp", "ntp", "audit",
 			    	      "alert", "clock", "local0", "local1", "local2", "local3",
 			    	      "local4", "local5", "local6", "local7" };
+/* length of the facility names string (for optimizatiions) */
+static short len_syslog_fac_names[24] = { 4, 4, 4, 6, 4, 6, 3,
+			    	          4, 4, 4, 8, 3, 3, 5,
+			    	          5, 5, 6, 6, 6, 6,
+			    	          6, 6, 6, 6 };
 
 /* table of severity names (in numerical order)*/
 static char *syslog_severity_names[8] = { "emerg", "alert", "crit", "err", "warning", "notice", "info", "debug" };
+static short len_syslog_severity_names[8] = { 5, 5, 4, 3, 7, 6, 4, 5 };
 
 /* numerical values as string - this is the most efficient approach to convert severity
  * and facility values to a numerical string... -- rgerhars, 2009-06-17
@@ -2420,21 +2426,19 @@ void MsgSetRawMsgWOSize(msg_t *pMsg, char* pszRawMsg)
 
 
 /* Decode a priority into textual information like auth.emerg.
- * The variable pRes must point to a user-supplied buffer and
- * pResLen must contain its size. The pointer to the buffer
+ * The variable pRes must point to a user-supplied buffer.
+ * The pointer to the buffer
  * is also returned, what makes this functiona suitable for
  * use in printf-like functions.
  * Note: a buffer size of 20 characters is always sufficient.
- * Interface to this function changed 2007-06-15 by RGerhards
  */
-char *textpri(char *pRes, size_t pResLen, int pri)
+char *textpri(char *pRes, int pri)
 {
 	assert(pRes != NULL);
-	assert(pResLen > 0);
-
-	snprintf(pRes, pResLen, "%s.%s", syslog_fac_names[LOG_FAC(pri)],
-		 syslog_severity_names[LOG_PRI(pri)]);
-
+	memcpy(pRes, syslog_fac_names[LOG_FAC(pri)], len_syslog_fac_names[LOG_FAC(pri)]);
+	pRes[len_syslog_fac_names[LOG_FAC(pri)]] = '.';
+	memcpy(pRes+len_syslog_fac_names[LOG_FAC(pri)]+1,
+	       syslog_severity_names[LOG_PRI(pri)], len_syslog_severity_names[LOG_PRI(pri)]);
 	return pRes;
 }
 
@@ -2829,7 +2833,7 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 				RET_OUT_OF_MEMORY;
 			} else {
 				*pbMustBeFreed = 1;
-				pRes = (uchar*)textpri((char*)pBuf, 20, getPRIi(pMsg));
+				pRes = (uchar*)textpri((char*)pBuf, getPRIi(pMsg));
 			}
 			break;
 		case PROP_IUT:
