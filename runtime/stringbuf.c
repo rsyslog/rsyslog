@@ -870,13 +870,7 @@ int rsCStrSzStrCmp(cstr_t *pCS1, uchar *psz, size_t iLenSz)
 			 * length, so we need to actually check if they
 			 * are equal.
 			 */
-			register size_t i;
-			for(i = 0 ; i < iLenSz ; ++i) {
-				if(pCS1->pBuf[i] != psz[i])
-					return pCS1->pBuf[i] - psz[i];
-			}
-			/* if we arrive here, the strings are equal */
-			return 0;
+			return strncmp((char*)pCS1->pBuf, (char*)psz, iLenSz);
 		}
 	else
 		return pCS1->iStrLen - iLenSz;
