@@ -362,11 +362,10 @@ SanitizeMsg(msg_t *pMsg)
 	 */
 	int bNeedSanitize = 0;
 	for(iSrc = 0 ; iSrc < lenMsg ; iSrc++) {
-		if(iscntrl(pszMsg[iSrc])) {
+		if(pszMsg[iSrc] < 32) {
 			if(bSpaceLFOnRcv && pszMsg[iSrc] == '\n')
 				pszMsg[iSrc] = ' ';
-			else
-			if(pszMsg[iSrc] == '\0' || bEscapeCCOnRcv) {
+			else if(pszMsg[iSrc] == '\0' || bEscapeCCOnRcv) {
 				bNeedSanitize = 1;
 				if (!bSpaceLFOnRcv)
 					break;
@@ -394,7 +393,7 @@ SanitizeMsg(msg_t *pMsg)
 		CHKmalloc(pDst = MALLOC(sizeof(uchar) * (iMaxLine + 1)));
 	iSrc = iDst = 0;
 	while(iSrc < lenMsg && iDst < maxDest - 3) { /* leave some space if last char must be escaped */
-		if(iscntrl((int) pszMsg[iSrc]) && (pszMsg[iSrc] != '\t' || bEscapeTab)) {
+		if((pszMsg[iSrc] < 32) && (pszMsg[iSrc] != '\t' || bEscapeTab)) {
 			/* note: \0 must always be escaped, the rest of the code currently
 			 * can not handle it! -- rgerhards, 2009-08-26
 			 */
