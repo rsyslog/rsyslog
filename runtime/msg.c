@@ -652,6 +652,7 @@ static inline rsRetVal msgBaseConstruct(msg_t **ppThis)
 	pM->iRefCount = 1;
 	pM->iSeverity = -1;
 	pM->iFacility = -1;
+	pM->iLenPROGNAME = -1;
 	pM->offAfterPRI = 0;
 	pM->offMSG = -1;
 	pM->iProtocolVersion = 0;
@@ -670,7 +671,6 @@ static inline rsRetVal msgBaseConstruct(msg_t **ppThis)
 	pM->pszTIMESTAMP3339 = NULL;
 	pM->pszTIMESTAMP_MySQL = NULL;
         pM->pszTIMESTAMP_PgSQL = NULL;
-	pM->pCSProgName = NULL;
 	pM->pCSStrucData = NULL;
 	pM->pCSAPPNAME = NULL;
 	pM->pCSPROCID = NULL;
@@ -813,8 +813,8 @@ CODESTARTobjDestruct(msg)
 		free(pThis->pszRcvdAt_PgSQL);
 		free(pThis->pszTIMESTAMP_MySQL);
 		free(pThis->pszTIMESTAMP_PgSQL);
-		if(pThis->pCSProgName != NULL)
-			rsCStrDestruct(&pThis->pCSProgName);
+		if(pThis->iLenPROGNAME >= CONF_PROGNAME_BUFSIZE)
+			free(pThis->PROGNAME.ptr);
 		if(pThis->pCSStrucData != NULL)
 			rsCStrDestruct(&pThis->pCSStrucData);
 		if(pThis->pCSAPPNAME != NULL)
@@ -967,7 +967,6 @@ msg_t* MsgDup(msg_t* pOld)
 		}
 	}
 
-	tmpCOPYCSTR(ProgName);
 	tmpCOPYCSTR(StrucData);
 	tmpCOPYCSTR(APPNAME);
 	tmpCOPYCSTR(PROCID);
@@ -1315,32 +1314,33 @@ finalize_it:
  * The above definition has been taken from the FreeBSD syslogd sources.
  * 
  * The program name is not parsed by default, because it is infrequently-used.
- * If it is needed, this function should be called first. It checks if it is
- * already set and extracts it, if not.
- *
  * IMPORTANT: A locked message object must be provided, else a crash will occur.
  * rgerhards, 2005-10-19
  */
-static rsRetVal aquireProgramName(msg_t *pM)
+static inline rsRetVal
+aquireProgramName(msg_t *pM)
 {
-	register int i;
-	uchar *pszTag;
+	int i;
+	uchar *pszTag, *pszProgName;
 	DEFiRet;
 
 	assert(pM != NULL);
-	if(pM->pCSProgName == NULL) {
-		/* ok, we do not yet have it. So let's parse the TAG to obtain it.  */
-		pszTag = (uchar*) ((pM->iLenTAG < CONF_TAG_BUFSIZE) ? pM->TAG.szBuf : pM->TAG.pszTAG);
-		CHKiRet(cstrConstruct(&pM->pCSProgName));
-		for(  i = 0
-		    ; (i < pM->iLenTAG) && isprint((int) pszTag[i])
-		      && (pszTag[i] != '\0') && (pszTag[i] != ':')
-		      && (pszTag[i] != '[')  && (pszTag[i] != '/')
-		    ; ++i) {
-			CHKiRet(cstrAppendChar(pM->pCSProgName, pszTag[i]));
-		}
-		CHKiRet(cstrFinalize(pM->pCSProgName));
+	pszTag = (uchar*) ((pM->iLenTAG < CONF_TAG_BUFSIZE) ? pM->TAG.szBuf : pM->TAG.pszTAG);
+	for(  i = 0
+	    ; (i < pM->iLenTAG) && isprint((int) pszTag[i])
+	      && (pszTag[i] != '\0') && (pszTag[i] != ':')
+	      && (pszTag[i] != '[')  && (pszTag[i] != '/')
+	    ; ++i)
+		; /* just search end of PROGNAME */
+	if(i < CONF_PROGNAME_BUFSIZE) {
+		pszProgName = pM->PROGNAME.szBuf;
+	} else {
+		CHKmalloc(pM->PROGNAME.ptr = malloc(i+1));
+		pszProgName = pM->PROGNAME.ptr;
 	}
+	memcpy((char*)pszProgName, (char*)pszTag, i);
+	pszProgName[i] = '\0';
+	pM->iLenPROGNAME = i;
 finalize_it:
 	RETiRet;
 }
@@ -2077,53 +2077,20 @@ static inline char *getStructuredData(msg_t *pM)
 	return (char*) pszRet;
 }
 
-/* check if we have a ProgramName, and, if not, try to aquire/emulate it.
- * rgerhards, 2009-06-26
- */
-static inline void prepareProgramName(msg_t *pM, sbool bLockMutex)
-{
-	if(pM->pCSProgName == NULL) {
-		if(bLockMutex == LOCK_MUTEX)
-			MsgLock(pM);
-
-		/* re-query as things might have changed during locking */
-		if(pM->pCSProgName == NULL)
-			aquireProgramName(pM);
-
-		if(bLockMutex == LOCK_MUTEX)
-			MsgUnlock(pM);
-	}
-}
-
-
-/* get the length of the "programname" sz string
- * rgerhards, 2005-10-19
- */
-int getProgramNameLen(msg_t *pM, sbool bLockMutex)
-{
-	assert(pM != NULL);
-	prepareProgramName(pM, bLockMutex);
-	return (pM->pCSProgName == NULL) ? 0 : rsCStrLen(pM->pCSProgName);
-}
-
-
 /* get the "programname" as sz string
  * rgerhards, 2005-10-19
  */
 uchar *getProgramName(msg_t *pM, sbool bLockMutex)
 {
-	uchar *pszRet;
-
-	if(bLockMutex == LOCK_MUTEX)
+	if(pM->iLenPROGNAME == -1 && bLockMutex == LOCK_MUTEX) {
 		MsgLock(pM);
-	prepareProgramName(pM, MUTEX_ALREADY_LOCKED);
-	if(pM->pCSProgName == NULL)
-		pszRet = UCHAR_CONSTANT("");
-	else 
-		pszRet = rsCStrGetSzStrNoNULL(pM->pCSProgName);
-	if(bLockMutex == LOCK_MUTEX)
+		/* need to re-check, things may have change in between! */
+		if(pM->iLenPROGNAME == -1)
+			aquireProgramName(pM);
 		MsgUnlock(pM);
-	return pszRet;
+	}
+	return (pM->iLenPROGNAME < CONF_PROGNAME_BUFSIZE) ? pM->PROGNAME.szBuf
+						       : pM->PROGNAME.ptr;
 }
 
 
