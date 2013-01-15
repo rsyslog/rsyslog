@@ -527,7 +527,7 @@ preprocessBatch(batch_t *pBatch) {
 			if(!bIsPermitted) {
 				DBGPRINTF("Message from '%s' discarded, not a permitted sender host\n",
 					  fromHostFQDN);
-				pBatch->pElem[i].state = BATCH_STATE_DISC;
+				pBatch->eltState[i] = BATCH_STATE_DISC;
 			} else {
 				/* save some of the info we obtained */
 				MsgSetRcvFromStr(pMsg, fromHost, ustrlen(fromHost), &propFromHost);
@@ -538,7 +538,7 @@ preprocessBatch(batch_t *pBatch) {
 		if((pMsg->msgFlags & NEEDS_PARSING) != 0) {
 			if((localRet = parser.ParseMsg(pMsg)) != RS_RET_OK)  {
 				DBGPRINTF("Message discarded, parsing error %d\n", localRet);
-				pBatch->pElem[i].state = BATCH_STATE_DISC;
+				pBatch->eltState[i] = BATCH_STATE_DISC;
 			}
 		}
 		if(pMsg->pRuleset != batchRuleset)
@@ -573,7 +573,7 @@ msgConsumer(void __attribute__((unused)) *notNeeded, batch_t *pBatch, int *pbShu
 //do not have this yet and so we emulate -- 2010-06-10
 int i;
 	for(i = 0 ; i < pBatch->nElem  && !*pbShutdownImmediate ; i++) {
-		pBatch->pElem[i].state = BATCH_STATE_COMM;
+		pBatch->eltState[i] = BATCH_STATE_COMM;
 	}
 	RETiRet;
 }

@@ -1070,11 +1070,11 @@ tryDoAction(action_t *pAction, batch_t *pBatch, int *pnElem)
 					++iCommittedUpTo;
 					//pBatch->pElem[iCommittedUpTo++].state = BATCH_STATE_COMM;
 				}
-				pBatch->pElem[i].state = BATCH_STATE_SUB;
+				pBatch->eltState[i] = BATCH_STATE_SUB;
 			} else if(localRet == RS_RET_DEFER_COMMIT) {
-				pBatch->pElem[i].state = BATCH_STATE_SUB;
+				pBatch->eltState[i] = BATCH_STATE_SUB;
 			} else if(localRet == RS_RET_DISCARDMSG) {
-				pBatch->pElem[i].state = BATCH_STATE_DISC;
+				pBatch->eltState[i] = BATCH_STATE_DISC;
 			} else {
 				dbgprintf("tryDoAction: unexpected error code %d[nElem %d, Commited UpTo %d], finalizing\n",
 					  localRet, *pnElem, iCommittedUpTo);
@@ -1136,9 +1136,9 @@ submitBatch(action_t *pAction, batch_t *pBatch, int nElem)
 		} else if(localRet == RS_RET_ACTION_FAILED) {
 			/* in this case, everything not yet committed is BAD */
 			for(i = pBatch->iDoneUpTo ; i < wasDoneTo + nElem ; ++i) {
-				if(   pBatch->pElem[i].state != BATCH_STATE_DISC
-				   && pBatch->pElem[i].state != BATCH_STATE_COMM ) {
-					pBatch->pElem[i].state = BATCH_STATE_BAD;
+				if(   pBatch->eltState[i] != BATCH_STATE_DISC
+				   && pBatch->eltState[i] != BATCH_STATE_COMM ) {
+					pBatch->eltState[i] = BATCH_STATE_BAD;
 					pBatch->pElem[i].bPrevWasSuspended = 1;
 					STATSCOUNTER_INC(pAction->ctrFail, pAction->mutCtrFail);
 				}
@@ -1214,7 +1214,7 @@ prepareBatch(action_t *pAction, batch_t *pBatch, sbool **activeSave, int *bMustR
 	for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pBatch->pbShutdownImmediate) ; ++i) {
 		pElem = &(pBatch->pElem[i]);
 		if(batchIsValidElem(pBatch, i)) {
-			pElem->state = BATCH_STATE_RDY;
+			pBatch->eltState[i] = BATCH_STATE_RDY;
 			if(prepareDoActionParams(pAction, pElem, &ttNow) != RS_RET_OK) {
 				/* make sure we have our copy of "active" array */
 				if(!*bMustRestoreActivePtr) {
@@ -1547,7 +1547,7 @@ doSubmitToActionQNotAllMarkBatch(action_t *pAction, batch_t *pBatch)
 	copyActive(pBatch);
 
 	for(i = 0 ; i < batchNumMsgs(pBatch) ; ++i) {
-		if((pBatch->pElem[i].state == BATCH_STATE_DISC) || !pBatch->active[i])
+		if((pBatch->eltState[i] == BATCH_STATE_DISC) || !pBatch->active[i])
 			continue;
 		if(now == 0) {
 			now = datetime.GetTime(NULL); /* good time call - the only one done */
@@ -1625,7 +1625,7 @@ doQueueEnqObjDirectBatch(action_t *pAction, batch_t *pBatch)
 				bNeedSubmit = 1;
 			}
 			DBGPRINTF("action %p[%d]: valid:%d state:%d execWhenPrev:%d prevWasSusp:%d\n",
-				   pAction, i, batchIsValidElem(pBatch, i),  pBatch->pElem[i].state,
+				   pAction, i, batchIsValidElem(pBatch, i),  pBatch->eltState[i],
 				   pAction->bExecWhenPrevSusp, pBatch->pElem[i].bPrevWasSuspended);
 		}
 		if(bNeedSubmit) {
@@ -1665,7 +1665,7 @@ doSubmitToActionQBatch(action_t *pAction, batch_t *pBatch)
 		 */
 		for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pBatch->pbShutdownImmediate) ; ++i) {
 			DBGPRINTF("action %p: valid:%d state:%d execWhenPrev:%d prevWasSusp:%d\n",
-		           pAction, batchIsValidElem(pBatch, i),  pBatch->pElem[i].state,
+		           pAction, batchIsValidElem(pBatch, i),  pBatch->eltState[i],
 			   pAction->bExecWhenPrevSusp, pBatch->pElem[i].bPrevWasSuspended);
 			if(   batchIsValidElem(pBatch, i) 
 			   && (pAction->bExecWhenPrevSusp == 0 || pBatch->pElem[i].bPrevWasSuspended == 1)) {
@@ -1693,7 +1693,7 @@ helperSubmitToActionQComplexBatch(action_t *pAction, batch_t *pBatch)
 		  pAction, module.GetStateName(pAction->pMod));
 	for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pBatch->pbShutdownImmediate) ; ++i) {
 		DBGPRINTF("action %p: valid:%d state:%d execWhenPrev:%d prevWasSusp:%d\n",
-		           pAction, batchIsValidElem(pBatch, i),  pBatch->pElem[i].state,
+		           pAction, batchIsValidElem(pBatch, i),  pBatch->eltState[i],
 			   pAction->bExecWhenPrevSusp, pBatch->pElem[i].bPrevWasSuspended);
 		if(   batchIsValidElem(pBatch, i)
 		   && ((pAction->bExecWhenPrevSusp  == 0) || pBatch->pElem[i].bPrevWasSuspended) ) {
