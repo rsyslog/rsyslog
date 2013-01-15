@@ -362,7 +362,7 @@ processDataRcvd(tcps_sess_t *pThis, char c, struct syslogTime *stTime, time_t tt
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
 
 	if(pThis->inputState == eAtStrtFram) {
-		if(pThis->bSuppOctetFram && isdigit((int) c)) {
+		if(pThis->bSuppOctetFram && c >= '0' && c <= '9') {
 			pThis->inputState = eInOctetCnt;
 			pThis->iOctetsRemain = 0;
 			pThis->eFraming = TCP_FRAMING_OCTET_COUNTING;
@@ -373,7 +373,7 @@ processDataRcvd(tcps_sess_t *pThis, char c, struct syslogTime *stTime, time_t tt
 	}
 
 	if(pThis->inputState == eInOctetCnt) {
-		if(isdigit(c)) {
+		if(c >= '0' && c <= '9') { /* isdigit() the faster way */
 			pThis->iOctetsRemain = pThis->iOctetsRemain * 10 + c - '0';
 		} else { /* done with the octet count, so this must be the SP terminator */
 			DBGPRINTF("TCP Message with octet-counter, size %d.\n", pThis->iOctetsRemain);
