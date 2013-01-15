@@ -852,6 +852,9 @@ static rsRetVal releaseBatch(action_t *pAction, batch_t *pBatch)
 
 	ASSERT(pAction != NULL);
 
+	if(pAction->eParamPassing == ACT_STRING_PASSING || pAction->eParamPassing == ACT_MSG_PASSING)
+		goto done; /* we need to do nothing with these types! */
+
 	for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pBatch->pbShutdownImmediate) ; ++i) {
 		pElem = &(pBatch->pElem[i]);
 		if(batchIsValidElem(pBatch, i)) {
@@ -871,10 +874,6 @@ static rsRetVal releaseBatch(action_t *pAction, batch_t *pBatch)
 					}
 				}
 				break;
-			case ACT_STRING_PASSING:
-			case ACT_MSG_PASSING:
-				/* nothing to do in that case */
-				break;
 			case ACT_JSON_PASSING:
 				for(j = 0 ; j < pAction->iNumTpls ; ++j) {
 					json_object_put((struct json_object*)
@@ -882,11 +881,15 @@ static rsRetVal releaseBatch(action_t *pAction, batch_t *pBatch)
 					pElem->staticActParams[j] = NULL;
 				}
 				break;
+			case ACT_STRING_PASSING:
+			case ACT_MSG_PASSING:
+				/* can never happen, just to keep compiler happy! */
+				break;
 			}
 		}
 	}
 
-	RETiRet;
+done:	RETiRet;
 }
 
 
