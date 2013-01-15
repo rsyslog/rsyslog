@@ -2417,7 +2417,8 @@ char *textpri(char *pRes, int pri)
 	memcpy(pRes, syslog_fac_names[LOG_FAC(pri)], len_syslog_fac_names[LOG_FAC(pri)]);
 	pRes[len_syslog_fac_names[LOG_FAC(pri)]] = '.';
 	memcpy(pRes+len_syslog_fac_names[LOG_FAC(pri)]+1,
-	       syslog_severity_names[LOG_PRI(pri)], len_syslog_severity_names[LOG_PRI(pri)]);
+	       syslog_severity_names[LOG_PRI(pri)],
+	       len_syslog_severity_names[LOG_PRI(pri)]+1 /* for \0! */);
 	return pRes;
 }
 
