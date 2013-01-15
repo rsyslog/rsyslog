@@ -34,13 +34,12 @@
  * main message queue. But over time, it could potentially be useful to split the two.
  * rgerhad, 2009-05-12
  */
-typedef enum {
-	BATCH_STATE_RDY  = 0,	/* object ready for processing */
-	BATCH_STATE_BAD  = 1,	/* unrecoverable failure while processing, do NOT resubmit to same action */
-	BATCH_STATE_SUB  = 2,	/* message submitted for processing, outcome yet unknown */
-	BATCH_STATE_COMM = 3,	/* message successfully commited */
-	BATCH_STATE_DISC = 4, 	/* discarded - processed OK, but do not submit to any other action */
-} batch_state_t;
+#define BATCH_STATE_RDY  0	/* object ready for processing */
+#define BATCH_STATE_BAD  1	/* unrecoverable failure while processing, do NOT resubmit to same action */
+#define BATCH_STATE_SUB  2	/* message submitted for processing, outcome yet unknown */
+#define BATCH_STATE_COMM 3	/* message successfully commited */
+#define BATCH_STATE_DISC 4 	/* discarded - processed OK, but do not submit to any other action */
+typedef unsigned char batch_state_t;
 
 
 /* an object inside a batch, including any information (state!) needed for it to "life".
