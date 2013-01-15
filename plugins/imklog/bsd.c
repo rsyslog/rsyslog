@@ -172,7 +172,7 @@ klogWillRun(modConfData_t *pModConf)
 
 	fklog = open((char*)GetPath(pModConf), O_RDONLY, 0);
 	if (fklog < 0) {
-		imklogLogIntMsg(RS_RET_ERR_OPEN_KLOG, "imklog: cannot open kernel log(%s): %s.",
+		imklogLogIntMsg(LOG_ERR, "imklog: cannot open kernel log(%s): %s.",
 			GetPath(pModConf), rs_strerror_r(errno, errmsg, sizeof(errmsg)));
 		ABORT_FINALIZE(RS_RET_ERR_OPEN_KLOG);
 	}

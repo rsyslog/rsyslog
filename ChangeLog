@@ -5,6 +5,8 @@ Version 7.3.6  [devel] 2012-12-??
 - impstats: added ability to write stats records to local file
   and avoid going through the syslog log stream. syslog logging can now
   also be turned off (see doc for details).
+- bugfix: imklog issued wrong facility in error messages
+  ...what could lead to problems in other parts of the code
 - fix compile problem in imklog
 - added capability to output thread-id-to-function debug info
   This is a useful debug aid, but nothing of concern for regular users.
