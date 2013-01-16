@@ -68,6 +68,7 @@
 #include "stream.h"
 #include "unicode-helper.h"
 #include "atomic.h"
+#include "statsobj.h"
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
@@ -81,6 +82,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 DEF_OMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(strm)
+DEFobjCurrIf(statsobj)
 
 /* for our current LRU mechanism, we need a monotonically increasing counters. We use
  * it much like a "Lamport logical clock": we do not need the actual time, we just need
@@ -157,6 +159,10 @@ typedef struct _instanceData {
 	sbool	bFlushOnTXEnd;		/* flush write buffers when transaction has ended? */
 	sbool	bUseAsyncWriter;	/* use async stream writer? */
 	sbool	bVeryRobustZip;
+	statsobj_t *stats;		/* listener stats */
+	STATSCOUNTER_DEF(ctrWrites, mutctrWrites);
+	STATSCOUNTER_DEF(ctrEvict, mutctrEvict);
+	STATSCOUNTER_DEF(ctrMiss, mutctrMiss);
 } instanceData;
 
 
@@ -598,8 +604,10 @@ prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
 	   	/* great, we are all set */
 		pCache[pData->iCurrElt]->clkTickAccessed = getClockFileAccess();
 		/* LRU needs only a strictly monotonically increasing counter, so such a one could do */
+dbgprintf("DDDD: %p: dynafile %s is already open\n", pData, newFileName);
 		FINALIZE;
 	}
+dbgprintf("DDDD: %p: dynafile %s not open, cache size %d, max %d\n", pData, newFileName, pData->iCurrCacheSize, pData->iDynaFileCacheSize);
 
 	/* ok, no luck. Now let's search the table if we find a matching spot.
 	 * While doing so, we also prepare for creation of a new one.
@@ -618,6 +626,7 @@ prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
 				pData->pStrm = pCache[i]->pStrm;
 				pData->iCurrElt = i;
 				pCache[i]->clkTickAccessed = getClockFileAccess(); /* update "timestamp" for LRU */
+				STATSCOUNTER_INC(pData->ctrMiss, lstn->mutCtrMiss);
 				FINALIZE;
 			}
 			/* did not find it - so lets keep track of the counters for LRU */
@@ -646,6 +655,7 @@ prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
 	if(iFirstFree == -1 && (pData->iCurrCacheSize < pData->iDynaFileCacheSize)) {
 		/* there is space left, so set it to that index */
 		iFirstFree = pData->iCurrCacheSize++;
+dbgprintf("DDDD: %p: file cache space left, index for new file %d\n", pData, iFirstFree);
 	}
 
 	/* Note that the following code sequence does not work with the cache entry itself,
@@ -654,6 +664,7 @@ prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
 	 */
 	if(iFirstFree == -1) {
 		dynaFileDelCacheEntry(pCache, iOldest, 0);
+		STATSCOUNTER_INC(pData->ctrEvict, lstn->mutCtrEvict);
 		iFirstFree = iOldest; /* this one *is* now free ;) */
 	} else {
 		/* we need to allocate memory for the cache structure */
@@ -863,6 +874,7 @@ CODESTARTdoAction
 	DBGPRINTF("file to log to: %s\n",
 		  (pData->bDynamicName) ? ppString[1] : pData->f_fname);
 	DBGPRINTF("omfile: start of data: '%.128s'\n", ppString[0]);
+	STATSCOUNTER_INC(pData->ctrWrites, lstn->mutCtrWrites);
 	CHKiRet(writeFile(ppString, iMsgOpts, pData));
 	if(!bCoreSupportsBatching && pData->bFlushOnTXEnd) {
 		CHKiRet(strm.Flush(pData->pStrm));
@@ -894,6 +906,28 @@ setInstParamDefaults(instanceData *pData)
 	pData->iIOBufSize = IOBUF_DFLT_SIZE;
 	pData->iFlushInterval = FLUSH_INTRVL_DFLT;
 	pData->bUseAsyncWriter = USE_ASYNCWRITER_DFLT;
+}
+
+
+static rsRetVal
+setupInstStatsCtrs(instanceData *pData)
+{
+	DEFiRet;
+	/* support statistics gathering */
+	CHKiRet(statsobj.Construct(&(pData->stats)));
+	CHKiRet(statsobj.SetName(pData->stats, pData->f_fname));
+	STATSCOUNTER_INIT(pData->ctrWrites, pData->mutCtrWrites);
+	CHKiRet(statsobj.AddCounter(pData->stats, UCHAR_CONSTANT("records"),
+		ctrType_IntCtr, &(pData->ctrWrites)));
+	STATSCOUNTER_INIT(pData->ctrMiss, pData->mutCtrMiss);
+	CHKiRet(statsobj.AddCounter(pData->stats, UCHAR_CONSTANT("cache.missed"),
+		ctrType_IntCtr, &(pData->ctrMiss)));
+	STATSCOUNTER_INIT(pData->ctrEvict, pData->mutCtrEvict);
+	CHKiRet(statsobj.AddCounter(pData->stats, UCHAR_CONSTANT("cache.evicted"),
+		ctrType_IntCtr, &(pData->ctrEvict)));
+	CHKiRet(statsobj.ConstructFinalize(pData->stats));
+finalize_it:
+	RETiRet;
 }
 
 BEGINnewActInst
@@ -990,6 +1024,7 @@ CODESTARTnewActInst
 		pData->iCurrElt = -1;		  /* no current element */
 	}
 // TODO: add	pData->iSizeLimit = 0; /* default value, use outchannels to configure! */
+	setupInstStatsCtrs(pData);
 
 CODE_STD_FINALIZERnewActInst
 	cnfparamvalsDestruct(pvals, &actpblk);
@@ -1079,6 +1114,7 @@ CODESTARTparseSelectorAct
 	pData->iFlushInterval = cs.iFlushInterval;
 	pData->bUseAsyncWriter = cs.bUseAsyncWriter;
 	pData->bVeryRobustZip = 0;	/* cannot be specified via legacy conf */
+	setupInstStatsCtrs(pData);
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
@@ -1126,6 +1162,7 @@ BEGINmodExit
 CODESTARTmodExit
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(strm, CORE_COMPONENT);
+	objRelease(statsobj, CORE_COMPONENT);
 	DESTROY_ATOMIC_HELPER_MUT(mutClock);
 ENDmodExit
 
@@ -1148,6 +1185,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 INITLegCnfVars
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(strm, CORE_COMPONENT));
+	CHKiRet(objUse(statsobj, CORE_COMPONENT));
 
 	INIT_ATOMIC_HELPER_MUT(mutClock);
 
