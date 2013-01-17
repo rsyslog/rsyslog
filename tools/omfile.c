@@ -159,10 +159,12 @@ typedef struct _instanceData {
 	sbool	bFlushOnTXEnd;		/* flush write buffers when transaction has ended? */
 	sbool	bUseAsyncWriter;	/* use async stream writer? */
 	sbool	bVeryRobustZip;
-	statsobj_t *stats;		/* listener stats */
-	STATSCOUNTER_DEF(ctrWrites, mutctrWrites);
+	statsobj_t *stats;		/* dynafile, primarily cache stats */
+	STATSCOUNTER_DEF(ctrRequests, mutctrRequests);
+	STATSCOUNTER_DEF(ctrLevel0, mutctrLevel0);
 	STATSCOUNTER_DEF(ctrEvict, mutctrEvict);
 	STATSCOUNTER_DEF(ctrMiss, mutctrMiss);
+	STATSCOUNTER_DEF(ctrMax, mutctrMax);
 } instanceData;
 
 
@@ -603,11 +605,10 @@ prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
 	   && !ustrcmp(newFileName, pCache[pData->iCurrElt]->pName)) {
 	   	/* great, we are all set */
 		pCache[pData->iCurrElt]->clkTickAccessed = getClockFileAccess();
+		STATSCOUNTER_INC(pData->ctrLevel0, lstn->mutCtrLevel0);
 		/* LRU needs only a strictly monotonically increasing counter, so such a one could do */
-dbgprintf("DDDD: %p: dynafile %s is already open\n", pData, newFileName);
 		FINALIZE;
 	}
-dbgprintf("DDDD: %p: dynafile %s not open, cache size %d, max %d\n", pData, newFileName, pData->iCurrCacheSize, pData->iDynaFileCacheSize);
 
 	/* ok, no luck. Now let's search the table if we find a matching spot.
 	 * While doing so, we also prepare for creation of a new one.
@@ -626,7 +627,6 @@ dbgprintf("DDDD: %p: dynafile %s not open, cache size %d, max %d\n", pData, newF
 				pData->pStrm = pCache[i]->pStrm;
 				pData->iCurrElt = i;
 				pCache[i]->clkTickAccessed = getClockFileAccess(); /* update "timestamp" for LRU */
-				STATSCOUNTER_INC(pData->ctrMiss, lstn->mutCtrMiss);
 				FINALIZE;
 			}
 			/* did not find it - so lets keep track of the counters for LRU */
@@ -638,6 +638,7 @@ dbgprintf("DDDD: %p: dynafile %s not open, cache size %d, max %d\n", pData, newF
 	}
 
 	/* we have not found an entry */
+	STATSCOUNTER_INC(pData->ctrMiss, lstn->mutCtrMiss);
 
 	/* invalidate iCurrElt as we may error-exit out of this function when the currrent
 	 * iCurrElt has been freed or otherwise become unusable. This is a precaution, and
@@ -655,7 +656,7 @@ dbgprintf("DDDD: %p: dynafile %s not open, cache size %d, max %d\n", pData, newF
 	if(iFirstFree == -1 && (pData->iCurrCacheSize < pData->iDynaFileCacheSize)) {
 		/* there is space left, so set it to that index */
 		iFirstFree = pData->iCurrCacheSize++;
-dbgprintf("DDDD: %p: file cache space left, index for new file %d\n", pData, iFirstFree);
+		STATSCOUNTER_SETMAX_NOMUT(pData->ctrMax, (unsigned) pData->iCurrCacheSize);
 	}
 
 	/* Note that the following code sequence does not work with the cache entry itself,
@@ -874,7 +875,7 @@ CODESTARTdoAction
 	DBGPRINTF("file to log to: %s\n",
 		  (pData->bDynamicName) ? ppString[1] : pData->f_fname);
 	DBGPRINTF("omfile: start of data: '%.128s'\n", ppString[0]);
-	STATSCOUNTER_INC(pData->ctrWrites, lstn->mutCtrWrites);
+	STATSCOUNTER_INC(pData->ctrRequests, lstn->mutCtrWrites);
 	CHKiRet(writeFile(ppString, iMsgOpts, pData));
 	if(!bCoreSupportsBatching && pData->bFlushOnTXEnd) {
 		CHKiRet(strm.Flush(pData->pStrm));
@@ -912,20 +913,35 @@ setInstParamDefaults(instanceData *pData)
 static rsRetVal
 setupInstStatsCtrs(instanceData *pData)
 {
+	uchar ctrName[512];
 	DEFiRet;
+
+	if(!pData->bDynamicName) {
+		FINALIZE;
+	}
+
 	/* support statistics gathering */
+	snprintf((char*)ctrName, sizeof(ctrName), "dynafile cache %s", pData->f_fname);
+	ctrName[sizeof(ctrName)-1] = '\0'; /* be on the save side */
 	CHKiRet(statsobj.Construct(&(pData->stats)));
-	CHKiRet(statsobj.SetName(pData->stats, pData->f_fname));
-	STATSCOUNTER_INIT(pData->ctrWrites, pData->mutCtrWrites);
-	CHKiRet(statsobj.AddCounter(pData->stats, UCHAR_CONSTANT("records"),
-		ctrType_IntCtr, &(pData->ctrWrites)));
+	CHKiRet(statsobj.SetName(pData->stats, ctrName));
+	STATSCOUNTER_INIT(pData->ctrRequests, pData->mutCtrWrites);
+	CHKiRet(statsobj.AddCounter(pData->stats, UCHAR_CONSTANT("requests"),
+		ctrType_IntCtr, &(pData->ctrRequests)));
+	STATSCOUNTER_INIT(pData->ctrLevel0, pData->mutCtrLevel0);
+	CHKiRet(statsobj.AddCounter(pData->stats, UCHAR_CONSTANT("level0"),
+		ctrType_IntCtr, &(pData->ctrLevel0)));
 	STATSCOUNTER_INIT(pData->ctrMiss, pData->mutCtrMiss);
-	CHKiRet(statsobj.AddCounter(pData->stats, UCHAR_CONSTANT("cache.missed"),
+	CHKiRet(statsobj.AddCounter(pData->stats, UCHAR_CONSTANT("missed"),
 		ctrType_IntCtr, &(pData->ctrMiss)));
 	STATSCOUNTER_INIT(pData->ctrEvict, pData->mutCtrEvict);
-	CHKiRet(statsobj.AddCounter(pData->stats, UCHAR_CONSTANT("cache.evicted"),
+	CHKiRet(statsobj.AddCounter(pData->stats, UCHAR_CONSTANT("evicted"),
 		ctrType_IntCtr, &(pData->ctrEvict)));
+	STATSCOUNTER_INIT(pData->ctrMax, pData->mutCtrMax);
+	CHKiRet(statsobj.AddCounter(pData->stats, UCHAR_CONSTANT("maxused"),
+		ctrType_IntCtr, &(pData->ctrMax)));
 	CHKiRet(statsobj.ConstructFinalize(pData->stats));
+
 finalize_it:
 	RETiRet;
 }

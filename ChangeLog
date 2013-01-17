@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------
 Version 7.3.6  [devel] 2012-12-??
+- omfile: added stats counters for dynafile caches
 - omfile: improved async writing, finally enabled full async write
   also fixed a couple of smaller issues along that way
 - impstats: added ability to write stats records to local file
