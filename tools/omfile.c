@@ -160,11 +160,11 @@ typedef struct _instanceData {
 	sbool	bUseAsyncWriter;	/* use async stream writer? */
 	sbool	bVeryRobustZip;
 	statsobj_t *stats;		/* dynafile, primarily cache stats */
-	STATSCOUNTER_DEF(ctrRequests, mutctrRequests);
-	STATSCOUNTER_DEF(ctrLevel0, mutctrLevel0);
-	STATSCOUNTER_DEF(ctrEvict, mutctrEvict);
-	STATSCOUNTER_DEF(ctrMiss, mutctrMiss);
-	STATSCOUNTER_DEF(ctrMax, mutctrMax);
+	STATSCOUNTER_DEF(ctrRequests, mutCtrRequests);
+	STATSCOUNTER_DEF(ctrLevel0, mutCtrLevel0);
+	STATSCOUNTER_DEF(ctrEvict, mutCtrEvict);
+	STATSCOUNTER_DEF(ctrMiss, mutCtrMiss);
+	STATSCOUNTER_DEF(ctrMax, mutCtrMax);
 } instanceData;
 
 
@@ -605,7 +605,7 @@ prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
 	   && !ustrcmp(newFileName, pCache[pData->iCurrElt]->pName)) {
 	   	/* great, we are all set */
 		pCache[pData->iCurrElt]->clkTickAccessed = getClockFileAccess();
-		STATSCOUNTER_INC(pData->ctrLevel0, lstn->mutCtrLevel0);
+		STATSCOUNTER_INC(pData->ctrLevel0, pData->mutCtrLevel0);
 		/* LRU needs only a strictly monotonically increasing counter, so such a one could do */
 		FINALIZE;
 	}
@@ -638,7 +638,7 @@ prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
 	}
 
 	/* we have not found an entry */
-	STATSCOUNTER_INC(pData->ctrMiss, lstn->mutCtrMiss);
+	STATSCOUNTER_INC(pData->ctrMiss, pData->mutCtrMiss);
 
 	/* invalidate iCurrElt as we may error-exit out of this function when the currrent
 	 * iCurrElt has been freed or otherwise become unusable. This is a precaution, and
@@ -665,7 +665,7 @@ prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
 	 */
 	if(iFirstFree == -1) {
 		dynaFileDelCacheEntry(pCache, iOldest, 0);
-		STATSCOUNTER_INC(pData->ctrEvict, lstn->mutCtrEvict);
+		STATSCOUNTER_INC(pData->ctrEvict, pData->mutCtrEvict);
 		iFirstFree = iOldest; /* this one *is* now free ;) */
 	} else {
 		/* we need to allocate memory for the cache structure */
@@ -875,7 +875,7 @@ CODESTARTdoAction
 	DBGPRINTF("file to log to: %s\n",
 		  (pData->bDynamicName) ? ppString[1] : pData->f_fname);
 	DBGPRINTF("omfile: start of data: '%.128s'\n", ppString[0]);
-	STATSCOUNTER_INC(pData->ctrRequests, lstn->mutCtrWrites);
+	STATSCOUNTER_INC(pData->ctrRequests, pData->mutCtrRequests);
 	CHKiRet(writeFile(ppString, iMsgOpts, pData));
 	if(!bCoreSupportsBatching && pData->bFlushOnTXEnd) {
 		CHKiRet(strm.Flush(pData->pStrm));
@@ -925,7 +925,7 @@ setupInstStatsCtrs(instanceData *pData)
 	ctrName[sizeof(ctrName)-1] = '\0'; /* be on the save side */
 	CHKiRet(statsobj.Construct(&(pData->stats)));
 	CHKiRet(statsobj.SetName(pData->stats, ctrName));
-	STATSCOUNTER_INIT(pData->ctrRequests, pData->mutCtrWrites);
+	STATSCOUNTER_INIT(pData->ctrRequests, pData->mutCtrRequests);
 	CHKiRet(statsobj.AddCounter(pData->stats, UCHAR_CONSTANT("requests"),
 		ctrType_IntCtr, &(pData->ctrRequests)));
 	STATSCOUNTER_INIT(pData->ctrLevel0, pData->mutCtrLevel0);
