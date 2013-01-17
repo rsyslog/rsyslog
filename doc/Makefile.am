@@ -70,6 +70,7 @@ html_files = \
 	tls_cert_client.html \
 	tls_cert_scenario.html \
 	rainerscript.html \
+	lookup_tables.html \
 	rscript_abnf.html \
 	rsconf1_actionexeconlywhenpreviousissuspended.html \
 	rsconf1_actionresumeinterval.html \
