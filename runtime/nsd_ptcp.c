@@ -251,32 +251,32 @@ Abort(nsd_t *pNsd)
 static rsRetVal
 FillRemHost(nsd_ptcp_t *pThis, struct sockaddr_storage *pAddr)
 {
-	uchar szIP[NI_MAXHOST] = "";
-	uchar szHname[NI_MAXHOST] = "";
-	size_t len;
+	uchar *szIP;
+	uchar *szHname;
+	rs_size_t lenHname, lenIP;
 	
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, nsd_ptcp);
 	assert(pAddr != NULL);
 
-	CHKiRet(dnscacheLookup(pAddr, szHname, szIP));
+	CHKiRet(dnscacheLookup(pAddr, &szHname, &lenHname, &szIP, &lenIP));
 
 	/* We now have the names, so now let's allocate memory and store them permanently.
 	 * (side note: we may hold on to these values for quite a while, thus we trim their
 	 * memory consumption)
 	 */
-	len = strlen((char*)szIP) + 1; /* +1 for \0 byte */
-	if((pThis->pRemHostIP = MALLOC(len)) == NULL)
+	lenIP++; /* +1 for \0 byte */
+	lenHname++;
+	if((pThis->pRemHostIP = MALLOC(lenIP)) == NULL)
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-	memcpy(pThis->pRemHostIP, szIP, len);
+	memcpy(pThis->pRemHostIP, szIP, lenIP);
 
-	len = strlen((char*)szHname) + 1; /* +1 for \0 byte */
-	if((pThis->pRemHostName = MALLOC(len)) == NULL) {
+	if((pThis->pRemHostName = MALLOC(lenHname)) == NULL) {
 		free(pThis->pRemHostIP); /* prevent leak */
 		pThis->pRemHostIP = NULL;
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
-	memcpy(pThis->pRemHostName, szHname, len);
+	memcpy(pThis->pRemHostName, szHname, lenHname);
 
 finalize_it:
 	RETiRet;

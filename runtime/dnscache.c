@@ -7,7 +7,7 @@
  * In any case, even the initial implementaton is far faster than what we had
  * before. -- rgerhards, 2011-06-06
  *
- * Copyright 2011 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2011-2013 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -42,14 +42,13 @@
 #include "net.h"
 #include "hashtable.h"
 
-/* in this initial implementation, we use a simple, non-optimized at all
- * linear list.
- */
 /* module data structures */
 struct dnscache_entry_s {
 	struct sockaddr_storage addr;
 	uchar *pszHostFQDN;
 	uchar *ip;
+	rs_size_t lenHost;
+	rs_size_t lenIP;
 	struct dnscache_entry_s *next;
 	unsigned nUsed;
 };
@@ -272,6 +271,8 @@ addEntry(struct sockaddr_storage *addr, dnscache_entry_t **pEtry)
 
 	CHKiRet(resolveAddr(addr, pszHostFQDN, ip));
 	CHKmalloc(etry = MALLOC(sizeof(dnscache_entry_t)));
+	etry->lenHost = ustrlen(pszHostFQDN);
+	etry->lenIP = ustrlen(ip);
 	CHKmalloc(etry->pszHostFQDN = ustrdup(pszHostFQDN));
 	CHKmalloc(etry->ip = ustrdup(ip));
 	memcpy(&etry->addr, addr, SALEN((struct sockaddr*) addr));
@@ -311,7 +312,8 @@ validateEntry(dnscache_entry_t __attribute__((unused)) *etry, struct sockaddr_st
  * If the entry can not be resolved, an error is reported back.
  */
 rsRetVal
-dnscacheLookup(struct sockaddr_storage *addr, uchar *pszHostFQDN, uchar *ip)
+dnscacheLookup(struct sockaddr_storage *addr, uchar **pszHostFQDN, rs_size_t *lenHost,
+	       uchar **ip, rs_size_t *lenIP)
 {
 	dnscache_entry_t *etry;
 	DEFiRet;
@@ -324,18 +326,21 @@ dnscacheLookup(struct sockaddr_storage *addr, uchar *pszHostFQDN, uchar *ip)
 	} else {
 		CHKiRet(validateEntry(etry, addr));
 	}
-	// TODO/QUESTION: can we get rid of the strcpy?
 dbgprintf("XXXX: hostn '%s', ip '%s'\n", etry->pszHostFQDN, etry->ip);
-	strcpy((char*)pszHostFQDN, (char*)etry->pszHostFQDN);
-	strcpy((char*)ip, (char*)etry->ip);
+	*pszHostFQDN = etry->pszHostFQDN;
+	*lenHost = etry->lenHost;
+	*ip = etry->ip;
+	*lenIP = etry->lenIP;
 
 finalize_it:
 	pthread_rwlock_unlock(&dnsCache.rwlock);
 dbgprintf("XXXX: dnscacheLookup finished, iRet=%d\n", iRet);
 	if(iRet != RS_RET_OK && iRet != RS_RET_ADDRESS_UNKNOWN) {
 		DBGPRINTF("dnscacheLookup failed with iRet %d\n", iRet);
-		strcpy((char*) pszHostFQDN, "???");
-		strcpy((char*) ip, "???");
+		*pszHostFQDN = (uchar*)"???";
+		*lenHost = 3;
+		*ip = (uchar*)"???";
+		*lenIP = 3;
 	}
 	RETiRet;
 }

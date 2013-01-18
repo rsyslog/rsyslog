@@ -362,17 +362,19 @@ resolveDNS(msg_t *pMsg) {
 	prop_t *propFromHost = NULL;
 	prop_t *propFromHostIP = NULL;
 	uchar fromHost[NI_MAXHOST];
-	uchar fromHostIP[NI_MAXHOST];
 	uchar fromHostFQDN[NI_MAXHOST];
+	uchar *fromHostIP;
+	rs_size_t lenIP;
 	DEFiRet;
 
 	MsgLock(pMsg);
 	CHKiRet(objUse(net, CORE_COMPONENT));
 	if(pMsg->msgFlags & NEEDS_DNSRESOL) {
-		localRet = net.cvthname(pMsg->rcvFrom.pfrominet, fromHost, fromHostFQDN, fromHostIP);
+		localRet = net.cvthname(pMsg->rcvFrom.pfrominet, fromHost, fromHostFQDN,
+				        &fromHostIP, &lenIP);
 		if(localRet == RS_RET_OK) {
 			MsgSetRcvFromStr(pMsg, fromHost, ustrlen(fromHost), &propFromHost);
-			CHKiRet(MsgSetRcvFromIPStr(pMsg, fromHostIP, ustrlen(fromHostIP), &propFromHostIP));
+			CHKiRet(MsgSetRcvFromIPStr(pMsg, fromHostIP, lenIP, &propFromHostIP));
 		}
 	}
 finalize_it:
