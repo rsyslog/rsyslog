@@ -40,6 +40,7 @@
 #include "obj.h"
 #include "unicode-helper.h"
 #include "net.h"
+#include "hashtable.h"
 
 /* in this initial implementation, we use a simple, non-optimized at all
  * linear list.
@@ -55,7 +56,7 @@ struct dnscache_entry_s {
 typedef struct dnscache_entry_s dnscache_entry_t;
 struct dnscache_s {
 	pthread_rwlock_t rwlock;
-	dnscache_entry_t *root;
+	struct hashtable *ht;
 	unsigned nEntries;
 };
 typedef struct dnscache_s dnscache_t;
@@ -69,12 +70,54 @@ DEFobjCurrIf(errmsg)
 static dnscache_t dnsCache;
 
 
+/* Our hash function.
+ * TODO: check how well it performs on socket addresses!
+ */
+unsigned int
+hash_from_key_fn(void *k) 
+{
+    int len;
+    uchar *rkey = (uchar*) k; /* we treat this as opaque bytes */
+    unsigned hashval = 1;
+
+    len = SALEN((struct sockaddr*)k);
+    while(len--)
+        hashval = hashval * 33 + *rkey++;
+
+    return hashval;
+}
+
+static int
+key_equals_fn(void *key1, void *key2)
+{
+dbgprintf("DDDD: key_equals_fn: SALEN %d, result %d\n", SALEN((struct sockaddr*)key1),
+SALEN((struct sockaddr*)key1) == SALEN((struct sockaddr*) key2) && !memcmp(key1, key2, SALEN((struct sockaddr*) key1)));
+	return (SALEN((struct sockaddr*)key1) == SALEN((struct sockaddr*) key2) 
+		   && !memcmp(key1, key2, SALEN((struct sockaddr*) key1)));
+}
+
+/* destruct a cache entry.
+ * Precondition: entry must already be unlinked from list
+ */
+static void
+entryDestruct(dnscache_entry_t *etry)
+{
+dbgprintf("dnscache: entryDestruct %p:%s\n", etry, etry->pszHostFQDN);
+	free(etry->pszHostFQDN);
+	free(etry->ip);
+	free(etry);
+}
+
 /* init function (must be called once) */
 rsRetVal
 dnscacheInit(void)
 {
 	DEFiRet;
-	dnsCache.root = NULL;
+	if((dnsCache.ht = create_hashtable(100, hash_from_key_fn, key_equals_fn,
+				(void(*)(void*))entryDestruct)) == NULL) {
+		DBGPRINTF("dnscache: error creating hash table!\n");
+		ABORT_FINALIZE(RS_RET_ERR); // TODO: make this degrade, but run!
+	}
 	dnsCache.nEntries = 0;
 	pthread_rwlock_init(&dnsCache.rwlock, NULL);
 	CHKiRet(objGetObjInterface(&obj)); /* this provides the root pointer for all other queries */
@@ -89,7 +132,7 @@ rsRetVal
 dnscacheDeinit(void)
 {
 	DEFiRet;
-	//TODO: free cache elements dnsCache.root = NULL;
+	hashtable_destroy(dnsCache.ht, 1); /* 1 => free all values automatically */
 	pthread_rwlock_destroy(&dnsCache.rwlock);
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
@@ -97,30 +140,10 @@ dnscacheDeinit(void)
 }
 
 
-/* destruct a cache entry.
- * Precondition: entry must already be unlinked from list
- */
-static inline void
-entryDestruct(dnscache_entry_t *etry)
-{
-	free(etry->pszHostFQDN);
-	free(etry->ip);
-	free(etry);
-}
-
-
 static inline dnscache_entry_t*
 findEntry(struct sockaddr_storage *addr)
 {
-	dnscache_entry_t *etry;
-	for(etry = dnsCache.root ; etry != NULL ; etry = etry->next) {
-		if(SALEN((struct sockaddr*)addr) == SALEN((struct sockaddr*) &etry->addr) 
-		   && !memcmp(addr, &etry->addr, SALEN((struct sockaddr*) addr)))
-			break; /* in this case, we found our entry */
-	}
-	if(etry != NULL)
-		++etry->nUsed; /* this is *not* atomic, but we can live with an occasional loss! */
-	return etry;
+	return((dnscache_entry_t*) hashtable_search(dnsCache.ht, addr));
 }
 
 
@@ -179,7 +202,6 @@ resolveAddr(struct sockaddr_storage *addr, uchar *pszHostFQDN, uchar *ip)
 		error = mygetnameinfo((struct sockaddr *)addr, SALEN((struct sockaddr *) addr),
 				    (char*)pszHostFQDN, NI_MAXHOST, NULL, 0, NI_NAMEREQD);
 		
-dbgprintf("dnscache: error %d after 2nd mygetnameinfo\n", error);
 		if(error == 0) {
 			memset (&hints, 0, sizeof (struct addrinfo));
 			hints.ai_flags = AI_NUMERICHOST;
@@ -228,7 +250,6 @@ dbgprintf("dnscache: error %d after 2nd mygetnameinfo\n", error);
 		pthread_sigmask(SIG_SETMASK, &omask, NULL);
 	}
 
-dbgprintf("dnscache: error %d, DisableDNS %d\n", error, glbl.GetDisableDNS());
         if(error || glbl.GetDisableDNS()) {
                 dbgprintf("Host name for your address (%s) unknown\n", ip);
 		strcpy((char*) pszHostFQDN, (char*)ip);
@@ -239,50 +260,16 @@ finalize_it:
 }
 
 
-/* evict an entry from the cache. We should try to evict one that does
- * not decrease the hit rate that much, but we do not try to hard currently
- * (as the base cache data structure may change).
- * This MUST NOT be called when the cache is empty!
- * rgerhards, 2011-06-06
- */
-static inline void
-evictEntry(void)
-{
-	dnscache_entry_t *prev, *evict, *prevEvict, *etry;
-	unsigned lowest;
-
-	prev = prevEvict = NULL;
-	evict = dnsCache.root;
-	lowest = evict->nUsed;
-	for(etry = dnsCache.root->next ; etry != NULL ; etry = etry->next) {
-		if(etry->nUsed < lowest) {
-			evict = etry;
-			lowest = etry->nUsed;
-			prevEvict = prev;
-		}
-		prev = etry;
-	}
-
-	/* found lowest, unlink */
-	if(prevEvict == NULL) { /* remove root? */
-		dnsCache.root = evict->next;
-	} else {
-		prevEvict = evict->next;
-	}
-	entryDestruct(evict);
-}
-
-
-/* add a new entry to the cache. This means the address is resolved and
- * then added to the cache.
- */
 static inline rsRetVal
 addEntry(struct sockaddr_storage *addr, dnscache_entry_t **pEtry)
 {
+	int r;
+	struct sockaddr_storage *keybuf;
 	uchar pszHostFQDN[NI_MAXHOST];
 	uchar ip[80]; /* 80 is safe for larges IPv6 addr */
 	dnscache_entry_t *etry;
 	DEFiRet;
+
 	CHKiRet(resolveAddr(addr, pszHostFQDN, ip));
 	CHKmalloc(etry = MALLOC(sizeof(dnscache_entry_t)));
 	CHKmalloc(etry->pszHostFQDN = ustrdup(pszHostFQDN));
@@ -291,18 +278,17 @@ addEntry(struct sockaddr_storage *addr, dnscache_entry_t **pEtry)
 	etry->nUsed = 0;
 	*pEtry = etry;
 
-	/* add to list. Currently, we place the new element always at
-	 * the root node. This needs to be optimized later. 2011-06-06
-	 */
+	CHKmalloc(keybuf = malloc(sizeof(struct sockaddr_storage)));
+	memcpy(keybuf, addr, sizeof(struct sockaddr_storage));
+
 	pthread_rwlock_unlock(&dnsCache.rwlock); /* release read lock */
 	pthread_rwlock_wrlock(&dnsCache.rwlock); /* and re-aquire for writing */
-	if(dnsCache.nEntries >= MAX_CACHE_ENTRIES) {
-		evictEntry();
+	r = hashtable_insert(dnsCache.ht, keybuf, *pEtry);
+	if(r == 0) {
+		DBGPRINTF("dnscache: inserting element failed\n");
 	}
-	etry->next = dnsCache.root;
-	dnsCache.root = etry;
 	pthread_rwlock_unlock(&dnsCache.rwlock);
-	pthread_rwlock_rdlock(&dnsCache.rwlock); /* TODO: optimize this! */
+	pthread_rwlock_rdlock(&dnsCache.rwlock); /* we need this again */
 
 finalize_it:
 	RETiRet;
