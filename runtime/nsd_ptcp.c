@@ -2,7 +2,7 @@
  *
  * An implementation of the nsd interface for plain tcp sockets.
  * 
- * Copyright 2007, 2008 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2013 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -87,10 +87,8 @@ ENDobjConstruct(nsd_ptcp)
 BEGINobjDestruct(nsd_ptcp) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(nsd_ptcp)
 	sockClose(&pThis->sock);
-	if(pThis->pRemHostIP != NULL)
-		free(pThis->pRemHostIP);
-	if(pThis->pRemHostName != NULL)
-		free(pThis->pRemHostName);
+	free(pThis->pRemHostIP);
+	free(pThis->pRemHostName);
 ENDobjDestruct(nsd_ptcp)
 
 
