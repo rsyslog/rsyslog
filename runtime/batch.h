@@ -156,6 +156,7 @@ batchFree(batch_t *pBatch) {
 		}
 	}
 	free(pBatch->pElem);
+	free(pBatch->eltState);
 }
 
 
