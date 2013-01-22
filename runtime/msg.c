@@ -337,6 +337,37 @@ MsgUnlock(msg_t *pThis)
 }
 
 
+/* set RcvFromIP name in msg object WITHOUT calling AddRef.
+ * rgerhards, 2013-01-22
+ */
+static inline void
+MsgSetRcvFromIPWithoutAddRef(msg_t *pThis, prop_t *new)
+{
+	if(pThis->pRcvFromIP != NULL)
+		prop.Destruct(&pThis->pRcvFromIP);
+	pThis->pRcvFromIP = new;
+}
+
+
+/* set RcvFrom name in msg object WITHOUT calling AddRef.
+ * rgerhards, 2013-01-22
+ */
+void MsgSetRcvFromWithoutAddRef(msg_t *pThis, prop_t *new)
+{
+	assert(pThis != NULL);
+
+	if(pThis->msgFlags & NEEDS_DNSRESOL) {
+		if(pThis->rcvFrom.pfrominet != NULL)
+			free(pThis->rcvFrom.pfrominet);
+		pThis->msgFlags &= ~NEEDS_DNSRESOL;
+	} else {
+		if(pThis->rcvFrom.pRcvFrom != NULL)
+			prop.Destruct(&pThis->rcvFrom.pRcvFrom);
+	}
+	pThis->rcvFrom.pRcvFrom = new;
+}
+
+
 /* rgerhards 2012-04-18: set associated ruleset (by ruleset name)
  * If ruleset cannot be found, no update is done.
  */
@@ -361,18 +392,17 @@ resolveDNS(msg_t *pMsg) {
 	rsRetVal localRet;
 	prop_t *propFromHost = NULL;
 	prop_t *ip;
-	uchar fromHost[NI_MAXHOST];
-	uchar fromHostFQDN[NI_MAXHOST];
+	prop_t *localName;
 	DEFiRet;
 
 	MsgLock(pMsg);
 	CHKiRet(objUse(net, CORE_COMPONENT));
 	if(pMsg->msgFlags & NEEDS_DNSRESOL) {
-		localRet = net.cvthname(pMsg->rcvFrom.pfrominet, fromHost, fromHostFQDN,
-				        &ip);
+		localRet = net.cvthname(pMsg->rcvFrom.pfrominet, &localName, NULL, &ip);
 		if(localRet == RS_RET_OK) {
-			MsgSetRcvFromStr(pMsg, fromHost, ustrlen(fromHost), &propFromHost);
-			CHKiRet(MsgSetRcvFromIP(pMsg, ip));
+			/* we pass down the props, so no need for AddRef */
+			MsgSetRcvFromWithoutAddRef(pMsg, localName);
+			MsgSetRcvFromIPWithoutAddRef(pMsg, ip);
 		}
 	}
 finalize_it:
@@ -2207,18 +2237,8 @@ finalize_it:
  */
 void MsgSetRcvFrom(msg_t *pThis, prop_t *new)
 {
-	assert(pThis != NULL);
-
 	prop.AddRef(new);
-	if(pThis->msgFlags & NEEDS_DNSRESOL) {
-		if(pThis->rcvFrom.pfrominet != NULL)
-		free(pThis->rcvFrom.pfrominet);
-		pThis->msgFlags &= ~NEEDS_DNSRESOL;
-	} else {
-		if(pThis->rcvFrom.pRcvFrom != NULL)
-			prop.Destruct(&pThis->rcvFrom.pRcvFrom);
-	}
-	pThis->rcvFrom.pRcvFrom = new;
+	MsgSetRcvFromWithoutAddRef(pThis, new);
 }
 
 
@@ -2251,9 +2271,7 @@ rsRetVal MsgSetRcvFromIP(msg_t *pThis, prop_t *new)
 
 	BEGINfunc
 	prop.AddRef(new);
-	if(pThis->pRcvFromIP != NULL)
-		prop.Destruct(&pThis->pRcvFromIP);
-	pThis->pRcvFromIP = new;
+	MsgSetRcvFromIPWithoutAddRef(pThis, new);
 	ENDfunc
 	return RS_RET_OK;
 }

@@ -258,7 +258,7 @@ FillRemHost(nsd_ptcp_t *pThis, struct sockaddr_storage *pAddr)
 	ISOBJ_TYPE_assert(pThis, nsd_ptcp);
 	assert(pAddr != NULL);
 
-	CHKiRet(dnscacheLookup(pAddr, &fqdn, NULL, &pThis->remoteIP));
+	CHKiRet(dnscacheLookup(pAddr, &fqdn, NULL, NULL, &pThis->remoteIP));
 
 	/* We now have the names, so now let's allocate memory and store them permanently.
 	 * (side note: we may hold on to these values for quite a while, thus we trim their

@@ -131,7 +131,7 @@ struct permittedPeers_s {
 
 /* interfaces */
 BEGINinterface(net) /* name must also be changed in ENDinterface macro! */
-	rsRetVal (*cvthname)(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQDN, prop_t **ip);
+	rsRetVal (*cvthname)(struct sockaddr_storage *f, prop_t **localName, prop_t **fqdn, prop_t **ip);
 	/* things to go away after proper modularization */
 	rsRetVal (*addAllowedSenderLine)(char* pName, uchar** ppRestOfConfLine);
 	void (*PrintAllowedSenders)(int iListToPrint);

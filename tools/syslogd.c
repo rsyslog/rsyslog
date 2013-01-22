@@ -500,9 +500,9 @@ finalize_it:
  */
 static inline rsRetVal
 preprocessBatch(batch_t *pBatch) {
-	uchar fromHost[NI_MAXHOST];
-	uchar fromHostFQDN[NI_MAXHOST];
 	prop_t *ip;
+	prop_t *fqdn;
+	prop_t *localName;
 	prop_t *propFromHost = NULL;
 	prop_t *propFromHostIP = NULL;
 	int bSingleRuleset;
@@ -520,17 +520,17 @@ preprocessBatch(batch_t *pBatch) {
 		pMsg = pBatch->pElem[i].pMsg;
 		if((pMsg->msgFlags & NEEDS_ACLCHK_U) != 0) {
 			DBGPRINTF("msgConsumer: UDP ACL must be checked for message (hostname-based)\n");
-			if(net.cvthname(pMsg->rcvFrom.pfrominet, fromHost, fromHostFQDN, &ip) != RS_RET_OK)
+			if(net.cvthname(pMsg->rcvFrom.pfrominet, &localName, &fqdn, &ip) != RS_RET_OK)
 				continue;
 			bIsPermitted = net.isAllowedSender2((uchar*)"UDP",
-			    (struct sockaddr *)pMsg->rcvFrom.pfrominet, (char*)fromHostFQDN, 1);
+			    (struct sockaddr *)pMsg->rcvFrom.pfrominet, (char*)propGetSzStr(fqdn), 1);
 			if(!bIsPermitted) {
 				DBGPRINTF("Message from '%s' discarded, not a permitted sender host\n",
-					  fromHostFQDN);
+					  propGetSzStr(fqdn));
 				pBatch->eltState[i] = BATCH_STATE_DISC;
 			} else {
 				/* save some of the info we obtained */
-				MsgSetRcvFromStr(pMsg, fromHost, ustrlen(fromHost), &propFromHost);
+				MsgSetRcvFrom(pMsg, localName);
 				CHKiRet(MsgSetRcvFromIP(pMsg, ip));
 				pMsg->msgFlags &= ~NEEDS_ACLCHK_U;
 			}

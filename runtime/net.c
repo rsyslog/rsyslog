@@ -1117,91 +1117,15 @@ void debugListenInfo(int fd, char *type)
 }
 
 
-/* Return a printable representation of a host address.
- * Now (2007-07-16) also returns the full host name (if it could be obtained)
- * in the second param [thanks to mildew@gmail.com for the patch].
- * The caller must provide buffer space for pszHost and pszHostFQDN. These
- * buffers must be of size NI_MAXHOST. This is not checked here, because
- * there is no way to check it. We use this way of doing things because it
- * frees us from using dynamic memory allocation where it really does not
- * pay.
- * 2005-05-16 rgerhards: added IP representation. Must also be NI_MAXHOST
+/* Return a printable representation of a host addresses. If
+ * a parameter is NULL, it is not set.  rgerhards, 2013-01-22
  */
-rsRetVal cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQDN, prop_t **ip)
+rsRetVal
+cvthname(struct sockaddr_storage *f, prop_t **localName, prop_t **fqdn, prop_t **ip)
 {
 	DEFiRet;
-	prop_t *fqdnLowerCase;
-	register uchar *p;
-	int count;
-	int i;
-	
 	assert(f != NULL);
-	assert(pszHost != NULL);
-	assert(pszHostFQDN != NULL);
-
-	iRet = dnscacheLookup(f, NULL, &fqdnLowerCase, ip);
-	strcpy((char*)pszHostFQDN, (char*)propGetSzStr(fqdnLowerCase));
-	prop.Destruct(&fqdnLowerCase);
-
-	if(iRet == RS_RET_INVALID_SOURCE) {
-		strcpy((char*) pszHost, (char*) pszHostFQDN); /* we use whatever was provided as replacement */
-		ABORT_FINALIZE(RS_RET_OK); /* this is handled, we are happy with it */
-	} else if(iRet != RS_RET_OK) {
-		FINALIZE; /* we return whatever error state we have - can not handle it */
-	}
-
-	/* OK, the fqdn is now known. Now it is time to extract only the hostname
-	 * part if we were instructed to do so.
-	 */
-	if(glbl.GetPreserveFQDN()) {
-		strcpy((char*)pszHost, (char*)pszHostFQDN);
-	} else { /* strip domain, if configured for this entry */
-		p = (uchar*)strchr((char*)pszHostFQDN, '.'); /* find start of domain name "machine.example.com" */
-		if(p == NULL) { /* do we have a domain part? */
-			strcpy((char*)pszHost, (char*)pszHostFQDN); /* no! */
-		} else {
-			i = p - pszHostFQDN; /* length of hostname */
-			memcpy(pszHost, pszHostFQDN, i);
-			/* now check if we belong to any of the domain names that were specified
-			 * in the -s command line option. If so, remove and we are done.
-			 */
-			if(glbl.GetStripDomains() != NULL) {
-				count=0;
-				while(glbl.GetStripDomains()[count]) {
-					if(strcmp((char*)(p + 1), glbl.GetStripDomains()[count]) == 0) {
-						pszHost[i] = '\0';
-						FINALIZE; /* we are done */
-					}
-					count++;
-				}
-			}
-			/* if we reach this point, we have not found any domain we should strip. Now
-			 * we try and see if the host itself is listed in the -l command line option
-			 * and so should be stripped also. If so, we do it and return. Please note that
-			 * -l list FQDNs, not just the hostname part. If it did just list the hostname, the
-			 * door would be wide-open for all kinds of mixing up of hosts. Because of this,
-			 * you'll see comparison against the full string (pszHostFQDN) below. The termination
-			 * still occurs at *p, which points at the first dot after the hostname.
-			 * TODO: this must also go away - see comment above -- rgerhards, 2008-04-16
-			 */
-			if(glbl.GetLocalHosts() != NULL) {
-				count=0;
-				while (glbl.GetLocalHosts()[count]) {
-					if (!strcmp((char*)pszHostFQDN, (char*)glbl.GetLocalHosts()[count])) {
-						pszHost[i] = '\0';
-						FINALIZE; /* we are done */
-					}
-					count++;
-				}
-			}
-			/* at this point, we have not found anything, so we need to copy
-			 * over the rest.
-			 */
-			strcpy((char*)pszHost+i, (char*)p);
-		}
-	}
-
-finalize_it:
+	iRet = dnscacheLookup(f, NULL, fqdn, localName, ip);
 	RETiRet;
 }
 

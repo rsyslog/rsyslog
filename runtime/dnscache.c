@@ -50,6 +50,7 @@ struct dnscache_entry_s {
 	struct sockaddr_storage addr;
 	prop_t *fqdn;
 	prop_t *fqdnLowerCase;
+	prop_t *localName; /* only local name, without domain part (if configured so) */
 	prop_t *ip;
 	struct dnscache_entry_s *next;
 	unsigned nUsed;
@@ -106,6 +107,8 @@ entryDestruct(dnscache_entry_t *etry)
 		prop.Destruct(&etry->fqdn);
 	if(etry->fqdnLowerCase != NULL)
 		prop.Destruct(&etry->fqdnLowerCase);
+	if(etry->localName != NULL)
+		prop.Destruct(&etry->localName);
 	if(etry->ip != NULL)
 		prop.Destruct(&etry->ip);
 	free(etry);
@@ -177,6 +180,73 @@ mygetnameinfo(const struct sockaddr *sa, socklen_t salen,
 }
 
 
+/* get only the local part of the hostname and set it in cache entry */
+static inline void
+setLocalHostName(dnscache_entry_t *etry)
+{
+	uchar *fqdnLower;
+	uchar *p;
+	int count;
+	int i;
+	uchar hostbuf[NI_MAXHOST];
+
+	if(glbl.GetPreserveFQDN()) {
+		prop.AddRef(etry->fqdnLowerCase);
+		etry->localName = etry->fqdnLowerCase;
+		goto done;
+	}
+
+	/* strip domain, if configured for this entry */
+	fqdnLower = propGetSzStr(etry->fqdnLowerCase);
+	p = (uchar*)strchr((char*)fqdnLower, '.'); /* find start of domain name "machine.example.com" */
+	if(p == NULL) { /* do we have a domain part? */
+		prop.AddRef(etry->fqdnLowerCase); /* no! */
+		etry->localName = etry->fqdnLowerCase;
+		goto done;
+	}
+
+	i = p - fqdnLower; /* length of hostname */
+	memcpy(hostbuf, fqdnLower, i);
+	/* now check if we belong to any of the domain names that were specified
+	 * in the -s command line option. If so, remove and we are done.
+	 */
+	if(glbl.GetStripDomains() != NULL) {
+		count=0;
+		while(glbl.GetStripDomains()[count]) {
+			if(strcmp((char*)(p + 1), glbl.GetStripDomains()[count]) == 0) {
+				prop.CreateStringProp(&etry->localName, hostbuf, i);
+				goto done;
+			}
+			count++;
+		}
+	}
+	/* if we reach this point, we have not found any domain we should strip. Now
+	 * we try and see if the host itself is listed in the -l command line option
+	 * and so should be stripped also. If so, we do it and return. Please note that
+	 * -l list FQDNs, not just the hostname part. If it did just list the hostname, the
+	 * door would be wide-open for all kinds of mixing up of hosts. Because of this,
+	 * you'll see comparison against the full string (pszHostFQDN) below.
+	 */
+	if(glbl.GetLocalHosts() != NULL) {
+		count=0;
+		while(glbl.GetLocalHosts()[count]) {
+			if(!strcmp((char*)fqdnLower, (char*)glbl.GetLocalHosts()[count])) {
+				prop.CreateStringProp(&etry->localName, hostbuf, i);
+				goto done;
+			}
+			count++;
+		}
+	}
+
+	/* at this point, we have not found anything, so we again use the
+	 * already-created complete full name property.
+	 */
+	prop.AddRef(etry->fqdnLowerCase);
+	etry->localName = etry->fqdnLowerCase;
+done:	return;
+}
+
+
 /* resolve an address.
  *
  * Please see http://www.hmug.org/man/3/getnameinfo.php (under Caveats)
@@ -187,7 +257,7 @@ mygetnameinfo(const struct sockaddr *sa, socklen_t salen,
  * message should be processed (1) or discarded (0).
  */
 static rsRetVal
-resolveAddr(struct sockaddr_storage *addr, prop_t **fqdn, prop_t **fqdnLowerCase, prop_t **ip)
+resolveAddr(struct sockaddr_storage *addr, dnscache_entry_t *etry)
 {
 	DEFiRet;
 	int error;
@@ -258,10 +328,10 @@ resolveAddr(struct sockaddr_storage *addr, prop_t **fqdn, prop_t **fqdnLowerCase
 				error = 1; /* that will trigger using IP address below. */
 			} else {/* we have a valid entry, so let's create the respective properties */
 				fqdnLen = strlen(fqdnBuf);
-				prop.CreateStringProp(fqdn, (uchar*)fqdnBuf, fqdnLen);
+				prop.CreateStringProp(&etry->fqdn, (uchar*)fqdnBuf, fqdnLen);
 				for(i = 0 ; i < fqdnLen ; ++i)
 					fqdnBuf[i] = tolower(fqdnBuf[i]);
-				prop.CreateStringProp(fqdnLowerCase, (uchar*)fqdnBuf, fqdnLen);
+				prop.CreateStringProp(&etry->fqdnLowerCase, (uchar*)fqdnBuf, fqdnLen);
 			}
 		}
 		pthread_sigmask(SIG_SETMASK, &omask, NULL);
@@ -275,15 +345,17 @@ finalize_it:
 	}
 
 	/* we need to create the inputName property (only once during our lifetime) */
-	prop.CreateStringProp(ip, (uchar*)szIP, strlen(szIP));
+	prop.CreateStringProp(&etry->ip, (uchar*)szIP, strlen(szIP));
 
         if(error || glbl.GetDisableDNS()) {
                 dbgprintf("Host name for your address (%s) unknown\n", szIP);
-		prop.AddRef(*ip);
-		*fqdn = *ip;
-		prop.AddRef(*ip);
-		*fqdnLowerCase = *ip;
+		prop.AddRef(etry->ip);
+		etry->fqdn = etry->ip;
+		prop.AddRef(etry->ip);
+		etry->fqdnLowerCase = etry->ip;
         }
+
+	setLocalHostName(etry);
 
 	RETiRet;
 }
@@ -298,7 +370,7 @@ addEntry(struct sockaddr_storage *addr, dnscache_entry_t **pEtry)
 	DEFiRet;
 
 	CHKmalloc(etry = MALLOC(sizeof(dnscache_entry_t)));
-	CHKiRet(resolveAddr(addr, &etry->fqdn, &etry->fqdnLowerCase, &etry->ip));
+	CHKiRet(resolveAddr(addr, etry));
 	memcpy(&etry->addr, addr, SALEN((struct sockaddr*) addr));
 	etry->nUsed = 0;
 	*pEtry = etry;
@@ -342,7 +414,7 @@ validateEntry(dnscache_entry_t __attribute__((unused)) *etry, struct sockaddr_st
  */
 rsRetVal
 dnscacheLookup(struct sockaddr_storage *addr, prop_t **fqdn, prop_t **fqdnLowerCase,
-	       prop_t **ip)
+	       prop_t **localName, prop_t **ip)
 {
 	dnscache_entry_t *etry;
 	DEFiRet;
@@ -365,6 +437,10 @@ dnscacheLookup(struct sockaddr_storage *addr, prop_t **fqdn, prop_t **fqdnLowerC
 		prop.AddRef(etry->fqdnLowerCase);
 		*fqdnLowerCase = etry->fqdnLowerCase;
 	}
+	if(localName != NULL) {
+		prop.AddRef(etry->localName);
+		*localName = etry->localName;
+	}
 
 finalize_it:
 	pthread_rwlock_unlock(&dnsCache.rwlock);
@@ -379,6 +455,10 @@ finalize_it:
 		if(fqdnLowerCase != NULL) {
 			prop.AddRef(staticErrValue);
 			*fqdnLowerCase = staticErrValue;
+		}
+		if(localName != NULL) {
+			prop.AddRef(staticErrValue);
+			*localName = staticErrValue;
 		}
 	}
 	RETiRet;
