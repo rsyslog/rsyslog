@@ -69,7 +69,7 @@ DEFobjCurrIf(glbl)
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(prop)
 static dnscache_t dnsCache;
-static prop_t *staticErrIPValue;
+static prop_t *staticErrValue;
 
 
 /* Our hash function.
@@ -128,9 +128,9 @@ dnscacheInit(void)
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(prop, CORE_COMPONENT));
 
-	prop.Construct(&staticErrIPValue);
-	prop.SetString(staticErrIPValue, (uchar*)"???", 3);
-	prop.ConstructFinalize(staticErrIPValue);
+	prop.Construct(&staticErrValue);
+	prop.SetString(staticErrValue, (uchar*)"???", 3);
+	prop.ConstructFinalize(staticErrValue);
 finalize_it:
 	RETiRet;
 }
@@ -140,7 +140,7 @@ rsRetVal
 dnscacheDeinit(void)
 {
 	DEFiRet;
-	prop.Destruct(&staticErrIPValue);
+	prop.Destruct(&staticErrValue);
 	hashtable_destroy(dnsCache.ht, 1); /* 1 => free all values automatically */
 	pthread_rwlock_destroy(&dnsCache.rwlock);
 	objRelease(glbl, CORE_COMPONENT);
@@ -355,6 +355,7 @@ dnscacheLookup(struct sockaddr_storage *addr, prop_t **fqdn, prop_t **fqdnLowerC
 	} else {
 		CHKiRet(validateEntry(etry, addr));
 	}
+	prop.AddRef(etry->ip);
 	*ip = etry->ip;
 	if(fqdn != NULL) {
 		prop.AddRef(etry->fqdn);
@@ -369,15 +370,15 @@ finalize_it:
 	pthread_rwlock_unlock(&dnsCache.rwlock);
 	if(iRet != RS_RET_OK && iRet != RS_RET_ADDRESS_UNKNOWN) {
 		DBGPRINTF("dnscacheLookup failed with iRet %d\n", iRet);
-		prop.AddRef(staticErrIPValue);
-		*ip = staticErrIPValue;
+		prop.AddRef(staticErrValue);
+		*ip = staticErrValue;
 		if(fqdn != NULL) {
-			prop.AddRef(staticErrIPValue);
-			*fqdn = staticErrIPValue;
+			prop.AddRef(staticErrValue);
+			*fqdn = staticErrValue;
 		}
 		if(fqdnLowerCase != NULL) {
-			prop.AddRef(staticErrIPValue);
-			*fqdnLowerCase = staticErrIPValue;
+			prop.AddRef(staticErrValue);
+			*fqdnLowerCase = staticErrValue;
 		}
 	}
 	RETiRet;
