@@ -21,14 +21,22 @@ So while lookup tables can be emulated with if-elseif constructs, they are gener
 much faster. Also, it is possible to reload lookup tables during rsyslog runtime without
 the need for a full restart.
 <p>The lookup tables itself exists in a separate configuration file (one per table). This
-file is loaded on rsyslog startup and when a reload is requested. Note that there are
-two classes of lookup tables: "static" and "dynamic", where "static" means that the
-table cannot by reloaded during runtime. For "dynamic" tables, this restriction
-obviously does not exist. Note that dynamic tables require some type of locking to
-coordinate the reloads (we use pthread reader/writer locks). This incurs some overhead
-which static tables do not have. As such, it is advisable to use static tables if the
-table either never changes or changes very infrequently and a full rsyslog restart
-is acceptable in order to reload it.
+file is loaded on rsyslog startup and when a reload is requested.
+<p>There are different types of lookup tables:
+<ul>
+<li><b>string</b> - the value to be looked up is an arbitrary string. Only exact
+some strings match.
+<li><b>array</b> - the value to be looked up is an integer number from a consequtive set.
+The set must not start at zero or one, but there must be no number missing. So, for example
+5,6,7,8,9 would be a valid set of index values, while 1,2,4,5 would not be (due to missing
+2).
+A match happens if the requested number is present.
+<li><b>sparseArray</b> - the value to be looked up is an integer value, but there may
+be gaps inside the set of values (usually there are large gaps). A typical use case would
+be the matching of IPv4 address information. A match happens on the first value that is
+less than or equal to the requested value.
+</ul>
+<p>Note that index integer numbers are represented by unsigned 32 bits.
 <p>Lookup tables can be access via the lookup() built-in function. The core idea is to
 set a local variable to the lookup result and later on use that local variable in templates.
 <p>More details on usage now follow.
@@ -129,7 +137,7 @@ lookup_table("name", indexvalue)
 This is a low-level decesion that must be made during the detail development
 process. Parameters and semantics will remain the same of this happens.</b>
 
-<p>This statement is used to reload a dynamic lookup table. It will fail if
+<p>This statement is used to reload a lookup table. It will fail if
 the table is static. While this statement is executed, lookups to this table
 are temporarily blocked. So for large tables, there may be a slight performance
 hit during the load phase. It is assume that always a triggering condition
@@ -160,7 +168,7 @@ lookup tables. We use the remote office example that an example lookup
 table file is given above for.
 <pre>
 lookup_table(name="ip2office" file="/path/to/ipoffice.lu"
-             type="dynamic" reloadOnHUP="off")
+             reloadOnHUP="off")
 
 
 template(name="depfile" type="string"
@@ -180,6 +188,12 @@ if $fromhost-ip == "10.0.1.123"
 a dedicated ruleset, bound to a specific listener - which than should also
 be sufficiently secured, e.g. via TLS mutual auth.
 
+<h2>Implementation Details</h2>
+<p>The lookup table functionality is implemented via highly efficient algorithms.
+The string lookup is based on a parse tree and has O(1) time complexity. The other
+types are also O(1).
+<p>To preserve space and, more important, increase cache hit performance, equal
+data values are only stored once, no matter how often a lookup index points to them.
 <p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>]
 [<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
 <p><font size="2">This documentation is part of the
