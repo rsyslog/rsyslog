@@ -25,6 +25,37 @@ has been implemented. Consequently, situations where the previous behaviour were
 desired need now to be solved differently. We do not think that this will cause any
 problems to anyone, especially as in v6 this was announced as a missing feature.
 
+<h2>omusrmsr: using just a username or "*" is deprecated</h2>
+<p>In legacy config format, the asterisk denotes writing the message to all users.
+This is usually used for emergency messages and configured like this:
+<pre>
+*.emerg  *
+</pre>
+<p>Unfortunately, the use of this single character conflicts with other uses, for
+example with the multiplication operator. While rsyslog up to versions v7.4 preserves the meaning of
+asterisk as an action, it is deprecated and will probably be removed in future versions.
+Consequently, a warning message is emitted. To make this warning go away, the action must
+be explicitly given, as follows:
+<pre>
+*.emerg  :omusrmsg:*
+</pre>
+<p>The same holds true for user names. For example
+<pre>
+*.emerg  john
+</pre>
+<p>at a minimum should be rewritten as
+<pre>
+*.emerg  :omusrmsg:john
+</pre>
+<p>Of course, for even more clarity the new RainerScript style of action can
+also be used:
+<pre>
+*.emerg  action(type="omusrmsg" users="john")
+</pre>
+<p>In Rainer's blog, there is more
+<a href="http://blog.gerhards.net/2011/07/why-omusrmsg-is-evil-and-how-it-is.html">background
+information on why omusrmsg needed to be changed</a> available.
+
 <h2>omruleset and discard (~) action are deprecated</h2>
 <p>Both continue to work, but have been replaced by better alternatives.
 <p>The discard action (tilde character) has been replaced by the "stop"
@@ -54,7 +85,7 @@ In practice, we do NOT expect that.
 
 <p><font size="2">This documentation is part of the
 <a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
-Copyright &copy; 2011-2012 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+Copyright &copy; 2011-2013 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
 <a href="http://www.adiscon.com/">Adiscon</a>. Released under the GNU GPL 
 version 2 or higher.</font></p>
 </body></html>
