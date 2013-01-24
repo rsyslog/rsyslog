@@ -579,7 +579,7 @@ static void
 clearAllowedSenders(uchar *pszType)
 {
 	struct AllowedSenders *pPrev;
-	struct AllowedSenders *pCurr;
+	struct AllowedSenders *pCurr = NULL;
 
 	if(setAllowRoot(&pCurr, pszType) != RS_RET_OK)
 		return;	/* if something went wrong, so let's leave */
@@ -987,7 +987,7 @@ MaskCmp(struct NetAddr *pAllow, uint8_t bits, struct sockaddr *pFrom, const char
 static int isAllowedSender2(uchar *pszType, struct sockaddr *pFrom, const char *pszFromHost, int bChkDNS)
 {
 	struct AllowedSenders *pAllow;
-	struct AllowedSenders *pAllowRoot;
+	struct AllowedSenders *pAllowRoot = NULL;
 	int bNeededDNS = 0;	/* partial check because we could not resolve DNS? */
 	int ret;
 
@@ -1132,13 +1132,18 @@ rsRetVal cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQDN
 	rs_size_t lenHost;
 	register uchar *p;
 	int count;
+	int i;
 	
 	assert(f != NULL);
 	assert(pszHost != NULL);
 	assert(pszHostFQDN != NULL);
 
 	iRet = dnscacheLookup(f, &host, &lenHost, ip);
-	strcpy((char*)pszHostFQDN, (char*)host); // TODO: optimize this! requires more changes below (dirty tricks ;))
+	/* Convert to lower case */
+	for(i = 0 ; i < lenHost ; ++i) {
+		pszHostFQDN[i] = tolower(host[i]);
+	} 
+	pszHostFQDN [i] = '\0';
 
 	if(iRet == RS_RET_INVALID_SOURCE) {
 		strcpy((char*) pszHost, (char*) pszHostFQDN); /* we use whatever was provided as replacement */
@@ -1147,41 +1152,26 @@ rsRetVal cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQDN
 		FINALIZE; /* we return whatever error state we have - can not handle it */
 	}
 
-	/* if we reach this point, we obtained a non-numeric hostname and can now process it */
-
-	/* Convert to lower case */
-	for(p = pszHostFQDN ; *p ; p++)
-		if (isupper((int) *p))
-			*p = tolower(*p);
-	
 	/* OK, the fqdn is now known. Now it is time to extract only the hostname
 	 * part if we were instructed to do so.
 	 */
-	/* TODO: quick and dirty right now: we need to optimize that. We simply
-	 * copy over the buffer and then use the old code. In the long term, that should
-	 * be placed in its own function and probably outside of the net module (at least
-	 * if should no longer reley on syslogd.c's global config-setting variables).
-	 * Note that the old code always removes the local domain. We may want to
-	 * make this in option in the long term. (rgerhards, 2007-09-11)
-	 */
-	strcpy((char*)pszHost, (char*)pszHostFQDN);
-	if(   (glbl.GetPreserveFQDN() == 0)
-	   && (p = (uchar*) strchr((char*)pszHost, '.'))) { /* find start of domain name "machine.example.com" */
-		strcmp((char*)(p + 1), (char*)glbl.GetLocalDomain());
-		if(strcmp((char*)(p + 1), (char*)glbl.GetLocalDomain()) == 0) {
-			*p = '\0'; /* simply terminate the string */
+	if(glbl.GetPreserveFQDN()) {
+		strcpy((char*)pszHost, (char*)pszHostFQDN);
+	} else { /* strip domain, if configured for this entry */
+		p = (uchar*)strchr((char*)pszHostFQDN, '.'); /* find start of domain name "machine.example.com" */
+		if(p == NULL) { /* do we have a domain part? */
+			strcpy((char*)pszHost, (char*)pszHostFQDN); /* no! */
 		} else {
+			i = p - pszHostFQDN; /* length of hostname */
+			memcpy(pszHost, pszHostFQDN, i);
 			/* now check if we belong to any of the domain names that were specified
 			 * in the -s command line option. If so, remove and we are done.
-			 * TODO: this must go away! -- rgerhards, 2008-04-16
-			 * For proper modularization, this must be done different, e.g. via a
-			 * "to be stripped" property of *this* object itself.
 			 */
 			if(glbl.GetStripDomains() != NULL) {
 				count=0;
 				while(glbl.GetStripDomains()[count]) {
-					if (strcmp((char*)(p + 1), glbl.GetStripDomains()[count]) == 0) {
-						*p = '\0';
+					if(strcmp((char*)(p + 1), glbl.GetStripDomains()[count]) == 0) {
+						pszHost[i] = '\0';
 						FINALIZE; /* we are done */
 					}
 					count++;
@@ -1192,20 +1182,24 @@ rsRetVal cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQDN
 			 * and so should be stripped also. If so, we do it and return. Please note that
 			 * -l list FQDNs, not just the hostname part. If it did just list the hostname, the
 			 * door would be wide-open for all kinds of mixing up of hosts. Because of this,
-			 * you'll see comparison against the full string (pszHost) below. The termination
+			 * you'll see comparison against the full string (pszHostFQDN) below. The termination
 			 * still occurs at *p, which points at the first dot after the hostname.
 			 * TODO: this must also go away - see comment above -- rgerhards, 2008-04-16
 			 */
 			if(glbl.GetLocalHosts() != NULL) {
 				count=0;
 				while (glbl.GetLocalHosts()[count]) {
-					if (!strcmp((char*)pszHost, (char*)glbl.GetLocalHosts()[count])) {
-						*p = '\0';
-						break; /* we are done */
+					if (!strcmp((char*)pszHostFQDN, (char*)glbl.GetLocalHosts()[count])) {
+						pszHost[i] = '\0';
+						FINALIZE; /* we are done */
 					}
 					count++;
 				}
 			}
+			/* at this point, we have not found anything, so we need to copy
+			 * over the rest.
+			 */
+			strcpy((char*)pszHost+i, (char*)p);
 		}
 	}
 
@@ -1474,7 +1468,7 @@ finalize_it:
  */
 static rsRetVal
 HasRestrictions(uchar *pszType, int *bHasRestrictions) {
-	struct AllowedSenders *pAllowRoot;
+	struct AllowedSenders *pAllowRoot = NULL;
 	DEFiRet;
 
 	CHKiRet(setAllowRoot(&pAllowRoot, pszType));
