@@ -243,7 +243,7 @@ int openPipe(char *configFile, pid_t *pid, int *pfd)
 {
 	int pipefd[2];
 	pid_t cpid;
-	char *newargv[] = {"../tools/rsyslogd", "dummy", "-c4", "-u2", "-n", "-irsyslog.pid",
+	char *newargv[] = {"../tools/rsyslogd", "dummy", "-u2", "-n", "-irsyslog.pid",
 			   "-M../runtime/.libs:../.libs", NULL, NULL};
 	char confFile[1024];
 
