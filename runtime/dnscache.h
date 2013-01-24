@@ -24,6 +24,6 @@
 
 rsRetVal dnscacheInit(void);
 rsRetVal dnscacheDeinit(void);
-rsRetVal dnscacheLookup(struct sockaddr_storage *addr, uchar **pszHostFQDN, rs_size_t *lenHost, prop_t **ip);
+rsRetVal dnscacheLookup(struct sockaddr_storage *addr, prop_t **fqdn, prop_t **fqdnLowerCase, prop_t **ip);
 
 #endif /* #ifndef INCLUDED_DNSCACHE_H */

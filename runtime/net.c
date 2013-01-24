@@ -70,6 +70,7 @@
 #include "errmsg.h"
 #include "net.h"
 #include "dnscache.h"
+#include "prop.h"
 
 #ifdef OS_SOLARIS
 #	define	s6_addr32	_S6_un._S6_u32
@@ -83,6 +84,7 @@ MODULE_TYPE_NOKEEP
 DEFobjStaticHelpers
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
+DEFobjCurrIf(prop)
 
 /* support for defining allowed TCP and UDP senders. We use the same
  * structure to implement this (a linked list), but we define two different
@@ -1128,8 +1130,7 @@ void debugListenInfo(int fd, char *type)
 rsRetVal cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQDN, prop_t **ip)
 {
 	DEFiRet;
-	uchar *host;
-	rs_size_t lenHost;
+	prop_t *fqdnLowerCase;
 	register uchar *p;
 	int count;
 	int i;
@@ -1138,12 +1139,9 @@ rsRetVal cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQDN
 	assert(pszHost != NULL);
 	assert(pszHostFQDN != NULL);
 
-	iRet = dnscacheLookup(f, &host, &lenHost, ip);
-	/* Convert to lower case */
-	for(i = 0 ; i < lenHost ; ++i) {
-		pszHostFQDN[i] = tolower(host[i]);
-	} 
-	pszHostFQDN [i] = '\0';
+	iRet = dnscacheLookup(f, NULL, &fqdnLowerCase, ip);
+	strcpy((char*)pszHostFQDN, (char*)propGetSzStr(fqdnLowerCase));
+	prop.Destruct(&fqdnLowerCase);
 
 	if(iRet == RS_RET_INVALID_SOURCE) {
 		strcpy((char*) pszHost, (char*) pszHostFQDN); /* we use whatever was provided as replacement */
@@ -1578,6 +1576,7 @@ BEGINObjClassExit(net, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO
 CODESTARTObjClassExit(net)
 	/* release objects we no longer need */
 	objRelease(glbl, CORE_COMPONENT);
+	objRelease(prop, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
 ENDObjClassExit(net)
 
@@ -1590,6 +1589,7 @@ BEGINAbstractObjClassInit(net, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
+	CHKiRet(objUse(prop, CORE_COMPONENT));
 
 	/* set our own handlers */
 ENDObjClassInit(net)

@@ -252,23 +252,21 @@ Abort(nsd_t *pNsd)
 static rsRetVal
 FillRemHost(nsd_ptcp_t *pThis, struct sockaddr_storage *pAddr)
 {
-	uchar *szHname;
-	rs_size_t lenHname;
+	prop_t *fqdn;
 	
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, nsd_ptcp);
 	assert(pAddr != NULL);
 
-	CHKiRet(dnscacheLookup(pAddr, &szHname, &lenHname, &pThis->remoteIP));
+	CHKiRet(dnscacheLookup(pAddr, &fqdn, NULL, &pThis->remoteIP));
 
 	/* We now have the names, so now let's allocate memory and store them permanently.
 	 * (side note: we may hold on to these values for quite a while, thus we trim their
 	 * memory consumption)
 	 */
-	lenHname++;
-	if((pThis->pRemHostName = MALLOC(lenHname)) == NULL)
+	if((pThis->pRemHostName = MALLOC(prop.GetStringLen(fqdn+1))) == NULL)
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-	memcpy(pThis->pRemHostName, szHname, lenHname);
+	memcpy(pThis->pRemHostName, propGetSzStr(fqdn), prop.GetStringLen(fqdn)+1);
 
 finalize_it:
 	RETiRet;

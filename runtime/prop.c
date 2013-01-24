@@ -100,7 +100,8 @@ static int GetStringLen(prop_t *pThis)
 
 
 /* get string */
-static rsRetVal GetString(prop_t *pThis, uchar **ppsz, int *plen)
+rsRetVal
+propGetString(prop_t *pThis, uchar **ppsz, int *plen)
 {
 	BEGINfunc
 	ISOBJ_TYPE_assert(pThis, prop);
@@ -173,7 +174,7 @@ rsRetVal CreateOrReuseStringProp(prop_t **ppThis, uchar *psz, int len)
 		CHKiRet(CreateStringProp(ppThis, psz, len));
 	} else {
 		/* already exists, check if we can re-use it */
-		GetString(*ppThis, &pszPrev, &lenPrev);
+		propGetString(*ppThis, &pszPrev, &lenPrev);
 		if(len != lenPrev || ustrcmp(psz, pszPrev)) {
 			/* different, need to discard old & create new one */
 			propDestruct(ppThis);
@@ -212,7 +213,7 @@ CODESTARTobjQueryInterface(prop)
 	pIf->Destruct = propDestruct;
 	pIf->DebugPrint = propDebugPrint;
 	pIf->SetString = SetString;
-	pIf->GetString = GetString;
+	pIf->GetString = propGetString;
 	pIf->GetStringLen = GetStringLen;
 	pIf->AddRef = AddRef;
 	pIf->CreateStringProp = CreateStringProp;
