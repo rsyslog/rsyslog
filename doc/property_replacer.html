@@ -228,7 +228,15 @@ for filtering in a generic way)</td>
 <td>This is the "bridge" to syslog message normalization (via
 <a href="mmnormalize.html">mmnormalize</a>): name is a name defined
 inside the normalization rule. It has the value selected by the rule
-or none if no rule with this field did match.
+or none if no rule with this field did match. You can also use these
+properties to specify JSON fields from the CEE-enhanced syslog
+message, once you parse it with <a href="mmjsonparse.html">mmjsonparse</a>
+</td>
+</tr>
+<tr>
+<td><b>$!all-json</b></td>
+<td>This is the JSON part of the CEE-enhanced syslog message, which 
+can be parsed with <a href="mmjsonparse.html">mmjsonparse</a>
 </td>
 </tr>
 </tbody>
