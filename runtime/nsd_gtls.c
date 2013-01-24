@@ -1357,16 +1357,14 @@ GetRemAddr(nsd_t *pNsd, struct sockaddr_storage **ppAddr)
 }
 
 
-/* get the remote host's IP address. The returned string must be freed by the
- * caller. -- rgerhards, 2008-04-25
- */
+/* get the remote host's IP address. Caller must Destruct the object. */
 static rsRetVal
-GetRemoteIP(nsd_t *pNsd, uchar **ppszIP)
+GetRemoteIP(nsd_t *pNsd, prop_t **ip)
 {
 	DEFiRet;
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 	ISOBJ_TYPE_assert(pThis, nsd_gtls);
-	iRet = nsd_ptcp.GetRemoteIP(pThis->pTcp, ppszIP);
+	iRet = nsd_ptcp.GetRemoteIP(pThis->pTcp, ip);
 	RETiRet;
 }
 
