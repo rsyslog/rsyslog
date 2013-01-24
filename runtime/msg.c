@@ -360,21 +360,19 @@ static inline rsRetVal
 resolveDNS(msg_t *pMsg) {
 	rsRetVal localRet;
 	prop_t *propFromHost = NULL;
-	prop_t *propFromHostIP = NULL;
+	prop_t *ip;
 	uchar fromHost[NI_MAXHOST];
 	uchar fromHostFQDN[NI_MAXHOST];
-	uchar *fromHostIP;
-	rs_size_t lenIP;
 	DEFiRet;
 
 	MsgLock(pMsg);
 	CHKiRet(objUse(net, CORE_COMPONENT));
 	if(pMsg->msgFlags & NEEDS_DNSRESOL) {
 		localRet = net.cvthname(pMsg->rcvFrom.pfrominet, fromHost, fromHostFQDN,
-				        &fromHostIP, &lenIP);
+				        &ip);
 		if(localRet == RS_RET_OK) {
 			MsgSetRcvFromStr(pMsg, fromHost, ustrlen(fromHost), &propFromHost);
-			CHKiRet(MsgSetRcvFromIPStr(pMsg, fromHostIP, lenIP, &propFromHostIP));
+			CHKiRet(MsgSetRcvFromIP(pMsg, ip));
 		}
 	}
 finalize_it:
@@ -386,8 +384,6 @@ finalize_it:
 	MsgUnlock(pMsg);
 	if(propFromHost != NULL)
 		prop.Destruct(&propFromHost);
-	if(propFromHostIP != NULL)
-		prop.Destruct(&propFromHostIP);
 	RETiRet;
 }
 

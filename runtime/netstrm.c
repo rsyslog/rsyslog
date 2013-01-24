@@ -271,11 +271,11 @@ GetRemoteHName(netstrm_t *pThis, uchar **ppsz)
 
 /* get remote IP - slim wrapper for NSD driver function */
 static rsRetVal
-GetRemoteIP(netstrm_t *pThis, uchar **ppsz)
+GetRemoteIP(netstrm_t *pThis, prop_t **ip)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, netstrm);
-	iRet = pThis->Drvr.GetRemoteIP(pThis->pDrvrData, ppsz);
+	iRet = pThis->Drvr.GetRemoteIP(pThis->pDrvrData, ip);
 	RETiRet;
 }
 

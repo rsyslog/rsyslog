@@ -424,7 +424,7 @@ SessAccept(tcpsrv_t *pThis, tcpLstnPortList_t *pLstnInfo, tcps_sess_t **ppSess, 
 	int iSess = -1;
 	struct sockaddr_storage *addr;
 	uchar *fromHostFQDN = NULL;
-	uchar *fromHostIP = NULL;
+	prop_t *fromHostIP;
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 	assert(pLstnInfo != NULL);
@@ -475,7 +475,6 @@ SessAccept(tcpsrv_t *pThis, tcpLstnPortList_t *pLstnInfo, tcps_sess_t **ppSess, 
 	CHKiRet(tcps_sess.SetHost(pSess, fromHostFQDN));
 	fromHostFQDN = NULL; /* we handed this string over */
 	CHKiRet(tcps_sess.SetHostIP(pSess, fromHostIP));
-	fromHostIP = NULL; /* we handed this string over */
 	CHKiRet(tcps_sess.SetStrm(pSess, pNewStrm));
 	pNewStrm = NULL; /* prevent it from being freed in error handler, now done in tcps_sess! */
 	CHKiRet(tcps_sess.SetMsgIdx(pSess, 0));
@@ -498,7 +497,6 @@ finalize_it:
 		if(pNewStrm != NULL)
 			netstrm.Destruct(&pNewStrm);
 		free(fromHostFQDN);
-		free(fromHostIP);
 	}
 
 	RETiRet;

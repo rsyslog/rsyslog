@@ -70,6 +70,7 @@
 #include "netstrm.h"
 #include "nssel.h"
 #include "errmsg.h"
+#include "prop.h"
 #include "unicode-helper.h"
 
 MODULE_TYPE_LIB
@@ -89,6 +90,7 @@ DEFobjCurrIf(net)
 DEFobjCurrIf(netstrms)
 DEFobjCurrIf(netstrm)
 DEFobjCurrIf(nssel)
+DEFobjCurrIf(prop)
 
 /* forward definitions */
 static rsRetVal create_strm_socket(strmsrv_t *pThis);
@@ -418,7 +420,7 @@ SessAccept(strmsrv_t *pThis, strmLstnPortList_t *pLstnInfo, strms_sess_t **ppSes
 	int iSess = -1;
 	struct sockaddr_storage *addr;
 	uchar *fromHostFQDN = NULL;
-	uchar *fromHostIP = NULL;
+	prop_t *ip = NULL;
 
 	ISOBJ_TYPE_assert(pThis, strmsrv);
 	assert(pLstnInfo != NULL);
@@ -444,7 +446,7 @@ SessAccept(strmsrv_t *pThis, strmLstnPortList_t *pLstnInfo, strms_sess_t **ppSes
 
 	/* get the host name */
 	CHKiRet(netstrm.GetRemoteHName(pNewStrm, &fromHostFQDN));
-	CHKiRet(netstrm.GetRemoteIP(pNewStrm, &fromHostIP));
+	CHKiRet(netstrm.GetRemoteIP(pNewStrm, &ip));
 	CHKiRet(netstrm.GetRemAddr(pNewStrm, &addr));
 	/* TODO: check if we need to strip the domain name here -- rgerhards, 2008-04-24 */
 
@@ -467,8 +469,8 @@ SessAccept(strmsrv_t *pThis, strmLstnPortList_t *pLstnInfo, strms_sess_t **ppSes
 	 */
 	CHKiRet(strms_sess.SetHost(pSess, fromHostFQDN));
 	fromHostFQDN = NULL; /* we handed this string over */
-	CHKiRet(strms_sess.SetHostIP(pSess, fromHostIP));
-	fromHostIP = NULL; /* we handed this string over */
+	CHKiRet(strms_sess.SetHostIP(pSess, ip));
+	ip = NULL; /* we handed this string over */
 	CHKiRet(strms_sess.SetStrm(pSess, pNewStrm));
 	pNewStrm = NULL; /* prevent it from being freed in error handler, now done in strms_sess! */
 	CHKiRet(strms_sess.ConstructFinalize(pSess));
@@ -489,7 +491,8 @@ finalize_it:
 		if(pNewStrm != NULL)
 			netstrm.Destruct(&pNewStrm);
 		free(fromHostFQDN);
-		free(fromHostIP);
+		if(ip != NULL)
+			prop.Destruct(&ip);
 	}
 
 	RETiRet;
@@ -908,6 +911,7 @@ CODESTARTObjClassExit(strmsrv)
 	objRelease(strms_sess, DONT_LOAD_LIB);
 	objRelease(conf, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
+	objRelease(prop, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(netstrms, DONT_LOAD_LIB);
 	objRelease(nssel, DONT_LOAD_LIB);
@@ -930,6 +934,7 @@ BEGINObjClassInit(strmsrv, 1, OBJ_IS_LOADABLE_MODULE) /* class, version - CHANGE
 	CHKiRet(objUse(strms_sess, DONT_LOAD_LIB));
 	CHKiRet(objUse(conf, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
+	CHKiRet(objUse(prop, CORE_COMPONENT));
 
 	/* set our own handlers */
 	OBJSetMethodHandler(objMethod_DEBUGPRINT, strmsrvDebugPrint);

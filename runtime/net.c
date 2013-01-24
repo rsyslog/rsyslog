@@ -1125,7 +1125,7 @@ void debugListenInfo(int fd, char *type)
  * pay.
  * 2005-05-16 rgerhards: added IP representation. Must also be NI_MAXHOST
  */
-rsRetVal cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQDN, uchar **pszIP, rs_size_t *lenIP)
+rsRetVal cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQDN, prop_t **ip)
 {
 	DEFiRet;
 	uchar *host;
@@ -1137,7 +1137,7 @@ rsRetVal cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQDN
 	assert(pszHost != NULL);
 	assert(pszHostFQDN != NULL);
 
-	iRet = dnscacheLookup(f, &host, &lenHost, pszIP, lenIP);
+	iRet = dnscacheLookup(f, &host, &lenHost, ip);
 	strcpy((char*)pszHostFQDN, (char*)host); // TODO: optimize this! requires more changes below (dirty tricks ;))
 
 	if(iRet == RS_RET_INVALID_SOURCE) {

@@ -140,24 +140,20 @@ finalize_it:
 	RETiRet;
 }
 
-/* set the remote host's IP. Note that the caller *hands over* the string. That is,
+/* set the remote host's IP. Note that the caller *hands over* the property. That is,
  * the caller no longer controls it once SetHostIP() has received it. Most importantly,
- * the caller must not free it. -- rgerhards, 2008-05-16
+ * the caller must not destruct it. -- rgerhards, 2008-05-16
  */
 static rsRetVal
-SetHostIP(tcps_sess_t *pThis, uchar *pszHostIP)
+SetHostIP(tcps_sess_t *pThis, prop_t *ip)
 {
 	DEFiRet;
-
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
 
-	if(pThis->fromHostIP == NULL)
-		CHKiRet(prop.Construct(&pThis->fromHostIP));
-
-	CHKiRet(prop.SetString(pThis->fromHostIP, pszHostIP, ustrlen(pszHostIP)));
-
-finalize_it:
-	free(pszHostIP);
+	if(pThis->fromHostIP != NULL) {
+		prop.Destruct(&pThis->fromHostIP);
+	}
+	pThis->fromHostIP = ip;
 	RETiRet;
 }
 

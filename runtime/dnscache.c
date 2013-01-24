@@ -41,14 +41,15 @@
 #include "unicode-helper.h"
 #include "net.h"
 #include "hashtable.h"
+#include "prop.h"
+#include "dnscache.h"
 
 /* module data structures */
 struct dnscache_entry_s {
 	struct sockaddr_storage addr;
 	uchar *pszHostFQDN;
-	uchar *ip;
+	prop_t *ip;
 	rs_size_t lenHost;
-	rs_size_t lenIP;
 	struct dnscache_entry_s *next;
 	unsigned nUsed;
 };
@@ -59,14 +60,15 @@ struct dnscache_s {
 	unsigned nEntries;
 };
 typedef struct dnscache_s dnscache_t;
-#define MAX_CACHE_ENTRIES 1000
 
 
 /* static data */
 DEFobjStaticHelpers
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(errmsg)
+DEFobjCurrIf(prop)
 static dnscache_t dnsCache;
+static prop_t *staticErrIPValue;
 
 
 /* Our hash function.
@@ -89,8 +91,6 @@ hash_from_key_fn(void *k)
 static int
 key_equals_fn(void *key1, void *key2)
 {
-dbgprintf("DDDD: key_equals_fn: SALEN %d, result %d\n", SALEN((struct sockaddr*)key1),
-SALEN((struct sockaddr*)key1) == SALEN((struct sockaddr*) key2) && !memcmp(key1, key2, SALEN((struct sockaddr*) key1)));
 	return (SALEN((struct sockaddr*)key1) == SALEN((struct sockaddr*) key2) 
 		   && !memcmp(key1, key2, SALEN((struct sockaddr*) key1)));
 }
@@ -122,6 +122,11 @@ dnscacheInit(void)
 	CHKiRet(objGetObjInterface(&obj)); /* this provides the root pointer for all other queries */
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	CHKiRet(objUse(prop, CORE_COMPONENT));
+
+	prop.Construct(&staticErrIPValue);
+	prop.SetString(staticErrIPValue, (uchar*)"???", 3);
+	prop.ConstructFinalize(staticErrIPValue);
 finalize_it:
 	RETiRet;
 }
@@ -131,10 +136,12 @@ rsRetVal
 dnscacheDeinit(void)
 {
 	DEFiRet;
+	prop.Destruct(&staticErrIPValue);
 	hashtable_destroy(dnsCache.ht, 1); /* 1 => free all values automatically */
 	pthread_rwlock_destroy(&dnsCache.rwlock);
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
+	objRelease(prop, CORE_COMPONENT);
 	RETiRet;
 }
 
@@ -176,18 +183,19 @@ mygetnameinfo(const struct sockaddr *sa, socklen_t salen,
  * message should be processed (1) or discarded (0).
  */
 static rsRetVal
-resolveAddr(struct sockaddr_storage *addr, uchar *pszHostFQDN, uchar *ip)
+resolveAddr(struct sockaddr_storage *addr, uchar *pszHostFQDN, prop_t **ip)
 {
 	DEFiRet;
 	int error;
 	sigset_t omask, nmask;
 	struct addrinfo hints, *res;
+	char szIP[80]; /* large enough for IPv6 */
 	
 	assert(addr != NULL);
 	assert(pszHostFQDN != NULL);
 
         error = mygetnameinfo((struct sockaddr *)addr, SALEN((struct sockaddr *)addr),
-			    (char*) ip, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
+			    (char*) szIP, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
         if(error) {
                 dbgprintf("Malformed from address %s\n", gai_strerror(error));
 		ABORT_FINALIZE(RS_RET_INVALID_SOURCE);
@@ -225,7 +233,7 @@ resolveAddr(struct sockaddr_storage *addr, uchar *pszHostFQDN, uchar *ip)
 					snprintf((char*)szErrMsg, sizeof(szErrMsg) / sizeof(uchar),
 						 "Malicious PTR record, message dropped "
 						 "IP = \"%s\" HOST = \"%s\"",
-						 ip, pszHostFQDN);
+						 szIP, pszHostFQDN);
 					errmsg.LogError(0, RS_RET_MALICIOUS_ENTITY, "%s", szErrMsg);
 					pthread_sigmask(SIG_SETMASK, &omask, NULL);
 					ABORT_FINALIZE(RS_RET_MALICIOUS_ENTITY);
@@ -240,7 +248,7 @@ resolveAddr(struct sockaddr_storage *addr, uchar *pszHostFQDN, uchar *ip)
 				snprintf((char*)szErrMsg, sizeof(szErrMsg) / sizeof(uchar),
 					 "Malicious PTR record (message accepted, but used IP "
 					 "instead of PTR name: IP = \"%s\" HOST = \"%s\"",
-					 ip, pszHostFQDN);
+					 szIP, pszHostFQDN);
 				errmsg.LogError(0, NO_ERRCODE, "%s", szErrMsg);
 
 				error = 1; /* that will trigger using IP address below. */
@@ -250,11 +258,19 @@ resolveAddr(struct sockaddr_storage *addr, uchar *pszHostFQDN, uchar *ip)
 	}
 
         if(error || glbl.GetDisableDNS()) {
-                dbgprintf("Host name for your address (%s) unknown\n", ip);
-		strcpy((char*) pszHostFQDN, (char*)ip);
+                dbgprintf("Host name for your address (%s) unknown\n", szIP);
+		strcpy((char*) pszHostFQDN, (char*)szIP);
         }
 
 finalize_it:
+	if(iRet != RS_RET_OK) {
+		strcpy(szIP, "?error.obtaining.ip?");
+	}
+	/* we need to create the inputName property (only once during our lifetime) */
+	prop.Construct(ip);
+	prop.SetString(*ip, (uchar*)szIP, strlen(szIP));
+	prop.ConstructFinalize(*ip);
+
 	RETiRet;
 }
 
@@ -265,16 +281,15 @@ addEntry(struct sockaddr_storage *addr, dnscache_entry_t **pEtry)
 	int r;
 	struct sockaddr_storage *keybuf;
 	uchar pszHostFQDN[NI_MAXHOST];
-	uchar ip[80]; /* 80 is safe for larges IPv6 addr */
+	prop_t *ip;
 	dnscache_entry_t *etry;
 	DEFiRet;
 
-	CHKiRet(resolveAddr(addr, pszHostFQDN, ip));
+	CHKiRet(resolveAddr(addr, pszHostFQDN, &ip));
 	CHKmalloc(etry = MALLOC(sizeof(dnscache_entry_t)));
 	etry->lenHost = ustrlen(pszHostFQDN);
-	etry->lenIP = ustrlen(ip);
 	CHKmalloc(etry->pszHostFQDN = ustrdup(pszHostFQDN));
-	CHKmalloc(etry->ip = ustrdup(ip));
+	etry->ip = ip;
 	memcpy(&etry->addr, addr, SALEN((struct sockaddr*) addr));
 	etry->nUsed = 0;
 	*pEtry = etry;
@@ -313,7 +328,7 @@ validateEntry(dnscache_entry_t __attribute__((unused)) *etry, struct sockaddr_st
  */
 rsRetVal
 dnscacheLookup(struct sockaddr_storage *addr, uchar **pszHostFQDN, rs_size_t *lenHost,
-	       uchar **ip, rs_size_t *lenIP)
+	       prop_t **ip)
 {
 	dnscache_entry_t *etry;
 	DEFiRet;
@@ -326,11 +341,10 @@ dnscacheLookup(struct sockaddr_storage *addr, uchar **pszHostFQDN, rs_size_t *le
 	} else {
 		CHKiRet(validateEntry(etry, addr));
 	}
-dbgprintf("XXXX: hostn '%s', ip '%s'\n", etry->pszHostFQDN, etry->ip);
 	*pszHostFQDN = etry->pszHostFQDN;
 	*lenHost = etry->lenHost;
+	prop.AddRef(etry->ip);
 	*ip = etry->ip;
-	*lenIP = etry->lenIP;
 
 finalize_it:
 	pthread_rwlock_unlock(&dnsCache.rwlock);
@@ -339,8 +353,7 @@ dbgprintf("XXXX: dnscacheLookup finished, iRet=%d\n", iRet);
 		DBGPRINTF("dnscacheLookup failed with iRet %d\n", iRet);
 		*pszHostFQDN = (uchar*)"???";
 		*lenHost = 3;
-		*ip = (uchar*)"???";
-		*lenIP = 3;
+		*ip = staticErrIPValue;
 	}
 	RETiRet;
 }

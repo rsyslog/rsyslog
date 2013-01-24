@@ -33,9 +33,8 @@ struct strms_sess_s {
 	strmsrv_t *pSrv;	/* pointer back to my server (e.g. for callbacks) */
 	strmLstnPortList_t *pLstnInfo;	/* pointer back to listener info */
 	netstrm_t *pStrm;
-//	uchar *pMsg;		/* message (fragment) received */
 	uchar *fromHost;
-	uchar *fromHostIP;
+	prop_t *fromHostIP;
 	void *pUsr;		/* a user-pointer */
 };
 
@@ -54,15 +53,17 @@ BEGINinterface(strms_sess) /* name must also be changed in ENDinterface macro! *
 	rsRetVal (*SetUsrP)(strms_sess_t*, void*);
 	void*    (*GetUsrP)(strms_sess_t*);
 	rsRetVal (*SetHost)(strms_sess_t *pThis, uchar*);
-	rsRetVal (*SetHostIP)(strms_sess_t *pThis, uchar*);
+	rsRetVal (*SetHostIP)(strms_sess_t *pThis, prop_t*);
 	rsRetVal (*SetStrm)(strms_sess_t *pThis, netstrm_t*);
 	rsRetVal (*SetOnMsgReceive)(strms_sess_t *pThis, rsRetVal (*OnMsgReceive)(strms_sess_t*, uchar*, int));
 ENDinterface(strms_sess)
-#define strms_sessCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
+#define strms_sessCURR_IF_VERSION 3 /* increment whenever you change the interface structure! */
 /* interface changes
  * to version v2, rgerhards, 2009-05-22
  * - Data structures changed
  * - SetLstnInfo entry point added
+ * version 3, rgerhads, 2013-01-21:
+ * - signature of SetHostIP() changed
  */
 
 
