@@ -7,7 +7,7 @@
  * of the "old" message code without any modifications. However, it
  * helps to have things at the right place one we go to the meat of it.
  *
- * Copyright 2007-2012 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2013 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -2084,12 +2084,16 @@ static inline char *getStructuredData(msg_t *pM)
  */
 uchar *getProgramName(msg_t *pM, sbool bLockMutex)
 {
-	if(pM->iLenPROGNAME == -1 && bLockMutex == LOCK_MUTEX) {
-		MsgLock(pM);
-		/* need to re-check, things may have change in between! */
-		if(pM->iLenPROGNAME == -1)
+	if(pM->iLenPROGNAME == -1) {
+		if(bLockMutex == LOCK_MUTEX) {
+			MsgLock(pM);
+			/* need to re-check, things may have change in between! */
+			if(pM->iLenPROGNAME == -1)
+				aquireProgramName(pM);
+			MsgUnlock(pM);
+		} else {
 			aquireProgramName(pM);
-		MsgUnlock(pM);
+		}
 	}
 	return (pM->iLenPROGNAME < CONF_PROGNAME_BUFSIZE) ? pM->PROGNAME.szBuf
 						       : pM->PROGNAME.ptr;
