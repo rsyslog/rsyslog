@@ -27,7 +27,7 @@ file is loaded on rsyslog startup and when a reload is requested.
 <li><b>string</b> - the value to be looked up is an arbitrary string. Only exact
 some strings match.
 <li><b>array</b> - the value to be looked up is an integer number from a consequtive set.
-The set must not start at zero or one, but there must be no number missing. So, for example
+The set does not need to start at zero or one, but there must be no number missing. So, for example
 5,6,7,8,9 would be a valid set of index values, while 1,2,4,5 would not be (due to missing
 2).
 A match happens if the requested number is present.
