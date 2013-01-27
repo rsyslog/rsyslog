@@ -287,6 +287,14 @@ readConfFile(FILE *fp, es_str_t **str)
 	es_addChar(str, '\0');
 }
 
+/* comparison function for qsort() and bsearch() string array compare */
+static int
+qs_arrcmp(const void *s1, const void *s2)
+{
+	return es_strcmp(*((es_str_t**)s1), *((es_str_t**)s2));
+}
+
+
 struct objlst*
 objlstNew(struct cnfobj *o)
 {
@@ -1355,26 +1363,29 @@ evalStrArrayCmp(es_str_t *estr_l, struct cnfarray* ar, int cmpop)
 {
 	int i;
 	int r = 0;
-	for(i = 0 ; (r == 0) && (i < ar->nmemb) ; ++i) {
-		switch(cmpop) {
-		case CMP_EQ:
-			r = es_strcmp(estr_l, ar->arr[i]) == 0;
-			break;
-		case CMP_NE:
-			r = es_strcmp(estr_l, ar->arr[i]) != 0;
-			break;
-		case CMP_STARTSWITH:
-			r = es_strncmp(estr_l, ar->arr[i], es_strlen(ar->arr[i])) == 0;
-			break;
-		case CMP_STARTSWITHI:
-			r = es_strncasecmp(estr_l, ar->arr[i], es_strlen(ar->arr[i])) == 0;
-			break;
-		case CMP_CONTAINS:
-			r = es_strContains(estr_l, ar->arr[i]) != -1;
-			break;
-		case CMP_CONTAINSI:
-			r = es_strCaseContains(estr_l, ar->arr[i]) != -1;
-			break;
+	es_str_t **res;
+	if(cmpop == CMP_EQ) {
+		res = bsearch(&estr_l, ar->arr, ar->nmemb, sizeof(es_str_t*), qs_arrcmp);
+		r = res != NULL;
+	} else if(cmpop == CMP_NE) {
+		res = bsearch(&estr_l, ar->arr, ar->nmemb, sizeof(es_str_t*), qs_arrcmp);
+		r = res == NULL;
+	} else {
+		for(i = 0 ; (r == 0) && (i < ar->nmemb) ; ++i) {
+			switch(cmpop) {
+			case CMP_STARTSWITH:
+				r = es_strncmp(estr_l, ar->arr[i], es_strlen(ar->arr[i])) == 0;
+				break;
+			case CMP_STARTSWITHI:
+				r = es_strncasecmp(estr_l, ar->arr[i], es_strlen(ar->arr[i])) == 0;
+				break;
+			case CMP_CONTAINS:
+				r = es_strContains(estr_l, ar->arr[i]) != -1;
+				break;
+			case CMP_CONTAINSI:
+				r = es_strCaseContains(estr_l, ar->arr[i]) != -1;
+				break;
+			}
 		}
 	}
 	return r;
@@ -2637,6 +2648,18 @@ cnfexprOptimize_AND_OR(struct cnfexpr *expr)
 	return expr;
 }
 
+
+/* optimize array for EQ/NEQ comparisons. We sort the array in
+ * this case so that we can apply binary search later on.
+ */
+static inline void
+cnfexprOptimize_CMPEQ_arr(struct cnfarray *arr)
+{
+	DBGPRINTF("optimizer: sorting array for CMP_EQ/NEQ comparison\n");
+	qsort(arr->arr, arr->nmemb, sizeof(es_str_t*), qs_arrcmp);
+}
+
+
 /* (recursively) optimize an expression */
 struct cnfexpr*
 cnfexprOptimize(struct cnfexpr *expr)
@@ -2695,6 +2718,9 @@ cnfexprOptimize(struct cnfexpr *expr)
 			}
 		} else if(expr->l->nodetype == 'V') {
 			expr = cnfexprOptimize_CMP_var(expr);
+		}
+		if(expr->r->nodetype == 'A') {
+			cnfexprOptimize_CMPEQ_arr((struct cnfarray *)expr->r);
 		}
 		break;
 	case CMP_LE:
