@@ -121,7 +121,6 @@ html_files = \
 	syslog_parsing.html \
 	troubleshoot.html \
 	rsyslog_conf_actions.html \
-	rsyslog_conf_examples.html \
 	rsyslog_conf_filter.html \
 	rsyslog_conf_global.html \
 	rsyslog_conf_modules.html \
@@ -141,13 +140,12 @@ html_files = \
 	rsconf1_abortonuncleanconfig.html \
 	rsconf1_maxopenfiles.html \
 	rsconf1_omfileforcechown.html \
-	rsyslog_conf_file_syntax_differences.html \
-	rsyslog_conf_lines.html \
 	rsyslog_queue_pointers.jpeg \
 	rsyslog_queue_pointers2.jpeg \
 	v6compatibility.html \
 	v7compatibility.html \
 	rsyslog_conf_basic_structure.html \
+	rsyslog_conf_sysklogd_compatibility.html \
 	imkmsg.html \
 	src/classes.dia
 
