@@ -58,10 +58,11 @@ CLEANFILES = \
 endif
 
 EXTRA_DIST = \
-	freebsd/rsyslogd \
-	slackware/rc.rsyslogd \
+	platform/README \
+	platform/freebsd/rsyslogd \
+	platform/slackware/rc.rsyslogd \
+	platform/redhat/rsyslog.conf \
 	contrib/README \
-	rsyslog.conf \
 	COPYING \
 	COPYING.LESSER \
 	COPYING.ASL20 \
