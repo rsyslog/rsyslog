@@ -1,0 +1,31 @@
+<html><head><title>sysklogdcompatibility - rsyslog.conf</title></head>
+<body>
+<h1>sysklogd compatibility</h1>
+<p>This is a part of the rsyslog.conf documentation.</p>
+<a href="rsyslog_conf.html">Back to rsyslog.conf manual</a>
+<p>Rsyslog supports standard sysklogd's configuration file format
+and extends it. So in general, you can take a "normal" syslog.conf and
+use it together with rsyslogd. It will understand everything. However,
+to use most of rsyslogd's unique features, you need to add extended
+configuration directives.</p>
+<p>Rsyslogd supports the classical, selector-based rule lines.
+They are still at the heart of it and all actions are initiated via
+rule lines.
+However, there are ample new directives, either in rsyslog traditional
+format (starting with a dollar sign) or in RainerScript format. These
+work together with sysklogd statements. A few select statements are
+no longer supported and may generate error messages. They are mentioned
+in the compatibility notes.
+</p>
+
+<p>[<a href="manual.html">manual index</a>]
+[<a href="rsyslog_conf.html">rsyslog.conf</a>]
+[<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the
+<a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
+Copyright &copy; 2008-2013 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>. Released under the GNU GPL
+version 3 or higher.</font></p>
+</body>
+</html>
+
