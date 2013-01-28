@@ -61,7 +61,6 @@ EXTRA_DIST = \
 	freebsd/rsyslogd \
 	slackware/rc.rsyslogd \
 	contrib/README \
-	rsyslog.conf \
 	COPYING \
 	COPYING.LESSER \
 	COPYING.ASL20 \
