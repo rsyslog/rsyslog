@@ -1,5 +1,11 @@
 ---------------------------------------------------------------------------
-Version 7.3.6  [devel] 2012-12-??
+Version 7.3.6  [devel] 2013-01-28
+- greatly improved speed of large-array  [N]EQ RainerScript comparisons
+  Thanks to David Lang for a related discussion that inspired the idea
+  to do this with a much simpler (yet sufficient) approach than orignally
+  planned for.
+- greatly improved speed of DNS cache for large cache sizes
+- general performance improvements
 - omfile: added stats counters for dynafile caches
 - omfile: improved async writing, finally enabled full async write
   also fixed a couple of smaller issues along that way
@@ -11,10 +17,6 @@ Version 7.3.6  [devel] 2012-12-??
 - fix compile problem in imklog
 - added capability to output thread-id-to-function debug info
   This is a useful debug aid, but nothing of concern for regular users.
-- greatly improved speed of large-array  [N]EQ RainerScript comparisons
-  Thanks to David Lang for a related discussion that inspired the idea
-  to do this with a much simpler (yet sufficient) approach than orignally
-  planned for.
 ---------------------------------------------------------------------------
 Version 7.3.5  [devel] 2012-12-19
 - ommysql: addded batching/transaction support
