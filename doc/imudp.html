@@ -55,7 +55,7 @@ Binds the listener to a specific <a href="multi_ruleset.html">ruleset</a>.</li>
 <p><b>Sample:</b></p>
 <p>This sets up an UPD server on port 514:<br>
 </p>
-<textarea rows="15" cols="60">module(load="/folder/to/rsyslog/plugins/imudp/.libs/imudp") # needs to be done just once
+<textarea rows="15" cols="60">module(load="imudp") # needs to be done just once
 input(type="imudp" port="514")
 </textarea>
 

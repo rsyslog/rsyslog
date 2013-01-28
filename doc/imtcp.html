@@ -110,7 +110,7 @@ is not used and some senders emit multi-line messages into the message stream.
 <p><b>Example:</b></p>
 <p>This sets up a TCP server on port 514 and permits it to accept up to 500 connections:<br>
 </p>
-<textarea rows="15" cols="60">module(load="/folder/to/rsyslog/plugins/imtcp/.libs/imtcp" MaxSessions="500") # needs to be done just once
+<textarea rows="15" cols="60">module(load="imtcp" MaxSessions="500")
 input(type="imtcp" port="514")
 </textarea>
 <p>Note that the global parameters (here: max sessions) need to be set when the module is loaded. Otherwise, the parameters will not apply. 
