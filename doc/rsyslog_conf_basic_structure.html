@@ -81,6 +81,14 @@ a message comes in via that input, the "program" (ruleset) bound to it will be e
 (but not any other!).
 <p>There is detail documentation available for
 <a href="multi_ruleset">rsyslog rulesets</a>.
+<p>For quick reference, rulesets are defined as follows:
+<pre>
+ruleset(name="rulesetname") {
+	action(type="omfile" file="/path/to/file")
+	action(type="..." ...)
+	/* and so on... */
+}
+</pre>
 
 <p>[<a href="manual.html">manual index</a>]
 [<a href="rsyslog_conf.html">rsyslog.conf</a>]
