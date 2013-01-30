@@ -1,4 +1,7 @@
 ---------------------------------------------------------------------------
+Version 7.3.7  [devel] 2013-02-??
+- bugfix: mmjsonparse segfault if new-style config was used
+---------------------------------------------------------------------------
 Version 7.3.6  [devel] 2013-01-28
 - greatly improved speed of large-array  [N]EQ RainerScript comparisons
   Thanks to David Lang for a related discussion that inspired the idea

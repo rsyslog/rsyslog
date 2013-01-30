@@ -95,6 +95,13 @@ ENDfreeCnf
 
 BEGINcreateInstance
 CODESTARTcreateInstance
+	pData->tokener = json_tokener_new();
+	if(pData->tokener == NULL) {
+		errmsg.LogError(0, RS_RET_ERR, "error: could not create json "
+				"tokener, cannot activate action");
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+finalize_it:
 ENDcreateInstance
 
 
@@ -112,7 +119,7 @@ ENDfreeInstance
 
 BEGINdbgPrintInstInfo
 CODESTARTdbgPrintInstInfo
-	dbgprintf("mmjsonparse\n");
+	DBGPRINTF("mmjsonparse\n");
 ENDdbgPrintInstInfo
 
 
@@ -128,7 +135,8 @@ processJSON(instanceData *pData, msg_t *pMsg, char *buf, size_t lenBuf)
 	const char *errMsg;
 	DEFiRet;
 
-	dbgprintf("mmjsonparse: toParse: '%s'\n", buf);
+	assert(pData->tokener != NULL);
+	DBGPRINTF("mmjsonparse: toParse: '%s'\n", buf);
 	json_tokener_reset(pData->tokener);
 
 	json = json_tokener_parse_ex(pData->tokener, buf, lenBuf);
@@ -147,7 +155,7 @@ processJSON(instanceData *pData, msg_t *pMsg, char *buf, size_t lenBuf)
 		else if(!json_object_is_type(json, json_type_object))
 			errMsg = "JSON value is not an object";
 		if(errMsg != NULL) {
-			dbgprintf("mmjsonparse: Error parsing JSON '%s': %s\n",
+			DBGPRINTF("mmjsonparse: Error parsing JSON '%s': %s\n",
 					buf, errMsg);
 		}
 	}
@@ -237,14 +245,6 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	 * the format specified (if any) is always ignored.
 	 */
 	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_TPL_AS_MSG, (uchar*) "RSYSLOG_FileFormat"));
-
-	/* finally build the instance */
-	pData->tokener = json_tokener_new();
-	if(pData->tokener == NULL) {
-		errmsg.LogError(0, RS_RET_ERR, "error: could not create json "
-				"tokener, cannot activate action");
-		ABORT_FINALIZE(RS_RET_ERR);
-	}
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
