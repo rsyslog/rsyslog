@@ -67,10 +67,20 @@ variable, if it exists. Returns an empty string if it does not exist.
 <li>cnum(expr) - converts expr to a number (integer)
 <li>re_match(expr, re) - returns 1, if expr matches re, 0 otherwise
 <li>field(str, delim, matchnbr) - returns a field-based substring. str is the string
-to search, delim is the numerical ascii value of the field delimiter (so that
-non-printable characters can by specified) and matchnbr is the match to search
+to search, delim is the delimiter and matchnbr is the match to search
 for (the first match starts at 1). This works similar as the field based
 property-replacer option.
+Versions prior to 7.3.7 only support a single character as delimiter character.
+Starting with version 7.3.7, a full string can be used as delimiter. If a single
+character is being used as delimiter,   delim is the numerical ascii value of the
+field delimiter character (so that non-printable characters can by specified). If a
+string is used as delmiter, a multi-character string (e.g. "#011") is to be
+specified. Samples:<br>
+set $!usr!field = field($msg, 32, 3); -- the third field, delimited by space<br>
+set $!usr!field = field($msg, "#011", 3); -- the third field, delmited by "#011"<br>
+Note that when a single character is specified as string [field($msg, ",", 3)] a
+string-based extraction is done, which is more performance intense than the
+equivalent single-character [field($msg, 44 ,3)] extraction.
 <li>prifilt(constant) - mimics a traditional PRI-based filter (like "*.*" or
 "mail.info"). The traditional filter string must be given as a <b>constant string</b>.
 Dynamic string evaluation is not permitted (for performance reasons).

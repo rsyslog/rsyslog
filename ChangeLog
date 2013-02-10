@@ -1,7 +1,10 @@
 ---------------------------------------------------------------------------
 Version 7.3.7  [devel] 2013-02-??
+- field() function now supports a string as field delimiter
 - bugfix: mmjsonparse segfault if new-style config was used
 - bugfix: script == comparison did not work properly on JSON objects
+- bugfix: field() function did never return "***FIELD NOT FOUND***"
+  instead it returned "***ERROR in field() FUNCTION***" in that case
 ---------------------------------------------------------------------------
 Version 7.3.6  [devel] 2013-01-28
 - greatly improved speed of large-array  [N]EQ RainerScript comparisons

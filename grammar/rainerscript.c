@@ -1137,8 +1137,8 @@ var2CString(struct var *r, int *bMustFree)
 	return cstr;
 }
 
-rsRetVal
-doExtractField(uchar *str, uchar delim, int matchnbr, uchar **resstr)
+static rsRetVal
+doExtractFieldByChar(uchar *str, uchar delim, int matchnbr, uchar **resstr)
 {
 	int iCurrFld;
 	int iLen;
@@ -1175,8 +1175,51 @@ doExtractField(uchar *str, uchar delim, int matchnbr, uchar **resstr)
 		/* now copy */
 		memcpy(pBuf, pFld, iLen);
 		pBuf[iLen] = '\0'; /* terminate it */
-		if(*(pFldEnd+1) != '\0')
-			++pFldEnd; /* OK, skip again over delimiter char */
+		*resstr = pBuf;
+	} else {
+		ABORT_FINALIZE(RS_RET_FIELD_NOT_FOUND);
+	}
+finalize_it:
+	RETiRet;
+}
+
+
+static rsRetVal
+doExtractFieldByStr(uchar *str, char *delim, rs_size_t lenDelim, int matchnbr, uchar **resstr)
+{
+	int iCurrFld;
+	int iLen;
+	uchar *pBuf;
+	uchar *pFld;
+	uchar *pFldEnd;
+	DEFiRet;
+
+	/* first, skip to the field in question */
+	iCurrFld = 1;
+	pFld = str;
+	while(pFld != NULL && iCurrFld < matchnbr) {
+		if((pFld = (uchar*) strstr((char*)pFld, delim)) != NULL) {
+			pFld += lenDelim;
+			++iCurrFld;
+		}
+	}
+	dbgprintf("field() field requested %d, field found %d\n", matchnbr, iCurrFld);
+	
+	if(iCurrFld == matchnbr) {
+		/* field found, now extract it */
+		/* first of all, we need to find the end */
+		pFldEnd = (uchar*) strstr((char*)pFld, delim);
+		if(pFldEnd == NULL) {
+			iLen = strlen((char*) pFld);
+		} else { /* found delmiter!  Note that pFldEnd *is* already on 
+			  * the first delmi char, we don't need that. */
+			iLen = pFldEnd - pFld;
+		}
+		/* we got our end pointer, now do the copy */
+		CHKmalloc(pBuf = MALLOC((iLen + 1) * sizeof(char)));
+		/* now copy */
+		memcpy(pBuf, pFld, iLen);
+		pBuf[iLen] = '\0'; /* terminate it */
 		*resstr = pBuf;
 	} else {
 		ABORT_FINALIZE(RS_RET_FIELD_NOT_FOUND);
@@ -1289,13 +1332,21 @@ doFuncCall(struct cnffunc *func, struct var *ret, void* usrptr)
 		cnfexprEval(func->expr[1], &r[1], usrptr);
 		cnfexprEval(func->expr[2], &r[2], usrptr);
 		str = (char*) var2CString(&r[0], &bMustFree);
-		delim = var2Number(&r[1], NULL);
 		matchnbr = var2Number(&r[2], NULL);
-		localRet = doExtractField((uchar*)str, (char) delim, matchnbr, &resStr);
+		if(r[1].datatype == 'S') {
+			char *delimstr;
+			delimstr = (char*) es_str2cstr(r[1].d.estr, NULL);
+			localRet = doExtractFieldByStr((uchar*)str, delimstr, es_strlen(r[1].d.estr),
+							matchnbr, &resStr);
+			free(delimstr);
+		} else {
+			delim = var2Number(&r[1], NULL);
+			localRet = doExtractFieldByChar((uchar*)str, (char) delim, matchnbr, &resStr);
+		}
 		if(localRet == RS_RET_OK) {
 			ret->d.estr = es_newStrFromCStr((char*)resStr, strlen((char*)resStr));
 			free(resStr);
-		} else if(localRet == RS_RET_OK) {
+		} else if(localRet == RS_RET_FIELD_NOT_FOUND) {
 			ret->d.estr = es_newStrFromCStr("***FIELD NOT FOUND***",
 					sizeof("***FIELD NOT FOUND***")-1);
 		} else {
