@@ -327,7 +327,7 @@ AM_CONDITIONAL(ENABLE_IMKMSG, test x$enable_kmsg = xyes)
 
 # journal
 AC_ARG_ENABLE(journal,
-        [AS_HELP_STRING([--enable-journal],[Kmsg structured kernel logs functionality @<:@default=no@:>@])],
+        [AS_HELP_STRING([--enable-journal],[Systemd journal message import @<:@default=no@:>@])],
         [case "${enableval}" in
          yes) enable_journal="yes" ;;
           no) enable_journal="no" ;;
@@ -335,7 +335,7 @@ AC_ARG_ENABLE(journal,
          esac],
         [enable_journal="no"]
 )
-AM_CONDITIONAL(ENABLE_IMKMSG, test x$enable_journal = xyes)
+AM_CONDITIONAL(ENABLE_IMJOURNAL, test x$enable_journal = xyes)
 
 # inet
 AC_ARG_ENABLE(inet,
