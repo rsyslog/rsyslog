@@ -107,32 +107,6 @@ finalize_it:
 }
 
 
-/* Get 'mesgid' part of journal message and add it to syslog json
- * as field named 'name'
- */
-static rsRetVal
-add_field_to_json (char *mesgid, char *name, struct json_object *json) {
-	DEFiRet;
-	const void *get;
-	size_t length;
-	struct json_object *jval;
-	char *where;
-
-	if (sd_journal_get_data(j, mesgid, &get, &length) >= 0) {
-		where = strndup(get+strlen(mesgid)+1, length-(strlen(mesgid)+1));
-		if (where == NULL) {
-			iRet = RS_RET_OUT_OF_MEMORY;
-			RETiRet;
-		}
-		jval = json_object_new_string((char *)where);
-		json_object_object_add(json, name, jval);
-		free (where);
-	}
-
-	RETiRet;
-}
-
-
 /* Read journal log while data are available, each read() reads one
  * record of printk buffer.
  */
@@ -154,6 +128,14 @@ readjournal() {
 	const void *get;
 	char *get2;
 	size_t length;
+
+	const void *equal_sign;
+	struct json_object *jval;
+	char *data;
+	char *name;
+	size_t l;
+
+	long prefixlen = 0;
 
 	int priority = 0;
 	int facility = 0;
@@ -219,52 +201,52 @@ readjournal() {
 	}
 	free (sys_iden);
 
-	CHKiRet(add_field_to_json ("SYSLOG_PID", "SYSLOG_PID", json));
 
-	/* Add journal trusted fields */
-	CHKiRet(add_field_to_json ("_PID", "pid", json));
-	CHKiRet(add_field_to_json ("_GID", "gid", json));
-	CHKiRet(add_field_to_json ("_UID", "uid", json));
+	SD_JOURNAL_FOREACH_DATA(j, get, l) {
+		/* locate equal sign, this is always present */
+		equal_sign = memchr(get, '=', l);
+		assert (equal_sign != NULL);
 
-	CHKiRet(add_field_to_json ("_COMM", "appname", json));
-	CHKiRet(add_field_to_json ("_EXE", "exe", json));
-	CHKiRet(add_field_to_json ("_CMDLINE", "cmd", json));
+		/* get length of journal data prefix */
+		prefixlen = ((char *)equal_sign - (char *)get);
 
-	CHKiRet(add_field_to_json ("_AUDIT_SESSION", "_AUDIT_SESSION", json));
-	CHKiRet(add_field_to_json ("_AUDIT_LOGINUID", "_AUDIT_LOGINUID", json));
-	CHKiRet(add_field_to_json ("_SYSTEMD_CGROUP", "_SYSTEMD_CGROUP", json));
-	CHKiRet(add_field_to_json ("_SYSTEMD_SESSION", "_SYSTEMD_SESSION", json));
-	CHKiRet(add_field_to_json ("_SYSTEMD_UNIT", "_SYSTEMD_UNIT", json));
-	CHKiRet(add_field_to_json ("_SYSTEMD_USER_UNIT", "_SYSTEMD_USER_UNIT", json));
-	CHKiRet(add_field_to_json ("_SYSTEMD_OWNER_UID", "_SYSTEMD_OWNER_UID", json));
+		/* translate name fields to lumberjack names XXX not very effective */
+		if (!strncmp(get, "_PID", 4)) {
+			name = strdup("pid");
+		} else if (!strncmp(get, "_GID", 4)) {
+			name = strdup("gid");
+		} else if (!strncmp(get, "_UID", 4)) {
+			name = strdup("uid");
+		} else if (!strncmp(get, "_COMM", 5)) {
+			name = strdup("appname");
+		} else if (!strncmp(get, "_EXE", 4)) {
+			name = strdup("exe");
+		} else if (!strncmp(get, "_CMDLINE", 8)) {
+			name = strdup("cmd");
+		} else {
+			name = strndup(get, prefixlen);
+		}
 
-	CHKiRet(add_field_to_json ("_SELINUX_CONTEXT", "_SELINUX_CONTEXT", json));
-	CHKiRet(add_field_to_json ("_BOOT_ID", "_BOOT_ID", json));
-	CHKiRet(add_field_to_json ("_MACHINE_ID", "_MACHINE_ID", json));
-	CHKiRet(add_field_to_json ("_HOSTNAME", "host", json));
-	CHKiRet(add_field_to_json ("_TRANSPORT", "_TRANSPORT", json));
+		if (name == NULL) {
+			iRet = RS_RET_OUT_OF_MEMORY;
+			goto ret;
+		}
 
-	/* Kernel journal fields */
-	CHKiRet(add_field_to_json ("_KERNEL_DEVICE", "_KERNEL_DEVICE", json));
-	CHKiRet(add_field_to_json ("_KERNEL_SUBSYSTEM", "_KERNEL_SUBSYSTEM", json));
-	CHKiRet(add_field_to_json ("_UDEV_SYSNAME", "_UDEV_SYSNAME", json));
-	CHKiRet(add_field_to_json ("_UDEV_DEVNODE", "_UDEV_DEVNODE", json));
-	CHKiRet(add_field_to_json ("_UDEV_DEVLINK", "_UDEV_DEVLINK", json));
+		prefixlen++; /* remove '=' */
 
-	/* Coredump fields */
-	CHKiRet(add_field_to_json ("COREDUMP_UNIT", "COREDUMP_UNIT", json));
-	CHKiRet(add_field_to_json ("COREDUMP_USER_UNIT", "COREDUMP_USER_UNIT", json));
+		data = strndup(get + prefixlen, l - prefixlen);
+		if (data == NULL) {
+			iRet = RS_RET_OUT_OF_MEMORY;
+			free (name);
+			goto ret;
+		}
 
-	/* Add message ID */
-	CHKiRet(add_field_to_json ("MESSAGE_ID", "MESSAGE_ID", json));
-
-	/* The code location generating this message, if known */
-	CHKiRet(add_field_to_json ("CODE_FILE", "CODE_FILE", json));
-	CHKiRet(add_field_to_json ("CODE_LINE", "CODE_LINE", json));
-	CHKiRet(add_field_to_json ("CODE_FUNC", "CODE_FUNC", json));
-
-	/* ERRNO */
-	CHKiRet(add_field_to_json ("ERRNO", "ERRNO", json));
+		/* and save them to json object */
+		jval = json_object_new_string((char *)data);
+		json_object_object_add(json, name, jval);
+		free (data);
+		free (name);
+	}
 
 	/* calculate timestamp */
 	if (sd_journal_get_realtime_usec(j, &timestamp) >= 0) {
