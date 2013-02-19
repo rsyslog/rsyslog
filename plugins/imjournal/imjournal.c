@@ -179,8 +179,9 @@ readjournal() {
 		}
 		free (get2);
 	} else {
-		/* message is missing facility */
-		facility = 5; // XXX messages generated internally by syslogd?
+		/* message is missing facility -> internal systemd journal msg, drop */
+		iRet = RS_RET_OK;
+		goto free_message;
 	}
 
 	/* Get message identifier and add ':' */
