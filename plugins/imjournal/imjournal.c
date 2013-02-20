@@ -149,7 +149,8 @@ readjournal() {
 
 	/* Get message text */
 	if (sd_journal_get_data(j, "MESSAGE", &get, &length) < 0) {
-		iRet = RS_RET_OK; // XXX there should be some internal logging, need RS_RET_OK to keep reading msgs
+		logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, "log message from journal doesn't have MESSAGE", 0);
+		iRet = RS_RET_OK;
 		goto ret;
 	}
 	message = strndup(get+8, length-8);
