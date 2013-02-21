@@ -26,15 +26,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
-
 #include <gt_base.h>
 #include <gt_http.h>
 
+#include "librsgt.h"
 
+
+#if 0
 void
 outputhash(GTDataHash *hash)
 {
@@ -42,33 +47,6 @@ outputhash(GTDataHash *hash)
 	for(i = 0 ; i < hash->digest_length ; ++i)
 		printf("%2.2x", hash->digest[i]);
 	printf("\n");
-}
-
-void
-gtInit()
-{
-	int r = GT_OK;
-
-	r = GT_init();
-	if(r != GT_OK) {
-		fprintf(stderr, "GT_init() failed: %d (%s)\n",
-				r, GT_getErrorString(r));
-		goto done;
-	}
-	r = GTHTTP_init("rsyslog logsigner", 1);
-	if(r != GT_OK) {
-		fprintf(stderr, "GTHTTP_init() failed: %d (%s)\n",
-				r, GTHTTP_getErrorString(r));
-		goto done;
-	}
-done:	return;
-}
-
-void
-gtExit()
-{
-	GTHTTP_finalize();
-	GT_finalize();
 }
 
 void
@@ -116,7 +94,7 @@ done:
 
 
 void
-sign(const char *buf, size_t len)
+sign(const char *buf, const size_t len)
 {
 	int r;
 	GTDataHash *hash = NULL;
@@ -132,6 +110,7 @@ sign(const char *buf, size_t len)
 	timestampIt(hash); /* of course, this needs to be moved to once at end ;) */
 done:	GTDataHash_free(hash);
 }
+#endif
 
 void
 processFile(char *name)
@@ -139,7 +118,10 @@ processFile(char *name)
 	FILE *fp;
 	size_t len;
 	char line[64*1024+1];
+	gtctx ctx = NULL;
 	
+	ctx = rsgtCtxNew();
+	sigblkInit(ctx);
 	if(!strcmp(name, "-"))
 		fp = stdin;
 	else
@@ -147,7 +129,8 @@ processFile(char *name)
 
 	while(1) {
 		if(fgets(line, sizeof(line), fp) == NULL) {
-			perror(name);
+			if(!feof(fp))
+				perror(name);
 			break;
 		}
 		len = strlen(line);
@@ -155,19 +138,22 @@ processFile(char *name)
 			--len;
 			line[len] = '\0';
 		}
-		sign(line, len);
+		//sign(line, len);
+		sigblkAddRecord(ctx, line, len);
 	}
 
-	if(fp != stdout)
+	if(fp != stdin)
 		fclose(fp);
+	sigblkFinish(ctx);
+	rsgtCtxDel(ctx);
 }
 
 
 int
 main(int argc, char *argv[])
 {
-	gtInit();
+	rsgtInit("rsyslog logsigner " VERSION);
 	processFile("-");
-	gtExit();
+	rsgtExit();
 	return 0;
 }

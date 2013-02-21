@@ -58,6 +58,12 @@ logctl_SOURCES = logctl.c
 logctl_CPPFLAGS =  $(LIBMONGO_CLIENT_CFLAGS)
 logctl_LDADD = $(LIBMONGO_CLIENT_LIBS)
 endif
+if ENABLE_GUARDTIME
+bin_PROGRAMS += logsigner
+logsigner = logsigner.c
+logsigner_CPPFLAGS =  $(RSRT_CFLAGS) $(GUARDTIME_CFLAGS)
+logsigner_LDADD = ../runtime/librsgt.la $(GUARDTIME_LIBS)
+endif
 endif
 
 EXTRA_DIST = $(man_MANS) \
