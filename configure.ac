@@ -1057,6 +1057,21 @@ AC_ARG_ENABLE(omstdout,
 )
 AM_CONDITIONAL(ENABLE_OMSTDOUT, test x$enable_omstdout = xyes)
 
+# settings for omjournal
+AC_ARG_ENABLE(omjournal,
+        [AS_HELP_STRING([--enable-omjournal],[Compiles omjournal @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_omjournal="yes" ;;
+          no) enable_omjournal="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-omjournal) ;;
+         esac],
+        [enable_omjournal=no]
+)
+if test "x$enable_omjournal" = "xyes"; then
+	PKG_CHECK_MODULES([LIBSYSTEMD_JOURNAL], [libsystemd-journal >= 197])
+fi
+AM_CONDITIONAL(ENABLE_OMJOURNAL, test x$enable_omjournal = xyes)
+
 
 # settings for pmlastmsg
 AC_ARG_ENABLE(pmlastmsg,
@@ -1298,6 +1313,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omhdfs/Makefile \
 		plugins/omprog/Makefile \
 		plugins/omstdout/Makefile \
+		plugins/omjournal/Makefile \
 		plugins/pmrfc3164sd/Makefile \
 		plugins/pmlastmsg/Makefile \
 		plugins/pmcisconames/Makefile \
@@ -1364,6 +1380,7 @@ echo "---{ output plugins }---"
 echo "    Mail support enabled:                     $enable_mail"
 echo "    omprog module will be compiled:           $enable_omprog"
 echo "    omstdout module will be compiled:         $enable_omstdout"
+echo "    omjournal module will be compiled:        $enable_omjournal"
 echo "    omhdfs module will be compiled:           $enable_omhdfs"
 echo "    omelasticsearch module will be compiled:  $enable_elasticsearch"
 echo "    omruleset module will be compiled:        $enable_omruleset"
