@@ -394,7 +394,7 @@ addListner(instanceConf_t *inst)
 		listeners[nfd].flags = inst->bIgnoreTimestamp ? IGNDATE : NOFLAG;
 		listeners[nfd].bCreatePath = inst->bCreatePath;
 		listeners[nfd].sockName = ustrdup(inst->sockName);
-		listeners[nfd].bUseCreds = (inst->bWritePid || inst->ratelimitInterval || inst->bAnnotate) ? 1 : 0;
+		listeners[nfd].bUseCreds = (inst->bDiscardOwnMsgs || inst->bWritePid || inst->ratelimitInterval || inst->bAnnotate) ? 1 : 0;
 		listeners[nfd].bAnnotate = inst->bAnnotate;
 		listeners[nfd].bParseTrusted = inst->bParseTrusted;
 		listeners[nfd].bDiscardOwnMsgs = inst->bDiscardOwnMsgs;
@@ -716,7 +716,7 @@ copyescaped(uchar *dstbuf, uchar *inbuf, int inlen)
  * can also mangle it if necessary.
  */
 static inline rsRetVal
-SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct timeval *ts)
+SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct timeval *ts, sbool bDiscardOwnMsgs)
 {
 	msg_t *pMsg;
 	int lenMsg;
@@ -739,8 +739,11 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 	struct json_object *json = NULL, *jval;
 	DEFiRet;
 
-	if(cred->pid == glblGetOurPid())
+dbgprintf("DDDD: cred->pid %d, ourPid %d\n", cred->pid, glblGetOurPid());
+	if(bDiscardOwnMsgs && cred != NULL && cred->pid == glblGetOurPid()) {
+		DBGPRINTF("imuxsock: discarding message from our own pid\n");
 		FINALIZE;
+	}
 
 	/* TODO: handle format errors?? */
 	/* we need to parse the pri first, because we need the severity for
@@ -993,7 +996,7 @@ static rsRetVal readSocket(lstn_t *pLstn)
 #				endif /* HAVE_SO_TIMESTAMP */
 			}
 		}
-		CHKiRet(SubmitMsg(pRcv, iRcvd, pLstn, cred, ts));
+		CHKiRet(SubmitMsg(pRcv, iRcvd, pLstn, cred, ts, pLstn->bDiscardOwnMsgs));
 	} else if(iRcvd < 0 && errno != EINTR && errno != EAGAIN) {
 		char errStr[1024];
 		rs_strerror_r(errno, errStr, sizeof(errStr));
@@ -1047,7 +1050,7 @@ activateListeners()
 	listeners[0].ratelimitInterval = runModConf->ratelimitIntervalSysSock;
 	listeners[0].ratelimitBurst = runModConf->ratelimitBurstSysSock;
 	listeners[0].ratelimitSev = runModConf->ratelimitSeveritySysSock;
-	listeners[0].bUseCreds = (runModConf->bWritePidSysSock || runModConf->ratelimitIntervalSysSock || runModConf->bAnnotateSysSock) ? 1 : 0;
+	listeners[0].bUseCreds = (runModConf->bWritePidSysSock || runModConf->ratelimitIntervalSysSock || runModConf->bAnnotateSysSock || runModConf->bDiscardOwnMsgs) ? 1 : 0;
 	listeners[0].bWritePid = runModConf->bWritePidSysSock;
 	listeners[0].bAnnotate = runModConf->bAnnotateSysSock;
 	listeners[0].bParseTrusted = runModConf->bParseTrusted;
@@ -1100,6 +1103,7 @@ CODESTARTbeginCnfLoad
 	pModConf->bWritePidSysSock = 0;
 	pModConf->bAnnotateSysSock = 0;
 	pModConf->bParseTrusted = 0;
+	pModConf->bDiscardOwnMsgs = 1;
 	pModConf->ratelimitIntervalSysSock = DFLT_ratelimitInterval;
 	pModConf->ratelimitBurstSysSock = DFLT_ratelimitBurst;
 	pModConf->ratelimitSeveritySysSock = DFLT_ratelimitSeverity;
