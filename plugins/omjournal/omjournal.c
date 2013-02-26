@@ -133,6 +133,9 @@ BEGINdoAction
 CODESTARTdoAction
 	pMsg = (msg_t*) ppString[0];
 	MsgGetSeverity(pMsg, &sev);
+	/* we can use more properties here, but let's see if there
+	 * is some real user interest. We can always add later...
+	 */
 	r = sd_journal_send("MESSAGE=%s", getMSG(pMsg),
                 "PRIORITY=%d", sev,
                 NULL);

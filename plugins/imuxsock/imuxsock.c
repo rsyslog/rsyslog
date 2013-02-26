@@ -6,7 +6,7 @@
  *
  * File begun on 2007-12-20 by RGerhards (extracted from syslogd.c)
  *
- * Copyright 2007-2012 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2013 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -144,6 +144,7 @@ typedef struct lstn_s {
 	sbool bAnnotate;	/* annotate events with trusted properties */
 	sbool bParseTrusted;	/* parse trusted properties */
 	sbool bWritePid;	/* write original PID into tag */
+	sbool bDiscardOwnMsgs;	/* discard messages that originated from ourselves */
 	sbool bUseSysTimeStamp;	/* use timestamp from system (instead of from message) */
 } lstn_t;
 static lstn_t listeners[MAXFUNIX];
@@ -199,6 +200,7 @@ struct instanceConf_s {
 	int ratelimitSeverity;
 	int bAnnotate;			/* annotate trusted properties */
 	int bParseTrusted;		/* parse trusted properties */
+	sbool bDiscardOwnMsgs;		/* discard messages that originated from our own pid? */
 	struct instanceConf_s *next;
 };
 
@@ -216,6 +218,7 @@ struct modConfData_s {
 	sbool bOmitLocalLogging;
 	sbool bWritePidSysSock;
 	sbool bUseSysTimeStamp;
+	sbool bDiscardOwnMsgs;
 	sbool configSetViaV2Method;
 };
 static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
@@ -226,6 +229,7 @@ static struct cnfparamdescr modpdescr[] = {
 	{ "syssock.use", eCmdHdlrBinary, 0 },
 	{ "syssock.name", eCmdHdlrGetWord, 0 },
 	{ "syssock.ignoretimestamp", eCmdHdlrBinary, 0 },
+	{ "syssock.ignoreownmessages", eCmdHdlrBinary, 0 },
 	{ "syssock.flowcontrol", eCmdHdlrBinary, 0 },
 	{ "syssock.usesystimestamp", eCmdHdlrBinary, 0 },
 	{ "syssock.annotate", eCmdHdlrBinary, 0 },
@@ -245,6 +249,7 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "socket", eCmdHdlrString, CNFPARAM_REQUIRED }, /* legacy: addunixlistensocket */
 	{ "createpath", eCmdHdlrBinary, 0 },
 	{ "parsetrusted", eCmdHdlrBinary, 0 },
+	{ "ignoreownmessages", eCmdHdlrBinary, 0 },
 	{ "hostname", eCmdHdlrString, 0 },
 	{ "ignoretimestamp", eCmdHdlrBinary, 0 },
 	{ "flowcontrol", eCmdHdlrBinary, 0 },
@@ -288,6 +293,7 @@ createInstance(instanceConf_t **pinst)
 	inst->bWritePid = 0;
 	inst->bAnnotate = 0;
 	inst->bParseTrusted = 0;
+	inst->bDiscardOwnMsgs = 1;
 	inst->next = NULL;
 
 	/* node created, let's add to config */
@@ -391,6 +397,7 @@ addListner(instanceConf_t *inst)
 		listeners[nfd].bUseCreds = (inst->bWritePid || inst->ratelimitInterval || inst->bAnnotate) ? 1 : 0;
 		listeners[nfd].bAnnotate = inst->bAnnotate;
 		listeners[nfd].bParseTrusted = inst->bParseTrusted;
+		listeners[nfd].bDiscardOwnMsgs = inst->bDiscardOwnMsgs;
 		listeners[nfd].bWritePid = inst->bWritePid;
 		listeners[nfd].bUseSysTimeStamp = inst->bUseSysTimeStamp;
 		CHKiRet(ratelimitNew(&listeners[nfd].dflt_ratelimiter, "imuxsock", NULL));
@@ -732,6 +739,9 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 	struct json_object *json = NULL, *jval;
 	DEFiRet;
 
+	if(cred->pid == glblGetOurPid())
+		FINALIZE;
+
 	/* TODO: handle format errors?? */
 	/* we need to parse the pri first, because we need the severity for
 	 * rate-limiting as well.
@@ -1041,6 +1051,7 @@ activateListeners()
 	listeners[0].bWritePid = runModConf->bWritePidSysSock;
 	listeners[0].bAnnotate = runModConf->bAnnotateSysSock;
 	listeners[0].bParseTrusted = runModConf->bParseTrusted;
+	listeners[0].bDiscardOwnMsgs = runModConf->bDiscardOwnMsgs;
 	listeners[0].bUseSysTimeStamp = runModConf->bUseSysTimeStamp;
 	listeners[0].flags = runModConf->bIgnoreTimestamp ? IGNDATE : NOFLAG;
 	listeners[0].flowCtl = runModConf->bUseFlowCtl ? eFLOWCTL_LIGHT_DELAY : eFLOWCTL_NO_DELAY;
@@ -1123,6 +1134,8 @@ CODESTARTsetModCnf
 			loadModConf->pLogSockName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(modpblk.descr[i].name, "syssock.ignoretimestamp")) {
 			loadModConf->bIgnoreTimestamp = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "syssock.ignoreownmessages")) {
+			loadModConf->bDiscardOwnMsgs = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "syssock.flowcontrol")) {
 			loadModConf->bUseFlowCtl = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "syssock.usesystimestamp")) {
@@ -1183,6 +1196,8 @@ CODESTARTnewInpInst
 			inst->bCreatePath = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "parsetrusted")) {
 			inst->bParseTrusted = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "ignoreownmessages")) {
+			inst->bDiscardOwnMsgs = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "hostname")) {
 			inst->pLogHostName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(modpblk.descr[i].name, "ignoretimestamp")) {
@@ -1472,6 +1487,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	listeners[0].bUseCreds = 0;
 	listeners[0].bAnnotate = 0;
 	listeners[0].bParseTrusted = 0;
+	listeners[0].bDiscardOwnMsgs = 1;
 	listeners[0].bCreatePath = 0;
 	listeners[0].bUseSysTimeStamp = 1;
 

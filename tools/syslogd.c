@@ -195,7 +195,6 @@ static prop_t *pInternalInputName = NULL;	/* there is only one global inputName 
 static uchar	*ConfFile = (uchar*) _PATH_LOGCONF; /* read-only after startup */
 static char	*PidFile = _PATH_LOGPID; /* read-only after startup */
 
-static pid_t myPid;	/* our pid for use in self-generated messages, e.g. on startup */
 /* mypid is read-only after the initial fork() */
 static int bHadHUP = 0; /* did we have a HUP? */
 
@@ -795,7 +794,7 @@ die(int sig)
 		(void) snprintf(buf, sizeof(buf) / sizeof(char),
 		 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
 		 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"]" " exiting on signal %d.",
-		 (int) myPid, sig);
+		 (int) glblGetOurPid(), sig);
 		errno = 0;
 		logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)buf, 0);
 	}
@@ -1169,7 +1168,7 @@ init(void)
                snprintf(bufStartUpMsg, sizeof(bufStartUpMsg)/sizeof(char),
 			 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
 			 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"] start",
-			 (int) myPid);
+			 (int) glblGetOurPid());
 		logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)bufStartUpMsg, 0);
 	}
 
@@ -1248,7 +1247,7 @@ doHUP(void)
 		snprintf(buf, sizeof(buf) / sizeof(char),
 			 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION
 			 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"] rsyslogd was HUPed",
-			 (int) myPid);
+			 (int) glblGetOurPid());
 			errno = 0;
 		logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)buf, 0);
 	}
@@ -1704,7 +1703,7 @@ doGlblProcessInit(void)
 		fputs("Pidfile (and pid) already exist.\n", stderr);
 		exit(1); /* exit during startup - questionable */
 	}
-	myPid = getpid(); 	/* save our pid for further testing (also used for messages) */
+	glblSetOurPid(getpid());
 
 	memset(&sigAct, 0, sizeof (sigAct));
 	sigemptyset(&sigAct.sa_mask);
@@ -2001,7 +2000,7 @@ int realMain(int argc, char **argv)
 	}
 
 	/* Send a signal to the parent so it can terminate.  */
-	if(myPid != ppid)
+	if(glblGetOurPid() != ppid)
 		kill(ppid, SIGTERM);
 
 

@@ -65,6 +65,12 @@ you must turn it on (via SysSock.Annotate and Annotate).
 <li><b>SysSock.IgnoreTimestamp</b> [<b>on</b>/off]<br>
 Ignore timestamps included in the messages, applies to messages received via the system log socket.
 </li>
+<li><b>SysSock.IgnoreOwnMessages</b> [<b>on</b>/off] (available since 7.3.7)<br>
+Ignores messages that originated from the same instance of rsyslogd. There usually
+is no reason to receive messages from ourselfs. This setting is vital
+when writing messages to the Linux journal. See <a href="omjournal.html">omjournal</a>
+module documentation for a more in-depth description.
+</li>
 <li><b>SysSock.Use</b> (imuxsock) [on/<b>off</b>] 
 do NOT listen for the local log socket. This is most useful if you run multiple
 instances of rsyslogd where only one shall handle the system log socket.
@@ -98,6 +104,12 @@ properties for the system log socket.</li>
 <ul>
 <li><b>IgnoreTimestamp</b> [<b>on</b>/off]
 <br>Ignore timestamps included in the message. Applies to the next socket being added.</li>
+<li><b>IgnoreOwnMessages</b> [<b>on</b>/off] (available since 7.3.7)<br>
+Ignore messages that originated from the same instance of rsyslogd. There usually
+is no reason to receive messages from ourselfs. This setting is vital
+when writing messages to the Linux journal. See <a href="omjournal.html">omjournal</a>
+module documentation for a more in-depth description.
+</li>
 <li><b>FlowControl</b> [on/<b>off</b>] - specifies if flow control should be applied
 to the next socket.</li>
 <li><b>RateLimit.Interval</b> [number] - specifies the rate-limiting
