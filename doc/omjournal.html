@@ -63,7 +63,7 @@ input(type="imudp" port="514" ruleset="writeToJournal")
 
 /* inside that ruleset, we just write data to the journal: */
 ruleset(name="writeToJournal") {
-	action(type="mmjournal")
+	action(type="omjournal")
 }
 </textarea>
 <p>Note that this can be your sole rsyslog.conf if you do not use rsyslog
