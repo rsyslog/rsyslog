@@ -128,16 +128,21 @@ ENDtryResume
 
 BEGINdoAction
 	msg_t *pMsg;
+	uchar *tag;
+	int lenTag;
 	int sev;
 	int r;
 CODESTARTdoAction
 	pMsg = (msg_t*) ppString[0];
 	MsgGetSeverity(pMsg, &sev);
+	getTAG(pMsg, &tag, &lenTag);
 	/* we can use more properties here, but let's see if there
 	 * is some real user interest. We can always add later...
 	 */
 	r = sd_journal_send("MESSAGE=%s", getMSG(pMsg),
                 "PRIORITY=%d", sev,
+		"SYSLOG_FACILITY=%d", pMsg->iFacility,
+		"SYSLOG_IDENTIFIER=%s", tag,
                 NULL);
 	/* FIXME: think about what to do with errors ;) */
 ENDdoAction
