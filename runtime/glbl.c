@@ -279,6 +279,28 @@ finalize_it:
 	RETiRet;
 }
 
+
+static rsRetVal
+setDebugFile(void __attribute__((unused)) *pVal, uchar *pNewVal)
+{
+	DEFiRet;
+	dbgSetDebugFile(pNewVal);
+	free(pNewVal);
+	RETiRet;
+}
+
+
+static rsRetVal
+setDebugLevel(void __attribute__((unused)) *pVal, int level)
+{
+	DEFiRet;
+	dbgSetDebugLevel(level);
+	dbgprintf("debug level %d set via config file\n", level);
+	dbgprintf("This is rsyslog version " VERSION "\n");
+	RETiRet;
+}
+
+
 /* return our local IP.
  * If no local IP is set, "127.0.0.1" is selected *and* set. This
  * is an intensional side effect that we do in order to keep things
@@ -611,6 +633,8 @@ BEGINAbstractObjClassInit(glbl, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 
 	/* config handlers are never unregistered and need not be - we are always loaded ;) */
+	CHKiRet(regCfSysLineHdlr((uchar *)"debugfile", 0, eCmdHdlrGetWord, setDebugFile, NULL, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"debuglevel", 0, eCmdHdlrInt, setDebugLevel, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"workdirectory", 0, eCmdHdlrGetWord, setWorkDir, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"dropmsgswithmaliciousdnsptrrecords", 0, eCmdHdlrBinary, NULL, &bDropMalPTRMsgs, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdriver", 0, eCmdHdlrGetWord, NULL, &pszDfltNetstrmDrvr, NULL));

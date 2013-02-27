@@ -1398,6 +1398,25 @@ dbgGetRuntimeOptions(void)
 }
 
 
+void
+dbgSetDebugLevel(int level)
+{
+	Debug = level;
+	debugging_on = (level == DEBUG_FULL) ? 1 : 0;
+}
+
+void
+dbgSetDebugFile(uchar *fn)
+{
+	if(altdbg != -1) {
+		dbgprintf("switching to debug file %s\n", fn);
+		close(altdbg);
+	}
+	if((altdbg = open((char*)fn, O_WRONLY|O_CREAT|O_TRUNC|O_NOCTTY|O_CLOEXEC, S_IRUSR|S_IWUSR)) == -1) {
+		fprintf(stderr, "alternate debug file could not be opened, ignoring. Error: %s\n", strerror(errno));
+	}
+}
+
 /* end support system to set debug options at runtime */
 
 rsRetVal dbgClassInit(void)
