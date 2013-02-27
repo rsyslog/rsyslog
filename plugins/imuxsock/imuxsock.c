@@ -716,7 +716,7 @@ copyescaped(uchar *dstbuf, uchar *inbuf, int inlen)
  * can also mangle it if necessary.
  */
 static inline rsRetVal
-SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct timeval *ts, sbool bDiscardOwnMsgs)
+SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct timeval *ts)
 {
 	msg_t *pMsg;
 	int lenMsg;
@@ -739,8 +739,7 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 	struct json_object *json = NULL, *jval;
 	DEFiRet;
 
-dbgprintf("DDDD: cred->pid %d, ourPid %d\n", cred->pid, glblGetOurPid());
-	if(bDiscardOwnMsgs && cred != NULL && cred->pid == glblGetOurPid()) {
+	if(pLstn->bDiscardOwnMsgs && cred != NULL && cred->pid == glblGetOurPid()) {
 		DBGPRINTF("imuxsock: discarding message from our own pid\n");
 		FINALIZE;
 	}
@@ -996,7 +995,7 @@ static rsRetVal readSocket(lstn_t *pLstn)
 #				endif /* HAVE_SO_TIMESTAMP */
 			}
 		}
-		CHKiRet(SubmitMsg(pRcv, iRcvd, pLstn, cred, ts, pLstn->bDiscardOwnMsgs));
+		CHKiRet(SubmitMsg(pRcv, iRcvd, pLstn, cred, ts));
 	} else if(iRcvd < 0 && errno != EINTR && errno != EAGAIN) {
 		char errStr[1024];
 		rs_strerror_r(errno, errStr, sizeof(errStr));
@@ -1494,6 +1493,13 @@ CODEmodInit_QueryRegCFSLineHdlr
 	listeners[0].bDiscardOwnMsgs = 1;
 	listeners[0].bCreatePath = 0;
 	listeners[0].bUseSysTimeStamp = 1;
+	if((listeners[0].ht = create_hashtable(100, hash_from_key_fn, key_equals_fn,
+		(void(*)(void*))ratelimitDestruct)) == NULL) {
+		/* in this case, we simply turn off rate-limiting */
+		DBGPRINTF("imuxsock: turning off rate limiting for system socket "
+			  "because we could not create hash table\n");
+		listeners[0].ratelimitInterval = 0;
+	}
 
 	/* initialize socket names */
 	for(i = 1 ; i < MAXFUNIX ; ++i) {
