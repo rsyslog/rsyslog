@@ -1,6 +1,7 @@
 ---------------------------------------------------------------------------
 Version 7.3.7  [devel] 2013-02-??
 - field() function now supports a string as field delimiter
+- added ability to configure debug system via rsyslog.conf
 - bugfix: mmjsonparse segfault if new-style config was used
 - bugfix: script == comparison did not work properly on JSON objects
 - bugfix: field() function did never return "***FIELD NOT FOUND***"
