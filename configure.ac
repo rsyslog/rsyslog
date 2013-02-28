@@ -875,7 +875,6 @@ fi
 AM_CONDITIONAL(ENABLE_MMJSONPARSE, test x$enable_mmjsonparse = xyes)
 
 
-
 # mmaudit
 AC_ARG_ENABLE(mmaudit,
         [AS_HELP_STRING([--enable-mmaudit],[Enable building mmaudit support @<:@default=no@:>@])],
@@ -890,6 +889,19 @@ if test "x$enable_mmaudit" = "xyes"; then
 	PKG_CHECK_MODULES(LIBLOGNORM, lognorm >= 0.3.1)
 fi
 AM_CONDITIONAL(ENABLE_MMAUDIT, test x$enable_mmaudit = xyes)
+
+
+# mmanon
+AC_ARG_ENABLE(mmanon,
+        [AS_HELP_STRING([--enable-mmanon],[Enable building mmanon support @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_mmanon="yes" ;;
+          no) enable_mmanon="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-mmanon) ;;
+         esac],
+        [enable_mmanon=no]
+)
+AM_CONDITIONAL(ENABLE_MMANON, test x$enable_mmanon = xyes)
 
 
 # RELP support
@@ -1328,7 +1340,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/impstats/Makefile \
 		plugins/imrelp/Makefile \
 		plugins/imdiag/Makefile \
-        plugins/imzmq3/Makefile \
+		plugins/imzmq3/Makefile \
 		plugins/omtesting/Makefile \
 		plugins/omgssapi/Makefile \
 		plugins/ommysql/Makefile \
@@ -1340,11 +1352,12 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omoracle/Makefile \
 		plugins/omudpspoof/Makefile \
 		plugins/ommongodb/Makefile \
-        plugins/omhiredis/Makefile \
-        plugins/omzmq3/Makefile \
+		plugins/omhiredis/Makefile \
+		plugins/omzmq3/Makefile \
 		plugins/mmnormalize/Makefile \
 		plugins/mmjsonparse/Makefile \
 		plugins/mmaudit/Makefile \
+		plugins/mmanon/Makefile \
 		plugins/omelasticsearch/Makefile \
 		plugins/sm_cust_bindcdr/Makefile \
 		plugins/mmsnmptrapd/Makefile \
@@ -1364,6 +1377,7 @@ echo "    rsyslogd will be built:                   $enable_rsyslogd"
 echo "    GUI components will be built:             $enable_gui"
 echo "    Unlimited select() support enabled:       $enable_unlimited_select"
 echo "    uuid support enabled:                     $enable_uuid"
+echo "    anonymization support enabled:            $enable_mmanon"
 echo
 echo "---{ input plugins }---"
 echo "    Klog functionality enabled:               $enable_klog ($os_type)"

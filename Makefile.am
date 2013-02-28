@@ -229,6 +229,10 @@ if ENABLE_MMAUDIT
 SUBDIRS += plugins/mmaudit
 endif
 
+if ENABLE_MMANON
+SUBDIRS += plugins/mmanon
+endif
+
 if ENABLE_ORACLE
 SUBDIRS += plugins/omoracle
 endif
