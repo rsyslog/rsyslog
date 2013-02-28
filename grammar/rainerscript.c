@@ -2793,7 +2793,7 @@ cnfDoInclude(char *name)
 {
 	char *cfgFile;
 	char *finalName;
-	unsigned i;
+	int i;
 	int result;
 	glob_t cfgFiles;
 	struct stat fileInfo;
@@ -2829,7 +2829,12 @@ cnfDoInclude(char *name)
 		return 1;
 	}
 
-	for(i = 0; i < cfgFiles.gl_pathc; i++) {
+	/* note: bison "stacks" the files, so we need to submit them
+	 * in reverse order to the *stack* in order to get the proper
+	 * parsing order. Also see
+	 * http://bugzilla.adiscon.com/show_bug.cgi?id=411
+	 */
+	for(i = cfgFiles.gl_pathc - 1; i >= 0 ; i--) {
 		cfgFile = cfgFiles.gl_pathv[i];
 		if(stat(cfgFile, &fileInfo) != 0) {
 			char errStr[1024];
