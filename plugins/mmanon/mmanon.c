@@ -48,6 +48,7 @@ DEF_OMOD_STATIC_DATA
 
 
 typedef struct _instanceData {
+	char replChar;
 } instanceData;
 
 struct modConfData_s {
@@ -55,6 +56,18 @@ struct modConfData_s {
 };
 static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
 static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current exec process */
+
+
+/* tables for interfacing with the v6 config system */
+/* action (instance) parameters */
+static struct cnfparamdescr actpdescr[] = {
+	{ "replacementchar", eCmdHdlrGetChar, 0 },
+};
+static struct cnfparamblk actpblk =
+	{ CNFPARAMBLK_VERSION,
+	  sizeof(actpdescr)/sizeof(struct cnfparamdescr),
+	  actpdescr
+	};
 
 BEGINbeginCnfLoad
 CODESTARTbeginCnfLoad
@@ -95,19 +108,42 @@ CODESTARTfreeInstance
 ENDfreeInstance
 
 
+static inline void
+setInstParamDefaults(instanceData *pData)
+{
+	pData->replChar = 'x';
+}
+
 BEGINnewActInst
+	struct cnfparamvals *pvals;
+	int i;
 CODESTARTnewActInst
-	/* Note: we currently do not have any parameters, so we do not need
-	 * the lst ptr. However, we will most probably need params in the 
-	 * future.
-	 */
 	DBGPRINTF("newActInst (mmanon)\n");
+	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
+		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
+
 	CODE_STD_STRING_REQUESTnewActInst(1)
 	CHKiRet(OMSRsetEntry(*ppOMSR, 0, NULL, OMSR_TPL_AS_MSG));
 	CHKiRet(createInstance(&pData));
-	/*setInstParamDefaults(pData);*/
+	setInstParamDefaults(pData);
+
+	for(i = 0 ; i < actpblk.nParams ; ++i) {
+		if(!pvals[i].bUsed)
+			continue;
+		if(!strcmp(actpblk.descr[i].name, "replacementchar")) {
+			pData->replChar = es_getBufAddr(pvals[i].val.d.estr)[0];
+			//pData->replChar = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		//} else if(!strcmp(actpblk.descr[i].name, "serverport")) {
+		//	pData->port = (int) pvals[i].val.d.n;
+		} else {
+			dbgprintf("mmanon: program error, non-handled "
+			  "param '%s'\n", actpblk.descr[i].name);
+		}
+	}
+
 CODE_STD_FINALIZERnewActInst
-/*	cnfparamvalsDestruct(pvals, &actpblk);*/
+	cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
 
 
@@ -141,7 +177,7 @@ dbgprintf("DDDD: got octet %d\n", num);
 
 /* currently works for IPv4 only! */
 void
-anonip(uchar *msg, int lenMsg, int *idx)
+anonip(instanceData *pData, uchar *msg, int lenMsg, int *idx)
 {
 	int i = *idx;
 	int octet;
@@ -171,7 +207,7 @@ dbgprintf("DDDD: in anonip: %s\n", msg+(*idx));
 	/* OK, we now found an ip address */
 	while(ipstart < i) {
 		if(msg[ipstart] != '.')
-			msg[ipstart] = 'x';
+			msg[ipstart] = pData->replChar;
 		++ipstart;
 	}
 
@@ -191,7 +227,7 @@ CODESTARTdoAction
 	msg = getMSG(pMsg);
 	DBGPRINTF("DDDD: calling mmanon with msg '%s'\n", msg);
 	for(i = 0 ; i < lenMsg ; ++i) {
-		anonip(msg, lenMsg, &i);
+		anonip(pData, msg, lenMsg, &i);
 	}
 ENDdoAction
 

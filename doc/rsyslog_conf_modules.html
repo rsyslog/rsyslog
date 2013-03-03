@@ -101,16 +101,14 @@ They can be implemented using either the output module or the parser module inte
 From the rsyslog core's point of view, they actually are output or parser modules, it is their
 implementation that makes them special.
 <p>Currently, there exists only a limited set of such modules, but new ones could be written with
-the methods the engine provides. They could be used, for example, to:
-<ul>
-<li>anonymize message content
-<li>add dynamically computed content to message (fields)
-</ul>
+the methods the engine provides. They could be used, for example, to
+add dynamically computed content to message (fields).
 <p>Message modification modules are usually written for one specific task and thus
 usually are not generic enough to be reused. However, existing module's code is
 probably an excellent starting base for writing a new module. Currently, the following
 modules exist inside the source tree:
 <ul>
+<li><a href="mmanon.html">mmanon</a> - used to anonymize log messages.
 <li><a href="mmnormalize.html">mmnormalize</a> - used to normalize log messages.
 Note that this actually is a <b>generic</b> module.
 <li><a href="mmjsonparse.html">mmjsonparse</a> - used to interpret CEE/lumberjack
