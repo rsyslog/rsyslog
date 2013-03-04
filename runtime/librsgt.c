@@ -96,20 +96,110 @@ rsgtExit(void)
 }
 
 
+
+
+static inline void
+tlvbufPhysWrite(gtctx ctx)
+{
+	fprintf(stderr, "emu: writing TLV file!\n");
+	ctx->tlvIdx = 0;
+}
+
+static inline void
+tlvbufChkWrite(gtctx ctx)
+{
+	if(ctx->tlvIdx == sizeof(ctx->tlvBuf)) {
+		tlvbufPhysWrite(ctx);
+	}
+}
+
+
+/* write to TLV file buffer. If buffer is full, an actual call occurs. Else
+ * output is written only on flush or close.
+ */
+static inline void
+tlvbufAddOctet(gtctx ctx, int8_t octet)
+{
+	tlvbufChkWrite(ctx);
+	ctx->tlvBuf[ctx->tlvIdx++] = octet;
+}
+static inline void
+tlvbufAddOctetString(gtctx ctx, int8_t *octet, int size)
+{
+	int i;
+	for(i = 0 ; i < size ; ++i)
+		tlvbufAddOctet(ctx, octet[i]);
+}
+static inline void
+tlvbufAddInteger(gtctx ctx, uint32_t val)
+{
+	tlvbufAddOctet(ctx, (val >> 24) & 0xff);
+	tlvbufAddOctet(ctx, (val >> 16) & 0xff);
+	tlvbufAddOctet(ctx, (val >>  8) & 0xff);
+	tlvbufAddOctet(ctx,  val        & 0xff);
+}
+
+
+void
+tlv8Write(gtctx ctx, int flags, int tlvtype, int len)
+{
+	tlvbufAddOctet(ctx, (flags << 5)|tlvtype);
+	tlvbufAddOctet(ctx, len & 0xff);
+} 
+
+void
+tlv16Write(gtctx ctx, int flags, int tlvtype, uint16_t len)
+{
+	tlvbufAddOctet(ctx, ((flags|1) << 13)|tlvtype);
+	tlvbufAddOctet(ctx, (len >> 8) & 0xff);
+	tlvbufAddOctet(ctx, len & 0xff);
+} 
+
+void
+tlvFlush(gtctx ctx)
+{
+	if(ctx->tlvIdx != 0)
+		tlvbufPhysWrite(ctx);
+}
+
+void tlvClose(gtctx ctx)
+{
+	tlvFlush(ctx);
+	fprintf(stderr, "emu: close tlv file\n");
+}
+
+/* note: if file exists, the last hash for chaining must
+ * be read from file.
+ */
+void tlvOpen(gtctx ctx)
+{
+	fprintf(stderr, "emu: open tlv file\n");
+	ctx->tlvIdx = 0;
+}
+
 void
 seedIV(gtctx ctx)
 {
 	/* FIXME: this currently is "kindergarten cryptography" - use a
 	 * sufficiently strong PRNG instead! Just a PoC so far! Do NOT
 	 * use in production!!!
+	 * As of some Linux and security expert I spoke to, /dev/urandom
+	 * provides very strong random numbers, even if it runs out of
+	 * entropy. As far as he knew, this is save for all applications
+	 * (and he had good proof that I currently am not permitted to
+	 * reproduce). -- rgerhards, 2013-03-04
 	 */
 	ctx->IV = rand() * 1000037;
 }
 
 gtctx
-rsgtCtxNew(void)
+rsgtCtxNew(void, char *logfilename)
 {
-	return calloc(1, sizeof(struct gtctx_s));
+	gtctx ctx;
+	ctx =  calloc(1, sizeof(struct gtctx_s));
+	ctx->logfilename = strdup(logfilename);
+	tlvOpen(ctx);
+	return ctx;
 }
 
 void
@@ -117,6 +207,9 @@ rsgtCtxDel(gtctx ctx)
 {
 	if(ctx == NULL)
 		goto done;
+
+	tlvClose(ctx);
+	free(ctx->logfilename);
 	free(ctx);
 	/* TODO: persist! */
 done:	return;
@@ -133,6 +226,7 @@ sigblkInit(gtctx ctx)
 //	}
 	memset(ctx->roots_valid, 0, sizeof(ctx->roots_valid)/sizeof(char));
 	ctx->nRoots = 0;
+	ctx->nRecords = 0;
 }
 
 
@@ -235,6 +329,7 @@ sigblkAddRecord(gtctx ctx, const uchar *rec, const size_t len)
 		t = NULL;
 	}
 	ctx->x_prev = x; /* single var may be sufficient */
+	++ctx->nRecords;
 
 	/* cleanup */
 	GTDataHash_free(m);
