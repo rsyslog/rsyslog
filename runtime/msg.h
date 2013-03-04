@@ -198,6 +198,7 @@ uchar *getMSG(msg_t *pM);
 char *getHOSTNAME(msg_t *pM);
 char *getPROCID(msg_t *pM, sbool bLockMutex);
 char *getAPPNAME(msg_t *pM, sbool bLockMutex);
+void setMSGLen(msg_t *pM, int lenMsg);
 int getMSGLen(msg_t *pM);
 
 char *getHOSTNAME(msg_t *pM);

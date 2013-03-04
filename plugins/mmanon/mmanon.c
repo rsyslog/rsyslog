@@ -46,11 +46,25 @@ DEF_OMOD_STATIC_DATA
 
 /* config variables */
 
+/* precomputed table of IPv4 anonymization masks */
+static const uint32_t ipv4masks[33] = {
+	0xffffffff, 0xfffffffe, 0xfffffffc, 0xfffffff8,
+	0xfffffff0, 0xffffffe0, 0xffffffc0, 0xffffff80,
+	0xffffff00, 0xfffffe00, 0xfffffc00, 0xfffff800,
+	0xfffff000, 0xffffe000, 0xffffc000, 0xffff8000,
+	0xffff0000, 0xfffe0000, 0xfffc0000, 0xfff80000,
+	0xfff00000, 0xffe00000, 0xffc00000, 0xff800000,
+	0xff000000, 0xfe000000, 0xfc000000, 0xf8000000,
+	0xf0000000, 0xe0000000, 0xc0000000, 0x80000000,
+	0x00000000
+	};
 
+/* define operation modes we have */
+#define SIMPLE_MODE 0	 /* just overwrite */
+#define REWRITE_MODE 1	 /* rewrite IP address, canoninized */
 typedef struct _instanceData {
 	char replChar;
 	int8_t mode;
-#	define SIMPLE_MODE 0 /* just overwrite */
 	struct {
 		int8_t bits;
 	} ipv4;
@@ -118,7 +132,7 @@ ENDfreeInstance
 static inline void
 setInstParamDefaults(instanceData *pData)
 {
-	pData->mode = SIMPLE_MODE;
+	pData->mode = REWRITE_MODE;
 	pData->replChar = 'x';
 	pData->ipv4.bits = 16;
 }
@@ -145,6 +159,9 @@ CODESTARTnewActInst
 			if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"simple",
 					 sizeof("simple")-1)) {
 				pData->mode = SIMPLE_MODE;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"rewrite",
+					 sizeof("rewrite")-1)) {
+				pData->mode = REWRITE_MODE;
 			} else {
 				char *cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
 				errmsg.LogError(0, RS_RET_INVLD_MODE,
@@ -183,6 +200,19 @@ CODESTARTnewActInst
 				"mmanon: invalid number of ipv4 bits "
 				"in simple mode, corrected to %d",
 				pData->ipv4.bits);
+	} else { /* REWRITE_MODE */
+		if(pData->ipv4.bits < 1 || pData->ipv4.bits > 32) {
+			pData->ipv4.bits = 32;
+			errmsg.LogError(0, RS_RET_INVLD_ANON_BITS,
+				"mmanon: invalid number of ipv4 bits "
+				"in rewrite mode, corrected to %d",
+				pData->ipv4.bits);
+		}
+		if(pData->replChar != 'x') {
+			errmsg.LogError(0, RS_RET_REPLCHAR_IGNORED,
+				"mmanon: replacementChar parameter is ignored "
+				"in rewrite mode");
+		}
 	}
 
 CODE_STD_FINALIZERnewActInst
@@ -206,28 +236,52 @@ getnum(uchar *msg, int lenMsg, int *idx)
 	int num = 0;
 	int i = *idx;
 
-dbgprintf("DDDD: in getnum: %s\n", msg+(*idx));
 	while(i < lenMsg && msg[i] >= '0' && msg[i] <= '9') {
 		num = num * 10 + msg[i] - '0';
 		++i;
 	}
 
 	*idx = i;
-dbgprintf("DDDD: got octet %d\n", num);
 	return num;
 }
 
 
+/* write an IP address octet to the output position */
+static int
+writeOctet(uchar *msg, int idx, int *nxtidx, uint8_t octet)
+{
+	if(octet > 99) {
+		msg[idx++] = '0' + octet / 100;
+		octet = octet % 100;
+	}
+	if(octet > 9) {
+		msg[idx++] = '0' + octet / 10;
+		octet = octet % 10;
+	}
+	msg[idx++] =  '0' + octet;
+
+	if(nxtidx != NULL) {
+		if(idx + 1 != *nxtidx) {
+			/* we got shorter, fix it! */
+			msg[idx] = '.';
+			*nxtidx = idx + 1;
+		}
+	}
+	return idx;
+}
+
 /* currently works for IPv4 only! */
 void
-anonip(instanceData *pData, uchar *msg, int lenMsg, int *idx)
+anonip(instanceData *pData, uchar *msg, int *pLenMsg, int *idx)
 {
 	int i = *idx;
-	int octet[4];
+	int octet;
+	uint32_t ipv4addr;
 	int ipstart[4];
 	int j;
+	int endpos;
+	int lenMsg = *pLenMsg;
 
-dbgprintf("DDDD: in anonip: %s\n", msg+(*idx));
 	while(i < lenMsg && (msg[i] <= '0' || msg[i] >= '9')) {
 		++i; /* skip to first number */
 	}
@@ -236,35 +290,55 @@ dbgprintf("DDDD: in anonip: %s\n", msg+(*idx));
 	
 	/* got digit, let's see if ip */
 	ipstart[0] = i;
-	octet[0] = getnum(msg, lenMsg, &i);
-	if(octet[0] > 255 || msg[i] != '.') goto done;
+	octet = getnum(msg, lenMsg, &i);
+	if(octet > 255 || msg[i] != '.') goto done;
+	ipv4addr = octet << 24;
 	++i;
 	ipstart[1] = i;
-	octet[1] = getnum(msg, lenMsg, &i);
-	if(octet[1] > 255 || msg[i] != '.') goto done;
+	octet = getnum(msg, lenMsg, &i);
+	if(octet > 255 || msg[i] != '.') goto done;
+	ipv4addr |= octet << 16;
 	++i;
 	ipstart[2] = i;
-	octet[2] = getnum(msg, lenMsg, &i);
-	if(octet[2] > 255 || msg[i] != '.') goto done;
+	octet = getnum(msg, lenMsg, &i);
+	if(octet > 255 || msg[i] != '.') goto done;
+	ipv4addr |= octet << 8;
 	++i;
 	ipstart[3] = i;
-	octet[3] = getnum(msg, lenMsg, &i);
-	if(octet[3] > 255 || !(msg[i] == ' ' || msg[i] == ':')) goto done;
+	octet = getnum(msg, lenMsg, &i);
+	if(octet > 255 || !(msg[i] == ' ' || msg[i] == ':')) goto done;
+	ipv4addr |= octet;
 
 	/* OK, we now found an ip address */
-	if(pData->ipv4.bits == 8)
-		j = ipstart[3];
-	else if(pData->ipv4.bits == 16)
-		j = ipstart[2];
-	else if(pData->ipv4.bits == 24)
-		j = ipstart[1];
-	else /* due to our checks, this *must* be 32 */
-		j = ipstart[0];
-dbgprintf("DDDD: ipstart is %d: %s\n", j, msg+j);
-	while(j < i) {
-		if(msg[j] != '.')
-			msg[j] = pData->replChar;
-		++j;
+	if(pData->mode == SIMPLE_MODE) {
+		if(pData->ipv4.bits == 8)
+			j = ipstart[3];
+		else if(pData->ipv4.bits == 16)
+			j = ipstart[2];
+		else if(pData->ipv4.bits == 24)
+			j = ipstart[1];
+		else /* due to our checks, this *must* be 32 */
+			j = ipstart[0];
+		while(j < i) {
+			if(msg[j] != '.')
+				msg[j] = pData->replChar;
+			++j;
+		}
+	} else { /* REWRITE_MODE */
+		ipv4addr &= ipv4masks[pData->ipv4.bits];
+		if(pData->ipv4.bits > 24)
+			writeOctet(msg, ipstart[0], &(ipstart[1]), ipv4addr >> 24);
+		if(pData->ipv4.bits > 16)
+			writeOctet(msg, ipstart[1], &(ipstart[2]), (ipv4addr >> 16) & 0xff);
+		if(pData->ipv4.bits > 8)
+			writeOctet(msg, ipstart[2], &(ipstart[3]), (ipv4addr >> 8) & 0xff);
+		endpos = writeOctet(msg, ipstart[3], NULL, ipv4addr & 0xff);
+		/* if we had truncation, we need to shrink the msg */
+		dbgprintf("existing i %d, endpos %d\n", i, endpos);
+		if(i - endpos > 0) {
+			*pLenMsg = lenMsg - (i - endpos);
+			memmove(msg+endpos, msg+i, lenMsg - i + 1);
+		}
 	}
 
 done:	*idx = i;
@@ -281,10 +355,11 @@ CODESTARTdoAction
 	pMsg = (msg_t*) ppString[0];
 	lenMsg = getMSGLen(pMsg);
 	msg = getMSG(pMsg);
-	DBGPRINTF("DDDD: calling mmanon with msg '%s'\n", msg);
 	for(i = 0 ; i < lenMsg ; ++i) {
-		anonip(pData, msg, lenMsg, &i);
+		anonip(pData, msg, &lenMsg, &i);
 	}
+	if(lenMsg != getMSGLen(pMsg))
+		setMSGLen(pMsg, lenMsg);
 ENDdoAction
 
 

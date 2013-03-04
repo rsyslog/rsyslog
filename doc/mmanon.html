@@ -7,15 +7,25 @@
 <a href="rsyslog_conf_modules.html">back</a>
 
 <h1>IP Address Anonimization Module (mmanon)</h1>
-<p><b>Module Name:&nbsp;&nbsp;&nbsp; omjournal</b></p>
+<p><b>Module Name:&nbsp;&nbsp;&nbsp; mmanon</b></p>
 <p><b>Author: </b>Rainer Gerhards &lt;rgerhards@adiscon.com&gt;</p>
 <p><b>Available since</b>: 7.3.7</p>
 <p><b>Description</b>:</p>
 <p>The mmanon module permits to anonymize IP addresses. It is a message 
 modification module that actually changes the IP address inside the message,
 so after calling mmanon, the original message can no longer be obtained.
-Note that anonymization will break digital signutures on the message, if
-such exists.
+Note that anonymization will break digital signatures on the message, if
+they exist.
+<p><i>How are IP-Addresses defined?</i>
+<p>We assume that an IP address consists of four octets in dotted notation,
+where each of the octets has a value between 0 and 255, inclusively. After
+the last octet, there must be either a space or a colon. So, for example,
+"1.2.3.4 Test" and "1.2.3.4:514 Test" are detected as containing valid IP 
+addresses, whereas this is not the case for "1.2.300.4 Test" or
+"1.2.3.4-Test". The message text may contain multiple addresses. If so,
+each of them is anonimized (according to the same rules).
+<b>Important:</b> We may change the set of acceptable characters after
+the last octet in the future, if there are good reasons to do so.
 <p>&nbsp;</p>
 
 <p><b>Module Configuration Parameters</b>:</p>
@@ -23,6 +33,18 @@ such exists.
 <p>&nbsp;</p>
 <p><b>Action Confguration Parameters</b>:</p>
 <ul>
+<li><b>mode</b> - default "rewrite"<br>
+There exists the "simple" and "rewrite" mode. In simple mode, only octets
+as whole can be anonymized and the length of the message is never changed.
+This means that when the last three octets of the address 10.1.12.123 are
+anonymized, the result will be 10.0.00.000. This means that the length of the
+original octets is still visible and may be used to draw some privacy-evasive
+conclusions. This mode is slightly faster than "overwrite" mode, and this
+may matter in high throughput environments.<br>
+The default "rewrite" mode will do full anonymization of any number of bits
+and it will also normlize the address, so that no information about the
+original IP address is available. So in the above example, 10.1.12.123 would
+be anonymized to 10.0.0.0.
 <li><b>ipv4.bits</b> - default 16<br>
 This set the number of bits that should be anonymized (bits are from the
 right, so lower bits are anonymized first). This setting permits to save
@@ -34,23 +56,20 @@ but conservative guideline for other countries.<br>
 Note: when in simple mode, only bits on a byte boundary can be specified.
 As such, any value other than 8, 16, 24 or 32 is invalid. If an invalid
 value is given, it is rounded to the next byte boundary (so we favor stronger
-encyrption in that case). For example, a bit value of 12 will become 16 in
+anonymization in that case). For example, a bit value of 12 will become 16 in
 simple mode (an error message is also emitted).
 <li><b>replacementChar</b> - default "x"<br>
 In simple mode, this sets the character
 that the to-be-anonymized part of the IP address is to be overwritten
-with.
+with. In rewrite mode, this parameter is <b>not permitted</b>, as in
+this case we need not necessarily rewrite full octets. As such, the anonymized
+part is always zero-filled and replacementChar is of no use. If it is
+specified, an error message is emitted and the parameter ignored.
 </ul>
 
 <p><b>Caveats/Known Bugs:</b>
 <ul>
-<li><b>This module is currently experimental.</b> This does not mean
-the code is not solid. What it means is that the functionality is limited
-and it got limited practice drill so far.
 <li><b>only IPv4</b> is supported
-<li>The anonymization replaces the numerical parts of the ip address.
-However, the number of digits is not normalized. So one can probably
-draw conlusions just based on the length of the various octets.
 </ul>
 
 <p><b>Samples:</b></p>
@@ -67,16 +86,27 @@ action(type="omfile" file="/path/to/anon.log")
 <p>This next snippet is almost identical to the first one, but
 here we anonymize the full IPv4 address. Note that by
 modifying the number of bits, you can anonymize different parts
-of the address. Keep in mind that in simple mode, the bit values
+of the address. Keep in mind that in simple mode (used here), the bit values
 must match IP address bytes, so for IPv4 only the values 8, 16, 24 and
 32 are valid. Also, in this example the replacement is done
-via zeros instead of lower-case "x"-letters.
+via zeros instead of lower-case "x"-letters. Also keep in mind that
+"replacementChar" can only be set in simple mode.
 <p><textarea rows="5" cols="60">module(load="mmanon")
 action(type="omfile" file="/path/to/non-anon.log")
-action(type="mmanon" ipv4.bits="32" replacementChar="0")
+action(type="mmanon" ipv4.bits="32" mode="simple" replacementChar="o")
 action(type="omfile" file="/path/to/anon.log")
 </textarea>
 
+<p>The next snippet is also based on the first one, but anonimzes an
+"odd" number of bits, 12. The value of 12 is used by some folks as a
+compromise between keeping privacy and still permiting to gain some
+more in-depth insight from log files. Note that anonymizing 12 bits
+may be insufficient to fulfill legal requirements (if such exist).
+<p><textarea rows="5" cols="60">module(load="mmanon")
+action(type="omfile" file="/path/to/non-anon.log")
+action(type="mmanon" ipv4.bits="12")
+action(type="omfile" file="/path/to/anon.log")
+</textarea>
 
 <p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>] [<a href="manual.html">manual 
 index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
