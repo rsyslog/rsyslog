@@ -49,6 +49,11 @@ DEF_OMOD_STATIC_DATA
 
 typedef struct _instanceData {
 	char replChar;
+	int8_t mode;
+#	define SIMPLE_MODE 0 /* just overwrite */
+	struct {
+		int8_t bits;
+	} ipv4;
 } instanceData;
 
 struct modConfData_s {
@@ -61,7 +66,9 @@ static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current ex
 /* tables for interfacing with the v6 config system */
 /* action (instance) parameters */
 static struct cnfparamdescr actpdescr[] = {
+	{ "mode", eCmdHdlrGetWord, 0 },
 	{ "replacementchar", eCmdHdlrGetChar, 0 },
+	{ "ipv4.bits", eCmdHdlrInt, 0 },
 };
 static struct cnfparamblk actpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -111,12 +118,15 @@ ENDfreeInstance
 static inline void
 setInstParamDefaults(instanceData *pData)
 {
+	pData->mode = SIMPLE_MODE;
 	pData->replChar = 'x';
+	pData->ipv4.bits = 16;
 }
 
 BEGINnewActInst
 	struct cnfparamvals *pvals;
 	int i;
+	sbool bHadBitsErr;
 CODESTARTnewActInst
 	DBGPRINTF("newActInst (mmanon)\n");
 	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
@@ -131,15 +141,48 @@ CODESTARTnewActInst
 	for(i = 0 ; i < actpblk.nParams ; ++i) {
 		if(!pvals[i].bUsed)
 			continue;
-		if(!strcmp(actpblk.descr[i].name, "replacementchar")) {
+		if(!strcmp(actpblk.descr[i].name, "mode")) {
+			if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"simple",
+					 sizeof("simple")-1)) {
+				pData->mode = SIMPLE_MODE;
+			} else {
+				char *cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
+				errmsg.LogError(0, RS_RET_INVLD_MODE,
+					"mmanon: invalid anonymization mode '%s' - ignored",
+					cstr);
+				free(cstr);
+			}
 			pData->replChar = es_getBufAddr(pvals[i].val.d.estr)[0];
-			//pData->replChar = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-		//} else if(!strcmp(actpblk.descr[i].name, "serverport")) {
-		//	pData->port = (int) pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "replacementchar")) {
+			pData->replChar = es_getBufAddr(pvals[i].val.d.estr)[0];
+		} else if(!strcmp(actpblk.descr[i].name, "ipv4.bits")) {
+			pData->ipv4.bits = (int8_t) pvals[i].val.d.n;
 		} else {
 			dbgprintf("mmanon: program error, non-handled "
 			  "param '%s'\n", actpblk.descr[i].name);
 		}
+	}
+
+	if(pData->mode == SIMPLE_MODE) {
+		bHadBitsErr = 0;
+		if(pData->ipv4.bits < 8) {
+			pData->ipv4.bits = 8;
+			bHadBitsErr = 1;
+		} else if(pData->ipv4.bits < 16) {
+			pData->ipv4.bits = 16;
+			bHadBitsErr = 1;
+		} else if(pData->ipv4.bits < 24) {
+			pData->ipv4.bits = 24;
+			bHadBitsErr = 1;
+		} else if(pData->ipv4.bits != 32) {
+			pData->ipv4.bits = 32;
+			bHadBitsErr = 1;
+		}
+		if(bHadBitsErr)
+			errmsg.LogError(0, RS_RET_INVLD_ANON_BITS,
+				"mmanon: invalid number of ipv4 bits "
+				"in simple mode, corrected to %d",
+				pData->ipv4.bits);
 	}
 
 CODE_STD_FINALIZERnewActInst
@@ -180,8 +223,9 @@ void
 anonip(instanceData *pData, uchar *msg, int lenMsg, int *idx)
 {
 	int i = *idx;
-	int octet;
-	int ipstart;
+	int octet[4];
+	int ipstart[4];
+	int j;
 
 dbgprintf("DDDD: in anonip: %s\n", msg+(*idx));
 	while(i < lenMsg && (msg[i] <= '0' || msg[i] >= '9')) {
@@ -191,24 +235,36 @@ dbgprintf("DDDD: in anonip: %s\n", msg+(*idx));
 		goto done;
 	
 	/* got digit, let's see if ip */
-	ipstart = i;
-	octet = getnum(msg, lenMsg, &i);
-	if(octet > 255 || msg[i] != '.') goto done;
+	ipstart[0] = i;
+	octet[0] = getnum(msg, lenMsg, &i);
+	if(octet[0] > 255 || msg[i] != '.') goto done;
 	++i;
-	octet = getnum(msg, lenMsg, &i);
-	if(octet > 255 || msg[i] != '.') goto done;
+	ipstart[1] = i;
+	octet[1] = getnum(msg, lenMsg, &i);
+	if(octet[1] > 255 || msg[i] != '.') goto done;
 	++i;
-	octet = getnum(msg, lenMsg, &i);
-	if(octet > 255 || msg[i] != '.') goto done;
+	ipstart[2] = i;
+	octet[2] = getnum(msg, lenMsg, &i);
+	if(octet[2] > 255 || msg[i] != '.') goto done;
 	++i;
-	octet = getnum(msg, lenMsg, &i);
-	if(octet > 255 || msg[i] != ' ') goto done;
+	ipstart[3] = i;
+	octet[3] = getnum(msg, lenMsg, &i);
+	if(octet[3] > 255 || !(msg[i] == ' ' || msg[i] == ':')) goto done;
 
 	/* OK, we now found an ip address */
-	while(ipstart < i) {
-		if(msg[ipstart] != '.')
-			msg[ipstart] = pData->replChar;
-		++ipstart;
+	if(pData->ipv4.bits == 8)
+		j = ipstart[3];
+	else if(pData->ipv4.bits == 16)
+		j = ipstart[2];
+	else if(pData->ipv4.bits == 24)
+		j = ipstart[1];
+	else /* due to our checks, this *must* be 32 */
+		j = ipstart[0];
+dbgprintf("DDDD: ipstart is %d: %s\n", j, msg+j);
+	while(j < i) {
+		if(msg[j] != '.')
+			msg[j] = pData->replChar;
+		++j;
 	}
 
 done:	*idx = i;

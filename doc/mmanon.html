@@ -23,9 +23,23 @@ such exists.
 <p>&nbsp;</p>
 <p><b>Action Confguration Parameters</b>:</p>
 <ul>
-<li><b>replacementChar</b><br>In simple mode, this sets the character
+<li><b>ipv4.bits</b> - default 16<br>
+This set the number of bits that should be anonymized (bits are from the
+right, so lower bits are anonymized first). This setting permits to save
+network information while still anonymizing user-specific data. The more
+bits you discard, the better the anonymization obviously is. The default
+of 16 bits reflects what German data privacy rules consider as being
+sufficinetly anonymized. We assume, this can also be used as a rough
+but conservative guideline for other countries.<br>
+Note: when in simple mode, only bits on a byte boundary can be specified.
+As such, any value other than 8, 16, 24 or 32 is invalid. If an invalid
+value is given, it is rounded to the next byte boundary (so we favor stronger
+encyrption in that case). For example, a bit value of 12 will become 16 in
+simple mode (an error message is also emitted).
+<li><b>replacementChar</b> - default "x"<br>
+In simple mode, this sets the character
 that the to-be-anonymized part of the IP address is to be overwritten
-with. The default is "x".
+with.
 </ul>
 
 <p><b>Caveats/Known Bugs:</b>
@@ -37,10 +51,9 @@ and it got limited practice drill so far.
 <li>The anonymization replaces the numerical parts of the ip address.
 However, the number of digits is not normalized. So one can probably
 draw conlusions just based on the length of the various octets.
-<li>Needed config parameters are missing.
 </ul>
 
-<p><b>Sample:</b></p>
+<p><b>Samples:</b></p>
 <p>In this snippet, we write one file without anonymization and another one
 with the message anonymized. Note that once mmanon has run, access to the 
 original message is no longer possible (execept if stored in user
@@ -48,6 +61,19 @@ variables before anonymization).
 <p><textarea rows="5" cols="60">module(load="mmanon")
 action(type="omfile" file="/path/to/non-anon.log")
 action(type="mmanon")
+action(type="omfile" file="/path/to/anon.log")
+</textarea>
+
+<p>This next snippet is almost identical to the first one, but
+here we anonymize the full IPv4 address. Note that by
+modifying the number of bits, you can anonymize different parts
+of the address. Keep in mind that in simple mode, the bit values
+must match IP address bytes, so for IPv4 only the values 8, 16, 24 and
+32 are valid. Also, in this example the replacement is done
+via zeros instead of lower-case "x"-letters.
+<p><textarea rows="5" cols="60">module(load="mmanon")
+action(type="omfile" file="/path/to/non-anon.log")
+action(type="mmanon" ipv4.bits="32" replacementChar="0")
 action(type="omfile" file="/path/to/anon.log")
 </textarea>
 
