@@ -89,11 +89,11 @@ modifying the number of bits, you can anonymize different parts
 of the address. Keep in mind that in simple mode (used here), the bit values
 must match IP address bytes, so for IPv4 only the values 8, 16, 24 and
 32 are valid. Also, in this example the replacement is done
-via zeros instead of lower-case "x"-letters. Also keep in mind that
+via asterisks instead of lower-case "x"-letters. Also keep in mind that
 "replacementChar" can only be set in simple mode.
 <p><textarea rows="5" cols="60">module(load="mmanon")
 action(type="omfile" file="/path/to/non-anon.log")
-action(type="mmanon" ipv4.bits="32" mode="simple" replacementChar="o")
+action(type="mmanon" ipv4.bits="32" mode="simple" replacementChar="*")
 action(type="omfile" file="/path/to/anon.log")
 </textarea>
 
