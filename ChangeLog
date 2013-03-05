@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------------
-Version 7.2.6  [v7-stable] 2013-01-??
+Version 7.2.6  [v7-stable] 2013-03-05
 - slightly improved config parser error messages when invalid escapes happen
 - bugfix: include files got included in the wrong order
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=411
