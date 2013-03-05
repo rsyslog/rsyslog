@@ -61,6 +61,8 @@ OnFileOpen(void *pT, uchar *fn)
 	lmsig_gt_t *pThis = (lmsig_gt_t*) pT;
 	DEFiRet;
 dbgprintf("DDDD: onFileOpen: %s\n", fn);
+	pThis->ctx = rsgtCtxNew(fn);
+	sigblkInit(pThis->ctx);
 
 	RETiRet;
 }
@@ -71,6 +73,7 @@ OnRecordWrite(void *pT, uchar *rec, rs_size_t lenRec)
 	lmsig_gt_t *pThis = (lmsig_gt_t*) pT;
 	DEFiRet;
 dbgprintf("DDDD: onRecordWrite (%d): %s\n", lenRec, rec);
+	sigblkAddRecord(pThis->ctx, rec, lenRec);
 
 	RETiRet;
 }
@@ -81,6 +84,7 @@ OnFileClose(void *pT)
 	lmsig_gt_t *pThis = (lmsig_gt_t*) pT;
 	DEFiRet;
 dbgprintf("DDDD: onFileClose\n");
+	rsgtCtxDel(pThis->ctx);
 
 	RETiRet;
 }

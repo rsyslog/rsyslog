@@ -44,6 +44,11 @@
 #include <string.h>
 #include <stdint.h>
 #include <assert.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#define MAXFNAME 1024 /* TODO: include correct header */
 
 #include <gt_http.h>
 
@@ -53,11 +58,12 @@ typedef unsigned char uchar;
 #ifndef VERSION
 #define VERSION "no-version"
 #endif
+#define LOGSIGHDR "LOGSIG10"
 
 static void
 outputhash(GTDataHash *hash)
 {
-	int i;
+	unsigned i;
 	for(i = 0 ; i < hash->digest_length ; ++i)
 		printf("%2.2x", hash->digest[i]);
 	printf("\n");
@@ -95,12 +101,43 @@ rsgtExit(void)
 }
 
 
-
-
 static inline void
 tlvbufPhysWrite(gtctx ctx)
 {
+	ssize_t lenBuf;
+	ssize_t iTotalWritten;
+	ssize_t iWritten;
+	char *pWriteBuf;
 	fprintf(stderr, "emu: writing TLV file!\n");
+
+	lenBuf = ctx->tlvIdx;
+	pWriteBuf = ctx->tlvBuf;
+	iTotalWritten = 0;
+	do {
+		iWritten = write(ctx->fd, pWriteBuf, lenBuf);
+		if(iWritten < 0) {
+			//char errStr[1024];
+			int err = errno;
+			iWritten = 0; /* we have written NO bytes! */
+		/*	rs_strerror_r(err, errStr, sizeof(errStr));
+			DBGPRINTF("log file (%d) write error %d: %s\n", pThis->fd, err, errStr);
+			*/
+			if(err == EINTR) {
+				/*NO ERROR, just continue */;
+			} else {
+				goto finalize_it; //ABORT_FINALIZE(RS_RET_IO_ERROR);
+				/* FIXME: flag error */
+			}
+	 	} 
+		/* advance buffer to next write position */
+		iTotalWritten += iWritten;
+		lenBuf -= iWritten;
+		pWriteBuf += iWritten;
+	} while(lenBuf > 0);	/* Warning: do..while()! */
+
+	//DBGOPRINT((obj_t*) pThis, "file %d write wrote %d bytes\n", pThis->fd, (int) iWritten);
+
+finalize_it:
 	ctx->tlvIdx = 0;
 }
 
@@ -161,19 +198,36 @@ tlvFlush(gtctx ctx)
 		tlvbufPhysWrite(ctx);
 }
 
+void
+tlvWriteBlockSig(gtctx ctx, uchar *der, size_t der_len)
+{
+	//FIXME: flags???
+	tlv8Write(ctx, 0x00, 0x00, 1);
+	tlvbufAddOctet(ctx, 0x02); // TODO: hash identifier (Tab. 2)!
+	tlv16Write(ctx, 0x00, 0x906, (uint16_t) der_len);
+	tlvbufAddOctetString(ctx, (int8_t*) der, (int) der_len);
+}
+
 void tlvClose(gtctx ctx)
 {
 	tlvFlush(ctx);
 	fprintf(stderr, "emu: close tlv file\n");
+	close(ctx->fd);
+	ctx->fd = -1;
 }
+
 
 /* note: if file exists, the last hash for chaining must
  * be read from file.
  */
-void tlvOpen(gtctx ctx)
+void tlvOpen(gtctx ctx, char *hdr, unsigned lenHdr)
 {
-	fprintf(stderr, "emu: open tlv file\n");
-	ctx->tlvIdx = 0;
+	fprintf(stderr, "emu: open tlv file '%s'\n", ctx->sigfilename);
+	ctx->fd = open((char*)ctx->sigfilename,
+		       O_WRONLY/*|O_APPEND*/|O_CREAT|O_NOCTTY|O_CLOEXEC, 0600);
+	// FIXME: check fd == -1
+	memcpy(ctx->tlvBuf, hdr, lenHdr);
+	ctx->tlvIdx = lenHdr;
 }
 
 void
@@ -192,12 +246,15 @@ seedIV(gtctx ctx)
 }
 
 gtctx
-rsgtCtxNew(char *logfilename)
+rsgtCtxNew(unsigned char *logfn)
 {
+	char fn[MAXFNAME+1];
 	gtctx ctx;
 	ctx =  calloc(1, sizeof(struct gtctx_s));
-	ctx->logfilename = strdup(logfilename);
-	tlvOpen(ctx);
+	snprintf(fn, sizeof(fn), "%s.gtsig", logfn);
+	fn[MAXFNAME] = '\0'; /* be on save side */
+	ctx->sigfilename = (uchar*) strdup(fn);
+	tlvOpen(ctx, LOGSIGHDR, sizeof(LOGSIGHDR)-1);
 	return ctx;
 }
 
@@ -207,8 +264,10 @@ rsgtCtxDel(gtctx ctx)
 	if(ctx == NULL)
 		goto done;
 
+	if(ctx->bInBlk)
+		sigblkFinish(ctx);
 	tlvClose(ctx);
-	free(ctx->logfilename);
+	free(ctx->sigfilename);
 	free(ctx);
 	/* TODO: persist! */
 done:	return;
@@ -226,6 +285,7 @@ sigblkInit(gtctx ctx)
 	memset(ctx->roots_valid, 0, sizeof(ctx->roots_valid)/sizeof(char));
 	ctx->nRoots = 0;
 	ctx->nRecords = 0;
+	ctx->bInBlk = 1;
 }
 
 
@@ -300,7 +360,7 @@ sigblkAddRecord(gtctx ctx, const uchar *rec, const size_t len)
 	GTDataHash *x; /* current hash */
 	GTDataHash *m, *r, *t;
 	int8_t j;
-	int ret;
+	//int ret;
 
 	hash_m(ctx, &m);
 	hash_r(ctx, &r, rec, len);
@@ -362,6 +422,9 @@ timestampIt(gtctx ctx, GTDataHash *hash)
 		goto done;
 	}
 
+	tlvWriteBlockSig(ctx, der, der_len);
+
+#if 0
 	/* Save DER-encoded timestamp to file. */
 	r = GT_saveFile(sigFile, der, der_len);
 	if(r != GT_OK) {
@@ -373,6 +436,7 @@ timestampIt(gtctx ctx, GTDataHash *hash)
 		goto done;
 	}
 	printf("Timestamping succeeded!\n");
+#endif
 done:
 	GT_free(der);
 	GTTimestamp_free(timestamp);
@@ -400,4 +464,5 @@ sigblkFinish(gtctx ctx)
 	/* persist root value here (callback?) */
 printf("root hash is:\n"); outputhash(root);
 	timestampIt(ctx, root);
+	ctx->bInBlk = 0;
 }
