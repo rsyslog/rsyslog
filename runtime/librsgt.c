@@ -45,7 +45,6 @@
 #include <stdint.h>
 #include <assert.h>
 
-#include <gt_base.h>
 #include <gt_http.h>
 
 #include "librsgt.h"
@@ -193,7 +192,7 @@ seedIV(gtctx ctx)
 }
 
 gtctx
-rsgtCtxNew(void, char *logfilename)
+rsgtCtxNew(char *logfilename)
 {
 	gtctx ctx;
 	ctx =  calloc(1, sizeof(struct gtctx_s));

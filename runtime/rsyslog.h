@@ -399,6 +399,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_DS_PROP_SEQ_ERR = -2308,/**< property sequence error deserializing object */
 	RS_RET_TPL_INVLD_PROP = -2309,/**< property name error in template (unknown name) */
 	RS_RET_NO_RULEBASE = -2310,/**< mmnormalize: rulebase can not be found or otherwise invalid */
+	RS_RET_SIGPROV_ERR = -2320,/**< error in signature provider */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */

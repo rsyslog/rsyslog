@@ -17,7 +17,7 @@
  * pipes. These have been moved to ompipe, to reduced the entanglement
  * between the two different functionalities. -- rgerhards
  *
- * Copyright 2007-2012 Adiscon GmbH.
+ * Copyright 2007-2013 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -69,6 +69,7 @@
 #include "unicode-helper.h"
 #include "atomic.h"
 #include "statsobj.h"
+#include "sigprov.h"
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
@@ -143,6 +144,11 @@ typedef struct _instanceData {
 	gid_t	fileGID;
 	gid_t	dirGID;
 	int	bFailOnChown;	/* fail creation if chown fails? */
+	uchar 	*sigprovName;	/* signature provider */
+	uchar 	*sigprovNameFull;/* full internal signature provider name */
+	sigprov_if_t sigprov;	/* ptr to signature provider interface */
+	void	*sigprovData;	/* opaque data ptr for provider use */
+	sbool	useSigprov;	/* quicker than checkig ptr (1 vs 8 bytes!) */
 	int	iCurrElt;	/* currently active cache element (-1 = none) */
 	int	iCurrCacheSize;	/* currently cache size (1-based) */
 	int	iDynaFileCacheSize; /* size of file handle cache */
@@ -228,7 +234,8 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "sync", eCmdHdlrBinary, 0 }, /* legacy: actionfileenablesync */
 	{ "file", eCmdHdlrString, 0 },     /* either "file" or ... */
 	{ "dynafile", eCmdHdlrString, 0 }, /* "dynafile" MUST be present */
-	{ "template", eCmdHdlrGetWord, 0 },
+	{ "sig.provider", eCmdHdlrGetWord, 0 },
+	{ "template", eCmdHdlrGetWord, 0 }
 };
 static struct cnfparamblk actpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -836,6 +843,14 @@ ENDcreateInstance
 
 BEGINfreeInstance
 CODESTARTfreeInstance
+	if(pData->useSigprov) {
+		dbgprintf("DDDD: destructing signature provider %s\n", pData->sigprovNameFull);
+		pData->sigprov.Destruct(&pData->sigprovData);
+		obj.ReleaseObj(__FILE__, pData->sigprovNameFull+2, pData->sigprovNameFull,
+			       (void*) &pData->sigprov);
+		free(pData->sigprovName);
+		free(pData->sigprovNameFull);
+	}
 	free(pData->tplName);
 	free(pData->f_fname);
 	if(pData->bDynamicName) {
@@ -907,6 +922,8 @@ setInstParamDefaults(instanceData *pData)
 	pData->iIOBufSize = IOBUF_DFLT_SIZE;
 	pData->iFlushInterval = FLUSH_INTRVL_DFLT;
 	pData->bUseAsyncWriter = USE_ASYNCWRITER_DFLT;
+	pData->sigprovName = NULL;
+	pData->useSigprov = 0;
 }
 
 
@@ -944,6 +961,47 @@ setupInstStatsCtrs(instanceData *pData)
 
 finalize_it:
 	RETiRet;
+}
+
+static inline void
+initSigprov(instanceData *pData)
+{
+	uchar szDrvrName[1024];
+
+	if(snprintf((char*)szDrvrName, sizeof(szDrvrName), "lmsig_%s", pData->sigprovName)
+		== sizeof(szDrvrName)) {
+		errmsg.LogError(0, RS_RET_ERR, "omfile: signature provider "
+				"name is too long: '%s' - signatures disabled",
+				pData->sigprovName);
+		goto done;
+	}
+	pData->sigprovNameFull = ustrdup(szDrvrName);
+
+	pData->sigprov.ifVersion = sigprovCURR_IF_VERSION;
+	/* The pDrvrName+2 below is a hack to obtain the object name. It 
+	 * safes us to have yet another variable with the name without "lm" in
+	 * front of it. If we change the module load interface, we may re-think
+	 * about this hack, but for the time being it is efficient and clean enough.
+	 */
+	if(obj.UseObj(__FILE__, szDrvrName, szDrvrName, (void*) &pData->sigprov)
+		!= RS_RET_OK) {
+		errmsg.LogError(0, RS_RET_LOAD_ERROR, "omfile: could not load "
+				"signature provider '%s' - signatures disabled",
+				szDrvrName);
+		goto done;
+	}
+
+	if(pData->sigprov.Construct(&pData->sigprovData) != RS_RET_OK) {
+		errmsg.LogError(0, RS_RET_SIGPROV_ERR, "omfile: error constructing "
+				"signature provider %s dataset - signatures disabled",
+				szDrvrName);
+		goto done;
+	}
+
+	dbgprintf("loaded signature provider %s, data instance at %p\n",
+		  szDrvrName, pData->sigprovData);
+	pData->useSigprov = 1;
+done:	return;
 }
 
 BEGINnewActInst
@@ -1013,6 +1071,8 @@ CODESTARTnewActInst
 			pData->bDynamicName = 1;
 		} else if(!strcmp(actpblk.descr[i].name, "template")) {
 			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "sig.provider")) {
+			pData->sigprovName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else {
 			dbgprintf("omfile: program error, non-handled "
 			  "param '%s'\n", actpblk.descr[i].name);
@@ -1023,6 +1083,10 @@ CODESTARTnewActInst
 		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "omfile: either the \"file\" or "
 				"\"dynfile\" parameter must be given");
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
+
+	if(pData->sigprovName != NULL) {
+		initSigprov(pData);
 	}
 
 	tplToUse = ustrdup((pData->tplName == NULL) ? getDfltTpl() : pData->tplName);

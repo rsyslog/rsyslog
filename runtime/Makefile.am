@@ -17,6 +17,7 @@ librsyslog_la_SOURCES = \
 	module-template.h \
 	im-helper.h \
 	obj-types.h \
+	sigprov.h \
 	nsd.h \
 	glbl.h \
 	glbl.c \
@@ -178,6 +179,12 @@ endif
 #
 if ENABLE_GUARDTIME
    librsgt_la_SOURCES = librsgt.c
+
+   pkglib_LTLIBRARIES += lmsig_gt.la
+   lmsig_gt_la_SOURCES = lmsig_gt.c
+   lmsig_gt_la_CPPFLAGS = $(RSRT_CFLAGS) $(GUARDTIME_CFLAGS)
+   lmsig_gt_la_LDFLAGS = -module -avoid-version
+   lmsig_gt_la_LIBADD = librsgt.c $(GUARDTIME_LIBS)
 endif
 
 
