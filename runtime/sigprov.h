@@ -27,7 +27,10 @@
 /* interface */
 BEGINinterface(sigprov) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Construct)(void *ppThis);
-	rsRetVal (*Destruct)(void **ppThis);
+	rsRetVal (*Destruct)(void *ppThis);
+	rsRetVal (*OnFileOpen)(void *pThis, uchar *fn);
+	rsRetVal (*OnRecordWrite)(void *pThis, uchar *rec, rs_size_t lenRec);
+	rsRetVal (*OnFileClose)(void *pThis);
 ENDinterface(sigprov)
 #define sigprovCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
 #endif /* #ifndef INCLUDED_SIGPROV_H */

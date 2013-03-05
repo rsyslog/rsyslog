@@ -184,7 +184,7 @@ if ENABLE_GUARDTIME
    lmsig_gt_la_SOURCES = lmsig_gt.c
    lmsig_gt_la_CPPFLAGS = $(RSRT_CFLAGS) $(GUARDTIME_CFLAGS)
    lmsig_gt_la_LDFLAGS = -module -avoid-version
-   lmsig_gt_la_LIBADD = librsgt.c $(GUARDTIME_LIBS)
+   lmsig_gt_la_LIBADD = librsgt.la $(GUARDTIME_LIBS)
 endif
 
 

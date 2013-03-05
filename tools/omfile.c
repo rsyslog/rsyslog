@@ -441,6 +441,7 @@ dynaFileDelCacheEntry(dynaFileCacheEntry **pCache, int iEntry, int bFreeEntry)
 
 	if(pCache[iEntry]->pStrm != NULL) {
 		strm.Destruct(&pCache[iEntry]->pStrm);
+#warning add sig capability here
 		if(pCache[iEntry]->pStrm != NULL) /* safety check -- TODO: remove if no longer necessary */
 			abort();
 	}
@@ -487,6 +488,27 @@ static void dynaFileFreeCache(instanceData *pData)
 	ENDfunc;
 }
 
+
+/* close current file */
+static rsRetVal
+closeFile(instanceData *pData)
+{
+	DEFiRet;
+	if(pData->useSigprov)
+		pData->sigprov.OnFileClose(pData->sigprovData);
+	strm.Destruct(&pData->pStrm);
+	RETiRet;
+}
+
+
+/* This prepares the signature provider to process a file */
+static rsRetVal
+sigprovPrepare(instanceData *pData, uchar *fn)
+{
+	DEFiRet;
+	pData->sigprov.OnFileOpen(pData->sigprovData, fn);
+	RETiRet;
+}
 
 /* This is now shared code for all types of files. It simply prepares
  * file access, which, among others, means the the file wil be opened
@@ -570,11 +592,14 @@ prepareFile(instanceData *pData, uchar *newFileName)
 	if(pData->pszSizeLimitCmd != NULL)
 		CHKiRet(strm.SetpszSizeLimitCmd(pData->pStrm, ustrdup(pData->pszSizeLimitCmd)));
 	CHKiRet(strm.ConstructFinalize(pData->pStrm));
+
+	if(pData->useSigprov)
+		sigprovPrepare(pData, szNameBuf);
 	
 finalize_it:
 	if(iRet != RS_RET_OK) {
 		if(pData->pStrm != NULL) {
-			strm.Destruct(&pData->pStrm);
+			closeFile(pData);
 		}
 	}
 	RETiRet;
@@ -701,7 +726,7 @@ prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
 	}
 
 	if((pCache[iFirstFree]->pName = ustrdup(newFileName)) == NULL) {
-		strm.Destruct(&pData->pStrm); /* need to free failed entry! */
+		closeFile(pData); /* need to free failed entry! */
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
 	pCache[iFirstFree]->pStrm = pData->pStrm;
@@ -729,7 +754,7 @@ doWrite(instanceData *pData, uchar *pszBuf, int lenBuf)
 	DBGPRINTF("write to stream, pData->pStrm %p, lenBuf %d\n", pData->pStrm, lenBuf);
 	if(pData->pStrm != NULL){
 		CHKiRet(strm.Write(pData->pStrm, pszBuf, lenBuf));
-		FINALIZE;
+		CHKiRet(pData->sigprov.OnRecordWrite(pData->sigprovData, pszBuf, lenBuf));
 	}
 
 finalize_it:
@@ -843,6 +868,12 @@ ENDcreateInstance
 
 BEGINfreeInstance
 CODESTARTfreeInstance
+	free(pData->tplName);
+	free(pData->f_fname);
+	if(pData->bDynamicName) {
+		dynaFileFreeCache(pData);
+	} else if(pData->pStrm != NULL)
+		closeFile(pData);
 	if(pData->useSigprov) {
 		dbgprintf("DDDD: destructing signature provider %s\n", pData->sigprovNameFull);
 		pData->sigprov.Destruct(&pData->sigprovData);
@@ -851,12 +882,6 @@ CODESTARTfreeInstance
 		free(pData->sigprovName);
 		free(pData->sigprovNameFull);
 	}
-	free(pData->tplName);
-	free(pData->f_fname);
-	if(pData->bDynamicName) {
-		dynaFileFreeCache(pData);
-	} else if(pData->pStrm != NULL)
-		strm.Destruct(&pData->pStrm);
 ENDfreeInstance
 
 
@@ -1231,8 +1256,7 @@ CODESTARTdoHUP
 		dynaFileFreeCacheEntries(pData);
 	} else {
 		if(pData->pStrm != NULL) {
-			strm.Destruct(&pData->pStrm);
-			pData->pStrm = NULL;
+			closeFile(pData);
 		}
 	}
 ENDdoHUP

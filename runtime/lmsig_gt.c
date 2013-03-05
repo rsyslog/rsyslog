@@ -55,14 +55,46 @@ CODESTARTobjDestruct(lmsig_gt)
 	dbgprintf("DDDD: lmsig_gt: called destruct\n");
 ENDobjDestruct(lmsig_gt)
 
+static rsRetVal
+OnFileOpen(void *pT, uchar *fn)
+{
+	lmsig_gt_t *pThis = (lmsig_gt_t*) pT;
+	DEFiRet;
+dbgprintf("DDDD: onFileOpen: %s\n", fn);
+
+	RETiRet;
+}
+
+static rsRetVal
+OnRecordWrite(void *pT, uchar *rec, rs_size_t lenRec)
+{
+	lmsig_gt_t *pThis = (lmsig_gt_t*) pT;
+	DEFiRet;
+dbgprintf("DDDD: onRecordWrite (%d): %s\n", lenRec, rec);
+
+	RETiRet;
+}
+
+static rsRetVal
+OnFileClose(void *pT)
+{
+	lmsig_gt_t *pThis = (lmsig_gt_t*) pT;
+	DEFiRet;
+dbgprintf("DDDD: onFileClose\n");
+
+	RETiRet;
+}
 
 BEGINobjQueryInterface(lmsig_gt)
 CODESTARTobjQueryInterface(lmsig_gt)
 	if(pIf->ifVersion != sigprovCURR_IF_VERSION) {/* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}
-	pIf->Construct = lmsig_gtConstruct;
-	pIf->Destruct = lmsig_gtDestruct;
+	pIf->Construct = (rsRetVal(*)(void*)) lmsig_gtConstruct;
+	pIf->Destruct = (rsRetVal(*)(void*)) lmsig_gtDestruct;
+	pIf->OnFileOpen = OnFileOpen;
+	pIf->OnRecordWrite = OnRecordWrite;
+	pIf->OnFileClose = OnFileClose;
 finalize_it:
 ENDobjQueryInterface(lmsig_gt)
 
@@ -72,6 +104,8 @@ CODESTARTObjClassExit(lmsig_gt)
 	/* release objects we no longer need */
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
+
+	rsgtExit();
 ENDObjClassExit(lmsig_gt)
 
 
@@ -80,7 +114,7 @@ BEGINObjClassInit(lmsig_gt, 1, OBJ_IS_LOADABLE_MODULE) /* class, version */
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 
-	/* set our own handlers */
+	rsgtInit("rsyslogd " VERSION);
 ENDObjClassInit(lmsig_gt)
 
 
