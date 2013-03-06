@@ -58,7 +58,45 @@ typedef unsigned char uchar;
 #ifndef VERSION
 #define VERSION "no-version"
 #endif
-#define LOGSIGHDR "LOGSIG10"
+
+static inline uint16_t
+hashOutputLengthOctets(uint8_t hashID)
+{
+	switch(hashID) {
+	case GT_HASHALG_SHA1:	/* paper: SHA1 */
+		return 20;
+	case GT_HASHALG_RIPEMD160: /* paper: RIPEMD-160 */
+		return 20;
+	case GT_HASHALG_SHA224:	/* paper: SHA2-224 */
+		return 28;
+	case GT_HASHALG_SHA256: /* paper: SHA2-256 */
+		return 32;
+	case GT_HASHALG_SHA384: /* paper: SHA2-384 */
+		return 48;
+	case GT_HASHALG_SHA512:	/* paper: SHA2-512 */
+		return 64;
+	default:return 32;
+	}
+}
+static inline uint8_t
+hashIdentifier(uint8_t hashID)
+{
+	switch(hashID) {
+	case GT_HASHALG_SHA1:	/* paper: SHA1 */
+		return 0x00;
+	case GT_HASHALG_RIPEMD160: /* paper: RIPEMD-160 */
+		return 0x02;
+	case GT_HASHALG_SHA224:	/* paper: SHA2-224 */
+		return 0x03;
+	case GT_HASHALG_SHA256: /* paper: SHA2-256 */
+		return 0x01;
+	case GT_HASHALG_SHA384: /* paper: SHA2-384 */
+		return 0x04;
+	case GT_HASHALG_SHA512:	/* paper: SHA2-512 */
+		return 0x05;
+	default:return 0xff;
+	}
+}
 
 static void
 outputhash(GTDataHash *hash)
@@ -75,8 +113,6 @@ void
 rsgtInit(char *usragent)
 {
 	int ret = GT_OK;
-
-	srand(time(NULL) * 7); /* see comments in seedIV() */
 
 	ret = GT_init();
 	if(ret != GT_OK) {
@@ -160,19 +196,25 @@ tlvbufAddOctet(gtctx ctx, int8_t octet)
 	ctx->tlvBuf[ctx->tlvIdx++] = octet;
 }
 static inline void
-tlvbufAddOctetString(gtctx ctx, int8_t *octet, int size)
+tlvbufAddOctetString(gtctx ctx, uint8_t *octet, int size)
 {
 	int i;
 	for(i = 0 ; i < size ; ++i)
 		tlvbufAddOctet(ctx, octet[i]);
 }
 static inline void
-tlvbufAddInteger(gtctx ctx, uint32_t val)
+tlvbufAddInt32(gtctx ctx, uint32_t val)
 {
 	tlvbufAddOctet(ctx, (val >> 24) & 0xff);
 	tlvbufAddOctet(ctx, (val >> 16) & 0xff);
 	tlvbufAddOctet(ctx, (val >>  8) & 0xff);
 	tlvbufAddOctet(ctx,  val        & 0xff);
+}
+static inline void
+tlvbufAddInt64(gtctx ctx, uint64_t val)
+{
+	tlvbufAddInt32(ctx, (val >> 32) & 0xffffffff);
+	tlvbufAddInt32(ctx,  val        & 0xffffffff);
 }
 
 
@@ -199,13 +241,34 @@ tlvFlush(gtctx ctx)
 }
 
 void
-tlvWriteBlockSig(gtctx ctx, uchar *der, size_t der_len)
+tlvWriteBlockSig(gtctx ctx, uchar *der, uint16_t lenDer)
 {
+	unsigned tlvlen;
+
+	tlvlen  = 1 + 1 /* hash algo TLV */ +
+	 	  1 + hashOutputLengthOctets(ctx->hashAlg) /* iv */ +
+		  1 + 1 + ctx->lenBlkStrtHash /* last hash */ +
+		  1 + 8 /* rec-count (64 bit integer) */ +
+		  2 + lenDer /* rfc-3161 */;
+	/* write top-level TLV object (block-sig */
+	tlv16Write(ctx, 0x00, 0x0902, tlvlen);
+	/* and now write the children */
 	//FIXME: flags???
+	/* hash-algo */
 	tlv8Write(ctx, 0x00, 0x00, 1);
-	tlvbufAddOctet(ctx, 0x02); // TODO: hash identifier (Tab. 2)!
-	tlv16Write(ctx, 0x00, 0x906, (uint16_t) der_len);
-	tlvbufAddOctetString(ctx, (int8_t*) der, (int) der_len);
+	tlvbufAddOctet(ctx, hashIdentifier(ctx->hashAlg));
+	/* block-iv */
+	tlv8Write(ctx, 0x00, 0x01, 1);
+	tlvbufAddOctetString(ctx, ctx->IV, hashOutputLengthOctets(ctx->hashAlg));
+	/* last-hash */
+	tlv8Write(ctx, 0x00, 0x02, 1);
+	tlvbufAddOctetString(ctx, ctx->blkStrtHash, ctx->lenBlkStrtHash);
+	/* rec-count */
+	tlv8Write(ctx, 0x00, 0x03, 1);
+	tlvbufAddInt64(ctx, ctx->nRecords);
+	/* rfc-3161 */
+	tlv16Write(ctx, 0x00, 0x906, lenDer);
+	tlvbufAddOctetString(ctx, der, lenDer);
 }
 
 void tlvClose(gtctx ctx)
@@ -228,36 +291,62 @@ void tlvOpen(gtctx ctx, char *hdr, unsigned lenHdr)
 	// FIXME: check fd == -1
 	memcpy(ctx->tlvBuf, hdr, lenHdr);
 	ctx->tlvIdx = lenHdr;
+	/* we now need to obtain the last previous hash, so that
+	 * we can continue the hash chain.
+	 */
+	// ...
+	/* in case we did not have a previous hash (or could not
+	 * obtain it), we start with zero.
+	 */
+	ctx->lenBlkStrtHash = hashOutputLengthOctets(ctx->hashAlg);
+	ctx->blkStrtHash = calloc(1, ctx->lenBlkStrtHash);
 }
 
+/*
+ * As of some Linux and security expert I spoke to, /dev/urandom
+ * provides very strong random numbers, even if it runs out of
+ * entropy. As far as he knew, this is save for all applications
+ * (and he had good proof that I currently am not permitted to
+ * reproduce). -- rgerhards, 2013-03-04
+ */
 void
 seedIV(gtctx ctx)
 {
-	/* FIXME: this currently is "kindergarten cryptography" - use a
-	 * sufficiently strong PRNG instead! Just a PoC so far! Do NOT
-	 * use in production!!!
-	 * As of some Linux and security expert I spoke to, /dev/urandom
-	 * provides very strong random numbers, even if it runs out of
-	 * entropy. As far as he knew, this is save for all applications
-	 * (and he had good proof that I currently am not permitted to
-	 * reproduce). -- rgerhards, 2013-03-04
+	int hashlen;
+	int fd;
+
+	hashlen = hashOutputLengthOctets(ctx->hashAlg);
+	ctx->IV = malloc(hashlen); /* do NOT zero-out! */
+	/* if we cannot obtain data from /dev/urandom, we use whatever
+	 * is present at the current memory location as random data. Of
+	 * course, this is very weak and we should consider a different
+	 * option, especially when not running under Linux (for Linux,
+	 * unavailability of /dev/urandom is just a theoretic thing, it
+	 * will always work...).  -- TODO -- rgerhards, 2013-03-06
 	 */
-	ctx->IV = rand() * 1000037;
+	if((fd = open("/dev/urandom", O_RDONLY)) > 0) {
+		read(fd, ctx->IV, hashlen);
+		close(fd);
+	}
 }
 
 gtctx
-rsgtCtxNew(unsigned char *logfn)
+rsgtCtxNew(unsigned char *logfn, enum GTHashAlgorithm hashAlg)
 {
 	char fn[MAXFNAME+1];
 	gtctx ctx;
 	ctx =  calloc(1, sizeof(struct gtctx_s));
+	ctx->x_prev = NULL;
+	ctx->hashAlg = hashAlg;
+	ctx->timestamper = strdup(
+			   "http://stamper.guardtime.net/gt-signingservice");
 	snprintf(fn, sizeof(fn), "%s.gtsig", logfn);
 	fn[MAXFNAME] = '\0'; /* be on save side */
 	ctx->sigfilename = (uchar*) strdup(fn);
 	tlvOpen(ctx, LOGSIGHDR, sizeof(LOGSIGHDR)-1);
 	return ctx;
 }
-
+ 
 void
 rsgtCtxDel(gtctx ctx)
 {
@@ -278,10 +367,6 @@ void
 sigblkInit(gtctx ctx)
 {
 	seedIV(ctx);
-//	if(ctx->x_prev == NULL) {
-		ctx->x_prev = NULL;
-		/* FIXME: do the real thing - or in a later step as currently? */
-//	}
 	memset(ctx->roots_valid, 0, sizeof(ctx->roots_valid)/sizeof(char));
 	ctx->nRoots = 0;
 	ctx->nRecords = 0;
@@ -297,13 +382,14 @@ bufAddIV(gtctx ctx, uchar *buf, size_t *len)
 	*len += sizeof(ctx->IV);
 }
 
+
 /* concat: add hash to buffer */
 static inline void
 bufAddHash(gtctx ctx, uchar *buf, size_t *len, GTDataHash *hash)
 {
 	if(hash == NULL) {
-		memset(buf+*len, 0, 32); /* FIXME: depends on hash function! */
-		*len += 32;
+		memcpy(buf+*len, ctx->blkStrtHash, ctx->lenBlkStrtHash);
+		*len += ctx->lenBlkStrtHash;
 	} else {
 		memcpy(buf+*len, hash->digest, hash->digest_length);
 		*len += hash->digest_length;
@@ -311,7 +397,7 @@ bufAddHash(gtctx ctx, uchar *buf, size_t *len, GTDataHash *hash)
 }
 /* concat: add tree level to buffer */
 static inline void
-bufAddLevel(gtctx ctx, uchar *buf, size_t *len, int level)
+bufAddLevel(uchar *buf, size_t *len, int level)
 {
 	memcpy(buf+*len, &level, sizeof(level));
 	*len += sizeof(level);
@@ -321,23 +407,21 @@ bufAddLevel(gtctx ctx, uchar *buf, size_t *len, int level)
 static void
 hash_m(gtctx ctx, GTDataHash **m)
 {
+#warning Overall: check GT API return states!
 	// m = hash(concat(ctx->x_prev, IV));
-	int r;
 	uchar concatBuf[16*1024];
 	size_t len = 0;
 
 	bufAddHash(ctx, concatBuf, &len, ctx->x_prev);
 	bufAddIV(ctx, concatBuf, &len);
-	r = GTDataHash_create(GT_HASHALG_SHA256, concatBuf, len, m);
+	GTDataHash_create(ctx->hashAlg, concatBuf, len, m);
 }
 
 static void
 hash_r(gtctx ctx, GTDataHash **r, const uchar *rec, const size_t len)
 {
 	// r = hash(canonicalize(rec));
-	int ret;
-
-	ret = GTDataHash_create(GT_HASHALG_SHA256, rec, len, r);
+	GTDataHash_create(ctx->hashAlg, rec, len, r);
 }
 
 
@@ -345,22 +429,21 @@ static void
 hash_node(gtctx ctx, GTDataHash **node, GTDataHash *m, GTDataHash *r, int level)
 {
 	// x = hash(concat(m, r, 0)); /* hash leaf */
-	int ret;
 	uchar concatBuf[16*1024];
 	size_t len = 0;
 
 	bufAddHash(ctx, concatBuf, &len, m);
 	bufAddHash(ctx, concatBuf, &len, r);
-	bufAddLevel(ctx, concatBuf, &len, level);
-	ret = GTDataHash_create(GT_HASHALG_SHA256, concatBuf, len, node);
+	bufAddLevel(concatBuf, &len, level);
+	GTDataHash_create(ctx->hashAlg, concatBuf, len, node);
 }
+
 void
 sigblkAddRecord(gtctx ctx, const uchar *rec, const size_t len)
 {
 	GTDataHash *x; /* current hash */
 	GTDataHash *m, *r, *t;
 	int8_t j;
-	//int ret;
 
 	hash_m(ctx, &m);
 	hash_r(ctx, &r, rec, len);
@@ -391,6 +474,7 @@ sigblkAddRecord(gtctx ctx, const uchar *rec, const size_t len)
 	++ctx->nRecords;
 
 	/* cleanup */
+	/* note: x is freed later as part of roots cleanup */
 	GTDataHash_free(m);
 	GTDataHash_free(r);
 }
@@ -398,15 +482,13 @@ sigblkAddRecord(gtctx ctx, const uchar *rec, const size_t len)
 static void
 timestampIt(gtctx ctx, GTDataHash *hash)
 {
+	unsigned char *der;
+	size_t lenDer;
 	int r = GT_OK;
 	GTTimestamp *timestamp = NULL;
-	unsigned char *der = NULL;
-	char *sigFile = "logsigner.TIMESTAMP";
-	size_t der_len;
 
 	/* Get the timestamp. */
-	r = GTHTTP_createTimestampHash(hash,
-		"http://stamper.guardtime.net/gt-signingservice", &timestamp);
+	r = GTHTTP_createTimestampHash(hash, ctx->timestamper, &timestamp);
 
 	if(r != GT_OK) {
 		fprintf(stderr, "GTHTTP_createTimestampHash() failed: %d (%s)\n",
@@ -415,28 +497,15 @@ timestampIt(gtctx ctx, GTDataHash *hash)
 	}
 
 	/* Encode timestamp. */
-	r = GTTimestamp_getDEREncoded(timestamp, &der, &der_len);
+	r = GTTimestamp_getDEREncoded(timestamp, &der, &lenDer);
 	if(r != GT_OK) {
 		fprintf(stderr, "GTTimestamp_getDEREncoded() failed: %d (%s)\n",
 				r, GT_getErrorString(r));
 		goto done;
 	}
 
-	tlvWriteBlockSig(ctx, der, der_len);
+	tlvWriteBlockSig(ctx, der, lenDer);
 
-#if 0
-	/* Save DER-encoded timestamp to file. */
-	r = GT_saveFile(sigFile, der, der_len);
-	if(r != GT_OK) {
-		fprintf(stderr, "Cannot save timestamp to file %s: %d (%s)\n",
-				sigFile, r, GT_getErrorString(r));
-		if(r == GT_IO_ERROR) {
-			fprintf(stderr, "\t%d (%s)\n", errno, strerror(errno));
-		}
-		goto done;
-	}
-	printf("Timestamping succeeded!\n");
-#endif
 done:
 	GT_free(der);
 	GTTimestamp_free(timestamp);

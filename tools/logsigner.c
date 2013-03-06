@@ -120,7 +120,7 @@ processFile(char *name)
 	char line[64*1024+1];
 	gtctx ctx = NULL;
 	
-	ctx = rsgtCtxNew((unsigned char*)"SIGFILE");
+	ctx = rsgtCtxNew((unsigned char*)"SIGFILE", GT_HASHALG_SHA256);
 	sigblkInit(ctx);
 	if(!strcmp(name, "-"))
 		fp = stdin;

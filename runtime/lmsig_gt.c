@@ -61,7 +61,7 @@ OnFileOpen(void *pT, uchar *fn)
 	lmsig_gt_t *pThis = (lmsig_gt_t*) pT;
 	DEFiRet;
 dbgprintf("DDDD: onFileOpen: %s\n", fn);
-	pThis->ctx = rsgtCtxNew(fn);
+	pThis->ctx = rsgtCtxNew(fn, GT_HASHALG_SHA256);
 	sigblkInit(pThis->ctx);
 
 	RETiRet;
