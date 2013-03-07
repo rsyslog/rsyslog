@@ -52,15 +52,21 @@ processFile(char *name)
 	}
 	if(rsgt_tlvrdHeader(fp, hdr) != 0) goto err;
 	printf("File Header: '%s'\n", hdr);
-	if(rsgt_tlvrd(fp, &tlvtype, &tlvlen, &obj) != 0) goto err;
-	rsgt_tlvprint(stdout, tlvtype, obj, 0);
+	while(1) { /* we will err out on EOF */
+		if(rsgt_tlvrd(fp, &tlvtype, &tlvlen, &obj) != 0) {
+			if(feof(fp))
+				break;
+			else
+				goto err;
+		}
+		rsgt_tlvprint(stdout, tlvtype, obj, 0);
+	}
 
 	if(fp != stdin)
 		fclose(fp);
 	return;
 err:	fprintf(stderr, "error processing file %s\n", name);
 }
-
 
 int
 main(int argc, char *argv[])

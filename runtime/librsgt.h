@@ -39,6 +39,7 @@ struct gtctx_s {
 	GTDataHash *x_prev; /* last leaf hash (maybe of previous block) --> preserve on term */
 	char *timestamper;
 	unsigned char *sigfilename;
+	unsigned char *statefilename;
 	int fd;
 	unsigned char *blkStrtHash; /* last hash from previous block */
 	uint16_t lenBlkStrtHash;
@@ -70,8 +71,6 @@ struct block_sig_s {
 	uint8_t hashID;
 	uint8_t sigID; /* what type of *signature*? */
 	uint8_t *iv;
-	// TODO: think about the situation where the last hash is 
-	// different from the current one (e.g. config change!)
 	imprint_t lastHash;
 	uint64_t recCount;
 	struct {
@@ -80,6 +79,17 @@ struct block_sig_s {
 			size_t len; /* must be size_t due to GT API! */
 		} der;
 	} sig;
+};
+
+
+/* the following defines the gtstate file record. Currently, this record
+ * is fixed, we may change that over time.
+ */
+struct rsgtstatefile {
+	char hdr[8];	/* must be "GTSTAT10" */
+	uint8_t hashID;
+	uint8_t lenHash;
+	/* after that, the hash value is contained within the file */
 };
 
 /* error states */

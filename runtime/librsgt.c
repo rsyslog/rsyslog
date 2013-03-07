@@ -233,11 +233,68 @@ printf("TTTT: tlvlen %u, lenDer %u\n", tlvlen, lenDer);
 	tlvbufAddOctetString(ctx, der, lenDer);
 }
 
+/* read rsyslog log state file; if we cannot access it or the
+ * contents looks invalid, we flag it as non-present (and thus
+ * begin a new hash chain).
+ * The context is initialized accordingly.
+ */
+static void
+readStateFile(gtctx ctx)
+{
+	int fd;
+	struct rsgtstatefile sf;
+	int rr;
+
+	fd = open((char*)ctx->statefilename, O_RDONLY|O_NOCTTY|O_CLOEXEC, 0600);
+	if(fd == -1) goto err;
+
+	if(read(fd, &sf, sizeof(sf)) != sizeof(sf)) goto err;
+	if(strncmp(sf.hdr, "GTSTAT10", 8)) goto err;
+
+	ctx->lenBlkStrtHash = hashOutputLengthOctets(sf.lenHash);
+	ctx->blkStrtHash = calloc(1, ctx->lenBlkStrtHash);
+	if((rr=read(fd, ctx->blkStrtHash, ctx->lenBlkStrtHash))
+		!= ctx->lenBlkStrtHash) {
+		free(ctx->blkStrtHash);
+		goto err;
+	}
+return;
+
+err:
+	ctx->lenBlkStrtHash = hashOutputLengthOctets(ctx->hashAlg);
+	ctx->blkStrtHash = calloc(1, ctx->lenBlkStrtHash);
+}
+
+/* persist all information that we need to re-open and append
+ * to a log signature file.
+ */
+static void
+writeStateFile(gtctx ctx)
+{
+	int fd;
+	struct rsgtstatefile sf;
+
+	fd = open((char*)ctx->statefilename,
+		       O_WRONLY|O_CREAT|O_TRUNC|O_NOCTTY|O_CLOEXEC, 0600);
+	if(fd == -1)
+		goto done;
+
+	memcpy(sf.hdr, "GTSTAT10", 8);
+	sf.hashID = hashIdentifier(ctx->hashAlg);
+	sf.lenHash = ctx->x_prev->digest_length;
+	write(fd, &sf, sizeof(sf));
+	write(fd, ctx->x_prev->digest, ctx->x_prev->digest_length);
+	close(fd);
+done:	return;
+}
+
+
 void tlvClose(gtctx ctx)
 {
 	tlvFlush(ctx);
 	close(ctx->fd);
 	ctx->fd = -1;
+	writeStateFile(ctx);
 }
 
 
@@ -247,19 +304,21 @@ void tlvClose(gtctx ctx)
 void tlvOpen(gtctx ctx, char *hdr, unsigned lenHdr)
 {
 	ctx->fd = open((char*)ctx->sigfilename,
-		       O_WRONLY/*|O_APPEND*/|O_CREAT|O_NOCTTY|O_CLOEXEC, 0600);
-	// FIXME: check fd == -1
-	memcpy(ctx->tlvBuf, hdr, lenHdr);
-	ctx->tlvIdx = lenHdr;
+		       O_WRONLY|O_APPEND|O_NOCTTY|O_CLOEXEC, 0600);
+	if(ctx->fd == -1) {
+		/* looks like we need to create a new file */
+		ctx->fd = open((char*)ctx->sigfilename,
+			       O_WRONLY|O_CREAT|O_NOCTTY|O_CLOEXEC, 0600);
+		// FIXME: check fd == -1
+		memcpy(ctx->tlvBuf, hdr, lenHdr);
+		ctx->tlvIdx = lenHdr;
+	} else {
+		ctx->tlvIdx = 0; /* header already present! */
+	}
 	/* we now need to obtain the last previous hash, so that
 	 * we can continue the hash chain.
 	 */
-	// ...
-	/* in case we did not have a previous hash (or could not
-	 * obtain it), we start with zero.
-	 */
-	ctx->lenBlkStrtHash = hashOutputLengthOctets(ctx->hashAlg);
-	ctx->blkStrtHash = calloc(1, ctx->lenBlkStrtHash);
+	readStateFile(ctx);
 }
 
 /*
@@ -303,6 +362,9 @@ rsgtCtxNew(unsigned char *logfn, enum GTHashAlgorithm hashAlg)
 	snprintf(fn, sizeof(fn), "%s.gtsig", logfn);
 	fn[MAXFNAME] = '\0'; /* be on save side */
 	ctx->sigfilename = (uchar*) strdup(fn);
+	snprintf(fn, sizeof(fn), "%s.gtstate", logfn);
+	fn[MAXFNAME] = '\0'; /* be on save side */
+	ctx->statefilename = (uchar*) strdup(fn);
 	tlvOpen(ctx, LOGSIGHDR, sizeof(LOGSIGHDR)-1);
 	return ctx;
 }
