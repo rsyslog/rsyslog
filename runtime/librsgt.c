@@ -350,15 +350,21 @@ seedIV(gtctx ctx)
 }
 
 gtctx
-rsgtCtxNew(unsigned char *logfn, enum GTHashAlgorithm hashAlg)
+rsgtCtxNew(void)
 {
-	char fn[MAXFNAME+1];
 	gtctx ctx;
-	ctx =  calloc(1, sizeof(struct gtctx_s));
+	ctx = calloc(1, sizeof(struct gtctx_s));
 	ctx->x_prev = NULL;
-	ctx->hashAlg = hashAlg;
+	ctx->hashAlg = GT_HASHALG_SHA256;
 	ctx->timestamper = strdup(
 			   "http://stamper.guardtime.net/gt-signingservice");
+	return ctx;
+}
+
+int
+rsgtCtxOpenFile(gtctx ctx, unsigned char *logfn)
+{
+	char fn[MAXFNAME+1];
 	snprintf(fn, sizeof(fn), "%s.gtsig", logfn);
 	fn[MAXFNAME] = '\0'; /* be on save side */
 	ctx->sigfilename = (uchar*) strdup(fn);
@@ -366,9 +372,31 @@ rsgtCtxNew(unsigned char *logfn, enum GTHashAlgorithm hashAlg)
 	fn[MAXFNAME] = '\0'; /* be on save side */
 	ctx->statefilename = (uchar*) strdup(fn);
 	tlvOpen(ctx, LOGSIGHDR, sizeof(LOGSIGHDR)-1);
-	return ctx;
+	return 0;
 }
  
+
+/* returns 0 on succes, 1 if algo is unknown */
+int
+rsgtSetHashFunction(gtctx ctx, char *algName)
+{
+	int r = 0;
+	if(!strcmp(algName, "SHA2-256"))
+		ctx->hashAlg = GT_HASHALG_SHA256;
+	else if(!strcmp(algName, "SHA2-384"))
+		ctx->hashAlg = GT_HASHALG_SHA384;
+	else if(!strcmp(algName, "SHA2-512"))
+		ctx->hashAlg = GT_HASHALG_SHA512;
+	else if(!strcmp(algName, "SHA1"))
+		ctx->hashAlg = GT_HASHALG_SHA1;
+	else if(!strcmp(algName, "RIPEMD-160"))
+		ctx->hashAlg = GT_HASHALG_RIPEMD160;
+	else if(!strcmp(algName, "SHA2-224"))
+		ctx->hashAlg = GT_HASHALG_SHA224;
+	else
+		r = 1;
+	return r;
+}
 void
 rsgtCtxDel(gtctx ctx)
 {

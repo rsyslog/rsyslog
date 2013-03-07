@@ -27,6 +27,7 @@
 /* interface */
 BEGINinterface(sigprov) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Construct)(void *ppThis);
+	rsRetVal (*SetCnfParam)(void *ppThis, struct nvlst *lst);
 	rsRetVal (*Destruct)(void *ppThis);
 	rsRetVal (*OnFileOpen)(void *pThis, uchar *fn);
 	rsRetVal (*OnRecordWrite)(void *pThis, uchar *rec, rs_size_t lenRec);

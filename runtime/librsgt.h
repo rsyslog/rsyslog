@@ -37,6 +37,9 @@ struct gtctx_s {
 	enum GTHashAlgorithm hashAlg;
 	uint8_t *IV; /* initial value for blinding masks (where to do we get it from?) */
 	GTDataHash *x_prev; /* last leaf hash (maybe of previous block) --> preserve on term */
+	uint8_t bKeepRecordHashes;
+	uint8_t bKeepTreeHashes;
+	uint64_t blockSizeLimit;
 	char *timestamper;
 	unsigned char *sigfilename;
 	unsigned char *statefilename;
@@ -172,10 +175,33 @@ getIVLen(block_sig_t *bs)
 {
 	return hashOutputLengthOctets(bs->hashID);
 }
+static inline void
+rsgtSetTimestamper(gtctx ctx, char *timestamper)
+{
+	free(ctx->timestamper);
+	ctx->timestamper = strdup(timestamper);
+}
+static inline void
+rsgtSetBlockSizeLimit(gtctx ctx, uint64_t limit)
+{
+	ctx->blockSizeLimit = limit;
+}
+static inline void
+rsgtSetKeepRecordHashes(gtctx ctx, int val)
+{
+	ctx->bKeepRecordHashes = val;
+}
+static inline void
+rsgtSetKeepTreeHashes(gtctx ctx, int val)
+{
+	ctx->bKeepTreeHashes = val;
+}
 
+int rsgtSetHashFunction(gtctx ctx, char *algName);
 void rsgtInit(char *usragent);
 void rsgtExit(void);
-gtctx rsgtCtxNew(unsigned char *logfn, enum GTHashAlgorithm hashAlg);
+gtctx rsgtCtxNew(void);
+int rsgtCtxOpenFile(gtctx ctx, unsigned char *logfn);
 void rsgtCtxDel(gtctx ctx);
 void sigblkInit(gtctx ctx);
 void sigblkAddRecord(gtctx ctx, const unsigned char *rec, const size_t len);

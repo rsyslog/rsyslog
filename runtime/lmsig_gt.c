@@ -41,11 +41,25 @@ DEFobjStaticHelpers
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 
+/* tables for interfacing with the v6 config system */
+static struct cnfparamdescr cnfpdescr[] = {
+	{ "sig.hashfunction", eCmdHdlrGetWord, 0 },
+	{ "sig.timestampservice", eCmdHdlrGetWord, 0 },
+	{ "sig.block.sizelimit", eCmdHdlrSize, 0 },
+	{ "sig.keeprecordhashes", eCmdHdlrBinary, 0 },
+	{ "sig.keeptreehashes", eCmdHdlrBinary, 0 }
+};
+static struct cnfparamblk pblk =
+	{ CNFPARAMBLK_VERSION,
+	  sizeof(cnfpdescr)/sizeof(struct cnfparamdescr),
+	  cnfpdescr
+	};
 
 /* Standard-Constructor
  */
-BEGINobjConstruct(lmsig_gt) /* be sure to specify the object type also in END macro! */
+BEGINobjConstruct(lmsig_gt)
 	dbgprintf("DDDD: lmsig_gt: called construct\n");
+	pThis->ctx = rsgtCtxNew();
 ENDobjConstruct(lmsig_gt)
 
 
@@ -55,13 +69,61 @@ CODESTARTobjDestruct(lmsig_gt)
 	dbgprintf("DDDD: lmsig_gt: called destruct\n");
 ENDobjDestruct(lmsig_gt)
 
+
+/* apply all params from param block to us. This must be called
+ * after construction, but before the OnFileOpen() entry point.
+ * Defaults are expected to have been set during construction.
+ */
+rsRetVal
+SetCnfParam(void *pT, struct nvlst *lst)
+{
+	lmsig_gt_t *pThis = (lmsig_gt_t*) pT;
+	int i;
+	uchar *cstr;
+	struct cnfparamvals *pvals;
+	pvals = nvlstGetParams(lst, &pblk, NULL);
+	if(Debug) {
+		dbgprintf("sig param blk in lmsig_gt:\n");
+		cnfparamsPrint(&pblk, pvals);
+	}
+
+	for(i = 0 ; i < pblk.nParams ; ++i) {
+		if(!pvals[i].bUsed)
+			continue;
+		if(!strcmp(pblk.descr[i].name, "sig.hashfunction")) {
+			cstr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
+			if(rsgtSetHashFunction(pThis->ctx, (char*)cstr) != 0) {
+				errmsg.LogError(0, RS_RET_ERR, "Hash function "
+					"'%s' unknown - using default", cstr);
+			}
+			free(cstr);
+		} else if(!strcmp(pblk.descr[i].name, "sig.timestampservice")) {
+			cstr = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+			rsgtSetTimestamper(pThis->ctx, (char*) cstr);
+			free(cstr);
+		} else if(!strcmp(pblk.descr[i].name, "sig.block.sizelimit")) {
+			rsgtSetBlockSizeLimit(pThis->ctx, pvals[i].val.d.n);
+		} else if(!strcmp(pblk.descr[i].name, "sig.keeprecordhashes")) {
+			rsgtSetKeepRecordHashes(pThis->ctx, pvals[i].val.d.n);
+		} else if(!strcmp(pblk.descr[i].name, "sig.keeptreehashes")) {
+			rsgtSetKeepTreeHashes(pThis->ctx, pvals[i].val.d.n);
+		} else {
+			DBGPRINTF("lmsig_gt: program error, non-handled "
+			  "param '%s'\n", pblk.descr[i].name);
+		}
+	}
+	cnfparamvalsDestruct(pvals, &pblk);
+	return RS_RET_OK;
+}
+
+
 static rsRetVal
 OnFileOpen(void *pT, uchar *fn)
 {
 	lmsig_gt_t *pThis = (lmsig_gt_t*) pT;
 	DEFiRet;
 dbgprintf("DDDD: onFileOpen: %s\n", fn);
-	pThis->ctx = rsgtCtxNew(fn, GT_HASHALG_SHA256);
+	rsgtCtxOpenFile(pThis->ctx, fn);
 	sigblkInit(pThis->ctx);
 
 	RETiRet;
@@ -95,6 +157,7 @@ CODESTARTobjQueryInterface(lmsig_gt)
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}
 	pIf->Construct = (rsRetVal(*)(void*)) lmsig_gtConstruct;
+	pIf->SetCnfParam = SetCnfParam;
 	pIf->Destruct = (rsRetVal(*)(void*)) lmsig_gtDestruct;
 	pIf->OnFileOpen = OnFileOpen;
 	pIf->OnRecordWrite = OnRecordWrite;

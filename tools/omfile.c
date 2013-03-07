@@ -989,7 +989,7 @@ finalize_it:
 }
 
 static inline void
-initSigprov(instanceData *pData)
+initSigprov(instanceData *pData, struct nvlst *lst)
 {
 	uchar szDrvrName[1024];
 
@@ -1022,6 +1022,7 @@ initSigprov(instanceData *pData)
 				szDrvrName);
 		goto done;
 	}
+	pData->sigprov.SetCnfParam(pData->sigprovData, lst);
 
 	dbgprintf("loaded signature provider %s, data instance at %p\n",
 		  szDrvrName, pData->sigprovData);
@@ -1111,7 +1112,7 @@ CODESTARTnewActInst
 	}
 
 	if(pData->sigprovName != NULL) {
-		initSigprov(pData);
+		initSigprov(pData, lst);
 	}
 
 	tplToUse = ustrdup((pData->tplName == NULL) ? getDfltTpl() : pData->tplName);
