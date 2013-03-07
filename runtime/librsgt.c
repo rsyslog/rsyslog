@@ -48,7 +48,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#define MAXFNAME 1024 /* TODO: include correct header */
+#define MAXFNAME 1024
 
 #include <gt_http.h>
 
@@ -59,45 +59,6 @@ typedef unsigned char uchar;
 #define VERSION "no-version"
 #endif
 
-static inline uint16_t
-hashOutputLengthOctets(uint8_t hashID)
-{
-	switch(hashID) {
-	case GT_HASHALG_SHA1:	/* paper: SHA1 */
-		return 20;
-	case GT_HASHALG_RIPEMD160: /* paper: RIPEMD-160 */
-		return 20;
-	case GT_HASHALG_SHA224:	/* paper: SHA2-224 */
-		return 28;
-	case GT_HASHALG_SHA256: /* paper: SHA2-256 */
-		return 32;
-	case GT_HASHALG_SHA384: /* paper: SHA2-384 */
-		return 48;
-	case GT_HASHALG_SHA512:	/* paper: SHA2-512 */
-		return 64;
-	default:return 32;
-	}
-}
-static inline uint8_t
-hashIdentifier(uint8_t hashID)
-{
-	switch(hashID) {
-	case GT_HASHALG_SHA1:	/* paper: SHA1 */
-		return 0x00;
-	case GT_HASHALG_RIPEMD160: /* paper: RIPEMD-160 */
-		return 0x02;
-	case GT_HASHALG_SHA224:	/* paper: SHA2-224 */
-		return 0x03;
-	case GT_HASHALG_SHA256: /* paper: SHA2-256 */
-		return 0x01;
-	case GT_HASHALG_SHA384: /* paper: SHA2-384 */
-		return 0x04;
-	case GT_HASHALG_SHA512:	/* paper: SHA2-512 */
-		return 0x05;
-	default:return 0xff;
-	}
-}
-
 static void
 outputhash(GTDataHash *hash)
 {
@@ -106,7 +67,6 @@ outputhash(GTDataHash *hash)
 		printf("%2.2x", hash->digest[i]);
 	printf("\n");
 }
-
 
 
 void
@@ -144,7 +104,6 @@ tlvbufPhysWrite(gtctx ctx)
 	ssize_t iTotalWritten;
 	ssize_t iWritten;
 	char *pWriteBuf;
-	fprintf(stderr, "emu: writing TLV file!\n");
 
 	lenBuf = ctx->tlvIdx;
 	pWriteBuf = ctx->tlvBuf;
@@ -170,8 +129,6 @@ tlvbufPhysWrite(gtctx ctx)
 		lenBuf -= iWritten;
 		pWriteBuf += iWritten;
 	} while(lenBuf > 0);	/* Warning: do..while()! */
-
-	//DBGOPRINT((obj_t*) pThis, "file %d write wrote %d bytes\n", pThis->fd, (int) iWritten);
 
 finalize_it:
 	ctx->tlvIdx = 0;
@@ -228,7 +185,10 @@ tlv8Write(gtctx ctx, int flags, int tlvtype, int len)
 void
 tlv16Write(gtctx ctx, int flags, int tlvtype, uint16_t len)
 {
-	tlvbufAddOctet(ctx, ((flags|1) << 13)|tlvtype);
+	uint16_t typ;
+	typ = ((flags|1) << 13)|tlvtype;
+	tlvbufAddOctet(ctx, typ >> 8);
+	tlvbufAddOctet(ctx, typ & 0xff);
 	tlvbufAddOctet(ctx, (len >> 8) & 0xff);
 	tlvbufAddOctet(ctx, len & 0xff);
 } 
@@ -245,11 +205,12 @@ tlvWriteBlockSig(gtctx ctx, uchar *der, uint16_t lenDer)
 {
 	unsigned tlvlen;
 
-	tlvlen  = 1 + 1 /* hash algo TLV */ +
-	 	  1 + hashOutputLengthOctets(ctx->hashAlg) /* iv */ +
-		  1 + 1 + ctx->lenBlkStrtHash /* last hash */ +
-		  1 + 8 /* rec-count (64 bit integer) */ +
-		  2 + lenDer /* rfc-3161 */;
+	tlvlen  = 2 + 1 /* hash algo TLV */ +
+	 	  2 + hashOutputLengthOctets(ctx->hashAlg) /* iv */ +
+		  2 + 1 + ctx->lenBlkStrtHash /* last hash */ +
+		  2 + 8 /* rec-count (64 bit integer) */ +
+		  4 + lenDer /* rfc-3161 */;
+printf("TTTT: tlvlen %u, lenDer %u\n", tlvlen, lenDer);
 	/* write top-level TLV object (block-sig */
 	tlv16Write(ctx, 0x00, 0x0902, tlvlen);
 	/* and now write the children */
@@ -258,13 +219,14 @@ tlvWriteBlockSig(gtctx ctx, uchar *der, uint16_t lenDer)
 	tlv8Write(ctx, 0x00, 0x00, 1);
 	tlvbufAddOctet(ctx, hashIdentifier(ctx->hashAlg));
 	/* block-iv */
-	tlv8Write(ctx, 0x00, 0x01, 1);
+	tlv8Write(ctx, 0x00, 0x01, hashOutputLengthOctets(ctx->hashAlg));
 	tlvbufAddOctetString(ctx, ctx->IV, hashOutputLengthOctets(ctx->hashAlg));
 	/* last-hash */
-	tlv8Write(ctx, 0x00, 0x02, 1);
+	tlv8Write(ctx, 0x00, 0x02, ctx->lenBlkStrtHash+1);
+	tlvbufAddOctet(ctx, hashIdentifier(ctx->hashAlg));
 	tlvbufAddOctetString(ctx, ctx->blkStrtHash, ctx->lenBlkStrtHash);
 	/* rec-count */
-	tlv8Write(ctx, 0x00, 0x03, 1);
+	tlv8Write(ctx, 0x00, 0x03, 8);
 	tlvbufAddInt64(ctx, ctx->nRecords);
 	/* rfc-3161 */
 	tlv16Write(ctx, 0x00, 0x906, lenDer);
@@ -274,7 +236,6 @@ tlvWriteBlockSig(gtctx ctx, uchar *der, uint16_t lenDer)
 void tlvClose(gtctx ctx)
 {
 	tlvFlush(ctx);
-	fprintf(stderr, "emu: close tlv file\n");
 	close(ctx->fd);
 	ctx->fd = -1;
 }
@@ -285,7 +246,6 @@ void tlvClose(gtctx ctx)
  */
 void tlvOpen(gtctx ctx, char *hdr, unsigned lenHdr)
 {
-	fprintf(stderr, "emu: open tlv file '%s'\n", ctx->sigfilename);
 	ctx->fd = open((char*)ctx->sigfilename,
 		       O_WRONLY/*|O_APPEND*/|O_CREAT|O_NOCTTY|O_CLOEXEC, 0600);
 	// FIXME: check fd == -1

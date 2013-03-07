@@ -70,6 +70,8 @@ struct block_sig_s {
 	uint8_t hashID;
 	uint8_t sigID; /* what type of *signature*? */
 	uint8_t *iv;
+	// TODO: think about the situation where the last hash is 
+	// different from the current one (e.g. config change!)
 	imprint_t lastHash;
 	uint64_t recCount;
 	struct {
@@ -80,6 +82,87 @@ struct block_sig_s {
 	} sig;
 };
 
+/* error states */
+#define RSGTE_IO 1 	/* any kind of io error, including EOF */
+#define RSGTE_FMT 2	/* data fromat error */
+#define RSGTE_INVLTYP 3	/* invalid TLV type record (unexcpected at this point) */
+#define RSGTE_OOM 4	/* ran out of memory */
+#define RSGTE_LEN 5	/* error related to length records */
+
+
+static inline uint16_t
+hashOutputLengthOctets(uint8_t hashID)
+{
+	switch(hashID) {
+	case GT_HASHALG_SHA1:	/* paper: SHA1 */
+		return 20;
+	case GT_HASHALG_RIPEMD160: /* paper: RIPEMD-160 */
+		return 20;
+	case GT_HASHALG_SHA224:	/* paper: SHA2-224 */
+		return 28;
+	case GT_HASHALG_SHA256: /* paper: SHA2-256 */
+		return 32;
+	case GT_HASHALG_SHA384: /* paper: SHA2-384 */
+		return 48;
+	case GT_HASHALG_SHA512:	/* paper: SHA2-512 */
+		return 64;
+	default:return 32;
+	}
+}
+
+static inline uint8_t
+hashIdentifier(uint8_t hashID)
+{
+	switch(hashID) {
+	case GT_HASHALG_SHA1:	/* paper: SHA1 */
+		return 0x00;
+	case GT_HASHALG_RIPEMD160: /* paper: RIPEMD-160 */
+		return 0x02;
+	case GT_HASHALG_SHA224:	/* paper: SHA2-224 */
+		return 0x03;
+	case GT_HASHALG_SHA256: /* paper: SHA2-256 */
+		return 0x01;
+	case GT_HASHALG_SHA384: /* paper: SHA2-384 */
+		return 0x04;
+	case GT_HASHALG_SHA512:	/* paper: SHA2-512 */
+		return 0x05;
+	default:return 0xff;
+	}
+}
+static inline char *
+hashAlgName(uint8_t hashID)
+{
+	switch(hashID) {
+	case GT_HASHALG_SHA1:
+		return "SHA1";
+	case GT_HASHALG_RIPEMD160:
+		return "RIPEMD-160";
+	case GT_HASHALG_SHA224:
+		return "SHA2-224";
+	case GT_HASHALG_SHA256:
+		return "SHA2-256";
+	case GT_HASHALG_SHA384:
+		return "SHA2-384";
+	case GT_HASHALG_SHA512:
+		return "SHA2-512";
+	default:return "[unknown]";
+	}
+}
+static inline char *
+sigTypeName(uint8_t sigID)
+{
+	switch(sigID) {
+	case SIGID_RFC3161:
+		return "RFC3161";
+	default:return "[unknown]";
+	}
+}
+static inline uint16_t
+getIVLen(block_sig_t *bs)
+{
+	return hashOutputLengthOctets(bs->hashID);
+}
+
 void rsgtInit(char *usragent);
 void rsgtExit(void);
 gtctx rsgtCtxNew(unsigned char *logfn, enum GTHashAlgorithm hashAlg);
@@ -88,4 +171,9 @@ void sigblkInit(gtctx ctx);
 void sigblkAddRecord(gtctx ctx, const unsigned char *rec, const size_t len);
 void sigblkFinish(gtctx ctx);
 void rsgtCtxSetLogfileName(gtctx ctx, char *logfilename);
+/* reader functions */
+int rsgt_tlvrdHeader(FILE *fp, unsigned char *hdr);
+int rsgt_tlvrd(FILE *fp, uint16_t *tlvtype, uint16_t *tlvlen, void *obj);
+void rsgt_tlvprint(FILE *fp, uint16_t tlvtype, void *obj, uint8_t verbose);
+
 #endif  /* #ifndef INCLUDED_LIBRSGT_H */
