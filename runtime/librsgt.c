@@ -272,7 +272,6 @@ readStateFile(gtctx ctx)
 {
 	int fd;
 	struct rsgtstatefile sf;
-	int rr;
 
 	fd = open((char*)ctx->statefilename, O_RDONLY|O_NOCTTY|O_CLOEXEC, 0600);
 	if(fd == -1) goto err;
@@ -282,7 +281,7 @@ readStateFile(gtctx ctx)
 
 	ctx->lenBlkStrtHash = sf.lenHash;
 	ctx->blkStrtHash = calloc(1, ctx->lenBlkStrtHash);
-	if((rr=read(fd, ctx->blkStrtHash, ctx->lenBlkStrtHash))
+	if(read(fd, ctx->blkStrtHash, ctx->lenBlkStrtHash)
 		!= ctx->lenBlkStrtHash) {
 		free(ctx->blkStrtHash);
 		goto err;
