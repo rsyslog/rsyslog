@@ -218,6 +218,18 @@ tlvFlush(gtctx ctx)
 }
 
 void
+tlvWriteRecHash(gtctx ctx, GTDataHash *r)
+{
+	unsigned tlvlen;
+
+	tlvlen = 1 + r->digest_length;
+	tlv16Write(ctx, 0x00, 0x0900, tlvlen);
+	tlvbufAddOctet(ctx, hashIdentifier(ctx->hashAlg));
+	tlvbufAddOctetString(ctx, r->digest, r->digest_length);
+dbgprintf("DDDD: tlvWriteRecHash: tlvlen %u, digest_len %u\n", tlvlen, r->digest_length);
+}
+
+void
 tlvWriteBlockSig(gtctx ctx, uchar *der, uint16_t lenDer)
 {
 	unsigned tlvlen;
@@ -490,7 +502,7 @@ hash_m(gtctx ctx, GTDataHash **m)
 	GTDataHash_create(ctx->hashAlg, concatBuf, len, m);
 }
 
-static void
+static inline void
 hash_r(gtctx ctx, GTDataHash **r, const uchar *rec, const size_t len)
 {
 	// r = hash(canonicalize(rec));
@@ -521,6 +533,8 @@ sigblkAddRecord(gtctx ctx, const uchar *rec, const size_t len)
 
 	hash_m(ctx, &m);
 	hash_r(ctx, &r, rec, len);
+	if(ctx->bKeepRecordHashes)
+		tlvWriteRecHash(ctx, r);
 	hash_node(ctx, &x, m, r, 1); /* hash leaf */
 	/* persists x here if Merkle tree needs to be persisted! */
 	/* add x to the forest as new leaf, update roots list */

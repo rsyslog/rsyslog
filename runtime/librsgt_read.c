@@ -160,6 +160,10 @@ rsgt_tlvrdLAST_HASH(FILE *fp, imprint_t *imp)
 	if(!(tlvtype == 0x02)) { r = RSGTE_INVLTYP; goto done; }
 	NEXTC;
 	imp->hashID = c;
+	if(tlvlen != 1 + hashOutputLengthOctets(imp->hashID)) {
+		r = RSGTE_LEN;
+		goto done;
+	}
 	imp->len = tlvlen - 1;
 	CHKr(rsgt_tlvrdOctetString(fp, &imp->data, tlvlen-1));
 	r = 0;
@@ -223,7 +227,7 @@ rsgt_tlvrdBLOCK_SIG(FILE *fp, block_sig_t **blocksig, uint16_t tlvlen)
 		   2 + lenInt /* rec-count */ +
 		   4 + bs->sig.der.len /* rfc-3161 */;
 	if(sizeRead != tlvlen) {
-		printf("lenght record error!\n");
+		printf("length record error!\n");
 		r = RSGTE_LEN;
 		goto done;
 	}
@@ -232,8 +236,38 @@ rsgt_tlvrdBLOCK_SIG(FILE *fp, block_sig_t **blocksig, uint16_t tlvlen)
 done:	return r;
 }
 
+static int
+rsgt_tlvrdREC_HASH(FILE *fp, imprint_t **imprint, uint16_t tlvlen)
+{
+	int r = 1;
+	imprint_t *imp;
+	int c;
 
-/**
+	if((imp = calloc(1, sizeof(imprint_t))) == NULL) {
+		r = RSGTE_OOM;
+		goto done;
+	}
+	if((imp->data = calloc(1, sizeof(imprint_t))) == NULL) {
+		r = RSGTE_OOM;
+		goto done;
+	}
+
+	NEXTC;
+	imp->hashID = c;
+	if(tlvlen != 1 + hashOutputLengthOctets(imp->hashID)) {
+		r = RSGTE_LEN;
+		goto done;
+	}
+	imp->len = tlvlen - 1;
+	CHKr(rsgt_tlvrdOctetString(fp, &imp->data, tlvlen-1));
+
+	*imprint = imp;
+	r = 0;
+done:	return r;
+}
+
+
+/**;
  * Read the next "object" from file. This usually is
  * a single TLV, but may be something larger, for
  * example in case of a block-sig TLV record.
@@ -258,6 +292,10 @@ rsgt_tlvrd(FILE *fp, uint16_t *tlvtype, uint16_t *tlvlen, void *obj)
 
 	if((r = rsgt_tlvrdTL(fp, tlvtype, tlvlen)) != 0) goto done;
 	switch(*tlvtype) {
+		case 0x0900:
+			r = rsgt_tlvrdREC_HASH(fp, obj, *tlvlen);
+			if(r != 0) goto done;
+			break;
 		case 0x0902:
 			r = rsgt_tlvrdBLOCK_SIG(fp, obj, *tlvlen);
 			if(r != 0) goto done;
@@ -295,6 +333,22 @@ blobIsZero(uint8_t *blob, uint16_t len)
 			return 0;
 	return 1;
 }
+
+static void
+rsgt_printIMPRINT(FILE *fp, char *name, imprint_t *imp, uint8_t verbose)
+{
+	fprintf(fp, "%s", name);
+		outputHexBlob(imp->data, imp->len, verbose);
+		fputc('\n', fp);
+}
+
+static void
+rsgt_printREC_HASH(FILE *fp, imprint_t *imp, uint8_t verbose)
+{
+	rsgt_printIMPRINT(fp, "[0x0900]Record Signature Record: ",
+		imp, verbose);
+}
+
 /**
  * Output a human-readable representation of a block_sig_t
  * to proviced file pointer. This function is mainly inteded for
@@ -307,7 +361,7 @@ blobIsZero(uint8_t *blob, uint16_t len)
 void
 rsgt_printBLOCK_SIG(FILE *fp, block_sig_t *bs, uint8_t verbose)
 {
-	fprintf(fp, "Block Signature Record [0x0902]:\n");
+	fprintf(fp, "[0x0902]Block Signature Record:\n");
 	fprintf(fp, "\tPrevious Block Hash:\n");
 	fprintf(fp, "\t   Algorithm..: %s\n", hashAlgName(bs->lastHash.hashID));
 	fprintf(fp, "\t   Hash.......: ");
@@ -339,6 +393,9 @@ void
 rsgt_tlvprint(FILE *fp, uint16_t tlvtype, void *obj, uint8_t verbose)
 {
 	switch(tlvtype) {
+	case 0x0900:
+		rsgt_printREC_HASH(fp, obj, verbose);
+		break;
 	case 0x0902:
 		rsgt_printBLOCK_SIG(fp, obj, verbose);
 		break;
