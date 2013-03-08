@@ -237,7 +237,7 @@ done:	return r;
 }
 
 static int
-rsgt_tlvrdREC_HASH(FILE *fp, imprint_t **imprint, uint16_t tlvlen)
+rsgt_tlvrdIMPRINT(FILE *fp, imprint_t **imprint, uint16_t tlvlen)
 {
 	int r = 1;
 	imprint_t *imp;
@@ -293,7 +293,11 @@ rsgt_tlvrd(FILE *fp, uint16_t *tlvtype, uint16_t *tlvlen, void *obj)
 	if((r = rsgt_tlvrdTL(fp, tlvtype, tlvlen)) != 0) goto done;
 	switch(*tlvtype) {
 		case 0x0900:
-			r = rsgt_tlvrdREC_HASH(fp, obj, *tlvlen);
+			r = rsgt_tlvrdIMPRINT(fp, obj, *tlvlen);
+			if(r != 0) goto done;
+			break;
+		case 0x0901:
+			r = rsgt_tlvrdIMPRINT(fp, obj, *tlvlen);
 			if(r != 0) goto done;
 			break;
 		case 0x0902:
@@ -345,7 +349,14 @@ rsgt_printIMPRINT(FILE *fp, char *name, imprint_t *imp, uint8_t verbose)
 static void
 rsgt_printREC_HASH(FILE *fp, imprint_t *imp, uint8_t verbose)
 {
-	rsgt_printIMPRINT(fp, "[0x0900]Record Signature Record: ",
+	rsgt_printIMPRINT(fp, "[0x0900]Record hash................: ",
+		imp, verbose);
+}
+
+static void
+rsgt_printINT_HASH(FILE *fp, imprint_t *imp, uint8_t verbose)
+{
+	rsgt_printIMPRINT(fp, "[0x0901]Intermediate aggregate hash: ",
 		imp, verbose);
 }
 
@@ -395,6 +406,9 @@ rsgt_tlvprint(FILE *fp, uint16_t tlvtype, void *obj, uint8_t verbose)
 	switch(tlvtype) {
 	case 0x0900:
 		rsgt_printREC_HASH(fp, obj, verbose);
+		break;
+	case 0x0901:
+		rsgt_printINT_HASH(fp, obj, verbose);
 		break;
 	case 0x0902:
 		rsgt_printBLOCK_SIG(fp, obj, verbose);

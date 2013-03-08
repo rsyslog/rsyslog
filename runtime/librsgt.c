@@ -218,15 +218,14 @@ tlvFlush(gtctx ctx)
 }
 
 void
-tlvWriteRecHash(gtctx ctx, GTDataHash *r)
+tlvWriteHash(gtctx ctx, uint16_t tlvtype, GTDataHash *r)
 {
 	unsigned tlvlen;
 
 	tlvlen = 1 + r->digest_length;
-	tlv16Write(ctx, 0x00, 0x0900, tlvlen);
+	tlv16Write(ctx, 0x00, tlvtype, tlvlen);
 	tlvbufAddOctet(ctx, hashIdentifier(ctx->hashAlg));
 	tlvbufAddOctetString(ctx, r->digest, r->digest_length);
-dbgprintf("DDDD: tlvWriteRecHash: tlvlen %u, digest_len %u\n", tlvlen, r->digest_length);
 }
 
 void
@@ -281,7 +280,7 @@ readStateFile(gtctx ctx)
 	if(read(fd, &sf, sizeof(sf)) != sizeof(sf)) goto err;
 	if(strncmp(sf.hdr, "GTSTAT10", 8)) goto err;
 
-	ctx->lenBlkStrtHash = hashOutputLengthOctets(sf.lenHash);
+	ctx->lenBlkStrtHash = sf.lenHash;
 	ctx->blkStrtHash = calloc(1, ctx->lenBlkStrtHash);
 	if((rr=read(fd, ctx->blkStrtHash, ctx->lenBlkStrtHash))
 		!= ctx->lenBlkStrtHash) {
@@ -534,9 +533,11 @@ sigblkAddRecord(gtctx ctx, const uchar *rec, const size_t len)
 	hash_m(ctx, &m);
 	hash_r(ctx, &r, rec, len);
 	if(ctx->bKeepRecordHashes)
-		tlvWriteRecHash(ctx, r);
+		tlvWriteHash(ctx, 0x0900, r);
 	hash_node(ctx, &x, m, r, 1); /* hash leaf */
 	/* persists x here if Merkle tree needs to be persisted! */
+	if(ctx->bKeepTreeHashes)
+		tlvWriteHash(ctx, 0x0901, x);
 	/* add x to the forest as new leaf, update roots list */
 	t = x;
 	for(j = 0 ; j < ctx->nRoots ; ++j) {
@@ -549,6 +550,9 @@ sigblkAddRecord(gtctx ctx, const uchar *rec, const size_t len)
 			/* hash interim node */
 			hash_node(ctx, &t, ctx->roots_hash[j], t, j+2);
 			ctx->roots_valid[j] = 0;
+			// TODO: check if this is correct location (paper!)
+			if(ctx->bKeepTreeHashes)
+				tlvWriteHash(ctx, 0x0901, t);
 		}
 	}
 	if(t != NULL) {
