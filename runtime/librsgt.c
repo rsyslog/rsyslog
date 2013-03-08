@@ -527,6 +527,11 @@ sigblkAddRecord(gtctx ctx, const uchar *rec, const size_t len)
 	/* note: x is freed later as part of roots cleanup */
 	GTDataHash_free(m);
 	GTDataHash_free(r);
+
+	if(ctx->nRecords == ctx->blockSizeLimit) {
+		sigblkFinish(ctx);
+		sigblkInit(ctx);
+	}
 }
 
 static void
@@ -568,6 +573,9 @@ sigblkFinish(gtctx ctx)
 	GTDataHash *root, *rootDel;
 	int8_t j;
 
+	if(ctx->nRecords == 0)
+		goto done;
+
 	root = NULL;
 	for(j = 0 ; j < ctx->nRoots ; ++j) {
 		if(root == NULL) {
@@ -580,8 +588,12 @@ sigblkFinish(gtctx ctx)
 			GTDataHash_free(rootDel);
 		}
 	}
-	/* persist root value here (callback?) */
-printf("root hash is:\n"); outputhash(root);
 	timestampIt(ctx, root);
+
+	free(ctx->blkStrtHash);
+	ctx->lenBlkStrtHash = ctx->x_prev->digest_length;
+	ctx->blkStrtHash = malloc(ctx->lenBlkStrtHash);
+	memcpy(ctx->blkStrtHash, ctx->x_prev->digest, ctx->lenBlkStrtHash);
+done:
 	ctx->bInBlk = 0;
 }
