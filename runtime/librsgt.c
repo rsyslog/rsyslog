@@ -456,16 +456,21 @@ static inline void
 bufAddHash(gtctx ctx, uchar *buf, size_t *len, GTDataHash *hash)
 {
 	if(hash == NULL) {
+	// TODO: how to get the REAL HASH ID? --> add field!
+		buf[*len] = hashIdentifier(ctx->hashAlg);
+		++(*len);
 		memcpy(buf+*len, ctx->blkStrtHash, ctx->lenBlkStrtHash);
 		*len += ctx->lenBlkStrtHash;
 	} else {
+		buf[*len] = hashIdentifier(ctx->hashAlg);
+		++(*len);
 		memcpy(buf+*len, hash->digest, hash->digest_length);
 		*len += hash->digest_length;
 	}
 }
 /* concat: add tree level to buffer */
 static inline void
-bufAddLevel(uchar *buf, size_t *len, int level)
+bufAddLevel(uchar *buf, size_t *len, uint8_t level)
 {
 	memcpy(buf+*len, &level, sizeof(level));
 	*len += sizeof(level);
@@ -494,7 +499,8 @@ hash_r(gtctx ctx, GTDataHash **r, const uchar *rec, const size_t len)
 
 
 static void
-hash_node(gtctx ctx, GTDataHash **node, GTDataHash *m, GTDataHash *r, int level)
+hash_node(gtctx ctx, GTDataHash **node, GTDataHash *m, GTDataHash *r,
+          uint8_t level)
 {
 	// x = hash(concat(m, r, 0)); /* hash leaf */
 	uchar concatBuf[16*1024];
@@ -511,7 +517,7 @@ sigblkAddRecord(gtctx ctx, const uchar *rec, const size_t len)
 {
 	GTDataHash *x; /* current hash */
 	GTDataHash *m, *r, *t;
-	int8_t j;
+	uint8_t j;
 
 	hash_m(ctx, &m);
 	hash_r(ctx, &r, rec, len);
