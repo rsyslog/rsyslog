@@ -542,14 +542,15 @@ sigblkAddRecord(gtctx ctx, const uchar *rec, const size_t len)
 	t = x;
 	for(j = 0 ; j < ctx->nRoots ; ++j) {
 		if(ctx->roots_valid[j] == 0) {
-			GTDataHash_free(ctx->roots_hash[j]);
 			ctx->roots_hash[j] = t;
 			ctx->roots_valid[j] = 1;
 			t = NULL;
+			break;
 		} else if(t != NULL) {
 			/* hash interim node */
 			hash_node(ctx, &t, ctx->roots_hash[j], t, j+2);
 			ctx->roots_valid[j] = 0;
+			GTDataHash_free(ctx->roots_hash[j]);
 			// TODO: check if this is correct location (paper!)
 			if(ctx->bKeepTreeHashes)
 				tlvWriteHash(ctx, 0x0901, t);
@@ -558,6 +559,7 @@ sigblkAddRecord(gtctx ctx, const uchar *rec, const size_t len)
 	if(t != NULL) {
 		/* new level, append "at the top" */
 		ctx->roots_hash[ctx->nRoots] = t;
+		ctx->roots_valid[ctx->nRoots] = 1;
 		++ctx->nRoots;
 		assert(ctx->nRoots < MAX_ROOTS);
 		t = NULL;
