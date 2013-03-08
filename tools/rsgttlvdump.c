@@ -40,6 +40,7 @@ processFile(char *name)
 	uchar hdr[9];
 	uint16_t tlvtype, tlvlen;
 	void *obj;
+	int r = -1;
 	
 	if(!strcmp(name, "-"))
 		fp = stdin;
@@ -50,10 +51,10 @@ processFile(char *name)
 			goto err;
 		}
 	}
-	if(rsgt_tlvrdHeader(fp, hdr) != 0) goto err;
+	if((r = rsgt_tlvrdHeader(fp, hdr)) != 0) goto err;
 	printf("File Header: '%s'\n", hdr);
 	while(1) { /* we will err out on EOF */
-		if(rsgt_tlvrd(fp, &tlvtype, &tlvlen, &obj) != 0) {
+		if((r = rsgt_tlvrd(fp, &tlvtype, &tlvlen, &obj)) != 0) {
 			if(feof(fp))
 				break;
 			else
@@ -65,7 +66,7 @@ processFile(char *name)
 	if(fp != stdin)
 		fclose(fp);
 	return;
-err:	fprintf(stderr, "error processing file %s\n", name);
+err:	fprintf(stderr, "error %d processing file %s\n", r, name);
 }
 
 int

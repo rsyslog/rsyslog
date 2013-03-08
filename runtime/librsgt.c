@@ -59,15 +59,6 @@ typedef unsigned char uchar;
 #define VERSION "no-version"
 #endif
 
-static void
-outputhash(GTDataHash *hash)
-{
-	unsigned i;
-	for(i = 0 ; i < hash->digest_length ; ++i)
-		printf("%2.2x", hash->digest[i]);
-	printf("\n");
-}
-
 
 void
 rsgtInit(char *usragent)
@@ -159,19 +150,45 @@ tlvbufAddOctetString(gtctx ctx, uint8_t *octet, int size)
 	for(i = 0 ; i < size ; ++i)
 		tlvbufAddOctet(ctx, octet[i]);
 }
-static inline void
-tlvbufAddInt32(gtctx ctx, uint32_t val)
+/* return the actual length in to-be-written octets of an integer */
+static inline uint8_t
+tlvbufGetInt64OctetSize(uint64_t val)
 {
-	tlvbufAddOctet(ctx, (val >> 24) & 0xff);
-	tlvbufAddOctet(ctx, (val >> 16) & 0xff);
-	tlvbufAddOctet(ctx, (val >>  8) & 0xff);
-	tlvbufAddOctet(ctx,  val        & 0xff);
+	if(val >> 56)
+		return 8;
+	if((val >> 48) & 0xff)
+		return 7;
+	if((val >> 40) & 0xff)
+		return 6;
+	if((val >> 32) & 0xff)
+		return 5;
+	if((val >> 24) & 0xff)
+		return 4;
+	if((val >> 16) & 0xff)
+		return 3;
+	if((val >> 8) & 0xff)
+		return 2;
+	return 1;
 }
 static inline void
 tlvbufAddInt64(gtctx ctx, uint64_t val)
 {
-	tlvbufAddInt32(ctx, (val >> 32) & 0xffffffff);
-	tlvbufAddInt32(ctx,  val        & 0xffffffff);
+	uint8_t doWrite = 0;
+	if(val >> 56)
+		tlvbufAddOctet(ctx, (val >> 56) & 0xff), doWrite = 1;
+	if(doWrite || ((val >> 48) & 0xff))
+		tlvbufAddOctet(ctx, (val >> 48) & 0xff), doWrite = 1;
+	if(doWrite || ((val >> 40) & 0xff))
+		tlvbufAddOctet(ctx, (val >> 40) & 0xff), doWrite = 1;
+	if(doWrite || ((val >> 32) & 0xff))
+		tlvbufAddOctet(ctx, (val >> 32) & 0xff), doWrite = 1;
+	if(doWrite || ((val >> 24) & 0xff))
+		tlvbufAddOctet(ctx, (val >> 24) & 0xff), doWrite = 1;
+	if(doWrite || ((val >> 16) & 0xff))
+		tlvbufAddOctet(ctx, (val >> 16) & 0xff), doWrite = 1;
+	if(doWrite || ((val >> 8) & 0xff))
+		tlvbufAddOctet(ctx, (val >>  8) & 0xff), doWrite = 1;
+	tlvbufAddOctet(ctx, val & 0xff);
 }
 
 
@@ -204,13 +221,14 @@ void
 tlvWriteBlockSig(gtctx ctx, uchar *der, uint16_t lenDer)
 {
 	unsigned tlvlen;
+	uint8_t tlvlenRecords;
 
+	tlvlenRecords = tlvbufGetInt64OctetSize(ctx->nRecords);
 	tlvlen  = 2 + 1 /* hash algo TLV */ +
 	 	  2 + hashOutputLengthOctets(ctx->hashAlg) /* iv */ +
 		  2 + 1 + ctx->lenBlkStrtHash /* last hash */ +
-		  2 + 8 /* rec-count (64 bit integer) */ +
+		  2 + tlvlenRecords /* rec-count */ +
 		  4 + lenDer /* rfc-3161 */;
-printf("TTTT: tlvlen %u, lenDer %u\n", tlvlen, lenDer);
 	/* write top-level TLV object (block-sig */
 	tlv16Write(ctx, 0x00, 0x0902, tlvlen);
 	/* and now write the children */
@@ -226,7 +244,7 @@ printf("TTTT: tlvlen %u, lenDer %u\n", tlvlen, lenDer);
 	tlvbufAddOctet(ctx, hashIdentifier(ctx->hashAlg));
 	tlvbufAddOctetString(ctx, ctx->blkStrtHash, ctx->lenBlkStrtHash);
 	/* rec-count */
-	tlv8Write(ctx, 0x00, 0x03, 8);
+	tlv8Write(ctx, 0x00, 0x03, tlvlenRecords);
 	tlvbufAddInt64(ctx, ctx->nRecords);
 	/* rfc-3161 */
 	tlv16Write(ctx, 0x00, 0x906, lenDer);
