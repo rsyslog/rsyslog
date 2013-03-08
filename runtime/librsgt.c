@@ -515,7 +515,7 @@ sigblkAddRecord(gtctx ctx, const uchar *rec, const size_t len)
 
 	hash_m(ctx, &m);
 	hash_r(ctx, &r, rec, len);
-	hash_node(ctx, &x, m, r, 0); /* hash leaf */
+	hash_node(ctx, &x, m, r, 1); /* hash leaf */
 	/* persists x here if Merkle tree needs to be persisted! */
 	/* add x to the forest as new leaf, update roots list */
 	t = x;
@@ -527,7 +527,7 @@ sigblkAddRecord(gtctx ctx, const uchar *rec, const size_t len)
 			t = NULL;
 		} else if(t != NULL) {
 			/* hash interim node */
-			hash_node(ctx, &t, ctx->roots_hash[j], t, j+1);
+			hash_node(ctx, &t, ctx->roots_hash[j], t, j+2);
 			ctx->roots_valid[j] = 0;
 		}
 	}
@@ -601,7 +601,7 @@ sigblkFinish(gtctx ctx)
 			ctx->roots_valid[j] = 0; /* guess this is redundant with init, maybe del */
 		} else if(ctx->roots_valid[j]) {
 			rootDel = root;
-			hash_node(ctx, &root, ctx->roots_hash[j], root, j+1);
+			hash_node(ctx, &root, ctx->roots_hash[j], root, j+2);
 			ctx->roots_valid[j] = 0; /* guess this is redundant with init, maybe del */
 			GTDataHash_free(rootDel);
 		}
