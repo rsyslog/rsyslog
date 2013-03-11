@@ -1,4 +1,8 @@
 ----------------------------------------------------------------------------
+Version 7.2.7  [v7-stable] 2013-03-??
+- doc bugfix: rsyslog.conf man page had invalid file format info
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=418
+----------------------------------------------------------------------------
 Version 7.2.6  [v7-stable] 2013-03-05
 - slightly improved config parser error messages when invalid escapes happen
 - bugfix: include files got included in the wrong order
