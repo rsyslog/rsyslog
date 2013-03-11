@@ -600,9 +600,7 @@ prepareFile(instanceData *pData, uchar *newFileName)
 	CHKiRet(strm.ConstructFinalize(pData->pStrm));
 
 	if(pData->useSigprov)
-{ dbgprintf("DDDD: prepareFile, call sigprovPrepare\n");
 		sigprovPrepare(pData, szNameBuf);
-}
 	
 finalize_it:
 	if(iRet != RS_RET_OK) {
@@ -714,7 +712,6 @@ prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
 
 	/* Ok, we finally can open the file */
 	localRet = prepareFile(pData, newFileName); /* ignore exact error, we check fd below */
-dbgprintf("DDDD: prepareFile returned %d\n", localRet);
 
 	/* check if we had an error */
 	if(localRet != RS_RET_OK) {
@@ -759,7 +756,6 @@ doWrite(instanceData *pData, uchar *pszBuf, int lenBuf)
 	ASSERT(pData != NULL);
 	ASSERT(pszBuf != NULL);
 
-dbgprintf("DDDD: pData->sigprov %p\n", pData->sigprov);
 	DBGPRINTF("write to stream, pData->pStrm %p, lenBuf %d\n", pData->pStrm, lenBuf);
 	if(pData->pStrm != NULL){
 		CHKiRet(strm.Write(pData->pStrm, pszBuf, lenBuf));
@@ -779,14 +775,11 @@ writeFile(uchar **ppString, unsigned iMsgOpts, instanceData *pData)
 
 	ASSERT(pData != NULL);
 
-dbgprintf("DDDD: enter writeFile, dyn: %d, name: %s\n", pData->bDynamicName, pData->f_fname);
 	/* first check if we have a dynamic file name and, if so,
 	 * check if it still is ok or a new file needs to be created
 	 */
 	if(pData->bDynamicName) {
-dbgprintf("DDDD: calling prepareDynFile\n");
 		CHKiRet(prepareDynFile(pData, ppString[1], iMsgOpts));
-dbgprintf("DDDD: done prepareDynFile\n");
 	} else { /* "regular", non-dynafile */
 		if(pData->pStrm == NULL) {
 			CHKiRet(prepareFile(pData, pData->f_fname));
@@ -796,7 +789,6 @@ dbgprintf("DDDD: done prepareDynFile\n");
 		}
 	}
 
-dbgprintf("DDDD: calling doWrite()\n");
 	CHKiRet(doWrite(pData, ppString[0], strlen(CHAR_CONVERT(ppString[0]))));
 
 finalize_it:
@@ -885,7 +877,6 @@ CODESTARTfreeInstance
 	} else if(pData->pStrm != NULL)
 		closeFile(pData);
 	if(pData->useSigprov) {
-		dbgprintf("DDDD: destructing signature provider %s\n", pData->sigprovNameFull);
 		pData->sigprov.Destruct(&pData->sigprovData);
 		obj.ReleaseObj(__FILE__, pData->sigprovNameFull+2, pData->sigprovNameFull,
 			       (void*) &pData->sigprov);
