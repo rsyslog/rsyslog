@@ -88,19 +88,34 @@ rsgtExit(void)
 }
 
 
+static inline gtfile
+rsgtfileConstruct(gtctx ctx)
+{
+	gtfile gf;
+	if((gf = calloc(1, sizeof(struct gtfile_s))) == NULL)
+		goto done;
+	gf->ctx = ctx;
+	gf->hashAlg = ctx->hashAlg;
+	gf->bKeepRecordHashes = ctx->bKeepRecordHashes;
+	gf->bKeepTreeHashes = ctx->bKeepTreeHashes;
+	gf->x_prev = NULL;
+
+done:	return gf;
+}
+
 static inline void
-tlvbufPhysWrite(gtctx ctx)
+tlvbufPhysWrite(gtfile gf)
 {
 	ssize_t lenBuf;
 	ssize_t iTotalWritten;
 	ssize_t iWritten;
 	char *pWriteBuf;
 
-	lenBuf = ctx->tlvIdx;
-	pWriteBuf = ctx->tlvBuf;
+	lenBuf = gf->tlvIdx;
+	pWriteBuf = gf->tlvBuf;
 	iTotalWritten = 0;
 	do {
-		iWritten = write(ctx->fd, pWriteBuf, lenBuf);
+		iWritten = write(gf->fd, pWriteBuf, lenBuf);
 		if(iWritten < 0) {
 			//char errStr[1024];
 			int err = errno;
@@ -122,14 +137,14 @@ tlvbufPhysWrite(gtctx ctx)
 	} while(lenBuf > 0);	/* Warning: do..while()! */
 
 finalize_it:
-	ctx->tlvIdx = 0;
+	gf->tlvIdx = 0;
 }
 
 static inline void
-tlvbufChkWrite(gtctx ctx)
+tlvbufChkWrite(gtfile gf)
 {
-	if(ctx->tlvIdx == sizeof(ctx->tlvBuf)) {
-		tlvbufPhysWrite(ctx);
+	if(gf->tlvIdx == sizeof(gf->tlvBuf)) {
+		tlvbufPhysWrite(gf);
 	}
 }
 
@@ -138,17 +153,17 @@ tlvbufChkWrite(gtctx ctx)
  * output is written only on flush or close.
  */
 static inline void
-tlvbufAddOctet(gtctx ctx, int8_t octet)
+tlvbufAddOctet(gtfile gf, int8_t octet)
 {
-	tlvbufChkWrite(ctx);
-	ctx->tlvBuf[ctx->tlvIdx++] = octet;
+	tlvbufChkWrite(gf);
+	gf->tlvBuf[gf->tlvIdx++] = octet;
 }
 static inline void
-tlvbufAddOctetString(gtctx ctx, uint8_t *octet, int size)
+tlvbufAddOctetString(gtfile gf, uint8_t *octet, int size)
 {
 	int i;
 	for(i = 0 ; i < size ; ++i)
-		tlvbufAddOctet(ctx, octet[i]);
+		tlvbufAddOctet(gf, octet[i]);
 }
 /* return the actual length in to-be-written octets of an integer */
 static inline uint8_t
@@ -171,95 +186,95 @@ tlvbufGetInt64OctetSize(uint64_t val)
 	return 1;
 }
 static inline void
-tlvbufAddInt64(gtctx ctx, uint64_t val)
+tlvbufAddInt64(gtfile gf, uint64_t val)
 {
 	uint8_t doWrite = 0;
 	if(val >> 56)
-		tlvbufAddOctet(ctx, (val >> 56) & 0xff), doWrite = 1;
+		tlvbufAddOctet(gf, (val >> 56) & 0xff), doWrite = 1;
 	if(doWrite || ((val >> 48) & 0xff))
-		tlvbufAddOctet(ctx, (val >> 48) & 0xff), doWrite = 1;
+		tlvbufAddOctet(gf, (val >> 48) & 0xff), doWrite = 1;
 	if(doWrite || ((val >> 40) & 0xff))
-		tlvbufAddOctet(ctx, (val >> 40) & 0xff), doWrite = 1;
+		tlvbufAddOctet(gf, (val >> 40) & 0xff), doWrite = 1;
 	if(doWrite || ((val >> 32) & 0xff))
-		tlvbufAddOctet(ctx, (val >> 32) & 0xff), doWrite = 1;
+		tlvbufAddOctet(gf, (val >> 32) & 0xff), doWrite = 1;
 	if(doWrite || ((val >> 24) & 0xff))
-		tlvbufAddOctet(ctx, (val >> 24) & 0xff), doWrite = 1;
+		tlvbufAddOctet(gf, (val >> 24) & 0xff), doWrite = 1;
 	if(doWrite || ((val >> 16) & 0xff))
-		tlvbufAddOctet(ctx, (val >> 16) & 0xff), doWrite = 1;
+		tlvbufAddOctet(gf, (val >> 16) & 0xff), doWrite = 1;
 	if(doWrite || ((val >> 8) & 0xff))
-		tlvbufAddOctet(ctx, (val >>  8) & 0xff), doWrite = 1;
-	tlvbufAddOctet(ctx, val & 0xff);
+		tlvbufAddOctet(gf, (val >>  8) & 0xff), doWrite = 1;
+	tlvbufAddOctet(gf, val & 0xff);
 }
 
 
 void
-tlv8Write(gtctx ctx, int flags, int tlvtype, int len)
+tlv8Write(gtfile gf, int flags, int tlvtype, int len)
 {
-	tlvbufAddOctet(ctx, (flags << 5)|tlvtype);
-	tlvbufAddOctet(ctx, len & 0xff);
+	tlvbufAddOctet(gf, (flags << 5)|tlvtype);
+	tlvbufAddOctet(gf, len & 0xff);
 } 
 
 void
-tlv16Write(gtctx ctx, int flags, int tlvtype, uint16_t len)
+tlv16Write(gtfile gf, int flags, int tlvtype, uint16_t len)
 {
 	uint16_t typ;
 	typ = ((flags|1) << 13)|tlvtype;
-	tlvbufAddOctet(ctx, typ >> 8);
-	tlvbufAddOctet(ctx, typ & 0xff);
-	tlvbufAddOctet(ctx, (len >> 8) & 0xff);
-	tlvbufAddOctet(ctx, len & 0xff);
+	tlvbufAddOctet(gf, typ >> 8);
+	tlvbufAddOctet(gf, typ & 0xff);
+	tlvbufAddOctet(gf, (len >> 8) & 0xff);
+	tlvbufAddOctet(gf, len & 0xff);
 } 
 
 void
-tlvFlush(gtctx ctx)
+tlvFlush(gtfile gf)
 {
-	if(ctx->tlvIdx != 0)
-		tlvbufPhysWrite(ctx);
+	if(gf->tlvIdx != 0)
+		tlvbufPhysWrite(gf);
 }
 
 void
-tlvWriteHash(gtctx ctx, uint16_t tlvtype, GTDataHash *r)
+tlvWriteHash(gtfile gf, uint16_t tlvtype, GTDataHash *r)
 {
 	unsigned tlvlen;
 
 	tlvlen = 1 + r->digest_length;
-	tlv16Write(ctx, 0x00, tlvtype, tlvlen);
-	tlvbufAddOctet(ctx, hashIdentifier(ctx->hashAlg));
-	tlvbufAddOctetString(ctx, r->digest, r->digest_length);
+	tlv16Write(gf, 0x00, tlvtype, tlvlen);
+	tlvbufAddOctet(gf, hashIdentifier(gf->hashAlg));
+	tlvbufAddOctetString(gf, r->digest, r->digest_length);
 }
 
 void
-tlvWriteBlockSig(gtctx ctx, uchar *der, uint16_t lenDer)
+tlvWriteBlockSig(gtfile gf, uchar *der, uint16_t lenDer)
 {
 	unsigned tlvlen;
 	uint8_t tlvlenRecords;
 
-	tlvlenRecords = tlvbufGetInt64OctetSize(ctx->nRecords);
+	tlvlenRecords = tlvbufGetInt64OctetSize(gf->nRecords);
 	tlvlen  = 2 + 1 /* hash algo TLV */ +
-	 	  2 + hashOutputLengthOctets(ctx->hashAlg) /* iv */ +
-		  2 + 1 + ctx->lenBlkStrtHash /* last hash */ +
+	 	  2 + hashOutputLengthOctets(gf->hashAlg) /* iv */ +
+		  2 + 1 + gf->lenBlkStrtHash /* last hash */ +
 		  2 + tlvlenRecords /* rec-count */ +
 		  4 + lenDer /* rfc-3161 */;
 	/* write top-level TLV object (block-sig */
-	tlv16Write(ctx, 0x00, 0x0902, tlvlen);
+	tlv16Write(gf, 0x00, 0x0902, tlvlen);
 	/* and now write the children */
 	//FIXME: flags???
 	/* hash-algo */
-	tlv8Write(ctx, 0x00, 0x00, 1);
-	tlvbufAddOctet(ctx, hashIdentifier(ctx->hashAlg));
+	tlv8Write(gf, 0x00, 0x00, 1);
+	tlvbufAddOctet(gf, hashIdentifier(gf->hashAlg));
 	/* block-iv */
-	tlv8Write(ctx, 0x00, 0x01, hashOutputLengthOctets(ctx->hashAlg));
-	tlvbufAddOctetString(ctx, ctx->IV, hashOutputLengthOctets(ctx->hashAlg));
+	tlv8Write(gf, 0x00, 0x01, hashOutputLengthOctets(gf->hashAlg));
+	tlvbufAddOctetString(gf, gf->IV, hashOutputLengthOctets(gf->hashAlg));
 	/* last-hash */
-	tlv8Write(ctx, 0x00, 0x02, ctx->lenBlkStrtHash+1);
-	tlvbufAddOctet(ctx, hashIdentifier(ctx->hashAlg));
-	tlvbufAddOctetString(ctx, ctx->blkStrtHash, ctx->lenBlkStrtHash);
+	tlv8Write(gf, 0x00, 0x02, gf->lenBlkStrtHash+1);
+	tlvbufAddOctet(gf, hashIdentifier(gf->hashAlg));
+	tlvbufAddOctetString(gf, gf->blkStrtHash, gf->lenBlkStrtHash);
 	/* rec-count */
-	tlv8Write(ctx, 0x00, 0x03, tlvlenRecords);
-	tlvbufAddInt64(ctx, ctx->nRecords);
+	tlv8Write(gf, 0x00, 0x03, tlvlenRecords);
+	tlvbufAddInt64(gf, gf->nRecords);
 	/* rfc-3161 */
-	tlv16Write(ctx, 0x00, 0x906, lenDer);
-	tlvbufAddOctetString(ctx, der, lenDer);
+	tlv16Write(gf, 0x00, 0x906, lenDer);
+	tlvbufAddOctetString(gf, der, lenDer);
 }
 
 /* read rsyslog log state file; if we cannot access it or the
@@ -268,85 +283,85 @@ tlvWriteBlockSig(gtctx ctx, uchar *der, uint16_t lenDer)
  * The context is initialized accordingly.
  */
 static void
-readStateFile(gtctx ctx)
+readStateFile(gtfile gf)
 {
 	int fd;
 	struct rsgtstatefile sf;
 
-	fd = open((char*)ctx->statefilename, O_RDONLY|O_NOCTTY|O_CLOEXEC, 0600);
+	fd = open((char*)gf->statefilename, O_RDONLY|O_NOCTTY|O_CLOEXEC, 0600);
 	if(fd == -1) goto err;
 
 	if(read(fd, &sf, sizeof(sf)) != sizeof(sf)) goto err;
 	if(strncmp(sf.hdr, "GTSTAT10", 8)) goto err;
 
-	ctx->lenBlkStrtHash = sf.lenHash;
-	ctx->blkStrtHash = calloc(1, ctx->lenBlkStrtHash);
-	if(read(fd, ctx->blkStrtHash, ctx->lenBlkStrtHash)
-		!= ctx->lenBlkStrtHash) {
-		free(ctx->blkStrtHash);
+	gf->lenBlkStrtHash = sf.lenHash;
+	gf->blkStrtHash = calloc(1, gf->lenBlkStrtHash);
+	if(read(fd, gf->blkStrtHash, gf->lenBlkStrtHash)
+		!= gf->lenBlkStrtHash) {
+		free(gf->blkStrtHash);
 		goto err;
 	}
 return;
 
 err:
-	ctx->lenBlkStrtHash = hashOutputLengthOctets(ctx->hashAlg);
-	ctx->blkStrtHash = calloc(1, ctx->lenBlkStrtHash);
+	gf->lenBlkStrtHash = hashOutputLengthOctets(gf->hashAlg);
+	gf->blkStrtHash = calloc(1, gf->lenBlkStrtHash);
 }
 
 /* persist all information that we need to re-open and append
  * to a log signature file.
  */
 static void
-writeStateFile(gtctx ctx)
+writeStateFile(gtfile gf)
 {
 	int fd;
 	struct rsgtstatefile sf;
 
-	fd = open((char*)ctx->statefilename,
+	fd = open((char*)gf->statefilename,
 		       O_WRONLY|O_CREAT|O_TRUNC|O_NOCTTY|O_CLOEXEC, 0600);
 	if(fd == -1)
 		goto done;
 
 	memcpy(sf.hdr, "GTSTAT10", 8);
-	sf.hashID = hashIdentifier(ctx->hashAlg);
-	sf.lenHash = ctx->x_prev->digest_length;
+	sf.hashID = hashIdentifier(gf->hashAlg);
+	sf.lenHash = gf->x_prev->digest_length;
 	write(fd, &sf, sizeof(sf));
-	write(fd, ctx->x_prev->digest, ctx->x_prev->digest_length);
+	write(fd, gf->x_prev->digest, gf->x_prev->digest_length);
 	close(fd);
 done:	return;
 }
 
 
-void tlvClose(gtctx ctx)
+void tlvClose(gtfile gf)
 {
-	tlvFlush(ctx);
-	close(ctx->fd);
-	ctx->fd = -1;
-	writeStateFile(ctx);
+	tlvFlush(gf);
+	close(gf->fd);
+	gf->fd = -1;
+	writeStateFile(gf);
 }
 
 
 /* note: if file exists, the last hash for chaining must
  * be read from file.
  */
-void tlvOpen(gtctx ctx, char *hdr, unsigned lenHdr)
+void tlvOpen(gtfile gf, char *hdr, unsigned lenHdr)
 {
-	ctx->fd = open((char*)ctx->sigfilename,
+	gf->fd = open((char*)gf->sigfilename,
 		       O_WRONLY|O_APPEND|O_NOCTTY|O_CLOEXEC, 0600);
-	if(ctx->fd == -1) {
+	if(gf->fd == -1) {
 		/* looks like we need to create a new file */
-		ctx->fd = open((char*)ctx->sigfilename,
+		gf->fd = open((char*)gf->sigfilename,
 			       O_WRONLY|O_CREAT|O_NOCTTY|O_CLOEXEC, 0600);
 		// FIXME: check fd == -1
-		memcpy(ctx->tlvBuf, hdr, lenHdr);
-		ctx->tlvIdx = lenHdr;
+		memcpy(gf->tlvBuf, hdr, lenHdr);
+		gf->tlvIdx = lenHdr;
 	} else {
-		ctx->tlvIdx = 0; /* header already present! */
+		gf->tlvIdx = 0; /* header already present! */
 	}
 	/* we now need to obtain the last previous hash, so that
 	 * we can continue the hash chain.
 	 */
-	readStateFile(ctx);
+	readStateFile(gf);
 }
 
 /*
@@ -357,13 +372,13 @@ void tlvOpen(gtctx ctx, char *hdr, unsigned lenHdr)
  * reproduce). -- rgerhards, 2013-03-04
  */
 void
-seedIV(gtctx ctx)
+seedIV(gtfile gf)
 {
 	int hashlen;
 	int fd;
 
-	hashlen = hashOutputLengthOctets(ctx->hashAlg);
-	ctx->IV = malloc(hashlen); /* do NOT zero-out! */
+	hashlen = hashOutputLengthOctets(gf->hashAlg);
+	gf->IV = malloc(hashlen); /* do NOT zero-out! */
 	/* if we cannot obtain data from /dev/urandom, we use whatever
 	 * is present at the current memory location as random data. Of
 	 * course, this is very weak and we should consider a different
@@ -372,7 +387,7 @@ seedIV(gtctx ctx)
 	 * will always work...).  -- TODO -- rgerhards, 2013-03-06
 	 */
 	if((fd = open("/dev/urandom", O_RDONLY)) > 0) {
-		read(fd, ctx->IV, hashlen);
+		read(fd, gf->IV, hashlen);
 		close(fd);
 	}
 }
@@ -382,25 +397,30 @@ rsgtCtxNew(void)
 {
 	gtctx ctx;
 	ctx = calloc(1, sizeof(struct gtctx_s));
-	ctx->x_prev = NULL;
 	ctx->hashAlg = GT_HASHALG_SHA256;
 	ctx->timestamper = strdup(
 			   "http://stamper.guardtime.net/gt-signingservice");
 	return ctx;
 }
 
-int
+/* either returns gtfile object or NULL if something went wrong */
+gtfile
 rsgtCtxOpenFile(gtctx ctx, unsigned char *logfn)
 {
+	gtfile gf;
 	char fn[MAXFNAME+1];
+
+	if((gf = rsgtfileConstruct(ctx)) == NULL)
+		goto done;
+
 	snprintf(fn, sizeof(fn), "%s.gtsig", logfn);
 	fn[MAXFNAME] = '\0'; /* be on save side */
-	ctx->sigfilename = (uchar*) strdup(fn);
+	gf->sigfilename = (uchar*) strdup(fn);
 	snprintf(fn, sizeof(fn), "%s.gtstate", logfn);
 	fn[MAXFNAME] = '\0'; /* be on save side */
-	ctx->statefilename = (uchar*) strdup(fn);
-	tlvOpen(ctx, LOGSIGHDR, sizeof(LOGSIGHDR)-1);
-	return 0;
+	gf->statefilename = (uchar*) strdup(fn);
+	tlvOpen(gf, LOGSIGHDR, sizeof(LOGSIGHDR)-1);
+done:	return gf;
 }
  
 
@@ -425,54 +445,61 @@ rsgtSetHashFunction(gtctx ctx, char *algName)
 		r = 1;
 	return r;
 }
+
+void
+rsgtfileDestruct(gtfile gf)
+{
+	if(gf == NULL)
+		goto done;
+
+	if(gf->bInBlk)
+		sigblkFinish(gf);
+	tlvClose(gf);
+	free(gf->sigfilename);
+	free(gf);
+done:	return;
+}
+
 void
 rsgtCtxDel(gtctx ctx)
 {
-	if(ctx == NULL)
-		goto done;
-
-	if(ctx->bInBlk)
-		sigblkFinish(ctx);
-	tlvClose(ctx);
-	free(ctx->sigfilename);
-	free(ctx);
-	/* TODO: persist! */
-done:	return;
+	if(ctx != NULL)
+		free(ctx);
 }
 
 /* new sigblk is initialized, but maybe in existing ctx */
 void
-sigblkInit(gtctx ctx)
+sigblkInit(gtfile gf)
 {
-	seedIV(ctx);
-	memset(ctx->roots_valid, 0, sizeof(ctx->roots_valid)/sizeof(char));
-	ctx->nRoots = 0;
-	ctx->nRecords = 0;
-	ctx->bInBlk = 1;
+	seedIV(gf);
+	memset(gf->roots_valid, 0, sizeof(gf->roots_valid)/sizeof(char));
+	gf->nRoots = 0;
+	gf->nRecords = 0;
+	gf->bInBlk = 1;
 }
 
 
 /* concat: add IV to buffer */
 static inline void
-bufAddIV(gtctx ctx, uchar *buf, size_t *len)
+bufAddIV(gtfile gf, uchar *buf, size_t *len)
 {
-	memcpy(buf+*len, &ctx->IV, sizeof(ctx->IV));
-	*len += sizeof(ctx->IV);
+	memcpy(buf+*len, &gf->IV, sizeof(gf->IV));
+	*len += sizeof(gf->IV);
 }
 
 
 /* concat: add hash to buffer */
 static inline void
-bufAddHash(gtctx ctx, uchar *buf, size_t *len, GTDataHash *hash)
+bufAddHash(gtfile gf, uchar *buf, size_t *len, GTDataHash *hash)
 {
 	if(hash == NULL) {
 	// TODO: how to get the REAL HASH ID? --> add field!
-		buf[*len] = hashIdentifier(ctx->hashAlg);
+		buf[*len] = hashIdentifier(gf->hashAlg);
 		++(*len);
-		memcpy(buf+*len, ctx->blkStrtHash, ctx->lenBlkStrtHash);
-		*len += ctx->lenBlkStrtHash;
+		memcpy(buf+*len, gf->blkStrtHash, gf->lenBlkStrtHash);
+		*len += gf->lenBlkStrtHash;
 	} else {
-		buf[*len] = hashIdentifier(ctx->hashAlg);
+		buf[*len] = hashIdentifier(gf->hashAlg);
 		++(*len);
 		memcpy(buf+*len, hash->digest, hash->digest_length);
 		*len += hash->digest_length;
@@ -488,97 +515,97 @@ bufAddLevel(uchar *buf, size_t *len, uint8_t level)
 
 
 static void
-hash_m(gtctx ctx, GTDataHash **m)
+hash_m(gtfile gf, GTDataHash **m)
 {
 #warning Overall: check GT API return states!
-	// m = hash(concat(ctx->x_prev, IV));
+	// m = hash(concat(gf->x_prev, IV));
 	uchar concatBuf[16*1024];
 	size_t len = 0;
 
-	bufAddHash(ctx, concatBuf, &len, ctx->x_prev);
-	bufAddIV(ctx, concatBuf, &len);
-	GTDataHash_create(ctx->hashAlg, concatBuf, len, m);
+	bufAddHash(gf, concatBuf, &len, gf->x_prev);
+	bufAddIV(gf, concatBuf, &len);
+	GTDataHash_create(gf->hashAlg, concatBuf, len, m);
 }
 
 static inline void
-hash_r(gtctx ctx, GTDataHash **r, const uchar *rec, const size_t len)
+hash_r(gtfile gf, GTDataHash **r, const uchar *rec, const size_t len)
 {
 	// r = hash(canonicalize(rec));
-	GTDataHash_create(ctx->hashAlg, rec, len, r);
+	GTDataHash_create(gf->hashAlg, rec, len, r);
 }
 
 
 static void
-hash_node(gtctx ctx, GTDataHash **node, GTDataHash *m, GTDataHash *r,
+hash_node(gtfile gf, GTDataHash **node, GTDataHash *m, GTDataHash *r,
           uint8_t level)
 {
 	// x = hash(concat(m, r, 0)); /* hash leaf */
 	uchar concatBuf[16*1024];
 	size_t len = 0;
 
-	bufAddHash(ctx, concatBuf, &len, m);
-	bufAddHash(ctx, concatBuf, &len, r);
+	bufAddHash(gf, concatBuf, &len, m);
+	bufAddHash(gf, concatBuf, &len, r);
 	bufAddLevel(concatBuf, &len, level);
-	GTDataHash_create(ctx->hashAlg, concatBuf, len, node);
+	GTDataHash_create(gf->hashAlg, concatBuf, len, node);
 }
 
 void
-sigblkAddRecord(gtctx ctx, const uchar *rec, const size_t len)
+sigblkAddRecord(gtfile gf, const uchar *rec, const size_t len)
 {
 	GTDataHash *x; /* current hash */
 	GTDataHash *m, *r, *t;
 	uint8_t j;
 
-	hash_m(ctx, &m);
-	hash_r(ctx, &r, rec, len);
-	if(ctx->bKeepRecordHashes)
-		tlvWriteHash(ctx, 0x0900, r);
-	hash_node(ctx, &x, m, r, 1); /* hash leaf */
+	hash_m(gf, &m);
+	hash_r(gf, &r, rec, len);
+	if(gf->bKeepRecordHashes)
+		tlvWriteHash(gf, 0x0900, r);
+	hash_node(gf, &x, m, r, 1); /* hash leaf */
 	/* persists x here if Merkle tree needs to be persisted! */
-	if(ctx->bKeepTreeHashes)
-		tlvWriteHash(ctx, 0x0901, x);
+	if(gf->bKeepTreeHashes)
+		tlvWriteHash(gf, 0x0901, x);
 	/* add x to the forest as new leaf, update roots list */
 	t = x;
-	for(j = 0 ; j < ctx->nRoots ; ++j) {
-		if(ctx->roots_valid[j] == 0) {
-			ctx->roots_hash[j] = t;
-			ctx->roots_valid[j] = 1;
+	for(j = 0 ; j < gf->nRoots ; ++j) {
+		if(gf->roots_valid[j] == 0) {
+			gf->roots_hash[j] = t;
+			gf->roots_valid[j] = 1;
 			t = NULL;
 			break;
 		} else if(t != NULL) {
 			/* hash interim node */
-			hash_node(ctx, &t, ctx->roots_hash[j], t, j+2);
-			ctx->roots_valid[j] = 0;
-			GTDataHash_free(ctx->roots_hash[j]);
+			hash_node(gf, &t, gf->roots_hash[j], t, j+2);
+			gf->roots_valid[j] = 0;
+			GTDataHash_free(gf->roots_hash[j]);
 			// TODO: check if this is correct location (paper!)
-			if(ctx->bKeepTreeHashes)
-				tlvWriteHash(ctx, 0x0901, t);
+			if(gf->bKeepTreeHashes)
+				tlvWriteHash(gf, 0x0901, t);
 		}
 	}
 	if(t != NULL) {
 		/* new level, append "at the top" */
-		ctx->roots_hash[ctx->nRoots] = t;
-		ctx->roots_valid[ctx->nRoots] = 1;
-		++ctx->nRoots;
-		assert(ctx->nRoots < MAX_ROOTS);
+		gf->roots_hash[gf->nRoots] = t;
+		gf->roots_valid[gf->nRoots] = 1;
+		++gf->nRoots;
+		assert(gf->nRoots < MAX_ROOTS);
 		t = NULL;
 	}
-	ctx->x_prev = x; /* single var may be sufficient */
-	++ctx->nRecords;
+	gf->x_prev = x; /* single var may be sufficient */
+	++gf->nRecords;
 
 	/* cleanup */
 	/* note: x is freed later as part of roots cleanup */
 	GTDataHash_free(m);
 	GTDataHash_free(r);
 
-	if(ctx->nRecords == ctx->blockSizeLimit) {
-		sigblkFinish(ctx);
-		sigblkInit(ctx);
+	if(gf->nRecords == gf->blockSizeLimit) {
+		sigblkFinish(gf);
+		sigblkInit(gf);
 	}
 }
 
 static void
-timestampIt(gtctx ctx, GTDataHash *hash)
+timestampIt(gtfile gf, GTDataHash *hash)
 {
 	unsigned char *der;
 	size_t lenDer;
@@ -586,7 +613,7 @@ timestampIt(gtctx ctx, GTDataHash *hash)
 	GTTimestamp *timestamp = NULL;
 
 	/* Get the timestamp. */
-	r = GTHTTP_createTimestampHash(hash, ctx->timestamper, &timestamp);
+	r = GTHTTP_createTimestampHash(hash, gf->ctx->timestamper, &timestamp);
 
 	if(r != GT_OK) {
 		fprintf(stderr, "GTHTTP_createTimestampHash() failed: %d (%s)\n",
@@ -602,7 +629,7 @@ timestampIt(gtctx ctx, GTDataHash *hash)
 		goto done;
 	}
 
-	tlvWriteBlockSig(ctx, der, lenDer);
+	tlvWriteBlockSig(gf, der, lenDer);
 
 done:
 	GT_free(der);
@@ -611,32 +638,32 @@ done:
 
 
 void
-sigblkFinish(gtctx ctx)
+sigblkFinish(gtfile gf)
 {
 	GTDataHash *root, *rootDel;
 	int8_t j;
 
-	if(ctx->nRecords == 0)
+	if(gf->nRecords == 0)
 		goto done;
 
 	root = NULL;
-	for(j = 0 ; j < ctx->nRoots ; ++j) {
+	for(j = 0 ; j < gf->nRoots ; ++j) {
 		if(root == NULL) {
-			root = ctx->roots_hash[j];
-			ctx->roots_valid[j] = 0; /* guess this is redundant with init, maybe del */
-		} else if(ctx->roots_valid[j]) {
+			root = gf->roots_hash[j];
+			gf->roots_valid[j] = 0; /* guess this is redundant with init, maybe del */
+		} else if(gf->roots_valid[j]) {
 			rootDel = root;
-			hash_node(ctx, &root, ctx->roots_hash[j], root, j+2);
-			ctx->roots_valid[j] = 0; /* guess this is redundant with init, maybe del */
+			hash_node(gf, &root, gf->roots_hash[j], root, j+2);
+			gf->roots_valid[j] = 0; /* guess this is redundant with init, maybe del */
 			GTDataHash_free(rootDel);
 		}
 	}
-	timestampIt(ctx, root);
+	timestampIt(gf, root);
 
-	free(ctx->blkStrtHash);
-	ctx->lenBlkStrtHash = ctx->x_prev->digest_length;
-	ctx->blkStrtHash = malloc(ctx->lenBlkStrtHash);
-	memcpy(ctx->blkStrtHash, ctx->x_prev->digest, ctx->lenBlkStrtHash);
+	free(gf->blkStrtHash);
+	gf->lenBlkStrtHash = gf->x_prev->digest_length;
+	gf->blkStrtHash = malloc(gf->lenBlkStrtHash);
+	memcpy(gf->blkStrtHash, gf->x_prev->digest, gf->lenBlkStrtHash);
 done:
-	ctx->bInBlk = 0;
+	gf->bInBlk = 0;
 }

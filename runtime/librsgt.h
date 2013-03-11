@@ -30,17 +30,31 @@
 #define MAX_ROOTS 64
 #define LOGSIGHDR "LOGSIG10"
 
-/* context for gt calls. All state data is kept here, this permits
- * multiple concurrent callers.
+/* context for gt calls. This primarily serves as a container for the
+ * config settings. The actual file-specific data is kept in gtfile.
  */
 struct gtctx_s {
 	enum GTHashAlgorithm hashAlg;
-	uint8_t *IV; /* initial value for blinding masks (where to do we get it from?) */
-	GTDataHash *x_prev; /* last leaf hash (maybe of previous block) --> preserve on term */
 	uint8_t bKeepRecordHashes;
 	uint8_t bKeepTreeHashes;
 	uint64_t blockSizeLimit;
 	char *timestamper;
+};
+typedef struct gtctx_s *gtctx;
+
+/* this describes a file, as far as librsgt is concerned */
+struct gtfile_s {
+	gtctx ctx;
+	/* the following data items are mirrored from gtctx to
+	 * increase cache hit ratio (they are frequently accesed).
+	 */
+	enum GTHashAlgorithm hashAlg;
+	uint8_t bKeepRecordHashes;
+	uint8_t bKeepTreeHashes;
+	/* end mirrored properties */
+	uint64_t blockSizeLimit;
+	uint8_t *IV; /* initial value for blinding masks */
+	GTDataHash *x_prev; /* last leaf hash (maybe of previous block) --> preserve on term */
 	unsigned char *sigfilename;
 	unsigned char *statefilename;
 	int fd;
@@ -54,11 +68,11 @@ struct gtctx_s {
 	 */
 	int8_t roots_valid[MAX_ROOTS];
 	GTDataHash *roots_hash[MAX_ROOTS];
-	/* data mambers for the associated TLV file */
+	/* data members for the associated TLV file */
 	char	tlvBuf[4096];
 	int	tlvIdx; /* current index into tlvBuf */
 };
-typedef struct gtctx_s *gtctx;
+typedef struct gtfile_s *gtfile;
 
 typedef struct imprint_s imprint_t;
 typedef struct block_sig_s block_sig_t;
@@ -201,12 +215,12 @@ int rsgtSetHashFunction(gtctx ctx, char *algName);
 void rsgtInit(char *usragent);
 void rsgtExit(void);
 gtctx rsgtCtxNew(void);
-int rsgtCtxOpenFile(gtctx ctx, unsigned char *logfn);
+gtfile rsgtCtxOpenFile(gtctx ctx, unsigned char *logfn);
+void rsgtfileDestruct(gtfile gf);
 void rsgtCtxDel(gtctx ctx);
-void sigblkInit(gtctx ctx);
-void sigblkAddRecord(gtctx ctx, const unsigned char *rec, const size_t len);
-void sigblkFinish(gtctx ctx);
-void rsgtCtxSetLogfileName(gtctx ctx, char *logfilename);
+void sigblkInit(gtfile gf);
+void sigblkAddRecord(gtfile gf, const unsigned char *rec, const size_t len);
+void sigblkFinish(gtfile gf);
 /* reader functions */
 int rsgt_tlvrdHeader(FILE *fp, unsigned char *hdr);
 int rsgt_tlvrd(FILE *fp, uint16_t *tlvtype, uint16_t *tlvlen, void *obj);

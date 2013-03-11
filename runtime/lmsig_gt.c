@@ -118,35 +118,34 @@ SetCnfParam(void *pT, struct nvlst *lst)
 
 
 static rsRetVal
-OnFileOpen(void *pT, uchar *fn)
+OnFileOpen(void *pT, uchar *fn, gtfile *pgf)
 {
 	lmsig_gt_t *pThis = (lmsig_gt_t*) pT;
 	DEFiRet;
 dbgprintf("DDDD: onFileOpen: %s\n", fn);
-	rsgtCtxOpenFile(pThis->ctx, fn);
-	sigblkInit(pThis->ctx);
+	
+	*pgf = rsgtCtxOpenFile(pThis->ctx, fn);
+	sigblkInit(*pgf);
 
 	RETiRet;
 }
 
 static rsRetVal
-OnRecordWrite(void *pT, uchar *rec, rs_size_t lenRec)
+OnRecordWrite(void *pF, uchar *rec, rs_size_t lenRec)
 {
-	lmsig_gt_t *pThis = (lmsig_gt_t*) pT;
 	DEFiRet;
 dbgprintf("DDDD: onRecordWrite (%d): %s\n", lenRec, rec);
-	sigblkAddRecord(pThis->ctx, rec, lenRec);
+	sigblkAddRecord(pF, rec, lenRec);
 
 	RETiRet;
 }
 
 static rsRetVal
-OnFileClose(void *pT)
+OnFileClose(void *pF)
 {
-	lmsig_gt_t *pThis = (lmsig_gt_t*) pT;
 	DEFiRet;
 dbgprintf("DDDD: onFileClose\n");
-	rsgtCtxDel(pThis->ctx);
+	rsgtfileDestruct(pF);
 
 	RETiRet;
 }

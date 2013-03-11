@@ -119,6 +119,7 @@ getClockFileAccess(void)
 struct s_dynaFileCacheEntry {
 	uchar *pName;		/* name currently open, if dynamic name */
 	strm_t	*pStrm;		/* our output stream */
+	void	*sigprovFileData;	/* opaque data ptr for provider use */
 	uint64	clkTickAccessed;/* for LRU - based on clockFileAccess */
 };
 typedef struct s_dynaFileCacheEntry dynaFileCacheEntry;
@@ -148,6 +149,7 @@ typedef struct _instanceData {
 	uchar 	*sigprovNameFull;/* full internal signature provider name */
 	sigprov_if_t sigprov;	/* ptr to signature provider interface */
 	void	*sigprovData;	/* opaque data ptr for provider use */
+	void 	*sigprovFileData;/* opaque data ptr for file instance */
 	sbool	useSigprov;	/* quicker than checkig ptr (1 vs 8 bytes!) */
 	int	iCurrElt;	/* currently active cache element (-1 = none) */
 	int	iCurrCacheSize;	/* currently cache size (1-based) */
@@ -423,15 +425,16 @@ finalize_it:
  * if the entry should be d_free()ed and 0 if not.
  */
 static rsRetVal
-dynaFileDelCacheEntry(dynaFileCacheEntry **pCache, int iEntry, int bFreeEntry)
+dynaFileDelCacheEntry(instanceData *pData, int iEntry, int bFreeEntry)
 {
+	dynaFileCacheEntry **pCache = pData->dynCache;
 	DEFiRet;
 	ASSERT(pCache != NULL);
 
 	if(pCache[iEntry] == NULL)
 		FINALIZE;
 
-	DBGPRINTF("Removed entry %d for file '%s' from dynaCache.\n", iEntry,
+	DBGPRINTF("Removing entry %d for file '%s' from dynaCache.\n", iEntry,
 		pCache[iEntry]->pName == NULL ? UCHAR_CONSTANT("[OPEN FAILED]") : pCache[iEntry]->pName);
 
 	if(pCache[iEntry]->pName != NULL) {
@@ -441,9 +444,10 @@ dynaFileDelCacheEntry(dynaFileCacheEntry **pCache, int iEntry, int bFreeEntry)
 
 	if(pCache[iEntry]->pStrm != NULL) {
 		strm.Destruct(&pCache[iEntry]->pStrm);
-#warning add sig capability here
-		if(pCache[iEntry]->pStrm != NULL) /* safety check -- TODO: remove if no longer necessary */
-			abort();
+		if(pData->useSigprov) {
+			pData->sigprov.OnFileClose(pCache[iEntry]->sigprovFileData);
+			pCache[iEntry]->sigprovFileData = NULL;
+		}
 	}
 
 	if(bFreeEntry) {
@@ -468,7 +472,7 @@ dynaFileFreeCacheEntries(instanceData *pData)
 
 	BEGINfunc;
 	for(i = 0 ; i < pData->iCurrCacheSize ; ++i) {
-		dynaFileDelCacheEntry(pData->dynCache, i, 1);
+		dynaFileDelCacheEntry(pData, i, 1);
 	}
 	pData->iCurrElt = -1; /* invalidate current element */
 	ENDfunc;
@@ -494,8 +498,10 @@ static rsRetVal
 closeFile(instanceData *pData)
 {
 	DEFiRet;
-	if(pData->useSigprov)
-		pData->sigprov.OnFileClose(pData->sigprovData);
+	if(pData->useSigprov) {
+		pData->sigprov.OnFileClose(pData->sigprovFileData);
+		pData->sigprovFileData = NULL;
+	}
 	strm.Destruct(&pData->pStrm);
 	RETiRet;
 }
@@ -506,7 +512,7 @@ static rsRetVal
 sigprovPrepare(instanceData *pData, uchar *fn)
 {
 	DEFiRet;
-	pData->sigprov.OnFileOpen(pData->sigprovData, fn);
+	pData->sigprov.OnFileOpen(pData->sigprovData, fn, &pData->sigprovFileData);
 	RETiRet;
 }
 
@@ -594,7 +600,9 @@ prepareFile(instanceData *pData, uchar *newFileName)
 	CHKiRet(strm.ConstructFinalize(pData->pStrm));
 
 	if(pData->useSigprov)
+{ dbgprintf("DDDD: prepareFile, call sigprovPrepare\n");
 		sigprovPrepare(pData, szNameBuf);
+}
 	
 finalize_it:
 	if(iRet != RS_RET_OK) {
@@ -630,9 +638,7 @@ prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
 
 	pCache = pData->dynCache;
 
-	/* first check, if we still have the current file
-	 * I *hope* this will be a performance enhancement.
-	 */
+	/* first check, if we still have the current file */
 	if(   (pData->iCurrElt != -1)
 	   && !ustrcmp(newFileName, pCache[pData->iCurrElt]->pName)) {
 	   	/* great, we are all set */
@@ -654,9 +660,11 @@ prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
 			if(iFirstFree == -1)
 				iFirstFree = i;
 		} else { /* got an element, let's see if it matches */
-			if(!ustrcmp(newFileName, pCache[i]->pName)) {  // RG:  name == NULL?
+			if(!ustrcmp(newFileName, pCache[i]->pName)) {
 				/* we found our element! */
 				pData->pStrm = pCache[i]->pStrm;
+				if(pData->useSigprov)
+					pData->sigprovFileData = pCache[i]->sigprovFileData;
 				pData->iCurrElt = i;
 				pCache[i]->clkTickAccessed = getClockFileAccess(); /* update "timestamp" for LRU */
 				FINALIZE;
@@ -683,7 +691,7 @@ prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
 	 * but it could be triggered in the common case of a failed open() system call.
 	 * rgerhards, 2010-03-22
 	 */
-	pData->pStrm = NULL;
+	pData->pStrm = pData->sigprovFileData = NULL;
 
 	if(iFirstFree == -1 && (pData->iCurrCacheSize < pData->iDynaFileCacheSize)) {
 		/* there is space left, so set it to that index */
@@ -696,19 +704,17 @@ prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
 	 * The cache array is only updated after the open was successful. -- rgerhards, 2010-03-21
 	 */
 	if(iFirstFree == -1) {
-		dynaFileDelCacheEntry(pCache, iOldest, 0);
+		dynaFileDelCacheEntry(pData, iOldest, 0);
 		STATSCOUNTER_INC(pData->ctrEvict, pData->mutCtrEvict);
 		iFirstFree = iOldest; /* this one *is* now free ;) */
 	} else {
 		/* we need to allocate memory for the cache structure */
-		/* TODO: performance note: we could alloc all entries on startup, thus saving malloc
-		 *       overhead -- this may be something to consider in v5...
-		 */
 		CHKmalloc(pCache[iFirstFree] = (dynaFileCacheEntry*) calloc(1, sizeof(dynaFileCacheEntry)));
 	}
 
 	/* Ok, we finally can open the file */
 	localRet = prepareFile(pData, newFileName); /* ignore exact error, we check fd below */
+dbgprintf("DDDD: prepareFile returned %d\n", localRet);
 
 	/* check if we had an error */
 	if(localRet != RS_RET_OK) {
@@ -730,6 +736,8 @@ prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
 	pCache[iFirstFree]->pStrm = pData->pStrm;
+	if(pData->useSigprov)
+		pCache[iFirstFree]->sigprovFileData = pData->sigprovFileData;
 	pCache[iFirstFree]->clkTickAccessed = getClockFileAccess();
 	pData->iCurrElt = iFirstFree;
 	DBGPRINTF("Added new entry %d for file cache, file '%s'.\n", iFirstFree, newFileName);
@@ -751,10 +759,11 @@ doWrite(instanceData *pData, uchar *pszBuf, int lenBuf)
 	ASSERT(pData != NULL);
 	ASSERT(pszBuf != NULL);
 
+dbgprintf("DDDD: pData->sigprov %p\n", pData->sigprov);
 	DBGPRINTF("write to stream, pData->pStrm %p, lenBuf %d\n", pData->pStrm, lenBuf);
 	if(pData->pStrm != NULL){
 		CHKiRet(strm.Write(pData->pStrm, pszBuf, lenBuf));
-		CHKiRet(pData->sigprov.OnRecordWrite(pData->sigprovData, pszBuf, lenBuf));
+		CHKiRet(pData->sigprov.OnRecordWrite(pData->sigprovFileData, pszBuf, lenBuf));
 	}
 
 finalize_it:
@@ -762,10 +771,7 @@ finalize_it:
 }
 
 
-/* rgerhards 2004-11-11: write to a file output. This
- * will be called for all outputs using file semantics,
- * for example also for pipes.
- */
+/* rgerhards 2004-11-11: write to a file output.  */
 static rsRetVal
 writeFile(uchar **ppString, unsigned iMsgOpts, instanceData *pData)
 {
@@ -773,11 +779,14 @@ writeFile(uchar **ppString, unsigned iMsgOpts, instanceData *pData)
 
 	ASSERT(pData != NULL);
 
+dbgprintf("DDDD: enter writeFile, dyn: %d, name: %s\n", pData->bDynamicName, pData->f_fname);
 	/* first check if we have a dynamic file name and, if so,
 	 * check if it still is ok or a new file needs to be created
 	 */
 	if(pData->bDynamicName) {
+dbgprintf("DDDD: calling prepareDynFile\n");
 		CHKiRet(prepareDynFile(pData, ppString[1], iMsgOpts));
+dbgprintf("DDDD: done prepareDynFile\n");
 	} else { /* "regular", non-dynafile */
 		if(pData->pStrm == NULL) {
 			CHKiRet(prepareFile(pData, pData->f_fname));
@@ -787,6 +796,7 @@ writeFile(uchar **ppString, unsigned iMsgOpts, instanceData *pData)
 		}
 	}
 
+dbgprintf("DDDD: calling doWrite()\n");
 	CHKiRet(doWrite(pData, ppString[0], strlen(CHAR_CONVERT(ppString[0]))));
 
 finalize_it:
