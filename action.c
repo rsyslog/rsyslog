@@ -146,7 +146,7 @@ static int iActionQueueDeqBatchSize = 16;			/* batch size for action queues */
 static int iActionQHighWtrMark = 800;				/* high water mark for disk-assisted queues */
 static int iActionQLightDlyMrk = -1;				/* light delay mark for disk-assisted queues */
 static int iActionQLowWtrMark = 200;				/* low water mark for disk-assisted queues */
-static int iActionQDiscardMark = 9800;				/* begin to discard messages */
+static int iActionQDiscardMark = 980;				/* begin to discard messages */
 static int iActionQDiscardSeverity = 8;				/* by default, discard nothing to prevent unintentional loss */
 static int iActionQueueNumWorkers = 1;				/* number of worker threads for the mm queue above */
 static uchar *pszActionQFName = NULL;				/* prefix for the main message queue file */
@@ -229,7 +229,7 @@ actionResetQueueParams(void)
 	iActionQHighWtrMark = 800;			/* high water mark for disk-assisted queues */
 	iActionQLightDlyMrk = -1;
 	iActionQLowWtrMark = 200;			/* low water mark for disk-assisted queues */
-	iActionQDiscardMark = 9800;			/* begin to discard messages */
+	iActionQDiscardMark = 980;			/* begin to discard messages */
 	iActionQDiscardSeverity = 8;			/* discard warning and above */
 	iActionQueueNumWorkers = 1;			/* number of worker threads for the mm queue above */
 	iActionQueMaxFileSize = 1024*1024;
