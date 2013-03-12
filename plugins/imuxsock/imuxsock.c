@@ -233,6 +233,7 @@ static struct cnfparamdescr modpdescr[] = {
 	{ "syssock.flowcontrol", eCmdHdlrBinary, 0 },
 	{ "syssock.usesystimestamp", eCmdHdlrBinary, 0 },
 	{ "syssock.annotate", eCmdHdlrBinary, 0 },
+	{ "syssock.parsetrusted", eCmdHdlrBinary, 0 },
 	{ "syssock.usepidfromsystem", eCmdHdlrBinary, 0 },
 	{ "syssock.ratelimit.interval", eCmdHdlrInt, 0 },
 	{ "syssock.ratelimit.burst", eCmdHdlrInt, 0 },
@@ -1145,6 +1146,8 @@ CODESTARTsetModCnf
 			loadModConf->bUseSysTimeStamp = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "syssock.annotate")) {
 			loadModConf->bAnnotateSysSock = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "syssock.parsetrusted")) {
+			loadModConf->bParseTrusted = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "syssock.usepidfromsystem")) {
 			loadModConf->bWritePidSysSock = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "syssock.ratelimit.interval")) {
