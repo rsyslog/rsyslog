@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 7.3.7  [devel] 2013-02-??
+Version 7.3.7  [devel] 2013-03-12
 - add support for anonymizing IPv4 addresses
 - add support for writing to the Linux Journal (omjournal)
 - imuxsock: add capability to ignore messages from ourselfes
