@@ -919,7 +919,7 @@ AC_ARG_ENABLE(guardtime,
         [enable_guardtime=no]
 )
 if test "x$enable_guardtime" = "xyes"; then
-	PKG_CHECK_MODULES(GUARDTIME, gt >= 0.3.1)
+	PKG_CHECK_MODULES(GUARDTIME, libgt >= 0.3.1)
 fi
 AM_CONDITIONAL(ENABLE_GUARDTIME, test x$enable_guardtime = xyes)
 
