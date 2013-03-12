@@ -325,17 +325,20 @@ AC_ARG_ENABLE(kmsg,
 )
 AM_CONDITIONAL(ENABLE_IMKMSG, test x$enable_kmsg = xyes)
 
-# journal
-AC_ARG_ENABLE(journal,
-        [AS_HELP_STRING([--enable-journal],[Systemd journal message import @<:@default=no@:>@])],
+# imjournal
+AC_ARG_ENABLE(imjournal,
+        [AS_HELP_STRING([--enable-imjournal],[Systemd journal message import @<:@default=no@:>@])],
         [case "${enableval}" in
-         yes) enable_journal="yes" ;;
-          no) enable_journal="no" ;;
-           *) AC_MSG_ERROR(bad value ${enableval} for --enable-journal) ;;
+         yes) enable_imjournal="yes" ;;
+          no) enable_imjournal="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-imjournal) ;;
          esac],
-        [enable_journal="no"]
+        [enable_imjournal="no"]
 )
-AM_CONDITIONAL(ENABLE_IMJOURNAL, test x$enable_journal = xyes)
+if test "x$enable_imjournal" = "xyes"; then
+	PKG_CHECK_MODULES([LIBSYSTEMD_JOURNAL], [libsystemd-journal >= 197])
+fi
+AM_CONDITIONAL(ENABLE_IMJOURNAL, test x$enable_imjournal = xyes)
 
 # inet
 AC_ARG_ENABLE(inet,
@@ -1401,7 +1404,7 @@ echo "    file input module enabled:                $enable_imfile"
 echo "    Solaris input module enabled:             $enable_imsolaris"
 echo "    periodic statistics module enabled:       $enable_impstats"
 echo "    imzmq3 input module enabled:              $enable_imzmq3"
-echo "    imjournal input module enabled:           $enable_journal"
+echo "    imjournal input module enabled:           $enable_imjournal"
 echo
 echo "---{ output plugins }---"
 echo "    Mail support enabled:                     $enable_mail"

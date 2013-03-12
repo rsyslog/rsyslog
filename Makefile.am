@@ -71,7 +71,7 @@ EXTRA_DIST = \
 	contrib/gnutls/key.pem \
 	rsyslog.service.in
 
-SUBDIRS = doc runtime grammar compat . plugins/immark plugins/imuxsock plugins/imjournal plugins/imtcp plugins/imudp plugins/omtesting
+SUBDIRS = doc runtime grammar compat . plugins/immark plugins/imuxsock plugins/imtcp plugins/imudp plugins/omtesting
 
 if ENABLE_RSYSLOGD
 SUBDIRS += tools
@@ -179,6 +179,10 @@ endif
 
 if ENABLE_OMJOURNAL
 SUBDIRS += plugins/omjournal
+endif
+
+if ENABLE_IMJOURNAL
+SUBDIRS += plugins/imjournal
 endif
 
 if ENABLE_ELASTICSEARCH
