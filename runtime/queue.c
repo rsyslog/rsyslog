@@ -1389,7 +1389,7 @@ qqueueSetDefaultsActionQueue(qqueue_t *pThis)
 	pThis->iDeqBatchSize = 128; 		/* default batch size */
 	pThis->iHighWtrMrk = 800;		/* high water mark for disk-assisted queues */
 	pThis->iLowWtrMrk = 200;		/* low water mark for disk-assisted queues */
-	pThis->iDiscardMrk = 9800;		/* begin to discard messages */
+	pThis->iDiscardMrk = 980;		/* begin to discard messages */
 	pThis->iDiscardSeverity = 8;		/* turn off */
 	pThis->iNumWorkerThreads = 1;		/* number of worker threads for the mm queue above */
 	pThis->iMaxFileSize = 1024*1024;
