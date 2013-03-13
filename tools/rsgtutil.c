@@ -28,13 +28,18 @@
 #include <string.h>
 #include <gt_base.h>
 #include <gt_http.h>
+#include <getopt.h>
 
 #include "librsgt.h"
 
 typedef unsigned char uchar;
 
-void
-processFile(char *name)
+static enum { MD_DUMP, MD_DETECT_FILE_TYPE,
+} mode = MD_DUMP;
+static int verbose = 0;
+
+static void
+dumpFile(char *name)
 {
 	FILE *fp;
 	uchar hdr[9];
@@ -60,7 +65,7 @@ processFile(char *name)
 			else
 				goto err;
 		}
-		rsgt_tlvprint(stdout, tlvtype, obj, 0);
+		rsgt_tlvprint(stdout, tlvtype, obj, verbose);
 	}
 
 	if(fp != stdin)
@@ -69,15 +74,95 @@ processFile(char *name)
 err:	fprintf(stderr, "error %d processing file %s\n", r, name);
 }
 
+static void
+detectFileType(char *name)
+{
+	FILE *fp;
+	char *typeName;
+	char hdr[9];
+	int r = -1;
+	
+	if(!strcmp(name, "-"))
+		fp = stdin;
+	else {
+		if((fp = fopen(name, "r")) == NULL) {
+			perror(name);
+			goto err;
+		}
+	}
+	if((r = rsgt_tlvrdHeader(fp, (uchar*)hdr)) != 0) goto err;
+	if(!strcmp(hdr, "LOGSIG10"))
+		typeName = "Log Signature File, Version 10";
+	else
+		typeName = "unknown";
+
+	printf("%s: %s [%s]\n", name, hdr, typeName);
+
+	if(fp != stdin)
+		fclose(fp);
+	return;
+err:	fprintf(stderr, "error %d processing file %s\n", r, name);
+}
+
+static void
+processFile(char *name)
+{
+	switch(mode) {
+	case MD_DETECT_FILE_TYPE:
+		detectFileType(name);
+		break;
+	case MD_DUMP:
+		dumpFile(name);
+		break;
+	}
+}
+
+
+static struct option long_options[] = 
+{ 
+	{"dump", no_argument, NULL, 'D'},
+	{"verbose", no_argument, NULL, 'v'},
+	{"version", no_argument, NULL, 'V'},
+	{"detect-file-type", no_argument, NULL, 'T'},
+	{NULL, 0, NULL, 0} 
+}; 
+
 int
 main(int argc, char *argv[])
 {
 	int i;
-	if(argc == 1)
+	int opt;
+
+	while(1) {
+		opt = getopt_long(argc, argv, "v", long_options, NULL);
+		if(opt == -1)
+			break;
+		switch(opt) {
+		case 'v':
+			verbose = 1;
+			break;
+		case 'V':
+			fprintf(stderr, "rsgtutil " VERSION "\n");
+			exit(0);
+		case 'D':
+			mode = MD_DUMP;
+			break;
+		case 'T':
+			mode = MD_DETECT_FILE_TYPE;
+			break;
+		case '?':
+			break;
+		default:fprintf(stderr, "getopt_long() returns unknown value %d\n", opt);
+			return 1;
+		}
+	}
+
+	if(optind == argc)
 		processFile("-");
 	else {
-		for(i = 1 ; i < argc ; ++i)
+		for(i = optind ; i < argc ; ++i)
 			processFile(argv[i]);
 	}
+
 	return 0;
 }

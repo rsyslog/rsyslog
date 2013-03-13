@@ -59,14 +59,14 @@ logctl_CPPFLAGS =  $(LIBMONGO_CLIENT_CFLAGS)
 logctl_LDADD = $(LIBMONGO_CLIENT_LIBS)
 endif
 if ENABLE_GUARDTIME
-bin_PROGRAMS += rsgttlvdump
-#bin_PROGRAMS += logsigner rsgttlvdump
+bin_PROGRAMS += rsgtutil
+#bin_PROGRAMS += logsigner rsgtutil
 #logsigner = logsigner.c
 #logsigner_CPPFLAGS =  $(RSRT_CFLAGS) $(GUARDTIME_CFLAGS)
 #logsigner_LDADD = ../runtime/librsgt.la $(GUARDTIME_LIBS)
-rsgttlvdump = rsgttlvdump.c
-rsgttlvdump_CPPFLAGS =  $(RSRT_CFLAGS) $(GUARDTIME_CFLAGS)
-rsgttlvdump_LDADD = ../runtime/librsgt.la $(GUARDTIME_LIBS)
+rsgtutil = rsgtutil.c
+rsgtutil_CPPFLAGS =  $(RSRT_CFLAGS) $(GUARDTIME_CFLAGS)
+rsgtutil_LDADD = ../runtime/librsgt.la $(GUARDTIME_LIBS)
 endif
 endif
 
