@@ -126,6 +126,7 @@ readjournal() {
 	char *sys_iden_help;
 
 	const void *get;
+	uchar *parse;
 	char *get2;
 	size_t length;
 
@@ -149,7 +150,7 @@ readjournal() {
 
 	/* Get message text */
 	if (sd_journal_get_data(j, "MESSAGE", &get, &length) < 0) {
-		logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, "log message from journal doesn't have MESSAGE", 0);
+		logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar *)"log message from journal doesn't have MESSAGE", 0);
 		iRet = RS_RET_OK;
 		goto ret;
 	}
@@ -212,21 +213,38 @@ readjournal() {
 		/* get length of journal data prefix */
 		prefixlen = ((char *)equal_sign - (char *)get);
 
-		/* translate name fields to lumberjack names XXX not very effective */
-		if (!strncmp(get, "_PID", 4)) {
-			name = strdup("pid");
-		} else if (!strncmp(get, "_GID", 4)) {
-			name = strdup("gid");
-		} else if (!strncmp(get, "_UID", 4)) {
-			name = strdup("uid");
-		} else if (!strncmp(get, "_COMM", 5)) {
-			name = strdup("appname");
-		} else if (!strncmp(get, "_EXE", 4)) {
-			name = strdup("exe");
-		} else if (!strncmp(get, "_CMDLINE", 8)) {
-			name = strdup("cmd");
-		} else {
+		/* translate name fields to lumberjack names */
+		parse = (uchar *)get;
+
+		switch (*parse)
+		{
+		case '_':
+			++parse;
+			if (*parse == 'P') {
+				name = strdup("pid");
+			} else if (*parse == 'G') {
+				name = strdup("gid");
+			} else if (*parse == 'U') {
+				name = strdup("uid");
+			} else if (*parse == 'E') {
+				name = strdup("exe");
+			} else if (*parse == 'C') {
+				parse++;
+				if (*parse == 'O') {
+					name = strdup("appname");
+				} else if (*parse == 'M') {
+					name = strdup("cmd");
+				} else {
+					name = strndup(get, prefixlen);
+				}
+			} else {
+				name = strndup(get, prefixlen);
+			}
+			break;
+
+		default:
 			name = strndup(get, prefixlen);
+			break;
 		}
 
 		if (name == NULL) {
