@@ -1,4 +1,14 @@
 ---------------------------------------------------------------------------
+Version 7.3.8  [devel] 2013-03-??
+- bugfix: include files got included in the wrong order
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=411
+  This happens if an $IncludeConfig directive was done on multiple
+  files (e.g. the distro default of $IncludeConfig /etc/rsyslog.d/*.conf).
+  In that case, the order of include file processing is reversed, which
+  could lead to all sorts of problems.
+  Thanks to Nathan Stratton Treadway for his great analysis of the problem,
+  which made bug fixing really easy.
+---------------------------------------------------------------------------
 Version 7.3.7  [devel] 2013-03-12
 - add support for anonymizing IPv4 addresses
 - add support for writing to the Linux Journal (omjournal)
@@ -158,8 +168,20 @@ Version 7.3.0  [devel] 2012-10-09
   This was achieved by somewhat reducing the robustness of the zip archive.
   This is controlled by the new action parameter "VeryReliableZip".
 ----------------------------------------------------------------------------
-Version 7.2.6  [v7-stable] 2013-01-??
+Version 7.2.7  [v7-stable] 2013-03-??
+- doc bugfix: rsyslog.conf man page had invalid file format info
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=418
+----------------------------------------------------------------------------
+Version 7.2.6  [v7-stable] 2013-03-05
 - slightly improved config parser error messages when invalid escapes happen
+- bugfix: include files got included in the wrong order
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=411
+  This happens if an $IncludeConfig directive was done on multiple
+  files (e.g. the distro default of $IncludeConfig /etc/rsyslog.d/*.conf).
+  In that case, the order of include file processing is reversed, which
+  could lead to all sorts of problems.
+  Thanks to Nathan Stratton Treadway for his great analysis of the problem,
+  which made bug fixing really easy.
 - bugfix: omelasticsearch failed when authentication data was provided
   ... at least in most cases it emitted an error message:
   "snprintf failed when trying to build auth string"
