@@ -50,7 +50,7 @@ static int rsgt_read_debug = 0;
 
 /* macro to obtain next char from file including error tracking */
 #define NEXTC	if((c = fgetc(fp)) == EOF) { \
-			r = RSGTE_IO; \
+			r = feof(fp) ? RSGTE_EOF : RSGTE_IO; \
 			goto done; \
 		}
 
@@ -113,6 +113,17 @@ rsgt_tlvrdOctetString(FILE *fp, uint8_t **data, size_t len)
 	for(i = 0 ; i < len ; ++i) {
 		NEXTC;
 		(*data)[i] = c;
+	}
+	r = 0;
+done:	return r;
+}
+static int
+rsgt_tlvrdSkipVal(FILE *fp, size_t len)
+{
+	size_t i;
+	int c, r = 1;
+	for(i = 0 ; i < len ; ++i) {
+		NEXTC;
 	}
 	r = 0;
 done:	return r;
@@ -314,14 +325,14 @@ done:	return r;
  * otherwise everything.
  */
 static void
-outputHexBlob(uint8_t *blob, uint16_t len, uint8_t verbose)
+outputHexBlob(FILE *fp, uint8_t *blob, uint16_t len, uint8_t verbose)
 {
 	unsigned i;
 	if(verbose || len <= 6) {
 		for(i = 0 ; i < len ; ++i)
-			printf("%2.2x", blob[i]);
+			fprintf(fp, "%2.2x", blob[i]);
 	} else {
-		printf("%2.2x%2.2x[...]%2.2x%2.2x",
+		fprintf(fp, "%2.2x%2.2x[...]%2.2x%2.2x",
 			blob[0], blob[1],
 			blob[len-2], blob[len-2]);
 	}
@@ -342,7 +353,7 @@ static void
 rsgt_printIMPRINT(FILE *fp, char *name, imprint_t *imp, uint8_t verbose)
 {
 	fprintf(fp, "%s", name);
-		outputHexBlob(imp->data, imp->len, verbose);
+		outputHexBlob(fp, imp->data, imp->len, verbose);
 		fputc('\n', fp);
 }
 
@@ -376,19 +387,19 @@ rsgt_printBLOCK_SIG(FILE *fp, block_sig_t *bs, uint8_t verbose)
 	fprintf(fp, "\tPrevious Block Hash:\n");
 	fprintf(fp, "\t   Algorithm..: %s\n", hashAlgName(bs->lastHash.hashID));
 	fprintf(fp, "\t   Hash.......: ");
-		outputHexBlob(bs->lastHash.data, bs->lastHash.len, verbose);
+		outputHexBlob(fp, bs->lastHash.data, bs->lastHash.len, verbose);
 		fputc('\n', fp);
 	if(blobIsZero(bs->lastHash.data, bs->lastHash.len))
 		fprintf(fp, "\t   NOTE: New Hash Chain Start!\n");
 	fprintf(fp, "\tHash Algorithm: %s\n", hashAlgName(bs->hashID));
 	fprintf(fp, "\tIV............: ");
-		outputHexBlob(bs->iv, getIVLen(bs), verbose);
+		outputHexBlob(fp, bs->iv, getIVLen(bs), verbose);
 		fputc('\n', fp);
 	fprintf(fp, "\tRecord Count..: %llu\n", bs->recCount);
 	fprintf(fp, "\tSignature Type: %s\n", sigTypeName(bs->sigID));
 	fprintf(fp, "\tSignature Len.: %u\n", bs->sig.der.len);
 	fprintf(fp, "\tSignature.....: ");
-		outputHexBlob(bs->sig.der.data, bs->sig.der.len, verbose);
+		outputHexBlob(fp, bs->sig.der.data, bs->sig.der.len, verbose);
 		fputc('\n', fp);
 }
 
@@ -416,4 +427,104 @@ rsgt_tlvprint(FILE *fp, uint16_t tlvtype, void *obj, uint8_t verbose)
 	default:fprintf(fp, "unknown tlv record %4.4x\n", tlvtype);
 		break;
 	}
+}
+
+
+/**
+ * Read block parameters. This detects if the block contains the
+ * individual log hashes, the intermediate hashes and the overall
+ * block paramters (from the signature block). As we do not have any
+ * begin of block record, we do not know e.g. the hash algorithm or IV
+ * until reading the block signature record. And because the file is
+ * purely sequential and variable size, we need to read all records up to
+ * the next signature record.
+ * If a caller intends to verify a log file based on the parameters,
+ * he must re-read the file from the begining (we could keep things
+ * in memory, but this is impractical for large blocks). In order
+ * to facitate this, the function permits to rewind to the original
+ * read location when it is done.
+ *
+ * @param[in] fp file pointer of tlv file
+ * @param[in] bRewind 0 - do not rewind at end of procesing, 1 - do so
+ * @param[out] bs block signature record
+ * @param[out] bHasRecHashes 0 if record hashes are present, 1 otherwise
+ * @param[out] bHasIntermedHashes 0 if intermediate hashes are present,
+ *                1 otherwise
+ *
+ * @returns 0 if ok, something else otherwise
+ */
+int
+rsgt_getBlockParams(FILE *fp, uint8_t bRewind, block_sig_t **bs,
+                    uint8_t *bHasRecHashes, uint8_t *bHasIntermedHashes)
+{
+	int r;
+	uint64_t nRecs = 0;
+	uint16_t tlvtype, tlvlen;
+	uint8_t bDone = 0;
+	off_t rewindPos = 0;
+
+	if(bRewind)
+		rewindPos = ftello(fp);
+	*bHasRecHashes = 0;
+	*bHasIntermedHashes = 0;
+	*bs = NULL;
+
+	while(!bDone) { /* we will err out on EOF */
+		if((r = rsgt_tlvrdTL(fp, &tlvtype, &tlvlen)) != 0) goto done;
+		switch(tlvtype) {
+		case 0x0900:
+			++nRecs;
+			*bHasRecHashes = 1;
+			rsgt_tlvrdSkipVal(fp, tlvlen);
+			break;
+		case 0x0901:
+			*bHasIntermedHashes = 1;
+			rsgt_tlvrdSkipVal(fp, tlvlen);
+			break;
+		case 0x0902:
+			r = rsgt_tlvrdBLOCK_SIG(fp, bs, tlvlen);
+			if(r != 0) goto done;
+			bDone = 1;
+			break;
+		default:fprintf(fp, "unknown tlv record %4.4x\n", tlvtype);
+			break;
+		}
+	}
+
+	if(*bHasRecHashes && (nRecs != (*bs)->recCount)) {
+		r = RSGTE_INVLD_RECCNT;
+		goto done;
+	}
+
+	if(bRewind) {
+		if(fseeko(fp, rewindPos, SEEK_SET) != 0) {
+			r = RSGTE_IO;
+			goto done;
+		}
+	}
+done:
+	return r;
+}
+
+
+/**
+ * Read the file header and compare it to the expected value.
+ * The file pointer is placed right after the header.
+ * @param[in] fp file pointer of tlv file
+ * @param[in] excpect expected header (e.g. "LOGSIG10")
+ * @returns 0 if ok, something else otherwise
+ */
+int
+rsgt_chkFileHdr(FILE *fp, char *expect)
+{
+	int r;
+	char hdr[9];
+
+	if((r = rsgt_tlvrdHeader(fp, (uchar*)hdr)) != 0) goto done;
+	if(strcmp(hdr, expect))
+		r = RSGTE_INVLHDR;
+	else
+		r = 0;
+done:
+	return r;
 }

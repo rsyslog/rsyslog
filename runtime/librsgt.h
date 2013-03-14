@@ -110,11 +110,16 @@ struct rsgtstatefile {
 };
 
 /* error states */
-#define RSGTE_IO 1 	/* any kind of io error, including EOF */
+#define RSGTE_IO 1 	/* any kind of io error */
 #define RSGTE_FMT 2	/* data fromat error */
 #define RSGTE_INVLTYP 3	/* invalid TLV type record (unexcpected at this point) */
 #define RSGTE_OOM 4	/* ran out of memory */
 #define RSGTE_LEN 5	/* error related to length records */
+#define RSGTE_NO_BLKSIG 6/* block signature record is missing --> invalid block */
+#define RSGTE_INVLD_RECCNT 7/* mismatch between actual records and records
+                               given in block-sig record */
+#define RSGTE_INVLHDR 8/* invalid file header */
+#define RSGTE_EOF 9 	/* specific EOF */
 
 
 static inline uint16_t
@@ -225,5 +230,8 @@ void sigblkFinish(gtfile gf);
 int rsgt_tlvrdHeader(FILE *fp, unsigned char *hdr);
 int rsgt_tlvrd(FILE *fp, uint16_t *tlvtype, uint16_t *tlvlen, void *obj);
 void rsgt_tlvprint(FILE *fp, uint16_t tlvtype, void *obj, uint8_t verbose);
+void rsgt_printBLOCK_SIG(FILE *fp, block_sig_t *bs, uint8_t verbose);
+int rsgt_getBlockParams(FILE *fp, uint8_t bRewind, block_sig_t **bs, uint8_t *bHasRecHashes, uint8_t *bHasIntermedHashes);
+int rsgt_chkFileHdr(FILE *fp, char *expect);
 
 #endif  /* #ifndef INCLUDED_LIBRSGT_H */

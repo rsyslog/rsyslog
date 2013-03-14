@@ -34,7 +34,7 @@
 
 typedef unsigned char uchar;
 
-static enum { MD_DUMP, MD_DETECT_FILE_TYPE,
+static enum { MD_DUMP, MD_DETECT_FILE_TYPE, MD_SHOW_SIGBLK_PARAMS
 } mode = MD_DUMP;
 static int verbose = 0;
 
@@ -72,6 +72,45 @@ dumpFile(char *name)
 		fclose(fp);
 	return;
 err:	fprintf(stderr, "error %d processing file %s\n", r, name);
+}
+
+static void
+showSigblkParams(char *name)
+{
+	FILE *fp;
+	block_sig_t *bs;
+	uint8_t bHasRecHashes, bHasIntermedHashes;
+	uint64_t blkCnt = 0;
+	int r = -1;
+	
+	if(!strcmp(name, "-"))
+		fp = stdin;
+	else {
+		if((fp = fopen(name, "r")) == NULL) {
+			perror(name);
+			goto err;
+		}
+	}
+	if((r = rsgt_chkFileHdr(fp, "LOGSIG10")) != 0) goto err;
+
+	while(1) { /* we will err out on EOF */
+		if((r = rsgt_getBlockParams(fp, 0, &bs, &bHasRecHashes,
+				        &bHasIntermedHashes)) != 0)
+			goto err;
+		++blkCnt;
+		rsgt_printBLOCK_SIG(stdout, bs, verbose);
+		printf("\t***META INFORMATION:\n");
+		printf("\tBlock Nbr in File......: %llu\n", blkCnt);
+		printf("\tHas Record Hashes......: %d\n", bHasRecHashes);
+		printf("\tHas Intermediate Hashes: %d\n", bHasIntermedHashes);
+	}
+
+	if(fp != stdin)
+		fclose(fp);
+	return;
+err:
+	if(r != RSGTE_EOF)
+		fprintf(stderr, "error %d processing file %s\n", r, name);
 }
 
 static void
@@ -114,6 +153,9 @@ processFile(char *name)
 	case MD_DUMP:
 		dumpFile(name);
 		break;
+	case MD_SHOW_SIGBLK_PARAMS:
+		showSigblkParams(name);
+		break;
 	}
 }
 
@@ -124,6 +166,7 @@ static struct option long_options[] =
 	{"verbose", no_argument, NULL, 'v'},
 	{"version", no_argument, NULL, 'V'},
 	{"detect-file-type", no_argument, NULL, 'T'},
+	{"show-sigblock-params", no_argument, NULL, 'B'},
 	{NULL, 0, NULL, 0} 
 }; 
 
@@ -146,6 +189,9 @@ main(int argc, char *argv[])
 			exit(0);
 		case 'D':
 			mode = MD_DUMP;
+			break;
+		case 'B':
+			mode = MD_SHOW_SIGBLK_PARAMS;
 			break;
 		case 'T':
 			mode = MD_DETECT_FILE_TYPE;
