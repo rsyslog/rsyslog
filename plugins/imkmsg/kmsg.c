@@ -89,6 +89,10 @@ submitSyslog(uchar *buf)
 	for (; isdigit(*buf); buf++) {
 		timestamp += (timestamp * 10) + (*buf - '0');
 	}
+
+	while (*buf != ';') {
+		buf++; /* skip everything till the first ; */
+	} 
 	buf++; /* skip ; */
 
 	/* get message */
