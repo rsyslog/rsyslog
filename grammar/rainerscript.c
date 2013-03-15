@@ -2635,7 +2635,7 @@ cnfexprOptimize_CMP_severity_facility(struct cnfexpr *expr)
 
 /* optimize a comparison with a variable as left-hand operand
  * NOTE: Currently support CMP_EQ, CMP_NE only and code NEEDS 
- *       TO BE CHANGED for other comparisons!
+ *       TO BE CHANGED fgr other comparisons!
  */
 static inline struct cnfexpr*
 cnfexprOptimize_CMP_var(struct cnfexpr *expr)
@@ -2790,10 +2790,10 @@ cnfexprOptimize(struct cnfexpr *expr)
 				expr->l = expr->r;
 				expr->r = exprswap;
 			}
-		} else if(expr->l->nodetype == 'V') {
-			expr = cnfexprOptimize_CMP_var(expr);
 		}
-		if(expr->r->nodetype == 'A') {
+		if(expr->l->nodetype == 'V') {
+			expr = cnfexprOptimize_CMP_var(expr);
+		} else if(expr->r->nodetype == 'A') {
 			cnfexprOptimize_CMPEQ_arr((struct cnfarray *)expr->r);
 		}
 		break;

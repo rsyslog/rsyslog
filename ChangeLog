@@ -3,6 +3,8 @@ Version 7.3.8  [devel] 2013-03-??
 - imrelp: now supports listening to IPv4/v6 only instead of always both
   build now requires librelp 1.0.2
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=378
+- bugfix: segfault in expression optimizer
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=423
 - bugfix: imuxsock was missing SysSock.ParseTrusted module parameter
   To use that functionality, legacy rsyslog.conf syntax had to be used.
   Also, the doc was missing information on the "ParseTrusted" set of
