@@ -255,6 +255,7 @@ relpEngineAddListner2(relpEngine_t *pThis, unsigned char *pLstnPort, void *pUsr)
 	CHKRet(relpSrvConstruct(&pSrv, pThis));
 	CHKRet(relpSrvSetUsrPtr(pSrv, pUsr));
 	CHKRet(relpSrvSetLstnPort(pSrv, pLstnPort));
+	CHKRet(relpSrvSetFamily(pSrv, pThis->ai_family));
 	CHKRet(relpSrvRun(pSrv));
 
 	/* all went well, so we can add the server to our server list */
@@ -297,6 +298,7 @@ relpEngineAddListner(relpEngine_t *pThis, unsigned char *pLstnPort)
 	RELPOBJ_assert(pThis, Engine);
 
 	CHKRet(relpSrvConstruct(&pSrv, pThis));
+	CHKRet(relpSrvSetFamily(pSrv, pThis->ai_family));
 	CHKRet(relpSrvSetLstnPort(pSrv, pLstnPort));
 	CHKRet(relpSrvRun(pSrv));
 
@@ -318,6 +320,17 @@ relpRetVal relpEngineSetStop(relpEngine_t *pThis)
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Engine);
 	pThis->bStop = 1;
+	LEAVE_RELPFUNC;
+}
+
+
+/* set the socket family to use
+ */
+relpRetVal relpEngineSetFamily(relpEngine_t *pThis, int ai_family)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Engine);
+	pThis->ai_family = ai_family;
 	LEAVE_RELPFUNC;
 }
 

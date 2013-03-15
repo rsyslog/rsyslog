@@ -33,6 +33,7 @@
 #include "config.h"
 #include <stdlib.h>
 #include <string.h>
+#include <netinet/in.h>
 #include <assert.h>
 #include "relp.h"
 #include "relpsrv.h"
@@ -58,6 +59,7 @@ relpSrvConstruct(relpSrv_t **ppThis, relpEngine_t *pEngine)
 	RELP_CORE_CONSTRUCTOR(pThis, Srv);
 	pThis->pEngine = pEngine;
 	pThis->stateCmdSyslog = pEngine->stateCmdSyslog;
+	pThis->ai_family = PF_UNSPEC;
 
 pEngine->dbgprint("relp server %p constructed\n", pThis);
 
@@ -134,6 +136,19 @@ finalize_it:
 }
 
 
+/* set the IPv4/v6 type to be used. Default is both (PF_UNSPEC)
+ * rgerhards, 2013-03-15
+ */
+relpRetVal
+relpSrvSetFamily(relpSrv_t *pThis, int ai_family)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Srv);
+	pThis->ai_family = ai_family;
+	LEAVE_RELPFUNC;
+}
+
+
 /* start a relp server - the server object must have all properties set
  * rgerhards, 2008-03-17
  */
@@ -146,7 +161,7 @@ relpSrvRun(relpSrv_t *pThis)
 	RELPOBJ_assert(pThis, Srv);
 
 	CHKRet(relpTcpConstruct(&pTcp, pThis->pEngine));
-	CHKRet(relpTcpLstnInit(pTcp, (pThis->pLstnPort == NULL) ? (unsigned char*) RELP_DFLT_PORT : pThis->pLstnPort));
+	CHKRet(relpTcpLstnInit(pTcp, (pThis->pLstnPort == NULL) ? (unsigned char*) RELP_DFLT_PORT : pThis->pLstnPort, pThis->ai_family));
 		
 	pThis->pTcp = pTcp;
 

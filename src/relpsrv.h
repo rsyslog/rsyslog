@@ -43,6 +43,7 @@ struct relpSrv_s {
 	BEGIN_RELP_OBJ;
 	relpEngine_t *pEngine;
 	unsigned char *pLstnPort;
+	int ai_family;
 	relpTcp_t *pTcp; /**< our tcp support object */
 	size_t maxDataSize;  /**< maximum size of a DATA element */
 	void *pUsr; /**< user pointer (passed back in to callback) */
@@ -60,6 +61,7 @@ struct relpSrv_s {
 relpRetVal relpSrvConstruct(relpSrv_t **ppThis, relpEngine_t *pEngine);
 relpRetVal relpSrvDestruct(relpSrv_t **ppThis);
 relpRetVal relpSrvSetLstnPort(relpSrv_t *pThis, unsigned char *pLstnPort);
+relpRetVal relpSrvSetFamily(relpSrv_t *pThis, int ai_family);
 relpRetVal relpSrvSetUsrPtr(relpSrv_t *pThis, void *pUsr);
 relpRetVal relpSrvRun(relpSrv_t *pThis);
 

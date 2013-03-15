@@ -294,7 +294,7 @@ finalize_it:
  * gerhards, 2008-03-17
  */
 relpRetVal
-relpTcpLstnInit(relpTcp_t *pThis, unsigned char *pLstnPort)
+relpTcpLstnInit(relpTcp_t *pThis, unsigned char *pLstnPort, int ai_family)
 {
         struct addrinfo hints, *res, *r;
         int error, maxs, *s, on = 1;
@@ -310,7 +310,7 @@ relpTcpLstnInit(relpTcp_t *pThis, unsigned char *pLstnPort)
 
         memset(&hints, 0, sizeof(hints));
         hints.ai_flags = AI_PASSIVE;
-        hints.ai_family = PF_UNSPEC; /* TODO: permit to configure IPv4/v6 only! */
+        hints.ai_family = ai_family;
         hints.ai_socktype = SOCK_STREAM;
 
         error = getaddrinfo(NULL, (char*) pLstnPt, &hints, &res);

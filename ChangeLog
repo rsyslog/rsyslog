@@ -1,4 +1,7 @@
 ----------------------------------------------------------------------
+Version 1.0.2 (rgerhards), 2013-03-15
+- added capability to support only IPv4/v6 instead of both
+----------------------------------------------------------------------
 Version 1.0.1 (rgerhards), 2012-09-06
 - added capability to stop server without canceling its thread
 - bugfix: interrupt of select() was not properly handled

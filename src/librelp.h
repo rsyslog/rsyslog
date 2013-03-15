@@ -147,6 +147,7 @@ relpRetVal relpEngineSetDbgprint(relpEngine_t *pThis, void (*dbgprint)(char *fmt
 relpRetVal relpEngineAddListner(relpEngine_t *pThis, unsigned char *pLstnPort);
 relpRetVal relpEngineAddListner2(relpEngine_t *pThis, unsigned char *pLstnPort, void*);
 relpRetVal relpEngineSetStop(relpEngine_t *pThis);
+relpRetVal relpEngineSetFamily(relpEngine_t *pThis, int ai_family);
 relpRetVal relpEngineRun(relpEngine_t *pThis);
 relpRetVal relpEngineCltDestruct(relpEngine_t *pThis, relpClt_t **ppClt);
 relpRetVal relpEngineCltConstruct(relpEngine_t *pThis, relpClt_t **ppClt);
