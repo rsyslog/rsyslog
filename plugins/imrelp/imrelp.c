@@ -208,6 +208,7 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 	if(pRelpEngine == NULL) {
 		CHKiRet(relpEngineConstruct(&pRelpEngine));
 		CHKiRet(relpEngineSetDbgprint(pRelpEngine, dbgprintf));
+		CHKiRet(relpEngineSetFamily(pRelpEngine, glbl.GetDefPFFamily()));
 		CHKiRet(relpEngineSetEnableCmd(pRelpEngine, (uchar*) "syslog", eRelpCmdState_Required));
 		CHKiRet(relpEngineSetSyslogRcv(pRelpEngine, onSyslogRcv));
 		if (!glbl.GetDisableDNS()) {
