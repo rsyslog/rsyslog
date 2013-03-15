@@ -1296,6 +1296,15 @@ dbgmalloc(size_t size)
 }
 
 
+/* report fd used for debug log. This is needed in case of
+ * auto-backgrounding, where the debug log shall not be closed.
+ */
+int
+dbgGetDbglogFd(void)
+{
+	return altdbg;
+}
+
 /* read in the runtime options
  * rgerhards, 2008-02-28
  */

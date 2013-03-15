@@ -104,6 +104,7 @@ void dbgSetExecLocation(int iStackPtr, int line);
 void dbgSetThrdName(uchar *pszName);
 void dbgPrintAllDebugInfo(void);
 void *dbgmalloc(size_t size);
+int dbgGetDbglogFd(void);
 
 /* macros */
 #ifdef DEBUGLESS
