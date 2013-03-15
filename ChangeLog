@@ -1,5 +1,9 @@
 ----------------------------------------------------------------------------
 Version 7.2.7  [v7-stable] 2013-03-??
+- bugfix: imuxsock was missing SysSock.ParseTrusted module parameter
+  To use that functionality, legacy rsyslog.conf syntax had to be used.
+  Also, the doc was missing information on the "ParseTrusted" set of
+  config directives.
 - doc bugfix: rsyslog.conf man page had invalid file format info
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=418
 ----------------------------------------------------------------------------
