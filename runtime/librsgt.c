@@ -483,7 +483,7 @@ sigblkInit(gtfile gf)
 static inline void
 bufAddIV(gtfile gf, uchar *buf, size_t *len)
 {
-	memcpy(buf+*len, &gf->IV, sizeof(gf->IV));
+	memcpy(buf+*len, gf->IV, hashOutputLengthOctets(gf->hashAlg));
 	*len += sizeof(gf->IV);
 }
 

@@ -151,12 +151,16 @@ doVerifyRec(FILE *logfp, FILE *sigfp, block_sig_t *bs, gtfile gf)
 	size_t lenRec;
 	char rec[128*1024];
 
-	fgets(rec, sizeof(rec), logfp);
+	if(fgets(rec, sizeof(rec), logfp) == NULL) {
+		r = feof(logfp) ? RSGTE_EOF : RSGTE_IO;
+		goto done;
+	}
 	lenRec = strlen(rec);
 	if(rec[lenRec-1] == '\n')
 		--lenRec;
 
 	r = rsgt_vrfy_nextRec(bs, gf, sigfp, (unsigned char*)rec, lenRec);
+done:
 	return r;
 }
 
