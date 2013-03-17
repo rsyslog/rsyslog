@@ -514,7 +514,7 @@ bufAddLevel(uchar *buf, size_t *len, uint8_t level)
 }
 
 
-static void
+void
 hash_m(gtfile gf, GTDataHash **m)
 {
 #warning Overall: check GT API return states!
@@ -527,7 +527,7 @@ hash_m(gtfile gf, GTDataHash **m)
 	GTDataHash_create(gf->hashAlg, concatBuf, len, m);
 }
 
-static inline void
+void
 hash_r(gtfile gf, GTDataHash **r, const uchar *rec, const size_t len)
 {
 	// r = hash(canonicalize(rec));
@@ -535,7 +535,7 @@ hash_r(gtfile gf, GTDataHash **r, const uchar *rec, const size_t len)
 }
 
 
-static void
+void
 hash_node(gtfile gf, GTDataHash **node, GTDataHash *m, GTDataHash *r,
           uint8_t level)
 {

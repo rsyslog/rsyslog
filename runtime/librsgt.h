@@ -120,6 +120,12 @@ struct rsgtstatefile {
                                given in block-sig record */
 #define RSGTE_INVLHDR 8/* invalid file header */
 #define RSGTE_EOF 9 	/* specific EOF */
+#define RSGTE_MISS_REC_HASH 10 /* record hash missing when expected */
+#define RSGTE_MISS_TREE_HASH 11 /* tree hash missing when expected */
+#define RSGTE_INVLD_REC_HASH 12 /* invalid record hash (failed verification) */
+#define RSGTE_INVLD_TREE_HASH 13 /* invalid tree hash (failed verification) */
+#define RSGTE_INVLD_REC_HASHID 14 /* invalid record hash ID (failed verification) */
+#define RSGTE_INVLD_TREE_HASHID 15 /* invalid tree hash ID (failed verification) */
 
 
 static inline uint16_t
@@ -180,6 +186,26 @@ hashAlgName(uint8_t hashID)
 	default:return "[unknown]";
 	}
 }
+static inline enum GTHashAlgorithm
+hashID2Alg(uint8_t hashID)
+{
+	switch(hashID) {
+	case 0x00:
+		return GT_HASHALG_SHA1;
+	case 0x02:
+		return GT_HASHALG_RIPEMD160;
+	case 0x03:
+		return GT_HASHALG_SHA224;
+	case 0x01:
+		return GT_HASHALG_SHA256;
+	case 0x04:
+		return GT_HASHALG_SHA384;
+	case 0x05:
+		return GT_HASHALG_SHA512;
+	default:
+		return 0xff;
+	}
+}
 static inline char *
 sigTypeName(uint8_t sigID)
 {
@@ -233,5 +259,12 @@ void rsgt_tlvprint(FILE *fp, uint16_t tlvtype, void *obj, uint8_t verbose);
 void rsgt_printBLOCK_SIG(FILE *fp, block_sig_t *bs, uint8_t verbose);
 int rsgt_getBlockParams(FILE *fp, uint8_t bRewind, block_sig_t **bs, uint8_t *bHasRecHashes, uint8_t *bHasIntermedHashes);
 int rsgt_chkFileHdr(FILE *fp, char *expect);
+gtfile rsgt_vrfyConstruct_gf(void);
+void rsgt_vrfyBlkInit(gtfile gf, block_sig_t *bs, uint8_t bHasRecHashes, uint8_t bHasIntermedHashes);
+int rsgt_vrfy_nextRec(block_sig_t *bs, gtfile gf, FILE *sigfp, unsigned char *rec, size_t lenRec);
 
+/* TODO: replace these? */
+void hash_m(gtfile gf, GTDataHash **m);
+void hash_r(gtfile gf, GTDataHash **r, const unsigned char *rec, const size_t len);
+void hash_node(gtfile gf, GTDataHash **node, GTDataHash *m, GTDataHash *r, uint8_t level);
 #endif  /* #ifndef INCLUDED_LIBRSGT_H */

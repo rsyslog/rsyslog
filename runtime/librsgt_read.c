@@ -277,6 +277,22 @@ rsgt_tlvrdIMPRINT(FILE *fp, imprint_t **imprint, uint16_t tlvlen)
 done:	return r;
 }
 
+static int
+rsgt_tlvrdRecHash(FILE *fp, imprint_t **imp)
+{
+	int r;
+	uint16_t tlvtype, tlvlen;
+
+	if((r = rsgt_tlvrdTL(fp, &tlvtype, &tlvlen)) != 0) goto done;
+printf("read tlvtype %4.4x\n", tlvtype);
+	if(tlvtype != 0x0900) {
+		r = RSGTE_MISS_REC_HASH;
+		goto done;
+	}
+	if((r = rsgt_tlvrdIMPRINT(fp, imp, tlvlen)) != 0) goto done;
+	r = 0;
+done:	return r;
+}
 
 /**;
  * Read the next "object" from file. This usually is
@@ -525,6 +541,116 @@ rsgt_chkFileHdr(FILE *fp, char *expect)
 		r = RSGTE_INVLHDR;
 	else
 		r = 0;
+done:
+	return r;
+}
+
+gtfile
+rsgt_vrfyConstruct_gf(void)
+{
+	gtfile gf;
+	if((gf = calloc(1, sizeof(struct gtfile_s))) == NULL)
+		goto done;
+	gf->x_prev = NULL;
+
+done:	return gf;
+}
+
+void
+rsgt_vrfyBlkInit(gtfile gf, block_sig_t *bs, uint8_t bHasRecHashes, uint8_t bHasIntermedHashes)
+{
+printf("bs->hashID %d\n", bs->hashID);
+	gf->hashAlg = hashID2Alg(bs->hashID);
+	gf->bKeepRecordHashes = bHasRecHashes;
+	gf->bKeepTreeHashes = bHasIntermedHashes;
+	free(gf->IV);
+	gf->IV = malloc(getIVLen(bs));
+	memcpy(gf->IV, bs->iv, getIVLen(bs));
+}
+
+static int
+rsgt_vrfy_chkRecHash(gtfile gf, FILE *sigfp, GTDataHash *recHash)
+{
+	int r = 0;
+	imprint_t *imp;
+
+	if(!gf->bKeepRecordHashes)
+		goto done;
+	if((r = rsgt_tlvrdRecHash(sigfp, &imp)) != 0)
+		goto done;
+	if(imp->hashID != hashIdentifier(gf->hashAlg)) {
+		r = RSGTE_INVLD_REC_HASHID;
+		goto done;
+	}
+printf("imp hash:");
+outputHexBlob(stdout, imp->data, hashOutputLengthOctets(imp->hashID), 1);
+printf("\nrec hash:");
+outputHexBlob(stdout, recHash->digest, hashOutputLengthOctets(imp->hashID), 1);
+printf("\n");
+	if(memcmp(imp->data, recHash->digest,
+		  hashOutputLengthOctets(imp->hashID))) {
+		r = RSGTE_INVLD_REC_HASH;
+		goto done;
+	}
+printf("record hash is OK\n");
+	r = 0;
+done:
+	return r;
+}
+
+int
+rsgt_vrfy_nextRec(block_sig_t *bs, gtfile gf, FILE *sigfp, unsigned char *rec,
+	size_t len)
+{
+	int r = 0;
+	GTDataHash *x; /* current hash */
+	GTDataHash *m, *recHash, *t;
+	uint8_t j;
+
+printf("hasRecHash %d, verify: %s", gf->bKeepRecordHashes, rec);
+	hash_m(gf, &m);
+	hash_r(gf, &recHash, rec, len);
+	if(gf->bKeepRecordHashes) {
+		r = rsgt_vrfy_chkRecHash(gf, sigfp, recHash);
+		if(r != 0) goto done;
+	}
+	hash_node(gf, &x, m, recHash, 1); /* hash leaf */
+	/* persists x here if Merkle tree needs to be persisted! */
+	//if(gf->bKeepTreeHashes)
+		//tlvWriteHash(gf, 0x0901, x);
+	/* add x to the forest as new leaf, update roots list */
+	t = x;
+	for(j = 0 ; j < gf->nRoots ; ++j) {
+		if(gf->roots_valid[j] == 0) {
+			gf->roots_hash[j] = t;
+			gf->roots_valid[j] = 1;
+			t = NULL;
+			break;
+		} else if(t != NULL) {
+			/* hash interim node */
+			hash_node(gf, &t, gf->roots_hash[j], t, j+2);
+			gf->roots_valid[j] = 0;
+			GTDataHash_free(gf->roots_hash[j]);
+			// TODO: check if this is correct location (paper!)
+			//if(gf->bKeepTreeHashes)
+				//tlvWriteHash(gf, 0x0901, t);
+		}
+	}
+	if(t != NULL) {
+		/* new level, append "at the top" */
+		gf->roots_hash[gf->nRoots] = t;
+		gf->roots_valid[gf->nRoots] = 1;
+		++gf->nRoots;
+		assert(gf->nRoots < MAX_ROOTS);
+		t = NULL;
+	}
+	gf->x_prev = x; /* single var may be sufficient */
+	++gf->nRecords;
+
+	/* cleanup */
+	/* note: x is freed later as part of roots cleanup */
+	GTDataHash_free(m);
+	GTDataHash_free(recHash);
 done:
 	return r;
 }

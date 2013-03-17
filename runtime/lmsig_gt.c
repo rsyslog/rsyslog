@@ -130,12 +130,20 @@ dbgprintf("DDDD: onFileOpen: %s\n", fn);
 	RETiRet;
 }
 
+/* Note: we assume that the record is terminated by a \n.
+ * As of the GuardTime paper, \n is not part of the signed
+ * message, so we subtract one from the record size. This
+ * may cause issues with non-standard formats, but let's 
+ * see how things evolve (the verifier will not work in
+ * any case when the records are not \n delimited...).
+ * rgerhards, 2013-03-17
+ */
 static rsRetVal
 OnRecordWrite(void *pF, uchar *rec, rs_size_t lenRec)
 {
 	DEFiRet;
-dbgprintf("DDDD: onRecordWrite (%d): %s\n", lenRec, rec);
-	sigblkAddRecord(pF, rec, lenRec);
+dbgprintf("DDDD: onRecordWrite (%d): %s\n", lenRec-1, rec);
+	sigblkAddRecord(pF, rec, lenRec-1);
 
 	RETiRet;
 }

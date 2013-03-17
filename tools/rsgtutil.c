@@ -34,7 +34,8 @@
 
 typedef unsigned char uchar;
 
-static enum { MD_DUMP, MD_DETECT_FILE_TYPE, MD_SHOW_SIGBLK_PARAMS
+static enum { MD_DUMP, MD_DETECT_FILE_TYPE, MD_SHOW_SIGBLK_PARAMS,
+              MD_VERIFY
 } mode = MD_DUMP;
 static int verbose = 0;
 
@@ -143,6 +144,91 @@ detectFileType(char *name)
 err:	fprintf(stderr, "error %d processing file %s\n", r, name);
 }
 
+static inline int
+doVerifyRec(FILE *logfp, FILE *sigfp, block_sig_t *bs, gtfile gf)
+{
+	int r;
+	size_t lenRec;
+	char rec[128*1024];
+
+	fgets(rec, sizeof(rec), logfp);
+	lenRec = strlen(rec);
+	if(rec[lenRec-1] == '\n')
+		--lenRec;
+
+	r = rsgt_vrfy_nextRec(bs, gf, sigfp, (unsigned char*)rec, lenRec);
+	return r;
+}
+
+/* note: here we need to have the LOG file name, not signature! */
+static void
+verify(char *name)
+{
+	FILE *logfp = NULL, *sigfp = NULL;
+	block_sig_t *bs;
+	gtfile gf;
+	uint8_t bHasRecHashes, bHasIntermedHashes;
+	uint8_t bInBlock;
+	int r = 0;
+	uint64_t nRecs;
+	char sigfname[4096];
+	
+	if(!strcmp(name, "-")) {
+		fprintf(stderr, "verify mode cannot work on stdin\n");
+		goto err;
+	} else {
+		snprintf(sigfname, sizeof(sigfname), "%s.gtsig", name);
+		sigfname[sizeof(sigfname)-1] = '\0';
+		if((logfp = fopen(name, "r")) == NULL) {
+			perror(name);
+			goto err;
+		}
+		if((sigfp = fopen(sigfname, "r")) == NULL) {
+			perror(name);
+			goto err;
+		}
+	}
+	if((r = rsgt_chkFileHdr(sigfp, "LOGSIG10")) != 0) goto err;
+
+	gf = rsgt_vrfyConstruct_gf();
+	if(gf == NULL) {
+		fprintf(stderr, "error initializing signature file structure\n");
+		goto err;
+	}
+
+	bInBlock = 0;
+
+	while(!feof(logfp)) {
+		if(bInBlock == 0) {
+			if((r = rsgt_getBlockParams(sigfp, 1, &bs, &bHasRecHashes,
+							&bHasIntermedHashes)) != 0)
+				goto err;
+			rsgt_vrfyBlkInit(gf, bs, bHasRecHashes,
+						bHasIntermedHashes);
+			nRecs = 0;
+			bInBlock = 1;
+		}
+		++nRecs;
+		if((r = doVerifyRec(logfp, sigfp, bs, gf)) != 0)
+			goto err;
+		if(nRecs == bs->recCount) {
+		//	verifyBLOCK_SIG(bs, gf);
+			bInBlock = 0;
+		}
+	}
+
+	fclose(logfp);
+	fclose(sigfp);
+	return;
+err:
+	if(logfp != NULL)
+		fclose(logfp);
+	if(sigfp != NULL)
+		fclose(sigfp);
+	if(r != RSGTE_EOF)
+		fprintf(stderr, "error %d processing file %s [%s]\n", r, name, sigfname);
+}
+
 static void
 processFile(char *name)
 {
@@ -156,6 +242,9 @@ processFile(char *name)
 	case MD_SHOW_SIGBLK_PARAMS:
 		showSigblkParams(name);
 		break;
+	case MD_VERIFY:
+		verify(name);
+		break;
 	}
 }
 
@@ -167,6 +256,7 @@ static struct option long_options[] =
 	{"version", no_argument, NULL, 'V'},
 	{"detect-file-type", no_argument, NULL, 'T'},
 	{"show-sigblock-params", no_argument, NULL, 'B'},
+	{"verify", no_argument, NULL, 't'}, /* 't' as in "test signatures" */
 	{NULL, 0, NULL, 0} 
 }; 
 
@@ -195,6 +285,9 @@ main(int argc, char *argv[])
 			break;
 		case 'T':
 			mode = MD_DETECT_FILE_TYPE;
+			break;
+		case 't':
+			mode = MD_VERIFY;
 			break;
 		case '?':
 			break;
