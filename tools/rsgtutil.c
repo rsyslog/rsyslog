@@ -216,7 +216,7 @@ verify(char *name)
 		if((r = doVerifyRec(logfp, sigfp, bs, gf)) != 0)
 			goto err;
 		if(nRecs == bs->recCount) {
-		//	verifyBLOCK_SIG(bs, gf);
+			verifyBLOCK_SIG(bs, gf, sigfp, nRecs);
 			bInBlock = 0;
 		}
 	}

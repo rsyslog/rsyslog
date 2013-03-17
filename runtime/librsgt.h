@@ -126,6 +126,8 @@ struct rsgtstatefile {
 #define RSGTE_INVLD_TREE_HASH 13 /* invalid tree hash (failed verification) */
 #define RSGTE_INVLD_REC_HASHID 14 /* invalid record hash ID (failed verification) */
 #define RSGTE_INVLD_TREE_HASHID 15 /* invalid tree hash ID (failed verification) */
+#define RSGTE_MISS_BLOCKSIG 16 /* block signature record missing when expected */
+#define RSGTE_INVLD_TIMESTAMP 17 /* RFC3161 timestamp is invalid */
 
 
 static inline uint16_t
@@ -262,6 +264,7 @@ int rsgt_chkFileHdr(FILE *fp, char *expect);
 gtfile rsgt_vrfyConstruct_gf(void);
 void rsgt_vrfyBlkInit(gtfile gf, block_sig_t *bs, uint8_t bHasRecHashes, uint8_t bHasIntermedHashes);
 int rsgt_vrfy_nextRec(block_sig_t *bs, gtfile gf, FILE *sigfp, unsigned char *rec, size_t lenRec);
+int verifyBLOCK_SIG(block_sig_t *bs, gtfile gf, FILE *sigfp, uint64_t nRecs);
 
 /* TODO: replace these? */
 void hash_m(gtfile gf, GTDataHash **m);

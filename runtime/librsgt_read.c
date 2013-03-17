@@ -311,6 +311,24 @@ printf("read tlvtype %4.4x\n", tlvtype);
 done:	return r;
 }
 
+/* read BLOCK_SIG during verification phase */
+static int
+rsgt_tlvrdVrfyBlockSig(FILE *fp, block_sig_t **bs)
+{
+	int r;
+	uint16_t tlvtype, tlvlen;
+
+	if((r = rsgt_tlvrdTL(fp, &tlvtype, &tlvlen)) != 0) goto done;
+printf("read tlvtype %4.4x\n", tlvtype);
+	if(tlvtype != 0x0902) {
+		r = RSGTE_MISS_BLOCKSIG;
+		goto done;
+	}
+	if((r = rsgt_tlvrdBLOCK_SIG(fp, bs, tlvlen)) != 0) goto done;
+	r = 0;
+done:	return r;
+}
+
 /**;
  * Read the next "object" from file. This usually is
  * a single TLV, but may be something larger, for
@@ -649,7 +667,6 @@ rsgt_vrfy_nextRec(block_sig_t *bs, gtfile gf, FILE *sigfp, unsigned char *rec,
 	GTDataHash *m, *recHash, *t;
 	uint8_t j;
 
-printf("hasRecHash %d, verify: %s", gf->bKeepRecordHashes, rec);
 	hash_m(gf, &m);
 	hash_r(gf, &recHash, rec, len);
 	if(gf->bKeepRecordHashes) {
@@ -698,5 +715,95 @@ printf("hasRecHash %d, verify: %s", gf->bKeepRecordHashes, rec);
 	GTDataHash_free(m);
 	GTDataHash_free(recHash);
 done:
+	return r;
+}
+
+
+static int
+verifyTimestamp(gtfile gf, GTDataHash *root)
+{
+	int r = 0;
+	printf("in verifyTimestamp\n");
+	return r;
+}
+
+
+/* TODO: think about merging this with the writer. The
+ * same applies to the other computation algos.
+ */
+static int
+verifySigblkFinish(gtfile gf)
+{
+	GTDataHash *root, *rootDel;
+	int8_t j;
+	int r;
+
+	if(gf->nRecords == 0)
+		goto done;
+
+	root = NULL;
+	for(j = 0 ; j < gf->nRoots ; ++j) {
+		if(root == NULL) {
+			root = gf->roots_hash[j];
+			gf->roots_valid[j] = 0; /* guess this is redundant with init, maybe del */
+		} else if(gf->roots_valid[j]) {
+			rootDel = root;
+			hash_node(gf, &root, gf->roots_hash[j], root, j+2);
+			gf->roots_valid[j] = 0; /* guess this is redundant with init, maybe del */
+			GTDataHash_free(rootDel);
+		}
+	}
+	r = verifyTimestamp(gf, root);
+
+	free(gf->blkStrtHash);
+	gf->blkStrtHash = NULL;
+	// We do not need the following as we take this from the block params
+	// (but I leave it in in order to aid getting to common code)
+	//gf->lenBlkStrtHash = gf->x_prev->digest_length;
+	//gf->blkStrtHash = malloc(gf->lenBlkStrtHash);
+	//memcpy(gf->blkStrtHash, gf->x_prev->digest, gf->lenBlkStrtHash);
+done:
+	gf->bInBlk = 0;
+	return r;
+}
+
+/* verify the root hash. This also means we need to compute the
+ * Merkle tree root for the current block.
+ */
+int
+verifyBLOCK_SIG(block_sig_t *bs, gtfile gf, FILE *sigfp, uint64_t nRecs)
+{
+	int r;
+	int gtstate;
+	block_sig_t *file_bs;
+	GTTimestamp *timestamp = NULL;
+	GTVerificationInfo *vrfyInf;
+	
+	if((r = verifySigblkFinish(gf)) != 0)
+		goto done;
+	if((r = rsgt_tlvrdVrfyBlockSig(sigfp, &file_bs)) != 0)
+		goto done;
+printf("got sig block, now doing checks \n");
+	if(nRecs != bs->recCount) {
+		r = RSGTE_INVLD_RECCNT;
+		goto done;
+	}
+
+printf("len DER timestamp: %d, data %p\n", (int) file_bs->sig.der.len, file_bs->sig.der.data);
+	gtstate = GTTimestamp_DERDecode(file_bs->sig.der.data,
+					file_bs->sig.der.len, &timestamp);
+printf("result of GTTimestamp_DERDecode: %d\n", gtstate);
+	gtstate = GTTimestamp_verify(timestamp, 1, &vrfyInf);
+printf("result of GTTimestamp_verify: %d, verf_err %d\n", gtstate, vrfyInf->verification_errors );
+	if(! (gtstate == GT_OK
+	      && vrfyInf->verification_errors == GT_NO_FAILURES) ) {
+		r = RSGTE_INVLD_TIMESTAMP; goto done;
+	}
+
+printf("root timestamp OK\n");
+	r = 0;
+done:
+	if(timestamp != NULL)
+		GTTimestamp_free(timestamp);
 	return r;
 }
