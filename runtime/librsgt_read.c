@@ -37,6 +37,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <gt_http.h>
 
 #include "librsgt.h"
 
@@ -719,20 +720,11 @@ done:
 }
 
 
-static int
-verifyTimestamp(gtfile gf, GTDataHash *root)
-{
-	int r = 0;
-	printf("in verifyTimestamp\n");
-	return r;
-}
-
-
 /* TODO: think about merging this with the writer. The
  * same applies to the other computation algos.
  */
 static int
-verifySigblkFinish(gtfile gf)
+verifySigblkFinish(gtfile gf, GTDataHash **pRoot)
 {
 	GTDataHash *root, *rootDel;
 	int8_t j;
@@ -753,15 +745,16 @@ verifySigblkFinish(gtfile gf)
 			GTDataHash_free(rootDel);
 		}
 	}
-	r = verifyTimestamp(gf, root);
 
 	free(gf->blkStrtHash);
 	gf->blkStrtHash = NULL;
+	*pRoot = root;
 	// We do not need the following as we take this from the block params
 	// (but I leave it in in order to aid getting to common code)
 	//gf->lenBlkStrtHash = gf->x_prev->digest_length;
 	//gf->blkStrtHash = malloc(gf->lenBlkStrtHash);
 	//memcpy(gf->blkStrtHash, gf->x_prev->digest, gf->lenBlkStrtHash);
+	r = 0;
 done:
 	gf->bInBlk = 0;
 	return r;
@@ -778,8 +771,9 @@ verifyBLOCK_SIG(block_sig_t *bs, gtfile gf, FILE *sigfp, uint64_t nRecs)
 	block_sig_t *file_bs;
 	GTTimestamp *timestamp = NULL;
 	GTVerificationInfo *vrfyInf;
+	GTDataHash *root = NULL;
 	
-	if((r = verifySigblkFinish(gf)) != 0)
+	if((r = verifySigblkFinish(gf, &root)) != 0)
 		goto done;
 	if((r = rsgt_tlvrdVrfyBlockSig(sigfp, &file_bs)) != 0)
 		goto done;
@@ -793,8 +787,11 @@ printf("len DER timestamp: %d, data %p\n", (int) file_bs->sig.der.len, file_bs->
 	gtstate = GTTimestamp_DERDecode(file_bs->sig.der.data,
 					file_bs->sig.der.len, &timestamp);
 printf("result of GTTimestamp_DERDecode: %d\n", gtstate);
-	gtstate = GTTimestamp_verify(timestamp, 1, &vrfyInf);
-printf("result of GTTimestamp_verify: %d, verf_err %d\n", gtstate, vrfyInf->verification_errors );
+	gtstate = GTHTTP_verifyTimestampHash(timestamp, root, NULL,
+			NULL, NULL,
+			"http://verify.guardtime.com/gt-controlpublications.bin",
+			0, &vrfyInf);
+printf("result of HTTP_vrfy: %d: %s\n", gtstate, GTHTTP_getErrorString(gtstate));
 	if(! (gtstate == GT_OK
 	      && vrfyInf->verification_errors == GT_NO_FAILURES) ) {
 		r = RSGTE_INVLD_TIMESTAMP; goto done;
