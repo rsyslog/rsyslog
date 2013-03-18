@@ -178,14 +178,14 @@ static void
 readkmsg(void)
 {
 	int i;
-	uchar pRcv[8096+1];
+	uchar pRcv[8192+1];
 	char errmsg[2048];
 
 	for (;;) {
 		dbgprintf("imkmsg waiting for kernel log line\n");
 
 		/* every read() from the opened device node receives one record of the printk buffer */
-		i = read(fklog, pRcv, 8096);
+		i = read(fklog, pRcv, 8192);
 
 		if (i > 0) {
 			/* successful read of message of nonzero length */
