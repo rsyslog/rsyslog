@@ -744,7 +744,7 @@ verifySigblkFinish(gtfile gf)
 	root = NULL;
 	for(j = 0 ; j < gf->nRoots ; ++j) {
 		if(root == NULL) {
-			root = gf->roots_hash[j];
+			root = gf->roots_valid[j] ? gf->roots_hash[j] : NULL;
 			gf->roots_valid[j] = 0; /* guess this is redundant with init, maybe del */
 		} else if(gf->roots_valid[j]) {
 			rootDel = root;
