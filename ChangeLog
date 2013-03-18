@@ -179,6 +179,18 @@ Version 7.3.0  [devel] 2012-10-09
   This is controlled by the new action parameter "VeryReliableZip".
 ----------------------------------------------------------------------------
 Version 7.2.7  [v7-stable] 2013-03-??
+- rsyslogd startup information is now properly conveyed back to init
+  when privileges are beging dropped
+  Actually, we have moved termination of the parent in front of the
+  priv drop. So it shall work now in all cases. See code comments in
+  commit for more details.
+- If forking, the parent now waits for a maximum of 60 seconds for
+  termination by the child
+- improved debugging support in forked (auto-backgrounding) mode
+  The rsyslog debug log file is now continued to be written across the
+  fork.
+- bugfix: several issues in imkmsg
+  see bug tracker: http://bugzilla.adiscon.com/show_bug.cgi?id=421#c8
 - bugfix: imuxsock was missing SysSock.ParseTrusted module parameter
   To use that functionality, legacy rsyslog.conf syntax had to be used.
   Also, the doc was missing information on the "ParseTrusted" set of

@@ -107,6 +107,7 @@ void dbgSetThrdName(uchar *pszName);
 void dbgPrintAllDebugInfo(void);
 void *dbgmalloc(size_t size);
 void dbgOutputTID(char* name);
+int dbgGetDbglogFd(void);
 
 /* macros */
 #ifdef DEBUGLESS
