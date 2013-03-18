@@ -29,6 +29,7 @@
 #include <signal.h>
 #include <errno.h>
 #include <unistd.h>
+#include <stdint.h>
 #include "conf.h"
 #include "syslogd-types.h"
 #include "srUtils.h"

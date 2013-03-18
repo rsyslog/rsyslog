@@ -1,8 +1,9 @@
 ---------------------------------------------------------------------------
-Version 7.3.8  [devel] 2013-03-??
+Version 7.3.8  [devel] 2013-03-18
 - imrelp: now supports listening to IPv4/v6 only instead of always both
   build now requires librelp 1.0.2
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=378
+- bugfix: mmanon did not build on some platforms (e.g. Ubuntu)
 - bugfix: segfault in expression optimizer
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=423
 - bugfix: imuxsock was missing SysSock.ParseTrusted module parameter
