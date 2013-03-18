@@ -1,11 +1,5 @@
 ----------------------------------------------------------------------------
 Version 7.2.7  [v7-stable] 2013-03-??
-- bugfix: imuxsock was missing SysSock.ParseTrusted module parameter
-  To use that functionality, legacy rsyslog.conf syntax had to be used.
-  Also, the doc was missing information on the "ParseTrusted" set of
-  config directives.
-- doc bugfix: rsyslog.conf man page had invalid file format info
-  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=418
 - rsyslogd startup information is now properly conveyed back to init
   when privileges are beging dropped
   Actually, we have moved termination of the parent in front of the
@@ -16,6 +10,14 @@ Version 7.2.7  [v7-stable] 2013-03-??
 - improved debugging support in forked (auto-backgrounding) mode
   The rsyslog debug log file is now continued to be written across the
   fork.
+- bugfix: several issues in imkmsg
+  see bug tracker: http://bugzilla.adiscon.com/show_bug.cgi?id=421#c8
+- bugfix: imuxsock was missing SysSock.ParseTrusted module parameter
+  To use that functionality, legacy rsyslog.conf syntax had to be used.
+  Also, the doc was missing information on the "ParseTrusted" set of
+  config directives.
+- doc bugfix: rsyslog.conf man page had invalid file format info
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=418
 ----------------------------------------------------------------------------
 Version 7.2.6  [v7-stable] 2013-03-05
 - slightly improved config parser error messages when invalid escapes happen
