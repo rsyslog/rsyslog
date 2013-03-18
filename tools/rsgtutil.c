@@ -192,6 +192,9 @@ verify(char *name)
 			goto err;
 		}
 	}
+
+	rsgtInit("rsyslog rsgtutil " VERSION);
+
 	if((r = rsgt_chkFileHdr(sigfp, "LOGSIG10")) != 0) goto err;
 
 	gf = rsgt_vrfyConstruct_gf();
@@ -231,6 +234,7 @@ err:
 		fclose(sigfp);
 	if(r != RSGTE_EOF)
 		fprintf(stderr, "error %d processing file %s [%s]\n", r, name, sigfname);
+	rsgtExit();
 }
 
 static void
