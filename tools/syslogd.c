@@ -2001,15 +2001,15 @@ int realMain(int argc, char **argv)
 	if(!iConfigVerify)
 		CHKiRet(doGlblProcessInit());
 
+	/* Send a signal to the parent so it can terminate.  */
+	if(glblGetOurPid() != ppid)
+		kill(ppid, SIGTERM);
+
 	CHKiRet(init());
 
 	if(Debug && debugging_on) {
 		dbgprintf("Debugging enabled, SIGUSR1 to turn off debugging.\n");
 	}
-
-	/* Send a signal to the parent so it can terminate.  */
-	if(glblGetOurPid() != ppid)
-		kill(ppid, SIGTERM);
 
 	/* END OF INTIALIZATION */
 	DBGPRINTF("initialization completed, transitioning to regular run mode\n");
