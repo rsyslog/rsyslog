@@ -107,7 +107,7 @@ submitSyslog(uchar *buf)
 	if (*buf != '\0') /* message has appended properties, skip \n */
 		buf++;
 
-	while (strlen((char *)buf)) {
+	while (*buf) {
 		/* get name of the property */
 		buf++; /* skip ' ' */
 		offs = 0;
