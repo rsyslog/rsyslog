@@ -759,7 +759,9 @@ doWrite(instanceData *pData, uchar *pszBuf, int lenBuf)
 	DBGPRINTF("write to stream, pData->pStrm %p, lenBuf %d\n", pData->pStrm, lenBuf);
 	if(pData->pStrm != NULL){
 		CHKiRet(strm.Write(pData->pStrm, pszBuf, lenBuf));
-		CHKiRet(pData->sigprov.OnRecordWrite(pData->sigprovFileData, pszBuf, lenBuf));
+		if(pData->useSigprov) {
+			CHKiRet(pData->sigprov.OnRecordWrite(pData->sigprovFileData, pszBuf, lenBuf));
+		}
 	}
 
 finalize_it:
