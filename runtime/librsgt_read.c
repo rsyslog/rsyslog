@@ -48,6 +48,8 @@ typedef unsigned char uchar;
 #define MAXFNAME 1024
 
 static int rsgt_read_debug = 0;
+char *rsgt_read_puburl = "http://verify.guardtime.com/gt-controlpublications.bin";
+uint8_t rsgt_read_showVerified = 0;
 
 /* macro to obtain next char from file including error tracking */
 #define NEXTC	if((c = fgetc(fp)) == EOF) { \
@@ -57,6 +59,130 @@ static int rsgt_read_debug = 0;
 
 /* check return state of operation and abort, if non-OK */
 #define CHKr(code) if((r = code) != 0) goto done
+
+
+/* if verbose==0, only the first and last two octets are shown,
+ * otherwise everything.
+ */
+static void
+outputHexBlob(FILE *fp, uint8_t *blob, uint16_t len, uint8_t verbose)
+{
+	unsigned i;
+	if(verbose || len <= 8) {
+		for(i = 0 ; i < len ; ++i)
+			fprintf(fp, "%2.2x", blob[i]);
+	} else {
+		fprintf(fp, "%2.2x%2.2x%2.2x[...]%2.2x%2.2x%2.2x",
+			blob[0], blob[1], blob[2],
+			blob[len-3], blob[len-2], blob[len-1]);
+	}
+}
+
+static inline void
+outputHash(FILE *fp, char *hdr, uint8_t *data, uint16_t len, uint8_t verbose)
+{
+	fprintf(fp, "%s", hdr);
+	outputHexBlob(fp, data, len, verbose);
+	fputc('\n', fp);
+}
+
+void
+rsgt_errctxInit(gterrctx_t *ectx)
+{
+	ectx->fp = NULL;
+	ectx->filename = NULL;
+	ectx->recNum = 0;
+	ectx->recNumInFile = 0;
+	ectx->blkNum = 0;
+	ectx->verbose = 0;
+	ectx->errRec = NULL;
+	ectx->frstRecInBlk = NULL;
+}
+void
+rsgt_errctxExit(gterrctx_t *ectx)
+{
+	free(ectx->filename);
+	free(ectx->frstRecInBlk);
+}
+
+/* note: we do not copy the record, so the caller MUST not destruct
+ * it before processing of the record is completed. To remove the
+ * current record without setting a new one, call this function
+ * with rec==NULL.
+ */
+void
+rsgt_errctxSetErrRec(gterrctx_t *ectx, char *rec)
+{
+	ectx->errRec = strdup(rec);
+}
+/* This stores the block's first record. Here we copy the data,
+ * as the caller will usually not preserve it long enough.
+ */
+void
+rsgt_errctxFrstRecInBlk(gterrctx_t *ectx, char *rec)
+{
+	free(ectx->frstRecInBlk);
+	ectx->frstRecInBlk = strdup(rec);
+}
+
+static void
+reportError(int errcode, gterrctx_t *ectx)
+{
+	if(ectx->fp != NULL) {
+		fprintf(ectx->fp, "%s[%llu:%llu:%llu]: error[%u]: %s\n",
+			ectx->filename,
+			(long long unsigned) ectx->blkNum, (long long unsigned) ectx->recNum,
+			(long long unsigned) ectx->recNumInFile,
+			errcode, RSGTE2String(errcode));
+		if(ectx->frstRecInBlk != NULL)
+			fprintf(ectx->fp, "\tBlock Start Record.: '%s'\n", ectx->frstRecInBlk);
+		if(ectx->errRec != NULL)
+			fprintf(ectx->fp, "\tRecord in Question.: '%s'\n", ectx->errRec);
+		if(ectx->computedHash != NULL) {
+			outputHash(ectx->fp, "\tComputed Hash......: ", ectx->computedHash->digest,
+				ectx->computedHash->digest_length, ectx->verbose);
+		}
+		if(ectx->fileHash != NULL) {
+			outputHash(ectx->fp, "\tSignature File Hash: ", ectx->fileHash->data,
+				ectx->fileHash->len, ectx->verbose);
+		}
+		if(errcode == RSGTE_INVLD_TREE_HASH ||
+		   errcode == RSGTE_INVLD_TREE_HASHID) {
+			fprintf(ectx->fp, "\tTree Level.........: %d\n", (int) ectx->treeLevel);
+			outputHash(ectx->fp, "\tTree Left Hash.....: ", ectx->lefthash->digest,
+				ectx->lefthash->digest_length, ectx->verbose);
+			outputHash(ectx->fp, "\tTree Right Hash....: ", ectx->righthash->digest,
+				ectx->righthash->digest_length, ectx->verbose);
+		}
+		if(errcode == RSGTE_INVLD_TIMESTAMP ||
+		   errcode == RSGTE_TS_DERDECODE) {
+			fprintf(ectx->fp, "\tPublication Server.: %s\n", rsgt_read_puburl);
+			fprintf(ectx->fp, "\tGT Verify Timestamp: [%u]%s\n",
+				ectx->gtstate, GTHTTP_getErrorString(ectx->gtstate));
+		}
+	}
+}
+
+/* obviously, this is not an error-reporting function. We still use
+ * ectx, as it has most information we need.
+ */
+static void
+reportVerifySuccess(gterrctx_t *ectx)
+{
+	if(ectx->fp != NULL) {
+		fprintf(ectx->fp, "%s[%llu:%llu:%llu]: block signature successfully verified\n",
+			ectx->filename,
+			(long long unsigned) ectx->blkNum, (long long unsigned) ectx->recNum,
+			(long long unsigned) ectx->recNumInFile);
+		if(ectx->frstRecInBlk != NULL)
+			fprintf(ectx->fp, "\tBlock Start Record.: '%s'\n", ectx->frstRecInBlk);
+		if(ectx->errRec != NULL)
+			fprintf(ectx->fp, "\tBlock End Record...: '%s'\n", ectx->errRec);
+		fprintf(ectx->fp, "\tGT Verify Timestamp: [%u]%s\n",
+			ectx->gtstate, GTHTTP_getErrorString(ectx->gtstate));
+	}
+}
+
 
 /**
  * Read a header from a binary file.
@@ -239,7 +365,6 @@ rsgt_tlvrdBLOCK_SIG(FILE *fp, block_sig_t **blocksig, uint16_t tlvlen)
 		   2 + lenInt /* rec-count */ +
 		   4 + bs->sig.der.len /* rfc-3161 */;
 	if(sizeRead != tlvlen) {
-		printf("length record error!\n");
 		r = RSGTE_LEN;
 		goto done;
 	}
@@ -285,7 +410,6 @@ rsgt_tlvrdRecHash(FILE *fp, imprint_t **imp)
 	uint16_t tlvtype, tlvlen;
 
 	if((r = rsgt_tlvrdTL(fp, &tlvtype, &tlvlen)) != 0) goto done;
-printf("read tlvtype %4.4x\n", tlvtype);
 	if(tlvtype != 0x0900) {
 		r = RSGTE_MISS_REC_HASH;
 		goto done;
@@ -302,7 +426,6 @@ rsgt_tlvrdTreeHash(FILE *fp, imprint_t **imp)
 	uint16_t tlvtype, tlvlen;
 
 	if((r = rsgt_tlvrdTL(fp, &tlvtype, &tlvlen)) != 0) goto done;
-printf("read tlvtype %4.4x\n", tlvtype);
 	if(tlvtype != 0x0901) {
 		r = RSGTE_MISS_TREE_HASH;
 		goto done;
@@ -320,7 +443,6 @@ rsgt_tlvrdVrfyBlockSig(FILE *fp, block_sig_t **bs)
 	uint16_t tlvtype, tlvlen;
 
 	if((r = rsgt_tlvrdTL(fp, &tlvtype, &tlvlen)) != 0) goto done;
-printf("read tlvtype %4.4x\n", tlvtype);
 	if(tlvtype != 0x0902) {
 		r = RSGTE_MISS_BLOCKSIG;
 		goto done;
@@ -372,24 +494,6 @@ rsgt_tlvrd(FILE *fp, uint16_t *tlvtype, uint16_t *tlvlen, void *obj)
 done:	return r;
 }
 
-
-/* if verbose==0, only the first and last two octets are shown,
- * otherwise everything.
- */
-static void
-outputHexBlob(FILE *fp, uint8_t *blob, uint16_t len, uint8_t verbose)
-{
-	unsigned i;
-	if(verbose || len <= 6) {
-		for(i = 0 ; i < len ; ++i)
-			fprintf(fp, "%2.2x", blob[i]);
-	} else {
-		fprintf(fp, "%2.2x%2.2x[...]%2.2x%2.2x",
-			blob[0], blob[1],
-			blob[len-2], blob[len-1]);
-	}
-}
-
 /* return if a blob is all zero */
 static inline int
 blobIsZero(uint8_t *blob, uint16_t len)
@@ -412,14 +516,14 @@ rsgt_printIMPRINT(FILE *fp, char *name, imprint_t *imp, uint8_t verbose)
 static void
 rsgt_printREC_HASH(FILE *fp, imprint_t *imp, uint8_t verbose)
 {
-	rsgt_printIMPRINT(fp, "[0x0900]Record hash................: ",
+	rsgt_printIMPRINT(fp, "[0x0900]Record hash: ",
 		imp, verbose);
 }
 
 static void
 rsgt_printINT_HASH(FILE *fp, imprint_t *imp, uint8_t verbose)
 {
-	rsgt_printIMPRINT(fp, "[0x0901]Intermediate aggregate hash: ",
+	rsgt_printIMPRINT(fp, "[0x0901]Tree hash..: ",
 		imp, verbose);
 }
 
@@ -608,20 +712,26 @@ rsgt_vrfyBlkInit(gtfile gf, block_sig_t *bs, uint8_t bHasRecHashes, uint8_t bHas
 }
 
 static int
-rsgt_vrfy_chkRecHash(gtfile gf, FILE *sigfp, GTDataHash *recHash)
+rsgt_vrfy_chkRecHash(gtfile gf, FILE *sigfp, GTDataHash *recHash, gterrctx_t *ectx)
 {
 	int r = 0;
 	imprint_t *imp;
 
 	if((r = rsgt_tlvrdRecHash(sigfp, &imp)) != 0)
+		reportError(r, ectx);
 		goto done;
 	if(imp->hashID != hashIdentifier(gf->hashAlg)) {
+		reportError(r, ectx);
 		r = RSGTE_INVLD_REC_HASHID;
 		goto done;
 	}
 	if(memcmp(imp->data, recHash->digest,
 		  hashOutputLengthOctets(imp->hashID))) {
 		r = RSGTE_INVLD_REC_HASH;
+		ectx->computedHash = recHash;
+		ectx->fileHash = imp;
+		reportError(r, ectx);
+		ectx->computedHash = NULL, ectx->fileHash = NULL;
 		goto done;
 	}
 	r = 0;
@@ -630,38 +740,37 @@ done:
 }
 
 static int
-rsgt_vrfy_chkTreeHash(gtfile gf, FILE *sigfp, GTDataHash *hash)
+rsgt_vrfy_chkTreeHash(gtfile gf, FILE *sigfp, GTDataHash *hash, gterrctx_t *ectx)
 {
 	int r = 0;
 	imprint_t *imp;
 
-	if((r = rsgt_tlvrdTreeHash(sigfp, &imp)) != 0)
+	if((r = rsgt_tlvrdTreeHash(sigfp, &imp)) != 0) {
+		reportError(r, ectx);
 		goto done;
+	}
 	if(imp->hashID != hashIdentifier(gf->hashAlg)) {
+		reportError(r, ectx);
 		r = RSGTE_INVLD_TREE_HASHID;
 		goto done;
 	}
-//printf("imp  hash:");
-//outputHexBlob(stdout, imp->data, hashOutputLengthOctets(imp->hashID), 1);
-//printf("\ntree hash:");
-//outputHexBlob(stdout, hash->digest, hashOutputLengthOctets(imp->hashID), 1);
-//printf("\nlenBlkStrtHAsh %d\nblkstrt hash:", gf->lenBlkStrtHash);
-//outputHexBlob(stdout, gf->blkStrtHash, gf->lenBlkStrtHash, 1);
-//printf("\n");
 	if(memcmp(imp->data, hash->digest,
 		  hashOutputLengthOctets(imp->hashID))) {
 		r = RSGTE_INVLD_TREE_HASH;
+		ectx->computedHash = hash;
+		ectx->fileHash = imp;
+		reportError(r, ectx);
+		ectx->computedHash = NULL, ectx->fileHash = NULL;
 		goto done;
 	}
 	r = 0;
-printf("Tree hash OK\n");
 done:
 	return r;
 }
 
 int
 rsgt_vrfy_nextRec(block_sig_t *bs, gtfile gf, FILE *sigfp, unsigned char *rec,
-	size_t len)
+	size_t len, gterrctx_t *ectx)
 {
 	int r = 0;
 	GTDataHash *x; /* current hash */
@@ -671,13 +780,15 @@ rsgt_vrfy_nextRec(block_sig_t *bs, gtfile gf, FILE *sigfp, unsigned char *rec,
 	hash_m(gf, &m);
 	hash_r(gf, &recHash, rec, len);
 	if(gf->bKeepRecordHashes) {
-		r = rsgt_vrfy_chkRecHash(gf, sigfp, recHash);
+		r = rsgt_vrfy_chkRecHash(gf, sigfp, recHash, ectx);
 		if(r != 0) goto done;
 	}
 	hash_node(gf, &x, m, recHash, 1); /* hash leaf */
-	/* persists x here if Merkle tree needs to be persisted! */
 	if(gf->bKeepTreeHashes) {
-		r = rsgt_vrfy_chkTreeHash(gf, sigfp, x);
+		ectx->treeLevel = 0;
+		ectx->lefthash = m;
+		ectx->righthash = recHash;
+		r = rsgt_vrfy_chkTreeHash(gf, sigfp, x, ectx);
 		if(r != 0) goto done;
 	}
 	/* add x to the forest as new leaf, update roots list */
@@ -690,14 +801,16 @@ rsgt_vrfy_nextRec(block_sig_t *bs, gtfile gf, FILE *sigfp, unsigned char *rec,
 			break;
 		} else if(t != NULL) {
 			/* hash interim node */
+			ectx->treeLevel = j+1;
+			ectx->righthash = t;
 			hash_node(gf, &t, gf->roots_hash[j], t, j+2);
 			gf->roots_valid[j] = 0;
-			GTDataHash_free(gf->roots_hash[j]);
-			// TODO: check if this is correct location (paper!)
 			if(gf->bKeepTreeHashes) {
-				r = rsgt_vrfy_chkTreeHash(gf, sigfp, t);
-				if(r != 0) goto done;
+				ectx->lefthash = gf->roots_hash[j];
+				r = rsgt_vrfy_chkTreeHash(gf, sigfp, t, ectx);
+				if(r != 0) goto done; /* mem leak ok, we terminate! */
 			}
+			GTDataHash_free(gf->roots_hash[j]);
 		}
 	}
 	if(t != NULL) {
@@ -749,11 +862,6 @@ verifySigblkFinish(gtfile gf, GTDataHash **pRoot)
 	free(gf->blkStrtHash);
 	gf->blkStrtHash = NULL;
 	*pRoot = root;
-	// We do not need the following as we take this from the block params
-	// (but I leave it in in order to aid getting to common code)
-	//gf->lenBlkStrtHash = gf->x_prev->digest_length;
-	//gf->blkStrtHash = malloc(gf->lenBlkStrtHash);
-	//memcpy(gf->blkStrtHash, gf->x_prev->digest, gf->lenBlkStrtHash);
 	r = 0;
 done:
 	gf->bInBlk = 0;
@@ -764,7 +872,7 @@ done:
  * Merkle tree root for the current block.
  */
 int
-verifyBLOCK_SIG(block_sig_t *bs, gtfile gf, FILE *sigfp, uint64_t nRecs)
+verifyBLOCK_SIG(block_sig_t *bs, gtfile gf, FILE *sigfp, gterrctx_t *ectx)
 {
 	int r;
 	int gtstate;
@@ -777,29 +885,34 @@ verifyBLOCK_SIG(block_sig_t *bs, gtfile gf, FILE *sigfp, uint64_t nRecs)
 		goto done;
 	if((r = rsgt_tlvrdVrfyBlockSig(sigfp, &file_bs)) != 0)
 		goto done;
-printf("got sig block, now doing checks \n");
-	if(nRecs != bs->recCount) {
+	if(ectx->recNum != bs->recCount) {
 		r = RSGTE_INVLD_RECCNT;
 		goto done;
 	}
 
-printf("len DER timestamp: %d, data %p\n", (int) file_bs->sig.der.len, file_bs->sig.der.data);
 	gtstate = GTTimestamp_DERDecode(file_bs->sig.der.data,
 					file_bs->sig.der.len, &timestamp);
-printf("result of GTTimestamp_DERDecode: %d\n", gtstate);
-	gtstate = GTHTTP_verifyTimestampHash(timestamp, root, NULL,
-			NULL, NULL,
-			"http://verify.guardtime.com/gt-controlpublications.bin",
-			0, &vrfyInf);
-printf("result of HTTP_vrfy: %d: %s\n", gtstate, GTHTTP_getErrorString(gtstate));
-	if(! (gtstate == GT_OK
-	      && vrfyInf->verification_errors == GT_NO_FAILURES) ) {
-		r = RSGTE_INVLD_TIMESTAMP; goto done;
+	if(gtstate != GT_OK) {
+		r = RSGTE_TS_DERDECODE;
+		ectx->gtstate = gtstate;
+		goto done;
 	}
 
-printf("root timestamp OK\n");
+	gtstate = GTHTTP_verifyTimestampHash(timestamp, root, NULL,
+			NULL, NULL, rsgt_read_puburl, 0, &vrfyInf);
+	if(! (gtstate == GT_OK
+	      && vrfyInf->verification_errors == GT_NO_FAILURES) ) {
+		r = RSGTE_INVLD_TIMESTAMP;
+		ectx->gtstate = gtstate;
+		goto done;
+	}
+
 	r = 0;
+	if(rsgt_read_showVerified)
+		reportVerifySuccess(ectx);
 done:
+	if(r != 0)
+		reportError(r, ectx);
 	if(timestamp != NULL)
 		GTTimestamp_free(timestamp);
 	return r;

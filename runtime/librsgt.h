@@ -73,9 +73,38 @@ struct gtfile_s {
 	int	tlvIdx; /* current index into tlvBuf */
 };
 typedef struct gtfile_s *gtfile;
-
+typedef struct gterrctx_s gterrctx_t;
 typedef struct imprint_s imprint_t;
 typedef struct block_sig_s block_sig_t;
+
+/* The following structure describes the "error context" to be used
+ * for verification and similiar reader functions. While verifying,
+ * we need some information (like filenames or block numbers) that
+ * is not readily available from the other objects (or not even known
+ * to librsgt). In order to provide meaningful error messages, this
+ * information must be passed in from the external callers. In order
+ * to centralize information (and make it more manageable), we use
+ * ths error context here, which contains everything needed to
+ * generate good error messages. Members of this structure are
+ * maintained both by library users (the callers) as well as
+ * the library itself. Who does what simply depends on who has
+ * the relevant information.
+ */
+struct gterrctx_s {
+	FILE *fp;	/**< file for error messages */
+	char *filename;
+	uint8_t verbose;
+	uint64_t recNumInFile;
+	uint64_t recNum;
+	uint64_t blkNum;
+	uint8_t treeLevel;
+	GTDataHash *computedHash;
+	GTDataHash *lefthash, *righthash; /* hashes to display if tree hash fails */
+	imprint_t *fileHash;
+	int gtstate;	/* status from last relevant GT.*() function call */
+	char *errRec;
+	char *frstRecInBlk; /* This holds the first message seen inside the current block */
+};
 
 struct imprint_s {
 	uint8_t hashID;
@@ -115,7 +144,7 @@ struct rsgtstatefile {
 #define RSGTE_INVLTYP 3	/* invalid TLV type record (unexcpected at this point) */
 #define RSGTE_OOM 4	/* ran out of memory */
 #define RSGTE_LEN 5	/* error related to length records */
-#define RSGTE_NO_BLKSIG 6/* block signature record is missing --> invalid block */
+// 6 may be reused!
 #define RSGTE_INVLD_RECCNT 7/* mismatch between actual records and records
                                given in block-sig record */
 #define RSGTE_INVLHDR 8/* invalid file header */
@@ -128,6 +157,57 @@ struct rsgtstatefile {
 #define RSGTE_INVLD_TREE_HASHID 15 /* invalid tree hash ID (failed verification) */
 #define RSGTE_MISS_BLOCKSIG 16 /* block signature record missing when expected */
 #define RSGTE_INVLD_TIMESTAMP 17 /* RFC3161 timestamp is invalid */
+#define RSGTE_TS_DERDECODE 18 /* error DER-Decoding a timestamp */
+
+/* the following function maps RSGTE_* state to a string - must be updated
+ * whenever a new state is added.
+ * Note: it is thread-safe to call this function, as it returns a pointer
+ * into constant memory pool.
+ */
+static inline char *
+RSGTE2String(int err)
+{
+	switch(err) {
+	case 0:
+		return "success";
+	case RSGTE_IO:
+		return "i/o error";
+	case RSGTE_FMT:
+		return "data format error";
+	case RSGTE_INVLTYP:
+		return "invalid/unexpected tlv record type";
+	case RSGTE_OOM:
+		return "out of memory";
+	case RSGTE_LEN:
+		return "length record problem";
+	case RSGTE_INVLD_RECCNT:
+		return "mismatch between actual record count and number in block signature record";
+	case RSGTE_INVLHDR:
+		return "invalid file header";
+	case RSGTE_EOF:
+		return "EOF";
+	case RSGTE_MISS_REC_HASH:
+		return "record hash missing";
+	case RSGTE_MISS_TREE_HASH:
+		return "tree hash missing";
+	case RSGTE_INVLD_REC_HASH:
+		return "record hash mismatch";
+	case RSGTE_INVLD_TREE_HASH:
+		return "tree hash mismatch";
+	case RSGTE_INVLD_REC_HASHID:
+		return "invalid record hash ID";
+	case RSGTE_INVLD_TREE_HASHID:
+		return "invalid tree hash ID";
+	case RSGTE_MISS_BLOCKSIG:
+		return "missing block signature record";
+	case RSGTE_INVLD_TIMESTAMP:
+		return "RFC3161 timestamp invalid";
+	case RSGTE_TS_DERDECODE:
+		return "error DER-decoding RFC3161 timestamp";
+	default:
+		return "unknown error";
+	}
+}
 
 
 static inline uint16_t
@@ -263,11 +343,19 @@ int rsgt_getBlockParams(FILE *fp, uint8_t bRewind, block_sig_t **bs, uint8_t *bH
 int rsgt_chkFileHdr(FILE *fp, char *expect);
 gtfile rsgt_vrfyConstruct_gf(void);
 void rsgt_vrfyBlkInit(gtfile gf, block_sig_t *bs, uint8_t bHasRecHashes, uint8_t bHasIntermedHashes);
-int rsgt_vrfy_nextRec(block_sig_t *bs, gtfile gf, FILE *sigfp, unsigned char *rec, size_t lenRec);
-int verifyBLOCK_SIG(block_sig_t *bs, gtfile gf, FILE *sigfp, uint64_t nRecs);
+int rsgt_vrfy_nextRec(block_sig_t *bs, gtfile gf, FILE *sigfp, unsigned char *rec, size_t lenRec, gterrctx_t *ectx);
+int verifyBLOCK_SIG(block_sig_t *bs, gtfile gf, FILE *sigfp, gterrctx_t *ectx);
+void rsgt_errctxInit(gterrctx_t *ectx);
+void rsgt_errctxExit(gterrctx_t *ectx);
+void rsgt_errctxSetErrRec(gterrctx_t *ectx, char *rec);
+void rsgt_errctxFrstRecInBlk(gterrctx_t *ectx, char *rec);
+
 
 /* TODO: replace these? */
 void hash_m(gtfile gf, GTDataHash **m);
 void hash_r(gtfile gf, GTDataHash **r, const unsigned char *rec, const size_t len);
 void hash_node(gtfile gf, GTDataHash **node, GTDataHash *m, GTDataHash *r, uint8_t level);
+extern char *rsgt_read_puburl; /**< url of publication server */
+extern uint8_t rsgt_read_showVerified;
+
 #endif  /* #ifndef INCLUDED_LIBRSGT_H */

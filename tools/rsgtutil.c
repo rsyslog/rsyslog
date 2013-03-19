@@ -101,9 +101,9 @@ showSigblkParams(char *name)
 		++blkCnt;
 		rsgt_printBLOCK_SIG(stdout, bs, verbose);
 		printf("\t***META INFORMATION:\n");
-		printf("\tBlock Nbr in File......: %llu\n", blkCnt);
-		printf("\tHas Record Hashes......: %d\n", bHasRecHashes);
-		printf("\tHas Intermediate Hashes: %d\n", bHasIntermedHashes);
+		printf("\tBlock Nbr in File...: %llu\n", blkCnt);
+		printf("\tHas Record Hashes...: %d\n", bHasRecHashes);
+		printf("\tHas Tree Hashes.....: %d\n", bHasIntermedHashes);
 	}
 
 	if(fp != stdin)
@@ -145,7 +145,7 @@ err:	fprintf(stderr, "error %d processing file %s\n", r, name);
 }
 
 static inline int
-doVerifyRec(FILE *logfp, FILE *sigfp, block_sig_t *bs, gtfile gf)
+doVerifyRec(FILE *logfp, FILE *sigfp, block_sig_t *bs, gtfile gf, gterrctx_t *ectx, uint8_t bInBlock)
 {
 	int r;
 	size_t lenRec;
@@ -156,10 +156,19 @@ doVerifyRec(FILE *logfp, FILE *sigfp, block_sig_t *bs, gtfile gf)
 		goto done;
 	}
 	lenRec = strlen(rec);
-	if(rec[lenRec-1] == '\n')
+	if(rec[lenRec-1] == '\n') {
+		rec[lenRec-1] = '\0';
 		--lenRec;
+		rsgt_errctxSetErrRec(ectx, rec);
+	}
 
-	r = rsgt_vrfy_nextRec(bs, gf, sigfp, (unsigned char*)rec, lenRec);
+	/* we need to preserve the first record of each block for
+	 * error-reporting purposes (bInBlock==0 meanst start of block)
+	 */
+	if(bInBlock == 0)
+		rsgt_errctxFrstRecInBlk(ectx, rec);
+
+	r = rsgt_vrfy_nextRec(bs, gf, sigfp, (unsigned char*)rec, lenRec, ectx);
 done:
 	return r;
 }
@@ -174,8 +183,8 @@ verify(char *name)
 	uint8_t bHasRecHashes, bHasIntermedHashes;
 	uint8_t bInBlock;
 	int r = 0;
-	uint64_t nRecs;
 	char sigfname[4096];
+	gterrctx_t ectx;
 	
 	if(!strcmp(name, "-")) {
 		fprintf(stderr, "verify mode cannot work on stdin\n");
@@ -194,6 +203,10 @@ verify(char *name)
 	}
 
 	rsgtInit("rsyslog rsgtutil " VERSION);
+	rsgt_errctxInit(&ectx);
+	ectx.verbose = verbose;
+	ectx.fp = stderr;
+	ectx.filename = strdup(sigfname);
 
 	if((r = rsgt_chkFileHdr(sigfp, "LOGSIG10")) != 0) goto err;
 
@@ -204,28 +217,31 @@ verify(char *name)
 	}
 
 	bInBlock = 0;
+	ectx.blkNum = 0;
+	ectx.recNumInFile = 0;
 
 	while(!feof(logfp)) {
 		if(bInBlock == 0) {
 			if((r = rsgt_getBlockParams(sigfp, 1, &bs, &bHasRecHashes,
 							&bHasIntermedHashes)) != 0)
 				goto err;
-			rsgt_vrfyBlkInit(gf, bs, bHasRecHashes,
-						bHasIntermedHashes);
-			nRecs = 0;
-			bInBlock = 1;
+			rsgt_vrfyBlkInit(gf, bs, bHasRecHashes, bHasIntermedHashes);
+			ectx.recNum = 0;
+			++ectx.blkNum;
 		}
-		++nRecs;
-		if((r = doVerifyRec(logfp, sigfp, bs, gf)) != 0)
+		++ectx.recNum, ++ectx.recNumInFile;
+		if((r = doVerifyRec(logfp, sigfp, bs, gf, &ectx, bInBlock)) != 0)
 			goto err;
-		if(nRecs == bs->recCount) {
-			verifyBLOCK_SIG(bs, gf, sigfp, nRecs);
+		if(ectx.recNum == bs->recCount) {
+			verifyBLOCK_SIG(bs, gf, sigfp, &ectx);
 			bInBlock = 0;
-		}
+		} else	bInBlock = 1;
 	}
 
 	fclose(logfp);
 	fclose(sigfp);
+	rsgtExit();
+	rsgt_errctxExit(&ectx);
 	return;
 err:
 	if(logfp != NULL)
@@ -233,8 +249,9 @@ err:
 	if(sigfp != NULL)
 		fclose(sigfp);
 	if(r != RSGTE_EOF)
-		fprintf(stderr, "error %d processing file %s [%s]\n", r, name, sigfname);
+		fprintf(stderr, "error %d processing file %s\n", r, name);
 	rsgtExit();
+	rsgt_errctxExit(&ectx);
 }
 
 static void
@@ -265,6 +282,8 @@ static struct option long_options[] =
 	{"detect-file-type", no_argument, NULL, 'T'},
 	{"show-sigblock-params", no_argument, NULL, 'B'},
 	{"verify", no_argument, NULL, 't'}, /* 't' as in "test signatures" */
+	{"publications-server", optional_argument, NULL, 'P'},
+	{"show-verified", no_argument, NULL, 's'},
 	{NULL, 0, NULL, 0} 
 }; 
 
@@ -275,12 +294,15 @@ main(int argc, char *argv[])
 	int opt;
 
 	while(1) {
-		opt = getopt_long(argc, argv, "v", long_options, NULL);
+		opt = getopt_long(argc, argv, "DvVTBtPs", long_options, NULL);
 		if(opt == -1)
 			break;
 		switch(opt) {
 		case 'v':
 			verbose = 1;
+			break;
+		case 's':
+			rsgt_read_showVerified = 1;
 			break;
 		case 'V':
 			fprintf(stderr, "rsgtutil " VERSION "\n");
@@ -290,6 +312,9 @@ main(int argc, char *argv[])
 			break;
 		case 'B':
 			mode = MD_SHOW_SIGBLK_PARAMS;
+			break;
+		case 'P':
+			rsgt_read_puburl = optarg;
 			break;
 		case 'T':
 			mode = MD_DETECT_FILE_TYPE;

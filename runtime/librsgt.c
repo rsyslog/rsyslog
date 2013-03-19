@@ -325,8 +325,11 @@ writeStateFile(gtfile gf)
 	memcpy(sf.hdr, "GTSTAT10", 8);
 	sf.hashID = hashIdentifier(gf->hashAlg);
 	sf.lenHash = gf->x_prev->digest_length;
-	write(fd, &sf, sizeof(sf));
-	write(fd, gf->x_prev->digest, gf->x_prev->digest_length);
+	/* if the write fails, we cannot do anything against that. We check
+	 * the condition just to keep the compiler happy.
+	 */
+	if(write(fd, &sf, sizeof(sf))){};
+	if(write(fd, gf->x_prev->digest, gf->x_prev->digest_length)){};
 	close(fd);
 done:	return;
 }
@@ -387,7 +390,7 @@ seedIV(gtfile gf)
 	 * will always work...).  -- TODO -- rgerhards, 2013-03-06
 	 */
 	if((fd = open("/dev/urandom", O_RDONLY)) > 0) {
-		read(fd, gf->IV, hashlen);
+		if(read(fd, gf->IV, hashlen)) {}; /* keep compiler happy */
 		close(fd);
 	}
 }

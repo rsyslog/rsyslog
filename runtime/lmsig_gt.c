@@ -118,9 +118,10 @@ SetCnfParam(void *pT, struct nvlst *lst)
 
 
 static rsRetVal
-OnFileOpen(void *pT, uchar *fn, gtfile *pgf)
+OnFileOpen(void *pT, uchar *fn, void *pGF)
 {
 	lmsig_gt_t *pThis = (lmsig_gt_t*) pT;
+	gtfile *pgf = (gtfile*) pGF;
 	DEFiRet;
 dbgprintf("DDDD: onFileOpen: %s\n", fn);
 	
