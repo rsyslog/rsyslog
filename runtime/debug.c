@@ -303,7 +303,7 @@ static inline void dbgFuncDBRemoveMutexLock(dbgFuncDB_t *pFuncDB, pthread_mutex_
 void
 dbgOutputTID(char* name)
 {
-#	ifdef	HAVE_SYSCALL
+#	if defined(HAVE_SYSCALL) && defined(HAVE_SYS_gettid)
 	if(bOutputTidToStderr)
 		fprintf(stderr, "thread tid %u, name '%s'\n",
 			(unsigned)syscall(SYS_gettid), name);
