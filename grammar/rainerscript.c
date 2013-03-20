@@ -1273,8 +1273,12 @@ doFuncCall(struct cnffunc *func, struct var *ret, void* usrptr)
 		estr = var2String(&r[0], &bMustFree);
 		str = (char*) es_str2cstr(estr, NULL);
 		envvar = getenv(str);
+		if(envvar == NULL) {
+			ret->d.estr = es_newStr(0);
+		} else {
+			ret->d.estr = es_newStrFromCStr(envvar, strlen(envvar));
+		}
 		ret->datatype = 'S';
-		ret->d.estr = es_newStrFromCStr(envvar, strlen(envvar));
 		if(bMustFree) es_deleteStr(estr);
 		if(r[0].datatype == 'S') es_deleteStr(r[0].d.estr);
 		free(str);
