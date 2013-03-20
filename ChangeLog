@@ -1,4 +1,7 @@
 ---------------------------------------------------------------------------
+Version 7.3.9  [devel] 2013-03-??
+- bugfix: build problems on non-Linux platforms
+---------------------------------------------------------------------------
 Version 7.3.8  [devel] 2013-03-18
 - imrelp: now supports listening to IPv4/v6 only instead of always both
   build now requires librelp 1.0.2
@@ -192,6 +195,9 @@ Version 7.2.7  [v7-stable] 2013-03-??
 - bugfix: using group resolution could lead to endless loop
   Thanks to Tomas Heinrich for the patch.
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=310
+- bugfix: $mmnormalizeuseramsg paramter was specified with wrong type
+  Thank to Renzhong Zhang for alerting us of the problem.
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=420
 - bugfix: RainerScript getenv() function caused segfault when var was
   not found.
   Thanks to Philippe Muller for the patch.
