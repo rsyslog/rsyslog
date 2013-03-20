@@ -350,8 +350,9 @@ static rsRetVal doGetGID(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *p
 	struct group gBuf;
 	DEFiRet;
 	uchar szName[256];
-	int bufSize = 2048;
+	int bufSize = 1024;
 	char * stringBuf = NULL;
+	int err;
 
 	assert(pp != NULL);
 	assert(*pp != NULL);
@@ -361,20 +362,21 @@ static rsRetVal doGetGID(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *p
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}
 
-
-	CHKmalloc(stringBuf = malloc(bufSize));
-	while(pgBuf == NULL) {
-		errno = 0;
-		getgrnam_r((char*)szName, &gBuf, stringBuf, bufSize, &pgBuf);
-		if((pgBuf == NULL) && (errno == ERANGE)) {
-			/* Increase bufsize and try again.*/
-			bufSize *= 2;
-			CHKmalloc(stringBuf = realloc(stringBuf, bufSize));
-		}
-	}
+	do {
+		/* Increase bufsize and try again.*/
+		bufSize *= 2;
+		CHKmalloc(stringBuf = realloc(stringBuf, bufSize));
+		err = getgrnam_r((char*)szName, &gBuf, stringBuf, bufSize, &pgBuf);
+	} while((pgBuf == NULL) && (err == ERANGE));
 
 	if(pgBuf == NULL) {
-		errmsg.LogError(0, RS_RET_NOT_FOUND, "ID for group '%s' could not be found or error", (char*)szName);
+		if (err != 0) {
+			rs_strerror_r(err, stringBuf, bufSize);
+			errmsg.LogError(0, RS_RET_NOT_FOUND, "Query for group '%s' resulted in an error: %s\n",
+				(char*)szName, stringBuf);
+		} else {
+			errmsg.LogError(0, RS_RET_NOT_FOUND, "ID for group '%s' could not be found", (char*)szName);
+		}
 		iRet = RS_RET_NOT_FOUND;
 	} else {
 		if(pSetHdlr == NULL) {
