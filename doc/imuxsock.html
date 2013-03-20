@@ -102,6 +102,12 @@ properties for the system log socket.</li>
 JSON/lumberjack properties out of the trusted properties (which can be accessed
 via RainerScript JSON Variables, e.g. "$!pid") instead of adding them to the message.
 </li>
+<li><b>SysSock.Unlink</b> &lt;<b>on</b>/off&gt; (available since 7.3.9)<br>
+if turned on (default), the system socket is unlinked and re-created when
+opened and also unlinked when finally closed. Note that this setting has
+no effect when running under systemd control (because systemd handles
+the socket).
+</li>
 </ul>
 
 <p><b>Input Instance Parameters</b></p>
@@ -166,6 +172,13 @@ that the local hostname can be overridden in cases where that is desired.</li>
 properties for the non-system log socket in question.</li>
 <li><b>ParseTrusted</b> &lt;on/<b>off</b>&gt; equivalent to the SysSock.ParseTrusted module
 parameter, but applies to the input that is being defined.
+<li><b>Unlink</b> &lt;<b>on</b>/off&gt; (available since 7.3.9)<br>
+if turned on (default), the socket is unlinked and re-created when
+opened and also unlinked when finally closed. Set it to off if you
+handle socket creation yourself. Note that handling socket creation
+oneself has the advantage that a limited amount of messages may be 
+queued by the OS if rsyslog is not running.
+</li>
 </ul>
 
 <b>Caveats/Known Bugs:</b><br>
