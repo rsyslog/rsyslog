@@ -259,9 +259,10 @@ gtlsClientCertCallback(gnutls_session session,
 static rsRetVal
 gtlsGetCertInfo(nsd_gtls_t *pThis, cstr_t **ppStr)
 {
-	char dn[128];
 	uchar lnBuf[256];
-	size_t size;
+	uchar szBufA[1024];
+	uchar *szBuf = szBufA;
+	size_t szBufLen = sizeof(szBufA), tmp;
 	unsigned int algo, bits;
 	time_t expiration_time, activation_time;
 	const gnutls_datum *cert_list;
@@ -271,8 +272,6 @@ gtlsGetCertInfo(nsd_gtls_t *pThis, cstr_t **ppStr)
 	int gnuRet;
 	DEFiRet;
 	unsigned iAltName;
-	size_t szAltNameLen;
-	char szAltName[1024]; /* this is sufficient for the DNSNAME... */
 
 	assert(ppStr != NULL);
 	ISOBJ_TYPE_assert(pThis, nsd_gtls);
@@ -296,14 +295,14 @@ gtlsGetCertInfo(nsd_gtls_t *pThis, cstr_t **ppStr)
 
 		expiration_time = gnutls_x509_crt_get_expiration_time(cert);
 		activation_time = gnutls_x509_crt_get_activation_time(cert);
-		ctime_r(&activation_time, dn);
-		dn[strlen(dn) - 1] = '\0'; /* strip linefeed */
-		snprintf((char*)lnBuf, sizeof(lnBuf), "certificate valid from %s ", dn);
+		ctime_r(&activation_time, szBuf);
+		szBuf[strlen(szBuf) - 1] = '\0'; /* strip linefeed */
+		snprintf((char*)lnBuf, sizeof(lnBuf), "certificate valid from %s ", szBuf);
 		CHKiRet(rsCStrAppendStr(pStr, lnBuf));
 
-		ctime_r(&expiration_time, dn);
-		dn[strlen(dn) - 1] = '\0'; /* strip linefeed */
-		snprintf((char*)lnBuf, sizeof(lnBuf), "to %s; ", dn);
+		ctime_r(&expiration_time, szBuf);
+		szBuf[strlen(szBuf) - 1] = '\0'; /* strip linefeed */
+		snprintf((char*)lnBuf, sizeof(lnBuf), "to %s; ", szBuf);
 		CHKiRet(rsCStrAppendStr(pStr, lnBuf));
 
 		/* Extract some of the public key algorithm's parameters */
@@ -314,27 +313,41 @@ gtlsGetCertInfo(nsd_gtls_t *pThis, cstr_t **ppStr)
 		CHKiRet(rsCStrAppendStr(pStr, lnBuf));
 
 		/* names */
-		size = sizeof(dn);
-		gnutls_x509_crt_get_dn(cert, dn, &size);
-		snprintf((char*)lnBuf, sizeof(lnBuf), "DN: %s; ", dn);
+		tmp = szBufLen;
+		if(gnutls_x509_crt_get_dn(cert, szBuf, &tmp)
+		    == GNUTLS_E_SHORT_MEMORY_BUFFER) {
+			szBufLen = tmp;
+			szBuf = malloc(tmp);
+			gnutls_x509_crt_get_dn(cert, szBuf, &tmp);
+		}
+		snprintf((char*)lnBuf, sizeof(lnBuf), "DN: %s; ", szBuf);
 		CHKiRet(rsCStrAppendStr(pStr, lnBuf));
 
-		size = sizeof(dn);
-		gnutls_x509_crt_get_issuer_dn(cert, dn, &size);
-		snprintf((char*)lnBuf, sizeof(lnBuf), "Issuer DN: %s; ", dn);
+		tmp = szBufLen;
+		if(gnutls_x509_crt_get_issuer_dn(cert, szBuf, &tmp)
+		    == GNUTLS_E_SHORT_MEMORY_BUFFER) {
+			szBufLen = tmp;
+			szBuf = realloc((szBuf == szBufA) ? NULL : szBuf, tmp);
+			gnutls_x509_crt_get_issuer_dn(cert, szBuf, &tmp);
+		}
+		snprintf((char*)lnBuf, sizeof(lnBuf), "Issuer DN: %s; ", szBuf);
 		CHKiRet(rsCStrAppendStr(pStr, lnBuf));
 
 		/* dNSName alt name */
 		iAltName = 0;
 		while(1) { /* loop broken below */
-			szAltNameLen = sizeof(szAltName);
+			tmp = szBufLen;
 			gnuRet = gnutls_x509_crt_get_subject_alt_name(cert, iAltName,
-					szAltName, &szAltNameLen, NULL);
-			if(gnuRet < 0)
+					szBuf, &tmp, NULL);
+			if(gnuRet == GNUTLS_E_SHORT_MEMORY_BUFFER) {
+				szBufLen = tmp;
+				szBuf = realloc((szBuf == szBufA) ? NULL : szBuf, tmp);
+				continue;
+			} else if(gnuRet < 0)
 				break;
 			else if(gnuRet == GNUTLS_SAN_DNSNAME) {
 				/* we found it! */
-				snprintf((char*)lnBuf, sizeof(lnBuf), "SAN:DNSname: %s; ", szAltName);
+				snprintf((char*)lnBuf, sizeof(lnBuf), "SAN:DNSname: %s; ", szBuf);
 				CHKiRet(rsCStrAppendStr(pStr, lnBuf));
 				/* do NOT break, because there may be multiple dNSName's! */
 			}
@@ -352,6 +365,8 @@ finalize_it:
 		if(pStr != NULL)
 			rsCStrDestruct(&pStr);
 	}
+	if(szBuf != szBufA)
+		free(szBuf);
 
 	RETiRet;
 }
