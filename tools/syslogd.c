@@ -2021,7 +2021,7 @@ int realMain(int argc, char **argv)
 	 * is still in its infancy (and not really done), we currently accept this issue.
 	 * rgerhards, 2009-06-29
 	 */
-	if(!doFork) {
+	if(doFork) {
 		close(1);
 		close(2);
 		ourConf->globals.bErrMsgToStderr = 0;
