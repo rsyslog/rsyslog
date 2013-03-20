@@ -141,17 +141,17 @@ your distro puts rsyslog's config files). Note that only commands
 actually needed need to be specified. The second file uses less
 commands and uses defaults instead.<br>
 </p>
-<textarea rows="15" cols="60">module(load="folder/to/rsyslog/plugins/imfile/.libs/imfile" PollingInterval="10") #needs to be done just once
+<textarea rows="15" cols="60">module(load="imfile" PollingInterval="10") #needs to be done just once
 # File 1
 input(type="imfile" File="/path/to/file1" 
-Tag="tag1" 
-StateFile="/var/spool/rsyslog/statefile1" 
-Severity="error" 
-Facility="local7")
+      Tag="tag1" 
+      StateFile="/var/spool/rsyslog/statefile1" 
+      Severity="error" 
+      Facility="local7")
 # File 2
 input(type="imfile" File="/path/to/file2" 
-Tag="tag2" 
-StateFile="/var/spool/rsyslog/statefile2")
+      Tag="tag2" 
+      StateFile="/var/spool/rsyslog/statefile2")
 # ... and so on ...
 #
 </textarea>
@@ -210,8 +210,7 @@ your distro puts rsyslog's config files). Note that only commands
 actually needed need to be specified. The second file uses less
 commands and uses defaults instead.<br>
 </p>
-<textarea rows="15" cols="60">$ModLoad imfile #
-needs to be done just once
+<textarea rows="15" cols="60">$ModLoad imfile # needs to be done just once
 # File 1
 $InputFileName /path/to/file1
 $InputFileTag tag1:
