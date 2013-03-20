@@ -192,6 +192,12 @@ Version 7.2.7  [v7-stable] 2013-03-??
 - improved debugging support in forked (auto-backgrounding) mode
   The rsyslog debug log file is now continued to be written across the
   fork.
+- bugfix: $mmnormalizeuseramsg paramter was specified with wrong type
+  Thank to Renzhong Zhang for alerting us of the problem.
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=420
+- bugfix: RainerScript getenv() function caused segfault when var was
+  not found.
+  Thanks to Philippe Muller for the patch.
 - bugfix: several issues in imkmsg
   see bug tracker: http://bugzilla.adiscon.com/show_bug.cgi?id=421#c8
 - bugfix: imuxsock was missing SysSock.ParseTrusted module parameter
