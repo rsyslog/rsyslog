@@ -235,6 +235,7 @@ openFile(fileInfo_t *pThis)
 	/* read back in the object */
 	CHKiRet(obj.Deserialize(&pThis->pStrm, (uchar*) "strm", psSF, NULL, pThis));
 
+	strm.CheckFileChange(pThis->pStrm);
 	CHKiRet(strm.SeekCurrOffs(pThis->pStrm));
 
 	/* note: we do not delete the state file, so that the last position remains
