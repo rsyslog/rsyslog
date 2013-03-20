@@ -77,7 +77,9 @@ created in the rsyslog working directory (configurable via
 $WorkDirectory). Be careful to use unique names for different files
 being monitored. If there are duplicates, all sorts of "interesting"
 things may happen. Rsyslog currently does not check if a name is
-specified multiple times.</li>
+specified multiple times.
+Note that when $WorkDirectory is not set or set to a non-writable
+location, the state file will not be generated.</li>
 <li><span style="font-weight: bold;">Facility
 facility</span><br>
 The syslog facility to be assigned to lines read. Can be specified in
