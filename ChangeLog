@@ -3,6 +3,8 @@ Version 7.3.9  [devel] 2013-03-??
 - imuxsock: add ability to NOT create/delete sockets during startup and
   shutdown
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=259
+- imfile: errors persisting state file are now reported
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=292
 - imfile: now detects file change when rsyslog was inactive
   Previosly, this case could not be detected, so if a file was overwritten
   or rotated away while rsyslog was stopped, some data was missing. This

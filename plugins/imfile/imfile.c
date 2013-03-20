@@ -739,12 +739,20 @@ persistStrmState(fileInfo_t *pInfo)
 	CHKiRet(strm.ConstructFinalize(psSF));
 
 	CHKiRet(strm.Serialize(pInfo->pStrm, psSF));
+	CHKiRet(strm.Flush(psSF));
 
 	CHKiRet(strm.Destruct(&psSF));
 
 finalize_it:
 	if(psSF != NULL)
 		strm.Destruct(&psSF);
+	
+	if(iRet != RS_RET_OK) {
+		errmsg.LogError(0, iRet, "imfile: could not persist state "
+				"file %s - data may be repeated on next "
+				"startup. Is WorkDirectory set?",
+				pInfo->pszStateFile);
+	}
 
 	RETiRet;
 }
