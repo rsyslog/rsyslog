@@ -10,6 +10,12 @@ Version 7.2.7  [v7-stable] 2013-03-??
 - improved debugging support in forked (auto-backgrounding) mode
   The rsyslog debug log file is now continued to be written across the
   fork.
+- bugfix: imuxsock rate-limiting could not be configured via legacy conf
+  Rate-limiting for the system socket could not be configured via legacy
+  configuration directives. However, the new-style RainerScript config
+  options worked.
+  Thanks to Milan Bartos for the patch.
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=390
 - bugfix: using group resolution could lead to endless loop
   Thanks to Tomas Heinrich for the patch.
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=310

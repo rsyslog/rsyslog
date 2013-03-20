@@ -1300,6 +1300,9 @@ CODESTARTendCnfLoad
 		loadModConf->bUseFlowCtl = cs.bUseFlowCtlSysSock;
 		loadModConf->bAnnotateSysSock = cs.bAnnotateSysSock;
 		loadModConf->bParseTrusted = cs.bParseTrusted;
+		loadModConf->ratelimitIntervalSysSock = cs.ratelimitIntervalSysSock;
+		loadModConf->ratelimitBurstSysSock = cs.ratelimitBurstSysSock;
+		loadModConf->ratelimitSeveritySysSock = cs.ratelimitSeveritySysSock;
 	}
 
 	loadModConf = NULL; /* done loading */
