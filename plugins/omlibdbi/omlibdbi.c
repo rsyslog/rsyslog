@@ -337,12 +337,14 @@ CODESTARTbeginTransaction
 	if(pData->conn == NULL) {
 		CHKiRet(initConn(pData, 0));
 	}
+#	if HAVE_DBI_TXSUPP
 	if (pData->txSupport == 1) {
 		if (dbi_conn_transaction_begin(pData->conn) != 0) {	
 			dbgprintf("libdbi server error: begin transaction not successful\n");		
 			iRet = RS_RET_SUSPENDED; 
-		} 		
+		} 
 	}
+#	endif
 finalize_it:
 ENDbeginTransaction
 /* end transaction */
@@ -350,19 +352,23 @@ ENDbeginTransaction
 BEGINdoAction
 CODESTARTdoAction
 	CHKiRet(writeDB(ppString[0], pData));
+#	if HAVE_DBI_TXSUPP
 	if (pData->txSupport == 1) {
 		iRet = RS_RET_DEFER_COMMIT;
 	}
+#	endif
 finalize_it:
 ENDdoAction
 
 /* transaction support 2013-03 */
 BEGINendTransaction
 CODESTARTendTransaction
+#	if HAVE_DBI_TXSUPP
 	if (dbi_conn_transaction_commit(pData->conn) != 0) {	
 		dbgprintf("libdbi server error: transaction not committed\n");		
 		iRet = RS_RET_SUSPENDED; 
 	} 
+#	endif
 ENDendTransaction
 /* end transaction */
 
@@ -571,6 +577,10 @@ CODESTARTmodInit
 INITLegCnfVars
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
+#	ifndef HAVE_DBI_TXSUPP
+	DBGPRINTF("omlibdbi: no transaction support in libdbi\n");
+#	warning libdbi too old - transactions are not enabled (use 0.9 or later)
+#	endif
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(regCfSysLineHdlr2((uchar *)"actionlibdbidriverdirectory", 0, eCmdHdlrGetWord, NULL, &cs.dbiDrvrDir, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionlibdbidriver", 0, eCmdHdlrGetWord, NULL, &cs.drvrName, STD_LOADABLE_MODULE_ID));

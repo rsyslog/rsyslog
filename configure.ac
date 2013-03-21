@@ -660,6 +660,11 @@ if test "x$enable_libdbi" = "xyes"; then
     [dbi_initialize_r],
     [AC_DEFINE([HAVE_DBI_R], [1], [Define to 1 if libdbi supports the new plugin-safe interface])]
   )
+  AC_CHECK_LIB(
+    [dbi],
+    [dbi_conn_transaction_begin],
+    [AC_DEFINE([HAVE_DBI_TXSUPP], [1], [Define to 1 if libdbi supports transactions])]
+  )
 fi
 AM_CONDITIONAL(ENABLE_OMLIBDBI, test x$enable_libdbi = xyes)
 AC_SUBST(LIBDBI_CFLAGS)
