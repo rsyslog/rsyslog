@@ -33,7 +33,7 @@ the value, the less precise the timestamp.
 <li><b>SchedulingPolicy</b> &lt;rr/fifo/other&gt;<br>
 Can be used the set the scheduler priority, if the necessary functionality
 is provided by the platform. Most useful to select "fifo" for real-time 
-processing under Linux (and thus reduce chance of packet loss). 
+processing under Linux (and thus reduce chance of packet loss).
 <li><b>SchedulingPriority</b> &lt;number&gt;<br>
 Scheduling priority to use. 
 </ul>
@@ -50,7 +50,11 @@ Binds the listener to a specific <a href="multi_ruleset.html">ruleset</a>.</li>
 </ul>
 <b>Caveats/Known Bugs:</b>
 <ul>
-<li>currently none known</li>
+<li>Scheduling parameters are set <b>after</b> privileges have been dropped.
+In most cases, this means that setting them will not be possible after
+privilege drop. This may be worked around by using a sufficiently-privileged
+user account.
+</li>
 </ul>
 <p><b>Sample:</b></p>
 <p>This sets up an UPD server on port 514:<br>
