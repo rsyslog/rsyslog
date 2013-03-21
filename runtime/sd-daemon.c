@@ -25,14 +25,18 @@
 ***/
 
 #ifndef _GNU_SOURCE
-#define _GNU_SOURCE
+#  define _GNU_SOURCE
 #endif
 
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/socket.h>
 #include <sys/un.h>
-#include <sys/fcntl.h>
+#ifdef __BIONIC__
+#  include <linux/fcntl.h>
+#else
+#  include <sys/fcntl.h>
+#endif
 #include <netinet/in.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -40,10 +44,28 @@
 #include <string.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <stddef.h>
+#include <limits.h>
+
+#if defined(__linux__)
+#  include <mqueue.h>
+#endif
 
 #include "sd-daemon.h"
 
-int sd_listen_fds(int unset_environment) {
+#if (__GNUC__ >= 4)
+#  ifdef SD_EXPORT_SYMBOLS
+/* Export symbols */
+#    define _sd_export_ __attribute__ ((visibility("default")))
+#  else
+/* Don't export the symbols */
+#    define _sd_export_ __attribute__ ((visibility("hidden")))
+#  endif
+#else
+#  define _sd_export_
+#endif
+
+_sd_export_ int sd_listen_fds(int unset_environment) {
 
 #if defined(DISABLE_SYSTEMD) || !defined(__linux__)
         return 0;
@@ -53,7 +75,8 @@ int sd_listen_fds(int unset_environment) {
         char *p = NULL;
         unsigned long l;
 
-        if (!(e = getenv("LISTEN_PID"))) {
+        e = getenv("LISTEN_PID");
+        if (!e) {
                 r = 0;
                 goto finish;
         }
@@ -66,7 +89,7 @@ int sd_listen_fds(int unset_environment) {
                 goto finish;
         }
 
-        if (!p || *p || l <= 0) {
+        if (!p || p == e || *p || l <= 0) {
                 r = -EINVAL;
                 goto finish;
         }
@@ -77,7 +100,8 @@ int sd_listen_fds(int unset_environment) {
                 goto finish;
         }
 
-        if (!(e = getenv("LISTEN_FDS"))) {
+        e = getenv("LISTEN_FDS");
+        if (!e) {
                 r = 0;
                 goto finish;
         }
@@ -90,7 +114,7 @@ int sd_listen_fds(int unset_environment) {
                 goto finish;
         }
 
-        if (!p || *p) {
+        if (!p || p == e || *p) {
                 r = -EINVAL;
                 goto finish;
         }
@@ -98,7 +122,8 @@ int sd_listen_fds(int unset_environment) {
         for (fd = SD_LISTEN_FDS_START; fd < SD_LISTEN_FDS_START + (int) l; fd ++) {
                 int flags;
 
-                if ((flags = fcntl(fd, F_GETFD)) < 0) {
+                flags = fcntl(fd, F_GETFD);
+                if (flags < 0) {
                         r = -errno;
                         goto finish;
                 }
@@ -124,13 +149,12 @@ finish:
 #endif
 }
 
-int sd_is_fifo(int fd, const char *path) {
+_sd_export_ int sd_is_fifo(int fd, const char *path) {
         struct stat st_fd;
 
         if (fd < 0)
                 return -EINVAL;
 
-        memset(&st_fd, 0, sizeof(st_fd));
         if (fstat(fd, &st_fd) < 0)
                 return -errno;
 
@@ -140,7 +164,6 @@ int sd_is_fifo(int fd, const char *path) {
         if (path) {
                 struct stat st_path;
 
-                memset(&st_path, 0, sizeof(st_path));
                 if (stat(path, &st_path) < 0) {
 
                         if (errno == ENOENT || errno == ENOTDIR)
@@ -152,6 +175,42 @@ int sd_is_fifo(int fd, const char *path) {
                 return
                         st_path.st_dev == st_fd.st_dev &&
                         st_path.st_ino == st_fd.st_ino;
+        }
+
+        return 1;
+}
+
+_sd_export_ int sd_is_special(int fd, const char *path) {
+        struct stat st_fd;
+
+        if (fd < 0)
+                return -EINVAL;
+
+        if (fstat(fd, &st_fd) < 0)
+                return -errno;
+
+        if (!S_ISREG(st_fd.st_mode) && !S_ISCHR(st_fd.st_mode))
+                return 0;
+
+        if (path) {
+                struct stat st_path;
+
+                if (stat(path, &st_path) < 0) {
+
+                        if (errno == ENOENT || errno == ENOTDIR)
+                                return 0;
+
+                        return -errno;
+                }
+
+                if (S_ISREG(st_fd.st_mode) && S_ISREG(st_path.st_mode))
+                        return
+                                st_path.st_dev == st_fd.st_dev &&
+                                st_path.st_ino == st_fd.st_ino;
+                else if (S_ISCHR(st_fd.st_mode) && S_ISCHR(st_path.st_mode))
+                        return st_path.st_rdev == st_fd.st_rdev;
+                else
+                        return 0;
         }
 
         return 1;
@@ -208,13 +267,14 @@ union sockaddr_union {
         struct sockaddr_storage storage;
 };
 
-int sd_is_socket(int fd, int family, int type, int listening) {
+_sd_export_ int sd_is_socket(int fd, int family, int type, int listening) {
         int r;
 
         if (family < 0)
                 return -EINVAL;
 
-        if ((r = sd_is_socket_internal(fd, type, listening)) <= 0)
+        r = sd_is_socket_internal(fd, type, listening);
+        if (r <= 0)
                 return r;
 
         if (family > 0) {
@@ -236,7 +296,7 @@ int sd_is_socket(int fd, int family, int type, int listening) {
         return 1;
 }
 
-int sd_is_socket_inet(int fd, int family, int type, int listening, uint16_t port) {
+_sd_export_ int sd_is_socket_inet(int fd, int family, int type, int listening, uint16_t port) {
         union sockaddr_union sockaddr;
         socklen_t l;
         int r;
@@ -244,7 +304,8 @@ int sd_is_socket_inet(int fd, int family, int type, int listening, uint16_t port
         if (family != 0 && family != AF_INET && family != AF_INET6)
                 return -EINVAL;
 
-        if ((r = sd_is_socket_internal(fd, type, listening)) <= 0)
+        r = sd_is_socket_internal(fd, type, listening);
+        if (r <= 0)
                 return r;
 
         memset(&sockaddr, 0, sizeof(sockaddr));
@@ -281,12 +342,13 @@ int sd_is_socket_inet(int fd, int family, int type, int listening, uint16_t port
         return 1;
 }
 
-int sd_is_socket_unix(int fd, int type, int listening, const char *path, size_t length) {
+_sd_export_ int sd_is_socket_unix(int fd, int type, int listening, const char *path, size_t length) {
         union sockaddr_union sockaddr;
         socklen_t l;
         int r;
 
-        if ((r = sd_is_socket_internal(fd, type, listening)) <= 0)
+        r = sd_is_socket_internal(fd, type, listening);
+        if (r <= 0)
                 return r;
 
         memset(&sockaddr, 0, sizeof(sockaddr));
@@ -302,29 +364,66 @@ int sd_is_socket_unix(int fd, int type, int listening, const char *path, size_t 
                 return 0;
 
         if (path) {
-                if (length <= 0)
+                if (length == 0)
                         length = strlen(path);
 
-                if (length <= 0)
+                if (length == 0)
                         /* Unnamed socket */
-                        return l == sizeof(sa_family_t);
+                        return l == offsetof(struct sockaddr_un, sun_path);
 
                 if (path[0])
                         /* Normal path socket */
                         return
-                                (l >= sizeof(sa_family_t) + length + 1) &&
+                                (l >= offsetof(struct sockaddr_un, sun_path) + length + 1) &&
                                 memcmp(path, sockaddr.un.sun_path, length+1) == 0;
                 else
                         /* Abstract namespace socket */
                         return
-                                (l == sizeof(sa_family_t) + length) &&
+                                (l == offsetof(struct sockaddr_un, sun_path) + length) &&
                                 memcmp(path, sockaddr.un.sun_path, length) == 0;
         }
 
         return 1;
 }
 
-int sd_notify(int unset_environment, const char *state) {
+_sd_export_ int sd_is_mq(int fd, const char *path) {
+#if !defined(__linux__)
+        return 0;
+#else
+        struct mq_attr attr;
+
+        if (fd < 0)
+                return -EINVAL;
+
+        if (mq_getattr(fd, &attr) < 0)
+                return -errno;
+
+        if (path) {
+                char fpath[PATH_MAX];
+                struct stat a, b;
+
+                if (path[0] != '/')
+                        return -EINVAL;
+
+                if (fstat(fd, &a) < 0)
+                        return -errno;
+
+                strncpy(stpcpy(fpath, "/dev/mqueue"), path, sizeof(fpath) - 12);
+                fpath[sizeof(fpath)-1] = 0;
+
+                if (stat(fpath, &b) < 0)
+                        return -errno;
+
+                if (a.st_dev != b.st_dev ||
+                    a.st_ino != b.st_ino)
+                        return 0;
+        }
+
+        return 1;
+#endif
+}
+
+_sd_export_ int sd_notify(int unset_environment, const char *state) {
 #if defined(DISABLE_SYSTEMD) || !defined(__linux__) || !defined(SOCK_CLOEXEC)
         return 0;
 #else
@@ -339,7 +438,8 @@ int sd_notify(int unset_environment, const char *state) {
                 goto finish;
         }
 
-        if (!(e = getenv("NOTIFY_SOCKET")))
+        e = getenv("NOTIFY_SOCKET");
+        if (!e)
                 return 0;
 
         /* Must be an abstract socket, or an absolute path */
@@ -348,7 +448,8 @@ int sd_notify(int unset_environment, const char *state) {
                 goto finish;
         }
 
-        if ((fd = socket(AF_UNIX, SOCK_DGRAM|SOCK_CLOEXEC, 0)) < 0) {
+        fd = socket(AF_UNIX, SOCK_DGRAM|SOCK_CLOEXEC, 0);
+        if (fd < 0) {
                 r = -errno;
                 goto finish;
         }
@@ -366,7 +467,7 @@ int sd_notify(int unset_environment, const char *state) {
 
         memset(&msghdr, 0, sizeof(msghdr));
         msghdr.msg_name = &sockaddr;
-        msghdr.msg_namelen = sizeof(sa_family_t) + strlen(e);
+        msghdr.msg_namelen = offsetof(struct sockaddr_un, sun_path) + strlen(e);
 
         if (msghdr.msg_namelen > sizeof(struct sockaddr_un))
                 msghdr.msg_namelen = sizeof(struct sockaddr_un);
@@ -392,7 +493,7 @@ finish:
 #endif
 }
 
-int sd_notifyf(int unset_environment, const char *format, ...) {
+_sd_export_ int sd_notifyf(int unset_environment, const char *format, ...) {
 #if defined(DISABLE_SYSTEMD) || !defined(__linux__)
         return 0;
 #else
@@ -414,22 +515,19 @@ int sd_notifyf(int unset_environment, const char *format, ...) {
 #endif
 }
 
-int sd_booted(void) {
+_sd_export_ int sd_booted(void) {
 #if defined(DISABLE_SYSTEMD) || !defined(__linux__)
         return 0;
 #else
+        struct stat st;
 
-        struct stat a, b;
+        /* We test whether the runtime unit file directory has been
+         * created. This takes place in mount-setup.c, so is
+         * guaranteed to happen very early during boot. */
 
-        /* We simply test whether the systemd cgroup hierarchy is
-         * mounted */
-
-        if (lstat("/sys/fs/cgroup", &a) < 0)
+        if (lstat("/run/systemd/system/", &st) < 0)
                 return 0;
 
-        if (lstat("/sys/fs/cgroup/systemd", &b) < 0)
-                return 0;
-
-        return a.st_dev != b.st_dev;
+        return !!S_ISDIR(st.st_mode);
 #endif
 }

@@ -211,6 +211,7 @@ Version 7.2.7  [v7-stable] 2013-03-??
 - improved debugging support in forked (auto-backgrounding) mode
   The rsyslog debug log file is now continued to be written across the
   fork.
+- updated systemd files to match current systemd source
 - bugfix: imudp scheduling parameters did affect main thread, not imudp
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=409
 - bugfix: imuxsock rate-limiting could not be configured via legacy conf
@@ -1245,6 +1246,7 @@ expected that interfaces, even new ones, break during the initial
   [ported from v4]
 ---------------------------------------------------------------------------
 Version 5.10.2  [V5-STABLE], 201?-??-??
+- updated systemd files to match current systemd source
 - bugfix: spurios error messages from imuxsock about (non-error) EAGAIN
   Thanks to Marius Tomaschewski for the patch.
 - imklog: added $klogParseKernelTimestamp option
