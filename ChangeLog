@@ -2,6 +2,7 @@
 Version 7.3.9  [devel] 2013-03-??
 - bugfix: imudp scheduling parameters did affect main thread, not imudp
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=409
+- omlibdbi: now supports transaction interface
 - imuxsock: add ability to NOT create/delete sockets during startup and
   shutdown
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=259
