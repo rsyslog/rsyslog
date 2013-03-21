@@ -15,6 +15,7 @@ Version 7.3.9  [devel] 2013-03-??
   is now detected and the new file being forwarded right from the
   beginning.
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=228
+- updated systemd files to match current systemd source
 - bugfix: build problem on platforms without GLOB_NOMAGIC
 - bugfix: build problems on non-Linux platforms
 - bugfix: stdout/stderr were not closed on forking
