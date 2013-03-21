@@ -853,7 +853,6 @@ CODESTARTactivateCnfPrePrivDrop
 		ABORT_FINALIZE(RS_RET_NO_RUN);
 	}
 
-	setSchedParams(pModConf);
 finalize_it:
 ENDactivateCnfPrePrivDrop
 
@@ -886,6 +885,15 @@ ENDfreeCnf
  */
 BEGINrunInput
 CODESTARTrunInput
+	/* Note well: the setting of scheduling parameters will not work
+	 * when we dropped privileges (if the user is not sufficently
+	 * privileged, of course). Howerver, we can't change the 
+	 * scheduling params in PrePrivDrop(), as at that point our thread
+	 * is not yet created. So at least as an interim solution, we do
+	 * NOT support both setting sched parameters and dropping
+	 * privileges within the same instance.
+	 */
+	setSchedParams(runModConf);
 	iRet = rcvMainLoop(pThrd);
 ENDrunInput
 
