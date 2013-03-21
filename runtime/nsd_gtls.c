@@ -259,7 +259,6 @@ gtlsClientCertCallback(gnutls_session session,
 static rsRetVal
 gtlsGetCertInfo(nsd_gtls_t *pThis, cstr_t **ppStr)
 {
-	uchar lnBuf[256];
 	uchar szBufA[1024];
 	uchar *szBuf = szBufA;
 	size_t szBufLen = sizeof(szBufA), tmp;
@@ -280,37 +279,27 @@ gtlsGetCertInfo(nsd_gtls_t *pThis, cstr_t **ppStr)
 		return RS_RET_TLS_CERT_ERR;
 
 	cert_list = gnutls_certificate_get_peers(pThis->sess, &cert_list_size);
-
-	CHKiRet(rsCStrConstruct(&pStr));
-
-	snprintf((char*)lnBuf, sizeof(lnBuf), "peer provided %d certificate(s). ", cert_list_size);
-	CHKiRet(rsCStrAppendStr(pStr, lnBuf));
+	CHKiRet(rsCStrConstructFromszStrf(&pStr, "peer provided %d certificate(s). ", cert_list_size));
 
 	if(cert_list_size > 0) {
 		/* we only print information about the first certificate */
 		CHKgnutls(gnutls_x509_crt_init(&cert));
 		CHKgnutls(gnutls_x509_crt_import(cert, &cert_list[0], GNUTLS_X509_FMT_DER));
 
-		CHKiRet(rsCStrAppendStr(pStr, (uchar*)"Certificate 1 info: "));
-
 		expiration_time = gnutls_x509_crt_get_expiration_time(cert);
 		activation_time = gnutls_x509_crt_get_activation_time(cert);
 		ctime_r(&activation_time, szBuf);
 		szBuf[strlen(szBuf) - 1] = '\0'; /* strip linefeed */
-		snprintf((char*)lnBuf, sizeof(lnBuf), "certificate valid from %s ", szBuf);
-		CHKiRet(rsCStrAppendStr(pStr, lnBuf));
-
+		CHKiRet(rsCStrAppendStrf(pStr, (uchar*)"Certificate 1 info: "
+			"certificate valid from %s ", szBuf));
 		ctime_r(&expiration_time, szBuf);
 		szBuf[strlen(szBuf) - 1] = '\0'; /* strip linefeed */
-		snprintf((char*)lnBuf, sizeof(lnBuf), "to %s; ", szBuf);
-		CHKiRet(rsCStrAppendStr(pStr, lnBuf));
+		CHKiRet(rsCStrAppendStrf(pStr, "to %s; ", szBuf));
 
 		/* Extract some of the public key algorithm's parameters */
 		algo = gnutls_x509_crt_get_pk_algorithm(cert, &bits);
-
-		snprintf((char*)lnBuf, sizeof(lnBuf), "Certificate public key: %s; ",
-			 gnutls_pk_algorithm_get_name(algo));
-		CHKiRet(rsCStrAppendStr(pStr, lnBuf));
+		CHKiRet(rsCStrAppendStrf(pStr, "Certificate public key: %s; ",
+			gnutls_pk_algorithm_get_name(algo)));
 
 		/* names */
 		tmp = szBufLen;
@@ -320,8 +309,7 @@ gtlsGetCertInfo(nsd_gtls_t *pThis, cstr_t **ppStr)
 			szBuf = malloc(tmp);
 			gnutls_x509_crt_get_dn(cert, szBuf, &tmp);
 		}
-		snprintf((char*)lnBuf, sizeof(lnBuf), "DN: %s; ", szBuf);
-		CHKiRet(rsCStrAppendStr(pStr, lnBuf));
+		CHKiRet(rsCStrAppendStrf(pStr, "DN: %s; ", szBuf));
 
 		tmp = szBufLen;
 		if(gnutls_x509_crt_get_issuer_dn(cert, szBuf, &tmp)
@@ -330,8 +318,7 @@ gtlsGetCertInfo(nsd_gtls_t *pThis, cstr_t **ppStr)
 			szBuf = realloc((szBuf == szBufA) ? NULL : szBuf, tmp);
 			gnutls_x509_crt_get_issuer_dn(cert, szBuf, &tmp);
 		}
-		snprintf((char*)lnBuf, sizeof(lnBuf), "Issuer DN: %s; ", szBuf);
-		CHKiRet(rsCStrAppendStr(pStr, lnBuf));
+		CHKiRet(rsCStrAppendStrf(pStr, "Issuer DN: %s; ", szBuf));
 
 		/* dNSName alt name */
 		iAltName = 0;
@@ -347,8 +334,7 @@ gtlsGetCertInfo(nsd_gtls_t *pThis, cstr_t **ppStr)
 				break;
 			else if(gnuRet == GNUTLS_SAN_DNSNAME) {
 				/* we found it! */
-				snprintf((char*)lnBuf, sizeof(lnBuf), "SAN:DNSname: %s; ", szBuf);
-				CHKiRet(rsCStrAppendStr(pStr, lnBuf));
+				CHKiRet(rsCStrAppendStrf(pStr, "SAN:DNSname: %s; ", szBuf));
 				/* do NOT break, because there may be multiple dNSName's! */
 			}
 			++iAltName;
