@@ -208,6 +208,8 @@ Version 7.2.7  [v7-stable] 2013-03-??
 - improved debugging support in forked (auto-backgrounding) mode
   The rsyslog debug log file is now continued to be written across the
   fork.
+- bugfix: imudp scheduling parameters did affect main thread, not imudp
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=409
 - bugfix: imuxsock rate-limiting could not be configured via legacy conf
   Rate-limiting for the system socket could not be configured via legacy
   configuration directives. However, the new-style RainerScript config
