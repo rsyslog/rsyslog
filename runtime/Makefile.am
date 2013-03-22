@@ -173,5 +173,5 @@ lmnsd_gtls_la_LIBADD = $(GNUTLS_LIBS)
 endif
 
 update-systemd:
-       curl http://cgit.freedesktop.org/systemd/plain/src/sd-daemon.c > sd-daemon.c
-       curl http://cgit.freedesktop.org/systemd/plain/src/sd-daemon.h > sd-daemon.h
+	curl http://cgit.freedesktop.org/systemd/systemd/plain/src/libsystemd-daemon/sd-daemon.c > sd-daemon.c
+	curl http://cgit.freedesktop.org/systemd/systemd/plain/src/systemd/sd-daemon.h > sd-daemon.h
