@@ -133,6 +133,8 @@ detectFileType(char *name)
 	if((r = rsgt_tlvrdHeader(fp, (uchar*)hdr)) != 0) goto err;
 	if(!strcmp(hdr, "LOGSIG10"))
 		typeName = "Log Signature File, Version 10";
+	else if(!strcmp(hdr, "GTSTAT10"))
+		typeName = "rsyslog GuardTime Signature State File, Version 10";
 	else
 		typeName = "unknown";
 
