@@ -183,10 +183,10 @@ static void* thrdStarter(void *arg)
 	assert(pThis != NULL);
 	assert(pThis->pUsrThrdMain != NULL);
 
+#	if HAVE_PRCTL && defined PR_SET_NAME
 	ustrncpy(thrdName+3, pThis->name, 20);
 	dbgOutputTID((char*)thrdName);
 
-#	if HAVE_PRCTL && defined PR_SET_NAME
 	/* set thread name - we ignore if the call fails, has no harsh consequences... */
 	if(prctl(PR_SET_NAME, thrdName, 0, 0, 0) != 0) {
 		DBGPRINTF("prctl failed, not setting thread name for '%s'\n", pThis->name);
