@@ -167,7 +167,7 @@ reportError(int errcode, gterrctx_t *ectx)
  * ectx, as it has most information we need.
  */
 static void
-reportVerifySuccess(gterrctx_t *ectx)
+reportVerifySuccess(gterrctx_t *ectx, GTVerificationInfo *vrfyInf)
 {
 	if(ectx->fp != NULL) {
 		fprintf(ectx->fp, "%s[%llu:%llu:%llu]: block signature successfully verified\n",
@@ -180,6 +180,7 @@ reportVerifySuccess(gterrctx_t *ectx)
 			fprintf(ectx->fp, "\tBlock End Record...: '%s'\n", ectx->errRec);
 		fprintf(ectx->fp, "\tGT Verify Timestamp: [%u]%s\n",
 			ectx->gtstate, GTHTTP_getErrorString(ectx->gtstate));
+		GTVerificationInfo_print(ectx->fp, 0, vrfyInf);
 	}
 }
 
@@ -909,7 +910,7 @@ verifyBLOCK_SIG(block_sig_t *bs, gtfile gf, FILE *sigfp, gterrctx_t *ectx)
 
 	r = 0;
 	if(rsgt_read_showVerified)
-		reportVerifySuccess(ectx);
+		reportVerifySuccess(ectx, vrfyInf);
 done:
 	if(r != 0)
 		reportError(r, ectx);

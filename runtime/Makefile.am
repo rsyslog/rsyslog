@@ -178,7 +178,7 @@ endif
 # support library for guardtime
 #
 if ENABLE_GUARDTIME
-   librsgt_la_SOURCES = librsgt.c librsgt_read.c
+   librsgt_la_SOURCES = librsgt.c librsgt_read.c librsgt.h
 
    pkglib_LTLIBRARIES += lmsig_gt.la
    lmsig_gt_la_SOURCES = lmsig_gt.c
