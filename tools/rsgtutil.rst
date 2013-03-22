@@ -79,7 +79,43 @@ unpredictable.
 dump
 ----
 
-This dump a the TLV header.
+The provided *signature* files are dumped. For each top-level record, the*u
+type code is printed as well as q short description. If there is additional
+information available, it will be printed in tab-indented lines below the
+main record dump. The actual *log* files need not to be present.
+
+verify
+------
+
+This mode does not work with stdin. On the command line, the *log* file names
+are specified. The corresponding *signature* files (ending on ".gtsig") must also
+be preset at the same location as the log file. In verify mode, both the log
+and signature file is read and the validity of the log file checked. If verification
+errors are detected these are printed and processing of the file aborted. By default,
+each file is verified individually, without taking cross-file hash chains into
+account (so the order of files on the command line does not matter).
+
+Note that the actual amount of what can be verified depends on the parameters with
+which the signature file was written. If record and tree hashes are present, they
+will be verified and thus fine-granular error reporting is possible. If they are
+not present, only the block signature itself is verified.
+
+By default, only errors are printed. To also print successful verifications, use the
+**--show-verified** option.
+
+
+detect-file-type
+----------------
+This mode is used to detect the type of some well-know files used inside the 
+signature system. The detection is based on the file header. This mode is
+primarily a debug aid.
+
+
+show-sigblock-params
+--------------------
+This mode is used to print signature block parameters. It is similar to *dump*
+mode, but will ignore everything except signature blocks. Also, some additional
+meta information is printed. This mode is primarily a debug aid.
 
 EXIT CODES
 ==========
@@ -91,22 +127,17 @@ other code in case of failures.
 EXAMPLES
 ========
 
-::
+**rsgtutil --verify logfile**
 
-    rsgtutil --verify logfile
+This verifies the file "logfile" via its associated signature file
+"logfile.gtsig". If errors are detected, these are reported to stderr.
+Otherwise, rsgtutil terminates without messages.
 
-    This verifies the file "logfile" via its associated signature file
-    "logfile.gtsig". If errors are detected, these are reported to stderr.
-    Otherwise, rsgtutil terminates without messages.
+**rsgtutil --dump logfile.gtsig**
 
-
-::
-
-    rsgtutil --dump logfile.gtsig
-
-    This dumps the content of the signature file "logfile.gtsig". The
-    actual log file is not being processed and does not even need to be
-    present.
+This dumps the content of the signature file "logfile.gtsig". The
+actual log file is not being processed and does not even need to be
+present.
 
 SEE ALSO
 ========
