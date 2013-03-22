@@ -66,6 +66,8 @@ save_LIBS=$LIBS
 LIBS=
 AC_SEARCH_LIBS(clock_gettime, rt)
 RT_LIBS=$LIBS
+AC_SEARCH_LIBS(mq_getattr, rt)
+RT_LIBS="$RT_LIBS $LIBS"
 LIBS=
 AC_SEARCH_LIBS(dlopen, dl)
 DL_LIBS=$LIBS
