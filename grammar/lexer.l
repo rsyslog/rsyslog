@@ -310,6 +310,7 @@ cnfSetLexFile(char *fname)
 	currbs = bs;
 	cnfcurrfn = bs->fn;
 	yylineno = 1;
+	dbgprintf("config parser: pushed file %s on top of stack\n", fname);
 
 done:
 	if(r != 0) {
@@ -337,6 +338,7 @@ popfile(void)
 	 * necessary, as otherwise we may provide wrong file name information
 	 * at the end of include files as well. -- rgerhards, 2011-07-22
 	 */
+	dbgprintf("config parser: reached end of file %s\n", bs->fn);
 	yy_delete_buffer(bs->bs);
 	if(bs->prev != NULL)
 		free(bs->fn);
@@ -346,12 +348,16 @@ popfile(void)
 	currbs = bs->prev;
 	free(bs);
 
-	if(currbs == NULL)
+	if(currbs == NULL) {
+		dbgprintf("config parser: parsing completed\n");
 		return 1; /* all processed */
+	}
 	
 	yy_switch_to_buffer(currbs->bs);
 	yylineno = currbs->lineno;
 	cnfcurrfn = currbs->fn;
+	dbgprintf("config parser: resume parsing of file %s at line %d\n",
+		  cnfcurrfn, yylineno);
 	return 0;
 }
 

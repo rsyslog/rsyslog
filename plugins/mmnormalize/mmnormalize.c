@@ -397,7 +397,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"mmnormalizerulebase", 0, eCmdHdlrGetWord,
 				    setRuleBase, NULL, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"mmnormalizeuserawmsg", 0, eCmdHdlrInt,
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"mmnormalizeuserawmsg", 0, eCmdHdlrBinary,
 				    NULL, &cs.bUseRawMsg, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
 				    resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));

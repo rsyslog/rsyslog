@@ -65,6 +65,12 @@ you must turn it on (via SysSock.Annotate and Annotate).
 <li><b>SysSock.IgnoreTimestamp</b> [<b>on</b>/off]<br>
 Ignore timestamps included in the messages, applies to messages received via the system log socket.
 </li>
+<li><b>SysSock.IgnoreOwnMessages</b> [<b>on</b>/off] (available since 7.3.7)<br>
+Ignores messages that originated from the same instance of rsyslogd. There usually
+is no reason to receive messages from ourselfs. This setting is vital
+when writing messages to the Linux journal. See <a href="omjournal.html">omjournal</a>
+module documentation for a more in-depth description.
+</li>
 <li><b>SysSock.Use</b> (imuxsock) [on/<b>off</b>] 
 do NOT listen for the local log socket. This is most useful if you run multiple
 instances of rsyslogd where only one shall handle the system log socket.
@@ -92,12 +98,28 @@ messages that shall be rate-limited.
 </li>
 <li><b>SysSock.Annotate</b> &lt;on/<b>off</b>&gt; turn on annotation/trusted
 properties for the system log socket.</li>
+<li><b>SysSock.ParseTrusted</b> &lt;on/<b>off</b>&gt; if Annotation is turned on, create
+JSON/lumberjack properties out of the trusted properties (which can be accessed
+via RainerScript JSON Variables, e.g. "$!pid") instead of adding them to the message.
+</li>
+<li><b>SysSock.Unlink</b> &lt;<b>on</b>/off&gt; (available since 7.3.9)<br>
+if turned on (default), the system socket is unlinked and re-created when
+opened and also unlinked when finally closed. Note that this setting has
+no effect when running under systemd control (because systemd handles
+the socket).
+</li>
 </ul>
 
 <p><b>Input Instance Parameters</b></p>
 <ul>
 <li><b>IgnoreTimestamp</b> [<b>on</b>/off]
 <br>Ignore timestamps included in the message. Applies to the next socket being added.</li>
+<li><b>IgnoreOwnMessages</b> [<b>on</b>/off] (available since 7.3.7)<br>
+Ignore messages that originated from the same instance of rsyslogd. There usually
+is no reason to receive messages from ourselfs. This setting is vital
+when writing messages to the Linux journal. See <a href="omjournal.html">omjournal</a>
+module documentation for a more in-depth description.
+</li>
 <li><b>FlowControl</b> [on/<b>off</b>] - specifies if flow control should be applied
 to the next socket.</li>
 <li><b>RateLimit.Interval</b> [number] - specifies the rate-limiting
@@ -148,6 +170,15 @@ will only affect the next one and then automatically be reset. This functionalit
 that the local hostname can be overridden in cases where that is desired.</li>
 <li><b>Annotate</b> &lt;on/<b>off</b>&gt; turn on annotation/trusted
 properties for the non-system log socket in question.</li>
+<li><b>ParseTrusted</b> &lt;on/<b>off</b>&gt; equivalent to the SysSock.ParseTrusted module
+parameter, but applies to the input that is being defined.
+<li><b>Unlink</b> &lt;<b>on</b>/off&gt; (available since 7.3.9)<br>
+if turned on (default), the socket is unlinked and re-created when
+opened and also unlinked when finally closed. Set it to off if you
+handle socket creation yourself. Note that handling socket creation
+oneself has the advantage that a limited amount of messages may be 
+queued by the OS if rsyslog is not running.
+</li>
 </ul>
 
 <b>Caveats/Known Bugs:</b><br>
@@ -160,12 +191,20 @@ change the array size in imuxsock.c.
 <p>The following sample is the minimum setup required to accept syslog messages from applications running
 on the local system.<br>
 </p>
-<textarea rows="2" cols="70">module(load="/folder/to/rsyslog/plugins/imuxsock/.libs/imuxsock" # needs to be done just once
+<textarea rows="2" cols="70">module(load="imuxsock" # needs to be done just once
 SysSock.FlowControl="on") # enable flow control (use if needed)
 </textarea>
+
+<p>The following sample is similiar to the first one, but enables trusted
+properties, which are put into JSON/lumberjack variables.
+<br>
+</p>
+<textarea rows="2" cols="70">module(load="imuxsock" SysSock.Annotate="on" SysSock.ParseTrusted="on")
+</textarea>
+
 <p>The following sample is a configuration where rsyslogd pulls logs from two
 jails, and assigns different hostnames to each of the jails: </p>
-<textarea rows="6" cols="70">module(load="/folder/to/rsyslog/plugins/imuxsock/.libs/imuxsock") # needs to be done just once
+<textarea rows="6" cols="70">module(load="imuxsock") # needs to be done just once
 
 input(type="imuxsock" HostName="jail1.example.net" Socket="/jail/1/dev/log")
 input(type="imuxsock" HostName="jail2.example.net" Socket="/jail/2/dev/log")
@@ -176,18 +215,18 @@ system. As rsyslogd starts up before the sshd, it needs to create the socket
 directories, because it otherwise can not open the socket and thus not listen
 to openssh messages. Note that it is vital not to place any other socket between
 the CreatePath and the Socket.</p>
-<textarea rows="6" cols="70">module(load="/folder/to/rsyslog/plugins/imuxsock/.libs/imuxsock") # needs to be done just once
+<textarea rows="6" cols="70">module(load="imuxsock") # needs to be done just once
 
 input(type="imuxsock" Socket="/var/run/sshd/dev/log" CreatePath="on")
 </textarea>
 <p>The following sample is used to turn off input rate limiting on the system log
 socket.
-<textarea rows="4" cols="70">module(load="/folder/to/rsyslog/plugins/imuxsock/.libs/imuxsock" # needs to be done just once
+<textarea rows="4" cols="70">module(load="imuxsock" # needs to be done just once
 SysSock.RateLimit.Interval="0") # turn off rate limiting
 </textarea>
 <p>The following sample is used activate message annotation and thus trusted properties
 on the system log socket.
-<textarea rows="4" cols="70">module(load="/folder/to/rsyslog/plugins/imuxsock/.libs/imuxsock" # needs to be done just once
+<textarea rows="4" cols="70">module(load="imuxsock" # needs to be done just once
 SysSock.Annotate="on")
 </textarea>
 
@@ -231,6 +270,7 @@ equivalent to: SysSock.IgnoreTimestamp.</li>
 <li><b>$InputUnixListenSocketHostName</b> &lt;hostname&gt; equivalent to: HostName.</li>
 <li><b>$InputUnixListenSocketAnnotate</b> &lt;on/<b>off</b>&gt; equivalent to: Annotate.</li>
 <li><b>$SystemLogSocketAnnotate</b> &lt;on/<b>off</b>&gt; equivalent to: SysSock.Annotate.</li>
+<li><b>$SystemLogSocketParseTrusted</b> &lt;on/<b>off</b>&gt; equivalent to: SysSock.ParseTrusted.</li>
 </ul>
 
 <b>Caveats/Known Bugs:</b><br>
@@ -283,7 +323,7 @@ $SystemLogSocketAnnotate on
 <p><font size="2">This documentation is part of the
 <a href="http://www.rsyslog.com/">rsyslog</a>
 project.<br>
-Copyright &copy; 2008-2012 by <a href="http://www.gerhards.net/rainer">Rainer
+Copyright &copy; 2008-2013 by <a href="http://www.gerhards.net/rainer">Rainer
 Gerhards</a> and
 <a href="http://www.adiscon.com/">Adiscon</a>.
 Released under the GNU GPL version 3 or higher.</font></p>

@@ -75,6 +75,26 @@ rsyslog core, we get a number of data structures wrong.
 <p>For these reasons, we utilize environment variables to initialize and configure
 the debugging system. We understand this may be somewhat painful, but now you know
 there are at least some good reasons for doing so.
+<p>HOWEVER, if you have a too hard time to set debug instructions using the environment
+variables, there is a cure, described in the next paragraph.
+
+<h2>Enabling Debug via rsyslog.conf</h2>
+<p>As described in the previous paragraph, enabling debug via rsyslog.conf
+may not be perfect for some debugging needs, but basic debug output will work - and
+that is what most often is requried. There are limited options available, but these
+cover the most important use cases.
+<p>Debug processing is done via legacy config statements. There currently
+is no plan to move these over to the v6+ config system. Availabe settings are
+<ul>
+<li>$DebugFile &lt;filename&gt; - sets the debug file name
+<li>$DebugLevel &lt;0|1|2&gt; - sets the respective debug level, where
+0 means debug off, 1 is debug on demand activated (but debug mode off) 
+and 2 is full debug mode.
+</ul>
+<p>Note that in theory it is forbidden to specify these parameters more
+than once. However, we do not enforce that and if it happens results
+are undefined.
+
 <h2>Getting debug information from a running Instance</h2>
 <p>It is possible to obtain debugging information from a running instance, but this requires
 some setup. We assume that the instance runs in the background, so debug output to
@@ -143,7 +163,7 @@ instance of rsyslogd can be aborted by pressing ctl-c.
 <p>[<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
 <p><font size="2">This documentation is part of the
 <a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
-Copyright &copy; 2008-2010 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+Copyright &copy; 2008-2013 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
 <a href="http://www.adiscon.com/">Adiscon</a>.
 Released under the GNU GPL version 3 or higher.</font></p>
 </body>

@@ -77,7 +77,9 @@ created in the rsyslog working directory (configurable via
 $WorkDirectory). Be careful to use unique names for different files
 being monitored. If there are duplicates, all sorts of "interesting"
 things may happen. Rsyslog currently does not check if a name is
-specified multiple times.</li>
+specified multiple times.
+Note that when $WorkDirectory is not set or set to a non-writable
+location, the state file will not be generated.</li>
 <li><span style="font-weight: bold;">Facility
 facility</span><br>
 The syslog facility to be assigned to lines read. Can be specified in
@@ -141,17 +143,17 @@ your distro puts rsyslog's config files). Note that only commands
 actually needed need to be specified. The second file uses less
 commands and uses defaults instead.<br>
 </p>
-<textarea rows="15" cols="60">module(load="folder/to/rsyslog/plugins/imfile/.libs/imfile" PollingInterval="10") #needs to be done just once
+<textarea rows="15" cols="60">module(load="imfile" PollingInterval="10") #needs to be done just once
 # File 1
 input(type="imfile" File="/path/to/file1" 
-Tag="tag1" 
-StateFile="/var/spool/rsyslog/statefile1" 
-Severity="error" 
-Facility="local7")
+      Tag="tag1" 
+      StateFile="/var/spool/rsyslog/statefile1" 
+      Severity="error" 
+      Facility="local7")
 # File 2
 input(type="imfile" File="/path/to/file2" 
-Tag="tag2" 
-StateFile="/var/spool/rsyslog/statefile2")
+      Tag="tag2" 
+      StateFile="/var/spool/rsyslog/statefile2")
 # ... and so on ...
 #
 </textarea>
@@ -210,8 +212,7 @@ your distro puts rsyslog's config files). Note that only commands
 actually needed need to be specified. The second file uses less
 commands and uses defaults instead.<br>
 </p>
-<textarea rows="15" cols="60">$ModLoad imfile #
-needs to be done just once
+<textarea rows="15" cols="60">$ModLoad imfile # needs to be done just once
 # File 1
 $InputFileName /path/to/file1
 $InputFileTag tag1:

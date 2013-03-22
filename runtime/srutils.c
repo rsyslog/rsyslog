@@ -630,6 +630,28 @@ finalize_it:
 	RETiRet;
 }
 
+/* Returns 1 if the given string contains a non-escaped glob(3)
+ * wildcard character and 0 otherwise (or if the string is empty).
+ */
+int
+containsGlobWildcard(char *str)
+{
+	char *p;
+	if(!str) {
+		return 0;
+	}
+	/* From Linux Programmer's Guide:
+	 * "A string is a wildcard pattern if it contains one of the characters '?', '*' or '['"
+	 * "One can remove the special meaning of '?', '*' and '[' by preceding them by a backslash"
+	 */
+	for(p = str; *p != '\0'; p++) {
+		if((*p == '?' || *p == '*' || *p == '[') &&
+				(p == str || *(p-1) != '\\')) {
+			return 1;
+		}
+	}
+	return 0;
+}
 
 /* vim:set ai:
  */

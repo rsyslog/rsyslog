@@ -1273,8 +1273,12 @@ doFuncCall(struct cnffunc *func, struct var *ret, void* usrptr)
 		estr = var2String(&r[0], &bMustFree);
 		str = (char*) es_str2cstr(estr, NULL);
 		envvar = getenv(str);
+		if(envvar == NULL) {
+			ret->d.estr = es_newStr(0);
+		} else {
+			ret->d.estr = es_newStrFromCStr(envvar, strlen(envvar));
+		}
 		ret->datatype = 'S';
-		ret->d.estr = es_newStrFromCStr(envvar, strlen(envvar));
 		if(bMustFree) es_deleteStr(estr);
 		if(r[0].datatype == 'S') es_deleteStr(r[0].d.estr);
 		free(str);
@@ -2635,7 +2639,7 @@ cnfexprOptimize_CMP_severity_facility(struct cnfexpr *expr)
 
 /* optimize a comparison with a variable as left-hand operand
  * NOTE: Currently support CMP_EQ, CMP_NE only and code NEEDS 
- *       TO BE CHANGED for other comparisons!
+ *       TO BE CHANGED fgr other comparisons!
  */
 static inline struct cnfexpr*
 cnfexprOptimize_CMP_var(struct cnfexpr *expr)
@@ -2790,10 +2794,10 @@ cnfexprOptimize(struct cnfexpr *expr)
 				expr->l = expr->r;
 				expr->r = exprswap;
 			}
-		} else if(expr->l->nodetype == 'V') {
-			expr = cnfexprOptimize_CMP_var(expr);
 		}
-		if(expr->r->nodetype == 'A') {
+		if(expr->l->nodetype == 'V') {
+			expr = cnfexprOptimize_CMP_var(expr);
+		} else if(expr->r->nodetype == 'A') {
 			cnfexprOptimize_CMPEQ_arr((struct cnfarray *)expr->r);
 		}
 		break;
@@ -3233,7 +3237,7 @@ cnfDoInclude(char *name)
 {
 	char *cfgFile;
 	char *finalName;
-	unsigned i;
+	int i;
 	int result;
 	glob_t cfgFiles;
 	struct stat fileInfo;
@@ -3252,12 +3256,16 @@ cnfDoInclude(char *name)
 
 	/* Use GLOB_MARK to append a trailing slash for directories. */
 	/* Use GLOB_NOMAGIC to detect wildcards that match nothing. */
-	result = glob(finalName, GLOB_MARK | GLOB_NOMAGIC, NULL, &cfgFiles);
-
+#ifdef HAVE_GLOB_NOMAGIC
 	/* Silently ignore wildcards that match nothing */
+	result = glob(finalName, GLOB_MARK | GLOB_NOMAGIC, NULL, &cfgFiles);
 	if(result == GLOB_NOMATCH) {
-		return 0;
-	}
+#else
+	result = glob(finalName, GLOB_MARK, NULL, &cfgFiles);
+    if(result == GLOB_NOMATCH && containsGlobWildcard(finalName)) {
+#endif /* HAVE_GLOB_NOMAGIC */
+        return 0;
+    }
 
 	if(result == GLOB_NOSPACE || result == GLOB_ABORTED) {
 		char errStr[1024];
@@ -3269,7 +3277,12 @@ cnfDoInclude(char *name)
 		return 1;
 	}
 
-	for(i = 0; i < cfgFiles.gl_pathc; i++) {
+	/* note: bison "stacks" the files, so we need to submit them
+	 * in reverse order to the *stack* in order to get the proper
+	 * parsing order. Also see
+	 * http://bugzilla.adiscon.com/show_bug.cgi?id=411
+	 */
+	for(i = cfgFiles.gl_pathc - 1; i >= 0 ; i--) {
 		cfgFile = cfgFiles.gl_pathv[i];
 		if(stat(cfgFile, &fileInfo) != 0) {
 			char errStr[1024];

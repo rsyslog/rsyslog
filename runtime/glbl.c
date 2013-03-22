@@ -7,7 +7,7 @@
  *
  * Module begun 2008-04-16 by Rainer Gerhards
  *
- * Copyright 2008-2011 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2013 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -82,6 +82,7 @@ static uchar *pszDfltNetstrmDrvrCAF = NULL; /* default CA file for the netstrm d
 static uchar *pszDfltNetstrmDrvrKeyFile = NULL; /* default key file for the netstrm driver (server) */
 static uchar *pszDfltNetstrmDrvrCertFile = NULL; /* default cert file for the netstrm driver (server) */
 static int bTerminateInputs = 0;		/* global switch that inputs shall terminate ASAP (1=> terminate) */
+pid_t glbl_ourpid;
 #ifndef HAVE_ATOMIC_BUILTINS
 static DEF_ATOMIC_HELPER_MUT(mutTerminateInputs);
 #endif
@@ -277,6 +278,28 @@ static rsRetVal setWorkDir(void __attribute__((unused)) *pVal, uchar *pNewVal)
 finalize_it:
 	RETiRet;
 }
+
+
+static rsRetVal
+setDebugFile(void __attribute__((unused)) *pVal, uchar *pNewVal)
+{
+	DEFiRet;
+	dbgSetDebugFile(pNewVal);
+	free(pNewVal);
+	RETiRet;
+}
+
+
+static rsRetVal
+setDebugLevel(void __attribute__((unused)) *pVal, int level)
+{
+	DEFiRet;
+	dbgSetDebugLevel(level);
+	dbgprintf("debug level %d set via config file\n", level);
+	dbgprintf("This is rsyslog version " VERSION "\n");
+	RETiRet;
+}
+
 
 /* return our local IP.
  * If no local IP is set, "127.0.0.1" is selected *and* set. This
@@ -610,6 +633,8 @@ BEGINAbstractObjClassInit(glbl, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 
 	/* config handlers are never unregistered and need not be - we are always loaded ;) */
+	CHKiRet(regCfSysLineHdlr((uchar *)"debugfile", 0, eCmdHdlrGetWord, setDebugFile, NULL, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"debuglevel", 0, eCmdHdlrInt, setDebugLevel, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"workdirectory", 0, eCmdHdlrGetWord, setWorkDir, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"dropmsgswithmaliciousdnsptrrecords", 0, eCmdHdlrBinary, NULL, &bDropMalPTRMsgs, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdriver", 0, eCmdHdlrGetWord, NULL, &pszDfltNetstrmDrvr, NULL));

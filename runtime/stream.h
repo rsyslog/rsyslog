@@ -112,6 +112,7 @@ typedef struct strm_s {
 	int lenDir;
 	int fd;		/* the file descriptor, -1 if closed */
 	int fdDir;	/* the directory's descriptor, in case bSync is requested (-1 if closed) */
+	ino_t inode;	/* current inode for files being monitored (undefined else) */
 	uchar *pszCurrFName; /* name of current file (if open) */
 	uchar *pIOBuf;	/* the iobuffer currently in use to gather data */
 	size_t iBufPtrMax;	/* current max Ptr in Buffer (if partial read!) */
@@ -187,8 +188,10 @@ BEGINinterface(strm) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*ReadLine)(strm_t *pThis, cstr_t **ppCStr, int mode);
 	/* v7 added  2012-09-14 */
 	INTERFACEpropSetMeth(strm, bVeryReliableZip, int);
+	/* v8 added  2013-03-21 */
+	rsRetVal (*CheckFileChange)(strm_t *pThis);
 ENDinterface(strm)
-#define strmCURR_IF_VERSION 7 /* increment whenever you change the interface structure! */
+#define strmCURR_IF_VERSION 8 /* increment whenever you change the interface structure! */
 
 static inline int
 strmGetCurrFileNum(strm_t *pStrm) {

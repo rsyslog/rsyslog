@@ -177,6 +177,10 @@ if ENABLE_OMHDFS
 SUBDIRS += plugins/omhdfs
 endif
 
+if ENABLE_OMJOURNAL
+SUBDIRS += plugins/omjournal
+endif
+
 if ENABLE_ELASTICSEARCH
 SUBDIRS += plugins/omelasticsearch
 endif
@@ -223,6 +227,10 @@ endif
 
 if ENABLE_MMAUDIT
 SUBDIRS += plugins/mmaudit
+endif
+
+if ENABLE_MMANON
+SUBDIRS += plugins/mmanon
 endif
 
 if ENABLE_ORACLE

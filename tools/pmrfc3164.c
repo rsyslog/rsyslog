@@ -138,7 +138,7 @@ CODESTARTparse
 		 */
 		if(lenMsg > 0 && pMsg->msgFlags & PARSE_HOSTNAME) {
 			i = 0;
-			while(i < lenMsg && (isalnum(p2parse[i]) || p2parse[i] == '.' || p2parse[i] == '.'
+			while(i < lenMsg && (isalnum(p2parse[i]) || p2parse[i] == '.'
 				|| p2parse[i] == '_' || p2parse[i] == '-') && i < (CONF_HOSTNAME_MAXSIZE - 1)) {
 				bufParseHOSTNAME[i] = p2parse[i];
 				++i;

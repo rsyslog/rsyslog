@@ -1468,6 +1468,14 @@ getRawMsg(msg_t *pM, uchar **pBuf, int *piLen)
 }
 
 
+/* note: setMSGLen() is only for friends who really know what they
+ * do. Setting an invalid length can be desasterous!
+ */
+void setMSGLen(msg_t *pM, int lenMsg)
+{
+	pM->iLenMSG = lenMsg;
+}
+
 int getMSGLen(msg_t *pM)
 {
 	return((pM == NULL) ? 0 : pM->iLenMSG);

@@ -89,6 +89,8 @@ typedef struct dbgCallStack_s {
 /* prototypes */
 rsRetVal dbgClassInit(void);
 rsRetVal dbgClassExit(void);
+void dbgSetDebugFile(uchar *fn);
+void dbgSetDebugLevel(int level);
 void sigsegvHdlr(int signum);
 void dbgoprint(obj_t *pObj, char *fmt, ...) __attribute__((format(printf, 2, 3)));
 void dbgprintf(char *fmt, ...) __attribute__((format(printf, 1, 2)));
@@ -105,6 +107,7 @@ void dbgSetThrdName(uchar *pszName);
 void dbgPrintAllDebugInfo(void);
 void *dbgmalloc(size_t size);
 void dbgOutputTID(char* name);
+int dbgGetDbglogFd(void);
 
 /* macros */
 #ifdef DEBUGLESS

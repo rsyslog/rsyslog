@@ -303,7 +303,7 @@ static inline void dbgFuncDBRemoveMutexLock(dbgFuncDB_t *pFuncDB, pthread_mutex_
 void
 dbgOutputTID(char* name)
 {
-#	ifdef	HAVE_SYSCALL
+#	if defined(HAVE_SYSCALL) && defined(HAVE_SYS_gettid)
 	if(bOutputTidToStderr)
 		fprintf(stderr, "thread tid %u, name '%s'\n",
 			(unsigned)syscall(SYS_gettid), name);
@@ -1315,6 +1315,15 @@ dbgmalloc(size_t size)
 }
 
 
+/* report fd used for debug log. This is needed in case of
+ * auto-backgrounding, where the debug log shall not be closed.
+ */
+int
+dbgGetDbglogFd(void)
+{
+	return altdbg;
+}
+
 /* read in the runtime options
  * rgerhards, 2008-02-28
  */
@@ -1397,6 +1406,25 @@ dbgGetRuntimeOptions(void)
 	}
 }
 
+
+void
+dbgSetDebugLevel(int level)
+{
+	Debug = level;
+	debugging_on = (level == DEBUG_FULL) ? 1 : 0;
+}
+
+void
+dbgSetDebugFile(uchar *fn)
+{
+	if(altdbg != -1) {
+		dbgprintf("switching to debug file %s\n", fn);
+		close(altdbg);
+	}
+	if((altdbg = open((char*)fn, O_WRONLY|O_CREAT|O_TRUNC|O_NOCTTY|O_CLOEXEC, S_IRUSR|S_IWUSR)) == -1) {
+		fprintf(stderr, "alternate debug file could not be opened, ignoring. Error: %s\n", strerror(errno));
+	}
+}
 
 /* end support system to set debug options at runtime */
 

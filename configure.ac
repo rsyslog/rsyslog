@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([rsyslog],[7.3.6],[rsyslog@lists.adiscon.com])
+AC_INIT([rsyslog],[7.3.8],[rsyslog@lists.adiscon.com])
 AM_INIT_AUTOMAKE
 
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
@@ -32,7 +32,7 @@ AC_CANONICAL_HOST
 PKG_PROG_PKG_CONFIG
 
 # modules we require
-PKG_CHECK_MODULES(LIBESTR, libestr >= 0.1.2)
+PKG_CHECK_MODULES(LIBESTR, libestr >= 0.1.5)
 PKG_CHECK_MODULES(LIBEE, libee >= 0.4.0)
 PKG_CHECK_MODULES([JSON_C], [json])
 
@@ -66,6 +66,8 @@ save_LIBS=$LIBS
 LIBS=
 AC_SEARCH_LIBS(clock_gettime, rt)
 RT_LIBS=$LIBS
+AC_SEARCH_LIBS(mq_getattr, rt)
+RT_LIBS="$RT_LIBS $LIBS"
 LIBS=
 AC_SEARCH_LIBS(dlopen, dl)
 DL_LIBS=$LIBS
@@ -122,7 +124,9 @@ AC_CHECK_DECL([SCM_CREDENTIALS], [AC_DEFINE(HAVE_SCM_CREDENTIALS, [1], [set defi
 #include <sys/socket.h>])
 AC_CHECK_DECL([SO_TIMESTAMP], [AC_DEFINE(HAVE_SO_TIMESTAMP, [1], [set define])], [], [#include <sys/types.h>
 #include <sys/socket.h>])
+AC_CHECK_DECL([SYS_gettid], [AC_DEFINE(HAVE_SYS_gettid, [1], [set define])], [], [#include <sys/syscall.h>])
 AC_CHECK_MEMBER([struct sysinfo.uptime], [AC_DEFINE(HAVE_SYSINFO_UPTIME, [1], [set define])], [], [#include <sys/sysinfo.h>])
+AC_CHECK_DECL([GLOB_NOMAGIC], [AC_DEFINE(HAVE_GLOB_NOMAGIC, [1], [set define])], [], [#include <glob.h>])
 
 # Check for MAXHOSTNAMELEN
 AC_MSG_CHECKING(for MAXHOSTNAMELEN)
@@ -658,6 +662,11 @@ if test "x$enable_libdbi" = "xyes"; then
     [dbi_initialize_r],
     [AC_DEFINE([HAVE_DBI_R], [1], [Define to 1 if libdbi supports the new plugin-safe interface])]
   )
+  AC_CHECK_LIB(
+    [dbi],
+    [dbi_conn_transaction_begin],
+    [AC_DEFINE([HAVE_DBI_TXSUPP], [1], [Define to 1 if libdbi supports transactions])]
+  )
 fi
 AM_CONDITIONAL(ENABLE_OMLIBDBI, test x$enable_libdbi = xyes)
 AC_SUBST(LIBDBI_CFLAGS)
@@ -875,7 +884,6 @@ fi
 AM_CONDITIONAL(ENABLE_MMJSONPARSE, test x$enable_mmjsonparse = xyes)
 
 
-
 # mmaudit
 AC_ARG_ENABLE(mmaudit,
         [AS_HELP_STRING([--enable-mmaudit],[Enable building mmaudit support @<:@default=no@:>@])],
@@ -892,6 +900,19 @@ fi
 AM_CONDITIONAL(ENABLE_MMAUDIT, test x$enable_mmaudit = xyes)
 
 
+# mmanon
+AC_ARG_ENABLE(mmanon,
+        [AS_HELP_STRING([--enable-mmanon],[Enable building mmanon support @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_mmanon="yes" ;;
+          no) enable_mmanon="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-mmanon) ;;
+         esac],
+        [enable_mmanon=no]
+)
+AM_CONDITIONAL(ENABLE_MMANON, test x$enable_mmanon = xyes)
+
+
 # RELP support
 AC_ARG_ENABLE(relp,
         [AS_HELP_STRING([--enable-relp],[Enable RELP support @<:@default=no@:>@])],
@@ -903,7 +924,7 @@ AC_ARG_ENABLE(relp,
         [enable_relp=no]
 )
 if test "x$enable_relp" = "xyes"; then
-	PKG_CHECK_MODULES(RELP, relp >= 1.0.1)
+	PKG_CHECK_MODULES(RELP, relp >= 1.0.2)
 fi
 AM_CONDITIONAL(ENABLE_RELP, test x$enable_relp = xyes)
 
@@ -1071,6 +1092,21 @@ AC_ARG_ENABLE(omstdout,
         [enable_omstdout=no]
 )
 AM_CONDITIONAL(ENABLE_OMSTDOUT, test x$enable_omstdout = xyes)
+
+# settings for omjournal
+AC_ARG_ENABLE(omjournal,
+        [AS_HELP_STRING([--enable-omjournal],[Compiles omjournal @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_omjournal="yes" ;;
+          no) enable_omjournal="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-omjournal) ;;
+         esac],
+        [enable_omjournal=no]
+)
+if test "x$enable_omjournal" = "xyes"; then
+	PKG_CHECK_MODULES([LIBSYSTEMD_JOURNAL], [libsystemd-journal >= 197])
+fi
+AM_CONDITIONAL(ENABLE_OMJOURNAL, test x$enable_omjournal = xyes)
 
 
 # settings for pmlastmsg
@@ -1313,6 +1349,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omhdfs/Makefile \
 		plugins/omprog/Makefile \
 		plugins/omstdout/Makefile \
+		plugins/omjournal/Makefile \
 		plugins/pmrfc3164sd/Makefile \
 		plugins/pmlastmsg/Makefile \
 		plugins/pmcisconames/Makefile \
@@ -1327,7 +1364,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/impstats/Makefile \
 		plugins/imrelp/Makefile \
 		plugins/imdiag/Makefile \
-        plugins/imzmq3/Makefile \
+		plugins/imzmq3/Makefile \
 		plugins/omtesting/Makefile \
 		plugins/omgssapi/Makefile \
 		plugins/ommysql/Makefile \
@@ -1339,11 +1376,12 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omoracle/Makefile \
 		plugins/omudpspoof/Makefile \
 		plugins/ommongodb/Makefile \
-        plugins/omhiredis/Makefile \
-        plugins/omzmq3/Makefile \
+		plugins/omhiredis/Makefile \
+		plugins/omzmq3/Makefile \
 		plugins/mmnormalize/Makefile \
 		plugins/mmjsonparse/Makefile \
 		plugins/mmaudit/Makefile \
+		plugins/mmanon/Makefile \
 		plugins/omelasticsearch/Makefile \
 		plugins/sm_cust_bindcdr/Makefile \
 		plugins/mmsnmptrapd/Makefile \
@@ -1364,6 +1402,7 @@ echo "    GUI components will be built:             $enable_gui"
 echo "    Unlimited select() support enabled:       $enable_unlimited_select"
 echo "    uuid support enabled:                     $enable_uuid"
 echo "    GuardTime signature support enabled:      $enable_guardtime"
+echo "    anonymization support enabled:            $enable_mmanon"
 echo
 echo "---{ input plugins }---"
 echo "    Klog functionality enabled:               $enable_klog ($os_type)"
@@ -1380,6 +1419,7 @@ echo "---{ output plugins }---"
 echo "    Mail support enabled:                     $enable_mail"
 echo "    omprog module will be compiled:           $enable_omprog"
 echo "    omstdout module will be compiled:         $enable_omstdout"
+echo "    omjournal module will be compiled:        $enable_omjournal"
 echo "    omhdfs module will be compiled:           $enable_omhdfs"
 echo "    omelasticsearch module will be compiled:  $enable_elasticsearch"
 echo "    omruleset module will be compiled:        $enable_omruleset"

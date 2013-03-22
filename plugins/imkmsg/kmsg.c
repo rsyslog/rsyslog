@@ -89,6 +89,10 @@ submitSyslog(uchar *buf)
 	for (; isdigit(*buf); buf++) {
 		timestamp += (timestamp * 10) + (*buf - '0');
 	}
+
+	while (*buf != ';') {
+		buf++; /* skip everything till the first ; */
+	} 
 	buf++; /* skip ; */
 
 	/* get message */
@@ -103,7 +107,7 @@ submitSyslog(uchar *buf)
 	if (*buf != '\0') /* message has appended properties, skip \n */
 		buf++;
 
-	while (strlen((char *)buf)) {
+	while (*buf) {
 		/* get name of the property */
 		buf++; /* skip ' ' */
 		offs = 0;
@@ -174,18 +178,22 @@ static void
 readkmsg(void)
 {
 	int i;
-	uchar pRcv[8096+1];
+	uchar pRcv[8192+1];
 	char errmsg[2048];
 
 	for (;;) {
 		dbgprintf("imkmsg waiting for kernel log line\n");
 
 		/* every read() from the opened device node receives one record of the printk buffer */
-		i = read(fklog, pRcv, 8096);
+		i = read(fklog, pRcv, 8192);
 
 		if (i > 0) {
 			/* successful read of message of nonzero length */
 			pRcv[i] = '\0';
+		} else if (i == -EPIPE) {
+			imkmsgLogIntMsg(LOG_WARNING,
+					"imkmsg: some messages in circular buffer got overwritten");
+			continue;
 		} else {
 			/* something went wrong - error or zero length message */
 			if (i < 0 && errno != EINTR && errno != EAGAIN) {

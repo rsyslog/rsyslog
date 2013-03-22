@@ -34,6 +34,8 @@ html_files = \
 	ompipe.html \
 	omfwd.html \
 	omfile.html \
+	omjournal.html \
+	mmanon.html \
 	omusrmsg.html \
 	omstdout.html \
 	omudpspoof.html \
