@@ -17,7 +17,7 @@
  * pipes. These have been moved to ompipe, to reduced the entanglement
  * between the two different functionalities. -- rgerhards
  *
- * Copyright 2007-2012 Adiscon GmbH.
+ * Copyright 2007-2013 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -69,6 +69,7 @@
 #include "unicode-helper.h"
 #include "atomic.h"
 #include "statsobj.h"
+#include "sigprov.h"
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
@@ -118,6 +119,7 @@ getClockFileAccess(void)
 struct s_dynaFileCacheEntry {
 	uchar *pName;		/* name currently open, if dynamic name */
 	strm_t	*pStrm;		/* our output stream */
+	void	*sigprovFileData;	/* opaque data ptr for provider use */
 	uint64	clkTickAccessed;/* for LRU - based on clockFileAccess */
 };
 typedef struct s_dynaFileCacheEntry dynaFileCacheEntry;
@@ -143,6 +145,12 @@ typedef struct _instanceData {
 	gid_t	fileGID;
 	gid_t	dirGID;
 	int	bFailOnChown;	/* fail creation if chown fails? */
+	uchar 	*sigprovName;	/* signature provider */
+	uchar 	*sigprovNameFull;/* full internal signature provider name */
+	sigprov_if_t sigprov;	/* ptr to signature provider interface */
+	void	*sigprovData;	/* opaque data ptr for provider use */
+	void 	*sigprovFileData;/* opaque data ptr for file instance */
+	sbool	useSigprov;	/* quicker than checkig ptr (1 vs 8 bytes!) */
 	int	iCurrElt;	/* currently active cache element (-1 = none) */
 	int	iCurrCacheSize;	/* currently cache size (1-based) */
 	int	iDynaFileCacheSize; /* size of file handle cache */
@@ -228,7 +236,8 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "sync", eCmdHdlrBinary, 0 }, /* legacy: actionfileenablesync */
 	{ "file", eCmdHdlrString, 0 },     /* either "file" or ... */
 	{ "dynafile", eCmdHdlrString, 0 }, /* "dynafile" MUST be present */
-	{ "template", eCmdHdlrGetWord, 0 },
+	{ "sig.provider", eCmdHdlrGetWord, 0 },
+	{ "template", eCmdHdlrGetWord, 0 }
 };
 static struct cnfparamblk actpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -416,15 +425,16 @@ finalize_it:
  * if the entry should be d_free()ed and 0 if not.
  */
 static rsRetVal
-dynaFileDelCacheEntry(dynaFileCacheEntry **pCache, int iEntry, int bFreeEntry)
+dynaFileDelCacheEntry(instanceData *pData, int iEntry, int bFreeEntry)
 {
+	dynaFileCacheEntry **pCache = pData->dynCache;
 	DEFiRet;
 	ASSERT(pCache != NULL);
 
 	if(pCache[iEntry] == NULL)
 		FINALIZE;
 
-	DBGPRINTF("Removed entry %d for file '%s' from dynaCache.\n", iEntry,
+	DBGPRINTF("Removing entry %d for file '%s' from dynaCache.\n", iEntry,
 		pCache[iEntry]->pName == NULL ? UCHAR_CONSTANT("[OPEN FAILED]") : pCache[iEntry]->pName);
 
 	if(pCache[iEntry]->pName != NULL) {
@@ -434,8 +444,10 @@ dynaFileDelCacheEntry(dynaFileCacheEntry **pCache, int iEntry, int bFreeEntry)
 
 	if(pCache[iEntry]->pStrm != NULL) {
 		strm.Destruct(&pCache[iEntry]->pStrm);
-		if(pCache[iEntry]->pStrm != NULL) /* safety check -- TODO: remove if no longer necessary */
-			abort();
+		if(pData->useSigprov) {
+			pData->sigprov.OnFileClose(pCache[iEntry]->sigprovFileData);
+			pCache[iEntry]->sigprovFileData = NULL;
+		}
 	}
 
 	if(bFreeEntry) {
@@ -460,7 +472,7 @@ dynaFileFreeCacheEntries(instanceData *pData)
 
 	BEGINfunc;
 	for(i = 0 ; i < pData->iCurrCacheSize ; ++i) {
-		dynaFileDelCacheEntry(pData->dynCache, i, 1);
+		dynaFileDelCacheEntry(pData, i, 1);
 	}
 	pData->iCurrElt = -1; /* invalidate current element */
 	ENDfunc;
@@ -480,6 +492,29 @@ static void dynaFileFreeCache(instanceData *pData)
 	ENDfunc;
 }
 
+
+/* close current file */
+static rsRetVal
+closeFile(instanceData *pData)
+{
+	DEFiRet;
+	if(pData->useSigprov) {
+		pData->sigprov.OnFileClose(pData->sigprovFileData);
+		pData->sigprovFileData = NULL;
+	}
+	strm.Destruct(&pData->pStrm);
+	RETiRet;
+}
+
+
+/* This prepares the signature provider to process a file */
+static rsRetVal
+sigprovPrepare(instanceData *pData, uchar *fn)
+{
+	DEFiRet;
+	pData->sigprov.OnFileOpen(pData->sigprovData, fn, &pData->sigprovFileData);
+	RETiRet;
+}
 
 /* This is now shared code for all types of files. It simply prepares
  * file access, which, among others, means the the file wil be opened
@@ -563,11 +598,14 @@ prepareFile(instanceData *pData, uchar *newFileName)
 	if(pData->pszSizeLimitCmd != NULL)
 		CHKiRet(strm.SetpszSizeLimitCmd(pData->pStrm, ustrdup(pData->pszSizeLimitCmd)));
 	CHKiRet(strm.ConstructFinalize(pData->pStrm));
+
+	if(pData->useSigprov)
+		sigprovPrepare(pData, szNameBuf);
 	
 finalize_it:
 	if(iRet != RS_RET_OK) {
 		if(pData->pStrm != NULL) {
-			strm.Destruct(&pData->pStrm);
+			closeFile(pData);
 		}
 	}
 	RETiRet;
@@ -598,9 +636,7 @@ prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
 
 	pCache = pData->dynCache;
 
-	/* first check, if we still have the current file
-	 * I *hope* this will be a performance enhancement.
-	 */
+	/* first check, if we still have the current file */
 	if(   (pData->iCurrElt != -1)
 	   && !ustrcmp(newFileName, pCache[pData->iCurrElt]->pName)) {
 	   	/* great, we are all set */
@@ -622,9 +658,11 @@ prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
 			if(iFirstFree == -1)
 				iFirstFree = i;
 		} else { /* got an element, let's see if it matches */
-			if(!ustrcmp(newFileName, pCache[i]->pName)) {  // RG:  name == NULL?
+			if(!ustrcmp(newFileName, pCache[i]->pName)) {
 				/* we found our element! */
 				pData->pStrm = pCache[i]->pStrm;
+				if(pData->useSigprov)
+					pData->sigprovFileData = pCache[i]->sigprovFileData;
 				pData->iCurrElt = i;
 				pCache[i]->clkTickAccessed = getClockFileAccess(); /* update "timestamp" for LRU */
 				FINALIZE;
@@ -651,7 +689,7 @@ prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
 	 * but it could be triggered in the common case of a failed open() system call.
 	 * rgerhards, 2010-03-22
 	 */
-	pData->pStrm = NULL;
+	pData->pStrm = pData->sigprovFileData = NULL;
 
 	if(iFirstFree == -1 && (pData->iCurrCacheSize < pData->iDynaFileCacheSize)) {
 		/* there is space left, so set it to that index */
@@ -664,14 +702,11 @@ prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
 	 * The cache array is only updated after the open was successful. -- rgerhards, 2010-03-21
 	 */
 	if(iFirstFree == -1) {
-		dynaFileDelCacheEntry(pCache, iOldest, 0);
+		dynaFileDelCacheEntry(pData, iOldest, 0);
 		STATSCOUNTER_INC(pData->ctrEvict, pData->mutCtrEvict);
 		iFirstFree = iOldest; /* this one *is* now free ;) */
 	} else {
 		/* we need to allocate memory for the cache structure */
-		/* TODO: performance note: we could alloc all entries on startup, thus saving malloc
-		 *       overhead -- this may be something to consider in v5...
-		 */
 		CHKmalloc(pCache[iFirstFree] = (dynaFileCacheEntry*) calloc(1, sizeof(dynaFileCacheEntry)));
 	}
 
@@ -694,10 +729,12 @@ prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
 	}
 
 	if((pCache[iFirstFree]->pName = ustrdup(newFileName)) == NULL) {
-		strm.Destruct(&pData->pStrm); /* need to free failed entry! */
+		closeFile(pData); /* need to free failed entry! */
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
 	pCache[iFirstFree]->pStrm = pData->pStrm;
+	if(pData->useSigprov)
+		pCache[iFirstFree]->sigprovFileData = pData->sigprovFileData;
 	pCache[iFirstFree]->clkTickAccessed = getClockFileAccess();
 	pData->iCurrElt = iFirstFree;
 	DBGPRINTF("Added new entry %d for file cache, file '%s'.\n", iFirstFree, newFileName);
@@ -722,7 +759,9 @@ doWrite(instanceData *pData, uchar *pszBuf, int lenBuf)
 	DBGPRINTF("write to stream, pData->pStrm %p, lenBuf %d\n", pData->pStrm, lenBuf);
 	if(pData->pStrm != NULL){
 		CHKiRet(strm.Write(pData->pStrm, pszBuf, lenBuf));
-		FINALIZE;
+		if(pData->useSigprov) {
+			CHKiRet(pData->sigprov.OnRecordWrite(pData->sigprovFileData, pszBuf, lenBuf));
+		}
 	}
 
 finalize_it:
@@ -730,10 +769,7 @@ finalize_it:
 }
 
 
-/* rgerhards 2004-11-11: write to a file output. This
- * will be called for all outputs using file semantics,
- * for example also for pipes.
- */
+/* rgerhards 2004-11-11: write to a file output.  */
 static rsRetVal
 writeFile(uchar **ppString, unsigned iMsgOpts, instanceData *pData)
 {
@@ -841,7 +877,14 @@ CODESTARTfreeInstance
 	if(pData->bDynamicName) {
 		dynaFileFreeCache(pData);
 	} else if(pData->pStrm != NULL)
-		strm.Destruct(&pData->pStrm);
+		closeFile(pData);
+	if(pData->useSigprov) {
+		pData->sigprov.Destruct(&pData->sigprovData);
+		obj.ReleaseObj(__FILE__, pData->sigprovNameFull+2, pData->sigprovNameFull,
+			       (void*) &pData->sigprov);
+		free(pData->sigprovName);
+		free(pData->sigprovNameFull);
+	}
 ENDfreeInstance
 
 
@@ -907,6 +950,8 @@ setInstParamDefaults(instanceData *pData)
 	pData->iIOBufSize = IOBUF_DFLT_SIZE;
 	pData->iFlushInterval = FLUSH_INTRVL_DFLT;
 	pData->bUseAsyncWriter = USE_ASYNCWRITER_DFLT;
+	pData->sigprovName = NULL;
+	pData->useSigprov = 0;
 }
 
 
@@ -944,6 +989,48 @@ setupInstStatsCtrs(instanceData *pData)
 
 finalize_it:
 	RETiRet;
+}
+
+static inline void
+initSigprov(instanceData *pData, struct nvlst *lst)
+{
+	uchar szDrvrName[1024];
+
+	if(snprintf((char*)szDrvrName, sizeof(szDrvrName), "lmsig_%s", pData->sigprovName)
+		== sizeof(szDrvrName)) {
+		errmsg.LogError(0, RS_RET_ERR, "omfile: signature provider "
+				"name is too long: '%s' - signatures disabled",
+				pData->sigprovName);
+		goto done;
+	}
+	pData->sigprovNameFull = ustrdup(szDrvrName);
+
+	pData->sigprov.ifVersion = sigprovCURR_IF_VERSION;
+	/* The pDrvrName+2 below is a hack to obtain the object name. It 
+	 * safes us to have yet another variable with the name without "lm" in
+	 * front of it. If we change the module load interface, we may re-think
+	 * about this hack, but for the time being it is efficient and clean enough.
+	 */
+	if(obj.UseObj(__FILE__, szDrvrName, szDrvrName, (void*) &pData->sigprov)
+		!= RS_RET_OK) {
+		errmsg.LogError(0, RS_RET_LOAD_ERROR, "omfile: could not load "
+				"signature provider '%s' - signatures disabled",
+				szDrvrName);
+		goto done;
+	}
+
+	if(pData->sigprov.Construct(&pData->sigprovData) != RS_RET_OK) {
+		errmsg.LogError(0, RS_RET_SIGPROV_ERR, "omfile: error constructing "
+				"signature provider %s dataset - signatures disabled",
+				szDrvrName);
+		goto done;
+	}
+	pData->sigprov.SetCnfParam(pData->sigprovData, lst);
+
+	dbgprintf("loaded signature provider %s, data instance at %p\n",
+		  szDrvrName, pData->sigprovData);
+	pData->useSigprov = 1;
+done:	return;
 }
 
 BEGINnewActInst
@@ -1013,6 +1100,8 @@ CODESTARTnewActInst
 			pData->bDynamicName = 1;
 		} else if(!strcmp(actpblk.descr[i].name, "template")) {
 			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "sig.provider")) {
+			pData->sigprovName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else {
 			dbgprintf("omfile: program error, non-handled "
 			  "param '%s'\n", actpblk.descr[i].name);
@@ -1023,6 +1112,10 @@ CODESTARTnewActInst
 		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "omfile: either the \"file\" or "
 				"\"dynfile\" parameter must be given");
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
+
+	if(pData->sigprovName != NULL) {
+		initSigprov(pData, lst);
 	}
 
 	tplToUse = ustrdup((pData->tplName == NULL) ? getDfltTpl() : pData->tplName);
@@ -1167,8 +1260,7 @@ CODESTARTdoHUP
 		dynaFileFreeCacheEntries(pData);
 	} else {
 		if(pData->pStrm != NULL) {
-			strm.Destruct(&pData->pStrm);
-			pData->pStrm = NULL;
+			closeFile(pData);
 		}
 	}
 ENDdoHUP

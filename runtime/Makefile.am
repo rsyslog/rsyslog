@@ -1,6 +1,6 @@
 sbin_PROGRAMS =
 man_MANS = 
-noinst_LTLIBRARIES = librsyslog.la
+noinst_LTLIBRARIES = librsyslog.la librsgt.la
 pkglib_LTLIBRARIES =
 #pkglib_LTLIBRARIES = librsyslog.la
 
@@ -17,6 +17,7 @@ librsyslog_la_SOURCES = \
 	module-template.h \
 	im-helper.h \
 	obj-types.h \
+	sigprov.h \
 	nsd.h \
 	glbl.h \
 	glbl.c \
@@ -92,6 +93,7 @@ librsyslog_la_SOURCES = \
 	../template.h
 # the files with ../ we need to work on - so that they either become part of the
 # runtime or will no longer be needed. -- rgerhards, 2008-06-13
+#
 
 if WITH_MODDIRS
 librsyslog_la_CPPFLAGS = -DSD_EXPORT_SYMBOLS -D_PATH_MODDIR=\"$(pkglibdir)/:$(moddirs)\" $(PTHREADS_CFLAGS) $(LIBEE_CFLAGS) -I\$(top_srcdir)/tools
@@ -171,6 +173,20 @@ lmnsd_gtls_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS) $(GNUTLS_CFLAGS)
 lmnsd_gtls_la_LDFLAGS = -module -avoid-version
 lmnsd_gtls_la_LIBADD = $(GNUTLS_LIBS)
 endif
+
+#
+# support library for guardtime
+#
+if ENABLE_GUARDTIME
+   librsgt_la_SOURCES = librsgt.c librsgt_read.c
+
+   pkglib_LTLIBRARIES += lmsig_gt.la
+   lmsig_gt_la_SOURCES = lmsig_gt.c
+   lmsig_gt_la_CPPFLAGS = $(RSRT_CFLAGS) $(GUARDTIME_CFLAGS)
+   lmsig_gt_la_LDFLAGS = -module -avoid-version
+   lmsig_gt_la_LIBADD = librsgt.la $(GUARDTIME_LIBS)
+endif
+
 
 update-systemd:
        curl http://cgit.freedesktop.org/systemd/plain/src/sd-daemon.c > sd-daemon.c

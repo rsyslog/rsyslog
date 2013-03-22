@@ -28,6 +28,7 @@ fi
 AC_DISABLE_STATIC
 AC_PROG_LIBTOOL
 AC_CANONICAL_HOST
+AC_PATH_PROG([RST2MAN], [rst2man])
 
 PKG_PROG_PKG_CONFIG
 
@@ -929,6 +930,21 @@ fi
 AM_CONDITIONAL(ENABLE_RELP, test x$enable_relp = xyes)
 
 
+# GuardTime support
+AC_ARG_ENABLE(guardtime,
+        [AS_HELP_STRING([--enable-guardtime],[Enable GuardTime support @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_guardtime="yes" ;;
+          no) enable_guardtime="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-guardtime) ;;
+         esac],
+        [enable_guardtime=no]
+)
+if test "x$enable_guardtime" = "xyes"; then
+	PKG_CHECK_MODULES(GUARDTIME, libgt >= 0.3.1)
+fi
+AM_CONDITIONAL(ENABLE_GUARDTIME, test x$enable_guardtime = xyes)
+
 # RFC 3195 support
 AC_ARG_ENABLE(rfc3195,
         [AS_HELP_STRING([--enable-rfc3195],[Enable RFC3195 support @<:@default=no@:>@])],
@@ -1386,6 +1402,7 @@ echo "    rsyslogd will be built:                   $enable_rsyslogd"
 echo "    GUI components will be built:             $enable_gui"
 echo "    Unlimited select() support enabled:       $enable_unlimited_select"
 echo "    uuid support enabled:                     $enable_uuid"
+echo "    GuardTime signature support enabled:      $enable_guardtime"
 echo "    anonymization support enabled:            $enable_mmanon"
 echo
 echo "---{ input plugins }---"
