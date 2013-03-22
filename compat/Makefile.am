@@ -1,4 +1,4 @@
-pkglib_LTLIBRARIES = compat.la
+noinst_LTLIBRARIES = compat.la
 
 compat_la_SOURCES = getifaddrs.c
 compat_la_CPPFLAGS = -I$(top_srcdir) $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
