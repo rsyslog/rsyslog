@@ -76,6 +76,15 @@ typedef struct gtfile_s *gtfile;
 typedef struct gterrctx_s gterrctx_t;
 typedef struct imprint_s imprint_t;
 typedef struct block_sig_s block_sig_t;
+typedef struct tlvrecord_s tlvrecord_t;
+
+struct tlvrecord_s {
+	uint16_t tlvtype;
+	uint16_t tlvlen;
+	uint8_t hdr[4]; /* the raw header (as persisted to file) */
+	uint8_t lenHdr; /* length of raw header */
+	uint8_t data[64*1024];	/* the actual data part (of length tlvlen) */
+};
 
 /* The following structure describes the "error context" to be used
  * for verification and similiar reader functions. While verifying,
@@ -336,7 +345,7 @@ void sigblkAddRecord(gtfile gf, const unsigned char *rec, const size_t len);
 void sigblkFinish(gtfile gf);
 /* reader functions */
 int rsgt_tlvrdHeader(FILE *fp, unsigned char *hdr);
-int rsgt_tlvrd(FILE *fp, uint16_t *tlvtype, uint16_t *tlvlen, void *obj);
+int rsgt_tlvrd(FILE *fp, tlvrecord_t *rec, void *obj);
 void rsgt_tlvprint(FILE *fp, uint16_t tlvtype, void *obj, uint8_t verbose);
 void rsgt_printBLOCK_SIG(FILE *fp, block_sig_t *bs, uint8_t verbose);
 int rsgt_getBlockParams(FILE *fp, uint8_t bRewind, block_sig_t **bs, uint8_t *bHasRecHashes, uint8_t *bHasIntermedHashes);
@@ -349,6 +358,7 @@ void rsgt_errctxInit(gterrctx_t *ectx);
 void rsgt_errctxExit(gterrctx_t *ectx);
 void rsgt_errctxSetErrRec(gterrctx_t *ectx, char *rec);
 void rsgt_errctxFrstRecInBlk(gterrctx_t *ectx, char *rec);
+void rsgt_objfree(uint16_t tlvtype, void *obj);
 
 
 /* TODO: replace these? */

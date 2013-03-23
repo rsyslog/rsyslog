@@ -44,8 +44,8 @@ dumpFile(char *name)
 {
 	FILE *fp;
 	uchar hdr[9];
-	uint16_t tlvtype, tlvlen;
 	void *obj;
+	tlvrecord_t rec;
 	int r = -1;
 	
 	if(!strcmp(name, "-"))
@@ -60,13 +60,14 @@ dumpFile(char *name)
 	if((r = rsgt_tlvrdHeader(fp, hdr)) != 0) goto err;
 	printf("File Header: '%s'\n", hdr);
 	while(1) { /* we will err out on EOF */
-		if((r = rsgt_tlvrd(fp, &tlvtype, &tlvlen, &obj)) != 0) {
+		if((r = rsgt_tlvrd(fp, &rec, &obj)) != 0) {
 			if(feof(fp))
 				break;
 			else
 				goto err;
 		}
-		rsgt_tlvprint(stdout, tlvtype, obj, verbose);
+		rsgt_tlvprint(stdout, rec.tlvtype, obj, verbose);
+		rsgt_objfree(rec.tlvtype, obj);
 	}
 
 	if(fp != stdin)
