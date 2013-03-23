@@ -483,17 +483,6 @@ rsgt_tlvrdOctetString(FILE *fp, uint8_t **data, size_t len)
 done:	return r;
 }
 static int
-rsgt_tlvrdSkipVal(FILE *fp, size_t len)
-{
-	size_t i;
-	int c, r = 1;
-	for(i = 0 ; i < len ; ++i) {
-		NEXTC;
-	}
-	r = 0;
-done:	return r;
-}
-static int
 rsgt_tlvrdHASH_ALGO(FILE *fp, uint8_t *hashAlg)
 {
 	int r = 1;
@@ -863,9 +852,10 @@ rsgt_getBlockParams(FILE *fp, uint8_t bRewind, block_sig_t **bs,
 {
 	int r;
 	uint64_t nRecs = 0;
-	uint16_t tlvtype, tlvlen;
 	uint8_t bDone = 0;
 	off_t rewindPos = 0;
+	void *obj;
+	tlvrecord_t rec;
 
 	if(bRewind)
 		rewindPos = ftello(fp);
@@ -874,25 +864,24 @@ rsgt_getBlockParams(FILE *fp, uint8_t bRewind, block_sig_t **bs,
 	*bs = NULL;
 
 	while(!bDone) { /* we will err out on EOF */
-		if((r = rsgt_tlvrdTL(fp, &tlvtype, &tlvlen)) != 0) goto done;
-		switch(tlvtype) {
+		if((r = rsgt_tlvrd(fp, &rec, &obj)) != 0) goto done;
+		switch(rec.tlvtype) {
 		case 0x0900:
 			++nRecs;
 			*bHasRecHashes = 1;
-			rsgt_tlvrdSkipVal(fp, tlvlen);
 			break;
 		case 0x0901:
 			*bHasIntermedHashes = 1;
-			rsgt_tlvrdSkipVal(fp, tlvlen);
 			break;
 		case 0x0902:
-			r = rsgt_tlvrdBLOCK_SIG(fp, bs, tlvlen);
-			if(r != 0) goto done;
+			*bs = (block_sig_t*) obj;
 			bDone = 1;
 			break;
-		default:fprintf(fp, "unknown tlv record %4.4x\n", tlvtype);
+		default:fprintf(fp, "unknown tlv record %4.4x\n", rec.tlvtype);
 			break;
 		}
+		if(!bDone)
+			rsgt_objfree(rec.tlvtype, obj);
 	}
 
 	if(*bHasRecHashes && (nRecs != (*bs)->recCount)) {
