@@ -627,6 +627,7 @@ timestampIt(gtfile gf, GTDataHash *hash)
 	/* Encode timestamp. */
 	r = GTTimestamp_getDEREncoded(timestamp, &der, &lenDer);
 	if(r != GT_OK) {
+		// TODO: use rsyslog error reporting!
 		fprintf(stderr, "GTTimestamp_getDEREncoded() failed: %d (%s)\n",
 				r, GT_getErrorString(r));
 		goto done;

@@ -1,6 +1,8 @@
 /* librsgt_read.c - rsyslog's guardtime support library
  * This includes functions used for reading signature (and 
- * other related) files.
+ * other related) files. Well, actually it also contains
+ * some writing functionality, but only as far as rsyslog
+ * itself is not concerned, but "just" the utility programs.
  *
  * This part of the library uses C stdio and expects that the
  * caller will open and close the file to be read itself.
@@ -49,6 +51,7 @@ typedef unsigned char uchar;
 
 static int rsgt_read_debug = 0;
 char *rsgt_read_puburl = "http://verify.guardtime.com/gt-controlpublications.bin";
+char *rsgt_extend_puburl = "http://verifier.guardtime.net/gt-extendingservice";
 uint8_t rsgt_read_showVerified = 0;
 
 /* macro to obtain next char from file including error tracking */
@@ -184,6 +187,23 @@ reportVerifySuccess(gterrctx_t *ectx, GTVerificationInfo *vrfyInf)
 	}
 }
 
+/**
+ * Write the provided record to the current file position.
+ *
+ * @param[in] fp file pointer for writing
+ * @param[out] rec tlvrecord to write
+ *
+ * @returns 0 if ok, something else otherwise
+ */
+static int
+rsgt_tlvwrite(FILE *fp, tlvrecord_t *rec)
+{
+	int r = RSGTE_IO;
+	if(fwrite(rec->hdr, (size_t) rec->lenHdr, 1, fp) != 1) goto done;
+	if(fwrite(rec->data, (size_t) rec->tlvlen, 1, fp) != 1) goto done;
+	r = 0;
+done:	return r;
+}
 
 /**
  * Read a header from a binary file.
@@ -442,7 +462,7 @@ done:
 }
 
 static int
-rsgt_tlvrdRecHash(FILE *fp, imprint_t **imp)
+rsgt_tlvrdRecHash(FILE *fp, FILE *outfp, imprint_t **imp)
 {
 	int r;
 	tlvrecord_t rec;
@@ -453,12 +473,14 @@ rsgt_tlvrdRecHash(FILE *fp, imprint_t **imp)
 		rsgt_objfree(rec.tlvtype, *imp);
 		goto done;
 	}
+	if(outfp != NULL)
+		if((r = rsgt_tlvwrite(outfp, &rec)) != 0) goto done;
 	r = 0;
 done:	return r;
 }
 
 static int
-rsgt_tlvrdTreeHash(FILE *fp, imprint_t **imp)
+rsgt_tlvrdTreeHash(FILE *fp, FILE *outfp, imprint_t **imp)
 {
 	int r;
 	tlvrecord_t rec;
@@ -469,28 +491,29 @@ rsgt_tlvrdTreeHash(FILE *fp, imprint_t **imp)
 		rsgt_objfree(rec.tlvtype, *imp);
 		goto done;
 	}
+	if(outfp != NULL)
+		if((r = rsgt_tlvwrite(outfp, &rec)) != 0) goto done;
 	r = 0;
 done:	return r;
 }
 
 /* read BLOCK_SIG during verification phase */
 static int
-rsgt_tlvrdVrfyBlockSig(FILE *fp, block_sig_t **bs)
+rsgt_tlvrdVrfyBlockSig(FILE *fp, block_sig_t **bs, tlvrecord_t *rec)
 {
 	int r;
-	tlvrecord_t rec;
 
-	if((r = rsgt_tlvrd(fp, &rec, bs)) != 0) goto done;
-	if(rec.tlvtype != 0x0902) {
+	if((r = rsgt_tlvrd(fp, rec, bs)) != 0) goto done;
+	if(rec->tlvtype != 0x0902) {
 		r = RSGTE_MISS_BLOCKSIG;
-		rsgt_objfree(rec.tlvtype, *bs);
+		rsgt_objfree(rec->tlvtype, *bs);
 		goto done;
 	}
 	r = 0;
 done:	return r;
 }
 
-/**;
+/**
  * Read the next "object" from file. This usually is
  * a single TLV, but may be something larger, for
  * example in case of a block-sig TLV record.
@@ -516,6 +539,7 @@ rsgt_tlvrd(FILE *fp, tlvrecord_t *rec, void *obj)
 	r = rsgt_tlvRecDecode(rec, obj);
 done:	return r;
 }
+
 
 /* return if a blob is all zero */
 static inline int
@@ -760,12 +784,13 @@ rsgt_vrfyBlkInit(gtfile gf, block_sig_t *bs, uint8_t bHasRecHashes, uint8_t bHas
 }
 
 static int
-rsgt_vrfy_chkRecHash(gtfile gf, FILE *sigfp, GTDataHash *recHash, gterrctx_t *ectx)
+rsgt_vrfy_chkRecHash(gtfile gf, FILE *sigfp, FILE *nsigfp, 
+		     GTDataHash *recHash, gterrctx_t *ectx)
 {
 	int r = 0;
 	imprint_t *imp = NULL;
 
-	if((r = rsgt_tlvrdRecHash(sigfp, &imp)) != 0)
+	if((r = rsgt_tlvrdRecHash(sigfp, nsigfp, &imp)) != 0)
 		reportError(r, ectx);
 		goto done;
 	if(imp->hashID != hashIdentifier(gf->hashAlg)) {
@@ -790,12 +815,13 @@ done:
 }
 
 static int
-rsgt_vrfy_chkTreeHash(gtfile gf, FILE *sigfp, GTDataHash *hash, gterrctx_t *ectx)
+rsgt_vrfy_chkTreeHash(gtfile gf, FILE *sigfp, FILE *nsigfp,
+                      GTDataHash *hash, gterrctx_t *ectx)
 {
 	int r = 0;
 	imprint_t *imp = NULL;
 
-	if((r = rsgt_tlvrdTreeHash(sigfp, &imp)) != 0) {
+	if((r = rsgt_tlvrdTreeHash(sigfp, nsigfp, &imp)) != 0) {
 		reportError(r, ectx);
 		goto done;
 	}
@@ -821,8 +847,8 @@ done:
 }
 
 int
-rsgt_vrfy_nextRec(block_sig_t *bs, gtfile gf, FILE *sigfp, unsigned char *rec,
-	size_t len, gterrctx_t *ectx)
+rsgt_vrfy_nextRec(block_sig_t *bs, gtfile gf, FILE *sigfp, FILE *nsigfp,
+	          unsigned char *rec, size_t len, gterrctx_t *ectx)
 {
 	int r = 0;
 	GTDataHash *x; /* current hash */
@@ -832,7 +858,7 @@ rsgt_vrfy_nextRec(block_sig_t *bs, gtfile gf, FILE *sigfp, unsigned char *rec,
 	hash_m(gf, &m);
 	hash_r(gf, &recHash, rec, len);
 	if(gf->bKeepRecordHashes) {
-		r = rsgt_vrfy_chkRecHash(gf, sigfp, recHash, ectx);
+		r = rsgt_vrfy_chkRecHash(gf, sigfp, nsigfp, recHash, ectx);
 		if(r != 0) goto done;
 	}
 	hash_node(gf, &x, m, recHash, 1); /* hash leaf */
@@ -840,7 +866,7 @@ rsgt_vrfy_nextRec(block_sig_t *bs, gtfile gf, FILE *sigfp, unsigned char *rec,
 		ectx->treeLevel = 0;
 		ectx->lefthash = m;
 		ectx->righthash = recHash;
-		r = rsgt_vrfy_chkTreeHash(gf, sigfp, x, ectx);
+		r = rsgt_vrfy_chkTreeHash(gf, sigfp, nsigfp, x, ectx);
 		if(r != 0) goto done;
 	}
 	/* add x to the forest as new leaf, update roots list */
@@ -859,7 +885,7 @@ rsgt_vrfy_nextRec(block_sig_t *bs, gtfile gf, FILE *sigfp, unsigned char *rec,
 			gf->roots_valid[j] = 0;
 			if(gf->bKeepTreeHashes) {
 				ectx->lefthash = gf->roots_hash[j];
-				r = rsgt_vrfy_chkTreeHash(gf, sigfp, t, ectx);
+				r = rsgt_vrfy_chkTreeHash(gf, sigfp, nsigfp, t, ectx);
 				if(r != 0) goto done; /* mem leak ok, we terminate! */
 			}
 			GTDataHash_free(gf->roots_hash[j]);
@@ -921,11 +947,49 @@ done:
 	return r;
 }
 
+static inline int
+rsgt_extendSig(GTTimestamp *timestamp, tlvrecord_t *rec)
+{
+	GTTimestamp *out_timestamp;
+	uint8_t *der;
+	size_t lenDer;
+	int r, rgt;
+
+printf("calling extend... ");fflush(stdout);
+	rgt = GTHTTP_extendTimestamp(timestamp, rsgt_extend_puburl, &out_timestamp);
+printf("done: %d\n", rgt);
+	if(rgt != GT_OK) {
+		r = RSGTE_TS_EXTEND;
+		// TODO: use ectx and report via the usual method!
+		fprintf(stderr, "GTHTTP_extendTimestamp() failed: %d (%s)\n",
+				rgt, GTHTTP_getErrorString(rgt));
+		goto done;
+	}
+	r = GTTimestamp_getDEREncoded(out_timestamp, &der, &lenDer);
+	if(r != GT_OK) {
+		// TODO: use rsyslog error reporting!
+		fprintf(stderr, "GTTimestamp_getDEREncoded() failed: %d (%s)\n",
+				r, GT_getErrorString(r));
+		goto done;
+	}
+	/* update block_sig tlv record with new extended timestamp */
+	rec->hdr[2] = (lenDer >> 8) & 0xff;
+	rec->hdr[3] = lenDer & 0xff;
+	rec->tlvlen = (uint16_t) lenDer;
+	free(rec->data);
+	memcpy(rec->data, der, lenDer);
+	r = 0;
+done:
+	return r;
+}
+
+
 /* verify the root hash. This also means we need to compute the
  * Merkle tree root for the current block.
  */
 int
-verifyBLOCK_SIG(block_sig_t *bs, gtfile gf, FILE *sigfp, gterrctx_t *ectx)
+verifyBLOCK_SIG(block_sig_t *bs, gtfile gf, FILE *sigfp, FILE *nsigfp,
+                uint8_t bExtend, gterrctx_t *ectx)
 {
 	int r;
 	int gtstate;
@@ -933,10 +997,11 @@ verifyBLOCK_SIG(block_sig_t *bs, gtfile gf, FILE *sigfp, gterrctx_t *ectx)
 	GTTimestamp *timestamp = NULL;
 	GTVerificationInfo *vrfyInf;
 	GTDataHash *root = NULL;
+	tlvrecord_t rec;
 	
 	if((r = verifySigblkFinish(gf, &root)) != 0)
 		goto done;
-	if((r = rsgt_tlvrdVrfyBlockSig(sigfp, &file_bs)) != 0)
+	if((r = rsgt_tlvrdVrfyBlockSig(sigfp, &file_bs, &rec)) != 0)
 		goto done;
 	if(ectx->recNum != bs->recCount) {
 		r = RSGTE_INVLD_RECCNT;
@@ -960,9 +1025,14 @@ verifyBLOCK_SIG(block_sig_t *bs, gtfile gf, FILE *sigfp, gterrctx_t *ectx)
 		goto done;
 	}
 
-	r = 0;
 	if(rsgt_read_showVerified)
 		reportVerifySuccess(ectx, vrfyInf);
+	if(bExtend)
+		if((r = rsgt_extendSig(timestamp, &rec)) != 0) goto done;
+		
+	if(nsigfp != NULL)
+		if((r = rsgt_tlvwrite(nsigfp, &rec)) != 0) goto done;
+	r = 0;
 done:
 	if(file_bs != NULL)
 		rsgt_objfree(0x0902, file_bs);

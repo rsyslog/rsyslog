@@ -148,13 +148,14 @@ err:	fprintf(stderr, "error %d processing file %s\n", r, name);
 }
 
 static inline int
-doVerifyRec(FILE *logfp, FILE *sigfp, block_sig_t *bs, gtfile gf, gterrctx_t *ectx, uint8_t bInBlock)
+doVerifyRec(FILE *logfp, FILE *sigfp, FILE *nsigfp,
+	    block_sig_t *bs, gtfile gf, gterrctx_t *ectx, uint8_t bInBlock)
 {
 	int r;
 	size_t lenRec;
-	char rec[128*1024];
+	char line[128*1024];
 
-	if(fgets(rec, sizeof(rec), logfp) == NULL) {
+	if(fgets(line, sizeof(line), logfp) == NULL) {
 		if(feof(logfp)) {
 			r = RSGTE_EOF;
 		} else {
@@ -163,20 +164,20 @@ doVerifyRec(FILE *logfp, FILE *sigfp, block_sig_t *bs, gtfile gf, gterrctx_t *ec
 		}
 		goto done;
 	}
-	lenRec = strlen(rec);
-	if(rec[lenRec-1] == '\n') {
-		rec[lenRec-1] = '\0';
+	lenRec = strlen(line);
+	if(line[lenRec-1] == '\n') {
+		line[lenRec-1] = '\0';
 		--lenRec;
-		rsgt_errctxSetErrRec(ectx, rec);
+		rsgt_errctxSetErrRec(ectx, line);
 	}
 
-	/* we need to preserve the first record of each block for
+	/* we need to preserve the first line (record) of each block for
 	 * error-reporting purposes (bInBlock==0 meanst start of block)
 	 */
 	if(bInBlock == 0)
-		rsgt_errctxFrstRecInBlk(ectx, rec);
+		rsgt_errctxFrstRecInBlk(ectx, line);
 
-	r = rsgt_vrfy_nextRec(bs, gf, sigfp, (unsigned char*)rec, lenRec, ectx);
+	r = rsgt_vrfy_nextRec(bs, gf, sigfp, nsigfp, (unsigned char*)line, lenRec, ectx);
 done:
 	return r;
 }
@@ -231,7 +232,13 @@ verify(char *name)
 	ectx.filename = strdup(sigfname);
 
 	if((r = rsgt_chkFileHdr(sigfp, "LOGSIG10")) != 0) goto err;
-
+	if(mode == MD_EXTEND) {
+		if(fwrite("LOGSIG10", 8, 1, nsigfp) != 1) {
+			perror(nsigfname);
+			r = RSGTE_IO;
+			goto err;
+		}
+	}
 	gf = rsgt_vrfyConstruct_gf();
 	if(gf == NULL) {
 		fprintf(stderr, "error initializing signature file structure\n");
@@ -254,10 +261,11 @@ verify(char *name)
 			++ectx.blkNum;
 		}
 		++ectx.recNum, ++ectx.recNumInFile;
-		if((r = doVerifyRec(logfp, sigfp, bs, gf, &ectx, bInBlock)) != 0)
+		if((r = doVerifyRec(logfp, sigfp, nsigfp, bs, gf, &ectx, bInBlock)) != 0)
 			goto err;
 		if(ectx.recNum == bs->recCount) {
-			verifyBLOCK_SIG(bs, gf, sigfp, &ectx);
+			verifyBLOCK_SIG(bs, gf, sigfp, nsigfp, 
+					(mode == MD_EXTEND) ? 1 : 0, &ectx);
 			bInBlock = 0;
 		} else	bInBlock = 1;
 	}

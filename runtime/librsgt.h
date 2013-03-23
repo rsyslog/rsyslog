@@ -153,7 +153,7 @@ struct rsgtstatefile {
 #define RSGTE_INVLTYP 3	/* invalid TLV type record (unexcpected at this point) */
 #define RSGTE_OOM 4	/* ran out of memory */
 #define RSGTE_LEN 5	/* error related to length records */
-// 6 may be reused!
+#define RSGTE_TS_EXTEND 6/* error extending timestamp */
 #define RSGTE_INVLD_RECCNT 7/* mismatch between actual records and records
                                given in block-sig record */
 #define RSGTE_INVLHDR 8/* invalid file header */
@@ -189,6 +189,8 @@ RSGTE2String(int err)
 		return "out of memory";
 	case RSGTE_LEN:
 		return "length record problem";
+	case RSGTE_TS_EXTEND:
+		return "error extending timestamp";
 	case RSGTE_INVLD_RECCNT:
 		return "mismatch between actual record count and number in block signature record";
 	case RSGTE_INVLHDR:
@@ -352,8 +354,8 @@ int rsgt_getBlockParams(FILE *fp, uint8_t bRewind, block_sig_t **bs, uint8_t *bH
 int rsgt_chkFileHdr(FILE *fp, char *expect);
 gtfile rsgt_vrfyConstruct_gf(void);
 void rsgt_vrfyBlkInit(gtfile gf, block_sig_t *bs, uint8_t bHasRecHashes, uint8_t bHasIntermedHashes);
-int rsgt_vrfy_nextRec(block_sig_t *bs, gtfile gf, FILE *sigfp, unsigned char *rec, size_t lenRec, gterrctx_t *ectx);
-int verifyBLOCK_SIG(block_sig_t *bs, gtfile gf, FILE *sigfp, gterrctx_t *ectx);
+int rsgt_vrfy_nextRec(block_sig_t *bs, gtfile gf, FILE *sigfp, FILE *nsigfp, unsigned char *rec, size_t len, gterrctx_t *ectx);
+int verifyBLOCK_SIG(block_sig_t *bs, gtfile gf, FILE *sigfp, FILE *nsigfp, uint8_t bExtend, gterrctx_t *ectx);
 void rsgt_errctxInit(gterrctx_t *ectx);
 void rsgt_errctxExit(gterrctx_t *ectx);
 void rsgt_errctxSetErrRec(gterrctx_t *ectx, char *rec);
