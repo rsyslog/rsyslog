@@ -35,7 +35,7 @@
 typedef unsigned char uchar;
 
 static enum { MD_DUMP, MD_DETECT_FILE_TYPE, MD_SHOW_SIGBLK_PARAMS,
-              MD_VERIFY
+              MD_VERIFY, MD_EXTEND
 } mode = MD_DUMP;
 static int verbose = 0;
 
@@ -155,7 +155,12 @@ doVerifyRec(FILE *logfp, FILE *sigfp, block_sig_t *bs, gtfile gf, gterrctx_t *ec
 	char rec[128*1024];
 
 	if(fgets(rec, sizeof(rec), logfp) == NULL) {
-		r = feof(logfp) ? RSGTE_EOF : RSGTE_IO;
+		if(feof(logfp)) {
+			r = RSGTE_EOF;
+		} else {
+			perror("log file input");
+			r = RSGTE_IO;
+		}
 		goto done;
 	}
 	lenRec = strlen(rec);
@@ -176,21 +181,27 @@ done:
 	return r;
 }
 
-/* note: here we need to have the LOG file name, not signature! */
+/* We handle both verify and extend with the same function as they
+ * are very similiar.
+ *
+ * note: here we need to have the LOG file name, not signature!
+ */
 static void
 verify(char *name)
 {
-	FILE *logfp = NULL, *sigfp = NULL;
+	FILE *logfp = NULL, *sigfp = NULL, *nsigfp = NULL;
 	block_sig_t *bs = NULL;
 	gtfile gf;
 	uint8_t bHasRecHashes, bHasIntermedHashes;
 	uint8_t bInBlock;
 	int r = 0;
 	char sigfname[4096];
+	char nsigfname[4096];
 	gterrctx_t ectx;
 	
 	if(!strcmp(name, "-")) {
-		fprintf(stderr, "verify mode cannot work on stdin\n");
+		fprintf(stderr, "%s mode cannot work on stdin\n",
+			mode == MD_VERIFY ? "verify" : "extend");
 		goto err;
 	} else {
 		snprintf(sigfname, sizeof(sigfname), "%s.gtsig", name);
@@ -200,8 +211,16 @@ verify(char *name)
 			goto err;
 		}
 		if((sigfp = fopen(sigfname, "r")) == NULL) {
-			perror(name);
+			perror(sigfname);
 			goto err;
+		}
+		if(mode == MD_EXTEND) {
+			snprintf(nsigfname, sizeof(nsigfname), "%s.gtsig.new", name);
+			nsigfname[sizeof(nsigfname)-1] = '\0';
+			if((nsigfp = fopen(nsigfname, "w")) == NULL) {
+				perror(nsigfname);
+				goto err;
+			}
 		}
 	}
 
@@ -245,6 +264,7 @@ verify(char *name)
 
 	fclose(logfp);
 	fclose(sigfp);
+	fclose(nsigfp);
 	rsgtExit();
 	rsgt_errctxExit(&ectx);
 	return;
@@ -253,6 +273,8 @@ err:
 		fclose(logfp);
 	if(sigfp != NULL)
 		fclose(sigfp);
+	if(nsigfp != NULL)
+		fclose(nsigfp);
 	if(r != RSGTE_EOF)
 		fprintf(stderr, "error %d processing file %s\n", r, name);
 	rsgtExit();
@@ -273,6 +295,7 @@ processFile(char *name)
 		showSigblkParams(name);
 		break;
 	case MD_VERIFY:
+	case MD_EXTEND:
 		verify(name);
 		break;
 	}
@@ -287,6 +310,7 @@ static struct option long_options[] =
 	{"detect-file-type", no_argument, NULL, 'T'},
 	{"show-sigblock-params", no_argument, NULL, 'B'},
 	{"verify", no_argument, NULL, 't'}, /* 't' as in "test signatures" */
+	{"extend", no_argument, NULL, 'e'},
 	{"publications-server", optional_argument, NULL, 'P'},
 	{"show-verified", no_argument, NULL, 's'},
 	{NULL, 0, NULL, 0} 
@@ -326,6 +350,9 @@ main(int argc, char *argv[])
 			break;
 		case 't':
 			mode = MD_VERIFY;
+			break;
+		case 'e':
+			mode = MD_EXTEND;
 			break;
 		case '?':
 			break;
