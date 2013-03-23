@@ -441,207 +441,18 @@ done:
 	return r;
 }
 
-/* read type & length */
-static int
-rsgt_tlvrdTL(FILE *fp, uint16_t *tlvtype, uint16_t *tlvlen)
-{
-	int r = 1;
-	int c;
-
-	NEXTC;
-	*tlvtype = c & 0x1f;
-	if(c & 0x20) { /* tlv16? */
-		NEXTC;
-		*tlvtype = (*tlvtype << 8) | c;
-		NEXTC;
-		*tlvlen = c << 8;
-		NEXTC;
-		*tlvlen |= c;
-	} else {
-		NEXTC;
-		*tlvlen = c;
-	}
-
-	if(rsgt_read_debug)
-		printf("read tlvtype %4.4x, len %u\n", (unsigned) *tlvtype,
-			(unsigned) *tlvlen);
-	r = 0;
-done:	return r;
-}
-
-static int
-rsgt_tlvrdOctetString(FILE *fp, uint8_t **data, size_t len)
-{
-	size_t i;
-	int c, r = 1;
-	if((*data = (uint8_t*)malloc(len)) == NULL) {r=RSGTE_OOM;goto done;}
-	for(i = 0 ; i < len ; ++i) {
-		NEXTC;
-		(*data)[i] = c;
-	}
-	r = 0;
-done:	return r;
-}
-static int
-rsgt_tlvrdHASH_ALGO(FILE *fp, uint8_t *hashAlg)
-{
-	int r = 1;
-	int c;
-	uint16_t tlvtype, tlvlen;
-
-	CHKr(rsgt_tlvrdTL(fp, &tlvtype, &tlvlen));
-	if(!(tlvtype == 0x00 && tlvlen == 1)) {
-		r = RSGTE_FMT;
-		goto done;
-	}
-	NEXTC;
-	*hashAlg = c;
-	r = 0;
-done:	return r;
-}
-static int
-rsgt_tlvrdBLOCK_IV(FILE *fp, uint8_t **iv)
-{
-	int r = 1;
-	uint16_t tlvtype, tlvlen;
-
-	CHKr(rsgt_tlvrdTL(fp, &tlvtype, &tlvlen));
-	if(!(tlvtype == 0x01)) {
-		r = RSGTE_INVLTYP;
-		goto done;
-	}
-	CHKr(rsgt_tlvrdOctetString(fp, iv, tlvlen));
-	r = 0;
-done:	return r;
-}
-static int
-rsgt_tlvrdLAST_HASH(FILE *fp, imprint_t *imp)
-{
-	int r = 1;
-	int c;
-	uint16_t tlvtype, tlvlen;
-
-	CHKr(rsgt_tlvrdTL(fp, &tlvtype, &tlvlen));
-	if(!(tlvtype == 0x02)) { r = RSGTE_INVLTYP; goto done; }
-	NEXTC;
-	imp->hashID = c;
-	if(tlvlen != 1 + hashOutputLengthOctets(imp->hashID)) {
-		r = RSGTE_LEN;
-		goto done;
-	}
-	imp->len = tlvlen - 1;
-	CHKr(rsgt_tlvrdOctetString(fp, &imp->data, tlvlen-1));
-	r = 0;
-done:	return r;
-}
-static int
-rsgt_tlvrdREC_COUNT(FILE *fp, uint64_t *cnt, size_t *lenInt)
-{
-	int r = 1;
-	int i;
-	int c;
-	uint64_t val;
-	uint16_t tlvtype, tlvlen;
-
-	if((r = rsgt_tlvrdTL(fp, &tlvtype, &tlvlen)) != 0) goto done;
-	if(!(tlvtype == 0x03 && tlvlen <= 8)) { r = RSGTE_INVLTYP; goto done; }
-	*lenInt = tlvlen;
-	val = 0;
-	for(i = 0 ; i < tlvlen ; ++i) {
-		NEXTC;
-		val = (val << 8) + c;
-	}
-	*cnt = val;
-	r = 0;
-done:	return r;
-}
-static int
-rsgt_tlvrdSIG(FILE *fp, block_sig_t *bs)
-{
-	int r = 1;
-	uint16_t tlvtype, tlvlen;
-
-	CHKr(rsgt_tlvrdTL(fp, &tlvtype, &tlvlen));
-	if(!(tlvtype == 0x0906)) { r = RSGTE_INVLTYP; goto done; }
-	bs->sig.der.len = tlvlen;
-	bs->sigID = SIGID_RFC3161;
-	CHKr(rsgt_tlvrdOctetString(fp, &(bs->sig.der.data), tlvlen));
-	r = 0;
-done:	return r;
-}
-
-static int
-rsgt_tlvrdBLOCK_SIG(FILE *fp, block_sig_t **blocksig, uint16_t tlvlen)
-{
-	int r = 1;
-	size_t lenInt = 0;
-	uint16_t sizeRead;
-	block_sig_t *bs;
-	if((bs = calloc(1, sizeof(block_sig_t))) == NULL) {
-		r = RSGTE_OOM;
-		goto done;
-	}
-	CHKr(rsgt_tlvrdHASH_ALGO(fp, &(bs->hashID)));
-	CHKr(rsgt_tlvrdBLOCK_IV(fp, &(bs->iv)));
-	CHKr(rsgt_tlvrdLAST_HASH(fp, &(bs->lastHash)));
-	CHKr(rsgt_tlvrdREC_COUNT(fp, &(bs->recCount), &lenInt));
-	CHKr(rsgt_tlvrdSIG(fp, bs));
-	sizeRead = 2 + 1 /* hash algo TLV */ +
-	 	   2 + getIVLen(bs) /* iv */ +
-		   2 + 1 + bs->lastHash.len /* last hash */ +
-		   2 + lenInt /* rec-count */ +
-		   4 + bs->sig.der.len /* rfc-3161 */;
-	if(sizeRead != tlvlen) {
-		r = RSGTE_LEN;
-		goto done;
-	}
-	*blocksig = bs;
-	r = 0;
-done:	return r;
-}
-
-static int
-rsgt_tlvrdIMPRINT(FILE *fp, imprint_t **imprint, uint16_t tlvlen)
-{
-	int r = 1;
-	imprint_t *imp;
-	int c;
-
-	if((imp = calloc(1, sizeof(imprint_t))) == NULL) {
-		r = RSGTE_OOM;
-		goto done;
-	}
-	if((imp->data = calloc(1, sizeof(imprint_t))) == NULL) {
-		r = RSGTE_OOM;
-		goto done;
-	}
-
-	NEXTC;
-	imp->hashID = c;
-	if(tlvlen != 1 + hashOutputLengthOctets(imp->hashID)) {
-		r = RSGTE_LEN;
-		goto done;
-	}
-	imp->len = tlvlen - 1;
-	CHKr(rsgt_tlvrdOctetString(fp, &imp->data, tlvlen-1));
-
-	*imprint = imp;
-	r = 0;
-done:	return r;
-}
-
 static int
 rsgt_tlvrdRecHash(FILE *fp, imprint_t **imp)
 {
 	int r;
-	uint16_t tlvtype, tlvlen;
+	tlvrecord_t rec;
 
-	if((r = rsgt_tlvrdTL(fp, &tlvtype, &tlvlen)) != 0) goto done;
-	if(tlvtype != 0x0900) {
+	if((r = rsgt_tlvrd(fp, &rec, imp)) != 0) goto done;
+	if(rec.tlvtype != 0x0900) {
 		r = RSGTE_MISS_REC_HASH;
+		rsgt_objfree(rec.tlvtype, *imp);
 		goto done;
 	}
-	if((r = rsgt_tlvrdIMPRINT(fp, imp, tlvlen)) != 0) goto done;
 	r = 0;
 done:	return r;
 }
@@ -650,14 +461,14 @@ static int
 rsgt_tlvrdTreeHash(FILE *fp, imprint_t **imp)
 {
 	int r;
-	uint16_t tlvtype, tlvlen;
+	tlvrecord_t rec;
 
-	if((r = rsgt_tlvrdTL(fp, &tlvtype, &tlvlen)) != 0) goto done;
-	if(tlvtype != 0x0901) {
+	if((r = rsgt_tlvrd(fp, &rec, imp)) != 0) goto done;
+	if(rec.tlvtype != 0x0901) {
 		r = RSGTE_MISS_TREE_HASH;
+		rsgt_objfree(rec.tlvtype, *imp);
 		goto done;
 	}
-	if((r = rsgt_tlvrdIMPRINT(fp, imp, tlvlen)) != 0) goto done;
 	r = 0;
 done:	return r;
 }
@@ -667,14 +478,14 @@ static int
 rsgt_tlvrdVrfyBlockSig(FILE *fp, block_sig_t **bs)
 {
 	int r;
-	uint16_t tlvtype, tlvlen;
+	tlvrecord_t rec;
 
-	if((r = rsgt_tlvrdTL(fp, &tlvtype, &tlvlen)) != 0) goto done;
-	if(tlvtype != 0x0902) {
+	if((r = rsgt_tlvrd(fp, &rec, bs)) != 0) goto done;
+	if(rec.tlvtype != 0x0902) {
 		r = RSGTE_MISS_BLOCKSIG;
+		rsgt_objfree(rec.tlvtype, *bs);
 		goto done;
 	}
-	if((r = rsgt_tlvrdBLOCK_SIG(fp, bs, tlvlen)) != 0) goto done;
 	r = 0;
 done:	return r;
 }
@@ -952,7 +763,7 @@ static int
 rsgt_vrfy_chkRecHash(gtfile gf, FILE *sigfp, GTDataHash *recHash, gterrctx_t *ectx)
 {
 	int r = 0;
-	imprint_t *imp;
+	imprint_t *imp = NULL;
 
 	if((r = rsgt_tlvrdRecHash(sigfp, &imp)) != 0)
 		reportError(r, ectx);
@@ -973,6 +784,8 @@ rsgt_vrfy_chkRecHash(gtfile gf, FILE *sigfp, GTDataHash *recHash, gterrctx_t *ec
 	}
 	r = 0;
 done:
+	if(imp != NULL)
+		rsgt_objfree(0x0900, imp);
 	return r;
 }
 
@@ -980,7 +793,7 @@ static int
 rsgt_vrfy_chkTreeHash(gtfile gf, FILE *sigfp, GTDataHash *hash, gterrctx_t *ectx)
 {
 	int r = 0;
-	imprint_t *imp;
+	imprint_t *imp = NULL;
 
 	if((r = rsgt_tlvrdTreeHash(sigfp, &imp)) != 0) {
 		reportError(r, ectx);
@@ -1002,6 +815,8 @@ rsgt_vrfy_chkTreeHash(gtfile gf, FILE *sigfp, GTDataHash *hash, gterrctx_t *ectx
 	}
 	r = 0;
 done:
+	if(imp != NULL)
+		rsgt_objfree(0x0901, imp);
 	return r;
 }
 
@@ -1011,7 +826,7 @@ rsgt_vrfy_nextRec(block_sig_t *bs, gtfile gf, FILE *sigfp, unsigned char *rec,
 {
 	int r = 0;
 	GTDataHash *x; /* current hash */
-	GTDataHash *m, *recHash, *t;
+	GTDataHash *m, *recHash = NULL, *t;
 	uint8_t j;
 
 	hash_m(gf, &m);
@@ -1064,8 +879,9 @@ rsgt_vrfy_nextRec(block_sig_t *bs, gtfile gf, FILE *sigfp, unsigned char *rec,
 	/* cleanup */
 	/* note: x is freed later as part of roots cleanup */
 	GTDataHash_free(m);
-	GTDataHash_free(recHash);
 done:
+	if(recHash != NULL)
+		GTDataHash_free(recHash);
 	return r;
 }
 
@@ -1113,7 +929,7 @@ verifyBLOCK_SIG(block_sig_t *bs, gtfile gf, FILE *sigfp, gterrctx_t *ectx)
 {
 	int r;
 	int gtstate;
-	block_sig_t *file_bs;
+	block_sig_t *file_bs = NULL;
 	GTTimestamp *timestamp = NULL;
 	GTVerificationInfo *vrfyInf;
 	GTDataHash *root = NULL;
@@ -1148,6 +964,8 @@ verifyBLOCK_SIG(block_sig_t *bs, gtfile gf, FILE *sigfp, gterrctx_t *ectx)
 	if(rsgt_read_showVerified)
 		reportVerifySuccess(ectx, vrfyInf);
 done:
+	if(file_bs != NULL)
+		rsgt_objfree(0x0902, file_bs);
 	if(r != 0)
 		reportError(r, ectx);
 	if(timestamp != NULL)

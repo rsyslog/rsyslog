@@ -181,7 +181,7 @@ static void
 verify(char *name)
 {
 	FILE *logfp = NULL, *sigfp = NULL;
-	block_sig_t *bs;
+	block_sig_t *bs = NULL;
 	gtfile gf;
 	uint8_t bHasRecHashes, bHasIntermedHashes;
 	uint8_t bInBlock;
@@ -225,6 +225,8 @@ verify(char *name)
 
 	while(!feof(logfp)) {
 		if(bInBlock == 0) {
+			if(bs != NULL)
+				rsgt_objfree(0x0902, bs);
 			if((r = rsgt_getBlockParams(sigfp, 1, &bs, &bHasRecHashes,
 							&bHasIntermedHashes)) != 0)
 				goto err;
