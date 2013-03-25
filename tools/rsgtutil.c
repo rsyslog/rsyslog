@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
+#include <unistd.h>
 #include <gt_base.h>
 #include <gt_http.h>
 #include <getopt.h>
@@ -35,7 +36,7 @@
 typedef unsigned char uchar;
 
 static enum { MD_DUMP, MD_DETECT_FILE_TYPE, MD_SHOW_SIGBLK_PARAMS,
-              MD_VERIFY
+              MD_VERIFY, MD_EXTEND
 } mode = MD_DUMP;
 static int verbose = 0;
 
@@ -44,8 +45,8 @@ dumpFile(char *name)
 {
 	FILE *fp;
 	uchar hdr[9];
-	uint16_t tlvtype, tlvlen;
 	void *obj;
+	tlvrecord_t rec;
 	int r = -1;
 	
 	if(!strcmp(name, "-"))
@@ -60,13 +61,14 @@ dumpFile(char *name)
 	if((r = rsgt_tlvrdHeader(fp, hdr)) != 0) goto err;
 	printf("File Header: '%s'\n", hdr);
 	while(1) { /* we will err out on EOF */
-		if((r = rsgt_tlvrd(fp, &tlvtype, &tlvlen, &obj)) != 0) {
+		if((r = rsgt_tlvrd(fp, &rec, &obj)) != 0) {
 			if(feof(fp))
 				break;
 			else
 				goto err;
 		}
-		rsgt_tlvprint(stdout, tlvtype, obj, verbose);
+		rsgt_tlvprint(stdout, rec.tlvtype, obj, verbose);
+		rsgt_objfree(rec.tlvtype, obj);
 	}
 
 	if(fp != stdin)
@@ -147,49 +149,62 @@ err:	fprintf(stderr, "error %d processing file %s\n", r, name);
 }
 
 static inline int
-doVerifyRec(FILE *logfp, FILE *sigfp, block_sig_t *bs, gtfile gf, gterrctx_t *ectx, uint8_t bInBlock)
+doVerifyRec(FILE *logfp, FILE *sigfp, FILE *nsigfp,
+	    block_sig_t *bs, gtfile gf, gterrctx_t *ectx, uint8_t bInBlock)
 {
 	int r;
 	size_t lenRec;
-	char rec[128*1024];
+	char line[128*1024];
 
-	if(fgets(rec, sizeof(rec), logfp) == NULL) {
-		r = feof(logfp) ? RSGTE_EOF : RSGTE_IO;
+	if(fgets(line, sizeof(line), logfp) == NULL) {
+		if(feof(logfp)) {
+			r = RSGTE_EOF;
+		} else {
+			perror("log file input");
+			r = RSGTE_IO;
+		}
 		goto done;
 	}
-	lenRec = strlen(rec);
-	if(rec[lenRec-1] == '\n') {
-		rec[lenRec-1] = '\0';
+	lenRec = strlen(line);
+	if(line[lenRec-1] == '\n') {
+		line[lenRec-1] = '\0';
 		--lenRec;
-		rsgt_errctxSetErrRec(ectx, rec);
+		rsgt_errctxSetErrRec(ectx, line);
 	}
 
-	/* we need to preserve the first record of each block for
+	/* we need to preserve the first line (record) of each block for
 	 * error-reporting purposes (bInBlock==0 meanst start of block)
 	 */
 	if(bInBlock == 0)
-		rsgt_errctxFrstRecInBlk(ectx, rec);
+		rsgt_errctxFrstRecInBlk(ectx, line);
 
-	r = rsgt_vrfy_nextRec(bs, gf, sigfp, (unsigned char*)rec, lenRec, ectx);
+	r = rsgt_vrfy_nextRec(bs, gf, sigfp, nsigfp, (unsigned char*)line, lenRec, ectx);
 done:
 	return r;
 }
 
-/* note: here we need to have the LOG file name, not signature! */
+/* We handle both verify and extend with the same function as they
+ * are very similiar.
+ *
+ * note: here we need to have the LOG file name, not signature!
+ */
 static void
 verify(char *name)
 {
-	FILE *logfp = NULL, *sigfp = NULL;
-	block_sig_t *bs;
+	FILE *logfp = NULL, *sigfp = NULL, *nsigfp = NULL;
+	block_sig_t *bs = NULL;
 	gtfile gf;
 	uint8_t bHasRecHashes, bHasIntermedHashes;
 	uint8_t bInBlock;
 	int r = 0;
 	char sigfname[4096];
+	char oldsigfname[4096];
+	char nsigfname[4096];
 	gterrctx_t ectx;
 	
 	if(!strcmp(name, "-")) {
-		fprintf(stderr, "verify mode cannot work on stdin\n");
+		fprintf(stderr, "%s mode cannot work on stdin\n",
+			mode == MD_VERIFY ? "verify" : "extend");
 		goto err;
 	} else {
 		snprintf(sigfname, sizeof(sigfname), "%s.gtsig", name);
@@ -199,8 +214,19 @@ verify(char *name)
 			goto err;
 		}
 		if((sigfp = fopen(sigfname, "r")) == NULL) {
-			perror(name);
+			perror(sigfname);
 			goto err;
+		}
+		if(mode == MD_EXTEND) {
+			snprintf(nsigfname, sizeof(nsigfname), "%s.gtsig.new", name);
+			nsigfname[sizeof(nsigfname)-1] = '\0';
+			if((nsigfp = fopen(nsigfname, "w")) == NULL) {
+				perror(nsigfname);
+				goto err;
+			}
+			snprintf(oldsigfname, sizeof(oldsigfname),
+			         "%s.gtsig.old", name);
+			oldsigfname[sizeof(oldsigfname)-1] = '\0';
 		}
 	}
 
@@ -210,12 +236,18 @@ verify(char *name)
 	ectx.fp = stderr;
 	ectx.filename = strdup(sigfname);
 
-	if((r = rsgt_chkFileHdr(sigfp, "LOGSIG10")) != 0) goto err;
-
+	if((r = rsgt_chkFileHdr(sigfp, "LOGSIG10")) != 0) goto done;
+	if(mode == MD_EXTEND) {
+		if(fwrite("LOGSIG10", 8, 1, nsigfp) != 1) {
+			perror(nsigfname);
+			r = RSGTE_IO;
+			goto done;
+		}
+	}
 	gf = rsgt_vrfyConstruct_gf();
 	if(gf == NULL) {
 		fprintf(stderr, "error initializing signature file structure\n");
-		goto err;
+		goto done;
 	}
 
 	bInBlock = 0;
@@ -224,34 +256,84 @@ verify(char *name)
 
 	while(!feof(logfp)) {
 		if(bInBlock == 0) {
+			if(bs != NULL)
+				rsgt_objfree(0x0902, bs);
 			if((r = rsgt_getBlockParams(sigfp, 1, &bs, &bHasRecHashes,
 							&bHasIntermedHashes)) != 0)
-				goto err;
+				goto done;
 			rsgt_vrfyBlkInit(gf, bs, bHasRecHashes, bHasIntermedHashes);
 			ectx.recNum = 0;
 			++ectx.blkNum;
 		}
 		++ectx.recNum, ++ectx.recNumInFile;
-		if((r = doVerifyRec(logfp, sigfp, bs, gf, &ectx, bInBlock)) != 0)
-			goto err;
+		if((r = doVerifyRec(logfp, sigfp, nsigfp, bs, gf, &ectx, bInBlock)) != 0)
+			goto done;
 		if(ectx.recNum == bs->recCount) {
-			verifyBLOCK_SIG(bs, gf, sigfp, &ectx);
+			if((r = verifyBLOCK_SIG(bs, gf, sigfp, nsigfp, 
+			    (mode == MD_EXTEND) ? 1 : 0, &ectx)) != 0)
+				goto done;
 			bInBlock = 0;
 		} else	bInBlock = 1;
 	}
 
-	fclose(logfp);
-	fclose(sigfp);
+done:
+	if(r != RSGTE_EOF)
+		goto err;
+
+	fclose(logfp); logfp = NULL;
+	fclose(sigfp); sigfp = NULL;
+	fclose(nsigfp); nsigfp = NULL;
+
+	/* everything went fine, so we rename files if we updated them */
+	if(mode == MD_EXTEND) {
+		if(unlink(oldsigfname) != 0) {
+			if(errno != ENOENT) {
+				perror("unlink oldsig");
+				r = RSGTE_IO;
+				goto err;
+			}
+		}
+		if(link(sigfname, oldsigfname) != 0) {
+			perror("link oldsig");
+			r = RSGTE_IO;
+			goto err;
+		}
+		if(unlink(sigfname) != 0) {
+			perror("unlink cursig");
+			r = RSGTE_IO;
+			goto err;
+		}
+		if(link(nsigfname, sigfname) != 0) {
+			perror("link  newsig");
+			fprintf(stderr, "WARNING: current sig file has been "
+			        "renamed to %s - you need to manually recover "
+				"it.\n", oldsigfname);
+			r = RSGTE_IO;
+			goto err;
+		}
+		if(unlink(nsigfname) != 0) {
+			perror("unlink newsig");
+			fprintf(stderr, "WARNING: current sig file has been "
+			        "renamed to %s - you need to manually recover "
+				"it.\n", oldsigfname);
+			r = RSGTE_IO;
+			goto err;
+		}
+	}
 	rsgtExit();
 	rsgt_errctxExit(&ectx);
 	return;
+
 err:
+	fprintf(stderr, "error %d processing file %s\n", r, name);
 	if(logfp != NULL)
 		fclose(logfp);
 	if(sigfp != NULL)
 		fclose(sigfp);
-	if(r != RSGTE_EOF)
-		fprintf(stderr, "error %d processing file %s\n", r, name);
+	if(nsigfp != NULL) {
+		fclose(nsigfp);
+		unlink(nsigfname);
+	}
 	rsgtExit();
 	rsgt_errctxExit(&ectx);
 }
@@ -270,6 +352,7 @@ processFile(char *name)
 		showSigblkParams(name);
 		break;
 	case MD_VERIFY:
+	case MD_EXTEND:
 		verify(name);
 		break;
 	}
@@ -284,6 +367,7 @@ static struct option long_options[] =
 	{"detect-file-type", no_argument, NULL, 'T'},
 	{"show-sigblock-params", no_argument, NULL, 'B'},
 	{"verify", no_argument, NULL, 't'}, /* 't' as in "test signatures" */
+	{"extend", no_argument, NULL, 'e'},
 	{"publications-server", optional_argument, NULL, 'P'},
 	{"show-verified", no_argument, NULL, 's'},
 	{NULL, 0, NULL, 0} 
@@ -323,6 +407,9 @@ main(int argc, char *argv[])
 			break;
 		case 't':
 			mode = MD_VERIFY;
+			break;
+		case 'e':
+			mode = MD_EXTEND;
 			break;
 		case '?':
 			break;

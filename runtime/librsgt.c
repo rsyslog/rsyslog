@@ -277,6 +277,10 @@ tlvWriteBlockSig(gtfile gf, uchar *der, uint16_t lenDer)
 	tlvbufAddOctetString(gf, der, lenDer);
 }
 
+/* support for old platforms - graceful degrade */
+#ifndef O_CLOEXEC
+#define O_CLOEXEC 0
+#endif
 /* read rsyslog log state file; if we cannot access it or the
  * contents looks invalid, we flag it as non-present (and thus
  * begin a new hash chain).
@@ -627,6 +631,7 @@ timestampIt(gtfile gf, GTDataHash *hash)
 	/* Encode timestamp. */
 	r = GTTimestamp_getDEREncoded(timestamp, &der, &lenDer);
 	if(r != GT_OK) {
+		// TODO: use rsyslog error reporting!
 		fprintf(stderr, "GTTimestamp_getDEREncoded() failed: %d (%s)\n",
 				r, GT_getErrorString(r));
 		goto done;

@@ -76,6 +76,15 @@ typedef struct gtfile_s *gtfile;
 typedef struct gterrctx_s gterrctx_t;
 typedef struct imprint_s imprint_t;
 typedef struct block_sig_s block_sig_t;
+typedef struct tlvrecord_s tlvrecord_t;
+
+struct tlvrecord_s {
+	uint16_t tlvtype;
+	uint16_t tlvlen;
+	uint8_t hdr[4]; /* the raw header (as persisted to file) */
+	uint8_t lenHdr; /* length of raw header */
+	uint8_t data[64*1024];	/* the actual data part (of length tlvlen) */
+};
 
 /* The following structure describes the "error context" to be used
  * for verification and similiar reader functions. While verifying,
@@ -138,13 +147,16 @@ struct rsgtstatefile {
 	/* after that, the hash value is contained within the file */
 };
 
+/* Flags and record types for TLV handling */
+#define RSGT_FLAG_TLV16 0x20
+
 /* error states */
 #define RSGTE_IO 1 	/* any kind of io error */
 #define RSGTE_FMT 2	/* data fromat error */
 #define RSGTE_INVLTYP 3	/* invalid TLV type record (unexcpected at this point) */
 #define RSGTE_OOM 4	/* ran out of memory */
 #define RSGTE_LEN 5	/* error related to length records */
-// 6 may be reused!
+#define RSGTE_TS_EXTEND 6/* error extending timestamp */
 #define RSGTE_INVLD_RECCNT 7/* mismatch between actual records and records
                                given in block-sig record */
 #define RSGTE_INVLHDR 8/* invalid file header */
@@ -158,6 +170,7 @@ struct rsgtstatefile {
 #define RSGTE_MISS_BLOCKSIG 16 /* block signature record missing when expected */
 #define RSGTE_INVLD_TIMESTAMP 17 /* RFC3161 timestamp is invalid */
 #define RSGTE_TS_DERDECODE 18 /* error DER-Decoding a timestamp */
+#define RSGTE_TS_DERENCODE 19 /* error DER-Encoding a timestamp */
 
 /* the following function maps RSGTE_* state to a string - must be updated
  * whenever a new state is added.
@@ -180,6 +193,8 @@ RSGTE2String(int err)
 		return "out of memory";
 	case RSGTE_LEN:
 		return "length record problem";
+	case RSGTE_TS_EXTEND:
+		return "error extending timestamp";
 	case RSGTE_INVLD_RECCNT:
 		return "mismatch between actual record count and number in block signature record";
 	case RSGTE_INVLHDR:
@@ -204,6 +219,8 @@ RSGTE2String(int err)
 		return "RFC3161 timestamp invalid";
 	case RSGTE_TS_DERDECODE:
 		return "error DER-decoding RFC3161 timestamp";
+	case RSGTE_TS_DERENCODE:
+		return "error DER-encoding RFC3161 timestamp";
 	default:
 		return "unknown error";
 	}
@@ -336,19 +353,20 @@ void sigblkAddRecord(gtfile gf, const unsigned char *rec, const size_t len);
 void sigblkFinish(gtfile gf);
 /* reader functions */
 int rsgt_tlvrdHeader(FILE *fp, unsigned char *hdr);
-int rsgt_tlvrd(FILE *fp, uint16_t *tlvtype, uint16_t *tlvlen, void *obj);
+int rsgt_tlvrd(FILE *fp, tlvrecord_t *rec, void *obj);
 void rsgt_tlvprint(FILE *fp, uint16_t tlvtype, void *obj, uint8_t verbose);
 void rsgt_printBLOCK_SIG(FILE *fp, block_sig_t *bs, uint8_t verbose);
 int rsgt_getBlockParams(FILE *fp, uint8_t bRewind, block_sig_t **bs, uint8_t *bHasRecHashes, uint8_t *bHasIntermedHashes);
 int rsgt_chkFileHdr(FILE *fp, char *expect);
 gtfile rsgt_vrfyConstruct_gf(void);
 void rsgt_vrfyBlkInit(gtfile gf, block_sig_t *bs, uint8_t bHasRecHashes, uint8_t bHasIntermedHashes);
-int rsgt_vrfy_nextRec(block_sig_t *bs, gtfile gf, FILE *sigfp, unsigned char *rec, size_t lenRec, gterrctx_t *ectx);
-int verifyBLOCK_SIG(block_sig_t *bs, gtfile gf, FILE *sigfp, gterrctx_t *ectx);
+int rsgt_vrfy_nextRec(block_sig_t *bs, gtfile gf, FILE *sigfp, FILE *nsigfp, unsigned char *rec, size_t len, gterrctx_t *ectx);
+int verifyBLOCK_SIG(block_sig_t *bs, gtfile gf, FILE *sigfp, FILE *nsigfp, uint8_t bExtend, gterrctx_t *ectx);
 void rsgt_errctxInit(gterrctx_t *ectx);
 void rsgt_errctxExit(gterrctx_t *ectx);
 void rsgt_errctxSetErrRec(gterrctx_t *ectx, char *rec);
 void rsgt_errctxFrstRecInBlk(gterrctx_t *ectx, char *rec);
+void rsgt_objfree(uint16_t tlvtype, void *obj);
 
 
 /* TODO: replace these? */

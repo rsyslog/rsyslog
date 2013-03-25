@@ -1,6 +1,8 @@
 /* librsgt_read.c - rsyslog's guardtime support library
  * This includes functions used for reading signature (and 
- * other related) files.
+ * other related) files. Well, actually it also contains
+ * some writing functionality, but only as far as rsyslog
+ * itself is not concerned, but "just" the utility programs.
  *
  * This part of the library uses C stdio and expects that the
  * caller will open and close the file to be read itself.
@@ -49,6 +51,7 @@ typedef unsigned char uchar;
 
 static int rsgt_read_debug = 0;
 char *rsgt_read_puburl = "http://verify.guardtime.com/gt-controlpublications.bin";
+char *rsgt_extend_puburl = "http://verifier.guardtime.net/gt-extendingservice";
 uint8_t rsgt_read_showVerified = 0;
 
 /* macro to obtain next char from file including error tracking */
@@ -97,6 +100,8 @@ rsgt_errctxInit(gterrctx_t *ectx)
 	ectx->verbose = 0;
 	ectx->errRec = NULL;
 	ectx->frstRecInBlk = NULL;
+	ectx->fileHash = NULL;
+	ectx->lefthash = ectx->righthash = ectx->computedHash = NULL;
 }
 void
 rsgt_errctxExit(gterrctx_t *ectx)
@@ -160,6 +165,16 @@ reportError(int errcode, gterrctx_t *ectx)
 			fprintf(ectx->fp, "\tGT Verify Timestamp: [%u]%s\n",
 				ectx->gtstate, GTHTTP_getErrorString(ectx->gtstate));
 		}
+		if(errcode == RSGTE_TS_EXTEND ||
+		   errcode == RSGTE_TS_DERDECODE) {
+			fprintf(ectx->fp, "\tExtending Server...: %s\n", rsgt_extend_puburl);
+			fprintf(ectx->fp, "\tGT Extend Timestamp: [%u]%s\n",
+				ectx->gtstate, GTHTTP_getErrorString(ectx->gtstate));
+		}
+		if(errcode == RSGTE_TS_DERENCODE) {
+			fprintf(ectx->fp, "\tAPI return state...: [%u]%s\n",
+				ectx->gtstate, GTHTTP_getErrorString(ectx->gtstate));
+		}
 	}
 }
 
@@ -167,7 +182,7 @@ reportError(int errcode, gterrctx_t *ectx)
  * ectx, as it has most information we need.
  */
 static void
-reportVerifySuccess(gterrctx_t *ectx)
+reportVerifySuccess(gterrctx_t *ectx, GTVerificationInfo *vrfyInf)
 {
 	if(ectx->fp != NULL) {
 		fprintf(ectx->fp, "%s[%llu:%llu:%llu]: block signature successfully verified\n",
@@ -180,9 +195,27 @@ reportVerifySuccess(gterrctx_t *ectx)
 			fprintf(ectx->fp, "\tBlock End Record...: '%s'\n", ectx->errRec);
 		fprintf(ectx->fp, "\tGT Verify Timestamp: [%u]%s\n",
 			ectx->gtstate, GTHTTP_getErrorString(ectx->gtstate));
+		GTVerificationInfo_print(ectx->fp, 0, vrfyInf);
 	}
 }
 
+/**
+ * Write the provided record to the current file position.
+ *
+ * @param[in] fp file pointer for writing
+ * @param[out] rec tlvrecord to write
+ *
+ * @returns 0 if ok, something else otherwise
+ */
+static int
+rsgt_tlvwrite(FILE *fp, tlvrecord_t *rec)
+{
+	int r = RSGTE_IO;
+	if(fwrite(rec->hdr, (size_t) rec->lenHdr, 1, fp) != 1) goto done;
+	if(fwrite(rec->data, (size_t) rec->tlvlen, 1, fp) != 1) goto done;
+	r = 0;
+done:	return r;
+}
 
 /**
  * Read a header from a binary file.
@@ -204,167 +237,216 @@ rsgt_tlvrdHeader(FILE *fp, uchar *hdr)
 done:	return r;
 }
 
-/* read type & length */
+/* read type a complete tlv record 
+ */
 static int
-rsgt_tlvrdTL(FILE *fp, uint16_t *tlvtype, uint16_t *tlvlen)
+rsgt_tlvRecRead(FILE *fp, tlvrecord_t *rec)
 {
 	int r = 1;
 	int c;
 
 	NEXTC;
-	*tlvtype = c & 0x1f;
+	rec->hdr[0] = c;
+	rec->tlvtype = c & 0x1f;
 	if(c & 0x20) { /* tlv16? */
+		rec->lenHdr = 4;
 		NEXTC;
-		*tlvtype = (*tlvtype << 8) | c;
+		rec->hdr[1] = c;
+		rec->tlvtype = (rec->tlvtype << 8) | c;
 		NEXTC;
-		*tlvlen = c << 8;
+		rec->hdr[2] = c;
+		rec->tlvlen = c << 8;
 		NEXTC;
-		*tlvlen |= c;
+		rec->hdr[3] = c;
+		rec->tlvlen |= c;
 	} else {
 		NEXTC;
-		*tlvlen = c;
+		rec->lenHdr = 2;
+		rec->hdr[1] = c;
+		rec->tlvlen = c;
 	}
+	if(fread(rec->data, (size_t) rec->tlvlen, 1, fp) != 1) {
+		r = RSGTE_IO;
+		goto done;
+	}
+
 	if(rsgt_read_debug)
-		printf("read tlvtype %4.4x, len %u\n", (unsigned) *tlvtype,
-			(unsigned) *tlvlen);
+		printf("read tlvtype %4.4x, len %u\n", (unsigned) rec->tlvtype,
+			(unsigned) rec->tlvlen);
 	r = 0;
 done:	return r;
 }
 
+/* decode a sub-tlv record from an existing record's memory buffer
+ */
 static int
-rsgt_tlvrdOctetString(FILE *fp, uint8_t **data, size_t len)
-{
-	size_t i;
-	int c, r = 1;
-	if((*data = (uint8_t*)malloc(len)) == NULL) {r=RSGTE_OOM;goto done;}
-	for(i = 0 ; i < len ; ++i) {
-		NEXTC;
-		(*data)[i] = c;
-	}
-	r = 0;
-done:	return r;
-}
-static int
-rsgt_tlvrdSkipVal(FILE *fp, size_t len)
-{
-	size_t i;
-	int c, r = 1;
-	for(i = 0 ; i < len ; ++i) {
-		NEXTC;
-	}
-	r = 0;
-done:	return r;
-}
-static int
-rsgt_tlvrdHASH_ALGO(FILE *fp, uint8_t *hashAlg)
+rsgt_tlvDecodeSUBREC(tlvrecord_t *rec, uint16_t *stridx, tlvrecord_t *newrec)
 {
 	int r = 1;
 	int c;
-	uint16_t tlvtype, tlvlen;
 
-	CHKr(rsgt_tlvrdTL(fp, &tlvtype, &tlvlen));
-	if(!(tlvtype == 0x00 && tlvlen == 1)) {
-		r = RSGTE_FMT;
-		goto done;
+	if(rec->tlvlen == *stridx) {r=RSGTE_LEN; goto done;}
+	c = rec->data[(*stridx)++];
+	newrec->hdr[0] = c;
+	newrec->tlvtype = c & 0x1f;
+	if(c & 0x20) { /* tlv16? */
+		newrec->lenHdr = 4;
+		if(rec->tlvlen == *stridx) {r=RSGTE_LEN; goto done;}
+		c = rec->data[(*stridx)++];
+		newrec->hdr[1] = c;
+		newrec->tlvtype = (newrec->tlvtype << 8) | c;
+		if(rec->tlvlen == *stridx) {r=RSGTE_LEN; goto done;}
+		c = rec->data[(*stridx)++];
+		newrec->hdr[2] = c;
+		newrec->tlvlen = c << 8;
+		if(rec->tlvlen == *stridx) {r=RSGTE_LEN; goto done;}
+		c = rec->data[(*stridx)++];
+		newrec->hdr[3] = c;
+		newrec->tlvlen |= c;
+	} else {
+		if(rec->tlvlen == *stridx) {r=RSGTE_LEN; goto done;}
+		c = rec->data[(*stridx)++];
+		newrec->lenHdr = 2;
+		newrec->hdr[1] = c;
+		newrec->tlvlen = c;
 	}
-	NEXTC;
-	*hashAlg = c;
+	if(rec->tlvlen < *stridx + newrec->tlvlen) {r=RSGTE_LEN; goto done;}
+	memcpy(newrec->data, (rec->data)+(*stridx), newrec->tlvlen);
+	*stridx += newrec->tlvlen;
+
+	if(rsgt_read_debug)
+		printf("read sub-tlv: tlvtype %4.4x, len %u\n",
+			(unsigned) newrec->tlvtype,
+			(unsigned) newrec->tlvlen);
 	r = 0;
 done:	return r;
 }
+
+
 static int
-rsgt_tlvrdBLOCK_IV(FILE *fp, uint8_t **iv)
+rsgt_tlvDecodeIMPRINT(tlvrecord_t *rec, imprint_t **imprint)
 {
 	int r = 1;
-	uint16_t tlvtype, tlvlen;
+	imprint_t *imp;
 
-	CHKr(rsgt_tlvrdTL(fp, &tlvtype, &tlvlen));
-	if(!(tlvtype == 0x01)) {
-		r = RSGTE_INVLTYP;
+	if((imp = calloc(1, sizeof(imprint_t))) == NULL) {
+		r = RSGTE_OOM;
 		goto done;
 	}
-	CHKr(rsgt_tlvrdOctetString(fp, iv, tlvlen));
-	r = 0;
-done:	return r;
-}
-static int
-rsgt_tlvrdLAST_HASH(FILE *fp, imprint_t *imp)
-{
-	int r = 1;
-	int c;
-	uint16_t tlvtype, tlvlen;
 
-	CHKr(rsgt_tlvrdTL(fp, &tlvtype, &tlvlen));
-	if(!(tlvtype == 0x02)) { r = RSGTE_INVLTYP; goto done; }
-	NEXTC;
-	imp->hashID = c;
-	if(tlvlen != 1 + hashOutputLengthOctets(imp->hashID)) {
+	imp->hashID = rec->data[0];
+	if(rec->tlvlen != 1 + hashOutputLengthOctets(imp->hashID)) {
 		r = RSGTE_LEN;
 		goto done;
 	}
-	imp->len = tlvlen - 1;
-	CHKr(rsgt_tlvrdOctetString(fp, &imp->data, tlvlen-1));
+	imp->len = rec->tlvlen - 1;
+	if((imp->data = (uint8_t*)malloc(imp->len)) == NULL) {r=RSGTE_OOM;goto done;}
+	memcpy(imp->data, rec->data+1, imp->len);
+	*imprint = imp;
+	r = 0;
+done:	return r;
+}
+
+static int
+rsgt_tlvDecodeHASH_ALGO(tlvrecord_t *rec, uint16_t *strtidx, uint8_t *hashAlg)
+{
+	int r = 1;
+	tlvrecord_t subrec;
+
+	CHKr(rsgt_tlvDecodeSUBREC(rec, strtidx, &subrec));
+	if(!(subrec.tlvtype == 0x00 && subrec.tlvlen == 1)) {
+		r = RSGTE_FMT;
+		goto done;
+	}
+	*hashAlg = subrec.data[0];
 	r = 0;
 done:	return r;
 }
 static int
-rsgt_tlvrdREC_COUNT(FILE *fp, uint64_t *cnt, size_t *lenInt)
+rsgt_tlvDecodeBLOCK_IV(tlvrecord_t *rec, uint16_t *strtidx, uint8_t **iv)
+{
+	int r = 1;
+	tlvrecord_t subrec;
+
+	CHKr(rsgt_tlvDecodeSUBREC(rec, strtidx, &subrec));
+	if(!(subrec.tlvtype == 0x01)) {
+		r = RSGTE_INVLTYP;
+		goto done;
+	}
+	if((*iv = (uint8_t*)malloc(subrec.tlvlen)) == NULL) {r=RSGTE_OOM;goto done;}
+	memcpy(*iv, subrec.data, subrec.tlvlen);
+	r = 0;
+done:	return r;
+}
+static int
+rsgt_tlvDecodeLAST_HASH(tlvrecord_t *rec, uint16_t *strtidx, imprint_t *imp)
+{
+	int r = 1;
+	tlvrecord_t subrec;
+
+	CHKr(rsgt_tlvDecodeSUBREC(rec, strtidx, &subrec));
+	if(!(subrec.tlvtype == 0x02)) { r = RSGTE_INVLTYP; goto done; }
+	imp->hashID = subrec.data[0];
+	if(subrec.tlvlen != 1 + hashOutputLengthOctets(imp->hashID)) {
+		r = RSGTE_LEN;
+		goto done;
+	}
+	imp->len = subrec.tlvlen - 1;
+	if((imp->data = (uint8_t*)malloc(imp->len)) == NULL) {r=RSGTE_OOM;goto done;}
+	memcpy(imp->data, subrec.data+1, subrec.tlvlen-1);
+	r = 0;
+done:	return r;
+}
+static int
+rsgt_tlvDecodeREC_COUNT(tlvrecord_t *rec, uint16_t *strtidx, uint64_t *cnt)
 {
 	int r = 1;
 	int i;
-	int c;
 	uint64_t val;
-	uint16_t tlvtype, tlvlen;
+	tlvrecord_t subrec;
 
-	if((r = rsgt_tlvrdTL(fp, &tlvtype, &tlvlen)) != 0) goto done;
-	if(!(tlvtype == 0x03 && tlvlen <= 8)) { r = RSGTE_INVLTYP; goto done; }
-	*lenInt = tlvlen;
+	CHKr(rsgt_tlvDecodeSUBREC(rec, strtidx, &subrec));
+	if(!(subrec.tlvtype == 0x03 && subrec.tlvlen <= 8)) { r = RSGTE_INVLTYP; goto done; }
 	val = 0;
-	for(i = 0 ; i < tlvlen ; ++i) {
-		NEXTC;
-		val = (val << 8) + c;
+	for(i = 0 ; i < subrec.tlvlen ; ++i) {
+		val = (val << 8) + subrec.data[i];
 	}
 	*cnt = val;
 	r = 0;
 done:	return r;
 }
 static int
-rsgt_tlvrdSIG(FILE *fp, block_sig_t *bs)
+rsgt_tlvDecodeSIG(tlvrecord_t *rec, uint16_t *strtidx, block_sig_t *bs)
 {
 	int r = 1;
-	uint16_t tlvtype, tlvlen;
+	tlvrecord_t subrec;
 
-	CHKr(rsgt_tlvrdTL(fp, &tlvtype, &tlvlen));
-	if(!(tlvtype == 0x0906)) { r = RSGTE_INVLTYP; goto done; }
-	bs->sig.der.len = tlvlen;
+	CHKr(rsgt_tlvDecodeSUBREC(rec, strtidx, &subrec));
+	if(!(subrec.tlvtype == 0x0906)) { r = RSGTE_INVLTYP; goto done; }
+	bs->sig.der.len = subrec.tlvlen;
 	bs->sigID = SIGID_RFC3161;
-	CHKr(rsgt_tlvrdOctetString(fp, &(bs->sig.der.data), tlvlen));
+	if((bs->sig.der.data = (uint8_t*)malloc(bs->sig.der.len)) == NULL) {r=RSGTE_OOM;goto done;}
+	memcpy(bs->sig.der.data, subrec.data, bs->sig.der.len);
 	r = 0;
 done:	return r;
 }
 
 static int
-rsgt_tlvrdBLOCK_SIG(FILE *fp, block_sig_t **blocksig, uint16_t tlvlen)
+rsgt_tlvDecodeBLOCK_SIG(tlvrecord_t *rec, block_sig_t **blocksig)
 {
 	int r = 1;
-	size_t lenInt = 0;
-	uint16_t sizeRead;
+	uint16_t strtidx = 0;
 	block_sig_t *bs;
 	if((bs = calloc(1, sizeof(block_sig_t))) == NULL) {
 		r = RSGTE_OOM;
 		goto done;
 	}
-	CHKr(rsgt_tlvrdHASH_ALGO(fp, &(bs->hashID)));
-	CHKr(rsgt_tlvrdBLOCK_IV(fp, &(bs->iv)));
-	CHKr(rsgt_tlvrdLAST_HASH(fp, &(bs->lastHash)));
-	CHKr(rsgt_tlvrdREC_COUNT(fp, &(bs->recCount), &lenInt));
-	CHKr(rsgt_tlvrdSIG(fp, bs));
-	sizeRead = 2 + 1 /* hash algo TLV */ +
-	 	   2 + getIVLen(bs) /* iv */ +
-		   2 + 1 + bs->lastHash.len /* last hash */ +
-		   2 + lenInt /* rec-count */ +
-		   4 + bs->sig.der.len /* rfc-3161 */;
-	if(sizeRead != tlvlen) {
+	CHKr(rsgt_tlvDecodeHASH_ALGO(rec, &strtidx, &(bs->hashID)));
+	CHKr(rsgt_tlvDecodeBLOCK_IV(rec, &strtidx, &(bs->iv)));
+	CHKr(rsgt_tlvDecodeLAST_HASH(rec, &strtidx, &(bs->lastHash)));
+	CHKr(rsgt_tlvDecodeREC_COUNT(rec, &strtidx, &(bs->recCount)));
+	CHKr(rsgt_tlvDecodeSIG(rec, &strtidx, bs));
+	if(strtidx != rec->tlvlen) {
 		r = RSGTE_LEN;
 		goto done;
 	}
@@ -372,87 +454,78 @@ rsgt_tlvrdBLOCK_SIG(FILE *fp, block_sig_t **blocksig, uint16_t tlvlen)
 	r = 0;
 done:	return r;
 }
-
 static int
-rsgt_tlvrdIMPRINT(FILE *fp, imprint_t **imprint, uint16_t tlvlen)
+rsgt_tlvRecDecode(tlvrecord_t *rec, void *obj)
 {
 	int r = 1;
-	imprint_t *imp;
-	int c;
-
-	if((imp = calloc(1, sizeof(imprint_t))) == NULL) {
-		r = RSGTE_OOM;
-		goto done;
+	switch(rec->tlvtype) {
+		case 0x0900:
+		case 0x0901:
+			r = rsgt_tlvDecodeIMPRINT(rec, obj);
+			if(r != 0) goto done;
+			break;
+		case 0x0902:
+			r = rsgt_tlvDecodeBLOCK_SIG(rec, obj);
+			if(r != 0) goto done;
+			break;
 	}
-	if((imp->data = calloc(1, sizeof(imprint_t))) == NULL) {
-		r = RSGTE_OOM;
-		goto done;
-	}
-
-	NEXTC;
-	imp->hashID = c;
-	if(tlvlen != 1 + hashOutputLengthOctets(imp->hashID)) {
-		r = RSGTE_LEN;
-		goto done;
-	}
-	imp->len = tlvlen - 1;
-	CHKr(rsgt_tlvrdOctetString(fp, &imp->data, tlvlen-1));
-
-	*imprint = imp;
-	r = 0;
-done:	return r;
+done:
+	return r;
 }
 
 static int
-rsgt_tlvrdRecHash(FILE *fp, imprint_t **imp)
+rsgt_tlvrdRecHash(FILE *fp, FILE *outfp, imprint_t **imp)
 {
 	int r;
-	uint16_t tlvtype, tlvlen;
+	tlvrecord_t rec;
 
-	if((r = rsgt_tlvrdTL(fp, &tlvtype, &tlvlen)) != 0) goto done;
-	if(tlvtype != 0x0900) {
+	if((r = rsgt_tlvrd(fp, &rec, imp)) != 0) goto done;
+	if(rec.tlvtype != 0x0900) {
 		r = RSGTE_MISS_REC_HASH;
+		rsgt_objfree(rec.tlvtype, *imp);
 		goto done;
 	}
-	if((r = rsgt_tlvrdIMPRINT(fp, imp, tlvlen)) != 0) goto done;
+	if(outfp != NULL)
+		if((r = rsgt_tlvwrite(outfp, &rec)) != 0) goto done;
 	r = 0;
 done:	return r;
 }
 
 static int
-rsgt_tlvrdTreeHash(FILE *fp, imprint_t **imp)
+rsgt_tlvrdTreeHash(FILE *fp, FILE *outfp, imprint_t **imp)
 {
 	int r;
-	uint16_t tlvtype, tlvlen;
+	tlvrecord_t rec;
 
-	if((r = rsgt_tlvrdTL(fp, &tlvtype, &tlvlen)) != 0) goto done;
-	if(tlvtype != 0x0901) {
+	if((r = rsgt_tlvrd(fp, &rec, imp)) != 0) goto done;
+	if(rec.tlvtype != 0x0901) {
 		r = RSGTE_MISS_TREE_HASH;
+		rsgt_objfree(rec.tlvtype, *imp);
 		goto done;
 	}
-	if((r = rsgt_tlvrdIMPRINT(fp, imp, tlvlen)) != 0) goto done;
+	if(outfp != NULL)
+		if((r = rsgt_tlvwrite(outfp, &rec)) != 0) goto done;
 	r = 0;
 done:	return r;
 }
 
 /* read BLOCK_SIG during verification phase */
 static int
-rsgt_tlvrdVrfyBlockSig(FILE *fp, block_sig_t **bs)
+rsgt_tlvrdVrfyBlockSig(FILE *fp, block_sig_t **bs, tlvrecord_t *rec)
 {
 	int r;
-	uint16_t tlvtype, tlvlen;
 
-	if((r = rsgt_tlvrdTL(fp, &tlvtype, &tlvlen)) != 0) goto done;
-	if(tlvtype != 0x0902) {
+	if((r = rsgt_tlvrd(fp, rec, bs)) != 0) goto done;
+	if(rec->tlvtype != 0x0902) {
 		r = RSGTE_MISS_BLOCKSIG;
+		rsgt_objfree(rec->tlvtype, *bs);
 		goto done;
 	}
-	if((r = rsgt_tlvrdBLOCK_SIG(fp, bs, tlvlen)) != 0) goto done;
 	r = 0;
 done:	return r;
 }
 
-/**;
+/**
  * Read the next "object" from file. This usually is
  * a single TLV, but may be something larger, for
  * example in case of a block-sig TLV record.
@@ -471,28 +544,14 @@ done:	return r;
  * @returns 0 if ok, something else otherwise
  */
 int
-rsgt_tlvrd(FILE *fp, uint16_t *tlvtype, uint16_t *tlvlen, void *obj)
+rsgt_tlvrd(FILE *fp, tlvrecord_t *rec, void *obj)
 {
-	int r = 1;
-
-	if((r = rsgt_tlvrdTL(fp, tlvtype, tlvlen)) != 0) goto done;
-	switch(*tlvtype) {
-		case 0x0900:
-			r = rsgt_tlvrdIMPRINT(fp, obj, *tlvlen);
-			if(r != 0) goto done;
-			break;
-		case 0x0901:
-			r = rsgt_tlvrdIMPRINT(fp, obj, *tlvlen);
-			if(r != 0) goto done;
-			break;
-		case 0x0902:
-			r = rsgt_tlvrdBLOCK_SIG(fp, obj, *tlvlen);
-			if(r != 0) goto done;
-			break;
-	}
-	r = 0;
+	int r;
+	if((r = rsgt_tlvRecRead(fp, rec)) != 0) goto done;
+	r = rsgt_tlvRecDecode(rec, obj);
 done:	return r;
 }
+
 
 /* return if a blob is all zero */
 static inline int
@@ -585,6 +644,31 @@ rsgt_tlvprint(FILE *fp, uint16_t tlvtype, void *obj, uint8_t verbose)
 	}
 }
 
+/**
+ * Free the provided object.
+ *
+ * @param[in] tlvtype type of tlv object (record)
+ * @param[in] obj the object to be destructed
+ */
+void
+rsgt_objfree(uint16_t tlvtype, void *obj)
+{
+	switch(tlvtype) {
+	case 0x0900:
+	case 0x0901:
+		free(((imprint_t*)obj)->data);
+		break;
+	case 0x0902:
+		free(((block_sig_t*)obj)->iv);
+		free(((block_sig_t*)obj)->lastHash.data);
+		free(((block_sig_t*)obj)->sig.der.data);
+		break;
+	default:fprintf(stderr, "rsgt_objfree: unknown tlv record %4.4x\n",
+		        tlvtype);
+		break;
+	}
+	free(obj);
+}
 
 /**
  * Read block parameters. This detects if the block contains the
@@ -615,9 +699,10 @@ rsgt_getBlockParams(FILE *fp, uint8_t bRewind, block_sig_t **bs,
 {
 	int r;
 	uint64_t nRecs = 0;
-	uint16_t tlvtype, tlvlen;
 	uint8_t bDone = 0;
 	off_t rewindPos = 0;
+	void *obj;
+	tlvrecord_t rec;
 
 	if(bRewind)
 		rewindPos = ftello(fp);
@@ -626,25 +711,24 @@ rsgt_getBlockParams(FILE *fp, uint8_t bRewind, block_sig_t **bs,
 	*bs = NULL;
 
 	while(!bDone) { /* we will err out on EOF */
-		if((r = rsgt_tlvrdTL(fp, &tlvtype, &tlvlen)) != 0) goto done;
-		switch(tlvtype) {
+		if((r = rsgt_tlvrd(fp, &rec, &obj)) != 0) goto done;
+		switch(rec.tlvtype) {
 		case 0x0900:
 			++nRecs;
 			*bHasRecHashes = 1;
-			rsgt_tlvrdSkipVal(fp, tlvlen);
 			break;
 		case 0x0901:
 			*bHasIntermedHashes = 1;
-			rsgt_tlvrdSkipVal(fp, tlvlen);
 			break;
 		case 0x0902:
-			r = rsgt_tlvrdBLOCK_SIG(fp, bs, tlvlen);
-			if(r != 0) goto done;
+			*bs = (block_sig_t*) obj;
 			bDone = 1;
 			break;
-		default:fprintf(fp, "unknown tlv record %4.4x\n", tlvtype);
+		default:fprintf(fp, "unknown tlv record %4.4x\n", rec.tlvtype);
 			break;
 		}
+		if(!bDone)
+			rsgt_objfree(rec.tlvtype, obj);
 	}
 
 	if(*bHasRecHashes && (nRecs != (*bs)->recCount)) {
@@ -712,12 +796,13 @@ rsgt_vrfyBlkInit(gtfile gf, block_sig_t *bs, uint8_t bHasRecHashes, uint8_t bHas
 }
 
 static int
-rsgt_vrfy_chkRecHash(gtfile gf, FILE *sigfp, GTDataHash *recHash, gterrctx_t *ectx)
+rsgt_vrfy_chkRecHash(gtfile gf, FILE *sigfp, FILE *nsigfp, 
+		     GTDataHash *recHash, gterrctx_t *ectx)
 {
 	int r = 0;
-	imprint_t *imp;
+	imprint_t *imp = NULL;
 
-	if((r = rsgt_tlvrdRecHash(sigfp, &imp)) != 0)
+	if((r = rsgt_tlvrdRecHash(sigfp, nsigfp, &imp)) != 0)
 		reportError(r, ectx);
 		goto done;
 	if(imp->hashID != hashIdentifier(gf->hashAlg)) {
@@ -736,16 +821,19 @@ rsgt_vrfy_chkRecHash(gtfile gf, FILE *sigfp, GTDataHash *recHash, gterrctx_t *ec
 	}
 	r = 0;
 done:
+	if(imp != NULL)
+		rsgt_objfree(0x0900, imp);
 	return r;
 }
 
 static int
-rsgt_vrfy_chkTreeHash(gtfile gf, FILE *sigfp, GTDataHash *hash, gterrctx_t *ectx)
+rsgt_vrfy_chkTreeHash(gtfile gf, FILE *sigfp, FILE *nsigfp,
+                      GTDataHash *hash, gterrctx_t *ectx)
 {
 	int r = 0;
-	imprint_t *imp;
+	imprint_t *imp = NULL;
 
-	if((r = rsgt_tlvrdTreeHash(sigfp, &imp)) != 0) {
+	if((r = rsgt_tlvrdTreeHash(sigfp, nsigfp, &imp)) != 0) {
 		reportError(r, ectx);
 		goto done;
 	}
@@ -765,22 +853,24 @@ rsgt_vrfy_chkTreeHash(gtfile gf, FILE *sigfp, GTDataHash *hash, gterrctx_t *ectx
 	}
 	r = 0;
 done:
+	if(imp != NULL)
+		rsgt_objfree(0x0901, imp);
 	return r;
 }
 
 int
-rsgt_vrfy_nextRec(block_sig_t *bs, gtfile gf, FILE *sigfp, unsigned char *rec,
-	size_t len, gterrctx_t *ectx)
+rsgt_vrfy_nextRec(block_sig_t *bs, gtfile gf, FILE *sigfp, FILE *nsigfp,
+	          unsigned char *rec, size_t len, gterrctx_t *ectx)
 {
 	int r = 0;
 	GTDataHash *x; /* current hash */
-	GTDataHash *m, *recHash, *t;
+	GTDataHash *m, *recHash = NULL, *t;
 	uint8_t j;
 
 	hash_m(gf, &m);
 	hash_r(gf, &recHash, rec, len);
 	if(gf->bKeepRecordHashes) {
-		r = rsgt_vrfy_chkRecHash(gf, sigfp, recHash, ectx);
+		r = rsgt_vrfy_chkRecHash(gf, sigfp, nsigfp, recHash, ectx);
 		if(r != 0) goto done;
 	}
 	hash_node(gf, &x, m, recHash, 1); /* hash leaf */
@@ -788,7 +878,7 @@ rsgt_vrfy_nextRec(block_sig_t *bs, gtfile gf, FILE *sigfp, unsigned char *rec,
 		ectx->treeLevel = 0;
 		ectx->lefthash = m;
 		ectx->righthash = recHash;
-		r = rsgt_vrfy_chkTreeHash(gf, sigfp, x, ectx);
+		r = rsgt_vrfy_chkTreeHash(gf, sigfp, nsigfp, x, ectx);
 		if(r != 0) goto done;
 	}
 	/* add x to the forest as new leaf, update roots list */
@@ -807,7 +897,7 @@ rsgt_vrfy_nextRec(block_sig_t *bs, gtfile gf, FILE *sigfp, unsigned char *rec,
 			gf->roots_valid[j] = 0;
 			if(gf->bKeepTreeHashes) {
 				ectx->lefthash = gf->roots_hash[j];
-				r = rsgt_vrfy_chkTreeHash(gf, sigfp, t, ectx);
+				r = rsgt_vrfy_chkTreeHash(gf, sigfp, nsigfp, t, ectx);
 				if(r != 0) goto done; /* mem leak ok, we terminate! */
 			}
 			GTDataHash_free(gf->roots_hash[j]);
@@ -827,8 +917,9 @@ rsgt_vrfy_nextRec(block_sig_t *bs, gtfile gf, FILE *sigfp, unsigned char *rec,
 	/* cleanup */
 	/* note: x is freed later as part of roots cleanup */
 	GTDataHash_free(m);
-	GTDataHash_free(recHash);
 done:
+	if(recHash != NULL)
+		GTDataHash_free(recHash);
 	return r;
 }
 
@@ -868,22 +959,94 @@ done:
 	return r;
 }
 
+
+/* helper for rsgt_extendSig: */
+#define COPY_SUBREC_TO_NEWREC \
+	memcpy(newrec.data+iWr, subrec.hdr, subrec.lenHdr); \
+	iWr += subrec.lenHdr; \
+	memcpy(newrec.data+iWr, subrec.data, subrec.tlvlen); \
+	iWr += subrec.tlvlen;
+static inline int
+rsgt_extendSig(GTTimestamp *timestamp, tlvrecord_t *rec, gterrctx_t *ectx)
+{
+	GTTimestamp *out_timestamp;
+	uint8_t *der;
+	size_t lenDer;
+	int r, rgt;
+	tlvrecord_t newrec, subrec;
+	uint16_t iRd, iWr;
+
+	rgt = GTHTTP_extendTimestamp(timestamp, rsgt_extend_puburl, &out_timestamp);
+	if(rgt != GT_OK) {
+		ectx->gtstate = rgt;
+		r = RSGTE_TS_EXTEND;
+		goto done;
+	}
+	r = GTTimestamp_getDEREncoded(out_timestamp, &der, &lenDer);
+	if(r != GT_OK) {
+		r = RSGTE_TS_DERENCODE;
+		ectx->gtstate = rgt;
+		goto done;
+	}
+	/* update block_sig tlv record with new extended timestamp */
+	/* we now need to copy all tlv records before the actual der
+	 * encoded part.
+	 */
+	iRd = iWr = 0;
+	// TODO; check tlvtypes at comment places below!
+	if ((r = rsgt_tlvDecodeSUBREC(rec, &iRd, &subrec)) != 0) goto done;
+	/* HASH_ALGO */
+	COPY_SUBREC_TO_NEWREC
+	if ((r = rsgt_tlvDecodeSUBREC(rec, &iRd, &subrec)) != 0) goto done;
+	/* BLOCK_IV */
+	COPY_SUBREC_TO_NEWREC
+	if ((r = rsgt_tlvDecodeSUBREC(rec, &iRd, &subrec)) != 0) goto done;
+	/* LAST_HASH */
+	COPY_SUBREC_TO_NEWREC
+	if ((r = rsgt_tlvDecodeSUBREC(rec, &iRd, &subrec)) != 0) goto done;
+	/* REC_COUNT */
+	COPY_SUBREC_TO_NEWREC
+	if ((r = rsgt_tlvDecodeSUBREC(rec, &iRd, &subrec)) != 0) goto done;
+	/* actual sig! */
+	newrec.data[iWr++] = 0x09 | RSGT_FLAG_TLV16;
+	newrec.data[iWr++] = 0x06;
+	newrec.data[iWr++] = (lenDer >> 8) & 0xff;
+	newrec.data[iWr++] = lenDer & 0xff;
+	/* now we know how large the new main record is */
+	newrec.tlvlen = (uint16_t) iWr+lenDer;
+	newrec.tlvtype = rec->tlvtype;
+	newrec.hdr[0] = rec->hdr[0];
+	newrec.hdr[1] = rec->hdr[1];
+	newrec.hdr[2] = (newrec.tlvlen >> 8) & 0xff;
+	newrec.hdr[3] = newrec.tlvlen & 0xff;
+	newrec.lenHdr = 4;
+	memcpy(newrec.data+iWr, der, lenDer);
+	/* and finally copy back new record to existing one */
+	memcpy(rec, &newrec, sizeof(newrec)-sizeof(newrec.data)+newrec.tlvlen+4);
+	r = 0;
+done:
+	return r;
+}
+
+
 /* verify the root hash. This also means we need to compute the
  * Merkle tree root for the current block.
  */
 int
-verifyBLOCK_SIG(block_sig_t *bs, gtfile gf, FILE *sigfp, gterrctx_t *ectx)
+verifyBLOCK_SIG(block_sig_t *bs, gtfile gf, FILE *sigfp, FILE *nsigfp,
+                uint8_t bExtend, gterrctx_t *ectx)
 {
 	int r;
 	int gtstate;
-	block_sig_t *file_bs;
+	block_sig_t *file_bs = NULL;
 	GTTimestamp *timestamp = NULL;
 	GTVerificationInfo *vrfyInf;
 	GTDataHash *root = NULL;
+	tlvrecord_t rec;
 	
 	if((r = verifySigblkFinish(gf, &root)) != 0)
 		goto done;
-	if((r = rsgt_tlvrdVrfyBlockSig(sigfp, &file_bs)) != 0)
+	if((r = rsgt_tlvrdVrfyBlockSig(sigfp, &file_bs, &rec)) != 0)
 		goto done;
 	if(ectx->recNum != bs->recCount) {
 		r = RSGTE_INVLD_RECCNT;
@@ -907,10 +1070,17 @@ verifyBLOCK_SIG(block_sig_t *bs, gtfile gf, FILE *sigfp, gterrctx_t *ectx)
 		goto done;
 	}
 
-	r = 0;
 	if(rsgt_read_showVerified)
-		reportVerifySuccess(ectx);
+		reportVerifySuccess(ectx, vrfyInf);
+	if(bExtend)
+		if((r = rsgt_extendSig(timestamp, &rec, ectx)) != 0) goto done;
+		
+	if(nsigfp != NULL)
+		if((r = rsgt_tlvwrite(nsigfp, &rec)) != 0) goto done;
+	r = 0;
 done:
+	if(file_bs != NULL)
+		rsgt_objfree(0x0902, file_bs);
 	if(r != 0)
 		reportError(r, ectx);
 	if(timestamp != NULL)
