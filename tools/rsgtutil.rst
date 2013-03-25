@@ -7,7 +7,7 @@ Manage (GuardTime) Signed Log Files
 -----------------------------------
 
 :Author: Rainer Gerhards <rgerhards@adiscon.com>
-:Date: 2013-03-22
+:Date: 2013-03-25
 :Manual section: 1
 
 SYNOPSIS
@@ -61,6 +61,11 @@ OPTIONS
   Select verbose mode. Most importantly, hashes and signatures are printed
   in full length (can be **very** lengthy) rather than the usual abbreviation.
 
+-e, --extend
+  Select extend mode. This extends the RFC3161 signatures. Note that this
+  mode also implies a full verification. If there are verify errors, extending
+  will also fail.
+
 -P <URL>, --publications-server <URL>
   Sets the publications server. If not set but required by the operation a
   default server is used. The default server is not necessarily optimal
@@ -102,6 +107,28 @@ not present, only the block signature itself is verified.
 
 By default, only errors are printed. To also print successful verifications, use the
 **--show-verified** option.
+
+
+extend
+------
+This extends the RFC3161 signatures. This includes a full verification
+of the file. If there are verification errors, extending will also fail.
+Note that a signature can only be extended when the required hash has been
+published. Currently, these hashes are created at the 15th of each month at
+0:00hrs UTC. It takes another few days to get them finally published. As such,
+it can be assumed that extending is only possible after this happend (which
+means it may take slightly above a month).
+
+To prevent data corruption, a copy of the signature file is created during
+extension. So there must be enough disk space available for both files,
+otherwise the operation will fail. If the log file is named logfile, the
+signature file is logfile.gtsig and the temporary work file is named
+logfile.gtsig.new. When extending finished successfully, the original
+signature file (logfile.gtsig in our example) is renamed with the .old
+postfix (logfile.gtsig.old) and the temporary file written under the
+original name. The .old file can be deleted. It is just kept as a 
+precaution to prevent signature loss. Note that any already existing
+.old or .new files are overwritten by these operations.
 
 
 detect-file-type
