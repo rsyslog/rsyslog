@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
+#include <unistd.h>
 #include <gt_base.h>
 #include <gt_http.h>
 #include <getopt.h>
@@ -197,6 +198,7 @@ verify(char *name)
 	uint8_t bInBlock;
 	int r = 0;
 	char sigfname[4096];
+	char oldsigfname[4096];
 	char nsigfname[4096];
 	gterrctx_t ectx;
 	
@@ -222,6 +224,9 @@ verify(char *name)
 				perror(nsigfname);
 				goto err;
 			}
+			snprintf(oldsigfname, sizeof(oldsigfname),
+			         "%s.gtsig.old", name);
+			oldsigfname[sizeof(oldsigfname)-1] = '\0';
 		}
 	}
 
@@ -231,18 +236,18 @@ verify(char *name)
 	ectx.fp = stderr;
 	ectx.filename = strdup(sigfname);
 
-	if((r = rsgt_chkFileHdr(sigfp, "LOGSIG10")) != 0) goto err;
+	if((r = rsgt_chkFileHdr(sigfp, "LOGSIG10")) != 0) goto done;
 	if(mode == MD_EXTEND) {
 		if(fwrite("LOGSIG10", 8, 1, nsigfp) != 1) {
 			perror(nsigfname);
 			r = RSGTE_IO;
-			goto err;
+			goto done;
 		}
 	}
 	gf = rsgt_vrfyConstruct_gf();
 	if(gf == NULL) {
 		fprintf(stderr, "error initializing signature file structure\n");
-		goto err;
+		goto done;
 	}
 
 	bInBlock = 0;
@@ -255,36 +260,80 @@ verify(char *name)
 				rsgt_objfree(0x0902, bs);
 			if((r = rsgt_getBlockParams(sigfp, 1, &bs, &bHasRecHashes,
 							&bHasIntermedHashes)) != 0)
-				goto err;
+				goto done;
 			rsgt_vrfyBlkInit(gf, bs, bHasRecHashes, bHasIntermedHashes);
 			ectx.recNum = 0;
 			++ectx.blkNum;
 		}
 		++ectx.recNum, ++ectx.recNumInFile;
 		if((r = doVerifyRec(logfp, sigfp, nsigfp, bs, gf, &ectx, bInBlock)) != 0)
-			goto err;
+			goto done;
 		if(ectx.recNum == bs->recCount) {
-			verifyBLOCK_SIG(bs, gf, sigfp, nsigfp, 
-					(mode == MD_EXTEND) ? 1 : 0, &ectx);
+			if((r = verifyBLOCK_SIG(bs, gf, sigfp, nsigfp, 
+			    (mode == MD_EXTEND) ? 1 : 0, &ectx)) != 0)
+				goto done;
 			bInBlock = 0;
 		} else	bInBlock = 1;
 	}
 
-	fclose(logfp);
-	fclose(sigfp);
-	fclose(nsigfp);
+done:
+	if(r != RSGTE_EOF)
+		goto err;
+
+	fclose(logfp); logfp = NULL;
+	fclose(sigfp); sigfp = NULL;
+	fclose(nsigfp); nsigfp = NULL;
+
+	/* everything went fine, so we rename files if we updated them */
+	if(mode == MD_EXTEND) {
+		if(unlink(oldsigfname) != 0) {
+			if(errno != ENOENT) {
+				perror("unlink oldsig");
+				r = RSGTE_IO;
+				goto err;
+			}
+		}
+		if(link(sigfname, oldsigfname) != 0) {
+			perror("link oldsig");
+			r = RSGTE_IO;
+			goto err;
+		}
+		if(unlink(sigfname) != 0) {
+			perror("unlink cursig");
+			r = RSGTE_IO;
+			goto err;
+		}
+		if(link(nsigfname, sigfname) != 0) {
+			perror("link  newsig");
+			fprintf(stderr, "WARNING: current sig file has been "
+			        "renamed to %s - you need to manually recover "
+				"it.\n", oldsigfname);
+			r = RSGTE_IO;
+			goto err;
+		}
+		if(unlink(nsigfname) != 0) {
+			perror("unlink newsig");
+			fprintf(stderr, "WARNING: current sig file has been "
+			        "renamed to %s - you need to manually recover "
+				"it.\n", oldsigfname);
+			r = RSGTE_IO;
+			goto err;
+		}
+	}
 	rsgtExit();
 	rsgt_errctxExit(&ectx);
 	return;
+
 err:
+	fprintf(stderr, "error %d processing file %s\n", r, name);
 	if(logfp != NULL)
 		fclose(logfp);
 	if(sigfp != NULL)
 		fclose(sigfp);
-	if(nsigfp != NULL)
+	if(nsigfp != NULL) {
 		fclose(nsigfp);
-	if(r != RSGTE_EOF)
-		fprintf(stderr, "error %d processing file %s\n", r, name);
+		unlink(nsigfname);
+	}
 	rsgtExit();
 	rsgt_errctxExit(&ectx);
 }

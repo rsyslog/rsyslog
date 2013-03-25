@@ -277,6 +277,10 @@ tlvWriteBlockSig(gtfile gf, uchar *der, uint16_t lenDer)
 	tlvbufAddOctetString(gf, der, lenDer);
 }
 
+/* support for old platforms - graceful degrade */
+#ifndef O_CLOEXEC
+#define O_CLOEXEC 0
+#endif
 /* read rsyslog log state file; if we cannot access it or the
  * contents looks invalid, we flag it as non-present (and thus
  * begin a new hash chain).

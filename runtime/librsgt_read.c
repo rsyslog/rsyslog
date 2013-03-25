@@ -100,6 +100,8 @@ rsgt_errctxInit(gterrctx_t *ectx)
 	ectx->verbose = 0;
 	ectx->errRec = NULL;
 	ectx->frstRecInBlk = NULL;
+	ectx->fileHash = NULL;
+	ectx->lefthash = ectx->righthash = ectx->computedHash = NULL;
 }
 void
 rsgt_errctxExit(gterrctx_t *ectx)
@@ -161,6 +163,16 @@ reportError(int errcode, gterrctx_t *ectx)
 		   errcode == RSGTE_TS_DERDECODE) {
 			fprintf(ectx->fp, "\tPublication Server.: %s\n", rsgt_read_puburl);
 			fprintf(ectx->fp, "\tGT Verify Timestamp: [%u]%s\n",
+				ectx->gtstate, GTHTTP_getErrorString(ectx->gtstate));
+		}
+		if(errcode == RSGTE_TS_EXTEND ||
+		   errcode == RSGTE_TS_DERDECODE) {
+			fprintf(ectx->fp, "\tExtending Server...: %s\n", rsgt_extend_puburl);
+			fprintf(ectx->fp, "\tGT Extend Timestamp: [%u]%s\n",
+				ectx->gtstate, GTHTTP_getErrorString(ectx->gtstate));
+		}
+		if(errcode == RSGTE_TS_DERENCODE) {
+			fprintf(ectx->fp, "\tAPI return state...: [%u]%s\n",
 				ectx->gtstate, GTHTTP_getErrorString(ectx->gtstate));
 		}
 	}
@@ -947,37 +959,70 @@ done:
 	return r;
 }
 
+
+/* helper for rsgt_extendSig: */
+#define COPY_SUBREC_TO_NEWREC \
+	memcpy(newrec.data+iWr, subrec.hdr, subrec.lenHdr); \
+	iWr += subrec.lenHdr; \
+	memcpy(newrec.data+iWr, subrec.data, subrec.tlvlen); \
+	iWr += subrec.tlvlen;
 static inline int
-rsgt_extendSig(GTTimestamp *timestamp, tlvrecord_t *rec)
+rsgt_extendSig(GTTimestamp *timestamp, tlvrecord_t *rec, gterrctx_t *ectx)
 {
 	GTTimestamp *out_timestamp;
 	uint8_t *der;
 	size_t lenDer;
 	int r, rgt;
+	tlvrecord_t newrec, subrec;
+	uint16_t iRd, iWr;
 
-printf("calling extend... ");fflush(stdout);
 	rgt = GTHTTP_extendTimestamp(timestamp, rsgt_extend_puburl, &out_timestamp);
-printf("done: %d\n", rgt);
 	if(rgt != GT_OK) {
+		ectx->gtstate = rgt;
 		r = RSGTE_TS_EXTEND;
-		// TODO: use ectx and report via the usual method!
-		fprintf(stderr, "GTHTTP_extendTimestamp() failed: %d (%s)\n",
-				rgt, GTHTTP_getErrorString(rgt));
 		goto done;
 	}
 	r = GTTimestamp_getDEREncoded(out_timestamp, &der, &lenDer);
 	if(r != GT_OK) {
-		// TODO: use rsyslog error reporting!
-		fprintf(stderr, "GTTimestamp_getDEREncoded() failed: %d (%s)\n",
-				r, GT_getErrorString(r));
+		r = RSGTE_TS_DERENCODE;
+		ectx->gtstate = rgt;
 		goto done;
 	}
 	/* update block_sig tlv record with new extended timestamp */
-	rec->hdr[2] = (lenDer >> 8) & 0xff;
-	rec->hdr[3] = lenDer & 0xff;
-	rec->tlvlen = (uint16_t) lenDer;
-	free(rec->data);
-	memcpy(rec->data, der, lenDer);
+	/* we now need to copy all tlv records before the actual der
+	 * encoded part.
+	 */
+	iRd = iWr = 0;
+	// TODO; check tlvtypes at comment places below!
+	if ((r = rsgt_tlvDecodeSUBREC(rec, &iRd, &subrec)) != 0) goto done;
+	/* HASH_ALGO */
+	COPY_SUBREC_TO_NEWREC
+	if ((r = rsgt_tlvDecodeSUBREC(rec, &iRd, &subrec)) != 0) goto done;
+	/* BLOCK_IV */
+	COPY_SUBREC_TO_NEWREC
+	if ((r = rsgt_tlvDecodeSUBREC(rec, &iRd, &subrec)) != 0) goto done;
+	/* LAST_HASH */
+	COPY_SUBREC_TO_NEWREC
+	if ((r = rsgt_tlvDecodeSUBREC(rec, &iRd, &subrec)) != 0) goto done;
+	/* REC_COUNT */
+	COPY_SUBREC_TO_NEWREC
+	if ((r = rsgt_tlvDecodeSUBREC(rec, &iRd, &subrec)) != 0) goto done;
+	/* actual sig! */
+	newrec.data[iWr++] = 0x09 | RSGT_FLAG_TLV16;
+	newrec.data[iWr++] = 0x06;
+	newrec.data[iWr++] = (lenDer >> 8) & 0xff;
+	newrec.data[iWr++] = lenDer & 0xff;
+	/* now we know how large the new main record is */
+	newrec.tlvlen = (uint16_t) iWr+lenDer;
+	newrec.tlvtype = rec->tlvtype;
+	newrec.hdr[0] = rec->hdr[0];
+	newrec.hdr[1] = rec->hdr[1];
+	newrec.hdr[2] = (newrec.tlvlen >> 8) & 0xff;
+	newrec.hdr[3] = newrec.tlvlen & 0xff;
+	newrec.lenHdr = 4;
+	memcpy(newrec.data+iWr, der, lenDer);
+	/* and finally copy back new record to existing one */
+	memcpy(rec, &newrec, sizeof(newrec)-sizeof(newrec.data)+newrec.tlvlen+4);
 	r = 0;
 done:
 	return r;
@@ -1028,7 +1073,7 @@ verifyBLOCK_SIG(block_sig_t *bs, gtfile gf, FILE *sigfp, FILE *nsigfp,
 	if(rsgt_read_showVerified)
 		reportVerifySuccess(ectx, vrfyInf);
 	if(bExtend)
-		if((r = rsgt_extendSig(timestamp, &rec)) != 0) goto done;
+		if((r = rsgt_extendSig(timestamp, &rec, ectx)) != 0) goto done;
 		
 	if(nsigfp != NULL)
 		if((r = rsgt_tlvwrite(nsigfp, &rec)) != 0) goto done;

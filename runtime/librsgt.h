@@ -147,6 +147,9 @@ struct rsgtstatefile {
 	/* after that, the hash value is contained within the file */
 };
 
+/* Flags and record types for TLV handling */
+#define RSGT_FLAG_TLV16 0x20
+
 /* error states */
 #define RSGTE_IO 1 	/* any kind of io error */
 #define RSGTE_FMT 2	/* data fromat error */
@@ -167,6 +170,7 @@ struct rsgtstatefile {
 #define RSGTE_MISS_BLOCKSIG 16 /* block signature record missing when expected */
 #define RSGTE_INVLD_TIMESTAMP 17 /* RFC3161 timestamp is invalid */
 #define RSGTE_TS_DERDECODE 18 /* error DER-Decoding a timestamp */
+#define RSGTE_TS_DERENCODE 19 /* error DER-Encoding a timestamp */
 
 /* the following function maps RSGTE_* state to a string - must be updated
  * whenever a new state is added.
@@ -215,6 +219,8 @@ RSGTE2String(int err)
 		return "RFC3161 timestamp invalid";
 	case RSGTE_TS_DERDECODE:
 		return "error DER-decoding RFC3161 timestamp";
+	case RSGTE_TS_DERENCODE:
+		return "error DER-encoding RFC3161 timestamp";
 	default:
 		return "unknown error";
 	}
