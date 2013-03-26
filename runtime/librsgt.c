@@ -87,7 +87,7 @@ rsgtsetErrFunc(gtctx ctx, void (*func)(void*, uchar *), void *usrptr)
 	ctx->errFunc = func;
 }
 
-static imprint_t *
+imprint_t *
 rsgtImprintFromGTDataHash(GTDataHash *hash)
 {
 	imprint_t *imp;
@@ -104,7 +104,7 @@ rsgtImprintFromGTDataHash(GTDataHash *hash)
 done:	return imp;
 }
 
-static void
+void
 rsgtimprintDel(imprint_t *imp)
 {
 	if(imp != NULL) {

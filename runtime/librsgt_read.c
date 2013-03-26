@@ -95,6 +95,7 @@ rsgt_errctxInit(gterrctx_t *ectx)
 	ectx->fp = NULL;
 	ectx->filename = NULL;
 	ectx->recNum = 0;
+	ectx->gtstate = 0;
 	ectx->recNumInFile = 0;
 	ectx->blkNum = 0;
 	ectx->verbose = 0;
@@ -864,7 +865,7 @@ rsgt_vrfy_nextRec(block_sig_t *bs, gtfile gf, FILE *sigfp, FILE *nsigfp,
 {
 	int r = 0;
 	GTDataHash *x; /* current hash */
-	GTDataHash *m, *recHash = NULL, *t;
+	GTDataHash *m, *recHash = NULL, *t, *t_del;
 	uint8_t j;
 
 	hash_m(gf, &m);
@@ -881,6 +882,8 @@ rsgt_vrfy_nextRec(block_sig_t *bs, gtfile gf, FILE *sigfp, FILE *nsigfp,
 		r = rsgt_vrfy_chkTreeHash(gf, sigfp, nsigfp, x, ectx);
 		if(r != 0) goto done;
 	}
+	rsgtimprintDel(gf->x_prev);
+	gf->x_prev = rsgtImprintFromGTDataHash(x);
 	/* add x to the forest as new leaf, update roots list */
 	t = x;
 	for(j = 0 ; j < gf->nRoots ; ++j) {
@@ -893,7 +896,8 @@ rsgt_vrfy_nextRec(block_sig_t *bs, gtfile gf, FILE *sigfp, FILE *nsigfp,
 			/* hash interim node */
 			ectx->treeLevel = j+1;
 			ectx->righthash = t;
-			hash_node(gf, &t, gf->roots_hash[j], t, j+2);
+			t_del = t;
+			hash_node(gf, &t, gf->roots_hash[j], t_del, j+2);
 			gf->roots_valid[j] = 0;
 			if(gf->bKeepTreeHashes) {
 				ectx->lefthash = gf->roots_hash[j];
@@ -901,6 +905,7 @@ rsgt_vrfy_nextRec(block_sig_t *bs, gtfile gf, FILE *sigfp, FILE *nsigfp,
 				if(r != 0) goto done; /* mem leak ok, we terminate! */
 			}
 			GTDataHash_free(gf->roots_hash[j]);
+			GTDataHash_free(t_del);
 		}
 	}
 	if(t != NULL) {
@@ -911,11 +916,9 @@ rsgt_vrfy_nextRec(block_sig_t *bs, gtfile gf, FILE *sigfp, FILE *nsigfp,
 		assert(gf->nRoots < MAX_ROOTS);
 		t = NULL;
 	}
-	gf->x_prev = x; /* single var may be sufficient */
 	++gf->nRecords;
 
 	/* cleanup */
-	/* note: x is freed later as part of roots cleanup */
 	GTDataHash_free(m);
 done:
 	if(recHash != NULL)

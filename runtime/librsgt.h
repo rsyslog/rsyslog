@@ -358,6 +358,8 @@ void rsgtCtxDel(gtctx ctx);
 void sigblkInit(gtfile gf);
 int sigblkAddRecord(gtfile gf, const unsigned char *rec, const size_t len);
 int sigblkFinish(gtfile gf);
+imprint_t * rsgtImprintFromGTDataHash(GTDataHash *hash);
+void rsgtimprintDel(imprint_t *imp);
 /* reader functions */
 int rsgt_tlvrdHeader(FILE *fp, unsigned char *hdr);
 int rsgt_tlvrd(FILE *fp, tlvrecord_t *rec, void *obj);
