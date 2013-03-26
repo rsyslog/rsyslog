@@ -1,0 +1,100 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Language" content="en">
+<title>GuardTime Log Signature Provider (gt)</title>
+</head>
+
+<body>
+<a href="rsyslog_conf_modules.html">back to rsyslog module overview</a>
+
+<h1>GuardTime Log Signature Provider (gt)</h1>
+<p><b>Signature Provider Name:&nbsp;&nbsp;&nbsp; gt</b></p>
+<p><b>Author: </b>Rainer Gerhards &lt;rgerhards@adiscon.com&gt;</p>
+<p><b>Multi-Ruleset Support: </b>since 7.3.9
+<p><b>Description</b>:</p>
+<p>Provides the ability to sign syslog messages via the
+GuardTime signature services.
+</p>
+
+<p><b>Configuration Parameters</b>:</p>
+<p>Signature providers are loaded by omfile, when the
+provider is selected in its "sig.providerName" parameter.
+Parameters for the provider are given in the omfile action instance
+line.
+<p>This provider creates a signature file with the same base name but
+the extension ".gtsig" for each log file (both for fixed-name files
+as well as dynafiles). Both files together form a set. So you need to
+archive both in order to prove integrity.
+<ul>
+<li><b>sig.hashFunction</b> &lt;Hash Algorithm&gt;<br>
+The following hash algorithms are currently supported:
+  <ul>
+	<li>SHA1
+	<li>RIPEMD-160
+	<li>SHA2-224
+	<li>SHA2-256
+	<li>SHA2-384
+	<li>SHA2-512
+  </ul>
+</li>
+<li><b>sig.timestampService</b> &lt;timestamper URL&gt;<br>
+This provides the URL of the timestamper service. If not selected,
+a default server is selected. This may not necessarily be a good
+one for your region.
+</li>
+<li><b>sig.block.sizeLimit</b> &lt;nbr-records&gt;<br>
+The maximum number of records inside a single signature block. By
+default, there is no size limit, so the signature is only written
+on file closure. Note that a signature request typically takes between
+one and two seconds. So signing to frequently is probably not a good
+idea.
+</li>
+<li><b>sig.keepRecordHashes</b> &lt;on/<b>off</b>&gt;<br>
+Controls if record hashes are written to the .gtsig file. This
+enhances the ability to spot the location of a signature breach,
+but costs considerable disk space (65 bytes for each log record
+for SHA2-512 hashes, for example).
+</li>
+<li><b>sig.keepTreeHashes</b> &lt;on/<b>off</b>&gt;<br>
+Controls if tree (intermediate) hashes are written to the .gtsig file. This
+enhances the ability to spot the location of a signature breach,
+but costs considerable disk space (a bit mire than the amount
+sig.keepRecordHashes requries). Note that both Tree and Record 
+hashes can be kept inside the signature file.
+</li>
+</ul>
+<b>Caveats/Known Bugs:</b>
+<ul>
+<li>currently none known
+</li>
+</ul>
+<p><b>Samples:</b></p>
+<p>This writes a log file with it's associated signature file. Default
+parameters are used.
+</p>
+<textarea rows="3" cols="60">
+action(type="omfile" file="/var/log/somelog"
+	sig.provider="gt")
+</textarea>
+
+<p>In the next sample, we use the more secure SHA2-512 hash function,
+sign every 10,000 records and Tree and Record hashes are kept.
+<textarea rows="3" cols="60">
+action(type="omfile" file="/var/log/somelog"
+	sig.provider="gt" sig.hashfunction="SHA2-512"
+	sig.block.sizelimit="10000"
+	sig.keepTreeHashes="on" sig.keepRecordHashes="on")
+</textarea>
+
+
+<p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>]
+[<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the
+<a href="http://www.rsyslog.com/">rsyslog</a>
+project.<br>
+Copyright &copy; 2013 by
+<a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>.
+Released under the GNU GPL version 3 or higher.</font></p>
+</body></html>

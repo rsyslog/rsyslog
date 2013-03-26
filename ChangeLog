@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------
-Version 7.3.9  [devel] 2013-03-??
+Version 7.3.9  [devel] 2013-03-27
+- support for signing logs added
 - imudp: now supports user-selectable inputname
 - omlibdbi: now supports transaction interface
   if recent enough lbdbi is present
