@@ -39,12 +39,13 @@ struct gtctx_s {
 	uint8_t bKeepTreeHashes;
 	uint64_t blockSizeLimit;
 	char *timestamper;
+	void (*errFunc)(void *, unsigned char*);
+	void *usrptr; /* for error function */
 };
 typedef struct gtctx_s *gtctx;
 
 /* this describes a file, as far as librsgt is concerned */
 struct gtfile_s {
-	gtctx ctx;
 	/* the following data items are mirrored from gtctx to
 	 * increase cache hit ratio (they are frequently accesed).
 	 */
@@ -52,6 +53,7 @@ struct gtfile_s {
 	uint8_t bKeepRecordHashes;
 	uint8_t bKeepTreeHashes;
 	/* end mirrored properties */
+	uint8_t disabled; /* permits to disable this file --> set to 1 */
 	uint64_t blockSizeLimit;
 	uint8_t *IV; /* initial value for blinding masks */
 	GTDataHash *x_prev; /* last leaf hash (maybe of previous block) --> preserve on term */
@@ -71,6 +73,7 @@ struct gtfile_s {
 	/* data members for the associated TLV file */
 	char	tlvBuf[4096];
 	int	tlvIdx; /* current index into tlvBuf */
+	gtctx ctx;
 };
 typedef struct gtfile_s *gtfile;
 typedef struct gterrctx_s gterrctx_t;
@@ -171,6 +174,7 @@ struct rsgtstatefile {
 #define RSGTE_INVLD_TIMESTAMP 17 /* RFC3161 timestamp is invalid */
 #define RSGTE_TS_DERDECODE 18 /* error DER-Decoding a timestamp */
 #define RSGTE_TS_DERENCODE 19 /* error DER-Encoding a timestamp */
+#define RSGTE_HASH_CREATE 20 /* error creating a hash */
 
 /* the following function maps RSGTE_* state to a string - must be updated
  * whenever a new state is added.
@@ -221,6 +225,8 @@ RSGTE2String(int err)
 		return "error DER-decoding RFC3161 timestamp";
 	case RSGTE_TS_DERENCODE:
 		return "error DER-encoding RFC3161 timestamp";
+	case RSGTE_HASH_CREATE:
+		return "error creating hash";
 	default:
 		return "unknown error";
 	}
@@ -342,15 +348,16 @@ rsgtSetKeepTreeHashes(gtctx ctx, int val)
 }
 
 int rsgtSetHashFunction(gtctx ctx, char *algName);
-void rsgtInit(char *usragent);
+int rsgtInit(char *usragent);
 void rsgtExit(void);
 gtctx rsgtCtxNew(void);
+void rsgtsetErrFunc(gtctx ctx, void (*func)(void*, unsigned char *), void *usrptr);
 gtfile rsgtCtxOpenFile(gtctx ctx, unsigned char *logfn);
-void rsgtfileDestruct(gtfile gf);
+int rsgtfileDestruct(gtfile gf);
 void rsgtCtxDel(gtctx ctx);
 void sigblkInit(gtfile gf);
-void sigblkAddRecord(gtfile gf, const unsigned char *rec, const size_t len);
-void sigblkFinish(gtfile gf);
+int sigblkAddRecord(gtfile gf, const unsigned char *rec, const size_t len);
+int sigblkFinish(gtfile gf);
 /* reader functions */
 int rsgt_tlvrdHeader(FILE *fp, unsigned char *hdr);
 int rsgt_tlvrd(FILE *fp, tlvrecord_t *rec, void *obj);
@@ -370,9 +377,9 @@ void rsgt_objfree(uint16_t tlvtype, void *obj);
 
 
 /* TODO: replace these? */
-void hash_m(gtfile gf, GTDataHash **m);
-void hash_r(gtfile gf, GTDataHash **r, const unsigned char *rec, const size_t len);
-void hash_node(gtfile gf, GTDataHash **node, GTDataHash *m, GTDataHash *r, uint8_t level);
+int hash_m(gtfile gf, GTDataHash **m);
+int hash_r(gtfile gf, GTDataHash **r, const unsigned char *rec, const size_t len);
+int hash_node(gtfile gf, GTDataHash **node, GTDataHash *m, GTDataHash *r, uint8_t level);
 extern char *rsgt_read_puburl; /**< url of publication server */
 extern uint8_t rsgt_read_showVerified;
 

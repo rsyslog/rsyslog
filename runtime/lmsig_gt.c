@@ -55,11 +55,20 @@ static struct cnfparamblk pblk =
 	  cnfpdescr
 	};
 
+
+static void
+errfunc(__attribute__((unused)) void *usrptr, uchar *emsg)
+{
+	errmsg.LogError(0, RS_RET_SIGPROV_ERR, "Signature Provider"
+		"Error: %s - disabling signatures", emsg);
+}
+
 /* Standard-Constructor
  */
 BEGINobjConstruct(lmsig_gt)
 	dbgprintf("DDDD: lmsig_gt: called construct\n");
 	pThis->ctx = rsgtCtxNew();
+	rsgtsetErrFunc(pThis->ctx, errfunc, NULL);
 ENDobjConstruct(lmsig_gt)
 
 
@@ -67,6 +76,7 @@ ENDobjConstruct(lmsig_gt)
 BEGINobjDestruct(lmsig_gt) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(lmsig_gt)
 	dbgprintf("DDDD: lmsig_gt: called destruct\n");
+	rsgtCtxDel(pThis->ctx);
 ENDobjDestruct(lmsig_gt)
 
 
@@ -124,10 +134,9 @@ OnFileOpen(void *pT, uchar *fn, void *pGF)
 	gtfile *pgf = (gtfile*) pGF;
 	DEFiRet;
 dbgprintf("DDDD: onFileOpen: %s\n", fn);
-	
+	/* note: if *pgf is set to NULL, this auto-disables GT functions */
 	*pgf = rsgtCtxOpenFile(pThis->ctx, fn);
 	sigblkInit(*pgf);
-
 	RETiRet;
 }
 
@@ -161,7 +170,7 @@ dbgprintf("DDDD: onFileClose\n");
 
 BEGINobjQueryInterface(lmsig_gt)
 CODESTARTobjQueryInterface(lmsig_gt)
-	if(pIf->ifVersion != sigprovCURR_IF_VERSION) {/* check for current version, increment on each change */
+	 if(pIf->ifVersion != sigprovCURR_IF_VERSION) {/* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}
 	pIf->Construct = (rsRetVal(*)(void*)) lmsig_gtConstruct;
@@ -189,7 +198,11 @@ BEGINObjClassInit(lmsig_gt, 1, OBJ_IS_LOADABLE_MODULE) /* class, version */
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 
-	rsgtInit("rsyslogd " VERSION);
+	if(rsgtInit("rsyslogd " VERSION) != 0) {
+		errmsg.LogError(0, RS_RET_SIGPROV_ERR, "error initializing "
+			"signature provider - cannot sign");
+		ABORT_FINALIZE(RS_RET_SIGPROV_ERR);
+	}
 ENDObjClassInit(lmsig_gt)
 
 

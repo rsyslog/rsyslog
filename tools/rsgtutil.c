@@ -282,7 +282,9 @@ done:
 
 	fclose(logfp); logfp = NULL;
 	fclose(sigfp); sigfp = NULL;
-	fclose(nsigfp); nsigfp = NULL;
+	if(nsigfp != NULL) {
+		fclose(nsigfp); nsigfp = NULL;
+	}
 
 	/* everything went fine, so we rename files if we updated them */
 	if(mode == MD_EXTEND) {
