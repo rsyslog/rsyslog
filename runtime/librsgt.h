@@ -43,6 +43,11 @@ struct gtctx_s {
 	void *usrptr; /* for error function */
 };
 typedef struct gtctx_s *gtctx;
+typedef struct gtfile_s *gtfile;
+typedef struct gterrctx_s gterrctx_t;
+typedef struct imprint_s imprint_t;
+typedef struct block_sig_s block_sig_t;
+typedef struct tlvrecord_s tlvrecord_t;
 
 /* this describes a file, as far as librsgt is concerned */
 struct gtfile_s {
@@ -56,7 +61,7 @@ struct gtfile_s {
 	uint8_t disabled; /* permits to disable this file --> set to 1 */
 	uint64_t blockSizeLimit;
 	uint8_t *IV; /* initial value for blinding masks */
-	GTDataHash *x_prev; /* last leaf hash (maybe of previous block) --> preserve on term */
+	imprint_t *x_prev; /* last leaf hash (maybe of previous block) --> preserve on term */
 	unsigned char *sigfilename;
 	unsigned char *statefilename;
 	int fd;
@@ -75,11 +80,6 @@ struct gtfile_s {
 	int	tlvIdx; /* current index into tlvBuf */
 	gtctx ctx;
 };
-typedef struct gtfile_s *gtfile;
-typedef struct gterrctx_s gterrctx_t;
-typedef struct imprint_s imprint_t;
-typedef struct block_sig_s block_sig_t;
-typedef struct tlvrecord_s tlvrecord_t;
 
 struct tlvrecord_s {
 	uint16_t tlvtype;
@@ -254,7 +254,7 @@ hashOutputLengthOctets(uint8_t hashID)
 }
 
 static inline uint8_t
-hashIdentifier(uint8_t hashID)
+hashIdentifier(enum GTHashAlgorithm hashID)
 {
 	switch(hashID) {
 	case GT_HASHALG_SHA1:	/* paper: SHA1 */

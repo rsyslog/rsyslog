@@ -87,6 +87,32 @@ rsgtsetErrFunc(gtctx ctx, void (*func)(void*, uchar *), void *usrptr)
 	ctx->errFunc = func;
 }
 
+static imprint_t *
+rsgtImprintFromGTDataHash(GTDataHash *hash)
+{
+	imprint_t *imp;
+
+	if((imp = calloc(1, sizeof(imprint_t))) == NULL) {
+		goto done;
+	}
+	imp->hashID = hashIdentifier(hash->algorithm),
+	imp->len = hash->digest_length;
+	if((imp->data = (uint8_t*)malloc(imp->len)) == NULL) {
+		free(imp); imp = NULL; goto done;
+	}
+	memcpy(imp->data, hash->digest, imp->len);
+done:	return imp;
+}
+
+static void
+rsgtimprintDel(imprint_t *imp)
+{
+	if(imp != NULL) {
+		free(imp->data),
+		free(imp);
+	}
+}
+
 int
 rsgtInit(char *usragent)
 {
@@ -398,12 +424,12 @@ writeStateFile(gtfile gf)
 
 	memcpy(sf.hdr, "GTSTAT10", 8);
 	sf.hashID = hashIdentifier(gf->hashAlg);
-	sf.lenHash = gf->x_prev->digest_length;
+	sf.lenHash = gf->x_prev->len;
 	/* if the write fails, we cannot do anything against that. We check
 	 * the condition just to keep the compiler happy.
 	 */
 	if(write(fd, &sf, sizeof(sf))){};
-	if(write(fd, gf->x_prev->digest, gf->x_prev->digest_length)){};
+	if(write(fd, gf->x_prev->data, gf->x_prev->len)){};
 	close(fd);
 done:	return;
 }
@@ -555,7 +581,7 @@ rsgtfileDestruct(gtfile gf)
 	free(gf->statefilename);
 	free(gf->IV);
 	free(gf->blkStrtHash);
-	GTDataHash_free(gf->x_prev);
+	rsgtimprintDel(gf->x_prev);
 	free(gf);
 done:	return r;
 }
@@ -592,22 +618,31 @@ bufAddIV(gtfile gf, uchar *buf, size_t *len)
 }
 
 
-/* concat: add hash to buffer */
+/* concat: add imprint to buffer */
 static inline void
-bufAddHash(gtfile gf, uchar *buf, size_t *len, GTDataHash *hash)
+bufAddImprint(gtfile gf, uchar *buf, size_t *len, imprint_t *imp)
 {
-	if(hash == NULL) {
+	if(imp == NULL) {
 	/* TODO: how to get the REAL HASH ID? --> add field? */
 		buf[*len] = hashIdentifier(gf->hashAlg);
 		++(*len);
 		memcpy(buf+*len, gf->blkStrtHash, gf->lenBlkStrtHash);
 		*len += gf->lenBlkStrtHash;
 	} else {
-		buf[*len] = hashIdentifier(gf->hashAlg);
+		buf[*len] = imp->hashID;
 		++(*len);
-		memcpy(buf+*len, hash->digest, hash->digest_length);
-		*len += hash->digest_length;
+		memcpy(buf+*len, imp->data, imp->len);
+		*len += imp->len;
 	}
+}
+/* concat: add hash to buffer */
+static inline void
+bufAddHash(gtfile gf, uchar *buf, size_t *len, GTDataHash *hash)
+{
+	buf[*len] = hashIdentifier(gf->hashAlg);
+	++(*len);
+	memcpy(buf+*len, hash->digest, hash->digest_length);
+	*len += hash->digest_length;
 }
 /* concat: add tree level to buffer */
 static inline void
@@ -626,7 +661,7 @@ hash_m(gtfile gf, GTDataHash **m)
 	size_t len = 0;
 	int r = 0;
 
-	bufAddHash(gf, concatBuf, &len, gf->x_prev);
+	bufAddImprint(gf, concatBuf, &len, gf->x_prev);
 	bufAddIV(gf, concatBuf, &len);
 	rgt = GTDataHash_create(gf->hashAlg, concatBuf, len, m);
 	if(rgt != GT_OK) {
@@ -672,23 +707,6 @@ done:	return r;
 }
 
 
-/* TODO: replace this once libgt provides a native function
- * for this!
- */
-static inline GTDataHash*
-GTDataHash_dup(GTDataHash *in)
-{
-	GTDataHash *out;
-
-	out = (GTDataHash*) calloc(1, sizeof(GTDataHash));
-	if(out == NULL) goto done;
-	out->algorithm = in->algorithm,
-	out->digest_length = in->digest_length,
-	out->digest = malloc(in->digest_length);
-	memcpy(out->digest, in->digest, in->digest_length);
-done:	return out;
-}
-
 int
 sigblkAddRecord(gtfile gf, const uchar *rec, const size_t len)
 {
@@ -706,8 +724,10 @@ sigblkAddRecord(gtfile gf, const uchar *rec, const size_t len)
 	/* persists x here if Merkle tree needs to be persisted! */
 	if(gf->bKeepTreeHashes)
 		tlvWriteHash(gf, 0x0901, x);
+	rsgtimprintDel(gf->x_prev);
+	gf->x_prev = rsgtImprintFromGTDataHash(x);
 	/* add x to the forest as new leaf, update roots list */
-	t = GTDataHash_dup(x);
+	t = x;
 	for(j = 0 ; j < gf->nRoots ; ++j) {
 		if(gf->roots_valid[j] == 0) {
 			gf->roots_hash[j] = t;
@@ -734,12 +754,9 @@ sigblkAddRecord(gtfile gf, const uchar *rec, const size_t len)
 		assert(gf->nRoots < MAX_ROOTS);
 		t = NULL;
 	}
-	GTDataHash_free(gf->x_prev);
-	gf->x_prev = x; /* single var may be sufficient */
 	++gf->nRecords;
 
-	/* cleanup */
-	/* note: x is freed later as part of roots cleanup */
+	/* cleanup (x is cleared as part of the roots array) */
 	GTDataHash_free(m);
 	GTDataHash_free(r);
 
@@ -812,14 +829,15 @@ sigblkFinish(gtfile gf)
 			GTDataHash_free(gf->roots_hash[j]);
 			GTDataHash_free(rootDel);
 			if(ret != 0) goto done; /* checks hash_node() result! */
+		}
 	}
 	if((ret = timestampIt(gf, root)) != 0) goto done;
 
 	GTDataHash_free(root);
 	free(gf->blkStrtHash);
-	gf->lenBlkStrtHash = gf->x_prev->digest_length;
+	gf->lenBlkStrtHash = gf->x_prev->len;
 	gf->blkStrtHash = malloc(gf->lenBlkStrtHash);
-	memcpy(gf->blkStrtHash, gf->x_prev->digest, gf->lenBlkStrtHash);
+	memcpy(gf->blkStrtHash, gf->x_prev->data, gf->x_prev->len);
 done:
 	gf->bInBlk = 0;
 	return ret;
