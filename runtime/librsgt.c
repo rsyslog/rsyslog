@@ -555,6 +555,7 @@ rsgtfileDestruct(gtfile gf)
 	free(gf->statefilename);
 	free(gf->IV);
 	free(gf->blkStrtHash);
+	GTDataHash_free(gf->x_prev);
 	free(gf);
 done:	return r;
 }
@@ -670,11 +671,29 @@ hash_node(gtfile gf, GTDataHash **node, GTDataHash *m, GTDataHash *rec,
 done:	return r;
 }
 
+
+/* TODO: replace this once libgt provides a native function
+ * for this!
+ */
+static inline GTDataHash*
+GTDataHash_dup(GTDataHash *in)
+{
+	GTDataHash *out;
+
+	out = (GTDataHash*) calloc(1, sizeof(GTDataHash));
+	if(out == NULL) goto done;
+	out->algorithm = in->algorithm,
+	out->digest_length = in->digest_length,
+	out->digest = malloc(in->digest_length);
+	memcpy(out->digest, in->digest, in->digest_length);
+done:	return out;
+}
+
 int
 sigblkAddRecord(gtfile gf, const uchar *rec, const size_t len)
 {
 	GTDataHash *x; /* current hash */
-	GTDataHash *m, *r, *t;
+	GTDataHash *m, *r, *t, *t_del;
 	uint8_t j;
 	int ret = 0;
 
@@ -688,7 +707,7 @@ sigblkAddRecord(gtfile gf, const uchar *rec, const size_t len)
 	if(gf->bKeepTreeHashes)
 		tlvWriteHash(gf, 0x0901, x);
 	/* add x to the forest as new leaf, update roots list */
-	t = x;
+	t = GTDataHash_dup(x);
 	for(j = 0 ; j < gf->nRoots ; ++j) {
 		if(gf->roots_valid[j] == 0) {
 			gf->roots_hash[j] = t;
@@ -697,10 +716,12 @@ sigblkAddRecord(gtfile gf, const uchar *rec, const size_t len)
 			break;
 		} else if(t != NULL) {
 			/* hash interim node */
-			ret = hash_node(gf, &t, gf->roots_hash[j], t, j+2);
-			if(ret != 0) goto done;
+			t_del = t;
+			ret = hash_node(gf, &t, gf->roots_hash[j], t_del, j+2);
 			gf->roots_valid[j] = 0;
 			GTDataHash_free(gf->roots_hash[j]);
+			GTDataHash_free(t_del);
+			if(ret != 0) goto done;
 			if(gf->bKeepTreeHashes)
 				tlvWriteHash(gf, 0x0901, t);
 		}
@@ -713,6 +734,7 @@ sigblkAddRecord(gtfile gf, const uchar *rec, const size_t len)
 		assert(gf->nRoots < MAX_ROOTS);
 		t = NULL;
 	}
+	GTDataHash_free(gf->x_prev);
 	gf->x_prev = x; /* single var may be sufficient */
 	++gf->nRecords;
 
@@ -729,7 +751,6 @@ sigblkAddRecord(gtfile gf, const uchar *rec, const size_t len)
 done:	
 	if(ret != 0) {
 		gf->disabled = 1;
-printf("DDDD: disabling ...\n");fflush(stdout);
 	}
 	return ret;
 }
@@ -789,17 +810,12 @@ sigblkFinish(gtfile gf)
 			ret = hash_node(gf, &root, gf->roots_hash[j], rootDel, j+2);
 			gf->roots_valid[j] = 0;
 			GTDataHash_free(gf->roots_hash[j]);
-			/* there is no API to duplicate a hash, so we need
-			 * to make sure we do not delete one that we still need!
-			 */
-			if(rootDel != gf->x_prev)
-				GTDataHash_free(rootDel);
-			if(ret != 0) goto done;
-		}
+			GTDataHash_free(rootDel);
+			if(ret != 0) goto done; /* checks hash_node() result! */
 	}
 	if((ret = timestampIt(gf, root)) != 0) goto done;
 
-
+	GTDataHash_free(root);
 	free(gf->blkStrtHash);
 	gf->lenBlkStrtHash = gf->x_prev->digest_length;
 	gf->blkStrtHash = malloc(gf->lenBlkStrtHash);
