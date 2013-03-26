@@ -179,9 +179,8 @@ endif
 #
 if ENABLE_GUARDTIME
    librsgt_la_SOURCES = librsgt.c librsgt_read.c librsgt.h
-
    pkglib_LTLIBRARIES += lmsig_gt.la
-   lmsig_gt_la_SOURCES = lmsig_gt.c
+   lmsig_gt_la_SOURCES = lmsig_gt.c lmsig_gt.h
    lmsig_gt_la_CPPFLAGS = $(RSRT_CFLAGS) $(GUARDTIME_CFLAGS)
    lmsig_gt_la_LDFLAGS = -module -avoid-version
    lmsig_gt_la_LIBADD = librsgt.la $(GUARDTIME_LIBS)
