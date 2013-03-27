@@ -1228,6 +1228,96 @@ finalize_it:
 	RETiRet;
 }
 
+static inline void
+doFunc_re_extract(struct cnffunc *func, struct var *ret, void* usrptr)
+{
+	size_t submatchnbr;
+	short matchnbr;
+	regmatch_t pmatch[50];
+	int bMustFree;
+	es_str_t *estr;
+	char *str;
+	struct var r[CNFFUNC_MAX_ARGS];
+	int iLenBuf;
+	unsigned iOffs;
+	short iTry = 0;
+	uchar bFound = 0;
+	iOffs = 0;
+	sbool bHadNoMatch = 0;
+
+	cnfexprEval(func->expr[0], &r[0], usrptr);
+	/* search string is already part of the compiled regex, so we don't
+	 * need it here!
+	 */
+	cnfexprEval(func->expr[2], &r[2], usrptr);
+	cnfexprEval(func->expr[3], &r[3], usrptr);
+	str = (char*) var2CString(&r[0], &bMustFree);
+	matchnbr = (short) var2Number(&r[2], NULL);
+	submatchnbr = (size_t) var2Number(&r[3], NULL);
+	if(submatchnbr > sizeof(pmatch)/sizeof(regmatch_t)) {
+		DBGPRINTF("re_extract() submatch %d is too large\n", submatchnbr);
+		bHadNoMatch = 1;
+		goto finalize_it;
+	}
+
+	/* first see if we find a match, iterating through the series of
+	 * potential matches over the string.
+	 */
+	while(!bFound) {
+		int iREstat;
+		iREstat = regexp.regexec(func->funcdata, (char*)(str + iOffs),
+					 submatchnbr+1, pmatch, 0);
+		dbgprintf("re_extract: regexec return is %d\n", iREstat);
+		if(iREstat == 0) {
+			if(pmatch[0].rm_so == -1) {
+				dbgprintf("oops ... start offset of successful regexec is -1\n");
+				break;
+			}
+			if(iTry == matchnbr) {
+				bFound = 1;
+			} else {
+				dbgprintf("re_extract: regex found at offset %d, new offset %d, tries %d\n",
+					  iOffs, (int) (iOffs + pmatch[0].rm_eo), iTry);
+				iOffs += pmatch[0].rm_eo;
+				++iTry;
+			}
+		} else {
+			break;
+		}
+	}
+	dbgprintf("re_extract: regex: end search, found %d\n", bFound);
+	if(!bFound) {
+		bHadNoMatch = 1;
+		goto finalize_it;
+	} else {
+		/* Match- but did it match the one we wanted? */
+		/* we got no match! */
+		if(pmatch[submatchnbr].rm_so == -1) {
+			bHadNoMatch = 1;
+			goto finalize_it;
+		}
+		/* OK, we have a usable match - we now need to malloc pB */
+		iLenBuf = pmatch[submatchnbr].rm_eo - pmatch[submatchnbr].rm_so;
+		estr = es_newStrFromBuf(str + iOffs + pmatch[submatchnbr].rm_so,
+					iLenBuf);
+	}
+
+	if(bMustFree) free(str);
+	if(r[0].datatype == 'S') es_deleteStr(r[0].d.estr);
+	if(r[2].datatype == 'S') es_deleteStr(r[2].d.estr);
+	if(r[3].datatype == 'S') es_deleteStr(r[3].d.estr);
+finalize_it:
+	if(bHadNoMatch) {
+		cnfexprEval(func->expr[4], &r[4], usrptr);
+		estr = var2String(&r[4], &bMustFree);
+		if(r[4].datatype == 'S') es_deleteStr(r[4].d.estr);
+	}
+	ret->datatype = 'S';
+	ret->d.estr = estr;
+	return;
+}
+
+
 /* Perform a function call. This has been moved out of cnfExprEval in order
  * to keep the code small and easier to maintain.
  */
@@ -1330,6 +1420,9 @@ doFuncCall(struct cnffunc *func, struct var *ret, void* usrptr)
 		ret->datatype = 'N';
 		if(bMustFree) free(str);
 		if(r[0].datatype == 'S') es_deleteStr(r[0].d.estr);
+		break;
+	case CNFFUNC_RE_EXTRACT:
+		doFunc_re_extract(func, ret, usrptr);
 		break;
 	case CNFFUNC_FIELD:
 		cnfexprEval(func->expr[0], &r[0], usrptr);
@@ -1908,6 +2001,7 @@ cnffuncDestruct(struct cnffunc *func)
 	/* some functions require special destruction */
 	switch(func->fID) {
 		case CNFFUNC_RE_MATCH:
+		case CNFFUNC_RE_EXTRACT:
 			if(func->funcdata != NULL)
 				regexp.regfree(func->funcdata);
 			break;
@@ -2988,7 +3082,6 @@ cnfstmtOptimize(struct cnfstmt *root)
 	struct cnfstmt *stmt;
 	if(root == NULL) goto done;
 	for(stmt = root ; stmt != NULL ; stmt = stmt->next) {
-dbgprintf("RRRR: stmtOptimize: stmt %p, nodetype %u\n", stmt, stmt->nodetype);
 		switch(stmt->nodetype) {
 		case S_IF:
 			cnfstmtOptimizeIf(stmt);
@@ -3088,6 +3181,13 @@ funcName2ID(es_str_t *fname, unsigned short nParams)
 			return CNFFUNC_INVALID;
 		}
 		return CNFFUNC_RE_MATCH;
+	} else if(!es_strbufcmp(fname, (unsigned char*)"re_extract", sizeof("re_extract") - 1)) {
+		if(nParams != 5) {
+			parser_errmsg("number of parameters for re_extract() must be five "
+				      "but is %d.", nParams);
+			return CNFFUNC_INVALID;
+		}
+		return CNFFUNC_RE_EXTRACT;
 	} else if(!es_strbufcmp(fname, (unsigned char*)"field", sizeof("field") - 1)) {
 		if(nParams != 3) {
 			parser_errmsg("number of parameters for field() must be three "
@@ -3118,7 +3218,7 @@ initFunc_re_match(struct cnffunc *func)
 
 	func->funcdata = NULL;
 	if(func->expr[1]->nodetype != 'S') {
-		parser_errmsg("param 2 of re_match() must be a constant string");
+		parser_errmsg("param 2 of re_match/extract() must be a constant string");
 		FINALIZE;
 	}
 
@@ -3196,6 +3296,7 @@ cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst)
 		/* some functions require special initialization */
 		switch(func->fID) {
 			case CNFFUNC_RE_MATCH:
+			case CNFFUNC_RE_EXTRACT:
 				/* need to compile the regexp in param 2, so this MUST be a constant */
 				initFunc_re_match(func);
 				break;

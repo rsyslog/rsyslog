@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------
 Version 7.3.10  [devel] 2013-04-??
+- added RainerScript re_extract() function
 - bugfix: imuxsock aborted under some conditions
   regression from ratelimiting enhancements
 ---------------------------------------------------------------------------
