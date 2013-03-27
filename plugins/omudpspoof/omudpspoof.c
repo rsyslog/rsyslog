@@ -481,7 +481,7 @@ UDPSend(instanceData *pData, uchar *pszSourcename, char *msg, size_t len)
 				0,				/* checksum */
 				source_ip.sin_addr.s_addr,
 				tempaddr->sin_addr.s_addr,
-				(u_int8_t*)(msg+msgOffs),	/* payload */
+				(uint8_t*)(msg+msgOffs),	/* payload */
 				pktLen, 			/* payload size */
 				pData->libnet_handle,		/* libnet handle */
 				ip);				/* libnet id */
