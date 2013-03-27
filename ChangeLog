@@ -1,4 +1,8 @@
 ---------------------------------------------------------------------------
+Version 7.3.10  [devel] 2013-04-??
+- bugfix: imuxsock aborted under some conditions
+  regression from ratelimiting enhancements
+---------------------------------------------------------------------------
 Version 7.3.9  [devel] 2013-03-27
 - support for signing logs added
 - imudp: now supports user-selectable inputname

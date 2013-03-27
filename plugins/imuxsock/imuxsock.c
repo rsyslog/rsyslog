@@ -570,6 +570,10 @@ findRatelimiter(lstn_t *pLstn, struct ucred *cred, ratelimit_t **prl)
 		FINALIZE;
 	}
 #endif
+	if(pLstn->ht == NULL) {
+		*prl = NULL;
+		FINALIZE;
+	}
 
 	rl = hashtable_search(pLstn->ht, &cred->pid);
 	if(rl == NULL) {
