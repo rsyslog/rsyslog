@@ -3232,11 +3232,9 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 		iTo = pTpe->data.field.iToPos;
 		if(bufLen == -1)
 			bufLen = ustrlen(pRes);
-dbgprintf("DDDD: orginal iFrom %u, iTo %u, len %u\n", iFrom, iTo, bufLen);
 		if(pTpe->data.field.options.bFromPosEndRelative) {
 			iFrom = (bufLen < iFrom) ? 0 : bufLen - iFrom;
 			iTo = (bufLen < iTo)? 0 : bufLen - iTo;
-dbgprintf("DDDD: now iFrom %u, iTo %u\n", iFrom, iTo);
 		} else {
 			/* need to zero-base to and from (they are 1-based!) */
 			if(iFrom > 0)
