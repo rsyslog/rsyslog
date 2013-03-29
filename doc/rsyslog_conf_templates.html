@@ -134,6 +134,8 @@ csv-data is generated, "json", which formats proper json content (but without a 
 header) and "jsonf", which formats as a complete json field.
 <li>position.from - obtain substring starting from this position (1 is the first position)
 <li>position.to - obtain substring up to this position
+<li>position.relativeToEnd - the from and to position is relative to the end of the string
+   instead of the usual start of string. (available since rsyslog v7.3.10)
 <li>field.number - obtain this field match
 <li>field.delimiter - decimal value of delimiter character for field extraction
 <li>regex.expression - expression to use
