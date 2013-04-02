@@ -755,6 +755,38 @@ if test "x$enable_gnutls" = "xyes"; then
 fi
 AM_CONDITIONAL(ENABLE_GNUTLS, test x$enable_gnutls = xyes)
 
+# libgcrypt support
+AC_ARG_ENABLE(libgcrypt,
+        [AS_HELP_STRING([--enable-libgcrypt],[Enable libgcrypt support @<:@default=yes@:>@])],
+        [case "${enableval}" in
+         yes) enable_libgcrypt="yes" ;;
+          no) enable_libgcrypt="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-libgcrypt) ;;
+         esac],
+        [enable_libgcrypt=yes]
+)
+if test "x$enable_libgcrypt" = "xyes"; then
+        AC_CHECK_PROG(
+      	    [HAVE_LIBGCRYPT_CONFIG],
+            [libgcrypt-config],
+            [yes],,,
+            )
+        if test "x${HAVE_LIBGCRYPT_CONFIG}" != "xyes"; then
+           AC_MSG_FAILURE([libgcrypt-config not found in PATH])
+        fi
+        AC_CHECK_LIB(
+		[gcrypt],
+        	[gcry_cipher_open],
+        	[LIBGCRYPT_CFLAGS="`libgcrypt-config --cflags`"
+        	LIBGCRYPT_LIBS="`libgcrypt-config --libs`"
+        	],
+        	[AC_MSG_FAILURE([libgrypt is missing])],
+        	[`libgcrypt-config --libs --cflags`]
+        	)
+	AC_DEFINE([ENABLE_LIBGCRYPT], [1], [Indicator that LIBGCRYPT is present])
+fi
+AM_CONDITIONAL(ENABLE_GNUTLS, test x$enable_gnutls = xyes)
+
 
 # support for building the rsyslogd runtime
 AC_ARG_ENABLE(rsyslogrt,
@@ -1406,6 +1438,7 @@ echo "    GUI components will be built:             $enable_gui"
 echo "    Unlimited select() support enabled:       $enable_unlimited_select"
 echo "    uuid support enabled:                     $enable_uuid"
 echo "    GuardTime signature support enabled:      $enable_guardtime"
+echo "    libgcrypt support enabled:                $enable_libgcrypt"
 echo "    anonymization support enabled:            $enable_mmanon"
 echo
 echo "---{ input plugins }---"
