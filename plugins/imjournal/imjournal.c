@@ -143,7 +143,7 @@ readjournal() {
 	char *sys_iden_help;
 
 	const void *get;
-	uchar *parse;
+	char *parse;
 	char *get2;
 	size_t length;
 
@@ -232,26 +232,50 @@ readjournal() {
 		prefixlen = ((char *)equal_sign - (char *)get);
 
 		/* translate name fields to lumberjack names */
-		parse = (uchar *)get;
+		parse = (char *)get;
 
 		switch (*parse)
 		{
 		case '_':
 			++parse;
 			if (*parse == 'P') {
-				name = strdup("pid");
+				if (!strncmp(parse, "PID=", 4)) {
+					name = strdup("pid");
+				} else {
+					name = strndup(get, prefixlen);
+				}
 			} else if (*parse == 'G') {
-				name = strdup("gid");
+				if (!strncmp(parse, "GID=", 4)) {
+					name = strdup("gid");
+				} else {
+					name = strndup(get, prefixlen);
+				}
 			} else if (*parse == 'U') {
-				name = strdup("uid");
+				if (!strncmp(parse, "UID=", 4)) {
+					name = strdup("uid");
+				} else {
+					name = strndup(get, prefixlen);
+				}
 			} else if (*parse == 'E') {
-				name = strdup("exe");
+				if (!strncmp(parse, "EXE=", 4)) {
+					name = strdup("exe");
+				} else {
+					name = strndup(get, prefixlen);
+				}
 			} else if (*parse == 'C') {
 				parse++;
 				if (*parse == 'O') {
-					name = strdup("appname");
+					if (!strncmp(parse, "OMM=", 4)) {
+						name = strdup("appname");
+					} else {
+						name = strndup(get, prefixlen);
+					}
 				} else if (*parse == 'M') {
-					name = strdup("cmd");
+					if (!strncmp(parse, "MDLINE=", 7)) {
+						name = strdup("cmd");
+					} else {
+						name = strndup(get, prefixlen);
+					}
 				} else {
 					name = strndup(get, prefixlen);
 				}
