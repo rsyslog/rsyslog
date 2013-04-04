@@ -1317,6 +1317,29 @@ cnfexprEval(struct cnfexpr *expr, struct var *ret, void* usrptr)
 				}
 				if(r.datatype == 'S') es_deleteStr(r.d.estr);
 			}
+		} else if(l.datatype == 'J') {
+			estr_l = var2String(&l, &bMustFree);
+			if(expr->r->nodetype == 'S') {
+				ret->d.n = !es_strcmp(estr_l, ((struct cnfstringval*)expr->r)->estr); /*CMP*/
+			} else if(expr->r->nodetype == 'A') {
+				ret->d.n = evalStrArrayCmp(estr_l,  (struct cnfarray*) expr->r, CMP_EQ);
+			} else {
+				cnfexprEval(expr->r, &r, usrptr);
+				if(r.datatype == 'S') {
+					ret->d.n = !es_strcmp(estr_l, r.d.estr); /*CMP*/
+				} else {
+					n_l = var2Number(&l, &convok_l);
+					if(convok_l) {
+						ret->d.n = (n_l == r.d.n); /*CMP*/
+					} else {
+						estr_r = var2String(&r, &bMustFree);
+						ret->d.n = !es_strcmp(estr_l, estr_r); /*CMP*/
+						if(bMustFree) es_deleteStr(estr_r);
+					}
+				}
+				if(r.datatype == 'S') es_deleteStr(r.d.estr);
+			}
+			if(bMustFree) es_deleteStr(estr_l);
 		} else {
 			cnfexprEval(expr->r, &r, usrptr);
 			if(r.datatype == 'S') {

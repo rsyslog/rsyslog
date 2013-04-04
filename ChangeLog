@@ -11,6 +11,8 @@ Version 7.2.7  [v7-stable] 2013-03-??
   The rsyslog debug log file is now continued to be written across the
   fork.
 - updated systemd files to match current systemd source
+- bugfix: script == comparison did not work properly on JSON objects
+  [backport from 7.3 branch]
 - bugfix: imudp scheduling parameters did affect main thread, not imudp
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=409
 - bugfix: imuxsock rate-limiting could not be configured via legacy conf
