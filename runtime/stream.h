@@ -41,7 +41,7 @@
  * deflateInit2(zstrmptr, 6, Z_DEFLATED, 31, 9, Z_DEFAULT_STRATEGY);
  * --------------------------------------------------------------------------
  * 
- * Copyright 2008, 2009 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2013 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -70,6 +70,7 @@
 #include "glbl.h"
 #include "stream.h"
 #include "zlibw.h"
+#include "cryprov.h"
 
 /* stream types */
 typedef enum {
@@ -134,6 +135,9 @@ typedef struct strm_s {
 	pthread_cond_t isEmpty;
 	unsigned short iEnq;	/* this MUST be unsigned as we use module arithmetic (else invalid indexing happens!) */
 	unsigned short iDeq;	/* this MUST be unsigned as we use module arithmetic (else invalid indexing happens!) */
+	cryprov_if_t *cryprov;  /* ptr to crypto provider; NULL = do not encrypt */
+	void	*cryprovData;	/* opaque data ptr for provider use */
+	void 	*cryprovFileData;/* opaque data ptr for file instance */
 	short iCnt;	/* current nbr of elements in buffer */
 	z_stream zstrm;	/* zip stream to use */
 	struct {
@@ -190,8 +194,11 @@ BEGINinterface(strm) /* name must also be changed in ENDinterface macro! */
 	INTERFACEpropSetMeth(strm, bVeryReliableZip, int);
 	/* v8 added  2013-03-21 */
 	rsRetVal (*CheckFileChange)(strm_t *pThis);
+	/* v9 added  2013-04-04 */
+	INTERFACEpropSetMeth(strm, cryprov, cryprov_if_t*);
+	INTERFACEpropSetMeth(strm, cryprovData, void*);
 ENDinterface(strm)
-#define strmCURR_IF_VERSION 8 /* increment whenever you change the interface structure! */
+#define strmCURR_IF_VERSION 9 /* increment whenever you change the interface structure! */
 
 static inline int
 strmGetCurrFileNum(strm_t *pStrm) {

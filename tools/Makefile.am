@@ -41,7 +41,7 @@ rsyslogd_CPPFLAGS =  $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
 # otherwise dependencies are not properly calculated (resulting in a 
 # potentially incomplete build, a problem we had several times...)
 rsyslogd_LDADD = ../grammar/libgrammar.la ../runtime/librsyslog.la $(ZLIB_LIBS) $(PTHREADS_LIBS) $(RSRT_LIBS) $(SOL_LIBS) $(LIBEE_LIBS) $(LIBLOGNORM_LIBS) $(LIBUUID_LIBS)
-rsyslogd_LDFLAGS = -export-dynamic
+rsyslogd_LDFLAGS = -export-dynamic `libgcrypt-config --libs`
 
 EXTRA_DIST = $(man_MANS) \
 	rsgtutil.rst \

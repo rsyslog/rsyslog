@@ -403,6 +403,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_INVLD_ANON_BITS = -2312,/**< mmanon: invalid number of bits to anonymize specified */
 	RS_RET_REPLCHAR_IGNORED = -2313,/**< mmanon: replacementChar parameter is ignored */
 	RS_RET_SIGPROV_ERR = -2320,/**< error in signature provider */
+	RS_RET_CRYPROV_ERR = -2321,/**< error in cryptography encryption provider */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */

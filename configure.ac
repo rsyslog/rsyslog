@@ -785,7 +785,7 @@ if test "x$enable_libgcrypt" = "xyes"; then
         	)
 	AC_DEFINE([ENABLE_LIBGCRYPT], [1], [Indicator that LIBGCRYPT is present])
 fi
-AM_CONDITIONAL(ENABLE_GNUTLS, test x$enable_gnutls = xyes)
+AM_CONDITIONAL(ENABLE_LIBGCRYPT, test x$enable_libgcrypt = xyes)
 
 
 # support for building the rsyslogd runtime
