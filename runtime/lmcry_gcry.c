@@ -44,6 +44,7 @@ DEFobjCurrIf(glbl)
 
 /* tables for interfacing with the v6 config system */
 static struct cnfparamdescr cnfpdescr[] = {
+	{ "cry.key", eCmdHdlrGetWord, 0 },
 	{ "cry.mode", eCmdHdlrGetWord, 0 }, /* CBC, ECB, etc */
 	{ "cry.algo", eCmdHdlrGetWord, 0 }
 };
@@ -83,12 +84,13 @@ ENDobjDestruct(lmcry_gcry)
  * after construction, but before the OnFileOpen() entry point.
  * Defaults are expected to have been set during construction.
  */
-rsRetVal
+static rsRetVal
 SetCnfParam(void *pT, struct nvlst *lst)
 {
 	lmcry_gcry_t *pThis = (lmcry_gcry_t*) pT;
-	int i;
+	int i, r;
 	uchar *cstr;
+	uchar *key = NULL;
 	struct cnfparamvals *pvals;
 	pvals = nvlstGetParams(lst, &pblk, NULL);
 	if(Debug) {
@@ -99,14 +101,9 @@ SetCnfParam(void *pT, struct nvlst *lst)
 	for(i = 0 ; i < pblk.nParams ; ++i) {
 		if(!pvals[i].bUsed)
 			continue;
+		if(!strcmp(pblk.descr[i].name, "cry.key")) {
+			key = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
 #if 0
-		if(!strcmp(pblk.descr[i].name, "sig.hashfunction")) {
-			cstr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
-			if(gcrySetHashFunction(pThis->ctx, (char*)cstr) != 0) {
-				errmsg.LogError(0, RS_RET_ERR, "Hash function "
-					"'%s' unknown - using default", cstr);
-			}
-			free(cstr);
 		} else if(!strcmp(pblk.descr[i].name, "sig.timestampservice")) {
 			cstr = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 			gcrySetTimestamper(pThis->ctx, (char*) cstr);
@@ -120,10 +117,24 @@ SetCnfParam(void *pT, struct nvlst *lst)
 		} else {
 			DBGPRINTF("lmcry_gcry: program error, non-handled "
 			  "param '%s'\n", pblk.descr[i].name);
-		}
 #endif
+		}
 	}
+	if(key != NULL) {
+		errmsg.LogError(0, RS_RET_ERR, "Note: specifying an actual key directly from the "
+			"config file is highly insecure - DO NOT USE FOR PRODUCTION");
+		r = rsgcrySetKey(pThis->ctx, key, strlen((char*)key));
+		if(r > 0) {
+			errmsg.LogError(0, RS_RET_ERR, "Key length %d expected, but "
+				"key of length %d given", r, strlen((char*)key));
+		}
+	}
+
 	cnfparamvalsDestruct(pvals, &pblk);
+	if(key != NULL) {
+		memset(key, 0, strlen((char*)key));
+		free(key);
+	}
 	return RS_RET_OK;
 }
 

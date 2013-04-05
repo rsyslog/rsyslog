@@ -42,6 +42,7 @@ rsyslogd_CPPFLAGS =  $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
 # potentially incomplete build, a problem we had several times...)
 rsyslogd_LDADD = ../grammar/libgrammar.la ../runtime/librsyslog.la $(ZLIB_LIBS) $(PTHREADS_LIBS) $(RSRT_LIBS) $(SOL_LIBS) $(LIBEE_LIBS) $(LIBLOGNORM_LIBS) $(LIBUUID_LIBS)
 rsyslogd_LDFLAGS = -export-dynamic `libgcrypt-config --libs`
+#rsyslogd_LDFLAGS = -export-dynamic $(LIBGCRYPT_LIBS)
 
 EXTRA_DIST = $(man_MANS) \
 	rsgtutil.rst \
@@ -64,10 +65,6 @@ logctl_LDADD = $(LIBMONGO_CLIENT_LIBS)
 endif
 if ENABLE_GUARDTIME
 bin_PROGRAMS += rsgtutil
-#bin_PROGRAMS += logsigner rsgtutil
-#logsigner = logsigner.c
-#logsigner_CPPFLAGS =  $(RSRT_CFLAGS) $(GUARDTIME_CFLAGS)
-#logsigner_LDADD = ../runtime/librsgt.la $(GUARDTIME_LIBS)
 rsgtutil = rsgtutil.c
 rsgtutil_CPPFLAGS =  $(RSRT_CFLAGS) $(GUARDTIME_CFLAGS)
 rsgtutil_LDADD = ../runtime/librsgt.la $(GUARDTIME_LIBS)
@@ -76,5 +73,17 @@ rsgtutil.1: rsgtutil.rst
 man1_MANS = rsgtutil.1
 CLEANFILES = rsgtutil.1
 EXTRA_DIST+= rsgtutil.1
+endif
+if ENABLE_LIBGCRYPT
+bin_PROGRAMS += rscryutil
+rscryutil = rscryutil.c
+rscryutil_CPPFLAGS = $(RSRT_CFLAGS) $(LIBGCRYPT_CFLAGS)
+rscryutil_LDFLAGS = `libgcrypt-config --libs`
+#rscryutil_LDFLAGS = $(LIBGCRYPT_LIBS)
+rscryutil.1: rscryutil.rst
+	$(AM_V_GEN) $(RST2MAN) $< $@
+man1_MANS = rscryutil.1
+CLEANFILES = rscryutil.1
+EXTRA_DIST+= rscryutil.1
 endif
 endif

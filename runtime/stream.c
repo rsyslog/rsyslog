@@ -256,9 +256,8 @@ doPhysOpen(strm_t *pThis)
 
 dbgprintf("DDDD: cryprov %p\n", pThis->cryprov);
 	if(pThis->cryprov != NULL) {
-		iRet = pThis->cryprov->OnFileOpen(pThis->cryprovData,
-		 	pThis->pszCurrFName, &pThis->cryprovFileData);
-dbgprintf("DDDD: iREt cryprov->onFileOpen: %d\n", iRet);
+		CHKiRet(pThis->cryprov->OnFileOpen(pThis->cryprovData,
+		 	pThis->pszCurrFName, &pThis->cryprovFileData));
 	}
 finalize_it:
 	RETiRet;

@@ -24,7 +24,8 @@
 
 
 struct gcryctx_s {
-	void *usrptr; /* for error function */
+	uchar *key;
+	size_t keyLen;
 };
 typedef struct gcryctx_s *gcryctx;
 typedef struct gcryfile_s *gcryfile;
@@ -38,6 +39,7 @@ struct gcryfile_s {
 
 int rsgcryInit(void);
 void rsgcryExit(void);
+int rsgcrySetKey(gcryctx ctx, unsigned char *key, uint16_t keyLen);
 gcryctx gcryCtxNew(void);
 void rsgcryCtxDel(gcryctx ctx);
 int gcryfileDestruct(gcryfile gf);

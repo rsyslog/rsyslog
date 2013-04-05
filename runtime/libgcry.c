@@ -27,6 +27,7 @@
 #include "rsyslog.h"
 #include "libgcry.h"
 
+#define GCRY_CIPHER GCRY_CIPHER_3DES  // TODO: make configurable
 
 static inline gcryfile
 gcryfileConstruct(gcryctx ctx)
@@ -98,20 +99,34 @@ removePadding(char *buf, size_t *plen)
 done:	return;
 }
 
+/* returns 0 on succes, positive if key length does not match and key
+ * of return value size is required.
+ */
+int
+rsgcrySetKey(gcryctx ctx, unsigned char *key, uint16_t keyLen)
+{
+	uint16_t reqKeyLen = gcry_cipher_get_algo_keylen(GCRY_CIPHER);
+	int r;
+
+	if(keyLen != reqKeyLen)
+		r = reqKeyLen;
+	ctx->keyLen = keyLen;
+	ctx->key = malloc(keyLen);
+	memcpy(ctx->key, key, keyLen);
+	r = 0;
+done:	return r;
+}
+
 rsRetVal
 rsgcryInitCrypt(gcryctx ctx, gcryfile *pgf, int gcry_mode, char *iniVector)
 {
-	#define GCRY_CIPHER GCRY_CIPHER_3DES  // TODO: make configurable
-	size_t keyLength;
-	char *aesSymKey = "123456789012345678901234"; // TODO: TEST ONLY
-	gcry_error_t     gcryError;
+	gcry_error_t gcryError;
 	gcryfile gf = NULL;
 	DEFiRet;
 
 	CHKmalloc(gf = gcryfileConstruct(ctx));
 
 	gf->blkLength = gcry_cipher_get_algo_blklen(GCRY_CIPHER);
-	keyLength = gcry_cipher_get_algo_keylen(GCRY_CIPHER);
 
 	gcryError = gcry_cipher_open(
 		&gf->chd, // gcry_cipher_hd_t *
@@ -125,7 +140,7 @@ rsgcryInitCrypt(gcryctx ctx, gcryfile *pgf, int gcry_mode, char *iniVector)
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
-	gcryError = gcry_cipher_setkey(gf->chd, aesSymKey, keyLength);
+	gcryError = gcry_cipher_setkey(gf->chd, gf->ctx->key, gf->ctx->keyLen);
 	if (gcryError) {
 		dbgprintf("gcry_cipher_setkey failed:  %s/%s\n",
 			gcry_strsource(gcryError),

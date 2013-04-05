@@ -1054,17 +1054,18 @@ initSigprov(instanceData *pData, struct nvlst *lst)
 done:	return;
 }
 
-static inline void
+static inline rsRetVal
 initCryprov(instanceData *pData, struct nvlst *lst)
 {
 	uchar szDrvrName[1024];
+	DEFiRet;
 
 	if(snprintf((char*)szDrvrName, sizeof(szDrvrName), "lmcry_%s", pData->cryprovName)
 		== sizeof(szDrvrName)) {
 		errmsg.LogError(0, RS_RET_ERR, "omfile: crypto provider "
 				"name is too long: '%s' - encryption disabled",
 				pData->cryprovName);
-		goto done;
+		ABORT_FINALIZE(RS_RET_ERR);
 	}
 	pData->cryprovNameFull = ustrdup(szDrvrName);
 
@@ -1079,21 +1080,22 @@ initCryprov(instanceData *pData, struct nvlst *lst)
 		errmsg.LogError(0, RS_RET_LOAD_ERROR, "omfile: could not load "
 				"crypto provider '%s' - encryption disabled",
 				szDrvrName);
-		goto done;
+		ABORT_FINALIZE(RS_RET_CRYPROV_ERR);
 	}
 
 	if(pData->cryprov.Construct(&pData->cryprovData) != RS_RET_OK) {
-		errmsg.LogError(0, RS_RET_SIGPROV_ERR, "omfile: error constructing "
+		errmsg.LogError(0, RS_RET_CRYPROV_ERR, "omfile: error constructing "
 				"crypto provider %s dataset - encryption disabled",
 				szDrvrName);
-		goto done;
+		ABORT_FINALIZE(RS_RET_CRYPROV_ERR);
 	}
-	pData->cryprov.SetCnfParam(pData->cryprovData, lst);
+	CHKiRet(pData->cryprov.SetCnfParam(pData->cryprovData, lst));
 
 	dbgprintf("loaded crypto provider %s, data instance at %p\n",
 		  szDrvrName, pData->cryprovData);
 	pData->useCryprov = 1;
-done:	return;
+finalize_it:
+	RETiRet;
 }
 
 BEGINnewActInst
@@ -1184,7 +1186,7 @@ CODESTARTnewActInst
 	}
 
 	if(pData->cryprovName != NULL) {
-		initCryprov(pData, lst);
+		CHKiRet(initCryprov(pData, lst));
 	}
 
 	tplToUse = ustrdup((pData->tplName == NULL) ? getDfltTpl() : pData->tplName);
