@@ -11,6 +11,14 @@ Version 7.2.7  [v7-stable] 2013-03-??
   The rsyslog debug log file is now continued to be written across the
   fork.
 - updated systemd files to match current systemd source
+- bugfix: failover/action suspend did not work correctly
+  This was experienced if the retry action took more than one second
+  to complete. For suspending, a cached timestamp was used, and if the
+  retry took longer, that timestamp was already in the past. As a 
+  result, the action never was kept in suspended state, and as such
+  no failover happened. The suspend functionalit now does no longer use
+  the cached timestamp (should not have any performance implication, as
+  action suspend occurs very infrequently).
 - bugfix: nested if/prifilt conditions did not work properly
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=415
 - bugfix: script == comparison did not work properly on JSON objects

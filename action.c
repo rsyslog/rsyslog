@@ -613,13 +613,17 @@ static void actionDisable(action_t *pThis)
  * CPU time. TODO: maybe a config option for that?
  * rgerhards, 2007-08-02
  */
-static inline void actionSuspend(action_t *pThis, time_t ttNow)
+static inline void actionSuspend(action_t *pThis)
 {
-	if(ttNow == NO_TIME_PROVIDED)
-		datetime.GetTime(&ttNow);
+	time_t ttNow;
+
+	/* note: we can NOT use a cached timestamp, as time may have evolved
+	 * since caching, and this would break logic (and it actually did so!)
+	 */
+	datetime.GetTime(&ttNow);
 	pThis->ttResumeRtry = ttNow + pThis->iResumeInterval * (pThis->iNbrResRtry / 10 + 1);
 	actionSetState(pThis, ACT_STATE_SUSP);
-	DBGPRINTF("earliest retry=%d\n", (int) pThis->ttResumeRtry);
+	DBGPRINTF("action suspended, earliest retry=%d\n", (int) pThis->ttResumeRtry);
 }
 
 
@@ -639,7 +643,7 @@ static inline void actionSuspend(action_t *pThis, time_t ttNow)
  * of its inability to recover. -- rgerhards, 2010-04-26.
  */
 static inline rsRetVal
-actionDoRetry(action_t *pThis, time_t ttNow, int *pbShutdownImmediate)
+actionDoRetry(action_t *pThis, int *pbShutdownImmediate)
 {
 	int iRetries;
 	int iSleepPeriod;
@@ -650,7 +654,9 @@ actionDoRetry(action_t *pThis, time_t ttNow, int *pbShutdownImmediate)
 
 	iRetries = 0;
 	while((*pbShutdownImmediate == 0) && pThis->eState == ACT_STATE_RTRY) {
+		DBGPRINTF("actionDoRetry: enter loop, iRetries=%d\n", iRetries);
 		iRet = pThis->pMod->tryResume(pThis->pModData);
+		DBGPRINTF("actionDoRetry: action->tryResume returned %d\n", iRet);
 		if((pThis->iResumeOKinRow > 9) && (pThis->iResumeOKinRow % 10 == 0)) {
 			bTreatOKasSusp = 1;
 			pThis->iResumeOKinRow = 0;
@@ -658,16 +664,18 @@ actionDoRetry(action_t *pThis, time_t ttNow, int *pbShutdownImmediate)
 			bTreatOKasSusp = 0;
 		}
 		if((iRet == RS_RET_OK) && (!bTreatOKasSusp)) {
+			DBGPRINTF("actionDoRetry: had success RDY again (iRet=%d)\n", iRet);
 			actionSetState(pThis, ACT_STATE_RDY);
 		} else if(iRet == RS_RET_SUSPENDED || bTreatOKasSusp) {
 			/* max retries reached? */
+			DBGPRINTF("actionDoRetry: check for max retries, iResumeRetryCount %d, iRetries %d\n",
+				  pThis->iResumeRetryCount, iRetries);
 			if((pThis->iResumeRetryCount != -1 && iRetries >= pThis->iResumeRetryCount)) {
-				actionSuspend(pThis, ttNow);
+				actionSuspend(pThis);
 			} else {
 				++pThis->iNbrResRtry;
 				++iRetries;
 				iSleepPeriod = pThis->iResumeInterval;
-				ttNow += iSleepPeriod; /* not truly exact, but sufficiently... */
 				srSleep(iSleepPeriod, 0);
 				if(*pbShutdownImmediate) {
 					ABORT_FINALIZE(RS_RET_FORCE_TERM);
@@ -714,7 +722,7 @@ static rsRetVal actionTryResume(action_t *pThis, int *pbShutdownImmediate)
 	if(pThis->eState == ACT_STATE_RTRY) {
 		if(ttNow == NO_TIME_PROVIDED) /* use cached result if we have it */
 			datetime.GetTime(&ttNow);
-		CHKiRet(actionDoRetry(pThis, ttNow, pbShutdownImmediate));
+		CHKiRet(actionDoRetry(pThis, pbShutdownImmediate));
 	}
 
 	if(Debug && (pThis->eState == ACT_STATE_RTRY ||pThis->eState == ACT_STATE_SUSP)) {
@@ -1125,6 +1133,7 @@ submitBatch(action_t *pAction, batch_t *pBatch, int nElem)
 
 	assert(pBatch != NULL);
 
+	DBGPRINTF("submitBatch: enter, nElem %d\n", nElem);
 	wasDoneTo = pBatch->iDoneUpTo;
 	bDone = 0;
 	do {
@@ -1146,7 +1155,8 @@ submitBatch(action_t *pAction, batch_t *pBatch, int nElem)
 		   || localRet == RS_RET_DEFER_COMMIT) {
 			bDone = 1;
 		} else if(localRet == RS_RET_SUSPENDED) {
-			; /* do nothing, this will retry the full batch */
+			DBGPRINTF("action ret RS_RET_SUSPENDED - retry full batch\n");
+			/* do nothing, this will retry the full batch */
 		} else if(localRet == RS_RET_ACTION_FAILED) {
 			/* in this case, everything not yet committed is BAD */
 			for(i = pBatch->iDoneUpTo ; i < wasDoneTo + nElem ; ++i) {
@@ -1974,7 +1984,7 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData,
 	pAction->eState = ACT_STATE_RDY; /* action is enabled */
 
 	if(bSuspended)
-		actionSuspend(pAction, datetime.GetTime(NULL)); /* "good" time call, only during init and unavoidable */
+		actionSuspend(pAction);
 
 	CHKiRet(actionConstructFinalize(pAction, queueParams));
 	
