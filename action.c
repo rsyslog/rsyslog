@@ -975,6 +975,8 @@ actionProcessMessage(action_t *pThis, msg_t *pMsg, void *actParams, int *pbShutd
 	ISOBJ_TYPE_assert(pMsg, msg);
 
 	CHKiRet(actionPrepare(pThis, pbShutdownImmediate));
+	if(pThis->pMod->mod.om.SetShutdownImmdtPtr != NULL)
+		pThis->pMod->mod.om.SetShutdownImmdtPtr(pThis->pModData, pbShutdownImmediate);
 	if(pThis->eState == ACT_STATE_ITX)
 		CHKiRet(actionCallDoAction(pThis, pMsg, actParams));
 

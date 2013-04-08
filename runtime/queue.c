@@ -1332,8 +1332,6 @@ finalize_it:
 	RETiRet;
 }
 
-
-
 /* Constructor for the queue object
  * This constructs the data structure, but does not yet start the queue. That
  * is done by queueStart(). The reason is that we want to give the caller a chance

@@ -188,6 +188,11 @@ CODESTARTisCompatibleWithFeature
 		iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
+BEGINSetShutdownImmdtPtr
+CODESTARTSetShutdownImmdtPtr
+	DBGPRINTF("omrelp: shutdownImmediate ptr now is %p\n", pPtr);
+ENDSetShutdownImmdtPtr
+
 
 BEGINdbgPrintInstInfo
 CODESTARTdbgPrintInstInfo
@@ -411,6 +416,7 @@ CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
 CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES 
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
+CODEqueryEtryPt_SetShutdownImmdtPtr
 ENDqueryEtryPt
 
 
