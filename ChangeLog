@@ -1,4 +1,5 @@
 - omrelp: added support for RainerScript-based configuration
+- omrelp: added ability to specify session timeout
 ----------------------------------------------------------------------------
 Version 7.2.7  [v7-stable] 2013-03-??
 - rsyslogd startup information is now properly conveyed back to init
