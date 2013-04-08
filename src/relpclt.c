@@ -1,6 +1,6 @@
 /* The relp client.
  *
- * Copyright 2008 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2013 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of librelp.
  *
@@ -57,6 +57,7 @@ relpCltConstruct(relpClt_t **ppThis, relpEngine_t *pEngine)
 
 	RELP_CORE_CONSTRUCTOR(pThis, Clt);
 	pThis->pEngine = pEngine;
+	pThis->timeout = 90; /* 90-second timeout is the default */
 
 	*ppThis = pThis;
 
@@ -99,6 +100,7 @@ relpCltConnect(relpClt_t *pThis, int protFamily, unsigned char *port, unsigned c
 	RELPOBJ_assert(pThis, Clt);
 
 	CHKRet(relpSessConstruct(&pThis->pSess, pThis->pEngine, NULL));
+	CHKRet(relpSessSetTimeout(pThis->pSess, pThis->timeout));
 	CHKRet(relpSessConnect(pThis->pSess, protFamily, port, host));
 
 finalize_it:
@@ -128,6 +130,17 @@ relpCltReconnect(relpClt_t *pThis)
 	CHKRet(relpSessTryReestablish(pThis->pSess));
 
 finalize_it:
+	LEAVE_RELPFUNC;
+}
+
+
+/** Set the timeout value for this client.
+ */
+relpRetVal relpCltSetTimeout(relpClt_t *pThis, unsigned timeout)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Clt);
+	pThis->timeout = timeout;
 	LEAVE_RELPFUNC;
 }
 

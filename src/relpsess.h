@@ -93,7 +93,7 @@ struct relpSess_s {
 	/* properties needed for client operation */
 	int bAutoRetry;	/**< automatically try (once) to reestablish a broken session? */
 	int sizeWindow;	/**< size of our app-level communications window */
-	int timeout; /**< timeout after which session is to be considered broken */
+	unsigned timeout; /**< timeout after which session is to be considered broken */
 	relpSessState_t sessState; /**< state of our session */
 	/* linked list of frames with outstanding "rsp" */
 	relpSessUnacked_t *pUnackedLstRoot;
@@ -125,6 +125,7 @@ relpRetVal relpSessAddUnacked(relpSess_t *pThis, relpSendbuf_t *pSendbuf);
 relpRetVal relpSessGetUnacked(relpSess_t *pThis, relpSendbuf_t **ppSendbuf, relpTxnr_t txnr);
 relpRetVal relpSessTryReestablish(relpSess_t *pThis);
 relpRetVal relpSessSetProtocolVersion(relpSess_t *pThis, int protocolVersion);
+relpRetVal relpSessSetTimeout(relpSess_t *pThis, unsigned timeout);
 relpRetVal relpSessConstructOffers(relpSess_t *pThis, relpOffers_t **ppOffers);
 relpRetVal relpSessSendSyslog(relpSess_t *pThis, unsigned char *pMsg, size_t lenMsg);
 relpRetVal relpSessSetEnableCmd(relpSess_t *pThis, unsigned char *pszCmd, relpCmdEnaState_t stateCmd);

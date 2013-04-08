@@ -161,6 +161,7 @@ relpRetVal relpEngineSetDnsLookupMode(relpEngine_t *pThis, int iMode);
 /* exposed relp client functions */
 relpRetVal relpCltConnect(relpClt_t *pThis, int protFamily, unsigned char *port, unsigned char *host);
 relpRetVal relpCltSendSyslog(relpClt_t *pThis, unsigned char *pMsg, size_t lenMsg);
+relpRetVal relpCltSetTimeout(relpClt_t *pThis, unsigned timeout);
 relpRetVal relpCltReconnect(relpClt_t *pThis);
 
 

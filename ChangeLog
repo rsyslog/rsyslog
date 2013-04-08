@@ -1,4 +1,11 @@
 ----------------------------------------------------------------------
+Version 1.0.3 (rgerhards), 2013-04-??
+- added relpCltSetTimeout() interface function
+- improved timeout handling
+  Note: default timeout is now consistently 90 seconds (there were
+  some parts of the code where it were 10 seconds and at others
+  they were 180).
+----------------------------------------------------------------------
 Version 1.0.2 (rgerhards), 2013-03-15
 - added capability to support only IPv4/v6 instead of both
 ----------------------------------------------------------------------

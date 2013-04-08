@@ -73,7 +73,7 @@ relpSessConstruct(relpSess_t **ppThis, relpEngine_t *pEngine, relpSrv_t *pSrv)
 	pThis->stateCmdSyslog = pEngine->stateCmdSyslog;
 	pThis->pSrv = pSrv;
 	pThis->txnr = 1; /* txnr start at 1 according to spec */
-	pThis->timeout = 10; /* TODO: make configurable */
+	pThis->timeout = 90;
 	pThis->sizeWindow = RELP_DFLT_WINDOW_SIZE; /* TODO: make configurable */
 	pThis->maxDataSize = RELP_DFLT_MAX_DATA_SIZE;
 
@@ -497,12 +497,13 @@ relpSessWaitState(relpSess_t *pThis, relpSessState_t stateExpected, int timeout)
 
 		FD_ZERO(&readfds);
 		FD_SET(sock, &readfds);
-pThis->pEngine->dbgprint("relpSessWaitRsp waiting for data on fd %d, timeout %d.%d\n", sock, (int) tvSelect.tv_sec, (int) tvSelect.tv_usec);
+		pThis->pEngine->dbgprint("relpSessWaitRsp waiting for data on fd %d, timeout %d.%d\n",
+			                 sock, (int) tvSelect.tv_sec, (int) tvSelect.tv_usec);
 		nfds = select(sock+1, (fd_set *) &readfds, NULL, NULL, &tvSelect);
-pThis->pEngine->dbgprint("relpSessWaitRsp select returns, nfds %d, errno %d\n", nfds, errno);
+		pThis->pEngine->dbgprint("relpSessWaitRsp select returns, nfds %d, errno %d\n", nfds, errno);
 		/* we don't check if we had a timeout - we give it one last chance */
 		CHKRet(relpSessRcvData(pThis));
-pThis->pEngine->dbgprint("iRet after relpSessRcvData %d\n", iRet);
+		pThis->pEngine->dbgprint("iRet after relpSessRcvData %d\n", iRet);
 		if(pThis->sessState == stateExpected || pThis->sessState == eRelpSessState_BROKEN) {
 			FINALIZE;
 		}
@@ -511,7 +512,7 @@ pThis->pEngine->dbgprint("iRet after relpSessRcvData %d\n", iRet);
 	}
 
 finalize_it:
-pThis->pEngine->dbgprint("relpSessWaitState returns %d\n", iRet);
+	pThis->pEngine->dbgprint("relpSessWaitState returns %d\n", iRet);
 	if(iRet == RELP_RET_TIMED_OUT) {
 		/* the session is broken! */
 		pThis->sessState = eRelpSessState_BROKEN;
@@ -568,13 +569,11 @@ relpSessSendCommand(relpSess_t *pThis, unsigned char *pCmd, size_t lenCmd,
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
 
-	/* this both reads server responses as well as makes sure we have space left
-	 * in our window. We provide a nearly eternal timeout (3 minutes). If we are not
-	 * ready to send in that period, something is awfully wrong. TODO: we may want
-	 * to make this timeout configurable, but I don't think it is a priority.
+	/* this both reads server responses as well as makes sure we have space
+	 * left in our window.
 	 */
-	//CHKRet(relpSessWaitState(pThis, eRelpSessState_READY_TO_SEND, 2));
-	CHKRet(relpSessWaitState(pThis, eRelpSessState_READY_TO_SEND, 180));
+	CHKRet(relpSessWaitState(pThis, eRelpSessState_READY_TO_SEND,
+		pThis->timeout));
 
 	/* re-try once if automatic retry mode is set */
 pThis->pEngine->dbgprint("send command relp sess state %d\n", pThis->sessState);
@@ -840,6 +839,16 @@ relpSessCltDoDisconnect(relpSess_t *pThis)
 	relpSessSetSessState(pThis, eRelpSessState_DISCONNECTED); /* indicate session startup */
 
 finalize_it:
+	LEAVE_RELPFUNC;
+}
+
+
+relpRetVal
+relpSessSetTimeout(relpSess_t *pThis, unsigned timeout)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Sess);
+	pThis->timeout = timeout;
 	LEAVE_RELPFUNC;
 }
 
