@@ -11,7 +11,7 @@
  *
  * Module begun 2009-06-10 by Rainer Gerhards
  *
- * Copyright 2009-2012 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2009-2013 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -297,6 +297,7 @@ execIf(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
 	sbool *newAct;
 	int i;
 	sbool bRet;
+	sbool allInactive = 1;
 	DEFiRet;
 	newAct = newActive(pBatch);
 	for(i = 0 ; i < batchNumMsgs(pBatch) ; ++i) {
@@ -306,10 +307,17 @@ execIf(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
 			continue; /* will be ignored in any case */
 		if(active == NULL || active[i]) {
 			bRet = cnfexprEvalBool(stmt->d.s_if.expr, pBatch->pElem[i].pMsg);
+			allInactive = 0;
 		} else 
 			bRet = 0;
 		newAct[i] = bRet;
 		DBGPRINTF("batch: item %d: expr eval: %d\n", i, bRet);
+	}
+
+	if(allInactive) {
+		DBGPRINTF("execIf: all batch elements are inactive, holding execution\n");
+		freeActive(newAct);
+		FINALIZE;
 	}
 
 	if(stmt->d.s_if.t_then != NULL) {
@@ -319,7 +327,8 @@ execIf(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
 		for(i = 0 ; i < batchNumMsgs(pBatch) ; ++i) {
 			if(*(pBatch->pbShutdownImmediate))
 				FINALIZE;
-			if(pBatch->eltState[i] != BATCH_STATE_DISC)
+			if(pBatch->eltState[i] != BATCH_STATE_DISC
+			   && (active == NULL || active[i]))
 				newAct[i] = !newAct[i];
 			}
 		scriptExec(stmt->d.s_if.t_else, pBatch, newAct);
@@ -364,7 +373,8 @@ execPRIFILT(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
 		for(i = 0 ; i < batchNumMsgs(pBatch) ; ++i) {
 			if(*(pBatch->pbShutdownImmediate))
 				return;
-			if(pBatch->eltState[i] != BATCH_STATE_DISC)
+			if(pBatch->eltState[i] != BATCH_STATE_DISC
+			   && (active == NULL || active[i]))
 				newAct[i] = !newAct[i];
 			}
 		scriptExec(stmt->d.s_prifilt.t_else, pBatch, newAct);
@@ -504,7 +514,11 @@ scriptExec(struct cnfstmt *root, batch_t *pBatch, sbool *active)
 	struct cnfstmt *stmt;
 
 	for(stmt = root ; stmt != NULL ; stmt = stmt->next) {
-dbgprintf("RRRR: scriptExec: batch of %d elements, active %p, stmt %p, nodetype %u\n", batchNumMsgs(pBatch), active, stmt, stmt->nodetype);
+		if(Debug) {
+			dbgprintf("scriptExec: batch of %d elements, active %p, active[0]:%d\n",
+				  batchNumMsgs(pBatch), active, (active == NULL ? 1 : active[0]));
+			cnfstmtPrintOnly(stmt, 2, 0);
+		}
 		switch(stmt->nodetype) {
 		case S_NOP:
 			break;
@@ -521,7 +535,6 @@ dbgprintf("RRRR: scriptExec: batch of %d elements, active %p, stmt %p, nodetype 
 			execUnset(stmt, pBatch, active);
 			break;
 		case S_CALL:
-			DBGPRINTF("calling ruleset\n"); // TODO: add Name
 			scriptExec(stmt->d.s_call.stmt, pBatch, active);
 			break;
 		case S_IF:

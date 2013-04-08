@@ -2,7 +2,7 @@
  *
  * Module begun 2011-07-01 by Rainer Gerhards
  *
- * Copyright 2011-2012 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2011-2013 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -2252,31 +2252,33 @@ cnfexprPrint(struct cnfexpr *expr, int indent)
 		break;
 	}
 }
+/* print only the given stmt 
+ * if "subtree" equals 1, the full statement subtree is printed, else
+ * really only the statement.
+ */
 void
-cnfstmtPrint(struct cnfstmt *root, int indent)
+cnfstmtPrintOnly(struct cnfstmt *stmt, int indent, sbool subtree)
 {
-	struct cnfstmt *stmt;
 	char *cstr;
-	//dbgprintf("stmt %p, indent %d, type '%c'\n", expr, indent, expr->nodetype);
-	for(stmt = root ; stmt != NULL ; stmt = stmt->next) {
-		switch(stmt->nodetype) {
-		case S_NOP:
-			doIndent(indent); dbgprintf("NOP\n");
-			break;
-		case S_STOP:
-			doIndent(indent); dbgprintf("STOP\n");
-			break;
-		case S_CALL:
-			cstr = es_str2cstr(stmt->d.s_call.name, NULL);
-			doIndent(indent); dbgprintf("CALL [%s]\n", cstr);
-			free(cstr);
-			break;
-		case S_ACT:
-			doIndent(indent); dbgprintf("ACTION %p [%s]\n", stmt->d.act, stmt->printable);
-			break;
-		case S_IF:
-			doIndent(indent); dbgprintf("IF\n");
-			cnfexprPrint(stmt->d.s_if.expr, indent+1);
+	switch(stmt->nodetype) {
+	case S_NOP:
+		doIndent(indent); dbgprintf("NOP\n");
+		break;
+	case S_STOP:
+		doIndent(indent); dbgprintf("STOP\n");
+		break;
+	case S_CALL:
+		cstr = es_str2cstr(stmt->d.s_call.name, NULL);
+		doIndent(indent); dbgprintf("CALL [%s]\n", cstr);
+		free(cstr);
+		break;
+	case S_ACT:
+		doIndent(indent); dbgprintf("ACTION %p [%s]\n", stmt->d.act, stmt->printable);
+		break;
+	case S_IF:
+		doIndent(indent); dbgprintf("IF\n");
+		cnfexprPrint(stmt->d.s_if.expr, indent+1);
+		if(subtree) {
 			doIndent(indent); dbgprintf("THEN\n");
 			cnfstmtPrint(stmt->d.s_if.t_then, indent+1);
 			if(stmt->d.s_if.t_else != NULL) {
@@ -2284,54 +2286,67 @@ cnfstmtPrint(struct cnfstmt *root, int indent)
 				cnfstmtPrint(stmt->d.s_if.t_else, indent+1);
 			}
 			doIndent(indent); dbgprintf("END IF\n");
-			break;
-		case S_SET:
-			doIndent(indent); dbgprintf("SET %s =\n",
-				          stmt->d.s_set.varname);
-			cnfexprPrint(stmt->d.s_set.expr, indent+1);
-			doIndent(indent); dbgprintf("END SET\n");
-			break;
-		case S_UNSET:
-			doIndent(indent); dbgprintf("UNSET %s\n",
-				          stmt->d.s_unset.varname);
-			break;
-		case S_PRIFILT:
-			doIndent(indent); dbgprintf("PRIFILT '%s'\n", stmt->printable);
-			pmaskPrint(stmt->d.s_prifilt.pmask, indent);
+		}
+		break;
+	case S_SET:
+		doIndent(indent); dbgprintf("SET %s =\n",
+				  stmt->d.s_set.varname);
+		cnfexprPrint(stmt->d.s_set.expr, indent+1);
+		doIndent(indent); dbgprintf("END SET\n");
+		break;
+	case S_UNSET:
+		doIndent(indent); dbgprintf("UNSET %s\n",
+				  stmt->d.s_unset.varname);
+		break;
+	case S_PRIFILT:
+		doIndent(indent); dbgprintf("PRIFILT '%s'\n", stmt->printable);
+		pmaskPrint(stmt->d.s_prifilt.pmask, indent);
+		if(subtree) {
 			cnfstmtPrint(stmt->d.s_prifilt.t_then, indent+1);
 			if(stmt->d.s_prifilt.t_else != NULL) {
 				doIndent(indent); dbgprintf("ELSE\n");
 				cnfstmtPrint(stmt->d.s_prifilt.t_else, indent+1);
 			}
 			doIndent(indent); dbgprintf("END PRIFILT\n");
-			break;
-		case S_PROPFILT:
-			doIndent(indent); dbgprintf("PROPFILT\n");
-			doIndent(indent); dbgprintf("\tProperty.: '%s'\n",
-				propIDToName(stmt->d.s_propfilt.propID));
-			if(stmt->d.s_propfilt.propName != NULL) {
-				cstr = es_str2cstr(stmt->d.s_propfilt.propName, NULL);
-				doIndent(indent);
-				dbgprintf("\tCEE-Prop.: '%s'\n", cstr);
-				free(cstr);
-			}
-			doIndent(indent); dbgprintf("\tOperation: ");
-			if(stmt->d.s_propfilt.isNegated)
-				dbgprintf("NOT ");
-			dbgprintf("'%s'\n", getFIOPName(stmt->d.s_propfilt.operation));
-			if(stmt->d.s_propfilt.pCSCompValue != NULL) {
-				doIndent(indent); dbgprintf("\tValue....: '%s'\n",
-				       rsCStrGetSzStrNoNULL(stmt->d.s_propfilt.pCSCompValue));
-			}
+		}
+		break;
+	case S_PROPFILT:
+		doIndent(indent); dbgprintf("PROPFILT\n");
+		doIndent(indent); dbgprintf("\tProperty.: '%s'\n",
+			propIDToName(stmt->d.s_propfilt.propID));
+		if(stmt->d.s_propfilt.propName != NULL) {
+			cstr = es_str2cstr(stmt->d.s_propfilt.propName, NULL);
+			doIndent(indent);
+			dbgprintf("\tCEE-Prop.: '%s'\n", cstr);
+			free(cstr);
+		}
+		doIndent(indent); dbgprintf("\tOperation: ");
+		if(stmt->d.s_propfilt.isNegated)
+			dbgprintf("NOT ");
+		dbgprintf("'%s'\n", getFIOPName(stmt->d.s_propfilt.operation));
+		if(stmt->d.s_propfilt.pCSCompValue != NULL) {
+			doIndent(indent); dbgprintf("\tValue....: '%s'\n",
+			       rsCStrGetSzStrNoNULL(stmt->d.s_propfilt.pCSCompValue));
+		}
+		if(subtree) {
 			doIndent(indent); dbgprintf("THEN\n");
 			cnfstmtPrint(stmt->d.s_propfilt.t_then, indent+1);
 			doIndent(indent); dbgprintf("END PROPFILT\n");
-			break;
-		default:
-			dbgprintf("error: unknown stmt type %u\n",
-				(unsigned) stmt->nodetype);
-			break;
 		}
+		break;
+	default:
+		dbgprintf("error: unknown stmt type %u\n",
+			(unsigned) stmt->nodetype);
+		break;
+	}
+}
+void
+cnfstmtPrint(struct cnfstmt *root, int indent)
+{
+	struct cnfstmt *stmt;
+	//dbgprintf("stmt %p, indent %d, type '%c'\n", expr, indent, expr->nodetype);
+	for(stmt = root ; stmt != NULL ; stmt = stmt->next) {
+		cnfstmtPrintOnly(stmt, indent, 1);
 	}
 }
 
@@ -3619,5 +3634,54 @@ unescapeStr(uchar *s, int len)
 			++iDst;
 		}
 		s[iDst] = '\0';
+	}
+}
+
+char *
+tokenval2str(int tok)
+{
+	if(tok < 256) return "";
+	switch(tok) {
+	case NAME: return "NAME";
+	case FUNC: return "FUNC";
+	case BEGINOBJ: return "BEGINOBJ";
+	case ENDOBJ: return "ENDOBJ";
+	case BEGIN_ACTION: return "BEGIN_ACTION";
+	case BEGIN_PROPERTY: return "BEGIN_PROPERTY";
+	case BEGIN_CONSTANT: return "BEGIN_CONSTANT";
+	case BEGIN_TPL: return "BEGIN_TPL";
+	case BEGIN_RULESET: return "BEGIN_RULESET";
+	case STOP: return "STOP";
+	case SET: return "SET";
+	case UNSET: return "UNSET";
+	case CONTINUE: return "CONTINUE";
+	case CALL: return "CALL";
+	case LEGACY_ACTION: return "LEGACY_ACTION";
+	case LEGACY_RULESET: return "LEGACY_RULESET";
+	case PRIFILT: return "PRIFILT";
+	case PROPFILT: return "PROPFILT";
+	case BSD_TAG_SELECTOR: return "BSD_TAG_SELECTOR";
+	case BSD_HOST_SELECTOR: return "BSD_HOST_SELECTOR";
+	case IF: return "IF";
+	case THEN: return "THEN";
+	case ELSE: return "ELSE";
+	case OR: return "OR";
+	case AND: return "AND";
+	case NOT: return "NOT";
+	case VAR: return "VAR";
+	case STRING: return "STRING";
+	case NUMBER: return "NUMBER";
+	case CMP_EQ: return "CMP_EQ";
+	case CMP_NE: return "CMP_NE";
+	case CMP_LE: return "CMP_LE";
+	case CMP_GE: return "CMP_GE";
+	case CMP_LT: return "CMP_LT";
+	case CMP_GT: return "CMP_GT";
+	case CMP_CONTAINS: return "CMP_CONTAINS";
+	case CMP_CONTAINSI: return "CMP_CONTAINSI";
+	case CMP_STARTSWITH: return "CMP_STARTSWITH";
+	case CMP_STARTSWITHI: return "CMP_STARTSWITHI";
+	case UMINUS: return "UMINUS";
+	default: return "UNKNOWN TOKEN";
 	}
 }
