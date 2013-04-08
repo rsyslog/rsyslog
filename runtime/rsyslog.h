@@ -387,7 +387,9 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_MOD_NO_INPUT_STMT = -2224, /**< (input) module does not support input() statement */
 	RS_RET_NO_CEE_MSG = -2225, /**< the message being processed is NOT CEE-enhanced */
 
-	/**** up to 2300 is reserved for v6 use ****/
+	/**** up to 2290 is reserved for v6 use ****/
+	RS_RET_RELP_ERR = -2291,	/**<< error in RELP processing */
+	/**** up to 3000 is reserved for c7 use ****/
 	RS_RET_JNAME_NO_ROOT = -2301, /**< root element is missing in JSON path */
 	RS_RET_JNAME_INVALID = -2302, /**< JSON path is invalid */
 	RS_RET_JSON_PARSE_ERR = -2303, /**< we had a problem parsing JSON (or extra data) */

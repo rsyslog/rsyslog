@@ -1,6 +1,7 @@
 ---------------------------------------------------------------------------
 Version 7.3.10  [devel] 2013-04-??
 - added RainerScript re_extract() function
+- omrelp: added support for RainerScript-based configuration
 - bugfix: failover/action suspend did not work correctly
   This was experienced if the retry action took more than one second
   to complete. For suspending, a cached timestamp was used, and if the
