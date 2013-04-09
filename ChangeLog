@@ -11,6 +11,8 @@ Version 7.3.10  [devel] 2013-04-??
   no failover happened. The suspend functionalit now does no longer use
   the cached timestamp (should not have any performance implication, as
   action suspend occurs very infrequently).
+- bugfix: gnutls RFC5425 driver had some undersized buffers
+  Thanks to Tomas Heinrich for the patch.
 - bugfix: nested if/prifilt conditions did not work properly
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=415
 - templates now permit substring extraction relative to end-of-string
