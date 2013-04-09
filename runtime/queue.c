@@ -1032,7 +1032,8 @@ rsRetVal qqueueEnqObjDirectBatch(qqueue_t *pThis, batch_t *pBatch)
 	 * We use our knowledge about the batch_t structure below, but without that, we
 	 * pay a too-large performance toll... -- rgerhards, 2009-04-22
 	 */
-	iRet = pThis->pConsumer(pThis->pUsr, pBatch, &pThis->bShutdownImmediate);
+dbgprintf("DDDD: qqueueEnqObjDirectBatch\n");
+	iRet = pThis->pConsumer(pThis->pUsr, pBatch, NULL);
 
 	RETiRet;
 }
@@ -1191,6 +1192,7 @@ RUNLOG_STR("trying to shutdown workers within Action Timeout");
 	/* instruct workers to finish ASAP, even if still work exists */
 	DBGOPRINT((obj_t*) pThis, "setting EnqOnly mode\n");
 	pThis->bEnqOnly = 1;
+dbgprintf("DDDD: setting shutdownImmediate mode, ptr %p!\n", &pThis->bShutdownImmediate);
 	pThis->bShutdownImmediate = 1;
 	/* now DA queue */
 	if(pThis->bIsDA) {
@@ -1872,6 +1874,7 @@ ConsumerReg(qqueue_t *pThis, wti_t *pWti)
 	/* at this spot, we may be cancelled */
 	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &iCancelStateSave);
 
+dbgprintf("DDDD: calling consumer with shutdownImmeditate ptr %p\n", &pThis->bShutdownImmediate);
 	CHKiRet(pThis->pConsumer(pThis->pUsr, &pWti->batch, &pThis->bShutdownImmediate));
 
 	/* we now need to check if we should deliberately delay processing a bit

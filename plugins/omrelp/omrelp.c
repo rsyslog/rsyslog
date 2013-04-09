@@ -190,6 +190,7 @@ ENDisCompatibleWithFeature
 
 BEGINSetShutdownImmdtPtr
 CODESTARTSetShutdownImmdtPtr
+	relpEngineSetShutdownImmdtPtr(pRelpEngine, pPtr);
 	DBGPRINTF("omrelp: shutdownImmediate ptr now is %p\n", pPtr);
 ENDSetShutdownImmdtPtr
 

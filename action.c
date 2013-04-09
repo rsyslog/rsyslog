@@ -1284,8 +1284,11 @@ processBatchMain(action_t *pAction, batch_t *pBatch, int *pbShutdownImmediate)
 
 	assert(pBatch != NULL);
 
-	pbShutdownImmdtSave = pBatch->pbShutdownImmediate;
-	pBatch->pbShutdownImmediate = pbShutdownImmediate;
+	if(pbShutdownImmediate != NULL) {
+		pbShutdownImmdtSave = pBatch->pbShutdownImmediate;
+		pBatch->pbShutdownImmediate = pbShutdownImmediate;
+dbgprintf("DDDD: processBatchMain ShutdownImmediate is %p, was %p\n", pBatch->pbShutdownImmediate, pbShutdownImmdtSave);
+	}
 	CHKiRet(prepareBatch(pAction, pBatch, &activeSave, &bMustRestoreActivePtr));
 
 	/* We now must guard the output module against execution by multiple threads. The
@@ -1316,7 +1319,8 @@ processBatchMain(action_t *pAction, batch_t *pBatch, int *pbShutdownImmediate)
 	}
 
 finalize_it:
-	pBatch->pbShutdownImmediate = pbShutdownImmdtSave;
+	if(pbShutdownImmediate != NULL)
+		pBatch->pbShutdownImmediate = pbShutdownImmdtSave;
 	RETiRet;
 }
 #pragma GCC diagnostic warning "-Wempty-body"
