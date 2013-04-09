@@ -961,6 +961,8 @@ actionProcessMessage(action_t *pThis, msg_t *pMsg, void *actParams, int *pbShutd
 	ISOBJ_TYPE_assert(pMsg, msg);
 
 	CHKiRet(actionPrepare(pThis, pbShutdownImmediate));
+	if(pThis->pMod->mod.om.SetShutdownImmdtPtr != NULL)
+		pThis->pMod->mod.om.SetShutdownImmdtPtr(pThis->pModData, pbShutdownImmediate);
 	if(pThis->eState == ACT_STATE_ITX)
 		CHKiRet(actionCallDoAction(pThis, pMsg, actParams));
 
@@ -1272,8 +1274,11 @@ processBatchMain(action_t *pAction, batch_t *pBatch, int *pbShutdownImmediate)
 
 	assert(pBatch != NULL);
 
-	pbShutdownImmdtSave = pBatch->pbShutdownImmediate;
-	pBatch->pbShutdownImmediate = pbShutdownImmediate;
+	if(pbShutdownImmediate != NULL) {
+		pbShutdownImmdtSave = pBatch->pbShutdownImmediate;
+		pBatch->pbShutdownImmediate = pbShutdownImmediate;
+dbgprintf("DDDD: processBatchMain ShutdownImmediate is %p, was %p\n", pBatch->pbShutdownImmediate, pbShutdownImmdtSave);
+	}
 	CHKiRet(prepareBatch(pAction, pBatch, &activeSave, &bMustRestoreActivePtr));
 
 	/* We now must guard the output module against execution by multiple threads. The
@@ -1304,7 +1309,8 @@ processBatchMain(action_t *pAction, batch_t *pBatch, int *pbShutdownImmediate)
 	}
 
 finalize_it:
-	pBatch->pbShutdownImmediate = pbShutdownImmdtSave;
+	if(pbShutdownImmediate != NULL)
+		pBatch->pbShutdownImmediate = pbShutdownImmdtSave;
 	RETiRet;
 }
 #pragma GCC diagnostic warning "-Wempty-body"

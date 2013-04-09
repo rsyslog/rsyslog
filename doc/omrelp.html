@@ -30,6 +30,10 @@ must be used.
 	<li><b>template </b>(not mandatory, default "RSYSLOG_ForwardFormat")<br>
 	Defines the template to be used for the output.
 	</li>
+	<li><b>timeout </b>(not mandatory, default 90)<br>
+	Timeout for relp sessions. If set too low, valid sessions
+	may be considered dead and tried to recover.
+	</li>
 </ul>
 <p><b>Sample:</b></p>
 <p>The following sample sends all messages to the central server

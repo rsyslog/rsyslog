@@ -63,7 +63,8 @@ typedef struct _instanceData {
 	uchar *port;
 	int bInitialConnect; /* is this the initial connection request of our module? (0-no, 1-yes) */
 	int bIsConnected; /* currently connected to server? 0 - no, 1 - yes */
-	relpClt_t *pRelpClt;		/* relp client for this instance */
+	unsigned timeout;
+	relpClt_t *pRelpClt; /* relp client for this instance */
 	uchar *tplName;
 } instanceData;
 
@@ -76,8 +77,9 @@ static configSettings_t __attribute__((unused)) cs;
 /* tables for interfacing with the v6 config system */
 /* action (instance) parameters */
 static struct cnfparamdescr actpdescr[] = {
-	{ "target", eCmdHdlrGetWord, 0 },
+	{ "target", eCmdHdlrGetWord, 1 },
 	{ "port", eCmdHdlrGetWord, 0 },
+	{ "timeout", eCmdHdlrInt, 0 },
 	{ "template", eCmdHdlrGetWord, 1 }
 };
 static struct cnfparamblk actpblk =
@@ -109,6 +111,8 @@ doCreateRelpClient(instanceData *pData)
 	DEFiRet;
 	if(relpEngineCltConstruct(pRelpEngine, &pData->pRelpClt) != RELP_RET_OK)
 		ABORT_FINALIZE(RS_RET_RELP_ERR);
+	if(relpCltSetTimeout(pData->pRelpClt, pData->timeout) != RELP_RET_OK)
+		ABORT_FINALIZE(RS_RET_RELP_ERR);
 finalize_it:
 	RETiRet;
 }
@@ -134,6 +138,7 @@ setInstParamDefaults(instanceData *pData)
 	pData->target = NULL;
 	pData->port = NULL;
 	pData->tplName = NULL;
+	pData->timeout = 90;
 }
 
 
@@ -157,6 +162,8 @@ CODESTARTnewActInst
 			pData->port = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "template")) {
 			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "timeout")) {
+			pData->timeout = (unsigned) pvals[i].val.d.n;
 		} else {
 			dbgprintf("omrelp: program error, non-handled "
 			  "param '%s'\n", actpblk.descr[i].name);
@@ -180,6 +187,12 @@ CODESTARTisCompatibleWithFeature
 	if(eFeat == sFEATURERepeatedMsgReduction)
 		iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
+
+BEGINSetShutdownImmdtPtr
+CODESTARTSetShutdownImmdtPtr
+	relpEngineSetShutdownImmdtPtr(pRelpEngine, pPtr);
+	DBGPRINTF("omrelp: shutdownImmediate ptr now is %p\n", pPtr);
+ENDSetShutdownImmdtPtr
 
 
 BEGINdbgPrintInstInfo
@@ -404,6 +417,7 @@ CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
 CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES 
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
+CODEqueryEtryPt_SetShutdownImmdtPtr
 ENDqueryEtryPt
 
 

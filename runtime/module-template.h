@@ -938,6 +938,28 @@ static rsRetVal doHUP(instanceData __attribute__((unused)) *pData)\
 }
 
 
+/* SetShutdownImmdtPtr()
+ * This function is optional. If defined by an output plugin, it is called 
+ * each time the action is invoked to set the "ShutdownImmediate" pointer,
+ * which is used during termination to indicate the action should shutdown
+ * as quickly as possible.
+ */
+#define CODEqueryEtryPt_SetShutdownImmdtPtr \
+	else if(!strcmp((char*) name, "SetShutdownImmdtPtr")) {\
+		*pEtryPoint = SetShutdownImmdtPtr;\
+	}
+#define BEGINSetShutdownImmdtPtr \
+static rsRetVal SetShutdownImmdtPtr(instanceData __attribute__((unused)) *pData, int *pPtr)\
+{\
+	DEFiRet;
+
+#define CODESTARTSetShutdownImmdtPtr 
+
+#define ENDSetShutdownImmdtPtr \
+	RETiRet;\
+}
+
+
 /* parse() - main entry point of parser modules
  */
 #define BEGINparse \
