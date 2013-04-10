@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------
-Version 1.0.3 (rgerhards), 2013-04-??
+Version 1.0.3 (rgerhards), 2013-04-10
 - added relpCltSetTimeout() interface function
 - improved timeout handling
   Note: default timeout is now consistently 90 seconds (there were
