@@ -56,6 +56,10 @@ case "${host}" in
     AC_DEFINE([OS_SOLARIS], [1], [Indicator for a Solaris OS])
     AC_DEFINE([_POSIX_PTHREAD_SEMANTICS], [1], [Use POSIX pthread semantics])
     SOL_LIBS="-lsocket -lnsl"
+    # Solaris libuuid does not ship with a pkgconfig file so override the appropriate
+    # variables (but only if they have not been set by the user).
+    LIBUUID_CFLAGS=${LIBUUID_CFLAGS:= }
+    LIBUUID_LIBS=${LIBUUID_LIBS:=-luuid}
     AC_SUBST(SOL_LIBS)
   ;;
 esac
