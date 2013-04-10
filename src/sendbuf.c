@@ -34,6 +34,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <sys/types.h>
+#include <time.h>
 #include "relp.h"
 #include "sendbuf.h"
 
@@ -140,6 +141,19 @@ finalize_it:
 }
 
 
+/* a portable way to put the current thread asleep. Note that
+ * using the sleep() API family may result in the whole process
+ * to be put asleep on some platforms.
+ */
+static inline void
+doSleep(int iSeconds, int iuSeconds)
+{
+	struct timeval tvSelectTimeout;
+	tvSelectTimeout.tv_sec = iSeconds;
+	tvSelectTimeout.tv_usec = iuSeconds; /* micro seconds */
+	select(0, NULL, NULL, NULL, &tvSelectTimeout);
+}
+
 /* This functions sends a complete sendbuf (a blocking call). It
  * is intended for use by clients. Do NOT use it on servers as
  * that will block other activity. bAddToUnacked specifies if the
@@ -147,16 +161,22 @@ finalize_it:
  * this shall NOT happen. Mode 0 is used for session reestablishment,
  * when the unacked list needs to be retransmitted.
  * rgerhards, 2008-03-19
+ * The timeout handler may be one second off. This currently is good
+ * enough for our needs, but we may revisit this if we make larger
+ * changes to the lib. -- rgerhards, 2013-04-10
  */
 relpRetVal
 relpSendbufSendAll(relpSendbuf_t *pThis, relpSess_t *pSess, int bAddToUnacked)
 {
 	ssize_t lenToWrite;
 	ssize_t lenWritten;
+	time_t timeout, currtime;
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sendbuf);
 	RELPOBJ_assert(pSess,  Sess);
 
+	time(&timeout);
+	timeout += pSess->timeout;
 	lenToWrite = pThis->lenData - pThis->bufPtr;
 	while(lenToWrite != 0) {
 		lenWritten = lenToWrite;
@@ -165,6 +185,15 @@ relpSendbufSendAll(relpSendbuf_t *pThis, relpSess_t *pSess, int bAddToUnacked)
 
 		if(lenWritten == -1) {
 			ABORT_FINALIZE(RELP_RET_IO_ERR);
+		} else if(lenWritten == 0) {
+			time(&currtime);
+			pSess->pEngine->dbgprint("relpSendbufSendAll() wrote "
+				"0 octets, timeout %lld, curr %lld\n",
+				(long long) timeout, (long long) currtime);
+			if(currtime >= timeout)
+				ABORT_FINALIZE(RELP_RET_IO_ERR);
+			/* we put ourselves to sleep to avoid busy waiting */
+			doSleep(0, 100);
 		} else if(lenWritten == lenToWrite) {
 			lenToWrite = 0;
 		} else {

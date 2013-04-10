@@ -1,4 +1,10 @@
 ----------------------------------------------------------------------
+Version 1.0.4 (rgerhards), 2013-04-11
+- bugfix: busy loop on syslog sending as a client when server did not
+  accept data; this was broken out only when the remote peer
+  indicated that the connection as whole was broken. Now we properly
+  timeout.
+----------------------------------------------------------------------
 Version 1.0.3 (rgerhards), 2013-04-10
 - added relpCltSetTimeout() interface function
 - improved timeout handling
