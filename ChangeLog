@@ -3,6 +3,7 @@ Version 7.3.10  [devel] 2013-04-??
 - added RainerScript re_extract() function
 - omrelp: added support for RainerScript-based configuration
 - omrelp: added ability to specify session timeout
+- templates now permit substring extraction relative to end-of-string
 - bugfix: failover/action suspend did not work correctly
   This was experienced if the retry action took more than one second
   to complete. For suspending, a cached timestamp was used, and if the
@@ -15,9 +16,10 @@ Version 7.3.10  [devel] 2013-04-??
   Thanks to Tomas Heinrich for the patch.
 - bugfix: nested if/prifilt conditions did not work properly
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=415
-- templates now permit substring extraction relative to end-of-string
 - bugfix: imuxsock aborted under some conditions
   regression from ratelimiting enhancements
+- bugfix: build problems on Solaris
+  Thanks to Martin Carpenter for the patches.
 ---------------------------------------------------------------------------
 Version 7.3.9  [devel] 2013-03-27
 - support for signing logs added
