@@ -141,6 +141,7 @@ enum relpCmdEnaState_e { /* command enabled state - what are we permitted to do/
 
 /* prototypes needed by library users */
 char *relpEngineGetVersion(void); /* use this entry point for configure check */
+void relpEngineSetShutdownImmdtPtr(relpEngine_t *pThis, int *ptr);
 relpRetVal relpEngineConstruct(relpEngine_t **ppThis);
 relpRetVal relpEngineDestruct(relpEngine_t **ppThis);
 relpRetVal relpEngineSetDbgprint(relpEngine_t *pThis, void (*dbgprint)(char *fmt, ...) __attribute__((format(printf, 1, 2))));

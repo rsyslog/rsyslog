@@ -1,6 +1,6 @@
 /* This module implements the relp sess object.
  *
- * Copyright 2008 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2013 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of librelp.
  *
@@ -483,7 +483,7 @@ relpSessWaitState(relpSess_t *pThis, relpSessState_t stateExpected, int timeout)
 	memcpy(&tTimeout, &tCurr, sizeof(struct timespec));
 	tTimeout.tv_sec += timeout;
 
-	while(1) {
+	while(!relpEngineShouldStop(pThis->pEngine)) {
 		sock = relpSessGetSock(pThis);
 		tvSelect.tv_sec = tTimeout.tv_sec - tCurr.tv_sec;
 		tvSelect.tv_usec = (tTimeout.tv_nsec - tCurr.tv_nsec) / 1000000;
@@ -497,14 +497,19 @@ relpSessWaitState(relpSess_t *pThis, relpSessState_t stateExpected, int timeout)
 
 		FD_ZERO(&readfds);
 		FD_SET(sock, &readfds);
-		pThis->pEngine->dbgprint("relpSessWaitRsp waiting for data on fd %d, timeout %d.%d\n",
-			                 sock, (int) tvSelect.tv_sec, (int) tvSelect.tv_usec);
+		pThis->pEngine->dbgprint("relpSessWaitRsp waiting for data on "
+			"fd %d, timeout %d.%d\n", sock, (int) tvSelect.tv_sec,
+			(int) tvSelect.tv_usec);
 		nfds = select(sock+1, (fd_set *) &readfds, NULL, NULL, &tvSelect);
-		pThis->pEngine->dbgprint("relpSessWaitRsp select returns, nfds %d, errno %d\n", nfds, errno);
-		/* we don't check if we had a timeout - we give it one last chance */
+		pThis->pEngine->dbgprint("relpSessWaitRsp select returns, "
+			"nfds %d, errno %d\n", nfds, errno);
+		if(relpEngineShouldStop(pThis->pEngine))
+			break;
+		/* we don't check if we had a timeout-we give it one last chance*/
 		CHKRet(relpSessRcvData(pThis));
 		pThis->pEngine->dbgprint("iRet after relpSessRcvData %d\n", iRet);
-		if(pThis->sessState == stateExpected || pThis->sessState == eRelpSessState_BROKEN) {
+		if(   pThis->sessState == stateExpected
+		   || pThis->sessState == eRelpSessState_BROKEN) {
 			FINALIZE;
 		}
 
@@ -513,7 +518,7 @@ relpSessWaitState(relpSess_t *pThis, relpSessState_t stateExpected, int timeout)
 
 finalize_it:
 	pThis->pEngine->dbgprint("relpSessWaitState returns %d\n", iRet);
-	if(iRet == RELP_RET_TIMED_OUT) {
+	if(iRet == RELP_RET_TIMED_OUT || relpEngineShouldStop(pThis->pEngine)) {
 		/* the session is broken! */
 		pThis->sessState = eRelpSessState_BROKEN;
 	}

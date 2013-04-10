@@ -103,6 +103,11 @@ struct relpEngine_s {
 	pthread_mutex_t mutSessLst;
 
 	int bStop;	/* set to 1 to stop server after next select */
+	int *bShutdownImmdt; /* if non-NULL provides a kind of "external" */
+		/* bStop functionality. This is in support for rsyslog,
+		 * whom's output interface is not capable of calling into
+		 * librelp at time of stop request.
+		 */
 };
 
 
@@ -157,6 +162,12 @@ struct relpEngine_s {
 /* some macro-implemented functionality of the RELP engine */
 #define relpEngineNextTXNR(txnr) \
 	((txnr > 999999999) ? 1 : txnr + 1)
+
+static inline int relpEngineShouldStop(relpEngine_t *pThis) {
+pThis->dbgprint("DDDD: librelp bStop %d, ShutdownImmdt %p, immdet result %d\n", pThis->bStop, pThis->bShutdownImmdt, (pThis->bShutdownImmdt == NULL) ? 0 : *pThis->bShutdownImmdt);
+	return     pThis->bStop
+	       || (pThis->bShutdownImmdt != NULL && *pThis->bShutdownImmdt);
+}
 
 /* prototypes needed by library itself (rest is in librelp.h) */
 relpRetVal relpEngineDispatchFrame(relpEngine_t *pThis, relpSess_t *pSess, relpFrame_t *pFrame);

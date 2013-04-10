@@ -369,7 +369,7 @@ relpEngineRun(relpEngine_t *pThis)
 	RELPOBJ_assert(pThis, Engine);
 
 	pThis->bStop = 0;
-	while(pThis->bStop == 0) {
+	while(!relpEngineShouldStop(pThis)) {
 	        maxfds = 0;
 	        FD_ZERO(&readfds);
 	        FD_ZERO(&writefds);
@@ -404,10 +404,10 @@ relpEngineRun(relpEngine_t *pThis)
 		}
 
 		/* wait for io to become ready */
-		if(pThis->bStop) break;
+		if(relpEngineShouldStop(pThis)) break;
 		nfds = select(maxfds+1, (fd_set *) &readfds, &writefds, NULL, NULL);
 		pThis->dbgprint("relp select returns, nfds %d\n", nfds);
-		if(pThis->bStop) break;
+		if(relpEngineShouldStop(pThis)) break;
 
 		if(nfds == -1) {
 			if(errno == EINTR) {
@@ -421,7 +421,7 @@ relpEngineRun(relpEngine_t *pThis)
 		/* and then start again with the servers (new connection request) */
 		for(pSrvEtry = pThis->pSrvLstRoot ; pSrvEtry != NULL ; pSrvEtry = pSrvEtry->pNext) {
 			for(iSocks = 1 ; iSocks <= relpSrvGetNumLstnSocks(pSrvEtry->pSrv) ; ++iSocks) {
-				if(pThis->bStop) break;
+				if(relpEngineShouldStop(pThis)) break;
 				sock = relpSrvGetLstnSock(pSrvEtry->pSrv, iSocks);
 				if(FD_ISSET(sock, &readfds)) {
 					pThis->dbgprint("new connect on RELP socket #%d\n", sock);
@@ -438,7 +438,7 @@ pThis->dbgprint("relp accept session returns, iRet %d\n", localRet);
 
 		/* now check if we have some action waiting for sessions */
 		for(pSessEtry = pThis->pSessLstRoot ; pSessEtry != NULL ; ) {
-			if(pThis->bStop) break;
+			if(relpEngineShouldStop(pThis)) break;
 			pSessEtryNext = pSessEtry->pNext; /* we need to cache this as we may delete the entry! */
 			sock = relpSessGetSock(pSessEtry->pSess);
 			/* read data waiting? */
@@ -585,6 +585,13 @@ char *relpEngineGetVersion(void)
 #	else
 		return VERSION;
 #	endif
+}
+
+void
+relpEngineSetShutdownImmdtPtr(relpEngine_t *pThis, int *ptr)
+{
+	if(pThis->bShutdownImmdt != ptr)
+		pThis->bShutdownImmdt = ptr;
 }
 
 
