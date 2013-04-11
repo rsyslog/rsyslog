@@ -108,8 +108,10 @@ rsgcrySetKey(gcryctx ctx, unsigned char *key, uint16_t keyLen)
 	uint16_t reqKeyLen = gcry_cipher_get_algo_keylen(GCRY_CIPHER);
 	int r;
 
-	if(keyLen != reqKeyLen)
+	if(keyLen != reqKeyLen) {
 		r = reqKeyLen;
+		goto done;
+	}
 	ctx->keyLen = keyLen;
 	ctx->key = malloc(keyLen);
 	memcpy(ctx->key, key, keyLen);

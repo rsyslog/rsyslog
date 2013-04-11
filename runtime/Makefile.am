@@ -184,7 +184,7 @@ if ENABLE_LIBGCRYPT
    pkglib_LTLIBRARIES += lmcry_gcry.la
    lmcry_gcry_la_SOURCES = lmcry_gcry.c lmcry_gcry.h libgcry.c libgcry.h
    lmcry_gcry_la_CPPFLAGS = $(RSRT_CFLAGS) $(LIBGCRYPT_CFLAGS)
-   lmcry_gcry_la_LDFLAGS = -module -avoid-version
+   lmcry_gcry_la_LDFLAGS = -module -avoid-version `libgcrypt-config --libs`
 #lmcry_gcry_la_LIBADD = libgcry.la $(LIBGCRYPT_LIBS)
    lmcry_gcry_la_LIBADD = $(LIBGCRYPT_LIBS)
 endif

@@ -92,6 +92,8 @@ SetCnfParam(void *pT, struct nvlst *lst)
 	uchar *cstr;
 	uchar *key = NULL;
 	struct cnfparamvals *pvals;
+	DEFiRet;
+
 	pvals = nvlstGetParams(lst, &pblk, NULL);
 	if(Debug) {
 		dbgprintf("param blk in lmcry_gcry:\n");
@@ -125,8 +127,9 @@ SetCnfParam(void *pT, struct nvlst *lst)
 			"config file is highly insecure - DO NOT USE FOR PRODUCTION");
 		r = rsgcrySetKey(pThis->ctx, key, strlen((char*)key));
 		if(r > 0) {
-			errmsg.LogError(0, RS_RET_ERR, "Key length %d expected, but "
+			errmsg.LogError(0, RS_RET_INVALID_PARAMS, "Key length %d expected, but "
 				"key of length %d given", r, strlen((char*)key));
+			ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 		}
 	}
 
@@ -135,7 +138,8 @@ SetCnfParam(void *pT, struct nvlst *lst)
 		memset(key, 0, strlen((char*)key));
 		free(key);
 	}
-	return RS_RET_OK;
+finalize_it:
+	RETiRet;
 }
 
 
