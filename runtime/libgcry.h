@@ -34,6 +34,8 @@ typedef struct gcryfile_s *gcryfile;
 struct gcryfile_s {
 	gcry_cipher_hd_t chd; /* cypher handle */
 	size_t blkLength; /* size of low-level crypto block */
+	uchar *eiName; /* name of .encinfo file */
+	int fd; /* descriptor of .encinfo file (-1 if not open) */
 	gcryctx ctx;
 };
 
@@ -42,8 +44,14 @@ void rsgcryExit(void);
 int rsgcrySetKey(gcryctx ctx, unsigned char *key, uint16_t keyLen);
 gcryctx gcryCtxNew(void);
 void rsgcryCtxDel(gcryctx ctx);
-int gcryfileDestruct(gcryfile gf);
-rsRetVal rsgcryInitCrypt(gcryctx ctx, gcryfile *pgf, int gcry_mode, char * iniVector);
+int gcryfileDestruct(gcryfile gf, off64_t offsLogfile);
+rsRetVal rsgcryInitCrypt(gcryctx ctx, gcryfile *pgf, int gcry_mode, uchar *fname);
 int rsgcryEncrypt(gcryfile pF, uchar *buf, size_t *len);
+
+/* error states */
+#define RSGCRYE_EI_OPEN 1 	/* error opening .encinfo file */
+#define RSGCRYE_OOM 4	/* ran out of memory */
+
+#define RSGCRY_FILETYPE_NAME "rsyslog-enrcyption-info"
 
 #endif  /* #ifndef INCLUDED_LIBGCRY_H */

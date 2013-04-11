@@ -45,6 +45,7 @@
 #include <pthread.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <sys/types.h>
 #include <sys/stat.h>	 /* required for HP UX */
 #include <errno.h>
 #include <pthread.h>
@@ -388,6 +389,7 @@ strmWaitAsyncWriterDone(strm_t *pThis)
  */
 static rsRetVal strmCloseFile(strm_t *pThis)
 {
+	off64_t currOffs;
 	DEFiRet;
 
 	ASSERT(pThis != NULL);
@@ -408,11 +410,12 @@ static rsRetVal strmCloseFile(strm_t *pThis)
 	 * against this. -- rgerhards, 2010-03-19
 	 */
 	if(pThis->fd != -1) {
+		currOffs = lseek64(pThis->fd, 0, SEEK_CUR);
 		close(pThis->fd);
 		pThis->fd = -1;
 		pThis->inode = 0;
 		if(pThis->cryprov != NULL) {
-			pThis->cryprov->OnFileClose(pThis->cryprovFileData);
+			pThis->cryprov->OnFileClose(pThis->cryprovFileData, currOffs);
 			pThis->cryprovFileData = NULL;
 		}
 	}

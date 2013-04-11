@@ -150,11 +150,13 @@ OnFileOpen(void *pT, uchar *fn, void *pGF)
 	gcryfile *pgf = (gcryfile*) pGF;
 	DEFiRet;
 dbgprintf("DDDD: cry: onFileOpen: %s\n", fn);
-	/* note: if *pgf is set to NULL, this auto-disables GT functions */
-	//*pgf = gcryCtxOpenFile(pThis->ctx, fn);
 
-	CHKiRet(rsgcryInitCrypt(pThis->ctx, pgf, GCRY_CIPHER_MODE_CBC, "TODO: init value"));
+	CHKiRet(rsgcryInitCrypt(pThis->ctx, pgf, GCRY_CIPHER_MODE_CBC, fn));
 finalize_it:
+	/* TODO: enable this error message (need to cleanup loop first ;))
+	errmsg.LogError(0, iRet, "Encryption Provider"
+		"Error: cannot open .encinfo file - disabling log file");
+	*/
 	RETiRet;
 }
 
@@ -169,11 +171,11 @@ dbgprintf("DDDD: Encrypt (%u): %s\n", *lenRec-1, rec);
 }
 
 static rsRetVal
-OnFileClose(void *pF)
+OnFileClose(void *pF, off64_t offsLogfile)
 {
 	DEFiRet;
 dbgprintf("DDDD: onFileClose\n");
-	gcryfileDestruct(pF);
+	gcryfileDestruct(pF, offsLogfile);
 
 	RETiRet;
 }

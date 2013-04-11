@@ -404,6 +404,10 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_REPLCHAR_IGNORED = -2313,/**< mmanon: replacementChar parameter is ignored */
 	RS_RET_SIGPROV_ERR = -2320,/**< error in signature provider */
 	RS_RET_CRYPROV_ERR = -2321,/**< error in cryptography encryption provider */
+	RS_RET_EI_OPN_ERR = -2322,/**< error opening an .encinfo file */
+	RS_RET_EI_NO_EXISTS = -2323,/**< .encinfo file does not exist (status, not necessarily error!)*/
+	RS_RET_EI_WR_ERR = -2324,/**< error writing an .encinfo file */
+	RS_RET_EI_INVLD_FILE = -2325,/**< header indicates the file is no .encinfo file */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */
