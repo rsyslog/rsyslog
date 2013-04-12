@@ -290,7 +290,7 @@ createInstance(instanceConf_t **pinst)
 	inst->sockName = NULL;
 	inst->pLogHostName = NULL;
 	inst->ratelimitInterval = DFLT_ratelimitInterval;
-	inst->ratelimitBurst = DFLT_ratelimitSeverity;
+	inst->ratelimitBurst = DFLT_ratelimitBurst;
 	inst->ratelimitSeverity = DFLT_ratelimitSeverity;
 	inst->bUseFlowCtl = 0;
 	inst->bIgnoreTimestamp = 1;
