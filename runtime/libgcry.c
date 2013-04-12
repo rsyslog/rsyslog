@@ -49,8 +49,6 @@
 #include "rsyslog.h"
 #include "libgcry.h"
 
-#define GCRY_CIPHER GCRY_CIPHER_3DES  // TODO: make configurable
-
 
 static rsRetVal
 eiWriteRec(gcryfile gf, char *recHdr, size_t lenRecHdr, char *buf, size_t lenBuf)
@@ -206,6 +204,8 @@ gcryCtxNew(void)
 {
 	gcryctx ctx;
 	ctx = calloc(1, sizeof(struct gcryctx_s));
+	ctx->algo = GCRY_CIPHER_AES128;
+	ctx->mode = GCRY_CIPHER_MODE_CBC;
 	return ctx;
 }
 
@@ -270,9 +270,10 @@ done:	return;
 int
 rsgcrySetKey(gcryctx ctx, unsigned char *key, uint16_t keyLen)
 {
-	uint16_t reqKeyLen = gcry_cipher_get_algo_keylen(GCRY_CIPHER);
+	uint16_t reqKeyLen;
 	int r;
 
+	reqKeyLen = gcry_cipher_get_algo_keylen(ctx->algo);
 	if(keyLen != reqKeyLen) {
 		r = reqKeyLen;
 		goto done;
@@ -282,6 +283,36 @@ rsgcrySetKey(gcryctx ctx, unsigned char *key, uint16_t keyLen)
 	memcpy(ctx->key, key, keyLen);
 	r = 0;
 done:	return r;
+}
+
+rsRetVal
+rsgcrySetMode(gcryctx ctx, uchar *modename)
+{
+	int mode;
+	DEFiRet;
+
+	mode = rsgcryModename2Mode((char *)modename);
+	if(mode == GCRY_CIPHER_MODE_NONE) {
+		ABORT_FINALIZE(RS_RET_CRY_INVLD_MODE);
+	}
+	ctx->mode = mode;
+finalize_it:
+	RETiRet;
+}
+
+rsRetVal
+rsgcrySetAlgo(gcryctx ctx, uchar *algoname)
+{
+	int algo;
+	DEFiRet;
+
+	algo = rsgcryAlgoname2Algo((char *)algoname);
+	if(algo == GCRY_CIPHER_NONE) {
+		ABORT_FINALIZE(RS_RET_CRY_INVLD_ALGO);
+	}
+	ctx->algo = algo;
+finalize_it:
+	RETiRet;
 }
 
 /* As of some Linux and security expert I spoke to, /dev/urandom
@@ -310,7 +341,7 @@ seedIV(gcryfile gf, uchar **iv)
 }
 
 rsRetVal
-rsgcryInitCrypt(gcryctx ctx, gcryfile *pgf, int gcry_mode, uchar *fname)
+rsgcryInitCrypt(gcryctx ctx, gcryfile *pgf, uchar *fname)
 {
 	gcry_error_t gcryError;
 	gcryfile gf = NULL;
@@ -319,13 +350,9 @@ rsgcryInitCrypt(gcryctx ctx, gcryfile *pgf, int gcry_mode, uchar *fname)
 
 	CHKiRet(gcryfileConstruct(ctx, &gf, fname));
 
-	gf->blkLength = gcry_cipher_get_algo_blklen(GCRY_CIPHER);
+	gf->blkLength = gcry_cipher_get_algo_blklen(ctx->algo);
 
-	gcryError = gcry_cipher_open(
-		&gf->chd, // gcry_cipher_hd_t *
-		GCRY_CIPHER,   // int
-		gcry_mode,     // int
-		0);            // unsigned int
+	gcryError = gcry_cipher_open(&gf->chd, ctx->algo, ctx->mode, 0);
 	if (gcryError) {
 		dbgprintf("gcry_cipher_open failed:  %s/%s\n",
 			gcry_strsource(gcryError),

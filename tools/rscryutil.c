@@ -40,6 +40,9 @@ static int verbose = 0;
 static gcry_cipher_hd_t gcry_chd;
 static size_t blkLength;
 
+static char *cry_key = NULL;
+static int cry_algo = GCRY_CIPHER_AES128;
+static int cry_mode = GCRY_CIPHER_MODE_CBC;
 
 /* rectype/value must be EIF_MAX_*_LEN+1 long!
  * returns 0 on success or something else on error/EOF
@@ -151,14 +154,13 @@ done:	return r;
 }
 
 static int
-initCrypt(FILE *eifp, int gcry_mode, char *key)
+initCrypt(FILE *eifp)
 {
-	#define GCRY_CIPHER GCRY_CIPHER_3DES  // TODO: make configurable
  	int r = 0;
-	gcry_error_t     gcryError;
+	gcry_error_t gcryError;
 	char iv[4096];
 
-	blkLength = gcry_cipher_get_algo_blklen(GCRY_CIPHER);
+	blkLength = gcry_cipher_get_algo_blklen(cry_algo);
 	if(blkLength > sizeof(iv)) {
 		fprintf(stderr, "internal error[%s:%d]: block length %d too large for "
 			"iv buffer\n", __FILE__, __LINE__, blkLength);
@@ -166,15 +168,15 @@ initCrypt(FILE *eifp, int gcry_mode, char *key)
 	}
 	if((r = eiGetIV(eifp, iv, blkLength)) != 0) goto done;
 
-	size_t keyLength = gcry_cipher_get_algo_keylen(GCRY_CIPHER);
-	if(strlen(key) != keyLength) {
+	size_t keyLength = gcry_cipher_get_algo_keylen(cry_algo);
+	if(strlen(cry_key) != keyLength) {
 		fprintf(stderr, "invalid key length; key is %u characters, but "
-			"exactly %u characters are required\n", strlen(key),
+			"exactly %u characters are required\n", strlen(cry_key),
 			keyLength);
 		r = 1; goto done;
 	}
 
-	gcryError = gcry_cipher_open(&gcry_chd, GCRY_CIPHER, gcry_mode, 0);
+	gcryError = gcry_cipher_open(&gcry_chd, cry_algo, cry_mode, 0);
 	if (gcryError) {
 		printf("gcry_cipher_open failed:  %s/%s\n",
 			gcry_strsource(gcryError),
@@ -182,7 +184,7 @@ initCrypt(FILE *eifp, int gcry_mode, char *key)
 		r = 1; goto done;
 	}
 
-	gcryError = gcry_cipher_setkey(gcry_chd, key, keyLength);
+	gcryError = gcry_cipher_setkey(gcry_chd, cry_key, keyLength);
 	if (gcryError) {
 		printf("gcry_cipher_setkey failed:  %s/%s\n",
 			gcry_strsource(gcryError),
@@ -225,10 +227,9 @@ done:	return;
 static void
 decryptBlock(FILE *fpin, FILE *fpout, off64_t blkEnd, off64_t *pCurrOffs)
 {
-	gcry_error_t     gcryError;
+	gcry_error_t gcryError;
 	size_t nRead, nWritten;
 	size_t toRead;
-	size_t nPad;
 	size_t leftTillBlkEnd;
 	char buf[64*1024];
 	
@@ -240,7 +241,6 @@ decryptBlock(FILE *fpin, FILE *fpout, off64_t blkEnd, off64_t *pCurrOffs)
 		if(nRead == 0)
 			break;
 		leftTillBlkEnd -= nRead, *pCurrOffs += nRead;
-		nPad = (blkLength - nRead % blkLength) % blkLength;
 		gcryError = gcry_cipher_decrypt(
 				gcry_chd, // gcry_cipher_hd_t
 				buf,    // void *
@@ -248,7 +248,7 @@ decryptBlock(FILE *fpin, FILE *fpout, off64_t blkEnd, off64_t *pCurrOffs)
 				NULL,    // const void *
 				0);   // size_t
 		if (gcryError) {
-			fprintf(stderr, "gcry_cipher_encrypt failed:  %s/%s\n",
+			fprintf(stderr, "gcry_cipher_decrypt failed:  %s/%s\n",
 			gcry_strsource(gcryError),
 			gcry_strerror(gcryError));
 			return;
@@ -264,7 +264,7 @@ decryptBlock(FILE *fpin, FILE *fpout, off64_t blkEnd, off64_t *pCurrOffs)
 
 
 static int
-doDecrypt(FILE *logfp, FILE *eifp, FILE *outfp, char *key)
+doDecrypt(FILE *logfp, FILE *eifp, FILE *outfp)
 {
 	off64_t blkEnd;
 	off64_t currOffs = 0;
@@ -272,7 +272,7 @@ doDecrypt(FILE *logfp, FILE *eifp, FILE *outfp, char *key)
 
 	while(1) {
 		/* process block */
-		if(initCrypt(eifp, GCRY_CIPHER_MODE_CBC, key) != 0)
+		if(initCrypt(eifp) != 0)
 			goto done;
 		if((r = eiGetEND(eifp, &blkEnd)) != 0) goto done;
 		decryptBlock(logfp, outfp, blkEnd, &currOffs);
@@ -283,7 +283,7 @@ done:	return r;
 }
 
 static void
-decrypt(char *name, char *key)
+decrypt(char *name)
 {
 	FILE *logfp = NULL, *eifp = NULL;
 	int r = 0;
@@ -307,7 +307,7 @@ decrypt(char *name, char *key)
 			goto err;
 	}
 
-	doDecrypt(logfp, eifp, stdout, key);
+	doDecrypt(logfp, eifp, stdout);
 
 	fclose(logfp); logfp = NULL;
 	fclose(eifp); eifp = NULL;
@@ -326,6 +326,8 @@ static struct option long_options[] =
 	{"version", no_argument, NULL, 'V'},
 	{"decrypt", no_argument, NULL, 'd'},
 	{"key", required_argument, NULL, 'k'},
+	{"algo", required_argument, NULL, 'a'},
+	{"mode", required_argument, NULL, 'm'},
 	{NULL, 0, NULL, 0} 
 }; 
 
@@ -334,10 +336,10 @@ main(int argc, char *argv[])
 {
 	int i;
 	int opt;
-	char *key = "";
+	int temp;
 
 	while(1) {
-		opt = getopt_long(argc, argv, "dk:vV", long_options, NULL);
+		opt = getopt_long(argc, argv, "a:dk:m:vV", long_options, NULL);
 		if(opt == -1)
 			break;
 		switch(opt) {
@@ -348,7 +350,25 @@ main(int argc, char *argv[])
 			fprintf(stderr, "WARNING: specifying the actual key "
 				"via the command line is highly insecure\n"
 				"Do NOT use this for PRODUCTION use.\n");
-			key = optarg;
+			cry_key = optarg;
+			break;
+		case 'a':
+			temp = rsgcryAlgoname2Algo(optarg);
+			if(temp == GCRY_CIPHER_NONE) {
+				fprintf(stderr, "ERROR: algorithm \"%s\" is not "
+					"kown/supported\n", optarg);
+				exit(1);
+			}
+			cry_algo = temp;
+			break;
+		case 'm':
+			temp = rsgcryModename2Mode(optarg);
+			if(temp == GCRY_CIPHER_MODE_NONE) {
+				fprintf(stderr, "ERROR: cipher mode \"%s\" is not "
+					"kown/supported\n", optarg);
+				exit(1);
+			}
+			cry_mode = temp;
 			break;
 		case 'v':
 			verbose = 1;
@@ -365,13 +385,12 @@ main(int argc, char *argv[])
 	}
 
 	if(optind == argc)
-		decrypt("-", key);
+		decrypt("-");
 	else {
 		for(i = optind ; i < argc ; ++i)
-			decrypt(argv[i], key); /* currently only mode ;) */
+			decrypt(argv[i]); /* currently only mode ;) */
 	}
 
-	memset(key, 0, strlen(key)); /* zero-out key store */
+	memset(cry_key, 0, strlen(cry_key)); /* zero-out key store */
 	return 0;
 }
-	//char *aesSymKey = "123456789012345678901234"; // TODO: TEST ONLY

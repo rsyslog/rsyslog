@@ -89,8 +89,9 @@ SetCnfParam(void *pT, struct nvlst *lst)
 {
 	lmcry_gcry_t *pThis = (lmcry_gcry_t*) pT;
 	int i, r;
-	uchar *cstr;
 	uchar *key = NULL;
+	uchar *algo = NULL;
+	uchar *mode = NULL;
 	struct cnfparamvals *pvals;
 	DEFiRet;
 
@@ -105,23 +106,30 @@ SetCnfParam(void *pT, struct nvlst *lst)
 			continue;
 		if(!strcmp(pblk.descr[i].name, "cry.key")) {
 			key = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
-#if 0
-		} else if(!strcmp(pblk.descr[i].name, "sig.timestampservice")) {
-			cstr = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-			gcrySetTimestamper(pThis->ctx, (char*) cstr);
-			free(cstr);
-		} else if(!strcmp(pblk.descr[i].name, "sig.block.sizelimit")) {
-			gcrySetBlockSizeLimit(pThis->ctx, pvals[i].val.d.n);
-		} else if(!strcmp(pblk.descr[i].name, "sig.keeprecordhashes")) {
-			gcrySetKeepRecordHashes(pThis->ctx, pvals[i].val.d.n);
-		} else if(!strcmp(pblk.descr[i].name, "sig.keeptreehashes")) {
-			gcrySetKeepTreeHashes(pThis->ctx, pvals[i].val.d.n);
+		} else if(!strcmp(pblk.descr[i].name, "cry.mode")) {
+			mode = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(pblk.descr[i].name, "cry.algo")) {
+			algo = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else {
 			DBGPRINTF("lmcry_gcry: program error, non-handled "
 			  "param '%s'\n", pblk.descr[i].name);
-#endif
 		}
 	}
+	if(algo != NULL) {
+		iRet = rsgcrySetAlgo(pThis->ctx, algo);
+		if(iRet != RS_RET_OK) {
+			errmsg.LogError(0, iRet, "cry.algo '%s' is not know/supported", algo);
+			FINALIZE;
+		}
+	}
+	if(mode != NULL) {
+		iRet = rsgcrySetMode(pThis->ctx, mode);
+		if(iRet != RS_RET_OK) {
+			errmsg.LogError(0, iRet, "cry.mode '%s' is not know/supported", mode);
+			FINALIZE;
+		}
+	}
+	/* note: key must be set AFTER algo/mode is set (as it depends on them) */
 	if(key != NULL) {
 		errmsg.LogError(0, RS_RET_ERR, "Note: specifying an actual key directly from the "
 			"config file is highly insecure - DO NOT USE FOR PRODUCTION");
@@ -138,6 +146,8 @@ SetCnfParam(void *pT, struct nvlst *lst)
 		memset(key, 0, strlen((char*)key));
 		free(key);
 	}
+	free(algo);
+	free(mode);
 finalize_it:
 	RETiRet;
 }
@@ -151,7 +161,7 @@ OnFileOpen(void *pT, uchar *fn, void *pGF)
 	DEFiRet;
 dbgprintf("DDDD: cry: onFileOpen: %s\n", fn);
 
-	CHKiRet(rsgcryInitCrypt(pThis->ctx, pgf, GCRY_CIPHER_MODE_CBC, fn));
+	CHKiRet(rsgcryInitCrypt(pThis->ctx, pgf, fn));
 finalize_it:
 	/* TODO: enable this error message (need to cleanup loop first ;))
 	errmsg.LogError(0, iRet, "Encryption Provider"

@@ -40,6 +40,13 @@ OPTIONS
   is highly insecure. However, it can be useful for intial testing
   steps. This option may be removed in the future.
 
+-a, --algo <algo>
+  Sets the encryption algorightm (cipher) to be used. See below
+  for supported algorithms. The default is "AES128".
+
+-m, --mode <mode>
+  Sets the ciphermode to be used. See below for supported modes.
+  The default is "CBC".
 
 OPERATION MODES
 ===============
@@ -61,6 +68,42 @@ EXIT CODES
 The command returns an exit code of 0 if everything went fine, and some 
 other code in case of failures.
 
+
+SUPPORTED ALGORITHMS
+====================
+
+We basically support what libgcrypt supports. This is:
+	3DES
+	CAST5
+	BLOWFISH
+	AES128
+	AES192
+	AES256
+	TWOFISH
+	TWOFISH128
+	ARCFOUR
+	DES
+	SERPENT128
+	SERPENT192
+	SERPENT256
+	RFC2268_40
+	SEED
+	CAMELLIA128
+	CAMELLIA192
+	CAMELLIA256
+
+
+SUPPORTED CIPHER MODES
+======================
+
+We basically support what libgcrypt supports. This is:
+  	ECB
+	CFB
+	CBC
+	STREAM
+	OFB
+	CTR
+	AESWRAP
 
 EXAMPLES
 ========
