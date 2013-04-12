@@ -2,6 +2,7 @@
 Version 7.3.10  [devel] 2013-04-??
 - added RainerScript re_extract() function
 - templates now permit substring extraction relative to end-of-string
+- added support for encrypting log files
 - bugfix: imuxsock aborted under some conditions
   regression from ratelimiting enhancements
 ---------------------------------------------------------------------------

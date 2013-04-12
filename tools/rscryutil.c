@@ -28,6 +28,9 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <getopt.h>
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <gcrypt.h>
 
 #include "rsyslog.h"
@@ -40,10 +43,13 @@ static int verbose = 0;
 static gcry_cipher_hd_t gcry_chd;
 static size_t blkLength;
 
+static char *keyfile = NULL;
+static int randomKeyLen = -1;
 static char *cry_key = NULL;
 static unsigned cry_keylen = 0;
 static int cry_algo = GCRY_CIPHER_AES128;
 static int cry_mode = GCRY_CIPHER_MODE_CBC;
+static int optionForce = 0;
 
 /* rectype/value must be EIF_MAX_*_LEN+1 long!
  * returns 0 on success or something else on error/EOF
@@ -321,41 +327,27 @@ err:
 }
 
 static void
-write_keyfile(char *keyfile)
+write_keyfile(char *fn)
 {
-	FILE *fp;
+	int fd;
+	int r;
+	mode_t fmode;
 
-	if(cry_key == NULL) {
-		fprintf(stderr, "ERROR: key must be set via some method\n");
+	fmode = O_WRONLY|O_CREAT;
+	if(!optionForce)
+		fmode |= O_EXCL;
+	if((fd = open(fn, fmode, S_IRUSR)) == -1) {
+		fprintf(stderr, "error opening keyfile ");
+		perror(fn);
 		exit(1);
 	}
-	if(keyfile == NULL) {
-		fprintf(stderr, "ERROR: keyfile must be set\n");
+	if((r = write(fd, cry_key, cry_keylen)) != (ssize_t)cry_keylen) {
+		fprintf(stderr, "error writing keyfile (ret=%d) ", r);
+		perror(fn);
 		exit(1);
 	}
-	if((fp = fopen(keyfile, "w")) == NULL) {
-		perror(keyfile);
-		exit(1);
-	}
-	if(fwrite(cry_key, cry_keylen, 1, fp) != 1) {
-		perror(keyfile);
-		exit(1);
-	}
-	fclose(fp);
+	close(fd);
 }
-
-static struct option long_options[] = 
-{ 
-	{"verbose", no_argument, NULL, 'v'},
-	{"version", no_argument, NULL, 'V'},
-	{"decrypt", no_argument, NULL, 'd'},
-	{"write-keyfile", no_argument, NULL, 'W'},
-	{"key", required_argument, NULL, 'K'},
-	{"keyfile", required_argument, NULL, 'k'},
-	{"algo", required_argument, NULL, 'a'},
-	{"mode", required_argument, NULL, 'm'},
-	{NULL, 0, NULL, 0} 
-}; 
 
 static void
 getKeyFromFile(char *fn)
@@ -368,16 +360,64 @@ getKeyFromFile(char *fn)
 	}
 }
 
+static void
+getRandomKey(void)
+{
+	int fd;
+	cry_keylen = randomKeyLen;
+	cry_key = malloc(randomKeyLen); /* do NOT zero-out! */
+	/* if we cannot obtain data from /dev/urandom, we use whatever
+	 * is present at the current memory location as random data. Of
+	 * course, this is very weak and we should consider a different
+	 * option, especially when not running under Linux (for Linux,
+	 * unavailability of /dev/urandom is just a theoretic thing, it
+	 * will always work...).  -- TODO -- rgerhards, 2013-03-06
+	 */
+	if((fd = open("/dev/urandom", O_RDONLY)) > 0) {
+		if(read(fd, cry_key, randomKeyLen)) {}; /* keep compiler happy */
+		close(fd);
+	}
+}
+
+
+static void
+setKey()
+{
+	if(randomKeyLen != -1)
+		getRandomKey();
+	else if(keyfile != NULL)
+		getKeyFromFile(keyfile);
+	if(cry_key == NULL) {
+		fprintf(stderr, "ERROR: key must be set via some method\n");
+		exit(1);
+	}
+}
+
+static struct option long_options[] = 
+{ 
+	{"verbose", no_argument, NULL, 'v'},
+	{"version", no_argument, NULL, 'V'},
+	{"decrypt", no_argument, NULL, 'd'},
+	{"force", no_argument, NULL, 'f'},
+	{"write-keyfile", required_argument, NULL, 'W'},
+	{"key", required_argument, NULL, 'K'},
+	{"generate-random-key", required_argument, NULL, 'r'},
+	{"keyfile", required_argument, NULL, 'k'},
+	{"algo", required_argument, NULL, 'a'},
+	{"mode", required_argument, NULL, 'm'},
+	{NULL, 0, NULL, 0} 
+}; 
+
 int
 main(int argc, char *argv[])
 {
 	int i;
 	int opt;
 	int temp;
-	char *keyfile = NULL;
+	char *newKeyFile = NULL;
 
 	while(1) {
-		opt = getopt_long(argc, argv, "a:dk:K:m:vVW", long_options, NULL);
+		opt = getopt_long(argc, argv, "a:dfk:K:m:r:vVW:", long_options, NULL);
 		if(opt == -1)
 			break;
 		switch(opt) {
@@ -386,9 +426,21 @@ main(int argc, char *argv[])
 			break;
 		case 'W':
 			mode = MD_WRITE_KEYFILE;
+			newKeyFile = optarg;
 			break;
 		case 'k':
 			keyfile = optarg;
+			break;
+		case 'f':
+			optionForce = 1;
+			break;
+		case 'r':
+			randomKeyLen = atoi(optarg);
+			if(randomKeyLen > 64*1024) {
+				fprintf(stderr, "ERROR: keys larger than 64KiB are "
+					"not supported\n");
+				exit(1);
+			}
 			break;
 		case 'K':
 			fprintf(stderr, "WARNING: specifying the actual key "
@@ -429,20 +481,16 @@ main(int argc, char *argv[])
 		}
 	}
 
+	setKey();
+
 	if(mode == MD_WRITE_KEYFILE) {
 		if(optind != argc) {
 			fprintf(stderr, "ERROR: no file parameters permitted in "
 				"--write-keyfile mode\n");
 			exit(1);
 		}
-		write_keyfile(keyfile);
+		write_keyfile(newKeyFile);
 	} else {
-		if(keyfile != NULL)
-			getKeyFromFile(keyfile);
-		if(cry_key == NULL) {
-			fprintf(stderr, "ERROR: key must be set via some method\n");
-			exit(1);
-		}
 		if(optind == argc)
 			decrypt("-");
 		else {

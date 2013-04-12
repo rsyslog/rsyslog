@@ -45,6 +45,7 @@ DEFobjCurrIf(glbl)
 /* tables for interfacing with the v6 config system */
 static struct cnfparamdescr cnfpdescr[] = {
 	{ "cry.key", eCmdHdlrGetWord, 0 },
+	{ "cry.keyfile", eCmdHdlrGetWord, 0 },
 	{ "cry.mode", eCmdHdlrGetWord, 0 }, /* CBC, ECB, etc */
 	{ "cry.algo", eCmdHdlrGetWord, 0 }
 };
@@ -89,7 +90,9 @@ SetCnfParam(void *pT, struct nvlst *lst)
 {
 	lmcry_gcry_t *pThis = (lmcry_gcry_t*) pT;
 	int i, r;
+	unsigned keylen;
 	uchar *key = NULL;
+	uchar *keyfile = NULL;
 	uchar *algo = NULL;
 	uchar *mode = NULL;
 	struct cnfparamvals *pvals;
@@ -106,6 +109,8 @@ SetCnfParam(void *pT, struct nvlst *lst)
 			continue;
 		if(!strcmp(pblk.descr[i].name, "cry.key")) {
 			key = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(pblk.descr[i].name, "cry.keyfile")) {
+			keyfile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(pblk.descr[i].name, "cry.mode")) {
 			mode = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(pblk.descr[i].name, "cry.algo")) {
@@ -130,15 +135,31 @@ SetCnfParam(void *pT, struct nvlst *lst)
 		}
 	}
 	/* note: key must be set AFTER algo/mode is set (as it depends on them) */
+	if(key != NULL && keyfile != NULL) {
+		errmsg.LogError(0, RS_RET_INVALID_PARAMS, "only one of the following "
+			"parameters can be specified: cry.key, cry.keyfile\n");
+		ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
+	}
 	if(key != NULL) {
 		errmsg.LogError(0, RS_RET_ERR, "Note: specifying an actual key directly from the "
 			"config file is highly insecure - DO NOT USE FOR PRODUCTION");
-		r = rsgcrySetKey(pThis->ctx, key, strlen((char*)key));
-		if(r > 0) {
-			errmsg.LogError(0, RS_RET_INVALID_PARAMS, "Key length %d expected, but "
-				"key of length %d given", r, strlen((char*)key));
+		keylen = strlen((char*)key);
+	}
+	if(keyfile != NULL) {
+		r = gcryGetKeyFromFile((char*)keyfile, (char**)&key, &keylen);
+		if(r != 0) {
+			errmsg.LogError(0, RS_RET_ERR, "error %d reading keyfile %s\n",
+				r, keyfile);
 			ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 		}
+	}
+
+	/* if we reach this point, we have a valid key */
+	r = rsgcrySetKey(pThis->ctx, key, keylen);
+	if(r > 0) {
+		errmsg.LogError(0, RS_RET_INVALID_PARAMS, "Key length %d expected, but "
+			"key of length %d given", r, keylen);
+		ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 	}
 
 	cnfparamvalsDestruct(pvals, &pblk);
@@ -146,6 +167,7 @@ SetCnfParam(void *pT, struct nvlst *lst)
 		memset(key, 0, strlen((char*)key));
 		free(key);
 	}
+	free(keyfile);
 	free(algo);
 	free(mode);
 finalize_it:
