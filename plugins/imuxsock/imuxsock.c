@@ -412,6 +412,8 @@ addListner(instanceConf_t *inst)
 		ratelimitSetLinuxLike(listeners[nfd].dflt_ratelimiter,
 				      listeners[nfd].ratelimitInterval,
 				      listeners[nfd].ratelimitBurst);
+		ratelimitSetSeverity(listeners[nfd].dflt_ratelimiter,
+				     listeners[nfd].ratelimitSev);
 		nfd++;
 	} else {
 		errmsg.LogError(0, NO_ERRCODE, "Out of unix socket name descriptors, ignoring %s\n",
@@ -586,6 +588,7 @@ findRatelimiter(lstn_t *pLstn, struct ucred *cred, ratelimit_t **prl)
 		pidbuf[sizeof(pidbuf)-1] = '\0'; /* to be on safe side */
 		CHKiRet(ratelimitNew(&rl, "imuxsock", pidbuf));
 		ratelimitSetLinuxLike(rl, pLstn->ratelimitInterval, pLstn->ratelimitBurst);
+		ratelimitSetSeverity(rl, pLstn->ratelimitSev);
 		CHKmalloc(keybuf = malloc(sizeof(pid_t)));
 		*keybuf = cred->pid;
 		r = hashtable_insert(pLstn->ht, keybuf, rl);
@@ -775,10 +778,7 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 	facil = LOG_FAC(pri);
 	sever = LOG_PRI(pri);
 
-	if(sever >= pLstn->ratelimitSev) {
-		/* note: if cred == NULL, then ratelimiter == NULL as well! */
-		findRatelimiter(pLstn, cred, &ratelimiter); /* ignore error, better so than others... */
-	}
+	findRatelimiter(pLstn, cred, &ratelimiter); /* ignore error, better so than others... */
 
 	if(ts == NULL) {
 		datetime.getCurrTime(&st, &tt);
@@ -1075,6 +1075,7 @@ activateListeners()
 		ratelimitSetLinuxLike(listeners[0].dflt_ratelimiter,
 		listeners[0].ratelimitInterval,
 		listeners[0].ratelimitBurst);
+	ratelimitSetSeverity(listeners[0].dflt_ratelimiter,listeners[0].ratelimitSev);
 
 	sd_fds = sd_listen_fds(0);
 	if(sd_fds < 0) {
