@@ -36,6 +36,4 @@ BEGINinterface(cryprov) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*OnFileClose)(void *pFileInstData, off64_t offsLogfile);
 ENDinterface(cryprov)
 #define cryprovCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
-rsRetVal initCrypt(int gcry_mode, char * iniVector);
-rsRetVal doCrypt(char *buf, size_t *len);
 #endif /* #ifndef INCLUDED_CRYPROV_H */

@@ -14,9 +14,11 @@
  * For the current implementation, there must always be an IV record
  * followed by an END record. Each records is LF-terminated. Record
  * types can simply be extended in the future by specifying new 
- * keywords (like "IV") before the colon.
+ * types (like "IV") before the colon.
  * To identify a file as rsyslog encryption info file, it must start with
  * the line "FILETYPE:rsyslog-enrcyption-info"
+ * There are some size constraints: the recordtype must be 31 bytes at
+ * most and the actual value (between : and LF) must be 1023 bytes at most.
  *
  * This file is part of rsyslog.
  *
@@ -191,7 +193,7 @@ gcryfileConstruct(gcryctx ctx, gcryfile *pgf, uchar *logfn)
 
 	CHKmalloc(gf = calloc(1, sizeof(struct gcryfile_s)));
 	gf->ctx = ctx;
-	snprintf(fn, sizeof(fn), "%s.encinfo", logfn);
+	snprintf(fn, sizeof(fn), "%s%s", logfn, ENCINFO_SUFFIX);
 	fn[MAXFNAME] = '\0'; /* be on save side */
 	gf->eiName = (uchar*) strdup(fn);
 	*pgf = gf;

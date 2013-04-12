@@ -77,7 +77,7 @@ endif
 if ENABLE_LIBGCRYPT
 bin_PROGRAMS += rscryutil
 rscryutil = rscryutil.c
-rscryutil_CPPFLAGS = $(RSRT_CFLAGS) $(LIBGCRYPT_CFLAGS)
+rscryutil_CPPFLAGS = -I../runtime $(RSRT_CFLAGS) $(LIBGCRYPT_CFLAGS)
 rscryutil_LDFLAGS = `libgcrypt-config --libs`
 #rscryutil_LDFLAGS = $(LIBGCRYPT_LIBS)
 rscryutil.1: rscryutil.rst

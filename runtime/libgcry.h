@@ -52,6 +52,9 @@ int rsgcryEncrypt(gcryfile pF, uchar *buf, size_t *len);
 #define RSGCRYE_EI_OPEN 1 	/* error opening .encinfo file */
 #define RSGCRYE_OOM 4	/* ran out of memory */
 
+#define EIF_MAX_RECTYPE_LEN 31 /* max length of record types */
+#define EIF_MAX_VALUE_LEN 1023 /* max length of value types */
 #define RSGCRY_FILETYPE_NAME "rsyslog-enrcyption-info"
+#define ENCINFO_SUFFIX ".encinfo"
 
 #endif  /* #ifndef INCLUDED_LIBGCRY_H */

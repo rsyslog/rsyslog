@@ -1,5 +1,4 @@
-/* This is a tool for dumpoing the content of GuardTime TLV
- * files in a (somewhat) human-readable manner.
+/* This is a tool for processing rsyslog encrypted log files.
  * 
  * Copyright 2013 Adiscon GmbH
  *
@@ -31,6 +30,9 @@
 #include <getopt.h>
 #include <gcrypt.h>
 
+#include "rsyslog.h"
+#include "libgcry.h"
+
 
 static enum { MD_DECRYPT
 } mode = MD_DECRYPT;
@@ -38,17 +40,135 @@ static int verbose = 0;
 static gcry_cipher_hd_t gcry_chd;
 static size_t blkLength;
 
+
+/* rectype/value must be EIF_MAX_*_LEN+1 long!
+ * returns 0 on success or something else on error/EOF
+ */
 static int
-initCrypt(int gcry_mode, char *iv, char *key)
+eiGetRecord(FILE *eifp, char *rectype, char *value)
+{
+	int r;
+	unsigned short i, j;
+	char buf[EIF_MAX_RECTYPE_LEN+EIF_MAX_VALUE_LEN+128];
+	     /* large enough for any valid record */
+
+	if(fgets(buf, sizeof(buf), eifp) == NULL) {
+		r = 1; goto done;
+	}
+
+	for(i = 0 ; i < EIF_MAX_RECTYPE_LEN && buf[i] != ':' ; ++i)
+		if(buf[i] == '\0') {
+			r = 2; goto done;
+		} else 
+			rectype[i] = buf[i];
+	rectype[i] = '\0';
+	j = 0;
+	for(++i ; i < EIF_MAX_VALUE_LEN && buf[i] != '\n' ; ++i, ++j)
+		if(buf[i] == '\0') {
+			r = 3; goto done;
+		} else 
+			value[j] = buf[i];
+	value[j] = '\0';
+	r = 0;
+done:	return r;
+}
+
+static int
+eiCheckFiletype(FILE *eifp)
+{
+	char rectype[EIF_MAX_RECTYPE_LEN+1];
+	char value[EIF_MAX_VALUE_LEN+1];
+	int r;
+
+	if((r = eiGetRecord(eifp, rectype, value)) != 0) goto done;
+	if(strcmp(rectype, "FILETYPE") || strcmp(value, RSGCRY_FILETYPE_NAME)) {
+		fprintf(stderr, "invalid filetype \"cookie\" in encryption "
+			"info file\n");
+		fprintf(stderr, "\trectype: '%s', value: '%s'\n", rectype, value);
+		r = 1; goto done;
+	}
+	r = 0;
+done:	return r;
+}
+
+static int
+eiGetIV(FILE *eifp, char *iv, size_t leniv)
+{
+	char rectype[EIF_MAX_RECTYPE_LEN+1];
+	char value[EIF_MAX_VALUE_LEN+1];
+	size_t valueLen;
+	unsigned short i, j;
+	int r;
+	unsigned char nibble;
+
+	if((r = eiGetRecord(eifp, rectype, value)) != 0) goto done;
+	if(strcmp(rectype, "IV")) {
+		fprintf(stderr, "no IV record found when expected, record type "
+			"seen is '%s'\n", rectype);
+		r = 1; goto done;
+	}
+	valueLen = strlen(value);
+	if(valueLen/2 != leniv) {
+		fprintf(stderr, "length of IV is %d, expected %d\n",
+			valueLen/2, leniv);
+		r = 1; goto done;
+	}
+
+	for(i = j = 0 ; i < valueLen ; ++i) {
+		if(value[i] >= '0' && value[i] <= '9')
+			nibble = value[i] - '0';
+		else if(value[i] >= 'a' && value[i] <= 'f')
+			nibble = value[i] - 'a' + 10;
+		else {
+			fprintf(stderr, "invalid IV '%s'\n", value);
+			r = 1; goto done;
+		}
+		if(i % 2 == 0)
+			iv[j] = nibble << 4;
+		else
+			iv[j++] |= nibble;
+	}
+	r = 0;
+done:	return r;
+}
+
+static int
+eiGetEND(FILE *eifp, off64_t *offs)
+{
+	char rectype[EIF_MAX_RECTYPE_LEN+1];
+	char value[EIF_MAX_VALUE_LEN+1];
+	int r;
+
+	if((r = eiGetRecord(eifp, rectype, value)) != 0) goto done;
+	if(strcmp(rectype, "END")) {
+		fprintf(stderr, "no END record found when expected, record type "
+			"seen is '%s'\n", rectype);
+		r = 1; goto done;
+	}
+	*offs = atoll(value);
+	r = 0;
+done:	return r;
+}
+
+static int
+initCrypt(FILE *eifp, int gcry_mode, char *key)
 {
 	#define GCRY_CIPHER GCRY_CIPHER_3DES  // TODO: make configurable
  	int r = 0;
 	gcry_error_t     gcryError;
+	char iv[4096];
 
 	blkLength = gcry_cipher_get_algo_blklen(GCRY_CIPHER);
+	if(blkLength > sizeof(iv)) {
+		fprintf(stderr, "internal error[%s:%d]: block length %d too large for "
+			"iv buffer\n", __FILE__, __LINE__, blkLength);
+		r = 1; goto done;
+	}
+	if((r = eiGetIV(eifp, iv, blkLength)) != 0) goto done;
+
 	size_t keyLength = gcry_cipher_get_algo_keylen(GCRY_CIPHER);
 	if(strlen(key) != keyLength) {
-		fprintf(stderr, "invalid key lengtjh; key is %u characters, but "
+		fprintf(stderr, "invalid key length; key is %u characters, but "
 			"exactly %u characters are required\n", strlen(key),
 			keyLength);
 		r = 1; goto done;
@@ -87,7 +207,7 @@ removePadding(char *buf, size_t *plen)
 	unsigned iSrc, iDst;
 	char *frstNUL;
 
-	frstNUL = strchr(buf, 0x00);
+	frstNUL = memchr(buf, 0x00, *plen);
 	if(frstNUL == NULL)
 		goto done;
 	iDst = iSrc = frstNUL - buf;
@@ -103,20 +223,24 @@ done:	return;
 }
 
 static void
-doDeCrypt(FILE *fpin, FILE *fpout)
+decryptBlock(FILE *fpin, FILE *fpout, off64_t blkEnd, off64_t *pCurrOffs)
 {
 	gcry_error_t     gcryError;
-	char	buf[64*1024];
-	size_t	nRead, nWritten;
+	size_t nRead, nWritten;
+	size_t toRead;
 	size_t nPad;
+	size_t leftTillBlkEnd;
+	char buf[64*1024];
 	
+	leftTillBlkEnd = blkEnd - *pCurrOffs;
 	while(1) {
-		nRead = fread(buf, 1, sizeof(buf), fpin);
+		toRead = sizeof(buf) <= leftTillBlkEnd ? sizeof(buf) : leftTillBlkEnd;
+		toRead = toRead - toRead % blkLength;
+		nRead = fread(buf, 1, toRead, fpin);
 		if(nRead == 0)
 			break;
+		leftTillBlkEnd -= nRead, *pCurrOffs += nRead;
 		nPad = (blkLength - nRead % blkLength) % blkLength;
-		fprintf(stderr, "--->read %d chars, blkLength %d, mod %d, pad %d\n", nRead, blkLength,
-			nRead % blkLength, nPad);
 		gcryError = gcry_cipher_decrypt(
 				gcry_chd, // gcry_cipher_hd_t
 				buf,    // void *
@@ -139,13 +263,31 @@ doDeCrypt(FILE *fpin, FILE *fpout)
 }
 
 
+static int
+doDecrypt(FILE *logfp, FILE *eifp, FILE *outfp, char *key)
+{
+	off64_t blkEnd;
+	off64_t currOffs = 0;
+	int r;
+
+	while(1) {
+		/* process block */
+		if(initCrypt(eifp, GCRY_CIPHER_MODE_CBC, key) != 0)
+			goto done;
+		if((r = eiGetEND(eifp, &blkEnd)) != 0) goto done;
+		decryptBlock(logfp, outfp, blkEnd, &currOffs);
+		gcry_cipher_close(gcry_chd);
+	}
+	r = 0;
+done:	return r;
+}
+
 static void
 decrypt(char *name, char *key)
 {
-	FILE *logfp = NULL;
-	//, *sigfp = NULL;
+	FILE *logfp = NULL, *eifp = NULL;
 	int r = 0;
-	//char sigfname[4096];
+	char eifname[4096];
 	
 	if(!strcmp(name, "-")) {
 		fprintf(stderr, "decrypt mode cannot work on stdin\n");
@@ -155,21 +297,20 @@ decrypt(char *name, char *key)
 			perror(name);
 			goto err;
 		}
-#if 0
-		snprintf(sigfname, sizeof(sigfname), "%s.gtsig", name);
-		sigfname[sizeof(sigfname)-1] = '\0';
-		if((sigfp = fopen(sigfname, "r")) == NULL) {
-			perror(sigfname);
+		snprintf(eifname, sizeof(eifname), "%s%s", name, ENCINFO_SUFFIX);
+		eifname[sizeof(eifname)-1] = '\0';
+		if((eifp = fopen(eifname, "r")) == NULL) {
+			perror(eifname);
 			goto err;
 		}
-#endif
+		if(eiCheckFiletype(eifp) != 0)
+			goto err;
 	}
 
-	if(initCrypt(GCRY_CIPHER_MODE_CBC, "TODO: init value", key) != 0)
-		goto err;
-	doDeCrypt(logfp, stdout);
-	gcry_cipher_close(gcry_chd);
+	doDecrypt(logfp, eifp, stdout, key);
+
 	fclose(logfp); logfp = NULL;
+	fclose(eifp); eifp = NULL;
 	return;
 
 err:
