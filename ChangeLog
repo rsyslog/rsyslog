@@ -272,6 +272,10 @@ Version 7.2.7  [v7-stable] 2013-03-??
   To use that functionality, legacy rsyslog.conf syntax had to be used.
   Also, the doc was missing information on the "ParseTrusted" set of
   config directives.
+- bugfix: parameter action.execOnlyWhenPreviousIsSuspended was accidently 
+  of integer-type. For obvious reasons, it needs to be boolean. Note
+  that this change can break existing configurations if they circumvented
+  the problem by using 0/1 values.
 - doc bugfix: rsyslog.conf man page had invalid file format info
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=418
 ----------------------------------------------------------------------------
