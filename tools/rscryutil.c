@@ -44,6 +44,7 @@ static gcry_cipher_hd_t gcry_chd;
 static size_t blkLength;
 
 static char *keyfile = NULL;
+static char *keyprog = NULL;
 static int randomKeyLen = -1;
 static char *cry_key = NULL;
 static unsigned cry_keylen = 0;
@@ -387,6 +388,8 @@ setKey()
 		getRandomKey();
 	else if(keyfile != NULL)
 		getKeyFromFile(keyfile);
+	else if(keyprog != NULL)
+		gcryGetKeyFromProg(keyprog, &cry_key, &cry_keylen);
 	if(cry_key == NULL) {
 		fprintf(stderr, "ERROR: key must be set via some method\n");
 		exit(1);
@@ -403,6 +406,7 @@ static struct option long_options[] =
 	{"key", required_argument, NULL, 'K'},
 	{"generate-random-key", required_argument, NULL, 'r'},
 	{"keyfile", required_argument, NULL, 'k'},
+	{"key-program", required_argument, NULL, 'p'},
 	{"algo", required_argument, NULL, 'a'},
 	{"mode", required_argument, NULL, 'm'},
 	{NULL, 0, NULL, 0} 
@@ -417,7 +421,7 @@ main(int argc, char *argv[])
 	char *newKeyFile = NULL;
 
 	while(1) {
-		opt = getopt_long(argc, argv, "a:dfk:K:m:r:vVW:", long_options, NULL);
+		opt = getopt_long(argc, argv, "a:dfk:K:m:p:r:vVW:", long_options, NULL);
 		if(opt == -1)
 			break;
 		switch(opt) {
@@ -430,6 +434,9 @@ main(int argc, char *argv[])
 			break;
 		case 'k':
 			keyfile = optarg;
+			break;
+		case 'p':
+			keyprog = optarg;
 			break;
 		case 'f':
 			optionForce = 1;
