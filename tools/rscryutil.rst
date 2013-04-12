@@ -31,6 +31,10 @@ OPTIONS
 -d, --decrypt
   Select decryption mode. This is the default mode.
 
+-W, --write-keyfile
+  Utility function to write a key to a keyfile. The key can be obtained
+  via any method (except via a keyfile for obvious reasons).
+
 -v, --verbose
   Select verbose mode.
 

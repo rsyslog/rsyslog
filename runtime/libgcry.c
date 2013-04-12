@@ -43,6 +43,8 @@
 #include <gcrypt.h>
 #include <sys/stat.h>
 #include <sys/uio.h>
+#include <sys/types.h>
+#include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
 
@@ -198,6 +200,7 @@ gcryfileConstruct(gcryctx ctx, gcryfile *pgf, uchar *logfn)
 finalize_it:
 	RETiRet;
 }
+
 
 gcryctx
 gcryCtxNew(void)

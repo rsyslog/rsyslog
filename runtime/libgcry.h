@@ -41,6 +41,7 @@ struct gcryfile_s {
 	gcryctx ctx;
 };
 
+int gcryGetKeyFromFile(char *fn, char **key, unsigned *keylen);
 int rsgcryInit(void);
 void rsgcryExit(void);
 int rsgcrySetKey(gcryctx ctx, unsigned char *key, uint16_t keyLen);

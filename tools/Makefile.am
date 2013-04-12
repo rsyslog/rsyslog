@@ -79,7 +79,7 @@ bin_PROGRAMS += rscryutil
 rscryutil = rscryutil.c
 rscryutil_CPPFLAGS = -I../runtime $(RSRT_CFLAGS) $(LIBGCRYPT_CFLAGS)
 rscryutil_LDFLAGS = `libgcrypt-config --libs`
-#rscryutil_LDFLAGS = $(LIBGCRYPT_LIBS)
+rscryutil_LDADD = ../runtime/libgcry.la $(LIBGCRYPT_LIBS)
 rscryutil.1: rscryutil.rst
 	$(AM_V_GEN) $(RST2MAN) $< $@
 man1_MANS = rscryutil.1

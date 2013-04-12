@@ -34,13 +34,14 @@
 #include "libgcry.h"
 
 
-static enum { MD_DECRYPT
+static enum { MD_DECRYPT, MD_WRITE_KEYFILE
 } mode = MD_DECRYPT;
 static int verbose = 0;
 static gcry_cipher_hd_t gcry_chd;
 static size_t blkLength;
 
 static char *cry_key = NULL;
+static unsigned cry_keylen = 0;
 static int cry_algo = GCRY_CIPHER_AES128;
 static int cry_mode = GCRY_CIPHER_MODE_CBC;
 
@@ -171,7 +172,7 @@ initCrypt(FILE *eifp)
 	size_t keyLength = gcry_cipher_get_algo_keylen(cry_algo);
 	if(strlen(cry_key) != keyLength) {
 		fprintf(stderr, "invalid key length; key is %u characters, but "
-			"exactly %u characters are required\n", strlen(cry_key),
+			"exactly %u characters are required\n", cry_keylen,
 			keyLength);
 		r = 1; goto done;
 	}
@@ -319,17 +320,53 @@ err:
 		fclose(logfp);
 }
 
+static void
+write_keyfile(char *keyfile)
+{
+	FILE *fp;
+
+	if(cry_key == NULL) {
+		fprintf(stderr, "ERROR: key must be set via some method\n");
+		exit(1);
+	}
+	if(keyfile == NULL) {
+		fprintf(stderr, "ERROR: keyfile must be set\n");
+		exit(1);
+	}
+	if((fp = fopen(keyfile, "w")) == NULL) {
+		perror(keyfile);
+		exit(1);
+	}
+	if(fwrite(cry_key, cry_keylen, 1, fp) != 1) {
+		perror(keyfile);
+		exit(1);
+	}
+	fclose(fp);
+}
 
 static struct option long_options[] = 
 { 
 	{"verbose", no_argument, NULL, 'v'},
 	{"version", no_argument, NULL, 'V'},
 	{"decrypt", no_argument, NULL, 'd'},
-	{"key", required_argument, NULL, 'k'},
+	{"write-keyfile", no_argument, NULL, 'W'},
+	{"key", required_argument, NULL, 'K'},
+	{"keyfile", required_argument, NULL, 'k'},
 	{"algo", required_argument, NULL, 'a'},
 	{"mode", required_argument, NULL, 'm'},
 	{NULL, 0, NULL, 0} 
 }; 
+
+static void
+getKeyFromFile(char *fn)
+{
+	int r;
+	r = gcryGetKeyFromFile(fn, &cry_key, &cry_keylen);
+	if(r != 0) {
+		fprintf(stderr, "Error %d reading key from file '%s'\n", r, fn);
+		exit(1);
+	}
+}
 
 int
 main(int argc, char *argv[])
@@ -337,20 +374,28 @@ main(int argc, char *argv[])
 	int i;
 	int opt;
 	int temp;
+	char *keyfile = NULL;
 
 	while(1) {
-		opt = getopt_long(argc, argv, "a:dk:m:vV", long_options, NULL);
+		opt = getopt_long(argc, argv, "a:dk:K:m:vVW", long_options, NULL);
 		if(opt == -1)
 			break;
 		switch(opt) {
 		case 'd':
 			mode = MD_DECRYPT;
 			break;
+		case 'W':
+			mode = MD_WRITE_KEYFILE;
+			break;
 		case 'k':
+			keyfile = optarg;
+			break;
+		case 'K':
 			fprintf(stderr, "WARNING: specifying the actual key "
 				"via the command line is highly insecure\n"
 				"Do NOT use this for PRODUCTION use.\n");
 			cry_key = optarg;
+			cry_keylen = strlen(cry_key);
 			break;
 		case 'a':
 			temp = rsgcryAlgoname2Algo(optarg);
@@ -384,13 +429,29 @@ main(int argc, char *argv[])
 		}
 	}
 
-	if(optind == argc)
-		decrypt("-");
-	else {
-		for(i = optind ; i < argc ; ++i)
-			decrypt(argv[i]); /* currently only mode ;) */
+	if(mode == MD_WRITE_KEYFILE) {
+		if(optind != argc) {
+			fprintf(stderr, "ERROR: no file parameters permitted in "
+				"--write-keyfile mode\n");
+			exit(1);
+		}
+		write_keyfile(keyfile);
+	} else {
+		if(keyfile != NULL)
+			getKeyFromFile(keyfile);
+		if(cry_key == NULL) {
+			fprintf(stderr, "ERROR: key must be set via some method\n");
+			exit(1);
+		}
+		if(optind == argc)
+			decrypt("-");
+		else {
+			for(i = optind ; i < argc ; ++i)
+				decrypt(argv[i]);
+		}
 	}
 
-	memset(cry_key, 0, strlen(cry_key)); /* zero-out key store */
+	memset(cry_key, 0, cry_keylen); /* zero-out key store */
+	cry_keylen = 0;
 	return 0;
 }
