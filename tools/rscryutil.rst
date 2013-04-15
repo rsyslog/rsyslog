@@ -46,6 +46,13 @@ OPTIONS
   or other meta information. Keyfiles can be generated via the
   *--write-keyfile* option.
 
+-p, --key-program <path-to-program>
+ In this mode, the key is provided by a so-called "key program". This program
+ is executed and must return the key to (as well as some meta information)
+ via stdout. The core idea of key programs is that using this interface the
+ user can implement as complex (and secure) method to obtain keys as
+ desired, all without the need to make modifications to rsyslog.
+
 -K, --key <KEY>
   TESTING AID, NOT FOR PRODUCTION USE. This uses the KEY specified
   on the command line. This is the actual key, and as such this mode
