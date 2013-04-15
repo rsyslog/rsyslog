@@ -46,6 +46,7 @@ DEFobjCurrIf(glbl)
 static struct cnfparamdescr cnfpdescr[] = {
 	{ "cry.key", eCmdHdlrGetWord, 0 },
 	{ "cry.keyfile", eCmdHdlrGetWord, 0 },
+	{ "cry.keyprogram", eCmdHdlrGetWord, 0 },
 	{ "cry.mode", eCmdHdlrGetWord, 0 }, /* CBC, ECB, etc */
 	{ "cry.algo", eCmdHdlrGetWord, 0 }
 };
@@ -93,11 +94,14 @@ SetCnfParam(void *pT, struct nvlst *lst)
 	unsigned keylen;
 	uchar *key = NULL;
 	uchar *keyfile = NULL;
+	uchar *keyprogram = NULL;
 	uchar *algo = NULL;
 	uchar *mode = NULL;
+	int nKeys; /* number of keys (actually methods) specified */
 	struct cnfparamvals *pvals;
 	DEFiRet;
 
+	nKeys = 0;
 	pvals = nvlstGetParams(lst, &pblk, NULL);
 	if(Debug) {
 		dbgprintf("param blk in lmcry_gcry:\n");
@@ -109,8 +113,13 @@ SetCnfParam(void *pT, struct nvlst *lst)
 			continue;
 		if(!strcmp(pblk.descr[i].name, "cry.key")) {
 			key = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
+			++nKeys;
 		} else if(!strcmp(pblk.descr[i].name, "cry.keyfile")) {
 			keyfile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+			++nKeys;
+		} else if(!strcmp(pblk.descr[i].name, "cry.keyprogram")) {
+			keyprogram = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+			++nKeys;
 		} else if(!strcmp(pblk.descr[i].name, "cry.mode")) {
 			mode = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(pblk.descr[i].name, "cry.algo")) {
@@ -135,9 +144,9 @@ SetCnfParam(void *pT, struct nvlst *lst)
 		}
 	}
 	/* note: key must be set AFTER algo/mode is set (as it depends on them) */
-	if(key != NULL && keyfile != NULL) {
-		errmsg.LogError(0, RS_RET_INVALID_PARAMS, "only one of the following "
-			"parameters can be specified: cry.key, cry.keyfile\n");
+	if(nKeys != 1) {
+		errmsg.LogError(0, RS_RET_INVALID_PARAMS, "excactly one of the following "
+			"parameters can be specified: cry.key, cry.keyfile, cry.keyprogram\n");
 		ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 	}
 	if(key != NULL) {
@@ -150,6 +159,14 @@ SetCnfParam(void *pT, struct nvlst *lst)
 		if(r != 0) {
 			errmsg.LogError(0, RS_RET_ERR, "error %d reading keyfile %s\n",
 				r, keyfile);
+			ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
+		}
+	}
+	if(keyprogram != NULL) {
+		r = gcryGetKeyFromProg((char*)keyprogram, (char**)&key, &keylen);
+		if(r != 0) {
+			errmsg.LogError(0, RS_RET_ERR, "error %d obtaining key from program %s\n",
+				r, keyprogram);
 			ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 		}
 	}
