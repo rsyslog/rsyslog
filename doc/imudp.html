@@ -18,8 +18,8 @@
 multiple input actions.
 </p>
 
-<p><b>Configuration Directives</b>:</p>
-<p><b>Global Directives</b>:</p>
+<p><b>Configuration Parameters</b>:</p>
+<p><b>Module Parameters</b>:</p>
 <ul>
 <li><b>TimeRequery</b> &lt;nbr-of-times&gt;<br>
 this is a performance
@@ -33,11 +33,11 @@ the value, the less precise the timestamp.
 <li><b>SchedulingPolicy</b> &lt;rr/fifo/other&gt;<br>
 Can be used the set the scheduler priority, if the necessary functionality
 is provided by the platform. Most useful to select "fifo" for real-time 
-processing under Linux (and thus reduce chance of packet loss). 
+processing under Linux (and thus reduce chance of packet loss).
 <li><b>SchedulingPriority</b> &lt;number&gt;<br>
 Scheduling priority to use. 
 </ul>
-<p><b>Action Directives</b>:</p>
+<p><b>Input Parameters</b>:</p>
 <ul>
 <li><b>Address</b> &lt;IP&gt;<br>
 local IP address (or name) the UDP listens should bind to</li>
@@ -54,17 +54,62 @@ of seconds (5 recommended) to activate rate-limiting.
 <li><b>RateLimit.Burst</b> [number] - (available since 7.3.1) specifies the rate-limiting
 burst in number of messages. Default is 10,000.
 </li>
+<li><b>InputName</b> [name] - (available since 7.3.9) specifies the value of
+the inputname. In older versions, this was always "imudp" for all listeners,
+which still i the default.
+Starting with 7.3.9 it can be set to different values for each listener.
+Note that when a single input statement defines multipe listner ports, the
+inputname will be the same for all of them. If you want to differentiate in that
+case, use "InputName.AppendPort" to make them unique.
+Note that the "InputName" parameter can be an empty string. In that case, the
+corresponding inputname property will obviously also be the empty string. This
+is primarily meant to be used togehter with "InputName.AppendPort" to set the
+inputname equal to the port.
+</li>
+<li><b>InputName.AppendPort</b> [on/<b>off</b>] - (available since 7.3.9)
+appends the port the the inputname. Note that when no inputname is specified,
+the default of "imudp" is used and the port is appended to that default. So,
+for example, a listner port of 514 in that case will lead to an inputname
+of "imudp514". The ability to append a port is most useful when multiple ports
+are defined for a single input and each of the inputnames shall be unique.
+Note that there currently is no differentiation between IPv4/v6 listners on
+the same port.
+</li>
 </ul>
 <b>Caveats/Known Bugs:</b>
 <ul>
-<li>currently none known</li>
+<li>Scheduling parameters are set <b>after</b> privileges have been dropped.
+In most cases, this means that setting them will not be possible after
+privilege drop. This may be worked around by using a sufficiently-privileged
+user account.
+</li>
 </ul>
-<p><b>Sample:</b></p>
+<p><b>Samples:</b></p>
 <p>This sets up an UPD server on port 514:<br>
 </p>
-<textarea rows="15" cols="60">module(load="imudp") # needs to be done just once
+<textarea rows="3" cols="60">module(load="imudp") # needs to be done just once
 input(type="imudp" port="514")
 </textarea>
+
+<p>In the next example, we set up three listners at ports 10514, 10515 and 10516
+and assign a listner name of "udp" to it, followed by the port number:
+</p>
+<textarea rows="4" cols="60">module(load="imudp")
+input(type="imudp" port=["10514","10515","10516"]
+      inputname="udp" inputname.appendPort="on")
+</textarea>
+
+<p>The next example is almost equal to the previous one, but
+now the inputname property will just be set to the port number.
+So if a message was received on port 10515, the input name will be
+"10515" in this example whereas it was "udp10515" in the previous one.
+Note that to do that we set the inputname to the empty string.
+</p>
+<textarea rows="4" cols="60">module(load="imudp")
+input(type="imudp" port=["10514","10515","10516"]
+      inputname="" inputname.appendPort="on")
+</textarea>
+
 
 <p><b>Legacy Configuration Directives</b>:</p>
 <p>Multiple receivers may be configured by specifying
@@ -84,23 +129,20 @@ equivalent to: SchedulingPolicy
 <li>$IMUDPSchedulingPriority &lt;number&gt; Available since 4.7.4+, 5.7.3+, 6.1.3+.<br>
 equivalent to: SchedulingPriority 
 </ul>
-<b>Caveats/Known Bugs:</b>
-<ul>
-<li>currently none known</li>
-</ul>
 <p><b>Sample:</b></p>
 <p>This sets up an UPD server on port 514:<br>
 </p>
-<textarea rows="15" cols="60">$ModLoad imudp # needs to be done just once
+<textarea rows="3" cols="60">$ModLoad imudp # needs to be done just once
 $UDPServerRun 514
 </textarea>
+
 <p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>]
 [<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
 <p><font size="2">This documentation is part of the
 <a href="http://www.rsyslog.com/">rsyslog</a>
 project.<br>
-Copyright &copy; 2009 by <a href="http://www.gerhards.net/rainer">Rainer
-Gerhards</a> and
+Copyright &copy; 2009-2013 by
+<a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
 <a href="http://www.adiscon.com/">Adiscon</a>.
 Released under the GNU GPL version 3 or higher.</font></p>
 </body></html>

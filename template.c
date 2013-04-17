@@ -79,6 +79,7 @@ static struct cnfparamdescr cnfparamdescrProperty[] = {
 	{ "format", eCmdHdlrString, 0 },
 	{ "position.from", eCmdHdlrInt, 0 },
 	{ "position.to", eCmdHdlrInt, 0 },
+	{ "position.relativetoend", eCmdHdlrBinary, 0 },
 	{ "field.number", eCmdHdlrInt, 0 },
 	{ "field.delimiter", eCmdHdlrInt, 0 },
 	{ "regex.expression", eCmdHdlrString, 0 },
@@ -712,6 +713,8 @@ static void doOptions(unsigned char **pp, struct templateEntry *pTpe)
 			pTpe->data.field.options.bSecPathDrop = 1;
 		 } else if(!strcmp((char*)Buf, "secpath-replace")) {
 			pTpe->data.field.options.bSecPathReplace = 1;
+		 } else if(!strcmp((char*)Buf, "pos-end-relative")) {
+			pTpe->data.field.options.bFromPosEndRelative = 1;
 		 } else if(!strcmp((char*)Buf, "csv")) {
 		 	if(pTpe->data.field.options.bJSON || pTpe->data.field.options.bJSONf) {
 				errmsg.LogError(0, NO_ERRCODE, "error: can only specify "
@@ -1057,17 +1060,26 @@ do_Parameter(uchar **pp, struct template *pTpl)
 #endif /* #ifdef FEATURE_REGEXP */
 	}
 
-	if(pTpe->data.field.iToPos < pTpe->data.field.iFromPos) {
-		iNum = pTpe->data.field.iToPos;
-		pTpe->data.field.iToPos = pTpe->data.field.iFromPos;
-		pTpe->data.field.iFromPos = iNum;
-	}
-
 	/* check options */
 	if(*p == ':') {
 		++p; /* eat ':' */
 		doOptions(&p, pTpe);
 	}
+
+	if(pTpe->data.field.options.bFromPosEndRelative) {
+		if(pTpe->data.field.iToPos > pTpe->data.field.iFromPos) {
+			iNum = pTpe->data.field.iToPos;
+			pTpe->data.field.iToPos = pTpe->data.field.iFromPos;
+			pTpe->data.field.iFromPos = iNum;
+		}
+	} else {
+		if(pTpe->data.field.iToPos < pTpe->data.field.iFromPos) {
+			iNum = pTpe->data.field.iToPos;
+			pTpe->data.field.iToPos = pTpe->data.field.iFromPos;
+			pTpe->data.field.iFromPos = iNum;
+		}
+	}
+
 
 	/* check field name */
 	if(*p == ':') {
@@ -1356,6 +1368,7 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 	int re_matchToUse = 0;
 	int re_submatchToUse = 0;
 	int bComplexProcessing = 0;
+	int bPosRelativeToEnd = 0;
 	char *re_expr = NULL;
 	struct cnfparamvals *pvals = NULL;
 	enum {F_NONE, F_CSV, F_JSON, F_JSONF} formatType = F_NONE;
@@ -1395,6 +1408,8 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 		} else if(!strcmp(pblkProperty.descr[i].name, "position.to")) {
 			topos = pvals[i].val.d.n;
 			bComplexProcessing = 1;
+		} else if(!strcmp(pblkProperty.descr[i].name, "position.relativetoend")) {
+			bPosRelativeToEnd = pvals[i].val.d.n;
 		} else if(!strcmp(pblkProperty.descr[i].name, "field.number")) {
 			fieldnum = pvals[i].val.d.n;
 			bComplexProcessing = 1;
@@ -1537,10 +1552,18 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 		topos = 2000000000; /* large enough ;) */
 	if(frompos == -1 && topos != -1)
 		frompos = 0;
-	if(topos < frompos) {
-		errmsg.LogError(0, RS_RET_ERR, "position.to=%d is lower than postion.from=%d\n",
-			topos, frompos);
-		ABORT_FINALIZE(RS_RET_ERR);
+	if(bPosRelativeToEnd) {
+		if(topos > frompos) {
+			errmsg.LogError(0, RS_RET_ERR, "position.to=%d is higher than postion.from=%d in 'relativeToEnd' mode\n",
+				topos, frompos);
+			ABORT_FINALIZE(RS_RET_ERR);
+		}
+	} else {
+		if(topos < frompos) {
+			errmsg.LogError(0, RS_RET_ERR, "position.to=%d is lower than postion.from=%d\n",
+				topos, frompos);
+			ABORT_FINALIZE(RS_RET_ERR);
+		}
 	}
 	if(fieldnum != -1 && re_expr != NULL) {
 		errmsg.LogError(0, RS_RET_ERR, "both field extraction and regex extraction "
@@ -1613,6 +1636,7 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 	if(frompos != -1) {
 		pTpe->data.field.iFromPos = frompos;
 		pTpe->data.field.iToPos = topos;
+		pTpe->data.field.options.bFromPosEndRelative = bPosRelativeToEnd;
 	}
 	if(re_expr != NULL) {
 		rsRetVal iRetLocal;

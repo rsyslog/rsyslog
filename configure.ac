@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([rsyslog],[7.3.6],[rsyslog@lists.adiscon.com])
+AC_INIT([rsyslog],[7.3.11],[rsyslog@lists.adiscon.com])
 AM_INIT_AUTOMAKE
 
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
@@ -28,11 +28,12 @@ fi
 AC_DISABLE_STATIC
 AC_PROG_LIBTOOL
 AC_CANONICAL_HOST
+AC_PATH_PROG([RST2MAN], [rst2man])
 
 PKG_PROG_PKG_CONFIG
 
 # modules we require
-PKG_CHECK_MODULES(LIBESTR, libestr >= 0.1.2)
+PKG_CHECK_MODULES(LIBESTR, libestr >= 0.1.5)
 PKG_CHECK_MODULES(LIBEE, libee >= 0.4.0)
 PKG_CHECK_MODULES([JSON_C], [json])
 
@@ -55,6 +56,10 @@ case "${host}" in
     AC_DEFINE([OS_SOLARIS], [1], [Indicator for a Solaris OS])
     AC_DEFINE([_POSIX_PTHREAD_SEMANTICS], [1], [Use POSIX pthread semantics])
     SOL_LIBS="-lsocket -lnsl"
+    # Solaris libuuid does not ship with a pkgconfig file so override the appropriate
+    # variables (but only if they have not been set by the user).
+    LIBUUID_CFLAGS=${LIBUUID_CFLAGS:= }
+    LIBUUID_LIBS=${LIBUUID_LIBS:=-luuid}
     AC_SUBST(SOL_LIBS)
   ;;
 esac
@@ -66,6 +71,8 @@ save_LIBS=$LIBS
 LIBS=
 AC_SEARCH_LIBS(clock_gettime, rt)
 RT_LIBS=$LIBS
+AC_SEARCH_LIBS(mq_getattr, rt)
+RT_LIBS="$RT_LIBS $LIBS"
 LIBS=
 AC_SEARCH_LIBS(dlopen, dl)
 DL_LIBS=$LIBS
@@ -114,7 +121,10 @@ AC_TYPE_SIGNAL
 AC_FUNC_STAT
 AC_FUNC_STRERROR_R
 AC_FUNC_VPRINTF
-AC_CHECK_FUNCS([flock basename alarm clock_gettime getifaddrs gethostbyname gethostname gettimeofday localtime_r memset mkdir regcomp select setid socket strcasecmp strchr strdup strerror strndup strnlen strrchr strstr strtol strtoul uname ttyname_r getline malloc_trim prctl epoll_create epoll_create1 fdatasync syscall lseek64])
+AC_CHECK_FUNCS([flock basename alarm clock_gettime gethostbyname gethostname gettimeofday localtime_r memset mkdir regcomp select setid socket strcasecmp strchr strdup strerror strndup strnlen strrchr strstr strtol strtoul uname ttyname_r getline malloc_trim prctl epoll_create epoll_create1 fdatasync syscall lseek64])
+
+# getifaddrs is in libc (mostly) or in libsocket (eg Solaris 11) or not defined (eg Solaris 10)
+AC_SEARCH_LIBS([getifaddrs], [socket], [AC_DEFINE(HAVE_GETIFADDRS, [1], [set define])])
 
 # the check below is probably ugly. If someone knows how to do it in a better way, please
 # let me know! -- rgerhards, 2010-10-06
@@ -122,7 +132,9 @@ AC_CHECK_DECL([SCM_CREDENTIALS], [AC_DEFINE(HAVE_SCM_CREDENTIALS, [1], [set defi
 #include <sys/socket.h>])
 AC_CHECK_DECL([SO_TIMESTAMP], [AC_DEFINE(HAVE_SO_TIMESTAMP, [1], [set define])], [], [#include <sys/types.h>
 #include <sys/socket.h>])
+AC_CHECK_DECL([SYS_gettid], [AC_DEFINE(HAVE_SYS_gettid, [1], [set define])], [], [#include <sys/syscall.h>])
 AC_CHECK_MEMBER([struct sysinfo.uptime], [AC_DEFINE(HAVE_SYSINFO_UPTIME, [1], [set define])], [], [#include <sys/sysinfo.h>])
+AC_CHECK_DECL([GLOB_NOMAGIC], [AC_DEFINE(HAVE_GLOB_NOMAGIC, [1], [set define])], [], [#include <glob.h>])
 
 # Check for MAXHOSTNAMELEN
 AC_MSG_CHECKING(for MAXHOSTNAMELEN)
@@ -672,6 +684,11 @@ if test "x$enable_libdbi" = "xyes"; then
     [dbi_initialize_r],
     [AC_DEFINE([HAVE_DBI_R], [1], [Define to 1 if libdbi supports the new plugin-safe interface])]
   )
+  AC_CHECK_LIB(
+    [dbi],
+    [dbi_conn_transaction_begin],
+    [AC_DEFINE([HAVE_DBI_TXSUPP], [1], [Define to 1 if libdbi supports transactions])]
+  )
 fi
 AM_CONDITIONAL(ENABLE_OMLIBDBI, test x$enable_libdbi = xyes)
 AC_SUBST(LIBDBI_CFLAGS)
@@ -755,6 +772,38 @@ if test "x$enable_gnutls" = "xyes"; then
 	AC_DEFINE([ENABLE_GNUTLS], [1], [Indicator that GnuTLS is present])
 fi
 AM_CONDITIONAL(ENABLE_GNUTLS, test x$enable_gnutls = xyes)
+
+# libgcrypt support
+AC_ARG_ENABLE(libgcrypt,
+        [AS_HELP_STRING([--enable-libgcrypt],[Enable libgcrypt support @<:@default=yes@:>@])],
+        [case "${enableval}" in
+         yes) enable_libgcrypt="yes" ;;
+          no) enable_libgcrypt="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-libgcrypt) ;;
+         esac],
+        [enable_libgcrypt=yes]
+)
+if test "x$enable_libgcrypt" = "xyes"; then
+        AC_CHECK_PROG(
+      	    [HAVE_LIBGCRYPT_CONFIG],
+            [libgcrypt-config],
+            [yes],,,
+            )
+        if test "x${HAVE_LIBGCRYPT_CONFIG}" != "xyes"; then
+           AC_MSG_FAILURE([libgcrypt-config not found in PATH])
+        fi
+        AC_CHECK_LIB(
+		[gcrypt],
+        	[gcry_cipher_open],
+        	[LIBGCRYPT_CFLAGS="`libgcrypt-config --cflags`"
+        	LIBGCRYPT_LIBS="`libgcrypt-config --libs`"
+        	],
+        	[AC_MSG_FAILURE([libgrypt is missing])],
+        	[`libgcrypt-config --libs --cflags`]
+        	)
+	AC_DEFINE([ENABLE_LIBGCRYPT], [1], [Indicator that LIBGCRYPT is present])
+fi
+AM_CONDITIONAL(ENABLE_LIBGCRYPT, test x$enable_libgcrypt = xyes)
 
 
 # support for building the rsyslogd runtime
@@ -929,10 +978,25 @@ AC_ARG_ENABLE(relp,
         [enable_relp=no]
 )
 if test "x$enable_relp" = "xyes"; then
-	PKG_CHECK_MODULES(RELP, relp >= 1.0.1)
+	PKG_CHECK_MODULES(RELP, relp >= 1.0.3)
 fi
 AM_CONDITIONAL(ENABLE_RELP, test x$enable_relp = xyes)
 
+
+# GuardTime support
+AC_ARG_ENABLE(guardtime,
+        [AS_HELP_STRING([--enable-guardtime],[Enable GuardTime support @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_guardtime="yes" ;;
+          no) enable_guardtime="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-guardtime) ;;
+         esac],
+        [enable_guardtime=no]
+)
+if test "x$enable_guardtime" = "xyes"; then
+	PKG_CHECK_MODULES(GUARDTIME, libgt >= 0.3.1)
+fi
+AM_CONDITIONAL(ENABLE_GUARDTIME, test x$enable_guardtime = xyes)
 
 # RFC 3195 support
 AC_ARG_ENABLE(rfc3195,
@@ -1392,6 +1456,8 @@ echo "    rsyslogd will be built:                   $enable_rsyslogd"
 echo "    GUI components will be built:             $enable_gui"
 echo "    Unlimited select() support enabled:       $enable_unlimited_select"
 echo "    uuid support enabled:                     $enable_uuid"
+echo "    GuardTime signature support enabled:      $enable_guardtime"
+echo "    libgcrypt support enabled:                $enable_libgcrypt"
 echo "    anonymization support enabled:            $enable_mmanon"
 echo
 echo "---{ input plugins }---"

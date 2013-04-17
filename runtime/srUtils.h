@@ -91,6 +91,7 @@ char *rs_strerror_r(int errnum, char *buf, size_t buflen);
 int decodeSyslogName(uchar *name, syslogName_t *codetab);
 int getSubString(uchar **ppSrc,  char *pDst, size_t DstSize, char cSep);
 rsRetVal getFileSize(uchar *pszName, off_t *pSize);
+int containsGlobWildcard(char *str);
 
 /* mutex operations */
 /* some useful constants */

@@ -303,7 +303,7 @@ static inline void dbgFuncDBRemoveMutexLock(dbgFuncDB_t *pFuncDB, pthread_mutex_
 void
 dbgOutputTID(char* name)
 {
-#	ifdef	HAVE_SYSCALL
+#	if defined(HAVE_SYSCALL) && defined(HAVE_SYS_gettid)
 	if(bOutputTidToStderr)
 		fprintf(stderr, "thread tid %u, name '%s'\n",
 			(unsigned)syscall(SYS_gettid), name);
@@ -1314,6 +1314,15 @@ dbgmalloc(size_t size)
 	return pRet;
 }
 
+
+/* report fd used for debug log. This is needed in case of
+ * auto-backgrounding, where the debug log shall not be closed.
+ */
+int
+dbgGetDbglogFd(void)
+{
+	return altdbg;
+}
 
 /* read in the runtime options
  * rgerhards, 2008-02-28

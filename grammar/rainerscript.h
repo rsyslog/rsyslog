@@ -226,6 +226,7 @@ enum cnffuncid {
 	CNFFUNC_CSTR,
 	CNFFUNC_CNUM,
 	CNFFUNC_RE_MATCH,
+	CNFFUNC_RE_EXTRACT,
 	CNFFUNC_FIELD,
 	CNFFUNC_PRIFILT
 };
@@ -317,6 +318,7 @@ int cnfparamvalsIsSet(struct cnfparamblk *params, struct cnfparamvals *vals);
 void varDelete(struct var *v);
 void cnfparamvalsDestruct(struct cnfparamvals *paramvals, struct cnfparamblk *blk);
 struct cnfstmt * cnfstmtNew(unsigned s_type);
+void cnfstmtPrintOnly(struct cnfstmt *stmt, int indent, sbool subtree);
 void cnfstmtPrint(struct cnfstmt *stmt, int indent);
 struct cnfstmt* scriptAddStmt(struct cnfstmt *root, struct cnfstmt *s);
 struct objlst* objlstAdd(struct objlst *root, struct cnfobj *o);
@@ -338,6 +340,7 @@ void cnfarrayContentDestruct(struct cnfarray *ar);
 char* getFIOPName(unsigned iFIOP);
 rsRetVal initRainerscript(void);
 void unescapeStr(uchar *s, int len);
+char * tokenval2str(int tok);
 
 /* debug helper */
 void cstrPrint(char *text, es_str_t *estr);

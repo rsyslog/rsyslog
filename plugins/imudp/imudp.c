@@ -75,6 +75,7 @@ static struct lstn_s {
 	struct lstn_s *next;
 	int sock;		/* socket */
 	ruleset_t *pRuleset;	/* bound ruleset */
+	prop_t *pInputName;
 	statsobj_t *stats;	/* listener stats */
 	ratelimit_t *ratelimiter;
 	STATSCOUNTER_DEF(ctrSubmit, mutCtrSubmit)
@@ -91,7 +92,6 @@ static uchar *pRcvBuf = NULL;		/* receive buffer (for a single packet). We use a
 					 * it so that we can check available memory in willRun() and request
 					 * termination if we can not get it. -- rgerhards, 2007-12-27
 					 */
-static prop_t *pInputName = NULL;	/* our inputName currently is always "imudp", and this will hold it */
 
 #define TIME_REQUERY_DFLT 2
 #define SCHED_PRIO_UNSET -12345678	/* a value that indicates that the scheduling priority has not been set */
@@ -108,10 +108,12 @@ struct instanceConf_s {
 	uchar *pszBindAddr;		/* IP to bind socket to */
 	uchar *pszBindPort;		/* Port to bind socket to */
 	uchar *pszBindRuleset;		/* name of ruleset to bind to */
+	uchar *inputname;
 	ruleset_t *pBindRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
 	int ratelimitInterval;
 	int ratelimitBurst;
 	struct instanceConf_s *next;
+	sbool bAppendPortToInpname;
 };
 
 struct modConfData_s {
@@ -141,6 +143,8 @@ static struct cnfparamblk modpblk =
 /* input instance parameters */
 static struct cnfparamdescr inppdescr[] = {
 	{ "port", eCmdHdlrArray, CNFPARAM_REQUIRED }, /* legacy: InputTCPServerRun */
+	{ "inputname", eCmdHdlrGetWord, 0 },
+	{ "inputname.appendport", eCmdHdlrBinary, 0 },
 	{ "address", eCmdHdlrString, 0 },
 	{ "ruleset", eCmdHdlrString, 0 },
 	{ "ratelimit.interval", eCmdHdlrInt, 0 },
@@ -169,6 +173,8 @@ createInstance(instanceConf_t **pinst)
 	inst->pszBindPort = NULL;
 	inst->pszBindAddr = NULL;
 	inst->pszBindRuleset = NULL;
+	inst->inputname = NULL;
+	inst->bAppendPortToInpname = 0;
 	inst->ratelimitBurst = 10000; /* arbitrary high limit */
 	inst->ratelimitInterval = 0; /* off */
 
@@ -229,7 +235,8 @@ addListner(instanceConf_t *inst)
 	struct lstn_s *newlcnfinfo;
 	uchar *bindName;
 	uchar *port;
-	uchar dispname[64];
+	uchar dispname[64], inpnameBuf[128];
+	uchar *inputname;
 
 	/* check which address to bind to. We could do this more compact, but have not
 	 * done so in order to make the code more readable. -- rgerhards, 2007-12-27
@@ -257,6 +264,21 @@ addListner(instanceConf_t *inst)
 			snprintf((char*)dispname, sizeof(dispname), "imudp(%s:%s)", bindName, port);
 			dispname[sizeof(dispname)-1] = '\0'; /* just to be on the save side... */
 			CHKiRet(ratelimitNew(&newlcnfinfo->ratelimiter, (char*)dispname, NULL));
+			if(inst->inputname == NULL) {
+				inputname = (uchar*)"imudp";
+			} else {
+				inputname = inst->inputname;
+			}
+			if(inst->bAppendPortToInpname) {
+				snprintf((char*)inpnameBuf, sizeof(inpnameBuf), "%s%s",
+					inputname, port);
+				inpnameBuf[sizeof(inpnameBuf)-1] = '\0';
+				inputname = inpnameBuf;
+			}
+			CHKiRet(prop.Construct(&newlcnfinfo->pInputName));
+			CHKiRet(prop.SetString(newlcnfinfo->pInputName,
+				inputname, ustrlen(inputname)));
+			CHKiRet(prop.ConstructFinalize(newlcnfinfo->pInputName));
 			ratelimitSetLinuxLike(newlcnfinfo->ratelimiter, inst->ratelimitInterval,
 					      inst->ratelimitBurst);
 			/* support statistics gathering */
@@ -390,7 +412,7 @@ processSocket(thrdInfo_t *pThrd, struct lstn_s *lstn, struct sockaddr_storage *f
 			/* we now create our own message object and submit it to the queue */
 			CHKiRet(msgConstructWithTime(&pMsg, &stTime, ttGenTime));
 			MsgSetRawMsg(pMsg, (char*)pRcvBuf, lenRcvBuf);
-			MsgSetInputName(pMsg, pInputName);
+			MsgSetInputName(pMsg, lstn->pInputName);
 			MsgSetRuleset(pMsg, lstn->pRuleset);
 			MsgSetFlowControlType(pMsg, eFLOWCTL_NO_DELAY);
 			pMsg->msgFlags  = NEEDS_PARSING | PARSE_HOSTNAME | NEEDS_DNSRESOL;
@@ -695,6 +717,10 @@ createListner(es_str_t *port, struct cnfparamvals *pvals)
 			continue;
 		if(!strcmp(inppblk.descr[i].name, "port")) {
 			continue;	/* array, handled by caller */
+		} else if(!strcmp(inppblk.descr[i].name, "inputname")) {
+			inst->inputname = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(inppblk.descr[i].name, "inputname.appendport")) {
+			inst->bAppendPortToInpname = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "address")) {
 			inst->pszBindAddr = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "ruleset")) {
@@ -853,7 +879,6 @@ CODESTARTactivateCnfPrePrivDrop
 		ABORT_FINALIZE(RS_RET_NO_RUN);
 	}
 
-	setSchedParams(pModConf);
 finalize_it:
 ENDactivateCnfPrePrivDrop
 
@@ -874,6 +899,7 @@ CODESTARTfreeCnf
 		free(inst->pszBindPort);
 		free(inst->pszBindAddr);
 		free(inst->pBindRuleset);
+		free(inst->inputname);
 		del = inst;
 		inst = inst->next;
 		free(del);
@@ -886,6 +912,15 @@ ENDfreeCnf
  */
 BEGINrunInput
 CODESTARTrunInput
+	/* Note well: the setting of scheduling parameters will not work
+	 * when we dropped privileges (if the user is not sufficently
+	 * privileged, of course). Howerver, we can't change the 
+	 * scheduling params in PrePrivDrop(), as at that point our thread
+	 * is not yet created. So at least as an interim solution, we do
+	 * NOT support both setting sched parameters and dropping
+	 * privileges within the same instance.
+	 */
+	setSchedParams(runModConf);
 	iRet = rcvMainLoop(pThrd);
 ENDrunInput
 
@@ -907,6 +942,7 @@ CODESTARTafterRun
 		statsobj.Destruct(&(lstn->stats));
 		ratelimitDestruct(lstn->ratelimiter);
 		close(lstn->sock);
+		prop.Destruct(&lstn->pInputName);
 		lstnDel = lstn;
 		lstn = lstn->next;
 		free(lstnDel);
@@ -921,9 +957,6 @@ ENDafterRun
 
 BEGINmodExit
 CODESTARTmodExit
-	if(pInputName != NULL)
-		prop.Destruct(&pInputName);
-
 	/* release what we no longer need */
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
@@ -977,11 +1010,6 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(prop, CORE_COMPONENT));
 	CHKiRet(objUse(ruleset, CORE_COMPONENT));
 	CHKiRet(objUse(net, LM_NET_FILENAME));
-
-	/* we need to create the inputName property (only once during our lifetime) */
-	CHKiRet(prop.Construct(&pInputName));
-	CHKiRet(prop.SetString(pInputName, UCHAR_CONSTANT("imudp"), sizeof("imudp") - 1));
-	CHKiRet(prop.ConstructFinalize(pInputName));
 
 	/* register config file handlers */
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputudpserverbindruleset", 0, eCmdHdlrGetWord,

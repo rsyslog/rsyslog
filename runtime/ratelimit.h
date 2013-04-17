@@ -26,6 +26,7 @@ struct ratelimit_s {
 	/* support for Linux kernel-type ratelimiting */
 	unsigned short interval;
 	unsigned short burst;
+	intTiny severity; /**< ratelimit only equal or lower severity levels (eq or higher values) */
 	unsigned done;
 	unsigned missed;
 	time_t begin;
@@ -41,6 +42,7 @@ struct ratelimit_s {
 rsRetVal ratelimitNew(ratelimit_t **ppThis, char *modname, char *dynname);
 void ratelimitSetThreadSafe(ratelimit_t *ratelimit);
 void ratelimitSetLinuxLike(ratelimit_t *ratelimit, unsigned short interval, unsigned short burst);
+void ratelimitSetSeverity(ratelimit_t *ratelimit, intTiny severity);
 rsRetVal ratelimitMsg(ratelimit_t *ratelimit, msg_t *pMsg, msg_t **ppRep);
 rsRetVal ratelimitAddMsg(ratelimit_t *ratelimit, multi_submit_t *pMultiSub, msg_t *pMsg);
 void ratelimitDestruct(ratelimit_t *pThis);

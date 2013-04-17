@@ -387,7 +387,9 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_MOD_NO_INPUT_STMT = -2224, /**< (input) module does not support input() statement */
 	RS_RET_NO_CEE_MSG = -2225, /**< the message being processed is NOT CEE-enhanced */
 
-	/**** up to 2300 is reserved for v6 use ****/
+	/**** up to 2290 is reserved for v6 use ****/
+	RS_RET_RELP_ERR = -2291,	/**<< error in RELP processing */
+	/**** up to 3000 is reserved for c7 use ****/
 	RS_RET_JNAME_NO_ROOT = -2301, /**< root element is missing in JSON path */
 	RS_RET_JNAME_INVALID = -2302, /**< JSON path is invalid */
 	RS_RET_JSON_PARSE_ERR = -2303, /**< we had a problem parsing JSON (or extra data) */
@@ -402,6 +404,14 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_INVLD_MODE = -2311,/**< invalid mode specified in configuration */
 	RS_RET_INVLD_ANON_BITS = -2312,/**< mmanon: invalid number of bits to anonymize specified */
 	RS_RET_REPLCHAR_IGNORED = -2313,/**< mmanon: replacementChar parameter is ignored */
+	RS_RET_SIGPROV_ERR = -2320,/**< error in signature provider */
+	RS_RET_CRYPROV_ERR = -2321,/**< error in cryptography encryption provider */
+	RS_RET_EI_OPN_ERR = -2322,/**< error opening an .encinfo file */
+	RS_RET_EI_NO_EXISTS = -2323,/**< .encinfo file does not exist (status, not necessarily error!)*/
+	RS_RET_EI_WR_ERR = -2324,/**< error writing an .encinfo file */
+	RS_RET_EI_INVLD_FILE = -2325,/**< header indicates the file is no .encinfo file */
+	RS_RET_CRY_INVLD_ALGO = -2326,/**< user specified invalid (unkonwn) crypto algorithm */
+	RS_RET_CRY_INVLD_MODE = -2327,/**< user specified invalid (unkonwn) crypto mode */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */

@@ -41,6 +41,7 @@ html_files = \
 	omudpspoof.html \
 	omruleset.html \
 	omsnmp.html \
+	sigprov_gt.html \
 	ommysql.html \
 	omoracle.html \
 	omlibdbi.html \

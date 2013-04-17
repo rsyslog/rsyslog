@@ -16,10 +16,34 @@ RELP protocol. For RELP's advantages over plain tcp syslog, please see
 the documentation for <a href="imrelp.html">imrelp</a>
 (the server counterpart).&nbsp;</p>
 <span style="font-weight: bold;">Setup</span>
-<p>Please note the <a href="http://www.librelp.com">librelp</a>
+<p>Please note that <a href="http://www.librelp.com">librelp</a>
 is required for imrelp (it provides the core relp protocol
 implementation).</p>
-<p><b>Configuration Directives</b>:</p>
+<p><b>Action Configuration Parameters</b>:</p>
+<p>This module supports RainerScript configuration starting with
+rsyslog 7.3.10. For older versions, legacy configuration directives
+must be used.
+<ul>
+	<li><b>target </b>(mandatory)<br>
+	The target server to connect to.
+	</li>
+	<li><b>template </b>(not mandatory, default "RSYSLOG_ForwardFormat")<br>
+	Defines the template to be used for the output.
+	</li>
+	<li><b>timeout </b>(not mandatory, default 90)<br>
+	Timeout for relp sessions. If set too low, valid sessions
+	may be considered dead and tried to recover.
+	</li>
+</ul>
+<p><b>Sample:</b></p>
+<p>The following sample sends all messages to the central server
+"centralserv" at port 2514 (note that that server must run imrelp on
+port 2514).
+</p>
+<textarea rows="3" cols="60">module(load="omrelp")
+action(type="omrelp" target="centralserv" port="2514")
+</textarea>
+<p><b>Legacy Configuration Directives</b>:</p>
 <p>This module uses old-style action configuration to keep
 consistent with the forwarding rule. So far, no additional
 configuration directives can be specified. To send a message via RELP,
@@ -33,18 +57,15 @@ use</p>
 <b>Caveats/Known Bugs:</b>
 <p>See <a href="imrelp.html">imrelp</a>,
 which documents them.&nbsp;</p>
-<p><b>Sample:</b></p>
+<p><b>Legacy Sample:</b></p>
 <p>The following sample sends all messages to the central server
 "centralserv" at port 2514 (note that that server must run imrelp on
-port 2514). Rsyslog's high-precision timestamp format is used, thus the
-special "RSYSLOG_ForwardFormat" (case sensitive!) template is used.<br>
+port 2514).
 </p>
-<textarea rows="15" cols="60">$ModLoad omrelp
-# forward messages to the remote server "myserv" on
-# port 2514
-*.* :omrelp:centralserv:2514;RSYSLOG_ForwardFormat
+<textarea rows="3" cols="60">$ModLoad omrelp
+*.* :omrelp:centralserv:2514
 </textarea>
-Note: to use IPv6 addresses, encode them in [::1] format.
+<p>Note: to use IPv6 addresses, encode them in [::1] format.
 <p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>]
 [<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
 <p><font size="2">This documentation is part of the

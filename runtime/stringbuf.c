@@ -32,6 +32,7 @@
 #include <assert.h>
 #include <string.h>
 #include <ctype.h>
+#include <stdarg.h>
 #include <sys/types.h>
 #include <libestr.h>
 #include "rsyslog.h"
@@ -100,6 +101,56 @@ rsRetVal rsCStrConstructFromszStr(cstr_t **ppThis, uchar *sz)
 	*ppThis = pThis;
 
 finalize_it:
+	RETiRet;
+}
+
+
+/* a helper function for rsCStr*Strf()
+ */
+static rsRetVal rsCStrConstructFromszStrv(cstr_t **ppThis, uchar *fmt, va_list ap)
+{
+	DEFiRet;
+	cstr_t *pThis;
+	va_list ap2;
+	uchar *sz;
+	int len;
+
+	assert(ppThis != NULL);
+
+	va_copy(ap2, ap);
+	len = vsnprintf(NULL, 0, fmt, ap2);
+	va_end(ap2);
+
+	if(len < 0)
+		ABORT_FINALIZE(RS_RET_ERR);
+
+	CHKiRet(rsCStrConstruct(&pThis));
+
+	pThis->iBufSize = pThis->iStrLen = len;
+	len++; /* account for the \0 written by vsnprintf */
+	if((pThis->pBuf = (uchar*) MALLOC(sizeof(uchar) * len)) == NULL) {
+		RSFREEOBJ(pThis);
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	}
+
+	vsnprintf(pThis->pBuf, len, fmt, ap);
+	*ppThis = pThis;
+finalize_it:
+	RETiRet;
+}
+
+
+/* construct from a printf-style formated string
+ */
+rsRetVal rsCStrConstructFromszStrf(cstr_t **ppThis, uchar *fmt, ...)
+{
+	DEFiRet;
+	va_list ap;
+
+	va_start(ap, fmt);
+	iRet = rsCStrConstructFromszStrv(ppThis, fmt, ap);
+	va_end(ap);
+
 	RETiRet;
 }
 
@@ -253,6 +304,27 @@ rsRetVal rsCStrAppendStr(cstr_t *pThis, uchar* psz)
 rsRetVal cstrAppendCStr(cstr_t *pThis, cstr_t *pstrAppend)
 {
 	return rsCStrAppendStrWithLen(pThis, pstrAppend->pBuf, pstrAppend->iStrLen);
+}
+
+
+/* append a printf-style formated string
+ */
+rsRetVal rsCStrAppendStrf(cstr_t *pThis, uchar *fmt, ...)
+{
+	DEFiRet;
+	va_list ap;
+	cstr_t *pStr;
+
+	va_start(ap, fmt);
+	iRet = rsCStrConstructFromszStrv(&pStr, fmt, ap);
+	va_end(ap);
+
+	CHKiRet(iRet);
+
+	iRet = cstrAppendCStr(pThis, pStr);
+	rsCStrDestruct(pStr);
+finalize_it:
+	RETiRet;
 }
 
 

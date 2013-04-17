@@ -7,7 +7,7 @@
  *
  * File begun on 2008-03-13 by RGerhards
  *
- * Copyright 2008-2012 Adiscon GmbH.
+ * Copyright 2008-2013 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -43,6 +43,7 @@
 #include "glbl.h"
 #include "errmsg.h"
 #include "debug.h"
+#include "unicode-helper.h"
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
@@ -57,12 +58,14 @@ DEFobjCurrIf(glbl)
 static relpEngine_t *pRelpEngine;	/* our relp engine */
 
 typedef struct _instanceData {
-	char *f_hname;
+	uchar *target;
 	int compressionLevel; /* 0 - no compression, else level for zlib */
-	char *port;
+	uchar *port;
 	int bInitialConnect; /* is this the initial connection request of our module? (0-no, 1-yes) */
 	int bIsConnected; /* currently connected to server? 0 - no, 1 - yes */
-	relpClt_t *pRelpClt;		/* relp client for this instance */
+	unsigned timeout;
+	relpClt_t *pRelpClt; /* relp client for this instance */
+	uchar *tplName;
 } instanceData;
 
 typedef struct configSettings_s {
@@ -70,30 +73,114 @@ typedef struct configSettings_s {
 } configSettings_t;
 static configSettings_t __attribute__((unused)) cs;
 
+
+/* tables for interfacing with the v6 config system */
+/* action (instance) parameters */
+static struct cnfparamdescr actpdescr[] = {
+	{ "target", eCmdHdlrGetWord, 1 },
+	{ "port", eCmdHdlrGetWord, 0 },
+	{ "timeout", eCmdHdlrInt, 0 },
+	{ "template", eCmdHdlrGetWord, 1 }
+};
+static struct cnfparamblk actpblk =
+	{ CNFPARAMBLK_VERSION,
+	  sizeof(actpdescr)/sizeof(struct cnfparamdescr),
+	  actpdescr
+	};
+
 BEGINinitConfVars		/* (re)set config variables to default values */
 CODESTARTinitConfVars 
 ENDinitConfVars
 
-/* get the syslog forward port from selector_t. The passed in
- * struct must be one that is setup for forwarding.
- * rgerhards, 2007-06-28
- * We may change the implementation to try to lookup the port
- * if it is unspecified. So far, we use the IANA default auf 514.
+/* We may change the implementation to try to lookup the port
+ * if it is unspecified. So far, we use 514 as default (what probably
+ * is not a really bright idea, but kept for backward compatibility).
  */
-static char *getRelpPt(instanceData *pData)
+static uchar *getRelpPt(instanceData *pData)
 {
 	assert(pData != NULL);
 	if(pData->port == NULL)
-		return("514");
+		return((uchar*)"514");
 	else
 		return(pData->port);
 }
+
+static inline rsRetVal
+doCreateRelpClient(instanceData *pData)
+{
+	DEFiRet;
+	if(relpEngineCltConstruct(pRelpEngine, &pData->pRelpClt) != RELP_RET_OK)
+		ABORT_FINALIZE(RS_RET_RELP_ERR);
+	if(relpCltSetTimeout(pData->pRelpClt, pData->timeout) != RELP_RET_OK)
+		ABORT_FINALIZE(RS_RET_RELP_ERR);
+finalize_it:
+	RETiRet;
+}
+
 
 BEGINcreateInstance
 CODESTARTcreateInstance
 	pData->bInitialConnect = 1;
 ENDcreateInstance
 
+BEGINfreeInstance
+CODESTARTfreeInstance
+	if(pData->pRelpClt != NULL)
+		relpEngineCltDestruct(pRelpEngine, &pData->pRelpClt);
+	free(pData->target);
+	free(pData->port);
+	free(pData->tplName);
+ENDfreeInstance
+
+static inline void
+setInstParamDefaults(instanceData *pData)
+{
+	pData->target = NULL;
+	pData->port = NULL;
+	pData->tplName = NULL;
+	pData->timeout = 90;
+}
+
+
+BEGINnewActInst
+	struct cnfparamvals *pvals;
+	int i;
+CODESTARTnewActInst
+	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
+		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
+
+	CHKiRet(createInstance(&pData));
+	setInstParamDefaults(pData);
+
+	for(i = 0 ; i < actpblk.nParams ; ++i) {
+		if(!pvals[i].bUsed)
+			continue;
+		if(!strcmp(actpblk.descr[i].name, "target")) {
+			pData->target = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "port")) {
+			pData->port = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "template")) {
+			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "timeout")) {
+			pData->timeout = (unsigned) pvals[i].val.d.n;
+		} else {
+			dbgprintf("omrelp: program error, non-handled "
+			  "param '%s'\n", actpblk.descr[i].name);
+		}
+	}
+	
+	CODE_STD_STRING_REQUESTnewActInst(1)
+
+	CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*)strdup((pData->tplName == NULL) ?
+			    "RSYSLOG_ForwardFormat" : (char*)pData->tplName),
+	   		    OMSR_NO_RQD_TPL_OPTS));
+
+	CHKiRet(doCreateRelpClient(pData));
+
+CODE_STD_FINALIZERnewActInst
+	cnfparamvalsDestruct(pvals, &actpblk);
+ENDnewActInst
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
@@ -101,25 +188,16 @@ CODESTARTisCompatibleWithFeature
 		iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
-
-BEGINfreeInstance
-CODESTARTfreeInstance
-	if(pData->port != NULL)
-		free(pData->port);
-
-	/* final cleanup */
-	if(pData->pRelpClt != NULL)
-		relpEngineCltDestruct(pRelpEngine, &pData->pRelpClt);
-
-	if(pData->f_hname != NULL)
-		free(pData->f_hname);
-
-ENDfreeInstance
+BEGINSetShutdownImmdtPtr
+CODESTARTSetShutdownImmdtPtr
+	relpEngineSetShutdownImmdtPtr(pRelpEngine, pPtr);
+	DBGPRINTF("omrelp: shutdownImmediate ptr now is %p\n", pPtr);
+ENDSetShutdownImmdtPtr
 
 
 BEGINdbgPrintInstInfo
 CODESTARTdbgPrintInstInfo
-	printf("RELP/%s", pData->f_hname);
+	dbgprintf("RELP/%s", pData->target);
 ENDdbgPrintInstInfo
 
 
@@ -131,7 +209,7 @@ static rsRetVal doConnect(instanceData *pData)
 	DEFiRet;
 
 	if(pData->bInitialConnect) {
-		iRet = relpCltConnect(pData->pRelpClt, glbl.GetDefPFFamily(), (uchar*) pData->port, (uchar*) pData->f_hname);
+		iRet = relpCltConnect(pData->pRelpClt, glbl.GetDefPFFamily(), pData->port, pData->target);
 		if(iRet == RELP_RET_OK)
 			pData->bInitialConnect = 0;
 	} else {
@@ -160,7 +238,7 @@ BEGINdoAction
 	size_t lenMsg;
 	relpRetVal ret;
 CODESTARTdoAction
-	dbgprintf(" %s:%s/RELP\n", pData->f_hname, getRelpPt(pData));
+	dbgprintf(" %s:%s/RELP\n", pData->target, getRelpPt(pData));
 
 	if(!pData->bIsConnected) {
 		CHKiRet(doConnect(pData));
@@ -309,21 +387,17 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	/* TODO: make this if go away! */
 	if(*p == ';') {
 		*p = '\0'; /* trick to obtain hostname (later)! */
-		CHKmalloc(pData->f_hname = strdup((char*) q));
+		CHKmalloc(pData->target = ustrdup(q));
 		*p = ';';
 	} else {
-		CHKmalloc(pData->f_hname = strdup((char*) q));
+		CHKmalloc(pData->target = ustrdup(q));
 	}
 
 	/* process template */
 	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS, (uchar*) "RSYSLOG_ForwardFormat"));
 
-	/* create our relp client  */
-	CHKiRet(relpEngineCltConstruct(pRelpEngine, &pData->pRelpClt)); /* we use CHKiRet as librelp has a similar return value range */
+	CHKiRet(doCreateRelpClient(pData));
 
-	/* TODO: do we need to call freeInstance if we failed - this is a general question for
-	 * all output modules. I'll address it later as the interface evolves. rgerhards, 2007-07-25
-	 */
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
@@ -342,6 +416,8 @@ BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
 CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES 
+CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
+CODEqueryEtryPt_SetShutdownImmdtPtr
 ENDqueryEtryPt
 
 

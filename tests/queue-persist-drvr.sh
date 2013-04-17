@@ -26,5 +26,10 @@ source $srcdir/diag.sh startup queue-persist.conf
 source $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
 ./msleep 500
 $srcdir/diag.sh wait-shutdown
-source $srcdir/diag.sh seq-check 0 4999
+# note: we need to permit duplicate messages, as due to the forced
+# shutdown some messages may be flagged as "unprocessed" while they
+# actually were processed. This is inline with rsyslog's philosophy
+# to better duplicate than loose messages. Duplicate messages are
+# permitted by the -d seq-check option.
+source $srcdir/diag.sh seq-check 0 4999 -d
 source $srcdir/diag.sh exit

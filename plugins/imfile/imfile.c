@@ -235,6 +235,7 @@ openFile(fileInfo_t *pThis)
 	/* read back in the object */
 	CHKiRet(obj.Deserialize(&pThis->pStrm, (uchar*) "strm", psSF, NULL, pThis));
 
+	strm.CheckFileChange(pThis->pStrm);
 	CHKiRet(strm.SeekCurrOffs(pThis->pStrm));
 
 	/* note: we do not delete the state file, so that the last position remains
@@ -738,12 +739,20 @@ persistStrmState(fileInfo_t *pInfo)
 	CHKiRet(strm.ConstructFinalize(psSF));
 
 	CHKiRet(strm.Serialize(pInfo->pStrm, psSF));
+	CHKiRet(strm.Flush(psSF));
 
 	CHKiRet(strm.Destruct(&psSF));
 
 finalize_it:
 	if(psSF != NULL)
 		strm.Destruct(&psSF);
+	
+	if(iRet != RS_RET_OK) {
+		errmsg.LogError(0, iRet, "imfile: could not persist state "
+				"file %s - data may be repeated on next "
+				"startup. Is WorkDirectory set?",
+				pInfo->pszStateFile);
+	}
 
 	RETiRet;
 }

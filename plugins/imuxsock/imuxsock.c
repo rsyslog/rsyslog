@@ -146,6 +146,7 @@ typedef struct lstn_s {
 	sbool bWritePid;	/* write original PID into tag */
 	sbool bDiscardOwnMsgs;	/* discard messages that originated from ourselves */
 	sbool bUseSysTimeStamp;	/* use timestamp from system (instead of from message) */
+	sbool bUnlink;		/* unlink&re-create socket at start and end of processing */
 } lstn_t;
 static lstn_t listeners[MAXFUNIX];
 
@@ -201,6 +202,7 @@ struct instanceConf_s {
 	int bAnnotate;			/* annotate trusted properties */
 	int bParseTrusted;		/* parse trusted properties */
 	sbool bDiscardOwnMsgs;		/* discard messages that originated from our own pid? */
+	sbool bUnlink;
 	struct instanceConf_s *next;
 };
 
@@ -220,6 +222,7 @@ struct modConfData_s {
 	sbool bUseSysTimeStamp;
 	sbool bDiscardOwnMsgs;
 	sbool configSetViaV2Method;
+	sbool bUnlink;
 };
 static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
 static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current load process */
@@ -228,11 +231,13 @@ static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current lo
 static struct cnfparamdescr modpdescr[] = {
 	{ "syssock.use", eCmdHdlrBinary, 0 },
 	{ "syssock.name", eCmdHdlrGetWord, 0 },
+	{ "syssock.unlink", eCmdHdlrBinary, 0 },
 	{ "syssock.ignoretimestamp", eCmdHdlrBinary, 0 },
 	{ "syssock.ignoreownmessages", eCmdHdlrBinary, 0 },
 	{ "syssock.flowcontrol", eCmdHdlrBinary, 0 },
 	{ "syssock.usesystimestamp", eCmdHdlrBinary, 0 },
 	{ "syssock.annotate", eCmdHdlrBinary, 0 },
+	{ "syssock.parsetrusted", eCmdHdlrBinary, 0 },
 	{ "syssock.usepidfromsystem", eCmdHdlrBinary, 0 },
 	{ "syssock.ratelimit.interval", eCmdHdlrInt, 0 },
 	{ "syssock.ratelimit.burst", eCmdHdlrInt, 0 },
@@ -247,6 +252,7 @@ static struct cnfparamblk modpblk =
 /* input instance parameters */
 static struct cnfparamdescr inppdescr[] = {
 	{ "socket", eCmdHdlrString, CNFPARAM_REQUIRED }, /* legacy: addunixlistensocket */
+	{ "unlink", eCmdHdlrBinary, 0 },
 	{ "createpath", eCmdHdlrBinary, 0 },
 	{ "parsetrusted", eCmdHdlrBinary, 0 },
 	{ "ignoreownmessages", eCmdHdlrBinary, 0 },
@@ -284,7 +290,7 @@ createInstance(instanceConf_t **pinst)
 	inst->sockName = NULL;
 	inst->pLogHostName = NULL;
 	inst->ratelimitInterval = DFLT_ratelimitInterval;
-	inst->ratelimitBurst = DFLT_ratelimitSeverity;
+	inst->ratelimitBurst = DFLT_ratelimitBurst;
 	inst->ratelimitSeverity = DFLT_ratelimitSeverity;
 	inst->bUseFlowCtl = 0;
 	inst->bIgnoreTimestamp = 1;
@@ -294,6 +300,7 @@ createInstance(instanceConf_t **pinst)
 	inst->bAnnotate = 0;
 	inst->bParseTrusted = 0;
 	inst->bDiscardOwnMsgs = 1;
+	inst->bUnlink = 1;
 	inst->next = NULL;
 
 	/* node created, let's add to config */
@@ -398,12 +405,15 @@ addListner(instanceConf_t *inst)
 		listeners[nfd].bAnnotate = inst->bAnnotate;
 		listeners[nfd].bParseTrusted = inst->bParseTrusted;
 		listeners[nfd].bDiscardOwnMsgs = inst->bDiscardOwnMsgs;
+		listeners[nfd].bUnlink = inst->bUnlink;
 		listeners[nfd].bWritePid = inst->bWritePid;
 		listeners[nfd].bUseSysTimeStamp = inst->bUseSysTimeStamp;
 		CHKiRet(ratelimitNew(&listeners[nfd].dflt_ratelimiter, "imuxsock", NULL));
 		ratelimitSetLinuxLike(listeners[nfd].dflt_ratelimiter,
 				      listeners[nfd].ratelimitInterval,
 				      listeners[nfd].ratelimitBurst);
+		ratelimitSetSeverity(listeners[nfd].dflt_ratelimiter,
+				     listeners[nfd].ratelimitSev);
 		nfd++;
 	} else {
 		errmsg.LogError(0, NO_ERRCODE, "Out of unix socket name descriptors, ignoring %s\n",
@@ -448,7 +458,8 @@ createLogSocket(lstn_t *pLstn)
 	struct sockaddr_un sunx;
 	DEFiRet;
 
-	unlink((char*)pLstn->sockName);
+	if(pLstn->bUnlink)
+		unlink((char*)pLstn->sockName);
 	memset(&sunx, 0, sizeof(sunx));
 	sunx.sun_family = AF_UNIX;
 	if(pLstn->bCreatePath) {
@@ -561,6 +572,10 @@ findRatelimiter(lstn_t *pLstn, struct ucred *cred, ratelimit_t **prl)
 		FINALIZE;
 	}
 #endif
+	if(pLstn->ht == NULL) {
+		*prl = NULL;
+		FINALIZE;
+	}
 
 	rl = hashtable_search(pLstn->ht, &cred->pid);
 	if(rl == NULL) {
@@ -573,6 +588,7 @@ findRatelimiter(lstn_t *pLstn, struct ucred *cred, ratelimit_t **prl)
 		pidbuf[sizeof(pidbuf)-1] = '\0'; /* to be on safe side */
 		CHKiRet(ratelimitNew(&rl, "imuxsock", pidbuf));
 		ratelimitSetLinuxLike(rl, pLstn->ratelimitInterval, pLstn->ratelimitBurst);
+		ratelimitSetSeverity(rl, pLstn->ratelimitSev);
 		CHKmalloc(keybuf = malloc(sizeof(pid_t)));
 		*keybuf = cred->pid;
 		r = hashtable_insert(pLstn->ht, keybuf, rl);
@@ -762,10 +778,7 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 	facil = LOG_FAC(pri);
 	sever = LOG_PRI(pri);
 
-	if(sever >= pLstn->ratelimitSev) {
-		/* note: if cred == NULL, then ratelimiter == NULL as well! */
-		findRatelimiter(pLstn, cred, &ratelimiter); /* ignore error, better so than others... */
-	}
+	findRatelimiter(pLstn, cred, &ratelimiter); /* ignore error, better so than others... */
 
 	if(ts == NULL) {
 		datetime.getCurrTime(&st, &tt);
@@ -1054,6 +1067,7 @@ activateListeners()
 	listeners[0].bAnnotate = runModConf->bAnnotateSysSock;
 	listeners[0].bParseTrusted = runModConf->bParseTrusted;
 	listeners[0].bDiscardOwnMsgs = runModConf->bDiscardOwnMsgs;
+	listeners[0].bUnlink = runModConf->bUnlink;
 	listeners[0].bUseSysTimeStamp = runModConf->bUseSysTimeStamp;
 	listeners[0].flags = runModConf->bIgnoreTimestamp ? IGNDATE : NOFLAG;
 	listeners[0].flowCtl = runModConf->bUseFlowCtl ? eFLOWCTL_LIGHT_DELAY : eFLOWCTL_NO_DELAY;
@@ -1061,6 +1075,7 @@ activateListeners()
 		ratelimitSetLinuxLike(listeners[0].dflt_ratelimiter,
 		listeners[0].ratelimitInterval,
 		listeners[0].ratelimitBurst);
+	ratelimitSetSeverity(listeners[0].dflt_ratelimiter,listeners[0].ratelimitSev);
 
 	sd_fds = sd_listen_fds(0);
 	if(sd_fds < 0) {
@@ -1103,6 +1118,7 @@ CODESTARTbeginCnfLoad
 	pModConf->bAnnotateSysSock = 0;
 	pModConf->bParseTrusted = 0;
 	pModConf->bDiscardOwnMsgs = 1;
+	pModConf->bUnlink = 1;
 	pModConf->ratelimitIntervalSysSock = DFLT_ratelimitInterval;
 	pModConf->ratelimitBurstSysSock = DFLT_ratelimitBurst;
 	pModConf->ratelimitSeveritySysSock = DFLT_ratelimitSeverity;
@@ -1139,12 +1155,16 @@ CODESTARTsetModCnf
 			loadModConf->bIgnoreTimestamp = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "syssock.ignoreownmessages")) {
 			loadModConf->bDiscardOwnMsgs = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "syssock.unlink")) {
+			loadModConf->bUnlink = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "syssock.flowcontrol")) {
 			loadModConf->bUseFlowCtl = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "syssock.usesystimestamp")) {
 			loadModConf->bUseSysTimeStamp = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "syssock.annotate")) {
 			loadModConf->bAnnotateSysSock = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "syssock.parsetrusted")) {
+			loadModConf->bParseTrusted = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "syssock.usepidfromsystem")) {
 			loadModConf->bWritePidSysSock = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "syssock.ratelimit.interval")) {
@@ -1201,6 +1221,8 @@ CODESTARTnewInpInst
 			inst->bParseTrusted = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "ignoreownmessages")) {
 			inst->bDiscardOwnMsgs = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "unlink")) {
+			inst->bUnlink = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "hostname")) {
 			inst->pLogHostName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(modpblk.descr[i].name, "ignoretimestamp")) {
@@ -1240,6 +1262,9 @@ CODESTARTendCnfLoad
 		loadModConf->bUseFlowCtl = cs.bUseFlowCtlSysSock;
 		loadModConf->bAnnotateSysSock = cs.bAnnotateSysSock;
 		loadModConf->bParseTrusted = cs.bParseTrusted;
+		loadModConf->ratelimitIntervalSysSock = cs.ratelimitIntervalSysSock;
+		loadModConf->ratelimitBurstSysSock = cs.ratelimitBurstSysSock;
+		loadModConf->ratelimitSeveritySysSock = cs.ratelimitSeveritySysSock;
 	}
 
 	loadModConf = NULL; /* done loading */
@@ -1377,8 +1402,10 @@ CODESTARTafterRun
 			    listeners[i].fd <  SD_LISTEN_FDS_START + sd_fds)
 				continue;
 
-			DBGPRINTF("imuxsock: unlinking unix socket file[%d] %s\n", i, listeners[i].sockName);
-			unlink((char*) listeners[i].sockName);
+			if(listeners[i].bUnlink) {
+				DBGPRINTF("imuxsock: unlinking unix socket file[%d] %s\n", i, listeners[i].sockName);
+				unlink((char*) listeners[i].sockName);
+			}
 		}
 
 	discardLogSockets();
@@ -1491,6 +1518,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	listeners[0].bAnnotate = 0;
 	listeners[0].bParseTrusted = 0;
 	listeners[0].bDiscardOwnMsgs = 1;
+	listeners[0].bUnlink = 1;
 	listeners[0].bCreatePath = 0;
 	listeners[0].bUseSysTimeStamp = 1;
 	if((listeners[0].ht = create_hashtable(100, hash_from_key_fn, key_equals_fn,

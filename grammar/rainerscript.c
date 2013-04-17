@@ -2,7 +2,7 @@
  *
  * Module begun 2011-07-01 by Rainer Gerhards
  *
- * Copyright 2011-2012 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2011-2013 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -1228,6 +1228,96 @@ finalize_it:
 	RETiRet;
 }
 
+static inline void
+doFunc_re_extract(struct cnffunc *func, struct var *ret, void* usrptr)
+{
+	size_t submatchnbr;
+	short matchnbr;
+	regmatch_t pmatch[50];
+	int bMustFree;
+	es_str_t *estr;
+	char *str;
+	struct var r[CNFFUNC_MAX_ARGS];
+	int iLenBuf;
+	unsigned iOffs;
+	short iTry = 0;
+	uchar bFound = 0;
+	iOffs = 0;
+	sbool bHadNoMatch = 0;
+
+	cnfexprEval(func->expr[0], &r[0], usrptr);
+	/* search string is already part of the compiled regex, so we don't
+	 * need it here!
+	 */
+	cnfexprEval(func->expr[2], &r[2], usrptr);
+	cnfexprEval(func->expr[3], &r[3], usrptr);
+	str = (char*) var2CString(&r[0], &bMustFree);
+	matchnbr = (short) var2Number(&r[2], NULL);
+	submatchnbr = (size_t) var2Number(&r[3], NULL);
+	if(submatchnbr > sizeof(pmatch)/sizeof(regmatch_t)) {
+		DBGPRINTF("re_extract() submatch %d is too large\n", submatchnbr);
+		bHadNoMatch = 1;
+		goto finalize_it;
+	}
+
+	/* first see if we find a match, iterating through the series of
+	 * potential matches over the string.
+	 */
+	while(!bFound) {
+		int iREstat;
+		iREstat = regexp.regexec(func->funcdata, (char*)(str + iOffs),
+					 submatchnbr+1, pmatch, 0);
+		dbgprintf("re_extract: regexec return is %d\n", iREstat);
+		if(iREstat == 0) {
+			if(pmatch[0].rm_so == -1) {
+				dbgprintf("oops ... start offset of successful regexec is -1\n");
+				break;
+			}
+			if(iTry == matchnbr) {
+				bFound = 1;
+			} else {
+				dbgprintf("re_extract: regex found at offset %d, new offset %d, tries %d\n",
+					  iOffs, (int) (iOffs + pmatch[0].rm_eo), iTry);
+				iOffs += pmatch[0].rm_eo;
+				++iTry;
+			}
+		} else {
+			break;
+		}
+	}
+	dbgprintf("re_extract: regex: end search, found %d\n", bFound);
+	if(!bFound) {
+		bHadNoMatch = 1;
+		goto finalize_it;
+	} else {
+		/* Match- but did it match the one we wanted? */
+		/* we got no match! */
+		if(pmatch[submatchnbr].rm_so == -1) {
+			bHadNoMatch = 1;
+			goto finalize_it;
+		}
+		/* OK, we have a usable match - we now need to malloc pB */
+		iLenBuf = pmatch[submatchnbr].rm_eo - pmatch[submatchnbr].rm_so;
+		estr = es_newStrFromBuf(str + iOffs + pmatch[submatchnbr].rm_so,
+					iLenBuf);
+	}
+
+	if(bMustFree) free(str);
+	if(r[0].datatype == 'S') es_deleteStr(r[0].d.estr);
+	if(r[2].datatype == 'S') es_deleteStr(r[2].d.estr);
+	if(r[3].datatype == 'S') es_deleteStr(r[3].d.estr);
+finalize_it:
+	if(bHadNoMatch) {
+		cnfexprEval(func->expr[4], &r[4], usrptr);
+		estr = var2String(&r[4], &bMustFree);
+		if(r[4].datatype == 'S') es_deleteStr(r[4].d.estr);
+	}
+	ret->datatype = 'S';
+	ret->d.estr = estr;
+	return;
+}
+
+
 /* Perform a function call. This has been moved out of cnfExprEval in order
  * to keep the code small and easier to maintain.
  */
@@ -1273,8 +1363,12 @@ doFuncCall(struct cnffunc *func, struct var *ret, void* usrptr)
 		estr = var2String(&r[0], &bMustFree);
 		str = (char*) es_str2cstr(estr, NULL);
 		envvar = getenv(str);
+		if(envvar == NULL) {
+			ret->d.estr = es_newStr(0);
+		} else {
+			ret->d.estr = es_newStrFromCStr(envvar, strlen(envvar));
+		}
 		ret->datatype = 'S';
-		ret->d.estr = es_newStrFromCStr(envvar, strlen(envvar));
 		if(bMustFree) es_deleteStr(estr);
 		if(r[0].datatype == 'S') es_deleteStr(r[0].d.estr);
 		free(str);
@@ -1326,6 +1420,9 @@ doFuncCall(struct cnffunc *func, struct var *ret, void* usrptr)
 		ret->datatype = 'N';
 		if(bMustFree) free(str);
 		if(r[0].datatype == 'S') es_deleteStr(r[0].d.estr);
+		break;
+	case CNFFUNC_RE_EXTRACT:
+		doFunc_re_extract(func, ret, usrptr);
 		break;
 	case CNFFUNC_FIELD:
 		cnfexprEval(func->expr[0], &r[0], usrptr);
@@ -1904,6 +2001,7 @@ cnffuncDestruct(struct cnffunc *func)
 	/* some functions require special destruction */
 	switch(func->fID) {
 		case CNFFUNC_RE_MATCH:
+		case CNFFUNC_RE_EXTRACT:
 			if(func->funcdata != NULL)
 				regexp.regfree(func->funcdata);
 			break;
@@ -2154,31 +2252,33 @@ cnfexprPrint(struct cnfexpr *expr, int indent)
 		break;
 	}
 }
+/* print only the given stmt 
+ * if "subtree" equals 1, the full statement subtree is printed, else
+ * really only the statement.
+ */
 void
-cnfstmtPrint(struct cnfstmt *root, int indent)
+cnfstmtPrintOnly(struct cnfstmt *stmt, int indent, sbool subtree)
 {
-	struct cnfstmt *stmt;
 	char *cstr;
-	//dbgprintf("stmt %p, indent %d, type '%c'\n", expr, indent, expr->nodetype);
-	for(stmt = root ; stmt != NULL ; stmt = stmt->next) {
-		switch(stmt->nodetype) {
-		case S_NOP:
-			doIndent(indent); dbgprintf("NOP\n");
-			break;
-		case S_STOP:
-			doIndent(indent); dbgprintf("STOP\n");
-			break;
-		case S_CALL:
-			cstr = es_str2cstr(stmt->d.s_call.name, NULL);
-			doIndent(indent); dbgprintf("CALL [%s]\n", cstr);
-			free(cstr);
-			break;
-		case S_ACT:
-			doIndent(indent); dbgprintf("ACTION %p [%s]\n", stmt->d.act, stmt->printable);
-			break;
-		case S_IF:
-			doIndent(indent); dbgprintf("IF\n");
-			cnfexprPrint(stmt->d.s_if.expr, indent+1);
+	switch(stmt->nodetype) {
+	case S_NOP:
+		doIndent(indent); dbgprintf("NOP\n");
+		break;
+	case S_STOP:
+		doIndent(indent); dbgprintf("STOP\n");
+		break;
+	case S_CALL:
+		cstr = es_str2cstr(stmt->d.s_call.name, NULL);
+		doIndent(indent); dbgprintf("CALL [%s]\n", cstr);
+		free(cstr);
+		break;
+	case S_ACT:
+		doIndent(indent); dbgprintf("ACTION %p [%s]\n", stmt->d.act, stmt->printable);
+		break;
+	case S_IF:
+		doIndent(indent); dbgprintf("IF\n");
+		cnfexprPrint(stmt->d.s_if.expr, indent+1);
+		if(subtree) {
 			doIndent(indent); dbgprintf("THEN\n");
 			cnfstmtPrint(stmt->d.s_if.t_then, indent+1);
 			if(stmt->d.s_if.t_else != NULL) {
@@ -2186,54 +2286,67 @@ cnfstmtPrint(struct cnfstmt *root, int indent)
 				cnfstmtPrint(stmt->d.s_if.t_else, indent+1);
 			}
 			doIndent(indent); dbgprintf("END IF\n");
-			break;
-		case S_SET:
-			doIndent(indent); dbgprintf("SET %s =\n",
-				          stmt->d.s_set.varname);
-			cnfexprPrint(stmt->d.s_set.expr, indent+1);
-			doIndent(indent); dbgprintf("END SET\n");
-			break;
-		case S_UNSET:
-			doIndent(indent); dbgprintf("UNSET %s\n",
-				          stmt->d.s_unset.varname);
-			break;
-		case S_PRIFILT:
-			doIndent(indent); dbgprintf("PRIFILT '%s'\n", stmt->printable);
-			pmaskPrint(stmt->d.s_prifilt.pmask, indent);
+		}
+		break;
+	case S_SET:
+		doIndent(indent); dbgprintf("SET %s =\n",
+				  stmt->d.s_set.varname);
+		cnfexprPrint(stmt->d.s_set.expr, indent+1);
+		doIndent(indent); dbgprintf("END SET\n");
+		break;
+	case S_UNSET:
+		doIndent(indent); dbgprintf("UNSET %s\n",
+				  stmt->d.s_unset.varname);
+		break;
+	case S_PRIFILT:
+		doIndent(indent); dbgprintf("PRIFILT '%s'\n", stmt->printable);
+		pmaskPrint(stmt->d.s_prifilt.pmask, indent);
+		if(subtree) {
 			cnfstmtPrint(stmt->d.s_prifilt.t_then, indent+1);
 			if(stmt->d.s_prifilt.t_else != NULL) {
 				doIndent(indent); dbgprintf("ELSE\n");
 				cnfstmtPrint(stmt->d.s_prifilt.t_else, indent+1);
 			}
 			doIndent(indent); dbgprintf("END PRIFILT\n");
-			break;
-		case S_PROPFILT:
-			doIndent(indent); dbgprintf("PROPFILT\n");
-			doIndent(indent); dbgprintf("\tProperty.: '%s'\n",
-				propIDToName(stmt->d.s_propfilt.propID));
-			if(stmt->d.s_propfilt.propName != NULL) {
-				cstr = es_str2cstr(stmt->d.s_propfilt.propName, NULL);
-				doIndent(indent);
-				dbgprintf("\tCEE-Prop.: '%s'\n", cstr);
-				free(cstr);
-			}
-			doIndent(indent); dbgprintf("\tOperation: ");
-			if(stmt->d.s_propfilt.isNegated)
-				dbgprintf("NOT ");
-			dbgprintf("'%s'\n", getFIOPName(stmt->d.s_propfilt.operation));
-			if(stmt->d.s_propfilt.pCSCompValue != NULL) {
-				doIndent(indent); dbgprintf("\tValue....: '%s'\n",
-				       rsCStrGetSzStrNoNULL(stmt->d.s_propfilt.pCSCompValue));
-			}
+		}
+		break;
+	case S_PROPFILT:
+		doIndent(indent); dbgprintf("PROPFILT\n");
+		doIndent(indent); dbgprintf("\tProperty.: '%s'\n",
+			propIDToName(stmt->d.s_propfilt.propID));
+		if(stmt->d.s_propfilt.propName != NULL) {
+			cstr = es_str2cstr(stmt->d.s_propfilt.propName, NULL);
+			doIndent(indent);
+			dbgprintf("\tCEE-Prop.: '%s'\n", cstr);
+			free(cstr);
+		}
+		doIndent(indent); dbgprintf("\tOperation: ");
+		if(stmt->d.s_propfilt.isNegated)
+			dbgprintf("NOT ");
+		dbgprintf("'%s'\n", getFIOPName(stmt->d.s_propfilt.operation));
+		if(stmt->d.s_propfilt.pCSCompValue != NULL) {
+			doIndent(indent); dbgprintf("\tValue....: '%s'\n",
+			       rsCStrGetSzStrNoNULL(stmt->d.s_propfilt.pCSCompValue));
+		}
+		if(subtree) {
 			doIndent(indent); dbgprintf("THEN\n");
 			cnfstmtPrint(stmt->d.s_propfilt.t_then, indent+1);
 			doIndent(indent); dbgprintf("END PROPFILT\n");
-			break;
-		default:
-			dbgprintf("error: unknown stmt type %u\n",
-				(unsigned) stmt->nodetype);
-			break;
 		}
+		break;
+	default:
+		dbgprintf("error: unknown stmt type %u\n",
+			(unsigned) stmt->nodetype);
+		break;
+	}
+}
+void
+cnfstmtPrint(struct cnfstmt *root, int indent)
+{
+	struct cnfstmt *stmt;
+	//dbgprintf("stmt %p, indent %d, type '%c'\n", expr, indent, expr->nodetype);
+	for(stmt = root ; stmt != NULL ; stmt = stmt->next) {
+		cnfstmtPrintOnly(stmt, indent, 1);
 	}
 }
 
@@ -2635,7 +2748,7 @@ cnfexprOptimize_CMP_severity_facility(struct cnfexpr *expr)
 
 /* optimize a comparison with a variable as left-hand operand
  * NOTE: Currently support CMP_EQ, CMP_NE only and code NEEDS 
- *       TO BE CHANGED for other comparisons!
+ *       TO BE CHANGED fgr other comparisons!
  */
 static inline struct cnfexpr*
 cnfexprOptimize_CMP_var(struct cnfexpr *expr)
@@ -2790,10 +2903,10 @@ cnfexprOptimize(struct cnfexpr *expr)
 				expr->l = expr->r;
 				expr->r = exprswap;
 			}
-		} else if(expr->l->nodetype == 'V') {
-			expr = cnfexprOptimize_CMP_var(expr);
 		}
-		if(expr->r->nodetype == 'A') {
+		if(expr->l->nodetype == 'V') {
+			expr = cnfexprOptimize_CMP_var(expr);
+		} else if(expr->r->nodetype == 'A') {
 			cnfexprOptimize_CMPEQ_arr((struct cnfarray *)expr->r);
 		}
 		break;
@@ -2984,7 +3097,6 @@ cnfstmtOptimize(struct cnfstmt *root)
 	struct cnfstmt *stmt;
 	if(root == NULL) goto done;
 	for(stmt = root ; stmt != NULL ; stmt = stmt->next) {
-dbgprintf("RRRR: stmtOptimize: stmt %p, nodetype %u\n", stmt, stmt->nodetype);
 		switch(stmt->nodetype) {
 		case S_IF:
 			cnfstmtOptimizeIf(stmt);
@@ -3084,6 +3196,13 @@ funcName2ID(es_str_t *fname, unsigned short nParams)
 			return CNFFUNC_INVALID;
 		}
 		return CNFFUNC_RE_MATCH;
+	} else if(!es_strbufcmp(fname, (unsigned char*)"re_extract", sizeof("re_extract") - 1)) {
+		if(nParams != 5) {
+			parser_errmsg("number of parameters for re_extract() must be five "
+				      "but is %d.", nParams);
+			return CNFFUNC_INVALID;
+		}
+		return CNFFUNC_RE_EXTRACT;
 	} else if(!es_strbufcmp(fname, (unsigned char*)"field", sizeof("field") - 1)) {
 		if(nParams != 3) {
 			parser_errmsg("number of parameters for field() must be three "
@@ -3114,7 +3233,7 @@ initFunc_re_match(struct cnffunc *func)
 
 	func->funcdata = NULL;
 	if(func->expr[1]->nodetype != 'S') {
-		parser_errmsg("param 2 of re_match() must be a constant string");
+		parser_errmsg("param 2 of re_match/extract() must be a constant string");
 		FINALIZE;
 	}
 
@@ -3192,6 +3311,7 @@ cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst)
 		/* some functions require special initialization */
 		switch(func->fID) {
 			case CNFFUNC_RE_MATCH:
+			case CNFFUNC_RE_EXTRACT:
 				/* need to compile the regexp in param 2, so this MUST be a constant */
 				initFunc_re_match(func);
 				break;
@@ -3233,7 +3353,7 @@ cnfDoInclude(char *name)
 {
 	char *cfgFile;
 	char *finalName;
-	unsigned i;
+	int i;
 	int result;
 	glob_t cfgFiles;
 	struct stat fileInfo;
@@ -3252,12 +3372,16 @@ cnfDoInclude(char *name)
 
 	/* Use GLOB_MARK to append a trailing slash for directories. */
 	/* Use GLOB_NOMAGIC to detect wildcards that match nothing. */
-	result = glob(finalName, GLOB_MARK | GLOB_NOMAGIC, NULL, &cfgFiles);
-
+#ifdef HAVE_GLOB_NOMAGIC
 	/* Silently ignore wildcards that match nothing */
+	result = glob(finalName, GLOB_MARK | GLOB_NOMAGIC, NULL, &cfgFiles);
 	if(result == GLOB_NOMATCH) {
-		return 0;
-	}
+#else
+	result = glob(finalName, GLOB_MARK, NULL, &cfgFiles);
+    if(result == GLOB_NOMATCH && containsGlobWildcard(finalName)) {
+#endif /* HAVE_GLOB_NOMAGIC */
+        return 0;
+    }
 
 	if(result == GLOB_NOSPACE || result == GLOB_ABORTED) {
 		char errStr[1024];
@@ -3269,7 +3393,12 @@ cnfDoInclude(char *name)
 		return 1;
 	}
 
-	for(i = 0; i < cfgFiles.gl_pathc; i++) {
+	/* note: bison "stacks" the files, so we need to submit them
+	 * in reverse order to the *stack* in order to get the proper
+	 * parsing order. Also see
+	 * http://bugzilla.adiscon.com/show_bug.cgi?id=411
+	 */
+	for(i = cfgFiles.gl_pathc - 1; i >= 0 ; i--) {
 		cfgFile = cfgFiles.gl_pathv[i];
 		if(stat(cfgFile, &fileInfo) != 0) {
 			char errStr[1024];
@@ -3505,5 +3634,54 @@ unescapeStr(uchar *s, int len)
 			++iDst;
 		}
 		s[iDst] = '\0';
+	}
+}
+
+char *
+tokenval2str(int tok)
+{
+	if(tok < 256) return "";
+	switch(tok) {
+	case NAME: return "NAME";
+	case FUNC: return "FUNC";
+	case BEGINOBJ: return "BEGINOBJ";
+	case ENDOBJ: return "ENDOBJ";
+	case BEGIN_ACTION: return "BEGIN_ACTION";
+	case BEGIN_PROPERTY: return "BEGIN_PROPERTY";
+	case BEGIN_CONSTANT: return "BEGIN_CONSTANT";
+	case BEGIN_TPL: return "BEGIN_TPL";
+	case BEGIN_RULESET: return "BEGIN_RULESET";
+	case STOP: return "STOP";
+	case SET: return "SET";
+	case UNSET: return "UNSET";
+	case CONTINUE: return "CONTINUE";
+	case CALL: return "CALL";
+	case LEGACY_ACTION: return "LEGACY_ACTION";
+	case LEGACY_RULESET: return "LEGACY_RULESET";
+	case PRIFILT: return "PRIFILT";
+	case PROPFILT: return "PROPFILT";
+	case BSD_TAG_SELECTOR: return "BSD_TAG_SELECTOR";
+	case BSD_HOST_SELECTOR: return "BSD_HOST_SELECTOR";
+	case IF: return "IF";
+	case THEN: return "THEN";
+	case ELSE: return "ELSE";
+	case OR: return "OR";
+	case AND: return "AND";
+	case NOT: return "NOT";
+	case VAR: return "VAR";
+	case STRING: return "STRING";
+	case NUMBER: return "NUMBER";
+	case CMP_EQ: return "CMP_EQ";
+	case CMP_NE: return "CMP_NE";
+	case CMP_LE: return "CMP_LE";
+	case CMP_GE: return "CMP_GE";
+	case CMP_LT: return "CMP_LT";
+	case CMP_GT: return "CMP_GT";
+	case CMP_CONTAINS: return "CMP_CONTAINS";
+	case CMP_CONTAINSI: return "CMP_CONTAINSI";
+	case CMP_STARTSWITH: return "CMP_STARTSWITH";
+	case CMP_STARTSWITHI: return "CMP_STARTSWITHI";
+	case UMINUS: return "UMINUS";
+	default: return "UNKNOWN TOKEN";
 	}
 }

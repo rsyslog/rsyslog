@@ -202,7 +202,9 @@ ratelimitMsg(ratelimit_t *ratelimit, msg_t *pMsg, msg_t **ppRepMsg)
 	DEFiRet;
 
 	*ppRepMsg = NULL;
-	if(ratelimit->interval) {
+	/* Only the messages having severity level at or below the
+	 * treshold (the value is >=) are subject to ratelimiting. */
+	if(ratelimit->interval && (pMsg->iSeverity >= ratelimit->severity)) {
 		if(withinRatelimit(ratelimit, pMsg->ttGenTime) == 0) {
 			msgDestruct(&pMsg);
 			ABORT_FINALIZE(RS_RET_DISCARDMSG);
@@ -284,6 +286,7 @@ ratelimitNew(ratelimit_t **ppThis, char *modname, char *dynname)
 		namebuf[sizeof(namebuf)-1] = '\0'; /* to be on safe side */
 		pThis->name = strdup(namebuf);
 	}
+	/* pThis->severity == 0 - all messages are ratelimited */
 	pThis->bReduceRepeatMsgs = loadConf->globals.bReduceRepeatMsgs;
 	*ppThis = pThis;
 finalize_it:
@@ -314,6 +317,15 @@ ratelimitSetThreadSafe(ratelimit_t *ratelimit)
 {
 	ratelimit->bThreadSafe = 1;
 	pthread_mutex_init(&ratelimit->mut, NULL);
+}
+
+/* Severity level determines which messages are subject to
+ * ratelimiting. Default (no value set) is all messages.
+ */
+void
+ratelimitSetSeverity(ratelimit_t *ratelimit, intTiny severity)
+{
+	ratelimit->severity = severity;
 }
 
 void

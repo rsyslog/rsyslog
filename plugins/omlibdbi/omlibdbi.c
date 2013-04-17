@@ -70,6 +70,7 @@ typedef struct _instanceData {
 	uchar *dbName;		/* database to use */
 	unsigned uLastDBErrno;	/* last errno returned by libdbi or 0 if all is well */
 	uchar	*tplName;       /* format template to use */
+	int txSupport;		/* transaction support */
 } instanceData;
 
 typedef struct configSettings_s {
@@ -261,7 +262,7 @@ static rsRetVal initConn(instanceData *pData, int bSilent)
 #	endif
 	if(pData->conn == NULL) {
 		errmsg.LogError(0, RS_RET_SUSPENDED, "can not initialize libdbi connection");
-		iRet = RS_RET_SUSPENDED;
+		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	} else { /* we could get the handle, now on with work... */
 		/* Connect to database */
 		dbi_conn_set_option(pData->conn, "host",     (char*) pData->host);
@@ -272,8 +273,9 @@ static rsRetVal initConn(instanceData *pData, int bSilent)
 		if(dbi_conn_connect(pData->conn) < 0) {
 			reportDBError(pData, bSilent);
 			closeConn(pData); /* ignore any error we may get */
-			iRet = RS_RET_SUSPENDED;
+			ABORT_FINALIZE(RS_RET_SUSPENDED);		
 		}
+		pData->txSupport = dbi_conn_cap_get(pData->conn, "transaction_support");
 	}
 
 finalize_it:
@@ -329,12 +331,46 @@ CODESTARTtryResume
 	}
 ENDtryResume
 
+/* transaction support 2013-03 */
+BEGINbeginTransaction
+CODESTARTbeginTransaction
+	if(pData->conn == NULL) {
+		CHKiRet(initConn(pData, 0));
+	}
+#	if HAVE_DBI_TXSUPP
+	if (pData->txSupport == 1) {
+		if (dbi_conn_transaction_begin(pData->conn) != 0) {	
+			dbgprintf("libdbi server error: begin transaction not successful\n");		
+			iRet = RS_RET_SUSPENDED; 
+		} 
+	}
+#	endif
+finalize_it:
+ENDbeginTransaction
+/* end transaction */
+
 BEGINdoAction
 CODESTARTdoAction
-	dbgprintf("\n");
-	iRet = writeDB(ppString[0], pData);
+	CHKiRet(writeDB(ppString[0], pData));
+#	if HAVE_DBI_TXSUPP
+	if (pData->txSupport == 1) {
+		iRet = RS_RET_DEFER_COMMIT;
+	}
+#	endif
+finalize_it:
 ENDdoAction
 
+/* transaction support 2013-03 */
+BEGINendTransaction
+CODESTARTendTransaction
+#	if HAVE_DBI_TXSUPP
+	if (dbi_conn_transaction_commit(pData->conn) != 0) {	
+		dbgprintf("libdbi server error: transaction not committed\n");		
+		iRet = RS_RET_SUSPENDED; 
+	} 
+#	endif
+ENDendTransaction
+/* end transaction */
 
 BEGINbeginCnfLoad
 CODESTARTbeginCnfLoad
@@ -427,7 +463,6 @@ CODESTARTnewActInst
 
 	CHKiRet(createInstance(&pData));
 	setInstParamDefaults(pData);
-
 	CODE_STD_STRING_REQUESTnewActInst(1)
 	for(i = 0 ; i < actpblk.nParams ; ++i) {
 		if(!pvals[i].bUsed)
@@ -468,7 +503,6 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 
 	/* ok, if we reach this point, we have something for us */
 	CHKiRet(createInstance(&pData));
-
 	/* no create the instance based on what we currently have */
 	if(cs.drvrName == NULL) {
 		errmsg.LogError(0, RS_RET_NO_DRIVERNAME, "omlibdbi: no db driver name given - action can not be created");
@@ -513,6 +547,7 @@ CODEqueryEtryPt_STD_OMOD_QUERIES
 CODEqueryEtryPt_STD_CONF2_QUERIES
 CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
+CODEqueryEtryPt_TXIF_OMOD_QUERIES /* we support the transactional interface! */
 ENDqueryEtryPt
 
 
@@ -542,6 +577,10 @@ CODESTARTmodInit
 INITLegCnfVars
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
+#	ifndef HAVE_DBI_TXSUPP
+	DBGPRINTF("omlibdbi: no transaction support in libdbi\n");
+#	warning libdbi too old - transactions are not enabled (use 0.9 or later)
+#	endif
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(regCfSysLineHdlr2((uchar *)"actionlibdbidriverdirectory", 0, eCmdHdlrGetWord, NULL, &cs.dbiDrvrDir, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionlibdbidriver", 0, eCmdHdlrGetWord, NULL, &cs.drvrName, STD_LOADABLE_MODULE_ID));

@@ -41,7 +41,12 @@ rsyslogd_CPPFLAGS =  $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
 # otherwise dependencies are not properly calculated (resulting in a 
 # potentially incomplete build, a problem we had several times...)
 rsyslogd_LDADD = ../grammar/libgrammar.la ../runtime/librsyslog.la $(ZLIB_LIBS) $(PTHREADS_LIBS) $(RSRT_LIBS) $(SOL_LIBS) $(LIBEE_LIBS) $(LIBLOGNORM_LIBS) $(LIBUUID_LIBS)
-rsyslogd_LDFLAGS = -export-dynamic
+rsyslogd_LDFLAGS = -export-dynamic `libgcrypt-config --libs`
+#rsyslogd_LDFLAGS = -export-dynamic $(LIBGCRYPT_LIBS)
+
+EXTRA_DIST = $(man_MANS) \
+	rsgtutil.rst \
+	recover_qi.pl
 
 if ENABLE_DIAGTOOLS
 sbin_PROGRAMS += rsyslog_diag_hostname msggen zpipe
@@ -58,7 +63,27 @@ logctl_SOURCES = logctl.c
 logctl_CPPFLAGS =  $(LIBMONGO_CLIENT_CFLAGS)
 logctl_LDADD = $(LIBMONGO_CLIENT_LIBS)
 endif
+if ENABLE_GUARDTIME
+bin_PROGRAMS += rsgtutil
+rsgtutil = rsgtutil.c
+rsgtutil_CPPFLAGS =  $(RSRT_CFLAGS) $(GUARDTIME_CFLAGS)
+rsgtutil_LDADD = ../runtime/librsgt.la $(GUARDTIME_LIBS)
+rsgtutil.1: rsgtutil.rst
+	$(AM_V_GEN) $(RST2MAN) $< $@
+man1_MANS = rsgtutil.1
+CLEANFILES = rsgtutil.1
+EXTRA_DIST+= rsgtutil.1
 endif
-
-EXTRA_DIST = $(man_MANS) \
-	recover_qi.pl
+if ENABLE_LIBGCRYPT
+bin_PROGRAMS += rscryutil
+rscryutil = rscryutil.c
+rscryutil_CPPFLAGS = -I../runtime $(RSRT_CFLAGS) $(LIBGCRYPT_CFLAGS)
+rscryutil_LDFLAGS = `libgcrypt-config --libs`
+rscryutil_LDADD = ../runtime/libgcry.la $(LIBGCRYPT_LIBS)
+rscryutil.1: rscryutil.rst
+	$(AM_V_GEN) $(RST2MAN) $< $@
+man1_MANS = rscryutil.1
+CLEANFILES = rscryutil.1
+EXTRA_DIST+= rscryutil.1
+endif
+endif

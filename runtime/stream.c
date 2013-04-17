@@ -16,7 +16,7 @@
  * it turns out to be problematic. Then, we need to quasi-refcount the number of accesses
  * to the object.
  *
- * Copyright 2008-2012 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2013 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -45,6 +45,7 @@
 #include <pthread.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <sys/types.h>
 #include <sys/stat.h>	 /* required for HP UX */
 #include <errno.h>
 #include <pthread.h>
@@ -56,6 +57,7 @@
 #include "stream.h"
 #include "unicode-helper.h"
 #include "module-template.h"
+#include "cryprov.h"
 #if HAVE_SYS_PRCTL_H
 #  include <sys/prctl.h>
 #endif
@@ -81,6 +83,7 @@ static void *asyncWriterThread(void *pPtr);
 static rsRetVal doZipWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf, int bFlush);
 static rsRetVal doZipFinish(strm_t *pThis);
 static rsRetVal strmPhysWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf);
+static rsRetVal strmSeekCurrOffs(strm_t *pThis);
 
 
 /* methods */
@@ -197,6 +200,7 @@ static rsRetVal
 doPhysOpen(strm_t *pThis)
 {
 	int iFlags = 0;
+	struct stat statOpen;
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, strm);
 
@@ -234,15 +238,76 @@ doPhysOpen(strm_t *pThis)
 			ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
 		else
 			ABORT_FINALIZE(RS_RET_IO_ERROR);
-	} else {
-		if(!ustrcmp(pThis->pszCurrFName, UCHAR_CONSTANT(_PATH_CONSOLE)) || isatty(pThis->fd)) {
-			DBGPRINTF("file %d is a tty-type file\n", pThis->fd);
-			pThis->bIsTTY = 1;
-		} else {
-			pThis->bIsTTY = 0;
-		}
 	}
 
+	if(pThis->tOperationsMode == STREAMMODE_READ) {
+		if(fstat(pThis->fd, &statOpen) == -1) {
+			DBGPRINTF("Error: cannot obtain inode# for file %s\n", pThis->pszCurrFName);
+			ABORT_FINALIZE(RS_RET_IO_ERROR);
+		}
+		pThis->inode = statOpen.st_ino;
+	}
+
+	if(!ustrcmp(pThis->pszCurrFName, UCHAR_CONSTANT(_PATH_CONSOLE)) || isatty(pThis->fd)) {
+		DBGPRINTF("file %d is a tty-type file\n", pThis->fd);
+		pThis->bIsTTY = 1;
+	} else {
+		pThis->bIsTTY = 0;
+	}
+
+dbgprintf("DDDD: cryprov %p\n", pThis->cryprov);
+	if(pThis->cryprov != NULL) {
+		CHKiRet(pThis->cryprov->OnFileOpen(pThis->cryprovData,
+		 	pThis->pszCurrFName, &pThis->cryprovFileData));
+	}
+finalize_it:
+	RETiRet;
+}
+
+
+static rsRetVal
+strmSetCurrFName(strm_t *pThis)
+{
+	DEFiRet;
+
+	if(pThis->sType == STREAMTYPE_FILE_CIRCULAR) {
+		CHKiRet(genFileName(&pThis->pszCurrFName, pThis->pszDir, pThis->lenDir,
+				    pThis->pszFName, pThis->lenFName, pThis->iCurrFNum, pThis->iFileNumDigits));
+	} else {
+		if(pThis->pszDir == NULL) {
+			if((pThis->pszCurrFName = ustrdup(pThis->pszFName)) == NULL)
+				ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+		} else {
+			CHKiRet(genFileName(&pThis->pszCurrFName, pThis->pszDir, pThis->lenDir,
+					    pThis->pszFName, pThis->lenFName, -1, 0));
+		}
+	}
+finalize_it:
+	RETiRet;
+}
+	
+/* This function checks if the actual file has changed and, if so, resets the
+ * offset. This is support for monitoring files. It should be called after
+ * deserializing the strm object and before doing any other operation on it
+ * (most importantly not an open or seek!).
+ */
+static rsRetVal
+CheckFileChange(strm_t *pThis)
+{
+	struct stat statName;
+	DEFiRet;
+
+	CHKiRet(strmSetCurrFName(pThis));
+	if(stat((char*) pThis->pszCurrFName, &statName) == -1)
+		ABORT_FINALIZE(RS_RET_IO_ERROR);
+	DBGPRINTF("stream/after deserialize checking for file change on '%s', "
+		  "inode %u/%u, size/currOffs %llu/%llu\n",
+	  pThis->pszCurrFName, (unsigned) pThis->inode,
+	  (unsigned) statName.st_ino, statName.st_size, pThis->iCurrOffs);
+	if(pThis->inode != statName.st_ino || statName.st_size < pThis->iCurrOffs) {
+		DBGPRINTF("stream: file %s has changed\n", pThis->pszCurrFName);
+		pThis->iCurrOffs = 0;
+	}
 finalize_it:
 	RETiRet;
 }
@@ -265,19 +330,8 @@ static rsRetVal strmOpenFile(strm_t *pThis)
 	if(pThis->pszFName == NULL)
 		ABORT_FINALIZE(RS_RET_FILE_PREFIX_MISSING);
 
-	if(pThis->sType == STREAMTYPE_FILE_CIRCULAR) {
-		CHKiRet(genFileName(&pThis->pszCurrFName, pThis->pszDir, pThis->lenDir,
-				    pThis->pszFName, pThis->lenFName, pThis->iCurrFNum, pThis->iFileNumDigits));
-	} else {
-		if(pThis->pszDir == NULL) {
-			if((pThis->pszCurrFName = ustrdup(pThis->pszFName)) == NULL)
-				ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-		} else {
-			CHKiRet(genFileName(&pThis->pszCurrFName, pThis->pszDir, pThis->lenDir,
-					    pThis->pszFName, pThis->lenFName, -1, 0));
-		}
-	}
-
+	CHKiRet(strmSetCurrFName(pThis));
+	
 	CHKiRet(doPhysOpen(pThis));
 
 	pThis->iCurrOffs = 0;
@@ -335,6 +389,7 @@ strmWaitAsyncWriterDone(strm_t *pThis)
  */
 static rsRetVal strmCloseFile(strm_t *pThis)
 {
+	off64_t currOffs;
 	DEFiRet;
 
 	ASSERT(pThis != NULL);
@@ -355,8 +410,14 @@ static rsRetVal strmCloseFile(strm_t *pThis)
 	 * against this. -- rgerhards, 2010-03-19
 	 */
 	if(pThis->fd != -1) {
+		currOffs = lseek64(pThis->fd, 0, SEEK_CUR);
 		close(pThis->fd);
 		pThis->fd = -1;
+		pThis->inode = 0;
+		if(pThis->cryprov != NULL) {
+			pThis->cryprov->OnFileClose(pThis->cryprovFileData, currOffs);
+			pThis->cryprovFileData = NULL;
+		}
 	}
 
 	if(pThis->fdDir != -1) {
@@ -432,18 +493,15 @@ static rsRetVal
 strmHandleEOFMonitor(strm_t *pThis)
 {
 	DEFiRet;
-	struct stat statOpen;
 	struct stat statName;
 
 	ISOBJ_TYPE_assert(pThis, strm);
-	if(fstat(pThis->fd, &statOpen) == -1)
-		ABORT_FINALIZE(RS_RET_IO_ERROR);
 	if(stat((char*) pThis->pszCurrFName, &statName) == -1)
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
-	DBGPRINTF("stream checking for file change on '%s', inode %u/%u",
-	  pThis->pszCurrFName, (unsigned) statOpen.st_ino,
+	DBGPRINTF("stream checking for file change on '%s', inode %u/%u\n",
+	  pThis->pszCurrFName, (unsigned) pThis->inode,
 	  (unsigned) statName.st_ino);
-	if(statOpen.st_ino == statName.st_ino) {
+	if(pThis->inode == statName.st_ino) {
 		ABORT_FINALIZE(RS_RET_EOF);
 	} else {
 		/* we had a file change! */
@@ -1155,9 +1213,17 @@ strmPhysWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf)
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, strm);
 
-	DBGPRINTF("strmPhysWrite, stream %p, len %d\n", pThis, (int) lenBuf);
+	DBGPRINTF("strmPhysWrite, stream %p, len %u\n", pThis, (unsigned)lenBuf);
 	if(pThis->fd == -1)
 		CHKiRet(strmOpenFile(pThis));
+
+	/* here we place our crypto interface */
+dbgprintf("DDDD: doing crypto, len %d\n", lenBuf);
+	if(pThis->cryprov != NULL) {
+		pThis->cryprov->Encrypt(pThis->cryprovFileData, pBuf, &lenBuf);
+	}
+dbgprintf("DDDD: done crypto, len %d\n", lenBuf);
+	/* end crypto */
 
 	iWritten = lenBuf;
 	CHKiRet(doWriteCall(pThis, pBuf, &iWritten));
@@ -1343,7 +1409,11 @@ static rsRetVal strmSeek(strm_t *pThis, off64_t offs)
 	}
 	long long i;
 	DBGOPRINT((obj_t*) pThis, "file %d seek, pos %llu\n", pThis->fd, (long long unsigned) offs);
-	i = lseek64(pThis->fd, offs, SEEK_SET); // TODO: check error!
+	i = lseek64(pThis->fd, offs, SEEK_SET);
+	if(i != offs) {
+		DBGPRINTF("strmSeek: error %lld seeking to offset %lld\n", i, offs);
+		ABORT_FINALIZE(RS_RET_IO_ERROR);
+	}
 	pThis->iCurrOffs = offs; /* we are now at *this* offset */
 	pThis->iBufPtr = 0; /* buffer invalidated */
 
@@ -1551,6 +1621,8 @@ DEFpropSetMeth(strm, sIOBufSize, size_t)
 DEFpropSetMeth(strm, iSizeLimit, off_t)
 DEFpropSetMeth(strm, iFlushInterval, int)
 DEFpropSetMeth(strm, pszSizeLimitCmd, uchar*)
+DEFpropSetMeth(strm, cryprov, cryprov_if_t*)
+DEFpropSetMeth(strm, cryprovData, void*)
 
 static rsRetVal strmSetiMaxFiles(strm_t *pThis, int iNewVal)
 {
@@ -1697,6 +1769,9 @@ static rsRetVal strmSerialize(strm_t *pThis, strm_t *pStrm)
 	l = pThis->iCurrOffs;
 	objSerializeSCALAR_VAR(pStrm, iCurrOffs, INT64, l);
 
+	l = pThis->inode;
+	objSerializeSCALAR_VAR(pStrm, inode, INT64, l);
+
 	objSerializePTR(pStrm, prevLineSegment, PSZ);
 
 	CHKiRet(obj.EndSerialize(pStrm));
@@ -1796,6 +1871,8 @@ static rsRetVal strmSetProperty(strm_t *pThis, var_t *pProp)
 		CHKiRet(strmSettOpenMode(pThis, pProp->val.num));
  	} else if(isProp("iCurrOffs")) {
 		pThis->iCurrOffs = pProp->val.num;
+ 	} else if(isProp("inode")) {
+		pThis->inode = (ino_t) pProp->val.num;
  	} else if(isProp("iMaxFileSize")) {
 		CHKiRet(strmSetiMaxFileSize(pThis, pProp->val.num));
  	} else if(isProp("iMaxFiles")) {
@@ -1865,6 +1942,7 @@ CODESTARTobjQueryInterface(strm)
 	pIf->GetCurrOffset = strmGetCurrOffset;
 	pIf->Dup = strmDup;
 	pIf->SetWCntr = strmSetWCntr;
+	pIf->CheckFileChange = CheckFileChange;
 	/* set methods */
 	pIf->SetbDeleteOnClose = strmSetbDeleteOnClose;
 	pIf->SetiMaxFileSize = strmSetiMaxFileSize;
@@ -1880,6 +1958,8 @@ CODESTARTobjQueryInterface(strm)
 	pIf->SetiSizeLimit = strmSetiSizeLimit;
 	pIf->SetiFlushInterval = strmSetiFlushInterval;
 	pIf->SetpszSizeLimitCmd = strmSetpszSizeLimitCmd;
+	pIf->Setcryprov = strmSetcryprov;
+	pIf->SetcryprovData = strmSetcryprovData;
 finalize_it:
 ENDobjQueryInterface(strm)
 

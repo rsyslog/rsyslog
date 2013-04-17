@@ -66,6 +66,15 @@ variable, if it exists. Returns an empty string if it does not exist.
 <li>cstr(expr) - converts expr to a string value
 <li>cnum(expr) - converts expr to a number (integer)
 <li>re_match(expr, re) - returns 1, if expr matches re, 0 otherwise
+<li>re_extract(expr, re, match, submatch, no-found) - extracts
+data from a string (property) via a regular expression match.
+POSIX ERE regular expressions are used. The variable "match" contains
+the number of the match to use. This permits to pick up more than the
+first expression match. Submatch is the submatch to match (max 50 supported).
+The "no-found" parameter specifies which string is to be returned in case when
+the regular expression is not found. Note that match and submatch start with
+zero. It currently is not possible to extract more than one submatch with
+a single call.
 <li>field(str, delim, matchnbr) - returns a field-based substring. str is the string
 to search, delim is the delimiter and matchnbr is the match to search
 for (the first match starts at 1). This works similar as the field based

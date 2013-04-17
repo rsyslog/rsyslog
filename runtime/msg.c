@@ -3230,13 +3230,18 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 		uchar *pSb;
 		iFrom = pTpe->data.field.iFromPos;
 		iTo = pTpe->data.field.iToPos;
-		/* need to zero-base to and from (they are 1-based!) */
-		if(iFrom > 0)
-			--iFrom;
-		if(iTo > 0)
-			--iTo;
 		if(bufLen == -1)
 			bufLen = ustrlen(pRes);
+		if(pTpe->data.field.options.bFromPosEndRelative) {
+			iFrom = (bufLen < iFrom) ? 0 : bufLen - iFrom;
+			iTo = (bufLen < iTo)? 0 : bufLen - iTo;
+		} else {
+			/* need to zero-base to and from (they are 1-based!) */
+			if(iFrom > 0)
+				--iFrom;
+			if(iTo > 0)
+				--iTo;
+		}
 		if(iFrom == 0 && iTo >=  bufLen) { 
 			/* in this case, the requested string is a superset of what we already have,
 			 * so there is no need to do any processing. This is a frequent case for size-limited
