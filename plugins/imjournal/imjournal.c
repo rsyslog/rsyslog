@@ -239,25 +239,25 @@ readjournal() {
 		case '_':
 			++parse;
 			if (*parse == 'P') {
-				if (!strncmp(parse, "PID=", 4)) {
+				if (!strncmp(parse+1, "ID=", 4)) {
 					name = strdup("pid");
 				} else {
 					name = strndup(get, prefixlen);
 				}
 			} else if (*parse == 'G') {
-				if (!strncmp(parse, "GID=", 4)) {
+				if (!strncmp(parse+1, "ID=", 4)) {
 					name = strdup("gid");
 				} else {
 					name = strndup(get, prefixlen);
 				}
 			} else if (*parse == 'U') {
-				if (!strncmp(parse, "UID=", 4)) {
+				if (!strncmp(parse+1, "ID=", 4)) {
 					name = strdup("uid");
 				} else {
 					name = strndup(get, prefixlen);
 				}
 			} else if (*parse == 'E') {
-				if (!strncmp(parse, "EXE=", 4)) {
+				if (!strncmp(parse+1, "XE=", 4)) {
 					name = strdup("exe");
 				} else {
 					name = strndup(get, prefixlen);
@@ -265,13 +265,13 @@ readjournal() {
 			} else if (*parse == 'C') {
 				parse++;
 				if (*parse == 'O') {
-					if (!strncmp(parse, "OMM=", 4)) {
+					if (!strncmp(parse+1, "MM=", 4)) {
 						name = strdup("appname");
 					} else {
 						name = strndup(get, prefixlen);
 					}
 				} else if (*parse == 'M') {
-					if (!strncmp(parse, "MDLINE=", 7)) {
+					if (!strncmp(parse+1, "DLINE=", 7)) {
 						name = strdup("cmd");
 					} else {
 						name = strndup(get, prefixlen);
