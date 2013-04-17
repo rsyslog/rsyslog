@@ -1529,6 +1529,13 @@ queryLocalHostname(void)
 	 */
 	glbl.SetLocalHostName(LocalHostName);
 	glbl.SetLocalDomain(LocalDomain);
+
+	if ( strlen((char*)LocalDomain) )  {
+		CHKmalloc(LocalFQDNName = (uchar*)malloc(strlen((char*)LocalDomain)+strlen((char*)LocalHostName)+1));
+		if ( sprintf((char*)LocalFQDNName,"%s.%s",(char*)LocalHostName,(char*)LocalDomain) )
+			glbl.SetLocalFQDNName(LocalFQDNName);
+		}
+
 	glbl.GenerateLocalHostNameProperty(); /* must be redone after conf processing, FQDN setting may have changed */
 finalize_it:
 	RETiRet;

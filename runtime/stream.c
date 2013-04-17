@@ -16,7 +16,7 @@
  * it turns out to be problematic. Then, we need to quasi-refcount the number of accesses
  * to the object.
  *
- * Copyright 2008-2012 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2013 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -45,6 +45,7 @@
 #include <pthread.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <sys/types.h>
 #include <sys/stat.h>	 /* required for HP UX */
 #include <errno.h>
 #include <pthread.h>
@@ -56,6 +57,7 @@
 #include "stream.h"
 #include "unicode-helper.h"
 #include "module-template.h"
+#include "cryprov.h"
 #if HAVE_SYS_PRCTL_H
 #  include <sys/prctl.h>
 #endif
@@ -253,6 +255,11 @@ doPhysOpen(strm_t *pThis)
 		pThis->bIsTTY = 0;
 	}
 
+dbgprintf("DDDD: cryprov %p\n", pThis->cryprov);
+	if(pThis->cryprov != NULL) {
+		CHKiRet(pThis->cryprov->OnFileOpen(pThis->cryprovData,
+		 	pThis->pszCurrFName, &pThis->cryprovFileData));
+	}
 finalize_it:
 	RETiRet;
 }
@@ -382,6 +389,7 @@ strmWaitAsyncWriterDone(strm_t *pThis)
  */
 static rsRetVal strmCloseFile(strm_t *pThis)
 {
+	off64_t currOffs;
 	DEFiRet;
 
 	ASSERT(pThis != NULL);
@@ -402,9 +410,14 @@ static rsRetVal strmCloseFile(strm_t *pThis)
 	 * against this. -- rgerhards, 2010-03-19
 	 */
 	if(pThis->fd != -1) {
+		currOffs = lseek64(pThis->fd, 0, SEEK_CUR);
 		close(pThis->fd);
 		pThis->fd = -1;
 		pThis->inode = 0;
+		if(pThis->cryprov != NULL) {
+			pThis->cryprov->OnFileClose(pThis->cryprovFileData, currOffs);
+			pThis->cryprovFileData = NULL;
+		}
 	}
 
 	if(pThis->fdDir != -1) {
@@ -1200,9 +1213,17 @@ strmPhysWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf)
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, strm);
 
-	DBGPRINTF("strmPhysWrite, stream %p, len %d\n", pThis, (int) lenBuf);
+	DBGPRINTF("strmPhysWrite, stream %p, len %u\n", pThis, (unsigned)lenBuf);
 	if(pThis->fd == -1)
 		CHKiRet(strmOpenFile(pThis));
+
+	/* here we place our crypto interface */
+dbgprintf("DDDD: doing crypto, len %d\n", lenBuf);
+	if(pThis->cryprov != NULL) {
+		pThis->cryprov->Encrypt(pThis->cryprovFileData, pBuf, &lenBuf);
+	}
+dbgprintf("DDDD: done crypto, len %d\n", lenBuf);
+	/* end crypto */
 
 	iWritten = lenBuf;
 	CHKiRet(doWriteCall(pThis, pBuf, &iWritten));
@@ -1600,6 +1621,8 @@ DEFpropSetMeth(strm, sIOBufSize, size_t)
 DEFpropSetMeth(strm, iSizeLimit, off_t)
 DEFpropSetMeth(strm, iFlushInterval, int)
 DEFpropSetMeth(strm, pszSizeLimitCmd, uchar*)
+DEFpropSetMeth(strm, cryprov, cryprov_if_t*)
+DEFpropSetMeth(strm, cryprovData, void*)
 
 static rsRetVal strmSetiMaxFiles(strm_t *pThis, int iNewVal)
 {
@@ -1935,6 +1958,8 @@ CODESTARTobjQueryInterface(strm)
 	pIf->SetiSizeLimit = strmSetiSizeLimit;
 	pIf->SetiFlushInterval = strmSetiFlushInterval;
 	pIf->SetpszSizeLimitCmd = strmSetpszSizeLimitCmd;
+	pIf->Setcryprov = strmSetcryprov;
+	pIf->SetcryprovData = strmSetcryprovData;
 finalize_it:
 ENDobjQueryInterface(strm)
 

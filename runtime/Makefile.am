@@ -1,6 +1,6 @@
 sbin_PROGRAMS =
 man_MANS = 
-noinst_LTLIBRARIES = librsyslog.la librsgt.la
+noinst_LTLIBRARIES = librsyslog.la
 pkglib_LTLIBRARIES =
 #pkglib_LTLIBRARIES = librsyslog.la
 
@@ -96,12 +96,12 @@ librsyslog_la_SOURCES = \
 #
 
 if WITH_MODDIRS
-librsyslog_la_CPPFLAGS = -DSD_EXPORT_SYMBOLS -D_PATH_MODDIR=\"$(pkglibdir)/:$(moddirs)\" $(PTHREADS_CFLAGS) $(LIBEE_CFLAGS) -I\$(top_srcdir)/tools
+librsyslog_la_CPPFLAGS = -DSD_EXPORT_SYMBOLS -D_PATH_MODDIR=\"$(pkglibdir)/:$(moddirs)\" $(PTHREADS_CFLAGS) $(LIBEE_CFLAGS) $(LIBGCRYPT_CFLAGS) -I\$(top_srcdir)/tools
 else
-librsyslog_la_CPPFLAGS = -DSD_EXPORT_SYMBOLS -D_PATH_MODDIR=\"$(pkglibdir)/\" -I$(top_srcdir) $(PTHREADS_CFLAGS) $(LIBEE_CFLAGS) -I\$(top_srcdir)/tools -I\$(top_srcdir)/grammar
+librsyslog_la_CPPFLAGS = -DSD_EXPORT_SYMBOLS -D_PATH_MODDIR=\"$(pkglibdir)/\" -I$(top_srcdir) $(PTHREADS_CFLAGS) $(LIBEE_CFLAGS) $(LIBGCRYPT_CFLAGS) -I\$(top_srcdir)/tools -I\$(top_srcdir)/grammar
 endif
 #librsyslog_la_LDFLAGS = -module -avoid-version
-librsyslog_la_LIBADD =  $(DL_LIBS) $(RT_LIBS) $(LIBEE_LIBS)
+librsyslog_la_LIBADD =  $(DL_LIBS) $(RT_LIBS) $(LIBGCRYPT_LIBS) $(LIBEE_LIBS)
 
 #
 # regular expression support
@@ -175,9 +175,25 @@ lmnsd_gtls_la_LIBADD = $(GNUTLS_LIBS)
 endif
 
 #
+# support library for libgcrypt
+#
+if ENABLE_LIBGCRYPT
+   noinst_LTLIBRARIES += libgcry.la
+   libgcry_la_SOURCES = libgcry.c libgcry_common.c libgcry.h
+   libgcry_la_CPPFLAGS = $(RSRT_CFLAGS) $(LIBGCRYPT_CFLAGS)
+   pkglib_LTLIBRARIES += lmcry_gcry.la
+   lmcry_gcry_la_SOURCES = lmcry_gcry.c lmcry_gcry.h
+   lmcry_gcry_la_CPPFLAGS = $(RSRT_CFLAGS) $(LIBGCRYPT_CFLAGS)
+   lmcry_gcry_la_LDFLAGS = -module -avoid-version `libgcrypt-config --libs`
+   lmcry_gcry_la_LIBADD = libgcry.la $(LIBGCRYPT_LIBS)
+endif
+
+
+#
 # support library for guardtime
 #
 if ENABLE_GUARDTIME
+   noinst_LTLIBRARIES +=  librsgt.la
    librsgt_la_SOURCES = librsgt.c librsgt_read.c librsgt.h
    pkglib_LTLIBRARIES += lmsig_gt.la
    lmsig_gt_la_SOURCES = lmsig_gt.c lmsig_gt.h

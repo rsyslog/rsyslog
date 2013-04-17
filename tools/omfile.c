@@ -70,6 +70,7 @@
 #include "atomic.h"
 #include "statsobj.h"
 #include "sigprov.h"
+#include "cryprov.h"
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
@@ -151,6 +152,12 @@ typedef struct _instanceData {
 	void	*sigprovData;	/* opaque data ptr for provider use */
 	void 	*sigprovFileData;/* opaque data ptr for file instance */
 	sbool	useSigprov;	/* quicker than checkig ptr (1 vs 8 bytes!) */
+	uchar 	*cryprovName;	/* crypto provider */
+	uchar 	*cryprovNameFull;/* full internal crypto provider name */
+	void	*cryprovData;	/* opaque data ptr for provider use */
+	void 	*cryprovFileData;/* opaque data ptr for file instance */
+	cryprov_if_t cryprov;	/* ptr to crypto provider interface */
+	sbool	useCryprov;	/* quicker than checkig ptr (1 vs 8 bytes!) */
 	int	iCurrElt;	/* currently active cache element (-1 = none) */
 	int	iCurrCacheSize;	/* currently cache size (1-based) */
 	int	iDynaFileCacheSize; /* size of file handle cache */
@@ -237,6 +244,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "file", eCmdHdlrString, 0 },     /* either "file" or ... */
 	{ "dynafile", eCmdHdlrString, 0 }, /* "dynafile" MUST be present */
 	{ "sig.provider", eCmdHdlrGetWord, 0 },
+	{ "cry.provider", eCmdHdlrGetWord, 0 },
 	{ "template", eCmdHdlrGetWord, 0 }
 };
 static struct cnfparamblk actpblk =
@@ -589,6 +597,10 @@ prepareFile(instanceData *pData, uchar *newFileName)
 	CHKiRet(strm.SetbSync(pData->pStrm, pData->bSyncFile));
 	CHKiRet(strm.SetsType(pData->pStrm, STREAMTYPE_FILE_SINGLE));
 	CHKiRet(strm.SetiSizeLimit(pData->pStrm, pData->iSizeLimit));
+	if(pData->useCryprov) {
+		CHKiRet(strm.Setcryprov(pData->pStrm, &pData->cryprov));
+		CHKiRet(strm.SetcryprovData(pData->pStrm, pData->cryprovData));
+	}
 	/* set the flush interval only if we actually use it - otherwise it will activate
 	 * async processing, which is a real performance waste if we do not do buffered
 	 * writes! -- rgerhards, 2009-07-06
@@ -689,7 +701,7 @@ prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
 	 * but it could be triggered in the common case of a failed open() system call.
 	 * rgerhards, 2010-03-22
 	 */
-	pData->pStrm = pData->sigprovFileData = NULL;
+	pData->pStrm = NULL, pData->sigprovFileData = NULL;
 
 	if(iFirstFree == -1 && (pData->iCurrCacheSize < pData->iDynaFileCacheSize)) {
 		/* there is space left, so set it to that index */
@@ -885,6 +897,13 @@ CODESTARTfreeInstance
 		free(pData->sigprovName);
 		free(pData->sigprovNameFull);
 	}
+	if(pData->useCryprov) {
+		pData->cryprov.Destruct(&pData->cryprovData);
+		obj.ReleaseObj(__FILE__, pData->cryprovNameFull+2, pData->cryprovNameFull,
+			       (void*) &pData->cryprov);
+		free(pData->cryprovName);
+		free(pData->cryprovNameFull);
+	}
 ENDfreeInstance
 
 
@@ -951,7 +970,9 @@ setInstParamDefaults(instanceData *pData)
 	pData->iFlushInterval = FLUSH_INTRVL_DFLT;
 	pData->bUseAsyncWriter = USE_ASYNCWRITER_DFLT;
 	pData->sigprovName = NULL;
+	pData->cryprovName = NULL;
 	pData->useSigprov = 0;
+	pData->useCryprov = 0;
 }
 
 
@@ -1033,6 +1054,50 @@ initSigprov(instanceData *pData, struct nvlst *lst)
 done:	return;
 }
 
+static inline rsRetVal
+initCryprov(instanceData *pData, struct nvlst *lst)
+{
+	uchar szDrvrName[1024];
+	DEFiRet;
+
+	if(snprintf((char*)szDrvrName, sizeof(szDrvrName), "lmcry_%s", pData->cryprovName)
+		== sizeof(szDrvrName)) {
+		errmsg.LogError(0, RS_RET_ERR, "omfile: crypto provider "
+				"name is too long: '%s' - encryption disabled",
+				pData->cryprovName);
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+	pData->cryprovNameFull = ustrdup(szDrvrName);
+
+	pData->cryprov.ifVersion = cryprovCURR_IF_VERSION;
+	/* The pDrvrName+2 below is a hack to obtain the object name. It 
+	 * safes us to have yet another variable with the name without "lm" in
+	 * front of it. If we change the module load interface, we may re-think
+	 * about this hack, but for the time being it is efficient and clean enough.
+	 */
+	if(obj.UseObj(__FILE__, szDrvrName, szDrvrName, (void*) &pData->cryprov)
+		!= RS_RET_OK) {
+		errmsg.LogError(0, RS_RET_LOAD_ERROR, "omfile: could not load "
+				"crypto provider '%s' - encryption disabled",
+				szDrvrName);
+		ABORT_FINALIZE(RS_RET_CRYPROV_ERR);
+	}
+
+	if(pData->cryprov.Construct(&pData->cryprovData) != RS_RET_OK) {
+		errmsg.LogError(0, RS_RET_CRYPROV_ERR, "omfile: error constructing "
+				"crypto provider %s dataset - encryption disabled",
+				szDrvrName);
+		ABORT_FINALIZE(RS_RET_CRYPROV_ERR);
+	}
+	CHKiRet(pData->cryprov.SetCnfParam(pData->cryprovData, lst));
+
+	dbgprintf("loaded crypto provider %s, data instance at %p\n",
+		  szDrvrName, pData->cryprovData);
+	pData->useCryprov = 1;
+finalize_it:
+	RETiRet;
+}
+
 BEGINnewActInst
 	struct cnfparamvals *pvals;
 	uchar *tplToUse;
@@ -1102,6 +1167,8 @@ CODESTARTnewActInst
 			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "sig.provider")) {
 			pData->sigprovName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "cry.provider")) {
+			pData->cryprovName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else {
 			dbgprintf("omfile: program error, non-handled "
 			  "param '%s'\n", actpblk.descr[i].name);
@@ -1116,6 +1183,10 @@ CODESTARTnewActInst
 
 	if(pData->sigprovName != NULL) {
 		initSigprov(pData, lst);
+	}
+
+	if(pData->cryprovName != NULL) {
+		CHKiRet(initCryprov(pData, lst));
 	}
 
 	tplToUse = ustrdup((pData->tplName == NULL) ? getDfltTpl() : pData->tplName);

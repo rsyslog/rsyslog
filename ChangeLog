@@ -1,7 +1,14 @@
 ---------------------------------------------------------------------------
 Version 7.3.11  [devel] 2013-04-??
+- added support for encrypting log files
+- bugfix:  $PreserveFQDN is not properly working
+  Thanks to Louis Bouchard for the patch
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=426
 - bugfix: imuxsock aborted due to problem in ratelimiting code
   Thanks to Tomas Heinrich for the patch.
+- bugfix: imuxsock aborted under some conditions
+  regression from ratelimiting enhancements - this was a different one
+  to the one Tomas Heinrich patched.
 ---------------------------------------------------------------------------
 Version 7.3.10  [devel] 2013-04-10
 - added RainerScript re_extract() function
