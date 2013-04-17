@@ -1,6 +1,8 @@
 ---------------------------------------------------------------------------
 Version 7.3.11  [devel] 2013-04-??
 - added support for encrypting log files
+- omhiredis: added support for redis pipeline support
+  Thanks to Brian Knox for the patch.
 - bugfix:  $PreserveFQDN is not properly working
   Thanks to Louis Bouchard for the patch
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=426
