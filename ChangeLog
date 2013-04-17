@@ -5,6 +5,9 @@ Version 7.3.10  [devel] 2013-04-??
 - added support for encrypting log files
 - bugfix: imuxsock aborted under some conditions
   regression from ratelimiting enhancements
+- bugfix:  $PreserveFQDN is not properly working
+  Thanks to Louis Bouchard for the patch
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=426
 ---------------------------------------------------------------------------
 Version 7.3.9  [devel] 2013-03-27
 - support for signing logs added
