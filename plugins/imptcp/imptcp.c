@@ -10,7 +10,7 @@
  *
  * File begun on 2010-08-10 by RGerhards
  *
- * Copyright 2007-2012 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2013 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -50,6 +50,7 @@
 #include <sys/socket.h>
 #include <sys/epoll.h>
 #include <netinet/tcp.h>
+#include <stdint.h>
 #include <zlib.h>
 #if HAVE_FCNTL_H
 #include <fcntl.h>
@@ -94,6 +95,11 @@ static void * wrkr(void *myself);
 
 #define DFLT_wrkrMax 2
 
+#define COMPRESS_NEVER 0
+#define COMPRESS_SINGLE_MSG 1	/* old, single-message compression */
+/* all other settings are for stream-compression */
+#define COMPRESS_STREAM_ALWAYS 2
+
 /* config settings */
 typedef struct configSettings_s {
 	int bKeepAlive;			/* support keep-alive packets */
@@ -118,6 +124,7 @@ struct instanceConf_s {
 	int bEmitMsgOnClose;
 	int bSuppOctetFram;		/* support octet-counted framing? */
 	int iAddtlFrameDelim;
+	uint8_t compressionMode;
 	uchar *pszBindPort;		/* port to bind to */
 	uchar *pszBindAddr;		/* IP to bind socket to */
 	uchar *pszBindRuleset;		/* name of ruleset to bind to */
@@ -157,6 +164,7 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "ruleset", eCmdHdlrString, 0 },
 	{ "supportoctetcountedframing", eCmdHdlrBinary, 0 },
 	{ "notifyonconnectionclose", eCmdHdlrBinary, 0 },
+	{ "compression.mode", eCmdHdlrGetWord, 0 },
 	{ "keepalive", eCmdHdlrBinary, 0 },
 	{ "keepalive.probes", eCmdHdlrInt, 0 },
 	{ "keepalive.time", eCmdHdlrInt, 0 },
@@ -192,6 +200,7 @@ struct ptcpsrv_s {
 	int iKeepAliveIntvl;
 	int iKeepAliveProbes;
 	int iKeepAliveTime;
+	uint8_t compressionMode;
 	uchar *pszInputName;
 	prop_t *pInputName;		/* InputName in (fast to process) property format */
 	ruleset_t *pRuleset;
@@ -214,6 +223,7 @@ struct ptcpsess_s {
 	epolld_t *epd;
 	sbool bzInitDone; /* did we do an init of zstrm already? */
 	z_stream zstrm;	/* zip stream to use for tcp compression */
+	uint8_t compressionMode;
 //--- from tcps_sess.h
 	int iMsg;		 /* index of next char to store in msg */
 	int bAtStrtOfFram;	/* are we at the very beginning of a new frame? */
@@ -839,7 +849,7 @@ finalize_it:
 }
 
 static rsRetVal
-DataRcvdCompress(ptcpsess_t *pThis, char *buf, size_t len)
+DataRcvdCompressed(ptcpsess_t *pThis, char *buf, size_t len)
 {
 	struct syslogTime stTime;
 	time_t ttGenTime;
@@ -894,7 +904,12 @@ finalize_it:
 static rsRetVal
 DataRcvd(ptcpsess_t *pThis, char *pData, size_t iLen)
 {
-	return DataRcvdCompress(pThis, pData, iLen);
+	DEFiRet;
+	if(pThis->compressionMode >= COMPRESS_STREAM_ALWAYS)
+		iRet =  DataRcvdCompressed(pThis, pData, iLen);
+	else
+		iRet =  DataRcvdUncompressed(pThis, pData, iLen, 0);
+	RETiRet;
 }
 
 
@@ -1032,6 +1047,7 @@ addSess(ptcplstn_t *pLstn, int sock, prop_t *peerName, prop_t *peerIP)
 	pSess->bAtStrtOfFram = 1;
 	pSess->peerName = peerName;
 	pSess->peerIP = peerIP;
+	pSess->compressionMode = pLstn->pSrv->compressionMode;
 
 	/* add to start of server's listener list */
 	pSess->prev = NULL;
@@ -1062,10 +1078,11 @@ doZipFinish(ptcpsess_t *pSess)
 	if(!pSess->bzInitDone)
 		goto done;
 
+dbgprintf("DDDD: enter doZipFinish\n");
 	pSess->zstrm.avail_in = 0;
 	/* run inflate() on buffer until everything has been compressed */
 	do {
-		DBGPRINTF("in inflate() loop, avail_in %d, total_in %ld\n", pSess->zstrm.avail_in, pSess->zstrm.total_in);
+		DBGPRINTF("doZipFinish: in inflate() loop, avail_in %d, total_in %ld\n", pSess->zstrm.avail_in, pSess->zstrm.total_in);
 		pSess->zstrm.avail_out = sizeof(zipBuf);
 		pSess->zstrm.next_out = zipBuf;
 		zRet = inflate(&pSess->zstrm, Z_FINISH);    /* no bad return value */
@@ -1077,9 +1094,9 @@ doZipFinish(ptcpsess_t *pSess)
 	} while (pSess->zstrm.avail_out == 0);
 
 finalize_it:
-	zRet = deflateEnd(&pSess->zstrm);
+	zRet = inflateEnd(&pSess->zstrm);
 	if(zRet != Z_OK) {
-		DBGPRINTF("error %d returned from zlib/deflateEnd()\n", zRet);
+		DBGPRINTF("imptcp: error %d returned from zlib/inflateEnd()\n", zRet);
 	}
 
 	pSess->bzInitDone = 0;
@@ -1146,6 +1163,7 @@ createInstance(instanceConf_t **pinst)
 	inst->pBindRuleset = NULL;
 	inst->ratelimitBurst = 10000; /* arbitrary high limit */
 	inst->ratelimitInterval = 0; /* off */
+	inst->compressionMode = COMPRESS_SINGLE_MSG;
 
 	/* node created, let's add to config */
 	if(loadModConf->tail == NULL) {
@@ -1225,6 +1243,7 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 	pSrv->iKeepAliveProbes = inst->iKeepAliveProbes;
 	pSrv->iKeepAliveTime = inst->iKeepAliveTime;
 	pSrv->bEmitMsgOnClose = inst->bEmitMsgOnClose;
+	pSrv->compressionMode = inst->compressionMode;
 	CHKiRet(ratelimitNew(&pSrv->ratelimiter, "imtcp", (char*)inst->pszBindPort));
 	ratelimitSetLinuxLike(pSrv->ratelimiter, inst->ratelimitInterval, inst->ratelimitBurst);
 	ratelimitSetThreadSafe(pSrv->ratelimiter);
@@ -1519,6 +1538,7 @@ wrkr(void *myself)
 BEGINnewInpInst
 	struct cnfparamvals *pvals;
 	instanceConf_t *inst;
+	char *cstr;
 	int i;
 CODESTARTnewInpInst
 	DBGPRINTF("newInpInst (imptcp)\n");
@@ -1550,6 +1570,19 @@ CODESTARTnewInpInst
 			inst->pszBindRuleset = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "supportoctetcountedframing")) {
 			inst->bSuppOctetFram = (int) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "compression.mode")) {
+			cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
+			if(!strcasecmp(cstr, "stream:always")) {
+				inst->compressionMode = COMPRESS_STREAM_ALWAYS;
+			} else if(!strcasecmp(cstr, "none")) {
+				inst->compressionMode = COMPRESS_NEVER;
+			} else {
+				errmsg.LogError(0, RS_RET_PARAM_ERROR, "omfwd: invalid value for 'compression.mode' "
+					 "parameter (given is '%s')", cstr);
+				free(cstr);
+				ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+			}
+			free(cstr);
 		} else if(!strcmp(inppblk.descr[i].name, "keepalive")) {
 			inst->bKeepAlive = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "keepalive.probes")) {
