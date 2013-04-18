@@ -1,0 +1,44 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Language" content="en"><title>Text File Input Monitor</title></head>
+<body>
+<a href="rsyslog_conf_modules.html">back</a>
+
+<h1>Systemd Journal Input Module</h1>
+<p><b>Module Name:&nbsp;&nbsp;&nbsp; imjournal</b></p>
+<p><b>Author: </b>Milan Bartos
+&lt;mbartos@redhat.com&gt;</p>
+<p><b>Description</b>:</p>
+<p>Provides the ability to import structured log messages from systemd journal
+to syslog.</p>
+
+<p><b>Configuration Directives</b>:</p>
+<p><b>Module Directives</b></p>
+<ul>
+<li><span style="font-weight: bold;">PersistStateInterval
+messages</span><br>
+This is a global setting. It specifies how often should the journal state be persisted.
+This option is useful for rsyslog to start reding from the last journal message it read.
+
+<li><span style="font-weight: bold;">StateFile
+/path/to/file</span><br>
+This is a global setting. It specifies where the state file for persisting
+journal state is located.
+</ul>
+<b>Caveats/Known Bugs:</b>
+<p>
+</p>
+<p><b>Sample:</b></p>
+<p>
+The following example shows pulling structured imjournal messages and saving them into /var/log/ceelog
+</p>
+<textarea rows="15" cols="60">
+module(load="imjournal" PersistStateInterval="100" StateFile="/path/to/file") #load imjournal module
+module(load="mmjsonparse") #load mmjsonparse module for structured logs
+
+$template CEETemplate,"%TIMESTAMP% %HOSTNAME% %syslogtag% @cee: %$!all-json%\n" #template for messages
+
+*.* :mmjsonparse:
+*.* /var/log/ceelog;CEETemplate
+</textarea>
+
