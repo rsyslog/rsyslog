@@ -775,7 +775,7 @@ done:
 static int
 timestampIt(gtfile gf, GTDataHash *hash)
 {
-	unsigned char *der;
+	unsigned char *der = NULL;
 	size_t lenDer;
 	int r = GT_OK;
 	int ret = 0;
