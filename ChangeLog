@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 7.3.11  [devel] 2013-04-??
+Version 7.3.11  [devel] 2013-04-23
 - added support for encrypting log files
 - omhiredis: added support for redis pipeline support
   Thanks to Brian Knox for the patch.
