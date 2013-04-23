@@ -11,6 +11,7 @@ Version 7.3.11  [devel] 2013-04-23
 - bugfix: imuxsock aborted under some conditions
   regression from ratelimiting enhancements - this was a different one
   to the one Tomas Heinrich patched.
+- bugfix: timestamp problems in imkmsg
 ---------------------------------------------------------------------------
 Version 7.3.10  [devel] 2013-04-10
 - added RainerScript re_extract() function

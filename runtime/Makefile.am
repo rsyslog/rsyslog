@@ -18,6 +18,7 @@ librsyslog_la_SOURCES = \
 	im-helper.h \
 	obj-types.h \
 	sigprov.h \
+	cryprov.h \
 	nsd.h \
 	glbl.h \
 	glbl.c \
