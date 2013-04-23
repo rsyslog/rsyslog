@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------
 Version 7.3.12  [devel] 2013-04-??
+- bugfix: block size limit was not properly honored
 - bugfix: potential segfault in guardtime signature provider
   it could segfault if an error was reported by the GuardTime API, because
   an invalid free could happen then

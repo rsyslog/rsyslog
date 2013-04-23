@@ -148,6 +148,7 @@ rsgtfileConstruct(gtctx ctx)
 		goto done;
 	gf->ctx = ctx;
 	gf->hashAlg = ctx->hashAlg;
+	gf->blockSizeLimit = ctx->blockSizeLimit;
 	gf->bKeepRecordHashes = ctx->bKeepRecordHashes;
 	gf->bKeepTreeHashes = ctx->bKeepTreeHashes;
 	gf->x_prev = NULL;
