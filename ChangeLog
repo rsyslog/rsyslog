@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------
-Version 1.0.5 (rgerhards), 2013-04-??
+Version 1.0.5 (rgerhards), 2013-04-24
 - bugfix: compile problem on Solaris
   Thanks to John Lyman for the patch
 ----------------------------------------------------------------------
