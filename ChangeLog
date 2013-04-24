@@ -1,4 +1,8 @@
 ----------------------------------------------------------------------
+Version 1.0.5 (rgerhards), 2013-04-??
+- bugfix: compile problem on Solaris
+  Thanks to John Lyman for the patch
+----------------------------------------------------------------------
 Version 1.0.4 (rgerhards), 2013-04-11
 - bugfix: busy loop on syslog sending as a client when server did not
   accept data; this was broken out only when the remote peer

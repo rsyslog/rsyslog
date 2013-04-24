@@ -35,6 +35,7 @@
 #include <string.h>
 #include <netinet/in.h>
 #include <assert.h>
+#include <sys/socket.h>
 #include "relp.h"
 #include "relpsrv.h"
 #include "tcp.h"
