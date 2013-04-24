@@ -20,7 +20,7 @@
  */
 #ifndef INCLUDED_LIBGCRY_H
 #define INCLUDED_LIBGCRY_H
-#include <gt_base.h>
+#include <stdint.h>
 
 
 struct gcryctx_s {
