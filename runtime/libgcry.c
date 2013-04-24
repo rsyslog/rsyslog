@@ -238,7 +238,7 @@ addPadding(gcryfile pF, uchar *buf, size_t *plen)
 	unsigned i;
 	size_t nPad;
 	nPad = (pF->blkLength - *plen % pF->blkLength) % pF->blkLength;
-	dbgprintf("DDDD: addPadding %d chars, blkLength %d, mod %d, pad %d\n",
+	DBGPRINTF("libgcry: addPadding %d chars, blkLength %d, mod %d, pad %d\n",
 		  *plen, pF->blkLength, *plen % pF->blkLength, nPad);
 	for(i = 0 ; i < nPad ; ++i)
 		buf[(*plen)+i] = 0x00;

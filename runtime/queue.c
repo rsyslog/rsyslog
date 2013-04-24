@@ -1150,7 +1150,6 @@ tryShutdownWorkersWithinActionTimeout(qqueue_t *pThis)
 	DBGOPRINT((obj_t*) pThis, "trying to shutdown workers within Action Timeout");
 	DBGOPRINT((obj_t*) pThis, "setting EnqOnly mode\n");
 	pThis->bEnqOnly = 1;
-dbgprintf("DDDD: setting shutdownImmediate mode, ptr %p!\n", &pThis->bShutdownImmediate);
 	pThis->bShutdownImmediate = 1;
 	/* now DA queue */
 	if(pThis->bIsDA) {
@@ -1856,7 +1855,6 @@ ConsumerReg(qqueue_t *pThis, wti_t *pWti)
 	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &iCancelStateSave);
 
 
-dbgprintf("DDDD: calling consumer with shutdownImmeditate ptr %p\n", &pThis->bShutdownImmediate);
 	CHKiRet(pThis->pConsumer(pThis->pAction, &pWti->batch, &pThis->bShutdownImmediate));
 
 	/* we now need to check if we should deliberately delay processing a bit

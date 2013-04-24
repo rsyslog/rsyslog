@@ -66,7 +66,6 @@ errfunc(__attribute__((unused)) void *usrptr, uchar *emsg)
 /* Standard-Constructor
  */
 BEGINobjConstruct(lmsig_gt)
-	dbgprintf("DDDD: lmsig_gt: called construct\n");
 	pThis->ctx = rsgtCtxNew();
 	rsgtsetErrFunc(pThis->ctx, errfunc, NULL);
 ENDobjConstruct(lmsig_gt)
@@ -75,7 +74,6 @@ ENDobjConstruct(lmsig_gt)
 /* destructor for the lmsig_gt object */
 BEGINobjDestruct(lmsig_gt) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(lmsig_gt)
-	dbgprintf("DDDD: lmsig_gt: called destruct\n");
 	rsgtCtxDel(pThis->ctx);
 ENDobjDestruct(lmsig_gt)
 
@@ -133,7 +131,7 @@ OnFileOpen(void *pT, uchar *fn, void *pGF)
 	lmsig_gt_t *pThis = (lmsig_gt_t*) pT;
 	gtfile *pgf = (gtfile*) pGF;
 	DEFiRet;
-dbgprintf("DDDD: onFileOpen: %s\n", fn);
+	DBGPRINTF("lmsig_gt: onFileOpen: %s\n", fn);
 	/* note: if *pgf is set to NULL, this auto-disables GT functions */
 	*pgf = rsgtCtxOpenFile(pThis->ctx, fn);
 	sigblkInit(*pgf);
@@ -152,7 +150,7 @@ static rsRetVal
 OnRecordWrite(void *pF, uchar *rec, rs_size_t lenRec)
 {
 	DEFiRet;
-dbgprintf("DDDD: onRecordWrite (%d): %s\n", lenRec-1, rec);
+	DBGPRINTF("lmsig_gt: onRecordWrite (%d): %s\n", lenRec-1, rec);
 	sigblkAddRecord(pF, rec, lenRec-1);
 
 	RETiRet;
@@ -162,7 +160,7 @@ static rsRetVal
 OnFileClose(void *pF)
 {
 	DEFiRet;
-dbgprintf("DDDD: onFileClose\n");
+	DBGPRINTF("lmsig_gt: onFileClose\n");
 	rsgtfileDestruct(pF);
 
 	RETiRet;

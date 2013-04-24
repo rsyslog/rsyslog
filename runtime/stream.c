@@ -255,7 +255,6 @@ doPhysOpen(strm_t *pThis)
 		pThis->bIsTTY = 0;
 	}
 
-dbgprintf("DDDD: cryprov %p\n", pThis->cryprov);
 	if(pThis->cryprov != NULL) {
 		CHKiRet(pThis->cryprov->OnFileOpen(pThis->cryprovData,
 		 	pThis->pszCurrFName, &pThis->cryprovFileData));
@@ -1218,11 +1217,9 @@ strmPhysWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf)
 		CHKiRet(strmOpenFile(pThis));
 
 	/* here we place our crypto interface */
-dbgprintf("DDDD: doing crypto, len %d\n", lenBuf);
 	if(pThis->cryprov != NULL) {
 		pThis->cryprov->Encrypt(pThis->cryprovFileData, pBuf, &lenBuf);
 	}
-dbgprintf("DDDD: done crypto, len %d\n", lenBuf);
 	/* end crypto */
 
 	iWritten = lenBuf;
