@@ -4,6 +4,8 @@ Version 7.3.12  [devel] 2013-04-??
   Thanks to Radu Gheorghe for the doc contribution.
 - platform compatibility enhancement: solve compile issue with libgcrypt
   do not use GCRY_CIPHER_MODE_AESWRAP where not available
+- fix compile on Solaris
+  Thanks to Martin Carpenter for the patch.
 - bugfix: block size limit was not properly honored
 - bugfix: potential segfault in guardtime signature provider
   it could segfault if an error was reported by the GuardTime API, because
