@@ -2,6 +2,10 @@
 Version 7.3.12  [devel] 2013-04-??
 - added doc for omelasticsearch
   Thanks to Radu Gheorghe for the doc contribution.
+- omelasticsearch: _id field support for bulk operations
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=392
+  Thanks to Jérôme Renard for the idea and patches.
+- max number of templates for plugin use has been increased to five
 - platform compatibility enhancement: solve compile issue with libgcrypt
   do not use GCRY_CIPHER_MODE_AESWRAP where not available
 - fix compile on Solaris
