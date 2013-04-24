@@ -10,6 +10,11 @@ Version 7.3.12  [devel] 2013-04-??
   do not use GCRY_CIPHER_MODE_AESWRAP where not available
 - fix compile on Solaris
   Thanks to Martin Carpenter for the patch.
+- bugfix: off-by-one error in handling local FQDN name (regression)
+  A remporary buffer was allocated one byte too small. Did only
+  affect startup, not actual operations. Came up during routine tests,
+  and can have no effect once the engine runs. Bug was introduced in
+  7.3.11.
 - bugfix: block size limit was not properly honored
 - bugfix: potential segfault in guardtime signature provider
   it could segfault if an error was reported by the GuardTime API, because

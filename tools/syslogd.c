@@ -1530,7 +1530,7 @@ queryLocalHostname(void)
 	glbl.SetLocalDomain(LocalDomain);
 
 	if ( strlen((char*)LocalDomain) )  {
-		CHKmalloc(LocalFQDNName = (uchar*)malloc(strlen((char*)LocalDomain)+strlen((char*)LocalHostName)+1));
+		CHKmalloc(LocalFQDNName = (uchar*)malloc(strlen((char*)LocalDomain)+strlen((char*)LocalHostName)+2));/* one for dot, one for NUL! */
 		if ( sprintf((char*)LocalFQDNName,"%s.%s",(char*)LocalHostName,(char*)LocalDomain) )
 			glbl.SetLocalFQDNName(LocalFQDNName);
 		}
