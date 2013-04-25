@@ -775,7 +775,7 @@ AM_CONDITIONAL(ENABLE_GNUTLS, test x$enable_gnutls = xyes)
 
 # libgcrypt support
 AC_ARG_ENABLE(libgcrypt,
-        [AS_HELP_STRING([--enable-libgcrypt],[Enable log file encryption support (libgcrypt=) @<:@default=yes@:>@])],
+        [AS_HELP_STRING([--enable-libgcrypt],[Enable log file encryption support (libgcrypt) @<:@default=yes@:>@])],
         [case "${enableval}" in
          yes) enable_libgcrypt="yes" ;;
           no) enable_libgcrypt="no" ;;
