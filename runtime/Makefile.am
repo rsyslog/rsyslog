@@ -133,7 +133,7 @@ pkglib_LTLIBRARIES += lmnet.la lmnetstrms.la
 # 
 lmnet_la_SOURCES = net.c net.h
 lmnet_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
-lmnet_la_LDFLAGS = -module -avoid-version
+lmnet_la_LDFLAGS = -module -avoid-version ../compat/compat_la-getifaddrs.lo
 lmnet_la_LIBADD =
 
 # network stream master class and stream factory
