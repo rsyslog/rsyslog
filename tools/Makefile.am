@@ -40,9 +40,8 @@ rsyslogd_CPPFLAGS =  $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
 # note: it looks like librsyslog.la must be explicitely given on LDDADD,
 # otherwise dependencies are not properly calculated (resulting in a 
 # potentially incomplete build, a problem we had several times...)
-rsyslogd_LDADD = ../grammar/libgrammar.la ../runtime/librsyslog.la $(ZLIB_LIBS) $(PTHREADS_LIBS) $(RSRT_LIBS) $(SOL_LIBS) $(LIBEE_LIBS) $(LIBLOGNORM_LIBS) $(LIBUUID_LIBS)
-rsyslogd_LDFLAGS = -export-dynamic `libgcrypt-config --libs`
-#rsyslogd_LDFLAGS = -export-dynamic $(LIBGCRYPT_LIBS)
+rsyslogd_LDADD = ../grammar/libgrammar.la ../runtime/librsyslog.la $(ZLIB_LIBS) $(PTHREADS_LIBS) $(RSRT_LIBS) $(SOL_LIBS) $(LIBEE_LIBS) $(LIBLOGNORM_LIBS) $(LIBUUID_LIBS) $(LIBGCRYPT_LIBS)
+rsyslogd_LDFLAGS = -export-dynamic
 
 EXTRA_DIST = $(man_MANS) \
 	rsgtutil.rst \
@@ -79,7 +78,6 @@ if ENABLE_LIBGCRYPT
 bin_PROGRAMS += rscryutil
 rscryutil = rscryutil.c
 rscryutil_CPPFLAGS = -I../runtime $(RSRT_CFLAGS) $(LIBGCRYPT_CFLAGS)
-rscryutil_LDFLAGS = `libgcrypt-config --libs`
 rscryutil_LDADD = ../runtime/libgcry.la $(LIBGCRYPT_LIBS)
 rscryutil.1: rscryutil.rst
 	$(AM_V_GEN) $(RST2MAN) $< $@
