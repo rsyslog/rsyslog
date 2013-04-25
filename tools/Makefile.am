@@ -46,6 +46,7 @@ rsyslogd_LDFLAGS = -export-dynamic `libgcrypt-config --libs`
 
 EXTRA_DIST = $(man_MANS) \
 	rsgtutil.rst \
+	rscryutil.rst \
 	recover_qi.pl
 
 if ENABLE_DIAGTOOLS
