@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 7.3.12  [devel] 2013-04-??
+Version 7.3.12  [devel] 2013-04-25
 - added doc for omelasticsearch
   Thanks to Radu Gheorghe for the doc contribution.
 - omelasticsearch: _id field support for bulk operations
