@@ -798,7 +798,7 @@ if test "x$enable_libgcrypt" = "xyes"; then
         	[LIBGCRYPT_CFLAGS="`libgcrypt-config --cflags`"
         	LIBGCRYPT_LIBS="`libgcrypt-config --libs`"
         	],
-        	[AC_MSG_FAILURE([libgrypt is missing])],
+        	[AC_MSG_FAILURE([libgcrypt is missing])],
         	[`libgcrypt-config --libs --cflags`]
         	)
 	AC_DEFINE([ENABLE_LIBGCRYPT], [1], [Indicator that LIBGCRYPT is present])
