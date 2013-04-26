@@ -1,4 +1,12 @@
 ---------------------------------------------------------------------------
+Version 7.3.13  [devel] 2013-04-??
+- bugfix: build problem when --enable-encrption was not selected
+  Thanks to Michael Biebl for fixing this.
+- doc bugfix: omfile parameter "VeryRobustZip" was documentas as
+  "VeryReliableZip"
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=437
+  Thanks to Thomas Doll for reporting this.
+---------------------------------------------------------------------------
 Version 7.3.12  [devel] 2013-04-25
 - added doc for omelasticsearch
   Thanks to Radu Gheorghe for the doc contribution.
