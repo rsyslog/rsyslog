@@ -1,6 +1,10 @@
 ---------------------------------------------------------------------------
-Version 7.3.13  [devel] 2013-04-??
-- bugfix: build problem when --enable-encrption was not selected
+Version 7.3.13  [beta] 2013-04-29
+- added omrabbitmq module (contributed, untested)
+  Note: this is unsupported and as such was moved immediately into the
+  beta version.
+  Thanks to Vaclav Tomec for providing this module.
+- bugfix: build problem when --enable-encryption was not selected
   Thanks to Michael Biebl for fixing this.
 - doc bugfix: omfile parameter "VeryRobustZip" was documentas as
   "VeryReliableZip"
