@@ -1369,6 +1369,26 @@ AM_CONDITIONAL(ENABLE_OMZMQ3, test x$enable_omzmq3 = xyes)
 
 # END ZMQ3 SUPPORT
 
+# BEGIN RABBITMQ OUTPUT SUPPORT
+
+AC_ARG_ENABLE(omrabbitmq,
+        [AS_HELP_STRING([--enable-omrabbitmq],[Compiles omrabbitmq output module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_omrabbitmq="yes" ;;
+          no) enable_omrabbitmq="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-omrabbitmq) ;;
+         esac],
+        [enable_omrabbitmq=no]
+)
+if test "x$enable_omrabbitmq" = "xyes"; then
+        PKG_CHECK_MODULES(RABBITMQ, librabbitmq >= 0.2.0)
+        AC_SUBST(RABBITMQ_CFLAGS)
+        AC_SUBST(RABBITMQ_LIBS)
+fi
+AM_CONDITIONAL(ENABLE_OMRABBITMQ, test x$enable_omrabbitmq = xyes)
+
+# END RABBITMQ SUPPORT
+
 # HIREDIS SUPPORT
 
 AC_ARG_ENABLE(omhiredis,
@@ -1435,6 +1455,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/ommongodb/Makefile \
 		plugins/omhiredis/Makefile \
 		plugins/omzmq3/Makefile \
+		plugins/omrabbitmq/Makefile \
 		plugins/mmnormalize/Makefile \
 		plugins/mmjsonparse/Makefile \
 		plugins/mmaudit/Makefile \
@@ -1485,6 +1506,7 @@ echo "    omruleset module will be compiled:        $enable_omruleset"
 echo "    omudpspoof module will be compiled:       $enable_omudpspoof"
 echo "    omuxsock module will be compiled:         $enable_omuxsock"
 echo "    omzmq3 module will be compiled:           $enable_omzmq3"
+echo "    omrabbitmq module will be compiled:       $enable_omrabbitmq"
 echo
 echo "---{ parser modules }---"
 echo "    pmrfc3164sd module will be compiled:      $enable_pmrfc3164sd"
