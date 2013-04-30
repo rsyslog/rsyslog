@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------
+Version 7.3.14  [beta] 2013-05-??
+- bugfix: some man pages were not properly installed
+  either rscryutil or rsgtutil man was installed, but not both
+  Thanks to Marius Tomaschewski for the patch.
+---------------------------------------------------------------------------
 Version 7.3.13  [beta] 2013-04-29
 - added omrabbitmq module (contributed, untested)
   Note: this is unsupported and as such was moved immediately into the

@@ -1,5 +1,7 @@
 sbin_PROGRAMS =
 bin_PROGRAMS =
+CLEANFILES =
+man1_MANS =
 man_MANS = rsyslogd.8 rsyslog.conf.5
 
 sbin_PROGRAMS += rsyslogd
@@ -70,8 +72,8 @@ rsgtutil_CPPFLAGS =  $(RSRT_CFLAGS) $(GUARDTIME_CFLAGS)
 rsgtutil_LDADD = ../runtime/librsgt.la $(GUARDTIME_LIBS)
 rsgtutil.1: rsgtutil.rst
 	$(AM_V_GEN) $(RST2MAN) $< $@
-man1_MANS = rsgtutil.1
-CLEANFILES = rsgtutil.1
+man1_MANS += rsgtutil.1
+CLEANFILES += rsgtutil.1
 EXTRA_DIST+= rsgtutil.1
 endif
 if ENABLE_LIBGCRYPT
@@ -81,8 +83,8 @@ rscryutil_CPPFLAGS = -I../runtime $(RSRT_CFLAGS) $(LIBGCRYPT_CFLAGS)
 rscryutil_LDADD = ../runtime/libgcry.la $(LIBGCRYPT_LIBS)
 rscryutil.1: rscryutil.rst
 	$(AM_V_GEN) $(RST2MAN) $< $@
-man1_MANS = rscryutil.1
-CLEANFILES = rscryutil.1
+man1_MANS += rscryutil.1
+CLEANFILES += rscryutil.1
 EXTRA_DIST+= rscryutil.1
 endif
 endif
