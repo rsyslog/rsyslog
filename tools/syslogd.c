@@ -1773,7 +1773,7 @@ int realMain(int argc, char **argv)
 	 * of other options, we do this during the inital option processing.
 	 * rgerhards, 2008-04-04
 	 */
-	while((ch = getopt(argc, argv, "46a:Ac:dDef:g:hi:l:m:M:nN:op:qQr::s:t:T:u:vwx")) != EOF) {
+	while((ch = getopt(argc, argv, "46a:Ac:dDef:g:hi:l:m:M:nN:op:qQr::s:S:t:T:u:vwx")) != EOF) {
 		switch((char)ch) {
                 case '4':
                 case '6':
@@ -1791,6 +1791,7 @@ int realMain(int argc, char **argv)
 		case 'q': /* add hostname if DNS resolving has failed */
 		case 'Q': /* dont resolve hostnames in ACL to IPs */
 		case 's':
+		case 'S': /* Source IP for local client to be used on multihomed host */
 		case 'T': /* chroot on startup (primarily for testing) */
 		case 'u': /* misc user settings */
 		case 'w': /* disable disallowed host warnings */
@@ -1882,6 +1883,13 @@ int realMain(int argc, char **argv)
                 case 'a':
 			fprintf(stderr, "rsyslogd: error -a is no longer supported, use module imuxsock instead");
                         break;
+		case 'S':		/* Source IP for local client to be used on multihomed host */
+			if(glbl.GetSourceIPofLocalClient() != NULL) {
+				fprintf (stderr, "rsyslogd: Only one -S argument allowed, the first one is taken.\n");
+			} else {
+				glbl.SetSourceIPofLocalClient(arg);
+			}
+			break;
 		case 'f':		/* configuration file */
 			ConfFile = (uchar*) arg;
 			break;

@@ -209,7 +209,11 @@ static rsRetVal doConnect(instanceData *pData)
 	DEFiRet;
 
 	if(pData->bInitialConnect) {
-		iRet = relpCltConnect(pData->pRelpClt, glbl.GetDefPFFamily(), pData->port, pData->target);
+		if (glbl.GetSourceIPofLocalClient() == NULL) {	/* ar Do we have a client IP set? */
+			iRet = relpCltConnect(pData->pRelpClt, glbl.GetDefPFFamily(), pData->port, pData->target);
+		} else {									/* ar YES: use it */
+			iRet = relpCltConnect2(pData->pRelpClt, glbl.GetDefPFFamily(), pData->port, pData->target,  glbl.GetSourceIPofLocalClient());
+		}
 		if(iRet == RELP_RET_OK)
 			pData->bInitialConnect = 0;
 	} else {

@@ -89,6 +89,7 @@ static DEF_ATOMIC_HELPER_MUT(mutTerminateInputs);
 #ifdef USE_UNLIMITED_SELECT
 static int iFdSetSize = howmany(FD_SETSIZE, __NFDBITS) * sizeof (fd_mask); /* size of select() bitmask in bytes */
 #endif
+static uchar *SourceIPofLocalClient = NULL;	/* [ar] Source IP for local client to be used on multihomed host */
 
 
 /* tables for interfacing with the v6 config system */
@@ -478,6 +479,23 @@ GetDfltNetstrmDrvrCertFile(void)
 }
 
 
+/* [ar] Source IP for local client to be used on multihomed host */
+static rsRetVal
+SetSourceIPofLocalClient(uchar *newname)
+{
+	if(SourceIPofLocalClient != NULL) {
+		free(SourceIPofLocalClient); }
+	SourceIPofLocalClient = newname;
+	return RS_RET_OK;
+}
+
+static uchar*
+GetSourceIPofLocalClient(void)
+{
+	return(SourceIPofLocalClient);
+}
+
+
 /* queryInterface function
  * rgerhards, 2008-02-21
  */
@@ -498,6 +516,8 @@ CODESTARTobjQueryInterface(glbl)
 	pIf->GetLocalHostIP = GetLocalHostIP;
 	pIf->SetGlobalInputTermination = SetGlobalInputTermination;
 	pIf->GetGlobalInputTermState = GetGlobalInputTermState;
+	pIf->GetSourceIPofLocalClient = GetSourceIPofLocalClient;	/* [ar] */
+	pIf->SetSourceIPofLocalClient = SetSourceIPofLocalClient;	/* [ar] */
 #define SIMP_PROP(name) \
 	pIf->Get##name = Get##name; \
 	pIf->Set##name = Set##name;
