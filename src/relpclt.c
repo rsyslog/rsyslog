@@ -113,6 +113,26 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 
+relpRetVal
+relpCltConnect2(relpClt_t *pThis, int protFamily, unsigned char *port, unsigned char *host, unsigned char *clientIP) /* ar */
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Clt);
+
+	CHKRet(relpSessConstruct(&pThis->pSess, pThis->pEngine, NULL));
+	CHKRet(relpSessSetTimeout(pThis->pSess, pThis->timeout));
+	CHKRet(relpSessConnect2(pThis->pSess, protFamily, port, host, clientIP));
+
+finalize_it:
+	if(iRet != RELP_RET_OK) {
+		if(pThis->pSess != NULL) {
+			relpSessDestruct(&pThis->pSess);
+		}
+	}
+
+	LEAVE_RELPFUNC;
+}
+
 
 /** Try to reconnect a broken session to the remote
  * server. The main difference to relpCltConnect() is that the

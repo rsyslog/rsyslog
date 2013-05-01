@@ -139,6 +139,8 @@ relpSessDestruct(relpSess_t **ppThis)
 		free(pThis->srvPort);
 	if(pThis->srvAddr != NULL)
 		free(pThis->srvAddr);
+	if(pThis->clientIP != NULL)		/* ar */
+		free(pThis->clientIP);		/* ar */
 
 	pthread_mutex_destroy(&pThis->mutSend);
 	/* done with de-init work, now free object itself */
@@ -616,7 +618,11 @@ relpSessTryReestablish(relpSess_t *pThis)
 	assert(pThis->sessState = eRelpSessState_BROKEN);
 
 	CHKRet(relpTcpAbortDestruct(&pThis->pTcp));
-	CHKRet(relpSessConnect(pThis, pThis->protFamily, pThis->srvPort, pThis->srvAddr));
+	if (pThis->clientIP == NULL) {						/* ar Do we have a client IP set? */
+		CHKRet(relpSessConnect(pThis, pThis->protFamily, pThis->srvPort, pThis->srvAddr));
+	} else {											/* ar YES: use it */
+		CHKRet(relpSessConnect2(pThis, pThis->protFamily, pThis->srvPort, pThis->srvAddr, pThis->clientIP));
+	}
 	/* if we reach this point, we could re-establish the session. We now
 	 * need to resend any unacked data. Note that we need to patch in new txnr's
 	 * into the existing frames. We need to do a special send command, as the usual
@@ -800,6 +806,65 @@ pThis->pEngine->dbgprint("end relpSessConnect, iRet %d\n", iRet);
 
 	LEAVE_RELPFUNC;
 }
+
+/* ar Variant of relpSessConnect which deals with fixed client source IP */
+/* ar (only 2 modifications) */
+relpRetVal
+relpSessConnect2(relpSess_t *pThis, int protFamily, unsigned char *port, unsigned char *host, unsigned char *clientIP)
+{
+	relpOffers_t *pOffers;
+	unsigned char *pszOffers = NULL;
+	size_t lenOffers;
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Sess);
+
+	CHKRet(relpSessFixCmdStates(pThis));
+	if(pThis->srvAddr == NULL) { /* initial connect, need to save params */
+		pThis->protFamily = protFamily;
+		if((pThis->srvPort = (unsigned char*) strdup((char*)port)) == NULL)
+			ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+		if((pThis->srvAddr = (unsigned char*) strdup((char*)host)) == NULL)
+			ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+		if((pThis->clientIP = (unsigned char*) strdup((char*)clientIP)) == NULL)	/* ar */
+			ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+	}
+
+	/* (re-)init some counters */
+	pThis->txnr = 1;
+	pThis->sessType = eRelpSess_Client;	/* indicate we have a client session */
+
+	CHKRet(relpTcpConstruct(&pThis->pTcp, pThis->pEngine));
+	CHKRet(relpTcpConnect2(pThis->pTcp, protFamily, port, host, clientIP));			/* ar */
+	relpSessSetSessState(pThis, eRelpSessState_PRE_INIT);
+
+	/* create offers */
+	CHKRet(relpSessConstructOffers(pThis, &pOffers));
+	CHKRet(relpOffersToString(pOffers, NULL, 0, &pszOffers, &lenOffers));
+	CHKRet(relpOffersDestruct(&pOffers));
+
+	CHKRet(relpSessRawSendCommand(pThis, (unsigned char*)"open", 4, pszOffers, lenOffers,
+				      relpSessCBrspOpen));
+	relpSessSetSessState(pThis, eRelpSessState_INIT_CMD_SENT);
+	CHKRet(relpSessWaitState(pThis, eRelpSessState_INIT_RSP_RCVD, pThis->timeout));
+
+	/* we now have received the server's response. Now is a good time to check if the offers
+	 * received back are compatible with what we need - and, if not, terminate the session...
+	 */
+pThis->pEngine->dbgprint("pre CltConnChkOffers %d\n", iRet);
+	CHKRet(relpSessCltConnChkOffers(pThis));
+	/* TODO: flag sesssion as broken if we did not succeed? */
+
+	/* if we reach this point, we have a valid relp session */
+	relpSessSetSessState(pThis, eRelpSessState_READY_TO_SEND); /* indicate session startup */
+
+finalize_it:
+pThis->pEngine->dbgprint("end relpSessConnect, iRet %d\n", iRet);
+	if(pszOffers != NULL)
+		free(pszOffers);
+
+	LEAVE_RELPFUNC;
+}
+
 
 
 /* callback when the "close" command has been processed

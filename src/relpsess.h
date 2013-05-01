@@ -85,6 +85,7 @@ struct relpSess_s {
 	int protFamily;
 	unsigned char *srvPort;
 	unsigned char *srvAddr;
+	unsigned char *clientIP;	/* ar */
 
 	/* properties needed for server operation */
 	relpSrv_t *pSrv;	/**< the server we belong to */
@@ -121,6 +122,7 @@ relpRetVal relpSessSndData(relpSess_t *pThis);
 relpRetVal relpSessSendCommand(relpSess_t *pThis, unsigned char *pCmd, size_t lenCmd,
 		    unsigned char *pData, size_t lenData, relpRetVal (*rspHdlr)(relpSess_t*,relpFrame_t*));
 relpRetVal relpSessConnect(relpSess_t *pThis, int protFamily, unsigned char *port, unsigned char *host);
+relpRetVal relpSessConnect2(relpSess_t *pThis, int protFamily, unsigned char *port, unsigned char *host, unsigned char *clientIP);	/* ar */
 relpRetVal relpSessAddUnacked(relpSess_t *pThis, relpSendbuf_t *pSendbuf);
 relpRetVal relpSessGetUnacked(relpSess_t *pThis, relpSendbuf_t **ppSendbuf, relpTxnr_t txnr);
 relpRetVal relpSessTryReestablish(relpSess_t *pThis);
