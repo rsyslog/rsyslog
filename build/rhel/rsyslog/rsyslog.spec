@@ -47,6 +47,11 @@ Summary: ElasticSearch output module for rsyslog
 Group: System Environment/Daemons
 Requires: %name = %version-%release
 
+%package mmcount
+Summary: Message counting support for rsyslog
+Group: System Environment/Daemons
+Requires: %name = %version-%release
+
 %package mmjsonparse
 Summary: JSON enhanced logging support
 Group: System Environment/Daemons
@@ -154,6 +159,11 @@ relay chains.
 This module provides the capability for rsyslog to feed logs directly into
 Elasticsearch.
 
+%description mmcount
+This module provides the capability to count log messages by severity
+or json property of given app-name.  The count value is added into the
+log message in json property named 'mmcount'
+
 %description mmjsonparse
 This module provides the capability to recognize and parse JSON enhanced
 syslog messages.
@@ -226,6 +236,7 @@ export PKG_CONFIG=/usr/bin/pkg-config
 %configure --disable-static \
         --disable-testbench \
         --enable-elasticsearch \
+        --enable-mmcount \
         --enable-mmjsonparse \
         --enable-mmnormalize \
         --enable-imzmq3 \
@@ -338,6 +349,10 @@ fi
 %files elasticsearch
 %defattr(-,root,root)
 %{_libdir}/rsyslog/omelasticsearch.so
+
+%files mmcount
+%defattr(-,root,root)
+%{_libdir}/rsyslog/mmcount.so
 
 %files mmjsonparse
 %defattr(-,root,root)

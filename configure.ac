@@ -962,6 +962,19 @@ AC_ARG_ENABLE(mmanon,
 AM_CONDITIONAL(ENABLE_MMANON, test x$enable_mmanon = xyes)
 
 
+# mmcount
+AC_ARG_ENABLE(mmcount,
+        [AS_HELP_STRING([--enable-mmcount],[Enable message counting @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_xmpp="yes" ;;
+          no) enable_xmpp="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-mmcount) ;;
+         esac],
+        [enable_mmcount=no]
+)
+AM_CONDITIONAL(ENABLE_MMCOUNT, test x$enable_mmcount = xyes)
+
+
 # RELP support
 AC_ARG_ENABLE(relp,
         [AS_HELP_STRING([--enable-relp],[Enable RELP support @<:@default=no@:>@])],
@@ -1478,6 +1491,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/mmjsonparse/Makefile \
 		plugins/mmaudit/Makefile \
 		plugins/mmanon/Makefile \
+		plugins/mmcount/Makefile \
 		plugins/omelasticsearch/Makefile \
 		plugins/sm_cust_bindcdr/Makefile \
 		plugins/mmsnmptrapd/Makefile \
@@ -1501,6 +1515,7 @@ echo "    uuid support enabled:                     $enable_uuid"
 echo "    Log file signing support:                 $enable_guardtime"
 echo "    Log file encryption support:              $enable_libgcrypt"
 echo "    anonymization support enabled:            $enable_mmanon"
+echo "    message counting support enabled:         $enable_mmcount"
 echo
 echo "---{ input plugins }---"
 echo "    Klog functionality enabled:               $enable_klog ($os_type)"
