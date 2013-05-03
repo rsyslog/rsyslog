@@ -3,6 +3,13 @@ Version 7.3.14  [beta] 2013-05-??
 - bugfix: some man pages were not properly installed
   either rscryutil or rsgtutil man was installed, but not both
   Thanks to Marius Tomaschewski for the patch.
+- bugfix: segfault due to invalid dynafile cache handling
+  Accidently, the old-style cache size parameter was used when the
+  dynafile cache was created in a RainerScript action. If the old-style
+  size was lower than the one actually set, this lead to misadressing
+  when the size was overrun, and that could lead to all kinds of
+  "interesting things", often in segfaults.
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=440
 ---------------------------------------------------------------------------
 Version 7.3.13  [beta] 2013-04-29
 - added omrabbitmq module (contributed, untested)
