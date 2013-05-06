@@ -3,6 +3,9 @@ Version 7.3.14  [beta] 2013-05-??
 - bugfix: some man pages were not properly installed
   either rscryutil or rsgtutil man was installed, but not both
   Thanks to Marius Tomaschewski for the patch.
+- bugfix: potential segfault on startup when builtin module was specified
+  in module() statement.
+  Thanks to Marius Tomaschewski for reporting the bug.
 - bugfix: segfault due to invalid dynafile cache handling
   Accidently, the old-style cache size parameter was used when the
   dynafile cache was created in a RainerScript action. If the old-style
