@@ -1,4 +1,7 @@
 ----------------------------------------------------------------------
+Version 1.0.6 - 2013-05-06
+- enhanced API to permit binding a client to a specific IP address
+----------------------------------------------------------------------
 Version 1.0.5 (rgerhards), 2013-04-24
 - bugfix: compile problem on Solaris
   Thanks to John Lyman for the patch
