@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 7.3.14  [beta] 2013-05-??
+Version 7.3.14  [beta] 2013-05-06
 - bugfix: some man pages were not properly installed
   either rscryutil or rsgtutil man was installed, but not both
   Thanks to Marius Tomaschewski for the patch.
