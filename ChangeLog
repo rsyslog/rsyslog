@@ -1,5 +1,8 @@
 ----------------------------------------------------------------------------
 Version 7.2.8  [v7-stable] 2013-0?-??
+- bugfix: potential segfault on startup when builtin module was specified
+  in module() statement.
+  Thanks to Marius Tomaschewski for reporting the bug.
 - bugfix: segfault due to invalid dynafile cache handling
   Accidently, the old-style cache size parameter was used when the
   dynafile cache was created in a RainerScript action. If the old-style
