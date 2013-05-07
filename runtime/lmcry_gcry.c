@@ -69,7 +69,6 @@ errfunc(__attribute__((unused)) void *usrptr, uchar *emsg)
 /* Standard-Constructor
  */
 BEGINobjConstruct(lmcry_gcry)
-	dbgprintf("DDDD: lmcry_gcry: called construct\n");
 	pThis->ctx = gcryCtxNew();
 ENDobjConstruct(lmcry_gcry)
 
@@ -77,7 +76,6 @@ ENDobjConstruct(lmcry_gcry)
 /* destructor for the lmcry_gcry object */
 BEGINobjDestruct(lmcry_gcry) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(lmcry_gcry)
-	dbgprintf("DDDD: lmcry_gcry: called destruct\n");
 	rsgcryCtxDel(pThis->ctx);
 ENDobjDestruct(lmcry_gcry)
 
@@ -198,7 +196,6 @@ OnFileOpen(void *pT, uchar *fn, void *pGF)
 	lmcry_gcry_t *pThis = (lmcry_gcry_t*) pT;
 	gcryfile *pgf = (gcryfile*) pGF;
 	DEFiRet;
-dbgprintf("DDDD: cry: onFileOpen: %s\n", fn);
 
 	CHKiRet(rsgcryInitCrypt(pThis->ctx, pgf, fn));
 finalize_it:
@@ -213,7 +210,6 @@ static rsRetVal
 Encrypt(void *pF, uchar *rec, size_t *lenRec)
 {
 	DEFiRet;
-dbgprintf("DDDD: Encrypt (%u): %s\n", *lenRec-1, rec);
 	iRet = rsgcryEncrypt(pF, rec, lenRec);
 
 	RETiRet;
@@ -223,7 +219,6 @@ static rsRetVal
 OnFileClose(void *pF, off64_t offsLogfile)
 {
 	DEFiRet;
-dbgprintf("DDDD: onFileClose\n");
 	gcryfileDestruct(pF, offsLogfile);
 
 	RETiRet;

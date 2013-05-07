@@ -61,9 +61,9 @@
 						 * rgerhards, 2006-11-30
 						 */
 
-#define CONF_OMOD_NUMSTRINGS_MAXSIZE	3	/* cache for pointers to output module buffer pointers. All
-						 * rsyslog-provided plugins do NOT need more than three buffers. If
-						 * more are needed (future developments, third-parties), rsyslog 
+#define CONF_OMOD_NUMSTRINGS_MAXSIZE	5	/* cache for pointers to output module buffer pointers. All
+						 * rsyslog-provided plugins do NOT need more than five buffers. If
+						 * more are needed (future developments, third-parties), rsyslog
 						 * must be recompiled with a larger parameter. Hardcoding this
 						 * saves us some overhead, both in runtime in code complexity. As
 						 * it is doubtful if ever more than 3 parameters are needed, the
@@ -91,7 +91,7 @@
 
 
 /* the rsyslog core provides information about present feature to plugins
- * asking it. Below are feature-test macros which must be used to query 
+ * asking it. Below are feature-test macros which must be used to query
  * features. Note that this must be powers of two, so that multiple queries
  * can be combined. -- rgerhards, 2009-04-27
  */
@@ -153,7 +153,7 @@ typedef uintTiny	propid_t;
 */
 enum rsRetVal_				/** return value. All methods return this if not specified otherwise */
 {
-	/* the first two define are for errmsg.logError(), so that we can use the rsRetVal 
+	/* the first two define are for errmsg.logError(), so that we can use the rsRetVal
 	 * as an rsyslog error code. -- rgerhards, 20080-06-27
 	 */
 	RS_RET_NO_ERRCODE = -1,		/**< RESERVED for NO_ERRCODE errmsg.logError status name */
@@ -448,7 +448,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 
 /** Object ID. These are for internal checking. Each
  * object is assigned a specific ID. This is contained in
- * all Object structs (just like C++ RTTI). We can use 
+ * all Object structs (just like C++ RTTI). We can use
  * this field to see if we have been passed a correct ID.
  * Other than that, there is currently no other use for
  * the object id.
@@ -480,7 +480,7 @@ typedef enum rsObjectID rsObjID;
 #endif
 
 /**
- * This macro should be used to free objects. 
+ * This macro should be used to free objects.
  * It aids in interpreting dumps during debugging.
  */
 #ifdef NDEBUG
@@ -547,7 +547,7 @@ rsRetVal rsrtSetErrLogger(rsRetVal (*errLogger)(int, uchar*));
 
 /* TODO: remove this -- this is only for transition of the config system */
 extern rsconf_t *ourConf; /* defined by syslogd.c, a hack for functions that do not
-			     yet receive a copy, so that we can incrementially 
+			     yet receive a copy, so that we can incrementially
 			     compile and change... -- rgerhars, 2011-04-19 */
 
 #endif /* multi-include protection */

@@ -1277,7 +1277,6 @@ processBatchMain(action_t *pAction, batch_t *pBatch, int *pbShutdownImmediate)
 	if(pbShutdownImmediate != NULL) {
 		pbShutdownImmdtSave = pBatch->pbShutdownImmediate;
 		pBatch->pbShutdownImmediate = pbShutdownImmediate;
-dbgprintf("DDDD: processBatchMain ShutdownImmediate is %p, was %p\n", pBatch->pbShutdownImmediate, pbShutdownImmdtSave);
 	}
 	CHKiRet(prepareBatch(pAction, pBatch, &activeSave, &bMustRestoreActivePtr));
 

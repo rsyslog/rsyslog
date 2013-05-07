@@ -118,7 +118,25 @@ use case. On February, 28th rsyslog 3.12.0 was released, the first
 version to contain expression support. This also meant that rsyslog
 from that date on supported all syslog-ng major features, but had a
 number of major features exlusive to it. With 3.12.0, I consider
-rsyslog fully superior to syslog-ng (except for platform support).</p><p>Be sure to visit Rainer's <a href="http://rgerhards.blogspot.com/">syslog blog</a>
+rsyslog fully superior to syslog-ng (except for platform support).</p>
+
+<p>Following the Fedora Developer's conference in Brno <b>2012</b>, rsyslog
+got very serious on implementing <b>structured logging</b> in
+project Lumberjack (CEE) style. Project Lumberjack was a much broader
+effort and brought closer collaboration with the syslog-ng folks, which
+helped to maintain and improve interoperability. In the
+<b>late winter/spring/summer 2012</b> timeframe numerous engine enhancements
+were made and plugins written (among them the first "official" interfaces
+to the Linux audit subsystem). At the end of the year, this culminated in the
+rsyslog 7, which not only implemented Lumberjack but also was the first one
+to support full condition nesting in rsyslog.conf (and a ton of other features as
+well).
+
+<p>In <b>spring 2013</b> major new security features were engineered,
+namely anonymization support, as well as log file signing and 
+encryption capabilities.
+
+<p>Be sure to visit Rainer's <a href="http://rgerhards.blogspot.com/">syslog blog</a>
 to get some more insight into the development and futures of rsyslog and syslog in general. 
 Don't be shy to post to either the blog or the
 <a href="http://www.rsyslog.com/PNphpBB2.phtml">rsyslog forums</a>.</p>

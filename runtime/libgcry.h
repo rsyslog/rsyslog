@@ -20,7 +20,7 @@
  */
 #ifndef INCLUDED_LIBGCRY_H
 #define INCLUDED_LIBGCRY_H
-#include <gt_base.h>
+#include <stdint.h>
 
 
 struct gcryctx_s {
@@ -93,7 +93,9 @@ rsgcryModename2Mode(char *modename) {
 	if(!strcmp((char*)modename, "STREAM")) return GCRY_CIPHER_MODE_STREAM;
 	if(!strcmp((char*)modename, "OFB")) return GCRY_CIPHER_MODE_OFB;
 	if(!strcmp((char*)modename, "CTR")) return GCRY_CIPHER_MODE_CTR;
+#	ifdef GCRY_CIPHER_MODE_AESWRAP
 	if(!strcmp((char*)modename, "AESWRAP")) return GCRY_CIPHER_MODE_AESWRAP;
+#	endif
 	return GCRY_CIPHER_MODE_NONE;
 }
 #endif  /* #ifndef INCLUDED_LIBGCRY_H */

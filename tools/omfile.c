@@ -1200,7 +1200,7 @@ CODESTARTnewActInst
 		// TODO: create unified code for this (legacy+v6 system)
 		/* we now allocate the cache table */
 		CHKmalloc(pData->dynCache = (dynaFileCacheEntry**)
-				calloc(cs.iDynaFileCacheSize, sizeof(dynaFileCacheEntry*)));
+				calloc(pData->iDynaFileCacheSize, sizeof(dynaFileCacheEntry*)));
 		pData->iCurrElt = -1;		  /* no current element */
 	}
 // TODO: add	pData->iSizeLimit = 0; /* default value, use outchannels to configure! */

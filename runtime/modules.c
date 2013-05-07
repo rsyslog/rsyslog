@@ -1045,7 +1045,6 @@ Load(uchar *pModName, sbool bConfLoad, struct nvlst *lst)
 		if(bConfLoad) {
 			localRet = readyModForCnf(pModInfo, &pNew, &pLast);
 			if(pModInfo->setModCnf != NULL && localRet == RS_RET_OK) {
-				addModToCnfList(pNew, pLast);
 				if(!strncmp((char*)pModName, "builtin:", sizeof("builtin:")-1)) {
 					if(pModInfo->bSetModCnfCalled) {
 						errmsg.LogError(0, RS_RET_DUP_PARAM,
@@ -1061,6 +1060,11 @@ Load(uchar *pModName, sbool bConfLoad, struct nvlst *lst)
 							pModInfo->setModCnf(lst);
 						pModInfo->bSetModCnfCalled = 1;
 					}
+				} else {
+					/* regular modules need to be added to conf list (for
+					 * builtins, this happend during initial load).
+					 */
+					addModToCnfList(pNew, pLast);
 				}
 			}
 		}

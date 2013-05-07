@@ -148,6 +148,7 @@ rsgtfileConstruct(gtctx ctx)
 		goto done;
 	gf->ctx = ctx;
 	gf->hashAlg = ctx->hashAlg;
+	gf->blockSizeLimit = ctx->blockSizeLimit;
 	gf->bKeepRecordHashes = ctx->bKeepRecordHashes;
 	gf->bKeepTreeHashes = ctx->bKeepTreeHashes;
 	gf->x_prev = NULL;
@@ -775,7 +776,7 @@ done:
 static int
 timestampIt(gtfile gf, GTDataHash *hash)
 {
-	unsigned char *der;
+	unsigned char *der = NULL;
 	size_t lenDer;
 	int r = GT_OK;
 	int ret = 0;

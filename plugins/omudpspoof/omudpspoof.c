@@ -435,8 +435,6 @@ UDPSend(instanceData *pData, uchar *pszSourcename, char *msg, size_t len)
 
 		/* Write it to the wire. */
 		lsent = libnet_write(pData->libnet_handle);
-		dbgprintf("DDDD: omudpspoof stage 1 return state %d (expected %d), fd %d\n", lsent,
-		          (int) (LIBNET_IPV4_H+LIBNET_UDP_H+pktLen), pData->libnet_handle->fd);
 		if(lsent != (int) (LIBNET_IPV4_H+LIBNET_UDP_H+pktLen)) {
 			/* note: access to fd is a libnet internal. If a newer version of libnet does
 			 * not expose that member, we should simply remove it. However, while it is there
@@ -490,7 +488,6 @@ UDPSend(instanceData *pData, uchar *pszSourcename, char *msg, size_t len)
 			}
 			/* Write it to the wire. */
 			lsent = libnet_write(pData->libnet_handle);
-			dbgprintf("DDDD: omudpspoof stage 1 return state %d (expected %d)\n", lsent, (int) (LIBNET_IPV4_H+pktLen));
 			if(lsent != (int) (LIBNET_IPV4_H+pktLen)) {
 				DBGPRINTF("omudpspoof: fragment write error len %d, sent %d: %s\n",
 					  LIBNET_IPV4_H+LIBNET_UDP_H+len, lsent, libnet_geterror(pData->libnet_handle));

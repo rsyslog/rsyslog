@@ -18,6 +18,7 @@ librsyslog_la_SOURCES = \
 	im-helper.h \
 	obj-types.h \
 	sigprov.h \
+	cryprov.h \
 	nsd.h \
 	glbl.h \
 	glbl.c \
@@ -132,7 +133,7 @@ pkglib_LTLIBRARIES += lmnet.la lmnetstrms.la
 # 
 lmnet_la_SOURCES = net.c net.h
 lmnet_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
-lmnet_la_LDFLAGS = -module -avoid-version
+lmnet_la_LDFLAGS = -module -avoid-version ../compat/compat_la-getifaddrs.lo
 lmnet_la_LIBADD =
 
 # network stream master class and stream factory
@@ -184,7 +185,7 @@ if ENABLE_LIBGCRYPT
    pkglib_LTLIBRARIES += lmcry_gcry.la
    lmcry_gcry_la_SOURCES = lmcry_gcry.c lmcry_gcry.h
    lmcry_gcry_la_CPPFLAGS = $(RSRT_CFLAGS) $(LIBGCRYPT_CFLAGS)
-   lmcry_gcry_la_LDFLAGS = -module -avoid-version `libgcrypt-config --libs`
+   lmcry_gcry_la_LDFLAGS = -module -avoid-version
    lmcry_gcry_la_LIBADD = libgcry.la $(LIBGCRYPT_LIBS)
 endif
 

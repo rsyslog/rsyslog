@@ -59,7 +59,7 @@
 <p><b>Caveats/Known Bugs:</b></p><ul><li>None.</li></ul>
 <p><b>Sample:</b></p>
 <p>The following command sends all syslog messages to a remote server via TCP port 10514.</p>
-<textarea rows="5" cols="60">Module (path="builtin:omfwd")
+<textarea rows="5" cols="60">Module (load="builtin:omfwd")
 *.* action(type="omfwd" 
 Target="192.168.2.11"
 Port="10514"

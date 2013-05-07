@@ -32,9 +32,8 @@
 #include <errno.h>
 #include <string.h>
 #include <ctype.h>
-#ifdef  OS_LINUX
 #include <sys/klog.h>
-#endif
+#include <sys/sysinfo.h>
 #include <json/json.h>
 
 #include "rsyslog.h"
@@ -58,9 +57,8 @@ submitSyslog(uchar *buf)
 {
 	long offs = 0;
 	struct timeval tv;
-	long int timestamp = 0;
-	struct timespec monotonic;
-	struct timespec realtime;
+	struct sysinfo info;
+	unsigned long int timestamp = 0;
 	char name[1024];
 	char value[1024];
 	char msg[1024];
@@ -87,12 +85,12 @@ submitSyslog(uchar *buf)
 
 	/* get timestamp */
 	for (; isdigit(*buf); buf++) {
-		timestamp += (timestamp * 10) + (*buf - '0');
+		timestamp = (timestamp * 10) + (*buf - '0');
 	}
 
 	while (*buf != ';') {
 		buf++; /* skip everything till the first ; */
-	} 
+	}
 	buf++; /* skip ; */
 
 	/* get message */
@@ -131,10 +129,24 @@ submitSyslog(uchar *buf)
 	}
 
 	/* calculate timestamp */
-	clock_gettime(CLOCK_MONOTONIC, &monotonic);
-	clock_gettime(CLOCK_REALTIME, &realtime);
-	tv.tv_sec = realtime.tv_sec + ((timestamp / 1000000l) - monotonic.tv_sec);
-	tv.tv_usec = (realtime.tv_nsec + ((timestamp / 1000000000l) - monotonic.tv_nsec)) / 1000;
+	sysinfo(&info);
+	gettimeofday(&tv, NULL);
+
+	/* get boot time */
+	tv.tv_sec -= info.uptime;
+
+	tv.tv_sec += timestamp / 1000000;
+	tv.tv_usec += timestamp % 1000000;
+
+	while (tv.tv_usec < 0) {
+		tv.tv_sec--;
+		tv.tv_usec += 1000000;
+	}
+
+	while (tv.tv_usec >= 1000000) {
+		tv.tv_sec++;
+		tv.tv_usec -= 1000000;
+	}
 
 	Syslog(priority, (uchar *)msg, &tv, json);
 }
@@ -146,7 +158,6 @@ rsRetVal
 klogWillRun(modConfData_t *pModConf)
 {
 	char errmsg[2048];
-	int r;
 	DEFiRet;
 
 	fklog = open(_PATH_KLOG, O_RDONLY, 0);
@@ -154,17 +165,6 @@ klogWillRun(modConfData_t *pModConf)
 		imkmsgLogIntMsg(RS_RET_ERR_OPEN_KLOG, "imkmsg: cannot open kernel log(%s): %s.",
 			_PATH_KLOG, rs_strerror_r(errno, errmsg, sizeof(errmsg)));
 		ABORT_FINALIZE(RS_RET_ERR_OPEN_KLOG);
-	}
-
-	/* Set level of kernel console messaging.. */
-	if(pModConf->console_log_level != -1) {
-		r = klogctl(8, NULL, pModConf->console_log_level);
-		if(r != 0) {
-			imkmsgLogIntMsg(LOG_WARNING, "imkmsg: cannot set console log level: %s",
-				rs_strerror_r(errno, errmsg, sizeof(errmsg)));
-			/* make sure we do not try to re-set! */
-			pModConf->console_log_level = -1;
-		}
 	}
 
 finalize_it:
