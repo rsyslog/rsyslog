@@ -26,14 +26,21 @@
 
 #include <gcrypt.h>
 
+/* we unfortunately need to have two different param names depending on the
+ * context in which parameters are set. Other than (re/over)engineering the core
+ * interface, we just define some values to keep track of that.
+ */
+#define CRYPROV_PARAMTYPE_REGULAR 0
+#define CRYPROV_PARAMTYPE_DISK 1
+
 /* interface */
 BEGINinterface(cryprov) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Construct)(void *ppThis);
-	rsRetVal (*SetCnfParam)(void *ppThis, struct nvlst *lst);
+	rsRetVal (*SetCnfParam)(void *ppThis, struct nvlst *lst, int paramType);
 	rsRetVal (*Destruct)(void *ppThis);
 	rsRetVal (*OnFileOpen)(void *pThis, uchar *fn, void *pFileInstData);
 	rsRetVal (*Encrypt)(void *pFileInstData, uchar *buf, size_t *lenBuf);
 	rsRetVal (*OnFileClose)(void *pFileInstData, off64_t offsLogfile);
 ENDinterface(cryprov)
-#define cryprovCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
+#define cryprovCURR_IF_VERSION 2 /* increment whenever you change the interface structure! */
 #endif /* #ifndef INCLUDED_CRYPROV_H */

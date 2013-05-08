@@ -1089,7 +1089,7 @@ initCryprov(instanceData *pData, struct nvlst *lst)
 				szDrvrName);
 		ABORT_FINALIZE(RS_RET_CRYPROV_ERR);
 	}
-	CHKiRet(pData->cryprov.SetCnfParam(pData->cryprovData, lst));
+	CHKiRet(pData->cryprov.SetCnfParam(pData->cryprovData, lst, CRYPROV_PARAMTYPE_REGULAR));
 
 	dbgprintf("loaded crypto provider %s, data instance at %p\n",
 		  szDrvrName, pData->cryprovData);
