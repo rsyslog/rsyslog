@@ -2760,6 +2760,12 @@ qqueueApplyCnfParam(qqueue_t *pThis, struct cnfparamvals *pvals)
 			  "param '%s'\n", pblk.descr[i].name);
 		}
 	}
+	if(pThis->qType == QUEUETYPE_DISK && pThis->pszFilePrefix == NULL) {
+		errmsg.LogError(0, RS_RET_QUEUE_DISK_NO_FN, "error on queue '%s', disk mode selected, but "
+			        "no queue file name given; queue type changed to 'linkedList'",
+				obj.GetName((obj_t*) pThis));
+		pThis->qType = QUEUETYPE_LINKEDLIST;
+	}
 	cnfparamvalsDestruct(pvals, &pblk);
 	return RS_RET_OK;
 }

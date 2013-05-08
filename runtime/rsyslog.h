@@ -412,6 +412,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_EI_INVLD_FILE = -2325,/**< header indicates the file is no .encinfo file */
 	RS_RET_CRY_INVLD_ALGO = -2326,/**< user specified invalid (unkonwn) crypto algorithm */
 	RS_RET_CRY_INVLD_MODE = -2327,/**< user specified invalid (unkonwn) crypto mode */
+	RS_RET_QUEUE_DISK_NO_FN = -2328,/**< disk queue configured, but filename not set */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */
