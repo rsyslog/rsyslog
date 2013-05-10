@@ -30,6 +30,7 @@
 #include "batch.h"
 #include "stream.h"
 #include "statsobj.h"
+#include "cryprov.h"
 
 /* support for the toDelete list */
 typedef struct toDeleteLst_s toDeleteLst_t;
@@ -168,6 +169,11 @@ struct queue_s {
 			strm_t *pReadDel; /* current file for deleting */
 		} disk;
 	} tVars;
+	sbool	useCryprov;	/* quicker than checkig ptr (1 vs 8 bytes!) */
+	uchar *cryprovName; /* crypto provider to use */
+	cryprov_if_t cryprov;	/* ptr to crypto provider interface */
+	uchar 	*cryprovNameFull;/* full internal crypto provider name */
+	void	*cryprovData;	/* opaque data ptr for provider use */
 	DEF_ATOMIC_HELPER_MUT(mutQueueSize);
 	DEF_ATOMIC_HELPER_MUT(mutLogDeq);
 	/* for statistics subsystem */
@@ -197,9 +203,8 @@ rsRetVal qqueueSetFilePrefix(qqueue_t *pThis, uchar *pszPrefix, size_t iLenPrefi
 rsRetVal qqueueConstruct(qqueue_t **ppThis, queueType_t qType, int iWorkerThreads,
 		        int iMaxQueueSize, rsRetVal (*pConsumer)(void*,batch_t*, int*));
 rsRetVal qqueueEnqObjDirectBatch(qqueue_t *pThis, batch_t *pBatch);
-rsRetVal qqueueDoCnfParams(struct nvlst *lst, struct cnfparamvals **ppvals);
-int queueCnfParamsSet(struct cnfparamvals *pvals);
-rsRetVal qqueueApplyCnfParam(qqueue_t *pThis, struct cnfparamvals *pvals);
+int queueCnfParamsSet(struct nvlst *lst);
+rsRetVal qqueueApplyCnfParam(qqueue_t *pThis, struct nvlst *lst);
 void qqueueSetDefaultsRulesetQueue(qqueue_t *pThis);
 void qqueueSetDefaultsActionQueue(qqueue_t *pThis);
 void qqueueDbgPrint(qqueue_t *pThis);

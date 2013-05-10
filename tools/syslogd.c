@@ -1057,7 +1057,7 @@ finalize_it:
  * the time being (remember that we want to restructure config processing at large!).
  * rgerhards, 2009-10-27
  */
-rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName, struct cnfparamvals *queueParams)
+rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName, struct nvlst *lst)
 {
 	struct queuefilenames_s *qfn;
 	uchar *qfname = NULL;
@@ -1073,7 +1073,7 @@ rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName, struct cnfpara
 	/* name our main queue object (it's not fatal if it fails...) */
 	obj.SetName((obj_t*) (*ppQueue), pszQueueName);
 
-	if(queueParams == NULL) { /* use legacy parameters? */
+	if(lst == NULL) { /* use legacy parameters? */
 		/* ... set some properties ... */
 	#	define setQPROP(func, directive, data) \
 		CHKiRet_Hdlr(func(*ppQueue, data)) { \
@@ -1130,7 +1130,7 @@ rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName, struct cnfpara
 	#	undef setQPROPstr
 	} else { /* use new style config! */
 		qqueueSetDefaultsRulesetQueue(*ppQueue);
-		qqueueApplyCnfParam(*ppQueue, queueParams);
+		qqueueApplyCnfParam(*ppQueue, lst);
 	}
 
 	/* ... and finally start the queue! */
@@ -1887,7 +1887,7 @@ int realMain(int argc, char **argv)
 			if(glbl.GetSourceIPofLocalClient() != NULL) {
 				fprintf (stderr, "rsyslogd: Only one -S argument allowed, the first one is taken.\n");
 			} else {
-				glbl.SetSourceIPofLocalClient(arg);
+				glbl.SetSourceIPofLocalClient((uchar*)arg);
 			}
 			break;
 		case 'f':		/* configuration file */

@@ -357,7 +357,7 @@ finalize_it:
 /* action construction finalizer
  */
 rsRetVal
-actionConstructFinalize(action_t *pThis, struct cnfparamvals *queueParams)
+actionConstructFinalize(action_t *pThis, struct nvlst *lst)
 {
 	DEFiRet;
 	uchar pszAName[64]; /* friendly name of our action */
@@ -432,7 +432,7 @@ actionConstructFinalize(action_t *pThis, struct cnfparamvals *queueParams)
 	obj.SetName((obj_t*) pThis->pQueue, pszAName);
 	qqueueSetpAction(pThis->pQueue, pThis);
 
-	if(queueParams == NULL) { /* use legacy params? */
+	if(lst == NULL) { /* use legacy params? */
 		/* ... set some properties ... */
 #		define setQPROP(func, directive, data) \
 		CHKiRet_Hdlr(func(pThis->pQueue, data)) { \
@@ -466,7 +466,7 @@ actionConstructFinalize(action_t *pThis, struct cnfparamvals *queueParams)
 	} else {
 		/* we have v6-style config params */
 		qqueueSetDefaultsActionQueue(pThis->pQueue);
-		qqueueApplyCnfParam(pThis->pQueue, queueParams);
+		qqueueApplyCnfParam(pThis->pQueue, lst);
 	}
 
 #	undef setQPROP
@@ -1788,7 +1788,7 @@ actionApplyCnfParam(action_t *pAction, struct cnfparamvals *pvals)
 rsRetVal
 addAction(action_t **ppAction, modInfo_t *pMod, void *pModData,
 	  omodStringRequest_t *pOMSR, struct cnfparamvals *actParams,
-	  struct cnfparamvals *queueParams, int bSuspended)
+	  struct nvlst *lst, int bSuspended)
 {
 	DEFiRet;
 	int i;
@@ -1881,7 +1881,7 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData,
 	if(bSuspended)
 		actionSuspend(pAction);
 
-	CHKiRet(actionConstructFinalize(pAction, queueParams));
+	CHKiRet(actionConstructFinalize(pAction, lst));
 	
 	/* TODO: if we exit here, we have a memory leak... */
 
@@ -1940,7 +1940,6 @@ rsRetVal
 actionNewInst(struct nvlst *lst, action_t **ppAction)
 {
 	struct cnfparamvals *paramvals;
-	struct cnfparamvals *queueParams;
 	modInfo_t *pMod;
 	uchar *cnfModName = NULL;
 	omodStringRequest_t *pOMSR;
@@ -1971,9 +1970,7 @@ actionNewInst(struct nvlst *lst, action_t **ppAction)
 		FINALIZE; /* iRet is already set to error state */
 	}
 
-	qqueueDoCnfParams(lst, &queueParams);
-
-	if((iRet = addAction(&pAction, pMod, pModData, pOMSR, paramvals, queueParams,
+	if((iRet = addAction(&pAction, pMod, pModData, pOMSR, paramvals, lst,
 	                    (iRet == RS_RET_SUSPENDED)? 1 : 0)) == RS_RET_OK) {
 		/* check if the module is compatible with select features
 		 * (currently no such features exist) */

@@ -928,7 +928,6 @@ rsRetVal
 rulesetProcessCnf(struct cnfobj *o)
 {
 	struct cnfparamvals *pvals;
-	struct cnfparamvals *queueParams;
 	rsRetVal localRet;
 	uchar *rsName = NULL;
 	uchar *parserName;
@@ -974,11 +973,10 @@ rulesetProcessCnf(struct cnfobj *o)
 	}
 
 	/* pick up ruleset queue parameters */
-	qqueueDoCnfParams(o->nvlst, &queueParams);
-	if(queueCnfParamsSet(queueParams)) {
+	if(queueCnfParamsSet(o->nvlst)) {
 		rsname = (pRuleset->pszName == NULL) ? (uchar*) "[ruleset]" : pRuleset->pszName;
 		DBGPRINTF("adding a ruleset-specific \"main\" queue for ruleset '%s'\n", rsname);
-		CHKiRet(createMainQueue(&pRuleset->pQueue, rsname, queueParams));
+		CHKiRet(createMainQueue(&pRuleset->pQueue, rsname, o->nvlst));
 	}
 
 finalize_it:
