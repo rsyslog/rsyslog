@@ -128,6 +128,7 @@ relpRetVal relpSessGetUnacked(relpSess_t *pThis, relpSendbuf_t **ppSendbuf, relp
 relpRetVal relpSessTryReestablish(relpSess_t *pThis);
 relpRetVal relpSessSetProtocolVersion(relpSess_t *pThis, int protocolVersion);
 relpRetVal relpSessSetTimeout(relpSess_t *pThis, unsigned timeout);
+relpRetVal relpSessSetClientIP(relpSess_t *pThis, unsigned char *ip);
 relpRetVal relpSessConstructOffers(relpSess_t *pThis, relpOffers_t **ppOffers);
 relpRetVal relpSessSendSyslog(relpSess_t *pThis, unsigned char *pMsg, size_t lenMsg);
 relpRetVal relpSessSetEnableCmd(relpSess_t *pThis, unsigned char *pszCmd, relpCmdEnaState_t stateCmd);

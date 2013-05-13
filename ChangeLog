@@ -1,5 +1,11 @@
 ----------------------------------------------------------------------
 Version 1.1.0 - 2013-05-06
+- ABI change: removed relpCltConnect2() API which was against
+  librelp API philosophy
+  This was only introduced in 1.0.6 and been in the code for a very
+  short time. So we decided that the best thing to do is actually
+  remove it (the only known user -rsyslog- has also been changed
+  accordingly)
 ----------------------------------------------------------------------
 Version 1.0.6 - 2013-05-06
 - enhanced API to permit binding a client to a specific IP address
