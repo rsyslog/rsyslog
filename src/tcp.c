@@ -54,6 +54,9 @@
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 #endif
 
+static int called_gnutls_global_init = 0;
+
+
 /** Construct a RELP tcp instance
  * This is the first thing that a caller must do before calling any
  * RELP function. The relp tcp must only destructed after all RELP
@@ -237,6 +240,16 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 
+/* Enable TLS mode. */
+relpRetVal
+relpTcpEnableTLS(relpTcp_t *pThis)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Tcp);
+	pThis->bEnableTLS = 1;
+	LEAVE_RELPFUNC;
+}
+
 
 
 /* accept an incoming connection request, sock provides the socket on which we can
@@ -384,23 +397,6 @@ relpTcpLstnInit(relpTcp_t *pThis, unsigned char *pLstnPort, int ai_family)
 		}
 
 
-#if 0 // Do we really (still) need this?
-
-		/* We need to enable BSD compatibility. Otherwise an attacker
-		 * could flood our log files by sending us tons of ICMP errors.
-		 */
-#ifndef BSD	
-		if(net.should_use_so_bsdcompat()) {
-			if (setsockopt(*s, SOL_SOCKET, SO_BSDCOMPAT,
-					(char *) &on, sizeof(on)) < 0) {
-				errmsg.LogError(NO_ERRCODE, "TCP setsockopt(BSDCOMPAT)");
-                                close(*s);
-				*s = -1;
-				continue;
-			}
-		}
-#endif
-#endif // #if 0
 
 	        if( (bind(*s, r->ai_addr, r->ai_addrlen) < 0)
 #ifndef IPV6_V6ONLY
@@ -507,6 +503,43 @@ pThis->pEngine->dbgprint("tcpSend returns %d\n", (int) *pLenBuf);
 	LEAVE_RELPFUNC;
 }
 
+static relpRetVal
+relpTcpConnectTLSInit(relpTcp_t *pThis)
+{
+	int r;
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Tcp);
+
+	if(!called_gnutls_global_init) {
+		gnutls_global_init();
+		called_gnutls_global_init = 1;
+	}
+	r = gnutls_anon_allocate_client_credentials(&pThis->anoncred);
+pThis->pEngine->dbgprint("DDDD: gnutls_anon_allocat_client_credentials: %d\n", r);
+	r = gnutls_init(&pThis->session, GNUTLS_CLIENT);
+pThis->pEngine->dbgprint("DDDD: gnutls_init: %d\n", r);
+	/* Use default priorities */
+	gnutls_priority_set_direct (pThis->session, "PERFORMANCE:+ANON-DH:!ARCFOUR-128",
+			      NULL);
+
+	/* put the anonymous credentials to the current session */
+	gnutls_credentials_set(pThis->session, GNUTLS_CRD_ANON, pThis->anoncred);
+
+	gnutls_transport_set_ptr(pThis->session, (gnutls_transport_ptr_t) pThis->sock);
+	//gnutls_handshake_set_timeout(pThis->session, GNUTLS_DEFAULT_HANDSHAKE_TIMEOUT);
+
+	/* Perform the TLS handshake */
+	do
+	{
+		r = gnutls_handshake(pThis->session);
+pThis->pEngine->dbgprint("DDDD: gnutls_handshake: %d: %s\n", r, gnutls_strerror(r));
+	}
+	while(0);
+	//while (r < 0 && gnutls_error_is_fatal(r) == 0);
+
+pThis->pEngine->dbgprint("tcpConnectTLSInit returns\n");
+	LEAVE_RELPFUNC;
+}
 
 /* open a connection to a remote host (server).
  * rgerhards, 2008-03-19
@@ -548,6 +581,10 @@ relpTcpConnect(relpTcp_t *pThis, int family, unsigned char *port, unsigned char 
 
 	if(connect(pThis->sock, res->ai_addr, res->ai_addrlen) != 0) {
 		ABORT_FINALIZE(RELP_RET_IO_ERR);
+	}
+
+	if(pThis->bEnableTLS) {
+		CHKRet(relpTcpConnectTLSInit(pThis));
 	}
 
 finalize_it:

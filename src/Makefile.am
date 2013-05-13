@@ -33,8 +33,8 @@ librelp_la_SOURCES = \
 	cserverclose.c \
 	dbllinklist.h \
 	cmdif.h
-librelp_la_CPPFLAGS = $(PTHREADS_CFLAGS)
-librelp_la_LIBADD = $(rt_libs)
+librelp_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(GNUTLS_CFLAGS)
+librelp_la_LIBADD = $(rt_libs) $(GNUTLS_LIBS)
 librelp_la_LDFLAGS = -version-info 0:0:0
 
 include_HEADERS = librelp.h

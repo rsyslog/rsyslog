@@ -104,6 +104,9 @@ relpCltConnect(relpClt_t *pThis, int protFamily, unsigned char *port, unsigned c
 	CHKRet(relpSessConstruct(&pThis->pSess, pThis->pEngine, NULL));
 	CHKRet(relpSessSetTimeout(pThis->pSess, pThis->timeout));
 	CHKRet(relpSessSetClientIP(pThis->pSess, pThis->clientIP));
+	if(pThis->bEnableTLS) {
+		CHKRet(relpSessEnableTLS(pThis->pSess));
+	}
 	CHKRet(relpSessConnect(pThis->pSess, protFamily, port, host));
 
 finalize_it:
@@ -157,6 +160,16 @@ relpRetVal relpCltSetClientIP(relpClt_t *pThis, unsigned char *ipAddr)
 	free(pThis->clientIP);
 	pThis->clientIP = ipAddr == NULL ? NULL :
 					   (unsigned char*)strdup((char*) ipAddr);
+	LEAVE_RELPFUNC;
+}
+
+/* Enable TLS mode. */
+relpRetVal
+relpCltEnableTLS(relpClt_t *pThis)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Clt);
+	pThis->bEnableTLS = 1;
 	LEAVE_RELPFUNC;
 }
 

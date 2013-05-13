@@ -545,6 +545,12 @@ relpEngineCltConstruct(relpEngine_t *pThis, relpClt_t **ppClt)
 	assert(ppClt != NULL);
 
 	CHKRet(relpCltConstruct(ppClt, pThis));
+// TODO: remove? 2013-05-13
+#if 0
+	if(pThis->bEnableTLS) {
+		CHKRet(relpCltEnableTLS(ppClt, pThis));
+	}
+#endif
 
 	pThis->dbgprint("relp engine create a new client (%p)\n", *ppClt);
 
@@ -594,15 +600,17 @@ relpEngineSetShutdownImmdtPtr(relpEngine_t *pThis, int *ptr)
 		pThis->bShutdownImmdt = ptr;
 }
 
+#if 0 // TODO: remove?
 /* Enable TLS mode. This also requires some other parameters to be
- * set. TODO: think if we can remove that function and detect TLS
- * support simply because these other params are set.
+ * set. Note that the other parameters alone are NOT sufficient to
+ * detect if TLS is desired, as we may use anon mode.
  */
 void
 relpEngineEnableTLS(relpEngine_t *pThis)
 {
 	pThis->bEnableTLS = 1;
 }
+#endif
 
 
 /* Enable or disable a command. Note that a command can not be enabled once

@@ -581,13 +581,10 @@ relpSessSendCommand(relpSess_t *pThis, unsigned char *pCmd, size_t lenCmd,
 		pThis->timeout));
 
 	/* re-try once if automatic retry mode is set */
-pThis->pEngine->dbgprint("send command relp sess state %d\n", pThis->sessState);
 	if(pThis->bAutoRetry && pThis->sessState == eRelpSessState_BROKEN) {
-pThis->pEngine->dbgprint("SendCommand does auto-retry\n");
 		CHKRet(relpSessTryReestablish(pThis));
 	}
 
-pThis->pEngine->dbgprint("sendcommand ready to send, relp sess state %d\n", pThis->sessState);
 	/* then send our data */
 	if(pThis->sessState == eRelpSessState_BROKEN)
 		ABORT_FINALIZE(RELP_RET_SESSION_BROKEN);
@@ -628,7 +625,8 @@ relpSessTryReestablish(relpSess_t *pThis)
 		pThis->pEngine->dbgprint("relp session %p reestablished, now resending %d unacked frames\n",
 					  pThis, pThis->lenUnackedLst);
 	while(pUnackedEtry != NULL) {
-pThis->pEngine->dbgprint("resending frame '%s'\n", pUnackedEtry->pSendbuf->pData + 9 - pUnackedEtry->pSendbuf->lenTxnr);
+		pThis->pEngine->dbgprint("resending frame '%s'\n", pUnackedEtry->pSendbuf->pData + 9
+								   - pUnackedEtry->pSendbuf->lenTxnr);
 		CHKRet(relpFrameRewriteTxnr(pUnackedEtry->pSendbuf, pThis->txnr));
 		pThis->txnr = relpEngineNextTXNR(pThis->txnr);
 		CHKRet(relpSendbufSendAll(pUnackedEtry->pSendbuf, pThis, 0));
@@ -636,7 +634,7 @@ pThis->pEngine->dbgprint("resending frame '%s'\n", pUnackedEtry->pSendbuf->pData
 	}
 
 finalize_it:
-pThis->pEngine->dbgprint("after TryReestablish, sess state %d\n", pThis->sessState);
+	pThis->pEngine->dbgprint("after TryReestablish, sess state %d\n", pThis->sessState);
 	LEAVE_RELPFUNC;
 }
 
@@ -770,6 +768,9 @@ relpSessConnect(relpSess_t *pThis, int protFamily, unsigned char *port, unsigned
 	pThis->sessType = eRelpSess_Client;	/* indicate we have a client session */
 
 	CHKRet(relpTcpConstruct(&pThis->pTcp, pThis->pEngine));
+	if(pThis->bEnableTLS) {
+		CHKRet(relpTcpEnableTLS(pThis->pTcp));
+	}
 	CHKRet(relpTcpConnect(pThis->pTcp, protFamily, port, host, pThis->clientIP));
 	relpSessSetSessState(pThis, eRelpSessState_PRE_INIT);
 
@@ -870,6 +871,15 @@ relpSessSetClientIP(relpSess_t *pThis, unsigned char *ip)
 	LEAVE_RELPFUNC;
 }
 
+/* Enable TLS mode. */
+relpRetVal
+relpSessEnableTLS(relpSess_t *pThis)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Sess);
+	pThis->bEnableTLS = 1;
+	LEAVE_RELPFUNC;
+}
 
 /* set the protocol version to be used by this session
  * rgerhards, 2008-03-25

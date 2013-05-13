@@ -33,6 +33,7 @@
 #ifndef RELPTCP_H_INCLUDED
 #define	RELPTCP_H_INCLUDED
 
+#include <gnutls/gnutls.h>
 #include "relp.h"
 
 /* the RELPTCP object 
@@ -46,6 +47,10 @@ typedef struct relpTcp_s {
 	int sock;	/**< the socket we use for regular, single-socket, operations */
 	int *socks;	/**< the socket(s) we use for listeners, element 0 has nbr of socks */
 	int iSessMax;	/**< maximum number of sessions permitted */
+	/* variables for TLS support */
+	int bEnableTLS;
+	gnutls_anon_client_credentials_t anoncred;
+	gnutls_session_t session;
 } relpTcp_t;
 
 
@@ -63,5 +68,6 @@ relpRetVal relpTcpAcceptConnReq(relpTcp_t **ppThis, int sock, relpEngine_t *pEng
 relpRetVal relpTcpRcv(relpTcp_t *pThis, relpOctet_t *pRcvBuf, ssize_t *pLenBuf);
 relpRetVal relpTcpSend(relpTcp_t *pThis, relpOctet_t *pBuf, ssize_t *pLenBuf);
 relpRetVal relpTcpConnect(relpTcp_t *pThis, int family, unsigned char *port, unsigned char *host, unsigned char *clientIP);
+relpRetVal relpTcpEnableTLS(relpTcp_t *pThis);
 
 #endif /* #ifndef RELPTCP_H_INCLUDED */

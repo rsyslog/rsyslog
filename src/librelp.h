@@ -165,6 +165,7 @@ relpRetVal relpCltConnect(relpClt_t *pThis, int protFamily, unsigned char *port,
 relpRetVal relpCltSendSyslog(relpClt_t *pThis, unsigned char *pMsg, size_t lenMsg);
 relpRetVal relpCltSetTimeout(relpClt_t *pThis, unsigned timeout);
 relpRetVal relpCltSetClientIP(relpClt_t *pThis, unsigned char *ipAddr);
+relpRetVal relpCltEnableTLS(relpClt_t *pThis);
 relpRetVal relpCltReconnect(relpClt_t *pThis);
 
 
