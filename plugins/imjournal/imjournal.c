@@ -140,13 +140,16 @@ readjournal() {
 
 	/* Information from messages */
 	char *message;
+	char *sys_pid;
 	char *sys_iden;
 	char *sys_iden_help;
 
 	const void *get;
+	const void *pidget;
 	char *parse;
 	char *get2;
 	size_t length;
+	size_t pidlength;
 
 	const void *equal_sign;
 	struct json_object *jval;
@@ -204,7 +207,7 @@ readjournal() {
 		goto free_message;
 	}
 
-	/* Get message identifier and add ':' */
+	/* Get message identifier, client pid and add ':' */
 	if (sd_journal_get_data(j, "SYSLOG_IDENTIFIER", &get, &length) >= 0) {
 		sys_iden = strndup(get+18, length-18);
 	} else {
@@ -215,12 +218,30 @@ readjournal() {
 		goto free_message;
 	}
 
-	asprintf(&sys_iden_help, "%s:", sys_iden);
+	if (sd_journal_get_data(j, "SYSLOG_PID", &pidget, &pidlength) >= 0) {
+		sys_pid = strndup(pidget+11, pidlength-11);
+		if (sys_pid == NULL) {
+			iRet = RS_RET_OUT_OF_MEMORY;
+			free (sys_iden);
+			goto free_message;
+		}
+	} else {
+		sys_pid = NULL;
+	}
+
+	if (sys_pid) {
+		asprintf(&sys_iden_help, "%s[%s]:", sys_iden, sys_pid);
+	} else {
+		asprintf(&sys_iden_help, "%s:", sys_iden);
+	}
+
+	free (sys_iden);
+	free (sys_pid);
+
 	if (sys_iden_help == NULL) {
 		iRet = RS_RET_OUT_OF_MEMORY;
 		goto finalize_it;
 	}
-	free (sys_iden);
 
 	json = json_object_new_object();
 
