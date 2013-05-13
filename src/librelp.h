@@ -158,6 +158,7 @@ relpRetVal relpEngineSetSyslogRcv2(relpEngine_t *pThis,
 				  relpRetVal (*pCB)(void*, unsigned char*, unsigned char*, unsigned char*, size_t));
 relpRetVal relpEngineSetEnableCmd(relpEngine_t *pThis, unsigned char *pszCmd, relpCmdEnaState_t stateCmd);
 relpRetVal relpEngineSetDnsLookupMode(relpEngine_t *pThis, int iMode);
+void relpEngineEnableTLS(relpEngine_t *pThis);
 
 /* exposed relp client functions */
 relpRetVal relpCltConnect(relpClt_t *pThis, int protFamily, unsigned char *port, unsigned char *host);

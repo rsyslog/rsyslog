@@ -199,8 +199,9 @@ relpSessRcvData(relpSess_t *pThis)
 
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
-memset(rcvBuf, 0, RELP_RCV_BUF_SIZE);
 
+// TODO: remove
+memset(rcvBuf, 0, RELP_RCV_BUF_SIZE);
 	lenBuf = RELP_RCV_BUF_SIZE;
 	CHKRet(relpTcpRcv(pThis->pTcp, rcvBuf, &lenBuf));
 

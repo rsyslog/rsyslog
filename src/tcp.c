@@ -1,6 +1,6 @@
 /* This implements the relp mapping onto TCP.
  *
- * Copyright 2008 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2013 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of librelp.
  *
@@ -44,7 +44,15 @@
 #include <assert.h>
 #include "relp.h"
 #include "tcp.h"
+#include <gnutls/gnutls.h>
+#include <gnutls/x509.h>
+#if GNUTLS_VERSION_NUMBER <= 0x020b00
+#	include <gcrypt.h>
+#endif
 
+#if GNUTLS_VERSION_NUMBER <= 0x020b00
+GCRY_THREAD_OPTION_PTHREAD_IMPL;
+#endif
 
 /** Construct a RELP tcp instance
  * This is the first thing that a caller must do before calling any

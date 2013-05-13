@@ -1,0 +1,4 @@
+DO NOT DELETE THIS FILE.
+It's sole purpose is to make sure
+the m4 subdirectory is created during
+git checkout (a simple aid...)

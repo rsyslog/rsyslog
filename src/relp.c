@@ -594,6 +594,16 @@ relpEngineSetShutdownImmdtPtr(relpEngine_t *pThis, int *ptr)
 		pThis->bShutdownImmdt = ptr;
 }
 
+/* Enable TLS mode. This also requires some other parameters to be
+ * set. TODO: think if we can remove that function and detect TLS
+ * support simply because these other params are set.
+ */
+void
+relpEngineEnableTLS(relpEngine_t *pThis)
+{
+	pThis->bEnableTLS = 1;
+}
+
 
 /* Enable or disable a command. Note that a command can not be enabled once
  * it has been set to forbidden! There will be no error return state in this
