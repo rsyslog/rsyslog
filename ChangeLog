@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 7.3.15  [beta] 2013-05-0?
+- bugfix: omrelp legacy config parameters set a timeout of zero
+  which lead the legacy config to be unusable.
 - bugfix: segfault on startup if a disk queue was configure without file
   name
   Now this triggers an error message and the queue is changed to
