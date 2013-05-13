@@ -172,8 +172,8 @@ struct queue_s {
 	sbool	useCryprov;	/* quicker than checkig ptr (1 vs 8 bytes!) */
 	uchar *cryprovName; /* crypto provider to use */
 	cryprov_if_t cryprov;	/* ptr to crypto provider interface */
+	void *cryprovData; /* opaque data ptr for provider use */
 	uchar 	*cryprovNameFull;/* full internal crypto provider name */
-	void	*cryprovData;	/* opaque data ptr for provider use */
 	DEF_ATOMIC_HELPER_MUT(mutQueueSize);
 	DEF_ATOMIC_HELPER_MUT(mutLogDeq);
 	/* for statistics subsystem */

@@ -257,7 +257,8 @@ doPhysOpen(strm_t *pThis)
 
 	if(pThis->cryprov != NULL) {
 		CHKiRet(pThis->cryprov->OnFileOpen(pThis->cryprovData,
-		 	pThis->pszCurrFName, &pThis->cryprovFileData));
+		 	pThis->pszCurrFName, &pThis->cryprovFileData,
+			(pThis->tOperationsMode == STREAMMODE_READ) ? 'r' : 'w'));
 	}
 finalize_it:
 	RETiRet;
@@ -568,11 +569,16 @@ strmReadBuf(strm_t *pThis)
 		CHKiRet(strmOpenFile(pThis));
 		iLenRead = read(pThis->fd, pThis->pIOBuf, pThis->sIOBufSize);
 		DBGOPRINT((obj_t*) pThis, "file %d read %ld bytes\n", pThis->fd, iLenRead);
+		/* end crypto */
 		if(iLenRead == 0) {
 			CHKiRet(strmHandleEOF(pThis));
 		} else if(iLenRead < 0)
 			ABORT_FINALIZE(RS_RET_IO_ERROR);
 		else { /* good read */
+			/* here we place our crypto interface */
+			if(pThis->cryprov != NULL) {
+				pThis->cryprov->Decrypt(pThis->cryprovFileData, pThis->pIOBuf, &iLenRead);
+			}
 			pThis->iBufPtrMax = iLenRead;
 			bRun = 0;	/* exit loop */
 		}

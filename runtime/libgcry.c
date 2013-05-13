@@ -49,8 +49,10 @@
 #include <errno.h>
 
 #include "rsyslog.h"
+#include "srUtils.h"
 #include "libgcry.h"
 
+#define READBUF_SIZE 4096	/* size of the read buffer */
 
 static rsRetVal
 eiWriteRec(gcryfile gf, char *recHdr, size_t lenRecHdr, char *buf, size_t lenBuf)
@@ -90,19 +92,66 @@ finalize_it:
 	RETiRet;
 }
 
+static rsRetVal
+eiRead(gcryfile gf)
+{
+	ssize_t nRead;
+	DEFiRet;
+
+	if(gf->readBuf == NULL) {
+		CHKmalloc(gf->readBuf = malloc(READBUF_SIZE));
+	}
+
+	nRead = read(gf->fd, gf->readBuf, READBUF_SIZE);
+	if(nRead <= 0) { /* TODO: provide specific EOF case? */
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+	gf->readBufMaxIdx = (int16_t) nRead;
+	gf->readBufIdx = 0;
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* returns EOF on any kind of error */
+static int
+eiReadChar(gcryfile gf)
+{
+	int c;
+
+	if(gf->readBufIdx >= gf->readBufMaxIdx) {
+		if(eiRead(gf) != RS_RET_OK) {
+			c = EOF;
+			goto finalize_it;
+		}
+	}
+	c = gf->readBuf[gf->readBufIdx++];
+finalize_it:
+	return c;
+}
+
 
 static rsRetVal
 eiCheckFiletype(gcryfile gf)
 {
 	char hdrBuf[128];
 	size_t toRead, didRead;
+	sbool bNeedClose = 0;
 	DEFiRet;
 
-	CHKiRet(eiOpenRead(gf));
+	if(gf->fd == -1) {
+		bNeedClose = 1;
+		CHKiRet(eiOpenRead(gf));
+	}
+
 	if(Debug) memset(hdrBuf, 0, sizeof(hdrBuf)); /* for dbgprintf below! */
 	toRead = sizeof("FILETYPE:")-1 + sizeof(RSGCRY_FILETYPE_NAME)-1 + 1;
 	didRead = read(gf->fd, hdrBuf, toRead);
-	close(gf->fd);
+	if(bNeedClose) {
+		close(gf->fd);
+		gf->fd = -1;
+	}
 	DBGPRINTF("eiCheckFiletype read %d bytes: '%s'\n", didRead, hdrBuf);
 	if(   didRead != toRead
 	   || strncmp(hdrBuf, "FILETYPE:" RSGCRY_FILETYPE_NAME "\n", toRead))
@@ -110,6 +159,79 @@ eiCheckFiletype(gcryfile gf)
 finalize_it:
 	RETiRet;
 }
+
+/* rectype/value must be EIF_MAX_*_LEN+1 long!
+ * returns 0 on success or something else on error/EOF
+ */
+static rsRetVal
+eiGetRecord(gcryfile gf, char *rectype, char *value)
+{
+	unsigned short i, j;
+	int c;
+	DEFiRet;
+
+	for(i = 0 ; i < EIF_MAX_RECTYPE_LEN ; ++i) {
+		c = eiReadChar(gf);
+		if(c == ':' || c == EOF)
+			break;
+		rectype[i] = c;
+	}
+	if(c != ':') { ABORT_FINALIZE(RS_RET_ERR); }
+	rectype[i] = '\0';
+	j = 0;
+	for(++i ; i < EIF_MAX_VALUE_LEN ; ++i, ++j) {
+		c = eiReadChar(gf);
+		if(c == '\n' || c == EOF)
+			break;
+		value[j] = c;
+	}
+	if(c != '\n') { ABORT_FINALIZE(RS_RET_ERR); }
+	value[j] = '\0';
+finalize_it:
+	RETiRet;
+}
+
+static rsRetVal
+eiGetIV(gcryfile gf, uchar *iv, size_t leniv)
+{
+	char rectype[EIF_MAX_RECTYPE_LEN+1];
+	char value[EIF_MAX_VALUE_LEN+1];
+	size_t valueLen;
+	unsigned short i, j;
+	unsigned char nibble;
+	DEFiRet;
+
+	CHKiRet(eiGetRecord(gf, rectype, value));
+	if(strcmp(rectype, "IV")) {
+		DBGPRINTF("no IV record found when expected, record type "
+			"seen is '%s'\n", rectype);
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+	valueLen = strlen(value);
+	if(valueLen/2 != leniv) {
+		DBGPRINTF("length of IV is %d, expected %d\n",
+			valueLen/2, leniv);
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
+	for(i = j = 0 ; i < valueLen ; ++i) {
+		if(value[i] >= '0' && value[i] <= '9')
+			nibble = value[i] - '0';
+		else if(value[i] >= 'a' && value[i] <= 'f')
+			nibble = value[i] - 'a' + 10;
+		else {
+			DBGPRINTF("invalid IV '%s'\n", value);
+			ABORT_FINALIZE(RS_RET_ERR);
+		}
+		if(i % 2 == 0)
+			iv[j] = nibble << 4;
+		else
+			iv[j++] |= nibble;
+	}
+finalize_it:
+	RETiRet;
+}
+
 
 static rsRetVal
 eiOpenAppend(gcryfile gf)
@@ -180,7 +302,9 @@ eiClose(gcryfile gf, off64_t offsLogfile)
 	/* 2^64 is 20 digits, so the snprintf buffer is large enough */
 	len = snprintf(offs, sizeof(offs), "%lld", offsLogfile);
 	eiWriteRec(gf, "END:", 4, offs, len);
+	free(gf->readBuf);
 	close(gf->fd);
+	gf->fd = -1;
 	DBGPRINTF("encryption info file %s: closed\n", gf->eiName);
 }
 
@@ -193,6 +317,7 @@ gcryfileConstruct(gcryctx ctx, gcryfile *pgf, uchar *logfn)
 
 	CHKmalloc(gf = calloc(1, sizeof(struct gcryfile_s)));
 	gf->ctx = ctx;
+	gf->fd = -1;
 	snprintf(fn, sizeof(fn), "%s%s", logfn, ENCINFO_SUFFIX);
 	fn[MAXFNAME] = '\0'; /* be on save side */
 	gf->eiName = (uchar*) strdup(fn);
@@ -246,13 +371,13 @@ addPadding(gcryfile pF, uchar *buf, size_t *plen)
 }
 
 static inline void
-removePadding(char *buf, size_t *plen)
+removePadding(uchar *buf, size_t *plen)
 {
 	unsigned len = (unsigned) *plen;
 	unsigned iSrc, iDst;
-	char *frstNUL;
+	uchar *frstNUL;
 
-	frstNUL = strchr(buf, 0x00);
+	frstNUL = (uchar*)strchr((char*)buf, 0x00);
 	if(frstNUL == NULL)
 		goto done;
 	iDst = iSrc = frstNUL - buf;
@@ -343,8 +468,31 @@ seedIV(gcryfile gf, uchar **iv)
 	}
 }
 
+static inline rsRetVal
+readIV(gcryfile gf, uchar **iv)
+{
+	rsRetVal localRet;
+	DEFiRet;
+
+	 do {
+		localRet = eiOpenRead(gf);
+		if(localRet == RS_RET_EI_NO_EXISTS) {
+			/* wait until it is created */
+			srSleep(0, 10000);
+		} else {
+			CHKiRet(localRet);
+		}
+	} while(localRet != RS_RET_OK);
+	CHKiRet(eiCheckFiletype(gf));
+	*iv = malloc(gf->blkLength); /* do NOT zero-out! */
+	CHKiRet(eiGetIV(gf, *iv, (size_t) gf->blkLength));
+dbgprintf("DDDD: read %d bytes of IV\n", (int) gf->blkLength);
+finalize_it:
+	RETiRet;
+}
+
 rsRetVal
-rsgcryInitCrypt(gcryctx ctx, gcryfile *pgf, uchar *fname)
+rsgcryInitCrypt(gcryctx ctx, gcryfile *pgf, uchar *fname, char openMode)
 {
 	gcry_error_t gcryError;
 	gcryfile gf = NULL;
@@ -352,6 +500,7 @@ rsgcryInitCrypt(gcryctx ctx, gcryfile *pgf, uchar *fname)
 	DEFiRet;
 
 	CHKiRet(gcryfileConstruct(ctx, &gf, fname));
+	gf->mode = openMode;
 
 	gf->blkLength = gcry_cipher_get_algo_blklen(ctx->algo);
 
@@ -371,7 +520,12 @@ rsgcryInitCrypt(gcryctx ctx, gcryfile *pgf, uchar *fname)
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
-	seedIV(gf, &iv);
+	if(openMode == 'r') {
+		readIV(gf, &iv);
+	} else {
+		seedIV(gf, &iv);
+	}
+
 	gcryError = gcry_cipher_setiv(gf->chd, iv, gf->blkLength);
 	if (gcryError) {
 		dbgprintf("gcry_cipher_setiv failed:  %s/%s\n",
@@ -379,8 +533,10 @@ rsgcryInitCrypt(gcryctx ctx, gcryfile *pgf, uchar *fname)
 			gcry_strerror(gcryError));
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
-	CHKiRet(eiOpenAppend(gf));
-	CHKiRet(eiWriteIV(gf, iv));
+	if(openMode == 'w') {
+		CHKiRet(eiOpenAppend(gf));
+		CHKiRet(eiWriteIV(gf, iv));
+	}
 	*pgf = gf;
 finalize_it:
 	free(iv);
@@ -389,7 +545,7 @@ finalize_it:
 	RETiRet;
 }
 
-int
+rsRetVal
 rsgcryEncrypt(gcryfile pF, uchar *buf, size_t *len)
 {
 	int gcryError;
@@ -409,6 +565,32 @@ rsgcryEncrypt(gcryfile pF, uchar *buf, size_t *len)
 finalize_it:
 	RETiRet;
 }
+
+/* TODO: handle multiple blocks
+ * test-read END record; if present, store offset, else unbounded (current active block)
+ * when decrypting, check if bound is reached. If yes, split into two blocks, get new IV for
+ * second one.
+ */
+rsRetVal
+rsgcryDecrypt(gcryfile pF, uchar *buf, size_t *len)
+{
+	gcry_error_t gcryError;
+	DEFiRet;
+	
+	gcryError = gcry_cipher_decrypt(pF->chd, buf, *len, NULL, 0);
+	if(gcryError) {
+		DBGPRINTF("gcry_cipher_decrypt failed:  %s/%s\n",
+			gcry_strsource(gcryError),
+			gcry_strerror(gcryError));
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+	removePadding(buf, len);
+dbgprintf("DDDD: decrypted, buffer is now '%50.50s'\n", buf);
+
+finalize_it:
+	RETiRet;
+}
+
 
 
 /* module-init dummy for potential later use */

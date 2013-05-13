@@ -155,7 +155,6 @@ typedef struct _instanceData {
 	uchar 	*cryprovName;	/* crypto provider */
 	uchar 	*cryprovNameFull;/* full internal crypto provider name */
 	void	*cryprovData;	/* opaque data ptr for provider use */
-	void 	*cryprovFileData;/* opaque data ptr for file instance */
 	cryprov_if_t cryprov;	/* ptr to crypto provider interface */
 	sbool	useCryprov;	/* quicker than checkig ptr (1 vs 8 bytes!) */
 	int	iCurrElt;	/* currently active cache element (-1 = none) */

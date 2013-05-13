@@ -835,6 +835,10 @@ static rsRetVal qConstructDisk(qqueue_t *pThis)
 		CHKiRet(strm.SetiMaxFiles(pThis->tVars.disk.pWrite, 10000000));
 		CHKiRet(strm.SettOperationsMode(pThis->tVars.disk.pWrite, STREAMMODE_WRITE));
 		CHKiRet(strm.SetsType(pThis->tVars.disk.pWrite, STREAMTYPE_FILE_CIRCULAR));
+		if(pThis->useCryprov) {
+			CHKiRet(strm.Setcryprov(pThis->tVars.disk.pWrite, &pThis->cryprov));
+			CHKiRet(strm.SetcryprovData(pThis->tVars.disk.pWrite, pThis->cryprovData));
+		}
 		CHKiRet(strm.ConstructFinalize(pThis->tVars.disk.pWrite));
 
 		CHKiRet(strm.Construct(&pThis->tVars.disk.pReadDeq));
@@ -843,6 +847,10 @@ static rsRetVal qConstructDisk(qqueue_t *pThis)
 		CHKiRet(strm.SetiMaxFiles(pThis->tVars.disk.pReadDeq, 10000000));
 		CHKiRet(strm.SettOperationsMode(pThis->tVars.disk.pReadDeq, STREAMMODE_READ));
 		CHKiRet(strm.SetsType(pThis->tVars.disk.pReadDeq, STREAMTYPE_FILE_CIRCULAR));
+		if(pThis->useCryprov) {
+			CHKiRet(strm.Setcryprov(pThis->tVars.disk.pReadDeq, &pThis->cryprov));
+			CHKiRet(strm.SetcryprovData(pThis->tVars.disk.pReadDeq, pThis->cryprovData));
+		}
 		CHKiRet(strm.ConstructFinalize(pThis->tVars.disk.pReadDeq));
 
 		CHKiRet(strm.Construct(&pThis->tVars.disk.pReadDel));
@@ -852,6 +860,10 @@ static rsRetVal qConstructDisk(qqueue_t *pThis)
 		CHKiRet(strm.SetiMaxFiles(pThis->tVars.disk.pReadDel, 10000000));
 		CHKiRet(strm.SettOperationsMode(pThis->tVars.disk.pReadDel, STREAMMODE_READ));
 		CHKiRet(strm.SetsType(pThis->tVars.disk.pReadDel, STREAMTYPE_FILE_CIRCULAR));
+		if(pThis->useCryprov) {
+			CHKiRet(strm.Setcryprov(pThis->tVars.disk.pReadDel, &pThis->cryprov));
+			CHKiRet(strm.SetcryprovData(pThis->tVars.disk.pReadDel, pThis->cryprovData));
+		}
 		CHKiRet(strm.ConstructFinalize(pThis->tVars.disk.pReadDel));
 
 		CHKiRet(strm.SetFName(pThis->tVars.disk.pWrite,   pThis->pszFilePrefix, pThis->lenFilePrefix));
@@ -1321,6 +1333,7 @@ rsRetVal qqueueConstruct(qqueue_t **ppThis, queueType_t qType, int iWorkerThread
 	pThis->iMaxFileSize = 1024 * 1024; /* default is 1 MiB */
 	pThis->iQueueSize = 0;
 	pThis->nLogDeq = 0;
+	pThis->useCryprov = 0;
 	pThis->iMaxQueueSize = iMaxQueueSize;
 	pThis->pConsumer = pConsumer;
 	pThis->iNumWorkerThreads = iWorkerThreads;
@@ -2390,7 +2403,13 @@ CODESTARTobjDestruct(qqueue)
 
 	free(pThis->pszFilePrefix);
 	free(pThis->pszSpoolDir);
-	free(pThis->cryprovName);
+	if(pThis->useCryprov) {
+		pThis->cryprov.Destruct(&pThis->cryprovData);
+		obj.ReleaseObj(__FILE__, pThis->cryprovNameFull+2, pThis->cryprovNameFull,
+			       (void*) &pThis->cryprov);
+		free(pThis->cryprovName);
+		free(pThis->cryprovNameFull);
+	}
 
 	/* some queues do not provide stats and thus have no statsobj! */
 	if(pThis->statsobj != NULL)
@@ -2700,7 +2719,7 @@ initCryprov(qqueue_t *pThis, struct nvlst *lst)
 
 	if(snprintf((char*)szDrvrName, sizeof(szDrvrName), "lmcry_%s", pThis->cryprovName)
 		== sizeof(szDrvrName)) {
-		errmsg.LogError(0, RS_RET_ERR, "omfile: crypto provider "
+		errmsg.LogError(0, RS_RET_ERR, "queue: crypto provider "
 				"name is too long: '%s' - encryption disabled",
 				pThis->cryprovName);
 		ABORT_FINALIZE(RS_RET_ERR);
@@ -2715,14 +2734,14 @@ initCryprov(qqueue_t *pThis, struct nvlst *lst)
 	 */
 	if(obj.UseObj(__FILE__, szDrvrName, szDrvrName, (void*) &pThis->cryprov)
 		!= RS_RET_OK) {
-		errmsg.LogError(0, RS_RET_LOAD_ERROR, "omfile: could not load "
+		errmsg.LogError(0, RS_RET_LOAD_ERROR, "queue: could not load "
 				"crypto provider '%s' - encryption disabled",
 				szDrvrName);
 		ABORT_FINALIZE(RS_RET_CRYPROV_ERR);
 	}
 
 	if(pThis->cryprov.Construct(&pThis->cryprovData) != RS_RET_OK) {
-		errmsg.LogError(0, RS_RET_CRYPROV_ERR, "omfile: error constructing "
+		errmsg.LogError(0, RS_RET_CRYPROV_ERR, "queue: error constructing "
 				"crypto provider %s dataset - encryption disabled",
 				szDrvrName);
 		ABORT_FINALIZE(RS_RET_CRYPROV_ERR);

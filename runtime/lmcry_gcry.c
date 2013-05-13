@@ -211,13 +211,14 @@ finalize_it:
 
 
 static rsRetVal
-OnFileOpen(void *pT, uchar *fn, void *pGF)
+OnFileOpen(void *pT, uchar *fn, void *pGF, char openMode)
 {
 	lmcry_gcry_t *pThis = (lmcry_gcry_t*) pT;
 	gcryfile *pgf = (gcryfile*) pGF;
 	DEFiRet;
+dbgprintf("DDDD: open file '%s', mode '%c'\n", fn, openMode);
 
-	CHKiRet(rsgcryInitCrypt(pThis->ctx, pgf, fn));
+	CHKiRet(rsgcryInitCrypt(pThis->ctx, pgf, fn, openMode));
 finalize_it:
 	/* TODO: enable this error message (need to cleanup loop first ;))
 	errmsg.LogError(0, iRet, "Encryption Provider"
@@ -225,6 +226,16 @@ finalize_it:
 	*/
 	RETiRet;
 }
+
+static rsRetVal
+Decrypt(void *pF, uchar *rec, size_t *lenRec)
+{
+	DEFiRet;
+	iRet = rsgcryDecrypt(pF, rec, lenRec);
+
+	RETiRet;
+}
+
 
 static rsRetVal
 Encrypt(void *pF, uchar *rec, size_t *lenRec)
@@ -254,6 +265,7 @@ CODESTARTobjQueryInterface(lmcry_gcry)
 	pIf->Destruct = (rsRetVal(*)(void*)) lmcry_gcryDestruct;
 	pIf->OnFileOpen = OnFileOpen;
 	pIf->Encrypt = Encrypt;
+	pIf->Decrypt = Decrypt;
 	pIf->OnFileClose = OnFileClose;
 finalize_it:
 ENDobjQueryInterface(lmcry_gcry)

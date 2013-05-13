@@ -38,7 +38,11 @@ struct gcryfile_s {
 	size_t blkLength; /* size of low-level crypto block */
 	uchar *eiName; /* name of .encinfo file */
 	int fd; /* descriptor of .encinfo file (-1 if not open) */
+	char mode; /* 'r': read, 'w': write */
 	gcryctx ctx;
+	uchar *readBuf;
+	int16_t readBufIdx;
+	int16_t readBufMaxIdx;
 };
 
 int gcryGetKeyFromFile(char *fn, char **key, unsigned *keylen);
@@ -50,8 +54,10 @@ rsRetVal rsgcrySetAlgo(gcryctx ctx, uchar *modename);
 gcryctx gcryCtxNew(void);
 void rsgcryCtxDel(gcryctx ctx);
 int gcryfileDestruct(gcryfile gf, off64_t offsLogfile);
-rsRetVal rsgcryInitCrypt(gcryctx ctx, gcryfile *pgf, uchar *fname);
-int rsgcryEncrypt(gcryfile pF, uchar *buf, size_t *len);
+rsRetVal rsgcryInitCrypt(gcryctx ctx, gcryfile *pgf, uchar *fname, char openMode);
+rsRetVal rsgcryEncrypt(gcryfile pF, uchar *buf, size_t *len);
+rsRetVal rsgcryDecrypt(gcryfile pF, uchar *buf, size_t *len);
+int gcryGetKeyFromProg(char *cmd, char **key, unsigned *keylen);
 
 /* error states */
 #define RSGCRYE_EI_OPEN 1 	/* error opening .encinfo file */
