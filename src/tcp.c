@@ -95,6 +95,7 @@ relpTcpDestruct(relpTcp_t **ppThis)
 {
 	relpTcp_t *pThis;
 	int i;
+	int gnuRet;
 
 	ENTER_RELPFUNC;
 	assert(ppThis != NULL);
@@ -117,6 +118,14 @@ relpTcpDestruct(relpTcp_t **ppThis)
 		free(pThis->pRemHostIP);
 	if(pThis->pRemHostName != NULL)
 		free(pThis->pRemHostName);
+
+	if(pThis->bEnableTLS) {
+		gnuRet = gnutls_bye(pThis->session, GNUTLS_SHUT_RDWR);
+		while(gnuRet == GNUTLS_E_INTERRUPTED || gnuRet == GNUTLS_E_AGAIN) {
+			gnuRet = gnutls_bye(pThis->session, GNUTLS_SHUT_RDWR);
+		}
+		gnutls_deinit(pThis->session);
+	}
 
 	/* done with de-init work, now free tcp object itself */
 	free(pThis);
@@ -299,7 +308,10 @@ relpTcpAcceptConnReq(relpTcp_t **ppThis, int sock, relpSrv_t *pSrv)
 	CHKRet(relpTcpConstruct(&pThis, pEngine));
 
 	pThis->sock = iNewSock;
-	CHKRet(relpTcpAcceptConnReqInitTLS(pThis, pSrv)); /* we are in blocking mode here -- TODO! */
+	if(pSrv->pTcp->bEnableTLS) {
+		pThis->bEnableTLS = 1;
+		CHKRet(relpTcpAcceptConnReqInitTLS(pThis, pSrv)); /* we are in blocking mode here -- TODO! */
+	}
 
 	/* TODO: obtain hostname, normalize (callback?), save it */
 	CHKRet(relpTcpSetRemHost(pThis, (struct sockaddr*) &addr));
@@ -510,13 +522,21 @@ relpTcpRcv(relpTcp_t *pThis, relpOctet_t *pRcvBuf, ssize_t *pLenBuf)
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Tcp);
 
-	*pLenBuf = recv(pThis->sock, pRcvBuf, *pLenBuf, MSG_DONTWAIT);
+	// TODO: much more to do, e.g. different error codes!
+pThis->pEngine->dbgprint("DDDD: relpTcpRcv, TLS enabled %d\n", pThis->bEnableTLS);
+	if(pThis->bEnableTLS) {
+		*pLenBuf = gnutls_record_recv(pThis->session, pRcvBuf, *pLenBuf);
+pThis->pEngine->dbgprint("DDDD: TLS rcv returned %d\n", (int) *pLenBuf);
+	} else {
+		*pLenBuf = recv(pThis->sock, pRcvBuf, *pLenBuf, MSG_DONTWAIT);
+	}
 
 	LEAVE_RELPFUNC;
 }
 
 
-/* send a buffer. On entry, pLenBuf contains the number of octets to
+/* send a buffer via unencrypted TCP.
+ * On entry, pLenBuf contains the number of octets to
  * write. On exit, it contains the number of octets actually written.
  * If this number is lower than on entry, only a partial buffer has
  * been written.
@@ -529,7 +549,13 @@ relpTcpSend(relpTcp_t *pThis, relpOctet_t *pBuf, ssize_t *pLenBuf)
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Tcp);
 
-	written = send(pThis->sock, pBuf, *pLenBuf, 0);
+	// TODO: much more to do, e.g. different error codes!
+	if(pThis->bEnableTLS) {
+		written = gnutls_record_send(pThis->session, pBuf, *pLenBuf);
+pThis->pEngine->dbgprint("DDDD: TLS send returned %d\n", (int) written);
+	} else {
+		written = send(pThis->sock, pBuf, *pLenBuf, 0);
+	}
 
 	if(written == -1) {
 		switch(errno) {
@@ -554,6 +580,7 @@ static relpRetVal
 relpTcpConnectTLSInit(relpTcp_t *pThis)
 {
 	int r;
+	int sockflags;
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Tcp);
 
@@ -586,6 +613,15 @@ pThis->pEngine->dbgprint("DDDD: gnutls_handshake: %d: %s\n", r, gnutls_strerror(
 	}
 	while(0);
 	//while (r < 0 && gnutls_error_is_fatal(r) == 0);
+
+	/* set the socket to non-blocking IO (we do this on the recv() for non-TLS */
+	if((sockflags = fcntl(pThis->sock, F_GETFL)) != -1) {
+		sockflags |= O_NONBLOCK;
+		/* SETFL could fail too, so get it caught by the subsequent
+		 * error check.  */
+		sockflags = fcntl(pThis->sock, F_SETFL, sockflags);
+	}
+
 
 pThis->pEngine->dbgprint("tcpConnectTLSInit returns\n");
 	LEAVE_RELPFUNC;

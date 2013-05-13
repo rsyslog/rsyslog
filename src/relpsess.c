@@ -715,6 +715,7 @@ finalize_it:
 	if(pOffers != NULL)
 		relpOffersDestruct(&pOffers);
 
+pEngine->dbgprint("DDDD: end offer processing\n");
 	LEAVE_RELPFUNC;
 }
 
