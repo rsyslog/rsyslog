@@ -43,6 +43,7 @@ struct relpClt_s {
 	int protFamily;		/**< protocol family to connect over (IPv4, v6, ...) */
 	unsigned char *port;	/**< server port to connect to */
 	unsigned char *host;	/**< host(name) to connect to */
+	unsigned char *clientIP;/**< ip to bind to, or NULL if irrelevant */
 	unsigned timeout;	/**< session timeout */
 };
 

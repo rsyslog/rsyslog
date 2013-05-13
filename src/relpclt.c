@@ -33,6 +33,7 @@
 #include "config.h"
 #include <stdlib.h>
 #include <assert.h>
+#include <string.h>
 #include <sys/types.h>
 #include "relp.h"
 #include "relpsess.h"
@@ -80,6 +81,7 @@ relpCltDestruct(relpClt_t **ppThis)
 
 	if(pThis->pSess != NULL)
 		relpSessDestruct(&pThis->pSess);
+	free(pThis->clientIP);
 
 	/* done with de-init work, now free clt object itself */
 	free(pThis);
@@ -101,27 +103,8 @@ relpCltConnect(relpClt_t *pThis, int protFamily, unsigned char *port, unsigned c
 
 	CHKRet(relpSessConstruct(&pThis->pSess, pThis->pEngine, NULL));
 	CHKRet(relpSessSetTimeout(pThis->pSess, pThis->timeout));
+	CHKRet(relpSessSetClientIP(pThis->pSess, pThis->clientIP));
 	CHKRet(relpSessConnect(pThis->pSess, protFamily, port, host));
-
-finalize_it:
-	if(iRet != RELP_RET_OK) {
-		if(pThis->pSess != NULL) {
-			relpSessDestruct(&pThis->pSess);
-		}
-	}
-
-	LEAVE_RELPFUNC;
-}
-
-relpRetVal
-relpCltConnect2(relpClt_t *pThis, int protFamily, unsigned char *port, unsigned char *host, unsigned char *clientIP) /* ar */
-{
-	ENTER_RELPFUNC;
-	RELPOBJ_assert(pThis, Clt);
-
-	CHKRet(relpSessConstruct(&pThis->pSess, pThis->pEngine, NULL));
-	CHKRet(relpSessSetTimeout(pThis->pSess, pThis->timeout));
-	CHKRet(relpSessConnect2(pThis->pSess, protFamily, port, host, clientIP));
 
 finalize_it:
 	if(iRet != RELP_RET_OK) {
@@ -164,6 +147,18 @@ relpRetVal relpCltSetTimeout(relpClt_t *pThis, unsigned timeout)
 	LEAVE_RELPFUNC;
 }
 
+
+/** Set the local IP address to be used when acting as a client.
+ */
+relpRetVal relpCltSetClientIP(relpClt_t *pThis, unsigned char *ipAddr)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Clt);
+	free(pThis->clientIP);
+	pThis->clientIP = ipAddr == NULL ? NULL :
+					   (unsigned char*)strdup((char*) ipAddr);
+	LEAVE_RELPFUNC;
+}
 
 /* Send a syslog message through RELP. The session must be established.
  * The provided message buffer is not touched by this function. The caller
