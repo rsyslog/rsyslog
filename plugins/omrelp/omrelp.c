@@ -113,6 +113,10 @@ doCreateRelpClient(instanceData *pData)
 		ABORT_FINALIZE(RS_RET_RELP_ERR);
 	if(relpCltSetTimeout(pData->pRelpClt, pData->timeout) != RELP_RET_OK)
 		ABORT_FINALIZE(RS_RET_RELP_ERR);
+	if(glbl.GetSourceIPofLocalClient() == NULL) {	/* ar Do we have a client IP set? */
+		if(relpCltSetClientIP(pData->pRelpClt, glbl.GetSourceIPofLocalClient()) != RELP_RET_OK)
+			ABORT_FINALIZE(RS_RET_RELP_ERR);
+	}
 finalize_it:
 	RETiRet;
 }
@@ -210,11 +214,7 @@ static rsRetVal doConnect(instanceData *pData)
 	DEFiRet;
 
 	if(pData->bInitialConnect) {
-		if (glbl.GetSourceIPofLocalClient() == NULL) {	/* ar Do we have a client IP set? */
-			iRet = relpCltConnect(pData->pRelpClt, glbl.GetDefPFFamily(), pData->port, pData->target);
-		} else {									/* ar YES: use it */
-			iRet = relpCltConnect2(pData->pRelpClt, glbl.GetDefPFFamily(), pData->port, pData->target,  glbl.GetSourceIPofLocalClient());
-		}
+		iRet = relpCltConnect(pData->pRelpClt, glbl.GetDefPFFamily(), pData->port, pData->target);
 		if(iRet == RELP_RET_OK)
 			pData->bInitialConnect = 0;
 	} else {
