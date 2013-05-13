@@ -121,6 +121,7 @@ finalize_it:
 BEGINcreateInstance
 CODESTARTcreateInstance
 	pData->bInitialConnect = 1;
+	pData->timeout = 90;
 ENDcreateInstance
 
 BEGINfreeInstance
