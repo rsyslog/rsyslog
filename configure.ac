@@ -2,10 +2,13 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([librelp], [1.0.6], [rgerhards@adiscon.com])
+AC_INIT([librelp], [1.1.0], [rgerhards@adiscon.com])
 AM_INIT_AUTOMAKE
+AM_INIT_AUTOMAKE
+m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 AC_CONFIG_SRCDIR([src/relp.c])
 AC_CONFIG_HEADER([config.h])
+AC_CONFIG_MACRO_DIR([m4])
 
 # Checks for programs.
 AC_PROG_CC
@@ -42,7 +45,7 @@ AC_FUNC_MALLOC
 AC_FUNC_SELECT_ARGTYPES
 AC_TYPE_SIGNAL
 #AC_CHECK_FUNCS([])
-
+PKG_CHECK_MODULES(GNUTLS, gnutls >= 1.4.0)
 
 # debug mode settings
 AC_ARG_ENABLE(debug,
