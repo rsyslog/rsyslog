@@ -149,6 +149,7 @@ relpRetVal relpEngineAddListner(relpEngine_t *pThis, unsigned char *pLstnPort);
 relpRetVal relpEngineAddListner2(relpEngine_t *pThis, unsigned char *pLstnPort, void*);
 relpRetVal relpEngineSetStop(relpEngine_t *pThis);
 relpRetVal relpEngineSetFamily(relpEngine_t *pThis, int ai_family);
+relpRetVal relpEngineEnableTLS(relpEngine_t *pThis);
 relpRetVal relpEngineRun(relpEngine_t *pThis);
 relpRetVal relpEngineCltDestruct(relpEngine_t *pThis, relpClt_t **ppClt);
 relpRetVal relpEngineCltConstruct(relpEngine_t *pThis, relpClt_t **ppClt);
@@ -158,7 +159,6 @@ relpRetVal relpEngineSetSyslogRcv2(relpEngine_t *pThis,
 				  relpRetVal (*pCB)(void*, unsigned char*, unsigned char*, unsigned char*, size_t));
 relpRetVal relpEngineSetEnableCmd(relpEngine_t *pThis, unsigned char *pszCmd, relpCmdEnaState_t stateCmd);
 relpRetVal relpEngineSetDnsLookupMode(relpEngine_t *pThis, int iMode);
-void relpEngineEnableTLS(relpEngine_t *pThis);
 
 /* exposed relp client functions */
 relpRetVal relpCltConnect(relpClt_t *pThis, int protFamily, unsigned char *port, unsigned char *host);

@@ -163,7 +163,7 @@ relpSessAcceptAndConstruct(relpSess_t **ppThis, relpSrv_t *pSrv, int sock)
 	assert(sock >= 0);
 
 	CHKRet(relpSessConstruct(&pThis, pSrv->pEngine, pSrv));
-	CHKRet(relpTcpAcceptConnReq(&pThis->pTcp, sock, pThis->pEngine));
+	CHKRet(relpTcpAcceptConnReq(&pThis->pTcp, sock, pSrv));
 
 	/* TODO: check hostname against ACL (callback?) */
 	/* TODO: check against max# sessions */

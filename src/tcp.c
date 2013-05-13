@@ -43,6 +43,7 @@
 #include <errno.h>
 #include <assert.h>
 #include "relp.h"
+#include "relpsrv.h"
 #include "tcp.h"
 #include <gnutls/gnutls.h>
 #include <gnutls/x509.h>
@@ -53,6 +54,8 @@
 #if GNUTLS_VERSION_NUMBER <= 0x020b00
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 #endif
+
+#define DH_BITS 1024 /* 1024 TODO: change, this value just for testing! */
 
 static int called_gnutls_global_init = 0;
 
@@ -186,7 +189,6 @@ relpTcpSetRemHost(relpTcp_t *pThis, struct sockaddr *pAddr)
 	assert(pAddr != NULL);
 
         error = getnameinfo(pAddr, SALEN(pAddr), (char*)szIP, sizeof(szIP), NULL, 0, NI_NUMERICHOST);
-pEngine->dbgprint("getnameinfo returns %d\n", error);
 
         if(error) {
                 pThis->pEngine->dbgprint("Malformed from address %s\n", gai_strerror(error));
@@ -251,19 +253,39 @@ relpTcpEnableTLS(relpTcp_t *pThis)
 }
 
 
+static relpRetVal
+relpTcpAcceptConnReqInitTLS(relpTcp_t *pThis, relpSrv_t *pSrv)
+{
+	int r;
+	ENTER_RELPFUNC;
+
+	r = gnutls_init(&pThis->session, GNUTLS_SERVER);
+pThis->pEngine->dbgprint("DDDD: gnutls_init %d: %s\n", r, gnutls_strerror(r));
+	r = gnutls_priority_set_direct(pThis->session, "NORMAL:+ANON-DH", NULL);
+pThis->pEngine->dbgprint("DDDD: gnutls_priority_set_direct %d: %s\n", r, gnutls_strerror(r));
+	r = gnutls_credentials_set(pThis->session, GNUTLS_CRD_ANON, pSrv->pTcp->anoncredSrv);
+pThis->pEngine->dbgprint("DDDD: gnutls_credentials_set %d: %s\n", r, gnutls_strerror(r));
+	gnutls_dh_set_prime_bits(pThis->session, DH_BITS);
+	gnutls_transport_set_ptr(pThis->session, (gnutls_transport_ptr_t) pThis->sock);
+	r = gnutls_handshake(pThis->session);
+pThis->pEngine->dbgprint("DDDD: gnutls_handshake: %d: %s\n", r, gnutls_strerror(r));
+
+  	LEAVE_RELPFUNC;
+}
 
 /* accept an incoming connection request, sock provides the socket on which we can
  * accept the new session.
  * rgerhards, 2008-03-17
  */
 relpRetVal
-relpTcpAcceptConnReq(relpTcp_t **ppThis, int sock, relpEngine_t *pEngine)
+relpTcpAcceptConnReq(relpTcp_t **ppThis, int sock, relpSrv_t *pSrv)
 {
 	relpTcp_t *pThis = NULL;
 	int sockflags;
 	struct sockaddr_storage addr;
 	socklen_t addrlen = sizeof(addr);
 	int iNewSock = -1;
+	relpEngine_t *pEngine = pSrv->pEngine;
 
 	ENTER_RELPFUNC;
 	assert(ppThis != NULL);
@@ -275,6 +297,9 @@ relpTcpAcceptConnReq(relpTcp_t **ppThis, int sock, relpEngine_t *pEngine)
 
 	/* construct our object so that we can use it... */
 	CHKRet(relpTcpConstruct(&pThis, pEngine));
+
+	pThis->sock = iNewSock;
+	CHKRet(relpTcpAcceptConnReqInitTLS(pThis, pSrv)); /* we are in blocking mode here -- TODO! */
 
 	/* TODO: obtain hostname, normalize (callback?), save it */
 	CHKRet(relpTcpSetRemHost(pThis, (struct sockaddr*) &addr));
@@ -293,8 +318,6 @@ pThis->pEngine->dbgprint("remote host is '%s', ip '%s'\n", pThis->pRemHostName, 
 		ABORT_FINALIZE(RELP_RET_IO_ERR);
 	}
 
-	pThis->sock = iNewSock;
-
 	*ppThis = pThis;
 
 finalize_it:
@@ -306,6 +329,28 @@ finalize_it:
 			close(iNewSock);
 	}
 
+	LEAVE_RELPFUNC;
+}
+
+/* initialize the listener for TLS use */
+static relpRetVal
+relpTcpLstnInitTLS(relpTcp_t *pThis)
+{
+	int r;
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Tcp);
+
+	gnutls_global_init(); // TODO: once in engine!
+	r = gnutls_anon_allocate_server_credentials(&pThis->anoncredSrv);
+
+	pThis->pEngine->dbgprint("DDDD: generating server DH params...\n");
+	r = gnutls_dh_params_init(&pThis->dh_params);
+pThis->pEngine->dbgprint("DDDD: dh_param_init returns %d\n", r);
+	r = gnutls_dh_params_generate2(pThis->dh_params, DH_BITS);
+pThis->pEngine->dbgprint("DDDD: paramgenerate returns %d\n", r);
+
+	gnutls_anon_set_server_dh_params(pThis->anoncredSrv, pThis->dh_params);
+	pThis->pEngine->dbgprint("DDDD: done Lstn  InitTLS\n");
 	LEAVE_RELPFUNC;
 }
 
@@ -396,7 +441,9 @@ relpTcpLstnInit(relpTcp_t *pThis, unsigned char *pLstnPort, int ai_family)
 			continue;
 		}
 
-
+		if(pThis->bEnableTLS) {
+			CHKRet(relpTcpLstnInitTLS(pThis));
+		}
 
 	        if( (bind(*s, r->ai_addr, r->ai_addrlen) < 0)
 #ifndef IPV6_V6ONLY
@@ -512,18 +559,21 @@ relpTcpConnectTLSInit(relpTcp_t *pThis)
 
 	if(!called_gnutls_global_init) {
 		gnutls_global_init();
+		pThis->pEngine->dbgprint("DDDD: gnutls_global_init() called\n");
 		called_gnutls_global_init = 1;
 	}
 	r = gnutls_anon_allocate_client_credentials(&pThis->anoncred);
-pThis->pEngine->dbgprint("DDDD: gnutls_anon_allocat_client_credentials: %d\n", r);
+	pThis->pEngine->dbgprint("DDDD: gnutls_anon_allocat_client_credentials: %d\n", r);
 	r = gnutls_init(&pThis->session, GNUTLS_CLIENT);
-pThis->pEngine->dbgprint("DDDD: gnutls_init: %d\n", r);
+	pThis->pEngine->dbgprint("DDDD: gnutls_init: %d\n", r);
 	/* Use default priorities */
-	gnutls_priority_set_direct (pThis->session, "PERFORMANCE:+ANON-DH:!ARCFOUR-128",
+	r = gnutls_priority_set_direct (pThis->session, "PERFORMANCE:+ANON-DH:!ARCFOUR-128",
 			      NULL);
+	pThis->pEngine->dbgprint("DDDD: gnutls_set prio: %d\n", r);
 
 	/* put the anonymous credentials to the current session */
-	gnutls_credentials_set(pThis->session, GNUTLS_CRD_ANON, pThis->anoncred);
+	r = gnutls_credentials_set(pThis->session, GNUTLS_CRD_ANON, pThis->anoncred);
+	pThis->pEngine->dbgprint("DDDD: gnutls_credentials_set: %d\n", r);
 
 	gnutls_transport_set_ptr(pThis->session, (gnutls_transport_ptr_t) pThis->sock);
 	//gnutls_handshake_set_timeout(pThis->session, GNUTLS_DEFAULT_HANDSHAKE_TIMEOUT);

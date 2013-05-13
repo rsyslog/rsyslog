@@ -41,6 +41,7 @@
 #include "tcp.h"
 
 
+
 /** Construct a RELP srv instance
  * This is the first thing that a caller must do before calling any
  * RELP function. The relp srv must only destructed after all RELP
@@ -61,8 +62,6 @@ relpSrvConstruct(relpSrv_t **ppThis, relpEngine_t *pEngine)
 	pThis->pEngine = pEngine;
 	pThis->stateCmdSyslog = pEngine->stateCmdSyslog;
 	pThis->ai_family = PF_UNSPEC;
-
-pEngine->dbgprint("relp server %p constructed\n", pThis);
 
 	*ppThis = pThis;
 
@@ -162,6 +161,8 @@ relpSrvRun(relpSrv_t *pThis)
 	RELPOBJ_assert(pThis, Srv);
 
 	CHKRet(relpTcpConstruct(&pTcp, pThis->pEngine));
+	if(pThis->pEngine->bEnableTLS)
+		relpTcpEnableTLS(pTcp);
 	CHKRet(relpTcpLstnInit(pTcp, (pThis->pLstnPort == NULL) ? (unsigned char*) RELP_DFLT_PORT : pThis->pLstnPort, pThis->ai_family));
 		
 	pThis->pTcp = pTcp;

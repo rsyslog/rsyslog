@@ -49,8 +49,10 @@ typedef struct relpTcp_s {
 	int iSessMax;	/**< maximum number of sessions permitted */
 	/* variables for TLS support */
 	int bEnableTLS;
-	gnutls_anon_client_credentials_t anoncred;
+	gnutls_anon_client_credentials_t anoncred;	/**< client anon credentials */
+	gnutls_anon_server_credentials_t anoncredSrv;	/**< server anon credentials */
 	gnutls_session_t session;
+	gnutls_dh_params_t dh_params; /**< server DH parameters for anon mode */
 } relpTcp_t;
 
 
@@ -64,7 +66,7 @@ relpRetVal relpTcpConstruct(relpTcp_t **ppThis, relpEngine_t *pEngine);
 relpRetVal relpTcpDestruct(relpTcp_t **ppThis);
 relpRetVal relpTcpAbortDestruct(relpTcp_t **ppThis);
 relpRetVal relpTcpLstnInit(relpTcp_t *pThis, unsigned char *pLstnPort, int ai_family);
-relpRetVal relpTcpAcceptConnReq(relpTcp_t **ppThis, int sock, relpEngine_t *pEngine);
+relpRetVal relpTcpAcceptConnReq(relpTcp_t **ppThis, int sock, relpSrv_t *pSrv);
 relpRetVal relpTcpRcv(relpTcp_t *pThis, relpOctet_t *pRcvBuf, ssize_t *pLenBuf);
 relpRetVal relpTcpSend(relpTcp_t *pThis, relpOctet_t *pBuf, ssize_t *pLenBuf);
 relpRetVal relpTcpConnect(relpTcp_t *pThis, int family, unsigned char *port, unsigned char *host, unsigned char *clientIP);
