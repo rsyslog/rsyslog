@@ -689,4 +689,46 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 
+/* return direction in which retry must be done. We return the original
+ * gnutls code, which means:
+ * "0 if trying to read data, 1 if trying to write data."
+ */
+int
+relpTcpGetRtryDirection(relpTcp_t *pThis)
+{
+	return gnutls_record_get_direction(pThis->session);
+}
 
+/* This functions is requried for TLS in async mode. The TLS protocol may
+ * need to do multiple send/recv for a single call, and may change the direction
+ * of these calls (see GnuTLS doc for more details). If this happens, we need
+ * to retry the last operation, and this is what is done here (actually
+ * it is not really a retry but more a "continue with this function"). Note
+ * that it may be possible that multiple retries are required.
+ * If an API error happens, we are more or less lost at this stage, because we
+ * do not have a path back to the original caller. So we ignore it here, BUT
+ * let the error pop up with the next call, which then is noticed. Note that
+ * this cannot lead to message loss, as we have app-layer acks and they work
+ * irrespective of what was the ultimate failure cause!
+ * Note: while we permit multiple operations on the same session in librelp,
+ * we enforce that no new call is made until an incomplete one is finally
+ * completed. Aynthing else may also get us into big trouble with GnuTLS.
+ * rgerhards, 2013-05-14
+ */
+void
+relpTcpDoRtry(relpTcp_t *pThis)
+{
+	int r;
+	if(pThis->rtryOp == relpTCP_RETRY_send) {
+		r = gnutls_record_send(pThis->session, NULL, 0);
+	} else {
+                pThis->pEngine->dbgprint("librelp: invalid retry mode %d\n",
+			(int)pThis->rtryOp);
+		r = 0; /* fake success to break any loops in code */
+	}
+	if(r < 0) {
+                pThis->pEngine->dbgprint("librelp: error %d during retry\n", r);
+		if(r != GNUTLS_E_INTERRUPTED && r != GNUTLS_E_AGAIN)
+			pThis->rtryOp = relpTCP_RETRY_none;
+	}
+}

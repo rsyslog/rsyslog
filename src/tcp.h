@@ -53,6 +53,9 @@ typedef struct relpTcp_s {
 	gnutls_anon_server_credentials_t anoncredSrv;	/**< server anon credentials */
 	gnutls_session_t session;
 	gnutls_dh_params_t dh_params; /**< server DH parameters for anon mode */
+	enum { relpTCP_RETRY_none = 0,
+	       relpTCP_RETRY_recv = 1, 
+	       relpTCP_RETRY_send = 2 } rtryOp;
 } relpTcp_t;
 
 
@@ -71,5 +74,7 @@ relpRetVal relpTcpRcv(relpTcp_t *pThis, relpOctet_t *pRcvBuf, ssize_t *pLenBuf);
 relpRetVal relpTcpSend(relpTcp_t *pThis, relpOctet_t *pBuf, ssize_t *pLenBuf);
 relpRetVal relpTcpConnect(relpTcp_t *pThis, int family, unsigned char *port, unsigned char *host, unsigned char *clientIP);
 relpRetVal relpTcpEnableTLS(relpTcp_t *pThis);
+int relpTcpGetRtryDirection(relpTcp_t *pThis);
+void relpTcpDoRtry(relpTcp_t *pThis);
 
 #endif /* #ifndef RELPTCP_H_INCLUDED */

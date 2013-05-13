@@ -103,7 +103,7 @@ struct relpSess_s {
 	int lenUnackedLst;
 };
 
-/* macros for quick memeber access */
+/* macros for quick member access */
 #define relpSessGetSock(pThis)  (relpTcpGetSock((pThis)->pTcp))
 #define relpSessGetSessState(pThis) ((pThis)->sessState)
 #define relpSessSetSessState(pThis, state) ((pThis)->sessState = (state))
@@ -111,6 +111,13 @@ struct relpSess_s {
 #include "relpframe.h" /* this needs to be done after relpSess_t is defined! */
 #include "sendbuf.h"
 #include "sendq.h"
+
+/* inlines */
+static inline int
+relpSessTcpRequiresRtry(relpSess_t *pThis)
+{
+	return pThis->pTcp->rtryOp != relpTCP_RETRY_none;
+}
 
 /* prototypes */
 relpRetVal relpSessConstruct(relpSess_t **ppThis, relpEngine_t *pEngine, relpSrv_t *pSrv);

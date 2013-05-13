@@ -386,10 +386,19 @@ relpEngineRun(relpEngine_t *pThis)
 		/* Add all sessions for reception and sending (they all have just one socket) */
 		for(pSessEtry = pThis->pSessLstRoot ; pSessEtry != NULL ; pSessEtry = pSessEtry->pNext) {
 			sock = relpSessGetSock(pSessEtry->pSess);
-			FD_SET(sock, &readfds);
-			/* now check if a send request is outstanding and, if so, add it */
-			if(!relpSendqIsEmpty(pSessEtry->pSess->pSendq)) {
-				FD_SET(sock, &writefds);
+			if(relpSessTcpRequiresRtry(pSessEtry->pSess)) {
+				pThis->dbgprint("***<librelp> retry op requested for sock %d\n", sock);
+				if(relpTcpGetRtryDirection(pSessEtry->pSess->pTcp) == 0) {
+					FD_SET(sock, &readfds);
+				} else {
+					FD_SET(sock, &writefds);
+				}
+			} else {
+				FD_SET(sock, &readfds);
+				/* now check if a send request is outstanding and, if so, add it */
+				if(!relpSendqIsEmpty(pSessEtry->pSess->pSendq)) {
+					FD_SET(sock, &writefds);
+				}
 			}
 			if(sock > maxfds) maxfds = sock;
 		}
@@ -441,31 +450,37 @@ pThis->dbgprint("relp accept session returns, iRet %d\n", localRet);
 			if(relpEngineShouldStop(pThis)) break;
 			pSessEtryNext = pSessEtry->pNext; /* we need to cache this as we may delete the entry! */
 			sock = relpSessGetSock(pSessEtry->pSess);
-			/* read data waiting? */
-			if(FD_ISSET(sock, &readfds)) {
-				localRet = relpSessRcvData(pSessEtry->pSess); /* errors are handled there */
-				/* if we had an error during processing, we must shut down the session. This
-				 * is part of the protocol specification: errors are recovered by aborting the
-				 * session, which may eventually be followed by a new connect.
-				 */
-				if(localRet != RELP_RET_OK) {
-					pThis->dbgprint("relp session %d iRet %d, tearing it down\n",
-						        sock, localRet);
-					relpEngineDelSess(pThis, pSessEtry);
+			if(relpSessTcpRequiresRtry(pSessEtry->pSess)) {
+				if(FD_ISSET(sock, &readfds) || FD_ISSET(sock, &writefds)) {
+					relpTcpDoRtry(pSessEtry->pSess->pTcp);
 				}
-				--nfds; /* indicate we have processed one */
-			}
-			/* are we able to write? */
-			if(FD_ISSET(sock, &writefds)) {
-				localRet = relpSessSndData(pSessEtry->pSess); /* errors are handled there */
-				/* if we had an error during processing, we must shut down the session. This
-				 * is part of the protocol specification: errors are recovered by aborting the
-				 * session, which may eventually be followed by a new connect.
-				 */
-				if(localRet != RELP_RET_OK) {
-					pThis->dbgprint("relp session %d iRet %d during send, tearing it down\n",
-						        sock, localRet);
-					relpEngineDelSess(pThis, pSessEtry);
+			} else {
+				/* read data waiting? */
+				if(FD_ISSET(sock, &readfds)) {
+					localRet = relpSessRcvData(pSessEtry->pSess); /* errors are handled there */
+					/* if we had an error during processing, we must shut down the session. This
+					 * is part of the protocol specification: errors are recovered by aborting the
+					 * session, which may eventually be followed by a new connect.
+					 */
+					if(localRet != RELP_RET_OK) {
+						pThis->dbgprint("relp session %d iRet %d, tearing it down\n",
+								sock, localRet);
+						relpEngineDelSess(pThis, pSessEtry);
+					}
+					--nfds; /* indicate we have processed one */
+				}
+				/* are we able to write? */
+				if(FD_ISSET(sock, &writefds)) {
+					localRet = relpSessSndData(pSessEtry->pSess); /* errors are handled there */
+					/* if we had an error during processing, we must shut down the session. This
+					 * is part of the protocol specification: errors are recovered by aborting the
+					 * session, which may eventually be followed by a new connect.
+					 */
+					if(localRet != RELP_RET_OK) {
+						pThis->dbgprint("relp session %d iRet %d during send, tearing it down\n",
+								sock, localRet);
+						relpEngineDelSess(pThis, pSessEtry);
+					}
 				}
 			}
 
