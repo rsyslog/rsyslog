@@ -9,6 +9,7 @@ Version 7.3.15  [beta] 2013-05-0?
   name
   Now this triggers an error message and the queue is changed to
   linkedList type.
+- bugfix: invalid addressing in string class (recent regression)
 ---------------------------------------------------------------------------
 Version 7.3.14  [beta] 2013-05-06
 - bugfix: some man pages were not properly installed
