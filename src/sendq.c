@@ -1,6 +1,6 @@
 /* The relp sendqueue object.
  *
- * Copyright 2008 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2013 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of librelp.
  *
@@ -220,7 +220,6 @@ relpSendqIsEmpty(relpSendq_t *pThis)
 	pthread_mutex_lock(&pThis->mut);
 	ret = pThis->pRoot == NULL;
 	pthread_mutex_unlock(&pThis->mut);
-pThis->pEngine->dbgprint("relpSendqIsEmpty() returns %d\n", ret);
 	return ret;
 }
 

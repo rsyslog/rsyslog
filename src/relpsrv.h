@@ -56,7 +56,6 @@ struct relpSrv_s {
 /* macros for quick memeber access */
 #define relpSrvGetNumLstnSocks(pThis) (relpTcpGetNumSocks((pThis)->pTcp))
 #define relpSrvGetLstnSock(pThis, i)  (relpTcpGetLstnSock((pThis)->pTcp, i))
-#define relpSrvGetTcp(pThis, i)  (pThis->pTcp)
 
 /* prototypes */
 relpRetVal relpSrvConstruct(relpSrv_t **ppThis, relpEngine_t *pEngine);

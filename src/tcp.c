@@ -549,30 +549,40 @@ relpTcpSend(relpTcp_t *pThis, relpOctet_t *pBuf, ssize_t *pLenBuf)
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Tcp);
 
-	// TODO: much more to do, e.g. different error codes!
 	if(pThis->bEnableTLS) {
 		written = gnutls_record_send(pThis->session, pBuf, *pLenBuf);
 pThis->pEngine->dbgprint("DDDD: TLS send returned %d\n", (int) written);
+		if(written == GNUTLS_E_AGAIN || written == GNUTLS_E_INTERRUPTED) {
+			/* no problem here - we indicate we had written 0 bytes. This
+			 * will cause sendbuf to re-send with the same parameters,
+			 * what is exactly what GnuTLS wants us to do.
+			 * TODO: think about gnutls direction, we may need to add a check
+			 * TODO: in the select loop!
+			 */
+			written = 0;
+		} else if(written < 1) {
+			pThis->pEngine->dbgprint("librelp: error in gnutls_record_send: %s\n",
+				gnutls_strerror(written));
+			ABORT_FINALIZE(RELP_RET_IO_ERR);
+		}
 	} else {
 		written = send(pThis->sock, pBuf, *pLenBuf, 0);
-	}
-
-	if(written == -1) {
-		switch(errno) {
-			case EAGAIN:
-			case EINTR:
-				/* this is fine, just retry... */
-				written = 0;
-				break;
-			default:
-				ABORT_FINALIZE(RELP_RET_IO_ERR);
-				break;
+		if(written == -1) {
+			switch(errno) {
+				case EAGAIN:
+				case EINTR:
+					/* this is fine, just retry... */
+					written = 0;
+					break;
+				default:
+					ABORT_FINALIZE(RELP_RET_IO_ERR);
+					break;
+			}
 		}
 	}
 
 	*pLenBuf = written;
 finalize_it:
-pThis->pEngine->dbgprint("tcpSend returns %d\n", (int) *pLenBuf);
 	LEAVE_RELPFUNC;
 }
 
@@ -688,5 +698,3 @@ finalize_it:
 
 	LEAVE_RELPFUNC;
 }
-
-
