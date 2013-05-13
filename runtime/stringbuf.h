@@ -58,7 +58,7 @@ rsRetVal cstrConstruct(cstr_t **ppThis);
 rsRetVal cstrConstructFromESStr(cstr_t **ppThis, es_str_t *str);
 rsRetVal rsCStrConstructFromszStr(cstr_t **ppThis, uchar *sz);
 rsRetVal rsCStrConstructFromCStr(cstr_t **ppThis, cstr_t *pFrom);
-rsRetVal rsCStrConstructFromszStrf(cstr_t **ppThis, uchar *fmt, ...);
+rsRetVal rsCStrConstructFromszStrf(cstr_t **ppThis, char *fmt, ...) __attribute__((format(printf,2, 3)));
 
 /**
  * Destruct the string buffer object.

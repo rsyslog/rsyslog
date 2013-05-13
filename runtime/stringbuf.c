@@ -112,13 +112,12 @@ static rsRetVal rsCStrConstructFromszStrv(cstr_t **ppThis, uchar *fmt, va_list a
 	DEFiRet;
 	cstr_t *pThis;
 	va_list ap2;
-	uchar *sz;
 	int len;
 
 	assert(ppThis != NULL);
 
 	va_copy(ap2, ap);
-	len = vsnprintf(NULL, 0, fmt, ap2);
+	len = vsnprintf(NULL, 0, (char*)fmt, ap2);
 	va_end(ap2);
 
 	if(len < 0)
@@ -133,7 +132,7 @@ static rsRetVal rsCStrConstructFromszStrv(cstr_t **ppThis, uchar *fmt, va_list a
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
 
-	vsnprintf(pThis->pBuf, len, fmt, ap);
+	vsnprintf((char*)pThis->pBuf, len, (char*)fmt, ap);
 	*ppThis = pThis;
 finalize_it:
 	RETiRet;
@@ -142,13 +141,13 @@ finalize_it:
 
 /* construct from a printf-style formated string
  */
-rsRetVal rsCStrConstructFromszStrf(cstr_t **ppThis, uchar *fmt, ...)
+rsRetVal rsCStrConstructFromszStrf(cstr_t **ppThis, char *fmt, ...)
 {
 	DEFiRet;
 	va_list ap;
 
 	va_start(ap, fmt);
-	iRet = rsCStrConstructFromszStrv(ppThis, fmt, ap);
+	iRet = rsCStrConstructFromszStrv(ppThis, (uchar*)fmt, ap);
 	va_end(ap);
 
 	RETiRet;
@@ -322,7 +321,7 @@ rsRetVal rsCStrAppendStrf(cstr_t *pThis, uchar *fmt, ...)
 	CHKiRet(iRet);
 
 	iRet = cstrAppendCStr(pThis, pStr);
-	rsCStrDestruct(pStr);
+	rsCStrDestruct(&pStr);
 finalize_it:
 	RETiRet;
 }

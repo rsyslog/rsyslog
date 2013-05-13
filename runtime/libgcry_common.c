@@ -98,7 +98,7 @@ fprintf(stderr, "pre execve: %s\n", cmd);
 	*/
 
 	/* we should never reach this point, but if we do, we terminate */
-done:	return;
+	return;
 }
 
 
