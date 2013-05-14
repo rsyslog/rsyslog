@@ -171,7 +171,6 @@ relpSessAcceptAndConstruct(relpSess_t **ppThis, relpSrv_t *pSrv, int sock)
 	*ppThis = pThis;
 
 finalize_it:
-pSrv->pEngine->dbgprint("relp session accepted with state %d\n", iRet);
 	if(iRet != RELP_RET_OK) {
 		if(pThis != NULL)
 			relpSessDestruct(&pThis);
@@ -190,19 +189,18 @@ pSrv->pEngine->dbgprint("relp session accepted with state %d\n", iRet);
 relpRetVal
 relpSessRcvData(relpSess_t *pThis)
 {
-	relpOctet_t rcvBuf[RELP_RCV_BUF_SIZE];
+	relpOctet_t rcvBuf[RELP_RCV_BUF_SIZE+1];
 	ssize_t lenBuf;
 	ssize_t i;
 
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
 
-// TODO: remove
-memset(rcvBuf, 0, RELP_RCV_BUF_SIZE);
 	lenBuf = RELP_RCV_BUF_SIZE;
 	CHKRet(relpTcpRcv(pThis->pTcp, rcvBuf, &lenBuf));
 
-pThis->pEngine->dbgprint("relp session read %d octets, buf '%s'\n", (int) lenBuf, rcvBuf);
+	rcvBuf[lenBuf] = '\0';
+	pThis->pEngine->dbgprint("relp session read %d octets, buf '%s'\n", (int) lenBuf, rcvBuf);
 	if(lenBuf == 0) {
 		pThis->pEngine->dbgprint("server closed relp session %p, session broken\n", pThis);
 		/* even though we had a "normal" close, it is unexpected at this
@@ -296,7 +294,7 @@ relpSessSrvSendHint(relpSess_t *pThis, unsigned char *pHint, size_t lenHint,
 
 	CHKRet(relpFrameBuildSendbuf(&pSendbuf, 0, pHint, lenHint, pData, lenData, pThis, NULL));
 	/* now send it */
-pThis->pEngine->dbgprint("hint-frame to send: '%s'\n", pSendbuf->pData + (9 - pSendbuf->lenTxnr));
+	pThis->pEngine->dbgprint("hint-frame to send: '%s'\n", pSendbuf->pData + (9 - pSendbuf->lenTxnr));
 	CHKRet(relpSendbufSend(pSendbuf, pThis->pTcp));
 
 finalize_it:
@@ -365,7 +363,7 @@ relpSessAddUnacked(relpSess_t *pThis, relpSendbuf_t *pSendbuf)
 			pThis->pEngine->dbgprint("Warning: exceeding window size, max %d, curr %d\n",
 						 pThis->lenUnackedLst, pThis->sizeWindow);
 	}
-pThis->pEngine->dbgprint("ADD sess %p unacked %d, sessState %d\n", pThis, pThis->lenUnackedLst, pThis->sessState);
+	pThis->pEngine->dbgprint("ADD sess %p unacked %d, sessState %d\n", pThis, pThis->lenUnackedLst, pThis->sessState);
 
 finalize_it:
 	LEAVE_RELPFUNC;
@@ -398,7 +396,7 @@ relpSessDelUnacked(relpSess_t *pThis, relpSessUnacked_t *pUnackedLstEntry)
 
 	free(pUnackedLstEntry);
 
-pThis->pEngine->dbgprint("DEL sess %p unacked %d, sessState %d\n", pThis, pThis->lenUnackedLst, pThis->sessState);
+	pThis->pEngine->dbgprint("DEL sess %p unacked %d, sessState %d\n", pThis, pThis->lenUnackedLst, pThis->sessState);
 	LEAVE_RELPFUNC;
 }
 
@@ -544,7 +542,7 @@ relpSessRawSendCommand(relpSess_t *pThis, unsigned char *pCmd, size_t lenCmd,
 	CHKRet(relpFrameBuildSendbuf(&pSendbuf, pThis->txnr, pCmd, lenCmd, pData, lenData, pThis, rspHdlr));
 	pThis->txnr = relpEngineNextTXNR(pThis->txnr);
 	/* now send it */
-pThis->pEngine->dbgprint("frame to send: '%s'\n", pSendbuf->pData + (9 - pSendbuf->lenTxnr));
+	pThis->pEngine->dbgprint("frame to send: '%s'\n", pSendbuf->pData + (9 - pSendbuf->lenTxnr));
 	iRet = relpSendbufSendAll(pSendbuf, pThis, 1);
 
 	if(iRet == RELP_RET_IO_ERR) {
@@ -786,7 +784,6 @@ relpSessConnect(relpSess_t *pThis, int protFamily, unsigned char *port, unsigned
 	/* we now have received the server's response. Now is a good time to check if the offers
 	 * received back are compatible with what we need - and, if not, terminate the session...
 	 */
-pThis->pEngine->dbgprint("pre CltConnChkOffers %d\n", iRet);
 	CHKRet(relpSessCltConnChkOffers(pThis));
 	/* TODO: flag sesssion as broken if we did not succeed? */
 
@@ -938,7 +935,6 @@ relpSessConstructOffers(relpSess_t *pThis, relpOffers_t **ppOffers)
 	/* now do the supported commands. Note that we must only send commands that
 	 * are explicitely enabled or desired.
 	 */
-pThis->pEngine->dbgprint("ConstructOffers syslog cmd state: %d\n", pThis->stateCmdSyslog);
 	CHKRet(relpOfferAdd(&pOffer, (unsigned char*) "commands", pOffers));
 	if(   pThis->stateCmdSyslog == eRelpCmdState_Enabled
 	   || pThis->stateCmdSyslog == eRelpCmdState_Desired

@@ -471,7 +471,6 @@ relpEngineRun(relpEngine_t *pThis)
 				if(FD_ISSET(sock, &readfds)) {
 					pThis->dbgprint("new connect on RELP socket #%d\n", sock);
 					localRet = relpSessAcceptAndConstruct(&pNewSess, pSrvEtry->pSrv, sock);
-pThis->dbgprint("relp accept session returns, iRet %d\n", localRet);
 					if(localRet == RELP_RET_OK) {
 						localRet = relpEngineAddToSess(pThis, pNewSess);
 					}
@@ -550,7 +549,7 @@ relpEngineDispatchFrame(relpEngine_t *pThis, relpSess_t *pSess, relpFrame_t *pFr
 	pThis->dbgprint("relp engine is dispatching frame with command '%s'\n", pFrame->cmd);
 
 	/* currently, we hardcode the commands. Over time, they may be dynamically 
-	 * loaded and, when so, should come from a linked list. TODO -- rgerhards, 2008-03-17
+	 * loaded and, when so, should come from a linked list.
 	 */
 	if(!strcmp((char*)pFrame->cmd, "open")) {
 		CHKRet(relpSCInit(pFrame, pSess));
@@ -586,14 +585,7 @@ relpEngineCltConstruct(relpEngine_t *pThis, relpClt_t **ppClt)
 	assert(ppClt != NULL);
 
 	CHKRet(relpCltConstruct(ppClt, pThis));
-// TODO: remove? 2013-05-13
-#if 0
-	if(pThis->bEnableTLS) {
-		CHKRet(relpCltEnableTLS(ppClt, pThis));
-	}
-#endif
-
-	pThis->dbgprint("relp engine create a new client (%p)\n", *ppClt);
+	pThis->dbgprint("relp engine created new client %p\n", *ppClt);
 
 finalize_it:
 	LEAVE_RELPFUNC;
@@ -612,8 +604,7 @@ relpEngineCltDestruct(relpEngine_t *pThis, relpClt_t **ppClt)
 	assert(ppClt != NULL);
 	RELPOBJ_assert(*ppClt, Clt);
 
-	pThis->dbgprint("relp engine destructing a client (%p)\n", *ppClt);
-
+	pThis->dbgprint("relp engine destructing client %p\n", *ppClt);
 	CHKRet(relpCltDestruct(ppClt));
 
 finalize_it:
@@ -656,8 +647,7 @@ relpEngineEnableTLS(relpEngine_t *pThis)
 
 /* Enable or disable a command. Note that a command can not be enabled once
  * it has been set to forbidden! There will be no error return state in this
- * case.
- * rgerhards, 2008-03-27
+ * case. -- rgerhards, 2008-03-27
  */
 relpRetVal
 relpEngineSetEnableCmd(relpEngine_t *pThis, unsigned char *pszCmd, relpCmdEnaState_t stateCmd)
@@ -666,7 +656,6 @@ relpEngineSetEnableCmd(relpEngine_t *pThis, unsigned char *pszCmd, relpCmdEnaSta
 	RELPOBJ_assert(pThis, Engine);
 	assert(pszCmd != NULL);
 
-pThis->dbgprint("ENGINE SetEnableCmd in syslog cmd state: %d\n", pThis->stateCmdSyslog);
 	if(!strcmp((char*)pszCmd, "syslog")) {
 		if(pThis->stateCmdSyslog != eRelpCmdState_Forbidden)
 			pThis->stateCmdSyslog = stateCmd;
@@ -676,7 +665,6 @@ pThis->dbgprint("ENGINE SetEnableCmd in syslog cmd state: %d\n", pThis->stateCmd
 	}
 
 finalize_it:
-pThis->dbgprint("ENGINE SetEnableCmd out syslog cmd state: %d, iRet %d\n", pThis->stateCmdSyslog, iRet);
 	LEAVE_RELPFUNC;
 }
 

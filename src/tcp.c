@@ -356,7 +356,7 @@ relpTcpLstnInitTLS(relpTcp_t *pThis)
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Tcp);
 
-	gnutls_global_init(); // TODO: once in engine!
+	gnutls_global_init();
 	r = gnutls_anon_allocate_server_credentials(&pThis->anoncredSrv);
 
 	pThis->pEngine->dbgprint("DDDD: generating server DH params...\n");
