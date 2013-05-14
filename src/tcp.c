@@ -55,7 +55,7 @@
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 #endif
 
-#define DH_BITS 1024 /* 1024 TODO: change, this value just for testing! */
+#define DH_BITS 1024 /* change, this value just for testing! */
 
 static int called_gnutls_global_init = 0;
 
@@ -506,7 +506,6 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 
-
 /* receive data from a tcp socket
  * The lenBuf parameter must contain the max buffer size on entry and contains
  * the number of octets read (or -1 in case of error) on exit. This function
@@ -522,11 +521,10 @@ relpTcpRcv(relpTcp_t *pThis, relpOctet_t *pRcvBuf, ssize_t *pLenBuf)
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Tcp);
 
-	// TODO: much more to do, e.g. different error codes!
-pThis->pEngine->dbgprint("DDDD: relpTcpRcv, TLS enabled %d\n", pThis->bEnableTLS);
 	if(pThis->bEnableTLS) {
 		*pLenBuf = gnutls_record_recv(pThis->session, pRcvBuf, *pLenBuf);
-pThis->pEngine->dbgprint("DDDD: TLS rcv returned %d\n", (int) *pLenBuf);
+		if(*pLenBuf < 0)
+			*pLenBuf = -1; /* make sure we follow our function signature! */
 	} else {
 		*pLenBuf = recv(pThis->sock, pRcvBuf, *pLenBuf, MSG_DONTWAIT);
 	}
@@ -534,8 +532,7 @@ pThis->pEngine->dbgprint("DDDD: TLS rcv returned %d\n", (int) *pLenBuf);
 	LEAVE_RELPFUNC;
 }
 
-
-/* send a buffer via unencrypted TCP.
+/* send a buffer via TCP.
  * On entry, pLenBuf contains the number of octets to
  * write. On exit, it contains the number of octets actually written.
  * If this number is lower than on entry, only a partial buffer has
@@ -631,9 +628,6 @@ pThis->pEngine->dbgprint("DDDD: gnutls_handshake: %d: %s\n", r, gnutls_strerror(
 		 * error check.  */
 		sockflags = fcntl(pThis->sock, F_SETFL, sockflags);
 	}
-
-
-pThis->pEngine->dbgprint("tcpConnectTLSInit returns\n");
 	LEAVE_RELPFUNC;
 }
 
