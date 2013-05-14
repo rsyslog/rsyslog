@@ -47,7 +47,9 @@ rsyslogd_LDFLAGS = -export-dynamic
 
 EXTRA_DIST = $(man_MANS) \
 	rsgtutil.rst \
+	rsgtutil.1 \
 	rscryutil.rst \
+	rscryutil.1 \
 	recover_qi.pl
 
 if ENABLE_DIAGTOOLS
