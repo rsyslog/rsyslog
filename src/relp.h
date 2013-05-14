@@ -165,7 +165,7 @@ struct relpEngine_s {
 	((txnr > 999999999) ? 1 : txnr + 1)
 
 static inline int relpEngineShouldStop(relpEngine_t *pThis) {
-pThis->dbgprint("DDDD: librelp bStop %d, ShutdownImmdt %p, immdet result %d\n", pThis->bStop, pThis->bShutdownImmdt, (pThis->bShutdownImmdt == NULL) ? 0 : *pThis->bShutdownImmdt);
+//pThis->dbgprint("DDDD: librelp bStop %d, ShutdownImmdt %p, immdet result %d\n", pThis->bStop, pThis->bShutdownImmdt, (pThis->bShutdownImmdt == NULL) ? 0 : *pThis->bShutdownImmdt);
 	return     pThis->bStop
 	       || (pThis->bShutdownImmdt != NULL && *pThis->bShutdownImmdt);
 }

@@ -277,6 +277,10 @@ pThis->pEngine->dbgprint("DDDD: gnutls_credentials_set %d: %s\n", r, gnutls_stre
 	gnutls_dh_set_prime_bits(pThis->session, DH_BITS);
 	gnutls_transport_set_ptr(pThis->session, (gnutls_transport_ptr_t) pThis->sock);
 	r = gnutls_handshake(pThis->session);
+	if(r == GNUTLS_E_INTERRUPTED || r == GNUTLS_E_AGAIN) {
+		pThis->pEngine->dbgprint("librelp: gnutls_handshake must be retried\n");
+		pThis->rtryOp = relpTCP_RETRY_handshake;
+	}
 pThis->pEngine->dbgprint("DDDD: gnutls_handshake: %d: %s\n", r, gnutls_strerror(r));
 
   	LEAVE_RELPFUNC;
@@ -307,12 +311,6 @@ relpTcpAcceptConnReq(relpTcp_t **ppThis, int sock, relpSrv_t *pSrv)
 	/* construct our object so that we can use it... */
 	CHKRet(relpTcpConstruct(&pThis, pEngine));
 
-	pThis->sock = iNewSock;
-	if(pSrv->pTcp->bEnableTLS) {
-		pThis->bEnableTLS = 1;
-		CHKRet(relpTcpAcceptConnReqInitTLS(pThis, pSrv)); /* we are in blocking mode here -- TODO! */
-	}
-
 	/* TODO: obtain hostname, normalize (callback?), save it */
 	CHKRet(relpTcpSetRemHost(pThis, (struct sockaddr*) &addr));
 pThis->pEngine->dbgprint("remote host is '%s', ip '%s'\n", pThis->pRemHostName, pThis->pRemHostIP);
@@ -328,6 +326,12 @@ pThis->pEngine->dbgprint("remote host is '%s', ip '%s'\n", pThis->pRemHostName, 
 	if(sockflags == -1) {
 		pThis->pEngine->dbgprint("error %d setting fcntl(O_NONBLOCK) on relp socket %d", errno, iNewSock);
 		ABORT_FINALIZE(RELP_RET_IO_ERR);
+	}
+
+	pThis->sock = iNewSock;
+	if(pSrv->pTcp->bEnableTLS) {
+		pThis->bEnableTLS = 1;
+		CHKRet(relpTcpAcceptConnReqInitTLS(pThis, pSrv));
 	}
 
 	*ppThis = pThis;
@@ -518,13 +522,19 @@ finalize_it:
 relpRetVal
 relpTcpRcv(relpTcp_t *pThis, relpOctet_t *pRcvBuf, ssize_t *pLenBuf)
 {
+	int r;
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Tcp);
 
 	if(pThis->bEnableTLS) {
-		*pLenBuf = gnutls_record_recv(pThis->session, pRcvBuf, *pLenBuf);
-		if(*pLenBuf < 0)
-			*pLenBuf = -1; /* make sure we follow our function signature! */
+		r = gnutls_record_recv(pThis->session, pRcvBuf, *pLenBuf);
+		if(r == GNUTLS_E_INTERRUPTED || r == GNUTLS_E_AGAIN) {
+			pThis->pEngine->dbgprint("librelp: gnutls_record_recv must be retried\n");
+			pThis->rtryOp = relpTCP_RETRY_recv;
+		} else {
+			pThis->rtryOp = relpTCP_RETRY_none;
+		}
+		*pLenBuf = (r < 0) ? -1 : r;
 	} else {
 		*pLenBuf = recv(pThis->sock, pRcvBuf, *pLenBuf, MSG_DONTWAIT);
 	}
@@ -548,19 +558,17 @@ relpTcpSend(relpTcp_t *pThis, relpOctet_t *pBuf, ssize_t *pLenBuf)
 
 	if(pThis->bEnableTLS) {
 		written = gnutls_record_send(pThis->session, pBuf, *pLenBuf);
-pThis->pEngine->dbgprint("DDDD: TLS send returned %d\n", (int) written);
+		pThis->pEngine->dbgprint("librelp: TLS send returned %d\n", (int) written);
 		if(written == GNUTLS_E_AGAIN || written == GNUTLS_E_INTERRUPTED) {
-			/* no problem here - we indicate we had written 0 bytes. This
-			 * will cause sendbuf to re-send with the same parameters,
-			 * what is exactly what GnuTLS wants us to do.
-			 * TODO: think about gnutls direction, we may need to add a check
-			 * TODO: in the select loop!
-			 */
+			pThis->rtryOp = relpTCP_RETRY_send;
 			written = 0;
-		} else if(written < 1) {
-			pThis->pEngine->dbgprint("librelp: error in gnutls_record_send: %s\n",
-				gnutls_strerror(written));
-			ABORT_FINALIZE(RELP_RET_IO_ERR);
+		} else {
+			pThis->rtryOp = relpTCP_RETRY_none;
+			if(written < 1) {
+				pThis->pEngine->dbgprint("librelp: error in gnutls_record_send: %s\n",
+					gnutls_strerror(written));
+				ABORT_FINALIZE(RELP_RET_IO_ERR);
+			}
 		}
 	} else {
 		written = send(pThis->sock, pBuf, *pLenBuf, 0);
@@ -703,36 +711,14 @@ relpTcpGetRtryDirection(relpTcp_t *pThis)
 	return gnutls_record_get_direction(pThis->session);
 }
 
-/* This functions is requried for TLS in async mode. The TLS protocol may
- * need to do multiple send/recv for a single call, and may change the direction
- * of these calls (see GnuTLS doc for more details). If this happens, we need
- * to retry the last operation, and this is what is done here (actually
- * it is not really a retry but more a "continue with this function"). Note
- * that it may be possible that multiple retries are required.
- * If an API error happens, we are more or less lost at this stage, because we
- * do not have a path back to the original caller. So we ignore it here, BUT
- * let the error pop up with the next call, which then is noticed. Note that
- * this cannot lead to message loss, as we have app-layer acks and they work
- * irrespective of what was the ultimate failure cause!
- * Note: while we permit multiple operations on the same session in librelp,
- * we enforce that no new call is made until an incomplete one is finally
- * completed. Aynthing else may also get us into big trouble with GnuTLS.
- * rgerhards, 2013-05-14
- */
 void
-relpTcpDoRtry(relpTcp_t *pThis)
+relpTcpRtryHandshake(relpTcp_t *pThis)
 {
 	int r;
-	if(pThis->rtryOp == relpTCP_RETRY_send) {
-		r = gnutls_record_send(pThis->session, NULL, 0);
-	} else {
-                pThis->pEngine->dbgprint("librelp: invalid retry mode %d\n",
-			(int)pThis->rtryOp);
-		r = 0; /* fake success to break any loops in code */
-	}
+	r = gnutls_handshake(pThis->session);
 	if(r < 0) {
-                pThis->pEngine->dbgprint("librelp: error %d during retry\n", r);
-		if(r != GNUTLS_E_INTERRUPTED && r != GNUTLS_E_AGAIN)
-			pThis->rtryOp = relpTCP_RETRY_none;
+                pThis->pEngine->dbgprint("librelp: state %d during retry handshake\n", r);
 	}
+	if(r != GNUTLS_E_INTERRUPTED && r != GNUTLS_E_AGAIN)
+		pThis->rtryOp = relpTCP_RETRY_none;
 }

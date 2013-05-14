@@ -36,6 +36,11 @@
 #include <gnutls/gnutls.h>
 #include "relp.h"
 
+typedef enum { relpTCP_RETRY_none = 0,
+       relpTCP_RETRY_handshake = 1,
+       relpTCP_RETRY_recv = 2, 
+       relpTCP_RETRY_send = 3 } relpTcpRtryState_t;
+
 /* the RELPTCP object 
  * rgerhards, 2008-03-16
  */
@@ -53,9 +58,7 @@ typedef struct relpTcp_s {
 	gnutls_anon_server_credentials_t anoncredSrv;	/**< server anon credentials */
 	gnutls_session_t session;
 	gnutls_dh_params_t dh_params; /**< server DH parameters for anon mode */
-	enum { relpTCP_RETRY_none = 0,
-	       relpTCP_RETRY_recv = 1, 
-	       relpTCP_RETRY_send = 2 } rtryOp;
+	relpTcpRtryState_t rtryOp;
 } relpTcp_t;
 
 
@@ -63,6 +66,13 @@ typedef struct relpTcp_s {
 #define relpTcpGetNumSocks(pThis)    ((pThis)->socks[0])
 #define relpTcpGetLstnSock(pThis, i) ((pThis)->socks[i])
 #define relpTcpGetSock(pThis)        ((pThis)->sock)
+
+/* inlines (only for library-internal use!) */
+static inline relpTcpRtryState_t
+relpTcpRtryOp(relpTcp_t *pThis)
+{
+	return pThis->rtryOp;
+}
 
 /* prototypes */
 relpRetVal relpTcpConstruct(relpTcp_t **ppThis, relpEngine_t *pEngine);
@@ -75,6 +85,6 @@ relpRetVal relpTcpSend(relpTcp_t *pThis, relpOctet_t *pBuf, ssize_t *pLenBuf);
 relpRetVal relpTcpConnect(relpTcp_t *pThis, int family, unsigned char *port, unsigned char *host, unsigned char *clientIP);
 relpRetVal relpTcpEnableTLS(relpTcp_t *pThis);
 int relpTcpGetRtryDirection(relpTcp_t *pThis);
-void relpTcpDoRtry(relpTcp_t *pThis);
+void relpTcpRtryHandshake(relpTcp_t *pThis);
 
 #endif /* #ifndef RELPTCP_H_INCLUDED */
