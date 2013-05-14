@@ -148,6 +148,12 @@ relpSrvSetFamily(relpSrv_t *pThis, int ai_family)
 	LEAVE_RELPFUNC;
 }
 
+void
+relpSrvEnableTLS(relpSrv_t *pThis)
+{
+	pThis->bEnableTLS = 1;
+}
+
 
 /* start a relp server - the server object must have all properties set
  * rgerhards, 2008-03-17
@@ -161,7 +167,7 @@ relpSrvRun(relpSrv_t *pThis)
 	RELPOBJ_assert(pThis, Srv);
 
 	CHKRet(relpTcpConstruct(&pTcp, pThis->pEngine));
-	if(pThis->pEngine->bEnableTLS)
+	if(pThis->bEnableTLS)
 		relpTcpEnableTLS(pTcp);
 	CHKRet(relpTcpLstnInit(pTcp, (pThis->pLstnPort == NULL) ? (unsigned char*) RELP_DFLT_PORT : pThis->pLstnPort, pThis->ai_family));
 		

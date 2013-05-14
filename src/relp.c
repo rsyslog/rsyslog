@@ -265,6 +265,38 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 
+/* create a new listener to be added to the engine. This is the new-style
+ * calling convention, which permits us to set various properties before
+ * the listener is actually started. New callers should use it. Sequence
+ * is:
+ * * relpEngineListnerConstruct()
+ * * ... set properties ... (via relpSrv...() family)
+ * * relgEngineListnerConstructFinalize()
+ * rgerhards, 2013-05-14
+ */
+relpRetVal
+relpEngineListnerConstruct(relpEngine_t *pThis, relpSrv_t **ppSrv)
+{
+	relpSrv_t *pSrv;
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Engine);
+
+	CHKRet(relpSrvConstruct(&pSrv, pThis));
+	CHKRet(relpSrvSetFamily(pSrv, pThis->ai_family));
+	*ppSrv = pSrv;
+finalize_it:
+	LEAVE_RELPFUNC;
+}
+relpRetVal
+relpEngineListnerConstructFinalize(relpEngine_t *pThis, relpSrv_t *pSrv)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Engine);
+	CHKRet(relpSrvRun(pSrv));
+	CHKRet(relpEngineAddToSrvList(pThis, pSrv));
+finalize_it:
+	LEAVE_RELPFUNC;
+}
 
 /* a dummy for callbacks not set by the caller */
 static relpRetVal relpSrvSyslogRcvDummy(unsigned char __attribute__((unused)) *pHostName,

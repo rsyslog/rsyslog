@@ -47,6 +47,7 @@ struct relpSrv_s {
 	relpTcp_t *pTcp; /**< our tcp support object */
 	size_t maxDataSize;  /**< maximum size of a DATA element */
 	void *pUsr; /**< user pointer (passed back in to callback) */
+	int bEnableTLS;
 
 	/* Status of commands as supported in this session. */
 	relpCmdEnaState_t stateCmdSyslog;
@@ -60,9 +61,7 @@ struct relpSrv_s {
 /* prototypes */
 relpRetVal relpSrvConstruct(relpSrv_t **ppThis, relpEngine_t *pEngine);
 relpRetVal relpSrvDestruct(relpSrv_t **ppThis);
-relpRetVal relpSrvSetLstnPort(relpSrv_t *pThis, unsigned char *pLstnPort);
 relpRetVal relpSrvSetFamily(relpSrv_t *pThis, int ai_family);
-relpRetVal relpSrvSetUsrPtr(relpSrv_t *pThis, void *pUsr);
 relpRetVal relpSrvRun(relpSrv_t *pThis);
 
 #endif /* #ifndef RELPSRV_H_INCLUDED */

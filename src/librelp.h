@@ -147,6 +147,8 @@ relpRetVal relpEngineDestruct(relpEngine_t **ppThis);
 relpRetVal relpEngineSetDbgprint(relpEngine_t *pThis, void (*dbgprint)(char *fmt, ...) __attribute__((format(printf, 1, 2))));
 relpRetVal relpEngineAddListner(relpEngine_t *pThis, unsigned char *pLstnPort);
 relpRetVal relpEngineAddListner2(relpEngine_t *pThis, unsigned char *pLstnPort, void*);
+relpRetVal relpEngineListnerConstruct(relpEngine_t *pThis, relpSrv_t **ppSrv);
+relpRetVal relpEngineListnerConstructFinalize(relpEngine_t *pThis, relpSrv_t *pSrv);
 relpRetVal relpEngineSetStop(relpEngine_t *pThis);
 relpRetVal relpEngineSetFamily(relpEngine_t *pThis, int ai_family);
 relpRetVal relpEngineEnableTLS(relpEngine_t *pThis);
@@ -160,6 +162,11 @@ relpRetVal relpEngineSetSyslogRcv2(relpEngine_t *pThis,
 relpRetVal relpEngineSetEnableCmd(relpEngine_t *pThis, unsigned char *pszCmd, relpCmdEnaState_t stateCmd);
 relpRetVal relpEngineSetDnsLookupMode(relpEngine_t *pThis, int iMode);
 
+/* exposed server property set functions */
+relpRetVal relpSrvSetLstnPort(relpSrv_t *pThis, unsigned char *pLstnPort);
+relpRetVal relpSrvSetUsrPtr(relpSrv_t *pThis, void *pUsr);
+void relpSrvEnableTLS(relpSrv_t *pThis);
+
 /* exposed relp client functions */
 relpRetVal relpCltConnect(relpClt_t *pThis, int protFamily, unsigned char *port, unsigned char *host);
 relpRetVal relpCltSendSyslog(relpClt_t *pThis, unsigned char *pMsg, size_t lenMsg);
@@ -167,6 +174,5 @@ relpRetVal relpCltSetTimeout(relpClt_t *pThis, unsigned timeout);
 relpRetVal relpCltSetClientIP(relpClt_t *pThis, unsigned char *ipAddr);
 relpRetVal relpCltEnableTLS(relpClt_t *pThis);
 relpRetVal relpCltReconnect(relpClt_t *pThis);
-
 
 #endif /* #ifndef RELP_H_INCLUDED */
