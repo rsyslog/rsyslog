@@ -28,7 +28,6 @@ fi
 AC_DISABLE_STATIC
 AC_PROG_LIBTOOL
 AC_CANONICAL_HOST
-AC_PATH_PROG([RST2MAN], [rst2man])
 
 PKG_PROG_PKG_CONFIG
 
@@ -999,6 +998,17 @@ if test "x$enable_guardtime" = "xyes"; then
 	PKG_CHECK_MODULES(GUARDTIME, libgt >= 0.3.1)
 fi
 AM_CONDITIONAL(ENABLE_GUARDTIME, test x$enable_guardtime = xyes)
+
+
+# obtain path for rst2man
+if test "x$enable_libgcrypt" = "xyes" || \
+        "x$enable_guardtime" = "xyes"; then
+        AC_PATH_PROG([RST2MAN], [rst2man])
+        if test "x${RST2MAN}" == "x"; then
+            AC_MSG_FAILURE([rst2man not found in PATH])
+        fi
+fi
+
 
 # RFC 3195 support
 AC_ARG_ENABLE(rfc3195,
