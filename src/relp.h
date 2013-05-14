@@ -84,7 +84,6 @@ struct relpEngine_s {
 
 	/* Flags */
 	int bEnableDns; /**< enabled DNS lookups 0 - no, 1 - yes */
-	int bEnableTLS; /**< enable TLS support */
 	int bAcceptSessFromMalDnsHost; /**< accept session from host with malicious DNS? (0-no, 1-yes) */
 	int ai_family;	/**< to support IPv4/v6 modes */
 

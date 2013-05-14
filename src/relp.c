@@ -664,19 +664,6 @@ relpEngineSetShutdownImmdtPtr(relpEngine_t *pThis, int *ptr)
 		pThis->bShutdownImmdt = ptr;
 }
 
-/* Enable TLS mode. This also requires some other parameters to be
- * set. Note that the other parameters alone are NOT sufficient to
- * detect if TLS is desired, as we may use anon mode.
- */
-relpRetVal
-relpEngineEnableTLS(relpEngine_t *pThis)
-{
-	ENTER_RELPFUNC;
-	pThis->bEnableTLS = 1;
-	LEAVE_RELPFUNC;
-}
-
-
 /* Enable or disable a command. Note that a command can not be enabled once
  * it has been set to forbidden! There will be no error return state in this
  * case. -- rgerhards, 2008-03-27

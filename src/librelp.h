@@ -151,7 +151,6 @@ relpRetVal relpEngineListnerConstruct(relpEngine_t *pThis, relpSrv_t **ppSrv);
 relpRetVal relpEngineListnerConstructFinalize(relpEngine_t *pThis, relpSrv_t *pSrv);
 relpRetVal relpEngineSetStop(relpEngine_t *pThis);
 relpRetVal relpEngineSetFamily(relpEngine_t *pThis, int ai_family);
-relpRetVal relpEngineEnableTLS(relpEngine_t *pThis);
 relpRetVal relpEngineRun(relpEngine_t *pThis);
 relpRetVal relpEngineCltDestruct(relpEngine_t *pThis, relpClt_t **ppClt);
 relpRetVal relpEngineCltConstruct(relpEngine_t *pThis, relpClt_t **ppClt);
