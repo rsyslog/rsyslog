@@ -212,58 +212,6 @@ relpEngineSetDbgprint(relpEngine_t *pThis, void (*dbgprint)(char *fmt, ...) __at
 }
 
 
-/* unfortunately, we need to duplicate some functionality to support the <= 0.1.2
- * callback interface (which did not contain a user pointer) and the >= 0.1.3 
- * callback interface. I have thought a lot about doing this smarter, but there
- * is no better way the API offers. The functions ending in ...2() are the new
- * interface. -- rgerhards, 2008-07-08
- */
-
-
-/* a dummy for callbacks not set by the caller */
-static relpRetVal relpSrvSyslogRcvDummy2(void __attribute__((unused)) *pUsr,
-	unsigned char __attribute__((unused)) *pHostName,
-	unsigned char __attribute__((unused)) *pIP, unsigned char __attribute__((unused)) *pMsg,
-	size_t __attribute__((unused)) lenMsg)
-{ return RELP_RET_NOT_IMPLEMENTED;
-}
-/* set the syslog receive callback. If NULL is provided, it is set to the
- * not implemented dummy.
- */
-relpRetVal
-relpEngineSetSyslogRcv2(relpEngine_t *pThis, relpRetVal (*pCB)(void *, unsigned char*, unsigned char*, unsigned char*, size_t))
-{
-	ENTER_RELPFUNC;
-	RELPOBJ_assert(pThis, Engine);
-
-	pThis->onSyslogRcv = NULL;
-	pThis->onSyslogRcv2 = (pCB == NULL) ? relpSrvSyslogRcvDummy2 : pCB;
-	LEAVE_RELPFUNC;
-}
-
-/* add a relp listener to the engine. The listen port must be provided.
- * The listen port may be NULL, in which case the default port is used.
- * rgerhards, 2008-03-17
- */
-relpRetVal
-relpEngineAddListner2(relpEngine_t *pThis, unsigned char *pLstnPort, void *pUsr)
-{
-	relpSrv_t *pSrv;
-	ENTER_RELPFUNC;
-	RELPOBJ_assert(pThis, Engine);
-
-	CHKRet(relpSrvConstruct(&pSrv, pThis));
-	CHKRet(relpSrvSetUsrPtr(pSrv, pUsr));
-	CHKRet(relpSrvSetLstnPort(pSrv, pLstnPort));
-	CHKRet(relpSrvSetFamily(pSrv, pThis->ai_family));
-	CHKRet(relpSrvRun(pSrv));
-
-	/* all went well, so we can add the server to our server list */
-	CHKRet(relpEngineAddToSrvList(pThis, pSrv));
-
-finalize_it:
-	LEAVE_RELPFUNC;
-}
 
 /* create a new listener to be added to the engine. This is the new-style
  * calling convention, which permits us to set various properties before
@@ -298,12 +246,57 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 
+/* unfortunately, we need to duplicate some functionality to support the <= 0.1.2
+ * callback interface (which did not contain a user pointer) and the >= 0.1.3 
+ * callback interface. I have thought a lot about doing this smarter, but there
+ * is no better way the API offers. The functions ending in ...2() are the new
+ * interface. -- rgerhards, 2008-07-08
+ */
+
+/* a dummy for callbacks not set by the caller */
+static relpRetVal relpSrvSyslogRcvDummy2(void __attribute__((unused)) *pUsr,
+	unsigned char __attribute__((unused)) *pHostName,
+	unsigned char __attribute__((unused)) *pIP, unsigned char __attribute__((unused)) *pMsg,
+	size_t __attribute__((unused)) lenMsg)
+{ return RELP_RET_NOT_IMPLEMENTED;
+}
+/* set the syslog receive callback. If NULL is provided, it is set to the
+ * not implemented dummy.
+ */
+relpRetVal
+relpEngineSetSyslogRcv2(relpEngine_t *pThis, relpRetVal (*pCB)(void *, unsigned char*, unsigned char*, unsigned char*, size_t))
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Engine);
+
+	pThis->onSyslogRcv = NULL;
+	pThis->onSyslogRcv2 = (pCB == NULL) ? relpSrvSyslogRcvDummy2 : pCB;
+	LEAVE_RELPFUNC;
+}
+
+/* Deprecated, use relpEngineListnerConstruct() family of functions.
+ * See there for further information.
+ */
+relpRetVal
+relpEngineAddListner2(relpEngine_t *pThis, unsigned char *pLstnPort, void *pUsr)
+{
+	relpSrv_t *pSrv;
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Engine);
+	CHKRet(relpEngineListnerConstruct(pThis, &pSrv));
+	CHKRet(relpSrvSetUsrPtr(pSrv, pUsr));
+	CHKRet(relpSrvSetLstnPort(pSrv, pLstnPort));
+	CHKRet(relpEngineListnerConstructFinalize(pThis, pSrv));
+finalize_it:
+	LEAVE_RELPFUNC;
+}
 /* a dummy for callbacks not set by the caller */
 static relpRetVal relpSrvSyslogRcvDummy(unsigned char __attribute__((unused)) *pHostName,
 	unsigned char __attribute__((unused)) *pIP, unsigned char __attribute__((unused)) *pMsg,
 	size_t __attribute__((unused)) lenMsg)
 { return RELP_RET_NOT_IMPLEMENTED;
 }
+
 /* set the syslog receive callback. If NULL is provided, it is set to the
  * not implemented dummy.
  */
@@ -318,9 +311,8 @@ relpEngineSetSyslogRcv(relpEngine_t *pThis, relpRetVal (*pCB)(unsigned char*, un
 	LEAVE_RELPFUNC;
 }
 
-/* add a relp listener to the engine. The listen port must be provided.
- * The listen port may be NULL, in which case the default port is used.
- * rgerhards, 2008-03-17
+/* Deprecated, use relpEngineListnerConstruct() family of functions.
+ * See there for further information.
  */
 relpRetVal
 relpEngineAddListner(relpEngine_t *pThis, unsigned char *pLstnPort)
@@ -328,15 +320,9 @@ relpEngineAddListner(relpEngine_t *pThis, unsigned char *pLstnPort)
 	relpSrv_t *pSrv;
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Engine);
-
-	CHKRet(relpSrvConstruct(&pSrv, pThis));
-	CHKRet(relpSrvSetFamily(pSrv, pThis->ai_family));
+	CHKRet(relpEngineListnerConstruct(pThis, &pSrv));
 	CHKRet(relpSrvSetLstnPort(pSrv, pLstnPort));
-	CHKRet(relpSrvRun(pSrv));
-
-	/* all went well, so we can add the server to our server list */
-	CHKRet(relpEngineAddToSrvList(pThis, pSrv));
-
+	CHKRet(relpEngineListnerConstructFinalize(pThis, pSrv));
 finalize_it:
 	LEAVE_RELPFUNC;
 }

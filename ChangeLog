@@ -1,5 +1,19 @@
 ----------------------------------------------------------------------
 Version ?.?.0 - 2013-05-??
+- add TLS support
+- new api for creating listners:
+  ... which permits us to set various properties before the listener
+  is actually started. New callers should use it. Sequence is:
+  * relpEngineListnerConstruct()
+  * ... set properties ... (via relpSrv...() family)
+  * relgEngineListnerConstructFinalize()
+  This new style permits us to add/set additional listner options
+  without the need to introduce ever-new listner create functions.
+  Actually, their number would grow exponentionally, so this were
+  a dead end.
+  The old-style APIs relpEngineAddListner() and
+  relpEngineAddListner2() are still fully supported (and supposed
+  to be for a long time), but flagged as deprecated.
 ----------------------------------------------------------------------
 Version 1.0.7 - 2013-05-13
 - ABI change: removed relpCltConnect2() API which was against
