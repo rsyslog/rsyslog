@@ -296,7 +296,7 @@ tlv16Write(gtfile gf, int flags, int tlvtype, uint16_t len)
 {
 	uint16_t typ;
 	int r;
-	typ = ((flags|1) << 13)|tlvtype;
+	typ = ((flags|1) << 15)|tlvtype;
 	r = tlvbufAddOctet(gf, typ >> 8);
 	if(r != 0) goto done;
 	r = tlvbufAddOctet(gf, typ & 0xff);

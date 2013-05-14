@@ -249,7 +249,7 @@ rsgt_tlvRecRead(FILE *fp, tlvrecord_t *rec)
 	NEXTC;
 	rec->hdr[0] = c;
 	rec->tlvtype = c & 0x1f;
-	if(c & 0x20) { /* tlv16? */
+	if(c & 0x80) { /* tlv16? */
 		rec->lenHdr = 4;
 		NEXTC;
 		rec->hdr[1] = c;
@@ -290,7 +290,7 @@ rsgt_tlvDecodeSUBREC(tlvrecord_t *rec, uint16_t *stridx, tlvrecord_t *newrec)
 	c = rec->data[(*stridx)++];
 	newrec->hdr[0] = c;
 	newrec->tlvtype = c & 0x1f;
-	if(c & 0x20) { /* tlv16? */
+	if(c & 0x80) { /* tlv16? */
 		newrec->lenHdr = 4;
 		if(rec->tlvlen == *stridx) {r=RSGTE_LEN; goto done;}
 		c = rec->data[(*stridx)++];

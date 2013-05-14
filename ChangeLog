@@ -2,6 +2,7 @@
 Version 7.3.15  [beta] 2013-05-0?
 - bugfix: imjournal had problem with systemd journal API change
 - imjournal: now obtain and include PID
+- bugfix: .logsig files had tlv16 indicator bit at wrong offset
 - bugfix: omrelp legacy config parameters set a timeout of zero
   which lead the legacy config to be unusable.
 - bugfix: segfault on startup if a disk queue was configure without file
