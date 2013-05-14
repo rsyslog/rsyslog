@@ -59,7 +59,6 @@ static relpEngine_t *pRelpEngine;	/* our relp engine */
 
 typedef struct _instanceData {
 	uchar *target;
-	int compressionLevel; /* 0 - no compression, else level for zlib */
 	uchar *port;
 	int bInitialConnect; /* is this the initial connection request of our module? (0-no, 1-yes) */
 	int bIsConnected; /* currently connected to server? 0 - no, 1 - yes */
@@ -280,62 +279,6 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	if((iRet = createInstance(&pData)) != RS_RET_OK)
 		FINALIZE;
 
-	/* we are now after the protocol indicator. Now check if we should
-	 * use compression. We begin to use a new option format for this:
-	 * @(option,option)host:port
-	 * The first option defined is "z[0..9]" where the digit indicates
-	 * the compression level. If it is not given, 9 (best compression) is
-	 * assumed. An example action statement might be:
-	 * :omrelp:(z5,o)127.0.0.1:1400  
-	 * Which means send via TCP with medium (5) compresion (z) to the local
-	 * host on port 1400. The '0' option means that octet-couting (as in
-	 * IETF I-D syslog-transport-tls) is to be used for framing (this option
-	 * applies to TCP-based syslog only and is ignored when specified with UDP).
-	 * That is not yet implemented.
-	 * rgerhards, 2006-12-07
-	 * TODO: think of all this in spite of RELP -- rgerhards, 2008-03-13
-	 */
-	if(*p == '(') {
-		/* at this position, it *must* be an option indicator */
-		do {
-			++p; /* eat '(' or ',' (depending on when called) */
-			/* check options */
-			if(*p == 'z') { /* compression */
-#					ifdef USE_NETZIP
-				++p; /* eat */
-				if(isdigit((int) *p)) {
-					int iLevel;
-					iLevel = *p - '0';
-					++p; /* eat */
-					pData->compressionLevel = iLevel;
-				} else {
-					errmsg.LogError(0, NO_ERRCODE, "Invalid compression level '%c' specified in "
-						 "forwardig action - NOT turning on compression.",
-						 *p);
-				}
-#					else
-				errmsg.LogError(0, NO_ERRCODE, "Compression requested, but rsyslogd is not compiled "
-					 "with compression support - request ignored.");
-#					endif /* #ifdef USE_NETZIP */
-			} else { /* invalid option! Just skip it... */
-				errmsg.LogError(0, NO_ERRCODE, "Invalid option %c in forwarding action - ignoring.", *p);
-				++p; /* eat invalid option */
-			}
-			/* the option processing is done. We now do a generic skip
-			 * to either the next option or the end of the option
-			 * block.
-			 */
-			while(*p && *p != ')' && *p != ',')
-				++p;	/* just skip it */
-		} while(*p && *p == ','); /* Attention: do.. while() */
-		if(*p == ')')
-			++p; /* eat terminator, on to next */
-		else
-			/* we probably have end of string - leave it for the rest
-			 * of the code to handle it (but warn the user)
-			 */
-			errmsg.LogError(0, NO_ERRCODE, "Option block not terminated in forwarding action.");
-	}
 	/* extract the host first (we do a trick - we replace the ';' or ':' with a '\0')
 	 * now skip to port and then template name. rgerhards 2005-07-06
 	 */
