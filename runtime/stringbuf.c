@@ -312,7 +312,7 @@ rsRetVal rsCStrAppendStrf(cstr_t *pThis, uchar *fmt, ...)
 {
 	DEFiRet;
 	va_list ap;
-	cstr_t *pStr;
+	cstr_t *pStr = NULL;
 
 	va_start(ap, fmt);
 	iRet = rsCStrConstructFromszStrv(&pStr, fmt, ap);
