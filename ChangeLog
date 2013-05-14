@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 7.3.15  [beta] 2013-05-0?
+Version 7.3.15  [beta] 2013-05-15
 - bugfix: problem in build system (especially when cross-compiling)
   Thanks to Tomas Heinrich and winfried_mb2@xmsnet.nl for the patch.
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=445
