@@ -210,6 +210,8 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 		CHKiRet(relpEngineSetDbgprint(pRelpEngine, dbgprintf));
 		CHKiRet(relpEngineSetFamily(pRelpEngine, glbl.GetDefPFFamily()));
 		CHKiRet(relpEngineSetEnableCmd(pRelpEngine, (uchar*) "syslog", eRelpCmdState_Required));
+// TODO: make configurable
+CHKiRet(relpEngineEnableTLS(pRelpEngine));
 		CHKiRet(relpEngineSetSyslogRcv(pRelpEngine, onSyslogRcv));
 		if (!glbl.GetDisableDNS()) {
 			CHKiRet(relpEngineSetDnsLookupMode(pRelpEngine, 1));
