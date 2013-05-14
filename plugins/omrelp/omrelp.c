@@ -65,6 +65,8 @@ typedef struct _instanceData {
 	int bInitialConnect; /* is this the initial connection request of our module? (0-no, 1-yes) */
 	int bIsConnected; /* currently connected to server? 0 - no, 1 - yes */
 	unsigned timeout;
+	unsigned rebindInterval;
+	unsigned nSent;
 	relpClt_t *pRelpClt; /* relp client for this instance */
 	sbool bEnableTLS;
 	uchar *tplName;
@@ -82,6 +84,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "target", eCmdHdlrGetWord, 1 },
 	{ "tls", eCmdHdlrBinary, 0 },
 	{ "port", eCmdHdlrGetWord, 0 },
+	{ "rebindinterval", eCmdHdlrInt, 0 },
 	{ "timeout", eCmdHdlrInt, 0 },
 	{ "template", eCmdHdlrGetWord, 1 }
 };
@@ -116,16 +119,16 @@ doCreateRelpClient(instanceData *pData)
 		ABORT_FINALIZE(RS_RET_RELP_ERR);
 	if(relpCltSetTimeout(pData->pRelpClt, pData->timeout) != RELP_RET_OK)
 		ABORT_FINALIZE(RS_RET_RELP_ERR);
-
 	if(pData->bEnableTLS) {
 		if(relpCltEnableTLS(pData->pRelpClt) != RELP_RET_OK)
 			ABORT_FINALIZE(RS_RET_RELP_ERR);
 	}
-
 	if(glbl.GetSourceIPofLocalClient() == NULL) {	/* ar Do we have a client IP set? */
 		if(relpCltSetClientIP(pData->pRelpClt, glbl.GetSourceIPofLocalClient()) != RELP_RET_OK)
 			ABORT_FINALIZE(RS_RET_RELP_ERR);
 	}
+	pData->bInitialConnect = 1;
+	pData->nSent = 0;
 finalize_it:
 	RETiRet;
 }
@@ -133,8 +136,8 @@ finalize_it:
 
 BEGINcreateInstance
 CODESTARTcreateInstance
-	pData->bInitialConnect = 1;
 	pData->timeout = 90;
+	pData->rebindInterval = 0;
 	pData->bEnableTLS = DFLT_ENABLE_TLS;
 ENDcreateInstance
 
@@ -154,6 +157,7 @@ setInstParamDefaults(instanceData *pData)
 	pData->port = NULL;
 	pData->tplName = NULL;
 	pData->timeout = 90;
+	pData->rebindInterval = 0;
 	pData->bEnableTLS = DFLT_ENABLE_TLS;
 }
 
@@ -180,6 +184,8 @@ CODESTARTnewActInst
 			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "timeout")) {
 			pData->timeout = (unsigned) pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "rebindinterval")) {
+			pData->rebindInterval = (unsigned) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "tls")) {
 			pData->bEnableTLS = (unsigned) pvals[i].val.d.n;
 		} else {
@@ -250,6 +256,17 @@ CODESTARTtryResume
 	iRet = doConnect(pData);
 ENDtryResume
 
+static inline rsRetVal
+doRebind(instanceData *pData)
+{
+	DEFiRet;
+	DBGPRINTF("omrelp: destructing relp client due to rebindInterval\n");
+	CHKiRet(relpEngineCltDestruct(pRelpEngine, &pData->pRelpClt));
+	pData->bIsConnected = 0;
+	CHKiRet(doCreateRelpClient(pData));
+finalize_it:
+	RETiRet;
+}
 
 BEGINdoAction
 	uchar *pMsg; /* temporary buffering */
@@ -265,7 +282,7 @@ CODESTARTdoAction
 	pMsg = ppString[0];
 	lenMsg = strlen((char*) pMsg); /* TODO: don't we get this? */
 
-	/* TODO: think about handling oversize messages! */
+	/* we need to truncate oversize msgs - no way around that... */
 	if((int) lenMsg > glbl.GetMaxLine())
 		lenMsg = glbl.GetMaxLine();
 
@@ -274,9 +291,13 @@ CODESTARTdoAction
 	if(ret != RELP_RET_OK) {
 		/* error! */
 		dbgprintf("error forwarding via relp, suspending\n");
-		iRet = RS_RET_SUSPENDED;
+		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
 
+	if(pData->rebindInterval != 0 &&
+	   (++pData->nSent >= pData->rebindInterval)) {
+	   	doRebind(pData);
+	}
 finalize_it:
 ENDdoAction
 
