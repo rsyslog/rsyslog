@@ -107,6 +107,7 @@ CODESTARTnewActInst
 	 * the lst ptr. However, we will most probably need params in the 
 	 * future.
 	 */
+	(void) lst; /* prevent compiler warning */
 	DBGPRINTF("newActInst (mmjournal)\n");
 	CODE_STD_STRING_REQUESTnewActInst(1)
 	CHKiRet(OMSRsetEntry(*ppOMSR, 0, NULL, OMSR_TPL_AS_MSG));
@@ -145,6 +146,7 @@ CODESTARTdoAction
 		"SYSLOG_IDENTIFIER=%s", tag,
                 NULL);
 	/* FIXME: think about what to do with errors ;) */
+	(void) r; /* prevent compiler warning */
 ENDdoAction
 
 

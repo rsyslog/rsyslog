@@ -44,6 +44,7 @@
 #include "glbl.h"
 #include "prop.h"
 #include "errmsg.h"
+#include "srUtils.h"
 #include "unicode-helper.h"
 #include <systemd/sd-journal.h>
 
@@ -137,6 +138,7 @@ readjournal() {
 	uint64_t timestamp;
 
 	struct json_object *json = NULL;
+	int r;
 
 	/* Information from messages */
 	char *message;
@@ -230,15 +232,15 @@ readjournal() {
 	}
 
 	if (sys_pid) {
-		asprintf(&sys_iden_help, "%s[%s]:", sys_iden, sys_pid);
+		r = asprintf(&sys_iden_help, "%s[%s]:", sys_iden, sys_pid);
 	} else {
-		asprintf(&sys_iden_help, "%s:", sys_iden);
+		r = asprintf(&sys_iden_help, "%s:", sys_iden);
 	}
 
 	free (sys_iden);
 	free (sys_pid);
 
-	if (sys_iden_help == NULL) {
+	if (-1 == r) {
 		iRet = RS_RET_OUT_OF_MEMORY;
 		goto finalize_it;
 	}
@@ -369,15 +371,16 @@ persistJournalState () {
 			fclose(sf);
 			free(cursor);
 		} else {
-			char errmsg[256];
-			rs_strerror_r(errno, errmsg, sizeof(errmsg));
-			dbgprintf("fopen() failed: '%s'\n", errmsg);
+			char errStr[256];
+			rs_strerror_r(errno, errStr, sizeof(errStr));
+			errmsg.LogError(0, RS_RET_FOPEN_FAILURE, "fopen() failed: "
+				"'%s', path: '%s'\n", errStr, cs.stateFile);
 			iRet = RS_RET_FOPEN_FAILURE;
 		}
 	} else {
-		char errmsg[256];
-		rs_strerror_r(-(ret), errmsg, sizeof(errmsg));
-		dbgprintf("sd_journal_get_cursor() failed: '%s'\n", errmsg);
+		char errStr[256];
+		rs_strerror_r(-(ret), errStr, sizeof(errStr));
+		errmsg.LogError(0, RS_RET_ERR, "sd_journal_get_cursor() failed: '%s'\n", errStr);
 		iRet = RS_RET_ERR;
 	}
 	RETiRet;
