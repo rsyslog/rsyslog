@@ -1430,6 +1430,7 @@ dbgSetDebugFile(uchar *fn)
 
 rsRetVal dbgClassInit(void)
 {
+	pthread_mutexattr_t mutAttr;
 	rsRetVal iRet;	/* do not use DEFiRet, as this makes calls into the debug system! */
 
 	struct sigaction sigAct;
@@ -1437,14 +1438,16 @@ rsRetVal dbgClassInit(void)
 	
 	(void) pthread_key_create(&keyCallStack, dbgCallStackDestruct); /* MUST be the first action done! */
 
-	/* we initialize all Mutexes with code, as some platforms seem to have
-	 * bugs in the static initializer macros. So better be on the safe side...
-	 * rgerhards, 2008-03-06
+	/* the mutexes must be recursive, because it may be called from within
+	 * signal handlers, which can lead to a hang if the signal interrupted dbgprintf
+	 * (yes, we have really seen that situation in practice!). -- rgerhards, 2013-05-17
 	 */
-	pthread_mutex_init(&mutFuncDBList, NULL);
-	pthread_mutex_init(&mutMutLog, NULL);
-	pthread_mutex_init(&mutCallStack, NULL);
-	pthread_mutex_init(&mutdbgprint, NULL);
+	pthread_mutexattr_init(&mutAttr);
+	pthread_mutexattr_settype(&mutAttr, PTHREAD_MUTEX_RECURSIVE);
+	pthread_mutex_init(&mutFuncDBList, &mutAttr);
+	pthread_mutex_init(&mutMutLog, &mutAttr);
+	pthread_mutex_init(&mutCallStack, &mutAttr);
+	pthread_mutex_init(&mutdbgprint, &mutAttr);
 
 	/* while we try not to use any of the real rsyslog code (to avoid infinite loops), we
 	 * need to have the ability to query object names. Thus, we need to obtain a pointer to

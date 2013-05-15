@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------
+Version 7.3.16  [beta] 2013-05-??
+- bugfix: potential hang *in debug mode* on rsyslogd termination
+  This ONLY affected rsyslogd if it were running with debug output
+  enabled.
+---------------------------------------------------------------------------
 Version 7.3.15  [beta] 2013-05-15
 - bugfix: problem in build system (especially when cross-compiling)
   Thanks to Tomas Heinrich and winfried_mb2@xmsnet.nl for the patch.
