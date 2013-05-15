@@ -299,9 +299,11 @@ eiClose(gcryfile gf, off64_t offsLogfile)
 	size_t len;
 	if(gf->fd == -1)
 		return;
-	/* 2^64 is 20 digits, so the snprintf buffer is large enough */
-	len = snprintf(offs, sizeof(offs), "%lld", offsLogfile);
-	eiWriteRec(gf, "END:", 4, offs, len);
+	if(gf->openMode == 'w') {
+		/* 2^64 is 20 digits, so the snprintf buffer is large enough */
+		len = snprintf(offs, sizeof(offs), "%lld", offsLogfile);
+		eiWriteRec(gf, "END:", 4, offs, len);
+	}
 	free(gf->readBuf);
 	close(gf->fd);
 	gf->fd = -1;
@@ -505,7 +507,7 @@ rsgcryInitCrypt(gcryctx ctx, gcryfile *pgf, uchar *fname, char openMode)
 	DEFiRet;
 
 	CHKiRet(gcryfileConstruct(ctx, &gf, fname));
-	gf->mode = openMode;
+	gf->openMode = openMode;
 
 	gf->blkLength = gcry_cipher_get_algo_blklen(ctx->algo);
 

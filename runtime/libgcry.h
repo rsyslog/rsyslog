@@ -38,7 +38,7 @@ struct gcryfile_s {
 	size_t blkLength; /* size of low-level crypto block */
 	uchar *eiName; /* name of .encinfo file */
 	int fd; /* descriptor of .encinfo file (-1 if not open) */
-	char mode; /* 'r': read, 'w': write */
+	char openMode; /* 'r': read, 'w': write */
 	gcryctx ctx;
 	uchar *readBuf;
 	int16_t readBufIdx;
