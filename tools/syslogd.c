@@ -51,7 +51,6 @@
 #include <stddef.h>
 #include <ctype.h>
 #include <limits.h>
-#define GNU_SOURCE
 #include <string.h>
 #include <stdarg.h>
 #include <time.h>
