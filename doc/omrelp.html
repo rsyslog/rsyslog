@@ -24,15 +24,18 @@ implementation).</p>
 rsyslog 7.3.10. For older versions, legacy configuration directives
 must be used.
 <ul>
-	<li><b>target </b>(mandatory)<br>
+	<li><b>target</b> (mandatory)<br>
 	The target server to connect to.
 	</li>
-	<li><b>template </b>(not mandatory, default "RSYSLOG_ForwardFormat")<br>
+	<li><b>template</b> (not mandatory, default "RSYSLOG_ForwardFormat")<br>
 	Defines the template to be used for the output.
 	</li>
-	<li><b>timeout </b>(not mandatory, default 90)<br>
+	<li><b>timeout</b> (not mandatory, default 90)<br>
 	Timeout for relp sessions. If set too low, valid sessions
 	may be considered dead and tried to recover.
+	</li>
+        <li><b>tls</b> (not mandatory, values "on","off", default "off")<br>
+	If set to "on", the RELP connection will be encrypted by TLS, 		so that the data is protected against observers. Please note 		that both the client and the server must have set TLS to 		either "on" or "off". Other combinations lead to unpredictable 		results.
 	</li>
 </ul>
 <p><b>Sample:</b></p>
