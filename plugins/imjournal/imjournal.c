@@ -392,12 +392,24 @@ CODESTARTrunInput
 	 */
 	int count = 0;
 
-	char readCursor[128 + 1];
-	FILE *r_sf;
+	if (cs.stateFile[0] != '/') {
+		char *new_stateFile;
+
+		if (-1 == asprintf(&new_stateFile, "%s/%s", (char *)glbl.GetWorkDir(), cs.stateFile)) {
+			errmsg.LogError(0, RS_RET_OUT_OF_MEMORY, "imjournal: asprintf failed\n");
+			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+		}
+		free (cs.stateFile);
+		cs.stateFile = new_stateFile;
+	}
 
 	/* if state file exists, set cursor to appropriate position */
 	if (access(cs.stateFile, F_OK|R_OK) != -1) {
+		FILE *r_sf;
+
 		if ((r_sf = fopen(cs.stateFile, "rb")) != NULL) {
+			char readCursor[128 + 1];
+
 			if (fscanf(r_sf, "%128s\n", readCursor) != EOF) {
 				if (sd_journal_seek_cursor(j, readCursor) != 0) {
 					errmsg.LogError(0, RS_RET_ERR, "imjournal: "
