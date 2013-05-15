@@ -59,6 +59,7 @@ rsRetVal rsgcryInitCrypt(gcryctx ctx, gcryfile *pgf, uchar *fname, char openMode
 rsRetVal rsgcryEncrypt(gcryfile pF, uchar *buf, size_t *len);
 rsRetVal rsgcryDecrypt(gcryfile pF, uchar *buf, size_t *len);
 int gcryGetKeyFromProg(char *cmd, char **key, unsigned *keylen);
+rsRetVal gcryfileDeleteState(uchar *fn);
 
 /* error states */
 #define RSGCRYE_EI_OPEN 1 	/* error opening .encinfo file */

@@ -212,8 +212,13 @@ finalize_it:
 static void
 SetDeleteOnClose(void *pF, int val)
 {
-dbgprintf("DDDD: SetDeleteOnClose %d\n", val);
 	gcryfileSetDeleteOnClose(pF, val);
+}
+
+static void
+DeleteStateFiles(uchar *logfn)
+{
+	return gcryfileDeleteState(logfn);
 }
 
 static rsRetVal
@@ -274,6 +279,7 @@ CODESTARTobjQueryInterface(lmcry_gcry)
 	pIf->Encrypt = Encrypt;
 	pIf->Decrypt = Decrypt;
 	pIf->OnFileClose = OnFileClose;
+	pIf->DeleteStateFiles = DeleteStateFiles;
 finalize_it:
 ENDobjQueryInterface(lmcry_gcry)
 

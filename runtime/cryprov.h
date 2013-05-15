@@ -43,6 +43,7 @@ BEGINinterface(cryprov) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Decrypt)(void *pFileInstData, uchar *buf, size_t *lenBuf);
 	rsRetVal (*OnFileClose)(void *pFileInstData, off64_t offsLogfile);
 	void (*SetDeleteOnClose)(void *pFileInstData, int val);
+	rsRetVal (*DeleteStateFiles)(uchar *logfn);
 ENDinterface(cryprov)
 #define cryprovCURR_IF_VERSION 3 /* increment whenever you change the interface structure! */
 #endif /* #ifndef INCLUDED_CRYPROV_H */

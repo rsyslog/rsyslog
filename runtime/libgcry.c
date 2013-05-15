@@ -310,6 +310,23 @@ eiClose(gcryfile gf, off64_t offsLogfile)
 	DBGPRINTF("encryption info file %s: closed\n", gf->eiName);
 }
 
+/* this is a special functon for use by the rsyslog disk queue subsystem. It
+ * needs to have the capability to delete state when a queue file is rolled
+ * over. This simply generates the file name and deletes it. It must take care
+ * of "all" state files, which currently happens to be a single one.
+ */
+rsRetVal
+gcryfileDeleteState(uchar *logfn)
+{
+	char fn[MAXFNAME+1];
+	DEFiRet;
+	snprintf(fn, sizeof(fn), "%s%s", logfn, ENCINFO_SUFFIX);
+	fn[MAXFNAME] = '\0'; /* be on save side */
+	DBGPRINTF("crypto provider deletes state file '%s' on request\n", fn);
+	unlink(fn);
+	RETiRet;
+}
+
 static rsRetVal
 gcryfileConstruct(gcryctx ctx, gcryfile *pgf, uchar *logfn)
 {

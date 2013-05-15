@@ -259,7 +259,6 @@ doPhysOpen(strm_t *pThis)
 		CHKiRet(pThis->cryprov->OnFileOpen(pThis->cryprovData,
 		 	pThis->pszCurrFName, &pThis->cryprovFileData,
 			(pThis->tOperationsMode == STREAMMODE_READ) ? 'r' : 'w'));
-dbgprintf("DDDD: stream bDeleteOnClose %d\n", pThis->bDeleteOnClose);
 		pThis->cryprov->SetDeleteOnClose(pThis->cryprovFileData, pThis->bDeleteOnClose);
 	}
 finalize_it:
@@ -410,7 +409,7 @@ static rsRetVal strmCloseFile(strm_t *pThis)
 
 	/* if we have a signature provider, we must make sure that the crypto
 	 * state files are opened and proper close processing happens. */
-	if(pThis->fd == -1) {
+	if(pThis->cryprov != NULL && pThis->fd == -1) {
 		strmOpenFile(pThis);
 	}
 
@@ -1469,6 +1468,8 @@ strmMultiFileSeek(strm_t *pThis, int FNum, off64_t offs, off64_t *bytesDel)
 			  "deleting '%s' (%lld bytes)\n", pThis->iCurrFNum, FNum,
 			  pThis->pszCurrFName, (long long) *bytesDel);
 		unlink((char*)pThis->pszCurrFName);
+		if(pThis->cryprov != NULL)
+			pThis->cryprov->DeleteStateFiles(pThis->pszCurrFName);
 		free(pThis->pszCurrFName);
 		pThis->pszCurrFName = NULL;
 		pThis->iCurrFNum = FNum;
@@ -1638,7 +1639,6 @@ static rsRetVal strmSetbDeleteOnClose(strm_t *pThis, int val)
 {
 	pThis->bDeleteOnClose = val;
 	if(pThis->cryprov != NULL) {
-dbgprintf("DDDD: set stream bDeleteOnClose %d\n", pThis->bDeleteOnClose);
 		pThis->cryprov->SetDeleteOnClose(pThis->cryprovFileData, pThis->bDeleteOnClose);
 	}
 	return RS_RET_OK;
