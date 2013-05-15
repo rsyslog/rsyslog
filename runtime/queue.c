@@ -777,12 +777,21 @@ qqueueTryLoadPersistedInfo(qqueue_t *pThis)
 			       (rsRetVal(*)(obj_t*,void*))qqueueLoadPersStrmInfoFixup, pThis));
 	CHKiRet(obj.Deserialize(&pThis->tVars.disk.pReadDel, (uchar*) "strm", psQIF,
 			       (rsRetVal(*)(obj_t*,void*))qqueueLoadPersStrmInfoFixup, pThis));
-
 	/* create a duplicate for the read "pointer". */
 	CHKiRet(strm.Dup(pThis->tVars.disk.pReadDel, &pThis->tVars.disk.pReadDeq));
 	CHKiRet(strm.SetbDeleteOnClose(pThis->tVars.disk.pReadDeq, 0)); /* deq must NOT delete the files! */
 	CHKiRet(strm.ConstructFinalize(pThis->tVars.disk.pReadDeq));
+	/* if we use a crypto provider, we need to amend the objects with it's info */
+	if(pThis->useCryprov) {
+		CHKiRet(strm.Setcryprov(pThis->tVars.disk.pWrite, &pThis->cryprov));
+		CHKiRet(strm.SetcryprovData(pThis->tVars.disk.pWrite, pThis->cryprovData));
+		CHKiRet(strm.Setcryprov(pThis->tVars.disk.pReadDeq, &pThis->cryprov));
+		CHKiRet(strm.SetcryprovData(pThis->tVars.disk.pReadDeq, pThis->cryprovData));
+		CHKiRet(strm.Setcryprov(pThis->tVars.disk.pReadDel, &pThis->cryprov));
+		CHKiRet(strm.SetcryprovData(pThis->tVars.disk.pReadDel, pThis->cryprovData));
+	}
 
+dbgprintf("DDDD: seeking offsets (here we need crypto)\n");
 	CHKiRet(strm.SeekCurrOffs(pThis->tVars.disk.pWrite));
 	CHKiRet(strm.SeekCurrOffs(pThis->tVars.disk.pReadDel));
 	CHKiRet(strm.SeekCurrOffs(pThis->tVars.disk.pReadDeq));

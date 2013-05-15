@@ -585,6 +585,7 @@ strmReadBuf(strm_t *pThis)
 			/* here we place our crypto interface */
 			if(pThis->cryprov != NULL) {
 				pThis->cryprov->Decrypt(pThis->cryprovFileData, pThis->pIOBuf, &iLenRead);
+dbgprintf("DDDD: data read, decrypted: %1024.1024s\n", pThis->pIOBuf);
 			}
 			pThis->iBufPtrMax = iLenRead;
 			bRun = 0;	/* exit loop */
@@ -1483,17 +1484,32 @@ finalize_it:
 }
 
 
-
 /* seek to current offset. This is primarily a helper to readjust the OS file
  * pointer after a strm object has been deserialized.
  */
 static rsRetVal strmSeekCurrOffs(strm_t *pThis)
 {
+	off64_t targetOffs;
+	uchar c;
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, strm);
 
-	iRet = strmSeek(pThis, pThis->iCurrOffs);
+dbgprintf("DDDD: seekCurrOffs file #%d, offs %lld\n", pThis->fd, (long long) pThis->iCurrOffs);
+	if(pThis->cryprov == NULL || pThis->tOperationsMode != STREAMMODE_READ) {
+		iRet = strmSeek(pThis, pThis->iCurrOffs);
+		FINALIZE;
+	}
+
+	targetOffs = pThis->iCurrOffs;
+	pThis->iCurrOffs = 0;
+dbgprintf("DDDD: skip read offs %lld, data: ", (long long) targetOffs);
+	while(targetOffs != pThis->iCurrOffs) {
+		CHKiRet(strmReadChar(pThis, &c));
+dbgprintf("%c", c);
+	}
+dbgprintf("\n");
+finalize_it:
 	RETiRet;
 }
 
