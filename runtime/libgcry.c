@@ -344,7 +344,12 @@ gcryfileDestruct(gcryfile gf, off64_t offsLogfile)
 	if(gf == NULL)
 		goto done;
 
+dbgprintf("DDDD: cryprov closes file %s\n", gf->eiName);
 	eiClose(gf, offsLogfile);
+	if(gf->bDeleteOnClose) {
+		DBGPRINTF("unlink file '%s' due to bDeleteOnClose set\n", gf->eiName);
+		unlink((char*)gf->eiName);
+	}
 	free(gf->eiName);
 	free(gf);
 done:	return r;

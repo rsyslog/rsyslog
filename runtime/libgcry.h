@@ -43,6 +43,7 @@ struct gcryfile_s {
 	uchar *readBuf;
 	int16_t readBufIdx;
 	int16_t readBufMaxIdx;
+	int8_t bDeleteOnClose; /* for queue support, similar to stream subsys */
 };
 
 int gcryGetKeyFromFile(char *fn, char **key, unsigned *keylen);
@@ -67,6 +68,14 @@ int gcryGetKeyFromProg(char *cmd, char **key, unsigned *keylen);
 #define EIF_MAX_VALUE_LEN 1023 /* max length of value types */
 #define RSGCRY_FILETYPE_NAME "rsyslog-enrcyption-info"
 #define ENCINFO_SUFFIX ".encinfo"
+
+/* Note: gf may validly be NULL, e.g. if file has not yet been opened! */
+static inline void
+gcryfileSetDeleteOnClose(gcryfile gf, int val)
+{
+	if(gf != NULL)
+		gf->bDeleteOnClose = val;
+}
 
 static inline int
 rsgcryAlgoname2Algo(char *algoname) {

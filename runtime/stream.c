@@ -259,6 +259,8 @@ doPhysOpen(strm_t *pThis)
 		CHKiRet(pThis->cryprov->OnFileOpen(pThis->cryprovData,
 		 	pThis->pszCurrFName, &pThis->cryprovFileData,
 			(pThis->tOperationsMode == STREAMMODE_READ) ? 'r' : 'w'));
+dbgprintf("DDDD: stream bDeleteOnClose %d\n", pThis->bDeleteOnClose);
+		pThis->cryprov->SetDeleteOnClose(pThis->cryprovFileData, pThis->bDeleteOnClose);
 	}
 finalize_it:
 	RETiRet;
@@ -404,6 +406,12 @@ static rsRetVal strmCloseFile(strm_t *pThis)
 		if(pThis->bAsyncWrite) {
 			strmWaitAsyncWriterDone(pThis);
 		}
+	}
+
+	/* if we have a signature provider, we must make sure that the crypto
+	 * state files are opened and proper close processing happens. */
+	if(pThis->fd == -1) {
+		strmOpenFile(pThis);
 	}
 
 	/* the file may already be closed (or never have opened), so guard
@@ -1611,7 +1619,6 @@ finalize_it:
 
 /* property set methods */
 /* simple ones first */
-DEFpropSetMeth(strm, bDeleteOnClose, int)
 DEFpropSetMeth(strm, iMaxFileSize, int)
 DEFpropSetMeth(strm, iFileNumDigits, int)
 DEFpropSetMeth(strm, tOperationsMode, int)
@@ -1626,6 +1633,16 @@ DEFpropSetMeth(strm, iFlushInterval, int)
 DEFpropSetMeth(strm, pszSizeLimitCmd, uchar*)
 DEFpropSetMeth(strm, cryprov, cryprov_if_t*)
 DEFpropSetMeth(strm, cryprovData, void*)
+
+static rsRetVal strmSetbDeleteOnClose(strm_t *pThis, int val)
+{
+	pThis->bDeleteOnClose = val;
+	if(pThis->cryprov != NULL) {
+dbgprintf("DDDD: set stream bDeleteOnClose %d\n", pThis->bDeleteOnClose);
+		pThis->cryprov->SetDeleteOnClose(pThis->cryprovFileData, pThis->bDeleteOnClose);
+	}
+	return RS_RET_OK;
+}
 
 static rsRetVal strmSetiMaxFiles(strm_t *pThis, int iNewVal)
 {

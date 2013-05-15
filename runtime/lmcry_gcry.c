@@ -209,6 +209,12 @@ finalize_it:
 	RETiRet;
 }
 
+static void
+SetDeleteOnClose(void *pF, int val)
+{
+dbgprintf("DDDD: SetDeleteOnClose %d\n", val);
+	gcryfileSetDeleteOnClose(pF, val);
+}
 
 static rsRetVal
 OnFileOpen(void *pT, uchar *fn, void *pGF, char openMode)
@@ -262,6 +268,7 @@ CODESTARTobjQueryInterface(lmcry_gcry)
 	}
 	pIf->Construct = (rsRetVal(*)(void*)) lmcry_gcryConstruct;
 	pIf->SetCnfParam = SetCnfParam;
+	pIf->SetDeleteOnClose = SetDeleteOnClose;
 	pIf->Destruct = (rsRetVal(*)(void*)) lmcry_gcryDestruct;
 	pIf->OnFileOpen = OnFileOpen;
 	pIf->Encrypt = Encrypt;

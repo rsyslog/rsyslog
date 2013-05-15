@@ -2779,7 +2779,6 @@ qqueueApplyCnfParam(qqueue_t *pThis, struct nvlst *lst)
 			pThis->lenFilePrefix = es_strlen(pvals[i].val.d.estr);
 		} else if(!strcmp(pblk.descr[i].name, "queue.cry.provider")) {
 			pThis->cryprovName = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
-dbgprintf("DDDD: crypto provider set: '%s'\n", pThis->cryprovName);
 		} else if(!strcmp(pblk.descr[i].name, "queue.size")) {
 			pThis->iMaxQueueSize = pvals[i].val.d.n;
 		} else if(!strcmp(pblk.descr[i].name, "queue.dequeuebatchsize")) {
