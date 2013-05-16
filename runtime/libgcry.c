@@ -682,7 +682,8 @@ rsgcryDecrypt(gcryfile pF, uchar *buf, size_t *len)
 	gcry_error_t gcryError;
 	DEFiRet;
 	
-	pF->bytesToBlkEnd -= *len;
+	if(pF->bytesToBlkEnd != -1)
+		pF->bytesToBlkEnd -= *len;
 	gcryError = gcry_cipher_decrypt(pF->chd, buf, *len, NULL, 0);
 	if(gcryError) {
 		DBGPRINTF("gcry_cipher_decrypt failed:  %s/%s\n",
