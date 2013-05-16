@@ -44,6 +44,9 @@ struct gcryfile_s {
 	int16_t readBufIdx;
 	int16_t readBufMaxIdx;
 	int8_t bDeleteOnClose; /* for queue support, similar to stream subsys */
+	ssize_t bytesToBlkEnd; /* number of bytes remaining in current crypto block
+				-1 means -> no end (still being writen to, queue files),
+				0 means -> end of block, new one must be started. */
 };
 
 int gcryGetKeyFromFile(char *fn, char **key, unsigned *keylen);
@@ -60,6 +63,7 @@ rsRetVal rsgcryEncrypt(gcryfile pF, uchar *buf, size_t *len);
 rsRetVal rsgcryDecrypt(gcryfile pF, uchar *buf, size_t *len);
 int gcryGetKeyFromProg(char *cmd, char **key, unsigned *keylen);
 rsRetVal gcryfileDeleteState(uchar *fn);
+rsRetVal gcryfileGetBytesLeftInBlock(gcryfile gf, ssize_t *left);
 
 /* error states */
 #define RSGCRYE_EI_OPEN 1 	/* error opening .encinfo file */

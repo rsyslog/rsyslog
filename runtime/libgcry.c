@@ -54,6 +54,8 @@
 
 #define READBUF_SIZE 4096	/* size of the read buffer */
 
+static rsRetVal rsgcryBlkBegin(gcryfile gf);
+
 static rsRetVal
 eiWriteRec(gcryfile gf, char *recHdr, size_t lenRecHdr, char *buf, size_t lenBuf)
 {
@@ -170,11 +172,13 @@ eiGetRecord(gcryfile gf, char *rectype, char *value)
 	int c;
 	DEFiRet;
 
+	c = eiReadChar(gf);
+	if(c == EOF) { ABORT_FINALIZE(RS_RET_NO_DATA); }
 	for(i = 0 ; i < EIF_MAX_RECTYPE_LEN ; ++i) {
-		c = eiReadChar(gf);
 		if(c == ':' || c == EOF)
 			break;
 		rectype[i] = c;
+		c = eiReadChar(gf);
 	}
 	if(c != ':') { ABORT_FINALIZE(RS_RET_ERR); }
 	rectype[i] = '\0';
@@ -232,6 +236,23 @@ finalize_it:
 	RETiRet;
 }
 
+static rsRetVal
+eiGetEND(gcryfile gf, off64_t *offs)
+{
+	char rectype[EIF_MAX_RECTYPE_LEN+1];
+	char value[EIF_MAX_VALUE_LEN+1];
+	DEFiRet;
+
+	CHKiRet(eiGetRecord(gf, rectype, value));
+	if(strcmp(rectype, "END")) {
+		DBGPRINTF("no END record found when expected, record type "
+			  "seen is '%s'\n", rectype);
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+	*offs = atoll(value);
+finalize_it:
+	RETiRet;
+}
 
 static rsRetVal
 eiOpenAppend(gcryfile gf)
@@ -304,10 +325,31 @@ eiClose(gcryfile gf, off64_t offsLogfile)
 		len = snprintf(offs, sizeof(offs), "%lld", offsLogfile);
 		eiWriteRec(gf, "END:", 4, offs, len);
 	}
+	gcry_cipher_close(gf->chd);
 	free(gf->readBuf);
 	close(gf->fd);
 	gf->fd = -1;
 	DBGPRINTF("encryption info file %s: closed\n", gf->eiName);
+}
+
+/* this returns the number of bytes left inside the block or -1, if the block
+ * size is unbounded. The function automatically handles end-of-block and begins
+ * to read the next block in this case.
+ */
+rsRetVal
+gcryfileGetBytesLeftInBlock(gcryfile gf, ssize_t *left)
+{
+	DEFiRet;
+	if(gf->bytesToBlkEnd == 0) {
+		DBGPRINTF("libgcry: end of current crypto block\n");
+		gcry_cipher_close(gf->chd);
+		CHKiRet(rsgcryBlkBegin(gf));
+	}
+	*left = gf->bytesToBlkEnd;
+finalize_it:
+	// TODO: remove once this code is sufficiently well-proven
+	DBGPRINTF("gcryfileGetBytesLeftInBlock returns %lld, iRet %d\n", (long long) *left, iRet);
+	RETiRet;
 }
 
 /* this is a special functon for use by the rsyslog disk queue subsystem. It
@@ -363,7 +405,7 @@ gcryfileDestruct(gcryfile gf, off64_t offsLogfile)
 	if(gf == NULL)
 		goto done;
 
-dbgprintf("DDDD: cryprov closes file %s\n", gf->eiName);
+	DBGPRINTF("libgcry: close file %s\n", gf->eiName);
 	eiClose(gf, offsLogfile);
 	if(gf->bDeleteOnClose) {
 		DBGPRINTF("unlink file '%s' due to bDeleteOnClose set\n", gf->eiName);
@@ -498,72 +540,111 @@ readIV(gcryfile gf, uchar **iv)
 	rsRetVal localRet;
 	DEFiRet;
 
-	 do {
-		localRet = eiOpenRead(gf);
-		if(localRet == RS_RET_EI_NO_EXISTS) {
-			/* wait until it is created */
-			srSleep(0, 10000);
-		} else {
-			CHKiRet(localRet);
+	if(gf->fd == -1) {
+		while(gf->fd == -1) {
+			localRet = eiOpenRead(gf);
+			if(localRet == RS_RET_EI_NO_EXISTS) {
+				/* wait until it is created */
+				srSleep(0, 10000);
+			} else {
+				CHKiRet(localRet);
+			}
 		}
-	} while(localRet != RS_RET_OK);
-	CHKiRet(eiCheckFiletype(gf));
+		CHKiRet(eiCheckFiletype(gf));
+	}
 	*iv = malloc(gf->blkLength); /* do NOT zero-out! */
 	CHKiRet(eiGetIV(gf, *iv, (size_t) gf->blkLength));
-dbgprintf("DDDD: read %d bytes of IV\n", (int) gf->blkLength);
 finalize_it:
 	RETiRet;
 }
 
-rsRetVal
-rsgcryInitCrypt(gcryctx ctx, gcryfile *pgf, uchar *fname, char openMode)
+/* this tries to read the END record. HOWEVER, no such record may be
+ * present, which is the case if we handle a currently-written to queue
+ * file. On the other hand, the queue file may contain multiple blocks. So
+ * what we do is try to see if there is a block end or not - and set the
+ * status accordingly. Note that once we found no end-of-block, we will never
+ * retry. This is because that case can never happen under current queue
+ * implementations. -- gerhards, 2013-05-16
+ */
+static inline rsRetVal
+readBlkEnd(gcryfile gf)
+{
+	off64_t blkEnd;
+	DEFiRet;
+
+	iRet = eiGetEND(gf, &blkEnd);
+	if(iRet == RS_RET_OK) {
+		gf->bytesToBlkEnd = (ssize_t) blkEnd;
+	} else if(iRet == RS_RET_NO_DATA) {
+		gf->bytesToBlkEnd = -1;
+	} else {
+		FINALIZE;
+	}
+		
+finalize_it:
+	RETiRet;
+}
+
+
+/* Read the block begin metadata and set our state variables accordingly. Can also
+ * be used to init the first block in write case.
+ */
+static rsRetVal
+rsgcryBlkBegin(gcryfile gf)
 {
 	gcry_error_t gcryError;
-	gcryfile gf = NULL;
 	uchar *iv = NULL;
 	DEFiRet;
 
-	CHKiRet(gcryfileConstruct(ctx, &gf, fname));
-	gf->openMode = openMode;
-
-	gf->blkLength = gcry_cipher_get_algo_blklen(ctx->algo);
-
-	gcryError = gcry_cipher_open(&gf->chd, ctx->algo, ctx->mode, 0);
+	gcryError = gcry_cipher_open(&gf->chd, gf->ctx->algo, gf->ctx->mode, 0);
 	if (gcryError) {
-		dbgprintf("gcry_cipher_open failed:  %s/%s\n",
-			gcry_strsource(gcryError),
-			gcry_strerror(gcryError));
+		DBGPRINTF("gcry_cipher_open failed:  %s/%s\n",
+			gcry_strsource(gcryError), gcry_strerror(gcryError));
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
 	gcryError = gcry_cipher_setkey(gf->chd, gf->ctx->key, gf->ctx->keyLen);
 	if (gcryError) {
-		dbgprintf("gcry_cipher_setkey failed:  %s/%s\n",
-			gcry_strsource(gcryError),
-			gcry_strerror(gcryError));
+		DBGPRINTF("gcry_cipher_setkey failed:  %s/%s\n",
+			gcry_strsource(gcryError), gcry_strerror(gcryError));
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
-	if(openMode == 'r') {
+	if(gf->openMode == 'r') {
 		readIV(gf, &iv);
+		readBlkEnd(gf);
 	} else {
 		seedIV(gf, &iv);
 	}
 
 	gcryError = gcry_cipher_setiv(gf->chd, iv, gf->blkLength);
 	if (gcryError) {
-		dbgprintf("gcry_cipher_setiv failed:  %s/%s\n",
-			gcry_strsource(gcryError),
-			gcry_strerror(gcryError));
+		DBGPRINTF("gcry_cipher_setiv failed:  %s/%s\n",
+			gcry_strsource(gcryError), gcry_strerror(gcryError));
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
-	if(openMode == 'w') {
+
+	if(gf->openMode == 'w') {
 		CHKiRet(eiOpenAppend(gf));
 		CHKiRet(eiWriteIV(gf, iv));
 	}
-	*pgf = gf;
 finalize_it:
 	free(iv);
+	RETiRet;
+}
+
+rsRetVal
+rsgcryInitCrypt(gcryctx ctx, gcryfile *pgf, uchar *fname, char openMode)
+{
+	gcryfile gf = NULL;
+	DEFiRet;
+
+	CHKiRet(gcryfileConstruct(ctx, &gf, fname));
+	gf->openMode = openMode;
+	gf->blkLength = gcry_cipher_get_algo_blklen(ctx->algo);
+	CHKiRet(rsgcryBlkBegin(gf));
+	*pgf = gf;
+finalize_it:
 	if(iRet != RS_RET_OK && gf != NULL)
 		gcryfileDestruct(gf, -1);
 	RETiRet;
@@ -601,6 +682,7 @@ rsgcryDecrypt(gcryfile pF, uchar *buf, size_t *len)
 	gcry_error_t gcryError;
 	DEFiRet;
 	
+	pF->bytesToBlkEnd -= *len;
 	gcryError = gcry_cipher_decrypt(pF->chd, buf, *len, NULL, 0);
 	if(gcryError) {
 		DBGPRINTF("gcry_cipher_decrypt failed:  %s/%s\n",
@@ -609,7 +691,8 @@ rsgcryDecrypt(gcryfile pF, uchar *buf, size_t *len)
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 	removePadding(buf, len);
-dbgprintf("DDDD: decrypted, buffer is now '%50.50s'\n", buf);
+	// TODO: remove dbgprintf once things are sufficently stable -- rgerhards, 2013-05-16
+	dbgprintf("libgcry: decrypted, bytesToBlkEnd %lld, buffer is now '%50.50s'\n", (long long) pF->bytesToBlkEnd, buf);
 
 finalize_it:
 	RETiRet;

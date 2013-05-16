@@ -415,6 +415,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_QUEUE_DISK_NO_FN = -2328,/**< disk queue configured, but filename not set */
 	/* up to 2350 reserved for 7.4 */
 	RS_RET_QUEUE_CRY_DISK_ONLY = -2351,/**< crypto provider only supported for disk-associated queues */
+	RS_RET_NO_DATA = -2352,/**< file has no data; more a state than a real error */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */

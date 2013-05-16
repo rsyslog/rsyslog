@@ -565,6 +565,8 @@ strmReadBuf(strm_t *pThis, int *padBytes)
 	int bRun;
 	long iLenRead;
 	size_t actualDataLen;
+	size_t toRead;
+	ssize_t bytesLeft;
 
 	ISOBJ_TYPE_assert(pThis, strm);
 	/* We need to try read at least twice because we may run into EOF and need to switch files. */
@@ -575,7 +577,17 @@ strmReadBuf(strm_t *pThis, int *padBytes)
 		 * rgerhards, 2008-02-13
 		 */
 		CHKiRet(strmOpenFile(pThis));
-		iLenRead = read(pThis->fd, pThis->pIOBuf, pThis->sIOBufSize);
+		if(pThis->cryprov == NULL) {
+			toRead = pThis->sIOBufSize;
+		} else {
+			CHKiRet(pThis->cryprov->GetBytesLeftInBlock(pThis->cryprovFileData, &bytesLeft));
+			if(bytesLeft == -1 || bytesLeft > pThis->sIOBufSize)  {
+				toRead = pThis->sIOBufSize;
+			} else {
+				toRead = (size_t) bytesLeft;
+			}
+		}
+		iLenRead = read(pThis->fd, pThis->pIOBuf, toRead);
 		DBGOPRINT((obj_t*) pThis, "file %d read %ld bytes\n", pThis->fd, iLenRead);
 		/* end crypto */
 		if(iLenRead == 0) {
@@ -1506,6 +1518,7 @@ static rsRetVal strmSeekCurrOffs(strm_t *pThis)
 		FINALIZE;
 	}
 
+	/* As the cryprov may use CBC or similiar things, we need to read skip data */
 	targetOffs = pThis->iCurrOffs;
 	pThis->iCurrOffs = 0;
 dbgprintf("DDDD: skip read offs %lld, data: ", (long long) targetOffs);

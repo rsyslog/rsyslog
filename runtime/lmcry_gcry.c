@@ -215,7 +215,13 @@ SetDeleteOnClose(void *pF, int val)
 	gcryfileSetDeleteOnClose(pF, val);
 }
 
-static void
+static rsRetVal
+GetBytesLeftInBlock(void *pF, ssize_t *left)
+{
+	return gcryfileGetBytesLeftInBlock((gcryfile) pF, left);
+}
+
+static rsRetVal
 DeleteStateFiles(uchar *logfn)
 {
 	return gcryfileDeleteState(logfn);
@@ -280,6 +286,7 @@ CODESTARTobjQueryInterface(lmcry_gcry)
 	pIf->Decrypt = Decrypt;
 	pIf->OnFileClose = OnFileClose;
 	pIf->DeleteStateFiles = DeleteStateFiles;
+	pIf->GetBytesLeftInBlock = GetBytesLeftInBlock;
 finalize_it:
 ENDobjQueryInterface(lmcry_gcry)
 
