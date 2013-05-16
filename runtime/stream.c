@@ -603,6 +603,8 @@ strmReadBuf(strm_t *pThis, int *padBytes)
 				iLenRead = actualDataLen;
 				DBGOPRINT((obj_t*) pThis, "encrypted file %d pad bytes %d, actual "
 					"data %ld\n", pThis->fd, *padBytes, iLenRead);
+			} else {
+				*padBytes = 0;
 			}
 			pThis->iBufPtrMax = iLenRead;
 			bRun = 0;	/* exit loop */
