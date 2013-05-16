@@ -233,7 +233,7 @@ OnFileOpen(void *pT, uchar *fn, void *pGF, char openMode)
 	lmcry_gcry_t *pThis = (lmcry_gcry_t*) pT;
 	gcryfile *pgf = (gcryfile*) pGF;
 	DEFiRet;
-dbgprintf("DDDD: open file '%s', mode '%c'\n", fn, openMode);
+	DBGPRINTF("lmcry_gcry: open file '%s', mode '%c'\n", fn, openMode);
 
 	CHKiRet(rsgcryInitCrypt(pThis->ctx, pgf, fn, openMode));
 finalize_it:

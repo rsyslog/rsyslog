@@ -791,7 +791,6 @@ qqueueTryLoadPersistedInfo(qqueue_t *pThis)
 		CHKiRet(strm.SetcryprovData(pThis->tVars.disk.pReadDel, pThis->cryprovData));
 	}
 
-dbgprintf("DDDD: seeking offsets (here we need crypto)\n");
 	CHKiRet(strm.SeekCurrOffs(pThis->tVars.disk.pWrite));
 	CHKiRet(strm.SeekCurrOffs(pThis->tVars.disk.pReadDel));
 	CHKiRet(strm.SeekCurrOffs(pThis->tVars.disk.pReadDeq));

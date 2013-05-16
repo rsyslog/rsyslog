@@ -581,7 +581,7 @@ strmReadBuf(strm_t *pThis, int *padBytes)
 			toRead = pThis->sIOBufSize;
 		} else {
 			CHKiRet(pThis->cryprov->GetBytesLeftInBlock(pThis->cryprovFileData, &bytesLeft));
-			if(bytesLeft == -1 || bytesLeft > pThis->sIOBufSize)  {
+			if(bytesLeft == -1 || bytesLeft > (ssize_t) pThis->sIOBufSize)  {
 				toRead = pThis->sIOBufSize;
 			} else {
 				toRead = (size_t) bytesLeft;
@@ -601,7 +601,8 @@ strmReadBuf(strm_t *pThis, int *padBytes)
 				pThis->cryprov->Decrypt(pThis->cryprovFileData, pThis->pIOBuf, &actualDataLen);
 				*padBytes = iLenRead - actualDataLen;
 				iLenRead = actualDataLen;
-dbgprintf("DDDD: data read (padBytes %d), decrypted: %1024.1024s\n", *padBytes, pThis->pIOBuf);
+				DBGOPRINT((obj_t*) pThis, "encrypted file %d pad bytes %d, actual "
+					"data %ld\n", pThis->fd, *padBytes, iLenRead);
 			}
 			pThis->iBufPtrMax = iLenRead;
 			bRun = 0;	/* exit loop */
@@ -1521,12 +1522,11 @@ static rsRetVal strmSeekCurrOffs(strm_t *pThis)
 	/* As the cryprov may use CBC or similiar things, we need to read skip data */
 	targetOffs = pThis->iCurrOffs;
 	pThis->iCurrOffs = 0;
-dbgprintf("DDDD: skip read offs %lld, data: ", (long long) targetOffs);
+	DBGOPRINT((obj_t*) pThis, "encrypted, doing skip read of %lld bytes\n",
+		(long long) targetOffs);
 	while(targetOffs != pThis->iCurrOffs) {
 		CHKiRet(strmReadChar(pThis, &c));
-dbgprintf("%c", c);
 	}
-dbgprintf("\n");
 finalize_it:
 	RETiRet;
 }
