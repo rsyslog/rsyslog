@@ -559,11 +559,12 @@ finalize_it:
  * rgerhards, 2008-02-13
  */
 static rsRetVal
-strmReadBuf(strm_t *pThis)
+strmReadBuf(strm_t *pThis, int *padBytes)
 {
 	DEFiRet;
 	int bRun;
 	long iLenRead;
+	size_t actualDataLen;
 
 	ISOBJ_TYPE_assert(pThis, strm);
 	/* We need to try read at least twice because we may run into EOF and need to switch files. */
@@ -584,8 +585,11 @@ strmReadBuf(strm_t *pThis)
 		else { /* good read */
 			/* here we place our crypto interface */
 			if(pThis->cryprov != NULL) {
-				pThis->cryprov->Decrypt(pThis->cryprovFileData, pThis->pIOBuf, &iLenRead);
-dbgprintf("DDDD: data read, decrypted: %1024.1024s\n", pThis->pIOBuf);
+				actualDataLen = iLenRead;
+				pThis->cryprov->Decrypt(pThis->cryprovFileData, pThis->pIOBuf, &actualDataLen);
+				*padBytes = iLenRead - actualDataLen;
+				iLenRead = actualDataLen;
+dbgprintf("DDDD: data read (padBytes %d), decrypted: %1024.1024s\n", *padBytes, pThis->pIOBuf);
 			}
 			pThis->iBufPtrMax = iLenRead;
 			bRun = 0;	/* exit loop */
@@ -608,6 +612,7 @@ finalize_it:
  */
 static rsRetVal strmReadChar(strm_t *pThis, uchar *pC)
 {
+	int padBytes = 0; /* in crypto mode, we may have some padding (non-data) bytes */
 	DEFiRet;
 	
 	ASSERT(pThis != NULL);
@@ -623,8 +628,9 @@ static rsRetVal strmReadChar(strm_t *pThis, uchar *pC)
 	
 	/* do we need to obtain a new buffer? */
 	if(pThis->iBufPtr >= pThis->iBufPtrMax) {
-		CHKiRet(strmReadBuf(pThis));
+		CHKiRet(strmReadBuf(pThis, &padBytes));
 	}
+	pThis->iCurrOffs += padBytes;
 
 	/* if we reach this point, we have data available in the buffer */
 
@@ -1495,7 +1501,6 @@ static rsRetVal strmSeekCurrOffs(strm_t *pThis)
 
 	ISOBJ_TYPE_assert(pThis, strm);
 
-dbgprintf("DDDD: seekCurrOffs file #%d, offs %lld\n", pThis->fd, (long long) pThis->iCurrOffs);
 	if(pThis->cryprov == NULL || pThis->tOperationsMode != STREAMMODE_READ) {
 		iRet = strmSeek(pThis, pThis->iCurrOffs);
 		FINALIZE;
