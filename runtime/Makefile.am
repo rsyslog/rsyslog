@@ -97,12 +97,12 @@ librsyslog_la_SOURCES = \
 #
 
 if WITH_MODDIRS
-librsyslog_la_CPPFLAGS = -DSD_EXPORT_SYMBOLS -D_PATH_MODDIR=\"$(pkglibdir)/:$(moddirs)\" $(PTHREADS_CFLAGS) $(LIBEE_CFLAGS) $(LIBGCRYPT_CFLAGS) -I\$(top_srcdir)/tools
+librsyslog_la_CPPFLAGS = -DSD_EXPORT_SYMBOLS -D_PATH_MODDIR=\"$(pkglibdir)/:$(moddirs)\" $(PTHREADS_CFLAGS) -I\$(top_srcdir)/tools
 else
-librsyslog_la_CPPFLAGS = -DSD_EXPORT_SYMBOLS -D_PATH_MODDIR=\"$(pkglibdir)/\" -I$(top_srcdir) $(PTHREADS_CFLAGS) $(LIBEE_CFLAGS) $(LIBGCRYPT_CFLAGS) -I\$(top_srcdir)/tools -I\$(top_srcdir)/grammar
+librsyslog_la_CPPFLAGS = -DSD_EXPORT_SYMBOLS -D_PATH_MODDIR=\"$(pkglibdir)/\" -I$(top_srcdir) $(PTHREADS_CFLAGS) -I\$(top_srcdir)/tools -I\$(top_srcdir)/grammar
 endif
 #librsyslog_la_LDFLAGS = -module -avoid-version
-librsyslog_la_LIBADD =  $(DL_LIBS) $(RT_LIBS) $(LIBGCRYPT_LIBS) $(LIBEE_LIBS)
+librsyslog_la_LIBADD =  $(DL_LIBS) $(RT_LIBS)
 
 #
 # regular expression support
