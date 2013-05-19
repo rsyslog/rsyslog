@@ -35,8 +35,6 @@
 #include "syslogd-types.h"
 #include "template.h"
 #include "atomic.h"
-#include "libee/libee.h"
-
 
 /* rgerhards 2004-11-08: The following structure represents a
  * syslog message. 

@@ -35,7 +35,6 @@
 #include <errno.h>
 #include <unistd.h>
 #include <ctype.h>
-#include <libestr.h>
 #include <json/json.h>
 #include "conf.h"
 #include "syslogd-types.h"

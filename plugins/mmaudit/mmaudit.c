@@ -43,8 +43,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <ctype.h>
-#include <libestr.h>
-#include <libee/libee.h>
+#include <json/json.h>
 #include "conf.h"
 #include "syslogd-types.h"
 #include "template.h"
