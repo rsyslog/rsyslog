@@ -164,11 +164,12 @@ readjournal() {
 	int priority = 0;
 	int facility = 0;
 
-	/* Get next journal message, if there is none, wait a second */
-	if (sd_journal_next(j) == 0) {
-		sleep(1);
-		iRet = RS_RET_OK;
-		goto ret;
+	/* Get next journal message, if there is none, wait for next */
+	while (sd_journal_next(j) == 0) {
+		if (sd_journal_wait(j, (uint64_t) -1) < 0) {
+			iRet = RS_RET_ERR;
+			goto ret;
+		}
 	}
 
 	/* Get message text */
