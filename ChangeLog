@@ -5,6 +5,9 @@ Version 7.3.16  [beta] 2013-05-??
   that case, cached versions of the man pages are used (they were built
   during "make dist", so they should be current for the version in
   question.
+- doc bugfix: ReadMode wrong in imfile doc, two values were swapped
+  Thanks to jokajak@gmail.com for mentioning this
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=450
 - imjournal: no longer do periodic wakeup
 - bugfix: potential hang *in debug mode* on rsyslogd termination
   This ONLY affected rsyslogd if it were running with debug output
