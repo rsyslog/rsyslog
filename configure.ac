@@ -1000,14 +1000,28 @@ fi
 AM_CONDITIONAL(ENABLE_GUARDTIME, test x$enable_guardtime = xyes)
 
 
+# Support using cached man file copies, to avoid the need for rst2man
+# in the build environment
+AC_ARG_ENABLE(cached_man_pages,
+        [AS_HELP_STRING([--enable-cached-man-pages],[Enable using cached versions of man files (avoid rst2man) @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_cached_man_pages="yes" ;;
+          no) enable_cached_man_pages="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-cached-man-pages) ;;
+         esac],
+        [enable_cached_man_pages=no]
+)
+if test "x$enable_cached_man_pages" = "xno"; then
 # obtain path for rst2man
-if test "x$enable_libgcrypt" = "xyes" || \
+  if test "x$enable_libgcrypt" = "xyes" || \
         "x$enable_guardtime" = "xyes"; then
         AC_PATH_PROG([RST2MAN], [rst2man])
         if test "x${RST2MAN}" == "x"; then
             AC_MSG_FAILURE([rst2man not found in PATH])
         fi
+  fi
 fi
+
 
 
 # RFC 3195 support
@@ -1487,6 +1501,7 @@ echo "    Zlib compression support enabled:         $enable_zlib"
 echo "    rsyslog runtime will be built:            $enable_rsyslogrt"
 echo "    rsyslogd will be built:                   $enable_rsyslogd"
 echo "    GUI components will be built:             $enable_gui"
+echo "    cached man files will be used:            $enable_cached_man_pages"
 echo "    Unlimited select() support enabled:       $enable_unlimited_select"
 echo "    uuid support enabled:                     $enable_uuid"
 echo "    Log file signing support:                 $enable_guardtime"
