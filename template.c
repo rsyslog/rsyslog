@@ -1184,6 +1184,7 @@ struct template *tplAddLine(rsconf_t *conf, char* pName, uchar** ppRestOfConfLin
 	if((pTpl = tplConstruct(conf)) == NULL)
 		return NULL;
 	
+	DBGPRINTF("tplAddLine processing template '%s'\n", pName);
 	pTpl->iLenName = strlen(pName);
 	pTpl->pszName = (char*) MALLOC(sizeof(char) * (pTpl->iLenName + 1));
 	if(pTpl->pszName == NULL) {

@@ -12,6 +12,17 @@ Version 7.3.16  [beta] 2013-05-??
 - bugfix: potential hang *in debug mode* on rsyslogd termination
   This ONLY affected rsyslogd if it were running with debug output
   enabled.
+- bugfix: $template statement with multiple spaces lead to invalid tpl name
+  If multiple spaces were used in front of the template name, all but one
+  of them became actually part of the template name. So
+  $template   a,"..." would be name "  a", and as such "a" was not
+  available, e.g. in 
+  *.* /var/log/file;a
+  This is a legacy config problem. As it was unreported for many years,
+  no backport of the fix to old versions will happen.
+  This is a long-standing bug that was only recently reported by forum
+  user mc-sim.
+  Reference: http://kb.monitorware.com/post23448.html
 ---------------------------------------------------------------------------
 Version 7.3.15  [beta] 2013-05-15
 - bugfix: problem in build system (especially when cross-compiling)
