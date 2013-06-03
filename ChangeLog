@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------
-Version ?.?.0 - 2013-05-??
+Version 1.1.0 - 2013-06-03
 - add TLS support
 - new api for creating listners:
   ... which permits us to set various properties before the listener
