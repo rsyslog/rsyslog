@@ -1284,6 +1284,8 @@ BEGINactivateCnfPrePrivDrop
 	instanceConf_t *inst;
 CODESTARTactivateCnfPrePrivDrop
 	runModConf = pModConf;
+	if(runModConf->bOmitLocalLogging && nfd == 1)
+		ABORT_FINALIZE(RS_RET_OK);
 	for(inst = runModConf->root ; inst != NULL ; inst = inst->next) {
 		addListner(inst);
 	}
@@ -1325,6 +1327,8 @@ BEGINrunInput
 #endif
 
 CODESTARTrunInput
+	if(runModConf->bOmitLocalLogging && nfd == 1)
+		ABORT_FINALIZE(RS_RET_OK);
 	/* this is an endless loop - it is terminated when the thread is
 	 * signalled to do so. This, however, is handled by the framework,
 	 * right into the sleep below.
