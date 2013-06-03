@@ -33,7 +33,6 @@ PKG_PROG_PKG_CONFIG
 
 # modules we require
 PKG_CHECK_MODULES(LIBESTR, libestr >= 0.1.5)
-PKG_CHECK_MODULES(LIBEE, libee >= 0.4.0)
 PKG_CHECK_MODULES([JSON_C], [json])
 
 case "${host}" in
@@ -918,6 +917,7 @@ AC_ARG_ENABLE(mmnormalize,
         [enable_mmnormalize=no]
 )
 if test "x$enable_mmnormalize" = "xyes"; then
+	PKG_CHECK_MODULES(LIBEE, libee >= 0.4.0)
 	PKG_CHECK_MODULES(LIBLOGNORM, lognorm >= 0.3.1)
 fi
 AM_CONDITIONAL(ENABLE_MMNORMALIZE, test x$enable_mmnormalize = xyes)
@@ -933,9 +933,6 @@ AC_ARG_ENABLE(mmjsonparse,
          esac],
         [enable_mmjsonparse=no]
 )
-if test "x$enable_mmjsonparse" = "xyes"; then
-	PKG_CHECK_MODULES(LIBLOGNORM, lognorm >= 0.3.1)
-fi
 AM_CONDITIONAL(ENABLE_MMJSONPARSE, test x$enable_mmjsonparse = xyes)
 
 
@@ -949,9 +946,6 @@ AC_ARG_ENABLE(mmaudit,
          esac],
         [enable_mmaudit=no]
 )
-if test "x$enable_mmaudit" = "xyes"; then
-	PKG_CHECK_MODULES(LIBLOGNORM, lognorm >= 0.3.1)
-fi
 AM_CONDITIONAL(ENABLE_MMAUDIT, test x$enable_mmaudit = xyes)
 
 
