@@ -23,6 +23,7 @@ Version 7.3.16  [beta] 2013-05-??
   This is a long-standing bug that was only recently reported by forum
   user mc-sim.
   Reference: http://kb.monitorware.com/post23448.html
+- 0mq fixes; credits to Hongfei Cheng and Brian Knox
 ---------------------------------------------------------------------------
 Version 7.3.15  [beta] 2013-05-15
 - bugfix: problem in build system (especially when cross-compiling)
