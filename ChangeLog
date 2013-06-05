@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------
-Version 7.3.16  [beta] 2013-05-??
+Version 7.4.0  [v7.4-stable] 2013-06-06
+This starts a new stable branch based on 7.3.15 plus the following changes:
 - add --enable-cached-man-pages ./configure option
   permits to build rsyslog on a system where rst2man is not installed. In
   that case, cached versions of the man pages are used (they were built
