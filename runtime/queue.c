@@ -12,7 +12,7 @@
  * function names - this makes it really hard to read and does not provide much
  * benefit, at least I (now) think so...
  *
- * Copyright 2008-2011 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2013 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -118,6 +118,7 @@ static struct cnfparamdescr cnfpdescr[] = {
 	{ "queue.dequeueslowdown", eCmdHdlrInt, 0 },
 	{ "queue.dequeuetimebegin", eCmdHdlrInt, 0 },
 	{ "queue.dequeuetimeend", eCmdHdlrInt, 0 },
+	{ "queue.cry.provider", eCmdHdlrGetWord, 0 }
 };
 static struct cnfparamblk pblk =
 	{ CNFPARAMBLK_VERSION,
@@ -776,11 +777,19 @@ qqueueTryLoadPersistedInfo(qqueue_t *pThis)
 			       (rsRetVal(*)(obj_t*,void*))qqueueLoadPersStrmInfoFixup, pThis));
 	CHKiRet(obj.Deserialize(&pThis->tVars.disk.pReadDel, (uchar*) "strm", psQIF,
 			       (rsRetVal(*)(obj_t*,void*))qqueueLoadPersStrmInfoFixup, pThis));
-
 	/* create a duplicate for the read "pointer". */
 	CHKiRet(strm.Dup(pThis->tVars.disk.pReadDel, &pThis->tVars.disk.pReadDeq));
 	CHKiRet(strm.SetbDeleteOnClose(pThis->tVars.disk.pReadDeq, 0)); /* deq must NOT delete the files! */
 	CHKiRet(strm.ConstructFinalize(pThis->tVars.disk.pReadDeq));
+	/* if we use a crypto provider, we need to amend the objects with it's info */
+	if(pThis->useCryprov) {
+		CHKiRet(strm.Setcryprov(pThis->tVars.disk.pWrite, &pThis->cryprov));
+		CHKiRet(strm.SetcryprovData(pThis->tVars.disk.pWrite, pThis->cryprovData));
+		CHKiRet(strm.Setcryprov(pThis->tVars.disk.pReadDeq, &pThis->cryprov));
+		CHKiRet(strm.SetcryprovData(pThis->tVars.disk.pReadDeq, pThis->cryprovData));
+		CHKiRet(strm.Setcryprov(pThis->tVars.disk.pReadDel, &pThis->cryprov));
+		CHKiRet(strm.SetcryprovData(pThis->tVars.disk.pReadDel, pThis->cryprovData));
+	}
 
 	CHKiRet(strm.SeekCurrOffs(pThis->tVars.disk.pWrite));
 	CHKiRet(strm.SeekCurrOffs(pThis->tVars.disk.pReadDel));
@@ -834,6 +843,10 @@ static rsRetVal qConstructDisk(qqueue_t *pThis)
 		CHKiRet(strm.SetiMaxFiles(pThis->tVars.disk.pWrite, 10000000));
 		CHKiRet(strm.SettOperationsMode(pThis->tVars.disk.pWrite, STREAMMODE_WRITE));
 		CHKiRet(strm.SetsType(pThis->tVars.disk.pWrite, STREAMTYPE_FILE_CIRCULAR));
+		if(pThis->useCryprov) {
+			CHKiRet(strm.Setcryprov(pThis->tVars.disk.pWrite, &pThis->cryprov));
+			CHKiRet(strm.SetcryprovData(pThis->tVars.disk.pWrite, pThis->cryprovData));
+		}
 		CHKiRet(strm.ConstructFinalize(pThis->tVars.disk.pWrite));
 
 		CHKiRet(strm.Construct(&pThis->tVars.disk.pReadDeq));
@@ -842,6 +855,10 @@ static rsRetVal qConstructDisk(qqueue_t *pThis)
 		CHKiRet(strm.SetiMaxFiles(pThis->tVars.disk.pReadDeq, 10000000));
 		CHKiRet(strm.SettOperationsMode(pThis->tVars.disk.pReadDeq, STREAMMODE_READ));
 		CHKiRet(strm.SetsType(pThis->tVars.disk.pReadDeq, STREAMTYPE_FILE_CIRCULAR));
+		if(pThis->useCryprov) {
+			CHKiRet(strm.Setcryprov(pThis->tVars.disk.pReadDeq, &pThis->cryprov));
+			CHKiRet(strm.SetcryprovData(pThis->tVars.disk.pReadDeq, pThis->cryprovData));
+		}
 		CHKiRet(strm.ConstructFinalize(pThis->tVars.disk.pReadDeq));
 
 		CHKiRet(strm.Construct(&pThis->tVars.disk.pReadDel));
@@ -851,6 +868,10 @@ static rsRetVal qConstructDisk(qqueue_t *pThis)
 		CHKiRet(strm.SetiMaxFiles(pThis->tVars.disk.pReadDel, 10000000));
 		CHKiRet(strm.SettOperationsMode(pThis->tVars.disk.pReadDel, STREAMMODE_READ));
 		CHKiRet(strm.SetsType(pThis->tVars.disk.pReadDel, STREAMTYPE_FILE_CIRCULAR));
+		if(pThis->useCryprov) {
+			CHKiRet(strm.Setcryprov(pThis->tVars.disk.pReadDel, &pThis->cryprov));
+			CHKiRet(strm.SetcryprovData(pThis->tVars.disk.pReadDel, pThis->cryprovData));
+		}
 		CHKiRet(strm.ConstructFinalize(pThis->tVars.disk.pReadDel));
 
 		CHKiRet(strm.SetFName(pThis->tVars.disk.pWrite,   pThis->pszFilePrefix, pThis->lenFilePrefix));
@@ -1320,6 +1341,7 @@ rsRetVal qqueueConstruct(qqueue_t **ppThis, queueType_t qType, int iWorkerThread
 	pThis->iMaxFileSize = 1024 * 1024; /* default is 1 MiB */
 	pThis->iQueueSize = 0;
 	pThis->nLogDeq = 0;
+	pThis->useCryprov = 0;
 	pThis->iMaxQueueSize = iMaxQueueSize;
 	pThis->pConsumer = pConsumer;
 	pThis->iNumWorkerThreads = iWorkerThreads;
@@ -2389,6 +2411,13 @@ CODESTARTobjDestruct(qqueue)
 
 	free(pThis->pszFilePrefix);
 	free(pThis->pszSpoolDir);
+	if(pThis->useCryprov) {
+		pThis->cryprov.Destruct(&pThis->cryprovData);
+		obj.ReleaseObj(__FILE__, pThis->cryprovNameFull+2, pThis->cryprovNameFull,
+			       (void*) &pThis->cryprov);
+		free(pThis->cryprovName);
+		free(pThis->cryprovNameFull);
+	}
 
 	/* some queues do not provide stats and thus have no statsobj! */
 	if(pThis->statsobj != NULL)
@@ -2672,27 +2701,67 @@ finalize_it:
 }
 
 
-/* take v6 config list and extract the queue params out of it. Hand the
- * param values back to the caller. Caller is responsible for destructing
- * them when no longer needed. Caller can use this param block to configure
- * all parameters for a newly created queue with one call to qqueueSetParams().
- * rgerhards, 2011-07-22
+/* are any queue params set at all? 1 - yes, 0 - no
+ * We need to evaluate the param block for this function, which is somewhat
+ * inefficient. HOWEVER, this is only done during config load, so we really
+ * don't care... -- rgerhards, 2013-05-10
  */
-rsRetVal
-qqueueDoCnfParams(struct nvlst *lst, struct cnfparamvals **ppvals)
-{
-	*ppvals = nvlstGetParams(lst, &pblk, NULL);
-	return RS_RET_OK;
-}
-
-
-/* are any queue params set at all? 1 - yes, 0 - no */
 int 
-queueCnfParamsSet(struct cnfparamvals *pvals)
+queueCnfParamsSet(struct nvlst *lst)
 {
-	return	cnfparamvalsIsSet(&pblk, pvals);
+	int r;
+	struct cnfparamvals *pvals;
+
+	pvals = nvlstGetParams(lst, &pblk, NULL);
+	r = cnfparamvalsIsSet(&pblk, pvals);
+	cnfparamvalsDestruct(pvals, &pblk);
+	return r;
 }
 
+
+static inline rsRetVal
+initCryprov(qqueue_t *pThis, struct nvlst *lst)
+{
+	uchar szDrvrName[1024];
+	DEFiRet;
+
+	if(snprintf((char*)szDrvrName, sizeof(szDrvrName), "lmcry_%s", pThis->cryprovName)
+		== sizeof(szDrvrName)) {
+		errmsg.LogError(0, RS_RET_ERR, "queue: crypto provider "
+				"name is too long: '%s' - encryption disabled",
+				pThis->cryprovName);
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+	pThis->cryprovNameFull = ustrdup(szDrvrName);
+
+	pThis->cryprov.ifVersion = cryprovCURR_IF_VERSION;
+	/* The pDrvrName+2 below is a hack to obtain the object name. It 
+	 * safes us to have yet another variable with the name without "lm" in
+	 * front of it. If we change the module load interface, we may re-think
+	 * about this hack, but for the time being it is efficient and clean enough.
+	 */
+	if(obj.UseObj(__FILE__, szDrvrName, szDrvrName, (void*) &pThis->cryprov)
+		!= RS_RET_OK) {
+		errmsg.LogError(0, RS_RET_LOAD_ERROR, "queue: could not load "
+				"crypto provider '%s' - encryption disabled",
+				szDrvrName);
+		ABORT_FINALIZE(RS_RET_CRYPROV_ERR);
+	}
+
+	if(pThis->cryprov.Construct(&pThis->cryprovData) != RS_RET_OK) {
+		errmsg.LogError(0, RS_RET_CRYPROV_ERR, "queue: error constructing "
+				"crypto provider %s dataset - encryption disabled",
+				szDrvrName);
+		ABORT_FINALIZE(RS_RET_CRYPROV_ERR);
+	}
+	CHKiRet(pThis->cryprov.SetCnfParam(pThis->cryprovData, lst, CRYPROV_PARAMTYPE_DISK));
+
+	dbgprintf("loaded crypto provider %s, data instance at %p\n",
+		  szDrvrName, pThis->cryprovData);
+	pThis->useCryprov = 1;
+finalize_it:
+	RETiRet;
+}
 
 /* apply all params from param block to queue. Must be called before
  * finalizing. This supports the v6 config system. Defaults were already
@@ -2700,15 +2769,24 @@ queueCnfParamsSet(struct cnfparamvals *pvals)
  * function.
  */
 rsRetVal
-qqueueApplyCnfParam(qqueue_t *pThis, struct cnfparamvals *pvals)
+qqueueApplyCnfParam(qqueue_t *pThis, struct nvlst *lst)
 {
 	int i;
+	struct cnfparamvals *pvals;
+
+	pvals = nvlstGetParams(lst, &pblk, NULL);
+	if(Debug) {
+		dbgprintf("queue param blk:\n");
+		cnfparamsPrint(&pblk, pvals);
+	}
 	for(i = 0 ; i < pblk.nParams ; ++i) {
 		if(!pvals[i].bUsed)
 			continue;
 		if(!strcmp(pblk.descr[i].name, "queue.filename")) {
 			pThis->pszFilePrefix = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
 			pThis->lenFilePrefix = es_strlen(pvals[i].val.d.estr);
+		} else if(!strcmp(pblk.descr[i].name, "queue.cry.provider")) {
+			pThis->cryprovName = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(pblk.descr[i].name, "queue.size")) {
 			pThis->iMaxQueueSize = pvals[i].val.d.n;
 		} else if(!strcmp(pblk.descr[i].name, "queue.dequeuebatchsize")) {
@@ -2760,12 +2838,27 @@ qqueueApplyCnfParam(qqueue_t *pThis, struct cnfparamvals *pvals)
 			  "param '%s'\n", pblk.descr[i].name);
 		}
 	}
-	if(pThis->qType == QUEUETYPE_DISK && pThis->pszFilePrefix == NULL) {
-		errmsg.LogError(0, RS_RET_QUEUE_DISK_NO_FN, "error on queue '%s', disk mode selected, but "
-			        "no queue file name given; queue type changed to 'linkedList'",
-				obj.GetName((obj_t*) pThis));
-		pThis->qType = QUEUETYPE_LINKEDLIST;
+	if(pThis->qType == QUEUETYPE_DISK) {
+		if(pThis->pszFilePrefix == NULL) {
+			errmsg.LogError(0, RS_RET_QUEUE_DISK_NO_FN, "error on queue '%s', disk mode selected, but "
+					"no queue file name given; queue type changed to 'linkedList'",
+					obj.GetName((obj_t*) pThis));
+			pThis->qType = QUEUETYPE_LINKEDLIST;
+		}
 	}
+
+	if(pThis->pszFilePrefix == NULL && pThis->cryprovName != NULL) {
+		errmsg.LogError(0, RS_RET_QUEUE_CRY_DISK_ONLY, "error on queue '%s', crypto provider can "
+				"only be set for disk or disk assisted queue - ignored",
+				obj.GetName((obj_t*) pThis));
+		free(pThis->cryprovName);
+		pThis->cryprovName = NULL;
+	}
+
+	if(pThis->cryprovName != NULL) {
+		initCryprov(pThis, lst);
+	}
+
 	cnfparamvalsDestruct(pvals, &pblk);
 	return RS_RET_OK;
 }

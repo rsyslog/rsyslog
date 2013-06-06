@@ -74,6 +74,7 @@ static struct configSettings_s {
 
 struct instanceConf_s {
 	uchar *pszBindPort;		/* port to bind to */
+	sbool bEnableTLS;
 	struct instanceConf_s *next;
 };
 
@@ -90,7 +91,8 @@ static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current lo
 
 /* input instance parameters */
 static struct cnfparamdescr inppdescr[] = {
-	{ "port", eCmdHdlrString, CNFPARAM_REQUIRED }
+	{ "port", eCmdHdlrString, CNFPARAM_REQUIRED },
+	{ "tls", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk inppblk =
 	{ CNFPARAMBLK_VERSION,
@@ -155,6 +157,7 @@ createInstance(instanceConf_t **pinst)
 	inst->next = NULL;
 
 	inst->pszBindPort = NULL;
+	inst->bEnableTLS = 0;
 
 	/* node created, let's add to config */
 	if(loadModConf->tail == NULL) {
@@ -179,7 +182,7 @@ std_checkRuleset_genErrMsg(modConfData_t *modConf, __attribute__((unused)) insta
 }
 
 
-/* This function is called when a new listener instace shall be added to 
+/* This function is called when a new listener instance shall be added to 
  * the current config object via the legacy config system. It just shuffles
  * all parameters to the listener in-memory instance.
  * rgerhards, 2011-05-04
@@ -204,6 +207,7 @@ finalize_it:
 static rsRetVal
 addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 {
+	relpSrv_t *pSrv;
 	DEFiRet;
 	if(pRelpEngine == NULL) {
 		CHKiRet(relpEngineConstruct(&pRelpEngine));
@@ -216,7 +220,11 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 		}
 	}
 
-	CHKiRet(relpEngineAddListner(pRelpEngine, inst->pszBindPort));
+	CHKiRet(relpEngineListnerConstruct(pRelpEngine, &pSrv));
+	CHKiRet(relpSrvSetLstnPort(pSrv, inst->pszBindPort));
+	if(inst->bEnableTLS)
+		relpSrvEnableTLS(pSrv);
+	CHKiRet(relpEngineListnerConstructFinalize(pRelpEngine, pSrv));
 
 finalize_it:
 	RETiRet;
@@ -249,6 +257,8 @@ CODESTARTnewInpInst
 			continue;
 		if(!strcmp(inppblk.descr[i].name, "port")) {
 			inst->pszBindPort = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(inppblk.descr[i].name, "tls")) {
+			inst->bEnableTLS = (unsigned) pvals[i].val.d.n;
 		} else {
 			dbgprintf("imrelp: program error, non-handled "
 			  "param '%s'\n", inppblk.descr[i].name);

@@ -38,7 +38,15 @@ struct gcryfile_s {
 	size_t blkLength; /* size of low-level crypto block */
 	uchar *eiName; /* name of .encinfo file */
 	int fd; /* descriptor of .encinfo file (-1 if not open) */
+	char openMode; /* 'r': read, 'w': write */
 	gcryctx ctx;
+	uchar *readBuf;
+	int16_t readBufIdx;
+	int16_t readBufMaxIdx;
+	int8_t bDeleteOnClose; /* for queue support, similar to stream subsys */
+	ssize_t bytesToBlkEnd; /* number of bytes remaining in current crypto block
+				-1 means -> no end (still being writen to, queue files),
+				0 means -> end of block, new one must be started. */
 };
 
 int gcryGetKeyFromFile(char *fn, char **key, unsigned *keylen);
@@ -50,8 +58,12 @@ rsRetVal rsgcrySetAlgo(gcryctx ctx, uchar *modename);
 gcryctx gcryCtxNew(void);
 void rsgcryCtxDel(gcryctx ctx);
 int gcryfileDestruct(gcryfile gf, off64_t offsLogfile);
-rsRetVal rsgcryInitCrypt(gcryctx ctx, gcryfile *pgf, uchar *fname);
-int rsgcryEncrypt(gcryfile pF, uchar *buf, size_t *len);
+rsRetVal rsgcryInitCrypt(gcryctx ctx, gcryfile *pgf, uchar *fname, char openMode);
+rsRetVal rsgcryEncrypt(gcryfile pF, uchar *buf, size_t *len);
+rsRetVal rsgcryDecrypt(gcryfile pF, uchar *buf, size_t *len);
+int gcryGetKeyFromProg(char *cmd, char **key, unsigned *keylen);
+rsRetVal gcryfileDeleteState(uchar *fn);
+rsRetVal gcryfileGetBytesLeftInBlock(gcryfile gf, ssize_t *left);
 
 /* error states */
 #define RSGCRYE_EI_OPEN 1 	/* error opening .encinfo file */
@@ -61,6 +73,14 @@ int rsgcryEncrypt(gcryfile pF, uchar *buf, size_t *len);
 #define EIF_MAX_VALUE_LEN 1023 /* max length of value types */
 #define RSGCRY_FILETYPE_NAME "rsyslog-enrcyption-info"
 #define ENCINFO_SUFFIX ".encinfo"
+
+/* Note: gf may validly be NULL, e.g. if file has not yet been opened! */
+static inline void
+gcryfileSetDeleteOnClose(gcryfile gf, int val)
+{
+	if(gf != NULL)
+		gf->bDeleteOnClose = val;
+}
 
 static inline int
 rsgcryAlgoname2Algo(char *algoname) {

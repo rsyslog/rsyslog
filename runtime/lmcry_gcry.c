@@ -43,17 +43,30 @@ DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 
 /* tables for interfacing with the v6 config system */
-static struct cnfparamdescr cnfpdescr[] = {
+static struct cnfparamdescr cnfpdescrRegular[] = {
 	{ "cry.key", eCmdHdlrGetWord, 0 },
 	{ "cry.keyfile", eCmdHdlrGetWord, 0 },
 	{ "cry.keyprogram", eCmdHdlrGetWord, 0 },
 	{ "cry.mode", eCmdHdlrGetWord, 0 }, /* CBC, ECB, etc */
 	{ "cry.algo", eCmdHdlrGetWord, 0 }
 };
-static struct cnfparamblk pblk =
+static struct cnfparamblk pblkRegular =
 	{ CNFPARAMBLK_VERSION,
-	  sizeof(cnfpdescr)/sizeof(struct cnfparamdescr),
-	  cnfpdescr
+	  sizeof(cnfpdescrRegular)/sizeof(struct cnfparamdescr),
+	  cnfpdescrRegular
+	};
+
+static struct cnfparamdescr cnfpdescrQueue[] = {
+	{ "queue.cry.key", eCmdHdlrGetWord, 0 },
+	{ "queue.cry.keyfile", eCmdHdlrGetWord, 0 },
+	{ "queue.cry.keyprogram", eCmdHdlrGetWord, 0 },
+	{ "queue.cry.mode", eCmdHdlrGetWord, 0 }, /* CBC, ECB, etc */
+	{ "queue.cry.algo", eCmdHdlrGetWord, 0 }
+};
+static struct cnfparamblk pblkQueue =
+	{ CNFPARAMBLK_VERSION,
+	  sizeof(cnfpdescrQueue)/sizeof(struct cnfparamdescr),
+	  cnfpdescrQueue
 	};
 
 
@@ -85,7 +98,7 @@ ENDobjDestruct(lmcry_gcry)
  * Defaults are expected to have been set during construction.
  */
 static rsRetVal
-SetCnfParam(void *pT, struct nvlst *lst)
+SetCnfParam(void *pT, struct nvlst *lst, int paramType)
 {
 	lmcry_gcry_t *pThis = (lmcry_gcry_t*) pT;
 	int i, r;
@@ -97,34 +110,41 @@ SetCnfParam(void *pT, struct nvlst *lst)
 	uchar *mode = NULL;
 	int nKeys; /* number of keys (actually methods) specified */
 	struct cnfparamvals *pvals;
+	struct cnfparamblk *pblk;
 	DEFiRet;
 
+	pblk = (paramType == CRYPROV_PARAMTYPE_REGULAR ) ?  &pblkRegular : &pblkQueue;
 	nKeys = 0;
-	pvals = nvlstGetParams(lst, &pblk, NULL);
+	pvals = nvlstGetParams(lst, pblk, NULL);
 	if(Debug) {
 		dbgprintf("param blk in lmcry_gcry:\n");
-		cnfparamsPrint(&pblk, pvals);
+		cnfparamsPrint(pblk, pvals);
 	}
 
-	for(i = 0 ; i < pblk.nParams ; ++i) {
+	for(i = 0 ; i < pblk->nParams ; ++i) {
 		if(!pvals[i].bUsed)
 			continue;
-		if(!strcmp(pblk.descr[i].name, "cry.key")) {
+		if(!strcmp(pblk->descr[i].name, "cry.key") || 
+		   !strcmp(pblk->descr[i].name, "queue.cry.key")) {
 			key = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
 			++nKeys;
-		} else if(!strcmp(pblk.descr[i].name, "cry.keyfile")) {
+		} else if(!strcmp(pblk->descr[i].name, "cry.keyfile") ||
+		          !strcmp(pblk->descr[i].name, "queue.cry.keyfile")) {
 			keyfile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 			++nKeys;
-		} else if(!strcmp(pblk.descr[i].name, "cry.keyprogram")) {
+		} else if(!strcmp(pblk->descr[i].name, "cry.keyprogram") ||
+		          !strcmp(pblk->descr[i].name, "queue.cry.keyprogram")) {
 			keyprogram = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 			++nKeys;
-		} else if(!strcmp(pblk.descr[i].name, "cry.mode")) {
+		} else if(!strcmp(pblk->descr[i].name, "cry.mode") ||
+		          !strcmp(pblk->descr[i].name, "queue.cry.mode")) {
 			mode = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if(!strcmp(pblk.descr[i].name, "cry.algo")) {
+		} else if(!strcmp(pblk->descr[i].name, "cry.algo") ||
+		          !strcmp(pblk->descr[i].name, "queue.cry.algo")) {
 			algo = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else {
 			DBGPRINTF("lmcry_gcry: program error, non-handled "
-			  "param '%s'\n", pblk.descr[i].name);
+			  "param '%s'\n", pblk->descr[i].name);
 		}
 	}
 	if(algo != NULL) {
@@ -177,7 +197,7 @@ SetCnfParam(void *pT, struct nvlst *lst)
 		ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 	}
 
-	cnfparamvalsDestruct(pvals, &pblk);
+	cnfparamvalsDestruct(pvals, pblk);
 	if(key != NULL) {
 		memset(key, 0, strlen((char*)key));
 		free(key);
@@ -189,15 +209,33 @@ finalize_it:
 	RETiRet;
 }
 
+static void
+SetDeleteOnClose(void *pF, int val)
+{
+	gcryfileSetDeleteOnClose(pF, val);
+}
 
 static rsRetVal
-OnFileOpen(void *pT, uchar *fn, void *pGF)
+GetBytesLeftInBlock(void *pF, ssize_t *left)
+{
+	return gcryfileGetBytesLeftInBlock((gcryfile) pF, left);
+}
+
+static rsRetVal
+DeleteStateFiles(uchar *logfn)
+{
+	return gcryfileDeleteState(logfn);
+}
+
+static rsRetVal
+OnFileOpen(void *pT, uchar *fn, void *pGF, char openMode)
 {
 	lmcry_gcry_t *pThis = (lmcry_gcry_t*) pT;
 	gcryfile *pgf = (gcryfile*) pGF;
 	DEFiRet;
+	DBGPRINTF("lmcry_gcry: open file '%s', mode '%c'\n", fn, openMode);
 
-	CHKiRet(rsgcryInitCrypt(pThis->ctx, pgf, fn));
+	CHKiRet(rsgcryInitCrypt(pThis->ctx, pgf, fn, openMode));
 finalize_it:
 	/* TODO: enable this error message (need to cleanup loop first ;))
 	errmsg.LogError(0, iRet, "Encryption Provider"
@@ -205,6 +243,16 @@ finalize_it:
 	*/
 	RETiRet;
 }
+
+static rsRetVal
+Decrypt(void *pF, uchar *rec, size_t *lenRec)
+{
+	DEFiRet;
+	iRet = rsgcryDecrypt(pF, rec, lenRec);
+
+	RETiRet;
+}
+
 
 static rsRetVal
 Encrypt(void *pF, uchar *rec, size_t *lenRec)
@@ -231,10 +279,14 @@ CODESTARTobjQueryInterface(lmcry_gcry)
 	}
 	pIf->Construct = (rsRetVal(*)(void*)) lmcry_gcryConstruct;
 	pIf->SetCnfParam = SetCnfParam;
+	pIf->SetDeleteOnClose = SetDeleteOnClose;
 	pIf->Destruct = (rsRetVal(*)(void*)) lmcry_gcryDestruct;
 	pIf->OnFileOpen = OnFileOpen;
 	pIf->Encrypt = Encrypt;
+	pIf->Decrypt = Decrypt;
 	pIf->OnFileClose = OnFileClose;
+	pIf->DeleteStateFiles = DeleteStateFiles;
+	pIf->GetBytesLeftInBlock = GetBytesLeftInBlock;
 finalize_it:
 ENDobjQueryInterface(lmcry_gcry)
 

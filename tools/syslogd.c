@@ -1056,7 +1056,7 @@ finalize_it:
  * the time being (remember that we want to restructure config processing at large!).
  * rgerhards, 2009-10-27
  */
-rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName, struct cnfparamvals *queueParams)
+rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName, struct nvlst *lst)
 {
 	struct queuefilenames_s *qfn;
 	uchar *qfname = NULL;
@@ -1072,7 +1072,7 @@ rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName, struct cnfpara
 	/* name our main queue object (it's not fatal if it fails...) */
 	obj.SetName((obj_t*) (*ppQueue), pszQueueName);
 
-	if(queueParams == NULL) { /* use legacy parameters? */
+	if(lst == NULL) { /* use legacy parameters? */
 		/* ... set some properties ... */
 	#	define setQPROP(func, directive, data) \
 		CHKiRet_Hdlr(func(*ppQueue, data)) { \
@@ -1129,7 +1129,7 @@ rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName, struct cnfpara
 	#	undef setQPROPstr
 	} else { /* use new style config! */
 		qqueueSetDefaultsRulesetQueue(*ppQueue);
-		qqueueApplyCnfParam(*ppQueue, queueParams);
+		qqueueApplyCnfParam(*ppQueue, lst);
 	}
 
 	/* ... and finally start the queue! */
@@ -1772,7 +1772,7 @@ int realMain(int argc, char **argv)
 	 * of other options, we do this during the inital option processing.
 	 * rgerhards, 2008-04-04
 	 */
-	while((ch = getopt(argc, argv, "46a:Ac:dDef:g:hi:l:m:M:nN:op:qQr::s:t:T:u:vwx")) != EOF) {
+	while((ch = getopt(argc, argv, "46a:Ac:dDef:g:hi:l:m:M:nN:op:qQr::s:S:t:T:u:vwx")) != EOF) {
 		switch((char)ch) {
                 case '4':
                 case '6':
@@ -1790,6 +1790,7 @@ int realMain(int argc, char **argv)
 		case 'q': /* add hostname if DNS resolving has failed */
 		case 'Q': /* dont resolve hostnames in ACL to IPs */
 		case 's':
+		case 'S': /* Source IP for local client to be used on multihomed host */
 		case 'T': /* chroot on startup (primarily for testing) */
 		case 'u': /* misc user settings */
 		case 'w': /* disable disallowed host warnings */
@@ -1881,6 +1882,13 @@ int realMain(int argc, char **argv)
                 case 'a':
 			fprintf(stderr, "rsyslogd: error -a is no longer supported, use module imuxsock instead");
                         break;
+		case 'S':		/* Source IP for local client to be used on multihomed host */
+			if(glbl.GetSourceIPofLocalClient() != NULL) {
+				fprintf (stderr, "rsyslogd: Only one -S argument allowed, the first one is taken.\n");
+			} else {
+				glbl.SetSourceIPofLocalClient((uchar*)arg);
+			}
+			break;
 		case 'f':		/* configuration file */
 			ConfFile = (uchar*) arg;
 			break;

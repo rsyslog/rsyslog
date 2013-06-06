@@ -28,12 +28,15 @@ nits outlined above, is a much more reliable solution than plain tcp
 syslog and so it is highly suggested to use RELP instead of plain tcp.
 Clients send messages to the RELP server via omrelp.</p>
 
-<p><b>Configuration Directives</b>:</p>
+<p><b>Input Parameters</b>:</p>
 <ul>
 <li><b>Ruleset</b> &lt;name&gt;</br>
 Binds the specified ruleset to all RELP listeners.
 <li><b>Port</b> &lt;port&gt;<br>
 Starts a RELP server on selected port</li>
+<li><b>tls</b> (not mandatory, values "on","off", default "off")<br>
+	If set to "on", the RELP connection will be encrypted by TLS, 		so that the data is protected against observers. Please note 		that both the client and the server must have set TLS to 		either "on" or "off". Other combinations lead to unpredictable 		results.
+	</li>
 </ul>
 <b>Caveats/Known Bugs:</b>
 <ul>

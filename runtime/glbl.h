@@ -81,6 +81,8 @@ BEGINinterface(glbl) /* name must also be changed in ENDinterface macro! */
 	/* next change is v9! */
 	/* v8 - 2012-03-21 */
 	prop_t* (*GetLocalHostIP)(void);
+	uchar* (*GetSourceIPofLocalClient)(void);		/* [ar] */
+	rsRetVal (*SetSourceIPofLocalClient)(uchar*);		/* [ar] */
 #undef	SIMP_PROP
 ENDinterface(glbl)
 #define glblCURR_IF_VERSION 7 /* increment whenever you change the interface structure! */

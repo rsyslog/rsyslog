@@ -257,7 +257,9 @@ doPhysOpen(strm_t *pThis)
 
 	if(pThis->cryprov != NULL) {
 		CHKiRet(pThis->cryprov->OnFileOpen(pThis->cryprovData,
-		 	pThis->pszCurrFName, &pThis->cryprovFileData));
+		 	pThis->pszCurrFName, &pThis->cryprovFileData,
+			(pThis->tOperationsMode == STREAMMODE_READ) ? 'r' : 'w'));
+		pThis->cryprov->SetDeleteOnClose(pThis->cryprovFileData, pThis->bDeleteOnClose);
 	}
 finalize_it:
 	RETiRet;
@@ -403,6 +405,12 @@ static rsRetVal strmCloseFile(strm_t *pThis)
 		if(pThis->bAsyncWrite) {
 			strmWaitAsyncWriterDone(pThis);
 		}
+	}
+
+	/* if we have a signature provider, we must make sure that the crypto
+	 * state files are opened and proper close processing happens. */
+	if(pThis->cryprov != NULL && pThis->fd == -1) {
+		strmOpenFile(pThis);
 	}
 
 	/* the file may already be closed (or never have opened), so guard
@@ -551,11 +559,14 @@ finalize_it:
  * rgerhards, 2008-02-13
  */
 static rsRetVal
-strmReadBuf(strm_t *pThis)
+strmReadBuf(strm_t *pThis, int *padBytes)
 {
 	DEFiRet;
 	int bRun;
 	long iLenRead;
+	size_t actualDataLen;
+	size_t toRead;
+	ssize_t bytesLeft;
 
 	ISOBJ_TYPE_assert(pThis, strm);
 	/* We need to try read at least twice because we may run into EOF and need to switch files. */
@@ -566,13 +577,35 @@ strmReadBuf(strm_t *pThis)
 		 * rgerhards, 2008-02-13
 		 */
 		CHKiRet(strmOpenFile(pThis));
-		iLenRead = read(pThis->fd, pThis->pIOBuf, pThis->sIOBufSize);
+		if(pThis->cryprov == NULL) {
+			toRead = pThis->sIOBufSize;
+		} else {
+			CHKiRet(pThis->cryprov->GetBytesLeftInBlock(pThis->cryprovFileData, &bytesLeft));
+			if(bytesLeft == -1 || bytesLeft > (ssize_t) pThis->sIOBufSize)  {
+				toRead = pThis->sIOBufSize;
+			} else {
+				toRead = (size_t) bytesLeft;
+			}
+		}
+		iLenRead = read(pThis->fd, pThis->pIOBuf, toRead);
 		DBGOPRINT((obj_t*) pThis, "file %d read %ld bytes\n", pThis->fd, iLenRead);
+		/* end crypto */
 		if(iLenRead == 0) {
 			CHKiRet(strmHandleEOF(pThis));
 		} else if(iLenRead < 0)
 			ABORT_FINALIZE(RS_RET_IO_ERROR);
 		else { /* good read */
+			/* here we place our crypto interface */
+			if(pThis->cryprov != NULL) {
+				actualDataLen = iLenRead;
+				pThis->cryprov->Decrypt(pThis->cryprovFileData, pThis->pIOBuf, &actualDataLen);
+				*padBytes = iLenRead - actualDataLen;
+				iLenRead = actualDataLen;
+				DBGOPRINT((obj_t*) pThis, "encrypted file %d pad bytes %d, actual "
+					"data %ld\n", pThis->fd, *padBytes, iLenRead);
+			} else {
+				*padBytes = 0;
+			}
 			pThis->iBufPtrMax = iLenRead;
 			bRun = 0;	/* exit loop */
 		}
@@ -594,6 +627,7 @@ finalize_it:
  */
 static rsRetVal strmReadChar(strm_t *pThis, uchar *pC)
 {
+	int padBytes = 0; /* in crypto mode, we may have some padding (non-data) bytes */
 	DEFiRet;
 	
 	ASSERT(pThis != NULL);
@@ -609,8 +643,9 @@ static rsRetVal strmReadChar(strm_t *pThis, uchar *pC)
 	
 	/* do we need to obtain a new buffer? */
 	if(pThis->iBufPtr >= pThis->iBufPtrMax) {
-		CHKiRet(strmReadBuf(pThis));
+		CHKiRet(strmReadBuf(pThis, &padBytes));
 	}
+	pThis->iCurrOffs += padBytes;
 
 	/* if we reach this point, we have data available in the buffer */
 
@@ -1455,6 +1490,8 @@ strmMultiFileSeek(strm_t *pThis, int FNum, off64_t offs, off64_t *bytesDel)
 			  "deleting '%s' (%lld bytes)\n", pThis->iCurrFNum, FNum,
 			  pThis->pszCurrFName, (long long) *bytesDel);
 		unlink((char*)pThis->pszCurrFName);
+		if(pThis->cryprov != NULL)
+			pThis->cryprov->DeleteStateFiles(pThis->pszCurrFName);
 		free(pThis->pszCurrFName);
 		pThis->pszCurrFName = NULL;
 		pThis->iCurrFNum = FNum;
@@ -1468,17 +1505,31 @@ finalize_it:
 }
 
 
-
 /* seek to current offset. This is primarily a helper to readjust the OS file
  * pointer after a strm object has been deserialized.
  */
 static rsRetVal strmSeekCurrOffs(strm_t *pThis)
 {
+	off64_t targetOffs;
+	uchar c;
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, strm);
 
-	iRet = strmSeek(pThis, pThis->iCurrOffs);
+	if(pThis->cryprov == NULL || pThis->tOperationsMode != STREAMMODE_READ) {
+		iRet = strmSeek(pThis, pThis->iCurrOffs);
+		FINALIZE;
+	}
+
+	/* As the cryprov may use CBC or similiar things, we need to read skip data */
+	targetOffs = pThis->iCurrOffs;
+	pThis->iCurrOffs = 0;
+	DBGOPRINT((obj_t*) pThis, "encrypted, doing skip read of %lld bytes\n",
+		(long long) targetOffs);
+	while(targetOffs != pThis->iCurrOffs) {
+		CHKiRet(strmReadChar(pThis, &c));
+	}
+finalize_it:
 	RETiRet;
 }
 
@@ -1605,7 +1656,6 @@ finalize_it:
 
 /* property set methods */
 /* simple ones first */
-DEFpropSetMeth(strm, bDeleteOnClose, int)
 DEFpropSetMeth(strm, iMaxFileSize, int)
 DEFpropSetMeth(strm, iFileNumDigits, int)
 DEFpropSetMeth(strm, tOperationsMode, int)
@@ -1620,6 +1670,15 @@ DEFpropSetMeth(strm, iFlushInterval, int)
 DEFpropSetMeth(strm, pszSizeLimitCmd, uchar*)
 DEFpropSetMeth(strm, cryprov, cryprov_if_t*)
 DEFpropSetMeth(strm, cryprovData, void*)
+
+static rsRetVal strmSetbDeleteOnClose(strm_t *pThis, int val)
+{
+	pThis->bDeleteOnClose = val;
+	if(pThis->cryprov != NULL) {
+		pThis->cryprov->SetDeleteOnClose(pThis->cryprovFileData, pThis->bDeleteOnClose);
+	}
+	return RS_RET_OK;
+}
 
 static rsRetVal strmSetiMaxFiles(strm_t *pThis, int iNewVal)
 {

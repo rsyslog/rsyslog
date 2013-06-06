@@ -1,4 +1,10 @@
 ---------------------------------------------------------------------------
+Version 7.5.0 [devel] 2013-0?-??
+- omrelp: add "rebindInterval" parameter
+- add -S command line option to specify IP address to use for RELP client
+  connections
+  Thanks to Axel Rau for the patch.
+---------------------------------------------------------------------------
 Version 7.4.0  [v7.4-stable] 2013-06-06
 This starts a new stable branch based on 7.3.15 plus the following changes:
 - add --enable-cached-man-pages ./configure option

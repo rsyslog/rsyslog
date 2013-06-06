@@ -191,6 +191,10 @@ is specified and the host logging resolves to satu.infodrom.north.de
 no domain would be cut, you will have to specify two domains like:
 .BR "\-s north.de:infodrom.north.de" .
 .TP
+.BI "\-S ip_address" "local client source IP"
+rsyslogd uses ip_address as local client address while connecting
+to remote logserver. Currently used by omrelp only and only with tcp.
+.TP
 .BI "\-u " "userlevel"
 This is a "catch all" option for some very seldomly-used user settings.
 The "userlevel" variable selects multiple things. Add the specific values
