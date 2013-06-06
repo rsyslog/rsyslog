@@ -244,7 +244,14 @@ readjournal() {
 	SD_JOURNAL_FOREACH_DATA(j, get, l) {
 		/* locate equal sign, this is always present */
 		equal_sign = memchr(get, '=', l);
-		assert (equal_sign != NULL);
+
+		/* ... but we know better than to trust the specs */
+		if (equal_sign == NULL) {
+			errmsg.LogError(0, RS_RET_ERR,"SD_JOURNAL_FOREACH_DATA()"
+				" returned a malformed field (has no '='): '%s'",
+				get);
+			continue; /* skip the entry */
+		}
 
 		/* get length of journal data prefix */
 		prefixlen = ((char *)equal_sign - (char *)get);
