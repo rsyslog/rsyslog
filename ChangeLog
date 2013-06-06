@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------
+Version 7.4.1  [v7.4-stable] 2013-06-??
+- bugfix imzmq3: potential segfault on startup
+  if no problem happend at startup, everything went fine
+  Thanks to Hongfei Cheng and Brian Knox for the patch
+---------------------------------------------------------------------------
 Version 7.4.0  [v7.4-stable] 2013-06-06
 This starts a new stable branch based on 7.3.15 plus the following changes:
 - add --enable-cached-man-pages ./configure option

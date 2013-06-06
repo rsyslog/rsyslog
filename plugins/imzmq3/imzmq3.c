@@ -135,7 +135,6 @@ struct lstn_s {
 /* ----------------------------------------------------------------------------
  *  Static definitions/initializations.
  */
-static modConfData_t*       loadModConf     = NULL;
 static modConfData_t*       runModConf      = NULL;
 static struct lstn_s*       lcnfRoot        = NULL;
 static struct lstn_s*       lcnfLast        = NULL;
@@ -268,7 +267,7 @@ static void setDefaults(instanceConf_t* info) {
     info->reconnectIVLMax = -1;
     info->ipv4Only        = -1;
     info->affinity        = -1;
-
+    info->next            = NULL;
 };
 
 /* given a comma separated list of subscriptions, create a char* array of them
@@ -442,11 +441,11 @@ static rsRetVal createInstance(instanceConf_t** pinst) {
     setDefaults(inst);
     
     /* add this to the config */
-    if(loadModConf->tail == NULL) {
-        loadModConf->tail = loadModConf->root = inst;
+    if (runModConf->root == NULL || runModConf->tail == NULL) {
+        runModConf->tail = runModConf->root = inst;
     } else {
-        loadModConf->tail->next = inst;
-        loadModConf->tail       = inst;
+        runModConf->tail->next = inst;
+        runModConf->tail       = inst;
     }
     *pinst = inst;
 finalize_it:
@@ -696,10 +695,14 @@ ENDisCompatibleWithFeature
 
 BEGINbeginCnfLoad
 CODESTARTbeginCnfLoad
-    loadModConf = pModConf;
-    pModConf->pConf = pConf;
+    /* After endCnfLoad() (BEGINendCnfLoad...ENDendCnfLoad) is called,
+     * the pModConf pointer must not be used to change the in-memory
+     * config object. It's safe to use the same pointer for accessing
+     * the config object until freeCnf() (BEGINfreeCnf...ENDfreeCnf). */
+    runModConf = pModConf;
+    runModConf->pConf = pConf;
     /* init module config */
-    loadModConf->io_threads = 0; /* 0 means don't set it */
+    runModConf->io_threads = 0; /* 0 means don't set it */
 ENDbeginCnfLoad
 
 
@@ -718,7 +721,7 @@ CODESTARTsetModCnf
         if (!pvals[i].bUsed)
             continue;
         if (!strcmp(modpblk.descr[i].name, "ioThreads")) {
-            loadModConf->io_threads = (int)pvals[i].val.d.n;
+            runModConf->io_threads = (int)pvals[i].val.d.n;
         } else {
             errmsg.LogError(0, RS_RET_INVALID_PARAMS, 
                            "imzmq3: config error, unknown "
@@ -735,7 +738,14 @@ ENDsetModCnf
 
 BEGINendCnfLoad
 CODESTARTendCnfLoad
-    loadModConf = NULL; /* done loading, so it becomes NULL */
+    /* Last chance to make changes to the in-memory config object for this
+     * input module. After this call, the config object must no longer be
+     * changed. */
+    if (pModConf != runModConf) {
+        errmsg.LogError(0, NO_ERRCODE, "imzmq3: pointer of in-memory config object has "
+                        "changed - pModConf=%p, runModConf=%p", pModConf, runModConf);
+    }
+    assert(pModConf == runModConf);
 ENDendCnfLoad
 
 
@@ -764,7 +774,12 @@ ENDcheckCnf
 
 BEGINactivateCnfPrePrivDrop
 CODESTARTactivateCnfPrePrivDrop
-    runModConf = pModConf;
+    if (pModConf != runModConf) {
+        errmsg.LogError(0, NO_ERRCODE, "imzmq3: pointer of in-memory config object has "
+                        "changed - pModConf=%p, runModConf=%p", pModConf, runModConf);
+    }
+    assert(pModConf == runModConf);
+
     /* first create the context */
     createContext();
 
@@ -775,12 +790,41 @@ ENDactivateCnfPrePrivDrop
 
 BEGINactivateCnf
 CODESTARTactivateCnf
+    if (pModConf != runModConf) {
+        errmsg.LogError(0, NO_ERRCODE, "imzmq3: pointer of in-memory config object has "
+                        "changed - pModConf=%p, runModConf=%p", pModConf, runModConf);
+    }
+    assert(pModConf == runModConf);
 ENDactivateCnf
 
 
-/*TODO: Fill this in! */
 BEGINfreeCnf
+    struct lstn_s *lstn, *lstn_r;
+    instanceConf_t *inst, *inst_r;
+    sublist *sub, *sub_r;
 CODESTARTfreeCnf
+    DBGPRINTF("imzmq3: BEGINfreeCnf ...\n");
+    if (pModConf != runModConf) {
+        errmsg.LogError(0, NO_ERRCODE, "imzmq3: pointer of in-memory config object has "
+                        "changed - pModConf=%p, runModConf=%p", pModConf, runModConf);
+    }
+    for (lstn = lcnfRoot; lstn != NULL; ) {
+        lstn_r = lstn;
+        lstn = lstn_r->next;
+        free(lstn_r);
+    }
+    for (inst = pModConf->root ; inst != NULL ; ) {
+        for (sub = inst->subscriptions; sub != NULL; ) {
+            free(sub->subscribe);
+            sub_r = sub;
+            sub = sub_r->next;
+            free(sub_r);
+        }
+        free(inst->pszBindRuleset);
+        inst_r = inst;
+        inst = inst->next;
+        free(inst_r);
+    }
 ENDfreeCnf
 
 
