@@ -65,7 +65,7 @@ static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current ex
 /* tables for interfacing with the v6 config system */
 /* action (instance) parameters */
 static struct cnfparamdescr actpdescr[] = {
-	{ "separator", eCmdHdlrGetChar, 1 }
+	{ "separator", eCmdHdlrGetChar, 0 }
 };
 static struct cnfparamblk actpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -121,7 +121,6 @@ setInstParamDefaults(instanceData *pData)
 BEGINnewActInst
 	struct cnfparamvals *pvals;
 	int i;
-	sbool bHadBitsErr;
 CODESTARTnewActInst
 	DBGPRINTF("newActInst (mmfields)\n");
 	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
@@ -137,13 +136,15 @@ CODESTARTnewActInst
 		if(!pvals[i].bUsed)
 			continue;
 		if(!strcmp(actpblk.descr[i].name, "separator")) {
-			pData->separator = (int8_t) pvals[i].val.d.n;
+			pData->separator = es_getBufAddr(pvals[i].val.d.estr)[0];
+dbgprintf("DDDD: separator set to %d [%c]\n", pData->separator, pData->separator);
 		} else {
 			dbgprintf("mmfields: program error, non-handled "
 			  "param '%s'\n", actpblk.descr[i].name);
 		}
 	}
 
+dbgprintf("DDDD: separator IS %d [%c]\n", pData->separator, pData->separator);
 CODE_STD_FINALIZERnewActInst
 	cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
@@ -159,15 +160,60 @@ CODESTARTtryResume
 ENDtryResume
 
 
+static inline rsRetVal
+extractField(instanceData *pData, uchar *msgtext, int lenMsg, int *curridx, uchar *fieldbuf)
+{
+	int i, j;
+	DEFiRet;
+	i = *curridx;
+	j = 0;
+	while(i < lenMsg && msgtext[i] != pData->separator) {
+		fieldbuf[j++] = msgtext[i++];
+	}
+	fieldbuf[j] = '\0';
+	if(i < lenMsg)
+		++i;
+	*curridx = i;
+
+	RETiRet;
+}
+
+static inline rsRetVal
+parse_fields(instanceData *pData, msg_t *pMsg, uchar *msgtext, int lenMsg)
+{
+	uchar fieldbuf[32*1024];
+	int field;
+	uchar *buf;
+	int currIdx = 0;
+	DEFiRet;
+
+	if(lenMsg < (int) sizeof(fieldbuf)) {
+		buf = fieldbuf;
+	} else {
+		CHKmalloc(buf = malloc(lenMsg+1));
+	}
+
+	field = 1;
+	while(currIdx < lenMsg) {
+		CHKiRet(extractField(pData, msgtext, lenMsg, &currIdx, buf));
+		DBGPRINTF("mmfields: field %d: '%s'\n", field, buf);
+		field++;
+	}
+finalize_it:
+	RETiRet;
+}
+
+
 BEGINdoAction
 	msg_t *pMsg;
 	uchar *msg;
 	int lenMsg;
-	int i;
 CODESTARTdoAction
 	pMsg = (msg_t*) ppString[0];
 	lenMsg = getMSGLen(pMsg);
 	msg = getMSG(pMsg);
+	CHKiRet(parse_fields(pData, pMsg, msg, lenMsg));
+finalize_it:
 ENDdoAction
 
 
