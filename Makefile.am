@@ -241,6 +241,10 @@ if ENABLE_MMANON
 SUBDIRS += plugins/mmanon
 endif
 
+if ENABLE_MMFIELDS
+SUBDIRS += plugins/mmfields
+endif
+
 if ENABLE_ORACLE
 SUBDIRS += plugins/omoracle
 endif
