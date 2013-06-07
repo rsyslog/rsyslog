@@ -767,6 +767,9 @@ relpSessConnect(relpSess_t *pThis, int protFamily, unsigned char *port, unsigned
 	CHKRet(relpTcpConstruct(&pThis->pTcp, pThis->pEngine));
 	if(pThis->bEnableTLS) {
 		CHKRet(relpTcpEnableTLS(pThis->pTcp));
+		if(pThis->bEnableTLSZip) {
+			CHKRet(relpTcpEnableTLSZip(pThis->pTcp));
+		}
 	}
 	CHKRet(relpTcpConnect(pThis->pTcp, protFamily, port, host, pThis->clientIP));
 	relpSessSetSessState(pThis, eRelpSessState_PRE_INIT);
@@ -874,6 +877,16 @@ relpSessEnableTLS(relpSess_t *pThis)
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
 	pThis->bEnableTLS = 1;
+	LEAVE_RELPFUNC;
+}
+
+/* Enable TLS Zip mode. */
+relpRetVal
+relpSessEnableTLSZip(relpSess_t *pThis)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Sess);
+	pThis->bEnableTLSZip = 1;
 	LEAVE_RELPFUNC;
 }
 

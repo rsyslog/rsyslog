@@ -1,6 +1,6 @@
 /* The RELPSESS object.
  *
- * Copyright 2008 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2013 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of librelp.
  *
@@ -81,6 +81,7 @@ struct relpSess_s {
 	/* Status of commands as supported in this session. */
 	relpCmdEnaState_t stateCmdSyslog;
 	int bEnableTLS;
+	int bEnableTLSZip;
 
 	/* save the following for auto-reconnect case */
 	int protFamily;
@@ -137,6 +138,7 @@ relpRetVal relpSessSetProtocolVersion(relpSess_t *pThis, int protocolVersion);
 relpRetVal relpSessSetTimeout(relpSess_t *pThis, unsigned timeout);
 relpRetVal relpSessSetClientIP(relpSess_t *pThis, unsigned char *ip);
 relpRetVal relpSessEnableTLS(relpSess_t *pThis);
+relpRetVal relpSessEnableTLSZip(relpSess_t *pThis);
 relpRetVal relpSessConstructOffers(relpSess_t *pThis, relpOffers_t **ppOffers);
 relpRetVal relpSessSendSyslog(relpSess_t *pThis, unsigned char *pMsg, size_t lenMsg);
 relpRetVal relpSessSetEnableCmd(relpSess_t *pThis, unsigned char *pszCmd, relpCmdEnaState_t stateCmd);

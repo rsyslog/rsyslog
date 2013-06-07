@@ -1,4 +1,8 @@
 ----------------------------------------------------------------------
+Version 1.1.1 - 2013-06-??
+- added compression support for TLS
+- API extension: relpCltEnableTLSZip, relpSrvEnableTLSZip
+----------------------------------------------------------------------
 Version 1.1.0 - 2013-06-03
 - add TLS support
 - new api for creating listners:

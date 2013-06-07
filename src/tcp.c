@@ -261,16 +261,35 @@ relpTcpEnableTLS(relpTcp_t *pThis)
 	LEAVE_RELPFUNC;
 }
 
+relpRetVal
+relpTcpEnableTLSZip(relpTcp_t *pThis)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Tcp);
+	pThis->bEnableTLSZip = 1;
+	LEAVE_RELPFUNC;
+}
+
 
 static relpRetVal
 relpTcpAcceptConnReqInitTLS(relpTcp_t *pThis, relpSrv_t *pSrv)
 {
 	int r;
+	char pristring[4096];
 	ENTER_RELPFUNC;
 
 	r = gnutls_init(&pThis->session, GNUTLS_SERVER);
 pThis->pEngine->dbgprint("DDDD: gnutls_init %d: %s\n", r, gnutls_strerror(r));
-	r = gnutls_priority_set_direct(pThis->session, "NORMAL:+ANON-DH", NULL);
+
+	/* Compute priority string (in simple cases where the user does not care...) */
+	if(pThis->bEnableTLSZip) {
+		strncpy(pristring, "NORMAL:+ANON-DH:COMP-ALL", sizeof(pristring));
+	} else {
+		strncpy(pristring, "NORMAL:+ANON-DH:COMP-NULL", sizeof(pristring));
+	}
+	pristring[sizeof(pristring)-1] = '\0';
+
+	r = gnutls_priority_set_direct(pThis->session, pristring, NULL);
 pThis->pEngine->dbgprint("DDDD: gnutls_priority_set_direct %d: %s\n", r, gnutls_strerror(r));
 	r = gnutls_credentials_set(pThis->session, GNUTLS_CRD_ANON, pSrv->pTcp->anoncredSrv);
 pThis->pEngine->dbgprint("DDDD: gnutls_credentials_set %d: %s\n", r, gnutls_strerror(r));
@@ -591,11 +610,13 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 
+/* this is only called for client-initiated sessions */
 static relpRetVal
 relpTcpConnectTLSInit(relpTcp_t *pThis)
 {
 	int r;
 	int sockflags;
+	char pristring[4096];
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Tcp);
 
@@ -608,9 +629,16 @@ relpTcpConnectTLSInit(relpTcp_t *pThis)
 	pThis->pEngine->dbgprint("DDDD: gnutls_anon_allocat_client_credentials: %d\n", r);
 	r = gnutls_init(&pThis->session, GNUTLS_CLIENT);
 	pThis->pEngine->dbgprint("DDDD: gnutls_init: %d\n", r);
-	/* Use default priorities */
-	r = gnutls_priority_set_direct (pThis->session, "PERFORMANCE:+ANON-DH:!ARCFOUR-128",
-			      NULL);
+
+	/* Compute priority string (in simple cases where the user does not care...) */
+	if(pThis->bEnableTLSZip) {
+		strncpy(pristring, "NORMAL:+ANON-DH:COMP-ALL", sizeof(pristring));
+	} else {
+		strncpy(pristring, "NORMAL:+ANON-DH:COMP-NULL", sizeof(pristring));
+	}
+	pristring[sizeof(pristring)-1] = '\0';
+
+	r = gnutls_priority_set_direct (pThis->session, pristring, NULL);
 	pThis->pEngine->dbgprint("DDDD: gnutls_set prio: %d\n", r);
 
 	/* put the anonymous credentials to the current session */
@@ -640,6 +668,7 @@ pThis->pEngine->dbgprint("DDDD: gnutls_handshake: %d: %s\n", r, gnutls_strerror(
 }
 
 /* open a connection to a remote host (server).
+ * This is only use for client initiated connections.
  * rgerhards, 2008-03-19
  */
 relpRetVal

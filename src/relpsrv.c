@@ -1,6 +1,6 @@
 /* The relp server.
  *
- * Copyright 2008 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2013 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of librelp.
  *
@@ -153,6 +153,11 @@ relpSrvEnableTLS(relpSrv_t *pThis)
 {
 	pThis->bEnableTLS = 1;
 }
+void
+relpSrvEnableTLSZip(relpSrv_t *pThis)
+{
+	pThis->bEnableTLSZip = 1;
+}
 
 
 /* start a relp server - the server object must have all properties set
@@ -167,8 +172,12 @@ relpSrvRun(relpSrv_t *pThis)
 	RELPOBJ_assert(pThis, Srv);
 
 	CHKRet(relpTcpConstruct(&pTcp, pThis->pEngine));
-	if(pThis->bEnableTLS)
+	if(pThis->bEnableTLS) {
 		relpTcpEnableTLS(pTcp);
+		if(pThis->bEnableTLSZip) {
+			relpTcpEnableTLSZip(pTcp);
+		}
+	}
 	CHKRet(relpTcpLstnInit(pTcp, (pThis->pLstnPort == NULL) ? (unsigned char*) RELP_DFLT_PORT : pThis->pLstnPort, pThis->ai_family));
 		
 	pThis->pTcp = pTcp;

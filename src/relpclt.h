@@ -41,6 +41,7 @@ struct relpClt_s {
 	relpEngine_t *pEngine;
 	relpSess_t *pSess;	/**< our session (the one and only!) */
 	int bEnableTLS;		/**< is TLS to be used? */
+	int bEnableTLSZip;	/**< is compression to be used together with TLS? */
 	int protFamily;		/**< protocol family to connect over (IPv4, v6, ...) */
 	unsigned char *port;	/**< server port to connect to */
 	unsigned char *host;	/**< host(name) to connect to */

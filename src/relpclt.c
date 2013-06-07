@@ -106,6 +106,9 @@ relpCltConnect(relpClt_t *pThis, int protFamily, unsigned char *port, unsigned c
 	CHKRet(relpSessSetClientIP(pThis->pSess, pThis->clientIP));
 	if(pThis->bEnableTLS) {
 		CHKRet(relpSessEnableTLS(pThis->pSess));
+		if(pThis->bEnableTLSZip) {
+			CHKRet(relpSessEnableTLSZip(pThis->pSess));
+		}
 	}
 	CHKRet(relpSessConnect(pThis->pSess, protFamily, port, host));
 
@@ -170,6 +173,15 @@ relpCltEnableTLS(relpClt_t *pThis)
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Clt);
 	pThis->bEnableTLS = 1;
+	LEAVE_RELPFUNC;
+}
+
+relpRetVal
+relpCltEnableTLSZip(relpClt_t *pThis)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Clt);
+	pThis->bEnableTLSZip = 1;
 	LEAVE_RELPFUNC;
 }
 

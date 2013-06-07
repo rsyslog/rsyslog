@@ -3,7 +3,7 @@
  * This file is meant to be included by applications using the relp library.
  * For relp library files themselves, include "relp.h".
  *
- * Copyright 2008-2012 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2013 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of librelp.
  *
@@ -35,7 +35,6 @@
  */
 #ifndef LIBRELP_H_INCLUDED
 #define	LIBRELP_H_INCLUDED
-
 
 /* define some of our types that a caller must know about */
 typedef unsigned char relpOctet_t;
@@ -172,6 +171,7 @@ relpRetVal relpCltSendSyslog(relpClt_t *pThis, unsigned char *pMsg, size_t lenMs
 relpRetVal relpCltSetTimeout(relpClt_t *pThis, unsigned timeout);
 relpRetVal relpCltSetClientIP(relpClt_t *pThis, unsigned char *ipAddr);
 relpRetVal relpCltEnableTLS(relpClt_t *pThis);
+relpRetVal relpCltEnableTLSZip(relpClt_t *pThis);
 relpRetVal relpCltReconnect(relpClt_t *pThis);
 
 #endif /* #ifndef RELP_H_INCLUDED */

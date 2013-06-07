@@ -48,6 +48,7 @@ struct relpSrv_s {
 	size_t maxDataSize;  /**< maximum size of a DATA element */
 	void *pUsr; /**< user pointer (passed back in to callback) */
 	int bEnableTLS;
+	int bEnableTLSZip;
 
 	/* Status of commands as supported in this session. */
 	relpCmdEnaState_t stateCmdSyslog;

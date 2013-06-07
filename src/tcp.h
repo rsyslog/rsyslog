@@ -1,6 +1,6 @@
 /* The mapping for relp over TCP.
  *
- * Copyright 2008 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2013 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of librelp.
  *
@@ -54,6 +54,7 @@ typedef struct relpTcp_s {
 	int iSessMax;	/**< maximum number of sessions permitted */
 	/* variables for TLS support */
 	int bEnableTLS;
+	int bEnableTLSZip;
 	gnutls_anon_client_credentials_t anoncred;	/**< client anon credentials */
 	gnutls_anon_server_credentials_t anoncredSrv;	/**< server anon credentials */
 	gnutls_session_t session;
@@ -84,6 +85,7 @@ relpRetVal relpTcpRcv(relpTcp_t *pThis, relpOctet_t *pRcvBuf, ssize_t *pLenBuf);
 relpRetVal relpTcpSend(relpTcp_t *pThis, relpOctet_t *pBuf, ssize_t *pLenBuf);
 relpRetVal relpTcpConnect(relpTcp_t *pThis, int family, unsigned char *port, unsigned char *host, unsigned char *clientIP);
 relpRetVal relpTcpEnableTLS(relpTcp_t *pThis);
+relpRetVal relpTcpEnableTLSZip(relpTcp_t *pThis);
 int relpTcpGetRtryDirection(relpTcp_t *pThis);
 void relpTcpRtryHandshake(relpTcp_t *pThis);
 
