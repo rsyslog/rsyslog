@@ -75,6 +75,7 @@ static struct configSettings_s {
 struct instanceConf_s {
 	uchar *pszBindPort;		/* port to bind to */
 	sbool bEnableTLS;
+	sbool bEnableTLSZip;
 	struct instanceConf_s *next;
 };
 
@@ -92,7 +93,8 @@ static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current lo
 /* input instance parameters */
 static struct cnfparamdescr inppdescr[] = {
 	{ "port", eCmdHdlrString, CNFPARAM_REQUIRED },
-	{ "tls", eCmdHdlrBinary, 0 }
+	{ "tls", eCmdHdlrBinary, 0 },
+	{ "tls.compression", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk inppblk =
 	{ CNFPARAMBLK_VERSION,
@@ -158,6 +160,7 @@ createInstance(instanceConf_t **pinst)
 
 	inst->pszBindPort = NULL;
 	inst->bEnableTLS = 0;
+	inst->bEnableTLSZip = 0;
 
 	/* node created, let's add to config */
 	if(loadModConf->tail == NULL) {
@@ -222,8 +225,12 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 
 	CHKiRet(relpEngineListnerConstruct(pRelpEngine, &pSrv));
 	CHKiRet(relpSrvSetLstnPort(pSrv, inst->pszBindPort));
-	if(inst->bEnableTLS)
+	if(inst->bEnableTLS) {
 		relpSrvEnableTLS(pSrv);
+		if(inst->bEnableTLSZip) {
+			relpSrvEnableTLSZip(pSrv);
+		}
+	}
 	CHKiRet(relpEngineListnerConstructFinalize(pRelpEngine, pSrv));
 
 finalize_it:
@@ -259,6 +266,8 @@ CODESTARTnewInpInst
 			inst->pszBindPort = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "tls")) {
 			inst->bEnableTLS = (unsigned) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "tls.compression")) {
+			inst->bEnableTLSZip = (unsigned) pvals[i].val.d.n;
 		} else {
 			dbgprintf("imrelp: program error, non-handled "
 			  "param '%s'\n", inppblk.descr[i].name);

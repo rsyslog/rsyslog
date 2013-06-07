@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------
 Version 7.5.0 [devel] 2013-0?-??
+- imrelp/omrelp: add TLS & compression (zip) support
 - omrelp: add "rebindInterval" parameter
 - add -S command line option to specify IP address to use for RELP client
   connections

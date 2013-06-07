@@ -56,6 +56,7 @@ DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 
 #define DFLT_ENABLE_TLS 0
+#define DFLT_ENABLE_TLSZIP 0
 
 static relpEngine_t *pRelpEngine;	/* our relp engine */
 
@@ -69,6 +70,7 @@ typedef struct _instanceData {
 	unsigned nSent;
 	relpClt_t *pRelpClt; /* relp client for this instance */
 	sbool bEnableTLS;
+	sbool bEnableTLSZip;
 	uchar *tplName;
 } instanceData;
 
@@ -83,6 +85,7 @@ static configSettings_t __attribute__((unused)) cs;
 static struct cnfparamdescr actpdescr[] = {
 	{ "target", eCmdHdlrGetWord, 1 },
 	{ "tls", eCmdHdlrBinary, 0 },
+	{ "tls.compression", eCmdHdlrBinary, 0 },
 	{ "port", eCmdHdlrGetWord, 0 },
 	{ "rebindinterval", eCmdHdlrInt, 0 },
 	{ "timeout", eCmdHdlrInt, 0 },
@@ -122,6 +125,10 @@ doCreateRelpClient(instanceData *pData)
 	if(pData->bEnableTLS) {
 		if(relpCltEnableTLS(pData->pRelpClt) != RELP_RET_OK)
 			ABORT_FINALIZE(RS_RET_RELP_ERR);
+		if(pData->bEnableTLSZip) {
+			if(relpCltEnableTLSZip(pData->pRelpClt) != RELP_RET_OK)
+				ABORT_FINALIZE(RS_RET_RELP_ERR);
+		}
 	}
 	if(glbl.GetSourceIPofLocalClient() == NULL) {	/* ar Do we have a client IP set? */
 		if(relpCltSetClientIP(pData->pRelpClt, glbl.GetSourceIPofLocalClient()) != RELP_RET_OK)
@@ -139,6 +146,7 @@ CODESTARTcreateInstance
 	pData->timeout = 90;
 	pData->rebindInterval = 0;
 	pData->bEnableTLS = DFLT_ENABLE_TLS;
+	pData->bEnableTLSZip = DFLT_ENABLE_TLSZIP;
 ENDcreateInstance
 
 BEGINfreeInstance
@@ -159,6 +167,7 @@ setInstParamDefaults(instanceData *pData)
 	pData->timeout = 90;
 	pData->rebindInterval = 0;
 	pData->bEnableTLS = DFLT_ENABLE_TLS;
+	pData->bEnableTLSZip = DFLT_ENABLE_TLSZIP;
 }
 
 
@@ -188,6 +197,8 @@ CODESTARTnewActInst
 			pData->rebindInterval = (unsigned) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "tls")) {
 			pData->bEnableTLS = (unsigned) pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "tls.compression")) {
+			pData->bEnableTLSZip = (unsigned) pvals[i].val.d.n;
 		} else {
 			dbgprintf("omrelp: program error, non-handled "
 			  "param '%s'\n", actpblk.descr[i].name);

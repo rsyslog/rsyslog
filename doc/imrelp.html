@@ -35,8 +35,17 @@ Binds the specified ruleset to all RELP listeners.
 <li><b>Port</b> &lt;port&gt;<br>
 Starts a RELP server on selected port</li>
 <li><b>tls</b> (not mandatory, values "on","off", default "off")<br>
-	If set to "on", the RELP connection will be encrypted by TLS, 		so that the data is protected against observers. Please note 		that both the client and the server must have set TLS to 		either "on" or "off". Other combinations lead to unpredictable 		results.
-	</li>
+If set to "on", the RELP connection will be encrypted by TLS,
+so that the data is protected against observers. Please note
+that both the client and the server must have set TLS to
+either "on" or "off". Other combinations lead to unpredictable
+results.
+</li>
+<li><b>tls.compression</b> (not mandatory, values "on","off", default "off")<br>
+The controls if the TLS stream should be compressed (zipped). While this
+increases CPU use, the network bandwidth should be reduced. Note that
+typical text-based log records usually compress rather well.
+</li>
 </ul>
 <b>Caveats/Known Bugs:</b>
 <ul>
