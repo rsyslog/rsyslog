@@ -167,13 +167,13 @@ withinRatelimit(ratelimit_t *ratelimit, time_t tt)
 		ratelimit->done++;
 		ret = 1;
 	} else {
-		if(ratelimit->missed == 0) {
+		ratelimit->missed++;
+		if(ratelimit->missed == 1) {
 			snprintf((char*)msgbuf, sizeof(msgbuf),
 			         "%s: begin to drop messages due to rate-limiting",
 				 ratelimit->name);
 			logmsgInternal(RS_RET_RATE_LIMITED, LOG_SYSLOG|LOG_INFO, msgbuf, 0);
 		}
-		ratelimit->missed++;
 		ret = 0;
 	}
 
