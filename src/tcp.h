@@ -54,6 +54,7 @@ typedef struct relpTcp_s {
 	int iSessMax;	/**< maximum number of sessions permitted */
 	/* variables for TLS support */
 	int bEnableTLS;
+	int bTLSActive;	/**< is TLS actually active (properly activated) on this session? */
 	int bEnableTLSZip;
 	gnutls_anon_client_credentials_t anoncred;	/**< client anon credentials */
 	gnutls_anon_server_credentials_t anoncredSrv;	/**< server anon credentials */

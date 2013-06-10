@@ -80,6 +80,7 @@ relpTcpConstruct(relpTcp_t **ppThis, relpEngine_t *pEngine)
 	pThis->sock = -1;
 	pThis->pEngine = pEngine;
 	pThis->iSessMax = 500;	/* default max nbr of sessions - TODO: make configurable -- rgerhards, 2008-03-17*/
+	pThis->bTLSActive = 0;
 
 	*ppThis = pThis;
 
@@ -119,7 +120,7 @@ relpTcpDestruct(relpTcp_t **ppThis)
 	if(pThis->pRemHostName != NULL)
 		free(pThis->pRemHostName);
 
-	if(pThis->bEnableTLS) {
+	if(pThis->bTLSActive) {
 		gnuRet = gnutls_bye(pThis->session, GNUTLS_SHUT_RDWR);
 		while(gnuRet == GNUTLS_E_INTERRUPTED || gnuRet == GNUTLS_E_AGAIN) {
 			gnuRet = gnutls_bye(pThis->session, GNUTLS_SHUT_RDWR);
@@ -498,6 +499,7 @@ relpTcpLstnInit(relpTcp_t *pThis, unsigned char *pLstnPort, int ai_family)
 
 		if(pThis->bEnableTLS) {
 			CHKRet(relpTcpLstnInitTLS(pThis));
+			pThis->bTLSActive = 1;
 		}
 
 	        if( (bind(*s, r->ai_addr, r->ai_addrlen) < 0)
@@ -729,6 +731,7 @@ relpTcpConnect(relpTcp_t *pThis, int family, unsigned char *port, unsigned char 
 
 	if(pThis->bEnableTLS) {
 		CHKRet(relpTcpConnectTLSInit(pThis));
+		pThis->bTLSActive = 1;
 	}
 
 finalize_it:
