@@ -128,8 +128,8 @@ tellLostCnt(ratelimit_t *ratelimit)
 		snprintf((char*)msgbuf, sizeof(msgbuf),
 			 "%s: %u messages lost due to rate-limiting",
 			 ratelimit->name, ratelimit->missed);
-		logmsgInternal(RS_RET_RATE_LIMITED, LOG_SYSLOG|LOG_INFO, msgbuf, 0);
 		ratelimit->missed = 0;
+		logmsgInternal(RS_RET_RATE_LIMITED, LOG_SYSLOG|LOG_INFO, msgbuf, 0);
 	}
 }
 
