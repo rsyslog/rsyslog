@@ -28,10 +28,13 @@ nits outlined above, is a much more reliable solution than plain tcp
 syslog and so it is highly suggested to use RELP instead of plain tcp.
 Clients send messages to the RELP server via omrelp.</p>
 
+<p><b>Module Parameters</b>:</p>
+<ul>
+	<li><b>Ruleset</b> &lt;name&gt;</br>
+	Binds the specified ruleset to <b>all</b> RELP listeners.
+</ul>
 <p><b>Input Parameters</b>:</p>
 <ul>
-<li><b>Ruleset</b> &lt;name&gt;</br>
-Binds the specified ruleset to all RELP listeners.
 <li><b>Port</b> &lt;port&gt;<br>
 Starts a RELP server on selected port</li>
 <li><b>tls</b> (not mandatory, values "on","off", default "off")<br>
@@ -59,7 +62,7 @@ not specific ones. This is due to a currently existing limitation in librelp.
 <p><b>Sample:</b></p>
 <p>This sets up a RELP server on port 20514.<br>
 </p>
-<textarea rows="15" cols="60">module(load="imrelp") # needs to be done just once
+<textarea rows="5" cols="60">module(load="imrelp") # needs to be done just once
 input(type="imrelp" port="20514")
 </textarea>
 
@@ -72,7 +75,6 @@ equivalent to: Port</li>
 </ul>
 <b>Caveats/Known Bugs:</b>
 <ul>
-<li>see description</li>
 <li>To obtain the remote system's IP address, you need to have at least
 librelp 1.0.0 installed. Versions below it return the hostname instead
 of the IP address.</li>
@@ -82,14 +84,14 @@ not specific ones. This is due to a currently existing limitation in librelp.
 <p><b>Sample:</b></p>
 <p>This sets up a RELP server on port 20514.<br>
 </p>
-<textarea rows="15" cols="60">$ModLoad imrelp # needs to be done just once
+<textarea rows="5" cols="60">$ModLoad imrelp # needs to be done just once
 $InputRELPServerRun 20514
 </textarea>
 <p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>]
 [<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
 <p><font size="2">This documentation is part of the
 <a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
-Copyright &copy; 2008-2011 by <a href="http://www.gerhards.net/rainer">Rainer
+Copyright &copy; 2008-2013 by <a href="http://www.gerhards.net/rainer">Rainer
 Gerhards</a> and
 <a href="http://www.adiscon.com/">Adiscon</a>.
 Released under the GNU GPL version 3 or higher.</font></p>

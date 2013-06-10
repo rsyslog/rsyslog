@@ -4,7 +4,7 @@
  *
  * File begun on 2008-03-13 by RGerhards
  *
- * Copyright 2008-2012 Adiscon GmbH.
+ * Copyright 2008-2013 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -89,6 +89,16 @@ struct modConfData_s {
 
 static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
 static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current load process */
+
+/* module-global parameters */
+static struct cnfparamdescr modpdescr[] = {
+	{ "ruleset", eCmdHdlrGetWord, 0 },
+};
+static struct cnfparamblk modpblk =
+	{ CNFPARAMBLK_VERSION,
+	  sizeof(modpdescr)/sizeof(struct cnfparamdescr),
+	  modpdescr
+	};
 
 /* input instance parameters */
 static struct cnfparamdescr inppdescr[] = {
@@ -283,19 +293,58 @@ BEGINbeginCnfLoad
 CODESTARTbeginCnfLoad
 	loadModConf = pModConf;
 	pModConf->pConf = pConf;
+	pModConf->pszBindRuleset = NULL;
+	pModConf->pBindRuleset = NULL;
 	/* init legacy config variables */
 	cs.pszBindRuleset = NULL;
 ENDbeginCnfLoad
 
 
+BEGINsetModCnf
+	struct cnfparamvals *pvals = NULL;
+	int i;
+CODESTARTsetModCnf
+	pvals = nvlstGetParams(lst, &modpblk, NULL);
+	if(pvals == NULL) {
+		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "error processing module "
+				"config parameters [module(...)]");
+		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
+
+	if(Debug) {
+		dbgprintf("module (global) param blk for imrelp:\n");
+		cnfparamsPrint(&modpblk, pvals);
+	}
+
+	for(i = 0 ; i < modpblk.nParams ; ++i) {
+		if(!pvals[i].bUsed)
+			continue;
+		if(!strcmp(modpblk.descr[i].name, "ruleset")) {
+			loadModConf->pszBindRuleset = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else {
+			dbgprintf("imrelp: program error, non-handled "
+			  "param '%s' in beginCnfLoad\n", modpblk.descr[i].name);
+		}
+	}
+finalize_it:
+	if(pvals != NULL)
+		cnfparamvalsDestruct(pvals, &modpblk);
+ENDsetModCnf
+
 BEGINendCnfLoad
 CODESTARTendCnfLoad
-	if((cs.pszBindRuleset == NULL) || (cs.pszBindRuleset[0] == '\0')) {
-		loadModConf->pszBindRuleset = NULL;
+	if(loadModConf->pszBindRuleset == NULL) {
+		if((cs.pszBindRuleset == NULL) || (cs.pszBindRuleset[0] == '\0')) {
+			loadModConf->pszBindRuleset = NULL;
+		} else {
+			CHKmalloc(loadModConf->pszBindRuleset = ustrdup(cs.pszBindRuleset));
+		}
 	} else {
-		CHKmalloc(loadModConf->pszBindRuleset = ustrdup(cs.pszBindRuleset));
+		if((cs.pszBindRuleset != NULL) && (cs.pszBindRuleset[0] != '\0')) {
+			errmsg.LogError(0, RS_RET_DUP_PARAM, "imrelp: warning: ruleset "
+					"set via legacy directive ignored");
+		}
 	}
-	loadModConf->pBindRuleset = NULL;
 finalize_it:
 	free(cs.pszBindRuleset);
 	loadModConf = NULL; /* done loading */
@@ -312,6 +361,7 @@ CODESTARTcheckCnf
 	if(pModConf->pszBindRuleset == NULL) {
 		pModConf->pBindRuleset = NULL;
 	} else {
+		DBGPRINTF("imrelp: using ruleset '%s'\n", pModConf->pszBindRuleset);
 		localRet = ruleset.GetRuleset(pModConf->pConf, &pRuleset, pModConf->pszBindRuleset);
 		if(localRet == RS_RET_NOT_FOUND) {
 			std_checkRuleset_genErrMsg(pModConf, NULL);
@@ -439,6 +489,7 @@ CODEqueryEtryPt_STD_IMOD_QUERIES
 CODEqueryEtryPt_STD_CONF2_QUERIES
 CODEqueryEtryPt_STD_CONF2_PREPRIVDROP_QUERIES
 CODEqueryEtryPt_STD_CONF2_IMOD_QUERIES
+CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
 CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
 ENDqueryEtryPt
 
