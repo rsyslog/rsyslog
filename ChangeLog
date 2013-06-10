@@ -1,5 +1,9 @@
 ---------------------------------------------------------------------------
 Version 7.4.1  [v7.4-stable] 2013-06-??
+- bugfix: potential loop in rate limiting
+  if the message that tells about rate-limiting gets rate-limited itself,
+  it will potentially create and endless loop
+- bugfix: potential segfault in imjournal if journal DB is corrupted
 - bugfix imzmq3: potential segfault on startup
   if no problem happend at startup, everything went fine
   Thanks to Hongfei Cheng and Brian Knox for the patch
