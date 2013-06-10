@@ -164,6 +164,7 @@ relpRetVal relpEngineSetDnsLookupMode(relpEngine_t *pThis, int iMode);
 relpRetVal relpSrvSetLstnPort(relpSrv_t *pThis, unsigned char *pLstnPort);
 relpRetVal relpSrvSetUsrPtr(relpSrv_t *pThis, void *pUsr);
 void relpSrvEnableTLS(relpSrv_t *pThis);
+void relpSrvEnableTLSZip(relpSrv_t *pThis);
 
 /* exposed relp client functions */
 relpRetVal relpCltConnect(relpClt_t *pThis, int protFamily, unsigned char *port, unsigned char *host);
