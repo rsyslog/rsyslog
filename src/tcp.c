@@ -280,10 +280,9 @@ relpTcpTLSSetPrio(relpTcp_t *pThis)
 	ENTER_RELPFUNC;
 	/* Compute priority string (in simple cases where the user does not care...) */
 	if(pThis->bEnableTLSZip) {
-		strncpy(pristring, "NORMAL:+ANON-DH:COMP-ALL", sizeof(pristring));
+		strncpy(pristring, "NORMAL:+ANON-DH:+COMP-ALL", sizeof(pristring));
 	} else {
-		strncpy(pristring, "NORMAL:+ANON-DH", sizeof(pristring));
-		//strncpy(pristring, "NORMAL:+ANON-DH:COMP-NULL", sizeof(pristring));
+		strncpy(pristring, "NORMAL:+ANON-DH:+COMP-NULL", sizeof(pristring));
 	}
 	pristring[sizeof(pristring)-1] = '\0';
 
