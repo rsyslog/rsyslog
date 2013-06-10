@@ -132,6 +132,8 @@ enum relpCmdEnaState_e { /* command enabled state - what are we permitted to do/
 #define RELP_RET_INVALID_HNAME	RELPERR_BASE + 28	/**< remote peer's hostname invalid or unobtainable */
 #define RELP_RET_ADDR_UNKNOWN 	RELPERR_BASE + 29	/**< remote peer's IP address could not be obtained */
 #define RELP_RET_INVALID_PARAM 	RELPERR_BASE + 30	/**< librelp API called with wrong parameter */
+#define RELP_RET_ERR_TLS_SETUP 	RELPERR_BASE + 31	/**< problem during TLS setup */
+#define RELP_RET_INVLD_TLS_PRIO  RELPERR_BASE + 32	/**< TLS setup used invalid TLS priority string */
 
 /* some macros to work with librelp error codes */
 #define CHKRet(code) if((iRet = code) != RELP_RET_OK) goto finalize_it

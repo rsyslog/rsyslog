@@ -271,37 +271,58 @@ relpTcpEnableTLSZip(relpTcp_t *pThis)
 }
 
 
+/* set TLS priority string, common code both for client and server */
+static relpRetVal
+relpTcpTLSSetPrio(relpTcp_t *pThis)
+{
+	int r;
+	char pristring[4096];
+	ENTER_RELPFUNC;
+	/* Compute priority string (in simple cases where the user does not care...) */
+	if(pThis->bEnableTLSZip) {
+		strncpy(pristring, "NORMAL:+ANON-DH:COMP-ALL", sizeof(pristring));
+	} else {
+		strncpy(pristring, "NORMAL:+ANON-DH", sizeof(pristring));
+		//strncpy(pristring, "NORMAL:+ANON-DH:COMP-NULL", sizeof(pristring));
+	}
+	pristring[sizeof(pristring)-1] = '\0';
+
+	r = gnutls_priority_set_direct(pThis->session, pristring, NULL);
+	pThis->pEngine->dbgprint("DDDD: gnutls_set prio(%s): %d: %s\n", pristring, r, gnutls_strerror(r));
+	if(r == GNUTLS_E_INVALID_REQUEST) {
+		ABORT_FINALIZE(RELP_RET_INVLD_TLS_PRIO);
+	} else if(r != GNUTLS_E_SUCCESS) {
+		ABORT_FINALIZE(RELP_RET_ERR_TLS_SETUP);
+	}
+finalize_it:
+	LEAVE_RELPFUNC;
+}
+
+
 static relpRetVal
 relpTcpAcceptConnReqInitTLS(relpTcp_t *pThis, relpSrv_t *pSrv)
 {
 	int r;
-	char pristring[4096];
 	ENTER_RELPFUNC;
 
 	r = gnutls_init(&pThis->session, GNUTLS_SERVER);
 pThis->pEngine->dbgprint("DDDD: gnutls_init %d: %s\n", r, gnutls_strerror(r));
 
-	/* Compute priority string (in simple cases where the user does not care...) */
-	if(pThis->bEnableTLSZip) {
-		strncpy(pristring, "NORMAL:+ANON-DH:COMP-ALL", sizeof(pristring));
-	} else {
-		strncpy(pristring, "NORMAL:+ANON-DH:COMP-NULL", sizeof(pristring));
-	}
-	pristring[sizeof(pristring)-1] = '\0';
-
-	r = gnutls_priority_set_direct(pThis->session, pristring, NULL);
-pThis->pEngine->dbgprint("DDDD: gnutls_priority_set_direct %d: %s\n", r, gnutls_strerror(r));
+	CHKRet(relpTcpTLSSetPrio(pThis));
 	r = gnutls_credentials_set(pThis->session, GNUTLS_CRD_ANON, pSrv->pTcp->anoncredSrv);
 pThis->pEngine->dbgprint("DDDD: gnutls_credentials_set %d: %s\n", r, gnutls_strerror(r));
 	gnutls_dh_set_prime_bits(pThis->session, DH_BITS);
 	gnutls_transport_set_ptr(pThis->session, (gnutls_transport_ptr_t) pThis->sock);
 	r = gnutls_handshake(pThis->session);
+pThis->pEngine->dbgprint("DDDD: gnutls_handshake: %d: %s\n", r, gnutls_strerror(r));
 	if(r == GNUTLS_E_INTERRUPTED || r == GNUTLS_E_AGAIN) {
 		pThis->pEngine->dbgprint("librelp: gnutls_handshake must be retried\n");
 		pThis->rtryOp = relpTCP_RETRY_handshake;
+	} else if(r != GNUTLS_E_SUCCESS) {
+		ABORT_FINALIZE(RELP_RET_ERR_TLS_SETUP);
 	}
-pThis->pEngine->dbgprint("DDDD: gnutls_handshake: %d: %s\n", r, gnutls_strerror(r));
 
+finalize_it:
   	LEAVE_RELPFUNC;
 }
 
@@ -616,7 +637,6 @@ relpTcpConnectTLSInit(relpTcp_t *pThis)
 {
 	int r;
 	int sockflags;
-	char pristring[4096];
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Tcp);
 
@@ -630,16 +650,7 @@ relpTcpConnectTLSInit(relpTcp_t *pThis)
 	r = gnutls_init(&pThis->session, GNUTLS_CLIENT);
 	pThis->pEngine->dbgprint("DDDD: gnutls_init: %d\n", r);
 
-	/* Compute priority string (in simple cases where the user does not care...) */
-	if(pThis->bEnableTLSZip) {
-		strncpy(pristring, "NORMAL:+ANON-DH:COMP-ALL", sizeof(pristring));
-	} else {
-		strncpy(pristring, "NORMAL:+ANON-DH:COMP-NULL", sizeof(pristring));
-	}
-	pristring[sizeof(pristring)-1] = '\0';
-
-	r = gnutls_priority_set_direct (pThis->session, pristring, NULL);
-	pThis->pEngine->dbgprint("DDDD: gnutls_set prio: %d\n", r);
+	CHKRet(relpTcpTLSSetPrio(pThis));
 
 	/* put the anonymous credentials to the current session */
 	r = gnutls_credentials_set(pThis->session, GNUTLS_CRD_ANON, pThis->anoncred);
@@ -652,7 +663,13 @@ relpTcpConnectTLSInit(relpTcp_t *pThis)
 	do
 	{
 		r = gnutls_handshake(pThis->session);
-pThis->pEngine->dbgprint("DDDD: gnutls_handshake: %d: %s\n", r, gnutls_strerror(r));
+		pThis->pEngine->dbgprint("DDDD: gnutls_handshake: %d: %s\n", r, gnutls_strerror(r));
+		if(r == GNUTLS_E_INTERRUPTED || r == GNUTLS_E_AGAIN) {
+			pThis->pEngine->dbgprint("librelp: gnutls_handshake must be retried\n");
+			pThis->rtryOp = relpTCP_RETRY_handshake;
+		} else if(r != GNUTLS_E_SUCCESS) {
+			ABORT_FINALIZE(RELP_RET_ERR_TLS_SETUP);
+		}
 	}
 	while(0);
 	//while (r < 0 && gnutls_error_is_fatal(r) == 0);
@@ -664,6 +681,7 @@ pThis->pEngine->dbgprint("DDDD: gnutls_handshake: %d: %s\n", r, gnutls_strerror(
 		 * error check.  */
 		sockflags = fcntl(pThis->sock, F_SETFL, sockflags);
 	}
+finalize_it:
 	LEAVE_RELPFUNC;
 }
 
