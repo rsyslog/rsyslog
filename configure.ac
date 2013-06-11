@@ -975,6 +975,19 @@ AC_ARG_ENABLE(mmcount,
 AM_CONDITIONAL(ENABLE_MMCOUNT, test x$enable_mmcount = xyes)
 
 
+# mmfields
+AC_ARG_ENABLE(mmfields,
+        [AS_HELP_STRING([--enable-mmfields],[Enable building mmfields support @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_mmfields="yes" ;;
+          no) enable_mmfields="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-mmfields) ;;
+         esac],
+        [enable_mmfields=no]
+)
+AM_CONDITIONAL(ENABLE_MMFIELDS, test x$enable_mmfields = xyes)
+
+
 # RELP support
 AC_ARG_ENABLE(relp,
         [AS_HELP_STRING([--enable-relp],[Enable RELP support @<:@default=no@:>@])],
@@ -1492,6 +1505,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/mmaudit/Makefile \
 		plugins/mmanon/Makefile \
 		plugins/mmcount/Makefile \
+		plugins/mmfields/Makefile \
 		plugins/omelasticsearch/Makefile \
 		plugins/sm_cust_bindcdr/Makefile \
 		plugins/mmsnmptrapd/Makefile \
@@ -1516,6 +1530,7 @@ echo "    Log file signing support:                 $enable_guardtime"
 echo "    Log file encryption support:              $enable_libgcrypt"
 echo "    anonymization support enabled:            $enable_mmanon"
 echo "    message counting support enabled:         $enable_mmcount"
+echo "    mmfields enabled:                         $enable_mmfields"
 echo
 echo "---{ input plugins }---"
 echo "    Klog functionality enabled:               $enable_klog ($os_type)"
