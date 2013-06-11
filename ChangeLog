@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 7.5.0 [devel] 2013-0?-??
+Version 7.5.0 [devel] 2013-06-11
 - imrelp: implement "ruleset" module parameter
 - imrelp/omrelp: add TLS & compression (zip) support
 - omrelp: add "rebindInterval" parameter
