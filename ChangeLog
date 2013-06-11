@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------
-Version 1.1.1 - 2013-06-??
+Version 1.1.1 - 2013-06-11
 - added compression support for TLS
 - API extension: relpCltEnableTLSZip, relpSrvEnableTLSZip
 ----------------------------------------------------------------------
