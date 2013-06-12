@@ -42,6 +42,7 @@ struct relpClt_s {
 	relpSess_t *pSess;	/**< our session (the one and only!) */
 	int bEnableTLS;		/**< is TLS to be used? */
 	int bEnableTLSZip;	/**< is compression to be used together with TLS? */
+	char *pristring;	/**< priority string for GnuTLS */
 	int protFamily;		/**< protocol family to connect over (IPv4, v6, ...) */
 	unsigned char *port;	/**< server port to connect to */
 	unsigned char *host;	/**< host(name) to connect to */

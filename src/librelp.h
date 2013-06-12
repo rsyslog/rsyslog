@@ -177,6 +177,7 @@ relpRetVal relpCltSetTimeout(relpClt_t *pThis, unsigned timeout);
 relpRetVal relpCltSetClientIP(relpClt_t *pThis, unsigned char *ipAddr);
 relpRetVal relpCltEnableTLS(relpClt_t *pThis);
 relpRetVal relpCltEnableTLSZip(relpClt_t *pThis);
+relpRetVal relpCltSetGnuTLSPriString(relpClt_t *pThis, char *pristr);
 relpRetVal relpCltReconnect(relpClt_t *pThis);
 
 #endif /* #ifndef RELP_H_INCLUDED */

@@ -109,6 +109,7 @@ relpCltConnect(relpClt_t *pThis, int protFamily, unsigned char *port, unsigned c
 		if(pThis->bEnableTLSZip) {
 			CHKRet(relpSessEnableTLSZip(pThis->pSess));
 		}
+		CHKRet(relpTcpSetGnuTLSPriString(pThis->pSess, pThis->pristring));
 	}
 	CHKRet(relpSessConnect(pThis->pSess, protFamily, port, host));
 
@@ -166,6 +167,24 @@ relpRetVal relpCltSetClientIP(relpClt_t *pThis, unsigned char *ipAddr)
 	LEAVE_RELPFUNC;
 }
 
+/* set the GnuTLS priority string. Providing NULL does re-set
+ * any previously set string. -- rgerhards, 2013-06-12
+ */
+relpRetVal
+relpCltSetGnuTLSPriString(relpClt_t *pThis, char *pristr)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Clt);
+	free(pThis->pristring);
+	if(pristr == NULL) {
+		pThis->pristring = NULL;
+	} else {
+		if((pThis->pristring = strdup(pristr)) == NULL)
+			ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+	}
+finalize_it:
+	LEAVE_RELPFUNC;
+}
 /* Enable TLS mode. */
 relpRetVal
 relpCltEnableTLS(relpClt_t *pThis)

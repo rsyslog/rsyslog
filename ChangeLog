@@ -4,7 +4,8 @@ Version 1.1.2 - 2013-06-??
   This gives callers complete control over crypto parameters, like
   ciphers to use.
 - add capability to specify number of Diffie-Hellman bits to use
-- API extension: relpSrvSetDHBits, relpSrvSetGnuTLSPriString
+- API extension: relpSrvSetDHBits, relpSrvSetGnuTLSPriString,
+  relpCltSetGnuTLSPriString
 ----------------------------------------------------------------------
 Version 1.1.1 - 2013-06-11
 - added compression support for TLS
