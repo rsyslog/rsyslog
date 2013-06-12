@@ -86,6 +86,7 @@ syslogName_t	syslogFacNames[] = {
 	{"mark",         LOG_MARK},		/* INTERNAL */
 	{"news",         LOG_NEWS},
 	{"security",     LOG_AUTH},		/* DEPRECATED */
+	{"bsd_security", (13<<3) },		/* BSD-specific, unfortunatly with duplicate name... */
 	{"syslog",       LOG_SYSLOG},
 	{"user",         LOG_USER},
 	{"uucp",         LOG_UUCP},
@@ -95,6 +96,7 @@ syslogName_t	syslogFacNames[] = {
 #if defined(LOG_AUDIT)
 	{"audit",        LOG_AUDIT},
 #endif
+	{"console",	 (14 << 3)},		/* BSD-specific priority */
 	{"local0",       LOG_LOCAL0},
 	{"local1",       LOG_LOCAL1},
 	{"local2",       LOG_LOCAL2},
