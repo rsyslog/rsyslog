@@ -35,7 +35,36 @@
 	Framing-Mode to be for forwarding. This affects only TCP-based protocols. It is ignored for UDP. In protocol engineering, ``framing'' means how multiple messages over the same connection are separated. Usually, this is transparent to users. Unfortunately, the early syslog protocol evolved, and so there are cases where users need to specify the framing. The traditional framing is nontransparent. With it, messages are end when a LF (aka ``line break'', ``return'') is encountered, and the next message starts immediately after the LF. If multi-line messages are received, these are essentially broken up into multiple message, usually with all but the first message segment being incorrectly formatted. The octet-counting framing solves this issue. With it, each message is prefixed with the actual message length, so that a receivers knows exactly where the message ends. Multi-line messages cause no problem here. This mode is very close to the method described in RFC5425 for TLS-enabled syslog. Unfortunately, only few syslogd implementations support octet-counted framing. As such, the traditional framing is set as default, even though it has defects. If it is known that the receiver supports octet-counted framing, it is suggested to use that framing mode.  <br></li><br>
 
 	<li><strong>ZipLevel </strong>0..9 [default 0]<br>
-	Compression level for messages. Rsyslog implements a proprietary capability to zip transmitted messages. Note that compression happens on a message-per-message basis. As such, there is a performance gain only for larger messages. Before compressing a message, rsyslog checks if there is some gain by compression. If so, the message is sent compressed. If not, it is sent uncompressed. As such, it is totally valid that compressed and uncompressed messages are intermixed within a conversation. <br>The compression level is specified via the usual factor of 0 to 9, with 9 being the strongest compression (taking up most processing time) and 0 being no compression at all (taking up no extra processing time). <br></li><br>
+	Compression level for messages.
+	<br>Up until rsyslog 7.5.1, this was the only compression setting that
+	rsyslog understood. Starting with 7.5.1, we have different compression
+	modes. All of them are affected by the ziplevel. If, however, no mode
+	is explicitely set, setting ziplevel also turns on "single"
+	compression mode, so pre 7.5.1 configuration will continue to work
+	as expected.
+	<br>The compression level is specified via the usual factor of 0 to 9, with 9 being the strongest compression (taking up most processing time) and 0 being no compression at all (taking up no extra processing time). <br></li><br>
+	<li><b>compression.mode</b><i>mode</i><br>
+	<i>mode</i> is one of "none", "single", or "stream:always". The 
+	default is "none", in which no compression happens at all.
+	<br>In "single" compression mode, Rsyslog implements a proprietary
+	capability to zip transmitted messages. That compression happens
+	on a message-per-message basis. As such, there is a performance gain
+	only for larger messages. Before compressing a message, rsyslog checks
+	if there is some gain by compression. If so, the message is sent
+	compressed. If not, it is sent uncompressed. As such, it is totally
+	valid that compressed and uncompressed messages are intermixed
+	within a conversation.
+	<br>In "stream:always" compression mode the full stream is being
+	compressed. This also uses non-standard protocol and is compatible
+	only with receives that have the same abilities. This mode offers
+	potentially very high compression ratios. With typical syslog
+	messages, it can be as high as 95+% compression (so only one twentieth 
+	of data is actually transmitted!). Note that this mode introduces
+	extra latency, as data is only sent when the compressor emits new
+	compressed data. For typical syslog messages, this can mean that
+	some hundered messages may be held in local buffers before they are
+	actually sent. This mode has been introduced in 7.5.1.
+	<br></li><br>
 
 	<li><strong>RebindInterval </strong>integer<br>
 	Permits to specify an interval at which the current connection is broken and re-established. This setting is primarily an aid to load balancers. After the configured number of messages has been transmitted, the current connection is terminated and a new one started. Note that this setting applies to both TCP and UDP traffic. For UDP, the new ``connection'' uses a different source port (ports are cycled and not reused too frequently). This usually is perceived as a ``new connection'' by load balancers, which in turn forward messages to another physical target system. <br></li><br>
