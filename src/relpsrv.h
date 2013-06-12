@@ -49,6 +49,7 @@ struct relpSrv_s {
 	void *pUsr; /**< user pointer (passed back in to callback) */
 	int bEnableTLS;
 	int bEnableTLSZip;
+	int dhBits;	/**< number of bits for Diffie-Hellman key */
 
 	/* Status of commands as supported in this session. */
 	relpCmdEnaState_t stateCmdSyslog;

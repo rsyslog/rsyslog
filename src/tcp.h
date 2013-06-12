@@ -56,6 +56,7 @@ typedef struct relpTcp_s {
 	int bEnableTLS;
 	int bTLSActive;	/**< is TLS actually active (properly activated) on this session? */
 	int bEnableTLSZip;
+	int dhBits;	/**< number of bits for Diffie-Hellman key */
 	gnutls_anon_client_credentials_t anoncred;	/**< client anon credentials */
 	gnutls_anon_server_credentials_t anoncredSrv;	/**< server anon credentials */
 	gnutls_session_t session;
@@ -87,6 +88,7 @@ relpRetVal relpTcpSend(relpTcp_t *pThis, relpOctet_t *pBuf, ssize_t *pLenBuf);
 relpRetVal relpTcpConnect(relpTcp_t *pThis, int family, unsigned char *port, unsigned char *host, unsigned char *clientIP);
 relpRetVal relpTcpEnableTLS(relpTcp_t *pThis);
 relpRetVal relpTcpEnableTLSZip(relpTcp_t *pThis);
+relpRetVal relpTcpSetDHBits(relpTcp_t *pThis, int bits);
 int relpTcpGetRtryDirection(relpTcp_t *pThis);
 void relpTcpRtryHandshake(relpTcp_t *pThis);
 

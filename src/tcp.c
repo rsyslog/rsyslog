@@ -55,8 +55,6 @@
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 #endif
 
-#define DH_BITS 1024 /* change, this value just for testing! */
-
 static int called_gnutls_global_init = 0;
 
 
@@ -81,6 +79,7 @@ relpTcpConstruct(relpTcp_t **ppThis, relpEngine_t *pEngine)
 	pThis->pEngine = pEngine;
 	pThis->iSessMax = 500;	/* default max nbr of sessions - TODO: make configurable -- rgerhards, 2008-03-17*/
 	pThis->bTLSActive = 0;
+	pThis->dhBits = DEFAULT_DH_BITS;
 
 	*ppThis = pThis;
 
@@ -271,6 +270,14 @@ relpTcpEnableTLSZip(relpTcp_t *pThis)
 	LEAVE_RELPFUNC;
 }
 
+relpRetVal
+relpTcpSetDHBits(relpTcp_t *pThis, int bits)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Tcp);
+	pThis->dhBits = bits;
+	LEAVE_RELPFUNC;
+}
 
 /* set TLS priority string, common code both for client and server */
 static relpRetVal
@@ -311,7 +318,7 @@ pThis->pEngine->dbgprint("DDDD: gnutls_init %d: %s\n", r, gnutls_strerror(r));
 	CHKRet(relpTcpTLSSetPrio(pThis));
 	r = gnutls_credentials_set(pThis->session, GNUTLS_CRD_ANON, pSrv->pTcp->anoncredSrv);
 pThis->pEngine->dbgprint("DDDD: gnutls_credentials_set %d: %s\n", r, gnutls_strerror(r));
-	gnutls_dh_set_prime_bits(pThis->session, DH_BITS);
+	gnutls_dh_set_prime_bits(pThis->session, pThis->dhBits);
 	gnutls_transport_set_ptr(pThis->session, (gnutls_transport_ptr_t) pThis->sock);
 	r = gnutls_handshake(pThis->session);
 pThis->pEngine->dbgprint("DDDD: gnutls_handshake: %d: %s\n", r, gnutls_strerror(r));
@@ -402,7 +409,7 @@ relpTcpLstnInitTLS(relpTcp_t *pThis)
 	pThis->pEngine->dbgprint("DDDD: generating server DH params...\n");
 	r = gnutls_dh_params_init(&pThis->dh_params);
 pThis->pEngine->dbgprint("DDDD: dh_param_init returns %d\n", r);
-	r = gnutls_dh_params_generate2(pThis->dh_params, DH_BITS);
+	r = gnutls_dh_params_generate2(pThis->dh_params, pThis->dhBits);
 pThis->pEngine->dbgprint("DDDD: paramgenerate returns %d\n", r);
 
 	gnutls_anon_set_server_dh_params(pThis->anoncredSrv, pThis->dh_params);

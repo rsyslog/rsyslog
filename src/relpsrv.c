@@ -62,6 +62,7 @@ relpSrvConstruct(relpSrv_t **ppThis, relpEngine_t *pEngine)
 	pThis->pEngine = pEngine;
 	pThis->stateCmdSyslog = pEngine->stateCmdSyslog;
 	pThis->ai_family = PF_UNSPEC;
+	pThis->dhBits = DEFAULT_DH_BITS;
 
 	*ppThis = pThis;
 
@@ -149,6 +150,11 @@ relpSrvSetFamily(relpSrv_t *pThis, int ai_family)
 }
 
 void
+relpSrvSetDHBits(relpSrv_t *pThis, int bits)
+{
+	pThis->dhBits = bits;
+}
+void
 relpSrvEnableTLS(relpSrv_t *pThis)
 {
 	pThis->bEnableTLS = 1;
@@ -177,6 +183,7 @@ relpSrvRun(relpSrv_t *pThis)
 		if(pThis->bEnableTLSZip) {
 			relpTcpEnableTLSZip(pTcp);
 		}
+		relpTcpSetDHBits(pTcp, pThis->dhBits);
 	}
 	CHKRet(relpTcpLstnInit(pTcp, (pThis->pLstnPort == NULL) ? (unsigned char*) RELP_DFLT_PORT : pThis->pLstnPort, pThis->ai_family));
 		

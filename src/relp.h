@@ -1,6 +1,6 @@
 /* The RELP (reliable event logging protocol) core protocol library.
  *
- * Copyright 2008-2012 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2013 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of librelp.
  *
@@ -37,6 +37,12 @@
 
 #include "librelp.h"
 
+/* "config params" - these can be overridden by defining the
+ * respective constants at compile time.
+ */
+#ifndef DEFAULT_DH_BITS /* security param: default Diffie-Hellman bits to use */
+#  define DEFAULT_DH_BITS 1024
+#endif
 
 /* the following macro MUST be specified as the first member of each
  * RELP object.
