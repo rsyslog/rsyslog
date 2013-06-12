@@ -107,7 +107,7 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "port", eCmdHdlrString, CNFPARAM_REQUIRED },
 	{ "tls", eCmdHdlrBinary, 0 },
 	{ "tls.dhbits", eCmdHdlrInt, 0 },
-	{ "tls.prioritystring", eCmdHdlrInt, 0 },
+	{ "tls.prioritystring", eCmdHdlrString, 0 },
 	{ "tls.compression", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk inppblk =

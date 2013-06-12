@@ -71,6 +71,7 @@ typedef struct _instanceData {
 	relpClt_t *pRelpClt; /* relp client for this instance */
 	sbool bEnableTLS;
 	sbool bEnableTLSZip;
+	uchar *pristring;		/* GnuTLS priority string (NULL if not to be provided) */
 	uchar *tplName;
 } instanceData;
 
@@ -86,6 +87,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "target", eCmdHdlrGetWord, 1 },
 	{ "tls", eCmdHdlrBinary, 0 },
 	{ "tls.compression", eCmdHdlrBinary, 0 },
+	{ "tls.prioritystring", eCmdHdlrString, 0 },
 	{ "port", eCmdHdlrGetWord, 0 },
 	{ "rebindinterval", eCmdHdlrInt, 0 },
 	{ "timeout", eCmdHdlrInt, 0 },
@@ -129,6 +131,8 @@ doCreateRelpClient(instanceData *pData)
 			if(relpCltEnableTLSZip(pData->pRelpClt) != RELP_RET_OK)
 				ABORT_FINALIZE(RS_RET_RELP_ERR);
 		}
+		if(relpCltSetGnuTLSPriString(pData->pRelpClt, (char*) pData->pristring) != RELP_RET_OK)
+			ABORT_FINALIZE(RS_RET_RELP_ERR);
 	}
 	if(glbl.GetSourceIPofLocalClient() == NULL) {	/* ar Do we have a client IP set? */
 		if(relpCltSetClientIP(pData->pRelpClt, glbl.GetSourceIPofLocalClient()) != RELP_RET_OK)
@@ -147,6 +151,7 @@ CODESTARTcreateInstance
 	pData->rebindInterval = 0;
 	pData->bEnableTLS = DFLT_ENABLE_TLS;
 	pData->bEnableTLSZip = DFLT_ENABLE_TLSZIP;
+	pData->pristring = NULL;
 ENDcreateInstance
 
 BEGINfreeInstance
@@ -156,6 +161,7 @@ CODESTARTfreeInstance
 	free(pData->target);
 	free(pData->port);
 	free(pData->tplName);
+	free(pData->pristring);
 ENDfreeInstance
 
 static inline void
@@ -168,6 +174,7 @@ setInstParamDefaults(instanceData *pData)
 	pData->rebindInterval = 0;
 	pData->bEnableTLS = DFLT_ENABLE_TLS;
 	pData->bEnableTLSZip = DFLT_ENABLE_TLSZIP;
+	pData->pristring = NULL;
 }
 
 
@@ -199,6 +206,8 @@ CODESTARTnewActInst
 			pData->bEnableTLS = (unsigned) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "tls.compression")) {
 			pData->bEnableTLSZip = (unsigned) pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "tls.prioritystring")) {
+			pData->pristring = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else {
 			dbgprintf("omrelp: program error, non-handled "
 			  "param '%s'\n", actpblk.descr[i].name);

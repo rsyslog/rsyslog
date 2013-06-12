@@ -42,6 +42,19 @@ must be used.
 	increases CPU use, the network bandwidth should be reduced. Note that
 	typical text-based log records usually compress rather well.
 	</li>
+	<li><b>tls.prioritystring</b> (not mandatory, string)<br>
+	This parameter permits to specify the so-called "priority string" to
+	GnuTLS. This string gives complete control over all crypto parameters,
+	including compression setting. For this reason, when the prioritystring
+	is specified, the "tls.compression" parameter has no effect and is
+	ignored.
+	<br>Full information about how to construct a priority string can be
+	found in the GnuTLS manual. At the time of this writing, this
+	information was contained in
+	<a href="http://gnutls.org/manual/html_node/Priority-Strings.html">section 6.10 of the GnuTLS manual</a>.
+	<br><b>Note: this is an expert parameter.</b> Do not use if you do
+	not exactly know what you are doing.
+	</li>
 </ul>
 <p><b>Sample:</b></p>
 <p>The following sample sends all messages to the central server
