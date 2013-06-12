@@ -99,6 +99,11 @@ of seconds (5 recommended) to activate rate-limiting.
 </li>
 <li><b>RateLimit.Burst</b> [number] - (available since 7.3.1) specifies the rate-limiting
 burst in number of messages. Default is 10,000.
+<li><b>compression.mode</b><i>mode</i><br>
+<i>mode</i> is one of "none" or "stream:always". 
+It is the counterpart to the compression modes set in
+<a href="omfile.html">omfile</a>.
+Please see it's documentation for details.
 </li>
 </ul>
 <b>Caveats/Known Bugs:</b>
