@@ -80,6 +80,7 @@ relpTcpConstruct(relpTcp_t **ppThis, relpEngine_t *pEngine)
 	pThis->iSessMax = 500;	/* default max nbr of sessions - TODO: make configurable -- rgerhards, 2008-03-17*/
 	pThis->bTLSActive = 0;
 	pThis->dhBits = DEFAULT_DH_BITS;
+	pThis->pristring = NULL;
 
 	*ppThis = pThis;
 
@@ -114,11 +115,6 @@ relpTcpDestruct(relpTcp_t **ppThis)
 		free(pThis->socks);
 	}
 
-	if(pThis->pRemHostIP != NULL)
-		free(pThis->pRemHostIP);
-	if(pThis->pRemHostName != NULL)
-		free(pThis->pRemHostName);
-
 	if(pThis->bTLSActive) {
 		gnuRet = gnutls_bye(pThis->session, GNUTLS_SHUT_RDWR);
 		while(gnuRet == GNUTLS_E_INTERRUPTED || gnuRet == GNUTLS_E_AGAIN) {
@@ -126,6 +122,10 @@ relpTcpDestruct(relpTcp_t **ppThis)
 		}
 		gnutls_deinit(pThis->session);
 	}
+
+	free(pThis->pRemHostIP);
+	free(pThis->pRemHostName);
+	free(pThis->pristring);
 
 	/* done with de-init work, now free tcp object itself */
 	free(pThis);
@@ -251,6 +251,23 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 
+relpRetVal
+relpTcpSetGnuTLSPriString(relpTcp_t *pThis, char *pristr)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Tcp);
+	
+	free(pThis->pristring);
+	if(pristr == NULL) {
+		pThis->pristring = NULL;
+	} else {
+		if((pThis->pristring = strdup(pristr)) == NULL)
+			ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+	}
+finalize_it:
+	LEAVE_RELPFUNC;
+}
+
 /* Enable TLS mode. */
 relpRetVal
 relpTcpEnableTLS(relpTcp_t *pThis)
@@ -284,15 +301,21 @@ static relpRetVal
 relpTcpTLSSetPrio(relpTcp_t *pThis)
 {
 	int r;
-	char pristring[4096];
+	char pristringBuf[4096];
+	char *pristring;
 	ENTER_RELPFUNC;
 	/* Compute priority string (in simple cases where the user does not care...) */
-	if(pThis->bEnableTLSZip) {
-		strncpy(pristring, "NORMAL:+ANON-DH:+COMP-ALL", sizeof(pristring));
+	if(pThis->pristring == NULL) {
+		if(pThis->bEnableTLSZip) {
+			strncpy(pristringBuf, "NORMAL:+ANON-DH:+COMP-ALL", sizeof(pristringBuf));
+		} else {
+			strncpy(pristringBuf, "NORMAL:+ANON-DH:+COMP-NULL", sizeof(pristringBuf));
+		}
+		pristringBuf[sizeof(pristringBuf)-1] = '\0';
+		pristring = pristringBuf;
 	} else {
-		strncpy(pristring, "NORMAL:+ANON-DH:+COMP-NULL", sizeof(pristring));
+		pristring = pThis->pristring;
 	}
-	pristring[sizeof(pristring)-1] = '\0';
 
 	r = gnutls_priority_set_direct(pThis->session, pristring, NULL);
 	pThis->pEngine->dbgprint("DDDD: gnutls_set prio(%s): %d: %s\n", pristring, r, gnutls_strerror(r));

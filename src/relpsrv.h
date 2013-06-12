@@ -50,6 +50,7 @@ struct relpSrv_s {
 	int bEnableTLS;
 	int bEnableTLSZip;
 	int dhBits;	/**< number of bits for Diffie-Hellman key */
+	char *pristring; /**< priority string for GnuTLS */
 
 	/* Status of commands as supported in this session. */
 	relpCmdEnaState_t stateCmdSyslog;

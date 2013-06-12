@@ -63,6 +63,7 @@ relpSrvConstruct(relpSrv_t **ppThis, relpEngine_t *pEngine)
 	pThis->stateCmdSyslog = pEngine->stateCmdSyslog;
 	pThis->ai_family = PF_UNSPEC;
 	pThis->dhBits = DEFAULT_DH_BITS;
+	pThis->pristring = NULL;
 
 	*ppThis = pThis;
 
@@ -89,6 +90,7 @@ relpSrvDestruct(relpSrv_t **ppThis)
 	if(pThis->pLstnPort != NULL)
 		free(pThis->pLstnPort);
 
+	free(pThis->pristring);
 	/* done with de-init work, now free srv object itself */
 	free(pThis);
 	*ppThis = NULL;
@@ -149,6 +151,25 @@ relpSrvSetFamily(relpSrv_t *pThis, int ai_family)
 	LEAVE_RELPFUNC;
 }
 
+/* set the GnuTLS priority string. Providing NULL does re-set
+ * any previously set string. -- rgerhards, 2013-06-12
+ */
+relpRetVal
+relpSrvSetGnuTLSPriString(relpSrv_t *pThis, char *pristr)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Srv);
+	free(pThis->pristring);
+	if(pristr == NULL) {
+		pThis->pristring = NULL;
+	} else {
+		if((pThis->pristring = strdup(pristr)) == NULL)
+			ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+	}
+finalize_it:
+	LEAVE_RELPFUNC;
+}
+
 void
 relpSrvSetDHBits(relpSrv_t *pThis, int bits)
 {
@@ -184,6 +205,7 @@ relpSrvRun(relpSrv_t *pThis)
 			relpTcpEnableTLSZip(pTcp);
 		}
 		relpTcpSetDHBits(pTcp, pThis->dhBits);
+		relpTcpSetGnuTLSPriString(pTcp, pThis->pristring);
 	}
 	CHKRet(relpTcpLstnInit(pTcp, (pThis->pLstnPort == NULL) ? (unsigned char*) RELP_DFLT_PORT : pThis->pLstnPort, pThis->ai_family));
 		
