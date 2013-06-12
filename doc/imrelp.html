@@ -49,6 +49,16 @@ The controls if the TLS stream should be compressed (zipped). While this
 increases CPU use, the network bandwidth should be reduced. Note that
 typical text-based log records usually compress rather well.
 </li>
+<li><b>tls.dhbits</b> (not mandatory, integer)<br>
+This setting controls how many bits are used for Diffie-Hellman key
+generation. If not set, the librelp default is used. For secrity
+reasons, at least 1024 bits should be used. Please note that the number
+of bits must be supported by GnuTLS. If an invalid number is given, rsyslog
+will report an error when the listener is started. We do this to be transparent
+to changes/upgrades in GnuTLS (to check at config processing time, we would need
+to hardcode the supported bits and keep them in sync with GnuTLS - this is
+even impossible when custom GnuTLS changes are made...).
+</li>
 </ul>
 <b>Caveats/Known Bugs:</b>
 <ul>
