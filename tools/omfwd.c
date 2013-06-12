@@ -4,7 +4,7 @@
  * NOTE: read comments in module-template.h to understand how this file
  *       works!
  *
- * Copyright 2007-2012 Adiscon GmbH.
+ * Copyright 2007-2013 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -39,6 +39,7 @@
 #include <errno.h>
 #include <ctype.h>
 #include <unistd.h>
+#include <stdint.h>
 #ifdef USE_NETZIP
 #include <zlib.h>
 #endif
@@ -97,6 +98,13 @@ typedef struct _instanceData {
 	TCPFRAMINGMODE tcp_framing;
 	int bResendLastOnRecon; /* should the last message be re-sent on a successful reconnect? */
 	tcpclt_t *pTCPClt;	/* our tcpclt object */
+#	define COMPRESS_NEVER 0
+#	define COMPRESS_SINGLE_MSG 1	/* old, single-message compression */
+	/* all other settings are for stream-compression */
+#	define COMPRESS_STREAM_ALWAYS 2
+	uint8_t compressionMode;
+	sbool bzInitDone; /* did we do an init of zstrm already? */
+	z_stream zstrm;	/* zip stream to use for tcp compression */
 	uchar sndBuf[16*1024];	/* this is intensionally fixed -- see no good reason to make configurable */
 	unsigned offsSndBuf;	/* next free spot in send buffer */
 } instanceData;
@@ -132,6 +140,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "protocol", eCmdHdlrGetWord, 0 },
 	{ "tcp_framing", eCmdHdlrGetWord, 0 },
 	{ "ziplevel", eCmdHdlrInt, 0 },
+	{ "compression.mode", eCmdHdlrGetWord, 0 },
 	{ "rebindinterval", eCmdHdlrInt, 0 },
 	{ "streamdriver", eCmdHdlrGetWord, 0 },
 	{ "streamdrivermode", eCmdHdlrInt, 0 },
@@ -169,6 +178,7 @@ ENDinitConfVars
 
 
 static rsRetVal doTryResume(instanceData *pData);
+static rsRetVal doZipFinish(instanceData *pData);
 
 /* this function gets the default template. It coordinates action between
  * old-style and new-style configuration parts.
@@ -240,6 +250,7 @@ static inline void
 DestructTCPInstanceData(instanceData *pData)
 {
 	assert(pData != NULL);
+	doZipFinish(pData);
 	if(pData->pNetstrm != NULL)
 		netstrm.Destruct(&pData->pNetstrm);
 	if(pData->pNS != NULL)
@@ -423,14 +434,8 @@ finalize_it:
 
 /* CODE FOR SENDING TCP MESSAGES */
 
-
-/* Send a buffer via TCP. Usually, this is used to send the current
- * send buffer, but if a message is larger than the buffer, we need to
- * have the capability to send the message buffer directly.
- * rgerhards, 2011-04-04
- */
 static rsRetVal
-TCPSendBuf(instanceData *pData, uchar *buf, unsigned len)
+TCPSendBufUncompressed(instanceData *pData, uchar *buf, unsigned len)
 {
 	DEFiRet;
 	unsigned alreadySent;
@@ -438,6 +443,7 @@ TCPSendBuf(instanceData *pData, uchar *buf, unsigned len)
 
 	alreadySent = 0;
 	CHKiRet(netstrm.CheckConnection(pData->pNetstrm)); /* hack for plain tcp syslog - see ptcp driver for details */
+
 	while(alreadySent != len) {
 		lenSend = len - alreadySent;
 		CHKiRet(netstrm.Send(pData->pNetstrm, buf+alreadySent, &lenSend));
@@ -453,6 +459,99 @@ finalize_it:
 		iRet = RS_RET_SUSPENDED;
 	}
 	RETiRet;
+}
+
+static rsRetVal
+TCPSendBufCompressed(instanceData *pData, uchar *buf, unsigned len)
+{
+	int zRet;	/* zlib return state */
+	unsigned outavail;
+	uchar zipBuf[32*1024];
+	DEFiRet;
+
+	if(!pData->bzInitDone) {
+		/* allocate deflate state */
+		pData->zstrm.zalloc = Z_NULL;
+		pData->zstrm.zfree = Z_NULL;
+		pData->zstrm.opaque = Z_NULL;
+		/* see note in file header for the params we use with deflateInit2() */
+		zRet = deflateInit(&pData->zstrm, 9);
+		if(zRet != Z_OK) {
+			DBGPRINTF("error %d returned from zlib/deflateInit()\n", zRet);
+			ABORT_FINALIZE(RS_RET_ZLIB_ERR);
+		}
+		pData->bzInitDone = RSTRUE;
+	}
+
+	/* now doing the compression */
+	pData->zstrm.next_in = (Bytef*) buf;
+	pData->zstrm.avail_in = len;
+	/* run deflate() on buffer until everything has been compressed */
+	do {
+		DBGPRINTF("omfwd: in deflate() loop, avail_in %d, total_in %ld\n", pData->zstrm.avail_in, pData->zstrm.total_in);
+		pData->zstrm.avail_out = sizeof(zipBuf);
+		pData->zstrm.next_out = zipBuf;
+		zRet = deflate(&pData->zstrm, Z_NO_FLUSH);    /* no bad return value */
+		DBGPRINTF("after deflate, ret %d, avail_out %d\n", zRet, pData->zstrm.avail_out);
+		outavail = sizeof(zipBuf) - pData->zstrm.avail_out;
+		if(outavail != 0) {
+			CHKiRet(TCPSendBufUncompressed(pData, zipBuf, outavail));
+		}
+	} while (pData->zstrm.avail_out == 0);
+
+finalize_it:
+	RETiRet;
+}
+
+static rsRetVal
+TCPSendBuf(instanceData *pData, uchar *buf, unsigned len)
+{
+	DEFiRet;
+	if(pData->compressionMode >= COMPRESS_STREAM_ALWAYS)
+		iRet = TCPSendBufCompressed(pData, buf, len);
+	else
+		iRet = TCPSendBufUncompressed(pData, buf, len);
+	RETiRet;
+}
+
+/* finish zlib buffer, to be called before closing the ZIP file (if
+ * running in stream mode).
+ */
+static rsRetVal
+doZipFinish(instanceData *pData)
+{
+	int zRet;	/* zlib return state */
+	DEFiRet;
+	unsigned outavail;
+	uchar zipBuf[32*1024];
+
+	if(!pData->bzInitDone)
+		goto done;
+
+// TODO: can we get this into a single common function?
+dbgprintf("DDDD: in doZipFinish()\n");
+	pData->zstrm.avail_in = 0;
+	/* run deflate() on buffer until everything has been compressed */
+	do {
+		DBGPRINTF("in deflate() loop, avail_in %d, total_in %ld\n", pData->zstrm.avail_in, pData->zstrm.total_in);
+		pData->zstrm.avail_out = sizeof(zipBuf);
+		pData->zstrm.next_out = zipBuf;
+		zRet = deflate(&pData->zstrm, Z_FINISH);    /* no bad return value */
+		DBGPRINTF("after deflate, ret %d, avail_out %d\n", zRet, pData->zstrm.avail_out);
+		outavail = sizeof(zipBuf) - pData->zstrm.avail_out;
+		if(outavail != 0) {
+			CHKiRet(TCPSendBufUncompressed(pData, zipBuf, outavail));
+		}
+	} while (pData->zstrm.avail_out == 0);
+
+finalize_it:
+	zRet = deflateEnd(&pData->zstrm);
+	if(zRet != Z_OK) {
+		DBGPRINTF("error %d returned from zlib/deflateEnd()\n", zRet);
+	}
+
+	pData->bzInitDone = 0;
+done:	RETiRet;
 }
 
 
@@ -636,11 +735,10 @@ CODESTARTdoAction
 	 * hard-coded but this may be changed to a config parameter.
 	 * rgerhards, 2006-11-30
 	 */
-	if(pData->compressionLevel && (l > CONF_MIN_SIZE_FOR_COMPRESS)) {
+	if(pData->compressionMode == COMPRESS_SINGLE_MSG && (l > CONF_MIN_SIZE_FOR_COMPRESS)) {
 		uLongf destLen = iMaxLine + iMaxLine/100 +12; /* recommended value from zlib doc */
 		uLong srcLen = l;
 		int ret;
-		/* TODO: optimize malloc sequence? -- rgerhards, 2008-09-02 */
 		CHKmalloc(out = (Bytef*) MALLOC(destLen));
 		out[0] = 'z';
 		out[1] = '\0';
@@ -756,14 +854,17 @@ setInstParamDefaults(instanceData *pData)
 	pData->iRebindInterval = 0;
 	pData->bResendLastOnRecon = 0; 
 	pData->pPermPeers = NULL;
-	pData->compressionLevel = 0;
+	pData->compressionLevel = 9;
+	pData->compressionMode = COMPRESS_NEVER;
 }
 
 BEGINnewActInst
 	struct cnfparamvals *pvals;
 	uchar *tplToUse;
+	char *cstr;
 	int i;
 	rsRetVal localRet;
+	int complevel = -1;
 CODESTARTnewActInst
 	DBGPRINTF("newActInst (omfwd)\n");
 
@@ -860,9 +961,10 @@ CODESTARTnewActInst
 			free(str);
 		} else if(!strcmp(actpblk.descr[i].name, "ziplevel")) {
 #			ifdef USE_NETZIP
-			int complevel = pvals[i].val.d.n;
+			complevel = pvals[i].val.d.n;
 			if(complevel >= 0 && complevel <= 10) {
 				pData->compressionLevel = complevel;
+				pData->compressionMode = COMPRESS_SINGLE_MSG;
 			} else {
 				errmsg.LogError(0, NO_ERRCODE, "Invalid ziplevel %d specified in "
 					 "forwardig action - NOT turning on compression.",
@@ -876,11 +978,37 @@ CODESTARTnewActInst
 			pData->bResendLastOnRecon = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "template")) {
 			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "compression.mode")) {
+			cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
+			if(!strcasecmp(cstr, "stream:always")) {
+				pData->compressionMode = COMPRESS_STREAM_ALWAYS;
+			} else if(!strcasecmp(cstr, "none")) {
+				pData->compressionMode = COMPRESS_NEVER;
+			} else if(!strcasecmp(cstr, "single")) {
+				pData->compressionMode = COMPRESS_SINGLE_MSG;
+			} else {
+				errmsg.LogError(0, RS_RET_PARAM_ERROR, "omfwd: invalid value for 'compression.mode' "
+					 "parameter (given is '%s')", cstr);
+				free(cstr);
+				ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+			}
+			free(cstr);
 		} else {
 			DBGPRINTF("omfwd: program error, non-handled "
 			  "param '%s'\n", actpblk.descr[i].name);
 		}
 	}
+
+	if(complevel != -1) {
+		pData->compressionLevel = complevel;
+		if(pData->compressionMode == COMPRESS_NEVER) {
+			/* to keep compatible with pre-7.3.11, only setting the
+			 * compresion level means old-style single-message mode.
+			 */
+			pData->compressionMode = COMPRESS_SINGLE_MSG;
+		}
+	}
+
 	CODE_STD_STRING_REQUESTnewActInst(1)
 
 	tplToUse = ustrdup((pData->tplName == NULL) ? getDfltTpl() : pData->tplName);
@@ -948,6 +1076,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 					iLevel = *p - '0';
 					++p; /* eat */
 					pData->compressionLevel = iLevel;
+					pData->compressionMode = COMPRESS_SINGLE_MSG;
 				} else {
 					errmsg.LogError(0, NO_ERRCODE, "Invalid compression level '%c' specified in "
 						 "forwardig action - NOT turning on compression.",
@@ -1025,7 +1154,6 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	while(*p && *p != ';'  && *p != '#' && !isspace((int) *p))
 		++p; /*JUST SKIP*/
 
-	/* TODO: make this if go away! */
 	if(*p == ';' || *p == '#' || isspace(*p)) {
 		uchar cTmp = *p;
 		*p = '\0'; /* trick to obtain hostname (later)! */
