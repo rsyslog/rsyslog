@@ -77,6 +77,7 @@ struct instanceConf_s {
 	sbool bEnableTLS;
 	sbool bEnableTLSZip;
 	int dhBits;
+	uchar *pristring;		/* GnuTLS priority string (NULL if not to be provided) */
 	struct instanceConf_s *next;
 };
 
@@ -106,6 +107,7 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "port", eCmdHdlrString, CNFPARAM_REQUIRED },
 	{ "tls", eCmdHdlrBinary, 0 },
 	{ "tls.dhbits", eCmdHdlrInt, 0 },
+	{ "tls.prioritystring", eCmdHdlrInt, 0 },
 	{ "tls.compression", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk inppblk =
@@ -174,6 +176,7 @@ createInstance(instanceConf_t **pinst)
 	inst->bEnableTLS = 0;
 	inst->bEnableTLSZip = 0;
 	inst->dhBits = 0;
+	inst->pristring = NULL;
 
 	/* node created, let's add to config */
 	if(loadModConf->tail == NULL) {
@@ -246,6 +249,7 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 		if(inst->dhBits) {
 			relpSrvSetDHBits(pSrv, inst->dhBits);
 		}
+		relpSrvSetGnuTLSPriString(pSrv, (char*)inst->pristring);
 	}
 	CHKiRet(relpEngineListnerConstructFinalize(pRelpEngine, pSrv));
 
@@ -284,6 +288,8 @@ CODESTARTnewInpInst
 			inst->bEnableTLS = (unsigned) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "tls.dhbits")) {
 			inst->dhBits = (unsigned) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "tls.prioritystring")) {
+			inst->pristring = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "tls.compression")) {
 			inst->bEnableTLSZip = (unsigned) pvals[i].val.d.n;
 		} else {

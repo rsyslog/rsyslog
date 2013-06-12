@@ -59,6 +59,17 @@ to changes/upgrades in GnuTLS (to check at config processing time, we would need
 to hardcode the supported bits and keep them in sync with GnuTLS - this is
 even impossible when custom GnuTLS changes are made...).
 </li>
+<li><b>tls.prioritystring</b> (not mandatory, string)<br>
+This parameter permits to specify the so-called "priority string" to
+GnuTLS. This string gives complete control over all crypto parameters,
+including compression setting. For this reason, when the prioritystring
+is specified, the "tls.compression" parameter has no effect and is
+ignored.
+<br>Full information about how to construct a priority string can be
+found in the GnuTLS manual. At the time of this writing, this
+information was contained in
+<a href="http://gnutls.org/manual/html_node/Priority-Strings.html">section 6.10 of the GnuTLS manual</a>.
+</li>
 </ul>
 <b>Caveats/Known Bugs:</b>
 <ul>
