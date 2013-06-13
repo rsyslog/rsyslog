@@ -76,6 +76,10 @@ relpSessConstruct(relpSess_t **ppThis, relpEngine_t *pEngine, relpSrv_t *pSrv)
 	pThis->timeout = 90;
 	pThis->sizeWindow = RELP_DFLT_WINDOW_SIZE; /* TODO: make configurable */
 	pThis->maxDataSize = RELP_DFLT_MAX_DATA_SIZE;
+	pThis->pristring = NULL;
+	pThis->caCertFile = NULL;
+	pThis->ownCertFile = NULL;
+	pThis->privKeyFile = NULL;
 
 	CHKRet(relpSendqConstruct(&pThis->pSendq, pThis->pEngine));
 	pthread_mutex_init(&pThis->mutSend, NULL);
@@ -137,7 +141,10 @@ relpSessDestruct(relpSess_t **ppThis)
 
 	free(pThis->srvPort);
 	free(pThis->srvAddr);
-	free(pThis->clientIP);		/* ar */
+	free(pThis->clientIP);
+	free(pThis->pristring);
+	free(pThis->ownCertFile);
+	free(pThis->privKeyFile);
 
 	pthread_mutex_destroy(&pThis->mutSend);
 	/* done with de-init work, now free object itself */
@@ -770,6 +777,10 @@ relpSessConnect(relpSess_t *pThis, int protFamily, unsigned char *port, unsigned
 		if(pThis->bEnableTLSZip) {
 			CHKRet(relpTcpEnableTLSZip(pThis->pTcp));
 		}
+		CHKRet(relpTcpSetGnuTLSPriString(pThis->pTcp, pThis->pristring));
+		CHKRet(relpTcpSetCACert(pThis->pTcp, pThis->caCertFile));
+		CHKRet(relpTcpSetOwnCert(pThis->pTcp, pThis->ownCertFile));
+		CHKRet(relpTcpSetPrivKey(pThis->pTcp, pThis->privKeyFile));
 	}
 	CHKRet(relpTcpConnect(pThis->pTcp, protFamily, port, host, pThis->clientIP));
 	relpSessSetSessState(pThis, eRelpSessState_PRE_INIT);
@@ -887,6 +898,75 @@ relpSessEnableTLSZip(relpSess_t *pThis)
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
 	pThis->bEnableTLSZip = 1;
+	LEAVE_RELPFUNC;
+}
+
+relpRetVal
+relpSessSetGnuTLSPriString(relpSess_t *pThis, char *pristr)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Tcp);
+	
+pThis->pEngine->dbgprint("DDDD: current pristring %p\n", pThis->pristring);
+	free(pThis->pristring);
+	if(pristr == NULL) {
+		pThis->pristring = NULL;
+	} else {
+		if((pThis->pristring = strdup(pristr)) == NULL)
+			ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+	}
+finalize_it:
+	LEAVE_RELPFUNC;
+}
+
+relpRetVal
+relpSessSetCACert(relpSess_t *pThis, char *cert)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Tcp);
+	
+	free(pThis->caCertFile);
+	if(cert == NULL) {
+		pThis->caCertFile = NULL;
+	} else {
+		if((pThis->caCertFile = strdup(cert)) == NULL)
+			ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+	}
+finalize_it:
+	LEAVE_RELPFUNC;
+}
+
+relpRetVal
+relpSessSetOwnCert(relpSess_t *pThis, char *cert)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Tcp);
+	
+	free(pThis->ownCertFile);
+	if(cert == NULL) {
+		pThis->ownCertFile = NULL;
+	} else {
+		if((pThis->ownCertFile = strdup(cert)) == NULL)
+			ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+	}
+finalize_it:
+	LEAVE_RELPFUNC;
+}
+
+relpRetVal
+relpSessSetPrivKey(relpSess_t *pThis, char *cert)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Tcp);
+	
+	free(pThis->privKeyFile);
+	if(cert == NULL) {
+		pThis->privKeyFile = NULL;
+	} else {
+		if((pThis->privKeyFile = strdup(cert)) == NULL)
+			ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+	}
+finalize_it:
 	LEAVE_RELPFUNC;
 }
 

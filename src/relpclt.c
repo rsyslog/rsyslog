@@ -59,6 +59,10 @@ relpCltConstruct(relpClt_t **ppThis, relpEngine_t *pEngine)
 	RELP_CORE_CONSTRUCTOR(pThis, Clt);
 	pThis->pEngine = pEngine;
 	pThis->timeout = 90; /* 90-second timeout is the default */
+	pThis->pristring = NULL;
+	pThis->caCertFile = NULL;
+	pThis->ownCertFile = NULL;
+	pThis->privKey = NULL;
 
 	*ppThis = pThis;
 
@@ -82,6 +86,10 @@ relpCltDestruct(relpClt_t **ppThis)
 	if(pThis->pSess != NULL)
 		relpSessDestruct(&pThis->pSess);
 	free(pThis->clientIP);
+	free(pThis->pristring);
+	free(pThis->caCertFile);
+	free(pThis->ownCertFile);
+	free(pThis->privKey);
 
 	/* done with de-init work, now free clt object itself */
 	free(pThis);
@@ -109,7 +117,10 @@ relpCltConnect(relpClt_t *pThis, int protFamily, unsigned char *port, unsigned c
 		if(pThis->bEnableTLSZip) {
 			CHKRet(relpSessEnableTLSZip(pThis->pSess));
 		}
-		CHKRet(relpTcpSetGnuTLSPriString(pThis->pSess->pTcp, pThis->pristring));
+		CHKRet(relpSessSetGnuTLSPriString(pThis->pSess, pThis->pristring));
+		CHKRet(relpSessSetCACert(pThis->pSess, pThis->caCertFile));
+		CHKRet(relpSessSetOwnCert(pThis->pSess, pThis->ownCertFile));
+		CHKRet(relpSessSetPrivKey(pThis->pSess, pThis->privKey));
 	}
 	CHKRet(relpSessConnect(pThis->pSess, protFamily, port, host));
 
@@ -180,6 +191,51 @@ relpCltSetGnuTLSPriString(relpClt_t *pThis, char *pristr)
 		pThis->pristring = NULL;
 	} else {
 		if((pThis->pristring = strdup(pristr)) == NULL)
+			ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+	}
+finalize_it:
+	LEAVE_RELPFUNC;
+}
+relpRetVal
+relpCltSetCACert(relpClt_t *pThis, char *file)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Clt);
+	free(pThis->caCertFile);
+	if(file == NULL) {
+		pThis->caCertFile = NULL;
+	} else {
+		if((pThis->caCertFile = strdup(file)) == NULL)
+			ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+	}
+finalize_it:
+	LEAVE_RELPFUNC;
+}
+relpRetVal
+relpCltSetOwnCert(relpClt_t *pThis, char *file)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Clt);
+	free(pThis->ownCertFile);
+	if(file == NULL) {
+		pThis->ownCertFile = NULL;
+	} else {
+		if((pThis->ownCertFile = strdup(file)) == NULL)
+			ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+	}
+finalize_it:
+	LEAVE_RELPFUNC;
+}
+relpRetVal
+relpCltSetPrivKey(relpClt_t *pThis, char *file)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Clt);
+	free(pThis->privKey);
+	if(file == NULL) {
+		pThis->privKey = NULL;
+	} else {
+		if((pThis->privKey = strdup(file)) == NULL)
 			ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
 	}
 finalize_it:

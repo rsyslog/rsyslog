@@ -43,6 +43,9 @@ struct relpClt_s {
 	int bEnableTLS;		/**< is TLS to be used? */
 	int bEnableTLSZip;	/**< is compression to be used together with TLS? */
 	char *pristring;	/**< priority string for GnuTLS */
+	char *caCertFile;
+	char *ownCertFile;
+	char *privKey;
 	int protFamily;		/**< protocol family to connect over (IPv4, v6, ...) */
 	unsigned char *port;	/**< server port to connect to */
 	unsigned char *host;	/**< host(name) to connect to */

@@ -169,6 +169,9 @@ void relpSrvEnableTLS(relpSrv_t *pThis);
 void relpSrvEnableTLSZip(relpSrv_t *pThis);
 void relpSrvSetDHBits(relpSrv_t *pThis, int bits);
 relpRetVal relpSrvSetGnuTLSPriString(relpSrv_t *pThis, char *pristr);
+relpRetVal relpSrvSetCACert(relpSrv_t *pThis, char *cert);
+relpRetVal relpSrvSetOwnCert(relpSrv_t *pThis, char *cert);
+relpRetVal relpSrvSetPrivKey(relpSrv_t *pThis, char *cert);
 
 /* exposed relp client functions */
 relpRetVal relpCltConnect(relpClt_t *pThis, int protFamily, unsigned char *port, unsigned char *host);
@@ -178,6 +181,9 @@ relpRetVal relpCltSetClientIP(relpClt_t *pThis, unsigned char *ipAddr);
 relpRetVal relpCltEnableTLS(relpClt_t *pThis);
 relpRetVal relpCltEnableTLSZip(relpClt_t *pThis);
 relpRetVal relpCltSetGnuTLSPriString(relpClt_t *pThis, char *pristr);
+relpRetVal relpCltSetCACert(relpClt_t *pThis, char *file);
+relpRetVal relpCltSetOwnCert(relpClt_t *pThis, char *file);
+relpRetVal relpCltSetPrivKey(relpClt_t *pThis, char *file);
 relpRetVal relpCltReconnect(relpClt_t *pThis);
 
 #endif /* #ifndef RELP_H_INCLUDED */

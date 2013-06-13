@@ -64,6 +64,9 @@ relpSrvConstruct(relpSrv_t **ppThis, relpEngine_t *pEngine)
 	pThis->ai_family = PF_UNSPEC;
 	pThis->dhBits = DEFAULT_DH_BITS;
 	pThis->pristring = NULL;
+	pThis->caCertFile = NULL;
+	pThis->ownCertFile = NULL;
+	pThis->privKey = NULL;
 
 	*ppThis = pThis;
 
@@ -91,6 +94,9 @@ relpSrvDestruct(relpSrv_t **ppThis)
 		free(pThis->pLstnPort);
 
 	free(pThis->pristring);
+	free(pThis->caCertFile);
+	free(pThis->ownCertFile);
+	free(pThis->privKey);
 	/* done with de-init work, now free srv object itself */
 	free(pThis);
 	*ppThis = NULL;
@@ -170,6 +176,52 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 
+relpRetVal
+relpSrvSetCACert(relpSrv_t *pThis, char *cert)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Srv);
+	free(pThis->caCertFile);
+	if(cert == NULL) {
+		pThis->caCertFile = NULL;
+	} else {
+		if((pThis->caCertFile = strdup(cert)) == NULL)
+			ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+	}
+finalize_it:
+	LEAVE_RELPFUNC;
+}
+relpRetVal
+relpSrvSetOwnCert(relpSrv_t *pThis, char *cert)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Srv);
+	free(pThis->ownCertFile);
+	if(cert == NULL) {
+		pThis->ownCertFile = NULL;
+	} else {
+		if((pThis->ownCertFile = strdup(cert)) == NULL)
+			ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+	}
+finalize_it:
+	LEAVE_RELPFUNC;
+}
+relpRetVal
+relpSrvSetPrivKey(relpSrv_t *pThis, char *cert)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Srv);
+	free(pThis->privKey);
+	if(cert == NULL) {
+		pThis->privKey = NULL;
+	} else {
+		if((pThis->privKey = strdup(cert)) == NULL)
+			ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+	}
+finalize_it:
+	LEAVE_RELPFUNC;
+}
+
 void
 relpSrvSetDHBits(relpSrv_t *pThis, int bits)
 {
@@ -206,6 +258,9 @@ relpSrvRun(relpSrv_t *pThis)
 		}
 		relpTcpSetDHBits(pTcp, pThis->dhBits);
 		relpTcpSetGnuTLSPriString(pTcp, pThis->pristring);
+		relpTcpSetCACert(pTcp, pThis->caCertFile);
+		relpTcpSetOwnCert(pTcp, pThis->ownCertFile);
+		relpTcpSetPrivKey(pTcp, pThis->privKey);
 	}
 	CHKRet(relpTcpLstnInit(pTcp, (pThis->pLstnPort == NULL) ? (unsigned char*) RELP_DFLT_PORT : pThis->pLstnPort, pThis->ai_family));
 		

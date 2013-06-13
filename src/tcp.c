@@ -412,6 +412,12 @@ pThis->pEngine->dbgprint("DDDD: gnutls_init %d: %s\n", r, gnutls_strerror(r));
 		r = gnutls_credentials_set(pThis->session, GNUTLS_CRD_ANON, pSrv->pTcp->anoncredSrv);
 		pThis->pEngine->dbgprint("DDDD: gnutls_credentials_set %d: %s\n", r, gnutls_strerror(r));
 		gnutls_dh_set_prime_bits(pThis->session, pThis->dhBits);
+	} else { /* cert-based auth */
+		if(pThis->caCertFile == NULL) {
+			gnutls_certificate_send_x509_rdn_sequence(pThis->session, 0);
+		}
+		r = gnutls_credentials_set(pThis->session, GNUTLS_CRD_CERTIFICATE, pSrv->pTcp->xcred);
+		pThis->pEngine->dbgprint("DDDD: gnutls_credentials_set(cert) %d: %s\n", r, gnutls_strerror(r));
 	}
 
 	gnutls_transport_set_ptr(pThis->session, (gnutls_transport_ptr_t) pThis->sock);
@@ -508,6 +514,22 @@ relpTcpLstnInitTLS(relpTcp_t *pThis)
 		r = gnutls_dh_params_generate2(pThis->dh_params, pThis->dhBits);
 		pThis->pEngine->dbgprint("DDDD: paramgenerate returns %d\n", r);
 		gnutls_anon_set_server_dh_params(pThis->anoncredSrv, pThis->dh_params);
+	} else {
+		gnutls_certificate_allocate_credentials(&pThis->xcred);
+		if(pThis->caCertFile != NULL) {
+			r = gnutls_certificate_set_x509_trust_file(pThis->xcred,
+				pThis->caCertFile, GNUTLS_X509_FMT_PEM);
+			pThis->pEngine->dbgprint("DDDD: certificate_set_x509_trust_file returns %d: %s\n", r, gnutls_strerror(r));
+			if(r >= 0) {
+				pThis->pEngine->dbgprint("librelp: obtained %d certificates from %s\n",
+					r, pThis->caCertFile);
+			} else {
+			 // TODO: save error message
+			}
+		}
+		r = gnutls_certificate_set_x509_key_file (pThis->xcred,
+			pThis->ownCertFile, pThis->privKeyFile, GNUTLS_X509_FMT_PEM);
+		pThis->pEngine->dbgprint("DDDD: certificate_set_x509_key_file returns %d\n", r);
 	}
 
 	pThis->pEngine->dbgprint("DDDD: done Lstn  InitTLS\n");
@@ -531,8 +553,7 @@ relpTcpLstnInit(relpTcp_t *pThis, unsigned char *pLstnPort, int ai_family)
 	RELPOBJ_assert(pThis, Tcp);
 
 	pLstnPt = pLstnPort;
-	assert(pLstnPt != NULL);
-	pThis->pEngine->dbgprint("creating relp tcp listen socket on port %s\n", pLstnPt);
+	assert(pLstnPt != NULL); pThis->pEngine->dbgprint("creating relp tcp listen socket on port %s\n", pLstnPt);
 
         memset(&hints, 0, sizeof(hints));
         hints.ai_flags = AI_PASSIVE;
@@ -872,7 +893,7 @@ relpTcpRtryHandshake(relpTcp_t *pThis)
 	int r;
 	r = gnutls_handshake(pThis->session);
 	if(r < 0) {
-                pThis->pEngine->dbgprint("librelp: state %d during retry handshake\n", r);
+                pThis->pEngine->dbgprint("librelp: state %d during retry handshake: %s\n", r, gnutls_strerror(r));
 	}
 	if(r != GNUTLS_E_INTERRUPTED && r != GNUTLS_E_AGAIN)
 		pThis->rtryOp = relpTCP_RETRY_none;

@@ -82,6 +82,10 @@ struct relpSess_s {
 	relpCmdEnaState_t stateCmdSyslog;
 	int bEnableTLS;
 	int bEnableTLSZip;
+	char *pristring;
+	char *caCertFile;
+	char *ownCertFile;
+	char *privKeyFile;
 
 	/* save the following for auto-reconnect case */
 	int protFamily;
@@ -139,6 +143,10 @@ relpRetVal relpSessSetTimeout(relpSess_t *pThis, unsigned timeout);
 relpRetVal relpSessSetClientIP(relpSess_t *pThis, unsigned char *ip);
 relpRetVal relpSessEnableTLS(relpSess_t *pThis);
 relpRetVal relpSessEnableTLSZip(relpSess_t *pThis);
+relpRetVal relpSessSetGnuTLSPriString(relpSess_t *pThis, char *pristr);
+relpRetVal relpSessSetCACert(relpSess_t *pThis, char *cert);
+relpRetVal relpSessSetOwnCert(relpSess_t *pThis, char *cert);
+relpRetVal relpSessSetPrivKey(relpSess_t *pThis, char *cert);
 relpRetVal relpSessConstructOffers(relpSess_t *pThis, relpOffers_t **ppOffers);
 relpRetVal relpSessSendSyslog(relpSess_t *pThis, unsigned char *pMsg, size_t lenMsg);
 relpRetVal relpSessSetEnableCmd(relpSess_t *pThis, unsigned char *pszCmd, relpCmdEnaState_t stateCmd);
