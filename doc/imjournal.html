@@ -63,6 +63,10 @@ with the journal database - information current as of June 2013).
 Specifies the maximum number of messages that can be emitted within the
 ratelimit.interval interval. For futher information, see description there.
 
+<li><b>IgnorePreviousMessages</b> [<b>off</b>/on]<br>
+This option specifies whether imjournal should ignore messages currently in
+journal and read only new messages. This option is only used when there is
+no StateFile to avoid message loss.
 </ul>
 
 <b>Caveats/Known Bugs:</b>
@@ -91,14 +95,16 @@ action(type="omfile" file="/var/log/ceelog" template="CEETemplate")
 
 <p><b>Legacy Configuration Directives</b>:</p>
 <ul>
-<li>$imjournalPersistStateInterval &lt;Delimiter&gt;<br>
+<li><b>$imjournalPersistStateInterval</b> &lt;Delimiter&gt;<br>
 Equivalent to: ratelimit.PersistStateInterval</li>
-<li>$imjournalStateFile &lt;Delimiter&gt;<br>
+<li><b>$imjournalStateFile</b> &lt;Delimiter&gt;<br>
 Equivalent to: ratelimit.StateFile</li>
-<li>$imjournalRatelimitInterval &lt;Delimiter&gt;<br>
+<li><b>$imjournalRatelimitInterval</b> &lt;Delimiter&gt;<br>
 Equivalent to: ratelimit.interval</li>
-<li>$imjournalRatelimitBurst &lt;Delimiter&gt;<br>
+<li><b>$imjournalRatelimitBurst</b> &lt;Delimiter&gt;<br>
 Equivalent to: ratelimit.burst</li>
+<li><strong>$ImjournalIgnorePreviousMessages</strong> [<b>off</b>/on]<br>
+Equivalent to: ignorePreviousMessages</li>
 </ul>
 
 </body>
