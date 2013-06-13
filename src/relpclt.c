@@ -109,7 +109,7 @@ relpCltConnect(relpClt_t *pThis, int protFamily, unsigned char *port, unsigned c
 		if(pThis->bEnableTLSZip) {
 			CHKRet(relpSessEnableTLSZip(pThis->pSess));
 		}
-		CHKRet(relpTcpSetGnuTLSPriString(pThis->pSess, pThis->pristring));
+		CHKRet(relpTcpSetGnuTLSPriString(pThis->pSess->pTcp, pThis->pristring));
 	}
 	CHKRet(relpSessConnect(pThis->pSess, protFamily, port, host));
 
