@@ -78,6 +78,9 @@ struct instanceConf_s {
 	sbool bEnableTLSZip;
 	int dhBits;
 	uchar *pristring;		/* GnuTLS priority string (NULL if not to be provided) */
+	uchar *caCertFile;
+	uchar *myCertFile;
+	uchar *myPrivKeyFile;
 	struct instanceConf_s *next;
 };
 
@@ -108,6 +111,9 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "tls", eCmdHdlrBinary, 0 },
 	{ "tls.dhbits", eCmdHdlrInt, 0 },
 	{ "tls.prioritystring", eCmdHdlrString, 0 },
+	{ "tls.cacert", eCmdHdlrString, 0 },
+	{ "tls.mycert", eCmdHdlrString, 0 },
+	{ "tls.myprivkey", eCmdHdlrString, 0 },
 	{ "tls.compression", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk inppblk =
@@ -250,6 +256,12 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 			relpSrvSetDHBits(pSrv, inst->dhBits);
 		}
 		relpSrvSetGnuTLSPriString(pSrv, (char*)inst->pristring);
+		if(relpSrvSetCACert(pSrv, (char*) inst->caCertFile) != RELP_RET_OK)
+			ABORT_FINALIZE(RS_RET_RELP_ERR);
+		if(relpSrvSetOwnCert(pSrv, (char*) inst->myCertFile) != RELP_RET_OK)
+			ABORT_FINALIZE(RS_RET_RELP_ERR);
+		if(relpSrvSetPrivKey(pSrv, (char*) inst->myPrivKeyFile) != RELP_RET_OK)
+			ABORT_FINALIZE(RS_RET_RELP_ERR);
 	}
 	CHKiRet(relpEngineListnerConstructFinalize(pRelpEngine, pSrv));
 
@@ -290,8 +302,15 @@ CODESTARTnewInpInst
 			inst->dhBits = (unsigned) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "tls.prioritystring")) {
 			inst->pristring = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+dbgprintf("DDDD: prioritystring set is '%s'\n", inst->pristring);
 		} else if(!strcmp(inppblk.descr[i].name, "tls.compression")) {
 			inst->bEnableTLSZip = (unsigned) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "tls.cacert")) {
+			inst->caCertFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(inppblk.descr[i].name, "tls.mycert")) {
+			inst->myCertFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(inppblk.descr[i].name, "tls.myprivkey")) {
+			inst->myPrivKeyFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else {
 			dbgprintf("imrelp: program error, non-handled "
 			  "param '%s'\n", inppblk.descr[i].name);

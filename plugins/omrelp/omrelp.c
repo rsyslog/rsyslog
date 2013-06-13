@@ -72,6 +72,9 @@ typedef struct _instanceData {
 	sbool bEnableTLS;
 	sbool bEnableTLSZip;
 	uchar *pristring;		/* GnuTLS priority string (NULL if not to be provided) */
+	uchar *caCertFile;
+	uchar *myCertFile;
+	uchar *myPrivKeyFile;
 	uchar *tplName;
 } instanceData;
 
@@ -88,6 +91,9 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "tls", eCmdHdlrBinary, 0 },
 	{ "tls.compression", eCmdHdlrBinary, 0 },
 	{ "tls.prioritystring", eCmdHdlrString, 0 },
+	{ "tls.cacert", eCmdHdlrString, 0 },
+	{ "tls.mycert", eCmdHdlrString, 0 },
+	{ "tls.myprivkey", eCmdHdlrString, 0 },
 	{ "port", eCmdHdlrGetWord, 0 },
 	{ "rebindinterval", eCmdHdlrInt, 0 },
 	{ "timeout", eCmdHdlrInt, 0 },
@@ -133,6 +139,12 @@ doCreateRelpClient(instanceData *pData)
 		}
 		if(relpCltSetGnuTLSPriString(pData->pRelpClt, (char*) pData->pristring) != RELP_RET_OK)
 			ABORT_FINALIZE(RS_RET_RELP_ERR);
+		if(relpCltSetCACert(pData->pRelpClt, (char*) pData->caCertFile) != RELP_RET_OK)
+			ABORT_FINALIZE(RS_RET_RELP_ERR);
+		if(relpCltSetOwnCert(pData->pRelpClt, (char*) pData->myCertFile) != RELP_RET_OK)
+			ABORT_FINALIZE(RS_RET_RELP_ERR);
+		if(relpCltSetPrivKey(pData->pRelpClt, (char*) pData->myPrivKeyFile) != RELP_RET_OK)
+			ABORT_FINALIZE(RS_RET_RELP_ERR);
 	}
 	if(glbl.GetSourceIPofLocalClient() == NULL) {	/* ar Do we have a client IP set? */
 		if(relpCltSetClientIP(pData->pRelpClt, glbl.GetSourceIPofLocalClient()) != RELP_RET_OK)
@@ -152,6 +164,9 @@ CODESTARTcreateInstance
 	pData->bEnableTLS = DFLT_ENABLE_TLS;
 	pData->bEnableTLSZip = DFLT_ENABLE_TLSZIP;
 	pData->pristring = NULL;
+	pData->caCertFile = NULL;
+	pData->myCertFile = NULL;
+	pData->myPrivKeyFile = NULL;
 ENDcreateInstance
 
 BEGINfreeInstance
@@ -162,6 +177,9 @@ CODESTARTfreeInstance
 	free(pData->port);
 	free(pData->tplName);
 	free(pData->pristring);
+	free(pData->caCertFile);
+	free(pData->myCertFile);
+	free(pData->myPrivKeyFile);
 ENDfreeInstance
 
 static inline void
@@ -175,6 +193,9 @@ setInstParamDefaults(instanceData *pData)
 	pData->bEnableTLS = DFLT_ENABLE_TLS;
 	pData->bEnableTLSZip = DFLT_ENABLE_TLSZIP;
 	pData->pristring = NULL;
+	pData->caCertFile = NULL;
+	pData->myCertFile = NULL;
+	pData->myPrivKeyFile = NULL;
 }
 
 
@@ -208,6 +229,12 @@ CODESTARTnewActInst
 			pData->bEnableTLSZip = (unsigned) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "tls.prioritystring")) {
 			pData->pristring = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "tls.cacert")) {
+			pData->caCertFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "tls.mycert")) {
+			pData->myCertFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "tls.myprivkey")) {
+			pData->myPrivKeyFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else {
 			dbgprintf("omrelp: program error, non-handled "
 			  "param '%s'\n", actpblk.descr[i].name);
