@@ -64,7 +64,7 @@ static int called_gnutls_global_init = 0;
  * operations have been finished.
  */
 relpRetVal
-relpTcpConstruct(relpTcp_t **ppThis, relpEngine_t *pEngine)
+relpTcpConstruct(relpTcp_t **ppThis, relpEngine_t *pEngine, int connType)
 {
 	relpTcp_t *pThis;
 
@@ -75,12 +75,16 @@ relpTcpConstruct(relpTcp_t **ppThis, relpEngine_t *pEngine)
 	}
 
 	RELP_CORE_CONSTRUCTOR(pThis, Tcp);
+	pThis->bIsClient = (connType == RELP_SRV_CONN) ? 0 : 1;
 	pThis->sock = -1;
 	pThis->pEngine = pEngine;
 	pThis->iSessMax = 500;	/* default max nbr of sessions - TODO: make configurable -- rgerhards, 2008-03-17*/
 	pThis->bTLSActive = 0;
 	pThis->dhBits = DEFAULT_DH_BITS;
 	pThis->pristring = NULL;
+	pThis->caCertFile = NULL;
+	pThis->ownCertFile = NULL;
+	pThis->privKeyFile = NULL;
 
 	*ppThis = pThis;
 
@@ -126,6 +130,9 @@ relpTcpDestruct(relpTcp_t **ppThis)
 	free(pThis->pRemHostIP);
 	free(pThis->pRemHostName);
 	free(pThis->pristring);
+	free(pThis->caCertFile);
+	free(pThis->ownCertFile);
+	free(pThis->privKeyFile);
 
 	/* done with de-init work, now free tcp object itself */
 	free(pThis);
@@ -268,6 +275,58 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 
+relpRetVal
+relpTcpSetCACert(relpTcp_t *pThis, char *cert)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Tcp);
+	
+	free(pThis->caCertFile);
+	if(cert == NULL) {
+		pThis->caCertFile = NULL;
+	} else {
+		if((pThis->caCertFile = strdup(cert)) == NULL)
+			ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+	}
+finalize_it:
+	LEAVE_RELPFUNC;
+}
+
+relpRetVal
+relpTcpSetOwnCert(relpTcp_t *pThis, char *cert)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Tcp);
+	
+	free(pThis->ownCertFile);
+	if(cert == NULL) {
+		pThis->ownCertFile = NULL;
+	} else {
+		if((pThis->ownCertFile = strdup(cert)) == NULL)
+			ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+	}
+finalize_it:
+	LEAVE_RELPFUNC;
+}
+
+relpRetVal
+relpTcpSetPrivKey(relpTcp_t *pThis, char *cert)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Tcp);
+	
+	free(pThis->privKeyFile);
+	if(cert == NULL) {
+		pThis->privKeyFile = NULL;
+	} else {
+		if((pThis->privKeyFile = strdup(cert)) == NULL)
+			ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+	}
+finalize_it:
+	LEAVE_RELPFUNC;
+}
+
+
 /* Enable TLS mode. */
 relpRetVal
 relpTcpEnableTLS(relpTcp_t *pThis)
@@ -379,7 +438,7 @@ relpTcpAcceptConnReq(relpTcp_t **ppThis, int sock, relpSrv_t *pSrv)
 	}
 
 	/* construct our object so that we can use it... */
-	CHKRet(relpTcpConstruct(&pThis, pEngine));
+	CHKRet(relpTcpConstruct(&pThis, pEngine, RELP_SRV_CONN));
 
 	/* TODO: obtain hostname, normalize (callback?), save it */
 	CHKRet(relpTcpSetRemHost(pThis, (struct sockaddr*) &addr));

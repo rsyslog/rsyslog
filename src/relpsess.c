@@ -764,7 +764,7 @@ relpSessConnect(relpSess_t *pThis, int protFamily, unsigned char *port, unsigned
 	pThis->txnr = 1;
 	pThis->sessType = eRelpSess_Client;	/* indicate we have a client session */
 
-	CHKRet(relpTcpConstruct(&pThis->pTcp, pThis->pEngine));
+	CHKRet(relpTcpConstruct(&pThis->pTcp, pThis->pEngine, RELP_CLT_CONN));
 	if(pThis->bEnableTLS) {
 		CHKRet(relpTcpEnableTLS(pThis->pTcp));
 		if(pThis->bEnableTLSZip) {

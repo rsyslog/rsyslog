@@ -33,6 +33,7 @@
 #ifndef RELPTCP_H_INCLUDED
 #define	RELPTCP_H_INCLUDED
 
+#include <stdint.h>
 #include <gnutls/gnutls.h>
 #include "relp.h"
 
@@ -40,6 +41,9 @@ typedef enum { relpTCP_RETRY_none = 0,
        relpTCP_RETRY_handshake = 1,
        relpTCP_RETRY_recv = 2, 
        relpTCP_RETRY_send = 3 } relpTcpRtryState_t;
+
+#define RELP_SRV_CONN 0	/**< this conection is a server connection */
+#define RELP_CLT_CONN 1	/**< this conection is a client connection */	
 
 /* the RELPTCP object 
  * rgerhards, 2008-03-16
@@ -53,13 +57,19 @@ typedef struct relpTcp_s {
 	int *socks;	/**< the socket(s) we use for listeners, element 0 has nbr of socks */
 	int iSessMax;	/**< maximum number of sessions permitted */
 	/* variables for TLS support */
-	int bEnableTLS;
-	int bTLSActive;	/**< is TLS actually active (properly activated) on this session? */
-	int bEnableTLSZip;
+	uint8_t bEnableTLS;
+	uint8_t bTLSActive;	/**< is TLS actually active (properly activated) on this session? */
+	uint8_t bEnableTLSZip;
+	uint8_t bIsClient;	/**< set if this belongs to a client, if unset --> server */
 	int dhBits;	/**< number of bits for Diffie-Hellman key */
 	char *pristring; /**< priority string for GnuTLS */
 	gnutls_anon_client_credentials_t anoncred;	/**< client anon credentials */
 	gnutls_anon_server_credentials_t anoncredSrv;	/**< server anon credentials */
+	/* GnuTLS certificat support */
+	gnutls_certificate_credentials_t xcred;		/**< certificate credentials */
+	char *caCertFile;
+	char *ownCertFile;
+	char *privKeyFile;
 	gnutls_session_t session;
 	gnutls_dh_params_t dh_params; /**< server DH parameters for anon mode */
 	relpTcpRtryState_t rtryOp;
@@ -79,7 +89,7 @@ relpTcpRtryOp(relpTcp_t *pThis)
 }
 
 /* prototypes */
-relpRetVal relpTcpConstruct(relpTcp_t **ppThis, relpEngine_t *pEngine);
+relpRetVal relpTcpConstruct(relpTcp_t **ppThis, relpEngine_t *pEngine, int connType);
 relpRetVal relpTcpDestruct(relpTcp_t **ppThis);
 relpRetVal relpTcpAbortDestruct(relpTcp_t **ppThis);
 relpRetVal relpTcpLstnInit(relpTcp_t *pThis, unsigned char *pLstnPort, int ai_family);
@@ -91,6 +101,9 @@ relpRetVal relpTcpEnableTLS(relpTcp_t *pThis);
 relpRetVal relpTcpEnableTLSZip(relpTcp_t *pThis);
 relpRetVal relpTcpSetDHBits(relpTcp_t *pThis, int bits);
 relpRetVal relpTcpSetGnuTLSPriString(relpTcp_t *pThis, char *pristr);
+relpRetVal relpTcpSetCACert(relpTcp_t *pThis, char *cert);
+relpRetVal relpTcpSetOwnCert(relpTcp_t *pThis, char *cert);
+relpRetVal relpTcpSetPrivKey(relpTcp_t *pThis, char *cert);
 int relpTcpGetRtryDirection(relpTcp_t *pThis);
 void relpTcpRtryHandshake(relpTcp_t *pThis);
 

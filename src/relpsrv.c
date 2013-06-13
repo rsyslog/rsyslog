@@ -198,7 +198,7 @@ relpSrvRun(relpSrv_t *pThis)
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Srv);
 
-	CHKRet(relpTcpConstruct(&pTcp, pThis->pEngine));
+	CHKRet(relpTcpConstruct(&pTcp, pThis->pEngine, RELP_SRV_CONN));
 	if(pThis->bEnableTLS) {
 		relpTcpEnableTLS(pTcp);
 		if(pThis->bEnableTLSZip) {
