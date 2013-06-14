@@ -3,6 +3,7 @@ Description=System Logging Service
 Requires=syslog.socket
 
 [Service]
+Type=notify
 ExecStart=@sbindir@/rsyslogd -n
 StandardOutput=null
 

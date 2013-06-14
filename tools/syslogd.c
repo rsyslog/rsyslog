@@ -2033,6 +2033,8 @@ int realMain(int argc, char **argv)
 		ourConf->globals.bErrMsgToStderr = 0;
 	}
 
+	sd_notify(0, "READY=1");
+
 	mainloop();
 
 	/* do any de-init's that need to be done AFTER this comment */
