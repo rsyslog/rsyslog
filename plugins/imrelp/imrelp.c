@@ -302,7 +302,6 @@ CODESTARTnewInpInst
 			inst->dhBits = (unsigned) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "tls.prioritystring")) {
 			inst->pristring = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-dbgprintf("DDDD: prioritystring set is '%s'\n", inst->pristring);
 		} else if(!strcmp(inppblk.descr[i].name, "tls.compression")) {
 			inst->bEnableTLSZip = (unsigned) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "tls.cacert")) {
