@@ -1,9 +1,9 @@
 [Unit]
 Description=System Logging Service
+Requires=syslog.socket
 
 [Service]
 ExecStart=@sbindir@/rsyslogd -n
-Sockets=syslog.socket
 StandardOutput=null
 
 [Install]
