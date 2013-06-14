@@ -406,6 +406,7 @@ relpTcpAcceptConnReqInitTLS(relpTcp_t *pThis, relpSrv_t *pSrv)
 
 	r = gnutls_init(&pThis->session, GNUTLS_SERVER);
 pThis->pEngine->dbgprint("DDDD: gnutls_init %d: %s\n", r, gnutls_strerror(r));
+	gnutls_session_set_ptr(pThis->session, pThis);
 
 	pThis->pristring = strdup(pSrv->pTcp->pristring);
 	CHKRet(relpTcpTLSSetPrio(pThis));
@@ -499,6 +500,155 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 
+/* Convert a fingerprint to printable data. The function must be provided a
+ * sufficiently large buffer. 512 bytes shall always do.
+ */
+static void
+GenFingerprintStr(char *pFingerprint, int sizeFingerprint, char *fpBuf)
+{
+	int iSrc, iDst;
+
+	fpBuf[0] = 'S', fpBuf[1] = 'H', fpBuf[2] = 'A'; fpBuf[3] = '1';
+	// TODO: length check fo fpBuf (but far from being urgent...)
+	for(iSrc = 0, iDst = 4 ; iSrc < sizeFingerprint ; ++iSrc, iDst += 3) {
+		sprintf(fpBuf+iDst, ":%2.2X", (unsigned char) pFingerprint[iSrc]);
+	}
+}
+
+
+/* Check the peer's ID in fingerprint auth mode.
+ * rgerhards, 2008-05-22
+ */
+static int
+relpTcpChkPeerFingerprint(relpTcp_t *pThis, gnutls_x509_crt cert)
+{
+	char fingerprint[20];
+	char fpPrintable[512];
+	size_t size;
+	int bFoundPositiveMatch;
+	//permittedPeers_t *pPeer;
+	int r;
+
+	/* obtain the SHA1 fingerprint */
+	size = sizeof(fingerprint);
+	gnutls_x509_crt_get_fingerprint(cert, GNUTLS_DIG_SHA1, fingerprint, &size);
+pThis->pEngine->dbgprint("DDDD: crt_get_fingerprint returned %d: %s\n", r, gnutls_strerror(r));
+	GenFingerprintStr(fingerprint, (int) size, fpPrintable);
+	pThis->pEngine->dbgprint("DDDD: peer's certificate SHA1 fingerprint: %s\n", fpPrintable);
+
+#if 0
+	/* now search through the permitted peers to see if we can find a permitted one */
+	bFoundPositiveMatch = 0;
+	pPeer = pThis->pPermPeers;
+	while(pPeer != NULL && !bFoundPositiveMatch) {
+		if(!rsCStrSzStrCmp(pstrFingerprint, pPeer->pszID, strlen((char*) pPeer->pszID))) {
+			bFoundPositiveMatch = 1;
+		} else {
+			pPeer = pPeer->pNext;
+		}
+	}
+
+	if(!bFoundPositiveMatch) {
+		dbgprintf("invalid peer fingerprint, not permitted to talk to it\n");
+		if(pThis->bReportAuthErr == 1) {
+			errno = 0;
+			errmsg.LogError(0, RS_RET_INVALID_FINGERPRINT, "error: peer fingerprint '%s' unknown - we are "
+					"not permitted to talk to it", cstrGetSzStr(pstrFingerprint));
+			pThis->bReportAuthErr = 0;
+		}
+		ABORT_FINALIZE(RS_RET_INVALID_FINGERPRINT);
+	}
+#endif
+}
+
+/* This function will verify the peer's certificate, and check
+ * if the hostname matches, as well as the activation, expiration dates.
+ */
+static int
+relpTcpVerifyCertificateCallback(gnutls_session_t session)
+{
+	unsigned int status = 0;
+	int r = 0;
+	int ret, type;
+	relpTcp_t *pThis;
+	gnutls_datum_t out;
+	const gnutls_datum *cert_list;
+	unsigned int list_size = 0;
+	gnutls_x509_crt cert;
+	int bMustDeinitCert = 0;
+	int gnuRet;
+
+	pThis = (relpTcp_t*) gnutls_session_get_ptr(session);
+	pThis->pEngine->dbgprint("DDDD: in cert verify function (server)\n");
+
+	/* This function only works for X.509 certificates.  */
+	if(gnutls_certificate_type_get(session) != GNUTLS_CRT_X509) {
+		r = GNUTLS_E_CERTIFICATE_ERROR; goto done;
+	}
+
+	cert_list = gnutls_certificate_get_peers(pThis->session, &list_size);
+
+	if(list_size < 1) {
+		pThis->pEngine->dbgprint("error: peer did not provide a certificate, "
+				"not permitted to talk to it");
+		r = GNUTLS_E_CERTIFICATE_ERROR; goto done;
+	}
+
+	/* If we reach this point, we have at least one valid certificate. 
+	 * We always use only the first certificate. As of GnuTLS documentation, the
+	 * first certificate always contains the remote peer's own certificate. All other
+	 * certificates are issuer's certificates (up the chain). We are only interested
+	 * in the first certificate, which is our peer. -- rgerhards, 2008-05-08
+	 */
+	gnutls_x509_crt_init(&cert);
+	bMustDeinitCert = 1; /* indicate cert is initialized and must be freed on exit */
+	gnutls_x509_crt_import(cert, &cert_list[0], GNUTLS_X509_FMT_DER);
+pThis->pEngine->dbgprint("DDDD: got hold of the cert, on to actual checking...\n");
+char szAltName[1024]; /* this is sufficient for the DNSNAME... */
+int iAltName;
+size_t szAltNameLen;
+szAltNameLen = sizeof(szAltName);
+	gnutls_x509_crt_get_subject_alt_name(cert, 0, szAltName, &szAltNameLen, NULL);
+pThis->pEngine->dbgprint("DDDD: subject alt name is %s'\n", szAltName);
+	relpTcpChkPeerFingerprint(pThis, cert);
+
+
+#if 0
+  /* This verification function uses the trusted CAs in the credentials
+   * structure. So you must have installed one or more CA certificates.
+   */ ret = gnutls_certificate_verify_peers3 (session, hostname, &status);
+  if (ret < 0)
+    {
+      printf ("Error\n");
+      return GNUTLS_E_CERTIFICATE_ERROR;
+    }
+
+  type = gnutls_certificate_type_get (session);
+
+  ret = gnutls_certificate_verification_status_print( status, type, &out, 0);
+  if (ret < 0)
+    {
+      printf ("Error\n");
+      return GNUTLS_E_CERTIFICATE_ERROR;
+    }
+  
+  printf ("%s", out.data);
+  
+  gnutls_free(out.data);
+
+  if (status != 0) /* Certificate is not trusted */
+      return GNUTLS_E_CERTIFICATE_ERROR;
+#endif
+
+	/* notify gnutls to continue handshake normally */
+	r = 0;
+
+done:
+	if(bMustDeinitCert)
+		gnutls_x509_crt_deinit(cert);
+	return r;
+}
+
 #if 0 /* enable if needed for debugging */
 static void logFunction(int level, const char *msg)
 {
@@ -521,11 +671,11 @@ relpTcpLstnInitTLS(relpTcp_t *pThis)
 	 * gnutls_global_set_log_level(10); // 0 (no) to 9 (most), 10 everything
 	 */
 
-	r = gnutls_dh_params_init(&pThis->dh_params);
-	pThis->pEngine->dbgprint("DDDD: dh_param_init returns %d\n", r);
-	r = gnutls_dh_params_generate2(pThis->dh_params, pThis->dhBits);
-	pThis->pEngine->dbgprint("DDDD: paramgenerate returns %d\n", r);
 	if(isAnonAuth(pThis)) {
+		r = gnutls_dh_params_init(&pThis->dh_params);
+		pThis->pEngine->dbgprint("DDDD: dh_param_init returns %d\n", r);
+		r = gnutls_dh_params_generate2(pThis->dh_params, pThis->dhBits);
+		pThis->pEngine->dbgprint("DDDD: paramgenerate returns %d\n", r);
 		r = gnutls_anon_allocate_server_credentials(&pThis->anoncredSrv);
 		pThis->pEngine->dbgprint("DDDD: generating server DH params...\n");
 		gnutls_anon_set_server_dh_params(pThis->anoncredSrv, pThis->dh_params);
@@ -545,8 +695,8 @@ relpTcpLstnInitTLS(relpTcp_t *pThis)
 		r = gnutls_certificate_set_x509_key_file (pThis->xcred,
 			pThis->ownCertFile, pThis->privKeyFile, GNUTLS_X509_FMT_PEM);
 		pThis->pEngine->dbgprint("DDDD: certificate_set_x509_key_file returns %d\n", r);
-		gnutls_certificate_set_dh_params(pThis->xcred, pThis->dh_params);
-		
+		//gnutls_certificate_set_dh_params(pThis->xcred, pThis->dh_params);
+		gnutls_certificate_set_verify_function(pThis->xcred, relpTcpVerifyCertificateCallback);
 	}
 
 	pThis->pEngine->dbgprint("DDDD: done Lstn  InitTLS\n");
