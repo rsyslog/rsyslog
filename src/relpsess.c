@@ -907,7 +907,6 @@ relpSessSetGnuTLSPriString(relpSess_t *pThis, char *pristr)
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Tcp);
 	
-pThis->pEngine->dbgprint("DDDD: current pristring %p\n", pThis->pristring);
 	free(pThis->pristring);
 	if(pristr == NULL) {
 		pThis->pristring = NULL;
