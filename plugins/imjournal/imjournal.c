@@ -434,12 +434,13 @@ finalize_it:
 }
 
 
-BEGINrunInput
-CODESTARTrunInput
-	/* this is an endless loop - it is terminated when the thread is
-	 * signalled to do so. This, however, is handled by the framework,
-	 * right into the sleep below.
-	 */
+/* This function loads a journal cursor from the state file.
+ */
+static rsRetVal
+loadJournalState()
+{
+	DEFiRet;
+
 	if (cs.stateFile[0] != '/') {
 		char *new_stateFile;
 
@@ -479,6 +480,20 @@ CODESTARTrunInput
 		}
 	}
 
+finalize_it:
+	RETiRet;
+}
+
+BEGINrunInput
+CODESTARTrunInput
+	/* this is an endless loop - it is terminated when the thread is
+	 * signalled to do so. This, however, is handled by the framework.
+	 */
+
+	if (cs.stateFile) {
+		CHKiRet(loadJournalState());
+	}
+
 	while (glbl.GetGlobalInputTermState() == 0) {
 		int count = 0, r;
 
@@ -499,11 +514,13 @@ CODESTARTrunInput
 		}
 
 		CHKiRet(readjournal());
-		/* TODO: This could use some finer metric. */
-		count++;
-		if (count == cs.iPersistStateInterval) {
-			count = 0;
-			persistJournalState();
+		if (cs.stateFile) { /* can't persist without a state file */
+			/* TODO: This could use some finer metric. */
+			count++;
+			if (count == cs.iPersistStateInterval) {
+				count = 0;
+				persistJournalState();
+			}
 		}
 	}
 
@@ -552,7 +569,9 @@ ENDwillRun
 /* close journal */
 BEGINafterRun
 CODESTARTafterRun
-	persistJournalState();
+	if (cs.stateFile) { /* can't persist without a state file */
+		persistJournalState();
+	}
 	sd_journal_close(j);
 ENDafterRun
 
