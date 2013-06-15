@@ -675,6 +675,10 @@ CODEmodInit_QueryRegCFSLineHdlr
 
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"persiststateinterval", 0, eCmdHdlrInt,
 		NULL, &cs.iPersistStateInterval, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"imjournalratelimitinterval", 0, eCmdHdlrInt,
+		NULL, &cs.ratelimitInterval, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"imjournalratelimitburst", 0, eCmdHdlrInt,
+		NULL, &cs.ratelimitBurst, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"statefile", 0, eCmdHdlrGetWord,
 		NULL, &cs.stateFile, STD_LOADABLE_MODULE_ID));
 
