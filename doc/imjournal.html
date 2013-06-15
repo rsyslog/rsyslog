@@ -11,6 +11,14 @@
 <p><b>Description</b>:</p>
 <p>Provides the ability to import structured log messages from systemd journal
 to syslog.</p>
+<p><b>Warning:</b> Some versions of systemd journal have problems with database
+corruption, which leads to the journal to return the same data endlessly
+in a thight loop. This results in massive message duplication inside rsyslog
+probably resulting in a denial-of-service when the system ressouces get
+exhausted. This can be somewhat mitigated by using proper rate-limiters, but
+even then there are spikes of old data which are endlessly repeated.
+<b>As such, it is strongly recommended to use this plugin only if there
+is hard need to do so.</b>
 
 <p><b>Configuration Directives</b>:</p>
 <p><b>Module Directives</b></p>
