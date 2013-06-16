@@ -111,8 +111,12 @@ File="/var/log/messages")
 
 <p><b>Legacy Configuration Directives</b>:</p>
 <ul>
-	<li><strong>$DynaFileCacheSize </strong>(not mandatory, default will be used)<br>
-	Defines a template to be used for the output. <br></li><br>
+	<li><strong>$DynaFileCacheSize </strong>(not mandatory, default 10)<br>
+	defines the maximum size of the dynafile cache for <b>this</b>
+	action. Cache size greatly affects performance and should be
+	set so that it matches the actual need. Note that files
+	inside the cache are kept open until either rsyslogd
+	is HUPed or the file is evicted from the cache.<br></li><br>
 
 	<li><strong>$OMFileZipLevel </strong>0..9 [default 0]<br>
 	if greater 0, turns on gzip compression of the output file. The higher the number, the better the compression, but also the more CPU is required for zipping.<br></li><br>
