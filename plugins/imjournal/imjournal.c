@@ -67,6 +67,7 @@ static struct configSettings_s {
 	int iPersistStateInterval;
 	int ratelimitInterval;
 	int ratelimitBurst;
+	int bIgnorePrevious;
 } cs;
 
 /* module-global parameters */
@@ -74,7 +75,8 @@ static struct cnfparamdescr modpdescr[] = {
 	{ "statefile", eCmdHdlrGetWord, 0 },
 	{ "ratelimit.interval", eCmdHdlrInt, 0 },
 	{ "ratelimit.burst", eCmdHdlrInt, 0 },
-	{ "persiststateinterval", eCmdHdlrInt, 0 }
+	{ "persiststateinterval", eCmdHdlrInt, 0 },
+	{ "ignorepreviousmessages", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk modpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -253,9 +255,8 @@ readjournal() {
 
 		/* ... but we know better than to trust the specs */
 		if (equal_sign == NULL) {
-			errmsg.LogError(0, RS_RET_ERR,"SD_JOURNAL_FOREACH_DATA()"
-				" returned a malformed field (has no '='): '%s'",
-				(char*)get);
+			errmsg.LogError(0, RS_RET_ERR, "SD_JOURNAL_FOREACH_DATA()"
+				"returned a malformed field (has no '='): '%s'", get);
 			continue; /* skip the entry */
 		}
 
@@ -484,7 +485,28 @@ loadJournalState()
 			errmsg.LogError(0, RS_RET_FOPEN_FAILURE, "imjournal: "
 					"open on state file `%s' failed\n", cs.stateFile);
 		}
-	}
+	} else {
+		/* when IgnorePrevious, seek to the end of journal */
+		if (cs.bIgnorePrevious) {
+			if (sd_journal_seek_tail(j) < 0) {
+				char errStr[256];
+
+				rs_strerror_r(errno, errStr, sizeof(errStr));
+				errmsg.LogError(0, RS_RET_ERR,
+					"sd_journal_seek_tail() failed: '%s'", errStr);
+				ABORT_FINALIZE(RS_RET_ERR);
+			}
+
+			if (sd_journal_previous(j) < 0) {
+				char errStr[256];
+
+				rs_strerror_r(errno, errStr, sizeof(errStr));
+				errmsg.LogError(0, RS_RET_ERR,
+					"sd_journal_previous() failed: '%s'", errStr);
+				ABORT_FINALIZE(RS_RET_ERR);
+			}
+		}
+	} 
 
 finalize_it:
 	RETiRet;
@@ -630,6 +652,8 @@ CODESTARTsetModCnf
 			cs.ratelimitBurst = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "ratelimit.interval")) {
 			cs.ratelimitInterval = (int) pvals[i].val.d.n;
+		} else if (!strcmp(modpblk.descr[i].name, "ignorepreviousmessages")) {
+			cs.bIgnorePrevious = (int) pvals[i].val.d.n; 
 		} else {
 			dbgprintf("imjournal: program error, non-handled "
 				"param '%s' in beginCnfLoad\n", modpblk.descr[i].name);
@@ -681,6 +705,8 @@ CODEmodInit_QueryRegCFSLineHdlr
 		NULL, &cs.ratelimitBurst, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"imjournalstatefile", 0, eCmdHdlrGetWord,
 		NULL, &cs.stateFile, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"imjournalignorepreviousmessages", 0, eCmdHdlrBinary,
+		NULL, &cs.bIgnorePrevious, STD_LOADABLE_MODULE_ID)); 
 
 
 ENDmodInit
