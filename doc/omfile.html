@@ -102,72 +102,68 @@
 <p>The following command writes all syslog messages into a file.</p>
 <textarea rows="5" cols="60">Module (load="builtin:omfile")
 *.* action(type="omfile" 
-DirCreateMode="0700"
-FileCreateMode="0644"
-File="/var/log/messages")
+           DirCreateMode="0700"
+           FileCreateMode="0644"
+           File="/var/log/messages")
 </textarea>
 
 <br><br>
 
 <p><b>Legacy Configuration Directives</b>:</p>
 <ul>
-	<li><strong>$DynaFileCacheSize </strong>(not mandatory, default 10)<br>
-	defines the maximum size of the dynafile cache for <b>this</b>
-	action. Cache size greatly affects performance and should be
-	set so that it matches the actual need. Note that files
-	inside the cache are kept open until either rsyslogd
-	is HUPed or the file is evicted from the cache.<br></li><br>
+	<li><strong>$DynaFileCacheSize </strong><br>
+	equivalent to the "dynaFileCacheSize" parameter<br></li><br>
 
-	<li><strong>$OMFileZipLevel </strong>0..9 [default 0]<br>
-	if greater 0, turns on gzip compression of the output file. The higher the number, the better the compression, but also the more CPU is required for zipping.<br></li><br>
+	<li><strong>$OMFileZipLevel </strong><br>
+	equivalent to the "zipLevel" parameter<br></li><br>
 
-	<li><strong>$OMFileFlushInterval </strong>(not mandatory, default will be used)<br>
-	Defines a template to be used for the output. <br></li><br>
+	<li><strong>$OMFileFlushInterval </strong><br>
+	equivalent to the "flushInterval" parameter<br></li><br>
 
-	<li><strong>$OMFileASyncWriting </strong>on/off [default off]<br>
-	if turned on, the files will be written in asynchronous mode via a separate thread. In that case, double buffers will be used so that one buffer can be filled while the other buffer is being written. Note that in order to enable FlushInterval, AsyncWriting must be set to "on". Otherwise, the flush interval will be ignored. Also note that when FlushOnTXEnd is "on" but AsyncWriting is off, output will only be written when the buffer is full. This may take several hours, or even require a rsyslog shutdown. However, a buffer flush can be forced in that case by sending rsyslogd a HUP signal. <br></li><br>
+	<li><strong>$OMFileASyncWriting </strong><br>
+	equivalent to the "asyncWriting" parameter<br></li><br>
 
-	<li><strong>$OMFileFlushOnTXEnd </strong>on/off [default on]<br>
-	Omfile has the capability to write output using a buffered writer. Disk writes are only done when the buffer is full. So if an error happens during that write, data is potentially lost. In cases where this is unacceptable, set FlushOnTXEnd to on. Then, data is written at the end of each transaction (for pre-v5 this means after each log message) and the usual error recovery thus can handle write errors without data loss. Note that this option severely reduces the effect of zip compression and should be switched to off for that use case. Note that the default -on- is primarily an aid to preserve the traditional syslogd behaviour.<br></li><br>
+	<li><strong>$OMFileFlushOnTXEnd </strong><br>
+	equivalent to the "flushOnTXEnd" parameter<br></li><br>
 
-	<li><strong>$OMFileIOBufferSize </strong>&lt;size_nbr&gt;, default 4k<br>
-	size of the buffer used to writing output data. The larger the buffer, the potentially better performance is. The default of 4k is quite conservative, it is useful to go up to 64k, and 128K if you used gzip compression (then, even higher sizes may make sense)<br></li><br>
+	<li><strong>$OMFileIOBufferSize </strong><br>
+	equivalent to the "IOBufferSize" parameter<br></li><br>
 
 	<li><strong>$DirOwner </strong><br>
-	Set the file owner for directories newly created. Please note that this setting does not affect the owner of directories already existing. The parameter is a user name, for which the userid is obtained by rsyslogd during startup processing. Interim changes to the user mapping are not detected.<br></li><br>
+	equivalent to the "dirOwner" parameter<br></li><br>
 
 	<li><strong>$DirGroup </strong><br>
-	Set the group for directories newly created. Please note that this setting does not affect the group of directories already existing. The parameter is a group name, for which the groupid is obtained by rsyslogd on during startup processing. Interim changes to the user mapping are not detected.<br></li><br>
+	equivalent to the "dirGroup" parameter<br></li><br>
 
 	<li><strong>$FileOwner </strong><br>
-	Set the file owner for files newly created. Please note that this setting does not affect the owner of files already existing. The parameter is a user name, for which the userid is obtained by rsyslogd during startup processing. Interim changes to the user mapping are not detected.<br></li><br>
+	equivalent to the "fileOwner" parameter<br></li><br>
 
 	<li><strong>$FileGroup </strong><br>
-	Set the group for files newly created. Please note that this setting does not affect the group of files already existing. The parameter is a group name, for which the groupid is obtained by rsyslogd during startup processing. Interim changes to the user mapping are not detected.<br></li><br>
+	equivalent to the "fileGroup" parameter<br></li><br>
 
-	<li><strong>$DirCreateMode </strong>[defaul 0700]<br>
-	This is the same as $FileCreateMode, but for directories automatically generated.<br></li><br>
+	<li><strong>$DirCreateMode </strong><br>
+	equivalent to the "dirCreateMode" parameter<br></li><br>
 
-	<li><strong>$FileCreateMode </strong>[default 0644]<br>
-	The FileCreateMode directive allows to specify the creation mode with which rsyslogd creates new files. If not specified, the value 0644 is used (which retains backward-compatibility with earlier releases). The value given must always be a 4-digit octal number, with the initial digit being zero. <br>Please note that the actual permission depend on rsyslogd's process umask. If in doubt, use "$umask 0000" right at the beginning of the configuration file to remove any restrictions. <br>FileCreateMode may be specified multiple times. If so, it specifies the creation mode for all selector lines that follow until the next $FileCreateMode directive. Order of lines is vitally important.<br></li><br>
+	<li><strong>$FileCreateMode </strong><br>
+	equivalent to the "fileCreateMode" parameter<br></li><br>
 
-	<li><strong>$FailOnCHOwnFailure </strong>on/off [default on]<br>
-	This option modifies behaviour of file creation. If different owners or groups are specified for new files or directories and rsyslogd fails to set these new owners or groups, it will log an error and NOT write to the file in question if that option is set to "on". If it is set to "off", the error will be ignored and processing continues. Keep in mind, that the files in this case may be (in)accessible by people who should not have permission. The default is "on".<br></li><br>
+	<li><strong>$FailOnCHOwnFailure </strong><br>
+	equivalent to the "failOnChOwnFailure" parameter<br></li><br>
 
 	<li><strong>$F$OMFileForceCHOwn </strong><br>
-	force ownership change for all files<br></li><br>
+	equivalent to the "ForceChOwn" parameter<br></li><br>
 
-	<li><strong>$CreateDirs </strong>on/off [default on]<br>
-	create directories on an as-needed basis<br></li><br>
+	<li><strong>$CreateDirs </strong><br>
+	equivalent to the "createDirs" parameter<br></li><br>
 
-	<li><strong>$ActionFileEnableSync </strong>on/off [default off]<br>
-	enables file syncing capability of omfile.<br></li><br>
+	<li><strong>$ActionFileEnableSync </strong><br>
+	equivalent to the "enableSync" parameter<br></li><br>
 
-	<li><strong>$ActionFileDefaultTemplate </strong>[templateName]<br>
-	sets a new default template for file actions.<br></li><br>
+	<li><strong>$ActionFileDefaultTemplate </strong><br>
+	equivalent to the "template" module parameter<br></li><br>
 
 	<li><strong>$ResetConfigVariables </strong><br>
-	Resets all configuration variables to their default value. Any settings made will not be applied to configuration lines following the $ResetConfigVariables. This is a good method to make sure no side-effects exists from previous directives. This directive has no parameters.<br></li><br>
+	Resets all configuration variables to their default value.<br></li><br>
 	
 </ul>
 
