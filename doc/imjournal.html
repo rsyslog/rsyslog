@@ -38,8 +38,9 @@ is hard need to do so.</b>
 <p><b>Configuration Directives</b>:</p>
 <p><b>Module Directives</b></p>
 <ul>
-<li><b>PersistStateInterval</b> messages<br>
+<li><b>PersistStateInterval</b> number-of-messages<br>
 This is a global setting. It specifies how often should the journal state be persisted.
+The persists happens after each <i>number-of-messages</i>.
 This option is useful for rsyslog to start reding from the last journal message it read.
 
 <li><b>StateFile</b> /path/to/file<br>
@@ -97,16 +98,6 @@ $template CEETemplate,"%TIMESTAMP% %HOSTNAME% %syslogtag% @cee: %$!all-json%\n" 
 *.* :mmjsonparse:
 *.* /var/log/ceelog;CEETemplate
 </textarea>
-
-<p><b>Legacy Configuration Directoves</b>:</p>
-<ul>
-<li><strong>$ImjournalPersistStateInterval [lines]</strong><br>
-It specifies how often should the journal state be persisted. This option is useful for rsyslog to start reading from the last journal message it read.
-</li>
-<li><strong>$ImjournalStateFile&nbsp;/path/to/file</strong><br>
-It specifies where the state file for persisting journal state is located.
-</li>
-</ul>
 
 </body>
 </html>
