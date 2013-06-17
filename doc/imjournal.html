@@ -38,8 +38,9 @@ is hard need to do so.</b>
 <p><b>Configuration Directives</b>:</p>
 <p><b>Module Directives</b></p>
 <ul>
-<li><b>PersistStateInterval</b> messages<br>
+<li><b>PersistStateInterval</b> number-of-messages<br>
 This is a global setting. It specifies how often should the journal state be persisted.
+The persists happens after each <i>number-of-messages</i>.
 This option is useful for rsyslog to start reding from the last journal message it read.
 
 <li><b>StateFile</b> /path/to/file<br>
@@ -64,18 +65,6 @@ ratelimit.interval interval. For futher information, see description there.
 
 </ul>
 
-<p><b>Legacy Configuration Directives</b>:</p>
-<ul>
-<li>$imjournalPersistStateInterval &lt;Delimiter&gt;<br>
-Equivalent to: ratelimit.PersistStateInterval</li>
-<li>$imjournalStateFile &lt;Delimiter&gt;<br>
-Equivalent to: ratelimit.StateFile</li>
-<li>$imjournalRatelimitInterval &lt;Delimiter&gt;<br>
-Equivalent to: ratelimit.interval</li>
-<li>$imjournalRatelimitBurst &lt;Delimiter&gt;<br>
-Equivalent to: ratelimit.burst</li>
-</ul>
-
 <b>Caveats/Known Bugs:</b>
 <p>
 <ul>
@@ -86,26 +75,30 @@ control of the rsyslog team.
 </p>
 <p><b>Sample:</b></p>
 <p>
-The following example shows pulling structured imjournal messages and saving them into /var/log/ceelog
+The following example shows pulling structured imjournal messages and saving them into /var/log/ceelog.
 </p>
-<textarea rows="11" cols="60">
+<textarea rows="11" cols="80">
 module(load="imjournal" PersistStateInterval="100" StateFile="/path/to/file") #load imjournal module
 module(load="mmjsonparse") #load mmjsonparse module for structured logs
 
-$template CEETemplate,"%TIMESTAMP% %HOSTNAME% %syslogtag% @cee: %$!all-json%\n" #template for messages
+template(name="CEETemplate" type="string"
+         string="%TIMESTAMP% %HOSTNAME% %syslogtag% @cee: %$!all-json%\n"
+	) #template for messages
 
-*.* :mmjsonparse:
-*.* /var/log/ceelog;CEETemplate
+action(type="mmjsonparse")
+action(type="omfile" file="/var/log/ceelog" template="CEETemplate")
 </textarea>
 
-<p><b>Legacy Configuration Directoves</b>:</p>
+<p><b>Legacy Configuration Directives</b>:</p>
 <ul>
-<li><strong>$ImjournalPersistStateInterval [lines]</strong><br>
-It specifies how often should the journal state be persisted. This option is useful for rsyslog to start reading from the last journal message it read.
-</li>
-<li><strong>$ImjournalStateFile&nbsp;/path/to/file</strong><br>
-It specifies where the state file for persisting journal state is located.
-</li>
+<li>$imjournalPersistStateInterval &lt;Delimiter&gt;<br>
+Equivalent to: ratelimit.PersistStateInterval</li>
+<li>$imjournalStateFile &lt;Delimiter&gt;<br>
+Equivalent to: ratelimit.StateFile</li>
+<li>$imjournalRatelimitInterval &lt;Delimiter&gt;<br>
+Equivalent to: ratelimit.interval</li>
+<li>$imjournalRatelimitBurst &lt;Delimiter&gt;<br>
+Equivalent to: ratelimit.burst</li>
 </ul>
 
 </body>
