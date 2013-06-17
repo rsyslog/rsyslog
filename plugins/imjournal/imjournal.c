@@ -604,11 +604,11 @@ ENDwillRun
 /* close journal */
 BEGINafterRun
 CODESTARTafterRun
-	ratelimitDestruct(ratelimiter);
 	if (cs.stateFile) { /* can't persist without a state file */
 		persistJournalState();
 	}
 	sd_journal_close(j);
+	ratelimitDestruct(ratelimiter);
 ENDafterRun
 
 
