@@ -604,6 +604,7 @@ ENDwillRun
 /* close journal */
 BEGINafterRun
 CODESTARTafterRun
+	ratelimitDestruct(ratelimiter);
 	if (cs.stateFile) { /* can't persist without a state file */
 		persistJournalState();
 	}
@@ -613,7 +614,6 @@ ENDafterRun
 
 BEGINmodExit
 CODESTARTmodExit
-	ratelimitDestruct(ratelimiter);
 	if(pInputName != NULL)
 		prop.Destruct(&pInputName);
 	if(pLocalHostIP != NULL)
