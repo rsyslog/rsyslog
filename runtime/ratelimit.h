@@ -35,6 +35,7 @@ struct ratelimit_s {
 	unsigned nsupp;		/**< nbr of msgs suppressed */
 	msg_t *pMsg;
 	sbool bThreadSafe;	/**< do we need to operate in Thread-Safe mode? */
+	sbool bNoTimeCache;	/**< if we shall not used cached reception time */
 	pthread_mutex_t mut;	/**< mutex if thread-safe operation desired */
 };
 
@@ -42,6 +43,7 @@ struct ratelimit_s {
 rsRetVal ratelimitNew(ratelimit_t **ppThis, char *modname, char *dynname);
 void ratelimitSetThreadSafe(ratelimit_t *ratelimit);
 void ratelimitSetLinuxLike(ratelimit_t *ratelimit, unsigned short interval, unsigned short burst);
+void ratelimitSetNoTimeCache(ratelimit_t *ratelimit);
 void ratelimitSetSeverity(ratelimit_t *ratelimit, intTiny severity);
 rsRetVal ratelimitMsg(ratelimit_t *ratelimit, msg_t *pMsg, msg_t **ppRep);
 rsRetVal ratelimitAddMsg(ratelimit_t *ratelimit, multi_submit_t *pMultiSub, msg_t *pMsg);

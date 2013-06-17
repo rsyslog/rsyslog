@@ -515,7 +515,10 @@ finalize_it:
 BEGINrunInput
 CODESTARTrunInput
 	CHKiRet(ratelimitNew(&ratelimiter, "imjournal", NULL));
+	dbgprintf("imjournal: ratelimiting burst %d, interval %d\n", cs.ratelimitBurst,
+		  cs.ratelimitInterval);
 	ratelimitSetLinuxLike(ratelimiter, cs.ratelimitInterval, cs.ratelimitBurst);
+	ratelimitSetNoTimeCache(ratelimiter);
 
 	if (cs.stateFile) {
 		CHKiRet(loadJournalState());
@@ -601,6 +604,7 @@ ENDwillRun
 /* close journal */
 BEGINafterRun
 CODESTARTafterRun
+	ratelimitDestruct(ratelimiter);
 	if (cs.stateFile) { /* can't persist without a state file */
 		persistJournalState();
 	}
@@ -610,7 +614,6 @@ ENDafterRun
 
 BEGINmodExit
 CODESTARTmodExit
-	ratelimitDestruct(ratelimiter);
 	if(pInputName != NULL)
 		prop.Destruct(&pInputName);
 	if(pLocalHostIP != NULL)
