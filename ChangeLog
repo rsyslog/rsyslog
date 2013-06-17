@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 7.4.1  [v7.4-stable] 2013-06-??
+Version 7.4.1  [v7.4-stable] 2013-06-17
 - imjournal: add ratelimiting capability
   The original imjournal code did not support ratelimiting at all. We
   now have our own ratelimiter. This can mitigate against journal
