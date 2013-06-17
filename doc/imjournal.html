@@ -65,6 +65,30 @@ ratelimit.interval interval. For futher information, see description there.
 
 </ul>
 
+<b>Caveats/Known Bugs:</b>
+<p>
+<ul>
+<li>As stated above, a corrupted systemd journal database can cause major
+problems, depending on what the corruption results in. This is beyond the
+control of the rsyslog team.
+</ul>
+</p>
+<p><b>Sample:</b></p>
+<p>
+The following example shows pulling structured imjournal messages and saving them into /var/log/ceelog.
+</p>
+<textarea rows="11" cols="80">
+module(load="imjournal" PersistStateInterval="100" StateFile="/path/to/file") #load imjournal module
+module(load="mmjsonparse") #load mmjsonparse module for structured logs
+
+template(name="CEETemplate" type="string"
+         string="%TIMESTAMP% %HOSTNAME% %syslogtag% @cee: %$!all-json%\n"
+	) #template for messages
+
+action(type="mmjsonparse")
+action(type="omfile" file="/var/log/ceelog" template="CEETemplate")
+</textarea>
+
 <p><b>Legacy Configuration Directives</b>:</p>
 <ul>
 <li>$imjournalPersistStateInterval &lt;Delimiter&gt;<br>
@@ -76,28 +100,6 @@ Equivalent to: ratelimit.interval</li>
 <li>$imjournalRatelimitBurst &lt;Delimiter&gt;<br>
 Equivalent to: ratelimit.burst</li>
 </ul>
-
-<b>Caveats/Known Bugs:</b>
-<p>
-<ul>
-<li>As stated above, a corrupted systemd journal database can cause major
-problems, depending on what the corruption results in. This is beyond the
-control of the rsyslog team.
-</ul>
-</p>
-<p><b>Sample:</b></p>
-<p>
-The following example shows pulling structured imjournal messages and saving them into /var/log/ceelog
-</p>
-<textarea rows="11" cols="60">
-module(load="imjournal" PersistStateInterval="100" StateFile="/path/to/file") #load imjournal module
-module(load="mmjsonparse") #load mmjsonparse module for structured logs
-
-$template CEETemplate,"%TIMESTAMP% %HOSTNAME% %syslogtag% @cee: %$!all-json%\n" #template for messages
-
-*.* :mmjsonparse:
-*.* /var/log/ceelog;CEETemplate
-</textarea>
 
 </body>
 </html>
