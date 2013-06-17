@@ -150,6 +150,15 @@ withinRatelimit(ratelimit_t *ratelimit, time_t tt)
 		goto finalize_it;
 	}
 
+	/* we primarily need "NoTimeCache" mode for imjournal, as it
+	 * sets the message generation time to the journal timestamp.
+	 * As such, we do not get a proper indication of the actual
+	 * message rate. To prevent this, we need to query local
+	 * system time ourselvs.
+	 */
+	if(ratelimit->bNoTimeCache)
+		tt = time(NULL);
+
 	assert(ratelimit->burst != 0);
 
 	if(ratelimit->begin == 0)
@@ -318,6 +327,12 @@ ratelimitSetThreadSafe(ratelimit_t *ratelimit)
 	ratelimit->bThreadSafe = 1;
 	pthread_mutex_init(&ratelimit->mut, NULL);
 }
+void
+ratelimitSetNoTimeCache(ratelimit_t *ratelimit)
+{
+	ratelimit->bNoTimeCache = 1;
+	pthread_mutex_init(&ratelimit->mut, NULL);
+}
 
 /* Severity level determines which messages are subject to
  * ratelimiting. Default (no value set) is all messages.
@@ -368,4 +383,3 @@ ratelimitModInit(void)
 finalize_it:
 	RETiRet;
 }
-
