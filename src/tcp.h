@@ -106,7 +106,7 @@ relpRetVal relpTcpSetCACert(relpTcp_t *pThis, char *cert);
 relpRetVal relpTcpSetOwnCert(relpTcp_t *pThis, char *cert);
 relpRetVal relpTcpSetPrivKey(relpTcp_t *pThis, char *cert);
 relpRetVal relpTcpSetPermittedPeers(relpTcp_t *pThis, relpPermittedPeers_t *pPeers);
+relpRetVal relpTcpRtryHandshake(relpTcp_t *pThis);
 int relpTcpGetRtryDirection(relpTcp_t *pThis);
-void relpTcpRtryHandshake(relpTcp_t *pThis);
 
 #endif /* #ifndef RELPTCP_H_INCLUDED */
