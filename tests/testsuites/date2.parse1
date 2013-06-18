@@ -1,0 +1,3 @@
+<38>Mar 7 19:06:53 example tag: testmessage (only date actually tested)
+38,auth,info,Mar  7 19:06:53,example,tag,tag:, testmessage (only date actually tested)
+# only one space between "Mar" and "7"

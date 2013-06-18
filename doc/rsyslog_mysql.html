@@ -1,0 +1,271 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><title>Writing syslog Data to MySQL</title>
+<a href="features.html">back</a>
+<meta name="KEYWORDS" content="syslog, mysql, syslog to mysql, howto"></head>
+<body>
+<h1>Writing syslog messages to MySQL</h1>
+<p><small><i>Written by <a href="http://www.adiscon.com/en/people/rainer-gerhards.php">Rainer
+Gerhards</a> (2008-02-28)</i></small></p>
+<h2>Abstract</h2>
+<p><i><b>In this paper, I describe how to write
+<a href="http://www.monitorware.com/en/topics/syslog/">syslog</a>
+messages to a <a href="http://www.mysql.com">MySQL</a>
+database.</b> Having syslog messages in a database is often
+handy, especially when you intend to set up a front-end for viewing
+them. This paper describes an approach with <a href="http://www.rsyslog.com/">rsyslogd</a>,
+an
+alternative enhanced syslog daemon natively supporting MySQL. I
+describe the components needed to be installed and how to configure
+them. Please note that as of this writing, rsyslog supports a variety
+of databases. While this guide is still MySQL-focussed, you
+can&nbsp;probably use it together with other ones too. You just need to
+modify a few settings.</i></p>
+<h2>Background</h2>
+<p>In many cases, syslog data is simply written to text files.
+This approach has some advantages, most notably it is very fast and
+efficient. However, data stored in text files is not readily accessible
+for real-time viewing and analysis. To do that, the messages need to be
+in a database. There are various ways to store syslog messages in a
+database. For example, some have the syslogd write text files which are
+later feed via a separate script into the database. Others have written
+scripts taking the data (via a pipe) from a non-database-aware syslogd
+and store them as they appear. Some others use database-aware syslogds
+and make them write the data directly to the database. In this paper, I
+use that "direct write" approach. I think it is superior, because the
+syslogd itself knows the status of the database connection and thus can
+handle it intelligently (well ... hopefully ;)). I use rsyslogd to
+acomplish this, simply because I have initiated the rsyslog project
+with database-awareness as one goal.</p>
+<p><b>One word of caution:</b> while message storage
+in the database provides an excellent foundation for interactive
+analysis, it comes at a cost. Database i/o is considerably slower than
+text file i/o. As such, directly writing to the database makes sense
+only if your message volume is low enough to allow a) the syslogd, b)
+the network, and c) the database server to catch up with it. Some time
+ago, I have written a paper on
+<a href="http://www.monitorware.com/Common/en/Articles/performance-optimizing-syslog-server.php">optimizing
+syslog server performance</a>. While this paper talks about
+Window-based solutions, the ideas in it are generic enough to apply
+here, too. So it might be worth reading if you anticipate medium high
+to high traffic. If you anticipate really high traffic (or very large
+traffic spikes), you should seriously consider forgetting about direct
+database writes - in my opinion, such a situation needs either a very
+specialised system or a different approach (the text-file-to-database
+approach might work better for you in this case).
+</p>
+<h2>Overall System Setup</h2>
+<p>In this paper, I concentrate on the server side. If you are
+thinking about interactive syslog message review, you probably want to
+centralize syslog. In such a scenario, you have multiple machines (the
+so-called clients) send their data to a central machine (called server
+in this context). While I expect such a setup to be typical when you
+are interested in storing messages in the database, I do not describe
+how to set it up. This is beyond the scope of this paper. If you search
+a little, you will probably find many good descriptions on how to
+centralize syslog. If you do that, it might be a good idea to do it
+securely, so you might also be interested in my paper on <a href="rsyslog_stunnel.html">
+ssl-encrypting syslog message transfer</a>.</p>
+<p>No matter how the messages arrive at the server, their
+processing is always the same. So you can use this paper in combination
+with any description for centralized syslog reporting.</p>
+<p>As I already said, I use rsyslogd on the server. It has
+intrinsic support for talking to MySQL databases. For obvious reasons,
+we also need an instance of MySQL running. To keep us focussed, the
+setup of MySQL itself is also beyond the scope of this paper. I assume
+that you have successfully installed MySQL and also have a front-end at
+hand to work with it (for example,
+<a href="http://www.phpmyadmin.net/">phpMyAdmin</a>).
+Please make sure that this is installed, actually working and you have
+a basic understanding of how to handle it.</p>
+<h2>Setting up the system</h2>
+<p>You need to download and install rsyslogd first. Obtain it
+from the
+<a href="http://www.rsyslog.com/">rsyslog site</a>.
+Make sure that you disable stock syslogd, otherwise you will experience
+some difficulties. On some distributions &nbsp;(Fedora 8 and above, for
+example), rsyslog may already by the default syslogd, in which case you
+obviously do not need to do anything specific. For many others, there
+are prebuild packages available. If you use either, please make sure
+that you have the required database plugins for your database
+available. It usually is a separate package and typically <span style="font-weight: bold;">not</span> installed by default.</p>
+<p>It is important to understand how rsyslogd talks to the
+database. In rsyslogd, there is the concept of "templates". Basically,
+a template is a string that includes some replacement characters, which
+are called "properties" in rsyslog. Properties are accessed via the "<a href="property_replacer.html">Property Replacer</a>".
+Simply said, you access properties by including their name between
+percent signs inside the template. For example, if the syslog message
+is "Test", the template "%msg%" would be expanded to "Test". Rsyslogd
+supports sending template text as a SQL statement to MySQL. As such,
+the template must be a valid SQL statement. There is no limit in what
+the statement might be, but there are some obvious and not so obvious
+choices. For example, a template "drop table xxx" is possible, but does
+not make an awful lot of sense. In practice, you will always use an
+"insert" statment inside the template.</p>
+<p>An example: if you would just like to store the msg part of
+the full syslog message, you have probably created a table "syslog"
+with a single column "message". In such a case, a good template would
+be "insert into syslog(message) values ('%msg%')". With the example
+above, that would be expanded to "insert into syslog(message)
+values('Test')". This expanded string is then sent to the database.
+It's that easy, no special magic. The only thing you must ensure is
+that your template expands to a proper SQL statement and that this
+statement matches your database design.</p>
+<p>Does that mean you need to create database schema yourself and
+also must fully understand rsyslogd's properties? No, that's not
+needed. Because we anticipated that folks are probably more interested
+in getting things going instead of designing them from scratch. So we
+have provided a default schema as well as build-in support for it. This
+schema also offers an additional benefit: rsyslog is part of <a href="http://www.adiscon.com/en/">Adiscon</a>'s
+<a href="http://www.monitorware.com/en/">MonitorWare
+product line</a> (which includes open source and closed source
+members). All of these tools share the same default schema and know how
+to operate on it. For this reason, the default schema is also called
+the "MonitorWare Schema". If you use it, you can simply add <a href="http://www.phplogcon.org/">phpLogCon, a GPLed syslog
+web interface</a>, to your system and have instant interactive
+access to your database. So there are some benefits in using the
+provided schema.</p>
+<p>The schema definition is contained in the file "createDB.sql".
+It comes with the rsyslog package. Review it to check that the database
+name is acceptable for you. Be sure to leave the table and field names
+unmodified, because otherwise you need to customize rsyslogd's default
+sql template, which we do not do in this paper. Then, run the script
+with your favourite MySQL tool. Double-check that the table was
+successfully created.</p>
+<p>MySQL support in rsyslog is integrated via a loadable plug-in
+module. To use the database
+functionality, MySQL must be enabled in the config file BEFORE the
+first database table action is
+used. This is done by placing the</p>
+<blockquote>
+<p><code>$ModLoad ommysql</code></p>
+</blockquote>
+<p>directive at the begining of /etc/rsyslog.conf. For other databases, use their plugin name (e.g. ompgsql).</p>
+<p>Next, we need to tell rsyslogd to write data to the database.
+As we use the default schema, we do NOT need to define a template for
+this. We can use the hardcoded one (rsyslogd handles the proper
+template linking). So all we need to do is add a simple selector line
+to /etc/rsyslog.conf:</p>
+<blockquote>
+<p><code>*.*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; :ommysql:database-server,database-name,database-userid,database-password</code></p>
+</blockquote>
+<p>Again, other databases have other selector names, e.g. ":ompgsql:"
+instead of ":ommysql:". See the output plugin's documentation for
+details.</p><p>In many cases, MySQL will run on the local machine. In this
+case, you can simply use "127.0.0.1" for <i>database-server</i>.
+This can be especially advisable, if you do not need to expose MySQL to
+any process outside of the local machine. In this case, you can simply
+bind it to 127.0.0.1, which provides a quite secure setup. Of course,
+also supports remote MySQL instances. In that case, use the remote
+server name (e.g. mysql.example.com) or IP-address. The <i>
+database-name</i> by default is "syslog". If you have modified
+the default, use your name here. <i>Database-userid</i>
+and <i>-password</i> are the credentials used to connect
+to the database. As they are stored in clear text in rsyslog.conf, that
+user should have only the least possible privileges. It is sufficient
+to grant it INSERT privileges to the systemevents table, only. As a
+side note, it is strongly advisable to make the rsyslog.conf file
+readable by root only - if you make it world-readable, everybody could
+obtain the password (and eventually other vital information from it).
+In our example, let's assume you have created a MySQL user named
+"syslogwriter" with a password of "topsecret" (just to say it bluntly:
+such a password is NOT a good idea...). If your MySQL database is on
+the local machine, your rsyslog.conf line might look like in this
+sample:</p>
+<blockquote>
+<p><code>*.*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; :ommysql:127.0.0.1,Syslog,syslogwriter,topsecret</code></p>
+</blockquote>
+<p>Save rsyslog.conf, restart rsyslogd - and you should see
+syslog messages being stored in the "systemevents" table!</p>
+<p>The example line stores every message to the database.
+Especially if you have a high traffic volume, you will probably limit
+the amount of messages being logged. This is easy to acomplish: the
+"write database" action is just a regular selector line. As such, you
+can apply normal selector-line filtering. If, for example, you are only
+interested in messages from the mail subsystem, you can use the
+following selector line:</p>
+<blockquote>
+<p><code>mail.*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</code><code>:ommysql:</code><code>127.0.0.1,syslog,syslogwriter,topsecret</code></p>
+</blockquote>
+<p>Review the <a href="rsyslog_conf.html">rsyslog.conf</a>
+documentation for details on selector lines and their filtering.</p>
+<p><b>You have now completed everything necessary to store
+syslog messages to the MySQL database.</b> If you would like to
+try out a front-end, you might want to look at <a href="http://www.phplogcon.org/">phpLogCon</a>, which
+displays syslog data in a browser. As of this writing, phpLogCon is not
+yet a powerful tool, but it's open source, so it might be a starting
+point for your own solution.</p>
+<h2>On Reliability...</h2>
+<p>Rsyslogd writes syslog messages directly to the database. This
+implies that the database must be available at the time of message
+arrival. If the database is offline, no space is left or something else
+goes wrong - rsyslogd can not write the database record. If rsyslogd is
+unable to store a message, it performs one retry. This is helpful if
+the database server was restarted. In this case, the previous
+connection was broken but a reconnect immediately succeeds. However, if
+the database is down for an extended period of time, an immediate retry
+does not help.</p>
+<p>Message loss in this scenario can easily be prevented with
+rsyslog. All you need to do is run the database writer in queued mode.
+This is now described in a generic way and I do not intend to duplicate
+it here. So please be sure to read "<a href="rsyslog_high_database_rate.html">Handling a massive
+syslog database insert rate with Rsyslog</a>", which describes
+the scenario and also includes configuration examples.</p>
+<h2>Conclusion</h2>
+<p>With minimal effort, you can use rsyslogd to write syslog
+messages to a MySQL database. You can even make it absolutely fail-safe
+and protect it against database server downtime. Once the messages are
+arrived there, you
+can interactivley review and analyse them. In practice, the messages
+are also stored in text files for longer-term archival and the
+databases are cleared out after some time (to avoid becoming too slow).
+If you expect an extremely high syslog message volume, storing it in
+real-time to the database may outperform your database server. In such
+cases, either filter out some messages or used queued mode (which in
+general is recommended with databases).</p>
+<p>The method outlined in this paper provides an easy to setup
+and maintain solution for most use cases.</p>
+<h3>Feedback Requested</h3>
+<p>I would appreciate feedback on this paper. If you have
+additional ideas, comments or find bugs, please
+<a href="mailto:rgerhards@adiscon.com">let me know</a>.</p>
+<h2>References and Additional Material</h2>
+<ul>
+<li><a href="http://www.rsyslog.com">www.rsyslog.com</a>
+- the rsyslog site</li>
+<li> <a href="http://www.monitorware.com/Common/en/Articles/performance-optimizing-syslog-server.php">
+Paper on Syslog Server Optimization</a></li>
+</ul>
+<h2>Revision History</h2>
+<ul>
+<li>2005-08-02 * <a href="http://www.adiscon.com/en/people/rainer-gerhards.php">Rainer
+Gerhards</a> * initial version created</li>
+<li>2005-08-03 * <a href="http://www.adiscon.com/en/people/rainer-gerhards.php">Rainer
+Gerhards</a> * added references to demo site</li>
+<li>2007-06-13 * <a href="http://www.adiscon.com/en/people/rainer-gerhards.php">Rainer
+Gerhards</a> * removed demo site - was torn down because too
+expensive for usage count</li>
+<li>2008-02-21 * <a href="http://www.adiscon.com/en/people/rainer-gerhards.php">Rainer
+Gerhards</a> * updated reliability section, can now be done with
+on-demand disk queues</li><li>2008-02-28 * <a href="http://www.adiscon.com/en/people/rainer-gerhards.php">Rainer
+Gerhards</a> * added info on other databases, updated syntax to more recent one</li>
+</ul>
+<h2>Copyright</h2>
+<p>Copyright (c) 2005-2008
+<a href="http://www.adiscon.com/en/people/rainer-gerhards.php">Rainer
+Gerhards</a> and <a href="http://www.adiscon.com/en/">Adiscon</a>.</p>
+<p>Permission is granted to copy, distribute and/or modify this
+document under the terms of the GNU Free Documentation License, Version
+1.2 or any later version published by the Free Software Foundation;
+with no Invariant Sections, no Front-Cover Texts, and no Back-Cover
+Texts. A copy of the license can be viewed at <a href="http://www.gnu.org/copyleft/fdl.html">
+http://www.gnu.org/copyleft/fdl.html</a>.</p>
+<p>[<a href="manual.html">manual index</a>]
+[<a href="rsyslog_conf.html">rsyslog.conf</a>]
+[<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the
+<a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
+Copyright &copy; 2008 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>. Released under the GNU GPL
+version 2 or higher.</font></p>
+
+</body></html>

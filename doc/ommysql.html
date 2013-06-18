@@ -1,0 +1,85 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Language" content="en">
+<title>MySQL Database Output Module</title>
+</head>
+
+<body>
+<a href="rsyslog_conf_modules.html">back</a>
+
+<h1>MySQL Database Output Module</h1>
+<p><b>Module Name:&nbsp;&nbsp;&nbsp; ommysql</b></p>
+<p><b>Author: </b>Michael Meckelein (Initial Author) / Rainer Gerhards
+&lt;rgerhards@adiscon.com&gt;</p>
+<p><b>Description</b>:</p>
+<p>This module provides native support for logging to MySQL databases. It offers
+superior performance over the more generic <a href="omlibdbi.html">omlibdbi</a> module.
+</p>
+<p><b>Action Parameters</b>:</p>
+<ul>
+<li><b>server</b><br>Name or address of the MySQL server
+<li><b>serverport</b><br>Permits to select
+a non-standard port for the MySQL server. The default is 0, which means the
+system default port is used. There is no need to specify this parameter unless
+you know the server is running on a non-standard listen port.
+<li><b>db</b><br>Database to use
+<li><b>uid</b><br>logon userid used to connect to server. Must have proper permissions.
+<li><b>pwd</b><br>the user's password
+<li><b>template</b><br>Template to use when submitting messages.
+<li><b>mysqlconfig.file</b><br>Permits the selection
+of an optional MySQL Client Library configuration file (my.cnf) for extended
+configuration functionality. The use of this configuration directive is necessary 
+only if you have a non-standard environment or if fine-grained control over the
+database connection is desired.</li>
+<li><b>mysqlconfig.section</b><br>Permits the selection of the
+section within the configuration file specified by the <b>myselconfig.file</b> parameter.
+<br>This will likely only be used where the database administrator provides a single
+configuration file with multiple profiles.
+<br>This configuration parameter is ignored unless <b>mysqlconfig.file</b> is also used.
+<br>If omitted, the MySQL Client Library default of &quot;client&quot; will be used.</li>
+</ul>
+<p><b>Legacy (pre-v6) Configuration Directives</b>:</p>
+<p>ommysql mostly uses the "very old style" (v0) configuration, with almost everything on the
+action line itself.
+<ul>
+<li><b>$ActionOmmysqlServerPort &lt;port&gt;</b> - like the "serverport" action parameter.
+<li><b>$OmMySQLConfigFile &lt;file name&gt;</b> - like the "mysqlconfig.file" action parameter.
+<li><b>$OmMySQLConfigSection &lt;string&gt;</b> - like the "mysqlconfig.file" action parameter.
+<li>Action line:
+<br><b>:ommysql:database-server,database-name,database-userid,database-password</b>
+<br>All parameters should be filled in for a successful connect.
+</ul>
+<p>Note rsyslog contains a canned default template to write to the MySQL
+database. It works on the MonitorWare schema. This template is:
+<p>
+<textarea rows="5" cols="80">$template tpl,"insert into SystemEvents (Message, Facility, FromHost, Priority, DeviceReportedTime, ReceivedAt, InfoUnitID, SysLogTag) values ('%msg%', %syslogfacility%, '%HOSTNAME%', %syslogpriority%, '%timereported:::date-mysql%', '%timegenerated:::date-mysql%', %iut%, '%syslogtag%')",SQL
+</textarea>
+<p>As you can see, the template is an actual SQL statement. Note the ",SQL" option: it tells the
+template processor that the template is used for SQL processing, thus quote characters are quoted
+to prevent security issues. You can not assign a template without ",SQL" to a MySQL output action.
+<p>If you would like to change fields contents or add or delete your own fields, you
+can simply do so by modifying the schema (if required) and creating your own custom
+template.
+<p><b>Sample:</b></p>
+<p>The following sample writes all syslog messages to the
+database "syslog_db" on mysqlsever.example.com. The server is
+being accessed under the account of "user" with password "pwd".
+</p>
+<textarea rows="5" cols="80">$ModLoad ommysql
+*.* 	action(type="ommysql" server="mysqlserver.example.com" serverport="1234"
+	       db="syslog_db" uid="user" pwd="pwd")
+</textarea>
+<p><b>Legacy Sample:</b></p>
+<p>The same as above, but in legacy config format (pre rsyslog-v6):
+<textarea rows="5" cols="80">$ModLoad ommysql
+$ActionOmmysqlServerPort 1234 # use non-standard port
+*.*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; :ommysql:mysqlserver.example.com,syslog_db,user,pwd
+</textarea>
+<p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>]
+[<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the
+<a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
+Copyright &copy; 2008-2012 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>.
+Released under the ASL 2.0.</font></p>
+</body></html>

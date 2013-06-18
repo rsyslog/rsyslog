@@ -1,0 +1,333 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><title>Configuration Directives - rsyslog.conf</title></head>
+<body>
+<p>This is a part of the rsyslog.conf documentation.</p>
+<a href="rsyslog_conf.html">back</a>
+<h2>Configuration Directives</h2>
+<p>All configuration directives need to be specified on a line by their
+own and must start with a dollar-sign. Note that those starting with
+the word "Action" modify the next action and should be specified
+in front of it.
+<p>Here is a list in alphabetical order. Follow links for a description.</p>
+<p>Not all directives have an in-depth description right now.
+Default values for them are in bold. A more in-depth description will
+appear as implementation progresses.
+</p>
+<p><b>Be sure to read information about <a href="queues.html">queues in rsyslog</a></b> -
+many parameter settings modify queue parameters. If in doubt, use the
+default, it is usually well-chosen and applicable in most cases.</p>
+<ul>
+<li><a href="rsconf1_abortonuncleanconfig.html"><b>$AbortOnUncleanConfig</b></a> - abort startup if there is
+any issue with the config file</li>
+<li><a href="rsconf1_actionexeconlywhenpreviousissuspended.html">$ActionExecOnlyWhenPreviousIsSuspended</a></li>
+<li><b>$ActionName</b> &lt;a_single_word&gt; - used primarily for documentation, e.g. when
+generating a configuration graph. Available sice 4.3.1.
+<li><b>$ActionExecOnlyOnceEveryInterval</b> &lt;seconds&gt; -
+execute action only if the last execute is at last
+&lt;seconds&gt; seconds in the past (more info in <a href="ommail.html">ommail</a>,
+but may be used with any action)</li>
+<li><i><b>$ActionExecOnlyEveryNthTime</b> &lt;number&gt;</i> - If configured, the next action will
+only be executed every n-th time. For example, if configured to 3, the first two messages
+that go into the action will be dropped, the 3rd will actually cause the action to execute,
+the 4th and 5th will be dropped, the 6th executed under the action, ... and so on. Note:
+this setting is automatically re-set when the actual action is defined.</li>
+<li><i><b>$ActionExecOnlyEveryNthTimeTimeout</b> &lt;number-of-seconds&gt;</i> - has a meaning only if
+$ActionExecOnlyEveryNthTime is also configured for the same action. If so, the timeout
+setting specifies after which period the counting of "previous actions" expires and
+a new action count is begun. Specify 0 (the default) to disable timeouts.
+<br>
+<i>Why is this option needed?</i> Consider this case: a message comes in at, eg., 10am. That's
+count 1. Then, nothing happens for the next 10 hours. At 8pm, the next
+one occurs. That's count 2. Another 5 hours later, the next message
+occurs, bringing the total count to 3. Thus, this message now triggers
+the rule.
+<br>
+The question is if this is desired behavior? Or should the rule only be
+triggered if the messages occur within an e.g. 20 minute window? If the
+later is the case, you need a
+<br>
+<b>$ActionExecOnlyEveryNthTimeTimeout 1200</b>
+<br>
+This directive will timeout previous messages seen if they are older
+than 20 minutes. In the example above, the count would now be always 1
+and consequently no rule would ever be triggered.
+
+<li><a href="omfile.html"><b>$ActionFileDefaultTemplate</b></a> [templateName] - sets a new default template for file actions</li>
+<li><a href="omfile.html"><b>$ActionFileEnableSync</b></a> [on/<span style="font-weight: bold;">off</span>] - enables file
+syncing capability of omfile</li>
+<li><a href="omfwd.html"><b>$ActionForwardDefaultTemplate</b></a> [templateName] - sets a new
+default template for UDP and plain TCP forwarding action</li>
+<li><b>$ActionGSSForwardDefaultTemplate</b> [templateName] - sets a
+new default template for GSS-API forwarding action</li>
+<li><b>$ActionQueueCheckpointInterval</b> &lt;number&gt;</li>
+<li><b>$ActionQueueDequeueBatchSize</b> &lt;number&gt; [default 16]</li>
+<li><b>$ActionQueueDequeueSlowdown</b> &lt;number&gt; [number
+is timeout in <i> micro</i>seconds (1000000us is 1sec!),
+default 0 (no delay). Simple rate-limiting!]</li>
+<li><b>$ActionQueueDiscardMark</b> &lt;number&gt; [default
+9750]</li>
+<li><b>$ActionQueueDiscardSeverity</b> &lt;number&gt;
+[*numerical* severity! default 8 (nothing discarded)]</li>
+<li><b>$ActionQueueFileName</b> &lt;name&gt;</li>
+<li><b>$ActionQueueHighWaterMark</b> &lt;number&gt; [default
+8000]</li>
+<li><b>$ActionQueueImmediateShutdown</b> [on/<b>off</b>]</li>
+<li><b>$ActionQueueSize</b> &lt;number&gt;</li>
+<li><b>$ActionQueueLowWaterMark</b> &lt;number&gt; [default
+2000]</li>
+<li><b>$ActionQueueMaxFileSize</b> &lt;size_nbr&gt;, default 1m</li>
+<li><b>$ActionQueueTimeoutActionCompletion</b> &lt;number&gt;
+[number is timeout in ms (1000ms is 1sec!), default 1000, 0 means
+immediate!]</li>
+<li><b>$ActionQueueTimeoutEnqueue</b> &lt;number&gt; [number
+is timeout in ms (1000ms is 1sec!), default 2000, 0 means indefinite]</li>
+<li><b>$ActionQueueTimeoutShutdown</b> &lt;number&gt; [number
+is timeout in ms (1000ms is 1sec!), default 0 (indefinite)]</li>
+<li><b>$ActionQueueWorkerTimeoutThreadShutdown</b>
+&lt;number&gt; [number is timeout in ms (1000ms is 1sec!),
+default 60000 (1 minute)]</li>
+<li><b>$ActionQueueType</b> [FixedArray/LinkedList/<b>Direct</b>/Disk]</li>
+<li><b>$ActionQueueSaveOnShutdown&nbsp;</b> [on/<b>off</b>]
+</li>
+<li><b>$ActionQueueWorkerThreads</b> &lt;number&gt;, num worker threads, default 1, recommended 1</li>
+<li><b>$ActionQueueWorkerThreadMinumumMessages</b> &lt;number&gt;, default 100</li>
+<li><a href="rsconf1_actionresumeinterval.html"><b>$ActionResumeInterval</b></a></li>
+<li><b>$ActionResumeRetryCount</b> &lt;number&gt; [default 0, -1 means eternal]</li>
+<li><a href="omfwd.html"><b>$ActionSendResendLastMsgOnReconnect</b></a> &lt;[on/<b>off</b>]&gt; specifies if the last message is to be resend when a connecition breaks and has been reconnected. May increase reliability, but comes at the risk of message duplication.
+<li><a href="omfwd.html"><b>$ActionSendStreamDriver</b></a> &lt;driver basename&gt; just like $DefaultNetstreamDriver, but for the specific action</li>
+<li><a href="omfwd.html"><b>$ActionSendStreamDriverMode</b></a> &lt;mode&gt;, default 0, mode to use with the stream driver (driver-specific)</li>
+<li><a href="omfwd.html"><b>$ActionSendStreamDriverAuthMode</b></a> &lt;mode&gt;,&nbsp; authentication mode to use with the stream driver. Note that this directive requires TLS
+netstream drivers. For all others, it will be ignored.
+(driver-specific)</li>
+<li><a href="omfwd.html"><b>$ActionSendStreamDriverPermittedPeer</b></a> &lt;ID&gt;,&nbsp; accepted fingerprint (SHA1) or name of remote peer. Note that this directive requires TLS
+netstream drivers. For all others, it will be ignored.
+(driver-specific) -<span style="font-weight: bold;"> directive may go away</span>!</li>
+<li><a href="omfwd.html"><b>$ActionSendTCPRebindInterval</b> nbr</a>- [available since 4.5.1] - instructs the TCP send
+action to close and re-open the connection to the remote host every nbr of messages sent.
+Zero, the default, means that no such processing is done. This directive is useful for
+use with load-balancers. Note that there is some performance overhead associated with it,
+so it is advisable to not too often &quot;rebind&quot; the connection (what
+&quot;too often&quot; actually means depends on your configuration, a rule of thumb is
+that it should be not be much more often than once per second).</li>
+<li><a href="omfwd.html"><b>$ActionSendUDPRebindInterval</b> nbr</a>- [available since 4.3.2] - instructs the UDP send
+action to rebind the send socket every nbr of messages sent. Zero, the default, means
+that no rebind is done. This directive is useful for use with load-balancers.</li>
+<li><b>$ActionWriteAllMarkMessages</b> [on/<b>off</b>]- [available since 5.1.5] - normally, mark messages
+are written to actions only if the action was not recently executed (by default, recently means within the
+past 20 minutes). If this setting is switched to &quot;on&quot;, mark messages are always sent to actions,
+no matter how recently they have been executed. In this mode, mark messages can be used as a kind of
+heartbeat. Note that this option auto-resets to &quot;off&quot;, so if you intend to use it with multiple
+actions, it must be specified in front off <b>all</b> selector lines that should provide this 
+functionality.
+</li>
+<li><a href="rsconf1_allowedsender.html"><b>$AllowedSender</b></a></li>
+<li><a href="rsconf1_controlcharacterescapeprefix.html"><b>$ControlCharacterEscapePrefix</b></a></li>
+<li><a href="rsconf1_debugprintcfsyslinehandlerlist.html"><b>$DebugPrintCFSyslineHandlerList</b></a></li>
+
+<li><a href="rsconf1_debugprintmodulelist.html"><b>$DebugPrintModuleList</b></a></li>
+<li><a href="rsconf1_debugprinttemplatelist.html"><b>$DebugPrintTemplateList</b></a></li>
+<li><b>$DefaultNetstreamDriver</b> &lt;drivername&gt;, the default <a href="netstream.html">network stream driver</a> to use. Defaults to&nbsp;ptcp.$DefaultNetstreamDriverCAFile &lt;/path/to/cafile.pem&gt;</li>
+<li><b>$DefaultNetstreamDriverCertFile</b> &lt;/path/to/certfile.pem&gt;</li>
+<li><b>$DefaultNetstreamDriverKeyFile</b> &lt;/path/to/keyfile.pem&gt;</li>
+<li><b>$DefaultRuleset</b> <i>name</i> - changes the default ruleset for unbound inputs to
+the provided <i>name</i> (the default default ruleset is named
+&quot;RSYSLOG_DefaultRuleset&quot;).  It is advised to also read
+our paper on <a href="multi_ruleset.html">using multiple rule sets in rsyslog</a>.</li>
+<li><a href="omfile.html"><b>$CreateDirs</b></a> [<b>on</b>/off] - create directories on an as-needed basis</li>
+<li><a href="omfile.html"><b>$DirCreateMode</b></a></li>
+<li><a href="omfile.html"><b>$DirGroup</b></a></li>
+<li><a href="omfile.html"><b>$DirOwner</b></a></li>
+<li><a href="rsconf1_dropmsgswithmaliciousdnsptrrecords.html"><b>$DropMsgsWithMaliciousDnsPTRRecords</b></a></li>
+<li><a href="rsconf1_droptrailinglfonreception.html"><b>$DropTrailingLFOnReception</b></a></li>
+<li><a href="omfile.html"><b>$DynaFileCacheSize</b></a></li>
+<li><a href="rsconf1_escape8bitcharsonreceive.html"><b>$Escape8BitCharactersOnReceive</b></a></li>
+<li><a href="rsconf1_escapecontrolcharactersonreceive.html"><b>$EscapeControlCharactersOnReceive</b></a></li>
+<li><b>$EscapeControlCharactersOnReceive</b> [<b>on</b>|off] - escape USASCII HT character</li>
+<li><b>$SpaceLFOnReceive</b> [on/<b>off</b>] - instructs rsyslogd to replace LF with spaces during message reception (sysklogd compatibility aid)</li>
+<li><b>$ErrorMessagesToStderr</b> [<b>on</b>|off] - direct rsyslogd error message to stderr (in addition to other targets)</li>
+<li><a href="omfile.html"><b>$FailOnChownFailure</b></a></li>
+<li><a href="omfile.html"><b>$FileCreateMode</b></a></li>
+<li><a href="omfile.html"><b>$FileGroup</b></a></li>
+<li><a href="omfile.html"><b>$FileOwner</b></a></li>
+<li><a href="rsconf1_generateconfiggraph.html"><b>$GenerateConfigGraph</b></a></li>
+<li><a href="rsconf1_gssforwardservicename.html"><b>$GssForwardServiceName</b></a></li>
+<li><a href="rsconf1_gsslistenservicename.html"><b>$GssListenServiceName</b></a></li>
+<li><a href="rsconf1_gssmode.html"><b>$GssMode</b></a></li>
+<li><a href="rsconf1_includeconfig.html"><b>$IncludeConfig</b></a></li><li>MainMsgQueueCheckpointInterval &lt;number&gt;</li>
+<li><b>$LocalHostName</b> [name] - this directive permits to overwrite the system
+hostname with the one specified in the directive. If the directive is given
+multiple times, all but the last one will be ignored. Please note that startup
+error messages may be issued with the real hostname. This is by design and not
+a bug (but one may argue if the design should be changed ;)). Available since
+4.7.4+, 5.7.3+, 6.1.3+.
+<li><b>$LogRSyslogStatusMessages</b> [<b>on</b>/off] - If set to on (the default),
+rsyslog emits message on startup and shutdown as well as when it is HUPed.
+This information might be needed by some log analyzers. If set to off, no such
+status messages are logged, what may be useful for other scenarios.
+[available since 4.7.0 and 5.3.0]
+<li><b>$MainMsgQueueDequeueBatchSize</b> &lt;number&gt; [default 32]</li>
+<li><b>$MainMsgQueueDequeueSlowdown</b> &lt;number&gt; [number
+is timeout in <i> micro</i>seconds (1000000us is 1sec!),
+default 0 (no delay). Simple rate-limiting!]</li>
+<li><b>$MainMsgQueueDiscardMark</b> &lt;number&gt; [default 9750]</li>
+<li><b>$MainMsgQueueDiscardSeverity</b> &lt;severity&gt;
+[either a textual or numerical severity! default 4 (warning)]</li>
+<li><b>$MainMsgQueueFileName</b> &lt;name&gt;</li>
+<li><b>$MainMsgQueueHighWaterMark</b> &lt;number&gt; [default
+8000]</li>
+<li><b>$MainMsgQueueImmediateShutdown</b> [on/<b>off</b>]</li>
+<li><a href="rsconf1_mainmsgqueuesize.html"><b>$MainMsgQueueSize</b></a></li>
+<li><b>$MainMsgQueueLowWaterMark</b> &lt;number&gt; [default
+2000]</li>
+<li><b>$MainMsgQueueMaxFileSize</b> &lt;size_nbr&gt;, default
+1m</li>
+<li><b>$MainMsgQueueTimeoutActionCompletion</b>
+&lt;number&gt; [number is timeout in ms (1000ms is 1sec!),
+default
+1000, 0 means immediate!]</li>
+<li><b>$MainMsgQueueTimeoutEnqueue</b> &lt;number&gt; [number
+is timeout in ms (1000ms is 1sec!), default 2000, 0 means indefinite]</li>
+<li><b>$MainMsgQueueTimeoutShutdown</b> &lt;number&gt; [number
+is timeout in ms (1000ms is 1sec!), default 0 (indefinite)]</li>
+<li><b>$MainMsgQueueWorkerTimeoutThreadShutdown</b>
+&lt;number&gt; [number is timeout in ms (1000ms is 1sec!),
+default 60000 (1 minute)]</li>
+<li><b>$MainMsgQueueType</b> [<b>FixedArray</b>/LinkedList/Direct/Disk]</li>
+<li><b>$MainMsgQueueSaveOnShutdown&nbsp;</b> [on/<b>off</b>]
+</li>
+<li><b>$MainMsgQueueWorkerThreads</b> &lt;number&gt;, num
+worker threads, default 1, recommended 1</li>
+<li><b>$MainMsgQueueWorkerThreadMinumumMessages</b> &lt;number&gt;, default 100</li>
+<li><a href="rsconf1_markmessageperiod.html"><b>$MarkMessagePeriod</b></a> (immark)</li>
+<li><b><i>$MaxMessageSize</i></b> &lt;size_nbr&gt;, default 2k - allows to specify maximum supported message size
+(both for sending and receiving). The default
+should be sufficient for almost all cases. Do not set this below 1k, as it would cause
+interoperability problems with other syslog implementations.<br>
+Change the setting to e.g. 32768 if you would like to
+support large message sizes for IHE (32k is the current maximum
+needed for IHE). I was initially tempted to set the default to 32k,
+but there is a some memory footprint with the current
+implementation in rsyslog.
+<br>If you intend to receive Windows Event Log data (e.g. via
+<a href="http://www.eventreporter.com/">EventReporter</a>), you might want to
+increase this number to an even higher value, as event
+log messages can be very lengthy ("$MaxMessageSize 64k" is not a bad idea).
+Note: testing showed that 4k seems to be
+the typical maximum for <b>UDP</b> based syslog. This is an IP stack
+restriction. Not always ... but very often. If you go beyond
+that value, be sure to test that rsyslogd actually does what
+you think it should do ;) It is highly suggested to use a TCP based transport
+instead of UDP (plain TCP syslog, RELP). This resolves the UDP stack size restrictions.
+<br>Note that 2k, the current default, is the smallest size that must be
+supported in order to be compliant to the upcoming new syslog RFC series.
+</li>
+<li><a href="rsconf1_maxopenfiles.html"><b>$MaxOpenFiles</b></a></li>
+<li><a href="rsconf1_moddir.html"><b>$ModDir</b></a></li>
+<li><a href="rsconf1_modload.html"><b>$ModLoad</b></a></li>
+<li><a href="omfile.html"><b>$OMFileAsyncWriting</b></a> [on/<b>off</b>], if turned on, the files will be written
+in asynchronous mode via a separate thread. In that case, double buffers will be used so
+that one buffer can be filled while the other buffer is being written. Note that in order
+to enable $OMFileFlushInterval, $OMFileAsyncWriting must be set to "on". Otherwise, the flush
+interval will be ignored. Also note that when $OMFileFlushOnTXEnd is "on" but 
+$OMFileAsyncWriting is off, output will only be written when the buffer is full. This may take
+several hours, or even require a rsyslog shutdown. However, a buffer flush can be forced
+in that case by sending rsyslogd a HUP signal.
+<li><a href="omfile.html"><b>$OMFileZipLevel</b></a> 0..9  [default 0] - if greater 0, turns on gzip compression
+of the output file. The higher the number, the better the compression, but also the
+more CPU is required for zipping.</li>
+<li><a href="omfile.html"><b>$OMFileIOBufferSize</b></a> &lt;size_nbr&gt;, default 4k, size of the buffer used to writing output data. The larger the buffer, the potentially better performance is. The default of 4k is quite conservative, it is useful to go up to 64k, and 128K if you used gzip compression (then, even higher sizes may make sense)</li>
+<li><a href="omfile.html"><b>$OMFileFlushOnTXEnd</b></a> &lt;[<b>on</b>/off]&gt;, default on. Omfile has the
+capability to
+write output using a buffered writer. Disk writes are only done when the buffer is
+full. So if an error happens during that write, data is potentially lost. In cases where
+this is unacceptable, set $OMFileFlushOnTXEnd to on. Then, data is written at the end
+of each transaction (for pre-v5 this means after <b>each</b> log message) and the usual
+error recovery thus can handle write errors without data loss. Note that this option
+severely reduces the effect of zip compression and should be switched to off
+for that use case. Note that the default -on- is primarily an aid to preserve
+the traditional syslogd behaviour.</li>
+<li><a href="omfile.html"><b>$omfileForceChown</b></a> - force ownership change for all files</li>
+<li><b>$RepeatedMsgContainsOriginalMsg</b> [on/<b>off</b>] - "last message repeated n times" messages, if generated,
+have a different format that contains the message that is being repeated.
+Note that only the first "n" characters are included, with n to be at least 80 characters, most
+probably more (this may change from version to version, thus no specific limit is given). The bottom
+line is that n is large enough to get a good idea which message was repeated but it is not necessarily
+large enough for the whole message. (Introduced with 4.1.5). Once set, it affects all following actions.</li>
+<li><a href="rsconf1_repeatedmsgreduction.html"><b>$RepeatedMsgReduction</b></a></li>
+<li><a href="rsconf1_resetconfigvariables.html"><b>$ResetConfigVariables</b></a></li>
+<li><b>$Ruleset</b> <i>name</i> - starts a new ruleset or switches back to one already defined.
+All following actions belong to that new rule set.
+the <i>name</i> does not yet exist, it is created. To switch back to rsyslog's
+default ruleset, specify &quot;RSYSLOG_DefaultRuleset&quot;) as the name.
+All following actions belong to that new rule set. It is advised to also read
+our paper on <a href="multi_ruleset.html">using multiple rule sets in rsyslog</a>.</li>
+<li><b><a href="rsconf1_rulesetcreatemainqueue.html">$RulesetCreateMainQueue</a></b> on - creates
+a ruleset-specific main queue.
+<li><b><a href="rsconf1_rulesetparser.html">$RulesetParser</a></b> - enables to set
+a specific (list of) message parsers to be used with the ruleset.
+<li><b>$OptimizeForUniprocessor</b> [on/<b>off</b>] - turns on optimizatons which lead to better
+performance on uniprocessors. If you run on multicore-machiens, turning this off lessens CPU load. The
+default may change as uniprocessor systems become less common. [available since 4.1.0]</li>
+<li><b>$PreserveFQDN</b> [on/<b>off</b>) - if set to off (legacy default to remain compatible
+to sysklogd), the domain part from a name that is within the same domain as the receiving
+system is stripped. If set to on, full names are always used.</li>
+<li><b>$WorkDirectory</b> &lt;name&gt; (directory for spool and other work files.
+Do <b>not</b> use trailing slashes)</li>
+<li><b>$UDPServerAddress</b> &lt;IP&gt; (imudp) -- local IP
+address (or name) the UDP listens should bind to</li>
+<li><b>$UDPServerRun</b> &lt;port&gt; (imudp) -- former
+-r&lt;port&gt; option, default 514, start UDP server on this
+port, "*" means all addresses</li>
+<li><b>$UDPServerTimeRequery</b> &lt;nbr-of-times&gt; (imudp) -- this is a performance
+optimization. Getting the system time is very costly. With this setting, imudp can
+be instructed to obtain the precise time only once every n-times. This logic is
+only activated if messages come in at a very fast rate, so doing less frequent
+time calls should usually be acceptable. The default value is two, because we have
+seen that even without optimization the kernel often returns twice the identical time.
+You can set this value as high as you like, but do so at your own risk. The higher
+the value, the less precise the timestamp.
+<li><a href="droppriv.html"><b>$PrivDropToGroup</b></a></li>
+<li><a href="droppriv.html"><b>$PrivDropToGroupID</b></a></li>
+<li><a href="droppriv.html"><b>$PrivDropToUser</b></a></li>
+<li><a href="droppriv.html"><b>$PrivDropToUserID</b></a></li>
+<li><b>$Sleep</b> &lt;seconds&gt; - puts the rsyslog main thread to sleep for the specified
+number of seconds immediately when the directive is encountered. You should have a
+good reason for using this directive!</li>
+<li><b>$LocalHostIPIF</b>  &lt;interface name&gt; - (available since 5.9.6) - if provided, the IP of the specified
+interface (e.g. "eth0") shall be used as fromhost-ip for locall-originating messages.
+If this directive is not given OR the interface cannot be found (or has no IP address),
+the default of "127.0.0.1" is used. Note that this directive can be given only
+once. Trying to reset will result in an error message and the new value will
+be ignored. Please note that modules must have support for obtaining the local
+IP address set via this directive. While this is the case for rsyslog-provided
+modules, it may not always be the case for contributed plugins.
+<br><b>Important:</b> This directive shall be placed <b>right at the top of
+rsyslog.conf</b>. Otherwise, if error messages are triggered before this directive
+is processed, rsyslog will fix the local host IP to "127.0.0.1", what than can
+not be reset.
+</li>
+<li><a href="rsconf1_umask.html"><b>$UMASK</b></a></li>
+</ul>
+<p><b>Where &lt;size_nbr&gt; or integers are specified above,</b>
+modifiers can be used after the number part. For example, 1k means
+1024. Supported are k(ilo), m(ega), g(iga), t(era), p(eta) and e(xa).
+Lower case letters refer to the traditional binary defintion (e.g. 1m
+equals 1,048,576) whereas upper case letters refer to their new
+1000-based definition (e.g 1M equals 1,000,000).</p>
+<p>Numbers may include '.' and ',' for readability. So you can
+for example specify either "1000" or "1,000" with the same result.
+Please note that rsyslogd simply ignores the punctuation. From it's
+point of view, "1,,0.0.,.,0" also has the value 1000. </p>
+
+<p>[<a href="manual.html">manual index</a>]
+[<a href="rsyslog_conf.html">rsyslog.conf</a>]
+[<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the
+<a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
+Copyright &copy; 2008-2010 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>. Released under the GNU GPL
+version 3 or higher.</font></p>
+</body>
+</html>
+
+

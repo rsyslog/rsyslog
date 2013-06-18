@@ -1,0 +1,140 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Language" content="en">
+<title>ruleset output module (omruleset)</title>
+</head>
+<body>
+<a href="rsyslog_conf_modules.html">rsyslog module reference</a>
+
+<h1>ruleset output/including module (omruleset)</h1>
+<p><b>Module Name:&nbsp;&nbsp;&nbsp; omruleset</b></p>
+<p><b>Author: </b>Rainer Gerhards &lt;rgerhards@adiscon.com&gt;</p>
+<p><b>Available Since</b>: 5.3.4</p>
+<p><b>Description</b>:</p>
+<p>This is a very special &quot;output&quot; module.  It permits to pass a message object
+to another rule set. While this is a very simple action, it enables very
+complex configurations, e.g. it supports high-speed "and" conditions, sending
+data to the same file in a non-racy way, include-ruleset functionality as well as
+some high-performance optimizations (in case the rule sets have the necessary
+queue definitions).
+<p>While it leads to a lot of power, this output module offers seamingly easy functionaltiy.
+The complexity (and capablities) arise from how everthing can be combined.
+<p>With this module, a message can be sent to processing to another ruleset. This is somewhat
+similar to a &quot;#include&quot; in the C programming language. However, one needs to keep
+on the mind that a ruleset can contain its own queue and that a queue can run in various modes.
+<p>Note that if no queue is defined in the ruleset, the message is enqueued into the main message
+queue. This most often is not optimal and means that message processing may be severely defered.
+Also note that when the ruleset's target queue is full and no free space can be aquired 
+within the usual timeout, the message object may actually be lost. This is an extreme scenario,
+but users building an audit-grade system need to know this restriction. For regular installations,
+it should not really be relevant.
+<p><b>At minimum, be sure you understand the
+<a href="rsconf1_rulesetcreatemainqueue.html">$RulesetCreateMainQueue</a>
+directive as well as the importance of statement order in rsyslog.conf before using omruleset!</b>
+<p><b>Recommended Use:</b> 
+<ul>
+<li>create rulesets specifically for omruleset
+<li>create these rulesets with their own main queue
+<li> decent queueing parameters (sizes, threads, etc) should be used
+for the ruleset main queue. If in doubt, use the same parameters as for the 
+overall main queue.
+<li>if you use multiple levels of ruleset nesting, double check for endless loops - the rsyslog
+engine does not detect these
+</ul>
+
+<p><b>Configuration Directives</b>:</p>
+<ul>
+<li><b>$ActionOmrulesetRulesetName</b> ruleset-to-submit-to<br>
+This directive specifies the name of the ruleset that the message
+provided to omruleset should be submitted to. This ruleset must already have
+been defined. Note that the directive is automatically reset after each
+:omruleset: action and there is no default. This is done to prevent accidential
+loops in ruleset definition, what can happen very quickly.
+The :omruleset: action will NOT be honored if no ruleset name has been defined. As usual,
+the ruleset name must be specified in front of the action that it modifies.
+</ul>
+<p><b>Examples:</b></p>
+<p>This example creates a ruleset for a write-to-file action. The idea here
+is that the same file is written based on multiple filters, problems occur if the file is used
+together with a buffer. That is because file buffers are action-specific, and so some partial
+buffers would be written. With omruleset, we create a single action inside its own ruleset and
+then pass all messages to it whenever we need to do so. Of course, such a simple situation could
+also be solved by a more complex filter, but the method used here can also be utilized in
+more complex scenarios (e.g. with multiple listeners). The example tries to keep it simple.
+Note that we create a ruleset-specific main queue (for simplicity with the default main queue 
+parameters) in order to avoid re-queueing messages back into the main queue.
+</p>
+<textarea rows="30" cols="80">$ModLoad omruleset
+
+# define ruleset for commonly written file
+$RuleSet commonAction
+$RulesetCreateMainQueue on
+*.* /path/to/file.log
+
+#switch back to default ruleset
+$ruleset RSYSLOG_DefaultRuleset
+
+# begin first action
+# note that we must first specify which ruleset to use for omruleset:
+$ActionOmrulesetRulesetName CommonAction
+mail.info :omruleset:
+#end first action
+
+# begin second action
+# note that we must first specify which ruleset to use for omruleset:
+$ActionOmrulesetRulesetName CommonAction
+:FROMHOST, isequal, "myhost.example.com" :omruleset:
+#end second action
+
+# of course, we can have "regular" actions alongside :omrulset: actions
+*.* /path/to/general-message-file.log
+</textarea>
+<p>The next example is used to creat a high-performance nested and filter condition. Here,
+it is first checked if the message contains a string &quot;error&quot;. If so, the message is forwarded
+to another ruleset which then applies some filters. The advantage of this is that we can use
+high-performance filters where we otherwise would need to use the (much slower) expression-based
+filters. Also, this enables pipeline processing, in that second ruleset is executed in
+parallel to the first one.</p>
+<textarea rows="30" cols="80">$ModLoad omruleset
+
+# define "second" ruleset 
+$RuleSet nested
+$RulesetCreateMainQueue on # again, we use our own queue
+mail.*   /path/to/mailerr.log
+kernel.* /path/to/kernelerr.log
+auth.*   /path/to/autherr.log
+
+#switch back to default ruleset
+$ruleset RSYSLOG_DefaultRuleset
+
+# begin first action - here we filter on "error"
+# note that we must first specify which ruleset to use for omruleset:
+$ActionOmrulesetRulesetName nested
+:msg, contains, "error :omruleset:
+#end first action
+
+# begin second action - as an example we can do anything else in
+# this processing. Note that these actions are processed concurrently
+# to the ruleset "nested"
+:FROMHOST, isequal, "myhost.example.com" /path/to/host.log
+#end second action
+
+# of course, we can have "regular" actions alongside :omrulset: actions
+*.* /path/to/general-message-file.log
+</textarea>
+<p><b>Caveats/Known Bugs:</b>
+<p>The current configuration file language is not really adequate for a complex construct
+like omruleset. Unfortunately, more important work is currently preventing me from redoing the
+config language. So use extreme care when nesting rulesets and be sure to test-run your
+config before putting it into production, ensuring you have a suffciently large probe
+of the traffic run over it. If problems arise, the
+<a href="troubleshoot.html">rsyslog debug log</a> is your friend.
+<p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>]
+[<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the
+<a href="http://www.rsyslog.com/">rsyslog</a>
+project.<br>
+Copyright &copy; 2009 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>.
+Released under the GNU GPL version 3 or higher.</font></p>
+</body></html>

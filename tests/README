@@ -1,0 +1,9 @@
+This directory contains the rsyslog testbench. It is slowly
+evolving. New tests are always welcome. So far, most tests check
+out the functionality of a single module. More complex tests are
+welcome.
+
+For a simple sample, see rtinit.c, which does a simple
+init/deinit check of the runtime system.
+
+rgerhards, 2008-06-13

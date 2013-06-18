@@ -1,0 +1,13 @@
+
+module omoracle 1.0;
+
+require {
+	type syslogd_t;
+	type port_t;
+	class process { execstack execmem };
+	class tcp_socket name_connect;
+}
+
+#============= syslogd_t ==============
+allow syslogd_t port_t:tcp_socket name_connect;
+allow syslogd_t self:process { execstack execmem };

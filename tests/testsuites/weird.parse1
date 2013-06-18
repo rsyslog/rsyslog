@@ -1,0 +1,37 @@
+# some really weird samples, some of them seen in practice,
+# some other deliberately generated. The main point is that they
+# should not cause an abort...
+<14>Aug 30 23:00:05 X4711 AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+14,user,info,Aug 30 23:00:05,X4711,AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,
+# important: the following line has a SP at the end of the line!
+<14>Aug 30 23:00:05 X4711 
+14,user,info,Aug 30 23:00:05,X4711,,,
+# and this one NOT
+<14>Aug 30 23:00:05 X4711
+14,user,info,Aug 30 23:00:05,X4711,,,
+# there is a SP at the end of the line
+<14>Aug 30 23:00:05 
+14,user,info,Aug 30 23:00:05,localhost.localdomain,,,
+# and here is no SP at the end of the line
+<14>Aug 30 23:00:05
+14,user,info,Aug 30 23:00:05,localhost.localdomain,,,
+# unfortunately, I can not test missing dates with this test suite, because
+# we would have the current date in the response, which we can not check against
+#
+# and now the same tests with RFC3339 data - this can make a difference
+# as a different date parser is involved.
+# 
+<14>2010-08-30T23:00:05Z X4711 AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+14,user,info,Aug 30 23:00:05,X4711,AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,
+# important: the following line has a SP at the end of the line!
+<14>2010-08-30T23:00:05Z X4711 
+14,user,info,Aug 30 23:00:05,X4711,,,
+# and this one NOT
+<14>2010-08-30T23:00:05Z X4711
+14,user,info,Aug 30 23:00:05,X4711,,,
+# there is a SP at the end of the line
+<14>2010-08-30T23:00:05Z 
+14,user,info,Aug 30 23:00:05,localhost.localdomain,,,
+# and here is no SP at the end of the line
+<14>2010-08-30T23:00:05Z
+14,user,info,Aug 30 23:00:05,localhost.localdomain,,,

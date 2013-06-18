@@ -1,0 +1,127 @@
+<html>
+<head>
+<title>rsyslog.conf file</title>
+</head>
+<body>
+<a href="rsyslog_conf_global.html">back</a>
+
+<h2>$GenerateConfigGraph</h2>
+<p><b>Type:</b> global configuration directive</p>
+<p><b>Default:</b> </p>
+<p><b>Available Since:</b> 4.3.1 <b>CURRENTLY NOT AVAILABLE</b></p>
+<p><b>Description:</b></p>
+<b>This directive is currently not supported. We had to disable it when we improved the
+rule engine. It is considerable effort to re-enable it. On the other hand, we are about
+to add a new config system, which will make yet another config graph method necessary.
+As such we have decided to currently disable this functionality and re-introduce it when
+the new config system has been instantiated.
+</b></p>
+<p>This directive permits to create (hopefully) good-looking visualizations of rsyslogd's
+configuration. It does not affect rsyslog operation. If the directive is specified multiple
+times, all but the last are ignored. If it is specified, a graph is created. This happens
+both during a regular startup as well a config check run. It is recommended to include
+this directive only for documentation purposes and remove it from a production
+configuraton.
+<p>The graph is not drawn by rsyslog itself. Instead, it uses the great open source tool
+<a href="http://www.graphviz.org">Graphviz</a> to do the actual drawing. This has at least
+two advantages:
+<ul>
+<li>the graph drawing support code in rsyslog is extremly slim and without overhead
+<li>the user may change or further annotate the generated file, thus potentially
+improving his documentation
+</ul>
+The drawback, of course, is that you need to run Graphviz once you have generated
+the control file with rsyslog. Fortunately, the process to do so is rather easy:
+<ol>
+<li>add &quot;$GenerateConfigGraph /path/to/file.dot&quot; to rsyslog.conf (from now on, I
+will call the file just file.dot). Optionally, add &quot;$ActionName&quot; statement
+<b>in front of</b> those actions that you like to use friendly names with. If you do
+this, keep the names short.
+<li>run rsyslog at least once (either in regular or configuration check mode)
+<li>remember to remove the $GenerateConfigGraph directive when you no longer need it (or
+comment it out)
+<li>change your working directory to where you place the dot file
+<li>if you would like to edit the rsyslog-generated file, now is the time to do so
+<li>do &quot;dot -Tpng file.dot &gt; file.png&quot;
+<li>remember that you can use &quot;convert -resize 50% file.png resized.png&quot; if
+dot's output is too large (likely) or too small. Resizing can be especially useful if
+you intend to get a rough overview over your configuration.
+</ol>
+After completing these steps, you should have a nice graph of your configuration. Details
+are missing, but that is exactly the point. At the start of the graph is always (at least
+in this version, could be improved) a node called &quot;inputs&quot; in a tripple hexagon
+shape. This represents all inputs active in the system (assuming you have defined some,
+what the current version does not check). Next comes the main queue. It is given in a
+hexagon shape. That shape indicates that a queue is peresent and used to de-couple
+the inbound from the outbound part of the graph. In technical terms, here is a 
+threading boundary. Action with &quot;real&quot; queues (other than in direct mode)
+also utilize this shape. For actions, notice that a &quot;hexagon action&quot; creates
+a deep copy of the message. As such, a &quot;discard hexagon action&quot; actually does
+nothing, because it duplicates the message and then discards <b>the duplicate</b>.
+At the end of the diagram, you always see a &quot;discard&quot; action. This indicates
+that rsyslog discards messages which have been run through all available rules.
+<p>Edges are labeled with information about when they are taken. For filters, the type of 
+filter, but not any specifics, are given. It is also indicated if no filter is
+applied in the configuration file (by using a &quot;*.*&quot; selector). Edges without
+labels are unconditionally taken. The actions themselfs are labeled with the name of
+the output module that handles them. If provided, the name given via
+&quot;ActionName&quot; is used instead. No further details are provided.
+<p>If there is anything in red, this should draw your attention. In this case, rsyslogd
+has detected something that does not look quite right. A typical example is a discard
+action which is followed by some other actions in an action unit. Even though something
+may be red, it can be valid - rsyslogd's graph generator does not yet check each and
+every speciality, so the configuration may just cover a very uncommon case.
+<p>Now let's look at some examples. The graph below was generated on a fairly standard
+Fedora rsyslog.conf file. It had only the usually commented-out last forwarding action
+activated:
+<p align="center">
+<img src="rsyslog_confgraph_std.png" alt="rsyslog configuration graph for a default fedora rsyslog.conf">
+<p>This is the typical structure for a simple rsyslog configuration. There are a couple of
+actions, each guarded by a filter. Messages run from top to bottom and control branches
+whenever a filter evaluates to true. As there is no discard action, all messages will
+run through all filters and discarded in the system default discard action right after
+all configured actions.
+</p>
+<p>A more complex example can be seen in the next graph. This is a configuration I
+created for testing the graph-creation features, so it contains a little bit of
+everything. However, real-world configurations can look quite complex, too (and I
+wouldn't say this one is very complex):
+<p align="center">
+<img src="rsyslog_confgraph_complex.png">
+</p>
+<p>Here, we have a user-defined discard action. You can immediately see this because
+processing branches after the first &quot;builtin-file&quot; action. Those messages
+where the filter evaluates to true for will never run through the left-hand action
+branch. However, there is also a configuration error present: there are two more
+actions (now shown red) after the discard action. As the message is discarded, these will
+never be executed. Note that the discard branch contains no further filters. This is
+because these actions are all part of the same action unit, which is guarded only by
+an entry filter. The same is present a bit further down at the node labeled
+&quot;write_system_log_2&quot;. This note has one more special feature, that is label
+was set via &quot;ActionName&quot;, thus is does not have standard form (the same
+happened to the node named &quot;Forward&quot; right at the top of the diagram.
+Inside this diagram, the &quot;Forward&quot; node is executed asynchonously on its own
+queue. All others are executed synchronously.
+<p>Configuration graphs are useful for documenting a setup, but are also a great
+<a href="troubleshoot.html">troubleshooting</a> resource. It is important to
+remember that <b>these graphs are generated
+from rsyslogd's in-memory action processing structures</b>. You can not get closer
+to understanding on how rsyslog interpreted its configuration files.
+So if the graph does not look
+what you intended to do, there is probably something worng in rsyslog.conf.
+<p>If something is not working as expected, but you do not spot the error immediately,
+I recommend to generate a graph and zoom it so that you see all of it in one great picture.
+You may not be able to read anything, but the structure should look good to you and
+so you can zoom into those areas that draw your attention.
+<p><b>Sample:</b></p>
+<p><code><b>$DirOwner /path/to/graphfile-file.dot</b></code></p>
+
+<p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>] [<a href="manual.html">manual 
+index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the
+<a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
+Copyright &copy; 2009 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>. Released under the GNU GPL 
+version 2 or higher.</font></p>
+</body>
+</html>

@@ -1,0 +1,43 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><title>omprog output module - sending messages to a program</title>
+<a href="features.html">back</a>
+</head>
+<body>
+<h1>Program integration Output module</h1>
+<p><b>Module Name:&nbsp;&nbsp;&nbsp; omprog</b></p>
+<p><b>Available since:&nbsp;&nbsp;&nbsp;</b> 4.3.0</p>
+<p><b>Author: </b>Rainer Gerhards
+&lt;rgerhards@adiscon.com&gt;</p>
+<p><b>Description</b>:</p>
+<p>This module permits to integrate arbitrary external programs into rsyslog's
+logging. It is similar to the "execute program (^)" action, but offers better security
+and much higher performance. While "execute program (^)" can be a useful tool for
+executing programs if rare events occur, omprog can be used to provide massive
+amounts of log data to a program.
+<p>Executes the configured program and feeds log messages to that binary via
+stdin. The binary is free to do whatever it wants with the supplied data.
+If the program terminates, it is re-started. If rsyslog terminates, the
+program's stdin will see EOF. The program must than terminate. The message format
+passed to the program can, as usual, be modified by defining rsyslog templates.
+<p>Note that each time an omprog action is defined, the corresponding programm
+is invoked. A single instance is <b>not</b> being re-used. There are arguments pro and
+con re-using existing binaries. For the time being, it simply is not done. In the future,
+we may add an option for such pooling, provided that some demand for that is voiced.
+You can also mimic the same effect by defining multiple rulesets and including them (at 
+the price of some slight performance loss).
+<p><b>Configuration Directives</b>:</p>
+<ul>
+<li><b>$ActionOMProgBinary</b> &lt;binary&gt;<br>
+The binary program to be executed.
+</ul>
+<b>Caveats/Known Bugs:</b>
+<p>Currently none known.
+<p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>]
+[<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the <a href="http://www.rsyslog.com/">rsyslog</a>
+project.<br>
+Copyright &copy; 2008-2011 by <a href="http://www.gerhards.net/rainer">Rainer
+Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>.
+Released under the GNU GPL version 3 or higher.</font></p>
+</body></html>

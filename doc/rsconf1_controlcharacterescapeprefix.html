@@ -1,0 +1,25 @@
+<html>
+<head>
+<title>rsyslog.conf file</title>
+</head>
+<body>
+<a href="rsyslog_conf_global.html">back</a>
+
+<h2>$ControlCharacterEscapePrefix</h2>
+<p><b>Type:</b> global configuration directive</p>
+<p><b>Default:</b> \</p>
+<p><b>Description:</b></p>
+<p>This option specifies the prefix character to be used for control character escaping (see option $EscapeControlCharactersOnReceive). By default, it is '\', which is backwards-compatible with sysklogd. Change it to '#' in order to be compliant to the value that is somewhat suggested by Internet-Draft syslog-protocol.</p>
+<p><b>IMPORTANT</b>: do not use the ' character. This is reserved and will most probably be used in the future as a character delimiter. For the same reason, the syntax of this directive will probably change in future releases.</p>
+<p><b>Sample:</b></p>
+<p><code><b>$EscapeControlCharactersOnReceive #&nbsp; # as of syslog-protocol</b></code></p>
+
+<p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>] [<a href="manual.html">manual 
+index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the
+<a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
+Copyright &copy; 2007 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>. Released under the GNU GPL 
+version 2 or higher.</font></p>
+</body>
+</html>

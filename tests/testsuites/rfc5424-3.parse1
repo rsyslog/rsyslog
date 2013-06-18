@@ -1,0 +1,4 @@
+<165>1 2003-10-11T22:14:15.003Z mymachine.example.com evntslog - ID47 [exampleSDID@32473 iut="3" eventSource= "Application" eventID="1011"][examplePriority@32473 class="high"]
+165,local4,notice,Oct 11 22:14:15,mymachine.example.com,,evntslog,
+#Example from RFC5424, section 6.5 / sample 4
+#Only the first two lines are important, you may place anything behind them!

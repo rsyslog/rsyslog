@@ -1,0 +1,52 @@
+#!/bin/bash
+
+# Database maintance script which can be used for rsyslog
+# and phplogcon default database schema.
+# Michael Mansour suggested it to be included - thx!
+
+# This program was original part of of PHPloghost
+# Copyright (C) 2004 Tuatha de Dana
+# some modifications for rsyslog by mmeckelein at 2007-08-08
+# 2007-08-13 mmeckelein: added dbhost and some other improvements 
+# suggested by Michael Mansour - thx a lot!
+
+# This program is free software; you can redistribute it and/or 
+# modify it under the terms of the GNU General Public License 
+# as published by the Free Software Foundation; either version 2 
+# of the License, or (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful, 
+# but WITHOUT ANY WARRANTY; without even the implied warranty of 
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the 
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License 
+# along with this program; if not, write to the Free Software 
+# Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111- 1307, USA.
+
+# Change these variables to reflect your situation.
+database=sqlrsyslogd
+dbhost="localhost"
+export table=systemevents
+sqluser=""
+password=""
+
+# Location of the mysql daemon:
+mysqld=/usr/bin/mysql
+
+# A couple of steps should be taken to maintain your database.
+# If not, the number of messages will fill your database.
+# By default, logs are deleted after they're 30 days old. 
+# Change this to meet your requirements.
+# rsyslog's default database template use two date columns
+# ReceivedAt and DeviceReportedTime. You can use either of 
+# the two and in most cases it doesn't make a huge difference.
+# See the property replacer doc at http://www.rsyslog.com/doc
+# for details on the two dates.
+SQL_DELETE="DELETE FROM $table WHERE ReceivedAt < CURDATE() - INTERVAL 30 DAY;"
+
+# After a large amount of rows have been deleted, we should # optimize the table.
+SQL_OPT="OPTIMIZE TABLE $table;";
+
+$mysqld -u$sqluser -p$password -h$dbhost -e"$SQL_DELETE" -D$database
+$mysqld -u$sqluser -p$password -h$dbhost -e"$SQL_OPT" -D$database

@@ -1,0 +1,6 @@
+<27>xapi: [error|xen3|15|Guest liveness monitor D:bca30ab3f1c1|master_connection] Connection to master died. I will continue to retry indefinitely (supressing future logging of this message)
+27,daemon,err,localhost.localdomain,xapi,xapi:, [error|xen3|15|Guest liveness monitor D:bca30ab3f1c1|master_connection] Connection to master died. I will continue to retry indefinitely (supressing future logging of this message)
+# a message with just text (as permitted by rfc 3164)
+# it is questionable if the current sample result is really correct as of 3164!
+This is a message!
+13,user,notice,This,is,is, a message!

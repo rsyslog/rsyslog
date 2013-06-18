@@ -1,0 +1,121 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Language" content="en"><title>RELP Input Module</title>
+
+</head>
+<body>
+<a href="rsyslog_conf_modules.html">back</a>
+
+<h1>RELP Input Module</h1>
+<p><b>Module Name:&nbsp;&nbsp;&nbsp; imrelp</b></p>
+<p><b>Author: Rainer Gerhards</b></p>
+<p><b>Description</b>:</p>
+<p>Provides the ability to receive syslog messages via the
+reliable RELP protocol. This module requires <a href="http://www.librelp.com">librelp</a> to be
+present on the system. From the user's point of view, imrelp works much
+like imtcp or imgssapi, except that no message loss can occur. Please
+note that with the currently supported relp protocol version, a minor
+message duplication may occur if a network connection between the relp
+client and relp server breaks after the client could successfully send
+some messages but the server could not acknowledge them. The window of
+opportunity is very slim, but in theory this is possible. Future
+versions of RELP will prevent this. Please also note that rsyslogd may
+lose a few messages if rsyslog is shutdown while a network conneciton
+to the server is broken and could not yet be recovered. Future version
+of RELP support in rsyslog will prevent that. Please note that both
+scenarios also exists with plain tcp syslog. RELP, even with the small
+nits outlined above, is a much more reliable solution than plain tcp
+syslog and so it is highly suggested to use RELP instead of plain tcp.
+Clients send messages to the RELP server via omrelp.</p>
+
+<p><b>Module Parameters</b>:</p>
+<ul>
+	<li><b>Ruleset</b> &lt;name&gt;</br>
+	Binds the specified ruleset to <b>all</b> RELP listeners.
+</ul>
+<p><b>Input Parameters</b>:</p>
+<ul>
+<li><b>Port</b> &lt;port&gt;<br>
+Starts a RELP server on selected port</li>
+<li><b>tls</b> (not mandatory, values "on","off", default "off")<br>
+If set to "on", the RELP connection will be encrypted by TLS,
+so that the data is protected against observers. Please note
+that both the client and the server must have set TLS to
+either "on" or "off". Other combinations lead to unpredictable
+results.
+</li>
+<li><b>tls.compression</b> (not mandatory, values "on","off", default "off")<br>
+The controls if the TLS stream should be compressed (zipped). While this
+increases CPU use, the network bandwidth should be reduced. Note that
+typical text-based log records usually compress rather well.
+</li>
+<li><b>tls.dhbits</b> (not mandatory, integer)<br>
+This setting controls how many bits are used for Diffie-Hellman key
+generation. If not set, the librelp default is used. For secrity
+reasons, at least 1024 bits should be used. Please note that the number
+of bits must be supported by GnuTLS. If an invalid number is given, rsyslog
+will report an error when the listener is started. We do this to be transparent
+to changes/upgrades in GnuTLS (to check at config processing time, we would need
+to hardcode the supported bits and keep them in sync with GnuTLS - this is
+even impossible when custom GnuTLS changes are made...).
+</li>
+<li><b>tls.prioritystring</b> (not mandatory, string)<br>
+This parameter permits to specify the so-called "priority string" to
+GnuTLS. This string gives complete control over all crypto parameters,
+including compression setting. For this reason, when the prioritystring
+is specified, the "tls.compression" parameter has no effect and is
+ignored.
+<br>Full information about how to construct a priority string can be
+found in the GnuTLS manual. At the time of this writing, this
+information was contained in
+<a href="http://gnutls.org/manual/html_node/Priority-Strings.html">section 6.10 of the GnuTLS manual</a>.
+<br><b>Note: this is an expert parameter.</b> Do not use if you do
+not exactly know what you are doing.
+</li>
+</ul>
+<b>Caveats/Known Bugs:</b>
+<ul>
+<li>see description</li>
+<li>To obtain the remote system's IP address, you need to have at least
+librelp 1.0.0 installed. Versions below it return the hostname instead
+of the IP address.</li>
+<li>Contrary to other inputs, the ruleset can only be bound to all listeners,
+not specific ones. This is due to a currently existing limitation in librelp.
+</ul>
+<p><b>Sample:</b></p>
+<p>This sets up a RELP server on port 20514.<br>
+</p>
+<textarea rows="5" cols="60">module(load="imrelp") # needs to be done just once
+input(type="imrelp" port="20514")
+</textarea>
+
+<p><b>Legacy Configuration Directives</b>:</p>
+<ul>
+<li>InputRELPServerBindRuleset &lt;name&gt; (available in 6.3.6+)</br>
+equivalent to: RuleSet
+<li>InputRELPServerRun &lt;port&gt;<br>
+equivalent to: Port</li>
+</ul>
+<b>Caveats/Known Bugs:</b>
+<ul>
+<li>To obtain the remote system's IP address, you need to have at least
+librelp 1.0.0 installed. Versions below it return the hostname instead
+of the IP address.</li>
+<li>Contrary to other inputs, the ruleset can only be bound to all listeners,
+not specific ones. This is due to a currently existing limitation in librelp.
+</ul>
+<p><b>Sample:</b></p>
+<p>This sets up a RELP server on port 20514.<br>
+</p>
+<textarea rows="5" cols="60">$ModLoad imrelp # needs to be done just once
+$InputRELPServerRun 20514
+</textarea>
+<p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>]
+[<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the
+<a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
+Copyright &copy; 2008-2013 by <a href="http://www.gerhards.net/rainer">Rainer
+Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>.
+Released under the GNU GPL version 3 or higher.</font></p>
+</body></html>

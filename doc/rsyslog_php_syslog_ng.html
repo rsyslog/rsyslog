@@ -1,0 +1,153 @@
+<html><head>
+<title>Using php-syslog-ng with rsyslog</title>
+<meta name="KEYWORDS" content="syslog, php-syslog-ng, mysql, howto, rsyslog">
+</head>
+<body>
+<h1>Using php-syslog-ng with rsyslog</h1>
+		<P><small><i>Written by
+		<a href="http://www.adiscon.com/en/people/rainer-gerhards.php">Rainer 
+		Gerhards</a> (2005-08-04)</i></small></P>
+<p>Note: it has been reported that this guide is somewhat outdated. Please 
+use with care. Also, please note that <b>rsyslog's "native" web frontend is
+<a href="http://www.phplogcon.org">phpLogCon</a></b>, which provides best integration
+and a lot of extra functionality.</p>
+<h2>Abstract</h2>
+<p><i><b>In this paper, I describe how to use
+<a href="http://www.vermeer.org/projects/php-syslog-ng">php-syslog-ng</a> with
+<a href="http://www.rsyslog.com/">rsyslogd</a>. </b>&nbsp;Php-syslog-ng is a 
+popular web interface to syslog data. Its name stem from the fact that it 
+usually picks up its data from a database created by
+<a href="http://www.balabit.com/products/syslog_ng/">syslog-ng</a> and some 
+helper scripts. However, there is nothing syslog-ng specific in the database. 
+With rsyslogd's high customizability, it is easy to write to a syslog-ng like 
+schema. I will tell you how to do this, enabling you to use php-syslog-ng as a 
+front-end for rsyslogd - or save the hassle with syslog-ng database 
+configuration and simply go ahead and use rsyslogd instead.</i></p>
+<h2>Overall System Setup</h2>
+<p>The setup is pretty straightforward. Basically, php-syslog-ng's interface to 
+the syslogd is the database. We use the schema that php-syslog-ng expects and 
+make rsyslogd write to it in its format. Because of this, php-syslog-ng does not 
+even know there is no syslog-ng present.</p>
+<h2>Setting up the system</h2>
+<p>For php-syslog-ng, you can follow its usual setup instructions. Just skip any 
+steps refering to configure syslog-ng. Make sure you create the database schema 
+in <a href="http://www.mysql.com/">MySQL</a>. As of this writing, the expected schema can be created via this script:</p>
+<blockquote>
+	<code>CREATE DATABASE syslog<br>
+	!<br>
+	USE syslog<br>
+	!<br>
+	CREATE TABLE logs (<br>
+	host varchar(32) default NULL,<br>
+	facility varchar(10) default NULL,<br>
+	priority varchar(10) default NULL,<br>
+	level varchar(10) default NULL,<br>
+	tag varchar(10) default NULL,<br>
+	date date default NULL,<br>
+	time time default NULL,<br>
+	program varchar(15) default NULL,<br>
+	msg text,<br>
+	seq int(10) unsigned NOT NULL auto_increment,<br>
+	PRIMARY KEY (seq),<br>
+	KEY host (host),<br>
+	KEY seq (seq),<br>
+	KEY program (program),<br>
+	KEY time (time),<br>
+	KEY date (date),<br>
+	KEY priority (priority),<br>
+	KEY facility (facility)<br>
+	) TYPE=MyISAM;</code>
+</blockquote>
+<p>Please note that at the time you are reading this paper, the schema might have changed. 
+Check for any differences. As we customize rsyslogd to the schema, it is vital 
+to have the correct one. If this paper is outdated,
+<a href="mailto:rgerhards@adiscon.com">let me know</a> so that I can fix it.</p>
+<p>Once this schema is created, we simply instruct rsyslogd to store received 
+data in it. I wont go into too much detail here. If you are interested in some 
+more details, you might find my paper &quot;<a href="rsyslog_mysql.html">Writing 
+syslog messages to MySQL</a>&quot; worth reading. For this article, we simply modify
+<a href="rsyslog_conf.html">rsyslog.conf </a>so that it writes to the database. 
+That is easy. Just these two lines are needed:</p>
+<blockquote>
+	<code><font color="green">$template syslog-ng,&quot;insert into logs(host, facility, priority, tag, date, 
+	time, msg) values ('%HOSTNAME%', %syslogfacility%, %syslogpriority%, 
+	'%syslogtag%',&nbsp; '%timereported:::date-mysql%', '%timereported:::date-mysql%', 
+	'%msg%')&quot;, SQL</font> <br>
+	<font color="red">*.*&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;&gt;mysql-server,syslog,user,pass;syslog-ng</font>
+	</code>
+</blockquote>
+<p>These are just <b>two</b> lines. I have color-coded them so that you see what 
+belongs together (the colors have no other meaning). The green line is the 
+actual SQL statement being used to take care of the syslog-ng schema. Rsyslogd 
+allows you to fully control the statement sent to the database. This allows you 
+to write to any database format, including your homegrown one (if you so desire). 
+Please note that there is a small inefficiency in our current usage: the
+	<code><font color="green">'%timereported:::date-mysql%'</font></code>&nbsp; 
+property is used for both the time and the date (if you wonder about what all 
+these funny characters mean, see the <a href="property_replacer.html">rsyslogd 
+property replacer manual</a>) . We could have extracted just the date and time 
+parts of the respective properties. However, this is more complicated and also 
+adds processing time to rsyslogd's processing (substrings must be extracted). So we take a full mysql-formatted timestamp and supply it to MySQL. The sql engine in turn 
+discards the unneeded part. It works pretty well. As of my understanding, the 
+inefficiency of discarding the unneeded part in MySQL is lower than the 
+effciency gain from using the full timestamp in rsyslogd. So it is most probably 
+the best solution.</p>
+<p>Please note that rsyslogd knows two different timestamp properties: one is 
+timereported, used here. It is the timestamp from the message itself. Sometimes 
+that is a good choice, in other cases not. It depends on your environment. The other one is the timegenerated 
+property. This is the time when rsyslogd received the message. For obvious 
+reasons, that timestamp is consistent, even when your devices are in multiple 
+time zones or their clocks are off. However, it is not &quot;the real thing&quot;. It's 
+your choice which one you prefer. If you prefer timegenerated ... simply use it 
+;)</p>
+<p>The line in red tells rsyslogd which messages to log and where to store it. 
+The &quot;*.*&quot; selects all messages. You can use standard syslog selector line filters here if 
+you do not like to see everything in your database. The &quot;&gt;&quot; tells 
+rsyslogd that a MySQL connection 
+must be established. Then, &quot;mysql-server&quot; is the name or IP address of the 
+server machine, &quot;syslog&quot; is the database name (default from the schema) and &quot;user&quot; 
+and &quot;pass&quot; are the logon credentials. Use a user with low privileges, insert into the 
+logs table is sufficient. &quot;syslog-ng&quot; is the template name and tells rsyslogd to 
+use the SQL statement shown above.</p>
+<p>Once you have made the changes, all you need to do is restart
+rsyslogd. Then, you should see syslog messages flow into your database - and 
+show up in php-syslog-ng.</p>
+<h2>Conclusion</h2>
+<P>With minumal effort, you can use php-syslog-ng together with rsyslogd. For 
+those unfamiliar with syslog-ng, this configuration is probably easier to set up 
+then switching to syslog-ng. For existing rsyslogd users, php-syslog-ng might be a nice 
+add-on to their logging infrastructure.</P>
+<P>Please note that the <a href="http://www.monitorware.com/en/">MonitorWare family</a> (to which rsyslog belongs) also 
+offers a web-interface: <a href="http://www.phplogcon.org/">phpLogCon</a>.
+From my point of view, obviously, <b>phpLogCon is the more natural choice for a web interface
+to be used together with rsyslog</b>. It also offers superb functionality and provides,
+for example,native display of Windows event log entries.
+I have set up a <a href="http://demo.phplogcon.org/">demo server</a>., 
+You can have a peek at it 
+without installing anything.</P>
+<h2>Feedback Requested</h2>
+<P>I would appreciate feedback on this paper. If you have additional ideas, 
+comments or find bugs, please
+<a href="mailto:rgerhards@adiscon.com">let me know</a>.</P>
+<h2>References and Additional Material</h2>
+<ul>
+	<li><a href="http://www.vermeer.org/projects/php-syslog-ng">php-syslog-ng</a></li>
+</ul>
+<h2>Revision History</h2>
+<ul>
+	<li>2005-08-04 * 
+	<a href="http://www.adiscon.com/en/people/rainer-gerhards.php">Rainer Gerhards</a> * 
+	initial version created</li>
+</ul>
+<h2>Copyright</h2>
+<p>Copyright (c) 2005
+<a href="http://www.adiscon.com/en/people/rainer-gerhards.php">Rainer Gerhards</a> 
+and <a href="http://www.adiscon.com/en/">Adiscon</a>.</p>
+<p>Permission is granted to copy, distribute and/or modify this document under 
+the terms of the GNU Free Documentation License, Version 1.2 or any later 
+version published by the Free Software Foundation; with no Invariant Sections, 
+no Front-Cover Texts, and no Back-Cover Texts. A copy of the license can be 
+viewed at <a href="http://www.gnu.org/copyleft/fdl.html">
+http://www.gnu.org/copyleft/fdl.html</a>.</p>
+</body>
+</html>

@@ -1,0 +1,336 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML>
+<HEAD>
+	<META HTTP-EQUIV="CONTENT-TYPE" CONTENT="text/html; charset=utf-8">
+	<TITLE></TITLE>
+	<META NAME="GENERATOR" CONTENT="OpenOffice.org 3.1  (Unix)">
+	<META NAME="AUTHOR" CONTENT="Marc Schiffbauer">
+	<META NAME="CREATED" CONTENT="20100129;15054500">
+	<META NAME="CHANGEDBY" CONTENT="Marc Schiffbauer">
+	<META NAME="CHANGED" CONTENT="20100129;16035000">
+	<META NAME="Info 1" CONTENT="">
+	<META NAME="Info 2" CONTENT="">
+	<META NAME="Info 3" CONTENT="">
+	<META NAME="Info 4" CONTENT="">
+	<STYLE TYPE="text/css">
+	<!--
+		@page { size: 8.27in 11.69in; margin: 0.79in }
+		P { margin-bottom: 0.08in }
+		P.western { font-family: "Arial", sans-serif }
+		H1 { margin-bottom: 0.08in }
+		H1.western { font-family: "Times New Roman", serif }
+		H1.cjk { font-family: "DejaVu Sans" }
+		H1.ctl { font-family: "DejaVu Sans" }
+		H2 { margin-bottom: 0.08in }
+		H2.western { font-family: "Times New Roman", serif }
+		BLOCKQUOTE.western { font-family: "Arial", sans-serif }
+		H3 { margin-bottom: 0.08in }
+		H3.western { font-family: "Times New Roman", serif }
+		A:link { so-language: zxx }
+	-->
+	</STYLE>
+</HEAD>
+<BODY>
+<H1 CLASS="western"><SPAN LANG="en-US">Writing </SPAN>syslog messages
+to MySQL, PostgreSQL or any other supported Database</H1>
+<P CLASS="western"><FONT SIZE=2><I>Written by </I></FONT><A HREF="http://www.adiscon.com/en/people/rainer-gerhards.php"><FONT SIZE=2><I>Rainer
+Gerhards</I></FONT></A><FONT SIZE=2><I> with some additions by Marc
+Schiffbauer (2008-02-28)</I></FONT></P>
+<H2 CLASS="western">Abstract</H2>
+<P CLASS="western"><SPAN LANG="en-US"><I><B>In this paper, I describe
+how to write </B></I></SPAN><A HREF="http://www.monitorware.com/en/topics/syslog/">syslog</A><SPAN LANG="en-US"><I><B>
+messages to a </B></I></SPAN><A HREF="http://www.mysql.com/">MySQL</A><SPAN LANG="en-US"><I><B>
+or </B></I></SPAN><A HREF="http://www.postgresql.org/">PostgreSQL</A><SPAN LANG="en-US"><I><B>
+database.</B></I></SPAN><SPAN LANG="en-US"><I> Having syslog messages
+in a database is often handy, especially when you intend to set up a
+front-end for viewing them. This paper describes an approach with
+</I></SPAN><A HREF="http://www.rsyslog.com/">rsyslogd</A><SPAN LANG="en-US"><I>,
+an alternative enhanced syslog daemon natively supporting MySQL and
+PostgreSQL. I describe the components needed to be installed and how
+to configure them. Please note that as of this writing, rsyslog
+supports a variety of databases. While this guide is still MySQL- and
+PostgreSQL-focused, you can probably use it together with other ones
+too. You just need to modify a few settings.</I></SPAN></P>
+<H2 CLASS="western">Background</H2>
+<P LANG="en-US" CLASS="western">In many cases, syslog data is simply
+written to text files. This approach has some advantages, most
+notably it is very fast and efficient. However, data stored in text
+files is not readily accessible for real-time viewing and analysis.
+To do that, the messages need to be in a database. There are various
+ways to store syslog messages in a database. For example, some have
+the syslogd write text files which are later feed via a separate
+script into the database. Others have written scripts taking the data
+(via a pipe) from a non-database-aware syslogd and store them as they
+appear. Some others use database-aware syslogds and make them write
+the data directly to the database. In this paper, I use that &quot;direct
+write&quot; approach. I think it is superior, because the syslogd
+itself knows the status of the database connection and thus can
+handle it intelligently (well ... hopefully ;)). I use rsyslogd to
+acomplish this, simply because I have initiated the rsyslog project
+with database-awareness as one goal.</P>
+<P CLASS="western"><SPAN LANG="en-US"><B>One word of caution:</B></SPAN><SPAN LANG="en-US">
+while message storage in the database provides an excellent
+foundation for interactive analysis, it comes at a cost. Database i/o
+is considerably slower than text file i/o. As such, directly writing
+to the database makes sense only if your message volume is low enough
+to allow a) the syslogd, b) the network, and c) the database server
+to catch up with it. Some time ago, I have written a paper on
+</SPAN><A HREF="http://www.monitorware.com/Common/en/Articles/performance-optimizing-syslog-server.php">optimizing
+syslog server performance</A><SPAN LANG="en-US">. While this paper
+talks about Window-based solutions, the ideas in it are generic
+enough to apply here, too. So it might be worth reading if you
+anticipate medium high to high traffic. If you anticipate really high
+traffic (or very large traffic spikes), you should seriously consider
+forgetting about direct database writes - in my opinion, such a
+situation needs either a very specialized system or a different
+approach (the text-file-to-database approach might work better for
+you in this case). </SPAN>
+</P>
+<H2 CLASS="western">Overall System Setup</H2>
+<P CLASS="western"><SPAN LANG="en-US">In this paper, I concentrate on
+the server side. If you are thinking about interactive syslog message
+review, you probably want to centralize syslog. In such a scenario,
+you have multiple machines (the so-called clients) send their data to
+a central machine (called server in this context). While I expect
+such a setup to be typical when you are interested in storing
+messages in the database, I do not describe how to set it up. This is
+beyond the scope of this paper. If you search a little, you will
+probably find many good descriptions on </SPAN><SPAN LANG="en-US">how
+to centralize syslog. If you do that, it might be a good idea to do
+it securely, so you might also be interested in my paper on
+</SPAN><A HREF="http://www.rsyslog.com/doc-rsyslog_stunnel.html">ssl-encrypting
+syslog message transfer</A><SPAN LANG="en-US">.</SPAN></P>
+<P LANG="en-US" CLASS="western">No matter how the messages arrive at
+the server, their processing is always the same. So you can use this
+paper in combination with any description for centralized syslog
+reporting.</P>
+<P CLASS="western"><SPAN LANG="en-US">As I already said, I use
+rsyslogd on the server. It has intrinsic support for talking to the
+supported databases. For obvious reasons, we also need an instance of
+MySQL or PostgreSQL running. To keep us focused, the setup of the
+database itself is also beyond the scope of this paper. I assume that
+you have successfully installed the database and also have a
+front-end at hand to work with it (for example, </SPAN><A HREF="http://www.phpmyadmin.net/">phpMyAdmin</A><SPAN LANG="en-US">
+or </SPAN><A HREF="http://phppgadmin.sourceforge.net/">phpPgAdmin</A><SPAN LANG="en-US">.
+Please make sure that this is installed, actually working and you
+have a basic understanding of how to handle it.</SPAN></P>
+<H2 CLASS="western">Setting up the system</H2>
+<P CLASS="western"><SPAN LANG="en-US">You need to download and
+install rsyslogd first. Obtain it from the </SPAN><A HREF="http://www.rsyslog.com/">rsyslog
+site</A><SPAN LANG="en-US">. Make sure that you disable stock
+syslogd, otherwise you will experience some difficulties. On some
+distributions &nbsp;(Fedora 8 and above, for example), rsyslog may
+already by the default syslogd, in which case you obviously do not
+need to do anything specific. For many others, there are prebuild
+packages available. If you use either, please make sure that you have
+the required database plugins for your database available. It usually
+is a separate package and typically </SPAN><SPAN LANG="en-US"><B>not</B></SPAN><SPAN LANG="en-US">
+installed by default.</SPAN></P>
+<P CLASS="western"><SPAN LANG="en-US">It is important to understand
+how rsyslogd talks to the database. In rsyslogd, there is the concept
+of &quot;templates&quot;. Basically, a template is a string that
+includes some replacement characters, which are called &quot;properties&quot;
+in rsyslog. Properties are accessed via the &quot;</SPAN><A HREF="http://www.rsyslog.com/doc-property_replacer.html">Property
+Replacer</A><SPAN LANG="en-US">&quot;. Simply said, you access
+properties by including their name between percent signs inside the
+template. For example, if the syslog message is &quot;Test&quot;, the
+template &quot;%msg%&quot; would be expanded to &quot;Test&quot;.
+Rsyslogd supports sending template text as a SQL statement to the
+database. As such, the template must be a valid SQL statement. There
+is no limit in what the statement might be, but there are some
+obvious and not so obvious choices. For example, a template &quot;drop
+table xxx&quot; is possible, but does not make an awful lot of sense.
+In practice, you will always use an &quot;insert&quot; statement
+inside the template.</SPAN></P>
+<P LANG="en-US" CLASS="western">An example: if you would just like to
+store the msg part of the full syslog message, you have probably
+created a table &quot;syslog&quot; with a single column &quot;message&quot;.
+In such a case, a good template would be &quot;insert into
+syslog(message) values ('%msg%')&quot;. With the example above, that
+would be expanded to &quot;insert into syslog(message)
+values('Test')&quot;. This expanded string is then sent to the
+database. It's that easy, no special magic. The only thing you must
+ensure is that your template expands to a proper SQL statement and
+that this statement matches your database design.</P>
+<P CLASS="western"><SPAN LANG="en-US">Does that mean you need to
+create database schema yourself and also must fully understand
+rsyslogd's properties? No, that's not needed. Because we anticipated
+that folks are probably more interested in getting things going
+instead of designing them from scratch. So we have provided a default
+schema as well as build-in support for it. This schema also offers an
+additional benefit: rsyslog is part of </SPAN><A HREF="http://www.adiscon.com/en/">Adiscon</A><SPAN LANG="en-US">'s
+</SPAN><A HREF="http://www.monitorware.com/en/">MonitorWare product
+line</A><SPAN LANG="en-US"> (which includes open source and closed
+source members). All of these tools share the same default schema and
+know how to operate on it. For this reason, the default schema is
+also called the &quot;MonitorWare Schema&quot;. If you use it, you
+can simply add </SPAN><A HREF="http://www.phplogcon.org/">phpLogCon,
+a GPLed syslog web interface</A><SPAN LANG="en-US">, to your system
+and have instant interactive access to your database. So there are
+some benefits in using the provided schema.</SPAN></P>
+<P LANG="en-US" CLASS="western">The schema definition is contained in
+the file &quot;createDB.sql&quot;. It comes with the rsyslog package
+and one can be found for each supported database type (in the plugins
+directory). Review it to check that the database name is acceptable
+for you. Be sure to leave the table and field names unmodified,
+because otherwise you need to customize rsyslogd's default sql
+template, which we do not do in this paper. Then, run the script with
+your favorite SQL client. Double-check that the table was
+successfully created.</P>
+<P LANG="en-US" CLASS="western">It is important to note that the
+correct database encoding must be used so that the database will
+accept strings independend of the string encoding. This is an
+important part because it can not be guarantied that all syslog
+messages will have a defined character encoding. This is especially
+true if the rsyslog-Server will collect messages from different
+clients and different products. 
+</P>
+<P LANG="en-US" CLASS="western">For example PostgreSQL may refuse to
+accept messages if you would set the database encoding to “UTF8”
+while a client is sending invalid byte sequences for that encoding. 
+</P>
+<P LANG="en-US" CLASS="western">Database support in rsyslog is
+integrated via loadable plugin modules. To use the database
+functionality, the database plugin must be enabled in the config file
+BEFORE the first database table action is used. This is done by
+placing the</P>
+<BLOCKQUOTE CLASS="western"><CODE>$ModLoad ommysql</CODE></BLOCKQUOTE>
+<P CLASS="western">directive at the begining of /etc/rsyslog.conf for
+MySQL and</P>
+<BLOCKQUOTE CLASS="western"><CODE>$ModLoad ompgsql</CODE></BLOCKQUOTE>
+<P CLASS="western"><CODE><FONT FACE="Arial, sans-serif">for
+PostgreSQL.</FONT></CODE></P>
+<P LANG="en-US" CLASS="western"><FONT FACE="Arial, sans-serif">For
+other databases, use their plugin name (e.g. omoracle).</FONT></P>
+<P CLASS="western">Next, we need to tell rsyslogd to write data to
+the database. As we use the default schema, we do NOT need to define
+a template for this. We can use the hardcoded one (rsyslogd handles
+the proper template linking). So all we need to do e.g. for MySQL is
+add a simple selector line to /etc/rsyslog.conf:</P>
+<BLOCKQUOTE CLASS="western"><CODE>*.*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+:ommysql:database-server,database-name,database-userid,database-password</CODE></BLOCKQUOTE>
+<P CLASS="western">Again, other databases have other selector names,
+e.g. &quot;:ompgsql:&quot; instead of &quot;:ommysql:&quot;. See the
+output plugin's documentation for details.</P>
+<P LANG="en-US" CLASS="western">In many cases, the database will run
+on the local machine. In this case, you can simply use &quot;127.0.0.1&quot;
+for <I>database-server</I>. This can be especially advisable, if you
+do not need to expose the database to any process outside of the
+local machine. In this case, you can simply bind it to 127.0.0.1,
+which provides a quite secure setup. Of course, rsyslog also supports
+remote database instances. In that case, use the remote server name
+(e.g. mydb.example.com) or IP-address. The <I>database-name</I> by
+default is &quot;Syslog&quot;. If you have modified the default, use
+your name here. <I>Database-userid</I> and <I>-password</I> are the
+credentials used to connect to the database. As they are stored in
+clear text in rsyslog.conf, that user should have only the least
+possible privileges. It is sufficient to grant it INSERT privileges
+to the systemevents table, only. As a side note, it is strongly
+advisable to make the rsyslog.conf file readable by root only - if
+you make it world-readable, everybody could obtain the password (and
+eventually other vital information from it). In our example, let's
+assume you have created a database user named &quot;syslogwriter&quot;
+with a password of &quot;topsecret&quot; (just to say it bluntly:
+such a password is NOT a good idea...). If your database is on the
+local machine, your rsyslog.conf line might look like in this sample:</P>
+<BLOCKQUOTE CLASS="western"><CODE>*.*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+:ommysql:127.0.0.1,Syslog,syslogwriter,topsecret</CODE></BLOCKQUOTE>
+<P CLASS="western">Save rsyslog.conf, restart rsyslogd - and you
+should see syslog messages being stored in the &quot;systemevents&quot;
+table!</P>
+<P LANG="en-US" CLASS="western">The example line stores every message
+to the database. Especially if you have a high traffic volume, you
+will probably limit the amount of messages being logged. This is easy
+to accomplish: the &quot;write database&quot; action is just a
+regular selector line. As such, you can apply normal selector-line
+filtering. If, for example, you are only interested in messages from
+the mail subsystem, you can use the following selector line:</P>
+<BLOCKQUOTE CLASS="western"><CODE>mail.*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:ommysql:127.0.0.1,syslog,syslogwriter,topsecret</CODE></BLOCKQUOTE>
+<P CLASS="western">Review the <A HREF="http://www.rsyslog.com/doc-rsyslog_conf.html">rsyslog.conf</A>
+documentation for details on selector lines and their filtering.</P>
+<P CLASS="western"><SPAN LANG="en-US"><B>You have now completed
+everything necessary to store syslog messages to the a database.</B></SPAN><SPAN LANG="en-US">
+If you would like to try out a front-end, you might want to look at
+</SPAN><A HREF="http://www.phplogcon.org/">phpLogCon</A><SPAN LANG="en-US">,
+which displays syslog data in a browser. As of this writing,
+phpLogCon is not yet a powerful tool, but it's open source, so it
+might be a starting point for your own solution.</SPAN></P>
+<H2 CLASS="western">On Reliability...</H2>
+<P LANG="en-US" CLASS="western">Rsyslogd writes syslog messages
+directly to the database. This implies that the database must be
+available at the time of message arrival. If the database is offline,
+no space is left or something else goes wrong - rsyslogd can not
+write the database record. If rsyslogd is unable to store a message,
+it performs one retry. This is helpful if the database server was
+restarted. In this case, the previous connection was broken but a
+reconnect immediately succeeds. However, if the database is down for
+an extended period of time, an immediate retry does not help.</P>
+<P CLASS="western"><SPAN LANG="en-US">Message loss in this scenario
+can easily be prevented with rsyslog. All you need to do is run the
+database writer in queued mode. This is now described in a generic
+way and I do not intend to duplicate it here. So please be sure to
+read &quot;</SPAN><A HREF="http://www.rsyslog.com/doc-rsyslog_high_database_rate.html">Handling
+a massive syslog database insert rate with Rsyslog</A><SPAN LANG="en-US">&quot;,
+which describes the scenario and also includes configuration
+examples.</SPAN></P>
+<H2 CLASS="western">Conclusion</H2>
+<P LANG="en-US" CLASS="western">With minimal effort, you can use
+rsyslogd to write syslog messages to a database. You can even make it
+absolutely fail-safe and protect it against database server downtime.
+Once the messages are arrived there, you can interactively review and
+analyze them. In practice, the messages are also stored in text files
+for longer-term archival and the databases are cleared out after some
+time (to avoid becoming too slow). If you expect an extremely high
+syslog message volume, storing it in real-time to the database may
+outperform your database server. In such cases, either filter out
+some messages or used queued mode (which in general is recommended
+with databases).</P>
+<P LANG="en-US" CLASS="western">The method outlined in this paper
+provides an easy to setup and maintain solution for most use cases.</P>
+<H3 CLASS="western">Feedback Requested</H3>
+<P CLASS="western">I would appreciate feedback on this paper. If you
+have additional ideas, comments or find bugs, please <A HREF="mailto:rgerhards@adiscon.com">let
+me know</A>.</P>
+<H2 CLASS="western">References and Additional Material</H2>
+<UL>
+	<LI><P CLASS="western" STYLE="margin-bottom: 0in"><A HREF="http://www.rsyslog.com/">www.rsyslog.com</A>
+	- the rsyslog site 
+	</P>
+	<LI><P CLASS="western"><A HREF="http://www.monitorware.com/Common/en/Articles/performance-optimizing-syslog-server.php">Paper
+	on Syslog Server Optimization</A> 
+	</P>
+</UL>
+<H2 CLASS="western">Revision History</H2>
+<UL>
+	<LI><P CLASS="western" STYLE="margin-bottom: 0in">2005-08-02 *
+	<A HREF="http://www.adiscon.com/en/people/rainer-gerhards.php">Rainer
+	Gerhards</A> * initial version created 
+	</P>
+	<LI><P CLASS="western" STYLE="margin-bottom: 0in">2005-08-03 *
+	<A HREF="http://www.adiscon.com/en/people/rainer-gerhards.php">Rainer
+	Gerhards</A> * added references to demo site 
+	</P>
+	<LI><P CLASS="western" STYLE="margin-bottom: 0in">2007-06-13 *
+	<A HREF="http://www.adiscon.com/en/people/rainer-gerhards.php">Rainer
+	Gerhards</A> * removed demo site - was torn down because too
+	expensive for usage count 
+	</P>
+	<LI><P CLASS="western" STYLE="margin-bottom: 0in">2008-02-21 *
+	<A HREF="http://www.adiscon.com/en/people/rainer-gerhards.php">Rainer
+	Gerhards</A> * updated reliability section, can now be done with
+	on-demand disk queues</P>
+	<LI><P CLASS="western">2008-02-28 * <A HREF="http://www.adiscon.com/en/people/rainer-gerhards.php">Rainer
+	Gerhards</A> * added info on other databases, updated syntax to more
+	recent one 
+	</P>
+	<LI><P CLASS="western">2010-01-29 * Marc Schiffbauer * added some
+	PostgreSQL stuff, made wording more database generic, fixed some
+	typos</P>
+</UL>
+<H2 CLASS="western">Copyright</H2>
+<P CLASS="western">Copyright (c) 2005-2010 <A HREF="http://www.adiscon.com/en/people/rainer-gerhards.php">Rainer
+Gerhards</A>, Marc Schiffbauer and <A HREF="http://www.adiscon.com/en/">Adiscon</A>.</P>
+<P CLASS="western"><BR><BR>
+</P>
+</BODY>
+</HTML>

@@ -1,0 +1,8 @@
+<34>1 2003-01-23T12:34:56.003Z mymachine.example.com su - ID47 - MSG
+003
+# full precision
+<34>1 2003-01-23T12:34:56.123456Z mymachine.example.com su - ID47 - MSG
+123456
+# without
+<34>1 2003-01-23T12:34:56Z mymachine.example.com su - ID47 - MSG
+0

@@ -1,0 +1,94 @@
+<html><head>
+<title>Writing syslog Data to MySQL</title>
+<meta name="KEYWORDS" content="syslog, mysql, syslog to mysql, howto">
+</head>
+<body>
+<h1>About rsyslog Modules</h1>
+<P><small><i>Written by
+<a href="http://www.adiscon.com/en/people/rainer-gerhards.php">Rainer Gerhards</a> (2007-07-28)</i></small></P>
+<p><font color="#FF0000"><b>This document is incomplete. The module interface is 
+also quite incomplete and under development. Do not currently use it!</b></font> 
+You may want to visit <a href="http://rgerhards.blogspot.com/">Rainer's blog</a> 
+to learn what's going on.</p>
+<h2>Overview</h2>
+<p>In theory, modules provide input and output, among other functions, in 
+rsyslog. In practice, modules are only utilized for output in the current 
+release. The module interface is not yet completed and a moving target. We do 
+not recommend to write a module based on the current specification. If you do, 
+please be prepared that future released of rsyslog will probably break your 
+module. </p>
+<p>A goal of modularization is to provide an easy to use plug-in interface. 
+However, this goal is not yet reached and all modules must be statically linked.</p>
+<h2>Module &quot;generation&quot;</h2>
+<p>There is a lot of plumbing that is always the same in all modules. For 
+example, the interface definitions, answering function pointer queries and such. 
+To get rid of these laborious things, I generate most of them automatically from 
+a single file. This file is named module-template.h. It also contains the 
+current best description of the interface &quot;specification&quot;.</p>
+<p>One thing that can also be achieved with it is the capability to cope with a 
+rapidly changing interface specification. The module interface is evolving. 
+Currently, it is far from being finished. As I moved the monolithic code to 
+modules, I needed (and still need) to make many &quot;non-clean&quot; code hacks, just to 
+get it working. These things are now gradually being removed. However, this 
+requires frequent changes to the interfaces, as things move in and out while 
+working towards a clean interface. All the interim is necessary to reach the 
+goal. This volatility of specifications is the number one reasons I currently 
+advise against implementing your own modules (hint: if you do, be sure to use 
+module-template.h and be prepared to fix newly appearing and disappearing data 
+elements).</p>
+<h2>Naming Conventions</h2>
+<h3>Source</h3>
+<p>Output modules, and only output modules, should start with a file name of 
+&quot;om&quot; (e.g. &quot;omfile.c&quot;, &quot;omshell.c&quot;). Similarly, input modules will use &quot;im&quot; and 
+filter modules &quot;fm&quot;. The third character shall not be a hyphen.</p>
+<h2>Module Security</h2>
+<p>Modules are directly loaded into rsyslog's address space. As such, any module 
+is provided a big level of trust. Please note that further module interfaces 
+might provide a way to load a module into an isolated address space. This, 
+however, is far from being completed. So the number one rule about module 
+security is to run only code that you know you can trust.</p>
+<p>To minimize the security risks associated with modules, rsyslog provides only 
+the most minimalistic access to data structures to its modules. For that reason, 
+the output modules do not receive any direct pointers to the selector_t 
+structure, the syslogd action structures and - most importantly - the msg 
+structure itself. Access to these structures would enable modules to access data 
+that is none of their business, creating a potential security weakness.</p>
+<p>Not having access to these structures also simplifies further queueing and 
+error handling cases. As we do not need to provide e.g. full access to the msg 
+object itself, we do not need to serialize and cache it. Instead, strings needed 
+by the module are created by syslogd and then the final result is provided to 
+the module. That, for example, means that in a queued case $NOW is the actual 
+timestamp of when the message was processed, which may be even days before it 
+being dequeued. Think about it: If we wouldn't cache the resulting string, $NOW 
+would be the actual date if the action were suspended and messages queued for 
+some time. That could potentially result in big confusion.</p>
+<p>It is thought that if an output module actually needs access to the while msg 
+object, we will (then) introduce a way to serialize it (e.g. to XML) in the 
+property replacer. Then, the output module can work with this serialized object. 
+The key point is that output modules never deal directly with msg objects (and 
+other internal structures). Besides security, this also greatly simplifies the 
+job of the output module developer.</p>
+<h2>Action Selectors</h2>
+<p>Modules (and rsyslog) need to know when they are called. For this, there must 
+a an action identification in selector lines. There are two syntaxes: the 
+single-character syntax, where a single characters identifies a module (e.g. &quot;*&quot; 
+for a wall message) and the modules designator syntax, where the module name is 
+given between colons (e.g. &quot;:ommysql:&quot;). The single character syntax is 
+depreciated and should not be used for new plugins.</p>
+<p>An in-depth discussion of module designation in action selectors can be found 
+in this forum thread:</p>
+<p>
+<a href="http://www.rsyslog.com/index.php?name=PNphpBB2&file=viewtopic&p=678#678">
+http://www.rsyslog.com/index.php?name=PNphpBB2&amp;file=viewtopic&amp;p=678#678</a></p>
+<h2>Copyright</h2>
+<p>Copyright (c) 2007
+<a href="http://www.adiscon.com/en/people/rainer-gerhards.php">Rainer Gerhards</a> 
+and <a href="http://www.adiscon.com/en/">Adiscon</a>.</p>
+<p>Permission is granted to copy, distribute and/or modify this document under 
+the terms of the GNU Free Documentation License, Version 1.2 or any later 
+version published by the Free Software Foundation; with no Invariant Sections, 
+no Front-Cover Texts, and no Back-Cover Texts. A copy of the license can be 
+viewed at <a href="http://www.gnu.org/copyleft/fdl.html">
+http://www.gnu.org/copyleft/fdl.html</a>.</p>
+</body>
+</html>

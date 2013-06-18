@@ -1,0 +1,95 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Language" content="en">
+<title>mmsnmptrapd message modification module</title>
+</head>
+
+<body>
+<a href="rsyslog_conf_modules.html">back to rsyslog module overview</a>
+
+<h1>mmsnmptrapd message modification module</h1>
+<p><b>Module Name:&nbsp;&nbsp;&nbsp; imtcp</b></p>
+<p><b>Author: </b>Rainer Gerhards &lt;rgerhards@adiscon.com&gt; (custom-created)</p>
+<p><b>Multi-Ruleset Support: </b>since 5.8.1
+<p><b>Description</b>:</p>
+<p>This module uses a specific configuration of snmptrapd's tag values to
+obtain information of the original source system and the severity present inside the
+original SNMP trap. It then replaces these fields inside the syslog message.
+<p>Let's look at an example. Essentially, SNMPTT will invoke something like this: 
+<pre>logger -t snmptrapd/warning/realhost Host 003c.abcd.ffff in vlan 17 is flapping between port Gi4/1 and port Gi3/2 
+</pre>
+<p>
+This message modification module will change the tag (removing the additional information),
+hostname and severity (not shown in example), so the log entry will look as follows:
+<pre>
+2011-04-21T16:43:09.101633+02:00 realhost snmptrapd: Host 003c.abcd.ffff in vlan 122 is flapping between port Gi4/1 and port Gi3/2 
+</pre>
+The following logic is applied to all message being processed:
+<ol>
+<li>The module checks incoming syslog entries. If their TAG field starts with "snmptrapd/"
+(configurable), they are modified, otherwise not. If the are modified, this happens as follows:
+<li>It will derive the hostname from the tag field which has format snmptrapd/severity/hostname 
+<li>It should derive the severity from the tag field which has format
+snmptrapd/severity/hostname. A configurable mapping table will be used to drive a new
+severity value from that severity string. If no mapping has been defined, the original
+severity is not changed.
+<li>It replaces the "FromHost" value with the derived value from step2 
+<li>It replaces the "Severity" value with the derived value from step 3 
+</ol>
+<p>Note that the placement of this module inside the configuration is important. All actions
+before this modules is called will work on the unmodified message. All messages after it's call
+will work on the modified message. Please also note that there is some extra power in case it
+is required: as this module is implemented via the output module interface, a filter
+can be used (actually must be used) in order to tell when it is called. Usually, the catch-all
+filter (*.*) is used, but more specific filters are fully supported. So it is possible to define
+different parameters for this module depending on different filters. It is also possible to
+just run messages from one remote system through this module, with the help of filters or
+multiple rulesets and ruleset bindings. In short words, all capabilities rsyslog offers
+to control output modules are also available to mmsnmptrapd.
+<p><b>Configuration Directives</b>:</p>
+<ul>
+<li><b>$mmsnmptrapdTag</b> [tagname]<br>
+tells the module which start string inside the tag to look for. The default is
+"snmptrapd". Note that a slash is automatically added to this tag when it comes to
+matching incoming messages. It MUST not be given, except if two slashes are required
+for whatever reasons (so "tag/" results in a check for "tag//" at the start of
+the tag field).
+<li><b>$mmsnmptrapdSeverityMapping</b> [severtiymap]<br>
+This specifies the severity mapping table. It needs to be specified as a list. Note that
+due to the current config system <b>no whitespace</b> is supported inside the list, so be
+sure not to use any whitespace inside it.<br>
+The list is constructed of Severtiy-Name/Severity-Value pairs, delimited by comma. 
+Severity-Name is a case-sensitive string, e.g. "warning" and an associated
+numerical value (e.g. 4).
+Possible values are in the rage 0..7 and are defined in RFC5424, table 2. The 
+given sample would be specified as "warning/4".<br>
+If multiple instances of mmsnmptrapd are used, each instance uses the most recently
+defined $mmsnmptrapdSeverityMapping before itself.
+</ul>
+<b>Caveats/Known Bugs:</b>
+<ul>
+<li>currently none known</li>
+</ul>
+<p><b>Example:</b></p>
+<p>This enables to rewrite messages from snmptrapd and configures error and warning 
+severities. The default tag is used.<br>
+</p>
+<textarea rows="10" cols="80">$ModLoad mmsnmptrapd # needs to be done just once
+# ... other module loads and listener setup ...
+*.* /path/to/file/with/orignalMessage  # this file receives *un*modified messages
+$mmsnmptrapdSeverityMapping warning/4,error/3
+*.* :mmsnmptrapd:		       # *now* message is modified
+*.* /path/to/file/with/modifiedMessage # this file receives modified messages
+# ... rest of config ...
+</textarea>
+</p>
+<p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>]
+[<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the <a href="http://www.rsyslog.com/">rsyslog</a>
+project.<br>
+Copyright &copy; 2011 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>.
+Released under the GNU GPL version 3 or higher.</font></p>
+</body>
+</html>

@@ -1,0 +1,3 @@
+<38>Mar 27 19:06:53 source_server sshd(pam_unix)[12750]: session opened for user foo by (uid=0)
+38,auth,info,Mar 27 19:06:53,source_server,sshd(pam_unix),sshd(pam_unix)[12750]:, session opened for user foo by (uid=0)
+# yet another real-life sample where we had some issues with

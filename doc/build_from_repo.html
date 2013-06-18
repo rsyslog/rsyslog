@@ -1,0 +1,79 @@
+<html><head>
+<title>Building rsyslog from the source repository</title>
+</head>
+<body>
+<h1>Building rsyslog from the source repository</h1>
+<p>In most cases, people install rsyslog either via a package or use an "official"
+distribution tarball to generate it. But there may be situations where it is desirable
+to build directly from the source repository. This is useful for people who would like to
+participate in development or who would like to use the latest, not-yet-released code.
+The later may especially be the case if you are asked to try out an experimental version.
+<p>Building from the repsitory is not much different than building from the source
+tarball, but some files are missing because they are output files and thus do not
+belong into the repository.
+<h2>Obtaining the Source</h2>
+<p>First of all, you need to download the sources. Rsyslog is currently kept in a git
+repository. You can clone this repository either via http or git protocol (with the later
+being much faster. URLS are:
+<ul>
+<li>git://git.adiscon.com/git/rsyslog.git
+<li>http://git.adiscon.com/git/rsyslog.git
+</ul>
+<p>There is also a browsable version (gitweb) available at
+<a href="http://git.adiscon.com/?p=rsyslog.git;a=summary">http://git.adiscon.com/?p=rsyslog.git;a=summary</a>.
+This version also offers snapshots of each commit for easy download. You can use these if
+you do not have git present on your system.
+<p>After you have cloned the repository, you are in the master branch by default. This
+is where we keep the devel branch. If you need any other branch, you need to do
+a "git checkout --track -b branch origin/branch". For example, the command to check out
+the beta branch is "git checkout --track -b beta origin/beta".
+<h2>Prequisites</h2>
+<p>To build the compilation system, you need the <b>pkg-config</b> package (an utility for
+autotools) present on your system. Otherwise, configure will fail with something like
+<pre><code>
+checking for SYSLOG_UNIXAF support... yes
+checking for FSSTND support... yes
+./configure: line 25895: syntax error near unexpected token `RELP,'
+./configure: line 25895: ` PKG_CHECK_MODULES(RELP, relp >= 0.1.1)'
+</code></pre>
+<h2>Creating the Build Environment</h2>
+<p>This is fairly easy: just issue "<b>autoreconf -fvi</b>", which should do everything you need.
+Once this is done, you can follow the usual ./configure steps just like when
+you downloaded an official distribution tarball (see the
+<a href="install.html">rsyslog install guide</a>, starting at step 2,
+for further details about that).
+
+<h2>Special Compile-Time Options</h2>
+<p>On some platforms, compile-time issues occur, like the one shown below:
+<p><pre><code>
+make[2]: Entering directory `/home/az/RSyslog/rsyslog-5.5.0/tools'
+  CCLD   rsyslogd
+rsyslogd-omfile.o: In function `getClockFileAccess':
+/home/az/RSyslog/rsyslog-5.5.0/tools/omfile.c:91: undefined reference to `__sync_fetch_and_add_8'
+/home/az/RSyslog/rsyslog-5.5.0/tools/omfile.c:91: undefined reference to `__sync_fetch_and_add_8'
+/home/az/RSyslog/rsyslog-5.5.0/tools/omfile.c:91: undefined reference to `__sync_fetch_and_add_8'
+</code></pre>
+<p>Note that the exact error messages can be different. These type of errors stem down to
+atomic instruction support in GCC, which is somewhat depending on the machine architecture it
+compiles code for. Very old machines (like the original i386) do not even at all provide support
+for these instructions.
+<p>The availability of atomic instructions is vital for rsyslog - it can not be built without them.
+Consequently, there is a configure check included for them. But under some circumstances,
+GCC seems to report they are available, but does not provide implementations for
+all of them (at least this is my observation...). The simple cure is to make sure that
+GCC generates code for a modern-enough architecture. This, for example, can be done as
+follows:
+<p><pre><code>
+./configure CFLAGS="-march=i586 -mcpu=i686" --enable-imfile ... (whatever you need)
+</code></pre>
+<p>These settings should resolve the issue .
+
+<p>[<a href="manual.html">manual index</a>]
+[<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the
+<a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
+Copyright &copy; 2008, 2009 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>. Released under the GNU GPL 
+version 3 or higher.</font></p>
+</body>
+</html>

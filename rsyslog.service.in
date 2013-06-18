@@ -1,0 +1,12 @@
+[Unit]
+Description=System Logging Service
+Requires=syslog.socket
+
+[Service]
+Type=notify
+ExecStart=@sbindir@/rsyslogd -n
+StandardOutput=null
+
+[Install]
+WantedBy=multi-user.target
+Alias=syslog.service

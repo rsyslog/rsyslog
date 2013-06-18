@@ -1,0 +1,150 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Language" content="en"><title>Generic Database Output Module (omlibdbi)</title>
+
+</head>
+<body>
+<a href="rsyslog_conf_modules.html">back</a>
+
+<h1>Generic Database Output Module (omlibdbi)</h1>
+<p><b>Module Name:&nbsp;&nbsp;&nbsp; omlibdbi</b></p>
+<p><b>Author: </b>Rainer Gerhards
+&lt;rgerhards@adiscon.com&gt;</p>
+<p><b>Description</b>:</p>
+<p>This modules supports a large number of database systems via <a href="http://libdbi.sourceforge.net/">libdbi</a>.
+Libdbi abstracts the database layer and provides drivers for many
+systems. Drivers are available via the <a href="http://libdbi-drivers.sourceforge.net/">libdbi-drivers</a>
+project. As of this writing, the following drivers are available:</p>
+<ul>
+<li><a href="http://www.firebird.sourceforge.net/">Firebird/Interbase</a></li>
+<li><a href="http://www.freetds.org/">FreeTDS</a>
+(provides access to <a href="http://www.microsoft.com/sql">MS
+SQL Server</a> and <a href="http://www.sybase.com/products/informationmanagement/adaptiveserverenterprise">Sybase</a>)</li>
+<li><a href="http://www.mysql.com/">MySQL</a>
+(also
+supported via the native ommysql plugin in rsyslog)</li>
+<li><a href="http://www.postgresql.org/">PostgreSQL</a>(also
+supported via the native
+ommysql plugin in rsyslog)</li>
+<li><a href="http://www.sqlite.org/">SQLite/SQLite3</a></li>
+</ul>
+<p>The following drivers are in various stages of completion:</p>
+<ul>
+<li><a href="http://ingres.com/">Ingres</a></li>
+<li><a href="http://www.hughes.com.au/">mSQL</a></li>
+<li><a href="http://www.oracle.com/">Oracle</a></li>
+</ul>
+<p>These drivers seem to be quite usable, at
+least from an rsyslog point of view.</p>
+<p>Libdbi provides a slim layer between rsyslog and the actual
+database engine. We have not yet done any performance testing (e.g.
+omlibdbi vs. ommysql) but honestly believe that the performance impact
+should be irrelevant, if at all measurable. Part of that assumption is
+that rsyslog just does the "insert" and most of the time is spent
+either in the database engine or rsyslog itself. It's hard to think of
+any considerable time spent in the libdbi abstraction layer.</p>
+<p><span style="font-weight: bold;">Setup</span></p>
+<p>In order for this plugin to work, you need to have libdbi, the
+libdbi driver for your database backend and the client software for
+your database backend installed. There are libdbi packages for many
+distributions. Please note that rsyslogd requires a quite recent
+version (0.8.3) of libdbi. It may work with older versions, but these
+need some special ./configure options to support being called from a
+dlopen()ed plugin (as omlibdbi is). So in short, you probably save you
+a lot of headache if you make sure you have at least libdbi version
+0.8.3 on your system.
+</p>
+<p><b>Module Parameters</b></p>
+<ul>
+<li><b>template</b><br>
+The default template to use. This template is used when no template is
+explicitely specified in the action() statement.
+<li><b>driverdirectory</b><br>
+Path to the libdbi drivers. Usually,
+you do not need to set it. If you installed libdbi-drivers at a
+non-standard location, you may need to specify the directory here. If
+you are unsure, do <b>not</b> use this configuration directive.
+Usually, everything works just fine.
+Note that this was an action() paramter in rsyslog versions below 7.3.0.
+However, only the first action's driverdirectory parameter was actually used.
+This has been cleaned up in 7.3.0, where this now is a module paramter.
+</li>
+</ul>
+<p><b>Action Parameters</b></p>
+<ul>
+<li><b>server</b><br>Name or address of the MySQL server
+<li><b>db</b><br>Database to use
+<li><b>uid</b><br>logon userid used to connect to server. Must have proper permissions.
+<li><b>pwd</b><br>the user's password
+<li><b>template</b><br>Template to use when submitting messages.
+<li><b>driver</b><br>
+Name of the dbidriver to use, see libdbi-drivers documentation. As a
+quick excerpt, at least those were available at the time of this
+writiting "mysql" (suggest to use ommysql instead), "firebird" (Firbird
+and InterBase), "ingres", "msql", "Oracle", "sqlite", "sqlite3",
+"freetds" (for Microsoft SQL and Sybase) and "pgsql" (suggest to use
+ompgsql instead).</li>
+</ul>
+<p><b>Legacy (pre-v6) Configuration Directives</b>:</p>
+<p>It is strongly recommended NOT to use legacy format.
+<ul>
+<li><i>$ActionLibdbiDriverDirectory /path/to/dbd/drivers</i>
+- like the driverdirectory action parameter.
+<li><i>$ActionLibdbiDriver drivername</i> - like the drivername action parameter
+<li><i>$ActionLibdbiHost hostname</i> - like the server action parameter
+<li><i>$ActionLibdbiUserName user</i> - like the uid action parameter
+<li><i>$ActionlibdbiPassword</i> - like the pwd action parameter
+<li><i>$ActionlibdbiDBName db</i> - like the db action parameter
+<li><i>selector line: :omlibdbi:<code>;template</code></i><br>
+executes the recently configured omlibdbi action. The ;template part is
+optional. If no template is provided, a default template is used (which
+is currently optimized for MySQL - sorry, folks...)</li>
+</ul>
+<b>Caveats/Known Bugs:</b>
+<p>You must make sure that any templates used for omlibdbi
+properly escape strings. This is usually done by supplying the SQL (or
+STDSQL) option to the template. Omlibdbi rejects templates without this
+option for security reasons. However, omlibdbi does not detect if you
+used the right option for your backend. Future versions of rsyslog
+(with full&nbsp;expression&nbsp; support) will provide advanced
+ways of handling this situation. So far, you must be careful. The
+default template provided by rsyslog is suitable for MySQL, but not
+necessarily for your database backend. Be careful!</p>
+<p>If you receive the rsyslog error message "libdbi or libdbi
+drivers not present on this system" you may either not have libdbi and
+its drivers installed or (very probably) the version is earlier than
+0.8.3. In this case, you need to make sure you have at least 0.8.3 and
+the libdbi driver for your database backend present on your system.</p><p>I
+do not have most of the database supported by omlibdbi in my lab. So it
+received limited cross-platform tests. If you run into troubles, be
+sure the let us know at <a href="http://www.rsyslog.com">http://www.rsyslog.com</a>.</p>
+<p><b>Sample:</b></p>
+<p>The following sample writes all syslog messages to the
+database "syslog_db" on mysqlsever.example.com. The server is MySQL and
+being accessed under the account of "user" with password "pwd" (if you
+have empty passwords, just remove the $ActionLibdbiPassword line).<br>
+</p>
+<textarea rows="5" cols="60">module(load="omlibdbi")
+*.* action(type="omlibdbi" driver="mysql"
+           server="mysqlserver.example.com" db="syslog_db"
+	   uid="user" pwd="pwd"
+</textarea>
+<p><b>Legacy Sample:</b></p>
+<p>The same as above, but in legacy config format (pre rsyslog-v6):
+<textarea rows="8" cols="60">$ModLoad omlibdbi
+$ActionLibdbiDriver mysql
+$ActionLibdbiHost mysqlserver.example.com
+$ActionLibdbiUserName user
+$ActionLibdbiPassword pwd
+$ActionLibdbiDBName syslog_db
+*.* :omlibdbi:
+</textarea>
+<p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>]
+[<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the
+<a href="http://www.rsyslog.com/">rsyslog</a>
+project.<br>
+Copyright &copy; 2008-2012 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>.
+Released under the ASL 2.0.</font></p>
+</body></html>

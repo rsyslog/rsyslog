@@ -1,0 +1,158 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><title>rsyslog features</title>
+</head>
+<body>
+<a href="rsyslog_conf.html">back</a>
+<h1>RSyslog - Features</h1>
+<p><b>This page lists both current features as well as
+those being considered for future versions of rsyslog.</b> If you
+think a feature is missing, drop
+<a href="mailto:rgerhards@adiscon.com">Rainer</a> a
+note. Rsyslog is a vital project. Features are added each few days. If
+you would like to keep up of what is going on, you can also subscribe
+to the <a href="http://lists.adiscon.net/mailman/listinfo/rsyslog">rsyslog
+mailing list</a>.</p>
+<p><span style="font-weight: bold;">A better
+structured feature list is now contained in our </span><a style="font-weight: bold;" href="rsyslog_ng_comparison.html">rsyslog
+vs. syslog-ng comparison</a><span style="font-weight: bold;">.
+</span>Probably that page will replace this one&nbsp;in the
+future.
+</p>
+<h2>Current Features</h2>
+<ul>
+<li>native support for <a href="rsyslog_mysql.html">writing
+to MySQL databases</a></li>
+<li> native support for writing to Postgres databases</li>
+<li>direct support for Firebird/Interbase,
+OpenTDS (MS SQL, Sybase), SQLLite, Ingres, Oracle, and mSQL via libdbi,
+a database abstraction layer (almost as good as native)</li>
+<li>native support for <a href="ommail.html">sending
+mail messages</a> (first seen in 3.17.0)</li>
+<li>support for (plain) tcp based syslog - much better
+reliability</li>
+<li>support for sending and receiving compressed syslog messages</li>
+<li>support for on-demand on-disk spooling of messages that can
+not be processed fast enough (a great feature for <a href="rsyslog_high_database_rate.html">writing massive
+amounts of syslog messages to a database</a>)</li>
+<li>support for selectively <a href="http://wiki.rsyslog.com/index.php/OffPeakHours">processing
+messages only during specific timeframes</a> and spooling them to
+disk otherwise</li>
+<li>ability to monitor text files and convert their contents
+into syslog messages (one per line)</li>
+<li>ability to configure backup syslog/database servers - if
+the primary fails, control is switched to a prioritized list of backups</li>
+<li>support for receiving messages via reliable <a href="http://www.monitorware.com/Common/en/glossary/rfc3195.php">
+RFC 3195</a> delivery (a bit clumpsy to build right now...)</li>
+<li>ability to generate file names and directories (log
+targets) dynamically, based on many different properties</li>
+<li>control of log output format, including ability to present
+channel and priority as visible log data</li>
+<li>good timestamp format control; at a minimum, ISO 8601/RFC
+3339 second-resolution UTC zone</li>
+<li>ability to reformat message contents and work with
+substrings</li>
+<li>support for log files larger than 2gb</li>
+<li>support for file size limitation and automatic rollover
+command execution</li>
+<li>support for running multiple rsyslogd instances on a single
+machine</li>
+<li>support for <a href="rsyslog_tls.html">TLS-protected
+syslog</a> (both <a href="rsyslog_tls.html">natively</a>
+and via <a href="rsyslog_stunnel.html">stunnel</a>)</li>
+<li>ability to filter on any part of the message, not just
+facility and severity</li>
+<li>ability to use regular expressions in filters</li>
+<li>support for discarding messages based on filters</li>
+<li>ability to execute shell scripts on received messages</li>
+<li>control of whether the local hostname or the hostname of
+the origin of the data is shown as the hostname in the output</li>
+<li>ability to preserve the original hostname in NAT
+environments and relay chains </li>
+<li>ability to limit the allowed network senders</li>
+<li>powerful BSD-style hostname and program name blocks for
+easy multi-host support</li>
+<li> massively multi-threaded with dynamic work thread pools
+that start up and shut themselves down on an as-needed basis (great for
+high log volume on multicore machines)</li>
+<li>very experimental and volatile support for <a href="syslog_protocol.html">syslog-protocol</a>
+compliant messages (it is volatile because standardization is currently
+underway and this is a proof-of-concept implementation to aid this
+effort)</li>
+<li> world's first implementation of syslog-transport-tls</li>
+<li> the sysklogd's klogd functionality is implemented as the <i>imklog</i>
+input plug-in. So rsyslog is a full replacement for the sysklogd package</li>
+<li> support for IPv6</li>
+<li> ability to control repeated line reduction ("last message
+repeated n times") on a per selector-line basis</li>
+<li> supports sub-configuration files, which can be
+automatically read from directories. Includes are specified in the main
+configuration file</li>
+<li> supports multiple actions per selector/filter condition</li>
+<li> MySQL and Postgres SQL functionality as a dynamically
+loadable plug-in</li>
+<li> modular design for inputs and outputs - easily extensible
+via custom plugins</li>
+<li> an easy-to-write to plugin interface</li>
+<li> ability to send SNMP trap messages</li>
+<li> ability to filter out messages based on sequence of arrival</li>
+<li>support for comma-seperated-values (CSV) output generation
+(via the "csv" property replace option). The
+CSV format supported is that from RFC 4180.</li>
+<li>support for arbitrary complex boolean, string and
+arithmetic expressions in message filters</li>
+</ul>
+<h2>World's first</h2>
+Rsyslog has an interesting number of "world's firsts" - things that
+were implemented for the first time ever in rsyslog. Some of them are still features not available elsewhere.<br><ul>
+<li>world's first implementation of IETF I-D syslog-protocol (February 2006, version 1.12.2 and above), now RFC5424</li><li>world's first implementation of dynamic syslog on-the-wire compression (December 2006, version 1.13.0 and above)</li><li>world's first open-source implementation of a disk-queueing syslogd (January 2008, version 3.11.0 and above)</li>
+<li>world's first implementation of IETF I-D
+syslog-transport-tls (May 2008, version 3.19.0 and above)</li>
+</ul>
+<h2>Upcoming Features</h2>
+<p>The list below is something like a repository of ideas we'd
+like to implement. Features on this list are typically NOT scheduled
+for immediate inclusion. We maintain a
+<a href="http://bugzilla.adiscon.com/rsyslog-feature.html">feature
+request tracker at our bugzilla</a>. This tracker has things
+typically within reach of implementation. Users are encouraged to
+submit feature requests there (or via our forums). If we like them but
+they look quite long-lived (aka "not soon to be implemented"), they
+will possibly be migrated to this list here and at some time moved back
+to the bugzilla tracker.</p>
+<p><b>Note that we also maintain a
+<a href="http://www.rsyslog.com/sponsor_feature">list of features that are looking for sponsors</a>.
+If you are interested in any of these features, or any other feature, you may consider sponsoring
+the implementation. This is also a great way to show your commitment to the open source
+community. Plus, it can be financially attractive: just think about how much less it may
+be to sponsor a feature instead of purchasing a commercial implementation. Also, the benefit
+of being recognised as a sponsor may even drive new customers to your business!</b>
+<ul>
+<li>port it to more *nix variants (eg AIX and HP UX) - this
+needs volunteers with access to those machines and knowledge </li>
+<li>pcre filtering - maybe (depending on feedback)&nbsp; -
+simple regex already partly added. So far, this seems sufficient so
+that there is no urgent need to do pcre. If done, it will be a loadable RainerScript function.</li>
+<li>support for <a href="http://www.monitorware.com/Common/en/glossary/rfc3195.php">RFC
+3195</a> as a sender - this is currently unlikely to happen,
+because there is no real demand for it. Any work on RFC 3195 has been
+suspend until we see some real interest in it.&nbsp; It is probably
+much better to use TCP-based syslog, which is interoperable with a
+large number of applications. You may also read my blog post on the
+future of liblogging, which contains interesting information about the <a href="http://rgerhards.blogspot.com/2007/09/where-is-liblogging-heading-to.html">
+future of RFC 3195 in rsyslog</a>.</li>
+</ul>
+<p>To see when each feature was added, see the
+<a href="http://www.rsyslog.com/Topic4.phtml">rsyslog
+change log</a> (online only).</p>
+
+<p>[<a href="manual.html">manual index</a>]
+[<a href="rsyslog_conf.html">rsyslog.conf</a>]
+[<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the
+<a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
+Copyright &copy; 2008 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>. Released under the GNU GPL
+version 2 or higher.</font></p>
+
+</body></html>
+

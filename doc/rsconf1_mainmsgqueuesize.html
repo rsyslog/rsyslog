@@ -1,0 +1,24 @@
+<html>
+<head>
+<title>rsyslog.conf file</title>
+</head>
+<body>
+<a href="rsyslog_conf_global.html">back</a>
+
+<h2>$MainMsgQueueSize</h2>
+<p><b>Type:</b> global configuration directive</p>
+<p><b>Default:</b> 10000</p>
+<p><b>Description:</b></p>
+<p>This allows to specify the maximum size of the message queue. This directive is only available when rsyslogd has been compiled with multithreading support. In this mode, receiver and output modules are de-coupled via an in-memory queue. This queue buffers messages when the output modules are not capable to process them as fast as they are received. Once the queue size is exhausted, messages will be dropped. The slower the output (e.g. MySQL), the larger the queue should be. Buffer space for the actual queue entries is allocated on an as-needed basis. Please keep in mind that a very large queue may exhaust available system memory and swap space. Keep this in mind when configuring the max size. The actual size of a message depends largely on its content and the originator. As a rule of thumb, typically messages should not take up more then roughly 1k (this is the memory structure, not what you see in a network dump!). For typical linux messages, 512 bytes should be a good bet. Please also note that there is a minimal amount of memory taken for each queue entry, no matter if it is used or not. This is one pointer value, so on 32bit systems, it should typically be 4 bytes and on 64bit systems it should typically be 8 bytes. For example, the default queue size of 10,000 entries needs roughly 40k fixed overhead on a 32 bit system.</p>
+<p><b>Sample:</b></p>
+<p><code><b>$MainMsgQueueSize 100000 # 100,000 may be a value to handle burst traffic</b></code></p>
+
+<p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>] [<a href="manual.html">manual 
+index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the
+<a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
+Copyright &copy; 2007 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>. Released under the GNU GPL 
+version 2 or higher.</font></p>
+</body>
+</html>

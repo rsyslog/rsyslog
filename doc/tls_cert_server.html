@@ -1,0 +1,127 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><title>TLS-protected syslog: central server setup</title>
+</head>
+<body>
+
+<h1>Encrypting Syslog Traffic with TLS (SSL)</h1>
+<p><small><i>Written by <a href="http://www.adiscon.com/en/people/rainer-gerhards.php">Rainer
+Gerhards</a> (2008-06-18)</i></small></p>
+
+<ul>
+<li><a href="rsyslog_secure_tls.html">Overview</a>
+<li><a href="tls_cert_scenario.html">Sample Scenario</a>
+<li><a href="tls_cert_ca.html">Setting up the CA</a>
+<li><a href="tls_cert_machine.html">Generating Machine Certificates</a>
+<li><a href="tls_cert_server.html">Setting up the Central Server</a>
+<li><a href="tls_cert_client.html">Setting up syslog Clients</a>
+<li><a href="tls_cert_udp_relay.html">Setting up the UDP syslog relay</a>
+<li><a href="tls_cert_summary.html">Wrapping it all up</a>
+</ul>
+
+<h3>Setting up the Central Server</h3>
+<p>In this step, we configure the central server. We assume it accepts messages only
+via TLS protected plain tcp based syslog from those peers that are explicitely permitted
+to send to it. The picture below show our configuration. This step configures
+the server central.example.net.
+<span style="float: left">
+<script type="text/javascript"><!--
+google_ad_client = "pub-3204610807458280";
+/* rsyslog doc inline */
+google_ad_slot = "5958614527";
+google_ad_width = 125;
+google_ad_height = 125;
+//-->
+</script>
+<script type="text/javascript"
+src="http://pagead2.googlesyndication.com/pagead/show_ads.js">
+</script>
+</span>
+<p><center><img src="tls_cert_100.jpg"></center>
+<p><i><font color="red"><b>Important:</b> Keep in mind that the order of configuration directives
+is very important in rsyslog. As such, the samples given below do only work if the given
+order is preserved.</font> Re-ordering the directives can break configurations and has broken them
+in practice. If you intend to re-order them, please be sure that you fully understand how
+the configuration language works and, most importantly, which statements form a block together.
+Please also note that we understand the the current configuration file format is
+ugly. However, there has been more important work in the way of enhancing it. If you would like
+to contribute some time to improve the config file language, please let us know. Any help
+is appreciated (be it doc or coding work!).</i>
+<p>Steps to do:
+<ul>
+<li>make sure you have a functional CA (<a href="tls_cert_ca.html">Setting up the CA</a>)
+<li>generate a machine certificate for central.example.net (follow instructions in
+    <a href="tls_cert_machine.html">Generating Machine Certificates</a>)
+<li>make sure you copy over ca.pem, machine-key.pem ad machine-cert.pem to the central server.
+Ensure that no user except root can access them (<b>even read permissions are really bad</b>).
+<li>configure the server so that it accepts messages from all machines in the
+example.net domain that have certificates from your CA. Alternatively, you may also
+precisely define from which machine names messages are accepted. See sample rsyslog.conf
+below.
+</ul>
+In this setup, we use wildcards to ease adding new systems. We permit the server to accept
+messages from systems whos names match *.example.net.
+<pre><code>
+$InputTCPServerStreamDriverPermittedPeer *.example.net
+</code></pre>
+This will match zuse.example.net and
+turing.example.net, but NOT pascal.otherdepartment.example.net. If the later would be desired,
+you can (and need) to include additional permitted peer config statments:
+<pre><code>
+$InputTCPServerStreamDriverPermittedPeer *.example.net
+$InputTCPServerStreamDriverPermittedPeer *.otherdepartment.example.net
+$InputTCPServerStreamDriverPermittedPeer *.example.com
+</code></pre>
+<p>As can be seen with example.com, the different permitted peers need NOT to be in a single
+domain tree. Also, individual machines can be configured. For example, if only zuse, turing
+and ada should be able to talk to the server, you can achive this by:
+<pre><code>
+$InputTCPServerStreamDriverPermittedPeer zuse.example.net
+$InputTCPServerStreamDriverPermittedPeer turing.example.net
+$InputTCPServerStreamDriverPermittedPeer ada.example.net
+</code></pre>
+<p>As an extension to the (upcoming) IETF syslog/tls standard, you can specify some text
+together with a domain component wildcard. So "*server.example.net", "server*.example.net"
+are valid permitted peers. However "server*Fix.example.net" is NOT a valid wildcard. The
+IETF standard permits no text along the wildcards.
+<p>The reason we use wildcards in the default setup is that it makes it easy to add systems
+without the need to change the central server's configuration. It is important to understand that
+the central server will accept names <b>only</b> (no exception) if the client certificate was
+signed by the CA we set up. So if someone tries to create a malicious certificate with
+a name "zuse.example.net", the server will <b>not</b> accept it. So a wildcard is safe
+as long as you ensure CA security is not breached. Actually, you authorize a client by issuing
+the certificate to it.
+<p><b>At this point, please be reminded once again that your security needs may be quite different from
+what we assume in this tutorial. Evaluate your options based on your security needs.</b>
+<h3>Sample syslog.conf</h3>
+<p>Keep in mind that this rsyslog.conf accepts messages via TCP, only. The only other
+source accepted is messages from the server itself.
+<code><pre>
+$ModLoad imuxsock # local messages
+$ModLoad imtcp # TCP listener
+
+# make gtls driver the default
+$DefaultNetstreamDriver gtls
+
+# certificate files
+$DefaultNetstreamDriverCAFile /rsyslog/protected/ca.pem
+$DefaultNetstreamDriverCertFile /rsyslog/protected/machine-cert.pem
+$DefaultNetstreamDriverKeyFile /rsyslog/protected/machine-key.pem
+
+$InputTCPServerStreamDriverAuthMode x509/name
+$InputTCPServerStreamDriverPermittedPeer *.example.net
+$InputTCPServerStreamDriverMode 1 # run driver in TLS-only mode
+$InputTCPServerRun 10514 # start up listener at port 10514
+</pre></code>
+<p><font color="red"><b>Be sure to safeguard at least the private key (machine-key.pem)!</b>
+If some third party obtains it, you security is broken!</font>
+<h2>Copyright</h2>
+<p>Copyright (c) 2008 <a href="http://www.adiscon.com/en/people/rainer-gerhards.php">Rainer
+Gerhards</a> and
+<a href="http://www.adiscon.com/en/">Adiscon</a>.</p>
+<p> Permission is granted to copy, distribute and/or modify this
+document under the terms of the GNU Free Documentation License, Version
+1.2 or any later version published by the Free Software Foundation;
+with no Invariant Sections, no Front-Cover Texts, and no Back-Cover
+Texts. A copy of the license can be viewed at
+<a href="http://www.gnu.org/copyleft/fdl.html">http://www.gnu.org/copyleft/fdl.html</a>.</p>
+</body></html>

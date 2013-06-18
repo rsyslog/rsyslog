@@ -1,0 +1,67 @@
+<html>
+<head>
+<title>rsyslog.conf file</title>
+</head>
+<body>
+<a href="rsyslog_conf_global.html">back</a>
+
+<h2>$omfileForceChown</h2>
+<p><b>Type:</b> global configuration directive</p>
+<p><b>Parameter Values:</b> boolean (on/off, yes/no)</p>
+<p><b>Available:</b> 4.7.0+, 5.3.0-5.8.x, <b>NOT</b> available in 5.9.x or higher</p>
+<p><b>Note: this directive has been removed and is no longer available. The
+documentation is currently being retained for historical reaons.</b> Expect
+it to go away at some later stage as well.
+<p><b>Default:</b> off</p>
+<p><b>Description:</b></p>
+<p>Forces rsyslogd to change the ownership for output files that already exist. Please note
+that this tries to fix a potential problem that exists outside the scope of rsyslog. Actually,
+it tries to fix invalid ownership/permission settings set by the original file creator.
+<p>Rsyslog changes the ownership during initial execution with root privileges. When a privelege
+drop is configured, privileges are dropped after the file owner ship is changed. Not that this currently
+is a limitation in rsyslog's privilege drop code, which is on the TODO list to be removed. See Caveats
+section below for the important implications.
+<p><b>Caveats:</b></p>
+<p>This directive tries to fix a problem that actually is outside the scope of rsyslog. As such,
+there are a couple of restrictions and situations in which it will not work. <b>Users are strongly
+encouraged to fix their system instead of turning this directive on</b> - it should only be used
+as a last resort.
+<p>At least in the following scenario, this directive will fail expectedly:
+<p>It does not address
+the situation that someone changes the ownership *after* rsyslogd has started.
+Let's, for example, consider a log rotation script.
+<ul>
+<li>rsyslog is started
+<li>ownership is changed
+<li>privileges dropped
+<li>log rotation (lr) script starts
+<li>lr removes files
+<li>lr creates new files with root:adm (or whatever else)
+<li>lr HUPs rsyslogd
+<li>rsyslogd closes files
+<li>rsyslogd tries to open files
+<li>rsyslogd tries to change ownership --&gt; fail as we are non-root now
+<li>file open fails
+</ul>
+
+Please note that once the privilege drop code is refactored, this directive will
+no longer work, because then privileges will be dropped before any action is performed,
+and thus we will no longer be able to chown files that do not belong to the
+user rsyslogd is configured to run under.
+
+<p>So <b>expect the directive to go away</b>. It will not
+be removed in version 4, but may disappear at any time for any version greater than 4.
+
+<p><b>Sample:</b></p>
+<p><code><b>$FileOwner loguser</b>
+<br><b>$omfileForceChown on</b></code></p>
+
+<p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>] [<a href="manual.html">manual 
+index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the
+<a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
+Copyright &copy; 2007 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>. Released under the GNU GPL 
+version 2 or higher.</font></p>
+</body>
+</html>

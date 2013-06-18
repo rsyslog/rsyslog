@@ -1,0 +1,22 @@
+Redis Outplug Plugin using hiredis library
+
+tested in Centos 6.2 and Archlinux
+
+BUILDING THIS PLUGIN
+Requires the hiredis C client library: https://github.com/redis/hiredis/
+
+in your /etc/rsyslog.conf, together with other modules:
+
+Brian Knox <briank@talksum.com>
+
+---------------------------------------------------------------------------------------------
+module(load="omhiredis")
+
+template(name="simple_count" type="string" string="HINCRBY progcount %programname% 1")
+
+action(name="simple_count_redis" type="omhiredis" queue.type="FixedArray" queue.size="10000" queue.dequeuebatchsize="100" template="simple_count")
+---------------------------------------------------------------------------------------------
+
+Note: dequeuebatchsize now sets the pipeline size for hiredis, allowing pipelining commands.
+Note: this plugin will NOT handle full rsyslog messages properly yet. spaces in a property will
+        cause the redis command to be constructed improperly.  a fix for this is in the works!

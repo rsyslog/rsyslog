@@ -1,0 +1,94 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Language" content="en"><title>RainerScript ABNF</title></head>
+<body>
+<h1>RainerScript ABNF</h1>
+<p>This is the formal definition of RainerScript, as supported by
+rsyslog configuration. Please note that this currently is working
+document and the actual implementation may be quite different.</p>
+<p>The
+first glimpse of RainerScript will be available as part of rsyslog
+3.12.0 expression support. However, the 3.12. series of rsyslog will
+have a partial script implementaiton, which will not necessariy be
+compatible with the later full implementation. So if you use it, be
+prepared for some config file changes as RainerScript evolves.</p>
+<p>C-like comments (/* some comment */) are supported in all pure
+RainerScript lines. However, legacy-mapped lines do not support them.
+All lines support the hash mark "#" as a comment initiator. Everything
+between the hash and the end of line is a comment (just like // in C++
+and many other languages).</p>
+<h2>Formal Definition</h2>
+<p>Below is the formal language definitionin ABNF (RFC 2234)
+format: <br>
+</p>
+<pre>; <span style="font-weight: bold;">all of this is a working document and may change!</span> -- rgerhards, 2008-02-24<br>
+<br>
+script    := *stmt<br>
+stmt      := (if_stmt / block / vardef / run_s / load_s)<br>
+vardef    := "var" ["scope" = ("global" / "event")] <br>
+block     := "begin" stmt "end"<br>
+load_s    := "load" constraint ("module") modpath params ; load mod only if expr is true<br>
+run_s     := "run" constraint ("input") name<br>
+constraint:= "if" expr ; constrains some one-time commands<br>
+modpath   := expr<br>
+params    := ["params" *1param *("," param) "endparams"]<br>
+param     := paramname) "=" expr<br>
+paramname := [*(obqualifier ".") name]<br>
+modpath:= ; path to module<br>
+?line? := cfsysline / cfli<br>
+cfsysline:= BOL "$" *char EOL ; how to handle the first line? (no EOL in front!)<br>
+BOL := ; Begin of Line - implicitely set on file beginning and after each EOL<br>
+EOL := 0x0a ;LF<br>
+if_stmt := "if" expr "then"<br>
+old_filter:= BOL facility "." severity ; no whitespace allowed between BOL and facility!<br>
+facility := "*" / "auth" / "authpriv" / "cron" / "daemon" / "kern" / "lpr" / <br>
+"mail" / "mark" / "news" / "security" / "syslog" / "user" / "uucp" / <br>
+"local0" .. "local7" / "mark"<br>
+; The keyword security should not be used anymore<br>
+; mark is just internal<br>
+severity := TBD ; not really relevant in this context<br>
+<br>
+; and now the actual expression<br>
+expr := e_and *("or" e_and)<br>
+e_and := e_cmp *("and" e_cmp)<br>
+e_cmp := val 0*1(cmp_op val)<br>
+val := term *(("+" / "-" / "&amp;") term)<br>
+term := factor *(("*" / "/" / "%") factor)<br>
+factor := ["not"] ["-"] terminal<br>
+terminal := var / constant / function / ( "(" expr ")" )<br>
+function := name "(" *("," expr) ")"<br>
+var := "$" varname<br>
+varname := msgvar / sysvar / ceevar<br>
+msgvar := name<br>
+ceevar := "!" name<br>
+sysvar := "$" name<br>
+name := alpha *(alnum)<br>
+constant := string / number<br>
+string := simpstr / tplstr ; tplstr will be implemented in next phase<br>
+simpstr := "'" *char "'" ; use your imagination for char ;)<br>
+tplstr := '"' template '"' ; not initially implemented<br>
+number := ["-"] 1*digit ; 0nn = octal, 0xnn = hex, nn = decimal<br>
+cmp_op := "==" / "!=" / "&lt;&gt;" / "&lt;" / "&gt;" / "&lt;=" / "&gt;=" / "contains" / "contains_i" / "startswith" / "startswith_i"<br>
+digit := %x30-39<br>
+alpha := "a" ... "z" # all letters<br>
+alnum :* alpha / digit / "_" /"-" # "-" necessary to cover currently-existing message properties<br>
+</pre>
+<h2>Samples</h2>
+<p>Some samples of RainerScript:</p><p>define function IsLinux<br>begin<br>&nbsp; &nbsp; if $environ contains "linux" then return true else return false<br>end</p><p>load if IsLinux() 'imklog.so' params name='klog' endparams /* load klog under linux only */<br>run if IsLinux() input 'klog'<br>load 'ommysql.so'</p><p>if $message contains "error" then<br>&nbsp; action<br>&nbsp;&nbsp;&nbsp; type='ommysql.so', queue.mode='disk', queue.highwatermark = 300,<br>&nbsp; &nbsp; action.dbname='events', action.dbuser='uid',<br>&nbsp;
+&nbsp; [?action.template='templatename'?] or [?action.sql='insert into
+table... values('&amp;$facility&amp;','&amp;$severity&amp;...?]<br>&nbsp; endaction<br><br>... or ...</p><p>define action writeMySQL<br>&nbsp;&nbsp;&nbsp; type='ommysql.so', queue.mode='disk', queue.highwatermark = 300,<br>&nbsp; &nbsp; action.dbname='events', action.dbuser='uid',<br>&nbsp; &nbsp; [?action.template='templatename'?] or [?action.sql='insert into table... values('<span style="font-family: monospace;"> &amp;</span> $facility &amp; ',' &nbsp;&amp; $severity &amp;...?]<br>&nbsp; &nbsp;endaction</p><p>if $message contains "error" then action writeMySQL</p><p>ALTERNATE APPROACH</p><p>define function IsLinux(<br>&nbsp; &nbsp; if $environ contains "linux" then return true else return false<br>)</p><p>load if IsLinux() 'imklog.so' params name='klog' endparams /* load klog under linux only */<br>run if IsLinux() input 'klog'<br>load 'ommysql.so'</p><p>if $message contains "error" then<br>&nbsp; action(<br>&nbsp;&nbsp;&nbsp; type='ommysql.so', queue.mode='disk', queue.highwatermark = 300,<br>&nbsp; &nbsp; action.dbname='events', action.dbuser='uid',<br>&nbsp;
+&nbsp; [?action.template='templatename'?] or [?action.sql='insert into
+table... values('&amp;$facility&amp;','&amp;$severity&amp;...?]<br>&nbsp;&nbsp;)<br><br>... or ...</p><p>define action writeMySQL(<br>&nbsp;&nbsp;&nbsp; type='ommysql.so', queue.mode='disk', queue.highwatermark = 300,<br>&nbsp; &nbsp; action.dbname='events', action.dbuser='uid',<br>&nbsp;
+&nbsp; [?action.template='templatename'?] or [?action.sql='insert into
+table... values('&amp;$facility&amp;','&amp;$severity&amp;...?]<br>&nbsp; &nbsp;)</p><p>if $message contains "error" then action writeMySQL(action.dbname='differentDB')</p><p></p><p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>]
+<h2>Implementation</h2>
+RainerScript will be implemented via a hand-crafted LL(1) parser. I was tempted to use yacc, but it turned out the resulting code was not thread-safe and as such did not fit within the context of rsyslog. Also, limited error handling is not a real problem for us: if there is a problem in parsing the configuration file, we stop processing. Guessing what was meant and trying to recover would IMHO not be good choices for something like a syslogd. 
+[<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the
+<a href="http://www.rsyslog.com/">rsyslog</a>
+project.<br>
+Copyright &copy; 2008 by <a href="http://www.gerhards.net/rainer">Rainer
+Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>.
+Released under the GNU GPL version 3 or higher.</font></p>
+</body></html>

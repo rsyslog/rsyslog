@@ -1,0 +1,25 @@
+// This file is part of rsyslog.
+// 
+// rsyslog message state in queue processing
+//
+// see http://www.graphviz.org for how to obtain the graphviz processor
+// which is used to build the actual graph.
+//
+// generate the graph with
+// $ dot file.dot -Tpng >file.png
+
+digraph msgState {
+	rankdir=LR
+
+	prod	[label="producer" style="dotted" shape="box"]
+	que	[label="queued"]
+	deq	[label="dequeued"]
+	del	[label="deleted"]
+
+	prod -> que 	[label="qEnq()" style="dotted"]
+	que  -> deq	[label="qDeq()"]
+	deq  -> del	[label="qDel()"]
+	deq  -> que	[label="fatal failure\n& restart"]
+
+	//{rank=same; del apf pdn }
+}

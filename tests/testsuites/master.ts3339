@@ -1,0 +1,22 @@
+<34>1 2003-11-11T22:14:15.003Z mymachine.example.com su - ID47 - MSG
+2003-11-11T22:14:15.003Z
+# next test
+<34>1 2003-01-11T22:14:15.003Z mymachine.example.com su - ID47 - MSG
+2003-01-11T22:14:15.003Z
+# next test
+<34>1 2003-11-01T22:04:15.003Z mymachine.example.com su - ID47 - MSG
+2003-11-01T22:04:15.003Z
+# next test
+<34>1 2003-11-11T02:14:15.003Z mymachine.example.com su - ID47 - MSG
+2003-11-11T02:14:15.003Z
+# next test
+<34>1 2003-11-11T22:04:05.003Z mymachine.example.com su - ID47 - MSG
+2003-11-11T22:04:05.003Z
+# next test
+<34>1 2003-11-11T22:04:05.003+02:00 mymachine.example.com su - ID47 - MSG
+2003-11-11T22:04:05.003+02:00
+# next test
+<34>1 2003-11-11T22:04:05.003+01:30 mymachine.example.com su - ID47 - MSG
+2003-11-11T22:04:05.003+01:30
+<34>1 2003-11-11T22:04:05.123456+01:30 mymachine.example.com su - ID47 - MSG
+2003-11-11T22:04:05.123456+01:30

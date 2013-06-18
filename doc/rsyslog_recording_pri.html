@@ -1,0 +1,134 @@
+<html><head>
+<title>Recording the Priority of Syslog Messages</title>
+<meta name="KEYWORDS" content="syslog, mysql, syslog to mysql, howto">
+</head>
+<body>
+<h1>Recording the Priority of Syslog Messages</h1>
+		<P><small><i>Written by
+		<a href="http://www.adiscon.com/en/people/rainer-gerhards.php">Rainer 
+		Gerhards</a> (2007-06-18)</i></small></P>
+<h2>Abstract</h2>
+<p><i><b>The so-called priority (PRI) is very important in syslog messages, 
+because almost all filtering in syslog.conf is based on it.</b> However, many 
+syslogds (including the Linux stock sysklogd) do not provide a way to record 
+that value. In this article, I'll give a brief overview of how PRI can be 
+written to a log file.</i></p>
+<h2>Background</h2>
+<p>The PRI value is a combination of so-called severity and facility. The 
+facility indicates where the message originated from (e.g. kernel, mail 
+subsystem) while the severity provides a glimpse of how important the message 
+might be (e.g. error or informational). Be careful with these values: they are 
+in no way consistent across applications (especially severity). However, they 
+still form the basis of most filtering in syslog.conf. For example, the 
+directive (aka &quot;selector line)</p>
+<p align="center">
+<code>mail.* /var/log/mail.log</code>
+</p>
+<p>means that messages with the mail facility should be stored to 
+/var/log/mail.log, no matter which severity indicator they have (that is telling 
+us the asterisk). If you set up complex conditions, it can be annoying to find 
+out which PRI value a specific syslog message has. Most stock syslogds do not 
+provide any way to record them.</p>
+<h2>How is it done?</h2>
+<p>With <a href="http://www.rsyslog.com/">rsyslog</a>, PRI recording is simple. 
+All you need is the correct template. Even if you do not use rsyslog on a regular 
+basis, it might be a handy tool for finding out the priority.</p>
+<p>Rsyslog provides a flexible system to specify the output formats. It is 
+template-based. A template with the traditional syslog format looks as follows:</p>
+<p align="center">
+<code>$template TraditionalFormat,&quot;%timegenerated% %HOSTNAME% %syslogtag%%msg:::drop-last-lf%\n&quot;</code>
+</p>
+<p>The part in quotes is the output formats. Things between percent-signs are 
+so-called <a href="property_replacer.html">messages properties</a>. They are replaced with the respective content 
+from the syslog message when output is written. Everything outside of the 
+percent signs is literal text, which is simply written as specified.</p>
+<p>Thankfully, rsyslog provides message properties for the priority. These are 
+called &quot;PRI&quot;, &quot;syslogfacility&quot; and &quot;syslogpriority&quot; (case is important!). They are numerical 
+values. Starting with rsyslog 1.13.4, there is also a property &quot;pri-text&quot;, which 
+contains the priority in friendly text format (e.g. &quot;syslog.info&quot;). For the rest 
+of this article, I assume that you run version 1.13.4 or higher.</p>
+<p>Recording the priority is now a simple matter of adding the respective field 
+to the template. It now looks like this:</p>
+<p align="center">
+<code>$template TraditionalFormatWithPRI,&quot;%pri-text%: %timegenerated% %HOSTNAME% %syslogtag%%msg:::drop-last-lf%\n&quot;</code>
+</p>
+<p>Now we have the right template - but how to write it to a file? You probably 
+have a line like this in your syslog.conf:</p>
+<p align="center"><code>*.* -/var/log/messages.log</code></p>
+<p>It does not specify a template. Consequently, rsyslog uses the traditional 
+format. In order to use some other format, simply specify the template after the 
+semicolon:</p>
+<p align="center"><code>*.* -/var/log/messages.log;TraditionalFormatWithPRI</code></p>
+<p>That's all you need to do. There is one common pitfall: you need to define 
+the template before you use it in a selector line. Otherwise, you will receive 
+an error.</p>
+<p>Once you have applied the changes, you need to restart rsyslogd. It 
+will then pick the new configuration.</p>
+<h2>What if I do not want rsyslogd to be the standard syslogd?</h2>
+<p>If you do not want to switch to rsyslog, you can still use it as a setup aid. 
+A little bit of configuration is required.</p>
+<ol>
+	<li>Download, make and install rsyslog</li>
+	<li>copy your syslog.conf over to rsyslog.conf</li>
+	<li>add the template described above to it; select the file that should use 
+	it</li>
+	<li>stop your regular syslog daemon for the time being</li>
+	<li>run rsyslogd (you may even do this interactively by calling it with the 
+	-n additional option from a shell)</li>
+	<li>stop rsyslogd (press ctrl-c when running interactively)</li>
+	<li>restart your regular syslogd</li>
+</ol>
+<p>That's it - you can now review the priorities.</p>
+<h2>Some Sample Data</h2>
+<p>Below is some sample data created with the template specified above. Note the 
+priority recording at the start of each line.</p>
+<p>
+<code>kern.info: Jun 15 18:10:38 host kernel: PCI: Sharing IRQ 11 with 00:04.0<br>
+kern.info: Jun 15 18:10:38 host kernel: PCI: Sharing IRQ 11 with 01:00.0<br>
+kern.warn: Jun 15 18:10:38 host kernel: Yenta IRQ list 06b8, PCI irq11<br>
+kern.warn: Jun 15 18:10:38 host kernel: Socket status: 30000006<br>
+kern.warn: Jun 15 18:10:38 host kernel: Yenta IRQ list 06b8, PCI irq11<br>
+kern.warn: Jun 15 18:10:38 host kernel: Socket status: 30000010<br>
+kern.info: Jun 15 18:10:38 host kernel: cs: IO port probe 0x0c00-0x0cff: clean.<br>
+kern.info: Jun 15 18:10:38 host kernel: cs: IO port probe 0x0100-0x04ff: excluding 0x100-0x107 0x378-0x37f 0x4d0-0x4d7<br>
+kern.info: Jun 15 18:10:38 host kernel: cs: IO port probe 0x0a00-0x0aff: clean.<br>
+local7.notice: Jun 15 18:17:24 host dd: 1+0 records out<br>
+local7.notice: Jun 15 18:17:24 host random: Saving random seed: succeeded<br>
+local7.notice: Jun 15 18:17:25 host portmap: portmap shutdown succeeded<br>
+local7.notice: Jun 15 18:17:25 host network: Shutting down interface eth1: succeeded<br>
+local7.notice: Jun 15 18:17:25 host network: Shutting down loopback interface: succeeded<br>
+local7.notice: Jun 15 18:17:25 host pcmcia: Shutting down PCMCIA services: cardmgr<br>
+user.notice: Jun 15 18:17:25 host /etc/hotplug/net.agent: NET unregister event not supported<br>
+local7.notice: Jun 15 18:17:27 host pcmcia: modules.<br>
+local7.notice: Jun 15 18:17:29 host rc: Stopping pcmcia: succeeded<br>
+local7.notice: Jun 15 18:17:30 host rc: Starting killall: succeeded<br>
+syslog.info: Jun 15 18:17:33 host [origin software=&quot;rsyslogd&quot; swVersion=&quot;1.13.3&quot; x-pid=&quot;2464&quot;] exiting on signal 15.<br>
+syslog.info: Jun 18 10:55:47 host [origin software=&quot;rsyslogd&quot; swVersion=&quot;1.13.3&quot; x-pid=&quot;2367&quot;][x-configInfo udpReception=&quot;Yes&quot; udpPort=&quot;514&quot; tcpReception=&quot;Yes&quot; tcpPort=&quot;1470&quot;] restart<br>
+user.notice: Jun 18 10:55:50 host rger: test<br>
+syslog.info: Jun 18 10:55:52 host [origin software=&quot;rsyslogd&quot; swVersion=&quot;1.13.3&quot; x-pid=&quot;2367&quot;] exiting on signal 2.</code></p>
+<h2>Feedback Requested</h2>
+<P>I would appreciate feedback on this paper. If you have additional ideas, 
+comments or find bugs, please
+<a href="mailto:rgerhards@adiscon.com">let me know</a>.</P>
+<h2>References and Additional Material</h2>
+<ul>
+	<li><a href="http://www.rsyslog.com">www.rsyslog.com</a> - the rsyslog site</li>
+</ul>
+<h2>Revision History</h2>
+<ul>
+	<li>2007-06-18 *
+	<a href="http://www.adiscon.com/en/people/rainer-gerhards.php">Rainer Gerhards</a> 
+	* initial version created</li>
+</ul>
+<h2>Copyright</h2>
+<p>Copyright (c) 2007
+<a href="http://www.adiscon.com/en/people/rainer-gerhards.php">Rainer Gerhards</a> 
+and <a href="http://www.adiscon.com/en/">Adiscon</a>.</p>
+<p>Permission is granted to copy, distribute and/or modify this document under 
+the terms of the GNU Free Documentation License, Version 1.2 or any later 
+version published by the Free Software Foundation; with no Invariant Sections, 
+no Front-Cover Texts, and no Back-Cover Texts. A copy of the license can be 
+viewed at <a href="http://www.gnu.org/copyleft/fdl.html">
+http://www.gnu.org/copyleft/fdl.html</a>.</p>
+</body>
+</html>

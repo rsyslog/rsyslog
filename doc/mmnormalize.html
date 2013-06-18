@@ -1,0 +1,72 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<title>Log Message Normalization Module (mmnormalize)</title>
+</head>
+<body>
+<a href="rsyslog_conf_modules.html">back</a>
+
+<h1>Log Message Normalization Module</h1>
+<p><b>Module Name:&nbsp;&nbsp;&nbsp; mmnormalize</b></p>
+<p><b>Available since: </b>6.1.2+
+<p><b>Author: </b>Rainer Gerhards &lt;rgerhards@adiscon.com&gt;</p>
+<p><b>Description</b>:</p>
+<p>This module provides the capability to normalize log messages via
+<a href="http://www.liblognorm.com">liblognorm</a>. Thanks to liblognorm, unstructured text,
+like usually found in log messages, can very quickly be parsed and put into
+a normal form. This is done so quickly, that it should be possible
+to normalize events in realtime.
+<p>This module is implemented via the output module interface. This means that
+mmnormalize should be called just like an action. After it has been called,
+the normalized message properties are avaialable and can be accessed. These properties
+are called the "CEE/lumberjack" properties, because liblognorm creates a format that is 
+inspired by the CEE/lumberjack approach.
+<p><b>Please note:</b> CEE/lumberjack properties are different from regular properties.
+They have always "$!" prepended to the property name given in the rulebase. Such a 
+property needs to be called with <b>%$!propertyname%</b>.
+<p>Note that mmnormalize should only be called once on each message. Behaviour is
+undefined if multiple calls to mmnormalize happen for the same message.
+</p>
+<p><b>Action Parameters</b>:</p>
+<ul>
+<li><b>ruleBase</b> [word]<br>
+Specifies which rulebase file is to use. If there are
+multiple mmnormalize instances, each one can use a different file. However,
+a single instance can use only a single file. This parameter MUST be given,
+because normalization can only happen based on a rulebase. It is recommended
+that an absolute path name is given. Information on how to create the rulebase 
+can be found in the <a href="http://www.liblognorm.com/files/manual/index.html">liblognorm manual</a>.
+<li><b>useRawMsg</b> [boolean]<br>
+Specifies if the raw message should be used for normalization (on) or just the
+MSG part of the message (off). Default is "off".
+</ul>
+<p><b>Legacy Configuration Directives</b>:</p>
+<ul>
+<li>$mmnormalizeRuleBase &lt;rulebase-file&gt; - equivalent to the "ruleBase"
+parameter.
+<li>$mmnormalizeUseRawMsg &lt;on/off&gt; - equivalent to the "useRawMsg" 
+parameter.
+</ul>
+<b>Caveats/Known Bugs:</b>
+<p>None known at this time.
+</ul>
+<p><b>Sample:</b></p>
+<p>This activates the module and applies normalization to all messages:<br>
+</p>
+<textarea rows="2" cols="60">module(load="mmnormalize")
+action(type="mmnormalize" ruleBase="/path/to/rulebase.rb")
+</textarea>
+<p>The same in legacy format:</p>
+<textarea rows="3" cols="60">$ModLoad mmnormalize
+$mmnormalizeRuleBase /path/to/rulebase.rb
+*.* :mmnormalize:
+</textarea>
+<p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>]
+[<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the
+<a href="http://www.rsyslog.com/">rsyslog</a>
+project.<br>
+Copyright &copy; 2010-2012 by <a href="http://www.gerhards.net/rainer">Rainer
+Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>.
+Released under the GNU GPL version 3 or higher.</font></p>
+</body></html>

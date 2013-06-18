@@ -1,0 +1,25 @@
+<html>
+<head>
+<title>rsyslog.conf file</title>
+</head>
+<body>
+<a href="rsyslog_conf_global.html">back</a>
+
+<h2>$DynaFileCacheSize</h2>
+<p><b>Type:</b> global configuration directive</p>
+<p><b>Default:</b> 10</p>
+<p><b>Description:</b></p>
+<p>This directive specifies the maximum size of the cache for dynamically-generated file names. Selector lines with dynamic files names ('?' indicator) support writing to multiple files with a single selector line. This setting specifies how many open file handles should be cached. If, for example, the file name is generated with the hostname in it and you have 100 different hosts, a cache size of 100 would ensure that files are opened once and then stay open. This can be a great way to increase performance. If the cache size is lower than the number of different files, the least recently used one is discarded (and the file closed). The hardcoded maximum is 10,000 - a value that we assume should already be very extreme. Please note that if you expect to run with a very large number of files, you probably need to reconfigure the kernel to support such a large number. In practice, we do NOT recommend to use a cache of more than 1,000 entries. The cache lookup would probably require more time than the open and close operations. The minimum value is 1.</p>
+<p>Numbers are always in decimal. Leading zeros should be avoided (in some later version, they may be mis-interpreted as being octal). Multiple directives may be given. They are applied to selector lines based on order of appearance.</p>
+<p><b>Sample:</b></p>
+<p><code><b>$DynaFileCacheSize 100&nbsp;&nbsp;&nbsp; # a cache of 100 files at most</b></code></p>
+
+<p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>] [<a href="manual.html">manual 
+index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the
+<a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
+Copyright &copy; 2007 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>. Released under the GNU GPL 
+version 2 or higher.</font></p>
+</body>
+</html>

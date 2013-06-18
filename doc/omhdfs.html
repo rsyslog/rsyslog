@@ -1,0 +1,69 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><title>rsyslog output module for HDFS (omhdfs)</title>
+<a href="features.html">back</a>
+</head>
+<body>
+<h1>Unix sockets Output Module (omhdfs)</h1>
+<p><b>Module Name:&nbsp;&nbsp;&nbsp; omhdfs</b></p>
+<p><b>Available since:&nbsp;&nbsp;&nbsp;</b> 5.7.1</p>
+<p><b>Author: </b>Rainer Gerhards &lt;rgerhards@adiscon.com&gt;</p>
+<p><b>Description</b>:</p>
+<p>This module supports writing message into files on Hadoop's HDFS
+file system.
+<p><b>Configuration Directives</b>:</p>
+<ul>
+<li><b>$OMHDFSFileName</b> [name]<br>
+The name of the file to which the output data shall be written.
+</li>
+<li><b>$OMHDFSHost</b> [name]<br>
+Name or IP address of the HDFS host to connect to.
+</li>
+<li><b>$OMHDFSPort</b> [name]<br>
+Port on which to connect to the HDFS host.
+</li>
+<li><b>$OMHDFSDefaultTemplate</b> [name]<br>
+Default template to be used when none is specified. This saves the work of
+specifying the same template ever and ever again. Of course, the default
+template can be overwritten via the usual method.
+</li>
+</ul>
+<b>Caveats/Known Bugs:</b>
+<p>Building omhdfs is a challenge because we could not yet find out how
+to integrate Java properly into the autotools build process. The issue is
+that HDFS is written in Java and libhdfs uses JNI to talk to it. That requires
+that various system-specific environment options and pathes be set correctly. At
+this point, we leave this to the user. If someone know how to do it better,
+please drop us a line!
+<ul>
+<li>In order to build, you need to set these environment variables BEFORE running
+./configure:
+<ul>
+<li>JAVA_INCLUDES - must have all include pathes that are needed to build 
+JNI C programms, including the -I options necessary for gcc. An example is<br>
+# export JAVA_INCLUDES="-I/usr/lib/jvm/java-1.6.0-openjdk-1.6.0.0.x86_64/include -I/usr/lib/jvm/java-1.6.0-openjdk-1.6.0.0.x86_64/include/linux"
+<li>JAVA_LIBS - must have all library pathes that are needed to build 
+JNI C programms, including the -l/-L options necessary for gcc. An example is<br>
+# export export JAVA_LIBS="-L/usr/java/jdk1.6.0_21/jre/lib/amd64 -L/usr/java/jdk1.6.0_21/jre/lib/amd64/server -ljava -ljvm -lverify"
+</ul>
+
+<li>As of HDFS architecture, you must make sure that all relevant environment
+variables (the usual Java stuff and HADOOP's home directory) are properly set.
+<li>As it looks, libhdfs makes Java throw exceptions to stdout. There is no
+known work-around for this (and it usually should not case any troubles.
+</ul>
+<p><b>Sample:</b></p>
+<p>
+</p>
+<textarea rows="4" cols="80">$ModLoad omhdfs
+
+$OMHDFSFileName /var/log/logfile
+*.* :omhdfs:
+</textarea>
+[<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the <a href="http://www.rsyslog.com/">rsyslog</a>
+project.<br>
+Copyright &copy; 2010 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>.
+Released under the GNU GPL version 3 or higher.</font></p>
+
+</body></html>

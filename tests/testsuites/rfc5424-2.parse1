@@ -1,0 +1,4 @@
+<165>1 2003-08-24T05:14:15.000003-07:00 192.0.2.1 myproc 8710 - - %% It's time to make the do-nuts.
+165,local4,notice,Aug 24 05:14:15,192.0.2.1,,myproc[8710],%% It's time to make the do-nuts.
+#Example from RFC5424, section 6.5 / sample 2
+#Only the first two lines are important, you may place anything behind them!

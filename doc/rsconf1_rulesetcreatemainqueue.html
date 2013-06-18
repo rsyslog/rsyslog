@@ -1,0 +1,83 @@
+<html>
+<head>
+<title>RulesetCreateMainQueue - rsyslog.conf file</title>
+</head>
+<body>
+<a href="rsyslog_conf_global.html">rsyslog.conf configuration directive</a>
+
+<h2>$RulesetCreateMainQueue</h2>
+<p><b>Type:</b> ruleset-specific configuration directive</p>
+<p><b>Parameter Values:</b> boolean (on/off, yes/no)</p>
+<p><b>Available since:</b> 5.3.5+</p>
+<p><b>Default:</b> off</p>
+<p><b>Description:</b></p>
+<p>
+Rulesets may use their own &quot;main&quot; message queue for message submission. Specifying
+this directive, <b>inside a ruleset definition</b>, turns this on. This is both a performance
+enhancement and also permits different rulesets (and thus different inputs within the same
+rsyslogd instance) to use different types of main message queues.
+<p>The ruleset queue is created with the parameters that are specified for the main message
+queue at the time the directive is given. If different queue configurations are desired,
+different main message queue directives must be used in front of the $RulesetCreateMainQueue
+directive. Note that this directive may only be given once per ruleset. If multiple statements
+are specified, only the first is used and for the others error messages are emitted.
+<p>Note that the final set of ruleset configuration directives specifies the parameters for
+the default main message queue.
+<p>To learn more about this feature, please be sure to read about
+<a href="multi_ruleset.html">multi-ruleset support in rsyslog</a>.
+<p><b>Caveats:</b></p>
+The configuration statement &quot;$RulesetCreateMainQueue off&quot; has no effect at all.
+The capability to specify this is an artifact of the current (ugly!) configuration 
+language.
+
+<p><b>Example:</b></p>
+<p>This example sets up a tcp server with three listeners. Each of these
+three listener is bound to a specific ruleset. As a performance optimization,
+the rulesets all receive their own private queue. The result is that received messages
+can be independently processed. With only a single main message queue, we would have
+some lock contention between the messages. This does not happen here. Note that in this
+example, we use different processing. Of course, all messages could also have been
+processed in the same way ($IncludeConfig may be useful in that case!).
+</p>
+<textarea rows="30" cols="60">$ModLoad imtcp
+# at first, this is a copy of the unmodified rsyslog.conf
+#define rulesets first
+$RuleSet remote10514
+$RulesetCreateMainQueue on # create ruleset-specific queue
+*.*     /var/log/remote10514
+
+$RuleSet remote10515
+$RulesetCreateMainQueue on # create ruleset-specific queue
+*.*     /var/log/remote10515
+
+$RuleSet remote10516
+$RulesetCreateMainQueue on # create ruleset-specific queue
+mail.*	/var/log/mail10516
+&amp;       ~
+# note that the discard-action will prevent this messag from 
+# being written to the remote10516 file - as usual...
+*.*     /var/log/remote10516
+
+# and now define listners bound to the relevant ruleset
+$InputTCPServerBindRuleset remote10514
+$InputTCPServerRun 10514
+
+$InputTCPServerBindRuleset remote10515
+$InputTCPServerRun 10515
+
+$InputTCPServerBindRuleset remote10516
+$InputTCPServerRun 10516
+</textarea>
+<p>Note the positions of the directives. With the current config language,
+position is very important. This is ugly, but unfortunately the way it currently
+works.
+</p>
+
+<p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>] [<a href="manual.html">manual 
+index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the
+<a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
+Copyright &copy; 2009 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>. Released under the GNU GPL version 2 or higher.</font></p>
+</body>
+</html>

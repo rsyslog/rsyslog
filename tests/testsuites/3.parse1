@@ -1,0 +1,3 @@
+<38>Apr  6 15:07:10 lxcvs07 sshd(pam_unix)[31738]: session closed for user cvsadmin
+38,auth,info,Apr  6 15:07:10,lxcvs07,sshd(pam_unix),sshd(pam_unix)[31738]:, session closed for user cvsadmin
+# yet another real-life sample where we had some issues with

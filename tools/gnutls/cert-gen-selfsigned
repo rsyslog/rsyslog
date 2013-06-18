@@ -1,0 +1,6 @@
+#/bin/sh
+# generates a self-signed certificate and key suitable for use with rsyslog
+# 2008-05-08, rgerhards
+# TODO: make this a robust shell script
+certtool --generate-privkey --outfile $1-key.pem
+certtool --generate-self-signed --load-privkey $1-key.pem --outfile $1-cert.pem

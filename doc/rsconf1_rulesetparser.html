@@ -1,0 +1,123 @@
+<html>
+<head>
+<title>RulesetParser - rsyslog.conf file</title>
+</head>
+<body>
+<a href="rsyslog_conf_global.html">rsyslog.conf configuration directive</a>
+
+<h2>$RulesetParser</h2>
+<p><b>Type:</b> ruleset-specific configuration directive</p>
+<p><b>Parameter Values:</b> string</p>
+<p><b>Available since:</b> 5.3.4+</p>
+<p><b>Default:</b> rsyslog.rfc5424 followed by rsyslog.rfc3164</p>
+<p><b>Description:</b></p>
+<p>
+This directive permits to specify which
+<a href="messageparser.html">message parsers</a> should be used for the ruleset
+in question. It no ruleset is explicitely specified, the default ruleset is used. Message
+parsers are contained in (loadable) parser modules with the most common cases
+(RFC3164 and RFC5424) being build-in into rsyslogd.
+<p>When this directive is specified the first time for a ruleset, it will not only add the
+parser to the ruleset's parser chain, it will also wipe out the default parser chain.
+So if you need to have
+them in addition to the custom parser, you need to specify those as well.
+<p>Order of directives is important. Parsers are tried one after another, in the order
+they are specified inside the config. As soon as a parser is able to parse the message,
+it will do so and no other parsers will be executed. If no matching parser can be found,
+the message will be discarded and a warning message be issued (but only for the first
+1,000 instances of this problem, to prevent message generation loops).
+<p>Note that the rfc3164 parser will <b>always</b> be able to parse a message - it may
+just not be the format that you like. This has two important implications: 1) always place
+that parser at the END of the parser list, or the other parsers after it will never
+be tried and 2) if you would like to make sure no message is lost, placing the rfc3164
+parser at the end of the parser list ensures that.
+<p>Multiple parser modules are very useful if you have various devices that emit 
+messages that are malformed in various ways. The route to take then is
+<ul>
+<li>make sure you find a custom parser for that device; if there is no one, you
+may consider writing one yourself (it is not that hard) or getting one written
+as part of
+<a href="http://www.rsyslog.com/professional-services">Adiscon's professional services
+for rsyslog</a>.
+<li>load your custom parsers via $ModLoad
+<li>create a ruleset for each malformed format; assign the custom parser to it
+<li>create a specific listening port for all devices that emit the same
+malformed format
+<li>bind the listener to the ruleset with the required parser
+</ul>
+<p>Note that it may be cumbersome to add all rules to all rulesets. To avoid this,
+you can either use $Include or <a href="omruleset.html">omruleset</a>
+(what probably provides the best solution).
+<p>More information about rulesets in general can be found in
+<a href="multi_ruleset.html">multi-ruleset support in rsyslog</a>.
+<p><b>Caveats:</b></p>
+<p>currently none known</p>
+
+<p><b>Example:</b></p>
+<p>This example assumes there are two devices emiting malformed messages via UDP.
+We have two custom parsers for them, named &quot;device1.parser&quot; and
+&quot;device2.parser&quot;. In addition to that, we have a number of other
+devices sending wellformed messages, also via UDP.
+<p>The solution is to listen for data from the two devices on two special
+ports (10514 and 10515 in this example), create a ruleset for each and
+assign the custom parsers to them. The rest of the messages are received via
+port 514 using the regular parsers. Processing shall be equal for all messages.
+So we simply forward the malformed messages to the regular queue once they are parsed (keep
+in mind that a message is never again parsed once any parser properly processed it).
+</p>
+<textarea rows="40" cols="80">$ModLoad imudp
+$ModLoad pmdevice1 # load parser "device1.parser" for device 1
+$ModLoad pmdevice2 # load parser "device2.parser" for device 2
+
+# define ruleset for the first device sending malformed data
+$Ruleset maldev1
+$RulesetCreateMainQueue on # create ruleset-specific queue
+$RulesetParser "device1.parser" # note: this deactivates the default parsers
+# forward all messages to default ruleset:
+$ActionOmrulesetRulesetName RSYSLOG_DefaultRuleset 
+*.* :omruleset:
+
+# define ruleset for the second device sending malformed data
+$Ruleset maldev2
+$RulesetCreateMainQueue on # create ruleset-specific queue
+$RulesetParser "device2.parser" # note: this deactivates the default parsers
+# forward all messages to default ruleset:
+$ActionOmrulesetRulesetName RSYSLOG_DefaultRuleset 
+*.* :omruleset:
+
+# switch back to default ruleset
+$Ruleset RSYSLOG_DefaultRuleset
+*.*           /path/to/file
+auth.info     @authlogger.example.net
+# whatever else you usually do...
+
+
+# now define the inputs and bind them to the rulesets
+# first the default listener (utilizing the default ruleset)
+$UDPServerRun 514
+
+# now the one with the parser for device type 1:
+$InputUDPServerBindRuleset maldev1
+$UDPServerRun 10514
+
+# and finally the one for device type 2:
+$InputUDPServerBindRuleset maldev2
+$UDPServerRun 10515
+</textarea>
+
+<p>For an example of how multiple parser can be chained (and an actual use case), please see
+the example section on the <a href="pmlastmsg.html">pmlastmsg</a> parser
+module.
+<p>Note the positions of the directives. With the current config language,
+<b>sequence of statements is very important</b>. This is ugly, but unfortunately
+the way it currently works.
+</p>
+
+<p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>] [<a href="manual.html">manual 
+index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the
+<a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
+Copyright &copy; 2009 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>. Released under the GNU GPL version 2 or higher.</font></p>
+</body>
+</html>

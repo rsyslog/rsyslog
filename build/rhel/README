@@ -1,0 +1,17 @@
+This directory contains a series of spec files to help build rsyslog
+and its dependencies on a RHEL 5 or 6 (or compatible variant) system.
+
+Build order:
+(dependencies for rsyslog's mmnormalize)
+1. libestr
+2. libee
+3. liblognorm
+
+(dependency for rsyslog)
+4. librelp
+
+(external dependencies for zmq modules)
+5. zeromq
+6. czmq
+
+7. rsyslog

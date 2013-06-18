@@ -1,0 +1,7 @@
+#This is a malformed message, but one from real life. At least,
+#it should be parsed as can be seen here.
+<6>Feb 18 16:01:59 serverX -- MARK --
+6,kern,info,Feb 18 16:01:59,serverX,--,--, MARK --
+# and the next one as an extreme case (note the absence of PRI)
+Feb 18 16:01:59 serverX -- MARK --
+13,user,notice,Feb 18 16:01:59,serverX,--,--, MARK --

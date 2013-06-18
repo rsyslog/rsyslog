@@ -1,0 +1,25 @@
+<html>
+<head>
+<title>rsyslog.conf file</title>
+</head>
+<body>
+<a href="rsyslog_conf_global.html">back</a>
+
+<h2>$RepeatedMsgReduction</h2>
+<p><b>Type:</b> global configuration directive</p>
+<p><b>Default:</b> depending on -e</p>
+<p><b>Description:</b></p>
+<p>This directive specifies whether or not repeated messages should be reduced (this is the "Last line repeated n times" feature). If set to on, repeated messages are reduced. If set to off, every message is logged. Please note that this directive overrides the -e command line option. In case -e is given, it is just the default value until the first RepeatedMsgReduction directive is encountered.</p>
+<p>This directives affects selector lines until a new directive is specified.</p>
+<p><b>Sample:</b></p>
+<p><code><b>$RepeatedMsgReduction off&nbsp;&nbsp;&nbsp; # log every message</b></code></p>
+
+<p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>] [<a href="manual.html">manual 
+index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the
+<a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
+Copyright &copy; 2007 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>. Released under the GNU GPL 
+version 2 or higher.</font></p>
+</body>
+</html>

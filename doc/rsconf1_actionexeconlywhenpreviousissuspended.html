@@ -1,0 +1,31 @@
+<html>
+<head>
+<title>rsyslog.conf file</title>
+</head>
+<body>
+<a href="rsyslog_conf_global.html">back</a>
+
+<h2>$ActionExecOnlyWhenPreviousIsSuspended</h2>
+<p><b>Type:</b> global configuration directive</p>
+<p><b>Default:</b> off</p>
+<p><b>Description:</b></p>
+<p>This directive allows to specify if actions should always be executed ("off," the default) or only if the previous action is suspended ("on"). This directive works hand-in-hand with the multiple actions per selector feature. It can be used, for example, to create rules that automatically switch destination servers or databases to a (set of) backup(s), if the primary server fails. Note that this feature depends on proper implementation of the suspend feature in the output module. All built-in output modules properly support it (most importantly the database write and the syslog message forwarder).</p>
+<p>This selector processes all messages it receives (*.*).  It tries to forward every message to primary-syslog.example.com (via tcp). If it can not reach that server, it tries secondary-1-syslog.example.com, if that fails too, it tries secondary-2-syslog.example.com. If neither of these servers can be connected, the data is stored in /var/log/localbuffer. Please note that the secondaries and the local log buffer are only used if the one before them does not work. So ideally, /var/log/localbuffer will never receive a message. If one of the servers resumes operation, it automatically takes over processing again.</p>
+<p>We strongly advise not to use repeated line reduction together with ActionExecOnlyWhenPreviousIsSuspended. It may lead to "interesting" and undesired results (but you can try it if you like).</p>
+<p><b>Sample:</b></p>
+<p><code><b>*.* @@primary-syslog.example.com
+<br>$ActionExecOnlyWhenPreviousIsSuspended on
+<br>&   @@secondary-1-syslog.example.com    # & is used to have more than one action for
+<br>&   @@secondary-2-syslog.example.com    # the same selector - the mult-action feature
+<br>&   /var/log/localbuffer
+<br>$ActionExecOnlyWhenPreviousIsSuspended off # to re-set it for the next selector </b></code></p>
+
+<p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>] [<a href="manual.html">manual 
+index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the
+<a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
+Copyright &copy; 2007 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>. Released under the GNU GPL 
+version 2 or higher.</font></p>
+</body>
+</html>

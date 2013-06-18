@@ -1,0 +1,238 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<title>Multiple Rulesets in rsyslog</title></head>
+<body>
+<h1>Multiple Rulesets in rsyslog</h1>
+<p>Starting with version 4.5.0 and 5.1.1, <a href="http://www.rsyslog.com">rsyslog</a> supports
+multiple rulesets within a single configuration.
+This is especially useful for routing the recpetion of remote messages to a set of specific rules.
+Note that the input module must support binding to non-standard rulesets, so the functionality
+may not be available with all inputs.
+<p>In this document, I am using <a href="imtcp.html">imtcp</a>, an input module
+that supports binding to non-standard rulesets since rsyslog started to support them.
+<h2>What is a Ruleset?</h2>
+If you have worked with (r)syslog.conf, you know that it is made up of what I call rules (others
+tend to call them selectors, a sysklogd term). Each rule consist of a filter and one or more
+actions to be carried out when the filter evaluates to true. A filter may be as simple as a
+traditional
+syslog priority based filter (like &quot;*.*&quot; or &quot;mail.info&quot; or a as complex as a
+script-like expression. Details on that are covered in the config file documentation. After the
+filter come action specifiers, and an action is something that does something to a message, e.g.
+write it to a file or forward it to a remote logging server.
+
+<p>A traditional configuration file is made up of one or more of these rules. When a new
+message arrives, its processing starts with the first rule (in order of appearance in
+rsyslog.conf) and continues for each rule until either all rules have been processed or
+a so-called &quot;discard&quot; action happens, in which case processing stops and the
+message is thrown away (what also happens after the last rule has been processed).
+
+<p>The <b>multi-ruleset</b> support now permits to specify more than one such rule sequence.
+You can think of a traditional config file just as a single default rule set, which is
+automatically bound to each of the inputs. This is even what actually happens. When
+rsyslog.conf is processed, the config file parser looks for the directive
+
+<pre>ruleset(name="rulesetname");
+</pre>
+
+<p>Where name is any name the user likes (but must not start with &quot;RSYSLOG_&quot;, which
+is the name space reserved for rsyslog use). If it finds this directive, it begins a new
+rule set (if the name was not yet know) or switches to an already-existing one (if the name
+was known). All rules defined between this $RuleSet directive and the next one are appended
+to the named ruleset. Note that the reserved name "RSYSLOG_DefaultRuleset" is used to
+specify rsyslogd's default ruleset. You can use that name whereever you can use a ruleset name,
+including when binding an input to it.
+
+<p>Inside a ruleset, messages are processed as described above: they start with the first rule
+and rules are processed in the order of appearance of the configuration file until either
+there are no more rules or the discard action is executed. Note that with multiple rulesets
+no longer <b>all</b> rsyslog.conf rules are executed but <b>only</b> those that are 
+contained within the specific ruleset.
+
+<p>Inputs must explicitely bind to rulesets. If they don't do, the default ruleset is bound.
+
+<p>This brings up the next question:
+
+<h2>What does &quot;To bind to a Ruleset&quot; mean?</h2>
+<p>This term is used in the same sense as &quot;to bind an IP address to an interface&quot;:
+it means that a specific input, or part of an input (like a tcp listener) will use a specific
+ruleset to &quot;pass its messages to&quot;. So when a new message arrives, it will be processed
+via the bound ruleset. Rule from all other rulesets are irrelevant and will never be processed.
+<p>This makes multiple rulesets very handy to process local and remote message via
+seperate means: bind the respective receivers to different rule sets, and you do not need
+to seperate the messages by any other method.
+
+<p>Binding to rulesets is input-specifc. For imtcp, this is done via the 
+
+<pre>input(type="imptcp" port="514" ruleset="rulesetname");
+</pre>
+
+directive. Note that &quot;name&quot; must be the name of a ruleset that is already defined
+at the time the bind directive is given. There are many ways to make sure this happens, but
+I personally think that it is best to define all rule sets at the top of rsyslog.conf and
+define the inputs at the bottom. This kind of reverses the traditional recommended ordering, but
+seems to be a really useful and straightforward way of doing things.
+<h2>Why are rulesets important for different parser configurations?</h2>
+<p>Custom message parsers, used to handle differnet (and potentially otherwise-invalid)
+message formats, can be bound to rulesets. So multiple rulesets can be a very useful
+way to handle devices sending messages in different malformed formats in a consistent
+way. Unfortunately, this is not uncommon in the syslog world. An in-depth explanation
+with configuration sample can be found at the
+<a href="rsconf1_rulesetparser.html">$RulesetParser</a> configuration directive.
+<h2>Can I use a different Ruleset as the default?</h2>
+<p>This is possible by using the
+
+<pre>$DefaultRuleset &lt;name&gt;
+</pre>
+
+Directive. Please note, however, that this directive is actually global: that is, it does not
+modify the ruleset to which the next input is bound but rather provides a system-wide
+default rule set for those inputs that did not explicitly bind to one. As such, the directive
+can not be used as a work-around to bind inputs to non-default rulesets that do not support
+ruleset binding.
+<h2>Examples</h2>
+<h3>Split local and remote logging</h3>
+<p>Let's say you have a pretty standard system that logs its local messages to the usual
+bunch of files that are specified in the default rsyslog.conf. As an example, your rsyslog.conf
+might look like this:
+
+<pre>
+# ... module loading ...
+# The authpriv file has restricted access.
+authpriv.*  /var/log/secure
+# Log all the mail messages in one place.
+mail.*      /var/log/maillog
+# Log cron stuff
+cron.*      /var/log/cron
+# Everybody gets emergency messages
+*.emerg     *
+... more ...
+</pre>
+
+<p>Now, you want to add receive messages from a remote system and log these to
+a special file, but you do not want to have these messages written to the files
+specified above. The traditional approach is to add a rule in front of all others that
+filters on the message, processes it and then discards it:
+
+<pre>
+# ... module loading ...
+# process remote messages
+if $fromhost-ip == '192.168.152.137' then {
+        action(type="omfile" file="/var/log/remotefile02")
+		stop
+	}
+
+
+# only messages not from 192.0.21 make it past this point
+
+# The authpriv file has restricted access.
+authpriv.*                            /var/log/secure
+# Log all the mail messages in one place.
+mail.*                                /var/log/maillog
+# Log cron stuff
+cron.*                                /var/log/cron
+# Everybody gets emergency messages
+*.emerg                               *
+... more ...
+</pre>
+
+<p>Note that "stop" is the discard action!. Also note that we assume that
+192.0.2.1 is the sole remote sender (to keep it simple).
+
+<p>With multiple rulesets, we can simply define a dedicated ruleset for the remote reception
+case and bind it to the receiver. This may be written as follows:
+
+<pre>
+# ... module loading ...
+# process remote messages
+# define new ruleset and add rules to it:
+ruleset(name="remote"){
+	action(type="omfile" file="/var/log/remotefile")
+}
+# only messages not from 192.0.21 make it past this point
+
+# bind ruleset to tcp listener and activate it:
+input(type="imptcp" port="10514" ruleset="remote")
+</pre>
+
+<h3>Split local and remote logging for three different ports</h3>
+<p>This example is almost like the first one, but it extends it a little bit. While it is
+very similar, I hope it is different enough to provide a useful example why you may want
+to have more than two rulesets.
+
+<p>Again, we would like to use the &quot;regular&quot; log files for local logging, only. But
+this time we set up three syslog/tcp listeners, each one listening to a different
+port (in this example 10514, 10515, and 10516). Logs received from these receivers shall go into
+different files. Also, logs received from 10516 (and only from that port!) with
+&quot;mail.*&quot; priority, shall be written into a specif file and <b>not</b> be
+written to 10516's general log file.
+
+<p>This is the config:
+
+<pre>
+# ... module loading ...
+# process remote messages
+
+ruleset(name="remote10514"){
+	action(type="omfile" file="/var/log/remote10514")
+}
+
+ruleset(name="remote10515"){
+	action(type="omfile" file="/var/log/remote10515")
+}
+
+ruleset(name="test1"){
+	if prifilt("mail.*") then {
+		/var/log/mail10516
+		stop
+		# note that the stop-command will prevent this message from 
+		# being written to the remote10516 file - as usual...	
+	}
+	/var/log/remote10516
+}
+
+
+# and now define listners bound to the relevant ruleset
+input(type="imptcp" port="10514" ruleset="remote10514")
+input(type="imptcp" port="10515" ruleset="remote10515")
+input(type="imptcp" port="10516" ruleset="remote10516")
+</pre>
+
+
+
+
+<h2>Performance</h2>
+<h3>Fewer Filters</h3>
+<p>No rule processing can be faster than not processing a rule at all. As such, it is useful
+for a high performance system to identify disjunct actions and try to split these off to
+different rule sets. In the example section, we had a case where three different tcp listeners
+need to write to three different files. This is a perfect example of where multiple rule sets
+are easier to use and offer more performance. The performance is better simply because there
+is no need to check the reception service - instead messages are automatically pushed to the
+right rule set and can be processed by very simple rules (maybe even with
+&quot;*.*&quot;-filters, the fastest ones available).
+
+<h3>Partitioning of Input Data</h3>
+<p>Starting with rsyslog 5.3.4, rulesets permit higher concurrency. They offer the ability
+to run on their own &quot;main&quot; queue. What that means is that a own queue is associated
+with a specific rule set. That means that inputs bound to that ruleset do no longer need
+to compete with each other when they enqueue a data element into the queue. Instead, enqueue
+operations can be completed in parallel.
+<p>An example: let us assume we have three TCP listeners. Without rulesets, each of them
+needs to insert messages into the main message queue. So if each of them wants to
+submit a newly arrived message into the queue at the same time, only one can do so
+while the others need to wait. With multiple rulesets, its own queue can be created for each
+ruleset. If now each listener is bound to its own ruleset, concurrent message submission is
+possible. On a machine with a sufficiently large number of corse, this can result in
+dramatic performance improvement.
+<p>It is highly advised that high-performance systems define a dedicated ruleset, with a
+dedicated queue for each of the inputs.
+<p>By default, rulesets do <b>not</b> have their own queue. It must be activated via the
+<a href="rsconf1_rulesetcreatemainqueue.html">$RulesetCreateMainQueue</a> directive.
+
+<p>[<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the <a href="http://www.rsyslog.com/">rsyslog</a>
+project.<br>
+Copyright &copy; 2009 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>.
+Released under the GNU GPL version 3 or higher.</font></p>
+</body></html>

@@ -1,0 +1,48 @@
+<html>
+<head>
+<title>rsyslog.conf file</title>
+</head>
+<body>
+<a href="rsyslog_conf_global.html">back</a>
+
+<h2>$IncludeConfig</h2>
+<p><b>Type:</b> global configuration directive</p>
+<p><b>Default:</b> </p>
+<p><b>Description:</b></p>
+<p>This directive allows to include other files into the main configuration file. As soon as an IncludeConfig directive is found, the contents of the new file is processed. IncludeConfigs can be nested. Please note that from a logical point of view the files are merged. Thus, if the include modifies some parameters (e.g. $DynaFileChacheSize), these new parameters are in place for the "calling" configuration file when the include is completed. To avoid any side effects, do a $ResetConfigVariables after the $IncludeConfig. It may also be a good idea to do a $ResetConfigVariables right at the start of the include, so that the module knows exactly what it does. Of course, one might specifically NOT do this to inherit parameters from the main file. As always, use it as it best fits...</p>
+<p>If all regular files in the /etc/rsyslog.d directory are included, then files starting with "." are ignored - so you can use them to place comments into the dir (e.g. "/etc/rsyslog.d/.mycomment" will be ignored). <a href="http://sourceforge.net/tracker/index.php?func=detail&aid=1764088&group_id=123448&atid=696555">Michael Biebl had the idea to this functionality</a>. Let me quote hím:</p>
+<blockquote>
+<p><i>Say you can add an option<br>
+$IncludeConfig /etc/rsyslog.d/<br>
+(which probably would make a good default)<br>
+to /etc/rsyslog.conf, which would then merge and include all *.conf files<br>
+in /etc/rsyslog.d/.<br>
+<br>
+This way, a distribution can modify its packages easily to drop a simple<br>
+config file into this directory upon installation.<br>
+<br>
+As an example, the network-manager package could install a simple config<br>
+file /etc/rsyslog.d/network-manager.conf which would contain.<br>
+:programname, contains, &quot;NetworkManager&quot; -/var/log/NetworkManager.log<br>
+<br>
+Upon uninstallation, the file could be easily removed again. This approach<br>
+would be much cleaner and less error prone, than having to munge around<br>
+with the /etc/rsyslog.conf file directly.</i></p>
+</blockquote>
+<p><b>Sample:</b></p>
+<p><code><b>$IncludeConfig /etc/some-included-file.conf</b></code></p>
+<p>Directories can also be included. To do so, the name must end on a slash:</p>
+<p><code><b>$IncludeConfig /etc/rsyslog.d/</b></code></p>
+<p><b>And finally, only specific files matching a wildcard my be included 
+from a directory:</b></p>
+<p><code><b>$IncludeConfig /etc/rsyslog.d/*.conf</b></code></p>
+
+<p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>] [<a href="manual.html">manual 
+index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the
+<a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
+Copyright &copy; 2007 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>. Released under the GNU GPL 
+version 2 or higher.</font></p>
+</body>
+</html>

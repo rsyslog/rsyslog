@@ -1,0 +1,323 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Language" content="en">
+<title>SNMP Output Module</title></head>
+
+<body>
+<a href="rsyslog_conf_modules.html">back</a>
+
+<h1>SNMP Output Module</h1>
+<p><b>Module Name:&nbsp;&nbsp;&nbsp; omsnmp</b></p>
+<p><b>Author: Andre Lorbach &lt;alorbach@adiscon.com&gt;</b></p>
+<p><b>Description</b>:</p>
+<p>Provides the ability to send syslog messages as an SNMPv1 &amp; v2c traps. By 
+default, SNMPv2c is preferred. The syslog message is wrapped into a OCTED 
+STRING variable. This module uses the <a target="_blank" href="http://net-snmp.sourceforge.net/">
+NET-SNMP</a> library. In order to compile this module, you will need to have the
+<a target="_blank" href="http://net-snmp.sourceforge.net/">NET-SNMP</a> 
+developer (headers) package installed. </p>
+<p>&nbsp;</p>
+<p><b>Action Line:</b></p>
+<p>%omsnmp% without any further parameters.</p>
+<p>&nbsp;</p>
+<p><b>Configuration Directives</b>:</p>
+<ul>
+	<li><strong>transport </strong>(This parameter is optional, the 
+	default value is "udp")<br>
+	<br>
+	Defines the transport type you wish to use. Technically we can support all 
+	transport types which are supported by NET-SNMP. <br>
+	To name a few possible values: <br>
+	<br>
+	udp, tcp, udp6, tcp6, icmp, icmp6 ...<br>
+	<br>
+	Example: <strong>transport udp<br>
+	</strong></li>
+	<li><strong>server</strong><br>
+	<br>
+	This can be a hostname or ip address, and is our snmp target host. This 
+	parameter is required, if the snmptarget is not defined, nothing will be 
+	send. <br>
+	<br>
+	Example: <strong>server server.domain.xxx</strong><br>
+	</li>
+	<li><strong>port </strong>(This parameter is optional, the 
+	default value is "162")<br>
+	<br>
+	The port which will be used, common values are port 162 or 161. <br>
+	<br>
+	Example: <strong>port 162</strong><br>
+	</li>
+	<li><strong>version </strong>(This parameter is optional, the 
+	default value is "1")<br>
+	<br>
+	There can only be two choices for this parameter for now. <br>
+	0 means SNMPv1 will be used.<br>
+	1 means SNMPv2c will be used. <br>
+	Any other value will default to 1. <br>
+	<br>
+	Example: <strong>version 1</strong><br>
+	</li>
+	<li><strong>community </strong>(This parameter is optional, the 
+	default value is "public")<br>
+	<br>
+	This sets the used SNMP Community.<br>
+	<br>
+	Example:<strong> community public<br>
+	</strong><br>
+	</li>
+	<li><strong>trapoid </strong>(This parameter is 
+	optional, the default value is "1.3.6.1.4.1.19406.1.2.1&quot; which means 
+	&quot;ADISCON-MONITORWARE-MIB::syslogtrap&quot;)<br>
+	This configuration parameter is used for <strong>SNMPv2</strong> only.<br>
+	<br>
+	This is the OID which defines the trap-type, or notifcation-type rsyslog 
+	uses to send the trap. <br>
+	In order to decode this OID, you will need to have the 
+	ADISCON-MONITORWARE-MIB and ADISCON-MIB mibs installed on the receiver side. Downloads of these mib files 
+	can be found here: <br>
+	<a href="http://www.adiscon.org/download/ADISCON-MIB.txt">
+	http://www.adiscon.org/download/ADISCON-MIB.txt</a><br>
+	<a href="http://www.adiscon.org/download/ADISCON-MONITORWARE-MIB.txt">
+	http://www.adiscon.org/download/ADISCON-MONITORWARE-MIB.txt</a><br>
+	<br>
+	Thanks to the net-snmp 
+	mailinglist for the help and the recommendations ;).<br>
+	<br>
+	Example: <strong>trapoid 1.3.6.1.4.1.19406.1.2.1<br>
+	</strong>If you have this MIBS installed, you can also configured with the 
+	OID Name: <strong>trapoid ADISCON-MONITORWARE-MIB::syslogtrap<br>
+	</strong>
+	</li>
+	<li><strong>messageoid </strong>(This parameter is 
+	optional, the default value is "1.3.6.1.4.1.19406.1.1.2.1&quot; which means 
+	&quot;ADISCON-MONITORWARE-MIB::syslogMsg&quot;)<br>
+	<br>
+	This OID will be used as a variable, type &quot;OCTET STRING&quot;. This variable will 
+	contain up to 255 characters of the original syslog message including syslog header. It is recommend to 
+	use the default OID. <br>
+	In order to decode this OID, you will need to have the 
+	ADISCON-MONITORWARE-MIB and ADISCON-MIB mibs installed on the receiver side. 
+	To download these custom mibs, see the description of <strong>$actionsnmptrapoid.
+	</strong><br>
+	<br>
+	Example: <strong>messageoid 1.3.6.1.4.1.19406.1.1.2.1<br>
+	</strong>If you have this MIBS installed, you can also configured with the 
+	OID Name: <strong>messageoid 
+	ADISCON-MONITORWARE-MIB::syslogMsg<br>
+	</strong><br>
+	</li>
+	<li><strong>enterpriseoid </strong>(This parameter is optional, 
+	the default value is "1.3.6.1.4.1.3.1.1" which means "enterprises.cmu.1.1")<br>
+	<br>
+	Customize this value if needed. I recommend to use the default value unless 
+	you require to use a different OID. <br>
+	This configuration parameter is used for <strong>SNMPv1</strong> only. It 
+	has no effect if <strong>SNMPv2</strong> is used. <br>
+	<br>
+	Example: <strong>enterpriseoid 1.3.6.1.4.1.3.1.1 <br>
+	</strong><br>
+	</li>
+	<li><strong>specifictype </strong>(This parameter is optional, 
+	the default value is "0")<strong> </strong><br>
+	<br>
+	This is the specific trap number. This configuration parameter is used for
+	<strong>SNMPv1</strong> only. It has no effect if <strong>SNMPv2</strong> is 
+	used. <br>
+	<br>
+	Example: <strong>specifictype 0<br>
+	</strong><br>
+	</li>
+	<li><strong>traptype</strong> (This parameter is optional, the 
+	default value is "6" which means SNMP_TRAP_ENTERPRISESPECIFIC) <br>
+	<br>
+	There are only 7 Possible trap types defined which can be used here. These 
+	trap types are: <br>
+	0 = SNMP_TRAP_COLDSTART<br>
+	1 = SNMP_TRAP_WARMSTART<br>
+	2 = SNMP_TRAP_LINKDOWN<br>
+	3 = SNMP_TRAP_LINKUP<br>
+	4 = SNMP_TRAP_AUTHFAIL<br>
+	5 = SNMP_TRAP_EGPNEIGHBORLOSS<br>
+	6 = SNMP_TRAP_ENTERPRISESPECIFIC<br>
+	<br>
+	Any other value will default to 6 automatically. This configuration 
+	parameter is used for <strong>SNMPv1</strong> only. It has no effect if
+	<strong>SNMPv2</strong> is used. <br>
+	<br>
+	Example: <strong>traptype 6</strong><br>
+	</li>
+	<li><strong>template </strong>[templateName]<strong> </strong><br>
+	<br>
+	sets a new default template for file actions.
+	</li>
+</ul>
+<p>&nbsp;</p>
+<p><b>Caveats/Known Bugs:</b></p><ul><li>In order to decode the custom OIDs, you 
+	will need to have the adiscon mibs installed. </li></ul>
+<p><b>Sample:</b></p>
+<p>The following commands send every message as a snmp trap.</p>
+<textarea rows="10" cols="60">Module (path="omsnmp")
+*.* action( type="omsnmp"
+transport="udp"
+target="localhost"
+targetport="162"
+version="1"
+community="public")
+
+</textarea>
+
+<p><b>Legacy Configuration Directives</b>:</p>
+<ul>
+	<li><strong>$actionsnmptransport </strong>(This parameter is optional, the 
+	default value is "udp")<br>
+	<br>
+	Defines the transport type you wish to use. Technically we can support all 
+	transport types which are supported by NET-SNMP. <br>
+	To name a few possible values: <br>
+	<br>
+	udp, tcp, udp6, tcp6, icmp, icmp6 ...<br>
+	<br>
+	Example: <strong>$actionsnmptransport udp<br>
+	</strong></li>
+	<li><strong>$actionsnmptarget</strong><br>
+	<br>
+	This can be a hostname or ip address, and is our snmp target host. This 
+	parameter is required, if the snmptarget is not defined, nothing will be 
+	send. <br>
+	<br>
+	Example: <strong>$actionsnmptarget server.domain.xxx</strong><br>
+	</li>
+	<li><strong>$actionsnmptargetport </strong>(This parameter is optional, the 
+	default value is "162")<br>
+	<br>
+	The port which will be used, common values are port 162 or 161. <br>
+	<br>
+	Example: <strong>$actionsnmptargetport 162</strong><br>
+	</li>
+	<li><strong>$actionsnmpversion </strong>(This parameter is optional, the 
+	default value is "1")<br>
+	<br>
+	There can only be two choices for this parameter for now. <br>
+	0 means SNMPv1 will be used.<br>
+	1 means SNMPv2c will be used. <br>
+	Any other value will default to 1. <br>
+	<br>
+	Example: <strong>$actionsnmpversion 1</strong><br>
+	</li>
+	<li><strong>$actionsnmpcommunity </strong>(This parameter is optional, the 
+	default value is "public")<br>
+	<br>
+	This sets the used SNMP Community.<br>
+	<br>
+	Example:<strong> $actionsnmpcommunity public<br>
+	</strong><br>
+	</li>
+	<li><strong>$actionsnmptrapoid </strong>(This parameter is 
+	optional, the default value is "1.3.6.1.4.1.19406.1.2.1&quot; which means 
+	&quot;ADISCON-MONITORWARE-MIB::syslogtrap&quot;)<br>
+	This configuration parameter is used for <strong>SNMPv2</strong> only.<br>
+	<br>
+	This is the OID which defines the trap-type, or notifcation-type rsyslog 
+	uses to send the trap. <br>
+	In order to decode this OID, you will need to have the 
+	ADISCON-MONITORWARE-MIB and ADISCON-MIB mibs installed on the receiver side. Downloads of these mib files 
+	can be found here: <br>
+	<a href="http://www.adiscon.org/download/ADISCON-MIB.txt">
+	http://www.adiscon.org/download/ADISCON-MIB.txt</a><br>
+	<a href="http://www.adiscon.org/download/ADISCON-MONITORWARE-MIB.txt">
+	http://www.adiscon.org/download/ADISCON-MONITORWARE-MIB.txt</a><br>
+	<br>
+	Thanks to the net-snmp 
+	mailinglist for the help and the recommendations ;).<br>
+	<br>
+	Example: <strong>$actionsnmptrapoid 1.3.6.1.4.1.19406.1.2.1<br>
+	</strong>If you have this MIBS installed, you can also configured with the 
+	OID Name: <strong>$actionsnmptrapoid ADISCON-MONITORWARE-MIB::syslogtrap<br>
+	</strong>
+	</li>
+	<li><strong>$actionsnmpsyslogmessageoid </strong>(This parameter is 
+	optional, the default value is "1.3.6.1.4.1.19406.1.1.2.1&quot; which means 
+	&quot;ADISCON-MONITORWARE-MIB::syslogMsg&quot;)<br>
+	<br>
+	This OID will be used as a variable, type &quot;OCTET STRING&quot;. This variable will 
+	contain up to 255 characters of the original syslog message including syslog header. It is recommend to 
+	use the default OID. <br>
+	In order to decode this OID, you will need to have the 
+	ADISCON-MONITORWARE-MIB and ADISCON-MIB mibs installed on the receiver side. 
+	To download these custom mibs, see the description of <strong>$actionsnmptrapoid.
+	</strong><br>
+	<br>
+	Example: <strong>$actionsnmpsyslogmessageoid 1.3.6.1.4.1.19406.1.1.2.1<br>
+	</strong>If you have this MIBS installed, you can also configured with the 
+	OID Name: <strong>$actionsnmpsyslogmessageoid 
+	ADISCON-MONITORWARE-MIB::syslogMsg<br>
+	</strong><br>
+	</li>
+	<li><strong>$actionsnmpenterpriseoid </strong>(This parameter is optional, 
+	the default value is "1.3.6.1.4.1.3.1.1" which means "enterprises.cmu.1.1")<br>
+	<br>
+	Customize this value if needed. I recommend to use the default value unless 
+	you require to use a different OID. <br>
+	This configuration parameter is used for <strong>SNMPv1</strong> only. It 
+	has no effect if <strong>SNMPv2</strong> is used. <br>
+	<br>
+	Example: <strong>$actionsnmpenterpriseoid 1.3.6.1.4.1.3.1.1 <br>
+	</strong><br>
+	</li>
+	<li><strong>$actionsnmpspecifictype </strong>(This parameter is optional, 
+	the default value is "0")<strong> </strong><br>
+	<br>
+	This is the specific trap number. This configuration parameter is used for
+	<strong>SNMPv1</strong> only. It has no effect if <strong>SNMPv2</strong> is 
+	used. <br>
+	<br>
+	Example: <strong>$actionsnmpspecifictype 0<br>
+	</strong><br>
+	</li>
+	<li><strong>$actionsnmptraptype</strong> (This parameter is optional, the 
+	default value is "6" which means SNMP_TRAP_ENTERPRISESPECIFIC) <br>
+	<br>
+	There are only 7 Possible trap types defined which can be used here. These 
+	trap types are: <br>
+	0 = SNMP_TRAP_COLDSTART<br>
+	1 = SNMP_TRAP_WARMSTART<br>
+	2 = SNMP_TRAP_LINKDOWN<br>
+	3 = SNMP_TRAP_LINKUP<br>
+	4 = SNMP_TRAP_AUTHFAIL<br>
+	5 = SNMP_TRAP_EGPNEIGHBORLOSS<br>
+	6 = SNMP_TRAP_ENTERPRISESPECIFIC<br>
+	<br>
+	Any other value will default to 6 automatically. This configuration 
+	parameter is used for <strong>SNMPv1</strong> only. It has no effect if
+	<strong>SNMPv2</strong> is used. <br>
+	<br>
+	Example: <strong>$actionsnmptraptype 6</strong><br>
+	</li>
+</ul>
+<p>&nbsp;</p>
+<p><b>Caveats/Known Bugs:</b></p><ul><li>In order to decode the custom OIDs, you 
+	will need to have the adiscon mibs installed. </li></ul>
+<p><b>Sample:</b></p>
+<p>The following commands send every message as a snmp trap.</p>
+<textarea rows="10" cols="60">$ModLoad omsnmp
+
+$actionsnmptransport udp
+$actionsnmptarget localhost
+$actionsnmptargetport 162
+$actionsnmpversion 1
+$actionsnmpcommunity public
+
+*.* :omsnmp:
+</textarea>
+
+
+<p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>] [<a href="manual.html">manual 
+index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the
+<a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
+Copyright © 2008 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>. Released under the GNU GPL 
+version 3 or higher.</font></p>
+
+</body></html>

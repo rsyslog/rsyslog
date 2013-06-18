@@ -1,0 +1,43 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><title>Unix sockets output module (omuxsock) - sending syslog messages to local socket</title>
+<a href="features.html">back</a>
+</head>
+<body>
+<h1>Unix sockets Output Module (omuxsock)</h1>
+<p><b>Module Name:&nbsp;&nbsp;&nbsp; omuxsock</b></p>
+<p><b>Available since:&nbsp;&nbsp;&nbsp;</b> 4.7.3, 5.5.7</p>
+<p><b>Author: </b>Rainer Gerhards &lt;rgerhards@adiscon.com&gt;</p>
+<p><b>Description</b>:</p>
+<p>This module supports sending syslog messages to local Unix sockets.
+Thus it provided a fast message-passing interface between different rsyslog
+instances. The counterpart to omuxsock is <a href="imuxsock.html">imuxsock</a>.
+Note that the template used together with omuxsock must be suitable to be
+processed by the receiver.
+<p><b>Configuration Directives</b>:</p>
+<ul>
+<li><b>$OMUxSockSocket</b><br>
+Name of the socket to send data to. This has no default and <b>must</b>
+be set.
+</li>
+<li><b>$OMUxSockDefaultTemplate</b><br>
+This can be used to override the default template to be used together
+with omuxsock. This is primarily useful if there are many forwarding
+actions and each of them should use the same template.</li>
+</ul>
+<b>Caveats/Known Bugs:</b>
+<p>Currently, only datagram sockets are supported.
+<p><b>Sample:</b></p>
+<p>The following sample writes all messages to the "/tmp/socksample" socket.
+</p>
+<textarea rows="4" cols="80">$ModLoad omuxsock
+$OMUxSockSocket /tmp/socksample
+*.* :omuxsock:
+</textarea>
+[<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the <a href="http://www.rsyslog.com/">rsyslog</a>
+project.<br>
+Copyright &copy; 2010 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>.
+Released under the GNU GPL version 3 or higher.</font></p>
+
+</body></html>

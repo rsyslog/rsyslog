@@ -1,0 +1,6 @@
+<131>Oct  8 23:05:06 10.321.1.123 05",result_code=200,b
+131,local0,err,Oct  8 23:05:06,10.321.1.123,05",result_code=200,b,05",result_code=200,b,
+# a somewhat mangeld-with real-life sample of a malformed message
+# the key here is not what is being parsed, but that we do not abort!
+# NOTE: if a parser enhancement breaks the format, this is probably OK
+# also note that the above message does NOT contain a MSG part

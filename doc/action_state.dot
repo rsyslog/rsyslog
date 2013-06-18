@@ -1,0 +1,34 @@
+// This file is part of rsyslog.
+// 
+// rsyslog message state diagram
+//
+// see http://www.graphviz.org for how to obtain the graphviz processor
+// which is used to build the actual graph.
+//
+// generate the graph with
+// $ dot file.dot -Tpng >file.png
+
+digraph msgState {
+	compound=true; nodesep=1.0
+	//label="\n\nrsyslog action transaction states\nhttp://www.rsyslog.com";
+	//fontsize=20;
+
+	rdy	[label="ready" group="main"];
+	itx	[label="in Tx" group="main"];
+	comm	[label="commit"]
+	rtry	[label="retry"]
+	susp	[label="suspended"]
+
+	rdy  -> itx	[label="transaction begins"]
+	rdy  -> rtry	[label="begin tx\nerror"]
+	itx  -> itx	[label="success"]
+	itx  -> comm	[label="commit\n(caller or auto)"]
+	itx  -> rtry	[label="error"]
+	comm -> rdy	[label="success"]
+	comm -> rtry	[label="error"]
+	rtry -> rdy	[label="recovered"]
+	rtry -> susp	[label="could not\nrecover"]
+	susp -> rtry	[label="timeout expired"]
+
+	{rank=same; comm rtry}
+}

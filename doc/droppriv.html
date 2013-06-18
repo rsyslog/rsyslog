@@ -1,0 +1,60 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><title>dropping privileges in rsyslog</title>
+</head>
+<body>
+<h1>Dropping privileges in rsyslog</h1>
+<p><b>Available since:&nbsp;&nbsp;&nbsp;</b> 4.1.1</p>
+<p><b>Description</b>:</p>
+<p>
+Rsyslogd provides the ability to drop privileges by
+impersonating as another user and/or group after startup.
+
+<p>Please note that due to POSIX standards, rsyslogd always needs to start
+up as root if there is a listener who must bind to a network port below 1024.
+For example, the UDP listener usually needs to listen to 514 and as such
+rsyslogd needs to start up as root.
+
+<p>If you do not need this functionality, you can start rsyslog directly as an ordinary
+user. That is probably the safest way of operations. However, if a startup as
+root is required, you can use the $PrivDropToGroup and $PrivDropToUser config
+directives to specify a group and/or user that rsyslogd should drop to after initialization.
+Once this happend, the daemon runs without high privileges (depending, of
+course, on the permissions of the user account you specified). 
+<p>There is some additional information available in the
+<a href="http://wiki.rsyslog.com/index.php/Security#Dropping_Privileges">rsyslog wiki</a>.
+<p><b>Configuration Directives</b>:</p>
+<ul>
+<li><b>$PrivDropToUser</b><br>
+Name of the user rsyslog should run under after startup. Please note that
+this user is looked up in the system tables. If the lookup fails, privileges are
+NOT dropped. Thus it is advisable to use the less convenient $PrivDropToUserID directive.
+If the user id can be looked up, but can not be set, rsyslog aborts.
+<br>
+</li>
+<li><b>$PrivDropToUserID</b><br>
+Much the same as $PrivDropToUser, except that a numerical user id instead of a name
+is specified.Thus, privilege drop will always happen. 
+rsyslogd aborts.
+<li><b>$PrivDropToGroup</b><br>
+Name of the group rsyslog should run under after startup. Please note that
+this user is looked up in the system tables. If the lookup fails, privileges are
+NOT dropped. Thus it is advisable to use the less convenient $PrivDropToGroupID directive.
+Note that all supplementary groups are removed from the process if $PrivDropToGroup is
+specified.
+If the group id can be looked up, but can not be set, rsyslog aborts.
+<br>
+</li>
+<li><b>$PrivDropToGroupID</b><br>
+Much the same as $PrivDropToGroup, except that a numerical group id instead of a name
+is specified. Thus, privilege drop will always happen.
+</ul>
+<p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>]
+[<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the <a href="http://www.rsyslog.com/">rsyslog</a>
+project.<br>
+Copyright &copy; 2008 by <a href="http://www.gerhards.net/rainer">Rainer
+Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>.
+Released under the GNU GPL version 3 or higher.</font></p>
+
+</body></html>

@@ -1,0 +1,130 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<title>Periodic Statistics of Internal Counters (impstats)</title>
+</head>
+<body>
+<a href="rsyslog_conf_modules.html">back</a>
+
+<h1>Input Module to Generate Periodic Statistics of Internal Counters</h1>
+<p><b>Module Name:&nbsp;&nbsp;&nbsp; impstats</b></p>
+<p><b>Available since: </b>5.7.0+, 6.1.1+
+<p><b>Author: </b>Rainer Gerhards &lt;rgerhards@adiscon.com&gt;</p>
+<p><b>Description</b>:</p>
+<p>This module provides periodic output of rsyslog internal counters.
+Note that the whole statistics system is currently under development. So
+availabilty and format of counters may change and is not yet stable (so be
+prepared to change your trending scripts when you upgrade to a newer rsyslog version).
+<p>The set of available counters will be output as a set of syslog messages. This
+output is periodic, with the interval being configurable (default is 5 minutes).
+Be sure that your configuration records the counter messages (default is syslog.=info).
+Besides logging to the regular syslog stream, the module can also be configured to
+write statistics data into a (local) file.
+<p>Note that loading this module has impact on rsyslog performance. Depending on
+settings, this impact may be noticable (for high-load environments).
+<p>The rsyslog website has an updated overview of available
+<a href="http://rsyslog.com/rsyslog-statistic-counter/">rsyslog statistic counters</a>.
+</p>
+<p><b>Module Confguration Parameters</b>:</p>
+<p>This module supports module parameters, only.
+<ul>
+	<li><strong>interval </strong>[seconds] (default 300 [5minutes])<br>
+	Sets the interval, in <b>seconds</b> at which messages are generated. Please note that the
+	actual interval may be a bit longer. We do not try to be precise and so the interval is
+	actually a sleep period which is entered after generating all messages. So the actual 
+	interval is what is configured here plus the actual time required to generate messages.
+	In general, the difference should not really matter.
+	<br></li>
+	<li><strong>facility </strong>[templateName]<br>
+	The numerical syslog facility code to be used for generated messages. Default
+	is 5 (syslog). This is useful for filtering messages.
+	<br></li>
+	<li><strong>severity </strong>[templateName]<br>
+	The numerical syslog severity code to be used for generated messages. Default
+	is 6 (info).This is useful for filtering messages.
+	<br></li>
+	<li><strong>format </strong>[json/cee/<b>legacy</b>](rsyslog v6.3.8+ only)<br>
+	Specifies the format of emitted stats messages. The default of "legacy" is
+	compatible with pre v6-rsyslog. The other options provide support for
+	structured formats (note the "cee" is actually "project lumberack" logging).
+	<br></li>
+	<li><strong>log.syslog </strong>[<b>on</b>/off] - available since 7.3.6<br>
+	This is a boolean setting specifying if data should be sent
+	to the usual syslog stream. This is useful if custom formatting
+	or more elaborate processing is desired. However, output is placed
+	under the same restrictions as regular syslog data, especially in
+	regard to the queue position (stats data may sit for an extended
+	period of time in queues if they are full).<br></li>
+	<li><strong>log.file </strong>[file name] - available since 7.3.6<br>
+	If specified, statistics data is written the specified file. For
+	robustness, this should be a local file. The file format cannot be
+	customized, it consists of a date header, followed by a colon, 
+	followed by the actual statistics record, all on one line. Only
+	very limited error handling is done, so if things go wrong stats
+	records will probably be lost. Logging to file an be a useful
+	alternative if for some reasons (e.g. full queues) the regular
+	syslog stream method shall not be used solely. Note that turning
+	on file logging does NOT turn of syslog logging. If that is desired
+	log.syslog="off" must be explicitely set.
+	<br></li>
+	
+</ul>
+<p><b>Legacx Configuration Directives</b>:</p>
+A limited set of parameters can also be set via the legacy configuration
+syntax. Note that this is intended as an upward compatibilit layer, so
+newer features are intentionally <b>not</b> available via legacy directives.
+<ul>
+<li>$PStatInterval &lt;Seconds&gt; - same as the "interval" parameter.
+<li>$PStatFacility &lt;numerical facility&gt; - same as the "facility" parameter.
+<li>$PStatSeverity &lt;numerical severity&gt; - same as the "severity" parameter.
+<li>$PStatJSON &lt;on/<b>off</b>&gt; (rsyslog v6.3.8+ only)<br>
+If set to on, stats messages are emitted as structured cee-enhanced syslog. If
+set to off, legacy format is used (which is compatible with pre v6-rsyslog).
+</li>
+</ul>
+<b>Caveats/Known Bugs:</b>
+<ul>
+<li>This module MUST be loaded right at the top of rsyslog.conf, otherwise 
+stats may not get turned on in all places.</li>
+</ul>
+<p><b>Samples:</b></p>
+<p>This activates the module and records messages to /var/log/rsyslog-stats in 10 minute intervals:<br>
+</p>
+<textarea rows="5" cols="60">module(load="impstats" interval="600" severity="7")
+
+# to actually gather the data:
+syslog.=debug  /var/log/rsyslog-stats
+</textarea>
+<p><b>Legacy Sample:</b></p>
+<p>This activates the module and records messages to /var/log/rsyslog-stats in 10 minute intervals:</p>
+<textarea rows="6" cols="60">$ModLoad impstats
+$PStatInterval 600
+$PStatSeverity 7
+
+syslog.=debug  /var/log/rsyslog-stats
+</textarea>
+<p>In the next sample, the default interval of 5 minutes is used. However, this time
+stats data is NOT emitted to the syslog stream but to a local file instead.
+<p>
+<textarea rows="3" cols="70">module(load="impstats" interval="600" severity="7"
+       log.syslog="off" /* need to turn log stream logging off! */
+       log.file="/path/to/local/stats.log")
+</textarea>
+<p>And finally, we log to both the regular syslog log stream as well as a file.
+Within the log stream, we forward the data records to another server:
+<p>
+<textarea rows="4" cols="70">module(load="impstats" interval="600" severity="7"
+       log.file="/path/to/local/stats.log")
+
+syslog.=debug  @central.example.net
+</textarea>
+
+<p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>]
+[<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the
+<a href="http://www.rsyslog.com/">rsyslog</a>
+project.<br>
+Copyright &copy; 2013 by <a href="http://www.gerhards.net/rainer">Rainer
+Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>.
+Released under the GNU GPL version 3 or higher.</font></p>
+</body></html>

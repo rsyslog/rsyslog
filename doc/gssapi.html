@@ -1,0 +1,118 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><title>GSSAPI module support in rsyslog v3</title>
+
+</head>
+<body>
+<h1>GSSAPI module support in rsyslog v3</h1>
+<p style="font-weight: bold;">What is it good for.</p>
+<ul style="margin-left: 1.25cm;">
+<li>
+client-serverauthentication </li>
+<li>
+Log
+messages encryption </li>
+</ul>
+<p class="P5"> </p>
+<p class="P3"><span style="font-weight: bold;">Requirements.</span>
+</p>
+<ul>
+<li>Kerberos infrastructure</li>
+<li>rsyslog, rsyslog-gssapi</li>
+</ul>
+<p> </p>
+<p><span style="font-weight: bold;">Configuration.</span>
+</p>
+<p>Let's assume there are 3 machines in kerberos Realm: </p>
+<ul>
+<li>the
+first is running KDC (Kerberos Authentication Service and Key
+Distribution Center),</li>
+<li>the second is a client sending its logs to the server,</li>
+<li>the third is receiver, gathering all logs.</li>
+</ul>
+<p class="P7"> </p>
+<p class="P10"><span style="font-style: italic;">1.
+KDC:</span> </p>
+<ul>
+<li>Kerberos
+database must be properly set-up on KDC machine first. Use
+kadmin/kadmin.local to do that. Two principals need to be add in our
+case:</li>
+</ul>
+<ol style="margin-left: 1.25cm; list-style-type: decimal;">
+<li>
+<p>sender@REALM.ORG
+</p>
+</li>
+</ol>
+<ul>
+<li>client must have ticket for pricipal sender</li>
+<li>REALM.ORG is kerberos Realm</li>
+</ul>
+<ol style="margin-left: 1.25cm; list-style-type: decimal;">
+<li>host/receiver.mydomain.com@REALM.ORG - service principal</li>
+</ol>
+<ul>
+<li>Use ktadd to export service principal and transfer it to
+/etc/krb5.keytab
+on receiver </li>
+</ul>
+<p><span style="font-style: italic;">2. CLIENT:</span>
+</p>
+<ul>
+<li>set-up rsyslog, in /etc/rsyslog.conf</li>
+<li>$ModLoad omgssapi - load output gss module </li>
+<li>$GSSForwardServiceName
+otherThanHost - set the name of service principal, "host" is the
+default one</li>
+<li>*.* :omgssapi:receiver.mydomain.com - action line, forward
+logs to receiver</li>
+<li>kinit root - get the TGT ticket</li>
+<li>service rsyslog start
+<p class="P14" style="margin-left: 0.25cm;"> </p>
+</li>
+</ul>
+<p><span style="font-style: italic;">3. SERVER:</span>
+</p>
+<ul>
+<li class="P14" style="margin-left: 0cm;">
+<p class="P14" style="margin-left: 0.25cm;">set-up
+rsyslog, in /etc/rsyslog.conf </p>
+</li>
+<li class="P16">
+<p class="P16" style="margin-left: 0.25cm;">$ModLoad
+<a href="imgssapi.html">imgssapi</a> - load input gss module </p>
+</li>
+<li class="P16">
+<p class="P16" style="margin-left: 0.25cm;">$InputGSSServerServiceName
+otherThanHost - set the name of service principal, "host" is the
+default one </p>
+</li>
+<li class="P16">
+<p class="P16" style="margin-left: 0.25cm;">$InputGSSServerPermitPlainTCP
+on - accept GSS and TCP connections (not authenticated senders), off by
+default </p>
+</li>
+<li class="P16">
+<p class="P16" style="margin-left: 0.25cm;">$InputGSSServerRun
+514 - run server on port </p>
+</li>
+<li class="P14" style="margin-left: 0cm;">
+<p class="P14" style="margin-left: 0.25cm;">service
+rsyslog start </p>
+</li>
+</ul>
+<span style="font-weight: bold;">The picture demonstrate
+how things work.</span>
+<p class="P18"> </p>
+<img src="gssapi.png" alt="rsyslog gssapi support">
+<p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>]
+[<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the
+<a href="http://www.rsyslog.com/">rsyslog</a>
+project.<br>
+Copyright © 2008 by <a href="http://www.gerhards.net/rainer">Rainer
+Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>.
+Released under the GNU GPL version 3 or higher.</font></p>
+</body></html>

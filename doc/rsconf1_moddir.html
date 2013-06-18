@@ -1,0 +1,29 @@
+<html>
+<head>
+<title>rsyslog.conf file</title>
+</head>
+<body>
+<a href="rsyslog_conf_global.html">back</a>
+
+<h2>$ModDir</h2>
+<p><b>Type:</b> global configuration directive</p>
+<p><b>Default:</b> system default for user libraries, e.g. 
+/usr/local/lib/rsyslog/</p>
+<p><b>Description:</b></p>
+<p>Provides the default directory in which loadable modules reside. This may be 
+used to specify an alternate location that is not based on the system default. 
+If the system default is used, there is no need to specify this directive. Please 
+note that it is vitally important to end the path name with a slash, else module 
+loads will fail.</p>
+<p><b>Sample:</b></p>
+<p><code><b>$ModDir /usr/rsyslog/libs/&nbsp; # note the trailing slash!</b></code></p>
+
+<p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>] [<a href="manual.html">manual 
+index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the
+<a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
+Copyright &copy; 2007 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>. Released under the GNU GPL 
+version 2 or higher.</font></p>
+</body>
+</html>

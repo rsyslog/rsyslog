@@ -1,0 +1,50 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Language" content="en"><title>/dev/kmsg Log Input Module (imkmsg)</title>
+
+</head>
+<body>
+<a href="rsyslog_conf_modules.html">back</a>
+
+<h1>/dev/kmsg Log Input Module</h1>
+<p><b>Module Name:&nbsp;&nbsp;&nbsp; imkmsg</b></p>
+<p><b>Authors: </b>Rainer Gerhards
+&lt;rgerhards@adiscon.com&gt;<br />
+Milan Bartos
+&lt;mbartos@redhat.com&gt;</p>
+<p><b>Description</b>:</p>
+<p>Reads messages from the /dev/kmsg structured kernel log and submits them to the
+syslog engine.</p>
+<p>
+The printk log buffer constains log records. These records are exported by /dev/kmsg
+device as structured data in the following format:<br />
+  "level,sequnum,timestamp;&lt;message text&gt;\n"<br />
+There could be continuation lines starting with space that contains key/value pairs.<br />
+<br />
+Log messages are parsed as necessary into rsyslog msg_t structure. Continuation lines are parsed
+as json key/value pairs and added into rsyslog's message json representation.
+</p>
+<p><b>Configuration Directives</b>:</p>
+<p>This module has no configuration directives.</p>
+<b>Caveats/Known Bugs:</b>
+<p>This module can't be used together with imklog module. When using one of them, make sure the other
+one is not enabled.</p>
+<p>This is Linux specific module and requires /dev/kmsg device with structured kernel logs.</p>
+<p><b>Sample:</b></p>
+<p>The following sample pulls messages from the /dev/kmsg log device. All
+parameters are left by default, which is usually a good idea. Please
+note that loading the plugin is sufficient to activate it. No directive
+is needed to start pulling messages.<br>
+</p>
+<textarea rows="15" cols="60">$ModLoad imkmsg
+</textarea>
+<p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>]
+[<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the
+<a href="http://www.rsyslog.com/">rsyslog</a>
+project.<br>
+Copyright &copy; 2008-2009 by <a href="http://www.gerhards.net/rainer">Rainer
+Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>.
+Released under the GNU GPL version 3 or higher.</font></p>
+</body></html>

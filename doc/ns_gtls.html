@@ -1,0 +1,59 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><title>gtls Network Stream Driver</title>
+
+</head>
+<body>
+<h1>gtls Network Stream Driver</h1>
+<p>This <a href="netstream.html">network stream
+driver</a> implements a TLS protected transport via the <a href="http://www.gnu.org/software/gnutls/" target="_blank">GnuTLS
+library</a>.</p>
+<p><b>Available since:</b> 3.19.0 (suggested minimum 3.19.8 and above)</p>
+<p style="font-weight: bold;">Supported Driver Modes</p>
+<ul>
+<li>0 - unencrypted trasmission (just like <a href="ns_ptcp.html">ptcp</a> driver)</li>
+<li>1 - TLS-protected operation</li>
+</ul>
+Note: mode 0 does not provide any benefit over the ptcp driver. This
+mode exists for technical reasons, but should not be used. It may be
+removed in the future.<br>
+<span style="font-weight: bold;">Supported Authentication
+Modes</span><br>
+<ul>
+<li><span style="font-weight: bold;">anon</span>
+- anonymous authentication as
+described in IETF's draft-ietf-syslog-transport-tls-12 Internet draft</li>
+<li><span style="font-weight: bold;">x509/fingerprint</span>
+- certificate fingerprint authentication as
+described in IETF's draft-ietf-syslog-transport-tls-12 Internet draft</li>
+<li><span style="font-weight: bold;">x509/certvalid</span>
+- certificate validation only</li>
+<li><span style="font-weight: bold;">x509/name</span>
+- certificate validation and subject name authentication as
+described in IETF's draft-ietf-syslog-transport-tls-12 Internet draft
+</li>
+</ul>
+Note: "anon" does not permit to authenticate the remote peer. As such,
+this mode is vulnerable to man in the middle attacks as well as
+unauthorized access. It is recommended NOT to use this mode.</p>
+<p>x509/certvalid is a nonstandard mode. It validates the remote
+peers certificate, but does not check the subject name. This is 
+weak authentication that may be useful in scenarios where multiple
+devices are deployed and it is sufficient proof of authenticy when
+their certificates are signed by the CA the server trusts. This is
+better than anon authentication, but still not recommended.
+<b>Known Problems</b><br>
+<p>Even in x509/fingerprint mode, both the client and sever
+certificate currently must be signed by the same root CA. This is an
+artifact of the underlying GnuTLS library and the way we use it. It is
+expected that we can resolve this issue in the future.</p>
+<p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>]
+[<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]
+</p>
+<p><font size="2">This documentation is part of the
+<a href="http://www.rsyslog.com/">rsyslog</a>
+project.<br>
+Copyright © 2008 by <a href="http://www.gerhards.net/rainer">Rainer
+Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>.
+Released under the GNU GPL version 3 or higher.</font></p>
+</body></html>

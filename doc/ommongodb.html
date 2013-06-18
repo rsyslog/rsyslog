@@ -1,0 +1,60 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Language" content="en">
+<title>MongoDB Output Module</title>
+</head>
+
+<body>
+<a href="rsyslog_conf_modules.html">back</a>
+
+<h1>MongoDB Output Module</h1>
+<p><b>Module Name:&nbsp;&nbsp;&nbsp; ommongodb</b></p>
+<p><b>Author: </b>Rainer Gerhards
+&lt;rgerhards@adiscon.com&gt;</p>
+<p><b>Description</b>:</p>
+<p>This module provides native support for logging to MongoDB. 
+</p>
+<p><b>Action Parameters</b>:</p>
+<ul>
+<li><b>server</b><br>Name or address of the MongoDB server
+<li><b>serverport</b><br>Permits to select
+a non-standard port for the MongoDB server. The default is 0, which means the
+system default port is used. There is no need to specify this parameter unless
+you know the server is running on a non-standard listen port.
+<li><b>db</b><br>Database to use
+<li><b>collection</b><br>Collection to use
+<li><b>uid</b><br>logon userid used to connect to server. Must have proper permissions.
+<li><b>pwd</b><br>the user's password
+<li><b>template</b><br>Template to use when submitting messages.
+</ul>
+<p>Note rsyslog contains a canned default template to write to the MongoDB. It 
+will be used automatically if no other template is specified to be used. This template is:
+<p>
+<textarea rows="5" cols="80">template(name="BSON" type="string" string="\"sys\" : \"%hostname%\", \"time\" : \"%timereported:::rfc3339%\", \"time_rcvd\" : \"%timegenerated:::rfc3339%\", \"msg\" : \"%msg%\", \"syslog_fac\" : \"%syslogfacility%\", \"syslog_sever\" : \"%syslogseverity%\", \"syslog_tag\" : \"%syslogtag%\", \"procid\" : \"%programname%\", \"pid\" : \"%procid%\", \"level\" : \"%syslogpriority-text%\"")
+</textarea>
+<p>This creates the BSON document needed for MongoDB if no template is specified. The default
+schema is aligned to CEE and project lumberjack. As such, the field names are standard
+lumberjack field names, and <b>not</b>
+<a href="property_replacer.html">rsyslog property names</a>. When specifying templates, be sure
+to use rsyslog property names as given in the table. If you would like to use lumberjack-based
+field names inside MongoDB (which probably is useful depending on the use case), you need to
+select fields names based on the lumberjack schema.
+If you just want to use a subset of the fields, but with lumberjack names, you can look up the
+mapping in the default template. For example, the lumberjack field "level" contains the rsyslog
+property "syslogpriority-text".
+<p><b>Sample:</b></p>
+<p>The following sample writes all syslog messages to the
+database "syslog" and into the collection "log" on mongosever.example.com. The server is
+being accessed under the account of "user" with password "pwd".
+</p>
+<textarea rows="5" cols="80">module(load="ommongodb")
+*.* 	action(type="ommongodb" server="mongoserver.example.com" db="syslog" collection="log" uid="user" pwd="pwd")
+</textarea>
+<p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>]
+[<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the
+<a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
+Copyright &copy; 2008-2012 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>.
+Released under the ASL 2.0.</font></p>
+</body></html>

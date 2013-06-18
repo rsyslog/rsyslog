@@ -1,0 +1,127 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><title>TLS-protected syslog: recommended scenario</title>
+</head>
+<body>
+
+<h1>Encrypting Syslog Traffic with TLS (SSL)</h1>
+<p><small><i>Written by <a href="http://www.adiscon.com/en/people/rainer-gerhards.php">Rainer
+Gerhards</a> (2008-06-17)</i></small></p>
+<ul>
+<li><a href="rsyslog_secure_tls.html">Overview</a>
+<li><a href="tls_cert_scenario.html">Sample Scenario</a>
+<li><a href="tls_cert_ca.html">Setting up the CA</a>
+<li><a href="tls_cert_machine.html">Generating Machine Certificates</a>
+<li><a href="tls_cert_server.html">Setting up the Central Server</a>
+<li><a href="tls_cert_client.html">Setting up syslog Clients</a>
+<li><a href="tls_cert_udp_relay.html">Setting up the UDP syslog relay</a>
+<li><a href="tls_cert_summary.html">Wrapping it all up</a>
+<li><a href="tls_cert_errmsgs.html">Frequently seen Error Messages</a>
+</ul>
+
+<h2>Overview</h2>
+<p>This document describes a secure way to set up rsyslog TLS. A secure logging
+environment requires more than just encrypting the transmission channel. This document
+provides one possible way to create such a secure system.
+<p>Rsyslog's TLS authentication can be used very flexible and thus supports a 
+wide range of security policies. This section tries to give some advise on a 
+scenario that works well for many environments. However, it may not be suitable 
+for you - please assess you security needs before using the recommendations 
+below. Do not blame us if it doesn't provide what you need ;)</p>
+<p>Our policy offers these security benefits:</p>
+<ul>
+	<li>syslog messages are encrypted while traveling on the wire</li>
+	<li>the syslog sender authenticates to the syslog receiver; thus, the 
+	receiver knows who is talking to it</li>
+	<li>the syslog receiver authenticates to the syslog sender; thus, the sender 
+	can check if it indeed is sending to the expected receiver</li>
+	<li>the mutual authentication prevents man-in-the-middle attacks</li>
+</ul>
+<p>Our secrity goals are achived via public/private key security. As such, it is 
+vital that private keys are well protected and not accessible to third parties. 
+<span style="float: left">
+<script type="text/javascript"><!--
+google_ad_client = "pub-3204610807458280";
+/* rsyslog doc inline */
+google_ad_slot = "5958614527";
+google_ad_width = 125;
+google_ad_height = 125;
+//-->
+</script>
+<script type="text/javascript"
+src="http://pagead2.googlesyndication.com/pagead/show_ads.js">
+</script>
+</span>
+If private keys have become known to third parties, the system does not provide 
+any security at all. Also, our solution bases on X.509 certificates and a (very 
+limited) chain of trust. We have one instance (the CA) that issues all machine 
+certificates. The machine certificate indentifies a particular machine. hile in 
+theory (and practice), there could be several &quot;sub-CA&quot; that issues machine 
+certificates for a specific adminitrative domain, we do not include this in our 
+&quot;simple yet secure&quot; setup. If you intend to use this, rsyslog supports it, but 
+then you need to dig a bit more into the documentation (or use the forum to ask). 
+In general, if you depart from our simple model, you should have good reasons 
+for doing so and know quite well what you are doing - otherwise you may 
+compromise your system security.</p>
+<p>Please note that security never comes without effort. In the scenario 
+described here, we have limited the effort as much as possible. What remains is 
+some setup work for the central CA, the certificate setup for each machine as 
+well as a few configuration commands that need to be applied to all of them. 
+Proably the most important limiting factor in our setup is that all senders and 
+receivers must support IETF's syslog-transport-tls standard (which is not 
+finalized yet). We use mandatory-to-implement technology, yet you may have 
+trouble finding all required features in some implementations. More often, 
+unfortunately, you will find that an implementation does not support the 
+upcoming IETF standard at all - especially in the &quot;early days&quot; (starting May 
+2008) when rsyslog is the only implementation of said standard.</p>
+<p>Fortunately, rsyslog supports allmost every protocol that is out there in the 
+syslog world. So in cases where transport-tls is not available on a sender, we 
+recommend to use rsyslog as the initial relay. In that mode, the not-capabe 
+sender sends to rsyslog via another protocol, which then relays the message via 
+transport-tls to either another interim relay or the final destination (which, 
+of course, must by transport-tls capable). In such a scenario, it is best to try 
+see what the sender support. Maybe it is possible to use industry-standard plain 
+tcp syslog with it. Often you can even combine it with stunnel, which then, too, 
+enables a secure delivery to the first rsyslog relay. If all of that is not 
+possible, you can (and often must...) resort to UDP. Even though this is now 
+lossy and insecure, this is better than not having the ability to listen to that 
+device at all. It may even be reasonale secure if the uncapable sender and the 
+first rsyslog relay communicate via a private channel, e.g. a dedicated network 
+link.</p>
+<p>One final word of caution: transport-tls protects the connection between the 
+sender and the receiver. It does not necessarily protect against attacks that 
+are present in the message itself. Especially in a relay environment, the 
+message may have been originated from a malicious system, which placed invalid 
+hostnames and/or other content into it. If there is no provisioning against such 
+things, these records may show up in the receivers' repository. -transport-tls 
+does not protect against this (but it may help, properly used). Keep in mind 
+that syslog-transport-tls provides hop-by-hop security. It does not provide 
+end-to-end security and it does not authenticate the message itself (just the 
+last sender).</p>
+<h3>A very quick Intro</h3>
+<p>If you'd like to get all information very rapidly, the graphic below contains
+everything you need to know (from the certificate perspective) in a very condensed
+manner. It is no surprise if the graphic puzzles you. In this case, <a href="tls_cert_scenario.html">simply read on</a>
+for full instructions.
+<p>
+<img align="center" alt="TLS/SSL protected syslog" src="tls_cert.jpg">
+<h3>Feedback requested</h3>
+<p>I would appreciate feedback on this tutorial. If you have
+additional ideas, comments or find bugs (I *do* bugs - no way... ;)),
+please
+<a href="mailto:rgerhards@adiscon.com">let me know</a>.</p>
+<h2>Revision History</h2>
+<ul>
+<li>2008-06-06 * <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> * Initial Version created</li>
+<li>2008-06-18 * <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> * Greatly enhanced and modularized the doc</li>
+</ul>
+<h2>Copyright</h2>
+<p>Copyright (c) 2008 <a href="http://www.adiscon.com/en/people/rainer-gerhards.php">Rainer
+Gerhards</a> and
+<a href="http://www.adiscon.com/en/">Adiscon</a>.</p>
+<p> Permission is granted to copy, distribute and/or modify this
+document under the terms of the GNU Free Documentation License, Version
+1.2 or any later version published by the Free Software Foundation;
+with no Invariant Sections, no Front-Cover Texts, and no Back-Cover
+Texts. A copy of the license can be viewed at
+<a href="http://www.gnu.org/copyleft/fdl.html">http://www.gnu.org/copyleft/fdl.html</a>.</p>
+</body></html>

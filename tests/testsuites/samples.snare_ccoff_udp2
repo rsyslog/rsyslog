@@ -1,0 +1,26 @@
+# see comments in snare_ccoff_udp.conf
+# note that some of these samples look pretty wild, but they are
+# *real* cases (just mangled to anonymize them...)
+#
+# NOTE
+# The current responses are probably not correct (handling of messages without PRI).
+# However, we keep them inside the test to be consistent. We should look at how
+# PRI-less messages are handled and once we have fixed that, the test cases may need
+# to be adapted. We do NOT try to preserve misbehaviour on such seriously malformed
+# messages.
+#
+# this is a very simple test, though not snare-based
+test
+insert into windows (Message, Facility,FromHost, Priority, DeviceReportedTime, ReceivedAt, InfoUnitID, SysLogTag) values ('', 1, 'test',5, '20100321185328', '20100321185328', 1, '')
+# and yet another one we have seen in practice
+UX=Abcd-efg-hij-klmno; XXXXX=1111111111, Z123=192.12.231.245:11111, S1234=123456789, XXXXXX=111111111
+insert into windows (Message, Facility,FromHost, Priority, DeviceReportedTime, ReceivedAt, InfoUnitID, SysLogTag) values (' XXXXX=1111111111, Z123=192.12.231.245:11111, S1234=123456789, XXXXXX=111111111', 1, 'localhost.localdomain',5, '20100321185328', '20100321185328', 1, 'UX=Abcd-efg-hij-klmno;')
+# Sample 1 - note the absence of PRI!
+windowsserver	MSWinEventLog	1	Security	1167	Fri Mar 19 15:33:30 2010	540	Security	SYSTEM	User	Success Audit	WINDOWSSERVER	Logon/Logoff		Successful Network Logon:     User Name: WINDOWSSERVER$     Domain: DOMX     Logon ID: (0x0,0xF88396)     Logon Type: 3     Logon Process: Kerberos     Authentication Package: Kerberos     Workstation Name:      Logon GUID: {79b6eb79-7bcc-8a2e-7dad-953c51dc00fd}     Caller User Name: -     Caller Domain: -     Caller Logon ID: -     Caller Process ID: -     Transited Services: -     Source Network Address: 10.11.11.3     Source Port: 3306    	733\n
+insert into windows (Message, Facility,FromHost, Priority, DeviceReportedTime, ReceivedAt, InfoUnitID, SysLogTag) values (' Mar 19 15:33:30 2010 540 Security SYSTEM User Success Audit WINDOWSSERVER Logon/Logoff  Successful Network Logon:     User Name: WINDOWSSERVER$     Domain: DOMX     Logon ID: (0x0,0xF88396)     Logon Type: 3     Logon Process: Kerberos     Authentication Package: Kerberos     Workstation Name:      Logon GUID: {79b6eb79-7bcc-8a2e-7dad-953c51dc00fd}     Caller User Name: -     Caller Domain: -     Caller Logon ID: -     Caller Process ID: -     Transited Services: -     Source Network Address: 10.11.11.3     Source Port: 3306     733', 1, 'localhost.localdomain',5, '20100321185328', '20100321185328', 1, 'windowsserver MSWinEventLog 1 Security 1167 Fri')
+# Sample 2
+windowsserver	MSWinEventLog	1	Security	1166	Fri Mar 19 15:33:30 2010	576	Security	SYSTEM	User	Success Audit	WINDOWSSERVER	Logon/Logoff		Special privileges assigned to new logon:     User Name: WINDOWSSERVER$     Domain: DOMX     Logon ID: (0x0,0xF88396)     Privileges: SeSecurityPrivilege   SeBackupPrivilege   SeRestorePrivilege   SeTakeOwnershipPrivilege   SeDebugPrivilege   SeSystemEnvironmentPrivilege   SeLoadDriverPrivilege   SeImpersonatePrivilege   SeEnableDelegationPrivilege  	732\n
+insert into windows (Message, Facility,FromHost, Priority, DeviceReportedTime, ReceivedAt, InfoUnitID, SysLogTag) values (' Mar 19 15:33:30 2010 576 Security SYSTEM User Success Audit WINDOWSSERVER Logon/Logoff  Special privileges assigned to new logon:     User Name: WINDOWSSERVER$     Domain: DOMX     Logon ID: (0x0,0xF88396)     Privileges: SeSecurityPrivilege   SeBackupPrivilege   SeRestorePrivilege   SeTakeOwnershipPrivilege   SeDebugPrivilege   SeSystemEnvironmentPrivilege   SeLoadDriverPrivilege   SeImpersonatePrivilege   SeEnableDelegationPrivilege   732', 1, 'localhost.localdomain',5, '20100321185328', '20100321185328', 1, 'windowsserver MSWinEventLog 1 Security 1166 Fri')
+# Sample 3
+windowsserver	MSWinEventLog	1	Security	1165	Fri Mar 19 15:33:30 2010	538	Security	SYSTEM	User	Success Audit	WINDOWSSERVER	Logon/Logoff		User Logoff:     User Name: WINDOWSSERVER$     Domain: DOMX     Logon ID: (0x0,0xF8830B)     Logon Type: 3    	731\n
+insert into windows (Message, Facility,FromHost, Priority, DeviceReportedTime, ReceivedAt, InfoUnitID, SysLogTag) values (' Mar 19 15:33:30 2010 538 Security SYSTEM User Success Audit WINDOWSSERVER Logon/Logoff  User Logoff:     User Name: WINDOWSSERVER$     Domain: DOMX     Logon ID: (0x0,0xF8830B)     Logon Type: 3     731', 1, 'localhost.localdomain',5, '20100321185328', '20100321185328', 1, 'windowsserver MSWinEventLog 1 Security 1165 Fri')

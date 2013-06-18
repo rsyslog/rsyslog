@@ -1,0 +1,4 @@
+<34>Oct 11 22:14:15 mymachine su: 'su root' failed for lonvick on /dev/pts/8
+34,auth,crit,Oct 11 22:14:15,mymachine,su,su:, 'su root' failed for lonvick on /dev/pts/8
+#Example from RFC3164, section 5.4
+#Only the first two lines are important, you may place anything behind them!

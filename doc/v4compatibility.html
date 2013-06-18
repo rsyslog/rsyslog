@@ -1,0 +1,96 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><title>Compatibility notes for rsyslog v4</title>
+</head>
+<body>
+<h1>Compatibility Notes for rsyslog v4</h1>
+<p><small><i>Written by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a>
+(2009-07-15)</i></small></p>
+<p>The changes introduced in rsyslog v4 are numerous, but not very intrusive.
+This document describes things to keep in mind when moving from v3 to v4. It 
+does not list enhancements nor does it talk about compatibility concerns introduced
+by v3 (for this, see the <a href="v3compatibility.html">rsyslog v3 compatibility notes</a>).
+<h2>HUP processing</h2>
+<p>With v3 and below, rsyslog used the traditional HUP behaviour. That meant that
+all output files are closed and the configuration file is re-read and the new configuration
+applied.
+<p>With a program as simple and static as sysklogd, this was not much of an issue. The
+most important config settings (like udp reception) of a traditional syslogd can not be
+modified via the configuration file. So a config file reload only meant setting up a new set of filters. It also didn't account as problem that while doing so messages may be lost - without
+any threading and queuing model, a traditional syslogd will potentially always loose
+messages, so it is irrelevant if this happens, too, during the short config re-read
+phase.
+<p>In rsyslog, things are quite different: the program is more or less a framework into
+which loadable modules are loaded as needed for a particular configuration. The software
+that will acutally be running is taylored via the config file. Thus, a re-read of
+the config file requires a full, very heavy restart, because the software acutally
+running with the new config can be totally different from what ran with the old config.
+<p>Consequently, the traditional HUP is a very heavy operation and may even cause some
+data loss because queues must be shut down, listeners stopped and so on. Some of these
+operations (depending on their configuration) involve intentional message loss. The operation
+also takes up a lot of system resources and needs quite some time (maybe seconds) to be
+completed. During this restart period, the syslog subsytem is not fully available.
+<p>From the software developer's point of view, the full restart done by a HUP is rather complex,
+especially if user-timeout limits set on action completion are taken into consideration (for
+those in the know: at the extreme ends this means we need to cancel threads as a last resort,
+but than we need to make sure that such cancellation does not happen at points where it
+would be fatal for a restart). A regular restart, where the process is actually terminated, is
+much less complex, because the operating system does a full cleanup after process termination,
+so rsyslogd does not need to take care for exotic cleanup cases and leave that to the OS.
+In the end result, restart-type HUPs clutter the code, increase complexity (read: add bugs)
+and cost performance.
+<p>On the contrary, a HUP is typically needed for log rotation, and the real desire is
+to close files. This is a non-disruptive and very lightweigth operation.
+<p>Many people have said that they are used to HUP the syslogd to apply configuration
+changes. This is true, but it is questionable if that really justifies all the cost that
+comes with it. After all, it is the difference between typing
+<pre>
+$ kill -HUP `cat /var/run/rsyslogd.pid`
+</pre>
+versus
+<pre>
+$ /etc/init.d/rsyslog restart
+</pre>
+Semantically, both is mostly the same thing. The only difference is that with the restart
+command rsyslogd can spit config error message to stderr, so that the user is able to see 
+any problems and fix them. With a HUP, we do not have access to stderr and thus can log
+error messages only to their configured destinations; exprience tells that most users
+will never find them there. What, by the way, is another strong argument against
+restarting rsyslogd by HUPing it.
+<p>So a restart via HUP is not strictly necessary
+and most other deamons require that a restart command is typed in if a restart is required.
+<p>Rsyslog will follow this paradigm in the next versions, resulting in many benefits. In v4,
+we provide some support for the old-style semantics. We introduced a setting $HUPisRestart
+which may be set to &quot;on&quot; (tradional, heavy operation)
+or &quot;off&quot; (new, lightweight &quot;file close only&quot; operation).
+The initial versions had the default set to traditional behavior, but starting with 4.5.1
+we are now using the new behavior as the default.
+<p>Most importantly, <b>this may break some scripts</b>, but my sincere belief is that
+there are very few scripts that automatically <b>change</b> rsyslog's config and then do a
+HUP to reload it. Anyhow, if you have some of these, it may be a good idea to change
+them now instead of turning restart-type HUPs on. Other than that, one mainly needs
+to change the habit of how to restart rsyslog after a configuration change.
+<p><b>Please note that restart-type HUP is depricated and will go away in rsyslog v5.</b>
+So it is a good idea to become ready for the new version now and also enjoy some of the
+benefits of the &quot;real restart&quot;, like the better error-reporting capability.
+<p>Note that code complexity reduction (and thus performance improvement) needs the restart-type
+HUP code to be removed, so these changes can (and will) only happen in version 5.
+<h2>outchannels</h2>
+Note: as always documented, outchannels are an experimental feature that may be 
+removed and/or changed in the future.
+There is one concrete change done starting with 4.6.7: let's assume an
+outchannel "mychannel" was defined. Then, this channel could be used inside an
+<code>
+*.* $mychannel
+</code>
+This is still supported and will remain to be supported in v4. However, there is
+a new variant which explicitely tells this is to be handled by omfile. This new
+syntax is as follows:
+<code>
+*.* :omfile:$mychannel
+</code>
+Note that future versions, specifically starting with v6, the older syntax is no
+longer supported. So users are strongly advised to switch to the new syntax. As an
+aid to the conversion process, rsyslog 4.7.4 and above issue a warning message
+if the old-style directive is seen -- but still accept the old syntax without
+any problems.
+</body></html>

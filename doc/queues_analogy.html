@@ -1,0 +1,259 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<title>turning lanes and rsyslog queues - an analogy</title></head>
+<body>
+<a href="rsyslog_conf_global.html">back</a>
+
+<h1>Turning Lanes and Rsyslog Queues - an Analogy</h1>
+<p>If there is a single object absolutely vital to understanding the way 
+rsyslog works, this object is queues. Queues offer a variety of services,
+including support for multithreading. While there is elaborate in-depth
+documentation on the ins and outs of <a href="queues.html">rsyslog queues</a>,
+some of the concepts are hard to grasp even for experienced people. I think this
+is because rsyslog uses a very high layer of abstraction which includes things 
+that look quite unnatural, like queues that do <b>not</b> actually queue...
+<p>With this document, I take a different approach: I will not describe every specific
+detail of queue operation but hope to be able to provide the core idea of how
+queues are used in rsyslog by using an analogy. I will compare the rsyslog data flow
+with real-life traffic flowing at an intersection.
+<p>But first let's set the stage for the rsyslog part. The graphic below describes
+the data flow inside rsyslog:
+<p align="center"><img src="dataflow.png" alt="rsyslog data flow">
+<p>Note that there is a <a href="http://www.rsyslog.com/Article350.phtml">video tutorial</a>
+available on the data flow. It is not perfect, but may aid in understanding this picture.
+<p>For our needs, the important fact to know is that messages enter rsyslog on &quot;the
+left side&quot; (for example, via UDP), are being preprocessed, put into the
+so-called main queue, taken off that queue, be filtered and be placed into one or
+several action queues (depending on filter results). They leave rsyslog on &quot;the
+right side&quot; where output modules (like the file or database writer) consume them.
+<p>So there are always <b>two</b> stages where a message (conceptually) is queued - first
+in the main queue and later on in <i>n</i> action specific queues (with <i>n</i> being the number of
+actions that the message in question needs to be processed by, what is being decided
+by the &quot;Filter Engine&quot;). As such, a message will be in at least two queues
+during its lifetime (with the exception of messages being discarded by the queue itself,
+but for the purpose of this document, we will ignore that possibility).
+<p>Also, it is vitally
+important to understand that <b>each</b> action has a queue sitting in front of it.
+If you have dug into the details of rsyslog configuration, you have probably seen that
+a queue mode can be set for each action. And the default queue mode is the so-called
+&quot;direct mode&quot;, in which &quot;the queue does not actually enqueue data&quot;.
+That sounds silly, but is not. It is an important abstraction that helps keep the code clean.
+<p>To understand this, we first need to look at who is the active component. In our data flow,
+the active part always sits to the left of the object. For example, the &quot;Preprocessor&quot;
+is being called by the inputs and calls itself into the main message queue. That is, the queue
+receiver is called, it is passive. One might think that the &quot;Parser &amp; Filter Engine&quot;
+is an active component that actively pulls messages from the queue. This is wrong! Actually,
+it is the queue that has a pool of worker threads, and these workers pull data from the queue 
+and then call the passively waiting Parser and Filter Engine with those messages. So the
+main message queue is the active part, the Parser and Filter Engine is passive.
+<p>Let's now try an analogy analogy for this part: Think about a TV show. The show is produced
+in some TV studio, from there sent (actively) to a radio tower. The radio tower passively
+receives from the studio and then actively sends out a signal, which is passively received
+by your TV set. In our simplified view, we have the following picture:
+<p align="center"><img src="queue_analogy_tv.png" alt="rsyslog queues and TV analogy">
+<p>The lower part of the picture lists the equivalent rsyslog entities, in an abstracted way.
+Every queue has a producer (in the above sample the input) and a consumer (in the above sample the Parser
+and Filter Engine). Their active and passive functions are equivalent to the TV entities
+that are listed on top of the rsyslog entity. For example, a rsyslog consumer can never 
+actively initiate reception of a message in the same way a TV set cannot actively
+&quot;initiate&quot; a TV show - both can only &quot;handle&quot; (display or process)
+what is sent to them.
+<p>Now let's look at the action queues: here, the active part, the producer, is the
+Parser and Filter Engine. The passive part is the Action Processor. The later does any
+processing that is necessary to call the output plugin, in particular it processes the template
+to create the plugin calling parameters (either a string or vector of arguments). From the
+action queue's point of view, Action Processor and Output form a single entity. Again, the
+TV set analogy holds. The Output <b>does not</b> actively ask the queue for data, but
+rather passively waits until the queue itself pushes some data to it.
+
+<p>Armed with this knowledge, we can now look at the way action queue modes work. My analogy here
+is a junction, as shown below (note that the colors in the pictures below are <b>not</b> related to
+the colors in the pictures above!):
+<p align="center"><img src="direct_queue0.png">
+<p>This is a very simple real-life traffic case: one road joins another. We look at
+traffic on the straight road, here shown by blue and green arrows. Traffic in the 
+opposing direction is shown in blue. Traffic flows without
+any delays as long as nobody takes turns. To be more precise, if the opposing traffic takes 
+a (right) turn, traffic still continues to flow without delay. However, if a car in the red traffic
+flow intends to do a (left, then) turn, the situation changes:
+<p align="center"><img src="direct_queue1.png">
+<p>The turning car is represented by the green arrow. It cannot turn unless there is a gap 
+in the &quot;blue traffic stream&quot;. And as this car blocks the roadway, the remaining
+traffic (now shown in red, which should indicate the block condition),
+must wait until the &quot;green&quot; car has made its turn. So
+a queue will build up on that lane, waiting for the turn to be completed.
+Note that in the examples below I do not care that much about the properties of the
+opposing traffic. That is, because its structure is not really important for what I intend to
+show. Think about the blue arrow as being a traffic stream that most of the time blocks
+left-turners, but from time to time has a gap that is sufficiently large for a left-turn
+to complete.
+<p>Our road network designers know that this may be unfortunate, and for more important roads
+and junctions, they came up with the concept of turning lanes:
+<p align="center"><img src="direct_queue2.png">
+<p>Now, the car taking the turn can wait in a special area, the turning lane. As such, 
+the &quot;straight&quot; traffic is no longer blocked and can flow in parallel to the
+turning lane (indicated by a now-green-again arrow).
+
+<p>However, the turning lane offers only finite space. So if too many cars intend to
+take a left turn, and there is no gap in the &quot;blue&quot; traffic, we end up with
+this well-known situation:
+<p align="center"><img src="direct_queue3.png">
+<p>The turning lane is now filled up, resulting in a tailback of cars intending to 
+left turn on the main driving lane. The end result is that &quot;straight&quot; traffic
+is again being blocked, just as in our initial problem case without the turning lane.
+In essence, the turning lane has provided some relief, but only for a limited amount of
+cars. Street system designers now try to weight cost vs. benefit and create (costly) 
+turning lanes that are sufficiently large to prevent traffic jams in most, but not all
+cases.
+<p><b>Now let's dig a bit into the mathematical properties of turning lanes.</b> We assume that
+cars all have the same length. So, units of cars, the length is alsways one (which is nice,
+as we don't need to care about that factor any longer ;)). A turning lane has finite capacity of
+<i>n</i> cars. As long as the number of cars wanting to take a turn is less than or eqal
+to <i>n</i>, &quot;straigth traffic&quot; is not blocked (or the other way round, traffic
+is blocked if at least <i>n + 1</i> cars want to take a turn!). We can now find an optimal
+value for <i>n</i>: it is a function of the probability that a car wants to turn
+and the cost of the turning lane
+(as well as the probability there is a gap in the &quot;blue&quot; traffic, but we ignore this
+in our simple sample).
+If we start from some finite upper bound of <i>n</i>, we can decrease
+<i>n</i> to a point where it reaches zero. But let's first look at <i>n = 1</i>, in which case exactly
+one car can wait on the turning lane. More than one car, and the rest of the traffic is blocked.
+Our everyday logic indicates that this is actually the lowest boundary for <i>n</i>.
+<p>In an abstract view, however, <i>n</i> can be zero and that works nicely. There still can be
+<i>n</i> cars at any given time on the turning lane, it just happens that this means there can
+be no car at all on it. And, as usual, if we have at least <i>n + 1</i> cars wanting to turn,
+the main traffic flow is blocked. True, but <i>n + 1 = 0 + 1 = 1</i> so as soon as there is any
+car wanting to take a turn, the main traffic flow is blocked (remember, in all cases, I assume
+no sufficiently large gaps in the opposing traffic).
+<p>This is the situation our everyday perception calls &quot;road without turning lane&quot;.
+In my math model, it is a &quot;road with turning lane of size 0&quot;. The subtle difference
+is important: my math model guarantees that, in an abstract sense, there always is a turning
+lane, it may just be too short. But it exists, even though we don't see it. And now I can
+claim that even in my small home village, all roads have turning lanes, which is rather
+impressive, isn't it? ;)
+<p><b>And now we finally have arrived at rsyslog's queues!</b> Rsyslog action queues exists for 
+all actions just like all roads in my village have turning lanes! And as in this real-life sample,
+it may be hard to see the action queues for that reason. In rsyslog, the &quot;direct&quot; queue
+mode is the equivalent to the 0-sized turning lane. And actions queues are the equivalent to turning
+lanes in general, with our real-life <i>n</i> being the maximum queue size.
+The main traffic line (which sometimes is blocked) is the equivalent to the 
+main message queue. And the periods without gaps in the opposing traffic are equivalent to 
+execution time of an action. In a rough sketch, the rsyslog main and action queues look like in the
+following picture. 
+<p align="center"><img src="direct_queue_rsyslog.png">
+<p>We need to read this picture from right to left (otherwise I would need to redo all
+the graphics ;)). In action 3, you see a 0-sized turning lane, aka an action queue in &quot;direct&quot;
+mode. All other queues are run in non-direct modes, but with different sizes greater than 0.
+<p>Let us first use our car analogy:
+Assume we are in a car on the main lane that wants to take turn into the &quot;action 4&quot;
+road. We pass action 1, where a number of cars wait in the turning lane and we pass
+action 2, which has a slightly smaller, but still not filled up turning lane. So we pass that
+without delay, too. Then we come to &quot;action 3&quot;, which has no turning lane. Unfortunately,
+the car in front of us wants to turn left into that road, so it blocks the main lane. So, this time
+we need to wait. An observer standing on the sidewalk may see that while we need to wait, there are
+still some cars in the &quot;action 4&quot; turning lane. As such, even though no new cars can
+arrive on the main lane, cars still turn into the &quot;action 4&quot; lane. In other words,
+an observer standing in &quot;action 4&quot; road is unable to see that traffic on the main lane
+is blocked.
+<p>Now on to rsyslog: Other than in the real-world traffic example, messages in rsyslog
+can - at more or less the
+same time - &quot;take turns&quot; into several roads at once. This is done by duplicating the message
+if the road has a non-zero-sized &quot;turning lane&quot; - or in rsyslog terms a queue that is
+running in any non-direct mode. If so, a deep copy of the message object is made, that placed into
+the action queue and then the initial message proceeds on the &quot;main lane&quot;. The action
+queue then pushes the duplicates through action processing. This is also the reason why a
+discard action inside a non-direct queue does not seem to have an effect. Actually, it discards the 
+copy that was just created, but the original message object continues to flow.
+<p>
+In action 1, we have some entries in the action queue, as we have in action 2 (where the queue is
+slightly shorter). As we have seen, new messages pass action one and two almost instantaneously.
+However, when a messages reaches action 3, its flow is blocked. Now, message processing must wait
+for the action to complete. Processing flow in a direct mode queue is something like a U-turn:
+
+<p align="center"><img src="direct_queue_directq.png" alt="message processing in an rsyslog action queue in direct mode">
+<p>The message starts to execute the action and once this is done, processing flow continues.
+In a real-life analogy, this may be the route of a delivery man who needs to drop a parcel
+in a side street before he continues driving on the main route. As a side-note, think of what happens 
+with the rest of the delivery route, at least for today, if the delivery truck has a serious accident
+in the side street. The rest of the parcels won't be delivered today, will they? This is exactly how the
+discard action works. It drops the message object inside the action and thus the message will no
+longer be available for further delivery - but as I said, only if the discard is done in a
+direct mode queue (I am stressing this example because it often causes a lot of confusion).
+<p>Back to the overall scenario. We have seen that messages need to wait for action 3 to
+complete. Does this necessarily mean that at the same time no messages can be processed
+in action 4? Well, it depends. As in the real-life scenario, action 4 will continue to 
+receive traffic as long as its action queue (&quot;turn lane&quot;) is not drained. In 
+our drawing, it is not. So action 4 will be executed while messages still wait for action 3
+to be completed.
+<p>Now look at the overall picture from a slightly different angle:
+<p align="center"><img src="direct_queue_rsyslog2.png" alt="message processing in an rsyslog action queue in direct mode">
+<p>The number of all connected green and red arrows is four - one each for action 1, 2 and 3
+(this one is dotted as action 4 was a special case) and one for the &quot;main lane&quot; as
+well as action 3 (this one contains the sole red arrow). <b>This number is the lower bound for
+the number of threads in rsyslog's output system (&quot;right-hand part&quot; of the main message
+queue)!</b> Each of the connected arrows is a continuous thread and each &quot;turn lane&quot; is
+a place where processing is forked onto a new thread. Also, note that in action 3 the processing
+is carried out on the main thread, but not in the non-direct queue modes.
+<p>I have said this is &quot;the lower bound for the number of threads...&quot;. This is with
+good reason: the main queue may have more than one worker thread (individual action queues
+currently do not support this, but could do in the future - there are good reasons for that, too
+but exploring why would finally take us away from what we intend to see). Note that you 
+configure an upper bound for the number of main message queue worker threads. The actual number
+varies depending on a lot of operational variables, most importantly the number of messages
+inside the queue. The number <i>t_m</i> of actually running threads is within the integer-interval
+[0,confLimit] (with confLimit being the operator configured limit, which defaults to 5).
+Output plugins may have more than one thread created by themselves. It is quite unusual for an
+output plugin to create such threads and so I assume we do not have any of these.
+Then, the overall number of threads in rsyslog's filtering and output system is
+<i>t_total = t_m + number of actions in non-direct modes</i>. Add the number of
+inputs configured to that and you have the total number of threads running in rsyslog at
+a given time (assuming again that inputs utilize only one thread per plugin, a not-so-safe
+assumption).
+<p>A quick side-note: I gave the lower bound for <i>t_m</i> as zero, which is somewhat in contrast
+to what I wrote at the begin of the last paragraph. Zero is actually correct, because rsyslog
+stops all worker threads when there is no work to do. This is also true for the action queues.
+So the ultimate lower bound for a rsyslog output system without any work to carry out actually is zero.
+But this bound will never be reached when there is continuous flow of activity. And, if you are
+curios: if the number of workers is zero, the worker wakeup process is actually handled within the
+threading context of the &quot;left-hand-side&quot; (or producer) of the queue. After being
+started, the worker begins to play the active queue component again. All of this, of course,
+can be overridden with configuration directives.
+<p>When looking at the threading model, one can simply add n lanes to the main lane but otherwise
+retain the traffic analogy. This is a very good description of the actual process (think what this
+means to the &quot;turning lanes&quot;; hint: there still is only one per action!).
+<p><b>Let's try to do a warp-up:</b> I have hopefully been able to show that in rsyslog, an action
+queue &quot;sits in front of&quot; each output plugin. Messages are received and flow, from input
+to output, over various stages and two level of queues to the outputs. Actions queues are always
+present, but may not easily be visible when in direct mode (where no actual queuing takes place).
+The "road junction with turning lane" analogy well describes the way - and intent - of the various
+queue levels in rsyslog.
+<p>On the output side, the queue is the active component, <b>not</b> the consumer. As such, the consumer
+cannot ask the queue for anything (like n number of messages) but rather is activated by the queue
+itself. As such, a queue somewhat resembles a &quot;living thing&quot; whereas the outputs are
+just tools that this &quot;living thing&quot; uses.
+<p><b>Note that I left out a couple of subtleties</b>, especially when it comes
+to error handling and terminating
+a queue (you hopefully have now at least a rough idea why I say &quot;terminating <b>a queue</b>&quot;
+and not &quot;terminating an action&quot; - <i>who is the &quot;living thing&quot;?</i>). An action returns
+a status to the queue, but it is the queue that ultimately decides which messages can finally be
+considered processed and which not. Please note that the queue may even cancel an output right in
+the middle of its action. This happens, if configured, if an output needs more than a configured
+maximum processing time and is a guard condition to prevent slow outputs from deferring a rsyslog
+restart for too long. Especially in this case re-queuing and cleanup is not trivial. Also, note that
+I did not discuss disk-assisted queue modes. The basic rules apply, but there are some additional
+constraints, especially in regard to the threading model. Transitioning between actual
+disk-assisted mode and pure-in-memory-mode (which is done automatically when needed) is also far from
+trivial and a real joy for an implementer to work on ;).
+<p>If you have not done so before, it may be worth reading the
+<a href="queues.html">rsyslog queue user's guide,</a> which most importantly lists all
+the knobs you can turn to tweak queue operation.
+<p>[<a href="manual.html">manual index</a>]
+[<a href="rsyslog_conf.html">rsyslog.conf</a>]
+[<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the
+<a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
+Copyright &copy; 2009 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>. Released under the GNU GPL
+version 3 or higher.</font></p>
+</body>
+</html>

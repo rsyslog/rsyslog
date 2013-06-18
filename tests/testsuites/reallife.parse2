@@ -1,0 +1,12 @@
+# New tests should be added to this file if there is no specific
+# reason for not doing that. Initially, we could only handle one test
+# case per file, but this restriction has been removed some time ago.
+# So it is less troublesome (and easier to overlook) to have all related
+# tests in a single file.
+# This file contains a lot of real-life samples (of course mangled so
+# that they can not be traced back to the original submitter). Note
+# that IP addr 192.0.2.1 is specifically set aside for testing and
+# documentation by IANA.
+# rgerhards, 2009-10-19
+<175>Oct 16 23:47:31 #001 MSWinEventLog 0#011Security#01119023582#011Fri Oct 16 16:30:44 2009#011592#011Security#011rgabcde#011User#011Success Audit#011XSXSXSN01#011Detailed Tracking#011#0112572#01119013885
+175,local5,debug,Oct 16 23:47:31,#001,#001, MSWinEventLog 0#011Security#01119023582#011Fri Oct 16 16:30:44 2009#011592#011Security#011rgabcde#011User#011Success Audit#011XSXSXSN01#011Detailed Tracking#011#0112572#01119013885

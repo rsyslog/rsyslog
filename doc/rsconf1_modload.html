@@ -1,0 +1,34 @@
+<html>
+<head>
+<title>rsyslog.conf file</title>
+</head>
+<body>
+<a href="rsyslog_conf_global.html">back</a>
+
+<h2>$ModLoad</h2>
+<p><b>Type:</b> global configuration directive</p>
+<p><b>Default:</b> </p>
+<p><b>Description:</b></p>
+<p>Dynamically loads a plug-in into rsyslog's address space and activates it. 
+The plug-in must obey the rsyslog module API. Currently, only MySQL and Postgres 
+output modules are available 
+as a plugins, but users may create their own. A plug-in must be loaded BEFORE 
+any configuration file lines that reference it.</p>
+<p>Modules must be present in the system default destination for rsyslog 
+modules. You can also set the directory via the <a href="rsconf1_moddir.html">
+$ModDir</a> directive.</p>
+<p>If a full path name is specified, the module is loaded from that path. The 
+default module directory is ignored in that case.</p>
+<p><b>Sample:</b></p>
+<p><code><b>$ModLoad ommysql # load MySQL functionality<br>
+$ModLoad /rsyslog/modules/ompgsql.so # load the postgres module via absolute path</b></code></p>
+
+<p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>] [<a href="manual.html">manual 
+index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the
+<a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
+Copyright &copy; 2007 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>. Released under the GNU GPL 
+version 2 or higher.</font></p>
+</body>
+</html>

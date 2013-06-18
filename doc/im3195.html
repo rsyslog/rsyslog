@@ -1,0 +1,48 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<title>RFC3195 Input Module (im3195)</title>
+
+</head>
+<body>
+<a href="rsyslog_conf_modules.html">back</a>
+
+<h1>RFC3195 Input Module</h1>
+<p><b>Module Name:&nbsp;&nbsp;&nbsp; im3195</b></p>
+<p><b>Author: </b>Rainer Gerhards
+&lt;rgerhards@adiscon.com&gt;</p>
+<p><b>Description</b>:</p>
+<p>Receives syslog messages via RFC 3195. The RAW profile is fully implemented and the 
+COOKED profile is provided in an experimental state. This module uses
+<a href="http://www.liblogging.org">liblogging</a> for the actual protocol handling.</p>
+<p><b>Configuration Directives</b>:</p>
+<ul>
+<li><strong>$Input3195ListenPort &lt;port&gt;</strong><br>
+The port on which imklog listens for RFC 3195 messages. The default port is 601
+(the IANA-assigned port)</li>
+</ul>
+<b>Caveats/Known Bugs:</b>
+<p>Due to no demand at all for RFC3195, we have converted rfc3195d
+to this input module, but we have NOT conducted any testing. Also,
+the module does not yet properly handle the recovery case. If someone
+intends to put this module into production, good testing should be
+cunducted. It also is a good idea to notify the rsyslog project that you intend to use
+it in production. In this case, we'll probably give the module another
+cleanup. We don't do this now because so far it looks just like a big
+waste of time.
+<p>Currently only a single listener can be defined. That one binds to all interfaces.</p>
+<p><b>Sample:</b></p>
+<p>The following sample accepts syslog messages via RFC 3195 on port 1601.
+<br>
+</p>
+<textarea rows="15" cols="60">$ModLoad im3195
+$Input3195ListenPort 1601
+</textarea>
+<p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>]
+[<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the
+<a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
+Copyright &copy; 2008 by <a href="http://www.gerhards.net/rainer">Rainer
+Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>.
+Released under the GNU GPL version 3 or higher.</font></p>
+</body></html>

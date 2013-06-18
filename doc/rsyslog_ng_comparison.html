@@ -1,0 +1,613 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><title>rsyslog vs. syslog-ng - a comparison</title></head>
+<body>
+<a href="features.html">back</a>
+<h1>rsyslog vs. syslog-ng</h1>
+<p><small><i>Written by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a>
+(2008-05-06), slightly updated 2012-01-09</i></small></p>
+<p><b>This comparison page is rooted nearly 5 years in the past and has become severely
+outdated since then.</b> It was unmaintained for several years and contained false 
+information on both syslog-ng and rsyslog as technology had advanced so much.
+<p>This page was initially written because so many people asked about a comparison when
+rsyslog was in its infancy. So I tried to create one, but it was hard to maintain as both
+projects grew and added feature after feature. I have to admit we did not try hard to keep
+it current -- there were many other priorities. I even had forgetten about this page, when I
+saw that Peter Czanik blogged about its
+<a href="http://blogs.balabit.com/2012/01/05/rsyslog-vs-syslog-ng/">incorrectness</a> (it must be noted
+that Peter is wrong on RELP -- it is well alive). I now remember
+that he asked me some time ago about this page, what I somehow lost... I guess he must have been
+rather grumpy about that :-(
+<p>Visiting this page after so many years is interesting, because it shows how much has changed since then.
+Obviously, one of my main goals in regard to syslog-ng is reached: in 2007, I blogged that 
+<a href="http://blog.gerhards.net/2007/08/why-does-world-need-another-syslogd.html">the
+world needs another syslogd</a> in order to have healthy competition and a greate feature
+set in the free editions. In my opinion, the timeline clearly tells that rsyslog's competition
+has driven more syslog-ng features from the commercial to the free edition. Also, I found
+it interesting to see that syslog-ng has adapted rsyslog's licensing scheme, modular design and
+multi-threadedness. On the other hand, the Balabit folks have obviously done a quicker and
+better move on log normalization with what they call patterndb (it is very roughly equivalent
+to what rsyslog has just recently introduced with the help of liblognorm).
+
+<p>To that account, I think the projects are closer together than 5 years ago. I should now
+go ahead and create a new feature comparison. Given previous experience, I think this does not
+work out. In the future, we will probably focus on some top features, as Balabit does. However,
+that requires some time and I have to admit I do not like to drop this page that has a lot of
+inbound links. So I think I do the useful thing by providing these notes and removing the
+syslog-ng information. So it can't be wrong on syslog-ng any more. Note that it still contains
+some incorrect information about rsyslog (it's the state it had 5 years ago!). The core idea is
+to start with updating the <a href="features.html">rsyslog feature sheet</a> and from there
+on work to a complete comparision. Of course, feel free to read on if you like to get some sense 
+of history (and inspiration on what you can still do -- but more ;)).
+<br><br>
+Thanks,<br>
+Rainer Gerhards
+<p>
+
+<table border="1">
+<tbody>
+<tr>
+<td valign="top"><b>Feature</b></td>
+<td valign="top"><b>rsyslog</b></td>
+<td valign="top"><b>syslog-ng</b></td>
+</tr>
+<tr>
+<td colspan="3" valign="top"><br>
+<b>Input Sources</b><br>
+</td>
+</tr>
+<tr>
+<td valign="top">UNIX domain socket</td>
+<td valign="top">yes</td>
+<td valign="top"></td>
+<td></td>
+</tr>
+<tr>
+<td valign="top">UDP</td>
+<td valign="top">yes</td>
+<td valign="top"></td>
+<td></td>
+</tr>
+<tr>
+<td valign="top">TCP</td>
+<td valign="top">yes</td>
+<td valign="top"></td>
+<td></td>
+</tr>
+<tr>
+<td valign="top"><a href="http://www.librelp.com">RELP</a></td>
+<td valign="top">yes</td>
+<td valign="top"></td>
+<td></td>
+</tr>
+<tr>
+<td valign="top">RFC 3195/BEEP</td>
+<td valign="top">yes (via <a href="im3195.html">im3195</a>)</td>
+<td valign="top"></td>
+<td></td>
+</tr>
+<tr>
+<td valign="top">kernel log</td>
+<td valign="top">yes</td>
+<td valign="top"></td>
+<td></td>
+</tr>
+<tr>
+<td valign="top">file</td>
+<td valign="top">yes</td>
+<td valign="top"></td>
+<td></td>
+</tr>
+<tr>
+<td valign="top">mark message generator as an
+optional input</td>
+<td valign="top">yes</td>
+<td valign="top"></td>
+<td></td>
+</tr>
+<tr>
+<td valign="top">Windows Event Log</td>
+<td valign="top">via a Windows event logging software such as
+<a href="http://www.eventreporter.com">EventReporter</a>
+or <a href="http://www.mwagent.com">MonitorWare Agent</a>
+(both commercial software, both fund rsyslog development)</td>
+<td valign="top"></td>
+</tr>
+<tr>
+<td colspan="3" valign="top"><b><br>
+Network (Protocol) Support</b><br>
+</td>
+</tr>
+<tr>
+<td valign="top">support for (plain) tcp based syslog</td>
+<td valign="top">yes</td>
+<td valign="top"></td>
+</tr>
+<tr>
+<td valign="top">support for GSS-API</td>
+<td valign="top">yes</td>
+<td valign="top"></td>
+</tr>
+<tr>
+<td valign="top">ability to limit the allowed
+network senders (syslog ACLs)</td>
+<td valign="top">yes</td>
+<td valign="top"></td>
+</tr>
+<tr>
+<td valign="top">support for syslog-transport-tls
+based framing on syslog/tcp connections</td>
+<td valign="top">yes</td>
+<td valign="top"></td>
+</tr>
+<tr>
+<td valign="top">udp syslog</td>
+<td valign="top">yes</td>
+<td valign="top"></td>
+</tr>
+<tr>
+<td valign="top">syslog over RELP<br>
+truly reliable message delivery (<a href="http://blog.gerhards.net/2008/05/why-you-cant-build-reliable-tcp.html">Why
+is plain tcp syslog not reliable?</a>)</td>
+<td valign="top">yes</td>
+<td valign="top"></td>
+</tr>
+<tr>
+<td valign="top">on the wire (zlib) message
+compression</td>
+<td valign="top">yes</td>
+<td valign="top"></td>
+</tr>
+<tr>
+<td valign="top">support for receiving messages via
+reliable <a href="http://www.monitorware.com/Common/en/glossary/rfc3195.php">RFC
+3195</a> delivery</td>
+<td valign="top">yes</td>
+<td valign="top"></td>
+</tr>
+<tr>
+<td valign="top">support for <a href="rsyslog_tls.html">TLS/SSL-protected
+syslog</a> </td>
+<td valign="top"><a href="rsyslog_tls.html">natively</a> (since 3.19.0)<br><a href="rsyslog_stunnel.html">via
+stunnel</a></td>
+<td valign="top"></td>
+</tr>
+<tr>
+<td valign="top">support for IETF's new syslog-protocol draft</td>
+<td valign="top">yes</td>
+<td valign="top"></td>
+</tr>
+<tr>
+<td valign="top">support for IETF's new syslog-transport-tls draft</td>
+<td valign="top">yes<br>(since 3.19.0 - world's first implementation)</td>
+<td valign="top"></td>
+</tr>
+<tr>
+<td valign="top">support for IPv6</td>
+<td valign="top">yes</td>
+<td valign="top"></td>
+</tr>
+<tr>
+<td valign="top">native ability to send SNMP traps</td>
+<td valign="top">yes</td>
+<td valign="top"></td>
+</tr>
+<tr>
+<td valign="top">ability to preserve the original
+hostname in NAT environments and relay chains</td>
+<td valign="top">yes</td>
+<td valign="top"></td>
+</tr>
+<tr>
+<td colspan="3" valign="top"><br>
+<b>Message Filtering</b><br>
+</td>
+</tr>
+<tr>
+<td valign="top">Filtering for syslog facility and
+priority</td>
+<td valign="top">yes</td>
+<td valign="top"></td>
+<td></td>
+</tr>
+<tr>
+<td valign="top">Filtering for hostname</td>
+<td valign="top">yes</td>
+<td valign="top"></td>
+<td></td>
+</tr>
+<tr>
+<td valign="top">Filtering for application</td>
+<td valign="top">yes</td>
+<td valign="top"></td>
+<td></td>
+</tr>
+<tr>
+<td valign="top">Filtering for message contents</td>
+<td valign="top">yes</td>
+<td valign="top"></td>
+<td></td>
+</tr>
+<tr>
+<td valign="top">Filtering for sending IP address</td>
+<td valign="top">yes</td>
+<td valign="top"></td>
+<td></td>
+</tr>
+<tr>
+<td valign="top">ability to filter on any other message
+field not mentioned above (including substrings and the like)</td>
+<td valign="top">yes</td>
+<td valign="top"></td>
+</tr>
+<tr>
+<td>support for complex filters, using full boolean algebra
+with and/or/not operators and parenthesis</td>
+<td>yes</td>
+<td></td>
+</tr>
+<tr>
+<td>Support for reusable filters: specify a filter once and
+use it in multiple selector lines</td>
+<td>no</td>
+<td></td>
+</tr>
+<tr>
+<td>support for arbritrary complex arithmetic and string
+expressions inside filters</td>
+<td>yes</td>
+<td></td>
+</tr>
+<tr>
+<td valign="top">ability to use regular expressions
+in filters</td>
+<td valign="top">yes</td>
+<td valign="top"></td>
+</tr>
+<tr>
+<td valign="top">support for discarding messages
+based on filters</td>
+<td valign="top">yes</td>
+<td valign="top"></td>
+<td></td>
+</tr>
+<tr>
+<td valign="top">ability to filter out messages based on sequence of appearing</td>
+<td valign="top">yes (starting with 3.21.3)</td>
+<td valign="top"></td>
+<td></td>
+</tr>
+<tr>
+<td valign="top">powerful BSD-style hostname and
+program name blocks for easy multi-host support</td>
+<td valign="top">yes</td>
+<td valign="top"></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td colspan="3" valign="top"><br>
+<b>Supported Database Outputs</b><br>
+</td>
+</tr>
+<tr>
+<td valign="top">MySQL</td>
+<td valign="top"><a href="rsyslog_mysql.html">yes</a>
+(native ommysql,&nbsp;<a href="omlibdbi.html">omlibdbi</a>)</td>
+<td valign="top"></td>
+</tr>
+<tr>
+<td valign="top">PostgreSQL</td>
+<td valign="top">yes (native ompgsql,&nbsp;<a href="omlibdbi.html">omlibdbi</a>)</td>
+<td valign="top"></td>
+</tr>
+<tr>
+<td valign="top">Oracle</td>
+<td valign="top">yes (<a href="omlibdbi.html">omlibdbi</a>)</td>
+<td valign="top"></td>
+</tr>
+<tr>
+<td valign="top">SQLite</td>
+<td valign="top">yes (<a href="omlibdbi.html">omlibdbi</a>)</td>
+<td valign="top"></td>
+</tr>
+<tr>
+<td valign="top">Microsoft SQL (Open TDS)</td>
+<td valign="top">yes (<a href="omlibdbi.html">omlibdbi</a>)</td>
+<td valign="top"></td>
+</tr>
+<tr>
+<td valign="top">Sybase (Open TDS)</td>
+<td valign="top">yes (<a href="omlibdbi.html">omlibdbi</a>)</td>
+<td valign="top"></td>
+</tr>
+<tr>
+<td valign="top">Firebird/Interbase</td>
+<td valign="top">yes (<a href="omlibdbi.html">omlibdbi</a>)</td>
+<td valign="top"></td>
+</tr>
+<tr>
+<td valign="top">Ingres</td>
+<td valign="top">yes (<a href="omlibdbi.html">omlibdbi</a>)</td>
+<td valign="top"></td>
+</tr>
+<tr>
+<td valign="top">mSQL</td>
+<td valign="top">yes (<a href="omlibdbi.html">omlibdbi</a>)</td>
+<td valign="top"></td>
+</tr>
+<tr>
+<td colspan="3" valign="top"><br>
+<b>Enterprise Features</b><br>
+</td>
+</tr>
+<tr>
+<td valign="top">support for on-demand on-disk
+spooling of messages</td>
+<td valign="top">yes</td>
+<td valign="top"></td>
+</tr>
+<tr>
+<td valign="top">ability to limit disk space used
+by spool files</td>
+<td valign="top">yes</td>
+<td valign="top"></td>
+</tr>
+<tr>
+<td valign="top">each action can use its own,
+independant
+set of spool files</td>
+<td valign="top">yes</td>
+<td valign="top"></td>
+</tr>
+<tr>
+<td valign="top">different sets of spool files can
+be placed on different disk</td>
+<td valign="top">yes</td>
+<td valign="top"></td>
+</tr>
+<tr>
+<td valign="top">ability to process spooled
+messages only during a configured timeframe (e.g. process messages only
+during off-peak hours, during peak hours they are enqueued only)</td>
+<td valign="top"><a href="http://wiki.rsyslog.com/index.php/OffPeakHours">yes</a><br>
+(can independently be configured for the main queue and each action
+queue)</td>
+<td valign="top"></td>
+</tr>
+<tr>
+<td valign="top">ability to configure backup
+syslog/database servers </td>
+<td valign="top">yes</td>
+<td valign="top"></td>
+</tr>
+<tr>
+<td>Professional Support</td>
+<td><a href="professional_support.html">yes</a></td>
+<td></td>
+</tr>
+<tr>
+<td colspan="3" valign="top"><br>
+<b>Config File</b><br>
+</td>
+</tr>
+<tr>
+<td valign="top">config file format</td>
+<td valign="top">compatible to legacy syslogd but
+ugly</td>
+<td valign="top"></td>
+</tr>
+<tr>
+<td valign="top">ability to include config file from
+within other config files</td>
+<td valign="top">yes</td>
+<td valign="top"></td>
+</tr>
+<tr>
+<td height="25" valign="top">ability to
+include all config files
+existing in a specific directory</td>
+<td height="25" valign="top">yes</td>
+<td height="25" valign="top"></td>
+</tr>
+<tr>
+<td colspan="3" valign="top"><br>
+<b>Extensibility</b><br>
+</td>
+</tr>
+<tr>
+<td valign="top">Functionality split in separately
+loadable
+modules</td>
+<td valign="top">yes</td>
+<td valign="top"></td>
+</tr>
+<tr>
+<td valign="top">Support for third-party input
+plugins</td>
+<td valign="top">yes</td>
+<td valign="top"></td>
+</tr>
+<tr>
+</tr>
+<tr>
+<td valign="top">Support for third-party output
+plugins</td>
+<td valign="top">yes</td>
+<td valign="top"></td>
+</tr>
+<tr>
+<td colspan="3" valign="top"><br>
+<b>Other Features</b><br>
+</td>
+</tr>
+<tr>
+</tr>
+<tr>
+<td valign="top">ability to generate file names and
+directories (log targets) dynamically</td>
+<td valign="top">yes</td>
+<td valign="top"></td>
+</tr>
+<tr>
+<td valign="top">control of log output format,
+including ability to present channel and priority as visible log data</td>
+<td valign="top">yes</td>
+<td valign="top"></td>
+</tr>
+<tr><td valign="top">native ability to send mail messages</td>
+<td valign="top">yes (<a href="ommail.html">ommail</a>, introduced in 3.17.0)</td>
+<td valign="top"></td>
+</tr>
+<tr>
+<td valign="top">good timestamp format control; at a
+minimum, ISO 8601/RFC 3339 second-resolution UTC zone</td>
+<td valign="top">yes</td>
+<td valign="top"></td>
+</tr>
+<tr>
+<td valign="top">ability to reformat message
+contents and work with substrings</td>
+<td valign="top">yes</td>
+<td valign="top"></td>
+</tr>
+<tr>
+<td valign="top">support for log files larger than
+2gb</td>
+<td valign="top">yes</td>
+<td valign="top"></td>
+</tr>
+<tr>
+<td valign="top">support for log file size
+limitation
+and automatic rollover command execution</td>
+<td valign="top">yes</td>
+<td valign="top"></td>
+</tr>
+<tr>
+<td valign="top">support for running multiple
+syslogd instances on a single machine</td>
+<td valign="top">yes</td>
+<td valign="top"></td>
+</tr>
+<tr>
+<td valign="top">ability to execute shell scripts on
+received messages</td>
+<td valign="top"></td>
+<td valign="top">yes</td>
+</tr>
+<tr>
+<td valign="top">ability to pipe messages to a
+continously running program</td>
+<td valign="top"></td>
+<td valign="top"></td>
+</tr>
+<tr>
+<td valign="top">massively multi-threaded for
+tomorrow's multi-core machines</td>
+<td valign="top">yes</td>
+<td valign="top"></td>
+</tr>
+<tr>
+<td valign="top">ability to control repeated line
+reduction ("last message repeated n times") on a per selector-line basis</td>
+<td valign="top">yes</td>
+<td valign="top"></td>
+</tr>
+<tr>
+<td valign="top">supports multiple actions per
+selector/filter condition</td>
+<td valign="top">yes</td>
+<td valign="top"></td>
+<td></td>
+</tr>
+<tr>
+<td valign="top">web interface</td>
+<td valign="top"><a href="http://www.phplogcon.org">phpLogCon</a><br>
+[also works with <a href="http://freshmeat.net/projects/php-syslog-ng/">
+php-syslog-ng</a>]</td>
+<td valign="top"></td>
+</tr>
+<tr>
+<td valign="top">using text files as input source</td>
+<td valign="top">yes</td>
+<td valign="top"></td>
+</tr>
+<tr>
+<td valign="top">rate-limiting output actions</td>
+<td valign="top">yes</td>
+<td valign="top"></td>
+</tr>
+<tr>
+<td valign="top">discard low-priority messages under
+system stress</td>
+<td valign="top">yes</td>
+<td valign="top"></td>
+</tr>
+<tr>
+<td height="43" valign="top">flow control
+(slow down message reception when system is busy)</td>
+<td height="43" valign="top">yes (advanced,
+with multiple ways to slow down inputs depending on individual input
+capabilities, based on watermarks)</td>
+<td height="43" valign="top"></td>
+</tr>
+<tr>
+<td valign="top">rewriting messages</td>
+<td valign="top">yes</td>
+<td valign="top"></td>
+</tr>
+<tr>
+<td valign="top">output data into various formats</td>
+<td valign="top">yes</td>
+<td valign="top"></td>
+</tr>
+<tr>
+<td valign="top">ability to control "message
+repeated n times" generation</td>
+<td valign="top">yes</td>
+<td valign="top"></td>
+</tr>
+<tr>
+<td valign="top">license</td>
+<td valign="top">GPLv3 (GPLv2 for v2 branch)</td>
+<td valign="top"></td>
+</tr>
+<tr>
+<td valign="top">supported platforms</td>
+<td valign="top">Linux, BSD, anecdotical seen on
+Solaris; compilation and basic testing done on HP UX</td>
+<td valign="top"></td>
+</tr>
+<tr>
+<td valign="top">DNS cache</td>
+<td valign="top"></td>
+<td valign="top"></td>
+</tr>
+</tbody>
+</table>
+<p>While the <span style="font-weight: bold;">rsyslog</span>
+project was initiated in 2004, it <span style="font-weight: bold;">is
+build on the main author's (Rainer Gerhards) 12+ years of
+logging&nbsp;experience</span>. Rainer, for example, also
+wrote the first <a href="http://www.winsyslog.com/Common/en/News/WinSyslog-1996-03-31.php">Windows
+syslog server</a> in early 1996 and invented the <a href="http://www.eventreporter.com/Common/en/News/EvntSLog-1997-03-23.php">eventlog-to-syslog</a>
+class of applications in early 1997. He did custom logging development
+and consulting even before he wrote these products. Rsyslog draws on
+that vast experience and sometimes even on the code.</p>
+<p>Based on a discussion I had, I also wrote about the <b>political
+argument why it is good to have another strong syslogd besides syslog-ng</b>.
+You may want to read it at my blog at "<a href="http://rgerhards.blogspot.com/2007/08/why-does-world-need-another-syslogd.html">Why
+does the world need another syslogd?</a>".</p>
+<p>[<a href="manual.html">manual index</a>]
+[<a href="rsyslog_conf.html">rsyslog.conf</a>]
+[<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the
+<a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
+Copyright &copy; 2008 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>. Released under the GNU GPL
+version 2 or higher.</font></p>
+
+</body></html>
