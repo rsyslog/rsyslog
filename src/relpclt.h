@@ -46,6 +46,7 @@ struct relpClt_s {
 	char *caCertFile;
 	char *ownCertFile;
 	char *privKey;
+	relpPermittedPeers_t permittedPeers;
 	int protFamily;		/**< protocol family to connect over (IPv4, v6, ...) */
 	unsigned char *port;	/**< server port to connect to */
 	unsigned char *host;	/**< host(name) to connect to */

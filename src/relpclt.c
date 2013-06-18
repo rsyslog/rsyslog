@@ -63,6 +63,7 @@ relpCltConstruct(relpClt_t **ppThis, relpEngine_t *pEngine)
 	pThis->caCertFile = NULL;
 	pThis->ownCertFile = NULL;
 	pThis->privKey = NULL;
+	pThis->permittedPeers.nmemb = 0;
 
 	*ppThis = pThis;
 
@@ -76,6 +77,7 @@ finalize_it:
 relpRetVal
 relpCltDestruct(relpClt_t **ppThis)
 {
+	int i;
 	relpClt_t *pThis;
 
 	ENTER_RELPFUNC;
@@ -90,6 +92,8 @@ relpCltDestruct(relpClt_t **ppThis)
 	free(pThis->caCertFile);
 	free(pThis->ownCertFile);
 	free(pThis->privKey);
+	for(i = 0 ; i < pThis->permittedPeers.nmemb ; ++i)
+		free(pThis->permittedPeers.name[i]);
 
 	/* done with de-init work, now free clt object itself */
 	free(pThis);
@@ -121,6 +125,7 @@ relpCltConnect(relpClt_t *pThis, int protFamily, unsigned char *port, unsigned c
 		CHKRet(relpSessSetCACert(pThis->pSess, pThis->caCertFile));
 		CHKRet(relpSessSetOwnCert(pThis->pSess, pThis->ownCertFile));
 		CHKRet(relpSessSetPrivKey(pThis->pSess, pThis->privKey));
+		CHKRet(relpSessSetPermittedPeer(pThis->pSess, &pThis->permittedPeers));
 	}
 	CHKRet(relpSessConnect(pThis->pSess, protFamily, port, host));
 
@@ -175,6 +180,30 @@ relpRetVal relpCltSetClientIP(relpClt_t *pThis, unsigned char *ipAddr)
 	free(pThis->clientIP);
 	pThis->clientIP = ipAddr == NULL ? NULL :
 					   (unsigned char*)strdup((char*) ipAddr);
+	LEAVE_RELPFUNC;
+}
+
+relpRetVal
+relpCltAddPermittedPeer(relpClt_t *pThis, char *peer)
+{
+	char **newName;
+	int newMemb;
+	ENTER_RELPFUNC;
+	newMemb = pThis->permittedPeers.nmemb + 1;
+	RELPOBJ_assert(pThis, Clt);
+	newName = realloc(pThis->permittedPeers.name, sizeof(char*) * newMemb);
+	if(newName == NULL) {
+		ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+	}
+	if((newName[newMemb - 1] = strdup(peer)) == NULL) {
+		free(newName);
+		ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+	}
+	pThis->permittedPeers.name = newName;
+	pThis->permittedPeers.nmemb = newMemb;
+	pThis->pEngine->dbgprint("librelp: CLT permitted peer added: '%s'\n", peer);
+
+finalize_it:
 	LEAVE_RELPFUNC;
 }
 

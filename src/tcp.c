@@ -280,7 +280,6 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 
-
 /* this copies a *complete* permitted peers structure into the
  * tcp object.
  */

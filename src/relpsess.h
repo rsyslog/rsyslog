@@ -86,6 +86,7 @@ struct relpSess_s {
 	char *caCertFile;
 	char *ownCertFile;
 	char *privKeyFile;
+	relpPermittedPeers_t permittedPeers;
 
 	/* save the following for auto-reconnect case */
 	int protFamily;
@@ -147,6 +148,7 @@ relpRetVal relpSessSetGnuTLSPriString(relpSess_t *pThis, char *pristr);
 relpRetVal relpSessSetCACert(relpSess_t *pThis, char *cert);
 relpRetVal relpSessSetOwnCert(relpSess_t *pThis, char *cert);
 relpRetVal relpSessSetPrivKey(relpSess_t *pThis, char *cert);
+relpRetVal relpSessAddPermittedPeer(relpSess_t *pThis, char *peer);
 relpRetVal relpSessConstructOffers(relpSess_t *pThis, relpOffers_t **ppOffers);
 relpRetVal relpSessSendSyslog(relpSess_t *pThis, unsigned char *pMsg, size_t lenMsg);
 relpRetVal relpSessSetEnableCmd(relpSess_t *pThis, unsigned char *pszCmd, relpCmdEnaState_t stateCmd);

@@ -50,6 +50,16 @@ static relpRetVal relpSessCltDoDisconnect(relpSess_t *pThis);
 static relpRetVal relpSessFixCmdStates(relpSess_t *pThis);
 static relpRetVal relpSessSrvDoDisconnect(relpSess_t *pThis);
 
+/* helper to free permittedPeer structure */
+static inline void
+relpSessFreePermittedPeers(relpSess_t *pThis)
+{
+	int i;
+	for(i = 0 ; i < pThis->permittedPeers.nmemb ; ++i)
+		free(pThis->permittedPeers.name[i]);
+	pThis->permittedPeers.nmemb = 0;
+}
+
 
 /** Construct a RELP sess instance
  *  the pSrv parameter may be set to NULL if the session object is for a client.
@@ -80,6 +90,7 @@ relpSessConstruct(relpSess_t **ppThis, relpEngine_t *pEngine, relpSrv_t *pSrv)
 	pThis->caCertFile = NULL;
 	pThis->ownCertFile = NULL;
 	pThis->privKeyFile = NULL;
+	pThis->permittedPeers.nmemb = 0;
 
 	CHKRet(relpSendqConstruct(&pThis->pSendq, pThis->pEngine));
 	pthread_mutex_init(&pThis->mutSend, NULL);
@@ -145,6 +156,7 @@ relpSessDestruct(relpSess_t **ppThis)
 	free(pThis->pristring);
 	free(pThis->ownCertFile);
 	free(pThis->privKeyFile);
+	relpSessFreePermittedPeers(pThis);
 
 	pthread_mutex_destroy(&pThis->mutSend);
 	/* done with de-init work, now free object itself */
@@ -781,6 +793,7 @@ relpSessConnect(relpSess_t *pThis, int protFamily, unsigned char *port, unsigned
 		CHKRet(relpTcpSetCACert(pThis->pTcp, pThis->caCertFile));
 		CHKRet(relpTcpSetOwnCert(pThis->pTcp, pThis->ownCertFile));
 		CHKRet(relpTcpSetPrivKey(pThis->pTcp, pThis->privKeyFile));
+		CHKRet(relpTcpSetPermittedPeers(pThis->pTcp, &pThis->permittedPeers));
 	}
 	CHKRet(relpTcpConnect(pThis->pTcp, protFamily, port, host, pThis->clientIP));
 	relpSessSetSessState(pThis, eRelpSessState_PRE_INIT);
@@ -878,6 +891,33 @@ relpSessSetClientIP(relpSess_t *pThis, unsigned char *ip)
 		pThis->clientIP = NULL;
 	else
 		pThis->clientIP = (unsigned char*) strdup((char*)  ip);
+	LEAVE_RELPFUNC;
+}
+
+/* this copies a *complete* permitted peers structure into the
+ * session object.
+ */
+relpRetVal
+relpSessSetPermittedPeers(relpSess_t *pThis, relpPermittedPeers_t *pPeers)
+{
+	ENTER_RELPFUNC;
+	int i;
+	RELPOBJ_assert(pThis, Sess);
+	
+	relpSessFreePermittedPeers(pThis);
+	if(pPeers->nmemb != 0) {
+		if((pThis->permittedPeers.name =
+			malloc(sizeof(char*) * pPeers->nmemb)) == NULL) {
+			ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+		}
+		for(i = 0 ; i < pPeers->nmemb ; ++i) {
+			if((pThis->permittedPeers.name[i] = strdup(pPeers->name[i])) == NULL) {
+				ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+			}
+		}
+	}
+	pThis->permittedPeers.nmemb = pPeers->nmemb;
+finalize_it:
 	LEAVE_RELPFUNC;
 }
 
