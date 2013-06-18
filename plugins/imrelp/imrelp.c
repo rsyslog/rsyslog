@@ -47,6 +47,7 @@
 #include "prop.h"
 #include "ruleset.h"
 #include "glbl.h"
+#include "statsobj.h"
 
 MODULE_TYPE_INPUT
 MODULE_TYPE_NOKEEP
@@ -59,6 +60,7 @@ DEFobjCurrIf(prop)
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(ruleset)
 DEFobjCurrIf(glbl)
+DEFobjCurrIf(statsobj)
 
 /* forward definitions */
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal);
@@ -82,6 +84,17 @@ struct instanceConf_s {
 	uchar *myCertFile;
 	uchar *myPrivKeyFile;
 	struct instanceConf_s *next;
+	/* with librelp, this module does not have any own specific session
+	 * or listener active data item. As a "work-around", we keep some
+	 * data items inside the configuration object. To keep things
+	 * decently clean, we put them all into their dedicated struct. So
+	 * it is easy to judge what is actual configuration and what is
+	 * dynamic runtime data. -- rgerhards, 2013-06-18
+	 */
+	struct {
+		statsobj_t *stats;	/* listener stats */
+		STATSCOUNTER_DEF(ctrSubmit, mutCtrSubmit)
+	} data;
 };
 
 
@@ -159,6 +172,7 @@ onSyslogRcv(void *pUsr, uchar *pHostname, uchar *pIP, uchar *msg, size_t lenMsg)
 	CHKiRet(MsgSetRcvFromIPStr(pMsg, pIP, ustrlen(pIP), &pProp));
 	CHKiRet(prop.Destruct(&pProp));
 	CHKiRet(submitMsg2(pMsg));
+	STATSCOUNTER_INC(inst->data.ctrSubmit, inst->data.mutCtrSubmit);
 
 finalize_it:
 
@@ -234,6 +248,7 @@ static rsRetVal
 addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 {
 	relpSrv_t *pSrv;
+	uchar statname[64];
 	DEFiRet;
 	if(pRelpEngine == NULL) {
 		CHKiRet(relpEngineConstruct(&pRelpEngine));
@@ -248,6 +263,18 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 
 	CHKiRet(relpEngineListnerConstruct(pRelpEngine, &pSrv));
 	CHKiRet(relpSrvSetLstnPort(pSrv, inst->pszBindPort));
+	/* support statistics gathering */
+	CHKiRet(statsobj.Construct(&(inst->data.stats)));
+	snprintf((char*)statname, sizeof(statname), "imrelp(%s)",
+		inst->pszBindPort);
+	statname[sizeof(statname)-1] = '\0'; /* just to be on the save side... */
+	CHKiRet(statsobj.SetName(inst->data.stats, statname));
+	STATSCOUNTER_INIT(inst->data.ctrSubmit, inst->data.mutCtrSubmit);
+	CHKiRet(statsobj.AddCounter(inst->data.stats, UCHAR_CONSTANT("submitted"),
+		ctrType_IntCtr, &(inst->data.ctrSubmit)));
+	CHKiRet(statsobj.ConstructFinalize(inst->data.stats));
+	/* end stats counters */
+	relpSrvSetUsrPtr(pSrv, inst);
 	if(inst->bEnableTLS) {
 		relpSrvEnableTLS(pSrv);
 		if(inst->bEnableTLSZip) {
@@ -256,7 +283,6 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 		if(inst->dhBits) {
 			relpSrvSetDHBits(pSrv, inst->dhBits);
 		}
-		relpSrvSetUsrPtr(pSrv, inst);
 		relpSrvSetGnuTLSPriString(pSrv, (char*)inst->pristring);
 		if(relpSrvSetCACert(pSrv, (char*) inst->caCertFile) != RELP_RET_OK)
 			ABORT_FINALIZE(RS_RET_RELP_ERR);
@@ -429,6 +455,7 @@ BEGINfreeCnf
 CODESTARTfreeCnf
 	for(inst = pModConf->root ; inst != NULL ; ) {
 		free(inst->pszBindPort);
+		statsobj.Destruct(&(inst->data.stats));
 		del = inst;
 		inst = inst->next;
 		free(del);
@@ -493,6 +520,7 @@ CODESTARTmodExit
 		prop.Destruct(&pInputName);
 
 	/* release objects we used */
+	objRelease(statsobj, CORE_COMPONENT);
 	objRelease(ruleset, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(prop, CORE_COMPONENT);
@@ -539,6 +567,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(net, LM_NET_FILENAME));
 	CHKiRet(objUse(ruleset, CORE_COMPONENT));
+	CHKiRet(objUse(statsobj, CORE_COMPONENT));
 
 	/* register config file handlers */
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputrelpserverbindruleset", 0, eCmdHdlrGetWord,
