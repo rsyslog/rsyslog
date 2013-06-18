@@ -83,6 +83,11 @@ struct instanceConf_s {
 	uchar *caCertFile;
 	uchar *myCertFile;
 	uchar *myPrivKeyFile;
+	struct {
+		int nmemb;
+		uchar **name;
+	} permittedPeers;
+
 	struct instanceConf_s *next;
 	/* with librelp, this module does not have any own specific session
 	 * or listener active data item. As a "work-around", we keep some
@@ -122,6 +127,7 @@ static struct cnfparamblk modpblk =
 static struct cnfparamdescr inppdescr[] = {
 	{ "port", eCmdHdlrString, CNFPARAM_REQUIRED },
 	{ "tls", eCmdHdlrBinary, 0 },
+	{ "tls.permittedpeer", eCmdHdlrArray, 0 },
 	{ "tls.dhbits", eCmdHdlrInt, 0 },
 	{ "tls.prioritystring", eCmdHdlrString, 0 },
 	{ "tls.cacert", eCmdHdlrString, 0 },
@@ -198,6 +204,7 @@ createInstance(instanceConf_t **pinst)
 	inst->bEnableTLSZip = 0;
 	inst->dhBits = 0;
 	inst->pristring = NULL;
+	inst->permittedPeers.nmemb = 0;
 
 	/* node created, let's add to config */
 	if(loadModConf->tail == NULL) {
@@ -249,6 +256,7 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 {
 	relpSrv_t *pSrv;
 	uchar statname[64];
+	int i;
 	DEFiRet;
 	if(pRelpEngine == NULL) {
 		CHKiRet(relpEngineConstruct(&pRelpEngine));
@@ -290,6 +298,9 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 			ABORT_FINALIZE(RS_RET_RELP_ERR);
 		if(relpSrvSetPrivKey(pSrv, (char*) inst->myPrivKeyFile) != RELP_RET_OK)
 			ABORT_FINALIZE(RS_RET_RELP_ERR);
+		for(i = 0 ; i <  inst->permittedPeers.nmemb ; ++i) {
+			relpSrvAddPermittedPeer(pSrv, (char*)inst->permittedPeers.name[i]);
+		}
 	}
 	CHKiRet(relpEngineListnerConstructFinalize(pRelpEngine, pSrv));
 
@@ -301,7 +312,7 @@ finalize_it:
 BEGINnewInpInst
 	struct cnfparamvals *pvals;
 	instanceConf_t *inst;
-	int i;
+	int i,j;
 CODESTARTnewInpInst
 	DBGPRINTF("newInpInst (imrelp)\n");
 
@@ -338,6 +349,13 @@ CODESTARTnewInpInst
 			inst->myCertFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "tls.myprivkey")) {
 			inst->myPrivKeyFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(inppblk.descr[i].name, "tls.permittedpeer")) {
+			inst->permittedPeers.nmemb = pvals[i].val.d.ar->nmemb;
+			CHKmalloc(inst->permittedPeers.name =
+				malloc(sizeof(uchar*) * inst->permittedPeers.nmemb));
+			for(j = 0 ; j <  pvals[i].val.d.ar->nmemb ; ++j) {
+				inst->permittedPeers.name[j] = (uchar*)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
+			}
 		} else {
 			dbgprintf("imrelp: program error, non-handled "
 			  "param '%s'\n", inppblk.descr[i].name);
@@ -452,10 +470,14 @@ ENDactivateCnf
 
 BEGINfreeCnf
 	instanceConf_t *inst, *del;
+	int i;
 CODESTARTfreeCnf
 	for(inst = pModConf->root ; inst != NULL ; ) {
 		free(inst->pszBindPort);
 		statsobj.Destruct(&(inst->data.stats));
+		for(i = 0 ; i <  inst->permittedPeers.nmemb ; ++i) {
+			free(inst->permittedPeers.name[i]);
+		}
 		del = inst;
 		inst = inst->next;
 		free(del);

@@ -9,6 +9,7 @@ Version 7.5.1 [devel] 2013-06-??
   * new parameter "compression.prioritystring" to control encryption
     parameters used by GnuTLS
   * support for impstats added
+  * support for setting permitted peers (client authentication) added
 - imjournal: imported patches from 7.4.1
 - added experimental TCP stream compression (imptcp only, currently)
 - added BSD-specific syslog facilities
