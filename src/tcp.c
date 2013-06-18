@@ -433,6 +433,7 @@ pThis->pEngine->dbgprint("DDDD: gnutls_handshake: %d: %s\n", r, gnutls_strerror(
 	} else if(r != GNUTLS_E_SUCCESS) {
 		ABORT_FINALIZE(RELP_RET_ERR_TLS_SETUP);
 	}
+	pThis->bTLSActive = 1;
 
 finalize_it:
   	LEAVE_RELPFUNC;
@@ -791,7 +792,6 @@ relpTcpLstnInit(relpTcp_t *pThis, unsigned char *pLstnPort, int ai_family)
 
 		if(pThis->bEnableTLS) {
 			CHKRet(relpTcpLstnInitTLS(pThis));
-			pThis->bTLSActive = 1;
 		}
 
 	        if( (bind(*s, r->ai_addr, r->ai_addrlen) < 0)
