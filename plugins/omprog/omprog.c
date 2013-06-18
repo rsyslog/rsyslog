@@ -54,10 +54,12 @@ DEFobjCurrIf(errmsg)
 
 typedef struct _instanceData {
 	uchar *szBinary;	/* name of binary to call */
+	char **aParams;		/* Optional Parameters for binary command */
 	uchar *tplName;		/* assigned output template */
-	pid_t pid;		/* pid of currently running process */
-	int fdPipe;		/* file descriptor to write to */
+	pid_t pid;			/* pid of currently running process */
+	int fdPipe;			/* file descriptor to write to */
 	int bIsRunning;		/* is binary currently running? 0-no, 1-yes */
+	int iParams;		/* Holds the count of parameters if set*/
 } instanceData;
 
 typedef struct configSettings_s {
@@ -98,9 +100,16 @@ ENDisCompatibleWithFeature
 
 
 BEGINfreeInstance
+	int i;
 CODESTARTfreeInstance
 	if(pData->szBinary != NULL)
 		free(pData->szBinary);
+	if(pData->aParams != NULL) {
+		for (i = 0; i < pData->iParams; i++) {
+			free(pData->aParams[i]);
+		}
+		free(pData->aParams); 
+	}
 ENDfreeInstance
 
 
@@ -120,9 +129,9 @@ ENDtryResume
 
 static void execBinary(instanceData *pData, int fdStdin)
 {
-	int i;
+	int i, iRet;
 	struct sigaction sigAct;
-	char *newargv[] = { NULL };
+/*	char *newargv[] = { NULL };*/
 	char *newenviron[] = { NULL };
 
 	assert(pData != NULL);
@@ -134,7 +143,7 @@ static void execBinary(instanceData *pData, int fdStdin)
 		 * gets some more widespread use...
 		 */
 	}
-	//fclose(stdout);
+	/*fclose(stdout);*/
 
 	/* we close all file handles as we fork soon
 	 * Is there a better way to do this? - mail me! rgerhards@adiscon.com
@@ -154,7 +163,11 @@ static void execBinary(instanceData *pData, int fdStdin)
 	alarm(0);
 
 	/* finally exec child */
-	execve((char*)pData->szBinary, newargv, newenviron);
+	iRet = execve((char*)pData->szBinary, pData->aParams, newenviron);
+	if (iRet == -1) {
+		dbgprintf("omprog: failed to execute binary '%s' with return code: %d\n", pData->szBinary, errno); 
+	}
+	
 	/* switch to?
 	execlp((char*)program, (char*) program, (char*)arg, NULL);
 	*/
@@ -180,7 +193,7 @@ openPipe(instanceData *pData)
 		ABORT_FINALIZE(RS_RET_ERR_CREAT_PIPE);
 	}
 
-	DBGPRINTF("executing program '%s'\n", pData->szBinary);
+	DBGPRINTF("omprog: executing program '%s' with '%d' parameters\n", pData->szBinary, pData->iParams);
 
 	/* NO OUTPUT AFTER FORK! */
 
@@ -198,7 +211,7 @@ openPipe(instanceData *pData)
 		/*NO CODE HERE - WILL NEVER BE REACHED!*/
 	}
 
-	DBGPRINTF("child has pid %d\n", (int) cpid);
+	DBGPRINTF("omprog: child has pid %d\n", (int) cpid);
 	pData->fdPipe = pipefd[1];
 	pData->pid = cpid;
 	close(pipefd[0]);
@@ -223,11 +236,11 @@ cleanup(instanceData *pData)
 	ret = waitpid(pData->pid, &status, 0);
 	if(ret != pData->pid) {
 		/* if waitpid() fails, we can not do much - try to ignore it... */
-		DBGPRINTF("waitpid() returned state %d[%s], future malfunction may happen\n", ret,
+		DBGPRINTF("omprog: waitpid() returned state %d[%s], future malfunction may happen\n", ret,
 			   rs_strerror_r(errno, errStr, sizeof(errStr)));
 	} else {
 		/* check if we should print out some diagnostic information */
-		DBGPRINTF("waitpid status return for program '%s': %2.2x\n",
+		DBGPRINTF("omprog: waitpid status return for program '%s': %2.2x\n",
 			  pData->szBinary, status);
 		if(WIFEXITED(status)) {
 			errmsg.LogError(0, NO_ERRCODE, "program '%s' exited normally, state %d",
@@ -282,13 +295,13 @@ writePipe(instanceData *pData, uchar *szMsg)
 		if(lenWritten == -1) {
 			switch(errno) {
 				case EPIPE:
-					DBGPRINTF("Program '%s' terminated, trying to restart\n",
+					DBGPRINTF("omprog: Program '%s' terminated, trying to restart\n",
 						  pData->szBinary);
 					CHKiRet(cleanup(pData));
 					CHKiRet(tryRestart(pData));
 					break;
 				default:
-					DBGPRINTF("error %d writing to pipe: %s\n", errno,
+					DBGPRINTF("omprog: error %d writing to pipe: %s\n", errno,
 						   rs_strerror_r(errno, errStr, sizeof(errStr)));
 					ABORT_FINALIZE(RS_RET_ERR_WRITE_PIPE);
 					break;
@@ -321,13 +334,23 @@ static inline void
 setInstParamDefaults(instanceData *pData)
 {
 	pData->szBinary = NULL;
+	pData->aParams = NULL;
+	pData->iParams = 0;
 	pData->fdPipe = -1;
 	pData->bIsRunning = 0;
 }
 
 BEGINnewActInst
 	struct cnfparamvals *pvals;
+	sbool bInQuotes;
 	int i;
+	int iPrm;
+	unsigned char *c;
+	es_size_t iCnt;
+	es_size_t iStr;
+	es_str_t *estrBinary;
+	es_str_t *estrParams;
+	es_str_t *estrTmp;
 CODESTARTnewActInst
 	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
@@ -341,23 +364,97 @@ CODESTARTnewActInst
 		if(!pvals[i].bUsed)
 			continue;
 		if(!strcmp(actpblk.descr[i].name, "binary")) {
-			pData->szBinary = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+			estrBinary = pvals[i].val.d.estr; 
+			estrParams = NULL; 
+
+			/* Search for space */
+			c = es_getBufAddr(pvals[i].val.d.estr);
+			iCnt = 0;
+			while(iCnt < es_strlen(pvals[i].val.d.estr) ) {
+				if (c[iCnt] == ' ') {
+					/* Split binary name from parameters */
+					estrBinary = es_newStrFromSubStr ( pvals[i].val.d.estr, 0, iCnt ); 
+					estrParams = es_newStrFromSubStr ( pvals[i].val.d.estr, iCnt+1, es_strlen(pvals[i].val.d.estr)); 
+					break;
+				}
+				iCnt++;
+			}	
+			/* Assign binary and params */
+			pData->szBinary = (uchar*)es_str2cstr(estrBinary, NULL);
+			dbgprintf("omprog: szBinary = '%s'\n", pData->szBinary); 
+			/* Check for Params! */
+			if (estrParams != NULL) {
+				dbgprintf("omprog: szParams = '%s'\n", es_str2cstr(estrParams, NULL) ); 
+				
+				/* Count parameters if set */
+				c = es_getBufAddr(estrParams); /* Reset to beginning */
+				pData->iParams = 2; /* Set default to 2, first parameter for binary and second parameter at least from config*/
+				iCnt = 0;
+				while(iCnt < es_strlen(estrParams) ) {
+					if (c[iCnt] == ' ' && c[iCnt-1] != '\\')
+						 pData->iParams++; 
+					iCnt++;
+				}
+				dbgprintf("omprog: iParams = '%d'\n", pData->iParams); 
+
+				/* Create argv Array */
+				CHKmalloc(pData->aParams = malloc( (pData->iParams+1) * sizeof(char*))); /* One more for first param */ 
+
+				/* Second Loop, create parameter array*/
+				c = es_getBufAddr(estrParams); /* Reset to beginning */
+				iCnt = iStr = iPrm = 0;
+				estrTmp = NULL; 
+				bInQuotes = FALSE; 
+				/* Set first parameter to binary */
+				pData->aParams[iPrm] = strdup(pData->szBinary); 
+				dbgprintf("omprog: Param (%d): '%s'\n", iPrm, pData->aParams[iPrm]);
+				iPrm++; 
+				while(iCnt < es_strlen(estrParams) ) {
+					if ( c[iCnt] == ' ' && !bInQuotes ) {
+						/* Copy into Param Array! */
+						estrTmp = es_newStrFromSubStr( estrParams, iStr, iCnt-iStr); 
+					}
+					else if ( iCnt+1 >= es_strlen(estrParams) ) {
+						/* Copy rest of string into Param Array! */
+						estrTmp = es_newStrFromSubStr( estrParams, iStr, iCnt-iStr+1); 
+					}
+					else if (c[iCnt] == '"') {
+						/* switch inQuotes Mode */
+						bInQuotes = !bInQuotes; 
+					}
+
+					if ( estrTmp != NULL ) {
+						pData->aParams[iPrm] = es_str2cstr(estrTmp, NULL); 
+						iStr = iCnt+1; /* Set new start */
+						dbgprintf("omprog: Param (%d): '%s'\n", iPrm, pData->aParams[iPrm]);
+						es_deleteStr( estrTmp );
+						estrTmp = NULL; 
+						iPrm++;
+					}
+
+					/*Next char*/
+					iCnt++;
+				}
+				/* NULL last parameter! */
+				pData->aParams[iPrm] = NULL; 
+
+			}
 		} else if(!strcmp(actpblk.descr[i].name, "template")) {
 			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else {
-			dbgprintf("omprog: program error, non-handled "
-			  "param '%s'\n", actpblk.descr[i].name);
+			dbgprintf("omprog: program error, non-handled param '%s'\n", actpblk.descr[i].name);
 		}
 	}
 
 	if(pData->tplName == NULL) {
-		CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*) "RSYSLOG_FileFormat",
+		CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*) strdup("RSYSLOG_FileFormat"),
 			OMSR_NO_RQD_TPL_OPTS));
 	} else {
 		CHKiRet(OMSRsetEntry(*ppOMSR, 0,
 			(uchar*) strdup((char*) pData->tplName),
 			OMSR_NO_RQD_TPL_OPTS));
 	}
+
 CODE_STD_FINALIZERnewActInst
 	cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
