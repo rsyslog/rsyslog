@@ -65,6 +65,7 @@ typedef struct relpTcp_s {
 	char *pristring; /**< priority string for GnuTLS */
 	gnutls_anon_client_credentials_t anoncred;	/**< client anon credentials */
 	gnutls_anon_server_credentials_t anoncredSrv;	/**< server anon credentials */
+	relpPermittedPeers_t permittedPeers;
 	/* GnuTLS certificat support */
 	gnutls_certificate_credentials_t xcred;		/**< certificate credentials */
 	char *caCertFile;
@@ -104,6 +105,7 @@ relpRetVal relpTcpSetGnuTLSPriString(relpTcp_t *pThis, char *pristr);
 relpRetVal relpTcpSetCACert(relpTcp_t *pThis, char *cert);
 relpRetVal relpTcpSetOwnCert(relpTcp_t *pThis, char *cert);
 relpRetVal relpTcpSetPrivKey(relpTcp_t *pThis, char *cert);
+relpRetVal relpTcpSetPermittedPeers(relpTcp_t *pThis, relpPermittedPeers_t *pPeers);
 int relpTcpGetRtryDirection(relpTcp_t *pThis);
 void relpTcpRtryHandshake(relpTcp_t *pThis);
 

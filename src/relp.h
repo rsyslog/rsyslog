@@ -53,6 +53,11 @@
 #define RELP_CORE_CONSTRUCTOR(pObj, objType) \
 	(pObj)->objID = eRelpObj_##objType
 
+/* a structure to store permitted peer information (a type of ACL) */
+typedef struct relpPermittedPeers_s {
+	int nmemb;
+	char **name;
+} relpPermittedPeers_t;
 
 /* a linked list entry for the list of relp servers (of this engine) */
 typedef struct relpEngSrvLst_s {

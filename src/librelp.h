@@ -172,6 +172,7 @@ relpRetVal relpSrvSetGnuTLSPriString(relpSrv_t *pThis, char *pristr);
 relpRetVal relpSrvSetCACert(relpSrv_t *pThis, char *cert);
 relpRetVal relpSrvSetOwnCert(relpSrv_t *pThis, char *cert);
 relpRetVal relpSrvSetPrivKey(relpSrv_t *pThis, char *cert);
+relpRetVal relpSrvAddPermittedPeer(relpSrv_t *pThis, char *peer);
 
 /* exposed relp client functions */
 relpRetVal relpCltConnect(relpClt_t *pThis, int protFamily, unsigned char *port, unsigned char *host);

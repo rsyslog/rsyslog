@@ -67,6 +67,7 @@ relpSrvConstruct(relpSrv_t **ppThis, relpEngine_t *pEngine)
 	pThis->caCertFile = NULL;
 	pThis->ownCertFile = NULL;
 	pThis->privKey = NULL;
+	pThis->permittedPeers.nmemb = 0;
 
 	*ppThis = pThis;
 
@@ -81,6 +82,7 @@ relpRetVal
 relpSrvDestruct(relpSrv_t **ppThis)
 {
 	relpSrv_t *pThis;
+	int i;
 
 	ENTER_RELPFUNC;
 	assert(ppThis != NULL);
@@ -97,10 +99,46 @@ relpSrvDestruct(relpSrv_t **ppThis)
 	free(pThis->caCertFile);
 	free(pThis->ownCertFile);
 	free(pThis->privKey);
+	for(i = 0 ; i < pThis->permittedPeers.nmemb ; ++i)
+		free(pThis->permittedPeers.name[i]);
 	/* done with de-init work, now free srv object itself */
 	free(pThis);
 	*ppThis = NULL;
 
+	LEAVE_RELPFUNC;
+}
+
+
+/** add a permitted peer to the current server object. As soon as the
+ * first permitted peer is set, anonymous access is no longer permitted.
+ * Note that currently once-set peers can never be removed. This is
+ * considered to be of no importance. We assume all peers are know
+ * at time of server construction. For the same reason, we do not guard
+ * the update operation. It is forbidden to add peers after the server
+ * has been started. In that case, races can happen.
+ * rgerhards, 2013-06-18
+ */
+relpRetVal
+relpSrvAddPermittedPeer(relpSrv_t *pThis, char *peer)
+{
+	char **newName;
+	int newMemb;
+	ENTER_RELPFUNC;
+	newMemb = pThis->permittedPeers.nmemb + 1;
+	RELPOBJ_assert(pThis, Srv);
+	newName = realloc(pThis->permittedPeers.name, sizeof(char*) * newMemb);
+	if(newName == NULL) {
+		ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+	}
+	if((newName[newMemb - 1] = strdup(peer)) == NULL) {
+		free(newName);
+		ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+	}
+	pThis->permittedPeers.name = newName;
+	pThis->permittedPeers.nmemb = newMemb;
+	pThis->pEngine->dbgprint("librelp: SRV permitted peer added: '%s'\n", peer);
+
+finalize_it:
 	LEAVE_RELPFUNC;
 }
 
@@ -261,6 +299,7 @@ relpSrvRun(relpSrv_t *pThis)
 		relpTcpSetCACert(pTcp, pThis->caCertFile);
 		relpTcpSetOwnCert(pTcp, pThis->ownCertFile);
 		relpTcpSetPrivKey(pTcp, pThis->privKey);
+		CHKRet(relpTcpSetPermittedPeers(pTcp, &(pThis->permittedPeers)));
 	}
 	CHKRet(relpTcpLstnInit(pTcp, (pThis->pLstnPort == NULL) ? (unsigned char*) RELP_DFLT_PORT : pThis->pLstnPort, pThis->ai_family));
 		

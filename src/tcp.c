@@ -58,6 +58,16 @@ GCRY_THREAD_OPTION_PTHREAD_IMPL;
 static int called_gnutls_global_init = 0;
 
 
+/* helper to free permittedPeer structure */
+static inline void
+relpTcpFreePermittedPeers(relpTcp_t *pThis)
+{
+	int i;
+	for(i = 0 ; i < pThis->permittedPeers.nmemb ; ++i)
+		free(pThis->permittedPeers.name[i]);
+	pThis->permittedPeers.nmemb = 0;
+}
+
 /** Construct a RELP tcp instance
  * This is the first thing that a caller must do before calling any
  * RELP function. The relp tcp must only destructed after all RELP
@@ -85,6 +95,7 @@ relpTcpConstruct(relpTcp_t **ppThis, relpEngine_t *pEngine, int connType)
 	pThis->caCertFile = NULL;
 	pThis->ownCertFile = NULL;
 	pThis->privKeyFile = NULL;
+	pThis->permittedPeers.nmemb = 0;
 
 	*ppThis = pThis;
 
@@ -127,6 +138,7 @@ relpTcpDestruct(relpTcp_t **ppThis)
 		gnutls_deinit(pThis->session);
 	}
 
+	relpTcpFreePermittedPeers(pThis);
 	free(pThis->pRemHostIP);
 	free(pThis->pRemHostName);
 	free(pThis->pristring);
@@ -264,6 +276,34 @@ relpTcpSetRemHost(relpTcp_t *pThis, struct sockaddr *pAddr)
 	}
 	memcpy(pThis->pRemHostName, szHname, len);
 
+finalize_it:
+	LEAVE_RELPFUNC;
+}
+
+
+/* this copies a *complete* permitted peers structure into the
+ * tcp object.
+ */
+relpRetVal
+relpTcpSetPermittedPeers(relpTcp_t *pThis, relpPermittedPeers_t *pPeers)
+{
+	ENTER_RELPFUNC;
+	int i;
+	RELPOBJ_assert(pThis, Tcp);
+	
+	relpTcpFreePermittedPeers(pThis);
+	if(pPeers->nmemb != 0) {
+		if((pThis->permittedPeers.name =
+			malloc(sizeof(char*) * pPeers->nmemb)) == NULL) {
+			ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+		}
+		for(i = 0 ; i < pPeers->nmemb ; ++i) {
+			if((pThis->permittedPeers.name[i] = strdup(pPeers->name[i])) == NULL) {
+				ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+			}
+		}
+	}
+	pThis->permittedPeers.nmemb = pPeers->nmemb;
 finalize_it:
 	LEAVE_RELPFUNC;
 }
@@ -484,6 +524,7 @@ pThis->pEngine->dbgprint("remote host is '%s', ip '%s'\n", pThis->pRemHostName, 
 	pThis->sock = iNewSock;
 	if(pSrv->pTcp->bEnableTLS) {
 		pThis->bEnableTLS = 1;
+		CHKRet(relpTcpSetPermittedPeers(pThis, &(pSrv->permittedPeers)));
 		CHKRet(relpTcpAcceptConnReqInitTLS(pThis, pSrv));
 	}
 
@@ -523,12 +564,12 @@ GenFingerprintStr(char *pFingerprint, int sizeFingerprint, char *fpBuf)
 static int
 relpTcpChkPeerFingerprint(relpTcp_t *pThis, gnutls_x509_crt cert)
 {
+	int r = 0;
+	int i;
 	char fingerprint[20];
 	char fpPrintable[512];
 	size_t size;
-	int bFoundPositiveMatch;
-	//permittedPeers_t *pPeer;
-	int r;
+	int8_t found;
 
 	/* obtain the SHA1 fingerprint */
 	size = sizeof(fingerprint);
@@ -537,6 +578,19 @@ pThis->pEngine->dbgprint("DDDD: crt_get_fingerprint returned %d: %s\n", r, gnutl
 	GenFingerprintStr(fingerprint, (int) size, fpPrintable);
 	pThis->pEngine->dbgprint("DDDD: peer's certificate SHA1 fingerprint: %s\n", fpPrintable);
 
+	/* now search through the permitted peers to see if we can find a permitted one */
+	found = 0;
+pThis->pEngine->dbgprint("DDDD: n peers %d\n", pThis->permittedPeers.nmemb);
+	for(i = 0 ; i < pThis->permittedPeers.nmemb ; ++i) {
+pThis->pEngine->dbgprint("DDDD: checking peer '%s','%s'\n", fpPrintable, pThis->permittedPeers.name[i]);
+		if(!strcmp(fpPrintable, pThis->permittedPeers.name[i])) {
+			found = 1;
+			break;
+		}
+	}
+	if(!found) {
+		r = GNUTLS_E_CERTIFICATE_ERROR; goto done;
+	}
 #if 0
 	/* now search through the permitted peers to see if we can find a permitted one */
 	bFoundPositiveMatch = 0;
@@ -560,6 +614,7 @@ pThis->pEngine->dbgprint("DDDD: crt_get_fingerprint returned %d: %s\n", r, gnutl
 		ABORT_FINALIZE(RS_RET_INVALID_FINGERPRINT);
 	}
 #endif
+done:	return r;
 }
 
 /* This function will verify the peer's certificate, and check
@@ -577,7 +632,6 @@ relpTcpVerifyCertificateCallback(gnutls_session_t session)
 	unsigned int list_size = 0;
 	gnutls_x509_crt cert;
 	int bMustDeinitCert = 0;
-	int gnuRet;
 
 	pThis = (relpTcp_t*) gnutls_session_get_ptr(session);
 	pThis->pEngine->dbgprint("DDDD: in cert verify function (server)\n");
@@ -605,13 +659,16 @@ relpTcpVerifyCertificateCallback(gnutls_session_t session)
 	bMustDeinitCert = 1; /* indicate cert is initialized and must be freed on exit */
 	gnutls_x509_crt_import(cert, &cert_list[0], GNUTLS_X509_FMT_DER);
 pThis->pEngine->dbgprint("DDDD: got hold of the cert, on to actual checking...\n");
+	r = relpTcpChkPeerFingerprint(pThis, cert);
+	if(r != 0) goto done;
+
+
 char szAltName[1024]; /* this is sufficient for the DNSNAME... */
 int iAltName;
 size_t szAltNameLen;
 szAltNameLen = sizeof(szAltName);
 	gnutls_x509_crt_get_subject_alt_name(cert, 0, szAltName, &szAltNameLen, NULL);
 pThis->pEngine->dbgprint("DDDD: subject alt name is %s'\n", szAltName);
-	relpTcpChkPeerFingerprint(pThis, cert);
 
 
 #if 0
