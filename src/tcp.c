@@ -461,6 +461,7 @@ pThis->pEngine->dbgprint("DDDD: gnutls_init %d: %s\n", r, gnutls_strerror(r));
 	gnutls_session_set_ptr(pThis->session, pThis);
 
 	pThis->pristring = strdup(pSrv->pTcp->pristring);
+	pThis->pUsr = pSrv->pUsr;
 	CHKRet(relpTcpTLSSetPrio(pThis));
 
 	if(isAnonAuth(pSrv->pTcp)) {
