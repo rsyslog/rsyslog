@@ -51,6 +51,7 @@ typedef enum { relpTCP_RETRY_none = 0,
 typedef struct relpTcp_s {
 	BEGIN_RELP_OBJ;
 	relpEngine_t *pEngine;
+	void *pUsr;		   /**< user pointer for callbacks */
 	unsigned char *pRemHostIP; /**< IP address of remote peer (currently used in server mode, only) */
 	unsigned char *pRemHostName; /**< host name of remote peer (currently used in server mode, only) */
 	int sock;	/**< the socket we use for regular, single-socket, operations */
@@ -107,6 +108,7 @@ relpRetVal relpTcpSetOwnCert(relpTcp_t *pThis, char *cert);
 relpRetVal relpTcpSetPrivKey(relpTcp_t *pThis, char *cert);
 relpRetVal relpTcpSetPermittedPeers(relpTcp_t *pThis, relpPermittedPeers_t *pPeers);
 relpRetVal relpTcpRtryHandshake(relpTcp_t *pThis);
+relpRetVal relpTcpSetUsrPtr(relpTcp_t *pThis, void *pUsr);
 int relpTcpGetRtryDirection(relpTcp_t *pThis);
 
 #endif /* #ifndef RELPTCP_H_INCLUDED */

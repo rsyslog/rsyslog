@@ -134,6 +134,7 @@ enum relpCmdEnaState_e { /* command enabled state - what are we permitted to do/
 #define RELP_RET_INVALID_PARAM 	RELPERR_BASE + 30	/**< librelp API called with wrong parameter */
 #define RELP_RET_ERR_TLS_SETUP 	RELPERR_BASE + 31	/**< problem during TLS setup */
 #define RELP_RET_INVLD_TLS_PRIO  RELPERR_BASE + 32	/**< TLS setup used invalid TLS priority string */
+#define RELP_RET_AUTH_ERR_FP  RELPERR_BASE + 33		/**< auth failed: non-permitted peer fingerprint */
 
 /* some macros to work with librelp error codes */
 #define CHKRet(code) if((iRet = code) != RELP_RET_OK) goto finalize_it
@@ -161,6 +162,8 @@ relpRetVal relpEngineSetSyslogRcv2(relpEngine_t *pThis,
 				  relpRetVal (*pCB)(void*, unsigned char*, unsigned char*, unsigned char*, size_t));
 relpRetVal relpEngineSetEnableCmd(relpEngine_t *pThis, unsigned char *pszCmd, relpCmdEnaState_t stateCmd);
 relpRetVal relpEngineSetDnsLookupMode(relpEngine_t *pThis, int iMode);
+relpRetVal relpEngineSetOnAuthErr(relpEngine_t *pThis,
+			          void (*pCB)(void*pUsr, char *authinfo, char*errmsg, relpRetVal errcode) );
 
 /* exposed server property set functions */
 relpRetVal relpSrvSetLstnPort(relpSrv_t *pThis, unsigned char *pLstnPort);

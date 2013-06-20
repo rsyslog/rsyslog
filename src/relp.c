@@ -1,6 +1,6 @@
 /* The RELP (reliable event logging protocol) core protocol library.
  *
- * Copyright 2008-2012 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2013 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of librelp.
  *
@@ -271,6 +271,36 @@ relpEngineSetSyslogRcv2(relpEngine_t *pThis, relpRetVal (*pCB)(void *, unsigned 
 
 	pThis->onSyslogRcv = NULL;
 	pThis->onSyslogRcv2 = (pCB == NULL) ? relpSrvSyslogRcvDummy2 : pCB;
+	LEAVE_RELPFUNC;
+}
+
+/**
+ * Set an event handler that shall receive information when authentication
+ * has been failed.
+ *
+ * Most importantly, this permits the caller to emit error messages on
+ * failed authentication. It is also suggested to output the credentials,
+ * so that the user knows what to do (e.g. add fingerprint for newly
+ * setup peer).
+ *
+ * This handler will only be called in a mode with authenticaton.
+ * Practically, this means when TLS support is enabled.
+ * 
+ * Callback parameters:
+ *
+ * pUsr     - the user pointer set
+ * authinfo - the credentials that have been used to authenticate
+ *            the remote peer. This may be a fingerprint or something 
+ *            else, depending on authentication settings.
+ * errmsg   - error message as far as librelp is concerned
+ * errcode  - contains librelp error status that lead to the failed auth.
+ */
+relpRetVal
+relpEngineSetOnAuthErr(relpEngine_t *pThis, void (*pCB)(void*pUsr, char *authinfo, char*errmsg, relpRetVal errcode) )
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Engine);
+	pThis->onAuthErr = pCB;
 	LEAVE_RELPFUNC;
 }
 

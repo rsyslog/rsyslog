@@ -98,6 +98,7 @@ relpTcpConstruct(relpTcp_t **ppThis, relpEngine_t *pEngine, int connType)
 	pThis->caCertFile = NULL;
 	pThis->ownCertFile = NULL;
 	pThis->privKeyFile = NULL;
+	pThis->pUsr = NULL;
 	pThis->permittedPeers.nmemb = 0;
 
 	*ppThis = pThis;
@@ -307,6 +308,15 @@ relpTcpSetPermittedPeers(relpTcp_t *pThis, relpPermittedPeers_t *pPeers)
 	}
 	pThis->permittedPeers.nmemb = pPeers->nmemb;
 finalize_it:
+	LEAVE_RELPFUNC;
+}
+
+relpRetVal
+relpTcpSetUsrPtr(relpTcp_t *pThis, void *pUsr)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Tcp);
+	pThis->pUsr = pUsr;
 	LEAVE_RELPFUNC;
 }
 
@@ -616,7 +626,14 @@ pThis->pEngine->dbgprint("DDDD: checking peer '%s','%s'\n", fpPrintable, pThis->
 		ABORT_FINALIZE(RS_RET_INVALID_FINGERPRINT);
 	}
 #endif
-done:	return r;
+done:
+	if(r != 0) {
+		if(pThis->pEngine->onAuthErr != NULL) {
+			pThis->pEngine->onAuthErr(pThis->pUsr, fpPrintable, 
+				"non-permited fingerprint", RELP_RET_AUTH_ERR_FP);
+		}
+	}
+	return r;
 }
 
 /* This function will verify the peer's certificate, and check
@@ -626,6 +643,7 @@ static int
 relpTcpVerifyCertificateCallback(gnutls_session_t session)
 {
 	unsigned int status = 0;
+	relpRetVal relpRet = RELP_RET_OK;
 	int r = 0;
 	int ret, type;
 	relpTcp_t *pThis;
