@@ -131,7 +131,6 @@ static void execBinary(instanceData *pData, int fdStdin)
 {
 	int i, iRet;
 	struct sigaction sigAct;
-/*	char *newargv[] = { NULL };*/
 	char *newenviron[] = { NULL };
 
 	assert(pData != NULL);
@@ -168,10 +167,6 @@ static void execBinary(instanceData *pData, int fdStdin)
 		dbgprintf("omprog: failed to execute binary '%s' with return code: %d\n", pData->szBinary, errno); 
 	}
 	
-	/* switch to?
-	execlp((char*)program, (char*) program, (char*)arg, NULL);
-	*/
-
 	/* we should never reach this point, but if we do, we terminate */
 	exit(1);
 }
