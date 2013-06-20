@@ -145,6 +145,14 @@ static struct cnfparamblk inppblk =
 
 /* ------------------------------ callbacks ------------------------------ */
 
+static void
+onAuthErr(void *pUsr, char *authinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode)
+{
+	instanceConf_t *inst = (instanceConf_t*) pUsr;
+	errmsg.LogError(0, NO_ERRCODE, "imrelp[%s]: authentication error '%s', peer "
+			"is '%s'", inst->pszBindPort, errmesg, authinfo);
+}
+
 /* callback for receiving syslog messages. This function is invoked from the
  * RELP engine when a syslog message arrived. It must return a relpRetVal,
  * with anything else but RELP_RET_OK terminating the relp session. Please note
@@ -264,6 +272,7 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 		CHKiRet(relpEngineSetFamily(pRelpEngine, glbl.GetDefPFFamily()));
 		CHKiRet(relpEngineSetEnableCmd(pRelpEngine, (uchar*) "syslog", eRelpCmdState_Required));
 		CHKiRet(relpEngineSetSyslogRcv2(pRelpEngine, onSyslogRcv));
+		CHKiRet(relpEngineSetOnAuthErr(pRelpEngine, onAuthErr));
 		if (!glbl.GetDisableDNS()) {
 			CHKiRet(relpEngineSetDnsLookupMode(pRelpEngine, 1));
 		}
