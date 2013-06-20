@@ -1034,7 +1034,7 @@ AC_ARG_ENABLE(cached_man_pages,
 if test "x$enable_cached_man_pages" = "xno"; then
 # obtain path for rst2man
   if test "x$enable_libgcrypt" = "xyes" || \
-        "x$enable_guardtime" = "xyes"; then
+     test "x$enable_guardtime" = "xyes"; then
         AC_PATH_PROG([RST2MAN], [rst2man])
         if test "x${RST2MAN}" == "x"; then
             AC_MSG_FAILURE([rst2man not found in PATH])
