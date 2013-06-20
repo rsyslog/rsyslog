@@ -58,6 +58,9 @@ GCRY_THREAD_OPTION_PTHREAD_IMPL;
 static int called_gnutls_global_init = 0;
 
 
+/* forward definitions */
+static int relpTcpVerifyCertificateCallback(gnutls_session_t session);
+
 /* helper to free permittedPeer structure */
 static inline void
 relpTcpFreePermittedPeers(relpTcp_t *pThis)
@@ -1001,6 +1004,7 @@ relpTcpConnectTLSInit(relpTcp_t *pThis)
 	r = gnutls_init(&pThis->session, GNUTLS_CLIENT);
 	pThis->pEngine->dbgprint("DDDD: gnutls_init: %d\n", r);
 
+	gnutls_session_set_ptr(pThis->session, pThis);
 	CHKRet(relpTcpTLSSetPrio(pThis));
 
 	if(isAnonAuth(pThis)) {
@@ -1029,6 +1033,7 @@ relpTcpConnectTLSInit(relpTcp_t *pThis)
 		}
 		r = gnutls_credentials_set(pThis->session, GNUTLS_CRD_CERTIFICATE, pThis->xcred);
 		pThis->pEngine->dbgprint("DDDD: gnutls_credentials_set(cert) %d: %s\n", r, gnutls_strerror(r));
+		gnutls_certificate_set_verify_function(pThis->xcred, relpTcpVerifyCertificateCallback);
 	}
 
 	gnutls_transport_set_ptr(pThis->session, (gnutls_transport_ptr_t) pThis->sock);

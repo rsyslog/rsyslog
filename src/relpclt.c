@@ -125,7 +125,7 @@ relpCltConnect(relpClt_t *pThis, int protFamily, unsigned char *port, unsigned c
 		CHKRet(relpSessSetCACert(pThis->pSess, pThis->caCertFile));
 		CHKRet(relpSessSetOwnCert(pThis->pSess, pThis->ownCertFile));
 		CHKRet(relpSessSetPrivKey(pThis->pSess, pThis->privKey));
-		CHKRet(relpSessSetPermittedPeer(pThis->pSess, &pThis->permittedPeers));
+		CHKRet(relpSessSetPermittedPeers(pThis->pSess, &pThis->permittedPeers));
 	}
 	CHKRet(relpSessConnect(pThis->pSess, protFamily, port, host));
 
