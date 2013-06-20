@@ -76,6 +76,10 @@ typedef struct _instanceData {
 	uchar *myCertFile;
 	uchar *myPrivKeyFile;
 	uchar *tplName;
+	struct {
+		int nmemb;
+		uchar **name;
+	} permittedPeers;
 } instanceData;
 
 typedef struct configSettings_s {
@@ -94,6 +98,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "tls.cacert", eCmdHdlrString, 0 },
 	{ "tls.mycert", eCmdHdlrString, 0 },
 	{ "tls.myprivkey", eCmdHdlrString, 0 },
+	{ "tls.permittedpeer", eCmdHdlrArray, 0 },
 	{ "port", eCmdHdlrGetWord, 0 },
 	{ "rebindinterval", eCmdHdlrInt, 0 },
 	{ "timeout", eCmdHdlrInt, 0 },
@@ -125,6 +130,7 @@ static uchar *getRelpPt(instanceData *pData)
 static inline rsRetVal
 doCreateRelpClient(instanceData *pData)
 {
+	int i;
 	DEFiRet;
 	if(relpEngineCltConstruct(pRelpEngine, &pData->pRelpClt) != RELP_RET_OK)
 		ABORT_FINALIZE(RS_RET_RELP_ERR);
@@ -145,6 +151,10 @@ doCreateRelpClient(instanceData *pData)
 			ABORT_FINALIZE(RS_RET_RELP_ERR);
 		if(relpCltSetPrivKey(pData->pRelpClt, (char*) pData->myPrivKeyFile) != RELP_RET_OK)
 			ABORT_FINALIZE(RS_RET_RELP_ERR);
+		for(i = 0 ; i <  pData->permittedPeers.nmemb ; ++i) {
+dbgprintf("DDDD: omrelp add permitted peer %s\n",(char*)pData->permittedPeers.name[i]);
+			relpCltAddPermittedPeer(pData->pRelpClt, (char*)pData->permittedPeers.name[i]);
+		}
 	}
 	if(glbl.GetSourceIPofLocalClient() == NULL) {	/* ar Do we have a client IP set? */
 		if(relpCltSetClientIP(pData->pRelpClt, glbl.GetSourceIPofLocalClient()) != RELP_RET_OK)
@@ -167,9 +177,11 @@ CODESTARTcreateInstance
 	pData->caCertFile = NULL;
 	pData->myCertFile = NULL;
 	pData->myPrivKeyFile = NULL;
+	pData->permittedPeers.nmemb = 0;
 ENDcreateInstance
 
 BEGINfreeInstance
+	int i;
 CODESTARTfreeInstance
 	if(pData->pRelpClt != NULL)
 		relpEngineCltDestruct(pRelpEngine, &pData->pRelpClt);
@@ -180,6 +192,9 @@ CODESTARTfreeInstance
 	free(pData->caCertFile);
 	free(pData->myCertFile);
 	free(pData->myPrivKeyFile);
+	for(i = 0 ; i <  pData->permittedPeers.nmemb ; ++i) {
+		free(pData->permittedPeers.name[i]);
+	}
 ENDfreeInstance
 
 static inline void
@@ -196,12 +211,13 @@ setInstParamDefaults(instanceData *pData)
 	pData->caCertFile = NULL;
 	pData->myCertFile = NULL;
 	pData->myPrivKeyFile = NULL;
+	pData->permittedPeers.nmemb = 0;
 }
 
 
 BEGINnewActInst
 	struct cnfparamvals *pvals;
-	int i;
+	int i,j;
 CODESTARTnewActInst
 	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
@@ -235,6 +251,13 @@ CODESTARTnewActInst
 			pData->myCertFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "tls.myprivkey")) {
 			pData->myPrivKeyFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "tls.permittedpeer")) {
+			pData->permittedPeers.nmemb = pvals[i].val.d.ar->nmemb;
+			CHKmalloc(pData->permittedPeers.name =
+				malloc(sizeof(uchar*) * pData->permittedPeers.nmemb));
+			for(j = 0 ; j <  pvals[i].val.d.ar->nmemb ; ++j) {
+				pData->permittedPeers.name[j] = (uchar*)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
+			}
 		} else {
 			dbgprintf("omrelp: program error, non-handled "
 			  "param '%s'\n", actpblk.descr[i].name);
