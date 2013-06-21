@@ -76,6 +76,19 @@ in braces like this:
 <br>To specify just a single peer, you can either
 specify the string directly or enclose it in braces.
 </li>
+<li><b>tls.authMode</b> mode</br>
+Sets the mode used for mutual authentication. Supported values are
+either "<i>fingerprint</i>" or "<i>name"</i>.
+<br>Fingerprint mode  basically is what SSH
+does. It does not require a full PKI to be present, instead self-signed
+certs can be used on all peers. Even if a CA certificate is given, the
+validity of the peer cert is NOT verified against it. Only the
+certificate fingerprint counts.
+<br>In "name" mode, certificate validation happens. Here, the matching
+is done against the certificate's subjectAltName and, as a fallback,
+the subject common name. If the certificate contains multiple names,
+a match on any one of these names is considered good and permits the
+peer to talk to rsyslog.
 <li><b>tls.prioritystring</b> (not mandatory, string)<br>
 This parameter permits to specify the so-called "priority string" to
 GnuTLS. This string gives complete control over all crypto parameters,
