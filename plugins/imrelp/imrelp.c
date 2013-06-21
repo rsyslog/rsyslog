@@ -80,6 +80,7 @@ struct instanceConf_s {
 	sbool bEnableTLSZip;
 	int dhBits;
 	uchar *pristring;		/* GnuTLS priority string (NULL if not to be provided) */
+	uchar *authmode;		/* TLS auth mode */
 	uchar *caCertFile;
 	uchar *myCertFile;
 	uchar *myPrivKeyFile;
@@ -128,6 +129,7 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "port", eCmdHdlrString, CNFPARAM_REQUIRED },
 	{ "tls", eCmdHdlrBinary, 0 },
 	{ "tls.permittedpeer", eCmdHdlrArray, 0 },
+	{ "tls.authmode", eCmdHdlrString, 0 },
 	{ "tls.dhbits", eCmdHdlrInt, 0 },
 	{ "tls.prioritystring", eCmdHdlrString, 0 },
 	{ "tls.cacert", eCmdHdlrString, 0 },
@@ -212,6 +214,7 @@ createInstance(instanceConf_t **pinst)
 	inst->bEnableTLSZip = 0;
 	inst->dhBits = 0;
 	inst->pristring = NULL;
+	inst->authmode = NULL;
 	inst->permittedPeers.nmemb = 0;
 
 	/* node created, let's add to config */
@@ -301,6 +304,11 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 			relpSrvSetDHBits(pSrv, inst->dhBits);
 		}
 		relpSrvSetGnuTLSPriString(pSrv, (char*)inst->pristring);
+		if(relpSrvSetAuthMode(pSrv, (char*)inst->authmode) != RELP_RET_OK) {
+			errmsg.LogError(0, RS_RET_RELP_ERR,
+					"imrelp: invalid auth mode '%s'\n", inst->authmode);
+			ABORT_FINALIZE(RS_RET_RELP_ERR);
+		}
 		if(relpSrvSetCACert(pSrv, (char*) inst->caCertFile) != RELP_RET_OK)
 			ABORT_FINALIZE(RS_RET_RELP_ERR);
 		if(relpSrvSetOwnCert(pSrv, (char*) inst->myCertFile) != RELP_RET_OK)
@@ -350,6 +358,8 @@ CODESTARTnewInpInst
 			inst->dhBits = (unsigned) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "tls.prioritystring")) {
 			inst->pristring = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(inppblk.descr[i].name, "tls.authmode")) {
+			inst->authmode = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "tls.compression")) {
 			inst->bEnableTLSZip = (unsigned) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "tls.cacert")) {
@@ -483,6 +493,8 @@ BEGINfreeCnf
 CODESTARTfreeCnf
 	for(inst = pModConf->root ; inst != NULL ; ) {
 		free(inst->pszBindPort);
+		free(inst->pristring);
+		free(inst->authmode);
 		statsobj.Destruct(&(inst->data.stats));
 		for(i = 0 ; i <  inst->permittedPeers.nmemb ; ++i) {
 			free(inst->permittedPeers.name[i]);
