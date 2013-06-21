@@ -69,6 +69,12 @@ typedef enum relpObjID_e {
 	eRelpObj_OfferValue = 12
 } relpObjID_t;
 
+/** authentication modes for TLS */
+typedef enum relpAuthMode_e {
+	eRelpAuthMode_None = 0,
+	eRelpAuthMode_Fingerprint = 1,
+	eRelpAuthMode_Name = 2
+} relpAuthMode_t;
 
 enum relpCmdEnaState_e { /* command enabled state - what are we permitted to do/request? */
 	eRelpCmdState_Unset = 0, /**< calloc default, not desired, not forbidden */
@@ -133,9 +139,12 @@ enum relpCmdEnaState_e { /* command enabled state - what are we permitted to do/
 #define RELP_RET_ADDR_UNKNOWN 	RELPERR_BASE + 29	/**< remote peer's IP address could not be obtained */
 #define RELP_RET_INVALID_PARAM 	RELPERR_BASE + 30	/**< librelp API called with wrong parameter */
 #define RELP_RET_ERR_TLS_SETUP 	RELPERR_BASE + 31	/**< problem during TLS setup */
-#define RELP_RET_INVLD_TLS_PRIO  RELPERR_BASE + 32	/**< TLS setup used invalid TLS priority string */
-#define RELP_RET_AUTH_ERR_FP  RELPERR_BASE + 33		/**< auth failed: non-permitted peer fingerprint */
-#define RELP_RET_AUTH_NO_CERT RELPERR_BASE + 34		/**< auth failed: peer did not present a certificate */
+#define RELP_RET_INVLD_TLS_PRIO	RELPERR_BASE + 32	/**< TLS setup used invalid TLS priority string */
+#define RELP_RET_AUTH_ERR_FP	RELPERR_BASE + 33	/**< auth failed: non-permitted peer fingerprint */
+#define RELP_RET_AUTH_ERR_NAME	RELPERR_BASE + 34	/**< auth failed: no permitted peer name found */
+#define RELP_RET_AUTH_NO_CERT	RELPERR_BASE + 35	/**< auth failed: peer did not present a certificate */
+#define RELP_RET_AUTH_CERT_INVL RELPERR_BASE + 36	/**< auth failed: peer certificate invalid (did not pass validation) */
+#define RELP_RET_INVLD_AUTH_MD	RELPERR_BASE + 37	/**< lib user tried to set invalid auth mode */
 
 /* some macros to work with librelp error codes */
 #define CHKRet(code) if((iRet = code) != RELP_RET_OK) goto finalize_it
@@ -176,6 +185,7 @@ relpRetVal relpSrvSetGnuTLSPriString(relpSrv_t *pThis, char *pristr);
 relpRetVal relpSrvSetCACert(relpSrv_t *pThis, char *cert);
 relpRetVal relpSrvSetOwnCert(relpSrv_t *pThis, char *cert);
 relpRetVal relpSrvSetPrivKey(relpSrv_t *pThis, char *cert);
+relpRetVal relpSrvSetAuthMode(relpSrv_t *pThis, char *mode);
 relpRetVal relpSrvAddPermittedPeer(relpSrv_t *pThis, char *peer);
 
 /* exposed relp client functions */

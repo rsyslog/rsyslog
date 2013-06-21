@@ -64,6 +64,7 @@ relpSrvConstruct(relpSrv_t **ppThis, relpEngine_t *pEngine)
 	pThis->ai_family = PF_UNSPEC;
 	pThis->dhBits = DEFAULT_DH_BITS;
 	pThis->pristring = NULL;
+	pThis->authmode = eRelpAuthMode_None;
 	pThis->caCertFile = NULL;
 	pThis->ownCertFile = NULL;
 	pThis->privKey = NULL;
@@ -182,6 +183,25 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 
+/* mode==NULL is valid and means "no change" */
+relpRetVal
+relpSrvSetAuthMode(relpSrv_t *pThis, char *mode)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Srv);
+	if(mode == NULL) 
+		FINALIZE;
+
+	if(!strcasecmp(mode, "fingerprint"))
+		pThis->authmode = eRelpAuthMode_Fingerprint;
+	else if(!strcasecmp(mode, "name"))
+		pThis->authmode = eRelpAuthMode_Name;
+	else
+		ABORT_FINALIZE(RELP_RET_INVLD_AUTH_MD);
+		
+finalize_it:
+	LEAVE_RELPFUNC;
+}
 
 /* set the IPv4/v6 type to be used. Default is both (PF_UNSPEC)
  * rgerhards, 2013-03-15
@@ -297,6 +317,7 @@ relpSrvRun(relpSrv_t *pThis)
 		}
 		relpTcpSetDHBits(pTcp, pThis->dhBits);
 		relpTcpSetGnuTLSPriString(pTcp, pThis->pristring);
+		relpTcpSetAuthMode(pTcp, pThis->authmode);
 		relpTcpSetCACert(pTcp, pThis->caCertFile);
 		relpTcpSetOwnCert(pTcp, pThis->ownCertFile);
 		relpTcpSetPrivKey(pTcp, pThis->privKey);

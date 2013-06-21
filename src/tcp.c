@@ -95,6 +95,7 @@ relpTcpConstruct(relpTcp_t **ppThis, relpEngine_t *pEngine, int connType)
 	pThis->bTLSActive = 0;
 	pThis->dhBits = DEFAULT_DH_BITS;
 	pThis->pristring = NULL;
+	pThis->authmode = eRelpAuthMode_None;
 	pThis->caCertFile = NULL;
 	pThis->ownCertFile = NULL;
 	pThis->privKeyFile = NULL;
@@ -332,6 +333,15 @@ relpTcpSetUsrPtr(relpTcp_t *pThis, void *pUsr)
 }
 
 relpRetVal
+relpTcpSetAuthMode(relpTcp_t *pThis, relpAuthMode_t authmode)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Tcp);
+	pThis->authmode = authmode;
+	LEAVE_RELPFUNC;
+}
+
+relpRetVal
 relpTcpSetGnuTLSPriString(relpTcp_t *pThis, char *pristr)
 {
 	ENTER_RELPFUNC;
@@ -472,6 +482,7 @@ pThis->pEngine->dbgprint("DDDD: gnutls_init %d: %s\n", r, gnutls_strerror(r));
 	gnutls_session_set_ptr(pThis->session, pThis);
 
 	pThis->pristring = strdup(pSrv->pTcp->pristring);
+	pThis->authmode = pSrv->pTcp->authmode;
 	pThis->pUsr = pSrv->pUsr;
 	CHKRet(relpTcpTLSSetPrio(pThis));
 
@@ -581,10 +592,7 @@ GenFingerprintStr(char *pFingerprint, int sizeFingerprint, char *fpBuf)
 	}
 }
 
-
-/* Check the peer's ID in fingerprint auth mode.
- * rgerhards, 2008-05-22
- */
+/* Check the peer's ID in fingerprint auth mode. */
 static int
 relpTcpChkPeerFingerprint(relpTcp_t *pThis, gnutls_x509_crt cert)
 {
@@ -645,18 +653,171 @@ done:
 	return r;
 }
 
+/* Perform a match on ONE peer name obtained from the certificate. This name
+ * is checked against the set of configured credentials. *pbFoundPositiveMatch is
+ * set to 1 if the ID matches. *pbFoundPositiveMatch must have been initialized
+ * to 0 by the caller (this is a performance enhancement as we expect to be
+ * called multiple times).
+ */
+static void
+gtlsChkOnePeerName(relpTcp_t *pThis, char *peername, int *pbFoundPositiveMatch)
+{
+	int i;
+
+	for(i = 0 ; i < pThis->permittedPeers.nmemb ; ++i) {
+		if(!strcmp(peername, pThis->permittedPeers.name[i])) {
+			*pbFoundPositiveMatch = 1;
+			break;
+		}
+	}
+}
+
+/* Obtain the CN from the DN field and hand it back to the caller
+ * (which is responsible for destructing it). We try to follow 
+ * RFC2253 as far as it makes sense for our use-case. This function
+ * is considered a compromise providing good-enough correctness while
+ * limiting code size and complexity. If a problem occurs, we may enhance
+ * this function. A (pointer to a) certificate must be caller-provided.
+ * The buffer for the name (namebuf) must also be caller-provided. A
+ * size of 1024 is most probably sufficien. The
+ * function returns 0 if all went well, something else otherwise.
+ * Note that non-0 is also returned if no CN is found.
+ */
+static int
+gtlsGetCN(gnutls_x509_crt cert, char *namebuf, int lenNamebuf)
+{
+	int r;
+	int gnuRet;
+	int i,j;
+	int bFound;
+	size_t size;
+	char szDN[1024]; /* this should really be large enough for any non-malicious case... */
+
+	size = sizeof(szDN);
+	gnuRet = gnutls_x509_crt_get_dn(cert, (char*)szDN, &size);
+	if(gnuRet != 0) {
+		r = 1; goto done;
+	}
+
+	/* now search for the CN part */
+	i = 0;
+	bFound = 0;
+	while(!bFound && szDN[i] != '\0') {
+		/* note that we do not overrun our string due to boolean shortcut
+		 * operations. If we have '\0', the if does not match and evaluation
+		 * stops. Order of checks is obviously important!
+		 */
+		if(szDN[i] == 'C' && szDN[i+1] == 'N' && szDN[i+2] == '=') {
+			bFound = 1;
+			i += 2;
+		}
+		i++;
+
+	}
+
+	if(!bFound) {
+		r = 1; goto done;
+	}
+
+	/* we found a common name, now extract it */
+	j = 0;
+	while(szDN[i] != '\0' && szDN[i] != ',' && j < lenNamebuf-1) {
+		if(szDN[i] == '\\') {
+			/* hex escapes are not implemented */
+			r = 2; goto done;
+		} else {
+			namebuf[j++] = szDN[i];
+		}
+		++i; /* char processed */
+	}
+	namebuf[j] = '\0';
+
+	/* we got it - we ignore the rest of the DN string (if any). So we may
+	 * not detect if it contains more than one CN
+	 */
+	r = 0;
+
+done:
+	return r;
+}
+
+/* Check the peer's ID in name auth mode. */
+static int
+relpTcpChkPeerName(relpTcp_t *pThis, gnutls_x509_crt cert)
+{
+	int r = 0;
+	int ret;
+	unsigned int status = 0;
+	char cnBuf[1024]; /* this is sufficient for the DNSNAME... */
+	char szAltName[1024]; /* this is sufficient for the DNSNAME... */
+	int iAltName;
+	char allNames[32*1024]; /* for error-reporting */
+	int iAllNames;
+	size_t szAltNameLen;
+	int bFoundPositiveMatch;
+	int gnuRet;
+
+	ret = gnutls_certificate_verify_peers2(pThis->session, &status);
+	pThis->pEngine->dbgprint("DDDD: gnutls_certificate_verify_peers2 returned %d: %s\n", ret, gnutls_strerror(ret));
+	if(ret < 0) {
+		callOnAuthErr(pThis, "", "certificate validation failed",
+			RELP_RET_AUTH_CERT_INVL);
+		r = GNUTLS_E_CERTIFICATE_ERROR; goto done;
+	}
+	if(status != 0) { /* Certificate is not trusted */
+		callOnAuthErr(pThis, "", "certificate validation failed",
+			RELP_RET_AUTH_CERT_INVL);
+		r = GNUTLS_E_CERTIFICATE_ERROR; goto done;
+	}
+
+	bFoundPositiveMatch = 0;
+	iAllNames = 0;
+
+	/* first search through the dNSName subject alt names */
+	iAltName = 0;
+	while(!bFoundPositiveMatch) { /* loop broken below */
+		szAltNameLen = sizeof(szAltName);
+		gnuRet = gnutls_x509_crt_get_subject_alt_name(cert, iAltName,
+				szAltName, &szAltNameLen, NULL);
+		if(gnuRet < 0)
+			break;
+		else if(gnuRet == GNUTLS_SAN_DNSNAME) {
+			pThis->pEngine->dbgprint("librelp: subject alt dnsName: '%s'\n", szAltName);
+			iAllNames += snprintf(allNames+iAllNames, sizeof(allNames)-iAllNames,
+					      "DNSname: %s; ", szAltName);
+			gtlsChkOnePeerName(pThis, szAltName, &bFoundPositiveMatch);
+			/* do NOT break, because there may be multiple dNSName's! */
+		}
+		++iAltName;
+	}
+
+	if(!bFoundPositiveMatch) {
+		/* if we did not succeed so far, we try the CN part of the DN... */
+		if(gtlsGetCN(cert, cnBuf, sizeof(cnBuf)) == 0) {
+			pThis->pEngine->dbgprint("librelp: gtls now checking auth for CN '%s'\n", cnBuf);
+			iAllNames += snprintf(allNames+iAllNames, sizeof(allNames)-iAllNames,
+					      "CN: %s; ", cnBuf);
+			gtlsChkOnePeerName(pThis, cnBuf, &bFoundPositiveMatch);
+		}
+	}
+
+	if(!bFoundPositiveMatch) {
+		callOnAuthErr(pThis, allNames, "no permited name found", RELP_RET_AUTH_ERR_NAME);
+		r = GNUTLS_E_CERTIFICATE_ERROR; goto done;
+	}
+	r = 0;
+done:
+	return r;
+}
+
 /* This function will verify the peer's certificate, and check
  * if the hostname matches, as well as the activation, expiration dates.
  */
 static int
 relpTcpVerifyCertificateCallback(gnutls_session_t session)
 {
-	unsigned int status = 0;
-	relpRetVal relpRet = RELP_RET_OK;
 	int r = 0;
-	int ret, type;
 	relpTcp_t *pThis;
-	gnutls_datum_t out;
 	const gnutls_datum *cert_list;
 	unsigned int list_size = 0;
 	gnutls_x509_crt cert;
@@ -673,8 +834,8 @@ relpTcpVerifyCertificateCallback(gnutls_session_t session)
 	cert_list = gnutls_certificate_get_peers(pThis->session, &list_size);
 
 	if(list_size < 1) {
-		callOnAuthErr(pThis, fpPrintable, "", "peer did not provide a "
-			"certificate", RELP_RET_AUTH_NO_CERT);
+		callOnAuthErr(pThis, "", "peer did not provide a certificate",
+			      RELP_RET_AUTH_NO_CERT);
 		r = GNUTLS_E_CERTIFICATE_ERROR; goto done;
 	}
 
@@ -687,45 +848,13 @@ relpTcpVerifyCertificateCallback(gnutls_session_t session)
 	gnutls_x509_crt_init(&cert);
 	bMustDeinitCert = 1; /* indicate cert is initialized and must be freed on exit */
 	gnutls_x509_crt_import(cert, &cert_list[0], GNUTLS_X509_FMT_DER);
-pThis->pEngine->dbgprint("DDDD: got hold of the cert, on to actual checking...\n");
-	r = relpTcpChkPeerFingerprint(pThis, cert);
+	pThis->pEngine->dbgprint("DDDD: got hold of the cert, on to actual checking...\n");
+	if(pThis->authmode == eRelpAuthMode_Fingerprint) {
+		r = relpTcpChkPeerFingerprint(pThis, cert);
+	} else {
+		r = relpTcpChkPeerName(pThis, cert);
+	}
 	if(r != 0) goto done;
-
-
-char szAltName[1024]; /* this is sufficient for the DNSNAME... */
-int iAltName;
-size_t szAltNameLen;
-szAltNameLen = sizeof(szAltName);
-	gnutls_x509_crt_get_subject_alt_name(cert, 0, szAltName, &szAltNameLen, NULL);
-pThis->pEngine->dbgprint("DDDD: subject alt name is %s'\n", szAltName);
-
-
-#if 0
-  /* This verification function uses the trusted CAs in the credentials
-   * structure. So you must have installed one or more CA certificates.
-   */ ret = gnutls_certificate_verify_peers3 (session, hostname, &status);
-  if (ret < 0)
-    {
-      printf ("Error\n");
-      return GNUTLS_E_CERTIFICATE_ERROR;
-    }
-
-  type = gnutls_certificate_type_get (session);
-
-  ret = gnutls_certificate_verification_status_print( status, type, &out, 0);
-  if (ret < 0)
-    {
-      printf ("Error\n");
-      return GNUTLS_E_CERTIFICATE_ERROR;
-    }
-  
-  printf ("%s", out.data);
-  
-  gnutls_free(out.data);
-
-  if (status != 0) /* Certificate is not trusted */
-      return GNUTLS_E_CERTIFICATE_ERROR;
-#endif
 
 	/* notify gnutls to continue handshake normally */
 	r = 0;
@@ -783,6 +912,8 @@ relpTcpLstnInitTLS(relpTcp_t *pThis)
 			pThis->ownCertFile, pThis->privKeyFile, GNUTLS_X509_FMT_PEM);
 		pThis->pEngine->dbgprint("DDDD: certificate_set_x509_key_file returns %d\n", r);
 		//gnutls_certificate_set_dh_params(pThis->xcred, pThis->dh_params);
+		if(pThis->authmode == eRelpAuthMode_None)
+			pThis->authmode = eRelpAuthMode_Fingerprint;
 		gnutls_certificate_set_verify_function(pThis->xcred, relpTcpVerifyCertificateCallback);
 	}
 
@@ -1060,6 +1191,8 @@ relpTcpConnectTLSInit(relpTcp_t *pThis)
 		}
 		r = gnutls_credentials_set(pThis->session, GNUTLS_CRD_CERTIFICATE, pThis->xcred);
 		pThis->pEngine->dbgprint("DDDD: gnutls_credentials_set(cert) %d: %s\n", r, gnutls_strerror(r));
+		if(pThis->authmode == eRelpAuthMode_None)
+			pThis->authmode = eRelpAuthMode_Fingerprint;
 		gnutls_certificate_set_verify_function(pThis->xcred, relpTcpVerifyCertificateCallback);
 	}
 

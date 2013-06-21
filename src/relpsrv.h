@@ -54,6 +54,7 @@ struct relpSrv_s {
 	char *caCertFile;
 	char *ownCertFile;
 	char *privKey;
+	relpAuthMode_t authmode;
 	relpPermittedPeers_t permittedPeers;
 
 	/* Status of commands as supported in this session. */

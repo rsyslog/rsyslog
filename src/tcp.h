@@ -64,6 +64,7 @@ typedef struct relpTcp_s {
 	uint8_t bIsClient;	/**< set if this belongs to a client, if unset --> server */
 	int dhBits;	/**< number of bits for Diffie-Hellman key */
 	char *pristring; /**< priority string for GnuTLS */
+	relpAuthMode_t authmode;
 	gnutls_anon_client_credentials_t anoncred;	/**< client anon credentials */
 	gnutls_anon_server_credentials_t anoncredSrv;	/**< server anon credentials */
 	relpPermittedPeers_t permittedPeers;
@@ -109,6 +110,7 @@ relpRetVal relpTcpSetPrivKey(relpTcp_t *pThis, char *cert);
 relpRetVal relpTcpSetPermittedPeers(relpTcp_t *pThis, relpPermittedPeers_t *pPeers);
 relpRetVal relpTcpRtryHandshake(relpTcp_t *pThis);
 relpRetVal relpTcpSetUsrPtr(relpTcp_t *pThis, void *pUsr);
+relpRetVal relpTcpSetAuthMode(relpTcp_t *pThis, relpAuthMode_t authmode);
 int relpTcpGetRtryDirection(relpTcp_t *pThis);
 
 #endif /* #ifndef RELPTCP_H_INCLUDED */
