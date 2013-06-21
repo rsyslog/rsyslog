@@ -73,6 +73,7 @@ typedef struct _instanceData {
 	sbool bEnableTLSZip;
 	sbool bHadAuthFail;	/**< set on auth failure, will cause retry to disable action */
 	uchar *pristring;		/* GnuTLS priority string (NULL if not to be provided) */
+	uchar *authmode;
 	uchar *caCertFile;
 	uchar *myCertFile;
 	uchar *myPrivKeyFile;
@@ -99,6 +100,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "tls.cacert", eCmdHdlrString, 0 },
 	{ "tls.mycert", eCmdHdlrString, 0 },
 	{ "tls.myprivkey", eCmdHdlrString, 0 },
+	{ "tls.authmode", eCmdHdlrString, 0 },
 	{ "tls.permittedpeer", eCmdHdlrArray, 0 },
 	{ "port", eCmdHdlrGetWord, 0 },
 	{ "rebindinterval", eCmdHdlrInt, 0 },
@@ -157,6 +159,11 @@ doCreateRelpClient(instanceData *pData)
 		}
 		if(relpCltSetGnuTLSPriString(pData->pRelpClt, (char*) pData->pristring) != RELP_RET_OK)
 			ABORT_FINALIZE(RS_RET_RELP_ERR);
+		if(relpCltSetAuthMode(pData->pRelpClt, (char*) pData->authmode) != RELP_RET_OK) {
+			errmsg.LogError(0, RS_RET_RELP_ERR,
+					"omrelp: invalid auth mode '%s'\n", pData->authmode);
+			ABORT_FINALIZE(RS_RET_RELP_ERR);
+		}
 		if(relpCltSetCACert(pData->pRelpClt, (char*) pData->caCertFile) != RELP_RET_OK)
 			ABORT_FINALIZE(RS_RET_RELP_ERR);
 		if(relpCltSetOwnCert(pData->pRelpClt, (char*) pData->myCertFile) != RELP_RET_OK)
@@ -185,6 +192,7 @@ CODESTARTcreateInstance
 	pData->bEnableTLSZip = DFLT_ENABLE_TLSZIP;
 	pData->bHadAuthFail = 0;
 	pData->pristring = NULL;
+	pData->authmode = NULL;
 	pData->caCertFile = NULL;
 	pData->myCertFile = NULL;
 	pData->myPrivKeyFile = NULL;
@@ -200,6 +208,7 @@ CODESTARTfreeInstance
 	free(pData->port);
 	free(pData->tplName);
 	free(pData->pristring);
+	free(pData->authmode);
 	free(pData->caCertFile);
 	free(pData->myCertFile);
 	free(pData->myPrivKeyFile);
@@ -219,6 +228,7 @@ setInstParamDefaults(instanceData *pData)
 	pData->bEnableTLS = DFLT_ENABLE_TLS;
 	pData->bEnableTLSZip = DFLT_ENABLE_TLSZIP;
 	pData->pristring = NULL;
+	pData->authmode = NULL;
 	pData->caCertFile = NULL;
 	pData->myCertFile = NULL;
 	pData->myPrivKeyFile = NULL;
@@ -262,6 +272,8 @@ CODESTARTnewActInst
 			pData->myCertFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "tls.myprivkey")) {
 			pData->myPrivKeyFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "tls.authmode")) {
+			pData->authmode = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "tls.permittedpeer")) {
 			pData->permittedPeers.nmemb = pvals[i].val.d.ar->nmemb;
 			CHKmalloc(pData->permittedPeers.name =
