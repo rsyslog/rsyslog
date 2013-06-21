@@ -149,7 +149,7 @@ static void
 onAuthErr(void *pUsr, char *authinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode)
 {
 	instanceConf_t *inst = (instanceConf_t*) pUsr;
-	errmsg.LogError(0, NO_ERRCODE, "imrelp[%s]: authentication error '%s', peer "
+	errmsg.LogError(0, RS_RET_RELP_AUTH_FAIL, "imrelp[%s]: authentication error '%s', peer "
 			"is '%s'", inst->pszBindPort, errmesg, authinfo);
 }
 

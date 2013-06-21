@@ -127,6 +127,14 @@ static uchar *getRelpPt(instanceData *pData)
 		return(pData->port);
 }
 
+static void
+onAuthErr(void *pUsr, char *authinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode)
+{
+	instanceData *pData = (instanceData*) pUsr;
+	errmsg.LogError(0, RS_RET_RELP_AUTH_FAIL, "omrelp[%s]: authentication error '%s', peer "
+			"is '%s'", pData->port, errmesg, authinfo);
+}
+
 static inline rsRetVal
 doCreateRelpClient(instanceData *pData)
 {
@@ -135,6 +143,8 @@ doCreateRelpClient(instanceData *pData)
 	if(relpEngineCltConstruct(pRelpEngine, &pData->pRelpClt) != RELP_RET_OK)
 		ABORT_FINALIZE(RS_RET_RELP_ERR);
 	if(relpCltSetTimeout(pData->pRelpClt, pData->timeout) != RELP_RET_OK)
+		ABORT_FINALIZE(RS_RET_RELP_ERR);
+	if(relpCltSetUsrPtr(pData->pRelpClt, pData) != RELP_RET_OK)
 		ABORT_FINALIZE(RS_RET_RELP_ERR);
 	if(pData->bEnableTLS) {
 		if(relpCltEnableTLS(pData->pRelpClt) != RELP_RET_OK)
@@ -165,7 +175,6 @@ dbgprintf("DDDD: omrelp add permitted peer %s\n",(char*)pData->permittedPeers.na
 finalize_it:
 	RETiRet;
 }
-
 
 BEGINcreateInstance
 CODESTARTcreateInstance
@@ -481,6 +490,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	/* create our relp engine */
 	CHKiRet(relpEngineConstruct(&pRelpEngine));
 	CHKiRet(relpEngineSetDbgprint(pRelpEngine, dbgprintf));
+	CHKiRet(relpEngineSetOnAuthErr(pRelpEngine, onAuthErr));
 	CHKiRet(relpEngineSetEnableCmd(pRelpEngine, (uchar*) "syslog", eRelpCmdState_Required));
 
 	/* tell which objects we need */

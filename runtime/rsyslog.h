@@ -416,6 +416,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	/* up to 2350 reserved for 7.4 */
 	RS_RET_QUEUE_CRY_DISK_ONLY = -2351,/**< crypto provider only supported for disk-associated queues */
 	RS_RET_NO_DATA = -2352,/**< file has no data; more a state than a real error */
+	RS_RET_RELP_AUTH_FAIL = -2353,/**< RELP peer authentication failed */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */
