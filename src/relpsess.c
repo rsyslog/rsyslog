@@ -84,6 +84,7 @@ relpSessConstruct(relpSess_t **ppThis, relpEngine_t *pEngine, relpSrv_t *pSrv)
 	pThis->pSrv = pSrv;
 	pThis->txnr = 1; /* txnr start at 1 according to spec */
 	pThis->timeout = 90;
+	pThis->pUsr = NULL;
 	pThis->sizeWindow = RELP_DFLT_WINDOW_SIZE; /* TODO: make configurable */
 	pThis->maxDataSize = RELP_DFLT_MAX_DATA_SIZE;
 	pThis->pristring = NULL;
@@ -784,6 +785,7 @@ relpSessConnect(relpSess_t *pThis, int protFamily, unsigned char *port, unsigned
 	pThis->sessType = eRelpSess_Client;	/* indicate we have a client session */
 
 	CHKRet(relpTcpConstruct(&pThis->pTcp, pThis->pEngine, RELP_CLT_CONN));
+	CHKRet(relpTcpSetUsrPtr(pThis->pTcp, pThis->pUsr));
 	if(pThis->bEnableTLS) {
 		CHKRet(relpTcpEnableTLS(pThis->pTcp));
 		if(pThis->bEnableTLSZip) {
@@ -928,6 +930,15 @@ relpSessEnableTLS(relpSess_t *pThis)
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
 	pThis->bEnableTLS = 1;
+	LEAVE_RELPFUNC;
+}
+
+relpRetVal
+relpSessSetUsrPtr(relpSess_t *pThis, void *pUsr)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Sess);
+	pThis->pUsr = pUsr;
 	LEAVE_RELPFUNC;
 }
 

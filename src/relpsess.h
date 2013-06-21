@@ -70,6 +70,7 @@ struct relpSess_s {
 	BEGIN_RELP_OBJ;
 	relpEngine_t *pEngine;
 	relpSessType_t sessType;	/**< session type: 0 - server, 1 - client */
+	void *pUsr;		/**< user provided pointer (opaque data) */
 	relpTcp_t *pTcp;	/**< our sockt to the remote peer */
 	struct relpFrame_s *pCurrRcvFrame; /**< the current receive frame (a buffer) */
 	relpTxnr_t txnr;	/**< next txnr expected when receiving or to be used when sending */
@@ -150,6 +151,7 @@ relpRetVal relpSessSetOwnCert(relpSess_t *pThis, char *cert);
 relpRetVal relpSessSetPrivKey(relpSess_t *pThis, char *cert);
 relpRetVal relpSessConstructOffers(relpSess_t *pThis, relpOffers_t **ppOffers);
 relpRetVal relpSessSetPermittedPeers(relpSess_t *pThis, relpPermittedPeers_t *pPeers);
+relpRetVal relpSessSetUsrPtr(relpSess_t *pThis, void *pUsr);
 relpRetVal relpSessSendSyslog(relpSess_t *pThis, unsigned char *pMsg, size_t lenMsg);
 relpRetVal relpSessSetEnableCmd(relpSess_t *pThis, unsigned char *pszCmd, relpCmdEnaState_t stateCmd);
 

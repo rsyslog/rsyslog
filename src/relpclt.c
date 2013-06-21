@@ -59,6 +59,7 @@ relpCltConstruct(relpClt_t **ppThis, relpEngine_t *pEngine)
 	RELP_CORE_CONSTRUCTOR(pThis, Clt);
 	pThis->pEngine = pEngine;
 	pThis->timeout = 90; /* 90-second timeout is the default */
+	pThis->pUsr = NULL;
 	pThis->pristring = NULL;
 	pThis->caCertFile = NULL;
 	pThis->ownCertFile = NULL;
@@ -116,6 +117,7 @@ relpCltConnect(relpClt_t *pThis, int protFamily, unsigned char *port, unsigned c
 	CHKRet(relpSessConstruct(&pThis->pSess, pThis->pEngine, NULL));
 	CHKRet(relpSessSetTimeout(pThis->pSess, pThis->timeout));
 	CHKRet(relpSessSetClientIP(pThis->pSess, pThis->clientIP));
+	CHKRet(relpSessSetUsrPtr(pThis->pSess, pThis->pUsr));
 	if(pThis->bEnableTLS) {
 		CHKRet(relpSessEnableTLS(pThis->pSess));
 		if(pThis->bEnableTLSZip) {
@@ -204,6 +206,15 @@ relpCltAddPermittedPeer(relpClt_t *pThis, char *peer)
 	pThis->pEngine->dbgprint("librelp: CLT permitted peer added: '%s'\n", peer);
 
 finalize_it:
+	LEAVE_RELPFUNC;
+}
+
+relpRetVal
+relpCltSetUsrPtr(relpClt_t *pThis, void *pUsr)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Clt);
+	pThis->pUsr = pUsr;
 	LEAVE_RELPFUNC;
 }
 

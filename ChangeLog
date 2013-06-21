@@ -6,7 +6,7 @@ Version 1.1.2 - 2013-06-??
 - add capability to specify number of Diffie-Hellman bits to use
 - API extension: relpSrvSetDHBits, relpSrvSetGnuTLSPriString,
   relpCltSetGnuTLSPriString
-  relpEngineSetOnAuthErr
+  relpEngineSetOnAuthErr, relpCltSetUsrPtr
 ----------------------------------------------------------------------
 Version 1.1.1 - 2013-06-11
 - added compression support for TLS

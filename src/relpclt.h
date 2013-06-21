@@ -40,6 +40,7 @@ struct relpClt_s {
 	BEGIN_RELP_OBJ;
 	relpEngine_t *pEngine;
 	relpSess_t *pSess;	/**< our session (the one and only!) */
+	void *pUsr;		/**< user pointer (opaque data) */
 	int bEnableTLS;		/**< is TLS to be used? */
 	int bEnableTLSZip;	/**< is compression to be used together with TLS? */
 	char *pristring;	/**< priority string for GnuTLS */
