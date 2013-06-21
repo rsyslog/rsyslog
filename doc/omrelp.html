@@ -43,16 +43,25 @@ must be used.
 	typical text-based log records usually compress rather well.
 	</li>
 	<li><b>tls.permittedPeer</b> peer</br>
-	Places access restrictions on this listener. Only peers which
-	have been listed in this parameter may connect. The validation
-	bases on the cerficate the remote peer presents.<br>
+	Places access restrictions on this forwarder. Only peers which
+	have been listed in this parameter may be connected to.
+	This guards against rouge servers and man-in-the-middle
+	attacks. The validation
+	bases on the certficate the remote peer presents.<br>
 	The <i>peer</i> parameter lists permitted certificate
 	fingerprints. Note that it is an array parameter, so either
 	a single or multiple fingerprints can be listed. When a
-	non-permitted peer connects, the refusal is logged together
-	with it's fingerprint. So it the administrator knows this was
+	non-permitted peer is connected to, the refusal is logged together
+	with it's fingerprint. So if the administrator knows this was
 	a valid request, he can simple add the fingerprint by copy and
-	past from the logfile to rsyslog.conf.
+	past from the logfile to rsyslog.conf. It must be noted, though,
+	that this situation should usually not happen after initial
+	client setup and administrators should be alert in this case.
+	<br>Note that usually a single remote peer should be all that
+	is ever needed. Support for multiple peers is primarily included
+	in support of load balancing scenarios. If the connection
+	goes to a specific server, only one specific certificate is ever
+	expected (just like when connecting to a specific ssh server).
 	<br>To specify multiple fingerprints, just enclose them
 	in braces like this:
 	<br>tls.permittedPeer=["SHA1:...1", "SHA1:....2"]

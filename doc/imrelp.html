@@ -59,6 +59,23 @@ to changes/upgrades in GnuTLS (to check at config processing time, we would need
 to hardcode the supported bits and keep them in sync with GnuTLS - this is
 even impossible when custom GnuTLS changes are made...).
 </li>
+<li><b>tls.permittedPeer</b> peer</br>
+Places access restrictions on this listener. Only peers which
+have been listed in this parameter may connect. The validation
+bases on the certificate the remote peer presents.<br>
+The <i>peer</i> parameter lists permitted certificate
+fingerprints. Note that it is an array parameter, so either
+a single or multiple fingerprints can be listed. When a
+non-permitted peer connects, the refusal is logged together
+with it's fingerprint. So if the administrator knows this was
+a valid request, he can simple add the fingerprint by copy and
+past from the logfile to rsyslog.conf.
+<br>To specify multiple fingerprints, just enclose them
+in braces like this:
+<br>tls.permittedPeer=["SHA1:...1", "SHA1:....2"]
+<br>To specify just a single peer, you can either
+specify the string directly or enclose it in braces.
+</li>
 <li><b>tls.prioritystring</b> (not mandatory, string)<br>
 This parameter permits to specify the so-called "priority string" to
 GnuTLS. This string gives complete control over all crypto parameters,
