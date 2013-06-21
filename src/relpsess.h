@@ -87,6 +87,7 @@ struct relpSess_s {
 	char *caCertFile;
 	char *ownCertFile;
 	char *privKeyFile;
+	relpAuthMode_t authmode;
 	relpPermittedPeers_t permittedPeers;
 
 	/* save the following for auto-reconnect case */
@@ -145,6 +146,7 @@ relpRetVal relpSessSetTimeout(relpSess_t *pThis, unsigned timeout);
 relpRetVal relpSessSetClientIP(relpSess_t *pThis, unsigned char *ip);
 relpRetVal relpSessEnableTLS(relpSess_t *pThis);
 relpRetVal relpSessEnableTLSZip(relpSess_t *pThis);
+relpRetVal relpSessSetAuthMode(relpSess_t *pThis, relpAuthMode_t authmode);
 relpRetVal relpSessSetGnuTLSPriString(relpSess_t *pThis, char *pristr);
 relpRetVal relpSessSetCACert(relpSess_t *pThis, char *cert);
 relpRetVal relpSessSetOwnCert(relpSess_t *pThis, char *cert);

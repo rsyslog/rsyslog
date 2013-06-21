@@ -44,6 +44,7 @@ struct relpClt_s {
 	int bEnableTLS;		/**< is TLS to be used? */
 	int bEnableTLSZip;	/**< is compression to be used together with TLS? */
 	char *pristring;	/**< priority string for GnuTLS */
+	relpAuthMode_t authmode;
 	char *caCertFile;
 	char *ownCertFile;
 	char *privKey;

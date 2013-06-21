@@ -199,6 +199,7 @@ relpRetVal relpCltSetGnuTLSPriString(relpClt_t *pThis, char *pristr);
 relpRetVal relpCltSetCACert(relpClt_t *pThis, char *file);
 relpRetVal relpCltSetOwnCert(relpClt_t *pThis, char *file);
 relpRetVal relpCltSetPrivKey(relpClt_t *pThis, char *file);
+relpRetVal relpCltSetAuthMode(relpClt_t *pThis, char *mode);
 relpRetVal relpCltAddPermittedPeer(relpClt_t *pThis, char *peer);
 relpRetVal relpCltSetUsrPtr(relpClt_t *pThis, void *pUsr);
 relpRetVal relpCltReconnect(relpClt_t *pThis);

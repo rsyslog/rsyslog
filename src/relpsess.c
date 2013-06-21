@@ -87,6 +87,7 @@ relpSessConstruct(relpSess_t **ppThis, relpEngine_t *pEngine, relpSrv_t *pSrv)
 	pThis->pUsr = NULL;
 	pThis->sizeWindow = RELP_DFLT_WINDOW_SIZE; /* TODO: make configurable */
 	pThis->maxDataSize = RELP_DFLT_MAX_DATA_SIZE;
+	pThis->authmode = eRelpAuthMode_None;
 	pThis->pristring = NULL;
 	pThis->caCertFile = NULL;
 	pThis->ownCertFile = NULL;
@@ -795,6 +796,7 @@ relpSessConnect(relpSess_t *pThis, int protFamily, unsigned char *port, unsigned
 		CHKRet(relpTcpSetCACert(pThis->pTcp, pThis->caCertFile));
 		CHKRet(relpTcpSetOwnCert(pThis->pTcp, pThis->ownCertFile));
 		CHKRet(relpTcpSetPrivKey(pThis->pTcp, pThis->privKeyFile));
+		CHKRet(relpTcpSetAuthMode(pThis->pTcp, pThis->authmode));
 		CHKRet(relpTcpSetPermittedPeers(pThis->pTcp, &pThis->permittedPeers));
 	}
 	CHKRet(relpTcpConnect(pThis->pTcp, protFamily, port, host, pThis->clientIP));
@@ -939,6 +941,15 @@ relpSessSetUsrPtr(relpSess_t *pThis, void *pUsr)
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
 	pThis->pUsr = pUsr;
+	LEAVE_RELPFUNC;
+}
+
+relpRetVal
+relpSessSetAuthMode(relpSess_t *pThis, relpAuthMode_t authmode)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Sess);
+	pThis->authmode = authmode;
 	LEAVE_RELPFUNC;
 }
 

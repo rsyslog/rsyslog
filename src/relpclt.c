@@ -60,6 +60,7 @@ relpCltConstruct(relpClt_t **ppThis, relpEngine_t *pEngine)
 	pThis->pEngine = pEngine;
 	pThis->timeout = 90; /* 90-second timeout is the default */
 	pThis->pUsr = NULL;
+	pThis->authmode = eRelpAuthMode_None;
 	pThis->pristring = NULL;
 	pThis->caCertFile = NULL;
 	pThis->ownCertFile = NULL;
@@ -127,6 +128,7 @@ relpCltConnect(relpClt_t *pThis, int protFamily, unsigned char *port, unsigned c
 		CHKRet(relpSessSetCACert(pThis->pSess, pThis->caCertFile));
 		CHKRet(relpSessSetOwnCert(pThis->pSess, pThis->ownCertFile));
 		CHKRet(relpSessSetPrivKey(pThis->pSess, pThis->privKey));
+		CHKRet(relpSessSetAuthMode(pThis->pSess, pThis->authmode));
 		CHKRet(relpSessSetPermittedPeers(pThis->pSess, &pThis->permittedPeers));
 	}
 	CHKRet(relpSessConnect(pThis->pSess, protFamily, port, host));
@@ -215,6 +217,26 @@ relpCltSetUsrPtr(relpClt_t *pThis, void *pUsr)
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Clt);
 	pThis->pUsr = pUsr;
+	LEAVE_RELPFUNC;
+}
+
+/* Note: mode==NULL is valid and means "no change" */
+relpRetVal
+relpCltSetAuthMode(relpClt_t *pThis, char *mode)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Clt);
+	if(mode == NULL) 
+		FINALIZE;
+
+	if(!strcasecmp(mode, "fingerprint"))
+		pThis->authmode = eRelpAuthMode_Fingerprint;
+	else if(!strcasecmp(mode, "name"))
+		pThis->authmode = eRelpAuthMode_Name;
+	else
+		ABORT_FINALIZE(RELP_RET_INVLD_AUTH_MD);
+		
+finalize_it:
 	LEAVE_RELPFUNC;
 }
 
