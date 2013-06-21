@@ -158,6 +158,17 @@ relpTcpDestruct(relpTcp_t **ppThis)
 }
 
 
+/* helper to call onAuthErr if set */
+static inline void
+callOnAuthErr(relpTcp_t *pThis, char *authdata, char *emsg, relpRetVal ecode)
+{
+	pThis->pEngine->dbgprint("librelp: auth error: authdata:'%s', ecode %d, "
+		"emsg '%s'\n", authdata, ecode, emsg);
+	if(pThis->pEngine->onAuthErr != NULL) {
+		pThis->pEngine->onAuthErr(pThis->pUsr, authdata, emsg, ecode);
+	}
+}
+
 /* abort a tcp connection. This is much like relpTcpDestruct(), but tries
  * to discard any unsent data. -- rgerhards, 2008-03-24
  */
@@ -629,10 +640,7 @@ pThis->pEngine->dbgprint("DDDD: checking peer '%s','%s'\n", fpPrintable, pThis->
 #endif
 done:
 	if(r != 0) {
-		if(pThis->pEngine->onAuthErr != NULL) {
-			pThis->pEngine->onAuthErr(pThis->pUsr, fpPrintable, 
-				"non-permited fingerprint", RELP_RET_AUTH_ERR_FP);
-		}
+		callOnAuthErr(pThis, fpPrintable, "non-permited fingerprint", RELP_RET_AUTH_ERR_FP);
 	}
 	return r;
 }
@@ -665,8 +673,8 @@ relpTcpVerifyCertificateCallback(gnutls_session_t session)
 	cert_list = gnutls_certificate_get_peers(pThis->session, &list_size);
 
 	if(list_size < 1) {
-		pThis->pEngine->dbgprint("error: peer did not provide a certificate, "
-				"not permitted to talk to it");
+		callOnAuthErr(pThis, fpPrintable, "", "peer did not provide a "
+			"certificate", RELP_RET_AUTH_NO_CERT);
 		r = GNUTLS_E_CERTIFICATE_ERROR; goto done;
 	}
 

@@ -135,6 +135,7 @@ enum relpCmdEnaState_e { /* command enabled state - what are we permitted to do/
 #define RELP_RET_ERR_TLS_SETUP 	RELPERR_BASE + 31	/**< problem during TLS setup */
 #define RELP_RET_INVLD_TLS_PRIO  RELPERR_BASE + 32	/**< TLS setup used invalid TLS priority string */
 #define RELP_RET_AUTH_ERR_FP  RELPERR_BASE + 33		/**< auth failed: non-permitted peer fingerprint */
+#define RELP_RET_AUTH_NO_CERT RELPERR_BASE + 34		/**< auth failed: peer did not present a certificate */
 
 /* some macros to work with librelp error codes */
 #define CHKRet(code) if((iRet = code) != RELP_RET_OK) goto finalize_it
