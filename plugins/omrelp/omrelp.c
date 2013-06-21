@@ -71,6 +71,7 @@ typedef struct _instanceData {
 	relpClt_t *pRelpClt; /* relp client for this instance */
 	sbool bEnableTLS;
 	sbool bEnableTLSZip;
+	sbool bHadAuthFail;	/**< set on auth failure, will cause retry to disable action */
 	uchar *pristring;		/* GnuTLS priority string (NULL if not to be provided) */
 	uchar *caCertFile;
 	uchar *myCertFile;
@@ -131,8 +132,9 @@ static void
 onAuthErr(void *pUsr, char *authinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode)
 {
 	instanceData *pData = (instanceData*) pUsr;
-	errmsg.LogError(0, RS_RET_RELP_AUTH_FAIL, "omrelp[%s]: authentication error '%s', peer "
-			"is '%s'", pData->port, errmesg, authinfo);
+	errmsg.LogError(0, RS_RET_RELP_AUTH_FAIL, "omrelp[%s:%s]: authentication error '%s', peer "
+			"is '%s' - DISABLING action", pData->target, pData->port, errmesg, authinfo);
+	pData->bHadAuthFail = 1;
 }
 
 static inline rsRetVal
@@ -162,7 +164,6 @@ doCreateRelpClient(instanceData *pData)
 		if(relpCltSetPrivKey(pData->pRelpClt, (char*) pData->myPrivKeyFile) != RELP_RET_OK)
 			ABORT_FINALIZE(RS_RET_RELP_ERR);
 		for(i = 0 ; i <  pData->permittedPeers.nmemb ; ++i) {
-dbgprintf("DDDD: omrelp add permitted peer %s\n",(char*)pData->permittedPeers.name[i]);
 			relpCltAddPermittedPeer(pData->pRelpClt, (char*)pData->permittedPeers.name[i]);
 		}
 	}
@@ -182,6 +183,7 @@ CODESTARTcreateInstance
 	pData->rebindInterval = 0;
 	pData->bEnableTLS = DFLT_ENABLE_TLS;
 	pData->bEnableTLSZip = DFLT_ENABLE_TLSZIP;
+	pData->bHadAuthFail = 0;
 	pData->pristring = NULL;
 	pData->caCertFile = NULL;
 	pData->myCertFile = NULL;
@@ -332,7 +334,11 @@ static rsRetVal doConnect(instanceData *pData)
 
 BEGINtryResume
 CODESTARTtryResume
+	if(pData->bHadAuthFail) {
+		ABORT_FINALIZE(RS_RET_DISABLE_ACTION);
+	}
 	iRet = doConnect(pData);
+finalize_it:
 ENDtryResume
 
 static inline rsRetVal
@@ -378,6 +384,8 @@ CODESTARTdoAction
 	   	doRebind(pData);
 	}
 finalize_it:
+	if(pData->bHadAuthFail)
+		iRet = RS_RET_DISABLE_ACTION;
 ENDdoAction
 
 
@@ -497,6 +505,3 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 ENDmodInit
-
-/* vim:set ai:
- */
