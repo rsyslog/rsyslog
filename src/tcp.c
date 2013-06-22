@@ -623,29 +623,6 @@ pThis->pEngine->dbgprint("DDDD: checking peer '%s','%s'\n", fpPrintable, pThis->
 	if(!found) {
 		r = GNUTLS_E_CERTIFICATE_ERROR; goto done;
 	}
-#if 0
-	/* now search through the permitted peers to see if we can find a permitted one */
-	bFoundPositiveMatch = 0;
-	pPeer = pThis->pPermPeers;
-	while(pPeer != NULL && !bFoundPositiveMatch) {
-		if(!rsCStrSzStrCmp(pstrFingerprint, pPeer->pszID, strlen((char*) pPeer->pszID))) {
-			bFoundPositiveMatch = 1;
-		} else {
-			pPeer = pPeer->pNext;
-		}
-	}
-
-	if(!bFoundPositiveMatch) {
-		dbgprintf("invalid peer fingerprint, not permitted to talk to it\n");
-		if(pThis->bReportAuthErr == 1) {
-			errno = 0;
-			errmsg.LogError(0, RS_RET_INVALID_FINGERPRINT, "error: peer fingerprint '%s' unknown - we are "
-					"not permitted to talk to it", cstrGetSzStr(pstrFingerprint));
-			pThis->bReportAuthErr = 0;
-		}
-		ABORT_FINALIZE(RS_RET_INVALID_FINGERPRINT);
-	}
-#endif
 done:
 	if(r != 0) {
 		callOnAuthErr(pThis, fpPrintable, "non-permited fingerprint", RELP_RET_AUTH_ERR_FP);
@@ -824,7 +801,6 @@ relpTcpVerifyCertificateCallback(gnutls_session_t session)
 	int bMustDeinitCert = 0;
 
 	pThis = (relpTcp_t*) gnutls_session_get_ptr(session);
-	pThis->pEngine->dbgprint("DDDD: in cert verify function (server)\n");
 
 	/* This function only works for X.509 certificates.  */
 	if(gnutls_certificate_type_get(session) != GNUTLS_CRT_X509) {
@@ -848,7 +824,6 @@ relpTcpVerifyCertificateCallback(gnutls_session_t session)
 	gnutls_x509_crt_init(&cert);
 	bMustDeinitCert = 1; /* indicate cert is initialized and must be freed on exit */
 	gnutls_x509_crt_import(cert, &cert_list[0], GNUTLS_X509_FMT_DER);
-	pThis->pEngine->dbgprint("DDDD: got hold of the cert, on to actual checking...\n");
 	if(pThis->authmode == eRelpAuthMode_Fingerprint) {
 		r = relpTcpChkPeerFingerprint(pThis, cert);
 	} else {
@@ -917,7 +892,6 @@ relpTcpLstnInitTLS(relpTcp_t *pThis)
 		gnutls_certificate_set_verify_function(pThis->xcred, relpTcpVerifyCertificateCallback);
 	}
 
-	pThis->pEngine->dbgprint("DDDD: done Lstn  InitTLS\n");
 	LEAVE_RELPFUNC;
 }
 
