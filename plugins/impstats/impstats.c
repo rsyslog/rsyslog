@@ -29,6 +29,10 @@
 #include <pthread.h>
 #include <fcntl.h>
 #include <sys/uio.h>
+#if defined(__FreeBSD__)
+#include <sys/stat.h>
+#endif
+
 #include "dirty.h"
 #include "cfsysline.h"
 #include "module-template.h"

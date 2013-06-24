@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------
+Version 7.4.2  [v7.4-stable] 2013-06-??
+- solved build problems on FreeBSD
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=458
+  Thanks to Christiano for reproting and suggesting patches
+---------------------------------------------------------------------------
 Version 7.4.1  [v7.4-stable] 2013-06-17
 - imjournal: add ratelimiting capability
   The original imjournal code did not support ratelimiting at all. We
