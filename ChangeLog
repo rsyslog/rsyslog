@@ -1,13 +1,14 @@
 ----------------------------------------------------------------------
-Version 1.1.2 - 2013-06-??
+Version 1.1.2 - 2013-06-24
 - add capability to specify the GnuTLS priority string
   This gives callers complete control over crypto parameters, like
   ciphers to use.
+- add certificate-based authentication
 - add capability to specify number of Diffie-Hellman bits to use
 - API extension: relpSrvSetDHBits, relpSrvSetGnuTLSPriString,
-  relpCltSetGnuTLSPriString
+  relpSrvSetGnuTLSPriString, relpCltSetGnuTLSPriString
   relpEngineSetOnAuthErr, relpCltSetUsrPtr,
-  relpSrvSetAuthMode
+  relpSrvSetAuthMode, relpCltSetAuthMode
 ----------------------------------------------------------------------
 Version 1.1.1 - 2013-06-11
 - added compression support for TLS
