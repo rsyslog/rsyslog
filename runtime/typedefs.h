@@ -3,7 +3,7 @@
  *
  * Begun 2010-11-25 RGerhards
  *
- * Copyright (C) 2005-2008 by Rainer Gerhards and Adiscon GmbH
+ * Copyright (C) 2005-2013 by Rainer Gerhards and Adiscon GmbH
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -147,6 +147,10 @@ typedef enum {
 	FIOP_EREREGEX = 5,	/* matches a ERE regular expression? */
 	FIOP_ISEMPTY = 6	/* string empty <=> strlen(s) == 0 ?*/
 } fiop_t;
+
+#if defined(__FreeBSD__)
+	typedef off_t off64_t;
+#endif
 
 /* types of configuration handlers
  */

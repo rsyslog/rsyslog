@@ -1,4 +1,3 @@
----------------------------------------------------------------------------
 Version 7.5.1 [devel] 2013-06-??
 - add mmfields, which among others supports easy parsing of CEF messages
 - omrelp:
@@ -19,6 +18,7 @@ Version 7.5.1 [devel] 2013-06-??
   * "bsd_security" - this is called "security" under BSD, but that name
     was unfortunately already taken by some standard facility. So I 
     did the (hopefully) second-best thing and renamed it a little.
+- imported fixes from 7.4.2 (especially build problems on FreeBSD)
 ---------------------------------------------------------------------------
 Version 7.5.0 [devel] 2013-06-11
 - imrelp: implement "ruleset" module parameter
@@ -27,6 +27,13 @@ Version 7.5.0 [devel] 2013-06-11
 - add -S command line option to specify IP address to use for RELP client
   connections
   Thanks to Axel Rau for the patch.
+---------------------------------------------------------------------------
+Version 7.4.2  [v7.4-stable] 2013-06-??
+- bugfix: small memory leak when $uptime property was used
+- solved build problems on FreeBSD
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=457
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=458
+  Thanks to Christiano for reproting and suggesting patches
 ---------------------------------------------------------------------------
 Version 7.4.1  [v7.4-stable] 2013-06-17
 - imjournal: add ratelimiting capability
