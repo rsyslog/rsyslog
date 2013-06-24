@@ -2989,15 +2989,39 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			break;
 		case PROP_SYS_UPTIME:
 #			ifndef HAVE_SYSINFO_UPTIME
-            /* An alternative on some systems (eg Solaris) is to scan
-             * /var/adm/utmpx for last boot time.
-             */
+			/* An alternative on some systems (eg Solaris) is to scan
+			* /var/adm/utmpx for last boot time.
+			*/
 			pRes = (uchar*) "UPTIME NOT available on this system";
 			*pbMustBeFreed = 0;
+
+#			elseif defined(__FreeBSD__)
+
+			{
+			struct timespec tp;
+
+			if(*pbMustBeFreed == 1)
+				free(pRes);
+			if((pRes = (uchar*) MALLOC(sizeof(uchar) * 32)) == NULL) {
+				RET_OUT_OF_MEMORY;
+			}
+			*pbMustBeFreed = 1;
+ 
+			if(clock_gettime(CLOCK_UPTIME, &tp) == -1) {
+ 				*pPropLen = sizeof("**SYSCALL FAILED**") - 1;
+ 				return(UCHAR_CONSTANT("**SYSCALL FAILED**"));
+ 			}
+ 
+			snprintf((char*) pRes, sizeof(uchar) * 32, "%ld", tp.tv_sec);
+ 			}
+
 #			else
+
 			{
 			struct sysinfo s_info;
 
+			if(*pbMustBeFreed == 1)
+				free(pRes);
 			if((pRes = (uchar*) MALLOC(sizeof(uchar) * 32)) == NULL) {
 				RET_OUT_OF_MEMORY;
 			}
