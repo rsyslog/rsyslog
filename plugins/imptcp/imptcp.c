@@ -1419,10 +1419,7 @@ BEGINnewInpInst
 CODESTARTnewInpInst
 	DBGPRINTF("newInpInst (imptcp)\n");
 
-	pvals = nvlstGetParams(lst, &inppblk, NULL);
-	if(pvals == NULL) {
-		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS,
-			        "imptcp: required parameter are missing\n");
+	if((pvals = nvlstGetParams(lst, &inppblk, NULL)) == NULL) {
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
 
