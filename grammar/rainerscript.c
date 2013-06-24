@@ -938,8 +938,14 @@ nvlstGetParams(struct nvlst *lst, struct cnfparamblk *params,
 
 	for(i = 0 ; i < params->nParams ; ++i) {
 		param = params->descr + i;
-		if((valnode = nvlstFindNameCStr(lst, param->name)) == NULL)
+		if((valnode = nvlstFindNameCStr(lst, param->name)) == NULL) {
+			if(param->flags & CNFPARAM_REQUIRED) {
+				parser_errmsg("parameter '%s' required but not specified - "
+				  "fix config", param->name);
+				bInError = 1;
+			}
 			continue;
+		}
 		if(vals[i].bUsed) {
 			parser_errmsg("parameter '%s' specified more than once - "
 			  "one instance is ignored. Fix config", param->name);
@@ -949,7 +955,6 @@ nvlstGetParams(struct nvlst *lst, struct cnfparamblk *params,
 			bInError = 1;
 		}
 	}
-
 
 	if(bInError) {
 		if(bValsWasNULL)
@@ -3444,6 +3449,8 @@ void
 cnfparamvalsDestruct(struct cnfparamvals *paramvals, struct cnfparamblk *blk)
 {
 	int i;
+	if(paramvals == NULL)
+		return;
 	for(i = 0 ; i < blk->nParams ; ++i) {
 		if(paramvals[i].bUsed) {
 			varDelete(&paramvals[i].val);

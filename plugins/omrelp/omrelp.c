@@ -105,7 +105,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "port", eCmdHdlrGetWord, 0 },
 	{ "rebindinterval", eCmdHdlrInt, 0 },
 	{ "timeout", eCmdHdlrInt, 0 },
-	{ "template", eCmdHdlrGetWord, 1 }
+	{ "template", eCmdHdlrGetWord, 0 }
 };
 static struct cnfparamblk actpblk =
 	{ CNFPARAMBLK_VERSION,
