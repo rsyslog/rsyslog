@@ -53,6 +53,7 @@ DEF_OMOD_STATIC_DATA
 #define REWRITE_MODE 1	 /* rewrite IP address, canoninized */
 typedef struct _instanceData {
 	char separator;
+	uchar *jsonRoot;	/**< container where to store fields */
 } instanceData;
 
 struct modConfData_s {
@@ -65,7 +66,8 @@ static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current ex
 /* tables for interfacing with the v6 config system */
 /* action (instance) parameters */
 static struct cnfparamdescr actpdescr[] = {
-	{ "separator", eCmdHdlrGetChar, 0 }
+	{ "separator", eCmdHdlrGetChar, 0 },
+	{ "jsonroot", eCmdHdlrString, 0 }
 };
 static struct cnfparamblk actpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -109,6 +111,7 @@ ENDisCompatibleWithFeature
 
 BEGINfreeInstance
 CODESTARTfreeInstance
+	free(pData->jsonRoot);
 ENDfreeInstance
 
 
@@ -116,6 +119,7 @@ static inline void
 setInstParamDefaults(instanceData *pData)
 {
 	pData->separator = ',';
+	pData->jsonRoot = NULL;
 }
 
 BEGINnewActInst
@@ -137,10 +141,15 @@ CODESTARTnewActInst
 			continue;
 		if(!strcmp(actpblk.descr[i].name, "separator")) {
 			pData->separator = es_getBufAddr(pvals[i].val.d.estr)[0];
+		} else if(!strcmp(actpblk.descr[i].name, "jsonroot")) {
+			pData->jsonRoot = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else {
 			dbgprintf("mmfields: program error, non-handled "
 			  "param '%s'\n", actpblk.descr[i].name);
 		}
+	}
+	if(pData->jsonRoot == NULL) {
+		CHKmalloc(pData->jsonRoot = (uchar*) strdup("!"));
 	}
 
 CODE_STD_FINALIZERnewActInst
@@ -203,13 +212,13 @@ parse_fields(instanceData *pData, msg_t *pMsg, uchar *msgtext, int lenMsg)
 	while(currIdx < lenMsg) {
 		CHKiRet(extractField(pData, msgtext, lenMsg, &currIdx, buf));
 		DBGPRINTF("mmfields: field %d: '%s'\n", field, buf);
-		snprintf(fieldname, sizeof(fieldname), "f%d", (char*)field);
+		snprintf((char*)fieldname, sizeof(fieldname), "f%d", field);
 		fieldname[sizeof(fieldname)-1] = '\0';
 		jval = json_object_new_string((char*)fieldbuf);
 		json_object_object_add(json, (char*)fieldname, jval);
 		field++;
 	}
- 	msgAddJSON(pMsg, (uchar*)"!", json);
+ 	msgAddJSON(pMsg, pData->jsonRoot, json);
 finalize_it:
 	RETiRet;
 }

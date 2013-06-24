@@ -51,20 +51,31 @@ functionality only if there is a real use case behind the request
 (in the past we too-often implemented things that actually never got used).
 <br>The fields are named f<i>nbr</i>, where <i>nbr</i> is the field number
 starting with one and being incremented for each field.
+<li><b>jsonRoot</b> - path (default "!")<br>
+This parameters specifies into which json path the extracted fields shall
+be written. The default is to use the json root object itself.
 </ul>
 
 <p><b>Caveats/Known Bugs:</b>
 <ul>
-<li>Currently, all fields are written directly into the Lumberjack root. The
-default separator character of comma is being used.
+<li>Currently none.
 </ul>
 
 <p><b>Samples:</b></p>
 <p>This is a very simple use case where each message is
-parsed.
+parsed. The default separator character of comma is being used.
 <p><textarea rows="5" cols="60">module(load="mmfields")
-template(name="ftpl" type=string string="%$!all-json")
+template(name="ftpl" type=string string="%$!%\n")
 action(type="omfields")
+action(type="omfile" file="/path/to/logfile" template="ftpl")
+</textarea>
+
+<p>The following sample is similar to the previous one, but
+this time the colon is used as separator and data is written
+into the "$!mmfields" json path.
+<p><textarea rows="5" cols="60">module(load="mmfields")
+template(name="ftpl" type=string string="%$!%\n")
+action(type="omfields" separator=":" jsonRoot="!mmfields")
 action(type="omfile" file="/path/to/logfile" template="ftpl")
 </textarea>
 
