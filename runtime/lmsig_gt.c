@@ -89,7 +89,11 @@ SetCnfParam(void *pT, struct nvlst *lst)
 	int i;
 	uchar *cstr;
 	struct cnfparamvals *pvals;
+	DEFiRet;
 	pvals = nvlstGetParams(lst, &pblk, NULL);
+	if(pvals == NULL) {
+		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
 	if(Debug) {
 		dbgprintf("sig param blk in lmsig_gt:\n");
 		cnfparamsPrint(&pblk, pvals);
@@ -120,8 +124,10 @@ SetCnfParam(void *pT, struct nvlst *lst)
 			  "param '%s'\n", pblk.descr[i].name);
 		}
 	}
-	cnfparamvalsDestruct(pvals, &pblk);
-	return RS_RET_OK;
+finalize_it:
+	if(pvals != NULL)
+		cnfparamvalsDestruct(pvals, &pblk);
+	RETiRet;
 }
 
 

@@ -35,6 +35,9 @@ Version 7.4.2  [v7.4-stable] 2013-06-??
 - bugfix: small memory leak when $uptime property was used
 - bugfix: potential segfault on rsyslog termination in imudp
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=456
+- bugfix: lmsig_gt abort on invalid configuration parameters
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=448
+  Thanks to Risto Laanoja for the patch.
 - imtcp: fix typo in "listner" parameter, which is "listener"
   Currently, both names are accepted.
 - solved build problems on FreeBSD
