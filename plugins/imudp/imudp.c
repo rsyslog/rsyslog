@@ -869,7 +869,7 @@ CODESTARTactivateCnfPrePrivDrop
 	for(inst = runModConf->root ; inst != NULL ; inst = inst->next) {
 		addListner(inst);
 	}
-	/* if we could not set up any listners, there is no point in running... */
+	/* if we could not set up any listeners, there is no point in running... */
 	if(lcnfRoot == NULL) {
 		errmsg.LogError(0, NO_ERRCODE, "imudp: no listeners could be started, "
 				"input not activated.\n");

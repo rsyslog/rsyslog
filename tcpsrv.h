@@ -63,9 +63,9 @@ struct tcpsrv_s {
 	sbool bUsingEPoll;	/**< are we in epoll mode (means we do not need to keep track of sessions!) */
 	sbool bUseFlowControl;	/**< use flow control (make light delayable) */
 	int iLstnCurr;		/**< max nbr of listeners currently supported */
-	netstrm_t **ppLstn;	/**< our netstream listners */
+	netstrm_t **ppLstn;	/**< our netstream listeners */
 	tcpLstnPortList_t **ppLstnPort; /**< pointer to relevant listen port description */
-	int iLstnMax;		/**< max number of listners supported */
+	int iLstnMax;		/**< max number of listeners supported */
 	int iSessMax;		/**< max number of sessions supported */
 	tcpLstnPortList_t *pLstnPorts;	/**< head pointer for listen ports */
 
