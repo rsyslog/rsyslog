@@ -216,6 +216,9 @@ createInstance(instanceConf_t **pinst)
 	inst->pristring = NULL;
 	inst->authmode = NULL;
 	inst->permittedPeers.nmemb = 0;
+	inst->caCertFile = NULL;
+	inst->myCertFile = NULL;
+	inst->myPrivKeyFile = NULL;
 
 	/* node created, let's add to config */
 	if(loadModConf->tail == NULL) {
