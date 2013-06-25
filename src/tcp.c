@@ -142,6 +142,7 @@ relpTcpDestruct(relpTcp_t **ppThis)
 			gnuRet = gnutls_bye(pThis->session, GNUTLS_SHUT_RDWR);
 		}
 		gnutls_deinit(pThis->session);
+pThis->pEngine->dbgprint("DDDD: gnutls_deinit done %p\n", pThis->session);
 	}
 
 	relpTcpFreePermittedPeers(pThis);
@@ -479,7 +480,7 @@ relpTcpAcceptConnReqInitTLS(relpTcp_t *pThis, relpSrv_t *pSrv)
 	ENTER_RELPFUNC;
 
 	r = gnutls_init(&pThis->session, GNUTLS_SERVER);
-pThis->pEngine->dbgprint("DDDD: gnutls_init %d: %s\n", r, gnutls_strerror(r));
+pThis->pEngine->dbgprint("DDDD: gnutls_init[%p] %d: %s\n", pThis->session, r, gnutls_strerror(r));
 	gnutls_session_set_ptr(pThis->session, pThis);
 
 	if(pSrv->pTcp->pristring != NULL)
@@ -1136,7 +1137,7 @@ relpTcpConnectTLSInit(relpTcp_t *pThis)
 		called_gnutls_global_init = 1;
 	}
 	r = gnutls_init(&pThis->session, GNUTLS_CLIENT);
-	pThis->pEngine->dbgprint("DDDD: gnutls_init: %d\n", r);
+	pThis->pEngine->dbgprint("DDDD: gnutls_init[%p]: %d\n", pThis->session, r);
 
 	gnutls_session_set_ptr(pThis->session, pThis);
 	CHKRet(relpTcpTLSSetPrio(pThis));
