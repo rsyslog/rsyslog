@@ -286,6 +286,7 @@ DISTCHECK_CONFIGURE_FLAGS=	--enable-gssapi_krb5 \
 				--enable-pmsnare \
 				--enable-mmsnmptrapd \
 				--enable-elasticsearch \
+				--enable-valgrind \
 				--with-systemdsystemunitdir=$$dc_install_base/$(systemdsystemunitdir) 
 # temporarily disable these checks for make distcheck 2012-09-06 rgerhards
 #				--enable-extended-tests \
