@@ -38,6 +38,7 @@
 #include <netdb.h>
 #include <fcntl.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
@@ -1210,6 +1211,7 @@ relpTcpConnect(relpTcp_t *pThis, int family, unsigned char *port, unsigned char 
 	struct addrinfo *res = NULL;
 	struct addrinfo hints;
 	struct addrinfo *reslocal = NULL;
+	int on = 1;
 
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Tcp);
@@ -1228,6 +1230,13 @@ relpTcpConnect(relpTcp_t *pThis, int family, unsigned char *port, unsigned char 
 	if((pThis->sock = socket(res->ai_family, res->ai_socktype, res->ai_protocol)) == -1) {
 		ABORT_FINALIZE(RELP_RET_IO_ERR);
 	}
+	/* we set the cork option as performance testing has shown this results
+	 * in 50 to 100% more performance. In the longer term, we should consider
+	 * putting messages into a buffer, which then is sent as whole. Much like
+	 * CORK, but under better control (especially without 200ms timeout!).
+	 * rgerhards, 2013-06-25
+	 */
+	setsockopt (pThis->sock, SOL_TCP, TCP_CORK, &on, sizeof (on));
 
 	if(clientIP != NULL) {
 		if(getaddrinfo((char*)clientIP, (char*)NULL, &hints, &reslocal) != 0) {
