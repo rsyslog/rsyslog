@@ -109,6 +109,7 @@ case $1 in
 		   echo Shutting down instance 2
 		fi
    		$srcdir/diag.sh wait-queueempty $2
+		./msleep 100 # wait 100 milliseconds
 		kill `cat rsyslog$2.pid`
 		# note: we do not wait for the actual termination!
 		;;
