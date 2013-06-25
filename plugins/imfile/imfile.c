@@ -596,7 +596,7 @@ CODESTARTactivateCnf
 	for(inst = runModConf->root ; inst != NULL ; inst = inst->next) {
 		addListner(inst);
 	}
-	/* if we could not set up any listners, there is no point in running... */
+	/* if we could not set up any listeners, there is no point in running... */
 	if(iFilPtr == 0) {
 		errmsg.LogError(0, NO_ERRCODE, "imfile: no file monitors could be started, "
 				"input not activated.\n");

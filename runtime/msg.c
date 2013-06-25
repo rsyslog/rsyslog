@@ -2995,7 +2995,7 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			pRes = (uchar*) "UPTIME NOT available on this system";
 			*pbMustBeFreed = 0;
 
-#			elseif defined(__FreeBSD__)
+#			elif defined(__FreeBSD__)
 
 			{
 			struct timespec tp;
