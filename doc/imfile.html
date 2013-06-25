@@ -1,218 +1,156 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
-<html><head>
-<meta http-equiv="Content-Language" content="en"><title>Text File Input Monitor</title></head>
-<body>
-<a href="rsyslog_conf_modules.html">back</a>
-
-<h1>Text File Input Module</h1>
-<p><b>Module Name:&nbsp;&nbsp;&nbsp; imfile</b></p>
-<p><b>Author: </b>Rainer Gerhards
-&lt;rgerhards@adiscon.com&gt;</p>
-<p><b>Description</b>:</p>
-<p>Provides the ability to convert any standard text file into
-a syslog message. A standard
-text file is a file consisting of printable characters with lines
-being&nbsp;delimited by LF.</p>
-<p>The file is read line-by-line and any line read is passed to
-rsyslog's rule engine. The rule engine applies filter conditons and
-selects which actions needs to be carried out. Empty lines are <b>not</b>
-processed, as they would result in empty syslog records. They are simply
-ignored.</p>
-<p>As new lines are written they are taken from the file and
-processed. Please note that this happens based on a polling interval
-and not immediately. The file monitor support file rotation. To fully
-work, rsyslogd must run while the file is rotated. Then, any remaining
-lines from the old file are read and processed and when done with that,
-the new file is being processed from the beginning. If rsyslogd is
-stopped during rotation, the new file is read, but any not-yet-reported
-lines from the previous file can no longer be obtained.</p>
-<p>When rsyslogd is stopped while monitoring a text file, it
-records the last processed location and continues to work from there
-upon restart. So no data is lost during a restart (except, as noted
-above, if the file is rotated just in this very moment).</p>
-<p>Currently, the file must have a fixed name and location
-(directory). It is planned to add support for dynamically generating
-file names in the future.</p>
-<p>Multiple files may be monitored by specifying
-$InputRunFileMonitor multiple times.
-</p>
-
-<p><b>Configuration Directives</b>:</p>
-<p><b>Module Directives</b></p>
-<ul>
-<li><span style="font-weight: bold;">PollingInterval
-seconds</span><br>
-This is a global setting. It specifies how often files are to be polled
-for new data. The time specified is in seconds. The <span style="font-weight: bold;">default value</span> is 10
-seconds. Please note that future
-releases of imfile may support per-file polling intervals, but
-currently this is not the case. If multiple PollingInterval
-statements are present in rsyslog.conf, only the last one is used.<br>
-A short poll interval provides more rapid message forwarding, but
-requires more system ressources. While it is possible, we stongly
-recommend not to set the polling interval to 0 seconds. That will make
-rsyslogd become a CPU hog, taking up considerable ressources. It is
-supported, however, for the few very unusual situations where this
-level may be needed. Even if you need quick response, 1 seconds should
-be well enough. Please note that imfile keeps reading files as long as
-there is any data in them. So a "polling sleep" will only happen when
-nothing is left to be processed.</li>
-</ul>
-
-<p><b>Action Directives</b></p>
-<ul>
-<li><strong>File&nbsp;/path/to/file</strong><br>
-The file being monitored. So far, this must be an absolute name (no
-macros or templates)</li>
-<li><span style="font-weight: bold;">Tag
-tag:</span><br>
-The tag to be used for messages that originate from this file. If you
-would like to see the colon after the tag, you need to specify it here
-(as shown above).</li>
-<li><span style="font-weight: bold;">StateFile
-&lt;name-of-state-file&gt;</span><br>
-Rsyslog must keep track of which parts of the to be monitored file it
-already processed. This is done in the state file. This file always is
-created in the rsyslog working directory (configurable via
-$WorkDirectory). Be careful to use unique names for different files
-being monitored. If there are duplicates, all sorts of "interesting"
-things may happen. Rsyslog currently does not check if a name is
-specified multiple times.
-Note that when $WorkDirectory is not set or set to a non-writable
-location, the state file will not be generated.</li>
-<li><span style="font-weight: bold;">Facility
-facility</span><br>
-The syslog facility to be assigned to lines read. Can be specified in
-textual form (e.g. "local0", "local1", ...) or as numbers (e.g. 128 for
-"local0"). Textual form is suggested. <span style="font-weight: bold;">Default</span> &nbsp;is
-"local0".<span style="font-weight: bold;"></span></li>
-<li><span style="font-weight: bold;">Severity</span><br>
-The
-syslog severity to be assigned to lines read. Can be specified in
-textual form (e.g. "info", "warning", ...) or as numbers (e.g. 4 for
-"info"). Textual form is suggested. <span style="font-weight: bold;">Default</span>
-is "notice".</li>
-<li><b>PersistStateInterval</b> [lines]</b><br>
-Specifies how often the state file shall be written when processing the input
-file. The default value is 0, which means a new state file is only written when 
-the monitored files is being closed (end of rsyslogd execution). Any other
-value n means that the state file is written every time n file lines have
-been processed. This setting can be used to guard against message duplication due
-to fatal errors (like power fail). Note that this setting affects imfile
-performance, especially when set to a low value. Frequently writing the state
-file is very time consuming.
-<li><b>ReadMode</b> [mode]</b><br>
-This mode should defined when having multiline messages. The value can range from 0-2 and determines the multiline detection method.
-<br>0 (default) - line based (Each line is a new message)
-<br>1 - paragraph (There is a blank line between log messages)
-<br>2 - indented (New log messages start at the beginning of a line. If a line starts with a space it is part of the log message before it)
-<li><b>MaxLinesAtOnce</b> [number]</b>
-<br>
-This is useful if multiple files need to be monitored. If set to 0, each file
-will be fully processed and then processing switches to the next file
-(this was the default in previous versions). If it is set, a maximum of
-[number] lines is processed in sequence for each file, and then the file is
-switched. This provides a kind of mutiplexing the load of multiple files and
-probably leads to a more natural distribution of events when multiple busy files
-are monitored. The default is 1024.
-<li><b>MaxSubmitAtOnce</b> [number]</b>
-<br>
-This is an expert option. It can be used to set the maximum input batch size that 
-imfile can generate. The default is 1024, which is suitable for a wide range of 
-applications. Be sure to understand rsyslog message batch processing before you 
-modify this option. If you do not know what this doc here talks about, this is a 
-good indication that you should NOT modify the default.
-<li><b>Ruleset</b> &lt;ruleset&gt;
-Binds the listener to a specific <a href="multi_ruleset.html">ruleset</a>.</li>
-</ul>
-<b>Caveats/Known Bugs:</b>
-<p>So far, only 100 files can be monitored. If more are needed,
-the source needs to be patched. See define MAX_INPUT_FILES in imfile.c</p><p>Powertop
-users may want to notice that imfile utilizes polling. Thus, it is no
-good citizen when it comes to conserving system power consumption. We
-are currently evaluating to move to inotify(). However, there are a
-number of subtle issues, which needs to be worked out first. We will
-make the change as soon as we can. If you can afford it, we recommend
-using a long polling interval in the mean time.
-</p>
-<p><b>Sample:</b></p>
-<p>The following sample monitors two files. If you need just one,
-remove the second one. If you need more, add them according to the
-sample ;). This code must be placed in /etc/rsyslog.conf (or wherever
-your distro puts rsyslog's config files). Note that only commands
-actually needed need to be specified. The second file uses less
-commands and uses defaults instead.<br>
-</p>
-<textarea rows="15" cols="60">module(load="imfile" PollingInterval="10") #needs to be done just once
+<html>
+	<head>
+		<meta content="en" http-equiv="Content-Language" />
+		<title>Text File Input Monitor</title>
+	</head>
+	<body>
+		<p>
+			<a href="rsyslog_conf_modules.html">back</a></p>
+		<h1>
+			Text File Input Module</h1>
+		<p>
+			<b>Module Name:&nbsp;&nbsp;&nbsp; imfile</b></p>
+		<p>
+			<b>Author: </b>Rainer Gerhards &lt;rgerhards@adiscon.com&gt;</p>
+		<p>
+			<b>Description</b>:</p>
+		<p>
+			Provides the ability to convert any standard text file into a syslog message. A standard text file is a file consisting of printable characters with lines being&nbsp;delimited by LF.</p>
+		<p>
+			The file is read line-by-line and any line read is passed to rsyslog&#39;s rule engine. The rule engine applies filter conditons and selects which actions needs to be carried out. Empty lines are <b>not</b> processed, as they would result in empty syslog records. They are simply ignored.</p>
+		<p>
+			As new lines are written they are taken from the file and processed. Please note that this happens based on a polling interval and not immediately. The file monitor support file rotation. To fully work, rsyslogd must run while the file is rotated. Then, any remaining lines from the old file are read and processed and when done with that, the new file is being processed from the beginning. If rsyslogd is stopped during rotation, the new file is read, but any not-yet-reported lines from the previous file can no longer be obtained.</p>
+		<p>
+			When rsyslogd is stopped while monitoring a text file, it records the last processed location and continues to work from there upon restart. So no data is lost during a restart (except, as noted above, if the file is rotated just in this very moment).</p>
+		<p>
+			Currently, the file must have a fixed name and location (directory). It is planned to add support for dynamically generating file names in the future.</p>
+		<p>
+			Multiple files may be monitored by specifying $InputRunFileMonitor multiple times.</p>
+		<p>
+			<b>Configuration Directives</b>:</p>
+		<p>
+			<b>Module Directives</b></p>
+		<ul>
+			<li>
+				<span style="font-weight: bold;">PollingInterval seconds</span><br />
+				This is a global setting. It specifies how often files are to be polled for new data. The time specified is in seconds. The <span style="font-weight: bold;">default value</span> is 10 seconds. Please note that future releases of imfile may support per-file polling intervals, but currently this is not the case. If multiple PollingInterval statements are present in rsyslog.conf, only the last one is used.<br />
+				A short poll interval provides more rapid message forwarding, but requires more system ressources. While it is possible, we stongly recommend not to set the polling interval to 0 seconds. That will make rsyslogd become a CPU hog, taking up considerable ressources. It is supported, however, for the few very unusual situations where this level may be needed. Even if you need quick response, 1 seconds should be well enough. Please note that imfile keeps reading files as long as there is any data in them. So a &quot;polling sleep&quot; will only happen when nothing is left to be processed.</li>
+		</ul>
+		<p>
+			<b>Action Directives</b></p>
+		<ul>
+			<li>
+				<strong>(required) File&nbsp;/path/to/file</strong><br />
+				The file being monitored. So far, this must be an absolute name (no macros or templates).</li>
+			<li>
+				<span style="font-weight: bold;">(required) Tag tag:</span><br />
+				The syslog tag to be used for messages that originate from this file. If you would like to see the colon after the tag, you need to specify it here (as shown above).</li>
+			<li>
+				<span style="font-weight: bold;">(required) StateFile &lt;name-of-state-file&gt;</span><br />
+				Rsyslog must keep track of which parts of the to be monitored file it already processed. This is done in the state file. This file always is created in the rsyslog working directory (configurable via $WorkDirectory). So you need to provide a file name here, not a path. Be careful to use unique names for different files being monitored. If there are duplicates, all sorts of &quot;interesting&quot; things may happen. Rsyslog currently does not check if a name is specified multiple times. Note that when $WorkDirectory is not set or set to a non-writable location, the state file will not be generated.</li>
+			<li>
+				<span style="font-weight: bold;">Facility facility</span><br />
+				The syslog facility to be assigned to lines read. Can be specified in textual form (e.g. &quot;local0&quot;, &quot;local1&quot;, ...) or as numbers (e.g. 128 for &quot;local0&quot;). Textual form is suggested. <span style="font-weight: bold;">Default</span> &nbsp;is &quot;local0&quot;.</li>
+			<li>
+				<span style="font-weight: bold;">Severity</span><br />
+				The syslog severity to be assigned to lines read. Can be specified in textual form (e.g. &quot;info&quot;, &quot;warning&quot;, ...) or as numbers (e.g. 4 for &quot;info&quot;). Textual form is suggested. <span style="font-weight: bold;">Default</span> is &quot;notice&quot;.</li>
+			<li>
+				<b>PersistStateInterval</b> [lines]<br />
+				Specifies how often the state file shall be written when processing the input file. The <strong>default</strong> value is 0, which means a new state file is only written when the monitored files is being closed (end of rsyslogd execution). Any other value n means that the state file is written every time n file lines have been processed. This setting can be used to guard against message duplication due to fatal errors (like power fail). Note that this setting affects imfile performance, especially when set to a low value. Frequently writing the state file is very time consuming.</li>
+			<li>
+				<b>ReadMode</b> [mode]<br />
+				This mode should defined when having multiline messages. The value can range from 0-2 and determines the multiline detection method.<br />
+				0 (<strong>default</strong>) - line based (Each line is a new message)<br />
+				1 - paragraph (There is a blank line between log messages)<br />
+				2 - indented (New log messages start at the beginning of a line. If a line starts with a space it is part of the log message before it)</li>
+			<li>
+				<b>MaxLinesAtOnce</b> [number]<br />
+				This is useful if multiple files need to be monitored. If set to 0, each file will be fully processed and then processing switches to the next file (this was the default in previous versions). If it is set, a maximum of [number] lines is processed in sequence for each file, and then the file is switched. This provides a kind of mutiplexing the load of multiple files and probably leads to a more natural distribution of events when multiple busy files are monitored. The <strong>default</strong> is 1024.</li>
+			<li>
+				<b>MaxSubmitAtOnce</b> [number]<br />
+				This is an expert option. It can be used to set the maximum input batch size that imfile can generate. The <strong>default</strong> is 1024, which is suitable for a wide range of applications. Be sure to understand rsyslog message batch processing before you modify this option. If you do not know what this doc here talks about, this is a good indication that you should NOT modify the default.</li>
+			<li>
+				<b>Ruleset</b> &lt;ruleset&gt; Binds the listener to a specific <a href="multi_ruleset.html">ruleset</a>.</li>
+		</ul>
+		<p>
+			<b>Caveats/Known Bugs:</b></p>
+		<p>
+			So far, only 100 files can be monitored. If more are needed, the source needs to be patched. See define MAX_INPUT_FILES in imfile.c</p>
+		<p>
+			Powertop users may want to notice that imfile utilizes polling. Thus, it is no good citizen when it comes to conserving system power consumption. We are currently evaluating to move to inotify(). However, there are a number of subtle issues, which needs to be worked out first. We will make the change as soon as we can. If you can afford it, we recommend using a long polling interval in the mean time.</p>
+		<p>
+			<b>Sample:</b></p>
+		<p>
+			The following sample monitors two files. If you need just one, remove the second one. If you need more, add them according to the sample ;). This code must be placed in /etc/rsyslog.conf (or wherever your distro puts rsyslog&#39;s config files). Note that only commands actually needed need to be specified. The second file uses less commands and uses defaults instead.</p>
+		<p>
+			<textarea cols="60" rows="15">module(load=&quot;imfile&quot; PollingInterval=&quot;10&quot;) #needs to be done just once
 # File 1
-input(type="imfile" File="/path/to/file1" 
-      Tag="tag1" 
-      StateFile="/var/spool/rsyslog/statefile1" 
-      Severity="error" 
-      Facility="local7")
+input(type=&quot;imfile&quot;
+      File=&quot;/path/to/file1&quot;
+      Tag=&quot;tag1&quot;
+      StateFile=&quot;statefile1&quot;
+      Severity=&quot;error&quot;
+      Facility=&quot;local7&quot;)
 # File 2
-input(type="imfile" File="/path/to/file2" 
-      Tag="tag2" 
-      StateFile="/var/spool/rsyslog/statefile2")
-# ... and so on ...
-#
-</textarea>
-
-
-<p><b>Legacy Configuration Directives</b>:</p>
-<ul>
-<li><strong>$InputFileName&nbsp;/path/to/file</strong><br>
-equivalent to: File </li>
-<li><span style="font-weight: bold;">$InputFileTag
-tag:</span><br>
-equivalent to: Tag </li>
-<li><span style="font-weight: bold;">$InputFileStateFile
-&lt;name-of-state-file&gt;</span><br>
-equivalent to: StateFile </li>
-<li><span style="font-weight: bold;">$InputFileFacility
-facility</span><br>
-equivalent to: Facility </span></li>
-<li><span style="font-weight: bold;">$InputFileSeverity</span><br>
-equivalent to: Severity</li>
-<li><span style="font-weight: bold;">$InputRunFileMonitor</span><br>
-This <span style="font-weight: bold;">activates</span>
-the current monitor. It has no parameters. If you forget this
-directive, no file monitoring will take place.</li>
-<li><span style="font-weight: bold;">$InputFilePollInterval
-seconds</span><br>
-equivalent to: PollingInterva</li>
-<li><b>$InputFilePersistStateInterval</b> [lines]</b><br>
-Available in 4.7.3+, 5.6.2+<br>
-equivalent to: PersistStateInterval 
-<li><b>$InputFileReadMode</b> [mode]</b><br>
-Available in 5.7.5+<br>
-equivalent to:  ReadMode 
-<li><b>$InputFileMaxLinesAtOnce</b> [number]</b><br>
-Available in 5.9.0+<br>
-equivalent to: MaxLinesAtOnce 
-<li>$InputFileBindRuleset &lt;ruleset&gt;<br>
-Available in 5.7.5+, 6.1.5+<br>
-equivalent to: Ruleset </li>
-</ul>
-<b>Caveats/Known Bugs:</b>
-<p>So far, only 100 files can be monitored. If more are needed,
-the source needs to be patched. See define MAX_INPUT_FILES in imfile.c</p><p>Powertop
-users may want to notice that imfile utilizes polling. Thus, it is no
-good citizen when it comes to conserving system power consumption. We
-are currently evaluating to move to inotify(). However, there are a
-number of subtle issues, which needs to be worked out first. We will
-make the change as soon as we can. If you can afford it, we recommend
-using a long polling interval in the mean time.
-</p>
-<p><b>Sample:</b></p>
-<p>The following sample monitors two files. If you need just one,
-remove the second one. If you need more, add them according to the
-sample ;). This code must be placed in /etc/rsyslog.conf (or wherever
-your distro puts rsyslog's config files). Note that only commands
-actually needed need to be specified. The second file uses less
-commands and uses defaults instead.<br>
-</p>
-<textarea rows="15" cols="60">$ModLoad imfile # needs to be done just once
+input(type=&quot;imfile&quot;
+      File=&quot;/path/to/file2&quot;
+      Tag=&quot;tag2&quot;
+      StateFile=&quot;statefile2&quot;)
+# ... and so on ... #</textarea></p>
+		<p>
+			<b>Legacy Configuration Directives</b>:</p>
+		<ul>
+			<li>
+				<strong>$InputFileName&nbsp;/path/to/file</strong><br />
+				equivalent to: File</li>
+			<li>
+				<span style="font-weight: bold;">$InputFileTag tag:</span><br />
+				equivalent to: Tag</li>
+			<li>
+				<span style="font-weight: bold;">$InputFileStateFile &lt;name-of-state-file&gt;</span><br />
+				equivalent to: StateFile</li>
+			<li>
+				<span style="font-weight: bold;">$InputFileFacility facility</span><br />
+				equivalent to: Facility</li>
+			<li>
+				<span style="font-weight: bold;">$InputFileSeverity</span><br />
+				equivalent to: Severity</li>
+			<li>
+				<span style="font-weight: bold;">$InputRunFileMonitor</span><br />
+				This <span style="font-weight: bold;">activates</span> the current monitor. It has no parameters. If you forget this directive, no file monitoring will take place.</li>
+			<li>
+				<span style="font-weight: bold;">$InputFilePollInterval seconds</span><br />
+				equivalent to: PollingInterva</li>
+			<li>
+				<b>$InputFilePersistStateInterval</b> [lines]<br />
+				Available in 4.7.3+, 5.6.2+<br />
+				equivalent to: PersistStateInterval</li>
+			<li>
+				<b>$InputFileReadMode</b> [mode]<br />
+				Available in 5.7.5+<br />
+				equivalent to: ReadMode</li>
+			<li>
+				<b>$InputFileMaxLinesAtOnce</b> [number]<br />
+				Available in 5.9.0+<br />
+				equivalent to: MaxLinesAtOnce</li>
+			<li>
+				$InputFileBindRuleset &lt;ruleset&gt;<br />
+				Available in 5.7.5+, 6.1.5+<br />
+				equivalent to: Ruleset</li>
+		</ul>
+		<p>
+			<b>Caveats/Known Bugs:</b></p>
+		<p>
+			So far, only 100 files can be monitored. If more are needed, the source needs to be patched. See define MAX_INPUT_FILES in imfile.c</p>
+		<p>
+			Powertop users may want to notice that imfile utilizes polling. Thus, it is no good citizen when it comes to conserving system power consumption. We are currently evaluating to move to inotify(). However, there are a number of subtle issues, which needs to be worked out first. We will make the change as soon as we can. If you can afford it, we recommend using a long polling interval in the mean time.</p>
+		<p>
+			<b>Sample:</b></p>
+		<p>
+			The following sample monitors two files. If you need just one, remove the second one. If you need more, add them according to the sample ;). This code must be placed in /etc/rsyslog.conf (or wherever your distro puts rsyslog&#39;s config files). Note that only commands actually needed need to be specified. The second file uses less commands and uses defaults instead.</p>
+		<p>
+			<textarea cols="60" rows="15">$ModLoad imfile # needs to be done just once
 # File 1
 $InputFileName /path/to/file1
 $InputFileTag tag1:
@@ -220,21 +158,18 @@ $InputFileStateFile stat-file1
 $InputFileSeverity error
 $InputFileFacility local7
 $InputRunFileMonitor
-# File 2
-$InputFileName /path/to/file2
-$InputFileTag tag2:
-$InputFileStateFile stat-file2
-$InputRunFileMonitor
-# ... and so on ...
-#
-# check for new lines every 10 seconds
-$InputFilePollingInterval 10
-</textarea>
-<p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>]
-[<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
-<p><font size="2">This documentation is part of the
-<a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
-Copyright &copy; 2008 by <a href="http://www.gerhards.net/rainer">Rainer
-Gerhards</a> and <a href="http://www.adiscon.com/">Adiscon</a>.
-Released under the GNU GPL version 3 or higher.</font></p>
-</body></html>
+# File 2 
+$InputFileName /path/to/file2 
+$InputFileTag tag2: 
+$InputFileStateFile stat-file2 
+$InputRunFileMonitor 
+# ... and so on ... # 
+# check for new lines every 10 seconds 
+$InputFilePollingInterval 10</textarea></p>
+		<p>
+			[<a href="rsyslog_conf.html">rsyslog.conf overview</a>] [<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+		<p>
+			<font size="2">This documentation is part of the <a href="http://www.rsyslog.com/">rsyslog</a> project.<br />
+			Copyright &copy; 2008 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and <a href="http://www.adiscon.com/">Adiscon</a>. Released under the GNU GPL version 3 or higher.</font></p>
+	</body>
+</html>
