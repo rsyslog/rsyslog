@@ -179,7 +179,8 @@ CODESTARTnewActInst
 	CHKiRet(doCreateRelpClient(pData));
 
 CODE_STD_FINALIZERnewActInst
-	cnfparamvalsDestruct(pvals, &actpblk);
+	if(pvals != NULL)
+		cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
 
 BEGINisCompatibleWithFeature
