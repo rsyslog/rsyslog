@@ -25,6 +25,9 @@
  */
 #ifndef INCLUDED_TYPEDEFS_H
 #define INCLUDED_TYPEDEFS_H
+#if defined(__FreeBSD__)
+#include <sys/types.h>
+#endif
 
 /* some universal fixed size integer defines ... */
 typedef long long int64;
@@ -148,7 +151,7 @@ typedef enum {
 	FIOP_ISEMPTY = 6	/* string empty <=> strlen(s) == 0 ?*/
 } fiop_t;
 
-#if defined(__FreeBSD__)
+#ifndef HAVE_LSEEK64
 	typedef off_t off64_t;
 #endif
 

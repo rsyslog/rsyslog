@@ -67,7 +67,6 @@
 #  define O_LARGEFILE 0
 #endif
 #ifndef HAVE_LSEEK64
-   typedef  off_t off64_t;
 #  define lseek64(fd, offset, whence) lseek(fd, offset, whence)
 #endif
 
