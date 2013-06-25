@@ -92,8 +92,6 @@ SetCnfParam(void *pT, struct nvlst *lst)
 	DEFiRet;
 	pvals = nvlstGetParams(lst, &pblk, NULL);
 	if(pvals == NULL) {
-		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS,
-				"lmsig_gt: error processing sig. parameters\n");
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
 	if(Debug) {
