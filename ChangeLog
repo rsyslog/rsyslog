@@ -4,6 +4,8 @@ Version 7.4.2  [v7.4-stable] 2013-06-??
   checked - this clould result to segfaults on startup if parameters
   were missing.
 - bugfix: small memory leak when $uptime property was used
+- bugfix: potential segfault on rsyslog termination in imudp
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=456
 - solved build problems on FreeBSD
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=457
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=458
