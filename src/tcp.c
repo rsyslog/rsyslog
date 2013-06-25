@@ -481,7 +481,8 @@ relpTcpAcceptConnReqInitTLS(relpTcp_t *pThis, relpSrv_t *pSrv)
 pThis->pEngine->dbgprint("DDDD: gnutls_init %d: %s\n", r, gnutls_strerror(r));
 	gnutls_session_set_ptr(pThis->session, pThis);
 
-	pThis->pristring = strdup(pSrv->pTcp->pristring);
+	if(pSrv->pTcp->pristring != NULL)
+		pThis->pristring = strdup(pSrv->pTcp->pristring);
 	pThis->authmode = pSrv->pTcp->authmode;
 	pThis->pUsr = pSrv->pUsr;
 	CHKRet(relpTcpTLSSetPrio(pThis));
