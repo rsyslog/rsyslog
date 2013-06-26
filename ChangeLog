@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------
-Version 7.5.1 [devel] 2013-06-??
+Version 7.5.1 [devel] 2013-06-26
+- librelp 1.1.3 is required - older versions can lead to a segfault
 - add mmfields, which among others supports easy parsing of CEF messages
 - omrelp:
   * new parameter "compression.prioritystring" to control encryption
