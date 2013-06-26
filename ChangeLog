@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------
-Version 1.1.3 - 2013-06-2?
+Version 1.1.3 - 2013-06-26
 - increased performance of RELP connection
 - bugfix: potential segfault if no GnuTLS priority string was set
 ----------------------------------------------------------------------
