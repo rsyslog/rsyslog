@@ -284,6 +284,30 @@ execStop(batch_t *pBatch, sbool *active)
 	}
 	RETiRet;
 }
+static rsRetVal
+execCall(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
+{
+	msg_t *pMsg;
+	int i;
+	DEFiRet;
+	if(stmt->d.s_call.ruleset == NULL) {
+		scriptExec(stmt->d.s_call.stmt, pBatch, active);
+	} else {
+		for(i = 0 ; i < batchNumMsgs(pBatch) ; ++i) {
+			CHKmalloc(pMsg = MsgDup((msg_t*) pBatch->pElem[i].pMsg));
+			DBGPRINTF("CALL: forwarding message %d to async ruleset %p\n",
+				  i, stmt->d.s_call.ruleset->pQueue);
+			MsgSetFlowControlType(pMsg, eFLOWCTL_NO_DELAY);
+			MsgSetRuleset(pMsg, stmt->d.s_call.ruleset);
+			/* Note: we intentionally use submitMsg2() here, as we process messages
+			 * that were already run through the rate-limiter.
+			 */
+			submitMsg2(pMsg);
+		}
+	}
+finalize_it:
+	RETiRet;
+}
 
 /* for details, see scriptExec() header comment! */
 // save current filter, evaluate new one
@@ -535,7 +559,7 @@ scriptExec(struct cnfstmt *root, batch_t *pBatch, sbool *active)
 			execUnset(stmt, pBatch, active);
 			break;
 		case S_CALL:
-			scriptExec(stmt->d.s_call.stmt, pBatch, active);
+			execCall(stmt, pBatch, active);
 			break;
 		case S_IF:
 			execIf(stmt, pBatch, active);
