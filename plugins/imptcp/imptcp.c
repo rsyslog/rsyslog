@@ -1056,6 +1056,7 @@ addSess(ptcplstn_t *pLstn, int sock, prop_t *peerName, prop_t *peerIP)
 	pSess->bSuppOctetFram = pLstn->bSuppOctetFram;
 	pSess->inputState = eAtStrtFram;
 	pSess->iMsg = 0;
+	pSess->bzInitDone = 0;
 	pSess->bAtStrtOfFram = 1;
 	pSess->peerName = peerName;
 	pSess->peerIP = peerIP;
