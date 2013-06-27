@@ -232,6 +232,7 @@ finalize_it:
 		/* enqueue the element */
 		if(pPeer->pWildcardRoot == NULL) {
 			pPeer->pWildcardRoot = pNew;
+			pPeer->pWildcardLast = pNew;
 		} else {
 			pPeer->pWildcardLast->pNext = pNew;
 		}
