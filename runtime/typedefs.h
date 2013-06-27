@@ -29,6 +29,10 @@
 #include <sys/types.h>
 #endif
 
+#ifndef HAVE_LSEEK64
+#include <unistd.h>
+#endif
+
 /* some universal fixed size integer defines ... */
 typedef long long int64;
 typedef long long unsigned uint64;
