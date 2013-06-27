@@ -49,7 +49,7 @@
 	relpRetVal relp##type##C##cmd(relpFrame_t *pFrame, relpSess_t *pSess);
 
 #define BEGINcommand(type, cmd) \
-	relpRetVal relp##type##C##cmd(relpFrame_t *pFrame, relpSess_t *pSess) \
+	relpRetVal relp##type##C##cmd(relpFrame_t __attribute__((unused)) *pFrame, relpSess_t *pSess) \
 	{ \
 		RELPOBJ_assert(pFrame, Frame); \
 		RELPOBJ_assert(pSess, Sess);
