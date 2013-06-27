@@ -68,7 +68,7 @@ relpTcpFreePermittedPeers(relpTcp_t *pThis)
 {
 	int i;
 	for(i = 0 ; i < pThis->permittedPeers.nmemb ; ++i)
-		free(pThis->permittedPeers.name[i]);
+		free(pThis->permittedPeers.peers[i].name);
 	pThis->permittedPeers.nmemb = 0;
 }
 
@@ -310,12 +310,12 @@ relpTcpSetPermittedPeers(relpTcp_t *pThis, relpPermittedPeers_t *pPeers)
 	
 	relpTcpFreePermittedPeers(pThis);
 	if(pPeers->nmemb != 0) {
-		if((pThis->permittedPeers.name =
-			malloc(sizeof(char*) * pPeers->nmemb)) == NULL) {
+		if((pThis->permittedPeers.peers =
+			malloc(sizeof(tcpPermittedPeerEntry_t) * pPeers->nmemb)) == NULL) {
 			ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
 		}
 		for(i = 0 ; i < pPeers->nmemb ; ++i) {
-			if((pThis->permittedPeers.name[i] = strdup(pPeers->name[i])) == NULL) {
+			if((pThis->permittedPeers.peers[i].name = strdup(pPeers->name[i])) == NULL) {
 				ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
 			}
 		}
@@ -617,8 +617,8 @@ pThis->pEngine->dbgprint("DDDD: crt_get_fingerprint returned %d: %s\n", r, gnutl
 	found = 0;
 pThis->pEngine->dbgprint("DDDD: n peers %d\n", pThis->permittedPeers.nmemb);
 	for(i = 0 ; i < pThis->permittedPeers.nmemb ; ++i) {
-pThis->pEngine->dbgprint("DDDD: checking peer '%s','%s'\n", fpPrintable, pThis->permittedPeers.name[i]);
-		if(!strcmp(fpPrintable, pThis->permittedPeers.name[i])) {
+pThis->pEngine->dbgprint("DDDD: checking peer '%s','%s'\n", fpPrintable, pThis->permittedPeers.peers[i].name);
+		if(!strcmp(fpPrintable, pThis->permittedPeers.peers[i].name)) {
 			found = 1;
 			break;
 		}
@@ -645,7 +645,7 @@ gtlsChkOnePeerName(relpTcp_t *pThis, char *peername, int *pbFoundPositiveMatch)
 	int i;
 
 	for(i = 0 ; i < pThis->permittedPeers.nmemb ; ++i) {
-		if(!strcmp(peername, pThis->permittedPeers.name[i])) {
+		if(!strcmp(peername, pThis->permittedPeers.peers[i].name)) {
 			*pbFoundPositiveMatch = 1;
 			break;
 		}

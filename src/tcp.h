@@ -45,6 +45,41 @@ typedef enum { relpTCP_RETRY_none = 0,
 #define RELP_SRV_CONN 0	/**< this conection is a server connection */
 #define RELP_CLT_CONN 1	/**< this conection is a client connection */	
 
+
+/* The tcp module uses an extended version of the permittedPeers structure,
+ * as it finally needs to "compile" patters that contain wildcards. Doing
+ * that on the fly would not make sense from a performance PoV. Note that
+ * we do not use this exteded structure in highe layers, as it is not
+ * needed there and would at least make things lool much more complicated
+ * than they must be.
+ */
+
+/* if we have wildcards inside permitted peers, we need to maintain
+ * a separate linked list for the wildcard components.
+ */
+typedef struct tcpPermittedPeerWildcardComp_s {
+	char *pszDomainPart;
+	int16_t lenDomainPart;
+	enum {
+		relpPEER_WILDCARD_NONE = 0,		/**< no wildcard in this entry */
+		relpPEER_WILDCARD_AT_START = 1,	/**< wildcard at start of entry (*name) */
+		relpPEER_WILDCARD_AT_END = 2,	/**< wildcard at end of entry (name*) */
+		relpPEER_WILDCARD_MATCH_ALL = 3,	/**< only * wildcard, matches all values */
+		relpPEER_WILDCARD_EMPTY_COMPONENT = 4/**< special case: domain component empty (e.g. "..") */
+	} wildcardType;
+	struct tcpPermittedPeerWildcardComp_s *pNext;
+} tcpPermittedPeerWildcardComp_t;
+
+typedef struct {
+		char *name;
+		tcpPermittedPeerWildcardComp_t *wildcardRoot;
+} tcpPermittedPeerEntry_t;
+/* a structure to store permitted peer information (a type of ACL) */
+typedef struct tcpPermittedPeers_s {
+	int nmemb;
+	tcpPermittedPeerEntry_t *peers;
+} tcpPermittedPeers_t;
+
 /* the RELPTCP object 
  * rgerhards, 2008-03-16
  */
@@ -67,7 +102,7 @@ typedef struct relpTcp_s {
 	relpAuthMode_t authmode;
 	gnutls_anon_client_credentials_t anoncred;	/**< client anon credentials */
 	gnutls_anon_server_credentials_t anoncredSrv;	/**< server anon credentials */
-	relpPermittedPeers_t permittedPeers;
+	tcpPermittedPeers_t permittedPeers;
 	/* GnuTLS certificat support */
 	gnutls_certificate_credentials_t xcred;		/**< certificate credentials */
 	char *caCertFile;
@@ -77,7 +112,6 @@ typedef struct relpTcp_s {
 	gnutls_dh_params_t dh_params; /**< server DH parameters for anon mode */
 	relpTcpRtryState_t rtryOp;
 } relpTcp_t;
-
 
 /* macros for quick member access */
 #define relpTcpGetNumSocks(pThis)    ((pThis)->socks[0])
