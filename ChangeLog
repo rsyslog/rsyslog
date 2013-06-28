@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 7.5.2 [devel] 2013-0?-??
+- librelp 1.1.4 is now required
+  We use API extensions for better error reporting.
 - doc: fixed various typos
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=391
   Thanks to Georgi Georgiev for the patch.

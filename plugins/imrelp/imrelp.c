@@ -148,6 +148,15 @@ static struct cnfparamblk inppblk =
 /* ------------------------------ callbacks ------------------------------ */
 
 static void
+onErr(void *pUsr, char *objinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode)
+{
+	instanceConf_t *inst = (instanceConf_t*) pUsr;
+	errmsg.LogError(0, RS_RET_RELP_AUTH_FAIL, "imrelp[%s]: error '%s', object "
+			" '%s' - input may not work as intended",
+			inst->pszBindPort, errmesg, objinfo);
+}
+
+static void
 onAuthErr(void *pUsr, char *authinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode)
 {
 	instanceConf_t *inst = (instanceConf_t*) pUsr;
@@ -278,6 +287,7 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 		CHKiRet(relpEngineSetFamily(pRelpEngine, glbl.GetDefPFFamily()));
 		CHKiRet(relpEngineSetEnableCmd(pRelpEngine, (uchar*) "syslog", eRelpCmdState_Required));
 		CHKiRet(relpEngineSetSyslogRcv2(pRelpEngine, onSyslogRcv));
+		CHKiRet(relpEngineSetOnErr(pRelpEngine, onErr));
 		CHKiRet(relpEngineSetOnAuthErr(pRelpEngine, onAuthErr));
 		if (!glbl.GetDisableDNS()) {
 			CHKiRet(relpEngineSetDnsLookupMode(pRelpEngine, 1));

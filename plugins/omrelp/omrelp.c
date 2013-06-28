@@ -131,6 +131,15 @@ static uchar *getRelpPt(instanceData *pData)
 }
 
 static void
+onErr(void *pUsr, char *objinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode)
+{
+	instanceData *pData = (instanceData*) pUsr;
+	errmsg.LogError(0, RS_RET_RELP_AUTH_FAIL, "omrelp[%s:%s]: error '%s', object "
+			" '%s' - action may not work as intended",
+			pData->target, pData->port, errmesg, objinfo);
+}
+
+static void
 onAuthErr(void *pUsr, char *authinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode)
 {
 	instanceData *pData = (instanceData*) pUsr;
@@ -512,6 +521,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(relpEngineConstruct(&pRelpEngine));
 	CHKiRet(relpEngineSetDbgprint(pRelpEngine, dbgprintf));
 	CHKiRet(relpEngineSetOnAuthErr(pRelpEngine, onAuthErr));
+	CHKiRet(relpEngineSetOnErr(pRelpEngine, onErr));
 	CHKiRet(relpEngineSetEnableCmd(pRelpEngine, (uchar*) "syslog", eRelpCmdState_Required));
 
 	/* tell which objects we need */
