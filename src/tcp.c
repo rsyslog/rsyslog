@@ -201,7 +201,7 @@ callOnErr(relpTcp_t *pThis, char *emsg, relpRetVal ecode)
  * Returns 1 if an error was detected, 0 otherwise. This can be used as a
  * shortcut for error handling (safes doing it twice).
  */
-static void
+static int
 chkGnutlsCode(relpTcp_t *pThis, char *emsg, relpRetVal ecode, int gnuRet)
 {
 	char msgbuf[4096];
