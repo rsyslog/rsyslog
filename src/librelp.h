@@ -147,6 +147,7 @@ enum relpCmdEnaState_e { /* command enabled state - what are we permitted to do/
 #define RELP_RET_INVLD_AUTH_MD	RELPERR_BASE + 37	/**< lib user tried to set invalid auth mode */
 #define RELP_RET_INVLD_WILDCARD	RELPERR_BASE + 38	/**< invalid wildcard given in permitted peer name */
 #define RELP_RET_ERR_TLS_HANDS 	RELPERR_BASE + 39	/**< TLS handshake failed */
+#define RELP_RET_ERR_TLS	RELPERR_BASE + 40	/**< generic TLS error */
 
 /* some macros to work with librelp error codes */
 #define CHKRet(code) if((iRet = code) != RELP_RET_OK) goto finalize_it
@@ -176,6 +177,8 @@ relpRetVal relpEngineSetEnableCmd(relpEngine_t *pThis, unsigned char *pszCmd, re
 relpRetVal relpEngineSetDnsLookupMode(relpEngine_t *pThis, int iMode);
 relpRetVal relpEngineSetOnAuthErr(relpEngine_t *pThis,
 			          void (*pCB)(void*pUsr, char *authinfo, char*errmsg, relpRetVal errcode) );
+relpRetVal relpEngineSetOnErr(relpEngine_t *pThis,
+				void (*pCB)(void*pUsr, char *objinfo, char*errmsg, relpRetVal errcode) );
 
 /* exposed server property set functions */
 relpRetVal relpSrvSetLstnPort(relpSrv_t *pThis, unsigned char *pLstnPort);
