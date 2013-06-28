@@ -304,6 +304,30 @@ relpEngineSetOnAuthErr(relpEngine_t *pThis, void (*pCB)(void*pUsr, char *authinf
 	LEAVE_RELPFUNC;
 }
 
+/**
+ * Set an event handler that shall receive information when some error
+ * occured for which no special handler exists. Note that even if the
+ * special handler (e.g. AuthErr) is not set, this handler here will
+ * not be called. This permits the lib-user to set fine-grained control
+ * on which error messages it intends to handle.
+ *
+ * Callback parameters:
+ *
+ * pUsr     - the user pointer set
+ * objinfo  - some information identifying the object in error; depends
+ *            on the actual error case.
+ * errmsg   - error message as far as librelp is concerned
+ * errcode  - contains librelp error status
+ */
+relpRetVal
+relpEngineSetOnErr(relpEngine_t *pThis, void (*pCB)(void*pUsr, char *objinfo, char*errmsg, relpRetVal errcode) )
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Engine);
+	pThis->onErr = pCB;
+	LEAVE_RELPFUNC;
+}
+
 /* Deprecated, use relpEngineListnerConstruct() family of functions.
  * See there for further information.
  */

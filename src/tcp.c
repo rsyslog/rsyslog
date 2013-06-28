@@ -45,6 +45,8 @@
 #include <assert.h>
 #include "relp.h"
 #include "relpsrv.h"
+#include "relpclt.h"
+#include "relpsess.h"
 #include "tcp.h"
 #include <gnutls/gnutls.h>
 #include <gnutls/x509.h>
@@ -166,6 +168,56 @@ pThis->pEngine->dbgprint("DDDD: gnutls_deinit done %p\n", pThis->session);
 	LEAVE_RELPFUNC;
 }
 
+
+/* helper to call onErr if set */
+static void
+callOnErr(relpTcp_t *pThis, char *emsg, relpRetVal ecode)
+{
+	char objinfo[1024];
+	pThis->pEngine->dbgprint("librelp: generic error: ecode %d, "
+		"emsg '%s'\n", ecode, emsg);
+	if(pThis->pEngine->onErr != NULL) {
+		if(pThis->pSrv == NULL) { /* client */
+			snprintf(objinfo, sizeof(objinfo), "conn to srvr %s:%s",
+				 pThis->pClt->pSess->srvAddr,
+				 pThis->pClt->pSess->srvPort);
+		} else if(pThis->pRemHostIP == NULL) { /* server listener */
+			snprintf(objinfo, sizeof(objinfo), "lstn %s",
+				 pThis->pSrv->pLstnPort);
+		} else { /* server connection to client */
+			snprintf(objinfo, sizeof(objinfo), "lstn %s: conn to clt %s/%s",
+				 pThis->pSrv->pLstnPort, pThis->pRemHostIP,
+				 pThis->pRemHostName);
+		}
+		objinfo[sizeof(objinfo)-1] = '\0';
+		pThis->pEngine->onErr(pThis->pUsr, objinfo, emsg, ecode);
+	}
+}
+
+
+/* helper to call an error code handler if gnutls failed. If there is a failure, 
+ * an error message is pulled form gnutls and the error message properly 
+ * populated.
+ * Returns 1 if an error was detected, 0 otherwise. This can be used as a
+ * shortcut for error handling (safes doing it twice).
+ */
+static void
+chkGnutlsCode(relpTcp_t *pThis, char *emsg, relpRetVal ecode, int gnuRet)
+{
+	char msgbuf[4096];
+	int r;
+
+	if(gnuRet == GNUTLS_E_SUCCESS) {
+		r = 0;
+	} else {
+		r = 1;
+		snprintf(msgbuf, sizeof(msgbuf), "%s [gnutls error %d: %s]",
+			 emsg, gnuRet, gnutls_strerror(gnuRet));
+		msgbuf[sizeof(msgbuf)-1] = '\0';
+		callOnErr(pThis, msgbuf, ecode);
+	}
+	return r;
+}
 
 /* helper to call onAuthErr if set */
 static inline void
@@ -478,6 +530,8 @@ relpTcpTLSSetPrio(relpTcp_t *pThis)
 		ABORT_FINALIZE(RELP_RET_ERR_TLS_SETUP);
 	}
 finalize_it:
+	if(iRet != RELP_RET_OK)
+		chkGnutlsCode(pThis, "Failed to set GnuTLS priority", iRet, r);
 	LEAVE_RELPFUNC;
 }
 
@@ -490,6 +544,10 @@ relpTcpAcceptConnReqInitTLS(relpTcp_t *pThis, relpSrv_t *pSrv)
 
 	r = gnutls_init(&pThis->session, GNUTLS_SERVER);
 pThis->pEngine->dbgprint("DDDD: gnutls_init[%p] %d: %s\n", pThis->session, r, gnutls_strerror(r));
+	if(chkGnutlsCode(pThis, "Failed to initialize GnuTLS", RELP_RET_ERR_TLS_SETUP, r)) {
+		ABORT_FINALIZE(RELP_RET_ERR_TLS_SETUP);
+	}
+
 	gnutls_session_set_ptr(pThis->session, pThis);
 
 	if(pSrv->pTcp->pristring != NULL)
@@ -501,11 +559,17 @@ pThis->pEngine->dbgprint("DDDD: gnutls_init[%p] %d: %s\n", pThis->session, r, gn
 	if(isAnonAuth(pSrv->pTcp)) {
 		r = gnutls_credentials_set(pThis->session, GNUTLS_CRD_ANON, pSrv->pTcp->anoncredSrv);
 		pThis->pEngine->dbgprint("DDDD: gnutls_credentials_set (anon) %d: %s\n", r, gnutls_strerror(r));
+		if(chkGnutlsCode(pThis, "Failed setting anonymous credentials", RELP_RET_ERR_TLS_SETUP, r)) {
+			ABORT_FINALIZE(RELP_RET_ERR_TLS_SETUP);
+		}
 	} else { /* cert-based auth */
 		if(pSrv->pTcp->caCertFile == NULL) {
 			gnutls_certificate_send_x509_rdn_sequence(pThis->session, 0);
 		}
 		r = gnutls_credentials_set(pThis->session, GNUTLS_CRD_CERTIFICATE, pSrv->pTcp->xcred);
+		if(chkGnutlsCode(pThis, "Failed setting certificate credentials", RELP_RET_ERR_TLS_SETUP, r)) {
+			ABORT_FINALIZE(RELP_RET_ERR_TLS_SETUP);
+		}
 		pThis->pEngine->dbgprint("DDDD: gnutls_credentials_set(cert) %d: %s\n", r, gnutls_strerror(r));
 	}
 	gnutls_dh_set_prime_bits(pThis->session, pThis->dhBits);
@@ -518,8 +582,10 @@ pThis->pEngine->dbgprint("DDDD: gnutls_handshake: %d: %s\n", r, gnutls_strerror(
 		pThis->pEngine->dbgprint("librelp: gnutls_handshake retry necessary (this is OK and expected)\n");
 		pThis->rtryOp = relpTCP_RETRY_handshake;
 	} else if(r != GNUTLS_E_SUCCESS) {
-		ABORT_FINALIZE(RELP_RET_ERR_TLS_SETUP);
+		chkGnutlsCode(pThis, "TLS handshake failed", RELP_RET_ERR_TLS_HANDS, r);
+		ABORT_FINALIZE(RELP_RET_ERR_TLS_HANDS);
 	}
+
 	pThis->bTLSActive = 1;
 
 finalize_it:
@@ -571,6 +637,7 @@ pThis->pEngine->dbgprint("remote host is '%s', ip '%s'\n", pThis->pRemHostName, 
 	pThis->sock = iNewSock;
 	if(pSrv->pTcp->bEnableTLS) {
 		pThis->bEnableTLS = 1;
+		pThis->pSrv = pSrv;
 		CHKRet(relpTcpSetPermittedPeers(pThis, &(pSrv->permittedPeers)));
 		CHKRet(relpTcpAcceptConnReqInitTLS(pThis, pSrv));
 	}
