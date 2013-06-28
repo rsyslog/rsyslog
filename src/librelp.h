@@ -145,6 +145,7 @@ enum relpCmdEnaState_e { /* command enabled state - what are we permitted to do/
 #define RELP_RET_AUTH_NO_CERT	RELPERR_BASE + 35	/**< auth failed: peer did not present a certificate */
 #define RELP_RET_AUTH_CERT_INVL RELPERR_BASE + 36	/**< auth failed: peer certificate invalid (did not pass validation) */
 #define RELP_RET_INVLD_AUTH_MD	RELPERR_BASE + 37	/**< lib user tried to set invalid auth mode */
+#define RELP_RET_INVLD_WILDCARD	RELPERR_BASE + 38	/**< invalid wildcard given in permitted peer name */
 
 /* some macros to work with librelp error codes */
 #define CHKRet(code) if((iRet = code) != RELP_RET_OK) goto finalize_it

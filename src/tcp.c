@@ -61,6 +61,7 @@ static int called_gnutls_global_init = 0;
 
 /* forward definitions */
 static int relpTcpVerifyCertificateCallback(gnutls_session_t session);
+static relpRetVal relpTcpPermittedPeerWildcardCompile(tcpPermittedPeerEntry_t *pEtry);
 
 /* helper to free permittedPeer structure */
 static inline void
@@ -68,7 +69,7 @@ relpTcpFreePermittedPeers(relpTcp_t *pThis)
 {
 	int i;
 	for(i = 0 ; i < pThis->permittedPeers.nmemb ; ++i)
-		free(pThis->permittedPeers.peers[i].name);
+		free(pThis->permittedPeers.peer[i].name);
 	pThis->permittedPeers.nmemb = 0;
 }
 
@@ -310,14 +311,17 @@ relpTcpSetPermittedPeers(relpTcp_t *pThis, relpPermittedPeers_t *pPeers)
 	
 	relpTcpFreePermittedPeers(pThis);
 	if(pPeers->nmemb != 0) {
-		if((pThis->permittedPeers.peers =
+		if((pThis->permittedPeers.peer =
 			malloc(sizeof(tcpPermittedPeerEntry_t) * pPeers->nmemb)) == NULL) {
 			ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
 		}
 		for(i = 0 ; i < pPeers->nmemb ; ++i) {
-			if((pThis->permittedPeers.peers[i].name = strdup(pPeers->name[i])) == NULL) {
+			if((pThis->permittedPeers.peer[i].name = strdup(pPeers->name[i])) == NULL) {
 				ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
 			}
+			pThis->permittedPeers.peer[i].wildcardRoot = NULL;
+			pThis->permittedPeers.peer[i].wildcardLast = NULL;
+			CHKRet(relpTcpPermittedPeerWildcardCompile(&(pThis->permittedPeers.peer[i])));
 		}
 	}
 	pThis->permittedPeers.nmemb = pPeers->nmemb;
@@ -617,8 +621,8 @@ pThis->pEngine->dbgprint("DDDD: crt_get_fingerprint returned %d: %s\n", r, gnutl
 	found = 0;
 pThis->pEngine->dbgprint("DDDD: n peers %d\n", pThis->permittedPeers.nmemb);
 	for(i = 0 ; i < pThis->permittedPeers.nmemb ; ++i) {
-pThis->pEngine->dbgprint("DDDD: checking peer '%s','%s'\n", fpPrintable, pThis->permittedPeers.peers[i].name);
-		if(!strcmp(fpPrintable, pThis->permittedPeers.peers[i].name)) {
+pThis->pEngine->dbgprint("DDDD: checking peer '%s','%s'\n", fpPrintable, pThis->permittedPeers.peer[i].name);
+		if(!strcmp(fpPrintable, pThis->permittedPeers.peer[i].name)) {
 			found = 1;
 			break;
 		}
@@ -633,6 +637,218 @@ done:
 	return r;
 }
 
+/* add a wildcard entry to this permitted peer. Entries are always
+ * added at the tail of the list. pszStr and lenStr identify the wildcard
+ * entry to be added. Note that the string is NOT \0 terminated, so
+ * we must rely on lenStr for when it is finished.
+ * rgerhards, 2008-05-27
+ */
+static relpRetVal
+AddPermittedPeerWildcard(tcpPermittedPeerEntry_t *pEtry, char* pszStr, int lenStr)
+{
+	tcpPermittedPeerWildcardComp_t *pNew = NULL;
+	int iSrc;
+	int iDst;
+	ENTER_RELPFUNC;
+
+	if((pNew = calloc(1, sizeof(tcpPermittedPeerWildcardComp_t))) == NULL) {
+		ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+	}
+
+	if(lenStr == 0) {
+		pNew->wildcardType = tcpPEER_WILDCARD_EMPTY_COMPONENT;
+		FINALIZE;
+	} else {
+		/* alloc memory for the domain component. We may waste a byte or
+		 * two, but that's ok.
+		 */
+		if((pNew->pszDomainPart = malloc(lenStr +1 )) == NULL) {
+			ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+		}
+	}
+
+	if(pszStr[0] == '*') {
+		pNew->wildcardType = tcpPEER_WILDCARD_AT_START;
+		iSrc = 1; /* skip '*' */
+	} else {
+		iSrc = 0;
+	}
+
+	for(iDst = 0 ; iSrc < lenStr && pszStr[iSrc] != '*' ; ++iSrc, ++iDst)  {
+		pNew->pszDomainPart[iDst] = pszStr[iSrc];
+	}
+
+	if(iSrc < lenStr) {
+		if(iSrc + 1 == lenStr && pszStr[iSrc] == '*') {
+			if(pNew->wildcardType == tcpPEER_WILDCARD_AT_START) {
+				ABORT_FINALIZE(RELP_RET_INVLD_WILDCARD);
+			} else {
+				pNew->wildcardType = tcpPEER_WILDCARD_AT_END;
+			}
+		} else {
+			/* we have an invalid wildcard, something follows the asterisk! */
+			ABORT_FINALIZE(RELP_RET_INVLD_WILDCARD);
+		}
+	}
+
+	if(lenStr == 1 && pNew->wildcardType == tcpPEER_WILDCARD_AT_START) {
+		pNew->wildcardType = tcpPEER_WILDCARD_MATCH_ALL;
+	}
+
+	/* if we reach this point, we had a valid wildcard. We now need to
+	 * properly terminate the domain component string.
+	 */
+	pNew->pszDomainPart[iDst] = '\0';
+	pNew->lenDomainPart = strlen((char*)pNew->pszDomainPart);
+
+finalize_it:
+	if(iRet != RELP_RET_OK) {
+		if(pNew != NULL) {
+			if(pNew->pszDomainPart != NULL)
+				free(pNew->pszDomainPart);
+			free(pNew);
+		}
+	} else {
+		/* add the element to linked list */
+		if(pEtry->wildcardRoot == NULL) {
+			pEtry->wildcardRoot = pNew;
+			pEtry->wildcardLast = pNew;
+		} else {
+			pEtry->wildcardLast->pNext = pNew;
+		}
+		pEtry->wildcardLast = pNew;
+	}
+	LEAVE_RELPFUNC;
+}
+
+/* Compile a wildcard - must not yet be comipled */
+static relpRetVal
+relpTcpPermittedPeerWildcardCompile(tcpPermittedPeerEntry_t *pEtry)
+{
+	char *pC;
+	char *pStart;
+	ENTER_RELPFUNC;
+
+	/* first check if we have a wildcard */
+	for(pC = pEtry->name ; *pC != '\0' && *pC != '*' ; ++pC)
+		/*EMPTY, just skip*/;
+
+	if(*pC == '\0') { /* no wildcard found, we are done */
+		FINALIZE;
+	}
+
+	/* if we reach this point, the string contains wildcards. So let's
+	 * compile the structure. To do so, we must parse from dot to dot
+	 * and create a wildcard entry for each domain component we find.
+	 * We must also flag problems if we have an asterisk in the middle
+	 * of the text (it is supported at the start or end only).
+	 */
+	pC = pEtry->name;
+	while(*pC) {
+		pStart = pC;
+		/* find end of domain component */
+		for( ; *pC != '\0' && *pC != '.' ; ++pC)
+			/*EMPTY, just skip*/;
+		CHKRet(AddPermittedPeerWildcard(pEtry, pStart, pC - pStart));
+		/* now check if we have an empty component at end of string */
+		if(*pC == '.' && *(pC + 1) == '\0') {
+			/* pStart is a dummy, it is not used if length is 0 */
+			CHKRet(AddPermittedPeerWildcard(pEtry, pStart, 0)); 
+		}
+		if(*pC != '\0')
+			++pC;
+	}
+
+finalize_it:
+	LEAVE_RELPFUNC;
+}
+
+/* check a peer against a wildcard entry. This is a more lengthy
+ * operation.
+ */
+static void
+gtlsChkOnePeerWildcard(tcpPermittedPeerWildcardComp_t *pRoot, char *peername, int *pbFoundPositiveMatch)
+{
+	tcpPermittedPeerWildcardComp_t *pWildcard;
+	char *pC;
+	char *pStart; /* start of current domain component */
+	int iWildcard, iName; /* work indexes for backward comparisons */
+
+	*pbFoundPositiveMatch = 0;
+	pWildcard = pRoot;
+	pC = peername;
+	while(*pC != '\0') {
+		if(pWildcard == NULL) {
+			/* we have more domain components than we have wildcards --> no match */
+			goto done;
+		}
+		pStart = pC;
+		while(*pC != '\0' && *pC != '.') {
+			++pC;
+		}
+
+		/* got the component, now do the match */
+		switch(pWildcard->wildcardType) {
+			case tcpPEER_WILDCARD_NONE:
+				if(   pWildcard->lenDomainPart != pC - pStart
+				   || strncmp((char*)pStart, (char*)pWildcard->pszDomainPart, pC - pStart)) {
+					goto done;
+				}
+				break;
+			case tcpPEER_WILDCARD_AT_START:
+				/* we need to do the backwards-matching manually */
+				if(pWildcard->lenDomainPart > pC - pStart) {
+					goto done;
+				}
+				iName = (size_t) (pC - pStart) - pWildcard->lenDomainPart;
+				iWildcard = 0;
+				while(iWildcard < pWildcard->lenDomainPart) {
+					if(pWildcard->pszDomainPart[iWildcard] != pStart[iName]) {
+						goto done;
+					}
+					++iName;
+					++iWildcard;
+				}
+				break;
+			case tcpPEER_WILDCARD_AT_END:
+				if(   pWildcard->lenDomainPart > pC - pStart
+				   || strncmp((char*)pStart, (char*)pWildcard->pszDomainPart, pWildcard->lenDomainPart)) {
+					goto done;
+				}
+				break;
+			case tcpPEER_WILDCARD_MATCH_ALL:
+				/* everything is OK, just continue */
+				break;
+			case tcpPEER_WILDCARD_EMPTY_COMPONENT:
+				if(pC - pStart > 0) {
+				   	/* if it is not empty, it is no match... */
+					goto done;
+				}
+				break;
+		}
+		pWildcard =  pWildcard->pNext; /* we processed this entry */
+
+		/* skip '.' if we had it and so prepare for next iteration */
+		if(*pC == '.')
+			++pC;
+	}
+	
+	/* we need to adjust for a border case, that is if the last component is
+	 * empty. That happens frequently if the domain root (e.g. "example.com.")
+	 * is properly given.
+	 */
+	if(pWildcard->wildcardType == tcpPEER_WILDCARD_EMPTY_COMPONENT)
+		pWildcard = pWildcard->pNext;
+
+	if(pWildcard != NULL) {
+		/* we have more domain components than in the name to be
+		 * checked. So this is no match.
+		 */
+		goto done;
+	}
+	*pbFoundPositiveMatch = 1;
+done:	return;
+}
 /* Perform a match on ONE peer name obtained from the certificate. This name
  * is checked against the set of configured credentials. *pbFoundPositiveMatch is
  * set to 1 if the ID matches. *pbFoundPositiveMatch must have been initialized
@@ -645,9 +861,15 @@ gtlsChkOnePeerName(relpTcp_t *pThis, char *peername, int *pbFoundPositiveMatch)
 	int i;
 
 	for(i = 0 ; i < pThis->permittedPeers.nmemb ; ++i) {
-		if(!strcmp(peername, pThis->permittedPeers.peers[i].name)) {
-			*pbFoundPositiveMatch = 1;
-			break;
+		if(pThis->permittedPeers.peer[i].wildcardRoot == NULL) {
+			/* simple string, only, no wildcards */
+			if(!strcmp(peername, pThis->permittedPeers.peer[i].name)) {
+				*pbFoundPositiveMatch = 1;
+				break;
+			}
+		} else {
+			gtlsChkOnePeerWildcard(pThis->permittedPeers.peer[i].wildcardRoot,
+			        peername, pbFoundPositiveMatch);
 		}
 	}
 }

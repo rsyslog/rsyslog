@@ -61,11 +61,11 @@ typedef struct tcpPermittedPeerWildcardComp_s {
 	char *pszDomainPart;
 	int16_t lenDomainPart;
 	enum {
-		relpPEER_WILDCARD_NONE = 0,		/**< no wildcard in this entry */
-		relpPEER_WILDCARD_AT_START = 1,	/**< wildcard at start of entry (*name) */
-		relpPEER_WILDCARD_AT_END = 2,	/**< wildcard at end of entry (name*) */
-		relpPEER_WILDCARD_MATCH_ALL = 3,	/**< only * wildcard, matches all values */
-		relpPEER_WILDCARD_EMPTY_COMPONENT = 4/**< special case: domain component empty (e.g. "..") */
+		tcpPEER_WILDCARD_NONE = 0,		/**< no wildcard in this entry */
+		tcpPEER_WILDCARD_AT_START = 1,	/**< wildcard at start of entry (*name) */
+		tcpPEER_WILDCARD_AT_END = 2,	/**< wildcard at end of entry (name*) */
+		tcpPEER_WILDCARD_MATCH_ALL = 3,	/**< only * wildcard, matches all values */
+		tcpPEER_WILDCARD_EMPTY_COMPONENT = 4/**< special case: domain component empty (e.g. "..") */
 	} wildcardType;
 	struct tcpPermittedPeerWildcardComp_s *pNext;
 } tcpPermittedPeerWildcardComp_t;
@@ -73,11 +73,12 @@ typedef struct tcpPermittedPeerWildcardComp_s {
 typedef struct {
 		char *name;
 		tcpPermittedPeerWildcardComp_t *wildcardRoot;
+		tcpPermittedPeerWildcardComp_t *wildcardLast;
 } tcpPermittedPeerEntry_t;
 /* a structure to store permitted peer information (a type of ACL) */
 typedef struct tcpPermittedPeers_s {
 	int nmemb;
-	tcpPermittedPeerEntry_t *peers;
+	tcpPermittedPeerEntry_t *peer;
 } tcpPermittedPeers_t;
 
 /* the RELPTCP object 
