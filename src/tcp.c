@@ -767,7 +767,7 @@ finalize_it:
  * operation.
  */
 static void
-gtlsChkOnePeerWildcard(tcpPermittedPeerWildcardComp_t *pRoot, char *peername, int *pbFoundPositiveMatch)
+relpTcpChkOnePeerWildcard(tcpPermittedPeerWildcardComp_t *pRoot, char *peername, int *pbFoundPositiveMatch)
 {
 	tcpPermittedPeerWildcardComp_t *pWildcard;
 	char *pC;
@@ -849,6 +849,7 @@ gtlsChkOnePeerWildcard(tcpPermittedPeerWildcardComp_t *pRoot, char *peername, in
 	*pbFoundPositiveMatch = 1;
 done:	return;
 }
+
 /* Perform a match on ONE peer name obtained from the certificate. This name
  * is checked against the set of configured credentials. *pbFoundPositiveMatch is
  * set to 1 if the ID matches. *pbFoundPositiveMatch must have been initialized
@@ -856,7 +857,7 @@ done:	return;
  * called multiple times).
  */
 static void
-gtlsChkOnePeerName(relpTcp_t *pThis, char *peername, int *pbFoundPositiveMatch)
+relpTcpChkOnePeerName(relpTcp_t *pThis, char *peername, int *pbFoundPositiveMatch)
 {
 	int i;
 
@@ -868,7 +869,7 @@ gtlsChkOnePeerName(relpTcp_t *pThis, char *peername, int *pbFoundPositiveMatch)
 				break;
 			}
 		} else {
-			gtlsChkOnePeerWildcard(pThis->permittedPeers.peer[i].wildcardRoot,
+			relpTcpChkOnePeerWildcard(pThis->permittedPeers.peer[i].wildcardRoot,
 			        peername, pbFoundPositiveMatch);
 		}
 	}
@@ -886,7 +887,7 @@ gtlsChkOnePeerName(relpTcp_t *pThis, char *peername, int *pbFoundPositiveMatch)
  * Note that non-0 is also returned if no CN is found.
  */
 static int
-gtlsGetCN(gnutls_x509_crt cert, char *namebuf, int lenNamebuf)
+relpTcpGetCN(gnutls_x509_crt cert, char *namebuf, int lenNamebuf)
 {
 	int r;
 	int gnuRet;
@@ -987,7 +988,7 @@ relpTcpChkPeerName(relpTcp_t *pThis, gnutls_x509_crt cert)
 			pThis->pEngine->dbgprint("librelp: subject alt dnsName: '%s'\n", szAltName);
 			iAllNames += snprintf(allNames+iAllNames, sizeof(allNames)-iAllNames,
 					      "DNSname: %s; ", szAltName);
-			gtlsChkOnePeerName(pThis, szAltName, &bFoundPositiveMatch);
+			relpTcpChkOnePeerName(pThis, szAltName, &bFoundPositiveMatch);
 			/* do NOT break, because there may be multiple dNSName's! */
 		}
 		++iAltName;
@@ -995,11 +996,11 @@ relpTcpChkPeerName(relpTcp_t *pThis, gnutls_x509_crt cert)
 
 	if(!bFoundPositiveMatch) {
 		/* if we did not succeed so far, we try the CN part of the DN... */
-		if(gtlsGetCN(cert, cnBuf, sizeof(cnBuf)) == 0) {
-			pThis->pEngine->dbgprint("librelp: gtls now checking auth for CN '%s'\n", cnBuf);
+		if(relpTcpGetCN(cert, cnBuf, sizeof(cnBuf)) == 0) {
+			pThis->pEngine->dbgprint("librelp: relpTcp now checking auth for CN '%s'\n", cnBuf);
 			iAllNames += snprintf(allNames+iAllNames, sizeof(allNames)-iAllNames,
 					      "CN: %s; ", cnBuf);
-			gtlsChkOnePeerName(pThis, cnBuf, &bFoundPositiveMatch);
+			relpTcpChkOnePeerName(pThis, cnBuf, &bFoundPositiveMatch);
 		}
 	}
 
