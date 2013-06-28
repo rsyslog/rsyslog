@@ -150,7 +150,6 @@ relpTcpDestruct(relpTcp_t **ppThis)
 			gnuRet = gnutls_bye(pThis->session, GNUTLS_SHUT_RDWR);
 		}
 		gnutls_deinit(pThis->session);
-pThis->pEngine->dbgprint("DDDD: gnutls_deinit done %p\n", pThis->session);
 	}
 
 	relpTcpFreePermittedPeers(pThis);
@@ -523,7 +522,6 @@ relpTcpTLSSetPrio(relpTcp_t *pThis)
 	}
 
 	r = gnutls_priority_set_direct(pThis->session, pristring, NULL);
-	pThis->pEngine->dbgprint("DDDD: gnutls_priority_set_direct(\"%s\"): %d: %s\n", pristring, r, gnutls_strerror(r));
 	if(r == GNUTLS_E_INVALID_REQUEST) {
 		ABORT_FINALIZE(RELP_RET_INVLD_TLS_PRIO);
 	} else if(r != GNUTLS_E_SUCCESS) {
@@ -543,7 +541,6 @@ relpTcpAcceptConnReqInitTLS(relpTcp_t *pThis, relpSrv_t *pSrv)
 	ENTER_RELPFUNC;
 
 	r = gnutls_init(&pThis->session, GNUTLS_SERVER);
-pThis->pEngine->dbgprint("DDDD: gnutls_init[%p] %d: %s\n", pThis->session, r, gnutls_strerror(r));
 	if(chkGnutlsCode(pThis, "Failed to initialize GnuTLS", RELP_RET_ERR_TLS_SETUP, r)) {
 		ABORT_FINALIZE(RELP_RET_ERR_TLS_SETUP);
 	}
@@ -558,7 +555,6 @@ pThis->pEngine->dbgprint("DDDD: gnutls_init[%p] %d: %s\n", pThis->session, r, gn
 
 	if(isAnonAuth(pSrv->pTcp)) {
 		r = gnutls_credentials_set(pThis->session, GNUTLS_CRD_ANON, pSrv->pTcp->anoncredSrv);
-		pThis->pEngine->dbgprint("DDDD: gnutls_credentials_set (anon) %d: %s\n", r, gnutls_strerror(r));
 		if(chkGnutlsCode(pThis, "Failed setting anonymous credentials", RELP_RET_ERR_TLS_SETUP, r)) {
 			ABORT_FINALIZE(RELP_RET_ERR_TLS_SETUP);
 		}
@@ -570,14 +566,12 @@ pThis->pEngine->dbgprint("DDDD: gnutls_init[%p] %d: %s\n", pThis->session, r, gn
 		if(chkGnutlsCode(pThis, "Failed setting certificate credentials", RELP_RET_ERR_TLS_SETUP, r)) {
 			ABORT_FINALIZE(RELP_RET_ERR_TLS_SETUP);
 		}
-		pThis->pEngine->dbgprint("DDDD: gnutls_credentials_set(cert) %d: %s\n", r, gnutls_strerror(r));
 	}
 	gnutls_dh_set_prime_bits(pThis->session, pThis->dhBits);
 	gnutls_certificate_server_set_request(pThis->session, GNUTLS_CERT_REQUEST);
 
 	gnutls_transport_set_ptr(pThis->session, (gnutls_transport_ptr_t) pThis->sock);
 	r = gnutls_handshake(pThis->session);
-pThis->pEngine->dbgprint("DDDD: gnutls_handshake: %d: %s\n", r, gnutls_strerror(r));
 	if(r == GNUTLS_E_INTERRUPTED || r == GNUTLS_E_AGAIN) {
 		pThis->pEngine->dbgprint("librelp: gnutls_handshake retry necessary (this is OK and expected)\n");
 		pThis->rtryOp = relpTCP_RETRY_handshake;
@@ -619,7 +613,7 @@ relpTcpAcceptConnReq(relpTcp_t **ppThis, int sock, relpSrv_t *pSrv)
 
 	/* TODO: obtain hostname, normalize (callback?), save it */
 	CHKRet(relpTcpSetRemHost(pThis, (struct sockaddr*) &addr));
-pThis->pEngine->dbgprint("remote host is '%s', ip '%s'\n", pThis->pRemHostName, pThis->pRemHostIP);
+	pThis->pEngine->dbgprint("remote host is '%s', ip '%s'\n", pThis->pRemHostName, pThis->pRemHostIP);
 
 	/* set the new socket to non-blocking IO */
 	if((sockflags = fcntl(iNewSock, F_GETFL)) != -1) {
@@ -685,7 +679,6 @@ relpTcpChkPeerFingerprint(relpTcp_t *pThis, gnutls_x509_crt cert)
 	/* obtain the SHA1 fingerprint */
 	size = sizeof(fingerprint);
 	r = gnutls_x509_crt_get_fingerprint(cert, GNUTLS_DIG_SHA1, fingerprint, &size);
-pThis->pEngine->dbgprint("DDDD: crt_get_fingerprint returned %d: %s\n", r, gnutls_strerror(r));
 	if(chkGnutlsCode(pThis, "Failed to obtain fingerprint from certificate", RELP_RET_ERR_TLS, r)) {
 		r = GNUTLS_E_CERTIFICATE_ERROR; goto done;
 	}
@@ -694,9 +687,9 @@ pThis->pEngine->dbgprint("DDDD: crt_get_fingerprint returned %d: %s\n", r, gnutl
 
 	/* now search through the permitted peers to see if we can find a permitted one */
 	found = 0;
-pThis->pEngine->dbgprint("DDDD: n peers %d\n", pThis->permittedPeers.nmemb);
+	pThis->pEngine->dbgprint("DDDD: n peers %d\n", pThis->permittedPeers.nmemb);
 	for(i = 0 ; i < pThis->permittedPeers.nmemb ; ++i) {
-pThis->pEngine->dbgprint("DDDD: checking peer '%s','%s'\n", fpPrintable, pThis->permittedPeers.peer[i].name);
+	pThis->pEngine->dbgprint("DDDD: checking peer '%s','%s'\n", fpPrintable, pThis->permittedPeers.peer[i].name);
 		if(!strcmp(fpPrintable, pThis->permittedPeers.peer[i].name)) {
 			found = 1;
 			break;
@@ -1036,7 +1029,6 @@ relpTcpChkPeerName(relpTcp_t *pThis, gnutls_x509_crt cert)
 	int gnuRet;
 
 	ret = gnutls_certificate_verify_peers2(pThis->session, &status);
-	pThis->pEngine->dbgprint("DDDD: gnutls_certificate_verify_peers2 returned %d: %s\n", ret, gnutls_strerror(ret));
 	if(ret < 0) {
 		callOnAuthErr(pThis, "", "certificate validation failed",
 			RELP_RET_AUTH_CERT_INVL);
@@ -1165,17 +1157,14 @@ relpTcpLstnInitTLS(relpTcp_t *pThis)
 
 	if(isAnonAuth(pThis)) {
 		r = gnutls_dh_params_init(&pThis->dh_params);
-		pThis->pEngine->dbgprint("DDDD: dh_param_init returns %d\n", r);
 		if(chkGnutlsCode(pThis, "Failed to initialize dh_params", RELP_RET_ERR_TLS_SETUP, r)) {
 			ABORT_FINALIZE(RELP_RET_ERR_TLS_SETUP);
 		}
 		r = gnutls_dh_params_generate2(pThis->dh_params, pThis->dhBits);
-		pThis->pEngine->dbgprint("DDDD: paramgenerate returns %d\n", r);
 		if(chkGnutlsCode(pThis, "Failed to generate dh_params", RELP_RET_ERR_TLS_SETUP, r)) {
 			ABORT_FINALIZE(RELP_RET_ERR_TLS_SETUP);
 		}
 		r = gnutls_anon_allocate_server_credentials(&pThis->anoncredSrv);
-		pThis->pEngine->dbgprint("DDDD: generating server DH params...\n");
 		if(chkGnutlsCode(pThis, "Failed to allocate server credentials", RELP_RET_ERR_TLS_SETUP, r)) {
 			ABORT_FINALIZE(RELP_RET_ERR_TLS_SETUP);
 		}
@@ -1189,20 +1178,16 @@ relpTcpLstnInitTLS(relpTcp_t *pThis)
 			r = gnutls_certificate_set_x509_trust_file(pThis->xcred,
 				pThis->caCertFile, GNUTLS_X509_FMT_PEM);
 			if(r < 0) {
-				pThis->pEngine->dbgprint("DDDD: certificate_set_x509_trust_file returns %d: %s\n", r, gnutls_strerror(r));
 				chkGnutlsCode(pThis, "Failed to set certificate trust files", RELP_RET_ERR_TLS_SETUP, r);
 				ABORT_FINALIZE(RELP_RET_ERR_TLS_SETUP);
 			}
-			pThis->pEngine->dbgprint("librelp: obtained %d certificates from %s\n",
-				r, pThis->caCertFile);
+			pThis->pEngine->dbgprint("librelp: obtained %d certificates from %s\n", r, pThis->caCertFile);
 		}
 		r = gnutls_certificate_set_x509_key_file (pThis->xcred,
 			pThis->ownCertFile, pThis->privKeyFile, GNUTLS_X509_FMT_PEM);
-		pThis->pEngine->dbgprint("DDDD: certificate_set_x509_key_file returns %d\n", r);
 		if(chkGnutlsCode(pThis, "Failed to set certificate key files", RELP_RET_ERR_TLS_SETUP, r)) {
 			ABORT_FINALIZE(RELP_RET_ERR_TLS_SETUP);
 		}
-		//gnutls_certificate_set_dh_params(pThis->xcred, pThis->dh_params);
 		if(pThis->authmode == eRelpAuthMode_None)
 			pThis->authmode = eRelpAuthMode_Fingerprint;
 		gnutls_certificate_set_verify_function(pThis->xcred, relpTcpVerifyCertificateCallback);
@@ -1228,7 +1213,9 @@ relpTcpLstnInit(relpTcp_t *pThis, unsigned char *pLstnPort, int ai_family)
 	RELPOBJ_assert(pThis, Tcp);
 
 	pLstnPt = pLstnPort;
-	assert(pLstnPt != NULL); pThis->pEngine->dbgprint("creating relp tcp listen socket on port %s\n", pLstnPt);
+	assert(pLstnPt != NULL);
+	
+	pThis->pEngine->dbgprint("creating relp tcp listen socket on port %s\n", pLstnPt);
 
         memset(&hints, 0, sizeof(hints));
         hints.ai_flags = AI_PASSIVE;
@@ -1372,7 +1359,8 @@ relpTcpRcv(relpTcp_t *pThis, relpOctet_t *pRcvBuf, ssize_t *pLenBuf)
 			pThis->pEngine->dbgprint("librelp: gnutls_record_recv must be retried\n");
 			pThis->rtryOp = relpTCP_RETRY_recv;
 		} else {
-			chkGnutlsCode(pThis, "TLS record reception failed", RELP_RET_IO_ERR, r);
+			if(r < 0)
+				chkGnutlsCode(pThis, "TLS record reception failed", RELP_RET_IO_ERR, r);
 			pThis->rtryOp = relpTCP_RETRY_none;
 		}
 		*pLenBuf = (r < 0) ? -1 : r;
@@ -1406,8 +1394,6 @@ relpTcpSend(relpTcp_t *pThis, relpOctet_t *pBuf, ssize_t *pLenBuf)
 		} else {
 			pThis->rtryOp = relpTCP_RETRY_none;
 			if(written < 1) {
-				pThis->pEngine->dbgprint("librelp: error in gnutls_record_send: %s\n",
-					gnutls_strerror(written));
 				chkGnutlsCode(pThis, "TLS record write failed", RELP_RET_IO_ERR, written);
 				ABORT_FINALIZE(RELP_RET_IO_ERR);
 			}
@@ -1452,7 +1438,6 @@ relpTcpConnectTLSInit(relpTcp_t *pThis)
 		called_gnutls_global_init = 1;
 	}
 	r = gnutls_init(&pThis->session, GNUTLS_CLIENT);
-	pThis->pEngine->dbgprint("DDDD: gnutls_init[%p]: %d\n", pThis->session, r);
 	if(chkGnutlsCode(pThis, "Failed to initialize GnuTLS", RELP_RET_ERR_TLS_SETUP, r)) {
 		ABORT_FINALIZE(RELP_RET_ERR_TLS_SETUP);
 	}
@@ -1462,13 +1447,11 @@ relpTcpConnectTLSInit(relpTcp_t *pThis)
 
 	if(isAnonAuth(pThis)) {
 		r = gnutls_anon_allocate_client_credentials(&pThis->anoncred);
-		pThis->pEngine->dbgprint("DDDD: gnutls_anon_allocat_client_credentials: %d\n", r);
 		if(chkGnutlsCode(pThis, "Failed to allocate client credentials", RELP_RET_ERR_TLS_SETUP, r)) {
 			ABORT_FINALIZE(RELP_RET_ERR_TLS_SETUP);
 		}
 		/* put the anonymous credentials to the current session */
 		r = gnutls_credentials_set(pThis->session, GNUTLS_CRD_ANON, pThis->anoncred);
-		pThis->pEngine->dbgprint("DDDD: gnutls_credentials_set: %d\n", r);
 		if(chkGnutlsCode(pThis, "Failed to set credentials", RELP_RET_ERR_TLS_SETUP, r)) {
 			ABORT_FINALIZE(RELP_RET_ERR_TLS_SETUP);
 		}
@@ -1481,7 +1464,6 @@ relpTcpConnectTLSInit(relpTcp_t *pThis)
 			r = gnutls_certificate_set_x509_trust_file(pThis->xcred,
 				pThis->caCertFile, GNUTLS_X509_FMT_PEM);
 			if(r < 0) {
-				pThis->pEngine->dbgprint("DDDD: certificate_set_x509_trust_file returns %d: %s\n", r, gnutls_strerror(r));
 				chkGnutlsCode(pThis, "Failed to set certificate trust file", RELP_RET_ERR_TLS_SETUP, r);
 				ABORT_FINALIZE(RELP_RET_ERR_TLS_SETUP);
 			}
@@ -1490,13 +1472,11 @@ relpTcpConnectTLSInit(relpTcp_t *pThis)
 		if(pThis->ownCertFile != NULL) {
 			r = gnutls_certificate_set_x509_key_file (pThis->xcred,
 				pThis->ownCertFile, pThis->privKeyFile, GNUTLS_X509_FMT_PEM);
-			pThis->pEngine->dbgprint("DDDD: certificate_set_x509_key_file returns %d\n", r);
 			if(chkGnutlsCode(pThis, "Failed to set certificate key file", RELP_RET_ERR_TLS_SETUP, r)) {
 				ABORT_FINALIZE(RELP_RET_ERR_TLS_SETUP);
 			}
 		}
 		r = gnutls_credentials_set(pThis->session, GNUTLS_CRD_CERTIFICATE, pThis->xcred);
-		pThis->pEngine->dbgprint("DDDD: gnutls_credentials_set(cert) %d: %s\n", r, gnutls_strerror(r));
 		if(chkGnutlsCode(pThis, "Failed to set credentials", RELP_RET_ERR_TLS_SETUP, r)) {
 			ABORT_FINALIZE(RELP_RET_ERR_TLS_SETUP);
 		}
