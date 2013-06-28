@@ -115,7 +115,7 @@ relpCltConnect(relpClt_t *pThis, int protFamily, unsigned char *port, unsigned c
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Clt);
 
-	CHKRet(relpSessConstruct(&pThis->pSess, pThis->pEngine, NULL));
+	CHKRet(relpSessConstruct(&pThis->pSess, pThis->pEngine, RELP_CLT_CONN, pThis));
 	CHKRet(relpSessSetTimeout(pThis->pSess, pThis->timeout));
 	CHKRet(relpSessSetClientIP(pThis->pSess, pThis->clientIP));
 	CHKRet(relpSessSetUsrPtr(pThis->pSess, pThis->pUsr));

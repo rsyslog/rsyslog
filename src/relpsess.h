@@ -76,6 +76,8 @@ struct relpSess_s {
 	relpTxnr_t txnr;	/**< next txnr expected when receiving or to be used when sending */
 	size_t maxDataSize;  /**< maximum size of a DATA element (TODO: set after handshake on connect) */
 	pthread_mutex_t mutSend; /**< mutex for send operation (make sure txnr is correct) */
+	relpSrv_t *pSrv;	   /**< a pointer to our server object, if NULL, we belong to a client */
+	relpClt_t *pClt;	   /**< ptr to our client; only valid if pSrv == NULL */
 
 	/* connection parameters */
 	int protocolVersion; /* relp protocol version in use in this session */
@@ -97,7 +99,6 @@ struct relpSess_s {
 	unsigned char *clientIP;	/* ar */
 
 	/* properties needed for server operation */
-	relpSrv_t *pSrv;	/**< the server we belong to */
 	struct relpSendq_s *pSendq; /**< our send queue */
 
 	/* properties needed for client operation */
@@ -128,7 +129,7 @@ relpSessTcpRequiresRtry(relpSess_t *pThis)
 }
 
 /* prototypes */
-relpRetVal relpSessConstruct(relpSess_t **ppThis, relpEngine_t *pEngine, relpSrv_t *pSrv);
+relpRetVal relpSessConstruct(relpSess_t **ppThis, relpEngine_t *pEngine, int connType, void *pParent);
 relpRetVal relpSessDestruct(relpSess_t **ppThis);
 relpRetVal relpSessAcceptAndConstruct(relpSess_t **ppThis, relpSrv_t *pSrv, int sock);
 relpRetVal relpSessRcvData(relpSess_t *pThis);

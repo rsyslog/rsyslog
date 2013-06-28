@@ -88,6 +88,8 @@ typedef struct relpTcp_s {
 	BEGIN_RELP_OBJ;
 	relpEngine_t *pEngine;
 	void *pUsr;		   /**< user pointer for callbacks */
+	relpSrv_t *pSrv;	   /**< a pointer to our server object, if NULL, we belong to a client */
+	relpClt_t *pClt;	   /**< ptr to our client; only valid if pSrv == NULL */
 	unsigned char *pRemHostIP; /**< IP address of remote peer (currently used in server mode, only) */
 	unsigned char *pRemHostName; /**< host name of remote peer (currently used in server mode, only) */
 	int sock;	/**< the socket we use for regular, single-socket, operations */
@@ -97,7 +99,6 @@ typedef struct relpTcp_s {
 	uint8_t bEnableTLS;
 	uint8_t bTLSActive;	/**< is TLS actually active (properly activated) on this session? */
 	uint8_t bEnableTLSZip;
-	uint8_t bIsClient;	/**< set if this belongs to a client, if unset --> server */
 	int dhBits;	/**< number of bits for Diffie-Hellman key */
 	char *pristring; /**< priority string for GnuTLS */
 	relpAuthMode_t authmode;
@@ -127,7 +128,7 @@ relpTcpRtryOp(relpTcp_t *pThis)
 }
 
 /* prototypes */
-relpRetVal relpTcpConstruct(relpTcp_t **ppThis, relpEngine_t *pEngine, int connType);
+relpRetVal relpTcpConstruct(relpTcp_t **ppThis, relpEngine_t *pEngine, int connType, void *pParent);
 relpRetVal relpTcpDestruct(relpTcp_t **ppThis);
 relpRetVal relpTcpAbortDestruct(relpTcp_t **ppThis);
 relpRetVal relpTcpLstnInit(relpTcp_t *pThis, unsigned char *pLstnPort, int ai_family);

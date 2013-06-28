@@ -65,7 +65,7 @@ relpSessFreePermittedPeers(relpSess_t *pThis)
  *  the pSrv parameter may be set to NULL if the session object is for a client.
  */
 relpRetVal
-relpSessConstruct(relpSess_t **ppThis, relpEngine_t *pEngine, relpSrv_t *pSrv)
+relpSessConstruct(relpSess_t **ppThis, relpEngine_t *pEngine, int connType, void *pParent)
 {
 	relpSess_t *pThis;
 
@@ -81,7 +81,11 @@ relpSessConstruct(relpSess_t **ppThis, relpEngine_t *pEngine, relpSrv_t *pSrv)
 	pThis->pEngine = pEngine;
 	/* use Engine's command enablement states as default */
 	pThis->stateCmdSyslog = pEngine->stateCmdSyslog;
-	pThis->pSrv = pSrv;
+	if(connType == RELP_SRV_CONN) {
+		pThis->pSrv = (relpSrv_t*) pParent;
+	} else {
+		pThis->pClt = (relpClt_t*) pParent;
+	}
 	pThis->txnr = 1; /* txnr start at 1 according to spec */
 	pThis->timeout = 90;
 	pThis->pUsr = NULL;
@@ -183,10 +187,9 @@ relpSessAcceptAndConstruct(relpSess_t **ppThis, relpSrv_t *pSrv, int sock)
 	RELPOBJ_assert(pSrv, Srv);
 	assert(sock >= 0);
 
-	CHKRet(relpSessConstruct(&pThis, pSrv->pEngine, pSrv));
+	CHKRet(relpSessConstruct(&pThis, pSrv->pEngine, RELP_SRV_CONN, pSrv));
 	CHKRet(relpTcpAcceptConnReq(&pThis->pTcp, sock, pSrv));
 
-	/* TODO: check hostname against ACL (callback?) */
 	/* TODO: check against max# sessions */
 
 	*ppThis = pThis;
@@ -785,7 +788,7 @@ relpSessConnect(relpSess_t *pThis, int protFamily, unsigned char *port, unsigned
 	pThis->txnr = 1;
 	pThis->sessType = eRelpSess_Client;	/* indicate we have a client session */
 
-	CHKRet(relpTcpConstruct(&pThis->pTcp, pThis->pEngine, RELP_CLT_CONN));
+	CHKRet(relpTcpConstruct(&pThis->pTcp, pThis->pEngine, RELP_CLT_CONN, pThis->pClt));
 	CHKRet(relpTcpSetUsrPtr(pThis->pTcp, pThis->pUsr));
 	if(pThis->bEnableTLS) {
 		CHKRet(relpTcpEnableTLS(pThis->pTcp));

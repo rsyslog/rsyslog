@@ -76,10 +76,11 @@ relpTcpFreePermittedPeers(relpTcp_t *pThis)
 /** Construct a RELP tcp instance
  * This is the first thing that a caller must do before calling any
  * RELP function. The relp tcp must only destructed after all RELP
- * operations have been finished.
+ * operations have been finished. Parameter pParent contains a pointer
+ * to the "parent" client or server object, depending on connType.
  */
 relpRetVal
-relpTcpConstruct(relpTcp_t **ppThis, relpEngine_t *pEngine, int connType)
+relpTcpConstruct(relpTcp_t **ppThis, relpEngine_t *pEngine, int connType, void *pParent)
 {
 	relpTcp_t *pThis;
 
@@ -90,7 +91,11 @@ relpTcpConstruct(relpTcp_t **ppThis, relpEngine_t *pEngine, int connType)
 	}
 
 	RELP_CORE_CONSTRUCTOR(pThis, Tcp);
-	pThis->bIsClient = (connType == RELP_SRV_CONN) ? 0 : 1;
+	if(connType == RELP_SRV_CONN) {
+		pThis->pSrv = (relpSrv_t*) pParent;
+	} else {
+		pThis->pClt = (relpClt_t*) pParent;
+	}
 	pThis->sock = -1;
 	pThis->pEngine = pEngine;
 	pThis->iSessMax = 500;	/* default max nbr of sessions - TODO: make configurable -- rgerhards, 2008-03-17*/
@@ -544,7 +549,7 @@ relpTcpAcceptConnReq(relpTcp_t **ppThis, int sock, relpSrv_t *pSrv)
 	}
 
 	/* construct our object so that we can use it... */
-	CHKRet(relpTcpConstruct(&pThis, pEngine, RELP_SRV_CONN));
+	CHKRet(relpTcpConstruct(&pThis, pEngine, RELP_SRV_CONN, pSrv));
 
 	/* TODO: obtain hostname, normalize (callback?), save it */
 	CHKRet(relpTcpSetRemHost(pThis, (struct sockaddr*) &addr));

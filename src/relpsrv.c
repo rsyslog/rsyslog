@@ -308,7 +308,7 @@ relpSrvRun(relpSrv_t *pThis)
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Srv);
 
-	CHKRet(relpTcpConstruct(&pTcp, pThis->pEngine, RELP_SRV_CONN));
+	CHKRet(relpTcpConstruct(&pTcp, pThis->pEngine, RELP_SRV_CONN, pThis));
 	relpTcpSetUsrPtr(pTcp, pThis->pUsr);
 	if(pThis->bEnableTLS) {
 		relpTcpEnableTLS(pTcp);
