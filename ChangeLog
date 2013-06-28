@@ -1,4 +1,9 @@
 ----------------------------------------------------------------------
+Version 1.1.4 - 2013-06-??
+- wildcards are now supported in TLS name peer authentication
+  They follow RFC5425 recommandations, e.g.
+  *.example.com, client*.example.com, client01.*.com
+----------------------------------------------------------------------
 Version 1.1.3 - 2013-06-26
 - increased performance of RELP connection
 - bugfix: potential segfault if no GnuTLS priority string was set
