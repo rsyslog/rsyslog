@@ -147,6 +147,8 @@ relpRetVal relpTcpSetPermittedPeers(relpTcp_t *pThis, relpPermittedPeers_t *pPee
 relpRetVal relpTcpRtryHandshake(relpTcp_t *pThis);
 relpRetVal relpTcpSetUsrPtr(relpTcp_t *pThis, void *pUsr);
 relpRetVal relpTcpSetAuthMode(relpTcp_t *pThis, relpAuthMode_t authmode);
+void relpTcpHintBurstBegin(relpTcp_t *pThis);
+void relpTcpHintBurstEnd(relpTcp_t *pThis);
 int relpTcpGetRtryDirection(relpTcp_t *pThis);
 
 #endif /* #ifndef RELPTCP_H_INCLUDED */

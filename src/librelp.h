@@ -208,5 +208,7 @@ relpRetVal relpCltSetAuthMode(relpClt_t *pThis, char *mode);
 relpRetVal relpCltAddPermittedPeer(relpClt_t *pThis, char *peer);
 relpRetVal relpCltSetUsrPtr(relpClt_t *pThis, void *pUsr);
 relpRetVal relpCltReconnect(relpClt_t *pThis);
+void relpCltHintBurstBegin(relpClt_t *pThis);
+void relpCltHintBurstEnd(relpClt_t *pThis);
 
 #endif /* #ifndef RELP_H_INCLUDED */

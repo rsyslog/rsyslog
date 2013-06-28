@@ -322,6 +322,23 @@ relpCltEnableTLSZip(relpClt_t *pThis)
 	LEAVE_RELPFUNC;
 }
 
+/* this function is called to hint librelp that a "burst" of data is to be
+ * sent. librelp can than try to optimize it's handling.
+ * The function is intentionally void as it must operate in a way that
+ * does not interfere with normal operations.
+ */
+void
+relpCltHintBurstBegin(relpClt_t *pThis)
+{
+	relpTcpHintBurstBegin(pThis->pSess->pTcp);
+}
+/* this is the counterpart to relpCltHintBurstBegin -- see there for doc */
+void
+relpCltHintBurstEnd(relpClt_t *pThis)
+{
+	relpTcpHintBurstEnd(pThis->pSess->pTcp);
+}
+
 /* Send a syslog message through RELP. The session must be established.
  * The provided message buffer is not touched by this function. The caller
  * must free it if it is no longer needed.

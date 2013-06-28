@@ -1,5 +1,7 @@
 ----------------------------------------------------------------------
 Version 1.1.4 - 2013-06-??
+- add burst support to the client API
+  new APIs: relpCltHintBurstBegin, relpCltHintBurstEnd
 - wildcards are now supported in TLS name peer authentication
   They follow RFC5425 recommandations, e.g.
   *.example.com, client*.example.com, client01.*.com

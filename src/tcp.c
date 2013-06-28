@@ -1371,6 +1371,28 @@ relpTcpRcv(relpTcp_t *pThis, relpOctet_t *pRcvBuf, ssize_t *pLenBuf)
 	LEAVE_RELPFUNC;
 }
 
+
+/* this function is called to hint librelp that a "burst" of data is to be
+ * sent. librelp can than try to optimize it's handling. Right now, this 
+ * means we turn on the CORK option and will turn it off when we are
+ * hinted that the burst is over.
+ * The function is intentionally void as it must operate in a way that
+ * does not interfere with normal operations.
+ */
+void
+relpTcpHintBurstBegin(relpTcp_t *pThis)
+{
+	int on = 1;
+	setsockopt(pThis->sock, SOL_TCP, TCP_CORK, &on, sizeof (on));
+}
+/* this is the counterpart to relpTcpHintBurstBegin -- see there for doc */
+void
+relpTcpHintBurstEnd(relpTcp_t *pThis)
+{
+	int on = 0;
+	setsockopt(pThis->sock, SOL_TCP, TCP_CORK, &on, sizeof (on));
+}
+
 /* send a buffer via TCP.
  * On entry, pLenBuf contains the number of octets to
  * write. On exit, it contains the number of octets actually written.
