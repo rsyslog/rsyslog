@@ -193,7 +193,7 @@ relpSendbufSendAll(relpSendbuf_t *pThis, relpSess_t *pSess, int bAddToUnacked)
 			if(currtime >= timeout)
 				ABORT_FINALIZE(RELP_RET_IO_ERR);
 			/* we put ourselves to sleep to avoid busy waiting */
-			doSleep(0, 100);
+			doSleep(0, 20);
 		} else if(lenWritten == lenToWrite) {
 			lenToWrite = 0;
 		} else {
