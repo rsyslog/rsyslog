@@ -482,6 +482,11 @@ relpSessWaitState(relpSess_t *pThis, relpSessState_t stateExpected, int timeout)
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
 
+	/* are we already ready? */
+	if(pThis->sessState == stateExpected || pThis->sessState == eRelpSessState_BROKEN) {
+		FINALIZE;
+	}
+
 	/* first read any outstanding data and process the packets. Note that this
 	 * call DOES NOT block.
 	 */
@@ -489,7 +494,7 @@ relpSessWaitState(relpSess_t *pThis, relpSessState_t stateExpected, int timeout)
 	if(localRet != RELP_RET_OK && localRet != RELP_RET_SESSION_BROKEN)
 		ABORT_FINALIZE(localRet);
 
-	/* check if we are already in the desired state. If so, we can immediately
+	/* re-check if we are already in the desired state. If so, we can immediately
 	 * return. That saves us doing a costly clock call to set the timeout. As a
 	 * side-effect, the timeout is actually applied without the time needed for
 	 * above reception. I think is is OK, even a bit logical ;)
