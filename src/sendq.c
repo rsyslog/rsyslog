@@ -243,6 +243,7 @@ relpSendqSend(relpSendq_t *pThis, relpTcp_t *pTcp)
 
 	pEntry = pThis->pRoot;
 
+	relpTcpHintBurstBegin(pTcp);
 	while(pEntry != NULL) {
 		RELPOBJ_assert(pEntry, Sendqe);
 		localRet = relpSendbufSend(pEntry->pBuf, pTcp);
@@ -258,5 +259,6 @@ relpSendqSend(relpSendq_t *pThis, relpTcp_t *pTcp)
 	}
 
 finalize_it:
+	relpTcpHintBurstEnd(pTcp);
 	LEAVE_RELPFUNC;
 }
