@@ -401,7 +401,7 @@ CODESTARTnewActInst
 				estrTmp = NULL; 
 				bInQuotes = FALSE; 
 				/* Set first parameter to binary */
-				pData->aParams[iPrm] = strdup(pData->szBinary); 
+				pData->aParams[iPrm] = strdup((char*)pData->szBinary); 
 				dbgprintf("omprog: Param (%d): '%s'\n", iPrm, pData->aParams[iPrm]);
 				iPrm++; 
 				while(iCnt < es_strlen(estrParams) ) {
