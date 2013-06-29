@@ -627,17 +627,19 @@ relpEngineDispatchFrame(relpEngine_t *pThis, relpSess_t *pSess, relpFrame_t *pFr
 
 	/* currently, we hardcode the commands. Over time, they may be dynamically 
 	 * loaded and, when so, should come from a linked list.
+	 * NOTE: the command handler are sorted so that most frequently used are
+	 * at the top of the list!
 	 */
-	if(!strcmp((char*)pFrame->cmd, "open")) {
+	if(!strcmp((char*)pFrame->cmd, "syslog")) {
+		CHKRet(relpSCSyslog(pFrame, pSess));
+	} else if(!strcmp((char*)pFrame->cmd, "rsp")) {
+		CHKRet(relpSCRsp(pFrame, pSess));
+	} else if(!strcmp((char*)pFrame->cmd, "open")) {
 		CHKRet(relpSCInit(pFrame, pSess));
 	} else if(!strcmp((char*)pFrame->cmd, "close")) {
 		CHKRet(relpSCClose(pFrame, pSess));
 	} else if(!strcmp((char*)pFrame->cmd, "serverclose")) {
 		CHKRet(relpCCServerclose(pFrame, pSess));
-	} else if(!strcmp((char*)pFrame->cmd, "syslog")) {
-		CHKRet(relpSCSyslog(pFrame, pSess));
-	} else if(!strcmp((char*)pFrame->cmd, "rsp")) {
-		CHKRet(relpSCRsp(pFrame, pSess));
 	} else {
 		pThis->dbgprint("invalid or not supported relp command '%s'\n", pFrame->cmd);
 		ABORT_FINALIZE(RELP_RET_INVALID_CMD);
