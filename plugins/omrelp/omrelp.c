@@ -375,6 +375,16 @@ finalize_it:
 	RETiRet;
 }
 
+BEGINbeginTransaction
+CODESTARTbeginTransaction
+dbgprintf("omrelp: beginTransaction\n");
+	if(!pData->bIsConnected) {
+		CHKiRet(doConnect(pData));
+	}
+	relpCltHintBurstBegin(pData->pRelpClt);
+finalize_it:
+ENDbeginTransaction
+
 BEGINdoAction
 	uchar *pMsg; /* temporary buffering */
 	size_t lenMsg;
@@ -408,8 +418,22 @@ CODESTARTdoAction
 finalize_it:
 	if(pData->bHadAuthFail)
 		iRet = RS_RET_DISABLE_ACTION;
+	if(iRet == RS_RET_OK) {
+		/* we mimic non-commit, as otherwise our endTransaction handler
+		 * will not get called. While this is not 100% correct, the worst
+		 * that can happen is some message duplication, something that
+		 * rsyslog generally accepts and prefers over message loss.
+		 */
+		iRet = RS_RET_PREVIOUS_COMMITTED;
+	}
 ENDdoAction
 
+
+BEGINendTransaction
+CODESTARTendTransaction
+	dbgprintf("omrelp: endTransaction\n");
+	relpCltHintBurstEnd(pData->pRelpClt);
+ENDendTransaction
 
 BEGINparseSelectorAct
 	uchar *q;
@@ -508,6 +532,7 @@ CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
 CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES 
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
+CODEqueryEtryPt_TXIF_OMOD_QUERIES
 CODEqueryEtryPt_SetShutdownImmdtPtr
 ENDqueryEtryPt
 
