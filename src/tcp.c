@@ -1639,3 +1639,37 @@ relpTcpRtryHandshake(relpTcp_t *pThis)
 finalize_it:
 	LEAVE_RELPFUNC;
 }
+
+
+/* wait until a socket is writable again. This is primarily for use in client cases.
+ * It does NOT take care of our regular event loop, and must not be used by parts
+ * of the code that are driven by this loop. Returns 0 if a timeout occured and 1
+ * otherwise.
+ */
+int
+relpTcpWaitWriteable(relpTcp_t *pThis, struct timespec *tTimeout)
+{
+	int r;
+	fd_set writefds;
+	struct timespec tCurr; /* current time */
+	struct timeval tvSelect;
+
+	clock_gettime(CLOCK_REALTIME, &tCurr);
+	tvSelect.tv_sec = tTimeout->tv_sec - tCurr.tv_sec;
+	tvSelect.tv_usec = (tTimeout->tv_nsec - tCurr.tv_nsec) / 1000000;
+	if(tvSelect.tv_usec < 0) {
+		tvSelect.tv_usec += 1000000;
+		tvSelect.tv_sec--;
+	}
+	if(tvSelect.tv_sec < 0) {
+		r = 0; goto done;
+	}
+
+	FD_ZERO(&writefds);
+	FD_SET(pThis->sock, &writefds);
+	pThis->pEngine->dbgprint("librelp: telpTcpWaitWritable doing select() "
+		"on fd %d, timoeut %lld.%lld\n", pThis->sock,
+		(long long) tTimeout->tv_sec, (long long) tTimeout->tv_nsec);
+	r = select(pThis->sock+1, NULL, &writefds, NULL, &tvSelect);
+done:	return r;
+}

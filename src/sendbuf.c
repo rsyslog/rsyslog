@@ -170,35 +170,41 @@ relpSendbufSendAll(relpSendbuf_t *pThis, relpSess_t *pSess, int bAddToUnacked)
 {
 	ssize_t lenToWrite;
 	ssize_t lenWritten;
-	time_t timeout, currtime;
+	struct timespec tCurr; /* absolute timeout value */
+	struct timespec tTimeout; /* absolute timeout value */
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sendbuf);
 	RELPOBJ_assert(pSess,  Sess);
 
-	time(&timeout);
-	timeout += pSess->timeout;
+	clock_gettime(CLOCK_REALTIME, &tTimeout);
+	tTimeout.tv_sec += pSess->timeout;
 	lenToWrite = pThis->lenData - pThis->bufPtr;
+	/* we compute the absolute timeout, as we may need to use it multiple
+	 * times in the loop below. Using the relative value would potentially
+	 * prolong it for quite some time!
+	 */
 	while(lenToWrite != 0) {
 		lenWritten = lenToWrite;
-//pSess->pEngine->dbgprint("sendbuf len %d, still to write %d\n", (int) pThis->lenData, (int) lenToWrite);
 		CHKRet(relpTcpSend(pSess->pTcp, pThis->pData + (9 - pThis->lenTxnr) + pThis->bufPtr, &lenWritten));
-
 		if(lenWritten == -1) {
 			ABORT_FINALIZE(RELP_RET_IO_ERR);
 		} else if(lenWritten == 0) {
-			time(&currtime);
-			pSess->pEngine->dbgprint("relpSendbufSendAll() wrote "
-				"0 octets, timeout %lld, curr %lld\n",
-				(long long) timeout, (long long) currtime);
-			if(currtime >= timeout)
-				ABORT_FINALIZE(RELP_RET_IO_ERR);
-			/* we put ourselves to sleep to avoid busy waiting */
-			doSleep(0, 20);
+			pSess->pEngine->dbgprint("relpSendbufSendAll() wrote 0 octets, waiting...\n");
+			if(relpTcpWaitWriteable(pSess->pTcp, &tTimeout) == 0) {
+				ABORT_FINALIZE(RELP_RET_IO_ERR); /* timed out! */
+			}
 		} else if(lenWritten == lenToWrite) {
 			lenToWrite = 0;
 		} else {
 			pThis->bufPtr += lenWritten;
 			lenToWrite = pThis->lenData - pThis->bufPtr;
+		}
+		if(lenToWrite != 0) {
+			clock_gettime(CLOCK_REALTIME, &tCurr);
+			if(   (tCurr.tv_sec > tTimeout.tv_sec)
+			   || (tCurr.tv_sec == tTimeout.tv_sec && tCurr.tv_nsec >= tTimeout.tv_nsec)) {
+				ABORT_FINALIZE(RELP_RET_IO_ERR);
+			}
 		}
 	}
 

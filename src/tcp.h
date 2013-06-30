@@ -150,5 +150,6 @@ relpRetVal relpTcpSetAuthMode(relpTcp_t *pThis, relpAuthMode_t authmode);
 void relpTcpHintBurstBegin(relpTcp_t *pThis);
 void relpTcpHintBurstEnd(relpTcp_t *pThis);
 int relpTcpGetRtryDirection(relpTcp_t *pThis);
+int relpTcpWaitWriteable(relpTcp_t *pThis, struct timespec *timeout);
 
 #endif /* #ifndef RELPTCP_H_INCLUDED */
