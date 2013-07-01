@@ -1372,6 +1372,19 @@ relpTcpRcv(relpTcp_t *pThis, relpOctet_t *pRcvBuf, ssize_t *pLenBuf)
 }
 
 
+/* helper for CORK option manipulation. As this is not portable, the
+ * helper abstracts it. Note that it is a null-operation if no
+ * such option is available on the platform in question.
+ */
+static inline void
+setCORKopt(int sock, int onOff)
+{
+#if defined(TCP_CORK)
+	setsockopt(sock, SOL_TCP, TCP_CORK, &onOff, sizeof (onOff));
+#elif defined(TCP_NOPUSH)
+	setsockopt(sock, IPPROTO_TCP, TCP_NOPUSH, &onOff, sizeof (onOff));
+#endif
+}
 /* this function is called to hint librelp that a "burst" of data is to be
  * sent. librelp can than try to optimize it's handling. Right now, this 
  * means we turn on the CORK option and will turn it off when we are
@@ -1382,15 +1395,13 @@ relpTcpRcv(relpTcp_t *pThis, relpOctet_t *pRcvBuf, ssize_t *pLenBuf)
 void
 relpTcpHintBurstBegin(relpTcp_t *pThis)
 {
-	int on = 1;
-	setsockopt(pThis->sock, SOL_TCP, TCP_CORK, &on, sizeof (on));
+	setCORKopt(pThis->sock, 1);
 }
 /* this is the counterpart to relpTcpHintBurstBegin -- see there for doc */
 void
 relpTcpHintBurstEnd(relpTcp_t *pThis)
 {
-	int on = 0;
-	setsockopt(pThis->sock, SOL_TCP, TCP_CORK, &on, sizeof (on));
+	setCORKopt(pThis->sock, 0);
 }
 
 /* send a buffer via TCP.
@@ -1546,7 +1557,6 @@ relpTcpConnect(relpTcp_t *pThis, int family, unsigned char *port, unsigned char 
 	struct addrinfo *res = NULL;
 	struct addrinfo hints;
 	struct addrinfo *reslocal = NULL;
-	int on = 1;
 
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Tcp);
@@ -1565,13 +1575,6 @@ relpTcpConnect(relpTcp_t *pThis, int family, unsigned char *port, unsigned char 
 	if((pThis->sock = socket(res->ai_family, res->ai_socktype, res->ai_protocol)) == -1) {
 		ABORT_FINALIZE(RELP_RET_IO_ERR);
 	}
-	/* we set the cork option as performance testing has shown this results
-	 * in 50 to 100% more performance. In the longer term, we should consider
-	 * putting messages into a buffer, which then is sent as whole. Much like
-	 * CORK, but under better control (especially without 200ms timeout!).
-	 * rgerhards, 2013-06-25
-	 */
-	setsockopt (pThis->sock, SOL_TCP, TCP_CORK, &on, sizeof (on));
 
 	if(clientIP != NULL) {
 		if(getaddrinfo((char*)clientIP, (char*)NULL, &hints, &reslocal) != 0) {

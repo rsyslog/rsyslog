@@ -1,7 +1,11 @@
 ----------------------------------------------------------------------
 Version 1.1.4 - 2013-06-??
+- fix build problems on BSD
+  Thanks to Christiano for analysis and patch suggestion.
 - add burst support to the client API
   new APIs: relpCltHintBurstBegin, relpCltHintBurstEnd
+  With this, we remove the unconditional performance improvement
+  done in 1.1.3 - it is better to call the APIs explicitely.
 - wildcards are now supported in TLS name peer authentication
   They follow RFC5425 recommandations, e.g.
   *.example.com, client*.example.com, client01.*.com
