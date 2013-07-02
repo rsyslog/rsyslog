@@ -483,7 +483,6 @@ writeDataError(instanceData *pData, cJSON **pReplyRoot, uchar *reqmsg)
 		DBGPRINTF("omelasticsearch: error %d writing error file, write returns %lld\n",
 			  errno, (long long) wrRet);
 	}
-	free(rendered);
 	cJSON_Delete(errRoot);
 	*pReplyRoot = NULL; /* tell caller not to delete once again! */
 

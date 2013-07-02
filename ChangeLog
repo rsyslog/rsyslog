@@ -46,6 +46,9 @@ Version 7.4.2  [v7.4-stable] 2013-06-??
 - bugfix: RainerScript object required parameters were not properly
   checked - this clould result to segfaults on startup if parameters
   were missing.
+- bugfix: double-free in omelasticsearch
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=461
+  Thanks to Marius Ionescu for providing a detailled bug report
 - bugfix: omrelp potential segfault at startup on invalid config parameters
 - bugfix: small memory leak when $uptime property was used
 - bugfix: potential segfault on rsyslog termination in imudp
