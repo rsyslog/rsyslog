@@ -14,7 +14,7 @@ a syslog message. A standard
 text file is a file consisting of printable characters with lines
 being&nbsp;delimited by LF.</p>
 <p>The file is read line-by-line and any line read is passed to
-rsyslog's rule engine. The rule engine applies filter conditons and
+rsyslog's rule engine. The rule engine applies filter conditions and
 selects which actions needs to be carried out. Empty lines are <b>not</b>
 processed, as they would result in empty syslog records. They are simply
 ignored.</p>
@@ -49,9 +49,9 @@ releases of imfile may support per-file polling intervals, but
 currently this is not the case. If multiple PollingInterval
 statements are present in rsyslog.conf, only the last one is used.<br>
 A short poll interval provides more rapid message forwarding, but
-requires more system ressources. While it is possible, we stongly
+requires more system resources. While it is possible, we stongly
 recommend not to set the polling interval to 0 seconds. That will make
-rsyslogd become a CPU hog, taking up considerable ressources. It is
+rsyslogd become a CPU hog, taking up considerable resources. It is
 supported, however, for the few very unusual situations where this
 level may be needed. Even if you need quick response, 1 seconds should
 be well enough. Please note that imfile keeps reading files as long as
