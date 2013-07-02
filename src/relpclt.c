@@ -117,6 +117,7 @@ relpCltConnect(relpClt_t *pThis, int protFamily, unsigned char *port, unsigned c
 
 	CHKRet(relpSessConstruct(&pThis->pSess, pThis->pEngine, RELP_CLT_CONN, pThis));
 	CHKRet(relpSessSetTimeout(pThis->pSess, pThis->timeout));
+	CHKRet(relpSessSetWindowSize(pThis->pSess, pThis->sizeWindow));
 	CHKRet(relpSessSetClientIP(pThis->pSess, pThis->clientIP));
 	CHKRet(relpSessSetUsrPtr(pThis->pSess, pThis->pUsr));
 	if(pThis->bEnableTLS) {
@@ -164,8 +165,23 @@ finalize_it:
 }
 
 
-/** Set the timeout value for this client.
+/** Set the relp window size for this client. Value 0 means
+ * that the default value is to be used.
  */
+relpRetVal
+relpCltSetWindowSize(relpClt_t *pThis, int sizeWindow)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Clt);
+	if(sizeWindow < 0)
+		ABORT_FINALIZE(RELP_RET_ERR_INVAL);
+	if(sizeWindow != 0)
+		pThis->sizeWindow = sizeWindow;
+finalize_it:
+	LEAVE_RELPFUNC;
+}
+
+/** Set the timeout value for this client.  */
 relpRetVal relpCltSetTimeout(relpClt_t *pThis, unsigned timeout)
 {
 	ENTER_RELPFUNC;

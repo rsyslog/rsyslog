@@ -144,8 +144,7 @@ finalize_it:
 }
 
 
-/* set the user pointer inside the RELP server. Whatever value the user
- * provides is accepted.
+/* set the user pointer. Whatever value the user provides is accepted.
  * rgerhards, 2008-07-08
  */
 relpRetVal

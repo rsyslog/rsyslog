@@ -148,6 +148,7 @@ enum relpCmdEnaState_e { /* command enabled state - what are we permitted to do/
 #define RELP_RET_INVLD_WILDCARD	RELPERR_BASE + 38	/**< invalid wildcard given in permitted peer name */
 #define RELP_RET_ERR_TLS_HANDS 	RELPERR_BASE + 39	/**< TLS handshake failed */
 #define RELP_RET_ERR_TLS	RELPERR_BASE + 40	/**< generic TLS error */
+#define RELP_RET_ERR_INVAL	RELPERR_BASE + 41	/**< some parameter is invalid (like EINVAL) */
 
 /* some macros to work with librelp error codes */
 #define CHKRet(code) if((iRet = code) != RELP_RET_OK) goto finalize_it
@@ -197,6 +198,7 @@ relpRetVal relpSrvAddPermittedPeer(relpSrv_t *pThis, char *peer);
 relpRetVal relpCltConnect(relpClt_t *pThis, int protFamily, unsigned char *port, unsigned char *host);
 relpRetVal relpCltSendSyslog(relpClt_t *pThis, unsigned char *pMsg, size_t lenMsg);
 relpRetVal relpCltSetTimeout(relpClt_t *pThis, unsigned timeout);
+relpRetVal relpCltSetWindowSize(relpClt_t *pThis, int sizeWindow);
 relpRetVal relpCltSetClientIP(relpClt_t *pThis, unsigned char *ipAddr);
 relpRetVal relpCltEnableTLS(relpClt_t *pThis);
 relpRetVal relpCltEnableTLSZip(relpClt_t *pThis);

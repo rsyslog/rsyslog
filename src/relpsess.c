@@ -89,7 +89,7 @@ relpSessConstruct(relpSess_t **ppThis, relpEngine_t *pEngine, int connType, void
 	pThis->txnr = 1; /* txnr start at 1 according to spec */
 	pThis->timeout = 90;
 	pThis->pUsr = NULL;
-	pThis->sizeWindow = RELP_DFLT_WINDOW_SIZE; /* TODO: make configurable */
+	pThis->sizeWindow = RELP_DFLT_WINDOW_SIZE;
 	pThis->maxDataSize = RELP_DFLT_MAX_DATA_SIZE;
 	pThis->authmode = eRelpAuthMode_None;
 	pThis->pristring = NULL;
@@ -883,6 +883,16 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 
+
+relpRetVal
+relpSessSetWindowSize(relpSess_t *pThis, int sizeWindow)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Sess);
+	if(sizeWindow > 1)
+		pThis->sizeWindow = sizeWindow;
+	LEAVE_RELPFUNC;
+}
 
 relpRetVal
 relpSessSetTimeout(relpSess_t *pThis, unsigned timeout)
