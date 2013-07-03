@@ -11,12 +11,17 @@ import sys
 import datetime
 import time
 import re
+import os
 
 # Set default variables
 szInput = "rsyslog-stats.log"
 szOutputDir = "./"
 bSingleObjectOutput = True
-bHelpOutput = True
+bHelpOutput = False
+bEnableCharts = False
+szChartsFormat = "svg"
+
+# Helper variables
 nLogLineNum = 0
 nLogFileCount = 0
 
@@ -37,14 +42,16 @@ for arg in sys.argv[-4:]:
 		szInput = arg[8:]
 	elif arg.find("--outputdir=") != -1:
 		szOutputDir = arg[12:]
-	elif arg.find("--singlefile=") != -1:
+	elif arg.find("--singlefile") != -1:
 		bSingleObjectOutput = True
+	elif arg.find("--enablecharts") != -1:
+		bEnableCharts = True
+	elif arg.find("--chartsformat=") != -1:
+		szChartsFormat = arg[15:]
 	elif arg.find("--h") != -1 or arg.find("-h") != -1 or arg.find("--help") != -1:
 		bHelpOutput = True
 
-#sys.exit(0)
-
-if bHelpOutput == 1: 
+if bHelpOutput: 
 	print "\n\nStatslog-splitter command line options:"
 	print "======================================="
 	print "	--input=<filename>		Contains the path and filename of your impstats logfile. "
@@ -54,10 +61,10 @@ if bHelpOutput == 1:
 	print "	--h / -h / --help		Displays this help message. \n"
 	print "	--singlefile			Splits the stats logfile into single CSV Files"
 	print "					Default is enabled."
-	print " --enablecharts			Generate Charts for each exported CSV File.
+	print " --enablecharts			Generate Charts for each exported CSV File."
 	print "					Default is disabled."
-	print " --chartsformat=<svg|png>	Format which should be used for Charts.
-	print "					Default is svg format
+	print " --chartsformat=<svg|png>	Format which should be used for Charts."
+	print "					Default is svg format"
 	print "\n	Sampleline: ./statslog-splitter.py singlefile --input=rsyslog-stats.log --outputdir=/home/user/csvlogs/ --enablecharts --chartsformat=png"
 elif bSingleObjectOutput:
 	inputfile = open(szInput, 'r')
@@ -128,11 +135,44 @@ elif bSingleObjectOutput:
 
 			#print "IMPStats Line found: " + line
 
+	# Close outfiles
+	for outFileName in outputFiles:
+		outputFiles[outFileName].close()
+
 	# Close input file
 	inputfile.close()
 
 	print "\n	File " + szInput + " has been processed"
 	print "	" + str(nLogFileCount) + " Logfiles have been exported to " + szOutputDir
+	
+	if bEnableCharts: 
+		# Open HTML Code
+		szHtmlCode =	"<!DOCTYPE html><html><head></head><body><center>"
+
+		# Default SVG Format!
+		if szChartsFormat.find("svg") != -1:
+			for outFileName in outputFiles:
+				iReturn = os.system("./statslog-graph.py --input=" + szOutputDir + "/" + outFileName + "")
+				print "Chart SVG generated for '" + outFileName + "': " + str(iReturn)
+				szHtmlCode +=	"<figure><embed type=\"image/svg+xml\" src=\"" + outFileName[:-4] + ".svg" + "\" />" + "</figure><br/><br/>"
+		# Otherwise PNG Output!
+		else: 
+			for outFileName in outputFiles:
+				iReturn = os.system("./statslog-graph.py --input=" + szOutputDir + "/" + outFileName + " --convertpng")
+				print "Chart PNG generated for '" + outFileName + "': " + str(iReturn)
+				szHtmlCode +=	"<img src=\"" + outFileName[:-4] + ".png" + "\" width=\"800\" height=\"600\"/>" + "<br/><br/>"
+
+		print "	" + str(nLogFileCount) + " Charts have been written " + szOutputDir
+		
+		# Close HTML Code
+		szHtmlCode +=	"</center></body></html>"
+
+		# Write HTML Index site!
+		outHtmlFile = open(szOutputDir + "/index.html", 'w')
+		outHtmlFile.write(szHtmlCode)
+		outHtmlFile.close()
+		print "	HTML Index with all charts has been written to " + szOutputDir + "/index.html"
+
 	print "\n\n"
 
 # Close Error log on exit

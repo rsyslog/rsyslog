@@ -148,20 +148,18 @@ else:
 #		if nLineCount > 25:
 #			break
 
-	if nMaxDataCount > 0: 
-		# Check if we need to reduce the data amount
-		nTotalDataCount = len( aData[aFields[0]] )
-		nDataStepCount = nTotalDataCount / (nMaxDataCount)
-		if nTotalDataCount > nMaxDataCount:
-			for iDataNum in reversed(range(0, nTotalDataCount)):
-				# Remove all entries who 
-				if iDataNum % nDataStepCount == 0:
-					aMajorXData.append( aData[aFields[0]][iDataNum] )
-#					for field in aFields:
-#						aData[field].pop(iDataNum)
+#	if nMaxDataCount > 0: 
+#		# Check if we need to reduce the data amount
+#		nTotalDataCount = len( aData[aFields[0]] )
+#		nDataStepCount = nTotalDataCount / (nMaxDataCount)
+#		if nTotalDataCount > nMaxDataCount:
+#			for iDataNum in reversed(range(0, nTotalDataCount)):
+#				# Remove all entries who 
+#				if iDataNum % nDataStepCount == 0:
+#					aMajorXData.append( aData[aFields[0]][iDataNum] )
 			
-#		print len(aMajorXData)
-#	sys.exit(0)
+	# Import Style
+#	from pygal.style import LightSolarizedStyle
 
 	# Create Config object
 	from pygal import Config
@@ -175,25 +173,32 @@ else:
 	chartCfg.x_label_rotation = 45
 	chartCfg.include_x_axis = True
 	chartCfg.show_dots=False
-	chartCfg.show_minor_x_labels=False
+	if nMaxDataCount > 0: 
+		chartCfg.show_minor_x_labels=False
+		chartCfg.x_labels_major_count=nMaxDataCount
+	chartCfg.js = [	'svg.jquery.js','pygal-tooltips.js' ] # Use script from local
+#	chartCfg.style = LightSolarizedStyle
+	chartCfg.print_values = False
+	chartCfg.print_zeroes = True
+	chartCfg.no_data_text = "All values are 0"
 	#chartCfg.logarithmic=True	# Makes chart more readable
 
-	
-	#Linechart
+	# Create Linechart
 	if bLineChart:
 		myChart = pygal.Line(chartCfg)
 		myChart.title = 'Line Chart of "' + szInput + '"'
 		myChart.x_title = "Time elasped in seconds"
 		myChart.x_labels = map(str, aData[aFields[0]] ) 
-		myChart.x_labels_major = map(str, aMajorXData )
+#		myChart.x_labels_major = map(str, aMajorXData )
 		for iChartNum in range(3, len(aFields) ):
 			myChart.add(aFields[iChartNum], aData[ aFields[iChartNum] ])  # Add some values
+	# Create BarChart
 	elif bBarChart: 
 		myChart = pygal.Bar(chartCfg)
 		myChart.title = 'Bar Chart of "' + szInput + '"'
 		myChart.x_title = "Time elasped in seconds"
 		myChart.x_labels = map(str, aData[aFields[0]] ) 
-		myChart.x_labels_major = map(str, aMajorXData )
+#		myChart.x_labels_major = map(str, aMajorXData )
 		for iChartNum in range(3, len(aFields) ):
 			myChart.add(aFields[iChartNum], aData[ aFields[iChartNum] ])  # Add some values
 	
