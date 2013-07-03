@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------
-Version 1.1.4 - 2013-06-??
+Version 1.1.4 - 2013-07-03
 - fix build problems on BSD
   Thanks to Christiano for analysis and patch suggestion.
 - add ability to specify a non-standard RELP Window size
