@@ -30,7 +30,7 @@ AC_SUBST(rt_libs)
 
 # Checks for header files.
 AC_HEADER_STDC
-#AC_CHECK_HEADERS([])
+AC_CHECK_HEADERS([sys/epoll.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
@@ -44,7 +44,7 @@ AC_CHECK_MEMBERS([struct sockaddr.sa_len],,,[$sa_includes])
 AC_FUNC_MALLOC
 AC_FUNC_SELECT_ARGTYPES
 AC_TYPE_SIGNAL
-#AC_CHECK_FUNCS([])
+AC_CHECK_FUNCS([epoll_create epoll_create1])
 PKG_CHECK_MODULES(GNUTLS, gnutls >= 1.4.0)
 
 # debug mode settings

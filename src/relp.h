@@ -34,6 +34,9 @@
 #define	RELP_H_INCLUDED
 
 #include <pthread.h>
+#if HAVE_SYS_EPOLL_H
+#	include <sys/epoll.h>
+#endif
 
 #include "librelp.h"
 
@@ -59,18 +62,38 @@ typedef struct relpPermittedPeers_s {
 	char **name;
 } relpPermittedPeers_t;
 
+typedef struct epolld_s epolld_t;
 /* a linked list entry for the list of relp servers (of this engine) */
 typedef struct relpEngSrvLst_s {
 	struct relpEngSrvLst_s *pPrev;
 	struct relpEngSrvLst_s *pNext;
+	epolld_t *epevt;
 	struct relpSrv_s *pSrv;
 } relpEngSrvLst_t;
+
+/* type of object stored in epoll descriptor */
+typedef enum {
+	epolld_lstn,
+	epolld_sess
+} epolld_type_t;
+
+/* an epoll descriptor. contains all information necessary to process
+ * the result of epoll.
+ */
+struct epolld_s {
+	epolld_type_t typ;
+	void *ptr;
+	int sock;
+	struct epoll_event ev;
+};
 
 
 /* a linked list entry for the list of relp sessions (of this engine) */
 typedef struct relpEngSessLst_s {
 	struct relpEngSessLst_s *pPrev;
 	struct relpEngSessLst_s *pNext;
+	enum { epoll_wronly, epoll_rdonly, epoll_rdwr } epollState;
+	epolld_t *epevt;
 	struct relpSess_s *pSess;
 } relpEngSessLst_t;
 
@@ -115,6 +138,9 @@ struct relpEngine_s {
 	int lenSessLst;
 	pthread_mutex_t mutSessLst;
 
+#	if defined(HAVE_EPOLL_CREATE1) || defined(HAVE_EPOLL_CREATE)
+	int efd;	/**< file descriptor for epoll */
+#	endif
 	int bStop;	/* set to 1 to stop server after next select */
 	int *bShutdownImmdt; /* if non-NULL provides a kind of "external" */
 		/* bStop functionality. This is in support for rsyslog,
@@ -159,6 +185,7 @@ struct relpEngine_s {
 
 /* some macros to work with librelp error codes */
 #define CHKRet(code) if((iRet = code) != RELP_RET_OK) goto finalize_it
+#define CHKmalloc(r) if((r) == NULL) { iRet = RELP_RET_OUT_OF_MEMORY; goto finalize_it; }
 /* macro below is to be used if we need our own handling, eg for cleanup */
 #define CHKRet_Hdlr(code) if((iRet = code) != RELP_RET_OK)
 /* macro below is used in conjunction with CHKiRet_Hdlr, else use ABORT_FINALIZE */
