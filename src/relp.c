@@ -442,6 +442,20 @@ doSend(relpEngine_t *pThis, relpEngSessLst_t *pSessEtry, int sock)
 		relpEngineDelSess(pThis, pSessEtry);
 	}
 }
+
+static void
+handleConnectionRequest(relpEngine_t *pThis, relpSrv_t *pSrv, int sock)
+{
+	relpRetVal localRet;
+	relpSess_t *pNewSess;
+
+	pThis->dbgprint("new connect on RELP socket #%d\n", sock);
+	localRet = relpSessAcceptAndConstruct(&pNewSess, pSrv, sock);
+	if(localRet == RELP_RET_OK) {
+		relpEngineAddToSess(pThis, pNewSess);
+	}
+}
+
 /* The "Run" method starts the relp engine. Most importantly, this means the engine begins
  * to read and write data to its peers. This method must be called on its own thread as it
  * will not return until the engine is finished. Note that the engine itself may (or may
@@ -463,7 +477,6 @@ relpEngineRun(relpEngine_t *pThis)
 	relpEngSrvLst_t *pSrvEtry;
 	relpEngSessLst_t *pSessEtry;
 	relpEngSessLst_t *pSessEtryNext;
-	relpSess_t *pNewSess;
 	relpTcp_t *pTcp;
 	relpRetVal localRet;
 	int iSocks;
@@ -541,12 +554,7 @@ relpEngineRun(relpEngine_t *pThis)
 				if(relpEngineShouldStop(pThis)) break;
 				sock = relpSrvGetLstnSock(pSrvEtry->pSrv, iSocks);
 				if(FD_ISSET(sock, &readfds)) {
-					pThis->dbgprint("new connect on RELP socket #%d\n", sock);
-					localRet = relpSessAcceptAndConstruct(&pNewSess, pSrvEtry->pSrv, sock);
-					if(localRet == RELP_RET_OK) {
-						localRet = relpEngineAddToSess(pThis, pNewSess);
-					}
-					/* TODO: check localret, emit error msg! */
+					handleConnectionRequest(pThis, pSrvEtry->pSrv, sock);
 					--nfds; /* indicate we have processed one */
 				}
 			}
