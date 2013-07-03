@@ -15,8 +15,8 @@ import re
 # Set default variables
 szInput = "rsyslog-stats.log"
 szOutputDir = "./"
-nSingleObjectOutput = 1
-nHelpOutput = 0
+bSingleObjectOutput = True
+bHelpOutput = True
 nLogLineNum = 0
 nLogFileCount = 0
 
@@ -37,23 +37,29 @@ for arg in sys.argv[-4:]:
 		szInput = arg[8:]
 	elif arg.find("--outputdir=") != -1:
 		szOutputDir = arg[12:]
+	elif arg.find("--singlefile=") != -1:
+		bSingleObjectOutput = True
 	elif arg.find("--h") != -1 or arg.find("-h") != -1 or arg.find("--help") != -1:
-		nHelpOutput = 1
+		bHelpOutput = True
 
 #sys.exit(0)
 
-if nHelpOutput == 1: 
+if bHelpOutput == 1: 
 	print "\n\nStatslog-splitter command line options:"
 	print "======================================="
-	print "	--input=<filename>	Contains the path and filename of your impstats logfile. "
-	print "				Default is 'rsyslog-stats.log' \n"
+	print "	--input=<filename>		Contains the path and filename of your impstats logfile. "
+	print "					Default is 'rsyslog-stats.log' \n"
 	print "	--outputdir=<dir>		Output directory to be used. "
-	print "				Default is current directory. "
-	print "	--h / -h / --help	Displays this help message. \n"
-	print "	singlefile		Splits the stats logfile into single CSV Files"
-	print "				(Default)"
-	print "\n	Sampleline: ./statslog-splitter.py singlefile --input=rsyslog-stats.log --outputdir=/home/user/csvlogs/"
-elif nSingleObjectOutput == 1:
+	print "					Default is current directory. "
+	print "	--h / -h / --help		Displays this help message. \n"
+	print "	--singlefile			Splits the stats logfile into single CSV Files"
+	print "					Default is enabled."
+	print " --enablecharts			Generate Charts for each exported CSV File.
+	print "					Default is disabled."
+	print " --chartsformat=<svg|png>	Format which should be used for Charts.
+	print "					Default is svg format
+	print "\n	Sampleline: ./statslog-splitter.py singlefile --input=rsyslog-stats.log --outputdir=/home/user/csvlogs/ --enablecharts --chartsformat=png"
+elif bSingleObjectOutput:
 	inputfile = open(szInput, 'r')
 	for line in inputfile.readlines():
 		if line.find("rsyslogd-pstats") != -1:
