@@ -101,10 +101,11 @@ elif bSingleObjectOutput:
 				# Found valid logline, save into file! 
 				if len(result) >= loglineindexes[iLogRegExIndex]["LN_LOGDATA"] and result[ loglineindexes[iLogRegExIndex]["LN_SYSLOGTAG"] ] == "rsyslogd-pstats":
 					# Convert Datetime!
-					if isinstance( result[ loglineindexes[iLogRegExIndex]["LN_MONTH"] ], int ):
-						filedate = datetime.datetime.strptime(result[ loglineindexes[iLogRegExIndex]["LN_MONTH"] ] + " " + str(datetime.datetime.now().year) + " " + result[ loglineindexes[iLogRegExIndex]["LN_DAY"] ] + " " + result[ loglineindexes[iLogRegExIndex]["LN_TIME"] ] ,"%b %Y %d %H:%M:%S")
-					else:
+					try:
+						iMonth = int( result[ loglineindexes[iLogRegExIndex]["LN_MONTH"] ] )
 						filedate = datetime.datetime.strptime(result[ loglineindexes[iLogRegExIndex]["LN_MONTH"] ] + " " + str(datetime.datetime.now().year) + " " + result[ loglineindexes[iLogRegExIndex]["LN_DAY"] ] + " " + result[ loglineindexes[iLogRegExIndex]["LN_TIME"] ] ,"%m %Y %d %H:%M:%S")
+					except ValueError:
+						filedate = datetime.datetime.strptime(result[ loglineindexes[iLogRegExIndex]["LN_MONTH"] ] + " " + str(datetime.datetime.now().year) + " " + result[ loglineindexes[iLogRegExIndex]["LN_DAY"] ] + " " + result[ loglineindexes[iLogRegExIndex]["LN_TIME"] ] ,"%b %Y %d %H:%M:%S")
 
 					# Split logdata into Array
 					aProperties = result[ loglineindexes[iLogRegExIndex]["LN_LOGDATA"] ].split(" ")
