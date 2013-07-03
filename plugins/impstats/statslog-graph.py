@@ -26,6 +26,8 @@ bUseDateTime = True
 bLineChart = True
 bBarChart = False
 bConvertPng = False
+bLogarithmicChart = False
+bFilledLineChart = False
 
 # Init variables
 aFields = []
@@ -58,6 +60,10 @@ for arg in sys.argv[-4:]:
 	elif arg.find("--barchart") != -1:
 		bLineChart = False
 		bBarChart = True
+	elif arg.find("--logarithmic") != -1:
+		bLogarithmicChart = True
+	elif arg.find("--filledlinechart") != -1:
+		bFilledLineChart = True
 	elif arg.find("--h") != -1 or arg.find("-h") != -1 or arg.find("--help") != -1:
 		bHelpOutput = True
 
@@ -76,6 +82,8 @@ if bHelpOutput == True:
 	print "				Default is disabled."
 	print " --linechart		Generates a Linechart (Default chart mode) (Cannot be used with --barchart)"
 	print " --barchart		Generates a Barchart (Cannot be used with --linechart)"
+	print " --logarithmic		Uses Logarithmic to scale the Y Axis, maybe useful in some cases. Default is OFF"
+	print " --filledlinechart	Use filled lines on Linechart, maybe useful in some cases. Default is OFF"
 	print " --convertpng		Generate PNG Output rather than SVG. "
 	print "				Default is SVG output."
 	print "	--h / -h / --help	Displays this help message. \n"
@@ -167,7 +175,10 @@ else:
 	chartCfg.show_legend = True
 	chartCfg.human_readable = True
 	chartCfg.pretty_print=True
-	chartCfg.fill = False
+	if bFilledLineChart: 
+		chartCfg.fill = True
+	else:
+		chartCfg.fill = False
 	chartCfg.x_scale = 1
 	chartCfg.y_scale = 1
 	chartCfg.x_label_rotation = 45
@@ -181,7 +192,8 @@ else:
 	chartCfg.print_values = False
 	chartCfg.print_zeroes = True
 	chartCfg.no_data_text = "All values are 0"
-	#chartCfg.logarithmic=True	# Makes chart more readable
+	if bLogarithmicChart: 
+		chartCfg.logarithmic=True	# Makes chart Y-Axis data more readable
 
 	# Create Linechart
 	if bLineChart:
