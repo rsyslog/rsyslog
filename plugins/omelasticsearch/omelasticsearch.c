@@ -487,8 +487,7 @@ writeDataError(instanceData *pData, cJSON **pReplyRoot, uchar *reqmsg)
 	*pReplyRoot = NULL; /* tell caller not to delete once again! */
 
 finalize_it:
-	if(rendered != NULL)
-		free(rendered);
+	free(rendered);
 	RETiRet;
 }
 
