@@ -8,6 +8,10 @@ Version 7.4.2  [v7.4-stable] 2013-07-04
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=461
   a security advisory for this bug is available at:
      http://www.lsexperts.de/advisories/lse-2013-07-03.txt
+  PLEASE NOTE: This issue only existed if omelasticsearch was used
+  in a non-default configuration, where the "errorfile" parameter
+  was specified. Without that parameter set, the bug could not
+  be triggered.
   Thanks to Markus Vervier and Marius Ionescu for providing a detailled
   bug report. Special thanks to Markus for coordinating his security
   advisory with us.
