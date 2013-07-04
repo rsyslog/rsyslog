@@ -409,7 +409,7 @@ relpRetVal relpEngineSetFamily(relpEngine_t *pThis, int ai_family)
 /* helper for relpEngineRun; receives data when it is time to
  * do so. Includes all housekeeping, like closing the session.
  */
-static inline void
+static inline relpRetVal
 doRecv(relpEngine_t *pThis, relpEngSessLst_t *pSessEtry, int sock)
 {
 	relpRetVal localRet;
@@ -423,6 +423,7 @@ doRecv(relpEngine_t *pThis, relpEngSessLst_t *pSessEtry, int sock)
 				sock, localRet);
 		relpEngineDelSess(pThis, pSessEtry);
 	}
+	return localRet;
 }
 /* helper for relpEngineRun; sends session data when it is time
  * to send. Includes all housekeeping, like closing the session.
@@ -553,7 +554,7 @@ relpEngineRun(relpEngine_t *pThis)
 		}
 
 		/* now check if we have some action waiting for sessions */
-		for(pSessEtry = pThis->pSessLstRoot ; nfds && pSessEtry != NULL ; ) {
+		for(pSessEtry = pThis->pSessLstRoot ; nfds && pSessEtry != NULL ; pSessEtry = pSessEtryNext) {
 			if(relpEngineShouldStop(pThis)) break;
 			pSessEtryNext = pSessEtry->pNext; /* we need to cache this as we may delete the entry! */
 			sock = relpSessGetSock(pSessEtry->pSess);
@@ -577,7 +578,8 @@ relpEngineRun(relpEngine_t *pThis)
 				}
 			} else {
 				if(FD_ISSET(sock, &readfds)) {
-					doRecv(pThis, pSessEtry, sock);
+					if(doRecv(pThis, pSessEtry, sock) != RELP_RET_OK)
+						continue; /* else write may cause invld mem access! */
 					--nfds; /* indicate we have processed one */
 				}
 				if(FD_ISSET(sock, &writefds)) {
@@ -585,8 +587,6 @@ relpEngineRun(relpEngine_t *pThis)
 					--nfds; /* indicate we have processed one */
 				}
 			}
-
-			pSessEtry = pSessEtryNext;
 		}
 
 	}
