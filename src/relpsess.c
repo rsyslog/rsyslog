@@ -309,7 +309,7 @@ static relpRetVal
 relpSessSrvSendHint(relpSess_t *pThis, unsigned char *pHint, size_t lenHint,
 		    unsigned char *pData, size_t lenData)
 {
-	relpSendbuf_t *pSendbuf;
+	relpSendbuf_t *pSendbuf = NULL;
 
 	ENTER_RELPFUNC;
 	assert(pHint != NULL);
@@ -322,6 +322,8 @@ relpSessSrvSendHint(relpSess_t *pThis, unsigned char *pHint, size_t lenHint,
 	CHKRet(relpSendbufSend(pSendbuf, pThis->pTcp));
 
 finalize_it:
+	if(pSendbuf != NULL)
+		relpSendbufDestruct(&pSendbuf);
 	LEAVE_RELPFUNC;
 }
 
@@ -740,7 +742,6 @@ finalize_it:
 	if(pOffers != NULL)
 		relpOffersDestruct(&pOffers);
 
-pEngine->dbgprint("DDDD: end offer processing\n");
 	LEAVE_RELPFUNC;
 }
 

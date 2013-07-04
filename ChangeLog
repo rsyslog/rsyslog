@@ -1,5 +1,8 @@
 ----------------------------------------------------------------------
 Version 1.1.5 - 2013-07-??
+- bugfix: memory leak on connection close
+  around 60 bytes of memory were lost on each connection close at the
+  server side (when the client initiated a close)
 - bugfix: potential misadressing on session close
   This can happen if also a write was outstanding, a quite unusable
   situation. In that case, already freed memory was being accessed.
