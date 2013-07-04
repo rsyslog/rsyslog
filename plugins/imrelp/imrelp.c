@@ -516,6 +516,7 @@ CODESTARTfreeCnf
 		inst = inst->next;
 		free(del);
 	}
+	free(pModConf->pszBindRuleset);
 ENDfreeCnf
 
 /* This is used to terminate the plugin. Note that the signal handler blocks

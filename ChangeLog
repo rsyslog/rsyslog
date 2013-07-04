@@ -1,4 +1,10 @@
 ---------------------------------------------------------------------------
+Version 7.5.3 [devel] 2013-07-??
+- bugfix: very small memory leak in imrelp
+  more or less cosmetic, a single memory block was not freed, but this
+  only happens immediately before termination (when the OS automatically
+  frees all memory). Still an annoyance e.g. in valgrind.
+---------------------------------------------------------------------------
 Version 7.5.2 [devel] 2013-07-04
 - librelp 1.1.4 is now required
   We use API extensions for better error reporting and higher performance.
