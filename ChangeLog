@@ -4,6 +4,13 @@ Version 7.5.2 [devel] 2013-07-04
   We use API extensions for better error reporting and higher performance.
 - omrelp: use transactional mode to make imrelp emit bulk sends
 - omrelp: add "windowSize" parameter to set custom RELP window size
+- bugfix: double-free in omelasticsearch
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=461
+  a security advisory for this bug is available at:
+     http://www.lsexperts.de/advisories/lse-2013-07-03.txt
+  Thanks to Markus Vervier and Marius Ionescu for providing a detailled
+  bug report. Special thanks to Markus for coordinating his security
+  advisory with us.
 - doc: fixed various typos
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=391
   Thanks to Georgi Georgiev for the patch.
