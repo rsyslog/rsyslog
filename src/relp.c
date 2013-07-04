@@ -793,7 +793,7 @@ engineEventLoopRun(relpEngine_t *pThis)
 		}
 
 		/* now check if we have some action waiting for sessions */
-		for(pSessEtry = pThis->pSessLstRoot ; nfds && pSessEtry != NULL ; ) {
+		for(pSessEtry = pThis->pSessLstRoot ; nfds && pSessEtry != NULL ; pSessEtry = pSessEtryNext) {
 			if(relpEngineShouldStop(pThis)) break;
 			pSessEtryNext = pSessEtry->pNext; /* we need to cache this as we may delete the entry! */
 			sock = relpSessGetSock(pSessEtry->pSess);
@@ -817,7 +817,8 @@ engineEventLoopRun(relpEngine_t *pThis)
 				}
 			} else {
 				if(FD_ISSET(sock, &readfds)) {
-					doRecv(pThis, pSessEtry, sock);
+					if(doRecv(pThis, pSessEtry, sock) != RELP_RET_OK)
+						continue; /* else write may cause invld mem access! */
 					--nfds; /* indicate we have processed one */
 				}
 				if(FD_ISSET(sock, &writefds)) {
@@ -825,8 +826,6 @@ engineEventLoopRun(relpEngine_t *pThis)
 					--nfds; /* indicate we have processed one */
 				}
 			}
-
-			pSessEtry = pSessEtryNext;
 		}
 
 	}
