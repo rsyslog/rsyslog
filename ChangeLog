@@ -24,6 +24,7 @@ Version 7.4.2  [v7.4-stable] 2013-07-04
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=457
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=458
   Thanks to Christiano for reproting and suggesting patches
+- solved build problems on CENTOS5
 ---------------------------------------------------------------------------
 Version 7.4.1  [v7.4-stable] 2013-06-17
 - imjournal: add ratelimiting capability
