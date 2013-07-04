@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 7.5.2 [devel] 2013-0?-??
+Version 7.5.2 [devel] 2013-07-04
 - librelp 1.1.4 is now required
   We use API extensions for better error reporting and higher performance.
 - omrelp: use transactional mode to make imrelp emit bulk sends
