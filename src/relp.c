@@ -81,28 +81,34 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 
+/* we do not return error states, as we are unable to handle them intelligently
+ * in any case...
+ */
+static void
+delFromEpollSet(relpEngine_t *pThis, epolld_t *epd)
+{
+	int r;
+	pThis->dbgprint("librelp: delete sock %d from epoll set\n", epd->sock);
+	if((r = epoll_ctl(pThis->efd, EPOLL_CTL_DEL, epd->sock, &epd->ev)) != 0) {
+		pThis->dbgprint("librelp: EPOLL_CTL_DEL sock %d failed with error code %d\n",
+				epd->sock, r);
+	}
+	free(epd);
+}
+
 static relpRetVal
 addSessToEpoll(relpEngine_t *pThis, relpEngSessLst_t *pSessLstEntry)
 {
-	pThis->dbgprint("librelp: add session %p to epoll set\n", pSessLstEntry);
 	addToEpollSet(pThis, epolld_sess, pSessLstEntry,
 		relpSessGetSock(pSessLstEntry->pSess), &pSessLstEntry->epevt);
 	pSessLstEntry->epollState = epoll_rdonly;
 	return RELP_RET_OK;
 }
 
-static relpRetVal
+static void
 delSessFromEpoll(relpEngine_t *pThis, relpEngSessLst_t *pSessEtry)
 {
-	pThis->dbgprint("librelp: remove sock %d from epoll set\n", pSessEtry->epevt->sock);
-	if(epoll_ctl(pThis->efd, EPOLL_CTL_DEL, pSessEtry->epevt->sock, &pSessEtry->epevt->ev) != 0) {
-		//char errStr[1024];
-		//int eno = errno;
-		//errmsg.LogError(0, RS_RET_EPOLL_CTL_FAILED, "os error (%d) during epoll ADD: %s",
-			        //eno, rs_strerror_r(eno, errStr, sizeof(errStr)));
-		//ABORT_FINALIZE(RS_RET_EPOLL_CTL_FAILED);
-	}
-	return RELP_RET_OK;
+	delFromEpollSet(pThis, pSessEtry->epevt);
 }
 
 /* add an entry to our server list. The server object is handed over and must
@@ -468,7 +474,7 @@ relpRetVal relpEngineSetFamily(relpEngine_t *pThis, int ai_family)
 /* helper for relpEngineRun; receives data when it is time to
  * do so. Includes all housekeeping, like closing the session.
  */
-static inline void
+static inline relpRetVal
 doRecv(relpEngine_t *pThis, relpEngSessLst_t *pSessEtry, int sock)
 {
 	relpRetVal localRet;
@@ -482,6 +488,7 @@ doRecv(relpEngine_t *pThis, relpEngSessLst_t *pSessEtry, int sock)
 				sock, localRet);
 		relpEngineDelSess(pThis, pSessEtry);
 	}
+	return localRet;
 }
 /* helper for relpEngineRun; sends session data when it is time
  * to send. Includes all housekeeping, like closing the session.
@@ -544,7 +551,8 @@ engineEventLoopInit(relpEngine_t __attribute__((unused)) *pThis)
 {
 #	define NUM_EPOLL_EVENTS 10
 	relpEngSrvLst_t *pSrvEtry;
-	int iSocks;
+	int i;
+	int nLstn;
 	int sock;
 	ENTER_RELPFUNC;
 #if defined(EPOLL_CLOEXEC) && defined(HAVE_EPOLL_CREATE1)
@@ -564,9 +572,11 @@ engineEventLoopInit(relpEngine_t __attribute__((unused)) *pThis)
 	 * never change, so we can do it just once in init.
 	 */
 	for(pSrvEtry = pThis->pSrvLstRoot ; pSrvEtry != NULL ; pSrvEtry = pSrvEtry->pNext) {
-		for(iSocks = 1 ; iSocks <= relpSrvGetNumLstnSocks(pSrvEtry->pSrv) ; ++iSocks) {
-			sock = relpSrvGetLstnSock(pSrvEtry->pSrv, iSocks);
-			addToEpollSet(pThis, epolld_lstn, pSrvEtry->pSrv, sock, &pSrvEtry->epevt);
+		nLstn = relpSrvGetNumLstnSocks(pSrvEtry->pSrv);
+		CHKmalloc(pSrvEtry->epevts = malloc(sizeof(epolld_t) * nLstn));
+		for(i = 0 ; i < nLstn ; ++i) {
+			sock = relpSrvGetLstnSock(pSrvEtry->pSrv, i+1);
+			addToEpollSet(pThis, epolld_lstn, pSrvEtry->pSrv, sock, &(pSrvEtry->epevts[i]));
 		}
 	}
 finalize_it:
@@ -575,7 +585,17 @@ finalize_it:
 static inline relpRetVal
 engineEventLoopExit(relpEngine_t __attribute__((unused)) *pThis)
 {
+	relpEngSrvLst_t *pSrvEtry;
+	int i;
+	int nLstn;
 	ENTER_RELPFUNC;
+	for(pSrvEtry = pThis->pSrvLstRoot ; pSrvEtry != NULL ; pSrvEtry = pSrvEtry->pNext) {
+		nLstn = relpSrvGetNumLstnSocks(pSrvEtry->pSrv);
+		for(i = 0 ; i < nLstn ; ++i) {
+			delFromEpollSet(pThis, pSrvEtry->epevts[i]);
+		}
+		free(pSrvEtry->epevts);
+	}
 	if(pThis->efd != -1) {
 		close(pThis->efd);
 		pThis->efd = -1;
@@ -606,9 +626,10 @@ handleSessIO(relpEngine_t *pThis, epolld_t *epd)
 			}
 		}
 	} else {
-		doRecv(pThis, pSessEtry, epd->sock);
-		if(epd->ev.events & EPOLLOUT) {
-			doSend(pThis, pSessEtry, epd->sock);
+		if(doRecv(pThis, pSessEtry, epd->sock) == RELP_RET_OK) {
+			if(epd->ev.events & EPOLLOUT) {
+				doSend(pThis, pSessEtry, epd->sock);
+			}
 		}
 	}
 	return RELP_RET_OK;

@@ -67,7 +67,7 @@ typedef struct epolld_s epolld_t;
 typedef struct relpEngSrvLst_s {
 	struct relpEngSrvLst_s *pPrev;
 	struct relpEngSrvLst_s *pNext;
-	epolld_t *epevt;
+	epolld_t **epevts;
 	struct relpSrv_s *pSrv;
 } relpEngSrvLst_t;
 
