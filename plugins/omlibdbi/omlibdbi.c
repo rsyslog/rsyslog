@@ -10,7 +10,7 @@
  *
  * File begun on 2008-02-14 by RGerhards (extracted from syslogd.c)
  *
- * Copyright 2008-2012 Adiscon GmbH.
+ * Copyright 2008-2013 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -340,7 +340,10 @@ CODESTARTbeginTransaction
 #	if HAVE_DBI_TXSUPP
 	if (pData->txSupport == 1) {
 		if (dbi_conn_transaction_begin(pData->conn) != 0) {	
-			dbgprintf("libdbi server error: begin transaction not successful\n");		
+			const char *emsg;
+			dbi_conn_error(pData->conn, &emsg);
+			dbgprintf("libdbi server error: begin transaction "
+				  "not successful: %s\n", emsg);
 			iRet = RS_RET_SUSPENDED; 
 		} 
 	}
@@ -365,7 +368,10 @@ BEGINendTransaction
 CODESTARTendTransaction
 #	if HAVE_DBI_TXSUPP
 	if (dbi_conn_transaction_commit(pData->conn) != 0) {	
-		dbgprintf("libdbi server error: transaction not committed\n");		
+		const char *emsg;
+		dbi_conn_error(pData->conn, &emsg);
+		dbgprintf("libdbi server error: transaction not committed: %s\n",
+			  emsg);
 		iRet = RS_RET_SUSPENDED; 
 	} 
 #	endif
