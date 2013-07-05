@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([librelp], [1.1.5], [rgerhards@adiscon.com])
+AC_INIT([librelp], [1.2.0], [rgerhards@adiscon.com])
 AM_INIT_AUTOMAKE
 AM_INIT_AUTOMAKE
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
@@ -30,7 +30,7 @@ AC_SUBST(rt_libs)
 
 # Checks for header files.
 AC_HEADER_STDC
-#AC_CHECK_HEADERS([])
+AC_CHECK_HEADERS([sys/epoll.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
@@ -43,8 +43,9 @@ AC_CHECK_MEMBERS([struct sockaddr.sa_len],,,[$sa_includes])
 # Checks for library functions.
 AC_FUNC_MALLOC
 AC_FUNC_SELECT_ARGTYPES
+AC_FUNC_STRERROR_R
 AC_TYPE_SIGNAL
-#AC_CHECK_FUNCS([])
+AC_CHECK_FUNCS([strerror_r epoll_create epoll_create1])
 PKG_CHECK_MODULES(GNUTLS, gnutls >= 1.4.0)
 
 # debug mode settings

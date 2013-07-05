@@ -31,10 +31,13 @@
  * development.
  */
 #include "config.h"
+#include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include <sys/select.h>
 #include <string.h>
 #include <errno.h>
+#include <unistd.h>
 #include <assert.h>
 #include "relp.h"
 #include "relpsrv.h"
@@ -47,6 +50,110 @@
 
 
 /* ------------------------------ some internal functions ------------------------------ */
+
+void __attribute__((format(printf, 4, 5)))
+relpEngineCallOnGenericErr(relpEngine_t *pThis, char *eobj, relpRetVal ecode, char *fmt, ...)
+{
+	va_list ap;
+	char emsg[1024];
+	
+	va_start(ap, fmt);
+	vsnprintf(emsg, sizeof(emsg), fmt, ap);
+	emsg[sizeof(emsg)/sizeof(char) - 1] = '\0'; /* just to be on the safe side... */
+	va_end(ap);
+	
+	pThis->dbgprint("librelp: generic error: ecode %d, eobj %s,"
+		"emsg '%s'\n", ecode, eobj, emsg);
+	if(pThis->onGenericErr != NULL) {
+		pThis->onGenericErr(eobj, emsg, ecode);
+	}
+}
+
+static char *
+relpEngine_strerror_r(int errnum, char *buf, size_t buflen) {
+#ifndef HAVE_STRERROR_R
+	char *p;
+	p = strerror(errnum);
+	strncpy(buf, emsg, buflen);
+	buf[buflen-1] = '\0';
+#else
+#	ifdef STRERROR_R_CHAR_P
+	char *p;
+	p = strerror_r(errnum, buf, buflen);
+	if(p != buf) {
+		strncpy(buf, p, buflen);
+		buf[buflen - 1] = '\0';
+	}
+#	else
+	strerror_r(errnum, buf, buflen);
+#	endif
+#endif
+	return buf;
+}
+
+static relpRetVal
+addToEpollSet(relpEngine_t *pThis, epolld_type_t typ, void *ptr, int sock, epolld_t **pepd)
+{
+	epolld_t *epd = NULL;
+	ENTER_RELPFUNC;
+
+	CHKmalloc(epd = calloc(sizeof(epolld_t), 1));
+	epd->typ = typ;
+	epd->ptr = ptr;
+	epd->sock = sock;
+	epd->ev.events = EPOLLIN;
+	epd->ev.data.ptr = (void*) epd;
+
+	pThis->dbgprint("librelp: add socket %d to epoll set (ptr %p)\n", sock, ptr);
+	if(epoll_ctl(pThis->efd, EPOLL_CTL_ADD, sock, &epd->ev) != 0) {
+		char errStr[1024];
+		int eno = errno;
+		relpEngineCallOnGenericErr(pThis, "librelp", RELP_RET_ERR_EPOLL_CTL,
+			"os error (%d) during EPOLL_CTL_ADD: %s",
+			eno, relpEngine_strerror_r(eno, errStr, sizeof(errStr)));
+		ABORT_FINALIZE(RELP_RET_ERR_EPOLL_CTL);
+	}
+	*pepd = epd;
+
+finalize_it:
+	if(iRet != RELP_RET_OK) {
+		free(epd);
+	}
+	LEAVE_RELPFUNC;
+}
+
+/* we do not return error states, as we are unable to handle them intelligently
+ * in any case...
+ */
+static void
+delFromEpollSet(relpEngine_t *pThis, epolld_t *epd)
+{
+	int r;
+	pThis->dbgprint("librelp: delete sock %d from epoll set\n", epd->sock);
+	if((r = epoll_ctl(pThis->efd, EPOLL_CTL_DEL, epd->sock, &epd->ev)) != 0) {
+		char errStr[1024];
+		int eno = errno;
+		relpEngineCallOnGenericErr(pThis, "librelp", RELP_RET_ERR_EPOLL_CTL,
+			"os error (%d) during EPOLL_CTL_DEL: %s",
+			eno, relpEngine_strerror_r(eno, errStr, sizeof(errStr)));
+	}
+	free(epd);
+}
+
+static relpRetVal
+addSessToEpoll(relpEngine_t *pThis, relpEngSessLst_t *pSessLstEntry)
+{
+	addToEpollSet(pThis, epolld_sess, pSessLstEntry,
+		relpSessGetSock(pSessLstEntry->pSess), &pSessLstEntry->epevt);
+	pSessLstEntry->epollState = epoll_rdonly;
+	return RELP_RET_OK;
+}
+
+static void
+delSessFromEpoll(relpEngine_t *pThis, relpEngSessLst_t *pSessEtry)
+{
+	delFromEpollSet(pThis, pSessEtry->epevt);
+}
 
 /* add an entry to our server list. The server object is handed over and must
  * no longer be accessed by the caller.
@@ -98,6 +205,7 @@ relpEngineAddToSess(relpEngine_t *pThis, relpSess_t *pSess)
 	DLL_Add(pSessLstEntry, pThis->pSessLstRoot, pThis->pSessLstLast);
 	++pThis->lenSessLst;
 	pthread_mutex_unlock(&pThis->mutSessLst);
+	addSessToEpoll(pThis, pSessLstEntry);
 
 finalize_it:
 	LEAVE_RELPFUNC;
@@ -114,6 +222,7 @@ relpEngineDelSess(relpEngine_t *pThis, relpEngSessLst_t *pSessLstEntry)
 	RELPOBJ_assert(pThis, Engine);
 	assert(pSessLstEntry != NULL);
 
+	delSessFromEpoll(pThis, pSessLstEntry);
 	pthread_mutex_lock(&pThis->mutSessLst);
 	DLL_Del(pSessLstEntry, pThis->pSessLstRoot, pThis->pSessLstLast);
 	--pThis->lenSessLst;
@@ -328,6 +437,26 @@ relpEngineSetOnErr(relpEngine_t *pThis, void (*pCB)(void*pUsr, char *objinfo, ch
 	LEAVE_RELPFUNC;
 }
 
+/**
+ * Set an event handler that shall receive information when some GENERIC 
+ * error occured for which no special handler exists. A generic error is
+ * one that cannot be assigned to a specific listener or session.
+ * Callback parameters:
+ *
+ * objinfo  - some information identifying the object in error; depends
+ *            on the actual error case.
+ * errmsg   - error message as far as librelp is concerned
+ * errcode  - contains librelp error status
+ */
+relpRetVal
+relpEngineSetOnGenericErr(relpEngine_t *pThis, void (*pCB)(char *objinfo, char*errmsg, relpRetVal errcode) )
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Engine);
+	pThis->onGenericErr = pCB;
+	LEAVE_RELPFUNC;
+}
+
 /* Deprecated, use relpEngineListnerConstruct() family of functions.
  * See there for further information.
  */
@@ -443,28 +572,208 @@ doSend(relpEngine_t *pThis, relpEngSessLst_t *pSessEtry, int sock)
 		relpEngineDelSess(pThis, pSessEtry);
 	}
 }
-/* The "Run" method starts the relp engine. Most importantly, this means the engine begins
- * to read and write data to its peers. This method must be called on its own thread as it
- * will not return until the engine is finished. Note that the engine itself may (or may
- * not ;)) spawn additional threads. This is an implementation detail not to be cared of by
- * caller.
- * Note that the engine MUST be running even if the caller intends to just SEND messages.
- * This is necessary because relp is a full-duplex protcol where acks and commands (e.g.
- * "abort" may be received at any time.
- *
- * This function is implemented as a select() server. I know that epoll() wold probably
- * be much better, but I implement the first version as select() because of portability.
- * Once everything has matured, we may begin to provide performance-optimized versions for
- * the several flavours of enhanced OS APIs.
- * rgerhards, 2008-03-17
- */
-relpRetVal
-relpEngineRun(relpEngine_t *pThis)
+
+static void
+handleConnectionRequest(relpEngine_t *pThis, relpSrv_t *pSrv, int sock)
+{
+	relpRetVal localRet;
+	relpSess_t *pNewSess;
+
+	pThis->dbgprint("new connect on RELP socket #%d\n", sock);
+	localRet = relpSessAcceptAndConstruct(&pNewSess, pSrv, sock);
+	if(localRet == RELP_RET_OK) {
+		relpEngineAddToSess(pThis, pNewSess);
+	}
+}
+
+
+#if defined(HAVE_EPOLL_CREATE1) || defined(HAVE_EPOLL_CREATE)
+
+static relpRetVal
+epoll_set_events(relpEngine_t *pThis, relpEngSessLst_t *pSessEtry, int sock, uint32_t events)
+{
+	ENTER_RELPFUNC;
+	/* TODO: remove the status dbgprint's once we have some practice drill 2013-07-05 */
+	pThis->dbgprint("librelp: epoll_set_events sock %d, target bits %2.2x, current %2.2x\n", sock, events, pSessEtry->epevt->ev.events);
+	if(pSessEtry->epevt->ev.events != events) {
+		pSessEtry->epevt->ev.events = events;
+		pThis->dbgprint("librelp: epoll_set_events sock %d, setting new bits\n", sock);
+		if(epoll_ctl(pThis->efd, EPOLL_CTL_MOD, sock, &pSessEtry->epevt->ev) != 0) {
+			char errStr[1024];
+			int eno = errno;
+			relpEngineCallOnGenericErr(pThis, "librelp", RELP_RET_ERR_EPOLL_CTL,
+				"os error (%d) during EPOLL_CTL_MOD: %s",
+				eno, relpEngine_strerror_r(eno, errStr, sizeof(errStr)));
+			ABORT_FINALIZE(RELP_RET_ERR_EPOLL_CTL);
+		}
+	}
+finalize_it:
+	LEAVE_RELPFUNC;
+}
+
+static inline relpRetVal
+engineEventLoopInit(relpEngine_t __attribute__((unused)) *pThis)
+{
+#	define NUM_EPOLL_EVENTS 10
+	relpEngSrvLst_t *pSrvEtry;
+	int i;
+	int nLstn;
+	int sock;
+	ENTER_RELPFUNC;
+#if defined(EPOLL_CLOEXEC) && defined(HAVE_EPOLL_CREATE1)
+	pThis->efd = epoll_create1(EPOLL_CLOEXEC);
+	if(pThis->efd < 0 && errno == ENOSYS)
+#endif
+	{
+		pThis->efd = epoll_create(NUM_EPOLL_EVENTS);
+	}
+
+	if(pThis->efd < 0) {
+		pThis->dbgprint("epoll_create1() could not create fd\n");
+		ABORT_FINALIZE(RELP_RET_IO_ERR);
+	}
+
+	/* Add the listen sockets to the epoll set. These
+	 * never change, so we can do it just once in init.
+	 */
+	for(pSrvEtry = pThis->pSrvLstRoot ; pSrvEtry != NULL ; pSrvEtry = pSrvEtry->pNext) {
+		nLstn = relpSrvGetNumLstnSocks(pSrvEtry->pSrv);
+		CHKmalloc(pSrvEtry->epevts = malloc(sizeof(epolld_t) * nLstn));
+		for(i = 0 ; i < nLstn ; ++i) {
+			sock = relpSrvGetLstnSock(pSrvEtry->pSrv, i+1);
+			addToEpollSet(pThis, epolld_lstn, pSrvEtry->pSrv, sock, &(pSrvEtry->epevts[i]));
+		}
+	}
+finalize_it:
+	LEAVE_RELPFUNC;
+}
+static inline relpRetVal
+engineEventLoopExit(relpEngine_t __attribute__((unused)) *pThis)
+{
+	relpEngSrvLst_t *pSrvEtry;
+	int i;
+	int nLstn;
+	ENTER_RELPFUNC;
+	for(pSrvEtry = pThis->pSrvLstRoot ; pSrvEtry != NULL ; pSrvEtry = pSrvEtry->pNext) {
+		nLstn = relpSrvGetNumLstnSocks(pSrvEtry->pSrv);
+		for(i = 0 ; i < nLstn ; ++i) {
+			delFromEpollSet(pThis, pSrvEtry->epevts[i]);
+		}
+		free(pSrvEtry->epevts);
+	}
+	if(pThis->efd != -1) {
+		close(pThis->efd);
+		pThis->efd = -1;
+	}
+	LEAVE_RELPFUNC;
+}
+
+static relpRetVal
+handleSessIO(relpEngine_t *pThis, epolld_t *epd)
+{
+	relpEngSessLst_t *pSessEtry;
+	relpTcp_t *pTcp;
+	relpRetVal localRet;
+
+	pSessEtry = (relpEngSessLst_t*) epd->ptr;
+	if(relpSessTcpRequiresRtry(pSessEtry->pSess)) {
+		pTcp = pSessEtry->pSess->pTcp;
+		if(relpTcpRtryOp(pTcp) == relpTCP_RETRY_send) {
+			doSend(pThis, pSessEtry, epd->sock);
+		} else if(relpTcpRtryOp(pTcp) == relpTCP_RETRY_recv) {
+			doRecv(pThis, pSessEtry, epd->sock);
+		} else {
+			localRet = relpTcpRtryHandshake(pTcp);
+			if(localRet != RELP_RET_OK) {
+				pThis->dbgprint("relp session %d handshake iRet %d, tearing it down\n",
+						epd->sock, localRet);
+				relpEngineDelSess(pThis, pSessEtry);
+			}
+		}
+	} else {
+		if(doRecv(pThis, pSessEtry, epd->sock) == RELP_RET_OK) {
+			if(epd->ev.events & EPOLLOUT) {
+				doSend(pThis, pSessEtry, epd->sock);
+			}
+		}
+	}
+	return RELP_RET_OK;
+}
+
+static relpRetVal
+engineEventLoopRun(relpEngine_t *pThis)
+{
+	relpEngSessLst_t *pSessEtry;
+	int i;
+	int sock;
+	struct epoll_event events[128];
+	epolld_t *epd;
+	int nEvents;
+
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Engine);
+
+	pThis->bStop = 0;
+	while(!relpEngineShouldStop(pThis)) {
+		/* very naive implementation, O(n) - can change this once things work...
+		 * But even the naive implementation is better than select, e.g. has no
+		 * limit on the number of sockets.
+		 */
+		for(pSessEtry = pThis->pSessLstRoot ; pSessEtry != NULL ; pSessEtry = pSessEtry->pNext) {
+			sock = relpSessGetSock(pSessEtry->pSess);
+			if(relpSessTcpRequiresRtry(pSessEtry->pSess)) {
+				pThis->dbgprint("librelp: retry op requested for sock %d\n", sock);
+				if(relpTcpGetRtryDirection(pSessEtry->pSess->pTcp) == 0) {
+					epoll_set_events(pThis, pSessEtry, sock, EPOLLIN);
+				} else {
+					epoll_set_events(pThis, pSessEtry, sock, EPOLLOUT);
+				}
+			} else {
+				/* now check if a send request is outstanding and, if so, add it */
+				if(relpSendqIsEmpty(pSessEtry->pSess->pSendq)) {
+					epoll_set_events(pThis, pSessEtry, sock, EPOLLIN);
+				} else {
+					epoll_set_events(pThis, pSessEtry, sock, EPOLLIN | EPOLLOUT);
+				}
+			}
+		}
+
+		/* wait for io to become ready */
+		if(relpEngineShouldStop(pThis)) break;
+		pThis->dbgprint("librelp: doing epoll_wait\n");
+		nEvents = epoll_wait(pThis->efd, events, sizeof(events)/sizeof(struct epoll_event), -1);
+		pThis->dbgprint("librelp: done epoll_wait, nEvents:%d\n", nEvents);
+		if(relpEngineShouldStop(pThis)) break;
+
+		for(i = 0 ; i < nEvents ; ++i) {
+			if(relpEngineShouldStop(pThis)) break;
+			epd = (epolld_t*) events[i].data.ptr;
+			switch(epd->typ) {
+			case epolld_lstn:
+				handleConnectionRequest(pThis, epd->ptr, epd->sock);
+				break;
+			case epolld_sess:
+				handleSessIO(pThis, epd);
+				break;
+			default:
+				relpEngineCallOnGenericErr(pThis, "librelp", RELP_RET_ERR_INTERNAL,
+					"invalid epolld_type_t %d after epoll", epd->typ);
+				break;
+			}
+		}
+	}
+
+	LEAVE_RELPFUNC;
+}
+#else /* no epoll support available */
+static inline relpRetVal engineEventLoopInit(relpEngine_t __attribute__((unused)) *pThis) { return RELP_RET_OK; }
+static inline relpRetVal engineEventLoopExit(relpEngine_t __attribute__((unused)) *pThis) { return RELP_RET_OK; }
+static relpRetVal
+engineEventLoopRun(relpEngine_t *pThis)
 {
 	relpEngSrvLst_t *pSrvEtry;
 	relpEngSessLst_t *pSessEtry;
 	relpEngSessLst_t *pSessEtryNext;
-	relpSess_t *pNewSess;
 	relpTcp_t *pTcp;
 	relpRetVal localRet;
 	int iSocks;
@@ -542,12 +851,7 @@ relpEngineRun(relpEngine_t *pThis)
 				if(relpEngineShouldStop(pThis)) break;
 				sock = relpSrvGetLstnSock(pSrvEtry->pSrv, iSocks);
 				if(FD_ISSET(sock, &readfds)) {
-					pThis->dbgprint("new connect on RELP socket #%d\n", sock);
-					localRet = relpSessAcceptAndConstruct(&pNewSess, pSrvEtry->pSrv, sock);
-					if(localRet == RELP_RET_OK) {
-						localRet = relpEngineAddToSess(pThis, pNewSess);
-					}
-					/* TODO: check localret, emit error msg! */
+					handleConnectionRequest(pThis, pSrvEtry->pSrv, sock);
 					--nfds; /* indicate we have processed one */
 				}
 			}
@@ -591,6 +895,35 @@ relpEngineRun(relpEngine_t *pThis)
 
 	}
 
+	LEAVE_RELPFUNC;
+}
+#endif /* epoll/select support */
+
+/* The "Run" method starts the relp engine. Most importantly, this means the engine begins
+ * to read and write data to its peers. This method must be called on its own thread as it
+ * will not return until the engine is finished. Note that the engine itself may (or may
+ * not ;)) spawn additional threads. This is an implementation detail not to be cared of by
+ * caller.
+ * Note that the engine MUST be running even if the caller intends to just SEND messages.
+ * This is necessary because relp is a full-duplex protcol where acks and commands (e.g.
+ * "abort" may be received at any time.
+ *
+ * This function is implemented as a select() server. I know that epoll() wold probably
+ * be much better, but I implement the first version as select() because of portability.
+ * Once everything has matured, we may begin to provide performance-optimized versions for
+ * the several flavours of enhanced OS APIs.
+ * rgerhards, 2008-03-17
+ */
+relpRetVal
+relpEngineRun(relpEngine_t *pThis)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Engine);
+
+	CHKRet(engineEventLoopInit(pThis));
+	engineEventLoopRun(pThis);
+	engineEventLoopExit(pThis);
+finalize_it:
 	LEAVE_RELPFUNC;
 }
 

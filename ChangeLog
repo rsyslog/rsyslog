@@ -1,4 +1,7 @@
 ----------------------------------------------------------------------
+Version 1.2.0 - 2013-07-??
+- API extension: relpEngineSetOnGenericErr
+----------------------------------------------------------------------
 Version 1.1.5 - 2013-07-05
 - bugfix: memory leak on connection close
   around 60 bytes of memory were lost on each connection close at the
