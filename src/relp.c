@@ -109,7 +109,7 @@ addToEpollSet(relpEngine_t *pThis, epolld_type_t typ, void *ptr, int sock, epoll
 		char errStr[1024];
 		int eno = errno;
 		relpEngineCallOnGenericErr(pThis, "librelp", RELP_RET_ERR_EPOLL_CTL,
-			"os error (%d) during epoll ADD: %s",
+			"os error (%d) during EPOLL_CTL_ADD: %s",
 			eno, relpEngine_strerror_r(eno, errStr, sizeof(errStr)));
 		ABORT_FINALIZE(RELP_RET_ERR_EPOLL_CTL);
 	}
@@ -131,8 +131,11 @@ delFromEpollSet(relpEngine_t *pThis, epolld_t *epd)
 	int r;
 	pThis->dbgprint("librelp: delete sock %d from epoll set\n", epd->sock);
 	if((r = epoll_ctl(pThis->efd, EPOLL_CTL_DEL, epd->sock, &epd->ev)) != 0) {
-		pThis->dbgprint("librelp: EPOLL_CTL_DEL sock %d failed with error code %d\n",
-				epd->sock, r);
+		char errStr[1024];
+		int eno = errno;
+		relpEngineCallOnGenericErr(pThis, "librelp", RELP_RET_ERR_EPOLL_CTL,
+			"os error (%d) during EPOLL_CTL_DEL: %s",
+			eno, relpEngine_strerror_r(eno, errStr, sizeof(errStr)));
 	}
 	free(epd);
 }
@@ -577,9 +580,7 @@ handleConnectionRequest(relpEngine_t *pThis, relpSrv_t *pSrv, int sock)
 	relpSess_t *pNewSess;
 
 	pThis->dbgprint("new connect on RELP socket #%d\n", sock);
-pThis->dbgprint("new connect on RELP socket #%d, server %p\n", sock, pSrv);
 	localRet = relpSessAcceptAndConstruct(&pNewSess, pSrv, sock);
-pThis->dbgprint("200 new connect on RELP socket #%d, server %p\n", sock, pSrv);
 	if(localRet == RELP_RET_OK) {
 		relpEngineAddToSess(pThis, pNewSess);
 	}
@@ -592,18 +593,21 @@ static relpRetVal
 epoll_set_events(relpEngine_t *pThis, relpEngSessLst_t *pSessEtry, int sock, uint32_t events)
 {
 	ENTER_RELPFUNC;
-pThis->dbgprint("librelp: epoll_set_events sock %d, target bits %2.2x, current %2.2x\n", sock, events, pSessEtry->epevt->ev.events);
+	/* TODO: remove the status dbgprint's once we have some practice drill 2013-07-05 */
+	pThis->dbgprint("librelp: epoll_set_events sock %d, target bits %2.2x, current %2.2x\n", sock, events, pSessEtry->epevt->ev.events);
 	if(pSessEtry->epevt->ev.events != events) {
 		pSessEtry->epevt->ev.events = events;
-pThis->dbgprint("librelp: epoll_set_events sock %d, setting new bits\n", sock);
+		pThis->dbgprint("librelp: epoll_set_events sock %d, setting new bits\n", sock);
 		if(epoll_ctl(pThis->efd, EPOLL_CTL_MOD, sock, &pSessEtry->epevt->ev) != 0) {
-			//char errStr[1024];
-			//int eno = errno;
-			//errmsg.LogError(0, RS_RET_EPOLL_CTL_FAILED, "os error (%d) during epoll ADD: %s",
-					//eno, rs_strerror_r(eno, errStr, sizeof(errStr)));
-			//ABORT_FINALIZE(RS_RET_EPOLL_CTL_FAILED);
+			char errStr[1024];
+			int eno = errno;
+			relpEngineCallOnGenericErr(pThis, "librelp", RELP_RET_ERR_EPOLL_CTL,
+				"os error (%d) during EPOLL_CTL_MOD: %s",
+				eno, relpEngine_strerror_r(eno, errStr, sizeof(errStr)));
+			ABORT_FINALIZE(RELP_RET_ERR_EPOLL_CTL);
 		}
 	}
+finalize_it:
 	LEAVE_RELPFUNC;
 }
 
@@ -752,8 +756,8 @@ engineEventLoopRun(relpEngine_t *pThis)
 				handleSessIO(pThis, epd);
 				break;
 			default:
-				//errmsg.LogError(0, RS_RET_INTERNAL_ERROR,
-					//"error: invalid epolld_type_t %d after epoll", epd->typ);
+				relpEngineCallOnGenericErr(pThis, "librelp", RELP_RET_ERR_INTERNAL,
+					"invalid epolld_type_t %d after epoll", epd->typ);
 				break;
 			}
 		}

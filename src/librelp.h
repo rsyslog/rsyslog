@@ -150,6 +150,7 @@ enum relpCmdEnaState_e { /* command enabled state - what are we permitted to do/
 #define RELP_RET_ERR_TLS	RELPERR_BASE + 40	/**< generic TLS error */
 #define RELP_RET_ERR_INVAL	RELPERR_BASE + 41	/**< some parameter is invalid (like EINVAL) */
 #define RELP_RET_ERR_EPOLL_CTL	RELPERR_BASE + 42	/**< epoll_ctl() failed */
+#define RELP_RET_ERR_INTERNAL	RELPERR_BASE + 43	/**< internal error in librelp (bug) */
 
 /* some macros to work with librelp error codes */
 #define CHKRet(code) if((iRet = code) != RELP_RET_OK) goto finalize_it
