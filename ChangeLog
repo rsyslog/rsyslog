@@ -1,5 +1,7 @@
 ----------------------------------------------------------------------
 Version 1.2.0 - 2013-07-??
+- support for epoll() added
+  platforms that do not support it fall back to select()
 - API extension: relpEngineSetOnGenericErr
 ----------------------------------------------------------------------
 Version 1.1.5 - 2013-07-05
