@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------
-Version 1.1.5 - 2013-07-??
+Version 1.1.5 - 2013-07-05
 - bugfix: memory leak on connection close
   around 60 bytes of memory were lost on each connection close at the
   server side (when the client initiated a close)
