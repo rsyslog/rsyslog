@@ -18,6 +18,7 @@ Version 7.5.2 [devel] 2013-07-04
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=461
   a security advisory for this bug is available at:
      http://www.lsexperts.de/advisories/lse-2013-07-03.txt
+  CVE: CVE-2013-4758 
   PLEASE NOTE: This issue only existed if omelasticsearch was used
   in a non-default configuration, where the "errorfile" parameter
   was specified. Without that parameter set, the bug could not
