@@ -657,7 +657,7 @@ engineEventLoopRun(relpEngine_t *pThis)
 		for(pSessEtry = pThis->pSessLstRoot ; pSessEtry != NULL ; pSessEtry = pSessEtry->pNext) {
 			sock = relpSessGetSock(pSessEtry->pSess);
 			if(relpSessTcpRequiresRtry(pSessEtry->pSess)) {
-				pThis->dbgprint("***<librelp> retry op requested for sock %d\n", sock);
+				pThis->dbgprint("librelp: retry op requested for sock %d\n", sock);
 				if(relpTcpGetRtryDirection(pSessEtry->pSess->pTcp) == 0) {
 					epoll_set_events(pThis, pSessEtry, sock, EPOLLIN);
 				} else {
