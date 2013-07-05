@@ -64,6 +64,11 @@ Version 7.5.0 [devel] 2013-06-11
   connections
   Thanks to Axel Rau for the patch.
 ---------------------------------------------------------------------------
+Version 7.4.3  [v7.4-stable] 2013-07-??
+- bugfix: omlibdbi did not properly close connection on some errors
+  This happened to errors occuring in Begin/End Transaction entry
+  points.
+---------------------------------------------------------------------------
 Version 7.4.2  [v7.4-stable] 2013-07-04
 - bugfix: in RFC5425 TLS, multiple wildcards in auth could cause segfault
 - bugfix: RainerScript object required parameters were not properly
