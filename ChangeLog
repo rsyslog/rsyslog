@@ -65,6 +65,9 @@ Version 7.5.0 [devel] 2013-06-11
   Thanks to Axel Rau for the patch.
 ---------------------------------------------------------------------------
 Version 7.4.3  [v7.4-stable] 2013-07-??
+- bugfix: potential segfault during startup on invalid config
+  could happen if invalid actions were present, which could lead
+  to improper handling in optimizer.
 - bugfix: omlibdbi did not properly close connection on some errors
   This happened to errors occuring in Begin/End Transaction entry
   points.
