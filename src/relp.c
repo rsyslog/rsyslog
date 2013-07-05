@@ -31,7 +31,9 @@
  * development.
  */
 #include "config.h"
+#include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include <sys/select.h>
 #include <string.h>
 #include <errno.h>
@@ -49,6 +51,46 @@
 
 /* ------------------------------ some internal functions ------------------------------ */
 
+void __attribute__((format(printf, 4, 5)))
+relpEngineCallOnGenericErr(relpEngine_t *pThis, char *eobj, relpRetVal ecode, char *fmt, ...)
+{
+	va_list ap;
+	char emsg[1024];
+	
+	va_start(ap, fmt);
+	vsnprintf(emsg, sizeof(emsg), fmt, ap);
+	emsg[sizeof(emsg)/sizeof(char) - 1] = '\0'; /* just to be on the safe side... */
+	va_end(ap);
+	
+	pThis->dbgprint("librelp: generic error: ecode %d, eobj %s,"
+		"emsg '%s'\n", ecode, eobj, emsg);
+	if(pThis->onGenericErr != NULL) {
+		pThis->onGenericErr(eobj, emsg, ecode);
+	}
+}
+
+static char *
+relpEngine_strerror_r(int errnum, char *buf, size_t buflen) {
+#ifndef HAVE_STRERROR_R
+	char *p;
+	p = strerror(errnum);
+	strncpy(buf, emsg, buflen);
+	buf[buflen-1] = '\0';
+#else
+#	ifdef STRERROR_R_CHAR_P
+	char *p;
+	p = strerror_r(errnum, buf, buflen);
+	if(p != buf) {
+		strncpy(buf, p, buflen);
+		buf[buflen - 1] = '\0';
+	}
+#	else
+	strerror_r(errnum, buf, buflen);
+#	endif
+#endif
+	return buf;
+}
+
 static relpRetVal
 addToEpollSet(relpEngine_t *pThis, epolld_type_t typ, void *ptr, int sock, epolld_t **pepd)
 {
@@ -64,15 +106,14 @@ addToEpollSet(relpEngine_t *pThis, epolld_type_t typ, void *ptr, int sock, epoll
 
 	pThis->dbgprint("librelp: add socket %d to epoll set (ptr %p)\n", sock, ptr);
 	if(epoll_ctl(pThis->efd, EPOLL_CTL_ADD, sock, &epd->ev) != 0) {
-		//char errStr[1024];
-		//int eno = errno;
-		//errmsg.LogError(0, RS_RET_EPOLL_CTL_FAILED, "os error (%d) during epoll ADD: %s",
-			        //eno, rs_strerror_r(eno, errStr, sizeof(errStr)));
-		//ABORT_FINALIZE(RS_RET_EPOLL_CTL_FAILED);
+		char errStr[1024];
+		int eno = errno;
+		relpEngineCallOnGenericErr(pThis, "librelp", RELP_RET_ERR_EPOLL_CTL,
+			"os error (%d) during epoll ADD: %s",
+			eno, relpEngine_strerror_r(eno, errStr, sizeof(errStr)));
+		ABORT_FINALIZE(RELP_RET_ERR_EPOLL_CTL);
 	}
 	*pepd = epd;
-
-	//DBGPRINTF("librelp: added socket %d to epoll[%d] set\n", sock, epollfd);
 
 finalize_it:
 	if(iRet != RELP_RET_OK) {
@@ -390,6 +431,26 @@ relpEngineSetOnErr(relpEngine_t *pThis, void (*pCB)(void*pUsr, char *objinfo, ch
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Engine);
 	pThis->onErr = pCB;
+	LEAVE_RELPFUNC;
+}
+
+/**
+ * Set an event handler that shall receive information when some GENERIC 
+ * error occured for which no special handler exists. A generic error is
+ * one that cannot be assigned to a specific listener or session.
+ * Callback parameters:
+ *
+ * objinfo  - some information identifying the object in error; depends
+ *            on the actual error case.
+ * errmsg   - error message as far as librelp is concerned
+ * errcode  - contains librelp error status
+ */
+relpRetVal
+relpEngineSetOnGenericErr(relpEngine_t *pThis, void (*pCB)(char *objinfo, char*errmsg, relpRetVal errcode) )
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Engine);
+	pThis->onGenericErr = pCB;
 	LEAVE_RELPFUNC;
 }
 

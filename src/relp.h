@@ -116,6 +116,7 @@ struct relpEngine_s {
 		                  unsigned char *pMsg, size_t lenMsg); /**< callback for "syslog" cmd */
 	void (*onAuthErr)(void*pUsr, char *authinfo, char*errmsg, relpRetVal errcode);
 	void (*onErr)(void*pUsr, char *objinfo, char*errmsg, relpRetVal errcode);
+	void (*onGenericErr)(char *objinfo, char*errmsg, relpRetVal errcode);
 	int protocolVersion; /**< version of the relp protocol supported by this engine */
 
 	/* Flags */
@@ -211,5 +212,6 @@ static inline int relpEngineShouldStop(relpEngine_t *pThis) {
 
 /* prototypes needed by library itself (rest is in librelp.h) */
 relpRetVal relpEngineDispatchFrame(relpEngine_t *pThis, relpSess_t *pSess, relpFrame_t *pFrame);
+void __attribute__((format(printf, 4, 5))) relpEngineCallOnGenericErr(relpEngine_t *pThis, char *eobj, relpRetVal ecode, char *fmt, ...);
 
 #endif /* #ifndef RELP_H_INCLUDED */
