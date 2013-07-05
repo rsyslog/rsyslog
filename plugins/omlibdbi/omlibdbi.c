@@ -344,7 +344,8 @@ CODESTARTbeginTransaction
 			dbi_conn_error(pData->conn, &emsg);
 			dbgprintf("libdbi server error: begin transaction "
 				  "not successful: %s\n", emsg);
-			iRet = RS_RET_SUSPENDED; 
+			closeConn(pData);
+			ABORT_FINALIZE(RS_RET_SUSPENDED);
 		} 
 	}
 #	endif
@@ -372,6 +373,7 @@ CODESTARTendTransaction
 		dbi_conn_error(pData->conn, &emsg);
 		dbgprintf("libdbi server error: transaction not committed: %s\n",
 			  emsg);
+		closeConn(pData);
 		iRet = RS_RET_SUSPENDED; 
 	} 
 #	endif
