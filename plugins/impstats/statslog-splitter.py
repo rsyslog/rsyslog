@@ -20,13 +20,15 @@ bSingleObjectOutput = True
 bHelpOutput = False
 bEnableCharts = False
 bLogarithmicChart = False
+bLineChart = True
+bBarChart = False
 bFilledLineChart = False
 szChartsFormat = "svg"
 
 # Helper variables
 nLogLineNum = 0
 nLogFileCount = 0
-szChartOptionalArgs = ""
+szChartAddArgs = ""
 
 # Create regex for loglines
 loglineregexes = []
@@ -62,6 +64,12 @@ for arg in sys.argv[-4:]:
 		szChartsFormat = arg[15:]
 	elif arg.find("--logarithmic") != -1:
 		bLogarithmicChart = True
+	elif arg.find("--linechart") != -1:
+		bLineChart = True
+		bBarChart = False
+	elif arg.find("--barchart") != -1:
+		bLineChart = False
+		bBarChart = True
 	elif arg.find("--filledlinechart") != -1:
 		bFilledLineChart = True
 	elif arg.find("--h") != -1 or arg.find("-h") != -1 or arg.find("--help") != -1:
@@ -82,6 +90,8 @@ if bHelpOutput:
 	print " --chartsformat=<svg|png>	Format which should be used for Charts."
 	print "					Default is svg format"
 	print " --logarithmic			Uses Logarithmic to scale the Y Axis, maybe useful in some cases. Default is OFF"
+	print " --linechart			If set, line charts will be generated (Default)."
+	print " --barchart			If set, bar charts will be generated."
 	print " --filledlinechart		Use filled lines on Linechart, maybe useful in some cases. Default is OFF"
 	print "\n	Sampleline: ./statslog-splitter.py singlefile --input=rsyslog-stats.log --outputdir=/home/user/csvlogs/ --enablecharts --chartsformat=png"
 elif bSingleObjectOutput:
@@ -184,23 +194,29 @@ elif bSingleObjectOutput:
 	if bEnableCharts: 
 		# Open HTML Code
 		szHtmlCode =	"<!DOCTYPE html><html><head></head><body><center>"
-
+		
+		# Add mandetory args
+		if bLineChart: 
+			szChartAddArgs += " --linechart"
+		elif bBarChart: 
+			szChartAddArgs += " --barchart"
+		
 		# Add optional args 
 		if bLogarithmicChart: 
-			szChartOptionalArgs += " --logarithmic"
+			szChartAddArgs += " --logarithmic"
 		if bFilledLineChart: 
-			szChartOptionalArgs += " --filledlinechart"
+			szChartAddArgs += " --filledlinechart"
 
 		# Default SVG Format!
 		if szChartsFormat.find("svg") != -1:
 			for outFileName in outputFiles:
-				iReturn = os.system("./statslog-graph.py " + szChartOptionalArgs + " --input=" + szOutputDir + "/" + outFileName + "")
+				iReturn = os.system("./statslog-graph.py " + szChartAddArgs + " --input=" + szOutputDir + "/" + outFileName + "")
 				print "Chart SVG generated for '" + outFileName + "': " + str(iReturn)
 				szHtmlCode +=	"<figure><embed type=\"image/svg+xml\" src=\"" + outFileName[:-4] + ".svg" + "\" />" + "</figure><br/><br/>"
 		# Otherwise PNG Output!
 		else: 
 			for outFileName in outputFiles:
-				iReturn = os.system("./statslog-graph.py " + szChartOptionalArgs + " --input=" + szOutputDir + "/" + outFileName + " --convertpng")
+				iReturn = os.system("./statslog-graph.py " + szChartAddArgs + " --input=" + szOutputDir + "/" + outFileName + " --convertpng")
 				print "Chart PNG generated for '" + outFileName + "': " + str(iReturn)
 				szHtmlCode +=	"<img src=\"" + outFileName[:-4] + ".png" + "\" width=\"800\" height=\"600\"/>" + "<br/><br/>"
 
