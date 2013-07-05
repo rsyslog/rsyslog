@@ -740,7 +740,7 @@ engineEventLoopRun(relpEngine_t *pThis)
 		for(pSessEtry = pThis->pSessLstRoot ; pSessEtry != NULL ; pSessEtry = pSessEtry->pNext) {
 			sock = relpSessGetSock(pSessEtry->pSess);
 			if(relpSessTcpRequiresRtry(pSessEtry->pSess)) {
-				pThis->dbgprint("***<librelp> retry op requested for sock %d\n", sock);
+				pThis->dbgprint("librelp: retry op requested for sock %d\n", sock);
 				if(relpTcpGetRtryDirection(pSessEtry->pSess->pTcp) == 0) {
 					FD_SET(sock, &readfds);
 				} else {
@@ -758,7 +758,7 @@ engineEventLoopRun(relpEngine_t *pThis)
 
 		/* done adding all sockets */
 		if(pThis->dbgprint != dbgprintDummy) {
-			pThis->dbgprint("***<librelp> calling select, active file descriptors (max %d): ", maxfds);
+			pThis->dbgprint("librelp: calling select, active file descriptors (max %d): ", maxfds);
 			for(nfds = 0; nfds <= maxfds; ++nfds)
 				if(FD_ISSET(nfds, &readfds))
 					pThis->dbgprint("%d ", nfds);
