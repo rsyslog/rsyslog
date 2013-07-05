@@ -142,6 +142,14 @@ onErr(void *pUsr, char *objinfo, char* errmesg, __attribute__((unused)) relpRetV
 }
 
 static void
+onGenericErr(char *objinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode)
+{
+	errmsg.LogError(0, RS_RET_RELP_ERR, "omrelp: librelp error '%s', object "
+			"'%s' - action may not work as intended",
+			errmesg, objinfo);
+}
+
+static void
 onAuthErr(void *pUsr, char *authinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode)
 {
 	instanceData *pData = (instanceData*) pUsr;
@@ -554,6 +562,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(relpEngineConstruct(&pRelpEngine));
 	CHKiRet(relpEngineSetDbgprint(pRelpEngine, dbgprintf));
 	CHKiRet(relpEngineSetOnAuthErr(pRelpEngine, onAuthErr));
+	CHKiRet(relpEngineSetOnGenericErr(pRelpEngine, onGenericErr));
 	CHKiRet(relpEngineSetOnErr(pRelpEngine, onErr));
 	CHKiRet(relpEngineSetEnableCmd(pRelpEngine, (uchar*) "syslog", eRelpCmdState_Required));
 

@@ -157,6 +157,13 @@ onErr(void *pUsr, char *objinfo, char* errmesg, __attribute__((unused)) relpRetV
 }
 
 static void
+onGenericErr(char *objinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode)
+{
+	errmsg.LogError(0, RS_RET_RELP_ERR, "imrelp: librelp error '%s', object "
+			" '%s' - input may not work as intended", errmesg, objinfo);
+}
+
+static void
 onAuthErr(void *pUsr, char *authinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode)
 {
 	instanceConf_t *inst = (instanceConf_t*) pUsr;
@@ -288,6 +295,7 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 		CHKiRet(relpEngineSetEnableCmd(pRelpEngine, (uchar*) "syslog", eRelpCmdState_Required));
 		CHKiRet(relpEngineSetSyslogRcv2(pRelpEngine, onSyslogRcv));
 		CHKiRet(relpEngineSetOnErr(pRelpEngine, onErr));
+		CHKiRet(relpEngineSetOnGenericErr(pRelpEngine, onGenericErr));
 		CHKiRet(relpEngineSetOnAuthErr(pRelpEngine, onAuthErr));
 		if (!glbl.GetDisableDNS()) {
 			CHKiRet(relpEngineSetDnsLookupMode(pRelpEngine, 1));
