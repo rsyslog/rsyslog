@@ -91,6 +91,7 @@ relpEngine_strerror_r(int errnum, char *buf, size_t buflen) {
 	return buf;
 }
 
+#if defined(HAVE_EPOLL_CREATE1) || defined(HAVE_EPOLL_CREATE)
 static relpRetVal
 addToEpollSet(relpEngine_t *pThis, epolld_type_t typ, void *ptr, int sock, epolld_t **pepd)
 {
@@ -154,6 +155,7 @@ delSessFromEpoll(relpEngine_t *pThis, relpEngSessLst_t *pSessEtry)
 {
 	delFromEpollSet(pThis, pSessEtry->epevt);
 }
+#endif
 
 /* add an entry to our server list. The server object is handed over and must
  * no longer be accessed by the caller.
@@ -205,7 +207,9 @@ relpEngineAddToSess(relpEngine_t *pThis, relpSess_t *pSess)
 	DLL_Add(pSessLstEntry, pThis->pSessLstRoot, pThis->pSessLstLast);
 	++pThis->lenSessLst;
 	pthread_mutex_unlock(&pThis->mutSessLst);
+#	if defined(HAVE_EPOLL_CREATE1) || defined(HAVE_EPOLL_CREATE)
 	addSessToEpoll(pThis, pSessLstEntry);
+#	endif
 
 finalize_it:
 	LEAVE_RELPFUNC;
@@ -222,7 +226,9 @@ relpEngineDelSess(relpEngine_t *pThis, relpEngSessLst_t *pSessLstEntry)
 	RELPOBJ_assert(pThis, Engine);
 	assert(pSessLstEntry != NULL);
 
+#	if defined(HAVE_EPOLL_CREATE1) || defined(HAVE_EPOLL_CREATE)
 	delSessFromEpoll(pThis, pSessLstEntry);
+#	endif
 	pthread_mutex_lock(&pThis->mutSessLst);
 	DLL_Del(pSessLstEntry, pThis->pSessLstRoot, pThis->pSessLstLast);
 	--pThis->lenSessLst;

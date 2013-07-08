@@ -62,15 +62,20 @@ typedef struct relpPermittedPeers_s {
 	char **name;
 } relpPermittedPeers_t;
 
+#if defined(HAVE_EPOLL_CREATE1) || defined(HAVE_EPOLL_CREATE)
 typedef struct epolld_s epolld_t;
+#endif
 /* a linked list entry for the list of relp servers (of this engine) */
 typedef struct relpEngSrvLst_s {
 	struct relpEngSrvLst_s *pPrev;
 	struct relpEngSrvLst_s *pNext;
+#	if defined(HAVE_EPOLL_CREATE1) || defined(HAVE_EPOLL_CREATE)
 	epolld_t **epevts;
+#	endif
 	struct relpSrv_s *pSrv;
 } relpEngSrvLst_t;
 
+#if defined(HAVE_EPOLL_CREATE1) || defined(HAVE_EPOLL_CREATE)
 /* type of object stored in epoll descriptor */
 typedef enum {
 	epolld_lstn,
@@ -86,15 +91,18 @@ struct epolld_s {
 	int sock;
 	struct epoll_event ev;
 };
+#endif
 
 
 /* a linked list entry for the list of relp sessions (of this engine) */
 typedef struct relpEngSessLst_s {
 	struct relpEngSessLst_s *pPrev;
 	struct relpEngSessLst_s *pNext;
+	struct relpSess_s *pSess;
+#	if defined(HAVE_EPOLL_CREATE1) || defined(HAVE_EPOLL_CREATE)
 	enum { epoll_wronly, epoll_rdonly, epoll_rdwr } epollState;
 	epolld_t *epevt;
-	struct relpSess_s *pSess;
+#	endif
 } relpEngSessLst_t;
 
 
