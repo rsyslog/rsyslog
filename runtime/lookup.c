@@ -37,6 +37,16 @@ DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 
 /* static data */
+/* tables for interfacing with the v6 config system (as far as we need to) */
+static struct cnfparamdescr modpdescr[] = {
+	{ "name", eCmdHdlrString, CNFPARAM_REQUIRED },
+	{ "file", eCmdHdlrString, CNFPARAM_REQUIRED }
+};
+static struct cnfparamblk modpblk =
+	{ CNFPARAMBLK_VERSION,
+	  sizeof(modpdescr)/sizeof(struct cnfparamdescr),
+	  modpdescr
+	};
 
 rsRetVal
 lookupNew(lookup_t **ppThis, char *modname, char *dynname)
@@ -56,15 +66,38 @@ lookupDestruct(lookup_t *lookup)
 	free(lookup);
 }
 
+rsRetVal
+lookupProcessCnf(struct cnfobj *o)
+{
+	struct cnfparamvals *pvals;
+	uchar *cnfModName = NULL;
+	int typeIdx;
+	DEFiRet;
+
+	pvals = nvlstGetParams(o->nvlst, &modpblk, NULL);
+	if(pvals == NULL) {
+		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
+	DBGPRINTF("lookupProcessCnf params:\n");
+	cnfparamsPrint(&modpblk, pvals);
+	
+	// TODO: add code
+
+finalize_it:
+	free(cnfModName);
+	cnfparamvalsDestruct(pvals, &modpblk);
+	RETiRet;
+}
+
 void
-lookupModExit(void)
+lookupClassExit(void)
 {
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
 }
 
 rsRetVal
-lookupModInit(void)
+lookupClassInit(void)
 {
 	DEFiRet;
 	CHKiRet(objGetObjInterface(&obj));

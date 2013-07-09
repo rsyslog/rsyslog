@@ -26,8 +26,9 @@ struct lookup_s {
 
 /* prototypes */
 rsRetVal lookupNew(lookup_t **ppThis, char *modname, char *dynname);
+rsRetVal lookupProcessCnf(struct cnfobj *o);
 void lookupDestruct(lookup_t *pThis);
-rsRetVal lookupModInit(void);
-void lookupModExit(void);
+void lookupClassExit(void);
+rsRetVal lookupClassInit(void);
 
 #endif /* #ifndef INCLUDED_LOOKUP_H */

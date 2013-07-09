@@ -24,6 +24,7 @@ enum cnfobjType {
 	CNFOBJ_TPL,
 	CNFOBJ_PROPERTY,
 	CNFOBJ_CONSTANT,
+	CNFOBJ_LOOKUP_TABLE,
 	CNFOBJ_INVALID = 0
 };
 
@@ -54,6 +55,9 @@ cnfobjType2str(enum cnfobjType ot)
 		break;
 	case CNFOBJ_CONSTANT:
 		return "constant";
+		break;
+	case CNFOBJ_LOOKUP_TABLE:
+		return "lookup_table";
 		break;
 	default:return "error: invalid cnfobjType";
 	}
