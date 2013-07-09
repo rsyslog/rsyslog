@@ -863,8 +863,6 @@ DataRcvdCompressed(ptcpsess_t *pThis, char *buf, size_t len)
 	// by simply updating the input and output sizes?
 	uint64_t outtotal;
 
-	assert(iLen > 0);
-
 	datetime.getCurrTime(&stTime, &ttGenTime);
 	outtotal = 0;
 

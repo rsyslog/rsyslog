@@ -2278,7 +2278,8 @@ cnfstmtPrintOnly(struct cnfstmt *stmt, int indent, sbool subtree)
 		free(cstr);
 		break;
 	case S_ACT:
-		doIndent(indent); dbgprintf("ACTION %p [%s]\n", stmt->d.act, stmt->printable);
+		doIndent(indent); dbgprintf("ACTION %p [%s:%s]\n", stmt->d.act,
+			modGetName(stmt->d.act->pMod), stmt->printable);
 		break;
 	case S_IF:
 		doIndent(indent); dbgprintf("IF\n");
@@ -2446,59 +2447,69 @@ cnfstmtNew(unsigned s_type)
 	return cnfstmt;
 }
 
+void cnfstmtDestructLst(struct cnfstmt *root);
+
+/* delete a single stmt */
 void
-cnfstmtDestruct(struct cnfstmt *root)
+cnfstmtDestruct(struct cnfstmt *stmt)
+{
+	switch(stmt->nodetype) {
+	case S_NOP:
+	case S_STOP:
+		break;
+	case S_CALL:
+		es_deleteStr(stmt->d.s_call.name);
+		break;
+	case S_ACT:
+		actionDestruct(stmt->d.act);
+		break;
+	case S_IF:
+		cnfexprDestruct(stmt->d.s_if.expr);
+		if(stmt->d.s_if.t_then != NULL) {
+			cnfstmtDestructLst(stmt->d.s_if.t_then);
+		}
+		if(stmt->d.s_if.t_else != NULL) {
+			cnfstmtDestructLst(stmt->d.s_if.t_else);
+		}
+		break;
+	case S_SET:
+		free(stmt->d.s_set.varname);
+		cnfexprDestruct(stmt->d.s_set.expr);
+		break;
+	case S_UNSET:
+		free(stmt->d.s_set.varname);
+		break;
+	case S_PRIFILT:
+		cnfstmtDestructLst(stmt->d.s_prifilt.t_then);
+		cnfstmtDestructLst(stmt->d.s_prifilt.t_else);
+		break;
+	case S_PROPFILT:
+		if(stmt->d.s_propfilt.propName != NULL)
+			es_deleteStr(stmt->d.s_propfilt.propName);
+		if(stmt->d.s_propfilt.regex_cache != NULL)
+			rsCStrRegexDestruct(&stmt->d.s_propfilt.regex_cache);
+		if(stmt->d.s_propfilt.pCSCompValue != NULL)
+			cstrDestruct(&stmt->d.s_propfilt.pCSCompValue);
+		cnfstmtDestructLst(stmt->d.s_propfilt.t_then);
+		break;
+	default:
+		dbgprintf("error: unknown stmt type during destruct %u\n",
+			(unsigned) stmt->nodetype);
+		break;
+	}
+	free(stmt->printable);
+	free(stmt);
+}
+
+/* delete a stmt and all others following it */
+void
+cnfstmtDestructLst(struct cnfstmt *root)
 {
 	struct cnfstmt *stmt, *todel;
 	for(stmt = root ; stmt != NULL ; ) {
-		switch(stmt->nodetype) {
-		case S_NOP:
-		case S_STOP:
-			break;
-		case S_CALL:
-			es_deleteStr(stmt->d.s_call.name);
-			break;
-		case S_ACT:
-			actionDestruct(stmt->d.act);
-			break;
-		case S_IF:
-			cnfexprDestruct(stmt->d.s_if.expr);
-			if(stmt->d.s_if.t_then != NULL) {
-				cnfstmtDestruct(stmt->d.s_if.t_then);
-			}
-			if(stmt->d.s_if.t_else != NULL) {
-				cnfstmtDestruct(stmt->d.s_if.t_else);
-			}
-			break;
-		case S_SET:
-			free(stmt->d.s_set.varname);
-			cnfexprDestruct(stmt->d.s_set.expr);
-			break;
-		case S_UNSET:
-			free(stmt->d.s_set.varname);
-			break;
-		case S_PRIFILT:
-			cnfstmtDestruct(stmt->d.s_prifilt.t_then);
-			cnfstmtDestruct(stmt->d.s_prifilt.t_else);
-			break;
-		case S_PROPFILT:
-			if(stmt->d.s_propfilt.propName != NULL)
-				es_deleteStr(stmt->d.s_propfilt.propName);
-			if(stmt->d.s_propfilt.regex_cache != NULL)
-				rsCStrRegexDestruct(&stmt->d.s_propfilt.regex_cache);
-			if(stmt->d.s_propfilt.pCSCompValue != NULL)
-				cstrDestruct(&stmt->d.s_propfilt.pCSCompValue);
-			cnfstmtDestruct(stmt->d.s_propfilt.t_then);
-			break;
-		default:
-			dbgprintf("error: unknown stmt type during destruct %u\n",
-				(unsigned) stmt->nodetype);
-			break;
-		}
-		free(stmt->printable);
 		todel = stmt;
 		stmt = stmt->next;
-		free(todel);
+		cnfstmtDestruct(todel);
 	}
 }
 
@@ -3049,7 +3060,7 @@ cnfstmtOptimizePRIFilt(struct cnfstmt *stmt)
 	DBGPRINTF("optimizer: removing always-true PRIFILT %p\n", stmt);
 	if(stmt->d.s_prifilt.t_else != NULL) {
 		parser_errmsg("error: always-true PRI filter has else part!\n");
-		cnfstmtDestruct(stmt->d.s_prifilt.t_else);
+		cnfstmtDestructLst(stmt->d.s_prifilt.t_else);
 	}
 	free(stmt->printable);
 	stmt->printable = NULL;
