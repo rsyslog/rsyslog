@@ -1022,7 +1022,7 @@ qqueueAdd(qqueue_t *pThis, msg_t *pMsg)
 
 	if(pThis->qType != QUEUETYPE_DIRECT) {
 		ATOMIC_INC(&pThis->iQueueSize, &pThis->mutQueueSize);
-		DBGOPRINT((obj_t*) pThis, "entry added, size now log %d, phys %d entries\n",
+		DBGOPRINT((obj_t*) pThis, "enqueueMsg: entry added, size now log %d, phys %d entries\n",
 			  getLogicalQueueSize(pThis), getPhysicalQueueSize(pThis));
 	}
 
@@ -1466,7 +1466,7 @@ DoDeleteBatchFromQStore(qqueue_t *pThis, int nElem)
 		 */
 		 if(bytesDel != 0) {
 			pThis->tVars.disk.sizeOnDisk -= bytesDel;
-			DBGOPRINT((obj_t*) pThis, "a %lld octet file has been deleted, now %lld octets disk "
+			DBGOPRINT((obj_t*) pThis, "enqueueMsg: a %lld octet file has been deleted, now %lld octets disk "
 					"space used\n", bytesDel, pThis->tVars.disk.sizeOnDisk);
 			/* awake possibly waiting enq process */
 			pthread_cond_signal(&pThis->notFull); /* we hold the mutex while we are in here! */
@@ -1480,7 +1480,7 @@ DoDeleteBatchFromQStore(qqueue_t *pThis, int nElem)
 	/* iQueueSize is not decremented by qDel(), so we need to do it ourselves */
 	ATOMIC_SUB(&pThis->iQueueSize, nElem, &pThis->mutQueueSize);
 	ATOMIC_SUB(&pThis->nLogDeq, nElem, &pThis->mutLogDeq);
-	DBGPRINTF("delete batch from store, new sizes: log %d, phys %d\n",
+	DBGPRINTF("enqueueMsg: delete batch from store, new sizes: log %d, phys %d\n",
 		  getLogicalQueueSize(pThis), getPhysicalQueueSize(pThis));
 	++pThis->deqIDDel; /* one more batch dequeued */
 
@@ -1550,13 +1550,13 @@ DeleteProcessedBatch(qqueue_t *pThis, batch_t *pBatch)
 			localRet = doEnqSingleObj(pThis, eFLOWCTL_NO_DELAY, MsgAddRef(pMsg));
 			++nEnqueued;
 			if(localRet != RS_RET_OK) {
-				DBGPRINTF("error %d re-enqueuing unprocessed data element - discarded\n", localRet);
+				DBGPRINTF("enqueueMsg: error %d re-enqueuing unprocessed data element - discarded\n", localRet);
 			}
 		}
 		msgDestruct(&pMsg);
 	}
 
-	DBGPRINTF("we deleted %d objects and enqueued %d objects\n", i-nEnqueued, nEnqueued);
+	DBGPRINTF("enqueueMsg: we deleted %d objects and enqueued %d objects\n", i-nEnqueued, nEnqueued); 
 
 	if(nEnqueued > 0)
 		qqueueChkPersist(pThis, nEnqueued);
@@ -2531,7 +2531,7 @@ doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, msg_t *pMsg)
 	      	  && pThis->tVars.disk.sizeOnDisk > pThis->sizeOnDiskMax)) {
 		STATSCOUNTER_INC(pThis->ctrFull, pThis->mutCtrFull);
 		if(pThis->toEnq == 0 || pThis->bEnqOnly) {
-			DBGOPRINT((obj_t*) pThis, "enqueueMsg: queue FULL - configured for immediate discarding.\n");
+			DBGOPRINT((obj_t*) pThis, "enqueueMsg: queue FULL - configured for immediate discarding QueueSize=%d MaxQueueSize=%d sizeOnDisk=%d sizeOnDiskMax=%d\n", pThis->iQueueSize, pThis->iMaxQueueSize, pThis->tVars.disk.sizeOnDisk, pThis->sizeOnDiskMax); 
 			STATSCOUNTER_INC(pThis->ctrFDscrd, pThis->mutCtrFDscrd);
 			msgDestruct(&pMsg);
 			ABORT_FINALIZE(RS_RET_QUEUE_FULL);
