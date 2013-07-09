@@ -22,9 +22,16 @@
 #include "config.h"
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <json/json.h>
+#include <json/json.h>
 #include <assert.h>
 
 #include "rsyslog.h"
+#include "srUtils.h"
 #include "errmsg.h"
 #include "lookup.h"
 #include "msg.h"
@@ -91,6 +98,75 @@ lookupInitCnf(lookup_tables_t *lu_tabs)
 }
 
 
+/* note: widely-deployed json_c 0.9 does NOT support incremental
+ * parsing. In order to keep compatible with e.g. Ubuntu 12.04LTS,
+ * we read the file into one big memory buffer and parse it at once.
+ * While this is not very elegant, it will not pose any real issue
+ * for "reasonable" lookup tables (and "unreasonably" large ones
+ * will probably have other issues as well...).
+ */
+rsRetVal
+lookupReadFile(lookup_t *pThis)
+{
+	struct json_tokener *tokener = NULL;
+	struct json_object *json;
+	int eno = errno;
+	char errStr[1024];
+	char *iobuf = NULL;
+	int fd;
+	ssize_t nread;
+	struct stat sb;
+	enum json_tokener_error jerr;
+	DEFiRet;
+
+
+	if(stat((char*)pThis->filename, &sb) == -1) {
+		eno = errno;
+		errmsg.LogError(0, RS_RET_FILE_NOT_FOUND,
+			"lookup table file '%s' stat failed: %s",
+			pThis->filename, rs_strerror_r(eno, errStr, sizeof(errStr)));
+		ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
+	}
+
+	CHKmalloc(iobuf = malloc(sb.st_size));
+
+	if((fd = open((const char*) pThis->filename, O_RDONLY)) == -1) {
+		eno = errno;
+		errmsg.LogError(0, RS_RET_FILE_NOT_FOUND,
+			"lookup table file '%s' could not be opened: %s",
+			pThis->filename, rs_strerror_r(eno, errStr, sizeof(errStr)));
+		ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
+	}
+
+	tokener = json_tokener_new();
+	nread = read(fd, iobuf, sb.st_size);
+dbgprintf("DDDD: read buffer of %lld bytes: '%s'\n", (long long) sb.st_size, iobuf);
+	if(nread != (ssize_t) sb.st_size) {
+		eno = errno;
+		errmsg.LogError(0, RS_RET_READ_ERR,
+			"lookup table file '%s' read error: %s",
+			pThis->filename, rs_strerror_r(eno, errStr, sizeof(errStr)));
+		ABORT_FINALIZE(RS_RET_READ_ERR);
+	}
+
+	json = json_tokener_parse_ex(tokener, iobuf, sb.st_size);
+	if(json == NULL) {
+		errmsg.LogError(0, RS_RET_JSON_PARSE_ERR,
+			"lookup table file '%s' json parsing error",
+			pThis->filename);
+		ABORT_FINALIZE(RS_RET_JSON_PARSE_ERR);
+	}
+
+	/* got json object, now populate our own in-memory structure */
+
+finalize_it:
+	free(iobuf);
+	if(tokener != NULL)
+		json_tokener_free(tokener);
+	RETiRet;
+}
+
+
 rsRetVal
 lookupProcessCnf(struct cnfobj *o)
 {
@@ -120,6 +196,7 @@ lookupProcessCnf(struct cnfobj *o)
 			  "param '%s'\n", modpblk.descr[i].name);
 		}
 	}
+	CHKiRet(lookupReadFile(lu));
 	DBGPRINTF("lookup table '%s' loaded from file '%s'\n", lu->name, lu->filename);
 
 finalize_it:
