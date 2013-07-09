@@ -30,6 +30,7 @@
 #include "msg.h"
 #include "rsconf.h"
 #include "dirty.h"
+#include "unicode-helper.h"
 
 /* definitions for objects we access */
 DEFobjStaticHelpers
@@ -48,16 +49,32 @@ static struct cnfparamblk modpblk =
 	  modpdescr
 	};
 
+
+/* create a new lookup table object AND include it in our list of
+ * lookup tables.
+ */
 rsRetVal
-lookupNew(lookup_t **ppThis, char *modname, char *dynname)
+lookupNew(lookup_t **ppThis)
 {
-	lookup_t *pThis;
+	lookup_t *pThis = NULL;
 	DEFiRet;
 
-	CHKmalloc(pThis = calloc(1, sizeof(lookup_t)));
+	CHKmalloc(pThis = malloc(sizeof(lookup_t)));
+	pThis->name = NULL;
+
+	if(loadConf->lu_tabs.root == NULL) {
+		loadConf->lu_tabs.root = pThis;
+		pThis->next = NULL;
+	} else {
+		pThis->next = loadConf->lu_tabs.last;
+	}
+	loadConf->lu_tabs.last = pThis;
 
 	*ppThis = pThis;
 finalize_it:
+	if(iRet != RS_RET_OK) {
+		free(pThis);
+	}
 	RETiRet;
 }
 void
@@ -66,12 +83,20 @@ lookupDestruct(lookup_t *lookup)
 	free(lookup);
 }
 
+void
+lookupInitCnf(lookup_tables_t *lu_tabs)
+{
+	lu_tabs->root = NULL;
+	lu_tabs->last = NULL;
+}
+
+
 rsRetVal
 lookupProcessCnf(struct cnfobj *o)
 {
 	struct cnfparamvals *pvals;
-	uchar *cnfModName = NULL;
-	int typeIdx;
+	lookup_t *lu;
+	short i;
 	DEFiRet;
 
 	pvals = nvlstGetParams(o->nvlst, &modpblk, NULL);
@@ -81,10 +106,23 @@ lookupProcessCnf(struct cnfobj *o)
 	DBGPRINTF("lookupProcessCnf params:\n");
 	cnfparamsPrint(&modpblk, pvals);
 	
-	// TODO: add code
+	CHKiRet(lookupNew(&lu));
+
+	for(i = 0 ; i < modpblk.nParams ; ++i) {
+		if(!pvals[i].bUsed)
+			continue;
+		if(!strcmp(modpblk.descr[i].name, "file")) {
+			CHKmalloc(lu->filename = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
+		} else if(!strcmp(modpblk.descr[i].name, "name")) {
+			CHKmalloc(lu->name = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
+		} else {
+			dbgprintf("lookup_table: program error, non-handled "
+			  "param '%s'\n", modpblk.descr[i].name);
+		}
+	}
+	DBGPRINTF("lookup table '%s' loaded from file '%s'\n", lu->name, lu->filename);
 
 finalize_it:
-	free(cnfModName);
 	cnfparamvalsDestruct(pvals, &modpblk);
 	RETiRet;
 }

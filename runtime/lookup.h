@@ -21,11 +21,19 @@
 #ifndef INCLUDED_LOOKUP_H
 #define INCLUDED_LOOKUP_H
 
+struct lookup_tables_s {
+	lookup_t *root;	/* the root of the template list */
+	lookup_t *last;	/* points to the last element of the template list */
+};
+
 struct lookup_s {
+	uchar *name;
+	uchar *filename;
+	lookup_t *next;
 };
 
 /* prototypes */
-rsRetVal lookupNew(lookup_t **ppThis, char *modname, char *dynname);
+void lookupInitCnf(lookup_tables_t *lu_tabs);
 rsRetVal lookupProcessCnf(struct cnfobj *o);
 void lookupDestruct(lookup_t *pThis);
 void lookupClassExit(void);

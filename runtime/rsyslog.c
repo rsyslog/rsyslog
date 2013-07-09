@@ -74,6 +74,7 @@
 #include "prop.h"
 #include "ruleset.h"
 #include "parser.h"
+#include "lookup.h"
 #include "strgen.h"
 #include "statsobj.h"
 #include "atomic.h"
@@ -187,7 +188,7 @@ rsrtInit(char **ppErrObj, obj_if_t *pObjIF)
 		if(ppErrObj != NULL) *ppErrObj = "rsconf";
 		CHKiRet(rsconfClassInit(NULL));
 		if(ppErrObj != NULL) *ppErrObj = "lookup";
-		CHKiRet(lookupClassInit(NULL));
+		CHKiRet(lookupClassInit());
 
 		/* dummy "classes" */
 		if(ppErrObj != NULL) *ppErrObj = "str";

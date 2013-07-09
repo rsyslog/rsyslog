@@ -124,6 +124,7 @@ BEGINobjConstruct(rsconf) /* be sure to specify the object type also in END macr
 	pThis->templates.last = NULL;
 	pThis->templates.lastStatic = NULL;
 	pThis->actions.nbrActions = 0;
+	lookupInitCnf(&pThis->lu_tabs);
 	CHKiRet(llInit(&pThis->rulesets.llRulesets, rulesetDestructForLinkedList,
 			rulesetKeyDestruct, strcasecmp));
 	/* queue params */
