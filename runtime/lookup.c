@@ -98,6 +98,54 @@ lookupInitCnf(lookup_tables_t *lu_tabs)
 }
 
 
+/* comparison function for qsort() and bsearch() string array compare
+ * this is for the string lookup table type
+ */
+static int
+qs_arrcmp_strtab(const void *s1, const void *s2)
+{
+	return ustrcmp(((lookup_string_tab_etry_t*)s1)->key, ((lookup_string_tab_etry_t*)s2)->key);
+}
+
+rsRetVal
+lookupBuildTable(lookup_t *pThis, struct json_object *jroot)
+{
+	struct json_object *jversion, *jnomatch, *jtype, *jtab;
+	struct json_object *jrow, *jindex, *jvalue;
+	uint32_t i;
+	uint32_t maxStrSize;
+	DEFiRet;
+
+	jversion = json_object_object_get(jroot, "version");
+	jnomatch = json_object_object_get(jroot, "nomatch");
+	jtype = json_object_object_get(jroot, "type");
+	jtab = json_object_object_get(jroot, "table");
+DBGPRINTF("DDDD: version: %d, nomatch %s, type %s, table: '%s'\n",
+		json_object_get_int(jversion),
+		json_object_get_string(jnomatch),
+		json_object_get_string(jtype),
+		json_object_get_string(jtab));
+	pThis->nmemb = json_object_array_length(jtab);
+	CHKmalloc(pThis->d.strtab = malloc(pThis->nmemb * sizeof(lookup_string_tab_etry_t)));
+
+	maxStrSize = 0;
+	for(i = 0 ; i < pThis->nmemb ; ++i) {
+		jrow = json_object_array_get_idx(jtab, i);
+		jindex = json_object_object_get(jrow, "index");
+		jvalue = json_object_object_get(jrow, "value");
+		CHKmalloc(pThis->d.strtab[i].key = (uchar*) strdup(json_object_get_string(jindex)));
+		CHKmalloc(pThis->d.strtab[i].val = (uchar*) strdup(json_object_get_string(jvalue)));
+		maxStrSize += ustrlen(pThis->d.strtab[i].val);
+	}
+
+	qsort(pThis->d.strtab, pThis->nmemb, sizeof(lookup_string_tab_etry_t), qs_arrcmp_strtab);
+dbgprintf("DDDD: table loaded (max size %u):\n", maxStrSize);
+for(i = 0 ; i < pThis->nmemb ; ++i)
+  dbgprintf("key: '%s', val: '%s'\n", pThis->d.strtab[i].key, pThis->d.strtab[i].val);
+finalize_it:
+	RETiRet;
+}
+
 /* note: widely-deployed json_c 0.9 does NOT support incremental
  * parsing. In order to keep compatible with e.g. Ubuntu 12.04LTS,
  * we read the file into one big memory buffer and parse it at once.
@@ -116,7 +164,6 @@ lookupReadFile(lookup_t *pThis)
 	int fd;
 	ssize_t nread;
 	struct stat sb;
-	enum json_tokener_error jerr;
 	DEFiRet;
 
 
@@ -158,6 +205,7 @@ dbgprintf("DDDD: read buffer of %lld bytes: '%s'\n", (long long) sb.st_size, iob
 	}
 
 	/* got json object, now populate our own in-memory structure */
+	CHKiRet(lookupBuildTable(pThis, json));
 
 finalize_it:
 	free(iobuf);

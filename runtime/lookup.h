@@ -26,9 +26,18 @@ struct lookup_tables_s {
 	lookup_t *last;	/* points to the last element of the template list */
 };
 
+struct lookup_string_tab_etry_s {
+	uchar *key;
+	uchar *val;
+};
+
 struct lookup_s {
 	uchar *name;
 	uchar *filename;
+	uint32_t nmemb;
+	union {
+		lookup_string_tab_etry_t *strtab;
+	} d;
 	lookup_t *next;
 };
 
