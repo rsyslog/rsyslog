@@ -6,6 +6,8 @@ Version 7.4.3  [v7.4-stable] 2013-07-??
 - bugfix: omlibdbi did not properly close connection on some errors
   This happened to errors occuring in Begin/End Transaction entry
   points.
+- fix build on FreeBSD
+  Thanks to Christiano Rolim for the patch
 ---------------------------------------------------------------------------
 Version 7.4.2  [v7.4-stable] 2013-07-04
 - bugfix: in RFC5425 TLS, multiple wildcards in auth could cause segfault
