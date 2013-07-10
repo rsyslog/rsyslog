@@ -98,13 +98,21 @@ lookupInitCnf(lookup_tables_t *lu_tabs)
 }
 
 
-/* comparison function for qsort() and bsearch() string array compare
+/* comparison function for qsort() and string array compare
  * this is for the string lookup table type
  */
 static int
 qs_arrcmp_strtab(const void *s1, const void *s2)
 {
 	return ustrcmp(((lookup_string_tab_etry_t*)s1)->key, ((lookup_string_tab_etry_t*)s2)->key);
+}
+/* comparison function for bsearch() and string array compare
+ * this is for the string lookup table type
+ */
+static int
+bs_arrcmp_strtab(const void *s1, const void *s2)
+{
+	return strcmp((char*)s1, (char*)((lookup_string_tab_etry_t*)s2)->key);
 }
 
 rsRetVal
@@ -120,11 +128,6 @@ lookupBuildTable(lookup_t *pThis, struct json_object *jroot)
 	jnomatch = json_object_object_get(jroot, "nomatch");
 	jtype = json_object_object_get(jroot, "type");
 	jtab = json_object_object_get(jroot, "table");
-DBGPRINTF("DDDD: version: %d, nomatch %s, type %s, table: '%s'\n",
-		json_object_get_int(jversion),
-		json_object_get_string(jnomatch),
-		json_object_get_string(jtype),
-		json_object_get_string(jtab));
 	pThis->nmemb = json_object_array_length(jtab);
 	CHKmalloc(pThis->d.strtab = malloc(pThis->nmemb * sizeof(lookup_string_tab_etry_t)));
 
@@ -142,9 +145,47 @@ DBGPRINTF("DDDD: version: %d, nomatch %s, type %s, table: '%s'\n",
 dbgprintf("DDDD: table loaded (max size %u):\n", maxStrSize);
 for(i = 0 ; i < pThis->nmemb ; ++i)
   dbgprintf("key: '%s', val: '%s'\n", pThis->d.strtab[i].key, pThis->d.strtab[i].val);
+
 finalize_it:
 	RETiRet;
 }
+
+
+/* find a lookup table. This is a naive O(n) algo, but this really
+ * doesn't matter as it is called only a few times during config
+ * load. The function returns either a pointer to the requested
+ * table or NULL, if not found.
+ */
+lookup_t *
+lookupFindTable(uchar *name)
+{
+	lookup_t *curr;
+
+	for(curr = loadConf->lu_tabs.root ; curr != NULL ; curr = curr->next) {
+		if(!ustrcmp(curr->name, name))
+			break;
+	}
+	return curr;
+}
+
+
+/* returns either a pointer to the value (read only!) or NULL
+ * if either the key could not be found or an error occured.
+ */
+uchar *
+lookupKey(lookup_t *pThis, uchar *key)
+{
+	lookup_string_tab_etry_t *etry;
+	uchar *r;
+	etry = bsearch(key, pThis->d.strtab, pThis->nmemb, sizeof(lookup_string_tab_etry_t), bs_arrcmp_strtab);
+	if(etry == NULL) {
+		r = (uchar*)""; // TODO: use set default 
+	} else {
+		r = etry->val;
+	}
+	return r;
+}
+
 
 /* note: widely-deployed json_c 0.9 does NOT support incremental
  * parsing. In order to keep compatible with e.g. Ubuntu 12.04LTS,
@@ -157,7 +198,7 @@ rsRetVal
 lookupReadFile(lookup_t *pThis)
 {
 	struct json_tokener *tokener = NULL;
-	struct json_object *json;
+	struct json_object *json = NULL;
 	int eno = errno;
 	char errStr[1024];
 	char *iobuf = NULL;
@@ -187,7 +228,6 @@ lookupReadFile(lookup_t *pThis)
 
 	tokener = json_tokener_new();
 	nread = read(fd, iobuf, sb.st_size);
-dbgprintf("DDDD: read buffer of %lld bytes: '%s'\n", (long long) sb.st_size, iobuf);
 	if(nread != (ssize_t) sb.st_size) {
 		eno = errno;
 		errmsg.LogError(0, RS_RET_READ_ERR,
@@ -203,6 +243,8 @@ dbgprintf("DDDD: read buffer of %lld bytes: '%s'\n", (long long) sb.st_size, iob
 			pThis->filename);
 		ABORT_FINALIZE(RS_RET_JSON_PARSE_ERR);
 	}
+	free(iobuf); /* early free to sever resources*/
+	iobuf = NULL; /* make sure no double-free */
 
 	/* got json object, now populate our own in-memory structure */
 	CHKiRet(lookupBuildTable(pThis, json));
@@ -211,6 +253,8 @@ finalize_it:
 	free(iobuf);
 	if(tokener != NULL)
 		json_tokener_free(tokener);
+	if(json != NULL)
+		json_object_put(json);
 	RETiRet;
 }
 
