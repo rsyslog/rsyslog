@@ -409,7 +409,7 @@ processSocket(thrdInfo_t *pThrd, struct lstn_s *lstn, struct sockaddr_storage *f
 			if(errno != EINTR && errno != EAGAIN) {
 				rs_strerror_r(errno, errStr, sizeof(errStr));
 				DBGPRINTF("INET socket error: %d = %s.\n", errno, errStr);
-				errmsg.LogError(errno, NO_ERRCODE, "recvfrom inet");
+				errmsg.LogError(errno, NO_ERRCODE, "imudp: error receving on socket: %s", errStr);
 			}
 			ABORT_FINALIZE(RS_RET_ERR); // this most often is NOT an error, state is not checked by caller!
 		}
