@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------
 Version 7.5.3 [devel] 2013-07-??
+- impstats: add process resource usage counters [via getrusage()]
 - librelp 1.2.0 is now required
 - make use of new librelp generic error reporting facility
   This leads to more error messages being passed to the user and
