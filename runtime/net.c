@@ -1189,12 +1189,16 @@ void closeUDPListenSockets(int *pSockArr)
  * hostname and/or pszPort may be NULL, but not both!
  * bIsServer indicates if a server socket should be created
  * 1 - server, 0 - client
+ * param rcvbuf indicates desired rcvbuf size; 0 means OS default
  */
-int *create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer)
+int *create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer, int rcvbuf)
 {
         struct addrinfo hints, *res, *r;
         int error, maxs, *s, *socks, on = 1;
 	int sockflags;
+	int actrcvbuf;
+	socklen_t optlen;
+	char errStr[1024];
 
 	assert(!((pszPort == NULL) && (hostname == NULL)));
         memset(&hints, 0, sizeof(hints));
@@ -1295,6 +1299,35 @@ int *create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer)
                         close(*s);
 			*s = -1;
 			continue;
+		}
+
+		if(rcvbuf != 0) {
+#			if defined(SO_RCVBUFFORCE)
+			if(setsockopt(*s, SOL_SOCKET, SO_RCVBUFFORCE, &rcvbuf, sizeof(rcvbuf)) < 0)
+#			endif
+			{
+				/* if we fail, try to do it the regular way. Experiments show that at 
+				 * least some platforms do not return an error here, but silently set
+				 * it to the max permitted value. So we do our error check a bit
+				 * differently by querying the size below.
+				 */
+				setsockopt(*s, SOL_SOCKET, SO_RCVBUF, &rcvbuf, sizeof(rcvbuf));
+			}
+		}
+
+		if(Debug || rcvbuf != 0) {
+			optlen = sizeof(actrcvbuf);
+			if(getsockopt(*s, SOL_SOCKET, SO_RCVBUF, &actrcvbuf, &optlen) == 0) {
+				dbgprintf("socket %d, actual rcvbuf size %d\n", *s, actrcvbuf);
+				if(rcvbuf != 0 && actrcvbuf/2 != rcvbuf) {
+					errmsg.LogError(errno, NO_ERRCODE,
+						"cannot set rcvbuf size %d for socket %d, value now is %d",
+						rcvbuf, *s, actrcvbuf/2);
+				}
+			} else {
+				dbgprintf("could not obtain rcvbuf size for socket %d: %s\n",
+					*s, rs_strerror_r(errno, errStr, sizeof(errStr)));
+			}
 		}
 
 		if(bIsServer) {
