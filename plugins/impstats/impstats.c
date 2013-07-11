@@ -1,7 +1,7 @@
 /* impstats.c
  * A module to periodically output statistics gathered by rsyslog.
  *
- * Copyright 2010-2012 Adiscon GmbH.
+ * Copyright 2010-2013 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -32,6 +32,9 @@
 #if defined(__FreeBSD__)
 #include <sys/stat.h>
 #endif
+#include <errno.h>
+#include <sys/time.h>
+#include <sys/resource.h>
 
 #include "dirty.h"
 #include "cfsysline.h"
@@ -100,6 +103,19 @@ static struct cnfparamblk modpblk =
 	  sizeof(modpdescr)/sizeof(struct cnfparamdescr),
 	  modpdescr
 	};
+
+
+/* resource use stats counters */
+static intctr_t st_ru_utime;
+static intctr_t st_ru_stime;
+static int st_ru_maxrss;
+static int st_ru_minflt;
+static int st_ru_majflt;
+static int st_ru_inblock;
+static int st_ru_oublock;
+static int st_ru_nvcsw;
+static int st_ru_nivcsw;
+static statsobj_t *statsobj_resources;
 
 BEGINmodExit
 CODESTARTmodExit
@@ -222,6 +238,22 @@ doStatsLine(void __attribute__((unused)) *usrptr, cstr_t *cstr)
 static inline void
 generateStatsMsgs(void)
 {
+	struct rusage ru;
+	int r;
+	r = getrusage(RUSAGE_SELF, &ru);
+	if(r != 0) {
+		dbgprintf("impstats: getrusage() failed with error %d, zeroing out\n", errno);
+		memset(&ru, 0, sizeof(ru));
+	}
+	st_ru_utime = ru.ru_utime.tv_sec * 1000000 + ru.ru_utime.tv_usec;
+	st_ru_stime = ru.ru_stime.tv_sec * 1000000 + ru.ru_stime.tv_usec;
+	st_ru_maxrss = ru.ru_maxrss;
+	st_ru_minflt = ru.ru_minflt;
+	st_ru_majflt = ru.ru_majflt;
+	st_ru_inblock = ru.ru_inblock;
+	st_ru_oublock = ru.ru_oublock;
+	st_ru_nvcsw = ru.ru_nvcsw;
+	st_ru_nivcsw = ru.ru_nivcsw;
 	statsobj.GetAllStatsLines(doStatsLine, NULL, runModConf->statsFmt);
 }
 
@@ -343,7 +375,33 @@ CODESTARTactivateCnf
 		errmsg.LogError(0, localRet, "impstats: error enabling statistics gathering");
 		ABORT_FINALIZE(RS_RET_NO_RUN);
 	}
+	/* initialize our own counters */
+	CHKiRet(statsobj.Construct(&statsobj_resources));
+	CHKiRet(statsobj.SetName(statsobj_resources, (uchar*)"resource-usage"));
+	CHKiRet(statsobj.AddCounter(statsobj_resources, UCHAR_CONSTANT("utime"),
+		ctrType_IntCtr, &st_ru_utime));
+	CHKiRet(statsobj.AddCounter(statsobj_resources, UCHAR_CONSTANT("stime"),
+		ctrType_IntCtr, &st_ru_stime));
+	CHKiRet(statsobj.AddCounter(statsobj_resources, UCHAR_CONSTANT("maxrss"),
+		ctrType_Int, &st_ru_maxrss));
+	CHKiRet(statsobj.AddCounter(statsobj_resources, UCHAR_CONSTANT("minflt"),
+		ctrType_Int, &st_ru_minflt));
+	CHKiRet(statsobj.AddCounter(statsobj_resources, UCHAR_CONSTANT("majflt"),
+		ctrType_Int, &st_ru_majflt));
+	CHKiRet(statsobj.AddCounter(statsobj_resources, UCHAR_CONSTANT("inblock"),
+		ctrType_Int, &st_ru_inblock));
+	CHKiRet(statsobj.AddCounter(statsobj_resources, UCHAR_CONSTANT("oublock"),
+		ctrType_Int, &st_ru_oublock));
+	CHKiRet(statsobj.AddCounter(statsobj_resources, UCHAR_CONSTANT("nvcsw"),
+		ctrType_Int, &st_ru_nvcsw));
+	CHKiRet(statsobj.AddCounter(statsobj_resources, UCHAR_CONSTANT("nivcsw"),
+		ctrType_Int, &st_ru_nivcsw));
+	CHKiRet(statsobj.ConstructFinalize(statsobj_resources));
 finalize_it:
+	if(iRet != RS_RET_OK) {
+		errmsg.LogError(0, iRet, "impstats: error activating module");
+		iRet = RS_RET_NO_RUN;
+	}
 ENDactivateCnf
 
 

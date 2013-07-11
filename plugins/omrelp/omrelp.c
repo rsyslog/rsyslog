@@ -65,6 +65,7 @@ typedef struct _instanceData {
 	uchar *port;
 	int bInitialConnect; /* is this the initial connection request of our module? (0-no, 1-yes) */
 	int bIsConnected; /* currently connected to server? 0 - no, 1 - yes */
+	int sizeWindow;		/**< the RELP window size - 0=use default */
 	unsigned timeout;
 	unsigned rebindInterval;
 	unsigned nSent;
@@ -104,6 +105,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "tls.permittedpeer", eCmdHdlrArray, 0 },
 	{ "port", eCmdHdlrGetWord, 0 },
 	{ "rebindinterval", eCmdHdlrInt, 0 },
+	{ "windowsize", eCmdHdlrInt, 0 },
 	{ "timeout", eCmdHdlrInt, 0 },
 	{ "template", eCmdHdlrGetWord, 0 }
 };
@@ -140,6 +142,14 @@ onErr(void *pUsr, char *objinfo, char* errmesg, __attribute__((unused)) relpRetV
 }
 
 static void
+onGenericErr(char *objinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode)
+{
+	errmsg.LogError(0, RS_RET_RELP_ERR, "omrelp: librelp error '%s', object "
+			"'%s' - action may not work as intended",
+			errmesg, objinfo);
+}
+
+static void
 onAuthErr(void *pUsr, char *authinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode)
 {
 	instanceData *pData = (instanceData*) pUsr;
@@ -156,6 +166,8 @@ doCreateRelpClient(instanceData *pData)
 	if(relpEngineCltConstruct(pRelpEngine, &pData->pRelpClt) != RELP_RET_OK)
 		ABORT_FINALIZE(RS_RET_RELP_ERR);
 	if(relpCltSetTimeout(pData->pRelpClt, pData->timeout) != RELP_RET_OK)
+		ABORT_FINALIZE(RS_RET_RELP_ERR);
+	if(relpCltSetWindowSize(pData->pRelpClt, pData->sizeWindow) != RELP_RET_OK)
 		ABORT_FINALIZE(RS_RET_RELP_ERR);
 	if(relpCltSetUsrPtr(pData->pRelpClt, pData) != RELP_RET_OK)
 		ABORT_FINALIZE(RS_RET_RELP_ERR);
@@ -195,6 +207,7 @@ finalize_it:
 
 BEGINcreateInstance
 CODESTARTcreateInstance
+	pData->sizeWindow = 0;
 	pData->timeout = 90;
 	pData->rebindInterval = 0;
 	pData->bEnableTLS = DFLT_ENABLE_TLS;
@@ -233,6 +246,7 @@ setInstParamDefaults(instanceData *pData)
 	pData->port = NULL;
 	pData->tplName = NULL;
 	pData->timeout = 90;
+	pData->sizeWindow = 0;
 	pData->rebindInterval = 0;
 	pData->bEnableTLS = DFLT_ENABLE_TLS;
 	pData->bEnableTLSZip = DFLT_ENABLE_TLSZIP;
@@ -269,6 +283,8 @@ CODESTARTnewActInst
 			pData->timeout = (unsigned) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "rebindinterval")) {
 			pData->rebindInterval = (unsigned) pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "windowsize")) {
+			pData->sizeWindow = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "tls")) {
 			pData->bEnableTLS = (unsigned) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "tls.compression")) {
@@ -546,6 +562,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(relpEngineConstruct(&pRelpEngine));
 	CHKiRet(relpEngineSetDbgprint(pRelpEngine, dbgprintf));
 	CHKiRet(relpEngineSetOnAuthErr(pRelpEngine, onAuthErr));
+	CHKiRet(relpEngineSetOnGenericErr(pRelpEngine, onGenericErr));
 	CHKiRet(relpEngineSetOnErr(pRelpEngine, onErr));
 	CHKiRet(relpEngineSetEnableCmd(pRelpEngine, (uchar*) "syslog", eRelpCmdState_Required));
 

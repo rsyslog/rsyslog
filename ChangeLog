@@ -1,8 +1,33 @@
 ---------------------------------------------------------------------------
-Version 7.5.2 [devel] 2013-0?-??
+Version 7.5.3 [devel] 2013-07-??
+- impstats: add process resource usage counters [via getrusage()]
+- librelp 1.2.0 is now required
+- make use of new librelp generic error reporting facility
+  This leads to more error messages being passed to the user and
+  thus simplified troubleshooting.
+- bugfix: very small memory leak in imrelp
+  more or less cosmetic, a single memory block was not freed, but this
+  only happens immediately before termination (when the OS automatically
+  frees all memory). Still an annoyance e.g. in valgrind.
+- fix compile problem in debug build
+---------------------------------------------------------------------------
+Version 7.5.2 [devel] 2013-07-04
 - librelp 1.1.4 is now required
   We use API extensions for better error reporting and higher performance.
 - omrelp: use transactional mode to make imrelp emit bulk sends
+- omrelp: add "windowSize" parameter to set custom RELP window size
+- bugfix: double-free in omelasticsearch
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=461
+  a security advisory for this bug is available at:
+     http://www.lsexperts.de/advisories/lse-2013-07-03.txt
+  CVE: CVE-2013-4758 
+  PLEASE NOTE: This issue only existed if omelasticsearch was used
+  in a non-default configuration, where the "errorfile" parameter
+  was specified. Without that parameter set, the bug could not
+  be triggered.
+  Thanks to Markus Vervier and Marius Ionescu for providing a detailled
+  bug report. Special thanks to Markus for coordinating his security
+  advisory with us.
 - doc: fixed various typos
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=391
   Thanks to Georgi Georgiev for the patch.
@@ -41,11 +66,33 @@ Version 7.5.0 [devel] 2013-06-11
   connections
   Thanks to Axel Rau for the patch.
 ---------------------------------------------------------------------------
-Version 7.4.2  [v7.4-stable] 2013-06-??
+Version 7.4.3  [v7.4-stable] 2013-07-??
+- bugfix: potential segfault during startup on invalid config
+  could happen if invalid actions were present, which could lead
+  to improper handling in optimizer.
+- bugfix: omlibdbi did not properly close connection on some errors
+  This happened to errors occuring in Begin/End Transaction entry
+  points.
+- fix build on FreeBSD
+  Thanks to Christiano Rolim for the patch
+---------------------------------------------------------------------------
+Version 7.4.2  [v7.4-stable] 2013-07-04
 - bugfix: in RFC5425 TLS, multiple wildcards in auth could cause segfault
 - bugfix: RainerScript object required parameters were not properly
   checked - this clould result to segfaults on startup if parameters
   were missing.
+- bugfix: double-free in omelasticsearch
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=461
+  a security advisory for this bug is available at:
+     http://www.lsexperts.de/advisories/lse-2013-07-03.txt
+  CVE: CVE-2013-4758 
+  PLEASE NOTE: This issue only existed if omelasticsearch was used
+  in a non-default configuration, where the "errorfile" parameter
+  was specified. Without that parameter set, the bug could not
+  be triggered.
+  Thanks to Markus Vervier and Marius Ionescu for providing a detailled
+  bug report. Special thanks to Markus for coordinating his security
+  advisory with us.
 - bugfix: omrelp potential segfault at startup on invalid config parameters
 - bugfix: small memory leak when $uptime property was used
 - bugfix: potential segfault on rsyslog termination in imudp
@@ -59,6 +106,7 @@ Version 7.4.2  [v7.4-stable] 2013-06-??
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=457
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=458
   Thanks to Christiano for reproting and suggesting patches
+- solved build problems on CENTOS5
 ---------------------------------------------------------------------------
 Version 7.4.1  [v7.4-stable] 2013-06-17
 - imjournal: add ratelimiting capability

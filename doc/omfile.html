@@ -97,7 +97,26 @@
 	sets a new default template for file actions.<br></li><br>
 	
 </ul>
-<p><b>Caveats/Known Bugs:</b></p><ul><li>None.</li></ul>
+<p><b>Caveats/Known Bugs:</b></p>
+<ul>
+<li>One needs to be careful with log rotation if signatures and/or encryption
+are being used. These create side-files, which form a set and must be kept
+together.
+<br>
+For signatures, the ".sigstate" file must NOT be rotated away if
+signature chains are to be build across multiple files. This is because
+.sigstate contains just global information for the whole file set. However,
+all other files need to be rotated together. The proper sequence is to
+    <ol>
+    <li> move all files inside the file set
+    <li> only AFTER this is completely done, HUP rsyslog
+    </ol>
+This sequence will ensure that all files inside the set are atomically
+closed and in sync. HUPing only after a subset of files have been moved
+results in inconsistencies and will most probably render the file set
+unusable.
+</li>
+</ul>
 <p><b>Sample:</b></p>
 <p>The following command writes all syslog messages into a file.</p>
 <textarea rows="5" cols="60">Module (load="builtin:omfile")

@@ -34,6 +34,19 @@ must be used.
 	Timeout for relp sessions. If set too low, valid sessions
 	may be considered dead and tried to recover.
 	</li>
+	<li><b>windowSize</b> (not mandatory, default 0)<br>
+	This is an <b>expert parameter</b>. It permits to override the
+	RELP window size being used by the client. Changing the window
+	size has both an effect on performance as well as potential 
+	message duplication in failure case. A larger window size means
+	more performance, but also potentially more duplicated 
+	messages - and vice versa. The default 0 means that librelp's
+	default window size is being used, which is considered a
+	compromise between goals reached. For your information:
+	at the time of this writing, the librelp default window size
+	is 128 messages, but this may change at any time.
+	<br>Note that there is no equivalent server parameter, as the
+	client proposes and manages the window size in RELP protocol.
         <li><b>tls</b> (not mandatory, values "on","off", default "off")<br>
 	If set to "on", the RELP connection will be encrypted by TLS, 		so that the data is protected against observers. Please note 		that both the client and the server must have set TLS to 		either "on" or "off". Other combinations lead to unpredictable 		results.
 	</li>
