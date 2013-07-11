@@ -18,8 +18,8 @@
 multiple input actions.
 </p>
 
-<p><b>Configuration Directives</b>:</p>
-<p><b>Global Directives</b>:</p>
+<p><b>Configuration Parameters</b>:</p>
+<p><b>Module Parameters</b>:</p>
 <ul>
 <li><b>TimeRequery</b> &lt;nbr-of-times&gt;<br>
 this is a performance
@@ -37,7 +37,7 @@ processing under Linux (and thus reduce chance of packet loss).
 <li><b>SchedulingPriority</b> &lt;number&gt;<br>
 Scheduling priority to use. 
 </ul>
-<p><b>Action Directives</b>:</p>
+<p><b>Action Parameters</b>:</p>
 <ul>
 <li><b>Address</b> &lt;IP&gt;<br>
 local IP address (or name) the UDP listens should bind to</li>
@@ -47,6 +47,18 @@ default 514, start UDP server on this port. Either a single port can be specifie
 <br>Array of ports: Port=["514","515","10514","..."]</li>
 <li><b>Ruleset</b> &lt;ruleset&gt;<br>
 Binds the listener to a specific <a href="multi_ruleset.html">ruleset</a>.</li>
+<li><b>rcvbufSize</b> &lt;size&gt;<br>
+Available since 7.5.3+<br>
+This request a socket receive buffer of specific size from the operating system.
+It is an expert parameter, which should only be changed for a good reason. Note that
+setting this parameter disables Linux auto-tuning, which usually works pretty well.
+The default value is 0, which means "keep the OS buffer size unchanged". This is a size
+value. So in addition to pure integer values, sizes like "256k", "1m" and the like can
+be specified. Note that setting very large sizes may require root or other special
+privileges. Also note that the OS may slightly adjust the value or shrink it to a
+system-set max value if the user is not sufficiently privileged. Technically, this
+parameter will result in a setsockopt() call with SO_RCVBUF (and SO_RCVBUFFORCE if it
+is available).
 </ul>
 <b>Caveats/Known Bugs:</b>
 <ul>
@@ -59,8 +71,15 @@ user account.
 <p><b>Sample:</b></p>
 <p>This sets up an UPD server on port 514:<br>
 </p>
-<textarea rows="15" cols="60">module(load="imudp") # needs to be done just once
+<textarea rows="4" cols="60">module(load="imudp") # needs to be done just once
 input(type="imudp" port="514")
+</textarea>
+
+<p>The following sample is mostly equivalent to the first one, but request a
+larger rcvuf size. Note that 1m most probably will not be honored by the OS
+until the user is sufficiently privileged.</p>
+<textarea rows="4" cols="60">module(load="imudp") # needs to be done just once
+input(type="imudp" port="514" rcvbufSize="1m")
 </textarea>
 
 <p><b>Legacy Configuration Directives</b>:</p>
@@ -81,14 +100,10 @@ equivalent to: SchedulingPolicy
 <li>$IMUDPSchedulingPriority &lt;number&gt; Available since 4.7.4+, 5.7.3+, 6.1.3+.<br>
 equivalent to: SchedulingPriority 
 </ul>
-<b>Caveats/Known Bugs:</b>
-<ul>
-<li>currently none known</li>
-</ul>
-<p><b>Sample:</b></p>
+<p><b>Legacy Sample:</b></p>
 <p>This sets up an UPD server on port 514:<br>
 </p>
-<textarea rows="15" cols="60">$ModLoad imudp # needs to be done just once
+<textarea rows="4" cols="60">$ModLoad imudp # needs to be done just once
 $UDPServerRun 514
 </textarea>
 <p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>]
@@ -96,7 +111,7 @@ $UDPServerRun 514
 <p><font size="2">This documentation is part of the
 <a href="http://www.rsyslog.com/">rsyslog</a>
 project.<br>
-Copyright &copy; 2009 by <a href="http://www.gerhards.net/rainer">Rainer
+Copyright &copy; 2009-2013 by <a href="http://www.gerhards.net/rainer">Rainer
 Gerhards</a> and
 <a href="http://www.adiscon.com/">Adiscon</a>.
 Released under the GNU GPL version 3 or higher.</font></p>

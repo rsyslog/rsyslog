@@ -576,7 +576,7 @@ static rsRetVal doTryResume(instanceData *pData)
 		pData->f_addr = res;
 		pData->bIsConnected = 1;
 		if(pData->pSockArray == NULL) {
-			pData->pSockArray = net.create_udp_socket((uchar*)pData->target, NULL, 0);
+			pData->pSockArray = net.create_udp_socket((uchar*)pData->target, NULL, 0, 0);
 		}
 	} else {
 		CHKiRet(TCPSendInit((void*)pData));

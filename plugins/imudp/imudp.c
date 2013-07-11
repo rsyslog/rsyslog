@@ -109,6 +109,7 @@ struct instanceConf_s {
 	uchar *pszBindPort;		/* Port to bind socket to */
 	uchar *pszBindRuleset;		/* name of ruleset to bind to */
 	ruleset_t *pBindRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
+	int rcvbuf;			/* 0 means: do not set, keep OS default */
 	struct instanceConf_s *next;
 };
 
@@ -140,6 +141,7 @@ static struct cnfparamblk modpblk =
 static struct cnfparamdescr inppdescr[] = {
 	{ "port", eCmdHdlrArray, CNFPARAM_REQUIRED }, /* legacy: InputTCPServerRun */
 	{ "address", eCmdHdlrString, 0 },
+	{ "rcvbufsize", eCmdHdlrSize, 0 },
 	{ "ruleset", eCmdHdlrString, 0 }
 };
 static struct cnfparamblk inppblk =
@@ -165,6 +167,7 @@ createInstance(instanceConf_t **pinst)
 	inst->pszBindPort = NULL;
 	inst->pszBindAddr = NULL;
 	inst->pszBindRuleset = NULL;
+	inst->rcvbuf = 0;
 
 	/* node created, let's add to config */
 	if(loadModConf->tail == NULL) {
@@ -239,7 +242,7 @@ addListner(instanceConf_t *inst)
 
 	DBGPRINTF("Trying to open syslog UDP ports at %s:%s.\n", bindName, inst->pszBindPort);
 
-	newSocks = net.create_udp_socket(bindAddr, port, 1);
+	newSocks = net.create_udp_socket(bindAddr, port, 1, inst->rcvbuf);
 	if(newSocks != NULL) {
 		/* we now need to add the new sockets to the existing set */
 		/* ready to copy */
@@ -682,6 +685,8 @@ createListner(es_str_t *port, struct cnfparamvals *pvals)
 			inst->pszBindAddr = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "ruleset")) {
 			inst->pszBindRuleset = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(inppblk.descr[i].name, "rcvbufsize")) {
+			inst->rcvbuf = (int) pvals[i].val.d.n;
 		} else {
 			dbgprintf("imudp: program error, non-handled "
 			  "param '%s'\n", inppblk.descr[i].name);
