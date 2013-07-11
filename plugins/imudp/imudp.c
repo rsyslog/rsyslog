@@ -290,6 +290,80 @@ std_checkRuleset_genErrMsg(__attribute__((unused)) modConfData_t *modConf, insta
 }
 
 
+/* This function processes received data. It provides unified handling
+ * in cases where recvmmsg() is available and not.
+ */
+static inline rsRetVal
+processPacket(thrdInfo_t *pThrd, struct lstn_s *lstn, struct sockaddr_storage *frominetPrev, int *pbIsPermitted,
+	ssize_t lenRcvBuf, struct syslogTime *stTime, time_t ttGenTime)
+{
+	DEFiRet;
+	socklen_t socklen;
+	struct sockaddr_storage frominet;
+	msg_t *pMsg;
+
+	assert(pThrd != NULL);
+
+	if(lenRcvBuf == 0)
+		FINALIZE; /* this looks a bit strange, but practice shows it happens... */
+
+	/* if we reach this point, we had a good receive and can process the packet received */
+	/* check if we have a different sender than before, if so, we need to query some new values */
+	if(bDoACLCheck) {
+		socklen = sizeof(struct sockaddr_storage);
+		if(net.CmpHost(&frominet, frominetPrev, socklen) != 0) {
+			memcpy(frominetPrev, &frominet, socklen); /* update cache indicator */
+			/* Here we check if a host is permitted to send us syslog messages. If it isn't,
+			 * we do not further process the message but log a warning (if we are
+			 * configured to do this). However, if the check would require name resolution,
+			 * it is postponed to the main queue. See also my blog post at
+			 * http://blog.gerhards.net/2009/11/acls-imudp-and-accepting-messages.html
+			 * rgerhards, 2009-11-16
+			 */
+			*pbIsPermitted = net.isAllowedSender2((uchar*)"UDP",
+					    (struct sockaddr *)&frominet, "", 0);
+	
+			if(*pbIsPermitted == 0) {
+				DBGPRINTF("msg is not from an allowed sender\n");
+				if(glbl.GetOption_DisallowWarning) {
+					time_t tt;
+					datetime.GetTime(&tt);
+					if(tt > ttLastDiscard + 60) {
+						ttLastDiscard = tt;
+						errmsg.LogError(0, NO_ERRCODE,
+						"UDP message from disallowed sender discarded");
+					}
+				}
+			}
+		}
+	} else {
+		*pbIsPermitted = 1; /* no check -> everything permitted */
+	}
+
+	DBGPRINTF("recv(%d,%d),acl:%d,msg:%s\n", lstn->sock, (int) lenRcvBuf, *pbIsPermitted, pRcvBuf);
+
+	if(*pbIsPermitted != 0)  {
+		/* we now create our own message object and submit it to the queue */
+		CHKiRet(msgConstructWithTime(&pMsg, stTime, ttGenTime));
+		MsgSetRawMsg(pMsg, (char*)pRcvBuf, lenRcvBuf);
+		MsgSetInputName(pMsg, pInputName);
+		MsgSetRuleset(pMsg, lstn->pRuleset);
+		MsgSetFlowControlType(pMsg, eFLOWCTL_NO_DELAY);
+		pMsg->msgFlags  = NEEDS_PARSING | PARSE_HOSTNAME | NEEDS_DNSRESOL;
+		if(*pbIsPermitted == 2)
+			pMsg->msgFlags  |= NEEDS_ACLCHK_U; /* request ACL check after resolution */
+		CHKiRet(msgSetFromSockinfo(pMsg, &frominet));
+		CHKiRet(submitMsg(pMsg));
+		STATSCOUNTER_INC(lstn->ctrSubmit, lstn->mutCtrSubmit);
+	}
+
+finalize_it:
+	RETiRet;
+}
+
+
+
+
 /* This function is a helper to runInput. I have extracted it
  * from the main loop just so that we do not have that large amount of code
  * in a single place. This function takes a socket and pulls messages from
@@ -314,9 +388,6 @@ processSocket(thrdInfo_t *pThrd, struct lstn_s *lstn, struct sockaddr_storage *f
 	socklen_t socklen;
 	ssize_t lenRcvBuf;
 	struct sockaddr_storage frominet;
-	msg_t *pMsg;
-	prop_t *propFromHost = NULL;
-	prop_t *propFromHostIP = NULL;
 	char errStr[1024];
 
 	assert(pThrd != NULL);
@@ -335,68 +406,14 @@ processSocket(thrdInfo_t *pThrd, struct lstn_s *lstn, struct sockaddr_storage *f
 			ABORT_FINALIZE(RS_RET_ERR); // this most often is NOT an error, state is not checked by caller!
 		}
 
-		if(lenRcvBuf == 0)
-			continue; /* this looks a bit strange, but practice shows it happens... */
-
-		/* if we reach this point, we had a good receive and can process the packet received */
-		/* check if we have a different sender than before, if so, we need to query some new values */
-		if(bDoACLCheck) {
-			if(net.CmpHost(&frominet, frominetPrev, socklen) != 0) {
-				memcpy(frominetPrev, &frominet, socklen); /* update cache indicator */
-				/* Here we check if a host is permitted to send us syslog messages. If it isn't,
-				 * we do not further process the message but log a warning (if we are
-				 * configured to do this). However, if the check would require name resolution,
-				 * it is postponed to the main queue. See also my blog post at
-				 * http://blog.gerhards.net/2009/11/acls-imudp-and-accepting-messages.html
-				 * rgerhards, 2009-11-16
-				 */
-				*pbIsPermitted = net.isAllowedSender2((uchar*)"UDP",
-						    (struct sockaddr *)&frominet, "", 0);
-		
-				if(*pbIsPermitted == 0) {
-					DBGPRINTF("msg is not from an allowed sender\n");
-					if(glbl.GetOption_DisallowWarning) {
-						time_t tt;
-						datetime.GetTime(&tt);
-						if(tt > ttLastDiscard + 60) {
-							ttLastDiscard = tt;
-							errmsg.LogError(0, NO_ERRCODE,
-							"UDP message from disallowed sender discarded");
-						}
-					}
-				}
-			}
-		} else {
-			*pbIsPermitted = 1; /* no check -> everything permitted */
+		if((runModConf->iTimeRequery == 0) || (iNbrTimeUsed++ % runModConf->iTimeRequery) == 0) {
+			datetime.getCurrTime(&stTime, &ttGenTime);
 		}
 
-		DBGPRINTF("recv(%d,%d),acl:%d,msg:%s\n", lstn->sock, (int) lenRcvBuf, *pbIsPermitted, pRcvBuf);
-
-		if(*pbIsPermitted != 0)  {
-			if((runModConf->iTimeRequery == 0) || (iNbrTimeUsed++ % runModConf->iTimeRequery) == 0) {
-				datetime.getCurrTime(&stTime, &ttGenTime);
-			}
-			/* we now create our own message object and submit it to the queue */
-			CHKiRet(msgConstructWithTime(&pMsg, &stTime, ttGenTime));
-			MsgSetRawMsg(pMsg, (char*)pRcvBuf, lenRcvBuf);
-			MsgSetInputName(pMsg, pInputName);
-			MsgSetRuleset(pMsg, lstn->pRuleset);
-			MsgSetFlowControlType(pMsg, eFLOWCTL_NO_DELAY);
-			pMsg->msgFlags  = NEEDS_PARSING | PARSE_HOSTNAME | NEEDS_DNSRESOL;
-			if(*pbIsPermitted == 2)
-				pMsg->msgFlags  |= NEEDS_ACLCHK_U; /* request ACL check after resolution */
-			CHKiRet(msgSetFromSockinfo(pMsg, &frominet));
-			CHKiRet(submitMsg(pMsg));
-			STATSCOUNTER_INC(lstn->ctrSubmit, lstn->mutCtrSubmit);
-		}
+		CHKiRet(processPacket(pThrd, lstn, frominetPrev, pbIsPermitted, lenRcvBuf, &stTime, ttGenTime));
 	}
 
 finalize_it:
-	if(propFromHost != NULL)
-		prop.Destruct(&propFromHost);
-	if(propFromHostIP != NULL)
-		prop.Destruct(&propFromHostIP);
-
 	RETiRet;
 }
 
