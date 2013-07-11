@@ -28,6 +28,7 @@ bBarChart = False
 bConvertPng = False
 bLogarithmicChart = False
 bFilledLineChart = False
+bChartCalcDelta = False
 
 # Init variables
 aFields = []
@@ -44,8 +45,8 @@ iStartSeconds = 0
 for arg in sys.argv[-4:]:
 	if arg.find("--input=") != -1:
 		szInput = arg[8:]
-	elif arg.find("--outputdir=") != -1:
-		szOutputFile = arg[12:]
+	elif arg.find("--outputfile=") != -1:
+		szOutputFile = arg[13:]
 	elif arg.find("--maxdataxlabel=") != -1:
 		nMaxDataCount = int(arg[16:]) 
 	elif arg.find("--xlabeldatetime") != -1:
@@ -64,6 +65,8 @@ for arg in sys.argv[-4:]:
 		bLogarithmicChart = True
 	elif arg.find("--filledlinechart") != -1:
 		bFilledLineChart = True
+	elif arg.find("--chartscalcdelta") != -1:
+		bChartCalcDelta = True
 	elif arg.find("--h") != -1 or arg.find("-h") != -1 or arg.find("--help") != -1:
 		bHelpOutput = True
 
@@ -84,6 +87,7 @@ if bHelpOutput == True:
 	print " --barchart		Generates a Barchart (Cannot be used with --linechart)"
 	print " --logarithmic		Uses Logarithmic to scale the Y Axis, maybe useful in some cases. Default is OFF"
 	print " --filledlinechart	Use filled lines on Linechart, maybe useful in some cases. Default is OFF"
+	print " --chartscalcdelta	If set, charts will use calculated delta values instead of cumulative values."
 	print " --convertpng		Generate PNG Output rather than SVG. "
 	print "				Default is SVG output."
 	print "	--h / -h / --help	Displays this help message. \n"
@@ -91,16 +95,19 @@ if bHelpOutput == True:
 else:
 	# Generate output filename
 	if len(szInput) > 0: 
-		if szInput.rfind(".") == -1:
-			szOutputFile += szInput + ".svg"
-		else: 
-			szOutputFile += szInput[:-4] + ".svg"
+		# Only set output filename if not specified
+		if len(szOutputFile) == 0: 
+			if szInput.rfind(".") == -1:
+				szOutputFile += szInput + ".svg"
+			else: 
+				szOutputFile += szInput[:-4] + ".svg"
 	else:
 		print "Error, no input file specified!"
 		sys.exit(0)
 
 	# Process inputfile
 	inputfile = open(szInput, 'r')
+	aLineDataPrev = [] # Helper variable for previous line!
 	for line in inputfile.readlines():
 		if nLineCount == 0: 
 			aFields = line.strip().split(";")
@@ -137,7 +144,16 @@ else:
 						# Set data field
 						aData[field].append( iTimeStamp - iStartSeconds )
 				elif iFieldNum > 2:
-					aData[field].append( int(aLineData[iFieldNum]) )
+					# Check if we need to calculate Deltas!
+					if bChartCalcDelta and len(aLineDataPrev) > 0: 
+						iPreviousVal = int(aLineDataPrev[iFieldNum])
+						iCurrentVal = int(aLineData[iFieldNum])
+						if iCurrentVal != 0:	# Calc DELTA
+							aData[field].append(iCurrentVal - iPreviousVal)
+						else:			# Don't Calc delta value!
+							aData[field].append( iCurrentVal )
+					else:
+						aData[field].append( int(aLineData[iFieldNum]) )
 				else:
 					aData[field].append( aLineData[iFieldNum] )
 
@@ -147,8 +163,9 @@ else:
 			# Increment counter
 			nDataRecordCound += 1
 
-			#print aData
-			#sys.exit(0)
+			# in case deltas need to be calculated, Store current line into previous line 
+			if bChartCalcDelta: 
+				aLineDataPrev = aLineData
 
 		# Increment counter
 		nLineCount += 1

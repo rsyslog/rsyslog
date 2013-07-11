@@ -23,6 +23,7 @@ bLogarithmicChart = False
 bLineChart = True
 bBarChart = False
 bFilledLineChart = False
+bChartCalcDelta = False
 szChartsFormat = "svg"
 
 # Helper variables
@@ -72,6 +73,8 @@ for arg in sys.argv[-4:]:
 		bBarChart = True
 	elif arg.find("--filledlinechart") != -1:
 		bFilledLineChart = True
+	elif arg.find("--chartscalcdelta") != -1:
+		bChartCalcDelta = True
 	elif arg.find("--h") != -1 or arg.find("-h") != -1 or arg.find("--help") != -1:
 		bHelpOutput = True
 
@@ -89,10 +92,11 @@ if bHelpOutput:
 	print "					Default is disabled."
 	print " --chartsformat=<svg|png>	Format which should be used for Charts."
 	print "					Default is svg format"
-	print " --logarithmic			Uses Logarithmic to scale the Y Axis, maybe useful in some cases. Default is OFF"
+	print " --logarithmic			Uses Logarithmic to scale the Y Axis, maybe useful in some cases. Default is OFF."
 	print " --linechart			If set, line charts will be generated (Default)."
 	print " --barchart			If set, bar charts will be generated."
-	print " --filledlinechart		Use filled lines on Linechart, maybe useful in some cases. Default is OFF"
+	print " --filledlinechart		Use filled lines on Linechart, maybe useful in some cases. Default is OFF."
+	print " --chartscalcdelta		If set, charts will use calculated delta values instead of cumulative values."
 	print "\n	Sampleline: ./statslog-splitter.py singlefile --input=rsyslog-stats.log --outputdir=/home/user/csvlogs/ --enablecharts --chartsformat=png"
 elif bSingleObjectOutput:
 	inputfile = open(szInput, 'r')
@@ -206,6 +210,8 @@ elif bSingleObjectOutput:
 			szChartAddArgs += " --logarithmic"
 		if bFilledLineChart: 
 			szChartAddArgs += " --filledlinechart"
+		if bChartCalcDelta: 
+			szChartAddArgs += " --chartscalcdelta"
 
 		# Default SVG Format!
 		if szChartsFormat.find("svg") != -1:
