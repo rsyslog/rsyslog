@@ -33,6 +33,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <netdb.h>
+#include <sys/socket.h>
 #if HAVE_SYS_EPOLL_H
 #	include <sys/epoll.h>
 #endif
@@ -295,11 +296,9 @@ std_checkRuleset_genErrMsg(__attribute__((unused)) modConfData_t *modConf, insta
  */
 static inline rsRetVal
 processPacket(thrdInfo_t *pThrd, struct lstn_s *lstn, struct sockaddr_storage *frominetPrev, int *pbIsPermitted,
-	ssize_t lenRcvBuf, struct syslogTime *stTime, time_t ttGenTime)
+	ssize_t lenRcvBuf, struct syslogTime *stTime, time_t ttGenTime, struct sockaddr_storage *frominet, socklen_t socklen)
 {
 	DEFiRet;
-	socklen_t socklen;
-	struct sockaddr_storage frominet;
 	msg_t *pMsg;
 
 	assert(pThrd != NULL);
@@ -311,8 +310,8 @@ processPacket(thrdInfo_t *pThrd, struct lstn_s *lstn, struct sockaddr_storage *f
 	/* check if we have a different sender than before, if so, we need to query some new values */
 	if(bDoACLCheck) {
 		socklen = sizeof(struct sockaddr_storage);
-		if(net.CmpHost(&frominet, frominetPrev, socklen) != 0) {
-			memcpy(frominetPrev, &frominet, socklen); /* update cache indicator */
+		if(net.CmpHost(frominet, frominetPrev, socklen) != 0) {
+			memcpy(frominetPrev, frominet, socklen); /* update cache indicator */
 			/* Here we check if a host is permitted to send us syslog messages. If it isn't,
 			 * we do not further process the message but log a warning (if we are
 			 * configured to do this). However, if the check would require name resolution,
@@ -321,7 +320,7 @@ processPacket(thrdInfo_t *pThrd, struct lstn_s *lstn, struct sockaddr_storage *f
 			 * rgerhards, 2009-11-16
 			 */
 			*pbIsPermitted = net.isAllowedSender2((uchar*)"UDP",
-					    (struct sockaddr *)&frominet, "", 0);
+					    (struct sockaddr *)frominet, "", 0);
 	
 			if(*pbIsPermitted == 0) {
 				DBGPRINTF("msg is not from an allowed sender\n");
@@ -352,7 +351,7 @@ processPacket(thrdInfo_t *pThrd, struct lstn_s *lstn, struct sockaddr_storage *f
 		pMsg->msgFlags  = NEEDS_PARSING | PARSE_HOSTNAME | NEEDS_DNSRESOL;
 		if(*pbIsPermitted == 2)
 			pMsg->msgFlags  |= NEEDS_ACLCHK_U; /* request ACL check after resolution */
-		CHKiRet(msgSetFromSockinfo(pMsg, &frominet));
+		CHKiRet(msgSetFromSockinfo(pMsg, frominet));
 		CHKiRet(submitMsg(pMsg));
 		STATSCOUNTER_INC(lstn->ctrSubmit, lstn->mutCtrSubmit);
 	}
@@ -389,14 +388,23 @@ processSocket(thrdInfo_t *pThrd, struct lstn_s *lstn, struct sockaddr_storage *f
 	ssize_t lenRcvBuf;
 	struct sockaddr_storage frominet;
 	char errStr[1024];
+	struct msghdr mh;
+	struct iovec iov[1];
 
 	assert(pThrd != NULL);
 	iNbrTimeUsed = 0;
 	while(1) { /* loop is terminated if we have a bad receive, done below in the body */
 		if(pThrd->bShallStop == RSTRUE)
 			ABORT_FINALIZE(RS_RET_FORCE_TERM);
-		socklen = sizeof(struct sockaddr_storage);
-		lenRcvBuf = recvfrom(lstn->sock, (char*) pRcvBuf, iMaxLine, 0, (struct sockaddr *)&frominet, &socklen);
+		memset(iov, 0, sizeof(iov));
+		iov[0].iov_base = pRcvBuf;
+		iov[0].iov_len = iMaxLine;
+		memset(&mh, 0, sizeof(mh));
+		mh.msg_name = &frominet;
+		mh.msg_namelen = sizeof(struct sockaddr_storage); 
+		mh.msg_iov = iov;
+		mh.msg_iovlen = 1;
+		lenRcvBuf = recvmsg(lstn->sock, &mh, 0);
 		if(lenRcvBuf < 0) {
 			if(errno != EINTR && errno != EAGAIN) {
 				rs_strerror_r(errno, errStr, sizeof(errStr));
@@ -410,7 +418,7 @@ processSocket(thrdInfo_t *pThrd, struct lstn_s *lstn, struct sockaddr_storage *f
 			datetime.getCurrTime(&stTime, &ttGenTime);
 		}
 
-		CHKiRet(processPacket(pThrd, lstn, frominetPrev, pbIsPermitted, lenRcvBuf, &stTime, ttGenTime));
+		CHKiRet(processPacket(pThrd, lstn, frominetPrev, pbIsPermitted, lenRcvBuf, &stTime, ttGenTime, &frominet, mh.msg_namelen));
 	}
 
 finalize_it:
