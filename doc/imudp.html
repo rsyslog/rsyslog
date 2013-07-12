@@ -36,6 +36,16 @@ is provided by the platform. Most useful to select "fifo" for real-time
 processing under Linux (and thus reduce chance of packet loss).
 <li><b>SchedulingPriority</b> &lt;number&gt;<br>
 Scheduling priority to use. 
+<li><b>batchSize</b> &lt;number&gt;<br>
+This parameter is only meaningful if the system support recvmmsg() (newer Linux
+OSs do this). The parameter is silently ignored if the system does not support
+it. If supported, it sets the maximum number of UDP messages that can be obtained
+with a single OS call. For systems with high UDP traffic, a relatively high batch
+size can reduce system overhead and improve performance. However, this parameter
+should not be overdone. For each buffer, max message size bytes are statically
+required. Also, a too-high number leads to reduced efficiency, as some structures
+need to be completely initialized before the OS call is done. We would suggest to not
+set it above a value of 128, except if experimental results show that this is useful.
 </ul>
 <p><b>Input Parameters</b>:</p>
 <ul>
