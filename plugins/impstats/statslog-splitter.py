@@ -52,7 +52,7 @@ outputFiles = {}
 errorlog = open("statslog-splitter.corrupted.log", 'w')
 
 # Process Arguments
-for arg in sys.argv[-4:]:
+for arg in sys.argv: # [-4:]:
 	if arg.find("--input=") != -1:
 		szInput = arg[8:]
 	elif arg.find("--outputdir=") != -1:
