@@ -112,6 +112,7 @@ struct instanceConf_s {
 	ruleset_t *pBindRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
 	int ratelimitInterval;
 	int ratelimitBurst;
+	int rcvbuf;			/* 0 means: do not set, keep OS default */
 	struct instanceConf_s *next;
 	sbool bAppendPortToInpname;
 };
@@ -146,9 +147,10 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "inputname", eCmdHdlrGetWord, 0 },
 	{ "inputname.appendport", eCmdHdlrBinary, 0 },
 	{ "address", eCmdHdlrString, 0 },
-	{ "ruleset", eCmdHdlrString, 0 },
 	{ "ratelimit.interval", eCmdHdlrInt, 0 },
-	{ "ratelimit.burst", eCmdHdlrInt, 0 }
+	{ "ratelimit.burst", eCmdHdlrInt, 0 },
+	{ "rcvbufsize", eCmdHdlrSize, 0 },
+	{ "ruleset", eCmdHdlrString, 0 }
 };
 static struct cnfparamblk inppblk =
 	{ CNFPARAMBLK_VERSION,
@@ -177,6 +179,7 @@ createInstance(instanceConf_t **pinst)
 	inst->bAppendPortToInpname = 0;
 	inst->ratelimitBurst = 10000; /* arbitrary high limit */
 	inst->ratelimitInterval = 0; /* off */
+	inst->rcvbuf = 0;
 
 	/* node created, let's add to config */
 	if(loadModConf->tail == NULL) {
@@ -252,7 +255,7 @@ addListner(instanceConf_t *inst)
 
 	DBGPRINTF("Trying to open syslog UDP ports at %s:%s.\n", bindName, inst->pszBindPort);
 
-	newSocks = net.create_udp_socket(bindAddr, port, 1);
+	newSocks = net.create_udp_socket(bindAddr, port, 1, inst->rcvbuf);
 	if(newSocks != NULL) {
 		/* we now need to add the new sockets to the existing set */
 		/* ready to copy */
@@ -729,6 +732,8 @@ createListner(es_str_t *port, struct cnfparamvals *pvals)
 			inst->ratelimitBurst = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "ratelimit.interval")) {
 			inst->ratelimitInterval = (int) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "rcvbufsize")) {
+			inst->rcvbuf = (int) pvals[i].val.d.n;
 		} else {
 			dbgprintf("imudp: program error, non-handled "
 			  "param '%s'\n", inppblk.descr[i].name);
