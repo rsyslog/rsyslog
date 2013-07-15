@@ -820,11 +820,10 @@ processDataRcvd(ptcpsess_t *pThis, char c, struct syslogTime *stTime, time_t ttG
  * EXTRACT from tcps_sess.c
  */
 static rsRetVal
-DataRcvdUncompressed(ptcpsess_t *pThis, char *pData, size_t iLen, time_t ttGenTime)
+DataRcvdUncompressed(ptcpsess_t *pThis, char *pData, size_t iLen, struct syslogTime *stTime, time_t ttGenTime)
 {
 	multi_submit_t multiSub;
 	msg_t *pMsgs[CONF_NUM_MULTISUB];
-	struct syslogTime stTime;
 	char *pEnd;
 	DEFiRet;
 
@@ -832,7 +831,7 @@ DataRcvdUncompressed(ptcpsess_t *pThis, char *pData, size_t iLen, time_t ttGenTi
 	assert(iLen > 0);
 
 	if(ttGenTime == 0)
-		datetime.getCurrTime(&stTime, &ttGenTime);
+		datetime.getCurrTime(stTime, &ttGenTime);
 	multiSub.ppMsgs = pMsgs;
 	multiSub.maxElem = CONF_NUM_MULTISUB;
 	multiSub.nElem = 0;
@@ -841,7 +840,7 @@ DataRcvdUncompressed(ptcpsess_t *pThis, char *pData, size_t iLen, time_t ttGenTi
 	pEnd = pData + iLen; /* this is one off, which is intensional */
 
 	while(pData < pEnd) {
-		CHKiRet(processDataRcvd(pThis, *pData++, &stTime, ttGenTime, &multiSub));
+		CHKiRet(processDataRcvd(pThis, *pData++, stTime, ttGenTime, &multiSub));
 	}
 
 	iRet = multiSubmitFlush(&multiSub);
@@ -892,7 +891,7 @@ DataRcvdCompressed(ptcpsess_t *pThis, char *buf, size_t len)
 		if(outavail != 0) {
 			outtotal += outavail;
 			pThis->pLstn->rcvdDecompressed += outavail;
-			CHKiRet(DataRcvdUncompressed(pThis, (char*)zipBuf, outavail, ttGenTime));
+			CHKiRet(DataRcvdUncompressed(pThis, (char*)zipBuf, outavail, &stTime, ttGenTime));
 		}
 	} while (pThis->zstrm.avail_out == 0);
 
@@ -904,12 +903,13 @@ finalize_it:
 static rsRetVal
 DataRcvd(ptcpsess_t *pThis, char *pData, size_t iLen)
 {
+	struct syslogTime stTime;
 	DEFiRet;
 	pThis->pLstn->rcvdBytes += iLen;
 	if(pThis->compressionMode >= COMPRESS_STREAM_ALWAYS)
 		iRet =  DataRcvdCompressed(pThis, pData, iLen);
 	else
-		iRet =  DataRcvdUncompressed(pThis, pData, iLen, 0);
+		iRet =  DataRcvdUncompressed(pThis, pData, iLen, &stTime, 0);
 	RETiRet;
 }
 
@@ -1084,6 +1084,7 @@ doZipFinish(ptcpsess_t *pSess)
 	int zRet;	/* zlib return state */
 	DEFiRet;
 	unsigned outavail;
+	struct syslogTime stTime;
 	uchar zipBuf[32*1024]; // TODO: use "global" one from pSess
 
 	if(!pSess->bzInitDone)
@@ -1100,7 +1101,7 @@ doZipFinish(ptcpsess_t *pSess)
 		outavail = sizeof(zipBuf) - pSess->zstrm.avail_out;
 		if(outavail != 0) {
 			pSess->pLstn->rcvdDecompressed += outavail;
-			CHKiRet(DataRcvdUncompressed(pSess, (char*)zipBuf, outavail, 0)); // TODO: query time!
+			CHKiRet(DataRcvdUncompressed(pSess, (char*)zipBuf, outavail, &stTime, 0)); // TODO: query time!
 		}
 	} while (pSess->zstrm.avail_out == 0);
 

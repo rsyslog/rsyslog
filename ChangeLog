@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------
 Version 7.5.3 [devel] 2013-07-??
+- bugfix: stream compression in imptcp caused timestamp to be corrupted
 - imudp: add ability to specify SO_RCVBUF size (rcvbufSize parameter)
 - impstats: add process resource usage counters [via getrusage()]
 - librelp 1.2.0 is now required
