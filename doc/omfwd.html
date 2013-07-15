@@ -43,7 +43,7 @@
 	compression mode, so pre 7.5.1 configuration will continue to work
 	as expected.
 	<br>The compression level is specified via the usual factor of 0 to 9, with 9 being the strongest compression (taking up most processing time) and 0 being no compression at all (taking up no extra processing time). <br></li><br>
-	<li><b>compression.mode</b><i>mode</i><br>
+	<li><b>compression.mode</b> <i>mode</i><br>
 	<i>mode</i> is one of "none", "single", or "stream:always". The 
 	default is "none", in which no compression happens at all.
 	<br>In "single" compression mode, Rsyslog implements a proprietary
@@ -66,6 +66,22 @@
 	actually sent. This mode has been introduced in 7.5.1.
 	<br><b>Note: currently only imptcp supports receiving stream-compressed
 	data.</b>
+	<br></li><br>
+
+	<li><b>compression.stream.flushOnTXEnd</b> <i>[<b>on</b>/off</i>] (requires 7.5.3+)<br>
+	This setting affects stream compression mode, only. If enabled (the default), the compression
+	buffer will by emptied at the end of a rsyslog batch. If set to "off",
+	end of batch will not affect compression at all.<br>
+	While setting it to "off" can potentially greatly improve compression
+	ratio, it will also introduce severe delay between when a message is being processed
+	by rsyslog and actually sent out to the network. We have seen cases where for
+	several thousand message not a single byte was sent. This is good in the sense that
+	it can happen only if we have a great compression ratio. This is most probably
+	a very good mode for busy machines which will process several thousand messages
+	per second and te resulting short delay will not pose any problems. However,
+	the default is more conservative, while it works more "naturally" with even low
+	message traffic. Even in flush mode, notable compression should be achivable
+	(but we do not yet have practice reports on actual compression ratios).
 	<br></li><br>
 
 	<li><strong>RebindInterval </strong>integer<br>

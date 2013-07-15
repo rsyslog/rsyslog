@@ -831,6 +831,12 @@ DataRcvdUncompressed(ptcpsess_t *pThis, char *pData, size_t iLen, time_t ttGenTi
 	assert(pData != NULL);
 	assert(iLen > 0);
 
+{size_t i;
+dbgprintf("Data received(%u): '", (unsigned) iLen);
+for(i=0;i<iLen;++i)
+  dbgprintf("%c", pData[i]);
+dbgprintf("'\n");
+}
 	if(ttGenTime == 0)
 		datetime.getCurrTime(&stTime, &ttGenTime);
 	multiSub.ppMsgs = pMsgs;
@@ -841,6 +847,7 @@ DataRcvdUncompressed(ptcpsess_t *pThis, char *pData, size_t iLen, time_t ttGenTi
 	pEnd = pData + iLen; /* this is one off, which is intensional */
 
 	while(pData < pEnd) {
+dbgprintf("DDDDD: processing char[%x] '%c'\n", *pData, *pData);
 		CHKiRet(processDataRcvd(pThis, *pData++, &stTime, ttGenTime, &multiSub));
 	}
 
@@ -862,12 +869,16 @@ DataRcvdCompressed(ptcpsess_t *pThis, char *buf, size_t len)
 	// TODO: can we do stats counters? Even if they are not 100% correct under all cases,
 	// by simply updating the input and output sizes?
 	uint64_t outtotal;
+dbgprintf("DDDD: in DataRcvdCompressed, init done %d\n", pThis->bzInitDone);
 
 	datetime.getCurrTime(&stTime, &ttGenTime);
 	outtotal = 0;
 
 	if(!pThis->bzInitDone) {
+dbgprintf("DDDD; inside zlib init code\n");
 		/* allocate deflate state */
+		pThis->zstrm.next_in = (Bytef*) buf;
+		pThis->zstrm.avail_in = 0;
 		pThis->zstrm.zalloc = Z_NULL;
 		pThis->zstrm.zfree = Z_NULL;
 		pThis->zstrm.opaque = Z_NULL;
@@ -886,7 +897,8 @@ DataRcvdCompressed(ptcpsess_t *pThis, char *buf, size_t len)
 		DBGPRINTF("imptcp: in inflate() loop, avail_in %d, total_in %ld\n", pThis->zstrm.avail_in, pThis->zstrm.total_in);
 		pThis->zstrm.avail_out = sizeof(zipBuf);
 		pThis->zstrm.next_out = zipBuf;
-		zRet = inflate(&pThis->zstrm, Z_NO_FLUSH);    /* no bad return value */
+		zRet = inflate(&pThis->zstrm, Z_SYNC_FLUSH);    /* no bad return value */
+		//zRet = inflate(&pThis->zstrm, Z_NO_FLUSH);    /* no bad return value */
 		DBGPRINTF("after inflate, ret %d, avail_out %d\n", zRet, pThis->zstrm.avail_out);
 		outavail = sizeof(zipBuf) - pThis->zstrm.avail_out;
 		if(outavail != 0) {
