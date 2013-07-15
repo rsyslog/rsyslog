@@ -1935,8 +1935,16 @@ ConsumerDA(qqueue_t *pThis, wti_t *pWti)
 
 	/* iterate over returned results and enqueue them in DA queue */
 	for(i = 0 ; i < pWti->batch.nElem && !pThis->bShutdownImmediate ; i++) {
-		CHKiRet(qqueueEnqMsg(pThis->pqDA, eFLOWCTL_NO_DELAY,
-			MsgAddRef(pWti->batch.pElem[i].pMsg)));
+		iRet = qqueueEnqMsg(pThis->pqDA, eFLOWCTL_NO_DELAY, MsgAddRef(pWti->batch.pElem[i].pMsg));
+		if(iRet != RS_RET_OK) {
+			if(iRet == RS_RET_ERR_QUEUE_EMERGENCY) {
+				/* Queue emergency error occured */
+				DBGOPRINT((obj_t*) pThis, "ConsumerDA:qqueueEnqMsg caught RS_RET_ERR_QUEUE_EMERGENCY, aborting loop.\n");
+				FINALIZE;
+			} else {
+				DBGOPRINT((obj_t*) pThis, "ConsumerDA:qqueueEnqMsg item (%d) returned with error state: '%d'\n", i, iRet);
+			}
+		}
 		pWti->batch.eltState[i] = BATCH_STATE_COMM; /* commited to other queue! */
 	}
 
@@ -1944,10 +1952,14 @@ ConsumerDA(qqueue_t *pThis, wti_t *pWti)
 	pthread_setcancelstate(iCancelStateSave, NULL);
 
 finalize_it:
+	if(iRet != RS_RET_OK && iRet != RS_RET_ERR_QUEUE_EMERGENCY) {
+			iRet = RS_RET_OK;
+	}
+
 	/* now we are done, but potentially need to re-aquire the mutex */
 	if(bNeedReLock)
 		d_pthread_mutex_lock(pThis->mut);
-	DBGOPRINT((obj_t*) pThis, "DAConsumer returns with iRet %d\n", iRet);
+
 	RETiRet;
 }
 
