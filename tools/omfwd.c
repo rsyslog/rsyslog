@@ -255,7 +255,6 @@ pData->bIsConnected = 0; // TODO: remove this variable altogether
 static inline void
 DestructTCPInstanceData(instanceData *pData)
 {
-dbgprintf("DDDD: in DestructTCPInstanceData\n");
 	assert(pData != NULL);
 	doZipFinish(pData);
 	if(pData->pNetstrm != NULL)
@@ -498,7 +497,6 @@ TCPSendBufCompressed(instanceData *pData, uchar *buf, unsigned len, sbool bIsFlu
 		op = Z_SYNC_FLUSH;
 	else
 		op = Z_NO_FLUSH;
-dbgprintf("DDDD: op: %d (SYNC_FLUSH %d)\n", op, Z_SYNC_FLUSH);
 	/* run deflate() on buffer until everything has been compressed */
 	do {
 		DBGPRINTF("omfwd: in deflate() loop, avail_in %d, total_in %ld, isFlush %d\n", pData->zstrm.avail_in, pData->zstrm.total_in, bIsFlush);
@@ -608,7 +606,6 @@ static rsRetVal TCPSendPrepRetry(void *pvData)
 {
 	DEFiRet;
 	instanceData *pData = (instanceData *) pvData;
-dbgprintf("TCPSendPrepRetry performs a DestructTCPInstanceData\n");
 
 	assert(pData != NULL);
 	DestructTCPInstanceData(pData);

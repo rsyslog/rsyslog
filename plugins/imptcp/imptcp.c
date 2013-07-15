@@ -830,12 +830,6 @@ DataRcvdUncompressed(ptcpsess_t *pThis, char *pData, size_t iLen, struct syslogT
 	assert(pData != NULL);
 	assert(iLen > 0);
 
-{size_t i;
-dbgprintf("Data received(%u): '", (unsigned) iLen);
-for(i=0;i<iLen;++i)
-  dbgprintf("%c", pData[i]);
-dbgprintf("'\n");
-}
 	if(ttGenTime == 0)
 		datetime.getCurrTime(stTime, &ttGenTime);
 	multiSub.ppMsgs = pMsgs;
@@ -867,16 +861,12 @@ DataRcvdCompressed(ptcpsess_t *pThis, char *buf, size_t len)
 	// TODO: can we do stats counters? Even if they are not 100% correct under all cases,
 	// by simply updating the input and output sizes?
 	uint64_t outtotal;
-dbgprintf("DDDD: in DataRcvdCompressed, init done %d\n", pThis->bzInitDone);
 
 	datetime.getCurrTime(&stTime, &ttGenTime);
 	outtotal = 0;
 
 	if(!pThis->bzInitDone) {
-dbgprintf("DDDD; inside zlib init code\n");
 		/* allocate deflate state */
-		pThis->zstrm.next_in = (Bytef*) buf;
-		pThis->zstrm.avail_in = 0;
 		pThis->zstrm.zalloc = Z_NULL;
 		pThis->zstrm.zfree = Z_NULL;
 		pThis->zstrm.opaque = Z_NULL;
@@ -1044,7 +1034,6 @@ addLstn(ptcpsrv_t *pSrv, int sock, int isIPv6)
 	iRet = addEPollSock(epolld_lstn, pLstn, sock, &pLstn->epd);
 
 finalize_it:
-dbgprintf("DDDD: addLstn return %d\n", iRet);
 	RETiRet;
 }
 
@@ -1813,7 +1802,6 @@ shutdownSrv(ptcpsrv_t *pSrv)
 	ptcplstn_t *pLstn, *lstnDel;
 	ptcpsess_t *pSess, *sessDel;
 
-dbgprintf("DDDD: enter shutdownSrv\n");
 	/* listeners */
 	pLstn = pSrv->pLstn;
 	while(pLstn != NULL) {
