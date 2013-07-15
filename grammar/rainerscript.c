@@ -2450,7 +2450,7 @@ cnfstmtNew(unsigned s_type)
 void cnfstmtDestructLst(struct cnfstmt *root);
 
 /* delete a single stmt */
-void
+static void
 cnfstmtDestruct(struct cnfstmt *stmt)
 {
 	switch(stmt->nodetype) {

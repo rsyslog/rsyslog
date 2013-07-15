@@ -331,7 +331,7 @@ struct cnfstmt * cnfstmtNewSet(char *var, struct cnfexpr *expr);
 struct cnfstmt * cnfstmtNewUnset(char *var);
 struct cnfstmt * cnfstmtNewCall(es_str_t *name);
 struct cnfstmt * cnfstmtNewContinue(void);
-void cnfstmtDestruct(struct cnfstmt *root);
+void cnfstmtDestructLst(struct cnfstmt *root);
 void cnfstmtOptimize(struct cnfstmt *root);
 struct cnfarray* cnfarrayNew(es_str_t *val);
 struct cnfarray* cnfarrayDup(struct cnfarray *old);
