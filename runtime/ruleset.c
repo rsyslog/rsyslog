@@ -742,7 +742,7 @@ CODESTARTobjDestruct(ruleset)
 		parser.DestructParserList(&pThis->pParserLst);
 	}
 	free(pThis->pszName);
-	cnfstmtDestruct(pThis->root);
+	cnfstmtDestructLst(pThis->root);
 ENDobjDestruct(ruleset)
 
 
@@ -951,7 +951,7 @@ rulesetProcessCnf(struct cnfobj *o)
 		errmsg.LogError(0, RS_RET_RULESET_EXISTS,
 			"error: ruleset '%s' specified more than once",
 			rsName);
-		cnfstmtDestruct(o->script);
+		cnfstmtDestructLst(o->script);
 		ABORT_FINALIZE(RS_RET_RULESET_EXISTS);
 	} else if(localRet != RS_RET_NOT_FOUND) {
 		ABORT_FINALIZE(localRet);
