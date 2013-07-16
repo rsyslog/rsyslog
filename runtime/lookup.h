@@ -48,9 +48,10 @@ struct lookup_s {
 void lookupInitCnf(lookup_tables_t *lu_tabs);
 rsRetVal lookupProcessCnf(struct cnfobj *o);
 lookup_t *lookupFindTable(uchar *name);
-es_str_t *lookupKey(lookup_t *pThis, uchar *key);
+es_str_t * lookupKey_estr(lookup_t *pThis, uchar *key);
 void lookupDestruct(lookup_t *pThis);
 void lookupClassExit(void);
+void lookupDoHUP();
 rsRetVal lookupClassInit(void);
 
 #endif /* #ifndef INCLUDED_LOOKUP_H */

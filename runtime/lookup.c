@@ -44,6 +44,9 @@ DEFobjStaticHelpers
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 
+/* forward definitions */
+static rsRetVal lookupReadFile(lookup_t *pThis);
+
 /* static data */
 /* tables for interfacing with the v6 config system (as far as we need to) */
 static struct cnfparamdescr modpdescr[] = {
@@ -172,6 +175,53 @@ lookupFindTable(uchar *name)
 }
 
 
+/* this reloads a lookup table. This is done while the engine is running,
+ * as such the function must ensure proper locking and proper order of
+ * operations (so that nothing can interfere). If the table cannot be loaded,
+ * the old table is continued to be used.
+ */
+static rsRetVal
+lookupReload(lookup_t *pThis)
+{
+	uint32_t i;
+	lookup_t newlu; /* dummy to be able to use support functions without 
+	                   affecting current settings. */
+	DEFiRet;
+	
+	DBGPRINTF("reload requested for lookup table '%s'\n", pThis->name);
+	memset(&newlu, 0, sizeof(newlu));
+	CHKmalloc(newlu.name = ustrdup(pThis->name));
+	CHKmalloc(newlu.filename = ustrdup(pThis->filename));
+	CHKiRet(lookupReadFile(&newlu));
+	/* all went well, copy over data members */
+	pthread_rwlock_wrlock(&pThis->rwlock);
+	for(i = 0 ; i < pThis->nmemb ; ++i) {
+		free(pThis->d.strtab[i].key), /* we don't care about exec order of frees */
+		free(pThis->d.strtab[i].val);
+	}
+	free(pThis->d.strtab);
+	pThis->d.strtab = newlu.d.strtab; /* hand table AND ALL STRINGS over! */
+	pthread_rwlock_unlock(&pThis->rwlock);
+	errmsg.LogError(0, RS_RET_OK, "lookup table '%s' reloaded from file '%s'",
+			pThis->name, pThis->filename);
+finalize_it:
+	free(newlu.name);
+	free(newlu.filename);
+	RETiRet;
+}
+
+
+/* reload all lookup tables on HUP */
+void
+lookupDoHUP()
+{
+	lookup_t *lu;
+	for(lu = loadConf->lu_tabs.root ; lu != NULL ; lu = lu->next) {
+		lookupReload(lu);
+	}
+}
+
+
 /* returns either a pointer to the value (read only!) or NULL
  * if either the key could not be found or an error occured.
  * Note that an estr_t object is returned. The caller is 
@@ -204,7 +254,7 @@ lookupKey_estr(lookup_t *pThis, uchar *key)
  * for "reasonable" lookup tables (and "unreasonably" large ones
  * will probably have other issues as well...).
  */
-rsRetVal
+static rsRetVal
 lookupReadFile(lookup_t *pThis)
 {
 	struct json_tokener *tokener = NULL;
