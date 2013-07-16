@@ -1481,8 +1481,7 @@ dbgprintf("DDDD: executing lookup\n");
 		}
 		cnfexprEval(func->expr[1], &r[1], usrptr);
 		str = (char*) var2CString(&r[1], &bMustFree);
-		s = (char*)lookupKey(func->funcdata, (uchar*)str);
-		ret->d.estr = es_newStrFromCStr(s, strlen(s));
+		ret->d.estr = lookupKey_estr(func->funcdata, (uchar*)str);
 		if(bMustFree) free(str);
 		if(r[1].datatype == 'S') es_deleteStr(r[1].d.estr);
 		break;

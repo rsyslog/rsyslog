@@ -67,6 +67,7 @@ lookupNew(lookup_t **ppThis)
 	DEFiRet;
 
 	CHKmalloc(pThis = malloc(sizeof(lookup_t)));
+	pthread_rwlock_init(&pThis->rwlock, NULL);
 	pThis->name = NULL;
 
 	if(loadConf->lu_tabs.root == NULL) {
@@ -85,9 +86,11 @@ finalize_it:
 	RETiRet;
 }
 void
-lookupDestruct(lookup_t *lookup)
+lookupDestruct(lookup_t *pThis)
 {
-	free(lookup);
+	pthread_rwlock_destroy(&pThis->rwlock);
+	free(pThis->name);
+	free(pThis);
 }
 
 void
@@ -171,19 +174,26 @@ lookupFindTable(uchar *name)
 
 /* returns either a pointer to the value (read only!) or NULL
  * if either the key could not be found or an error occured.
+ * Note that an estr_t object is returned. The caller is 
+ * responsible for freeing it.
  */
-uchar *
-lookupKey(lookup_t *pThis, uchar *key)
+es_str_t *
+lookupKey_estr(lookup_t *pThis, uchar *key)
 {
 	lookup_string_tab_etry_t *etry;
-	uchar *r;
+	char *r;
+	es_str_t *estr;
+
+	pthread_rwlock_rdlock(&pThis->rwlock);
 	etry = bsearch(key, pThis->d.strtab, pThis->nmemb, sizeof(lookup_string_tab_etry_t), bs_arrcmp_strtab);
 	if(etry == NULL) {
-		r = (uchar*)""; // TODO: use set default 
+		r = ""; // TODO: use set default 
 	} else {
-		r = etry->val;
+		r = (char*)etry->val;
 	}
-	return r;
+	estr = es_newStrFromCStr(r, strlen(r));
+	pthread_rwlock_unlock(&pThis->rwlock);
+	return estr;
 }
 
 
