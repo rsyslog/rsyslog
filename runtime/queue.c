@@ -1931,7 +1931,7 @@ ConsumerDA(qqueue_t *pThis, wti_t *pWti)
 
 finalize_it:
 	/*	Check the last return state of qqueueEnqMsg. If an error was returned, we acknowledge it only.
-	*	Unless the error code is RS_RET_ERR_QUEUE_EMERGENCY, we resett the return state to RS_RET_OK.  
+	*	Unless the error code is RS_RET_ERR_QUEUE_EMERGENCY, we reset the return state to RS_RET_OK.  
 	*	Otherwise the Caller functions would run into an infinite Loop trying to enqueue the 
 	*	same messages over and over again. 
 	*	
@@ -1941,6 +1941,13 @@ finalize_it:
 	*		RS_RET_IDLE,
 	*		RS_RET_TERMINATE_WHEN_IDLE 
 	*	These return states are important for Queue handling of the upper laying functions. 
+	*	RGer: Note that checking for iRet < 0 is a bit bold. In theory, positive iRet
+	*	values are "OK" states, and things that the caller shall deal with. However,
+	*	this has not been done so consistently. Andre convinced me that the current
+	*	code is an elegant solution. However, if problems with queue workers and/or
+	*	shutdown come up, this code here should be looked at suspiciously. In those
+	*	cases it may work out to check all status codes explicitely, just to avoid
+	*	a pitfall due to unexpected states being passed on to the caller.
 	*/
 	if(	iRet != RS_RET_OK && 
 		iRet != RS_RET_ERR_QUEUE_EMERGENCY && 
