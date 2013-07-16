@@ -1930,8 +1930,25 @@ ConsumerDA(qqueue_t *pThis, wti_t *pWti)
 	pthread_setcancelstate(iCancelStateSave, NULL);
 
 finalize_it:
-	if(iRet != RS_RET_OK && iRet != RS_RET_ERR_QUEUE_EMERGENCY) {
-			iRet = RS_RET_OK;
+	/*	Check the last return state of qqueueEnqMsg. If an error was returned, we acknowledge it only.
+	*	Unless the error code is RS_RET_ERR_QUEUE_EMERGENCY, we resett the return state to RS_RET_OK.  
+	*	Otherwise the Caller functions would run into an infinite Loop trying to enqueue the 
+	*	same messages over and over again. 
+	*	
+	*	However we do NOT overwrite positive return states like 
+	*		RS_RET_TERMINATE_NOW, 
+	*		RS_RET_NO_RUN, 
+	*		RS_RET_IDLE,
+	*		RS_RET_TERMINATE_WHEN_IDLE 
+	*	These return states are important for Queue handling of the upper laying functions. 
+	*/
+	if(	iRet != RS_RET_OK && 
+		iRet != RS_RET_ERR_QUEUE_EMERGENCY && 
+		iRet < 0) {
+		DBGOPRINT((obj_t*) pThis, "ConsumerDA:qqueueEnqMsg Resetting iRet from %d back to RS_RET_OK\n", iRet);
+		iRet = RS_RET_OK;
+	} else {
+		DBGOPRINT((obj_t*) pThis, "ConsumerDA:qqueueEnqMsg returns with iRet %d\n", iRet);
 	}
 
 	/* now we are done, but potentially need to re-aquire the mutex */
