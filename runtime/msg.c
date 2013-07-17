@@ -1216,6 +1216,14 @@ MsgDeserialize(msg_t *pMsg, strm_t *pStrm)
 		reinitVar(pVar);
 		CHKiRet(objDeserializeProperty(pVar, pStrm));
 	}
+	if(isProp("localvars")) {
+		tokener = json_tokener_new();
+		pMsg->localvars = json_tokener_parse_ex(tokener, (char*)rsCStrGetSzStrNoNULL(pVar->val.pStr),
+						        cstrLen(pVar->val.pStr));
+		json_tokener_free(tokener);
+		reinitVar(pVar);
+		CHKiRet(objDeserializeProperty(pVar, pStrm));
+	}
 	if(isProp("pCSStrucData")) {
 		MsgSetStructuredData(pMsg, (char*) rsCStrGetSzStrNoNULL(pVar->val.pStr));
 		reinitVar(pVar);
