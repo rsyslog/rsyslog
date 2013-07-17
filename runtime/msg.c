@@ -1198,6 +1198,7 @@ MsgDeserialize(msg_t *pMsg, strm_t *pStrm)
 		tokener = json_tokener_new();
 		pMsg->json = json_tokener_parse_ex(tokener, (char*)rsCStrGetSzStrNoNULL(pVar->val.pStr),
 					     cstrLen(pVar->val.pStr));
+		json_tokener_free(tokener);
 		reinitVar(pVar);
 		CHKiRet(objDeserializeProperty(pVar, pStrm));
 	}
