@@ -1113,7 +1113,6 @@ MsgDeserialize(msg_t *pMsg, strm_t *pStrm)
 	prop_t *propRcvFrom = NULL;
 	prop_t *propRcvFromIP = NULL;
 	struct json_tokener *tokener;
-	struct json_object *json;
 	var_t *pVar = NULL;
 	DEFiRet;
 
@@ -1197,8 +1196,9 @@ MsgDeserialize(msg_t *pMsg, strm_t *pStrm)
 	}
 	if(isProp("json")) {
 		tokener = json_tokener_new();
-		json = json_tokener_parse_ex(tokener, (char*)rsCStrGetSzStrNoNULL(pVar->val.pStr),
+		pMsg->json = json_tokener_parse_ex(tokener, (char*)rsCStrGetSzStrNoNULL(pVar->val.pStr),
 					     cstrLen(pVar->val.pStr));
+		json_tokener_free(tokener);
 		reinitVar(pVar);
 		CHKiRet(objDeserializeProperty(pVar, pStrm));
 	}

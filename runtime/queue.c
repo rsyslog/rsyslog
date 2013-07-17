@@ -898,7 +898,8 @@ static rsRetVal qDestructDisk(qqueue_t *pThis)
 	DEFiRet;
 	
 	ASSERT(pThis != NULL);
-	
+
+	free(pThis->pszQIFNam);
 	if(pThis->tVars.disk.pWrite != NULL)
 		strm.Destruct(&pThis->tVars.disk.pWrite);
 	if(pThis->tVars.disk.pReadDeq != NULL)
@@ -2596,7 +2597,9 @@ doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, msg_t *pMsg)
 	      	  && pThis->tVars.disk.sizeOnDisk > pThis->sizeOnDiskMax)) {
 		STATSCOUNTER_INC(pThis->ctrFull, pThis->mutCtrFull);
 		if(pThis->toEnq == 0 || pThis->bEnqOnly) {
-			DBGOPRINT((obj_t*) pThis, "doEnqSingleObject: queue FULL - configured for immediate discarding QueueSize=%d MaxQueueSize=%d sizeOnDisk=%d sizeOnDiskMax=%d\n", pThis->iQueueSize, pThis->iMaxQueueSize, pThis->tVars.disk.sizeOnDisk, pThis->sizeOnDiskMax); 
+			DBGOPRINT((obj_t*) pThis, "doEnqSingleObject: queue FULL - configured for immediate discarding QueueSize=%d "
+				"MaxQueueSize=%d sizeOnDisk=%lld sizeOnDiskMax=%lld\n", pThis->iQueueSize, pThis->iMaxQueueSize,
+				pThis->tVars.disk.sizeOnDisk, pThis->sizeOnDiskMax); 
 			STATSCOUNTER_INC(pThis->ctrFDscrd, pThis->mutCtrFDscrd);
 			msgDestruct(&pMsg);
 			ABORT_FINALIZE(RS_RET_QUEUE_FULL);
