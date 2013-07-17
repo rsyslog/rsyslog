@@ -327,7 +327,7 @@ tplToJSON(struct template *pTpl, msg_t *pMsg, struct json_object **pjson, struct
 	DEFiRet;
 
 	if(pTpl->subtree != NULL){
-		localRet = jsonFind(pMsg, pTpl->subtree, pjson);
+		localRet = jsonFind(pMsg->json, pTpl->subtree, pjson);
 		if(*pjson == NULL) {
 			/* we need to have a root object! */
 			*pjson = json_object_new_object();

@@ -317,7 +317,7 @@ static pthread_mutex_t mutTrimCtr;	 /* mutex to handle malloc trim */
 
 /* some forward declarations */
 static int getAPPNAMELen(msg_t *pM, sbool bLockMutex);
-static rsRetVal jsonPathFindParent(msg_t *pM, uchar *name, uchar *leaf, struct json_object **parent, int bCreate);
+static rsRetVal jsonPathFindParent(struct json_object *jroot, uchar *name, uchar *leaf, struct json_object **parent, int bCreate);
 static uchar * jsonPathGetLeaf(uchar *name, int lenName);
 static struct json_object *jsonDeepCopy(struct json_object *src);
 
@@ -2510,9 +2510,9 @@ static uchar *getNOW(eNOWType eNow, struct syslogTime *t)
 #undef tmpBUFSIZE /* clean up */
 
 
-/* Get a CEE-Property as string value*/
-rsRetVal
-getCEEPropVal(msg_t *pM, es_str_t *propName, uchar **pRes, rs_size_t *buflen, unsigned short *pbMustBeFreed)
+/* Get a JSON-Property as string value  (used for various types of JSON-based vars) */
+static rsRetVal
+getJSONPropVal(struct json_object *jroot, es_str_t *propName, uchar **pRes, rs_size_t *buflen, unsigned short *pbMustBeFreed)
 {
 	uchar *name = NULL;
 	uchar *leaf;
@@ -2524,14 +2524,14 @@ getCEEPropVal(msg_t *pM, es_str_t *propName, uchar **pRes, rs_size_t *buflen, un
 		free(*pRes);
 	*pRes = NULL;
 	// TODO: mutex?
-	if(pM->json == NULL) goto finalize_it;
+	if(jroot == NULL) goto finalize_it;
 
 	if(!es_strbufcmp(propName, (uchar*)"!", 1)) {
-		field = pM->json;
+		field = jroot;
 	} else {
 		name = (uchar*)es_str2cstr(propName, NULL);
 		leaf = jsonPathGetLeaf(name, ustrlen(name));
-		CHKiRet(jsonPathFindParent(pM, name, leaf, &parent, 1));
+		CHKiRet(jsonPathFindParent(jroot, name, leaf, &parent, 1));
 		field = json_object_object_get(parent, (char*)leaf);
 	}
 	if(field != NULL) {
@@ -2550,11 +2550,16 @@ finalize_it:
 	RETiRet;
 }
 
-
-/* Get a CEE-Property as native json object
- */
 rsRetVal
-msgGetCEEPropJSON(msg_t *pM, es_str_t *propName, struct json_object **pjson)
+getCEEPropVal(msg_t *pM, es_str_t *propName, uchar **pRes, rs_size_t *buflen, unsigned short *pbMustBeFreed)
+{
+	return getJSONPropVal(pM->json, propName, pRes, buflen, pbMustBeFreed);
+}
+
+
+/* Get a JSON-based-variable as native json object */
+rsRetVal
+msgGetJSONPropJSON(struct json_object *jroot, es_str_t *propName, struct json_object **pjson)
 {
 	uchar *name = NULL;
 	uchar *leaf;
@@ -2562,17 +2567,17 @@ msgGetCEEPropJSON(msg_t *pM, es_str_t *propName, struct json_object **pjson)
 	DEFiRet;
 
 	// TODO: mutex?
-	if(pM->json == NULL) {
+	if(jroot == NULL) {
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}
 
 	if(!es_strbufcmp(propName, (uchar*)"!", 1)) {
-		*pjson = pM->json;
+		*pjson = jroot;
 		FINALIZE;
 	}
 	name = (uchar*)es_str2cstr(propName, NULL);
 	leaf = jsonPathGetLeaf(name, ustrlen(name));
-	CHKiRet(jsonPathFindParent(pM, name, leaf, &parent, 1));
+	CHKiRet(jsonPathFindParent(jroot, name, leaf, &parent, 1));
 	*pjson = json_object_object_get(parent, (char*)leaf);
 	if(*pjson == NULL) {
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
@@ -2583,6 +2588,11 @@ finalize_it:
 	RETiRet;
 }
 
+rsRetVal
+msgGetCEEPropJSON(msg_t *pM, es_str_t *propName, struct json_object **pjson)
+{
+	return msgGetJSONPropJSON(pM->json, propName, pjson);
+}
 
 /* Encode a JSON value and add it to provided string. Note that 
  * the string object may be NULL. In this case, it is created
@@ -3648,15 +3658,15 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 }
 
 
-/* The function returns a cee variable suitable for use with RainerScript. 
+/* The function returns a json variable suitable for use with RainerScript. 
  * Note: caller must free the returned string.
  * Note that we need to do a lot of conversions between es_str_t and cstr -- this will go away once
  * we have moved larger parts of rsyslog to es_str_t. Acceptable for the moment, especially as we intend
  * to rewrite the script engine as well!
  * rgerhards, 2010-12-03
  */
-es_str_t*
-msgGetCEEVarNew(msg_t *pMsg, char *name)
+static es_str_t*
+msgGetJSONVarNew(msg_t *pMsg, struct json_object *jroot, char *name)
 {
 	uchar *leaf;
 	char *val;
@@ -3665,12 +3675,12 @@ msgGetCEEVarNew(msg_t *pMsg, char *name)
 
 	ISOBJ_TYPE_assert(pMsg, msg);
 
-	if(pMsg->json == NULL) {
+	if(jroot == NULL) {
 		estr = es_newStr(1);
 		goto done;
 	}
 	leaf = jsonPathGetLeaf((uchar*)name, strlen(name));
-	if(jsonPathFindParent(pMsg, (uchar*)name, leaf, &parent, 1) != RS_RET_OK) {
+	if(jsonPathFindParent(jroot, (uchar*)name, leaf, &parent, 1) != RS_RET_OK) {
 		estr = es_newStr(1);
 		goto done;
 	}
@@ -3681,6 +3691,11 @@ done:
 	return estr;
 }
 
+es_str_t*
+msgGetCEEVarNew(msg_t *pMsg, char *name)
+{
+	return msgGetJSONVarNew(pMsg, pMsg->json, name);
+}
 
 /* Return an es_str_t for given message property.
  */
@@ -3853,10 +3868,10 @@ finalize_it:
 }
 
 static rsRetVal
-jsonPathFindParent(msg_t *pM, uchar *name, uchar *leaf, struct json_object **parent, int bCreate)
+jsonPathFindParent(struct json_object *jroot, uchar *name, uchar *leaf, struct json_object **parent, int bCreate)
 {
 	DEFiRet;
-	*parent = pM->json;
+	*parent = jroot;
 	while(name < leaf-1) {
 		jsonPathFindNext(*parent, &name, leaf, parent, bCreate);
 	}
@@ -3885,7 +3900,7 @@ DBGPRINTF("AAAA jsonMerge adds '%s'\n", it.key);
 
 /* find a JSON structure element (field or container doesn't matter).  */
 rsRetVal
-jsonFind(msg_t *pM, es_str_t *propName, struct json_object **jsonres)
+jsonFind(struct json_object *jroot, es_str_t *propName, struct json_object **jsonres)
 {
 	uchar *name = NULL;
 	uchar *leaf;
@@ -3893,17 +3908,17 @@ jsonFind(msg_t *pM, es_str_t *propName, struct json_object **jsonres)
 	struct json_object *field;
 	DEFiRet;
 
-	if(pM->json == NULL) {
+	if(jroot == NULL) {
 		field = NULL;
 		goto finalize_it;
 	}
 
 	if(!es_strbufcmp(propName, (uchar*)"!", 1)) {
-		field = pM->json;
+		field = jroot;
 	} else {
 		name = (uchar*)es_str2cstr(propName, NULL);
 		leaf = jsonPathGetLeaf(name, ustrlen(name));
-		CHKiRet(jsonPathFindParent(pM, name, leaf, &parent, 0));
+		CHKiRet(jsonPathFindParent(jroot, name, leaf, &parent, 0));
 		field = json_object_object_get(parent, (char*)leaf);
 	}
 	*jsonres = field;
@@ -3913,8 +3928,8 @@ finalize_it:
 	RETiRet;
 }
 
-rsRetVal
-msgAddJSON(msg_t *pM, uchar *name, struct json_object *json)
+static rsRetVal
+msgAddJSONObj(msg_t *pM, uchar *name, struct json_object *json, struct json_object **pjroot)
 {
 	/* TODO: error checks! This is a quick&dirty PoC! */
 	struct json_object *parent, *leafnode;
@@ -3923,23 +3938,23 @@ msgAddJSON(msg_t *pM, uchar *name, struct json_object *json)
 
 	MsgLock(pM);
 	if(name[0] == '!' && name[1] == '\0') {
-		if(pM->json == NULL)
-			pM->json = json;
+		if(*pjroot == NULL)
+			*pjroot = json;
 		else
-			CHKiRet(jsonMerge(pM->json, json));
+			CHKiRet(jsonMerge(*pjroot, json));
 	} else {
-		if(pM->json == NULL) {
+		if(*pjroot == NULL) {
 			/* now we need a root obj */
-			pM->json = json_object_new_object();
+			*pjroot = json_object_new_object();
 		}
 		leaf = jsonPathGetLeaf(name, ustrlen(name));
-		CHKiRet(jsonPathFindParent(pM, name, leaf, &parent, 1));
+		CHKiRet(jsonPathFindParent(*pjroot, name, leaf, &parent, 1));
 		leafnode = json_object_object_get(parent, (char*)leaf);
 		if(leafnode == NULL) {
 			json_object_object_add(parent, (char*)leaf, json);
 		} else {
 			if(json_object_get_type(json) == json_type_object) {
-				CHKiRet(jsonMerge(pM->json, json));
+				CHKiRet(jsonMerge(*pjroot, json));
 			} else {
 //dbgprintf("AAAA: leafnode already exists, type is %d, update with %d\n", (int)json_object_get_type(leafnode), (int)json_object_get_type(json));
 				/* TODO: improve the code below, however, the current
@@ -3970,7 +3985,12 @@ finalize_it:
 }
 
 rsRetVal
-msgDelJSON(msg_t *pM, uchar *name)
+msgAddJSON(msg_t *pM, uchar *name, struct json_object *json) {
+	return msgAddJSONObj(pM, name, json, &pM->json);
+}
+
+rsRetVal
+msgDelJSONVar(msg_t *pM, struct json_object **jroot, uchar *name)
 {
 	struct json_object *parent, *leafnode;
 	uchar *leaf;
@@ -3983,15 +4003,15 @@ dbgprintf("AAAA: unset variable '%s'\n", name);
 		 * we trust rsyslog.conf to be written by the admin.
 		 */
 		DBGPRINTF("unsetting JSON root object\n");
-		json_object_put(pM->json);
-		pM->json = NULL;
+		json_object_put(*jroot);
+		*jroot = NULL;
 	} else {
-		if(pM->json == NULL) {
+		if(*jroot == NULL) {
 			/* now we need a root obj */
-			pM->json = json_object_new_object();
+			*jroot = json_object_new_object();
 		}
 		leaf = jsonPathGetLeaf(name, ustrlen(name));
-		CHKiRet(jsonPathFindParent(pM, name, leaf, &parent, 1));
+		CHKiRet(jsonPathFindParent(*jroot, name, leaf, &parent, 1));
 		leafnode = json_object_object_get(parent, (char*)leaf);
 DBGPRINTF("AAAA: unset found JSON value path '%s', " "leaf '%s', leafnode %p\n", name, leaf, leafnode);
 		if(leafnode == NULL) {
@@ -4008,6 +4028,12 @@ DBGPRINTF("AAAA: unset found JSON value path '%s', " "leaf '%s', leafnode %p\n",
 finalize_it:
 	MsgUnlock(pM);
 	RETiRet;
+}
+
+rsRetVal
+msgDelJSON(msg_t *pM, uchar *name)
+{
+	return msgDelJSONVar(pM, &pM->json, name);
 }
 
 static struct json_object *

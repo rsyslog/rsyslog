@@ -208,7 +208,7 @@ uchar *propIDToName(propid_t propID);
 rsRetVal msgGetCEEPropJSON(msg_t *pM, es_str_t *propName, struct json_object **pjson);
 rsRetVal msgSetJSONFromVar(msg_t *pMsg, uchar *varname, struct var *var);
 rsRetVal msgDelJSON(msg_t *pMsg, uchar *varname);
-rsRetVal jsonFind(msg_t *pM, es_str_t *propName, struct json_object **jsonres);
+rsRetVal jsonFind(struct json_object *jroot, es_str_t *propName, struct json_object **jsonres);
 
 static inline rsRetVal
 msgUnsetJSON(msg_t *pMsg, uchar *varname) {
