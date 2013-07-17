@@ -320,6 +320,7 @@ static int getAPPNAMELen(msg_t *pM, sbool bLockMutex);
 static rsRetVal jsonPathFindParent(struct json_object *jroot, uchar *name, uchar *leaf, struct json_object **parent, int bCreate);
 static uchar * jsonPathGetLeaf(uchar *name, int lenName);
 static struct json_object *jsonDeepCopy(struct json_object *src);
+static rsRetVal msgAddJSONObj(msg_t *pM, uchar *name, struct json_object *json, struct json_object **pjroot);
 
 
 /* the locking and unlocking implementations: */
@@ -536,6 +537,8 @@ propNameStrToID(uchar *pName, propid_t *pPropID)
 		*pPropID = PROP_CEE_ALL_JSON;
 	} else if(!strncmp((char*) pName, "$!", 2)) {
 		*pPropID = PROP_CEE;
+	} else if(!strncmp((char*) pName, "$.", 2)) {
+		*pPropID = PROP_LOCAL_VAR;
 	} else if(!strcmp((char*) pName, "$bom")) {
 		*pPropID = PROP_SYS_BOM;
 	} else if(!strcmp((char*) pName, "$uptime")) {
@@ -634,6 +637,8 @@ uchar *propIDToName(propid_t propID)
 			return UCHAR_CONSTANT("$MYHOSTNAME");
 		case PROP_CEE:
 			return UCHAR_CONSTANT("*CEE-based property*");
+		case PROP_LOCAL_VAR:
+			return UCHAR_CONSTANT("*LOCAL_VARIABLE*");
 		case PROP_CEE_ALL_JSON:
 			return UCHAR_CONSTANT("$!all-json");
 		case PROP_SYS_BOM:
@@ -708,6 +713,7 @@ static inline rsRetVal msgBaseConstruct(msg_t **ppThis)
 	pM->rcvFrom.pRcvFrom = NULL;
 	pM->pRuleset = NULL;
 	pM->json = NULL;
+	pM->localvars = NULL;
 	memset(&pM->tRcvdAt, 0, sizeof(pM->tRcvdAt));
 	memset(&pM->tTIMESTAMP, 0, sizeof(pM->tTIMESTAMP));
 	pM->TAG.pszTAG = NULL;
@@ -853,6 +859,8 @@ CODESTARTobjDestruct(msg)
 			rsCStrDestruct(&pThis->pCSMSGID);
 		if(pThis->json != NULL)
 			json_object_put(pThis->json);
+		if(pThis->localvars != NULL)
+			json_object_put(pThis->localvars);
 		if(pThis->pszUUID != NULL)
 			free(pThis->pszUUID);
 #	ifndef HAVE_ATOMIC_BUILTINS
@@ -1002,6 +1010,8 @@ msg_t* MsgDup(msg_t* pOld)
 
 	if(pOld->json != NULL)
 		pNew->json = jsonDeepCopy(pOld->json);
+	if(pOld->localvars != NULL)
+		pNew->localvars = jsonDeepCopy(pOld->localvars);
 
 	/* we do not copy all other cache properties, as we do not even know
 	 * if they are needed once again. So we let them re-create if needed.
@@ -1059,6 +1069,10 @@ static rsRetVal MsgSerialize(msg_t *pThis, strm_t *pStrm)
 	if(pThis->json != NULL) {
 		psz = (uchar*) json_object_get_string(pThis->json);
 		CHKiRet(obj.SerializeProp(pStrm, UCHAR_CONSTANT("json"), PROPTYPE_PSZ, (void*) psz));
+	}
+	if(pThis->localvars != NULL) {
+		psz = (uchar*) json_object_get_string(pThis->localvars);
+		CHKiRet(obj.SerializeProp(pStrm, UCHAR_CONSTANT("localvars"), PROPTYPE_PSZ, (void*) psz));
 	}
 
 	objSerializePTR(pStrm, pCSStrucData, CSTR);
@@ -2556,6 +2570,12 @@ getCEEPropVal(msg_t *pM, es_str_t *propName, uchar **pRes, rs_size_t *buflen, un
 	return getJSONPropVal(pM->json, propName, pRes, buflen, pbMustBeFreed);
 }
 
+rsRetVal
+getLocalVarPropVal(msg_t *pM, es_str_t *propName, uchar **pRes, rs_size_t *buflen, unsigned short *pbMustBeFreed)
+{
+	return getJSONPropVal(pM->localvars, propName, pRes, buflen, pbMustBeFreed);
+}
+
 
 /* Get a JSON-based-variable as native json object */
 rsRetVal
@@ -2592,6 +2612,12 @@ rsRetVal
 msgGetCEEPropJSON(msg_t *pM, es_str_t *propName, struct json_object **pjson)
 {
 	return msgGetJSONPropJSON(pM->json, propName, pjson);
+}
+
+rsRetVal
+msgGetLocalVarJSON(msg_t *pM, es_str_t *propName, struct json_object **pjson)
+{
+	return msgGetJSONPropJSON(pM->localvars, propName, pjson);
 }
 
 /* Encode a JSON value and add it to provided string. Note that 
@@ -2990,6 +3016,9 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			break;
 		case PROP_CEE:
 			getCEEPropVal(pMsg, propName, &pRes, &bufLen, pbMustBeFreed);
+			break;
+		case PROP_LOCAL_VAR:
+			getLocalVarPropVal(pMsg, propName, &pRes, &bufLen, pbMustBeFreed);
 			break;
 		case PROP_SYS_BOM:
 			if(*pbMustBeFreed == 1)
@@ -3697,6 +3726,12 @@ msgGetCEEVarNew(msg_t *pMsg, char *name)
 	return msgGetJSONVarNew(pMsg, pMsg->json, name);
 }
 
+es_str_t*
+msgGetLocalVarNew(msg_t *pMsg, char *name)
+{
+	return msgGetJSONVarNew(pMsg, pMsg->localvars, name);
+}
+
 /* Return an es_str_t for given message property.
  */
 es_str_t*
@@ -3824,16 +3859,22 @@ static uchar *
 jsonPathGetLeaf(uchar *name, int lenName)
 {
 	int i;
-	for(i = lenName ; name[i] != '!' && i >= 0 ; --i)
-		/* just skip */;
-	if(name[i] == '!')
+	for(i = lenName ; i >= 0 ; --i)
+		if(i == 0) {
+			if(name[0] == '.' || name[0] == '!')
+				break;
+		} else {
+			if(name[i] == '!')
+				break;
+		}
+	if(name[i] == '!' || name[i] == '.')
 		++i;
 	return name + i;
 }
 
 
 static rsRetVal
-jsonPathFindNext(struct json_object *root, uchar **name, uchar *leaf,
+jsonPathFindNext(struct json_object *root, uchar *namestart, uchar **name, uchar *leaf,
 		 struct json_object **found, int bCreate)
 {
 	uchar namebuf[1024];
@@ -3842,9 +3883,9 @@ jsonPathFindNext(struct json_object *root, uchar **name, uchar *leaf,
 	uchar *p = *name;
 	DEFiRet;
 
-	if(*p == '!')
+	if(*p == '!' || (*name == namestart && *p == '.'))
 		++p;
-	for(i = 0 ; *p && *p != '!' && p != leaf && i < sizeof(namebuf)-1 ; ++i, ++p)
+	for(i = 0 ; *p && !(p == namestart && *p == '.') && *p != '!' && p != leaf && i < sizeof(namebuf)-1 ; ++i, ++p)
 		namebuf[i] = *p;
 	if(i > 0) {
 		namebuf[i] = '\0';
@@ -3870,10 +3911,12 @@ finalize_it:
 static rsRetVal
 jsonPathFindParent(struct json_object *jroot, uchar *name, uchar *leaf, struct json_object **parent, int bCreate)
 {
+	uchar *namestart;
 	DEFiRet;
+	namestart = name;
 	*parent = jroot;
 	while(name < leaf-1) {
-		jsonPathFindNext(*parent, &name, leaf, parent, bCreate);
+		jsonPathFindNext(*parent, namestart, &name, leaf, parent, bCreate);
 	}
 	RETiRet;
 }
@@ -3937,7 +3980,7 @@ msgAddJSONObj(msg_t *pM, uchar *name, struct json_object *json, struct json_obje
 	DEFiRet;
 
 	MsgLock(pM);
-	if(name[0] == '!' && name[1] == '\0') {
+	if((name[0] == '!' || name[0] == '.') && name[1] == '\0') {
 		if(*pjroot == NULL)
 			*pjroot = json;
 		else
@@ -3998,7 +4041,7 @@ msgDelJSONVar(msg_t *pM, struct json_object **jroot, uchar *name)
 
 dbgprintf("AAAA: unset variable '%s'\n", name);
 	MsgLock(pM);
-	if(name[0] == '!' && name[1] == '\0') {
+	if((name[0] == '!' || name[0] == '.') && name[1] == '\0') {
 		/* strange, but I think we should permit this. After all,
 		 * we trust rsyslog.conf to be written by the admin.
 		 */
@@ -4105,7 +4148,11 @@ msgSetJSONFromVar(msg_t *pMsg, uchar *varname, struct var *v)
 		v->datatype);
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
-	msgAddJSON(pMsg, varname+1, json);
+	/* we always know strlen(varname) > 2 */
+	if(varname[1] == '.')
+		msgAddJSONObj(pMsg, varname+1, json, &pMsg->localvars);
+	else
+		msgAddJSONObj(pMsg, varname+1, json, &pMsg->json);
 finalize_it:
 	RETiRet;
 }
