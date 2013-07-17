@@ -877,7 +877,8 @@ static rsRetVal qDestructDisk(qqueue_t *pThis)
 	DEFiRet;
 	
 	ASSERT(pThis != NULL);
-	
+
+	free(pThis->pszQIFNam);
 	if(pThis->tVars.disk.pWrite != NULL)
 		strm.Destruct(&pThis->tVars.disk.pWrite);
 	if(pThis->tVars.disk.pReadDeq != NULL)
