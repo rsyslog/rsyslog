@@ -60,6 +60,7 @@ DEFobjCurrIf(net)
  * For this object, these variables are obviously what makes the "meat" of the
  * class...
  */
+static struct cnfobj *mainqCnfObj = NULL;/* main queue object, to be used later in startup sequence */
 static uchar *pszWorkDir = NULL;
 static int bOptimizeUniProc = 1;	/* enable uniprocessor optimizations */
 static int bParseHOSTNAMEandTAG = 1;	/* parser modification (based on startup params!) */
@@ -137,6 +138,7 @@ static dataType Get##nameFunc(void) \
 SIMP_PROP(ParseHOSTNAMEandTAG, bParseHOSTNAMEandTAG, int)
 SIMP_PROP(OptimizeUniProc, bOptimizeUniProc, int)
 SIMP_PROP(PreserveFQDN, bPreserveFQDN, int)
+SIMP_PROP(mainqCnfObj, mainqCnfObj, struct cnfobj *)
 SIMP_PROP(MaxLine, iMaxLine, int)
 SIMP_PROP(DefPFFamily, iDefPFFamily, int) /* note that in the future we may check the family argument */
 SIMP_PROP(DropMalPTRMsgs, bDropMalPTRMsgs, int)
@@ -529,6 +531,7 @@ CODESTARTobjQueryInterface(glbl)
 	SIMP_PROP(DropMalPTRMsgs);
 	SIMP_PROP(Option_DisallowWarning);
 	SIMP_PROP(DisableDNS);
+	SIMP_PROP(mainqCnfObj);
 	SIMP_PROP(LocalFQDNName)
 	SIMP_PROP(LocalHostName)
 	SIMP_PROP(LocalDomain)
@@ -579,6 +582,8 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 void
 glblPrepCnf(void)
 {
+	free(mainqCnfObj);
+	mainqCnfObj = NULL;
 	free(cnfparamvals);
 	cnfparamvals = NULL;
 }
@@ -594,6 +599,31 @@ glblProcessCnf(struct cnfobj *o)
 	cnfparamvals = nvlstGetParams(o->nvlst, &paramblk, cnfparamvals);
 	dbgprintf("glbl param blk after glblProcessCnf:\n");
 	cnfparamsPrint(&paramblk, cnfparamvals);
+}
+
+/* Set mainq parameters. Note that when this is not called, we'll use the
+ * legacy parameter config. mainq parameters can only be set once.
+ */
+void
+glblProcessMainQCnf(struct cnfobj *o)
+{
+	if(mainqCnfObj == NULL) {
+		mainqCnfObj = o;
+	} else {
+		errmsg.LogError(0, RS_RET_ERR, "main_queue() object can only be specified "
+				"once - all but first ignored\n");
+	}
+}
+
+/* destruct the main q cnf object after it is no longer needed. This is
+ * also used to do some final checks.
+ */
+void
+glblDestructMainqCnfObj()
+{
+	nvlstChkUnused(mainqCnfObj->nvlst);
+	cnfobjDestruct(mainqCnfObj);
+	mainqCnfObj = NULL;
 }
 
 void

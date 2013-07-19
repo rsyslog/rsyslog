@@ -52,6 +52,7 @@ BEGINinterface(glbl) /* name must also be changed in ENDinterface macro! */
 	SIMP_PROP(Option_DisallowWarning, int)
 	SIMP_PROP(DisableDNS, int)
 	SIMP_PROP(LocalFQDNName, uchar*)
+	SIMP_PROP(mainqCnfObj, struct cnfobj*)
 	SIMP_PROP(LocalHostName, uchar*)
 	SIMP_PROP(LocalDomain, uchar*)
 	SIMP_PROP(StripDomains, char**)
@@ -96,6 +97,8 @@ static inline void glblSetOurPid(pid_t pid) { glbl_ourpid = pid; }
 
 void glblPrepCnf(void);
 void glblProcessCnf(struct cnfobj *o);
+void glblProcessMainQCnf(struct cnfobj *o);
+void glblDestructMainqCnfObj();
 void glblDoneLoadCnf(void);
 
 #endif /* #ifndef GLBL_H_INCLUDED */

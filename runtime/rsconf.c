@@ -399,6 +399,7 @@ yyerror(char *s)
 }
 void cnfDoObj(struct cnfobj *o)
 {
+	int bDestructObj = 1;
 	int bChkUnuse = 1;
 
 	dbgprintf("cnf:global:obj: ");
@@ -406,6 +407,10 @@ void cnfDoObj(struct cnfobj *o)
 	switch(o->objType) {
 	case CNFOBJ_GLOBAL:
 		glblProcessCnf(o);
+		break;
+	case CNFOBJ_MAINQ:
+		glblProcessMainQCnf(o);
+		bDestructObj = 0;
 		break;
 	case CNFOBJ_MODULE:
 		modulesProcessCnf(o);
@@ -430,9 +435,11 @@ void cnfDoObj(struct cnfobj *o)
 			 o->objType);
 		break;
 	}
-	if(bChkUnuse)
-		nvlstChkUnused(o->nvlst);
-	cnfobjDestruct(o);
+	if(bDestructObj) {
+		if(bChkUnuse)
+			nvlstChkUnused(o->nvlst);
+		cnfobjDestruct(o);
+	 }
 }
 
 void cnfDoScript(struct cnfstmt *script)
@@ -757,9 +764,14 @@ startInputModules(void)
 static inline rsRetVal
 activateMainQueue()
 {
+	struct cnfobj *mainqCnfObj;
 	DEFiRet;
+
+	mainqCnfObj = glbl.GetmainqCnfObj();
+	DBGPRINTF("activateMainQueue: mainq cnf obj ptr is %p\n", mainqCnfObj);
 	/* create message queue */
-	CHKiRet_Hdlr(createMainQueue(&pMsgQueue, UCHAR_CONSTANT("main Q"), NULL)) {
+	CHKiRet_Hdlr(createMainQueue(&pMsgQueue, UCHAR_CONSTANT("main Q"),
+		    		(mainqCnfObj == NULL) ? NULL : mainqCnfObj->nvlst)) {
 		/* no queue is fatal, we need to give up in that case... */
 		fprintf(stderr, "fatal error %d: could not create message queue - rsyslogd can not run!\n", iRet);
 		FINALIZE;
@@ -768,6 +780,7 @@ activateMainQueue()
 	bHaveMainQueue = (ourConf->globals.mainQ.MainMsgQueType == QUEUETYPE_DIRECT) ? 0 : 1;
 	DBGPRINTF("Main processing queue is initialized and running\n");
 finalize_it:
+	glblDestructMainqCnfObj();
 	RETiRet;
 }
 

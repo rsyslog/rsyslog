@@ -176,6 +176,8 @@ int fileno(FILE *stream);
 <INCL>[^ \t\n]+			{ if(cnfDoInclude(yytext) != 0)
 					yyterminate();
 				  BEGIN INITIAL; }
+"main_queue"[ \n\t]*"("		{ yylval.objType = CNFOBJ_MAINQ;
+				  BEGIN INOBJ; return BEGINOBJ; }
 "global"[ \n\t]*"("		{ yylval.objType = CNFOBJ_GLOBAL;
 				  BEGIN INOBJ; return BEGINOBJ; }
 "template"[ \n\t]*"("		{ yylval.objType = CNFOBJ_TPL;
