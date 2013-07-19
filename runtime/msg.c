@@ -2495,10 +2495,10 @@ static uchar *getNOW(eNOWType eNow, struct syslogTime *t)
 		memcpy(pBuf, two_digits[(int)t->hour], 3);
 		break;
 	case NOW_HHOUR:
-		memcpy(pBuf, two_digits[t->hour/30], 3);
+		memcpy(pBuf, two_digits[t->minute/30], 3);
 		break;
 	case NOW_QHOUR:
-		memcpy(pBuf, two_digits[t->hour/15], 3);
+		memcpy(pBuf, two_digits[t->minute/15], 3);
 		break;
 	case NOW_MINUTE:
 		memcpy(pBuf, two_digits[(int)t->minute], 3);
