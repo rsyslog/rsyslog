@@ -34,6 +34,18 @@ return a valid result, as you can't really add two letters (to
 concatenate them, use the concatenation operator &amp;).
 &nbsp;However, all type conversions are automatically done by the
 script interpreter when there is need to do so.<br>
+<h2>configuration objects</h2>
+<h3>main_queue()</h3>
+This permits to specify parameters for the main message queue. Note that
+only <a href="queue_parameters.html">queue-parameters</a> are permitted for this
+config object. This permits to set the same options like in ruleset and action
+queues. A special statement is needed for the main queue, because it is a
+different object and cannot be configured via any other object.
+<p>Note that when the main_queue() object is configured, the legacy
+$MainMsgQ... statements are ignored.
+<p>Example:</p>
+<textarea rows="2" cols="60">main_queue(queue.size="100000" queue.type="LinkedList")
+</textarea>
 <h2>Expressions</h2>
 The language supports arbitrary complex expressions. All usual
 operators are supported. The precedence of operations is as follows
