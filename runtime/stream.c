@@ -1605,7 +1605,7 @@ finalize_it:
 /* property set methods */
 /* simple ones first */
 DEFpropSetMeth(strm, bDeleteOnClose, int)
-DEFpropSetMeth(strm, iMaxFileSize, int)
+DEFpropSetMeth(strm, iMaxFileSize, int64)
 DEFpropSetMeth(strm, iFileNumDigits, int)
 DEFpropSetMeth(strm, tOperationsMode, int)
 DEFpropSetMeth(strm, tOpenMode, mode_t)

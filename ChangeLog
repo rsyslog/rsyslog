@@ -1477,6 +1477,9 @@ expected that interfaces, even new ones, break during the initial
   [ported from v4]
 ---------------------------------------------------------------------------
 Version 5.10.2  [V5-STABLE], 201?-??-??
+- bugfix: queue file size was not correctly processed
+  this could lead to using one queue file per message for sizes >2GB
+  Thanks to Tomas Heinrich for the patch.
 - updated systemd files to match current systemd source
 - bugfix: spurios error messages from imuxsock about (non-error) EAGAIN
   Thanks to Marius Tomaschewski for the patch.
