@@ -1,5 +1,10 @@
 ---------------------------------------------------------------------------
 Version 7.4.3  [v7.4-stable] 2013-07-18
+- bugfix: $QHOUR/$HHOUR were always "00" or "01"
+  regression some time between v5 and here
+  Thanks to forum user rjmcinty for reporting this bug
+---------------------------------------------------------------------------
+Version 7.4.3  [v7.4-stable] 2013-07-18
 - bugfix: memory leak if disk queues were used and json data present
 - bugfix: CEE/json data was lost during disk queue operation
 - bugfix: potential segfault during startup on invalid config
