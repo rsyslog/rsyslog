@@ -1128,9 +1128,7 @@ rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName, struct nvlst *
 	#	undef setQPROP
 	#	undef setQPROPstr
 	} else { /* use new style config! */
-dbgprintf("DDDD: setting ruleset Queue defaults\n");
 		qqueueSetDefaultsRulesetQueue(*ppQueue);
-dbgprintf("DDDD: setting ruleset Queue defaults, type now %d\n", (*ppQueue)->qType);
 		qqueueApplyCnfParam(*ppQueue, lst);
 	}
 
