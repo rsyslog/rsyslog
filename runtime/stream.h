@@ -158,7 +158,6 @@ BEGINinterface(strm) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Construct)(strm_t **ppThis);
 	rsRetVal (*ConstructFinalize)(strm_t *pThis);
 	rsRetVal (*Destruct)(strm_t **ppThis);
-	rsRetVal (*SetMaxFileSize)(strm_t *pThis, int64 iMaxFileSize);
 	rsRetVal (*SetFileName)(strm_t *pThis, uchar *pszName, size_t iLenName);
 	rsRetVal (*ReadChar)(strm_t *pThis, uchar *pC);
 	rsRetVal (*UnreadChar)(strm_t *pThis, uchar c);
@@ -176,7 +175,7 @@ BEGINinterface(strm) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetWCntr)(strm_t *pThis, number_t *pWCnt);
 	rsRetVal (*Dup)(strm_t *pThis, strm_t **ppNew);
 	INTERFACEpropSetMeth(strm, bDeleteOnClose, int);
-	INTERFACEpropSetMeth(strm, iMaxFileSize, int);
+	INTERFACEpropSetMeth(strm, iMaxFileSize, int64);
 	INTERFACEpropSetMeth(strm, iMaxFiles, int);
 	INTERFACEpropSetMeth(strm, iFileNumDigits, int);
 	INTERFACEpropSetMeth(strm, tOperationsMode, int);
