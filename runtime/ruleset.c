@@ -447,6 +447,11 @@ evalPROPFILT(struct cnfstmt *stmt, msg_t *pMsg)
 			DBGPRINTF("Filter: check for CEE property '%s' (value '%s') ",
 				cstr, pszPropVal);
 			free(cstr);
+		} else if(stmt->d.s_propfilt.propID == PROP_LOCAL_VAR) {
+			cstr = es_str2cstr(stmt->d.s_propfilt.propName, NULL);
+			DBGPRINTF("Filter: check for local var '%s' (value '%s') ",
+				cstr, pszPropVal);
+			free(cstr);
 		} else {
 			DBGPRINTF("Filter: check for property '%s' (value '%s') ",
 				propIDToName(stmt->d.s_propfilt.propID), pszPropVal);

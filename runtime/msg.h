@@ -108,6 +108,7 @@ struct msg {
 	struct syslogTime tRcvdAt;/* time the message entered this program */
 	struct syslogTime tTIMESTAMP;/* (parsed) value of the timestamp */
 	struct json_object *json;
+	struct json_object *localvars;
 	/* some fixed-size buffers to save malloc()/free() for frequently used fields (from the default templates) */
 	uchar szRawMsg[CONF_RAWMSG_BUFSIZE];	/* most messages are small, and these are stored here (without malloc/free!) */
 	uchar szHOSTNAME[CONF_HOSTNAME_BUFSIZE];
@@ -186,6 +187,7 @@ char *getPRI(msg_t *pMsg);
 void getRawMsg(msg_t *pM, uchar **pBuf, int *piLen);
 rsRetVal msgGetCEEVar(msg_t *pThis, cstr_t *propName, var_t **ppVar);
 es_str_t* msgGetCEEVarNew(msg_t *pMsg, char *name);
+es_str_t* msgGetLocalVarNew(msg_t *pMsg, char *name);
 rsRetVal msgAddJSON(msg_t *pM, uchar *name, struct json_object *json);
 rsRetVal getCEEPropVal(msg_t *pM, es_str_t *propName, uchar **pRes, rs_size_t *buflen, unsigned short *pbMustBeFreed);
 rsRetVal MsgGetSeverity(msg_t *pThis, int *piSeverity);
@@ -206,9 +208,10 @@ uchar *getRcvFrom(msg_t *pM);
 rsRetVal propNameToID(cstr_t *pCSPropName, propid_t *pPropID);
 uchar *propIDToName(propid_t propID);
 rsRetVal msgGetCEEPropJSON(msg_t *pM, es_str_t *propName, struct json_object **pjson);
+rsRetVal msgGetLocalVarJSON(msg_t *pM, es_str_t *propName, struct json_object **pjson);
 rsRetVal msgSetJSONFromVar(msg_t *pMsg, uchar *varname, struct var *var);
 rsRetVal msgDelJSON(msg_t *pMsg, uchar *varname);
-rsRetVal jsonFind(msg_t *pM, es_str_t *propName, struct json_object **jsonres);
+rsRetVal jsonFind(struct json_object *jroot, es_str_t *propName, struct json_object **jsonres);
 
 static inline rsRetVal
 msgUnsetJSON(msg_t *pMsg, uchar *varname) {
