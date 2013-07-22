@@ -66,6 +66,11 @@
 #include "var.h"
 #include "rsconf.h"
 
+/* TODO: move the global variable root to the config object - had no time to to it
+ * right now before vacation -- rgerhards, 2013-07-22
+ */
+struct json_object *global_var_root = NULL;
+
 /* static data */
 DEFobjStaticHelpers
 DEFobjCurrIf(datetime)
@@ -539,6 +544,8 @@ propNameStrToID(uchar *pName, propid_t *pPropID)
 		*pPropID = PROP_CEE;
 	} else if(!strncmp((char*) pName, "$.", 2)) {
 		*pPropID = PROP_LOCAL_VAR;
+	} else if(!strncmp((char*) pName, "$/", 2)) {
+		*pPropID = PROP_GLOBAL_VAR;
 	} else if(!strcmp((char*) pName, "$bom")) {
 		*pPropID = PROP_SYS_BOM;
 	} else if(!strcmp((char*) pName, "$uptime")) {
@@ -639,6 +646,8 @@ uchar *propIDToName(propid_t propID)
 			return UCHAR_CONSTANT("*CEE-based property*");
 		case PROP_LOCAL_VAR:
 			return UCHAR_CONSTANT("*LOCAL_VARIABLE*");
+		case PROP_GLOBAL_VAR:
+			return UCHAR_CONSTANT("*GLOBAL_VARIABLE*");
 		case PROP_CEE_ALL_JSON:
 			return UCHAR_CONSTANT("$!all-json");
 		case PROP_SYS_BOM:
@@ -2584,6 +2593,12 @@ getLocalVarPropVal(msg_t *pM, es_str_t *propName, uchar **pRes, rs_size_t *bufle
 	return getJSONPropVal(pM->localvars, propName, pRes, buflen, pbMustBeFreed);
 }
 
+rsRetVal
+getGlobalVarPropVal( es_str_t *propName, uchar **pRes, rs_size_t *buflen, unsigned short *pbMustBeFreed)
+{
+	return getJSONPropVal(global_var_root, propName, pRes, buflen, pbMustBeFreed);
+}
+
 
 /* Get a JSON-based-variable as native json object */
 rsRetVal
@@ -2626,6 +2641,12 @@ rsRetVal
 msgGetLocalVarJSON(msg_t *pM, es_str_t *propName, struct json_object **pjson)
 {
 	return msgGetJSONPropJSON(pM->localvars, propName, pjson);
+}
+
+rsRetVal
+msgGetGlobalVarJSON(es_str_t *propName, struct json_object **pjson)
+{
+	return msgGetJSONPropJSON(global_var_root, propName, pjson);
 }
 
 /* Encode a JSON value and add it to provided string. Note that 
@@ -3027,6 +3048,9 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			break;
 		case PROP_LOCAL_VAR:
 			getLocalVarPropVal(pMsg, propName, &pRes, &bufLen, pbMustBeFreed);
+			break;
+		case PROP_GLOBAL_VAR:
+			getGlobalVarPropVal(propName, &pRes, &bufLen, pbMustBeFreed);
 			break;
 		case PROP_SYS_BOM:
 			if(*pbMustBeFreed == 1)
@@ -3869,13 +3893,13 @@ jsonPathGetLeaf(uchar *name, int lenName)
 	int i;
 	for(i = lenName ; i >= 0 ; --i)
 		if(i == 0) {
-			if(name[0] == '.' || name[0] == '!')
+			if(name[0] == '!'  || name[0] == '.' || name[0] == '/')
 				break;
 		} else {
 			if(name[i] == '!')
 				break;
 		}
-	if(name[i] == '!' || name[i] == '.')
+	if(name[i] == '!' || name[i] == '.' || name[i] == '/')
 		++i;
 	return name + i;
 }
@@ -3891,9 +3915,9 @@ jsonPathFindNext(struct json_object *root, uchar *namestart, uchar **name, uchar
 	uchar *p = *name;
 	DEFiRet;
 
-	if(*p == '!' || (*name == namestart && *p == '.'))
+	if(*p == '!' || (*name == namestart && (*p == '.' || *p == '/')))
 		++p;
-	for(i = 0 ; *p && !(p == namestart && *p == '.') && *p != '!' && p != leaf && i < sizeof(namebuf)-1 ; ++i, ++p)
+	for(i = 0 ; *p && !(p == namestart && (*p == '.' || *p == '/')) && *p != '!' && p != leaf && i < sizeof(namebuf)-1 ; ++i, ++p)
 		namebuf[i] = *p;
 	if(i > 0) {
 		namebuf[i] = '\0';
@@ -3988,7 +4012,7 @@ msgAddJSONObj(msg_t *pM, uchar *name, struct json_object *json, struct json_obje
 	DEFiRet;
 
 	MsgLock(pM);
-	if((name[0] == '!' || name[0] == '.') && name[1] == '\0') {
+	if((name[0] == '!' || name[0] == '.' || name[0] == '/') && name[1] == '\0') {
 		if(*pjroot == NULL)
 			*pjroot = json;
 		else
@@ -4049,7 +4073,7 @@ msgDelJSONVar(msg_t *pM, struct json_object **jroot, uchar *name)
 
 dbgprintf("AAAA: unset variable '%s'\n", name);
 	MsgLock(pM);
-	if((name[0] == '!' || name[0] == '.') && name[1] == '\0') {
+	if((name[0] == '!' || name[0] == '.' || name[0] == '/') && name[1] == '\0') {
 		/* strange, but I think we should permit this. After all,
 		 * we trust rsyslog.conf to be written by the admin.
 		 */
@@ -4157,10 +4181,12 @@ msgSetJSONFromVar(msg_t *pMsg, uchar *varname, struct var *v)
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 	/* we always know strlen(varname) > 2 */
+	if(varname[1] == '!')
+		msgAddJSONObj(pMsg, varname+1, json, &pMsg->json);
 	if(varname[1] == '.')
 		msgAddJSONObj(pMsg, varname+1, json, &pMsg->localvars);
-	else
-		msgAddJSONObj(pMsg, varname+1, json, &pMsg->json);
+	else /* global - '/' */
+		msgAddJSONObj(pMsg, varname+1, json, &global_var_root);
 finalize_it:
 	RETiRet;
 }

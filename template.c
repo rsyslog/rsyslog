@@ -367,6 +367,17 @@ tplToJSON(struct template *pTpl, msg_t *pMsg, struct json_object **pjson, struct
 						json_object_object_add(json, (char*)pTpe->fieldName, NULL);
 					}
 				}
+			} else if(pTpe->data.field.propid == PROP_GLOBAL_VAR) {
+				localRet = msgGetGlobalVarJSON(pTpe->data.field.propName, &jsonf);
+				if(localRet == RS_RET_OK) {
+					json_object_object_add(json, (char*)pTpe->fieldName, json_object_get(jsonf));
+				} else {
+					DBGPRINTF("tplToJSON: error %d looking up local variable %s\n",
+						  localRet, pTpe->fieldName);
+					if(pTpe->data.field.options.bMandatory) {
+						json_object_object_add(json, (char*)pTpe->fieldName, NULL);
+					}
+				}
 			} else  {
 				pVal = (uchar*) MsgGetProp(pMsg, pTpe, pTpe->data.field.propid,
 							   pTpe->data.field.propName,  &propLen,
@@ -808,8 +819,8 @@ do_Parameter(uchar **pp, struct template *pTpl)
 			cstrDestruct(&pStrProp);
 			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 		}
-	} else if(pTpe->data.field.propid == PROP_LOCAL_VAR) {
-		/* in CEE case, we need to preserve the actual property name, but correct the root ID (bang vs. dot) */
+	} else if(pTpe->data.field.propid == PROP_LOCAL_VAR || pTpe->data.field.propid == PROP_GLOBAL_VAR) {
+		/* in these cases, we need to preserve the actual property name, but correct the root ID (bang vs. dot) */
 		if((pTpe->data.field.propName = es_newStrFromCStr((char*)cstrGetSzStrNoNULL(pStrProp)+1, cstrLen(pStrProp)-1)) == NULL) {
 			cstrDestruct(&pStrProp);
 			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
@@ -1112,7 +1123,8 @@ do_Parameter(uchar **pp, struct template *pTpl)
 
 	/* save field name - if none was given, use the property name instead */
 	if(pStrField == NULL) {
-		if(pTpe->data.field.propid == PROP_CEE ||pTpe->data.field.propid == PROP_LOCAL_VAR) {
+		if(pTpe->data.field.propid == PROP_CEE || pTpe->data.field.propid == PROP_LOCAL_VAR ||
+		   pTpe->data.field.propid == PROP_GLOBAL_VAR) {
 			/* in CEE case, we remove "$!"/"$." from the fieldname - it's just our indicator */
 			pTpe->fieldName = ustrdup(cstrGetSzStrNoNULL(pStrProp)+2);
 			pTpe->lenFieldName = cstrLen(pStrProp)-2;
@@ -1598,8 +1610,8 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 		/* in CEE case, we need to preserve the actual property name */
 		pTpe->data.field.propName = es_newStrFromCStr((char*)cstrGetSzStrNoNULL(name)+1,
 							      cstrLen(name)-1);
-	} else if(pTpe->data.field.propid == PROP_LOCAL_VAR) {
-		/* in this case, we need to preserve the actual property name, but correct the root ID (bang vs. dot) */
+	} else if(pTpe->data.field.propid == PROP_LOCAL_VAR  || pTpe->data.field.propid == PROP_GLOBAL_VAR) {
+		/* in these case, we need to preserve the actual property name, but correct the root ID (bang vs. dot) */
 		pTpe->data.field.propName = es_newStrFromCStr((char*)cstrGetSzStrNoNULL(name)+1, cstrLen(name)-1);
 		es_getBufAddr(pTpe->data.field.propName)[0] = '!'; /* patch root name */
 	}
@@ -2113,6 +2125,10 @@ void tplPrintList(rsconf_t *conf)
 				} else if(pTpe->data.field.propid == PROP_LOCAL_VAR) {
 					char *cstr = es_str2cstr(pTpe->data.field.propName, NULL);
 					dbgprintf("[Local Var: '%s'] ", cstr);
+					free(cstr);
+				} else if(pTpe->data.field.propid == PROP_GLOBAL_VAR) {
+					char *cstr = es_str2cstr(pTpe->data.field.propName, NULL);
+					dbgprintf("[Global Var: '%s'] ", cstr);
 					free(cstr);
 				}
 				switch(pTpe->data.field.eDateFormat) {
