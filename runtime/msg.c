@@ -69,6 +69,7 @@
 /* TODO: move the global variable root to the config object - had no time to to it
  * right now before vacation -- rgerhards, 2013-07-22
  */
+static pthread_rwlock_t glblVars_rwlock;
 struct json_object *global_var_root = NULL;
 
 /* static data */
@@ -2597,7 +2598,11 @@ getLocalVarPropVal(msg_t *pM, es_str_t *propName, uchar **pRes, rs_size_t *bufle
 rsRetVal
 getGlobalVarPropVal( es_str_t *propName, uchar **pRes, rs_size_t *buflen, unsigned short *pbMustBeFreed)
 {
-	return getJSONPropVal(global_var_root, propName, pRes, buflen, pbMustBeFreed);
+	DEFiRet;
+	pthread_rwlock_rdlock(&glblVars_rwlock);
+	iRet = getJSONPropVal(global_var_root, propName, pRes, buflen, pbMustBeFreed);
+	pthread_rwlock_unlock(&glblVars_rwlock);
+	RETiRet;
 }
 
 
@@ -2647,7 +2652,11 @@ msgGetLocalVarJSON(msg_t *pM, es_str_t *propName, struct json_object **pjson)
 rsRetVal
 msgGetGlobalVarJSON(es_str_t *propName, struct json_object **pjson)
 {
-	return msgGetJSONPropJSON(global_var_root, propName, pjson);
+	DEFiRet;
+	pthread_rwlock_rdlock(&glblVars_rwlock);
+	iRet = msgGetJSONPropJSON(global_var_root, propName, pjson);
+	pthread_rwlock_unlock(&glblVars_rwlock);
+	RETiRet;
 }
 
 /* Encode a JSON value and add it to provided string. Note that 
@@ -4189,8 +4198,11 @@ msgSetJSONFromVar(msg_t *pMsg, uchar *varname, struct var *v)
 		msgAddJSONObj(pMsg, varname+1, json, &pMsg->json);
 	else if(varname[1] == '.')
 		msgAddJSONObj(pMsg, varname+1, json, &pMsg->localvars);
-	else /* global - '/' */
+	else { /* global - '/' */
+		pthread_rwlock_wrlock(&glblVars_rwlock);
 		msgAddJSONObj(pMsg, varname+1, json, &global_var_root);
+		pthread_rwlock_unlock(&glblVars_rwlock);
+	 }
 finalize_it:
 	RETiRet;
 }
@@ -4203,6 +4215,8 @@ rsRetVal msgQueryInterface(void) { return RS_RET_NOT_IMPLEMENTED; }
  * rgerhards, 2008-01-04
  */
 BEGINObjClassInit(msg, 1, OBJ_IS_CORE_MODULE)
+	pthread_rwlock_init(&glblVars_rwlock, NULL);
+
 	/* request objects we use */
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
