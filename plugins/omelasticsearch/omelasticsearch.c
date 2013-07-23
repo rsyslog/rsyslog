@@ -224,6 +224,12 @@ checkConn(instanceData *pData)
 		DBGPRINTF("omelasticsearch: checkConn() curl_easy_init() failed\n");
 		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
+	/* Bodypart of request not needed, so set curl opt to nobody and httpget, otherwise lib-curl could sigsegv */
+	curl_easy_setopt(curl, CURLOPT_HTTPGET, TRUE);
+	curl_easy_setopt(curl, CURLOPT_NOBODY, TRUE); 
+	/* Only enable for debugging 
+	curl_easy_setopt(curl, CURLOPT_VERBOSE, TRUE); */
+
 	cstr = es_str2cstr(url, NULL);
 	curl_easy_setopt(curl, CURLOPT_URL, cstr);
 	free(cstr);
