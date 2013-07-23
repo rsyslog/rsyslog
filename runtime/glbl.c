@@ -621,7 +621,10 @@ glblProcessMainQCnf(struct cnfobj *o)
 void
 glblDestructMainqCnfObj()
 {
-	nvlstChkUnused(mainqCnfObj->nvlst);
+	/* Only destruct if not NULL! */
+	if (mainqCnfObj != NULL) {
+		nvlstChkUnused(mainqCnfObj->nvlst);
+	}
 	cnfobjDestruct(mainqCnfObj);
 	mainqCnfObj = NULL;
 }
