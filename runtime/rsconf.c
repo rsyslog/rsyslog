@@ -486,10 +486,10 @@ cnfGetVar(char *name, void *usrptr)
 		else if(name[1] == '!')
 			estr = msgGetCEEVarNew((msg_t*) usrptr, name+2);
 		else
-			estr = msgGetMsgVarNew((msg_t*) usrptr, (uchar*)name+1);
+			estr = msgGetMsgVarNew((msg_t*) usrptr, (uchar*)name);
 	} else { /* if this happens, we have a program logic error */
 		estr = es_newStrFromCStr("err: var must start with $",
-				  strlen("err: var must start with $"));
+				  sizeof("err: var must start with $")-1);
 	}
 	if(Debug) {
 		char *s;

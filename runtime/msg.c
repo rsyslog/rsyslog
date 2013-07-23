@@ -551,6 +551,7 @@ propNameStrToID(uchar *pName, propid_t *pPropID)
 	} else if(!strcmp((char*) pName, "$uptime")) {
 		*pPropID = PROP_SYS_UPTIME;
 	} else {
+		DBGPRINTF("PROP_INVALID for name '%s'\n", pName);
 		*pPropID = PROP_INVALID;
 		iRet = RS_RET_VAR_NOT_FOUND;
 	}
@@ -3774,13 +3775,16 @@ msgGetMsgVarNew(msg_t *pThis, uchar *name)
 	propid_t propid;
 	unsigned short bMustBeFreed = 0;
 	es_str_t *estr;
+	es_str_t *propName;
 
 	ISOBJ_TYPE_assert(pThis, msg);
 
 	/* always call MsgGetProp() without a template specifier */
 	/* TODO: optimize propNameToID() call -- rgerhards, 2009-06-26 */
 	propNameStrToID(name, &propid);
-	pszProp = (uchar*) MsgGetProp(pThis, NULL, propid, NULL, &propLen, &bMustBeFreed, NULL);
+	propName = es_newStrFromCStr((char*)name+1, ustrlen(name)-1); // TODO: optimize!
+	pszProp = (uchar*) MsgGetProp(pThis, NULL, propid, propName, &propLen, &bMustBeFreed, NULL);
+	es_deleteStr(propName);
 
 	estr = es_newStrFromCStr((char*)pszProp, propLen);
 	if(bMustBeFreed)
@@ -4183,7 +4187,7 @@ msgSetJSONFromVar(msg_t *pMsg, uchar *varname, struct var *v)
 	/* we always know strlen(varname) > 2 */
 	if(varname[1] == '!')
 		msgAddJSONObj(pMsg, varname+1, json, &pMsg->json);
-	if(varname[1] == '.')
+	else if(varname[1] == '.')
 		msgAddJSONObj(pMsg, varname+1, json, &pMsg->localvars);
 	else /* global - '/' */
 		msgAddJSONObj(pMsg, varname+1, json, &global_var_root);
