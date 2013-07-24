@@ -613,8 +613,11 @@ curlPost(instanceData *pData, uchar *message, int msglen, uchar **tpls)
 			break;
 	}
 
-	pData->reply[pData->replyLen] = '\0'; /* byte has been reserved in malloc */
-	DBGPRINTF("omelasticsearch: es reply: '%s'\n", pData->reply);
+	DBGPRINTF("omelasticsearch: pData replyLen = '%d'\n", pData->replyLen);
+	if (pData->replyLen > 0) {
+		pData->reply[pData->replyLen] = '\0'; /* Append 0 Byte if replyLen is above 0 - byte has been reserved in malloc */
+	}
+	DBGPRINTF("omelasticsearch: pData reply: '%s'\n", pData->reply);
 
 	CHKiRet(checkResult(pData, message));
 finalize_it:
