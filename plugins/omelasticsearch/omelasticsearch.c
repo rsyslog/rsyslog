@@ -651,12 +651,17 @@ ENDdoAction
 
 
 BEGINendTransaction
-	char *cstr;
+	char *cstr = NULL;
 CODESTARTendTransaction
 dbgprintf("omelasticsearch: endTransaction init\n");
-	cstr = es_str2cstr(pData->batch.data, NULL);
-	dbgprintf("omelasticsearch: endTransaction, batch: '%s'\n", cstr);
-	CHKiRet(curlPost(pData, (uchar*) cstr, strlen(cstr), NULL));
+	/* End Transaction only if batch data is not empty */
+	if (pData->batch.data != NULL ) {
+		cstr = es_str2cstr(pData->batch.data, NULL);
+		dbgprintf("omelasticsearch: endTransaction, batch: '%s'\n", cstr);
+		CHKiRet(curlPost(pData, (uchar*) cstr, strlen(cstr), NULL));
+	}
+	else
+		dbgprintf("omelasticsearch: endTransaction, pData->batch.data is NULL, nothing to send. \n");
 finalize_it:
 	free(cstr);
 dbgprintf("omelasticsearch: endTransaction done with %d\n", iRet);
