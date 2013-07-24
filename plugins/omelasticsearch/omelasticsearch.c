@@ -613,8 +613,11 @@ curlPost(instanceData *pData, uchar *message, int msglen, uchar **tpls)
 			break;
 	}
 
-	pData->reply[pData->replyLen] = '\0'; /* byte has been reserved in malloc */
-	DBGPRINTF("omelasticsearch: es reply: '%s'\n", pData->reply);
+	DBGPRINTF("omelasticsearch: pData replyLen = '%d'\n", pData->replyLen);
+	if (pData->replyLen > 0) {
+		pData->reply[pData->replyLen] = '\0'; /* Append 0 Byte if replyLen is above 0 - byte has been reserved in malloc */
+	}
+	DBGPRINTF("omelasticsearch: pData reply: '%s'\n", pData->reply);
 
 	CHKiRet(checkResult(pData, message));
 finalize_it:
@@ -648,12 +651,17 @@ ENDdoAction
 
 
 BEGINendTransaction
-	char *cstr;
+	char *cstr = NULL;
 CODESTARTendTransaction
 dbgprintf("omelasticsearch: endTransaction init\n");
-	cstr = es_str2cstr(pData->batch.data, NULL);
-	dbgprintf("omelasticsearch: endTransaction, batch: '%s'\n", cstr);
-	CHKiRet(curlPost(pData, (uchar*) cstr, strlen(cstr), NULL));
+	/* End Transaction only if batch data is not empty */
+	if (pData->batch.data != NULL ) {
+		cstr = es_str2cstr(pData->batch.data, NULL);
+		dbgprintf("omelasticsearch: endTransaction, batch: '%s'\n", cstr);
+		CHKiRet(curlPost(pData, (uchar*) cstr, strlen(cstr), NULL));
+	}
+	else
+		dbgprintf("omelasticsearch: endTransaction, pData->batch.data is NULL, nothing to send. \n");
 finalize_it:
 	free(cstr);
 dbgprintf("omelasticsearch: endTransaction done with %d\n", iRet);
