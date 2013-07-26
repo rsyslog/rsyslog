@@ -223,8 +223,6 @@ relpSessRcvData(relpSess_t *pThis)
 	lenBuf = RELP_RCV_BUF_SIZE;
 	CHKRet(relpTcpRcv(pThis->pTcp, rcvBuf, &lenBuf));
 
-	rcvBuf[lenBuf] = '\0';
-	pThis->pEngine->dbgprint("relp session read %d octets, buf '%s'\n", (int) lenBuf, rcvBuf);
 	if(lenBuf == 0) {
 		pThis->pEngine->dbgprint("server closed relp session %p, session broken\n", pThis);
 		/* even though we had a "normal" close, it is unexpected at this
@@ -240,6 +238,10 @@ relpSessRcvData(relpSess_t *pThis)
 			ABORT_FINALIZE(RELP_RET_SESSION_BROKEN);
 		}
 	} else {
+		/* Terminate buffer and output received data to debug*/
+		rcvBuf[lenBuf] = '\0';
+		pThis->pEngine->dbgprint("relp session read %d octets, buf '%s'\n", (int) lenBuf, rcvBuf);
+
 		/* we have regular data, which we now can process */
 		for(i = 0 ; i < lenBuf ; ++i) {
 			CHKRet(relpFrameProcessOctetRcvd(&pThis->pCurrRcvFrame, rcvBuf[i], pThis));
