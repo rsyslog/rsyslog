@@ -74,7 +74,7 @@ dumpFile(char *name)
 	if(fp != stdin)
 		fclose(fp);
 	return;
-err:	fprintf(stderr, "error %d processing file %s\n", r, name);
+err:	fprintf(stderr, "error %d (%s) processing file %s\n", r, RSGTE2String(r), name);
 }
 
 static void
@@ -113,7 +113,7 @@ showSigblkParams(char *name)
 	return;
 err:
 	if(r != RSGTE_EOF)
-		fprintf(stderr, "error %d processing file %s\n", r, name);
+		fprintf(stderr, "error %d (%s) processing file %s\n", r, RSGTE2String(r), name);
 }
 
 static void
@@ -145,7 +145,7 @@ detectFileType(char *name)
 	if(fp != stdin)
 		fclose(fp);
 	return;
-err:	fprintf(stderr, "error %d processing file %s\n", r, name);
+err:	fprintf(stderr, "error %d (%s) processing file %s\n", r, RSGTE2String(r), name);
 }
 
 static inline int
@@ -327,7 +327,7 @@ done:
 	return;
 
 err:
-	fprintf(stderr, "error %d processing file %s\n", r, name);
+	fprintf(stderr, "error %d (%s) processing file %s\n", r, RSGTE2String(r), name);
 	if(logfp != NULL)
 		fclose(logfp);
 	if(sigfp != NULL)
