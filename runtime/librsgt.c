@@ -75,7 +75,7 @@ reportGTAPIErr(gtctx ctx, gtfile gf, char *apiname, int ecode)
 	char errbuf[4096];
 	snprintf(errbuf, sizeof(errbuf), "%s[%s:%d]: %s",
 		 (gf == NULL) ? (uchar*)"" : gf->sigfilename,
-		 apiname, ecode, GT_getErrorString(ecode));
+		 apiname, ecode, GTHTTP_getErrorString(ecode));
 	errbuf[sizeof(errbuf)-1] = '\0';
 	reportErr(ctx, errbuf);
 }
