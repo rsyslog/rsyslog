@@ -176,7 +176,7 @@ WriteRcpts(instanceData *pData, uchar *pszOp, size_t lenOp, int iStatusToCheck)
 	for(pRcpt = pData->md.smtp.lstRcpt ; pRcpt != NULL ; pRcpt = pRcpt->pNext) {
 		dbgprintf("Sending '%s: <%s>'\n", pszOp, pRcpt->pszTo); 
 		CHKiRet(Send(pData->md.smtp.sock, (char*)pszOp, lenOp));
-		CHKiRet(Send(pData->md.smtp.sock, ": <", sizeof(": <") - 1));
+		CHKiRet(Send(pData->md.smtp.sock, ":<", sizeof(":<") - 1));
 		CHKiRet(Send(pData->md.smtp.sock, (char*)pRcpt->pszTo, strlen((char*)pRcpt->pszTo)));
 		CHKiRet(Send(pData->md.smtp.sock, ">\r\n", sizeof(">\r\n") - 1));
 		if(iStatusToCheck >= 0)
@@ -522,7 +522,7 @@ sendSMTP(instanceData *pData, uchar *body, uchar *subject)
 	CHKiRet(Send(pData->md.smtp.sock, "\r\n", sizeof("\r\n") - 1));
 	CHKiRet(readResponse(pData, &iState, 250));
 
-	CHKiRet(Send(pData->md.smtp.sock, "MAIL FROM: <", sizeof("MAIL FROM: <") - 1));
+	CHKiRet(Send(pData->md.smtp.sock, "MAIL FROM:<", sizeof("MAIL FROM:<") - 1));
 	CHKiRet(Send(pData->md.smtp.sock, (char*)pData->md.smtp.pszFrom, strlen((char*)pData->md.smtp.pszFrom)));
 	CHKiRet(Send(pData->md.smtp.sock, ">\r\n", sizeof(">\r\n") - 1));
 	CHKiRet(readResponse(pData, &iState, 250));
