@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 7.4.4  [v7.4-stable] 2013-0?-??
+- bugfix: imtcp addtlframedelimiter could not be set to zero
+  Thanks to Chris Norton for alerting us.
 - doc bugfix: remove no-longer existing omtemplate from developer doc
   was specifically mentioned as a sample for creating new plugins
   Thanks to Yannick Brosseau for alerting us of this problem.

@@ -854,7 +854,7 @@ nvlstGetParam(struct nvlst *valnode, struct cnfparamdescr *param,
 		r = doGetInt(valnode, param, val);
 		break;
 	case eCmdHdlrNonNegInt:
-		r = doGetPositiveInt(valnode, param, val);
+		r = doGetNonNegInt(valnode, param, val);
 		break;
 	case eCmdHdlrPositiveInt:
 		r = doGetPositiveInt(valnode, param, val);

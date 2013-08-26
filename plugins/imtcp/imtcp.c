@@ -138,7 +138,7 @@ static struct cnfparamdescr modpdescr[] = {
 	{ "disablelfdelimiter", eCmdHdlrBinary, 0 },
 	{ "octetcountedframing", eCmdHdlrBinary, 0 },
 	{ "notifyonconnectionclose", eCmdHdlrBinary, 0 },
-	{ "addtlframedelimiter", eCmdHdlrPositiveInt, 0 },
+	{ "addtlframedelimiter", eCmdHdlrNonNegInt, 0 },
 	{ "maxsessions", eCmdHdlrPositiveInt, 0 },
 	{ "maxlistners", eCmdHdlrPositiveInt, 0 },
 	{ "maxlisteners", eCmdHdlrPositiveInt, 0 },
