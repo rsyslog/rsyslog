@@ -72,6 +72,12 @@ Version 7.5.0 [devel] 2013-06-11
   connections
   Thanks to Axel Rau for the patch.
 ---------------------------------------------------------------------------
+Version 7.4.4  [v7.4-stable] 2013-0?-??
+- doc bugfix: remove no-longer existing omtemplate from developer doc
+  was specifically mentioned as a sample for creating new plugins
+  Thanks to Yannick Brosseau for alerting us of this problem.
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=473
+---------------------------------------------------------------------------
 Version 7.4.3  [v7.4-stable] 2013-07-18
 - bugfix: queue file size was not correctly processed
   this could lead to using one queue file per message for sizes >2GiB
