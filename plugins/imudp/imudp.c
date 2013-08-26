@@ -504,10 +504,9 @@ processSocket(thrdInfo_t *pThrd, struct lstn_s *lstn, struct sockaddr_storage *f
 	multi_submit_t multiSub;
 	msg_t *pMsgs[CONF_NUM_MULTISUB];
 	char errStr[1024];
-	DEFiRet;
-	char errStr[1024];
 	struct msghdr mh;
 	struct iovec iov[1];
+	DEFiRet;
 
 	assert(pThrd != NULL);
 	multiSub.ppMsgs = pMsgs;
