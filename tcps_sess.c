@@ -253,6 +253,8 @@ defaultDoSubmitMessage(tcps_sess_t *pThis, struct syslogTime *stTime, time_t ttG
 	CHKiRet(msgConstructWithTime(&pMsg, stTime, ttGenTime));
 	MsgSetRawMsg(pMsg, (char*)pThis->pMsg, pThis->iMsg);
 	MsgSetInputName(pMsg, pThis->pLstnInfo->pInputName);
+	if(pThis->pLstnInfo->dfltTZ != NULL)
+		MsgSetDfltTZ(pMsg, (char*) pThis->pLstnInfo->dfltTZ);
 	MsgSetFlowControlType(pMsg, pThis->pSrv->bUseFlowControl
 			            ? eFLOWCTL_LIGHT_DELAY : eFLOWCTL_NO_DELAY);
 	pMsg->msgFlags  = NEEDS_PARSING | PARSE_HOSTNAME;

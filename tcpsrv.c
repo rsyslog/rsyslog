@@ -134,6 +134,7 @@ addNewLstnPort(tcpsrv_t *pThis, uchar *pszPort, int bSuppOctetFram)
 	/* create entry */
 	CHKmalloc(pEntry = MALLOC(sizeof(tcpLstnPortList_t)));
 	CHKmalloc(pEntry->pszPort = ustrdup(pszPort));
+	strcpy((char*)pEntry->dfltTZ, (char*)pThis->dfltTZ);
 	pEntry->pSrv = pThis;
 	pEntry->pRuleset = pThis->pRuleset;
 	pEntry->bSuppOctetFram = bSuppOctetFram;
@@ -916,6 +917,7 @@ BEGINobjConstruct(tcpsrv) /* be sure to specify the object type also in END macr
 	pThis->addtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
 	pThis->bDisableLFDelim = 0;
 	pThis->OnMsgReceive = NULL;
+	pThis->dfltTZ[0] = '\0';
 	pThis->ratelimitInterval = 0;
 	pThis->ratelimitBurst = 10000;
 	pThis->bUseFlowControl = 1;
@@ -1107,6 +1109,15 @@ SetAddtlFrameDelim(tcpsrv_t *pThis, int iDelim)
 }
 
 
+static rsRetVal
+SetDfltTZ(tcpsrv_t *pThis, uchar *tz)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, tcpsrv);
+	strcpy((char*)pThis->dfltTZ, (char*)tz);
+	RETiRet;
+}
+
 /* Set the input name to use -- rgerhards, 2008-12-10 */
 static rsRetVal
 SetInputName(tcpsrv_t *pThis, uchar *name)
@@ -1266,6 +1277,7 @@ CODESTARTobjQueryInterface(tcpsrv)
 	pIf->SetKeepAlive = SetKeepAlive;
 	pIf->SetUsrP = SetUsrP;
 	pIf->SetInputName = SetInputName;
+	pIf->SetDfltTZ = SetDfltTZ;
 	pIf->SetAddtlFrameDelim = SetAddtlFrameDelim;
 	pIf->SetbDisableLFDelim = SetbDisableLFDelim;
 	pIf->SetSessMax = SetSessMax;

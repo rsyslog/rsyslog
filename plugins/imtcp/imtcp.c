@@ -4,7 +4,7 @@
  * File begun on 2007-12-21 by RGerhards (extracted from syslogd.c,
  * which at the time of the rsyslog fork was BSD-licensed)
  *
- * Copyright 2007-2012 Adiscon GmbH.
+ * Copyright 2007-2013 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -105,6 +105,7 @@ struct instanceConf_s {
 	uchar *pszBindRuleset;		/* name of ruleset to bind to */
 	ruleset_t *pBindRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
 	uchar *pszInputName;		/* value for inputname property, NULL is OK and handled by core engine */
+	uchar *dfltTZ;
 	int ratelimitInterval;
 	int ratelimitBurst;
 	int bSuppOctetFram;
@@ -157,6 +158,7 @@ static struct cnfparamblk modpblk =
 static struct cnfparamdescr inppdescr[] = {
 	{ "port", eCmdHdlrString, CNFPARAM_REQUIRED }, /* legacy: InputTCPServerRun */
 	{ "name", eCmdHdlrString, 0 },
+	{ "defaulttz", eCmdHdlrString, 0 },
 	{ "ruleset", eCmdHdlrString, 0 },
 	{ "supportOctetCountedFraming", eCmdHdlrBinary, 0 },
 	{ "ratelimit.interval", eCmdHdlrInt, 0 },
@@ -255,6 +257,7 @@ createInstance(instanceConf_t **pinst)
 	inst->next = NULL;
 	inst->pszBindRuleset = NULL;
 	inst->pszInputName = NULL;
+	inst->dfltTZ = NULL;
 	inst->bSuppOctetFram = 1;
 	inst->ratelimitInterval = 0;
 	inst->ratelimitBurst = 10000;
@@ -341,6 +344,7 @@ addListner(modConfData_t *modConf, instanceConf_t *inst)
 	CHKiRet(tcpsrv.SetRuleset(pOurTcpsrv, inst->pBindRuleset));
 	CHKiRet(tcpsrv.SetInputName(pOurTcpsrv, inst->pszInputName == NULL ?
 						UCHAR_CONSTANT("imtcp") : inst->pszInputName));
+	CHKiRet(tcpsrv.SetDfltTZ(pOurTcpsrv, (inst->dfltTZ == NULL) ? (uchar*)"" : inst->dfltTZ));
 	CHKiRet(tcpsrv.SetLinuxLikeRatelimiters(pOurTcpsrv, inst->ratelimitInterval, inst->ratelimitBurst));
 	tcpsrv.configureTCPListen(pOurTcpsrv, inst->pszBindPort, inst->bSuppOctetFram);
 
@@ -380,6 +384,8 @@ CODESTARTnewInpInst
 			inst->pszBindPort = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "name")) {
 			inst->pszInputName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(inppblk.descr[i].name, "defaulttz")) {
+			inst->dfltTZ = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "ruleset")) {
 			inst->pszBindRuleset = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "supportOctetCountedFraming")) {
@@ -571,6 +577,7 @@ CODESTARTfreeCnf
 	for(inst = pModConf->root ; inst != NULL ; ) {
 		free(inst->pszBindPort);
 		free(inst->pszInputName);
+		free(inst->dfltTZ);
 		del = inst;
 		inst = inst->next;
 		free(del);
