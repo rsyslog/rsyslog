@@ -75,6 +75,9 @@ Version 7.5.0 [devel] 2013-06-11
 Version 7.4.4  [v7.4-stable] 2013-0?-??
 - better error messages in GuardTime signature provider
   Thanks to Ahto Truu for providing the patch.
+- bugfix: imfile parameter "persistStateInterval" was unusable
+  due to a case typo in imfile; work-around was to use legacy config
+  Thanks to Brandon Murphy for reporting this bug.
 - bugfix: TLV16 flag encoding error in signature files from GT provider
   This fixes a problem where the TLV16 flag was improperly encoded.
   Unfortunately, existing files already have the bug and may not properly
