@@ -75,7 +75,7 @@ reportGTAPIErr(gtctx ctx, gtfile gf, char *apiname, int ecode)
 	char errbuf[4096];
 	snprintf(errbuf, sizeof(errbuf), "%s[%s:%d]: %s",
 		 (gf == NULL) ? (uchar*)"" : gf->sigfilename,
-		 apiname, ecode, GT_getErrorString(ecode));
+		 apiname, ecode, GTHTTP_getErrorString(ecode));
 	errbuf[sizeof(errbuf)-1] = '\0';
 	reportErr(ctx, errbuf);
 }
@@ -285,7 +285,9 @@ int
 tlv8Write(gtfile gf, int flags, int tlvtype, int len)
 {
 	int r;
-	r = tlvbufAddOctet(gf, (flags << 5)|tlvtype);
+	assert((flags & RSGT_TYPE_MASK) == 0);
+	assert((tlvtype & RSGT_TYPE_MASK) == tlvtype);
+	r = tlvbufAddOctet(gf, (flags & ~RSGT_FLAG_TLV16) | tlvtype);
 	if(r != 0) goto done;
 	r = tlvbufAddOctet(gf, len & 0xff);
 done:	return r;
@@ -296,7 +298,9 @@ tlv16Write(gtfile gf, int flags, int tlvtype, uint16_t len)
 {
 	uint16_t typ;
 	int r;
-	typ = ((flags|1) << 15)|tlvtype;
+	assert((flags & RSGT_TYPE_MASK) == 0);
+	assert((tlvtype >> 8 & RSGT_TYPE_MASK) == (tlvtype >> 8));
+	typ = ((flags | RSGT_FLAG_TLV16) << 8) | tlvtype;
 	r = tlvbufAddOctet(gf, typ >> 8);
 	if(r != 0) goto done;
 	r = tlvbufAddOctet(gf, typ & 0xff);

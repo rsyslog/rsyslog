@@ -151,7 +151,10 @@ struct rsgtstatefile {
 };
 
 /* Flags and record types for TLV handling */
+#define RSGT_FLAG_NONCRIT 0x80
+#define RSGT_FLAG_FORWARD 0x40
 #define RSGT_FLAG_TLV16 0x20
+#define RSGT_TYPE_MASK 0x1f
 
 /* error states */
 #define RSGTE_IO 1 	/* any kind of io error */

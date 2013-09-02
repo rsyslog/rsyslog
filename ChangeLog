@@ -73,6 +73,14 @@ Version 7.5.0 [devel] 2013-06-11
   Thanks to Axel Rau for the patch.
 ---------------------------------------------------------------------------
 Version 7.4.4  [v7.4-stable] 2013-0?-??
+- better error messages in GuardTime signature provider
+  Thanks to Ahto Truu for providing the patch.
+- bugfix: TLV16 flag encoding error in signature files from GT provider
+  This fixes a problem where the TLV16 flag was improperly encoded.
+  Unfortunately, existing files already have the bug and may not properly
+  be processed. The fix uses constants from the GuardTime API lib to
+  prevent such problems in the future.
+  Thanks to Ahto Truu for providing the patch.
 - bugfix: imtcp addtlframedelimiter could not be set to zero
   Thanks to Chris Norton for alerting us.
 - doc bugfix: remove no-longer existing omtemplate from developer doc
