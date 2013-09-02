@@ -478,7 +478,7 @@ CODESTARTnewInpInst
 			inst->readMode = pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "maxlinesatonce")) {
 			inst->maxLinesAtOnce = pvals[i].val.d.n;
-		} else if(!strcmp(inppblk.descr[i].name, "persistStateInterval")) {
+		} else if(!strcmp(inppblk.descr[i].name, "persiststateinterval")) {
 			inst->iPersistStateInterval = pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "maxsubmitatonce")) {
 			inst->nMultiSub = pvals[i].val.d.n;
