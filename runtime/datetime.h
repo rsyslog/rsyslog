@@ -62,5 +62,6 @@ ENDinterface(datetime)
 
 /* prototypes */
 PROTOTYPEObj(datetime);
+void applyDfltTZ(struct syslogTime *pTime, char *tz);
 
 #endif /* #ifndef INCLUDED_DATETIME_H */

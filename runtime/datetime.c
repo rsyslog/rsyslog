@@ -626,6 +626,15 @@ finalize_it:
 	RETiRet;
 }
 
+void
+applyDfltTZ(struct syslogTime *pTime, char *tz)
+{
+	pTime->OffsetMode = tz[0];
+	pTime->OffsetHour = (tz[1] - '0') * 10 + (tz[2] - '0');
+	pTime->OffsetMinute = (tz[4] - '0') * 10 + (tz[5] - '0');
+
+}
+
 /*******************************************************************
  * END CODE-LIBLOGGING                                             *
  *******************************************************************/

@@ -725,6 +725,7 @@ static inline rsRetVal msgBaseConstruct(msg_t **ppThis)
 	pM->pRuleset = NULL;
 	pM->json = NULL;
 	pM->localvars = NULL;
+	pM->dfltTZ[0] = '\0';
 	memset(&pM->tRcvdAt, 0, sizeof(pM->tRcvdAt));
 	memset(&pM->tTIMESTAMP, 0, sizeof(pM->tTIMESTAMP));
 	pM->TAG.pszTAG = NULL;
@@ -2246,6 +2247,15 @@ void MsgSetInputName(msg_t *pThis, prop_t *inputName)
 	if(pThis->pInputName != NULL)
 		prop.Destruct(&pThis->pInputName);
 	pThis->pInputName = inputName;
+}
+
+/* Set default TZ. Note that at most 7 chars are set, as we would
+ * otherwise overrun our buffer! 
+ */
+void MsgSetDfltTZ(msg_t *pThis, char *tz)
+{
+	strncpy(pThis->dfltTZ, tz, 7);
+	pThis->dfltTZ[7] = '\0'; /* ensure 0-Term in case of overflow! */
 }
 
 

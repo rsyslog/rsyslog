@@ -14,7 +14,7 @@
 <p><b>Multi-Ruleset Support: </b>since 4.5.0 and 5.1.1
 <p><b>Description</b>:</p>
 <p>Provides the ability to receive syslog messages via TCP.
-Encryption is natively provided by selecting the approprioate network stream driver and
+Encryption is natively provided by selecting the appropriate network stream driver and
 can also be provided by using <a href="rsyslog_stunnel.html">stunnel</a>
 (an alternative is the use the <a href="imgssapi.html">imgssapi</a> module).</p>
 
@@ -80,7 +80,7 @@ AuthMode and&nbsp; <a href="netstream.html">network stream driver</a>. Permitted
 <br>Single peer: PermittedPeer="127.0.0.1"
 <br>Array of peers: PermittedPeer=["test1.example.net","10.1.2.3","test2.example.net","..."]</li>
 </ul>
-<p><b>Action Directives</b>:</p>
+<p><b>Input Parameters</b>:</p>
 <ul>
 <li><b>Port</b> &lt;port&gt;<br>
 Starts a TCP server on selected port</li>
@@ -96,6 +96,17 @@ activated. This is the default and should be left unchanged until you know
 very well what you do. It may be useful to turn it off, if you know this framing
 is not used and some senders emit multi-line messages into the message stream.
 </li>
+<li><b>defaultTZ</b> &lt;timezone-info&gt;<br>
+This is an <b>experimental</b> parameter; details may change at any time and it may
+also be discoutinued without any early warning.<br>
+Permits to set a default timezone for this listener. This is useful when working with
+legacy syslog (RFC3164 et al) residing in different timezones. If set it will be used as
+timezone for all messages <b>that do not contain timezone info</b>.
+Currently, the format <b>must</b> be "+/-hh:mm", e.g. "-05:00", "+01:30". Other formats,
+including TZ names (like EST) are NOT yet supported. Note that consequently no daylight
+saving settings are evaluated when working with timezones. If an invalid format is used,
+"interesting" things can happen, among them malformed timestamps and rsyslogd segfaults.
+This will obviously be changed at the time this feature becomes non-experimental.</li>
 <li><b>RateLimit.Interval</b> [number] - (available since 7.3.1) specifies the rate-limiting
 interval in seconds.  Default value is 0, which turns off rate limiting. Set it to a number
 of seconds (5 recommended) to activate rate-limiting.

@@ -126,7 +126,8 @@ struct msg {
 	char pszRcvdAt_SecFrac[7];	     /* same as above. Both are fractional seconds for their respective timestamp */
 	char pszTIMESTAMP_Unix[12]; /* almost as small as a pointer! */
 	char pszRcvdAt_Unix[12];
-    uchar *pszUUID; /* The message's UUID */
+	char dfltTZ[8];	    /* 7 chars max, less overhead than ptr! */
+	uchar *pszUUID; /* The message's UUID */
 };
 
 
@@ -156,6 +157,7 @@ msg_t* MsgDup(msg_t* pOld);
 msg_t *MsgAddRef(msg_t *pM);
 void setProtocolVersion(msg_t *pM, int iNewVersion);
 void MsgSetInputName(msg_t *pMsg, prop_t*);
+void MsgSetDfltTZ(msg_t *pThis, char *tz);
 rsRetVal MsgSetAPPNAME(msg_t *pMsg, char* pszAPPNAME);
 rsRetVal MsgSetPROCID(msg_t *pMsg, char* pszPROCID);
 rsRetVal MsgSetMSGID(msg_t *pMsg, char* pszMSGID);
