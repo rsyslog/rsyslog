@@ -430,7 +430,7 @@ CODESTARTnewActInst
 	}
 
 	CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*)strdup((pData->tplName == NULL) ? 
-						"RSYSLOG_ForwardFormat" : (char*)pData->tplName),
+						"RSYSLOG_FileFormat" : (char*)pData->tplName),
 						OMSR_NO_RQD_TPL_OPTS));
 
 CODE_STD_FINALIZERnewActInst
