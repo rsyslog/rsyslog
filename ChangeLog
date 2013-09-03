@@ -17,6 +17,10 @@ Version 7.4.4  [v7.4-stable] 2013-0?-??
 - bugfix: segfault in omprog if no template was provided (now dflt is used)
 - bugfix: segfault in ompipe if no template was provided (now dflt is used)
 - bugfix: segfault in omsnmp if no template was provided (now dflt is used)
+- bugfix: some omsnmp optional config params were flagged as mandatory
+- bugfix: segfault in omelasticsearch when resuming queued messages
+  after restarting Elasticsearch
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=464
 - bugfix: imtcp addtlframedelimiter could not be set to zero
   Thanks to Chris Norton for alerting us.
 - doc bugfix: remove no-longer existing omtemplate from developer doc
