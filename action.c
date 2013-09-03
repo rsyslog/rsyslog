@@ -98,7 +98,7 @@
 #include <strings.h>
 #include <time.h>
 #include <errno.h>
-#include <json/json.h>
+#include <json.h>
 
 #include "dirty.h"
 #include "template.h"

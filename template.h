@@ -30,7 +30,7 @@
 #ifndef	TEMPLATE_H_INCLUDED
 #define	TEMPLATE_H_INCLUDED 1
 
-#include <json/json.h>
+#include <json.h>
 #include <libestr.h>
 #include "regexp.h"
 #include "stringbuf.h"

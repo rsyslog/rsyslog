@@ -30,7 +30,7 @@
 
 #include <pthread.h>
 #include <libestr.h>
-#include <json/json.h>
+#include <json.h>
 #include "obj.h"
 #include "syslogd-types.h"
 #include "template.h"

@@ -43,7 +43,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <ctype.h>
-#include <json/json.h>
+#include <json.h>
 #include "conf.h"
 #include "syslogd-types.h"
 #include "template.h"
