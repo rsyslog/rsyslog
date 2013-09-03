@@ -2,6 +2,8 @@
 Version 7.4.4  [v7.4-stable] 2013-0?-??
 - better error messages in GuardTime signature provider
   Thanks to Ahto Truu for providing the patch.
+- make rsyslog use the new json-c pkgconfig file if available
+  Thanks to the Gentoo team for the patches.
 - bugfix: imfile parameter "persistStateInterval" was unusable
   due to a case typo in imfile; work-around was to use legacy config
   Thanks to Brandon Murphy for reporting this bug.
