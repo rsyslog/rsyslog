@@ -33,7 +33,7 @@
 #include <stdint.h>
 #include <time.h>
 #include <mongo.h>
-#include <json/json.h>
+#include <json.h>
 /* For struct json_object_iter, should not be necessary in future versions */
 #include <json/json_object_private.h>
 

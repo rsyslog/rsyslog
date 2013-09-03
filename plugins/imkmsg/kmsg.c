@@ -34,7 +34,7 @@
 #include <ctype.h>
 #include <sys/klog.h>
 #include <sys/sysinfo.h>
-#include <json/json.h>
+#include <json.h>
 
 #include "rsyslog.h"
 #include "srUtils.h"

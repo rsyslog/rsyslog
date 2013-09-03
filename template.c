@@ -34,7 +34,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <assert.h>
-#include <json/json.h>
+#include <json.h>
 #include "stringbuf.h"
 #include "syslogd-types.h"
 #include "template.h"
