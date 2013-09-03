@@ -16,6 +16,7 @@ Version 7.5.3 [devel] 2013-07-??
   only happens immediately before termination (when the OS automatically
   frees all memory). Still an annoyance e.g. in valgrind.
 - fix compile problem in debug build
+- imported fixes from 7.4.4
 ---------------------------------------------------------------------------
 Version 7.5.2 [devel] 2013-07-04
 - librelp 1.1.4 is now required
