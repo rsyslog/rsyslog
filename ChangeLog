@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 7.4.4  [v7.4-stable] 2013-0?-??
+Version 7.4.4  [v7.4-stable] 2013-09-03
 - better error messages in GuardTime signature provider
   Thanks to Ahto Truu for providing the patch.
 - make rsyslog use the new json-c pkgconfig file if available
