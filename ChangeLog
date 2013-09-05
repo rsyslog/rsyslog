@@ -73,7 +73,11 @@ Version 7.5.0 [devel] 2013-06-11
   connections
   Thanks to Axel Rau for the patch.
 ---------------------------------------------------------------------------
-Version 7.4.4  [v7.4-stable] 2013-0?-??
+Version 7.4.5  [v7.4-stable] 2013-09-??
+- bugfix: some more build problems with newer json-c versions
+  Thanks to Michael Biebl for mentioning the problem.
+---------------------------------------------------------------------------
+Version 7.4.4  [v7.4-stable] 2013-09-03
 - better error messages in GuardTime signature provider
   Thanks to Ahto Truu for providing the patch.
 - make rsyslog use the new json-c pkgconfig file if available
