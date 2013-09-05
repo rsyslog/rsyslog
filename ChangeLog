@@ -6,6 +6,7 @@ Version 7.5.3 [devel] 2013-07-??
 - add main_queue() configuration object to configure main message queue
 - bugfix: stream compression in imptcp caused timestamp to be corrupted
 - imudp: add ability to specify SO_RCVBUF size (rcvbufSize parameter)
+- imudp: use inputname for statistics, if configured
 - impstats: add process resource usage counters [via getrusage()]
 - librelp 1.2.0 is now required
 - make use of new librelp generic error reporting facility

@@ -273,14 +273,14 @@ addListner(instanceConf_t *inst)
 			newlcnfinfo->next = NULL;
 			newlcnfinfo->sock = newSocks[iSrc];
 			newlcnfinfo->pRuleset = inst->pBindRuleset;
-			snprintf((char*)dispname, sizeof(dispname), "imudp(%s:%s)", bindName, port);
-			dispname[sizeof(dispname)-1] = '\0'; /* just to be on the save side... */
-			CHKiRet(ratelimitNew(&newlcnfinfo->ratelimiter, (char*)dispname, NULL));
 			if(inst->inputname == NULL) {
 				inputname = (uchar*)"imudp";
 			} else {
 				inputname = inst->inputname;
 			}
+			snprintf((char*)dispname, sizeof(dispname), "%s(%s:%s)", inputname, bindName, port);
+			dispname[sizeof(dispname)-1] = '\0'; /* just to be on the save side... */
+			CHKiRet(ratelimitNew(&newlcnfinfo->ratelimiter, (char*)dispname, NULL));
 			if(inst->bAppendPortToInpname) {
 				snprintf((char*)inpnameBuf, sizeof(inpnameBuf), "%s%s",
 					inputname, port);
