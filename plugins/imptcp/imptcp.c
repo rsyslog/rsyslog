@@ -935,7 +935,7 @@ addLstn(ptcpsrv_t *pSrv, int sock, int isIPv6)
 	CHKiRet(statsobj.SetName(pLstn->stats, statname));
 	STATSCOUNTER_INIT(pLstn->ctrSubmit, pLstn->mutCtrSubmit);
 	CHKiRet(statsobj.AddCounter(pLstn->stats, UCHAR_CONSTANT("submitted"),
-		ctrType_IntCtr, &(pLstn->ctrSubmit)));
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pLstn->ctrSubmit)));
 	CHKiRet(statsobj.ConstructFinalize(pLstn->stats));
 
 	/* add to start of server's listener list */

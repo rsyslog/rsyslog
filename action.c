@@ -382,11 +382,11 @@ actionConstructFinalize(action_t *pThis, struct cnfparamvals *queueParams)
 
 	STATSCOUNTER_INIT(pThis->ctrProcessed, pThis->mutCtrProcessed);
 	CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("processed"),
-		ctrType_IntCtr, &pThis->ctrProcessed));
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &pThis->ctrProcessed));
 
 	STATSCOUNTER_INIT(pThis->ctrFail, pThis->mutCtrFail);
 	CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("failed"),
-		ctrType_IntCtr, &pThis->ctrFail));
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &pThis->ctrFail));
 
 	CHKiRet(statsobj.ConstructFinalize(pThis->statsobj));
 

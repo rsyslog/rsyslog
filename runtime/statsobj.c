@@ -142,7 +142,7 @@ finalize_it:
  * is called.
  */
 static rsRetVal
-addCounter(statsobj_t *pThis, uchar *ctrName, statsCtrType_t ctrType, void *pCtr)
+addCounter(statsobj_t *pThis, uchar *ctrName, statsCtrType_t ctrType, int8_t flags, void *pCtr)
 {
 	ctr_t *ctr;
 	DEFiRet;
@@ -151,6 +151,7 @@ addCounter(statsobj_t *pThis, uchar *ctrName, statsCtrType_t ctrType, void *pCtr
 	ctr->next = NULL;
 	ctr->prev = NULL;
 	CHKmalloc(ctr->name = ustrdup(ctrName));
+	ctr->flags = flags;
 	ctr->ctrType = ctrType;
 	switch(ctrType) {
 	case ctrType_IntCtr:
@@ -241,9 +242,11 @@ getStatsLine(statsobj_t *pThis, cstr_t **ppcstr)
 		switch(pCtr->ctrType) {
 		case ctrType_IntCtr:
 			rsCStrAppendInt(pcstr, *(pCtr->val.pIntCtr)); // TODO: OK?????
+			*(pCtr->val.pIntCtr) = 0;
 			break;
 		case ctrType_Int:
 			rsCStrAppendInt(pcstr, *(pCtr->val.pInt));
+			*(pCtr->val.pInt) = 0;
 			break;
 		}
 		cstrAppendChar(pcstr, ' ');

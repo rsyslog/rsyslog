@@ -50,6 +50,9 @@ typedef enum statsFmtType_e {
 	statsFmt_CEE
 } statsFmtType_t;
 
+/* counter flags */
+#define CTR_FLAG_NONE 0
+#define CTR_FLAG_RESETTABLE 1
 
 /* helper entity, the counter */
 typedef struct ctr_s {
@@ -59,6 +62,7 @@ typedef struct ctr_s {
 		intctr_t *pIntCtr;
 		int *pInt;
 	} val;
+	int8_t flags;
 	struct ctr_s *next, *prev;
 } ctr_t;
 
@@ -84,13 +88,14 @@ BEGINinterface(statsobj) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetName)(statsobj_t *pThis, uchar *name);
 	rsRetVal (*GetStatsLine)(statsobj_t *pThis, cstr_t **ppcstr);
 	rsRetVal (*GetAllStatsLines)(rsRetVal(*cb)(void*, cstr_t*), void *usrptr, statsFmtType_t fmt);
-	rsRetVal (*AddCounter)(statsobj_t *pThis, uchar *ctrName, statsCtrType_t ctrType, void *pCtr);
+	rsRetVal (*AddCounter)(statsobj_t *pThis, uchar *ctrName, statsCtrType_t ctrType, int8_t flags, void *pCtr);
 	rsRetVal (*EnableStats)(void);
 ENDinterface(statsobj)
-#define statsobjCURR_IF_VERSION 10 /* increment whenever you change the interface structure! */
+#define statsobjCURR_IF_VERSION 11 /* increment whenever you change the interface structure! */
 /* Changes
  * v2-v9 rserved for future use in "older" version branches
  * v10, 2012-04-01: GetAllStatsLines got fmt parameter
+ * v11, 2013-09-07: add "flags" to AddCounter API
  */
 
 
