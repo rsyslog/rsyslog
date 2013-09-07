@@ -298,7 +298,7 @@ addListner(instanceConf_t *inst)
 			CHKiRet(statsobj.SetName(newlcnfinfo->stats, dispname));
 			STATSCOUNTER_INIT(newlcnfinfo->ctrSubmit, newlcnfinfo->mutCtrSubmit);
 			CHKiRet(statsobj.AddCounter(newlcnfinfo->stats, UCHAR_CONSTANT("submitted"),
-				ctrType_IntCtr, &(newlcnfinfo->ctrSubmit)));
+				ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(newlcnfinfo->ctrSubmit)));
 			CHKiRet(statsobj.ConstructFinalize(newlcnfinfo->stats));
 			/* link to list. Order must be preserved to take care for 
 			 * conflicting matches.

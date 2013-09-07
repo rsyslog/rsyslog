@@ -992,19 +992,19 @@ setupInstStatsCtrs(instanceData *pData)
 	CHKiRet(statsobj.SetName(pData->stats, ctrName));
 	STATSCOUNTER_INIT(pData->ctrRequests, pData->mutCtrRequests);
 	CHKiRet(statsobj.AddCounter(pData->stats, UCHAR_CONSTANT("requests"),
-		ctrType_IntCtr, &(pData->ctrRequests)));
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pData->ctrRequests)));
 	STATSCOUNTER_INIT(pData->ctrLevel0, pData->mutCtrLevel0);
 	CHKiRet(statsobj.AddCounter(pData->stats, UCHAR_CONSTANT("level0"),
-		ctrType_IntCtr, &(pData->ctrLevel0)));
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pData->ctrLevel0)));
 	STATSCOUNTER_INIT(pData->ctrMiss, pData->mutCtrMiss);
 	CHKiRet(statsobj.AddCounter(pData->stats, UCHAR_CONSTANT("missed"),
-		ctrType_IntCtr, &(pData->ctrMiss)));
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pData->ctrMiss)));
 	STATSCOUNTER_INIT(pData->ctrEvict, pData->mutCtrEvict);
 	CHKiRet(statsobj.AddCounter(pData->stats, UCHAR_CONSTANT("evicted"),
-		ctrType_IntCtr, &(pData->ctrEvict)));
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pData->ctrEvict)));
 	STATSCOUNTER_INIT(pData->ctrMax, pData->mutCtrMax);
 	CHKiRet(statsobj.AddCounter(pData->stats, UCHAR_CONSTANT("maxused"),
-		ctrType_IntCtr, &(pData->ctrMax)));
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pData->ctrMax)));
 	CHKiRet(statsobj.ConstructFinalize(pData->stats));
 
 finalize_it:

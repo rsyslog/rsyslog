@@ -379,23 +379,23 @@ CODESTARTactivateCnf
 	CHKiRet(statsobj.Construct(&statsobj_resources));
 	CHKiRet(statsobj.SetName(statsobj_resources, (uchar*)"resource-usage"));
 	CHKiRet(statsobj.AddCounter(statsobj_resources, UCHAR_CONSTANT("utime"),
-		ctrType_IntCtr, &st_ru_utime));
+		ctrType_IntCtr, CTR_FLAG_NONE, &st_ru_utime));
 	CHKiRet(statsobj.AddCounter(statsobj_resources, UCHAR_CONSTANT("stime"),
-		ctrType_IntCtr, &st_ru_stime));
+		ctrType_IntCtr, CTR_FLAG_NONE, &st_ru_stime));
 	CHKiRet(statsobj.AddCounter(statsobj_resources, UCHAR_CONSTANT("maxrss"),
-		ctrType_Int, &st_ru_maxrss));
+		ctrType_Int, CTR_FLAG_NONE, &st_ru_maxrss));
 	CHKiRet(statsobj.AddCounter(statsobj_resources, UCHAR_CONSTANT("minflt"),
-		ctrType_Int, &st_ru_minflt));
+		ctrType_Int, CTR_FLAG_NONE, &st_ru_minflt));
 	CHKiRet(statsobj.AddCounter(statsobj_resources, UCHAR_CONSTANT("majflt"),
-		ctrType_Int, &st_ru_majflt));
+		ctrType_Int, CTR_FLAG_NONE, &st_ru_majflt));
 	CHKiRet(statsobj.AddCounter(statsobj_resources, UCHAR_CONSTANT("inblock"),
-		ctrType_Int, &st_ru_inblock));
+		ctrType_Int, CTR_FLAG_NONE, &st_ru_inblock));
 	CHKiRet(statsobj.AddCounter(statsobj_resources, UCHAR_CONSTANT("oublock"),
-		ctrType_Int, &st_ru_oublock));
+		ctrType_Int, CTR_FLAG_NONE, &st_ru_oublock));
 	CHKiRet(statsobj.AddCounter(statsobj_resources, UCHAR_CONSTANT("nvcsw"),
-		ctrType_Int, &st_ru_nvcsw));
+		ctrType_Int, CTR_FLAG_NONE, &st_ru_nvcsw));
 	CHKiRet(statsobj.AddCounter(statsobj_resources, UCHAR_CONSTANT("nivcsw"),
-		ctrType_Int, &st_ru_nivcsw));
+		ctrType_Int, CTR_FLAG_NONE, &st_ru_nivcsw));
 	CHKiRet(statsobj.ConstructFinalize(statsobj_resources));
 finalize_it:
 	if(iRet != RS_RET_OK) {

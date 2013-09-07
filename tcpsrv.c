@@ -158,7 +158,7 @@ addNewLstnPort(tcpsrv_t *pThis, uchar *pszPort, int bSuppOctetFram)
 	ratelimitSetThreadSafe(pEntry->ratelimiter);
 	STATSCOUNTER_INIT(pEntry->ctrSubmit, pEntry->mutCtrSubmit);
 	CHKiRet(statsobj.AddCounter(pEntry->stats, UCHAR_CONSTANT("submitted"),
-		ctrType_IntCtr, &(pEntry->ctrSubmit)));
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pEntry->ctrSubmit)));
 	CHKiRet(statsobj.ConstructFinalize(pEntry->stats));
 
 finalize_it:

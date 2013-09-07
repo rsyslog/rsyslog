@@ -1013,15 +1013,15 @@ addLstn(ptcpsrv_t *pSrv, int sock, int isIPv6)
 	CHKiRet(statsobj.SetName(pLstn->stats, statname));
 	STATSCOUNTER_INIT(pLstn->ctrSubmit, pLstn->mutCtrSubmit);
 	CHKiRet(statsobj.AddCounter(pLstn->stats, UCHAR_CONSTANT("submitted"),
-		ctrType_IntCtr, &(pLstn->ctrSubmit)));
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pLstn->ctrSubmit)));
 	/* the following counters are not protected by mutexes; we accept
 	 * that they may not be 100% correct */
 	pLstn->rcvdBytes = 0,
 	pLstn->rcvdDecompressed = 0;
 	CHKiRet(statsobj.AddCounter(pLstn->stats, UCHAR_CONSTANT("bytes.received"),
-		ctrType_IntCtr, &(pLstn->rcvdBytes)));
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pLstn->rcvdBytes)));
 	CHKiRet(statsobj.AddCounter(pLstn->stats, UCHAR_CONSTANT("bytes.decompressed"),
-		ctrType_IntCtr, &(pLstn->rcvdDecompressed)));
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pLstn->rcvdDecompressed)));
 	CHKiRet(statsobj.ConstructFinalize(pLstn->stats));
 
 	/* add to start of server's listener list */
