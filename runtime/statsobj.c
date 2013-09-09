@@ -167,6 +167,21 @@ finalize_it:
 	RETiRet;
 }
 
+static inline void
+resetResettableCtr(ctr_t *pCtr)
+{
+	if(pCtr->flags & CTR_FLAG_RESETTABLE) {
+		switch(pCtr->ctrType) {
+		case ctrType_IntCtr:
+			*(pCtr->val.pIntCtr) = 0;
+			break;
+		case ctrType_Int:
+			*(pCtr->val.pInt) = 0;
+			break;
+		}
+	}
+}
+
 /* get all the object's countes together as CEE. */
 static rsRetVal
 getStatsLineCEE(statsobj_t *pThis, cstr_t **ppcstr, int cee_cookie)
@@ -210,7 +225,7 @@ getStatsLineCEE(statsobj_t *pThis, cstr_t **ppcstr, int cee_cookie)
 		} else {
 			cstrAppendChar(pcstr, '}');
 		}
-
+		resetResettableCtr(pCtr);
 	}
 	pthread_mutex_unlock(&pThis->mutCtr);
 
@@ -242,14 +257,13 @@ getStatsLine(statsobj_t *pThis, cstr_t **ppcstr)
 		switch(pCtr->ctrType) {
 		case ctrType_IntCtr:
 			rsCStrAppendInt(pcstr, *(pCtr->val.pIntCtr)); // TODO: OK?????
-			*(pCtr->val.pIntCtr) = 0;
 			break;
 		case ctrType_Int:
 			rsCStrAppendInt(pcstr, *(pCtr->val.pInt));
-			*(pCtr->val.pInt) = 0;
 			break;
 		}
 		cstrAppendChar(pcstr, ' ');
+		resetResettableCtr(pCtr);
 	}
 	pthread_mutex_unlock(&pThis->mutCtr);
 
