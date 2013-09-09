@@ -79,6 +79,7 @@ struct modConfData_s {
 	int logfd; /* fd if logging to file, or -1 if closed */
 	statsFmtType_t statsFmt;
 	sbool bLogToSyslog;
+	sbool bResetCtrs;
 	char *logfile;
 	sbool configSetViaV2Method;
 };
@@ -95,6 +96,7 @@ static struct cnfparamdescr modpdescr[] = {
 	{ "facility", eCmdHdlrInt, 0 },
 	{ "severity", eCmdHdlrInt, 0 },
 	{ "log.syslog", eCmdHdlrBinary, 0 },
+	{ "resetcounters", eCmdHdlrBinary, 0 },
 	{ "log.file", eCmdHdlrGetWord, 0 },
 	{ "format", eCmdHdlrGetWord, 0 }
 };
@@ -254,7 +256,7 @@ generateStatsMsgs(void)
 	st_ru_oublock = ru.ru_oublock;
 	st_ru_nvcsw = ru.ru_nvcsw;
 	st_ru_nivcsw = ru.ru_nivcsw;
-	statsobj.GetAllStatsLines(doStatsLine, NULL, runModConf->statsFmt);
+	statsobj.GetAllStatsLines(doStatsLine, NULL, runModConf->statsFmt, runModConf->bResetCtrs);
 }
 
 
@@ -271,6 +273,7 @@ CODESTARTbeginCnfLoad
 	loadModConf->logfd = -1;
 	loadModConf->logfile = NULL;
 	loadModConf->bLogToSyslog = 1;
+	loadModConf->bResetCtrs = 0;
 	bLegacyCnfModGlobalsPermitted = 1;
 	/* init legacy config vars */
 	initConfigSettings();
@@ -305,6 +308,8 @@ CODESTARTsetModCnf
 			loadModConf->iSeverity = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "log.syslog")) {
 			loadModConf->bLogToSyslog = (sbool) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "resetcounters")) {
+			loadModConf->bResetCtrs = (sbool) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "log.file")) {
 			loadModConf->logfile = es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(modpblk.descr[i].name, "format")) {
@@ -367,8 +372,8 @@ BEGINactivateCnf
 	rsRetVal localRet;
 CODESTARTactivateCnf
 	runModConf = pModConf;
-	DBGPRINTF("impstats: stats interval %d seconds, logToSyslog %d, logFile %s\n",
-		  runModConf->iStatsInterval, runModConf->bLogToSyslog,
+	DBGPRINTF("impstats: stats interval %d seconds, reset %d, logToSyslog %d, logFile %s\n",
+		  runModConf->iStatsInterval, runModConf->bResetCtrs, runModConf->bLogToSyslog,
 		  runModConf->logfile == NULL ? "deactivated" : (char*)runModConf->logfile);
 	localRet = statsobj.EnableStats();
 	if(localRet != RS_RET_OK) {
