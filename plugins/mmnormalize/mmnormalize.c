@@ -40,7 +40,7 @@
 #include <unistd.h>
 #include <libestr.h>
 #include <libee/libee.h>
-#include <json/json.h>
+#include <json.h>
 #include <liblognorm.h>
 #include "conf.h"
 #include "syslogd-types.h"
