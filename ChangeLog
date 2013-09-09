@@ -8,6 +8,8 @@ Version 7.5.3 [devel] 2013-07-??
 - imudp: add ability to specify SO_RCVBUF size (rcvbufSize parameter)
 - imudp: use inputname for statistics, if configured
 - impstats: add process resource usage counters [via getrusage()]
+- impstats: add paramter "resetCounters" to report delta values
+  possible for most, but not all, counters. See doc for details.
 - librelp 1.2.0 is now required
 - make use of new librelp generic error reporting facility
   This leads to more error messages being passed to the user and
