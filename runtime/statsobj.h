@@ -86,8 +86,8 @@ BEGINinterface(statsobj) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*ConstructFinalize)(statsobj_t *pThis);
 	rsRetVal (*Destruct)(statsobj_t **ppThis);
 	rsRetVal (*SetName)(statsobj_t *pThis, uchar *name);
-	rsRetVal (*GetStatsLine)(statsobj_t *pThis, cstr_t **ppcstr);
-	rsRetVal (*GetAllStatsLines)(rsRetVal(*cb)(void*, cstr_t*), void *usrptr, statsFmtType_t fmt);
+	//rsRetVal (*GetStatsLine)(statsobj_t *pThis, cstr_t **ppcstr);
+	rsRetVal (*GetAllStatsLines)(rsRetVal(*cb)(void*, cstr_t*), void *usrptr, statsFmtType_t fmt, int8_t bResetCtr);
 	rsRetVal (*AddCounter)(statsobj_t *pThis, uchar *ctrName, statsCtrType_t ctrType, int8_t flags, void *pCtr);
 	rsRetVal (*EnableStats)(void);
 ENDinterface(statsobj)
@@ -95,7 +95,8 @@ ENDinterface(statsobj)
 /* Changes
  * v2-v9 rserved for future use in "older" version branches
  * v10, 2012-04-01: GetAllStatsLines got fmt parameter
- * v11, 2013-09-07: add "flags" to AddCounter API
+ * v11, 2013-09-07: - add "flags" to AddCounter API
+ *                  - GetAllStatsLines got parameter telling if ctrs shall be reset
  */
 
 
