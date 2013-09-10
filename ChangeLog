@@ -13,6 +13,7 @@ Version 7.5.3 [devel] 2013-07-??
 	to the input statement. Given the trouble LFs cause and the fact
 	that the majority of installations still use legacy config, we
 	considered this behaviour change acceptable and useful.
+  see also: http://blog.gerhards.net/2013/09/imfile-multi-line-messages.html
 - bugfix: queue file size was not correctly processed
   this could lead to using one queue file per message for sizes >2GiB
   Thanks to Tomas Heinrich for the patch.

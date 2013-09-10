@@ -113,7 +113,8 @@ do not expect these. If set to "on", this option avoid this trouble by properly 
 LF characters to the 4-byte sequence "#012". This is consistent with other rsyslog control character
 escaping. By default, escaping is turned on. If you turn it off, make sure you test very carefully
 with all associated tools. Please note that if you intend to use plain TCP syslog with embedded
-LF characters, you need to enable octet-counted framing.
+LF characters, you need to enable octet-counted framing. For more details, see Rainer's blog posting on
+<a href="http://blog.gerhards.net/2013/09/imfile-multi-line-messages.html">imfile LF escaping</a>.
 <li><b>MaxLinesAtOnce</b> [number]</b>
 <br>
 This is useful if multiple files need to be monitored. If set to 0, each file
