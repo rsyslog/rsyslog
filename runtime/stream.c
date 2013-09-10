@@ -745,6 +745,7 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF)
 	} else if(mode == 2) {
 		/* indented follow-up lines */
 		finished=0;
+		bPrevWasNL = 0;
 		while(finished == 0){
 			if ((*ppCStr)->iStrLen == 0){
         			if(c != '\n') {
@@ -755,22 +756,31 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF)
 					finished=1;  /* this is a blank line, a \n with nothing since the last complete record */
 				}
 			} else {
-				if ((*ppCStr)->pBuf[(*ppCStr)->iStrLen -1 ] != '\n'){
-				/* not the first character after a newline, add it to the buffer */
-               				CHKiRet(cstrAppendChar(*ppCStr, c));
-               				CHKiRet(strmReadChar(pThis, &c));
-				} else {
+				if(bPrevWasNL) {
 					if ((c == ' ') || (c == '\t')){
                					CHKiRet(cstrAppendChar(*ppCStr, c));
                					CHKiRet(strmReadChar(pThis, &c));
+						bPrevWasNL = 0;
 					} else {
 						/* clean things up by putting the character we just read back into
 						 * the input buffer and removing the LF character that is currently at the
 						 * end of the output string */
 						CHKiRet(strmUnreadChar(pThis, c));
-						rsCStrTruncate(*ppCStr,1);
+						rsCStrTruncate(*ppCStr, (bEscapeLF) ? 4 : 1);
 						finished=1;
 					}
+				} else { /* not the first character after a newline, add it to the buffer */
+					if(c == '\n') {
+						bPrevWasNL = 1;
+						if(bEscapeLF) {
+							CHKiRet(rsCStrAppendStrWithLen(*ppCStr, (uchar*)"#012", sizeof("#012")-1));
+						} else {
+							CHKiRet(cstrAppendChar(*ppCStr, c));
+						}
+					} else {
+						CHKiRet(cstrAppendChar(*ppCStr, c));
+					}
+               				CHKiRet(strmReadChar(pThis, &c));
 				}
 			}
 		}

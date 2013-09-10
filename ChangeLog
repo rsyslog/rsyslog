@@ -1,5 +1,18 @@
 ---------------------------------------------------------------------------
 Version 7.5.3 [devel] 2013-07-??
+- imfile: support for escaping LF characters added
+  embedded LF in syslog messages cause a lot of trouble. imfile now has
+  the capability to escape them to "#012" (just like the regular control
+  character escape option). This requires new-style input statements to be
+  used. If legacy configuration statements are used, LF escaping is always
+  turned off to preserve compatibility.
+  NOTE: if input() statements were already used, there is a CHANGE OF
+        BEHAVIOUR: starting with this version, escaping is enabled by
+	default. So if you do not want it, you need to add
+	escapeLF="off"
+	to the input statement. Given the trouble LFs cause and the fact
+	that the majority of installations still use legacy config, we
+	considered this behaviour change acceptable and useful.
 - bugfix: queue file size was not correctly processed
   this could lead to using one queue file per message for sizes >2GiB
   Thanks to Tomas Heinrich for the patch.
