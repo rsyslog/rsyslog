@@ -995,13 +995,13 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(statsobj.Construct(&indexStats));
 	CHKiRet(statsobj.SetName(indexStats, (uchar *)"elasticsearch"));
 	CHKiRet(statsobj.AddCounter(indexStats, (uchar *)"connfail",
-		ctrType_IntCtr, &indexConFail));
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &indexConFail));
 	CHKiRet(statsobj.AddCounter(indexStats, (uchar *)"submits",
-		ctrType_IntCtr, &indexSubmit));
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &indexSubmit));
 	CHKiRet(statsobj.AddCounter(indexStats, (uchar *)"failed",
-		ctrType_IntCtr, &indexFailed));
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &indexFailed));
 	CHKiRet(statsobj.AddCounter(indexStats, (uchar *)"success",
-		ctrType_IntCtr, &indexSuccess));
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &indexSuccess));
 	CHKiRet(statsobj.ConstructFinalize(indexStats));
 ENDmodInit
 
