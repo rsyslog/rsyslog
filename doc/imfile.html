@@ -106,7 +106,7 @@ This mode should defined when having multiline messages. The value can range fro
 <br>0 (<strong>default</strong>) - line based (Each line is a new message)
 <br>1 - paragraph (There is a blank line between log messages)
 <br>2 - indented (New log messages start at the beginning of a line. If a line starts with a space it is part of the log message before it)
-<li><b>escapeLF</b> [<b>on</b>/off]</b><br>
+<li><b>escapeLF</b> [<b>on</b>/off] (requires v7.5.3+)<br>
 This is only meaningful if multi-line messages are to be processed. LF characters embedded into
 syslog messages cause a lot of trouble, as most tools and even the legacy syslog TCP protocol
 do not expect these. If set to "on", this option avoid this trouble by properly escaping
