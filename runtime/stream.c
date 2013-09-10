@@ -680,7 +680,7 @@ static rsRetVal strmUnreadChar(strm_t *pThis, uchar c)
  * destruction of the returned CStr object! -- dlang 2010-12-13
  */
 static rsRetVal
-strmReadLine(strm_t *pThis, cstr_t **ppCStr, int mode)
+strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF)
 {
 	/* mode = 0 single line mode (equivalent to ReadLine)
          * mode = 1 LFLF mode (paragraph, blank line between entries)
@@ -690,6 +690,7 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, int mode)
         uchar c;
 	uchar finished;
 	rsRetVal readCharRet;
+	sbool bPrevWasNL;
         DEFiRet;
 
         ASSERT(pThis != NULL);
@@ -715,18 +716,25 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, int mode)
         	CHKiRet(cstrFinalize(*ppCStr));
 	} else if(mode == 1) {
 		finished=0;
+		bPrevWasNL = 0;
 		while(finished == 0){
         		if(c != '\n') {
                 		CHKiRet(cstrAppendChar(*ppCStr, c));
                 		CHKiRet(strmReadChar(pThis, &c));
+				bPrevWasNL = 0;
 			} else {
 				if ((((*ppCStr)->iStrLen) > 0) ){
-					if ((*ppCStr)->pBuf[(*ppCStr)->iStrLen -1 ] == '\n'){
-						rsCStrTruncate(*ppCStr,1); /* remove the prior newline */
+					if(bPrevWasNL) {
+						rsCStrTruncate(*ppCStr, (bEscapeLF) ? 4 : 1); /* remove the prior newline */
 						finished=1;
 					} else {
-               					CHKiRet(cstrAppendChar(*ppCStr, c));
+						if(bEscapeLF) {
+							CHKiRet(rsCStrAppendStrWithLen(*ppCStr, (uchar*)"#012", sizeof("#012")-1));
+						} else {
+							CHKiRet(cstrAppendChar(*ppCStr, c));
+						}
                					CHKiRet(strmReadChar(pThis, &c));
+						bPrevWasNL = 1;
 					}
 				} else {
 					finished=1;  /* this is a blank line, a \n with nothing since the last complete record */

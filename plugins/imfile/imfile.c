@@ -81,7 +81,8 @@ typedef struct fileInfo_s {
 	int nRecords; /**< How many records did we process before persisting the stream? */
 	int iPersistStateInterval; /**< how often should state be persisted? (0=on close only) */
 	strm_t *pStrm;	/* its stream (NULL if not assigned) */
-	int readMode;	/* which mode to use in ReadMulteLine call? */
+	uint8_t readMode;	/* which mode to use in ReadMulteLine call? */
+	sbool escapeLF;	/* escape LF inside the MSG content? */
 	ruleset_t *pRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
 	ratelimit_t *ratelimiter;
 	multi_submit_t multiSub;
@@ -110,7 +111,8 @@ struct instanceConf_s {
 	int iPersistStateInterval;
 	int iFacility;
 	int iSeverity;
-	int readMode;
+	uint8_t readMode;
+	sbool escapeLF;
 	int maxLinesAtOnce;
 	ruleset_t *pBindRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
 	struct instanceConf_s *next;
@@ -156,6 +158,7 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "facility", eCmdHdlrFacility, 0 },
 	{ "ruleset", eCmdHdlrString, 0 },
 	{ "readmode", eCmdHdlrInt, 0 },
+	{ "escapelf", eCmdHdlrBinary, 0 },
 	{ "maxlinesatonce", eCmdHdlrInt, 0 },
 	{ "maxsubmitatonce", eCmdHdlrInt, 0 },
 	{ "persiststateinterval", eCmdHdlrInt, 0 }
@@ -167,6 +170,7 @@ static struct cnfparamblk inppblk =
 	};
 
 #include "im-helper.h" /* must be included AFTER the type definitions! */
+
 
 /* enqueue the read file line as a message. The provided string is
  * not freed - thuis must be done by the caller.
@@ -295,7 +299,7 @@ static rsRetVal pollFile(fileInfo_t *pThis, int *pbHadFileData)
 	while(glbl.GetGlobalInputTermState() == 0) {
 		if(pThis->maxLinesAtOnce != 0 && nProcessed >= pThis->maxLinesAtOnce)
 			break;
-		CHKiRet(strm.ReadLine(pThis->pStrm, &pCStr, pThis->readMode));
+		CHKiRet(strm.ReadLine(pThis->pStrm, &pCStr, pThis->readMode, pThis->escapeLF));
 		++nProcessed;
 		*pbHadFileData = 1; /* this is just a flag, so set it and forget it */
 		CHKiRet(enqLine(pThis, pCStr)); /* process line */
@@ -341,6 +345,7 @@ createInstance(instanceConf_t **pinst)
 	inst->maxLinesAtOnce = 10240;
 	inst->iPersistStateInterval = 0;
 	inst->readMode = 0;
+	inst->escapeLF = 1;
 
 	/* node created, let's add to config */
 	if(loadModConf->tail == NULL) {
@@ -389,6 +394,7 @@ static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	inst->maxLinesAtOnce = cs.maxLinesAtOnce;
 	inst->iPersistStateInterval = cs.iPersistStateInterval;
 	inst->readMode = cs.readMode;
+	inst->escapeLF = 0;
 
 	/* reset legacy system */
 	cs.iPersistStateInterval = 0;
@@ -409,7 +415,6 @@ addListner(instanceConf_t *inst)
 
 	if(iFilPtr < MAX_INPUT_FILES) {
 		pThis = &files[iFilPtr];
-		//TODO: optimize, save strdup?
 		pThis->pszFileName = (uchar*) strdup((char*) inst->pszFileName);
 		pThis->pszTag = (uchar*) strdup((char*) inst->pszTag);
 		pThis->lenTag = ustrlen(pThis->pszTag);
@@ -424,6 +429,7 @@ addListner(instanceConf_t *inst)
 		pThis->maxLinesAtOnce = inst->maxLinesAtOnce;
 		pThis->iPersistStateInterval = inst->iPersistStateInterval;
 		pThis->readMode = inst->readMode;
+		pThis->escapeLF = inst->escapeLF;
 		pThis->pRuleset = inst->pBindRuleset;
 		pThis->nRecords = 0;
 	} else {
@@ -475,7 +481,9 @@ CODESTARTnewInpInst
 		} else if(!strcmp(inppblk.descr[i].name, "facility")) {
 			inst->iSeverity = pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "readmode")) {
-			inst->readMode = pvals[i].val.d.n;
+			inst->readMode = (uint8_t) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "escapelf")) {
+			inst->escapeLF = (sbool) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "maxlinesatonce")) {
 			inst->maxLinesAtOnce = pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "persiststateinterval")) {

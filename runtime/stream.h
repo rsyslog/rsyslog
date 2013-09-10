@@ -66,6 +66,7 @@
 #define STREAM_H_INCLUDED
 
 #include <pthread.h>
+#include <stdint.h>
 #include "obj-types.h"
 #include "glbl.h"
 #include "stream.h"
@@ -188,7 +189,7 @@ BEGINinterface(strm) /* name must also be changed in ENDinterface macro! */
 	INTERFACEpropSetMeth(strm, iFlushInterval, int);
 	INTERFACEpropSetMeth(strm, pszSizeLimitCmd, uchar*);
 	/* v6 added */
-	rsRetVal (*ReadLine)(strm_t *pThis, cstr_t **ppCStr, int mode);
+	rsRetVal (*ReadLine)(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF);
 	/* v7 added  2012-09-14 */
 	INTERFACEpropSetMeth(strm, bVeryReliableZip, int);
 	/* v8 added  2013-03-21 */
@@ -197,7 +198,8 @@ BEGINinterface(strm) /* name must also be changed in ENDinterface macro! */
 	INTERFACEpropSetMeth(strm, cryprov, cryprov_if_t*);
 	INTERFACEpropSetMeth(strm, cryprovData, void*);
 ENDinterface(strm)
-#define strmCURR_IF_VERSION 9 /* increment whenever you change the interface structure! */
+#define strmCURR_IF_VERSION 10 /* increment whenever you change the interface structure! */
+/* V10, 2013-09-10: added new parameter bEscapeLF, changed mode to uint8_t (rgerhards) */
 
 static inline int
 strmGetCurrFileNum(strm_t *pStrm) {
