@@ -312,7 +312,7 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 	CHKiRet(statsobj.SetName(inst->data.stats, statname));
 	STATSCOUNTER_INIT(inst->data.ctrSubmit, inst->data.mutCtrSubmit);
 	CHKiRet(statsobj.AddCounter(inst->data.stats, UCHAR_CONSTANT("submitted"),
-		ctrType_IntCtr, &(inst->data.ctrSubmit)));
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(inst->data.ctrSubmit)));
 	CHKiRet(statsobj.ConstructFinalize(inst->data.stats));
 	/* end stats counters */
 	relpSrvSetUsrPtr(pSrv, inst);
