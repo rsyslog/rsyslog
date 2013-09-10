@@ -68,9 +68,9 @@ local and global variables are also modifieable.
 represents the root.
 <p>Local variables names start with "$.", where the dot denotes the root. Similarly,
 global variables start with "$/".
-<p>Both JSON properties as well as local variables may contain an arbitrary
+<p>Both JSON properties as well as global/local variables may contain an arbitrary
 deep path before the final element. The bang character is always used as path
-separator, no matter if it is a message property or a local variable. For example
+separator, no matter if it is a message property or a global/local variable. For example
 "$!path1!path2!varname" is a three-level deep message property where as
 the very similar looking "$.path1!path2!varname" specifies a three-level
 deep local variable. The similar global variables is named "$/path1!path2!varname".
