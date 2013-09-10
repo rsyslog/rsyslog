@@ -1,0 +1,71 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<title>rsyslog queues parameters</title></head>
+<body>
+<a href="rsyslog_conf_global.html">back</a>
+<p><h2>General Queue Parameters</h2></p>
+Queues need to be configured in the action or ruleset it should affect. If nothing is configured, 
+default values will be used. Thus, the default ruleset has only the default main queue. Specific Action 
+queues are not set up by default.</p>
+<ul>
+	<li><strong>queue.filename</strong> name</li>
+	<li><strong>queue.size</strong> number</li>
+	<li><strong>queue.dequeuebatchsize</strong> number 
+	<br>default 16</li>
+	<li><strong>queue.maxdiskspace</strong> number</li>
+	<li><strong>queue.highwatermark</strong> number
+	<br>default 8000</li>
+	<li><strong>queue.lowwatermark</strong> number
+	<br>default 2000</li>
+	<li><strong>queue.fulldelaymark</strong> number</li>
+	<li><strong>queue.lightdelaymark</strong> number</li>
+	<li><strong>queue.discardmark</strong> number
+	<br>default 9750]</li>
+	<li><strong>queue.discardseverity</strong> number
+	<br>*numerical* severity! default 8 (nothing discarded)</li>
+	<li><strong>queue.checkpointinterval</strong> number</li>
+	<li><strong>queue.syncqueuefiles</strong> on/off</li>
+	<li><strong>queue.type</strong> [FixedArray/LinkedList/<b>Direct</b>/Disk]</li>
+	<li><strong>queue.workerthreads</strong> number
+	<br>number of worker threads, default 1, recommended 1</li>
+	<li><strong>queue.timeoutshutdown</strong> number
+	<br>number is timeout in ms (1000ms is 1sec!), default 0 (indefinite)</li>
+	<li><strong>queue.timeoutactioncompletion</strong> number
+	<br>number is timeout in ms (1000ms is 1sec!), default 1000, 0 means immediate!</li>
+	<li><strong>queue.timeoutenqueue</strong> number
+	<br>number is timeout in ms (1000ms is 1sec!), default 2000, 0 means indefinite</li>
+	<li><strong>queue.timeoutworkerthreadshutdown</strong> number
+	<br>number is timeout in ms (1000ms is 1sec!), default 60000 (1 minute)</li>
+	<li><strong>queue.workerthreadminimummessages</strong> number
+	<br>default 100</li>
+	<li><strong>queue.maxfilesize</strong> size_nbr
+	<br> default 1m</li>
+	<li><strong>queue.saveonshutdown</strong> on/<b>off</b></li>
+	<li><strong>queue.dequeueslowdown</strong> number
+	<br>number is timeout in microseconds (1000000us is 1sec!), default 0 (no delay). Simple rate-limiting!</li>
+	<li><strong>queue.dequeuetimebegin</strong> number</li>
+	<li><strong>queue.dequeuetimeend</strong> number</li>
+</ul>
+<p><b>Sample:</b></p>
+<p>The following is a sample of a TCP forwarding action with its own queue.</p>
+<textarea rows="5" cols="60">Module (load="builtin:omfwd")
+*.* action(type="omfwd" 
+Target="192.168.2.11"
+Port="10514"
+Protocol="tcp"
+queue.filename="forwarding"
+queue.size="1000000"
+queue.type="LinkedList"
+)
+</textarea>
+<br><br>
+[<a href="manual.html">manual index</a>]
+[<a href="rsyslog_conf.html">rsyslog.conf</a>]
+[<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the
+<a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
+Copyright &copy; 2008, 2009 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>. Released under the GNU GPL
+version 3 or higher.</font></p>
+
+</body></html>
