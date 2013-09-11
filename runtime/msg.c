@@ -3801,7 +3801,7 @@ msgGetMsgVarNew(msg_t *pThis, uchar *name)
 	/* always call MsgGetProp() without a template specifier */
 	/* TODO: optimize propNameToID() call -- rgerhards, 2009-06-26 */
 	propNameStrToID(name, &propid);
-	propName = es_newStrFromCStr((char*)name+1, ustrlen(name)-1); // TODO: optimize!
+	propName = es_newStrFromCStr((char*)name, ustrlen(name)); // TODO: optimize!
 	pszProp = (uchar*) MsgGetProp(pThis, NULL, propid, propName, &propLen, &bMustBeFreed, NULL);
 	es_deleteStr(propName);
 
