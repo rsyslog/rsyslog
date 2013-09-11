@@ -58,10 +58,9 @@ DEFobjCurrIf(errmsg)
 DEFobjCurrIf(statsobj)
 
 statsobj_t *indexStats;
-STATSCOUNTER_DEF(indexConFail, mutIndexConFail)
 STATSCOUNTER_DEF(indexSubmit, mutIndexSubmit)
-STATSCOUNTER_DEF(indexFailed, mutIndexFailed)
-STATSCOUNTER_DEF(indexSuccess, mutIndexSuccess)
+STATSCOUNTER_DEF(indexHTTPFail, mutIndexHTTPFail)
+STATSCOUNTER_DEF(indexESFail, mutIndexESFail)
 
 /* REST API for elasticsearch hits this URL:
  * http://<hostName>:<restPort>/<searchIndex>/<searchType>
@@ -540,6 +539,9 @@ DBGPRINTF("omelasticsearch: %d items in reply\n", numitems);
 	}
 
 finalize_it:
+	if(iRet != RS_RET_OK) {
+		STATSCOUNTER_INC(indexESFail, mutIndexESFail);
+	}
 	RETiRet;
 }
 
@@ -603,13 +605,12 @@ curlPost(instanceData *pData, uchar *message, int msglen, uchar **tpls)
 		case CURLE_COULDNT_RESOLVE_PROXY:
 		case CURLE_COULDNT_CONNECT:
 		case CURLE_WRITE_ERROR:
-			STATSCOUNTER_INC(indexConFail, mutIndexConFail);
+			STATSCOUNTER_INC(indexHTTPFail, mutIndexHTTPFail);
 			DBGPRINTF("omelasticsearch: we are suspending ourselfs due "
 				  "to failure %lld of curl_easy_perform()\n",
 				  (long long) code);
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
 		default:
-			STATSCOUNTER_INC(indexSubmit, mutIndexSubmit);
 			break;
 	}
 
@@ -639,6 +640,7 @@ ENDbeginTransaction
 
 BEGINdoAction
 CODESTARTdoAction
+	STATSCOUNTER_INC(indexSubmit, mutIndexSubmit);
 	if(pData->bulkmode) {
 		CHKiRet(buildBatch(pData, ppString[0], ppString));
 	} else {
@@ -993,15 +995,13 @@ CODEmodInit_QueryRegCFSLineHdlr
 
 	/* support statistics gathering */
 	CHKiRet(statsobj.Construct(&indexStats));
-	CHKiRet(statsobj.SetName(indexStats, (uchar *)"elasticsearch"));
-	CHKiRet(statsobj.AddCounter(indexStats, (uchar *)"connfail",
-		ctrType_IntCtr, &indexConFail));
-	CHKiRet(statsobj.AddCounter(indexStats, (uchar *)"submits",
+	CHKiRet(statsobj.SetName(indexStats, (uchar *)"omelasticsearch"));
+	CHKiRet(statsobj.AddCounter(indexStats, (uchar *)"submitted",
 		ctrType_IntCtr, &indexSubmit));
-	CHKiRet(statsobj.AddCounter(indexStats, (uchar *)"failed",
-		ctrType_IntCtr, &indexFailed));
-	CHKiRet(statsobj.AddCounter(indexStats, (uchar *)"success",
-		ctrType_IntCtr, &indexSuccess));
+	CHKiRet(statsobj.AddCounter(indexStats, (uchar *)"failed.http",
+		ctrType_IntCtr, &indexHTTPFail));
+	CHKiRet(statsobj.AddCounter(indexStats, (uchar *)"failed.es",
+		ctrType_IntCtr, &indexESFail));
 	CHKiRet(statsobj.ConstructFinalize(indexStats));
 ENDmodInit
 
