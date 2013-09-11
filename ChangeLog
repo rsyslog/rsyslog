@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 7.5.3 [devel] 2013-07-??
+Version 7.5.3 [devel] 2013-09-11
 - imfile: support for escaping LF characters added
   embedded LF in syslog messages cause a lot of trouble. imfile now has
   the capability to escape them to "#012" (just like the regular control
