@@ -24,8 +24,6 @@
 #ifndef INCLUDED_CRYPROV_H
 #define INCLUDED_CRYPROV_H
 
-#include <gcrypt.h>
-
 /* we unfortunately need to have two different param names depending on the
  * context in which parameters are set. Other than (re/over)engineering the core
  * interface, we just define some values to keep track of that.
