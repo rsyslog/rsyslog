@@ -24,8 +24,6 @@
 #ifndef INCLUDED_CRYPROV_H
 #define INCLUDED_CRYPROV_H
 
-#include <gcrypt.h>
-
 /* interface */
 BEGINinterface(cryprov) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Construct)(void *ppThis);
