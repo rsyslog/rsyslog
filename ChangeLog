@@ -1,6 +1,7 @@
 ---------------------------------------------------------------------------
 Version 7.4.5  [v7.4-stable] 2013-09-??
 - bugfix: segfault on startup if TLS was used but no CA cert set
+- bugfix: segfault on startup if TCP TLS was used but no cert or key set
 - bugfix: some more build problems with newer json-c versions
   Thanks to Michael Biebl for mentioning the problem.
 - bugfix: build system: libgcrypt.h needed even if libgrcypt was disabled
