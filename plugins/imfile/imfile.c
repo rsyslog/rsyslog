@@ -840,8 +840,8 @@ resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unus
 	cs.pszFileName = NULL;
 	free(cs.pszFileTag);
 	cs.pszFileTag = NULL;
-	free(cs.pszFileTag);
-	cs.pszFileTag = NULL;
+	free(cs.pszStateFile);
+	cs.pszStateFile = NULL;
 
 	/* set defaults... */
 	cs.iPollInterval = DFLT_PollInterval;
