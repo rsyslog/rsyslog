@@ -943,6 +943,8 @@ finalize_it:
 	if(iRet != RS_RET_OK) {
 		if(pThis->pNS != NULL)
 			netstrms.Destruct(&pThis->pNS);
+		errmsg.LogError(0, iRet, "tcpsrv could not create listener (inputname: '%s')",
+				(pThis->pszInputName == NULL) ? (uchar*)"*UNSET*" : pThis->pszInputName);
 	}
 	RETiRet;
 }

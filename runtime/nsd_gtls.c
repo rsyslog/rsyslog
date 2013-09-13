@@ -2,7 +2,7 @@
  *
  * An implementation of the nsd interface for GnuTLS.
  * 
- * Copyright (C) 2007, 2008 Rainer Gerhards and Adiscon GmbH.
+ * Copyright (C) 2007-2013 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -579,6 +579,11 @@ gtlsGlblInit(void)
 
 	/* sets the trusted cas file */
 	cafile = glbl.GetDfltNetstrmDrvrCAF();
+	if(cafile == NULL) {
+		errmsg.LogError(0, RS_RET_CA_CERT_MISSING, "error: ca certificate is not set, cannot "
+				"continue");
+		ABORT_FINALIZE(RS_RET_CA_CERT_MISSING);
+	}
 	dbgprintf("GTLS CA file: '%s'\n", cafile);
 	gnuRet = gnutls_certificate_set_x509_trust_file(xcred, (char*)cafile, GNUTLS_X509_FMT_PEM);
 	if(gnuRet < 0) {

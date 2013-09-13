@@ -1,3 +1,4 @@
+- bugfix: segfault on startup if TLS was used but no CA cert set
 ----------------------------------------------------------------------------
 Version 7.2.8  [v7-stable] 2013-0?-??
 - bugfix: potential segfault on startup when builtin module was specified
