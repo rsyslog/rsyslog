@@ -263,7 +263,7 @@ hashtable_destroy(struct hashtable *h, int free_values)
 
 /* some generic hash functions */
 
-/* one provided by Aaaron Wiebe based on perl's hashng algorithm 
+/* one provided by Aaaron Wiebe based on perl's hashing algorithm 
  * (so probably pretty generic). Not for excessively large strings!
  */
 unsigned int

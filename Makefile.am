@@ -71,7 +71,7 @@ EXTRA_DIST = \
 	contrib/gnutls/key.pem \
 	rsyslog.service.in
 
-SUBDIRS = doc runtime grammar compat . plugins/immark plugins/imuxsock plugins/imtcp plugins/imudp plugins/omtesting
+SUBDIRS = doc compat runtime grammar . plugins/immark plugins/imuxsock plugins/imtcp plugins/imudp plugins/omtesting
 
 if ENABLE_RSYSLOGD
 SUBDIRS += tools
@@ -165,6 +165,10 @@ if ENABLE_OMZMQ3
 SUBDIRS += plugins/omzmq3
 endif
 
+if ENABLE_OMRABBITMQ
+SUBDIRS += plugins/omrabbitmq
+endif
+
 if ENABLE_IMZMQ3
 SUBDIRS += plugins/imzmq3
 endif
@@ -175,6 +179,14 @@ endif
 
 if ENABLE_OMHDFS
 SUBDIRS += plugins/omhdfs
+endif
+
+if ENABLE_OMJOURNAL
+SUBDIRS += plugins/omjournal
+endif
+
+if ENABLE_IMJOURNAL
+SUBDIRS += plugins/imjournal
 endif
 
 if ENABLE_ELASTICSEARCH
@@ -225,6 +237,10 @@ if ENABLE_MMAUDIT
 SUBDIRS += plugins/mmaudit
 endif
 
+if ENABLE_MMANON
+SUBDIRS += plugins/mmanon
+endif
+
 if ENABLE_ORACLE
 SUBDIRS += plugins/omoracle
 endif
@@ -245,7 +261,6 @@ SUBDIRS += tests
 # in a make distcheck is so that we detect code that accidently was not updated
 # when some global update happened.
 DISTCHECK_CONFIGURE_FLAGS=	--enable-gssapi_krb5 \
-				--enable-gnutls \
 				--enable-imfile \
 				--enable-snmp \
 				--enable-libdbi \
@@ -271,6 +286,7 @@ DISTCHECK_CONFIGURE_FLAGS=	--enable-gssapi_krb5 \
 				--enable-pmsnare \
 				--enable-mmsnmptrapd \
 				--enable-elasticsearch \
+				--enable-valgrind \
 				--with-systemdsystemunitdir=$$dc_install_base/$(systemdsystemunitdir) 
 # temporarily disable these checks for make distcheck 2012-09-06 rgerhards
 #				--enable-extended-tests \

@@ -3,7 +3,7 @@
  *
  * Begun 2010-11-25 RGerhards
  *
- * Copyright (C) 2005-2008 by Rainer Gerhards and Adiscon GmbH
+ * Copyright (C) 2005-2013 by Rainer Gerhards and Adiscon GmbH
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -25,6 +25,13 @@
  */
 #ifndef INCLUDED_TYPEDEFS_H
 #define INCLUDED_TYPEDEFS_H
+#if defined(__FreeBSD__)
+#include <sys/types.h>
+#endif
+
+#ifndef HAVE_LSEEK64
+#include <unistd.h>
+#endif
 
 /* some universal fixed size integer defines ... */
 typedef long long int64;
@@ -92,6 +99,8 @@ typedef struct cfgmodules_etry_s cfgmodules_etry_t;
 typedef struct outchannels_s outchannels_t;
 typedef struct modConfData_s modConfData_t;
 typedef struct instanceConf_s instanceConf_t;
+typedef struct ratelimit_s ratelimit_t;
+typedef struct action_s action_t;
 typedef int rs_size_t; /* we do never need more than 2Gig strings, signed permits to
 			* use -1 as a special flag. */
 typedef rsRetVal (*prsf_t)(struct vmstk_s*, int);	/* pointer to a RainerScript function */
@@ -145,6 +154,10 @@ typedef enum {
 	FIOP_EREREGEX = 5,	/* matches a ERE regular expression? */
 	FIOP_ISEMPTY = 6	/* string empty <=> strlen(s) == 0 ?*/
 } fiop_t;
+
+#ifndef HAVE_LSEEK64
+	typedef off_t off64_t;
+#endif
 
 /* types of configuration handlers
  */

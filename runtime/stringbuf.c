@@ -32,6 +32,7 @@
 #include <assert.h>
 #include <string.h>
 #include <ctype.h>
+#include <stdarg.h>
 #include <sys/types.h>
 #include <libestr.h>
 #include "rsyslog.h"
@@ -100,6 +101,55 @@ rsRetVal rsCStrConstructFromszStr(cstr_t **ppThis, uchar *sz)
 	*ppThis = pThis;
 
 finalize_it:
+	RETiRet;
+}
+
+
+/* a helper function for rsCStr*Strf()
+ */
+static rsRetVal rsCStrConstructFromszStrv(cstr_t **ppThis, uchar *fmt, va_list ap)
+{
+	DEFiRet;
+	cstr_t *pThis;
+	va_list ap2;
+	int len;
+
+	assert(ppThis != NULL);
+
+	va_copy(ap2, ap);
+	len = vsnprintf(NULL, 0, (char*)fmt, ap2);
+	va_end(ap2);
+
+	if(len < 0)
+		ABORT_FINALIZE(RS_RET_ERR);
+
+	CHKiRet(rsCStrConstruct(&pThis));
+
+	pThis->iBufSize = pThis->iStrLen = len;
+	len++; /* account for the \0 written by vsnprintf */
+	if((pThis->pBuf = (uchar*) MALLOC(sizeof(uchar) * len)) == NULL) {
+		RSFREEOBJ(pThis);
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	}
+
+	vsnprintf((char*)pThis->pBuf, len, (char*)fmt, ap);
+	*ppThis = pThis;
+finalize_it:
+	RETiRet;
+}
+
+
+/* construct from a printf-style formated string
+ */
+rsRetVal rsCStrConstructFromszStrf(cstr_t **ppThis, char *fmt, ...)
+{
+	DEFiRet;
+	va_list ap;
+
+	va_start(ap, fmt);
+	iRet = rsCStrConstructFromszStrv(ppThis, (uchar*)fmt, ap);
+	va_end(ap);
+
 	RETiRet;
 }
 
@@ -253,6 +303,27 @@ rsRetVal rsCStrAppendStr(cstr_t *pThis, uchar* psz)
 rsRetVal cstrAppendCStr(cstr_t *pThis, cstr_t *pstrAppend)
 {
 	return rsCStrAppendStrWithLen(pThis, pstrAppend->pBuf, pstrAppend->iStrLen);
+}
+
+
+/* append a printf-style formated string
+ */
+rsRetVal rsCStrAppendStrf(cstr_t *pThis, uchar *fmt, ...)
+{
+	DEFiRet;
+	va_list ap;
+	cstr_t *pStr = NULL;
+
+	va_start(ap, fmt);
+	iRet = rsCStrConstructFromszStrv(&pStr, fmt, ap);
+	va_end(ap);
+
+	CHKiRet(iRet);
+
+	iRet = cstrAppendCStr(pThis, pStr);
+	rsCStrDestruct(&pStr);
+finalize_it:
+	RETiRet;
 }
 
 
@@ -870,13 +941,7 @@ int rsCStrSzStrCmp(cstr_t *pCS1, uchar *psz, size_t iLenSz)
 			 * length, so we need to actually check if they
 			 * are equal.
 			 */
-			register size_t i;
-			for(i = 0 ; i < iLenSz ; ++i) {
-				if(pCS1->pBuf[i] != psz[i])
-					return pCS1->pBuf[i] - psz[i];
-			}
-			/* if we arrive here, the strings are equal */
-			return 0;
+			return strncmp((char*)pCS1->pBuf, (char*)psz, iLenSz);
 		}
 	else
 		return pCS1->iStrLen - iLenSz;

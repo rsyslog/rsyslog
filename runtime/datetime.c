@@ -182,12 +182,13 @@ getTime(time_t *ttSeconds)
  * 		  the method always returns zero.
  * \retval The number parsed.
  */
-static int srSLMGParseInt32(uchar** ppsz, int *pLenStr)
+static inline int
+srSLMGParseInt32(uchar** ppsz, int *pLenStr)
 {
 	register int i;
 
 	i = 0;
-	while(*pLenStr > 0 && isdigit((int) **ppsz)) {
+	while(*pLenStr > 0 && **ppsz >= '0' && **ppsz <= '9') {
 		i = i * 10 + **ppsz - '0';
 		++(*ppsz);
 		--(*pLenStr);

@@ -34,11 +34,15 @@ html_files = \
 	ompipe.html \
 	omfwd.html \
 	omfile.html \
+	omjournal.html \
+	imjournal.html \
+	mmanon.html \
 	omusrmsg.html \
 	omstdout.html \
 	omudpspoof.html \
 	omruleset.html \
 	omsnmp.html \
+	sigprov_gt.html \
 	ommysql.html \
 	omoracle.html \
 	omlibdbi.html \
@@ -70,6 +74,7 @@ html_files = \
 	tls_cert_client.html \
 	tls_cert_scenario.html \
 	rainerscript.html \
+	lookup_tables.html \
 	rscript_abnf.html \
 	rsconf1_actionexeconlywhenpreviousissuspended.html \
 	rsconf1_actionresumeinterval.html \
@@ -115,6 +120,7 @@ html_files = \
 	gssapi.html \
 	licensing.html \
 	mmnormalize.html \
+	mmjsonparse.html \
 	ommail.html \
 	omuxsock.html \
 	omrelp.html \

@@ -1,6 +1,6 @@
 /* Definitions for dnscache module.
  *
- * Copyright 2011-2012 Adiscon GmbH.
+ * Copyright 2011-2013 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -24,6 +24,6 @@
 
 rsRetVal dnscacheInit(void);
 rsRetVal dnscacheDeinit(void);
-rsRetVal dnscacheLookup(struct sockaddr_storage *addr, uchar *pszHostFQDN, uchar *ip);
+rsRetVal dnscacheLookup(struct sockaddr_storage *addr, prop_t **fqdn, prop_t **fqdnLowerCase, prop_t **localName, prop_t **ip);
 
 #endif /* #ifndef INCLUDED_DNSCACHE_H */

@@ -33,9 +33,9 @@
 #include <stdint.h>
 #include <time.h>
 #include <mongo.h>
-#include <json/json.h>
+#include <json.h>
 /* For struct json_object_iter, should not be necessary in future versions */
-#include <json/json_object_private.h>
+#include <json_object_private.h>
 
 #include "rsyslog.h"
 #include "conf.h"
@@ -236,11 +236,11 @@ getDefaultBSON(msg_t *pMsg)
 	gint64 ts_gen, ts_rcv; /* timestamps: generated, received */
 	int secfrac;
 
-	procid = MsgGetProp(pMsg, NULL, PROP_PROGRAMNAME, NULL, &procid_len, &procid_free);
-	tag = MsgGetProp(pMsg, NULL, PROP_SYSLOGTAG, NULL, &tag_len, &tag_free);
-	pid = MsgGetProp(pMsg, NULL, PROP_PROCID, NULL, &pid_len, &pid_free);
-	sys = MsgGetProp(pMsg, NULL, PROP_HOSTNAME, NULL, &sys_len, &sys_free);
-	msg = MsgGetProp(pMsg, NULL, PROP_MSG, NULL, &msg_len, &msg_free);
+	procid = MsgGetProp(pMsg, NULL, PROP_PROGRAMNAME, NULL, &procid_len, &procid_free, NULL);
+	tag = MsgGetProp(pMsg, NULL, PROP_SYSLOGTAG, NULL, &tag_len, &tag_free, NULL);
+	pid = MsgGetProp(pMsg, NULL, PROP_PROCID, NULL, &pid_len, &pid_free, NULL);
+	sys = MsgGetProp(pMsg, NULL, PROP_HOSTNAME, NULL, &sys_len, &sys_free, NULL);
+	msg = MsgGetProp(pMsg, NULL, PROP_MSG, NULL, &msg_len, &msg_free, NULL);
 
 	// TODO: move to datetime? Refactor in any case! rgerhards, 2012-03-30
 	ts_gen = (gint64) datetime.syslogTime2time_t(&pMsg->tTIMESTAMP) * 1000; /* ms! */

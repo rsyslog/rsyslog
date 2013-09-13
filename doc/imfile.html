@@ -14,7 +14,7 @@ a syslog message. A standard
 text file is a file consisting of printable characters with lines
 being&nbsp;delimited by LF.</p>
 <p>The file is read line-by-line and any line read is passed to
-rsyslog's rule engine. The rule engine applies filter conditons and
+rsyslog's rule engine. The rule engine applies filter conditions and
 selects which actions needs to be carried out. Empty lines are <b>not</b>
 processed, as they would result in empty syslog records. They are simply
 ignored.</p>
@@ -49,9 +49,9 @@ releases of imfile may support per-file polling intervals, but
 currently this is not the case. If multiple PollingInterval
 statements are present in rsyslog.conf, only the last one is used.<br>
 A short poll interval provides more rapid message forwarding, but
-requires more system ressources. While it is possible, we stongly
+requires more system resources. While it is possible, we stongly
 recommend not to set the polling interval to 0 seconds. That will make
-rsyslogd become a CPU hog, taking up considerable ressources. It is
+rsyslogd become a CPU hog, taking up considerable resources. It is
 supported, however, for the few very unusual situations where this
 level may be needed. Even if you need quick response, 1 seconds should
 be well enough. Please note that imfile keeps reading files as long as
@@ -61,15 +61,15 @@ nothing is left to be processed.</li>
 
 <p><b>Action Directives</b></p>
 <ul>
-<li><strong>File&nbsp;/path/to/file</strong><br>
+<li><strong>(required) File&nbsp;/path/to/file</strong><br>
 The file being monitored. So far, this must be an absolute name (no
 macros or templates)</li>
-<li><span style="font-weight: bold;">Tag
+<li><span style="font-weight: bold;">(required) Tag
 tag:</span><br>
 The tag to be used for messages that originate from this file. If you
 would like to see the colon after the tag, you need to specify it here
 (as shown above).</li>
-<li><span style="font-weight: bold;">StateFile
+<li><span style="font-weight: bold;">(required) StateFile
 &lt;name-of-state-file&gt;</span><br>
 Rsyslog must keep track of which parts of the to be monitored file it
 already processed. This is done in the state file. This file always is
@@ -77,7 +77,9 @@ created in the rsyslog working directory (configurable via
 $WorkDirectory). Be careful to use unique names for different files
 being monitored. If there are duplicates, all sorts of "interesting"
 things may happen. Rsyslog currently does not check if a name is
-specified multiple times.</li>
+specified multiple times.
+Note that when $WorkDirectory is not set or set to a non-writable
+location, the state file will not be generated.</li>
 <li><span style="font-weight: bold;">Facility
 facility</span><br>
 The syslog facility to be assigned to lines read. Can be specified in
@@ -92,7 +94,7 @@ textual form (e.g. "info", "warning", ...) or as numbers (e.g. 4 for
 is "notice".</li>
 <li><b>PersistStateInterval</b> [lines]</b><br>
 Specifies how often the state file shall be written when processing the input
-file. The default value is 0, which means a new state file is only written when 
+file. The <strong>default</strong> value is 0, which means a new state file is only written when 
 the monitored files is being closed (end of rsyslogd execution). Any other
 value n means that the state file is written every time n file lines have
 been processed. This setting can be used to guard against message duplication due
@@ -101,9 +103,9 @@ performance, especially when set to a low value. Frequently writing the state
 file is very time consuming.
 <li><b>ReadMode</b> [mode]</b><br>
 This mode should defined when having multiline messages. The value can range from 0-2 and determines the multiline detection method.
-<br>0 (default) - line based (Each line is a new message)
-<br>1 - indented (New log messages start at the beginning of a line. If a line starts with a space it is part of the log message before it)
-<br>2 - paragraph (There is a blank line between log messages)
+<br>0 (<strong>default</strong>) - line based (Each line is a new message)
+<br>1 - paragraph (There is a blank line between log messages)
+<br>2 - indented (New log messages start at the beginning of a line. If a line starts with a space it is part of the log message before it)
 <li><b>MaxLinesAtOnce</b> [number]</b>
 <br>
 This is useful if multiple files need to be monitored. If set to 0, each file
@@ -112,11 +114,11 @@ will be fully processed and then processing switches to the next file
 [number] lines is processed in sequence for each file, and then the file is
 switched. This provides a kind of mutiplexing the load of multiple files and
 probably leads to a more natural distribution of events when multiple busy files
-are monitored. The default is 1024.
+are monitored. The <strong>default</strong> is 1024.
 <li><b>MaxSubmitAtOnce</b> [number]</b>
 <br>
 This is an expert option. It can be used to set the maximum input batch size that 
-imfile can generate. The default is 1024, which is suitable for a wide range of 
+imfile can generate. The <strong>default</strong> is 1024, which is suitable for a wide range of 
 applications. Be sure to understand rsyslog message batch processing before you 
 modify this option. If you do not know what this doc here talks about, this is a 
 good indication that you should NOT modify the default.
@@ -141,17 +143,17 @@ your distro puts rsyslog's config files). Note that only commands
 actually needed need to be specified. The second file uses less
 commands and uses defaults instead.<br>
 </p>
-<textarea rows="15" cols="60">module(load="folder/to/rsyslog/plugins/imfile/.libs/imfile" PollingInterval="10") #needs to be done just once
+<textarea rows="15" cols="60">module(load="imfile" PollingInterval="10") #needs to be done just once
 # File 1
 input(type="imfile" File="/path/to/file1" 
-Tag="tag1" 
-StateFile="/var/spool/rsyslog/statefile1" 
-Severity="error" 
-Facility="local7")
+      Tag="tag1" 
+      StateFile="statefile1" 
+      Severity="error" 
+      Facility="local7")
 # File 2
 input(type="imfile" File="/path/to/file2" 
-Tag="tag2" 
-StateFile="/var/spool/rsyslog/statefile2")
+      Tag="tag2" 
+      StateFile="statefile2")
 # ... and so on ...
 #
 </textarea>
@@ -178,7 +180,7 @@ the current monitor. It has no parameters. If you forget this
 directive, no file monitoring will take place.</li>
 <li><span style="font-weight: bold;">$InputFilePollInterval
 seconds</span><br>
-equivalent to: PollingInterva</li>
+equivalent to: PollingInterval</li>
 <li><b>$InputFilePersistStateInterval</b> [lines]</b><br>
 Available in 4.7.3+, 5.6.2+<br>
 equivalent to: PersistStateInterval 
@@ -210,8 +212,7 @@ your distro puts rsyslog's config files). Note that only commands
 actually needed need to be specified. The second file uses less
 commands and uses defaults instead.<br>
 </p>
-<textarea rows="15" cols="60">$ModLoad imfile #
-needs to be done just once
+<textarea rows="15" cols="60">$ModLoad imfile # needs to be done just once
 # File 1
 $InputFileName /path/to/file1
 $InputFileTag tag1:
@@ -227,7 +228,7 @@ $InputRunFileMonitor
 # ... and so on ...
 #
 # check for new lines every 10 seconds
-$InputFilePollingInterval 10
+$InputFilePollInterval 10
 </textarea>
 <p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>]
 [<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>

@@ -120,7 +120,11 @@ CODESTARTdoAction
 		  (char*) pData->pszRulesetName, pData->pRuleset);
 	MsgSetFlowControlType(pMsg, eFLOWCTL_NO_DELAY);
 	MsgSetRuleset(pMsg, pData->pRuleset);
-	submitMsg(pMsg);
+	/* Note: we intentionally use submitMsg2() here, as we process messages
+	 * that were already run through the rate-limiter. So it is (at least)
+	 * questionable if they were rate-limited again.
+	 */
+	submitMsg2(pMsg);
 finalize_it:
 ENDdoAction
 
@@ -165,12 +169,8 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	p += sizeof(":omruleset:") - 1; /* eat indicator sequence  (-1 because of '\0'!) */
 	CHKiRet(createInstance(&pData));
 
-	/* re-enable in v7.3: requires action list to support 
-	 * action-like statements, something that is too late to
-	 * do in 7.1.
 	errmsg.LogError(0, RS_RET_DEPRECATED, "warning: omruleset is deprecated, consider "
 			"using the 'call' statement instead");
-	 */
 
 	/* check if a non-standard template is to be applied */
 	if(*(p-1) == ';')

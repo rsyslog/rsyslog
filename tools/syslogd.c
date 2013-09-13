@@ -44,7 +44,6 @@
 #include "rsyslog.h"
 
 #define DEFUPRI		(LOG_USER|LOG_NOTICE)
-#define TIMERINTVL	30		/* interval for checking flush, mark */
 
 #include <unistd.h>
 #include <stdlib.h>
@@ -52,7 +51,6 @@
 #include <stddef.h>
 #include <ctype.h>
 #include <limits.h>
-#define GNU_SOURCE
 #include <string.h>
 #include <stdarg.h>
 #include <time.h>
@@ -127,6 +125,7 @@ extern int yydebug; /* interface to flex */
 #include "dnscache.h"
 #include "sd-daemon.h"
 #include "rainerscript.h"
+#include "ratelimit.h"
 
 /* definitions for objects we access */
 DEFobjCurrIf(obj)
@@ -195,7 +194,6 @@ static prop_t *pInternalInputName = NULL;	/* there is only one global inputName 
 static uchar	*ConfFile = (uchar*) _PATH_LOGCONF; /* read-only after startup */
 static char	*PidFile = _PATH_LOGPID; /* read-only after startup */
 
-static pid_t myPid;	/* our pid for use in self-generated messages, e.g. on startup */
 /* mypid is read-only after the initial fork() */
 static int bHadHUP = 0; /* did we have a HUP? */
 
@@ -204,13 +202,6 @@ static int bFinished = 0;	/* used by termination signal handler, read-only excep
  				 * termination.
 				 */
 int iConfigVerify = 0;	/* is this just a config verify run? */
-
-/* Intervals at which we flush out "message repeated" messages,
- * in seconds after previous message is logged.  After each flush,
- * we move to the next interval until we reach the largest.
- * TODO: this shall go into action object! -- rgerhards, 2008-01-29
- */
-int	repeatinterval[2] = { 30, 60 };	/* # of secs before flush */
 
 #define LIST_DELIMITER	':'		/* delimiter between two hosts */
 
@@ -222,6 +213,8 @@ struct queuefilenames_s {
 } *queuefilenames = NULL;
 
 
+static ratelimit_t *dflt_ratelimiter = NULL; /* ratelimiter for submits without explicit one */
+static ratelimit_t *internalMsg_ratelimiter = NULL; /* ratelimiter for rsyslog-own messages */
 int	MarkInterval = 20 * 60;	/* interval between marks in seconds - read-only after startup */
 int      send_to_all = 0;        /* send message to all IPv4/IPv6 addresses */
 static int	doFork = 1; 	/* fork - run in daemon mode - read-only after startup */
@@ -413,7 +406,7 @@ parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int fla
 	CHKiRet(prop.Destruct(&pProp));
 	CHKiRet(MsgSetRcvFromIPStr(pMsg, hnameIP, ustrlen(hnameIP), &pProp));
 	CHKiRet(prop.Destruct(&pProp));
-	CHKiRet(submitMsg(pMsg));
+	CHKiRet(submitMsg2(pMsg));
 
 finalize_it:
 	RETiRet;
@@ -432,6 +425,12 @@ submitErrMsg(int iErr, uchar *msg)
 	RETiRet;
 }
 
+
+static inline rsRetVal
+submitMsgWithDfltRatelimiter(msg_t *pMsg)
+{
+	return ratelimitAddMsg(dflt_ratelimiter, NULL, pMsg);
+}
 
 /* rgerhards 2004-11-09: the following is a function that can be used
  * to log a message orginating from the syslogd itself.
@@ -484,49 +483,12 @@ logmsgInternal(int iErr, int pri, uchar *msg, int flags)
                /* we have the queue, so we can simply provide the
 		 * message to the queue engine.
 		 */
-		submitMsg(pMsg);
+		ratelimitAddMsg(internalMsg_ratelimiter, NULL, pMsg);
+		//submitMsgWithDfltRatelimiter(pMsg);
 	}
 finalize_it:
 	RETiRet;
 }
-
-/* check message against ACL set
- * rgerhards, 2009-11-16
- */
-#if 0
-static inline rsRetVal
-chkMsgAgainstACL() {
-	/* if we reach this point, we had a good receive and can process the packet received */
-	/* check if we have a different sender than before, if so, we need to query some new values */
-	if(net.CmpHost(&frominet, frominetPrev, socklen) != 0) {
-		CHKiRet(net.cvthname(&frominet, fromHost, fromHostFQDN, fromHostIP));
-		memcpy(frominetPrev, &frominet, socklen); /* update cache indicator */
-		/* Here we check if a host is permitted to send us
-		* syslog messages. If it isn't, we do not further
-		* process the message but log a warning (if we are
-		* configured to do this).
-		* rgerhards, 2005-09-26
-		*/
-		*pbIsPermitted = net.isAllowedSender((uchar*)"UDP",
-						    (struct sockaddr *)&frominet, (char*)fromHostFQDN);
-
-		if(!*pbIsPermitted) {
-			DBGPRINTF("%s is not an allowed sender\n", (char*)fromHostFQDN);
-			if(glbl.GetOption_DisallowWarning) {
-				time_t tt;
-
-				datetime.GetTime(&tt);
-				if(tt > ttLastDiscard + 60) {
-					ttLastDiscard = tt;
-					errmsg.LogError(0, NO_ERRCODE,
-					"UDP message from disallowed sender %s discarded",
-					(char*)fromHost);
-				}
-			}
-		}
-	}
-}
-#endif
 
 
 /* preprocess a batch of messages, that is ready them for actual processing. This is done
@@ -536,9 +498,9 @@ chkMsgAgainstACL() {
  */
 static inline rsRetVal
 preprocessBatch(batch_t *pBatch) {
-	uchar fromHost[NI_MAXHOST];
-	uchar fromHostIP[NI_MAXHOST];
-	uchar fromHostFQDN[NI_MAXHOST];
+	prop_t *ip;
+	prop_t *fqdn;
+	prop_t *localName;
 	prop_t *propFromHost = NULL;
 	prop_t *propFromHostIP = NULL;
 	int bSingleRuleset;
@@ -550,31 +512,31 @@ preprocessBatch(batch_t *pBatch) {
 	DEFiRet;
 
 	bSingleRuleset = 1;
-	batchRuleset = (pBatch->nElem > 0) ? ((msg_t*) pBatch->pElem[0].pUsrp)->pRuleset : NULL;
+	batchRuleset = (pBatch->nElem > 0) ? pBatch->pElem[0].pMsg->pRuleset : NULL;
 	
 	for(i = 0 ; i < pBatch->nElem  && !*(pBatch->pbShutdownImmediate) ; i++) {
-		pMsg = (msg_t*) pBatch->pElem[i].pUsrp;
+		pMsg = pBatch->pElem[i].pMsg;
 		if((pMsg->msgFlags & NEEDS_ACLCHK_U) != 0) {
 			DBGPRINTF("msgConsumer: UDP ACL must be checked for message (hostname-based)\n");
-			if(net.cvthname(pMsg->rcvFrom.pfrominet, fromHost, fromHostFQDN, fromHostIP) != RS_RET_OK)
+			if(net.cvthname(pMsg->rcvFrom.pfrominet, &localName, &fqdn, &ip) != RS_RET_OK)
 				continue;
 			bIsPermitted = net.isAllowedSender2((uchar*)"UDP",
-			    (struct sockaddr *)pMsg->rcvFrom.pfrominet, (char*)fromHostFQDN, 1);
+			    (struct sockaddr *)pMsg->rcvFrom.pfrominet, (char*)propGetSzStr(fqdn), 1);
 			if(!bIsPermitted) {
 				DBGPRINTF("Message from '%s' discarded, not a permitted sender host\n",
-					  fromHostFQDN);
-				pBatch->pElem[i].state = BATCH_STATE_DISC;
+					  propGetSzStr(fqdn));
+				pBatch->eltState[i] = BATCH_STATE_DISC;
 			} else {
 				/* save some of the info we obtained */
-				MsgSetRcvFromStr(pMsg, fromHost, ustrlen(fromHost), &propFromHost);
-				CHKiRet(MsgSetRcvFromIPStr(pMsg, fromHostIP, ustrlen(fromHostIP), &propFromHostIP));
+				MsgSetRcvFrom(pMsg, localName);
+				CHKiRet(MsgSetRcvFromIP(pMsg, ip));
 				pMsg->msgFlags &= ~NEEDS_ACLCHK_U;
 			}
 		}
 		if((pMsg->msgFlags & NEEDS_PARSING) != 0) {
 			if((localRet = parser.ParseMsg(pMsg)) != RS_RET_OK)  {
 				DBGPRINTF("Message discarded, parsing error %d\n", localRet);
-				pBatch->pElem[i].state = BATCH_STATE_DISC;
+				pBatch->eltState[i] = BATCH_STATE_DISC;
 			}
 		}
 		if(pMsg->pRuleset != batchRuleset)
@@ -609,7 +571,7 @@ msgConsumer(void __attribute__((unused)) *notNeeded, batch_t *pBatch, int *pbShu
 //do not have this yet and so we emulate -- 2010-06-10
 int i;
 	for(i = 0 ; i < pBatch->nElem  && !*pbShutdownImmediate ; i++) {
-		pBatch->pElem[i].state = BATCH_STATE_COMM;
+		pBatch->eltState[i] = BATCH_STATE_COMM;
 	}
 	RETiRet;
 }
@@ -620,7 +582,7 @@ int i;
  * rgerhards, 2008-02-13
  */
 rsRetVal
-submitMsg(msg_t *pMsg)
+submitMsg2(msg_t *pMsg)
 {
 	qqueue_t *pQueue;
 	ruleset_t *pRuleset;
@@ -633,15 +595,21 @@ submitMsg(msg_t *pMsg)
 
 	/* if a plugin logs a message during shutdown, the queue may no longer exist */
 	if(pQueue == NULL) {
-		DBGPRINTF("submitMsg() could not submit message - "
+		DBGPRINTF("submitMsg2() could not submit message - "
 			  "queue does (no longer?) exist - ignored\n");
 		FINALIZE;
 	}
 
-	qqueueEnqObj(pQueue, pMsg->flowCtlType, (void*) pMsg);
+	qqueueEnqMsg(pQueue, pMsg->flowCtlType, pMsg);
 
 finalize_it:
 	RETiRet;
+}
+
+rsRetVal
+submitMsg(msg_t *pMsg)
+{
+	return submitMsgWithDfltRatelimiter(pMsg);
 }
 
 
@@ -650,7 +618,7 @@ finalize_it:
  * rgerhards, 2009-06-16
  */
 rsRetVal
-multiSubmitMsg(multi_submit_t *pMultiSub)
+multiSubmitMsg2(multi_submit_t *pMultiSub)
 {
 	qqueue_t *pQueue;
 	ruleset_t *pRuleset;
@@ -676,8 +644,23 @@ multiSubmitMsg(multi_submit_t *pMultiSub)
 finalize_it:
 	RETiRet;
 }
+rsRetVal
+multiSubmitMsg(multi_submit_t *pMultiSub) /* backward compat. level */
+{
+	return multiSubmitMsg2(pMultiSub);
+}
 
 
+/* flush multiSubmit, e.g. at end of read records */
+rsRetVal
+multiSubmitFlush(multi_submit_t *pMultiSub)
+{
+	DEFiRet;
+	if(pMultiSub->nElem > 0) {
+		iRet = multiSubmitMsg2(pMultiSub);
+	}
+	RETiRet;
+}
 
 
 static void
@@ -693,43 +676,6 @@ reapchild()
 
 	while(waitpid(-1, NULL, WNOHANG) > 0);
 	errno = saved_errno;
-}
-
-
-/* helper to doFlushRptdMsgs() to flush the individual action links via llExecFunc
- * rgerhards, 2007-08-02
- */
-DEFFUNC_llExecFunc(flushRptdMsgsActions)
-{
-	action_t *pAction = (action_t*) pData;
-	assert(pAction != NULL);
-
-	BEGINfunc
-	d_pthread_mutex_lock(&pAction->mutAction);
-	/* TODO: time() performance: the call below could be moved to
-	 * the beginn of the llExec(). This makes it slightly less correct, but
-	 * in an acceptable way. -- rgerhards, 2008-09-16
-	 */
-	if (pAction->f_prevcount && datetime.GetTime(NULL) >= REPEATTIME(pAction)) {
-		DBGPRINTF("flush %s: repeated %d times, %d sec.\n",
-		    module.GetStateName(pAction->pMod), pAction->f_prevcount,
-		    repeatinterval[pAction->f_repeatcount]);
-		actionWriteToAction(pAction);
-		BACKOFF(pAction);
-	}
-	d_pthread_mutex_unlock(&pAction->mutAction);
-
-	ENDfunc
-	return RS_RET_OK; /* we ignore errors, we can not do anything either way */
-}
-
-
-/* This method flushes repeat messages.
- */
-static void
-doFlushRptdMsgs(void)
-{
-	ruleset.IterateAllActions(runConf, flushRptdMsgsActions, NULL);
 }
 
 
@@ -847,7 +793,7 @@ die(int sig)
 		(void) snprintf(buf, sizeof(buf) / sizeof(char),
 		 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
 		 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"]" " exiting on signal %d.",
-		 (int) myPid, sig);
+		 (int) glblGetOurPid(), sig);
 		errno = 0;
 		logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)buf, 0);
 	}
@@ -1221,7 +1167,7 @@ init(void)
                snprintf(bufStartUpMsg, sizeof(bufStartUpMsg)/sizeof(char),
 			 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
 			 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"] start",
-			 (int) myPid);
+			 (int) glblGetOurPid());
 		logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)bufStartUpMsg, 0);
 	}
 
@@ -1263,7 +1209,7 @@ static inline void processImInternal(void)
 	msg_t *pMsg;
 
 	while(iminternalRemoveMsg(&pMsg) == RS_RET_OK) {
-		submitMsg(pMsg);
+		submitMsgWithDfltRatelimiter(pMsg);
 	}
 }
 
@@ -1300,7 +1246,7 @@ doHUP(void)
 		snprintf(buf, sizeof(buf) / sizeof(char),
 			 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION
 			 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"] rsyslogd was HUPed",
-			 (int) myPid);
+			 (int) glblGetOurPid());
 			errno = 0;
 		logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)buf, 0);
 	}
@@ -1330,49 +1276,22 @@ mainloop(void)
 
 	while(!bFinished){
 		/* this is now just a wait - please note that we do use a near-"eternal"
-		 * timeout of 1 day if we do not have repeated message reduction turned on
-		 * (which it is not by default). This enables us to help safe the environment
+		 * timeout of 1 day. This enables us to help safe the environment
 		 * by not unnecessarily awaking rsyslog on a regular tick (just think
 		 * powertop, for example). In that case, we primarily wait for a signal,
 		 * but a once-a-day wakeup should be quite acceptable. -- rgerhards, 2008-06-09
 		 */
-		tvSelectTimeout.tv_sec = (runConf->globals.bReduceRepeatMsgs == 1) ? TIMERINTVL : 86400 /*1 day*/;
-		//tvSelectTimeout.tv_sec = TIMERINTVL; /* TODO: change this back to the above code when we have a better solution for apc */
+		tvSelectTimeout.tv_sec = 86400 /*1 day*/;
 		tvSelectTimeout.tv_usec = 0;
 		select(1, NULL, NULL, NULL, &tvSelectTimeout);
 		if(bFinished)
-			break;	/* exit as quickly as possible - see long comment below */
-
-		/* If we received a HUP signal, we call doFlushRptdMsgs() a bit early. This
- 		 * doesn't matter, because doFlushRptdMsgs() checks timestamps. What may happen,
- 		 * however, is that the too-early call may lead to a bit too-late output
- 		 * of "last message repeated n times" messages. But that is quite acceptable.
- 		 * rgerhards, 2007-12-21
-		 * ... and just to explain, we flush here because that is exactly what the mainloop
-		 * shall do - provide a periodic interval in which not-yet-flushed messages will
-		 * be flushed. Be careful, there is a potential race condition: doFlushRptdMsgs()
-		 * needs to aquire a lock on the action objects. If, however, long-running consumers
-		 * cause the main queue worker threads to lock them for a long time, we may receive
-		 * a starvation condition, resulting in the mainloop being held on lock for an extended
-		 * period of time. That, in turn, could lead to unresponsiveness to termination
-		 * requests. It is especially important that the bFinished flag is checked before
-		 * doFlushRptdMsgs() is called (I know because I ran into that situation). I am
-		 * not yet sure if the remaining probability window of a termination-related
-		 * problem is large enough to justify changing the code - I would consider it
-		 * extremely unlikely that the problem ever occurs in practice. Fixing it would
-		 * require not only a lot of effort but would cost considerable performance. So
-		 * for the time being, I think the remaining risk can be accepted.
-		 * rgerhards, 2008-01-10
- 		 */
-		if(runConf->globals.bReduceRepeatMsgs == 1)
-			doFlushRptdMsgs();
+			break;	/* exit as quickly as possible */
 
 		if(bHadHUP) {
 			doHUP();
 			bHadHUP = 0;
 			continue;
 		}
-		// TODO: remove execScheduled(); /* handle Apc calls (if any) */
 	}
 	ENDfunc
 }
@@ -1473,6 +1392,7 @@ InitGlobalClasses(void)
 	CHKiRet(objUse(net, LM_NET_FILENAME));
 	dnscacheInit();
 	initRainerscript();
+	ratelimitModInit();
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
@@ -1511,6 +1431,7 @@ GlobalClassExit(void)
 	/* TODO: implement the rest of the deinit */
 	/* dummy "classes */
 	strExit();
+	ratelimitModExit();
 
 #if 0
 	CHKiRet(objGetObjInterface(&obj)); /* this provides the root pointer for all other queries */
@@ -1606,6 +1527,13 @@ queryLocalHostname(void)
 	 */
 	glbl.SetLocalHostName(LocalHostName);
 	glbl.SetLocalDomain(LocalDomain);
+
+	if ( strlen((char*)LocalDomain) )  {
+		CHKmalloc(LocalFQDNName = (uchar*)malloc(strlen((char*)LocalDomain)+strlen((char*)LocalHostName)+2));/* one for dot, one for NUL! */
+		if ( sprintf((char*)LocalFQDNName,"%s.%s",(char*)LocalHostName,(char*)LocalDomain) )
+			glbl.SetLocalFQDNName(LocalFQDNName);
+		}
+
 	glbl.GenerateLocalHostNameProperty(); /* must be redone after conf processing, FQDN setting may have changed */
 finalize_it:
 	RETiRet;
@@ -1789,7 +1717,7 @@ doGlblProcessInit(void)
 		fputs("Pidfile (and pid) already exist.\n", stderr);
 		exit(1); /* exit during startup - questionable */
 	}
-	myPid = getpid(); 	/* save our pid for further testing (also used for messages) */
+	glblSetOurPid(getpid());
 
 	memset(&sigAct, 0, sizeof (sigAct));
 	sigemptyset(&sigAct.sa_mask);
@@ -2057,6 +1985,12 @@ int realMain(int argc, char **argv)
 	}
 	CHKiRet(localRet);
 
+	CHKiRet(ratelimitNew(&dflt_ratelimiter, "rsyslogd", "dflt"));
+	/* TODO: add linux-type limiting capability */
+	CHKiRet(ratelimitNew(&internalMsg_ratelimiter, "rsyslogd", "internal_messages"));
+	ratelimitSetLinuxLike(internalMsg_ratelimiter, 5, 500);
+	/* TODO: make internalMsg ratelimit settings configurable */
+
 	if(bChDirRoot) {
 		if(chdir("/") != 0)
 			fprintf(stderr, "Can not do 'cd /' - still trying to run\n");
@@ -2074,10 +2008,8 @@ int realMain(int argc, char **argv)
 		CHKiRet(doGlblProcessInit());
 
 	/* Send a signal to the parent so it can terminate.  */
-	if(myPid != ppid) {
-		dbgprintf("signaling parent to terminate\n");
+	if(glblGetOurPid() != ppid)
 		kill(ppid, SIGTERM);
-	}
 
 	CHKiRet(init());
 
@@ -2100,6 +2032,8 @@ int realMain(int argc, char **argv)
 		close(2);
 		ourConf->globals.bErrMsgToStderr = 0;
 	}
+
+	sd_notify(0, "READY=1");
 
 	mainloop();
 

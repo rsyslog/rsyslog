@@ -70,6 +70,7 @@
 #include "errmsg.h"
 #include "net.h"
 #include "dnscache.h"
+#include "prop.h"
 
 #ifdef OS_SOLARIS
 #	define	s6_addr32	_S6_un._S6_u32
@@ -83,6 +84,7 @@ MODULE_TYPE_NOKEEP
 DEFobjStaticHelpers
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
+DEFobjCurrIf(prop)
 
 /* support for defining allowed TCP and UDP senders. We use the same
  * structure to implement this (a linked list), but we define two different
@@ -230,6 +232,7 @@ finalize_it:
 		/* enqueue the element */
 		if(pPeer->pWildcardRoot == NULL) {
 			pPeer->pWildcardRoot = pNew;
+			pPeer->pWildcardLast = pNew;
 		} else {
 			pPeer->pWildcardLast->pNext = pNew;
 		}
@@ -579,7 +582,7 @@ static void
 clearAllowedSenders(uchar *pszType)
 {
 	struct AllowedSenders *pPrev;
-	struct AllowedSenders *pCurr;
+	struct AllowedSenders *pCurr = NULL;
 
 	if(setAllowRoot(&pCurr, pszType) != RS_RET_OK)
 		return;	/* if something went wrong, so let's leave */
@@ -987,7 +990,7 @@ MaskCmp(struct NetAddr *pAllow, uint8_t bits, struct sockaddr *pFrom, const char
 static int isAllowedSender2(uchar *pszType, struct sockaddr *pFrom, const char *pszFromHost, int bChkDNS)
 {
 	struct AllowedSenders *pAllow;
-	struct AllowedSenders *pAllowRoot;
+	struct AllowedSenders *pAllowRoot = NULL;
 	int bNeededDNS = 0;	/* partial check because we could not resolve DNS? */
 	int ret;
 
@@ -1115,98 +1118,15 @@ void debugListenInfo(int fd, char *type)
 }
 
 
-/* Return a printable representation of a host address.
- * Now (2007-07-16) also returns the full host name (if it could be obtained)
- * in the second param [thanks to mildew@gmail.com for the patch].
- * The caller must provide buffer space for pszHost and pszHostFQDN. These
- * buffers must be of size NI_MAXHOST. This is not checked here, because
- * there is no way to check it. We use this way of doing things because it
- * frees us from using dynamic memory allocation where it really does not
- * pay.
- * 2005-05-16 rgerhards: added IP representation. Must also be NI_MAXHOST
+/* Return a printable representation of a host addresses. If
+ * a parameter is NULL, it is not set.  rgerhards, 2013-01-22
  */
-rsRetVal cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQDN, uchar *pszIP)
+rsRetVal
+cvthname(struct sockaddr_storage *f, prop_t **localName, prop_t **fqdn, prop_t **ip)
 {
 	DEFiRet;
-	register uchar *p;
-	int count;
-	
 	assert(f != NULL);
-	assert(pszHost != NULL);
-	assert(pszHostFQDN != NULL);
-
-	iRet = dnscacheLookup(f, pszHostFQDN, pszIP);
-
-	if(iRet == RS_RET_INVALID_SOURCE) {
-		strcpy((char*) pszHost, (char*) pszHostFQDN); /* we use whatever was provided as replacement */
-		ABORT_FINALIZE(RS_RET_OK); /* this is handled, we are happy with it */
-	} else if(iRet != RS_RET_OK) {
-		FINALIZE; /* we return whatever error state we have - can not handle it */
-	}
-
-	/* if we reach this point, we obtained a non-numeric hostname and can now process it */
-
-	/* Convert to lower case */
-	for(p = pszHostFQDN ; *p ; p++)
-		if (isupper((int) *p))
-			*p = tolower(*p);
-	
-	/* OK, the fqdn is now known. Now it is time to extract only the hostname
-	 * part if we were instructed to do so.
-	 */
-	/* TODO: quick and dirty right now: we need to optimize that. We simply
-	 * copy over the buffer and then use the old code. In the long term, that should
-	 * be placed in its own function and probably outside of the net module (at least
-	 * if should no longer reley on syslogd.c's global config-setting variables).
-	 * Note that the old code always removes the local domain. We may want to
-	 * make this in option in the long term. (rgerhards, 2007-09-11)
-	 */
-	strcpy((char*)pszHost, (char*)pszHostFQDN);
-	if(   (glbl.GetPreserveFQDN() == 0)
-	   && (p = (uchar*) strchr((char*)pszHost, '.'))) { /* find start of domain name "machine.example.com" */
-		strcmp((char*)(p + 1), (char*)glbl.GetLocalDomain());
-		if(strcmp((char*)(p + 1), (char*)glbl.GetLocalDomain()) == 0) {
-			*p = '\0'; /* simply terminate the string */
-		} else {
-			/* now check if we belong to any of the domain names that were specified
-			 * in the -s command line option. If so, remove and we are done.
-			 * TODO: this must go away! -- rgerhards, 2008-04-16
-			 * For proper modularization, this must be done different, e.g. via a
-			 * "to be stripped" property of *this* object itself.
-			 */
-			if(glbl.GetStripDomains() != NULL) {
-				count=0;
-				while(glbl.GetStripDomains()[count]) {
-					if (strcmp((char*)(p + 1), glbl.GetStripDomains()[count]) == 0) {
-						*p = '\0';
-						FINALIZE; /* we are done */
-					}
-					count++;
-				}
-			}
-			/* if we reach this point, we have not found any domain we should strip. Now
-			 * we try and see if the host itself is listed in the -l command line option
-			 * and so should be stripped also. If so, we do it and return. Please note that
-			 * -l list FQDNs, not just the hostname part. If it did just list the hostname, the
-			 * door would be wide-open for all kinds of mixing up of hosts. Because of this,
-			 * you'll see comparison against the full string (pszHost) below. The termination
-			 * still occurs at *p, which points at the first dot after the hostname.
-			 * TODO: this must also go away - see comment above -- rgerhards, 2008-04-16
-			 */
-			if(glbl.GetLocalHosts() != NULL) {
-				count=0;
-				while (glbl.GetLocalHosts()[count]) {
-					if (!strcmp((char*)pszHost, (char*)glbl.GetLocalHosts()[count])) {
-						*p = '\0';
-						break; /* we are done */
-					}
-					count++;
-				}
-			}
-		}
-	}
-
-finalize_it:
+	iRet = dnscacheLookup(f, NULL, fqdn, localName, ip);
 	RETiRet;
 }
 
@@ -1471,7 +1391,7 @@ finalize_it:
  */
 static rsRetVal
 HasRestrictions(uchar *pszType, int *bHasRestrictions) {
-	struct AllowedSenders *pAllowRoot;
+	struct AllowedSenders *pAllowRoot = NULL;
 	DEFiRet;
 
 	CHKiRet(setAllowRoot(&pAllowRoot, pszType));
@@ -1581,6 +1501,7 @@ BEGINObjClassExit(net, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO
 CODESTARTObjClassExit(net)
 	/* release objects we no longer need */
 	objRelease(glbl, CORE_COMPONENT);
+	objRelease(prop, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
 ENDObjClassExit(net)
 
@@ -1593,6 +1514,7 @@ BEGINAbstractObjClassInit(net, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
+	CHKiRet(objUse(prop, CORE_COMPONENT));
 
 	/* set our own handlers */
 ENDObjClassInit(net)

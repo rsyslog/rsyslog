@@ -51,6 +51,11 @@ of a and b should be tested as "a &lt;&gt; b". The "not" operator
 should be reserved to cases where it actually is needed to form a
 complex boolean expression. In those cases, parenthesis are highly
 recommended.
+<h2>Lookup Tables</h2>
+<p><a href="lookup_tables.html">Lookup tables</a> are a powerful construct
+to obtain "class" information based on message content (e.g. to build
+log file names for different server types, departments or remote 
+offices).
 <h2>Functions</h2>
 <p>RainerScript supports a currently quite limited set of functions:
 <ul>
@@ -61,11 +66,30 @@ variable, if it exists. Returns an empty string if it does not exist.
 <li>cstr(expr) - converts expr to a string value
 <li>cnum(expr) - converts expr to a number (integer)
 <li>re_match(expr, re) - returns 1, if expr matches re, 0 otherwise
+<li>re_extract(expr, re, match, submatch, no-found) - extracts
+data from a string (property) via a regular expression match.
+POSIX ERE regular expressions are used. The variable "match" contains
+the number of the match to use. This permits to pick up more than the
+first expression match. Submatch is the submatch to match (max 50 supported).
+The "no-found" parameter specifies which string is to be returned in case when
+the regular expression is not found. Note that match and submatch start with
+zero. It currently is not possible to extract more than one submatch with
+a single call.
 <li>field(str, delim, matchnbr) - returns a field-based substring. str is the string
-to search, delim is the numerical ascii value of the field delimiter (so that
-non-printable characters can by specified) and matchnbr is the match to search
+to search, delim is the delimiter and matchnbr is the match to search
 for (the first match starts at 1). This works similar as the field based
 property-replacer option.
+Versions prior to 7.3.7 only support a single character as delimiter character.
+Starting with version 7.3.7, a full string can be used as delimiter. If a single
+character is being used as delimiter,   delim is the numerical ascii value of the
+field delimiter character (so that non-printable characters can by specified). If a
+string is used as delmiter, a multi-character string (e.g. "#011") is to be
+specified. Samples:<br>
+set $!usr!field = field($msg, 32, 3); -- the third field, delimited by space<br>
+set $!usr!field = field($msg, "#011", 3); -- the third field, delmited by "#011"<br>
+Note that when a single character is specified as string [field($msg, ",", 3)] a
+string-based extraction is done, which is more performance intense than the
+equivalent single-character [field($msg, 44 ,3)] extraction.
 <li>prifilt(constant) - mimics a traditional PRI-based filter (like "*.*" or
 "mail.info"). The traditional filter string must be given as a <b>constant string</b>.
 Dynamic string evaluation is not permitted (for performance reasons).
@@ -80,7 +104,7 @@ if $msg contains getenv('TRIGGERVAR') then /path/to/errfile
 <p><font size="2">This documentation is part of the
 <a href="http://www.rsyslog.com/">rsyslog</a>
 project.<br>
-Copyright &copy; 2008-2012 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+Copyright &copy; 2008-2013 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
 <a href="http://www.adiscon.com/">Adiscon</a>.
 Released under the GNU GPL version 3 or higher.</font></p>
 </body></html>

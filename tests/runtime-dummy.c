@@ -30,7 +30,6 @@
 #include "rsyslog.h"
 
 int bReduceRepeatMsgs = 0;
-int repeatinterval = 30;
 int bActExecWhenPrevSusp = 0;
 int iActExecOnceInterval = 1;
 int MarkInterval = 30;

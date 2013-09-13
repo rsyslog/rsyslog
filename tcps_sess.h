@@ -66,16 +66,18 @@ BEGINinterface(tcps_sess) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetLstnInfo)(tcps_sess_t *pThis, tcpLstnPortList_t *pLstnInfo);
 	rsRetVal (*SetUsrP)(tcps_sess_t*, void*);
 	rsRetVal (*SetHost)(tcps_sess_t *pThis, uchar*);
-	rsRetVal (*SetHostIP)(tcps_sess_t *pThis, uchar*);
+	rsRetVal (*SetHostIP)(tcps_sess_t *pThis, prop_t*);
 	rsRetVal (*SetStrm)(tcps_sess_t *pThis, netstrm_t*);
 	rsRetVal (*SetMsgIdx)(tcps_sess_t *pThis, int);
 	rsRetVal (*SetOnMsgReceive)(tcps_sess_t *pThis, rsRetVal (*OnMsgReceive)(tcps_sess_t*, uchar*, int));
 ENDinterface(tcps_sess)
-#define tcps_sessCURR_IF_VERSION 2 /* increment whenever you change the interface structure! */
+#define tcps_sessCURR_IF_VERSION 3 /* increment whenever you change the interface structure! */
 /* interface changes
  * to version v2, rgerhards, 2009-05-22
  * - Data structures changed
  * - SetLstnInfo entry point added
+ * version 3, rgerhards, 2013-01-21:
+ * - signature of SetHostIP() changed
  */
 
 

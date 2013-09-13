@@ -36,7 +36,15 @@
 #include <stdlib.h>
 #include <net/if.h>
 #include <ifaddrs.h>
-#include <libsocket_priv.h>
+
+/* Normally this is defined in <net/if.h> but was new for Solaris 11 */
+#ifndef LIFC_ENABLED
+#define LIFC_ENABLED    0x20
+#endif
+
+int getallifaddrs(sa_family_t af, struct ifaddrs **ifap, int64_t flags);
+int getallifs(int s, sa_family_t af, struct lifreq **lifr, int *numifs,
+    int64_t lifc_flags);
 
 /*
  * Create a linked list of `struct ifaddrs' structures, one for each

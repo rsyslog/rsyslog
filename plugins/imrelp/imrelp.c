@@ -113,11 +113,29 @@ static struct cnfparamblk inppblk =
  * we will only see the hostname (twice). -- rgerhards, 2009-10-14
  */
 static relpRetVal
-onSyslogRcv(uchar *pHostname, uchar *pIP, uchar *pMsg, size_t lenMsg)
+onSyslogRcv(uchar *pHostname, uchar *pIP, uchar *msg, size_t lenMsg)
 {
+	prop_t *pProp = NULL;
+	msg_t *pMsg;
 	DEFiRet;
-	parseAndSubmitMessage(pHostname, pIP, pMsg, lenMsg, PARSE_HOSTNAME,
-			      eFLOWCTL_LIGHT_DELAY, pInputName, NULL, 0, runModConf->pBindRuleset);
+
+	CHKiRet(msgConstruct(&pMsg));
+	MsgSetInputName(pMsg, pInputName);
+	MsgSetRawMsg(pMsg, (char*)msg, lenMsg);
+	MsgSetFlowControlType(pMsg, eFLOWCTL_LIGHT_DELAY);
+	MsgSetRuleset(pMsg, runModConf->pBindRuleset);
+	pMsg->msgFlags  = PARSE_HOSTNAME | NEEDS_PARSING;
+
+	/* TODO: optimize this, we can store it inside the session, requires
+	 * changes to librelp --> next librelp iteration?. rgerhards, 2012-10-29
+	 */
+	MsgSetRcvFromStr(pMsg, pHostname, ustrlen(pHostname), &pProp);
+	CHKiRet(prop.Destruct(&pProp));
+	CHKiRet(MsgSetRcvFromIPStr(pMsg, pIP, ustrlen(pIP), &pProp));
+	CHKiRet(prop.Destruct(&pProp));
+	CHKiRet(submitMsg2(pMsg));
+
+finalize_it:
 
 	RETiRet;
 }
@@ -190,6 +208,7 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 	if(pRelpEngine == NULL) {
 		CHKiRet(relpEngineConstruct(&pRelpEngine));
 		CHKiRet(relpEngineSetDbgprint(pRelpEngine, dbgprintf));
+		CHKiRet(relpEngineSetFamily(pRelpEngine, glbl.GetDefPFFamily()));
 		CHKiRet(relpEngineSetEnableCmd(pRelpEngine, (uchar*) "syslog", eRelpCmdState_Required));
 		CHKiRet(relpEngineSetSyslogRcv(pRelpEngine, onSyslogRcv));
 		if (!glbl.GetDisableDNS()) {

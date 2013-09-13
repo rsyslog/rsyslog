@@ -17,7 +17,7 @@
  * pipes. These have been moved to ompipe, to reduced the entanglement
  * between the two different functionalities. -- rgerhards
  *
- * Copyright 2007-2012 Adiscon GmbH.
+ * Copyright 2007-2013 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -68,6 +68,9 @@
 #include "stream.h"
 #include "unicode-helper.h"
 #include "atomic.h"
+#include "statsobj.h"
+#include "sigprov.h"
+#include "cryprov.h"
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
@@ -81,6 +84,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 DEF_OMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(strm)
+DEFobjCurrIf(statsobj)
 
 /* for our current LRU mechanism, we need a monotonically increasing counters. We use
  * it much like a "Lamport logical clock": we do not need the actual time, we just need
@@ -116,6 +120,7 @@ getClockFileAccess(void)
 struct s_dynaFileCacheEntry {
 	uchar *pName;		/* name currently open, if dynamic name */
 	strm_t	*pStrm;		/* our output stream */
+	void	*sigprovFileData;	/* opaque data ptr for provider use */
 	uint64	clkTickAccessed;/* for LRU - based on clockFileAccess */
 };
 typedef struct s_dynaFileCacheEntry dynaFileCacheEntry;
@@ -141,6 +146,18 @@ typedef struct _instanceData {
 	gid_t	fileGID;
 	gid_t	dirGID;
 	int	bFailOnChown;	/* fail creation if chown fails? */
+	uchar 	*sigprovName;	/* signature provider */
+	uchar 	*sigprovNameFull;/* full internal signature provider name */
+	sigprov_if_t sigprov;	/* ptr to signature provider interface */
+	void	*sigprovData;	/* opaque data ptr for provider use */
+	void 	*sigprovFileData;/* opaque data ptr for file instance */
+	sbool	useSigprov;	/* quicker than checkig ptr (1 vs 8 bytes!) */
+	uchar 	*cryprovName;	/* crypto provider */
+	uchar 	*cryprovNameFull;/* full internal crypto provider name */
+	void	*cryprovData;	/* opaque data ptr for provider use */
+	void 	*cryprovFileData;/* opaque data ptr for file instance */
+	cryprov_if_t cryprov;	/* ptr to crypto provider interface */
+	sbool	useCryprov;	/* quicker than checkig ptr (1 vs 8 bytes!) */
 	int	iCurrElt;	/* currently active cache element (-1 = none) */
 	int	iCurrCacheSize;	/* currently cache size (1-based) */
 	int	iDynaFileCacheSize; /* size of file handle cache */
@@ -156,6 +173,13 @@ typedef struct _instanceData {
 	int	iFlushInterval;		/* how fast flush buffer on inactivity? */
 	sbool	bFlushOnTXEnd;		/* flush write buffers when transaction has ended? */
 	sbool	bUseAsyncWriter;	/* use async stream writer? */
+	sbool	bVeryRobustZip;
+	statsobj_t *stats;		/* dynafile, primarily cache stats */
+	STATSCOUNTER_DEF(ctrRequests, mutCtrRequests);
+	STATSCOUNTER_DEF(ctrLevel0, mutCtrLevel0);
+	STATSCOUNTER_DEF(ctrEvict, mutCtrEvict);
+	STATSCOUNTER_DEF(ctrMiss, mutCtrMiss);
+	STATSCOUNTER_DEF(ctrMax, mutCtrMax);
 } instanceData;
 
 
@@ -205,6 +229,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "ziplevel", eCmdHdlrInt, 0 }, /* legacy: omfileziplevel */
 	{ "flushinterval", eCmdHdlrInt, 0 }, /* legacy: omfileflushinterval */
 	{ "asyncwriting", eCmdHdlrBinary, 0 }, /* legacy: omfileasyncwriting */
+	{ "veryrobustzip", eCmdHdlrBinary, 0 },
 	{ "flushontxend", eCmdHdlrBinary, 0 }, /* legacy: omfileflushontxend */
 	{ "iobuffersize", eCmdHdlrSize, 0 }, /* legacy: omfileiobuffersize */
 	{ "dirowner", eCmdHdlrUID, 0 }, /* legacy: dirowner */
@@ -218,7 +243,9 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "sync", eCmdHdlrBinary, 0 }, /* legacy: actionfileenablesync */
 	{ "file", eCmdHdlrString, 0 },     /* either "file" or ... */
 	{ "dynafile", eCmdHdlrString, 0 }, /* "dynafile" MUST be present */
-	{ "template", eCmdHdlrGetWord, 0 },
+	{ "sig.provider", eCmdHdlrGetWord, 0 },
+	{ "cry.provider", eCmdHdlrGetWord, 0 },
+	{ "template", eCmdHdlrGetWord, 0 }
 };
 static struct cnfparamblk actpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -269,7 +296,8 @@ CODESTARTdbgPrintInstInfo
 	dbgprintf("\tflush on TX end=%d\n", pData->bFlushOnTXEnd);
 	dbgprintf("\tflush interval=%d\n", pData->iFlushInterval);
 	dbgprintf("\tfile cache size=%d\n", pData->iDynaFileCacheSize);
-	dbgprintf("\tcreate directories: %s\n", pData->bCreateDirs ? "yes" : "no");
+	dbgprintf("\tcreate directories: %s\n", pData->bCreateDirs ? "on" : "off");
+	dbgprintf("\tvery robust zip: %s\n", pData->bCreateDirs ? "on" : "off");
 	dbgprintf("\tfile owner %d, group %d\n", (int) pData->fileUID, (int) pData->fileGID);
 	dbgprintf("\tdirectory owner %d, group %d\n", (int) pData->dirUID, (int) pData->dirGID);
 	dbgprintf("\tdir create mode 0%3.3o, file create mode 0%3.3o\n",
@@ -292,7 +320,7 @@ setLegacyDfltTpl(void __attribute__((unused)) *pVal, uchar* newVal)
 
 	if(loadModConf != NULL && loadModConf->tplName != NULL) {
 		free(newVal);
-		errmsg.LogError(0, RS_RET_ERR, "omfile default template already set via module "
+		errmsg.LogError(0, RS_RET_ERR, "omfile: default template already set via module "
 			"global parameter - can no longer be changed");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
@@ -405,15 +433,16 @@ finalize_it:
  * if the entry should be d_free()ed and 0 if not.
  */
 static rsRetVal
-dynaFileDelCacheEntry(dynaFileCacheEntry **pCache, int iEntry, int bFreeEntry)
+dynaFileDelCacheEntry(instanceData *pData, int iEntry, int bFreeEntry)
 {
+	dynaFileCacheEntry **pCache = pData->dynCache;
 	DEFiRet;
 	ASSERT(pCache != NULL);
 
 	if(pCache[iEntry] == NULL)
 		FINALIZE;
 
-	DBGPRINTF("Removed entry %d for file '%s' from dynaCache.\n", iEntry,
+	DBGPRINTF("Removing entry %d for file '%s' from dynaCache.\n", iEntry,
 		pCache[iEntry]->pName == NULL ? UCHAR_CONSTANT("[OPEN FAILED]") : pCache[iEntry]->pName);
 
 	if(pCache[iEntry]->pName != NULL) {
@@ -423,8 +452,10 @@ dynaFileDelCacheEntry(dynaFileCacheEntry **pCache, int iEntry, int bFreeEntry)
 
 	if(pCache[iEntry]->pStrm != NULL) {
 		strm.Destruct(&pCache[iEntry]->pStrm);
-		if(pCache[iEntry]->pStrm != NULL) /* safety check -- TODO: remove if no longer necessary */
-			abort();
+		if(pData->useSigprov) {
+			pData->sigprov.OnFileClose(pCache[iEntry]->sigprovFileData);
+			pCache[iEntry]->sigprovFileData = NULL;
+		}
 	}
 
 	if(bFreeEntry) {
@@ -449,7 +480,7 @@ dynaFileFreeCacheEntries(instanceData *pData)
 
 	BEGINfunc;
 	for(i = 0 ; i < pData->iCurrCacheSize ; ++i) {
-		dynaFileDelCacheEntry(pData->dynCache, i, 1);
+		dynaFileDelCacheEntry(pData, i, 1);
 	}
 	pData->iCurrElt = -1; /* invalidate current element */
 	ENDfunc;
@@ -469,6 +500,29 @@ static void dynaFileFreeCache(instanceData *pData)
 	ENDfunc;
 }
 
+
+/* close current file */
+static rsRetVal
+closeFile(instanceData *pData)
+{
+	DEFiRet;
+	if(pData->useSigprov) {
+		pData->sigprov.OnFileClose(pData->sigprovFileData);
+		pData->sigprovFileData = NULL;
+	}
+	strm.Destruct(&pData->pStrm);
+	RETiRet;
+}
+
+
+/* This prepares the signature provider to process a file */
+static rsRetVal
+sigprovPrepare(instanceData *pData, uchar *fn)
+{
+	DEFiRet;
+	pData->sigprov.OnFileOpen(pData->sigprovData, fn, &pData->sigprovFileData);
+	RETiRet;
+}
 
 /* This is now shared code for all types of files. It simply prepares
  * file access, which, among others, means the the file wil be opened
@@ -536,12 +590,17 @@ prepareFile(instanceData *pData, uchar *newFileName)
 	CHKiRet(strm.SetFName(pData->pStrm, szBaseName, ustrlen(szBaseName)));
 	CHKiRet(strm.SetDir(pData->pStrm, szDirName, ustrlen(szDirName)));
 	CHKiRet(strm.SetiZipLevel(pData->pStrm, pData->iZipLevel));
+	CHKiRet(strm.SetbVeryReliableZip(pData->pStrm, pData->bVeryRobustZip));
 	CHKiRet(strm.SetsIOBufSize(pData->pStrm, (size_t) pData->iIOBufSize));
 	CHKiRet(strm.SettOperationsMode(pData->pStrm, STREAMMODE_WRITE_APPEND));
 	CHKiRet(strm.SettOpenMode(pData->pStrm, cs.fCreateMode));
 	CHKiRet(strm.SetbSync(pData->pStrm, pData->bSyncFile));
 	CHKiRet(strm.SetsType(pData->pStrm, STREAMTYPE_FILE_SINGLE));
 	CHKiRet(strm.SetiSizeLimit(pData->pStrm, pData->iSizeLimit));
+	if(pData->useCryprov) {
+		CHKiRet(strm.Setcryprov(pData->pStrm, &pData->cryprov));
+		CHKiRet(strm.SetcryprovData(pData->pStrm, pData->cryprovData));
+	}
 	/* set the flush interval only if we actually use it - otherwise it will activate
 	 * async processing, which is a real performance waste if we do not do buffered
 	 * writes! -- rgerhards, 2009-07-06
@@ -551,11 +610,14 @@ prepareFile(instanceData *pData, uchar *newFileName)
 	if(pData->pszSizeLimitCmd != NULL)
 		CHKiRet(strm.SetpszSizeLimitCmd(pData->pStrm, ustrdup(pData->pszSizeLimitCmd)));
 	CHKiRet(strm.ConstructFinalize(pData->pStrm));
+
+	if(pData->useSigprov)
+		sigprovPrepare(pData, szNameBuf);
 	
 finalize_it:
 	if(iRet != RS_RET_OK) {
 		if(pData->pStrm != NULL) {
-			strm.Destruct(&pData->pStrm);
+			closeFile(pData);
 		}
 	}
 	RETiRet;
@@ -586,14 +648,13 @@ prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
 
 	pCache = pData->dynCache;
 
-	/* first check, if we still have the current file
-	 * I *hope* this will be a performance enhancement.
-	 */
+	/* first check, if we still have the current file */
 	if(   (pData->iCurrElt != -1)
 	   && !ustrcmp(newFileName, pCache[pData->iCurrElt]->pName)) {
 	   	/* great, we are all set */
 		pCache[pData->iCurrElt]->clkTickAccessed = getClockFileAccess();
-		// LRU needs only a strictly monotonically increasing counter, so such a one could do
+		STATSCOUNTER_INC(pData->ctrLevel0, pData->mutCtrLevel0);
+		/* LRU needs only a strictly monotonically increasing counter, so such a one could do */
 		FINALIZE;
 	}
 
@@ -609,9 +670,11 @@ prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
 			if(iFirstFree == -1)
 				iFirstFree = i;
 		} else { /* got an element, let's see if it matches */
-			if(!ustrcmp(newFileName, pCache[i]->pName)) {  // RG:  name == NULL?
+			if(!ustrcmp(newFileName, pCache[i]->pName)) {
 				/* we found our element! */
 				pData->pStrm = pCache[i]->pStrm;
+				if(pData->useSigprov)
+					pData->sigprovFileData = pCache[i]->sigprovFileData;
 				pData->iCurrElt = i;
 				pCache[i]->clkTickAccessed = getClockFileAccess(); /* update "timestamp" for LRU */
 				FINALIZE;
@@ -625,6 +688,7 @@ prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
 	}
 
 	/* we have not found an entry */
+	STATSCOUNTER_INC(pData->ctrMiss, pData->mutCtrMiss);
 
 	/* invalidate iCurrElt as we may error-exit out of this function when the currrent
 	 * iCurrElt has been freed or otherwise become unusable. This is a precaution, and
@@ -637,11 +701,12 @@ prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
 	 * but it could be triggered in the common case of a failed open() system call.
 	 * rgerhards, 2010-03-22
 	 */
-	pData->pStrm = NULL;
+	pData->pStrm = NULL, pData->sigprovFileData = NULL;
 
 	if(iFirstFree == -1 && (pData->iCurrCacheSize < pData->iDynaFileCacheSize)) {
 		/* there is space left, so set it to that index */
 		iFirstFree = pData->iCurrCacheSize++;
+		STATSCOUNTER_SETMAX_NOMUT(pData->ctrMax, (unsigned) pData->iCurrCacheSize);
 	}
 
 	/* Note that the following code sequence does not work with the cache entry itself,
@@ -649,13 +714,11 @@ prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
 	 * The cache array is only updated after the open was successful. -- rgerhards, 2010-03-21
 	 */
 	if(iFirstFree == -1) {
-		dynaFileDelCacheEntry(pCache, iOldest, 0);
+		dynaFileDelCacheEntry(pData, iOldest, 0);
+		STATSCOUNTER_INC(pData->ctrEvict, pData->mutCtrEvict);
 		iFirstFree = iOldest; /* this one *is* now free ;) */
 	} else {
 		/* we need to allocate memory for the cache structure */
-		/* TODO: performance note: we could alloc all entries on startup, thus saving malloc
-		 *       overhead -- this may be something to consider in v5...
-		 */
 		CHKmalloc(pCache[iFirstFree] = (dynaFileCacheEntry*) calloc(1, sizeof(dynaFileCacheEntry)));
 	}
 
@@ -678,10 +741,12 @@ prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
 	}
 
 	if((pCache[iFirstFree]->pName = ustrdup(newFileName)) == NULL) {
-		strm.Destruct(&pData->pStrm); /* need to free failed entry! */
+		closeFile(pData); /* need to free failed entry! */
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
 	pCache[iFirstFree]->pStrm = pData->pStrm;
+	if(pData->useSigprov)
+		pCache[iFirstFree]->sigprovFileData = pData->sigprovFileData;
 	pCache[iFirstFree]->clkTickAccessed = getClockFileAccess();
 	pData->iCurrElt = iFirstFree;
 	DBGPRINTF("Added new entry %d for file cache, file '%s'.\n", iFirstFree, newFileName);
@@ -706,7 +771,9 @@ doWrite(instanceData *pData, uchar *pszBuf, int lenBuf)
 	DBGPRINTF("write to stream, pData->pStrm %p, lenBuf %d\n", pData->pStrm, lenBuf);
 	if(pData->pStrm != NULL){
 		CHKiRet(strm.Write(pData->pStrm, pszBuf, lenBuf));
-		FINALIZE;
+		if(pData->useSigprov) {
+			CHKiRet(pData->sigprov.OnRecordWrite(pData->sigprovFileData, pszBuf, lenBuf));
+		}
 	}
 
 finalize_it:
@@ -714,10 +781,7 @@ finalize_it:
 }
 
 
-/* rgerhards 2004-11-11: write to a file output. This
- * will be called for all outputs using file semantics,
- * for example also for pipes.
- */
+/* rgerhards 2004-11-11: write to a file output.  */
 static rsRetVal
 writeFile(uchar **ppString, unsigned iMsgOpts, instanceData *pData)
 {
@@ -825,7 +889,21 @@ CODESTARTfreeInstance
 	if(pData->bDynamicName) {
 		dynaFileFreeCache(pData);
 	} else if(pData->pStrm != NULL)
-		strm.Destruct(&pData->pStrm);
+		closeFile(pData);
+	if(pData->useSigprov) {
+		pData->sigprov.Destruct(&pData->sigprovData);
+		obj.ReleaseObj(__FILE__, pData->sigprovNameFull+2, pData->sigprovNameFull,
+			       (void*) &pData->sigprov);
+		free(pData->sigprovName);
+		free(pData->sigprovNameFull);
+	}
+	if(pData->useCryprov) {
+		pData->cryprov.Destruct(&pData->cryprovData);
+		obj.ReleaseObj(__FILE__, pData->cryprovNameFull+2, pData->cryprovNameFull,
+			       (void*) &pData->cryprov);
+		free(pData->cryprovName);
+		free(pData->cryprovNameFull);
+	}
 ENDfreeInstance
 
 
@@ -843,7 +921,12 @@ BEGINendTransaction
 CODESTARTendTransaction
 	/* Note: pStrm may be NULL if there was an error opening the stream */
 	if(pData->bFlushOnTXEnd && pData->pStrm != NULL) {
-		CHKiRet(strm.Flush(pData->pStrm));
+		/* if we have an async writer, it controls the flush via
+		 * a timeout. However, without it, we actually need to flush,
+		 * else incomplete records are written.
+		 */
+		if(!pData->bUseAsyncWriter)
+			CHKiRet(strm.Flush(pData->pStrm));
 	}
 finalize_it:
 ENDendTransaction
@@ -851,7 +934,10 @@ ENDendTransaction
 
 BEGINdoAction
 CODESTARTdoAction
-	DBGPRINTF("file to log to: %s\n", pData->f_fname);
+	DBGPRINTF("file to log to: %s\n",
+		  (pData->bDynamicName) ? ppString[1] : pData->f_fname);
+	DBGPRINTF("omfile: start of data: '%.128s'\n", ppString[0]);
+	STATSCOUNTER_INC(pData->ctrRequests, pData->mutCtrRequests);
 	CHKiRet(writeFile(ppString, iMsgOpts, pData));
 	if(!bCoreSupportsBatching && pData->bFlushOnTXEnd) {
 		CHKiRet(strm.Flush(pData->pStrm));
@@ -878,10 +964,138 @@ setInstParamDefaults(instanceData *pData)
 	pData->bCreateDirs = 1;
 	pData->bSyncFile = 0;
 	pData->iZipLevel = 0;
+	pData->bVeryRobustZip = 0;
 	pData->bFlushOnTXEnd = FLUSHONTX_DFLT;
 	pData->iIOBufSize = IOBUF_DFLT_SIZE;
 	pData->iFlushInterval = FLUSH_INTRVL_DFLT;
 	pData->bUseAsyncWriter = USE_ASYNCWRITER_DFLT;
+	pData->sigprovName = NULL;
+	pData->cryprovName = NULL;
+	pData->useSigprov = 0;
+	pData->useCryprov = 0;
+}
+
+
+static rsRetVal
+setupInstStatsCtrs(instanceData *pData)
+{
+	uchar ctrName[512];
+	DEFiRet;
+
+	if(!pData->bDynamicName) {
+		FINALIZE;
+	}
+
+	/* support statistics gathering */
+	snprintf((char*)ctrName, sizeof(ctrName), "dynafile cache %s", pData->f_fname);
+	ctrName[sizeof(ctrName)-1] = '\0'; /* be on the save side */
+	CHKiRet(statsobj.Construct(&(pData->stats)));
+	CHKiRet(statsobj.SetName(pData->stats, ctrName));
+	STATSCOUNTER_INIT(pData->ctrRequests, pData->mutCtrRequests);
+	CHKiRet(statsobj.AddCounter(pData->stats, UCHAR_CONSTANT("requests"),
+		ctrType_IntCtr, &(pData->ctrRequests)));
+	STATSCOUNTER_INIT(pData->ctrLevel0, pData->mutCtrLevel0);
+	CHKiRet(statsobj.AddCounter(pData->stats, UCHAR_CONSTANT("level0"),
+		ctrType_IntCtr, &(pData->ctrLevel0)));
+	STATSCOUNTER_INIT(pData->ctrMiss, pData->mutCtrMiss);
+	CHKiRet(statsobj.AddCounter(pData->stats, UCHAR_CONSTANT("missed"),
+		ctrType_IntCtr, &(pData->ctrMiss)));
+	STATSCOUNTER_INIT(pData->ctrEvict, pData->mutCtrEvict);
+	CHKiRet(statsobj.AddCounter(pData->stats, UCHAR_CONSTANT("evicted"),
+		ctrType_IntCtr, &(pData->ctrEvict)));
+	STATSCOUNTER_INIT(pData->ctrMax, pData->mutCtrMax);
+	CHKiRet(statsobj.AddCounter(pData->stats, UCHAR_CONSTANT("maxused"),
+		ctrType_IntCtr, &(pData->ctrMax)));
+	CHKiRet(statsobj.ConstructFinalize(pData->stats));
+
+finalize_it:
+	RETiRet;
+}
+
+static inline void
+initSigprov(instanceData *pData, struct nvlst *lst)
+{
+	uchar szDrvrName[1024];
+
+	if(snprintf((char*)szDrvrName, sizeof(szDrvrName), "lmsig_%s", pData->sigprovName)
+		== sizeof(szDrvrName)) {
+		errmsg.LogError(0, RS_RET_ERR, "omfile: signature provider "
+				"name is too long: '%s' - signatures disabled",
+				pData->sigprovName);
+		goto done;
+	}
+	pData->sigprovNameFull = ustrdup(szDrvrName);
+
+	pData->sigprov.ifVersion = sigprovCURR_IF_VERSION;
+	/* The pDrvrName+2 below is a hack to obtain the object name. It 
+	 * safes us to have yet another variable with the name without "lm" in
+	 * front of it. If we change the module load interface, we may re-think
+	 * about this hack, but for the time being it is efficient and clean enough.
+	 */
+	if(obj.UseObj(__FILE__, szDrvrName, szDrvrName, (void*) &pData->sigprov)
+		!= RS_RET_OK) {
+		errmsg.LogError(0, RS_RET_LOAD_ERROR, "omfile: could not load "
+				"signature provider '%s' - signatures disabled",
+				szDrvrName);
+		goto done;
+	}
+
+	if(pData->sigprov.Construct(&pData->sigprovData) != RS_RET_OK) {
+		errmsg.LogError(0, RS_RET_SIGPROV_ERR, "omfile: error constructing "
+				"signature provider %s dataset - signatures disabled",
+				szDrvrName);
+		goto done;
+	}
+	pData->sigprov.SetCnfParam(pData->sigprovData, lst);
+
+	dbgprintf("loaded signature provider %s, data instance at %p\n",
+		  szDrvrName, pData->sigprovData);
+	pData->useSigprov = 1;
+done:	return;
+}
+
+static inline rsRetVal
+initCryprov(instanceData *pData, struct nvlst *lst)
+{
+	uchar szDrvrName[1024];
+	DEFiRet;
+
+	if(snprintf((char*)szDrvrName, sizeof(szDrvrName), "lmcry_%s", pData->cryprovName)
+		== sizeof(szDrvrName)) {
+		errmsg.LogError(0, RS_RET_ERR, "omfile: crypto provider "
+				"name is too long: '%s' - encryption disabled",
+				pData->cryprovName);
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+	pData->cryprovNameFull = ustrdup(szDrvrName);
+
+	pData->cryprov.ifVersion = cryprovCURR_IF_VERSION;
+	/* The pDrvrName+2 below is a hack to obtain the object name. It 
+	 * safes us to have yet another variable with the name without "lm" in
+	 * front of it. If we change the module load interface, we may re-think
+	 * about this hack, but for the time being it is efficient and clean enough.
+	 */
+	if(obj.UseObj(__FILE__, szDrvrName, szDrvrName, (void*) &pData->cryprov)
+		!= RS_RET_OK) {
+		errmsg.LogError(0, RS_RET_LOAD_ERROR, "omfile: could not load "
+				"crypto provider '%s' - encryption disabled",
+				szDrvrName);
+		ABORT_FINALIZE(RS_RET_CRYPROV_ERR);
+	}
+
+	if(pData->cryprov.Construct(&pData->cryprovData) != RS_RET_OK) {
+		errmsg.LogError(0, RS_RET_CRYPROV_ERR, "omfile: error constructing "
+				"crypto provider %s dataset - encryption disabled",
+				szDrvrName);
+		ABORT_FINALIZE(RS_RET_CRYPROV_ERR);
+	}
+	CHKiRet(pData->cryprov.SetCnfParam(pData->cryprovData, lst));
+
+	dbgprintf("loaded crypto provider %s, data instance at %p\n",
+		  szDrvrName, pData->cryprovData);
+	pData->useCryprov = 1;
+finalize_it:
+	RETiRet;
 }
 
 BEGINnewActInst
@@ -915,6 +1129,8 @@ CODESTARTnewActInst
 			pData->iZipLevel = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "flushinterval")) {
 			pData->iFlushInterval = pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "veryrobustzip")) {
+			pData->bVeryRobustZip = pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "asyncwriting")) {
 			pData->bUseAsyncWriter = pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "flushontxend")) {
@@ -949,6 +1165,10 @@ CODESTARTnewActInst
 			pData->bDynamicName = 1;
 		} else if(!strcmp(actpblk.descr[i].name, "template")) {
 			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "sig.provider")) {
+			pData->sigprovName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "cry.provider")) {
+			pData->cryprovName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else {
 			dbgprintf("omfile: program error, non-handled "
 			  "param '%s'\n", actpblk.descr[i].name);
@@ -959,6 +1179,14 @@ CODESTARTnewActInst
 		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "omfile: either the \"file\" or "
 				"\"dynfile\" parameter must be given");
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
+
+	if(pData->sigprovName != NULL) {
+		initSigprov(pData, lst);
+	}
+
+	if(pData->cryprovName != NULL) {
+		CHKiRet(initCryprov(pData, lst));
 	}
 
 	tplToUse = ustrdup((pData->tplName == NULL) ? getDfltTpl() : pData->tplName);
@@ -976,6 +1204,7 @@ CODESTARTnewActInst
 		pData->iCurrElt = -1;		  /* no current element */
 	}
 // TODO: add	pData->iSizeLimit = 0; /* default value, use outchannels to configure! */
+	setupInstStatsCtrs(pData);
 
 CODE_STD_FINALIZERnewActInst
 	cnfparamvalsDestruct(pvals, &actpblk);
@@ -1064,6 +1293,8 @@ CODESTARTparseSelectorAct
 	pData->iIOBufSize = (int) cs.iIOBufSize;
 	pData->iFlushInterval = cs.iFlushInterval;
 	pData->bUseAsyncWriter = cs.bUseAsyncWriter;
+	pData->bVeryRobustZip = 0;	/* cannot be specified via legacy conf */
+	setupInstStatsCtrs(pData);
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
@@ -1090,7 +1321,6 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	cs.bUseAsyncWriter = USE_ASYNCWRITER_DFLT;
 	free(pszFileDfltTplName);
 	pszFileDfltTplName = NULL;
-
 	return RS_RET_OK;
 }
 
@@ -1101,8 +1331,7 @@ CODESTARTdoHUP
 		dynaFileFreeCacheEntries(pData);
 	} else {
 		if(pData->pStrm != NULL) {
-			strm.Destruct(&pData->pStrm);
-			pData->pStrm = NULL;
+			closeFile(pData);
 		}
 	}
 ENDdoHUP
@@ -1112,6 +1341,7 @@ BEGINmodExit
 CODESTARTmodExit
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(strm, CORE_COMPONENT);
+	objRelease(statsobj, CORE_COMPONENT);
 	DESTROY_ATOMIC_HELPER_MUT(mutClock);
 ENDmodExit
 
@@ -1134,6 +1364,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 INITLegCnfVars
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(strm, CORE_COMPONENT));
+	CHKiRet(objUse(statsobj, CORE_COMPONENT));
 
 	INIT_ATOMIC_HELPER_MUT(mutClock);
 

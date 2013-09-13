@@ -51,7 +51,7 @@ typedef enum {
 /* list member definition for linked list types of queues: */
 typedef struct qLinkedList_S {
 	struct qLinkedList_S *pNext;
-	void *pUsr;
+	msg_t *pMsg;
 } qLinkedList_t;
 
 
@@ -71,7 +71,7 @@ struct queue_s {
 	int	iMinMsgsPerWrkr;/* minimum nbr of msgs per worker thread, if more, a new worker is started until max wrkrs */
 	wtp_t	*pWtpDA;
 	wtp_t	*pWtpReg;
-	void	*pUsr;		/* a global, user-supplied pointer. Is passed back to consumer. */
+	action_t *pAction;	/* for action queues, ptr to action object; for main queues unused */
 	int	iUpdsSincePersist;/* nbr of queue updates since the last persist call */
 	int	iPersistUpdCnt;	/* persits queue info after this nbr of updates - 0 -> persist only on shutdown */
 	sbool	bSyncQueueFiles;/* if working with files, sync them after each write? */
@@ -111,8 +111,8 @@ struct queue_s {
 	/* type-specific handlers (set during construction) */
 	rsRetVal (*qConstruct)(struct queue_s *pThis);
 	rsRetVal (*qDestruct)(struct queue_s *pThis);
-	rsRetVal (*qAdd)(struct queue_s *pThis, void *pUsr);
-	rsRetVal (*qDeq)(struct queue_s *pThis, void **ppUsr);
+	rsRetVal (*qAdd)(struct queue_s *pThis, msg_t *pMsg);
+	rsRetVal (*qDeq)(struct queue_s *pThis, msg_t **ppMsg);
 	rsRetVal (*qDel)(struct queue_s *pThis);
 	/* end type-specific handler */
 	/* public entry points (set during construction, permit to set best algorithm for params selected) */
@@ -135,6 +135,8 @@ struct queue_s {
 	size_t lenSpoolDir;
 	uchar *pszFilePrefix;
 	size_t lenFilePrefix;
+	uchar *pszQIFNam;	/* full .qi file name, based on parts above */
+	size_t lenQIFNam;
 	int iNumberFiles;	/* how many files make up the queue? */
 	int64 iMaxFileSize;	/* max size for a single queue file */
 	int64 sizeOnDiskMax;    /* maximum size on disk allowed */
@@ -145,7 +147,8 @@ struct queue_s {
 	struct queue_s *pqParent;/* pointer to the parent (if this is a child queue) */
 	int	bDAEnqOnly;	/* EnqOnly setting for DA queue */
 	/* now follow queueing mode specific data elements */
-	union {			/* different data elements based on queue type (qType) */
+	//union {			/* different data elements based on queue type (qType) */
+	struct {			/* different data elements based on queue type (qType) */
 		struct {
 			long deqhead, head, tail;
 			void** pBuf;		/* the queued user data structure */
@@ -157,7 +160,9 @@ struct queue_s {
 		} linklist;
 		struct {
 			int64 sizeOnDisk; /* current amount of disk space used */
-			int64 bytesRead;  /* number of bytes read from current (undeleted!) file */
+			int64 deqOffs; /* offset after dequeue batch - used for file deleter */
+			int deqFileNumIn; /* same for the circular file numbers, mainly for  */
+			int deqFileNumOut;/* deleting finished files */
 			strm_t *pWrite;   /* current file to be written */
 			strm_t *pReadDeq; /* current file for dequeueing */
 			strm_t *pReadDel; /* current file for deleting */
@@ -184,8 +189,8 @@ struct queue_s {
 
 /* prototypes */
 rsRetVal qqueueDestruct(qqueue_t **ppThis);
-rsRetVal qqueueEnqObjDirect(qqueue_t *pThis, void *pUsr);
-rsRetVal qqueueEnqObj(qqueue_t *pThis, flowControl_t flwCtlType, void *pUsr);
+rsRetVal qqueueEnqMsgDirect(qqueue_t *pThis, msg_t *pMsg);
+rsRetVal qqueueEnqMsg(qqueue_t *pThis, flowControl_t flwCtlType, msg_t *pMsg);
 rsRetVal qqueueStart(qqueue_t *pThis);
 rsRetVal qqueueSetMaxFileSize(qqueue_t *pThis, size_t iMaxFileSize);
 rsRetVal qqueueSetFilePrefix(qqueue_t *pThis, uchar *pszPrefix, size_t iLenPrefix);
@@ -215,7 +220,7 @@ PROTOTYPEpropSetMeth(qqueue, iDiscardMrk, int);
 PROTOTYPEpropSetMeth(qqueue, iDiscardSeverity, int);
 PROTOTYPEpropSetMeth(qqueue, iMinMsgsPerWrkr, int);
 PROTOTYPEpropSetMeth(qqueue, bSaveOnShutdown, int);
-PROTOTYPEpropSetMeth(qqueue, pUsr, void*);
+PROTOTYPEpropSetMeth(qqueue, pAction, action_t*);
 PROTOTYPEpropSetMeth(qqueue, iDeqSlowdown, int);
 PROTOTYPEpropSetMeth(qqueue, sizeOnDiskMax, int64);
 PROTOTYPEpropSetMeth(qqueue, iDeqBatchSize, int);

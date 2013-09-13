@@ -381,6 +381,7 @@ wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in 
 	if(prctl(PR_SET_NAME, thrdName, 0, 0, 0) != 0) {
 		DBGPRINTF("prctl failed, not setting thread name for '%s'\n", wtpGetDbgHdr(pThis));
 	}
+	dbgOutputTID((char*)thrdName);
 #	endif
 
 	pthread_cleanup_push(wtpWrkrExecCancelCleanup, pWti);

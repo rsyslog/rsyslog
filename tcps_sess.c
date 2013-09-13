@@ -47,6 +47,7 @@
 #include "msg.h"
 #include "datetime.h"
 #include "prop.h"
+#include "ratelimit.h"
 #include "debug.h"
 
 
@@ -139,24 +140,20 @@ finalize_it:
 	RETiRet;
 }
 
-/* set the remote host's IP. Note that the caller *hands over* the string. That is,
+/* set the remote host's IP. Note that the caller *hands over* the property. That is,
  * the caller no longer controls it once SetHostIP() has received it. Most importantly,
- * the caller must not free it. -- rgerhards, 2008-05-16
+ * the caller must not destruct it. -- rgerhards, 2008-05-16
  */
 static rsRetVal
-SetHostIP(tcps_sess_t *pThis, uchar *pszHostIP)
+SetHostIP(tcps_sess_t *pThis, prop_t *ip)
 {
 	DEFiRet;
-
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
 
-	if(pThis->fromHostIP == NULL)
-		CHKiRet(prop.Construct(&pThis->fromHostIP));
-
-	CHKiRet(prop.SetString(pThis->fromHostIP, pszHostIP, ustrlen(pszHostIP)));
-
-finalize_it:
-	free(pszHostIP);
+	if(pThis->fromHostIP != NULL) {
+		prop.Destruct(&pThis->fromHostIP);
+	}
+	pThis->fromHostIP = ip;
 	RETiRet;
 }
 
@@ -264,14 +261,7 @@ defaultDoSubmitMessage(tcps_sess_t *pThis, struct syslogTime *stTime, time_t ttG
 	MsgSetRuleset(pMsg, pThis->pLstnInfo->pRuleset);
 
 	STATSCOUNTER_INC(pThis->pLstnInfo->ctrSubmit, pThis->pLstnInfo->mutCtrSubmit);
-	if(pMultiSub == NULL) {
-		CHKiRet(submitMsg(pMsg));
-	} else {
-		pMultiSub->ppMsgs[pMultiSub->nElem++] = pMsg;
-		if(pMultiSub->nElem == pMultiSub->maxElem)
-			CHKiRet(multiSubmitMsg(pMultiSub));
-	}
-
+	ratelimitAddMsg(pThis->pLstnInfo->ratelimiter, pMultiSub, pMsg);
 
 finalize_it:
 	/* reset status variables */
@@ -368,7 +358,7 @@ processDataRcvd(tcps_sess_t *pThis, char c, struct syslogTime *stTime, time_t tt
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
 
 	if(pThis->inputState == eAtStrtFram) {
-		if(pThis->bSuppOctetFram && isdigit((int) c)) {
+		if(pThis->bSuppOctetFram && c >= '0' && c <= '9') {
 			pThis->inputState = eInOctetCnt;
 			pThis->iOctetsRemain = 0;
 			pThis->eFraming = TCP_FRAMING_OCTET_COUNTING;
@@ -379,7 +369,7 @@ processDataRcvd(tcps_sess_t *pThis, char c, struct syslogTime *stTime, time_t tt
 	}
 
 	if(pThis->inputState == eInOctetCnt) {
-		if(isdigit(c)) {
+		if(c >= '0' && c <= '9') { /* isdigit() the faster way */
 			pThis->iOctetsRemain = pThis->iOctetsRemain * 10 + c - '0';
 		} else { /* done with the octet count, so this must be the SP terminator */
 			DBGPRINTF("TCP Message with octet-counter, size %d.\n", pThis->iOctetsRemain);
@@ -487,11 +477,7 @@ DataRcvd(tcps_sess_t *pThis, char *pData, size_t iLen)
 	while(pData < pEnd) {
 		CHKiRet(processDataRcvd(pThis, *pData++, &stTime, ttGenTime, &multiSub));
 	}
-
-	if(multiSub.nElem > 0) {
-		/* submit anything that was not yet submitted */
-		CHKiRet(multiSubmitMsg(&multiSub));
-	}
+	iRet = multiSubmitFlush(&multiSub);
 
 finalize_it:
 	RETiRet;

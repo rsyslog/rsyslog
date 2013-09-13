@@ -30,14 +30,12 @@ Clients send messages to the RELP server via omrelp.</p>
 
 <p><b>Configuration Directives</b>:</p>
 <ul>
-<li><b>Ruleset</b> &lt;name&gt;</br>
-Binds the specified ruleset to all RELP listeners.
 <li><b>Port</b> &lt;port&gt;<br>
 Starts a RELP server on selected port</li>
 </ul>
 <b>Caveats/Known Bugs:</b>
 <ul>
-<li>see description</li>
+<li>ruleset can only be bound via legacy configuration format</li>
 <li>To obtain the remote system's IP address, you need to have at least
 librelp 1.0.0 installed. Versions below it return the hostname instead
 of the IP address.</li>
@@ -47,14 +45,14 @@ not specific ones. This is due to a currently existing limitation in librelp.
 <p><b>Sample:</b></p>
 <p>This sets up a RELP server on port 20514.<br>
 </p>
-<textarea rows="15" cols="60">module(load="/folder/to/rsyslog/plugins/imrelp/.libs/imrelp") # needs to be done just once
+<textarea rows="15" cols="60">module(load="imrelp") # needs to be done just once
 input(type="imrelp" port="20514")
 </textarea>
 
 <p><b>Legacy Configuration Directives</b>:</p>
 <ul>
 <li>InputRELPServerBindRuleset &lt;name&gt; (available in 6.3.6+)</br>
-equivalent to: RuleSet
+Binds the specified ruleset to all RELP listeners.
 <li>InputRELPServerRun &lt;port&gt;<br>
 equivalent to: Port</li>
 </ul>

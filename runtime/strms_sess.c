@@ -38,12 +38,14 @@
 #include "errmsg.h"
 #include "netstrm.h"
 #include "msg.h"
+#include "prop.h"
 #include "datetime.h"
 
 
 /* static data */
 DEFobjStaticHelpers
 DEFobjCurrIf(glbl)
+DEFobjCurrIf(prop)
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(netstrm)
 DEFobjCurrIf(datetime)
@@ -86,7 +88,8 @@ CODESTARTobjDestruct(strms_sess)
 	}
 	/* now destruct our own properties */
 	free(pThis->fromHost);
-	free(pThis->fromHostIP);
+	if(pThis->fromHostIP != NULL)
+		prop.Destruct(&pThis->fromHostIP);
 ENDobjDestruct(strms_sess)
 
 
@@ -111,17 +114,18 @@ SetHost(strms_sess_t *pThis, uchar *pszHost)
 	RETiRet;
 }
 
-/* set the remote host's IP. Note that the caller *hands over* the string. That is,
+/* set the remote host's IP. Note that the caller *hands over* the property. That is,
  * the caller no longer controls it once SetHostIP() has received it. Most importantly,
- * the caller must not free it. -- rgerhards, 2008-05-16
+ * the caller must not destruct it. -- rgerhards, 2008-05-16
  */
 static rsRetVal
-SetHostIP(strms_sess_t *pThis, uchar *pszHostIP)
+SetHostIP(strms_sess_t *pThis, prop_t *ip)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, strms_sess);
-	free(pThis->fromHostIP);
-	pThis->fromHostIP = pszHostIP;
+	if(pThis->fromHostIP != NULL)
+		prop.Destruct(&pThis->fromHostIP);
+	pThis->fromHostIP = ip;
 	RETiRet;
 }
 
@@ -188,8 +192,8 @@ Close(strms_sess_t *pThis)
 	netstrm.Destruct(&pThis->pStrm);
 	free(pThis->fromHost);
 	pThis->fromHost = NULL; /* not really needed, but... */
-	free(pThis->fromHostIP);
-	pThis->fromHostIP = NULL; /* not really needed, but... */
+	if(pThis->fromHostIP != NULL)
+		prop.Destruct(&pThis->fromHostIP);
 
 	RETiRet;
 }
@@ -284,6 +288,7 @@ BEGINObjClassInit(strms_sess, 1, OBJ_IS_CORE_MODULE) /* class, version - CHANGE 
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(netstrm, LM_NETSTRMS_FILENAME));
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
+	CHKiRet(objUse(prop, CORE_COMPONENT));
 
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	iMaxLine = glbl.GetMaxLine(); /* get maximum size we currently support */

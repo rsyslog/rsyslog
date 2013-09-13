@@ -105,6 +105,7 @@ BEGINdoAction
 	int iBuf;
 	char szBuf[65564];
 	size_t len;
+	int r;
 CODESTARTdoAction
 	if(pData->bUseArrayInterface) {
 		/* if we use array passing, we need to put together a string
@@ -140,9 +141,15 @@ CODESTARTdoAction
 	 * actually intends to use this module in production (why???), this code
 	 * needs to be more solid. -- rgerhards, 2012-11-28
 	 */
-	if(write(1, toWrite, len)) {}; /* 1 is stdout! */
+	if((r = write(1, toWrite, len)) != (int) len) { /* 1 is stdout! */
+		DBGPRINTF("omstdout: error %d writing to stdout[%d]: %s\n",
+			r, len, toWrite);
+	}
 	if(pData->bEnsureLFEnding && toWrite[len-1] != '\n') {
-		if(write(1, "\n", 1)) {}; /* write missing LF */
+		if((r = write(1, "\n", 1)) != 1) { /* write missing LF */
+			DBGPRINTF("omstdout: error %d writing \\n to stdout\n",
+				r);
+		}
 	}
 ENDdoAction
 

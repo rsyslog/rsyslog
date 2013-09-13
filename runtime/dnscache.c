@@ -7,7 +7,7 @@
  * In any case, even the initial implementaton is far faster than what we had
  * before. -- rgerhards, 2011-06-06
  *
- * Copyright 2011 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2011-2013 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -33,6 +33,7 @@
 #include <signal.h>
 #include <netdb.h>
 #include <unistd.h>
+#include <ctype.h>
 
 #include "syslogd-types.h"
 #include "glbl.h"
@@ -40,46 +41,99 @@
 #include "obj.h"
 #include "unicode-helper.h"
 #include "net.h"
+#include "hashtable.h"
+#include "prop.h"
+#include "dnscache.h"
 
-/* in this initial implementation, we use a simple, non-optimized at all
- * linear list.
- */
 /* module data structures */
 struct dnscache_entry_s {
 	struct sockaddr_storage addr;
-	uchar *pszHostFQDN;
-	uchar *ip;
+	prop_t *fqdn;
+	prop_t *fqdnLowerCase;
+	prop_t *localName; /* only local name, without domain part (if configured so) */
+	prop_t *ip;
 	struct dnscache_entry_s *next;
 	unsigned nUsed;
 };
 typedef struct dnscache_entry_s dnscache_entry_t;
 struct dnscache_s {
 	pthread_rwlock_t rwlock;
-	dnscache_entry_t *root;
+	struct hashtable *ht;
 	unsigned nEntries;
 };
 typedef struct dnscache_s dnscache_t;
-#define MAX_CACHE_ENTRIES 1000
 
 
 /* static data */
 DEFobjStaticHelpers
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(errmsg)
+DEFobjCurrIf(prop)
 static dnscache_t dnsCache;
+static prop_t *staticErrValue;
 
+
+/* Our hash function.
+ * TODO: check how well it performs on socket addresses!
+ */
+unsigned int
+hash_from_key_fn(void *k) 
+{
+    int len;
+    uchar *rkey = (uchar*) k; /* we treat this as opaque bytes */
+    unsigned hashval = 1;
+
+    len = SALEN((struct sockaddr*)k);
+    while(len--)
+        hashval = hashval * 33 + *rkey++;
+
+    return hashval;
+}
+
+static int
+key_equals_fn(void *key1, void *key2)
+{
+	return (SALEN((struct sockaddr*)key1) == SALEN((struct sockaddr*) key2) 
+		   && !memcmp(key1, key2, SALEN((struct sockaddr*) key1)));
+}
+
+/* destruct a cache entry.
+ * Precondition: entry must already be unlinked from list
+ */
+static void
+entryDestruct(dnscache_entry_t *etry)
+{
+	if(etry->fqdn != NULL)
+		prop.Destruct(&etry->fqdn);
+	if(etry->fqdnLowerCase != NULL)
+		prop.Destruct(&etry->fqdnLowerCase);
+	if(etry->localName != NULL)
+		prop.Destruct(&etry->localName);
+	if(etry->ip != NULL)
+		prop.Destruct(&etry->ip);
+	free(etry);
+}
 
 /* init function (must be called once) */
 rsRetVal
 dnscacheInit(void)
 {
 	DEFiRet;
-	dnsCache.root = NULL;
+	if((dnsCache.ht = create_hashtable(100, hash_from_key_fn, key_equals_fn,
+				(void(*)(void*))entryDestruct)) == NULL) {
+		DBGPRINTF("dnscache: error creating hash table!\n");
+		ABORT_FINALIZE(RS_RET_ERR); // TODO: make this degrade, but run!
+	}
 	dnsCache.nEntries = 0;
 	pthread_rwlock_init(&dnsCache.rwlock, NULL);
 	CHKiRet(objGetObjInterface(&obj)); /* this provides the root pointer for all other queries */
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	CHKiRet(objUse(prop, CORE_COMPONENT));
+
+	prop.Construct(&staticErrValue);
+	prop.SetString(staticErrValue, (uchar*)"???", 3);
+	prop.ConstructFinalize(staticErrValue);
 finalize_it:
 	RETiRet;
 }
@@ -89,38 +143,20 @@ rsRetVal
 dnscacheDeinit(void)
 {
 	DEFiRet;
-	//TODO: free cache elements dnsCache.root = NULL;
+	prop.Destruct(&staticErrValue);
+	hashtable_destroy(dnsCache.ht, 1); /* 1 => free all values automatically */
 	pthread_rwlock_destroy(&dnsCache.rwlock);
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
+	objRelease(prop, CORE_COMPONENT);
 	RETiRet;
-}
-
-
-/* destruct a cache entry.
- * Precondition: entry must already be unlinked from list
- */
-static inline void
-entryDestruct(dnscache_entry_t *etry)
-{
-	free(etry->pszHostFQDN);
-	free(etry->ip);
-	free(etry);
 }
 
 
 static inline dnscache_entry_t*
 findEntry(struct sockaddr_storage *addr)
 {
-	dnscache_entry_t *etry;
-	for(etry = dnsCache.root ; etry != NULL ; etry = etry->next) {
-		if(SALEN((struct sockaddr*)addr) == SALEN((struct sockaddr*) &etry->addr) 
-		   && !memcmp(addr, &etry->addr, SALEN((struct sockaddr*) addr)))
-			break; /* in this case, we found our entry */
-	}
-	if(etry != NULL)
-		++etry->nUsed; /* this is *not* atomic, but we can live with an occasional loss! */
-	return etry;
+	return((dnscache_entry_t*) hashtable_search(dnsCache.ht, addr));
 }
 
 
@@ -144,6 +180,73 @@ mygetnameinfo(const struct sockaddr *sa, socklen_t salen,
 }
 
 
+/* get only the local part of the hostname and set it in cache entry */
+static inline void
+setLocalHostName(dnscache_entry_t *etry)
+{
+	uchar *fqdnLower;
+	uchar *p;
+	int count;
+	int i;
+	uchar hostbuf[NI_MAXHOST];
+
+	if(glbl.GetPreserveFQDN()) {
+		prop.AddRef(etry->fqdnLowerCase);
+		etry->localName = etry->fqdnLowerCase;
+		goto done;
+	}
+
+	/* strip domain, if configured for this entry */
+	fqdnLower = propGetSzStr(etry->fqdnLowerCase);
+	p = (uchar*)strchr((char*)fqdnLower, '.'); /* find start of domain name "machine.example.com" */
+	if(p == NULL) { /* do we have a domain part? */
+		prop.AddRef(etry->fqdnLowerCase); /* no! */
+		etry->localName = etry->fqdnLowerCase;
+		goto done;
+	}
+
+	i = p - fqdnLower; /* length of hostname */
+	memcpy(hostbuf, fqdnLower, i);
+	/* now check if we belong to any of the domain names that were specified
+	 * in the -s command line option. If so, remove and we are done.
+	 */
+	if(glbl.GetStripDomains() != NULL) {
+		count=0;
+		while(glbl.GetStripDomains()[count]) {
+			if(strcmp((char*)(p + 1), glbl.GetStripDomains()[count]) == 0) {
+				prop.CreateStringProp(&etry->localName, hostbuf, i);
+				goto done;
+			}
+			count++;
+		}
+	}
+	/* if we reach this point, we have not found any domain we should strip. Now
+	 * we try and see if the host itself is listed in the -l command line option
+	 * and so should be stripped also. If so, we do it and return. Please note that
+	 * -l list FQDNs, not just the hostname part. If it did just list the hostname, the
+	 * door would be wide-open for all kinds of mixing up of hosts. Because of this,
+	 * you'll see comparison against the full string (pszHostFQDN) below.
+	 */
+	if(glbl.GetLocalHosts() != NULL) {
+		count=0;
+		while(glbl.GetLocalHosts()[count]) {
+			if(!strcmp((char*)fqdnLower, (char*)glbl.GetLocalHosts()[count])) {
+				prop.CreateStringProp(&etry->localName, hostbuf, i);
+				goto done;
+			}
+			count++;
+		}
+	}
+
+	/* at this point, we have not found anything, so we again use the
+	 * already-created complete full name property.
+	 */
+	prop.AddRef(etry->fqdnLowerCase);
+	etry->localName = etry->fqdnLowerCase;
+done:	return;
+}
+
+
 /* resolve an address.
  *
  * Please see http://www.hmug.org/man/3/getnameinfo.php (under Caveats)
@@ -154,18 +257,19 @@ mygetnameinfo(const struct sockaddr *sa, socklen_t salen,
  * message should be processed (1) or discarded (0).
  */
 static rsRetVal
-resolveAddr(struct sockaddr_storage *addr, uchar *pszHostFQDN, uchar *ip)
+resolveAddr(struct sockaddr_storage *addr, dnscache_entry_t *etry)
 {
 	DEFiRet;
 	int error;
 	sigset_t omask, nmask;
 	struct addrinfo hints, *res;
+	char szIP[80]; /* large enough for IPv6 */
+	char fqdnBuf[NI_MAXHOST];
+	rs_size_t fqdnLen;
+	rs_size_t i;
 	
-	assert(addr != NULL);
-	assert(pszHostFQDN != NULL);
-
         error = mygetnameinfo((struct sockaddr *)addr, SALEN((struct sockaddr *)addr),
-			    (char*) ip, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
+			    (char*) szIP, sizeof(szIP), NULL, 0, NI_NUMERICHOST);
         if(error) {
                 dbgprintf("Malformed from address %s\n", gai_strerror(error));
 		ABORT_FINALIZE(RS_RET_INVALID_SOURCE);
@@ -177,9 +281,8 @@ resolveAddr(struct sockaddr_storage *addr, uchar *pszHostFQDN, uchar *ip)
 		pthread_sigmask(SIG_BLOCK, &nmask, &omask);
 
 		error = mygetnameinfo((struct sockaddr *)addr, SALEN((struct sockaddr *) addr),
-				    (char*)pszHostFQDN, NI_MAXHOST, NULL, 0, NI_NAMEREQD);
+				    fqdnBuf, NI_MAXHOST, NULL, 0, NI_NAMEREQD);
 		
-dbgprintf("dnscache: error %d after 2nd mygetnameinfo\n", error);
 		if(error == 0) {
 			memset (&hints, 0, sizeof (struct addrinfo));
 			hints.ai_flags = AI_NUMERICHOST;
@@ -188,7 +291,7 @@ dbgprintf("dnscache: error %d after 2nd mygetnameinfo\n", error);
 			 * because we should not have obtained a non-numeric address. If
 			 * we got a numeric one, someone messed with DNS!
 			 */
-			if(getaddrinfo ((char*)pszHostFQDN, NULL, &hints, &res) == 0) {
+			if(getaddrinfo (fqdnBuf, NULL, &hints, &res) == 0) {
 				uchar szErrMsg[1024];
 				freeaddrinfo (res);
 				/* OK, we know we have evil. The question now is what to do about
@@ -204,7 +307,7 @@ dbgprintf("dnscache: error %d after 2nd mygetnameinfo\n", error);
 					snprintf((char*)szErrMsg, sizeof(szErrMsg) / sizeof(uchar),
 						 "Malicious PTR record, message dropped "
 						 "IP = \"%s\" HOST = \"%s\"",
-						 ip, pszHostFQDN);
+						 szIP, fqdnBuf);
 					errmsg.LogError(0, RS_RET_MALICIOUS_ENTITY, "%s", szErrMsg);
 					pthread_sigmask(SIG_SETMASK, &omask, NULL);
 					ABORT_FINALIZE(RS_RET_MALICIOUS_ENTITY);
@@ -219,92 +322,76 @@ dbgprintf("dnscache: error %d after 2nd mygetnameinfo\n", error);
 				snprintf((char*)szErrMsg, sizeof(szErrMsg) / sizeof(uchar),
 					 "Malicious PTR record (message accepted, but used IP "
 					 "instead of PTR name: IP = \"%s\" HOST = \"%s\"",
-					 ip, pszHostFQDN);
+					 szIP, fqdnBuf);
 				errmsg.LogError(0, NO_ERRCODE, "%s", szErrMsg);
 
 				error = 1; /* that will trigger using IP address below. */
+			} else {/* we have a valid entry, so let's create the respective properties */
+				fqdnLen = strlen(fqdnBuf);
+				prop.CreateStringProp(&etry->fqdn, (uchar*)fqdnBuf, fqdnLen);
+				for(i = 0 ; i < fqdnLen ; ++i)
+					fqdnBuf[i] = tolower(fqdnBuf[i]);
+				prop.CreateStringProp(&etry->fqdnLowerCase, (uchar*)fqdnBuf, fqdnLen);
 			}
 		}
 		pthread_sigmask(SIG_SETMASK, &omask, NULL);
 	}
 
-dbgprintf("dnscache: error %d, DisableDNS %d\n", error, glbl.GetDisableDNS());
-        if(error || glbl.GetDisableDNS()) {
-                dbgprintf("Host name for your address (%s) unknown\n", ip);
-		strcpy((char*) pszHostFQDN, (char*)ip);
-        }
 
 finalize_it:
+	if(iRet != RS_RET_OK) {
+		strcpy(szIP, "?error.obtaining.ip?");
+		error = 1; /* trigger hostname copies below! */
+	}
+
+	/* we need to create the inputName property (only once during our lifetime) */
+	prop.CreateStringProp(&etry->ip, (uchar*)szIP, strlen(szIP));
+
+        if(error || glbl.GetDisableDNS()) {
+                dbgprintf("Host name for your address (%s) unknown\n", szIP);
+		prop.AddRef(etry->ip);
+		etry->fqdn = etry->ip;
+		prop.AddRef(etry->ip);
+		etry->fqdnLowerCase = etry->ip;
+        }
+
+	setLocalHostName(etry);
+
 	RETiRet;
 }
 
 
-/* evict an entry from the cache. We should try to evict one that does
- * not decrease the hit rate that much, but we do not try to hard currently
- * (as the base cache data structure may change).
- * This MUST NOT be called when the cache is empty!
- * rgerhards, 2011-06-06
- */
-static inline void
-evictEntry(void)
-{
-	dnscache_entry_t *prev, *evict, *prevEvict, *etry;
-	unsigned lowest;
-
-	prev = prevEvict = NULL;
-	evict = dnsCache.root;
-	lowest = evict->nUsed;
-	for(etry = dnsCache.root->next ; etry != NULL ; etry = etry->next) {
-		if(etry->nUsed < lowest) {
-			evict = etry;
-			lowest = etry->nUsed;
-			prevEvict = prev;
-		}
-		prev = etry;
-	}
-
-	/* found lowest, unlink */
-	if(prevEvict == NULL) { /* remove root? */
-		dnsCache.root = evict->next;
-	} else {
-		prevEvict = evict->next;
-	}
-	entryDestruct(evict);
-}
-
-
-/* add a new entry to the cache. This means the address is resolved and
- * then added to the cache.
- */
 static inline rsRetVal
 addEntry(struct sockaddr_storage *addr, dnscache_entry_t **pEtry)
 {
-	uchar pszHostFQDN[NI_MAXHOST];
-	uchar ip[80]; /* 80 is safe for larges IPv6 addr */
-	dnscache_entry_t *etry;
+	int r;
+	struct sockaddr_storage *keybuf;
+	dnscache_entry_t *etry = NULL;
 	DEFiRet;
-	CHKiRet(resolveAddr(addr, pszHostFQDN, ip));
+
 	CHKmalloc(etry = MALLOC(sizeof(dnscache_entry_t)));
-	CHKmalloc(etry->pszHostFQDN = ustrdup(pszHostFQDN));
-	CHKmalloc(etry->ip = ustrdup(ip));
+	CHKiRet(resolveAddr(addr, etry));
 	memcpy(&etry->addr, addr, SALEN((struct sockaddr*) addr));
 	etry->nUsed = 0;
 	*pEtry = etry;
 
-	/* add to list. Currently, we place the new element always at
-	 * the root node. This needs to be optimized later. 2011-06-06
-	 */
+	CHKmalloc(keybuf = malloc(sizeof(struct sockaddr_storage)));
+	memcpy(keybuf, addr, sizeof(struct sockaddr_storage));
+
 	pthread_rwlock_unlock(&dnsCache.rwlock); /* release read lock */
 	pthread_rwlock_wrlock(&dnsCache.rwlock); /* and re-aquire for writing */
-	if(dnsCache.nEntries >= MAX_CACHE_ENTRIES) {
-		evictEntry();
+	r = hashtable_insert(dnsCache.ht, keybuf, *pEtry);
+	if(r == 0) {
+		DBGPRINTF("dnscache: inserting element failed\n");
 	}
-	etry->next = dnsCache.root;
-	dnsCache.root = etry;
 	pthread_rwlock_unlock(&dnsCache.rwlock);
-	pthread_rwlock_rdlock(&dnsCache.rwlock); /* TODO: optimize this! */
+	pthread_rwlock_rdlock(&dnsCache.rwlock); /* we need this again */
 
 finalize_it:
+	if(iRet != RS_RET_OK && etry != NULL) {
+		/* Note: sub-fields cannot be populated in this case */
+		free(etry);
+	}
 	RETiRet;
 }
 
@@ -314,7 +401,7 @@ finalize_it:
  * TODO: implement!
  */
 static inline rsRetVal
-validateEntry(dnscache_entry_t *etry, struct sockaddr_storage *addr)
+validateEntry(dnscache_entry_t __attribute__((unused)) *etry, struct sockaddr_storage __attribute__((unused)) *addr)
 {
 	return RS_RET_OK;
 }
@@ -322,10 +409,12 @@ validateEntry(dnscache_entry_t *etry, struct sockaddr_storage *addr)
 
 /* This is the main function: it looks up an entry and returns it's name
  * and IP address. If the entry is not yet inside the cache, it is added.
- * If the entry can not be resolved, an error is reported back.
+ * If the entry can not be resolved, an error is reported back. If fqdn
+ * or fqdnLowerCase are NULL, they are not set.
  */
 rsRetVal
-dnscacheLookup(struct sockaddr_storage *addr, uchar *pszHostFQDN, uchar *ip)
+dnscacheLookup(struct sockaddr_storage *addr, prop_t **fqdn, prop_t **fqdnLowerCase,
+	       prop_t **localName, prop_t **ip)
 {
 	dnscache_entry_t *etry;
 	DEFiRet;
@@ -338,18 +427,39 @@ dnscacheLookup(struct sockaddr_storage *addr, uchar *pszHostFQDN, uchar *ip)
 	} else {
 		CHKiRet(validateEntry(etry, addr));
 	}
-	// TODO/QUESTION: can we get rid of the strcpy?
-dbgprintf("XXXX: hostn '%s', ip '%s'\n", etry->pszHostFQDN, etry->ip);
-	strcpy((char*)pszHostFQDN, (char*)etry->pszHostFQDN);
-	strcpy((char*)ip, (char*)etry->ip);
+	prop.AddRef(etry->ip);
+	*ip = etry->ip;
+	if(fqdn != NULL) {
+		prop.AddRef(etry->fqdn);
+		*fqdn = etry->fqdn;
+	}
+	if(fqdnLowerCase != NULL) {
+		prop.AddRef(etry->fqdnLowerCase);
+		*fqdnLowerCase = etry->fqdnLowerCase;
+	}
+	if(localName != NULL) {
+		prop.AddRef(etry->localName);
+		*localName = etry->localName;
+	}
 
 finalize_it:
 	pthread_rwlock_unlock(&dnsCache.rwlock);
-dbgprintf("XXXX: dnscacheLookup finished, iRet=%d\n", iRet);
 	if(iRet != RS_RET_OK && iRet != RS_RET_ADDRESS_UNKNOWN) {
 		DBGPRINTF("dnscacheLookup failed with iRet %d\n", iRet);
-		strcpy((char*) pszHostFQDN, "???");
-		strcpy((char*) ip, "???");
+		prop.AddRef(staticErrValue);
+		*ip = staticErrValue;
+		if(fqdn != NULL) {
+			prop.AddRef(staticErrValue);
+			*fqdn = staticErrValue;
+		}
+		if(fqdnLowerCase != NULL) {
+			prop.AddRef(staticErrValue);
+			*fqdnLowerCase = staticErrValue;
+		}
+		if(localName != NULL) {
+			prop.AddRef(staticErrValue);
+			*localName = staticErrValue;
+		}
 	}
 	RETiRet;
 }

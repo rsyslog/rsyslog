@@ -112,15 +112,15 @@ static configSettings_t cs;
 /* action (instance) parameters */
 static struct cnfparamdescr actpdescr[] = {
 	{ "server", eCmdHdlrString, CNFPARAM_REQUIRED },
-	{ "port", eCmdHdlrInt, CNFPARAM_REQUIRED },
-	{ "transport", eCmdHdlrString, CNFPARAM_REQUIRED },
-	{ "version", eCmdHdlrInt, CNFPARAM_REQUIRED },
-	{ "community", eCmdHdlrString, CNFPARAM_REQUIRED },
-	{ "enterpriseoid", eCmdHdlrString, CNFPARAM_REQUIRED },
-	{ "trapoid", eCmdHdlrString, CNFPARAM_REQUIRED },
-	{ "messageoid", eCmdHdlrString, CNFPARAM_REQUIRED },
-	{ "traptype", eCmdHdlrInt, CNFPARAM_REQUIRED },
-	{ "specifictype", eCmdHdlrInt, CNFPARAM_REQUIRED },
+	{ "port", eCmdHdlrInt, 0 },
+	{ "transport", eCmdHdlrString, 0 },
+	{ "version", eCmdHdlrInt, 0 },
+	{ "community", eCmdHdlrString, 0 },
+	{ "enterpriseoid", eCmdHdlrString, 0 },
+	{ "trapoid", eCmdHdlrString, 0 },
+	{ "messageoid", eCmdHdlrString, 0 },
+	{ "traptype", eCmdHdlrInt, 0 },
+	{ "specifictype", eCmdHdlrInt, 0 },
 	{ "template", eCmdHdlrGetWord, 0 }
 };
 static struct cnfparamblk actpblk =
@@ -429,14 +429,10 @@ CODESTARTnewActInst
 		}
 	}
 
-	if(pData->tplName == NULL) {
-		CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*) "RSYSLOG_FileFormat",
-			OMSR_NO_RQD_TPL_OPTS));
-	} else {
-		CHKiRet(OMSRsetEntry(*ppOMSR, 0,
-			(uchar*) strdup((char*) pData->tplName),
-			OMSR_NO_RQD_TPL_OPTS));
-	}
+	CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*)strdup((pData->tplName == NULL) ? 
+						"RSYSLOG_FileFormat" : (char*)pData->tplName),
+						OMSR_NO_RQD_TPL_OPTS));
+
 CODE_STD_FINALIZERnewActInst
 	cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst

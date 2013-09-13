@@ -58,9 +58,6 @@ static int	fklog = -1;	/* kernel log fd */
 #ifdef OS_LINUX
 /* submit a message to imklog Syslog() API. In this function, we check if 
  * a kernel timestamp is present and, if so, extract and strip it.
- * Note: this is an extra processing step. We should revisit the whole
- * idea in v6 and remove all that old stuff that we do not longer need
- * (like symbol resolution). <-- TODO 
  * Note that this is heavily Linux specific and thus is not compiled or
  * used for BSD.
  * Special thanks to Lennart Poettering for suggesting on how to convert
@@ -175,7 +172,7 @@ klogWillRun(modConfData_t *pModConf)
 
 	fklog = open((char*)GetPath(pModConf), O_RDONLY, 0);
 	if (fklog < 0) {
-		imklogLogIntMsg(RS_RET_ERR_OPEN_KLOG, "imklog: cannot open kernel log(%s): %s.",
+		imklogLogIntMsg(LOG_ERR, "imklog: cannot open kernel log(%s): %s.",
 			GetPath(pModConf), rs_strerror_r(errno, errmsg, sizeof(errmsg)));
 		ABORT_FINALIZE(RS_RET_ERR_OPEN_KLOG);
 	}

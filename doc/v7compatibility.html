@@ -82,6 +82,53 @@ errors and error messages. Starting with 7.2.1, this has been reduced to 10
 successive failures. This still gives the plugin a chance to recover. In extreme
 cases, a plugin may now enter suspend mode where it previously did not do so.
 In practice, we do NOT expect that.
+<h1>Notes for the 7.3/7.4 branch</h1>
+<h2>"last message repeated n times" Processing</h2>
+<p>This processing has been optimized and moved to the input side. This results
+in usually far better performance and also de-couples different sources
+from the same
+processing. It is now also integrated in to the more generic rate-limiting
+processing.
+<h3>User-Noticable Changes</h3>
+The code works almost as before, with two exceptions:
+<ul>
+<li>The supression amount can be different, as the new algorithm
+    precisely check's a single source, and while that source is being
+    read. The previous algorithm worked on a set of mixed messages
+    from multiple sources.
+<li>The previous algorithm wrote a "last message repeated n times" message
+    at least every 60 seconds. For performance reasons, we do no longer do
+    this but write this message only when a new message arrives or rsyslog
+    is shut down.
+</ul>
+<p>Note that the new algorithms needs support from input modules. If old
+modules which do not have the necessary support are used, duplicate 
+messages will most probably not be detected. Upgrading the module code is
+simple, and all rsyslog-provided plugins support the new method, so this
+should not be a real problem (crafting a solution would result in rather
+complex code - for a case that most probably would never happen).
+<h3>Performance Implications</h3>
+<p>In general, the new method enables far faster output procesing. However, it
+needs to be noted that the "last message repeated n" processing needs parsed
+messages in order to detect duplicated. Consequently, if it is enabled the
+parser step cannot be deferred to the main queue processing thread and
+thus must be done during input processing. The changes workload distribution
+and may have (good or bad) effect on the overall performance. If you have
+a very high performance installation, it is suggested to check the performance
+profile before deploying the new version. Note: for high-performance
+environments it is highly recommended NOT to use "last message repeated n times"
+processing but rather the other (more efficient) rate-limiting methods. These
+also do NOT require the parsing step to be done during input processing.
+
+<h2>Stricter string-template Processing</h2>
+<p>Previously, no error message for invalid string template parameters
+was generated.
+Rather a malformed template was generated, and error information emitted
+at runtime. However, this could be quite confusing. Note that the new code
+changes user experience: formerly, rsyslog and the affected
+actions properly started up, but the actions did not produce proper
+data. Now, there are startup error messages and the actions are NOT
+executed (due to missing template due to template error).
 
 <p><font size="2">This documentation is part of the
 <a href="http://www.rsyslog.com/">rsyslog</a> project.<br>

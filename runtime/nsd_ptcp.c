@@ -2,7 +2,7 @@
  *
  * An implementation of the nsd interface for plain tcp sockets.
  * 
- * Copyright 2007, 2008 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2013 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -50,6 +50,7 @@
 #include "nsdsel_ptcp.h"
 #include "nsdpoll_ptcp.h"
 #include "nsd_ptcp.h"
+#include "prop.h"
 #include "dnscache.h"
 
 MODULE_TYPE_LIB
@@ -62,6 +63,7 @@ DEFobjCurrIf(glbl)
 DEFobjCurrIf(net)
 DEFobjCurrIf(netstrms)
 DEFobjCurrIf(netstrm)
+DEFobjCurrIf(prop)
 
 
 /* a few deinit helpers */
@@ -87,10 +89,9 @@ ENDobjConstruct(nsd_ptcp)
 BEGINobjDestruct(nsd_ptcp) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(nsd_ptcp)
 	sockClose(&pThis->sock);
-	if(pThis->pRemHostIP != NULL)
-		free(pThis->pRemHostIP);
-	if(pThis->pRemHostName != NULL)
-		free(pThis->pRemHostName);
+	if(pThis->remoteIP != NULL)
+		prop.Destruct(&pThis->remoteIP);
+	free(pThis->pRemHostName);
 ENDobjDestruct(nsd_ptcp)
 
 
@@ -251,32 +252,22 @@ Abort(nsd_t *pNsd)
 static rsRetVal
 FillRemHost(nsd_ptcp_t *pThis, struct sockaddr_storage *pAddr)
 {
-	uchar szIP[NI_MAXHOST] = "";
-	uchar szHname[NI_MAXHOST] = "";
-	size_t len;
+	prop_t *fqdn;
 	
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, nsd_ptcp);
 	assert(pAddr != NULL);
 
-	CHKiRet(dnscacheLookup(pAddr, szHname, szIP));
+	CHKiRet(dnscacheLookup(pAddr, &fqdn, NULL, NULL, &pThis->remoteIP));
 
 	/* We now have the names, so now let's allocate memory and store them permanently.
 	 * (side note: we may hold on to these values for quite a while, thus we trim their
 	 * memory consumption)
 	 */
-	len = strlen((char*)szIP) + 1; /* +1 for \0 byte */
-	if((pThis->pRemHostIP = MALLOC(len)) == NULL)
+	if((pThis->pRemHostName = MALLOC(prop.GetStringLen(fqdn)+1)) == NULL)
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-	memcpy(pThis->pRemHostIP, szIP, len);
-
-	len = strlen((char*)szHname) + 1; /* +1 for \0 byte */
-	if((pThis->pRemHostName = MALLOC(len)) == NULL) {
-		free(pThis->pRemHostIP); /* prevent leak */
-		pThis->pRemHostIP = NULL;
-		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-	}
-	memcpy(pThis->pRemHostName, szHname, len);
+	memcpy(pThis->pRemHostName, propGetSzStr(fqdn), prop.GetStringLen(fqdn)+1);
+	prop.Destruct(&fqdn);
 
 finalize_it:
 	RETiRet;
@@ -719,21 +710,16 @@ finalize_it:
 }
 
 
-/* get the remote host's IP address. The returned string must be freed by the
- * caller.
- * rgerhards, 2008-04-24
+/* get the remote host's IP address. Caller must Destruct the object.
  */
 static rsRetVal
-GetRemoteIP(nsd_t *pNsd, uchar **ppszIP)
+GetRemoteIP(nsd_t *pNsd, prop_t **ip)
 {
 	DEFiRet;
 	nsd_ptcp_t *pThis = (nsd_ptcp_t*) pNsd;
 	ISOBJ_TYPE_assert(pThis, nsd_ptcp);
-	assert(ppszIP != NULL);
-
-	CHKmalloc(*ppszIP = (uchar*)strdup(pThis->pRemHostIP == NULL ? "" : (char*) pThis->pRemHostIP));
-
-finalize_it:
+	prop.AddRef(pThis->remoteIP);
+	*ip = pThis->remoteIP;
 	RETiRet;
 }
 
@@ -779,6 +765,7 @@ CODESTARTObjClassExit(nsd_ptcp)
 	/* release objects we no longer need */
 	objRelease(net, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
+	objRelease(prop, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(netstrm, DONT_LOAD_LIB);
 	objRelease(netstrms, LM_NETSTRMS_FILENAME);
@@ -793,6 +780,7 @@ BEGINObjClassInit(nsd_ptcp, 1, OBJ_IS_LOADABLE_MODULE) /* class, version */
 	/* request objects we use */
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
+	CHKiRet(objUse(prop, CORE_COMPONENT));
 	CHKiRet(objUse(net, CORE_COMPONENT));
 	CHKiRet(objUse(netstrms, LM_NETSTRMS_FILENAME));
 	CHKiRet(objUse(netstrm, DONT_LOAD_LIB));

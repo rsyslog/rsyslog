@@ -35,9 +35,9 @@ struct modConfData_s {
 	int iFacilIntMsg;
 	uchar *pszPath;
 	int console_log_level;
-	sbool bPermitNonKernel;
 	sbool bParseKernelStamp;
 	sbool bKeepKernelStamp;
+	sbool bPermitNonKernel;
 	sbool configSetViaV2Method;
 };
 

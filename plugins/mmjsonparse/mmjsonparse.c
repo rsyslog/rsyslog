@@ -35,8 +35,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <ctype.h>
-#include <libestr.h>
-#include <json/json.h>
+#include <json.h>
 #include "conf.h"
 #include "syslogd-types.h"
 #include "template.h"
@@ -62,15 +61,46 @@ typedef struct _instanceData {
 	struct json_tokener *tokener;
 } instanceData;
 
+struct modConfData_s {
+	rsconf_t *pConf;	/* our overall config object */
+};
+static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
+static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current exec process */
 
-BEGINinitConfVars		/* (re)set config variables to default values */
-CODESTARTinitConfVars 
-	resetConfigVariables(NULL, NULL);
-ENDinitConfVars
+
+BEGINbeginCnfLoad
+CODESTARTbeginCnfLoad
+	loadModConf = pModConf;
+	pModConf->pConf = pConf;
+ENDbeginCnfLoad
+
+BEGINendCnfLoad
+CODESTARTendCnfLoad
+ENDendCnfLoad
+
+BEGINcheckCnf
+CODESTARTcheckCnf
+ENDcheckCnf
+
+BEGINactivateCnf
+CODESTARTactivateCnf
+	runModConf = pModConf;
+ENDactivateCnf
+
+BEGINfreeCnf
+CODESTARTfreeCnf
+ENDfreeCnf
 
 
 BEGINcreateInstance
 CODESTARTcreateInstance
+	pData->tokener = json_tokener_new();
+	if(pData->tokener == NULL) {
+		errmsg.LogError(0, RS_RET_ERR, "error: could not create json "
+				"tokener, cannot activate action");
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+finalize_it:
 ENDcreateInstance
 
 
@@ -88,7 +118,7 @@ ENDfreeInstance
 
 BEGINdbgPrintInstInfo
 CODESTARTdbgPrintInstInfo
-	dbgprintf("mmjsonparse\n");
+	DBGPRINTF("mmjsonparse\n");
 ENDdbgPrintInstInfo
 
 
@@ -104,7 +134,8 @@ processJSON(instanceData *pData, msg_t *pMsg, char *buf, size_t lenBuf)
 	const char *errMsg;
 	DEFiRet;
 
-	dbgprintf("mmjsonparse: toParse: '%s'\n", buf);
+	assert(pData->tokener != NULL);
+	DBGPRINTF("mmjsonparse: toParse: '%s'\n", buf);
 	json_tokener_reset(pData->tokener);
 
 	json = json_tokener_parse_ex(pData->tokener, buf, lenBuf);
@@ -123,7 +154,7 @@ processJSON(instanceData *pData, msg_t *pMsg, char *buf, size_t lenBuf)
 		else if(!json_object_is_type(json, json_type_object))
 			errMsg = "JSON value is not an object";
 		if(errMsg != NULL) {
-			dbgprintf("mmjsonparse: Error parsing JSON '%s': %s\n",
+			DBGPRINTF("mmjsonparse: Error parsing JSON '%s': %s\n",
 					buf, errMsg);
 		}
 	}
@@ -177,6 +208,22 @@ finalize_it:
 	MsgSetParseSuccess(pMsg, bSuccess);
 ENDdoAction
 
+BEGINnewActInst
+CODESTARTnewActInst
+	/* Note: we currently do not have any parameters, so we do not need
+	 * the lst ptr. However, we will most probably need params in the 
+	 * future.
+	 */
+	DBGPRINTF("newActInst (mmjsonparse)\n");
+
+	CODE_STD_STRING_REQUESTnewActInst(1)
+	CHKiRet(OMSRsetEntry(*ppOMSR, 0, NULL, OMSR_TPL_AS_MSG));
+	CHKiRet(createInstance(&pData));
+	/*setInstParamDefaults(pData);*/
+
+CODE_STD_FINALIZERnewActInst
+/*	cnfparamvalsDestruct(pvals, &actpblk);*/
+ENDnewActInst
 
 BEGINparseSelectorAct
 CODESTARTparseSelectorAct
@@ -197,14 +244,6 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	 * the format specified (if any) is always ignored.
 	 */
 	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_TPL_AS_MSG, (uchar*) "RSYSLOG_FileFormat"));
-
-	/* finally build the instance */
-	pData->tokener = json_tokener_new();
-	if(pData->tokener == NULL) {
-		errmsg.LogError(0, RS_RET_ERR, "error: could not create json "
-				"tokener, cannot activate action");
-		ABORT_FINALIZE(RS_RET_ERR);
-	}
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
@@ -218,7 +257,8 @@ ENDmodExit
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
-CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES 
+CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
+CODEqueryEtryPt_STD_CONF2_QUERIES
 ENDqueryEtryPt
 
 
@@ -238,7 +278,6 @@ BEGINmodInit()
 	unsigned long opts;
 	int bMsgPassingSupported;
 CODESTARTmodInit
-INITLegCnfVars
 	*ipIFVersProvided = CURR_MOD_IF_VERSION;
 		/* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr

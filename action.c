@@ -12,11 +12,11 @@
  * necessary to triple-check that everything works well in *all* modes.
  * The different modes (and calling sequence) are:
  *
- * if set iExecEveryNthOccur > 1 || f_ReduceRepeated || iSecsExecOnceInterval
+ * if set iExecEveryNthOccur > 1 || iSecsExecOnceInterval
  * - doSubmitToActionQComplexBatch
  * - helperSubmitToActionQComplexBatch
  * - doActionCallAction
- *   handles duplicate message processing, but in essence calls
+ *   handles mark message reduction, but in essence calls
  * - actionWriteToAction
  * - qqueueEnqObj
  *   (now queue engine processing)
@@ -98,7 +98,7 @@
 #include <strings.h>
 #include <time.h>
 #include <errno.h>
-#include <json/json.h>
+#include <json.h>
 
 #include "dirty.h"
 #include "template.h"
@@ -307,9 +307,6 @@ rsRetVal actionDestruct(action_t *pThis)
 	if(pThis->pMod != NULL)
 		pThis->pMod->freeInstance(pThis->pModData);
 
-	if(pThis->f_pMsg != NULL)
-		msgDestruct(&pThis->f_pMsg);
-
 	pthread_mutex_destroy(&pThis->mutAction);
 	pthread_mutex_destroy(&pThis->mutActExec);
 	d_free(pThis->pszName);
@@ -410,16 +407,11 @@ actionConstructFinalize(action_t *pThis, struct cnfparamvals *queueParams)
 	 * mode is much faster processing (and simpler code) -- rgerhards, 2010-06-08
 	 */
 	if(   pThis->iExecEveryNthOccur > 1
-	   || pThis->f_ReduceRepeated
 	   || pThis->iSecsExecOnceInterval
 	  ) {
 		DBGPRINTF("info: firehose mode disabled for action because "
-		          "iExecEveryNthOccur=%d, "
-		          "ReduceRepeated=%d, "
-		          "iSecsExecOnceInterval=%d\n",
-			  pThis->iExecEveryNthOccur, pThis->f_ReduceRepeated,
-			  pThis->iSecsExecOnceInterval
-			  );
+		          "iExecEveryNthOccur=%d, iSecsExecOnceInterval=%d\n",
+			  pThis->iExecEveryNthOccur, pThis->iSecsExecOnceInterval);
 		pThis->submitToActQ = doSubmitToActionQComplexBatch;
 	} else if(pThis->bWriteAllMarkMsgs == RSFALSE) {
 		/* nearly full-speed submission mode, default case */
@@ -438,7 +430,7 @@ actionConstructFinalize(action_t *pThis, struct cnfparamvals *queueParams)
 	CHKiRet(qqueueConstruct(&pThis->pQueue, cs.ActionQueType, 1, cs.iActionQueueSize,
 					(rsRetVal (*)(void*, batch_t*, int*))processBatchMain));
 	obj.SetName((obj_t*) pThis->pQueue, pszAName);
-	qqueueSetpUsr(pThis->pQueue, pThis);
+	qqueueSetpAction(pThis->pQueue, pThis);
 
 	if(queueParams == NULL) { /* use legacy params? */
 		/* ... set some properties ... */
@@ -782,7 +774,6 @@ rsRetVal actionDbgPrint(action_t *pThis)
 	pThis->pMod->dbgPrintInstInfo(pThis->pModData);
 	dbgprintf("\n");
 	dbgprintf("\tInstance data: 0x%lx\n", (unsigned long) pThis->pModData);
-	dbgprintf("\tRepeatedMsgReduction: %d\n", pThis->f_ReduceRepeated);
 	dbgprintf("\tResume Interval: %d\n", pThis->iResumeInterval);
 	if(pThis->eState == ACT_STATE_SUSP) {
 		dbgprintf("\tresume next retry: %u, number retries: %d",
@@ -809,7 +800,8 @@ rsRetVal actionDbgPrint(action_t *pThis)
 /* prepare the calling parameters for doAction()
  * rgerhards, 2009-05-07
  */
-static rsRetVal prepareDoActionParams(action_t *pAction, batch_obj_t *pElem)
+static rsRetVal
+prepareDoActionParams(action_t *pAction, batch_obj_t *pElem, struct syslogTime *ttNow)
 {
 	int i;
 	msg_t *pMsg;
@@ -819,23 +811,23 @@ static rsRetVal prepareDoActionParams(action_t *pAction, batch_obj_t *pElem)
 	ASSERT(pAction != NULL);
 	ASSERT(pElem != NULL);
 
-	pMsg = (msg_t*) pElem->pUsrp;
+	pMsg = pElem->pMsg;
 	/* here we must loop to process all requested strings */
 	for(i = 0 ; i < pAction->iNumTpls ; ++i) {
 		switch(pAction->eParamPassing) {
 			case ACT_STRING_PASSING:
 				CHKiRet(tplToString(pAction->ppTpl[i], pMsg, &(pElem->staticActStrings[i]),
-					&pElem->staticLenStrings[i]));
+					&pElem->staticLenStrings[i], ttNow));
 				pElem->staticActParams[i] = pElem->staticActStrings[i];
 				break;
 			case ACT_ARRAY_PASSING:
-				CHKiRet(tplToArray(pAction->ppTpl[i], pMsg, (uchar***) &(pElem->staticActParams[i])));
+				CHKiRet(tplToArray(pAction->ppTpl[i], pMsg, (uchar***) &(pElem->staticActParams[i]), ttNow));
 				break;
 			case ACT_MSG_PASSING:
 				pElem->staticActParams[i] = (void*) pMsg;
 				break;
 			case ACT_JSON_PASSING:
-				CHKiRet(tplToJSON(pAction->ppTpl[i], pMsg, &json));
+				CHKiRet(tplToJSON(pAction->ppTpl[i], pMsg, &json, ttNow));
 				pElem->staticActParams[i] = (void*) json;
 				break;
 			default:dbgprintf("software bug/error: unknown pAction->eParamPassing %d in prepareDoActionParams\n",
@@ -868,6 +860,9 @@ static rsRetVal releaseBatch(action_t *pAction, batch_t *pBatch)
 
 	ASSERT(pAction != NULL);
 
+	if(pAction->eParamPassing == ACT_STRING_PASSING || pAction->eParamPassing == ACT_MSG_PASSING)
+		goto done; /* we need to do nothing with these types! */
+
 	for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pBatch->pbShutdownImmediate) ; ++i) {
 		pElem = &(pBatch->pElem[i]);
 		if(batchIsValidElem(pBatch, i)) {
@@ -887,19 +882,6 @@ static rsRetVal releaseBatch(action_t *pAction, batch_t *pBatch)
 					}
 				}
 				break;
-			case ACT_STRING_PASSING:
-			case ACT_MSG_PASSING:
-				/* nothing to do in that case */
-				/* TODO ... and yet we do something ;) This is considered not
-				 * really needed, but I was not bold enough to remove that while
-				 * fixing the stable. It should be removed in a devel version
-				 * soon (I really don't see a reason why we would need it).
-				 * rgerhards, 2010-12-16
-				 */
-				for(j = 0 ; j < pAction->iNumTpls ; ++j) {
-					((uchar**)pElem->staticActParams)[j] = NULL;
-				}
-				break;
 			case ACT_JSON_PASSING:
 				for(j = 0 ; j < pAction->iNumTpls ; ++j) {
 					json_object_put((struct json_object*)
@@ -907,11 +889,15 @@ static rsRetVal releaseBatch(action_t *pAction, batch_t *pBatch)
 					pElem->staticActParams[j] = NULL;
 				}
 				break;
+			case ACT_STRING_PASSING:
+			case ACT_MSG_PASSING:
+				/* can never happen, just to keep compiler happy! */
+				break;
 			}
 		}
 	}
 
-	RETiRet;
+done:	RETiRet;
 }
 
 
@@ -975,6 +961,8 @@ actionProcessMessage(action_t *pThis, msg_t *pMsg, void *actParams, int *pbShutd
 	ISOBJ_TYPE_assert(pMsg, msg);
 
 	CHKiRet(actionPrepare(pThis, pbShutdownImmediate));
+	if(pThis->pMod->mod.om.SetShutdownImmdtPtr != NULL)
+		pThis->pMod->mod.om.SetShutdownImmdtPtr(pThis->pModData, pbShutdownImmediate);
 	if(pThis->eState == ACT_STATE_ITX)
 		CHKiRet(actionCallDoAction(pThis, pMsg, actParams));
 
@@ -1069,7 +1057,7 @@ tryDoAction(action_t *pAction, batch_t *pBatch, int *pnElem)
 		 * enq side of the queue (see file header comment)! -- rgerhards, 2011-06-15
 		 */
 		if(batchIsValidElem(pBatch, i)) {
-			pMsg = (msg_t*) pBatch->pElem[i].pUsrp;
+			pMsg = pBatch->pElem[i].pMsg;
 			localRet = actionProcessMessage(pAction, pMsg, pBatch->pElem[i].staticActParams,
 							pBatch->pbShutdownImmediate);
 			DBGPRINTF("action %p call returned %d\n", pAction, localRet);
@@ -1092,11 +1080,11 @@ tryDoAction(action_t *pAction, batch_t *pBatch, int *pnElem)
 					++iCommittedUpTo;
 					//pBatch->pElem[iCommittedUpTo++].state = BATCH_STATE_COMM;
 				}
-				pBatch->pElem[i].state = BATCH_STATE_SUB;
+				pBatch->eltState[i] = BATCH_STATE_SUB;
 			} else if(localRet == RS_RET_DEFER_COMMIT) {
-				pBatch->pElem[i].state = BATCH_STATE_SUB;
+				pBatch->eltState[i] = BATCH_STATE_SUB;
 			} else if(localRet == RS_RET_DISCARDMSG) {
-				pBatch->pElem[i].state = BATCH_STATE_DISC;
+				pBatch->eltState[i] = BATCH_STATE_DISC;
 			} else {
 				dbgprintf("tryDoAction: unexpected error code %d[nElem %d, Commited UpTo %d], finalizing\n",
 					  localRet, *pnElem, iCommittedUpTo);
@@ -1160,9 +1148,9 @@ submitBatch(action_t *pAction, batch_t *pBatch, int nElem)
 		} else if(localRet == RS_RET_ACTION_FAILED) {
 			/* in this case, everything not yet committed is BAD */
 			for(i = pBatch->iDoneUpTo ; i < wasDoneTo + nElem ; ++i) {
-				if(   pBatch->pElem[i].state != BATCH_STATE_DISC
-				   && pBatch->pElem[i].state != BATCH_STATE_COMM ) {
-					pBatch->pElem[i].state = BATCH_STATE_BAD;
+				if(   pBatch->eltState[i] != BATCH_STATE_DISC
+				   && pBatch->eltState[i] != BATCH_STATE_COMM ) {
+					pBatch->eltState[i] = BATCH_STATE_BAD;
 					pBatch->pElem[i].bPrevWasSuspended = 1;
 					STATSCOUNTER_INC(pAction->ctrFail, pAction->mutCtrFail);
 				}
@@ -1228,14 +1216,18 @@ prepareBatch(action_t *pAction, batch_t *pBatch, sbool **activeSave, int *bMustR
 {
 	int i;
 	batch_obj_t *pElem;
+	struct syslogTime ttNow;
 	DEFiRet;
+
+	/* indicate we have not yet read the date */
+	ttNow.year = 0;
 
 	pBatch->iDoneUpTo = 0;
 	for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pBatch->pbShutdownImmediate) ; ++i) {
 		pElem = &(pBatch->pElem[i]);
 		if(batchIsValidElem(pBatch, i)) {
-			pElem->state = BATCH_STATE_RDY;
-			if(prepareDoActionParams(pAction, pElem) != RS_RET_OK) {
+			pBatch->eltState[i] = BATCH_STATE_RDY;
+			if(prepareDoActionParams(pAction, pElem, &ttNow) != RS_RET_OK) {
 				/* make sure we have our copy of "active" array */
 				if(!*bMustRestoreActivePtr) {
 					*activeSave = pBatch->active;
@@ -1282,8 +1274,10 @@ processBatchMain(action_t *pAction, batch_t *pBatch, int *pbShutdownImmediate)
 
 	assert(pBatch != NULL);
 
-	pbShutdownImmdtSave = pBatch->pbShutdownImmediate;
-	pBatch->pbShutdownImmediate = pbShutdownImmediate;
+	if(pbShutdownImmediate != NULL) {
+		pbShutdownImmdtSave = pBatch->pbShutdownImmediate;
+		pBatch->pbShutdownImmediate = pbShutdownImmediate;
+	}
 	CHKiRet(prepareBatch(pAction, pBatch, &activeSave, &bMustRestoreActivePtr));
 
 	/* We now must guard the output module against execution by multiple threads. The
@@ -1314,7 +1308,8 @@ processBatchMain(action_t *pAction, batch_t *pBatch, int *pbShutdownImmediate)
 	}
 
 finalize_it:
-	pBatch->pbShutdownImmediate = pbShutdownImmdtSave;
+	if(pbShutdownImmediate != NULL)
+		pBatch->pbShutdownImmediate = pbShutdownImmdtSave;
 	RETiRet;
 }
 #pragma GCC diagnostic warning "-Wempty-body"
@@ -1397,9 +1392,9 @@ doSubmitToActionQ(action_t *pAction, msg_t *pMsg)
 
 	STATSCOUNTER_INC(pAction->ctrProcessed, pAction->mutCtrProcessed);
 	if(pAction->pQueue->qType == QUEUETYPE_DIRECT)
-		iRet = qqueueEnqObjDirect(pAction->pQueue, (void*) MsgAddRef(pMsg));
+		iRet = qqueueEnqMsgDirect(pAction->pQueue, MsgAddRef(pMsg));
 	else
-		iRet = qqueueEnqObj(pAction->pQueue, eFLOWCTL_NO_DELAY, (void*) MsgAddRef(pMsg));
+		iRet = qqueueEnqMsg(pAction->pQueue, eFLOWCTL_NO_DELAY, MsgAddRef(pMsg));
 
 finalize_it:
 	RETiRet;
@@ -1414,13 +1409,9 @@ finalize_it:
  * be filtered out before calling us (what is done currently!).
  */
 rsRetVal
-actionWriteToAction(action_t *pAction)
+actionWriteToAction(action_t *pAction, msg_t *pMsg)
 {
-	msg_t *pMsgSave;	/* to save current message pointer, necessary to restore
-				   it in case it needs to be updated (e.g. repeated msgs) */
 	DEFiRet;
-
-	pMsgSave = NULL;	/* indicate message poiner not saved */
 
 	/* first, we check if the action should actually be called. The action-specific
 	 * $ActionExecOnlyEveryNthTime permits us to execute an action only every Nth
@@ -1448,43 +1439,6 @@ actionWriteToAction(action_t *pAction)
 		}
 	}
 
-	/* then check if this is a regular message or the repeation of
-	 * a previous message. If so, we need to change the message text
-	 * to "last message repeated n times" and then go ahead and write
-	 * it. Please note that we can not modify the message object, because
-	 * that would update it in other selectors as well. As such, we first
-	 * need to create a local copy of the message, which we than can update.
-	 * rgerhards, 2007-07-10
-	 */
-	if(pAction->f_prevcount > 1) {
-		msg_t *pMsg;
-		size_t lenRepMsg;
-		uchar szRepMsg[1024];
-
-		if((pMsg = MsgDup(pAction->f_pMsg)) == NULL) {
-			/* it failed - nothing we can do against it... */
-			DBGPRINTF("Message duplication failed, dropping repeat message.\n");
-			ABORT_FINALIZE(RS_RET_ERR);
-		}
-
-		if(pAction->bRepMsgHasMsg == 0) { /* old format repeat message? */
-			lenRepMsg = snprintf((char*)szRepMsg, sizeof(szRepMsg), " last message repeated %d times",
-			    pAction->f_prevcount);
-		} else {
-			lenRepMsg = snprintf((char*)szRepMsg, sizeof(szRepMsg), " message repeated %d times: [%.800s]",
-			    pAction->f_prevcount, getMSG(pAction->f_pMsg));
-		}
-
-		/* We now need to update the other message properties. Please note that digital
-		 * signatures inside the message are also invalidated.
-		 */
-		datetime.getCurrTime(&(pMsg->tRcvdAt), &(pMsg->ttGenTime));
-		memcpy(&pMsg->tTIMESTAMP, &pMsg->tRcvdAt, sizeof(struct syslogTime));
-		MsgReplaceMSG(pMsg, szRepMsg, lenRepMsg);
-		pMsgSave = pAction->f_pMsg;	/* save message pointer for later restoration */
-		pAction->f_pMsg = pMsg;	/* use the new msg (pointer will be restored below) */
-	}
-
 	DBGPRINTF("Called action(complex case), logging to %s\n", module.GetStateName(pAction->pMod));
 
 	/* now check if we need to drop the message because otherwise the action would be too
@@ -1505,31 +1459,14 @@ actionWriteToAction(action_t *pAction)
 	/* we use reception time, not dequeue time - this is considered more appropriate and also faster ;)
 	 * rgerhards, 2008-09-17 */
 	pAction->tLastExec = getActNow(pAction); /* re-init time flags */
-	pAction->f_time = pAction->f_pMsg->ttGenTime;
+	pAction->f_time = pMsg->ttGenTime;
 
 	/* When we reach this point, we have a valid, non-disabled action.
 	 * So let's enqueue our message for execution. -- rgerhards, 2007-07-24
 	 */
-	iRet = doSubmitToActionQ(pAction, pAction->f_pMsg);
-
-	if(iRet == RS_RET_OK)
-		pAction->f_prevcount = 0; /* message processed, so we start a new cycle */
+	iRet = doSubmitToActionQ(pAction, pMsg);
 
 finalize_it:
-	if(pMsgSave != NULL) {
-		/* we had saved the original message pointer. That was
-		 * done because we needed to create a temporary one
-		 * (most often for "message repeated n time" handling). If so,
-		 * we need to restore the original one now, so that procesing
-		 * can continue as normal. We also need to discard the temporary
-		 * one, as we do not like memory leaks ;) Please note that the original
-		 * message object will be discarded by our callers, so this is nothing
-		 * of our business. rgerhards, 2007-07-10
-		 */
-		msgDestruct(&pAction->f_pMsg);
-		pAction->f_pMsg = pMsgSave;	/* restore it */
-	}
-
 	RETiRet;
 }
 
@@ -1543,7 +1480,7 @@ doActionCallAction(action_t *pAction, batch_t *pBatch, int idxBtch)
 	msg_t *pMsg;
 	DEFiRet;
 
-	pMsg = (msg_t*)(pBatch->pElem[idxBtch].pUsrp);
+	pMsg = pBatch->pElem[idxBtch].pMsg;
 	pAction->tActNow = -1; /* we do not yet know our current time (clear prev. value) */
 
 	/* don't output marks to recently written outputs */
@@ -1552,43 +1489,8 @@ doActionCallAction(action_t *pAction, batch_t *pBatch, int idxBtch)
 		ABORT_FINALIZE(RS_RET_OK);
 	}
 
-	/* suppress duplicate messages */
-	if ((pAction->f_ReduceRepeated == 1) && pAction->f_pMsg != NULL &&
-	    (pMsg->msgFlags & MARK) == 0 && getMSGLen(pMsg) == getMSGLen(pAction->f_pMsg) &&
-	    !ustrcmp(getMSG(pMsg), getMSG(pAction->f_pMsg)) &&
-	    !strcmp(getHOSTNAME(pMsg), getHOSTNAME(pAction->f_pMsg)) &&
-	    !strcmp(getPROCID(pMsg, LOCK_MUTEX), getPROCID(pAction->f_pMsg, LOCK_MUTEX)) &&
-	    !strcmp(getAPPNAME(pMsg, LOCK_MUTEX), getAPPNAME(pAction->f_pMsg, LOCK_MUTEX))) {
-		pAction->f_prevcount++;
-		DBGPRINTF("msg repeated %d times, %ld sec of %d.\n",
-		    pAction->f_prevcount, (long) getActNow(pAction) - pAction->f_time,
-		    repeatinterval[pAction->f_repeatcount]);
-		/* use current message, so we have the new timestamp (means we need to discard previous one) */
-		msgDestruct(&pAction->f_pMsg);
-		pAction->f_pMsg = MsgAddRef(pMsg);
-		/* If domark would have logged this by now, flush it now (so we don't hold
-		 * isolated messages), but back off so we'll flush less often in the future.
-		 */
-		if(getActNow(pAction) > REPEATTIME(pAction)) {
-			iRet = actionWriteToAction(pAction);
-			BACKOFF(pAction);
-		}
-	} else {/* new message, save it */
-		/* first check if we have a previous message stored
-		 * if so, emit and then discard it first
-		 */
-		if(pAction->f_pMsg != NULL) {
-			if(pAction->f_prevcount > 0)
-				actionWriteToAction(pAction);
-				/* we do not care about iRet above - I think it's right but if we have
-				 * some troubles, you know where to look at ;) -- rgerhards, 2007-08-01
-				 */
-			msgDestruct(&pAction->f_pMsg);
-		}
-		pAction->f_pMsg = MsgAddRef(pMsg);
-		/* call the output driver */
-		iRet = actionWriteToAction(pAction);
-	}
+	/* call the output driver */
+	iRet = actionWriteToAction(pAction, pMsg);
 
 finalize_it:
 	/* we need to update the batch to handle failover processing correctly */
@@ -1660,7 +1562,7 @@ doSubmitToActionQNotAllMarkBatch(action_t *pAction, batch_t *pBatch)
 	copyActive(pBatch);
 
 	for(i = 0 ; i < batchNumMsgs(pBatch) ; ++i) {
-		if((pBatch->pElem[i].state == BATCH_STATE_DISC) || !pBatch->active[i])
+		if((pBatch->eltState[i] == BATCH_STATE_DISC) || !pBatch->active[i])
 			continue;
 		if(now == 0) {
 			now = datetime.GetTime(NULL); /* good time call - the only one done */
@@ -1670,7 +1572,7 @@ doSubmitToActionQNotAllMarkBatch(action_t *pAction, batch_t *pBatch)
 		 * also faster ;) -- rgerhards, 2008-09-17 */
 		do {
 			lastAct = pAction->f_time;
-			if(((msg_t*)(pBatch->pElem[i].pUsrp))->msgFlags & MARK) {
+			if(pBatch->pElem[i].pMsg->msgFlags & MARK) {
 				if((now - lastAct) < MarkInterval / 2) {
 					pBatch->active[i] = 0;
 					DBGPRINTF("batch item %d: action was recently called, ignoring "
@@ -1679,7 +1581,7 @@ doSubmitToActionQNotAllMarkBatch(action_t *pAction, batch_t *pBatch)
 				}
 			}
 		} while(ATOMIC_CAS_time_t(&pAction->f_time, lastAct,
-			((msg_t*)(pBatch->pElem[i].pUsrp))->ttGenTime, &pAction->mutCAS) == 0);
+			pBatch->pElem[i].pMsg->ttGenTime, &pAction->mutCAS) == 0);
 		if(pBatch->active[i]) {
 			DBGPRINTF("Called action(NotAllMark), processing batch[%d] via '%s'\n",
 				  i, module.GetStateName(pAction->pMod));
@@ -1738,7 +1640,7 @@ doQueueEnqObjDirectBatch(action_t *pAction, batch_t *pBatch)
 				bNeedSubmit = 1;
 			}
 			DBGPRINTF("action %p[%d]: valid:%d state:%d execWhenPrev:%d prevWasSusp:%d\n",
-				   pAction, i, batchIsValidElem(pBatch, i),  pBatch->pElem[i].state,
+				   pAction, i, batchIsValidElem(pBatch, i),  pBatch->eltState[i],
 				   pAction->bExecWhenPrevSusp, pBatch->pElem[i].bPrevWasSuspended);
 		}
 		if(bNeedSubmit) {
@@ -1778,11 +1680,11 @@ doSubmitToActionQBatch(action_t *pAction, batch_t *pBatch)
 		 */
 		for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pBatch->pbShutdownImmediate) ; ++i) {
 			DBGPRINTF("action %p: valid:%d state:%d execWhenPrev:%d prevWasSusp:%d\n",
-		           pAction, batchIsValidElem(pBatch, i),  pBatch->pElem[i].state,
+		           pAction, batchIsValidElem(pBatch, i),  pBatch->eltState[i],
 			   pAction->bExecWhenPrevSusp, pBatch->pElem[i].bPrevWasSuspended);
 			if(   batchIsValidElem(pBatch, i) 
 			   && (pAction->bExecWhenPrevSusp == 0 || pBatch->pElem[i].bPrevWasSuspended == 1)) {
-				doSubmitToActionQ(pAction, (msg_t*)(pBatch->pElem[i].pUsrp));
+				doSubmitToActionQ(pAction, pBatch->pElem[i].pMsg);
 			}
 		}
 	}
@@ -1806,7 +1708,7 @@ helperSubmitToActionQComplexBatch(action_t *pAction, batch_t *pBatch)
 		  pAction, module.GetStateName(pAction->pMod));
 	for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pBatch->pbShutdownImmediate) ; ++i) {
 		DBGPRINTF("action %p: valid:%d state:%d execWhenPrev:%d prevWasSusp:%d\n",
-		           pAction, batchIsValidElem(pBatch, i),  pBatch->pElem[i].state,
+		           pAction, batchIsValidElem(pBatch, i),  pBatch->eltState[i],
 			   pAction->bExecWhenPrevSusp, pBatch->pElem[i].bPrevWasSuspended);
 		if(   batchIsValidElem(pBatch, i)
 		   && ((pAction->bExecWhenPrevSusp  == 0) || pBatch->pElem[i].bPrevWasSuspended) ) {
@@ -1878,7 +1780,6 @@ actionApplyCnfParam(action_t *pAction, struct cnfparamvals *pvals)
 }
 
 
-
 /* add an Action to the current selector
  * The pOMSR is freed, as it is not needed after this function.
  * Note: this function pulls global data that specifies action config state.
@@ -1943,7 +1844,7 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData,
 		   && (pAction->ppTpl[i] =
 		   	tplFind(ourConf, (char*)pTplName, strlen((char*)pTplName))) == NULL) {
 			snprintf(errMsg, sizeof(errMsg) / sizeof(char),
-				 " Could not find template '%s' - action disabled\n",
+				 " Could not find template '%s' - action disabled",
 				 pTplName);
 			errno = 0;
 			errmsg.LogError(0, RS_RET_NOT_FOUND, "%s", errMsg);
@@ -1974,13 +1875,7 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData,
 
 	pAction->pMod = pMod;
 	pAction->pModData = pModData;
-	/* now check if the module is compatible with select features */
-	if(pMod->isCompatibleWithFeature(sFEATURERepeatedMsgReduction) == RS_RET_OK) {
-		pAction->f_ReduceRepeated = loadConf->globals.bReduceRepeatMsgs;
-	} else {
-		DBGPRINTF("module is incompatible with RepeatedMsgReduction - turned off\n");
-		pAction->f_ReduceRepeated = 0;
-	}
+	/* check if the module is compatible with select features (currently no such features exist) */
 	pAction->eState = ACT_STATE_RDY; /* action is enabled */
 
 	if(bSuspended)
@@ -2080,13 +1975,8 @@ actionNewInst(struct nvlst *lst, action_t **ppAction)
 
 	if((iRet = addAction(&pAction, pMod, pModData, pOMSR, paramvals, queueParams,
 	                    (iRet == RS_RET_SUSPENDED)? 1 : 0)) == RS_RET_OK) {
-		/* now check if the module is compatible with select features */
-		if(pMod->isCompatibleWithFeature(sFEATURERepeatedMsgReduction) == RS_RET_OK)
-			pAction->f_ReduceRepeated = loadConf->globals.bReduceRepeatMsgs;
-		else {
-			DBGPRINTF("module is incompatible with RepeatedMsgReduction - turned off\n");
-			pAction->f_ReduceRepeated = 0;
-		}
+		/* check if the module is compatible with select features
+		 * (currently no such features exist) */
 		pAction->eState = ACT_STATE_RDY; /* action is enabled */
 		loadConf->actions.nbrActions++;	/* one more active action! */
 	}

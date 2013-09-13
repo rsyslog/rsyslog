@@ -105,6 +105,8 @@ struct instanceConf_s {
 	uchar *pszBindRuleset;		/* name of ruleset to bind to */
 	ruleset_t *pBindRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
 	uchar *pszInputName;		/* value for inputname property, NULL is OK and handled by core engine */
+	int ratelimitInterval;
+	int ratelimitBurst;
 	int bSuppOctetFram;
 	struct instanceConf_s *next;
 };
@@ -136,9 +138,10 @@ static struct cnfparamdescr modpdescr[] = {
 	{ "disablelfdelimiter", eCmdHdlrBinary, 0 },
 	{ "octetcountedframing", eCmdHdlrBinary, 0 },
 	{ "notifyonconnectionclose", eCmdHdlrBinary, 0 },
-	{ "addtlframedelimiter", eCmdHdlrPositiveInt, 0 },
+	{ "addtlframedelimiter", eCmdHdlrNonNegInt, 0 },
 	{ "maxsessions", eCmdHdlrPositiveInt, 0 },
 	{ "maxlistners", eCmdHdlrPositiveInt, 0 },
+	{ "maxlisteners", eCmdHdlrPositiveInt, 0 },
 	{ "streamdriver.mode", eCmdHdlrPositiveInt, 0 },
 	{ "streamdriver.authmode", eCmdHdlrString, 0 },
 	{ "permittedpeer", eCmdHdlrArray, 0 },
@@ -155,7 +158,9 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "port", eCmdHdlrString, CNFPARAM_REQUIRED }, /* legacy: InputTCPServerRun */
 	{ "name", eCmdHdlrString, 0 },
 	{ "ruleset", eCmdHdlrString, 0 },
-	{ "supportOctetCountedFraming", eCmdHdlrBinary, 0 }
+	{ "supportOctetCountedFraming", eCmdHdlrBinary, 0 },
+	{ "ratelimit.interval", eCmdHdlrInt, 0 },
+	{ "ratelimit.burst", eCmdHdlrInt, 0 }
 };
 static struct cnfparamblk inppblk =
 	{ CNFPARAMBLK_VERSION,
@@ -251,6 +256,8 @@ createInstance(instanceConf_t **pinst)
 	inst->pszBindRuleset = NULL;
 	inst->pszInputName = NULL;
 	inst->bSuppOctetFram = 1;
+	inst->ratelimitInterval = 0;
+	inst->ratelimitBurst = 10000;
 
 	/* node created, let's add to config */
 	if(loadModConf->tail == NULL) {
@@ -334,6 +341,7 @@ addListner(modConfData_t *modConf, instanceConf_t *inst)
 	CHKiRet(tcpsrv.SetRuleset(pOurTcpsrv, inst->pBindRuleset));
 	CHKiRet(tcpsrv.SetInputName(pOurTcpsrv, inst->pszInputName == NULL ?
 						UCHAR_CONSTANT("imtcp") : inst->pszInputName));
+	CHKiRet(tcpsrv.SetLinuxLikeRatelimiters(pOurTcpsrv, inst->ratelimitInterval, inst->ratelimitBurst));
 	tcpsrv.configureTCPListen(pOurTcpsrv, inst->pszBindPort, inst->bSuppOctetFram);
 
 finalize_it:
@@ -376,6 +384,10 @@ CODESTARTnewInpInst
 			inst->pszBindRuleset = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "supportOctetCountedFraming")) {
 			inst->bSuppOctetFram = (int) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "ratelimit.burst")) {
+			inst->ratelimitBurst = (int) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "ratelimit.interval")) {
+			inst->ratelimitInterval = (int) pvals[i].val.d.n;
 		} else {
 			dbgprintf("imtcp: program error, non-handled "
 			  "param '%s'\n", inppblk.descr[i].name);
@@ -442,7 +454,8 @@ CODESTARTsetModCnf
 			loadModConf->iAddtlFrameDelim = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "maxsessions")) {
 			loadModConf->iTCPSessMax = (int) pvals[i].val.d.n;
-		} else if(!strcmp(modpblk.descr[i].name, "maxlistners")) {
+		} else if(!strcmp(modpblk.descr[i].name, "maxlisteners") ||
+			  !strcmp(modpblk.descr[i].name, "maxlistners")) { /* keep old name for a while */
 			loadModConf->iTCPLstnMax = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "keepalive")) {
 			loadModConf->bKeepAlive = (int) pvals[i].val.d.n;
@@ -487,10 +500,10 @@ CODESTARTendCnfLoad
 			loadModConf->pszStrmDrvrAuthMode = NULL;
 		} else {
 			loadModConf->pszStrmDrvrAuthMode = cs.pszStrmDrvrAuthMode;
+			cs.pszStrmDrvrAuthMode = NULL;
 		}
 	}
-	if((cs.pszStrmDrvrAuthMode == NULL) || (cs.pszStrmDrvrAuthMode[0] == '\0'))
-		free(cs.pszStrmDrvrAuthMode);
+	free(cs.pszStrmDrvrAuthMode);
 	cs.pszStrmDrvrAuthMode = NULL;
 
 	loadModConf = NULL; /* done loading */
@@ -550,6 +563,7 @@ ENDactivateCnf
 BEGINfreeCnf
 	instanceConf_t *inst, *del;
 CODESTARTfreeCnf
+	free(pModConf->pszStrmDrvrAuthMode);
 	if(pModConf->permittedPeers != NULL) {
 		cnfarrayContentDestruct(pModConf->permittedPeers);
 		free(pModConf->permittedPeers);
@@ -580,7 +594,9 @@ ENDwillRun
 
 BEGINafterRun
 CODESTARTafterRun
-	/* do cleanup here */
+	if(pOurTcpsrv != NULL)
+		iRet = tcpsrv.Destruct(&pOurTcpsrv);
+
 	net.clearAllowedSenders(UCHAR_CONSTANT("TCP"));
 ENDafterRun
 
@@ -594,9 +610,6 @@ ENDisCompatibleWithFeature
 
 BEGINmodExit
 CODESTARTmodExit
-	if(pOurTcpsrv != NULL)
-		iRet = tcpsrv.Destruct(&pOurTcpsrv);
-
 	if(pPermPeersRoot != NULL) {
 		net.DestructPermittedPeers(&pPermPeersRoot);
 	}

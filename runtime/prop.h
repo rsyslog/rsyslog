@@ -52,6 +52,13 @@ ENDinterface(prop)
 #define propCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
 
 
+/* get classic c-style string */
+static inline uchar *
+propGetSzStr(prop_t *pThis)
+{
+	return(pThis->len < CONF_PROP_BUFSIZE) ? pThis->szVal.sz : pThis->szVal.psz;
+}
+
 /* prototypes */
 PROTOTYPEObj(prop);
 

@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([rsyslog],[7.2.7],[rsyslog@lists.adiscon.com])
+AC_INIT([rsyslog],[7.4.4],[rsyslog@lists.adiscon.com])
 AM_INIT_AUTOMAKE
 
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
@@ -33,8 +33,9 @@ PKG_PROG_PKG_CONFIG
 
 # modules we require
 PKG_CHECK_MODULES(LIBESTR, libestr >= 0.1.5)
-PKG_CHECK_MODULES(LIBEE, libee >= 0.4.0)
-PKG_CHECK_MODULES([JSON_C], [json])
+PKG_CHECK_MODULES([JSON_C], [json],, [
+	PKG_CHECK_MODULES([JSON_C], [json-c])
+])
 
 case "${host}" in
   *-*-linux*)
@@ -120,7 +121,10 @@ AC_TYPE_SIGNAL
 AC_FUNC_STAT
 AC_FUNC_STRERROR_R
 AC_FUNC_VPRINTF
-AC_CHECK_FUNCS([flock basename alarm clock_gettime getifaddrs gethostbyname gethostname gettimeofday localtime_r memset mkdir regcomp select setid socket strcasecmp strchr strdup strerror strndup strnlen strrchr strstr strtol strtoul uname ttyname_r getline malloc_trim prctl epoll_create epoll_create1 fdatasync lseek64])
+AC_CHECK_FUNCS([flock basename alarm clock_gettime gethostbyname gethostname gettimeofday localtime_r memset mkdir regcomp select setsid socket strcasecmp strchr strdup strerror strndup strnlen strrchr strstr strtol strtoul uname ttyname_r getline malloc_trim prctl epoll_create epoll_create1 fdatasync syscall lseek64])
+
+# getifaddrs is in libc (mostly) or in libsocket (eg Solaris 11) or not defined (eg Solaris 10)
+AC_SEARCH_LIBS([getifaddrs], [socket], [AC_DEFINE(HAVE_GETIFADDRS, [1], [set define])])
 
 # the check below is probably ugly. If someone knows how to do it in a better way, please
 # let me know! -- rgerhards, 2010-10-06
@@ -128,7 +132,9 @@ AC_CHECK_DECL([SCM_CREDENTIALS], [AC_DEFINE(HAVE_SCM_CREDENTIALS, [1], [set defi
 #include <sys/socket.h>])
 AC_CHECK_DECL([SO_TIMESTAMP], [AC_DEFINE(HAVE_SO_TIMESTAMP, [1], [set define])], [], [#include <sys/types.h>
 #include <sys/socket.h>])
+AC_CHECK_DECL([SYS_gettid], [AC_DEFINE(HAVE_SYS_gettid, [1], [set define])], [], [#include <sys/syscall.h>])
 AC_CHECK_MEMBER([struct sysinfo.uptime], [AC_DEFINE(HAVE_SYSINFO_UPTIME, [1], [set define])], [], [#include <sys/sysinfo.h>])
+AC_CHECK_DECL([GLOB_NOMAGIC], [AC_DEFINE(HAVE_GLOB_NOMAGIC, [1], [set define])], [], [#include <glob.h>])
 
 # Check for MAXHOSTNAMELEN
 AC_MSG_CHECKING(for MAXHOSTNAMELEN)
@@ -152,7 +158,7 @@ RS_ATOMIC_OPERATIONS
 RS_ATOMIC_OPERATIONS_64BIT
 
 # fall back to POSIX sems for atomic operations (cpu expensive)
-AC_CHECK_HEADERS([semaphore.h])
+AC_CHECK_HEADERS([semaphore.h sys/syscall.h])
 
 
 # Additional module directories
@@ -331,6 +337,20 @@ AC_ARG_ENABLE(kmsg,
 )
 AM_CONDITIONAL(ENABLE_IMKMSG, test x$enable_kmsg = xyes)
 
+# imjournal
+AC_ARG_ENABLE(imjournal,
+        [AS_HELP_STRING([--enable-imjournal],[Systemd journal message import @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_imjournal="yes" ;;
+          no) enable_imjournal="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-imjournal) ;;
+         esac],
+        [enable_imjournal="no"]
+)
+if test "x$enable_imjournal" = "xyes"; then
+	PKG_CHECK_MODULES([LIBSYSTEMD_JOURNAL], [libsystemd-journal >= 197])
+fi
+AM_CONDITIONAL(ENABLE_IMJOURNAL, test x$enable_imjournal = xyes)
 
 # inet
 AC_ARG_ENABLE(inet,
@@ -664,6 +684,11 @@ if test "x$enable_libdbi" = "xyes"; then
     [dbi_initialize_r],
     [AC_DEFINE([HAVE_DBI_R], [1], [Define to 1 if libdbi supports the new plugin-safe interface])]
   )
+  AC_CHECK_LIB(
+    [dbi],
+    [dbi_conn_transaction_begin],
+    [AC_DEFINE([HAVE_DBI_TXSUPP], [1], [Define to 1 if libdbi supports transactions])]
+  )
 fi
 AM_CONDITIONAL(ENABLE_OMLIBDBI, test x$enable_libdbi = xyes)
 AC_SUBST(LIBDBI_CFLAGS)
@@ -748,6 +773,40 @@ if test "x$enable_gnutls" = "xyes"; then
 fi
 AM_CONDITIONAL(ENABLE_GNUTLS, test x$enable_gnutls = xyes)
 
+# libgcrypt support
+AC_ARG_ENABLE(libgcrypt,
+        [AS_HELP_STRING([--enable-libgcrypt],[Enable log file encryption support (libgcrypt) @<:@default=yes@:>@])],
+        [case "${enableval}" in
+         yes) enable_libgcrypt="yes" ;;
+          no) enable_libgcrypt="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-libgcrypt) ;;
+         esac],
+        [enable_libgcrypt=yes]
+)
+if test "x$enable_libgcrypt" = "xyes"; then
+        AC_CHECK_PROG(
+      	    [HAVE_LIBGCRYPT_CONFIG],
+            [libgcrypt-config],
+            [yes],,,
+            )
+        if test "x${HAVE_LIBGCRYPT_CONFIG}" != "xyes"; then
+           AC_MSG_FAILURE([libgcrypt-config not found in PATH])
+        fi
+        AC_CHECK_LIB(
+		[gcrypt],
+        	[gcry_cipher_open],
+        	[LIBGCRYPT_CFLAGS="`libgcrypt-config --cflags`"
+        	LIBGCRYPT_LIBS="`libgcrypt-config --libs`"
+        	],
+        	[AC_MSG_FAILURE([libgcrypt is missing])],
+        	[`libgcrypt-config --libs --cflags`]
+        	)
+	AC_DEFINE([ENABLE_LIBGCRYPT], [1], [Indicator that LIBGCRYPT is present])
+fi
+AM_CONDITIONAL(ENABLE_LIBGCRYPT, test x$enable_libgcrypt = xyes)
+AC_SUBST(LIBGCRYPT_CFLAGS)
+AC_SUBST(LIBGCRYPT_LIBS)
+
 
 # support for building the rsyslogd runtime
 AC_ARG_ENABLE(rsyslogrt,
@@ -764,7 +823,7 @@ if test "x$enable_rsyslogrt" = "xyes"; then
   RSRT_LIBS1="\$(top_builddir)/runtime/librsyslog.la"
 fi
 AM_CONDITIONAL(ENABLE_RSYSLOGRT, test x$enable_rsyslogrt = xyes)
-RSRT_CFLAGS="\$(RSRT_CFLAGS1) \$(LIBESTR_CFLAGS) \$(JSON_C_FLAGS)"
+RSRT_CFLAGS="\$(RSRT_CFLAGS1) \$(LIBESTR_CFLAGS) \$(JSON_C_CFLAGS)"
 RSRT_LIBS="\$(RSRT_LIBS1) \$(LIBESTR_LIBS) \$(JSON_C_LIBS)"
 AC_SUBST(RSRT_CFLAGS1)
 AC_SUBST(RSRT_LIBS1)
@@ -860,6 +919,7 @@ AC_ARG_ENABLE(mmnormalize,
         [enable_mmnormalize=no]
 )
 if test "x$enable_mmnormalize" = "xyes"; then
+	PKG_CHECK_MODULES(LIBEE, libee >= 0.4.0)
 	PKG_CHECK_MODULES(LIBLOGNORM, lognorm >= 0.3.1)
 fi
 AM_CONDITIONAL(ENABLE_MMNORMALIZE, test x$enable_mmnormalize = xyes)
@@ -875,11 +935,7 @@ AC_ARG_ENABLE(mmjsonparse,
          esac],
         [enable_mmjsonparse=no]
 )
-if test "x$enable_mmjsonparse" = "xyes"; then
-	PKG_CHECK_MODULES(LIBLOGNORM, lognorm >= 0.3.1)
-fi
 AM_CONDITIONAL(ENABLE_MMJSONPARSE, test x$enable_mmjsonparse = xyes)
-
 
 
 # mmaudit
@@ -892,10 +948,20 @@ AC_ARG_ENABLE(mmaudit,
          esac],
         [enable_mmaudit=no]
 )
-if test "x$enable_mmaudit" = "xyes"; then
-	PKG_CHECK_MODULES(LIBLOGNORM, lognorm >= 0.3.1)
-fi
 AM_CONDITIONAL(ENABLE_MMAUDIT, test x$enable_mmaudit = xyes)
+
+
+# mmanon
+AC_ARG_ENABLE(mmanon,
+        [AS_HELP_STRING([--enable-mmanon],[Enable building mmanon support @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_mmanon="yes" ;;
+          no) enable_mmanon="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-mmanon) ;;
+         esac],
+        [enable_mmanon=no]
+)
+AM_CONDITIONAL(ENABLE_MMANON, test x$enable_mmanon = xyes)
 
 
 # RELP support
@@ -909,9 +975,49 @@ AC_ARG_ENABLE(relp,
         [enable_relp=no]
 )
 if test "x$enable_relp" = "xyes"; then
-	PKG_CHECK_MODULES(RELP, relp >= 1.0.1)
+	PKG_CHECK_MODULES(RELP, relp >= 1.0.3)
 fi
 AM_CONDITIONAL(ENABLE_RELP, test x$enable_relp = xyes)
+
+
+# GuardTime support
+AC_ARG_ENABLE(guardtime,
+        [AS_HELP_STRING([--enable-guardtime],[Enable log file signing support (via GuardTime) @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_guardtime="yes" ;;
+          no) enable_guardtime="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-guardtime) ;;
+         esac],
+        [enable_guardtime=no]
+)
+if test "x$enable_guardtime" = "xyes"; then
+	PKG_CHECK_MODULES(GUARDTIME, libgt >= 0.3.1)
+fi
+AM_CONDITIONAL(ENABLE_GUARDTIME, test x$enable_guardtime = xyes)
+
+
+# Support using cached man file copies, to avoid the need for rst2man
+# in the build environment
+AC_ARG_ENABLE(cached_man_pages,
+        [AS_HELP_STRING([--enable-cached-man-pages],[Enable using cached versions of man files (avoid rst2man) @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_cached_man_pages="yes" ;;
+          no) enable_cached_man_pages="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-cached-man-pages) ;;
+         esac],
+        [enable_cached_man_pages=no]
+)
+if test "x$enable_cached_man_pages" = "xno"; then
+# obtain path for rst2man
+  if test "x$enable_libgcrypt" = "xyes" || \
+     test "x$enable_guardtime" = "xyes"; then
+        AC_PATH_PROG([RST2MAN], [rst2man])
+        if test "x${RST2MAN}" == "x"; then
+            AC_MSG_FAILURE([rst2man not found in PATH])
+        fi
+  fi
+fi
+
 
 
 # RFC 3195 support
@@ -1062,6 +1168,21 @@ AC_ARG_ENABLE(omstdout,
         [enable_omstdout=no]
 )
 AM_CONDITIONAL(ENABLE_OMSTDOUT, test x$enable_omstdout = xyes)
+
+# settings for omjournal
+AC_ARG_ENABLE(omjournal,
+        [AS_HELP_STRING([--enable-omjournal],[Compiles omjournal @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_omjournal="yes" ;;
+          no) enable_omjournal="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-omjournal) ;;
+         esac],
+        [enable_omjournal=no]
+)
+if test "x$enable_omjournal" = "xyes"; then
+	PKG_CHECK_MODULES([LIBSYSTEMD_JOURNAL], [libsystemd-journal >= 197])
+fi
+AM_CONDITIONAL(ENABLE_OMJOURNAL, test x$enable_omjournal = xyes)
 
 
 # settings for pmlastmsg
@@ -1268,6 +1389,26 @@ AM_CONDITIONAL(ENABLE_OMZMQ3, test x$enable_omzmq3 = xyes)
 
 # END ZMQ3 SUPPORT
 
+# BEGIN RABBITMQ OUTPUT SUPPORT
+
+AC_ARG_ENABLE(omrabbitmq,
+        [AS_HELP_STRING([--enable-omrabbitmq],[Compiles omrabbitmq output module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_omrabbitmq="yes" ;;
+          no) enable_omrabbitmq="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-omrabbitmq) ;;
+         esac],
+        [enable_omrabbitmq=no]
+)
+if test "x$enable_omrabbitmq" = "xyes"; then
+        PKG_CHECK_MODULES(RABBITMQ, librabbitmq >= 0.2.0)
+        AC_SUBST(RABBITMQ_CFLAGS)
+        AC_SUBST(RABBITMQ_LIBS)
+fi
+AM_CONDITIONAL(ENABLE_OMRABBITMQ, test x$enable_omrabbitmq = xyes)
+
+# END RABBITMQ SUPPORT
+
 # HIREDIS SUPPORT
 
 AC_ARG_ENABLE(omhiredis,
@@ -1298,12 +1439,14 @@ AC_CONFIG_FILES([Makefile \
 		plugins/im3195/Makefile \
 		plugins/imgssapi/Makefile \
 		plugins/imuxsock/Makefile \
+		plugins/imjournal/Makefile \
 		plugins/immark/Makefile \
 		plugins/imklog/Makefile \
 		plugins/imkmsg/Makefile \
 		plugins/omhdfs/Makefile \
 		plugins/omprog/Makefile \
 		plugins/omstdout/Makefile \
+		plugins/omjournal/Makefile \
 		plugins/pmrfc3164sd/Makefile \
 		plugins/pmlastmsg/Makefile \
 		plugins/pmcisconames/Makefile \
@@ -1318,7 +1461,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/impstats/Makefile \
 		plugins/imrelp/Makefile \
 		plugins/imdiag/Makefile \
-        plugins/imzmq3/Makefile \
+		plugins/imzmq3/Makefile \
 		plugins/omtesting/Makefile \
 		plugins/omgssapi/Makefile \
 		plugins/ommysql/Makefile \
@@ -1330,11 +1473,13 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omoracle/Makefile \
 		plugins/omudpspoof/Makefile \
 		plugins/ommongodb/Makefile \
-        plugins/omhiredis/Makefile \
-        plugins/omzmq3/Makefile \
+		plugins/omhiredis/Makefile \
+		plugins/omzmq3/Makefile \
+		plugins/omrabbitmq/Makefile \
 		plugins/mmnormalize/Makefile \
 		plugins/mmjsonparse/Makefile \
 		plugins/mmaudit/Makefile \
+		plugins/mmanon/Makefile \
 		plugins/omelasticsearch/Makefile \
 		plugins/sm_cust_bindcdr/Makefile \
 		plugins/mmsnmptrapd/Makefile \
@@ -1352,8 +1497,12 @@ echo "    Zlib compression support enabled:         $enable_zlib"
 echo "    rsyslog runtime will be built:            $enable_rsyslogrt"
 echo "    rsyslogd will be built:                   $enable_rsyslogd"
 echo "    GUI components will be built:             $enable_gui"
+echo "    cached man files will be used:            $enable_cached_man_pages"
 echo "    Unlimited select() support enabled:       $enable_unlimited_select"
 echo "    uuid support enabled:                     $enable_uuid"
+echo "    Log file signing support:                 $enable_guardtime"
+echo "    Log file encryption support:              $enable_libgcrypt"
+echo "    anonymization support enabled:            $enable_mmanon"
 echo
 echo "---{ input plugins }---"
 echo "    Klog functionality enabled:               $enable_klog ($os_type)"
@@ -1365,17 +1514,20 @@ echo "    file input module enabled:                $enable_imfile"
 echo "    Solaris input module enabled:             $enable_imsolaris"
 echo "    periodic statistics module enabled:       $enable_impstats"
 echo "    imzmq3 input module enabled:              $enable_imzmq3"
+echo "    imjournal input module enabled:           $enable_imjournal"
 echo
 echo "---{ output plugins }---"
 echo "    Mail support enabled:                     $enable_mail"
 echo "    omprog module will be compiled:           $enable_omprog"
 echo "    omstdout module will be compiled:         $enable_omstdout"
+echo "    omjournal module will be compiled:        $enable_omjournal"
 echo "    omhdfs module will be compiled:           $enable_omhdfs"
 echo "    omelasticsearch module will be compiled:  $enable_elasticsearch"
 echo "    omruleset module will be compiled:        $enable_omruleset"
 echo "    omudpspoof module will be compiled:       $enable_omudpspoof"
 echo "    omuxsock module will be compiled:         $enable_omuxsock"
 echo "    omzmq3 module will be compiled:           $enable_omzmq3"
+echo "    omrabbitmq module will be compiled:       $enable_omrabbitmq"
 echo
 echo "---{ parser modules }---"
 echo "    pmrfc3164sd module will be compiled:      $enable_pmrfc3164sd"

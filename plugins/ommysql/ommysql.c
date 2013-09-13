@@ -189,7 +189,6 @@ static rsRetVal initMySQL(instanceData *pData, int bSilent)
 
 	ASSERT(pData != NULL);
 	ASSERT(pData->f_hmysql == NULL);
-
 	pData->f_hmysql = mysql_init(NULL);
 	if(pData->f_hmysql == NULL) {
 		errmsg.LogError(0, RS_RET_SUSPENDED, "can not initialize MySQL handle");
@@ -219,10 +218,12 @@ static rsRetVal initMySQL(instanceData *pData, int bSilent)
 				      pData->f_dbpwd, pData->f_dbname, pData->f_dbsrvPort, NULL, 0) == NULL) {
 			reportDBError(pData, bSilent);
 			closeMySQL(pData); /* ignore any error we may get */
-			iRet = RS_RET_SUSPENDED;
+			ABORT_FINALIZE(RS_RET_SUSPENDED);
 		}
+		mysql_autocommit(pData->f_hmysql, 0);
 	}
 
+finalize_it:
 	RETiRet;
 }
 
@@ -241,6 +242,7 @@ rsRetVal writeMySQL(uchar *psz, instanceData *pData)
 	/* see if we are ready to proceed */
 	if(pData->f_hmysql == NULL) {
 		CHKiRet(initMySQL(pData, 0));
+		
 	}
 
 	/* try insert */
@@ -272,11 +274,27 @@ CODESTARTtryResume
 	}
 ENDtryResume
 
+BEGINbeginTransaction
+CODESTARTbeginTransaction
+	CHKiRet(writeMySQL((uchar*)"START TRANSACTION", pData));
+finalize_it:
+ENDbeginTransaction
+
 BEGINdoAction
 CODESTARTdoAction
 	dbgprintf("\n");
-	iRet = writeMySQL(ppString[0], pData);
+	CHKiRet(writeMySQL(ppString[0], pData));
+	iRet = RS_RET_DEFER_COMMIT;
+finalize_it:
 ENDdoAction
+
+BEGINendTransaction
+CODESTARTendTransaction
+	if (mysql_commit(pData->f_hmysql) != 0)	{	
+		dbgprintf("mysql server error: transaction not committed\n");		
+		iRet = RS_RET_SUSPENDED;
+	}
+ENDendTransaction
 
 
 static inline void
@@ -305,7 +323,7 @@ CODESTARTnewActInst
 	CHKiRet(createInstance(&pData));
 	setInstParamDefaults(pData);
 
-	CODE_STD_STRING_REQUESTnewActInst(1)
+	CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	for(i = 0 ; i < actpblk.nParams ; ++i) {
 		if(!pvals[i].bUsed)
 			continue;
@@ -437,6 +455,7 @@ BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
+CODEqueryEtryPt_TXIF_OMOD_QUERIES /* we support the transactional interface! */
 ENDqueryEtryPt
 
 
@@ -459,6 +478,11 @@ INITLegCnfVars
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	INITChkCoreFeature(bCoreSupportsBatching, CORE_FEATURE_BATCHING);
+	if(!bCoreSupportsBatching) {	
+		errmsg.LogError(0, NO_ERRCODE, "ommysql: rsyslog core too old");
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
 
 	/* we need to init the MySQL library. If that fails, we cannot run */
 	if(

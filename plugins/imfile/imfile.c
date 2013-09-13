@@ -48,6 +48,7 @@
 #include "prop.h"
 #include "stringbuf.h"
 #include "ruleset.h"
+#include "ratelimit.h"
 
 MODULE_TYPE_INPUT	/* must be present for input modules, do not remove */
 MODULE_TYPE_NOKEEP
@@ -82,6 +83,7 @@ typedef struct fileInfo_s {
 	strm_t *pStrm;	/* its stream (NULL if not assigned) */
 	int readMode;	/* which mode to use in ReadMulteLine call? */
 	ruleset_t *pRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
+	ratelimit_t *ratelimiter;
 	multi_submit_t multiSub;
 } fileInfo_t;
 
@@ -189,9 +191,7 @@ static rsRetVal enqLine(fileInfo_t *pInfo, cstr_t *cstrLine)
 	pMsg->iFacility = LOG_FAC(pInfo->iFacility);
 	pMsg->iSeverity = LOG_PRI(pInfo->iSeverity);
 	MsgSetRuleset(pMsg, pInfo->pRuleset);
-	pInfo->multiSub.ppMsgs[pInfo->multiSub.nElem++] = pMsg;
-	if(pInfo->multiSub.nElem == pInfo->multiSub.maxElem)
-		CHKiRet(multiSubmitMsg(&pInfo->multiSub));
+	ratelimitAddMsg(pInfo->ratelimiter, &pInfo->multiSub, pMsg);
 finalize_it:
 	RETiRet;
 }
@@ -235,6 +235,7 @@ openFile(fileInfo_t *pThis)
 	/* read back in the object */
 	CHKiRet(obj.Deserialize(&pThis->pStrm, (uchar*) "strm", psSF, NULL, pThis));
 
+	strm.CheckFileChange(pThis->pStrm);
 	CHKiRet(strm.SeekCurrOffs(pThis->pStrm));
 
 	/* note: we do not delete the state file, so that the last position remains
@@ -246,6 +247,8 @@ finalize_it:
 		strm.Destruct(&psSF);
 
 	if(iRet != RS_RET_OK) {
+		if(pThis->pStrm != NULL)
+			strm.Destruct(&pThis->pStrm);
 		CHKiRet(strm.Construct(&pThis->pStrm));
 		CHKiRet(strm.SettOperationsMode(pThis->pStrm, STREAMMODE_READ));
 		CHKiRet(strm.SetsType(pThis->pStrm, STREAMTYPE_FILE_MONITOR));
@@ -304,10 +307,7 @@ static rsRetVal pollFile(fileInfo_t *pThis, int *pbHadFileData)
 	}
 
 finalize_it:
-	if(pThis->multiSub.nElem > 0) {
-		/* submit everything that was not yet submitted */
-		CHKiRet(multiSubmitMsg(&pThis->multiSub));
-	}
+	multiSubmitFlush(&pThis->multiSub);
 	pthread_cleanup_pop(0);
 
 	if(pCStr != NULL) {
@@ -415,6 +415,7 @@ addListner(instanceConf_t *inst)
 		pThis->lenTag = ustrlen(pThis->pszTag);
 		pThis->pszStateFile = (uchar*) strdup((char*) inst->pszStateFile);
 
+		CHKiRet(ratelimitNew(&pThis->ratelimiter, "imfile", (char*)inst->pszFileName));
 		CHKmalloc(pThis->multiSub.ppMsgs = MALLOC(inst->nMultiSub * sizeof(msg_t*)));
 		pThis->multiSub.maxElem = inst->nMultiSub;
 		pThis->multiSub.nElem = 0;
@@ -448,8 +449,6 @@ CODESTARTnewInpInst
 
 	pvals = nvlstGetParams(lst, &inppblk, NULL);
 	if(pvals == NULL) {
-		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS,
-			        "imfile: required parameter are missing\n");
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
 
@@ -479,7 +478,7 @@ CODESTARTnewInpInst
 			inst->readMode = pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "maxlinesatonce")) {
 			inst->maxLinesAtOnce = pvals[i].val.d.n;
-		} else if(!strcmp(inppblk.descr[i].name, "persistStateInterval")) {
+		} else if(!strcmp(inppblk.descr[i].name, "persiststateinterval")) {
 			inst->iPersistStateInterval = pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "maxsubmitatonce")) {
 			inst->nMultiSub = pvals[i].val.d.n;
@@ -595,7 +594,7 @@ CODESTARTactivateCnf
 	for(inst = runModConf->root ; inst != NULL ; inst = inst->next) {
 		addListner(inst);
 	}
-	/* if we could not set up any listners, there is no point in running... */
+	/* if we could not set up any listeners, there is no point in running... */
 	if(iFilPtr == 0) {
 		errmsg.LogError(0, NO_ERRCODE, "imfile: no file monitors could be started, "
 				"input not activated.\n");
@@ -738,12 +737,20 @@ persistStrmState(fileInfo_t *pInfo)
 	CHKiRet(strm.ConstructFinalize(psSF));
 
 	CHKiRet(strm.Serialize(pInfo->pStrm, psSF));
+	CHKiRet(strm.Flush(psSF));
 
 	CHKiRet(strm.Destruct(&psSF));
 
 finalize_it:
 	if(psSF != NULL)
 		strm.Destruct(&psSF);
+	
+	if(iRet != RS_RET_OK) {
+		errmsg.LogError(0, iRet, "imfile: could not persist state "
+				"file %s - data may be repeated on next "
+				"startup. Is WorkDirectory set?",
+				pInfo->pszStateFile);
+	}
 
 	RETiRet;
 }
@@ -765,6 +772,8 @@ CODESTARTafterRun
 			persistStrmState(&files[i]);
 			strm.Destruct(&(files[i].pStrm));
 		}
+		ratelimitDestruct(files[i].ratelimiter);
+		free(files[i].multiSub.ppMsgs);
 		free(files[i].pszFileName);
 		free(files[i].pszTag);
 		free(files[i].pszStateFile);

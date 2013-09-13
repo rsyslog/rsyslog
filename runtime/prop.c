@@ -100,7 +100,7 @@ static int GetStringLen(prop_t *pThis)
 
 
 /* get string */
-static rsRetVal GetString(prop_t *pThis, uchar **ppsz, int *plen)
+rsRetVal GetString(prop_t *pThis, uchar **ppsz, int *plen)
 {
 	BEGINfunc
 	ISOBJ_TYPE_assert(pThis, prop);

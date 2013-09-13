@@ -46,6 +46,7 @@
 #define CONF_HOSTNAME_MAXSIZE		512	/* a value that is deemed far too large for any valid HOSTNAME */
 #define CONF_RAWMSG_BUFSIZE		101
 #define CONF_TAG_BUFSIZE		32
+#define CONF_PROGNAME_BUFSIZE		16
 #define CONF_HOSTNAME_BUFSIZE		32
 #define CONF_PROP_BUFSIZE		16	/* should be close to sizeof(ptr) or lighly above it */
 #define	CONF_MIN_SIZE_FOR_COMPRESS	60 	/* config param: minimum message size to try compression. The smaller
@@ -60,15 +61,16 @@
 						 * rgerhards, 2006-11-30
 						 */
 
-#define CONF_OMOD_NUMSTRINGS_MAXSIZE	3	/* cache for pointers to output module buffer pointers. All
-						 * rsyslog-provided plugins do NOT need more than three buffers. If
-						 * more are needed (future developments, third-parties), rsyslog 
+#define CONF_OMOD_NUMSTRINGS_MAXSIZE	5	/* cache for pointers to output module buffer pointers. All
+						 * rsyslog-provided plugins do NOT need more than five buffers. If
+						 * more are needed (future developments, third-parties), rsyslog
 						 * must be recompiled with a larger parameter. Hardcoding this
 						 * saves us some overhead, both in runtime in code complexity. As
 						 * it is doubtful if ever more than 3 parameters are needed, the
 						 * approach taken here is considered appropriate.
 						 * rgerhards, 2010-06-24
 						 */
+#define CONF_NUM_MULTISUB		1024	/* default number of messages per multisub structure */
 
 /* ############################################################# *
  * #                  End Config Settings                      # *
@@ -89,7 +91,7 @@
 
 
 /* the rsyslog core provides information about present feature to plugins
- * asking it. Below are feature-test macros which must be used to query 
+ * asking it. Below are feature-test macros which must be used to query
  * features. Note that this must be powers of two, so that multiple queries
  * can be combined. -- rgerhards, 2009-04-27
  */
@@ -151,7 +153,7 @@ typedef uintTiny	propid_t;
 */
 enum rsRetVal_				/** return value. All methods return this if not specified otherwise */
 {
-	/* the first two define are for errmsg.logError(), so that we can use the rsRetVal 
+	/* the first two define are for errmsg.logError(), so that we can use the rsRetVal
 	 * as an rsyslog error code. -- rgerhards, 20080-06-27
 	 */
 	RS_RET_NO_ERRCODE = -1,		/**< RESERVED for NO_ERRCODE errmsg.logError status name */
@@ -322,7 +324,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_ERR_DOOR = -2147, /**< some problems with handling the Solaris door functionality */
 	RS_RET_NO_SRCNAME_TPL = -2150, /**< sourcename template was not specified where one was needed (omudpspoof spoof addr) */
 	RS_RET_HOST_NOT_SPECIFIED = -2151, /**< (target) host was not specified where it was needed */
-	RS_RET_ERR_LIBNET_INIT = -2152, /**< error initializing libnet */
+	RS_RET_ERR_LIBNET_INIT = -2152, /**< error initializing libnet, e.g. because not running as root */
 	RS_RET_FORCE_TERM = -2153,	/**< thread was forced to terminate by bShallShutdown, a state, not an error */
 	RS_RET_RULES_QUEUE_EXISTS = -2154,/**< we were instructed to create a new ruleset queue, but one already exists */
 	RS_RET_NO_CURR_RULESET = -2155,/**< no current ruleset exists (but one is required) */
@@ -376,6 +378,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_LEGA_ACT_NOT_SUPPORTED = -2215, /**< the module (no longer) supports legacy action syntax */
 	RS_RET_MAX_OMSR_REACHED = -2216, /**< max nbr of string requests reached, not supported by core */
 	RS_RET_UID_MISSING = -2217,	/**< a user id is missing (but e.g. a password provided) */
+	RS_RET_DATAFAIL = -2218,	/**< data passed to action caused failure */
 	/* reserved for pre-v6.5 */
 	RS_RET_DUP_PARAM = -2220, /**< config parameter is given more than once */
 	RS_RET_MODULE_ALREADY_IN_CONF = -2221, /**< module already in current configuration */
@@ -384,7 +387,9 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_MOD_NO_INPUT_STMT = -2224, /**< (input) module does not support input() statement */
 	RS_RET_NO_CEE_MSG = -2225, /**< the message being processed is NOT CEE-enhanced */
 
-	/**** up to 2300 is reserved for v6 use ****/
+	/**** up to 2290 is reserved for v6 use ****/
+	RS_RET_RELP_ERR = -2291,	/**<< error in RELP processing */
+	/**** up to 3000 is reserved for c7 use ****/
 	RS_RET_JNAME_NO_ROOT = -2301, /**< root element is missing in JSON path */
 	RS_RET_JNAME_INVALID = -2302, /**< JSON path is invalid */
 	RS_RET_JSON_PARSE_ERR = -2303, /**< we had a problem parsing JSON (or extra data) */
@@ -393,7 +398,22 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_INVLD_SETOP = -2305, /**< invalid variable set operation, incompatible type */
 	RS_RET_RULESET_EXISTS = -2306,/**< ruleset already exists */
 	RS_RET_DEPRECATED = -2307,/**< deprecated functionality is used */
-	RS_RET_CA_CERT_MISSING = -2308,/**< a CA cert is missing where one is required (e.g. TLS) */
+	RS_RET_DS_PROP_SEQ_ERR = -2308,/**< property sequence error deserializing object */
+	RS_RET_TPL_INVLD_PROP = -2309,/**< property name error in template (unknown name) */
+	RS_RET_NO_RULEBASE = -2310,/**< mmnormalize: rulebase can not be found or otherwise invalid */
+	RS_RET_INVLD_MODE = -2311,/**< invalid mode specified in configuration */
+	RS_RET_INVLD_ANON_BITS = -2312,/**< mmanon: invalid number of bits to anonymize specified */
+	RS_RET_REPLCHAR_IGNORED = -2313,/**< mmanon: replacementChar parameter is ignored */
+	RS_RET_SIGPROV_ERR = -2320,/**< error in signature provider */
+	RS_RET_CRYPROV_ERR = -2321,/**< error in cryptography encryption provider */
+	RS_RET_EI_OPN_ERR = -2322,/**< error opening an .encinfo file */
+	RS_RET_EI_NO_EXISTS = -2323,/**< .encinfo file does not exist (status, not necessarily error!)*/
+	RS_RET_EI_WR_ERR = -2324,/**< error writing an .encinfo file */
+	RS_RET_EI_INVLD_FILE = -2325,/**< header indicates the file is no .encinfo file */
+	RS_RET_CRY_INVLD_ALGO = -2326,/**< user specified invalid (unkonwn) crypto algorithm */
+	RS_RET_CRY_INVLD_MODE = -2327,/**< user specified invalid (unkonwn) crypto mode */
+	RS_RET_QUEUE_DISK_NO_FN = -2328,/**< disk queue configured, but filename not set */
+	RS_RET_CA_CERT_MISSING = -2329,/**< a CA cert is missing where one is required (e.g. TLS) */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */
@@ -430,7 +450,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 
 /** Object ID. These are for internal checking. Each
  * object is assigned a specific ID. This is contained in
- * all Object structs (just like C++ RTTI). We can use 
+ * all Object structs (just like C++ RTTI). We can use
  * this field to see if we have been passed a correct ID.
  * Other than that, there is currently no other use for
  * the object id.
@@ -462,7 +482,7 @@ typedef enum rsObjectID rsObjID;
 #endif
 
 /**
- * This macro should be used to free objects. 
+ * This macro should be used to free objects.
  * It aids in interpreting dumps during debugging.
  */
 #ifdef NDEBUG
@@ -529,7 +549,7 @@ rsRetVal rsrtSetErrLogger(rsRetVal (*errLogger)(int, uchar*));
 
 /* TODO: remove this -- this is only for transition of the config system */
 extern rsconf_t *ourConf; /* defined by syslogd.c, a hack for functions that do not
-			     yet receive a copy, so that we can incrementially 
+			     yet receive a copy, so that we can incrementially
 			     compile and change... -- rgerhars, 2011-04-19 */
 
 #endif /* multi-include protection */

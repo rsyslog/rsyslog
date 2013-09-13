@@ -2,7 +2,7 @@
  *
  * Module begun 2011-07-01 by Rainer Gerhards
  *
- * Copyright 2011-2012 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2011-2013 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -50,9 +50,69 @@
 DEFobjCurrIf(obj)
 DEFobjCurrIf(regexp)
 
-void cnfexprOptimize(struct cnfexpr *expr);
+struct cnfexpr* cnfexprOptimize(struct cnfexpr *expr);
 static void cnfstmtOptimizePRIFilt(struct cnfstmt *stmt);
 static void cnfarrayPrint(struct cnfarray *ar, int indent);
+struct cnffunc * cnffuncNew_prifilt(int fac);
+
+/* debug support: convert token to a human-readable string. Note that
+ * this function only supports a single thread due to a static buffer.
+ * This is deemed a solid solution, as it is intended to be used during
+ * startup, only.
+ * NOTE: This function MUST be updated if new tokens are defined in the
+ *       grammar.
+ */
+char *
+tokenToString(int token)
+{
+	char *tokstr;
+	static char tokbuf[512];
+
+	switch(token) {
+	case NAME: tokstr = "NAME"; break;
+	case FUNC: tokstr = "FUNC"; break;
+	case BEGINOBJ: tokstr ="BEGINOBJ"; break;
+	case ENDOBJ: tokstr ="ENDOBJ"; break;
+	case BEGIN_ACTION: tokstr ="BEGIN_ACTION"; break;
+	case BEGIN_PROPERTY: tokstr ="BEGIN_PROPERTY"; break;
+	case BEGIN_CONSTANT: tokstr ="BEGIN_CONSTANT"; break;
+	case BEGIN_TPL: tokstr ="BEGIN_TPL"; break;
+	case BEGIN_RULESET: tokstr ="BEGIN_RULESET"; break;
+	case STOP: tokstr ="STOP"; break;
+	case SET: tokstr ="SET"; break;
+	case UNSET: tokstr ="UNSET"; break;
+	case CONTINUE: tokstr ="CONTINUE"; break;
+	case CALL: tokstr ="CALL"; break;
+	case LEGACY_ACTION: tokstr ="LEGACY_ACTION"; break;
+	case LEGACY_RULESET: tokstr ="LEGACY_RULESET"; break;
+	case PRIFILT: tokstr ="PRIFILT"; break;
+	case PROPFILT: tokstr ="PROPFILT"; break;
+	case IF: tokstr ="IF"; break;
+	case THEN: tokstr ="THEN"; break;
+	case ELSE: tokstr ="ELSE"; break;
+	case OR: tokstr ="OR"; break;
+	case AND: tokstr ="AND"; break;
+	case NOT: tokstr ="NOT"; break;
+	case VAR: tokstr ="VAR"; break;
+	case STRING: tokstr ="STRING"; break;
+	case NUMBER: tokstr ="NUMBER"; break;
+	case CMP_EQ: tokstr ="CMP_EQ"; break;
+	case CMP_NE: tokstr ="CMP_NE"; break;
+	case CMP_LE: tokstr ="CMP_LE"; break;
+	case CMP_GE: tokstr ="CMP_GE"; break;
+	case CMP_LT: tokstr ="CMP_LT"; break;
+	case CMP_GT: tokstr ="CMP_GT"; break;
+	case CMP_CONTAINS: tokstr ="CMP_CONTAINS"; break;
+	case CMP_CONTAINSI: tokstr ="CMP_CONTAINSI"; break;
+	case CMP_STARTSWITH: tokstr ="CMP_STARTSWITH"; break;
+	case CMP_STARTSWITHI: tokstr ="CMP_STARTSWITHI"; break;
+	case UMINUS: tokstr ="UMINUS"; break;
+	default: snprintf(tokbuf, sizeof(tokbuf), "%c[%d]", token, token); 
+		 tokstr = tokbuf; break;
+	}
+	return tokstr;
+}
+
 
 char*
 getFIOPName(unsigned iFIOP)
@@ -82,6 +142,97 @@ getFIOPName(unsigned iFIOP)
 			break;
 	}
 	return pRet;
+}
+
+static void
+prifiltInvert(struct funcData_prifilt *prifilt)
+{
+	int i;
+	for(i = 0 ; i < LOG_NFACILITIES+1 ; ++i) {
+		prifilt->pmask[i] = ~prifilt->pmask[i];
+	}
+}
+
+/* set prifilt so that it matches for some severities, sev is its numerical
+ * value. Mode is one of the compop tokens CMP_EQ, CMP_LT, CMP_LE, CMP_GT,
+ * CMP_GE, CMP_NE.
+ */
+static void
+prifiltSetSeverity(struct funcData_prifilt *prifilt, int sev, int mode)
+{
+	static int lessthanmasks[] = { 0x00, 0x01, 0x03, 0x07, 0x0f, 0x1f, 0x3f, 0x7f, 0xff };
+	int i;
+	for(i = 0 ; i < LOG_NFACILITIES+1 ; ++i) {
+		if(mode == CMP_EQ || mode == CMP_NE)
+			prifilt->pmask[i] = 1 << sev;
+		else if(mode == CMP_LT)
+			prifilt->pmask[i] = lessthanmasks[sev];
+		else if(mode == CMP_LE)
+			prifilt->pmask[i] = lessthanmasks[sev+1];
+		else if(mode == CMP_GT)
+			prifilt->pmask[i] = ~lessthanmasks[sev+1];
+		else if(mode == CMP_GE)
+			prifilt->pmask[i] = ~lessthanmasks[sev];
+		else
+			DBGPRINTF("prifiltSetSeverity: program error, invalid mode %s\n",
+				  tokenToString(mode));
+	}
+	if(mode == CMP_NE)
+		prifiltInvert(prifilt);
+}
+
+/* set prifilt so that it matches for some facilities, fac is its numerical
+ * value. Mode is one of the compop tokens CMP_EQ, CMP_LT, CMP_LE, CMP_GT,
+ * CMP_GE, CMP_NE. For the given facilities, all severities are enabled.
+ * NOTE: fac MUST be in the range 0..24 (not multiplied by 8)!
+ */
+static void
+prifiltSetFacility(struct funcData_prifilt *prifilt, int fac, int mode)
+{
+	int i;
+
+	memset(prifilt->pmask, 0, sizeof(prifilt->pmask));
+	switch(mode) {
+	case CMP_EQ:
+		prifilt->pmask[fac] = TABLE_ALLPRI;
+		break;
+	case CMP_NE:
+		prifilt->pmask[fac] = TABLE_ALLPRI;
+		prifiltInvert(prifilt);
+		break;
+	case CMP_LT:
+		for(i = 0 ; i < fac ; ++i)
+			prifilt->pmask[i] = TABLE_ALLPRI;
+		break;
+	case CMP_LE:
+		for(i = 0 ; i < fac+1 ; ++i)
+			prifilt->pmask[i] = TABLE_ALLPRI;
+		break;
+	case CMP_GE:
+		for(i = fac ; i < LOG_NFACILITIES+1 ; ++i)
+			prifilt->pmask[i] = TABLE_ALLPRI;
+		break;
+	case CMP_GT:
+		for(i = fac+1 ; i < LOG_NFACILITIES+1 ; ++i)
+			prifilt->pmask[i] = TABLE_ALLPRI;
+		break;
+	default:break;
+	}
+}
+
+/* combine a prifilt with AND/OR (the respective token values are
+ * used to keep things simple).
+ */
+static void
+prifiltCombine(struct funcData_prifilt *prifilt, struct funcData_prifilt *prifilt2, int mode)
+{
+	int i;
+	for(i = 0 ; i < LOG_NFACILITIES+1 ; ++i) {
+		if(mode == AND)
+			prifilt->pmask[i] = prifilt->pmask[i] & prifilt2->pmask[i];
+		else
+			prifilt->pmask[i] = prifilt->pmask[i] | prifilt2->pmask[i];
+	}
 }
 
 
@@ -135,6 +286,14 @@ readConfFile(FILE *fp, es_str_t **str)
 	es_addChar(str, '\0');
 	es_addChar(str, '\0');
 }
+
+/* comparison function for qsort() and bsearch() string array compare */
+static int
+qs_arrcmp(const void *s1, const void *s2)
+{
+	return es_strcmp(*((es_str_t**)s1), *((es_str_t**)s2));
+}
+
 
 struct objlst*
 objlstNew(struct cnfobj *o)
@@ -275,8 +434,8 @@ nvlstPrint(struct nvlst *lst)
 			dbgprintf("\tname: '%s', value '%s'\n", name, value);
 			free(value);
 			break;
-		default:dbgprintf("nvlstPrint: unknown type '%c' [%d]\n",
-				lst->val.datatype, lst->val.datatype);
+		default:dbgprintf("nvlstPrint: unknown type '%s'\n",
+				tokenToString(lst->val.datatype));
 			break;
 		}
 		free(name);
@@ -695,7 +854,7 @@ nvlstGetParam(struct nvlst *valnode, struct cnfparamdescr *param,
 		r = doGetInt(valnode, param, val);
 		break;
 	case eCmdHdlrNonNegInt:
-		r = doGetPositiveInt(valnode, param, val);
+		r = doGetNonNegInt(valnode, param, val);
 		break;
 	case eCmdHdlrPositiveInt:
 		r = doGetPositiveInt(valnode, param, val);
@@ -779,8 +938,14 @@ nvlstGetParams(struct nvlst *lst, struct cnfparamblk *params,
 
 	for(i = 0 ; i < params->nParams ; ++i) {
 		param = params->descr + i;
-		if((valnode = nvlstFindNameCStr(lst, param->name)) == NULL)
+		if((valnode = nvlstFindNameCStr(lst, param->name)) == NULL) {
+			if(param->flags & CNFPARAM_REQUIRED) {
+				parser_errmsg("parameter '%s' required but not specified - "
+				  "fix config", param->name);
+				bInError = 1;
+			}
 			continue;
+		}
 		if(vals[i].bUsed) {
 			parser_errmsg("parameter '%s' specified more than once - "
 			  "one instance is ignored. Fix config", param->name);
@@ -790,7 +955,6 @@ nvlstGetParams(struct nvlst *lst, struct cnfparamblk *params,
 			bInError = 1;
 		}
 	}
-
 
 	if(bInError) {
 		if(bValsWasNULL)
@@ -978,8 +1142,8 @@ var2CString(struct var *r, int *bMustFree)
 	return cstr;
 }
 
-rsRetVal
-doExtractField(uchar *str, uchar delim, int matchnbr, uchar **resstr)
+static rsRetVal
+doExtractFieldByChar(uchar *str, uchar delim, int matchnbr, uchar **resstr)
 {
 	int iCurrFld;
 	int iLen;
@@ -1016,8 +1180,6 @@ doExtractField(uchar *str, uchar delim, int matchnbr, uchar **resstr)
 		/* now copy */
 		memcpy(pBuf, pFld, iLen);
 		pBuf[iLen] = '\0'; /* terminate it */
-		if(*(pFldEnd+1) != '\0')
-			++pFldEnd; /* OK, skip again over delimiter char */
 		*resstr = pBuf;
 	} else {
 		ABORT_FINALIZE(RS_RET_FIELD_NOT_FOUND);
@@ -1025,6 +1187,141 @@ doExtractField(uchar *str, uchar delim, int matchnbr, uchar **resstr)
 finalize_it:
 	RETiRet;
 }
+
+
+static rsRetVal
+doExtractFieldByStr(uchar *str, char *delim, rs_size_t lenDelim, int matchnbr, uchar **resstr)
+{
+	int iCurrFld;
+	int iLen;
+	uchar *pBuf;
+	uchar *pFld;
+	uchar *pFldEnd;
+	DEFiRet;
+
+	/* first, skip to the field in question */
+	iCurrFld = 1;
+	pFld = str;
+	while(pFld != NULL && iCurrFld < matchnbr) {
+		if((pFld = (uchar*) strstr((char*)pFld, delim)) != NULL) {
+			pFld += lenDelim;
+			++iCurrFld;
+		}
+	}
+	dbgprintf("field() field requested %d, field found %d\n", matchnbr, iCurrFld);
+	
+	if(iCurrFld == matchnbr) {
+		/* field found, now extract it */
+		/* first of all, we need to find the end */
+		pFldEnd = (uchar*) strstr((char*)pFld, delim);
+		if(pFldEnd == NULL) {
+			iLen = strlen((char*) pFld);
+		} else { /* found delmiter!  Note that pFldEnd *is* already on 
+			  * the first delmi char, we don't need that. */
+			iLen = pFldEnd - pFld;
+		}
+		/* we got our end pointer, now do the copy */
+		CHKmalloc(pBuf = MALLOC((iLen + 1) * sizeof(char)));
+		/* now copy */
+		memcpy(pBuf, pFld, iLen);
+		pBuf[iLen] = '\0'; /* terminate it */
+		*resstr = pBuf;
+	} else {
+		ABORT_FINALIZE(RS_RET_FIELD_NOT_FOUND);
+	}
+finalize_it:
+	RETiRet;
+}
+
+static inline void
+doFunc_re_extract(struct cnffunc *func, struct var *ret, void* usrptr)
+{
+	size_t submatchnbr;
+	short matchnbr;
+	regmatch_t pmatch[50];
+	int bMustFree;
+	es_str_t *estr;
+	char *str;
+	struct var r[CNFFUNC_MAX_ARGS];
+	int iLenBuf;
+	unsigned iOffs;
+	short iTry = 0;
+	uchar bFound = 0;
+	iOffs = 0;
+	sbool bHadNoMatch = 0;
+
+	cnfexprEval(func->expr[0], &r[0], usrptr);
+	/* search string is already part of the compiled regex, so we don't
+	 * need it here!
+	 */
+	cnfexprEval(func->expr[2], &r[2], usrptr);
+	cnfexprEval(func->expr[3], &r[3], usrptr);
+	str = (char*) var2CString(&r[0], &bMustFree);
+	matchnbr = (short) var2Number(&r[2], NULL);
+	submatchnbr = (size_t) var2Number(&r[3], NULL);
+	if(submatchnbr > sizeof(pmatch)/sizeof(regmatch_t)) {
+		DBGPRINTF("re_extract() submatch %d is too large\n", submatchnbr);
+		bHadNoMatch = 1;
+		goto finalize_it;
+	}
+
+	/* first see if we find a match, iterating through the series of
+	 * potential matches over the string.
+	 */
+	while(!bFound) {
+		int iREstat;
+		iREstat = regexp.regexec(func->funcdata, (char*)(str + iOffs),
+					 submatchnbr+1, pmatch, 0);
+		dbgprintf("re_extract: regexec return is %d\n", iREstat);
+		if(iREstat == 0) {
+			if(pmatch[0].rm_so == -1) {
+				dbgprintf("oops ... start offset of successful regexec is -1\n");
+				break;
+			}
+			if(iTry == matchnbr) {
+				bFound = 1;
+			} else {
+				dbgprintf("re_extract: regex found at offset %d, new offset %d, tries %d\n",
+					  iOffs, (int) (iOffs + pmatch[0].rm_eo), iTry);
+				iOffs += pmatch[0].rm_eo;
+				++iTry;
+			}
+		} else {
+			break;
+		}
+	}
+	dbgprintf("re_extract: regex: end search, found %d\n", bFound);
+	if(!bFound) {
+		bHadNoMatch = 1;
+		goto finalize_it;
+	} else {
+		/* Match- but did it match the one we wanted? */
+		/* we got no match! */
+		if(pmatch[submatchnbr].rm_so == -1) {
+			bHadNoMatch = 1;
+			goto finalize_it;
+		}
+		/* OK, we have a usable match - we now need to malloc pB */
+		iLenBuf = pmatch[submatchnbr].rm_eo - pmatch[submatchnbr].rm_so;
+		estr = es_newStrFromBuf(str + iOffs + pmatch[submatchnbr].rm_so,
+					iLenBuf);
+	}
+
+	if(bMustFree) free(str);
+	if(r[0].datatype == 'S') es_deleteStr(r[0].d.estr);
+	if(r[2].datatype == 'S') es_deleteStr(r[2].d.estr);
+	if(r[3].datatype == 'S') es_deleteStr(r[3].d.estr);
+finalize_it:
+	if(bHadNoMatch) {
+		cnfexprEval(func->expr[4], &r[4], usrptr);
+		estr = var2String(&r[4], &bMustFree);
+		if(r[4].datatype == 'S') es_deleteStr(r[4].d.estr);
+	}
+	ret->datatype = 'S';
+	ret->d.estr = estr;
+	return;
+}
+
 
 /* Perform a function call. This has been moved out of cnfExprEval in order
  * to keep the code small and easier to maintain.
@@ -1129,18 +1426,29 @@ doFuncCall(struct cnffunc *func, struct var *ret, void* usrptr)
 		if(bMustFree) free(str);
 		if(r[0].datatype == 'S') es_deleteStr(r[0].d.estr);
 		break;
+	case CNFFUNC_RE_EXTRACT:
+		doFunc_re_extract(func, ret, usrptr);
+		break;
 	case CNFFUNC_FIELD:
 		cnfexprEval(func->expr[0], &r[0], usrptr);
 		cnfexprEval(func->expr[1], &r[1], usrptr);
 		cnfexprEval(func->expr[2], &r[2], usrptr);
 		str = (char*) var2CString(&r[0], &bMustFree);
-		delim = var2Number(&r[1], NULL);
 		matchnbr = var2Number(&r[2], NULL);
-		localRet = doExtractField((uchar*)str, (char) delim, matchnbr, &resStr);
+		if(r[1].datatype == 'S') {
+			char *delimstr;
+			delimstr = (char*) es_str2cstr(r[1].d.estr, NULL);
+			localRet = doExtractFieldByStr((uchar*)str, delimstr, es_strlen(r[1].d.estr),
+							matchnbr, &resStr);
+			free(delimstr);
+		} else {
+			delim = var2Number(&r[1], NULL);
+			localRet = doExtractFieldByChar((uchar*)str, (char) delim, matchnbr, &resStr);
+		}
 		if(localRet == RS_RET_OK) {
 			ret->d.estr = es_newStrFromCStr((char*)resStr, strlen((char*)resStr));
 			free(resStr);
-		} else if(localRet == RS_RET_OK) {
+		} else if(localRet == RS_RET_FIELD_NOT_FOUND) {
 			ret->d.estr = es_newStrFromCStr("***FIELD NOT FOUND***",
 					sizeof("***FIELD NOT FOUND***")-1);
 		} else {
@@ -1208,26 +1516,29 @@ evalStrArrayCmp(es_str_t *estr_l, struct cnfarray* ar, int cmpop)
 {
 	int i;
 	int r = 0;
-	for(i = 0 ; (r == 0) && (i < ar->nmemb) ; ++i) {
-		switch(cmpop) {
-		case CMP_EQ:
-			r = es_strcmp(estr_l, ar->arr[i]) == 0;
-			break;
-		case CMP_NE:
-			r = es_strcmp(estr_l, ar->arr[i]) != 0;
-			break;
-		case CMP_STARTSWITH:
-			r = es_strncmp(estr_l, ar->arr[i], es_strlen(ar->arr[i])) == 0;
-			break;
-		case CMP_STARTSWITHI:
-			r = es_strncasecmp(estr_l, ar->arr[i], es_strlen(ar->arr[i])) == 0;
-			break;
-		case CMP_CONTAINS:
-			r = es_strContains(estr_l, ar->arr[i]) != -1;
-			break;
-		case CMP_CONTAINSI:
-			r = es_strCaseContains(estr_l, ar->arr[i]) != -1;
-			break;
+	es_str_t **res;
+	if(cmpop == CMP_EQ) {
+		res = bsearch(&estr_l, ar->arr, ar->nmemb, sizeof(es_str_t*), qs_arrcmp);
+		r = res != NULL;
+	} else if(cmpop == CMP_NE) {
+		res = bsearch(&estr_l, ar->arr, ar->nmemb, sizeof(es_str_t*), qs_arrcmp);
+		r = res == NULL;
+	} else {
+		for(i = 0 ; (r == 0) && (i < ar->nmemb) ; ++i) {
+			switch(cmpop) {
+			case CMP_STARTSWITH:
+				r = es_strncmp(estr_l, ar->arr[i], es_strlen(ar->arr[i])) == 0;
+				break;
+			case CMP_STARTSWITHI:
+				r = es_strncasecmp(estr_l, ar->arr[i], es_strlen(ar->arr[i])) == 0;
+				break;
+			case CMP_CONTAINS:
+				r = es_strContains(estr_l, ar->arr[i]) != -1;
+				break;
+			case CMP_CONTAINSI:
+				r = es_strCaseContains(estr_l, ar->arr[i]) != -1;
+				break;
+			}
 		}
 	}
 	return r;
@@ -1285,9 +1596,7 @@ cnfexprEval(struct cnfexpr *expr, struct var *ret, void* usrptr)
 	int bMustFree, bMustFree2;
 	long long n_r, n_l;
 
-	DBGPRINTF("eval expr %p, type '%c'[%s](%u)\n", expr, expr->nodetype,
-
-		  tokenval2str(expr->nodetype), expr->nodetype);
+	dbgprintf("eval expr %p, type '%s'\n", expr, tokenToString(expr->nodetype));
 	switch(expr->nodetype) {
 	/* note: comparison operations are extremely similar. The code can be copyied, only
 	 * places flagged with "CMP" need to be changed.
@@ -1697,6 +2006,7 @@ cnffuncDestruct(struct cnffunc *func)
 	/* some functions require special destruction */
 	switch(func->fID) {
 		case CNFFUNC_RE_MATCH:
+		case CNFFUNC_RE_EXTRACT:
 			if(func->funcdata != NULL)
 				regexp.regfree(func->funcdata);
 			break;
@@ -1712,7 +2022,13 @@ void
 cnfexprDestruct(struct cnfexpr *expr)
 {
 
-	dbgprintf("cnfexprDestruct expr %p, type '%c'(%u)\n", expr, expr->nodetype, expr->nodetype);
+	if(expr == NULL) {
+		/* this is valid and can happen during optimizer run! */
+		DBGPRINTF("cnfexprDestruct got NULL ptr - valid, so doing nothing\n");
+		return;
+	}
+
+	DBGPRINTF("cnfexprDestruct expr %p, type '%s'\n", expr, tokenToString(expr->nodetype));
 	switch(expr->nodetype) {
 	case CMP_NE:
 	case CMP_EQ:
@@ -1962,7 +2278,8 @@ cnfstmtPrintOnly(struct cnfstmt *stmt, int indent, sbool subtree)
 		free(cstr);
 		break;
 	case S_ACT:
-		doIndent(indent); dbgprintf("ACTION %p [%s]\n", stmt->d.act, stmt->printable);
+		doIndent(indent); dbgprintf("ACTION %p [%s:%s]\n", stmt->d.act,
+			modGetName(stmt->d.act->pMod), stmt->printable);
 		break;
 	case S_IF:
 		doIndent(indent); dbgprintf("IF\n");
@@ -2130,59 +2447,69 @@ cnfstmtNew(unsigned s_type)
 	return cnfstmt;
 }
 
+void cnfstmtDestructLst(struct cnfstmt *root);
+
+/* delete a single stmt */
+static void
+cnfstmtDestruct(struct cnfstmt *stmt)
+{
+	switch(stmt->nodetype) {
+	case S_NOP:
+	case S_STOP:
+		break;
+	case S_CALL:
+		es_deleteStr(stmt->d.s_call.name);
+		break;
+	case S_ACT:
+		actionDestruct(stmt->d.act);
+		break;
+	case S_IF:
+		cnfexprDestruct(stmt->d.s_if.expr);
+		if(stmt->d.s_if.t_then != NULL) {
+			cnfstmtDestructLst(stmt->d.s_if.t_then);
+		}
+		if(stmt->d.s_if.t_else != NULL) {
+			cnfstmtDestructLst(stmt->d.s_if.t_else);
+		}
+		break;
+	case S_SET:
+		free(stmt->d.s_set.varname);
+		cnfexprDestruct(stmt->d.s_set.expr);
+		break;
+	case S_UNSET:
+		free(stmt->d.s_set.varname);
+		break;
+	case S_PRIFILT:
+		cnfstmtDestructLst(stmt->d.s_prifilt.t_then);
+		cnfstmtDestructLst(stmt->d.s_prifilt.t_else);
+		break;
+	case S_PROPFILT:
+		if(stmt->d.s_propfilt.propName != NULL)
+			es_deleteStr(stmt->d.s_propfilt.propName);
+		if(stmt->d.s_propfilt.regex_cache != NULL)
+			rsCStrRegexDestruct(&stmt->d.s_propfilt.regex_cache);
+		if(stmt->d.s_propfilt.pCSCompValue != NULL)
+			cstrDestruct(&stmt->d.s_propfilt.pCSCompValue);
+		cnfstmtDestructLst(stmt->d.s_propfilt.t_then);
+		break;
+	default:
+		dbgprintf("error: unknown stmt type during destruct %u\n",
+			(unsigned) stmt->nodetype);
+		break;
+	}
+	free(stmt->printable);
+	free(stmt);
+}
+
+/* delete a stmt and all others following it */
 void
-cnfstmtDestruct(struct cnfstmt *root)
+cnfstmtDestructLst(struct cnfstmt *root)
 {
 	struct cnfstmt *stmt, *todel;
 	for(stmt = root ; stmt != NULL ; ) {
-		switch(stmt->nodetype) {
-		case S_NOP:
-		case S_STOP:
-			break;
-		case S_CALL:
-			es_deleteStr(stmt->d.s_call.name);
-			break;
-		case S_ACT:
-			actionDestruct(stmt->d.act);
-			break;
-		case S_IF:
-			cnfexprDestruct(stmt->d.s_if.expr);
-			if(stmt->d.s_if.t_then != NULL) {
-				cnfstmtDestruct(stmt->d.s_if.t_then);
-			}
-			if(stmt->d.s_if.t_else != NULL) {
-				cnfstmtDestruct(stmt->d.s_if.t_else);
-			}
-			break;
-		case S_SET:
-			free(stmt->d.s_set.varname);
-			cnfexprDestruct(stmt->d.s_set.expr);
-			break;
-		case S_UNSET:
-			free(stmt->d.s_set.varname);
-			break;
-		case S_PRIFILT:
-			cnfstmtDestruct(stmt->d.s_prifilt.t_then);
-			cnfstmtDestruct(stmt->d.s_prifilt.t_else);
-			break;
-		case S_PROPFILT:
-			if(stmt->d.s_propfilt.propName != NULL)
-				es_deleteStr(stmt->d.s_propfilt.propName);
-			if(stmt->d.s_propfilt.regex_cache != NULL)
-				rsCStrRegexDestruct(&stmt->d.s_propfilt.regex_cache);
-			if(stmt->d.s_propfilt.pCSCompValue != NULL)
-				cstrDestruct(&stmt->d.s_propfilt.pCSCompValue);
-			cnfstmtDestruct(stmt->d.s_propfilt.t_then);
-			break;
-		default:
-			dbgprintf("error: unknown stmt type during destruct %u\n",
-				(unsigned) stmt->nodetype);
-			break;
-		}
-		free(stmt->printable);
 		todel = stmt;
 		stmt = stmt->next;
-		free(todel);
+		cnfstmtDestruct(todel);
 	}
 }
 
@@ -2395,14 +2722,155 @@ constFoldConcat(struct cnfexpr *expr)
 }
 
 
+/* optimize comparisons with syslog severity/facility. This is a special
+ * handler as the numerical values also support GT, LT, etc ops.
+ */
+static inline struct cnfexpr*
+cnfexprOptimize_CMP_severity_facility(struct cnfexpr *expr)
+{
+	struct cnffunc *func;
+
+	if(!strcmp("$syslogseverity", ((struct cnfvar*)expr->l)->name)) {
+		if(expr->r->nodetype == 'N') {
+			int sev = (int) ((struct cnfnumval*)expr->r)->val;
+			if(sev >= 0 && sev <= 7) {
+				DBGPRINTF("optimizer: change comparison OP to FUNC prifilt()\n");
+				func = cnffuncNew_prifilt(0); /* fac is irrelevant, set below... */
+				prifiltSetSeverity(func->funcdata, sev, expr->nodetype);
+				cnfexprDestruct(expr);
+				expr = (struct cnfexpr*) func;
+			} else {
+				parser_errmsg("invalid syslogseverity %d, expression will always "
+					      "evaluate to FALSE", sev);
+			}
+		}
+	} else if(!strcmp("$syslogfacility", ((struct cnfvar*)expr->l)->name)) {
+		if(expr->r->nodetype == 'N') {
+			int fac = (int) ((struct cnfnumval*)expr->r)->val;
+			if(fac >= 0 && fac <= 24) {
+				DBGPRINTF("optimizer: change comparison OP to FUNC prifilt()\n");
+				func = cnffuncNew_prifilt(0); /* fac is irrelevant, set below... */
+				prifiltSetFacility(func->funcdata, fac, expr->nodetype);
+				cnfexprDestruct(expr);
+				expr = (struct cnfexpr*) func;
+			} else {
+				parser_errmsg("invalid syslogfacility %d, expression will always "
+					      "evaluate to FALSE", fac);
+			}
+		}
+	}
+	return expr;
+}
+
+/* optimize a comparison with a variable as left-hand operand
+ * NOTE: Currently support CMP_EQ, CMP_NE only and code NEEDS 
+ *       TO BE CHANGED fgr other comparisons!
+ */
+static inline struct cnfexpr*
+cnfexprOptimize_CMP_var(struct cnfexpr *expr)
+{
+	struct cnffunc *func;
+
+	if(!strcmp("$syslogfacility-text", ((struct cnfvar*)expr->l)->name)) {
+		if(expr->r->nodetype == 'S') {
+			char *cstr = es_str2cstr(((struct cnfstringval*)expr->r)->estr, NULL);
+			int fac = decodeSyslogName((uchar*)cstr, syslogFacNames);
+			if(fac == -1) {
+				parser_errmsg("invalid facility '%s', expression will always "
+					      "evaluate to FALSE", cstr);
+			} else {
+				/* we can acutally optimize! */
+				DBGPRINTF("optimizer: change comparison OP to FUNC prifilt()\n");
+				func = cnffuncNew_prifilt(fac);
+				if(expr->nodetype == CMP_NE)
+					prifiltInvert(func->funcdata);
+				cnfexprDestruct(expr);
+				expr = (struct cnfexpr*) func;
+			}
+			free(cstr);
+		}
+	} else if(!strcmp("$syslogseverity-text", ((struct cnfvar*)expr->l)->name)) {
+		if(expr->r->nodetype == 'S') {
+			char *cstr = es_str2cstr(((struct cnfstringval*)expr->r)->estr, NULL);
+			int sev = decodeSyslogName((uchar*)cstr, syslogPriNames);
+			if(sev == -1) {
+				parser_errmsg("invalid syslogseverity '%s', expression will always "
+					      "evaluate to FALSE", cstr);
+			} else {
+				/* we can acutally optimize! */
+				DBGPRINTF("optimizer: change comparison OP to FUNC prifilt()\n");
+				func = cnffuncNew_prifilt(0);
+				prifiltSetSeverity(func->funcdata, sev, expr->nodetype);
+				cnfexprDestruct(expr);
+				expr = (struct cnfexpr*) func;
+			}
+			free(cstr);
+		}
+	} else {
+		expr = cnfexprOptimize_CMP_severity_facility(expr);
+	}
+	return expr;
+}
+
+static inline struct cnfexpr*
+cnfexprOptimize_NOT(struct cnfexpr *expr)
+{
+	struct cnffunc *func;
+
+	if(expr->r->nodetype == 'F') {
+		func = (struct cnffunc *)expr->r;
+		if(func->fID == CNFFUNC_PRIFILT) {
+			DBGPRINTF("optimize NOT prifilt() to inverted prifilt()\n");
+			expr->r = NULL;
+			cnfexprDestruct(expr);
+			prifiltInvert(func->funcdata);
+			expr = (struct cnfexpr*) func;
+		}
+	}
+	return expr;
+}
+
+static inline struct cnfexpr*
+cnfexprOptimize_AND_OR(struct cnfexpr *expr)
+{
+	struct cnffunc *funcl, *funcr;
+
+	if(expr->l->nodetype == 'F') {
+		if(expr->r->nodetype == 'F') {
+			funcl = (struct cnffunc *)expr->l;
+			funcr = (struct cnffunc *)expr->r;
+			if(funcl->fID == CNFFUNC_PRIFILT && funcr->fID == CNFFUNC_PRIFILT) {
+				DBGPRINTF("optimize combine AND/OR prifilt()\n");
+				expr->l = NULL;
+				prifiltCombine(funcl->funcdata, funcr->funcdata, expr->nodetype);
+				cnfexprDestruct(expr);
+				expr = (struct cnfexpr*) funcl;
+			}
+		}
+	}
+	return expr;
+}
+
+
+/* optimize array for EQ/NEQ comparisons. We sort the array in
+ * this case so that we can apply binary search later on.
+ */
+static inline void
+cnfexprOptimize_CMPEQ_arr(struct cnfarray *arr)
+{
+	DBGPRINTF("optimizer: sorting array for CMP_EQ/NEQ comparison\n");
+	qsort(arr->arr, arr->nmemb, sizeof(es_str_t*), qs_arrcmp);
+}
+
+
 /* (recursively) optimize an expression */
-void
+struct cnfexpr*
 cnfexprOptimize(struct cnfexpr *expr)
 {
 	long long ln, rn;
 	struct cnfexpr *exprswap;
 
-	dbgprintf("optimize expr %p, type '%c'(%u)\n", expr, expr->nodetype, expr->nodetype);
+	dbgprintf("optimize expr %p, type '%s'\n", expr, tokenToString(expr->nodetype));
 	switch(expr->nodetype) {
 	case '&':
 		constFoldConcat(expr);
@@ -2439,6 +2907,8 @@ cnfexprOptimize(struct cnfexpr *expr)
 		break;
 	case CMP_NE:
 	case CMP_EQ:
+		expr->l = cnfexprOptimize(expr->l);
+		expr->r = cnfexprOptimize(expr->r);
 		if(expr->l->nodetype == 'A') {
 			if(expr->r->nodetype == 'A') {
 				parser_errmsg("warning: '==' or '<>' "
@@ -2450,10 +2920,41 @@ cnfexprOptimize(struct cnfexpr *expr)
 				expr->r = exprswap;
 			}
 		}
-	default:/* nodetype we cannot optimize */
+		if(expr->l->nodetype == 'V') {
+			expr = cnfexprOptimize_CMP_var(expr);
+		} else if(expr->r->nodetype == 'A') {
+			cnfexprOptimize_CMPEQ_arr((struct cnfarray *)expr->r);
+		}
+		break;
+	case CMP_LE:
+	case CMP_GE:
+	case CMP_LT:
+	case CMP_GT:
+		expr->l = cnfexprOptimize(expr->l);
+		expr->r = cnfexprOptimize(expr->r);
+		expr = cnfexprOptimize_CMP_severity_facility(expr);
+		break;
+	case CMP_CONTAINS:
+	case CMP_CONTAINSI:
+	case CMP_STARTSWITH:
+	case CMP_STARTSWITHI:
+		expr->l = cnfexprOptimize(expr->l);
+		expr->r = cnfexprOptimize(expr->r);
+		break;
+	case AND:
+	case OR:
+		expr->l = cnfexprOptimize(expr->l);
+		expr->r = cnfexprOptimize(expr->r);
+		expr = cnfexprOptimize_AND_OR(expr);
+		break;
+	case NOT:
+		expr->r = cnfexprOptimize(expr->r);
+		expr = cnfexprOptimize_NOT(expr);
+		break;
+	default:/* nodetypes we cannot optimize */
 		break;
 	}
-
+	return expr;
 }
 
 /* removes NOPs from a statement list and returns the
@@ -2496,8 +2997,7 @@ cnfstmtOptimizeIf(struct cnfstmt *stmt)
 	struct cnffunc *func;
 	struct funcData_prifilt *prifilt;
 
-	expr = stmt->d.s_if.expr;
-	cnfexprOptimize(expr);
+	expr = stmt->d.s_if.expr = cnfexprOptimize(stmt->d.s_if.expr);
 	stmt->d.s_if.t_then = removeNOPs(stmt->d.s_if.t_then);
 	stmt->d.s_if.t_else = removeNOPs(stmt->d.s_if.t_else);
 	cnfstmtOptimize(stmt->d.s_if.t_then);
@@ -2515,8 +3015,11 @@ cnfstmtOptimizeIf(struct cnfstmt *stmt)
 				sizeof(prifilt->pmask));
 			stmt->d.s_prifilt.t_then = t_then;
 			stmt->d.s_prifilt.t_else = t_else;
-			stmt->printable = (uchar*)
-				es_str2cstr(((struct cnfstringval*)func->expr[0])->estr, NULL);
+			if(func->nParams == 0)
+				stmt->printable = (uchar*)strdup("[Optimizer Result]");
+			else
+				stmt->printable = (uchar*)
+					es_str2cstr(((struct cnfstringval*)func->expr[0])->estr, NULL);
 			cnfexprDestruct(expr);
 			cnfstmtOptimizePRIFilt(stmt);
 		}
@@ -2557,7 +3060,7 @@ cnfstmtOptimizePRIFilt(struct cnfstmt *stmt)
 	DBGPRINTF("optimizer: removing always-true PRIFILT %p\n", stmt);
 	if(stmt->d.s_prifilt.t_else != NULL) {
 		parser_errmsg("error: always-true PRI filter has else part!\n");
-		cnfstmtDestruct(stmt->d.s_prifilt.t_else);
+		cnfstmtDestructLst(stmt->d.s_prifilt.t_else);
 	}
 	free(stmt->printable);
 	stmt->printable = NULL;
@@ -2610,7 +3113,6 @@ cnfstmtOptimize(struct cnfstmt *root)
 	struct cnfstmt *stmt;
 	if(root == NULL) goto done;
 	for(stmt = root ; stmt != NULL ; stmt = stmt->next) {
-dbgprintf("RRRR: stmtOptimize: stmt %p, nodetype %u\n", stmt, stmt->nodetype);
 		switch(stmt->nodetype) {
 		case S_IF:
 			cnfstmtOptimizeIf(stmt);
@@ -2623,7 +3125,7 @@ dbgprintf("RRRR: stmtOptimize: stmt %p, nodetype %u\n", stmt, stmt->nodetype);
 			cnfstmtOptimize(stmt->d.s_propfilt.t_then);
 			break;
 		case S_SET:
-			cnfexprOptimize(stmt->d.s_set.expr);
+			stmt->d.s_set.expr = cnfexprOptimize(stmt->d.s_set.expr);
 			break;
 		case S_ACT:
 			cnfstmtOptimizeAct(stmt);
@@ -2710,6 +3212,13 @@ funcName2ID(es_str_t *fname, unsigned short nParams)
 			return CNFFUNC_INVALID;
 		}
 		return CNFFUNC_RE_MATCH;
+	} else if(!es_strbufcmp(fname, (unsigned char*)"re_extract", sizeof("re_extract") - 1)) {
+		if(nParams != 5) {
+			parser_errmsg("number of parameters for re_extract() must be five "
+				      "but is %d.", nParams);
+			return CNFFUNC_INVALID;
+		}
+		return CNFFUNC_RE_EXTRACT;
 	} else if(!es_strbufcmp(fname, (unsigned char*)"field", sizeof("field") - 1)) {
 		if(nParams != 3) {
 			parser_errmsg("number of parameters for field() must be three "
@@ -2740,7 +3249,7 @@ initFunc_re_match(struct cnffunc *func)
 
 	func->funcdata = NULL;
 	if(func->expr[1]->nodetype != 'S') {
-		parser_errmsg("param 2 of re_match() must be a constant string");
+		parser_errmsg("param 2 of re_match/extract() must be a constant string");
 		FINALIZE;
 	}
 
@@ -2787,6 +3296,7 @@ finalize_it:
 	RETiRet;
 }
 
+
 struct cnffunc *
 cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst)
 {
@@ -2817,6 +3327,7 @@ cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst)
 		/* some functions require special initialization */
 		switch(func->fID) {
 			case CNFFUNC_RE_MATCH:
+			case CNFFUNC_RE_EXTRACT:
 				/* need to compile the regexp in param 2, so this MUST be a constant */
 				initFunc_re_match(func);
 				break;
@@ -2828,6 +3339,27 @@ cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst)
 	}
 	return func;
 }
+
+
+/* A special function to create a prifilt() expression during optimization
+ * phase.
+ */
+struct cnffunc *
+cnffuncNew_prifilt(int fac)
+{
+	struct cnffunc* func;
+
+	if((func = malloc(sizeof(struct cnffunc))) != NULL) {
+		func->nodetype = 'F';
+		func->fname = es_newStrFromCStr("prifilt", sizeof("prifilt")-1);
+		func->nParams = 0;
+		func->fID = CNFFUNC_PRIFILT;
+		func->funcdata = calloc(1, sizeof(struct funcData_prifilt));
+		((struct funcData_prifilt *)func->funcdata)->pmask[fac >> 3] = TABLE_ALLPRI;
+	}
+	return func;
+}
+
 
 /* returns 0 if everything is OK and config parsing shall continue,
  * and 1 if things are so wrong that config parsing shall be aborted.
@@ -2856,12 +3388,16 @@ cnfDoInclude(char *name)
 
 	/* Use GLOB_MARK to append a trailing slash for directories. */
 	/* Use GLOB_NOMAGIC to detect wildcards that match nothing. */
-	result = glob(finalName, GLOB_MARK | GLOB_NOMAGIC, NULL, &cfgFiles);
-
+#ifdef HAVE_GLOB_NOMAGIC
 	/* Silently ignore wildcards that match nothing */
+	result = glob(finalName, GLOB_MARK | GLOB_NOMAGIC, NULL, &cfgFiles);
 	if(result == GLOB_NOMATCH) {
-		return 0;
-	}
+#else
+	result = glob(finalName, GLOB_MARK, NULL, &cfgFiles);
+    if(result == GLOB_NOMATCH && containsGlobWildcard(finalName)) {
+#endif /* HAVE_GLOB_NOMAGIC */
+        return 0;
+    }
 
 	if(result == GLOB_NOSPACE || result == GLOB_ABORTED) {
 		char errStr[1024];
@@ -2924,6 +3460,8 @@ void
 cnfparamvalsDestruct(struct cnfparamvals *paramvals, struct cnfparamblk *blk)
 {
 	int i;
+	if(paramvals == NULL)
+		return;
 	for(i = 0 ; i < blk->nParams ; ++i) {
 		if(paramvals[i].bUsed) {
 			varDelete(&paramvals[i].val);

@@ -17,6 +17,8 @@ librsyslog_la_SOURCES = \
 	module-template.h \
 	im-helper.h \
 	obj-types.h \
+	sigprov.h \
+	cryprov.h \
 	nsd.h \
 	glbl.h \
 	glbl.c \
@@ -65,11 +67,12 @@ librsyslog_la_SOURCES = \
 	ruleset.h \
 	prop.c \
 	prop.h \
+	ratelimit.c \
+	ratelimit.h \
 	cfsysline.c \
 	cfsysline.h \
 	sd-daemon.c \
 	sd-daemon.h \
-	\
 	\
 	../action.h \
 	../action.c \
@@ -91,14 +94,16 @@ librsyslog_la_SOURCES = \
 	../template.h
 # the files with ../ we need to work on - so that they either become part of the
 # runtime or will no longer be needed. -- rgerhards, 2008-06-13
+#
 
 if WITH_MODDIRS
-librsyslog_la_CPPFLAGS = -DSD_EXPORT_SYMBOLS -D_PATH_MODDIR=\"$(pkglibdir)/:$(moddirs)\" $(PTHREADS_CFLAGS) $(LIBEE_CFLAGS) -I\$(top_srcdir)/tools
+librsyslog_la_CPPFLAGS = -DSD_EXPORT_SYMBOLS -D_PATH_MODDIR=\"$(pkglibdir)/:$(moddirs)\"
 else
-librsyslog_la_CPPFLAGS = -DSD_EXPORT_SYMBOLS -D_PATH_MODDIR=\"$(pkglibdir)/\" -I$(top_srcdir) $(PTHREADS_CFLAGS) $(LIBEE_CFLAGS) -I\$(top_srcdir)/tools -I\$(top_srcdir)/grammar
+librsyslog_la_CPPFLAGS = -DSD_EXPORT_SYMBOLS -D_PATH_MODDIR=\"$(pkglibdir)/\" -I\$(top_srcdir) -I\$(top_srcdir)/grammar
 endif
 #librsyslog_la_LDFLAGS = -module -avoid-version
-librsyslog_la_LIBADD =  $(DL_LIBS) $(RT_LIBS) $(LIBEE_LIBS)
+librsyslog_la_CPPFLAGS += $(PTHREADS_CFLAGS) $(LIBEE_CFLAGS) $(LIBUUID_CFLAGS) $(JSON_C_CFLAGS) -I\$(top_srcdir)/tools
+librsyslog_la_LIBADD =  $(DL_LIBS) $(RT_LIBS) $(LIBEE_LIBS) $(LIBUUID_LIBS) $(JSON_C_LIBS)
 
 #
 # regular expression support
@@ -129,7 +134,7 @@ pkglib_LTLIBRARIES += lmnet.la lmnetstrms.la
 # 
 lmnet_la_SOURCES = net.c net.h
 lmnet_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
-lmnet_la_LDFLAGS = -module -avoid-version
+lmnet_la_LDFLAGS = -module -avoid-version ../compat/compat_la-getifaddrs.lo
 lmnet_la_LIBADD =
 
 # network stream master class and stream factory
@@ -170,6 +175,35 @@ lmnsd_gtls_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS) $(GNUTLS_CFLAGS)
 lmnsd_gtls_la_LDFLAGS = -module -avoid-version
 lmnsd_gtls_la_LIBADD = $(GNUTLS_LIBS)
 endif
+
+#
+# support library for libgcrypt
+#
+if ENABLE_LIBGCRYPT
+   noinst_LTLIBRARIES += libgcry.la
+   libgcry_la_SOURCES = libgcry.c libgcry_common.c libgcry.h
+   libgcry_la_CPPFLAGS = $(RSRT_CFLAGS) $(LIBGCRYPT_CFLAGS)
+   pkglib_LTLIBRARIES += lmcry_gcry.la
+   lmcry_gcry_la_SOURCES = lmcry_gcry.c lmcry_gcry.h
+   lmcry_gcry_la_CPPFLAGS = $(RSRT_CFLAGS) $(LIBGCRYPT_CFLAGS)
+   lmcry_gcry_la_LDFLAGS = -module -avoid-version
+   lmcry_gcry_la_LIBADD = libgcry.la $(LIBGCRYPT_LIBS)
+endif
+
+
+#
+# support library for guardtime
+#
+if ENABLE_GUARDTIME
+   noinst_LTLIBRARIES +=  librsgt.la
+   librsgt_la_SOURCES = librsgt.c librsgt_read.c librsgt.h
+   pkglib_LTLIBRARIES += lmsig_gt.la
+   lmsig_gt_la_SOURCES = lmsig_gt.c lmsig_gt.h
+   lmsig_gt_la_CPPFLAGS = $(RSRT_CFLAGS) $(GUARDTIME_CFLAGS)
+   lmsig_gt_la_LDFLAGS = -module -avoid-version
+   lmsig_gt_la_LIBADD = librsgt.la $(GUARDTIME_LIBS)
+endif
+
 
 update-systemd:
 	curl http://cgit.freedesktop.org/systemd/systemd/plain/src/libsystemd-daemon/sd-daemon.c > sd-daemon.c

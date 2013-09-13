@@ -65,6 +65,12 @@ you must turn it on (via SysSock.Annotate and Annotate).
 <li><b>SysSock.IgnoreTimestamp</b> [<b>on</b>/off]<br>
 Ignore timestamps included in the messages, applies to messages received via the system log socket.
 </li>
+<li><b>SysSock.IgnoreOwnMessages</b> [<b>on</b>/off] (available since 7.3.7)<br>
+Ignores messages that originated from the same instance of rsyslogd. There usually
+is no reason to receive messages from ourselfs. This setting is vital
+when writing messages to the Linux journal. See <a href="omjournal.html">omjournal</a>
+module documentation for a more in-depth description.
+</li>
 <li><b>SysSock.Use</b> (imuxsock) [on/<b>off</b>] 
 do NOT listen for the local log socket. This is most useful if you run multiple
 instances of rsyslogd where only one shall handle the system log socket.
@@ -95,13 +101,25 @@ properties for the system log socket.</li>
 <li><b>SysSock.ParseTrusted</b> &lt;on/<b>off</b>&gt; if Annotation is turned on, create
 JSON/lumberjack properties out of the trusted properties (which can be accessed
 via RainerScript JSON Variables, e.g. "$!pid") instead of adding them to the message.
-properties for the system log socket.</li>
+</li>
+<li><b>SysSock.Unlink</b> &lt;<b>on</b>/off&gt; (available since 7.3.9)<br>
+if turned on (default), the system socket is unlinked and re-created when
+opened and also unlinked when finally closed. Note that this setting has
+no effect when running under systemd control (because systemd handles
+the socket).
+</li>
 </ul>
 
 <p><b>Input Instance Parameters</b></p>
 <ul>
 <li><b>IgnoreTimestamp</b> [<b>on</b>/off]
 <br>Ignore timestamps included in the message. Applies to the next socket being added.</li>
+<li><b>IgnoreOwnMessages</b> [<b>on</b>/off] (available since 7.3.7)<br>
+Ignore messages that originated from the same instance of rsyslogd. There usually
+is no reason to receive messages from ourselfs. This setting is vital
+when writing messages to the Linux journal. See <a href="omjournal.html">omjournal</a>
+module documentation for a more in-depth description.
+</li>
 <li><b>FlowControl</b> [on/<b>off</b>] - specifies if flow control should be applied
 to the next socket.</li>
 <li><b>RateLimit.Interval</b> [number] - specifies the rate-limiting
@@ -154,6 +172,13 @@ that the local hostname can be overridden in cases where that is desired.</li>
 properties for the non-system log socket in question.</li>
 <li><b>ParseTrusted</b> &lt;on/<b>off</b>&gt; equivalent to the SysSock.ParseTrusted module
 parameter, but applies to the input that is being defined.
+<li><b>Unlink</b> &lt;<b>on</b>/off&gt; (available since 7.3.9)<br>
+if turned on (default), the socket is unlinked and re-created when
+opened and also unlinked when finally closed. Set it to off if you
+handle socket creation yourself. Note that handling socket creation
+oneself has the advantage that a limited amount of messages may be 
+queued by the OS if rsyslog is not running.
+</li>
 </ul>
 
 <b>Caveats/Known Bugs:</b><br>

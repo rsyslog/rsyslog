@@ -43,7 +43,7 @@ struct strmsrv_s {
 	uchar *pszInputName;	/**< value to be used as input name */
 	permittedPeers_t *pPermPeers;/**< driver's permitted peers */
 	int iLstnMax;		/**< max nbr of listeners currently supported */
-	netstrm_t **ppLstn;	/**< our netstream listners */
+	netstrm_t **ppLstn;	/**< our netstream listeners */
 	strmLstnPortList_t **ppLstnPort; /**< pointer to relevant listen port description */
 	int iSessMax;		/**< max number of sessions supported */
 	strmLstnPortList_t *pLstnPorts;	/**< head pointer for listen ports */

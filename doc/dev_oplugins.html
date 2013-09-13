@@ -18,19 +18,10 @@ means they are primarily thought of being message sinks. In theory, however, out
 plugins may aggergate other functionality, too. Nobody has taken this route so far
 so if you would like to do that, it is highly suggested to post your plan on the
 rsyslog mailing list, first (so that we can offer advise).
-<p>The rsyslog distribution tarball contains two plugins that are extremely well
-targeted for getting started:
-<ul>
-<li>omtemplate
-<li>omstdout
-</ul>
-Plugin omtemplate was specifically created to provide a copy template for new output
-plugins. It is bare of real functionality but has ample comments. Even if you decide
-to start from another plugin (or even from scratch), be sure to read omtemplate source
-and comments first. The omstdout is primarily a testing aide, but offers support for
-the two different parameter-passing conventions plugins can use (plus the way to 
-differentiate between the two). It also is not bare of functionaly, only mostly
-bare of it ;). But you can actually execute it and play with it.
+<p>The rsyslog distribution tarball contains the omstdout plugin which is extremely well
+targeted for getting started. Just note that this plugin itself is not meant for
+production use. But it is very simplistic and so a really good starting point to
+grasp the core ideas.
 <p>In any case, you should also read the comments in ./runtime/module-template.h. 
 Output plugins are build based on a large set of code-generating macros. These 
 macros handle most of the plumbing needed by the interface. As long as no
@@ -38,19 +29,7 @@ special callback to rsyslog is needed (it typically is not), an output plugin do
 not really need to be aware that it is executed by rsyslog. As a plug-in programmer,
 you can (in most cases) "code as usual". However, all macros and entry points need to be
 provided and thus reading the code comments in the files mentioned is highly suggested.
-<p>In short, the best idea is to start with a template. Let's assume you start by
-copying omtemplate. Then, the basic steps you need to do are:
-<ul>
-<li>cp ./plugins/omtemplate ./plugins/your-plugin
-<li>mv cd ./plugins/your-plugin
-<li>vi Makefile.am, adjust to your-plugin
-<li>mv omtemplate.c your-plugin.c
-<li>cd ../..
-<li>vi Makefile.am configure.ac
-<br>search for omtemplate, copy and modify (follow comments)
-</ul>
-<p>Basically, this is all you need to do ... Well, except, of course, coding
-your plugin ;). For testing, you need rsyslog's debugging support. Some useful
+<p>For testing, you need rsyslog's debugging support. Some useful
 information is given in "<a href="troubleshoot.html">troubleshooting rsyslog</a>
 from the doc set.
 <h2>Special Topics</h2>

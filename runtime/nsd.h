@@ -59,7 +59,7 @@ BEGINinterface(nsd) /* name must also be changed in ENDinterface macro! */
 			     uchar *pLstnPort, uchar *pLstnIP, int iSessMax);
 	rsRetVal (*AcceptConnReq)(nsd_t *pThis, nsd_t **ppThis);
 	rsRetVal (*GetRemoteHName)(nsd_t *pThis, uchar **pszName);
-	rsRetVal (*GetRemoteIP)(nsd_t *pThis, uchar **pszIP);
+	rsRetVal (*GetRemoteIP)(nsd_t *pThis, prop_t **ip);
 	rsRetVal (*SetMode)(nsd_t *pThis, int mode); /* sets a driver specific mode - see driver doc for details */
 	rsRetVal (*SetAuthMode)(nsd_t *pThis, uchar*); /* sets a driver specific mode - see driver doc for details */
 	rsRetVal (*SetPermPeers)(nsd_t *pThis, permittedPeers_t*); /* sets driver permitted peers for auth needs */
@@ -80,10 +80,11 @@ BEGINinterface(nsd) /* name must also be changed in ENDinterface macro! */
 	/* v5 */
 	rsRetVal (*EnableKeepAlive)(nsd_t *pThis);
 ENDinterface(nsd)
-#define nsdCURR_IF_VERSION 6 /* increment whenever you change the interface structure! */
+#define nsdCURR_IF_VERSION 7 /* increment whenever you change the interface structure! */
 /* interface version 4 added GetRemAddr()
  * interface version 5 added EnableKeepAlive() -- rgerhards, 2009-06-02
  * interface version 6 changed return of CheckConnection from void to rsRetVal -- alorbach, 2012-09-06
+ * interface version 7 changed signature ofGetRempoteIP() -- rgerhards, 2013-01-21
  */
 
 /* interface  for the select call */

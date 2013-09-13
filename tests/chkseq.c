@@ -48,6 +48,7 @@ int main(int argc, char *argv[])
 	int start = 0, end = 0;
 	int opt;
 	int nDups = 0;
+	int reachedEOF;
 	int edLen;	/* length of extra data */
 	static char edBuf[500*1024]; /* buffer for extra data (pretty large to be on the save side...) */
 	char *file = NULL;
@@ -126,15 +127,47 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if(nDups != 0)
-		printf("info: had %d duplicates (this is no error)\n", nDups);
-
 	if(i - 1 != end) {
 		printf("only %d records in file, expected %d\n", i - 1, end);
 		exit(1);
 	}
 
-	if(!feof(fp)) {
+	if(feof(fp)) {
+		reachedEOF = 1;
+	} else {
+		/* if duplicates are permitted, we need to do a final check if we have duplicates at the
+		 * end of file.
+		 */
+		if(dupsPermitted) {
+			i = end;
+			while(!feof(fp)) {
+				if(bHaveExtraData) {
+					scanfOK = fscanf(fp, "%d,%d,%s\n", &val, &edLen, edBuf) == 3 ? 1 : 0;
+					if(edLen != (int) strlen(edBuf)) {
+						printf("extra data length specified %d, but actually is %ld in record %d\n",
+							edLen, (long) strlen(edBuf), i);
+						exit(1);
+					}
+				} else {
+					scanfOK = fscanf(fp, "%d\n", &val) == 1 ? 1 : 0;
+				}
+
+				if(val != i) {
+					reachedEOF = 0;
+					goto breakIF;
+				}
+			}
+			reachedEOF = feof(fp) ? 1 : 0;
+		} else {
+			reachedEOF = 0;
+		}
+	}
+
+breakIF:
+	if(nDups != 0)
+		printf("info: had %d duplicates (this is no error)\n", nDups);
+
+	if(!reachedEOF) {
 		printf("end of processing, but NOT end of file!\n");
 		exit(1);
 	}

@@ -7,7 +7,7 @@
  * of the "old" message code without any modifications. However, it
  * helps to have things at the right place one we go to the meat of it.
  *
- * Copyright 2007-2012 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2013 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -41,9 +41,9 @@
 #endif
 #include <netdb.h>
 #include <libestr.h>
-#include <json/json.h>
+#include <json.h>
 /* For struct json_object_iter, should not be necessary in future versions */
-#include <json/json_object_private.h>
+#include <json_object_private.h>
 #if HAVE_MALLOC_H
 #  include <malloc.h>
 #endif
@@ -63,6 +63,7 @@
 #include "ruleset.h"
 #include "prop.h"
 #include "net.h"
+#include "var.h"
 #include "rsconf.h"
 
 /* static data */
@@ -72,6 +73,19 @@ DEFobjCurrIf(glbl)
 DEFobjCurrIf(regexp)
 DEFobjCurrIf(prop)
 DEFobjCurrIf(net)
+DEFobjCurrIf(var)
+
+static char *two_digits[100] = {
+	"00", "01", "02", "03", "04", "05", "06", "07", "08", "09",
+	"10", "11", "12", "13", "14", "15", "16", "17", "18", "19",
+	"20", "21", "22", "23", "24", "25", "26", "27", "28", "29",
+	"30", "31", "32", "33", "34", "35", "36", "37", "38", "39",
+	"40", "41", "42", "43", "44", "45", "46", "47", "48", "49",
+	"50", "51", "52", "53", "54", "55", "56", "57", "58", "59",
+	"60", "61", "62", "63", "64", "65", "66", "67", "68", "69",
+	"70", "71", "72", "73", "74", "75", "76", "77", "78", "79",
+	"80", "81", "82", "83", "84", "85", "86", "87", "88", "89",
+	"90", "91", "92", "93", "94", "95", "96", "97", "98", "99"};
 
 static struct {
 	uchar *pszName;
@@ -279,9 +293,15 @@ static char *syslog_fac_names[24] = { "kern", "user", "mail", "daemon", "auth", 
 			    	      "news", "uucp", "cron", "authpriv", "ftp", "ntp", "audit",
 			    	      "alert", "clock", "local0", "local1", "local2", "local3",
 			    	      "local4", "local5", "local6", "local7" };
+/* length of the facility names string (for optimizatiions) */
+static short len_syslog_fac_names[24] = { 4, 4, 4, 6, 4, 6, 3,
+			    	          4, 4, 4, 8, 3, 3, 5,
+			    	          5, 5, 6, 6, 6, 6,
+			    	          6, 6, 6, 6 };
 
 /* table of severity names (in numerical order)*/
 static char *syslog_severity_names[8] = { "emerg", "alert", "crit", "err", "warning", "notice", "info", "debug" };
+static short len_syslog_severity_names[8] = { 5, 5, 4, 3, 7, 6, 4, 5 };
 
 /* numerical values as string - this is the most efficient approach to convert severity
  * and facility values to a numerical string... -- rgerhars, 2009-06-17
@@ -317,6 +337,47 @@ MsgUnlock(msg_t *pThis)
 }
 
 
+/* set RcvFromIP name in msg object WITHOUT calling AddRef.
+ * rgerhards, 2013-01-22
+ */
+static inline void
+MsgSetRcvFromIPWithoutAddRef(msg_t *pThis, prop_t *new)
+{
+	if(pThis->pRcvFromIP != NULL)
+		prop.Destruct(&pThis->pRcvFromIP);
+	pThis->pRcvFromIP = new;
+}
+
+
+/* set RcvFrom name in msg object WITHOUT calling AddRef.
+ * rgerhards, 2013-01-22
+ */
+void MsgSetRcvFromWithoutAddRef(msg_t *pThis, prop_t *new)
+{
+	assert(pThis != NULL);
+
+	if(pThis->msgFlags & NEEDS_DNSRESOL) {
+		if(pThis->rcvFrom.pfrominet != NULL)
+			free(pThis->rcvFrom.pfrominet);
+		pThis->msgFlags &= ~NEEDS_DNSRESOL;
+	} else {
+		if(pThis->rcvFrom.pRcvFrom != NULL)
+			prop.Destruct(&pThis->rcvFrom.pRcvFrom);
+	}
+	pThis->rcvFrom.pRcvFrom = new;
+}
+
+
+/* rgerhards 2012-04-18: set associated ruleset (by ruleset name)
+ * If ruleset cannot be found, no update is done.
+ */
+static void
+MsgSetRulesetByName(msg_t *pMsg, cstr_t *rulesetName)
+{
+	rulesetGetRuleset(runConf, &(pMsg->pRuleset), rsCStrGetSzStrNoNULL(rulesetName));
+}
+
+
 static inline int getProtocolVersion(msg_t *pM)
 {
 	return(pM->iProtocolVersion);
@@ -330,19 +391,18 @@ static inline rsRetVal
 resolveDNS(msg_t *pMsg) {
 	rsRetVal localRet;
 	prop_t *propFromHost = NULL;
-	prop_t *propFromHostIP = NULL;
-	uchar fromHost[NI_MAXHOST];
-	uchar fromHostIP[NI_MAXHOST];
-	uchar fromHostFQDN[NI_MAXHOST];
+	prop_t *ip;
+	prop_t *localName;
 	DEFiRet;
 
 	MsgLock(pMsg);
 	CHKiRet(objUse(net, CORE_COMPONENT));
 	if(pMsg->msgFlags & NEEDS_DNSRESOL) {
-		localRet = net.cvthname(pMsg->rcvFrom.pfrominet, fromHost, fromHostFQDN, fromHostIP);
+		localRet = net.cvthname(pMsg->rcvFrom.pfrominet, &localName, NULL, &ip);
 		if(localRet == RS_RET_OK) {
-			MsgSetRcvFromStr(pMsg, fromHost, ustrlen(fromHost), &propFromHost);
-			CHKiRet(MsgSetRcvFromIPStr(pMsg, fromHostIP, ustrlen(fromHostIP), &propFromHostIP));
+			/* we pass down the props, so no need for AddRef */
+			MsgSetRcvFromWithoutAddRef(pMsg, localName);
+			MsgSetRcvFromIPWithoutAddRef(pMsg, ip);
 		}
 	}
 finalize_it:
@@ -354,8 +414,6 @@ finalize_it:
 	MsgUnlock(pMsg);
 	if(propFromHost != NULL)
 		prop.Destruct(&propFromHost);
-	if(propFromHostIP != NULL)
-		prop.Destruct(&propFromHostIP);
 	RETiRet;
 }
 
@@ -622,6 +680,7 @@ static inline rsRetVal msgBaseConstruct(msg_t **ppThis)
 	pM->iRefCount = 1;
 	pM->iSeverity = -1;
 	pM->iFacility = -1;
+	pM->iLenPROGNAME = -1;
 	pM->offAfterPRI = 0;
 	pM->offMSG = -1;
 	pM->iProtocolVersion = 0;
@@ -640,7 +699,6 @@ static inline rsRetVal msgBaseConstruct(msg_t **ppThis)
 	pM->pszTIMESTAMP3339 = NULL;
 	pM->pszTIMESTAMP_MySQL = NULL;
         pM->pszTIMESTAMP_PgSQL = NULL;
-	pM->pCSProgName = NULL;
 	pM->pCSStrucData = NULL;
 	pM->pCSAPPNAME = NULL;
 	pM->pCSPROCID = NULL;
@@ -719,6 +777,19 @@ finalize_it:
 }
 
 
+/* Special msg constructor, to be used when an object is deserialized.
+ * we do only the base init as we know the properties will be set in
+ * any case by the deserializer. We still do the "inexpensive" inits
+ * just to be on the safe side. The whole process needs to be
+ * refactored together with the msg serialization subsystem.
+ */
+rsRetVal
+msgConstructForDeserializer(msg_t **ppThis)
+{
+	return msgBaseConstruct(ppThis);
+}
+
+
 /* some free handlers for (slightly) complicated cases... All of them may be called
  * with an empty element.
  */
@@ -770,8 +841,8 @@ CODESTARTobjDestruct(msg)
 		free(pThis->pszRcvdAt_PgSQL);
 		free(pThis->pszTIMESTAMP_MySQL);
 		free(pThis->pszTIMESTAMP_PgSQL);
-		if(pThis->pCSProgName != NULL)
-			rsCStrDestruct(&pThis->pCSProgName);
+		if(pThis->iLenPROGNAME >= CONF_PROGNAME_BUFSIZE)
+			free(pThis->PROGNAME.ptr);
 		if(pThis->pCSStrucData != NULL)
 			rsCStrDestruct(&pThis->pCSStrucData);
 		if(pThis->pCSAPPNAME != NULL)
@@ -924,7 +995,6 @@ msg_t* MsgDup(msg_t* pOld)
 		}
 	}
 
-	tmpCOPYCSTR(ProgName);
 	tmpCOPYCSTR(StrucData);
 	tmpCOPYCSTR(APPNAME);
 	tmpCOPYCSTR(PROCID);
@@ -1014,6 +1084,168 @@ static rsRetVal MsgSerialize(msg_t *pThis, strm_t *pStrm)
 finalize_it:
 	RETiRet;
 }
+
+
+/* This is a helper for MsgDeserialize that re-inits the var object. This
+ * whole construct should be replaced, var is really ready to be retired.
+ * But as an interim help during refactoring let's introduce this function
+ * here (and thus NOT as method of var object!). -- rgerhads, 2012-11-06
+ */
+static inline void
+reinitVar(var_t *pVar)
+{
+	rsCStrDestruct(&pVar->pcsName); /* no longer needed */
+	if(pVar->varType == VARTYPE_STR) {
+		if(pVar->val.pStr != NULL)
+			rsCStrDestruct(&pVar->val.pStr);
+	}
+}
+/* deserialize the message again 
+ * we deserialize the properties in the same order that we serialized them. Except
+ * for some checks to cover downlevel version, we do not need to do all these
+ * CPU intense name checkings.
+ */
+#define isProp(name) !rsCStrSzStrCmp(pVar->pcsName, (uchar*) name, sizeof(name) - 1)
+rsRetVal
+MsgDeserialize(msg_t *pMsg, strm_t *pStrm)
+{
+	prop_t *myProp;
+	prop_t *propRcvFrom = NULL;
+	prop_t *propRcvFromIP = NULL;
+	struct json_tokener *tokener;
+	var_t *pVar = NULL;
+	DEFiRet;
+
+	ISOBJ_TYPE_assert(pStrm, strm);
+
+	CHKiRet(var.Construct(&pVar));
+	CHKiRet(var.ConstructFinalize(pVar));
+
+	CHKiRet(objDeserializeProperty(pVar, pStrm));
+	if(isProp("iProtocolVersion")) {
+		setProtocolVersion(pMsg, pVar->val.num);
+		reinitVar(pVar);
+		CHKiRet(objDeserializeProperty(pVar, pStrm));
+	}
+	if(isProp("iSeverity")) {
+		pMsg->iSeverity = pVar->val.num;
+		reinitVar(pVar);
+		CHKiRet(objDeserializeProperty(pVar, pStrm));
+	}
+	if(isProp("iFacility")) {
+		pMsg->iFacility = pVar->val.num;
+		reinitVar(pVar);
+		CHKiRet(objDeserializeProperty(pVar, pStrm));
+	}
+	if(isProp("msgFlags")) {
+		pMsg->msgFlags = pVar->val.num;
+		reinitVar(pVar);
+		CHKiRet(objDeserializeProperty(pVar, pStrm));
+	}
+	if(isProp("ttGenTime")) {
+		pMsg->ttGenTime = pVar->val.num;
+		reinitVar(pVar);
+		CHKiRet(objDeserializeProperty(pVar, pStrm));
+	}
+	if(isProp("tRcvdAt")) {
+		memcpy(&pMsg->tRcvdAt, &pVar->val.vSyslogTime, sizeof(struct syslogTime));
+		reinitVar(pVar);
+		CHKiRet(objDeserializeProperty(pVar, pStrm));
+	}
+	if(isProp("tTIMESTAMP")) {
+		memcpy(&pMsg->tTIMESTAMP, &pVar->val.vSyslogTime, sizeof(struct syslogTime));
+		reinitVar(pVar);
+		CHKiRet(objDeserializeProperty(pVar, pStrm));
+	}
+	if(isProp("pszTAG")) {
+		MsgSetTAG(pMsg, rsCStrGetSzStrNoNULL(pVar->val.pStr), cstrLen(pVar->val.pStr));
+		reinitVar(pVar);
+		CHKiRet(objDeserializeProperty(pVar, pStrm));
+	}
+	if(isProp("pszRawMsg")) {
+		MsgSetRawMsg(pMsg, (char*) rsCStrGetSzStrNoNULL(pVar->val.pStr), cstrLen(pVar->val.pStr));
+		reinitVar(pVar);
+		CHKiRet(objDeserializeProperty(pVar, pStrm));
+	}
+	if(isProp("pszHOSTNAME")) {
+		MsgSetHOSTNAME(pMsg, rsCStrGetSzStrNoNULL(pVar->val.pStr), rsCStrLen(pVar->val.pStr));
+		reinitVar(pVar);
+		CHKiRet(objDeserializeProperty(pVar, pStrm));
+	}
+	if(isProp("pszInputName")) {
+		/* we need to create a property */ 
+		CHKiRet(prop.Construct(&myProp));
+		CHKiRet(prop.SetString(myProp, rsCStrGetSzStrNoNULL(pVar->val.pStr), rsCStrLen(pVar->val.pStr)));
+		CHKiRet(prop.ConstructFinalize(myProp));
+		MsgSetInputName(pMsg, myProp);
+		prop.Destruct(&myProp);
+		reinitVar(pVar);
+		CHKiRet(objDeserializeProperty(pVar, pStrm));
+	}
+	if(isProp("pszRcvFrom")) {
+		MsgSetRcvFromStr(pMsg, rsCStrGetSzStrNoNULL(pVar->val.pStr), rsCStrLen(pVar->val.pStr), &propRcvFrom);
+		prop.Destruct(&propRcvFrom);
+		reinitVar(pVar);
+		CHKiRet(objDeserializeProperty(pVar, pStrm));
+	}
+	if(isProp("pszRcvFromIP")) {
+		MsgSetRcvFromIPStr(pMsg, rsCStrGetSzStrNoNULL(pVar->val.pStr), rsCStrLen(pVar->val.pStr), &propRcvFromIP);
+		prop.Destruct(&propRcvFromIP);
+		reinitVar(pVar);
+		CHKiRet(objDeserializeProperty(pVar, pStrm));
+	}
+	if(isProp("json")) {
+		tokener = json_tokener_new();
+		pMsg->json = json_tokener_parse_ex(tokener, (char*)rsCStrGetSzStrNoNULL(pVar->val.pStr),
+					     cstrLen(pVar->val.pStr));
+		json_tokener_free(tokener);
+		reinitVar(pVar);
+		CHKiRet(objDeserializeProperty(pVar, pStrm));
+	}
+	if(isProp("pCSStrucData")) {
+		MsgSetStructuredData(pMsg, (char*) rsCStrGetSzStrNoNULL(pVar->val.pStr));
+		reinitVar(pVar);
+		CHKiRet(objDeserializeProperty(pVar, pStrm));
+	}
+	if(isProp("pCSAPPNAME")) {
+		MsgSetAPPNAME(pMsg, (char*) rsCStrGetSzStrNoNULL(pVar->val.pStr));
+		reinitVar(pVar);
+		CHKiRet(objDeserializeProperty(pVar, pStrm));
+	}
+	if(isProp("pCSPROCID")) {
+		MsgSetPROCID(pMsg, (char*) rsCStrGetSzStrNoNULL(pVar->val.pStr));
+		reinitVar(pVar);
+		CHKiRet(objDeserializeProperty(pVar, pStrm));
+	}
+	if(isProp("pCSMSGID")) {
+		MsgSetMSGID(pMsg, (char*) rsCStrGetSzStrNoNULL(pVar->val.pStr));
+		reinitVar(pVar);
+		CHKiRet(objDeserializeProperty(pVar, pStrm));
+	}
+	if(isProp("pszUUID")) {
+		pMsg->pszUUID = ustrdup(rsCStrGetSzStrNoNULL(pVar->val.pStr));
+		reinitVar(pVar);
+		CHKiRet(objDeserializeProperty(pVar, pStrm));
+	}
+	if(isProp("pszRuleset")) {
+		MsgSetRulesetByName(pMsg, pVar->val.pStr);
+		reinitVar(pVar);
+		CHKiRet(objDeserializeProperty(pVar, pStrm));
+	}
+	/* "offMSG" must always be our last field, so we use this as an
+	 * indicator if the sequence is correct. This is a bit questionable,
+	 * but on the other hand it works decently AND we will probably replace
+	 * the whole persisted format soon in any case. -- rgerhards, 2012-11-06
+	 */
+	if(!isProp("offMSG"))
+		ABORT_FINALIZE(RS_RET_DS_PROP_SEQ_ERR);
+	MsgSetMSGoffs(pMsg, pVar->val.num);
+finalize_it:
+	if(pVar != NULL)
+		var.Destruct(&pVar);
+	RETiRet;
+}
+#undef isProp
 
 
 /* Increment reference count - see description of the "msg"
@@ -1110,32 +1342,33 @@ finalize_it:
  * The above definition has been taken from the FreeBSD syslogd sources.
  * 
  * The program name is not parsed by default, because it is infrequently-used.
- * If it is needed, this function should be called first. It checks if it is
- * already set and extracts it, if not.
- *
  * IMPORTANT: A locked message object must be provided, else a crash will occur.
  * rgerhards, 2005-10-19
  */
-static rsRetVal aquireProgramName(msg_t *pM)
+static inline rsRetVal
+aquireProgramName(msg_t *pM)
 {
-	register int i;
-	uchar *pszTag;
+	int i;
+	uchar *pszTag, *pszProgName;
 	DEFiRet;
 
 	assert(pM != NULL);
-	if(pM->pCSProgName == NULL) {
-		/* ok, we do not yet have it. So let's parse the TAG to obtain it.  */
-		pszTag = (uchar*) ((pM->iLenTAG < CONF_TAG_BUFSIZE) ? pM->TAG.szBuf : pM->TAG.pszTAG);
-		CHKiRet(cstrConstruct(&pM->pCSProgName));
-		for(  i = 0
-		    ; (i < pM->iLenTAG) && isprint((int) pszTag[i])
-		      && (pszTag[i] != '\0') && (pszTag[i] != ':')
-		      && (pszTag[i] != '[')  && (pszTag[i] != '/')
-		    ; ++i) {
-			CHKiRet(cstrAppendChar(pM->pCSProgName, pszTag[i]));
-		}
-		CHKiRet(cstrFinalize(pM->pCSProgName));
+	pszTag = (uchar*) ((pM->iLenTAG < CONF_TAG_BUFSIZE) ? pM->TAG.szBuf : pM->TAG.pszTAG);
+	for(  i = 0
+	    ; (i < pM->iLenTAG) && isprint((int) pszTag[i])
+	      && (pszTag[i] != '\0') && (pszTag[i] != ':')
+	      && (pszTag[i] != '[')  && (pszTag[i] != '/')
+	    ; ++i)
+		; /* just search end of PROGNAME */
+	if(i < CONF_PROGNAME_BUFSIZE) {
+		pszProgName = pM->PROGNAME.szBuf;
+	} else {
+		CHKmalloc(pM->PROGNAME.ptr = malloc(i+1));
+		pszProgName = pM->PROGNAME.ptr;
 	}
+	memcpy((char*)pszProgName, (char*)pszTag, i);
+	pszProgName[i] = '\0';
+	pM->iLenPROGNAME = i;
 finalize_it:
 	RETiRet;
 }
@@ -1234,6 +1467,14 @@ getRawMsg(msg_t *pM, uchar **pBuf, int *piLen)
 	}
 }
 
+
+/* note: setMSGLen() is only for friends who really know what they
+ * do. Setting an invalid length can be desasterous!
+ */
+void setMSGLen(msg_t *pM, int lenMsg)
+{
+	pM->iLenMSG = lenMsg;
+}
 
 int getMSGLen(msg_t *pM)
 {
@@ -1684,16 +1925,6 @@ void MsgSetRuleset(msg_t *pMsg, ruleset_t *pRuleset)
 }
 
 
-/* rgerhards 2012-04-18: set associated ruleset (by ruleset name)
- * If ruleset cannot be found, no update is done.
- */
-static void
-MsgSetRulesetByName(msg_t *pMsg, cstr_t *rulesetName)
-{
-	rulesetGetRuleset(runConf, &(pMsg->pRuleset), rsCStrGetSzStrNoNULL(rulesetName));
-}
-
-
 /* set TAG in msg object
  * (rewritten 2009-06-18 rgerhards)
  */
@@ -1882,53 +2113,24 @@ static inline char *getStructuredData(msg_t *pM)
 	return (char*) pszRet;
 }
 
-/* check if we have a ProgramName, and, if not, try to aquire/emulate it.
- * rgerhards, 2009-06-26
- */
-static inline void prepareProgramName(msg_t *pM, sbool bLockMutex)
-{
-	if(pM->pCSProgName == NULL) {
-		if(bLockMutex == LOCK_MUTEX)
-			MsgLock(pM);
-
-		/* re-query as things might have changed during locking */
-		if(pM->pCSProgName == NULL)
-			aquireProgramName(pM);
-
-		if(bLockMutex == LOCK_MUTEX)
-			MsgUnlock(pM);
-	}
-}
-
-
-/* get the length of the "programname" sz string
- * rgerhards, 2005-10-19
- */
-int getProgramNameLen(msg_t *pM, sbool bLockMutex)
-{
-	assert(pM != NULL);
-	prepareProgramName(pM, bLockMutex);
-	return (pM->pCSProgName == NULL) ? 0 : rsCStrLen(pM->pCSProgName);
-}
-
-
 /* get the "programname" as sz string
  * rgerhards, 2005-10-19
  */
 uchar *getProgramName(msg_t *pM, sbool bLockMutex)
 {
-	uchar *pszRet;
-
-	if(bLockMutex == LOCK_MUTEX)
-		MsgLock(pM);
-	prepareProgramName(pM, MUTEX_ALREADY_LOCKED);
-	if(pM->pCSProgName == NULL)
-		pszRet = UCHAR_CONSTANT("");
-	else 
-		pszRet = rsCStrGetSzStrNoNULL(pM->pCSProgName);
-	if(bLockMutex == LOCK_MUTEX)
-		MsgUnlock(pM);
-	return pszRet;
+	if(pM->iLenPROGNAME == -1) {
+		if(bLockMutex == LOCK_MUTEX) {
+			MsgLock(pM);
+			/* need to re-check, things may have change in between! */
+			if(pM->iLenPROGNAME == -1)
+				aquireProgramName(pM);
+			MsgUnlock(pM);
+		} else {
+			aquireProgramName(pM);
+		}
+	}
+	return (pM->iLenPROGNAME < CONF_PROGNAME_BUFSIZE) ? pM->PROGNAME.szBuf
+						       : pM->PROGNAME.ptr;
 }
 
 
@@ -2043,18 +2245,8 @@ finalize_it:
  */
 void MsgSetRcvFrom(msg_t *pThis, prop_t *new)
 {
-	assert(pThis != NULL);
-
 	prop.AddRef(new);
-	if(pThis->msgFlags & NEEDS_DNSRESOL) {
-		if(pThis->rcvFrom.pfrominet != NULL)
-		free(pThis->rcvFrom.pfrominet);
-		pThis->msgFlags &= ~NEEDS_DNSRESOL;
-	} else {
-		if(pThis->rcvFrom.pRcvFrom != NULL)
-			prop.Destruct(&pThis->rcvFrom.pRcvFrom);
-	}
-	pThis->rcvFrom.pRcvFrom = new;
+	MsgSetRcvFromWithoutAddRef(pThis, new);
 }
 
 
@@ -2087,9 +2279,7 @@ rsRetVal MsgSetRcvFromIP(msg_t *pThis, prop_t *new)
 
 	BEGINfunc
 	prop.AddRef(new);
-	if(pThis->pRcvFromIP != NULL)
-		prop.Destruct(&pThis->pRcvFromIP);
-	pThis->pRcvFromIP = new;
+	MsgSetRcvFromIPWithoutAddRef(pThis, new);
 	ENDfunc
 	return RS_RET_OK;
 }
@@ -2243,21 +2433,20 @@ void MsgSetRawMsgWOSize(msg_t *pMsg, char* pszRawMsg)
 
 
 /* Decode a priority into textual information like auth.emerg.
- * The variable pRes must point to a user-supplied buffer and
- * pResLen must contain its size. The pointer to the buffer
+ * The variable pRes must point to a user-supplied buffer.
+ * The pointer to the buffer
  * is also returned, what makes this functiona suitable for
  * use in printf-like functions.
  * Note: a buffer size of 20 characters is always sufficient.
- * Interface to this function changed 2007-06-15 by RGerhards
  */
-char *textpri(char *pRes, size_t pResLen, int pri)
+char *textpri(char *pRes, int pri)
 {
 	assert(pRes != NULL);
-	assert(pResLen > 0);
-
-	snprintf(pRes, pResLen, "%s.%s", syslog_fac_names[LOG_FAC(pri)],
-		 syslog_severity_names[LOG_PRI(pri)]);
-
+	memcpy(pRes, syslog_fac_names[LOG_FAC(pri)], len_syslog_fac_names[LOG_FAC(pri)]);
+	pRes[len_syslog_fac_names[LOG_FAC(pri)]] = '.';
+	memcpy(pRes+len_syslog_fac_names[LOG_FAC(pri)]+1,
+	       syslog_severity_names[LOG_PRI(pri)],
+	       len_syslog_severity_names[LOG_PRI(pri)]+1 /* for \0! */);
 	return pRes;
 }
 
@@ -2271,40 +2460,48 @@ char *textpri(char *pRes, size_t pResLen, int pri)
  */
 typedef enum ENOWType { NOW_NOW, NOW_YEAR, NOW_MONTH, NOW_DAY, NOW_HOUR, NOW_HHOUR, NOW_QHOUR, NOW_MINUTE } eNOWType;
 #define tmpBUFSIZE 16	/* size of formatting buffer */
-static uchar *getNOW(eNOWType eNow)
+static uchar *getNOW(eNOWType eNow, struct syslogTime *t)
 {
 	uchar *pBuf;
-	struct syslogTime t;
 
 	if((pBuf = (uchar*) MALLOC(sizeof(uchar) * tmpBUFSIZE)) == NULL) {
 		return NULL;
 	}
 
-	datetime.getCurrTime(&t, NULL);
+	if(t->year == 0) { /* not yet set! */
+		datetime.getCurrTime(t, NULL);
+	}
+
 	switch(eNow) {
 	case NOW_NOW:
-		snprintf((char*) pBuf, tmpBUFSIZE, "%4.4d-%2.2d-%2.2d", t.year, t.month, t.day);
+		memcpy(pBuf, two_digits[t->year/100], 2);
+		memcpy(pBuf+2, two_digits[t->year%100], 2);
+		pBuf[4] = '-';
+		memcpy(pBuf+5, two_digits[(int)t->month], 2);
+		pBuf[7] = '-';
+		memcpy(pBuf+8, two_digits[(int)t->day], 3);
 		break;
 	case NOW_YEAR:
-		snprintf((char*) pBuf, tmpBUFSIZE, "%4.4d", t.year);
+		memcpy(pBuf, two_digits[t->year/100], 2);
+		memcpy(pBuf+2, two_digits[t->year%100], 3);
 		break;
 	case NOW_MONTH:
-		snprintf((char*) pBuf, tmpBUFSIZE, "%2.2d", t.month);
+		memcpy(pBuf, two_digits[(int)t->month], 3);
 		break;
 	case NOW_DAY:
-		snprintf((char*) pBuf, tmpBUFSIZE, "%2.2d", t.day);
+		memcpy(pBuf, two_digits[(int)t->day], 3);
 		break;
 	case NOW_HOUR:
-		snprintf((char*) pBuf, tmpBUFSIZE, "%2.2d", t.hour);
+		memcpy(pBuf, two_digits[(int)t->hour], 3);
 		break;
 	case NOW_HHOUR:
-		snprintf((char*) pBuf, tmpBUFSIZE, "%2.2d", t.minute / 30);
+		memcpy(pBuf, two_digits[t->minute/30], 3);
 		break;
 	case NOW_QHOUR:
-		snprintf((char*) pBuf, tmpBUFSIZE, "%2.2d", t.minute / 15);
+		memcpy(pBuf, two_digits[t->minute/15], 3);
 		break;
 	case NOW_MINUTE:
-		snprintf((char*) pBuf, tmpBUFSIZE, "%2.2d", t.minute);
+		memcpy(pBuf, two_digits[(int)t->minute], 3);
 		break;
 	}
 
@@ -2571,7 +2768,7 @@ finalize_it:
  * Parameter "bMustBeFreed" is set by this function. It tells the
  * caller whether or not the string returned must be freed by the
  * caller itself. It is is 0, the caller MUST NOT free it. If it is
- * 1, the caller MUST free 1. Handling this wrongly leads to either
+ * 1, the caller MUST free it. Handling this wrongly leads to either
  * a memory leak of a program abort (do to double-frees or frees on
  * the constant memory pool). So be careful to do it right.
  * rgerhards 2004-11-23
@@ -2588,7 +2785,7 @@ finalize_it:
 	return(UCHAR_CONSTANT("**OUT OF MEMORY**"));}
 uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
                  propid_t propid, es_str_t *propName, rs_size_t *pPropLen,
-		 unsigned short *pbMustBeFreed)
+		 unsigned short *pbMustBeFreed, struct syslogTime *ttNow)
 {
 	uchar *pRes; /* result pointer */
 	rs_size_t bufLen = -1; /* length of string or -1, if not known */
@@ -2650,7 +2847,7 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 				RET_OUT_OF_MEMORY;
 			} else {
 				*pbMustBeFreed = 1;
-				pRes = (uchar*)textpri((char*)pBuf, 20, getPRIi(pMsg));
+				pRes = (uchar*)textpri((char*)pBuf, getPRIi(pMsg));
 			}
 			break;
 		case PROP_IUT:
@@ -2703,52 +2900,68 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			pRes = (uchar*)getParseSuccess(pMsg);
 			break;
 		case PROP_SYS_NOW:
-			if((pRes = getNOW(NOW_NOW)) == NULL) {
+			if((pRes = getNOW(NOW_NOW, ttNow)) == NULL) {
 				RET_OUT_OF_MEMORY;
-			} else
-				*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
+			} else {
+				*pbMustBeFreed = 1;
+				bufLen = 10;
+			}
 			break;
 		case PROP_SYS_YEAR:
-			if((pRes = getNOW(NOW_YEAR)) == NULL) {
+			if((pRes = getNOW(NOW_YEAR, ttNow)) == NULL) {
 				RET_OUT_OF_MEMORY;
-			} else
-				*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
+			} else {
+				*pbMustBeFreed = 1;
+				bufLen = 4;
+			}
 			break;
 		case PROP_SYS_MONTH:
-			if((pRes = getNOW(NOW_MONTH)) == NULL) {
+			if((pRes = getNOW(NOW_MONTH, ttNow)) == NULL) {
 				RET_OUT_OF_MEMORY;
-			} else
-				*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
+			} else {
+				*pbMustBeFreed = 1;
+				bufLen = 2;
+			}
 			break;
 		case PROP_SYS_DAY:
-			if((pRes = getNOW(NOW_DAY)) == NULL) {
+			if((pRes = getNOW(NOW_DAY, ttNow)) == NULL) {
 				RET_OUT_OF_MEMORY;
-			} else
-				*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
+			} else {
+				*pbMustBeFreed = 1;
+				bufLen = 2;
+			}
 			break;
 		case PROP_SYS_HOUR:
-			if((pRes = getNOW(NOW_HOUR)) == NULL) {
+			if((pRes = getNOW(NOW_HOUR, ttNow)) == NULL) {
 				RET_OUT_OF_MEMORY;
-			} else
-				*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
+			} else {
+				*pbMustBeFreed = 1;
+				bufLen = 2;
+			}
 			break;
 		case PROP_SYS_HHOUR:
-			if((pRes = getNOW(NOW_HHOUR)) == NULL) {
+			if((pRes = getNOW(NOW_HHOUR, ttNow)) == NULL) {
 				RET_OUT_OF_MEMORY;
-			} else
-				*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
+			} else {
+				*pbMustBeFreed = 1;
+				bufLen = 2;
+			}
 			break;
 		case PROP_SYS_QHOUR:
-			if((pRes = getNOW(NOW_QHOUR)) == NULL) {
+			if((pRes = getNOW(NOW_QHOUR, ttNow)) == NULL) {
 				RET_OUT_OF_MEMORY;
-			} else
-				*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
+			} else {
+				*pbMustBeFreed = 1;
+				bufLen = 2;
+			}
 			break;
 		case PROP_SYS_MINUTE:
-			if((pRes = getNOW(NOW_MINUTE)) == NULL) {
+			if((pRes = getNOW(NOW_MINUTE, ttNow)) == NULL) {
 				RET_OUT_OF_MEMORY;
-			} else
-				*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
+			} else {
+				*pbMustBeFreed = 1;
+				bufLen = 2;
+			}
 			break;
 		case PROP_SYS_MYHOSTNAME:
 			pRes = glbl.GetLocalHostName();
@@ -2776,15 +2989,39 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			break;
 		case PROP_SYS_UPTIME:
 #			ifndef HAVE_SYSINFO_UPTIME
-            /* An alternative on some systems (eg Solaris) is to scan
-             * /var/adm/utmpx for last boot time.
-             */
+			/* An alternative on some systems (eg Solaris) is to scan
+			* /var/adm/utmpx for last boot time.
+			*/
 			pRes = (uchar*) "UPTIME NOT available on this system";
 			*pbMustBeFreed = 0;
+
+#			elif defined(__FreeBSD__)
+
+			{
+			struct timespec tp;
+
+			if(*pbMustBeFreed == 1)
+				free(pRes);
+			if((pRes = (uchar*) MALLOC(sizeof(uchar) * 32)) == NULL) {
+				RET_OUT_OF_MEMORY;
+			}
+			*pbMustBeFreed = 1;
+ 
+			if(clock_gettime(CLOCK_UPTIME, &tp) == -1) {
+ 				*pPropLen = sizeof("**SYSCALL FAILED**") - 1;
+ 				return(UCHAR_CONSTANT("**SYSCALL FAILED**"));
+ 			}
+ 
+			snprintf((char*) pRes, sizeof(uchar) * 32, "%ld", tp.tv_sec);
+ 			}
+
 #			else
+
 			{
 			struct sysinfo s_info;
 
+			if(*pbMustBeFreed == 1)
+				free(pRes);
 			if((pRes = (uchar*) MALLOC(sizeof(uchar) * 32)) == NULL) {
 				RET_OUT_OF_MEMORY;
 			}
@@ -2810,7 +3047,7 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 	}
 
 	/* If we did not receive a template pointer, we are already done... */
-	if(pTpe == NULL) {
+	if(pTpe == NULL || !pTpe->bComplexProcessing) {
 		*pPropLen = (bufLen == -1) ? ustrlen(pRes) : bufLen;
 		return pRes;
 	}
@@ -3017,13 +3254,18 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 		uchar *pSb;
 		iFrom = pTpe->data.field.iFromPos;
 		iTo = pTpe->data.field.iToPos;
-		/* need to zero-base to and from (they are 1-based!) */
-		if(iFrom > 0)
-			--iFrom;
-		if(iTo > 0)
-			--iTo;
 		if(bufLen == -1)
 			bufLen = ustrlen(pRes);
+		if(pTpe->data.field.options.bFromPosEndRelative) {
+			iFrom = (bufLen < iFrom) ? 0 : bufLen - iFrom;
+			iTo = (bufLen < iTo)? 0 : bufLen - iTo;
+		} else {
+			/* need to zero-base to and from (they are 1-based!) */
+			if(iFrom > 0)
+				--iFrom;
+			if(iTo > 0)
+				--iTo;
+		}
 		if(iFrom == 0 && iTo >=  bufLen) { 
 			/* in this case, the requested string is a superset of what we already have,
 			 * so there is no need to do any processing. This is a frequent case for size-limited
@@ -3399,9 +3641,7 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 		jsonField(pTpe, &pRes, pbMustBeFreed, &bufLen);
 	}
 
-	if(bufLen == -1)
-		bufLen = ustrlen(pRes);
-	*pPropLen = bufLen;
+	*pPropLen = (bufLen == -1) ? ustrlen(pRes) : bufLen;
 
 	ENDfunc
 	return(pRes);
@@ -3458,7 +3698,7 @@ msgGetMsgVarNew(msg_t *pThis, uchar *name)
 	/* always call MsgGetProp() without a template specifier */
 	/* TODO: optimize propNameToID() call -- rgerhards, 2009-06-26 */
 	propNameStrToID(name, &propid);
-	pszProp = (uchar*) MsgGetProp(pThis, NULL, propid, NULL, &propLen, &bMustBeFreed);
+	pszProp = (uchar*) MsgGetProp(pThis, NULL, propid, NULL, &propLen, &bMustBeFreed, NULL);
 
 	estr = es_newStrFromCStr((char*)pszProp, propLen);
 	if(bMustBeFreed)
@@ -3557,12 +3797,10 @@ finalize_it:
  * satisfies the base object class getSeverity semantics.
  * rgerhards, 2008-01-14
  */
-static rsRetVal
-MsgGetSeverity(obj_t_ptr pThis, int *piSeverity)
+rsRetVal
+MsgGetSeverity(msg_t *pMsg, int *piSeverity)
 {
-	ISOBJ_TYPE_assert(pThis, msg);
-	assert(piSeverity != NULL);
-	*piSeverity = ((msg_t*) pThis)->iSeverity;
+	*piSeverity = pMsg->iSeverity;
 	return RS_RET_OK;
 }
 
@@ -3820,25 +4058,25 @@ done:	return dst;
 
 
 rsRetVal
-msgSetJSONFromVar(msg_t *pMsg, uchar *varname, struct var *var)
+msgSetJSONFromVar(msg_t *pMsg, uchar *varname, struct var *v)
 {
 	struct json_object *json = NULL;
 	char *cstr;
 	DEFiRet;
-	switch(var->datatype) {
+	switch(v->datatype) {
 	case 'S':/* string */
-		cstr = es_str2cstr(var->d.estr, NULL);
+		cstr = es_str2cstr(v->d.estr, NULL);
 		json = json_object_new_string(cstr);
 		free(cstr);
 		break;
 	case 'N':/* number (integer) */
-		json = json_object_new_int((int) var->d.n);
+		json = json_object_new_int((int) v->d.n);
 		break;
 	case 'J':/* native JSON */
-		json = jsonDeepCopy(var->d.json);
+		json = jsonDeepCopy(v->d.json);
 		break;
 	default:DBGPRINTF("msgSetJSONFromVar: unsupported datatype %c\n",
-		var->datatype);
+		v->datatype);
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 	msgAddJSON(pMsg, varname+1, json);
@@ -3858,11 +4096,10 @@ BEGINObjClassInit(msg, 1, OBJ_IS_CORE_MODULE)
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(prop, CORE_COMPONENT));
+	CHKiRet(objUse(var, CORE_COMPONENT));
 
 	/* set our own handlers */
 	OBJSetMethodHandler(objMethod_SERIALIZE, MsgSerialize);
-	OBJSetMethodHandler(objMethod_SETPROPERTY, MsgSetProperty);
-	OBJSetMethodHandler(objMethod_GETSEVERITY, MsgGetSeverity);
 	/* some more inits */
 #	if HAVE_MALLOC_TRIM
 	INIT_ATOMIC_HELPER_MUT(mutTrimCtr);

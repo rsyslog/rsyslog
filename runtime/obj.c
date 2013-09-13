@@ -604,7 +604,7 @@ finalize_it:
 /* Deserialize a single property. Pointer must be positioned at begin of line. Whole line
  * up until the \n is read.
  */
-static rsRetVal objDeserializeProperty(var_t *pProp, strm_t *pStrm)
+rsRetVal objDeserializeProperty(var_t *pProp, strm_t *pStrm)
 {
 	DEFiRet;
 	number_t i;
@@ -767,21 +767,20 @@ finalize_it:
  * of the trailer. Header must already have been processed.
  * rgerhards, 2008-01-11
  */
-static rsRetVal objDeserializeProperties(obj_t *pObj, objInfo_t *pObjInfo, strm_t *pStrm)
+static rsRetVal objDeserializeProperties(obj_t *pObj, rsRetVal (*objSetProperty)(), strm_t *pStrm)
 {
 	DEFiRet;
 	var_t *pVar = NULL;
 
 	ISOBJ_assert(pObj);
 	ISOBJ_TYPE_assert(pStrm, strm);
-	ASSERT(pObjInfo != NULL);
 
 	CHKiRet(var.Construct(&pVar));
 	CHKiRet(var.ConstructFinalize(pVar));
 
 	iRet = objDeserializeProperty(pVar, pStrm);
 	while(iRet == RS_RET_OK) {
-		CHKiRet(pObjInfo->objMethods[objMethod_SETPROPERTY](pObj, pVar));
+		CHKiRet(objSetProperty(pObj, pVar));
 		/* re-init var object - TODO: method of var! */
 		rsCStrDestruct(&pVar->pcsName); /* no longer needed */
 		if(pVar->varType == VARTYPE_STR) {
@@ -848,7 +847,7 @@ Deserialize(void *ppObj, uchar *pszTypeExpected, strm_t *pStrm, rsRetVal (*fFixu
 	CHKiRet(pObjInfo->objMethods[objMethod_CONSTRUCT](&pObj));
 
 	/* we got the object, now we need to fill the properties */
-	CHKiRet(objDeserializeProperties(pObj, pObjInfo, pStrm));
+	CHKiRet(objDeserializeProperties(pObj, pObjInfo->objMethods[objMethod_SETPROPERTY], pStrm));
 
 	/* check if we need to call a fixup function that modifies the object
 	 * before it is finalized. -- rgerhards, 2008-01-13
@@ -869,6 +868,104 @@ finalize_it:
 	if(pstrID != NULL)
 		rsCStrDestruct(&pstrID);
 
+	RETiRet;
+}
+
+
+/* De-Serialize an object, with known constructur and destructor. Params like Deserialize().
+ * rgerhards, 2012-11-03
+ */
+rsRetVal
+objDeserializeWithMethods(void *ppObj, uchar *pszTypeExpected, int lenTypeExpected, strm_t *pStrm, rsRetVal (*fFixup)(obj_t*,void*), void *pUsr, rsRetVal (*objConstruct)(), rsRetVal (*objConstructFinalize)(), rsRetVal (*objDeserialize)())
+{
+	DEFiRet;
+	rsRetVal iRetLocal;
+	obj_t *pObj = NULL;
+	int oVers = 0;   /* keep compiler happy, but it is totally useless but takes up some execution time... */
+	cstr_t *pstrID = NULL;
+
+	assert(ppObj != NULL);
+	assert(pszTypeExpected != NULL);
+	ISOBJ_TYPE_assert(pStrm, strm);
+
+	/* we de-serialize the header. if all goes well, we are happy. However, if
+	 * we experience a problem, we try to recover. We do this by skipping to
+	 * the next object header. This is defined via the line-start cookies. In
+	 * worst case, we exhaust the queue, but then we receive EOF return state,
+	 * from objDeserializeTryRecover(), what will cause us to ultimately give up.
+	 * rgerhards, 2008-07-08
+	 */
+	do {
+		iRetLocal = objDeserializeHeader((uchar*) "Obj", &pstrID, &oVers, pStrm);
+		if(iRetLocal != RS_RET_OK) {
+			dbgprintf("objDeserialize error %d during header processing - "
+				  "trying to recover\n", iRetLocal);
+			CHKiRet(objDeserializeTryRecover(pStrm));
+		}
+	} while(iRetLocal != RS_RET_OK);
+
+	if(rsCStrSzStrCmp(pstrID, pszTypeExpected, lenTypeExpected))
+		ABORT_FINALIZE(RS_RET_INVALID_OID);
+
+	CHKiRet(objConstruct(&pObj));
+
+	/* we got the object, now we need to fill the properties */
+	CHKiRet(objDeserialize(pObj, pStrm));
+	CHKiRet(objDeserializeTrailer(pStrm)); /* do trailer checks */
+
+	/* check if we need to call a fixup function that modifies the object
+	 * before it is finalized. -- rgerhards, 2008-01-13
+	 */
+	if(fFixup != NULL)
+		CHKiRet(fFixup(pObj, pUsr));
+
+	/* we have a valid object, let's finalize our work and return */
+	if(objConstructFinalize != NULL) {
+		CHKiRet(objConstructFinalize(pObj));
+	}
+
+	*((obj_t**) ppObj) = pObj;
+
+finalize_it:
+	if(iRet != RS_RET_OK && pObj != NULL)
+		free(pObj); /* TODO: check if we can call destructor 2008-01-13 rger */
+
+	if(pstrID != NULL)
+		rsCStrDestruct(&pstrID);
+
+	RETiRet;
+}
+
+/* This is a dummy deserializer, to be used for the delete queue reader
+ * specifically. This is kind of a hack, but also to be replace (hopefully) soon
+ * by totally different code. So let's make it as simple as possible...
+ * rgerhards, 2012-11-06
+ */
+rsRetVal
+objDeserializeDummy(obj_t __attribute__((unused)) *pObj, strm_t *pStrm)
+{
+	DEFiRet;
+	var_t *pVar = NULL;
+
+	CHKiRet(var.Construct(&pVar));
+	CHKiRet(var.ConstructFinalize(pVar));
+
+	iRet = objDeserializeProperty(pVar, pStrm);
+	while(iRet == RS_RET_OK) {
+		/* this loop does actually NOGHTING but read the file... */
+		/* re-init var object - TODO: method of var! */
+		rsCStrDestruct(&pVar->pcsName); /* no longer needed */
+		if(pVar->varType == VARTYPE_STR) {
+			if(pVar->val.pStr != NULL)
+				rsCStrDestruct(&pVar->val.pStr);
+		}
+		iRet = objDeserializeProperty(pVar, pStrm);
+	}
+finalize_it:
+	if(iRet == RS_RET_NO_PROPLINE)
+		iRet = RS_RET_OK; /* NO_PROPLINE is OK and a kind of EOF! */
+	if(pVar != NULL)
+		var.Destruct(&pVar);
 	RETiRet;
 }
 
@@ -909,7 +1006,7 @@ objDeserializeObjAsPropBag(obj_t *pObj, strm_t *pStrm)
 	CHKiRet(FindObjInfo(pstrID, &pObjInfo));
 
 	/* we got the object, now we need to fill the properties */
-	CHKiRet(objDeserializeProperties(pObj, pObjInfo, pStrm));
+	CHKiRet(objDeserializeProperties(pObj, pObjInfo->objMethods[objMethod_SETPROPERTY], pStrm));
 
 finalize_it:
 	if(pstrID != NULL)
@@ -961,7 +1058,7 @@ DeserializePropBag(obj_t *pObj, strm_t *pStrm)
 	CHKiRet(FindObjInfo(pstrID, &pObjInfo));
 
 	/* we got the object, now we need to fill the properties */
-	CHKiRet(objDeserializeProperties(pObj, pObjInfo, pStrm));
+	CHKiRet(objDeserializeProperties(pObj, pObjInfo->objMethods[objMethod_SETPROPERTY], pStrm));
 
 finalize_it:
 	if(pstrID != NULL)

@@ -1,4 +1,450 @@
+---------------------------------------------------------------------------
+Version 7.4.5  [v7.4-stable] 2013-09-??
 - bugfix: segfault on startup if TLS was used but no CA cert set
+- bugfix: some more build problems with newer json-c versions
+  Thanks to Michael Biebl for mentioning the problem.
+- bugfix: build system: libgcrypt.h needed even if libgrcypt was disabled
+  Thanks to Jonny Törnbom for reporting this problem
+---------------------------------------------------------------------------
+Version 7.4.4  [v7.4-stable] 2013-09-03
+- better error messages in GuardTime signature provider
+  Thanks to Ahto Truu for providing the patch.
+- make rsyslog use the new json-c pkgconfig file if available
+  Thanks to the Gentoo team for the patches.
+- bugfix: imfile parameter "persistStateInterval" was unusable
+  due to a case typo in imfile; work-around was to use legacy config
+  Thanks to Brandon Murphy for reporting this bug.
+- bugfix: TLV16 flag encoding error in signature files from GT provider
+  This fixes a problem where the TLV16 flag was improperly encoded.
+  Unfortunately, existing files already have the bug and may not properly
+  be processed. The fix uses constants from the GuardTime API lib to
+  prevent such problems in the future.
+  Thanks to Ahto Truu for providing the patch.
+- bugfix: slightly malformed SMTP handling in ommail
+- bugfix: segfault in omprog if no template was provided (now dflt is used)
+- bugfix: segfault in ompipe if no template was provided (now dflt is used)
+- bugfix: segfault in omsnmp if no template was provided (now dflt is used)
+- bugfix: some omsnmp optional config params were flagged as mandatory
+- bugfix: segfault in omelasticsearch when resuming queued messages
+  after restarting Elasticsearch
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=464
+- bugfix: imtcp addtlframedelimiter could not be set to zero
+  Thanks to Chris Norton for alerting us.
+- doc bugfix: remove no-longer existing omtemplate from developer doc
+  was specifically mentioned as a sample for creating new plugins
+  Thanks to Yannick Brosseau for alerting us of this problem.
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=473
+---------------------------------------------------------------------------
+Version 7.4.3  [v7.4-stable] 2013-07-18
+- bugfix: queue file size was not correctly processed
+  this could lead to using one queue file per message for sizes >2GiB
+  Thanks to Tomas Heinrich for the patch.
+- bugfix: $QHOUR/$HHOUR were always "00" or "01"
+  regression some time between v5 and here
+  Thanks to forum user rjmcinty for reporting this bug
+- bugfix: testbench tool chkseq did improperly report invalid file
+  This happened when permitted duplicate values existed in the very
+  last lines, right before end-of-file.
+  Thanks to Radu Gheorghe for reporting this bug.
+---------------------------------------------------------------------------
+Version 7.4.3  [v7.4-stable] 2013-07-18
+- bugfix: memory leak if disk queues were used and json data present
+- bugfix: CEE/json data was lost during disk queue operation
+- bugfix: potential segfault during startup on invalid config
+  could happen if invalid actions were present, which could lead
+  to improper handling in optimizer.
+- bugfix: 100% CPU utilization when DA queue became full
+- bugfix: omlibdbi did not properly close connection on some errors
+  This happened to errors occuring in Begin/End Transaction entry
+  points.
+- cosmetic bugfix: file name buffer was not freed on disk queue destruction
+  This was an extremely small one-time per run memleak, so nothing of
+  concern. However, it bugs under valgrind and similar memory debuggers.
+- fix build on FreeBSD
+  Thanks to Christiano Rolim for the patch
+---------------------------------------------------------------------------
+Version 7.4.2  [v7.4-stable] 2013-07-04
+- bugfix: in RFC5425 TLS, multiple wildcards in auth could cause segfault
+- bugfix: RainerScript object required parameters were not properly
+  checked - this clould result to segfaults on startup if parameters
+  were missing.
+- bugfix: double-free in omelasticsearch
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=461
+  a security advisory for this bug is available at:
+     http://www.lsexperts.de/advisories/lse-2013-07-03.txt
+  CVE: CVE-2013-4758 
+  PLEASE NOTE: This issue only existed if omelasticsearch was used
+  in a non-default configuration, where the "errorfile" parameter
+  was specified. Without that parameter set, the bug could not
+  be triggered.
+  Thanks to Markus Vervier and Marius Ionescu for providing a detailled
+  bug report. Special thanks to Markus for coordinating his security
+  advisory with us.
+- bugfix: omrelp potential segfault at startup on invalid config parameters
+- bugfix: small memory leak when $uptime property was used
+- bugfix: potential segfault on rsyslog termination in imudp
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=456
+- bugfix: lmsig_gt abort on invalid configuration parameters
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=448
+  Thanks to Risto Laanoja for the patch.
+- imtcp: fix typo in "listner" parameter, which is "listener"
+  Currently, both names are accepted.
+- solved build problems on FreeBSD
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=457
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=458
+  Thanks to Christiano for reproting and suggesting patches
+- solved build problems on CENTOS5
+---------------------------------------------------------------------------
+Version 7.4.1  [v7.4-stable] 2013-06-17
+- imjournal: add ratelimiting capability
+  The original imjournal code did not support ratelimiting at all. We
+  now have our own ratelimiter. This can mitigate against journal
+  database corruption, when the journal re-sends old data. This is a
+  current bug in systemd journal, but we won't outrule this to happen
+  in the future again. So it is better to have a safeguard in place.
+  By default, we permit 20,000 messages witin 10 minutes. This may
+  be a bit restrictive, but given the risk potential it seems reasonable.
+  Users requiring larger traffic flows can always adjust the value.
+- bugfix: potential loop in rate limiting
+  if the message that tells about rate-limiting gets rate-limited itself,
+  it will potentially create and endless loop
+- bugfix: potential segfault in imjournal if journal DB is corrupted
+- bugfix: prevent a segfault in imjournal if state file is not defined
+- bugfix imzmq3: potential segfault on startup
+  if no problem happend at startup, everything went fine
+  Thanks to Hongfei Cheng and Brian Knox for the patch
+---------------------------------------------------------------------------
+Version 7.4.0  [v7.4-stable] 2013-06-06
+This starts a new stable branch based on 7.3.15 plus the following changes:
+- add --enable-cached-man-pages ./configure option
+  permits to build rsyslog on a system where rst2man is not installed. In
+  that case, cached versions of the man pages are used (they were built
+  during "make dist", so they should be current for the version in
+  question.
+- doc bugfix: ReadMode wrong in imfile doc, two values were swapped
+  Thanks to jokajak@gmail.com for mentioning this
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=450
+- imjournal: no longer do periodic wakeup
+- bugfix: potential hang *in debug mode* on rsyslogd termination
+  This ONLY affected rsyslogd if it were running with debug output
+  enabled.
+- bugfix: $template statement with multiple spaces lead to invalid tpl name
+  If multiple spaces were used in front of the template name, all but one
+  of them became actually part of the template name. So
+  $template   a,"..." would be name "  a", and as such "a" was not
+  available, e.g. in 
+  *.* /var/log/file;a
+  This is a legacy config problem. As it was unreported for many years,
+  no backport of the fix to old versions will happen.
+  This is a long-standing bug that was only recently reported by forum
+  user mc-sim.
+  Reference: http://kb.monitorware.com/post23448.html
+- 0mq fixes; credits to Hongfei Cheng and Brian Knox
+---------------------------------------------------------------------------
+Version 7.3.15  [beta] 2013-05-15
+- bugfix: problem in build system (especially when cross-compiling)
+  Thanks to Tomas Heinrich and winfried_mb2@xmsnet.nl for the patch.
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=445
+- bugfix: imjournal had problem with systemd journal API change
+- imjournal: now obtain and include PID
+- bugfix: .logsig files had tlv16 indicator bit at wrong offset
+- bugfix: omrelp legacy config parameters set a timeout of zero
+  which lead the legacy config to be unusable.
+- bugfix: segfault on startup if a disk queue was configure without file
+  name
+  Now this triggers an error message and the queue is changed to
+  linkedList type.
+- bugfix: invalid addressing in string class (recent regression)
+---------------------------------------------------------------------------
+Version 7.3.14  [beta] 2013-05-06
+- bugfix: some man pages were not properly installed
+  either rscryutil or rsgtutil man was installed, but not both
+  Thanks to Marius Tomaschewski for the patch.
+- bugfix: potential segfault on startup when builtin module was specified
+  in module() statement.
+  Thanks to Marius Tomaschewski for reporting the bug.
+- bugfix: segfault due to invalid dynafile cache handling
+  Accidently, the old-style cache size parameter was used when the
+  dynafile cache was created in a RainerScript action. If the old-style
+  size was lower than the one actually set, this lead to misadressing
+  when the size was overrun, and that could lead to all kinds of
+  "interesting things", often in segfaults.
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=440
+---------------------------------------------------------------------------
+Version 7.3.13  [beta] 2013-04-29
+- added omrabbitmq module (contributed, untested)
+  Note: this is unsupported and as such was moved immediately into the
+  beta version.
+  Thanks to Vaclav Tomec for providing this module.
+- bugfix: build problem when --enable-encryption was not selected
+  Thanks to Michael Biebl for fixing this.
+- doc bugfix: omfile parameter "VeryRobustZip" was documentas as
+  "VeryReliableZip"
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=437
+  Thanks to Thomas Doll for reporting this.
+---------------------------------------------------------------------------
+Version 7.3.12  [devel] 2013-04-25
+- added doc for omelasticsearch
+  Thanks to Radu Gheorghe for the doc contribution.
+- omelasticsearch: _id field support for bulk operations
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=392
+  Thanks to Jérôme Renard for the idea and patches.
+- max number of templates for plugin use has been increased to five
+- platform compatibility enhancement: solve compile issue with libgcrypt
+  do not use GCRY_CIPHER_MODE_AESWRAP where not available
+- fix compile on Solaris
+  Thanks to Martin Carpenter for the patch.
+- bugfix: off-by-one error in handling local FQDN name (regression)
+  A remporary buffer was allocated one byte too small. Did only
+  affect startup, not actual operations. Came up during routine tests,
+  and can have no effect once the engine runs. Bug was introduced in
+  7.3.11.
+- bugfix: build problems on Solaris
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=436
+- bugfix: block size limit was not properly honored
+- bugfix: potential segfault in guardtime signature provider
+  it could segfault if an error was reported by the GuardTime API, because
+  an invalid free could happen then
+---------------------------------------------------------------------------
+Version 7.3.11  [devel] 2013-04-23
+- added support for encrypting log files
+- omhiredis: added support for redis pipeline support
+  Thanks to Brian Knox for the patch.
+- bugfix:  $PreserveFQDN is not properly working
+  Thanks to Louis Bouchard for the patch
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=426
+- bugfix: imuxsock aborted due to problem in ratelimiting code
+  Thanks to Tomas Heinrich for the patch.
+- bugfix: imuxsock aborted under some conditions
+  regression from ratelimiting enhancements - this was a different one
+  to the one Tomas Heinrich patched.
+- bugfix: timestamp problems in imkmsg
+---------------------------------------------------------------------------
+Version 7.3.10  [devel] 2013-04-10
+- added RainerScript re_extract() function
+- omrelp: added support for RainerScript-based configuration
+- omrelp: added ability to specify session timeout
+- templates now permit substring extraction relative to end-of-string
+- bugfix: failover/action suspend did not work correctly
+  This was experienced if the retry action took more than one second
+  to complete. For suspending, a cached timestamp was used, and if the
+  retry took longer, that timestamp was already in the past. As a 
+  result, the action never was kept in suspended state, and as such
+  no failover happened. The suspend functionalit now does no longer use
+  the cached timestamp (should not have any performance implication, as
+  action suspend occurs very infrequently).
+- bugfix: gnutls RFC5425 driver had some undersized buffers
+  Thanks to Tomas Heinrich for the patch.
+- bugfix: nested if/prifilt conditions did not work properly
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=415
+- bugfix: imuxsock aborted under some conditions
+  regression from ratelimiting enhancements
+- bugfix: build problems on Solaris
+  Thanks to Martin Carpenter for the patches.
+---------------------------------------------------------------------------
+Version 7.3.9  [devel] 2013-03-27
+- support for signing logs added
+- imudp: now supports user-selectable inputname
+- omlibdbi: now supports transaction interface
+  if recent enough lbdbi is present
+- imuxsock: add ability to NOT create/delete sockets during startup and
+  shutdown
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=259
+- imfile: errors persisting state file are now reported
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=292
+- imfile: now detects file change when rsyslog was inactive
+  Previosly, this case could not be detected, so if a file was overwritten
+  or rotated away while rsyslog was stopped, some data was missing. This
+  is now detected and the new file being forwarded right from the
+  beginning.
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=228
+- updated systemd files to match current systemd source
+- bugfix: imudp scheduling parameters did affect main thread, not imudp
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=409
+- bugfix: build problem on platforms without GLOB_NOMAGIC
+- bugfix: build problems on non-Linux platforms
+- bugfix: stdout/stderr were not closed on forking
+  but were closed when running in the forground - this was just reversed
+  of what it should be. This is a regression of a recent change.
+---------------------------------------------------------------------------
+Version 7.3.8  [devel] 2013-03-18
+- imrelp: now supports listening to IPv4/v6 only instead of always both
+  build now requires librelp 1.0.2
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=378
+- bugfix: mmanon did not build on some platforms (e.g. Ubuntu)
+- bugfix: segfault in expression optimizer
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=423
+- bugfix: imuxsock was missing SysSock.ParseTrusted module parameter
+  To use that functionality, legacy rsyslog.conf syntax had to be used.
+  Also, the doc was missing information on the "ParseTrusted" set of
+  config directives.
+- bugfix: include files got included in the wrong order
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=411
+  This happens if an $IncludeConfig directive was done on multiple
+  files (e.g. the distro default of $IncludeConfig /etc/rsyslog.d/*.conf).
+  In that case, the order of include file processing is reversed, which
+  could lead to all sorts of problems.
+  Thanks to Nathan Stratton Treadway for his great analysis of the problem,
+  which made bug fixing really easy.
+---------------------------------------------------------------------------
+Version 7.3.7  [devel] 2013-03-12
+- add support for anonymizing IPv4 addresses
+- add support for writing to the Linux Journal (omjournal)
+- imuxsock: add capability to ignore messages from ourselfes
+  This helps prevent message routing loops, and is vital to have
+  if omjournal is used together with traditional syslog.
+- field() function now supports a string as field delimiter
+- added ability to configure debug system via rsyslog.conf
+- bugfix: imuxsock segfault when system log socket was used
+- bugfix: mmjsonparse segfault if new-style config was used
+- bugfix: script == comparison did not work properly on JSON objects
+- bugfix: field() function did never return "***FIELD NOT FOUND***"
+  instead it returned "***ERROR in field() FUNCTION***" in that case
+---------------------------------------------------------------------------
+Version 7.3.6  [devel] 2013-01-28
+- greatly improved speed of large-array  [N]EQ RainerScript comparisons
+  Thanks to David Lang for a related discussion that inspired the idea
+  to do this with a much simpler (yet sufficient) approach than orignally
+  planned for.
+- greatly improved speed of DNS cache for large cache sizes
+- general performance improvements
+- omfile: added stats counters for dynafile caches
+- omfile: improved async writing, finally enabled full async write
+  also fixed a couple of smaller issues along that way
+- impstats: added ability to write stats records to local file
+  and avoid going through the syslog log stream. syslog logging can now
+  also be turned off (see doc for details).
+- bugfix: imklog issued wrong facility in error messages
+  ...what could lead to problems in other parts of the code
+- fix compile problem in imklog
+- added capability to output thread-id-to-function debug info
+  This is a useful debug aid, but nothing of concern for regular users.
+---------------------------------------------------------------------------
+Version 7.3.5  [devel] 2012-12-19
+- ommysql: addded batching/transaction support
+- enhanced script optimizer to optimize common PRI-based comparisons
+  These constructs are especially used in SUSE default config files,
+  but also by many users (as they are more readable than the equivalent
+  PRI-based filter).
+- omudpspoof: add support for new config system
+- omudpspoof: add support for packets larger than 1472 bytes
+  On Ethernet, they need to be transmitted in multiple fragments. While
+  it is known that fragmentation can cause issues, it is the best choice
+  to be made in that case. Also improved debug output.
+- bugfix: omudpspoof failed depending on the execution environment
+  The v7 engine closes fds, and closed some of libnet's fds as well, what
+  lead to problems (unfortunately, at least some libnet versions do not
+  report a proper error state but still "success"...). The order of libnet
+  calls has been adjusted to by in sync with what the core engine does.
+- bugfix: segfault on imuxsock startup if system log socket is used
+  and no ratelimiting supported. Happens only during initial config
+  read phase, once this is over, everything works stable.
+- bugfix: mmnormalize build problems
+- bugfix: mmnormalize could abort rsyslog if config parameter was in error
+- bugfix: no error message for invalid string template parameters
+  rather a malformed template was generated, and error information emitted
+  at runtime. However, this could be quite confusing. Note that with this
+  "bugfix" user experience changes: formerly, rsyslog and the affected
+  actions properly started up, but the actions did not produce proper
+  data. Now, there are startup error messages and the actions are NOT
+  executed (due to missing template due to template error).
+- bugfix[minor]: invalid error code when mmnormalize could not access
+  rulebase
+- bugfix(kind of): script optimizer did not work for complex boolean
+  expressions
+- doc bugfix: corrections and improvements in mmnormalize html doc page
+- bugfix: some message properties could be garbled due to race condition
+  This happened only on very high volume systems, if the same message was
+  being processed by two different actions. This was a regression caused
+  by the new config processor, which did no longer properly enable msg
+  locking in multithreaded cases. The bugfix is actually a refactoring of
+  the msg locking code - we no longer do unlocked operations, as the use
+  case for it has mostly gone away. It is potentially possible only at
+  very low-end systems, and there the small additional overhead of doing
+  the locking does not really hurt. Instead, the removal of that 
+  capability can actually slightly improve performance in common cases,
+  as the code path is smaller and requires slightly less memory writes.
+  That probably outperforms the extra locking overhead (which in the 
+  low-end case always happens in user space, without need for kernel
+  support as we can always directly aquire the lock - there is no
+  contention at all).
+- build system cleanup (thanks to Michael Biebl for this!)
+- bugfix: omelasticsearch did not properly compile on some platforms
+  due to missing libmath. Thanks to Michael Biebl for the fix
+---------------------------------------------------------------------------
+Version 7.3.4  [devel] 2012-11-23
+- further (and rather drastically) improved disk queue performance
+  we now save one third of the IO calls
+- imklog: added ParseKernelTimestamp parameter (import from 5.10.2)
+  Thanks to Marius Tomaschewski for the patch.
+- imklog: added KeepKernelTimestamp parameter (import from 5.10.2)
+  Thanks to Marius Tomaschewski for the patch.
+- bugfix: improper handling of backslash in string-type template()s
+- bugfix: leading quote (") in string-type template() lead to thight loop
+  on startup
+- bugfix: no error msg on invalid field option in legacy/string template
+- bugfix: imklog mistakenly took kernel timestamp subseconds as nanoseconds
+  ... actually, they are microseconds. So the fractional part of the 
+  timestamp was not properly formatted. (import from 5.10.2)
+  Thanks to Marius Tomaschewski for the bug report and the patch idea.
+---------------------------------------------------------------------------
+Version 7.3.3  [devel] 2012-11-07
+- improved disk queue performance
+- bugfix: dynafile zip files could be corrupted
+  This could happen if a dynafile was destructed before the first write.
+  In practice, this could happen if few lines were written to a file and
+  it then became evicted from the dynafile cache. This would probably
+  look very random, because it depended on the timing in regard to 
+  message volume and dynafile cache size.
+---------------------------------------------------------------------------
+Version 7.3.2  [devel] 2012-10-30
+- mmnormalize: support for v6+ config interface added
+- mmjsonparse: support for v6+ config interface added
+---------------------------------------------------------------------------
+Version 7.3.2  [devel] 2012-10-30
+- totally reworked ratelimiting and "last message repeated n times"
+  all over rsyslog code. Each of the supported inputs now supports 
+  linux-like ratelimiting (formerly only imuxsock did). Also, the
+  "last message repeated n times" is now processed at the input side
+  and no longer at the output side of rsyslog processing. This 
+  provides the basis for new future additions as well as usually more
+  performance and a much simpler output part (which can be even further
+  refactored).
+- imtcp: support for Linux-Type ratelimiting added
+- imptcp: support for Linux-Type ratelimiting added
+- imudp enhancements:
+  * support for input batching added (performance improvement)
+  * support for Linux-Type ratelimiting added
+- permited action-like statements (stop, call, ...) in action lists
+- bugfix: segfault on startup when modules using MSG_PASSING mode are used
+- omelasticsearch: support for writing data errors to local file added
+- omelasticsearch: fix check for bulk processing status response
+---------------------------------------------------------------------------
+Version 7.3.1  [devel] 2012-10-19
+- optimized template processing performance, especially for $NOW family
+  of properties
+- change lumberjack cookie to "@cee:" from "@cee: "
+  CEE originally specified the cookie with SP, whereas other lumberjack
+  tools used it without space. In order to keep interop with lumberjack,
+  we now use the cookie without space as well. I hope this can be changed
+  in CEE as well when it is released at a later time.
+  Thanks to Miloslav Trmač for pointing this out and a similiar v7 patch.
+- bugfix: imuxsock and imklog truncated head of received message
+  This happened only under some circumstances. Thanks to Marius
+  Tomaschewski, Florian Piekert and Milan Bartos for their help in
+  solving this issue.
+- bugfix: imuxsock did not properly honor $LocalHostIPIF
+---------------------------------------------------------------------------
+Version 7.3.0  [devel] 2012-10-09
+- omlibdbi improvements, added
+  * support for config load phases & module() parameters
+  * support for default templates
+  * driverdirectory is now cleanly a global parameter, but can no longer
+    be specified as an action paramter. Note that in previous versions
+    this parameter was ignored in all but the first action definition
+- improved omfile zip writer to increase compression
+  This was achieved by somewhat reducing the robustness of the zip archive.
+  This is controlled by the new action parameter "VeryReliableZip".
 ----------------------------------------------------------------------------
 Version 7.2.8  [v7-stable] 2013-0?-??
 - bugfix: potential segfault on startup when builtin module was specified
@@ -1074,6 +1520,9 @@ expected that interfaces, even new ones, break during the initial
   [ported from v4]
 ---------------------------------------------------------------------------
 Version 5.10.2  [V5-STABLE], 201?-??-??
+- bugfix: queue file size was not correctly processed
+  this could lead to using one queue file per message for sizes >2GiB
+  Thanks to Tomas Heinrich for the patch.
 - updated systemd files to match current systemd source
 - bugfix: spurios error messages from imuxsock about (non-error) EAGAIN
   Thanks to Marius Tomaschewski for the patch.
@@ -1106,7 +1555,7 @@ Version 5.10.2  [V5-STABLE], 201?-??-??
   Thanks to Tomas Heinrich for the patch.
 - bugfix[kind of]: omudpspoof discarded messages >1472 bytes (MTU size)
   it now truncates these message, but ensures they are sent. Note that
-  7.2.5+ will switch to fragmented UDP messages instead (up to 64K)
+  7.3.5+ will switch to fragmented UDP messages instead (up to 64K)
 ---------------------------------------------------------------------------
 Version 5.10.1  [V5-STABLE], 2012-10-17
 - bugfix: imuxsock and imklog truncated head of received message

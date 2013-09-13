@@ -34,20 +34,18 @@
  * main message queue. But over time, it could potentially be useful to split the two.
  * rgerhad, 2009-05-12
  */
-typedef enum {
-	BATCH_STATE_RDY  = 0,	/* object ready for processing */
-	BATCH_STATE_BAD  = 1,	/* unrecoverable failure while processing, do NOT resubmit to same action */
-	BATCH_STATE_SUB  = 2,	/* message submitted for processing, outcome yet unknown */
-	BATCH_STATE_COMM = 3,	/* message successfully commited */
-	BATCH_STATE_DISC = 4, 	/* discarded - processed OK, but do not submit to any other action */
-} batch_state_t;
+#define BATCH_STATE_RDY  0	/* object ready for processing */
+#define BATCH_STATE_BAD  1	/* unrecoverable failure while processing, do NOT resubmit to same action */
+#define BATCH_STATE_SUB  2	/* message submitted for processing, outcome yet unknown */
+#define BATCH_STATE_COMM 3	/* message successfully commited */
+#define BATCH_STATE_DISC 4 	/* discarded - processed OK, but do not submit to any other action */
+typedef unsigned char batch_state_t;
 
 
 /* an object inside a batch, including any information (state!) needed for it to "life".
  */
 struct batch_obj_s {
-	obj_t *pUsrp;		/* pointer to user object (most often message) */
-	batch_state_t state;	/* associated state */
+	msg_t *pMsg;
 	/* work variables for action processing; these are reused for each action (or block of
 	 * actions)
 	 */
@@ -85,6 +83,13 @@ struct batch_s {
 	sbool *active;		/* which messages are active for processing, NULL=all */
 	sbool bSingleRuleset;	/* do all msgs of this batch use a single ruleset? */
 	batch_obj_t *pElem;	/* batch elements */
+	batch_state_t *eltState;/* state (array!) for individual objects.
+	   			   NOTE: we have moved this out of batch_obj_t because we
+				         get a *much* better cache hit ratio this way. So do not
+					 move it back into this structure! Note that this is really
+					 a HUGE saving, even if it doesn't look so (both profiler
+					 data as well as practical tests indicate that!).
+				*/
 };
 
 
@@ -97,13 +102,13 @@ batchSetSingleRuleset(batch_t *pBatch, sbool val) {
 /* get the batches ruleset (if we have a single ruleset) */
 static inline ruleset_t*
 batchGetRuleset(batch_t *pBatch) {
-	return (pBatch->nElem > 0) ? ((msg_t*) pBatch->pElem[0].pUsrp)->pRuleset : NULL;
+	return (pBatch->nElem > 0) ? pBatch->pElem[0].pMsg->pRuleset : NULL;
 }
 
 /* get the ruleset of a specifc element of the batch (index not verified!) */
 static inline ruleset_t*
 batchElemGetRuleset(batch_t *pBatch, int i) {
-	return ((msg_t*) pBatch->pElem[i].pUsrp)->pRuleset;
+	return pBatch->pElem[i].pMsg->pRuleset;
 }
 
 /* get number of msgs for this batch */
@@ -119,8 +124,8 @@ batchNumMsgs(batch_t *pBatch) {
  */
 static inline void
 batchSetElemState(batch_t *pBatch, int i, batch_state_t newState) {
-	if(pBatch->pElem[i].state != BATCH_STATE_DISC)
-		pBatch->pElem[i].state = newState;
+	if(pBatch->eltState[i] != BATCH_STATE_DISC)
+		pBatch->eltState[i] = newState;
 }
 
 
@@ -129,24 +134,8 @@ batchSetElemState(batch_t *pBatch, int i, batch_state_t newState) {
  */
 static inline int
 batchIsValidElem(batch_t *pBatch, int i) {
-	return(   (pBatch->pElem[i].state != BATCH_STATE_DISC)
+	return(   (pBatch->eltState[i] != BATCH_STATE_DISC)
 	       && (pBatch->active == NULL || pBatch->active[i]));
-}
-
-
-/* copy one batch element to another.
- * This creates a complete duplicate in those cases where
- * it is needed. Use duplication only when absolutely necessary!
- * Note that all working fields are reset to zeros. If that were 
- * not done, we would have potential problems with invalid
- * or double pointer frees.
- * rgerhards, 2010-06-10
- */
-static inline void
-batchCopyElem(batch_obj_t *pDest, batch_obj_t *pSrc) {
-	memset(pDest, 0, sizeof(batch_obj_t));
-	pDest->pUsrp = pSrc->pUsrp;
-	pDest->state = pSrc->state;
 }
 
 
@@ -167,6 +156,7 @@ batchFree(batch_t *pBatch) {
 		}
 	}
 	free(pBatch->pElem);
+	free(pBatch->eltState);
 }
 
 
@@ -180,6 +170,7 @@ batchInit(batch_t *pBatch, int maxElem) {
 	pBatch->iDoneUpTo = 0;
 	pBatch->maxElem = maxElem;
 	CHKmalloc(pBatch->pElem = calloc((size_t)maxElem, sizeof(batch_obj_t)));
+	CHKmalloc(pBatch->eltState = calloc((size_t)maxElem, sizeof(batch_state_t)));
 	// TODO: replace calloc by inidividual writes?
 finalize_it:
 	RETiRet;

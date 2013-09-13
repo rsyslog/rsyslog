@@ -53,6 +53,7 @@
 #include "srUtils.h"
 #include "msg.h"
 #include "datetime.h"
+#include "ratelimit.h"
 #include "net.h" /* for permittedPeers, may be removed when this is removed */
 
 MODULE_TYPE_INPUT
@@ -199,7 +200,7 @@ finalize_it:
 /* actually submit a message to the rsyslog core
  */
 static rsRetVal
-doInjectMsg(int iNum)
+doInjectMsg(int iNum, ratelimit_t *ratelimiter)
 {
 	uchar szMsg[1024];
 	msg_t *pMsg;
@@ -219,7 +220,7 @@ doInjectMsg(int iNum)
 	pMsg->msgFlags  = NEEDS_PARSING | PARSE_HOSTNAME;
 	MsgSetRcvFrom(pMsg, pRcvDummy);
 	CHKiRet(MsgSetRcvFromIP(pMsg, pRcvIPDummy));
-	CHKiRet(submitMsg(pMsg));
+	CHKiRet(ratelimitAddMsg(ratelimiter, NULL, pMsg));
 
 finalize_it:
 	RETiRet;
@@ -237,6 +238,7 @@ injectMsg(uchar *pszCmd, tcps_sess_t *pSess)
 	int iFrom;
 	int nMsgs;
 	int i;
+	ratelimit_t *ratelimit;
 	DEFiRet;
 
 	/* we do not check errors here! */
@@ -244,13 +246,15 @@ injectMsg(uchar *pszCmd, tcps_sess_t *pSess)
 	iFrom = atoi((char*)wordBuf);
 	getFirstWord(&pszCmd, wordBuf, sizeof(wordBuf)/sizeof(uchar), TO_LOWERCASE);
 	nMsgs = atoi((char*)wordBuf);
+	ratelimitNew(&ratelimit, "imdiag", "injectmsg");
 
 	for(i = 0 ; i < nMsgs ; ++i) {
-		doInjectMsg(i + iFrom);
+		doInjectMsg(i + iFrom, ratelimit);
 	}
 
 	CHKiRet(sendResponse(pSess, "%d messages injected\n", nMsgs));
 	DBGPRINTF("imdiag: %d messages injected\n", nMsgs);
+	ratelimitDestruct(ratelimit);
 
 finalize_it:
 	RETiRet;

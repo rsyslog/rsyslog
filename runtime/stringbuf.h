@@ -58,6 +58,7 @@ rsRetVal cstrConstruct(cstr_t **ppThis);
 rsRetVal cstrConstructFromESStr(cstr_t **ppThis, es_str_t *str);
 rsRetVal rsCStrConstructFromszStr(cstr_t **ppThis, uchar *sz);
 rsRetVal rsCStrConstructFromCStr(cstr_t **ppThis, cstr_t *pFrom);
+rsRetVal rsCStrConstructFromszStrf(cstr_t **ppThis, char *fmt, ...) __attribute__((format(printf,2, 3)));
 
 /**
  * Destruct the string buffer object.
@@ -173,6 +174,12 @@ rsRetVal rsCStrAppendStr(cstr_t *pThis, uchar* psz);
  */
 rsRetVal rsCStrAppendStrWithLen(cstr_t *pThis, uchar* psz, size_t iStrLen);
 
+/**
+ * Append a printf-style formated string to the buffer.
+ *
+ * \param fmt pointer to the format string (see man 3 printf for details). Must not be NULL.
+ */
+rsRetVal rsCStrAppendStrf(cstr_t *pThis, uchar *fmt, ...);
 
 /**
  * Append an integer to the string. No special formatting is

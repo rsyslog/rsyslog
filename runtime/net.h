@@ -1,6 +1,6 @@
 /* Definitions for network-related stuff.
  *
- * Copyright 2007-2012 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2013 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -131,7 +131,7 @@ struct permittedPeers_s {
 
 /* interfaces */
 BEGINinterface(net) /* name must also be changed in ENDinterface macro! */
-	rsRetVal (*cvthname)(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQDN, uchar *pszIP);
+	rsRetVal (*cvthname)(struct sockaddr_storage *f, prop_t **localName, prop_t **fqdn, prop_t **ip);
 	/* things to go away after proper modularization */
 	rsRetVal (*addAllowedSenderLine)(char* pName, uchar** ppRestOfConfLine);
 	void (*PrintAllowedSenders)(int iListToPrint);
@@ -156,8 +156,9 @@ BEGINinterface(net) /* name must also be changed in ENDinterface macro! */
 	/* data members - these should go away over time... TODO */
 	int    *pACLAddHostnameOnFail; /* add hostname to acl when DNS resolving has failed */
 	int    *pACLDontResolve;       /* add hostname to acl instead of resolving it to IP(s) */
+	/* v8 cvthname() signature change -- rgerhards, 2013-01-18 */
 ENDinterface(net)
-#define netCURR_IF_VERSION 7 /* increment whenever you change the interface structure! */
+#define netCURR_IF_VERSION 8 /* increment whenever you change the interface structure! */
 
 /* prototypes */
 PROTOTYPEObj(net);

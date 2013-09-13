@@ -83,10 +83,7 @@
 		((obj_t*) (pThis))->pObjInfo = pObjInfoOBJ; \
 		((obj_t*) (pThis))->pszName = NULL
 #endif
-#define objDestruct(pThis) (((obj_t*) (pThis))->pObjInfo->objMethods[objMethod_DESTRUCT])(&pThis)
 #define objSerialize(pThis) (((obj_t*) (pThis))->pObjInfo->objMethods[objMethod_SERIALIZE])
-#define objGetSeverity(pThis, piSever) (((obj_t*) (pThis))->pObjInfo->objMethods[objMethod_GETSEVERITY])(pThis, piSever)
-#define objDebugPrint(pThis) (((obj_t*) (pThis))->pObjInfo->objMethods[objMethod_DEBUGPRINT])(pThis)
 
 #define OBJSetMethodHandler(methodID, pHdlr) \
 	CHKiRet(obj.InfoSetMethod(pObjInfoOBJ, methodID, (rsRetVal (*)(void*)) pHdlr))
@@ -121,6 +118,9 @@ ENDinterface(obj)
 rsRetVal objGetObjInterface(obj_if_t *pIf);
 PROTOTYPEObjClassInit(obj);
 PROTOTYPEObjClassExit(obj);
+rsRetVal objDeserializeWithMethods(void *ppObj, uchar *pszTypeExpected, int lenTypeExpected, strm_t *pStrm, rsRetVal (*fFixup)(obj_t*,void*), void *pUsr, rsRetVal (*objConstruct)(), rsRetVal (*objConstructFinalize)(), rsRetVal (*objDeserialize)());
+rsRetVal objDeserializeProperty(var_t *pProp, strm_t *pStrm);
+rsRetVal objDeserializeDummy(obj_t *pObj, strm_t *pStrm);
 
 
 /* the following definition is only for "friends" */

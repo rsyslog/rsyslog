@@ -129,6 +129,23 @@ finalize_it:
 }
 
 
+/* remove leading spaces from name; this "fixes" some anomalies in
+ * getSubString(), but I was not brave enough to fix the former as
+ * it has many other callers... -- rgerhards, 2013-05-27
+ */
+static inline void
+ltrim(char *src)
+{
+	char *dst = src;
+	while(isspace(*src))
+		++src; /*SKIP*/;
+	if(dst != src) {
+		while(*src != '\0')
+			*dst++ = *src++;
+		*dst = '\0';
+	}
+}
+
 /* parse and interpret a $-config line that starts with
  * a name (this is common code). It is parsed to the name
  * and then the proper sub-function is called to handle
@@ -155,6 +172,7 @@ doNameLine(uchar **pp, void* pVal)
 		errmsg.LogError(0, RS_RET_NOT_FOUND, "Invalid config line: could not extract name - line ignored");
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}
+	ltrim(szName);
 	if(*p == ',')
 		++p; /* comma was eaten */
 	
@@ -607,13 +625,8 @@ rsRetVal cflineDoAction(rsconf_t *conf, uchar **p, action_t **ppAction)
 		if(iRet == RS_RET_OK || iRet == RS_RET_SUSPENDED) {
 			if((iRet = addAction(&pAction, pMod, pModData, pOMSR, NULL, NULL,
 					     (iRet == RS_RET_SUSPENDED)? 1 : 0)) == RS_RET_OK) {
-				/* now check if the module is compatible with select features */
-				if(pMod->isCompatibleWithFeature(sFEATURERepeatedMsgReduction) == RS_RET_OK)
-					pAction->f_ReduceRepeated = loadConf->globals.bReduceRepeatMsgs;
-				else {
-					dbgprintf("module is incompatible with RepeatedMsgReduction - turned off\n");
-					pAction->f_ReduceRepeated = 0;
-				}
+				/* here check if the module is compatible with select features
+				 * (currently, we have no such features!) */
 				pAction->eState = ACT_STATE_RDY; /* action is enabled */
 				conf->actions.nbrActions++;	/* one more active action! */
 			}

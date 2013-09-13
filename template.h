@@ -30,7 +30,7 @@
 #ifndef	TEMPLATE_H_INCLUDED
 #define	TEMPLATE_H_INCLUDED 1
 
-#include <json/json.h>
+#include <json.h>
 #include <libestr.h>
 #include "regexp.h"
 #include "stringbuf.h"
@@ -72,6 +72,7 @@ struct templateEntry {
 	enum EntryTypes eEntryType;
 	uchar *fieldName;	/**< field name to be used for structured output */
 	int lenFieldName;
+	sbool bComplexProcessing; /**< set if complex processing (options, etc) is required */
 	union {
 		struct {
 			uchar *pConstant;	/* pointer to constant value */
@@ -118,6 +119,7 @@ struct templateEntry {
 				unsigned bJSON: 1;		/* format field JSON escaped */
 				unsigned bJSONf: 1;		/* format field JSON *field* (n/v pair) */
 				unsigned bMandatory: 1;		/* mandatory field - emit even if empty */
+				unsigned bFromPosEndRelative: 1;/* is From/To-Pos relative to end of string? */
 			} options;		/* options as bit fields */
 		} field;
 	} data;
@@ -142,14 +144,15 @@ void tplDeleteNew(rsconf_t *conf);
 void tplPrintList(rsconf_t *conf);
 void tplLastStaticInit(rsconf_t *conf, struct template *tpl);
 rsRetVal ExtendBuf(uchar **pBuf, size_t *pLenBuf, size_t iMinSize);
+int tplRequiresDateCall(struct template *pTpl);
 /* note: if a compiler warning for undefined type tells you to look at this
  * code line below, the actual cause is that you currently MUST include template.h
  * BEFORE msg.h, even if your code file does not actually need it.
  * rgerhards, 2007-08-06
  */
-rsRetVal tplToArray(struct template *pTpl, msg_t *pMsg, uchar*** ppArr);
-rsRetVal tplToString(struct template *pTpl, msg_t *pMsg, uchar** ppSz, size_t *);
-rsRetVal tplToJSON(struct template *pTpl, msg_t *pMsg, struct json_object **);
+rsRetVal tplToArray(struct template *pTpl, msg_t *pMsg, uchar*** ppArr, struct syslogTime *ttNow);
+rsRetVal tplToString(struct template *pTpl, msg_t *pMsg, uchar** ppSz, size_t *, struct syslogTime *ttNow);
+rsRetVal tplToJSON(struct template *pTpl, msg_t *pMsg, struct json_object **, struct syslogTime *ttNow);
 rsRetVal doEscape(uchar **pp, rs_size_t *pLen, unsigned short *pbMustBeFreed, int escapeMode);
 
 rsRetVal templateInit();

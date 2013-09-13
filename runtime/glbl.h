@@ -30,10 +30,13 @@
 #ifndef GLBL_H_INCLUDED
 #define GLBL_H_INCLUDED
 
+#include <sys/types.h>
 #include "rainerscript.h"
 #include "prop.h"
 
 #define glblGetIOBufSize() 4096 /* size of the IO buffer, e.g. for strm class */
+
+extern pid_t glbl_ourpid;
 
 /* interfaces */
 BEGINinterface(glbl) /* name must also be changed in ENDinterface macro! */
@@ -85,6 +88,9 @@ ENDinterface(glbl)
 
 /* the remaining prototypes */
 PROTOTYPEObj(glbl);
+
+static inline pid_t glblGetOurPid(void) { return glbl_ourpid; }
+static inline void glblSetOurPid(pid_t pid) { glbl_ourpid = pid; }
 
 void glblPrepCnf(void);
 void glblProcessCnf(struct cnfobj *o);

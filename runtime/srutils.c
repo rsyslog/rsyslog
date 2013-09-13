@@ -527,8 +527,7 @@ char *rs_strerror_r(int errnum, char *buf, size_t buflen) {
 }
 
 
-/*  Decode a symbolic name to a numeric value
- */
+/*  Decode a symbolic name to a numeric value */
 int decodeSyslogName(uchar *name, syslogName_t *codetab)
 {
 	register syslogName_t *c;
@@ -538,22 +537,23 @@ int decodeSyslogName(uchar *name, syslogName_t *codetab)
 	ASSERT(name != NULL);
 	ASSERT(codetab != NULL);
 
-	dbgprintf("symbolic name: %s", name);
-	if (isdigit((int) *name))
-	{
-		dbgprintf("\n");
+	DBGPRINTF("symbolic name: %s", name);
+	if(isdigit((int) *name)) {
+		DBGPRINTF("\n");
 		return (atoi((char*) name));
 	}
 	strncpy((char*) buf, (char*) name, 79);
-	for (p = buf; *p; p++)
+	for(p = buf; *p; p++) {
 		if (isupper((int) *p))
 			*p = tolower((int) *p);
-	for (c = codetab; c->c_name; c++)
-		if (!strcmp((char*) buf, (char*) c->c_name))
-		{
-			dbgprintf(" ==> %d\n", c->c_val);
+	}
+	for(c = codetab; c->c_name; c++) {
+		if(!strcmp((char*) buf, (char*) c->c_name)) {
+			DBGPRINTF(" ==> %d\n", c->c_val);
 			return (c->c_val);
 		}
+	}
+	DBGPRINTF("\n");
 	return (-1);
 }
 
@@ -630,6 +630,28 @@ finalize_it:
 	RETiRet;
 }
 
+/* Returns 1 if the given string contains a non-escaped glob(3)
+ * wildcard character and 0 otherwise (or if the string is empty).
+ */
+int
+containsGlobWildcard(char *str)
+{
+	char *p;
+	if(!str) {
+		return 0;
+	}
+	/* From Linux Programmer's Guide:
+	 * "A string is a wildcard pattern if it contains one of the characters '?', '*' or '['"
+	 * "One can remove the special meaning of '?', '*' and '[' by preceding them by a backslash"
+	 */
+	for(p = str; *p != '\0'; p++) {
+		if((*p == '?' || *p == '*' || *p == '[') &&
+				(p == str || *(p-1) != '\\')) {
+			return 1;
+		}
+	}
+	return 0;
+}
 
 /* vim:set ai:
  */
