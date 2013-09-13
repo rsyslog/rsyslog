@@ -2,7 +2,7 @@
  *
  * An implementation of the nsd interface for GnuTLS.
  * 
- * Copyright (C) 2007, 2008 Rainer Gerhards and Adiscon GmbH.
+ * Copyright (C) 2007-2013 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -547,10 +547,20 @@ gtlsAddOurCert(void)
 	keyFile = glbl.GetDfltNetstrmDrvrKeyFile();
 	dbgprintf("GTLS certificate file: '%s'\n", certFile);
 	dbgprintf("GTLS key file: '%s'\n", keyFile);
+	if(certFile == NULL) {
+		errmsg.LogError(0, RS_RET_CERT_MISSING, "error: certificate file is not set, cannot "
+				"continue");
+		ABORT_FINALIZE(RS_RET_CERT_MISSING);
+	}
+	if(keyFile == NULL) {
+		errmsg.LogError(0, RS_RET_CERTKEY_MISSING, "error: key file is not set, cannot "
+				"continue");
+		ABORT_FINALIZE(RS_RET_CERTKEY_MISSING);
+	}
 	CHKgnutls(gnutls_certificate_set_x509_key_file(xcred, (char*)certFile, (char*)keyFile, GNUTLS_X509_FMT_PEM));
 
 finalize_it:
-	if(iRet != RS_RET_OK) {
+	if(iRet != RS_RET_OK && iRet != RS_RET_CERT_MISSING && iRet != RS_RET_CERTKEY_MISSING) {
 		pGnuErr = gtlsStrerror(gnuRet);
 		errno = 0;
 		errmsg.LogError(0, iRet, "error adding our certificate. GnuTLS error %d, message: '%s', "
@@ -580,6 +590,11 @@ gtlsGlblInit(void)
 
 	/* sets the trusted cas file */
 	cafile = glbl.GetDfltNetstrmDrvrCAF();
+	if(cafile == NULL) {
+		errmsg.LogError(0, RS_RET_CA_CERT_MISSING, "error: ca certificate is not set, cannot "
+				"continue");
+		ABORT_FINALIZE(RS_RET_CA_CERT_MISSING);
+	}
 	dbgprintf("GTLS CA file: '%s'\n", cafile);
 	gnuRet = gnutls_certificate_set_x509_trust_file(xcred, (char*)cafile, GNUTLS_X509_FMT_PEM);
 	if(gnuRet < 0) {
