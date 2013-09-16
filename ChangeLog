@@ -1,5 +1,8 @@
 ---------------------------------------------------------------------------
 Version 7.4.5  [v7.4-stable] 2013-09-??
+- bugfix: doc: imuxsock legacy param $SystemLogSocketParseTrusted was
+  misspelled
+  Thanks to David Lang for alerting us
 - bugfix: small memory leak in imfile when $ResetConfigVariables was used
   Thanks to Grégory Nuyttens for reporting this bug and providig a fix
 - bugfix: segfault on startup if TLS was used but no CA cert set
