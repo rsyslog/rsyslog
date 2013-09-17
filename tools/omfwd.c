@@ -843,7 +843,6 @@ initTCP(instanceData *pData)
 		CHKiRet(tcpclt.SetSendPrepRetry(pData->pTCPClt, TCPSendPrepRetry));
 		CHKiRet(tcpclt.SetFraming(pData->pTCPClt, pData->tcp_framing));
 		CHKiRet(tcpclt.SetRebindInterval(pData->pTCPClt, pData->iRebindInterval));
-		pData->iStrmDrvrMode = cs.iStrmDrvrMode;
 		if(cs.pszStrmDrvr != NULL)
 			CHKmalloc(pData->pszStrmDrvr = (uchar*)strdup((char*)cs.pszStrmDrvr));
 		if(cs.pszStrmDrvrAuthMode != NULL)

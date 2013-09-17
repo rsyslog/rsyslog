@@ -1,5 +1,8 @@
 ---------------------------------------------------------------------------
 Version 7.5.4 [devel] 2013-09-??
+- bugfix: omfwd parameter streamdrivermmode was not properly handled
+  it was always overwritten by whatever value was set via the 
+  legacy directive $ActionSendStreamDriverMode
 - imtcp: add streamdriver.name module parameter
   permits overriding the system default stream driver (gtls, ptcp)
 - bugfix: build system: libgcrypt.h needed even if libgrcypt was disabled
