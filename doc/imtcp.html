@@ -68,6 +68,15 @@ configure that explicitly.
 <li><b>MaxListeners</b> &lt;number&gt;<br>
 Sets the maximum number of listeners (server ports) supported. Default is 20. This must be set before the first $InputTCPServerRun directive.</li>
 <li><b>MaxSessions</b> &lt;number&gt;<br> Sets the maximum number of sessions supported. Default is 200. This must be set before the first $InputTCPServerRun directive</li>
+<li><b>StreamDriver.Name</b> &lt;name&gt;<br>
+Sets the driver name and overrides the system default. This enables e.g. to
+define a system default of "gtls" (for TLS transmission) and override it to
+"ptcp" (traditional unprotected plain tcp). Note, however, that this is a module
+parameter. Currently, imtcp does not support mixed TLS/non-TLS listeners. If this
+is desired, use imtcp for TLS, and imptcp for non-TLS. However, setting the
+stream driver enables you to use e.g. plain tcp for the imtcp listeners while
+setting the system default to TLS, which is then used by multiple forwarding (omfwd)
+actions.
 <li><b>StreamDriver.Mode</b> &lt;number&gt;<br>
 Sets the driver mode for the currently selected <a href="netstream.html">network stream driver</a>. &lt;number&gt; is driver specific.</li>
 <li><b>StreamDriver.AuthMode</b> &lt;mode-string&gt;<br>

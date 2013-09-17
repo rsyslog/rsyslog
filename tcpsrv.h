@@ -57,6 +57,7 @@ struct tcpsrv_s {
 	netstrms_t *pNS;	/**< pointer to network stream subsystem */
 	int iDrvrMode;		/**< mode of the stream driver to use */
 	uchar *pszDrvrAuthMode;	/**< auth mode of the stream driver to use */
+	uchar *pszDrvrName;	/**< name of stream driver to use */
 	uchar *pszInputName;	/**< value to be used as input name */
 	ruleset_t *pRuleset;	/**< ruleset to bind to */
 	permittedPeers_t *pPermPeers;/**< driver's permitted peers */
@@ -112,7 +113,6 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*ConstructFinalize)(tcpsrv_t __attribute__((unused)) *pThis);
 	rsRetVal (*Destruct)(tcpsrv_t **ppThis);
 	rsRetVal (*configureTCPListen)(tcpsrv_t*, uchar *pszPort, int bSuppOctetFram);
-	//rsRetVal (*SessAccept)(tcpsrv_t *pThis, tcpLstnPortList_t*, tcps_sess_t **ppSess, netstrm_t *pStrm);
 	rsRetVal (*create_tcp_socket)(tcpsrv_t *pThis);
 	rsRetVal (*Run)(tcpsrv_t *pThis);
 	/* set methods */
@@ -151,8 +151,10 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetLinuxLikeRatelimiters)(tcpsrv_t *pThis, int interval, int burst);
 	/* added v14 -- rgerhards, 2013-07-28 */
 	rsRetVal (*SetDfltTZ)(tcpsrv_t *pThis, uchar *dfltTZ);
+	/* added v15 -- rgerhards, 2013-09-17 */
+	rsRetVal (*SetDrvrName)(tcpsrv_t *pThis, uchar *pszName);
 ENDinterface(tcpsrv)
-#define tcpsrvCURR_IF_VERSION 13 /* increment whenever you change the interface structure! */
+#define tcpsrvCURR_IF_VERSION 15 /* increment whenever you change the interface structure! */
 /* change for v4:
  * - SetAddtlFrameDelim() added -- rgerhards, 2008-12-10
  * - SetInputName() added -- rgerhards, 2008-12-10

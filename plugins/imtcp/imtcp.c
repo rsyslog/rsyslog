@@ -125,6 +125,7 @@ struct modConfData_s {
 	sbool bUseFlowControl; /* use flow control, what means indicate ourselfs a "light delayable" */
 	sbool bKeepAlive;
 	sbool bEmitMsgOnClose; /* emit an informational message on close by remote peer */
+	uchar *pszStrmDrvrName; /* stream driver to use */
 	uchar *pszStrmDrvrAuthMode; /* authentication mode to use */
 	struct cnfarray *permittedPeers;
 	sbool configSetViaV2Method;
@@ -145,6 +146,7 @@ static struct cnfparamdescr modpdescr[] = {
 	{ "maxlisteners", eCmdHdlrPositiveInt, 0 },
 	{ "streamdriver.mode", eCmdHdlrPositiveInt, 0 },
 	{ "streamdriver.authmode", eCmdHdlrString, 0 },
+	{ "streamdriver.name", eCmdHdlrString, 0 },
 	{ "permittedpeer", eCmdHdlrArray, 0 },
 	{ "keepalive", eCmdHdlrBinary, 0 }
 };
@@ -331,6 +333,9 @@ addListner(modConfData_t *modConf, instanceConf_t *inst)
 		CHKiRet(tcpsrv.SetbDisableLFDelim(pOurTcpsrv, modConf->bDisableLFDelim));
 		CHKiRet(tcpsrv.SetNotificationOnRemoteClose(pOurTcpsrv, modConf->bEmitMsgOnClose));
 		/* now set optional params, but only if they were actually configured */
+		if(modConf->pszStrmDrvrName != NULL) {
+			CHKiRet(tcpsrv.SetDrvrName(pOurTcpsrv, modConf->pszStrmDrvrName));
+		}
 		if(modConf->pszStrmDrvrAuthMode != NULL) {
 			CHKiRet(tcpsrv.SetDrvrAuthMode(pOurTcpsrv, modConf->pszStrmDrvrAuthMode));
 		}
@@ -419,6 +424,7 @@ CODESTARTbeginCnfLoad
 	loadModConf->bEmitMsgOnClose = 0;
 	loadModConf->iAddtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
 	loadModConf->bDisableLFDelim = 0;
+	loadModConf->pszStrmDrvrName = NULL;
 	loadModConf->pszStrmDrvrAuthMode = NULL;
 	loadModConf->permittedPeers = NULL;
 	loadModConf->configSetViaV2Method = 0;
@@ -469,6 +475,8 @@ CODESTARTsetModCnf
 			loadModConf->iStrmDrvrMode = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "streamdriver.authmode")) {
 			loadModConf->pszStrmDrvrAuthMode = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(modpblk.descr[i].name, "streamdriver.name")) {
+			loadModConf->pszStrmDrvrName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(modpblk.descr[i].name, "permittedpeer")) {
 			loadModConf->permittedPeers = cnfarrayDup(pvals[i].val.d.ar);
 		} else {
@@ -569,6 +577,7 @@ ENDactivateCnf
 BEGINfreeCnf
 	instanceConf_t *inst, *del;
 CODESTARTfreeCnf
+	free(pModConf->pszStrmDrvrName);
 	free(pModConf->pszStrmDrvrAuthMode);
 	if(pModConf->permittedPeers != NULL) {
 		cnfarrayContentDestruct(pModConf->permittedPeers);

@@ -66,7 +66,6 @@ loadDrvr(nspoll_t *pThis)
 	uchar szDrvrName[48]; /* 48 shall be large enough */
 
 	pBaseDrvrName = pThis->pBaseDrvrName;
-	if(pBaseDrvrName == NULL) /* if no drvr name is set, use system default */
 		pBaseDrvrName = glbl.GetDfltNetstrmDrvr();
 	if(snprintf((char*)szDrvrName, sizeof(szDrvrName), "lmnsdpoll_%s", pBaseDrvrName) == sizeof(szDrvrName))
 		ABORT_FINALIZE(RS_RET_DRVRNAME_TOO_LONG);
@@ -138,6 +137,29 @@ Wait(nspoll_t *pThis, int timeout, int *numEntries, nsd_epworkset_t workset[]) {
 }
 
 
+/* set the base driver name. If the driver name
+ * is set to NULL, the previously set name is deleted but
+ * no name set again (which results in the system default being
+ * used)-- rgerhards, 2008-05-05
+ */
+static rsRetVal
+SetDrvrName(nspoll_t *pThis, uchar *pszName)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, netstrms);
+	if(pThis->pBaseDrvrName != NULL) {
+		free(pThis->pBaseDrvrName);
+		pThis->pBaseDrvrName = NULL;
+	}
+
+	if(pszName != NULL) {
+		CHKmalloc(pThis->pBaseDrvrName = (uchar*) strdup((char*) pszName));
+	}
+finalize_it:
+	RETiRet;
+}
+
+
 /* semantics like the epoll_ctl() function, does the same thing.
  * rgerhards, 2009-11-18
  */
@@ -164,6 +186,7 @@ CODESTARTobjQueryInterface(nspoll)
 	 */
 	pIf->Construct = nspollConstruct;
 	pIf->ConstructFinalize = ConstructFinalize;
+	pIf->SetDrvrName = SetDrvrName;
 	pIf->Destruct = nspollDestruct;
 	pIf->Wait = Wait;
 	pIf->Ctl = Ctl;

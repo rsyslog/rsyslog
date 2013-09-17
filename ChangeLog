@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 7.5.4 [devel] 2013-09-??
+- imtcp: add streamdriver.name module parameter
+  permits overriding the system default stream driver (gtls, ptcp)
 - bugfix: build system: libgcrypt.h needed even if libgrcypt was disabled
   Thanks to Jonny Törnbom for reporting this problem
 ---------------------------------------------------------------------------

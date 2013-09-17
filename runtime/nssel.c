@@ -127,6 +127,29 @@ finalize_it:
 }
 
 
+/* set the base driver name. If the driver name
+ * is set to NULL, the previously set name is deleted but
+ * no name set again (which results in the system default being
+ * used)-- rgerhards, 2008-05-05
+ */
+static rsRetVal
+SetDrvrName(nssel_t *pThis, uchar *pszName)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, netstrms);
+	if(pThis->pBaseDrvrName != NULL) {
+		free(pThis->pBaseDrvrName);
+		pThis->pBaseDrvrName = NULL;
+	}
+
+	if(pszName != NULL) {
+		CHKmalloc(pThis->pBaseDrvrName = (uchar*) strdup((char*) pszName));
+	}
+finalize_it:
+	RETiRet;
+}
+
+
 /* Add a stream object to the current select() set.
  * Note that a single stream may have multiple "sockets" if
  * it is a listener. If so, all of them are begin added.
@@ -195,6 +218,7 @@ CODESTARTobjQueryInterface(nssel)
 	pIf->Construct = nsselConstruct;
 	pIf->ConstructFinalize = ConstructFinalize;
 	pIf->Destruct = nsselDestruct;
+	pIf->SetDrvrName = SetDrvrName;
 	pIf->Add = Add;
 	pIf->Wait = Wait;
 	pIf->IsReady = IsReady;
