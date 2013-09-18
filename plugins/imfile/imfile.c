@@ -479,7 +479,7 @@ CODESTARTnewInpInst
 		} else if(!strcmp(inppblk.descr[i].name, "severity")) {
 			inst->iSeverity = pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "facility")) {
-			inst->iSeverity = pvals[i].val.d.n;
+			inst->iFacility = pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "readmode")) {
 			inst->readMode = (uint8_t) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "escapelf")) {
