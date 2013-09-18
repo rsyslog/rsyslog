@@ -1,5 +1,8 @@
 ---------------------------------------------------------------------------
 Version 7.5.4 [devel] 2013-09-??
+- imuxsock: handle unlimited number of additional listen sockets
+  At the same time, (very) slightly remove memory footprint when
+  few listeners are monitored.
 - bugfix: omfwd parameter streamdrivermmode was not properly handled
   it was always overwritten by whatever value was set via the 
   legacy directive $ActionSendStreamDriverMode

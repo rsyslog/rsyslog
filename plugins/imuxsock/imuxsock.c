@@ -62,7 +62,6 @@ MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("imuxsock")
 
 /* defines */
-#define MAXFUNIX	50
 #ifndef _PATH_LOG
 #ifdef BSD
 #define _PATH_LOG	"/var/run/log"
@@ -148,7 +147,7 @@ typedef struct lstn_s {
 	sbool bUseSysTimeStamp;	/* use timestamp from system (instead of from message) */
 	sbool bUnlink;		/* unlink&re-create socket at start and end of processing */
 } lstn_t;
-static lstn_t listeners[MAXFUNIX];
+static lstn_t *listeners;
 
 static prop_t *pLocalHostIP = NULL;	/* there is only one global IP for all internally-generated messages */
 static prop_t *pInputName = NULL;	/* our inputName currently is always "imudp", and this will hold it */
@@ -359,12 +358,7 @@ finalize_it:
 }
 
 
-/* add an additional listen socket. Socket names are added
- * until the array is filled up. It is never reset, only at
- * module unload.
- * TODO: we should change the array to a list so that we
- * can support any number of listen socket names.
- * rgerhards, 2007-12-20
+/* add an additional listen socket. 
  * added capability to specify hostname for socket -- rgerhards, 2008-08-01
  */
 static rsRetVal
@@ -372,53 +366,50 @@ addListner(instanceConf_t *inst)
 {
 	DEFiRet;
 
-	if(nfd < MAXFUNIX) {
-		if(*inst->sockName == ':') {
-			listeners[nfd].bParseHost = 1;
-		} else {
-			listeners[nfd].bParseHost = 0;
-		}
-		if(inst->pLogHostName == NULL) {
-			listeners[nfd].hostName = NULL;
-		} else {
-			CHKiRet(prop.Construct(&(listeners[nfd].hostName)));
-			CHKiRet(prop.SetString(listeners[nfd].hostName, inst->pLogHostName, ustrlen(inst->pLogHostName)));
-			CHKiRet(prop.ConstructFinalize(listeners[nfd].hostName));
-		}
-		if(inst->ratelimitInterval > 0) {
-			if((listeners[nfd].ht = create_hashtable(100, hash_from_key_fn, key_equals_fn,
-				(void(*)(void*))ratelimitDestruct)) == NULL) {
-				/* in this case, we simply turn off rate-limiting */
-				DBGPRINTF("imuxsock: turning off rate limiting because we could not "
-					  "create hash table\n");
-				inst->ratelimitInterval = 0;
-			}
-		}
-		listeners[nfd].ratelimitInterval = inst->ratelimitInterval;
-		listeners[nfd].ratelimitBurst = inst->ratelimitBurst;
-		listeners[nfd].ratelimitSev = inst->ratelimitSeverity;
-		listeners[nfd].flowCtl = inst->bUseFlowCtl ? eFLOWCTL_LIGHT_DELAY : eFLOWCTL_NO_DELAY;
-		listeners[nfd].flags = inst->bIgnoreTimestamp ? IGNDATE : NOFLAG;
-		listeners[nfd].bCreatePath = inst->bCreatePath;
-		listeners[nfd].sockName = ustrdup(inst->sockName);
-		listeners[nfd].bUseCreds = (inst->bDiscardOwnMsgs || inst->bWritePid || inst->ratelimitInterval || inst->bAnnotate) ? 1 : 0;
-		listeners[nfd].bAnnotate = inst->bAnnotate;
-		listeners[nfd].bParseTrusted = inst->bParseTrusted;
-		listeners[nfd].bDiscardOwnMsgs = inst->bDiscardOwnMsgs;
-		listeners[nfd].bUnlink = inst->bUnlink;
-		listeners[nfd].bWritePid = inst->bWritePid;
-		listeners[nfd].bUseSysTimeStamp = inst->bUseSysTimeStamp;
-		CHKiRet(ratelimitNew(&listeners[nfd].dflt_ratelimiter, "imuxsock", NULL));
-		ratelimitSetLinuxLike(listeners[nfd].dflt_ratelimiter,
-				      listeners[nfd].ratelimitInterval,
-				      listeners[nfd].ratelimitBurst);
-		ratelimitSetSeverity(listeners[nfd].dflt_ratelimiter,
-				     listeners[nfd].ratelimitSev);
-		nfd++;
+	if(*inst->sockName == ':') {
+		listeners[nfd].bParseHost = 1;
 	} else {
-		errmsg.LogError(0, NO_ERRCODE, "Out of unix socket name descriptors, ignoring %s\n",
-			 inst->sockName);
+		listeners[nfd].bParseHost = 0;
 	}
+	if(inst->pLogHostName == NULL) {
+		listeners[nfd].hostName = NULL;
+	} else {
+		CHKiRet(prop.Construct(&(listeners[nfd].hostName)));
+		CHKiRet(prop.SetString(listeners[nfd].hostName, inst->pLogHostName, ustrlen(inst->pLogHostName)));
+		CHKiRet(prop.ConstructFinalize(listeners[nfd].hostName));
+	}
+	if(inst->ratelimitInterval > 0) {
+		if((listeners[nfd].ht = create_hashtable(100, hash_from_key_fn, key_equals_fn,
+			(void(*)(void*))ratelimitDestruct)) == NULL) {
+			/* in this case, we simply turn off rate-limiting */
+			DBGPRINTF("imuxsock: turning off rate limiting because we could not "
+				  "create hash table\n");
+			inst->ratelimitInterval = 0;
+		}
+	} else {
+		listeners[nfd].ht = NULL;
+	}
+	listeners[nfd].ratelimitInterval = inst->ratelimitInterval;
+	listeners[nfd].ratelimitBurst = inst->ratelimitBurst;
+	listeners[nfd].ratelimitSev = inst->ratelimitSeverity;
+	listeners[nfd].flowCtl = inst->bUseFlowCtl ? eFLOWCTL_LIGHT_DELAY : eFLOWCTL_NO_DELAY;
+	listeners[nfd].flags = inst->bIgnoreTimestamp ? IGNDATE : NOFLAG;
+	listeners[nfd].bCreatePath = inst->bCreatePath;
+	listeners[nfd].sockName = ustrdup(inst->sockName);
+	listeners[nfd].bUseCreds = (inst->bDiscardOwnMsgs || inst->bWritePid || inst->ratelimitInterval || inst->bAnnotate) ? 1 : 0;
+	listeners[nfd].bAnnotate = inst->bAnnotate;
+	listeners[nfd].bParseTrusted = inst->bParseTrusted;
+	listeners[nfd].bDiscardOwnMsgs = inst->bDiscardOwnMsgs;
+	listeners[nfd].bUnlink = inst->bUnlink;
+	listeners[nfd].bWritePid = inst->bWritePid;
+	listeners[nfd].bUseSysTimeStamp = inst->bUseSysTimeStamp;
+	CHKiRet(ratelimitNew(&listeners[nfd].dflt_ratelimiter, "imuxsock", NULL));
+	ratelimitSetLinuxLike(listeners[nfd].dflt_ratelimiter,
+			      listeners[nfd].ratelimitInterval,
+			      listeners[nfd].ratelimitBurst);
+	ratelimitSetSeverity(listeners[nfd].dflt_ratelimiter,
+			     listeners[nfd].ratelimitSev);
+	nfd++;
 
 finalize_it:
 	RETiRet;
@@ -1282,12 +1273,29 @@ ENDcheckCnf
 
 BEGINactivateCnfPrePrivDrop
 	instanceConf_t *inst;
+	int nLstn;
+	int i;
 CODESTARTactivateCnfPrePrivDrop
 	runModConf = pModConf;
 	if(runModConf->bOmitLocalLogging && nfd == 1)
 		ABORT_FINALIZE(RS_RET_OK);
+	/* we first calculate the number of listeners so that we can
+	 * appropriately size the listener array.
+	 */
+	nLstn = 0;
 	for(inst = runModConf->root ; inst != NULL ; inst = inst->next) {
-		addListner(inst);
+		++nLstn;
+	}
+	if(nLstn > 0) {
+		DBGPRINTF("imuxsock: allocating memory for %d addtl listeners\n", nLstn);
+		CHKmalloc(listeners = realloc(listeners, (1+nLstn)*sizeof(lstn_t)));
+		for(i = 1 ; i < nLstn ; ++i) {
+			listeners[i].sockName = NULL;
+			listeners[i].fd  = -1;
+		}
+		for(inst = runModConf->root ; inst != NULL ; inst = inst->next) {
+			addListner(inst);
+		}
 	}
 	CHKiRet(activateListeners());
 finalize_it:
@@ -1419,6 +1427,7 @@ ENDafterRun
 
 BEGINmodExit
 CODESTARTmodExit
+	free(listeners);
 	if(pInputName != NULL)
 		prop.Destruct(&pInputName);
 
@@ -1481,7 +1490,6 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 
 
 BEGINmodInit()
-	int i;
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
@@ -1512,6 +1520,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	pLocalHostIP = glbl.GetLocalHostIP();
 
 	/* init system log socket settings */
+	CHKmalloc(listeners = malloc(sizeof(lstn_t)));
 	listeners[0].flags = IGNDATE;
 	listeners[0].sockName = UCHAR_CONSTANT(_PATH_LOG);
 	listeners[0].hostName = NULL;
@@ -1531,12 +1540,6 @@ CODEmodInit_QueryRegCFSLineHdlr
 		DBGPRINTF("imuxsock: turning off rate limiting for system socket "
 			  "because we could not create hash table\n");
 		listeners[0].ratelimitInterval = 0;
-	}
-
-	/* initialize socket names */
-	for(i = 1 ; i < MAXFUNIX ; ++i) {
-		listeners[i].sockName = NULL;
-		listeners[i].fd  = -1;
 	}
 
 	/* register config file handlers */
