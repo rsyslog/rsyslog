@@ -50,10 +50,14 @@ MODULE_CNFNAME("mmutf8fix")
 DEFobjCurrIf(errmsg);
 DEF_OMOD_STATIC_DATA
 
-/* config variables */
+/* define operation modes we have */
+#define MODE_CC 0	 /* just fix control characters */
+#define MODE_UTF8 1	 /* do real UTF-8 fixing */
 
+/* config variables */
 typedef struct _instanceData {
 	uchar replChar;
+	uint8_t mode;		/* operations mode */
 } instanceData;
 
 struct modConfData_s {
@@ -66,6 +70,7 @@ static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current ex
 /* tables for interfacing with the v6 config system */
 /* action (instance) parameters */
 static struct cnfparamdescr actpdescr[] = {
+	{ "mode", eCmdHdlrGetWord, 0 },
 	{ "replacementchar", eCmdHdlrGetChar, 0 }
 };
 static struct cnfparamblk actpblk =
@@ -116,6 +121,7 @@ ENDfreeInstance
 static inline void
 setInstParamDefaults(instanceData *pData)
 {
+	pData->mode = MODE_UTF8;
 	pData->replChar = ' ';
 }
 
@@ -136,7 +142,21 @@ CODESTARTnewActInst
 	for(i = 0 ; i < actpblk.nParams ; ++i) {
 		if(!pvals[i].bUsed)
 			continue;
-		if(!strcmp(actpblk.descr[i].name, "replacementchar")) {
+		if(!strcmp(actpblk.descr[i].name, "mode")) {
+			if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"utf8",
+					 sizeof("utf8")-1)) {
+				pData->mode = MODE_UTF8;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"controlcharacters",
+					 sizeof("controlcharacters")-1)) {
+				pData->mode = MODE_CC;
+			} else {
+				char *cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
+				errmsg.LogError(0, RS_RET_INVLD_MODE,
+					"mmutf8fix: invalid mode '%s' - ignored",
+					cstr);
+				free(cstr);
+			}
+		} else if(!strcmp(actpblk.descr[i].name, "replacementchar")) {
 			pData->replChar = es_getBufAddr(pvals[i].val.d.estr)[0];
 		} else {
 			dbgprintf("mmutf8fix: program error, non-handled "
@@ -159,19 +179,76 @@ CODESTARTtryResume
 ENDtryResume
 
 
-BEGINdoAction
-	msg_t *pMsg;
-	uchar *msg;
-	int lenMsg;
+static inline void
+doCC(instanceData *pData, uchar *msg, int lenMsg)
+{
 	int i;
-CODESTARTdoAction
-	pMsg = (msg_t*) ppString[0];
-	lenMsg = getMSGLen(pMsg);
-	msg = getMSG(pMsg);
+
 	for(i = 0 ; i < lenMsg ; ++i) {
 		if(msg[i] < 32 || msg[i] > 126) {
 			msg[i] = pData->replChar;
 		}
+	}
+}
+
+static inline void
+doUTF8(instanceData *pData, uchar *msg, int lenMsg)
+{
+	uchar c;
+	int8_t seqLen, bytesLeft = 0;
+	int strtIdx, endIdx;
+	int i, j;
+
+	for(i = 0 ; i < lenMsg ; ++i) {
+		c = msg[i];
+		if(bytesLeft) {
+			if((c & 0xc0) != 0x80) {
+				/* sequence invalid, invalidate all bytes */
+				endIdx = strtIdx + seqLen;
+				if(endIdx > lenMsg)
+					endIdx = lenMsg;
+				for(j = strtIdx ; j < endIdx ; ++j)
+					msg[j] = pData->replChar;
+				i = endIdx - 1;
+				bytesLeft = 0;
+			} else {
+				--bytesLeft;
+			}
+		} else {
+			if((c & 0x80) == 0) {
+				/* 1-byte sequence, US-ASCII */
+				; /* nothing to do, all well */
+			} else if((c & 0xe0) == 0xc0) {
+				/* 2-byte sequence */
+				strtIdx = i;
+				seqLen = bytesLeft = 1;
+			} else if((c & 0xf0) == 0xe0) {
+				/* 3-byte sequence */
+				strtIdx = i;
+				seqLen = bytesLeft = 2;
+			} else if((c & 0xf8) == 0xf0) {
+				/* 4-byte sequence */
+				strtIdx = i;
+				seqLen = bytesLeft = 3;
+			} else {   /* invalid (5&6 byte forbidden by RFC3629) */
+				msg[i] = pData->replChar;
+			}
+		}
+	}
+}
+
+BEGINdoAction
+	msg_t *pMsg;
+	uchar *msg;
+	int lenMsg;
+CODESTARTdoAction
+	pMsg = (msg_t*) ppString[0];
+	lenMsg = getMSGLen(pMsg);
+	msg = getMSG(pMsg);
+	if(pData->mode == MODE_CC) {
+		doCC(pData, msg, lenMsg);
+	} else {
+		doUTF8(pData, msg, lenMsg);
 	}
 ENDdoAction
 
@@ -201,7 +278,6 @@ CODEqueryEtryPt_STD_OMOD_QUERIES
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 CODEqueryEtryPt_STD_CONF2_QUERIES
 ENDqueryEtryPt
-
 
 
 BEGINmodInit()
