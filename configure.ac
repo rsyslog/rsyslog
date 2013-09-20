@@ -964,6 +964,19 @@ AC_ARG_ENABLE(mmanon,
 AM_CONDITIONAL(ENABLE_MMANON, test x$enable_mmanon = xyes)
 
 
+# mmutf8fix
+AC_ARG_ENABLE(mmutf8fix,
+        [AS_HELP_STRING([--enable-mmutf8fix],[Enable building mmutf8fix support @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_mmutf8fix="yes" ;;
+          no) enable_mmutf8fix="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-mmutf8fix) ;;
+         esac],
+        [enable_mmutf8fix=no]
+)
+AM_CONDITIONAL(ENABLE_MMUTF8FIX, test x$enable_mmutf8fix = xyes)
+
+
 # mmcount
 AC_ARG_ENABLE(mmcount,
         [AS_HELP_STRING([--enable-mmcount],[Enable message counting @<:@default=no@:>@])],
@@ -1518,6 +1531,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/mmjsonparse/Makefile \
 		plugins/mmaudit/Makefile \
 		plugins/mmanon/Makefile \
+		plugins/mmutf8fix/Makefile \
 		plugins/mmcount/Makefile \
 		plugins/mmfields/Makefile \
 		plugins/mmrfc5424addhmac/Makefile \
@@ -1584,6 +1598,7 @@ echo "    mmnormalize module will be compiled:      $enable_mmnormalize"
 echo "    mmjsonparse module will be compiled:      $enable_mmjsonparse"
 echo "    mmjaduit module will be compiled:         $enable_mmaudit"
 echo "    mmsnmptrapd module will be compiled:      $enable_mmsnmptrapd"
+echo "    mmutf8fix enabled:                        $enable_mmutf8fix"
 echo "    mmrfc5424addhmac enabled:                 $enable_mmrfc5424addhmac"
 echo
 echo "---{ strgen modules }---"
