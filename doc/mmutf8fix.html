@@ -45,9 +45,9 @@ ruleset.
 <p>&nbsp;</p>
 <p><b>Action Confguration Parameters</b>:</p>
 <ul>
-<li><b>mode</b> - <b>utf8</b>/controlcharacters<br>
+<li><b>mode</b> - <b>utf-8</b>/controlcharacters<br>
 This sets the basic detection mode.
-<br>In <b>utf8</b> mode (the default), proper
+<br>In <b>utf-8</b> mode (the default), proper
 UTF-8 encoding is checked and bytes which are not proper UTF-8 sequences
 are acted on. If a proper multi-byte start sequence byte is detected but
 any of the following bytes is invalid, the whole sequence is replaced by
@@ -66,7 +66,7 @@ MUST be a <b>printable</b> US-ASCII character.
 
 <p><b>Caveats/Known Bugs:</b>
 <ul>
-<li><b>only IPv4</b> is supported
+<li>overlong UTF-8 encodings are currently not detected in utf-8 mode.
 </ul>
 
 <p><b>Samples:</b></p>

@@ -143,8 +143,8 @@ CODESTARTnewActInst
 		if(!pvals[i].bUsed)
 			continue;
 		if(!strcmp(actpblk.descr[i].name, "mode")) {
-			if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"utf8",
-					 sizeof("utf8")-1)) {
+			if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"utf-8",
+					 sizeof("utf-8")-1)) {
 				pData->mode = MODE_UTF8;
 			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"controlcharacters",
 					 sizeof("controlcharacters")-1)) {
@@ -191,28 +191,48 @@ doCC(instanceData *pData, uchar *msg, int lenMsg)
 	}
 }
 
+/* fix an invalid multibyte sequence */
+static inline void
+fixInvldMBSeq(instanceData *pData, uchar *msg, int lenMsg, int strtIdx, int *endIdx, int8_t seqLen)
+{
+	int i;
+
+	*endIdx = strtIdx + seqLen;
+	if(*endIdx > lenMsg)
+		*endIdx = lenMsg;
+	for(i = strtIdx ; i < *endIdx ; ++i)
+		msg[i] = pData->replChar;
+}
+
 static inline void
 doUTF8(instanceData *pData, uchar *msg, int lenMsg)
 {
 	uchar c;
 	int8_t seqLen, bytesLeft = 0;
+	uint32_t codepoint;
 	int strtIdx, endIdx;
-	int i, j;
+	int i;
 
 	for(i = 0 ; i < lenMsg ; ++i) {
 		c = msg[i];
 		if(bytesLeft) {
 			if((c & 0xc0) != 0x80) {
 				/* sequence invalid, invalidate all bytes */
-				endIdx = strtIdx + seqLen;
-				if(endIdx > lenMsg)
-					endIdx = lenMsg;
-				for(j = strtIdx ; j < endIdx ; ++j)
-					msg[j] = pData->replChar;
+				fixInvldMBSeq(pData, msg, lenMsg, strtIdx, &endIdx,
+				              seqLen);
 				i = endIdx - 1;
 				bytesLeft = 0;
 			} else {
+				codepoint = (codepoint << 6) | (c & 0x3f);
 				--bytesLeft;
+				if(bytesLeft == 0) {
+					/* too-large codepoint? */
+					if(codepoint > 0x10FFFF) {
+						fixInvldMBSeq(pData, msg, lenMsg,
+							      strtIdx, &endIdx,
+							      seqLen);
+					}
+				}
 			}
 		} else {
 			if((c & 0x80) == 0) {
@@ -222,14 +242,17 @@ doUTF8(instanceData *pData, uchar *msg, int lenMsg)
 				/* 2-byte sequence */
 				strtIdx = i;
 				seqLen = bytesLeft = 1;
+				codepoint = c & 0x1f;
 			} else if((c & 0xf0) == 0xe0) {
 				/* 3-byte sequence */
 				strtIdx = i;
 				seqLen = bytesLeft = 2;
+				codepoint = c & 0x0f;
 			} else if((c & 0xf8) == 0xf0) {
 				/* 4-byte sequence */
 				strtIdx = i;
 				seqLen = bytesLeft = 3;
+				codepoint = c & 0x07;
 			} else {   /* invalid (5&6 byte forbidden by RFC3629) */
 				msg[i] = pData->replChar;
 			}
