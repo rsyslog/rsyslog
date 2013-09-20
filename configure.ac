@@ -989,6 +989,18 @@ AC_ARG_ENABLE(mmfields,
 )
 AM_CONDITIONAL(ENABLE_MMFIELDS, test x$enable_mmfields = xyes)
 
+# mmrfc5424addhmac
+AC_ARG_ENABLE(mmrfc5424addhmac,
+        [AS_HELP_STRING([--enable-mmrfc5424addhmac],[Enable building mmrfc5424addhmac support @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_mmrfc5424addhmac="yes" ;;
+          no) enable_mmrfc5424addhmac="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-mmrfc5424addhmac) ;;
+         esac],
+        [enable_mmrfc5424addhmac=no]
+)
+AM_CONDITIONAL(ENABLE_MMRFC5424ADDHMAC, test x$enable_mmrfc5424addhmac = xyes)
+
 
 # RELP support
 AC_ARG_ENABLE(relp,
@@ -1508,6 +1520,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/mmanon/Makefile \
 		plugins/mmcount/Makefile \
 		plugins/mmfields/Makefile \
+		plugins/mmrfc5424addhmac/Makefile \
 		plugins/omelasticsearch/Makefile \
 		plugins/sm_cust_bindcdr/Makefile \
 		plugins/mmsnmptrapd/Makefile \
@@ -1571,6 +1584,7 @@ echo "    mmnormalize module will be compiled:      $enable_mmnormalize"
 echo "    mmjsonparse module will be compiled:      $enable_mmjsonparse"
 echo "    mmjaduit module will be compiled:         $enable_mmaudit"
 echo "    mmsnmptrapd module will be compiled:      $enable_mmsnmptrapd"
+echo "    mmrfc5424addhmac enabled:                 $enable_mmrfc5424addhmac"
 echo
 echo "---{ strgen modules }---"
 echo "    sm_cust_bindcdr module will be compiled:  $enable_sm_cust_bindcdr"
