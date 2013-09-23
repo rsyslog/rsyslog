@@ -377,13 +377,6 @@ MsgSetRulesetByName(msg_t *pMsg, cstr_t *rulesetName)
 	rulesetGetRuleset(runConf, &(pMsg->pRuleset), rsCStrGetSzStrNoNULL(rulesetName));
 }
 
-
-static inline int getProtocolVersion(msg_t *pM)
-{
-	return(pM->iProtocolVersion);
-}
-
-
 /* do a DNS reverse resolution, if not already done, reflect status
  * rgerhards, 2009-11-16
  */
@@ -1292,7 +1285,7 @@ static rsRetVal aquirePROCIDFromTAG(msg_t *pM)
 	if(pM->pCSPROCID != NULL)
 		return RS_RET_OK; /* we are already done ;) */
 
-	if(getProtocolVersion(pM) != 0)
+	if(msgGetProtocolVersion(pM) != 0)
 		return RS_RET_OK; /* we can only emulate if we have legacy format */
 
 	pszTag = (uchar*) ((pM->iLenTAG < CONF_TAG_BUFSIZE) ? pM->TAG.szBuf : pM->TAG.pszTAG);
@@ -1975,7 +1968,7 @@ static inline void tryEmulateTAG(msg_t *pM, sbool bLockMutex)
 		return; /* done, no need to emulate */
 	}
 	
-	if(getProtocolVersion(pM) == 1) {
+	if(msgGetProtocolVersion(pM) == 1) {
 		if(!strcmp(getPROCID(pM, MUTEX_ALREADY_LOCKED), "-")) {
 			/* no process ID, use APP-NAME only */
 			MsgSetTAG(pM, (uchar*) getAPPNAME(pM, MUTEX_ALREADY_LOCKED), getAPPNAMELen(pM, MUTEX_ALREADY_LOCKED));
@@ -2145,7 +2138,7 @@ static void tryEmulateAPPNAME(msg_t *pM)
 	if(pM->pCSAPPNAME != NULL)
 		return; /* we are already done */
 
-	if(getProtocolVersion(pM) == 0) {
+	if(msgGetProtocolVersion(pM) == 0) {
 		/* only then it makes sense to emulate */
 		MsgSetAPPNAME(pM, (char*)getProgramName(pM, MUTEX_ALREADY_LOCKED));
 	}

@@ -142,6 +142,9 @@ struct msg {
 #define NEEDS_ACLCHK_U	0x080	/* check UDP ACLs after DNS resolution has been done in main queue consumer */
 #define NO_PRI_IN_RAW	0x100	/* rawmsg does not include a PRI (Solaris!), but PRI is already set correctly in the msg object */
 
+/* (syslog) protocol types */
+#define MSG_LEGACY_PROTOCOL 0
+#define MSG_RFC5424_PROTOCOL 1
 
 /* function prototypes
  */
@@ -213,6 +216,12 @@ rsRetVal jsonFind(msg_t *pM, es_str_t *propName, struct json_object **jsonres);
 static inline rsRetVal
 msgUnsetJSON(msg_t *pMsg, uchar *varname) {
 	return msgDelJSON(pMsg, varname+1);
+}
+
+static inline int
+msgGetProtocolVersion(msg_t *pM)
+{
+	return(pM->iProtocolVersion);
 }
 
 

@@ -211,7 +211,16 @@ BEGINdoAction
 	msg_t *pMsg;
 CODESTARTdoAction
 	pMsg = (msg_t*) ppString[0];
-	hashMsg(pData, pMsg);
+	if(msgGetProtocolVersion(pMsg) == MSG_RFC5424_PROTOCOL) {
+		hashMsg(pData, pMsg);
+	} else {
+		if(Debug) {
+			uchar *pRawMsg;
+			int lenRawMsg;
+			getRawMsg(pMsg, &pRawMsg, &lenRawMsg);
+			dbgprintf("mmrfc5424addhmac: non-rfc5424: %.256s\n", pRawMsg);
+		}
+	}
 ENDdoAction
 
 
