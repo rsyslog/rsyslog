@@ -241,6 +241,10 @@ if ENABLE_MMANON
 SUBDIRS += plugins/mmanon
 endif
 
+if ENABLE_MMPSTRUCDATA
+SUBDIRS += plugins/mmpstrucdata
+endif
+
 if ENABLE_MMRFC5424ADDHMAC
 SUBDIRS += plugins/mmrfc5424addhmac
 endif

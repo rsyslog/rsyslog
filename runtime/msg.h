@@ -225,6 +225,12 @@ msgGetProtocolVersion(msg_t *pM)
 	return(pM->iProtocolVersion);
 }
 
+/* returns non-zero if the message has structured data, 0 otherwise */
+static inline sbool
+MsgHasStructuredData(msg_t *pM)
+{
+	return (pM->pCSStrucData == NULL) ? 0 : 1;
+}
 
 /* ------------------------------ some inline functions ------------------------------ */
 
