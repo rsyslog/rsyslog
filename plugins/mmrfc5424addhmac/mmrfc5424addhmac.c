@@ -198,6 +198,9 @@ hashMsg(instanceData *pData, msg_t *pMsg)
 	uchar hashPrintable[2*EVP_MAX_MD_SIZE+1];
 	DEFiRet;
 
+// Next two debug only!
+MsgGetStructuredData(pMsg, &pRawMsg, &lenRawMsg);
+dbgprintf("DDDD: STRUCTURED-DATA is: '%s'\n", pRawMsg);
 	getRawMsg(pMsg, &pRawMsg, &lenRawMsg);
  	HMAC(pData->algo, pData->key, pData->keylen,
 	     pRawMsg, lenRawMsg, hash, &hashlen);

@@ -2079,31 +2079,20 @@ finalize_it:
 	RETiRet;
 }
 
-/* get the length of the "STRUCTURED-DATA" sz string
- * rgerhards, 2005-11-24
- */
-#if 0 /* This method is currently not called, be we like to preserve it */
-static int getStructuredDataLen(msg_t *pM)
+
+/* get the "STRUCTURED-DATA" as sz string, including length */
+void
+MsgGetStructuredData(msg_t *pM, uchar **pBuf, rs_size_t *len)
 {
-	return (pM->pCSStrucData == NULL) ? 1 : rsCStrLen(pM->pCSStrucData);
-}
-#endif
-
-
-/* get the "STRUCTURED-DATA" as sz string
- * rgerhards, 2005-11-24
- */
-static inline char *getStructuredData(msg_t *pM)
-{
-	uchar *pszRet;
-
 	MsgLock(pM);
-	if(pM->pCSStrucData == NULL)
-		pszRet = UCHAR_CONSTANT("-");
-	else 
-		pszRet = rsCStrGetSzStrNoNULL(pM->pCSStrucData);
+	if(pM->pCSStrucData == NULL) {
+		*pBuf = UCHAR_CONSTANT("-"),
+		*len = 1;
+	} else  {
+		*pBuf = rsCStrGetSzStr(pM->pCSStrucData),
+		*len = cstrLen(pM->pCSStrucData);
+	}
 	MsgUnlock(pM);
-	return (char*) pszRet;
 }
 
 /* get the "programname" as sz string
@@ -2873,7 +2862,7 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			pRes = (uchar*)getProtocolVersionString(pMsg);
 			break;
 		case PROP_STRUCTURED_DATA:
-			pRes = (uchar*)getStructuredData(pMsg);
+			MsgGetStructuredData(pMsg, &pRes, &bufLen);
 			break;
 		case PROP_APP_NAME:
 			pRes = (uchar*)getAPPNAME(pMsg, LOCK_MUTEX);
