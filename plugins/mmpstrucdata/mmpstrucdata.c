@@ -216,11 +216,12 @@ dbgprintf("DDDD: parseSD_NAME, NAME: '%s'\n", namebuf);
 
 
 static inline rsRetVal
-parseSD_PARAM(instanceData *pData, uchar *sdbuf, int lenbuf, int *curridx)
+parseSD_PARAM(instanceData *pData, uchar *sdbuf, int lenbuf, int *curridx, struct json_object *jroot)
 {
 	int i;
 	uchar pName[33];
 	uchar pVal[32*1024];
+	struct json_object *jval;
 	DEFiRet;
 dbgprintf("DDDD: parseSD_PARAM %s\n", sdbuf+*curridx);
 	
@@ -240,6 +241,9 @@ dbgprintf("DDDD: parseSD_PARAM %s\n", sdbuf+*curridx);
 	}
 	++i;
 
+	jval = json_object_new_string((char*)pVal);
+	json_object_object_add(jroot, (char*)pName, jval);
+
 	*curridx = i;
 finalize_it:
 	RETiRet;
@@ -247,10 +251,11 @@ finalize_it:
 
 
 static inline rsRetVal
-parseSD_ELEMENT(instanceData *pData, uchar *sdbuf, int lenbuf, int *curridx)
+parseSD_ELEMENT(instanceData *pData, uchar *sdbuf, int lenbuf, int *curridx, struct json_object *jroot)
 {
 	int i;
 	uchar sd_id[33];
+	struct json_object *json;
 	DEFiRet;
 dbgprintf("DDDD: parseSD_ELEMENT: %s\n", sdbuf+*curridx);
 	
@@ -261,6 +266,7 @@ dbgprintf("DDDD: parseSD_ELEMENT: %s\n", sdbuf+*curridx);
 	++i; /* eat '[' */
 
 	CHKiRet(parseSD_NAME(sdbuf, lenbuf, &i, sd_id));
+	json =  json_object_new_object();
 
 	while(i < lenbuf) {
 		if(sdbuf[i] == ']') {
@@ -271,7 +277,7 @@ dbgprintf("DDDD: parseSD_ELEMENT: %s\n", sdbuf+*curridx);
 		++i;
 		while(i < lenbuf && sdbuf[i] == ' ')
 			++i;
-		CHKiRet(parseSD_PARAM(pData, sdbuf, lenbuf, &i));
+		CHKiRet(parseSD_PARAM(pData, sdbuf, lenbuf, &i, json));
 dbgprintf("DDDD: done parseSD_PARAM, in loop, i:%d, lenbuf:%d, rest: %s\n", i, lenbuf, sdbuf+i);
 	}
 
@@ -282,6 +288,9 @@ dbgprintf("DDDD: done parseSD_PARAM, in loop, i:%d, lenbuf:%d, rest: %s\n", i, l
 	}
 	++i; /* eat ']' */
 	*curridx = i;
+	json_object_object_add(jroot, (char*)sd_id, json);
+dbgprintf("DDDD: SD_ELEMENT: json: '%s'\n", json_object_get_string(json));
+dbgprintf("DDDD: SD_ELEMENT: jroot '%s'\n", json_object_get_string(json));
 finalize_it:
 dbgprintf("DDDD: parseSD_ELEMENT iRet:%d, i:%d, *curridx:%d\n", iRet, i, *curridx);
 	RETiRet;
@@ -298,6 +307,7 @@ parse_sd(instanceData *pData, msg_t *pMsg)
 	int field;
 	uchar *buf;
 #endif
+	struct json_object *json;
 	uchar *sdbuf;
 	int lenbuf;
 	int i = 0;
@@ -312,28 +322,17 @@ parse_sd(instanceData *pData, msg_t *pMsg)
 #endif
 
 dbgprintf("DDDD: parse_sd\n");
-	MsgGetStructuredData(pMsg, &sdbuf,&lenbuf);
-	while(i < lenbuf) {
-		CHKiRet(parseSD_ELEMENT(pData, sdbuf, lenbuf, &i));
-dbgprintf("DDDD: parse_sd, i:%d\n", i);
-	}
-#if 0
 	json =  json_object_new_object();
 	if(json == NULL) {
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
-	field = 1;
-	while(currIdx < lenMsg) {
-		CHKiRet(extractField(pData, msgtext, lenMsg, &currIdx, buf));
-		DBGPRINTF("mmpstrucdata: field %d: '%s'\n", field, buf);
-		snprintf((char*)fieldname, sizeof(fieldname), "f%d", field);
-		fieldname[sizeof(fieldname)-1] = '\0';
-		jval = json_object_new_string((char*)fieldbuf);
-		json_object_object_add(json, (char*)fieldname, jval);
-		field++;
+	MsgGetStructuredData(pMsg, &sdbuf,&lenbuf);
+	while(i < lenbuf) {
+		CHKiRet(parseSD_ELEMENT(pData, sdbuf, lenbuf, &i, json));
+dbgprintf("DDDD: parse_sd, i:%d\n", i);
 	}
+dbgprintf("DDDD: json: '%s'\n", json_object_get_string(json));
  	msgAddJSON(pMsg, pData->jsonRoot, json);
-#endif
 finalize_it:
 	RETiRet;
 }
