@@ -974,6 +974,12 @@ AC_ARG_ENABLE(mmrfc5424addhmac,
          esac],
         [enable_mmrfc5424addhmac=no]
 )
+if test "x$enable_mmrfc5424addhmac" = "xyes"; then
+	PKG_CHECK_MODULES(OPENSSL, openssl >= 0.9.7)
+#AC_CHECK_LIB([crypto],[CRYPTO_new_ex_data], [], [AC_MSG_ERROR([OpenSSL libraries required])])
+#AC_CHECK_LIB([ssl],[SSL_library_init], [], [AC_MSG_ERROR([OpenSSL libraries required])])
+#AC_CHECK_HEADERS([openssl/crypto.h openssl/x509.h openssl/pem.h openssl/ssl.h openssl/err.h],[],[AC_MSG_ERROR([OpenSSL headers required])])
+fi
 AM_CONDITIONAL(ENABLE_MMRFC5424ADDHMAC, test x$enable_mmrfc5424addhmac = xyes)
 
 
