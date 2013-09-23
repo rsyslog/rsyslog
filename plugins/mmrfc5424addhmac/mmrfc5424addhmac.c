@@ -30,6 +30,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <stdint.h>
+#include <openssl/hmac.h>
 #include "conf.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
@@ -48,6 +49,8 @@ DEF_OMOD_STATIC_DATA
 /* config variables */
 
 typedef struct _instanceData {
+	uchar *key;
+	int keylen;	/* cached length of key, to avoid recompution */
 } instanceData;
 
 struct modConfData_s {
@@ -60,9 +63,7 @@ static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current ex
 /* tables for interfacing with the v6 config system */
 /* action (instance) parameters */
 static struct cnfparamdescr actpdescr[] = {
-	{ "mode", eCmdHdlrGetWord, 0 },
-	{ "replacementchar", eCmdHdlrGetChar, 0 },
-	{ "ipv4.bits", eCmdHdlrInt, 0 },
+	{ "key", eCmdHdlrString, 1 }
 };
 static struct cnfparamblk actpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -112,7 +113,7 @@ ENDfreeInstance
 static inline void
 setInstParamDefaults(instanceData *pData)
 {
-	//pData->replChar = 'x';
+	pData->key = NULL;
 }
 
 BEGINnewActInst
@@ -133,9 +134,8 @@ CODESTARTnewActInst
 		if(!pvals[i].bUsed)
 			continue;
 		if(!strcmp(actpblk.descr[i].name, "replacementchar")) {
-	//		pData->replChar = es_getBufAddr(pvals[i].val.d.estr)[0];
-		} else if(!strcmp(actpblk.descr[i].name, "ipv4.bits")) {
-	//		pData->ipv4.bits = (int8_t) pvals[i].val.d.n;
+			pData->key = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+			pData->keylen = strlen((char*)pData->key);
 		} else {
 			dbgprintf("mmrfc5424addhmac: program error, non-handled "
 			  "param '%s'\n", actpblk.descr[i].name);
@@ -157,122 +157,47 @@ CODESTARTtryResume
 ENDtryResume
 
 
-#if 0
-/* write an IP address octet to the output position */
-static int
-writeOctet(uchar *msg, int idx, int *nxtidx, uint8_t octet)
+/* turn the binary data in bin of length len into a
+ * printable hex string. "print" must be 2*len+1 (for \0)
+ */
+static inline void
+hexify(uchar *bin, int len, uchar *print)
 {
-	if(octet > 99) {
-		msg[idx++] = '0' + octet / 100;
-		octet = octet % 100;
-	}
-	if(octet > 9) {
-		msg[idx++] = '0' + octet / 10;
-		octet = octet % 10;
-	}
-	msg[idx++] =  '0' + octet;
+	static const char hexchars[16] =
+	   {'0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'};
+	int iSrc, iDst;
 
-	if(nxtidx != NULL) {
-		if(idx + 1 != *nxtidx) {
-			/* we got shorter, fix it! */
-			msg[idx] = '.';
-			*nxtidx = idx + 1;
-		}
+	for(iSrc = iDst = 0 ; iSrc < len ; ++iSrc) {
+		print[iDst++] = hexchars[bin[iSrc]>>4];
+		print[iDst++] = hexchars[bin[iSrc]&0x0f];
 	}
-	return idx;
+	print[iDst] = '\0';
 }
 
-/* currently works for IPv4 only! */
-void
-anonip(instanceData *pData, uchar *msg, int *pLenMsg, int *idx)
+static inline rsRetVal
+hashMsg(instanceData *pData, msg_t *pMsg)
 {
-	int i = *idx;
-	int octet;
-	uint32_t ipv4addr;
-	int ipstart[4];
-	int j;
-	int endpos;
-	int lenMsg = *pLenMsg;
+	uchar *pRawMsg;
+	int lenRawMsg;
+	unsigned int hashlen;
+	uchar hash[EVP_MAX_MD_SIZE];
+	uchar hashPrintable[2*EVP_MAX_MD_SIZE+1];
+	DEFiRet;
 
-	while(i < lenMsg && (msg[i] <= '0' || msg[i] >= '9')) {
-		++i; /* skip to first number */
-	}
-	if(i >= lenMsg)
-		goto done;
-	
-	/* got digit, let's see if ip */
-	ipstart[0] = i;
-	octet = getnum(msg, lenMsg, &i);
-	if(octet > 255 || msg[i] != '.') goto done;
-	ipv4addr = octet << 24;
-	++i;
-	ipstart[1] = i;
-	octet = getnum(msg, lenMsg, &i);
-	if(octet > 255 || msg[i] != '.') goto done;
-	ipv4addr |= octet << 16;
-	++i;
-	ipstart[2] = i;
-	octet = getnum(msg, lenMsg, &i);
-	if(octet > 255 || msg[i] != '.') goto done;
-	ipv4addr |= octet << 8;
-	++i;
-	ipstart[3] = i;
-	octet = getnum(msg, lenMsg, &i);
-	if(octet > 255 || !(msg[i] == ' ' || msg[i] == ':')) goto done;
-	ipv4addr |= octet;
-
-	/* OK, we now found an ip address */
-	if(pData->mode == SIMPLE_MODE) {
-		if(pData->ipv4.bits == 8)
-			j = ipstart[3];
-		else if(pData->ipv4.bits == 16)
-			j = ipstart[2];
-		else if(pData->ipv4.bits == 24)
-			j = ipstart[1];
-		else /* due to our checks, this *must* be 32 */
-			j = ipstart[0];
-		while(j < i) {
-			if(msg[j] != '.')
-				msg[j] = pData->replChar;
-			++j;
-		}
-	} else { /* REWRITE_MODE */
-		ipv4addr &= ipv4masks[pData->ipv4.bits];
-		if(pData->ipv4.bits > 24)
-			writeOctet(msg, ipstart[0], &(ipstart[1]), ipv4addr >> 24);
-		if(pData->ipv4.bits > 16)
-			writeOctet(msg, ipstart[1], &(ipstart[2]), (ipv4addr >> 16) & 0xff);
-		if(pData->ipv4.bits > 8)
-			writeOctet(msg, ipstart[2], &(ipstart[3]), (ipv4addr >> 8) & 0xff);
-		endpos = writeOctet(msg, ipstart[3], NULL, ipv4addr & 0xff);
-		/* if we had truncation, we need to shrink the msg */
-		dbgprintf("existing i %d, endpos %d\n", i, endpos);
-		if(i - endpos > 0) {
-			*pLenMsg = lenMsg - (i - endpos);
-			memmove(msg+endpos, msg+i, lenMsg - i + 1);
-		}
-	}
-
-done:	*idx = i;
-	return;
+	getRawMsg(pMsg, &pRawMsg, &lenRawMsg);
+ 	HMAC(EVP_sha1(), pData->key, pData->keylen,
+	     pRawMsg, lenRawMsg, hash, &hashlen);
+	hexify(hash, hashlen, hashPrintable);
+dbgprintf("DDDD: rawmsg is: '%s', hash: '%s'\n", pRawMsg, hashPrintable);
+	RETiRet;
 }
-#endif
 
 
 BEGINdoAction
 	msg_t *pMsg;
-	uchar *msg;
-	int lenMsg;
-	int i;
 CODESTARTdoAction
 	pMsg = (msg_t*) ppString[0];
-	lenMsg = getMSGLen(pMsg);
-	msg = getMSG(pMsg);
-	for(i = 0 ; i < lenMsg ; ++i) {
-		anonip(pData, msg, &lenMsg, &i);
-	}
-	if(lenMsg != getMSGLen(pMsg))
-		setMSGLen(pMsg, lenMsg);
+	hashMsg(pData, pMsg);
 ENDdoAction
 
 
@@ -306,7 +231,7 @@ ENDqueryEtryPt
 
 BEGINmodInit()
 CODESTARTmodInit
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+	*ipIFVersProvided = CURR_MOD_IF_VERSION;
 CODEmodInit_QueryRegCFSLineHdlr
 	DBGPRINTF("mmrfc5424addhmac: module compiled with rsyslog version %s.\n", VERSION);
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
