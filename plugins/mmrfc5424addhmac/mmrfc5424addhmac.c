@@ -51,6 +51,7 @@ DEF_OMOD_STATIC_DATA
 typedef struct _instanceData {
 	uchar *key;
 	int keylen;	/* cached length of key, to avoid recompution */
+	const EVP_MD *algo;
 } instanceData;
 
 struct modConfData_s {
@@ -63,7 +64,8 @@ static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current ex
 /* tables for interfacing with the v6 config system */
 /* action (instance) parameters */
 static struct cnfparamdescr actpdescr[] = {
-	{ "key", eCmdHdlrString, 1 }
+	{ "key", eCmdHdlrString, 1 },
+	{ "hashfunction", eCmdHdlrString, 1 }
 };
 static struct cnfparamblk actpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -118,6 +120,7 @@ setInstParamDefaults(instanceData *pData)
 
 BEGINnewActInst
 	struct cnfparamvals *pvals;
+	char *ciphername;
 	int i;
 CODESTARTnewActInst
 	DBGPRINTF("newActInst (mmrfc5424addhmac)\n");
@@ -136,6 +139,17 @@ CODESTARTnewActInst
 		if(!strcmp(actpblk.descr[i].name, "replacementchar")) {
 			pData->key = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 			pData->keylen = strlen((char*)pData->key);
+		} else if(!strcmp(actpblk.descr[i].name, "hashfunction")) {
+			ciphername = es_str2cstr(pvals[i].val.d.estr, NULL);
+			pData->algo = EVP_get_digestbyname(ciphername);
+			if(pData->algo == NULL) {
+				errmsg.LogError(0, RS_RET_CRY_INVLD_ALGO,
+					"hashFunction '%s' unknown to openssl - "
+					"cannot continue", ciphername);
+				free(ciphername);
+				ABORT_FINALIZE(RS_RET_CRY_INVLD_ALGO);
+			}
+			free(ciphername);
 		} else {
 			dbgprintf("mmrfc5424addhmac: program error, non-handled "
 			  "param '%s'\n", actpblk.descr[i].name);
@@ -185,7 +199,7 @@ hashMsg(instanceData *pData, msg_t *pMsg)
 	DEFiRet;
 
 	getRawMsg(pMsg, &pRawMsg, &lenRawMsg);
- 	HMAC(EVP_sha1(), pData->key, pData->keylen,
+ 	HMAC(pData->algo, pData->key, pData->keylen,
 	     pRawMsg, lenRawMsg, hash, &hashlen);
 	hexify(hash, hashlen, hashPrintable);
 dbgprintf("DDDD: rawmsg is: '%s', hash: '%s'\n", pRawMsg, hashPrintable);
@@ -217,6 +231,7 @@ ENDparseSelectorAct
 BEGINmodExit
 CODESTARTmodExit
 	objRelease(errmsg, CORE_COMPONENT);
+	EVP_cleanup();
 ENDmodExit
 
 
@@ -234,5 +249,6 @@ CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION;
 CODEmodInit_QueryRegCFSLineHdlr
 	DBGPRINTF("mmrfc5424addhmac: module compiled with rsyslog version %s.\n", VERSION);
+	OpenSSL_add_all_digests();
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 ENDmodInit
