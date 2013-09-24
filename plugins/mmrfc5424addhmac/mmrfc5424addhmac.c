@@ -1,6 +1,30 @@
 /* mmrfc5424addhmac.c
  * custom module: add hmac to RFC5424 messages
  *
+ * Note on important design decision: This module is fully self-contained.
+ * Most importantly, it does not rely on mmpstrucdata to populate the
+ * structured data portion of the messages JSON. There are two reasons
+ * for this:
+ * 1. robustness
+ *    - this guard against misconfiguration
+ *    - it permits us to be more liberal in regard to malformed
+ *      structured data
+ *    - it permits us to handle border-cases (like duplicate 
+ *      SD-IDs) with much less complexity
+ * 2. performance
+ *    With being "on the spot" of what we need we can reduce memory
+ *    reads and writes. This is a considerable save if the JSON representation
+ *    is not otherwise needed.
+ *
+ * Note that the recommended calling sequence if both of these modules
+ * are used is
+ *
+ * 1. mmrfc5424addhmac
+ * 2. mmpstrucdata
+ *
+ * This sequence permits mmpstrucdata to pick up the modifications we
+ * made in this module here.
+ *
  * Copyright 2013 Adiscon GmbH.
  *
  * This file is part of rsyslog.
@@ -50,7 +74,9 @@ DEF_OMOD_STATIC_DATA
 
 typedef struct _instanceData {
 	uchar *key;
-	int keylen;	/* cached length of key, to avoid recompution */
+	int16_t keylen;	/* cached length of key, to avoid recomputation */
+	uchar *sdid;	/* SD-ID to be used to persist the hmac */
+	int16_t sdidLen;
 	const EVP_MD *algo;
 } instanceData;
 
@@ -65,7 +91,8 @@ static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current ex
 /* action (instance) parameters */
 static struct cnfparamdescr actpdescr[] = {
 	{ "key", eCmdHdlrString, 1 },
-	{ "hashfunction", eCmdHdlrString, 1 }
+	{ "hashfunction", eCmdHdlrString, 1 },
+	{ "sd_id", eCmdHdlrGetWord, 1 }
 };
 static struct cnfparamblk actpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -138,7 +165,7 @@ CODESTARTnewActInst
 			continue;
 		if(!strcmp(actpblk.descr[i].name, "replacementchar")) {
 			pData->key = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-			pData->keylen = strlen((char*)pData->key);
+			pData->keylen = es_strlen(pvals[i].val.d.estr);
 		} else if(!strcmp(actpblk.descr[i].name, "hashfunction")) {
 			ciphername = es_str2cstr(pvals[i].val.d.estr, NULL);
 			pData->algo = EVP_get_digestbyname(ciphername);
@@ -150,6 +177,9 @@ CODESTARTnewActInst
 				ABORT_FINALIZE(RS_RET_CRY_INVLD_ALGO);
 			}
 			free(ciphername);
+		} else if(!strcmp(actpblk.descr[i].name, "sd_id")) {
+			pData->sdid = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+			pData->sdidLen = es_strlen(pvals[i].val.d.estr);
 		} else {
 			dbgprintf("mmrfc5424addhmac: program error, non-handled "
 			  "param '%s'\n", actpblk.descr[i].name);
@@ -188,6 +218,83 @@ hexify(uchar *bin, int len, uchar *print)
 	print[iDst] = '\0';
 }
 
+
+/* skip to end of current SD-ID. This function can be improved
+ * in regard to fully parsing based on RFC5424, HOWEVER, this would
+ * also reduce performance. So we consider the current implementation
+ * to be superior.
+ */
+static inline void
+skipSDID(uchar *sdbuf, int sdlen, int *rootIdx)
+{
+	int i;
+	i = *rootIdx;
+	while(i < sdlen) {
+		if(sdbuf[i] == ']') {
+			if(i > *rootIdx && sdbuf[i-1] == '\\') {
+				; /* escaped, nothing to do! */
+			} else {
+				++i; /* eat ']' */
+				break;
+			}
+		}
+		++i;
+	}
+dbgprintf("DDDD: end skip, sd-id: '%s'\n", sdbuf+i);
+	*rootIdx = i;
+}
+
+static inline void
+getSDID(uchar *sdbuf, int sdlen, int *rootIdx, uchar *sdid)
+{
+	int i, j;
+	i = *rootIdx;
+	j = 0;
+
+	if(sdbuf[i] != '[') {
+		++i;
+		goto done;
+	}
+	
+	++i;
+	while(i < sdlen && sdbuf[i] != '=' && sdbuf[i] != ' '
+	                && sdbuf[i] != ']' && sdbuf[i] != '"') {
+		sdid[j++] = sdbuf[i++];
+	}
+done:
+	sdid[j] = '\0';
+	*rootIdx = i;
+dbgprintf("DDDD: got sd-id '%s'\n", sdid);
+}
+
+/* check if "our" hmac is already present */
+static inline sbool
+isHmacPresent(instanceData *pData, msg_t *pMsg)
+{
+	uchar *sdbuf;
+	rs_size_t sdlen;
+	sbool found;
+	int i;
+	uchar sdid[33]; /* RFC-based size limit */
+
+	MsgGetStructuredData(pMsg, &sdbuf, &sdlen);
+dbgprintf("DDDD: STRUCTURED-DATA is: '%s'\n", sdbuf);
+
+	found = 0;
+	i = 0;
+	while(i < sdlen && !found) {
+		getSDID(sdbuf, sdlen, &i, sdid);
+		if(!strcmp((char*)pData->sdid, (char*)sdid)) {
+			found = 1;
+			break;
+		}
+		skipSDID(sdbuf, sdlen, &i);
+	}
+
+dbgprintf("DDDD: isHmacPresent: %d\n", found);
+	return found;
+}
+
 static inline rsRetVal
 hashMsg(instanceData *pData, msg_t *pMsg)
 {
@@ -198,9 +305,6 @@ hashMsg(instanceData *pData, msg_t *pMsg)
 	uchar hashPrintable[2*EVP_MAX_MD_SIZE+1];
 	DEFiRet;
 
-// Next two debug only!
-MsgGetStructuredData(pMsg, &pRawMsg, &lenRawMsg);
-dbgprintf("DDDD: STRUCTURED-DATA is: '%s'\n", pRawMsg);
 	getRawMsg(pMsg, &pRawMsg, &lenRawMsg);
  	HMAC(pData->algo, pData->key, pData->keylen,
 	     pRawMsg, lenRawMsg, hash, &hashlen);
@@ -214,14 +318,17 @@ BEGINdoAction
 	msg_t *pMsg;
 CODESTARTdoAction
 	pMsg = (msg_t*) ppString[0];
-	if(msgGetProtocolVersion(pMsg) == MSG_RFC5424_PROTOCOL) {
+	if(   msgGetProtocolVersion(pMsg) == MSG_RFC5424_PROTOCOL
+	   && !isHmacPresent(pData, pMsg)) {
 		hashMsg(pData, pMsg);
 	} else {
 		if(Debug) {
 			uchar *pRawMsg;
 			int lenRawMsg;
 			getRawMsg(pMsg, &pRawMsg, &lenRawMsg);
-			dbgprintf("mmrfc5424addhmac: non-rfc5424: %.256s\n", pRawMsg);
+dbgprintf("DDDD: mmrfc5424addhmac: non-rfc5424 or HMAC already present: %.256s\n", pRawMsg);
+			dbgprintf("mmrfc5424addhmac: non-rfc5424 or HMAC already "
+			          "present: %.256s\n", pRawMsg);
 		}
 	}
 ENDdoAction
