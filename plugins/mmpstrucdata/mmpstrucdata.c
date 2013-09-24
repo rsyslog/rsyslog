@@ -307,7 +307,7 @@ parse_sd(instanceData *pData, msg_t *pMsg)
 	int field;
 	uchar *buf;
 #endif
-	struct json_object *json;
+	struct json_object *json, *jroot;
 	uchar *sdbuf;
 	int lenbuf;
 	int i = 0;
@@ -332,7 +332,13 @@ dbgprintf("DDDD: parse_sd\n");
 dbgprintf("DDDD: parse_sd, i:%d\n", i);
 	}
 dbgprintf("DDDD: json: '%s'\n", json_object_get_string(json));
- 	msgAddJSON(pMsg, pData->jsonRoot, json);
+
+	jroot =  json_object_new_object();
+	if(jroot == NULL) {
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+	json_object_object_add(jroot, "RFC5424-SD", json);
+ 	msgAddJSON(pMsg, pData->jsonRoot, jroot);
 finalize_it:
 	RETiRet;
 }
