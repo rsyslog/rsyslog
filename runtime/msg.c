@@ -4067,6 +4067,22 @@ finalize_it:
 	RETiRet;
 }
 
+rsRetVal
+MsgAddToStructuredData(msg_t *pMsg, uchar *toadd, rs_size_t len)
+{
+	uchar *newptr;
+	rs_size_t newlen;
+	DEFiRet;
+	newlen = pMsg->lenStrucData + len;
+	CHKmalloc(newptr = (uchar*) realloc(pMsg->pszStrucData, newlen+1));
+	pMsg->pszStrucData = newptr;
+	memcpy(pMsg->pszStrucData+pMsg->lenStrucData, toadd, len);
+	pMsg->pszStrucData[newlen] = '\0';
+	pMsg->lenStrucData = newlen;
+finalize_it:
+	RETiRet;
+}
+
 
 /* dummy */
 rsRetVal msgQueryInterface(void) { return RS_RET_NOT_IMPLEMENTED; }

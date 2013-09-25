@@ -168,6 +168,7 @@ void MsgSetTAG(msg_t *pMsg, uchar* pszBuf, size_t lenBuf);
 void MsgSetRuleset(msg_t *pMsg, ruleset_t*);
 rsRetVal MsgSetFlowControlType(msg_t *pMsg, flowControl_t eFlowCtl);
 rsRetVal MsgSetStructuredData(msg_t *pMsg, char* pszStrucData);
+rsRetVal MsgAddToStructuredData(msg_t *pMsg, uchar *toadd, rs_size_t len);
 void MsgGetStructuredData(msg_t *pM, uchar **pBuf, rs_size_t *len);
 rsRetVal msgSetFromSockinfo(msg_t *pThis, struct sockaddr_storage *sa);
 void MsgSetRcvFrom(msg_t *pMsg, prop_t*);

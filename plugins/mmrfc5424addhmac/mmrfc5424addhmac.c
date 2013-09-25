@@ -240,7 +240,6 @@ skipSDID(uchar *sdbuf, int sdlen, int *rootIdx)
 		}
 		++i;
 	}
-dbgprintf("DDDD: end skip, sd-id: '%s'\n", sdbuf+i);
 	*rootIdx = i;
 }
 
@@ -264,7 +263,6 @@ getSDID(uchar *sdbuf, int sdlen, int *rootIdx, uchar *sdid)
 done:
 	sdid[j] = '\0';
 	*rootIdx = i;
-dbgprintf("DDDD: got sd-id '%s'\n", sdid);
 }
 
 /* check if "our" hmac is already present */
@@ -278,7 +276,6 @@ isHmacPresent(instanceData *pData, msg_t *pMsg)
 	uchar sdid[33]; /* RFC-based size limit */
 
 	MsgGetStructuredData(pMsg, &sdbuf, &sdlen);
-dbgprintf("DDDD: STRUCTURED-DATA is: '%s'\n", sdbuf);
 
 	found = 0;
 	i = 0;
@@ -291,7 +288,6 @@ dbgprintf("DDDD: STRUCTURED-DATA is: '%s'\n", sdbuf);
 		skipSDID(sdbuf, sdlen, &i);
 	}
 
-dbgprintf("DDDD: isHmacPresent: %d\n", found);
 	return found;
 }
 
@@ -300,16 +296,23 @@ hashMsg(instanceData *pData, msg_t *pMsg)
 {
 	uchar *pRawMsg;
 	int lenRawMsg;
+	uchar *sdbuf;
+	rs_size_t sdlen;
 	unsigned int hashlen;
 	uchar hash[EVP_MAX_MD_SIZE];
 	uchar hashPrintable[2*EVP_MAX_MD_SIZE+1];
+	uchar newsd[64*1024];	/* we assume this is sufficient... */
+	int lenNewsd;
 	DEFiRet;
 
+	MsgGetStructuredData(pMsg, &sdbuf, &sdlen);
 	getRawMsg(pMsg, &pRawMsg, &lenRawMsg);
  	HMAC(pData->algo, pData->key, pData->keylen,
 	     pRawMsg, lenRawMsg, hash, &hashlen);
 	hexify(hash, hashlen, hashPrintable);
-dbgprintf("DDDD: rawmsg is: '%s', hash: '%s'\n", pRawMsg, hashPrintable);
+	lenNewsd = snprintf((char*)newsd, sizeof(newsd), "[%s hash=\"%s\"]",
+		            (char*)pData->sdid, (char*)hashPrintable);
+	MsgAddToStructuredData(pMsg, newsd, lenNewsd);
 	RETiRet;
 }
 
@@ -326,7 +329,6 @@ CODESTARTdoAction
 			uchar *pRawMsg;
 			int lenRawMsg;
 			getRawMsg(pMsg, &pRawMsg, &lenRawMsg);
-dbgprintf("DDDD: mmrfc5424addhmac: non-rfc5424 or HMAC already present: %.256s\n", pRawMsg);
 			dbgprintf("mmrfc5424addhmac: non-rfc5424 or HMAC already "
 			          "present: %.256s\n", pRawMsg);
 		}
