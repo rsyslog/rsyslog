@@ -692,7 +692,7 @@ static inline rsRetVal msgBaseConstruct(msg_t **ppThis)
 	pM->pszTIMESTAMP3339 = NULL;
 	pM->pszTIMESTAMP_MySQL = NULL;
         pM->pszTIMESTAMP_PgSQL = NULL;
-	pM->pCSStrucData = NULL;
+	pM->pszStrucData = NULL;
 	pM->pCSAPPNAME = NULL;
 	pM->pCSPROCID = NULL;
 	pM->pCSMSGID = NULL;
@@ -834,10 +834,9 @@ CODESTARTobjDestruct(msg)
 		free(pThis->pszRcvdAt_PgSQL);
 		free(pThis->pszTIMESTAMP_MySQL);
 		free(pThis->pszTIMESTAMP_PgSQL);
+		free(pThis->pszStrucData);
 		if(pThis->iLenPROGNAME >= CONF_PROGNAME_BUFSIZE)
 			free(pThis->PROGNAME.ptr);
-		if(pThis->pCSStrucData != NULL)
-			rsCStrDestruct(&pThis->pCSStrucData);
 		if(pThis->pCSAPPNAME != NULL)
 			rsCStrDestruct(&pThis->pCSAPPNAME);
 		if(pThis->pCSPROCID != NULL)
@@ -987,8 +986,13 @@ msg_t* MsgDup(msg_t* pOld)
 			tmpCOPYSZ(HOSTNAME);
 		}
 	}
+	if(pOld->pszStrucData == NULL) {
+		pNew->pszStrucData = NULL;
+	} else {
+		pNew->pszStrucData = (uchar*)strdup((char*)pOld->pszStrucData);
+		pNew->lenStrucData = pOld->lenStrucData;
+	}
 
-	tmpCOPYCSTR(StrucData);
 	tmpCOPYCSTR(APPNAME);
 	tmpCOPYCSTR(PROCID);
 	tmpCOPYCSTR(MSGID);
@@ -1049,12 +1053,13 @@ static rsRetVal MsgSerialize(msg_t *pThis, strm_t *pStrm)
 	CHKiRet(obj.SerializeProp(pStrm, UCHAR_CONSTANT("pszRcvFrom"), PROPTYPE_PSZ, (void*) psz));
 	psz = getRcvFromIP(pThis); 
 	CHKiRet(obj.SerializeProp(pStrm, UCHAR_CONSTANT("pszRcvFromIP"), PROPTYPE_PSZ, (void*) psz));
+	psz = pThis->pszStrucData; 
+	CHKiRet(obj.SerializeProp(pStrm, UCHAR_CONSTANT("pszRcvStrucData"), PROPTYPE_PSZ, (void*) psz));
 	if(pThis->json != NULL) {
 		psz = (uchar*) json_object_get_string(pThis->json);
 		CHKiRet(obj.SerializeProp(pStrm, UCHAR_CONSTANT("json"), PROPTYPE_PSZ, (void*) psz));
 	}
 
-	objSerializePTR(pStrm, pCSStrucData, CSTR);
 	objSerializePTR(pStrm, pCSAPPNAME, CSTR);
 	objSerializePTR(pStrm, pCSPROCID, CSTR);
 	objSerializePTR(pStrm, pCSMSGID, CSTR);
@@ -1195,7 +1200,7 @@ MsgDeserialize(msg_t *pMsg, strm_t *pStrm)
 		reinitVar(pVar);
 		CHKiRet(objDeserializeProperty(pVar, pStrm));
 	}
-	if(isProp("pCSStrucData")) {
+	if(isProp("pszStrucData")) {
 		MsgSetStructuredData(pMsg, (char*) rsCStrGetSzStrNoNULL(pVar->val.pStr));
 		reinitVar(pVar);
 		CHKiRet(objDeserializeProperty(pVar, pStrm));
@@ -2068,13 +2073,9 @@ rsRetVal MsgSetStructuredData(msg_t *pMsg, char* pszStrucData)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pMsg, msg);
-	if(pMsg->pCSStrucData == NULL) {
-		/* we need to obtain the object first */
-		CHKiRet(rsCStrConstruct(&pMsg->pCSStrucData));
-	}
-	/* if we reach this point, we have the object */
-	iRet = rsCStrSetSzStr(pMsg->pCSStrucData, (uchar*) pszStrucData);
-
+	free(pMsg->pszStrucData);
+	CHKmalloc(pMsg->pszStrucData = (uchar*)strdup(pszStrucData));
+	pMsg->lenStrucData = strlen(pszStrucData);
 finalize_it:
 	RETiRet;
 }
@@ -2085,12 +2086,12 @@ void
 MsgGetStructuredData(msg_t *pM, uchar **pBuf, rs_size_t *len)
 {
 	MsgLock(pM);
-	if(pM->pCSStrucData == NULL) {
+	if(pM->pszStrucData == NULL) {
 		*pBuf = UCHAR_CONSTANT("-"),
 		*len = 1;
 	} else  {
-		*pBuf = rsCStrGetSzStr(pM->pCSStrucData),
-		*len = cstrLen(pM->pCSStrucData);
+		*pBuf = pM->pszStrucData,
+		*len = pM->lenStrucData;
 	}
 	MsgUnlock(pM);
 }
@@ -3740,7 +3741,7 @@ rsRetVal MsgSetProperty(msg_t *pThis, var_t *pProp)
 		prop.Destruct(&propRcvFrom);
 	} else if(isProp("pszHOSTNAME")) {
 		MsgSetHOSTNAME(pThis, rsCStrGetSzStrNoNULL(pProp->val.pStr), rsCStrLen(pProp->val.pStr));
-	} else if(isProp("pCSStrucData")) {
+	} else if(isProp("pszStrucData")) {
 		MsgSetStructuredData(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.pStr));
 	} else if(isProp("pCSAPPNAME")) {
 		MsgSetAPPNAME(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.pStr));
@@ -4065,6 +4066,7 @@ msgSetJSONFromVar(msg_t *pMsg, uchar *varname, struct var *v)
 finalize_it:
 	RETiRet;
 }
+
 
 /* dummy */
 rsRetVal msgQueryInterface(void) { return RS_RET_NOT_IMPLEMENTED; }

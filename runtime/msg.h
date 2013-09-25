@@ -30,6 +30,7 @@
 
 #include <pthread.h>
 #include <libestr.h>
+#include <stdint.h>
 #include <json.h>
 #include "obj.h"
 #include "syslogd-types.h"
@@ -86,7 +87,8 @@ struct msg {
 	char *pszTIMESTAMP3339;	/* TIMESTAMP as RFC3339 formatted string (32 charcters at most) */
 	char *pszTIMESTAMP_MySQL;/* TIMESTAMP as MySQL formatted string (always 14 charcters) */
         char *pszTIMESTAMP_PgSQL;/* TIMESTAMP as PgSQL formatted string (always 21 characters) */
-	cstr_t *pCSStrucData;   /* STRUCTURED-DATA */
+	uchar *pszStrucData;    /* STRUCTURED-DATA */
+	uint16_t lenStrucData;	/* (cached) length of STRUCTURED-DATA */
 	cstr_t *pCSAPPNAME;	/* APP-NAME */
 	cstr_t *pCSPROCID;	/* PROCID */
 	cstr_t *pCSMSGID;	/* MSGID */
@@ -229,7 +231,7 @@ msgGetProtocolVersion(msg_t *pM)
 static inline sbool
 MsgHasStructuredData(msg_t *pM)
 {
-	return (pM->pCSStrucData == NULL) ? 0 : 1;
+	return (pM->pszStrucData == NULL) ? 0 : 1;
 }
 
 /* ------------------------------ some inline functions ------------------------------ */
