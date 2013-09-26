@@ -1,4 +1,8 @@
 ----------------------------------------------------------------------
+Version 1.2.1 - 2013-09-26
+- errors binding listener port are now reported via error message
+  callback
+----------------------------------------------------------------------
 Version 1.2.0 - 2013-07-15
 - support for epoll() added
   platforms that do not support it fall back to select()

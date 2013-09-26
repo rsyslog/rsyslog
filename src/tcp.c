@@ -1293,7 +1293,11 @@ relpTcpLstnInit(relpTcp_t *pThis, unsigned char *pLstnPort, int ai_family)
 		     && (errno != EADDRINUSE)
 #endif
 	           ) {
-                        pThis->pEngine->dbgprint("error %d while binding relp tcp socket", errno);
+			char msgbuf[4096];
+			snprintf(msgbuf, sizeof(msgbuf), "error while binding relp tcp socket "
+				 "on port '%s'", pLstnPort);
+			msgbuf[sizeof(msgbuf)-1] = '\0';
+			callOnErr(pThis, msgbuf, errno);
                 	close(*s);
 			*s = -1;
                         continue;
