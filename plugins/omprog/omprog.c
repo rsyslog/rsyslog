@@ -131,6 +131,8 @@ static void execBinary(instanceData *pData, int fdStdin)
 {
 	int i, iRet;
 	struct sigaction sigAct;
+	sigset_t set;
+	char *newargv[] = { NULL };
 	char *newenviron[] = { NULL };
 
 	assert(pData != NULL);
@@ -154,10 +156,12 @@ static void execBinary(instanceData *pData, int fdStdin)
 
 	/* reset signal handlers to default */
 	memset(&sigAct, 0, sizeof(sigAct));
-	sigfillset(&sigAct.sa_mask);
+	sigemptyset(&sigAct.sa_mask);
 	sigAct.sa_handler = SIG_DFL;
 	for(i = 1 ; i < NSIG ; ++i)
 		sigaction(i, &sigAct, NULL);
+	sigemptyset(&set);
+        sigprocmask(SIG_SETMASK, &set, NULL);
 
 	alarm(0);
 

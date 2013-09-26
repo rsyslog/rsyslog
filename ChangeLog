@@ -105,6 +105,10 @@ Version 7.5.0 [devel] 2013-06-11
   Thanks to Axel Rau for the patch.
 ---------------------------------------------------------------------------
 Version 7.4.5  [v7.4-stable] 2013-09-??
+- bugfix: omprog blocked signals to executed programs
+  The made it impossible to send signals to programs executed via
+  omprog.
+  Thanks to Risto Vaarandi for the analysis and a patch.
 - bugfix: doc: imuxsock legacy param $SystemLogSocketParseTrusted was
   misspelled
   Thanks to David Lang for alerting us
