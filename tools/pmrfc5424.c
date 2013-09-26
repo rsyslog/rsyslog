@@ -227,7 +227,7 @@ CODESTARTparse
 		ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
 	}
 	DBGPRINTF("Message has RFC5424/syslog-protocol format.\n");
-	setProtocolVersion(pMsg, 1);
+	setProtocolVersion(pMsg, MSG_RFC5424_PROTOCOL);
 	p2parse += 2;
 	lenMsg -= 2;
 

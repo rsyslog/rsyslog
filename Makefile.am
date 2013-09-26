@@ -253,6 +253,10 @@ if ENABLE_MMFIELDS
 SUBDIRS += plugins/mmfields
 endif
 
+if ENABLE_MMPSTRUCDATA
+SUBDIRS += plugins/mmpstrucdata
+endif
+
 if ENABLE_MMRFC5424ADDHMAC
 SUBDIRS += plugins/mmrfc5424addhmac
 endif

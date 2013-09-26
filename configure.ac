@@ -1002,6 +1002,19 @@ AC_ARG_ENABLE(mmfields,
 )
 AM_CONDITIONAL(ENABLE_MMFIELDS, test x$enable_mmfields = xyes)
 
+# mmpstrucdata
+AC_ARG_ENABLE(mmpstrucdata,
+        [AS_HELP_STRING([--enable-mmpstrucdata],[Enable building mmpstrucdata support @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_mmpstrucdata="yes" ;;
+          no) enable_mmpstrucdata="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-mmpstrucdata) ;;
+         esac],
+        [enable_mmpstrucdata=no]
+)
+AM_CONDITIONAL(ENABLE_MMPSTRUCDATA, test x$enable_mmpstrucdata = xyes)
+
+
 # mmrfc5424addhmac
 AC_ARG_ENABLE(mmrfc5424addhmac,
         [AS_HELP_STRING([--enable-mmrfc5424addhmac],[Enable building mmrfc5424addhmac support @<:@default=no@:>@])],
@@ -1540,6 +1553,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/mmutf8fix/Makefile \
 		plugins/mmcount/Makefile \
 		plugins/mmfields/Makefile \
+		plugins/mmpstrucdata/Makefile \
 		plugins/mmrfc5424addhmac/Makefile \
 		plugins/omelasticsearch/Makefile \
 		plugins/sm_cust_bindcdr/Makefile \
@@ -1606,6 +1620,7 @@ echo "    mmjaduit module will be compiled:         $enable_mmaudit"
 echo "    mmsnmptrapd module will be compiled:      $enable_mmsnmptrapd"
 echo "    mmutf8fix enabled:                        $enable_mmutf8fix"
 echo "    mmrfc5424addhmac enabled:                 $enable_mmrfc5424addhmac"
+echo "    mmpstrucdata enabled:                     $enable_mmpstrucdata"
 echo
 echo "---{ strgen modules }---"
 echo "    sm_cust_bindcdr module will be compiled:  $enable_sm_cust_bindcdr"

@@ -30,6 +30,7 @@
 
 #include <pthread.h>
 #include <libestr.h>
+#include <stdint.h>
 #include <json.h>
 #include "obj.h"
 #include "syslogd-types.h"
@@ -85,7 +86,8 @@ struct msg {
 	char *pszTIMESTAMP3339;	/* TIMESTAMP as RFC3339 formatted string (32 charcters at most) */
 	char *pszTIMESTAMP_MySQL;/* TIMESTAMP as MySQL formatted string (always 14 charcters) */
         char *pszTIMESTAMP_PgSQL;/* TIMESTAMP as PgSQL formatted string (always 21 characters) */
-	cstr_t *pCSStrucData;   /* STRUCTURED-DATA */
+	uchar *pszStrucData;    /* STRUCTURED-DATA */
+	uint16_t lenStrucData;	/* (cached) length of STRUCTURED-DATA */
 	cstr_t *pCSAPPNAME;	/* APP-NAME */
 	cstr_t *pCSPROCID;	/* PROCID */
 	cstr_t *pCSMSGID;	/* MSGID */
@@ -143,6 +145,9 @@ struct msg {
 #define NEEDS_ACLCHK_U	0x080	/* check UDP ACLs after DNS resolution has been done in main queue consumer */
 #define NO_PRI_IN_RAW	0x100	/* rawmsg does not include a PRI (Solaris!), but PRI is already set correctly in the msg object */
 
+/* (syslog) protocol types */
+#define MSG_LEGACY_PROTOCOL 0
+#define MSG_RFC5424_PROTOCOL 1
 
 /* function prototypes
  */
@@ -165,6 +170,8 @@ void MsgSetTAG(msg_t *pMsg, uchar* pszBuf, size_t lenBuf);
 void MsgSetRuleset(msg_t *pMsg, ruleset_t*);
 rsRetVal MsgSetFlowControlType(msg_t *pMsg, flowControl_t eFlowCtl);
 rsRetVal MsgSetStructuredData(msg_t *pMsg, char* pszStrucData);
+rsRetVal MsgAddToStructuredData(msg_t *pMsg, uchar *toadd, rs_size_t len);
+void MsgGetStructuredData(msg_t *pM, uchar **pBuf, rs_size_t *len);
 rsRetVal msgSetFromSockinfo(msg_t *pThis, struct sockaddr_storage *sa);
 void MsgSetRcvFrom(msg_t *pMsg, prop_t*);
 void MsgSetRcvFromStr(msg_t *pMsg, uchar* pszRcvFrom, int, prop_t **);
@@ -221,6 +228,18 @@ msgUnsetJSON(msg_t *pMsg, uchar *varname) {
 	return msgDelJSON(pMsg, varname+1);
 }
 
+static inline int
+msgGetProtocolVersion(msg_t *pM)
+{
+	return(pM->iProtocolVersion);
+}
+
+/* returns non-zero if the message has structured data, 0 otherwise */
+static inline sbool
+MsgHasStructuredData(msg_t *pM)
+{
+	return (pM->pszStrucData == NULL) ? 0 : 1;
+}
 
 /* ------------------------------ some inline functions ------------------------------ */
 

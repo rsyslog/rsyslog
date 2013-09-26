@@ -132,7 +132,7 @@ dbgprintf("wrong closing text!\n");
 	 */
 	DBGPRINTF("pmlastmsg detected a \"last message repeated n times\" message\n");
 
-	setProtocolVersion(pMsg, 0);
+	setProtocolVersion(pMsg, MSG_LEGACY_PROTOCOL);
 	memcpy(&pMsg->tTIMESTAMP, &pMsg->tRcvdAt, sizeof(struct syslogTime));
 	MsgSetMSGoffs(pMsg, pMsg->offAfterPRI); /* we don't have a header! */
 	MsgSetTAG(pMsg, (uchar*)"", 0);

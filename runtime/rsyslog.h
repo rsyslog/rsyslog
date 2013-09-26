@@ -418,6 +418,8 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_CA_CERT_MISSING = -2329,/**< a CA cert is missing where one is required (e.g. TLS) */
 	RS_RET_CERT_MISSING = -2330,/**< a cert is missing where one is required (e.g. TLS) */
 	RS_RET_CERTKEY_MISSING = -2331,/**< a cert (private) key is missing where one is required (e.g. TLS) */
+	RS_RET_STRUC_DATA_INVLD = -2349,/**< structured data is malformed */
+
 	/* up to 2350 reserved for 7.4 */
 	RS_RET_QUEUE_CRY_DISK_ONLY = -2351,/**< crypto provider only supported for disk-associated queues */
 	RS_RET_NO_DATA = -2352,/**< file has no data; more a state than a real error */

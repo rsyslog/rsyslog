@@ -384,13 +384,6 @@ MsgSetRulesetByName(msg_t *pMsg, cstr_t *rulesetName)
 	rulesetGetRuleset(runConf, &(pMsg->pRuleset), rsCStrGetSzStrNoNULL(rulesetName));
 }
 
-
-static inline int getProtocolVersion(msg_t *pM)
-{
-	return(pM->iProtocolVersion);
-}
-
-
 /* do a DNS reverse resolution, if not already done, reflect status
  * rgerhards, 2009-11-16
  */
@@ -715,7 +708,7 @@ static inline rsRetVal msgBaseConstruct(msg_t **ppThis)
 	pM->pszTIMESTAMP3339 = NULL;
 	pM->pszTIMESTAMP_MySQL = NULL;
         pM->pszTIMESTAMP_PgSQL = NULL;
-	pM->pCSStrucData = NULL;
+	pM->pszStrucData = NULL;
 	pM->pCSAPPNAME = NULL;
 	pM->pCSPROCID = NULL;
 	pM->pCSMSGID = NULL;
@@ -859,10 +852,9 @@ CODESTARTobjDestruct(msg)
 		free(pThis->pszRcvdAt_PgSQL);
 		free(pThis->pszTIMESTAMP_MySQL);
 		free(pThis->pszTIMESTAMP_PgSQL);
+		free(pThis->pszStrucData);
 		if(pThis->iLenPROGNAME >= CONF_PROGNAME_BUFSIZE)
 			free(pThis->PROGNAME.ptr);
-		if(pThis->pCSStrucData != NULL)
-			rsCStrDestruct(&pThis->pCSStrucData);
 		if(pThis->pCSAPPNAME != NULL)
 			rsCStrDestruct(&pThis->pCSAPPNAME);
 		if(pThis->pCSPROCID != NULL)
@@ -1014,8 +1006,13 @@ msg_t* MsgDup(msg_t* pOld)
 			tmpCOPYSZ(HOSTNAME);
 		}
 	}
+	if(pOld->pszStrucData == NULL) {
+		pNew->pszStrucData = NULL;
+	} else {
+		pNew->pszStrucData = (uchar*)strdup((char*)pOld->pszStrucData);
+		pNew->lenStrucData = pOld->lenStrucData;
+	}
 
-	tmpCOPYCSTR(StrucData);
 	tmpCOPYCSTR(APPNAME);
 	tmpCOPYCSTR(PROCID);
 	tmpCOPYCSTR(MSGID);
@@ -1078,6 +1075,8 @@ static rsRetVal MsgSerialize(msg_t *pThis, strm_t *pStrm)
 	CHKiRet(obj.SerializeProp(pStrm, UCHAR_CONSTANT("pszRcvFrom"), PROPTYPE_PSZ, (void*) psz));
 	psz = getRcvFromIP(pThis); 
 	CHKiRet(obj.SerializeProp(pStrm, UCHAR_CONSTANT("pszRcvFromIP"), PROPTYPE_PSZ, (void*) psz));
+	psz = pThis->pszStrucData; 
+	CHKiRet(obj.SerializeProp(pStrm, UCHAR_CONSTANT("pszRcvStrucData"), PROPTYPE_PSZ, (void*) psz));
 	if(pThis->json != NULL) {
 		psz = (uchar*) json_object_get_string(pThis->json);
 		CHKiRet(obj.SerializeProp(pStrm, UCHAR_CONSTANT("json"), PROPTYPE_PSZ, (void*) psz));
@@ -1087,7 +1086,6 @@ static rsRetVal MsgSerialize(msg_t *pThis, strm_t *pStrm)
 		CHKiRet(obj.SerializeProp(pStrm, UCHAR_CONSTANT("localvars"), PROPTYPE_PSZ, (void*) psz));
 	}
 
-	objSerializePTR(pStrm, pCSStrucData, CSTR);
 	objSerializePTR(pStrm, pCSAPPNAME, CSTR);
 	objSerializePTR(pStrm, pCSPROCID, CSTR);
 	objSerializePTR(pStrm, pCSMSGID, CSTR);
@@ -1236,7 +1234,7 @@ MsgDeserialize(msg_t *pMsg, strm_t *pStrm)
 		reinitVar(pVar);
 		CHKiRet(objDeserializeProperty(pVar, pStrm));
 	}
-	if(isProp("pCSStrucData")) {
+	if(isProp("pszStrucData")) {
 		MsgSetStructuredData(pMsg, (char*) rsCStrGetSzStrNoNULL(pVar->val.pStr));
 		reinitVar(pVar);
 		CHKiRet(objDeserializeProperty(pVar, pStrm));
@@ -1326,7 +1324,7 @@ static rsRetVal aquirePROCIDFromTAG(msg_t *pM)
 	if(pM->pCSPROCID != NULL)
 		return RS_RET_OK; /* we are already done ;) */
 
-	if(getProtocolVersion(pM) != 0)
+	if(msgGetProtocolVersion(pM) != 0)
 		return RS_RET_OK; /* we can only emulate if we have legacy format */
 
 	pszTag = (uchar*) ((pM->iLenTAG < CONF_TAG_BUFSIZE) ? pM->TAG.szBuf : pM->TAG.pszTAG);
@@ -2009,7 +2007,7 @@ static inline void tryEmulateTAG(msg_t *pM, sbool bLockMutex)
 		return; /* done, no need to emulate */
 	}
 	
-	if(getProtocolVersion(pM) == 1) {
+	if(msgGetProtocolVersion(pM) == 1) {
 		if(!strcmp(getPROCID(pM, MUTEX_ALREADY_LOCKED), "-")) {
 			/* no process ID, use APP-NAME only */
 			MsgSetTAG(pM, (uchar*) getAPPNAME(pM, MUTEX_ALREADY_LOCKED), getAPPNAMELen(pM, MUTEX_ALREADY_LOCKED));
@@ -2109,42 +2107,27 @@ rsRetVal MsgSetStructuredData(msg_t *pMsg, char* pszStrucData)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pMsg, msg);
-	if(pMsg->pCSStrucData == NULL) {
-		/* we need to obtain the object first */
-		CHKiRet(rsCStrConstruct(&pMsg->pCSStrucData));
-	}
-	/* if we reach this point, we have the object */
-	iRet = rsCStrSetSzStr(pMsg->pCSStrucData, (uchar*) pszStrucData);
-
+	free(pMsg->pszStrucData);
+	CHKmalloc(pMsg->pszStrucData = (uchar*)strdup(pszStrucData));
+	pMsg->lenStrucData = strlen(pszStrucData);
 finalize_it:
 	RETiRet;
 }
 
-/* get the length of the "STRUCTURED-DATA" sz string
- * rgerhards, 2005-11-24
- */
-#if 0 /* This method is currently not called, be we like to preserve it */
-static int getStructuredDataLen(msg_t *pM)
+
+/* get the "STRUCTURED-DATA" as sz string, including length */
+void
+MsgGetStructuredData(msg_t *pM, uchar **pBuf, rs_size_t *len)
 {
-	return (pM->pCSStrucData == NULL) ? 1 : rsCStrLen(pM->pCSStrucData);
-}
-#endif
-
-
-/* get the "STRUCTURED-DATA" as sz string
- * rgerhards, 2005-11-24
- */
-static inline char *getStructuredData(msg_t *pM)
-{
-	uchar *pszRet;
-
 	MsgLock(pM);
-	if(pM->pCSStrucData == NULL)
-		pszRet = UCHAR_CONSTANT("-");
-	else 
-		pszRet = rsCStrGetSzStrNoNULL(pM->pCSStrucData);
+	if(pM->pszStrucData == NULL) {
+		*pBuf = UCHAR_CONSTANT("-"),
+		*len = 1;
+	} else  {
+		*pBuf = pM->pszStrucData,
+		*len = pM->lenStrucData;
+	}
 	MsgUnlock(pM);
-	return (char*) pszRet;
 }
 
 /* get the "programname" as sz string
@@ -2179,7 +2162,7 @@ static void tryEmulateAPPNAME(msg_t *pM)
 	if(pM->pCSAPPNAME != NULL)
 		return; /* we are already done */
 
-	if(getProtocolVersion(pM) == 0) {
+	if(msgGetProtocolVersion(pM) == 0) {
 		/* only then it makes sense to emulate */
 		MsgSetAPPNAME(pM, (char*)getProgramName(pM, MUTEX_ALREADY_LOCKED));
 	}
@@ -2965,7 +2948,7 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			pRes = (uchar*)getProtocolVersionString(pMsg);
 			break;
 		case PROP_STRUCTURED_DATA:
-			pRes = (uchar*)getStructuredData(pMsg);
+			MsgGetStructuredData(pMsg, &pRes, &bufLen);
 			break;
 		case PROP_APP_NAME:
 			pRes = (uchar*)getAPPNAME(pMsg, LOCK_MUTEX);
@@ -3863,7 +3846,7 @@ rsRetVal MsgSetProperty(msg_t *pThis, var_t *pProp)
 		prop.Destruct(&propRcvFrom);
 	} else if(isProp("pszHOSTNAME")) {
 		MsgSetHOSTNAME(pThis, rsCStrGetSzStrNoNULL(pProp->val.pStr), rsCStrLen(pProp->val.pStr));
-	} else if(isProp("pCSStrucData")) {
+	} else if(isProp("pszStrucData")) {
 		MsgSetStructuredData(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.pStr));
 	} else if(isProp("pCSAPPNAME")) {
 		MsgSetAPPNAME(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.pStr));
@@ -4216,6 +4199,23 @@ msgSetJSONFromVar(msg_t *pMsg, uchar *varname, struct var *v)
 finalize_it:
 	RETiRet;
 }
+
+rsRetVal
+MsgAddToStructuredData(msg_t *pMsg, uchar *toadd, rs_size_t len)
+{
+	uchar *newptr;
+	rs_size_t newlen;
+	DEFiRet;
+	newlen = pMsg->lenStrucData + len;
+	CHKmalloc(newptr = (uchar*) realloc(pMsg->pszStrucData, newlen+1));
+	pMsg->pszStrucData = newptr;
+	memcpy(pMsg->pszStrucData+pMsg->lenStrucData, toadd, len);
+	pMsg->pszStrucData[newlen] = '\0';
+	pMsg->lenStrucData = newlen;
+finalize_it:
+	RETiRet;
+}
+
 
 /* dummy */
 rsRetVal msgQueryInterface(void) { return RS_RET_NOT_IMPLEMENTED; }
