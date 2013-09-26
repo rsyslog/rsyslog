@@ -206,6 +206,8 @@ uchar	*pszFileDfltTplName; /* name of the default template to use */
 struct modConfData_s {
 	rsconf_t *pConf;	/* our overall config object */
 	uchar 	*tplName;	/* default template */
+	int fCreateMode; /* default mode to use when creating files */
+	int fDirCreateMode; /* default mode to use when creating files */
 };
 
 static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
@@ -215,6 +217,8 @@ static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current ex
 /* module-global parameters */
 static struct cnfparamdescr modpdescr[] = {
 	{ "template", eCmdHdlrGetWord, 0 },
+	{ "dircreatemode", eCmdHdlrFileCreateMode, 0 },
+	{ "filecreatemode", eCmdHdlrFileCreateMode, 0 }
 };
 static struct cnfparamblk modpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -814,6 +818,8 @@ CODESTARTbeginCnfLoad
 	loadModConf = pModConf;
 	pModConf->pConf = pConf;
 	pModConf->tplName = NULL;
+	pModConf->fCreateMode = 0644;
+	pModConf->fDirCreateMode = 0700;
 ENDbeginCnfLoad
 
 BEGINsetModCnf
@@ -842,6 +848,10 @@ CODESTARTsetModCnf
 						"was already set via legacy directive - may lead to inconsistent "
 						"results.");
 			}
+		} else if(!strcmp(modpblk.descr[i].name, "dircreatemode")) {
+			loadModConf->fDirCreateMode = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "filecreatemode")) {
+			loadModConf->fCreateMode = (int) pvals[i].val.d.n;
 		} else {
 			dbgprintf("omfile: program error, non-handled "
 			  "param '%s' in beginCnfLoad\n", modpblk.descr[i].name);
@@ -958,8 +968,8 @@ setInstParamDefaults(instanceData *pData)
 	pData->dirGID = -1;
 	pData->bFailOnChown = 1;
 	pData->iDynaFileCacheSize = 10;
-	pData->fCreateMode = 0644;
-	pData->fDirCreateMode = 0700;
+	pData->fCreateMode = loadModConf->fCreateMode;
+	pData->fDirCreateMode = loadModConf->fDirCreateMode;
 	pData->bCreateDirs = 1;
 	pData->bSyncFile = 0;
 	pData->iZipLevel = 0;
