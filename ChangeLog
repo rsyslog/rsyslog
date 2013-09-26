@@ -1,5 +1,8 @@
 ---------------------------------------------------------------------------
 Version 7.5.4 [devel] 2013-09-??
+- omfile: new module parameters to set action defaults added
+  * dirCreateMode
+  * fileCreateMode
 - mmutf8fix: new module to fix invalid UTF-8 sequences
 - imuxsock: handle unlimited number of additional listen sockets
   At the same time, (very) slightly remove memory footprint when

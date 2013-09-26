@@ -17,7 +17,14 @@
 	<li><strong>Template </strong>[templateName]<br>
 	Set the default template to be used if an action is not
 	configured to use a specific template.<br></li>
+
+	<li><strong>DirCreateMode </strong>[default 0700]<br>
+	Sets the default DirCreateMode to be used for an action
+	if no explicit one is specified.</br>
 	
+	<li><strong>FileCreateMode </strong>[default 0644]<br>
+	Sets the default DirCreateMode to be used for an action
+	if no explicit one is specified.</br>
 </ul>
 <p>&nbsp;</p>
 <p><b>Action Parameters</b>:</p>
@@ -74,10 +81,10 @@
 	<li><strong>FileGroup </strong><br>
 	Set the group for files newly created. Please note that this setting does not affect the group of files already existing. The parameter is a group name, for which the groupid is obtained by rsyslogd during startup processing. Interim changes to the user mapping are not detected.<br></li><br>
 
-	<li><strong>FileCreateMode </strong>[default 0644]<br>
+	<li><strong>FileCreateMode </strong>[default equelly-named module parameter]<br>
 	The FileCreateMode directive allows to specify the creation mode with which rsyslogd creates new files. If not specified, the value 0644 is used (which retains backward-compatibility with earlier releases). The value given must always be a 4-digit octal number, with the initial digit being zero. <br>Please note that the actual permission depend on rsyslogd's process umask. If in doubt, use "$umask 0000" right at the beginning of the configuration file to remove any restrictions. <br>FileCreateMode may be specified multiple times. If so, it specifies the creation mode for all selector lines that follow until the next $FileCreateMode directive. Order of lines is vitally important.<br></li><br>
 
-	<li><strong>DirCreateMode </strong>[defaul 0700]<br>
+	<li><strong>DirCreateMode </strong>[default equelly-named module parameter]<br>
 	This is the same as FileCreateMode, but for directories automatically generated.<br></li><br>
 
 	<li><strong>FailOnCHOwnFailure </strong>on/off [default on]<br>
