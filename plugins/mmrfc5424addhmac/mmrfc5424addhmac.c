@@ -276,8 +276,11 @@ isHmacPresent(instanceData *pData, msg_t *pMsg)
 	uchar sdid[33]; /* RFC-based size limit */
 
 	MsgGetStructuredData(pMsg, &sdbuf, &sdlen);
-
 	found = 0;
+
+	if(sdbuf[0] == '-') /* RFC: struc data is empty! */
+		goto done;
+
 	i = 0;
 	while(i < sdlen && !found) {
 		getSDID(sdbuf, sdlen, &i, sdid);
@@ -288,6 +291,7 @@ isHmacPresent(instanceData *pData, msg_t *pMsg)
 		skipSDID(sdbuf, sdlen, &i);
 	}
 
+done:
 	return found;
 }
 

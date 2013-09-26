@@ -4206,10 +4206,14 @@ MsgAddToStructuredData(msg_t *pMsg, uchar *toadd, rs_size_t len)
 	uchar *newptr;
 	rs_size_t newlen;
 	DEFiRet;
-	newlen = pMsg->lenStrucData + len;
+	newlen = (pMsg->pszStrucData[0] == '-') ? len : pMsg->lenStrucData + len;
 	CHKmalloc(newptr = (uchar*) realloc(pMsg->pszStrucData, newlen+1));
 	pMsg->pszStrucData = newptr;
-	memcpy(pMsg->pszStrucData+pMsg->lenStrucData, toadd, len);
+	if(pMsg->pszStrucData[0] == '-') { /* empty? */
+		memcpy(pMsg->pszStrucData, toadd, len);
+	} else {
+		memcpy(pMsg->pszStrucData+pMsg->lenStrucData, toadd, len);
+	}
 	pMsg->pszStrucData[newlen] = '\0';
 	pMsg->lenStrucData = newlen;
 finalize_it:
