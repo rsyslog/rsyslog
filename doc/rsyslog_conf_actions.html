@@ -3,9 +3,14 @@
 <body>
 <p>This is a part of the rsyslog.conf documentation.</p>
 <a href="rsyslog_conf.html">back</a>
+<p><b><i>Note: this documentation describes features present in v7+ of
+rsyslog. If you use an older version, scroll down to "legacy parameters".</i></b>
+If you prefer, you can also
+<a href="http://www.rsyslog.com/how-to-obtain-a-specific-doc-version/">obtain
+a specific version of the rsyslog documentation</a>.
 <h2>Actions</h2>
 Action object describe what is to be done with a message. They are
-implemented via <a href="rsyslog_conf_modules.html#om">outpout modules</a>.
+implemented via <a href="rsyslog_conf_modules.html#om">output modules</a>.
 <p>The action object has different parameters:
 <ul>
 <li>those that apply to all actions and are action specific. These
@@ -13,8 +18,11 @@ implemented via <a href="rsyslog_conf_modules.html#om">outpout modules</a>.
 <li>parameters for the action queue. While they also apply to 
     all parameters, they are queue-specific, not action-specific (they
     are the same that are used in rulesets, for example).
+    The are documented separately under
+    <a href="queue_parameters.html">queue parameters</a>.
 <li>action-specific parameters. These are specific to a certain
-    type of actions. They are documented by the output module
+    type of actions. They are documented by the
+    <a href="rsyslog_conf_modules.html#om">output module</a>
     in question.
 </ul>
 <h3>General Action Parameters</h3>
@@ -47,7 +55,19 @@ When an action is suspended (e.g. destination can not be connected), the action 
 </ul>
 
 
-<h2>Legacy Format</h2>
+<h2>Useful Links</h2>
+<ul>
+<li>Rainer's blog posting on the performance of
+    <a href="http://blog.gerhards.net/2013/06/rsyslog-performance-main-and-action.html">main
+    and action queue worker threads</a>
+</ul>
+
+<br>
+<br>
+<br>
+
+
+<h1>Legacy Format</h1>
 <p><b>Be warned that legacy action format is hard to get right. It is
 recommended to use RainerScript-Style action format whenever possible!</b>
 A key problem with legacy format is that a single action is defined via
