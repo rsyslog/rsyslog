@@ -153,6 +153,7 @@ html_files = \
 	rsyslog_conf_basic_structure.html \
 	rsyslog_conf_sysklogd_compatibility.html \
 	imkmsg.html \
+	rainerscript_call.html \
 	src/classes.dia
 
 grfx_files = \
