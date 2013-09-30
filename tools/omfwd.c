@@ -109,6 +109,7 @@ typedef struct _instanceData {
 	z_stream zstrm;	/* zip stream to use for tcp compression */
 	uchar sndBuf[16*1024];	/* this is intensionally fixed -- see no good reason to make configurable */
 	unsigned offsSndBuf;	/* next free spot in send buffer */
+	int errsToReport;	/* (remaining) number of errors to report */
 } instanceData;
 
 /* config data */
@@ -144,6 +145,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "ziplevel", eCmdHdlrInt, 0 },
 	{ "compression.mode", eCmdHdlrGetWord, 0 },
 	{ "compression.stream.flushontxend", eCmdHdlrBinary, 0 },
+	{ "maxerrormessages", eCmdHdlrInt, 0 },
 	{ "rebindinterval", eCmdHdlrInt, 0 },
 	{ "streamdriver", eCmdHdlrGetWord, 0 },
 	{ "streamdrivermode", eCmdHdlrInt, 0 },
@@ -329,6 +331,7 @@ ENDfreeCnf
 BEGINcreateInstance
 CODESTARTcreateInstance
 	pData->offsSndBuf = 0;
+	pData->errsToReport = 5;
 ENDcreateInstance
 
 
@@ -372,7 +375,9 @@ static rsRetVal UDPSend(instanceData *pData, char *msg, size_t len)
 	struct addrinfo *r;
 	int i;
 	unsigned lsent = 0;
-	int bSendSuccess;
+	sbool bSendSuccess;
+	int lasterrno;
+	char errStr[1024];
 
 	if(pData->iRebindInterval && (pData->nXmit++ % pData->iRebindInterval == 0)) {
 		dbgprintf("omfwd dropping UDP 'connection' (as configured)\n");
@@ -400,18 +405,30 @@ static rsRetVal UDPSend(instanceData *pData, char *msg, size_t len)
 					bSendSuccess = RSTRUE;
 					break;
 				} else {
-					int eno = errno;
-					char errStr[1024];
-					dbgprintf("sendto() error: %d = %s.\n",
-						eno, rs_strerror_r(eno, errStr, sizeof(errStr)));
+					lasterrno = errno;
+					DBGPRINTF("sendto() error: %d = %s.\n",
+						lasterrno,
+						rs_strerror_r(lasterrno, errStr, sizeof(errStr)));
 				}
 			}
 			if (lsent == len && !send_to_all)
 			       break;
 		}
 		/* finished looping */
-		if (bSendSuccess == RSFALSE) {
+		if(bSendSuccess == RSFALSE) {
 			dbgprintf("error forwarding via udp, suspending\n");
+			if(pData->errsToReport > 0) {
+				rs_strerror_r(lasterrno, errStr, sizeof(errStr));
+				errmsg.LogError(0, RS_RET_ERR_UDPSEND, "omfwd: error sending "
+						"via udp: %s", errStr);
+				if(pData->errsToReport == 1) {
+					errmsg.LogError(0, RS_RET_LAST_ERRREPORT, "omfwd: "
+							"max number of error message emitted "
+							"- further messages will be "
+							"suppressed");
+				}
+				--pData->errsToReport;
+			}
 			iRet = RS_RET_SUSPENDED;
 		}
 	}
@@ -866,6 +883,7 @@ setInstParamDefaults(instanceData *pData)
 	pData->compressionLevel = 9;
 	pData->strmCompFlushOnTxEnd = 1;
 	pData->compressionMode = COMPRESS_NEVER;
+	pData->errsToReport = 5;
 }
 
 BEGINnewActInst
@@ -984,6 +1002,8 @@ CODESTARTnewActInst
 			errmsg.LogError(0, NO_ERRCODE, "Compression requested, but rsyslogd is not compiled "
 				 "with compression support - request ignored.");
 #			endif /* #ifdef USE_NETZIP */
+		} else if(!strcmp(actpblk.descr[i].name, "maxerrormessages")) {
+			pData->errsToReport = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "resendlastmsgonreconnect")) {
 			pData->bResendLastOnRecon = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "template")) {
