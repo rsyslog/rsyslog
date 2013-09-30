@@ -1,5 +1,9 @@
 ---------------------------------------------------------------------------
 Version 7.4.5  [v7.4-stable] 2013-09-??
+- mmanon: added "]" to set of acceptable chars after an IPv4 address
+  This is used in Exim and Postfix ... and probably a bunch of other tools
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=477
+  Thanks to Muri Cicanor for requesting the addition
 - bugfix: omprog blocked signals to executed programs
   The made it impossible to send signals to programs executed via
   omprog.

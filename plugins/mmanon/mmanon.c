@@ -307,7 +307,7 @@ anonip(instanceData *pData, uchar *msg, int *pLenMsg, int *idx)
 	++i;
 	ipstart[3] = i;
 	octet = getnum(msg, lenMsg, &i);
-	if(octet > 255 || !(msg[i] == ' ' || msg[i] == ':')) goto done;
+	if(octet > 255 || !(msg[i] == ' ' || msg[i] == ':' || msg[i] == ']')) goto done;
 	ipv4addr |= octet;
 
 	/* OK, we now found an ip address */
