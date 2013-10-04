@@ -1,5 +1,10 @@
 ---------------------------------------------------------------------------
 Version 7.5.4 [devel] 2013-09-??
+- change main/ruleset queue defaults to be more enterprise-like
+  new defaults are queue.size 100,000 max workers 2, worker
+  activation after 40,000 msgs are queued, batch size 256. These settings
+  are much more useful for enterprises and will not hurt low-end systems
+  that much. This is part of our re-focus on enterprise needs.
 - omfwd: new action parameter "maxErrorMessages" added
 - omfile: new module parameters to set action defaults added
   * dirCreateMode

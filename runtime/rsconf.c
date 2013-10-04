@@ -127,12 +127,12 @@ BEGINobjConstruct(rsconf) /* be sure to specify the object type also in END macr
 	CHKiRet(llInit(&pThis->rulesets.llRulesets, rulesetDestructForLinkedList,
 			rulesetKeyDestruct, strcasecmp));
 	/* queue params */
-	pThis->globals.mainQ.iMainMsgQueueSize = 10000;
-	pThis->globals.mainQ.iMainMsgQHighWtrMark = 8000;
-	pThis->globals.mainQ.iMainMsgQLowWtrMark = 2000;
-	pThis->globals.mainQ.iMainMsgQDiscardMark = 9800;
+	pThis->globals.mainQ.iMainMsgQueueSize = 100000;
+	pThis->globals.mainQ.iMainMsgQHighWtrMark = 80000;
+	pThis->globals.mainQ.iMainMsgQLowWtrMark = 20000;
+	pThis->globals.mainQ.iMainMsgQDiscardMark = 98000;
 	pThis->globals.mainQ.iMainMsgQDiscardSeverity = 8;
-	pThis->globals.mainQ.iMainMsgQueueNumWorkers = 1;
+	pThis->globals.mainQ.iMainMsgQueueNumWorkers = 2;
 	pThis->globals.mainQ.MainMsgQueType = QUEUETYPE_FIXED_ARRAY;
 	pThis->globals.mainQ.pszMainMsgQFName = NULL;
 	pThis->globals.mainQ.iMainMsgQueMaxFileSize = 1024*1024;
@@ -142,10 +142,10 @@ BEGINobjConstruct(rsconf) /* be sure to specify the object type also in END macr
 	pThis->globals.mainQ.iMainMsgQtoActShutdown = 1000;
 	pThis->globals.mainQ.iMainMsgQtoEnq = 2000;
 	pThis->globals.mainQ.iMainMsgQtoWrkShutdown = 60000;
-	pThis->globals.mainQ.iMainMsgQWrkMinMsgs = 100;
+	pThis->globals.mainQ.iMainMsgQWrkMinMsgs = 40000;
 	pThis->globals.mainQ.iMainMsgQDeqSlowdown = 0;
 	pThis->globals.mainQ.iMainMsgQueMaxDiskSpace = 0;
-	pThis->globals.mainQ.iMainMsgQueDeqBatchSize = 32;
+	pThis->globals.mainQ.iMainMsgQueDeqBatchSize = 256;
 	pThis->globals.mainQ.bMainMsgQSaveOnShutdown = 1;
 	pThis->globals.mainQ.iMainMsgQueueDeqtWinFromHr = 0;
 	pThis->globals.mainQ.iMainMsgQueueDeqtWinToHr = 25;
