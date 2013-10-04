@@ -5,7 +5,7 @@
  *
  * Work originally begun on 2008-02-01 by Rainer Gerhards
  *
- * Copyright 2008-2012 Adiscon GmbH.
+ * Copyright 2008-2013 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -23,14 +23,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "config.h" /* this is for autotools and always must be the first include */
+#include "config.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <pthread.h>		/* do NOT remove: will soon be done by the module generation macros */
+#include <pthread.h>
 #ifdef HAVE_SYS_STAT_H
 #	include <sys/stat.h>
 #endif
