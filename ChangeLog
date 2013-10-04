@@ -109,6 +109,14 @@ Version 7.5.0 [devel] 2013-06-11
   Thanks to Axel Rau for the patch.
 ---------------------------------------------------------------------------
 Version 7.4.5  [v7.4-stable] 2013-09-??
+- mmanon: removed the check for specific "terminator characters" after 
+  last octet. As it turned out, this didn't work in practice as there
+  was an enormous set of potential terminator chars -- so removing
+  them was the best thing to do. Note that this may change behaviour of
+  existing installations. Yet, we still consider this an important
+  bugfix, that should be applied to the stable branch.
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=477
+  Thanks to Muri Cicanor for initiating the discussion
 - bugfix: omprog blocked signals to executed programs
   The made it impossible to send signals to programs executed via
   omprog.

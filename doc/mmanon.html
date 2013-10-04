@@ -18,14 +18,7 @@ Note that anonymization will break digital signatures on the message, if
 they exist.
 <p><i>How are IP-Addresses defined?</i>
 <p>We assume that an IP address consists of four octets in dotted notation,
-where each of the octets has a value between 0 and 255, inclusively. After
-the last octet, there must be either a space or a colon. So, for example,
-"1.2.3.4 Test" and "1.2.3.4:514 Test" are detected as containing valid IP 
-addresses, whereas this is not the case for "1.2.300.4 Test" or
-"1.2.3.4-Test". The message text may contain multiple addresses. If so,
-each of them is anonimized (according to the same rules).
-<b>Important:</b> We may change the set of acceptable characters after
-the last octet in the future, if there are good reasons to do so.
+where each of the octets has a value between 0 and 255, inclusively.
 <p>&nbsp;</p>
 
 <p><b>Module Configuration Parameters</b>:</p>
