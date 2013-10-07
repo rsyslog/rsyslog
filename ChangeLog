@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
-Version 7.5.4 [devel] 2013-09-??
+Version 7.5.4 [devel] 2013-10-07
+- mmpstrucdata: new module to parse RFC5424 structured data into json
+  message properties
 - change main/ruleset queue defaults to be more enterprise-like
   new defaults are queue.size 100,000 max workers 2, worker
   activation after 40,000 msgs are queued, batch size 256. These settings
@@ -11,6 +13,9 @@ Version 7.5.4 [devel] 2013-09-??
   * fileCreateMode
 - mmutf8fix: new module to fix invalid UTF-8 sequences
 - imuxsock: handle unlimited number of additional listen sockets
+- doc: improve usability by linking to relevant web ressources
+  The idea is to enable users to quickly find additional information,
+  samples, HOWTOs and the like on the main site.
   At the same time, (very) slightly remove memory footprint when
   few listeners are monitored.
 - bugfix: omfwd parameter streamdrivermmode was not properly handled
@@ -20,6 +25,7 @@ Version 7.5.4 [devel] 2013-09-??
   permits overriding the system default stream driver (gtls, ptcp)
 - bugfix: build system: libgcrypt.h needed even if libgrcypt was disabled
   Thanks to Jonny Törnbom for reporting this problem
+- imported bugfixes from 7.4.4
 ---------------------------------------------------------------------------
 Version 7.5.3 [devel] 2013-09-11
 - imfile: support for escaping LF characters added
