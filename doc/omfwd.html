@@ -56,6 +56,11 @@
 	Permits to resend the last message when a connection is reconnected. This setting affects TCP-based syslog, only. It is most useful for traditional, plain TCP syslog. Using this protocol, it is not always possible to know which messages were successfully transmitted to the receiver when a connection breaks. In many cases, the last message sent is lost. By switching this setting to "yes", rsyslog will always retransmit the last message when a connection is reestablished. This reduces potential message loss, but comes at the price that some messages may be duplicated (what usually is more acceptable). <br></li><br>
 	
 </ul>
+<p><b>See Also</b>
+<ul>
+<li><a href="http://www.rsyslog.com/encrypted-disk-queues/">Encrypted Disk Queues</a></li>
+</ul>
+</p>
 <p><b>Caveats/Known Bugs:</b></p><ul><li>None.</li></ul>
 <p><b>Sample:</b></p>
 <p>The following command sends all syslog messages to a remote server via TCP port 10514.</p>
