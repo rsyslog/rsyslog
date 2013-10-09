@@ -78,6 +78,7 @@ static struct lstn_s {
 	prop_t *pInputName;
 	statsobj_t *stats;	/* listener stats */
 	ratelimit_t *ratelimiter;
+	uchar *dfltTZ;
 	STATSCOUNTER_DEF(ctrSubmit, mutCtrSubmit)
 } *lcnfRoot = NULL, *lcnfLast = NULL;
 
@@ -110,6 +111,7 @@ struct instanceConf_s {
 	uchar *pszBindRuleset;		/* name of ruleset to bind to */
 	uchar *inputname;
 	ruleset_t *pBindRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
+	uchar *dfltTZ;
 	int ratelimitInterval;
 	int ratelimitBurst;
 	struct instanceConf_s *next;
@@ -143,6 +145,7 @@ static struct cnfparamblk modpblk =
 /* input instance parameters */
 static struct cnfparamdescr inppdescr[] = {
 	{ "port", eCmdHdlrArray, CNFPARAM_REQUIRED }, /* legacy: InputTCPServerRun */
+	{ "defaulttz", eCmdHdlrString, 0 },
 	{ "inputname", eCmdHdlrGetWord, 0 },
 	{ "inputname.appendport", eCmdHdlrBinary, 0 },
 	{ "address", eCmdHdlrString, 0 },
@@ -177,6 +180,7 @@ createInstance(instanceConf_t **pinst)
 	inst->bAppendPortToInpname = 0;
 	inst->ratelimitBurst = 10000; /* arbitrary high limit */
 	inst->ratelimitInterval = 0; /* off */
+	inst->dfltTZ = NULL;
 
 	/* node created, let's add to config */
 	if(loadModConf->tail == NULL) {
@@ -261,6 +265,7 @@ addListner(instanceConf_t *inst)
 			newlcnfinfo->next = NULL;
 			newlcnfinfo->sock = newSocks[iSrc];
 			newlcnfinfo->pRuleset = inst->pBindRuleset;
+			newlcnfinfo->dfltTZ = inst->dfltTZ;
 			snprintf((char*)dispname, sizeof(dispname), "imudp(%s:%s)", bindName, port);
 			dispname[sizeof(dispname)-1] = '\0'; /* just to be on the save side... */
 			CHKiRet(ratelimitNew(&newlcnfinfo->ratelimiter, (char*)dispname, NULL));
@@ -415,6 +420,8 @@ processSocket(thrdInfo_t *pThrd, struct lstn_s *lstn, struct sockaddr_storage *f
 			MsgSetInputName(pMsg, lstn->pInputName);
 			MsgSetRuleset(pMsg, lstn->pRuleset);
 			MsgSetFlowControlType(pMsg, eFLOWCTL_NO_DELAY);
+			if(lstn->dfltTZ != NULL)
+				MsgSetDfltTZ(pMsg, (char*) lstn->dfltTZ);
 			pMsg->msgFlags  = NEEDS_PARSING | PARSE_HOSTNAME | NEEDS_DNSRESOL;
 			if(*pbIsPermitted == 2)
 				pMsg->msgFlags  |= NEEDS_ACLCHK_U; /* request ACL check after resolution */
@@ -721,6 +728,8 @@ createListner(es_str_t *port, struct cnfparamvals *pvals)
 			inst->inputname = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "inputname.appendport")) {
 			inst->bAppendPortToInpname = (int) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "defaulttz")) {
+			inst->dfltTZ = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "address")) {
 			inst->pszBindAddr = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "ruleset")) {
@@ -896,6 +905,7 @@ CODESTARTfreeCnf
 		free(inst->pszBindPort);
 		free(inst->pszBindAddr);
 		free(inst->inputname);
+		free(inst->dfltTZ);
 		del = inst;
 		inst = inst->next;
 		free(del);
