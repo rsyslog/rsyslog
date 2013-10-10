@@ -2,6 +2,9 @@
 Version 7.5.5 [devel] 2013-10-??
 - imudp: add "dfltTZ" input config parameter
 - bugfix: memory leak in mmnormalize
+- bugfix: mmutf8fix did not properly handle invalid UTF-8 at END of message
+  if the very last character sequence was too long, this was not detected
+  Thanks to Risto Vaarandi for reporting this problem.
 ---------------------------------------------------------------------------
 Version 7.5.4 [devel] 2013-10-07
 - mmpstrucdata: new module to parse RFC5424 structured data into json
