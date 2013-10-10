@@ -2779,7 +2779,7 @@ cnfexprOptimize_CMP_var(struct cnfexpr *expr)
 				parser_errmsg("invalid facility '%s', expression will always "
 					      "evaluate to FALSE", cstr);
 			} else {
-				/* we can acutally optimize! */
+				/* we can actually optimize! */
 				DBGPRINTF("optimizer: change comparison OP to FUNC prifilt()\n");
 				func = cnffuncNew_prifilt(fac);
 				if(expr->nodetype == CMP_NE)
@@ -2858,7 +2858,7 @@ cnfexprOptimize_AND_OR(struct cnfexpr *expr)
 static inline void
 cnfexprOptimize_CMPEQ_arr(struct cnfarray *arr)
 {
-	DBGPRINTF("optimizer: sorting array for CMP_EQ/NEQ comparison\n");
+	DBGPRINTF("optimizer: sorting array of %d members for CMP_EQ/NEQ comparison\n", arr->nmemb);
 	qsort(arr->arr, arr->nmemb, sizeof(es_str_t*), qs_arrcmp);
 }
 
@@ -2922,7 +2922,8 @@ cnfexprOptimize(struct cnfexpr *expr)
 		}
 		if(expr->l->nodetype == 'V') {
 			expr = cnfexprOptimize_CMP_var(expr);
-		} else if(expr->r->nodetype == 'A') {
+		}
+		if(expr->r->nodetype == 'A') {
 			cnfexprOptimize_CMPEQ_arr((struct cnfarray *)expr->r);
 		}
 		break;
