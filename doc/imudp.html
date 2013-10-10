@@ -29,7 +29,17 @@ only activated if messages come in at a very fast rate, so doing less frequent
 time calls should usually be acceptable. The default value is two, because we have
 seen that even without optimization the kernel often returns twice the identical time.
 You can set this value as high as you like, but do so at your own risk. The higher
-the value, the less precise the timestamp.
+the value, the less precise the timestamp.<br>
+<b>Note:</b> the timeRequery is done based on executed system calls (<b>not</b>
+messages received). So when batch
+sizes are used, multiple messages are received with one system call. All of these
+messages always receive the same timestamp, as they are effectively received at the
+same time. When there is very high traffic and successive system calls immediately
+return the next batch of messages, the time requery logic kicks in, which means that
+by default time is only queried for every second batch. Again, this should not cause
+a too-much deviation as it requires messages to come in very rapidly. However, we advise
+not to set the "timeRequery" parameter to a large value (larger than 10) if input
+batches are used.
 <li><b>SchedulingPolicy</b> &lt;rr/fifo/other&gt;<br>
 Can be used the set the scheduler priority, if the necessary functionality
 is provided by the platform. Most useful to select "fifo" for real-time 
