@@ -10,6 +10,7 @@ Version 7.4.5  [v7.4-stable] 2013-09-??
   Thanks to Muri Cicanor for initiating the discussion
 - now requires libestr 0.1.7 as early versions had a nasty bug in
   string comparisons
+- bugfix: memory leak in mmnormalize
 - bugfix: array-based ==/!= comparisions lead to invalid results
   This was a regression introduced in 7.3.5 bei the PRI optimizer
 - bugfix: omprog blocked signals to executed programs
