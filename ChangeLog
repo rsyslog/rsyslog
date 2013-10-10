@@ -1,3 +1,5 @@
+- bugfix: array-based ==/!= comparisions lead to invalid results
+  This was a regression introduced in 7.3.5 bei the PRI optimizer
 ---------------------------------------------------------------------------
 Version 7.4.4  [v7.4-stable] 2013-09-03
 - better error messages in GuardTime signature provider
