@@ -130,6 +130,7 @@ struct instanceConf_s {
 	uchar *pszBindRuleset;		/* name of ruleset to bind to */
 	uchar *pszInputName;		/* value for inputname property, NULL is OK and handled by core engine */
 	ruleset_t *pBindRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
+	uchar *dfltTZ;
 	int ratelimitInterval;
 	int ratelimitBurst;
 	struct instanceConf_s *next;
@@ -162,6 +163,7 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "address", eCmdHdlrString, 0 },
 	{ "name", eCmdHdlrString, 0 },
 	{ "ruleset", eCmdHdlrString, 0 },
+	{ "defaulttz", eCmdHdlrString, 0 },
 	{ "supportoctetcountedframing", eCmdHdlrBinary, 0 },
 	{ "notifyonconnectionclose", eCmdHdlrBinary, 0 },
 	{ "compression.mode", eCmdHdlrGetWord, 0 },
@@ -202,6 +204,7 @@ struct ptcpsrv_s {
 	int iKeepAliveTime;
 	uint8_t compressionMode;
 	uchar *pszInputName;
+	uchar *dfltTZ;
 	prop_t *pInputName;		/* InputName in (fast to process) property format */
 	ruleset_t *pRuleset;
 	ptcplstn_t *pLstn;		/* root of our listeners */
@@ -694,6 +697,8 @@ doSubmitMsg(ptcpsess_t *pThis, struct syslogTime *stTime, time_t ttGenTime, mult
 	MsgSetRawMsg(pMsg, (char*)pThis->pMsg, pThis->iMsg);
 	MsgSetInputName(pMsg, pSrv->pInputName);
 	MsgSetFlowControlType(pMsg, eFLOWCTL_LIGHT_DELAY);
+	if(pSrv->dfltTZ != NULL)
+		MsgSetDfltTZ(pMsg, (char*) pSrv->dfltTZ);
 	pMsg->msgFlags  = NEEDS_PARSING | PARSE_HOSTNAME;
 	MsgSetRcvFrom(pMsg, pThis->peerName);
 	CHKiRet(MsgSetRcvFromIP(pMsg, pThis->peerIP));
@@ -1174,6 +1179,7 @@ createInstance(instanceConf_t **pinst)
 	inst->iKeepAliveProbes = 0;
 	inst->iKeepAliveTime = 0;
 	inst->bEmitMsgOnClose = 0;
+	inst->dfltTZ = NULL;
 	inst->iAddtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
 	inst->pBindRuleset = NULL;
 	inst->ratelimitBurst = 10000; /* arbitrary high limit */
@@ -1259,6 +1265,7 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 	pSrv->iKeepAliveTime = inst->iKeepAliveTime;
 	pSrv->bEmitMsgOnClose = inst->bEmitMsgOnClose;
 	pSrv->compressionMode = inst->compressionMode;
+	pSrv->dfltTZ = inst->dfltTZ;
 	CHKiRet(ratelimitNew(&pSrv->ratelimiter, "imtcp", (char*)inst->pszBindPort));
 	ratelimitSetLinuxLike(pSrv->ratelimiter, inst->ratelimitInterval, inst->ratelimitBurst);
 	ratelimitSetThreadSafe(pSrv->ratelimiter);
@@ -1607,6 +1614,8 @@ CODESTARTnewInpInst
 			inst->iAddtlFrameDelim = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "notifyonconnectionclose")) {
 			inst->bEmitMsgOnClose = (int) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "defaulttz")) {
+			inst->dfltTZ = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "ratelimit.burst")) {
 			inst->ratelimitBurst = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "ratelimit.interval")) {
@@ -1761,6 +1770,7 @@ CODESTARTfreeCnf
 		free(inst->pszBindAddr);
 		free(inst->pszBindRuleset);
 		free(inst->pszInputName);
+		free(inst->dfltTZ);
 		del = inst;
 		inst = inst->next;
 		free(del);
