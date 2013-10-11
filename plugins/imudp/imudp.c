@@ -1120,7 +1120,9 @@ wrkr(void *myself)
 }
 
 /* This function is called to gather input.
- * In essence, it just starts the pool of workers.
+ * In essence, it just starts the pool of workers. To save resources,
+ * we run one of the workers on our own thread -- otherwise that thread would
+ * just idle around and wait for the workers to finish.
  */
 BEGINrunInput
 	int i;
@@ -1128,13 +1130,18 @@ BEGINrunInput
 CODESTARTrunInput
 	pthread_attr_init(&wrkrThrdAttr);
 	pthread_attr_setstacksize(&wrkrThrdAttr, 4096*1024);
-	for(i = 0 ; i < runModConf->wrkrMax ; ++i) {
+	for(i = 0 ; i < runModConf->wrkrMax - 1 ; ++i) {
 		wrkrInfo[i].pThrd = pThrd;
 		wrkrInfo[i].id = i;
 		pthread_create(&wrkrInfo[i].tid, &wrkrThrdAttr, wrkr, &(wrkrInfo[i]));
 	}
 	pthread_attr_destroy(&wrkrThrdAttr);
-	for(i = 0 ; i < runModConf->wrkrMax ; ++i) {
+
+	wrkrInfo[i].pThrd = pThrd;
+	wrkrInfo[i].id = i;
+	wrkr(&wrkrInfo[i]);
+
+	for(i = 0 ; i < runModConf->wrkrMax - 1 ; ++i) {
 		pthread_join(wrkrInfo[i].tid, NULL);
 	}
 ENDrunInput
