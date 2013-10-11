@@ -56,6 +56,15 @@ should not be overdone. For each buffer, max message size bytes are statically
 required. Also, a too-high number leads to reduced efficiency, as some structures
 need to be completely initialized before the OS call is done. We would suggest to not
 set it above a value of 128, except if experimental results show that this is useful.
+<li><b>threads</b> &lt;number&gt; (default 1), available since 7.5.5<br>
+Number of worker threads to process incoming messages. These
+threads are utilized to pull data off the network. On a busy system, additional
+threads (but not more than there are CPUs/Cores) can help improving
+performance and avoiding message loss. Note that with too many threads, performance
+can suffer.
+There is a hard upper limit on the number of threads that can be defined.
+Currently, this limit is set to 32. It may increase in the future when massive
+multicore processors become available.
 </ul>
 <p><b>Input Parameters</b>:</p>
 <ul>
