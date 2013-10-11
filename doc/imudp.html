@@ -127,6 +127,13 @@ system-set max value if the user is not sufficiently privileged. Technically, th
 parameter will result in a setsockopt() call with SO_RCVBUF (and SO_RCVBUFFORCE if it
 is available).
 </ul>
+<p><b>See Also</b>
+<ul>
+<li>Description of
+<a href="http://www.rsyslog.com/rsyslog-statistic-counter/">rsyslog statistic counters</a>
+This also describes all imudp counters.
+</ul>
+<p>
 <b>Caveats/Known Bugs:</b>
 <ul>
 <li>Scheduling parameters are set <b>after</b> privileges have been dropped.
