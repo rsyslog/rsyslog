@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------
 Version 7.5.5 [devel] 2013-10-??
+- imudp: support for multiple receiver threads added
 - imudp: add "dfltTZ" input config parameter
 - bugfix: memory leak in mmnormalize
 - bugfix: mmutf8fix did not properly handle invalid UTF-8 at END of message
