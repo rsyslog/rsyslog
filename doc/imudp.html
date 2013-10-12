@@ -103,6 +103,7 @@ of "imudp514". The ability to append a port is most useful when multiple ports
 are defined for a single input and each of the inputnames shall be unique.
 Note that there currently is no differentiation between IPv4/v6 listeners on
 the same port.
+</li>
 <li><b>defaultTZ</b> &lt;timezone-info&gt;<br>
 This is an <b>experimental</b> parameter; details may change at any time and it may
 also be discoutinued without any early warning.<br>
@@ -114,7 +115,6 @@ including TZ names (like EST) are NOT yet supported. Note that consequently no d
 saving settings are evaluated when working with timezones. If an invalid format is used,
 "interesting" things can happen, among them malformed timestamps and rsyslogd segfaults.
 This will obviously be changed at the time this feature becomes non-experimental.</li>
-</li>
 <li><b>rcvbufSize</b> [size] - (available since 7.5.3)
 This request a socket receive buffer of specific size from the operating system.
 It is an expert parameter, which should only be changed for a good reason. Note that

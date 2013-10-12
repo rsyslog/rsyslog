@@ -96,6 +96,17 @@ the message was received from.
 Binds specified ruleset to next server defined.
 <li><b>Address</b> &lt;name&gt;<br>
 On multi-homed machines, specifies to which local address the listerner should be bound.
+<li><b>defaultTZ</b> &lt;timezone-info&gt;<br>
+This is an <b>experimental</b> parameter; details may change at any time and it may
+also be discoutinued without any early warning.<br>
+Permits to set a default timezone for this listener. This is useful when working with
+legacy syslog (RFC3164 et al) residing in different timezones. If set it will be used as
+timezone for all messages <b>that do not contain timezone info</b>.
+Currently, the format <b>must</b> be "+/-hh:mm", e.g. "-05:00", "+01:30". Other formats,
+including TZ names (like EST) are NOT yet supported. Note that consequently no daylight
+saving settings are evaluated when working with timezones. If an invalid format is used,
+"interesting" things can happen, among them malformed timestamps and rsyslogd segfaults.
+This will obviously be changed at the time this feature becomes non-experimental.</li>
 <li><b>RateLimit.Interval</b> [number] - (available since 7.3.1) specifies the rate-limiting
 interval in seconds.  Default value is 0, which turns off rate limiting. Set it to a number
 of seconds (5 recommended) to activate rate-limiting.
