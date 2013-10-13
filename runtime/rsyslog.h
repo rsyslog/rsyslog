@@ -426,6 +426,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_RELP_AUTH_FAIL = -2353,/**< RELP peer authentication failed */
 	RS_RET_ERR_UDPSEND = -2354,/**< sending msg via UDP failed */
 	RS_RET_LAST_ERRREPORT = -2355,/**< module does not emit more error messages as limit is reached */
+	RS_RET_READ_ERR = -2356,/**< read error occured (file i/o) */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */

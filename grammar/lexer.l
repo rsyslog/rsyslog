@@ -192,6 +192,8 @@ int fileno(FILE *stream);
 				  BEGIN INOBJ; return BEGINOBJ; }
 "module"[ \n\t]*"("		{ yylval.objType = CNFOBJ_MODULE;
 				  BEGIN INOBJ; return BEGINOBJ; }
+"lookup_table"[ \n\t]*"("	{ yylval.objType = CNFOBJ_LOOKUP_TABLE;
+				  BEGIN INOBJ; return BEGINOBJ; }
 "action"[ \n\t]*"("		{ BEGIN INOBJ; return BEGIN_ACTION; }
 ^[ \t]*:\$?[a-z\-]+[ ]*,[ ]*!?[a-z]+[ ]*,[ ]*\"(\\\"|[^\"])*\"	{
 				  yylval.s = strdup(rmLeadingSpace(yytext));

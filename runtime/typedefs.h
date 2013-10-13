@@ -25,6 +25,7 @@
  */
 #ifndef INCLUDED_TYPEDEFS_H
 #define INCLUDED_TYPEDEFS_H
+#include <stdint.h>
 #if defined(__FreeBSD__)
 #include <sys/types.h>
 #endif
@@ -100,6 +101,9 @@ typedef struct outchannels_s outchannels_t;
 typedef struct modConfData_s modConfData_t;
 typedef struct instanceConf_s instanceConf_t;
 typedef struct ratelimit_s ratelimit_t;
+typedef struct lookup_string_tab_etry_s lookup_string_tab_etry_t;
+typedef struct lookup_tables_s lookup_tables_t;
+typedef struct lookup_s lookup_t;
 typedef struct action_s action_t;
 typedef int rs_size_t; /* we do never need more than 2Gig strings, signed permits to
 			* use -1 as a special flag. */

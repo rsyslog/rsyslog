@@ -25,6 +25,7 @@ enum cnfobjType {
 	CNFOBJ_PROPERTY,
 	CNFOBJ_CONSTANT,
 	CNFOBJ_MAINQ,
+	CNFOBJ_LOOKUP_TABLE,
 	CNFOBJ_INVALID = 0
 };
 
@@ -58,6 +59,8 @@ cnfobjType2str(enum cnfobjType ot)
 		break;
 	case CNFOBJ_MAINQ:
 		return "main_queue";
+	case CNFOBJ_LOOKUP_TABLE:
+		return "lookup_table";
 		break;
 	default:return "error: invalid cnfobjType";
 	}
@@ -232,7 +235,8 @@ enum cnffuncid {
 	CNFFUNC_RE_MATCH,
 	CNFFUNC_RE_EXTRACT,
 	CNFFUNC_FIELD,
-	CNFFUNC_PRIFILT
+	CNFFUNC_PRIFILT,
+	CNFFUNC_LOOKUP
 };
 
 struct cnffunc {
