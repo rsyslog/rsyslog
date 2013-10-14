@@ -139,6 +139,17 @@ Version 7.4.5  [v7.4-stable] 2013-09-??
   Thanks to Muri Cicanor for initiating the discussion
 - now requires libestr 0.1.7 as early versions had a nasty bug in
   string comparisons
+- bugfix: mmanon did not detect all IP addresses in rewrite mode
+  The problem occured if two IPs were close to each other and the first one
+  was shrunk.
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=485
+  Thanks to micah-at-riseup.net for reporting this bug
+- bugfix: mmanon sometimes used invalid replacement char in simple mode
+  depending on configuration sequence, the replacement character was set
+  to 's' instead of the correct value. Most importantly, it was set to
+  's' if simple mode was selected and no replacement char set.
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=484
+  Thanks to micah-at-riseup.net for reporting this bug
 - bugfix: memory leak in mmnormalize
 - bugfix: array-based ==/!= comparisions lead to invalid results
   This was a regression introduced in 7.3.5 bei the PRI optimizer
