@@ -31,6 +31,8 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <pthread.h>		/* do NOT remove: will soon be done by the module generation macros */
+#include <sys/types.h>
+#include <unistd.h>
 #ifdef HAVE_SYS_STAT_H
 #	include <sys/stat.h>
 #endif
@@ -104,6 +106,8 @@ static struct configSettings_s {
 
 struct instanceConf_s {
 	uchar *pszFileName;
+	uchar *pszDirName;
+	uchar *pszFileBaseName;
 	uchar *pszTag;
 	uchar *pszStateFile;
 	uchar *pszBindRuleset;
@@ -361,6 +365,65 @@ finalize_it:
 }
 
 
+/* this function checks instance parameters and does some required pre-processing
+ * (e.g. split filename in path and actual name)
+ * Note: we do NOT use dirname()/basename() as they have portability problems.
+ */
+static rsRetVal
+checkInstance(instanceConf_t *inst)
+{
+	char dirn[MAXFNAME];
+	char basen[MAXFNAME];
+	int i;
+	int lenName;
+	struct stat sb;
+	int r;
+	int eno;
+	char errStr[512];
+	DEFiRet;
+
+	lenName = ustrlen(inst->pszFileName);
+	for(i = lenName ; i >= 0 ; --i) {
+		if(inst->pszFileName[i] == '/') {
+			/* found basename component */
+			if(i == lenName)
+				basen[0] = '\0';
+			else {
+				memcpy(basen, inst->pszFileName+i+1, lenName-i);
+				/* Note \0 is copied above! */
+				//basen[(lenName-i+1)+1] = '\0';
+			}
+			break;
+		}
+	}
+	memcpy(dirn, inst->pszFileName, i); /* do not copy slash */
+	dirn[i] = '\0';
+	CHKmalloc(inst->pszFileBaseName = ustrdup(basen));
+	CHKmalloc(inst->pszDirName = ustrdup(dirn));
+
+	if(dirn[0] == '\0') {
+		dirn[0] = '/';
+		dirn[1] = '\0';
+	}
+	r = stat(dirn, &sb);
+	if(r != 0)  {
+		eno = errno;
+		rs_strerror_r(eno, errStr, sizeof(errStr));
+		errmsg.LogError(0, RS_RET_CONFIG_ERROR, "imfile warning: directory '%s': %s",
+				dirn, errStr);
+		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+	}
+	if(!S_ISDIR(sb.st_mode)) {
+		errmsg.LogError(0, RS_RET_CONFIG_ERROR, "imfile warning: configured directory "
+				"'%s' is NOT a directory", dirn);
+		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+	}
+
+finalize_it:
+	RETiRet;
+}
+
+
 /* add a new monitor */
 static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 {
@@ -395,6 +458,8 @@ static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	inst->iPersistStateInterval = cs.iPersistStateInterval;
 	inst->readMode = cs.readMode;
 	inst->escapeLF = 0;
+
+	CHKiRet(checkInstance(inst));
 
 	/* reset legacy system */
 	cs.iPersistStateInterval = 0;
@@ -495,6 +560,7 @@ CODESTARTnewInpInst
 			  "param '%s'\n", inppblk.descr[i].name);
 		}
 	}
+	CHKiRet(checkInstance(inst));
 finalize_it:
 CODE_STD_FINALIZERnewInpInst
 	cnfparamvalsDestruct(pvals, &inppblk);
