@@ -5,7 +5,7 @@
  *
  * Work originally begun on 2008-02-01 by Rainer Gerhards
  *
- * Copyright 2008-2012 Adiscon GmbH.
+ * Copyright 2008-2013 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -627,26 +627,6 @@ CODESTARTfreeCnf
 ENDfreeCnf
 
 
-
-/* This function is the cancel cleanup handler. It is called when rsyslog decides the
- * module must be stopped, what most probably happens during shutdown of rsyslogd. When
- * this function is called, the runInput() function (below) is already terminated - somewhere
- * in the middle of what it was doing. The cancel cleanup handler below should take
- * care of any locked mutexes and such, things that really need to be cleaned up
- * before processing continues. In general, many plugins do not need to provide
- * any code at all here.
- *
- * IMPORTANT: the calling interface of this function can NOT be modified. It actually is
- * called by pthreads. The provided argument is currently not being used.
- */
-static void
-inputModuleCleanup(void __attribute__((unused)) *arg)
-{
-	BEGINfunc
-	ENDfunc
-}
-
-
 /* This function is called by the framework to gather the input. The module stays
  * most of its lifetime inside this function. It MUST NEVER exit this function. Doing
  * so would end module processing and rsyslog would NOT reschedule the module. If
@@ -667,12 +647,10 @@ inputModuleCleanup(void __attribute__((unused)) *arg)
  * On spamming the main queue: keep in mind that it will automatically rate-limit
  * ourselfes if we begin to overrun it. So we really do not need to care here.
  */
-#pragma GCC diagnostic ignored "-Wempty-body"
 BEGINrunInput
 	int i;
 	int bHadFileData; /* were there at least one file with data during this run? */
 CODESTARTrunInput
-	pthread_cleanup_push(inputModuleCleanup, NULL);
 	while(glbl.GetGlobalInputTermState() == 0) {
 		do {
 			bHadFileData = 0;
@@ -692,13 +670,8 @@ CODESTARTrunInput
 	}
 	DBGPRINTF("imfile: terminating upon request of rsyslog core\n");
 	
-	pthread_cleanup_pop(0); /* just for completeness, but never called... */
 	RETiRet;	/* use it to make sure the housekeeping is done! */
 ENDrunInput
-#pragma GCC diagnostic warning "-Wempty-body"
-	/* END no-touch zone                                                                          *
-	 * ------------------------------------------------------------------------------------------ */
-
 
 
 /* The function is called by rsyslog before runInput() is called. It is a last chance
@@ -868,8 +841,7 @@ std_checkRuleset_genErrMsg(__attribute__((unused)) modConfData_t *modConf, insta
  * complexity of processing is depending on the actual module. However, only
  * thing absolutely necessary should be done here. Actual app-level processing
  * is to be performed in runInput(). A good sample of what to do here may be to
- * set some variable defaults. The most important thing probably is registration
- * of config command handlers.
+ * set some variable defaults.
  */
 BEGINmodInit()
 CODESTARTmodInit
