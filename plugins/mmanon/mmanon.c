@@ -170,7 +170,6 @@ CODESTARTnewActInst
 					cstr);
 				free(cstr);
 			}
-			pData->replChar = es_getBufAddr(pvals[i].val.d.estr)[0];
 		} else if(!strcmp(actpblk.descr[i].name, "replacementchar")) {
 			pData->replChar = es_getBufAddr(pvals[i].val.d.estr)[0];
 		} else if(!strcmp(actpblk.descr[i].name, "ipv4.bits")) {
