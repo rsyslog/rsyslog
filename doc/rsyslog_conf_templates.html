@@ -524,7 +524,13 @@ $template TraditionalForwardFormat,"<%PRI%>%TIMESTAMP% %HOSTNAME% %syslogtag:1:3
 <br><br>
 $template StdSQLFormat,"insert into SystemEvents (Message, Facility, FromHost, Priority, DeviceReportedTime, ReceivedAt, InfoUnitID, SysLogTag) values ('%msg%', %syslogfacility%, '%HOSTNAME%', %syslogpriority%, '%timereported:::date-mysql%', '%timegenerated:::date-mysql%', %iut%, '%syslogtag%')",SQL
 </code></p>
-
+<p><b>See Also</b>
+<ul>
+<li><a href="http://www.rsyslog.com/how-to-bind-a-template/">How to bind a template</a></li>
+<li><a href="http://www.rsyslog.com/adding-the-bom-to-a-message/">Adding the BOM to a message</a></li>
+<li><a href="http://www.rsyslog.com/article60/">How to separate log files by host name of the sending device</a></li>
+</ul>
+</p>
 <p>[<a href="manual.html">manual index</a>]
 [<a href="rsyslog_conf.html">rsyslog.conf</a>]
 [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>

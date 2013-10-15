@@ -1334,6 +1334,7 @@ doFuncCall(struct cnffunc *func, struct var *ret, void* usrptr)
 	int bMustFree;
 	es_str_t *estr;
 	char *str;
+	char *s;
 	uchar *resStr;
 	int retval;
 	struct var r[CNFFUNC_MAX_ARGS];
@@ -1470,6 +1471,19 @@ doFuncCall(struct cnffunc *func, struct var *ret, void* usrptr)
 		else
 			ret->d.n = 1;
 		ret->datatype = 'N';
+		break;
+	case CNFFUNC_LOOKUP:
+dbgprintf("DDDD: executing lookup\n");
+		ret->datatype = 'S';
+		if(func->funcdata == NULL) {
+			ret->d.estr = es_newStrFromCStr("TABLE-NOT-FOUND", sizeof("TABLE-NOT-FOUND")-1);
+			break;
+		}
+		cnfexprEval(func->expr[1], &r[1], usrptr);
+		str = (char*) var2CString(&r[1], &bMustFree);
+		ret->d.estr = lookupKey_estr(func->funcdata, (uchar*)str);
+		if(bMustFree) free(str);
+		if(r[1].datatype == 'S') es_deleteStr(r[1].d.estr);
 		break;
 	default:
 		if(Debug) {
@@ -2779,7 +2793,7 @@ cnfexprOptimize_CMP_var(struct cnfexpr *expr)
 				parser_errmsg("invalid facility '%s', expression will always "
 					      "evaluate to FALSE", cstr);
 			} else {
-				/* we can acutally optimize! */
+				/* we can actually optimize! */
 				DBGPRINTF("optimizer: change comparison OP to FUNC prifilt()\n");
 				func = cnffuncNew_prifilt(fac);
 				if(expr->nodetype == CMP_NE)
@@ -2858,7 +2872,7 @@ cnfexprOptimize_AND_OR(struct cnfexpr *expr)
 static inline void
 cnfexprOptimize_CMPEQ_arr(struct cnfarray *arr)
 {
-	DBGPRINTF("optimizer: sorting array for CMP_EQ/NEQ comparison\n");
+	DBGPRINTF("optimizer: sorting array of %d members for CMP_EQ/NEQ comparison\n", arr->nmemb);
 	qsort(arr->arr, arr->nmemb, sizeof(es_str_t*), qs_arrcmp);
 }
 
@@ -2922,7 +2936,8 @@ cnfexprOptimize(struct cnfexpr *expr)
 		}
 		if(expr->l->nodetype == 'V') {
 			expr = cnfexprOptimize_CMP_var(expr);
-		} else if(expr->r->nodetype == 'A') {
+		}
+		if(expr->r->nodetype == 'A') {
 			cnfexprOptimize_CMPEQ_arr((struct cnfarray *)expr->r);
 		}
 		break;
@@ -3233,6 +3248,13 @@ funcName2ID(es_str_t *fname, unsigned short nParams)
 			return CNFFUNC_INVALID;
 		}
 		return CNFFUNC_PRIFILT;
+	} else if(!es_strbufcmp(fname, (unsigned char*)"lookup", sizeof("lookup") - 1)) {
+		if(nParams != 2) {
+			parser_errmsg("number of parameters for lookup() must be two "
+				      "but is %d.", nParams);
+			return CNFFUNC_INVALID;
+		}
+		return CNFFUNC_LOOKUP;
 	} else {
 		return CNFFUNC_INVALID;
 	}
@@ -3297,6 +3319,31 @@ finalize_it:
 }
 
 
+static inline rsRetVal
+initFunc_lookup(struct cnffunc *func)
+{
+	struct funcData_prifilt *pData;
+	uchar *cstr = NULL;
+	DEFiRet;
+
+	func->funcdata = NULL;
+	if(func->expr[0]->nodetype != 'S') {
+		parser_errmsg("table name (param 1) of lookup() must be a constant string");
+		FINALIZE;
+	}
+
+	cstr = (uchar*)es_str2cstr(((struct cnfstringval*) func->expr[0])->estr, NULL);
+	if((func->funcdata = lookupFindTable(cstr)) == NULL) {
+		parser_errmsg("lookup table '%s' not found", cstr);
+		FINALIZE;
+	}
+
+finalize_it:
+	free(cstr);
+	RETiRet;
+}
+
+
 struct cnffunc *
 cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst)
 {
@@ -3333,6 +3380,9 @@ cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst)
 				break;
 			case CNFFUNC_PRIFILT:
 				initFunc_prifilt(func);
+				break;
+			case CNFFUNC_LOOKUP:
+				initFunc_lookup(func);
 				break;
 			default:break;
 		}

@@ -1253,6 +1253,7 @@ doHUP(void)
 
 	queryLocalHostname(); /* re-read our name */
 	ruleset.IterateAllActions(ourConf, doHUPActions, NULL);
+	lookupDoHUP();
 }
 
 

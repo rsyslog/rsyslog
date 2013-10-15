@@ -2,7 +2,7 @@
  *
  * Module begun 2011-04-19 by Rainer Gerhards
  *
- * Copyright 2011-2012 Adiscon GmbH.
+ * Copyright 2011-2013 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -124,6 +124,7 @@ BEGINobjConstruct(rsconf) /* be sure to specify the object type also in END macr
 	pThis->templates.last = NULL;
 	pThis->templates.lastStatic = NULL;
 	pThis->actions.nbrActions = 0;
+	lookupInitCnf(&pThis->lu_tabs);
 	CHKiRet(llInit(&pThis->rulesets.llRulesets, rulesetDestructForLinkedList,
 			rulesetKeyDestruct, strcasecmp));
 	/* queue params */
@@ -417,6 +418,9 @@ void cnfDoObj(struct cnfobj *o)
 		break;
 	case CNFOBJ_INPUT:
 		inputProcessCnf(o);
+		break;
+	case CNFOBJ_LOOKUP_TABLE:
+		lookupProcessCnf(o);
 		break;
 	case CNFOBJ_TPL:
 		if(tplProcessCnf(o) != RS_RET_OK)

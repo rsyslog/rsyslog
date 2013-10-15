@@ -227,6 +227,7 @@ CODESTARTdoAction
 	/* TODO: this is all extremly ineffcient! */
 	ee_fmtEventToJSON(event, &str);
 	cstrJSON = es_str2cstr(str, NULL);
+	ee_deleteEvent(event);
 	dbgprintf("mmnormalize generated: %s\n", cstrJSON);
 
 	tokener = json_tokener_new();

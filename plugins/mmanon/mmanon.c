@@ -170,7 +170,6 @@ CODESTARTnewActInst
 					cstr);
 				free(cstr);
 			}
-			pData->replChar = es_getBufAddr(pvals[i].val.d.estr)[0];
 		} else if(!strcmp(actpblk.descr[i].name, "replacementchar")) {
 			pData->replChar = es_getBufAddr(pvals[i].val.d.estr)[0];
 		} else if(!strcmp(actpblk.descr[i].name, "ipv4.bits")) {
@@ -339,6 +338,8 @@ anonip(instanceData *pData, uchar *msg, int *pLenMsg, int *idx)
 		if(i - endpos > 0) {
 			*pLenMsg = lenMsg - (i - endpos);
 			memmove(msg+endpos, msg+i, lenMsg - i + 1);
+			/* correct index for next search! */
+			i -= (i - endpos);
 		}
 	}
 

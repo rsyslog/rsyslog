@@ -32,6 +32,7 @@
 #include <unistd.h>
 #include <netdb.h>
 #include <sys/socket.h>
+#include <pthread.h>
 #if HAVE_SYS_EPOLL_H
 #	include <sys/epoll.h>
 #endif
@@ -60,6 +61,7 @@ MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("imudp")
 
 /* defines */
+#define MAX_WRKR_THREADS 32
 
 /* Module static data */
 DEF_IMOD_STATIC_DATA
@@ -79,6 +81,7 @@ static struct lstn_s {
 	prop_t *pInputName;
 	statsobj_t *stats;	/* listener stats */
 	ratelimit_t *ratelimiter;
+	uchar *dfltTZ;
 	STATSCOUNTER_DEF(ctrSubmit, mutCtrSubmit)
 } *lcnfRoot = NULL, *lcnfLast = NULL;
 
@@ -117,12 +120,26 @@ struct instanceConf_s {
 	uchar *pszBindRuleset;		/* name of ruleset to bind to */
 	uchar *inputname;
 	ruleset_t *pBindRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
+	uchar *dfltTZ;
 	int ratelimitInterval;
 	int ratelimitBurst;
 	int rcvbuf;			/* 0 means: do not set, keep OS default */
 	struct instanceConf_s *next;
 	sbool bAppendPortToInpname;
 };
+
+/* The following structure controls the worker threads. Global data is
+ * needed for their access.
+ */
+static struct wrkrInfo_s {
+	pthread_t tid;	/* the worker's thread ID */
+	int id;
+	thrdInfo_t *pThrd;
+	statsobj_t *stats;	/* worker thread stats */
+	STATSCOUNTER_DEF(ctrCall_recvmmsg, mutCtrCall_recvmmsg)
+	STATSCOUNTER_DEF(ctrCall_recvmsg, mutCtrCall_recvmsg)
+	STATSCOUNTER_DEF(ctrMsgsRcvd, mutCtrMsgsRcvd)
+} wrkrInfo[MAX_WRKR_THREADS];
 
 struct modConfData_s {
 	rsconf_t *pConf;		/* our overall config object */
@@ -132,6 +149,7 @@ struct modConfData_s {
 	int iSchedPrio;			/* scheduling priority */
 	int iTimeRequery;		/* how often is time to be queried inside tight recv loop? 0=always */
 	int batchSize;			/* max nbr of input batch --> also recvmmsg() max count */
+	int8_t wrkrMax;			/* max nbr of worker threads */
 	sbool configSetViaV2Method;
 };
 static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
@@ -142,6 +160,7 @@ static struct cnfparamdescr modpdescr[] = {
 	{ "schedulingpolicy", eCmdHdlrGetWord, 0 },
 	{ "schedulingpriority", eCmdHdlrInt, 0 },
 	{ "batchsize", eCmdHdlrInt, 0 },
+	{ "threads", eCmdHdlrPositiveInt, 0 },
 	{ "timerequery", eCmdHdlrInt, 0 }
 };
 static struct cnfparamblk modpblk =
@@ -153,6 +172,7 @@ static struct cnfparamblk modpblk =
 /* input instance parameters */
 static struct cnfparamdescr inppdescr[] = {
 	{ "port", eCmdHdlrArray, CNFPARAM_REQUIRED }, /* legacy: InputTCPServerRun */
+	{ "defaulttz", eCmdHdlrString, 0 },
 	{ "inputname", eCmdHdlrGetWord, 0 },
 	{ "inputname.appendport", eCmdHdlrBinary, 0 },
 	{ "address", eCmdHdlrString, 0 },
@@ -189,6 +209,7 @@ createInstance(instanceConf_t **pinst)
 	inst->ratelimitBurst = 10000; /* arbitrary high limit */
 	inst->ratelimitInterval = 0; /* off */
 	inst->rcvbuf = 0;
+	inst->dfltTZ = NULL;
 
 	/* node created, let's add to config */
 	if(loadModConf->tail == NULL) {
@@ -273,6 +294,7 @@ addListner(instanceConf_t *inst)
 			newlcnfinfo->next = NULL;
 			newlcnfinfo->sock = newSocks[iSrc];
 			newlcnfinfo->pRuleset = inst->pBindRuleset;
+			newlcnfinfo->dfltTZ = inst->dfltTZ;
 			if(inst->inputname == NULL) {
 				inputname = (uchar*)"imudp";
 			} else {
@@ -388,6 +410,8 @@ processPacket(thrdInfo_t *pThrd, struct lstn_s *lstn, struct sockaddr_storage *f
 		MsgSetInputName(pMsg, lstn->pInputName);
 		MsgSetRuleset(pMsg, lstn->pRuleset);
 		MsgSetFlowControlType(pMsg, eFLOWCTL_NO_DELAY);
+		if(lstn->dfltTZ != NULL)
+			MsgSetDfltTZ(pMsg, (char*) lstn->dfltTZ);
 		pMsg->msgFlags  = NEEDS_PARSING | PARSE_HOSTNAME | NEEDS_DNSRESOL;
 		if(*pbIsPermitted == 2)
 			pMsg->msgFlags  |= NEEDS_ACLCHK_U; /* request ACL check after resolution */
@@ -409,7 +433,7 @@ finalize_it:
  */
 #ifdef HAVE_RECVMMSG
 static inline rsRetVal
-processSocket(thrdInfo_t *pThrd, struct lstn_s *lstn, struct sockaddr_storage *frominetPrev, int *pbIsPermitted)
+processSocket(struct wrkrInfo_s *pWrkr, struct lstn_s *lstn, struct sockaddr_storage *frominetPrev, int *pbIsPermitted)
 {
 	DEFiRet;
 	int iNbrTimeUsed;
@@ -422,13 +446,12 @@ processSocket(thrdInfo_t *pThrd, struct lstn_s *lstn, struct sockaddr_storage *f
 	int nelem;
 	int i;
 
-	assert(pThrd != NULL);
 	multiSub.ppMsgs = pMsgs;
 	multiSub.maxElem = CONF_NUM_MULTISUB;
 	multiSub.nElem = 0;
 	iNbrTimeUsed = 0;
 	while(1) { /* loop is terminated if we have a "bad" receive, done below in the body */
-		if(pThrd->bShallStop == RSTRUE)
+		if(pWrkr->pThrd->bShallStop == RSTRUE)
 			ABORT_FINALIZE(RS_RET_FORCE_TERM);
 		memset(recvmsg_iov, 0, runModConf->batchSize * sizeof(struct iovec));
 		memset(recvmsg_mmh, 0, runModConf->batchSize * sizeof(struct mmsghdr));
@@ -441,11 +464,13 @@ processSocket(thrdInfo_t *pThrd, struct lstn_s *lstn, struct sockaddr_storage *f
 			recvmsg_mmh[i].msg_hdr.msg_iovlen = 1;
 		}
 		nelem = recvmmsg(lstn->sock, recvmsg_mmh, runModConf->batchSize, 0, NULL);
+		STATSCOUNTER_INC(pWrkr->ctrCall_recvmmsg, pWrkr->mutCtrCall_recvmmsg);
 dbgprintf("DDDD: recvmmsg returnd %d: %s\n", nelem, rs_strerror_r(errno, errStr, sizeof(errStr)));
 		if(nelem < 0 && errno == ENOSYS) {
 			/* be careful: some versions of valgrind do not support recvmmsg()! */
 			DBGPRINTF("imudp: error ENOSYS on call to recvmmsg() - fall back to recvmsg\n");
 			nelem = recvmsg(lstn->sock, &recvmsg_mmh[0].msg_hdr, 0);
+			STATSCOUNTER_INC(pWrkr->ctrCall_recvmsg, pWrkr->mutCtrCall_recvmsg);
 			if(nelem >= 0) {
 				recvmsg_mmh[0].msg_len = nelem;
 				nelem = 1;
@@ -464,8 +489,9 @@ dbgprintf("DDDD: recvmmsg returnd %d: %s\n", nelem, rs_strerror_r(errno, errStr,
 			datetime.getCurrTime(&stTime, &ttGenTime);
 		}
 
+		pWrkr->ctrMsgsRcvd += nelem;
 		for(i = 0 ; i < nelem ; ++i) {
-			processPacket(pThrd, lstn, frominetPrev, pbIsPermitted, recvmsg_mmh[i].msg_hdr.msg_iov->iov_base,
+			processPacket(pWrkr->pThrd, lstn, frominetPrev, pbIsPermitted, recvmsg_mmh[i].msg_hdr.msg_iov->iov_base,
 				      recvmsg_mmh[i].msg_len, &stTime, ttGenTime, &frominet,
 				      recvmsg_mmh[i].msg_hdr.msg_namelen, &multiSub);
 		}
@@ -491,7 +517,7 @@ finalize_it:
  * on scheduling order. -- rgerhards, 2008-10-02
  */
 static inline rsRetVal
-processSocket(thrdInfo_t *pThrd, struct lstn_s *lstn, struct sockaddr_storage *frominetPrev, int *pbIsPermitted)
+processSocket(struct wrkrInfo_s *pWrkr, struct lstn_s *lstn, struct sockaddr_storage *frominetPrev, int *pbIsPermitted)
 {
 	int iNbrTimeUsed;
 	time_t ttGenTime;
@@ -508,13 +534,12 @@ processSocket(thrdInfo_t *pThrd, struct lstn_s *lstn, struct sockaddr_storage *f
 	struct iovec iov[1];
 	DEFiRet;
 
-	assert(pThrd != NULL);
 	multiSub.ppMsgs = pMsgs;
 	multiSub.maxElem = CONF_NUM_MULTISUB;
 	multiSub.nElem = 0;
 	iNbrTimeUsed = 0;
 	while(1) { /* loop is terminated if we have a bad receive, done below in the body */
-		if(pThrd->bShallStop == RSTRUE)
+		if(pWrkr->pThrd->bShallStop == RSTRUE)
 			ABORT_FINALIZE(RS_RET_FORCE_TERM);
 		memset(iov, 0, sizeof(iov));
 		iov[0].iov_base = pRcvBuf;
@@ -525,6 +550,7 @@ processSocket(thrdInfo_t *pThrd, struct lstn_s *lstn, struct sockaddr_storage *f
 		mh.msg_iov = iov;
 		mh.msg_iovlen = 1;
 		lenRcvBuf = recvmsg(lstn->sock, &mh, 0);
+		STATSCOUNTER_INC(pWrkr->ctrCall_recvmsg, pWrkr->mutCtrCall_recvmsg);
 		if(lenRcvBuf < 0) {
 			if(errno != EINTR && errno != EAGAIN) {
 				rs_strerror_r(errno, errStr, sizeof(errStr));
@@ -534,11 +560,12 @@ processSocket(thrdInfo_t *pThrd, struct lstn_s *lstn, struct sockaddr_storage *f
 			ABORT_FINALIZE(RS_RET_ERR); // this most often is NOT an error, state is not checked by caller!
 		}
 
+		++pWrkr->ctrMsgsRcvd;
 		if((runModConf->iTimeRequery == 0) || (iNbrTimeUsed++ % runModConf->iTimeRequery) == 0) {
 			datetime.getCurrTime(&stTime, &ttGenTime);
 		}
 
-		CHKiRet(processPacket(pThrd, lstn, frominetPrev, pbIsPermitted, pRcvBuf, lenRcvBuf, &stTime,
+		CHKiRet(processPacket(pWrkr->pThrd, lstn, frominetPrev, pbIsPermitted, pRcvBuf, lenRcvBuf, &stTime,
 			ttGenTime, &frominet, mh.msg_namelen, &multiSub));
 	}
 
@@ -678,7 +705,7 @@ finalize_it:
  */
 #if defined(HAVE_EPOLL_CREATE1) || defined(HAVE_EPOLL_CREATE)
 #define NUM_EPOLL_EVENTS 10
-rsRetVal rcvMainLoop(thrdInfo_t *pThrd)
+rsRetVal rcvMainLoop(struct wrkrInfo_s *pWrkr)
 {
 	DEFiRet;
 	int nfds;
@@ -741,11 +768,11 @@ rsRetVal rcvMainLoop(thrdInfo_t *pThrd)
 		nfds = epoll_wait(efd, currEvt, NUM_EPOLL_EVENTS, -1);
 		DBGPRINTF("imudp: epoll_wait() returned with %d fds\n", nfds);
 
-		if(pThrd->bShallStop == RSTRUE)
+		if(pWrkr->pThrd->bShallStop == RSTRUE)
 			break; /* terminate input! */
 
 		for(i = 0 ; i < nfds ; ++i) {
-			processSocket(pThrd, currEvt[i].data.ptr, &frominetPrev, &bIsPermitted);
+			processSocket(pWrkr, currEvt[i].data.ptr, &frominetPrev, &bIsPermitted);
 		}
 	}
 
@@ -757,7 +784,7 @@ finalize_it:
 }
 #else /* #if HAVE_EPOLL_CREATE1 */
 /* this is the code for the select() interface */
-rsRetVal rcvMainLoop(thrdInfo_t *pThrd)
+rsRetVal rcvMainLoop(thrdInfo_t *pWrkr)
 {
 	DEFiRet;
 	int maxfds;
@@ -804,7 +831,7 @@ rsRetVal rcvMainLoop(thrdInfo_t *pThrd)
 
 		for(lstn = lcnfRoot ; nfds && lstn != NULL ; lstn = lstn->next) {
 			if(FD_ISSET(lstn->sock, &readfds)) {
-		       		processSocket(pThrd, lstn, &frominetPrev, &bIsPermitted);
+		       		processSocket(pWrkr, lstn, &frominetPrev, &bIsPermitted);
 			--nfds; /* indicate we have processed one descriptor */
 			}
 	       }
@@ -834,6 +861,8 @@ createListner(es_str_t *port, struct cnfparamvals *pvals)
 			inst->inputname = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "inputname.appendport")) {
 			inst->bAppendPortToInpname = (int) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "defaulttz")) {
+			inst->dfltTZ = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "address")) {
 			inst->pszBindAddr = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "ruleset")) {
@@ -887,6 +916,7 @@ CODESTARTbeginCnfLoad
 	pModConf->pConf = pConf;
 	/* init our settings */
 	loadModConf->configSetViaV2Method = 0;
+	loadModConf->wrkrMax = 1; /* conservative, but least msg reordering */
 	loadModConf->batchSize = BATCH_SIZE_DFLT;
 	loadModConf->iTimeRequery = TIME_REQUERY_DFLT;
 	loadModConf->iSchedPrio = SCHED_PRIO_UNSET;
@@ -904,6 +934,7 @@ ENDbeginCnfLoad
 BEGINsetModCnf
 	struct cnfparamvals *pvals = NULL;
 	int i;
+	int wrkrMax;
 CODESTARTsetModCnf
 	pvals = nvlstGetParams(lst, &modpblk, NULL);
 	if(pvals == NULL) {
@@ -928,6 +959,16 @@ CODESTARTsetModCnf
 			loadModConf->iSchedPrio = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "schedulingpolicy")) {
 			loadModConf->pszSchedPolicy = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(modpblk.descr[i].name, "threads")) {
+			wrkrMax = (int) pvals[i].val.d.n;
+			if(wrkrMax > MAX_WRKR_THREADS) {
+				errmsg.LogError(0, RS_RET_PARAM_ERROR, "imudp: configured for %d"
+						"worker threads, but maximum permitted is %d",
+						wrkrMax, MAX_WRKR_THREADS);
+				loadModConf->wrkrMax = MAX_WRKR_THREADS;
+			} else {
+				loadModConf->wrkrMax = wrkrMax;
+			}
 		} else {
 			dbgprintf("imudp: program error, non-handled "
 			  "param '%s' in beginCnfLoad\n", modpblk.descr[i].name);
@@ -1022,20 +1063,34 @@ CODESTARTfreeCnf
 		free(inst->pszBindPort);
 		free(inst->pszBindAddr);
 		free(inst->inputname);
+		free(inst->dfltTZ);
 		del = inst;
 		inst = inst->next;
 		free(del);
 	}
 ENDfreeCnf
 
-/* This function is called to gather input.
- * Note that sock must be non-NULL because otherwise we would not have
- * indicated that we want to run (or we have a programming error ;)). -- rgerhards, 2008-10-02
- */
-BEGINrunInput
-CODESTARTrunInput
+
+static void *
+wrkr(void *myself)
+{
+	struct wrkrInfo_s *pWrkr = (struct wrkrInfo_s*) myself;
+#	if HAVE_PRCTL && defined PR_SET_NAME
+	uchar *pszDbgHdr;
+#	endif
+	uchar thrdName[32];
+
+	snprintf((char*)thrdName, sizeof(thrdName), "imudp(w%d)", pWrkr->id);
+#	if HAVE_PRCTL && defined PR_SET_NAME
+	/* set thread name - we ignore if the call fails, has no harsh consequences... */
+	if(prctl(PR_SET_NAME, thrdName, 0, 0, 0) != 0) {
+		DBGPRINTF("prctl failed, not setting thread name for '%s'\n", thrdName);
+	}
+#	endif
+	dbgOutputTID((char*)thrdName);
+
 	/* Note well: the setting of scheduling parameters will not work
-	 * when we dropped privileges (if the user is not sufficently
+	 * when we dropped privileges (if the user is not sufficiently
 	 * privileged, of course). Howerver, we can't change the 
 	 * scheduling params in PrePrivDrop(), as at that point our thread
 	 * is not yet created. So at least as an interim solution, we do
@@ -1043,7 +1098,52 @@ CODESTARTrunInput
 	 * privileges within the same instance.
 	 */
 	setSchedParams(runModConf);
-	iRet = rcvMainLoop(pThrd);
+
+	/* support statistics gathering */
+	statsobj.Construct(&(pWrkr->stats));
+	statsobj.SetName(pWrkr->stats, thrdName);
+	STATSCOUNTER_INIT(pWrkr->ctrCall_recvmmsg, pWrkr->mutCtrCall_recvmmsg);
+	statsobj.AddCounter(pWrkr->stats, UCHAR_CONSTANT("called.recvmmsg"),
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pWrkr->ctrCall_recvmmsg));
+	STATSCOUNTER_INIT(pWrkr->ctrCall_recvmsg, pWrkr->mutCtrCall_recvmsg);
+	statsobj.AddCounter(pWrkr->stats, UCHAR_CONSTANT("called.recvmsg"),
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pWrkr->ctrCall_recvmsg));
+	STATSCOUNTER_INIT(pWrkr->ctrMsgsRcvd, pWrkr->mutCtrMsgsRcvd);
+	statsobj.AddCounter(pWrkr->stats, UCHAR_CONSTANT("msgs.received"),
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pWrkr->ctrMsgsRcvd));
+	statsobj.ConstructFinalize(pWrkr->stats);
+
+	rcvMainLoop(pWrkr);
+
+	/* cleanup */
+	return NULL;
+}
+
+/* This function is called to gather input.
+ * In essence, it just starts the pool of workers. To save resources,
+ * we run one of the workers on our own thread -- otherwise that thread would
+ * just idle around and wait for the workers to finish.
+ */
+BEGINrunInput
+	int i;
+	pthread_attr_t wrkrThrdAttr;
+CODESTARTrunInput
+	pthread_attr_init(&wrkrThrdAttr);
+	pthread_attr_setstacksize(&wrkrThrdAttr, 4096*1024);
+	for(i = 0 ; i < runModConf->wrkrMax - 1 ; ++i) {
+		wrkrInfo[i].pThrd = pThrd;
+		wrkrInfo[i].id = i;
+		pthread_create(&wrkrInfo[i].tid, &wrkrThrdAttr, wrkr, &(wrkrInfo[i]));
+	}
+	pthread_attr_destroy(&wrkrThrdAttr);
+
+	wrkrInfo[i].pThrd = pThrd;
+	wrkrInfo[i].id = i;
+	wrkr(&wrkrInfo[i]);
+
+	for(i = 0 ; i < runModConf->wrkrMax - 1 ; ++i) {
+		pthread_join(wrkrInfo[i].tid, NULL);
+	}
 ENDrunInput
 
 
