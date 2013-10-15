@@ -718,10 +718,7 @@ CODESTARTfreeCnf
 ENDfreeCnf
 
 
-/* This function is called by the framework to gather the input. The module stays
- * most of its lifetime inside this function. It MUST NEVER exit this function. Doing
- * so would end module processing and rsyslog would NOT reschedule the module. If
- * you exit from this function, you violate the interface specification!
+/* Monitor files in traditional polling mode.
  *
  * We go through all files and remember if at least one had data. If so, we do
  * another run (until no data was present in any file). Then we sleep for
@@ -738,10 +735,12 @@ ENDfreeCnf
  * On spamming the main queue: keep in mind that it will automatically rate-limit
  * ourselfes if we begin to overrun it. So we really do not need to care here.
  */
-BEGINrunInput
+static rsRetVal
+doPolling(void)
+{
 	int i;
 	int bHadFileData; /* were there at least one file with data during this run? */
-CODESTARTrunInput
+	DEFiRet;
 	while(glbl.GetGlobalInputTermState() == 0) {
 		do {
 			bHadFileData = 0;
@@ -750,17 +749,31 @@ CODESTARTrunInput
 					break; /* terminate input! */
 				pollFile(&files[i], &bHadFileData);
 			}
-		} while(iFilPtr > 1 && bHadFileData == 1 && glbl.GetGlobalInputTermState() == 0); /* warning: do...while()! */
+		} while(iFilPtr > 1 && bHadFileData == 1 && glbl.GetGlobalInputTermState() == 0);
+		  /* warning: do...while()! */
 
-		/* Note: the additional 10ns wait is vitally important. It guards rsyslog against totally
-		 * hogging the CPU if the users selects a polling interval of 0 seconds. It doesn't hurt any
-		 * other valid scenario. So do not remove. -- rgerhards, 2008-02-14
+		/* Note: the additional 10ns wait is vitally important. It guards rsyslog
+		 * against totally hogging the CPU if the users selects a polling interval
+		 * of 0 seconds. It doesn't hurt any other valid scenario. So do not remove.
+		 * rgerhards, 2008-02-14
 		 */
 		if(glbl.GetGlobalInputTermState() == 0)
 			srSleep(runModConf->iPollInterval, 10);
 	}
-	DBGPRINTF("imfile: terminating upon request of rsyslog core\n");
 	
+	RETiRet;
+}
+
+/* This function is called by the framework to gather the input. The module stays
+ * most of its lifetime inside this function. It MUST NEVER exit this function. Doing
+ * so would end module processing and rsyslog would NOT reschedule the module. If
+ * you exit from this function, you violate the interface specification!
+ */
+BEGINrunInput
+CODESTARTrunInput
+	iRet = doPolling();
+
+	DBGPRINTF("imfile: terminating upon request of rsyslog core\n");
 	RETiRet;	/* use it to make sure the housekeeping is done! */
 ENDrunInput
 
