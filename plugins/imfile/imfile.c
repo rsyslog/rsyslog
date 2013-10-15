@@ -137,11 +137,16 @@ struct instanceConf_s {
 static rsRetVal persistStrmState(fileInfo_t *pInfo);
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal);
 
+
+#define OPMODE_POLLING 0
+#define OPMODE_INOTIFY 1
+
 /* config variables */
 struct modConfData_s {
 	rsconf_t *pConf;	/* our overall config object */
 	int iPollInterval;	/* number of seconds to sleep when there was no file activity */
 	instanceConf_t *root, *tail;
+	uint8_t opMode;
 	sbool configSetViaV2Method;
 };
 static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
@@ -176,7 +181,8 @@ static prop_t *pInputName = NULL;	/* there is only one global inputName for all 
 
 /* module-global parameters */
 static struct cnfparamdescr modpdescr[] = {
-	{ "pollinginterval", eCmdHdlrPositiveInt, 0 }
+	{ "pollinginterval", eCmdHdlrPositiveInt, 0 },
+	{ "mode", eCmdHdlrGetWord, 0 }
 };
 static struct cnfparamblk modpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -715,6 +721,7 @@ CODESTARTbeginCnfLoad
 	loadModConf = pModConf;
 	pModConf->pConf = pConf;
 	/* init our settings */
+	loadModConf->opMode = OPMODE_POLLING;
 	loadModConf->iPollInterval = DFLT_PollInterval;
 	loadModConf->configSetViaV2Method = 0;
 	bLegacyCnfModGlobalsPermitted = 1;
@@ -753,6 +760,17 @@ CODESTARTsetModCnf
 			continue;
 		if(!strcmp(modpblk.descr[i].name, "pollinginterval")) {
 			loadModConf->iPollInterval = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "mode")) {
+			if(!es_strconstcmp(pvals[i].val.d.estr, "polling"))
+				loadModConf->opMode = OPMODE_POLLING;
+			else if(!es_strconstcmp(pvals[i].val.d.estr, "inotify"))
+				loadModConf->opMode = OPMODE_INOTIFY;
+			else {
+				char *cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
+				errmsg.LogError(0, RS_RET_PARAM_ERROR, "imfile: unknown "
+					"mode '%s'", cstr);
+				free(cstr);
+			}
 		} else {
 			dbgprintf("imfile: program error, non-handled "
 			  "param '%s' in beginCnfLoad\n", modpblk.descr[i].name);
@@ -777,7 +795,9 @@ CODESTARTendCnfLoad
 		/* persist module-specific settings from legacy config system */
 		loadModConf->iPollInterval = cs.iPollInterval;
 	}
-	dbgprintf("imfile: polling interval is %d\n", loadModConf->iPollInterval);
+	dbgprintf("imfile: opmode is %d, polling interval is %d\n",
+		  loadModConf->opMode,
+		  loadModConf->iPollInterval);
 
 	loadModConf = NULL; /* done loading */
 	/* free legacy config vars */
@@ -1034,8 +1054,12 @@ finalize_it:
  */
 BEGINrunInput
 CODESTARTrunInput
-	iRet = doPolling();
-	//iRet = do_inotify();
+	DBGPRINTF("imfile: working in %s mode\n", 
+		 (runModConf->opMode == OPMODE_POLLING) ? "polling" : "inotify");
+	if(runModConf->opMode == OPMODE_POLLING)
+		iRet = doPolling();
+	else
+		iRet = do_inotify();
 
 	DBGPRINTF("imfile: terminating upon request of rsyslog core\n");
 	RETiRet;	/* use it to make sure the housekeeping is done! */
