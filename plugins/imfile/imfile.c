@@ -519,6 +519,7 @@ addListner(instanceConf_t *inst)
 	pThis->escapeLF = inst->escapeLF;
 	pThis->pRuleset = inst->pBindRuleset;
 	pThis->nRecords = 0;
+	pThis->pStrm = NULL;
 	++iFilPtr;	/* we got a new file to monitor */
 
 	resetConfigVariables(NULL, NULL); /* values are both dummies */

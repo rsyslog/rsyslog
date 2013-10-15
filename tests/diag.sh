@@ -9,7 +9,7 @@
 #valgrind="valgrind --tool=drd --log-fd=1"
 #valgrind="valgrind --tool=helgrind --log-fd=1"
 #valgrind="valgrind --tool=exp-ptrcheck --log-fd=1"
-#set -o xtrace
+set -o xtrace
 #export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction nostdout"
 #export RSYSLOG_DEBUGLOG="log"
 case $1 in

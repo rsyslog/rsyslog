@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 7.5.5 [devel] 2013-10-??
+Version 7.5.5 [devel] 2013-10-15
 - imfile: permit to monitor an unlimited number of files
 - imptcp: add "defaultTZ" input parameter
 - imudp: support for multiple receiver threads added
@@ -8,6 +8,30 @@ Version 7.5.5 [devel] 2013-10-??
 - bugfix: mmutf8fix did not properly handle invalid UTF-8 at END of message
   if the very last character sequence was too long, this was not detected
   Thanks to Risto Vaarandi for reporting this problem.
+- mmanon: removed the check for specific "terminator characters" after 
+  last octet. As it turned out, this didn't work in practice as there
+  was an enormous set of potential terminator chars -- so removing
+  them was the best thing to do. Note that this may change behaviour of
+  existing installations. Yet, we still consider this an important
+  bugfix, that should be applied to the stable branch.
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=477
+  Thanks to Muri Cicanor for initiating the discussion
+- now requires libestr 0.1.7 as early versions had a nasty bug in
+  string comparisons
+- bugfix: mmanon did not detect all IP addresses in rewrite mode
+  The problem occured if two IPs were close to each other and the first one
+  was shrunk.
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=485
+  Thanks to micah-at-riseup.net for reporting this bug
+- bugfix: mmanon sometimes used invalid replacement char in simple mode
+  depending on configuration sequence, the replacement character was set
+  to 's' instead of the correct value. Most importantly, it was set to
+  's' if simple mode was selected and no replacement char set.
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=484
+  Thanks to micah-at-riseup.net for reporting this bug
+- bugfix: memory leak in mmnormalize
+- bugfix: array-based ==/!= comparisions lead to invalid results
+  This was a regression introduced in 7.3.5 bei the PRI optimizer
 ---------------------------------------------------------------------------
 Version 7.5.4 [devel] 2013-10-07
 - mmpstrucdata: new module to parse RFC5424 structured data into json
