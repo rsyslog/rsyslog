@@ -76,7 +76,7 @@ static int bLegacyCnfModGlobalsPermitted;/* are legacy module-global config para
 #define DFLT_PollInterval 10
 
 #define INIT_FILE_TAB_SIZE 4 /* default file table size - is extended as needed, use 2^x value */
-#define INIT_WDMAP_TAB_SIZE 8 /* default wdMap table size - is extended as needed, use 2^x value */
+#define INIT_WDMAP_TAB_SIZE 1 /* default wdMap table size - is extended as needed, use 2^x value */
 
 /* this structure is used in pure polling mode as well one of the support
  * structures for inotify.
@@ -225,13 +225,13 @@ finalize_it:
 
 /* compare function for bsearch() */
 static int
-wdmap_cmp(const void *v1, const void *v2)
+wdmap_cmp(const void *k, const void *a)
 {
-	wd_map_t *m1 = (wd_map_t*) v1;
-	wd_map_t *m2 = (wd_map_t*) v2;
-	if(m1->wd < m2->wd)
+	int key = *((int*) k);
+	wd_map_t *etry = (wd_map_t*) a;
+	if(key < etry->wd)
 		return -1;
-	else if(m1->wd > m2->wd)
+	else if(key > etry->wd)
 		return 1;
 	else
 		return 0;
@@ -242,9 +242,10 @@ wdmap_cmp(const void *v1, const void *v2)
 static wd_map_t *
 wdmapLookup(int wd)
 {
-	return bsearch(&wd, wdmap, sizeof(wd_map_t), nWdmap, wdmap_cmp);
+	return bsearch(&wd, wdmap, nWdmap, sizeof(wd_map_t), wdmap_cmp);
 }
 
+/* note: we search backwards, as inotify tends to return increasing wd's */
 static rsRetVal
 wdmapAdd(int wd, int dirIdx, int fileIdx)
 {
@@ -253,27 +254,30 @@ wdmapAdd(int wd, int dirIdx, int fileIdx)
 	int i;
 	DEFiRet;
 
-	for(i = 0 ; i < nWdmap && wdmap[i].wd < wd ; ++i)
+	for(i = nWdmap-1 ; i >= 0 && wdmap[i].wd > wd ; --i)
 		; 	/* just scan */
-	if(i < nWdmap && wdmap[i].wd == wd) {
+	if(i >= 0 && wdmap[i].wd == wd) {
 		DBGPRINTF("imfile: wd %d already in wdmap!\n", wd);
 		FINALIZE;
 	}
+	++i;
 	/* i now points to the entry that is to be moved upwards (or end of map) */
 	if(nWdmap == allocMaxWdmap) {
 		newmapsize = 2 * allocMaxWdmap;
 		CHKmalloc(newmap = realloc(wdmap, sizeof(wd_map_t) * newmapsize));
 		// TODO: handle the error more intelligently? At all possible? -- 2013-10-15
 		wdmap = newmap;
+		allocMaxWdmap = newmapsize;
 	}
-	if(i <= nWdmap) {
+	if(i < nWdmap) {
 		/* we need to shift to make room for new entry */
-		dbgprintf("DDDD: imfile doing wdmap mmemmov(%d, %d, %d) for ADD\n", i+1,i,nWdmap-i);
-		memmove(wdmap + i + 1, wdmap + i, nWdmap - i);
+		dbgprintf("DDDD: imfile doing wdmap mmemmov(%d, %d, %d) for ADD\n", i,i+1,nWdmap-i);
+		memmove(wdmap + i, wdmap + i + 1, nWdmap - i);
 	}
 	wdmap[i].wd = wd;
 	wdmap[i].dirIdx = dirIdx;
 	wdmap[i].fileIdx = fileIdx;
+	++nWdmap;
 	dbgprintf("DDDD: imfile: enter into wdmap[%d]: wd %d, dir %d, file %d\n",i,wd,dirIdx,fileIdx);
 
 finalize_it:
@@ -295,8 +299,8 @@ wdmapDel(int wd)
 	++i; /* we now point to the to-be-deleted entry */
 	if(i <= nWdmap) {
 		/* we need to shift to delete it (see comment at wdmap definition) */
-		dbgprintf("DDDD: imfile doing wdmap mmemmov(%d, %d, %d) for DEL\n", i,i+1,nWdmap-i);
-		memmove(wdmap + i, wdmap + i + 1, nWdmap - i);
+		dbgprintf("DDDD: imfile doing wdmap mmemmov(%d, %d, %d) for DEL\n", i+1,i,nWdmap-i);
+		memmove(wdmap + i + 1, wdmap + i, nWdmap - i);
 	}
 	dbgprintf("DDDD: imfile: wd %d deleted, was idx %d\n", wd, i);
 
@@ -420,8 +424,6 @@ static rsRetVal pollFile(fileInfo_t *pThis, int *pbHadFileData)
 	int nProcessed = 0;
 	DEFiRet;
 
-	ASSERT(pbHadFileData != NULL);
-
 	/* Note: we must do pthread_cleanup_push() immediately, because the POXIS macros
 	 * otherwise do not work if I include the _cleanup_pop() inside an if... -- rgerhards, 2008-08-14
 	 */
@@ -436,7 +438,8 @@ static rsRetVal pollFile(fileInfo_t *pThis, int *pbHadFileData)
 			break;
 		CHKiRet(strm.ReadLine(pThis->pStrm, &pCStr, pThis->readMode, pThis->escapeLF));
 		++nProcessed;
-		*pbHadFileData = 1; /* this is just a flag, so set it and forget it */
+		if(pbHadFileData != NULL)
+			*pbHadFileData = 1; /* this is just a flag, so set it and forget it */
 		CHKiRet(enqLine(pThis, pCStr)); /* process line */
 		rsCStrDestruct(&pCStr); /* discard string (must be done by us!) */
 		if(pThis->iPersistStateInterval > 0 && pThis->nRecords++ >= pThis->iPersistStateInterval) {
@@ -890,6 +893,139 @@ doPolling(void)
 }
 
 
+#if HAVE_INOTIFY_INIT
+/* Setup a new file watch.
+ * Note: we need to try to read this file, as it may already contain data this
+ * needs to be processed, and we won't get an event for that as notifications
+ * happen only for things after the watch has been activated.
+ */
+static void
+in_setupFileWatch(int i)
+{
+	int wd;
+	wd = inotify_add_watch(ino_fd, (char*)files[i].pszFileName, IN_MODIFY);
+	if(wd < 0) {
+		DBGPRINTF("imfile: could not create initial watch for '%s'\n",
+			files[i].pszFileName);
+	}
+	wdmapAdd(wd, -1, i);
+	dbgprintf("DDDD: watch %d added for %s\n", wd, files[i].pszFileName);
+	pollFile(&files[i], NULL);
+}
+
+/* setup our initial set of watches, based on user config */
+static rsRetVal
+in_setupInitialWatches()
+{
+	int i;
+	DEFiRet;
+
+	for(i = 0 ; i < iFilPtr ; ++i) {
+		in_setupFileWatch(i);
+	}
+	RETiRet;
+}
+
+static void
+in_processEvent(struct inotify_event *ev)
+{
+	wd_map_t *etry;
+
+	etry =  wdmapLookup(ev->wd);
+	if(etry == NULL) {
+		DBGPRINTF("imfile: could not lookup wd %d\n", ev->wd);
+		goto done;
+	}
+	dbgprintf("DDDD: imfile: wd %d got file %d, dir %d\n", ev->wd, etry->fileIdx, etry->dirIdx);
+	if(etry->fileIdx == -1) { /* directory? */
+		dbgprintf("DDDD: directories in notify not yet implmented!\n");
+	} else {
+		pollFile(&files[etry->fileIdx], NULL);
+	}
+done:	return;
+}
+
+static void
+in_dbg_showEv(struct inotify_event *ev)
+{
+	if(ev->mask & IN_IGNORED) {
+		dbgprintf("watch was REMOVED\n");
+	} else if(ev->mask & IN_MODIFY) {
+		dbgprintf("watch was MODIFID\n");
+	} else if(ev->mask & IN_ACCESS) {
+		dbgprintf("watch IN_ACCESS\n");
+	} else if(ev->mask & IN_ATTRIB) {
+		dbgprintf("watch IN_ATTRIB\n");
+	} else if(ev->mask & IN_CLOSE_WRITE) {
+		dbgprintf("watch IN_CLOSE_WRITE\n");
+	} else if(ev->mask & IN_CLOSE_NOWRITE) {
+		dbgprintf("watch IN_CLOSE_NOWRITE\n");
+	} else if(ev->mask & IN_CREATE) {
+		dbgprintf("file was CREATED: %s", ev->name);
+#if 0
+		if(!fnmatch(fn, ev->name, 0)) {
+			wd = inotify_add_watch(ino_fd, ev->name, IN_MODIFY);
+			printf(", adding watch [pattern '%s']: %d\n", fn, wd);
+		}
+#endif
+		dbgprintf("\n");
+	} else if(ev->mask & IN_DELETE) {
+		dbgprintf("watch IN_DELETE\n");
+	} else if(ev->mask & IN_DELETE_SELF) {
+		dbgprintf("watch IN_DELETE_SELF\n");
+	} else if(ev->mask & IN_MOVE_SELF) {
+		dbgprintf("watch IN_MOVE_SELF\n");
+	} else if(ev->mask & IN_MOVED_FROM) {
+		dbgprintf("watch IN_MOVED_FROM\n");
+	} else if(ev->mask & IN_MOVED_TO) {
+		dbgprintf("watch IN_MOVED_TO\n");
+	} else if(ev->mask & IN_OPEN) {
+		dbgprintf("watch IN_OPEN\n");
+	} else if(ev->mask & IN_ISDIR) {
+		dbgprintf("watch IN_ISDIR\n");
+	} else {
+		dbgprintf("unknown mask code\n");
+	}
+}
+
+/* Monitor files in inotify mode */
+static rsRetVal
+do_inotify()
+{
+	char iobuf[8192];
+	struct inotify_event *ev;
+	int rd;
+	int currev;
+	DEFiRet;
+
+	CHKiRet(wdmapInit());
+	ino_fd = inotify_init();
+	DBGPRINTF("imfile: inotify fd %d\n", ino_fd);
+	CHKiRet(in_setupInitialWatches());
+
+	while(glbl.GetGlobalInputTermState() == 0) {
+		rd = read(ino_fd, iobuf, sizeof(iobuf));
+		if(rd < 0) {
+			perror("inotify read"); exit(1);
+		}
+		currev = 0;
+		while(currev < rd) {
+			ev = (struct inotify_event*) (iobuf+currev);
+			dbgprintf("DDDD: imfile event notification: rd %d[%d], wd (%d, mask "
+				"%8.8x, cookie %4.4x, len %d)\n",
+				(int) rd, currev, ev->wd, ev->mask, ev->cookie, ev->len);
+			in_dbg_showEv(ev);
+			in_processEvent(ev);
+			currev += sizeof(struct inotify_event) + ev->len;
+		}
+	}
+
+finalize_it:
+	close(ino_fd);
+	RETiRet;
+}
+
+#endif /* #if HAVE_INOTIFY_INIT */
 
 /* This function is called by the framework to gather the input. The module stays
  * most of its lifetime inside this function. It MUST NEVER exit this function. Doing
@@ -899,6 +1035,7 @@ doPolling(void)
 BEGINrunInput
 CODESTARTrunInput
 	iRet = doPolling();
+	//iRet = do_inotify();
 
 	DBGPRINTF("imfile: terminating upon request of rsyslog core\n");
 	RETiRet;	/* use it to make sure the housekeeping is done! */
