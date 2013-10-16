@@ -447,7 +447,6 @@ finalize_it:
 static prop_t*
 GetLocalHostNameProp(void)
 {
-	prop.AddRef(propLocalHostName);
 	return(propLocalHostName);
 }
 
