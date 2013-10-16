@@ -2469,7 +2469,9 @@ cnfstmtPrintOnly(struct cnfstmt *stmt, int indent, sbool subtree)
 		doIndent(indent); dbgprintf("PROPFILT\n");
 		doIndent(indent); dbgprintf("\tProperty.: '%s'\n",
 			propIDToName(stmt->d.s_propfilt.prop.id));
-		if(stmt->d.s_propfilt.prop.name != NULL) {
+		if(stmt->d.s_propfilt.prop.id == PROP_CEE ||
+		   stmt->d.s_propfilt.prop.id == PROP_LOCAL_VAR ||
+		   stmt->d.s_propfilt.prop.id == PROP_GLOBAL_VAR) {
 			doIndent(indent);
 			dbgprintf("\tCEE-Prop.: '%s'\n", stmt->d.s_propfilt.prop.name);
 		}
