@@ -249,6 +249,10 @@ if ENABLE_MMCOUNT
 SUBDIRS += plugins/mmcount
 endif
 
+if ENABLE_MMSEQUENCE
+SUBDIRS += plugins/mmsequence
+endif
+
 if ENABLE_MMFIELDS
 SUBDIRS += plugins/mmfields
 endif
