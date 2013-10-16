@@ -542,9 +542,6 @@ DBGPRINTF("omelasticsearch: %d items in reply\n", numitems);
 	}
 
 finalize_it:
-	if(iRet != RS_RET_OK) {
-		STATSCOUNTER_INC(indexESFail, mutIndexESFail);
-	}
 	RETiRet;
 }
 
@@ -582,6 +579,9 @@ checkResult(instanceData *pData, uchar *reqmsg)
 finalize_it:
 	if(root != NULL)
 		cJSON_Delete(root);
+	if(iRet != RS_RET_OK) {
+		STATSCOUNTER_INC(indexESFail, mutIndexESFail);
+	}
 	RETiRet;
 }
 
