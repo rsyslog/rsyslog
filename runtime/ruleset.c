@@ -261,7 +261,7 @@ execUnset(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
 	for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pBatch->pbShutdownImmediate) ; ++i) {
 		if(   pBatch->eltState[i] != BATCH_STATE_DISC
 		   && (active == NULL || active[i])) {
-			msgUnsetJSON(pBatch->pElem[i].pMsg, stmt->d.s_unset.varname);
+			msgDelJSON(pBatch->pElem[i].pMsg, stmt->d.s_unset.varname);
 		}
 	}
 	RETiRet;
@@ -392,12 +392,11 @@ evalPROPFILT(struct cnfstmt *stmt, msg_t *pMsg)
 	int bRet = 0;
 	rs_size_t propLen;
 
-	if(stmt->d.s_propfilt.propID == PROP_INVALID)
+	if(stmt->d.s_propfilt.prop.id == PROP_INVALID)
 		goto done;
 
-	pszPropVal = MsgGetProp(pMsg, NULL, stmt->d.s_propfilt.propID,
-				stmt->d.s_propfilt.propName, &propLen,
-				&pbMustBeFreed, NULL);
+	pszPropVal = MsgGetProp(pMsg, NULL, &stmt->d.s_propfilt.prop,
+				&propLen, &pbMustBeFreed, NULL);
 
 	/* Now do the compares (short list currently ;)) */
 	switch(stmt->d.s_propfilt.operation ) {
@@ -441,25 +440,18 @@ evalPROPFILT(struct cnfstmt *stmt, msg_t *pMsg)
 		bRet = (bRet == 1) ?  0 : 1;
 
 	if(Debug) {
-		char *cstr;
-		if(stmt->d.s_propfilt.propID == PROP_CEE) {
-			cstr = es_str2cstr(stmt->d.s_propfilt.propName, NULL);
+		if(stmt->d.s_propfilt.prop.id == PROP_CEE) {
 			DBGPRINTF("Filter: check for CEE property '%s' (value '%s') ",
-				cstr, pszPropVal);
-			free(cstr);
-		} else if(stmt->d.s_propfilt.propID == PROP_LOCAL_VAR) {
-			cstr = es_str2cstr(stmt->d.s_propfilt.propName, NULL);
+				stmt->d.s_propfilt.prop.name, pszPropVal);
+		} else if(stmt->d.s_propfilt.prop.id == PROP_LOCAL_VAR) {
 			DBGPRINTF("Filter: check for local var '%s' (value '%s') ",
-				cstr, pszPropVal);
-			free(cstr);
-		} else if(stmt->d.s_propfilt.propID == PROP_GLOBAL_VAR) {
-			cstr = es_str2cstr(stmt->d.s_propfilt.propName, NULL);
-			DBGPRINTF("Filter: check for global var '%s' (value '%s') ",
-				cstr, pszPropVal);
-			free(cstr);
+				stmt->d.s_propfilt.prop.name, pszPropVal);
+		//} else if(stmt->d.s_propfilt.propID == PROP_GLOBAL_VAR) {
+			//DBGPRINTF("Filter: check for global var '%s' (value '%s') ",
+				//stmt->d.s_propfilt.propName, pszPropVal);
 		} else {
 			DBGPRINTF("Filter: check for property '%s' (value '%s') ",
-				propIDToName(stmt->d.s_propfilt.propID), pszPropVal);
+				propIDToName(stmt->d.s_propfilt.prop.id), pszPropVal);
 		}
 		if(stmt->d.s_propfilt.isNegated)
 			DBGPRINTF("NOT ");

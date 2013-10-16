@@ -3,7 +3,7 @@
  *
  * File begun on 2007-07-13 by RGerhards (extracted from syslogd.c)
  *
- * Copyright 2007-2012 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2013 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -183,21 +183,14 @@ void MsgSetMSGoffs(msg_t *pMsg, short offs);
 void MsgSetRawMsgWOSize(msg_t *pMsg, char* pszRawMsg);
 void MsgSetRawMsg(msg_t *pMsg, char* pszRawMsg, size_t lenMsg);
 rsRetVal MsgReplaceMSG(msg_t *pThis, uchar* pszMSG, int lenMSG);
-uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
-                  propid_t propid, es_str_t *propName,
+uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe, msgPropDescr_t *pProp,
 		  rs_size_t *pPropLen, unsigned short *pbMustBeFreed, struct syslogTime *ttNow);
-rsRetVal msgGetMsgVar(msg_t *pThis, cstr_t *pstrPropName, var_t **ppVar);
-es_str_t* msgGetMsgVarNew(msg_t *pThis, uchar *name);
 uchar *getRcvFrom(msg_t *pM);
 void getTAG(msg_t *pM, uchar **ppBuf, int *piLen);
 char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt);
 char *getPRI(msg_t *pMsg);
 void getRawMsg(msg_t *pM, uchar **pBuf, int *piLen);
-rsRetVal msgGetCEEVar(msg_t *pThis, cstr_t *propName, var_t **ppVar);
-es_str_t* msgGetCEEVarNew(msg_t *pMsg, char *name);
-es_str_t* msgGetLocalVarNew(msg_t *pMsg, char *name);
 rsRetVal msgAddJSON(msg_t *pM, uchar *name, struct json_object *json);
-rsRetVal getCEEPropVal(msg_t *pM, es_str_t *propName, uchar **pRes, rs_size_t *buflen, unsigned short *pbMustBeFreed);
 rsRetVal MsgGetSeverity(msg_t *pThis, int *piSeverity);
 rsRetVal MsgDeserialize(msg_t *pMsg, strm_t *pStrm);
 
@@ -213,20 +206,16 @@ char *getHOSTNAME(msg_t *pM);
 int getHOSTNAMELen(msg_t *pM);
 uchar *getProgramName(msg_t *pM, sbool bLockMutex);
 uchar *getRcvFrom(msg_t *pM);
-rsRetVal propNameToID(cstr_t *pCSPropName, propid_t *pPropID);
+rsRetVal propNameToID(uchar *pName, propid_t *pPropID);
 uchar *propIDToName(propid_t propID);
-rsRetVal msgGetCEEPropJSON(msg_t *pM, es_str_t *propName, struct json_object **pjson);
-rsRetVal getGlobalVarPropVal( es_str_t *propName, uchar **pRes, rs_size_t *buflen, unsigned short *pbMustBeFreed);
-rsRetVal msgGetLocalVarJSON(msg_t *pM, es_str_t *propName, struct json_object **pjson);
-rsRetVal msgGetGlobalVarJSON(es_str_t *propName, struct json_object **pjson);
+rsRetVal msgGetJSONPropJSON(msg_t *pMsg, msgPropDescr_t *pProp, struct json_object **pjson);
+rsRetVal getJSONPropVal(msg_t *pMsg, msgPropDescr_t *pProp, uchar **pRes, rs_size_t *buflen, unsigned short *pbMustBeFreed);
 rsRetVal msgSetJSONFromVar(msg_t *pMsg, uchar *varname, struct var *var);
 rsRetVal msgDelJSON(msg_t *pMsg, uchar *varname);
-rsRetVal jsonFind(struct json_object *jroot, es_str_t *propName, struct json_object **jsonres);
+rsRetVal jsonFind(struct json_object *jroot, msgPropDescr_t *pProp, struct json_object **jsonres);
 
-static inline rsRetVal
-msgUnsetJSON(msg_t *pMsg, uchar *varname) {
-	return msgDelJSON(pMsg, varname+1);
-}
+rsRetVal msgPropDescrFill(msgPropDescr_t *pProp, uchar *name, int nameLen);
+void msgPropDescrDestruct(msgPropDescr_t *pProp);
 
 static inline int
 msgGetProtocolVersion(msg_t *pM)

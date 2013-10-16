@@ -40,7 +40,8 @@ struct template {
 	char *pszName;
 	int iLenName;
 	rsRetVal (*pStrgen)(msg_t*, uchar**, size_t *);
-	es_str_t *subtree;	/* subtree name for subtree-type templates */
+	sbool bHaveSubtree;
+	msgPropDescr_t subtree;	/* subtree property name for subtree-type templates */
 	int tpenElements; /* number of elements in templateEntry list */
 	struct templateEntry *pEntryRoot;
 	struct templateEntry *pEntryLast;
@@ -79,7 +80,7 @@ struct templateEntry {
 			int iLenConstant;	/* its length */
 		} constant;
 		struct {
-			propid_t propid;	/* property to be used */
+			msgPropDescr_t msgProp;	/* property to be used */
 			unsigned iFromPos;	/* for partial strings only chars from this position ... */
 			unsigned iToPos;	/* up to that one... */
 			unsigned iFieldNr;	/* for field extraction: field to extract */
@@ -103,7 +104,6 @@ struct templateEntry {
 			int field_expand;	/* use multiple instances of the field delimiter as a single one? */
 #endif
 
-			es_str_t *propName;	/**< property name (currently being used for CEE only) */
 
 			enum tplFormatTypes eDateFormat;
 			enum tplFormatCaseConvTypes eCaseConv;

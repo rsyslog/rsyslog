@@ -6,7 +6,6 @@
 #include <sys/types.h>
 #include <regex.h>
 
-
 #define	LOG_NFACILITIES	24	/* current number of syslog facilities */
 #define CNFFUNC_MAX_ARGS 32
 	/**< maximum number of arguments that any function can have (among
@@ -182,8 +181,7 @@ struct cnfstmt {
 			regex_t *regex_cache;/* cache for compiled REs, if used */
 			struct cstr_s *pCSCompValue;/* value to "compare" against */
 			sbool isNegated;
-			uintTiny propID;/* ID of the requested property */
-			es_str_t *propName;/* name of property for CEE-based filters */
+			msgPropDescr_t prop; /* requested property */
 			struct cnfstmt *t_then;
 			struct cnfstmt *t_else;
 		} s_propfilt;
@@ -210,6 +208,7 @@ struct cnfstringval {
 struct cnfvar {
 	unsigned nodetype;
 	char *name;
+	msgPropDescr_t prop;
 };
 
 struct cnfarray {
