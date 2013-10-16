@@ -359,7 +359,7 @@ MsgSetRcvFromIPWithoutAddRef(msg_t *pThis, prop_t *new)
 /* set RcvFrom name in msg object WITHOUT calling AddRef.
  * rgerhards, 2013-01-22
  */
-void MsgSetRcvFrom(msg_t *pThis, prop_t *new)
+void MsgSetRcvFromWithoutAddRef(msg_t *pThis, prop_t *new)
 {
 	assert(pThis != NULL);
 
@@ -401,7 +401,7 @@ resolveDNS(msg_t *pMsg) {
 		localRet = net.cvthname(pMsg->rcvFrom.pfrominet, &localName, NULL, &ip);
 		if(localRet == RS_RET_OK) {
 			/* we pass down the props, so no need for AddRef */
-			MsgSetRcvFrom(pMsg, localName);
+			MsgSetRcvFromWithoutAddRef(pMsg, localName);
 			MsgSetRcvFromIPWithoutAddRef(pMsg, ip);
 		}
 	}
@@ -2262,6 +2262,18 @@ msgSetFromSockinfo(msg_t *pThis, struct sockaddr_storage *sa){
 finalize_it:
 	RETiRet;
 }
+
+/* rgerhards 2008-09-10: set RcvFrom name in msg object. This calls AddRef()
+ * on the property, because this must be done in all current cases and there
+ * is no case expected where this may not be necessary.
+ * rgerhards, 2009-06-30
+ */
+void MsgSetRcvFrom(msg_t *pThis, prop_t *new)
+{
+	prop.AddRef(new);
+	MsgSetRcvFromWithoutAddRef(pThis, new);
+}
+
 
 /* This is used to set the property via a string. This function should not be
  * called if there is a reliable way for a caller to make sure that the
