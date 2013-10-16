@@ -60,6 +60,7 @@ DEFobjCurrIf(statsobj)
 statsobj_t *indexStats;
 STATSCOUNTER_DEF(indexSubmit, mutIndexSubmit)
 STATSCOUNTER_DEF(indexHTTPFail, mutIndexHTTPFail)
+STATSCOUNTER_DEF(indexHTTPReqFail, mutIndexHTTPReqFail)
 STATSCOUNTER_DEF(indexESFail, mutIndexESFail)
 
 /* REST API for elasticsearch hits this URL:
@@ -607,6 +608,7 @@ curlPost(instanceData *pData, uchar *message, int msglen, uchar **tpls, int nmsg
 		case CURLE_COULDNT_RESOLVE_PROXY:
 		case CURLE_COULDNT_CONNECT:
 		case CURLE_WRITE_ERROR:
+			STATSCOUNTER_INC(indexHTTPReqFail, mutHTTPReqFail);
 			indexHTTPFail += nmsgs;
 			DBGPRINTF("omelasticsearch: we are suspending ourselfs due "
 				  "to failure %lld of curl_easy_perform()\n",
@@ -1003,6 +1005,9 @@ CODEmodInit_QueryRegCFSLineHdlr
 		ctrType_IntCtr, &indexSubmit));
 	CHKiRet(statsobj.AddCounter(indexStats, (uchar *)"failed.http",
 		ctrType_IntCtr, &indexHTTPFail));
+	STATSCOUNTER_INIT(indexHTTPReqFail, mutCtrIndexHTTPReqFail);
+	CHKiRet(statsobj.AddCounter(indexStats, (uchar *)"failed.httprequests",
+		ctrType_IntCtr, &indexHTTPReqFail));
 	CHKiRet(statsobj.AddCounter(indexStats, (uchar *)"failed.es",
 		ctrType_IntCtr, &indexESFail));
 	CHKiRet(statsobj.ConstructFinalize(indexStats));
