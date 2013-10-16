@@ -256,9 +256,10 @@ doUTF8(instanceData *pData, uchar *msg, int lenMsg)
 			} else {   /* invalid (5&6 byte forbidden by RFC3629) */
 				msg[i] = pData->replChar;
 			}
-			if(i+bytesleft >= lenMsg) {
+			if(i+bytesLeft >= lenMsg) {
+				int dummy = lenMsg;
 				/* invalid, as rest of message cannot contain full char */
-				fixInvldMBSeq(pData, msg, lenMsg, strtIdx, lenMsg, seqLen);
+				fixInvldMBSeq(pData, msg, lenMsg, strtIdx, &dummy, seqLen);
 				i = lenMsg - 1;
 			}
 		}
