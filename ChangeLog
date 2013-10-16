@@ -13,6 +13,7 @@ Version 7.4.5  [v7.4-stable] 2013-09-??
 - omelasticsearch: add failed.httprequests stats counter
 - bugfix: omelasticsearch: correct failed.http stats counter
 - bugfix: omelasticsearch: did not correctly initialize stats counters
+- bugfix: omelasticsearch: failed.es counter was only maintained in bulk mode
   This usually did not lead to any problems, because they are in static
   memory, which is initialized to zero by the OS when the plugin is
   loaded. But it may cause problems especially on systems that do not
