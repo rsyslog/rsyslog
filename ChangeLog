@@ -164,6 +164,14 @@ Version 7.4.5  [v7.4-stable] 2013-09-??
   Thanks to Muri Cicanor for initiating the discussion
 - now requires libestr 0.1.8 as early versions had a nasty bug in
   string comparisons
+- omelasticsearch: add failed.httprequests stats counter
+- bugfix: omelasticsearch: correct failed.http stats counter
+- bugfix: omelasticsearch: did not correctly initialize stats counters
+  This usually did not lead to any problems, because they are in static
+  memory, which is initialized to zero by the OS when the plugin is
+  loaded. But it may cause problems especially on systems that do not
+  support atomic instructions - in this case the associated mutexes also
+  did not get properly initialized.
 - bugfix: mmanon did not detect all IP addresses in rewrite mode
   The problem occured if two IPs were close to each other and the first one
   was shrunk.
