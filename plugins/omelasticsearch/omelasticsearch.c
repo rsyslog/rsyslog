@@ -1001,13 +1001,16 @@ CODEmodInit_QueryRegCFSLineHdlr
 	/* support statistics gathering */
 	CHKiRet(statsobj.Construct(&indexStats));
 	CHKiRet(statsobj.SetName(indexStats, (uchar *)"omelasticsearch"));
+	STATSCOUNTER_INIT(indexSubmit, mutCtrIndexSubmit);
 	CHKiRet(statsobj.AddCounter(indexStats, (uchar *)"submitted",
 		ctrType_IntCtr, &indexSubmit));
+	STATSCOUNTER_INIT(indexHTTPFail, mutCtrIndexHTTPFail);
 	CHKiRet(statsobj.AddCounter(indexStats, (uchar *)"failed.http",
 		ctrType_IntCtr, &indexHTTPFail));
 	STATSCOUNTER_INIT(indexHTTPReqFail, mutCtrIndexHTTPReqFail);
 	CHKiRet(statsobj.AddCounter(indexStats, (uchar *)"failed.httprequests",
 		ctrType_IntCtr, &indexHTTPReqFail));
+	STATSCOUNTER_INIT(indexESFail, mutCtrIndexESFail);
 	CHKiRet(statsobj.AddCounter(indexStats, (uchar *)"failed.es",
 		ctrType_IntCtr, &indexESFail));
 	CHKiRet(statsobj.ConstructFinalize(indexStats));
