@@ -1,7 +1,10 @@
-- bugfix: unset statement always worked on message var, even if local
-  var was given
 ---------------------------------------------------------------------------
 Version 7.5.6 [devel] 2013-10-??
+- improved performance of RainerScript variable access
+  by refactoring the whole body of variable handling code. This also
+  solves some of the anomalies experienced in some versions of rsyslog.
+  All variable types are now handled in unified code, including
+  access via templates.
 - RainerScript: make use of 64 bit for numbers where available
   Thanks to Pavel Levshin for enhancement.
 - slight performance optimization if GCC is used
@@ -14,6 +17,8 @@ Version 7.5.6 [devel] 2013-10-??
   such, we consider the current approach as an experiment that did not
   work out and opt to removing it, clearing the way for a better future
   solution. Note: global vars were introduced in 7.5.3 on Sept, 11th 2013.
+- bugfix: unset statement always worked on message var, even if local
+  var was given
 - imudp: support for binding to ruleset added
 - bugfix: segfault if variable was assigned to non-container subtree
   Thanks to Pavel Levshin for the fix
