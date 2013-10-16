@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 7.5.5 [devel] 2013-10-15
+Version 7.5.5 [devel] 2013-10-16
 - imfile: permit to monitor an unlimited number of files
 - imptcp: add "defaultTZ" input parameter
 - imudp: support for multiple receiver threads added
