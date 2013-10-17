@@ -243,6 +243,18 @@ static struct cnfparamblk inppblk =
 #if HAVE_INOTIFY_INIT
 /* support for inotify mode */
 
+#if 0 /* enable if you need this for debugging */
+static void
+dbg_wdmapPrint(char *msg)
+{
+	int i;
+	dbgprintf("%s\n", msg);
+	for(i = 0 ; i < nWdmap ; ++i)
+		dbgprintf("wdmap[%d]: wd: %d, file %d, dir %d\n", i,
+			  wdmap[i].wd, wdmap[i].fileIdx, wdmap[i].dirIdx);
+}
+#endif
+
 static inline rsRetVal
 wdmapInit(void)
 {
@@ -325,16 +337,16 @@ wdmapDel(int wd)
 
 	for(i = 0 ; i < nWdmap && wdmap[i].wd < wd ; ++i)
 		; 	/* just scan */
-	if(i == nWdmap || wdmap[i+1].wd != wd) {
-		DBGPRINTF("imfile: wd %d already in wdmap!\n", wd);
+	if(i == nWdmap ||  wdmap[i].wd != wd) {
+		DBGPRINTF("imfile: wd %d shall be deleted but not in wdmap!\n", wd);
 		FINALIZE;
 	}
-	++i; /* we now point to the to-be-deleted entry */
-	if(i <= nWdmap) {
+	if(i < nWdmap-1) {
 		/* we need to shift to delete it (see comment at wdmap definition) */
-		dbgprintf("DDDD: imfile doing wdmap mmemmov(%d, %d, %d) for DEL\n", i+1,i,nWdmap-i);
-		memmove(wdmap + i + 1, wdmap + i, nWdmap - i);
+		dbgprintf("DDDD: imfile doing wdmap mmemmov(%d, %d, %d) for DEL\n", i,i+1,nWdmap-i-1);
+		memmove(wdmap + i, wdmap + i+1, nWdmap - i-1);
 	}
+	--nWdmap;
 	dbgprintf("DDDD: imfile: wd %d deleted, was idx %d\n", wd, i);
 
 finalize_it:
@@ -1033,7 +1045,9 @@ finalize_it:
 	RETiRet;
 }
 
-/* add file to directory (create association) */
+/* add file to directory (create association)
+ * i is index into file table, all other information is pulled from that table.
+ */
 static rsRetVal
 dirsAddFile(int i)
 {
@@ -1053,7 +1067,7 @@ dirsAddFile(int i)
 	}
 
 	dir = dirs + dirIdx;
-	for(j = 0 ; j < dir->currMaxFiles && dir->files[j].idx != i ; ++i)
+	for(j = 0 ; j < dir->currMaxFiles && dir->files[j].idx != i ; ++j)
 		; /* just scan */
 	if(j < dir->currMaxFiles) {
 		/* this is not important enough to send an user error, as all will
@@ -1083,6 +1097,49 @@ dirsAddFile(int i)
 	dbgprintf("DDDD: associated file %d[%s] to directory %d[%s]\n",
 		i, files[i].pszFileName, dirIdx, dir->dirName);
 	++dir->currMaxFiles;
+finalize_it:
+	RETiRet;
+}
+
+/* delete a file from directory (remove association) 
+ * fIdx is index into file table, all other information is pulled from that table.
+ */
+static rsRetVal
+dirsDelFile(int fIdx)
+{
+	int dirIdx;
+	int j;
+	dirInfo_t *dir;
+	DEFiRet;
+
+	dirIdx = dirsFindDir(files[fIdx].pszDirName);
+	if(dirIdx == -1) {
+		DBGPRINTF("imfile: could not find directory '%s' in dirs array - ignoring",
+			files[fIdx].pszDirName);
+		FINALIZE;
+	}
+
+	dir = dirs + dirIdx;
+	for(j = 0 ; j < dir->currMaxFiles && dir->files[j].idx != fIdx ; ++j)
+		; /* just scan */
+	if(j == dir->currMaxFiles) {
+		DBGPRINTF("imfile: no association for file '%s' in directory '%s' "
+			"found - ignoring\n", files[fIdx].pszFileName, dir->dirName);
+		FINALIZE;
+	}
+	dir->files[j].refcnt--;
+	if(dir->files[j].refcnt == 0) {
+		/* we remove that entry (but we never shrink the table) */
+		if(j < dir->currMaxFiles - 1) {
+			/* entry in middle - need to move others */
+			memmove(dir->files+j, dir->files+j+1,
+				(dir->currMaxFiles -j-1) * sizeof(dirInfoFiles_t));
+		}
+		--dir->currMaxFiles;
+	}
+	DBGPRINTF("imfile: removed association of file '%s' to directory '%s'\n",
+		  files[fIdx].pszFileName, dir->dirName);
+
 finalize_it:
 	RETiRet;
 }
@@ -1197,6 +1254,31 @@ in_handleDirEvent(struct inotify_event *ev, int dirIdx)
 done:	return;
 }
 
+/* inotify told us that a file's wd was closed. We now need to remove
+ * the file from our internal structures. Remember that a different inode
+ * with the same name may already be in processing.
+ */
+static void
+in_removeFile(struct inotify_event *ev, int fIdx)
+{
+	wdmapDel(ev->wd);
+	dirsDelFile(fIdx);
+}
+
+
+static void
+in_handleFileEvent(struct inotify_event *ev, int fIdx)
+{
+	if(ev->mask & IN_MODIFY) {
+		pollFile(&files[fIdx], NULL);
+	} else if(ev->mask & IN_IGNORED) {
+		in_removeFile(ev, fIdx);
+	} else {
+		DBGPRINTF("imfile: got non-expected inotify event:\n");
+		in_dbg_showEv(ev);
+	}
+}
+
 static void
 in_processEvent(struct inotify_event *ev)
 {
@@ -1211,7 +1293,7 @@ in_processEvent(struct inotify_event *ev)
 	if(etry->fileIdx == -1) { /* directory? */
 		in_handleDirEvent(ev, etry->dirIdx);
 	} else {
-		pollFile(&files[etry->fileIdx], NULL);
+		in_handleFileEvent(ev, etry->fileIdx);
 	}
 done:	return;
 }
