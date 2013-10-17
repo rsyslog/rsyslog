@@ -288,8 +288,8 @@ Note that the template string itself must be on a single line.
 <h4>Standard Template for Forwarding to a Remote Host (RFC3164 mode)</h4>
 <p><pre><code>template(name="ForwardFormat" type="list") {
 	constant(value="&lt;")
-	property(name="PRI")
-	constant(value="&lt;")
+	property(name="pri")
+	constant(value="&gt;")
 	property(name="timestamp" dateFormat="rfc3339")
 	constant(value=" ")
 	property(name="hostname")
