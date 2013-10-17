@@ -163,9 +163,19 @@ static int allocMaxFiles;	/* max file table size currently allocated */
 /* support for inotify mode */
 
 /* we need to track directories */
+struct dirInfoFiles_s { /* associated files */
+	int idx;
+	int refcnt;	/* due to inotify's async nature, we may have multiple
+			 * references to a single file inside our cache - e.g. when
+			 * inodes are removed, and the file name is re-created BUT another
+			 * process (like rsyslogd ;)) holds open the old inode.
+			 */
+};
+typedef struct dirInfoFiles_s dirInfoFiles_t;
+
 struct dirInfo_s {
 	uchar *dirName;
-	int *files;	/* associated file entries */
+	dirInfoFiles_t *files;	/* associated file entries */
 	int currMaxFiles;
 	int allocMaxFiles;
 };
@@ -957,7 +967,7 @@ dirsAdd(uchar *dirName)
 
 	/* if we reach this point, there is space in the file table for the new entry */
 	dirs[currMaxDirs].dirName = dirName;
-	CHKmalloc(dirs[currMaxDirs].files= malloc(sizeof(int) * INIT_FILE_IN_DIR_TAB_SIZE));
+	CHKmalloc(dirs[currMaxDirs].files= malloc(sizeof(dirInfoFiles_t) * INIT_FILE_IN_DIR_TAB_SIZE));
 	dirs[currMaxDirs].allocMaxFiles = INIT_FILE_IN_DIR_TAB_SIZE;
 	dirs[currMaxDirs].currMaxFiles= 0;
 
@@ -974,10 +984,11 @@ static int
 dirsFindFile(int i, uchar *fn)
 {
 	int f;
+	uchar *baseName;
 
 	for(f = 0 ; f < dirs[i].currMaxFiles ; ++f) {
-		if(!fnmatch((char*)fn, (char*)files[dirs[i].files[f]].pszBaseName,
-			    FNM_PATHNAME | FNM_PERIOD))
+		baseName = files[dirs[i].files[f].idx].pszBaseName;
+		if(!fnmatch((char*)fn, (char*)baseName, FNM_PATHNAME | FNM_PERIOD))
 			break; /* found */
 	}
 	if(f == dirs[i].currMaxFiles)
@@ -1029,7 +1040,7 @@ dirsAddFile(int i)
 	int dirIdx;
 	int j;
 	int newMax;
-	int *newFileTab;
+	dirInfoFiles_t *newFileTab;
 	dirInfo_t *dir;
 	DEFiRet;
 
@@ -1042,19 +1053,20 @@ dirsAddFile(int i)
 	}
 
 	dir = dirs + dirIdx;
-	for(j = 0 ; j < dir->currMaxFiles && dir->files[j] != i ; ++i)
+	for(j = 0 ; j < dir->currMaxFiles && dir->files[j].idx != i ; ++i)
 		; /* just scan */
 	if(j < dir->currMaxFiles) {
 		/* this is not important enough to send an user error, as all will
 		 * continue to work. */
-		DBGPRINTF("imfile: file '%s' already registered in directory '%s'\n",
-			files[i].pszFileName, dir->dirName);
+		++dir->files[j].refcnt;
+		DBGPRINTF("imfile: file '%s' already registered in directory '%s', recnt now %d\n",
+			files[i].pszFileName, dir->dirName, dir->files[j].refcnt);
 		FINALIZE;
 	}
 
 	if(dir->currMaxFiles == dir->allocMaxFiles) {
 		newMax = 2 * allocMaxFiles;
-		newFileTab = realloc(dirs, newMax * sizeof(int));
+		newFileTab = realloc(dirs, newMax * sizeof(dirInfoFiles_t));
 		if(newFileTab == NULL) {
 			errmsg.LogError(0, RS_RET_OUT_OF_MEMORY,
 					"cannot alloc memory to map directory '%s' file relationship "
@@ -1066,7 +1078,8 @@ dirsAddFile(int i)
 		DBGPRINTF("imfile: increased dir table to %d entries\n", allocMaxDirs);
 	}
 
-	dir->files[dir->currMaxFiles] = i;
+	dir->files[dir->currMaxFiles].idx = i;
+	dir->files[dir->currMaxFiles].refcnt = 1;
 	dbgprintf("DDDD: associated file %d[%s] to directory %d[%s]\n",
 		i, files[i].pszFileName, dirIdx, dir->dirName);
 	++dir->currMaxFiles;
