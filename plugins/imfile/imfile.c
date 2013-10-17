@@ -33,6 +33,7 @@
 #include <pthread.h>		/* do NOT remove: will soon be done by the module generation macros */
 #include <sys/types.h>
 #include <unistd.h>
+#include <fnmatch.h>
 #ifdef HAVE_SYS_INOTIFY_H
 #include <sys/inotify.h>
 #endif
@@ -85,6 +86,7 @@ static int bLegacyCnfModGlobalsPermitted;/* are legacy module-global config para
 typedef struct fileInfo_s {
 	uchar *pszFileName;
 	uchar *pszDirName;
+	uchar *pszBaseName;
 	uchar *pszTag;
 	size_t lenTag;
 	uchar *pszStateFile; /* file in which state between runs is to be stored */
@@ -653,6 +655,7 @@ addListner(instanceConf_t *inst)
 	pThis = &files[iFilPtr];
 	pThis->pszFileName = (uchar*) strdup((char*) inst->pszFileName);
 	pThis->pszDirName = inst->pszDirName; /* use value from inst! */
+	pThis->pszBaseName = inst->pszFileBaseName; /* use value from inst! */
 	pThis->pszTag = (uchar*) strdup((char*) inst->pszTag);
 	pThis->lenTag = ustrlen(pThis->pszTag);
 	pThis->pszStateFile = (uchar*) strdup((char*) inst->pszStateFile);
@@ -963,6 +966,26 @@ finalize_it:
 	RETiRet;
 }
 
+/* checks if a file name is already inside the dirs array. Note that wildcards
+ * apply. Returns either the array index or -1 if not found.
+ * i is the index of the dir entry to search.
+ */
+static int
+dirsFindFile(int i, uchar *fn)
+{
+	int f;
+
+	for(f = 0 ; f < dirs[i].currMaxFiles ; ++f) {
+		if(!fnmatch((char*)fn, (char*)files[dirs[i].files[f]].pszBaseName,
+			    FNM_PATHNAME | FNM_PERIOD))
+			break; /* found */
+	}
+	if(f == dirs[i].currMaxFiles)
+		f = -1;
+	//dbgprintf("DDDD: dir '%s', file '%s', found:%d\n", dirs[i].dirName, fn, f);
+	return f;
+}
+
 /* checks if a dir name is already inside the dirs array. If so, returns
  * its index. If not present, -1 is returned.
  */
@@ -975,7 +998,7 @@ dirsFindDir(uchar *dir)
 		; /* just scan, all done in for() */
 	if(i == currMaxDirs)
 		i = -1;
-	dbgprintf("DDDD: dir '%s', found:%d\n", dir, i);
+	//dbgprintf("DDDD: dir '%s', found:%d\n", dir, i);
 	return i;
 }
 
@@ -999,6 +1022,7 @@ finalize_it:
 	RETiRet;
 }
 
+/* add file to directory (create association) */
 static rsRetVal
 dirsAddFile(int i)
 {
@@ -1023,7 +1047,7 @@ dirsAddFile(int i)
 	if(j < dir->currMaxFiles) {
 		/* this is not important enough to send an user error, as all will
 		 * continue to work. */
-		DBGPRINTF("imfile: file '%s' already registered in directory '%s'",
+		DBGPRINTF("imfile: file '%s' already registered in directory '%s'\n",
 			files[i].pszFileName, dir->dirName);
 		FINALIZE;
 	}
@@ -1104,9 +1128,60 @@ in_setupInitialWatches()
 }
 
 static void
-in_handleDirEvent(struct inotify_event *ev, int i)
+in_dbg_showEv(struct inotify_event *ev)
 {
-	dbgprintf("DDDD: handle dir event for %s\n", dirs[i].dirName);
+	if(ev->mask & IN_IGNORED) {
+		dbgprintf("watch was REMOVED\n");
+	} else if(ev->mask & IN_MODIFY) {
+		dbgprintf("watch was MODIFID\n");
+	} else if(ev->mask & IN_ACCESS) {
+		dbgprintf("watch IN_ACCESS\n");
+	} else if(ev->mask & IN_ATTRIB) {
+		dbgprintf("watch IN_ATTRIB\n");
+	} else if(ev->mask & IN_CLOSE_WRITE) {
+		dbgprintf("watch IN_CLOSE_WRITE\n");
+	} else if(ev->mask & IN_CLOSE_NOWRITE) {
+		dbgprintf("watch IN_CLOSE_NOWRITE\n");
+	} else if(ev->mask & IN_CREATE) {
+		dbgprintf("file was CREATED: %s\n", ev->name);
+	} else if(ev->mask & IN_DELETE) {
+		dbgprintf("watch IN_DELETE\n");
+	} else if(ev->mask & IN_DELETE_SELF) {
+		dbgprintf("watch IN_DELETE_SELF\n");
+	} else if(ev->mask & IN_MOVE_SELF) {
+		dbgprintf("watch IN_MOVE_SELF\n");
+	} else if(ev->mask & IN_MOVED_FROM) {
+		dbgprintf("watch IN_MOVED_FROM\n");
+	} else if(ev->mask & IN_MOVED_TO) {
+		dbgprintf("watch IN_MOVED_TO\n");
+	} else if(ev->mask & IN_OPEN) {
+		dbgprintf("watch IN_OPEN\n");
+	} else if(ev->mask & IN_ISDIR) {
+		dbgprintf("watch IN_ISDIR\n");
+	} else {
+		dbgprintf("unknown mask code %8.8x\n", ev->mask);
+	 }
+}
+
+static void
+in_handleDirEvent(struct inotify_event *ev, int dirIdx)
+{
+	int fileIdx;
+	dbgprintf("DDDD: handle dir event for %s\n", dirs[dirIdx].dirName);
+	if(!(ev->mask & IN_CREATE)) {
+		DBGPRINTF("imfile: got non-expected inotify event:\n");
+		in_dbg_showEv(ev);
+		goto done;
+	}
+	fileIdx = dirsFindFile(dirIdx, (uchar*)ev->name);
+	if(fileIdx == -1) {
+		dbgprintf("imfile: file '%s' not associated with dir '%s'\n",
+			ev->name, dirs[dirIdx].dirName);
+		goto done;
+	}
+	dbgprintf("DDDD: file '%s' associated with dir '%s'\n", ev->name, dirs[dirIdx].dirName);
+	in_setupFileWatch(fileIdx);
+done:	return;
 }
 
 static void
@@ -1126,49 +1201,6 @@ in_processEvent(struct inotify_event *ev)
 		pollFile(&files[etry->fileIdx], NULL);
 	}
 done:	return;
-}
-
-static void
-in_dbg_showEv(struct inotify_event *ev)
-{
-	if(ev->mask & IN_IGNORED) {
-		dbgprintf("watch was REMOVED\n");
-	} else if(ev->mask & IN_MODIFY) {
-		dbgprintf("watch was MODIFID\n");
-	} else if(ev->mask & IN_ACCESS) {
-		dbgprintf("watch IN_ACCESS\n");
-	} else if(ev->mask & IN_ATTRIB) {
-		dbgprintf("watch IN_ATTRIB\n");
-	} else if(ev->mask & IN_CLOSE_WRITE) {
-		dbgprintf("watch IN_CLOSE_WRITE\n");
-	} else if(ev->mask & IN_CLOSE_NOWRITE) {
-		dbgprintf("watch IN_CLOSE_NOWRITE\n");
-	} else if(ev->mask & IN_CREATE) {
-		dbgprintf("file was CREATED: %s", ev->name);
-#if 0
-		if(!fnmatch(fn, ev->name, 0)) {
-			wd = inotify_add_watch(ino_fd, ev->name, IN_MODIFY);
-			printf(", adding watch [pattern '%s']: %d\n", fn, wd);
-		}
-#endif
-		dbgprintf("\n");
-	} else if(ev->mask & IN_DELETE) {
-		dbgprintf("watch IN_DELETE\n");
-	} else if(ev->mask & IN_DELETE_SELF) {
-		dbgprintf("watch IN_DELETE_SELF\n");
-	} else if(ev->mask & IN_MOVE_SELF) {
-		dbgprintf("watch IN_MOVE_SELF\n");
-	} else if(ev->mask & IN_MOVED_FROM) {
-		dbgprintf("watch IN_MOVED_FROM\n");
-	} else if(ev->mask & IN_MOVED_TO) {
-		dbgprintf("watch IN_MOVED_TO\n");
-	} else if(ev->mask & IN_OPEN) {
-		dbgprintf("watch IN_OPEN\n");
-	} else if(ev->mask & IN_ISDIR) {
-		dbgprintf("watch IN_ISDIR\n");
-	} else {
-		dbgprintf("unknown mask code\n");
-	}
 }
 
 /* Monitor files in inotify mode */
