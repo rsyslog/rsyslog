@@ -38,6 +38,7 @@
 #include "rainerscript.h"
 #include "conf.h"
 #include "parserif.h"
+#include "parse.h"
 #include "rsconf.h"
 #include "grammar.h"
 #include "queue.h"
@@ -142,6 +143,111 @@ getFIOPName(unsigned iFIOP)
 			break;
 	}
 	return pRet;
+}
+
+
+/* This function takes the filter part of a property
+ * based filter and decodes it. It processes the line up to the beginning
+ * of the action part.
+ */
+static rsRetVal
+DecodePropFilter(uchar *pline, struct cnfstmt *stmt)
+{
+	rsParsObj *pPars;
+	cstr_t *pCSCompOp;
+	cstr_t *pCSPropName;
+	rsRetVal iRet;
+	int iOffset; /* for compare operations */
+
+	ASSERT(pline != NULL);
+
+	DBGPRINTF("Decoding property-based filter '%s'\n", pline);
+
+	/* create parser object starting with line string without leading colon */
+	if((iRet = rsParsConstructFromSz(&pPars, pline+1)) != RS_RET_OK) {
+		parser_errmsg("error %d constructing parser object", iRet);
+		return(iRet);
+	}
+
+	/* read property */
+	iRet = parsDelimCStr(pPars, &pCSPropName, ',', 1, 1, 1);
+	if(iRet != RS_RET_OK) {
+		parser_errmsg("error %d parsing filter property", iRet);
+		rsParsDestruct(pPars);
+		return(iRet);
+	}
+	iRet = propNameToID(pCSPropName, &stmt->d.s_propfilt.propID);
+	if(iRet != RS_RET_OK) {
+		parser_errmsg("invalid property name '%s' in filter",
+				cstrGetSzStrNoNULL(pCSPropName));
+		rsParsDestruct(pPars);
+		return(iRet);
+	}
+	if(stmt->d.s_propfilt.propID == PROP_CEE) {
+		/* in CEE case, we need to preserve the actual property name */
+		if((stmt->d.s_propfilt.propName =
+		     es_newStrFromBuf((char*)cstrGetSzStrNoNULL(pCSPropName)+2, cstrLen(pCSPropName)-2)) == NULL) {
+			cstrDestruct(&pCSPropName);
+			return(RS_RET_ERR);
+		}
+	}
+	cstrDestruct(&pCSPropName);
+
+	/* read operation */
+	iRet = parsDelimCStr(pPars, &pCSCompOp, ',', 1, 1, 1);
+	if(iRet != RS_RET_OK) {
+		parser_errmsg("error %d compare operation property - ignoring selector", iRet);
+		rsParsDestruct(pPars);
+		return(iRet);
+	}
+
+	/* we now first check if the condition is to be negated. To do so, we first
+	 * must make sure we have at least one char in the param and then check the
+	 * first one.
+	 * rgerhards, 2005-09-26
+	 */
+	if(rsCStrLen(pCSCompOp) > 0) {
+		if(*rsCStrGetBufBeg(pCSCompOp) == '!') {
+			stmt->d.s_propfilt.isNegated = 1;
+			iOffset = 1; /* ignore '!' */
+		} else {
+			stmt->d.s_propfilt.isNegated = 0;
+			iOffset = 0;
+		}
+	} else {
+		stmt->d.s_propfilt.isNegated = 0;
+		iOffset = 0;
+	}
+
+	if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, (uchar*) "contains", 8)) {
+		stmt->d.s_propfilt.operation = FIOP_CONTAINS;
+	} else if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, (uchar*) "isequal", 7)) {
+		stmt->d.s_propfilt.operation = FIOP_ISEQUAL;
+	} else if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, (uchar*) "isempty", 7)) {
+		stmt->d.s_propfilt.operation = FIOP_ISEMPTY;
+	} else if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, (uchar*) "startswith", 10)) {
+		stmt->d.s_propfilt.operation = FIOP_STARTSWITH;
+	} else if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, (unsigned char*) "regex", 5)) {
+		stmt->d.s_propfilt.operation = FIOP_REGEX;
+	} else if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, (unsigned char*) "ereregex", 8)) {
+		stmt->d.s_propfilt.operation = FIOP_EREREGEX;
+	} else {
+		parser_errmsg("error: invalid compare operation '%s'",
+		           (char*) rsCStrGetSzStrNoNULL(pCSCompOp));
+	}
+	rsCStrDestruct(&pCSCompOp); /* no longer needed */
+
+	if(stmt->d.s_propfilt.operation != FIOP_ISEMPTY) {
+		/* read compare value */
+		iRet = parsQuotedCStr(pPars, &stmt->d.s_propfilt.pCSCompValue);
+		if(iRet != RS_RET_OK) {
+			parser_errmsg("error %d compare value property", iRet);
+			rsParsDestruct(pPars);
+			return(iRet);
+		}
+	}
+
+	return rsParsDestruct(pPars);
 }
 
 static void
