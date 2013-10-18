@@ -564,7 +564,7 @@ rsRetVal cstrTrimTrailingWhiteSpace(cstr_t *pThis)
 	}
 	/* i now is the new string length! */
 	pThis->iStrLen = i;
-	pThis->pBuf[pThis->iStrLen] = '0'; /* we always have this space */
+	pThis->pBuf[pThis->iStrLen] = '\0'; /* we always have this space */
 
 done:	return RS_RET_OK;
 }
