@@ -2698,6 +2698,7 @@ cnfstmtNewPROPFILT(char *propfilt, struct cnfstmt *t_then)
 		cnfstmt->d.s_propfilt.pCSCompValue = NULL;
 		if(DecodePropFilter((uchar*)propfilt, cnfstmt) != RS_RET_OK) {
 			cnfstmt->nodetype = S_NOP; /* disable action! */
+			cnfstmtDestructLst(t_then); /* we do no longer need this */
 		}
 	}
 	return cnfstmt;

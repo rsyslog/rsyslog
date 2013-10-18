@@ -7,6 +7,8 @@ Version 7.5.6 [devel] 2013-10-??
   This could happen if the property name was longer than 127 chars, a case
   that would not happen in practice.
 - bugfix: invalid property filter was not properly disabled in ruleset
+  Note: the cosmetic memory leak introduced with that patch in 7.4.5 is
+  now also fixed.
 ---------------------------------------------------------------------------
 Version 7.5.5 [devel] 2013-10-16
 - imfile: permit to monitor an unlimited number of files
