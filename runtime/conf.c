@@ -486,10 +486,9 @@ rsRetVal DecodePRIFilter(uchar *pline, uchar pmask[])
 }
 
 
-/* Helper to cfline(). This function takes the filter part of a property
+/* This function takes the filter part of a property
  * based filter and decodes it. It processes the line up to the beginning
- * of the action part. A pointer to that beginnig is passed back to the caller.
- * rgerhards 2005-09-15
+ * of the action part.
  */
 rsRetVal DecodePropFilter(uchar *pline, struct cnfstmt *stmt)
 {
@@ -518,7 +517,8 @@ rsRetVal DecodePropFilter(uchar *pline, struct cnfstmt *stmt)
 	}
 	iRet = propNameToID(pCSPropName, &stmt->d.s_propfilt.propID);
 	if(iRet != RS_RET_OK) {
-		errmsg.LogError(0, iRet, "error %d parsing filter property - ignoring selector", iRet);
+		errmsg.LogError(0, iRet, "invalid property name '%s' in filter",
+				cstrGetSzStrNoNULL(pCSPropName));
 		rsParsDestruct(pPars);
 		return(iRet);
 	}
