@@ -520,9 +520,6 @@ processSocket(struct wrkrInfo_s *pWrkr, struct lstn_s *lstn, struct sockaddr_sto
 	struct syslogTime stTime;
 	ssize_t lenRcvBuf;
 	struct sockaddr_storage frominet;
-	msg_t *pMsg;
-	prop_t *propFromHost = NULL;
-	prop_t *propFromHostIP = NULL;
 	multi_submit_t multiSub;
 	msg_t *pMsgs[CONF_NUM_MULTISUB];
 	char errStr[1024];
