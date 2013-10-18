@@ -234,6 +234,7 @@ DecodePropFilter(uchar *pline, struct cnfstmt *stmt)
 	} else {
 		parser_errmsg("error: invalid compare operation '%s'",
 		           (char*) rsCStrGetSzStrNoNULL(pCSCompOp));
+		return(RS_RET_ERR);
 	}
 	rsCStrDestruct(&pCSCompOp); /* no longer needed */
 
@@ -2689,14 +2690,15 @@ struct cnfstmt *
 cnfstmtNewPROPFILT(char *propfilt, struct cnfstmt *t_then)
 {
 	struct cnfstmt* cnfstmt;
-	rsRetVal lRet;
 	if((cnfstmt = cnfstmtNew(S_PROPFILT)) != NULL) {
 		cnfstmt->printable = (uchar*)propfilt;
 		cnfstmt->d.s_propfilt.t_then = t_then;
 		cnfstmt->d.s_propfilt.propName = NULL;
 		cnfstmt->d.s_propfilt.regex_cache = NULL;
 		cnfstmt->d.s_propfilt.pCSCompValue = NULL;
-		lRet = DecodePropFilter((uchar*)propfilt, cnfstmt);
+		if(DecodePropFilter((uchar*)propfilt, cnfstmt) != RS_RET_OK) {
+			cnfstmt->nodetype = S_NOP; /* disable action! */
+		}
 	}
 	return cnfstmt;
 }

@@ -6,6 +6,7 @@ Version 7.5.6 [devel] 2013-10-??
 - bugfix: potential misadressing on startup if property-filter was used
   This could happen if the property name was longer than 127 chars, a case
   that would not happen in practice.
+- bugfix: invalid property filter was not properly disabled in ruleset
 ---------------------------------------------------------------------------
 Version 7.5.5 [devel] 2013-10-16
 - imfile: permit to monitor an unlimited number of files
@@ -173,6 +174,12 @@ Version 7.4.5  [v7.4-stable] 2013-09-??
 - now requires libestr 0.1.8 as early versions had a nasty bug in
   string comparisons
 - omelasticsearch: add failed.httprequests stats counter
+- bugfix: invalid property filter was not properly disabled in ruleset
+  Note that this bugfix introduces a very slight memory leak, which is
+  cosmetic, as it just holds data until termination that is no longer
+  needed. It is just the part of the config that was invalid. We will
+  "fix" this "issue" in the devel version first, as the fix is a bit
+  too intrusive to do without hard need in the stable version.
 - bugfix: segfault if re_extract() function was used and no match found
 - bugfix: potential misadressing on startup if property-filter was used
   This could happen if the property name was longer than 127 chars, a case
