@@ -1337,7 +1337,6 @@ doFuncCall(struct cnffunc *func, struct var *ret, void* usrptr)
 	int bMustFree;
 	es_str_t *estr;
 	char *str;
-	char *s;
 	uchar *resStr;
 	int retval;
 	struct var r[CNFFUNC_MAX_ARGS];
@@ -3325,7 +3324,6 @@ finalize_it:
 static inline rsRetVal
 initFunc_lookup(struct cnffunc *func)
 {
-	struct funcData_prifilt *pData;
 	uchar *cstr = NULL;
 	DEFiRet;
 
