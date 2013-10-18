@@ -11,6 +11,7 @@ Version 7.4.5  [v7.4-stable] 2013-09-??
 - now requires libestr 0.1.8 as early versions had a nasty bug in
   string comparisons
 - omelasticsearch: add failed.httprequests stats counter
+- bugfix: segfault if re_extract() function was used and no match found
 - bugfix: omelasticsearch: correct failed.http stats counter
 - bugfix: omelasticsearch: did not correctly initialize stats counters
 - bugfix: omelasticsearch: failed.es counter was only maintained in bulk mode

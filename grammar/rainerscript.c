@@ -1315,7 +1315,10 @@ finalize_it:
 	if(bHadNoMatch) {
 		cnfexprEval(func->expr[4], &r[4], usrptr);
 		estr = var2String(&r[4], &bMustFree);
-		if(r[4].datatype == 'S') es_deleteStr(r[4].d.estr);
+		/* Note that we do NOT free the string that was returned/created
+		 * for r[4]. We pass it to the caller, which in turn frees it.
+		 * This saves us doing one unnecessary memory alloc & write.
+		 */
 	}
 	ret->datatype = 'S';
 	ret->d.estr = estr;
