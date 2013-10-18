@@ -3,6 +3,9 @@ Version 7.5.6 [devel] 2013-10-??
 - bugfix: segfault if re_extract() function was used and no match found
 - bugfix: omelasticsearch did not compile on platforms without atomic
   instructions
+- bugfix: potential misadressing on startup if property-filter was used
+  This could happen if the property name was longer than 127 chars, a case
+  that would not happen in practice.
 ---------------------------------------------------------------------------
 Version 7.5.5 [devel] 2013-10-16
 - imfile: permit to monitor an unlimited number of files
