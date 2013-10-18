@@ -107,7 +107,8 @@ finalize_it:
 
 /* a helper function for rsCStr*Strf()
  */
-static rsRetVal rsCStrConstructFromszStrv(cstr_t **ppThis, uchar *fmt, va_list ap)
+static rsRetVal rsCStrConstructFromszStrv(cstr_t **ppThis, char *fmt, va_list ap) __attribute__((format(gnu_printf,2, 0)));
+static rsRetVal rsCStrConstructFromszStrv(cstr_t **ppThis, char *fmt, va_list ap)
 {
 	DEFiRet;
 	cstr_t *pThis;
@@ -147,7 +148,7 @@ rsRetVal rsCStrConstructFromszStrf(cstr_t **ppThis, char *fmt, ...)
 	va_list ap;
 
 	va_start(ap, fmt);
-	iRet = rsCStrConstructFromszStrv(ppThis, (uchar*)fmt, ap);
+	iRet = rsCStrConstructFromszStrv(ppThis, fmt, ap);
 	va_end(ap);
 
 	RETiRet;
@@ -315,7 +316,7 @@ rsRetVal rsCStrAppendStrf(cstr_t *pThis, uchar *fmt, ...)
 	cstr_t *pStr = NULL;
 
 	va_start(ap, fmt);
-	iRet = rsCStrConstructFromszStrv(&pStr, fmt, ap);
+	iRet = rsCStrConstructFromszStrv(&pStr, (char*)fmt, ap);
 	va_end(ap);
 
 	CHKiRet(iRet);
