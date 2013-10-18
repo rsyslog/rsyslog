@@ -135,9 +135,9 @@ static inline void
 doSubmitMsg(uchar *line)
 {
 	msg_t *pMsg;
-	DEFiRet;
 
-	CHKiRet(msgConstruct(&pMsg));
+	if(msgConstruct(&pMsg) != RS_RET_OK)
+		goto finalize_it;
 	MsgSetInputName(pMsg, pInputName);
 	MsgSetRawMsgWOSize(pMsg, (char*)line);
 	MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName(), ustrlen(glbl.GetLocalHostName()));
