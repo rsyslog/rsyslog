@@ -171,6 +171,9 @@ Version 7.4.5  [v7.4-stable] 2013-09-??
   string comparisons
 - omelasticsearch: add failed.httprequests stats counter
 - bugfix: segfault if re_extract() function was used and no match found
+- bugfix: potential misadressing on startup if property-filter was used
+  This could happen if the property name was longer than 127 chars, a case
+  that would not happen in practice.
 - bugfix: omelasticsearch: correct failed.http stats counter
 - bugfix: omelasticsearch: did not correctly initialize stats counters
 - bugfix: omelasticsearch: failed.es counter was only maintained in bulk mode
