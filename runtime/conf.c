@@ -573,6 +573,7 @@ rsRetVal DecodePropFilter(uchar *pline, struct cnfstmt *stmt)
 	} else {
 		errmsg.LogError(0, NO_ERRCODE, "error: invalid compare operation '%s' - ignoring selector",
 		           (char*) rsCStrGetSzStrNoNULL(pCSCompOp));
+		return(RS_RET_ERR);
 	}
 	rsCStrDestruct(&pCSCompOp); /* no longer needed */
 
