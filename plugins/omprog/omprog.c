@@ -132,7 +132,6 @@ static void execBinary(instanceData *pData, int fdStdin)
 	int i, iRet;
 	struct sigaction sigAct;
 	sigset_t set;
-	char *newargv[] = { NULL };
 	char *newenviron[] = { NULL };
 
 	assert(pData != NULL);
