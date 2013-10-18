@@ -52,6 +52,7 @@ void rsgcryCtxDel(gcryctx ctx);
 int gcryfileDestruct(gcryfile gf, off64_t offsLogfile);
 rsRetVal rsgcryInitCrypt(gcryctx ctx, gcryfile *pgf, uchar *fname);
 int rsgcryEncrypt(gcryfile pF, uchar *buf, size_t *len);
+int gcryGetKeyFromProg(char *cmd, char **key, unsigned *keylen);
 
 /* error states */
 #define RSGCRYE_EI_OPEN 1 	/* error opening .encinfo file */
