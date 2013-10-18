@@ -153,11 +153,11 @@ getFIOPName(unsigned iFIOP)
 static rsRetVal
 DecodePropFilter(uchar *pline, struct cnfstmt *stmt)
 {
-	rsParsObj *pPars;
-	cstr_t *pCSCompOp;
-	cstr_t *pCSPropName;
-	rsRetVal iRet;
+	rsParsObj *pPars = NULL;
+	cstr_t *pCSCompOp = NULL;
+	cstr_t *pCSPropName = NULL;
 	int iOffset; /* for compare operations */
+	DEFiRet;
 
 	ASSERT(pline != NULL);
 
@@ -166,7 +166,7 @@ DecodePropFilter(uchar *pline, struct cnfstmt *stmt)
 	/* create parser object starting with line string without leading colon */
 	if((iRet = rsParsConstructFromSz(&pPars, pline+1)) != RS_RET_OK) {
 		parser_errmsg("error %d constructing parser object", iRet);
-		return(iRet);
+		ABORT_FINALIZE(iRet);
 	}
 
 	/* read property */
@@ -174,31 +174,29 @@ DecodePropFilter(uchar *pline, struct cnfstmt *stmt)
 	if(iRet != RS_RET_OK) {
 		parser_errmsg("error %d parsing filter property", iRet);
 		rsParsDestruct(pPars);
-		return(iRet);
+		ABORT_FINALIZE(iRet);
 	}
 	iRet = propNameToID(pCSPropName, &stmt->d.s_propfilt.propID);
 	if(iRet != RS_RET_OK) {
 		parser_errmsg("invalid property name '%s' in filter",
 				cstrGetSzStrNoNULL(pCSPropName));
 		rsParsDestruct(pPars);
-		return(iRet);
+		ABORT_FINALIZE(iRet);
 	}
 	if(stmt->d.s_propfilt.propID == PROP_CEE) {
 		/* in CEE case, we need to preserve the actual property name */
 		if((stmt->d.s_propfilt.propName =
 		     es_newStrFromBuf((char*)cstrGetSzStrNoNULL(pCSPropName)+2, cstrLen(pCSPropName)-2)) == NULL) {
-			cstrDestruct(&pCSPropName);
-			return(RS_RET_ERR);
+			ABORT_FINALIZE(RS_RET_ERR);
 		}
 	}
-	cstrDestruct(&pCSPropName);
 
 	/* read operation */
 	iRet = parsDelimCStr(pPars, &pCSCompOp, ',', 1, 1, 1);
 	if(iRet != RS_RET_OK) {
 		parser_errmsg("error %d compare operation property - ignoring selector", iRet);
 		rsParsDestruct(pPars);
-		return(iRet);
+		ABORT_FINALIZE(iRet);
 	}
 
 	/* we now first check if the condition is to be negated. To do so, we first
@@ -234,9 +232,8 @@ DecodePropFilter(uchar *pline, struct cnfstmt *stmt)
 	} else {
 		parser_errmsg("error: invalid compare operation '%s'",
 		           (char*) rsCStrGetSzStrNoNULL(pCSCompOp));
-		return(RS_RET_ERR);
+		ABORT_FINALIZE(RS_RET_ERR);
 	}
-	rsCStrDestruct(&pCSCompOp); /* no longer needed */
 
 	if(stmt->d.s_propfilt.operation != FIOP_ISEMPTY) {
 		/* read compare value */
@@ -244,11 +241,18 @@ DecodePropFilter(uchar *pline, struct cnfstmt *stmt)
 		if(iRet != RS_RET_OK) {
 			parser_errmsg("error %d compare value property", iRet);
 			rsParsDestruct(pPars);
-			return(iRet);
+			ABORT_FINALIZE(iRet);
 		}
 	}
 
-	return rsParsDestruct(pPars);
+finalize_it:
+	if(pPars != NULL)
+		rsParsDestruct(pPars);
+	if(pCSCompOp != NULL)
+		rsCStrDestruct(&pCSCompOp);
+	if(pCSPropName != NULL)
+		cstrDestruct(&pCSPropName);
+	RETiRet;
 }
 
 static void
