@@ -1,4 +1,7 @@
 ---------------------------------------------------------------------------
+Version 7.5.6 [devel] 2013-10-??
+- bugfix: segfault if re_extract() function was used and no match found
+---------------------------------------------------------------------------
 Version 7.5.5 [devel] 2013-10-16
 - imfile: permit to monitor an unlimited number of files
 - imptcp: add "defaultTZ" input parameter
