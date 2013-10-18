@@ -155,7 +155,6 @@ static inline uchar*  cstrGetSzStrNoNULL(cstr_t *pThis)
  */
 rsRetVal rsCStrTruncate(cstr_t *pThis, size_t nTrunc);
 
-rsRetVal rsCStrTrimTrailingWhiteSpace(cstr_t *pThis);
 rsRetVal cstrTrimTrailingWhiteSpace(cstr_t *pThis);
 
 /**
