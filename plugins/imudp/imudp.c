@@ -132,6 +132,7 @@ static struct wrkrInfo_s {
 	STATSCOUNTER_DEF(ctrMsgsRcvd, mutCtrMsgsRcvd)
 	uchar *pRcvBuf;		/* receive buffer (for a single packet) */
 #	ifdef HAVE_RECVMMSG
+	struct sockaddr_storage *frominet;
 	struct mmsghdr *recvmsg_mmh;
 	struct iovec *recvmsg_iov;
 #	endif
@@ -435,7 +436,6 @@ processSocket(struct wrkrInfo_s *pWrkr, struct lstn_s *lstn, struct sockaddr_sto
 	int iNbrTimeUsed;
 	time_t ttGenTime;
 	struct syslogTime stTime;
-	struct sockaddr_storage frominet;
 	char errStr[1024];
 	msg_t *pMsgs[CONF_NUM_MULTISUB];
 	multi_submit_t multiSub;
@@ -454,8 +454,8 @@ processSocket(struct wrkrInfo_s *pWrkr, struct lstn_s *lstn, struct sockaddr_sto
 		for(i = 0 ; i < runModConf->batchSize ; ++i) {
 			pWrkr->recvmsg_iov[i].iov_base = pWrkr->pRcvBuf+(i*(iMaxLine+1));
 			pWrkr->recvmsg_iov[i].iov_len = iMaxLine;
-			pWrkr->recvmsg_mmh[i].msg_hdr.msg_name = &frominet;
 			pWrkr->recvmsg_mmh[i].msg_hdr.msg_namelen = sizeof(struct sockaddr_storage); 
+			pWrkr->recvmsg_mmh[i].msg_hdr.msg_name = &(pWrkr->frominet[i]);
 			pWrkr->recvmsg_mmh[i].msg_hdr.msg_iov = &(pWrkr->recvmsg_iov[i]);
 			pWrkr->recvmsg_mmh[i].msg_hdr.msg_iovlen = 1;
 		}
@@ -488,7 +488,7 @@ processSocket(struct wrkrInfo_s *pWrkr, struct lstn_s *lstn, struct sockaddr_sto
 		pWrkr->ctrMsgsRcvd += nelem;
 		for(i = 0 ; i < nelem ; ++i) {
 			processPacket(pWrkr->pThrd, lstn, frominetPrev, pbIsPermitted, pWrkr->recvmsg_mmh[i].msg_hdr.msg_iov->iov_base,
-				      pWrkr->recvmsg_mmh[i].msg_len, &stTime, ttGenTime, &frominet,
+				      pWrkr->recvmsg_mmh[i].msg_len, &stTime, ttGenTime, &(pWrkr->frominet[i]),
 				      pWrkr->recvmsg_mmh[i].msg_hdr.msg_namelen, &multiSub);
 		}
 	}
@@ -1046,6 +1046,7 @@ CODESTARTactivateCnf
 #		ifdef HAVE_RECVMMSG
 		CHKmalloc(wrkrInfo[i].recvmsg_iov = MALLOC(runModConf->batchSize * sizeof(struct iovec)));
 		CHKmalloc(wrkrInfo[i].recvmsg_mmh = MALLOC(runModConf->batchSize * sizeof(struct mmsghdr)));
+		CHKmalloc(wrkrInfo[i].frominet = MALLOC(runModConf->batchSize * sizeof(struct sockaddr_storage)));
 #		endif
 		CHKmalloc(wrkrInfo[i].pRcvBuf = MALLOC(lenRcvBuf));
 		wrkrInfo[i].id = i;
@@ -1172,6 +1173,7 @@ CODESTARTafterRun
 #		ifdef HAVE_RECVMMSG
 		free(wrkrInfo[i].recvmsg_iov);
 		free(wrkrInfo[i].recvmsg_mmh);
+		free(wrkrInfo[i].frominet);
 #		endif
 		free(wrkrInfo[i].pRcvBuf);
 	}
