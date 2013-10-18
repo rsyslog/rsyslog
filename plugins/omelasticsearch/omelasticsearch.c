@@ -608,7 +608,7 @@ curlPost(instanceData *pData, uchar *message, int msglen, uchar **tpls, int nmsg
 		case CURLE_COULDNT_RESOLVE_PROXY:
 		case CURLE_COULDNT_CONNECT:
 		case CURLE_WRITE_ERROR:
-			STATSCOUNTER_INC(indexHTTPReqFail, mutHTTPReqFail);
+			STATSCOUNTER_INC(indexHTTPReqFail, mutIndexHTTPReqFail);
 			indexHTTPFail += nmsgs;
 			DBGPRINTF("omelasticsearch: we are suspending ourselfs due "
 				  "to failure %lld of curl_easy_perform()\n",
@@ -1001,16 +1001,16 @@ CODEmodInit_QueryRegCFSLineHdlr
 	/* support statistics gathering */
 	CHKiRet(statsobj.Construct(&indexStats));
 	CHKiRet(statsobj.SetName(indexStats, (uchar *)"omelasticsearch"));
-	STATSCOUNTER_INIT(indexSubmit, mutCtrIndexSubmit);
+	STATSCOUNTER_INIT(indexSubmit, mutIndexSubmit);
 	CHKiRet(statsobj.AddCounter(indexStats, (uchar *)"submitted",
 		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &indexSubmit));
-	STATSCOUNTER_INIT(indexHTTPFail, mutCtrIndexHTTPFail);
+	STATSCOUNTER_INIT(indexHTTPFail, mutIndexHTTPFail);
 	CHKiRet(statsobj.AddCounter(indexStats, (uchar *)"failed.http",
 		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &indexHTTPFail));
-	STATSCOUNTER_INIT(indexHTTPReqFail, mutCtrIndexHTTPReqFail);
+	STATSCOUNTER_INIT(indexHTTPReqFail, mutIndexHTTPReqFail);
 	CHKiRet(statsobj.AddCounter(indexStats, (uchar *)"failed.httprequests",
 		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &indexHTTPReqFail));
-	STATSCOUNTER_INIT(indexESFail, mutCtrIndexESFail);
+	STATSCOUNTER_INIT(indexESFail, mutIndexESFail);
 	CHKiRet(statsobj.AddCounter(indexStats, (uchar *)"failed.es",
 		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &indexESFail));
 	CHKiRet(statsobj.ConstructFinalize(indexStats));
