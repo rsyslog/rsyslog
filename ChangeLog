@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------
 Version 7.5.6 [devel] 2013-10-??
+- imudp: support for binding to ruleset added
 - bugfix: running imupd on multiple threads lead to segfault if recvmmsg
   is available
 - bugfix: imudp when using recvmmsg could report wrong sender IP
