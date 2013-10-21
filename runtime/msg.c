@@ -452,13 +452,11 @@ getRcvFromIP(msg_t *pM)
 }
 
 
-/* map a property name (C string) to a property ID */
+/* map a property name (string) to a property ID */
 rsRetVal
-propNameStrToID(uchar *pName, propid_t *pPropID)
+propNameToID(uchar *pName, propid_t *pPropID)
 {
 	DEFiRet;
-
-	assert(pName != NULL);
 
 	/* sometimes there are aliases to the original MonitoWare
 	 * property names. These come after || in the ifs below. */
@@ -550,21 +548,6 @@ propNameStrToID(uchar *pName, propid_t *pPropID)
 		iRet = RS_RET_VAR_NOT_FOUND;
 	}
 
-	RETiRet;
-}
-
-
-/* map a property name (string) to a property ID */
-rsRetVal
-propNameToID(cstr_t *pCSPropName, propid_t *pPropID)
-{
-	uchar *pName;
-	DEFiRet;
-
-	assert(pCSPropName != NULL);
-	assert(pPropID != NULL);
-	pName = rsCStrGetSzStrNoNULL(pCSPropName);
-	iRet =  propNameStrToID(pName, pPropID);
 	RETiRet;
 }
 
@@ -3779,7 +3762,7 @@ msgGetMsgVarNew(msg_t *pThis, uchar *name)
 	/* always call MsgGetProp() without a template specifier */
 	/* TODO: optimize propNameToID() call -- rgerhards, 2009-06-26 */
 #warning remove strlen() ?
-	propNameStrToID(name, &propid);
+	propNameToID(name, &propid);
 	pszProp = (uchar*) MsgGetProp(pThis, NULL, propid, name, ustrlen(name), &propLen, &bMustBeFreed, NULL);
 
 	estr = es_newStrFromCStr((char*)pszProp, propLen);

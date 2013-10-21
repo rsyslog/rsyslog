@@ -213,7 +213,7 @@ char *getHOSTNAME(msg_t *pM);
 int getHOSTNAMELen(msg_t *pM);
 uchar *getProgramName(msg_t *pM, sbool bLockMutex);
 uchar *getRcvFrom(msg_t *pM);
-rsRetVal propNameToID(cstr_t *pCSPropName, propid_t *pPropID);
+rsRetVal propNameToID(uchar *pName, propid_t *pPropID);
 uchar *propIDToName(propid_t propID);
 rsRetVal msgGetCEEPropJSON(msg_t *pM, uchar *propName, int propNameLen, struct json_object **pjson);
 rsRetVal getGlobalVarPropVal(uchar *propName, int propNameLen, uchar **pRes, rs_size_t *buflen, unsigned short *pbMustBeFreed);

@@ -809,7 +809,7 @@ do_Parameter(uchar **pp, struct template *pTpl)
 	/* got the name */
 	cstrFinalize(pStrProp);
 
-	if(propNameToID(pStrProp, &pTpe->data.field.propid) != RS_RET_OK) {
+	if(propNameToID(cstrGetSzStrNoNULL(pStrProp), &pTpe->data.field.propid) != RS_RET_OK) {
 		errmsg.LogError(0, RS_RET_TPL_INVLD_PROP, "template '%s': invalid parameter '%s'",
 				pTpl->pszName, cstrGetSzStrNoNULL(pStrProp));
 		cstrDestruct(&pStrProp);
@@ -1604,7 +1604,7 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 	/* apply */
 	CHKmalloc(pTpe = tpeConstruct(pTpl));
 	pTpe->eEntryType = FIELD;
-	CHKiRet(propNameToID(name, &pTpe->data.field.propid));
+	CHKiRet(propNameToID(cstrGetSzStrNoNULL(name), &pTpe->data.field.propid));
 	if(pTpe->data.field.propid == PROP_CEE) {
 		/* in CEE case, we need to preserve the actual property name */
 		pTpe->data.field.propName = ustrdup(cstrGetSzStrNoNULL(name)+1);
