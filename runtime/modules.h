@@ -122,10 +122,6 @@ struct modInfo_s {
 	rsRetVal (*activateCnf)(void*Cnf);	/* make provided config the running conf */
 	rsRetVal (*freeCnf)(void*Cnf);
 	/* end v2 config system specific */
-	/* below: create an instance of this module. Most importantly the module
-	 * can allocate instance memory in this call.
-	 */
-	rsRetVal (*createInstance)();
 	union	{
 		struct {/* data for input modules */
 /* TODO: remove? */rsRetVal (*willRun)(void); 		/* check if the current config will be able to run*/
