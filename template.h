@@ -40,7 +40,8 @@ struct template {
 	char *pszName;
 	int iLenName;
 	rsRetVal (*pStrgen)(msg_t*, uchar**, size_t *);
-	es_str_t *subtree;	/* subtree name for subtree-type templates */
+	uchar *subtree;	/* subtree name for subtree-type templates */
+	int subtreeLen;
 	int tpenElements; /* number of elements in templateEntry list */
 	struct templateEntry *pEntryRoot;
 	struct templateEntry *pEntryLast;
@@ -103,7 +104,8 @@ struct templateEntry {
 			int field_expand;	/* use multiple instances of the field delimiter as a single one? */
 #endif
 
-			es_str_t *propName;	/**< property name (currently being used for CEE only) */
+			uchar *propName;
+			int propNameLen;
 
 			enum tplFormatTypes eDateFormat;
 			enum tplFormatCaseConvTypes eCaseConv;

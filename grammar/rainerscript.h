@@ -183,7 +183,9 @@ struct cnfstmt {
 			struct cstr_s *pCSCompValue;/* value to "compare" against */
 			sbool isNegated;
 			uintTiny propID;/* ID of the requested property */
-			es_str_t *propName;/* name of property for CEE-based filters */
+			//es_str_t *propName;/* name of property for CEE-based filters */
+			uchar *propName;
+			int propNameLen;
 			struct cnfstmt *t_then;
 			struct cnfstmt *t_else;
 		} s_propfilt;

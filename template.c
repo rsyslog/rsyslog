@@ -169,7 +169,7 @@ tplToString(struct template *pTpl, msg_t *pMsg, uchar **ppBuf, size_t *pLenBuf,
 		 * not worth the effort, as this passing mode is not expected
 		 * in subtree mode and so most probably only used for debug & test.
 		 */
-		getCEEPropVal(pMsg, pTpl->subtree, &pVal, &iLenVal, &bMustBeFreed);
+		getCEEPropVal(pMsg, pTpl->subtree, pTpl->subtreeLen, &pVal, &iLenVal, &bMustBeFreed);
 		if(iLenVal >= (rs_size_t)*pLenBuf) /* we reserve one char for the final \0! */
 			CHKiRet(ExtendBuf(ppBuf, pLenBuf, iLenVal + 1));
 		memcpy(*ppBuf, pVal, iLenVal+1);
@@ -194,8 +194,8 @@ tplToString(struct template *pTpl, msg_t *pMsg, uchar **ppBuf, size_t *pLenBuf,
 			bMustBeFreed = 0;
 		} else 	if(pTpe->eEntryType == FIELD) {
 			pVal = (uchar*) MsgGetProp(pMsg, pTpe, pTpe->data.field.propid,
-						   pTpe->data.field.propName,  &iLenVal,
-						   &bMustBeFreed, ttNow);
+						   pTpe->data.field.propName, pTpe->data.field.propNameLen,
+						   &iLenVal, &bMustBeFreed, ttNow);
 			/* we now need to check if we should use SQL option. In this case,
 			 * we must go over the generated string and escape '\'' characters.
 			 * rgerhards, 2005-09-22: the option values below look somewhat misplaced,
@@ -269,7 +269,7 @@ tplToArray(struct template *pTpl, msg_t *pMsg, uchar*** ppArr, struct syslogTime
 		 *       using array passing, so I simply could not test it.
 		 */
 		CHKmalloc(pArr = calloc(2, sizeof(uchar*)));
-		getCEEPropVal(pMsg, pTpl->subtree, &pVal, &propLen, &bMustBeFreed);
+		getCEEPropVal(pMsg, pTpl->subtree, pTpl->subtreeLen, &pVal, &propLen, &bMustBeFreed);
 		if(bMustBeFreed) { /* if it must be freed, it is our own private copy... */
 			pArr[0] = pVal; /* ... so we can use it! */
 		} else {
@@ -291,8 +291,8 @@ tplToArray(struct template *pTpl, msg_t *pMsg, uchar*** ppArr, struct syslogTime
 			CHKmalloc(pArr[iArr] = (uchar*)strdup((char*) pTpe->data.constant.pConstant));
 		} else 	if(pTpe->eEntryType == FIELD) {
 			pVal = (uchar*) MsgGetProp(pMsg, pTpe, pTpe->data.field.propid,
-						   pTpe->data.field.propName,  &propLen,
-						   &bMustBeFreed, ttNow);
+						   pTpe->data.field.propName, pTpe->data.field.propNameLen,
+						   &propLen, &bMustBeFreed, ttNow);
 			if(bMustBeFreed) { /* if it must be freed, it is our own private copy... */
 				pArr[iArr] = pVal; /* ... so we can use it! */
 			} else {
@@ -327,7 +327,7 @@ tplToJSON(struct template *pTpl, msg_t *pMsg, struct json_object **pjson, struct
 	DEFiRet;
 
 	if(pTpl->subtree != NULL){
-		localRet = jsonFind(pMsg->json, pTpl->subtree, pjson);
+		localRet = jsonFind(pMsg->json, pTpl->subtree, pTpl->subtreeLen, pjson);
 		if(*pjson == NULL) {
 			/* we need to have a root object! */
 			*pjson = json_object_new_object();
@@ -346,7 +346,7 @@ tplToJSON(struct template *pTpl, msg_t *pMsg, struct json_object **pjson, struct
 			json_object_object_add(json, (char*)pTpe->fieldName, jsonf);
 		} else 	if(pTpe->eEntryType == FIELD) {
 			if(pTpe->data.field.propid == PROP_CEE) {
-				localRet = msgGetCEEPropJSON(pMsg, pTpe->data.field.propName, &jsonf);
+				localRet = msgGetCEEPropJSON(pMsg, pTpe->data.field.propName, pTpe->data.field.propNameLen, &jsonf);
 				if(localRet == RS_RET_OK) {
 					json_object_object_add(json, (char*)pTpe->fieldName, json_object_get(jsonf));
 				} else {
@@ -357,7 +357,7 @@ tplToJSON(struct template *pTpl, msg_t *pMsg, struct json_object **pjson, struct
 					}
 				}
 			} else if(pTpe->data.field.propid == PROP_LOCAL_VAR) {
-				localRet = msgGetLocalVarJSON(pMsg, pTpe->data.field.propName, &jsonf);
+				localRet = msgGetLocalVarJSON(pMsg, pTpe->data.field.propName, pTpe->data.field.propNameLen, &jsonf);
 				if(localRet == RS_RET_OK) {
 					json_object_object_add(json, (char*)pTpe->fieldName, json_object_get(jsonf));
 				} else {
@@ -368,7 +368,7 @@ tplToJSON(struct template *pTpl, msg_t *pMsg, struct json_object **pjson, struct
 					}
 				}
 			} else if(pTpe->data.field.propid == PROP_GLOBAL_VAR) {
-				localRet = msgGetGlobalVarJSON(pTpe->data.field.propName, &jsonf);
+				localRet = msgGetGlobalVarJSON(pTpe->data.field.propName, pTpe->data.field.propNameLen, &jsonf);
 				if(localRet == RS_RET_OK) {
 					json_object_object_add(json, (char*)pTpe->fieldName, json_object_get(jsonf));
 				} else {
@@ -380,7 +380,8 @@ tplToJSON(struct template *pTpl, msg_t *pMsg, struct json_object **pjson, struct
 				}
 			} else  {
 				pVal = (uchar*) MsgGetProp(pMsg, pTpe, pTpe->data.field.propid,
-							   pTpe->data.field.propName,  &propLen,
+							   pTpe->data.field.propName,
+							   pTpe->data.field.propNameLen, &propLen,
 							   &bMustBeFreed, ttNow);
 				if(pTpe->data.field.options.bMandatory || propLen > 0) {
 					jsonf = json_object_new_string_len((char*)pVal, propLen);
@@ -557,6 +558,7 @@ tplConstruct(rsconf_t *conf)
 	struct template *pTpl;
 	if((pTpl = calloc(1, sizeof(struct template))) == NULL)
 		return NULL;
+pTpl->subtree = NULL;
 	
 	/* basic initialisation is done via calloc() - need to
 	 * initialize only values != 0. */
@@ -815,17 +817,14 @@ do_Parameter(uchar **pp, struct template *pTpl)
 	}
 	if(pTpe->data.field.propid == PROP_CEE) {
 		/* in CEE case, we need to preserve the actual property name */
-		if((pTpe->data.field.propName = es_newStrFromCStr((char*)cstrGetSzStrNoNULL(pStrProp)+1, cstrLen(pStrProp)-1)) == NULL) {
-			cstrDestruct(&pStrProp);
-			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-		}
+		pTpe->data.field.propName = ustrdup(cstrGetSzStrNoNULL(pStrProp)+1);
+		pTpe->data.field.propNameLen = cstrLen(pStrProp)-1;
 	} else if(pTpe->data.field.propid == PROP_LOCAL_VAR || pTpe->data.field.propid == PROP_GLOBAL_VAR) {
 		/* in these cases, we need to preserve the actual property name, but correct the root ID (bang vs. dot) */
-		if((pTpe->data.field.propName = es_newStrFromCStr((char*)cstrGetSzStrNoNULL(pStrProp)+1, cstrLen(pStrProp)-1)) == NULL) {
-			cstrDestruct(&pStrProp);
-			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-		}
-		es_getBufAddr(pTpe->data.field.propName)[0] = '!'; /* patch root name */
+		pTpe->data.field.propName = ustrdup(cstrGetSzStrNoNULL(pStrProp)+1);
+		pTpe->data.field.propNameLen = cstrLen(pStrProp)-1;
+		pTpe->data.field.propName[0] = '!'; /* patch root name */
+#warning do we really need to patch root name?
 	}
 
 	/* Check frompos, if it has an R, then topos should be a regex */
@@ -1608,12 +1607,13 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 	CHKiRet(propNameToID(name, &pTpe->data.field.propid));
 	if(pTpe->data.field.propid == PROP_CEE) {
 		/* in CEE case, we need to preserve the actual property name */
-		pTpe->data.field.propName = es_newStrFromCStr((char*)cstrGetSzStrNoNULL(name)+1,
-							      cstrLen(name)-1);
+		pTpe->data.field.propName = ustrdup(cstrGetSzStrNoNULL(name)+1);
+		pTpe->data.field.propNameLen = cstrLen(name)-1;
 	} else if(pTpe->data.field.propid == PROP_LOCAL_VAR  || pTpe->data.field.propid == PROP_GLOBAL_VAR) {
 		/* in these case, we need to preserve the actual property name, but correct the root ID (bang vs. dot) */
-		pTpe->data.field.propName = es_newStrFromCStr((char*)cstrGetSzStrNoNULL(name)+1, cstrLen(name)-1);
-		es_getBufAddr(pTpe->data.field.propName)[0] = '!'; /* patch root name */
+		pTpe->data.field.propName = ustrdup(cstrGetSzStrNoNULL(name)+1);
+		pTpe->data.field.propNameLen = cstrLen(name)-1;
+		pTpe->data.field.propName[0] = '!'; /* patch root name */
 	}
 	pTpe->data.field.options.bDropLastLF = droplastlf;
 	pTpe->data.field.options.bSPIffNo1stSP = spifno1stsp;
@@ -1747,7 +1747,7 @@ tplProcessCnf(struct cnfobj *o)
 	char *name = NULL;
 	uchar *tplStr = NULL;
 	uchar *plugin = NULL;
-	es_str_t *subtree = NULL;
+	uchar *subtree = NULL;
 	uchar *p;
 	enum { T_STRING, T_PLUGIN, T_LIST, T_SUBTREE }
 		tplType = T_STRING; /* init just to keep compiler happy: mandatory parameter */
@@ -1795,10 +1795,7 @@ tplProcessCnf(struct cnfobj *o)
 				free(name); /* overall assigned */
 				ABORT_FINALIZE(RS_RET_ERR);
 			} else {
-				/* TODO: unify strings! */
-				char *cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
-				subtree = es_newStrFromBuf(cstr+1, es_strlen(pvals[i].val.d.estr)-1);
-				free(cstr);
+				subtree = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 			}
 		} else if(!strcmp(pblk.descr[i].name, "plugin")) {
 			plugin = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
@@ -1912,6 +1909,7 @@ tplProcessCnf(struct cnfobj *o)
 	case T_LIST:	createListTpl(pTpl, o);
 			break;
 	case T_SUBTREE:	pTpl->subtree = subtree;
+			pTpl->subtreeLen = ustrlen(subtree);
 			break;
 	}
 	
@@ -2003,8 +2001,7 @@ void tplDeleteAll(rsconf_t *conf)
 						regexp.regfree(&(pTpeDel->data.field.re));
 					}
 				}
-				if(pTpeDel->data.field.propName != NULL)
-					es_deleteStr(pTpeDel->data.field.propName);
+				free(pTpeDel->data.field.propName);
 #endif
 				break;
 			}
@@ -2015,8 +2012,7 @@ void tplDeleteAll(rsconf_t *conf)
 		pTplDel = pTpl;
 		pTpl = pTpl->pNext;
 		free(pTplDel->pszName);
-		if(pTplDel->subtree != NULL)
-			es_deleteStr(pTplDel->subtree);
+		free(pTplDel->subtree);
 		free(pTplDel);
 	}
 	ENDfunc
@@ -2063,8 +2059,7 @@ void tplDeleteNew(rsconf_t *conf)
 						regexp.regfree(&(pTpeDel->data.field.re));
 					}
 				}
-				if(pTpeDel->data.field.propName != NULL)
-					es_deleteStr(pTpeDel->data.field.propName);
+				free(pTpeDel->data.field.propName);
 #endif
 				break;
 			}
@@ -2074,8 +2069,7 @@ void tplDeleteNew(rsconf_t *conf)
 		pTplDel = pTpl;
 		pTpl = pTpl->pNext;
 		free(pTplDel->pszName);
-		if(pTplDel->subtree != NULL)
-			es_deleteStr(pTplDel->subtree);
+		free(pTplDel->subtree);
 		free(pTplDel);
 	}
 	ENDfunc
@@ -2119,17 +2113,11 @@ void tplPrintList(rsconf_t *conf)
 			case FIELD:
 				dbgprintf("(FIELD), value: '%d' ", pTpe->data.field.propid);
 				if(pTpe->data.field.propid == PROP_CEE) {
-					char *cstr = es_str2cstr(pTpe->data.field.propName, NULL);
-					dbgprintf("[EE-Property: '%s'] ", cstr);
-					free(cstr);
+					dbgprintf("[EE-Property: '%s'] ", pTpe->data.field.propName);
 				} else if(pTpe->data.field.propid == PROP_LOCAL_VAR) {
-					char *cstr = es_str2cstr(pTpe->data.field.propName, NULL);
-					dbgprintf("[Local Var: '%s'] ", cstr);
-					free(cstr);
+					dbgprintf("[Local Var: '%s'] ", pTpe->data.field.propName);
 				} else if(pTpe->data.field.propid == PROP_GLOBAL_VAR) {
-					char *cstr = es_str2cstr(pTpe->data.field.propName, NULL);
-					dbgprintf("[Global Var: '%s'] ", cstr);
-					free(cstr);
+					dbgprintf("[Global Var: '%s'] ", pTpe->data.field.propName);
 				}
 				switch(pTpe->data.field.eDateFormat) {
 				case tplFmtDefault:

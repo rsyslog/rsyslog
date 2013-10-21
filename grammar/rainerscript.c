@@ -47,6 +47,7 @@
 #include "obj.h"
 #include "modules.h"
 #include "ruleset.h"
+#include "unicode-helper.h"
 
 DEFobjCurrIf(obj)
 DEFobjCurrIf(regexp)
@@ -185,10 +186,8 @@ DecodePropFilter(uchar *pline, struct cnfstmt *stmt)
 	}
 	if(stmt->d.s_propfilt.propID == PROP_CEE) {
 		/* in CEE case, we need to preserve the actual property name */
-		if((stmt->d.s_propfilt.propName =
-		     es_newStrFromBuf((char*)cstrGetSzStrNoNULL(pCSPropName)+2, cstrLen(pCSPropName)-2)) == NULL) {
-			ABORT_FINALIZE(RS_RET_ERR);
-		}
+		stmt->d.s_propfilt.propName = ustrdup(cstrGetSzStrNoNULL(pCSPropName+2));
+		stmt->d.s_propfilt.propNameLen = cstrLen(pCSPropName)-2;
 	}
 
 	/* read operation */
@@ -1614,14 +1613,11 @@ static inline void
 evalVar(struct cnfvar *var, void *usrptr, struct var *ret)
 {
 	rsRetVal localRet;
-	es_str_t *estr;
 	struct json_object *json;
 
 	if(var->name[0] == '$' && var->name[1] == '!') {
-		/* TODO: unify string libs */
-		estr = es_newStrFromBuf(var->name+1, strlen(var->name)-1);
-		localRet = msgGetCEEPropJSON((msg_t*)usrptr, estr, &json);
-		es_deleteStr(estr);
+#warning chace strlen()?
+		localRet = msgGetCEEPropJSON((msg_t*)usrptr, (uchar*)var->name+1, strlen(var->name)-1, &json);
 		ret->datatype = 'J';
 		ret->d.json = (localRet == RS_RET_OK) ? json : NULL;
 	} else {
@@ -2448,10 +2444,8 @@ cnfstmtPrintOnly(struct cnfstmt *stmt, int indent, sbool subtree)
 		doIndent(indent); dbgprintf("\tProperty.: '%s'\n",
 			propIDToName(stmt->d.s_propfilt.propID));
 		if(stmt->d.s_propfilt.propName != NULL) {
-			cstr = es_str2cstr(stmt->d.s_propfilt.propName, NULL);
 			doIndent(indent);
-			dbgprintf("\tCEE-Prop.: '%s'\n", cstr);
-			free(cstr);
+			dbgprintf("\tCEE-Prop.: '%s'\n", stmt->d.s_propfilt.propName);
 		}
 		doIndent(indent); dbgprintf("\tOperation: ");
 		if(stmt->d.s_propfilt.isNegated)
@@ -2611,8 +2605,7 @@ cnfstmtDestruct(struct cnfstmt *stmt)
 		cnfstmtDestructLst(stmt->d.s_prifilt.t_else);
 		break;
 	case S_PROPFILT:
-		if(stmt->d.s_propfilt.propName != NULL)
-			es_deleteStr(stmt->d.s_propfilt.propName);
+		free(stmt->d.s_propfilt.propName);
 		if(stmt->d.s_propfilt.regex_cache != NULL)
 			rsCStrRegexDestruct(&stmt->d.s_propfilt.regex_cache);
 		if(stmt->d.s_propfilt.pCSCompValue != NULL)

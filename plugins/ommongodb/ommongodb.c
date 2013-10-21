@@ -236,11 +236,11 @@ getDefaultBSON(msg_t *pMsg)
 	gint64 ts_gen, ts_rcv; /* timestamps: generated, received */
 	int secfrac;
 
-	procid = MsgGetProp(pMsg, NULL, PROP_PROGRAMNAME, NULL, &procid_len, &procid_free, NULL);
-	tag = MsgGetProp(pMsg, NULL, PROP_SYSLOGTAG, NULL, &tag_len, &tag_free, NULL);
-	pid = MsgGetProp(pMsg, NULL, PROP_PROCID, NULL, &pid_len, &pid_free, NULL);
-	sys = MsgGetProp(pMsg, NULL, PROP_HOSTNAME, NULL, &sys_len, &sys_free, NULL);
-	msg = MsgGetProp(pMsg, NULL, PROP_MSG, NULL, &msg_len, &msg_free, NULL);
+	procid = MsgGetProp(pMsg, NULL, PROP_PROGRAMNAME, NULL, 0, &procid_len, &procid_free, NULL);
+	tag = MsgGetProp(pMsg, NULL, PROP_SYSLOGTAG, NULL, 0, &tag_len, &tag_free, NULL);
+	pid = MsgGetProp(pMsg, NULL, PROP_PROCID, NULL, 0, &pid_len, &pid_free, NULL);
+	sys = MsgGetProp(pMsg, NULL, PROP_HOSTNAME, NULL, 0, &sys_len, &sys_free, NULL);
+	msg = MsgGetProp(pMsg, NULL, PROP_MSG, NULL, 0, &msg_len, &msg_free, NULL);
 
 	// TODO: move to datetime? Refactor in any case! rgerhards, 2012-03-30
 	ts_gen = (gint64) datetime.syslogTime2time_t(&pMsg->tTIMESTAMP) * 1000; /* ms! */

@@ -184,7 +184,7 @@ void MsgSetRawMsgWOSize(msg_t *pMsg, char* pszRawMsg);
 void MsgSetRawMsg(msg_t *pMsg, char* pszRawMsg, size_t lenMsg);
 rsRetVal MsgReplaceMSG(msg_t *pThis, uchar* pszMSG, int lenMSG);
 uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
-                  propid_t propid, es_str_t *propName,
+                  propid_t propid, uchar *propName, int propNameLen,
 		  rs_size_t *pPropLen, unsigned short *pbMustBeFreed, struct syslogTime *ttNow);
 rsRetVal msgGetMsgVar(msg_t *pThis, cstr_t *pstrPropName, var_t **ppVar);
 es_str_t* msgGetMsgVarNew(msg_t *pThis, uchar *name);
@@ -197,7 +197,7 @@ rsRetVal msgGetCEEVar(msg_t *pThis, cstr_t *propName, var_t **ppVar);
 es_str_t* msgGetCEEVarNew(msg_t *pMsg, char *name);
 es_str_t* msgGetLocalVarNew(msg_t *pMsg, char *name);
 rsRetVal msgAddJSON(msg_t *pM, uchar *name, struct json_object *json);
-rsRetVal getCEEPropVal(msg_t *pM, es_str_t *propName, uchar **pRes, rs_size_t *buflen, unsigned short *pbMustBeFreed);
+rsRetVal getCEEPropVal(msg_t *pM, uchar *propName, int propNameLen, uchar **pRes, rs_size_t *buflen, unsigned short *pbMustBeFreed);
 rsRetVal MsgGetSeverity(msg_t *pThis, int *piSeverity);
 rsRetVal MsgDeserialize(msg_t *pMsg, strm_t *pStrm);
 
@@ -215,13 +215,13 @@ uchar *getProgramName(msg_t *pM, sbool bLockMutex);
 uchar *getRcvFrom(msg_t *pM);
 rsRetVal propNameToID(cstr_t *pCSPropName, propid_t *pPropID);
 uchar *propIDToName(propid_t propID);
-rsRetVal msgGetCEEPropJSON(msg_t *pM, es_str_t *propName, struct json_object **pjson);
-rsRetVal getGlobalVarPropVal( es_str_t *propName, uchar **pRes, rs_size_t *buflen, unsigned short *pbMustBeFreed);
-rsRetVal msgGetLocalVarJSON(msg_t *pM, es_str_t *propName, struct json_object **pjson);
-rsRetVal msgGetGlobalVarJSON(es_str_t *propName, struct json_object **pjson);
+rsRetVal msgGetCEEPropJSON(msg_t *pM, uchar *propName, int propNameLen, struct json_object **pjson);
+rsRetVal getGlobalVarPropVal(uchar *propName, int propNameLen, uchar **pRes, rs_size_t *buflen, unsigned short *pbMustBeFreed);
+rsRetVal msgGetLocalVarJSON(msg_t *pM, uchar *propName, int propNameLen, struct json_object **pjson);
+rsRetVal msgGetGlobalVarJSON(uchar *propName, int propNameLen, struct json_object **pjson);
 rsRetVal msgSetJSONFromVar(msg_t *pMsg, uchar *varname, struct var *var);
 rsRetVal msgDelJSON(msg_t *pMsg, uchar *varname);
-rsRetVal jsonFind(struct json_object *jroot, es_str_t *propName, struct json_object **jsonres);
+rsRetVal jsonFind(struct json_object *jroot, uchar *propName, int propNameLen, struct json_object **jsonres);
 
 static inline rsRetVal
 msgUnsetJSON(msg_t *pMsg, uchar *varname) {

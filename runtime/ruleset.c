@@ -396,8 +396,8 @@ evalPROPFILT(struct cnfstmt *stmt, msg_t *pMsg)
 		goto done;
 
 	pszPropVal = MsgGetProp(pMsg, NULL, stmt->d.s_propfilt.propID,
-				stmt->d.s_propfilt.propName, &propLen,
-				&pbMustBeFreed, NULL);
+				stmt->d.s_propfilt.propName, stmt->d.s_propfilt.propNameLen,
+				&propLen, &pbMustBeFreed, NULL);
 
 	/* Now do the compares (short list currently ;)) */
 	switch(stmt->d.s_propfilt.operation ) {
@@ -441,22 +441,15 @@ evalPROPFILT(struct cnfstmt *stmt, msg_t *pMsg)
 		bRet = (bRet == 1) ?  0 : 1;
 
 	if(Debug) {
-		char *cstr;
 		if(stmt->d.s_propfilt.propID == PROP_CEE) {
-			cstr = es_str2cstr(stmt->d.s_propfilt.propName, NULL);
 			DBGPRINTF("Filter: check for CEE property '%s' (value '%s') ",
-				cstr, pszPropVal);
-			free(cstr);
+				stmt->d.s_propfilt.propName, pszPropVal);
 		} else if(stmt->d.s_propfilt.propID == PROP_LOCAL_VAR) {
-			cstr = es_str2cstr(stmt->d.s_propfilt.propName, NULL);
 			DBGPRINTF("Filter: check for local var '%s' (value '%s') ",
-				cstr, pszPropVal);
-			free(cstr);
+				stmt->d.s_propfilt.propName, pszPropVal);
 		} else if(stmt->d.s_propfilt.propID == PROP_GLOBAL_VAR) {
-			cstr = es_str2cstr(stmt->d.s_propfilt.propName, NULL);
 			DBGPRINTF("Filter: check for global var '%s' (value '%s') ",
-				cstr, pszPropVal);
-			free(cstr);
+				stmt->d.s_propfilt.propName, pszPropVal);
 		} else {
 			DBGPRINTF("Filter: check for property '%s' (value '%s') ",
 				propIDToName(stmt->d.s_propfilt.propID), pszPropVal);

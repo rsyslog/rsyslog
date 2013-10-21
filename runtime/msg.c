@@ -2538,9 +2538,8 @@ static uchar *getNOW(eNOWType eNow, struct syslogTime *t)
 
 /* Get a JSON-Property as string value  (used for various types of JSON-based vars) */
 static rsRetVal
-getJSONPropVal(struct json_object *jroot, es_str_t *propName, uchar **pRes, rs_size_t *buflen, unsigned short *pbMustBeFreed)
+getJSONPropVal(struct json_object *jroot, uchar *propName, int propNameLen, uchar **pRes, rs_size_t *buflen, unsigned short *pbMustBeFreed)
 {
-	uchar *name = NULL;
 	uchar *leaf;
 	struct json_object *parent;
 	struct json_object *field;
@@ -2549,15 +2548,15 @@ getJSONPropVal(struct json_object *jroot, es_str_t *propName, uchar **pRes, rs_s
 	if(*pbMustBeFreed)
 		free(*pRes);
 	*pRes = NULL;
-	// TODO: mutex?
 	if(jroot == NULL) goto finalize_it;
 
-	if(!es_strbufcmp(propName, (uchar*)"!", 1)) {
+	if(!strcmp((char*)propName, "!") ||
+	   !strcmp((char*)propName, ".") ||
+	   !strcmp((char*)propName, "/")   ) {
 		field = jroot;
 	} else {
-		name = (uchar*)es_str2cstr(propName, NULL);
-		leaf = jsonPathGetLeaf(name+1, ustrlen(name-1));
-		CHKiRet(jsonPathFindParent(jroot, name+1, leaf, &parent, 1));
+		leaf = jsonPathGetLeaf(propName, propNameLen);
+		CHKiRet(jsonPathFindParent(jroot, propName+1, leaf, &parent, 1));
 		field = json_object_object_get(parent, (char*)leaf);
 	}
 	if(field != NULL) {
@@ -2567,7 +2566,6 @@ getJSONPropVal(struct json_object *jroot, es_str_t *propName, uchar **pRes, rs_s
 	}
 
 finalize_it:
-	free(name);
 	if(*pRes == NULL) {
 		/* could not find any value, so set it to empty */
 		*pRes = (unsigned char*)"";
@@ -2577,23 +2575,23 @@ finalize_it:
 }
 
 rsRetVal
-getCEEPropVal(msg_t *pM, es_str_t *propName, uchar **pRes, rs_size_t *buflen, unsigned short *pbMustBeFreed)
+getCEEPropVal(msg_t *pM, uchar *propName, int propNameLen, uchar **pRes, rs_size_t *buflen, unsigned short *pbMustBeFreed)
 {
-	return getJSONPropVal(pM->json, propName, pRes, buflen, pbMustBeFreed);
+	return getJSONPropVal(pM->json, propName, propNameLen, pRes, buflen, pbMustBeFreed);
 }
 
 rsRetVal
-getLocalVarPropVal(msg_t *pM, es_str_t *propName, uchar **pRes, rs_size_t *buflen, unsigned short *pbMustBeFreed)
+getLocalVarPropVal(msg_t *pM,  uchar *propName, int propNameLen, uchar **pRes, rs_size_t *buflen, unsigned short *pbMustBeFreed)
 {
-	return getJSONPropVal(pM->localvars, propName, pRes, buflen, pbMustBeFreed);
+	return getJSONPropVal(pM->localvars, propName, propNameLen, pRes, buflen, pbMustBeFreed);
 }
 
 rsRetVal
-getGlobalVarPropVal( es_str_t *propName, uchar **pRes, rs_size_t *buflen, unsigned short *pbMustBeFreed)
+getGlobalVarPropVal(uchar *propName, int propNameLen, uchar **pRes, rs_size_t *buflen, unsigned short *pbMustBeFreed)
 {
 	DEFiRet;
 	pthread_rwlock_rdlock(&glblVars_rwlock);
-	iRet = getJSONPropVal(global_var_root, propName, pRes, buflen, pbMustBeFreed);
+	iRet = getJSONPropVal(global_var_root, propName, propNameLen, pRes, buflen, pbMustBeFreed);
 	pthread_rwlock_unlock(&glblVars_rwlock);
 	RETiRet;
 }
@@ -2601,53 +2599,51 @@ getGlobalVarPropVal( es_str_t *propName, uchar **pRes, rs_size_t *buflen, unsign
 
 /* Get a JSON-based-variable as native json object */
 rsRetVal
-msgGetJSONPropJSON(struct json_object *jroot, es_str_t *propName, struct json_object **pjson)
+msgGetJSONPropJSON(struct json_object *jroot, uchar *propName, int propNameLen, struct json_object **pjson)
 {
-	uchar *name = NULL;
 	uchar *leaf;
 	struct json_object *parent;
 	DEFiRet;
 
-	// TODO: mutex?
 	if(jroot == NULL) {
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}
 
-	if(!es_strbufcmp(propName, (uchar*)"!", 1)) {
+	if(!strcmp((char*)propName, "!") ||
+	   !strcmp((char*)propName, ".") ||
+	   !strcmp((char*)propName, "/")   ) {
 		*pjson = jroot;
 		FINALIZE;
 	}
-	name = (uchar*)es_str2cstr(propName, NULL);
-	leaf = jsonPathGetLeaf(name, ustrlen(name));
-	CHKiRet(jsonPathFindParent(jroot, name, leaf, &parent, 1));
+	leaf = jsonPathGetLeaf(propName, propNameLen);
+	CHKiRet(jsonPathFindParent(jroot, propName, leaf, &parent, 1));
 	*pjson = json_object_object_get(parent, (char*)leaf);
 	if(*pjson == NULL) {
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}
 
 finalize_it:
-	free(name);
 	RETiRet;
 }
 
 rsRetVal
-msgGetCEEPropJSON(msg_t *pM, es_str_t *propName, struct json_object **pjson)
+msgGetCEEPropJSON(msg_t *pM, uchar *propName, int propNameLen, struct json_object **pjson)
 {
-	return msgGetJSONPropJSON(pM->json, propName, pjson);
+	return msgGetJSONPropJSON(pM->json, propName, propNameLen, pjson);
 }
 
 rsRetVal
-msgGetLocalVarJSON(msg_t *pM, es_str_t *propName, struct json_object **pjson)
+msgGetLocalVarJSON(msg_t *pM, uchar *propName, int propNameLen, struct json_object **pjson)
 {
-	return msgGetJSONPropJSON(pM->localvars, propName, pjson);
+	return msgGetJSONPropJSON(pM->localvars, propName, propNameLen, pjson);
 }
 
 rsRetVal
-msgGetGlobalVarJSON(es_str_t *propName, struct json_object **pjson)
+msgGetGlobalVarJSON(uchar *propName, int propNameLen, struct json_object **pjson)
 {
 	DEFiRet;
 	pthread_rwlock_rdlock(&glblVars_rwlock);
-	iRet = msgGetJSONPropJSON(global_var_root, propName, pjson);
+	iRet = msgGetJSONPropJSON(global_var_root, propName, propNameLen, pjson);
 	pthread_rwlock_unlock(&glblVars_rwlock);
 	RETiRet;
 }
@@ -2852,7 +2848,7 @@ finalize_it:
 	*pPropLen = sizeof("**OUT OF MEMORY**") - 1; \
 	return(UCHAR_CONSTANT("**OUT OF MEMORY**"));}
 uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
-                 propid_t propid, es_str_t *propName, rs_size_t *pPropLen,
+                 propid_t propid, uchar *propName, int propNameLen, rs_size_t *pPropLen,
 		 unsigned short *pbMustBeFreed, struct syslogTime *ttNow)
 {
 	uchar *pRes; /* result pointer */
@@ -3047,13 +3043,13 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			}
 			break;
 		case PROP_CEE:
-			getCEEPropVal(pMsg, propName, &pRes, &bufLen, pbMustBeFreed);
+			getCEEPropVal(pMsg, propName, propNameLen, &pRes, &bufLen, pbMustBeFreed);
 			break;
 		case PROP_LOCAL_VAR:
-			getLocalVarPropVal(pMsg, propName, &pRes, &bufLen, pbMustBeFreed);
+			getLocalVarPropVal(pMsg, propName, propNameLen, &pRes, &bufLen, pbMustBeFreed);
 			break;
 		case PROP_GLOBAL_VAR:
-			getGlobalVarPropVal(propName, &pRes, &bufLen, pbMustBeFreed);
+			getGlobalVarPropVal(propName, propNameLen, &pRes, &bufLen, pbMustBeFreed);
 			break;
 		case PROP_SYS_BOM:
 			if(*pbMustBeFreed == 1)
@@ -3777,16 +3773,14 @@ msgGetMsgVarNew(msg_t *pThis, uchar *name)
 	propid_t propid;
 	unsigned short bMustBeFreed = 0;
 	es_str_t *estr;
-	es_str_t *propName;
 
 	ISOBJ_TYPE_assert(pThis, msg);
 
 	/* always call MsgGetProp() without a template specifier */
 	/* TODO: optimize propNameToID() call -- rgerhards, 2009-06-26 */
+#warning remove strlen() ?
 	propNameStrToID(name, &propid);
-	propName = es_newStrFromCStr((char*)name, ustrlen(name)); // TODO: optimize!
-	pszProp = (uchar*) MsgGetProp(pThis, NULL, propid, propName, &propLen, &bMustBeFreed, NULL);
-	es_deleteStr(propName);
+	pszProp = (uchar*) MsgGetProp(pThis, NULL, propid, name, ustrlen(name), &propLen, &bMustBeFreed, NULL);
 
 	estr = es_newStrFromCStr((char*)pszProp, propLen);
 	if(bMustBeFreed)
@@ -3981,9 +3975,8 @@ DBGPRINTF("AAAA jsonMerge adds '%s'\n", it.key);
 
 /* find a JSON structure element (field or container doesn't matter).  */
 rsRetVal
-jsonFind(struct json_object *jroot, es_str_t *propName, struct json_object **jsonres)
+jsonFind(struct json_object *jroot, uchar *propName, int propNameLen, struct json_object **jsonres)
 {
-	uchar *name = NULL;
 	uchar *leaf;
 	struct json_object *parent;
 	struct json_object *field;
@@ -3994,18 +3987,18 @@ jsonFind(struct json_object *jroot, es_str_t *propName, struct json_object **jso
 		goto finalize_it;
 	}
 
-	if(!es_strbufcmp(propName, (uchar*)"!", 1)) {
+	if(!strcmp((char*)propName, "!") ||
+	   !strcmp((char*)propName, ".") ||
+	   !strcmp((char*)propName, "/")   ) {
 		field = jroot;
 	} else {
-		name = (uchar*)es_str2cstr(propName, NULL);
-		leaf = jsonPathGetLeaf(name, ustrlen(name));
-		CHKiRet(jsonPathFindParent(jroot, name, leaf, &parent, 0));
+		leaf = jsonPathGetLeaf(propName, propNameLen);
+		CHKiRet(jsonPathFindParent(jroot, propName, leaf, &parent, 0));
 		field = json_object_object_get(parent, (char*)leaf);
 	}
 	*jsonres = field;
 
 finalize_it:
-	free(name);
 	RETiRet;
 }
 
