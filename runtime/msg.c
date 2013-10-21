@@ -2556,8 +2556,8 @@ getJSONPropVal(struct json_object *jroot, es_str_t *propName, uchar **pRes, rs_s
 		field = jroot;
 	} else {
 		name = (uchar*)es_str2cstr(propName, NULL);
-		leaf = jsonPathGetLeaf(name, ustrlen(name));
-		CHKiRet(jsonPathFindParent(jroot, name, leaf, &parent, 1));
+		leaf = jsonPathGetLeaf(name+1, ustrlen(name-1));
+		CHKiRet(jsonPathFindParent(jroot, name+1, leaf, &parent, 1));
 		field = json_object_object_get(parent, (char*)leaf);
 	}
 	if(field != NULL) {
