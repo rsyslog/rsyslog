@@ -815,12 +815,10 @@ do_Parameter(uchar **pp, struct template *pTpl)
 		cstrDestruct(&pStrProp);
 		ABORT_FINALIZE(RS_RET_TPL_INVLD_PROP);
 	}
-	if(pTpe->data.field.propid == PROP_CEE) {
-		/* in CEE case, we need to preserve the actual property name */
-		pTpe->data.field.propName = ustrdup(cstrGetSzStrNoNULL(pStrProp)+1);
-		pTpe->data.field.propNameLen = cstrLen(pStrProp)-1;
-	} else if(pTpe->data.field.propid == PROP_LOCAL_VAR || pTpe->data.field.propid == PROP_GLOBAL_VAR) {
-		/* in these cases, we need to preserve the actual property name, but correct the root ID (bang vs. dot) */
+	if(pTpe->data.field.propid == PROP_CEE ||
+          pTpe->data.field.propid == PROP_LOCAL_VAR ||
+	  pTpe->data.field.propid == PROP_GLOBAL_VAR) {
+	  	/* in these cases, we need the field name for later processing */
 		pTpe->data.field.propName = ustrdup(cstrGetSzStrNoNULL(pStrProp)+1);
 		pTpe->data.field.propNameLen = cstrLen(pStrProp)-1;
 		pTpe->data.field.propName[0] = '!'; /* patch root name */
@@ -1605,12 +1603,10 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 	CHKmalloc(pTpe = tpeConstruct(pTpl));
 	pTpe->eEntryType = FIELD;
 	CHKiRet(propNameToID(cstrGetSzStrNoNULL(name), &pTpe->data.field.propid));
-	if(pTpe->data.field.propid == PROP_CEE) {
-		/* in CEE case, we need to preserve the actual property name */
-		pTpe->data.field.propName = ustrdup(cstrGetSzStrNoNULL(name)+1);
-		pTpe->data.field.propNameLen = cstrLen(name)-1;
-	} else if(pTpe->data.field.propid == PROP_LOCAL_VAR  || pTpe->data.field.propid == PROP_GLOBAL_VAR) {
-		/* in these case, we need to preserve the actual property name, but correct the root ID (bang vs. dot) */
+	if(pTpe->data.field.propid == PROP_CEE ||
+	   pTpe->data.field.propid == PROP_LOCAL_VAR ||
+	   pTpe->data.field.propid == PROP_GLOBAL_VAR) {
+		/* in these cases, we need the fieldname for later processing */
 		pTpe->data.field.propName = ustrdup(cstrGetSzStrNoNULL(name)+1);
 		pTpe->data.field.propNameLen = cstrLen(name)-1;
 		pTpe->data.field.propName[0] = '!'; /* patch root name */

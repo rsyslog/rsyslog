@@ -177,7 +177,7 @@ DecodePropFilter(uchar *pline, struct cnfstmt *stmt)
 		rsParsDestruct(pPars);
 		ABORT_FINALIZE(iRet);
 	}
-	iRet = propNameToID(pCSPropName, &stmt->d.s_propfilt.propID);
+	iRet = propNameToID(cstrGetSzStrNoNULL(pCSPropName), &stmt->d.s_propfilt.propID);
 	if(iRet != RS_RET_OK) {
 		parser_errmsg("invalid property name '%s' in filter",
 				cstrGetSzStrNoNULL(pCSPropName));
