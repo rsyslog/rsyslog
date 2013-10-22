@@ -47,6 +47,7 @@
 #include "obj.h"
 #include "modules.h"
 #include "ruleset.h"
+#include "msg.h"
 #include "unicode-helper.h"
 
 DEFobjCurrIf(obj)
@@ -177,18 +178,8 @@ DecodePropFilter(uchar *pline, struct cnfstmt *stmt)
 		rsParsDestruct(pPars);
 		ABORT_FINALIZE(iRet);
 	}
-	iRet = propNameToID(cstrGetSzStrNoNULL(pCSPropName), &stmt->d.s_propfilt.propID);
-	if(iRet != RS_RET_OK) {
-		parser_errmsg("invalid property name '%s' in filter",
-				cstrGetSzStrNoNULL(pCSPropName));
-		rsParsDestruct(pPars);
-		ABORT_FINALIZE(iRet);
-	}
-	if(stmt->d.s_propfilt.propID == PROP_CEE) {
-		/* in CEE case, we need to preserve the actual property name */
-		stmt->d.s_propfilt.propName = ustrdup(cstrGetSzStrNoNULL(pCSPropName+2));
-		stmt->d.s_propfilt.propNameLen = cstrLen(pCSPropName)-2;
-	}
+	CHKiRet(msgPropDescrFill(&stmt->d.s_propfilt.prop, cstrGetSzStrNoNULL(pCSPropName),
+		cstrLen(pCSPropName)));
 
 	/* read operation */
 	iRet = parsDelimCStr(pPars, &pCSCompOp, ',', 1, 1, 1);
@@ -2442,10 +2433,10 @@ cnfstmtPrintOnly(struct cnfstmt *stmt, int indent, sbool subtree)
 	case S_PROPFILT:
 		doIndent(indent); dbgprintf("PROPFILT\n");
 		doIndent(indent); dbgprintf("\tProperty.: '%s'\n",
-			propIDToName(stmt->d.s_propfilt.propID));
-		if(stmt->d.s_propfilt.propName != NULL) {
+			propIDToName(stmt->d.s_propfilt.prop.id));
+		if(stmt->d.s_propfilt.prop.name != NULL) {
 			doIndent(indent);
-			dbgprintf("\tCEE-Prop.: '%s'\n", stmt->d.s_propfilt.propName);
+			dbgprintf("\tCEE-Prop.: '%s'\n", stmt->d.s_propfilt.prop.name);
 		}
 		doIndent(indent); dbgprintf("\tOperation: ");
 		if(stmt->d.s_propfilt.isNegated)
@@ -2605,7 +2596,7 @@ cnfstmtDestruct(struct cnfstmt *stmt)
 		cnfstmtDestructLst(stmt->d.s_prifilt.t_else);
 		break;
 	case S_PROPFILT:
-		free(stmt->d.s_propfilt.propName);
+		msgPropDescrDestruct(&stmt->d.s_propfilt.prop);
 		if(stmt->d.s_propfilt.regex_cache != NULL)
 			rsCStrRegexDestruct(&stmt->d.s_propfilt.regex_cache);
 		if(stmt->d.s_propfilt.pCSCompValue != NULL)
@@ -2690,7 +2681,6 @@ cnfstmtNewPROPFILT(char *propfilt, struct cnfstmt *t_then)
 	if((cnfstmt = cnfstmtNew(S_PROPFILT)) != NULL) {
 		cnfstmt->printable = (uchar*)propfilt;
 		cnfstmt->d.s_propfilt.t_then = t_then;
-		cnfstmt->d.s_propfilt.propName = NULL;
 		cnfstmt->d.s_propfilt.regex_cache = NULL;
 		cnfstmt->d.s_propfilt.pCSCompValue = NULL;
 		if(DecodePropFilter((uchar*)propfilt, cnfstmt) != RS_RET_OK) {

@@ -64,6 +64,7 @@ typedef struct nsdsel_ptcp_s nsdsel_ptcp_t;
 typedef struct nsdsel_gtls_s nsdsel_gtls_t;
 typedef struct nsdpoll_ptcp_s nsdpoll_ptcp_t;
 typedef struct wti_s wti_t;
+typedef struct msgPropDescr_s msgPropDescr_t;
 typedef struct msg msg_t;
 typedef struct queue_s qqueue_t;
 typedef struct prop_s prop_t;
@@ -163,6 +164,52 @@ typedef enum {
 	typedef off_t off64_t;
 #endif
 
+
+/* properties are now encoded as (tiny) integers. I do not use an enum as I would like
+ * to keep the memory footprint small (and thus cache hits high).
+ * rgerhards, 2009-06-26
+ */
+typedef uintTiny	propid_t;
+#define PROP_INVALID			0
+#define PROP_MSG			1
+#define PROP_TIMESTAMP			2
+#define PROP_HOSTNAME			3
+#define PROP_SYSLOGTAG			4
+#define PROP_RAWMSG			5
+#define PROP_INPUTNAME			6
+#define PROP_FROMHOST			7
+#define PROP_FROMHOST_IP		8
+#define PROP_PRI			9
+#define PROP_PRI_TEXT			10
+#define PROP_IUT			11
+#define PROP_SYSLOGFACILITY		12
+#define PROP_SYSLOGFACILITY_TEXT	13
+#define PROP_SYSLOGSEVERITY		14
+#define PROP_SYSLOGSEVERITY_TEXT	15
+#define PROP_TIMEGENERATED		16
+#define PROP_PROGRAMNAME		17
+#define PROP_PROTOCOL_VERSION		18
+#define PROP_STRUCTURED_DATA		19
+#define PROP_APP_NAME			20
+#define PROP_PROCID			21
+#define PROP_MSGID			22
+#define PROP_PARSESUCCESS		23
+#define PROP_SYS_NOW			150
+#define PROP_SYS_YEAR			151
+#define PROP_SYS_MONTH			152
+#define PROP_SYS_DAY			153
+#define PROP_SYS_HOUR			154
+#define PROP_SYS_HHOUR			155
+#define PROP_SYS_QHOUR			156
+#define PROP_SYS_MINUTE			157
+#define PROP_SYS_MYHOSTNAME		158
+#define PROP_SYS_BOM			159
+#define PROP_SYS_UPTIME			160
+#define PROP_UUID			161
+#define PROP_CEE			200
+#define PROP_CEE_ALL_JSON		201
+#define PROP_LOCAL_VAR			202
+
 /* types of configuration handlers
  */
 typedef enum cslCmdHdlrType {
@@ -211,6 +258,13 @@ struct multi_submit_s {
 	short	maxElem;	/* maximum number of Elements */
 	short	nElem;		/* current number of Elements, points to the next one FREE */
 	msg_t	**ppMsgs;
+};
+
+/* the following structure is a helper to describe a message property */
+struct msgPropDescr_s {
+	propid_t id;
+	uchar *name;		/* name and lenName are only set for dynamic */
+	int nameLen;		/* properties (JSON) */
 };
 
 #endif /* multi-include protection */

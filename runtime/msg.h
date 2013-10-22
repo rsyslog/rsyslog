@@ -3,7 +3,7 @@
  *
  * File begun on 2007-07-13 by RGerhards (extracted from syslogd.c)
  *
- * Copyright 2007-2012 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2013 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -183,8 +183,7 @@ void MsgSetMSGoffs(msg_t *pMsg, short offs);
 void MsgSetRawMsgWOSize(msg_t *pMsg, char* pszRawMsg);
 void MsgSetRawMsg(msg_t *pMsg, char* pszRawMsg, size_t lenMsg);
 rsRetVal MsgReplaceMSG(msg_t *pThis, uchar* pszMSG, int lenMSG);
-uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
-                  propid_t propid, uchar *propName, int propNameLen,
+uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe, msgPropDescr_t *pProp,
 		  rs_size_t *pPropLen, unsigned short *pbMustBeFreed, struct syslogTime *ttNow);
 rsRetVal msgGetMsgVar(msg_t *pThis, cstr_t *pstrPropName, var_t **ppVar);
 es_str_t* msgGetMsgVarNew(msg_t *pThis, uchar *name);
@@ -222,6 +221,9 @@ rsRetVal msgGetGlobalVarJSON(uchar *propName, int propNameLen, struct json_objec
 rsRetVal msgSetJSONFromVar(msg_t *pMsg, uchar *varname, struct var *var);
 rsRetVal msgDelJSON(msg_t *pMsg, uchar *varname);
 rsRetVal jsonFind(struct json_object *jroot, uchar *propName, int propNameLen, struct json_object **jsonres);
+
+rsRetVal msgPropDescrFill(msgPropDescr_t *pProp, uchar *name, int nameLen);
+void msgPropDescrDestruct(msgPropDescr_t *pProp);
 
 static inline rsRetVal
 msgUnsetJSON(msg_t *pMsg, uchar *varname) {

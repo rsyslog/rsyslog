@@ -80,7 +80,7 @@ struct templateEntry {
 			int iLenConstant;	/* its length */
 		} constant;
 		struct {
-			propid_t propid;	/* property to be used */
+			msgPropDescr_t msgProp;	/* property to be used */
 			unsigned iFromPos;	/* for partial strings only chars from this position ... */
 			unsigned iToPos;	/* up to that one... */
 			unsigned iFieldNr;	/* for field extraction: field to extract */
@@ -104,8 +104,6 @@ struct templateEntry {
 			int field_expand;	/* use multiple instances of the field delimiter as a single one? */
 #endif
 
-			uchar *propName;
-			int propNameLen;
 
 			enum tplFormatTypes eDateFormat;
 			enum tplFormatCaseConvTypes eCaseConv;

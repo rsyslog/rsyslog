@@ -540,8 +540,6 @@ propNameToID(uchar *pName, propid_t *pPropID)
 		*pPropID = PROP_CEE;
 	} else if(!strncmp((char*) pName, "$.", 2) || pName[0] == '.') {
 		*pPropID = PROP_LOCAL_VAR;
-	} else if(!strncmp((char*) pName, "$/", 2) || pName[0] == '/') {
-		*pPropID = PROP_GLOBAL_VAR;
 	} else {
 		DBGPRINTF("PROP_INVALID for name '%s'\n", pName);
 		*pPropID = PROP_INVALID;
@@ -624,8 +622,6 @@ uchar *propIDToName(propid_t propID)
 			return UCHAR_CONSTANT("*CEE-based property*");
 		case PROP_LOCAL_VAR:
 			return UCHAR_CONSTANT("*LOCAL_VARIABLE*");
-		case PROP_GLOBAL_VAR:
-			return UCHAR_CONSTANT("*GLOBAL_VARIABLE*");
 		case PROP_CEE_ALL_JSON:
 			return UCHAR_CONSTANT("$!all-json");
 		case PROP_SYS_BOM:
@@ -2831,7 +2827,7 @@ finalize_it:
 	*pPropLen = sizeof("**OUT OF MEMORY**") - 1; \
 	return(UCHAR_CONSTANT("**OUT OF MEMORY**"));}
 uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
-                 propid_t propid, uchar *propName, int propNameLen, rs_size_t *pPropLen,
+                 msgPropDescr_t *pProp, rs_size_t *pPropLen,
 		 unsigned short *pbMustBeFreed, struct syslogTime *ttNow)
 {
 	uchar *pRes; /* result pointer */
@@ -2854,7 +2850,7 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 
 	*pbMustBeFreed = 0;
 
-	switch(propid) {
+	switch(pProp->id) {
 		case PROP_MSG:
 			pRes = getMSG(pMsg);
 			bufLen = getMSGLen(pMsg);
@@ -3026,13 +3022,10 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			}
 			break;
 		case PROP_CEE:
-			getCEEPropVal(pMsg, propName, propNameLen, &pRes, &bufLen, pbMustBeFreed);
+			getCEEPropVal(pMsg, pProp->name, pProp->nameLen, &pRes, &bufLen, pbMustBeFreed);
 			break;
 		case PROP_LOCAL_VAR:
-			getLocalVarPropVal(pMsg, propName, propNameLen, &pRes, &bufLen, pbMustBeFreed);
-			break;
-		case PROP_GLOBAL_VAR:
-			getGlobalVarPropVal(propName, propNameLen, &pRes, &bufLen, pbMustBeFreed);
+			getLocalVarPropVal(pMsg, pProp->name, pProp->nameLen, &pRes, &bufLen, pbMustBeFreed);
 			break;
 		case PROP_SYS_BOM:
 			if(*pbMustBeFreed == 1)
@@ -3093,7 +3086,7 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			/* there is no point in continuing, we may even otherwise render the
 			 * error message unreadable. rgerhards, 2007-07-10
 			 */
-			dbgprintf("invalid property id: '%d'\n", propid);
+			dbgprintf("invalid property id: '%d'\n", pProp->id);
 			*pbMustBeFreed = 0;
 			*pPropLen = sizeof("**INVALID PROPERTY NAME**") - 1;
 			return UCHAR_CONSTANT("**INVALID PROPERTY NAME**");
@@ -3753,8 +3746,8 @@ msgGetMsgVarNew(msg_t *pThis, uchar *name)
 {
 	rs_size_t propLen;
 	uchar *pszProp = NULL;
-	propid_t propid;
 	unsigned short bMustBeFreed = 0;
+	msgPropDescr_t mProp;
 	es_str_t *estr;
 
 	ISOBJ_TYPE_assert(pThis, msg);
@@ -3762,8 +3755,8 @@ msgGetMsgVarNew(msg_t *pThis, uchar *name)
 	/* always call MsgGetProp() without a template specifier */
 	/* TODO: optimize propNameToID() call -- rgerhards, 2009-06-26 */
 #warning remove strlen() ?
-	propNameToID(name, &propid);
-	pszProp = (uchar*) MsgGetProp(pThis, NULL, propid, name, ustrlen(name), &propLen, &bMustBeFreed, NULL);
+	msgPropDescrFill(&mProp, name, ustrlen(name));
+	pszProp = (uchar*) MsgGetProp(pThis, NULL, &mProp, &propLen, &bMustBeFreed, NULL);
 
 	estr = es_newStrFromCStr((char*)pszProp, propLen);
 	if(bMustBeFreed)
@@ -3882,6 +3875,7 @@ jsonPathGetLeaf(uchar *name, int lenName)
 			if(name[i] == '!')
 				break;
 		}
+dbgprintf("DDDD: jsonPAthGetLeaf: name '%s', lenNAme %d, i %d\n", name, lenName, i);
 	if(name[i] == '!' || name[i] == '.' || name[i] == '/')
 		++i;
 	return name + i;
@@ -4196,6 +4190,48 @@ finalize_it:
 	RETiRet;
 }
 
+
+/* Fill a message propert description. Space must already be alloced
+ * by the caller. This is for efficiency, as we expect this to happen
+ * as part of a larger structure alloc.
+ * Note that CEE/LOCAL_VAR properties can come in either as
+ * "$!xx"/"$.xx" or "!xx"/".xx" - we will unify them here.
+ */
+rsRetVal
+msgPropDescrFill(msgPropDescr_t *pProp, uchar *name, int nameLen)
+{
+	propid_t id;
+	int offs;
+	DEFiRet;
+	if(propNameToID(name, &id) != RS_RET_OK) {
+#warning enable error messages
+		//errmsg.LogError(0, RS_RET_TPL_INVLD_PROP, "invalid property '%s'",
+				//pTpl->pszName, cstrGetSzStrNoNULL(pStrProp));
+		ABORT_FINALIZE(RS_RET_INVLD_PROP);
+	}
+	if(id == PROP_CEE || id == PROP_LOCAL_VAR) {
+	  	/* in these cases, we need the field name for later processing */
+		/* normalize name: remove $ if present */
+		offs = (name[0] == '$') ? 1 : 0;
+		pProp->name = ustrdup(name + offs);
+		pProp->nameLen = nameLen - offs;
+		/* we patch the root name, so that support functions do not need to
+		 * check for different root chars. */
+		pProp->name[0] = '!';
+dbgprintf("DDDD: setting porpname '%s' (offs %d)\n", pProp->name, offs);
+	}
+	pProp->id = id;
+finalize_it:
+	RETiRet;
+}
+
+void
+msgPropDescrDestruct(msgPropDescr_t *pProp)
+{
+	if(pProp != NULL) {
+		free(pProp->name);
+	}
+}
 
 /* dummy */
 rsRetVal msgQueryInterface(void) { return RS_RET_NOT_IMPLEMENTED; }

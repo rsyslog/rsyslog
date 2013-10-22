@@ -392,11 +392,10 @@ evalPROPFILT(struct cnfstmt *stmt, msg_t *pMsg)
 	int bRet = 0;
 	rs_size_t propLen;
 
-	if(stmt->d.s_propfilt.propID == PROP_INVALID)
+	if(stmt->d.s_propfilt.prop.id == PROP_INVALID)
 		goto done;
 
-	pszPropVal = MsgGetProp(pMsg, NULL, stmt->d.s_propfilt.propID,
-				stmt->d.s_propfilt.propName, stmt->d.s_propfilt.propNameLen,
+	pszPropVal = MsgGetProp(pMsg, NULL, &stmt->d.s_propfilt.prop,
 				&propLen, &pbMustBeFreed, NULL);
 
 	/* Now do the compares (short list currently ;)) */
@@ -441,18 +440,18 @@ evalPROPFILT(struct cnfstmt *stmt, msg_t *pMsg)
 		bRet = (bRet == 1) ?  0 : 1;
 
 	if(Debug) {
-		if(stmt->d.s_propfilt.propID == PROP_CEE) {
+		if(stmt->d.s_propfilt.prop.id == PROP_CEE) {
 			DBGPRINTF("Filter: check for CEE property '%s' (value '%s') ",
-				stmt->d.s_propfilt.propName, pszPropVal);
-		} else if(stmt->d.s_propfilt.propID == PROP_LOCAL_VAR) {
+				stmt->d.s_propfilt.prop.name, pszPropVal);
+		} else if(stmt->d.s_propfilt.prop.id == PROP_LOCAL_VAR) {
 			DBGPRINTF("Filter: check for local var '%s' (value '%s') ",
-				stmt->d.s_propfilt.propName, pszPropVal);
-		} else if(stmt->d.s_propfilt.propID == PROP_GLOBAL_VAR) {
-			DBGPRINTF("Filter: check for global var '%s' (value '%s') ",
-				stmt->d.s_propfilt.propName, pszPropVal);
+				stmt->d.s_propfilt.prop.name, pszPropVal);
+		//} else if(stmt->d.s_propfilt.propID == PROP_GLOBAL_VAR) {
+			//DBGPRINTF("Filter: check for global var '%s' (value '%s') ",
+				//stmt->d.s_propfilt.propName, pszPropVal);
 		} else {
 			DBGPRINTF("Filter: check for property '%s' (value '%s') ",
-				propIDToName(stmt->d.s_propfilt.propID), pszPropVal);
+				propIDToName(stmt->d.s_propfilt.prop.id), pszPropVal);
 		}
 		if(stmt->d.s_propfilt.isNegated)
 			DBGPRINTF("NOT ");
