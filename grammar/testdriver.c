@@ -87,15 +87,6 @@ void cnfDoBSDHost(char *ln)
 	 dbgprintf("global:BSD host: %s\n", ln);
 }
 
-es_str_t*
-cnfGetVar(char __attribute__((unused)) *name,
-	  void __attribute__((unused)) *usrptr)
-{
-	es_str_t *estr;
-	estr = es_newStrFromCStr("", 1);
-	return estr;
-}
-
 int
 main(int argc, char *argv[])
 {

@@ -479,30 +479,6 @@ void cnfDoBSDHost(char *ln)
 			"solution (Block '%s')", ln);
 	free(ln);
 }
-
-es_str_t*
-cnfGetVar(char *name, void *usrptr)
-{
-	es_str_t *estr;
-	if(name[0] == '$') {
-		if(name[1] == '$')
-			estr = getSysVar(name+2);
-		else if(name[1] == '!')
-			estr = msgGetCEEVarNew((msg_t*) usrptr, name+2);
-		else
-			estr = msgGetMsgVarNew((msg_t*) usrptr, (uchar*)name);
-	} else { /* if this happens, we have a program logic error */
-		estr = es_newStrFromCStr("err: var must start with $",
-				  sizeof("err: var must start with $")-1);
-	}
-	if(Debug) {
-		char *s;
-		s = es_str2cstr(estr, NULL);
-		dbgprintf("rainerscript: var '%s': '%s'\n", name, s);
-		free(s);
-	}
-	return estr;
-}
 /*------------------------------ end interface to flex/bison parser ------------------------------*/
 
 
