@@ -754,7 +754,7 @@ static rsRetVal
 do_Parameter(uchar **pp, struct template *pTpl)
 {
 	uchar *p;
-	cstr_t *pStrProp;
+	cstr_t *pStrProp = NULL;
 	cstr_t *pStrField = NULL;
 	struct templateEntry *pTpe;
 	int iNum;	/* to compute numbers */
@@ -1099,10 +1099,11 @@ do_Parameter(uchar **pp, struct template *pTpl)
 		DBGPRINTF("template/do_Parameter: fieldName is NULL!\n");
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
-	cstrDestruct(&pStrProp);
 	if(*p) ++p; /* eat '%' */
 	*pp = p;
 finalize_it:
+	if(pStrProp != NULL)
+		cstrDestruct(&pStrProp);
 	RETiRet;
 }
 
