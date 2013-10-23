@@ -217,11 +217,6 @@ rsRetVal jsonFind(struct json_object *jroot, msgPropDescr_t *pProp, struct json_
 rsRetVal msgPropDescrFill(msgPropDescr_t *pProp, uchar *name, int nameLen);
 void msgPropDescrDestruct(msgPropDescr_t *pProp);
 
-static inline rsRetVal
-msgUnsetJSON(msg_t *pMsg, uchar *varname) {
-	return msgDelJSON(pMsg, varname+1);
-}
-
 static inline int
 msgGetProtocolVersion(msg_t *pM)
 {

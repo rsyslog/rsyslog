@@ -261,7 +261,7 @@ execUnset(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
 	for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pBatch->pbShutdownImmediate) ; ++i) {
 		if(   pBatch->eltState[i] != BATCH_STATE_DISC
 		   && (active == NULL || active[i])) {
-			msgUnsetJSON(pBatch->pElem[i].pMsg, stmt->d.s_unset.varname);
+			msgDelJSON(pBatch->pElem[i].pMsg, stmt->d.s_unset.varname);
 		}
 	}
 	RETiRet;

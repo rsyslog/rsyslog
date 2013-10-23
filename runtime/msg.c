@@ -4068,9 +4068,9 @@ msgSetJSONFromVar(msg_t *pMsg, uchar *varname, struct var *v)
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 	/* we always know strlen(varname) > 2 */
-	if(varname[1] == '!')
+	if(varname[0] == '!')
 		msgAddJSONObj(pMsg, varname+1, json, &pMsg->json);
-	else if(varname[1] == '.')
+	else if(varname[0] == '.')
 		msgAddJSONObj(pMsg, varname+1, json, &pMsg->localvars);
 	else { /* global - '/' */
 		pthread_rwlock_wrlock(&glblVars_rwlock);

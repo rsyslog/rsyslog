@@ -2554,8 +2554,7 @@ cnfvarNew(char *name)
 	struct cnfvar *var;
 	if((var = malloc(sizeof(struct cnfvar))) != NULL) {
 		var->nodetype = 'V';
-		var->name = strdup(name+1);
-		free(name);
+		var->name = name;
 		msgPropDescrFill(&var->prop, (uchar*)var->name, strlen(var->name));
 	}
 	return var;
