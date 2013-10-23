@@ -1616,13 +1616,13 @@ evalVar(struct cnfvar *var, void *usrptr, struct var *ret)
 		ret->datatype = 'J';
 		ret->d.json = (localRet == RS_RET_OK) ? json : NULL;
 			
-		DBGPRINTF("rainerscript: var '%s': '%s'\n", var->prop.name,
+		DBGPRINTF("rainerscript: var %d:%s: '%s'\n", var->prop.id, var->prop.name,
 			  (ret->d.json == NULL) ? "" : json_object_get_string(ret->d.json));
 	} else {
 		ret->datatype = 'S';
 		pszProp = (uchar*) MsgGetProp((msg_t*)usrptr, NULL, &var->prop, &propLen, &bMustBeFreed, NULL);
 		ret->d.estr = es_newStrFromCStr((char*)pszProp, propLen);
-		DBGPRINTF("rainerscript: var '%s': '%s'\n", var->prop.name, pszProp);
+		DBGPRINTF("rainerscript: var %d:%s: '%s'\n", var->prop.id, var->prop.name, pszProp);
 		if(bMustBeFreed)
 			free(pszProp);
 	}
