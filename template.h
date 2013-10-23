@@ -40,8 +40,8 @@ struct template {
 	char *pszName;
 	int iLenName;
 	rsRetVal (*pStrgen)(msg_t*, uchar**, size_t *);
-	uchar *subtree;	/* subtree name for subtree-type templates */
-	int subtreeLen;
+	sbool bHaveSubtree;
+	msgPropDescr_t subtree;	/* subtree property name for subtree-type templates */
 	int tpenElements; /* number of elements in templateEntry list */
 	struct templateEntry *pEntryRoot;
 	struct templateEntry *pEntryLast;

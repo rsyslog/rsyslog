@@ -163,13 +163,13 @@ tplToString(struct template *pTpl, msg_t *pMsg, uchar **ppBuf, size_t *pLenBuf,
 		FINALIZE;
 	}
 
-	if(pTpl->subtree != NULL) {
+	if(pTpl->bHaveSubtree) {
 		/* only a single CEE subtree must be provided */
 		/* note: we could optimize the code below, however, this is
 		 * not worth the effort, as this passing mode is not expected
 		 * in subtree mode and so most probably only used for debug & test.
 		 */
-		getCEEPropVal(pMsg, pTpl->subtree, pTpl->subtreeLen, &pVal, &iLenVal, &bMustBeFreed);
+		getJSONPropVal(pMsg, &pTpl->subtree, &pVal, &iLenVal, &bMustBeFreed);
 		if(iLenVal >= (rs_size_t)*pLenBuf) /* we reserve one char for the final \0! */
 			CHKiRet(ExtendBuf(ppBuf, pLenBuf, iLenVal + 1));
 		memcpy(*ppBuf, pVal, iLenVal+1);
@@ -263,12 +263,12 @@ tplToArray(struct template *pTpl, msg_t *pMsg, uchar*** ppArr, struct syslogTime
 	assert(pMsg != NULL);
 	assert(ppArr != NULL);
 
-	if(pTpl->subtree) {
+	if(pTpl->bHaveSubtree) {
 		/* Note: this mode is untested, as there is no official plugin
 		 *       using array passing, so I simply could not test it.
 		 */
 		CHKmalloc(pArr = calloc(2, sizeof(uchar*)));
-		getCEEPropVal(pMsg, pTpl->subtree, pTpl->subtreeLen, &pVal, &propLen, &bMustBeFreed);
+		getJSONPropVal(pMsg, &pTpl->subtree, &pVal, &propLen, &bMustBeFreed);
 		if(bMustBeFreed) { /* if it must be freed, it is our own private copy... */
 			pArr[0] = pVal; /* ... so we can use it! */
 		} else {
@@ -324,8 +324,8 @@ tplToJSON(struct template *pTpl, msg_t *pMsg, struct json_object **pjson, struct
 	rsRetVal localRet;
 	DEFiRet;
 
-	if(pTpl->subtree != NULL){
-		localRet = jsonFind(pMsg->json, pTpl->subtree, pTpl->subtreeLen, pjson);
+	if(pTpl->bHaveSubtree){
+		localRet = jsonFind(pMsg->json, pTpl->subtree.name, pTpl->subtree.nameLen, pjson);
 		if(*pjson == NULL) {
 			/* we need to have a root object! */
 			*pjson = json_object_new_object();
@@ -534,7 +534,6 @@ tplConstruct(rsconf_t *conf)
 	struct template *pTpl;
 	if((pTpl = calloc(1, sizeof(struct template))) == NULL)
 		return NULL;
-pTpl->subtree = NULL;
 	
 	/* basic initialisation is done via calloc() - need to
 	 * initialize only values != 0. */
@@ -1698,8 +1697,9 @@ tplProcessCnf(struct cnfobj *o)
 	char *name = NULL;
 	uchar *tplStr = NULL;
 	uchar *plugin = NULL;
-	uchar *subtree = NULL;
 	uchar *p;
+	msgPropDescr_t subtree;
+	sbool bHaveSubtree = 0;
 	enum { T_STRING, T_PLUGIN, T_LIST, T_SUBTREE }
 		tplType = T_STRING; /* init just to keep compiler happy: mandatory parameter */
 	int i;
@@ -1746,7 +1746,11 @@ tplProcessCnf(struct cnfobj *o)
 				free(name); /* overall assigned */
 				ABORT_FINALIZE(RS_RET_ERR);
 			} else {
-				subtree = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+				uchar *cstr;
+				cstr  = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+				CHKiRet(msgPropDescrFill(&subtree, cstr, ustrlen(cstr)));
+				free(cstr);
+				bHaveSubtree = 1;
 			}
 		} else if(!strcmp(pblk.descr[i].name, "plugin")) {
 			plugin = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
@@ -1789,7 +1793,7 @@ tplProcessCnf(struct cnfobj *o)
 		}
 	}
 
-	if(subtree  == NULL) {
+	if(bHaveSubtree) {
 		if(tplType == T_SUBTREE) {
 			errmsg.LogError(0, RS_RET_ERR, "template '%s' of type subtree needs "
 				"subtree parameter", name);
@@ -1859,8 +1863,8 @@ tplProcessCnf(struct cnfobj *o)
 			break;
 	case T_LIST:	createListTpl(pTpl, o);
 			break;
-	case T_SUBTREE:	pTpl->subtree = subtree;
-			pTpl->subtreeLen = ustrlen(subtree);
+	case T_SUBTREE:	memcpy(&pTpl->subtree, &subtree, sizeof(msgPropDescr_t));
+			pTpl->bHaveSubtree = 1;
 			break;
 	}
 	
@@ -1963,7 +1967,8 @@ void tplDeleteAll(rsconf_t *conf)
 		pTplDel = pTpl;
 		pTpl = pTpl->pNext;
 		free(pTplDel->pszName);
-		free(pTplDel->subtree);
+		if(pTplDel->bHaveSubtree)
+			msgPropDescrDestruct(&pTplDel->subtree);
 		free(pTplDel);
 	}
 	ENDfunc
@@ -2020,7 +2025,8 @@ void tplDeleteNew(rsconf_t *conf)
 		pTplDel = pTpl;
 		pTpl = pTpl->pNext;
 		free(pTplDel->pszName);
-		free(pTplDel->subtree);
+		if(pTplDel->bHaveSubtree)
+			msgPropDescrDestruct(&pTplDel->subtree);
 		free(pTplDel);
 	}
 	ENDfunc

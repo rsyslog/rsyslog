@@ -2516,10 +2516,11 @@ static uchar *getNOW(eNOWType eNow, struct syslogTime *t)
 
 
 /* Get a JSON-Property as string value  (used for various types of JSON-based vars) */
-static rsRetVal
-getJSONPropVal(struct json_object *jroot, uchar *propName, int propNameLen, uchar **pRes, rs_size_t *buflen, unsigned short *pbMustBeFreed)
+rsRetVal
+getJSONPropVal(msg_t *pMsg, msgPropDescr_t *pProp, uchar **pRes, rs_size_t *buflen, unsigned short *pbMustBeFreed)
 {
 	uchar *leaf;
+	struct json_object *jroot;
 	struct json_object *parent;
 	struct json_object *field;
 	DEFiRet;
@@ -2527,13 +2528,26 @@ getJSONPropVal(struct json_object *jroot, uchar *propName, int propNameLen, ucha
 	if(*pbMustBeFreed)
 		free(*pRes);
 	*pRes = NULL;
+
+	if(pProp->id == PROP_CEE) {
+		jroot = pMsg->json;
+	} else if(pProp->id == PROP_LOCAL_VAR) {
+		jroot = pMsg->localvars;
+	} else if(pProp->id == PROP_GLOBAL_VAR) {
+		pthread_rwlock_rdlock(&glblVars_rwlock);
+		jroot = global_var_root;
+	} else {
+		DBGPRINTF("msgGetJSONPropVal; invalid property id %d\n",
+			  pProp->id);
+		ABORT_FINALIZE(RS_RET_NOT_FOUND);
+	}
 	if(jroot == NULL) goto finalize_it;
 
-	if(!strcmp((char*)propName, "!")) {
+	if(!strcmp((char*)pProp->name, "!")) {
 		field = jroot;
 	} else {
-		leaf = jsonPathGetLeaf(propName, propNameLen);
-		CHKiRet(jsonPathFindParent(jroot, propName+1, leaf, &parent, 1));
+		leaf = jsonPathGetLeaf(pProp->name, pProp->nameLen);
+		CHKiRet(jsonPathFindParent(jroot, pProp->name, leaf, &parent, 1));
 		field = json_object_object_get(parent, (char*)leaf);
 	}
 	if(field != NULL) {
@@ -2543,33 +2557,13 @@ getJSONPropVal(struct json_object *jroot, uchar *propName, int propNameLen, ucha
 	}
 
 finalize_it:
+	if(pProp->id == PROP_GLOBAL_VAR)
+		pthread_rwlock_unlock(&glblVars_rwlock);
 	if(*pRes == NULL) {
 		/* could not find any value, so set it to empty */
 		*pRes = (unsigned char*)"";
 		*pbMustBeFreed = 0;
 	}
-	RETiRet;
-}
-
-rsRetVal
-getCEEPropVal(msg_t *pM, uchar *propName, int propNameLen, uchar **pRes, rs_size_t *buflen, unsigned short *pbMustBeFreed)
-{
-	return getJSONPropVal(pM->json, propName, propNameLen, pRes, buflen, pbMustBeFreed);
-}
-
-rsRetVal
-getLocalVarPropVal(msg_t *pM,  uchar *propName, int propNameLen, uchar **pRes, rs_size_t *buflen, unsigned short *pbMustBeFreed)
-{
-	return getJSONPropVal(pM->localvars, propName, propNameLen, pRes, buflen, pbMustBeFreed);
-}
-
-rsRetVal
-getGlobalVarPropVal(uchar *propName, int propNameLen, uchar **pRes, rs_size_t *buflen, unsigned short *pbMustBeFreed)
-{
-	DEFiRet;
-	pthread_rwlock_rdlock(&glblVars_rwlock);
-	iRet = getJSONPropVal(global_var_root, propName, propNameLen, pRes, buflen, pbMustBeFreed);
-	pthread_rwlock_unlock(&glblVars_rwlock);
 	RETiRet;
 }
 
@@ -3014,10 +3008,9 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			}
 			break;
 		case PROP_CEE:
-			getCEEPropVal(pMsg, pProp->name, pProp->nameLen, &pRes, &bufLen, pbMustBeFreed);
-			break;
 		case PROP_LOCAL_VAR:
-			getLocalVarPropVal(pMsg, pProp->name, pProp->nameLen, &pRes, &bufLen, pbMustBeFreed);
+		case PROP_GLOBAL_VAR:
+			getJSONPropVal(pMsg, pProp, &pRes, &bufLen, pbMustBeFreed);
 			break;
 		case PROP_SYS_BOM:
 			if(*pbMustBeFreed == 1)
@@ -4220,6 +4213,7 @@ msgPropDescrDestruct(msgPropDescr_t *pProp)
 		free(pProp->name);
 	}
 }
+
 
 /* dummy */
 rsRetVal msgQueryInterface(void) { return RS_RET_NOT_IMPLEMENTED; }
