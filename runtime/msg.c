@@ -65,6 +65,7 @@
 #include "net.h"
 #include "var.h"
 #include "rsconf.h"
+#include "parserif.h"
 
 /* TODO: move the global variable root to the config object - had no time to to it
  * right now before vacation -- rgerhards, 2013-07-22
@@ -4114,12 +4115,10 @@ msgPropDescrFill(msgPropDescr_t *pProp, uchar *name, int nameLen)
 	int offs;
 	DEFiRet;
 	if(propNameToID(name, &id) != RS_RET_OK) {
-#warning enable error messages
-		//errmsg.LogError(0, RS_RET_TPL_INVLD_PROP, "invalid property '%s'",
-				//pTpl->pszName, cstrGetSzStrNoNULL(pStrProp));
+		parser_errmsg("invalid property '%s'", name);
 		ABORT_FINALIZE(RS_RET_INVLD_PROP);
 	}
-	if(id == PROP_CEE || id == PROP_LOCAL_VAR) {
+	if(id == PROP_CEE || id == PROP_LOCAL_VAR || id == PROP_GLOBAL_VAR) {
 	  	/* in these cases, we need the field name for later processing */
 		/* normalize name: remove $ if present */
 		offs = (name[0] == '$') ? 1 : 0;
