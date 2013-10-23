@@ -2529,9 +2529,7 @@ getJSONPropVal(struct json_object *jroot, uchar *propName, int propNameLen, ucha
 	*pRes = NULL;
 	if(jroot == NULL) goto finalize_it;
 
-	if(!strcmp((char*)propName, "!") ||
-	   !strcmp((char*)propName, ".") ||
-	   !strcmp((char*)propName, "/")   ) {
+	if(!strcmp((char*)propName, "!")) {
 		field = jroot;
 	} else {
 		leaf = jsonPathGetLeaf(propName, propNameLen);
@@ -3957,9 +3955,7 @@ jsonFind(struct json_object *jroot, uchar *propName, int propNameLen, struct jso
 		goto finalize_it;
 	}
 
-	if(!strcmp((char*)propName, "!") ||
-	   !strcmp((char*)propName, ".") ||
-	   !strcmp((char*)propName, "/")   ) {
+	if(!strcmp((char*)propName, "!")) {
 		field = jroot;
 	} else {
 		leaf = jsonPathGetLeaf(propName, propNameLen);
