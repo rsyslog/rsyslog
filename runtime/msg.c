@@ -327,7 +327,6 @@ static int getAPPNAMELen(msg_t *pM, sbool bLockMutex);
 static rsRetVal jsonPathFindParent(struct json_object *jroot, uchar *name, uchar *leaf, struct json_object **parent, int bCreate);
 static uchar * jsonPathGetLeaf(uchar *name, int lenName);
 static struct json_object *jsonDeepCopy(struct json_object *src);
-static rsRetVal msgAddJSONObj(msg_t *pM, uchar *name, struct json_object *json, struct json_object **pjroot);
 
 
 /* the locking and unlocking implementations: */
@@ -3890,16 +3889,26 @@ finalize_it:
 	RETiRet;
 }
 
-static rsRetVal
-msgAddJSONObj(msg_t *pM, uchar *name, struct json_object *json, struct json_object **pjroot)
+rsRetVal
+msgAddJSON(msg_t *pM, uchar *name, struct json_object *json)
 {
 	/* TODO: error checks! This is a quick&dirty PoC! */
+	struct json_object **pjroot;
 	struct json_object *parent, *leafnode;
 	uchar *leaf;
 	DEFiRet;
 
 	MsgLock(pM);
-	if((name[0] == '!' || name[0] == '.' || name[0] == '/') && name[1] == '\0') {
+	if(name[0] == '!') {
+		pjroot = &pM->json;
+	} else if(name[0] == '.') {
+		pjroot = &pM->localvars;
+	} else { /* globl var */
+		pthread_rwlock_wrlock(&glblVars_rwlock);
+		pjroot = &global_var_root;
+	}
+
+	if(name[1] == '\0') { /* full tree? */
 		if(*pjroot == NULL)
 			*pjroot = json;
 		else
@@ -3942,14 +3951,12 @@ msgAddJSONObj(msg_t *pM, uchar *name, struct json_object *json, struct json_obje
 	}
 
 finalize_it:
+	if(name[0] == '/')
+		pthread_rwlock_unlock(&glblVars_rwlock);
 	MsgUnlock(pM);
 	RETiRet;
 }
 
-rsRetVal
-msgAddJSON(msg_t *pM, uchar *name, struct json_object *json) {
-	return msgAddJSONObj(pM, name, json, &pM->json);
-}
 
 rsRetVal
 msgDelJSON(msg_t *pM, uchar *name)
@@ -4079,16 +4086,8 @@ msgSetJSONFromVar(msg_t *pMsg, uchar *varname, struct var *v)
 		v->datatype);
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
-	/* we always know strlen(varname) > 2 */
-	if(varname[0] == '!')
-		msgAddJSONObj(pMsg, varname+1, json, &pMsg->json);
-	else if(varname[0] == '.')
-		msgAddJSONObj(pMsg, varname+1, json, &pMsg->localvars);
-	else { /* global - '/' */
-		pthread_rwlock_wrlock(&glblVars_rwlock);
-		msgAddJSONObj(pMsg, varname+1, json, &global_var_root);
-		pthread_rwlock_unlock(&glblVars_rwlock);
-	 }
+
+	msgAddJSON(pMsg, varname, json);
 finalize_it:
 	RETiRet;
 }
