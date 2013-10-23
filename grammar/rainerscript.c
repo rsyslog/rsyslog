@@ -2187,6 +2187,7 @@ cnfexprDestruct(struct cnfexpr *expr)
 		break;
 	case 'V':
 		free(((struct cnfvar*)expr)->name);
+		msgPropDescrDestruct(&(((struct cnfvar*)expr)->prop));
 		break;
 	case 'F':
 		cnffuncDestruct((struct cnffunc*)expr);
