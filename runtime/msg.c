@@ -3864,7 +3864,7 @@ DBGPRINTF("AAAA jsonMerge adds '%s'\n", it.key);
 
 /* find a JSON structure element (field or container doesn't matter).  */
 rsRetVal
-jsonFind(struct json_object *jroot, uchar *propName, int propNameLen, struct json_object **jsonres)
+jsonFind(struct json_object *jroot, msgPropDescr_t *pProp, struct json_object **jsonres)
 {
 	uchar *leaf;
 	struct json_object *parent;
@@ -3876,11 +3876,11 @@ jsonFind(struct json_object *jroot, uchar *propName, int propNameLen, struct jso
 		goto finalize_it;
 	}
 
-	if(!strcmp((char*)propName, "!")) {
+	if(!strcmp((char*)pProp->name, "!")) {
 		field = jroot;
 	} else {
-		leaf = jsonPathGetLeaf(propName, propNameLen);
-		CHKiRet(jsonPathFindParent(jroot, propName, leaf, &parent, 0));
+		leaf = jsonPathGetLeaf(pProp->name, pProp->nameLen);
+		CHKiRet(jsonPathFindParent(jroot, pProp->name, leaf, &parent, 0));
 		field = json_object_object_get(parent, (char*)leaf);
 	}
 	*jsonres = field;
