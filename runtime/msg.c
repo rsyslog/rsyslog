@@ -3952,16 +3952,32 @@ msgAddJSON(msg_t *pM, uchar *name, struct json_object *json) {
 }
 
 rsRetVal
-msgDelJSONVar(msg_t *pM, struct json_object **jroot, uchar *name)
+msgDelJSON(msg_t *pM, uchar *name)
 {
+	struct json_object **jroot;
 	struct json_object *parent, *leafnode;
 	uchar *leaf;
 	DEFiRet;
 
 dbgprintf("AAAA: unset variable '%s'\n", name);
 	MsgLock(pM);
-	if((name[0] == '!' || name[0] == '.' || name[0] == '/') && name[1] == '\0') {
-		/* strange, but I think we should permit this. After all,
+
+	if(name[0] == '!') {
+		jroot = &pM->json;
+	} else if(name[0] == '.') {
+		jroot = &pM->localvars;
+	} else { /* globl var */
+		pthread_rwlock_wrlock(&glblVars_rwlock);
+		jroot = &global_var_root;
+	}
+	if(jroot == NULL) {
+		DBGPRINTF("msgDelJSONVar; jroot empty in unset for property %s\n",
+			  name);
+		FINALIZE;
+	}
+
+	if(name[1] == '\0') {
+		/* full tree! Strange, but I think we should permit this. After all,
 		 * we trust rsyslog.conf to be written by the admin.
 		 */
 		DBGPRINTF("unsetting JSON root object\n");
@@ -3988,14 +4004,10 @@ DBGPRINTF("AAAA: unset found JSON value path '%s', " "leaf '%s', leafnode %p\n",
 	}
 
 finalize_it:
+	if(name[0] == '/')
+		pthread_rwlock_unlock(&glblVars_rwlock);
 	MsgUnlock(pM);
 	RETiRet;
-}
-
-rsRetVal
-msgDelJSON(msg_t *pM, uchar *name)
-{
-	return msgDelJSONVar(pM, &pM->json, name);
 }
 
 static struct json_object *
