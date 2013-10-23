@@ -2578,54 +2578,43 @@ getGlobalVarPropVal(uchar *propName, int propNameLen, uchar **pRes, rs_size_t *b
 
 /* Get a JSON-based-variable as native json object */
 rsRetVal
-msgGetJSONPropJSON(struct json_object *jroot, uchar *propName, int propNameLen, struct json_object **pjson)
+msgGetJSONPropJSON(msg_t *pMsg, msgPropDescr_t *pProp, struct json_object **pjson)
 {
+	struct json_object *jroot;
 	uchar *leaf;
 	struct json_object *parent;
 	DEFiRet;
 
-	if(jroot == NULL) {
+	if(pProp->id == PROP_CEE) {
+		jroot = pMsg->json;
+	} else if(pProp->id == PROP_LOCAL_VAR) {
+		jroot = pMsg->localvars;
+	} else if(pProp->id == PROP_GLOBAL_VAR) {
+		pthread_rwlock_rdlock(&glblVars_rwlock);
+		jroot = global_var_root;
+	} else {
+		DBGPRINTF("msgGetJSONPropJSON; invalid property id %d\n",
+			  pProp->id);
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}
 
-	if(!strcmp((char*)propName, "!") ||
-	   !strcmp((char*)propName, ".") ||
-	   !strcmp((char*)propName, "/")   ) {
+	if(!strcmp((char*)pProp->name, "!")) {
 		*pjson = jroot;
 		FINALIZE;
 	}
-	leaf = jsonPathGetLeaf(propName, propNameLen);
-	CHKiRet(jsonPathFindParent(jroot, propName, leaf, &parent, 1));
+	leaf = jsonPathGetLeaf(pProp->name, pProp->nameLen);
+	CHKiRet(jsonPathFindParent(jroot, pProp->name, leaf, &parent, 1));
 	*pjson = json_object_object_get(parent, (char*)leaf);
 	if(*pjson == NULL) {
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}
 
 finalize_it:
+	if(pProp->id == PROP_GLOBAL_VAR)
+		pthread_rwlock_unlock(&glblVars_rwlock);
 	RETiRet;
 }
 
-rsRetVal
-msgGetCEEPropJSON(msg_t *pM, uchar *propName, int propNameLen, struct json_object **pjson)
-{
-	return msgGetJSONPropJSON(pM->json, propName, propNameLen, pjson);
-}
-
-rsRetVal
-msgGetLocalVarJSON(msg_t *pM, uchar *propName, int propNameLen, struct json_object **pjson)
-{
-	return msgGetJSONPropJSON(pM->localvars, propName, propNameLen, pjson);
-}
-
-rsRetVal
-msgGetGlobalVarJSON(uchar *propName, int propNameLen, struct json_object **pjson)
-{
-	DEFiRet;
-	pthread_rwlock_rdlock(&glblVars_rwlock);
-	iRet = msgGetJSONPropJSON(global_var_root, propName, propNameLen, pjson);
-	pthread_rwlock_unlock(&glblVars_rwlock);
-	RETiRet;
-}
 
 /* Encode a JSON value and add it to provided string. Note that 
  * the string object may be NULL. In this case, it is created

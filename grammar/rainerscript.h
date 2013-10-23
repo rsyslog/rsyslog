@@ -208,6 +208,7 @@ struct cnfstringval {
 struct cnfvar {
 	unsigned nodetype;
 	char *name;
+	msgPropDescr_t prop;
 };
 
 struct cnfarray {

@@ -209,6 +209,7 @@ typedef uintTiny	propid_t;
 #define PROP_CEE			200
 #define PROP_CEE_ALL_JSON		201
 #define PROP_LOCAL_VAR			202
+#define PROP_GLOBAL_VAR			203
 
 /* types of configuration handlers
  */

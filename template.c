@@ -343,8 +343,10 @@ tplToJSON(struct template *pTpl, msg_t *pMsg, struct json_object **pjson, struct
 			jsonf = json_object_new_string((char*) pTpe->data.constant.pConstant);
 			json_object_object_add(json, (char*)pTpe->fieldName, jsonf);
 		} else 	if(pTpe->eEntryType == FIELD) {
-			if(pTpe->data.field.msgProp.id == PROP_CEE) {
-				localRet = msgGetCEEPropJSON(pMsg, pTpe->data.field.msgProp.name, pTpe->data.field.msgProp.nameLen, &jsonf);
+			if(pTpe->data.field.msgProp.id == PROP_CEE        ||
+			   pTpe->data.field.msgProp.id == PROP_LOCAL_VAR  ||
+			   pTpe->data.field.msgProp.id == PROP_GLOBAL_VAR   ) {
+				localRet = msgGetJSONPropJSON(pMsg, &pTpe->data.field.msgProp, &jsonf);
 				if(localRet == RS_RET_OK) {
 					json_object_object_add(json, (char*)pTpe->fieldName, json_object_get(jsonf));
 				} else {
@@ -354,30 +356,6 @@ tplToJSON(struct template *pTpl, msg_t *pMsg, struct json_object **pjson, struct
 						json_object_object_add(json, (char*)pTpe->fieldName, NULL);
 					}
 				}
-			} else if(pTpe->data.field.msgProp.id == PROP_LOCAL_VAR) {
-				localRet = msgGetLocalVarJSON(pMsg, pTpe->data.field.msgProp.name, pTpe->data.field.msgProp.nameLen, &jsonf);
-				if(localRet == RS_RET_OK) {
-					json_object_object_add(json, (char*)pTpe->fieldName, json_object_get(jsonf));
-				} else {
-					DBGPRINTF("tplToJSON: error %d looking up local variable %s\n",
-						  localRet, pTpe->fieldName);
-					if(pTpe->data.field.options.bMandatory) {
-						json_object_object_add(json, (char*)pTpe->fieldName, NULL);
-					}
-				}
-#if 0 /* do not remove this code *for the moment* -- rgerhards, 2013-10-22 */
-			} else if(pTpe->data.field.msgProp.id == PROP_GLOBAL_VAR) {
-				localRet = msgGetGlobalVarJSON(pTpe->data.field.msgProp.name, pTpe->data.field.msgProp.nameLen, &jsonf);
-				if(localRet == RS_RET_OK) {
-					json_object_object_add(json, (char*)pTpe->fieldName, json_object_get(jsonf));
-				} else {
-					DBGPRINTF("tplToJSON: error %d looking up local variable %s\n",
-						  localRet, pTpe->fieldName);
-					if(pTpe->data.field.options.bMandatory) {
-						json_object_object_add(json, (char*)pTpe->fieldName, NULL);
-					}
-				}
-#endif
 			} else  {
 				pVal = (uchar*) MsgGetProp(pMsg, pTpe, &pTpe->data.field.msgProp,
 							   &propLen, &bMustBeFreed, ttNow);

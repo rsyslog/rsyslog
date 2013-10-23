@@ -1606,9 +1606,10 @@ evalVar(struct cnfvar *var, void *usrptr, struct var *ret)
 	rsRetVal localRet;
 	struct json_object *json;
 
-	if(var->name[0] == '$' && var->name[1] == '!') {
-#warning chace strlen()?
-		localRet = msgGetCEEPropJSON((msg_t*)usrptr, (uchar*)var->name+1, strlen(var->name)-1, &json);
+	if(var->prop.id == PROP_CEE        ||
+	   var->prop.id == PROP_LOCAL_VAR  ||
+	   var->prop.id == PROP_GLOBAL_VAR   ) {
+		localRet = msgGetJSONPropJSON((msg_t*)usrptr, &var->prop, &json);
 		ret->datatype = 'J';
 		ret->d.json = (localRet == RS_RET_OK) ? json : NULL;
 	} else {
@@ -2543,6 +2544,7 @@ cnfvarNew(char *name)
 	if((var = malloc(sizeof(struct cnfvar))) != NULL) {
 		var->nodetype = 'V';
 		var->name = name;
+		msgPropDescrFill(&var->prop, (uchar*)name, strlen(name));
 	}
 	return var;
 }
