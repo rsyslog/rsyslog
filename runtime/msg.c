@@ -540,6 +540,8 @@ propNameToID(uchar *pName, propid_t *pPropID)
 		*pPropID = PROP_CEE;
 	} else if(!strncmp((char*) pName, "$.", 2) || pName[0] == '.') {
 		*pPropID = PROP_LOCAL_VAR;
+	} else if(!strncmp((char*) pName, "$/", 2) || pName[0] == '/') {
+		*pPropID = PROP_GLOBAL_VAR;
 	} else {
 		DBGPRINTF("PROP_INVALID for name '%s'\n", pName);
 		*pPropID = PROP_INVALID;
