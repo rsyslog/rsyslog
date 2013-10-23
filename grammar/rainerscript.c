@@ -1603,6 +1603,9 @@ dbgprintf("DDDD: executing lookup\n");
 static inline void
 evalVar(struct cnfvar *var, void *usrptr, struct var *ret)
 {
+	rs_size_t propLen;
+	uchar *pszProp = NULL;
+	unsigned short bMustBeFreed = 0;
 	rsRetVal localRet;
 	struct json_object *json;
 
@@ -1612,9 +1615,16 @@ evalVar(struct cnfvar *var, void *usrptr, struct var *ret)
 		localRet = msgGetJSONPropJSON((msg_t*)usrptr, &var->prop, &json);
 		ret->datatype = 'J';
 		ret->d.json = (localRet == RS_RET_OK) ? json : NULL;
+			
+		DBGPRINTF("rainerscript: var '%s': '%s'\n", var->prop.name,
+			  (ret->d.json == NULL) ? "" : json_object_get_string(ret->d.json));
 	} else {
 		ret->datatype = 'S';
-		ret->d.estr = cnfGetVar(var->name, usrptr);
+		pszProp = (uchar*) MsgGetProp((msg_t*)usrptr, NULL, &var->prop, &propLen, &bMustBeFreed, NULL);
+		ret->d.estr = es_newStrFromCStr((char*)pszProp, propLen);
+		DBGPRINTF("rainerscript: var '%s': '%s'\n", var->prop.name, pszProp);
+		if(bMustBeFreed)
+			free(pszProp);
 	}
 
 }
