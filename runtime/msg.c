@@ -4148,7 +4148,10 @@ void
 msgPropDescrDestruct(msgPropDescr_t *pProp)
 {
 	if(pProp != NULL) {
-		free(pProp->name);
+		if(pProp->id == PROP_CEE ||
+		   pProp->id == PROP_LOCAL_VAR ||
+		   pProp->id == PROP_GLOBAL_VAR)
+			free(pProp->name);
 	}
 }
 
