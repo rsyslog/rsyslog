@@ -2597,6 +2597,11 @@ msgGetJSONPropJSON(msg_t *pMsg, msgPropDescr_t *pProp, struct json_object **pjso
 			  pProp->id);
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}
+	if(jroot == NULL) {
+		DBGPRINTF("msgGetJSONPropJSON; jroot empty for property %s\n",
+			  pProp->name);
+		ABORT_FINALIZE(RS_RET_NOT_FOUND);
+	}
 
 	if(!strcmp((char*)pProp->name, "!")) {
 		*pjson = jroot;
@@ -3864,7 +3869,6 @@ jsonPathGetLeaf(uchar *name, int lenName)
 			if(name[i] == '!')
 				break;
 		}
-dbgprintf("DDDD: jsonPAthGetLeaf: name '%s', lenNAme %d, i %d\n", name, lenName, i);
 	if(name[i] == '!' || name[i] == '.' || name[i] == '/')
 		++i;
 	return name + i;
@@ -4207,7 +4211,6 @@ msgPropDescrFill(msgPropDescr_t *pProp, uchar *name, int nameLen)
 		/* we patch the root name, so that support functions do not need to
 		 * check for different root chars. */
 		pProp->name[0] = '!';
-dbgprintf("DDDD: setting porpname '%s' (offs %d)\n", pProp->name, offs);
 	}
 	pProp->id = id;
 finalize_it:
