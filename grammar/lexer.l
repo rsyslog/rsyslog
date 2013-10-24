@@ -9,7 +9,7 @@
   * cases. So while we hope that cfsysline support can be dropped some time in
   * the future, we will probably keep these useful constructs.
   *
-  * Copyright 2011-2012 Rainer Gerhards and Adiscon GmbH.
+  * Copyright 2011-2013 Rainer Gerhards and Adiscon GmbH.
   *
   * This file is part of the rsyslog runtime library.
   *

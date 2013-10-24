@@ -155,7 +155,8 @@ static int startIndexUxLocalSockets; /* process fd from that index on (used to
  				   * suppress local logging. rgerhards 2005-08-01
 				   * read-only after startup
 				   */
-static int nfd = 1; /* number of Unix sockets open / read-only after startup */
+static int nfd = 1; /* number of active unix sockets  (socket 0 is always reserved for the system 
+                        socket, even if it is not enabled. */
 static int sd_fds = 0;			/* number of systemd activated sockets */
 
 /* config vars for legacy config system */
@@ -1277,10 +1278,9 @@ BEGINactivateCnfPrePrivDrop
 	int i;
 CODESTARTactivateCnfPrePrivDrop
 	runModConf = pModConf;
-	if(runModConf->bOmitLocalLogging && nfd == 1)
-		ABORT_FINALIZE(RS_RET_OK);
 	/* we first calculate the number of listeners so that we can
-	 * appropriately size the listener array.
+	 * appropriately size the listener array. Note that we will
+	 * always allocate memory for the system log socket.
 	 */
 	nLstn = 0;
 	for(inst = runModConf->root ; inst != NULL ; inst = inst->next) {

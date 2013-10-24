@@ -37,44 +37,22 @@ script interpreter when there is need to do so.<br>
 <h2>Variable (Property) types</h2>
 <p>All rsyslog properties (see the <a href="property_replacer.html">property
 replacer</a> page for a list) can be used in RainerScript. In addition, it also
-supports local and global variables. Local variables are local to the current message, but are
+supports local variables. Local variables are local to the current message, but are
 NOT message properties (e.g. the "$!" all JSON property does not contain
-them). Global variables have a truely global scope and are NOT bound to
-a specifc message. Thus they can be used to persist values across
-multiple messages (for things like counters). Please note that rsyslog
-ensures proper synchronization for global variables (which also means
-they are slower than the others). HOWEVER, in a highly multithreaded
-configuration operations like<br>
-set $/var = $/var + 1;</br>
-are <b>not</b> atomic, so some updates to the counter variable may be missing. The
-classical sample for this is in a two-thread environment: Variable $/var is set
-to 1 at the start. Now the following happens in the following order:
-<ol>
-<li>Thread A reads 1 from $/var and adds 1, result is 2, but not yet stored
-<li>Thread B reads 1 from $/var and adds 1, result is 2, but not yet stored
-<li>Thread A stores its result of 2
-<li>Thread B stores its result of 2
-</ol>
-After this sequence, $/var contains the value two, which is probably not what was
-expected. Rsyslog does <b>not</b> provide looking primitives for individual variables,
-as this can lead to serious configuration problems if not used 100% correctly.
-However, rsyslog provides (or will in the future provide) special function which
-provide guaranteed atomic updates (in the sample, the end result would be three
-no matter what the scheduling order is).
+them).
 <p>Only message json (CEE/Lumberjack) properties can be modified by
 the "set" and "unset" statements, not any other message property. Obviously,
-local and global variables are also modifieable.
+local variables are also modifieable.
 <p>Message JSON property names start with "$!" where the bang character
 represents the root.
-<p>Local variables names start with "$.", where the dot denotes the root. Similarly,
-global variables start with "$/".
-<p>Both JSON properties as well as global/local variables may contain an arbitrary
+<p>Local variables names start with "$.", where the dot denotes the root.
+<p>Both JSON properties as well as local variables may contain an arbitrary
 deep path before the final element. The bang character is always used as path
-separator, no matter if it is a message property or a global/local variable. For example
+separator, no matter if it is a message property or a local variable. For example
 "$!path1!path2!varname" is a three-level deep message property where as
 the very similar looking "$.path1!path2!varname" specifies a three-level
-deep local variable. The similar global variables is named "$/path1!path2!varname".
-The bang, slash, or dot character immediately following the
+deep local variable.
+The bang or dot character immediately following the
 dollar sign is used by rsyslog to separate the different types.
 <h2>configuration objects</h2>
 <h3>main_queue()</h3>

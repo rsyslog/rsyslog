@@ -3922,6 +3922,12 @@ msgAddJSON(msg_t *pM, uchar *name, struct json_object *json)
 		}
 		leaf = jsonPathGetLeaf(name, ustrlen(name));
 		CHKiRet(jsonPathFindParent(*pjroot, name, leaf, &parent, 1));
+		if (json_object_get_type(parent) != json_type_object) {
+			DBGPRINTF("msgAddJSON: not a container in json path,"
+				"name is '%s'\n", name);
+			json_object_put(json);
+			ABORT_FINALIZE(RS_RET_INVLD_SETOP);
+		}
 		leafnode = json_object_object_get(parent, (char*)leaf);
 		if(leafnode == NULL) {
 			json_object_object_add(parent, (char*)leaf, json);

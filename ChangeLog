@@ -2,7 +2,17 @@
   var was given
 ---------------------------------------------------------------------------
 Version 7.5.6 [devel] 2013-10-??
+- removed global variable support
+  The original idea was not well thought out and global variables, as
+  implemented, worked far different from what anybody would expect. As
+  such, we consider the current approach as an experiment that did not
+  work out and opt to removing it, clearing the way for a better future
+  solution. Note: global vars were introduced in 7.5.3 on Sept, 11th 2013.
 - imudp: support for binding to ruleset added
+- bugfix: segfault if variable was assigned to non-container subtree
+  Thanks to Pavel Levshin for the fix
+- bugfix: imuxsock did not suport addtl sockets if syssock was disabled
+  Thanks to Pavel Levshin for the fix
 - bugfix: running imupd on multiple threads lead to segfault if recvmmsg
   is available
 - bugfix: imudp when using recvmmsg could report wrong sender IP
