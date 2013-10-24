@@ -1277,8 +1277,6 @@ BEGINactivateCnfPrePrivDrop
 	int i;
 CODESTARTactivateCnfPrePrivDrop
 	runModConf = pModConf;
-	if(runModConf->bOmitLocalLogging && nfd == 1)
-		ABORT_FINALIZE(RS_RET_OK);
 	/* we first calculate the number of listeners so that we can
 	 * appropriately size the listener array.
 	 */
