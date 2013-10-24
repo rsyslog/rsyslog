@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 7.4.5  [v7.4-stable] 2013-09-??
+Version 7.4.5  [v7.4-stable] 2013-10-22
 - mmanon: removed the check for specific "terminator characters" after 
   last octet. As it turned out, this didn't work in practice as there
   was an enormous set of potential terminator chars -- so removing
