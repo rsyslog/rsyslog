@@ -1622,7 +1622,7 @@ evalVar(struct cnfvar *var, void *usrptr, struct var *ret)
 		ret->datatype = 'S';
 		pszProp = (uchar*) MsgGetProp((msg_t*)usrptr, NULL, &var->prop, &propLen, &bMustBeFreed, NULL);
 		ret->d.estr = es_newStrFromCStr((char*)pszProp, propLen);
-		DBGPRINTF("rainerscript: var %d:%s: '%s'\n", var->prop.id, var->prop.name, pszProp);
+		DBGPRINTF("rainerscript: var %d: '%s'\n", var->prop.id, pszProp);
 		if(bMustBeFreed)
 			free(pszProp);
 	}
