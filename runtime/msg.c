@@ -2470,9 +2470,15 @@ typedef enum ENOWType { NOW_NOW, NOW_YEAR, NOW_MONTH, NOW_DAY, NOW_HOUR, NOW_HHO
 static uchar *getNOW(eNOWType eNow, struct syslogTime *t)
 {
 	uchar *pBuf;
+	struct syslogTime tt;
 
 	if((pBuf = (uchar*) MALLOC(sizeof(uchar) * tmpBUFSIZE)) == NULL) {
 		return NULL;
+	}
+
+	if(t == NULL) { /* can happen if called via script engine */
+		datetime.getCurrTime(&tt, NULL);
+		t = &tt;
 	}
 
 	if(t->year == 0) { /* not yet set! */
