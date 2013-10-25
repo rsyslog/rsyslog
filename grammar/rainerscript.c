@@ -1142,6 +1142,23 @@ var2CString(struct var *r, int *bMustFree)
 	return cstr;
 }
 
+/* frees struct var members, but not the struct itself. This is because
+ * it usually is allocated on the stack. Callers why dynamically allocate
+ * struct var need to free the struct themselfes!
+ */
+static void
+varFreeMembers(struct var *r)
+{
+	/* Note: we do NOT need to free JSON objects, as we use 
+	 * json_object_object_get() to obtain the values, which does not
+	 * increment the reference count. So json_object_put() [free] is
+	 * neither required nor permitted (would free the original object!).
+	 * So for the time being the string data type is the only one that
+	 * we currently need to free.
+	 */
+	if(r->datatype == 'S') es_deleteStr(r->d.estr);
+}
+
 static rsRetVal
 doExtractFieldByChar(uchar *str, uchar delim, int matchnbr, uchar **resstr)
 {
@@ -1309,9 +1326,9 @@ doFunc_re_extract(struct cnffunc *func, struct var *ret, void* usrptr)
 
 finalize_it:
 	if(bMustFree) free(str);
-	if(r[0].datatype == 'S') es_deleteStr(r[0].d.estr);
-	if(r[2].datatype == 'S') es_deleteStr(r[2].d.estr);
-	if(r[3].datatype == 'S') es_deleteStr(r[3].d.estr);
+	varFreeMembers(&r[0]);
+	varFreeMembers(&r[2]);
+	varFreeMembers(&r[3]);
 
 	if(bHadNoMatch) {
 		cnfexprEval(func->expr[4], &r[4], usrptr);
@@ -1379,7 +1396,7 @@ doFuncCall(struct cnffunc *func, struct var *ret, void* usrptr)
 		}
 		ret->datatype = 'S';
 		if(bMustFree) es_deleteStr(estr);
-		if(r[0].datatype == 'S') es_deleteStr(r[0].d.estr);
+		varFreeMembers(&r[0]);
 		free(str);
 		break;
 	case CNFFUNC_TOLOWER:
@@ -1390,7 +1407,7 @@ doFuncCall(struct cnffunc *func, struct var *ret, void* usrptr)
 		es_tolower(estr);
 		ret->datatype = 'S';
 		ret->d.estr = estr;
-		if(r[0].datatype == 'S') es_deleteStr(r[0].d.estr);
+		varFreeMembers(&r[0]);
 		break;
 	case CNFFUNC_CSTR:
 		cnfexprEval(func->expr[0], &r[0], usrptr);
@@ -1399,7 +1416,7 @@ doFuncCall(struct cnffunc *func, struct var *ret, void* usrptr)
 			estr = es_strdup(estr);
 		ret->datatype = 'S';
 		ret->d.estr = estr;
-		if(r[0].datatype == 'S') es_deleteStr(r[0].d.estr);
+		varFreeMembers(&r[0]);
 		break;
 	case CNFFUNC_CNUM:
 		if(func->expr[0]->nodetype == 'N') {
@@ -1410,7 +1427,7 @@ doFuncCall(struct cnffunc *func, struct var *ret, void* usrptr)
 		} else {
 			cnfexprEval(func->expr[0], &r[0], usrptr);
 			ret->d.n = var2Number(&r[0], NULL);
-			if(r[0].datatype == 'S') es_deleteStr(r[0].d.estr);
+			varFreeMembers(&r[0]);
 		}
 		ret->datatype = 'N';
 		break;
@@ -1428,7 +1445,7 @@ doFuncCall(struct cnffunc *func, struct var *ret, void* usrptr)
 		}
 		ret->datatype = 'N';
 		if(bMustFree) free(str);
-		if(r[0].datatype == 'S') es_deleteStr(r[0].d.estr);
+		varFreeMembers(&r[0]);
 		break;
 	case CNFFUNC_RE_EXTRACT:
 		doFunc_re_extract(func, ret, usrptr);
@@ -1461,9 +1478,9 @@ doFuncCall(struct cnffunc *func, struct var *ret, void* usrptr)
 		}
 		ret->datatype = 'S';
 		if(bMustFree) free(str);
-		if(r[0].datatype == 'S') es_deleteStr(r[0].d.estr);
-		if(r[1].datatype == 'S') es_deleteStr(r[1].d.estr);
-		if(r[2].datatype == 'S') es_deleteStr(r[2].d.estr);
+		varFreeMembers(&r[0]);
+		varFreeMembers(&r[1]);
+		varFreeMembers(&r[2]);
 		break;
 	case CNFFUNC_PRIFILT:
 		pPrifilt = (struct funcData_prifilt*) func->funcdata;
@@ -1549,8 +1566,8 @@ evalStrArrayCmp(es_str_t *estr_l, struct cnfarray* ar, int cmpop)
 }
 
 #define FREE_BOTH_RET \
-		if(r.datatype == 'S') es_deleteStr(r.d.estr); \
-		if(l.datatype == 'S') es_deleteStr(l.d.estr)
+		varFreeMembers(&r); \
+		varFreeMembers(&l)
 
 #define COMP_NUM_BINOP(x) \
 	cnfexprEval(expr->l, &l, usrptr); \
@@ -1577,9 +1594,9 @@ evalStrArrayCmp(es_str_t *estr_l, struct cnfarray* ar, int cmpop)
 
 #define FREE_TWO_STRINGS \
 		if(bMustFree) es_deleteStr(estr_r);  \
-		if(expr->r->nodetype != 'S' && expr->r->nodetype != 'A' && r.datatype == 'S') es_deleteStr(r.d.estr);  \
+		if(expr->r->nodetype != 'S' && expr->r->nodetype != 'A') varFreeMembers(&r); \
 		if(bMustFree2) es_deleteStr(estr_l);  \
-		if(l.datatype == 'S') es_deleteStr(l.d.estr)
+		varFreeMembers(&l)
 
 /* evaluate an expression.
  * Note that we try to avoid malloc whenever possible (because of
@@ -1630,7 +1647,7 @@ cnfexprEval(struct cnfexpr *expr, struct var *ret, void* usrptr)
 						if(bMustFree) es_deleteStr(estr_r);
 					}
 				}
-				if(r.datatype == 'S') es_deleteStr(r.d.estr);
+				varFreeMembers(&r);
 			}
 		} else if(l.datatype == 'J') {
 			estr_l = var2String(&l, &bMustFree);
@@ -1652,7 +1669,7 @@ cnfexprEval(struct cnfexpr *expr, struct var *ret, void* usrptr)
 						if(bMustFree) es_deleteStr(estr_r);
 					}
 				}
-				if(r.datatype == 'S') es_deleteStr(r.d.estr);
+				varFreeMembers(&r);
 			}
 			if(bMustFree) es_deleteStr(estr_l);
 		} else {
@@ -1669,9 +1686,9 @@ cnfexprEval(struct cnfexpr *expr, struct var *ret, void* usrptr)
 			} else {
 				ret->d.n = (l.d.n == r.d.n); /*CMP*/
 			}
-			if(r.datatype == 'S') es_deleteStr(r.d.estr);
+			varFreeMembers(&r);
 		}
-		if(l.datatype == 'S') es_deleteStr(l.d.estr);
+		varFreeMembers(&l);
 		break;
 	case CMP_NE:
 		cnfexprEval(expr->l, &l, usrptr);
@@ -1899,9 +1916,9 @@ cnfexprEval(struct cnfexpr *expr, struct var *ret, void* usrptr)
 				ret->d.n = 1ll;
 			else 
 				ret->d.n = 0ll;
-			if(r.datatype == 'S') es_deleteStr(r.d.estr); 
+			varFreeMembers(&r);
 		}
-		if(l.datatype == 'S') es_deleteStr(l.d.estr);
+		varFreeMembers(&l);
 		break;
 	case AND:
 		cnfexprEval(expr->l, &l, usrptr);
@@ -1912,17 +1929,17 @@ cnfexprEval(struct cnfexpr *expr, struct var *ret, void* usrptr)
 				ret->d.n = 1ll;
 			else 
 				ret->d.n = 0ll;
-			if(r.datatype == 'S') es_deleteStr(r.d.estr); 
+			varFreeMembers(&r);
 		} else {
 			ret->d.n = 0ll;
 		}
-		if(l.datatype == 'S') es_deleteStr(l.d.estr);
+		varFreeMembers(&l);
 		break;
 	case NOT:
 		cnfexprEval(expr->r, &r, usrptr);
 		ret->datatype = 'N';
 		ret->d.n = !var2Number(&r, &convok_r);
-		if(r.datatype == 'S') es_deleteStr(r.d.estr);
+		varFreeMembers(&r);
 		break;
 	case 'N':
 		ret->datatype = 'N';
@@ -1973,7 +1990,7 @@ cnfexprEval(struct cnfexpr *expr, struct var *ret, void* usrptr)
 		cnfexprEval(expr->r, &r, usrptr);
 		ret->datatype = 'N';
 		ret->d.n = -var2Number(&r, &convok_r);
-		if(r.datatype == 'S') es_deleteStr(r.d.estr);
+		varFreeMembers(&r);
 		break;
 	case 'F':
 		doFuncCall((struct cnffunc*) expr, ret, usrptr);
