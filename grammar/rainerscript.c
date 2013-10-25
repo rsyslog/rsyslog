@@ -1307,11 +1307,12 @@ doFunc_re_extract(struct cnffunc *func, struct var *ret, void* usrptr)
 					iLenBuf);
 	}
 
+finalize_it:
 	if(bMustFree) free(str);
 	if(r[0].datatype == 'S') es_deleteStr(r[0].d.estr);
 	if(r[2].datatype == 'S') es_deleteStr(r[2].d.estr);
 	if(r[3].datatype == 'S') es_deleteStr(r[3].d.estr);
-finalize_it:
+
 	if(bHadNoMatch) {
 		cnfexprEval(func->expr[4], &r[4], usrptr);
 		estr = var2String(&r[4], &bMustFree);
