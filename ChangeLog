@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 7.4.6  [v7.4-stable] 2013-11-??
+- bugfix: memory leak in omhiredis
+  Thanks to Pavel Levshin for the fix
 - bugfix: segfault if variable was assigned to non-container subtree
   Thanks to Pavel Levshin for the fix
 ---------------------------------------------------------------------------
