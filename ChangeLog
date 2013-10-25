@@ -181,6 +181,12 @@ Version 7.5.0 [devel] 2013-06-11
   Thanks to Axel Rau for the patch.
 ---------------------------------------------------------------------------
 Version 7.4.6  [v7.4-stable] 2013-11-??
+- bugfix: buffer overrun if re_extract function was called for submatch 50
+  Thanks to Pavel Levshin for reporting the problem and its location.
+- bugfix: memleak in re_extract() function
+  Thanks to Pavel Levshin for reporting this problem.
+- bugfix: memory leak in omhiredis
+  Thanks to Pavel Levshin for the fix
 - bugfix: segfault if variable was assigned to non-container subtree
   Thanks to Pavel Levshin for the fix
 ---------------------------------------------------------------------------

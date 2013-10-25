@@ -198,7 +198,7 @@ CODESTARTendTransaction
         /*  TODO: add error checking here! */
         free ( pData->replies[i] );
     }
-    free ( pData->replies );
+    freeReplyObject ( pData->replies );
     pData->count = 0;
 ENDendTransaction
 
