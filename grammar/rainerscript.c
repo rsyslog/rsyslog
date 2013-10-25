@@ -1259,7 +1259,7 @@ doFunc_re_extract(struct cnffunc *func, struct var *ret, void* usrptr)
 	str = (char*) var2CString(&r[0], &bMustFree);
 	matchnbr = (short) var2Number(&r[2], NULL);
 	submatchnbr = (size_t) var2Number(&r[3], NULL);
-	if(submatchnbr > sizeof(pmatch)/sizeof(regmatch_t)) {
+	if(submatchnbr >= sizeof(pmatch)/sizeof(regmatch_t)) {
 		DBGPRINTF("re_extract() submatch %d is too large\n", submatchnbr);
 		bHadNoMatch = 1;
 		goto finalize_it;
