@@ -1359,6 +1359,7 @@ doFuncCall(struct cnffunc *func, struct var *ret, void* usrptr)
 			estr = var2String(&r[0], &bMustFree);
 			ret->d.n = es_strlen(estr);
 			if(bMustFree) es_deleteStr(estr);
+			if(r[0].datatype == 'S') es_deleteStr(r[0].d.estr);
 		}
 		ret->datatype = 'N';
 		break;
