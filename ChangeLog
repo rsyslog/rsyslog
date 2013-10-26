@@ -1,5 +1,9 @@
 ---------------------------------------------------------------------------
 Version 7.5.6 [devel] 2013-10-??
+- slight performance optimization if GCC is used
+  We give branch prediction hints for the frequent RETiRet macro which is
+  used for error handling. Some slight performance gain is to be expected
+  from that.
 - removed global variable support
   The original idea was not well thought out and global variables, as
   implemented, worked far different from what anybody would expect. As

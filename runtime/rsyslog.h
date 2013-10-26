@@ -445,7 +445,12 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
  * Be sure to call the to-be-returned variable always "iRet" and
  * the function finalizer always "finalize_it".
  */
-#define CHKiRet(code) if((iRet = code) != RS_RET_OK) goto finalize_it
+#if HAVE_BUILTIN_EXCEPT
+#	define CHKiRet(code) if(__builtin_expect(((iRet = code) != RS_RET_OK), 0)) goto finalize_it
+#else
+#	define CHKiRet(code) if((iRet = code) != RS_RET_OK) goto finalize_it
+#endif
+
 /* macro below is to be used if we need our own handling, eg for cleanup */
 #define CHKiRet_Hdlr(code) if((iRet = code) != RS_RET_OK)
 /* macro below is to handle failing malloc/calloc/strdup... which we almost always handle in the same way... */

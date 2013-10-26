@@ -153,6 +153,14 @@ AC_TRY_COMPILE([
 	AC_MSG_RESULT(no; defined as 64)
 )
 
+# Check for __builtin_expect()
+AC_MSG_CHECKING([for __builtin_expect()])
+AC_LINK_IFELSE([AC_LANG_PROGRAM(, return __builtin_expect(main != 0, 1))],
+               [AC_DEFINE(HAVE_BUILTIN_EXPECT, 1,
+                          Define to 1 if compiler supports __builtin_expect)
+                AC_MSG_RESULT([yes])],
+               [AC_MSG_RESULT([no])])
+
 # check for availability of atomic operations
 RS_ATOMIC_OPERATIONS
 RS_ATOMIC_OPERATIONS_64BIT
