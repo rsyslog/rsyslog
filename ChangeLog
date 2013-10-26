@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 7.4.6  [v7.4-stable] 2013-11-??
+- now requires libestr 0.1.9 as earlier versions lead to problems with
+  number handling in RainerScript
 - bugfix: memory leak in strlen() RainerScript function
   Thanks to Gregoire Seux for reportig this bug.
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=486
