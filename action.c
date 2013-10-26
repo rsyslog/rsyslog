@@ -175,10 +175,9 @@ configSettings_t cs_save;				/* our saved (scope!) config settings */
 /* the counter below counts actions created. It is used to obtain unique IDs for the action. They
  * should not be relied on for any long-term activity (e.g. disk queue names!), but they are nice
  * to have during one instance of an rsyslogd run. For example, I use them to name actions when there
- * is no better name available. Note that I do NOT recover previous numbers on HUP - we simply keep
- * counting. -- rgerhards, 2008-01-29
+ * is no better name available.
  */
-static int iActionNbr = 0;
+int iActionNbr = 0;
 
 /* tables for interfacing with the v6 config system */
 static struct cnfparamdescr cnfparamdescr[] = {
@@ -341,6 +340,7 @@ rsRetVal actionConstruct(action_t **ppThis)
 	pThis->bExecWhenPrevSusp = 0;
 	pThis->bRepMsgHasMsg = 0;
 	pThis->tLastOccur = datetime.GetTime(NULL);	/* done once per action on startup only */
+	pThis->iActionNbr = iActionNbr;
 	pthread_mutex_init(&pThis->mutActExec, NULL);
 	pthread_mutex_init(&pThis->mutAction, NULL);
 	INIT_ATOMIC_HELPER_MUT(pThis->mutCAS);
@@ -912,7 +912,8 @@ actionCallDoAction(action_t *pThis, msg_t *pMsg, void *actParams)
 	ASSERT(pThis != NULL);
 	ISOBJ_TYPE_assert(pMsg, msg);
 
-	DBGPRINTF("entering actionCalldoAction(), state: %s\n", getActStateName(pThis));
+	DBGPRINTF("entering actionCalldoAction(), state: %s, actionNbr %d\n",
+		  getActStateName(pThis), pThis->iActionNbr);
 
 	pThis->bHadAutoCommit = 0;
 	iRet = pThis->pMod->mod.om.doAction(actParams, pMsg->msgFlags, pThis->pModData);

@@ -51,6 +51,7 @@ struct action_s {
 	time_t	tActNow;	/* the current time for an action execution. Initially set to -1 and
 				   populated on an as-needed basis. This is a performance optimization. */
 	time_t	tLastExec;	/* time this action was last executed */
+	int	iActionNbr;	/* this action's number (ID) */
 	sbool	bExecWhenPrevSusp;/* execute only when previous action is suspended? */
 	sbool	bWriteAllMarkMsgs;/* should all mark msgs be written (not matter how recent the action was executed)? */
 	int	iSecsExecOnceInterval; /* if non-zero, minimum seconds to wait until action is executed again */
@@ -103,5 +104,8 @@ rsRetVal addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStr
 rsRetVal activateActions(void);
 rsRetVal actionNewInst(struct nvlst *lst, action_t **ppAction);
 rsRetVal actionProcessCnf(struct cnfobj *o);
+
+/* external data */
+extern int iActionNbr;
 
 #endif /* #ifndef ACTION_H_INCLUDED */

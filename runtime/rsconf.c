@@ -1205,6 +1205,7 @@ ourConf = loadConf; // TODO: remove, once ourConf is gone!
 		ABORT_FINALIZE(RS_RET_NO_ACTIONS);
 	}
 	tellLexEndParsing();
+	DBGPRINTF("Number of actions in this configuration: %d\n", iActionNbr);
 	rulesetOptimizeAll(loadConf);
 
 	tellCoreConfigLoadDone();

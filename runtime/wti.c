@@ -44,6 +44,7 @@
 #include "wti.h"
 #include "obj.h"
 #include "glbl.h"
+#include "action.h"
 #include "atomic.h"
 
 /* static data */
@@ -171,6 +172,7 @@ BEGINobjDestruct(wti) /* be sure to specify the object type also in END and CODE
 CODESTARTobjDestruct(wti)
 	/* actual destruction */
 	batchFree(&pThis->batch);
+	free(pThis->actWrkrData);
 	DESTROY_ATOMIC_HELPER_MUT(pThis->mutIsRunning);
 
 	free(pThis->pszDbgHdr);
@@ -195,10 +197,14 @@ wtiConstructFinalize(wti_t *pThis)
 
 	ISOBJ_TYPE_assert(pThis, wti);
 
-	DBGPRINTF("%s: finalizing construction of worker instance data\n", wtiGetDbgHdr(pThis));
+	DBGPRINTF("%s: finalizing construction of worker instance data (for %d actions)\n",
+		  wtiGetDbgHdr(pThis), iActionNbr);
 
 	/* initialize our thread instance descriptor (no concurrency here) */
 	pThis->bIsRunning = RSFALSE; 
+
+	/* must use calloc as we need zeto-init */
+	CHKmalloc(pThis->actWrkrData = calloc(iActionNbr, sizeof(void*)));
 
 	/* we now alloc the array for user pointers. We obtain the max from the queue itself. */
 	CHKiRet(pThis->pWtp->pfGetDeqBatchSize(pThis->pWtp->pUsr, &iDeqBatchSize));
