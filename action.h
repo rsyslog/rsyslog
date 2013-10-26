@@ -69,7 +69,7 @@ struct action_s {
 	struct modInfo_s *pMod;/* pointer to output module handling this selector */
 	void	*pModData;	/* pointer to module data - content is module-specific */
 	sbool	bRepMsgHasMsg;	/* "message repeated..." has msg fragment in it (0-no, 1-yes) */
-	rsRetVal (*submitToActQ)(action_t *, batch_t *);/* function submit message to action queue */
+	rsRetVal (*submitToActQ)(action_t *, batch_t *, wti_t*);/* function submit message to action queue */
 	rsRetVal (*qConstruct)(struct queue_s *pThis);
 	enum 	{ ACT_STRING_PASSING = 0, ACT_ARRAY_PASSING = 1, ACT_MSG_PASSING = 2,
 		  ACT_JSON_PASSING = 3}
@@ -97,7 +97,7 @@ rsRetVal actionDestruct(action_t *pThis);
 rsRetVal actionDbgPrint(action_t *pThis);
 rsRetVal actionSetGlobalResumeInterval(int iNewVal);
 rsRetVal actionDoAction(action_t *pAction);
-rsRetVal actionWriteToAction(action_t *pAction, msg_t *pMsg);
+rsRetVal actionWriteToAction(action_t *pAction, msg_t *pMsg, wti_t*);
 rsRetVal actionCallHUPHdlr(action_t *pAction);
 rsRetVal actionClassInit(void);
 rsRetVal addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStringRequest_t *pOMSR, struct cnfparamvals *actParams, struct nvlst *lst, int bSuspended);

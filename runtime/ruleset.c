@@ -67,8 +67,8 @@ static struct cnfparamblk rspblk =
 	};
 
 /* forward definitions */
-static rsRetVal processBatch(batch_t *pBatch);
-static rsRetVal scriptExec(struct cnfstmt *root, batch_t *pBatch, sbool *active);
+static rsRetVal processBatch(batch_t *pBatch, wti_t *pWti);
+static rsRetVal scriptExec(struct cnfstmt *root, batch_t *pBatch, sbool *active, wti_t *pWti);
 
 
 /* ---------- linked-list key handling functions (ruleset) ---------- */
@@ -168,7 +168,7 @@ finalize_it:
  * rgerhards, 2010-06-15
  */
 static inline rsRetVal
-processBatchMultiRuleset(batch_t *pBatch)
+processBatchMultiRuleset(batch_t *pBatch, wti_t *pWti)
 {
 	ruleset_t *currRuleset;
 	batch_t snglRuleBatch;
@@ -206,7 +206,7 @@ processBatchMultiRuleset(batch_t *pBatch)
 		snglRuleBatch.nElem = iNew; /* was left just right by the for loop */
 		batchSetSingleRuleset(&snglRuleBatch, 1);
 		/* process temp batch */
-		processBatch(&snglRuleBatch);
+		processBatch(&snglRuleBatch, pWti);
 		batchFree(&snglRuleBatch);
 	} while(bHaveUnprocessed == 1);
 
@@ -226,12 +226,12 @@ static inline void freeActive(sbool *active) { free(active); }
 /* for details, see scriptExec() header comment! */
 /* call action for all messages with filter on */
 static rsRetVal
-execAct(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
+execAct(struct cnfstmt *stmt, batch_t *pBatch, sbool *active, wti_t *pWti)
 {
 	DEFiRet;
 dbgprintf("RRRR: execAct [%s]: batch of %d elements, active %p\n", modGetName(stmt->d.act->pMod), batchNumMsgs(pBatch), active);
 	pBatch->active = active;
-	stmt->d.act->submitToActQ(stmt->d.act, pBatch);
+	stmt->d.act->submitToActQ(stmt->d.act, pBatch, pWti);
 	RETiRet;
 }
 
@@ -292,7 +292,7 @@ execStop(batch_t *pBatch, sbool *active)
 //    set new filter, inverted
 //    perform else (if any messages)
 static rsRetVal
-execIf(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
+execIf(struct cnfstmt *stmt, batch_t *pBatch, sbool *active, wti_t *pWti)
 {
 	sbool *newAct;
 	int i;
@@ -321,7 +321,7 @@ execIf(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
 	}
 
 	if(stmt->d.s_if.t_then != NULL) {
-		scriptExec(stmt->d.s_if.t_then, pBatch, newAct);
+		scriptExec(stmt->d.s_if.t_then, pBatch, newAct, pWti);
 	}
 	if(stmt->d.s_if.t_else != NULL) {
 		for(i = 0 ; i < batchNumMsgs(pBatch) ; ++i) {
@@ -331,7 +331,7 @@ execIf(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
 			   && (active == NULL || active[i]))
 				newAct[i] = !newAct[i];
 			}
-		scriptExec(stmt->d.s_if.t_else, pBatch, newAct);
+		scriptExec(stmt->d.s_if.t_else, pBatch, newAct, pWti);
 	}
 	freeActive(newAct);
 finalize_it:
@@ -340,7 +340,7 @@ finalize_it:
 
 /* for details, see scriptExec() header comment! */
 static void
-execPRIFILT(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
+execPRIFILT(struct cnfstmt *stmt, batch_t *pBatch, sbool *active, wti_t *pWti)
 {
 	sbool *newAct;
 	msg_t *pMsg;
@@ -367,7 +367,7 @@ execPRIFILT(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
 	}
 
 	if(stmt->d.s_prifilt.t_then != NULL) {
-		scriptExec(stmt->d.s_prifilt.t_then, pBatch, newAct);
+		scriptExec(stmt->d.s_prifilt.t_then, pBatch, newAct, pWti);
 	}
 	if(stmt->d.s_prifilt.t_else != NULL) {
 		for(i = 0 ; i < batchNumMsgs(pBatch) ; ++i) {
@@ -377,7 +377,7 @@ execPRIFILT(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
 			   && (active == NULL || active[i]))
 				newAct[i] = !newAct[i];
 			}
-		scriptExec(stmt->d.s_prifilt.t_else, pBatch, newAct);
+		scriptExec(stmt->d.s_prifilt.t_else, pBatch, newAct, pWti);
 	}
 	freeActive(newAct);
 }
@@ -476,7 +476,7 @@ done:
 
 /* for details, see scriptExec() header comment! */
 static void
-execPROPFILT(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
+execPROPFILT(struct cnfstmt *stmt, batch_t *pBatch, sbool *active, wti_t *pWti)
 {
 	sbool *thenAct;
 	sbool bRet;
@@ -495,7 +495,7 @@ execPROPFILT(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
 		DBGPRINTF("batch: item %d PROPFILT %d\n", i, thenAct[i]);
 	}
 
-	scriptExec(stmt->d.s_propfilt.t_then, pBatch, thenAct);
+	scriptExec(stmt->d.s_propfilt.t_then, pBatch, thenAct, pWti);
 	freeActive(thenAct);
 }
 
@@ -510,7 +510,7 @@ execPROPFILT(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
  * rgerhards, 2012-09-04
  */
 static rsRetVal
-scriptExec(struct cnfstmt *root, batch_t *pBatch, sbool *active)
+scriptExec(struct cnfstmt *root, batch_t *pBatch, sbool *active, wti_t *pWti)
 {
 	DEFiRet;
 	struct cnfstmt *stmt;
@@ -528,7 +528,7 @@ scriptExec(struct cnfstmt *root, batch_t *pBatch, sbool *active)
 			execStop(pBatch, active);
 			break;
 		case S_ACT:
-			execAct(stmt, pBatch, active);
+			execAct(stmt, pBatch, active, pWti);
 			break;
 		case S_SET:
 			execSet(stmt, pBatch, active);
@@ -537,16 +537,16 @@ scriptExec(struct cnfstmt *root, batch_t *pBatch, sbool *active)
 			execUnset(stmt, pBatch, active);
 			break;
 		case S_CALL:
-			scriptExec(stmt->d.s_call.stmt, pBatch, active);
+			scriptExec(stmt->d.s_call.stmt, pBatch, active, pWti);
 			break;
 		case S_IF:
-			execIf(stmt, pBatch, active);
+			execIf(stmt, pBatch, active, pWti);
 			break;
 		case S_PRIFILT:
-			execPRIFILT(stmt, pBatch, active);
+			execPRIFILT(stmt, pBatch, active, pWti);
 			break;
 		case S_PROPFILT:
-			execPROPFILT(stmt, pBatch, active);
+			execPROPFILT(stmt, pBatch, active, pWti);
 			break;
 		default:
 			dbgprintf("error: unknown stmt type %u during exec\n",
@@ -565,7 +565,7 @@ scriptExec(struct cnfstmt *root, batch_t *pBatch, sbool *active)
  * rgerhards, 2005-10-13
  */
 static rsRetVal
-processBatch(batch_t *pBatch)
+processBatch(batch_t *pBatch, wti_t *pWti)
 {
 	ruleset_t *pThis;
 	DEFiRet;
@@ -577,9 +577,9 @@ processBatch(batch_t *pBatch)
 		if(pThis == NULL)
 			pThis = ourConf->rulesets.pDflt;
 		ISOBJ_TYPE_assert(pThis, ruleset);
-		CHKiRet(scriptExec(pThis->root, pBatch, NULL));
+		CHKiRet(scriptExec(pThis->root, pBatch, NULL, pWti));
 	} else {
-		CHKiRet(processBatchMultiRuleset(pBatch));
+		CHKiRet(processBatchMultiRuleset(pBatch, pWti));
 	}
 
 finalize_it:

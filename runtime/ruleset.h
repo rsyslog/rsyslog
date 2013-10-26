@@ -46,7 +46,7 @@ BEGINinterface(ruleset) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Destruct)(ruleset_t **ppThis);
 	rsRetVal (*DestructAllActions)(rsconf_t *conf);
 	rsRetVal (*SetName)(ruleset_t *pThis, uchar *pszName);
-	rsRetVal (*ProcessBatch)(batch_t*);
+	rsRetVal (*ProcessBatch)(batch_t*, wti_t *);
 	rsRetVal (*GetRuleset)(rsconf_t *conf, ruleset_t **ppThis, uchar*);
 	rsRetVal (*SetDefaultRuleset)(rsconf_t *conf, uchar*);
 	rsRetVal (*SetCurrRuleset)(rsconf_t *conf, uchar*);
@@ -64,8 +64,9 @@ BEGINinterface(ruleset) /* name must also be changed in ENDinterface macro! */
 	/* AddRule() removed */
 	/*TODO:REMOVE*/rsRetVal (*IterateAllActions)(rsconf_t *conf, rsRetVal (*pFunc)(void*, void*), void* pParam);
 	void (*AddScript)(ruleset_t *pThis, struct cnfstmt *script);
+	/* v8: changed processBatch interface */
 ENDinterface(ruleset)
-#define rulesetCURR_IF_VERSION 7 /* increment whenever you change the interface structure! */
+#define rulesetCURR_IF_VERSION 8 /* increment whenever you change the interface structure! */
 
 
 /* prototypes */

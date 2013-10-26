@@ -986,7 +986,7 @@ static rsRetVal qAddDirect(qqueue_t *pThis, msg_t* pMsg)
 	singleBatch.pElem = &batchObj;
 	singleBatch.eltState = &batchState;
 	singleBatch.active = &active;
-	iRet = pThis->pConsumer(pThis->pAction, &singleBatch, &pThis->bShutdownImmediate);
+	iRet = pThis->pConsumer(pThis->pAction, &singleBatch, NULL, &pThis->bShutdownImmediate);
 	/* delete the batch string params: TODO: create its own "class" for this */
 	for(i = 0 ; i < CONF_OMOD_NUMSTRINGS_MAXSIZE ; ++i) {
 		free(batchObj.staticActStrings[i]);
@@ -1013,7 +1013,8 @@ rsRetVal qqueueEnqObjDirectBatch(qqueue_t *pThis, batch_t *pBatch)
 	 * We use our knowledge about the batch_t structure below, but without that, we
 	 * pay a too-large performance toll... -- rgerhards, 2009-04-22
 	 */
-	iRet = pThis->pConsumer(pThis->pAction, pBatch, NULL);
+#warning TODO: handle wti ptr!
+	iRet = pThis->pConsumer(pThis->pAction, pBatch, NULL, NULL);
 
 	RETiRet;
 }
@@ -1319,7 +1320,7 @@ finalize_it:
  * to modify some parameters before the queue is actually started.
  */
 rsRetVal qqueueConstruct(qqueue_t **ppThis, queueType_t qType, int iWorkerThreads,
-		        int iMaxQueueSize, rsRetVal (*pConsumer)(void*, batch_t*,int*))
+		        int iMaxQueueSize, rsRetVal (*pConsumer)(void*, batch_t*, wti_t*, int*))
 {
 	DEFiRet;
 	qqueue_t *pThis;
@@ -1878,7 +1879,7 @@ ConsumerReg(qqueue_t *pThis, wti_t *pWti)
 	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &iCancelStateSave);
 
 
-	CHKiRet(pThis->pConsumer(pThis->pAction, &pWti->batch, &pThis->bShutdownImmediate));
+	CHKiRet(pThis->pConsumer(pThis->pAction, &pWti->batch, pWti, &pThis->bShutdownImmediate));
 
 	/* we now need to check if we should deliberately delay processing a bit
 	 * and, if so, do that. -- rgerhards, 2008-01-30
