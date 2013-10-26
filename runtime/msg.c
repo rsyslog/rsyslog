@@ -4048,7 +4048,11 @@ jsonDeepCopy(struct json_object *src)
 		dst = json_object_new_double(json_object_get_double(src));
 		break;
 	case json_type_int:
+#ifdef HAVE_JSON_OBJECT_NEW_INT64
+		dst = json_object_new_int64(json_object_get_int64(src));
+#else /* HAVE_JSON_OBJECT_NEW_INT64 */
 		dst = json_object_new_int(json_object_get_int(src));
+#endif /* HAVE_JSON_OBJECT_NEW_INT64 */
 		break;
 	case json_type_string:
 		dst = json_object_new_string(json_object_get_string(src));
@@ -4091,7 +4095,11 @@ msgSetJSONFromVar(msg_t *pMsg, uchar *varname, struct var *v)
 		free(cstr);
 		break;
 	case 'N':/* number (integer) */
+#ifdef HAVE_JSON_OBJECT_NEW_INT64
+		json = json_object_new_int64(v->d.n);
+#else /* HAVE_JSON_OBJECT_NEW_INT64 */
 		json = json_object_new_int((int) v->d.n);
+#endif /* HAVE_JSON_OBJECT_NEW_INT64 */
 		break;
 	case 'J':/* native JSON */
 		json = jsonDeepCopy(v->d.json);

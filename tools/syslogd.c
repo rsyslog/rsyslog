@@ -1343,6 +1343,11 @@ static void printVersion(void)
 #else
 	printf("\tuuid support:\t\t\t\tNo\n");
 #endif
+#ifdef HAVE_JSON_OBJECT_NEW_INT64
+	printf("\tNumber of Bits in RainerScript integers: 64\n");
+#else
+	printf("\tNumber of Bits in RainerScript integers: 32 (due to too-old json-c lib)\n");
+#endif
 	printf("\nSee http://www.rsyslog.com for more information.\n");
 }
 

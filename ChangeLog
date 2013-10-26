@@ -2,6 +2,12 @@
   var was given
 ---------------------------------------------------------------------------
 Version 7.5.6 [devel] 2013-10-??
+- RainerScript: make use of 64 bit for numbers where available
+  Thanks to Pavel Levshin for enhancement.
+- slight performance optimization if GCC is used
+  We give branch prediction hints for the frequent RETiRet macro which is
+  used for error handling. Some slight performance gain is to be expected
+  from that.
 - removed global variable support
   The original idea was not well thought out and global variables, as
   implemented, worked far different from what anybody would expect. As
@@ -181,6 +187,8 @@ Version 7.5.0 [devel] 2013-06-11
   Thanks to Axel Rau for the patch.
 ---------------------------------------------------------------------------
 Version 7.4.6  [v7.4-stable] 2013-11-??
+- now requires libestr 0.1.9 as earlier versions lead to problems with
+  number handling in RainerScript
 - bugfix: memory leak in strlen() RainerScript function
   Thanks to Gregoire Seux for reportig this bug.
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=486
