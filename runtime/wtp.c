@@ -8,7 +8,7 @@
  * (and in the web doc set on http://www.rsyslog.com/doc). Be sure to read it
  * if you are getting aquainted to the object.
  *
- * Copyright 2008,2009 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2013 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -91,6 +91,7 @@ BEGINobjConstruct(wtp) /* be sure to specify the object type also in END macro! 
 	pthread_cond_init(&pThis->condThrdTrm, NULL);
 	pthread_attr_init(&pThis->attrThrd);
 	/* Set thread scheduling policy to default */
+#warning do we need this any longer? I think it was a cure for an already fixed bug..
 #ifdef HAVE_PTHREAD_SETSCHEDPARAM
 	pthread_attr_setschedpolicy(&pThis->attrThrd, default_thr_sched_policy);
 	pthread_attr_setschedparam(&pThis->attrThrd, &default_sched_param);
@@ -121,7 +122,8 @@ wtpConstructFinalize(wtp_t *pThis)
 
 	ISOBJ_TYPE_assert(pThis, wtp);
 
-	DBGPRINTF("%s: finalizing construction of worker thread pool\n", wtpGetDbgHdr(pThis));
+	DBGPRINTF("%s: finalizing construction of worker thread pool (numworkerThreads %d)\n",
+		  wtpGetDbgHdr(pThis), pThis->iNumWorkerThreads);
 	/* alloc and construct workers - this can only be done in finalizer as we previously do
 	 * not know the max number of workers
 	 */
