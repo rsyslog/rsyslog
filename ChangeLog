@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 7.5.6 [devel] 2013-10-??
+- RainerScript: make use of 64 bit for numbers where available
+  Thanks to Pavel Levshin for enhancement.
 - slight performance optimization if GCC is used
   We give branch prediction hints for the frequent RETiRet macro which is
   used for error handling. Some slight performance gain is to be expected
