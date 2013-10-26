@@ -311,8 +311,11 @@ BSONAppendJSONObject(bson *doc, const gchar *name, struct json_object *json)
 	case json_type_int: {
 		int64_t i;
 
-		/* FIXME: the future version will have get_int64 */
+#ifdef HAVE_JSON_OBJECT_NEW_INT64
+		i = json_object_get_int64(json);
+#else /* HAVE_JSON_OBJECT_NEW_INT64 */
 		i = json_object_get_int(json);
+#endif /* HAVE_JSON_OBJECT_NEW_INT64 */
 		if (i >= INT32_MIN && i <= INT32_MAX)
 			return bson_append_int32(doc, name, i);
 		else

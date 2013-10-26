@@ -37,6 +37,10 @@ PKG_CHECK_MODULES([JSON_C], [json],, [
 	PKG_CHECK_MODULES([JSON_C], [json-c])
 ])
 
+# if int64 is supported, use it
+AC_CHECK_LIB(json-c, json_object_new_object,,)
+AC_CHECK_FUNCS(json_object_new_int64,,)
+
 case "${host}" in
   *-*-linux*)
     AC_DEFINE([OS_LINUX], [1], [Indicator for a Linux OS])
