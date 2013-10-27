@@ -112,6 +112,10 @@ typedef struct _instanceData {
 	int errsToReport;	/* (remaining) number of errors to report */
 } instanceData;
 
+typedef struct wrkrInstanceData {
+	instanceData *pData;
+} wrkrInstanceData_t;
+
 /* config data */
 typedef struct configSettings_s {
 	uchar *pszTplName; /* name of the default template to use */

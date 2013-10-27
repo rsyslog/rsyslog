@@ -181,6 +181,10 @@ typedef struct _instanceData {
 	STATSCOUNTER_DEF(ctrMax, mutCtrMax);
 } instanceData;
 
+typedef struct wrkrInstanceData {
+	instanceData *pData;
+} wrkrInstanceData_t;
+
 
 typedef struct configSettings_s {
 	int iDynaFileCacheSize; /* max cache for dynamic files */

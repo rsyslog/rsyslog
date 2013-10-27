@@ -262,7 +262,7 @@ static rsRetVal endTransaction(instanceData __attribute__((unused)) *pData)\
 #define BEGINdoAction \
 static rsRetVal doAction(uchar __attribute__((unused)) **ppString, unsigned __attribute__((unused)) iMsgOpts, wrkrInstanceData_t __attribute__((unused)) *pWrkrData)\
 {\
-	instanceData pDate = NULL; /* deliberately make module abort if it does not support new IF */\
+	instanceData *pData = NULL; /* deliberately make module abort if it does not support new IF */\
 	DEFiRet;
 
 #define CODESTARTdoAction \

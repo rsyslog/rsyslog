@@ -49,6 +49,10 @@ typedef struct _instanceData {
 	EMPTY_STRUCT
 } instanceData;
 
+typedef struct wrkrInstanceData {
+	instanceData *pData;
+} wrkrInstanceData_t;
+
 /* we do not need a createInstance()!
 BEGINcreateInstance
 CODESTARTcreateInstance

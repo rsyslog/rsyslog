@@ -70,6 +70,10 @@ typedef struct _instanceData {
 	uchar *pszRulesetName;	/* primarily for debugging/display purposes */
 } instanceData;
 
+typedef struct wrkrInstanceData {
+	instanceData *pData;
+} wrkrInstanceData_t;
+
 typedef struct configSettings_s {
 	ruleset_t *pRuleset;	/* ruleset to enqueue message to (NULL = Default, not recommended) */
 	uchar *pszRulesetName;

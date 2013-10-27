@@ -87,6 +87,10 @@ typedef struct _instanceData {
 	uchar *tplName;
 } instanceData;
 
+typedef struct wrkrInstanceData {
+	instanceData *pData;
+} wrkrInstanceData_t;
+
 typedef struct configSettings_s {
 	EMPTY_STRUCT
 } configSettings_t;

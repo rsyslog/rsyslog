@@ -63,7 +63,6 @@ MODULE_CNFNAME("omtesting")
  */
 DEF_OMOD_STATIC_DATA
 
-
 typedef struct _instanceData {
 	enum { MD_SLEEP, MD_FAIL, MD_RANDFAIL, MD_ALWAYS_SUSPEND }
 		mode;
@@ -75,6 +74,10 @@ typedef struct _instanceData {
 	int	iResumeAfter;
 	int	iCurrRetries;
 } instanceData;
+
+typedef struct wrkrInstanceData {
+	instanceData *pData;
+} wrkrInstanceData_t;
 
 typedef struct configSettings_s {
 	int bEchoStdout;	/* echo non-failed messages to stdout */

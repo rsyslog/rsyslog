@@ -63,6 +63,10 @@ typedef struct _instanceData {
 	uchar	progName[MAXFNAME]; /* program  to execute */
 } instanceData;
 
+typedef struct wrkrInstanceData {
+	instanceData *pData;
+} wrkrInstanceData_t;
+
 BEGINcreateInstance
 CODESTARTcreateInstance
 ENDcreateInstance
