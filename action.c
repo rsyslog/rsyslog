@@ -1396,7 +1396,7 @@ doSubmitToActionQ(action_t *pAction, msg_t *pMsg, wti_t *pWti)
 
 	STATSCOUNTER_INC(pAction->ctrProcessed, pAction->mutCtrProcessed);
 	if(pAction->pQueue->qType == QUEUETYPE_DIRECT)
-		iRet = qqueueEnqMsgDirect(pAction->pQueue, MsgAddRef(pMsg));
+		iRet = qqueueEnqMsgDirect(pAction->pQueue, MsgAddRef(pMsg), pWti);
 	else
 		iRet = qqueueEnqMsg(pAction->pQueue, eFLOWCTL_NO_DELAY, MsgAddRef(pMsg));
 
@@ -1617,7 +1617,7 @@ countStatsBatchEnq(action_t *pAction, batch_t *pBatch)
  * rgerhards, 2011-06-16
  */
 static inline rsRetVal
-doQueueEnqObjDirectBatch(action_t *pAction, batch_t *pBatch)
+doQueueEnqObjDirectBatch(action_t *pAction, batch_t *pBatch, wti_t *pWti)
 {
 	sbool bNeedSubmit;
 	sbool *activeSave;
@@ -1649,14 +1649,14 @@ doQueueEnqObjDirectBatch(action_t *pAction, batch_t *pBatch)
 		}
 		if(bNeedSubmit) {
 			/* note: stats were already computed above */
-			iRet = qqueueEnqObjDirectBatch(pAction->pQueue, pBatch);
+			iRet = qqueueEnqObjDirectBatch(pAction->pQueue, pBatch, pWti);
 		} else {
 			DBGPRINTF("no need to submit batch, all invalid\n");
 		}
 	} else {
 		if(GatherStats)
 			countStatsBatchEnq(pAction, pBatch);
-		iRet = qqueueEnqObjDirectBatch(pAction->pQueue, pBatch);
+		iRet = qqueueEnqObjDirectBatch(pAction->pQueue, pBatch, pWti);
 	}
 
 	free(pBatch->active);
@@ -1678,7 +1678,7 @@ doSubmitToActionQBatch(action_t *pAction, batch_t *pBatch, wti_t *pWti)
 	DBGPRINTF("Called action(Batch), logging to %s\n", module.GetStateName(pAction->pMod));
 
 	if(pAction->pQueue->qType == QUEUETYPE_DIRECT) {
-		iRet = doQueueEnqObjDirectBatch(pAction, pBatch);
+		iRet = doQueueEnqObjDirectBatch(pAction, pBatch, pWti);
 	} else {/* in this case, we do single submits to the queue. 
 		 * TODO: optimize this, we may do at least a multi-submit!
 		 */

@@ -81,8 +81,8 @@ static rsRetVal GetDeqBatchSize(qqueue_t *pThis, int *pVal);
 static rsRetVal ConsumerDA(qqueue_t *pThis, wti_t *pWti);
 static rsRetVal batchProcessed(qqueue_t *pThis, wti_t *pWti);
 static rsRetVal qqueueMultiEnqObjNonDirect(qqueue_t *pThis, multi_submit_t *pMultiSub);
-static rsRetVal qqueueMultiEnqObjDirect(qqueue_t *pThis, multi_submit_t *pMultiSub);
-static rsRetVal qAddDirect(qqueue_t *pThis, msg_t *pMsg);
+static rsRetVal qqueueMultiEnqObjDirect(qqueue_t *pThis, multi_submit_t *pMultiSub, wti_t *pWti);
+static rsRetVal qAddDirect(qqueue_t *pThis, msg_t *pMsg, wti_t *pWti);
 static rsRetVal qDestructDirect(qqueue_t __attribute__((unused)) *pThis);
 static rsRetVal qConstructDirect(qqueue_t __attribute__((unused)) *pThis);
 static rsRetVal qDelDirect(qqueue_t __attribute__((unused)) *pThis);
@@ -959,7 +959,7 @@ static rsRetVal qDestructDirect(qqueue_t __attribute__((unused)) *pThis)
 	return RS_RET_OK;
 }
 
-static rsRetVal qAddDirect(qqueue_t *pThis, msg_t* pMsg)
+static rsRetVal qAddDirect(qqueue_t *pThis, msg_t* pMsg, wti_t *pWti)
 {
 	batch_t singleBatch;
 	batch_obj_t batchObj;
@@ -986,7 +986,7 @@ static rsRetVal qAddDirect(qqueue_t *pThis, msg_t* pMsg)
 	singleBatch.pElem = &batchObj;
 	singleBatch.eltState = &batchState;
 	singleBatch.active = &active;
-	iRet = pThis->pConsumer(pThis->pAction, &singleBatch, NULL, &pThis->bShutdownImmediate);
+	iRet = pThis->pConsumer(pThis->pAction, &singleBatch, pWti, &pThis->bShutdownImmediate);
 	/* delete the batch string params: TODO: create its own "class" for this */
 	for(i = 0 ; i < CONF_OMOD_NUMSTRINGS_MAXSIZE ; ++i) {
 		free(batchObj.staticActStrings[i]);
@@ -999,7 +999,7 @@ static rsRetVal qAddDirect(qqueue_t *pThis, msg_t* pMsg)
 /* "enqueue" a batch in direct mode. This is a shortcut which saves all the overhead
  * otherwise incured. -- rgerhards, ~2010-06-23
  */
-rsRetVal qqueueEnqObjDirectBatch(qqueue_t *pThis, batch_t *pBatch)
+rsRetVal qqueueEnqObjDirectBatch(qqueue_t *pThis, batch_t *pBatch, wti_t *pWti)
 {
 	DEFiRet;
 
@@ -1013,8 +1013,7 @@ rsRetVal qqueueEnqObjDirectBatch(qqueue_t *pThis, batch_t *pBatch)
 	 * We use our knowledge about the batch_t structure below, but without that, we
 	 * pay a too-large performance toll... -- rgerhards, 2009-04-22
 	 */
-#warning TODO: handle wti ptr!
-	iRet = pThis->pConsumer(pThis->pAction, pBatch, NULL, NULL);
+	iRet = pThis->pConsumer(pThis->pAction, pBatch, pWti, NULL);
 
 	RETiRet;
 }
@@ -2676,7 +2675,7 @@ finalize_it:
 
 /* now, the same function, but for direct mode */
 static rsRetVal
-qqueueMultiEnqObjDirect(qqueue_t *pThis, multi_submit_t *pMultiSub)
+qqueueMultiEnqObjDirect(qqueue_t *pThis, multi_submit_t *pMultiSub, wti_t *pWti)
 {
 	int i;
 	DEFiRet;
@@ -2685,7 +2684,7 @@ qqueueMultiEnqObjDirect(qqueue_t *pThis, multi_submit_t *pMultiSub)
 	assert(pMultiSub != NULL);
 
 	for(i = 0 ; i < pMultiSub->nElem ; ++i) {
-		CHKiRet(qAddDirect(pThis, (void*)pMultiSub->ppMsgs[i]));
+		CHKiRet(qAddDirect(pThis, (void*)pMultiSub->ppMsgs[i], pWti));
 	}
 
 finalize_it:
@@ -2700,16 +2699,16 @@ finalize_it:
  * Enqueues the new element and awakes worker thread.
  */
 rsRetVal
-qqueueEnqMsgDirect(qqueue_t *pThis, msg_t *pMsg)
+qqueueEnqMsgDirect(qqueue_t *pThis, msg_t *pMsg, wti_t *pWti)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, qqueue);
-	iRet = qAddDirect(pThis, pMsg);
+	iRet = qAddDirect(pThis, pMsg, pWti);
 	RETiRet;
 }
 
 
-/* enqueue a new user data element
+/* enqueue a new user data element 
  * Enqueues the new element and awakes worker thread.
  */
 rsRetVal
