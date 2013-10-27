@@ -175,6 +175,43 @@ static rsRetVal freeInstance(void* pModData)\
 	RETiRet;\
 }
 
+/* createWrkrInstance()
+ */
+#define BEGINcreateWrkrInstance \
+static rsRetVal createInstance(wrkrInstanceData_t **ppWrkrData)\
+	{\
+	DEFiRet; /* store error code here */\
+	instanceData *pWrkrData; /* use this to point to data elements */
+
+#define CODESTARTcreateWrkrInstance \
+	if((pWrkrData = calloc(1, sizeof(wrkrInstanceData_t))) == NULL) {\
+		*ppWrkrData = NULL;\
+		ENDfunc \
+		return RS_RET_OUT_OF_MEMORY;\
+	}
+
+#define ENDcreateWrkrInstance \
+	*ppWrkrData = pWrkrData;\
+	RETiRet;\
+}
+
+/* freeWrkrInstance */
+#define BEGINfreeWrkrInstance \
+static rsRetVal freeWrkrInstance(void* pd)\
+{\
+	DEFiRet;\
+	wrkrInstanceData_t *pWrkrData;
+
+#define CODESTARTfreeWrkrInstance \
+	pWrkrData = (wrkrInstanceData_t*) pModData;
+
+#define ENDfreeWrkrInstance \
+	if(pWrkrData != NULL)\
+		free(pWrkrData); /* we need to free this in any case */\
+	RETiRet;\
+}
+
+
 /* isCompatibleWithFeature()
  */
 #define BEGINisCompatibleWithFeature \
@@ -223,8 +260,9 @@ static rsRetVal endTransaction(instanceData __attribute__((unused)) *pData)\
 /* doAction()
  */
 #define BEGINdoAction \
-static rsRetVal doAction(uchar __attribute__((unused)) **ppString, unsigned __attribute__((unused)) iMsgOpts, instanceData __attribute__((unused)) *pData)\
+static rsRetVal doAction(uchar __attribute__((unused)) **ppString, unsigned __attribute__((unused)) iMsgOpts, wrkrInstanceData_t __attribute__((unused)) *pWrkrData)\
 {\
+	instanceData pDate = NULL; /* deliberately make module abort if it does not support new IF */\
 	DEFiRet;
 
 #define CODESTARTdoAction \
