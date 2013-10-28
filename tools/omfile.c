@@ -133,6 +133,7 @@ typedef struct s_dynaFileCacheEntry dynaFileCacheEntry;
 
 
 typedef struct _instanceData {
+	pthread_mutex_t mutWrite; /* guard against multiple instances writing to single file */
 	uchar	*f_fname;	/* file or template name (display only) */
 	uchar 	*tplName;	/* name of assigned template */
 	strm_t	*pStrm;		/* our output stream */
@@ -806,6 +807,8 @@ writeFile(instanceData *pData, linebuf_t *linebuf)
 
 	ASSERT(pData != NULL);
 
+	pthread_mutex_lock(&pData->mutWrite);
+
 	/* first check if we have a dynamic file name and, if so,
 	 * check if it still is ok or a new file needs to be created
 	 */
@@ -823,6 +826,7 @@ writeFile(instanceData *pData, linebuf_t *linebuf)
 	CHKiRet(doWrite(pData, linebuf->ln, ustrlen(linebuf->ln)));
 
 finalize_it:
+	pthread_mutex_unlock(&pData->mutWrite);
 	RETiRet;
 }
 
@@ -902,6 +906,7 @@ ENDfreeCnf
 BEGINcreateInstance
 CODESTARTcreateInstance
 	pData->pStrm = NULL;
+	pthread_mutex_init(&pData->mutWrite, NULL);
 ENDcreateInstance
 
 
@@ -933,6 +938,7 @@ CODESTARTfreeInstance
 		free(pData->cryprovName);
 		free(pData->cryprovNameFull);
 	}
+	pthread_mutex_destroy(&pData->mutWrite);
 ENDfreeInstance
 
 
@@ -1390,6 +1396,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 
 BEGINdoHUP
 CODESTARTdoHUP
+	pthread_mutex_lock(&pData->mutWrite);
 	if(pData->bDynamicName) {
 		dynaFileFreeCacheEntries(pData);
 	} else {
@@ -1397,6 +1404,7 @@ CODESTARTdoHUP
 			closeFile(pData);
 		}
 	}
+	pthread_mutex_unlock(&pData->mutWrite);
 ENDdoHUP
 
 
