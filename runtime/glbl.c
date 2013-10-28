@@ -32,6 +32,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <pthread.h>
 #include <assert.h>
 
 #include "rsyslog.h"
@@ -72,6 +73,7 @@ static int option_DisallowWarning = 1;	/* complain if message from disallowed se
 static int bDisableDNS = 0; /* don't look up IP addresses of remote messages */
 static prop_t *propLocalIPIF = NULL;/* IP address to report for the local host (default is 127.0.0.1) */
 static prop_t *propLocalHostName = NULL;/* our hostname as FQDN - read-only after startup */
+static prop_t *propLocalHostNameToDelete = NULL;/* see GenerateLocalHostName function hdr comment! */
 static uchar *LocalHostName = NULL;/* our hostname  - read-only after startup, except HUP */
 static uchar *LocalHostNameOverride = NULL;/* user-overridden hostname - read-only after startup */
 static uchar *LocalFQDNName = NULL;/* our hostname as FQDN - read-only after startup, except HUP */
@@ -382,17 +384,31 @@ GetLocalDomain(void)
 /* generate the local hostname property. This must be done after the hostname info
  * has been set as well as PreserveFQDN.
  * rgerhards, 2009-06-30
+ * NOTE: This function tries to avoid locking by not destructing the previous value
+ * immediately. This is so that current readers can  continue to use the previous name.
+ * Otherwise, we would need to use read/write locks to protect the update process.
+ * In order to do so, we save the previous value and delete it when we are called again
+ * the next time. Note that this in theory is racy and can lead to a double-free.
+ * In practice, however, the window of exposure to trigger this is extremely short
+ * and as this functions is very infrequently being called (on HUP), the trigger
+ * condition for this bug is so highly unlikely that it never occurs in practice.
+ * Probably if you HUP rsyslog every few milliseconds, but who does that...
+ * To further reduce risk potential, we do only update the property when there
+ * actually is a hostname change, which makes it even less likely.
+ * rgerhards, 2013-10-28
  */
 static rsRetVal
 GenerateLocalHostNameProperty(void)
 {
-	DEFiRet;
+	uchar *pszPrev;
+	int lenPrev;
+	prop_t *hostnameNew;
 	uchar *pszName;
+	DEFiRet;
 
-	if(propLocalHostName != NULL)
-		prop.Destruct(&propLocalHostName);
+	if(propLocalHostNameToDelete != NULL)
+		prop.Destruct(&propLocalHostNameToDelete);
 
-	CHKiRet(prop.Construct(&propLocalHostName));
 	if(LocalHostNameOverride == NULL) {
 		if(LocalHostName == NULL)
 			pszName = (uchar*) "[localhost]";
@@ -406,8 +422,20 @@ GenerateLocalHostNameProperty(void)
 		pszName = LocalHostNameOverride;
 	}
 	DBGPRINTF("GenerateLocalHostName uses '%s'\n", pszName);
-	CHKiRet(prop.SetString(propLocalHostName, pszName, ustrlen(pszName)));
-	CHKiRet(prop.ConstructFinalize(propLocalHostName));
+
+	if(propLocalHostName == NULL)
+		pszPrev = (uchar*)""; /* make sure strcmp() below does not match */
+	else
+		prop.GetString(propLocalHostName, &pszPrev, &lenPrev);
+
+	if(ustrcmp(pszPrev, pszName)) {
+		/* we need to update */
+		CHKiRet(prop.Construct(&hostnameNew));
+		CHKiRet(prop.SetString(hostnameNew, pszName, ustrlen(pszName)));
+		CHKiRet(prop.ConstructFinalize(hostnameNew));
+		propLocalHostNameToDelete = propLocalHostName;
+		propLocalHostName = hostnameNew;
+	}
 
 finalize_it:
 	RETiRet;
@@ -720,6 +748,8 @@ BEGINObjClassExit(glbl, OBJ_IS_CORE_MODULE) /* class, version */
 	free(LocalHostNameOverride);
 	free(LocalFQDNName);
 	objRelease(prop, CORE_COMPONENT);
+	if(propLocalHostNameToDelete != NULL)
+		prop.Destruct(&propLocalHostNameToDelete);
 	DESTROY_ATOMIC_HELPER_MUT(mutTerminateInputs);
 ENDObjClassExit(glbl)
 
