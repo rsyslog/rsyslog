@@ -408,7 +408,7 @@ CODESTARTbeginCnfLoad
 	loadModConf->iTCPLstnMax = 20;
 	loadModConf->bSuppOctetFram = 1;
 	loadModConf->iStrmDrvrMode = 0;
-	loadModConf->bUseFlowControl = 0;
+	loadModConf->bUseFlowControl = 1;
 	loadModConf->bKeepAlive = 0;
 	loadModConf->bEmitMsgOnClose = 0;
 	loadModConf->iAddtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
@@ -631,7 +631,7 @@ resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unus
 	cs.iTCPLstnMax = 20;
 	cs.bSuppOctetFram = 1;
 	cs.iStrmDrvrMode = 0;
-	cs.bUseFlowControl = 0;
+	cs.bUseFlowControl = 1;
 	cs.bKeepAlive = 0;
 	cs.bEmitMsgOnClose = 0;
 	cs.iAddtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
