@@ -71,6 +71,10 @@ typedef struct _instanceData {
 	} ipv4;
 } instanceData;
 
+typedef struct wrkrInstanceData {
+	instanceData *pData;
+} wrkrInstanceData_t;
+
 struct modConfData_s {
 	rsconf_t *pConf;	/* our overall config object */
 };
@@ -118,6 +122,10 @@ ENDfreeCnf
 BEGINcreateInstance
 CODESTARTcreateInstance
 ENDcreateInstance
+
+BEGINcreateWrkrInstance
+CODESTARTcreateWrkrInstance
+ENDcreateWrkrInstance
 
 
 BEGINisCompatibleWithFeature
@@ -354,6 +362,7 @@ BEGINdoAction
 	int lenMsg;
 	int i;
 CODESTARTdoAction
+	pData = pWrkrData->pData;
 	pMsg = (msg_t*) ppString[0];
 	lenMsg = getMSGLen(pMsg);
 	msg = getMSG(pMsg);
@@ -387,6 +396,7 @@ ENDmodExit
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
+CODEqueryEtryPt_STD_OMOD8_QUERIES
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 CODEqueryEtryPt_STD_CONF2_QUERIES
 ENDqueryEtryPt
