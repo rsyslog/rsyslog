@@ -247,8 +247,9 @@ static rsRetVal beginTransaction(instanceData __attribute__((unused)) *pData)\
  * introduced in v4.3.3 -- rgerhards, 2009-04-27
  */
 #define BEGINendTransaction \
-static rsRetVal endTransaction(instanceData __attribute__((unused)) *pData)\
+static rsRetVal endTransaction(wrkrInstanceData_t __attribute__((unused)) *pWrkrData)\
 {\
+	instanceData *pData = NULL; /* deliberately make module abort if it does not support new IF */\
 	DEFiRet;
 
 #define CODESTARTendTransaction /* currently empty, but may be extended */
@@ -506,6 +507,11 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 		*pEtryPoint = tryResume;\
 	}
 
+/* standard queries for output module interface in rsyslog v8+ */
+#define CODEqueryEtryPt_STD_OMOD8_QUERIES \
+	else if(!strcmp((char*) name, "createWrkrInstance")) {\
+		*pEtryPoint = createWrkrInstance;\
+	}
 
 /* the following definition is queryEtryPt block that must be added
  * if an output module supports the transactional interface.
