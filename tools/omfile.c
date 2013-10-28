@@ -958,7 +958,7 @@ bufferLine(wrkrInstanceData_t *pWrkrData, uchar *filename, uchar *line)
 	linebuf_t *lb;
 	DEFiRet;
 
-	dbgprintf("DDDD: buffering line %s\n", line);
+	dbgprintf("DDDD: buffering root %p, line %s\n", pWrkrData->pRoot, line);
 	CHKmalloc(lb = (linebuf_t*) malloc(sizeof(linebuf_t)));
 	CHKmalloc(lb->filename = ustrdup(filename));
 	CHKmalloc(lb->ln = ustrdup(line));
@@ -996,12 +996,16 @@ submitCachedLines(wrkrInstanceData_t *pWrkrData, instanceData *pData)
 
 BEGINdoAction
 CODESTARTdoAction
+	pData = pWrkrData->pData;
 	iRet = bufferLine(pWrkrData, (pData->bDynamicName) ? ppString[1] : pData->f_fname,
 	                     ppString[0]);
+	if(iRet == RS_RET_OK)
+		iRet = RS_RET_DEFER_COMMIT;
 ENDdoAction
 
 BEGINendTransaction
 CODESTARTendTransaction
+	pData = pWrkrData->pData;
 	submitCachedLines(pWrkrData, pData);
 	/* Note: pStrm may be NULL if there was an error opening the stream */
 	if(pData->bFlushOnTXEnd && pData->pStrm != NULL) {

@@ -915,10 +915,15 @@ actionCallDoAction(action_t *pThis, msg_t *pMsg, void *actParams, wti_t *pWti)
 	DBGPRINTF("entering actionCalldoAction(), state: %s, actionNbr %d\n",
 		  getActStateName(pThis), pThis->iActionNbr);
 
+	if(pWti->actWrkrData[pThis->iActionNbr] == NULL) {
+		DBGPRINTF("we need to create a new action worker instance for "
+			  "action %d\n", pThis->iActionNbr);
+		CHKiRet(pThis->pMod->mod.om.createWrkrInstance(&(pWti->actWrkrData[pThis->iActionNbr]), pThis->pModData));
+	}
+
 	pThis->bHadAutoCommit = 0;
-dbgprintf("DDDD: calling action id %d for wti %p\n", pThis->iActionNbr, pWti);
-#warning TODO: add action instance check here
-	iRet = pThis->pMod->mod.om.doAction(actParams, pMsg->msgFlags, pThis->pModData);
+	iRet = pThis->pMod->mod.om.doAction(actParams, pMsg->msgFlags,
+				            pWti->actWrkrData[pThis->iActionNbr]);
 	switch(iRet) {
 		case RS_RET_OK:
 			actionCommitted(pThis);
@@ -955,7 +960,7 @@ finalize_it:
  * this readies the action and then calls doAction()
  * rgerhards, 2008-01-28
  */
-static inline rsRetVal
+static rsRetVal
 actionProcessMessage(action_t *pThis, msg_t *pMsg, void *actParams, int *pbShutdownImmediate, wti_t *pWti)
 {
 	DEFiRet;
@@ -980,7 +985,7 @@ finalize_it:
  * rgerhards, 2008-01-28
  */
 static rsRetVal
-finishBatch(action_t *pThis, batch_t *pBatch)
+finishBatch(action_t *pThis, batch_t *pBatch, wti_t *pWti)
 {
 	int i;
 	DEFiRet;
@@ -994,7 +999,7 @@ finishBatch(action_t *pThis, batch_t *pBatch)
 
 	CHKiRet(actionPrepare(pThis, pBatch->pbShutdownImmediate));
 	if(pThis->eState == ACT_STATE_ITX) {
-		iRet = pThis->pMod->mod.om.endTransaction(pThis->pModData);
+		iRet = pThis->pMod->mod.om.endTransaction(pWti->actWrkrData[pThis->iActionNbr]);
 		switch(iRet) {
 			case RS_RET_OK:
 				actionCommitted(pThis);
@@ -1138,7 +1143,7 @@ submitBatch(action_t *pAction, batch_t *pBatch, int nElem, wti_t *pWti)
 			/* try commit transaction, once done, we can simply do so as if
 			 * that return state was returned from tryDoAction().
 			 */
-			localRet = finishBatch(pAction, pBatch);
+			localRet = finishBatch(pAction, pBatch, pWti);
 		}
 
 		if(   localRet == RS_RET_OK
@@ -1254,7 +1259,7 @@ processAction(action_t *pAction, batch_t *pBatch, wti_t* pWti)
 
 	assert(pBatch != NULL);
 	CHKiRet(submitBatch(pAction, pBatch, pBatch->nElem, pWti));
-	iRet = finishBatch(pAction, pBatch);
+	iRet = finishBatch(pAction, pBatch, pWti);
 
 finalize_it:
 	RETiRet;

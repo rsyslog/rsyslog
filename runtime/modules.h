@@ -139,6 +139,7 @@ struct modInfo_s {
 			rsRetVal (*parseSelectorAct)(uchar**, void**,omodStringRequest_t**);
 			rsRetVal (*newActInst)(uchar *modName, struct nvlst *lst, void **, omodStringRequest_t **);
 			rsRetVal (*SetShutdownImmdtPtr)(void *pData, void *pPtr);
+			rsRetVal (*createWrkrInstance)(void*pWrkrData, void*pData);
 		} om;
 		struct { /* data for library modules */
 		    	char dummy;

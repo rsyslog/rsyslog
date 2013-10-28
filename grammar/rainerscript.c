@@ -2427,7 +2427,7 @@ cnfstmtPrintOnly(struct cnfstmt *stmt, int indent, sbool subtree)
 		free(cstr);
 		break;
 	case S_ACT:
-		doIndent(indent); dbgprintf("ACTION %p [%s:%s]\n", stmt->d.act,
+		doIndent(indent); dbgprintf("ACTION %d [%s:%s]\n", stmt->d.act->iActionNbr,
 			modGetName(stmt->d.act->pMod), stmt->printable);
 		break;
 	case S_IF:
