@@ -181,8 +181,16 @@ typedef struct _instanceData {
 	STATSCOUNTER_DEF(ctrMax, mutCtrMax);
 } instanceData;
 
+/* to build a linked list for temporary storage of lines while we cannot commit */
+typedef struct linebuf {
+	uchar *filename; /* for dynafiles, make go away */
+	uchar *ln;
+	struct linebuf *next;
+} linebuf_t;
+
 typedef struct wrkrInstanceData {
 	instanceData *pData;
+	linebuf_t *pRoot;
 } wrkrInstanceData_t;
 
 
@@ -895,6 +903,12 @@ CODESTARTcreateInstance
 ENDcreateInstance
 
 
+BEGINcreateWrkrInstance
+CODESTARTcreateWrkrInstance
+ENDcreateWrkrInstance
+
+
+
 BEGINfreeInstance
 CODESTARTfreeInstance
 	free(pData->tplName);
@@ -945,8 +959,10 @@ finalize_it:
 ENDendTransaction
 
 
-BEGINdoAction
-CODESTARTdoAction
+#if 0
+static rsRetVal
+doRealAction()
+{
 	DBGPRINTF("file to log to: %s\n",
 		  (pData->bDynamicName) ? ppString[1] : pData->f_fname);
 	DBGPRINTF("omfile: start of data: '%.128s'\n", ppString[0]);
@@ -955,9 +971,20 @@ CODESTARTdoAction
 	if(!bCoreSupportsBatching && pData->bFlushOnTXEnd) {
 		CHKiRet(strm.Flush(pData->pStrm));
 	}
-finalize_it:
-	if(iRet == RS_RET_OK)
-		iRet = RS_RET_DEFER_COMMIT;
+}
+#endif
+
+static rsRetVal
+bufferLine(wrkrInstanceData_t *pWrkrData, uchar *filename, uchar *line)
+{
+	DEFiRet;
+	RETiRet;
+}
+
+BEGINdoAction
+CODESTARTdoAction
+	iRet = bufferLine(pWrkrData, (pData->bDynamicName) ? ppString[1] : pData->f_fname,
+	                     ppString[0]);
 ENDdoAction
 
 

@@ -178,17 +178,18 @@ static rsRetVal freeInstance(void* pModData)\
 /* createWrkrInstance()
  */
 #define BEGINcreateWrkrInstance \
-static rsRetVal createInstance(wrkrInstanceData_t **ppWrkrData)\
+static rsRetVal createWrkrInstance(wrkrInstanceData_t **ppWrkrData, instanceData *pData)\
 	{\
 	DEFiRet; /* store error code here */\
-	instanceData *pWrkrData; /* use this to point to data elements */
+	wrkrInstanceData_t *pWrkrData; /* use this to point to data elements */
 
 #define CODESTARTcreateWrkrInstance \
 	if((pWrkrData = calloc(1, sizeof(wrkrInstanceData_t))) == NULL) {\
 		*ppWrkrData = NULL;\
 		ENDfunc \
 		return RS_RET_OUT_OF_MEMORY;\
-	}
+	} \
+	pWrkrData->pData = pData;
 
 #define ENDcreateWrkrInstance \
 	*ppWrkrData = pWrkrData;\
