@@ -32,6 +32,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <pthread.h>
 #include <assert.h>
 
 #include "rsyslog.h"
@@ -379,17 +380,24 @@ GetLocalDomain(void)
 /* generate the local hostname property. This must be done after the hostname info
  * has been set as well as PreserveFQDN.
  * rgerhards, 2009-06-30
+ * NOTE: This function DELIBERATELY introduces a small memory leak in order to gain
+ * speed. Each time it is called when a property name already exists, a new one is
+ * allocated but the previous one is NOT freed. This is so that current readers can
+ * continue to use the previous name. Otherwise, we would need to use read/write locks
+ * to protect the update process. As this function is called extremely infrequently and
+ * the memory leak is very small, this is totally accessible. Think that otherwise we
+ * would need to place a read look each time the property is read, which is much more
+ * frequent (once per message for the modules that use this local hostname!).
+ * rgerhards, 2013-10-28
  */
 static rsRetVal
 GenerateLocalHostNameProperty(void)
 {
-	DEFiRet;
+	prop_t *hostnameNew;
 	uchar *pszName;
+	DEFiRet;
 
-	if(propLocalHostName != NULL)
-		prop.Destruct(&propLocalHostName);
-
-	CHKiRet(prop.Construct(&propLocalHostName));
+	CHKiRet(prop.Construct(&hostnameNew));
 	if(LocalHostNameOverride == NULL) {
 		if(LocalHostName == NULL)
 			pszName = (uchar*) "[localhost]";
@@ -403,8 +411,11 @@ GenerateLocalHostNameProperty(void)
 		pszName = LocalHostNameOverride;
 	}
 	DBGPRINTF("GenerateLocalHostName uses '%s'\n", pszName);
-	CHKiRet(prop.SetString(propLocalHostName, pszName, ustrlen(pszName)));
-	CHKiRet(prop.ConstructFinalize(propLocalHostName));
+	CHKiRet(prop.SetString(hostnameNew, pszName, ustrlen(pszName)));
+	CHKiRet(prop.ConstructFinalize(hostnameNew));
+
+	propLocalHostName = hostnameNew;
+	/* inititional MEM LEAK for old value -- see function hdr comment! */
 
 finalize_it:
 	RETiRet;
