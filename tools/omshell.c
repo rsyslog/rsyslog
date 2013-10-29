@@ -72,6 +72,11 @@ CODESTARTcreateInstance
 ENDcreateInstance
 
 
+BEGINcreateWrkrInstance
+CODESTARTcreateWrkrInstance
+ENDcreateWrkrInstance
+
+
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
 	if(eFeat == sFEATURERepeatedMsgReduction)
@@ -143,6 +148,7 @@ ENDmodExit
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
+CODEqueryEtryPt_STD_OMOD8_QUERIES
 ENDqueryEtryPt
 
 

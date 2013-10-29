@@ -915,7 +915,6 @@ CODESTARTcreateWrkrInstance
 ENDcreateWrkrInstance
 
 
-
 BEGINfreeInstance
 CODESTARTfreeInstance
 	free(pData->tplName);

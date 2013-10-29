@@ -8,7 +8,7 @@
  * File begun on 2007-07-20 by RGerhards (extracted from syslogd.c, which at the
  * time of the fork from sysklogd was under BSD license)
  *
- * Copyright 2007-2012 Adiscon GmbH.
+ * Copyright 2007-2013 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -117,6 +117,11 @@ ENDinitConfVars
 BEGINcreateInstance
 CODESTARTcreateInstance
 ENDcreateInstance
+
+
+BEGINcreateWrkrInstance
+CODESTARTcreateWrkrInstance
+ENDcreateWrkrInstance
 
 
 BEGINisCompatibleWithFeature
@@ -439,6 +444,7 @@ ENDmodExit
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
+CODEqueryEtryPt_STD_OMOD8_QUERIES
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 ENDqueryEtryPt
 

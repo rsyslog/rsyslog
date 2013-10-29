@@ -6,7 +6,7 @@
  *
  * File begun on 2007-07-24 by RGerhards
  *
- * Copyright 2007-2012 Adiscon GmbH.
+ * Copyright 2007-2013 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -58,6 +58,11 @@ BEGINcreateInstance
 CODESTARTcreateInstance
 ENDcreateInstance
 */
+
+
+BEGINcreateWrkrInstance
+CODESTARTcreateWrkrInstance
+ENDcreateWrkrInstance
 
 
 BEGINdbgPrintInstInfo
@@ -118,6 +123,7 @@ ENDmodExit
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
+CODEqueryEtryPt_STD_OMOD8_QUERIES
 ENDqueryEtryPt
 
 
