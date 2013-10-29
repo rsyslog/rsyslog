@@ -807,8 +807,6 @@ writeFile(instanceData *pData, linebuf_t *linebuf)
 
 	ASSERT(pData != NULL);
 
-	pthread_mutex_lock(&pData->mutWrite);
-
 	/* first check if we have a dynamic file name and, if so,
 	 * check if it still is ok or a new file needs to be created
 	 */
@@ -826,7 +824,6 @@ writeFile(instanceData *pData, linebuf_t *linebuf)
 	CHKiRet(doWrite(pData, linebuf->ln, ustrlen(linebuf->ln)));
 
 finalize_it:
-	pthread_mutex_unlock(&pData->mutWrite);
 	RETiRet;
 }
 
@@ -981,6 +978,10 @@ submitCachedLines(wrkrInstanceData_t *pWrkrData, instanceData *pData)
 {
 	linebuf_t *curr, *todel;
 
+dbgprintf("DDDD: omfile: waiting on write lock (pWrkrData %p)\n", pWrkrData);
+	pthread_mutex_lock(&pData->mutWrite);
+dbgprintf("DDDD: omfile: aquired write lock    (pWrkrData %p)\n", pWrkrData);
+
 	for(curr = pWrkrData->pRoot ; curr != NULL ; ) {
 		DBGPRINTF("omfile: file to log to: %s\n", curr->filename);
 		DBGPRINTF("omfile: start of data: '%.128s'\n", curr->ln);
@@ -993,6 +994,8 @@ submitCachedLines(wrkrInstanceData_t *pWrkrData, instanceData *pData)
 		free(todel->ln);
 		free(todel);
 	}
+	pthread_mutex_unlock(&pData->mutWrite);
+dbgprintf("DDDD: omfile: free write lock      (pWrkrData %p)\n", pWrkrData);
 	pWrkrData->pRoot = NULL;
 }
 

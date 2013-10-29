@@ -307,7 +307,6 @@ rsRetVal actionDestruct(action_t *pThis)
 		pThis->pMod->freeInstance(pThis->pModData);
 
 	pthread_mutex_destroy(&pThis->mutAction);
-	pthread_mutex_destroy(&pThis->mutActExec);
 	d_free(pThis->pszName);
 	d_free(pThis->ppTpl);
 
@@ -341,7 +340,6 @@ rsRetVal actionConstruct(action_t **ppThis)
 	pThis->bRepMsgHasMsg = 0;
 	pThis->tLastOccur = datetime.GetTime(NULL);	/* done once per action on startup only */
 	pThis->iActionNbr = iActionNbr;
-	pthread_mutex_init(&pThis->mutActExec, NULL);
 	pthread_mutex_init(&pThis->mutAction, NULL);
 	INIT_ATOMIC_HELPER_MUT(pThis->mutCAS);
 
@@ -1267,7 +1265,6 @@ finalize_it:
 }
 
 
-#pragma GCC diagnostic ignored "-Wempty-body"
 /* receive an array of to-process user pointers and submit them
  * for processing.
  * rgerhards, 2009-04-22
@@ -1290,17 +1287,7 @@ processBatchMain(void *pVoid, batch_t *pBatch, wti_t *pWti, int *pbShutdownImmed
 	}
 	CHKiRet(prepareBatch(pAction, pBatch, &activeSave, &bMustRestoreActivePtr));
 
-	/* We now must guard the output module against execution by multiple threads. The
-	 * plugin interface specifies that output modules must not be thread-safe (except
-	 * if they notify us they are - functionality not yet implemented...).
-	 * rgerhards, 2008-01-30
-	 */
-	d_pthread_mutex_lock(&pAction->mutActExec);
-	pthread_cleanup_push(mutexCancelCleanup, &pAction->mutActExec);
-
 	iRet = processAction(pAction, pBatch, pWti);
-
-	pthread_cleanup_pop(1); /* unlock mutex */
 
 	/* even if processAction failed, we need to release the batch (else we
 	 * have a memory leak). So we do this first, and then check if we need to
@@ -1322,15 +1309,12 @@ finalize_it:
 		pBatch->pbShutdownImmediate = pbShutdownImmdtSave;
 	RETiRet;
 }
-#pragma GCC diagnostic warning "-Wempty-body"
 
 
-/* call the HUP handler for a given action, if such a handler is defined. The
- * action mutex is locked, because the HUP handler most probably needs to modify
- * some internal state information.
- * rgerhards, 2008-10-22
+/* call the HUP handler for a given action, if such a handler is defined.
+ * Note that the action must be able to service HUP requests concurrently
+ * to any current doAction() processing.
  */
-#pragma GCC diagnostic ignored "-Wempty-body"
 rsRetVal
 actionCallHUPHdlr(action_t *pAction)
 {
@@ -1339,19 +1323,13 @@ actionCallHUPHdlr(action_t *pAction)
 	ASSERT(pAction != NULL);
 	DBGPRINTF("Action %p checks HUP hdlr: %p\n", pAction, pAction->pMod->doHUP);
 
-	if(pAction->pMod->doHUP == NULL) {
-		FINALIZE;	/* no HUP handler, so we are done ;) */
+	if(pAction->pMod->doHUP != NULL) {
+		CHKiRet(pAction->pMod->doHUP(pAction->pModData));
 	}
-
-	d_pthread_mutex_lock(&pAction->mutActExec);
-	pthread_cleanup_push(mutexCancelCleanup, &pAction->mutActExec);
-	CHKiRet(pAction->pMod->doHUP(pAction->pModData));
-	pthread_cleanup_pop(1); /* unlock mutex */
 
 finalize_it:
 	RETiRet;
 }
-#pragma GCC diagnostic warning "-Wempty-body"
 
 
 /* set the action message queue mode
@@ -1739,6 +1717,7 @@ doSubmitToActionQComplexBatch(action_t *pAction, batch_t *pBatch, wti_t *pWti)
 	DEFiRet;
 
 	d_pthread_mutex_lock(&pAction->mutAction);
+dbgprintf("DDDD: locked mutAction\n");
 	pthread_cleanup_push(mutexCancelCleanup, &pAction->mutAction);
 	iRet = helperSubmitToActionQComplexBatch(pAction, pBatch, pWti);
 	d_pthread_mutex_unlock(&pAction->mutAction);
