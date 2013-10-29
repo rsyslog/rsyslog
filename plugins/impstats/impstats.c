@@ -377,7 +377,6 @@ checkRuleset(modConfData_t *modConf)
 	DEFiRet;
 
 	modConf->pBindRuleset = NULL;	/* assume default ruleset */
-dbgprintf("DDDD: impstats ruleset %s\n", modConf->pszBindRuleset);
 
 	if(modConf->pszBindRuleset == NULL)
 		FINALIZE;
@@ -390,7 +389,6 @@ dbgprintf("DDDD: impstats ruleset %s\n", modConf->pszBindRuleset);
 	CHKiRet(localRet);
 	modConf->pBindRuleset = pRuleset;
 finalize_it:
-dbgprintf("DDDD: impstats ruleset ptr %p\n", modConf->pBindRuleset);
 	RETiRet;
 }
 
