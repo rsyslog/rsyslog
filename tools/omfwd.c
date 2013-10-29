@@ -369,6 +369,11 @@ CODESTARTfreeInstance
 ENDfreeInstance
 
 
+BEGINfreeWrkrInstance
+CODESTARTfreeWrkrInstance
+ENDfreeWrkrInstance
+
+
 BEGINdbgPrintInstInfo
 CODESTARTdbgPrintInstInfo
 	dbgprintf("%s", pData->target);

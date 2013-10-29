@@ -89,6 +89,11 @@ CODESTARTfreeInstance
 ENDfreeInstance
 
 
+BEGINfreeWrkrInstance
+CODESTARTfreeWrkrInstance
+ENDfreeWrkrInstance
+
+
 BEGINdbgPrintInstInfo
 CODESTARTdbgPrintInstInfo
 	printf("%s", pData->progName);

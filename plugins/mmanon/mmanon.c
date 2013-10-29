@@ -138,6 +138,11 @@ CODESTARTfreeInstance
 ENDfreeInstance
 
 
+BEGINfreeWrkrInstance
+CODESTARTfreeWrkrInstance
+ENDfreeWrkrInstance
+
+
 static inline void
 setInstParamDefaults(instanceData *pData)
 {

@@ -96,6 +96,11 @@ CODESTARTfreeInstance
 ENDfreeInstance
 
 
+BEGINfreeWrkrInstance
+CODESTARTfreeWrkrInstance
+ENDfreeWrkrInstance
+
+
 BEGINparseSelectorAct
 CODESTARTparseSelectorAct
 CODE_STD_STRING_REQUESTparseSelectorAct(0)

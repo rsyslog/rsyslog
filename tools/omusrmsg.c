@@ -137,6 +137,11 @@ CODESTARTfreeInstance
 ENDfreeInstance
 
 
+BEGINfreeWrkrInstance
+CODESTARTfreeWrkrInstance
+ENDfreeWrkrInstance
+
+
 BEGINdbgPrintInstInfo
 	register int i;
 CODESTARTdbgPrintInstInfo

@@ -941,6 +941,11 @@ CODESTARTfreeInstance
 ENDfreeInstance
 
 
+BEGINfreeWrkrInstance
+CODESTARTfreeWrkrInstance
+ENDfreeWrkrInstance
+
+
 BEGINtryResume
 CODESTARTtryResume
 ENDtryResume

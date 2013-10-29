@@ -204,7 +204,7 @@ static rsRetVal freeWrkrInstance(void* pd)\
 	wrkrInstanceData_t *pWrkrData;
 
 #define CODESTARTfreeWrkrInstance \
-	pWrkrData = (wrkrInstanceData_t*) pModData;
+	pWrkrData = (wrkrInstanceData_t*) pd;
 
 #define ENDfreeWrkrInstance \
 	if(pWrkrData != NULL)\
@@ -511,6 +511,8 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 #define CODEqueryEtryPt_STD_OMOD8_QUERIES \
 	else if(!strcmp((char*) name, "createWrkrInstance")) {\
 		*pEtryPoint = createWrkrInstance;\
+	} else if(!strcmp((char*) name, "freeWrkrInstance")) {\
+		*pEtryPoint = freeWrkrInstance;\
 	}
 
 /* the following definition is queryEtryPt block that must be added
