@@ -2926,11 +2926,14 @@ cnfexprOptimize(struct cnfexpr *expr)
 				expr->r = exprswap;
 			}
 		}
-		if(expr->l->nodetype == 'V') {
-			expr = cnfexprOptimize_CMP_var(expr);
-		}
 		if(expr->r->nodetype == 'A') {
 			cnfexprOptimize_CMPEQ_arr((struct cnfarray *)expr->r);
+		}
+		/* This should be evaluated last because it may change expr
+		 * to a function.
+		 */
+		if(expr->l->nodetype == 'V') {
+			expr = cnfexprOptimize_CMP_var(expr);
 		}
 		break;
 	case CMP_LE:
