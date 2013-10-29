@@ -916,6 +916,7 @@ actionCallDoAction(action_t *pThis, msg_t *pMsg, void *actParams, wti_t *pWti)
 		  getActStateName(pThis), pThis->iActionNbr);
 
 	if(pWti->actWrkrData[pThis->iActionNbr] == NULL) {
+dbgprintf("DDDD: wti %p create new worker instance for action %d\n", pWti, pThis->iActionNbr);
 		DBGPRINTF("we need to create a new action worker instance for "
 			  "action %d\n", pThis->iActionNbr);
 		CHKiRet(pThis->pMod->mod.om.createWrkrInstance(&(pWti->actWrkrData[pThis->iActionNbr]), pThis->pModData));

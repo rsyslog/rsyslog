@@ -962,7 +962,6 @@ bufferLine(wrkrInstanceData_t *pWrkrData, uchar *filename, uchar *line)
 	linebuf_t *lb;
 	DEFiRet;
 
-	dbgprintf("DDDD: buffering root %p, line %s\n", pWrkrData->pRoot, line);
 	CHKmalloc(lb = (linebuf_t*) malloc(sizeof(linebuf_t)));
 	CHKmalloc(lb->filename = ustrdup(filename));
 	CHKmalloc(lb->ln = ustrdup(line));

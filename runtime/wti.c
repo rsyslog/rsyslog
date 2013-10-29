@@ -292,6 +292,7 @@ wtiWorker(wti_t *pThis)
 	dbgSetThrdName(pThis->pszDbgHdr);
 	pthread_cleanup_push(wtiWorkerCancelCleanup, pThis);
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
+dbgprintf("DDDD: wti %p: worker starting\n", pThis);
 
 	/* now we have our identity, on to real processing */
 	while(1) { /* loop will be broken below - need to do mutex locks */
@@ -341,6 +342,7 @@ wtiWorker(wti_t *pThis)
 	/* indicate termination */
 	pthread_cleanup_pop(0); /* remove cleanup handler */
 	pthread_setcancelstate(iCancelStateSave, NULL);
+dbgprintf("DDDD: wti %p: worker exiting\n", pThis);
 
 	RETiRet;
 }
