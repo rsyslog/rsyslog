@@ -913,16 +913,18 @@ actionCallDoAction(action_t *pThis, msg_t *pMsg, void *actParams, wti_t *pWti)
 	DBGPRINTF("entering actionCalldoAction(), state: %s, actionNbr %d\n",
 		  getActStateName(pThis), pThis->iActionNbr);
 
-	if(pWti->actWrkrData[pThis->iActionNbr] == NULL) {
+	if(pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData == NULL) {
 dbgprintf("DDDD: wti %p create new worker instance for action %d\n", pWti, pThis->iActionNbr);
 		DBGPRINTF("we need to create a new action worker instance for "
 			  "action %d\n", pThis->iActionNbr);
-		CHKiRet(pThis->pMod->mod.om.createWrkrInstance(&(pWti->actWrkrData[pThis->iActionNbr]), pThis->pModData));
+		CHKiRet(pThis->pMod->mod.om.createWrkrInstance(&(pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData),
+						               pThis->pModData));
+		pWti->actWrkrInfo[pThis->iActionNbr].pAction = pThis;
 	}
 
 	pThis->bHadAutoCommit = 0;
 	iRet = pThis->pMod->mod.om.doAction(actParams, pMsg->msgFlags,
-				            pWti->actWrkrData[pThis->iActionNbr]);
+				            pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData);
 	switch(iRet) {
 		case RS_RET_OK:
 			actionCommitted(pThis);
@@ -998,7 +1000,7 @@ finishBatch(action_t *pThis, batch_t *pBatch, wti_t *pWti)
 
 	CHKiRet(actionPrepare(pThis, pBatch->pbShutdownImmediate));
 	if(pThis->eState == ACT_STATE_ITX) {
-		iRet = pThis->pMod->mod.om.endTransaction(pWti->actWrkrData[pThis->iActionNbr]);
+		iRet = pThis->pMod->mod.om.endTransaction(pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData);
 		switch(iRet) {
 			case RS_RET_OK:
 				actionCommitted(pThis);

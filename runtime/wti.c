@@ -172,7 +172,7 @@ BEGINobjDestruct(wti) /* be sure to specify the object type also in END and CODE
 CODESTARTobjDestruct(wti)
 	/* actual destruction */
 	batchFree(&pThis->batch);
-	free(pThis->actWrkrData);
+	free(pThis->actWrkrInfo);
 	DESTROY_ATOMIC_HELPER_MUT(pThis->mutIsRunning);
 
 	free(pThis->pszDbgHdr);
@@ -203,8 +203,8 @@ wtiConstructFinalize(wti_t *pThis)
 	/* initialize our thread instance descriptor (no concurrency here) */
 	pThis->bIsRunning = RSFALSE; 
 
-	/* must use calloc as we need zeto-init */
-	CHKmalloc(pThis->actWrkrData = calloc(iActionNbr, sizeof(void*)));
+	/* must use calloc as we need zero-init */
+	CHKmalloc(pThis->actWrkrInfo = calloc(iActionNbr, sizeof(actWrkrInfo_t)));
 
 	/* we now alloc the array for user pointers. We obtain the max from the queue itself. */
 	CHKiRet(pThis->pWtp->pfGetDeqBatchSize(pThis->pWtp->pUsr, &iDeqBatchSize));
@@ -283,6 +283,7 @@ wtiWorker(wti_t *pThis)
 	rsRetVal localRet;
 	rsRetVal terminateRet;
 	int iCancelStateSave;
+	int i;
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, wti);
@@ -337,6 +338,15 @@ dbgprintf("DDDD: wti %p: worker starting\n", pThis);
 		d_pthread_mutex_unlock(pWtp->pmutUsr);
 
 		bInactivityTOOccured = 0; /* reset for next run */
+	}
+
+	DBGPRINTF("DDDD: wti %p: worker cleanup up action instances\n", pThis);
+	for(i = 0 ; i < iActionNbr ; ++i) {
+		dbgprintf("wti %p, action %d, ptr %p\n", pThis, i, pThis->actWrkrInfo[i].actWrkrData);
+		if(pThis->actWrkrInfo[i].actWrkrData != NULL) {
+			dbgprintf("DDDD: calling freeWrkrData!\n");
+			pThis->actWrkrInfo[i].pAction->pMod->mod.om.freeWrkrInstance(pThis->actWrkrInfo[i].actWrkrData);
+		}
 	}
 
 	/* indicate termination */
