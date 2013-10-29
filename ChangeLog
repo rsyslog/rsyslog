@@ -205,6 +205,10 @@ Version 7.4.6  [v7.4-stable] 2013-11-??
   Thanks to Pavel Levshin for reporting the problem and its location.
 - bugfix: memleak in re_extract() function
   Thanks to Pavel Levshin for reporting this problem.
+- bugfix: potential abort in RainerScript optimizer
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=488
+  Thanks to Thomas Doll for reporting the problem and Pavel Levshin for
+  fixing it.
 - bugfix: memory leak in omhiredis
   Thanks to Pavel Levshin for the fix
 - bugfix: segfault if variable was assigned to non-container subtree
