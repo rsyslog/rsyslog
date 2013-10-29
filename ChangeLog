@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 7.4.6  [v7.4-stable] 2013-11-??
+Version 7.4.6  [v7.4-stable] 2013-10-31
 - bugfix: potential abort during HUP
   This could happen when one of imklog, imzmq3, imkmsg, impstats,
   imjournal, or imuxsock were under heavy load during a HUP.
