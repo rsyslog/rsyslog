@@ -2469,7 +2469,9 @@ cnfstmtPrintOnly(struct cnfstmt *stmt, int indent, sbool subtree)
 		doIndent(indent); dbgprintf("PROPFILT\n");
 		doIndent(indent); dbgprintf("\tProperty.: '%s'\n",
 			propIDToName(stmt->d.s_propfilt.prop.id));
-		if(stmt->d.s_propfilt.prop.name != NULL) {
+		if(stmt->d.s_propfilt.prop.id == PROP_CEE ||
+		   stmt->d.s_propfilt.prop.id == PROP_LOCAL_VAR ||
+		   stmt->d.s_propfilt.prop.id == PROP_GLOBAL_VAR) {
 			doIndent(indent);
 			dbgprintf("\tCEE-Prop.: '%s'\n", stmt->d.s_propfilt.prop.name);
 		}
@@ -3068,11 +3070,14 @@ cnfexprOptimize(struct cnfexpr *expr)
 				expr->r = exprswap;
 			}
 		}
-		if(expr->l->nodetype == 'V') {
-			expr = cnfexprOptimize_CMP_var(expr);
-		}
 		if(expr->r->nodetype == 'A') {
 			cnfexprOptimize_CMPEQ_arr((struct cnfarray *)expr->r);
+		}
+		/* This should be evaluated last because it may change expr
+		 * to a function.
+		 */
+		if(expr->l->nodetype == 'V') {
+			expr = cnfexprOptimize_CMP_var(expr);
 		}
 		break;
 	case CMP_LE:

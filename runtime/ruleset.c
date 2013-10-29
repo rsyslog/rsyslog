@@ -446,9 +446,9 @@ evalPROPFILT(struct cnfstmt *stmt, msg_t *pMsg)
 		} else if(stmt->d.s_propfilt.prop.id == PROP_LOCAL_VAR) {
 			DBGPRINTF("Filter: check for local var '%s' (value '%s') ",
 				stmt->d.s_propfilt.prop.name, pszPropVal);
-		//} else if(stmt->d.s_propfilt.propID == PROP_GLOBAL_VAR) {
-			//DBGPRINTF("Filter: check for global var '%s' (value '%s') ",
-				//stmt->d.s_propfilt.propName, pszPropVal);
+		} else if(stmt->d.s_propfilt.prop.id == PROP_GLOBAL_VAR) {
+			DBGPRINTF("Filter: check for global var '%s' (value '%s') ",
+				stmt->d.s_propfilt.prop.name, pszPropVal);
 		} else {
 			DBGPRINTF("Filter: check for property '%s' (value '%s') ",
 				propIDToName(stmt->d.s_propfilt.prop.id), pszPropVal);

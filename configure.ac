@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([rsyslog],[7.5.5],[rsyslog@lists.adiscon.com])
+AC_INIT([rsyslog],[7.5.6],[rsyslog@lists.adiscon.com])
 AM_INIT_AUTOMAKE
 
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
@@ -993,13 +993,26 @@ AM_CONDITIONAL(ENABLE_MMUTF8FIX, test x$enable_mmutf8fix = xyes)
 AC_ARG_ENABLE(mmcount,
         [AS_HELP_STRING([--enable-mmcount],[Enable message counting @<:@default=no@:>@])],
         [case "${enableval}" in
-         yes) enable_xmpp="yes" ;;
-          no) enable_xmpp="no" ;;
+         yes) enable_mmcount="yes" ;;
+          no) enable_mmcount="no" ;;
            *) AC_MSG_ERROR(bad value ${enableval} for --enable-mmcount) ;;
          esac],
         [enable_mmcount=no]
 )
 AM_CONDITIONAL(ENABLE_MMCOUNT, test x$enable_mmcount = xyes)
+
+
+# mmsequence
+AC_ARG_ENABLE(mmsequence,
+        [AS_HELP_STRING([--enable-mmsequence],[Enable sequence generator @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_mmsequence="yes" ;;
+          no) enable_mmsequence="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-mmsequence) ;;
+         esac],
+        [enable_mmsequence=no]
+)
+AM_CONDITIONAL(ENABLE_MMSEQUENCE, test x$enable_mmsequence = xyes)
 
 
 # mmfields
@@ -1564,6 +1577,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/mmanon/Makefile \
 		plugins/mmutf8fix/Makefile \
 		plugins/mmcount/Makefile \
+		plugins/mmsequence/Makefile \
 		plugins/mmfields/Makefile \
 		plugins/mmpstrucdata/Makefile \
 		plugins/mmrfc5424addhmac/Makefile \
@@ -1633,6 +1647,7 @@ echo "    mmsnmptrapd module will be compiled:      $enable_mmsnmptrapd"
 echo "    mmutf8fix enabled:                        $enable_mmutf8fix"
 echo "    mmrfc5424addhmac enabled:                 $enable_mmrfc5424addhmac"
 echo "    mmpstrucdata enabled:                     $enable_mmpstrucdata"
+echo "    mmsequence enabled:                       $enable_mmsequence"
 echo
 echo "---{ strgen modules }---"
 echo "    sm_cust_bindcdr module will be compiled:  $enable_sm_cust_bindcdr"
