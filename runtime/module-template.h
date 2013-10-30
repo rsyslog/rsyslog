@@ -232,7 +232,7 @@ static rsRetVal isCompatibleWithFeature(syslogFeature __attribute__((unused)) eF
  * introduced in v4.3.3 -- rgerhards, 2009-04-27
  */
 #define BEGINbeginTransaction \
-static rsRetVal beginTransaction(instanceData __attribute__((unused)) *pData)\
+static rsRetVal beginTransaction(wrkrInstanceData_t __attribute__((unused)) *pWrkrData)\
 {\
 	DEFiRet;
 
@@ -422,8 +422,9 @@ static rsRetVal newInpInst(struct nvlst *lst)\
  * rgerhard, 2007-08-02
  */
 #define BEGINtryResume \
-static rsRetVal tryResume(instanceData __attribute__((unused)) *pData)\
+static rsRetVal tryResume(wrkrInstanceData_t __attribute__((unused)) *pWrkrData)\
 {\
+	instanceData *pData = pWrkrData->pData; \
 	DEFiRet;
 
 #define CODESTARTtryResume \
