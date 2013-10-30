@@ -424,11 +424,10 @@ static rsRetVal newInpInst(struct nvlst *lst)\
 #define BEGINtryResume \
 static rsRetVal tryResume(wrkrInstanceData_t __attribute__((unused)) *pWrkrData)\
 {\
-	instanceData *pData = pWrkrData->pData; \
 	DEFiRet;
 
 #define CODESTARTtryResume \
-	assert(pData != NULL);
+	assert(pWrkrData != NULL);
 
 #define ENDtryResume \
 	RETiRet;\

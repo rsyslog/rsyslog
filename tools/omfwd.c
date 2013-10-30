@@ -734,7 +734,7 @@ finalize_it:
 
 BEGINtryResume
 CODESTARTtryResume
-	iRet = doTryResume(pData);
+	iRet = doTryResume(pWrkrData->pData);
 ENDtryResume
 
 

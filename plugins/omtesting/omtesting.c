@@ -173,11 +173,11 @@ static rsRetVal doRandFail(void)
 BEGINtryResume
 CODESTARTtryResume
 	dbgprintf("omtesting tryResume() called\n");
-	switch(pData->mode) {
+	switch(pWrkrData->pData->mode) {
 		case MD_SLEEP:
 			break;
 		case MD_FAIL:
-			iRet = doFailOnResume(pData);
+			iRet = doFailOnResume(pWrkrData->pData);
 			break;
 		case MD_RANDFAIL:
 			iRet = doRandFail();
