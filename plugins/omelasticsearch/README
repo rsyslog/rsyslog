@@ -1,3 +1,7 @@
+How to access ElasticSearch on local machine (for testing):
+===========================================================
+see: https://github.com/mobz/elasticsearch-head
+
 How to produce an error:
 ========================
 It's quite easy to get 400, if you put a wrong mapping to your
