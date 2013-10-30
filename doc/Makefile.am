@@ -37,6 +37,7 @@ html_files = \
 	omjournal.html \
 	imjournal.html \
 	mmanon.html \
+	mmsequence.html \
 	mmpstrucdata.html \
 	omusrmsg.html \
 	omstdout.html \
