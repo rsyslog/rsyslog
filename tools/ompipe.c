@@ -69,6 +69,7 @@ typedef struct _instanceData {
 	uchar	*pipe;	/* pipe or template name (display only) */
 	uchar	*tplName;       /* format template to use */
 	short	fd;		/* pipe descriptor for (current) pipe */
+	pthread_mutex_t mutWrite; /* guard against multiple instances writing to same pipe */
 	sbool	bHadError;	/* did we already have/report an error on this pipe? */
 } instanceData;
 
@@ -280,6 +281,7 @@ CODESTARTcreateInstance
 	pData->pipe = NULL;
 	pData->fd = -1;
 	pData->bHadError = 0;
+	pthread_mutex_init(&pData->mutWrite, NULL);
 ENDcreateInstance
 
 
@@ -290,6 +292,7 @@ ENDcreateWrkrInstance
 
 BEGINfreeInstance
 CODESTARTfreeInstance
+	pthread_mutex_destroy(&pData->mutWrite);
 	free(pData->pipe);
 	if(pData->fd != -1)
 		close(pData->fd);
@@ -308,7 +311,10 @@ ENDtryResume
 BEGINdoAction
 CODESTARTdoAction
 	DBGPRINTF(" (%s)\n", pData->pipe);
+	/* this module is single-threaded by nature */
+	pthread_mutex_lock(&pData->mutWrite);
 	iRet = writePipe(ppString, pData);
+	pthread_mutex_unlock(&pData->mutWrite);
 ENDdoAction
 
 
