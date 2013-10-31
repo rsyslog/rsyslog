@@ -685,6 +685,22 @@ finalize_it:
 }
 
 
+static rsRetVal
+actionCheckAndCreateWrkrInstance(action_t *pThis, wti_t *pWti)
+{
+	DEFiRet;
+	if(pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData == NULL) {
+dbgprintf("DDDD: wti %p create new worker instance for action %d\n", pWti, pThis->iActionNbr);
+		DBGPRINTF("we need to create a new action worker instance for "
+			  "action %d\n", pThis->iActionNbr);
+		CHKiRet(pThis->pMod->mod.om.createWrkrInstance(&(pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData),
+						               pThis->pModData));
+		pWti->actWrkrInfo[pThis->iActionNbr].pAction = pThis;
+	}
+finalize_it:
+	RETiRet;
+}
+
 /* try to resume an action -- rgerhards, 2007-08-02
  * changed to new action state engine -- rgerhards, 2009-05-07
  */
@@ -729,18 +745,19 @@ finalize_it:
  * depending on its current state.
  * rgerhards, 2009-05-07
  */
-static inline rsRetVal actionPrepare(action_t *pThis, int *pbShutdownImmediate)
+static inline rsRetVal actionPrepare(action_t *pThis, int *pbShutdownImmediate, wti_t *pWti)
 {
 	DEFiRet;
 
 	assert(pThis != NULL);
+	CHKiRet(actionCheckAndCreateWrkrInstance(pThis, pWti));
 	CHKiRet(actionTryResume(pThis, pbShutdownImmediate));
 
 	/* if we are now ready, we initialize the transaction and advance
 	 * action state accordingly
 	 */
 	if(pThis->eState == ACT_STATE_RDY) {
-		iRet = pThis->pMod->mod.om.beginTransaction(pThis->pModData);
+		iRet = pThis->pMod->mod.om.beginTransaction(pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData);
 		switch(iRet) {
 			case RS_RET_OK:
 				actionSetState(pThis, ACT_STATE_ITX);
@@ -913,14 +930,7 @@ actionCallDoAction(action_t *pThis, msg_t *pMsg, void *actParams, wti_t *pWti)
 	DBGPRINTF("entering actionCalldoAction(), state: %s, actionNbr %d\n",
 		  getActStateName(pThis), pThis->iActionNbr);
 
-	if(pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData == NULL) {
-dbgprintf("DDDD: wti %p create new worker instance for action %d\n", pWti, pThis->iActionNbr);
-		DBGPRINTF("we need to create a new action worker instance for "
-			  "action %d\n", pThis->iActionNbr);
-		CHKiRet(pThis->pMod->mod.om.createWrkrInstance(&(pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData),
-						               pThis->pModData));
-		pWti->actWrkrInfo[pThis->iActionNbr].pAction = pThis;
-	}
+	CHKiRet(actionCheckAndCreateWrkrInstance(pThis, pWti));
 
 	pThis->bHadAutoCommit = 0;
 	iRet = pThis->pMod->mod.om.doAction(actParams, pMsg->msgFlags,
@@ -969,7 +979,7 @@ actionProcessMessage(action_t *pThis, msg_t *pMsg, void *actParams, int *pbShutd
 	ASSERT(pThis != NULL);
 	ISOBJ_TYPE_assert(pMsg, msg);
 
-	CHKiRet(actionPrepare(pThis, pbShutdownImmediate));
+	CHKiRet(actionPrepare(pThis, pbShutdownImmediate, pWti));
 	if(pThis->pMod->mod.om.SetShutdownImmdtPtr != NULL)
 		pThis->pMod->mod.om.SetShutdownImmdtPtr(pThis->pModData, pbShutdownImmediate);
 	if(pThis->eState == ACT_STATE_ITX)
@@ -998,7 +1008,7 @@ finishBatch(action_t *pThis, batch_t *pBatch, wti_t *pWti)
 		FINALIZE; /* nothing to do */
 	}
 
-	CHKiRet(actionPrepare(pThis, pBatch->pbShutdownImmediate));
+	CHKiRet(actionPrepare(pThis, pBatch->pbShutdownImmediate, pWti));
 	if(pThis->eState == ACT_STATE_ITX) {
 		iRet = pThis->pMod->mod.om.endTransaction(pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData);
 		switch(iRet) {

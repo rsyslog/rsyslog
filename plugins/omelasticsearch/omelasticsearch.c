@@ -122,7 +122,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "asyncrepl", eCmdHdlrBinary, 0 },
 	{ "timeout", eCmdHdlrGetWord, 0 },
 	{ "errorfile", eCmdHdlrGetWord, 0 },
-	{ "template", eCmdHdlrGetWord, 1 },
+	{ "template", eCmdHdlrGetWord, 0 },
 	{ "dynbulkid", eCmdHdlrBinary, 0 },
 	{ "bulkid", eCmdHdlrGetWord, 0 },
 };
@@ -142,6 +142,7 @@ ENDcreateInstance
 
 BEGINcreateWrkrInstance
 CODESTARTcreateWrkrInstance
+dbgprintf("omelasticsearch: createWrkrInstance\n");
 	pWrkrData->restURL = NULL;
 	if(pData->bulkmode) {
 		pWrkrData->batch.currTpl1 = NULL;
@@ -154,6 +155,7 @@ CODESTARTcreateWrkrInstance
 	}
 	CHKiRet(curlSetup(pWrkrData, pWrkrData->pData));
 finalize_it:
+dbgprintf("DDDD: createWrkrInstance,pData %p/%p, pWrkrData %p\n", pData, pWrkrData->pData, pWrkrData);
 ENDcreateWrkrInstance
 
 BEGINisCompatibleWithFeature
@@ -666,7 +668,7 @@ finalize_it:
 
 BEGINbeginTransaction
 CODESTARTbeginTransaction
-dbgprintf("omelasticsearch: beginTransaction\n");
+dbgprintf("omelasticsearch: beginTransaction, pWrkrData %p, pData %p\n", pWrkrData, pWrkrData->pData);
 	if(!pWrkrData->pData->bulkmode) {
 		FINALIZE;
 	}
@@ -680,14 +682,14 @@ ENDbeginTransaction
 BEGINdoAction
 CODESTARTdoAction
 	STATSCOUNTER_INC(indexSubmit, mutIndexSubmit);
-	if(pData->bulkmode) {
+	if(pWrkrData->pData->bulkmode) {
 		CHKiRet(buildBatch(pWrkrData, ppString[0], ppString));
 	} else {
 		CHKiRet(curlPost(pWrkrData, ppString[0], strlen((char*)ppString[0]),
 		                 ppString, 1));
 	}
 finalize_it:
-dbgprintf("omelasticsearch: result doAction: %d (bulkmode %d)\n", iRet, pData->bulkmode);
+dbgprintf("omelasticsearch: result doAction: %d (bulkmode %d)\n", iRet, pWrkrData->pData->bulkmode);
 ENDdoAction
 
 
