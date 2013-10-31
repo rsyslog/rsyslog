@@ -19,7 +19,7 @@
  * of the "old" message code without any modifications. However, it
  * helps to have things at the right place one we go to the meat of it.
  *
- * Copyright 2007-2012 Adiscon GmbH.
+ * Copyright 2007-2013 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -106,10 +106,7 @@ ENDtryResume
 
 BEGINdoAction
 CODESTARTdoAction
-	/* TODO: using pData->progName is not clean from the point of
-	 * modularization. We'll change that as we go ahead with modularization.
-	 * rgerhards, 2007-07-20
-	 */
+	pData = pWrkrData->pData;
 	dbgprintf("\n");
 	if(execProg((uchar*) pData->progName, 1, ppString[0]) == 0)
 	 	errmsg.LogError(0, NO_ERRCODE, "Executing program '%s' failed", (char*)pData->progName);
