@@ -1,11 +1,8 @@
 /* mmnormalize.c
  * This is a message modification module. It normalizes the input message with
- * the help of liblognorm. The messages EE event structure is updated.
+ * the help of liblognorm. The message's JSON variables are updated.
  *
  * NOTE: read comments in module-template.h for details on the calling interface!
- *
- * TODO: check if we can replace libee via JSON system - currently that part
- * is pretty inefficient... rgerhards, 2012-08-27
  *
  * File begun on 2010-01-01 by RGerhards
  *
@@ -39,7 +36,6 @@
 #include <errno.h>
 #include <unistd.h>
 #include <libestr.h>
-#include <libee/libee.h>
 #include <json.h>
 #include <liblognorm.h>
 #include "conf.h"
@@ -67,7 +63,6 @@ typedef struct _instanceData {
 	sbool bUseRawMsg;	/**< use %rawmsg% instead of %msg% */
 	uchar 	*rulebase;	/**< name of rulebase to use */
 	ln_ctx ctxln;		/**< context to be used for liblognorm */
-	ee_ctx ctxee;		/**< context to be used for libee */
 } instanceData;
 
 typedef struct wrkrInstanceData {
@@ -100,30 +95,21 @@ static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current l
 static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current exec process */
 
 
-/* to be called to build the libee part of the instance ONCE ALL PARAMETERS ARE CORRECT
+/* to be called to build the liblognorm part of the instance ONCE ALL PARAMETERS ARE CORRECT
  * (and set within pData!).
  */
 static rsRetVal
 buildInstance(instanceData *pData)
 {
 	DEFiRet;
-	if((pData->ctxee = ee_initCtx()) == NULL) {
-		errmsg.LogError(0, RS_RET_ERR_LIBEE_INIT, "error: could not initialize libee "
-				"ctx, cannot activate action");
-		ABORT_FINALIZE(RS_RET_ERR_LIBEE_INIT);
-	}
-
 	if((pData->ctxln = ln_initCtx()) == NULL) {
 		errmsg.LogError(0, RS_RET_ERR_LIBLOGNORM_INIT, "error: could not initialize "
 				"liblognorm ctx, cannot activate action");
-		ee_exitCtx(pData->ctxee);
 		ABORT_FINALIZE(RS_RET_ERR_LIBLOGNORM_INIT);
 	}
-	ln_setEECtx(pData->ctxln, pData->ctxee);
 	if(ln_loadSamples(pData->ctxln, (char*) pData->rulebase) != 0) {
 		errmsg.LogError(0, RS_RET_NO_RULEBASE, "error: normalization rulebase '%s' "
-				"could not be loaded cannot activate action", cs.rulebase);
-		ee_exitCtx(pData->ctxee);
+				"could not be loaded cannot activate action", pData->rulebase);
 		ln_exitCtx(pData->ctxln);
 		ABORT_FINALIZE(RS_RET_ERR_LIBLOGNORM_SAMPDB_LOAD);
 	}
@@ -185,7 +171,6 @@ ENDisCompatibleWithFeature
 BEGINfreeInstance
 CODESTARTfreeInstance
 	free(pData->rulebase);
-	ee_exitCtx(pData->ctxee);
 	ln_exitCtx(pData->ctxln);
 ENDfreeInstance
 
@@ -209,12 +194,9 @@ BEGINdoAction
 	msg_t *pMsg;
 	es_str_t *str;
 	uchar *buf;
-	char *cstrJSON;
 	int len;
 	int r;
-	struct ee_event	*event = NULL;
-	struct json_tokener *tokener;
-	struct json_object *json;
+	struct json_object *json = NULL;
 CODESTARTdoAction
 	pMsg = (msg_t*) ppString[0];
 	/* note that we can performance-optimize the interface, but this also
@@ -228,7 +210,7 @@ CODESTARTdoAction
 		len = getMSGLen(pMsg);
 	}
 	str = es_newStrFromCStr((char*)buf, len);
-	r = ln_normalize(pWrkrData->pData->ctxln, str, &event);
+	r = ln_normalize(pWrkrData->pData->ctxln, str, &json);
 	if(r != 0) {
 		DBGPRINTF("error %d during ln_normalize\n", r);
 		MsgSetParseSuccess(pMsg, 0);
@@ -237,20 +219,8 @@ CODESTARTdoAction
 	}
 	es_deleteStr(str);
 
-	/* reformat to our json data struct */
-	/* TODO: this is all extremly ineffcient! */
-	ee_fmtEventToJSON(event, &str);
-	cstrJSON = es_str2cstr(str, NULL);
-	ee_deleteEvent(event);
-	dbgprintf("mmnormalize generated: %s\n", cstrJSON);
-
-	tokener = json_tokener_new();
-	json = json_tokener_parse_ex(tokener, cstrJSON, strlen((char*)cstrJSON));
-	json_tokener_free(tokener);
  	msgAddJSON(pMsg, (uchar*)"!", json);
 
-	free(cstrJSON);
-	es_deleteStr(str);
 ENDdoAction
 
 
