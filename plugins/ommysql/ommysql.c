@@ -55,13 +55,13 @@ DEF_OMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
 
 typedef struct _instanceData {
-	char	f_dbsrv[MAXHOSTNAMELEN+1];	/* IP or hostname of DB server*/ 
-	unsigned int f_dbsrvPort;		/* port of MySQL server */
-	char	f_dbname[_DB_MAXDBLEN+1];	/* DB name */
-	char	f_dbuid[_DB_MAXUNAMELEN+1];	/* DB user */
-	char	f_dbpwd[_DB_MAXPWDLEN+1];	/* DB user's password */
-	uchar   *f_configfile;			/* MySQL Client Configuration File */
-	uchar   *f_configsection;		/* MySQL Client Configuration Section */
+	char	dbsrv[MAXHOSTNAMELEN+1];	/* IP or hostname of DB server*/ 
+	unsigned int dbsrvPort;		/* port of MySQL server */
+	char	dbname[_DB_MAXDBLEN+1];	/* DB name */
+	char	dbuid[_DB_MAXUNAMELEN+1];	/* DB user */
+	char	dbpwd[_DB_MAXPWDLEN+1];	/* DB user's password */
+	uchar   *configfile;			/* MySQL Client Configuration File */
+	uchar   *configsection;		/* MySQL Client Configuration Section */
 	uchar	*tplName;			/* format template to use */
 } instanceData;
 
@@ -135,8 +135,8 @@ static void closeMySQL(wrkrInstanceData_t *pWrkrData)
 
 BEGINfreeInstance
 CODESTARTfreeInstance
-	free(pData->f_configfile);
-	free(pData->f_configsection);
+	free(pData->configfile);
+	free(pData->configsection);
 	free(pData->tplName);
 ENDfreeInstance
 
@@ -198,14 +198,14 @@ static rsRetVal initMySQL(wrkrInstanceData_t *pWrkrData, int bSilent)
 		errmsg.LogError(0, RS_RET_SUSPENDED, "can not initialize MySQL handle");
 		iRet = RS_RET_SUSPENDED;
 	} else { /* we could get the handle, now on with work... */
-		mysql_options(pWrkrData->hmysql,MYSQL_READ_DEFAULT_GROUP,((pData->f_configsection!=NULL)?(char*)pData->f_configsection:"client"));
-		if(pData->f_configfile!=NULL){
+		mysql_options(pWrkrData->hmysql,MYSQL_READ_DEFAULT_GROUP,((pData->configsection!=NULL)?(char*)pData->configsection:"client"));
+		if(pData->configfile!=NULL){
 			FILE * fp;
-			fp=fopen((char*)pData->f_configfile,"r");
+			fp=fopen((char*)pData->configfile,"r");
 			int err=errno;
 			if(fp==NULL){
 				char msg[512];
-				snprintf(msg,sizeof(msg)/sizeof(char),"Could not open '%s' for reading",pData->f_configfile);
+				snprintf(msg,sizeof(msg)/sizeof(char),"Could not open '%s' for reading",pData->configfile);
 				if(bSilent) {
 					char errStr[512];
 					rs_strerror_r(err, errStr, sizeof(errStr));
@@ -214,12 +214,12 @@ static rsRetVal initMySQL(wrkrInstanceData_t *pWrkrData, int bSilent)
 					errmsg.LogError(err,NO_ERRCODE,"mysql configuration error: %s\n",msg);
 			} else {
 				fclose(fp);
-				mysql_options(pWrkrData->hmysql,MYSQL_READ_DEFAULT_FILE,pData->f_configfile);
+				mysql_options(pWrkrData->hmysql,MYSQL_READ_DEFAULT_FILE,pData->configfile);
 			}
 		}
 		/* Connect to database */
-		if(mysql_real_connect(pWrkrData->hmysql, pData->f_dbsrv, pData->f_dbuid,
-				      pData->f_dbpwd, pData->f_dbname, pData->f_dbsrvPort, NULL, 0) == NULL) {
+		if(mysql_real_connect(pWrkrData->hmysql, pData->dbsrv, pData->dbuid,
+				      pData->dbpwd, pData->dbname, pData->dbsrvPort, NULL, 0) == NULL) {
 			reportDBError(pWrkrData, bSilent);
 			closeMySQL(pWrkrData); /* ignore any error we may get */
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
@@ -301,9 +301,9 @@ ENDendTransaction
 static inline void
 setInstParamDefaults(instanceData *pData)
 {
-	pData->f_dbsrvPort = 0;
-	pData->f_configfile = NULL;
-	pData->f_configsection = NULL;
+	pData->dbsrvPort = 0;
+	pData->configfile = NULL;
+	pData->configsection = NULL;
 	pData->tplName = NULL;
 }
 
@@ -329,26 +329,26 @@ CODESTARTnewActInst
 			continue;
 		if(!strcmp(actpblk.descr[i].name, "server")) {
 			cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
-			strncpy(pData->f_dbsrv, cstr, sizeof(pData->f_dbsrv));
+			strncpy(pData->dbsrv, cstr, sizeof(pData->dbsrv));
 			free(cstr);
 		} else if(!strcmp(actpblk.descr[i].name, "serverport")) {
-			pData->f_dbsrvPort = (int) pvals[i].val.d.n, NULL;
+			pData->dbsrvPort = (int) pvals[i].val.d.n, NULL;
 		} else if(!strcmp(actpblk.descr[i].name, "db")) {
 			cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
-			strncpy(pData->f_dbname, cstr, sizeof(pData->f_dbname));
+			strncpy(pData->dbname, cstr, sizeof(pData->dbname));
 			free(cstr);
 		} else if(!strcmp(actpblk.descr[i].name, "uid")) {
 			cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
-			strncpy(pData->f_dbuid, cstr, sizeof(pData->f_dbuid));
+			strncpy(pData->dbuid, cstr, sizeof(pData->dbuid));
 			free(cstr);
 		} else if(!strcmp(actpblk.descr[i].name, "pwd")) {
 			cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
-			strncpy(pData->f_dbpwd, cstr, sizeof(pData->f_dbpwd));
+			strncpy(pData->dbpwd, cstr, sizeof(pData->dbpwd));
 			free(cstr);
 		} else if(!strcmp(actpblk.descr[i].name, "mysqlconfig.file")) {
-			pData->f_configfile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+			pData->configfile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "mysqlconfig.section")) {
-			pData->f_configsection = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+			pData->configsection = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "template")) {
 			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else {
@@ -399,19 +399,19 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	 * Now we read the MySQL connection properties 
 	 * and verify that the properties are valid.
 	 */
-	if(getSubString(&p, pData->f_dbsrv, MAXHOSTNAMELEN+1, ','))
+	if(getSubString(&p, pData->dbsrv, MAXHOSTNAMELEN+1, ','))
 		iMySQLPropErr++;
-	if(*pData->f_dbsrv == '\0')
+	if(*pData->dbsrv == '\0')
 		iMySQLPropErr++;
-	if(getSubString(&p, pData->f_dbname, _DB_MAXDBLEN+1, ','))
+	if(getSubString(&p, pData->dbname, _DB_MAXDBLEN+1, ','))
 		iMySQLPropErr++;
-	if(*pData->f_dbname == '\0')
+	if(*pData->dbname == '\0')
 		iMySQLPropErr++;
-	if(getSubString(&p, pData->f_dbuid, _DB_MAXUNAMELEN+1, ','))
+	if(getSubString(&p, pData->dbuid, _DB_MAXUNAMELEN+1, ','))
 		iMySQLPropErr++;
-	if(*pData->f_dbuid == '\0')
+	if(*pData->dbuid == '\0')
 		iMySQLPropErr++;
-	if(getSubString(&p, pData->f_dbpwd, _DB_MAXPWDLEN+1, ';'))
+	if(getSubString(&p, pData->dbpwd, _DB_MAXPWDLEN+1, ';'))
 		iMySQLPropErr++;
 	/* now check for template
 	 * We specify that the SQL option must be present in the template.
@@ -431,9 +431,9 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		errmsg.LogError(0, RS_RET_INVALID_PARAMS, "Trouble with MySQL connection properties. -MySQL logging disabled");
 		ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 	} else {
-		pData->f_dbsrvPort = (unsigned) cs.iSrvPort;	/* set configured port */
-		pData->f_configfile = cs.pszMySQLConfigFile;
-		pData->f_configsection = cs.pszMySQLConfigSection;
+		pData->dbsrvPort = (unsigned) cs.iSrvPort;	/* set configured port */
+		pData->configfile = cs.pszMySQLConfigFile;
+		pData->configsection = cs.pszMySQLConfigSection;
 	}
 
 CODE_STD_FINALIZERparseSelectorAct
