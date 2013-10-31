@@ -1794,7 +1794,7 @@ tplProcessCnf(struct cnfobj *o)
 		}
 	}
 
-	if(bHaveSubtree) {
+	if(!bHaveSubtree) {
 		if(tplType == T_SUBTREE) {
 			errmsg.LogError(0, RS_RET_ERR, "template '%s' of type subtree needs "
 				"subtree parameter", name);
