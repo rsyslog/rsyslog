@@ -978,9 +978,9 @@ submitCachedLines(wrkrInstanceData_t *pWrkrData, instanceData *pData)
 {
 	linebuf_t *curr, *todel;
 
-dbgprintf("DDDD: omfile: waiting on write lock (pWrkrData %p)\n", pWrkrData);
+dbgprintf("omfile: waiting on write lock (pWrkrData %p)\n", pWrkrData);
 	pthread_mutex_lock(&pData->mutWrite);
-dbgprintf("DDDD: omfile: aquired write lock    (pWrkrData %p)\n", pWrkrData);
+dbgprintf("omfile: aquired write lock    (pWrkrData %p)\n", pWrkrData);
 
 	for(curr = pWrkrData->pRoot ; curr != NULL ; ) {
 		DBGPRINTF("omfile: file to log to: %s\n", curr->filename);
@@ -995,7 +995,7 @@ dbgprintf("DDDD: omfile: aquired write lock    (pWrkrData %p)\n", pWrkrData);
 		free(todel);
 	}
 	pthread_mutex_unlock(&pData->mutWrite);
-dbgprintf("DDDD: omfile: free write lock      (pWrkrData %p)\n", pWrkrData);
+dbgprintf("omfile: free write lock      (pWrkrData %p)\n", pWrkrData);
 	pWrkrData->pRoot = NULL;
 }
 
