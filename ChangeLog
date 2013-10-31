@@ -1,4 +1,10 @@
 ---------------------------------------------------------------------------
+Version 8.1.0 [devel] 2013-11-??
+- module omruleset is no longer enabled by default.
+  Note that it has been deprecated in v7 and been replaced by the "call"
+  statement. Also, it can still be build without problems, the option must
+  just explicitely be given.
+---------------------------------------------------------------------------
 Version 7.5.7 [devel] 2013-11-??
 - bugfix: ommysql lost configfile/section parameters after first close
   This means that when a connection was broken, it was probably

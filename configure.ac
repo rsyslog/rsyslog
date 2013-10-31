@@ -1353,7 +1353,7 @@ AC_ARG_ENABLE(omruleset,
           no) enable_omruleset="no" ;;
            *) AC_MSG_ERROR(bad value ${enableval} for --enable-omruleset) ;;
          esac],
-        [enable_omruleset=yes]
+        [enable_omruleset=no]
 )
 AM_CONDITIONAL(ENABLE_OMRULESET, test x$enable_omruleset = xyes)
 
