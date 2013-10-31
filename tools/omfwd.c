@@ -751,7 +751,9 @@ BEGINdoAction
 #	ifdef	USE_NETZIP
 	Bytef *out = NULL; /* for compression */
 #	endif
+	instanceData *pData;
 CODESTARTdoAction
+	pData = pWrkrData->pData;
 	CHKiRet(doTryResume(pData));
 
 	iMaxLine = glbl.GetMaxLine();
@@ -827,7 +829,9 @@ ENDdoAction
 
 
 BEGINendTransaction
+	instanceData *pData;
 CODESTARTendTransaction
+	pData = pWrkrData->pData;
 dbgprintf("omfwd: endTransaction, offsSndBuf %u\n", pData->offsSndBuf);
 	if(pData->offsSndBuf != 0) {
 		iRet = TCPSendBuf(pData, pData->sndBuf, pData->offsSndBuf, IS_FLUSH);

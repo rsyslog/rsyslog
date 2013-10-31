@@ -290,7 +290,7 @@ ENDtryResume
 BEGINdoAction
 CODESTARTdoAction
 	dbgprintf("\n");
-	iRet = wallmsg(ppString[0], pData);
+	iRet = wallmsg(ppString[0], pWrkrData->pData);
 ENDdoAction
 
 

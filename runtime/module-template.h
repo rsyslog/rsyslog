@@ -249,7 +249,6 @@ static rsRetVal beginTransaction(wrkrInstanceData_t __attribute__((unused)) *pWr
 #define BEGINendTransaction \
 static rsRetVal endTransaction(wrkrInstanceData_t __attribute__((unused)) *pWrkrData)\
 {\
-	instanceData *pData = NULL; /* deliberately make module abort if it does not support new IF */\
 	DEFiRet;
 
 #define CODESTARTendTransaction /* currently empty, but may be extended */
@@ -264,7 +263,6 @@ static rsRetVal endTransaction(wrkrInstanceData_t __attribute__((unused)) *pWrkr
 #define BEGINdoAction \
 static rsRetVal doAction(uchar __attribute__((unused)) **ppString, unsigned __attribute__((unused)) iMsgOpts, wrkrInstanceData_t __attribute__((unused)) *pWrkrData)\
 {\
-	instanceData *pData = NULL; /* deliberately make module abort if it does not support new IF */\
 	DEFiRet;
 
 #define CODESTARTdoAction \

@@ -190,8 +190,10 @@ ENDtryResume
 
 
 BEGINdoAction
+	instanceData *pData;
 CODESTARTdoAction
 	dbgprintf("omtesting received msg '%s'\n", ppString[0]);
+	pData = pWrkrData->pData;
 	switch(pData->mode) {
 		case MD_SLEEP:
 			iRet = doSleep(pData);

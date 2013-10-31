@@ -1001,6 +1001,7 @@ dbgprintf("omfile: free write lock      (pWrkrData %p)\n", pWrkrData);
 
 
 BEGINdoAction
+	instanceData *pData;
 CODESTARTdoAction
 	pData = pWrkrData->pData;
 	iRet = bufferLine(pWrkrData, (pData->bDynamicName) ? ppString[1] : pData->f_fname,
@@ -1010,6 +1011,7 @@ CODESTARTdoAction
 ENDdoAction
 
 BEGINendTransaction
+	instanceData *pData;
 CODESTARTendTransaction
 	pData = pWrkrData->pData;
 	submitCachedLines(pWrkrData, pData);

@@ -106,10 +106,9 @@ ENDtryResume
 
 BEGINdoAction
 CODESTARTdoAction
-	pData = pWrkrData->pData;
 	dbgprintf("\n");
-	if(execProg((uchar*) pData->progName, 1, ppString[0]) == 0)
-	 	errmsg.LogError(0, NO_ERRCODE, "Executing program '%s' failed", (char*)pData->progName);
+	if(execProg((uchar*) pWrkrData->pData->progName, 1, ppString[0]) == 0)
+	 	errmsg.LogError(0, NO_ERRCODE, "Executing program '%s' failed", (char*)pWrkrData->pData->progName);
 ENDdoAction
 
 
