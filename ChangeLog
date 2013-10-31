@@ -5,6 +5,7 @@ Version 7.5.7 [devel] 2013-11-??
   re-instantiated with different parameters than configured.
 ---------------------------------------------------------------------------
 Version 7.5.6 [devel] 2013-10-29
+- impstats: add capability to bind to a ruleset
 - improved performance of RainerScript variable access
   by refactoring the whole body of variable handling code. This also
   solves some of the anomalies experienced in some versions of rsyslog.
