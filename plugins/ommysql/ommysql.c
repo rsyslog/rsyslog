@@ -123,14 +123,6 @@ static void closeMySQL(instanceData *pData)
 		mysql_close(pData->f_hmysql);	
 		pData->f_hmysql = NULL;
 	}
-	if(pData->f_configfile!=NULL){
-		free(pData->f_configfile);
-		pData->f_configfile=NULL;
-	}
-	if(pData->f_configsection!=NULL){
-		free(pData->f_configsection);
-		pData->f_configsection=NULL;
-	}
 }
 
 BEGINfreeInstance
