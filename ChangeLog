@@ -38,6 +38,7 @@ Version 7.5.6 [devel] 2013-10-29
 - bugfix: invalid property filter was not properly disabled in ruleset
   Note: the cosmetic memory leak introduced with that patch in 7.4.5 is
   now also fixed.
+- imported bugfixes from 7.4.6 stable release
 ---------------------------------------------------------------------------
 Version 7.5.5 [devel] 2013-10-16
 - imfile: permit to monitor an unlimited number of files
@@ -193,7 +194,7 @@ Version 7.5.0 [devel] 2013-06-11
   connections
   Thanks to Axel Rau for the patch.
 ---------------------------------------------------------------------------
-Version 7.4.6  [v7.4-stable] 2013-11-??
+Version 7.4.6  [v7.4-stable] 2013-10-31
 - bugfix: potential abort during HUP
   This could happen when one of imklog, imzmq3, imkmsg, impstats,
   imjournal, or imuxsock were under heavy load during a HUP.
