@@ -6,7 +6,7 @@
  *
  * File begun on 2009-03-19 by RGerhards
  *
- * Copyright 2009-2012 Adiscon GmbH.
+ * Copyright 2009-2013 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -60,6 +60,10 @@ typedef struct _instanceData {
 	int bEnsureLFEnding;		/* ensure that a linefeed is written at the end of EACH record (test aid for nettester) */
 } instanceData;
 
+typedef struct wrkrInstanceData {
+	instanceData *pData;
+} wrkrInstanceData_t;
+
 typedef struct configSettings_s {
 	int bUseArrayInterface;		/* shall action use array instead of string template interface? */
 	int bEnsureLFEnding;		/* shall action use array instead of string template interface? */
@@ -76,6 +80,11 @@ CODESTARTcreateInstance
 ENDcreateInstance
 
 
+BEGINcreateWrkrInstance
+CODESTARTcreateWrkrInstance
+ENDcreateWrkrInstance
+
+
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
 	if(eFeat == sFEATURERepeatedMsgReduction)
@@ -86,6 +95,11 @@ ENDisCompatibleWithFeature
 BEGINfreeInstance
 CODESTARTfreeInstance
 ENDfreeInstance
+
+
+BEGINfreeWrkrInstance
+CODESTARTfreeWrkrInstance
+ENDfreeWrkrInstance
 
 
 BEGINdbgPrintInstInfo
@@ -107,7 +121,7 @@ BEGINdoAction
 	size_t len;
 	int r;
 CODESTARTdoAction
-	if(pData->bUseArrayInterface) {
+	if(pWrkrData->pData->bUseArrayInterface) {
 		/* if we use array passing, we need to put together a string
 		 * ourselves. At this point, please keep in mind that omstdout is
 		 * primarily a testing aid. Other modules may do different processing
@@ -145,7 +159,7 @@ CODESTARTdoAction
 		DBGPRINTF("omstdout: error %d writing to stdout[%d]: %s\n",
 			r, len, toWrite);
 	}
-	if(pData->bEnsureLFEnding && toWrite[len-1] != '\n') {
+	if(pWrkrData->pData->bEnsureLFEnding && toWrite[len-1] != '\n') {
 		if((r = write(1, "\n", 1)) != 1) { /* write missing LF */
 			DBGPRINTF("omstdout: error %d writing \\n to stdout\n",
 				r);
@@ -186,6 +200,7 @@ ENDmodExit
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
+CODEqueryEtryPt_STD_OMOD8_QUERIES
 CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES 
 ENDqueryEtryPt
 
