@@ -581,7 +581,7 @@ static void actionCommitted(action_t *pThis, wti_t *pWti)
 static void actionRetry(action_t *pThis, wti_t *pWti)
 {
 	actionSetState(pThis, pWti, ACT_STATE_RTRY);
-	pThis->iResumeOKinRow++;
+	incActionResumeInRow(pWti, pThis);
 }
 
 
@@ -648,9 +648,9 @@ actionDoRetry(action_t *pThis, wti_t *pWti, int *pbShutdownImmediate)
 		DBGPRINTF("actionDoRetry: enter loop, iRetries=%d\n", iRetries);
 		iRet = pThis->pMod->tryResume(pThis->pModData);
 		DBGPRINTF("actionDoRetry: action->tryResume returned %d\n", iRet);
-		if((pThis->iResumeOKinRow > 9) && (pThis->iResumeOKinRow % 10 == 0)) {
+		if((getActionResumeInRow(pWti, pThis) > 9) && (getActionResumeInRow(pWti, pThis) % 10 == 0)) {
 			bTreatOKasSusp = 1;
-			pThis->iResumeOKinRow = 0;
+			setActionResumeInRow(pWti, pThis, 0);
 		} else {
 			bTreatOKasSusp = 0;
 		}
@@ -940,16 +940,16 @@ actionCallDoAction(action_t *pThis, msg_t *pMsg, void *actParams, wti_t *pWti)
 	switch(iRet) {
 		case RS_RET_OK:
 			actionCommitted(pThis, pWti);
-			pThis->iResumeOKinRow = 0; /* we had a successful call! */
+			setActionResumeInRow(pWti, pThis, 0);
 			break;
 		case RS_RET_DEFER_COMMIT:
-			pThis->iResumeOKinRow = 0; /* we had a successful call! */
+			setActionResumeInRow(pWti, pThis, 0);
 			/* we are done, action state remains the same */
 			break;
 		case RS_RET_PREVIOUS_COMMITTED:
 			/* action state remains the same, but we had a commit. */
 			pThis->bHadAutoCommit = 1;
-			pThis->iResumeOKinRow = 0; /* we had a successful call! */
+			setActionResumeInRow(pWti, pThis, 0);
 			break;
 		case RS_RET_SUSPENDED:
 			actionRetry(pThis, pWti);
