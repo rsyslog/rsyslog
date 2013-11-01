@@ -171,7 +171,6 @@ batchInit(batch_t *pBatch, int maxElem) {
 	pBatch->maxElem = maxElem;
 	CHKmalloc(pBatch->pElem = calloc((size_t)maxElem, sizeof(batch_obj_t)));
 	CHKmalloc(pBatch->eltState = calloc((size_t)maxElem, sizeof(batch_state_t)));
-	// TODO: replace calloc by inidividual writes?
 finalize_it:
 	RETiRet;
 }

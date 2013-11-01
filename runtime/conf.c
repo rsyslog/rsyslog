@@ -523,7 +523,6 @@ rsRetVal cflineDoAction(rsconf_t *conf, uchar **p, action_t **ppAction)
 					     (iRet == RS_RET_SUSPENDED)? 1 : 0)) == RS_RET_OK) {
 				/* here check if the module is compatible with select features
 				 * (currently, we have no such features!) */
-				pAction->eState = ACT_STATE_RDY; /* action is enabled */
 				conf->actions.nbrActions++;	/* one more active action! */
 			}
 			break;

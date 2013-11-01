@@ -26,11 +26,22 @@
 #include "wtp.h"
 #include "obj.h"
 #include "batch.h"
+#include "action.h"
 
+
+#define ACT_STATE_DIED 0	/* action permanently failed and now disabled  - MUST BE ZERO! */
+#define ACT_STATE_RDY  1	/* action ready, waiting for new transaction */
+#define ACT_STATE_ITX  2	/* transaction active, waiting for new data or commit */
+#define ACT_STATE_COMM 3 	/* transaction finished (a transient state) */
+#define ACT_STATE_RTRY 4	/* failure occured, trying to restablish ready state */
+#define ACT_STATE_SUSP 5	/* suspended due to failure (return fail until timeout expired) */
 
 typedef struct actWrkrInfo {
 	action_t *pAction;
 	void *actWrkrData;
+	struct {
+		unsigned actState : 3;
+	} flags;
 } actWrkrInfo_t;
 
 /* the worker thread instance class */
@@ -61,5 +72,17 @@ sbool wtiGetState(wti_t *pThis);
 PROTOTYPEObjClassInit(wti);
 PROTOTYPEpropSetMeth(wti, pszDbgHdr, uchar*);
 PROTOTYPEpropSetMeth(wti, pWtp, wtp_t*);
+
+static inline uint8_t
+getActionState(wti_t *pWti, action_t *pAction)
+{
+	return((uint8_t) pWti->actWrkrInfo[pAction->iActionNbr].flags.actState);
+}
+
+static inline void
+setActionState(wti_t *pWti, action_t *pAction, uint8_t newState)
+{
+	pWti->actWrkrInfo[pAction->iActionNbr].flags.actState = newState;
+}
 
 #endif /* #ifndef WTI_H_INCLUDED */

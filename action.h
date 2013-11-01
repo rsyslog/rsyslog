@@ -35,15 +35,6 @@
 extern int glbliActionResumeRetryCount;
 
 
-typedef enum {
-	ACT_STATE_DIED = 0,	/* action permanently failed and now disabled  - MUST BE ZERO! */
-	ACT_STATE_RDY  = 1,	/* action ready, waiting for new transaction */
-	ACT_STATE_ITX  = 2,	/* transaction active, waiting for new data or commit */
-	ACT_STATE_COMM = 3, 	/* transaction finished (a transient state) */
-	ACT_STATE_RTRY = 4,	/* failure occured, trying to restablish ready state */
-	ACT_STATE_SUSP = 5	/* suspended due to failure (return fail until timeout expired) */
-} action_state_t;
-
 /* the following struct defines the action object data structure
  */
 struct action_s {
@@ -55,7 +46,6 @@ struct action_s {
 	sbool	bExecWhenPrevSusp;/* execute only when previous action is suspended? */
 	sbool	bWriteAllMarkMsgs;/* should all mark msgs be written (not matter how recent the action was executed)? */
 	int	iSecsExecOnceInterval; /* if non-zero, minimum seconds to wait until action is executed again */
-	action_state_t eState;	/* current state of action */
 	sbool	bHadAutoCommit;	/* did an auto-commit happen during doAction()? */
 	time_t	ttResumeRtry;	/* when is it time to retry the resume? */
 	int	iResumeOKinRow;	/* number of times in a row that resume said OK with an immediate failure following */
@@ -93,7 +83,7 @@ struct action_s {
 rsRetVal actionConstruct(action_t **ppThis);
 rsRetVal actionConstructFinalize(action_t *pThis, struct nvlst *lst);
 rsRetVal actionDestruct(action_t *pThis);
-rsRetVal actionDbgPrint(action_t *pThis);
+//rsRetVal actionDbgPrint(action_t *pThis);
 rsRetVal actionSetGlobalResumeInterval(int iNewVal);
 rsRetVal actionDoAction(action_t *pAction);
 rsRetVal actionWriteToAction(action_t *pAction, msg_t *pMsg, wti_t*);
