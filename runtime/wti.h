@@ -29,12 +29,18 @@
 #include "action.h"
 
 
-#define ACT_STATE_DIED 0	/* action permanently failed and now disabled  - MUST BE ZERO! */
+/* TODO: check if we really need the unused value -- I think we can just use the ITX state
+ * when we check at "end of batch" (in wti processing). In that case, we can set RDY = 0
+ * and remove unused. -- rgerhards 2013-11-01
+ */
+#define ACT_STATE_UNUSED 0	/* action has not yet been used - MUST BE ZERO! */
 #define ACT_STATE_RDY  1	/* action ready, waiting for new transaction */
 #define ACT_STATE_ITX  2	/* transaction active, waiting for new data or commit */
 #define ACT_STATE_COMM 3 	/* transaction finished (a transient state) */
 #define ACT_STATE_RTRY 4	/* failure occured, trying to restablish ready state */
 #define ACT_STATE_SUSP 5	/* suspended due to failure (return fail until timeout expired) */
+#define ACT_STATE_DIED 6	/* action permanently failed and now disabled */
+/* note: 3 bit bit field --> highest value is 7! */
 
 typedef struct actWrkrInfo {
 	action_t *pAction;
@@ -73,6 +79,12 @@ sbool wtiGetState(wti_t *pThis);
 PROTOTYPEObjClassInit(wti);
 PROTOTYPEpropSetMeth(wti, pszDbgHdr, uchar*);
 PROTOTYPEpropSetMeth(wti, pWtp, wtp_t*);
+
+static inline uint8_t
+getActionStateByNbr(wti_t *pWti, int iActNbr)
+{
+	return((uint8_t) pWti->actWrkrInfo[iActNbr].flags.actState);
+}
 
 static inline uint8_t
 getActionState(wti_t *pWti, action_t *pAction)

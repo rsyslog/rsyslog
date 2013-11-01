@@ -562,7 +562,8 @@ static inline void
 actionSetState(action_t *pThis, wti_t *pWti, uint8_t newState)
 {
 	setActionState(pWti, pThis, newState);
-	DBGPRINTF("Action %p transitioned to state: %s\n", pThis, getActStateName(pThis, pWti));
+	DBGPRINTF("Action %d transitioned to state: %s\n",
+		  pThis->iActionNbr, getActStateName(pThis, pWti));
 }
 
 /* Handles the transient commit state. So far, this is
@@ -758,6 +759,7 @@ static inline rsRetVal actionPrepare(action_t *pThis, int *pbShutdownImmediate, 
 	 * action state accordingly
 	 */
 	if(getActionState(pWti, pThis) == ACT_STATE_RDY) {
+dbgprintf("DDDDD: calling beginTransaction for action %d\n", pThis->iActionNbr);
 		iRet = pThis->pMod->mod.om.beginTransaction(pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData);
 		switch(iRet) {
 			case RS_RET_OK:
@@ -935,6 +937,7 @@ actionCallDoAction(action_t *pThis, msg_t *pMsg, void *actParams, wti_t *pWti)
 	CHKiRet(actionCheckAndCreateWrkrInstance(pThis, pWti));
 
 	pThis->bHadAutoCommit = 0;
+dbgprintf("DDDDD: calling doAction for action %d\n", pThis->iActionNbr);
 	iRet = pThis->pMod->mod.om.doAction(actParams, pMsg->msgFlags,
 				            pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData);
 	switch(iRet) {
@@ -1004,6 +1007,11 @@ finishBatch(action_t *pThis, batch_t *pBatch, wti_t *pWti)
 	DEFiRet;
 
 	ASSERT(pThis != NULL);
+// Testing for new engine:
+dbgprintf("DDDD: iActionNbr %d\n", iActionNbr);
+for(i = 0 ; i < iActionNbr ; ++i) {
+	dbgprintf("DDDD: finishBatch, act %d state %u\n", i, getActionStateByNbr(pWti, i));
+}
 
 	if(getActionState(pWti, pThis) == ACT_STATE_RDY) {
 		/* we just need to flag the batch as commited */
@@ -1012,6 +1020,7 @@ finishBatch(action_t *pThis, batch_t *pBatch, wti_t *pWti)
 
 	CHKiRet(actionPrepare(pThis, pBatch->pbShutdownImmediate, pWti));
 	if(getActionState(pWti, pThis) == ACT_STATE_ITX) {
+dbgprintf("DDDDD: calling endTransaction for action %d\n", pThis->iActionNbr);
 		iRet = pThis->pMod->mod.om.endTransaction(pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData);
 		switch(iRet) {
 			case RS_RET_OK:
@@ -1385,6 +1394,7 @@ doSubmitToActionQ(action_t *pAction, msg_t *pMsg, wti_t *pWti)
 {
 	DEFiRet;
 
+	// TODO: bug? Isn't that supposed to be checked in direct mode as well???
 	if(getActionState(pWti, pAction) == ACT_STATE_DIED) {
 		DBGPRINTF("action %p died, do NOT execute\n", pAction);
 		FINALIZE;
