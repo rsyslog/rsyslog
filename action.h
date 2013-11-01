@@ -50,7 +50,6 @@ struct action_s {
 	time_t	ttResumeRtry;	/* when is it time to retry the resume? */
 	int	iResumeInterval;/* resume interval for this action */
 	int	iResumeRetryCount;/* how often shall we retry a suspended action? (-1 --> eternal) */
-	int	iNbrResRtry;	/* number of retries since last suspend */
 	int	iNbrNoExec;	/* number of matches that did not yet yield to an exec */
 	int	iExecEveryNthOccur;/* execute this action only every n-th occurence (with n=0,1 -> always) */
 	int  	iExecEveryNthOccurTO;/* timeout for n-th occurence feature */
@@ -68,7 +67,7 @@ struct action_s {
 				 * in this order. */
 	qqueue_t *pQueue;	/* action queue */
 	pthread_mutex_t mutAction; /* primary action mutex */
-	uchar *pszName;		/* action name (for documentation) */
+	uchar *pszName;		/* action name */
 	DEF_ATOMIC_HELPER_MUT(mutCAS);
 	/* for statistics subsystem */
 	statsobj_t *statsobj;

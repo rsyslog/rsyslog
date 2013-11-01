@@ -613,7 +613,8 @@ static inline void actionSuspend(action_t *pThis, wti_t *pWti)
 	 * since caching, and this would break logic (and it actually did so!)
 	 */
 	datetime.GetTime(&ttNow);
-	pThis->ttResumeRtry = ttNow + pThis->iResumeInterval * (pThis->iNbrResRtry / 10 + 1);
+	pThis->ttResumeRtry = ttNow + pThis->iResumeInterval *
+		(getActionNbrResRtry(pWti, pThis) / 10 + 1);
 	actionSetState(pThis, pWti, ACT_STATE_SUSP);
 	DBGPRINTF("action suspended, earliest retry=%d\n", (int) pThis->ttResumeRtry);
 }
@@ -665,7 +666,7 @@ actionDoRetry(action_t *pThis, wti_t *pWti, int *pbShutdownImmediate)
 			if((pThis->iResumeRetryCount != -1 && iRetries >= pThis->iResumeRetryCount)) {
 				actionSuspend(pThis, pWti);
 			} else {
-				++pThis->iNbrResRtry;
+				incActionNbrResRtry(pWti, pThis);
 				++iRetries;
 				iSleepPeriod = pThis->iResumeInterval;
 				srSleep(iSleepPeriod, 0);
@@ -679,7 +680,7 @@ actionDoRetry(action_t *pThis, wti_t *pWti, int *pbShutdownImmediate)
 	}
 
 	if(getActionState(pWti, pThis) == ACT_STATE_RDY) {
-		pThis->iNbrResRtry = 0;
+		setActionNbrResRtry(pWti, pThis, 0);
 	}
 
 finalize_it:

@@ -46,6 +46,7 @@ typedef struct actWrkrInfo {
 	action_t *pAction;
 	void *actWrkrData;
 	uint16_t uResumeOKinRow;/* number of times in a row that resume said OK with an immediate failure following */
+	int	iNbrResRtry;	/* number of retries since last suspend */
 	struct {
 		unsigned actState : 3;
 	} flags;
@@ -114,5 +115,23 @@ static inline void
 incActionResumeInRow(wti_t *pWti, action_t *pAction)
 {
 	pWti->actWrkrInfo[pAction->iActionNbr].uResumeOKinRow++;
+}
+
+static inline int
+getActionNbrResRtry(wti_t *pWti, action_t *pAction)
+{
+	return(pWti->actWrkrInfo[pAction->iActionNbr].iNbrResRtry);
+}
+
+static inline void
+setActionNbrResRtry(wti_t *pWti, action_t *pAction, uint16_t val)
+{
+	pWti->actWrkrInfo[pAction->iActionNbr].iNbrResRtry = val;
+}
+
+static inline void
+incActionNbrResRtry(wti_t *pWti, action_t *pAction)
+{
+	pWti->actWrkrInfo[pAction->iActionNbr].iNbrResRtry++;
 }
 #endif /* #ifndef WTI_H_INCLUDED */
