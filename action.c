@@ -1089,7 +1089,6 @@ tryDoAction(action_t *pAction, batch_t *pBatch, int *pnElem, wti_t *pWti)
 					pBatch->pElem[iCommittedUpTo].bPrevWasSuspended = 0; /* we had success! */
 					batchSetElemState(pBatch, iCommittedUpTo, BATCH_STATE_COMM);
 					++iCommittedUpTo;
-					//pBatch->pElem[iCommittedUpTo++].state = BATCH_STATE_COMM;
 				}
 			} else if(localRet == RS_RET_PREVIOUS_COMMITTED) {
 				/* mark messages as committed */
@@ -1097,7 +1096,6 @@ tryDoAction(action_t *pAction, batch_t *pBatch, int *pnElem, wti_t *pWti)
 					pBatch->pElem[iCommittedUpTo].bPrevWasSuspended = 0; /* we had success! */
 					batchSetElemState(pBatch, iCommittedUpTo, BATCH_STATE_COMM);
 					++iCommittedUpTo;
-					//pBatch->pElem[iCommittedUpTo++].state = BATCH_STATE_COMM;
 				}
 				pBatch->eltState[i] = BATCH_STATE_SUB;
 			} else if(localRet == RS_RET_DEFER_COMMIT) {
