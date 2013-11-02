@@ -29,17 +29,12 @@
 #include "action.h"
 
 
-/* TODO: check if we really need the unused value -- I think we can just use the ITX state
- * when we check at "end of batch" (in wti processing). In that case, we can set RDY = 0
- * and remove unused. -- rgerhards 2013-11-01
- */
-#define ACT_STATE_UNUSED 0	/* action has not yet been used - MUST BE ZERO! */
-#define ACT_STATE_RDY  1	/* action ready, waiting for new transaction */
-#define ACT_STATE_ITX  2	/* transaction active, waiting for new data or commit */
-#define ACT_STATE_COMM 3 	/* transaction finished (a transient state) */
-#define ACT_STATE_RTRY 4	/* failure occured, trying to restablish ready state */
-#define ACT_STATE_SUSP 5	/* suspended due to failure (return fail until timeout expired) */
-#define ACT_STATE_DIED 6	/* action permanently failed and now disabled */
+#define ACT_STATE_RDY  0	/* action ready, waiting for new transaction */
+#define ACT_STATE_ITX  1	/* transaction active, waiting for new data or commit */
+#define ACT_STATE_COMM 2 	/* transaction finished (a transient state) */
+#define ACT_STATE_RTRY 3	/* failure occured, trying to restablish ready state */
+#define ACT_STATE_SUSP 4	/* suspended due to failure (return fail until timeout expired) */
+#define ACT_STATE_DIED 7	/* action permanently failed and now disabled */
 /* note: 3 bit bit field --> highest value is 7! */
 
 typedef struct actWrkrInfo {
@@ -50,6 +45,13 @@ typedef struct actWrkrInfo {
 	struct {
 		unsigned actState : 3;
 	} flags;
+	/* following are caches to save allocs if not absolutely necessary */
+	uchar *staticActStrings[CONF_OMOD_NUMSTRINGS_MAXSIZE]; /**< for strings */
+				/* a cache to save malloc(), if not absolutely necessary */
+	void *staticActParams[CONF_OMOD_NUMSTRINGS_MAXSIZE]; /**< for anything else */
+	size_t staticLenStrings[CONF_OMOD_NUMSTRINGS_MAXSIZE];
+				/* and the same for the message length (if used) */
+	/* end action work variables */
 } actWrkrInfo_t;
 
 /* the worker thread instance class */
