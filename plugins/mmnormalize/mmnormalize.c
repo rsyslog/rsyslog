@@ -63,6 +63,7 @@ typedef struct _instanceData {
 	sbool bUseRawMsg;	/**< use %rawmsg% instead of %msg% */
 	uchar 	*rulebase;	/**< name of rulebase to use */
 	ln_ctx ctxln;		/**< context to be used for liblognorm */
+	char *pszPath;		/**< path of normalized data */
 } instanceData;
 
 typedef struct wrkrInstanceData {
@@ -79,6 +80,7 @@ static configSettings_t cs;
 /* action (instance) parameters */
 static struct cnfparamdescr actpdescr[] = {
 	{ "rulebase", eCmdHdlrGetWord, 1 },
+	{ "path", eCmdHdlrGetWord, 0 },
 	{ "userawmsg", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk actpblk =
@@ -172,6 +174,7 @@ BEGINfreeInstance
 CODESTARTfreeInstance
 	free(pData->rulebase);
 	ln_exitCtx(pData->ctxln);
+	free(pData->pszPath);
 ENDfreeInstance
 
 
@@ -219,7 +222,7 @@ CODESTARTdoAction
 	}
 	es_deleteStr(str);
 
- 	msgAddJSON(pMsg, (uchar*)"!", json);
+ 	msgAddJSON(pMsg, (uchar*)pWrkrData->pData->pszPath + 1, json);
 
 ENDdoAction
 
@@ -229,12 +232,14 @@ setInstParamDefaults(instanceData *pData)
 {
 	pData->rulebase = NULL;
 	pData->bUseRawMsg = 0;
+	pData->pszPath = strdup("$!");
 }
 
 BEGINnewActInst
 	struct cnfparamvals *pvals;
 	int i;
 	int bDestructPValsOnExit;
+	char *cstr;
 CODESTARTnewActInst
 	DBGPRINTF("newActInst (mmnormalize)\n");
 
@@ -262,6 +267,23 @@ CODESTARTnewActInst
 			pData->rulebase = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "userawmsg")) {
 			pData->bUseRawMsg = (int) pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "path")) {
+			cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
+			if (strlen(cstr) < 2) {
+				errmsg.LogError(0, RS_RET_VALUE_NOT_SUPPORTED,
+						"mmnormalize: valid path name should be at least "
+						"2 symbols long, got %s",	cstr);
+				free(cstr);
+			} else if (cstr[0] != '$') {
+				errmsg.LogError(0, RS_RET_VALUE_NOT_SUPPORTED,
+						"mmnormalize: valid path name should start with $,"
+						"got %s", cstr);
+				free(cstr);
+			} else {
+				free(pData->pszPath);
+				pData->pszPath = cstr;
+			}
+			continue;
 		} else {
 			DBGPRINTF("mmnormalize: program error, non-handled "
 			  "param '%s'\n", actpblk.descr[i].name);
@@ -297,6 +319,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 
 	pData->rulebase = cs.rulebase;
 	pData->bUseRawMsg = cs.bUseRawMsg;
+	pData->pszPath = strdup("$!"); /* old interface does not support this feature */
 	/* all config vars auto-reset! */
 	cs.bUseRawMsg = 0;
 	cs.rulebase = NULL; /* we used it up! */
