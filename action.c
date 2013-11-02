@@ -1007,16 +1007,9 @@ for(i = 0 ; i < iActionNbr ; ++i) {
 	if(getActionState(pWti, pThis) == ACT_STATE_ITX) {
 dbgprintf("DDDDD: calling endTransaction for action %d\n", pThis->iActionNbr);
 		iRet = pThis->pMod->mod.om.endTransaction(pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData);
-		setActionState(pWti, pThis, ACT_STATE_RDY);
-#if 0
 		switch(iRet) {
 			case RS_RET_OK:
 				actionCommitted(pThis, pWti);
-				/* flag messages as committed */
-				for(i = 0 ; i < pBatch->nElem ; ++i) {
-					batchSetElemState(pBatch, i, BATCH_STATE_COMM);
-					pBatch->pElem[i].bPrevWasSuspended = 0; /* we had success! */
-				}
 				break;
 			case RS_RET_SUSPENDED:
 				actionRetry(pThis, pWti);
@@ -1039,7 +1032,6 @@ dbgprintf("DDDDD: calling endTransaction for action %d\n", pThis->iActionNbr);
 				 */
 				FINALIZE;
 		}
-#endif
 	}
 	iRet = getReturnCode(pThis, pWti);
 
