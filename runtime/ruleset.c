@@ -231,7 +231,23 @@ execAct(struct cnfstmt *stmt, batch_t *pBatch, sbool *active, wti_t *pWti)
 	DEFiRet;
 dbgprintf("RRRR: execAct [%s]: batch of %d elements, active %p\n", modGetName(stmt->d.act->pMod), batchNumMsgs(pBatch), active);
 	pBatch->active = active;
+// TODO: check here if bPrevWasSuspsended was required and, if so
+// if we actually are permitted to execute this action.
+	//if(pAction->bExecWhenPrevSusp) {
 	stmt->d.act->submitToActQ(stmt->d.act, pBatch, pWti);
+#warning implement action return code checking
+// we should store the return code and make it available
+// to users via a special function (or maybe variable)
+// internally, we can use this for bPrevWasSuspended checking
+// to implement this system, we need to keep a kind of
+// "execution state" when running the rule engine. This most
+// probably is best done inside the wti object.
+// I think in v7 there was a bug, so that bPrevWasSuspended did
+// not properly make it onto the next batch (because it was
+// stored within the batch state) -- but even if so, the
+// exposure window was minimal, as the action would probably
+// fail the next time again. [TODO: check if batch object survived
+// end of batch, in which case it was probably correctly handled]
 	RETiRet;
 }
 

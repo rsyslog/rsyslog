@@ -36,9 +36,6 @@
  *
  * After dequeue, processing is as follows:
  * - processBatchMain
- * - processAction
- * - submitBatch
- * - tryDoAction
  * - ...
  *
  * MORE ON PROCESSING, QUEUES and FILTERING
@@ -1275,13 +1272,6 @@ doActionCallAction(action_t *pAction, batch_t *pBatch, int idxBtch, wti_t *pWti)
 	iRet = actionWriteToAction(pAction, pMsg, pWti);
 
 finalize_it:
-	/* we need to update the batch to handle failover processing correctly */
-	if(iRet == RS_RET_OK) {
-		pBatch->pElem[idxBtch].bPrevWasSuspended = 0;
-	} else if(iRet == RS_RET_ACTION_FAILED) {
-		pBatch->pElem[idxBtch].bPrevWasSuspended = 1;
-	}
-
 	RETiRet;
 }
 
@@ -1398,48 +1388,10 @@ countStatsBatchEnq(action_t *pAction, batch_t *pBatch)
 static inline rsRetVal
 doQueueEnqObjDirectBatch(action_t *pAction, batch_t *pBatch, wti_t *pWti)
 {
-	sbool bNeedSubmit;
-	sbool *activeSave;
-	int i;
 	DEFiRet;
-
-	activeSave = pBatch->active;
-	copyActive(pBatch);
-
-	/* note: for direct mode, we need to adjust the filter property. For non-direct
-	 * this is not necessary, because in that case we enqueue only what actually needs
-	 * to be processed.
-	 */
-	if(pAction->bExecWhenPrevSusp) {
-		bNeedSubmit = 0;
-		for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pBatch->pbShutdownImmediate) ; ++i) {
-			if(!pBatch->pElem[i].bPrevWasSuspended) {
-				DBGPRINTF("action enq stage: change active to 0 due to "
-					  "failover case in elem %d\n", i);
-				pBatch->active[i] = 0;
-			}
-			if(batchIsValidElem(pBatch, i)) {
-				STATSCOUNTER_INC(pAction->ctrProcessed, pAction->mutCtrProcessed);
-				bNeedSubmit = 1;
-			}
-			DBGPRINTF("action %p[%d]: valid:%d state:%d execWhenPrev:%d prevWasSusp:%d\n",
-				   pAction, i, batchIsValidElem(pBatch, i),  pBatch->eltState[i],
-				   pAction->bExecWhenPrevSusp, pBatch->pElem[i].bPrevWasSuspended);
-		}
-		if(bNeedSubmit) {
-			/* note: stats were already computed above */
-			iRet = qqueueEnqObjDirectBatch(pAction->pQueue, pBatch, pWti);
-		} else {
-			DBGPRINTF("no need to submit batch, all invalid\n");
-		}
-	} else {
-		if(GatherStats)
-			countStatsBatchEnq(pAction, pBatch);
-		iRet = qqueueEnqObjDirectBatch(pAction->pQueue, pBatch, pWti);
-	}
-
-	free(pBatch->active);
-	pBatch->active = activeSave;
+	if(GatherStats)
+		countStatsBatchEnq(pAction, pBatch);
+	iRet = qqueueEnqObjDirectBatch(pAction->pQueue, pBatch, pWti);
 	RETiRet;
 }
 
@@ -1462,11 +1414,7 @@ doSubmitToActionQBatch(action_t *pAction, batch_t *pBatch, wti_t *pWti)
 		 * TODO: optimize this, we may do at least a multi-submit!
 		 */
 		for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pBatch->pbShutdownImmediate) ; ++i) {
-			DBGPRINTF("action %p: valid:%d state:%d execWhenPrev:%d prevWasSusp:%d\n",
-		           pAction, batchIsValidElem(pBatch, i),  pBatch->eltState[i],
-			   pAction->bExecWhenPrevSusp, pBatch->pElem[i].bPrevWasSuspended);
-			if(   batchIsValidElem(pBatch, i) 
-			   && (pAction->bExecWhenPrevSusp == 0 || pBatch->pElem[i].bPrevWasSuspended == 1)) {
+			if(batchIsValidElem(pBatch, i)) {
 				doSubmitToActionQ(pAction, pBatch->pElem[i].pMsg, pWti);
 			}
 		}
@@ -1490,11 +1438,10 @@ helperSubmitToActionQComplexBatch(action_t *pAction, batch_t *pBatch, wti_t *pWt
 	DBGPRINTF("Called action %p (complex case), logging to %s\n",
 		  pAction, module.GetStateName(pAction->pMod));
 	for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pBatch->pbShutdownImmediate) ; ++i) {
-		DBGPRINTF("action %p: valid:%d state:%d execWhenPrev:%d prevWasSusp:%d\n",
+		DBGPRINTF("action %p: valid:%d state:%d execWhenPrev:%d\n",
 		           pAction, batchIsValidElem(pBatch, i),  pBatch->eltState[i],
-			   pAction->bExecWhenPrevSusp, pBatch->pElem[i].bPrevWasSuspended);
-		if(   batchIsValidElem(pBatch, i)
-		   && ((pAction->bExecWhenPrevSusp  == 0) || pBatch->pElem[i].bPrevWasSuspended) ) {
+			   pAction->bExecWhenPrevSusp);
+		if(batchIsValidElem(pBatch, i)) {
 			doActionCallAction(pAction, pBatch, i, pWti);
 		}
 	}

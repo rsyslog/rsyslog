@@ -49,7 +49,6 @@ struct batch_obj_s {
 	/* work variables for action processing; these are reused for each action (or block of
 	 * actions)
 	 */
-	sbool bPrevWasSuspended;
 	/* following are caches to save allocs if not absolutely necessary */
 	uchar *staticActStrings[CONF_OMOD_NUMSTRINGS_MAXSIZE]; /**< for strings */
 				/* a cache to save malloc(), if not absolutely necessary */
