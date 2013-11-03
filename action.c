@@ -1082,7 +1082,7 @@ processBatchMain(void *pVoid, batch_t *pBatch, wti_t *pWti, int *pbShutdownImmed
 	/* indicate we have not yet read the date */
 	ttNow.year = 0;
 
-	for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pBatch->pbShutdownImmediate) ; ++i) {
+	for(i = 0 ; i < batchNumMsgs(pBatch) && !*pbShutdownImmediate ; ++i) {
 		if(batchIsValidElem(pBatch, i)) {
 			pMsg = pBatch->pElem[i].pMsg;
 dbgprintf("DDDD: processBatchMain[act %d], elt %d: %s\n", pAction->iActionNbr, i, pMsg->pszRawMsg);
@@ -1092,6 +1092,8 @@ dbgprintf("DDDD: processBatchMain[act %d], elt %d: %s\n", pAction->iActionNbr, i
 						    pWti->actWrkrInfo[pAction->iActionNbr].staticActParams,
 						    pbShutdownImmediate, pWti);
 			releaseDoActionParams(pAction, pWti);
+				// TODO: we must refactor this!  flag messages as committed
+				batchSetElemState(pBatch, i, BATCH_STATE_COMM);
 		}
 	}
 
