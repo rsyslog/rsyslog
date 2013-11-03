@@ -987,10 +987,6 @@ static rsRetVal qAddDirect(qqueue_t *pThis, msg_t* pMsg, wti_t *pWti)
 	singleBatch.eltState = &batchState;
 	singleBatch.active = &active;
 	iRet = pThis->pConsumer(pThis->pAction, &singleBatch, pWti, &pThis->bShutdownImmediate);
-	/* delete the batch string params: TODO: create its own "class" for this */
-	for(i = 0 ; i < CONF_OMOD_NUMSTRINGS_MAXSIZE ; ++i) {
-		free(batchObj.staticActStrings[i]);
-	}
 	msgDestruct(&pMsg);
 
 	RETiRet;

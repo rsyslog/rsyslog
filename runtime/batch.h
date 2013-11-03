@@ -46,16 +46,6 @@ typedef unsigned char batch_state_t;
  */
 struct batch_obj_s {
 	msg_t *pMsg;
-	/* work variables for action processing; these are reused for each action (or block of
-	 * actions)
-	 */
-	/* following are caches to save allocs if not absolutely necessary */
-	uchar *staticActStrings[CONF_OMOD_NUMSTRINGS_MAXSIZE]; /**< for strings */
-				/* a cache to save malloc(), if not absolutely necessary */
-	void *staticActParams[CONF_OMOD_NUMSTRINGS_MAXSIZE]; /**< for anything else */
-	size_t staticLenStrings[CONF_OMOD_NUMSTRINGS_MAXSIZE];
-				/* and the same for the message length (if used) */
-	/* end action work variables */
 };
 
 /* the batch
@@ -151,7 +141,7 @@ batchFree(batch_t *pBatch) {
 			/* staticActParams MUST be freed immediately (if required),
 			 * so we do not need to do that!
 			 */
-			free(pBatch->pElem[i].staticActStrings[j]);
+			//TODO: do this in wti! free(pBatch->pElem[i].staticActStrings[j]);
 		}
 	}
 	free(pBatch->pElem);
