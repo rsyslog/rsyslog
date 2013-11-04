@@ -644,7 +644,7 @@ actionDoRetry(action_t *pThis, wti_t *pWti, int *pbShutdownImmediate)
 	iRetries = 0;
 	while((*pbShutdownImmediate == 0) && getActionState(pWti, pThis) == ACT_STATE_RTRY) {
 		DBGPRINTF("actionDoRetry: enter loop, iRetries=%d\n", iRetries);
-		iRet = pThis->pMod->tryResume(pThis->pModData);
+		iRet = pThis->pMod->tryResume(pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData);
 		DBGPRINTF("actionDoRetry: action->tryResume returned %d\n", iRet);
 		if((getActionResumeInRow(pWti, pThis) > 9) && (getActionResumeInRow(pWti, pThis) % 10 == 0)) {
 			bTreatOKasSusp = 1;

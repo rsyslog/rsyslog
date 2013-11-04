@@ -341,6 +341,7 @@ ENDcreateInstance
 
 BEGINcreateWrkrInstance
 CODESTARTcreateWrkrInstance
+	dbgprintf("DDDD: createWrkrInstance: pWrkrData %p\n", pWrkrData);
 ENDcreateWrkrInstance
 
 
@@ -734,6 +735,7 @@ finalize_it:
 
 BEGINtryResume
 CODESTARTtryResume
+	dbgprintf("DDDD: tryResume: pWrkrData %p\n", pWrkrData);
 	iRet = doTryResume(pWrkrData->pData);
 ENDtryResume
 
@@ -753,6 +755,7 @@ BEGINdoAction
 #	endif
 	instanceData *pData;
 CODESTARTdoAction
+	dbgprintf("DDDD: doAction: pWrkrData %p\n", pWrkrData);
 	pData = pWrkrData->pData;
 	CHKiRet(doTryResume(pData));
 
