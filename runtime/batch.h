@@ -88,17 +88,6 @@ batchSetSingleRuleset(batch_t *pBatch, sbool val) {
 	pBatch->bSingleRuleset = val;
 }
 
-/* get the batches ruleset (if we have a single ruleset) */
-static inline ruleset_t*
-batchGetRuleset(batch_t *pBatch) {
-	return (pBatch->nElem > 0) ? pBatch->pElem[0].pMsg->pRuleset : NULL;
-}
-
-/* get the ruleset of a specifc element of the batch (index not verified!) */
-static inline ruleset_t*
-batchElemGetRuleset(batch_t *pBatch, int i) {
-	return pBatch->pElem[i].pMsg->pRuleset;
-}
 
 /* get number of msgs for this batch */
 static inline int
