@@ -1041,6 +1041,20 @@ static rsRetVal
 actionCommit(action_t *pThis, wti_t *pWti, int *pbShutdownImmediate)
 {
 	DEFiRet;
+// TODO: #warning do we really need to return something?
+	/* even more TODO:
+		This is the place where retry processing needs to go in. If the action
+		permanently fails, we should - as a new feature - add the capability to
+		write an error file. This is already done be omelasticsearch, and IMHO
+		pretty useful.
+		For the time being, I do NOT implement all of this (not even retry!)
+		as I want to get the rest of the engine to SISD (non-SIMD ;)) so that
+		I know any potential suprises and complications that arise out of this.
+		When this is done, I can come back here and complete this work. Obviously,
+		many features do not work in the mean time (but it is not planned to release
+		any of these partial implementations).
+		rgerhards, 2013-11-04
+	 */
 	iRet = actionTryCommit(pThis, pWti, pbShutdownImmediate);
 	RETiRet;
 }
