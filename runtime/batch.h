@@ -69,7 +69,6 @@ struct batch_s {
 	int iDoneUpTo;		/* all messages below this index have state other than RDY */
 	qDeqID	deqID;		/* ID of dequeue operation that generated this batch */
 	int *pbShutdownImmediate;/* end processing of this batch immediately if set to 1 */
-	sbool *active;		/* which messages are active for processing, NULL=all */
 	batch_obj_t *pElem;	/* batch elements */
 	batch_state_t *eltState;/* state (array!) for individual objects.
 	   			   NOTE: we have moved this out of batch_obj_t because we
@@ -104,8 +103,7 @@ batchSetElemState(batch_t *pBatch, int i, batch_state_t newState) {
  */
 static inline int
 batchIsValidElem(batch_t *pBatch, int i) {
-	return(   (pBatch->eltState[i] != BATCH_STATE_DISC)
-	       && (pBatch->active == NULL || pBatch->active[i]));
+	return(pBatch->eltState[i] != BATCH_STATE_DISC);
 }
 
 

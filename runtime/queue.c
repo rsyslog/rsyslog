@@ -964,7 +964,6 @@ static rsRetVal qAddDirect(qqueue_t *pThis, msg_t* pMsg, wti_t *pWti)
 	batch_t singleBatch;
 	batch_obj_t batchObj;
 	batch_state_t batchState = BATCH_STATE_RDY;
-	sbool active = 1;
 	int i;
 	DEFiRet;
 
@@ -985,7 +984,6 @@ static rsRetVal qAddDirect(qqueue_t *pThis, msg_t* pMsg, wti_t *pWti)
 	singleBatch.nElem = 1; /* there always is only one in direct mode */
 	singleBatch.pElem = &batchObj;
 	singleBatch.eltState = &batchState;
-	singleBatch.active = &active;
 	iRet = pThis->pConsumer(pThis->pAction, &singleBatch, pWti, &pThis->bShutdownImmediate);
 	msgDestruct(&pMsg);
 
