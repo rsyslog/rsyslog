@@ -57,7 +57,7 @@ struct action_s {
 	struct modInfo_s *pMod;/* pointer to output module handling this selector */
 	void	*pModData;	/* pointer to module data - content is module-specific */
 	sbool	bRepMsgHasMsg;	/* "message repeated..." has msg fragment in it (0-no, 1-yes) */
-	rsRetVal (*submitToActQ)(action_t *, batch_t *, wti_t*);/* function submit message to action queue */
+	rsRetVal (*submitToActQ)(action_t *, wti_t*, msg_t*);/* function submit message to action queue */
 	rsRetVal (*qConstruct)(struct queue_s *pThis);
 	enum 	{ ACT_STRING_PASSING = 0, ACT_ARRAY_PASSING = 1, ACT_MSG_PASSING = 2,
 		  ACT_JSON_PASSING = 3}
@@ -91,6 +91,7 @@ rsRetVal addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStr
 rsRetVal activateActions(void);
 rsRetVal actionNewInst(struct nvlst *lst, action_t **ppAction);
 rsRetVal actionProcessCnf(struct cnfobj *o);
+rsRetVal actionCommitAll(wti_t *pWti);
 
 /* external data */
 extern int iActionNbr;

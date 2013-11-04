@@ -228,13 +228,27 @@ static inline void freeActive(sbool *active) { free(active); }
 static rsRetVal
 execAct(struct cnfstmt *stmt, batch_t *pBatch, sbool *active, wti_t *pWti)
 {
+	int i;
 	DEFiRet;
 dbgprintf("RRRR: execAct [%s]: batch of %d elements, active %p\n", modGetName(stmt->d.act->pMod), batchNumMsgs(pBatch), active);
 	pBatch->active = active;
 // TODO: check here if bPrevWasSuspsended was required and, if so
 // if we actually are permitted to execute this action.
 	//if(pAction->bExecWhenPrevSusp) {
-	stmt->d.act->submitToActQ(stmt->d.act, pBatch, pWti);
+
+
+	for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pBatch->pbShutdownImmediate) ; ++i) {
+		DBGPRINTF("action %d: valid:%d state:%d execWhenPrev:%d\n",
+		           stmt->d.act->iActionNbr, batchIsValidElem(pBatch, i),  pBatch->eltState[i],
+			   stmt->d.act->bExecWhenPrevSusp);
+		if(batchIsValidElem(pBatch, i)) {
+			stmt->d.act->submitToActQ(stmt->d.act, pWti, pBatch->pElem[i].pMsg);
+		// TODO: we must refactor this!  flag messages as committed
+		batchSetElemState(pBatch, i, BATCH_STATE_COMM);
+		}
+	}
+
+
 #warning implement action return code checking
 // we should store the return code and make it available
 // to users via a special function (or maybe variable)
@@ -598,6 +612,7 @@ processBatch(batch_t *pBatch, wti_t *pWti)
 		CHKiRet(processBatchMultiRuleset(pBatch, pWti));
 	}
 
+	actionCommitAll(pWti);
 finalize_it:
 	DBGPRINTF("ruleset.ProcessMsg() returns %d\n", iRet);
 	RETiRet;
