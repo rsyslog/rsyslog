@@ -503,17 +503,12 @@ preprocessBatch(batch_t *pBatch) {
 	prop_t *localName;
 	prop_t *propFromHost = NULL;
 	prop_t *propFromHostIP = NULL;
-	int bSingleRuleset;
-	ruleset_t *batchRuleset; /* the ruleset used for all message inside the batch, if there is a single one */
 	int bIsPermitted;
 	msg_t *pMsg;
 	int i;
 	rsRetVal localRet;
 	DEFiRet;
 
-	bSingleRuleset = 1;
-	batchRuleset = (pBatch->nElem > 0) ? pBatch->pElem[0].pMsg->pRuleset : NULL;
-	
 	for(i = 0 ; i < pBatch->nElem  && !*(pBatch->pbShutdownImmediate) ; i++) {
 		pMsg = pBatch->pElem[i].pMsg;
 		if((pMsg->msgFlags & NEEDS_ACLCHK_U) != 0) {
@@ -539,11 +534,7 @@ preprocessBatch(batch_t *pBatch) {
 				pBatch->eltState[i] = BATCH_STATE_DISC;
 			}
 		}
-		if(pMsg->pRuleset != batchRuleset)
-			bSingleRuleset = 0;
 	}
-
-	batchSetSingleRuleset(pBatch, bSingleRuleset);
 
 finalize_it:
 	if(propFromHost != NULL)

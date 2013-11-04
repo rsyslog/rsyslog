@@ -70,7 +70,6 @@ struct batch_s {
 	qDeqID	deqID;		/* ID of dequeue operation that generated this batch */
 	int *pbShutdownImmediate;/* end processing of this batch immediately if set to 1 */
 	sbool *active;		/* which messages are active for processing, NULL=all */
-	sbool bSingleRuleset;	/* do all msgs of this batch use a single ruleset? */
 	batch_obj_t *pElem;	/* batch elements */
 	batch_state_t *eltState;/* state (array!) for individual objects.
 	   			   NOTE: we have moved this out of batch_obj_t because we
@@ -80,13 +79,6 @@ struct batch_s {
 					 data as well as practical tests indicate that!).
 				*/
 };
-
-
-/* some inline functions (we may move this off to an object .. or not) */
-static inline void
-batchSetSingleRuleset(batch_t *pBatch, sbool val) {
-	pBatch->bSingleRuleset = val;
-}
 
 
 /* get number of msgs for this batch */
