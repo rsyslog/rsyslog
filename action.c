@@ -1038,6 +1038,21 @@ finalize_it:
 	RETiRet;
 }
 
+/* Commit all active transactions in *DIRECT mode* */
+void
+actionCommitAll(wti_t *pWti)
+{
+	int i;
+	action_t *pAction;
+
+	for(i = 0 ; i < iActionNbr ; ++i) {
+		dbgprintf("DDDD: actionCommitAll: action %d, state %u, root %p\n",
+			  i, getActionStateByNbr(pWti, i), pWti->actWrkrInfo[i].iparamRoot);
+		pAction = pWti->actWrkrInfo[i].pAction;
+		if(pAction != NULL && pAction->pQueue->qType == QUEUETYPE_DIRECT)
+			actionCommit(pWti->actWrkrInfo[i].pAction, pWti);
+	}
+}
 
 /* process a single message. This is both called if we run from the
  * cosumer side of an action queue as well as directly from the main
@@ -1063,22 +1078,6 @@ dbgprintf("DDDD: processMsgMain[act %d], %s\n", pAction->iActionNbr, pMsg->pszRa
 	releaseDoActionParams(pAction, pWti);
 finalize_it:
 	RETiRet;
-}
-
-/* Commit all active transactions in direct mode */
-void
-actionCommitAll(wti_t *pWti)
-{
-	int i;
-	action_t *pAction;
-
-	for(i = 0 ; i < iActionNbr ; ++i) {
-		dbgprintf("DDDD: actionCommitAll: action %d, state %u, root %p\n",
-			  i, getActionStateByNbr(pWti, i), pWti->actWrkrInfo[i].iparamRoot);
-		pAction = pWti->actWrkrInfo[i].pAction;
-		if(pAction != NULL && pAction->pQueue->qType == QUEUETYPE_DIRECT)
-			actionCommit(pWti->actWrkrInfo[i].pAction, pWti);
-	}
 }
 
 /* receive an array of to-process user pointers and submit them
