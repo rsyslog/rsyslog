@@ -589,9 +589,9 @@ scriptExec(struct cnfstmt *root, batch_t *pBatch, sbool *active, wti_t *pWti)
 
 
 static void
-commitBatch(wti_t *pWti)
+commitBatch(batch_t *pBatch, wti_t *pWti)
 {
-	actionCommitAll(pWti);
+	actionCommitAllDirect(pWti, pBatch->pbShutdownImmediate);
 }
 
 /* Process (consume) a batch of messages. Calls the actions configured.
@@ -621,7 +621,7 @@ processBatch(batch_t *pBatch, wti_t *pWti)
 	}
 
 	/* commit phase */
-	commitBatch(pWti);
+	commitBatch(pBatch, pWti);
 finalize_it:
 	DBGPRINTF("ruleset.ProcessMsg() returns %d\n", iRet);
 	RETiRet;

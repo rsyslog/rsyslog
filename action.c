@@ -977,11 +977,10 @@ finalize_it:
 }
 
 
-/* Commit action after processing. */
+/* Commit try committing (do not handle retry processing and such) */
 static rsRetVal
-actionCommit(action_t *pThis, wti_t *pWti)
+actionTryCommit(action_t *pThis, wti_t *pWti, int *pbShutdownImmediate)
 {
-	int pbShutdownImmediate = 1;
 	actWrkrInfo_t *wrkrInfo;
 	actWrkrIParams_t *iparamCurr, *iparamDel;
 	DEFiRet;
@@ -993,7 +992,7 @@ actionCommit(action_t *pThis, wti_t *pWti)
 		while(iparamCurr != NULL) {
 			iRet = actionProcessMessage(pThis, iparamCurr->msgFlags,
 						    iparamCurr->staticActParams,
-						    &pbShutdownImmediate, pWti);
+						    pbShutdownImmediate, pWti);
 			releaseDoActionParams(pThis, pWti);
 			iparamDel = iparamCurr;
 			iparamCurr = iparamCurr->next;
@@ -1002,7 +1001,7 @@ actionCommit(action_t *pThis, wti_t *pWti)
 		wrkrInfo->iparamLast = NULL;
 	}
 
-	CHKiRet(actionPrepare(pThis, &pbShutdownImmediate, pWti));
+	CHKiRet(actionPrepare(pThis, pbShutdownImmediate, pWti));
 	if(getActionState(pWti, pThis) == ACT_STATE_ITX) {
 dbgprintf("DDDDD: calling endTransaction for action %d\n", pThis->iActionNbr);
 		iRet = pThis->pMod->mod.om.endTransaction(pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData);
@@ -1038,9 +1037,17 @@ finalize_it:
 	RETiRet;
 }
 
+static rsRetVal
+actionCommit(action_t *pThis, wti_t *pWti, int *pbShutdownImmediate)
+{
+	DEFiRet;
+	iRet = actionTryCommit(pThis, pWti, pbShutdownImmediate);
+	RETiRet;
+}
+
 /* Commit all active transactions in *DIRECT mode* */
 void
-actionCommitAll(wti_t *pWti)
+actionCommitAllDirect(wti_t *pWti, int *pbShutdownImmediate)
 {
 	int i;
 	action_t *pAction;
@@ -1050,7 +1057,7 @@ actionCommitAll(wti_t *pWti)
 			  i, getActionStateByNbr(pWti, i), pWti->actWrkrInfo[i].iparamRoot);
 		pAction = pWti->actWrkrInfo[i].pAction;
 		if(pAction != NULL && pAction->pQueue->qType == QUEUETYPE_DIRECT)
-			actionCommit(pWti->actWrkrInfo[i].pAction, pWti);
+			actionCommit(pWti->actWrkrInfo[i].pAction, pWti, pbShutdownImmediate);
 	}
 }
 
@@ -1109,7 +1116,7 @@ processBatchMain(void *pVoid, batch_t *pBatch, wti_t *pWti, int *pbShutdownImmed
 		}
 	}
 
-	iRet = actionCommit(pAction, pWti);
+	iRet = actionCommit(pAction, pWti, pbShutdownImmediate);
 dbgprintf("DDDD: processBatchMain - end\n");
 	RETiRet;
 }
