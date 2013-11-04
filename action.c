@@ -633,7 +633,7 @@ static inline void actionSuspend(action_t *pThis)
  * of its inability to recover. -- rgerhards, 2010-04-26.
  */
 static inline rsRetVal
-actionDoRetry(action_t *pThis, int *pbShutdownImmediate)
+actionDoRetry(action_t *pThis, int *pbShutdownImmediate, wti_t *pWti)
 {
 	int iRetries;
 	int iSleepPeriod;
@@ -645,7 +645,7 @@ actionDoRetry(action_t *pThis, int *pbShutdownImmediate)
 	iRetries = 0;
 	while((*pbShutdownImmediate == 0) && pThis->eState == ACT_STATE_RTRY) {
 		DBGPRINTF("actionDoRetry: enter loop, iRetries=%d\n", iRetries);
-		iRet = pThis->pMod->tryResume(pThis->pModData);
+		iRet = pThis->pMod->tryResume(pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData);
 		DBGPRINTF("actionDoRetry: action->tryResume returned %d\n", iRet);
 		if((pThis->iResumeOKinRow > 9) && (pThis->iResumeOKinRow % 10 == 0)) {
 			bTreatOKasSusp = 1;
@@ -704,7 +704,7 @@ finalize_it:
 /* try to resume an action -- rgerhards, 2007-08-02
  * changed to new action state engine -- rgerhards, 2009-05-07
  */
-static rsRetVal actionTryResume(action_t *pThis, int *pbShutdownImmediate)
+static rsRetVal actionTryResume(action_t *pThis, int *pbShutdownImmediate, wti_t *pWti)
 {
 	DEFiRet;
 	time_t ttNow = NO_TIME_PROVIDED;
@@ -728,7 +728,7 @@ static rsRetVal actionTryResume(action_t *pThis, int *pbShutdownImmediate)
 	if(pThis->eState == ACT_STATE_RTRY) {
 		if(ttNow == NO_TIME_PROVIDED) /* use cached result if we have it */
 			datetime.GetTime(&ttNow);
-		CHKiRet(actionDoRetry(pThis, pbShutdownImmediate));
+		CHKiRet(actionDoRetry(pThis, pbShutdownImmediate, pWti));
 	}
 
 	if(Debug && (pThis->eState == ACT_STATE_RTRY ||pThis->eState == ACT_STATE_SUSP)) {
@@ -751,7 +751,7 @@ static inline rsRetVal actionPrepare(action_t *pThis, int *pbShutdownImmediate, 
 
 	assert(pThis != NULL);
 	CHKiRet(actionCheckAndCreateWrkrInstance(pThis, pWti));
-	CHKiRet(actionTryResume(pThis, pbShutdownImmediate));
+	CHKiRet(actionTryResume(pThis, pbShutdownImmediate, pWti));
 
 	/* if we are now ready, we initialize the transaction and advance
 	 * action state accordingly
