@@ -391,7 +391,6 @@ finalize_it:
 	RETiRet;
 }
 
-
 /* dummy */
 rsRetVal wtiQueryInterface(void) { return RS_RET_NOT_IMPLEMENTED; }
 

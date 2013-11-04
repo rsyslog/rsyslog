@@ -588,8 +588,14 @@ scriptExec(struct cnfstmt *root, batch_t *pBatch, sbool *active, wti_t *pWti)
 }
 
 
+static void
+commitBatch(wti_t *pWti)
+{
+	actionCommitAll(pWti);
+}
+
 /* Process (consume) a batch of messages. Calls the actions configured.
- * If the whole batch uses a singel ruleset, we can process the batch as 
+ * If the whole batch uses a single ruleset, we can process the batch as 
  * a whole. Otherwise, we need to process it slower, on a message-by-message
  * basis (what can be optimized to a per-ruleset basis)
  * rgerhards, 2005-10-13
@@ -602,6 +608,8 @@ processBatch(batch_t *pBatch, wti_t *pWti)
 	assert(pBatch != NULL);
 
 	DBGPRINTF("processBatch: batch of %d elements must be processed\n", pBatch->nElem);
+
+	/* execution phase */
 	if(pBatch->bSingleRuleset) {
 		pThis = batchGetRuleset(pBatch);
 		if(pThis == NULL)
@@ -612,7 +620,8 @@ processBatch(batch_t *pBatch, wti_t *pWti)
 		CHKiRet(processBatchMultiRuleset(pBatch, pWti));
 	}
 
-	actionCommitAll(pWti);
+	/* commit phase */
+	commitBatch(pWti);
 finalize_it:
 	DBGPRINTF("ruleset.ProcessMsg() returns %d\n", iRet);
 	RETiRet;
