@@ -161,61 +161,6 @@ finalize_it:
 }
 
 
-/* This function is similar to processBatch(), but works on a batch that
- * contains rules from multiple rulesets. In this case, we can not push
- * the whole batch through the ruleset. Instead, we examine it and
- * partition it into sub-rulesets which we then push through the system.
- * rgerhards, 2010-06-15
- */
-static inline rsRetVal
-processBatchMultiRuleset(batch_t *pBatch, wti_t *pWti)
-{
-	ruleset_t *currRuleset;
-	batch_t snglRuleBatch;
-	int i;
-	int iStart;	/* start index of partial batch */
-	int iNew;	/* index for new (temporary) batch */
-	int bHaveUnprocessed;	/* do we (still) have unprocessed entries? (loop term predicate) */
-	DEFiRet;
-
-	do {
-		bHaveUnprocessed = 0;
-		/* search for first unprocessed element */
-		for(iStart = 0 ; iStart < pBatch->nElem && pBatch->eltState[iStart] == BATCH_STATE_DISC ; ++iStart)
-			/* just search, no action */;
-		if(iStart == pBatch->nElem)
-			break; /* everything processed */
-
-		/* prepare temporary batch */
-		CHKiRet(batchInit(&snglRuleBatch, pBatch->nElem));
-		snglRuleBatch.pbShutdownImmediate = pBatch->pbShutdownImmediate;
-		currRuleset = batchElemGetRuleset(pBatch, iStart);
-		iNew = 0;
-		for(i = iStart ; i < pBatch->nElem ; ++i) {
-			if(batchElemGetRuleset(pBatch, i) == currRuleset) {
-				/* for performance reasons, we copy only those members that we actually need */
-				snglRuleBatch.pElem[iNew].pMsg = pBatch->pElem[i].pMsg;
-				snglRuleBatch.eltState[iNew] = pBatch->eltState[i];
-				++iNew;
-				/* We indicate the element also as done, so it will not be processed again */
-				pBatch->eltState[i] = BATCH_STATE_DISC;
-			} else {
-				bHaveUnprocessed = 1;
-			}
-		}
-		snglRuleBatch.nElem = iNew; /* was left just right by the for loop */
-		batchSetSingleRuleset(&snglRuleBatch, 1);
-		/* process temp batch */
-		processBatch(&snglRuleBatch, pWti);
-		batchFree(&snglRuleBatch);
-	} while(bHaveUnprocessed == 1);
-
-finalize_it:
-	RETiRet;
-}
-
-/* for details, see scriptExec() header comment! */
-/* call action for all messages with filter on */
 static void
 execAct(struct cnfstmt *stmt, msg_t *pMsg, wti_t *pWti)
 {
