@@ -188,6 +188,26 @@ execUnset(struct cnfstmt *stmt, msg_t *pMsg)
 	msgDelJSON(pMsg, stmt->d.s_unset.varname);
 }
 
+static rsRetVal
+execCall(struct cnfstmt *stmt, msg_t *pMsg, wti_t *pWti)
+{
+	DEFiRet;
+	if(stmt->d.s_call.ruleset == NULL) {
+		scriptExec(stmt->d.s_call.stmt, pMsg, pWti);
+	} else {
+		CHKmalloc(pMsg = MsgDup((msg_t*) pMsg));
+		DBGPRINTF("CALL: forwarding message to async ruleset %p\n",
+			  stmt->d.s_call.ruleset->pQueue);
+		MsgSetFlowControlType(pMsg, eFLOWCTL_NO_DELAY);
+		MsgSetRuleset(pMsg, stmt->d.s_call.ruleset);
+		/* Note: we intentionally use submitMsg2() here, as we process messages
+		 * that were already run through the rate-limiter.
+		 */
+		submitMsg2(pMsg);
+	}
+finalize_it:
+	RETiRet;
+}
 
 static void
 execIf(struct cnfstmt *stmt, msg_t *pMsg, wti_t *pWti)
@@ -364,7 +384,7 @@ scriptExec(struct cnfstmt *root, msg_t *pMsg, wti_t *pWti)
 			execUnset(stmt, pMsg);
 			break;
 		case S_CALL:
-			scriptExec(stmt->d.s_call.stmt, pMsg, pWti);
+			execCall(stmt, pMsg, pWti);
 			break;
 		case S_IF:
 			execIf(stmt, pMsg, pWti);

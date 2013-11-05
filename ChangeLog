@@ -1,3 +1,6 @@
+Version 7.4.7  [v7.4-stable] 2013-11-??
+- bugfix: call to ruleset with async queue did not use the queue
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=443
 ---------------------------------------------------------------------------
 Version 8.1.0 [devel] 2013-11-??
 - module omruleset is no longer enabled by default.
