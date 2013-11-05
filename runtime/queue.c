@@ -964,7 +964,6 @@ static rsRetVal qAddDirect(qqueue_t *pThis, msg_t* pMsg, wti_t *pWti)
 	batch_t singleBatch;
 	batch_obj_t batchObj;
 	batch_state_t batchState = BATCH_STATE_RDY;
-	int i;
 	DEFiRet;
 
 	//TODO: init batchObj (states _OK and new fields -- CHECK)
@@ -989,29 +988,6 @@ static rsRetVal qAddDirect(qqueue_t *pThis, msg_t* pMsg, wti_t *pWti)
 
 	RETiRet;
 }
-
-/* "enqueue" a batch in direct mode. This is a shortcut which saves all the overhead
- * otherwise incured. -- rgerhards, ~2010-06-23
- */
-rsRetVal qqueueEnqObjDirectBatch(qqueue_t *pThis, batch_t *pBatch, wti_t *pWti)
-{
-	DEFiRet;
-
-	ASSERT(pThis != NULL);
-
-	/* calling the consumer is quite different here than it is from a worker thread */
-	/* we need to provide the consumer's return value back to the caller because in direct
-	 * mode the consumer probably has a lot to convey (which get's lost in the other modes
-	 * because they are asynchronous. But direct mode is deliberately synchronous.
-	 * rgerhards, 2008-02-12
-	 * We use our knowledge about the batch_t structure below, but without that, we
-	 * pay a too-large performance toll... -- rgerhards, 2009-04-22
-	 */
-	iRet = pThis->pConsumer(pThis->pAction, pBatch, pWti, NULL);
-
-	RETiRet;
-}
-
 
 static rsRetVal qDelDirect(qqueue_t __attribute__((unused)) *pThis)
 {

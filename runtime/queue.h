@@ -202,7 +202,6 @@ rsRetVal qqueueSetMaxFileSize(qqueue_t *pThis, size_t iMaxFileSize);
 rsRetVal qqueueSetFilePrefix(qqueue_t *pThis, uchar *pszPrefix, size_t iLenPrefix);
 rsRetVal qqueueConstruct(qqueue_t **ppThis, queueType_t qType, int iWorkerThreads,
 		        int iMaxQueueSize, rsRetVal (*pConsumer)(void*,batch_t*, wti_t *, int*));
-rsRetVal qqueueEnqObjDirectBatch(qqueue_t *pThis, batch_t *pBatch, wti_t *pWti);
 int queueCnfParamsSet(struct nvlst *lst);
 rsRetVal qqueueApplyCnfParam(qqueue_t *pThis, struct nvlst *lst);
 void qqueueSetDefaultsRulesetQueue(qqueue_t *pThis);
