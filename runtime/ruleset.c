@@ -169,8 +169,14 @@ execAct(struct cnfstmt *stmt, msg_t *pMsg, wti_t *pWti)
 // if we actually are permitted to execute this action.
 // NOTE: this will primarily be handled by end-of-batch processing
 
+	if(getActionState(pWti, stmt->d.act) == ACT_STATE_DIED) {
+		DBGPRINTF("action %d died, do NOT execute\n", stmt->d.act->iActionNbr);
+		goto done;
+	}
+
 	DBGPRINTF("executing action %d\n", stmt->d.act->iActionNbr);
 	stmt->d.act->submitToActQ(stmt->d.act, pWti, pMsg);
+done:	return;
 }
 
 static void
