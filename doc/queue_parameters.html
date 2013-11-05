@@ -16,7 +16,11 @@ default values will be used. Thus, the default ruleset has only the default main
 queues are not set up by default.</p>
 <ul>
 	<li><strong>queue.filename</strong> name</li>
-	<li><strong>queue.size</strong> number</li>
+	<li><strong>queue.size</strong> number <br>
+		This is the maximum size of the queue in number of messages.
+		Note that setting the queue size to very small values (roughly
+		below 100 messages) is not supported and can lead to 
+		unpredictable results.</li>
 	<li><strong>queue.dequeuebatchsize</strong> number 
 	<br>default 16</li>
 	<li><strong>queue.maxdiskspace</strong> number</li>
