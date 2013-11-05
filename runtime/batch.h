@@ -66,7 +66,6 @@ struct batch_s {
 	int maxElem;		/* maximum number of elements that this batch supports */
 	int nElem;		/* actual number of element in this entry */
 	int nElemDeq;		/* actual number of elements dequeued (and thus to be deleted) - see comment above! */
-	int iDoneUpTo;		/* all messages below this index have state other than RDY */
 	qDeqID	deqID;		/* ID of dequeue operation that generated this batch */
 	batch_obj_t *pElem;	/* batch elements */
 	batch_state_t *eltState;/* state (array!) for individual objects.
@@ -134,7 +133,6 @@ batchFree(batch_t *pBatch) {
 static inline rsRetVal
 batchInit(batch_t *pBatch, int maxElem) {
 	DEFiRet;
-	pBatch->iDoneUpTo = 0;
 	pBatch->maxElem = maxElem;
 	CHKmalloc(pBatch->pElem = calloc((size_t)maxElem, sizeof(batch_obj_t)));
 	CHKmalloc(pBatch->eltState = calloc((size_t)maxElem, sizeof(batch_state_t)));
