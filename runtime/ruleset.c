@@ -340,6 +340,11 @@ scriptExec(struct cnfstmt *root, msg_t *pMsg, wti_t *pWti)
 	struct cnfstmt *stmt;
 
 	for(stmt = root ; stmt != NULL ; stmt = stmt->next) {
+		if(*pWti->pbShutdownImmediate) {
+			DBGPRINTF("scriptExec: ShutdownImmediate set, "
+				  "force terminating\n");	
+			goto done;
+		}
 		if(Debug) {
 			cnfstmtPrintOnly(stmt, 2, 0);
 		}
