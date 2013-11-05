@@ -1388,10 +1388,10 @@ doSubmitToActionQComplex(action_t *pAction, wti_t *pWti, msg_t *pMsg)
 	/* call the output driver */
 	iRet = actionWriteToAction(pAction, pMsg, pWti);
 
+finalize_it:
 	d_pthread_mutex_unlock(&pAction->mutAction);
 	pthread_cleanup_pop(0); /* remove mutex cleanup handler */
 
-finalize_it:
 	RETiRet;
 }
 #pragma GCC diagnostic warning "-Wempty-body"
