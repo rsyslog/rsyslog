@@ -1279,6 +1279,41 @@ finalize_it:
 }
 
 
+/* Call configured action, most complex case with all features supported (and thus slow).
+ * rgerhards, 2010-06-08
+ */
+#pragma GCC diagnostic ignored "-Wempty-body"
+static rsRetVal
+doSubmitToActionQComplex(action_t *pAction, wti_t *pWti, msg_t *pMsg)
+{
+	DEFiRet;
+
+	d_pthread_mutex_lock(&pAction->mutAction);
+	pthread_cleanup_push(mutexCancelCleanup, &pAction->mutAction);
+	DBGPRINTF("Called action %p (complex case), logging to %s\n",
+		  pAction, module.GetStateName(pAction->pMod));
+
+	pAction->tActNow = -1; /* we do not yet know our current time (clear prev. value) */
+	// TODO: can we optimize the "now" handling again (was batch, I guess...)?
+
+	/* don't output marks to recently written outputs */
+	if(pAction->bWriteAllMarkMsgs == RSFALSE
+	   && (pMsg->msgFlags & MARK) && (getActNow(pAction) - pAction->f_time) < MarkInterval / 2) {
+		ABORT_FINALIZE(RS_RET_OK);
+	}
+
+	/* call the output driver */
+	iRet = actionWriteToAction(pAction, pMsg, pWti);
+
+finalize_it:
+	d_pthread_mutex_unlock(&pAction->mutAction);
+	pthread_cleanup_pop(0); /* remove mutex cleanup handler */
+
+	RETiRet;
+}
+#pragma GCC diagnostic warning "-Wempty-body"
+
+
 /* helper to activateActions, it activates a specific action.
  */
 DEFFUNC_llExecFunc(doActivateActions)
@@ -1360,41 +1395,6 @@ doSubmitToActionQNotAllMark(action_t *pAction, wti_t *pWti, msg_t *pMsg)
 
 	RETiRet;
 }
-
-
-/* Call configured action, most complex case with all features supported (and thus slow).
- * rgerhards, 2010-06-08
- */
-#pragma GCC diagnostic ignored "-Wempty-body"
-static rsRetVal
-doSubmitToActionQComplex(action_t *pAction, wti_t *pWti, msg_t *pMsg)
-{
-	DEFiRet;
-
-	d_pthread_mutex_lock(&pAction->mutAction);
-	pthread_cleanup_push(mutexCancelCleanup, &pAction->mutAction);
-	DBGPRINTF("Called action %p (complex case), logging to %s\n",
-		  pAction, module.GetStateName(pAction->pMod));
-
-	pAction->tActNow = -1; /* we do not yet know our current time (clear prev. value) */
-	// TODO: can we optimize the "now" handling again (was batch, I guess...)?
-
-	/* don't output marks to recently written outputs */
-	if(pAction->bWriteAllMarkMsgs == RSFALSE
-	   && (pMsg->msgFlags & MARK) && (getActNow(pAction) - pAction->f_time) < MarkInterval / 2) {
-		ABORT_FINALIZE(RS_RET_OK);
-	}
-
-	/* call the output driver */
-	iRet = actionWriteToAction(pAction, pMsg, pWti);
-
-finalize_it:
-	d_pthread_mutex_unlock(&pAction->mutAction);
-	pthread_cleanup_pop(0); /* remove mutex cleanup handler */
-
-	RETiRet;
-}
-#pragma GCC diagnostic warning "-Wempty-body"
 
 
 /* apply all params from param block to action. This supports the v6 config system.
