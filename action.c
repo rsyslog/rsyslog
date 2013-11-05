@@ -1329,21 +1329,17 @@ activateActions(void)
 static rsRetVal
 doSubmitToActionQNotAllMarkBatch(action_t *pAction, wti_t *pWti, msg_t *pMsg)
 {
-	time_t now = 0;
 	int doProcess = 1;
 	time_t lastAct;
 	DEFiRet;
 
-	if(now == 0) { // TODO: do in caller!
-		now = datetime.GetTime(NULL); /* good time call - the only one done */
-	}
 	/* CAS loop, we write back a bit early, but that's OK... */
 	/* we use reception time, not dequeue time - this is considered more appropriate and
 	 * also faster ;) -- rgerhards, 2008-09-17 */
 	do {
 		lastAct = pAction->f_time;
 		if(pMsg->msgFlags & MARK) {
-			if((now - lastAct) < MarkInterval / 2) {
+			if((pMsg->ttGenTime - lastAct) < MarkInterval / 2) {
 				doProcess = 0;
 				DBGPRINTF("action was recently called, ignoring mark message\n");
 				break; /* do not update timestamp for non-written mark messages */
