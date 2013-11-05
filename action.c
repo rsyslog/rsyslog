@@ -14,7 +14,6 @@
  *
  * if set iExecEveryNthOccur > 1 || iSecsExecOnceInterval
  * - doSubmitToActionQComplexBatch
- * - doActionCallAction
  *   handles mark message reduction, but in essence calls
  * - actionWriteToAction
  * - qqueueEnqObj
@@ -1281,30 +1280,6 @@ finalize_it:
 }
 
 
-/* helper to actonCallAction, mostly needed because of this damn
- * pthread_cleanup_push() POSIX macro...
- */
-static inline rsRetVal
-doActionCallAction(action_t *pAction, wti_t *pWti, msg_t *pMsg)
-{
-	DEFiRet;
-
-	pAction->tActNow = -1; /* we do not yet know our current time (clear prev. value) */
-
-	/* don't output marks to recently written outputs */
-	if(pAction->bWriteAllMarkMsgs == RSFALSE
-	   && (pMsg->msgFlags & MARK) && (getActNow(pAction) - pAction->f_time) < MarkInterval / 2) {
-		ABORT_FINALIZE(RS_RET_OK);
-	}
-
-	/* call the output driver */
-	iRet = actionWriteToAction(pAction, pMsg, pWti);
-
-finalize_it:
-	RETiRet;
-}
-
-
 /* helper to activateActions, it activates a specific action.
  */
 DEFFUNC_llExecFunc(doActivateActions)
@@ -1441,10 +1416,23 @@ doSubmitToActionQComplexBatch(action_t *pAction, wti_t *pWti, msg_t *pMsg)
 	pthread_cleanup_push(mutexCancelCleanup, &pAction->mutAction);
 	DBGPRINTF("Called action %p (complex case), logging to %s\n",
 		  pAction, module.GetStateName(pAction->pMod));
-	doActionCallAction(pAction, pWti, pMsg);
+
+	pAction->tActNow = -1; /* we do not yet know our current time (clear prev. value) */
+	// TODO: can we optimize the "now" handling again (was batch, I guess...)?
+
+	/* don't output marks to recently written outputs */
+	if(pAction->bWriteAllMarkMsgs == RSFALSE
+	   && (pMsg->msgFlags & MARK) && (getActNow(pAction) - pAction->f_time) < MarkInterval / 2) {
+		ABORT_FINALIZE(RS_RET_OK);
+	}
+
+	/* call the output driver */
+	iRet = actionWriteToAction(pAction, pMsg, pWti);
+
 	d_pthread_mutex_unlock(&pAction->mutAction);
 	pthread_cleanup_pop(0); /* remove mutex cleanup handler */
 
+finalize_it:
 	RETiRet;
 }
 #pragma GCC diagnostic warning "-Wempty-body"
