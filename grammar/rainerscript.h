@@ -5,6 +5,7 @@
 #include <typedefs.h>
 #include <sys/types.h>
 #include <regex.h>
+#include "typedefs.h"
 
 #define	LOG_NFACILITIES	24	/* current number of syslog facilities */
 #define CNFFUNC_MAX_ARGS 32
@@ -170,6 +171,7 @@ struct cnfstmt {
 		struct {
 			es_str_t *name;
 			struct cnfstmt *stmt;
+			ruleset_t *ruleset;	/* non-NULL if the ruleset has a queue assigned */
 		} s_call;
 		struct {
 			uchar pmask[LOG_NFACILITIES+1];	/* priority mask */

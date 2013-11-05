@@ -2423,7 +2423,8 @@ cnfstmtPrintOnly(struct cnfstmt *stmt, int indent, sbool subtree)
 		break;
 	case S_CALL:
 		cstr = es_str2cstr(stmt->d.s_call.name, NULL);
-		doIndent(indent); dbgprintf("CALL [%s]\n", cstr);
+		doIndent(indent); dbgprintf("CALL [%s, queue:%d]\n", cstr,
+			stmt->d.s_call.ruleset == NULL ? 0 : 1);
 		free(cstr);
 		break;
 	case S_ACT:
@@ -3254,8 +3255,14 @@ cnfstmtOptimizeCall(struct cnfstmt *stmt)
 		stmt->nodetype = S_NOP;
 		goto done;
 	}
-	DBGPRINTF("CALL obtained ruleset ptr %p for ruleset %s\n", pRuleset, rsName);
-	stmt->d.s_call.stmt = pRuleset->root;
+	DBGPRINTF("CALL obtained ruleset ptr %p for ruleset %s [hasQueue:%d]\n",
+		  pRuleset, rsName, rulesetHasQueue(pRuleset));
+	if(rulesetHasQueue(pRuleset)) {
+		stmt->d.s_call.ruleset = pRuleset;
+	} else {
+		stmt->d.s_call.ruleset = NULL;
+		stmt->d.s_call.stmt = pRuleset->root;
+	}
 done:
 	free(rsName);
 	return;
