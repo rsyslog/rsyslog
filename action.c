@@ -13,16 +13,15 @@
  * The different modes (and calling sequence) are:
  *
  * if set iExecEveryNthOccur > 1 || iSecsExecOnceInterval
- * - doSubmitToActionQComplexBatch
+ * - doSubmitToActionQComplex
  *   handles mark message reduction, but in essence calls
  * - actionWriteToAction
  * - qqueueEnqObj
  *   (now queue engine processing)
  * if(pThis->bWriteAllMarkMsgs == RSFALSE) - this is the DEFAULT
- * - doSubmitToActionQNotAllMarkBatch
- * - doSubmitToActionQBatch (and from here like in the else case below!)
+ * - doSubmitToActionQNotAllMark
+ * - doSubmitToActionQ (and from here like in the else case below!)
  * else
- * - doSubmitToActionQBatch
  * - doSubmitToActionQ
  * - qqueueEnqObj
  *   (now queue engine processing)
@@ -116,8 +115,8 @@
 /* forward definitions */
 static rsRetVal processBatchMain(void *pVoid, batch_t *pBatch, wti_t *pWti);
 static rsRetVal doSubmitToActionQ(action_t *pAction, wti_t *pWti, msg_t*);
-static rsRetVal doSubmitToActionQComplexBatch(action_t *pAction, wti_t *pWti, msg_t*);
-static rsRetVal doSubmitToActionQNotAllMarkBatch(action_t *pAction, wti_t *pWti, msg_t*);
+static rsRetVal doSubmitToActionQComplex(action_t *pAction, wti_t *pWti, msg_t*);
+static rsRetVal doSubmitToActionQNotAllMark(action_t *pAction, wti_t *pWti, msg_t*);
 
 /* object static data (once for all instances) */
 /* TODO: make this an object! DEFobjStaticHelpers -- rgerhards, 2008-03-05 */
@@ -405,10 +404,10 @@ actionConstructFinalize(action_t *pThis, struct nvlst *lst)
 		DBGPRINTF("info: firehose mode disabled for action because "
 		          "iExecEveryNthOccur=%d, iSecsExecOnceInterval=%d\n",
 			  pThis->iExecEveryNthOccur, pThis->iSecsExecOnceInterval);
-		pThis->submitToActQ = doSubmitToActionQComplexBatch;
+		pThis->submitToActQ = doSubmitToActionQComplex;
 	} else if(pThis->bWriteAllMarkMsgs == RSFALSE) {
 		/* nearly full-speed submission mode, default case */
-		pThis->submitToActQ = doSubmitToActionQNotAllMarkBatch;
+		pThis->submitToActQ = doSubmitToActionQNotAllMark;
 	} else {
 		/* full firehose submission mode */
 		pThis->submitToActQ = doSubmitToActionQ;
@@ -1191,7 +1190,7 @@ static rsRetVal setActionQueType(void __attribute__((unused)) *pVal, uchar *pszT
 static rsRetVal
 doSubmitToActionQ(action_t *pAction, wti_t *pWti, msg_t *pMsg)
 {
-	struct syslogTime ttNow;
+	struct syslogTime ttNow; // TODO: think if we can buffer this in pWti
 	DEFiRet;
 
 	DBGPRINTF("Called action, logging to %s\n", module.GetStateName(pAction->pMod));
@@ -1327,7 +1326,7 @@ activateActions(void)
  * rgerhards, 2010-06-08
  */
 static rsRetVal
-doSubmitToActionQNotAllMarkBatch(action_t *pAction, wti_t *pWti, msg_t *pMsg)
+doSubmitToActionQNotAllMark(action_t *pAction, wti_t *pWti, msg_t *pMsg)
 {
 	int doProcess = 1;
 	time_t lastAct;
@@ -1368,7 +1367,7 @@ doSubmitToActionQNotAllMarkBatch(action_t *pAction, wti_t *pWti, msg_t *pMsg)
  */
 #pragma GCC diagnostic ignored "-Wempty-body"
 static rsRetVal
-doSubmitToActionQComplexBatch(action_t *pAction, wti_t *pWti, msg_t *pMsg)
+doSubmitToActionQComplex(action_t *pAction, wti_t *pWti, msg_t *pMsg)
 {
 	DEFiRet;
 
