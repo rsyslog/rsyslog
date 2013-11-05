@@ -90,6 +90,13 @@ rulesetGetName(ruleset_t *pRuleset)
 	return pRuleset->pszName;
 }
 
+/* returns 1 if the ruleset has a queue associtated, 0 if not */
+static inline int
+rulesetHasQueue(ruleset_t *pRuleset)
+{
+	return pRuleset->pQueue == NULL ? 0 : 1;
+}
+
 
 /* we will most probably convert this module back to traditional C
  * calling sequence, so here we go...
