@@ -2084,6 +2084,13 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 			break;
 	}
 
+	if(pThis->iMaxQueueSize < 100) {
+		errmsg.LogError(0, RS_RET_OK_WARN, "Note: queue.size=\"%d\" is very "
+			"low and can lead to unpredictable results. See also "
+			"http://www.rsyslog.com/lower-bound-for-queue-sizes/",
+			pThis->iMaxQueueSize);
+	}
+
 	if(pThis->iFullDlyMrk == -1)
 		pThis->iFullDlyMrk  = pThis->iMaxQueueSize
 			- (pThis->iMaxQueueSize / 100) *  3; /* default 97% */
