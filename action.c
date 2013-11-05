@@ -1183,7 +1183,7 @@ static rsRetVal setActionQueType(void __attribute__((unused)) *pVal, uchar *pszT
 
 /* This submits the message to the action queue in case we do NOT need to handle repeat
  * message processing. That case permits us to gain lots of freedom during processing
- * and thus speed. This is also utilized to submit messages in complex case once
+ * and thus speed. This is also utilized to submit messages in more complex cases once
  * the complex logic has been applied ;)
  * rgerhards, 2010-06-08
  */

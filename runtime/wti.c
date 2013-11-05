@@ -51,6 +51,8 @@
 DEFobjStaticHelpers
 DEFobjCurrIf(glbl)
 
+pthread_key_t thrd_wti_key;
+
 /* forward-definitions */
 
 /* methods */
@@ -205,6 +207,11 @@ wtiConstructFinalize(wti_t *pThis)
 
 	/* must use calloc as we need zero-init */
 	CHKmalloc(pThis->actWrkrInfo = calloc(iActionNbr, sizeof(actWrkrInfo_t)));
+
+	if(pThis->pWtp == NULL) {
+		dbgprintf("wtiConstructFinalize: pWtp not set, this may be intentional\n");
+		FINALIZE;
+	}
 
 	/* we now alloc the array for user pointers. We obtain the max from the queue itself. */
 	CHKiRet(pThis->pWtp->pfGetDeqBatchSize(pThis->pWtp->pUsr, &iDeqBatchSize));
@@ -391,6 +398,34 @@ finalize_it:
 	RETiRet;
 }
 
+
+/* This function returns (and creates if necessary) a dummy wti suitable
+ * for use by the rule engine. It is intended to be used for direct-mode
+ * main queues (folks, don't do that!). Once created, data is stored in
+ * thread-specific storage.
+ * Note: we do NOT do error checking -- if this functions fails, all the
+ * rest will fail as well... (also, it will only fail under OOM, so...).
+ * Memleak: we leak pWti's when run in direct mode. However, this is only
+ * a cosmetic leak, as we need them until all inputs are terminated,
+ * what means essentially until rsyslog itself is terminated. So we
+ * don't care -- it's just not nice in valgrind, but that's it.
+ */
+wti_t *
+wtiGetDummy(void)
+{
+	wti_t *pWti;
+
+	pWti = (wti_t*) pthread_getspecific(thrd_wti_key);
+	if(pWti == NULL) {
+		wtiConstruct(&pWti);
+		wtiConstructFinalize(pWti);
+		if(pthread_setspecific(thrd_wti_key, pWti) != 0) {
+			DBGPRINTF("wtiGetDummy: error setspecific thrd_wti_key\n");
+		}
+	}
+	return pWti;
+}
+
 /* dummy */
 rsRetVal wtiQueryInterface(void) { return RS_RET_NOT_IMPLEMENTED; }
 
@@ -400,6 +435,7 @@ BEGINObjClassExit(wti, OBJ_IS_CORE_MODULE) /* CHANGE class also in END MACRO! */
 CODESTARTObjClassExit(nsdsel_gtls)
 	/* release objects we no longer need */
 	objRelease(glbl, CORE_COMPONENT);
+	pthread_key_delete(thrd_wti_key);
 ENDObjClassExit(wti)
 
 
@@ -408,8 +444,14 @@ ENDObjClassExit(wti)
  * rgerhards, 2008-01-09
  */
 BEGINObjClassInit(wti, 1, OBJ_IS_CORE_MODULE) /* one is the object version (most important for persisting) */
+	int r;
 	/* request objects we use */
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
+	r = pthread_key_create(&thrd_wti_key, NULL);
+	if(r != 0) {
+		dbgprintf("wti.c: pthread_key_create failed\n");
+		iRet = RS_RET_ERR;
+	}
 ENDObjClassInit(wti)
 
 /* vi:set ai:
