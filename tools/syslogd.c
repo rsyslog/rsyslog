@@ -551,17 +551,16 @@ finalize_it:
  * for the main queue.
  */
 static rsRetVal
-msgConsumer(void __attribute__((unused)) *notNeeded, batch_t *pBatch, wti_t *pWti, int *pbShutdownImmediate)
+msgConsumer(void __attribute__((unused)) *notNeeded, batch_t *pBatch, wti_t *pWti)
 {
 	DEFiRet;
 	assert(pBatch != NULL);
-	pWti->pbShutdownImmediate = pbShutdownImmediate;
 	preprocessBatch(pBatch, pWti->pbShutdownImmediate);
 	ruleset.ProcessBatch(pBatch, pWti);
 //TODO: the BATCH_STATE_COMM must be set somewhere down the road, but we 
 //do not have this yet and so we emulate -- 2010-06-10
 int i;
-	for(i = 0 ; i < pBatch->nElem  && !*pbShutdownImmediate ; i++) {
+	for(i = 0 ; i < pBatch->nElem  && !*pWti->pbShutdownImmediate ; i++) {
 		pBatch->eltState[i] = BATCH_STATE_COMM;
 	}
 	RETiRet;
