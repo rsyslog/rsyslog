@@ -48,6 +48,7 @@
 #include "rainerscript.h"
 #include "srUtils.h"
 #include "modules.h"
+#include "wti.h"
 #include "dirty.h" /* for main ruleset queue creation */
 
 /* static data */
@@ -392,7 +393,7 @@ processBatch(batch_t *pBatch, wti_t *pWti)
 	DBGPRINTF("processBATCH: batch of %d elements must be processed\n", pBatch->nElem);
 
 	/* execution phase */
-	for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pBatch->pbShutdownImmediate) ; ++i) {
+	for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pWti->pbShutdownImmediate) ; ++i) {
 		pMsg = pBatch->pElem[i].pMsg;
 		DBGPRINTF("processBATCH: next msg %d: %.128s\n", i, pMsg->pszRawMsg);
 		pRuleset = (pMsg->pRuleset == NULL) ? ourConf->rulesets.pDflt : pMsg->pRuleset;
@@ -405,7 +406,7 @@ processBatch(batch_t *pBatch, wti_t *pWti)
 
 	/* commit phase */
 	dbgprintf("END batch execution phase, entering to commit phase\n");
-	actionCommitAllDirect(pWti, pBatch->pbShutdownImmediate);
+	actionCommitAllDirect(pWti);
 
 	DBGPRINTF("processBATCH: batch of %d elements has been processed\n", pBatch->nElem);
 	RETiRet;

@@ -1061,7 +1061,7 @@ actionCommit(action_t *pThis, wti_t *pWti, int *pbShutdownImmediate)
 
 /* Commit all active transactions in *DIRECT mode* */
 void
-actionCommitAllDirect(wti_t *pWti, int *pbShutdownImmediate)
+actionCommitAllDirect(wti_t *pWti)
 {
 	int i;
 	action_t *pAction;
@@ -1071,7 +1071,7 @@ actionCommitAllDirect(wti_t *pWti, int *pbShutdownImmediate)
 			  i, getActionStateByNbr(pWti, i), pWti->actWrkrInfo[i].iparamRoot);
 		pAction = pWti->actWrkrInfo[i].pAction;
 		if(pAction != NULL && pAction->pQueue->qType == QUEUETYPE_DIRECT)
-			actionCommit(pWti->actWrkrInfo[i].pAction, pWti, pbShutdownImmediate);
+			actionCommit(pWti->actWrkrInfo[i].pAction, pWti, pWti->pbShutdownImmediate);
 	}
 }
 
@@ -1115,7 +1115,7 @@ processBatchMain(void *pVoid, batch_t *pBatch, wti_t *pWti, int *pbShutdownImmed
 	DEFiRet;
 
 	if(pbShutdownImmediate == NULL) {
-		pbShutdownImmediate = pBatch->pbShutdownImmediate;
+		pbShutdownImmediate = pWti->pbShutdownImmediate;
 	}
 
 	/* indicate we have not yet read the date */

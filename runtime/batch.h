@@ -68,7 +68,6 @@ struct batch_s {
 	int nElemDeq;		/* actual number of elements dequeued (and thus to be deleted) - see comment above! */
 	int iDoneUpTo;		/* all messages below this index have state other than RDY */
 	qDeqID	deqID;		/* ID of dequeue operation that generated this batch */
-	int *pbShutdownImmediate;/* end processing of this batch immediately if set to 1 */
 	batch_obj_t *pElem;	/* batch elements */
 	batch_state_t *eltState;/* state (array!) for individual objects.
 	   			   NOTE: we have moved this out of batch_obj_t because we

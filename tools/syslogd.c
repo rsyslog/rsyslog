@@ -497,7 +497,7 @@ finalize_it:
  * rgerhards, 2010-06-09
  */
 static inline rsRetVal
-preprocessBatch(batch_t *pBatch) {
+preprocessBatch(batch_t *pBatch, int *pbShutdownImmediate) {
 	prop_t *ip;
 	prop_t *fqdn;
 	prop_t *localName;
@@ -509,7 +509,7 @@ preprocessBatch(batch_t *pBatch) {
 	rsRetVal localRet;
 	DEFiRet;
 
-	for(i = 0 ; i < pBatch->nElem  && !*(pBatch->pbShutdownImmediate) ; i++) {
+	for(i = 0 ; i < pBatch->nElem  && !*pbShutdownImmediate ; i++) {
 		pMsg = pBatch->pElem[i].pMsg;
 		if((pMsg->msgFlags & NEEDS_ACLCHK_U) != 0) {
 			DBGPRINTF("msgConsumer: UDP ACL must be checked for message (hostname-based)\n");
@@ -555,8 +555,8 @@ msgConsumer(void __attribute__((unused)) *notNeeded, batch_t *pBatch, wti_t *pWt
 {
 	DEFiRet;
 	assert(pBatch != NULL);
-	pBatch->pbShutdownImmediate = pbShutdownImmediate; /* TODO: move this to batch creation! */
-	preprocessBatch(pBatch);
+	pWti->pbShutdownImmediate = pbShutdownImmediate;
+	preprocessBatch(pBatch, pWti->pbShutdownImmediate);
 	ruleset.ProcessBatch(pBatch, pWti);
 //TODO: the BATCH_STATE_COMM must be set somewhere down the road, but we 
 //do not have this yet and so we emulate -- 2010-06-10

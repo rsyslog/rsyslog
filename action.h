@@ -91,7 +91,7 @@ rsRetVal addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStr
 rsRetVal activateActions(void);
 rsRetVal actionNewInst(struct nvlst *lst, action_t **ppAction);
 rsRetVal actionProcessCnf(struct cnfobj *o);
-void actionCommitAllDirect(wti_t *pWti, int *pbShutdownImmediate);
+void actionCommitAllDirect(wti_t *pWti);
 
 /* external data */
 extern int iActionNbr;
