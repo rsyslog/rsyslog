@@ -1,4 +1,5 @@
 Version 7.4.7  [v7.4-stable] 2013-11-??
+- improved checking of queue config parameters on startup
 - bugfix: call to ruleset with async queue did not use the queue
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=443
 ---------------------------------------------------------------------------

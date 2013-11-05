@@ -2106,16 +2106,24 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 			break;
 	}
 
-	if(pThis->iFullDlyMrk == -1)
-		pThis->iFullDlyMrk  = pThis->iMaxQueueSize
-			- (pThis->iMaxQueueSize / 100) *  3; /* default 97% */
-	if(pThis->iLightDlyMrk == -1)
-		pThis->iLightDlyMrk = pThis->iMaxQueueSize
-			- (pThis->iMaxQueueSize / 100) * 30; /* default 70% */
+	if(pThis->iMaxQueueSize < 100) {
+		errmsg.LogError(0, RS_RET_OK_WARN, "Note: queue.size=\"%d\" is very "
+			"low and can lead to unpredictable results. See also "
+			"http://www.rsyslog.com/lower-bound-for-queue-sizes/",
+			pThis->iMaxQueueSize);
+	}
 
 	/* we need to do a quick check if our water marks are set plausible. If not,
-	 * we correct the most important shortcomings. TODO: do that!!!! -- rgerhards, 2008-03-14
+	 * we correct the most important shortcomings.
 	 */
+	if(pThis->iFullDlyMrk == -1 || pThis->iFullDlyMrk > pThis->iMaxQueueSize)
+		pThis->iFullDlyMrk  = pThis->iMaxQueueSize
+			- (pThis->iMaxQueueSize / 100) *  3; /* default 97% */
+	if(pThis->iLightDlyMrk == -1 || pThis->iLightDlyMrk > pThis->iMaxQueueSize)
+		pThis->iLightDlyMrk = pThis->iMaxQueueSize
+			- (pThis->iMaxQueueSize / 100) * 30; /* default 70% */
+	if(pThis->iDeqBatchSize > pThis->iMaxQueueSize)
+		pThis->iDeqBatchSize = pThis->iMaxQueueSize;
 
 	/* finalize some initializations that could not yet be done because it is
 	 * influenced by properties which might have been set after queueConstruct ()
