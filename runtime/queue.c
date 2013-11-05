@@ -85,7 +85,6 @@ static rsRetVal qqueueMultiEnqObjDirect(qqueue_t *pThis, multi_submit_t *pMultiS
 static rsRetVal qAddDirect(qqueue_t *pThis, msg_t *pMsg);
 static rsRetVal qDestructDirect(qqueue_t __attribute__((unused)) *pThis);
 static rsRetVal qConstructDirect(qqueue_t __attribute__((unused)) *pThis);
-static rsRetVal qDelDirect(qqueue_t __attribute__((unused)) *pThis);
 static rsRetVal qDestructDisk(qqueue_t *pThis);
 
 /* some constants for queuePersist () */
@@ -1007,11 +1006,6 @@ qAddDirect(qqueue_t *pThis, msg_t* pMsg)
 	pWti->pbShutdownImmediate = &pThis->bShutdownImmediate;
 	iRet = qAddDirectWithWti(pThis, pMsg, pWti);
 	RETiRet;
-}
-
-static rsRetVal qDelDirect(qqueue_t __attribute__((unused)) *pThis)
-{
-	return RS_RET_OK;
 }
 
 
@@ -2687,21 +2681,6 @@ finalize_it:
 	RETiRet;
 }
 /* ------------------------------ END multi-enqueue functions ------------------------------ */
-
-
-/* enqueue a new user data element in direct mode
- * NOTE/TODO: This is a TESTER/EXPERIEMENTAL, to be changed to better
- * code later on (like multi submit!) 2010-06-10
- * Enqueues the new element and awakes worker thread.
- */
-rsRetVal
-qqueueEnqMsgDirect(qqueue_t *pThis, msg_t *pMsg, wti_t *pWti)
-{
-	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, qqueue);
-	iRet = qAddDirectWithWti(pThis, pMsg, pWti);
-	RETiRet;
-}
 
 
 /* enqueue a new user data element 
