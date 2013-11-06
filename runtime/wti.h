@@ -82,6 +82,10 @@ struct wti_s {
 	DEF_ATOMIC_HELPER_MUT(mutIsRunning);
 	struct {
 		uint8_t bPrevWasSuspended;
+		uint8_t bDoAutoCommit; /* do a commit after each message
+		                        * this is usually set for batches with 0 element, but may
+					* also be added as a user-selectable option (not implemented yet)
+					*/
 	} execState;	/* state for the execution engine */
 };
 
@@ -176,5 +180,12 @@ dbgprintf("DDDD: adding param for action %d\n", pAction->iActionNbr);
 
 finalize_it:
 	RETiRet;
+}
+
+static inline void
+wtiResetExecState(wti_t *pWti, batch_t *pBatch)
+{
+	pWti->execState.bPrevWasSuspended = 0;
+	pWti->execState.bDoAutoCommit = (batchNumMsgs(pBatch) == 1);
 }
 #endif /* #ifndef WTI_H_INCLUDED */

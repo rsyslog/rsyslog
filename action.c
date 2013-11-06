@@ -996,7 +996,7 @@ actionTryCommit(action_t *pThis, wti_t *pWti)
 			iparamCurr = iparamCurr->next;
 			free(iparamDel); // TODO: memleak strings!
 		}
-		wrkrInfo->iparamLast = NULL;
+		wrkrInfo->iparamRoot = wrkrInfo->iparamLast = NULL;
 	}
 
 	CHKiRet(actionPrepare(pThis, pWti));
@@ -1102,14 +1102,14 @@ dbgprintf("DDDD: processMsgMain[act %d], %s\n", pAction->iActionNbr, pMsg->pszRa
 				    pWti);
 	releaseDoActionParams(pAction, pWti);
 finalize_it:
+	if(pWti->execState.bDoAutoCommit)
+		iRet = actionCommit(pAction, pWti);
 	pWti->execState.bPrevWasSuspended = (iRet == RS_RET_SUSPENDED || iRet == RS_RET_ACTION_FAILED);
 dbgprintf("DDDD: bPrevWasSuspended now %d, action state %d\n", (int)pWti->execState.bPrevWasSuspended, getActionState(pWti, pAction));
 	RETiRet;
 }
 
-/* receive an array of to-process user pointers and submit them
- * for processing.
- * rgerhards, 2009-04-22
+/* This entry point is called by the ACTION queue (not main queue!)
  */
 static rsRetVal
 processBatchMain(void *pVoid, batch_t *pBatch, wti_t *pWti)
@@ -1120,7 +1120,7 @@ processBatchMain(void *pVoid, batch_t *pBatch, wti_t *pWti)
 	struct syslogTime ttNow;
 	DEFiRet;
 
-	pWti->execState.bPrevWasSuspended = 0;
+	wtiResetExecState(pWti, pBatch);
 	/* indicate we have not yet read the date */
 	ttNow.year = 0;
 
@@ -1133,7 +1133,8 @@ processBatchMain(void *pVoid, batch_t *pBatch, wti_t *pWti)
 		}
 	}
 
-	iRet = actionCommit(pAction, pWti);
+	if(!pWti->execState.bDoAutoCommit)
+		iRet = actionCommit(pAction, pWti);
 dbgprintf("DDDD: processBatchMain - end\n");
 	RETiRet;
 }

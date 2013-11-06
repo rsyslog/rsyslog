@@ -412,6 +412,7 @@ done:	return;
 
 
 /* Process (consume) a batch of messages. Calls the actions configured.
+ * This is called by MAIN queues.
  */
 static rsRetVal
 processBatch(batch_t *pBatch, wti_t *pWti)
@@ -422,6 +423,8 @@ processBatch(batch_t *pBatch, wti_t *pWti)
 	DEFiRet;
 
 	DBGPRINTF("processBATCH: batch of %d elements must be processed\n", pBatch->nElem);
+
+	wtiResetExecState(pWti, pBatch);
 
 	/* execution phase */
 	for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pWti->pbShutdownImmediate) ; ++i) {
