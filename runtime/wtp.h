@@ -56,7 +56,7 @@ struct wtp_s {
 	void *pUsr;		/* pointer to user object (in this case, the queue the wtp belongs to) */
 	pthread_attr_t attrThrd;/* attribute for new threads (created just once and cached here) */
 	pthread_mutex_t *pmutUsr;
-	pthread_cond_t *pcondBusy; /* condition the user will signal "busy again, keep runing" on (awakes worker) */
+	pthread_cond_t *pcondBusy; /* unused condition variable, was used to signal threads to wake up */
 	rsRetVal (*pfChkStopWrkr)(void *pUsr, int);
 	rsRetVal (*pfGetDeqBatchSize)(void *pUsr, int*); /* obtains max dequeue count from queue config */
 	rsRetVal (*pfObjProcessed)(void *pUsr, wti_t *pWti); /* indicate user object is processed */

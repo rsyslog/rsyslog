@@ -37,6 +37,7 @@ struct wti_s {
 	wtp_t *pWtp; /* my worker thread pool (important if only the work thread instance is passed! */
 	batch_t batch; /* pointer to an object array meaningful for current user pointer (e.g. queue pUsr data elemt) */
 	uchar *pszDbgHdr;	/* header string for debug messages */
+	pthread_cond_t pcondBusy; /* condition to wake up the worker, protected by pmutUsr in wtp */
 	DEF_ATOMIC_HELPER_MUT(mutIsRunning);
 };
 
