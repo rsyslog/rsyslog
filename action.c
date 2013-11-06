@@ -978,19 +978,17 @@ doTransaction(action_t *pThis, wti_t *pWti)
 {
 	actWrkrInfo_t *wrkrInfo;
 	actWrkrIParams_t *iparamCurr;
+	int i;
 	DEFiRet;
 
 	wrkrInfo = &(pWti->actWrkrInfo[pThis->iActionNbr]);
-	dbgprintf("DDDD: doTransaction: action %d, root %p\n", pThis->iActionNbr, wrkrInfo->iparamRoot);
-	if(wrkrInfo->iparamRoot != NULL) {
-		iparamCurr = wrkrInfo->iparamRoot;
-		while(iparamCurr != NULL) {
-			iRet = actionProcessMessage(pThis, iparamCurr->msgFlags,
-						    iparamCurr->staticActParams,
-						    pWti);
-			dbgprintf("DDDD: doTransaction loop, iRet %d\n", iRet);
-			iparamCurr = iparamCurr->next;
-		}
+	dbgprintf("DDDD: doTransaction: action %d, currIParams %d\n", pThis->iActionNbr, wrkrInfo->currIParam);
+	for(i = 0 ; i < wrkrInfo->currIParam ; ++i) {
+		iparamCurr = wrkrInfo->iparams + i;
+		iRet = actionProcessMessage(pThis, iparamCurr->msgFlags,
+					    iparamCurr->staticActParams,
+					    pWti);
+		dbgprintf("DDDD: doTransaction loop, iRet %d\n", iRet);
 	}
 	RETiRet;
 }
@@ -1000,29 +998,25 @@ static void
 actionFreeParams(action_t *pThis, wti_t *pWti)
 {
 	actWrkrInfo_t *wrkrInfo;
-	actWrkrIParams_t *iparamCurr, *iparamDel;
+	actWrkrIParams_t *iparamCurr;
+	int i;
 	int j;
 
 	wrkrInfo = &(pWti->actWrkrInfo[pThis->iActionNbr]);
-	dbgprintf("DDDD: actionFreeParams: action %d, root %p\n", pThis->iActionNbr, wrkrInfo->iparamRoot);
-	if(wrkrInfo->iparamRoot != NULL) {
-		iparamCurr = wrkrInfo->iparamRoot;
-		while(iparamCurr != NULL) {
-			releaseDoActionParams(pThis, pWti);
-			iparamDel = iparamCurr;
-			iparamCurr = iparamCurr->next;
-			for(j = 0 ; j < CONF_OMOD_NUMSTRINGS_MAXSIZE ; ++j) {
-				/* TODO: we can save time by not freeing everything,
-				 * but that's left for a later optimization.
-				 */
-				free(iparamDel->staticActStrings[j]);
-				iparamDel->staticActStrings[j] = NULL;
-				iparamDel->staticLenStrings[j] = 0;
-			}
-			free(iparamDel);
+	dbgprintf("DDDD: actionFreeParams: action %d, currIParam %d\n", pThis->iActionNbr, wrkrInfo->currIParam);
+	for(i = 0 ; i < wrkrInfo->currIParam ; ++i) {
+		iparamCurr = wrkrInfo->iparams + i;
+		for(j = 0 ; j < CONF_OMOD_NUMSTRINGS_MAXSIZE ; ++j) {
+			/* TODO: we can save time by not freeing everything,
+			 * but that's left for a later optimization.
+			 */
+			free(iparamCurr->staticActStrings[j]);
+			iparamCurr->staticActStrings[j] = NULL;
+			iparamCurr->staticLenStrings[j] = 0;
 		}
-		wrkrInfo->iparamRoot = wrkrInfo->iparamLast = NULL;
 	}
+	wrkrInfo->currIParam = 0; /* reset to beginning */
+	releaseDoActionParams(pThis, pWti);
 }
 
 
@@ -1118,11 +1112,11 @@ actionCommitAllDirect(wti_t *pWti)
 	action_t *pAction;
 
 	for(i = 0 ; i < iActionNbr ; ++i) {
-		dbgprintf("DDDD: actionCommitAll: action %d, state %u, root %p\n",
-			  i, getActionStateByNbr(pWti, i), pWti->actWrkrInfo[i].iparamRoot);
+		dbgprintf("DDDD: actionCommitAll: action %d, state %u, nbr to commit %d\n",
+			  i, getActionStateByNbr(pWti, i), pWti->actWrkrInfo->currIParam);
 		pAction = pWti->actWrkrInfo[i].pAction;
 		if(pAction != NULL && pAction->pQueue->qType == QUEUETYPE_DIRECT)
-			actionCommit(pWti->actWrkrInfo[i].pAction, pWti);
+			actionCommit(pAction, pWti);
 	}
 }
 

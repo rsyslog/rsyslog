@@ -44,7 +44,6 @@
  * as well. -- gerhards, 2013-11-04
  */
 typedef struct actWrkrIParams {
-	struct actWrkrIParams *next;
 	int msgFlags;
 	/* following are caches to save allocs if not absolutely necessary */
 	uchar *staticActStrings[CONF_OMOD_NUMSTRINGS_MAXSIZE]; /**< for strings */
@@ -62,8 +61,9 @@ typedef struct actWrkrInfo {
 	struct {
 		unsigned actState : 3;
 	} flags;
-	actWrkrIParams_t *iparamRoot;
-	actWrkrIParams_t *iparamLast;
+	actWrkrIParams_t *iparams;
+	int currIParam;
+	int maxIParams;	/* current max */
 	void *staticActParams[CONF_OMOD_NUMSTRINGS_MAXSIZE]; /* for non-strings */
 } actWrkrInfo_t;
 
@@ -164,18 +164,23 @@ wtiNewIParam(wti_t *pWti, action_t *pAction, actWrkrIParams_t **piparams)
 {
 	actWrkrInfo_t *wrkrInfo;
 	actWrkrIParams_t *iparams;
+	int newMax;
 	DEFiRet;
 
 	wrkrInfo = &(pWti->actWrkrInfo[pAction->iActionNbr]);
-dbgprintf("DDDD: adding param for action %d\n", pAction->iActionNbr);
-	CHKmalloc(iparams = calloc(1, sizeof(actWrkrIParams_t)));
-	if(wrkrInfo->iparamLast == NULL) {
-		wrkrInfo->iparamLast = wrkrInfo->iparamRoot = iparams;
-	} else {
-		wrkrInfo->iparamLast->next = iparams;
-		wrkrInfo->iparamLast = iparams;
+	if(wrkrInfo->currIParam == wrkrInfo->maxIParams) {
+		/* we need to extend */
+		dbgprintf("DDDD: extending iparams, max %d\n", wrkrInfo->maxIParams);
+		newMax = (wrkrInfo->maxIParams == 0) ? CONF_IPARAMS_BUFSIZE : 2 * wrkrInfo->maxIParams;
+		CHKmalloc(iparams = realloc(wrkrInfo->iparams, sizeof(actWrkrIParams_t) * newMax));
+		wrkrInfo->iparams = iparams;
+		wrkrInfo->maxIParams = newMax;
 	}
+dbgprintf("DDDD: adding param  %d for action %d\n", wrkrInfo->currIParam, pAction->iActionNbr);
+	iparams = wrkrInfo->iparams + wrkrInfo->currIParam;
+	memset(iparams, 0, sizeof(actWrkrIParams_t));
 	*piparams = iparams;
+	++wrkrInfo->currIParam;
 
 finalize_it:
 	RETiRet;
