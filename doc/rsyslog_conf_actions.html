@@ -31,8 +31,14 @@ implemented via <a href="rsyslog_conf_modules.html#om">output modules</a>.
 	<br>used for statistics gathering and documentation
 	<li><b>type</b> string
 	<br>Mandatory parameter for every action. The name of the module that should be used. </li>
-	<li><b>action.writeAllMarkMessages</b> on/off
-	<br>Normally, mark messages are written to actions only if the action was not recently executed (by default, recently means within the past 20 minutes). If this setting is switched to "on", mark messages are always sent to actions, no matter how recently they have been executed. In this mode, mark messages can be used as a kind of heartbeat. Note that this option auto-resets to "off", so if you intend to use it with multiple actions, it must be specified in front off all selector lines that should provide this functionality. </li>
+	<li><b>action.writeAllMarkMessages</b> <i>on</i>/off
+	<br>This setting tells if mark messages are always written ("on", the default) or only
+	if the action was not recently executed ("off"). By default, recently means within the
+	past 20 minutes. If this setting is "on", mark messages are always sent to actions, no
+	matter how recently they have been executed. In this mode, mark messages can be used as
+	a kind of heartbeat. This mode also enables faster processing inside the rule engine. So
+	it should be set to "off" only when there is a good reason to do so.
+	</li>
 	<li><b>action.execOnlyEveryNthTime</b> integer
 	<br>If configured, the next action will only be executed every n-th time. For example, if configured to 3, the first two messages that go into the action will be dropped, the 3rd will actually cause the action to execute, the 4th and 5th will be dropped, the 6th executed under the action, ... and so on. Note: this setting is automatically re-set when the actual action is defined.</li>
 	<li><b>action.execOnlyEveryNthTimeout</b> integer

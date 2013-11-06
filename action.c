@@ -18,7 +18,7 @@
  * - actionWriteToAction
  * - qqueueEnqObj
  *   (now queue engine processing)
- * if(pThis->bWriteAllMarkMsgs == RSFALSE) - this is the DEFAULT
+ * if(pThis->bWriteAllMarkMsgs == RSFALSE)
  * - doSubmitToActionQNotAllMark
  * - doSubmitToActionQ (and from here like in the else case below!)
  * else
@@ -326,7 +326,7 @@ rsRetVal actionConstruct(action_t **ppThis)
 	pThis->iResumeInterval = 30;
 	pThis->iResumeRetryCount = 0;
 	pThis->pszName = NULL;
-	pThis->bWriteAllMarkMsgs = RSFALSE;
+	pThis->bWriteAllMarkMsgs = 1;
 	pThis->iExecEveryNthOccur = 0;
 	pThis->iExecEveryNthOccurTO = 0;
 	pThis->iSecsExecOnceInterval = 0;
@@ -406,12 +406,12 @@ actionConstructFinalize(action_t *pThis, struct nvlst *lst)
 		          "iExecEveryNthOccur=%d, iSecsExecOnceInterval=%d\n",
 			  pThis->iExecEveryNthOccur, pThis->iSecsExecOnceInterval);
 		pThis->submitToActQ = doSubmitToActionQComplex;
-	} else if(pThis->bWriteAllMarkMsgs == RSFALSE) {
-		/* nearly full-speed submission mode, default case */
-		pThis->submitToActQ = doSubmitToActionQNotAllMark;
-	} else {
-		/* full firehose submission mode */
+	} else if(pThis->bWriteAllMarkMsgs) {
+		/* full firehose submission mode, default case*/
 		pThis->submitToActQ = doSubmitToActionQ;
+	} else {
+		/* nearly full-speed submission mode */
+		pThis->submitToActQ = doSubmitToActionQNotAllMark;
 	}
 
 	/* create queue */
@@ -1305,7 +1305,7 @@ doSubmitToActionQComplex(action_t *pAction, wti_t *pWti, msg_t *pMsg)
 	// TODO: can we optimize the "now" handling again (was batch, I guess...)?
 
 	/* don't output marks to recently written outputs */
-	if(pAction->bWriteAllMarkMsgs == RSFALSE
+	if(pAction->bWriteAllMarkMsgs == 0
 	   && (pMsg->msgFlags & MARK) && (getActNow(pAction) - pAction->f_time) < MarkInterval / 2) {
 		ABORT_FINALIZE(RS_RET_OK);
 	}
@@ -1482,7 +1482,7 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData,
 		pAction->bRepMsgHasMsg = cs.bActionRepMsgHasMsg;
 		cs.iActExecEveryNthOccur = 0; /* auto-reset */
 		cs.iActExecEveryNthOccurTO = 0; /* auto-reset */
-		cs.bActionWriteAllMarkMsgs = RSFALSE; /* auto-reset */
+		cs.bActionWriteAllMarkMsgs = 1; /* auto-reset */
 		cs.pszActionName = NULL;	/* free again! */
 	} else {
 		actionApplyCnfParam(pAction, actParams);
@@ -1579,7 +1579,7 @@ resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unus
 static inline void
 initConfigVariables(void)
 {
-	cs.bActionWriteAllMarkMsgs = RSFALSE;
+	cs.bActionWriteAllMarkMsgs = 1;
 	cs.glbliActionResumeRetryCount = 0;
 	cs.bActExecWhenPrevSusp = 0;
 	cs.iActExecOnceInterval = 0;

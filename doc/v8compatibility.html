@@ -13,6 +13,12 @@ Most importantly, pre-v8 plugins <b>do not longer work</b> and need to
 be updated to support the new calling interfaces. If you developed a plugin,
 be sure to review the developer section below.
 </p>
+<h2>Mark Messages</h2>
+<p>In previous versions, mark messages were by default only processed if an
+action was not executed for some time. The default has now changed, and mark
+messages are now always processed. Note that this enables faster processing
+inside rsyslog. To change to previous behaviour, you need to add
+action.writeAllMarkMessages="off" to the actions in question.
 <h2>What Developers need to Know</h2>
 <h3>output plugin interface</h3>
 <p>To support the new core engine, the output interface has been considerably
