@@ -119,7 +119,6 @@ static rsRetVal doSubmitToActionQComplex(action_t *pAction, wti_t *pWti, msg_t*)
 static rsRetVal doSubmitToActionQNotAllMark(action_t *pAction, wti_t *pWti, msg_t*);
 
 /* object static data (once for all instances) */
-/* TODO: make this an object! DEFobjStaticHelpers -- rgerhards, 2008-03-05 */
 DEFobjCurrIf(obj)
 DEFobjCurrIf(datetime)
 DEFobjCurrIf(module)
@@ -1624,11 +1623,7 @@ actionNewInst(struct nvlst *lst, action_t **ppAction)
 		errmsg.LogError(0, RS_RET_MOD_UNKNOWN, "module name '%s' is unknown", cnfModName);
 		ABORT_FINALIZE(RS_RET_MOD_UNKNOWN);
 	}
-	iRet = pMod->mod.om.newActInst(cnfModName, lst, &pModData, &pOMSR);
-	// TODO: check if RS_RET_SUSPENDED is still valid in v6!
-	if(iRet != RS_RET_OK && iRet != RS_RET_SUSPENDED) {
-		FINALIZE; /* iRet is already set to error state */
-	}
+	CHKiRet(pMod->mod.om.newActInst(cnfModName, lst, &pModData, &pOMSR));
 
 	if((iRet = addAction(&pAction, pMod, pModData, pOMSR, paramvals, lst)) == RS_RET_OK) {
 		/* check if the module is compatible with select features
@@ -1643,8 +1638,6 @@ finalize_it:
 	RETiRet;
 }
 
-/* TODO: we are not yet a real object, the ClassInit here just looks like it is..
- */
 rsRetVal actionClassInit(void)
 {
 	DEFiRet;
