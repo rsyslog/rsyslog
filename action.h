@@ -45,8 +45,9 @@ struct action_s {
 	int	iActionNbr;	/* this action's number (ID) */
 	sbool	bExecWhenPrevSusp;/* execute only when previous action is suspended? */
 	sbool	bWriteAllMarkMsgs;/* should all mark msgs be written (not matter how recent the action was executed)? */
-	int	iSecsExecOnceInterval; /* if non-zero, minimum seconds to wait until action is executed again */
 	sbool	bHadAutoCommit;	/* did an auto-commit happen during doAction()? */
+	sbool	bDisabled;
+	int	iSecsExecOnceInterval; /* if non-zero, minimum seconds to wait until action is executed again */
 	time_t	ttResumeRtry;	/* when is it time to retry the resume? */
 	int	iResumeInterval;/* resume interval for this action */
 	int	iResumeRetryCount;/* how often shall we retry a suspended action? (-1 --> eternal) */

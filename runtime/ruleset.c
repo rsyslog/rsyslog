@@ -165,11 +165,7 @@ finalize_it:
 static void
 execAct(struct cnfstmt *stmt, msg_t *pMsg, wti_t *pWti)
 {
-// TODO: check here if bPrevWasSuspsended was required and, if so
-// if we actually are permitted to execute this action.
-// NOTE: this will primarily be handled by end-of-batch processing
-
-	if(getActionState(pWti, stmt->d.act) == ACT_STATE_DIED) {
+	if(stmt->d.act->bDisabled) {
 		DBGPRINTF("action %d died, do NOT execute\n", stmt->d.act->iActionNbr);
 		goto done;
 	}

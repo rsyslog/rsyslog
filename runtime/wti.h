@@ -34,7 +34,6 @@
 #define ACT_STATE_COMM 2 	/* transaction finished (a transient state) */
 #define ACT_STATE_RTRY 3	/* failure occured, trying to restablish ready state */
 #define ACT_STATE_SUSP 4	/* suspended due to failure (return fail until timeout expired) */
-#define ACT_STATE_DIED 7	/* action permanently failed and now disabled */
 /* note: 3 bit bit field --> highest value is 7! */
 
 /* The following structure defines immutable parameters which need to

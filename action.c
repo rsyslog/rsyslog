@@ -332,6 +332,7 @@ rsRetVal actionConstruct(action_t **ppThis)
 	pThis->iSecsExecOnceInterval = 0;
 	pThis->bExecWhenPrevSusp = 0;
 	pThis->bRepMsgHasMsg = 0;
+	pThis->bDisabled = 0;
 	pThis->tLastOccur = datetime.GetTime(NULL);	/* done once per action on startup only */
 	pThis->iActionNbr = iActionNbr;
 	pthread_mutex_init(&pThis->mutAction, NULL);
@@ -501,8 +502,6 @@ static uchar *getActStateName(action_t *pThis, wti_t *pWti)
 			return (uchar*) "rtry";
 		case ACT_STATE_SUSP:
 			return (uchar*) "susp";
-		case ACT_STATE_DIED:
-			return (uchar*) "died";
 		case ACT_STATE_COMM:
 			return (uchar*) "comm";
 		default:
@@ -535,7 +534,6 @@ static rsRetVal getReturnCode(action_t *pThis, wti_t *pWti)
 			iRet = RS_RET_SUSPENDED;
 			break;
 		case ACT_STATE_SUSP:
-		case ACT_STATE_DIED:
 			iRet = RS_RET_ACTION_FAILED;
 			break;
 		default:
@@ -585,9 +583,9 @@ static void actionRetry(action_t *pThis, wti_t *pWti)
  * depends on output module.
  * rgerhards, 2007-08-02
  */
-static void actionDisable(action_t *pThis, wti_t *pWti)
+static void actionDisable(action_t *pThis)
 {
-	actionSetState(pThis, pWti, ACT_STATE_DIED);
+	pThis->bDisabled = 1;
 }
 
 
@@ -669,7 +667,7 @@ actionDoRetry(action_t *pThis, wti_t *pWti)
 				}
 			}
 		} else if(iRet == RS_RET_DISABLE_ACTION) {
-			actionDisable(pThis, pWti);
+			actionDisable(pThis);
 		}
 	}
 
@@ -765,7 +763,7 @@ dbgprintf("DDDDD: calling beginTransaction for action %d\n", pThis->iActionNbr);
 				actionRetry(pThis, pWti);
 				break;
 			case RS_RET_DISABLE_ACTION:
-				actionDisable(pThis, pWti);
+				actionDisable(pThis);
 				break;
 			default:FINALIZE;
 		}
@@ -940,7 +938,7 @@ actionCallDoAction(action_t *pThis, int msgFlags, void *actParams, wti_t *pWti)
 			actionRetry(pThis, pWti);
 			break;
 		case RS_RET_DISABLE_ACTION:
-			actionDisable(pThis, pWti);
+			actionDisable(pThis);
 			break;
 		default:/* permanent failure of this message - no sense in retrying. This is
 			 * not yet handled (but easy TODO)
@@ -1011,7 +1009,7 @@ dbgprintf("DDDDD: calling endTransaction for action %d\n", pThis->iActionNbr);
 				actionRetry(pThis, pWti);
 				break;
 			case RS_RET_DISABLE_ACTION:
-				actionDisable(pThis, pWti);
+				actionDisable(pThis);
 				break;
 			case RS_RET_DEFER_COMMIT:
 				DBGPRINTF("output plugin error: endTransaction() returns RS_RET_DEFER_COMMIT "
@@ -1338,8 +1336,7 @@ DEFFUNC_llExecFunc(doActivateActions)
 			errmsg.LogError(0, localRet, "file prefix (work directory?) "
 					"is missing");
 		}
-#warning think how to handle this:
-		//actionDisable(pThis);
+		actionDisable(pThis);
 	}
 	DBGPRINTF("Action %s[%p]: queue %p started\n", modGetName(pThis->pMod),
 		  pThis, pThis->pQueue);
