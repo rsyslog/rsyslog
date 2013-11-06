@@ -972,22 +972,40 @@ finalize_it:
 }
 
 
-/* Commit try committing (do not handle retry processing and such) */
+/* the following functions simulates a potential future new omo callback */
 static rsRetVal
-actionTryCommit(action_t *pThis, wti_t *pWti)
+doTransaction(action_t *pThis, wti_t *pWti)
 {
 	actWrkrInfo_t *wrkrInfo;
-	actWrkrIParams_t *iparamCurr, *iparamDel;
+	actWrkrIParams_t *iparamCurr;
 	DEFiRet;
 
 	wrkrInfo = &(pWti->actWrkrInfo[pThis->iActionNbr]);
-	dbgprintf("DDDD: actionCommit: action %d, root %p\n", pThis->iActionNbr, wrkrInfo->iparamRoot);
+	dbgprintf("DDDD: doTransaction: action %d, root %p\n", pThis->iActionNbr, wrkrInfo->iparamRoot);
 	if(wrkrInfo->iparamRoot != NULL) {
 		iparamCurr = wrkrInfo->iparamRoot;
 		while(iparamCurr != NULL) {
 			iRet = actionProcessMessage(pThis, iparamCurr->msgFlags,
 						    iparamCurr->staticActParams,
 						    pWti);
+			iparamCurr = iparamCurr->next;
+		}
+	}
+	RETiRet;
+}
+
+
+static void
+actionFreeParams(action_t *pThis, wti_t *pWti)
+{
+	actWrkrInfo_t *wrkrInfo;
+	actWrkrIParams_t *iparamCurr, *iparamDel;
+
+	wrkrInfo = &(pWti->actWrkrInfo[pThis->iActionNbr]);
+	dbgprintf("DDDD: actionFreeParams: action %d, root %p\n", pThis->iActionNbr, wrkrInfo->iparamRoot);
+	if(wrkrInfo->iparamRoot != NULL) {
+		iparamCurr = wrkrInfo->iparamRoot;
+		while(iparamCurr != NULL) {
 			releaseDoActionParams(pThis, pWti);
 			iparamDel = iparamCurr;
 			iparamCurr = iparamCurr->next;
@@ -995,6 +1013,17 @@ actionTryCommit(action_t *pThis, wti_t *pWti)
 		}
 		wrkrInfo->iparamRoot = wrkrInfo->iparamLast = NULL;
 	}
+}
+
+
+/* Commit try committing (do not handle retry processing and such) */
+static rsRetVal
+actionTryCommit(action_t *pThis, wti_t *pWti)
+{
+	//actWrkrInfo_t *wrkrInfo;
+	DEFiRet;
+
+	doTransaction(pThis, pWti);
 
 	CHKiRet(actionPrepare(pThis, pWti));
 	if(getActionState(pWti, pThis) == ACT_STATE_ITX) {
@@ -1029,6 +1058,7 @@ dbgprintf("DDDDD: calling endTransaction for action %d\n", pThis->iActionNbr);
 	iRet = getReturnCode(pThis, pWti);
 
 finalize_it:
+	actionFreeParams(pThis, pWti);
 	RETiRet;
 }
 
