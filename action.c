@@ -1000,6 +1000,7 @@ actionFreeParams(action_t *pThis, wti_t *pWti)
 {
 	actWrkrInfo_t *wrkrInfo;
 	actWrkrIParams_t *iparamCurr, *iparamDel;
+	int j;
 
 	wrkrInfo = &(pWti->actWrkrInfo[pThis->iActionNbr]);
 	dbgprintf("DDDD: actionFreeParams: action %d, root %p\n", pThis->iActionNbr, wrkrInfo->iparamRoot);
@@ -1009,7 +1010,15 @@ actionFreeParams(action_t *pThis, wti_t *pWti)
 			releaseDoActionParams(pThis, pWti);
 			iparamDel = iparamCurr;
 			iparamCurr = iparamCurr->next;
-			free(iparamDel); // TODO: memleak strings!
+			for(j = 0 ; j < CONF_OMOD_NUMSTRINGS_MAXSIZE ; ++j) {
+				/* TODO: we can save time by not freeing everything,
+				 * but that's left for a later optimization.
+				 */
+				free(iparamDel->staticActStrings[j]);
+				iparamDel->staticActStrings[j] = NULL;
+				iparamDel->staticLenStrings[j] = 0;
+			}
+			free(iparamDel);
 		}
 		wrkrInfo->iparamRoot = wrkrInfo->iparamLast = NULL;
 	}
