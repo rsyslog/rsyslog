@@ -1082,12 +1082,18 @@ processMsgMain(action_t *pAction, wti_t *pWti, msg_t *pMsg, struct syslogTime *t
 {
 	DEFiRet;
 
+	if(pAction->bExecWhenPrevSusp && !pWti->execState.bPrevWasSuspended) {
+		DBGPRINTF("action %d: NOT executing, as previous action was "
+			  "not suspended\n", pAction->iActionNbr);
+		FINALIZE;
+	}
+
 dbgprintf("DDDD: processMsgMain[act %d], %s\n", pAction->iActionNbr, pMsg->pszRawMsg);
-	// TODO: check error return states!
 	iRet = prepareDoActionParams(pAction, pWti, pMsg, ttNow);
 	if(pAction->eParamPassing == ACT_STRING_PASSING) {
 		pWti->actWrkrInfo[pAction->iActionNbr].pAction = pAction;
 		dbgprintf("DDDD: action %d is string passing - executing in commit phase\n", pAction->iActionNbr);
+		iRet = getReturnCode(pAction, pWti);
 		FINALIZE;
 	}
 
@@ -1096,6 +1102,8 @@ dbgprintf("DDDD: processMsgMain[act %d], %s\n", pAction->iActionNbr, pMsg->pszRa
 				    pWti);
 	releaseDoActionParams(pAction, pWti);
 finalize_it:
+	pWti->execState.bPrevWasSuspended = (iRet == RS_RET_SUSPENDED || iRet == RS_RET_ACTION_FAILED);
+dbgprintf("DDDD: bPrevWasSuspended now %d, action state %d\n", (int)pWti->execState.bPrevWasSuspended, getActionState(pWti, pAction));
 	RETiRet;
 }
 
@@ -1112,6 +1120,7 @@ processBatchMain(void *pVoid, batch_t *pBatch, wti_t *pWti)
 	struct syslogTime ttNow;
 	DEFiRet;
 
+	pWti->execState.bPrevWasSuspended = 0;
 	/* indicate we have not yet read the date */
 	ttNow.year = 0;
 

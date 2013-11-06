@@ -80,6 +80,9 @@ struct wti_s {
 	uchar *pszDbgHdr;	/* header string for debug messages */
 	actWrkrInfo_t *actWrkrInfo; /* *array* of action wrkr infos for all actions (sized for max nbr of actions in config!) */
 	DEF_ATOMIC_HELPER_MUT(mutIsRunning);
+	struct {
+		uint8_t bPrevWasSuspended;
+	} execState;	/* state for the execution engine */
 };
 
 
