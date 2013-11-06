@@ -121,6 +121,9 @@ html_files = \
 	v3compatibility.html \
 	v4compatibility.html \
 	v5compatibility.html \
+	v6compatibility.html \
+	v7compatibility.html \
+	v8compatibility.html \
 	im3195.html \
 	netstream.html \
 	ns_gtls.html \
@@ -157,8 +160,6 @@ html_files = \
 	rsconf1_omfileforcechown.html \
 	rsyslog_queue_pointers.jpeg \
 	rsyslog_queue_pointers2.jpeg \
-	v6compatibility.html \
-	v7compatibility.html \
 	rsyslog_conf_basic_structure.html \
 	rsyslog_conf_sysklogd_compatibility.html \
 	imkmsg.html \
