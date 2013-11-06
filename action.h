@@ -87,7 +87,7 @@ rsRetVal actionDoAction(action_t *pAction);
 rsRetVal actionWriteToAction(action_t *pAction, msg_t *pMsg, wti_t*);
 rsRetVal actionCallHUPHdlr(action_t *pAction);
 rsRetVal actionClassInit(void);
-rsRetVal addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStringRequest_t *pOMSR, struct cnfparamvals *actParams, struct nvlst *lst, int bSuspended);
+rsRetVal addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStringRequest_t *pOMSR, struct cnfparamvals *actParams, struct nvlst *lst);
 rsRetVal activateActions(void);
 rsRetVal actionNewInst(struct nvlst *lst, action_t **ppAction);
 rsRetVal actionProcessCnf(struct cnfobj *o);

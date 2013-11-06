@@ -1456,7 +1456,7 @@ actionApplyCnfParam(action_t *pAction, struct cnfparamvals *pvals)
 rsRetVal
 addAction(action_t **ppAction, modInfo_t *pMod, void *pModData,
 	  omodStringRequest_t *pOMSR, struct cnfparamvals *actParams,
-	  struct nvlst *lst, int bSuspended)
+	  struct nvlst *lst)
 {
 	DEFiRet;
 	int i;
@@ -1544,14 +1544,9 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData,
 	pAction->pMod = pMod;
 	pAction->pModData = pModData;
 
-// TODO #warning we need to look at the following
-	// Probably the core init needs to be done during createWrkrInstance()
-	//if(bSuspended)
-	//	actionSuspend(pAction, pWti);
-
 	CHKiRet(actionConstructFinalize(pAction, lst));
 	
-	/* TODO: if we exit here, we have a memory leak... */
+	/* TODO: if we exit here, we have a (quite acceptable...) memory leak */
 
 	*ppAction = pAction; /* finally store the action pointer */
 
@@ -1638,8 +1633,7 @@ actionNewInst(struct nvlst *lst, action_t **ppAction)
 		FINALIZE; /* iRet is already set to error state */
 	}
 
-	if((iRet = addAction(&pAction, pMod, pModData, pOMSR, paramvals, lst,
-	                    (iRet == RS_RET_SUSPENDED)? 1 : 0)) == RS_RET_OK) {
+	if((iRet = addAction(&pAction, pMod, pModData, pOMSR, paramvals, lst)) == RS_RET_OK) {
 		/* check if the module is compatible with select features
 		 * (currently no such features exist) */
 		loadConf->actions.nbrActions++;	/* one more active action! */
