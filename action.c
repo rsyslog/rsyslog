@@ -1072,11 +1072,14 @@ finalize_it:
 	RETiRet;
 }
 
-// TODO: #warning do we really need to return something?
+/* Note: we currently need to return an iRet, as this is used in 
+ * direct mode. TODO: However, it may be worth further investigating this,
+ * as it looks like there is no ultimate consumer of this code.
+ * rgerhards, 2013-11-06
+ */
 static rsRetVal
 actionCommit(action_t *pThis, wti_t *pWti)
 {
-int iter = 0;
 	sbool bDone;
 	DEFiRet;
 
@@ -1096,7 +1099,7 @@ int iter = 0;
 	bDone = 0;
 	do {
 		iRet = actionTryCommit(pThis, pWti);
-		DBGPRINTF("DDDD: actionCommit, in retry loop, iter %d, iRet %d\n", ++iter, iRet);
+		DBGPRINTF("actionCommit, in retry loop, iRet %d\n", iRet);
 		if(iRet == RS_RET_FORCE_TERM) {
 			ABORT_FINALIZE(RS_RET_FORCE_TERM);
 		} else if(iRet == RS_RET_OK || iRet == RS_RET_ACTION_FAILED) {
