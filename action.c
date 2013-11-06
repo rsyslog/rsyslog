@@ -1946,20 +1946,14 @@ actionNewInst(struct nvlst *lst, action_t **ppAction)
 	omodStringRequest_t *pOMSR;
 	void *pModData;
 	action_t *pAction;
-	int typeIdx;
 	DEFiRet;
 
 	paramvals = nvlstGetParams(lst, &pblk, NULL);
 	if(paramvals == NULL) {
-		ABORT_FINALIZE(RS_RET_ERR);
+		ABORT_FINALIZE(RS_RET_PARAM_ERROR);
 	}
 	dbgprintf("action param blk after actionNewInst:\n");
 	cnfparamsPrint(&pblk, paramvals);
-	typeIdx = cnfparamGetIdx(&pblk, "type");
-	if(paramvals[typeIdx].bUsed == 0) {
-		errmsg.LogError(0, RS_RET_CONF_RQRD_PARAM_MISSING, "action type missing");
-		ABORT_FINALIZE(RS_RET_CONF_RQRD_PARAM_MISSING); // TODO: move this into rainerscript handlers
-	}
 	cnfModName = (uchar*)es_str2cstr(paramvals[cnfparamGetIdx(&pblk, ("type"))].val.d.estr, NULL);
 	if((pMod = module.FindWithCnfName(loadConf, cnfModName, eMOD_OUT)) == NULL) {
 		errmsg.LogError(0, RS_RET_MOD_UNKNOWN, "module name '%s' is unknown", cnfModName);
