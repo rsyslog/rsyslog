@@ -619,14 +619,14 @@ static inline void actionSuspend(action_t *pThis, wti_t *pWti)
  * entry point. This is invalid, but has harsh consequences: it will cause the rsyslog
  * engine to go into a tight loop. That obviously is not acceptable. As such, we track the
  * count of iterations that a tryResume returning RS_RET_OK is immediately followed by
- * an unsuccessful call to doAction(). If that happens more than 1,000 times, we assume 
+ * an unsuccessful call to doAction(). If that happens more than 10 times, we assume 
  * the return acutally is a RS_RET_SUSPENDED. In order to go through the various 
- * resumption stages, we do this for every 1000 requests. This magic number 1000 may
+ * resumption stages, we do this for every 10 requests. This magic number 10 may
  * not be the most appropriate, but it should be thought of a "if nothing else helps"
  * kind of facility: in the first place, the module should return a proper indication
  * of its inability to recover. -- rgerhards, 2010-04-26.
  */
-static inline rsRetVal
+static rsRetVal
 actionDoRetry(action_t *pThis, wti_t *pWti)
 {
 	int iRetries;
@@ -988,6 +988,7 @@ doTransaction(action_t *pThis, wti_t *pWti)
 			iRet = actionProcessMessage(pThis, iparamCurr->msgFlags,
 						    iparamCurr->staticActParams,
 						    pWti);
+			dbgprintf("DDDD: doTransaction loop, iRet %d\n", iRet);
 			iparamCurr = iparamCurr->next;
 		}
 	}
@@ -1071,11 +1072,14 @@ finalize_it:
 	RETiRet;
 }
 
+// TODO: #warning do we really need to return something?
 static rsRetVal
 actionCommit(action_t *pThis, wti_t *pWti)
 {
+int iter = 0;
+	sbool bDone;
 	DEFiRet;
-// TODO: #warning do we really need to return something?
+
 	/* even more TODO:
 		This is the place where retry processing needs to go in. If the action
 		permanently fails, we should - as a new feature - add the capability to
@@ -1089,7 +1093,17 @@ actionCommit(action_t *pThis, wti_t *pWti)
 		any of these partial implementations).
 		rgerhards, 2013-11-04
 	 */
-	iRet = actionTryCommit(pThis, pWti);
+	bDone = 0;
+	do {
+		iRet = actionTryCommit(pThis, pWti);
+		DBGPRINTF("DDDD: actionCommit, in retry loop, iter %d, iRet %d\n", ++iter, iRet);
+		if(iRet == RS_RET_FORCE_TERM) {
+			ABORT_FINALIZE(RS_RET_FORCE_TERM);
+		} else if(iRet == RS_RET_OK || iRet == RS_RET_ACTION_FAILED) {
+			bDone = 1;
+		}
+	} while(!bDone);
+finalize_it:
 	RETiRet;
 }
 
