@@ -351,16 +351,15 @@ qqueueAdviseMaxWorkers(qqueue_t *pThis)
 		if(pThis->bIsDA && getLogicalQueueSize(pThis) >= pThis->iHighWtrMrk) {
 			DBGOPRINT((obj_t*) pThis, "(re)activating DA worker\n");
 			wtpAdviseMaxWorkers(pThis->pWtpDA, 1); /* disk queues have always one worker */
-		} else {
-			if(getLogicalQueueSize(pThis) == 0) {
-				iMaxWorkers = 0;
-			} else if(pThis->qType == QUEUETYPE_DISK || pThis->iMinMsgsPerWrkr == 0) {
-				iMaxWorkers = 1;
-			} else {
-				iMaxWorkers = getLogicalQueueSize(pThis) / pThis->iMinMsgsPerWrkr + 1;
-			}
-			wtpAdviseMaxWorkers(pThis->pWtpReg, iMaxWorkers);
 		}
+		if(getLogicalQueueSize(pThis) == 0) {
+			iMaxWorkers = 0;
+		} else if(pThis->qType == QUEUETYPE_DISK || pThis->iMinMsgsPerWrkr == 0) {
+			iMaxWorkers = 1;
+		} else {
+			iMaxWorkers = getLogicalQueueSize(pThis) / pThis->iMinMsgsPerWrkr + 1;
+		}
+		wtpAdviseMaxWorkers(pThis->pWtpReg, iMaxWorkers);
 	}
 
 	RETiRet;
