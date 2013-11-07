@@ -2,6 +2,7 @@
 # to carry out multiple tests with different queue modes
 # added 2009-05-27 by Rgerhards
 # This file is part of the rsyslog project, released  under GPLv3
+echo ===============================================================================
 echo \[daqueue-persist.sh\]: test data persisting at shutdown
 source $srcdir/daqueue-persist-drvr.sh LinkedList
 source $srcdir/daqueue-persist-drvr.sh FixedArray
