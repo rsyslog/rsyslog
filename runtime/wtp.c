@@ -235,9 +235,9 @@ wtpShutdownAll(wtp_t *pThis, wtpState_t tShutdownCmd, struct timespec *ptTimeout
 	/* lock mutex to prevent races (may otherwise happen during idle processing and such...) */
 	d_pthread_mutex_lock(pThis->pmutUsr);
 	wtpSetState(pThis, tShutdownCmd);
-	pthread_cond_broadcast(pThis->pcondBusy); /* wake up all workers */
 	/* awake workers in retry loop */
 	for(i = 0 ; i < pThis->iNumWorkerThreads ; ++i) {
+		pthread_cond_signal(&pThis->pWrkr[i]->pcondBusy);
 		wtiWakeupThrd(pThis->pWrkr[i]);
 	}
 	d_pthread_mutex_unlock(pThis->pmutUsr);
@@ -457,7 +457,7 @@ wtpAdviseMaxWorkers(wtp_t *pThis, int nMaxWrkr)
 {
 	DEFiRet;
 	int nMissing; /* number workers missing to run */
-	int i;
+	int i, nRunning;
 
 	ISOBJ_TYPE_assert(pThis, wtp);
 
@@ -477,7 +477,13 @@ wtpAdviseMaxWorkers(wtp_t *pThis, int nMaxWrkr)
 			CHKiRet(wtpStartWrkr(pThis));
 		}
 	} else {
-		pthread_cond_signal(pThis->pcondBusy);
+		/* we have needed number of workers, but they may be sleeping */
+		for(i = 0, nRunning = 0; i < pThis->iNumWorkerThreads && nRunning < nMaxWrkr; ++i) {
+			if (wtiGetState(pThis->pWrkr[i]) != WRKTHRD_STOPPED) {
+				pthread_cond_signal(&pThis->pWrkr[i]->pcondBusy);
+				nRunning++;
+			}
+		}
 	}
 
 	
@@ -492,7 +498,6 @@ DEFpropSetMeth(wtp, wtpState, wtpState_t)
 DEFpropSetMeth(wtp, iNumWorkerThreads, int)
 DEFpropSetMeth(wtp, pUsr, void*)
 DEFpropSetMethPTR(wtp, pmutUsr, pthread_mutex_t)
-DEFpropSetMethPTR(wtp, pcondBusy, pthread_cond_t)
 DEFpropSetMethFP(wtp, pfChkStopWrkr, rsRetVal(*pVal)(void*, int))
 DEFpropSetMethFP(wtp, pfRateLimiter, rsRetVal(*pVal)(void*))
 DEFpropSetMethFP(wtp, pfGetDeqBatchSize, rsRetVal(*pVal)(void*, int*))

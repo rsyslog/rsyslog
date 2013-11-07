@@ -175,6 +175,7 @@ CODESTARTobjDestruct(wti)
 	/* actual destruction */
 	batchFree(&pThis->batch);
 	free(pThis->actWrkrInfo);
+	pthread_cond_destroy(&pThis->pcondBusy);
 	DESTROY_ATOMIC_HELPER_MUT(pThis->mutIsRunning);
 
 	free(pThis->pszDbgHdr);
@@ -185,6 +186,7 @@ ENDobjDestruct(wti)
  */
 BEGINobjConstruct(wti) /* be sure to specify the object type also in END macro! */
 	INIT_ATOMIC_HELPER_MUT(pThis->mutIsRunning);
+	pthread_cond_init(&pThis->pcondBusy, NULL);
 ENDobjConstruct(wti)
 
 
@@ -262,10 +264,10 @@ doIdleProcessing(wti_t *pThis, wtp_t *pWtp, int *pbInactivityTOOccured)
 
 	if(pThis->bAlwaysRunning) {
 		/* never shut down any started worker */
-		d_pthread_cond_wait(pWtp->pcondBusy, pWtp->pmutUsr);
+		d_pthread_cond_wait(&pThis->pcondBusy, pWtp->pmutUsr);
 	} else {
 		timeoutComp(&t, pWtp->toWrkShutdown);/* get absolute timeout */
-		if(d_pthread_cond_timedwait(pWtp->pcondBusy, pWtp->pmutUsr, &t) != 0) {
+		if(d_pthread_cond_timedwait(&pThis->pcondBusy, pWtp->pmutUsr, &t) != 0) {
 			DBGPRINTF("%s: inactivity timeout, worker terminating...\n", wtiGetDbgHdr(pThis));
 			*pbInactivityTOOccured = 1; /* indicate we had a timeout */
 		}

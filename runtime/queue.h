@@ -121,7 +121,7 @@ struct queue_s {
 	/* synchronization variables */
 	pthread_mutex_t mutThrdMgmt; /* mutex for the queue's thread management */
 	pthread_mutex_t *mut; /* mutex for enqueing and dequeueing messages */
-	pthread_cond_t notFull, notEmpty;
+	pthread_cond_t notFull;
 	pthread_cond_t belowFullDlyWtrMrk; /* below eFLOWCTL_FULL_DELAY watermark */
 	pthread_cond_t belowLightDlyWtrMrk; /* below eFLOWCTL_FULL_DELAY watermark */
 	int bThrdStateChanged;		/* at least one thread state has changed if 1 */
