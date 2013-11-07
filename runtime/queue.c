@@ -2106,7 +2106,8 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 			break;
 	}
 
-	if(pThis->iMaxQueueSize < 100) {
+	if(pThis->iMaxQueueSize < 100
+	   && (pThis->qType == QUEUETYPE_LINKEDLIST || pThis->qType == QUEUETYPE_FIXED_ARRAY)) {
 		errmsg.LogError(0, RS_RET_OK_WARN, "Note: queue.size=\"%d\" is very "
 			"low and can lead to unpredictable results. See also "
 			"http://www.rsyslog.com/lower-bound-for-queue-sizes/",
@@ -2122,7 +2123,7 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 	if(pThis->iLightDlyMrk == -1 || pThis->iLightDlyMrk > pThis->iMaxQueueSize)
 		pThis->iLightDlyMrk = pThis->iMaxQueueSize
 			- (pThis->iMaxQueueSize / 100) * 30; /* default 70% */
-	if(pThis->iDeqBatchSize > pThis->iMaxQueueSize)
+	if(pThis->iMaxQueueSize > 0 && pThis->iDeqBatchSize > pThis->iMaxQueueSize)
 		pThis->iDeqBatchSize = pThis->iMaxQueueSize;
 
 	/* finalize some initializations that could not yet be done because it is
