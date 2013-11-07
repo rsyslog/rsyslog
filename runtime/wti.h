@@ -43,6 +43,7 @@ struct wti_s {
 	batch_t batch; /* pointer to an object array meaningful for current user pointer (e.g. queue pUsr data elemt) */
 	uchar *pszDbgHdr;	/* header string for debug messages */
 	actWrkrInfo_t *actWrkrInfo; /* *array* of action wrkr infos for all actions (sized for max nbr of actions in config!) */
+	pthread_cond_t pcondBusy; /* condition to wake up the worker, protected by pmutUsr in wtp */
 	DEF_ATOMIC_HELPER_MUT(mutIsRunning);
 };
 
