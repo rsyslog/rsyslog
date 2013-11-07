@@ -2123,7 +2123,7 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 	if(pThis->iLightDlyMrk == -1 || pThis->iLightDlyMrk > pThis->iMaxQueueSize)
 		pThis->iLightDlyMrk = pThis->iMaxQueueSize
 			- (pThis->iMaxQueueSize / 100) * 30; /* default 70% */
-	if(pThis->iDeqBatchSize > pThis->iMaxQueueSize)
+	if(pThis->iMaxQueueSize > 0 && pThis->iDeqBatchSize > pThis->iMaxQueueSize)
 		pThis->iDeqBatchSize = pThis->iMaxQueueSize;
 
 	/* finalize some initializations that could not yet be done because it is
