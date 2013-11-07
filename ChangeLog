@@ -1,5 +1,16 @@
 ---------------------------------------------------------------------------
-Version 7.4.7  [v7.4-stable] 2013-11-??
+Version 7.5.7 [devel] 2013-11-??
+- bugfix: ommysql lost configfile/section parameters after first close
+  This means that when a connection was broken, it was probably
+  re-instantiated with different parameters than configured.
+- bugfix: regular worker threads are not properly (re)started if DA
+  mode is active.
+  This occurs only under rare conditions, but definitely is a bug that
+  needed to be addressed. It probably is present since version 4.
+  Note that this patch has not been applied to v7.4-stable, as it
+  is very unlikely to happen and the fix itself has some regression
+  potential (the fix looks very solid, but it addresses a core component).
+  Thanks to Pavel Levshin for the fix
 - worker thread pool handling has been improved
   Among others, permits pool to actually shrink (was quite hard with
   previous implementation. This will also improve performance and/or
@@ -8,11 +19,6 @@ Version 7.4.7  [v7.4-stable] 2013-11-??
 - improved checking of queue config parameters on startup
 - bugfix: call to ruleset with async queue did not use the queue
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=443
----------------------------------------------------------------------------
-Version 7.5.7 [devel] 2013-11-??
-- bugfix: ommysql lost configfile/section parameters after first close
-  This means that when a connection was broken, it was probably
-  re-instantiated with different parameters than configured.
 ---------------------------------------------------------------------------
 Version 7.5.6 [devel] 2013-10-29
 - impstats: add capability to bind to a ruleset
