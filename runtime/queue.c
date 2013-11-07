@@ -484,7 +484,6 @@ InitDA(qqueue_t *pThis, int bLockMutex)
 	CHKiRet(wtpSetpfDoWork		(pThis->pWtpDA, (rsRetVal (*)(void *pUsr, void *pWti)) ConsumerDA));
 	CHKiRet(wtpSetpfObjProcessed	(pThis->pWtpDA, (rsRetVal (*)(void *pUsr, wti_t *pWti)) batchProcessed));
 	CHKiRet(wtpSetpmutUsr		(pThis->pWtpDA, pThis->mut));
-	CHKiRet(wtpSetpcondBusy		(pThis->pWtpDA, &pThis->notEmpty));
 	CHKiRet(wtpSetiNumWorkerThreads	(pThis->pWtpDA, 1));
 	CHKiRet(wtpSettoWrkShutdown	(pThis->pWtpDA, pThis->toWrkShutdown));
 	CHKiRet(wtpSetpUsr		(pThis->pWtpDA, pThis));
@@ -2140,7 +2139,6 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 
 	pthread_mutex_init(&pThis->mutThrdMgmt, NULL);
 	pthread_cond_init (&pThis->notFull, NULL);
-	pthread_cond_init (&pThis->notEmpty, NULL);
 	pthread_cond_init (&pThis->belowFullDlyWtrMrk, NULL);
 	pthread_cond_init (&pThis->belowLightDlyWtrMrk, NULL);
 
@@ -2181,7 +2179,6 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 	CHKiRet(wtpSetpfDoWork		(pThis->pWtpReg, (rsRetVal (*)(void *pUsr, void *pWti)) ConsumerReg));
 	CHKiRet(wtpSetpfObjProcessed	(pThis->pWtpReg, (rsRetVal (*)(void *pUsr, wti_t *pWti)) batchProcessed));
 	CHKiRet(wtpSetpmutUsr		(pThis->pWtpReg, pThis->mut));
-	CHKiRet(wtpSetpcondBusy		(pThis->pWtpReg, &pThis->notEmpty));
 	CHKiRet(wtpSetiNumWorkerThreads	(pThis->pWtpReg, pThis->iNumWorkerThreads));
 	CHKiRet(wtpSettoWrkShutdown	(pThis->pWtpReg, pThis->toWrkShutdown));
 	CHKiRet(wtpSetpUsr		(pThis->pWtpReg, pThis));
@@ -2446,7 +2443,6 @@ CODESTARTobjDestruct(qqueue)
 		}
 		pthread_mutex_destroy(&pThis->mutThrdMgmt);
 		pthread_cond_destroy(&pThis->notFull);
-		pthread_cond_destroy(&pThis->notEmpty);
 		pthread_cond_destroy(&pThis->belowFullDlyWtrMrk);
 		pthread_cond_destroy(&pThis->belowLightDlyWtrMrk);
 
