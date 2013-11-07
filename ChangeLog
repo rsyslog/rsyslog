@@ -16,6 +16,8 @@ Version 7.5.7 [devel] 2013-11-??
   previous implementation. This will also improve performance and/or
   lower system overhead on busy systems.
   Thanks to Pavel Levshin for the enhancement.
+- now emit warning message if om with msg passing mode uses action queue
+  These can modify the message, and this causes races.
 - improved checking of queue config parameters on startup
 - bugfix: call to ruleset with async queue did not use the queue
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=443
