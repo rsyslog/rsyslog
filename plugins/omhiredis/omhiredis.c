@@ -97,7 +97,6 @@ BEGINfreeInstance
 CODESTARTfreeInstance
 	closeHiredis(pData);
 	free(pData->server);
-	free(pData->tplName);
 ENDfreeInstance
 
 
@@ -196,9 +195,9 @@ CODESTARTendTransaction
     for ( i = 0; i < pData->count; i++ ) {
         redisGetReply ( pData->conn, (void *)&pData->replies[i] );
         /*  TODO: add error checking here! */
-        free ( pData->replies[i] );
+        freeReplyObject ( pData->replies[i] );
     }
-    freeReplyObject ( pData->replies );
+    free ( pData->replies );
     pData->count = 0;
 ENDendTransaction
 
