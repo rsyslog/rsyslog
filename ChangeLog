@@ -9,6 +9,8 @@ Version 7.5.7 [devel] 2013-11-??
 - bugfix: ommysql lost configfile/section parameters after first close
   This means that when a connection was broken, it was probably
   re-instantiated with different parameters than configured.
+- bugfix: regression in template processing with subtrees in templates
+  Thanks to Pavel Levshin for the fix
 - bugfix: regular worker threads are not properly (re)started if DA
   mode is active.
   This occurs only under rare conditions, but definitely is a bug that
