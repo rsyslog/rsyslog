@@ -367,12 +367,11 @@ BEGINdoAction
 	int lenMsg;
 	int i;
 CODESTARTdoAction
-	pData = pWrkrData->pData;
 	pMsg = (msg_t*) ppString[0];
 	lenMsg = getMSGLen(pMsg);
 	msg = getMSG(pMsg);
 	for(i = 0 ; i < lenMsg ; ++i) {
-		anonip(pData, msg, &lenMsg, &i);
+		anonip(pWrkrData->pData, msg, &lenMsg, &i);
 	}
 	if(lenMsg != getMSGLen(pMsg))
 		setMSGLen(pMsg, lenMsg);
