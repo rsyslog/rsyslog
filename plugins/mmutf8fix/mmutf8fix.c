@@ -60,6 +60,10 @@ typedef struct _instanceData {
 	uint8_t mode;		/* operations mode */
 } instanceData;
 
+typedef struct wrkrInstanceData {
+	instanceData *pData;
+} wrkrInstanceData_t;
+
 struct modConfData_s {
 	rsconf_t *pConf;	/* our overall config object */
 };
@@ -108,6 +112,11 @@ CODESTARTcreateInstance
 ENDcreateInstance
 
 
+BEGINcreateWrkrInstance
+CODESTARTcreateWrkrInstance
+ENDcreateWrkrInstance
+
+
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
 ENDisCompatibleWithFeature
@@ -116,6 +125,11 @@ ENDisCompatibleWithFeature
 BEGINfreeInstance
 CODESTARTfreeInstance
 ENDfreeInstance
+
+
+BEGINfreeWrkrInstance
+CODESTARTfreeWrkrInstance
+ENDfreeWrkrInstance
 
 
 static inline void
@@ -274,10 +288,10 @@ CODESTARTdoAction
 	pMsg = (msg_t*) ppString[0];
 	lenMsg = getMSGLen(pMsg);
 	msg = getMSG(pMsg);
-	if(pData->mode == MODE_CC) {
-		doCC(pData, msg, lenMsg);
+	if(pWrkrData->pData->mode == MODE_CC) {
+		doCC(pWrkrData->pData, msg, lenMsg);
 	} else {
-		doUTF8(pData, msg, lenMsg);
+		doUTF8(pWrkrData->pData, msg, lenMsg);
 	}
 ENDdoAction
 
@@ -304,6 +318,7 @@ ENDmodExit
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
+CODEqueryEtryPt_STD_OMOD8_QUERIES
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 CODEqueryEtryPt_STD_CONF2_QUERIES
 ENDqueryEtryPt
