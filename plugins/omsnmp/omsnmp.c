@@ -2,7 +2,7 @@
  *
  * This module sends an snmp trap.
  *
- * Copyright 2007-2012 Adiscon GmbH.
+ * Copyright 2007-2013 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -74,14 +74,18 @@ typedef struct _instanceData {
 		*	http://www.adiscon.org/download/ADISCON-MONITORWARE-MIB.txt
 		*	http://www.adiscon.org/download/ADISCON-MIB.txt
 		*/ 
-	int iPort;						/* Target Port */
-	int iSNMPVersion;					/* SNMP Version to use */
-	int iTrapType;						/* Snmp TrapType or GenericType */
-	int iSpecificType;					/* Snmp Specific Type */
+	int iPort;			/* Target Port */
+	int iSNMPVersion;		/* SNMP Version to use */
+	int iTrapType;			/* Snmp TrapType or GenericType */
+	int iSpecificType;		/* Snmp Specific Type */
 
-	netsnmp_session *snmpsession;						/* Holds to SNMP Session, NULL if not initialized */
-	uchar	*tplName;       /* format template to use */
+	uchar	*tplName;       	/* format template to use */
 } instanceData;
+
+typedef struct wrkrInstanceData {
+	instanceData *pData;
+	netsnmp_session *snmpsession;	/* Holds to SNMP Session, NULL if not initialized */
+} wrkrInstanceData_t;
 
 typedef struct configSettings_s {
 	uchar* pszTransport; /* default transport */
@@ -147,6 +151,10 @@ BEGINcreateInstance
 CODESTARTcreateInstance
 ENDcreateInstance
 
+BEGINcreateWrkrInstance
+CODESTARTcreateWrkrInstance
+	pWrkrData->snmpsession = NULL;
+ENDcreateWrkrInstance
 
 BEGINdbgPrintInstInfo
 CODESTARTdbgPrintInstInfo
@@ -171,14 +179,16 @@ ENDisCompatibleWithFeature
 /* Exit SNMP Session
  * alorbach, 2008-02-12
  */
-static rsRetVal omsnmp_exitSession(instanceData *pData)
+static rsRetVal
+omsnmp_exitSession(wrkrInstanceData_t *pWrkrData)
 {
 	DEFiRet;
 
-	if(pData->snmpsession != NULL) {
-		dbgprintf( "omsnmp_exitSession: Clearing Session to '%s' on Port = '%d'\n", pData->szTarget, pData->iPort);
-		snmp_close(pData->snmpsession);
-		pData->snmpsession = NULL;
+	if(pWrkrData->snmpsession != NULL) {
+		DBGPRINTF("omsnmp_exitSession: Clearing Session to '%s' on Port = '%d'\n",
+			  pWrkrData->pData->szTarget, pWrkrData->pData->iPort);
+		snmp_close(pWrkrData->snmpsession);
+		pWrkrData->snmpsession = NULL;
 	}
 
 	RETiRet;
@@ -187,15 +197,19 @@ static rsRetVal omsnmp_exitSession(instanceData *pData)
 /* Init SNMP Session
  * alorbach, 2008-02-12
  */
-static rsRetVal omsnmp_initSession(instanceData *pData)
+static rsRetVal
+omsnmp_initSession(wrkrInstanceData_t *pWrkrData)
 {
 	netsnmp_session session;
+	instanceData *pData;
 	char szTargetAndPort[MAXHOSTNAMELEN+128]; /* work buffer for specifying a full target and port string */
 	DEFiRet;
 	
 	/* should not happen, but if session is not cleared yet - we do it now! */
-	if (pData->snmpsession != NULL)
-		omsnmp_exitSession(pData);
+	if (pWrkrData->snmpsession != NULL)
+		omsnmp_exitSession(pWrkrData);
+
+	pData = pWrkrData->pData;
 
 	snprintf((char*)szTargetAndPort, sizeof(szTargetAndPort), "%s:%s:%d",
 			(pData->szTransport == NULL) ? "udp" : (char*)pData->szTransport,
@@ -217,8 +231,8 @@ static rsRetVal omsnmp_initSession(instanceData *pData)
 		session.community_len = strlen((char*) session.community);
 	}
 
-	pData->snmpsession = snmp_open(&session);
-	if (pData->snmpsession == NULL) {
+	pWrkrData->snmpsession = snmp_open(&session);
+	if (pWrkrData->snmpsession == NULL) {
 		errmsg.LogError(0, RS_RET_SUSPENDED, "omsnmp_initSession: snmp_open to host '%s' on Port '%d' failed\n", pData->szTarget, pData->iPort);
 		/* Stay suspended */
 		iRet = RS_RET_SUSPENDED;
@@ -227,7 +241,7 @@ static rsRetVal omsnmp_initSession(instanceData *pData)
 	RETiRet;
 }
 
-static rsRetVal omsnmp_sendsnmp(instanceData *pData, uchar *psz)
+static rsRetVal omsnmp_sendsnmp(wrkrInstanceData_t *pWrkrData, uchar *psz)
 {
 	DEFiRet;
 
@@ -239,10 +253,12 @@ static rsRetVal omsnmp_sendsnmp(instanceData *pData, uchar *psz)
 	int             status;
 	char            *trap = NULL;
 	const char		*strErr = NULL;
+	instanceData *pData;
 
+	pData = pWrkrData->pData;
 	/* Init SNMP Session if necessary */
-	if (pData->snmpsession == NULL) {
-		CHKiRet(omsnmp_initSession(pData));
+	if (pWrkrData->snmpsession == NULL) {
+		CHKiRet(omsnmp_initSession(pWrkrData));
 	}
 	
 	/* String should not be NULL */
@@ -250,7 +266,7 @@ static rsRetVal omsnmp_sendsnmp(instanceData *pData, uchar *psz)
 	dbgprintf( "omsnmp_sendsnmp: ENTER - Syslogmessage = '%s'\n", (char*)psz);
 
 	/* If SNMP Version1 is configured !*/
-	if(pData->snmpsession->version == SNMP_VERSION_1) {
+	if(pWrkrData->snmpsession->version == SNMP_VERSION_1) {
 		pdu = snmp_pdu_create(SNMP_MSG_TRAP);
 
 		/* Set enterprise */
@@ -275,7 +291,7 @@ static rsRetVal omsnmp_sendsnmp(instanceData *pData, uchar *psz)
 		pdu->time = get_uptime();
 	}
 	/* If SNMP Version2c is configured !*/
-	else if (pData->snmpsession->version == SNMP_VERSION_2c) 
+	else if (pWrkrData->snmpsession->version == SNMP_VERSION_2c) 
 	{
 		long sysuptime;
 		char csysuptime[20];
@@ -320,15 +336,15 @@ static rsRetVal omsnmp_sendsnmp(instanceData *pData, uchar *psz)
 	}
 
 	/* Send the TRAP */
-	status = snmp_send(pData->snmpsession, pdu) == 0;
+	status = snmp_send(pWrkrData->snmpsession, pdu) == 0;
 	if (status)
 	{
 		/* Debug Output! */
-		int iErrorCode = pData->snmpsession->s_snmp_errno;
+		int iErrorCode = pWrkrData->snmpsession->s_snmp_errno;
 		errmsg.LogError(0, RS_RET_SUSPENDED,  "omsnmp_sendsnmp: snmp_send failed error '%d', Description='%s'\n", iErrorCode*(-1), api_errors[iErrorCode*(-1)]);
 
 		/* Clear Session */
-		omsnmp_exitSession(pData);
+		omsnmp_exitSession(pWrkrData);
 
 		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
@@ -347,7 +363,7 @@ finalize_it:
 
 BEGINtryResume
 CODESTARTtryResume
-	iRet = omsnmp_initSession(pData);
+	iRet = omsnmp_initSession(pWrkrData);
 ENDtryResume
 
 BEGINdoAction
@@ -358,19 +374,20 @@ CODESTARTdoAction
 	}
 	
 	/* This will generate and send the SNMP Trap */
-	iRet = omsnmp_sendsnmp(pData, ppString[0]);
+	iRet = omsnmp_sendsnmp(pWrkrData, ppString[0]);
 finalize_it:
 ENDdoAction
 
 BEGINfreeInstance
 CODESTARTfreeInstance
-	/* free snmp Session here */
-	omsnmp_exitSession(pData);
-
 	free(pData->tplName);
 	free(pData->szTarget);
 ENDfreeInstance
 
+BEGINfreeWrkrInstance
+CODESTARTfreeWrkrInstance
+	omsnmp_exitSession(pWrkrData);
+ENDfreeWrkrInstance
 
 static inline void
 setInstParamDefaults(instanceData *pData)
@@ -499,9 +516,6 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 
 	/* Set some defaults in the NetSNMP library */
 	netsnmp_ds_set_int(NETSNMP_DS_LIBRARY_ID, NETSNMP_DS_LIB_DEFAULT_PORT, pData->iPort );
-
-	/* Init Session Pointer */
-	pData->snmpsession = NULL;
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
@@ -545,6 +559,7 @@ ENDmodExit
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
+CODEqueryEtryPt_STD_OMOD8_QUERIES
 CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES 
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 ENDqueryEtryPt
