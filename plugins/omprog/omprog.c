@@ -6,7 +6,7 @@
  *
  * File begun on 2009-04-01 by RGerhards
  *
- * Copyright 2009-2012 Adiscon GmbH.
+ * Copyright 2009-2013 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -35,6 +35,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <wait.h>
+#include <pthread.h>
 #include "conf.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
@@ -60,7 +61,12 @@ typedef struct _instanceData {
 	int fdPipe;			/* file descriptor to write to */
 	int bIsRunning;		/* is binary currently running? 0-no, 1-yes */
 	int iParams;		/* Holds the count of parameters if set*/
+	pthread_mutex_t mut;	/* make sure only one instance is active */
 } instanceData;
+
+typedef struct wrkrInstanceData {
+	instanceData *pData;
+} wrkrInstanceData_t;
 
 typedef struct configSettings_s {
 	uchar *szBinary;	/* name of binary to call */
@@ -89,7 +95,12 @@ ENDinitConfVars
 
 BEGINcreateInstance
 CODESTARTcreateInstance
+	pthread_mutex_init(&pData->mut, NULL);
 ENDcreateInstance
+
+BEGINcreateWrkrInstance
+CODESTARTcreateWrkrInstance
+ENDcreateWrkrInstance
 
 
 BEGINisCompatibleWithFeature
@@ -102,6 +113,7 @@ ENDisCompatibleWithFeature
 BEGINfreeInstance
 	int i;
 CODESTARTfreeInstance
+	pthread_mutex_destroy(&pData->mut);
 	if(pData->szBinary != NULL)
 		free(pData->szBinary);
 	if(pData->aParams != NULL) {
@@ -111,6 +123,10 @@ CODESTARTfreeInstance
 		free(pData->aParams); 
 	}
 ENDfreeInstance
+
+BEGINfreeWrkrInstance
+CODESTARTfreeWrkrInstance
+ENDfreeWrkrInstance
 
 
 BEGINdbgPrintInstInfo
@@ -287,22 +303,21 @@ writePipe(instanceData *pData, uchar *szMsg)
 	lenWrite = strlen((char*)szMsg);
 	writeOffset = 0;
 
-	do
-	{
+	do {
 		lenWritten = write(pData->fdPipe, ((char*)szMsg)+writeOffset, lenWrite);
 		if(lenWritten == -1) {
 			switch(errno) {
-				case EPIPE:
-					DBGPRINTF("omprog: Program '%s' terminated, trying to restart\n",
-						  pData->szBinary);
-					CHKiRet(cleanup(pData));
-					CHKiRet(tryRestart(pData));
-					break;
-				default:
-					DBGPRINTF("omprog: error %d writing to pipe: %s\n", errno,
-						   rs_strerror_r(errno, errStr, sizeof(errStr)));
-					ABORT_FINALIZE(RS_RET_ERR_WRITE_PIPE);
-					break;
+			case EPIPE:
+				DBGPRINTF("omprog: Program '%s' terminated, trying to restart\n",
+					  pData->szBinary);
+				CHKiRet(cleanup(pData));
+				CHKiRet(tryRestart(pData));
+				break;
+			default:
+				DBGPRINTF("omprog: error %d writing to pipe: %s\n", errno,
+					   rs_strerror_r(errno, errStr, sizeof(errStr)));
+				ABORT_FINALIZE(RS_RET_ERR_WRITE_PIPE);
+				break;
 			}
 		} else {
 			writeOffset += lenWritten;
@@ -316,7 +331,10 @@ finalize_it:
 
 
 BEGINdoAction
+	instanceData *pData;
 CODESTARTdoAction
+	pData = pWrkrData->pData;
+	pthread_mutex_lock(&pData->mut);
 	if(pData->bIsRunning == 0) {
 		openPipe(pData);
 	}
@@ -325,6 +343,7 @@ CODESTARTdoAction
 
 	if(iRet != RS_RET_OK)
 		iRet = RS_RET_SUSPENDED;
+	pthread_mutex_unlock(&pData->mut);
 ENDdoAction
 
 
@@ -496,6 +515,7 @@ ENDmodExit
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
+CODEqueryEtryPt_STD_OMOD8_QUERIES
 CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES 
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 ENDqueryEtryPt
