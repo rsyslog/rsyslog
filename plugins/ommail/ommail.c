@@ -214,12 +214,9 @@ ENDisCompatibleWithFeature
 BEGINfreeInstance
 CODESTARTfreeInstance
 	if(pData->iMode == 0) {
-		if(pData->md.smtp.pszSrv != NULL)
-			free(pData->md.smtp.pszSrv);
-		if(pData->md.smtp.pszSrvPort != NULL)
-			free(pData->md.smtp.pszSrvPort);
-		if(pData->md.smtp.pszFrom != NULL)
-			free(pData->md.smtp.pszFrom);
+		free(pData->md.smtp.pszSrv);
+		free(pData->md.smtp.pszSrvPort);
+		free(pData->md.smtp.pszFrom);
 		lstRcptDestruct(pData->md.smtp.lstRcpt);
 	}
 ENDfreeInstance
