@@ -72,48 +72,50 @@ DEFobjCurrIf(netstrms)
 DEFobjCurrIf(netstrm)
 DEFobjCurrIf(tcpclt)
 
+
 /* some local constants (just) for better readybility */
 #define IS_FLUSH 1
 #define NO_FLUSH 0
 
 typedef struct _instanceData {
 	uchar 	*tplName;	/* name of assigned template */
-	netstrms_t *pNS; /* netstream subsystem */
-	netstrm_t *pNetstrm; /* our output netstream */
 	uchar *pszStrmDrvr;
 	uchar *pszStrmDrvrAuthMode;
 	permittedPeers_t *pPermPeers;
 	int iStrmDrvrMode;
 	char	*target;
-	int *pSockArray;	/* sockets to use for UDP */
-	int bIsConnected;  /* are we connected to remote host? 0 - no, 1 - yes, UDP means addr resolved */
-	struct addrinfo *f_addr;
 	int compressionLevel;	/* 0 - no compression, else level for zlib */
 	char *port;
 	int protocol;
 	int iRebindInterval;	/* rebind interval */
-	int nXmit;		/* number of transmissions since last (re-)bind */
 #	define	FORW_UDP 0
 #	define	FORW_TCP 1
 	/* following fields for TCP-based delivery */
 	TCPFRAMINGMODE tcp_framing;
 	int bResendLastOnRecon; /* should the last message be re-sent on a successful reconnect? */
-	tcpclt_t *pTCPClt;	/* our tcpclt object */
 #	define COMPRESS_NEVER 0
 #	define COMPRESS_SINGLE_MSG 1	/* old, single-message compression */
 	/* all other settings are for stream-compression */
 #	define COMPRESS_STREAM_ALWAYS 2
 	uint8_t compressionMode;
+	int errsToReport;	/* max number of errors to report (per instance) */
 	sbool strmCompFlushOnTxEnd; /* flush stream compression on transaction end? */
+} instanceData;
+
+typedef struct wrkrInstanceData {
+	instanceData *pData;
+	netstrms_t *pNS; /* netstream subsystem */
+	netstrm_t *pNetstrm; /* our output netstream */
+	struct addrinfo *f_addr;
+	int *pSockArray;	/* sockets to use for UDP */
+	int bIsConnected;  /* are we connected to remote host? 0 - no, 1 - yes, UDP means addr resolved */
+	int nXmit;		/* number of transmissions since last (re-)bind */
+	tcpclt_t *pTCPClt;	/* our tcpclt object */
 	sbool bzInitDone; /* did we do an init of zstrm already? */
 	z_stream zstrm;	/* zip stream to use for tcp compression */
 	uchar sndBuf[16*1024];	/* this is intensionally fixed -- see no good reason to make configurable */
 	unsigned offsSndBuf;	/* next free spot in send buffer */
 	int errsToReport;	/* (remaining) number of errors to report */
-} instanceData;
-
-typedef struct wrkrInstanceData {
-	instanceData *pData;
 } wrkrInstanceData_t;
 
 /* config data */
@@ -173,6 +175,9 @@ static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current l
 static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current exec process */
 
 
+static rsRetVal initTCP(wrkrInstanceData_t *pWrkrData);
+
+
 BEGINinitConfVars		/* (re)set config variables to default values */
 CODESTARTinitConfVars 
 	cs.pszTplName = NULL; /* name of the default template to use */
@@ -186,8 +191,8 @@ CODESTARTinitConfVars
 ENDinitConfVars
 
 
-static rsRetVal doTryResume(instanceData *pData);
-static rsRetVal doZipFinish(instanceData *pData);
+static rsRetVal doTryResume(wrkrInstanceData_t *);
+static rsRetVal doZipFinish(wrkrInstanceData_t *);
 
 /* this function gets the default template. It coordinates action between
  * old-style and new-style configuration parts.
@@ -231,17 +236,16 @@ finalize_it:
  * rgerhards, 2009-05-29
  */
 static rsRetVal
-closeUDPSockets(instanceData *pData)
+closeUDPSockets(wrkrInstanceData_t *pWrkrData)
 {
 	DEFiRet;
-	assert(pData != NULL);
-	if(pData->pSockArray != NULL) {
-		net.closeUDPListenSockets(pData->pSockArray);
-		pData->pSockArray = NULL;
-		freeaddrinfo(pData->f_addr);
-		pData->f_addr = NULL;
+	if(pWrkrData->pSockArray != NULL) {
+		net.closeUDPListenSockets(pWrkrData->pSockArray);
+		pWrkrData->pSockArray = NULL;
+		freeaddrinfo(pWrkrData->f_addr);
+		pWrkrData->f_addr = NULL;
 	}
-pData->bIsConnected = 0; // TODO: remove this variable altogether
+pWrkrData->bIsConnected = 0; // TODO: remove this variable altogether
 	RETiRet;
 }
 
@@ -252,18 +256,17 @@ pData->bIsConnected = 0; // TODO: remove this variable altogether
  * rgerhards, 2008-06-04
  * Note that we DO NOT discard the current buffer contents
  * (if any). This permits us to save data between sessions. In
- * the wort case, some duplication occurs, but we do not
+ * the worst case, some duplication occurs, but we do not
  * loose data.
  */
 static inline void
-DestructTCPInstanceData(instanceData *pData)
+DestructTCPInstanceData(wrkrInstanceData_t *pWrkrData)
 {
-	assert(pData != NULL);
-	doZipFinish(pData);
-	if(pData->pNetstrm != NULL)
-		netstrm.Destruct(&pData->pNetstrm);
-	if(pData->pNS != NULL)
-		netstrms.Destruct(&pData->pNS);
+	doZipFinish(pWrkrData);
+	if(pWrkrData->pNetstrm != NULL)
+		netstrm.Destruct(&pWrkrData->pNetstrm);
+	if(pWrkrData->pNS != NULL)
+		netstrms.Destruct(&pWrkrData->pNS);
 }
 
 
@@ -334,14 +337,22 @@ ENDfreeCnf
 
 BEGINcreateInstance
 CODESTARTcreateInstance
-	pData->offsSndBuf = 0;
 	pData->errsToReport = 5;
+	if(cs.pszStrmDrvr != NULL)
+		CHKmalloc(pData->pszStrmDrvr = (uchar*)strdup((char*)cs.pszStrmDrvr));
+	if(cs.pszStrmDrvrAuthMode != NULL)
+		CHKmalloc(pData->pszStrmDrvrAuthMode =
+				     (uchar*)strdup((char*)cs.pszStrmDrvrAuthMode));
+finalize_it:
 ENDcreateInstance
 
 
 BEGINcreateWrkrInstance
 CODESTARTcreateWrkrInstance
 	dbgprintf("DDDD: createWrkrInstance: pWrkrData %p\n", pWrkrData);
+	pWrkrData->offsSndBuf = 0;
+	pWrkrData->errsToReport = pData->errsToReport;
+	iRet = initTCP(pWrkrData);
 ENDcreateWrkrInstance
 
 
@@ -354,24 +365,22 @@ ENDisCompatibleWithFeature
 
 BEGINfreeInstance
 CODESTARTfreeInstance
-	/* final cleanup */
-	DestructTCPInstanceData(pData);
-	closeUDPSockets(pData);
-
-	if(pData->protocol == FORW_TCP) {
-		tcpclt.Destruct(&pData->pTCPClt);
-	}
-
-	free(pData->port);
-	free(pData->target);
 	free(pData->pszStrmDrvr);
 	free(pData->pszStrmDrvrAuthMode);
+	free(pData->port);
+	free(pData->target);
 	net.DestructPermittedPeers(&pData->pPermPeers);
 ENDfreeInstance
 
 
 BEGINfreeWrkrInstance
 CODESTARTfreeWrkrInstance
+	DestructTCPInstanceData(pWrkrData);
+	closeUDPSockets(pWrkrData);
+
+	if(pWrkrData->pData->protocol == FORW_TCP) {
+		tcpclt.Destruct(&pWrkrData->pTCPClt);
+	}
 ENDfreeWrkrInstance
 
 
@@ -384,7 +393,7 @@ ENDdbgPrintInstInfo
 /* Send a message via UDP
  * rgehards, 2007-12-20
  */
-static rsRetVal UDPSend(instanceData *pData, char *msg, size_t len)
+static rsRetVal UDPSend(wrkrInstanceData_t *pWrkrData, char *msg, size_t len)
 {
 	DEFiRet;
 	struct addrinfo *r;
@@ -394,17 +403,17 @@ static rsRetVal UDPSend(instanceData *pData, char *msg, size_t len)
 	int lasterrno;
 	char errStr[1024];
 
-	if(pData->iRebindInterval && (pData->nXmit++ % pData->iRebindInterval == 0)) {
+	if(pWrkrData->pData->iRebindInterval && (pWrkrData->nXmit++ % pWrkrData->pData->iRebindInterval == 0)) {
 		dbgprintf("omfwd dropping UDP 'connection' (as configured)\n");
-		pData->nXmit = 1;	/* else we have an addtl wrap at 2^31-1 */
-		CHKiRet(closeUDPSockets(pData));
+		pWrkrData->nXmit = 1;	/* else we have an addtl wrap at 2^31-1 */
+		CHKiRet(closeUDPSockets(pWrkrData));
 	}
 
-	if(pData->pSockArray == NULL) {
-		CHKiRet(doTryResume(pData));
+	if(pWrkrData->pSockArray == NULL) {
+		CHKiRet(doTryResume(pWrkrData));
 	}
 
-	if(pData->pSockArray != NULL) {
+	if(pWrkrData->pSockArray != NULL) {
 		/* we need to track if we have success sending to the remote
 		 * peer. Success is indicated by at least one sendto() call
 		 * succeeding. We track this be bSendSuccess. We can not simply
@@ -413,9 +422,9 @@ static rsRetVal UDPSend(instanceData *pData, char *msg, size_t len)
 		 * the sendto() succeeded. -- rgerhards, 2007-06-22
 		 */
 		bSendSuccess = RSFALSE;
-		for (r = pData->f_addr; r; r = r->ai_next) {
-			for (i = 0; i < *pData->pSockArray; i++) {
-			       lsent = sendto(pData->pSockArray[i+1], msg, len, 0, r->ai_addr, r->ai_addrlen);
+		for (r = pWrkrData->f_addr; r; r = r->ai_next) {
+			for (i = 0; i < *pWrkrData->pSockArray; i++) {
+			       lsent = sendto(pWrkrData->pSockArray[i+1], msg, len, 0, r->ai_addr, r->ai_addrlen);
 				if (lsent == len) {
 					bSendSuccess = RSTRUE;
 					break;
@@ -432,17 +441,17 @@ static rsRetVal UDPSend(instanceData *pData, char *msg, size_t len)
 		/* finished looping */
 		if(bSendSuccess == RSFALSE) {
 			dbgprintf("error forwarding via udp, suspending\n");
-			if(pData->errsToReport > 0) {
+			if(pWrkrData->errsToReport > 0) {
 				rs_strerror_r(lasterrno, errStr, sizeof(errStr));
 				errmsg.LogError(0, RS_RET_ERR_UDPSEND, "omfwd: error sending "
 						"via udp: %s", errStr);
-				if(pData->errsToReport == 1) {
+				if(pWrkrData->errsToReport == 1) {
 					errmsg.LogError(0, RS_RET_LAST_ERRREPORT, "omfwd: "
 							"max number of error message emitted "
 							"- further messages will be "
 							"suppressed");
 				}
-				--pData->errsToReport;
+				--pWrkrData->errsToReport;
 			}
 			iRet = RS_RET_SUSPENDED;
 		}
@@ -470,18 +479,18 @@ finalize_it:
 /* CODE FOR SENDING TCP MESSAGES */
 
 static rsRetVal
-TCPSendBufUncompressed(instanceData *pData, uchar *buf, unsigned len)
+TCPSendBufUncompressed(wrkrInstanceData_t *pWrkrData, uchar *buf, unsigned len)
 {
 	DEFiRet;
 	unsigned alreadySent;
 	ssize_t lenSend;
 
 	alreadySent = 0;
-	CHKiRet(netstrm.CheckConnection(pData->pNetstrm)); /* hack for plain tcp syslog - see ptcp driver for details */
+	CHKiRet(netstrm.CheckConnection(pWrkrData->pNetstrm)); /* hack for plain tcp syslog - see ptcp driver for details */
 
 	while(alreadySent != len) {
 		lenSend = len - alreadySent;
-		CHKiRet(netstrm.Send(pData->pNetstrm, buf+alreadySent, &lenSend));
+		CHKiRet(netstrm.Send(pWrkrData->pNetstrm, buf+alreadySent, &lenSend));
 		DBGPRINTF("omfwd: TCP sent %ld bytes, requested %u\n", (long) lenSend, len - alreadySent);
 		alreadySent += lenSend;
 	}
@@ -490,14 +499,14 @@ finalize_it:
 	if(iRet != RS_RET_OK) {
 		/* error! */
 		dbgprintf("TCPSendBuf error %d, destruct TCP Connection!\n", iRet);
-		DestructTCPInstanceData(pData);
+		DestructTCPInstanceData(pWrkrData);
 		iRet = RS_RET_SUSPENDED;
 	}
 	RETiRet;
 }
 
 static rsRetVal
-TCPSendBufCompressed(instanceData *pData, uchar *buf, unsigned len, sbool bIsFlush)
+TCPSendBufCompressed(wrkrInstanceData_t *pWrkrData, uchar *buf, unsigned len, sbool bIsFlush)
 {
 	int zRet;	/* zlib return state */
 	unsigned outavail;
@@ -505,52 +514,52 @@ TCPSendBufCompressed(instanceData *pData, uchar *buf, unsigned len, sbool bIsFlu
 	int op;
 	DEFiRet;
 
-	if(!pData->bzInitDone) {
+	if(!pWrkrData->bzInitDone) {
 		/* allocate deflate state */
-		pData->zstrm.zalloc = Z_NULL;
-		pData->zstrm.zfree = Z_NULL;
-		pData->zstrm.opaque = Z_NULL;
+		pWrkrData->zstrm.zalloc = Z_NULL;
+		pWrkrData->zstrm.zfree = Z_NULL;
+		pWrkrData->zstrm.opaque = Z_NULL;
 		/* see note in file header for the params we use with deflateInit2() */
-		zRet = deflateInit(&pData->zstrm, 9);
+		zRet = deflateInit(&pWrkrData->zstrm, 9);
 		if(zRet != Z_OK) {
 			DBGPRINTF("error %d returned from zlib/deflateInit()\n", zRet);
 			ABORT_FINALIZE(RS_RET_ZLIB_ERR);
 		}
-		pData->bzInitDone = RSTRUE;
+		pWrkrData->bzInitDone = RSTRUE;
 	}
 
 	/* now doing the compression */
-	pData->zstrm.next_in = (Bytef*) buf;
-	pData->zstrm.avail_in = len;
-	if(pData->strmCompFlushOnTxEnd && bIsFlush)
+	pWrkrData->zstrm.next_in = (Bytef*) buf;
+	pWrkrData->zstrm.avail_in = len;
+	if(pWrkrData->pData->strmCompFlushOnTxEnd && bIsFlush)
 		op = Z_SYNC_FLUSH;
 	else
 		op = Z_NO_FLUSH;
 	/* run deflate() on buffer until everything has been compressed */
 	do {
-		DBGPRINTF("omfwd: in deflate() loop, avail_in %d, total_in %ld, isFlush %d\n", pData->zstrm.avail_in, pData->zstrm.total_in, bIsFlush);
-		pData->zstrm.avail_out = sizeof(zipBuf);
-		pData->zstrm.next_out = zipBuf;
-		zRet = deflate(&pData->zstrm, op);    /* no bad return value */
-		DBGPRINTF("after deflate, ret %d, avail_out %d\n", zRet, pData->zstrm.avail_out);
-		outavail = sizeof(zipBuf) - pData->zstrm.avail_out;
+		DBGPRINTF("omfwd: in deflate() loop, avail_in %d, total_in %ld, isFlush %d\n", pWrkrData->zstrm.avail_in, pWrkrData->zstrm.total_in, bIsFlush);
+		pWrkrData->zstrm.avail_out = sizeof(zipBuf);
+		pWrkrData->zstrm.next_out = zipBuf;
+		zRet = deflate(&pWrkrData->zstrm, op);    /* no bad return value */
+		DBGPRINTF("after deflate, ret %d, avail_out %d\n", zRet, pWrkrData->zstrm.avail_out);
+		outavail = sizeof(zipBuf) - pWrkrData->zstrm.avail_out;
 		if(outavail != 0) {
-			CHKiRet(TCPSendBufUncompressed(pData, zipBuf, outavail));
+			CHKiRet(TCPSendBufUncompressed(pWrkrData, zipBuf, outavail));
 		}
-	} while (pData->zstrm.avail_out == 0);
+	} while (pWrkrData->zstrm.avail_out == 0);
 
 finalize_it:
 	RETiRet;
 }
 
 static rsRetVal
-TCPSendBuf(instanceData *pData, uchar *buf, unsigned len, sbool bIsFlush)
+TCPSendBuf(wrkrInstanceData_t *pWrkrData, uchar *buf, unsigned len, sbool bIsFlush)
 {
 	DEFiRet;
-	if(pData->compressionMode >= COMPRESS_STREAM_ALWAYS)
-		iRet = TCPSendBufCompressed(pData, buf, len, bIsFlush);
+	if(pWrkrData->pData->compressionMode >= COMPRESS_STREAM_ALWAYS)
+		iRet = TCPSendBufCompressed(pWrkrData, buf, len, bIsFlush);
 	else
-		iRet = TCPSendBufUncompressed(pData, buf, len);
+		iRet = TCPSendBufUncompressed(pWrkrData, buf, len);
 	RETiRet;
 }
 
@@ -558,39 +567,39 @@ TCPSendBuf(instanceData *pData, uchar *buf, unsigned len, sbool bIsFlush)
  * running in stream mode).
  */
 static rsRetVal
-doZipFinish(instanceData *pData)
+doZipFinish(wrkrInstanceData_t *pWrkrData)
 {
 	int zRet;	/* zlib return state */
 	DEFiRet;
 	unsigned outavail;
 	uchar zipBuf[32*1024];
 
-	if(!pData->bzInitDone)
+	if(!pWrkrData->bzInitDone)
 		goto done;
 
 // TODO: can we get this into a single common function?
 dbgprintf("DDDD: in doZipFinish()\n");
-	pData->zstrm.avail_in = 0;
+	pWrkrData->zstrm.avail_in = 0;
 	/* run deflate() on buffer until everything has been compressed */
 	do {
-		DBGPRINTF("in deflate() loop, avail_in %d, total_in %ld\n", pData->zstrm.avail_in, pData->zstrm.total_in);
-		pData->zstrm.avail_out = sizeof(zipBuf);
-		pData->zstrm.next_out = zipBuf;
-		zRet = deflate(&pData->zstrm, Z_FINISH);    /* no bad return value */
-		DBGPRINTF("after deflate, ret %d, avail_out %d\n", zRet, pData->zstrm.avail_out);
-		outavail = sizeof(zipBuf) - pData->zstrm.avail_out;
+		DBGPRINTF("in deflate() loop, avail_in %d, total_in %ld\n", pWrkrData->zstrm.avail_in, pWrkrData->zstrm.total_in);
+		pWrkrData->zstrm.avail_out = sizeof(zipBuf);
+		pWrkrData->zstrm.next_out = zipBuf;
+		zRet = deflate(&pWrkrData->zstrm, Z_FINISH);    /* no bad return value */
+		DBGPRINTF("after deflate, ret %d, avail_out %d\n", zRet, pWrkrData->zstrm.avail_out);
+		outavail = sizeof(zipBuf) - pWrkrData->zstrm.avail_out;
 		if(outavail != 0) {
-			CHKiRet(TCPSendBufUncompressed(pData, zipBuf, outavail));
+			CHKiRet(TCPSendBufUncompressed(pWrkrData, zipBuf, outavail));
 		}
-	} while (pData->zstrm.avail_out == 0);
+	} while (pWrkrData->zstrm.avail_out == 0);
 
 finalize_it:
-	zRet = deflateEnd(&pData->zstrm);
+	zRet = deflateEnd(&pWrkrData->zstrm);
 	if(zRet != Z_OK) {
 		DBGPRINTF("error %d returned from zlib/deflateEnd()\n", zRet);
 	}
 
-	pData->bzInitDone = 0;
+	pWrkrData->bzInitDone = 0;
 done:	RETiRet;
 }
 
@@ -600,26 +609,26 @@ done:	RETiRet;
 static rsRetVal TCPSendFrame(void *pvData, char *msg, size_t len)
 {
 	DEFiRet;
-	instanceData *pData = (instanceData *) pvData;
+	wrkrInstanceData_t *pWrkrData = (wrkrInstanceData_t *) pvData;
 
 	DBGPRINTF("omfwd: add %u bytes to send buffer (curr offs %u)\n",
-		(unsigned) len, pData->offsSndBuf);
-	if(pData->offsSndBuf != 0 && pData->offsSndBuf + len >= sizeof(pData->sndBuf)) {
+		(unsigned) len, pWrkrData->offsSndBuf);
+	if(pWrkrData->offsSndBuf != 0 && pWrkrData->offsSndBuf + len >= sizeof(pWrkrData->sndBuf)) {
 		/* no buffer space left, need to commit previous records */
-		CHKiRet(TCPSendBuf(pData, pData->sndBuf, pData->offsSndBuf, NO_FLUSH));
-		pData->offsSndBuf = 0;
+		CHKiRet(TCPSendBuf(pWrkrData, pWrkrData->sndBuf, pWrkrData->offsSndBuf, NO_FLUSH));
+		pWrkrData->offsSndBuf = 0;
 		iRet = RS_RET_PREVIOUS_COMMITTED;
 	}
 
 	/* check if the message is too large to fit into buffer */
-	if(len > sizeof(pData->sndBuf)) {
-		CHKiRet(TCPSendBuf(pData, (uchar*)msg, len, NO_FLUSH));
+	if(len > sizeof(pWrkrData->sndBuf)) {
+		CHKiRet(TCPSendBuf(pWrkrData, (uchar*)msg, len, NO_FLUSH));
 		ABORT_FINALIZE(RS_RET_OK);	/* committed everything so far */
 	}
 
 	/* we now know the buffer has enough free space */
-	memcpy(pData->sndBuf + pData->offsSndBuf, msg, len);
-	pData->offsSndBuf += len;
+	memcpy(pWrkrData->sndBuf + pWrkrData->offsSndBuf, msg, len);
+	pWrkrData->offsSndBuf += len;
 	iRet = RS_RET_DEFER_COMMIT;
 
 finalize_it:
@@ -634,10 +643,10 @@ finalize_it:
 static rsRetVal TCPSendPrepRetry(void *pvData)
 {
 	DEFiRet;
-	instanceData *pData = (instanceData *) pvData;
+	wrkrInstanceData_t *pWrkrData = (wrkrInstanceData_t *) pvData;
 
-	assert(pData != NULL);
-	DestructTCPInstanceData(pData);
+	assert(pWrkrData != NULL);
+	DestructTCPInstanceData(pWrkrData);
 	RETiRet;
 }
 
@@ -648,36 +657,39 @@ static rsRetVal TCPSendPrepRetry(void *pvData)
 static rsRetVal TCPSendInit(void *pvData)
 {
 	DEFiRet;
-	instanceData *pData = (instanceData *) pvData;
+	wrkrInstanceData_t *pWrkrData = (wrkrInstanceData_t *) pvData;
+	instanceData *pData;
 
-	assert(pData != NULL);
-	if(pData->pNetstrm == NULL) {
+	assert(pWrkrData != NULL);
+	pData = pWrkrData->pData;
+
+	if(pWrkrData->pNetstrm == NULL) {
 		dbgprintf("TCPSendInit CREATE\n");
-		CHKiRet(netstrms.Construct(&pData->pNS));
+		CHKiRet(netstrms.Construct(&pWrkrData->pNS));
 		/* the stream driver must be set before the object is finalized! */
-		CHKiRet(netstrms.SetDrvrName(pData->pNS, pData->pszStrmDrvr));
-		CHKiRet(netstrms.ConstructFinalize(pData->pNS));
+		CHKiRet(netstrms.SetDrvrName(pWrkrData->pNS, pData->pszStrmDrvr));
+		CHKiRet(netstrms.ConstructFinalize(pWrkrData->pNS));
 
 		/* now create the actual stream and connect to the server */
-		CHKiRet(netstrms.CreateStrm(pData->pNS, &pData->pNetstrm));
-		CHKiRet(netstrm.ConstructFinalize(pData->pNetstrm));
-		CHKiRet(netstrm.SetDrvrMode(pData->pNetstrm, pData->iStrmDrvrMode));
+		CHKiRet(netstrms.CreateStrm(pWrkrData->pNS, &pWrkrData->pNetstrm));
+		CHKiRet(netstrm.ConstructFinalize(pWrkrData->pNetstrm));
+		CHKiRet(netstrm.SetDrvrMode(pWrkrData->pNetstrm, pData->iStrmDrvrMode));
 		/* now set optional params, but only if they were actually configured */
 		if(pData->pszStrmDrvrAuthMode != NULL) {
-			CHKiRet(netstrm.SetDrvrAuthMode(pData->pNetstrm, pData->pszStrmDrvrAuthMode));
+			CHKiRet(netstrm.SetDrvrAuthMode(pWrkrData->pNetstrm, pData->pszStrmDrvrAuthMode));
 		}
 		if(pData->pPermPeers != NULL) {
-			CHKiRet(netstrm.SetDrvrPermPeers(pData->pNetstrm, pData->pPermPeers));
+			CHKiRet(netstrm.SetDrvrPermPeers(pWrkrData->pNetstrm, pData->pPermPeers));
 		}
 		/* params set, now connect */
-		CHKiRet(netstrm.Connect(pData->pNetstrm, glbl.GetDefPFFamily(),
+		CHKiRet(netstrm.Connect(pWrkrData->pNetstrm, glbl.GetDefPFFamily(),
 			(uchar*)pData->port, (uchar*)pData->target));
 	}
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
 		dbgprintf("TCPSendInit FAILED with %d.\n", iRet);
-		DestructTCPInstanceData(pData);
+		DestructTCPInstanceData(pWrkrData);
 	}
 
 	RETiRet;
@@ -687,15 +699,17 @@ finalize_it:
 /* try to resume connection if it is not ready
  * rgerhards, 2007-08-02
  */
-static rsRetVal doTryResume(instanceData *pData)
+static rsRetVal doTryResume(wrkrInstanceData_t *pWrkrData)
 {
 	int iErr;
 	struct addrinfo *res;
 	struct addrinfo hints;
+	instanceData *pData;
 	DEFiRet;
 
-	if(pData->bIsConnected)
+	if(pWrkrData->bIsConnected)
 		FINALIZE;
+	pData = pWrkrData->pData;
 
 	/* The remote address is not yet known and needs to be obtained */
 	dbgprintf(" %s\n", pData->target);
@@ -711,20 +725,20 @@ static rsRetVal doTryResume(instanceData *pData)
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
 		}
 		dbgprintf("%s found, resuming.\n", pData->target);
-		pData->f_addr = res;
-		pData->bIsConnected = 1;
-		if(pData->pSockArray == NULL) {
-			pData->pSockArray = net.create_udp_socket((uchar*)pData->target, NULL, 0, 0);
+		pWrkrData->f_addr = res;
+		pWrkrData->bIsConnected = 1;
+		if(pWrkrData->pSockArray == NULL) {
+			pWrkrData->pSockArray = net.create_udp_socket((uchar*)pData->target, NULL, 0, 0);
 		}
 	} else {
-		CHKiRet(TCPSendInit((void*)pData));
+		CHKiRet(TCPSendInit((void*)pWrkrData));
 	}
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		if(pData->f_addr != NULL) {
-			freeaddrinfo(pData->f_addr);
-			pData->f_addr = NULL;
+		if(pWrkrData->f_addr != NULL) {
+			freeaddrinfo(pWrkrData->f_addr);
+			pWrkrData->f_addr = NULL;
 		}
 		iRet = RS_RET_SUSPENDED;
 	}
@@ -736,7 +750,7 @@ finalize_it:
 BEGINtryResume
 CODESTARTtryResume
 	dbgprintf("DDDD: tryResume: pWrkrData %p\n", pWrkrData);
-	iRet = doTryResume(pWrkrData->pData);
+	iRet = doTryResume(pWrkrData);
 ENDtryResume
 
 
@@ -757,7 +771,7 @@ BEGINdoAction
 CODESTARTdoAction
 	dbgprintf("DDDD: doAction: pWrkrData %p\n", pWrkrData);
 	pData = pWrkrData->pData;
-	CHKiRet(doTryResume(pData));
+	CHKiRet(doTryResume(pWrkrData));
 
 	iMaxLine = glbl.GetMaxLine();
 
@@ -810,14 +824,14 @@ CODESTARTdoAction
 
 	if(pData->protocol == FORW_UDP) {
 		/* forward via UDP */
-		CHKiRet(UDPSend(pData, psz, l));
+		CHKiRet(UDPSend(pWrkrData, psz, l));
 	} else {
 		/* forward via TCP */
-		iRet = tcpclt.Send(pData->pTCPClt, pData, psz, l);
+		iRet = tcpclt.Send(pWrkrData->pTCPClt, pWrkrData, psz, l);
 		if(iRet != RS_RET_OK && iRet != RS_RET_DEFER_COMMIT && iRet != RS_RET_PREVIOUS_COMMITTED) {
 			/* error! */
 			dbgprintf("error forwarding via tcp, suspending\n");
-			DestructTCPInstanceData(pData);
+			DestructTCPInstanceData(pWrkrData);
 			iRet = RS_RET_SUSPENDED;
 		}
 		if(pData->compressionMode >= COMPRESS_STREAM_ALWAYS && pData->strmCompFlushOnTxEnd)
@@ -832,13 +846,11 @@ ENDdoAction
 
 
 BEGINendTransaction
-	instanceData *pData;
 CODESTARTendTransaction
-	pData = pWrkrData->pData;
-dbgprintf("omfwd: endTransaction, offsSndBuf %u\n", pData->offsSndBuf);
-	if(pData->offsSndBuf != 0) {
-		iRet = TCPSendBuf(pData, pData->sndBuf, pData->offsSndBuf, IS_FLUSH);
-		pData->offsSndBuf = 0;
+dbgprintf("omfwd: endTransaction, offsSndBuf %u\n", pWrkrData->offsSndBuf);
+	if(pWrkrData->offsSndBuf != 0) {
+		iRet = TCPSendBuf(pWrkrData, pWrkrData->sndBuf, pWrkrData->offsSndBuf, IS_FLUSH);
+		pWrkrData->offsSndBuf = 0;
 	}
 ENDendTransaction
 
@@ -865,24 +877,22 @@ finalize_it:
  * created.
  */
 static rsRetVal
-initTCP(instanceData *pData)
+initTCP(wrkrInstanceData_t *pWrkrData)
 {
+	instanceData *pData;
 	DEFiRet;
+
+	pData = pWrkrData->pData;
 	if(pData->protocol == FORW_TCP) {
 		/* create our tcpclt */
-		CHKiRet(tcpclt.Construct(&pData->pTCPClt));
-		CHKiRet(tcpclt.SetResendLastOnRecon(pData->pTCPClt, pData->bResendLastOnRecon));
+		CHKiRet(tcpclt.Construct(&pWrkrData->pTCPClt));
+		CHKiRet(tcpclt.SetResendLastOnRecon(pWrkrData->pTCPClt, pData->bResendLastOnRecon));
 		/* and set callbacks */
-		CHKiRet(tcpclt.SetSendInit(pData->pTCPClt, TCPSendInit));
-		CHKiRet(tcpclt.SetSendFrame(pData->pTCPClt, TCPSendFrame));
-		CHKiRet(tcpclt.SetSendPrepRetry(pData->pTCPClt, TCPSendPrepRetry));
-		CHKiRet(tcpclt.SetFraming(pData->pTCPClt, pData->tcp_framing));
-		CHKiRet(tcpclt.SetRebindInterval(pData->pTCPClt, pData->iRebindInterval));
-		if(cs.pszStrmDrvr != NULL)
-			CHKmalloc(pData->pszStrmDrvr = (uchar*)strdup((char*)cs.pszStrmDrvr));
-		if(cs.pszStrmDrvrAuthMode != NULL)
-			CHKmalloc(pData->pszStrmDrvrAuthMode =
-				     (uchar*)strdup((char*)cs.pszStrmDrvrAuthMode));
+		CHKiRet(tcpclt.SetSendInit(pWrkrData->pTCPClt, TCPSendInit));
+		CHKiRet(tcpclt.SetSendFrame(pWrkrData->pTCPClt, TCPSendFrame));
+		CHKiRet(tcpclt.SetSendPrepRetry(pWrkrData->pTCPClt, TCPSendPrepRetry));
+		CHKiRet(tcpclt.SetFraming(pWrkrData->pTCPClt, pData->tcp_framing));
+		CHKiRet(tcpclt.SetRebindInterval(pWrkrData->pTCPClt, pData->iRebindInterval));
 	}
 finalize_it:
 	RETiRet;
@@ -1067,7 +1077,6 @@ CODESTARTnewActInst
 	tplToUse = ustrdup((pData->tplName == NULL) ? getDfltTpl() : pData->tplName);
 	CHKiRet(OMSRsetEntry(*ppOMSR, 0, tplToUse, OMSR_NO_RQD_TPL_OPTS));
 
-	CHKiRet(initTCP(pData));
 CODE_STD_FINALIZERnewActInst
 	cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
@@ -1236,7 +1245,6 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 			cs.pPermPeers = NULL;
 		}
 	}
-	CHKiRet(initTCP(pData));
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
