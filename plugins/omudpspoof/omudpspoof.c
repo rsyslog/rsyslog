@@ -98,15 +98,19 @@ typedef struct _instanceData {
 	uchar	*port;
 	uchar	*sourceTpl;
 	int	mtu;
-	int	*pSockArray;		/* sockets to use for UDP */
-	struct addrinfo *f_addr;
-	u_short sourcePort;
 	u_short sourcePortStart;	/* for sorce port iteration */
 	u_short sourcePortEnd;
 	int	bReportLibnetInitErr; /* help prevent multiple error messages on init err */
-	libnet_t *libnet_handle;
-	char errbuf[LIBNET_ERRBUF_SIZE];
 } instanceData;
+
+typedef struct wrkrInstanceData {
+	instanceData *pData;
+	libnet_t *libnet_handle;
+	u_short sourcePort;
+	int	*pSockArray;		/* sockets to use for UDP */
+	struct addrinfo *f_addr;
+	char errbuf[LIBNET_ERRBUF_SIZE];
+} wrkrInstanceData_t;
 
 #define DFLT_SOURCE_PORT_START 32000
 #define DFLT_SOURCE_PORT_END   42000
@@ -172,7 +176,7 @@ ENDinitConfVars
 pthread_mutex_t mutLibnet;
 
 /* forward definitions */
-static rsRetVal doTryResume(instanceData *pData);
+static rsRetVal doTryResume(wrkrInstanceData_t *pWrkrData);
 
 
 /* this function gets the default template. It coordinates action between
@@ -217,15 +221,14 @@ finalize_it:
  * rgerhards, 2009-05-29
  */
 static rsRetVal
-closeUDPSockets(instanceData *pData)
+closeUDPSockets(wrkrInstanceData_t *pWrkrData)
 {
 	DEFiRet;
-	assert(pData != NULL);
-	if(pData->pSockArray != NULL) {
-		net.closeUDPListenSockets(pData->pSockArray);
-		pData->pSockArray = NULL;
-		freeaddrinfo(pData->f_addr);
-		pData->f_addr = NULL;
+	if(pWrkrData->pSockArray != NULL) {
+		net.closeUDPListenSockets(pWrkrData->pSockArray);
+		pWrkrData->pSockArray = NULL;
+		freeaddrinfo(pWrkrData->f_addr);
+		pWrkrData->f_addr = NULL;
 	}
 	RETiRet;
 }
@@ -310,11 +313,16 @@ ENDfreeCnf
 
 BEGINcreateInstance
 CODESTARTcreateInstance
-	pData->libnet_handle = NULL;
 	pData->mtu = 1500;
 	pData->bReportLibnetInitErr = 1;
 ENDcreateInstance
 
+
+BEGINcreateWrkrInstance
+CODESTARTcreateWrkrInstance
+	pWrkrData->libnet_handle = NULL;
+	pWrkrData->sourcePort = pData->sourcePortStart;
+ENDcreateWrkrInstance
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
@@ -326,14 +334,18 @@ ENDisCompatibleWithFeature
 BEGINfreeInstance
 CODESTARTfreeInstance
 	/* final cleanup */
-	closeUDPSockets(pData);
 	free(pData->tplName);
 	free(pData->port);
 	free(pData->host);
 	free(pData->sourceTpl);
-	if(pData->libnet_handle != NULL)
-		libnet_destroy(pData->libnet_handle);
 ENDfreeInstance
+
+BEGINfreeWrkrInstance
+CODESTARTfreeWrkrInstance
+	closeUDPSockets(pWrkrData);
+	if(pWrkrData->libnet_handle != NULL)
+		libnet_destroy(pWrkrData->libnet_handle);
+ENDfreeWrkrInstance
 
 
 BEGINdbgPrintInstInfo
@@ -348,11 +360,12 @@ ENDdbgPrintInstInfo
  * rgehards, 2007-12-20
  */
 static inline rsRetVal
-UDPSend(instanceData *pData, uchar *pszSourcename, char *msg, size_t len)
+UDPSend(wrkrInstanceData_t *pWrkrData, uchar *pszSourcename, char *msg, size_t len)
 {
 	struct addrinfo *r;
 	int lsent = 0;
 	int bSendSuccess;
+	instanceData *pData;
 	struct sockaddr_in *tempaddr,source_ip;
 	libnet_ptag_t ip, ipo;
 	libnet_ptag_t udp;
@@ -363,9 +376,10 @@ UDPSend(instanceData *pData, uchar *pszSourcename, char *msg, size_t len)
 	unsigned maxPktLen, pktLen;
 	DEFiRet;
 
-	if(pData->pSockArray == NULL) {
-		CHKiRet(doTryResume(pData));
+	if(pWrkrData->pSockArray == NULL) {
+		CHKiRet(doTryResume(pWrkrData));
 	}
+	pData = pWrkrData->pData;
 
 	if(len > 65528) {
 		DBGPRINTF("omudpspoof: msg with length %d truncated to 64k: '%.768s'\n",
@@ -374,8 +388,8 @@ UDPSend(instanceData *pData, uchar *pszSourcename, char *msg, size_t len)
 	}
 
 	ip = ipo = udp = 0;
-	if(pData->sourcePort++ >= pData->sourcePortEnd){
-		pData->sourcePort = pData->sourcePortStart;
+	if(pWrkrData->sourcePort++ >= pData->sourcePortEnd){
+		pWrkrData->sourcePort = pData->sourcePortStart;
 	}
 
 	inet_pton(AF_INET, (char*)pszSourcename, &(source_ip.sin_addr));
@@ -383,7 +397,7 @@ UDPSend(instanceData *pData, uchar *pszSourcename, char *msg, size_t len)
 	bSendSuccess = RSFALSE;
 	d_pthread_mutex_lock(&mutLibnet);
 	bNeedUnlock = 1;
-	for (r = pData->f_addr; r && bSendSuccess == RSFALSE ; r = r->ai_next) {
+	for (r = pWrkrData->f_addr; r && bSendSuccess == RSFALSE ; r = r->ai_next) {
 		tempaddr = (struct sockaddr_in *)r->ai_addr;
 		/* Getting max payload size (must be multiple of 8) */
 		maxPktLen = (pData->mtu - LIBNET_IPV4_H) & ~0x07;
@@ -400,19 +414,19 @@ UDPSend(instanceData *pData, uchar *pszSourcename, char *msg, size_t len)
 		}
 		DBGPRINTF("omudpspoof: stage 1: MF:%d, hdrOffs %d, pktLen %d\n",
 			  (hdrOffs & IP_MF) >> 13, (hdrOffs & 0x1FFF) << 3, pktLen);
-		libnet_clear_packet(pData->libnet_handle);
+		libnet_clear_packet(pWrkrData->libnet_handle);
 		/* note: libnet does need ports in host order NOT in network byte order! -- rgerhards, 2009-11-12 */
 		udp = libnet_build_udp(
-			ntohs(pData->sourcePort),/* source port */
+			ntohs(pWrkrData->sourcePort),/* source port */
 			ntohs(tempaddr->sin_port),/* destination port */
 			pktLen+LIBNET_UDP_H,	/* packet length */
 			0,			/* checksum */
 			(u_char*)msg,		/* payload */
 			pktLen,	                /* payload size */
-			pData->libnet_handle,	/* libnet handle */
+			pWrkrData->libnet_handle,	/* libnet handle */
 			udp);			/* libnet id */
 		if (udp == -1) {
-			DBGPRINTF("omudpspoof: can't build UDP header: %s\n", libnet_geterror(pData->libnet_handle));
+			DBGPRINTF("omudpspoof: can't build UDP header: %s\n", libnet_geterror(pWrkrData->libnet_handle));
 		}
 
 		ip = libnet_build_ipv4(
@@ -427,22 +441,22 @@ UDPSend(instanceData *pData, uchar *pszSourcename, char *msg, size_t len)
 			tempaddr->sin_addr.s_addr,
 			NULL,				/* payload */
 			0,				/* payload size */
-			pData->libnet_handle,		/* libnet handle */
+			pWrkrData->libnet_handle,		/* libnet handle */
 			ip);				/* libnet id */
 		if (ip == -1) {
-			DBGPRINTF("omudpspoof: can't build IP header: %s\n", libnet_geterror(pData->libnet_handle));
+			DBGPRINTF("omudpspoof: can't build IP header: %s\n", libnet_geterror(pWrkrData->libnet_handle));
 		}
 
 		/* Write it to the wire. */
-		lsent = libnet_write(pData->libnet_handle);
+		lsent = libnet_write(pWrkrData->libnet_handle);
 		if(lsent != (int) (LIBNET_IPV4_H+LIBNET_UDP_H+pktLen)) {
 			/* note: access to fd is a libnet internal. If a newer version of libnet does
 			 * not expose that member, we should simply remove it. However, while it is there
 			 * it is useful for consolidating with strace output.
 			 */
 			DBGPRINTF("omudpspoof: write error (total len %d): pktLen %d, sent %d, fd %d: %s\n",
-				  len, LIBNET_IPV4_H+LIBNET_UDP_H+pktLen, lsent, pData->libnet_handle->fd,
-				  libnet_geterror(pData->libnet_handle));
+				  len, LIBNET_IPV4_H+LIBNET_UDP_H+pktLen, lsent, pWrkrData->libnet_handle->fd,
+				  libnet_geterror(pWrkrData->libnet_handle));
 			if(lsent != -1) {
 				bSendSuccess = RSTRUE;
 			}
@@ -452,7 +466,7 @@ UDPSend(instanceData *pData, uchar *pszSourcename, char *msg, size_t len)
 		msgOffs += pktLen;
 
 		/* We need to get rid of the UDP header to build the other fragments */
-		libnet_clear_packet(pData->libnet_handle);
+		libnet_clear_packet(pWrkrData->libnet_handle);
 		ip = LIBNET_PTAG_INITIALIZER;
 		while(len > msgOffs ) { /* loop until all payload is sent */
 			/* check if there will be more fragments */
@@ -481,16 +495,16 @@ UDPSend(instanceData *pData, uchar *pszSourcename, char *msg, size_t len)
 				tempaddr->sin_addr.s_addr,
 				(uint8_t*)(msg+msgOffs),	/* payload */
 				pktLen, 			/* payload size */
-				pData->libnet_handle,		/* libnet handle */
+				pWrkrData->libnet_handle,		/* libnet handle */
 				ip);				/* libnet id */
 			if (ip == -1) {
-				DBGPRINTF("omudpspoof: can't build IP fragment header: %s\n", libnet_geterror(pData->libnet_handle));
+				DBGPRINTF("omudpspoof: can't build IP fragment header: %s\n", libnet_geterror(pWrkrData->libnet_handle));
 			}
 			/* Write it to the wire. */
-			lsent = libnet_write(pData->libnet_handle);
+			lsent = libnet_write(pWrkrData->libnet_handle);
 			if(lsent != (int) (LIBNET_IPV4_H+pktLen)) {
 				DBGPRINTF("omudpspoof: fragment write error len %d, sent %d: %s\n",
-					  LIBNET_IPV4_H+LIBNET_UDP_H+len, lsent, libnet_geterror(pData->libnet_handle));
+					  LIBNET_IPV4_H+LIBNET_UDP_H+len, lsent, libnet_geterror(pWrkrData->libnet_handle));
 				bSendSuccess = RSFALSE;
 				continue;
 			}
@@ -500,9 +514,9 @@ UDPSend(instanceData *pData, uchar *pszSourcename, char *msg, size_t len)
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		if(pData->libnet_handle != NULL) {
-			libnet_destroy(pData->libnet_handle);
-			pData->libnet_handle = NULL;
+		if(pWrkrData->libnet_handle != NULL) {
+			libnet_destroy(pWrkrData->libnet_handle);
+			pWrkrData->libnet_handle = NULL;
 		}
 	}
 	if(bNeedUnlock) {
@@ -515,26 +529,28 @@ finalize_it:
 /* try to resume connection if it is not ready
  * rgerhards, 2007-08-02
  */
-static rsRetVal doTryResume(instanceData *pData)
+static rsRetVal doTryResume(wrkrInstanceData_t *pWrkrData)
 {
 	int iErr;
 	struct addrinfo *res;
 	struct addrinfo hints;
+	instanceData *pData;
 	DEFiRet;
 
-	if(pData->pSockArray != NULL)
+	if(pWrkrData->pSockArray != NULL)
 		FINALIZE;
+	pData = pWrkrData->pData;
 
-	if(pData->libnet_handle == NULL) {
+	if(pWrkrData->libnet_handle == NULL) {
 		/* Initialize the libnet library.  Root priviledges are required.
 		 * this initializes a IPv4 socket to use for forging UDP packets.
 		 */
-		pData->libnet_handle = libnet_init(
+		pWrkrData->libnet_handle = libnet_init(
 		    LIBNET_RAW4,                            /* injection type */
 		    NULL,                                   /* network interface */
-		    pData->errbuf);                         /* errbuf */
+		    pWrkrData->errbuf);                     /* errbuf */
 
-		if(pData->libnet_handle == NULL) {
+		if(pWrkrData->libnet_handle == NULL) {
 			if(pData->bReportLibnetInitErr) {
 				errmsg.LogError(0, RS_RET_ERR_LIBNET_INIT, "omudpsoof: error "
 				                "initializing libnet - are you running as root?");
@@ -559,14 +575,14 @@ static rsRetVal doTryResume(instanceData *pData)
 		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
 	DBGPRINTF("%s found, resuming.\n", pData->host);
-	pData->f_addr = res;
-	pData->pSockArray = net.create_udp_socket((uchar*)pData->host, NULL, 0, 0);
+	pWrkrData->f_addr = res;
+	pWrkrData->pSockArray = net.create_udp_socket((uchar*)pData->host, NULL, 0, 0);
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		if(pData->f_addr != NULL) {
-			freeaddrinfo(pData->f_addr);
-			pData->f_addr = NULL;
+		if(pWrkrData->f_addr != NULL) {
+			freeaddrinfo(pWrkrData->f_addr);
+			pWrkrData->f_addr = NULL;
 		}
 		iRet = RS_RET_SUSPENDED;
 	}
@@ -577,7 +593,7 @@ finalize_it:
 
 BEGINtryResume
 CODESTARTtryResume
-	iRet = doTryResume(pData);
+	iRet = doTryResume(pWrkrData);
 ENDtryResume
 
 BEGINdoAction
@@ -585,10 +601,10 @@ BEGINdoAction
 	unsigned l;
 	int iMaxLine;
 CODESTARTdoAction
-	CHKiRet(doTryResume(pData));
+	CHKiRet(doTryResume(pWrkrData));
 
-	DBGPRINTF(" %s:%s/omudpspoof, src '%s', msg strt '%.256s'\n", pData->host,
-		  getFwdPt(pData), ppString[1], ppString[0]);
+	DBGPRINTF(" %s:%s/omudpspoof, src '%s', msg strt '%.256s'\n", pWrkrData->pData->host,
+		  getFwdPt(pWrkrData->pData), ppString[1], ppString[0]);
 
 	iMaxLine = glbl.GetMaxLine();
 	psz = (char*) ppString[0];
@@ -596,7 +612,7 @@ CODESTARTdoAction
 	if((int) l > iMaxLine)
 		l = iMaxLine;
 
-	CHKiRet(UDPSend(pData, ppString[1], psz, l));
+	CHKiRet(UDPSend(pWrkrData, ppString[1], psz, l));
 
 finalize_it:
 ENDdoAction
@@ -660,7 +676,6 @@ CODESTARTnewActInst
 		}
 	}
 	CODE_STD_STRING_REQUESTnewActInst(2)
-	pData->sourcePort = pData->sourcePortStart;
 
 	tplToUse = ustrdup((pData->tplName == NULL) ? getDfltTpl() : pData->tplName);
 	CHKiRet(OMSRsetEntry(*ppOMSR, 0, tplToUse, OMSR_NO_RQD_TPL_OPTS));
@@ -699,7 +714,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(2)
 	else 
 		CHKmalloc(pData->port = ustrdup(cs.pszTargetPort));
 	CHKiRet(OMSRsetEntry(*ppOMSR, 1, ustrdup(sourceTpl), OMSR_NO_RQD_TPL_OPTS));
-	pData->sourcePort = pData->sourcePortStart = cs.iSourcePortStart;
+	pData->sourcePortStart = cs.iSourcePortStart;
 	pData->sourcePortEnd = cs.iSourcePortEnd;
 
 	/* process template */
@@ -740,6 +755,7 @@ ENDmodExit
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
+CODEqueryEtryPt_STD_OMOD8_QUERIES
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 CODEqueryEtryPt_STD_CONF2_QUERIES
 CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
