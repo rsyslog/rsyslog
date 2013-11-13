@@ -19,6 +19,24 @@ action was not executed for some time. The default has now changed, and mark
 messages are now always processed. Note that this enables faster processing
 inside rsyslog. To change to previous behaviour, you need to add
 action.writeAllMarkMessages="off" to the actions in question.
+
+<h2>Modules without v8 Support</h2>
+<p>The following modules will not properly build under rsyslog v8 and
+need to be updated:
+<ul>
+<li>plugins/omgssapi
+<li>plugins/omhdfs
+<li>plugins/omhiredis - not project supported
+<li>plugins/omrabbitmq - not project supported
+<li>plugins/omzmq3 - not project supported
+<li>plugins/mmrfc5424addhmac - was a custom project, requires sponsoring
+    for conversion
+<li>plugins/omoracle - orphaned since a while -- use omlibdbi instead
+<li>plugins/mmsnmptrapd - waiting for demand
+<li>plugins/mmaudit - scheduled to be updated soon
+<li>plugins/mmcount - scheduled to be updated soon
+</ul>
+
 <h2>What Developers need to Know</h2>
 <h3>output plugin interface</h3>
 <p>To support the new core engine, the output interface has been considerably
