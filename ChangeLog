@@ -1,5 +1,19 @@
 ---------------------------------------------------------------------------
 Version 8.1.0 [devel] 2013-11-??
+- rewritten core engine for higher performance and new features
+  In detail:
+  * completely rewritten rule execution engine
+  * completely changed output module interface
+  * remodelled output module interface
+  * enabled important output modules to support full concurrent
+    operation
+  The core engine has been considerably changed and must be considered
+  experimental at this stage. Note that it does not yet include all
+  features planned for v8, but is close to this goal. In theory, the
+  engine should perform much better, especially on complex configurations
+  and busy servers. Most importantly, actions instances can now be called
+  concurrently from worker threads and many important output modules
+  support multiple concurrent action instances natively.
 - module omruleset is no longer enabled by default.
   Note that it has been deprecated in v7 and been replaced by the "call"
   statement. Also, it can still be build without problems, the option must
