@@ -960,6 +960,7 @@ bufferLine(wrkrInstanceData_t *pWrkrData, uchar *filename, uchar *line)
 	DEFiRet;
 
 	CHKmalloc(lb = (linebuf_t*) malloc(sizeof(linebuf_t)));
+dbgprintf("DDDD: filename '%s'\n", filename);
 	CHKmalloc(lb->filename = ustrdup(filename));
 	CHKmalloc(lb->ln = ustrdup(line));
 	lb->pNext = NULL;
@@ -1004,6 +1005,7 @@ BEGINdoAction
 	instanceData *pData;
 CODESTARTdoAction
 	pData = pWrkrData->pData;
+dbgprintf("DDDD: bDynName %d, filename '%s'\n", pData->bDynamicName, ppString[1]);
 	iRet = bufferLine(pWrkrData, (pData->bDynamicName) ? ppString[1] : pData->f_fname,
 	                     ppString[0]);
 	if(iRet == RS_RET_OK)

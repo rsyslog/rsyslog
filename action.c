@@ -831,11 +831,15 @@ prepareDoActionParams(action_t *pAction, wti_t *pWti, msg_t *pMsg, struct syslog
 	DEFiRet;
 
 	pWrkrInfo = &(pWti->actWrkrInfo[pAction->iActionNbr]);
+	if(pAction->eParamPassing == ACT_STRING_PASSING) {
+		CHKiRet(wtiNewIParam(pWti, pAction, &iparams));
+	}
+
 	/* here we must loop to process all requested strings */
 	for(i = 0 ; i < pAction->iNumTpls ; ++i) {
+dbgprintf("DDDDD: generating template #%d\n", i);
 		switch(pAction->eParamPassing) {
 			case ACT_STRING_PASSING:
-				CHKiRet(wtiNewIParam(pWti, pAction, &iparams));
 				iparams->msgFlags = pMsg->msgFlags;
 				CHKiRet(tplToString(pAction->ppTpl[i], pMsg, &(iparams->staticActStrings[i]),
 					&iparams->staticLenStrings[i], ttNow));
@@ -856,6 +860,7 @@ prepareDoActionParams(action_t *pAction, wti_t *pWti, msg_t *pMsg, struct syslog
 				assert(0); /* software bug if this happens! */
 				break;
 		}
+dbgprintf("DDDDD: template #%d is: '%s'\n", i, iparams->staticActStrings[i]);
 	}
 
 finalize_it:
