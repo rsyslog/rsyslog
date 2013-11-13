@@ -50,6 +50,9 @@
 #include "errmsg.h"
 #include "conf.h"
 
+#undef HAVE_DBI_TXSUPP
+#warning transaction support disabled in v8 -- TODO: reenable
+
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("omlibdbi")
@@ -73,6 +76,10 @@ typedef struct _instanceData {
 	int txSupport;		/* transaction support */
 } instanceData;
 
+typedef struct wrkrInstanceData {
+	instanceData *pData;
+} wrkrInstanceData_t;
+
 typedef struct configSettings_s {
 	uchar *dbiDrvrDir;	/* global: where do the dbi drivers reside? */
 	uchar *drvrName;	/* driver to use */
@@ -93,6 +100,8 @@ struct modConfData_s {
 static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
 static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current exec process */
 static int bLegacyCnfModGlobalsPermitted;/* are legacy module-global config parameters permitted? */
+
+static pthread_mutex_t mutDoAct = PTHREAD_MUTEX_INITIALIZER;
 
 
 /* tables for interfacing with the v6 config system */
@@ -157,6 +166,10 @@ BEGINcreateInstance
 CODESTARTcreateInstance
 ENDcreateInstance
 
+BEGINcreateWrkrInstance
+CODESTARTcreateWrkrInstance
+ENDcreateWrkrInstance
+
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
@@ -187,6 +200,9 @@ CODESTARTfreeInstance
 	free(pData->dbName);
 ENDfreeInstance
 
+BEGINfreeWrkrInstance
+CODESTARTfreeWrkrInstance
+ENDfreeWrkrInstance
 
 BEGINdbgPrintInstInfo
 CODESTARTdbgPrintInstInfo
@@ -326,16 +342,16 @@ finalize_it:
 
 BEGINtryResume
 CODESTARTtryResume
-	if(pData->conn == NULL) {
-		iRet = initConn(pData, 1);
+	if(pWrkrData->pData->conn == NULL) {
+		iRet = initConn(pWrkrData->pData, 1);
 	}
 ENDtryResume
 
 /* transaction support 2013-03 */
 BEGINbeginTransaction
 CODESTARTbeginTransaction
-	if(pData->conn == NULL) {
-		CHKiRet(initConn(pData, 0));
+	if(pWrkrData->pData->conn == NULL) {
+		CHKiRet(initConn(pWrkrData->pData, 0));
 	}
 #	if HAVE_DBI_TXSUPP
 	if (pData->txSupport == 1) {
@@ -355,13 +371,15 @@ ENDbeginTransaction
 
 BEGINdoAction
 CODESTARTdoAction
-	CHKiRet(writeDB(ppString[0], pData));
+	pthread_mutex_lock(&mutDoAct);
+	CHKiRet(writeDB(ppString[0], pWrkrData->pData));
 #	if HAVE_DBI_TXSUPP
 	if (pData->txSupport == 1) {
 		iRet = RS_RET_DEFER_COMMIT;
 	}
 #	endif
 finalize_it:
+	pthread_mutex_unlock(&mutDoAct);
 ENDdoAction
 
 /* transaction support 2013-03 */
@@ -552,6 +570,7 @@ ENDmodExit
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
+CODEqueryEtryPt_STD_OMOD8_QUERIES
 CODEqueryEtryPt_STD_CONF2_QUERIES
 CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES

@@ -9,7 +9,7 @@
  *
  * File begun on 2010-01-01 by RGerhards
  *
- * Copyright 2010-2012 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2010-2013 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -69,6 +69,10 @@ typedef struct _instanceData {
 	ln_ctx ctxln;		/**< context to be used for liblognorm */
 	ee_ctx ctxee;		/**< context to be used for libee */
 } instanceData;
+
+typedef struct wrkrInstanceData {
+	instanceData *pData;
+} wrkrInstanceData_t;
 
 typedef struct configSettings_s {
 	uchar *rulebase;		/**< name of normalization rulebase to use */
@@ -139,6 +143,11 @@ CODESTARTcreateInstance
 ENDcreateInstance
 
 
+BEGINcreateWrkrInstance
+CODESTARTcreateWrkrInstance
+ENDcreateWrkrInstance
+
+
 BEGINbeginCnfLoad
 CODESTARTbeginCnfLoad
 	loadModConf = pModConf;
@@ -181,6 +190,11 @@ CODESTARTfreeInstance
 ENDfreeInstance
 
 
+BEGINfreeWrkrInstance
+CODESTARTfreeWrkrInstance
+ENDfreeWrkrInstance
+
+
 BEGINdbgPrintInstInfo
 CODESTARTdbgPrintInstInfo
 	dbgprintf("mmnormalize\n");
@@ -207,14 +221,14 @@ CODESTARTdoAction
 	 * requires changes to the libraries. For now, we accept message
 	 * duplication. -- rgerhards, 2010-12-01
 	 */
-	if(pData->bUseRawMsg) {
+	if(pWrkrData->pData->bUseRawMsg) {
 		getRawMsg(pMsg, &buf, &len);
 	} else {
 		buf = getMSG(pMsg);
 		len = getMSGLen(pMsg);
 	}
 	str = es_newStrFromCStr((char*)buf, len);
-	r = ln_normalize(pData->ctxln, str, &event);
+	r = ln_normalize(pWrkrData->pData->ctxln, str, &event);
 	if(r != 0) {
 		DBGPRINTF("error %d during ln_normalize\n", r);
 		MsgSetParseSuccess(pMsg, 0);
@@ -338,6 +352,7 @@ ENDmodExit
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
+CODEqueryEtryPt_STD_OMOD8_QUERIES
 CODEqueryEtryPt_STD_CONF2_QUERIES
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 ENDqueryEtryPt

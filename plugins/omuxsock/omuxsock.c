@@ -4,7 +4,7 @@
  * NOTE: read comments in module-template.h to understand how this file
  *       works!
  *
- * Copyright 2010-2012 Adiscon GmbH.
+ * Copyright 2010-2013 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -60,9 +60,13 @@ typedef struct _instanceData {
 	permittedPeers_t *pPermPeers;
 	uchar *sockName;
 	int sock;
-	int bIsConnected;  /* are we connected to remote host? 0 - no, 1 - yes, UDP means addr resolved */
 	struct sockaddr_un addr;
 } instanceData;
+
+
+typedef struct wrkrInstanceData {
+	instanceData *pData;
+} wrkrInstanceData_t;
 
 /* config data */
 typedef struct configSettings_s {
@@ -90,6 +94,7 @@ static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current l
 static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current exec process */
 
 
+static pthread_mutex_t mutDoAct = PTHREAD_MUTEX_INITIALIZER;
 
 BEGINinitConfVars		/* (re)set config variables to default values */
 CODESTARTinitConfVars 
@@ -147,7 +152,6 @@ closeSocket(instanceData *pData)
 		close(pData->sock);
 		pData->sock = INVLD_SOCK;
 	}
-pData->bIsConnected = 0; // TODO: remove this variable altogether
 	RETiRet;
 }
 
@@ -224,6 +228,10 @@ CODESTARTcreateInstance
 	pData->sock = INVLD_SOCK;
 ENDcreateInstance
 
+BEGINcreateWrkrInstance
+CODESTARTcreateWrkrInstance
+ENDcreateWrkrInstance
+
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
@@ -238,6 +246,10 @@ CODESTARTfreeInstance
 	closeSocket(pData);
 	free(pData->sockName);
 ENDfreeInstance
+
+BEGINfreeWrkrInstance
+CODESTARTfreeWrkrInstance
+ENDfreeWrkrInstance
 
 
 BEGINdbgPrintInstInfo
@@ -332,7 +344,7 @@ static rsRetVal doTryResume(instanceData *pData)
 
 BEGINtryResume
 CODESTARTtryResume
-	iRet = doTryResume(pData);
+	iRet = doTryResume(pWrkrData->pData);
 ENDtryResume
 
 BEGINdoAction
@@ -340,20 +352,22 @@ BEGINdoAction
 	register unsigned l;
 	int iMaxLine;
 CODESTARTdoAction
-	CHKiRet(doTryResume(pData));
+	pthread_mutex_lock(&mutDoAct);
+	CHKiRet(doTryResume(pWrkrData->pData));
 
 	iMaxLine = glbl.GetMaxLine();
 
-	DBGPRINTF(" omuxsock:%s\n", pData->sockName);
+	DBGPRINTF(" omuxsock:%s\n", pWrkrData->pData->sockName);
 
 	psz = (char*) ppString[0];
 	l = strlen((char*) psz);
 	if((int) l > iMaxLine)
 		l = iMaxLine;
 
-	CHKiRet(sendMsg(pData, psz, l));
+	CHKiRet(sendMsg(pWrkrData->pData, psz, l));
 
 finalize_it:
+	pthread_mutex_unlock(&mutDoAct);
 ENDdoAction
 
 
@@ -413,6 +427,7 @@ ENDmodExit
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
+CODEqueryEtryPt_STD_OMOD8_QUERIES
 CODEqueryEtryPt_STD_CONF2_QUERIES
 CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
 ENDqueryEtryPt

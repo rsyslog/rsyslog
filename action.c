@@ -108,6 +108,7 @@
 #include "unicode-helper.h"
 #include "atomic.h"
 #include "ruleset.h"
+#include "parserif.h"
 #include "statsobj.h"
 
 #define NO_TIME_PROVIDED 0 /* indicate we do not provide any cached time */
@@ -467,6 +468,12 @@ actionConstructFinalize(action_t *pThis, struct nvlst *lst)
 	qqueueDbgPrint(pThis->pQueue);
 
 	DBGPRINTF("Action %p: queue %p created\n", pThis, pThis->pQueue);
+
+	if(pThis->eParamPassing == ACT_MSG_PASSING && pThis->pQueue->qType != QUEUETYPE_DIRECT) {
+		parser_warnmsg("module %s with message passing mode uses "
+			"non-direct queue. This most probably leads to undesired "
+			"results", (char*)modGetName(pThis->pMod));
+	}
 	
 	/* and now reset the queue params (see comment in its function header!) */
 	actionResetQueueParams();

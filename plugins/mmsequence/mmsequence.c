@@ -74,6 +74,10 @@ typedef struct _instanceData {
 	char *pszVar;
 } instanceData;
 
+typedef struct wrkrInstanceData {
+	instanceData *pData;
+} wrkrInstanceData_t;
+
 struct modConfData_s {
 	rsconf_t *pConf;	/* our overall config object */
 };
@@ -100,6 +104,8 @@ static struct cnfparamblk actpblk =
 /* table for key-counter pairs */	
 static struct hashtable *ght;
 static pthread_mutex_t ght_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+static pthread_mutex_t inst_mutex = PTHREAD_MUTEX_INITIALIZER;
 	
 BEGINbeginCnfLoad
 CODESTARTbeginCnfLoad
@@ -129,6 +135,10 @@ BEGINcreateInstance
 CODESTARTcreateInstance
 ENDcreateInstance
 
+BEGINcreateWrkrInstance
+CODESTARTcreateWrkrInstance
+ENDcreateWrkrInstance
+
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
@@ -138,6 +148,10 @@ ENDisCompatibleWithFeature
 BEGINfreeInstance
 CODESTARTfreeInstance
 ENDfreeInstance
+
+BEGINfreeWrkrInstance
+CODESTARTfreeWrkrInstance
+ENDfreeWrkrInstance
 
 
 static inline void
@@ -243,7 +257,7 @@ CODESTARTnewActInst
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
 		}
-        pthread_mutex_unlock(&ght_mutex);
+		pthread_mutex_unlock(&ght_mutex);
 		break;
 	default:
 		errmsg.LogError(0, RS_RET_INVLD_MODE,
@@ -303,7 +317,9 @@ BEGINdoAction
 	struct json_object *json;
 	int val = 0;
 	int *pCounter;
+	instanceData *pData;
 CODESTARTdoAction
+	pData = pWrkrData->pData;
 	pMsg = (msg_t*) ppString[0];
 
 	switch(pData->mode) {
@@ -312,12 +328,19 @@ CODESTARTdoAction
 				(pData->valueTo - pData->valueFrom));
 		break;
 	case mmSequencePerInstance:
-		if (pData->value >= pData->valueTo - pData->step) {
-			pData->value = pData->valueFrom;
+		if (!pthread_mutex_lock(&inst_mutex)) {
+			pCounter = getCounter(ght, pData->pszKey, pData->valueTo);
+			if (pData->value >= pData->valueTo - pData->step) {
+				pData->value = pData->valueFrom;
+			} else {
+				pData->value += pData->step;
+			}
+			val = pData->value;
+			pthread_mutex_unlock(&inst_mutex);
 		} else {
-			pData->value += pData->step;
+			errmsg.LogError(0, RS_RET_ERR,
+					"mmsequence: mutex lock has failed!");
 		}
-		val = pData->value;
 		break;
 	case mmSequencePerKey:
 		if (!pthread_mutex_lock(&ght_mutex)) {
@@ -381,6 +404,7 @@ ENDmodExit
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
+CODEqueryEtryPt_STD_OMOD8_QUERIES
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 CODEqueryEtryPt_STD_CONF2_QUERIES
 ENDqueryEtryPt

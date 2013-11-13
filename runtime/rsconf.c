@@ -292,6 +292,21 @@ finalize_it:
 extern int yylineno;
 
 void
+parser_warnmsg(char *fmt, ...)
+{
+	va_list ap;
+	char errBuf[1024];
+
+	va_start(ap, fmt);
+	if(vsnprintf(errBuf, sizeof(errBuf), fmt, ap) == sizeof(errBuf))
+		errBuf[sizeof(errBuf)-1] = '\0';
+	errmsg.LogError(0, RS_RET_CONF_PARSE_WARNING,
+			"warning during parsing file %s, on or before line %d: %s",
+			cnfcurrfn, yylineno, errBuf);
+	va_end(ap);
+}
+
+void
 parser_errmsg(char *fmt, ...)
 {
 	va_list ap;
