@@ -61,6 +61,10 @@ these modules (this may save us testing).
 changed. It is suggested to review some of the project-provided plugins for
 full details. In this doc, we describe the most important changes from a high
 level perspective.
+<p><b>NOTE: the v8 output module interface is not yet stable.</b> It is highly
+likely that additional changes will be made within the next weeks. So if you
+convert a module now, be prepared for additional mandatory changes.
+
 <p><b>Multi-thread awareness required</b></p>
 <p>The new engine activates one <b>worker</b>instance of output actions on 
 each worker thread. This means an action has now three types of data:
