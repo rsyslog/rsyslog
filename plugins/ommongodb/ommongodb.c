@@ -4,7 +4,7 @@
  * mongodb C interface is crap. Obtain the library here:
  * https://github.com/algernon/libmongo-client
  *
- * Copyright 2007-2012 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2013 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -71,6 +71,10 @@ typedef struct _instanceData {
 	int bErrMsgPermitted;	/* only one errmsg permitted per connection */
 } instanceData;
 
+typedef struct wrkrInstanceData {
+	instanceData *pData;
+} wrkrInstanceData_t;
+
 
 /* tables for interfacing with the v6 config system */
 /* action (instance) parameters */
@@ -89,9 +93,15 @@ static struct cnfparamblk actpblk =
 	  actpdescr
 	};
 
+static pthread_mutex_t mutDoAct = PTHREAD_MUTEX_INITIALIZER;
+
 BEGINcreateInstance
 CODESTARTcreateInstance
 ENDcreateInstance
+
+BEGINcreateWrkrInstance
+CODESTARTcreateWrkrInstance
+ENDcreateWrkrInstance
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
@@ -125,6 +135,10 @@ CODESTARTfreeInstance
 	free(pData->dbNcoll);
 	free(pData->tplName);
 ENDfreeInstance
+
+BEGINfreeWrkrInstance
+CODESTARTfreeWrkrInstance
+ENDfreeWrkrInstance
 
 
 BEGINdbgPrintInstInfo
@@ -422,14 +436,17 @@ error:
 
 BEGINtryResume
 CODESTARTtryResume
-	if(pData->conn == NULL) {
-		iRet = initMongoDB(pData, 1);
+	if(pWrkrData->pData->conn == NULL) {
+		iRet = initMongoDB(pWrkrData->pData, 1);
 	}
 ENDtryResume
 
 BEGINdoAction
 	bson *doc = NULL;
+	instanceData *pData;
 CODESTARTdoAction
+	pthread_mutex_lock(&mutDoAct);
+	pData = pWrkrData->pData;
 	/* see if we are ready to proceed */
 	if(pData->conn == NULL) {
 		CHKiRet(initMongoDB(pData, 0));
@@ -454,6 +471,7 @@ CODESTARTdoAction
 	}
 
 finalize_it:
+	pthread_mutex_unlock(&mutDoAct);
 	if(doc != NULL)
 		bson_free(doc);
 ENDdoAction
@@ -560,6 +578,7 @@ ENDmodExit
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
+CODEqueryEtryPt_STD_OMOD8_QUERIES
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 ENDqueryEtryPt
 
