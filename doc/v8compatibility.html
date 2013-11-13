@@ -20,7 +20,7 @@ messages are now always processed. Note that this enables faster processing
 inside rsyslog. To change to previous behaviour, you need to add
 action.writeAllMarkMessages="off" to the actions in question.
 
-<h2>Modules without v8 Support</h2>
+<h2>Modules WITHOUT v8 Support</h2>
 <p>The following modules will not properly build under rsyslog v8 and
 need to be updated:
 <ul>
@@ -36,6 +36,24 @@ need to be updated:
 <li>plugins/mmaudit - scheduled to be updated soon
 <li>plugins/mmcount - scheduled to be updated soon
 </ul>
+
+<h2>Untested Modules</h2>
+<p>The following modules have been updated and successfully
+build, but no "real" test were conducted. Users of these modules
+should use extra care.
+<ul>
+<li>mmsequence
+<li>omprog
+<li>omsnmp
+<li>mmfields
+<li>mmpstrucdata
+<li>omlibdbi - will be tested soon
+<li>ommongodb - larger changes still outstanding
+<li>ompgsql - larger chages still outstanding
+<li>omuxsock
+</ul>
+<p>In addition to bug reports, success reports are also appreciated for
+these modules (this may save us testing).
 
 <h2>What Developers need to Know</h2>
 <h3>output plugin interface</h3>
