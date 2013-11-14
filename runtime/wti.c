@@ -355,6 +355,7 @@ dbgprintf("DDDD: wti %p: worker starting\n", pThis);
 		if(pThis->actWrkrInfo[i].actWrkrData != NULL) {
 			dbgprintf("DDDD: calling freeWrkrData!\n");
 			pThis->actWrkrInfo[i].pAction->pMod->mod.om.freeWrkrInstance(pThis->actWrkrInfo[i].actWrkrData);
+			pThis->actWrkrInfo[i].actWrkrData = NULL; /* re-init for next activation */
 		}
 	}
 
