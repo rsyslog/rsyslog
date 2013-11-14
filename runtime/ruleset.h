@@ -105,6 +105,7 @@ rulesetHasQueue(ruleset_t *pRuleset)
 rsRetVal rulesetGetRuleset(rsconf_t *conf, ruleset_t **ppRuleset, uchar *pszName);
 rsRetVal rulesetOptimizeAll(rsconf_t *conf);
 rsRetVal rulesetProcessCnf(struct cnfobj *o);
+rsRetVal activateRulesetQueues(void);
 
 /* Set a current rule set to already-known pointer */
 static inline void

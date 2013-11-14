@@ -679,8 +679,12 @@ activateMainQueue()
 	mainqCnfObj = glbl.GetmainqCnfObj();
 	DBGPRINTF("activateMainQueue: mainq cnf obj ptr is %p\n", mainqCnfObj);
 	/* create message queue */
-	CHKiRet_Hdlr(createMainQueue(&pMsgQueue, UCHAR_CONSTANT("main Q"),
-		    		(mainqCnfObj == NULL) ? NULL : mainqCnfObj->nvlst)) {
+	iRet = createMainQueue(&pMsgQueue, UCHAR_CONSTANT("main Q"),
+		    		(mainqCnfObj == NULL) ? NULL : mainqCnfObj->nvlst);
+	if(iRet == RS_RET_OK) {
+		iRet = startMainQueue(pMsgQueue);
+	}
+	if(iRet != RS_RET_OK) {
 		/* no queue is fatal, we need to give up in that case... */
 		fprintf(stderr, "fatal error %d: could not create message queue - rsyslogd can not run!\n", iRet);
 		FINALIZE;
@@ -743,6 +747,7 @@ activate(rsconf_t *cnf)
 	tellModulesActivateConfig();
 	startInputModules();
 	CHKiRet(activateActions());
+	CHKiRet(activateRulesetQueues());
 	CHKiRet(activateMainQueue());
 	/* finally let the inputs run... */
 	runInputModules();

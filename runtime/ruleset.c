@@ -161,6 +161,28 @@ finalize_it:
 	RETiRet;
 }
 
+/* driver to iterate over all rulesets */
+DEFFUNC_llExecFunc(doActivateRulesetQueues)
+{
+	DEFiRet;
+	ruleset_t* pThis = (ruleset_t*) pData;
+	dbgprintf("Activating Ruleset Queue[%p] for Ruleset %s\n",
+		  pThis->pQueue, pThis->pszName);
+	if(pThis->pQueue != NULL)
+		startMainQueue(pThis->pQueue);
+	RETiRet;
+}
+/* activate all ruleset queues */
+rsRetVal
+activateRulesetQueues()
+{
+	DEFiRet;
+
+	llExecFunc(&(runConf->rulesets.llRulesets), doActivateRulesetQueues, NULL);
+
+	RETiRet;
+}
+
 
 static void
 execAct(struct cnfstmt *stmt, msg_t *pMsg, wti_t *pWti)

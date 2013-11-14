@@ -36,6 +36,7 @@ rsRetVal logmsgInternal(int iErr, int pri, uchar *msg, int flags);
 rsRetVal __attribute__((deprecated)) parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int flags, flowControl_t flowCtlTypeu, prop_t *pInputName, struct syslogTime *stTime, time_t ttGenTime, ruleset_t *pRuleset);
 rsRetVal diagGetMainMsgQSize(int *piSize); /* for imdiag */
 rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName, struct nvlst *lst);
+rsRetVal startMainQueue(qqueue_t *pQueue);
 
 extern int MarkInterval;
 extern qqueue_t *pMsgQueue;				/* the main message queue */

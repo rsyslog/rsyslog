@@ -1121,9 +1121,14 @@ rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName, struct nvlst *
 		qqueueSetDefaultsRulesetQueue(*ppQueue);
 		qqueueApplyCnfParam(*ppQueue, lst);
 	}
+	RETiRet;
+}
 
-	/* ... and finally start the queue! */
-	CHKiRet_Hdlr(qqueueStart(*ppQueue)) {
+rsRetVal
+startMainQueue(qqueue_t *pQueue)
+{
+	DEFiRet;
+	CHKiRet_Hdlr(qqueueStart(pQueue)) {
 		/* no queue is fatal, we need to give up in that case... */
 		errmsg.LogError(0, iRet, "could not start (ruleset) main message queue"); \
 	}
