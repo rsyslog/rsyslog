@@ -14,6 +14,7 @@ TESTS +=  \
 	diskqueue.sh \
 	diskqueue-fsync.sh \
 	rulesetmultiqueue.sh \
+	rulesetmultiqueue-v6.sh \
 	manytcp.sh \
 	rsf_getenv.sh \
 	imtcp_conndrop.sh \
