@@ -159,11 +159,11 @@ static int nfd = 1; /* number of active unix sockets  (socket 0 is always reserv
                         socket, even if it is not enabled. */
 static int sd_fds = 0;			/* number of systemd activated sockets */
 
-/* config vars for legacy config system */
 #define DFLT_bCreatePath 0
 #define DFLT_ratelimitInterval 0
 #define DFLT_ratelimitBurst 200
 #define DFLT_ratelimitSeverity 1			/* do not rate-limit emergency messages */
+/* config vars for the legacy config system */
 static struct configSettings_s {
 	int bOmitLocalLogging;
 	uchar *pLogSockName;
@@ -188,6 +188,7 @@ static struct configSettings_s {
 	int bParseTrusted;		/* parse trusted properties */
 } cs;
 
+/* config vars for the v2 config system (rsyslog v6+) */
 struct instanceConf_s {
 	uchar *sockName;
 	uchar *pLogHostName;		/* host name to use with this socket */
@@ -1248,11 +1249,14 @@ BEGINendCnfLoad
 CODESTARTendCnfLoad
 	if(!loadModConf->configSetViaV2Method) {
 		/* persist module-specific settings from legacy config system */
+		/* these are used to initialize the system log socket (listeners[0]) */
 		loadModConf->bOmitLocalLogging = cs.bOmitLocalLogging;
 		loadModConf->pLogSockName = cs.pLogSockName;
 		loadModConf->bIgnoreTimestamp = cs.bIgnoreTimestampSysSock;
+		loadModConf->bUseSysTimeStamp = cs.bUseSysTimeStampSysSock;
 		loadModConf->bUseFlowCtl = cs.bUseFlowCtlSysSock;
 		loadModConf->bAnnotateSysSock = cs.bAnnotateSysSock;
+		loadModConf->bWritePidSysSock = cs.bWritePidSysSock;
 		loadModConf->bParseTrusted = cs.bParseTrusted;
 		loadModConf->ratelimitIntervalSysSock = cs.ratelimitIntervalSysSock;
 		loadModConf->ratelimitBurstSysSock = cs.ratelimitBurstSysSock;
