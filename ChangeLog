@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 8.1.0 [devel] 2013-11-??
+Version 8.1.0 [devel] 2013-11-15
 - rewritten core engine for higher performance and new features
   In detail:
   * completely rewritten rule execution engine
