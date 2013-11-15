@@ -1,5 +1,8 @@
 ---------------------------------------------------------------------------
 Version 7.4.7  [v7.4-stable] 2013-11-??
+- bugfix: imuxsock: UseSysTimeStamp config parameter did not work correctly
+  Thanks to Tomas Heinrich for alerting us and provinding a solution
+  suggestion.
 - bugfix: $SystemLogUseSysTimeStamp/$SystemLogUsePIDFromSystem did not work
   Thanks to Tomas Heinrich for the patch.
 - improved checking of queue config parameters on startup
