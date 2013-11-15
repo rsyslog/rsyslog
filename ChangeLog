@@ -40,6 +40,12 @@ Version 7.5.7 [devel] 2013-11-??
   Thanks to Pavel Levshin for the enhancement.
 - now emit warning message if om with msg passing mode uses action queue
   These can modify the message, and this causes races.
+- bugfix: $SystemLogUseSysTimeStamp/$SystemLogUsePIDFromSystem did not work
+  Thanks to Tomas Heinrich for the patch.
+---------------------------------------------------------------------------
+Version 7.4.7  [v7.4-stable] 2013-11-??
+- bugfix: $SystemLogUseSysTimeStamp/$SystemLogUsePIDFromSystem did not work
+  Thanks to Tomas Heinrich for the patch.
 - improved checking of queue config parameters on startup
 - bugfix: call to ruleset with async queue did not use the queue
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=443
