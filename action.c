@@ -860,7 +860,6 @@ dbgprintf("DDDDD: generating template #%d\n", i);
 				assert(0); /* software bug if this happens! */
 				break;
 		}
-dbgprintf("DDDDD: template #%d is: '%s'\n", i, iparams->staticActStrings[i]);
 	}
 
 finalize_it:

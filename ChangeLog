@@ -1,6 +1,12 @@
 ---------------------------------------------------------------------------
 Version 8.1.1 [devel] 2013-11-??
 - mmaudit: now supports v8 output module interface and work again
+- bugfix: potential abort on startup in debug mode
+  This depends on template type being used. The root cause was a 
+  non-necessary debug output, which were at the wrong spot (leftover from
+  initial testing).
+  Thanks to Pavel Levshin for alerting us and providing a patch
+  proposal.
 ---------------------------------------------------------------------------
 Version 8.1.0 [devel] 2013-11-15
 - rewritten core engine for higher performance and new features
