@@ -1,4 +1,7 @@
 ---------------------------------------------------------------------------
+Version 8.1.1 [devel] 2013-11-??
+- mmaudit: now supports v8 output module interface and work again
+---------------------------------------------------------------------------
 Version 8.1.0 [devel] 2013-11-15
 - rewritten core engine for higher performance and new features
   In detail:

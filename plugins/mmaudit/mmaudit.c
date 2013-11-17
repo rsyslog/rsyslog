@@ -14,7 +14,7 @@
  *
  * File begun on 2012-02-23 by RGerhards
  *
- * Copyright 2012 Adiscon GmbH.
+ * Copyright 2013 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -69,6 +69,11 @@ typedef struct _instanceData {
 	int dummy; /* remove when the first real parameter is needed */
 } instanceData;
 
+typedef struct wrkrInstanceData {
+	instanceData *pData;
+} wrkrInstanceData_t;
+
+
 BEGINinitConfVars		/* (re)set config variables to default values */
 CODESTARTinitConfVars 
 	resetConfigVariables(NULL, NULL);
@@ -79,6 +84,10 @@ BEGINcreateInstance
 CODESTARTcreateInstance
 ENDcreateInstance
 
+BEGINcreateWrkrInstance
+CODESTARTcreateWrkrInstance
+ENDcreateWrkrInstance
+
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
@@ -88,6 +97,10 @@ ENDisCompatibleWithFeature
 BEGINfreeInstance
 CODESTARTfreeInstance
 ENDfreeInstance
+
+BEGINfreeWrkrInstance
+CODESTARTfreeWrkrInstance
+ENDfreeWrkrInstance
 
 
 BEGINdbgPrintInstInfo
@@ -302,6 +315,7 @@ ENDmodExit
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
+CODEqueryEtryPt_STD_OMOD8_QUERIES
 ENDqueryEtryPt
 
 
