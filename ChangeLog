@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------
 Version 8.1.1 [devel] 2013-11-??
+- bugfix: memory leak on worker thread termination
 - bugfix: potential segfault in omfile under heavy load
   Thanks to Pavel Levshin for alerting us.
 - bugfix: mmsequence: instance mode did not work
