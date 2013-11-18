@@ -69,7 +69,7 @@ static struct cnfparamblk rspblk =
 
 /* forward definitions */
 static rsRetVal processBatch(batch_t *pBatch, wti_t *pWti);
-static void scriptExec(struct cnfstmt *root, msg_t *pMsg, wti_t *pWti);
+static rsRetVal scriptExec(struct cnfstmt *root, msg_t *pMsg, wti_t *pWti);
 
 
 /* ---------- linked-list key handling functions (ruleset) ---------- */
@@ -184,32 +184,44 @@ activateRulesetQueues()
 }
 
 
-static void
+static rsRetVal
 execAct(struct cnfstmt *stmt, msg_t *pMsg, wti_t *pWti)
 {
+	DEFiRet;
 	if(stmt->d.act->bDisabled) {
 		DBGPRINTF("action %d died, do NOT execute\n", stmt->d.act->iActionNbr);
-		goto done;
+		FINALIZE;
 	}
 
 	DBGPRINTF("executing action %d\n", stmt->d.act->iActionNbr);
 	stmt->d.act->submitToActQ(stmt->d.act, pWti, pMsg);
-done:	return;
+	if(iRet != RS_RET_DISCARDMSG) {
+		/* note: we ignore the error code here, as we do NEVER want to
+		 * stop script execution due to action return code
+		 */
+		iRet = RS_RET_OK;
+	}
+finalize_it:
+	RETiRet;
 }
 
-static void
+static rsRetVal
 execSet(struct cnfstmt *stmt, msg_t *pMsg)
 {
 	struct var result;
+	DEFiRet;
 	cnfexprEval(stmt->d.s_set.expr, &result, pMsg);
 	msgSetJSONFromVar(pMsg, stmt->d.s_set.varname, &result);
 	varDelete(&result);
+	RETiRet;
 }
 
-static void
+static rsRetVal
 execUnset(struct cnfstmt *stmt, msg_t *pMsg)
 {
+	DEFiRet;
 	msgDelJSON(pMsg, stmt->d.s_unset.varname);
+	RETiRet;
 }
 
 static rsRetVal
@@ -217,7 +229,7 @@ execCall(struct cnfstmt *stmt, msg_t *pMsg, wti_t *pWti)
 {
 	DEFiRet;
 	if(stmt->d.s_call.ruleset == NULL) {
-		scriptExec(stmt->d.s_call.stmt, pMsg, pWti);
+		CHKiRet(scriptExec(stmt->d.s_call.stmt, pMsg, pWti));
 	} else {
 		CHKmalloc(pMsg = MsgDup((msg_t*) pMsg));
 		DBGPRINTF("CALL: forwarding message to async ruleset %p\n",
@@ -233,25 +245,29 @@ finalize_it:
 	RETiRet;
 }
 
-static void
+static rsRetVal
 execIf(struct cnfstmt *stmt, msg_t *pMsg, wti_t *pWti)
 {
 	sbool bRet;
+	DEFiRet;
 	bRet = cnfexprEvalBool(stmt->d.s_if.expr, pMsg);
 	DBGPRINTF("if condition result is %d\n", bRet);
 	if(bRet) {
 		if(stmt->d.s_if.t_then != NULL)
-			scriptExec(stmt->d.s_if.t_then, pMsg, pWti);
+			CHKiRet(scriptExec(stmt->d.s_if.t_then, pMsg, pWti));
 	} else {
 		if(stmt->d.s_if.t_else != NULL)
-			scriptExec(stmt->d.s_if.t_else, pMsg, pWti);
+			CHKiRet(scriptExec(stmt->d.s_if.t_else, pMsg, pWti));
 	}
+finalize_it:
+	RETiRet;
 }
 
-static void
+static rsRetVal
 execPRIFILT(struct cnfstmt *stmt, msg_t *pMsg, wti_t *pWti)
 {
 	int bRet;
+	DEFiRet;
 	if( (stmt->d.s_prifilt.pmask[pMsg->iFacility] == TABLE_NOPRI) ||
 	   ((stmt->d.s_prifilt.pmask[pMsg->iFacility]
 		    & (1<<pMsg->iSeverity)) == 0) )
@@ -262,11 +278,13 @@ execPRIFILT(struct cnfstmt *stmt, msg_t *pMsg, wti_t *pWti)
 	DBGPRINTF("PRIFILT condition result is %d\n", bRet);
 	if(bRet) {
 		if(stmt->d.s_prifilt.t_then != NULL)
-			scriptExec(stmt->d.s_prifilt.t_then, pMsg, pWti);
+			CHKiRet(scriptExec(stmt->d.s_prifilt.t_then, pMsg, pWti));
 	} else {
 		if(stmt->d.s_prifilt.t_else != NULL)
-			scriptExec(stmt->d.s_prifilt.t_else, pMsg, pWti);
+			CHKiRet(scriptExec(stmt->d.s_prifilt.t_else, pMsg, pWti));
 	}
+finalize_it:
+	RETiRet;
 }
 
 
@@ -361,15 +379,18 @@ done:
 	return bRet;
 }
 
-static void
+static rsRetVal
 execPROPFILT(struct cnfstmt *stmt, msg_t *pMsg, wti_t *pWti)
 {
 	sbool bRet;
+	DEFiRet;
 
 	bRet = evalPROPFILT(stmt, pMsg);
 	DBGPRINTF("PROPFILT condition result is %d\n", bRet);
 	if(bRet)
-		scriptExec(stmt->d.s_propfilt.t_then, pMsg, pWti);
+		CHKiRet(scriptExec(stmt->d.s_propfilt.t_then, pMsg, pWti));
+finalize_it:
+	RETiRet;
 }
 
 /* The rainerscript execution engine. It is debatable if that would be better
@@ -378,16 +399,17 @@ execPROPFILT(struct cnfstmt *stmt, msg_t *pMsg, wti_t *pWti)
  * better suited here.
  * rgerhards, 2012-09-04
  */
-static void
+static rsRetVal
 scriptExec(struct cnfstmt *root, msg_t *pMsg, wti_t *pWti)
 {
 	struct cnfstmt *stmt;
+	DEFiRet;
 
 	for(stmt = root ; stmt != NULL ; stmt = stmt->next) {
 		if(*pWti->pbShutdownImmediate) {
 			DBGPRINTF("scriptExec: ShutdownImmediate set, "
 				  "force terminating\n");	
-			goto done;
+			ABORT_FINALIZE(RS_RET_FORCE_TERM);
 		}
 		if(Debug) {
 			cnfstmtPrintOnly(stmt, 2, 0);
@@ -396,28 +418,28 @@ scriptExec(struct cnfstmt *root, msg_t *pMsg, wti_t *pWti)
 		case S_NOP:
 			break;
 		case S_STOP:
-			goto done;
+			ABORT_FINALIZE(RS_RET_DISCARDMSG);
 			break;
 		case S_ACT:
-			execAct(stmt, pMsg, pWti);
+			CHKiRet(execAct(stmt, pMsg, pWti));
 			break;
 		case S_SET:
-			execSet(stmt, pMsg);
+			CHKiRet(execSet(stmt, pMsg));
 			break;
 		case S_UNSET:
-			execUnset(stmt, pMsg);
+			CHKiRet(execUnset(stmt, pMsg));
 			break;
 		case S_CALL:
-			execCall(stmt, pMsg, pWti);
+			CHKiRet(execCall(stmt, pMsg, pWti));
 			break;
 		case S_IF:
-			execIf(stmt, pMsg, pWti);
+			CHKiRet(execIf(stmt, pMsg, pWti));
 			break;
 		case S_PRIFILT:
-			execPRIFILT(stmt, pMsg, pWti);
+			CHKiRet(execPRIFILT(stmt, pMsg, pWti));
 			break;
 		case S_PROPFILT:
-			execPROPFILT(stmt, pMsg, pWti);
+			CHKiRet(execPROPFILT(stmt, pMsg, pWti));
 			break;
 		default:
 			dbgprintf("error: unknown stmt type %u during exec\n",
@@ -425,7 +447,8 @@ scriptExec(struct cnfstmt *root, msg_t *pMsg, wti_t *pWti)
 			break;
 		}
 	}
-done:	return;
+finalize_it:
+	RETiRet;
 }
 
 
