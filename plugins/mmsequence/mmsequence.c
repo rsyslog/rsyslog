@@ -329,7 +329,6 @@ CODESTARTdoAction
 		break;
 	case mmSequencePerInstance:
 		if (!pthread_mutex_lock(&inst_mutex)) {
-			pCounter = getCounter(ght, pData->pszKey, pData->valueTo);
 			if (pData->value >= pData->valueTo - pData->step) {
 				pData->value = pData->valueFrom;
 			} else {
