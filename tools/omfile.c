@@ -979,10 +979,6 @@ submitCachedLines(wrkrInstanceData_t *pWrkrData, instanceData *pData)
 {
 	linebuf_t *curr, *todel;
 
-dbgprintf("omfile: waiting on write lock (pWrkrData %p)\n", pWrkrData);
-	pthread_mutex_lock(&pData->mutWrite);
-dbgprintf("omfile: aquired write lock    (pWrkrData %p)\n", pWrkrData);
-
 	for(curr = pWrkrData->pRoot ; curr != NULL ; ) {
 		DBGPRINTF("omfile: file to log to: %s\n", curr->filename);
 		DBGPRINTF("omfile: start of data: '%.128s'\n", curr->ln);
@@ -995,8 +991,6 @@ dbgprintf("omfile: aquired write lock    (pWrkrData %p)\n", pWrkrData);
 		free(todel->ln);
 		free(todel);
 	}
-	pthread_mutex_unlock(&pData->mutWrite);
-dbgprintf("omfile: free write lock      (pWrkrData %p)\n", pWrkrData);
 	pWrkrData->pRoot = NULL;
 }
 
@@ -1016,6 +1010,10 @@ BEGINendTransaction
 	instanceData *pData;
 CODESTARTendTransaction
 	pData = pWrkrData->pData;
+dbgprintf("omfile: waiting on write lock (pWrkrData %p)\n", pWrkrData);
+	pthread_mutex_lock(&pData->mutWrite);
+dbgprintf("omfile: aquired write lock    (pWrkrData %p)\n", pWrkrData);
+
 	submitCachedLines(pWrkrData, pData);
 	/* Note: pStrm may be NULL if there was an error opening the stream */
 	if(pData->bFlushOnTXEnd && pData->pStrm != NULL) {
@@ -1027,6 +1025,8 @@ CODESTARTendTransaction
 			CHKiRet(strm.Flush(pData->pStrm));
 	}
 finalize_it:
+	pthread_mutex_unlock(&pData->mutWrite);
+dbgprintf("omfile: free write lock      (pWrkrData %p)\n", pWrkrData);
 ENDendTransaction
 
 
