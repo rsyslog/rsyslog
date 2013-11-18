@@ -1151,6 +1151,7 @@ dbgprintf("DDDD: processMsgMain[act %d], %s\n", pAction->iActionNbr, pMsg->pszRa
 	if(pAction->eParamPassing == ACT_STRING_PASSING) {
 		pWti->actWrkrInfo[pAction->iActionNbr].pAction = pAction;
 		dbgprintf("DDDD: action %d is string passing - executing in commit phase\n", pAction->iActionNbr);
+		actionPrepare(pAction, pWti);
 		iRet = getReturnCode(pAction, pWti);
 		FINALIZE;
 	}

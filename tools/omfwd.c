@@ -757,6 +757,7 @@ ENDtryResume
 BEGINbeginTransaction
 CODESTARTbeginTransaction
 dbgprintf("omfwd: beginTransaction\n");
+	iRet = doTryResume(pWrkrData);
 ENDbeginTransaction
 
 
