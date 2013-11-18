@@ -59,6 +59,7 @@ TESTS +=  \
 	discard-rptdmsg.sh \
 	discard-allmark.sh \
 	discard.sh \
+	stop.sh \
 	failover-async.sh \
 	failover-double.sh \
 	failover-basic.sh \
