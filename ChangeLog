@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 8.1.1 [devel] 2013-11-??
+- bugfix: mmsequence: instance mode did not work
+  Thanks to Pavel Levshin for the patch
 - omhiredis: now supports v8 output module interface and works again
   Thanks to Pavel Levshin for the patch
 - mmaudit: now supports v8 output module interface and work again
