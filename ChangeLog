@@ -3,6 +3,7 @@ Version 7.5.7 [v7-devel] 2013-11-??
 - queue defaults have changed
   * high water mark is now dynamically 90% of queue size
   * low water makr is now dynamically 70% of queue size
+- bugfix: legacy directive $ActionQueueWorkerThreads was not honored
 - bugfix: segfault on startup when certain script constructs are used
   e.g. "if not $msg ..."
 - bugfix: ommysql lost configfile/section parameters after first close

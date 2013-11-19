@@ -2123,6 +2123,7 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 				"60%% (%d) if you have a good reason for this.",
 				obj.GetName((obj_t*) pThis), pThis->iHighWtrMrk, goodval);
 	}
+
 	if(pThis->iHighWtrMrk < 2 || pThis->iHighWtrMrk > pThis->iMaxQueueSize)
 		pThis->iHighWtrMrk  = (pThis->iMaxQueueSize / 100) * 90;
 	if(   pThis->iLowWtrMrk < 2
@@ -2937,6 +2938,7 @@ DEFpropSetMeth(qqueue, iFullDlyMrk, int)
 DEFpropSetMeth(qqueue, iDiscardSeverity, int)
 DEFpropSetMeth(qqueue, iLightDlyMrk, int)
 DEFpropSetMeth(qqueue, bIsDA, int)
+DEFpropSetMeth(qqueue, iNumWorkerThreads, int)
 DEFpropSetMeth(qqueue, iMinMsgsPerWrkr, int)
 DEFpropSetMeth(qqueue, bSaveOnShutdown, int)
 DEFpropSetMeth(qqueue, pAction, action_t*)
