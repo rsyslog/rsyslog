@@ -1,4 +1,11 @@
 ---------------------------------------------------------------------------
+Version 8.1.2 [devel] 2013-11-??
+- queue defaults have changed
+  * high water mark is now dynamically 90% of queue size
+  * low water makr is now dynamically 70% of queue size
+  * queue.workerThreadMinimumMessage set to queue.size / num workers
+- bugfix: legacy directive $ActionQueueWorkerThreads was not honored
+---------------------------------------------------------------------------
 Version 8.1.1 [devel] 2013-11-19
 - bugfix: STOP/discard(~) was mostly NOT honored
   This lead to execution of config code that was not meant to be executed.
