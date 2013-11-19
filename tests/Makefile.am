@@ -54,7 +54,7 @@ TESTS +=  \
 	imuxsock_ccmiddle_root.sh \
 	udp-msgreduc-vg.sh \
 	udp-msgreduc-orgmsg-vg.sh \
-	queue-persist.sh 
+	queue-persist.sh \
 	discard-rptdmsg.sh \
 	discard-allmark.sh \
 	discard.sh \
