@@ -985,7 +985,7 @@ static rsRetVal readSocket(lstn_t *pLstn)
 	if(iRcvd > 0) {
 		cred = NULL;
 		ts = NULL;
-		if(pLstn->bUseCreds || pLstn->bUseSysTimeStamp) {
+		if(pLstn->bUseCreds) {
 			for(cm = CMSG_FIRSTHDR(&msgh); cm; cm = CMSG_NXTHDR(&msgh, cm)) {
 #				if HAVE_SCM_CREDENTIALS
 				if(   pLstn->bUseCreds
@@ -1055,7 +1055,7 @@ activateListeners()
 	listeners[0].ratelimitInterval = runModConf->ratelimitIntervalSysSock;
 	listeners[0].ratelimitBurst = runModConf->ratelimitBurstSysSock;
 	listeners[0].ratelimitSev = runModConf->ratelimitSeveritySysSock;
-	listeners[0].bUseCreds = (runModConf->bWritePidSysSock || runModConf->ratelimitIntervalSysSock || runModConf->bAnnotateSysSock || runModConf->bDiscardOwnMsgs) ? 1 : 0;
+	listeners[0].bUseCreds = (runModConf->bWritePidSysSock || runModConf->ratelimitIntervalSysSock || runModConf->bAnnotateSysSock || runModConf->bDiscardOwnMsgs || runModConf->bUseSysTimeStamp) ? 1 : 0;
 	listeners[0].bWritePid = runModConf->bWritePidSysSock;
 	listeners[0].bAnnotate = runModConf->bAnnotateSysSock;
 	listeners[0].bParseTrusted = runModConf->bParseTrusted;
