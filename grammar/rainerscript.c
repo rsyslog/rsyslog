@@ -2881,6 +2881,9 @@ cnfexprOptimize_CMP_severity_facility(struct cnfexpr *expr)
 {
 	struct cnffunc *func;
 
+	if(expr->l->nodetype != 'V')
+		FINALIZE;
+
 	if(!strcmp("$syslogseverity", ((struct cnfvar*)expr->l)->name)) {
 		if(expr->r->nodetype == 'N') {
 			int sev = (int) ((struct cnfnumval*)expr->r)->val;
@@ -2910,6 +2913,7 @@ cnfexprOptimize_CMP_severity_facility(struct cnfexpr *expr)
 			}
 		}
 	}
+finalize_it:
 	return expr;
 }
 
