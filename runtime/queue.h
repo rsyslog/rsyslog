@@ -219,6 +219,7 @@ PROTOTYPEpropSetMeth(qqueue, iLowWtrMrk, int);
 PROTOTYPEpropSetMeth(qqueue, iDiscardMrk, int);
 PROTOTYPEpropSetMeth(qqueue, iDiscardSeverity, int);
 PROTOTYPEpropSetMeth(qqueue, iMinMsgsPerWrkr, int);
+PROTOTYPEpropSetMeth(qqueue, iNumWorkerThreads, int);
 PROTOTYPEpropSetMeth(qqueue, bSaveOnShutdown, int);
 PROTOTYPEpropSetMeth(qqueue, pAction, action_t*);
 PROTOTYPEpropSetMeth(qqueue, iDeqSlowdown, int);
