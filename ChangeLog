@@ -227,6 +227,7 @@ Version 7.5.0 [devel] 2013-06-11
   Thanks to Axel Rau for the patch.
 ---------------------------------------------------------------------------
 Version 7.4.7  [v7.4-stable] 2013-11-??
+- bugfix: legacy directive $ActionQueueWorkerThreads was not honored
 - bugfix: segfault on startup when certain script constructs are used
   e.g. "if not $msg ..."
 - bugfix: imuxsock: UseSysTimeStamp config parameter did not work correctly
