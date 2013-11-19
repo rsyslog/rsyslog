@@ -1385,7 +1385,7 @@ qqueueSetDefaultsActionQueue(qqueue_t *pThis)
 	pThis->toActShutdown = 1000;		/* action shutdown (in phase 2) */ 
 	pThis->toEnq = 2000;			/* timeout for queue enque */ 
 	pThis->toWrkShutdown = 60000;		/* timeout for worker thread shutdown */
-	pThis->iMinMsgsPerWrkr = 100;		/* minimum messages per worker needed to start a new one */
+	pThis->iMinMsgsPerWrkr = -1;		/* minimum messages per worker needed to start a new one */
 	pThis->bSaveOnShutdown = 1;		/* save queue on shutdown (when DA enabled)? */
 	pThis->sizeOnDiskMax = 0;		/* unlimited */
 	pThis->iDeqSlowdown = 0;
@@ -1415,7 +1415,7 @@ qqueueSetDefaultsRulesetQueue(qqueue_t *pThis)
 	pThis->toActShutdown = 1000;		/* action shutdown (in phase 2) */ 
 	pThis->toEnq = 2000;			/* timeout for queue enque */ 
 	pThis->toWrkShutdown = 60000;		/* timeout for worker thread shutdown */
-	pThis->iMinMsgsPerWrkr = 1000;		/* minimum messages per worker needed to start a new one */
+	pThis->iMinMsgsPerWrkr = -1;		/* minimum messages per worker needed to start a new one */
 	pThis->bSaveOnShutdown = 1;		/* save queue on shutdown (when DA enabled)? */
 	pThis->sizeOnDiskMax = 0;		/* unlimited */
 	pThis->iDeqSlowdown = 0;
@@ -2124,12 +2124,28 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 				obj.GetName((obj_t*) pThis), pThis->iHighWtrMrk, goodval);
 	}
 
+	if(pThis->iNumWorkerThreads > 1) {
+		goodval = (pThis->iMaxQueueSize / 100) * 10;
+		if(pThis->iMinMsgsPerWrkr != -1 && pThis->iMinMsgsPerWrkr < goodval) {
+			errmsg.LogError(0, RS_RET_CONF_PARSE_WARNING, "queue \"%s\": "
+					"queue.workerThreadMinimumMessage "
+					"is set quite low at %d. You should only set it below "
+					"10%% (%d) if you have a good reason for this.",
+					obj.GetName((obj_t*) pThis), pThis->iMinMsgsPerWrkr, goodval);
+		}
+	}
+
 	if(pThis->iHighWtrMrk < 2 || pThis->iHighWtrMrk > pThis->iMaxQueueSize)
 		pThis->iHighWtrMrk  = (pThis->iMaxQueueSize / 100) * 90;
 	if(   pThis->iLowWtrMrk < 2
 	   || pThis->iLowWtrMrk > pThis->iMaxQueueSize 
 	   || pThis->iLowWtrMrk > pThis->iHighWtrMrk )
 		pThis->iLowWtrMrk  = (pThis->iMaxQueueSize / 100) * 70;
+	if(pThis->iNumWorkerThreads > 1) {
+		if(   pThis->iMinMsgsPerWrkr < 1
+		   || pThis->iMinMsgsPerWrkr > pThis->iMaxQueueSize )
+			pThis->iMinMsgsPerWrkr  = pThis->iMaxQueueSize / pThis->iNumWorkerThreads;
+	}
 	if(pThis->iFullDlyMrk == -1 || pThis->iFullDlyMrk > pThis->iMaxQueueSize)
 		pThis->iFullDlyMrk  = (pThis->iMaxQueueSize / 100) * 97;
 	if(pThis->iLightDlyMrk == -1 || pThis->iLightDlyMrk > pThis->iMaxQueueSize)
