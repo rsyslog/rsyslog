@@ -6,6 +6,7 @@ TESTS = $(TESTRUNS)
 
 if ENABLE_IMDIAG
 TESTS +=  \
+	stop-localvar.sh \
 	arrayqueue.sh \
 	da-mainmsg-q.sh \
 	validation-run.sh \
