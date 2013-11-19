@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 8.1.1 [devel] 2013-11-??
+Version 8.1.1 [devel] 2013-11-19
 - bugfix: STOP/discard(~) was mostly NOT honored
   This lead to execution of config code that was not meant to be executed.
 - bugfix: memory leak on worker thread termination
