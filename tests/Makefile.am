@@ -293,8 +293,12 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/rscript_stop.conf \
 	   rscript_stop2.sh \
 	   testsuites/rscript_stop2.conf \
+	   stop.sh \
+	   testsuites/stop.conf \
 	   stop-localvar.sh \
 	   testsuites/stop-localvar.conf \
+	   global_vars.sh \
+	   testsuites/global_vars.conf \
 	   rscript_prifilt.sh \
 	   testsuites/rscript_prifilt.conf \
 	   rscript_optimizer1.sh \
@@ -466,6 +470,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/master.nolimittag \
 	   rulesetmultiqueue.sh \
 	   testsuites/rulesetmultiqueue.conf \
+	   rulesetmultiqueue-v6.sh \
+	   testsuites/rulesetmultiqueue-v6.conf \
 	   omruleset.sh \
 	   testsuites/omruleset.conf \
 	   omruleset-queue.sh \
