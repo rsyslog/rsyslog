@@ -2054,6 +2054,7 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 	uchar pszBuf[64];
 	uchar pszQIFNam[MAXFNAME];
 	int wrk;
+	int goodval; /* a "good value" to use for comparisons (different objects) */
 	uchar *qName;
 	size_t lenBuf;
 
@@ -2115,6 +2116,13 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 	/* we need to do a quick check if our water marks are set plausible. If not,
 	 * we correct the most important shortcomings.
 	 */
+	goodval = (pThis->iMaxQueueSize / 100) * 60;
+	if(pThis->iHighWtrMrk < goodval) {
+		errmsg.LogError(0, RS_RET_CONF_PARSE_WARNING, "queue \"%s\": high water mark "
+				"is set quite low at %d. You should only set it below "
+				"60%% (%d) if you have a good reason for this.",
+				obj.GetName((obj_t*) pThis), pThis->iHighWtrMrk, goodval);
+	}
 	if(pThis->iFullDlyMrk == -1 || pThis->iFullDlyMrk > pThis->iMaxQueueSize)
 		pThis->iFullDlyMrk  = pThis->iMaxQueueSize
 			- (pThis->iMaxQueueSize / 100) *  3; /* default 97% */
