@@ -246,8 +246,8 @@ actionResetQueueParams(void)
 	cs.ActionQueType = QUEUETYPE_DIRECT;		/* type of the main message queue above */
 	cs.iActionQueueSize = 1000;			/* size of the main message queue above */
 	cs.iActionQueueDeqBatchSize = 16;		/* default batch size */
-	cs.iActionQHighWtrMark = 800;			/* high water mark for disk-assisted queues */
-	cs.iActionQLowWtrMark = 200;			/* low water mark for disk-assisted queues */
+	cs.iActionQHighWtrMark = -1;			/* high water mark for disk-assisted queues */
+	cs.iActionQLowWtrMark = -1;			/* low water mark for disk-assisted queues */
 	cs.iActionQDiscardMark = 980;			/* begin to discard messages */
 	cs.iActionQDiscardSeverity = 8;			/* discard warning and above */
 	cs.iActionQueueNumWorkers = 1;			/* number of worker threads for the mm queue above */
@@ -258,7 +258,7 @@ actionResetQueueParams(void)
 	cs.iActionQtoActShutdown = 1000;		/* action shutdown (in phase 2) */ 
 	cs.iActionQtoEnq = 50;				/* timeout for queue enque */ 
 	cs.iActionQtoWrkShutdown = 60000;		/* timeout for worker thread shutdown */
-	cs.iActionQWrkMinMsgs = 100;			/* minimum messages per worker needed to start a new one */
+	cs.iActionQWrkMinMsgs = -1;			/* minimum messages per worker needed to start a new one */
 	cs.bActionQSaveOnShutdown = 1;			/* save queue on shutdown (when DA enabled)? */
 	cs.iActionQueMaxDiskSpace = 0;
 	cs.iActionQueueDeqSlowdown = 0;
@@ -452,6 +452,7 @@ actionConstructFinalize(action_t *pThis, struct nvlst *lst)
 		setQPROP(qqueueSetiDiscardMrk, "$ActionQueueDiscardMark", cs.iActionQDiscardMark);
 		setQPROP(qqueueSetiDiscardSeverity, "$ActionQueueDiscardSeverity", cs.iActionQDiscardSeverity);
 		setQPROP(qqueueSetiMinMsgsPerWrkr, "$ActionQueueWorkerThreadMinimumMessages", cs.iActionQWrkMinMsgs);
+		setQPROP(qqueueSetiNumWorkerThreads, "$ActionQueueWorkerThreads", cs.iActionQueueNumWorkers);
 		setQPROP(qqueueSetbSaveOnShutdown, "$ActionQueueSaveOnShutdown", cs.bActionQSaveOnShutdown);
 		setQPROP(qqueueSetiDeqSlowdown,    "$ActionQueueDequeueSlowdown", cs.iActionQueueDeqSlowdown);
 		setQPROP(qqueueSetiDeqtWinFromHr,  "$ActionQueueDequeueTimeBegin", cs.iActionQueueDeqtWinFromHr);
