@@ -303,15 +303,21 @@ wtiWorker(wti_t *pThis)
 	pthread_cleanup_push(wtiWorkerCancelCleanup, pThis);
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
 dbgprintf("DDDD: wti %p: worker starting\n", pThis);
-
 	/* now we have our identity, on to real processing */
-	while(1) { /* loop will be broken below - need to do mutex locks */
+
+	/* note: in this loop, the mutex is "never" unlocked. Of course,
+	 * this is not true: it actually is unlocked when the actual processing
+	 * is done, as part of pWtp->pfDoWork() processing. Note that this
+	 * function is required to re-lock it when done. We cannot do the
+	 * lock/unlock here ourselfs, as pfDoWork() needs to access queue
+	 * structures itself. -- rgerhards, 2013-11-20
+	 */
+	d_pthread_mutex_lock(pWtp->pmutUsr);
+	while(1) { /* loop will be broken below */
 		if(pWtp->pfRateLimiter != NULL) { /* call rate-limiter, if defined */
 			pWtp->pfRateLimiter(pWtp->pUsr);
 		}
 		
-		d_pthread_mutex_lock(pWtp->pmutUsr);
-
 		/* first check if we are in shutdown process (but evaluate a bit later) */
 		terminateRet = wtpChkStopWrkr(pWtp, MUTEX_ALREADY_LOCKED);
 		if(terminateRet == RS_RET_TERMINATE_NOW) {
@@ -319,35 +325,30 @@ dbgprintf("DDDD: wti %p: worker starting\n", pThis);
 			localRet = pWtp->pfObjProcessed(pWtp->pUsr, pThis);
 			DBGOPRINT((obj_t*) pThis, "terminating worker because of TERMINATE_NOW mode, del iRet %d\n",
 				 localRet);
-			d_pthread_mutex_unlock(pWtp->pmutUsr);
 			break;
 		}
 
 		/* try to execute and process whatever we have */
-		/* Note that this function releases and re-aquires the mutex. The returned
-		 * information on idle state must be processed before releasing the mutex again.
+		/* Note that this function releases and re-aquires the mutex.
 		 */
 		localRet = pWtp->pfDoWork(pWtp->pUsr, pThis);
 
 		if(localRet == RS_RET_ERR_QUEUE_EMERGENCY) {
-			d_pthread_mutex_unlock(pWtp->pmutUsr);
 			break;	/* end of loop */
 		} else if(localRet == RS_RET_IDLE) {
 			if(terminateRet == RS_RET_TERMINATE_WHEN_IDLE || bInactivityTOOccured) {
-				d_pthread_mutex_unlock(pWtp->pmutUsr);
 				DBGOPRINT((obj_t*) pThis, "terminating worker terminateRet=%d, bInactivityTOOccured=%d\n",
 					  terminateRet, bInactivityTOOccured);
 				break;	/* end of loop */
 			}
 			doIdleProcessing(pThis, pWtp, &bInactivityTOOccured);
-			d_pthread_mutex_unlock(pWtp->pmutUsr);
 			continue; /* request next iteration */
 		}
 
-		d_pthread_mutex_unlock(pWtp->pmutUsr);
-
 		bInactivityTOOccured = 0; /* reset for next run */
 	}
+
+	d_pthread_mutex_unlock(pWtp->pmutUsr);
 
 	DBGPRINTF("DDDD: wti %p: worker cleanup up action instances\n", pThis);
 	for(i = 0 ; i < iActionNbr ; ++i) {
