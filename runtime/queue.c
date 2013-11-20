@@ -2130,11 +2130,9 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 	   || pThis->iLowWtrMrk > pThis->iMaxQueueSize 
 	   || pThis->iLowWtrMrk > pThis->iHighWtrMrk )
 		pThis->iLowWtrMrk  = (pThis->iMaxQueueSize / 100) * 70;
-	if(pThis->iNumWorkerThreads > 1) {
-		if(   pThis->iMinMsgsPerWrkr < 1
-		   || pThis->iMinMsgsPerWrkr > pThis->iMaxQueueSize )
-			pThis->iMinMsgsPerWrkr  = pThis->iMaxQueueSize / pThis->iNumWorkerThreads;
-	}
+	if(   pThis->iMinMsgsPerWrkr < 1
+	   || pThis->iMinMsgsPerWrkr > pThis->iMaxQueueSize )
+		pThis->iMinMsgsPerWrkr  = pThis->iMaxQueueSize / pThis->iNumWorkerThreads;
 	if(pThis->iFullDlyMrk == -1 || pThis->iFullDlyMrk > pThis->iMaxQueueSize)
 		pThis->iFullDlyMrk  = (pThis->iMaxQueueSize / 100) * 97;
 	if(pThis->iLightDlyMrk == -1 || pThis->iLightDlyMrk > pThis->iMaxQueueSize)
