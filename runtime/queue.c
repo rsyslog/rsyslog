@@ -1680,6 +1680,9 @@ DequeueConsumable(qqueue_t *pThis, wti_t *pWti)
 
 /* The rate limiter
  *
+ * IMPORTANT: the rate-limiter MUST unlock and re-lock the queue when
+ * it actually delays processing. Otherwise inputs are stalled.
+ *
  * Here we may wait if a dequeue time window is defined or if we are
  * rate-limited. TODO: If we do so, we should also look into the
  * way new worker threads are spawned. Obviously, it doesn't make much
@@ -1765,8 +1768,10 @@ RateLimiter(qqueue_t *pThis)
 	}
 
 	if(iDelay > 0) {
+		pthread_mutex_unlock(pThis->mut);
 		DBGOPRINT((obj_t*) pThis, "outside dequeue time window, delaying %d seconds\n", iDelay);
 		srSleep(iDelay, 0);
+		pthread_mutex_lock(pThis->mut);
 	}
 
 	RETiRet;

@@ -310,7 +310,12 @@ dbgprintf("DDDD: wti %p: worker starting\n", pThis);
 	 * is done, as part of pWtp->pfDoWork() processing. Note that this
 	 * function is required to re-lock it when done. We cannot do the
 	 * lock/unlock here ourselfs, as pfDoWork() needs to access queue
-	 * structures itself. -- rgerhards, 2013-11-20
+	 * structures itself.
+	 * The same goes for pfRateLimiter(). While we could unlock/lock when
+	 * we call it, in practice the function is often called without any
+	 * ratelimiting actually done. Only the rate limiter itself knows
+	 * that. As such, it needs to bear the burden of doing the locking
+	 * when required. -- rgerhards, 2013-11-20
 	 */
 	d_pthread_mutex_lock(pWtp->pmutUsr);
 	while(1) { /* loop will be broken below */
@@ -329,8 +334,6 @@ dbgprintf("DDDD: wti %p: worker starting\n", pThis);
 		}
 
 		/* try to execute and process whatever we have */
-		/* Note that this function releases and re-aquires the mutex.
-		 */
 		localRet = pWtp->pfDoWork(pWtp->pUsr, pThis);
 
 		if(localRet == RS_RET_ERR_QUEUE_EMERGENCY) {
