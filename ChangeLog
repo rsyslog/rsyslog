@@ -51,6 +51,9 @@ Version 7.5.7 [v7-devel] 2013-11-??
   * high water mark is now dynamically 90% of queue size
   * low water makr is now dynamically 70% of queue size
   * queue.workerThreadMinimumMessage set to queue.size / num workers
+- bugfix: RainerScript optimizer did not optimize PRI filters
+  things like "if $syslogfacility-text == "local3"" were not converted
+  to PRIFILT. This was a regression introduced in 7.5.6.
 - bugfix: legacy directive $ActionQueueWorkerThreads was not honored
 - bugfix: segfault on startup when certain script constructs are used
   e.g. "if not $msg ..."

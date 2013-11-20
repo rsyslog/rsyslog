@@ -2884,7 +2884,7 @@ cnfexprOptimize_CMP_severity_facility(struct cnfexpr *expr)
 	if(expr->l->nodetype != 'V')
 		FINALIZE;
 
-	if(!strcmp("$syslogseverity", ((struct cnfvar*)expr->l)->name)) {
+	if(!strcmp("syslogseverity", ((struct cnfvar*)expr->l)->name)) {
 		if(expr->r->nodetype == 'N') {
 			int sev = (int) ((struct cnfnumval*)expr->r)->val;
 			if(sev >= 0 && sev <= 7) {
@@ -2898,7 +2898,7 @@ cnfexprOptimize_CMP_severity_facility(struct cnfexpr *expr)
 					      "evaluate to FALSE", sev);
 			}
 		}
-	} else if(!strcmp("$syslogfacility", ((struct cnfvar*)expr->l)->name)) {
+	} else if(!strcmp("syslogfacility", ((struct cnfvar*)expr->l)->name)) {
 		if(expr->r->nodetype == 'N') {
 			int fac = (int) ((struct cnfnumval*)expr->r)->val;
 			if(fac >= 0 && fac <= 24) {
@@ -2926,7 +2926,7 @@ cnfexprOptimize_CMP_var(struct cnfexpr *expr)
 {
 	struct cnffunc *func;
 
-	if(!strcmp("$syslogfacility-text", ((struct cnfvar*)expr->l)->name)) {
+	if(!strcmp("syslogfacility-text", ((struct cnfvar*)expr->l)->name)) {
 		if(expr->r->nodetype == 'S') {
 			char *cstr = es_str2cstr(((struct cnfstringval*)expr->r)->estr, NULL);
 			int fac = decodeSyslogName((uchar*)cstr, syslogFacNames);
@@ -2944,7 +2944,7 @@ cnfexprOptimize_CMP_var(struct cnfexpr *expr)
 			}
 			free(cstr);
 		}
-	} else if(!strcmp("$syslogseverity-text", ((struct cnfvar*)expr->l)->name)) {
+	} else if(!strcmp("syslogseverity-text", ((struct cnfvar*)expr->l)->name)) {
 		if(expr->r->nodetype == 'S') {
 			char *cstr = es_str2cstr(((struct cnfstringval*)expr->r)->estr, NULL);
 			int sev = decodeSyslogName((uchar*)cstr, syslogPriNames);
