@@ -3,7 +3,13 @@ Version 8.1.2 [devel] 2013-11-??
 - queue defaults have changed
   * high water mark is now dynamically 90% of queue size
   * low water makr is now dynamically 70% of queue size
+  * queue.discardMark is now dynamically 98% of queue size
   * queue.workerThreadMinimumMessage set to queue.size / num workers
+  For queues with very low queue.maxSize (< 100), "emergency" defaults
+  will be used.
+- bugfix: disk queues created files in wrong working directory
+  if the $WorkDirectory was changed multiple times, all queues only
+  used the last value set.
 - bugfix: legacy directive $ActionQueueWorkerThreads was not honored
 ---------------------------------------------------------------------------
 Version 8.1.1 [devel] 2013-11-19
@@ -50,7 +56,10 @@ Version 7.5.7 [v7-devel] 2013-11-??
 - queue defaults have changed
   * high water mark is now dynamically 90% of queue size
   * low water makr is now dynamically 70% of queue size
+  * queue.discardMark is now dynamically 98% of queue size
   * queue.workerThreadMinimumMessage set to queue.size / num workers
+  For queues with very low queue.maxSize (< 100), "emergency" defaults
+  will be used.
 - bugfix: RainerScript optimizer did not optimize PRI filters
   things like "if $syslogfacility-text == "local3"" were not converted
   to PRIFILT. This was a regression introduced in 7.5.6.
