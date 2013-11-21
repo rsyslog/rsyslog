@@ -59,6 +59,7 @@
 #include "datetime.h"
 #include "unicode-helper.h"
 #include "statsobj.h"
+#include "parserif.h"
 
 #ifdef OS_SOLARIS
 #	include <sched.h>
@@ -96,6 +97,7 @@ rsRetVal qqueueSetSpoolDir(qqueue_t *pThis, uchar *pszSpoolDir, int lenSpoolDir)
 /* tables for interfacing with the v6 config system */
 static struct cnfparamdescr cnfpdescr[] = {
 	{ "queue.filename", eCmdHdlrGetWord, 0 },
+	{ "queue.spooldirectory", eCmdHdlrGetWord, 0 },
 	{ "queue.size", eCmdHdlrSize, 0 },
 	{ "queue.dequeuebatchsize", eCmdHdlrInt, 0 },
 	{ "queue.maxdiskspace", eCmdHdlrSize, 0 },
@@ -2883,6 +2885,16 @@ qqueueApplyCnfParam(qqueue_t *pThis, struct nvlst *lst)
 			pThis->lenFilePrefix = es_strlen(pvals[i].val.d.estr);
 		} else if(!strcmp(pblk.descr[i].name, "queue.cry.provider")) {
 			pThis->cryprovName = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(pblk.descr[i].name, "queue.spooldirectory")) {
+			free(pThis->pszSpoolDir);
+			pThis->pszSpoolDir = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
+			pThis->lenSpoolDir = es_strlen(pvals[i].val.d.estr);
+			if(pThis->pszSpoolDir[pThis->lenSpoolDir-1] == '/') {
+				pThis->pszSpoolDir[pThis->lenSpoolDir-1] = '\0';
+				--pThis->lenSpoolDir;
+				parser_errmsg("queue.spooldirectory must not end with '/', "
+					      "corrected to '%s'", pThis->pszSpoolDir);
+			}
 		} else if(!strcmp(pblk.descr[i].name, "queue.size")) {
 			pThis->iMaxQueueSize = pvals[i].val.d.n;
 		} else if(!strcmp(pblk.descr[i].name, "queue.dequeuebatchsize")) {
