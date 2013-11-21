@@ -1379,7 +1379,7 @@ qqueueSetDefaultsActionQueue(qqueue_t *pThis)
 	pThis->iDeqBatchSize = 128; 		/* default batch size */
 	pThis->iHighWtrMrk = -1;		/* high water mark for disk-assisted queues */
 	pThis->iLowWtrMrk = -1;			/* low water mark for disk-assisted queues */
-	pThis->iDiscardMrk = 980;		/* begin to discard messages */
+	pThis->iDiscardMrk = -1;		/* begin to discard messages */
 	pThis->iDiscardSeverity = 8;		/* turn off */
 	pThis->iNumWorkerThreads = 1;		/* number of worker threads for the mm queue above */
 	pThis->iMaxFileSize = 1024*1024;
@@ -1409,7 +1409,7 @@ qqueueSetDefaultsRulesetQueue(qqueue_t *pThis)
 	pThis->iDeqBatchSize = 1024; 		/* default batch size */
 	pThis->iHighWtrMrk = -1;		/* high water mark for disk-assisted queues */
 	pThis->iLowWtrMrk = -1;			/* low water mark for disk-assisted queues */
-	pThis->iDiscardMrk = 49500;		/* begin to discard messages */
+	pThis->iDiscardMrk = -1;		/* begin to discard messages */
 	pThis->iDiscardSeverity = 8;		/* turn off */
 	pThis->iNumWorkerThreads = 1;		/* number of worker threads for the mm queue above */
 	pThis->iMaxFileSize = 16*1024*1024;
@@ -2139,6 +2139,22 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 		}
 	}
 
+	if(pThis->iDiscardMrk > pThis->iMaxQueueSize) {
+		errmsg.LogError(0, RS_RET_CONF_PARSE_WARNING, "queue \"%s\": "
+				"queue.discardMark %d is set larger than queue.size",
+				obj.GetName((obj_t*) pThis), pThis->iDiscardMrk);
+	}
+
+	goodval = (pThis->iMaxQueueSize / 100) * 80;
+	if(pThis->iDiscardMrk != -1 && pThis->iDiscardMrk < goodval) {
+		errmsg.LogError(0, RS_RET_CONF_PARSE_WARNING, "queue \"%s\": queue.discardMark "
+				"is set quite low at %d. You should only set it below "
+				"80%% (%d) if you have a good reason for this.",
+				obj.GetName((obj_t*) pThis), pThis->iDiscardMrk, goodval);
+	}
+
+
+	/* now come parameter corrections and defaults */
 	if(pThis->iHighWtrMrk < 2 || pThis->iHighWtrMrk > pThis->iMaxQueueSize) {
 		pThis->iHighWtrMrk  = (pThis->iMaxQueueSize / 100) * 90;
 		if(pThis->iHighWtrMrk == 0) { /* guard against very low max queue sizes! */
@@ -2172,6 +2188,15 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 				(pThis->iMaxQueueSize == 1) ? 1 : pThis->iMaxQueueSize - 1;
 		}
 	}
+
+	if(pThis->iDiscardMrk < 1 || pThis->iDiscardMrk > pThis->iMaxQueueSize) {
+		pThis->iDiscardMrk  = (pThis->iMaxQueueSize / 100) * 98;
+		if(pThis->iDiscardMrk == 0) {
+			/* for very small queues, we disable this by default */
+			pThis->iDiscardMrk = pThis->iMaxQueueSize;
+		}
+	}
+
 	if(pThis->iMaxQueueSize > 0 && pThis->iDeqBatchSize > pThis->iMaxQueueSize) {
 		pThis->iDeqBatchSize = pThis->iMaxQueueSize;
 	}
@@ -2206,10 +2231,10 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 			pThis->iFullDlyMrk = wrk;
 	}
 
-	DBGOPRINT((obj_t*) pThis, "type %d, enq-only %d, disk assisted %d, spoolDir '%s', maxFileSz %lld, "
+	DBGOPRINT((obj_t*) pThis, "params: type %d, enq-only %d, disk assisted %d, spoolDir '%s', maxFileSz %lld, "
 			          "maxQSize %d, lqsize %d, pqsize %d, child %d, full delay %d, "
 				  "light delay %d, deq batch size %d, high wtrmrk %d, low wtrmrk %d, "
-				  "discardmrk %d, max wrkr %d, min msgs f. wrkr %d starting\n",
+				  "discardmrk %d, max wrkr %d, min msgs f. wrkr %d\n",
 		  pThis->qType, pThis->bEnqOnly, pThis->bIsDA, pThis->pszSpoolDir,
 		  pThis->iMaxFileSize, pThis->iMaxQueueSize,
 		  getLogicalQueueSize(pThis), getPhysicalQueueSize(pThis),
