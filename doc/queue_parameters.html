@@ -15,7 +15,19 @@ Queues need to be configured in the action or ruleset it should affect. If nothi
 default values will be used. Thus, the default ruleset has only the default main queue. Specific Action 
 queues are not set up by default.</p>
 <ul>
-	<li><strong>queue.filename</strong> name</li>
+	<li><strong>queue.filename</strong> name<br>
+		File name to be used for the queue files. Please note that
+		this is actually just the file name. A directory can NOT be
+		specified in this paramter. If the files shall be
+		created in a specific directory, specify
+		queue.spoolDirectory for this. The filename is used to build 
+		to complete path for queue files.</li>
+	<li><strong>queue.spoolDirectory</strong> name<br>
+		This is the directory into which queue files will be stored.
+		Note that the directory must exist, it is NOT automatically
+		created by rsyslog. If no spoolDirectory is specified, the
+		work directory is used.
+		</li>
 	<li><strong>queue.size</strong> number <br>
 		This is the maximum size of the queue in number of messages.
 		Note that setting the queue size to very small values (roughly
