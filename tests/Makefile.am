@@ -119,6 +119,11 @@ TESTS +=  \
 	imptcp_conndrop.sh 
 endif
 
+if ENABLE_MMPSTRUCDATA
+TESTS +=  \
+	mmpstrucdata.sh
+endif
+
 if ENABLE_GNUTLS
 # TODO: re-enable in newer version
 #TESTS +=  \
@@ -517,6 +522,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   mysql-asyn.sh \
 	   mysql-asyn-vg.sh \
 	   testsuites/mysql-asyn.conf \
+	   mmpstrucdata.sh \
+	   testsuites/mmpstrucdata.conf \
 	   cfg.sh
 
 # TODO: re-enable
