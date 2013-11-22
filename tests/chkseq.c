@@ -51,6 +51,7 @@ int main(int argc, char *argv[])
 	int reachedEOF;
 	int edLen;	/* length of extra data */
 	static char edBuf[500*1024]; /* buffer for extra data (pretty large to be on the save side...) */
+	static char ioBuf[sizeof(edBuf)+1024];
 	char *file = NULL;
 
 	while((opt = getopt(argc, argv, "e:f:ds:vE")) != EOF) {
@@ -103,14 +104,22 @@ int main(int argc, char *argv[])
 
 	for(i = start ; i < end+1 ; ++i) {
 		if(bHaveExtraData) {
-			scanfOK = fscanf(fp, "%d,%d,%s\n", &val, &edLen, edBuf) == 3 ? 1 : 0;
+			if(fgets(ioBuf, sizeof(ioBuf), fp) == NULL) {
+				scanfOK = 0;
+			} else {
+				scanfOK = sscanf(ioBuf, "%d,%d,%s\n", &val, &edLen, edBuf) == 3 ? 1 : 0;
+			}
 			if(edLen != (int) strlen(edBuf)) {
 				printf("extra data length specified %d, but actually is %ld in record %d\n",
 					edLen, (long) strlen(edBuf), i);
 				exit(1);
 			}
 		} else {
-			scanfOK = fscanf(fp, "%d\n", &val) == 1 ? 1 : 0;
+			if(fgets(ioBuf, sizeof(ioBuf), fp) == NULL) {
+				scanfOK = 0;
+			} else {
+				scanfOK = sscanf(ioBuf, "%d\n", &val) == 1 ? 1 : 0;
+			}
 		}
 		if(!scanfOK) {
 			printf("scanf error in index i=%d\n", i);
@@ -132,9 +141,11 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
-	if(feof(fp)) {
+	int c = getc(fp);
+	if(c == EOF) {
 		reachedEOF = 1;
 	} else {
+		ungetc(c, fp);
 		/* if duplicates are permitted, we need to do a final check if we have duplicates at the
 		 * end of file.
 		 */
@@ -142,14 +153,22 @@ int main(int argc, char *argv[])
 			i = end;
 			while(!feof(fp)) {
 				if(bHaveExtraData) {
-					scanfOK = fscanf(fp, "%d,%d,%s\n", &val, &edLen, edBuf) == 3 ? 1 : 0;
+					if(fgets(ioBuf, sizeof(ioBuf), fp) == NULL) {
+						scanfOK = 0;
+					} else {
+						scanfOK = sscanf(ioBuf, "%d,%d,%s\n", &val, &edLen, edBuf) == 3 ? 1 : 0;
+					}
 					if(edLen != (int) strlen(edBuf)) {
 						printf("extra data length specified %d, but actually is %ld in record %d\n",
 							edLen, (long) strlen(edBuf), i);
 						exit(1);
 					}
 				} else {
-					scanfOK = fscanf(fp, "%d\n", &val) == 1 ? 1 : 0;
+					if(fgets(ioBuf, sizeof(ioBuf), fp) == NULL) {
+						scanfOK = 0;
+					} else {
+						scanfOK = sscanf(ioBuf, "%d\n", &val) == 1 ? 1 : 0;
+					}
 				}
 
 				if(val != i) {

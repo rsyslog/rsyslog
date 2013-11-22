@@ -60,6 +60,7 @@ Version 7.5.7 [v7-devel] 2013-11-??
   * queue.workerThreadMinimumMessage set to queue.size / num workers
   For queues with very low queue.maxSize (< 100), "emergency" defaults
   will be used.
+- bugfix: mmpstrucdata generated inaccessible properties
 - bugfix: RainerScript optimizer did not optimize PRI filters
   things like "if $syslogfacility-text == "local3"" were not converted
   to PRIFILT. This was a regression introduced in 7.5.6.
