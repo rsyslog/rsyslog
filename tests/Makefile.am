@@ -309,7 +309,7 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   rfc5424parser.sh \
 	   testsuites/rfc5424parser.conf \
 	   rs_optimizer_pri.sh \
-	   testsuites/rs_optimizer_pr.conf \
+	   testsuites/rs_optimizer_pri.conf \
 	   rscript_prifilt.sh \
 	   testsuites/rscript_prifilt.conf \
 	   rscript_optimizer1.sh \
