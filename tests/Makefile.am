@@ -7,6 +7,7 @@ TESTS = $(TESTRUNS)
 if ENABLE_IMDIAG
 TESTS +=  \
 	stop-localvar.sh \
+	stop-msgvar.sh \
 	rfc5424parser.sh \
 	arrayqueue.sh \
 	da-mainmsg-q.sh \
@@ -299,6 +300,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/rscript_stop2.conf \
 	   stop-localvar.sh \
 	   testsuites/stop-localvar.conf \
+	   stop-msgvar.sh \
+	   testsuites/stop-msgvar.conf \
 	   rfc5424parser.sh \
 	   testsuites/rfc5424parser.conf \
 	   rs_optimizer_pri.sh \
