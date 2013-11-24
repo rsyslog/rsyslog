@@ -7,6 +7,7 @@ TESTS = $(TESTRUNS)
 if ENABLE_IMDIAG
 TESTS +=  \
 	stop-localvar.sh \
+	stop-msgvar.sh \
 	rfc5424parser.sh \
 	arrayqueue.sh \
 	global_vars.sh \
@@ -304,6 +305,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/stop.conf \
 	   stop-localvar.sh \
 	   testsuites/stop-localvar.conf \
+	   stop-msgvar.sh \
+	   testsuites/stop-msgvar.conf \
 	   global_vars.sh \
 	   testsuites/global_vars.conf \
 	   rfc5424parser.sh \
