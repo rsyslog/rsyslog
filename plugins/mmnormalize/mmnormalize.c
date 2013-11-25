@@ -195,32 +195,25 @@ ENDtryResume
 
 BEGINdoAction
 	msg_t *pMsg;
-	es_str_t *str;
 	uchar *buf;
 	int len;
 	int r;
 	struct json_object *json = NULL;
 CODESTARTdoAction
 	pMsg = (msg_t*) ppString[0];
-	/* note that we can performance-optimize the interface, but this also
-	 * requires changes to the libraries. For now, we accept message
-	 * duplication. -- rgerhards, 2010-12-01
-	 */
 	if(pWrkrData->pData->bUseRawMsg) {
 		getRawMsg(pMsg, &buf, &len);
 	} else {
 		buf = getMSG(pMsg);
 		len = getMSGLen(pMsg);
 	}
-	str = es_newStrFromCStr((char*)buf, len);
-	r = ln_normalize(pWrkrData->pData->ctxln, str, &json);
+	r = ln_normalize(pWrkrData->pData->ctxln, buf, len, &json);
 	if(r != 0) {
 		DBGPRINTF("error %d during ln_normalize\n", r);
 		MsgSetParseSuccess(pMsg, 0);
 	} else {
 		MsgSetParseSuccess(pMsg, 1);
 	}
-	es_deleteStr(str);
 
  	msgAddJSON(pMsg, (uchar*)pWrkrData->pData->pszPath + 1, json);
 
