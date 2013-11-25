@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 7.5.7 [v7-devel] 2013-11-??
+Version 7.5.7 [v7-devel] 2013-11-25
 - queue defaults have changed
   * high water mark is now dynamically 90% of queue size
   * low water makr is now dynamically 70% of queue size
@@ -7,6 +7,11 @@ Version 7.5.7 [v7-devel] 2013-11-??
   * queue.workerThreadMinimumMessage set to queue.size / num workers
   For queues with very low queue.maxSize (< 100), "emergency" defaults
   will be used.
+- worker thread pool handling has been improved
+  Among others, permits pool to actually shrink (was quite hard with
+  previous implementation. This will also improve performance and/or
+  lower system overhead on busy systems.
+  Thanks to Pavel Levshin for the enhancement.
 - bugfix: mmpstrucdata generated inaccessible properties
 - bugfix: RainerScript optimizer did not optimize PRI filters
   things like "if $syslogfacility-text == "local3"" were not converted
@@ -27,11 +32,6 @@ Version 7.5.7 [v7-devel] 2013-11-??
   is very unlikely to happen and the fix itself has some regression
   potential (the fix looks very solid, but it addresses a core component).
   Thanks to Pavel Levshin for the fix
-- worker thread pool handling has been improved
-  Among others, permits pool to actually shrink (was quite hard with
-  previous implementation. This will also improve performance and/or
-  lower system overhead on busy systems.
-  Thanks to Pavel Levshin for the enhancement.
 - now emit warning message if om with msg passing mode uses action queue
   These can modify the message, and this causes races.
 - bugfix: $SystemLogUseSysTimeStamp/$SystemLogUsePIDFromSystem did not work
