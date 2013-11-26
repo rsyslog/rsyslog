@@ -379,6 +379,22 @@ if test "$enable_inet" = "yes"; then
         AC_DEFINE(SYSLOG_INET, 1, [network support is integrated.])
 fi
 
+# jemalloc
+AC_ARG_ENABLE(jemalloc,
+        [AS_HELP_STRING([--enable-jemalloc],[Enable jemalloc support @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_jemalloc="yes" ;;
+          no) enable_jemalloc="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-jemalloc) ;;
+         esac],
+        [enable_jemalloc="no"]
+)
+AM_CONDITIONAL(ENABLE_JEMALLOC, test x$enable_jemalloc = xyes)
+if test "$enable_jemalloc" = "yes"; then
+        AC_DEFINE(HAVE_JEMALLOC, 1, [jemalloc support is integrated.])
+	RT_LIBS="$RT_LIBS -ljemalloc"
+fi
+
 
 #
 # The following define determines whether the package adheres to the
