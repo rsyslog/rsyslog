@@ -31,6 +31,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <stdint.h>
+#include <ctype.h>
 #include "conf.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
@@ -218,7 +219,8 @@ dbgprintf("DDDD: parseSD_NAME %s\n", sdbuf+*curridx);
 		if(   sdbuf[i] == '=' || sdbuf[i] == '"'
 		   || sdbuf[i] == ']' || sdbuf[i] == ' ')
 			break;
-		namebuf[j] = sdbuf[i++];
+		namebuf[j] = tolower(sdbuf[i]);
+		++i;
 	}
 	namebuf[j] = '\0';
 dbgprintf("DDDD: parseSD_NAME, NAME: '%s'\n", namebuf);
@@ -349,7 +351,7 @@ dbgprintf("DDDD: json: '%s'\n", json_object_get_string(json));
 	if(jroot == NULL) {
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
-	json_object_object_add(jroot, "RFC5424-SD", json);
+	json_object_object_add(jroot, "rfc5424-sd", json);
  	msgAddJSON(pMsg, pData->jsonRoot, jroot);
 finalize_it:
 	RETiRet;

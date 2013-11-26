@@ -7,6 +7,8 @@ TESTS = $(TESTRUNS)
 if ENABLE_IMDIAG
 TESTS +=  \
 	stop-localvar.sh \
+	stop-msgvar.sh \
+	rfc5424parser.sh \
 	arrayqueue.sh \
 	global_vars.sh \
 	da-mainmsg-q.sh \
@@ -120,6 +122,11 @@ TESTS +=  \
 	imptcp_large.sh \
 	imptcp_addtlframedelim.sh \
 	imptcp_conndrop.sh 
+endif
+
+if ENABLE_MMPSTRUCDATA
+TESTS +=  \
+	mmpstrucdata.sh
 endif
 
 if ENABLE_GNUTLS
@@ -298,10 +305,14 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/stop.conf \
 	   stop-localvar.sh \
 	   testsuites/stop-localvar.conf \
+	   stop-msgvar.sh \
+	   testsuites/stop-msgvar.conf \
 	   global_vars.sh \
 	   testsuites/global_vars.conf \
+	   rfc5424parser.sh \
+	   testsuites/rfc5424parser.conf \
 	   rs_optimizer_pri.sh \
-	   testsuites/rs_optimizer_pr.conf \
+	   testsuites/rs_optimizer_pri.conf \
 	   rscript_prifilt.sh \
 	   testsuites/rscript_prifilt.conf \
 	   rscript_optimizer1.sh \
@@ -526,6 +537,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   mysql-asyn.sh \
 	   mysql-asyn-vg.sh \
 	   testsuites/mysql-asyn.conf \
+	   mmpstrucdata.sh \
+	   testsuites/mmpstrucdata.conf \
 	   cfg.sh
 
 # TODO: re-enable
