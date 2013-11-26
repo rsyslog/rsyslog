@@ -1328,6 +1328,11 @@ static void printVersion(void)
 #else
 	printf("\t64bit Atomic operations supported:\tNo\n");
 #endif
+#ifdef	HAVE_JEMALLOC
+	printf("\tmemory allocator:\t\t\tjemalloc\n");
+#else
+	printf("\tmemory allocator:\t\t\tsystem default\n");
+#endif
 #ifdef	RTINST
 	printf("\tRuntime Instrumentation (slow code):\tYes\n");
 #else
