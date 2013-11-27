@@ -1,4 +1,7 @@
 ---------------------------------------------------------------------------
+Version 7.5.8 [v7-devel] 2013-11-??
+- bugfix: mmrfc5424addhmac: "key" parameter was not properly processed
+---------------------------------------------------------------------------
 Version 7.5.7 [v7-devel] 2013-11-25
 - queue defaults have changed
   * high water mark is now dynamically 90% of queue size
