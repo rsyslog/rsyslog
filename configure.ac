@@ -391,8 +391,15 @@ AC_ARG_ENABLE(jemalloc,
 )
 AM_CONDITIONAL(ENABLE_JEMALLOC, test x$enable_jemalloc = xyes)
 if test "$enable_jemalloc" = "yes"; then
-        AC_DEFINE(HAVE_JEMALLOC, 1, [jemalloc support is integrated.])
-	RT_LIBS="$RT_LIBS -ljemalloc"
+  AC_CHECK_LIB(
+    [jemalloc],
+    [malloc_stats_print],
+    [RT_LIBS="$RT_LIBS -ljemalloc"
+     AC_DEFINE(HAVE_JEMALLOC, 1, [jemalloc support is integrated.])
+    ],
+    [AC_MSG_FAILURE([jemalloc library is missing])],
+    []
+    )
 fi
 
 
