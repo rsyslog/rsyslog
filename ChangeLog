@@ -1,3 +1,4 @@
+- bugfix: mmrfc5424addhmac: "key" parameter was not properly processed
 ---------------------------------------------------------------------------
 Version 7.4.5  [v7.4-stable] 2013-09-??
 - bugfix: doc: imuxsock legacy param $SystemLogSocketParseTrusted was
