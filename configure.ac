@@ -932,7 +932,7 @@ AC_ARG_ENABLE(mmnormalize,
 )
 if test "x$enable_mmnormalize" = "xyes"; then
 	PKG_CHECK_MODULES(LIBEE, libee >= 0.4.0)
-	PKG_CHECK_MODULES(LIBLOGNORM, lognorm >= 0.3.1)
+	PKG_CHECK_MODULES(LIBLOGNORM, lognorm >= 0.3.1 lognorm < 1.0.0)
 fi
 AM_CONDITIONAL(ENABLE_MMNORMALIZE, test x$enable_mmnormalize = xyes)
 
