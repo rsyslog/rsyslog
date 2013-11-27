@@ -13,6 +13,7 @@ Version 8.1.2 [devel] 2013-11-??
   if the $WorkDirectory was changed multiple times, all queues only
   used the last value set.
 - bugfix: legacy directive $ActionQueueWorkerThreads was not honored
+- bugfix: mmrfc5424addhmac: "key" parameter was not properly processed
 ---------------------------------------------------------------------------
 Version 8.1.1 [devel] 2013-11-19
 - bugfix: STOP/discard(~) was mostly NOT honored
@@ -53,6 +54,9 @@ Version 8.1.0 [devel] 2013-11-15
   Note that it has been deprecated in v7 and been replaced by the "call"
   statement. Also, it can still be build without problems, the option must
   just explicitely be given.
+---------------------------------------------------------------------------
+Version 7.5.8 [v7-devel] 2013-11-??
+- bugfix: mmrfc5424addhmac: "key" parameter was not properly processed
 ---------------------------------------------------------------------------
 Version 7.5.7 [v7-devel] 2013-11-25
 - queue defaults have changed

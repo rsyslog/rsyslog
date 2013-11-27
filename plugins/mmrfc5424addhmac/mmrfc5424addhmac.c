@@ -163,7 +163,7 @@ CODESTARTnewActInst
 	for(i = 0 ; i < actpblk.nParams ; ++i) {
 		if(!pvals[i].bUsed)
 			continue;
-		if(!strcmp(actpblk.descr[i].name, "replacementchar")) {
+		if(!strcmp(actpblk.descr[i].name, "key")) {
 			pData->key = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 			pData->keylen = es_strlen(pvals[i].val.d.estr);
 		} else if(!strcmp(actpblk.descr[i].name, "hashfunction")) {
