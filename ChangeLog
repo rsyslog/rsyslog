@@ -1,5 +1,9 @@
 ---------------------------------------------------------------------------
-Version 8.1.2 [devel] 2013-11-??
+Version 8.1.2 [devel] 2013-11-28
+- support for liblognorm1 added - results in performance improvements
+  Thanks to Pavel Levshin for his work in this regard.
+- support for jemalloc added via --enable-jemalloc
+  Thanks to Pavel Levshin for suggesting jemalloc
 - queue defaults have changed
   * high water mark is now dynamically 90% of queue size
   * low water makr is now dynamically 70% of queue size
@@ -7,7 +11,6 @@ Version 8.1.2 [devel] 2013-11-??
   * queue.workerThreadMinimumMessage set to queue.size / num workers
   For queues with very low queue.maxSize (< 100), "emergency" defaults
   will be used.
-- support for jemalloc added via --enable-jemalloc
   Note that build system is experiemental at this stage.
 - bugfix: disk queues created files in wrong working directory
   if the $WorkDirectory was changed multiple times, all queues only
