@@ -207,7 +207,7 @@ CODESTARTdoAction
 		buf = getMSG(pMsg);
 		len = getMSGLen(pMsg);
 	}
-	r = ln_normalize(pWrkrData->pData->ctxln, buf, len, &json);
+	r = ln_normalize(pWrkrData->pData->ctxln, (char*)buf, len, &json);
 	if(r != 0) {
 		DBGPRINTF("error %d during ln_normalize\n", r);
 		MsgSetParseSuccess(pMsg, 0);
