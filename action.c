@@ -616,6 +616,7 @@ static void actionDisable(action_t *pThis)
 static inline void actionSuspend(action_t *pThis)
 {
 	time_t ttNow;
+	char timebuf[32];
 
 	/* note: we can NOT use a cached timestamp, as time may have evolved
 	 * since caching, and this would break logic (and it actually did so!)
@@ -623,7 +624,12 @@ static inline void actionSuspend(action_t *pThis)
 	datetime.GetTime(&ttNow);
 	pThis->ttResumeRtry = ttNow + pThis->iResumeInterval * (pThis->iNbrResRtry / 10 + 1);
 	actionSetState(pThis, ACT_STATE_SUSP);
-	DBGPRINTF("action suspended, earliest retry=%d\n", (int) pThis->ttResumeRtry);
+	DBGPRINTF("action '%s' suspended, earliest retry=%lld (now %lld)\n",
+		  pThis->pszName, (long long) pThis->ttResumeRtry, (long long) ttNow);
+	ctime_r(&pThis->ttResumeRtry, timebuf);
+	errmsg.LogMsg(0, RS_RET_NOT_FOUND, LOG_WARNING,
+		      "action '%s' suspended, next retry is %s",
+		      pThis->pszName, timebuf);
 }
 
 
@@ -654,9 +660,9 @@ actionDoRetry(action_t *pThis, int *pbShutdownImmediate)
 
 	iRetries = 0;
 	while((*pbShutdownImmediate == 0) && pThis->eState == ACT_STATE_RTRY) {
-		DBGPRINTF("actionDoRetry: enter loop, iRetries=%d\n", iRetries);
+		DBGPRINTF("actionDoRetry: %s enter loop, iRetries=%d\n", pThis->pszName, iRetries);
 		iRet = pThis->pMod->tryResume(pThis->pModData);
-		DBGPRINTF("actionDoRetry: action->tryResume returned %d\n", iRet);
+		DBGPRINTF("actionDoRetry: %s action->tryResume returned %d\n", pThis->pszName, iRet);
 		if((pThis->iResumeOKinRow > 9) && (pThis->iResumeOKinRow % 10 == 0)) {
 			bTreatOKasSusp = 1;
 			pThis->iResumeOKinRow = 0;
@@ -664,12 +670,16 @@ actionDoRetry(action_t *pThis, int *pbShutdownImmediate)
 			bTreatOKasSusp = 0;
 		}
 		if((iRet == RS_RET_OK) && (!bTreatOKasSusp)) {
-			DBGPRINTF("actionDoRetry: had success RDY again (iRet=%d)\n", iRet);
+			DBGPRINTF("actionDoRetry: %s had success RDY again (iRet=%d)\n",
+				  pThis->pszName, iRet);
+			errmsg.LogMsg(0, RS_RET_OK, LOG_INFO, "action '%s' resumed",
+				      pThis->pszName);
 			actionSetState(pThis, ACT_STATE_RDY);
 		} else if(iRet == RS_RET_SUSPENDED || bTreatOKasSusp) {
 			/* max retries reached? */
-			DBGPRINTF("actionDoRetry: check for max retries, iResumeRetryCount %d, iRetries %d\n",
-				  pThis->iResumeRetryCount, iRetries);
+			DBGPRINTF("actionDoRetry: %s check for max retries, iResumeRetryCount "
+				  "%d, iRetries %d\n",
+				  pThis->pszName, pThis->iResumeRetryCount, iRetries);
 			if((pThis->iResumeRetryCount != -1 && iRetries >= pThis->iResumeRetryCount)) {
 				actionSuspend(pThis);
 			} else {
