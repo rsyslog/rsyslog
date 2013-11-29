@@ -323,7 +323,7 @@ static pthread_mutex_t mutTrimCtr;	 /* mutex to handle malloc trim */
 #endif
 
 /* some forward declarations */
-static int getAPPNAMELen(msg_t *pM, sbool bLockMutex);
+static int getAPPNAMELen(msg_t * const pM, sbool bLockMutex);
 static rsRetVal jsonPathFindParent(struct json_object *jroot, uchar *name, uchar *leaf, struct json_object **parent, int bCreate);
 static uchar * jsonPathGetLeaf(uchar *name, int lenName);
 static struct json_object *jsonDeepCopy(struct json_object *src);
@@ -379,7 +379,7 @@ void MsgSetRcvFromWithoutAddRef(msg_t *pThis, prop_t *new)
  * If ruleset cannot be found, no update is done.
  */
 static void
-MsgSetRulesetByName(msg_t *pMsg, cstr_t *rulesetName)
+MsgSetRulesetByName(msg_t * const pMsg, cstr_t *rulesetName)
 {
 	rulesetGetRuleset(runConf, &(pMsg->pRuleset), rsCStrGetSzStrNoNULL(rulesetName));
 }
@@ -388,7 +388,7 @@ MsgSetRulesetByName(msg_t *pMsg, cstr_t *rulesetName)
  * rgerhards, 2009-11-16
  */
 static inline rsRetVal
-resolveDNS(msg_t *pMsg) {
+resolveDNS(msg_t * const pMsg) {
 	rsRetVal localRet;
 	prop_t *propFromHost = NULL;
 	prop_t *ip;
@@ -419,7 +419,7 @@ finalize_it:
 
 
 static inline void
-getInputName(msg_t *pM, uchar **ppsz, int *plen)
+getInputName(msg_t * const pM, uchar **ppsz, int *plen)
 {
 	BEGINfunc
 	if(pM == NULL || pM->pInputName == NULL) {
@@ -433,7 +433,7 @@ getInputName(msg_t *pM, uchar **ppsz, int *plen)
 
 
 static inline uchar*
-getRcvFromIP(msg_t *pM)
+getRcvFromIP(msg_t * const pM)
 {
 	uchar *psz;
 	int len;
@@ -1112,7 +1112,7 @@ reinitVar(var_t *pVar)
  */
 #define isProp(name) !rsCStrSzStrCmp(pVar->pcsName, (uchar*) name, sizeof(name) - 1)
 rsRetVal
-MsgDeserialize(msg_t *pMsg, strm_t *pStrm)
+MsgDeserialize(msg_t * const pMsg, strm_t *pStrm)
 {
 	prop_t *myProp;
 	prop_t *propRcvFrom = NULL;
@@ -1268,7 +1268,7 @@ finalize_it:
  *
  * pSecondMsgPointer = MsgAddRef(pOrgMsgPointer);
  */
-msg_t *MsgAddRef(msg_t *pM)
+msg_t *MsgAddRef(msg_t * const pM)
 {
 	assert(pM != NULL);
 #	ifdef HAVE_ATOMIC_BUILTINS
@@ -1294,7 +1294,7 @@ msg_t *MsgAddRef(msg_t *pM)
  * rgerhards, 2005-11-24
  * THIS MUST be called with the message lock locked.
  */
-static rsRetVal aquirePROCIDFromTAG(msg_t *pM)
+static rsRetVal aquirePROCIDFromTAG(msg_t * const pM)
 {
 	register int i;
 	uchar *pszTag;
@@ -1359,7 +1359,7 @@ finalize_it:
  * rgerhards, 2005-10-19
  */
 static inline rsRetVal
-aquireProgramName(msg_t *pM)
+aquireProgramName(msg_t * const pM)
 {
 	int i;
 	uchar *pszTag, *pszProgName;
@@ -1389,7 +1389,7 @@ finalize_it:
 
 /* Access methods - dumb & easy, not a comment for each ;)
  */
-void setProtocolVersion(msg_t *pM, int iNewVersion)
+void setProtocolVersion(msg_t * const pM, int iNewVersion)
 {
 	assert(pM != NULL);
 	if(iNewVersion != 0 && iNewVersion != 1) {
@@ -1400,7 +1400,7 @@ void setProtocolVersion(msg_t *pM, int iNewVersion)
 }
 
 /* note: string is taken from constant pool, do NOT free */
-char *getProtocolVersionString(msg_t *pM)
+char *getProtocolVersionString(msg_t * const pM)
 {
 	assert(pM != NULL);
 	return(pM->iProtocolVersion ? "1" : "0");
@@ -1410,7 +1410,7 @@ char *getProtocolVersionString(msg_t *pM)
 /* note: libuuid seems not to be thread-safe, so we need
  * to get some safeguards in place.
  */
-static void msgSetUUID(msg_t *pM)
+static void msgSetUUID(msg_t * const pM)
 {
 	size_t lenRes = sizeof(uuid_t) * 2 + 1;
 	char hex_char [] = "0123456789ABCDEF";
@@ -1438,7 +1438,7 @@ static void msgSetUUID(msg_t *pM)
 	dbgprintf("[MsgSetUUID] END\n");
 }
 
-void getUUID(msg_t *pM, uchar **pBuf, int *piLen)
+void getUUID(msg_t * const pM, uchar **pBuf, int *piLen)
 {
 	dbgprintf("[getUUID] START\n");
 	if(pM == NULL) {
@@ -1464,7 +1464,7 @@ void getUUID(msg_t *pM, uchar **pBuf, int *piLen)
 #endif
 
 void
-getRawMsg(msg_t *pM, uchar **pBuf, int *piLen)
+getRawMsg(msg_t * const pM, uchar **pBuf, int *piLen)
 {
 	if(pM == NULL) {
 		*pBuf=  UCHAR_CONSTANT("");
@@ -1484,17 +1484,17 @@ getRawMsg(msg_t *pM, uchar **pBuf, int *piLen)
 /* note: setMSGLen() is only for friends who really know what they
  * do. Setting an invalid length can be desasterous!
  */
-void setMSGLen(msg_t *pM, int lenMsg)
+void setMSGLen(msg_t * const pM, int lenMsg)
 {
 	pM->iLenMSG = lenMsg;
 }
 
-int getMSGLen(msg_t *pM)
+int getMSGLen(msg_t * const pM)
 {
 	return((pM == NULL) ? 0 : pM->iLenMSG);
 }
 
-uchar *getMSG(msg_t *pM)
+uchar *getMSG(msg_t * const pM)
 {
 	uchar *ret;
 	if(pM == NULL)
@@ -1510,7 +1510,7 @@ uchar *getMSG(msg_t *pM)
 
 
 /* Get PRI value as integer */
-static int getPRIi(msg_t *pM)
+static int getPRIi(msg_t * const pM)
 {
 	return (pM->iFacility << 3) + (pM->iSeverity);
 }
@@ -1519,7 +1519,7 @@ static int getPRIi(msg_t *pM)
 /* Get PRI value in text form
  */
 char *
-getPRI(msg_t *pM)
+getPRI(msg_t * const pM)
 {
 	/* PRI is a number in the range 0..191. Thus, we use a simple lookup table to obtain the
 	 * string value. It looks a bit clumpsy here in code ;)
@@ -1535,7 +1535,7 @@ getPRI(msg_t *pM)
 
 
 char *
-getTimeReported(msg_t *pM, enum tplFormatTypes eFmt)
+getTimeReported(msg_t * const pM, enum tplFormatTypes eFmt)
 {
 	BEGINfunc
 	if(pM == NULL)
@@ -1605,7 +1605,7 @@ getTimeReported(msg_t *pM, enum tplFormatTypes eFmt)
 	return "INVALID eFmt OPTION!";
 }
 
-static inline char *getTimeGenerated(msg_t *pM, enum tplFormatTypes eFmt)
+static inline char *getTimeGenerated(msg_t * const pM, enum tplFormatTypes eFmt)
 {
 	BEGINfunc
 	if(pM == NULL)
@@ -1941,7 +1941,7 @@ void MsgSetRuleset(msg_t * const pMsg, ruleset_t *pRuleset)
 /* set TAG in msg object
  * (rewritten 2009-06-18 rgerhards)
  */
-void MsgSetTAG(msg_t *pMsg, uchar* pszBuf, size_t lenBuf)
+void MsgSetTAG(msg_t * const pMsg, uchar* pszBuf, size_t lenBuf)
 {
 	uchar *pBuf;
 	assert(pMsg != NULL);
@@ -1974,7 +1974,7 @@ void MsgSetTAG(msg_t *pMsg, uchar* pszBuf, size_t lenBuf)
  * if there is a TAG and, if not, if it can emulate it.
  * rgerhards, 2005-11-24
  */
-static inline void tryEmulateTAG(msg_t *pM, sbool bLockMutex)
+static inline void tryEmulateTAG(msg_t * const pM, sbool bLockMutex)
 {
 	size_t lenTAG;
 	uchar bufTAG[CONF_TAG_MAXSIZE];
@@ -2006,7 +2006,7 @@ static inline void tryEmulateTAG(msg_t *pM, sbool bLockMutex)
 
 
 void
-getTAG(msg_t *pM, uchar **ppBuf, int *piLen)
+getTAG(msg_t * const pM, uchar **ppBuf, int *piLen)
 {
 	if(pM == NULL) {
 		*ppBuf = UCHAR_CONSTANT("");
@@ -2025,7 +2025,7 @@ getTAG(msg_t *pM, uchar **ppBuf, int *piLen)
 }
 
 
-int getHOSTNAMELen(msg_t *pM)
+int getHOSTNAMELen(msg_t * const pM)
 {
 	if(pM == NULL)
 		return 0;
@@ -2041,7 +2041,7 @@ int getHOSTNAMELen(msg_t *pM)
 }
 
 
-char *getHOSTNAME(msg_t *pM)
+char *getHOSTNAME(msg_t * const pM)
 {
 	if(pM == NULL)
 		return "";
@@ -2062,7 +2062,7 @@ char *getHOSTNAME(msg_t *pM)
 }
 
 
-uchar *getRcvFrom(msg_t *pM)
+uchar *getRcvFrom(msg_t * const pM)
 {
 	uchar *psz;
 	int len;
@@ -2084,7 +2084,7 @@ uchar *getRcvFrom(msg_t *pM)
 
 /* rgerhards 2004-11-24: set STRUCTURED DATA in msg object
  */
-rsRetVal MsgSetStructuredData(msg_t *pMsg, char* pszStrucData)
+rsRetVal MsgSetStructuredData(msg_t * const pMsg, char* pszStrucData)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pMsg, msg);
@@ -2098,7 +2098,7 @@ finalize_it:
 
 /* get the "STRUCTURED-DATA" as sz string, including length */
 void
-MsgGetStructuredData(msg_t *pM, uchar **pBuf, rs_size_t *len)
+MsgGetStructuredData(msg_t * const pM, uchar **pBuf, rs_size_t *len)
 {
 	MsgLock(pM);
 	if(pM->pszStrucData == NULL) {
@@ -2114,7 +2114,7 @@ MsgGetStructuredData(msg_t *pM, uchar **pBuf, rs_size_t *len)
 /* get the "programname" as sz string
  * rgerhards, 2005-10-19
  */
-uchar *getProgramName(msg_t *pM, sbool bLockMutex)
+uchar *getProgramName(msg_t * const pM, sbool bLockMutex)
 {
 	if(pM->iLenPROGNAME == -1) {
 		if(bLockMutex == LOCK_MUTEX) {
@@ -2137,7 +2137,7 @@ uchar *getProgramName(msg_t *pM, sbool bLockMutex)
  * now would like to send out the same one via syslog-protocol.
  * MUST be called with the Msg Lock locked!
  */
-static void tryEmulateAPPNAME(msg_t *pM)
+static void tryEmulateAPPNAME(msg_t * const pM)
 {
 	assert(pM != NULL);
 	if(pM->pCSAPPNAME != NULL)
@@ -2155,7 +2155,7 @@ static void tryEmulateAPPNAME(msg_t *pM)
  * This must be called WITHOUT the message lock being held.
  * rgerhards, 2009-06-26
  */
-static inline void prepareAPPNAME(msg_t *pM, sbool bLockMutex)
+static inline void prepareAPPNAME(msg_t * const pM, sbool bLockMutex)
 {
 	if(pM->pCSAPPNAME == NULL) {
 		if(bLockMutex == LOCK_MUTEX)
@@ -2172,7 +2172,7 @@ static inline void prepareAPPNAME(msg_t *pM, sbool bLockMutex)
 
 /* rgerhards, 2005-11-24
  */
-char *getAPPNAME(msg_t *pM, sbool bLockMutex)
+char *getAPPNAME(msg_t * const pM, sbool bLockMutex)
 {
 	uchar *pszRet;
 
@@ -2191,7 +2191,7 @@ char *getAPPNAME(msg_t *pM, sbool bLockMutex)
 
 /* rgerhards, 2005-11-24
  */
-static int getAPPNAMELen(msg_t *pM, sbool bLockMutex)
+static int getAPPNAMELen(msg_t * const pM, sbool bLockMutex)
 {
 	assert(pM != NULL);
 	prepareAPPNAME(pM, bLockMutex);
@@ -2348,7 +2348,7 @@ void MsgSetHOSTNAME(msg_t *pThis, uchar* pszHOSTNAME, int lenHOSTNAME)
  * (exactly by one). This can happen if we have a message that does not 
  * contain any MSG part.
  */
-void MsgSetMSGoffs(msg_t *pMsg, short offs)
+void MsgSetMSGoffs(msg_t * const pMsg, short offs)
 {
 	ISOBJ_TYPE_assert(pMsg, msg);
 	pMsg->offMSG = offs;
@@ -2432,7 +2432,7 @@ void MsgSetRawMsg(msg_t *pThis, char* pszRawMsg, size_t lenMsg)
  * try to remove it altogether).
  * rgerhards, 2009-06-16
  */
-void MsgSetRawMsgWOSize(msg_t *pMsg, char* pszRawMsg)
+void MsgSetRawMsgWOSize(msg_t * const pMsg, char* pszRawMsg)
 {
 	MsgSetRawMsg(pMsg, pszRawMsg, strlen(pszRawMsg));
 }
@@ -2524,7 +2524,7 @@ static uchar *getNOW(eNOWType eNow, struct syslogTime *t)
 
 /* Get a JSON-Property as string value  (used for various types of JSON-based vars) */
 rsRetVal
-getJSONPropVal(msg_t *pMsg, msgPropDescr_t *pProp, uchar **pRes, rs_size_t *buflen, unsigned short *pbMustBeFreed)
+getJSONPropVal(msg_t * const pMsg, msgPropDescr_t *pProp, uchar **pRes, rs_size_t *buflen, unsigned short *pbMustBeFreed)
 {
 	uchar *leaf;
 	struct json_object *jroot;
@@ -2577,7 +2577,7 @@ finalize_it:
 
 /* Get a JSON-based-variable as native json object */
 rsRetVal
-msgGetJSONPropJSON(msg_t *pMsg, msgPropDescr_t *pProp, struct json_object **pjson)
+msgGetJSONPropJSON(msg_t * const pMsg, msgPropDescr_t *pProp, struct json_object **pjson)
 {
 	struct json_object *jroot;
 	uchar *leaf;
@@ -2819,7 +2819,7 @@ finalize_it:
 #define RET_OUT_OF_MEMORY { *pbMustBeFreed = 0;\
 	*pPropLen = sizeof("**OUT OF MEMORY**") - 1; \
 	return(UCHAR_CONSTANT("**OUT OF MEMORY**"));}
-uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
+uchar *MsgGetProp(msg_t * const pMsg, struct templateEntry *pTpe,
                  msgPropDescr_t *pProp, rs_size_t *pPropLen,
 		 unsigned short *pbMustBeFreed, struct syslogTime *ttNow)
 {
@@ -3776,7 +3776,7 @@ finalize_it:
  * rgerhards, 2008-01-14
  */
 rsRetVal
-MsgGetSeverity(msg_t *pMsg, int *piSeverity)
+MsgGetSeverity(msg_t * const pMsg, int *piSeverity)
 {
 	*piSeverity = pMsg->iSeverity;
 	return RS_RET_OK;
@@ -3897,7 +3897,7 @@ finalize_it:
 }
 
 rsRetVal
-msgAddJSON(msg_t *pM, uchar *name, struct json_object *json)
+msgAddJSON(msg_t * const pM, uchar *name, struct json_object *json)
 {
 	/* TODO: error checks! This is a quick&dirty PoC! */
 	struct json_object **pjroot;
@@ -3972,7 +3972,7 @@ finalize_it:
 
 
 rsRetVal
-msgDelJSON(msg_t *pM, uchar *name)
+msgDelJSON(msg_t * const pM, uchar *name)
 {
 	struct json_object **jroot;
 	struct json_object *parent, *leafnode;
@@ -4082,7 +4082,7 @@ done:	return dst;
 
 
 rsRetVal
-msgSetJSONFromVar(msg_t *pMsg, uchar *varname, struct var *v)
+msgSetJSONFromVar(msg_t * const pMsg, uchar *varname, struct var *v)
 {
 	struct json_object *json = NULL;
 	char *cstr;
@@ -4114,7 +4114,7 @@ finalize_it:
 }
 
 rsRetVal
-MsgAddToStructuredData(msg_t *pMsg, uchar *toadd, rs_size_t len)
+MsgAddToStructuredData(msg_t * const pMsg, uchar *toadd, rs_size_t len)
 {
 	uchar *newptr;
 	rs_size_t newlen;
