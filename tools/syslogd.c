@@ -21,7 +21,7 @@
  * For further information, please see http://www.rsyslog.com
  *
  * rsyslog - An Enhanced syslogd Replacement.
- * Copyright 2003-2012 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2003-2013 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -417,12 +417,10 @@ finalize_it:
  * function is also passed to the runtime library as the generic error
  * message handler. -- rgerhards, 2008-04-17
  */
-rsRetVal
-submitErrMsg(int iErr, uchar *msg)
+void
+submitErrMsg(const int severity, const int iErr, const uchar *msg)
 {
-	DEFiRet;
-	iRet = logmsgInternal(iErr, LOG_SYSLOG|LOG_ERR, msg, 0);
-	RETiRet;
+	logmsgInternal(iErr, LOG_SYSLOG|(severity & 0x07), msg, 0);
 }
 
 
@@ -436,7 +434,7 @@ submitMsgWithDfltRatelimiter(msg_t *pMsg)
  * to log a message orginating from the syslogd itself.
  */
 rsRetVal
-logmsgInternal(int iErr, int pri, uchar *msg, int flags)
+logmsgInternal(const int iErr, const int pri, const uchar *msg, int flags)
 {
 	uchar pszTag[33];
 	msg_t *pMsg;
@@ -484,7 +482,6 @@ logmsgInternal(int iErr, int pri, uchar *msg, int flags)
 		 * message to the queue engine.
 		 */
 		ratelimitAddMsg(internalMsg_ratelimiter, NULL, pMsg);
-		//submitMsgWithDfltRatelimiter(pMsg);
 	}
 finalize_it:
 	RETiRet;
@@ -1365,7 +1362,7 @@ InitGlobalClasses(void)
 	/* Intialize the runtime system */
 	pErrObj = "rsyslog runtime"; /* set in case the runtime errors before setting an object */
 	CHKiRet(rsrtInit(&pErrObj, &obj));
-	CHKiRet(rsrtSetErrLogger(submitErrMsg)); /* set out error handler */
+	rsrtSetErrLogger(submitErrMsg);
 
 	/* Now tell the system which classes we need ourselfs */
 	pErrObj = "glbl";

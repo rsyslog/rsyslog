@@ -172,6 +172,7 @@ configSettings_t cs_save;				/* our saved (scope!) config settings */
  * is no better name available.
  */
 int iActionNbr = 0;
+int bActionReportSuspension = 1;
 
 /* tables for interfacing with the v6 config system */
 static struct cnfparamdescr cnfparamdescr[] = {
@@ -380,6 +381,17 @@ actionConstructFinalize(action_t *pThis, struct nvlst *lst)
 	STATSCOUNTER_INIT(pThis->ctrFail, pThis->mutCtrFail);
 	CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("failed"),
 		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &pThis->ctrFail));
+
+	STATSCOUNTER_INIT(pThis->ctrSuspend, pThis->mutCtrSuspend);
+	CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("suspended"),
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &pThis->ctrSuspend));
+	STATSCOUNTER_INIT(pThis->ctrSuspendDuration, pThis->mutCtrSuspendDuration);
+	CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("suspended.duration"),
+		ctrType_IntCtr, 0, &pThis->ctrSuspendDuration));
+
+	STATSCOUNTER_INIT(pThis->ctrResume, pThis->mutCtrResume);
+	CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("resumed"),
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &pThis->ctrResume));
 
 	CHKiRet(statsobj.ConstructFinalize(pThis->statsobj));
 
@@ -596,7 +608,7 @@ static void actionDisable(action_t *pThis)
 }
 
 
-/* Suspend action, this involves changing the acton state as well
+/* Suspend action, this involves changing the action state as well
  * as setting the next retry time.
  * if we have more than 10 retries, we prolong the
  * retry interval. If something is really stalled, it will
@@ -604,18 +616,35 @@ static void actionDisable(action_t *pThis)
  * CPU time. TODO: maybe a config option for that?
  * rgerhards, 2007-08-02
  */
-static inline void actionSuspend(action_t *pThis, wti_t *pWti)
+static inline void
+actionSuspend(action_t * const pThis, wti_t *pWti)
 {
 	time_t ttNow;
+	int suspendDuration;
+	char timebuf[32];
 
 	/* note: we can NOT use a cached timestamp, as time may have evolved
 	 * since caching, and this would break logic (and it actually did so!)
 	 */
 	datetime.GetTime(&ttNow);
-	pThis->ttResumeRtry = ttNow + pThis->iResumeInterval *
-		(getActionNbrResRtry(pWti, pThis) / 10 + 1);
+	suspendDuration = pThis->iResumeInterval * (getActionNbrResRtry(pWti, pThis) / 10 + 1);
+	pThis->ttResumeRtry = ttNow + suspendDuration;
 	actionSetState(pThis, pWti, ACT_STATE_SUSP);
-	DBGPRINTF("action suspended, earliest retry=%d\n", (int) pThis->ttResumeRtry);
+	pThis->ctrSuspendDuration += suspendDuration;
+	if(getActionNbrResRtry(pWti, pThis) == 0) {
+		STATSCOUNTER_INC(pThis->ctrSuspend, pThis->mutCtrSuspend);
+	}
+	DBGPRINTF("action '%s' suspended, earliest retry=%lld (now %lld), iNbrResRtry %d, "
+		  "duration %d\n",
+		  pThis->pszName, (long long) pThis->ttResumeRtry, (long long) ttNow,
+		  getActionNbrResRtry(pWti, pThis), suspendDuration);
+	if(bActionReportSuspension) {
+		ctime_r(&pThis->ttResumeRtry, timebuf);
+		timebuf[strlen(timebuf)-1] = '\0'; /* strip LF */
+		errmsg.LogMsg(0, RS_RET_NOT_FOUND, LOG_WARNING,
+			      "action '%s' suspended, next retry is %s",
+			      pThis->pszName, timebuf);
+	}
 }
 
 
@@ -646,9 +675,9 @@ actionDoRetry(action_t *pThis, wti_t *pWti)
 
 	iRetries = 0;
 	while((*pWti->pbShutdownImmediate == 0) && getActionState(pWti, pThis) == ACT_STATE_RTRY) {
-		DBGPRINTF("actionDoRetry: enter loop, iRetries=%d\n", iRetries);
+		DBGPRINTF("actionDoRetry: %s enter loop, iRetries=%d\n", pThis->pszName, iRetries);
 		iRet = pThis->pMod->tryResume(pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData);
-		DBGPRINTF("actionDoRetry: action->tryResume returned %d\n", iRet);
+		DBGPRINTF("actionDoRetry: %s action->tryResume returned %d\n", pThis->pszName, iRet);
 		if((getActionResumeInRow(pWti, pThis) > 9) && (getActionResumeInRow(pWti, pThis) % 10 == 0)) {
 			bTreatOKasSusp = 1;
 			setActionResumeInRow(pWti, pThis, 0);
@@ -656,16 +685,23 @@ actionDoRetry(action_t *pThis, wti_t *pWti)
 			bTreatOKasSusp = 0;
 		}
 		if((iRet == RS_RET_OK) && (!bTreatOKasSusp)) {
-			DBGPRINTF("actionDoRetry: had success RDY again (iRet=%d)\n", iRet);
+			DBGPRINTF("actionDoRetry: %s had success RDY again (iRet=%d)\n",
+				  pThis->pszName, iRet);
+			if(bActionReportSuspension) {
+				errmsg.LogMsg(0, RS_RET_OK, LOG_INFO, "action '%s' resumed",
+					      pThis->pszName);
+			}
 			actionSetState(pThis, pWti, ACT_STATE_RDY);
 		} else if(iRet == RS_RET_SUSPENDED || bTreatOKasSusp) {
 			/* max retries reached? */
-			DBGPRINTF("actionDoRetry: check for max retries, iResumeRetryCount %d, iRetries %d\n",
-				  pThis->iResumeRetryCount, iRetries);
+			DBGPRINTF("actionDoRetry: %s check for max retries, iResumeRetryCount "
+				  "%d, iRetries %d\n",
+				  pThis->pszName, pThis->iResumeRetryCount, iRetries);
 			if((pThis->iResumeRetryCount != -1 && iRetries >= pThis->iResumeRetryCount)) {
 				actionSuspend(pThis, pWti);
+				if(getActionNbrResRtry(pWti, pThis) < 20)
+					incActionNbrResRtry(pWti, pThis);
 			} else {
-				incActionNbrResRtry(pWti, pThis);
 				++iRetries;
 				iSleepPeriod = pThis->iResumeInterval;
 				srSleep(iSleepPeriod, 0);

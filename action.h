@@ -28,11 +28,9 @@
 #include "syslogd-types.h"
 #include "queue.h"
 
-/* external data - this is to be removed when we change the action
- * object interface (will happen some time..., at latest when the
- * config file format is changed). -- rgerhards, 2008-01-28
- */
+/* external data */
 extern int glbliActionResumeRetryCount;
+extern int bActionReportSuspension;
 
 
 /* the following struct defines the action object data structure
@@ -74,6 +72,9 @@ struct action_s {
 	statsobj_t *statsobj;
 	STATSCOUNTER_DEF(ctrProcessed, mutCtrProcessed);
 	STATSCOUNTER_DEF(ctrFail, mutCtrFail);
+	STATSCOUNTER_DEF(ctrSuspend, mutCtrSuspend);
+	STATSCOUNTER_DEF(ctrSuspendDuration, mutCtrSuspendDuration);
+	STATSCOUNTER_DEF(ctrResume, mutCtrResume);
 };
 
 

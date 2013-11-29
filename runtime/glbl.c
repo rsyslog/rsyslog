@@ -43,6 +43,7 @@
 #include "prop.h"
 #include "atomic.h"
 #include "errmsg.h"
+#include "action.h"
 #include "rainerscript.h"
 #include "net.h"
 
@@ -105,6 +106,7 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "defaultnetstreamdriverkeyfile", eCmdHdlrString, 0 },
 	{ "defaultnetstreamdriver", eCmdHdlrString, 0 },
 	{ "maxmessagesize", eCmdHdlrSize, 0 },
+	{ "action.reportsuspension", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk paramblk =
 	{ CNFPARAMBLK_VERSION,
@@ -693,6 +695,8 @@ glblDoneLoadCnf(void)
 		} else if(!strcmp(paramblk.descr[i].name,
 				"dropmsgswithmaliciousdnsptrrecords")) {
 			bDropMalPTRMsgs = (int) cnfparamvals[i].val.d.n;
+		} else if(!strcmp(paramblk.descr[i].name, "action.reportsuspension")) {
+			bActionReportSuspension = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "maxmessagesize")) {
 			iMaxLine = (int) cnfparamvals[i].val.d.n;
 		} else {
