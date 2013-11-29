@@ -505,13 +505,13 @@ void dbgprintf(char *, ...) __attribute__((format(printf, 1, 2)));
  * add them. -- rgerhards, 2008-04-17
  */
 extern uchar *glblModPath; /* module load path */
-extern rsRetVal (*glblErrLogger)(int, uchar*);
+extern rsRetVal (*glblErrLogger)(int, const uchar*);
 
 /* some runtime prototypes */
 rsRetVal rsrtInit(char **ppErrObj, obj_if_t *pObjIF);
 rsRetVal rsrtExit(void);
 int rsrtIsInit(void);
-rsRetVal rsrtSetErrLogger(rsRetVal (*errLogger)(int, uchar*));
+rsRetVal rsrtSetErrLogger(rsRetVal (*errLogger)(int, const uchar*));
 
 /* this define below is (later) intended to be used to implement empty
  * structs. TODO: check if compilers supports this and, if not, define

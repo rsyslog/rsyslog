@@ -605,7 +605,7 @@ static void actionDisable(action_t *pThis)
 }
 
 
-/* Suspend action, this involves changing the acton state as well
+/* Suspend action, this involves changing the action state as well
  * as setting the next retry time.
  * if we have more than 10 retries, we prolong the
  * retry interval. If something is really stalled, it will

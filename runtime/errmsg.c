@@ -57,7 +57,7 @@ DEFobjStaticHelpers
  * rgerhards, 2008-06-27
  */
 static void __attribute__((format(printf, 3, 4)))
-LogError(int iErrno, int iErrCode, char *fmt, ... )
+LogError(int iErrno, int iErrCode, const char *fmt, ... )
 {
 	va_list ap;
 	char buf[1024];

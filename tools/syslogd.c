@@ -418,7 +418,7 @@ finalize_it:
  * message handler. -- rgerhards, 2008-04-17
  */
 rsRetVal
-submitErrMsg(int iErr, uchar *msg)
+submitErrMsg(const int iErr, const uchar *msg)
 {
 	DEFiRet;
 	iRet = logmsgInternal(iErr, LOG_SYSLOG|LOG_ERR, msg, 0);
@@ -436,7 +436,7 @@ submitMsgWithDfltRatelimiter(msg_t *pMsg)
  * to log a message orginating from the syslogd itself.
  */
 rsRetVal
-logmsgInternal(int iErr, int pri, uchar *msg, int flags)
+logmsgInternal(const int iErr, const int pri, const uchar *msg, int flags)
 {
 	uchar pszTag[33];
 	msg_t *pMsg;
@@ -484,7 +484,6 @@ logmsgInternal(int iErr, int pri, uchar *msg, int flags)
 		 * message to the queue engine.
 		 */
 		ratelimitAddMsg(internalMsg_ratelimiter, NULL, pMsg);
-		//submitMsgWithDfltRatelimiter(pMsg);
 	}
 finalize_it:
 	RETiRet;
