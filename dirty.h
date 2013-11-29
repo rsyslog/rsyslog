@@ -5,7 +5,7 @@
  * yet a runtime library, because it depends on some functionality
  * residing somewhere else.
  *
- * Copyright 2007, 2008 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2013 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *

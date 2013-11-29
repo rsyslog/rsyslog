@@ -7,7 +7,7 @@
  * to take further case, as the code now boils to be either my own or, a few lines,
  * of the original BSD-licenses sysklogd code. rgerhards, 2012-01-16
  *
- * Copyright 2008-2012 Adiscon GmbH.
+ * Copyright 2008-2013 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
