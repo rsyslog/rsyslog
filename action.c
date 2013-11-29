@@ -624,9 +624,11 @@ static inline void actionSuspend(action_t *pThis)
 	datetime.GetTime(&ttNow);
 	pThis->ttResumeRtry = ttNow + pThis->iResumeInterval * (pThis->iNbrResRtry / 10 + 1);
 	actionSetState(pThis, ACT_STATE_SUSP);
-	DBGPRINTF("action '%s' suspended, earliest retry=%lld (now %lld)\n",
-		  pThis->pszName, (long long) pThis->ttResumeRtry, (long long) ttNow);
+	DBGPRINTF("action '%s' suspended, earliest retry=%lld (now %lld), iNbrResRtry %d\n",
+		  pThis->pszName, (long long) pThis->ttResumeRtry, (long long) ttNow,
+		  pThis->iNbrResRtry);
 	ctime_r(&pThis->ttResumeRtry, timebuf);
+	timebuf[strlen(timebuf)-1] = '\0'; /* strip LF */
 	errmsg.LogMsg(0, RS_RET_NOT_FOUND, LOG_WARNING,
 		      "action '%s' suspended, next retry is %s",
 		      pThis->pszName, timebuf);
@@ -682,8 +684,9 @@ actionDoRetry(action_t *pThis, int *pbShutdownImmediate)
 				  pThis->pszName, pThis->iResumeRetryCount, iRetries);
 			if((pThis->iResumeRetryCount != -1 && iRetries >= pThis->iResumeRetryCount)) {
 				actionSuspend(pThis);
+				if(pThis->iNbrResRtry < 20)
+					++pThis->iNbrResRtry;
 			} else {
-				++pThis->iNbrResRtry;
 				++iRetries;
 				iSleepPeriod = pThis->iResumeInterval;
 				srSleep(iSleepPeriod, 0);
