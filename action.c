@@ -389,6 +389,17 @@ actionConstructFinalize(action_t *pThis, struct nvlst *lst)
 	CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("failed"),
 		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &pThis->ctrFail));
 
+	STATSCOUNTER_INIT(pThis->ctrSuspend, pThis->mutCtrSuspend);
+	CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("suspended"),
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &pThis->ctrSuspend));
+	STATSCOUNTER_INIT(pThis->ctrSuspendDuration, pThis->mutCtrSuspendDuration);
+	CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("suspended.duration"),
+		ctrType_IntCtr, 0, &pThis->ctrSuspendDuration));
+
+	STATSCOUNTER_INIT(pThis->ctrResume, pThis->mutCtrResume);
+	CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("resumed"),
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &pThis->ctrResume));
+
 	CHKiRet(statsobj.ConstructFinalize(pThis->statsobj));
 
 	/* create our queue */
@@ -613,17 +624,24 @@ static void actionDisable(action_t *pThis)
  * CPU time. TODO: maybe a config option for that?
  * rgerhards, 2007-08-02
  */
-static inline void actionSuspend(action_t *pThis)
+static inline void
+actionSuspend(action_t * const pThis)
 {
 	time_t ttNow;
+	int suspendDuration;
 	char timebuf[32];
 
 	/* note: we can NOT use a cached timestamp, as time may have evolved
 	 * since caching, and this would break logic (and it actually did so!)
 	 */
 	datetime.GetTime(&ttNow);
-	pThis->ttResumeRtry = ttNow + pThis->iResumeInterval * (pThis->iNbrResRtry / 10 + 1);
+	suspendDuration = pThis->iResumeInterval * (pThis->iNbrResRtry / 10 + 1);
+	pThis->ttResumeRtry = ttNow + suspendDuration;
 	actionSetState(pThis, ACT_STATE_SUSP);
+	pThis->ctrSuspendDuration += suspendDuration;
+	if(pThis->iNbrResRtry == 0) {
+		STATSCOUNTER_INC(pThis->ctrSuspend, pThis->mutCtrSuspend);
+	}
 	DBGPRINTF("action '%s' suspended, earliest retry=%lld (now %lld), iNbrResRtry %d\n",
 		  pThis->pszName, (long long) pThis->ttResumeRtry, (long long) ttNow,
 		  pThis->iNbrResRtry);

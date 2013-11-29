@@ -85,6 +85,9 @@ struct action_s {
 	statsobj_t *statsobj;
 	STATSCOUNTER_DEF(ctrProcessed, mutCtrProcessed);
 	STATSCOUNTER_DEF(ctrFail, mutCtrFail);
+	STATSCOUNTER_DEF(ctrSuspend, mutCtrSuspend);
+	STATSCOUNTER_DEF(ctrSuspendDuration, mutCtrSuspendDuration);
+	STATSCOUNTER_DEF(ctrResume, mutCtrResume);
 };
 
 
