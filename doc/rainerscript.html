@@ -67,6 +67,9 @@ $MainMsgQ... statements are ignored.
 <p>Example:</p>
 <textarea rows="2" cols="60">main_queue(queue.size="100000" queue.type="LinkedList")
 </textarea>
+<h3>global()</h3>
+<p>This is used to set global configuration parameters. For details, please
+see the <a href="rsyslog_global">rsyslog global configuration object</a>.
 <h2>Expressions</h2>
 The language supports arbitrary complex expressions. All usual
 operators are supported. The precedence of operations is as follows
@@ -84,10 +87,6 @@ of a and b should be tested as "a &lt;&gt; b". The "not" operator
 should be reserved to cases where it actually is needed to form a
 complex boolean expression. In those cases, parenthesis are highly
 recommended.
-<h2>configuration objects</h2>
-<h3>global()</h3>
-<p>This is used to set global configuration parameters. For details, please
-see the <a href="rsyslog_global">rsyslog global configuration object</a>.
 <h2>Lookup Tables</h2>
 <p><a href="lookup_tables.html">Lookup tables</a> are a powerful construct
 to obtain "class" information based on message content (e.g. to build
