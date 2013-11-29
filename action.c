@@ -180,6 +180,7 @@ configSettings_t cs_save;				/* our saved (scope!) config settings */
  * counting. -- rgerhards, 2008-01-29
  */
 static int iActionNbr = 0;
+int bActionReportSuspension = 1;
 
 /* tables for interfacing with the v6 config system */
 static struct cnfparamdescr cnfparamdescr[] = {
@@ -645,11 +646,13 @@ actionSuspend(action_t * const pThis)
 	DBGPRINTF("action '%s' suspended, earliest retry=%lld (now %lld), iNbrResRtry %d\n",
 		  pThis->pszName, (long long) pThis->ttResumeRtry, (long long) ttNow,
 		  pThis->iNbrResRtry);
-	ctime_r(&pThis->ttResumeRtry, timebuf);
-	timebuf[strlen(timebuf)-1] = '\0'; /* strip LF */
-	errmsg.LogMsg(0, RS_RET_NOT_FOUND, LOG_WARNING,
-		      "action '%s' suspended, next retry is %s",
-		      pThis->pszName, timebuf);
+	if(bActionReportSuspension) {
+		ctime_r(&pThis->ttResumeRtry, timebuf);
+		timebuf[strlen(timebuf)-1] = '\0'; /* strip LF */
+		errmsg.LogMsg(0, RS_RET_NOT_FOUND, LOG_WARNING,
+			      "action '%s' suspended, next retry is %s",
+			      pThis->pszName, timebuf);
+	}
 }
 
 
@@ -692,8 +695,10 @@ actionDoRetry(action_t *pThis, int *pbShutdownImmediate)
 		if((iRet == RS_RET_OK) && (!bTreatOKasSusp)) {
 			DBGPRINTF("actionDoRetry: %s had success RDY again (iRet=%d)\n",
 				  pThis->pszName, iRet);
-			errmsg.LogMsg(0, RS_RET_OK, LOG_INFO, "action '%s' resumed",
-				      pThis->pszName);
+			if(bActionReportSuspension) {
+				errmsg.LogMsg(0, RS_RET_OK, LOG_INFO, "action '%s' resumed",
+					      pThis->pszName);
+			}
 			actionSetState(pThis, ACT_STATE_RDY);
 		} else if(iRet == RS_RET_SUSPENDED || bTreatOKasSusp) {
 			/* max retries reached? */
