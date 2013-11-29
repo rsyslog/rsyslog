@@ -1692,7 +1692,7 @@ static inline char *getTimeGenerated(msg_t *pM, enum tplFormatTypes eFmt)
 }
 
 
-static inline char *getSeverity(msg_t *pM)
+static inline char *getSeverity(msg_t * const pM)
 {
 	char *name = NULL;
 
@@ -1709,7 +1709,7 @@ static inline char *getSeverity(msg_t *pM)
 }
 
 
-static inline char *getSeverityStr(msg_t *pM)
+static inline char *getSeverityStr(msg_t * const pM)
 {
 	char *name = NULL;
 
@@ -1725,7 +1725,7 @@ static inline char *getSeverityStr(msg_t *pM)
 	return name;
 }
 
-static inline char *getFacility(msg_t *pM)
+static inline char *getFacility(msg_t * const pM)
 {
 	char *name = NULL;
 
@@ -1741,7 +1741,7 @@ static inline char *getFacility(msg_t *pM)
 	return name;
 }
 
-static inline char *getFacilityStr(msg_t *pM)
+static inline char *getFacilityStr(msg_t * const pM)
 {
         char *name = NULL;
 
@@ -1765,7 +1765,7 @@ static inline char *getFacilityStr(msg_t *pM)
  * rgerhards, 2008-03-14
  */
 rsRetVal
-MsgSetFlowControlType(msg_t *pMsg, flowControl_t eFlowCtl)
+MsgSetFlowControlType(msg_t * const pMsg, flowControl_t eFlowCtl)
 {
 	DEFiRet;
 	assert(pMsg != NULL);
@@ -1780,7 +1780,7 @@ MsgSetFlowControlType(msg_t *pMsg, flowControl_t eFlowCtl)
  * rgerhards, 2009-06-16
  */
 rsRetVal
-MsgSetAfterPRIOffs(msg_t *pMsg, short offs)
+MsgSetAfterPRIOffs(msg_t * const pMsg, short offs)
 {
 	assert(pMsg != NULL);
 	pMsg->offAfterPRI = offs;
@@ -1794,7 +1794,7 @@ MsgSetAfterPRIOffs(msg_t *pMsg, short offs)
  * which already obtained the lock. So in general, this function here must
  * only be called when it it safe to do so without it aquiring a lock.
  */
-rsRetVal MsgSetAPPNAME(msg_t *pMsg, char* pszAPPNAME)
+rsRetVal MsgSetAPPNAME(msg_t * const pMsg, char* pszAPPNAME)
 {
 	DEFiRet;
 	assert(pMsg != NULL);
@@ -1812,7 +1812,7 @@ finalize_it:
 
 /* rgerhards 2004-11-24: set PROCID in msg object
  */
-rsRetVal MsgSetPROCID(msg_t *pMsg, char* pszPROCID)
+rsRetVal MsgSetPROCID(msg_t * const pMsg, char* pszPROCID)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pMsg, msg);
@@ -1833,7 +1833,7 @@ finalize_it:
  * This must be called WITHOUT the message lock being held.
  * rgerhards, 2009-06-26
  */
-static inline void preparePROCID(msg_t *pM, sbool bLockMutex)
+static inline void preparePROCID(msg_t * const pM, sbool bLockMutex)
 {
 	if(pM->pCSPROCID == NULL) {
 		if(bLockMutex == LOCK_MUTEX)
@@ -1861,7 +1861,7 @@ static inline int getPROCIDLen(msg_t *pM, sbool bLockMutex)
 
 /* rgerhards, 2005-11-24
  */
-char *getPROCID(msg_t *pM, sbool bLockMutex)
+char *getPROCID(msg_t * const pM, sbool bLockMutex)
 {
 	uchar *pszRet;
 
@@ -1881,7 +1881,7 @@ char *getPROCID(msg_t *pM, sbool bLockMutex)
 
 /* rgerhards 2004-11-24: set MSGID in msg object
  */
-rsRetVal MsgSetMSGID(msg_t *pMsg, char* pszMSGID)
+rsRetVal MsgSetMSGID(msg_t * const pMsg, char* pszMSGID)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pMsg, msg);
@@ -1900,7 +1900,7 @@ finalize_it:
 /* Return state of last parser. If it had success, "OK" is returned, else
  * "FAIL". All from the constant pool.
  */
-static inline char *getParseSuccess(msg_t *pM)
+static inline char *getParseSuccess(msg_t * const pM)
 {
 	return (pM->bParseSuccess) ? "OK" : "FAIL";
 }
@@ -1908,7 +1908,7 @@ static inline char *getParseSuccess(msg_t *pM)
 
 /* al, 2011-07-26: LockMsg to avoid race conditions
  */
-static inline char *getMSGID(msg_t *pM)
+static inline char *getMSGID(msg_t * const pM)
 {
 	if (pM->pCSMSGID == NULL) {
 		return "-"; 
@@ -1923,7 +1923,7 @@ static inline char *getMSGID(msg_t *pM)
 
 /* rgerhards 2012-03-15: set parser success (an integer, acutally bool)
  */
-void MsgSetParseSuccess(msg_t *pMsg, int bSuccess)
+void MsgSetParseSuccess(msg_t * const pMsg, int bSuccess)
 {
 	assert(pMsg != NULL);
 	pMsg->bParseSuccess = bSuccess;
@@ -1931,7 +1931,7 @@ void MsgSetParseSuccess(msg_t *pMsg, int bSuccess)
 
 /* rgerhards 2009-06-12: set associated ruleset
  */
-void MsgSetRuleset(msg_t *pMsg, ruleset_t *pRuleset)
+void MsgSetRuleset(msg_t * const pMsg, ruleset_t *pRuleset)
 {
 	assert(pMsg != NULL);
 	pMsg->pRuleset = pRuleset;
