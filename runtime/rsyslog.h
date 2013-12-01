@@ -383,6 +383,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_LAST_ERRREPORT = -2355,/**< module does not emit more error messages as limit is reached */
 	RS_RET_READ_ERR = -2356,/**< read error occured (file i/o) */
 	RS_RET_CONF_PARSE_WARNING = -2357,/**< warning parsing config file */
+	RS_RET_CONF_WRN_FULLDLY_BELOW_HIGHWTR = -2358,/**< warning queue full delay mark below high wtr mark */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */

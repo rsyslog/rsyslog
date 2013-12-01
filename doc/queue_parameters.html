@@ -43,7 +43,19 @@ queues are not set up by default.</p>
 	<br>default 8000</li>
 	<li><strong>queue.lowwatermark</strong> number
 	<br>default 2000</li>
-	<li><strong>queue.fulldelaymark</strong> number</li>
+	<li><strong>queue.fulldelaymark</strong> number</br>
+	Number of messages when the queue should block delayable messages. Messages
+	are NO LONGER PROCESSED until the queue has sufficient space again. If
+	a message is delayable depends on the input. For example, messages
+	received via imtcp are delayable (because TCP can push back), but those
+	received via imudp are not (as UDP does not permit a push back). The
+	intent behind this setting is to leave some space in an almost-full
+	queue for non-delayable messages, which would be lost if the queue runs
+	out of space.</br></br>
+	Please note that if you use a DA queue, setting the fulldelaymark ABOVE the
+	highwatermark makes the queue never activate disk mode for delayable
+	inputs. So this is probably not what you want.
+	</li>
 	<li><strong>queue.lightdelaymark</strong> number</li>
 	<li><strong>queue.discardmark</strong> number
 	<br>default 9750]</li>

@@ -2147,6 +2147,15 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 				obj.GetName((obj_t*) pThis), pThis->iDiscardMrk, goodval);
 	}
 
+	if(pThis->pszFilePrefix != NULL) { /* This means we have a potential DA queue */
+		if(pThis->iFullDlyMrk != -1 && pThis->iFullDlyMrk < pThis->iHighWtrMrk) {
+			errmsg.LogError(0, RS_RET_CONF_WRN_FULLDLY_BELOW_HIGHWTR,
+					"queue \"%s\": queue.fullDelayMark "
+					"is set below high water mark. This will result in DA mode "
+					" NOT being activated for full delayable messages",
+					obj.GetName((obj_t*) pThis));
+		}
+	}
 
 	/* now come parameter corrections and defaults */
 	if(pThis->iHighWtrMrk < 2 || pThis->iHighWtrMrk > pThis->iMaxQueueSize) {
