@@ -398,7 +398,7 @@ processPacket(thrdInfo_t *pThrd, struct lstn_s *lstn, struct sockaddr_storage *f
 		*pbIsPermitted = 1; /* no check -> everything permitted */
 	}
 
-	DBGPRINTF("recv(%d,%d),acl:%d,msg:%s\n", lstn->sock, (int) lenRcvBuf, *pbIsPermitted, rcvBuf);
+	DBGPRINTF("recv(%d,%d),acl:%d,msg:%.128s\n", lstn->sock, (int) lenRcvBuf, *pbIsPermitted, rcvBuf);
 
 	if(*pbIsPermitted != 0)  {
 		/* we now create our own message object and submit it to the queue */
