@@ -244,6 +244,10 @@ Version 7.5.0 [devel] 2013-06-11
   Thanks to Axel Rau for the patch.
 ---------------------------------------------------------------------------
 Version 7.4.7  [v7.4-stable] 2013-11-??
+- bugfix: linux kernel-like ratelimiter did not work properly with all
+  inputs (for example, it did not work with imdup). The reason was that
+  the PRI value was used, but that needed parsing of the message, which
+  was done too late.
 - bugfix: disk queues created files in wrong working directory
   if the $WorkDirectory was changed multiple times, all queues only
   used the last value set.
