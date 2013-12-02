@@ -403,7 +403,7 @@ processSocket(thrdInfo_t *pThrd, struct lstn_s *lstn, struct sockaddr_storage *f
 			*pbIsPermitted = 1; /* no check -> everything permitted */
 		}
 
-		DBGPRINTF("imudp:recv(%d,%d),acl:%d,msg:%s\n", lstn->sock, (int) lenRcvBuf, *pbIsPermitted, pRcvBuf);
+		DBGPRINTF("imudp:recv(%d,%d),acl:%d,msg:%.128s\n", lstn->sock, (int) lenRcvBuf, *pbIsPermitted, pRcvBuf);
 
 		if(*pbIsPermitted != 0)  {
 			if((runModConf->iTimeRequery == 0) || (iNbrTimeUsed++ % runModConf->iTimeRequery) == 0) {
