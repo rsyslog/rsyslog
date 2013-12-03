@@ -111,16 +111,6 @@ batchIsValidElem(batch_t *pBatch, int i) {
  */
 static inline void
 batchFree(batch_t *pBatch) {
-	int i;
-	int j;
-	for(i = 0 ; i < pBatch->maxElem ; ++i) {
-		for(j = 0 ; j < CONF_OMOD_NUMSTRINGS_MAXSIZE ; ++j) {
-			/* staticActParams MUST be freed immediately (if required),
-			 * so we do not need to do that!
-			 */
-			//TODO: do this in wti! free(pBatch->pElem[i].staticActStrings[j]);
-		}
-	}
 	free(pBatch->pElem);
 	free(pBatch->eltState);
 }
