@@ -311,6 +311,19 @@ finalize_it:
 }
 
 
+/* Disable action, this means it will never again be usable
+ * until rsyslog is reloaded. Use only as a last resort, but
+ * depends on output module.
+ * rgerhards, 2007-08-02
+ */
+static inline void
+actionDisable(action_t *__restrict__ const pThis)
+{
+	pThis->bDisabled = 1;
+}
+
+
+
 /* create a new action descriptor object
  * rgerhards, 2007-08-01
  * Note that it is vital to set proper initial values as the v6 config
@@ -352,12 +365,10 @@ finalize_it:
 /* action construction finalizer
  */
 rsRetVal
-actionConstructFinalize(action_t * const pThis, struct nvlst *lst)
+actionConstructFinalize(action_t *__restrict__ const pThis, struct nvlst *lst)
 {
 	DEFiRet;
 	uchar pszAName[64]; /* friendly name of our action */
-
-	ASSERT(pThis != NULL);
 
 	if(!strcmp((char*)modGetName(pThis->pMod), "builtin:omdiscard")) {
 		/* discard actions will be optimized out */
@@ -373,6 +384,15 @@ actionConstructFinalize(action_t * const pThis, struct nvlst *lst)
 
 	/* cache transactional attribute */
 	pThis->isTransactional = pThis->pMod->mod.om.supportsTX;
+	if(pThis->isTransactional && pThis->eParamPassing != ACT_STRING_PASSING) {
+		errmsg.LogError(0, RS_RET_INVLD_OMOD, "action '%s'(%d) is transactional but "
+		                "uses invalid paramter passing mode -- disabling "
+				"action. This is probably caused by a pre-v7 "
+				"output module that needs upgrade.",
+				pThis->pszName, pThis->iActionNbr);
+		actionDisable(pThis);
+		ABORT_FINALIZE(RS_RET_INVLD_OMOD);
+	}
 
 
 	/* support statistics gathering */
@@ -600,18 +620,6 @@ static void actionRetry(action_t * const pThis, wti_t * const pWti)
 	actionSetState(pThis, pWti, ACT_STATE_RTRY);
 	incActionResumeInRow(pWti, pThis);
 }
-
-
-/* Disable action, this means it will never again be usable
- * until rsyslog is reloaded. Use only as a last resort, but
- * depends on output module.
- * rgerhards, 2007-08-02
- */
-static void actionDisable(action_t * const pThis)
-{
-	pThis->bDisabled = 1;
-}
-
 
 /* Suspend action, this involves changing the action state as well
  * as setting the next retry time.

@@ -385,6 +385,9 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_CONF_PARSE_WARNING = -2357,/**< warning parsing config file */
 	RS_RET_CONF_WRN_FULLDLY_BELOW_HIGHWTR = -2358,/**< warning queue full delay mark below high wtr mark */
 
+	/* up to 2400 reserved for 7.5 & 7.6 */
+	RS_RET_INVLD_OMOD = -2400, /**< invalid output module, does not provide proper interfaces */
+
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */
 	RS_RET_FIELD_NOT_FOUND = 1002, /**< field() function did not find requested field */
