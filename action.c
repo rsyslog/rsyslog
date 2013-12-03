@@ -953,7 +953,6 @@ releaseDoActionParams(action_t *pAction, wti_t *pWti)
 		break;
 	case ACT_STRING_PASSING:
 		for(j = 0 ; j < pAction->iNumTpls ; ++j) {
-#warning optimiize loop condition in TX case as well! (iNumTpls!!!!!)
 			/* TODO: we can save time by not freeing everything,
 			 * but that's left for a later optimization.
 			 */
@@ -1075,7 +1074,7 @@ actionFreeParams(action_t *pThis, wti_t *pWti)
 	dbgprintf("DDDD: actionFreeParams: action %d, currIParam %d\n", pThis->iActionNbr, wrkrInfo->currIParam);
 	for(i = 0 ; i < wrkrInfo->currIParam ; ++i) {
 		iparamCurr = wrkrInfo->iparams + i;
-		for(j = 0 ; j < CONF_OMOD_NUMSTRINGS_MAXSIZE ; ++j) {
+		for(j = 0 ; j < pThis->iNumTpls ; ++j) {
 			/* TODO: we can save time by not freeing everything,
 			 * but that's left for a later optimization.
 			 */
