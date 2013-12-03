@@ -38,10 +38,6 @@
 
 /* The following structure defines immutable parameters which need to
  * be passed as action parameters. Note that the current implementation
- * does NOT focus on performance, but on a simple PoC in order to get
- * things going. TODO: Once it works, revisit this code and think about
- * an array implementation. We also need to support other passing modes
- * as well. -- gerhards, 2013-11-04
  */
 typedef struct actWrkrIParams {
 	int msgFlags;
@@ -92,76 +88,76 @@ struct wti_s {
 
 /* prototypes */
 rsRetVal wtiConstruct(wti_t **ppThis);
-rsRetVal wtiConstructFinalize(wti_t *pThis);
+rsRetVal wtiConstructFinalize(wti_t * const pThis);
 rsRetVal wtiDestruct(wti_t **ppThis);
-rsRetVal wtiWorker(wti_t *pThis);
-rsRetVal wtiSetDbgHdr(wti_t *pThis, uchar *pszMsg, size_t lenMsg);
-rsRetVal wtiCancelThrd(wti_t *pThis);
-rsRetVal wtiSetAlwaysRunning(wti_t *pThis);
-rsRetVal wtiSetState(wti_t *pThis, sbool bNew);
-rsRetVal wtiWakeupThrd(wti_t *pThis);
-sbool wtiGetState(wti_t *pThis);
+rsRetVal wtiWorker(wti_t * const pThis);
+rsRetVal wtiSetDbgHdr(wti_t * const pThis, uchar *pszMsg, size_t lenMsg);
+rsRetVal wtiCancelThrd(wti_t * const pThis);
+rsRetVal wtiSetAlwaysRunning(wti_t * const pThis);
+rsRetVal wtiSetState(wti_t * const pThis, sbool bNew);
+rsRetVal wtiWakeupThrd(wti_t * const pThis);
+sbool wtiGetState(wti_t * const pThis);
 wti_t *wtiGetDummy(void);
 PROTOTYPEObjClassInit(wti);
 PROTOTYPEpropSetMeth(wti, pszDbgHdr, uchar*);
 PROTOTYPEpropSetMeth(wti, pWtp, wtp_t*);
 
 static inline uint8_t
-getActionStateByNbr(wti_t *pWti, int iActNbr)
+getActionStateByNbr(wti_t * const pWti, int iActNbr)
 {
 	return((uint8_t) pWti->actWrkrInfo[iActNbr].flags.actState);
 }
 
 static inline uint8_t
-getActionState(wti_t *pWti, action_t *pAction)
+getActionState(wti_t * const pWti, action_t * const pAction)
 {
 	return((uint8_t) pWti->actWrkrInfo[pAction->iActionNbr].flags.actState);
 }
 
 static inline void
-setActionState(wti_t *pWti, action_t *pAction, uint8_t newState)
+setActionState(wti_t * const pWti, action_t * const pAction, uint8_t newState)
 {
 	pWti->actWrkrInfo[pAction->iActionNbr].flags.actState = newState;
 }
 
 static inline uint16_t
-getActionResumeInRow(wti_t *pWti, action_t *pAction)
+getActionResumeInRow(wti_t * const pWti, action_t * const pAction)
 {
 	return(pWti->actWrkrInfo[pAction->iActionNbr].uResumeOKinRow);
 }
 
 static inline void
-setActionResumeInRow(wti_t *pWti, action_t *pAction, uint16_t val)
+setActionResumeInRow(wti_t * const pWti, action_t * const pAction, uint16_t val)
 {
 	pWti->actWrkrInfo[pAction->iActionNbr].uResumeOKinRow = val;
 }
 
 static inline void
-incActionResumeInRow(wti_t *pWti, action_t *pAction)
+incActionResumeInRow(wti_t * const pWti, action_t * const pAction)
 {
 	pWti->actWrkrInfo[pAction->iActionNbr].uResumeOKinRow++;
 }
 
 static inline int
-getActionNbrResRtry(wti_t *pWti, action_t *pAction)
+getActionNbrResRtry(wti_t * const pWti, action_t * const pAction)
 {
 	return(pWti->actWrkrInfo[pAction->iActionNbr].iNbrResRtry);
 }
 
 static inline void
-setActionNbrResRtry(wti_t *pWti, action_t *pAction, uint16_t val)
+setActionNbrResRtry(wti_t * const pWti, action_t * const pAction, const uint16_t val)
 {
 	pWti->actWrkrInfo[pAction->iActionNbr].iNbrResRtry = val;
 }
 
 static inline void
-incActionNbrResRtry(wti_t *pWti, action_t *pAction)
+incActionNbrResRtry(wti_t * const pWti, action_t * const pAction)
 {
 	pWti->actWrkrInfo[pAction->iActionNbr].iNbrResRtry++;
 }
 
 static inline rsRetVal
-wtiNewIParam(wti_t *pWti, action_t *pAction, actWrkrIParams_t **piparams)
+wtiNewIParam(wti_t * const pWti, action_t * const pAction, actWrkrIParams_t **piparams)
 {
 	actWrkrInfo_t *wrkrInfo;
 	actWrkrIParams_t *iparams;
@@ -188,7 +184,7 @@ finalize_it:
 }
 
 static inline void
-wtiResetExecState(wti_t *pWti, batch_t *pBatch)
+wtiResetExecState(wti_t * const pWti, batch_t * const pBatch)
 {
 	pWti->execState.bPrevWasSuspended = 0;
 	pWti->execState.bDoAutoCommit = (batchNumMsgs(pBatch) == 1);

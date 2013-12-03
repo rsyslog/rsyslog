@@ -2,7 +2,7 @@
  * I am not sure yet if this will become a full-blown object. For now, this header just
  * includes the object definition and is not accompanied by code.
  *
- * Copyright 2009 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2009-2013 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -80,7 +80,7 @@ struct batch_s {
 
 /* get number of msgs for this batch */
 static inline int
-batchNumMsgs(batch_t *pBatch) {
+batchNumMsgs(const batch_t * const pBatch) {
 	return pBatch->nElem;
 }
 
@@ -90,7 +90,7 @@ batchNumMsgs(batch_t *pBatch) {
  * the state table. -- rgerhards, 2010-06-10
  */
 static inline void
-batchSetElemState(batch_t *pBatch, int i, batch_state_t newState) {
+batchSetElemState(batch_t * const pBatch, const int i, const batch_state_t newState) {
 	if(pBatch->eltState[i] != BATCH_STATE_DISC)
 		pBatch->eltState[i] = newState;
 }
@@ -100,7 +100,7 @@ batchSetElemState(batch_t *pBatch, int i, batch_state_t newState) {
  * element index is valid. -- rgerhards, 2010-06-10
  */
 static inline int
-batchIsValidElem(batch_t *pBatch, int i) {
+batchIsValidElem(const batch_t * const pBatch, const int i) {
 	return(pBatch->eltState[i] != BATCH_STATE_DISC);
 }
 
@@ -110,7 +110,7 @@ batchIsValidElem(batch_t *pBatch, int i) {
  * object itself cannot be freed! -- rgerhards, 2010-06-15
  */
 static inline void
-batchFree(batch_t *pBatch) {
+batchFree(batch_t * const pBatch) {
 	free(pBatch->pElem);
 	free(pBatch->eltState);
 }
@@ -121,7 +121,7 @@ batchFree(batch_t *pBatch) {
  * provided. -- rgerhards, 2010-06-15
  */
 static inline rsRetVal
-batchInit(batch_t *pBatch, int maxElem) {
+batchInit(batch_t *const pBatch, const int maxElem) {
 	DEFiRet;
 	pBatch->maxElem = maxElem;
 	CHKmalloc(pBatch->pElem = calloc((size_t)maxElem, sizeof(batch_obj_t)));
@@ -133,7 +133,7 @@ finalize_it:
 
 /* primarily a helper for debug purposes, get human-readble name of state */
 static inline char *
-batchState2String(batch_state_t state) {
+batchState2String(const batch_state_t state) {
 	switch(state) {
 	case BATCH_STATE_RDY:
 		return "BATCH_STATE_RDY";
