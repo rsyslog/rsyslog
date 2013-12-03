@@ -114,10 +114,10 @@
 #define NO_TIME_PROVIDED 0 /* indicate we do not provide any cached time */
 
 /* forward definitions */
-static rsRetVal processBatchMain(void *pVoid, batch_t *pBatch, wti_t *pWti);
-static rsRetVal doSubmitToActionQ(action_t *pAction, wti_t *pWti, msg_t*);
-static rsRetVal doSubmitToActionQComplex(action_t *pAction, wti_t *pWti, msg_t*);
-static rsRetVal doSubmitToActionQNotAllMark(action_t *pAction, wti_t *pWti, msg_t*);
+static rsRetVal processBatchMain(void *pVoid, batch_t *pBatch, wti_t * const pWti);
+static rsRetVal doSubmitToActionQ(action_t * const pAction, wti_t * const pWti, msg_t*);
+static rsRetVal doSubmitToActionQComplex(action_t * const pAction, wti_t * const pWti, msg_t*);
+static rsRetVal doSubmitToActionQNotAllMark(action_t * const pAction, wti_t * const pWti, msg_t*);
 
 /* object static data (once for all instances) */
 DEFobjCurrIf(obj)
@@ -218,7 +218,7 @@ static struct cnfparamblk pblk =
  * a lot. So we simply return the system time.
  */
 static inline time_t
-getActNow(action_t *pThis)
+getActNow(action_t * const pThis)
 {
 	assert(pThis != NULL);
 	if(pThis->tActNow == -1) {
@@ -278,7 +278,7 @@ actionResetQueueParams(void)
 /* destructs an action descriptor object
  * rgerhards, 2007-08-01
  */
-rsRetVal actionDestruct(action_t *pThis)
+rsRetVal actionDestruct(action_t * const pThis)
 {
 	DEFiRet;
 	ASSERT(pThis != NULL);
@@ -352,7 +352,7 @@ finalize_it:
 /* action construction finalizer
  */
 rsRetVal
-actionConstructFinalize(action_t *pThis, struct nvlst *lst)
+actionConstructFinalize(action_t * const pThis, struct nvlst *lst)
 {
 	DEFiRet;
 	uchar pszAName[64]; /* friendly name of our action */
@@ -515,7 +515,7 @@ rsRetVal actionSetGlobalResumeInterval(int iNewVal)
  * returned string must not be modified.
  * rgerhards, 2009-05-07
  */
-static uchar *getActStateName(action_t *pThis, wti_t *pWti)
+static uchar *getActStateName(action_t * const pThis, wti_t * const pWti)
 {
 	switch(getActionState(pWti, pThis)) {
 		case ACT_STATE_RDY:
@@ -537,7 +537,7 @@ static uchar *getActStateName(action_t *pThis, wti_t *pWti)
 /* returns a suitable return code based on action state
  * rgerhards, 2009-05-07
  */
-static rsRetVal getReturnCode(action_t *pThis, wti_t *pWti)
+static rsRetVal getReturnCode(action_t * const pThis, wti_t * const pWti)
 {
 	DEFiRet;
 
@@ -575,7 +575,7 @@ static rsRetVal getReturnCode(action_t *pThis, wti_t *pWti)
  * rgerhards, 2007-08-02
  */
 static inline void
-actionSetState(action_t *pThis, wti_t *pWti, uint8_t newState)
+actionSetState(action_t * const pThis, wti_t * const pWti, uint8_t newState)
 {
 	setActionState(pWti, pThis, newState);
 	DBGPRINTF("Action %d transitioned to state: %s\n",
@@ -586,7 +586,7 @@ actionSetState(action_t *pThis, wti_t *pWti, uint8_t newState)
  * mostly a dummy...
  * rgerhards, 2007-08-02
  */
-static void actionCommitted(action_t *pThis, wti_t *pWti)
+static void actionCommitted(action_t * const pThis, wti_t * const pWti)
 {
 	actionSetState(pThis, pWti, ACT_STATE_RDY);
 }
@@ -595,7 +595,7 @@ static void actionCommitted(action_t *pThis, wti_t *pWti)
 /* set action to "rtry" state.
  * rgerhards, 2007-08-02
  */
-static void actionRetry(action_t *pThis, wti_t *pWti)
+static void actionRetry(action_t * const pThis, wti_t * const pWti)
 {
 	actionSetState(pThis, pWti, ACT_STATE_RTRY);
 	incActionResumeInRow(pWti, pThis);
@@ -607,7 +607,7 @@ static void actionRetry(action_t *pThis, wti_t *pWti)
  * depends on output module.
  * rgerhards, 2007-08-02
  */
-static void actionDisable(action_t *pThis)
+static void actionDisable(action_t * const pThis)
 {
 	pThis->bDisabled = 1;
 }
@@ -622,7 +622,7 @@ static void actionDisable(action_t *pThis)
  * rgerhards, 2007-08-02
  */
 static inline void
-actionSuspend(action_t * const pThis, wti_t *pWti)
+actionSuspend(action_t * const pThis, wti_t * const pWti)
 {
 	time_t ttNow;
 	int suspendDuration;
@@ -669,7 +669,7 @@ actionSuspend(action_t * const pThis, wti_t *pWti)
  * of its inability to recover. -- rgerhards, 2010-04-26.
  */
 static rsRetVal
-actionDoRetry(action_t *pThis, wti_t *pWti)
+actionDoRetry(action_t * const pThis, wti_t * const pWti)
 {
 	int iRetries;
 	int iSleepPeriod;
@@ -729,7 +729,7 @@ finalize_it:
 
 
 static rsRetVal
-actionCheckAndCreateWrkrInstance(action_t *pThis, wti_t *pWti)
+actionCheckAndCreateWrkrInstance(action_t * const pThis, wti_t * const pWti)
 {
 	DEFiRet;
 	if(pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData == NULL) {
@@ -749,7 +749,7 @@ finalize_it:
  * changed to new action state engine -- rgerhards, 2009-05-07
  */
 static rsRetVal
-actionTryResume(action_t *pThis, wti_t *pWti)
+actionTryResume(action_t * const pThis, wti_t * const pWti)
 {
 	DEFiRet;
 	time_t ttNow = NO_TIME_PROVIDED;
@@ -789,7 +789,7 @@ finalize_it:
  * rgerhards, 2009-05-07
  */
 static inline rsRetVal
-actionPrepare(action_t *pThis, wti_t *pWti)
+actionPrepare(action_t * const pThis, wti_t * const pWti)
 {
 	DEFiRet;
 
@@ -864,7 +864,7 @@ static rsRetVal actionDbgPrint(action_t *pThis)
  * rgerhards, 2009-05-07
  */
 static rsRetVal
-prepareDoActionParams(action_t *pAction, wti_t *pWti, msg_t *pMsg, struct syslogTime *ttNow)
+prepareDoActionParams(action_t * const pAction, wti_t * const pWti, msg_t *pMsg, struct syslogTime *ttNow)
 {
 	int i;
 	struct json_object *json;
@@ -917,7 +917,7 @@ finalize_it:
 
 
 static void
-releaseDoActionParams(action_t *pAction, wti_t *pWti)
+releaseDoActionParams(action_t * const pAction, wti_t * const pWti)
 {
 	int jArr;
 	int j;
@@ -973,7 +973,7 @@ done:	return;
  * rgerhards, 2008-01-28
  */
 static rsRetVal
-actionCallDoAction(action_t *pThis, int msgFlags, void *actParams, wti_t *pWti)
+actionCallDoAction(action_t * const pThis, int msgFlags, void *actParams, wti_t * const pWti)
 {
 	DEFiRet;
 
@@ -1024,7 +1024,7 @@ finalize_it:
  * rgerhards, 2008-01-28
  */
 rsRetVal
-actionProcessMessage(action_t *pThis, int msgFlags, void *actParams, wti_t *pWti)
+actionProcessMessage(action_t * const pThis, int msgFlags, void *actParams, wti_t * const pWti)
 {
 	DEFiRet;
 
@@ -1042,7 +1042,7 @@ finalize_it:
 
 /* the following functions simulates a potential future new omo callback */
 static rsRetVal
-doTransaction(action_t *pThis, wti_t *pWti)
+doTransaction(action_t * const pThis, wti_t * const pWti)
 {
 	actWrkrInfo_t *wrkrInfo;
 	actWrkrIParams_t *iparamCurr;
@@ -1063,7 +1063,7 @@ doTransaction(action_t *pThis, wti_t *pWti)
 
 
 static void
-actionFreeParams(action_t *pThis, wti_t *pWti)
+actionFreeParams(action_t * const pThis, wti_t * const pWti)
 {
 	actWrkrInfo_t *wrkrInfo;
 	actWrkrIParams_t *iparamCurr;
@@ -1090,7 +1090,7 @@ actionFreeParams(action_t *pThis, wti_t *pWti)
 
 /* Commit try committing (do not handle retry processing and such) */
 static rsRetVal
-actionTryCommit(action_t *pThis, wti_t *pWti)
+actionTryCommit(action_t * const pThis, wti_t * const pWti)
 {
 	DEFiRet;
 
@@ -1139,7 +1139,7 @@ finalize_it:
  * rgerhards, 2013-11-06
  */
 static rsRetVal
-actionCommit(action_t *pThis, wti_t *pWti)
+actionCommit(action_t * const pThis, wti_t * const pWti)
 {
 	sbool bDone;
 	DEFiRet;
@@ -1173,7 +1173,7 @@ finalize_it:
 
 /* Commit all active transactions in *DIRECT mode* */
 void
-actionCommitAllDirect(wti_t *pWti)
+actionCommitAllDirect(wti_t * const pWti)
 {
 	int i;
 	action_t *pAction;
@@ -1192,7 +1192,7 @@ actionCommitAllDirect(wti_t *pWti)
  * queue thread if the action queue is set to "direct".
  */
 static rsRetVal
-processMsgMain(action_t *pAction, wti_t *pWti, msg_t *pMsg, struct syslogTime *ttNow)
+processMsgMain(action_t * const pAction, wti_t * const pWti, msg_t *pMsg, struct syslogTime *ttNow)
 {
 	DEFiRet;
 
@@ -1229,7 +1229,7 @@ dbgprintf("DDDD: bPrevWasSuspended now %d, action state %d\n", (int)pWti->execSt
 static rsRetVal
 processBatchMain(void *pVoid, batch_t * const pBatch, wti_t * const pWti)
 {
-	action_t *pAction = (action_t*) pVoid;
+	action_t * const pAction = (action_t*) pVoid;
 	msg_t *pMsg;
 	int i;
 	struct syslogTime ttNow;
@@ -1259,7 +1259,7 @@ dbgprintf("DDDD: processBatchMain - end\n");
  * to any current doAction() processing.
  */
 rsRetVal
-actionCallHUPHdlr(action_t *pAction)
+actionCallHUPHdlr(action_t * const pAction)
 {
 	DEFiRet;
 
@@ -1312,7 +1312,7 @@ static rsRetVal setActionQueType(void __attribute__((unused)) *pVal, uchar *pszT
  * rgerhards, 2010-06-08
  */
 static rsRetVal
-doSubmitToActionQ(action_t *pAction, wti_t *pWti, msg_t *pMsg)
+doSubmitToActionQ(action_t * const pAction, wti_t * const pWti, msg_t *pMsg)
 {
 	struct syslogTime ttNow; // TODO: think if we can buffer this in pWti
 	DEFiRet;
@@ -1341,7 +1341,7 @@ doSubmitToActionQ(action_t *pAction, wti_t *pWti, msg_t *pMsg)
  * be filtered out before calling us (what is done currently!).
  */
 rsRetVal
-actionWriteToAction(action_t *pAction, msg_t *pMsg, wti_t *pWti)
+actionWriteToAction(action_t * const pAction, msg_t *pMsg, wti_t * const pWti)
 {
 	DEFiRet;
 
@@ -1408,7 +1408,7 @@ finalize_it:
  */
 #pragma GCC diagnostic ignored "-Wempty-body"
 static rsRetVal
-doSubmitToActionQComplex(action_t *pAction, wti_t *pWti, msg_t *pMsg)
+doSubmitToActionQComplex(action_t * const pAction, wti_t * const pWti, msg_t *pMsg)
 {
 	DEFiRet;
 
@@ -1443,7 +1443,7 @@ finalize_it:
 DEFFUNC_llExecFunc(doActivateActions)
 {
 	rsRetVal localRet;
-	action_t *pThis = (action_t*) pData;
+	action_t * const pThis = (action_t*) pData;
 	BEGINfunc
 	localRet = qqueueStart(pThis->pQueue);
 	if(localRet != RS_RET_OK) {
@@ -1484,7 +1484,7 @@ activateActions(void)
  * rgerhards, 2010-06-08
  */
 static rsRetVal
-doSubmitToActionQNotAllMark(action_t *pAction, wti_t *pWti, msg_t *pMsg)
+doSubmitToActionQNotAllMark(action_t * const pAction, wti_t * const pWti, msg_t * const pMsg)
 {
 	int doProcess = 1;
 	time_t lastAct;
@@ -1525,7 +1525,7 @@ doSubmitToActionQNotAllMark(action_t *pAction, wti_t *pWti, msg_t *pMsg)
  * rgerhards, 2011-08-01
  */
 static rsRetVal
-actionApplyCnfParam(action_t *pAction, struct cnfparamvals *pvals)
+actionApplyCnfParam(action_t * const pAction, struct cnfparamvals * const pvals)
 {
 	int i;
 	
@@ -1569,7 +1569,7 @@ actionApplyCnfParam(action_t *pAction, struct cnfparamvals *pvals)
 rsRetVal
 addAction(action_t **ppAction, modInfo_t *pMod, void *pModData,
 	  omodStringRequest_t *pOMSR, struct cnfparamvals *actParams,
-	  struct nvlst *lst)
+	  struct nvlst * const lst)
 {
 	DEFiRet;
 	int i;
