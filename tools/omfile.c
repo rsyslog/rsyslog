@@ -134,7 +134,7 @@ typedef struct s_dynaFileCacheEntry dynaFileCacheEntry;
 
 typedef struct _instanceData {
 	pthread_mutex_t mutWrite; /* guard against multiple instances writing to single file */
-	uchar	*f_fname;	/* file or template name (display only) */
+	uchar	*fname;	/* file or template name (display only) */
 	uchar 	*tplName;	/* name of assigned template */
 	strm_t	*pStrm;		/* our output stream */
 	char	bDynamicName;	/* 0 - static name, 1 - dynamic name (with properties) */
@@ -305,11 +305,11 @@ CODESTARTdbgPrintInstInfo
 	if(pData->bDynamicName) {
 		dbgprintf("[dynamic]\n");
 	} else { /* regular file */
-		dbgprintf("%s%s\n", pData->f_fname,
+		dbgprintf("%s%s\n", pData->fname,
 			  (pData->pStrm == NULL) ? " (closed)" : "");
 	}
 
-	dbgprintf("\ttemplate='%s'\n", pData->f_fname);
+	dbgprintf("\ttemplate='%s'\n", pData->fname);
 	dbgprintf("\tuse async writer=%d\n", pData->bUseAsyncWriter);
 	dbgprintf("\tflush on TX end=%d\n", pData->bFlushOnTXEnd);
 	dbgprintf("\tflush interval=%d\n", pData->iFlushInterval);
@@ -429,7 +429,7 @@ static rsRetVal cflineParseOutchannel(instanceData *pData, uchar* p, omodStringR
 	}
 
 	/* OK, we finally got a correct template. So let's use it... */
-	pData->f_fname = ustrdup(pOch->pszFileTemplate);
+	pData->fname = ustrdup(pOch->pszFileTemplate);
 	pData->iSizeLimit = pOch->uSizeLimit;
 	/* WARNING: It is dangerous "just" to pass the pointer. As we
 	 * never rebuild the output channel description, this is acceptable here.
@@ -814,9 +814,9 @@ writeFile(instanceData *pData, linebuf_t *linebuf)
 		CHKiRet(prepareDynFile(pData, linebuf->filename, linebuf->iMsgOpts));
 	} else { /* "regular", non-dynafile */
 		if(pData->pStrm == NULL) {
-			CHKiRet(prepareFile(pData, pData->f_fname));
+			CHKiRet(prepareFile(pData, pData->fname));
 			if(pData->pStrm == NULL) {
-				errmsg.LogError(0, RS_RET_NO_FILE_ACCESS, "Could no open output file '%s'", pData->f_fname);
+				errmsg.LogError(0, RS_RET_NO_FILE_ACCESS, "Could no open output file '%s'", pData->fname);
 			}
 		}
 	}
@@ -915,7 +915,7 @@ ENDcreateWrkrInstance
 BEGINfreeInstance
 CODESTARTfreeInstance
 	free(pData->tplName);
-	free(pData->f_fname);
+	free(pData->fname);
 	if(pData->bDynamicName) {
 		dynaFileFreeCache(pData);
 	} else if(pData->pStrm != NULL)
@@ -998,7 +998,7 @@ BEGINdoAction
 	instanceData *pData;
 CODESTARTdoAction
 	pData = pWrkrData->pData;
-	iRet = bufferLine(pWrkrData, (pData->bDynamicName) ? ppString[1] : pData->f_fname,
+	iRet = bufferLine(pWrkrData, (pData->bDynamicName) ? ppString[1] : pData->fname,
 	                     ppString[0]);
 	if(iRet == RS_RET_OK)
 		iRet = RS_RET_DEFER_COMMIT;
@@ -1026,11 +1026,10 @@ dbgprintf("omfile: free write lock      (pWrkrData %p)\n", pWrkrData);
 ENDendTransaction
 
 
-
 static inline void
 setInstParamDefaults(instanceData *pData)
 {
-	pData->f_fname = NULL;
+	pData->fname = NULL;
 	pData->tplName = NULL;
 	pData->fileUID = -1;
 	pData->fileGID = -1;
@@ -1066,7 +1065,7 @@ setupInstStatsCtrs(instanceData *pData)
 	}
 
 	/* support statistics gathering */
-	snprintf((char*)ctrName, sizeof(ctrName), "dynafile cache %s", pData->f_fname);
+	snprintf((char*)ctrName, sizeof(ctrName), "dynafile cache %s", pData->fname);
 	ctrName[sizeof(ctrName)-1] = '\0'; /* be on the save side */
 	CHKiRet(statsobj.Construct(&(pData->stats)));
 	CHKiRet(statsobj.SetName(pData->stats, ctrName));
@@ -1235,11 +1234,11 @@ CODESTARTnewActInst
 		} else if(!strcmp(actpblk.descr[i].name, "createdirs")) {
 			pData->bCreateDirs = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "file")) {
-			pData->f_fname = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+			pData->fname = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 			CODE_STD_STRING_REQUESTnewActInst(1)
 			pData->bDynamicName = 0;
 		} else if(!strcmp(actpblk.descr[i].name, "dynafile")) {
-			pData->f_fname = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+			pData->fname = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 			CODE_STD_STRING_REQUESTnewActInst(2)
 			pData->bDynamicName = 1;
 		} else if(!strcmp(actpblk.descr[i].name, "template")) {
@@ -1254,7 +1253,7 @@ CODESTARTnewActInst
 		}
 	}
 
-	if(pData->f_fname == NULL) {
+	if(pData->fname == NULL) {
 		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "omfile: either the \"file\" or "
 				"\"dynfile\" parameter must be given");
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
@@ -1275,7 +1274,7 @@ CODESTARTnewActInst
 		/* "filename" is actually a template name, we need this as string 1. So let's add it
 		 * to the pOMSR. -- rgerhards, 2007-07-27
 		 */
-		CHKiRet(OMSRsetEntry(*ppOMSR, 1, ustrdup(pData->f_fname), OMSR_NO_RQD_TPL_OPTS));
+		CHKiRet(OMSRsetEntry(*ppOMSR, 1, ustrdup(pData->fname), OMSR_NO_RQD_TPL_OPTS));
 		// TODO: create unified code for this (legacy+v6 system)
 		/* we now allocate the cache table */
 		CHKmalloc(pData->dynCache = (dynaFileCacheEntry**)
@@ -1334,13 +1333,13 @@ CODESTARTparseSelectorAct
 		CODE_STD_STRING_REQUESTparseSelectorAct(2)
 		++p; /* eat '?' */
 		CHKiRet(cflineParseFileName(p, fname, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS, getDfltTpl()));
-		pData->f_fname = ustrdup(fname);
+		pData->fname = ustrdup(fname);
 		pData->bDynamicName = 1;
 		pData->iCurrElt = -1;		  /* no current element */
 		/* "filename" is actually a template name, we need this as string 1. So let's add it
 		 * to the pOMSR. -- rgerhards, 2007-07-27
 		 */
-		CHKiRet(OMSRsetEntry(*ppOMSR, 1, ustrdup(pData->f_fname), OMSR_NO_RQD_TPL_OPTS));
+		CHKiRet(OMSRsetEntry(*ppOMSR, 1, ustrdup(pData->fname), OMSR_NO_RQD_TPL_OPTS));
 		/* we now allocate the cache table */
 		CHKmalloc(pData->dynCache = (dynaFileCacheEntry**)
 				calloc(cs.iDynaFileCacheSize, sizeof(dynaFileCacheEntry*)));
@@ -1350,7 +1349,7 @@ CODESTARTparseSelectorAct
 	case '.':
 		CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		CHKiRet(cflineParseFileName(p, fname, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS, getDfltTpl()));
-		pData->f_fname = ustrdup(fname);
+		pData->fname = ustrdup(fname);
 		pData->bDynamicName = 0;
 		break;
 	default:
