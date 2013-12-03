@@ -64,6 +64,10 @@ typedef struct actWrkrInfo {
 	actWrkrIParams_t *iparams;
 	int currIParam;
 	int maxIParams;	/* current max */
+	uchar *staticActStrings[CONF_OMOD_NUMSTRINGS_MAXSIZE]; /**< for strings */
+				/* a cache to save malloc(), if not absolutely necessary */
+	unsigned staticLenStrings[CONF_OMOD_NUMSTRINGS_MAXSIZE];
+				/* and the same for the message length (if used) */
 	void *staticActParams[CONF_OMOD_NUMSTRINGS_MAXSIZE]; /* for non-strings */
 } actWrkrInfo_t;
 

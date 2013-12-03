@@ -334,6 +334,7 @@ rsRetVal actionConstruct(action_t **ppThis)
 	pThis->bExecWhenPrevSusp = 0;
 	pThis->bRepMsgHasMsg = 0;
 	pThis->bDisabled = 0;
+	pThis->isTransactional = 0;
 	pThis->tLastOccur = datetime.GetTime(NULL);	/* done once per action on startup only */
 	pThis->iActionNbr = iActionNbr;
 	pthread_mutex_init(&pThis->mutAction, NULL);
@@ -369,6 +370,10 @@ actionConstructFinalize(action_t *pThis, struct nvlst *lst)
 		ustrncpy(pszAName, pThis->pszName, sizeof(pszAName));
 		pszAName[sizeof(pszAName)-1] = '\0'; /* to be on the save side */
 	}
+
+	/* cache transactional attribute */
+	pThis->isTransactional = pThis->pMod->mod.om.supportsTX;
+
 
 	/* support statistics gathering */
 	CHKiRet(statsobj.Construct(&pThis->statsobj));
@@ -868,34 +873,41 @@ prepareDoActionParams(action_t *pAction, wti_t *pWti, msg_t *pMsg, struct syslog
 	DEFiRet;
 
 	pWrkrInfo = &(pWti->actWrkrInfo[pAction->iActionNbr]);
-	if(pAction->eParamPassing == ACT_STRING_PASSING) {
+	if(pAction->isTransactional) {
 		CHKiRet(wtiNewIParam(pWti, pAction, &iparams));
-	}
-
-	/* here we must loop to process all requested strings */
-	for(i = 0 ; i < pAction->iNumTpls ; ++i) {
-dbgprintf("DDDDD: generating template #%d\n", i);
-		switch(pAction->eParamPassing) {
-			case ACT_STRING_PASSING:
-				iparams->msgFlags = pMsg->msgFlags;
-				CHKiRet(tplToString(pAction->ppTpl[i], pMsg, &(iparams->staticActStrings[i]),
-					&iparams->staticLenStrings[i], ttNow));
-				iparams->staticActParams[i] = iparams->staticActStrings[i];
-				break;
-			case ACT_ARRAY_PASSING:
-				CHKiRet(tplToArray(pAction->ppTpl[i], pMsg, (uchar***) &(pWrkrInfo->staticActParams[i]), ttNow));
-				break;
-			case ACT_MSG_PASSING:
-				pWrkrInfo->staticActParams[i] = (void*) pMsg;
-				break;
-			case ACT_JSON_PASSING:
-				CHKiRet(tplToJSON(pAction->ppTpl[i], pMsg, &json, ttNow));
-				pWrkrInfo->staticActParams[i] = (void*) json;
-				break;
-			default:dbgprintf("software bug/error: unknown pAction->eParamPassing %d in prepareDoActionParams\n",
-					   (int) pAction->eParamPassing);
-				assert(0); /* software bug if this happens! */
-				break;
+		for(i = 0 ; i < pAction->iNumTpls ; ++i) {
+dbgprintf("DDDDD: generating template #%d (in-TX)\n", i);
+			iparams->msgFlags = pMsg->msgFlags;
+			CHKiRet(tplToString(pAction->ppTpl[i], pMsg, &(iparams->staticActStrings[i]),
+				&iparams->staticLenStrings[i], ttNow));
+			iparams->staticActParams[i] = iparams->staticActStrings[i];
+		}
+	} else {
+		for(i = 0 ; i < pAction->iNumTpls ; ++i) {
+dbgprintf("DDDDD: generating template #%d (non-TX)\n", i);
+			switch(pAction->eParamPassing) {
+				case ACT_STRING_PASSING:
+					CHKiRet(tplToString(pAction->ppTpl[i], pMsg, &(pWrkrInfo->staticActStrings[i]),
+						&pWrkrInfo->staticLenStrings[i], ttNow));
+					pWrkrInfo->staticActParams[i] = pWrkrInfo->staticActStrings[i];
+					break;
+				case ACT_ARRAY_PASSING:
+					CHKiRet(tplToArray(pAction->ppTpl[i], pMsg,
+						(uchar***) &(pWrkrInfo->staticActParams[i]), ttNow));
+					break;
+				case ACT_MSG_PASSING:
+					pWrkrInfo->staticActParams[i] = (void*) pMsg;
+					break;
+				case ACT_JSON_PASSING:
+					CHKiRet(tplToJSON(pAction->ppTpl[i], pMsg, &json, ttNow));
+					pWrkrInfo->staticActParams[i] = (void*) json;
+					break;
+				default:dbgprintf("software bug/error: unknown pAction->eParamPassing "
+						  "%d in prepareDoActionParams\n",
+						   (int) pAction->eParamPassing);
+					assert(0); /* software bug if this happens! */
+					break;
+			}
 		}
 	}
 
@@ -940,6 +952,15 @@ releaseDoActionParams(action_t *pAction, wti_t *pWti)
 		}
 		break;
 	case ACT_STRING_PASSING:
+		for(j = 0 ; j < pAction->iNumTpls ; ++j) {
+#warning optimiize loop condition in TX case as well! (iNumTpls!!!!!)
+			/* TODO: we can save time by not freeing everything,
+			 * but that's left for a later optimization.
+			 */
+			free(pWrkrInfo->staticActStrings[j]);
+			pWrkrInfo->staticActStrings[j] = NULL;
+			pWrkrInfo->staticLenStrings[j] = 0;
+		}
 	case ACT_MSG_PASSING:
 		/* can never happen, just to keep compiler happy! */
 		break;
@@ -1184,9 +1205,9 @@ processMsgMain(action_t *pAction, wti_t *pWti, msg_t *pMsg, struct syslogTime *t
 
 dbgprintf("DDDD: processMsgMain[act %d], %s\n", pAction->iActionNbr, pMsg->pszRawMsg);
 	iRet = prepareDoActionParams(pAction, pWti, pMsg, ttNow);
-	if(pAction->eParamPassing == ACT_STRING_PASSING) {
+	if(pAction->isTransactional) {
 		pWti->actWrkrInfo[pAction->iActionNbr].pAction = pAction;
-		dbgprintf("DDDD: action %d is string passing - executing in commit phase\n", pAction->iActionNbr);
+		dbgprintf("DDDD: action %d is transactional - executing in commit phase\n", pAction->iActionNbr);
 		actionPrepare(pAction, pWti);
 		iRet = getReturnCode(pAction, pWti);
 		FINALIZE;

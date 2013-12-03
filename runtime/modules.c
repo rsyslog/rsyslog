@@ -664,11 +664,14 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 			if(localRet != RS_RET_OK && localRet != RS_RET_MODULE_ENTRY_POINT_NOT_FOUND)
 				ABORT_FINALIZE(localRet);
 
+			pNew->mod.om.supportsTX = 1;
 			localRet = (*pNew->modQueryEtryPt)((uchar*)"beginTransaction", &pNew->mod.om.beginTransaction);
-			if(localRet == RS_RET_MODULE_ENTRY_POINT_NOT_FOUND)
+			if(localRet == RS_RET_MODULE_ENTRY_POINT_NOT_FOUND) {
 				pNew->mod.om.beginTransaction = dummyBeginTransaction;
-			else if(localRet != RS_RET_OK)
+				pNew->mod.om.supportsTX = 0;
+			} else if(localRet != RS_RET_OK) {
 				ABORT_FINALIZE(localRet);
+			}
 
 			localRet = (*pNew->modQueryEtryPt)((uchar*)"endTransaction",
 				   &pNew->mod.om.endTransaction);

@@ -1,4 +1,10 @@
 ---------------------------------------------------------------------------
+Version 8.1.3 [devel] 2013-12-??
+- failed action detection more precisely for a number of actions
+  If an action  uses string parameter passing but is non-transactional 
+  it can be executed immediately, giving a quicker indicatio of
+  action failure.
+---------------------------------------------------------------------------
 Version 8.1.2 [devel] 2013-11-28
 - support for liblognorm1 added - results in performance improvements
   Thanks to Pavel Levshin for his work in this regard.

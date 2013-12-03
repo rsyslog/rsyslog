@@ -141,6 +141,7 @@ struct modInfo_s {
 			rsRetVal (*SetShutdownImmdtPtr)(void *pData, void *pPtr);
 			rsRetVal (*createWrkrInstance)(void*ppWrkrData, void*pData);
 			rsRetVal (*freeWrkrInstance)(void*pWrkrData);
+			sbool supportsTX;	/* set if the module supports transactions */
 		} om;
 		struct { /* data for library modules */
 		    	char dummy;
