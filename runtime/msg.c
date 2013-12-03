@@ -1605,7 +1605,7 @@ getTimeReported(msg_t * const pM, enum tplFormatTypes eFmt)
 	return "INVALID eFmt OPTION!";
 }
 
-static inline char *getTimeGenerated(msg_t * const pM, enum tplFormatTypes eFmt)
+static char *getTimeGenerated(msg_t * const pM, enum tplFormatTypes eFmt)
 {
 	BEGINfunc
 	if(pM == NULL)
@@ -2819,9 +2819,9 @@ finalize_it:
 #define RET_OUT_OF_MEMORY { *pbMustBeFreed = 0;\
 	*pPropLen = sizeof("**OUT OF MEMORY**") - 1; \
 	return(UCHAR_CONSTANT("**OUT OF MEMORY**"));}
-uchar *MsgGetProp(msg_t * const pMsg, struct templateEntry *pTpe,
-                 msgPropDescr_t *pProp, rs_size_t *pPropLen,
-		 unsigned short *pbMustBeFreed, struct syslogTime *ttNow)
+uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restrict__ const pTpe,
+                 msgPropDescr_t *pProp, rs_size_t *__restrict__ const pPropLen,
+		 unsigned short *__restrict__ const pbMustBeFreed, struct syslogTime * const ttNow)
 {
 	uchar *pRes; /* result pointer */
 	rs_size_t bufLen = -1; /* length of string or -1, if not known */

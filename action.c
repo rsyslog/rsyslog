@@ -1058,7 +1058,7 @@ doTransaction(action_t * const pThis, wti_t * const pWti)
 
 /* Commit try committing (do not handle retry processing and such) */
 static rsRetVal
-actionTryCommit(action_t * const pThis, wti_t * const pWti)
+actionTryCommit(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti)
 {
 	DEFiRet;
 
