@@ -137,14 +137,14 @@ finalize_it:
  * The function takes a pointer to a template and a pointer to a msg object
  * as well as a pointer to an output buffer and its size. Note that the output
  * buffer pointer may be NULL, size 0, in which case a new one is allocated.
- * The outpub buffer is grown as required. It is the caller's duty to free the
+ * The output buffer is grown as required. It is the caller's duty to free the
  * buffer when it is done. Note that it is advisable to reuse memory, as this
  * offers big performance improvements.
  * rewritten 2009-06-19 rgerhards
  */
 rsRetVal
-tplToString(struct template *pTpl, msg_t *pMsg, uchar **ppBuf, size_t *pLenBuf,
-	    struct syslogTime *ttNow)
+tplToString(struct template * const pTpl, msg_t * const pMsg, uchar **ppBuf, size_t * const pLenBuf,
+	    struct syslogTime * const ttNow)
 {
 	DEFiRet;
 	struct templateEntry *pTpe;

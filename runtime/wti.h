@@ -55,7 +55,7 @@ typedef struct actWrkrInfo {
 	struct {
 		unsigned actState : 3;
 	} flags;
-	actWrkrIParams_t *iparams;
+	actWrkrIParams_t *iparams;	/* dynamically sized array for template parameters */
 	int currIParam;
 	int maxIParams;	/* current max */
 	unsigned staticLenStrings[CONF_OMOD_NUMSTRINGS_MAXSIZE];
@@ -103,7 +103,7 @@ PROTOTYPEpropSetMeth(wti, pszDbgHdr, uchar*);
 PROTOTYPEpropSetMeth(wti, pWtp, wtp_t*);
 
 static inline uint8_t
-getActionStateByNbr(wti_t * const pWti, int iActNbr)
+getActionStateByNbr(wti_t * const pWti, const int iActNbr)
 {
 	return((uint8_t) pWti->actWrkrInfo[iActNbr].flags.actState);
 }

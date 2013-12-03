@@ -864,7 +864,10 @@ static rsRetVal actionDbgPrint(action_t *pThis)
  * rgerhards, 2009-05-07
  */
 static rsRetVal
-prepareDoActionParams(action_t * const pAction, wti_t * const pWti, msg_t *pMsg, struct syslogTime *ttNow)
+prepareDoActionParams(action_t * __restrict__ const pAction,
+		      wti_t * __restrict__ const pWti,
+		      msg_t *__restrict__ const pMsg,
+		      struct syslogTime *ttNow)
 {
 	int i;
 	struct json_object *json;
@@ -876,7 +879,6 @@ prepareDoActionParams(action_t * const pAction, wti_t * const pWti, msg_t *pMsg,
 	if(pAction->isTransactional) {
 		CHKiRet(wtiNewIParam(pWti, pAction, &iparams));
 		for(i = 0 ; i < pAction->iNumTpls ; ++i) {
-dbgprintf("DDDDD: generating template #%d (in-TX)\n", i);
 			iparams->msgFlags = pMsg->msgFlags;
 			CHKiRet(tplToString(pAction->ppTpl[i], pMsg, (uchar**)&(iparams->staticActParams[i]),
 				&iparams->staticLenStrings[i], ttNow));
@@ -884,10 +886,10 @@ dbgprintf("DDDDD: generating template #%d (in-TX)\n", i);
 		}
 	} else {
 		for(i = 0 ; i < pAction->iNumTpls ; ++i) {
-dbgprintf("DDDDD: generating template #%d (non-TX)\n", i);
 			switch(pAction->eParamPassing) {
 				case ACT_STRING_PASSING:
-					CHKiRet(tplToString(pAction->ppTpl[i], pMsg, (uchar**)&(pWrkrInfo->staticActParams[i]),
+					CHKiRet(tplToString(pAction->ppTpl[i], pMsg,
+						(uchar**)&(pWrkrInfo->staticActParams[i]),
 						&pWrkrInfo->staticLenStrings[i], ttNow));
 					pWrkrInfo->staticActParams[i] = pWrkrInfo->staticActParams[i];
 					break;
@@ -917,7 +919,7 @@ finalize_it:
 
 
 static void
-releaseDoActionParams(action_t * const pAction, wti_t * const pWti)
+releaseDoActionParams(action_t *__restrict__ const pAction, wti_t *__restrict__ const pWti)
 {
 	int jArr;
 	int j;

@@ -4,7 +4,7 @@
  * File begun on 2007-08-06 by RGerhards (extracted from syslogd.c, which
  * was under BSD license at the time of rsyslog fork)
  *
- * Copyright 2007-2012 Adiscon GmbH.
+ * Copyright 2007-2013 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
