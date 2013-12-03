@@ -878,18 +878,18 @@ prepareDoActionParams(action_t * const pAction, wti_t * const pWti, msg_t *pMsg,
 		for(i = 0 ; i < pAction->iNumTpls ; ++i) {
 dbgprintf("DDDDD: generating template #%d (in-TX)\n", i);
 			iparams->msgFlags = pMsg->msgFlags;
-			CHKiRet(tplToString(pAction->ppTpl[i], pMsg, &(iparams->staticActStrings[i]),
+			CHKiRet(tplToString(pAction->ppTpl[i], pMsg, (uchar**)&(iparams->staticActParams[i]),
 				&iparams->staticLenStrings[i], ttNow));
-			iparams->staticActParams[i] = iparams->staticActStrings[i];
+			iparams->staticActParams[i] = iparams->staticActParams[i];
 		}
 	} else {
 		for(i = 0 ; i < pAction->iNumTpls ; ++i) {
 dbgprintf("DDDDD: generating template #%d (non-TX)\n", i);
 			switch(pAction->eParamPassing) {
 				case ACT_STRING_PASSING:
-					CHKiRet(tplToString(pAction->ppTpl[i], pMsg, &(pWrkrInfo->staticActStrings[i]),
+					CHKiRet(tplToString(pAction->ppTpl[i], pMsg, (uchar**)&(pWrkrInfo->staticActParams[i]),
 						&pWrkrInfo->staticLenStrings[i], ttNow));
-					pWrkrInfo->staticActParams[i] = pWrkrInfo->staticActStrings[i];
+					pWrkrInfo->staticActParams[i] = pWrkrInfo->staticActParams[i];
 					break;
 				case ACT_ARRAY_PASSING:
 					CHKiRet(tplToArray(pAction->ppTpl[i], pMsg,
@@ -956,8 +956,8 @@ releaseDoActionParams(action_t * const pAction, wti_t * const pWti)
 			/* TODO: we can save time by not freeing everything,
 			 * but that's left for a later optimization.
 			 */
-			free(pWrkrInfo->staticActStrings[j]);
-			pWrkrInfo->staticActStrings[j] = NULL;
+			free(pWrkrInfo->staticActParams[j]);
+			pWrkrInfo->staticActParams[j] = NULL;
 			pWrkrInfo->staticLenStrings[j] = 0;
 		}
 	case ACT_MSG_PASSING:
@@ -1078,8 +1078,8 @@ actionFreeParams(action_t * const pThis, wti_t * const pWti)
 			/* TODO: we can save time by not freeing everything,
 			 * but that's left for a later optimization.
 			 */
-			free(iparamCurr->staticActStrings[j]);
-			iparamCurr->staticActStrings[j] = NULL;
+			free(iparamCurr->staticActParams[j]);
+			iparamCurr->staticActParams[j] = NULL;
 			iparamCurr->staticLenStrings[j] = 0;
 		}
 	}
