@@ -346,7 +346,7 @@ struct cnfarray* cnfarrayNew(es_str_t *val);
 struct cnfarray* cnfarrayDup(struct cnfarray *old);
 struct cnfarray* cnfarrayAdd(struct cnfarray *ar, es_str_t *val);
 void cnfarrayContentDestruct(struct cnfarray *ar);
-char* getFIOPName(unsigned iFIOP);
+const char* getFIOPName(unsigned iFIOP);
 rsRetVal initRainerscript(void);
 void unescapeStr(uchar *s, int len);
 char * tokenval2str(int tok);

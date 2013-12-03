@@ -10,6 +10,8 @@ Version 8.1.3 [devel] 2013-12-??
     problem, as in any case a single messages' memory footprint should
     be far lower than that of a whole set of messages (especially on
     busy servers).
+  * used variable qualifiers (const, __restrict__) to hopefully help
+    the compiler to generate somewhat faster code
 - failed action detection more precisely for a number of actions
   If an action  uses string parameter passing but is non-transactional 
   it can be executed immediately, giving a quicker indicatio of
