@@ -116,7 +116,7 @@ static int bFirstRegexpErrmsg = 1; /**< did we already do a "can't load regexp" 
 /* helper to tplToString and strgen's, extends buffer */
 #define ALLOC_INC 128
 rsRetVal
-ExtendBuf(uchar **pBuf, size_t *pLenBuf, size_t iMinSize)
+ExtendBuf(uchar **pBuf, size_t *__restrict__ const pLenBuf, const size_t iMinSize)
 {
 	uchar *pNewBuf;
 	size_t iNewSize;
@@ -143,11 +143,12 @@ finalize_it:
  * rewritten 2009-06-19 rgerhards
  */
 rsRetVal
-tplToString(struct template * const pTpl, msg_t * const pMsg, uchar **ppBuf, size_t * const pLenBuf,
+tplToString(struct template *__restrict__ const pTpl, msg_t *__restrict__ const pMsg,
+	    uchar **ppBuf, size_t *__restrict__ const pLenBuf,
 	    struct syslogTime * const ttNow)
 {
 	DEFiRet;
-	struct templateEntry *pTpe;
+	struct templateEntry *__restrict__ pTpe;
 	size_t iBuf;
 	unsigned short bMustBeFreed = 0;
 	uchar *pVal;
@@ -228,7 +229,7 @@ tplToString(struct template * const pTpl, msg_t * const pMsg, uchar **ppBuf, siz
 		/* in the weired case of an *empty* template, this can happen.
 		 * it is debatable if we should really fix it here or simply
 		 * forbid that case. However, performance toll is minimal, so 
-		 * I tend to permit it. -- 201011-05 rgerhards
+		 * I tend to permit it. -- 2010-11-05 rgerhards
 		 */
 		CHKiRet(ExtendBuf(ppBuf, pLenBuf, iBuf + 1));
 	}

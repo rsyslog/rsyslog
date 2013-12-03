@@ -170,12 +170,13 @@ wtiNewIParam(wti_t * const pWti, action_t * const pAction, actWrkrIParams_t **pi
 		dbgprintf("DDDD: extending iparams, max %d\n", wrkrInfo->maxIParams);
 		newMax = (wrkrInfo->maxIParams == 0) ? CONF_IPARAMS_BUFSIZE : 2 * wrkrInfo->maxIParams;
 		CHKmalloc(iparams = realloc(wrkrInfo->iparams, sizeof(actWrkrIParams_t) * newMax));
+		memset(iparams+wrkrInfo->maxIParams, 0,
+		       sizeof(actWrkrIParams_t) * (newMax - wrkrInfo->maxIParams));
 		wrkrInfo->iparams = iparams;
 		wrkrInfo->maxIParams = newMax;
 	}
 dbgprintf("DDDD: adding param  %d for action %d\n", wrkrInfo->currIParam, pAction->iActionNbr);
 	iparams = wrkrInfo->iparams + wrkrInfo->currIParam;
-	memset(iparams, 0, sizeof(actWrkrIParams_t));
 	*piparams = iparams;
 	++wrkrInfo->currIParam;
 

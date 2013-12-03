@@ -872,7 +872,7 @@ prepareDoActionParams(action_t * __restrict__ const pAction,
 	int i;
 	struct json_object *json;
 	actWrkrIParams_t *iparams;
-	actWrkrInfo_t *pWrkrInfo;
+	actWrkrInfo_t *__restrict__ pWrkrInfo;
 	DEFiRet;
 
 	pWrkrInfo = &(pWti->actWrkrInfo[pAction->iActionNbr]);
@@ -891,7 +891,6 @@ prepareDoActionParams(action_t * __restrict__ const pAction,
 					CHKiRet(tplToString(pAction->ppTpl[i], pMsg,
 						(uchar**)&(pWrkrInfo->staticActParams[i]),
 						&pWrkrInfo->staticLenStrings[i], ttNow));
-					pWrkrInfo->staticActParams[i] = pWrkrInfo->staticActParams[i];
 					break;
 				case ACT_ARRAY_PASSING:
 					CHKiRet(tplToArray(pAction->ppTpl[i], pMsg,
@@ -923,7 +922,7 @@ releaseDoActionParams(action_t *__restrict__ const pAction, wti_t *__restrict__ 
 {
 	int jArr;
 	int j;
-	actWrkrInfo_t *pWrkrInfo;
+	actWrkrInfo_t *__restrict__ pWrkrInfo;
 	uchar ***ppMsgs;
 
 	if(pAction->eParamPassing == ACT_STRING_PASSING || pAction->eParamPassing == ACT_MSG_PASSING)
@@ -954,14 +953,7 @@ releaseDoActionParams(action_t *__restrict__ const pAction, wti_t *__restrict__ 
 		}
 		break;
 	case ACT_STRING_PASSING:
-		for(j = 0 ; j < pAction->iNumTpls ; ++j) {
-			/* TODO: we can save time by not freeing everything,
-			 * but that's left for a later optimization.
-			 */
-			free(pWrkrInfo->staticActParams[j]);
-			pWrkrInfo->staticActParams[j] = NULL;
-			pWrkrInfo->staticLenStrings[j] = 0;
-		}
+		/* strings are destructed when the worker terminates */
 	case ACT_MSG_PASSING:
 		/* can never happen, just to keep compiler happy! */
 		break;
@@ -1064,32 +1056,6 @@ doTransaction(action_t * const pThis, wti_t * const pWti)
 }
 
 
-static void
-actionFreeParams(action_t * const pThis, wti_t * const pWti)
-{
-	actWrkrInfo_t *wrkrInfo;
-	actWrkrIParams_t *iparamCurr;
-	int i;
-	int j;
-
-	wrkrInfo = &(pWti->actWrkrInfo[pThis->iActionNbr]);
-	dbgprintf("DDDD: actionFreeParams: action %d, currIParam %d\n", pThis->iActionNbr, wrkrInfo->currIParam);
-	for(i = 0 ; i < wrkrInfo->currIParam ; ++i) {
-		iparamCurr = wrkrInfo->iparams + i;
-		for(j = 0 ; j < pThis->iNumTpls ; ++j) {
-			/* TODO: we can save time by not freeing everything,
-			 * but that's left for a later optimization.
-			 */
-			free(iparamCurr->staticActParams[j]);
-			iparamCurr->staticActParams[j] = NULL;
-			iparamCurr->staticLenStrings[j] = 0;
-		}
-	}
-	wrkrInfo->currIParam = 0; /* reset to beginning */
-	releaseDoActionParams(pThis, pWti);
-}
-
-
 /* Commit try committing (do not handle retry processing and such) */
 static rsRetVal
 actionTryCommit(action_t * const pThis, wti_t * const pWti)
@@ -1131,7 +1097,7 @@ dbgprintf("DDDDD: calling endTransaction for action %d\n", pThis->iActionNbr);
 	iRet = getReturnCode(pThis, pWti);
 
 finalize_it:
-	actionFreeParams(pThis, pWti);
+	pWti->actWrkrInfo[pThis->iActionNbr].currIParam = 0; /* reset to beginning */
 	RETiRet;
 }
 

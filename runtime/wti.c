@@ -177,7 +177,6 @@ CODESTARTobjDestruct(wti)
 	free(pThis->actWrkrInfo);
 	pthread_cond_destroy(&pThis->pcondBusy);
 	DESTROY_ATOMIC_HELPER_MUT(pThis->mutIsRunning);
-
 	free(pThis->pszDbgHdr);
 ENDobjDestruct(wti)
 
@@ -285,19 +284,18 @@ doIdleProcessing(wti_t *pThis, wtp_t *pWtp, int *pbInactivityTOOccured)
  */
 #pragma GCC diagnostic ignored "-Wempty-body"
 rsRetVal
-wtiWorker(wti_t *pThis)
+wtiWorker(wti_t *__restrict__ const pThis)
 {
-	wtp_t *pWtp;		/* our worker thread pool */
+	wtp_t *__restrict__ const pWtp = pThis->pWtp; /* our worker thread pool -- shortcut */
+	const action_t *__restrict__ pAction;
 	int bInactivityTOOccured = 0;
 	rsRetVal localRet;
 	rsRetVal terminateRet;
+	actWrkrInfo_t *__restrict__ wrkrInfo;
+	actWrkrIParams_t *__restrict__ iparamCurr;
 	int iCancelStateSave;
-	int i;
+	int i, j, k;
 	DEFiRet;
-
-	ISOBJ_TYPE_assert(pThis, wti);
-	pWtp = pThis->pWtp; /* shortcut */
-	ISOBJ_TYPE_assert(pWtp, wtp);
 
 	dbgSetThrdName(pThis->pszDbgHdr);
 	pthread_cleanup_push(wtiWorkerCancelCleanup, pThis);
@@ -353,17 +351,26 @@ dbgprintf("DDDD: wti %p: worker starting\n", pThis);
 
 	d_pthread_mutex_unlock(pWtp->pmutUsr);
 
-	DBGPRINTF("DDDD: wti %p: worker cleanup up action instances\n", pThis);
+	DBGPRINTF("DDDD: wti %p: worker cleanup action instances\n", pThis);
 	for(i = 0 ; i < iActionNbr ; ++i) {
-		dbgprintf("wti %p, action %d, ptr %p\n", pThis, i, pThis->actWrkrInfo[i].actWrkrData);
-		if(pThis->actWrkrInfo[i].actWrkrData != NULL) {
-			dbgprintf("DDDD: calling freeWrkrData!\n");
-			pThis->actWrkrInfo[i].pAction->pMod->mod.om.freeWrkrInstance(pThis->actWrkrInfo[i].actWrkrData);
-			free(pThis->actWrkrInfo[i].iparams);
-			pThis->actWrkrInfo[i].actWrkrData = NULL; /* re-init for next activation */
-			pThis->actWrkrInfo[i].iparams = NULL;
-			pThis->actWrkrInfo[i].currIParam = 0;
-			pThis->actWrkrInfo[i].maxIParams = 0;
+		wrkrInfo = &(pThis->actWrkrInfo[i]);
+		dbgprintf("wti %p, action %d, ptr %p\n", pThis, i, wrkrInfo->actWrkrData);
+		if(wrkrInfo->actWrkrData != NULL) {
+			dbgprintf("DDDD: calling freeWrkrData, currIParam %d\n", wrkrInfo->currIParam);
+			pAction = wrkrInfo->pAction;
+			pAction->pMod->mod.om.freeWrkrInstance(wrkrInfo->actWrkrData);
+			/* free iparam "cache" - we need to go through to max! */
+			for(j = 0 ; j < wrkrInfo->maxIParams ; ++j) {
+				iparamCurr = wrkrInfo->iparams + j;
+				for(k = 0 ; k < pAction->iNumTpls ; ++k) {
+					free(iparamCurr->staticActParams[k]);
+				}
+			}
+			free(wrkrInfo->iparams);
+			wrkrInfo->actWrkrData = NULL; /* re-init for next activation */
+			wrkrInfo->iparams = NULL;
+			wrkrInfo->currIParam = 0;
+			wrkrInfo->maxIParams = 0;
 		}
 	}
 
