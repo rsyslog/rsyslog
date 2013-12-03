@@ -1072,7 +1072,6 @@ actionFreeParams(action_t *pThis, wti_t *pWti)
 static rsRetVal
 actionTryCommit(action_t *pThis, wti_t *pWti)
 {
-	//actWrkrInfo_t *wrkrInfo;
 	DEFiRet;
 
 	doTransaction(pThis, pWti);
@@ -1208,7 +1207,7 @@ dbgprintf("DDDD: bPrevWasSuspended now %d, action state %d\n", (int)pWti->execSt
 /* This entry point is called by the ACTION queue (not main queue!)
  */
 static rsRetVal
-processBatchMain(void *pVoid, batch_t *pBatch, wti_t *pWti)
+processBatchMain(void *pVoid, batch_t * const pBatch, wti_t * const pWti)
 {
 	action_t *pAction = (action_t*) pVoid;
 	msg_t *pMsg;
@@ -1224,8 +1223,7 @@ processBatchMain(void *pVoid, batch_t *pBatch, wti_t *pWti)
 		if(batchIsValidElem(pBatch, i)) {
 			pMsg = pBatch->pElem[i].pMsg;
 			iRet = processMsgMain(pAction, pWti, pMsg, &ttNow);
-		// TODO: we must refactor this!  flag messages as committed
-		batchSetElemState(pBatch, i, BATCH_STATE_COMM);
+			batchSetElemState(pBatch, i, BATCH_STATE_COMM);
 		}
 	}
 
