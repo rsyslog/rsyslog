@@ -37,7 +37,7 @@
 /* note: 3 bit bit field --> highest value is 7! */
 
 /* The following structure defines immutable parameters which need to
- * be passed as action parameters. Note that the current implementation
+ * be passed as action parameters.
  */
 typedef struct actWrkrIParams {
 	int msgFlags;

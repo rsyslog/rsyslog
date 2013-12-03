@@ -1022,7 +1022,6 @@ CODESTARTendTransaction
 	}
 finalize_it:
 	pthread_mutex_unlock(&pData->mutWrite);
-dbgprintf("omfile: free write lock      (pWrkrData %p)\n", pWrkrData);
 ENDendTransaction
 
 

@@ -143,9 +143,11 @@ finalize_it:
  * rewritten 2009-06-19 rgerhards
  */
 rsRetVal
-tplToString(struct template *__restrict__ const pTpl, msg_t *__restrict__ const pMsg,
-	    uchar **ppBuf, size_t *__restrict__ const pLenBuf,
-	    struct syslogTime * const ttNow)
+tplToString(struct template *__restrict__ const pTpl,
+	    msg_t *__restrict__ const pMsg,
+	    uchar **ppBuf,
+	    size_t *__restrict__ const pLenBuf,
+	    struct syslogTime *const ttNow)
 {
 	DEFiRet;
 	struct templateEntry *__restrict__ pTpe;
