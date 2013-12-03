@@ -34,6 +34,16 @@ return a valid result, as you can't really add two letters (to
 concatenate them, use the concatenation operator &amp;).
 &nbsp;However, all type conversions are automatically done by the
 script interpreter when there is need to do so.<br>
+<h3>Constant Strings</h3>
+<p>String constants are necessary in many places: comparisons,
+configuration parameter values and function arguments, to name a
+few important ones.
+<p>In constant strings, special characters are escape by prepending a
+backslash in front of them -- just in the same way this is done in the
+C programming language or PHP.
+<p>If in doubt how to properly escape, use the
+<a href="http://www.rsyslog.com/rainerscript-constant-string-escaper/">RainerScript
+String Escape Online Tool</a>.
 <h2>Variable (Property) types</h2>
 <p>All rsyslog properties (see the <a href="property_replacer.html">property
 replacer</a> page for a list) can be used in RainerScript. In addition, it also
