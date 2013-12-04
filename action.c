@@ -885,35 +885,34 @@ prepareDoActionParams(action_t * __restrict__ const pAction,
 	if(pAction->isTransactional) {
 		CHKiRet(wtiNewIParam(pWti, pAction, &iparams));
 		for(i = 0 ; i < pAction->iNumTpls ; ++i) {
-			CHKiRet(tplToString(pAction->ppTpl[i], pMsg, (uchar**)&(iparams->param[i]),
-				&iparams->lenBuf[i], &iparams->lenStr[i], ttNow));
-			iparams->param[i] = iparams->param[i];
+			CHKiRet(tplToString(pAction->ppTpl[i], pMsg, 
+					    &actParam(iparams, pAction->iNumTpls, 0, i),
+				            ttNow));
 		}
 	} else {
 		for(i = 0 ; i < pAction->iNumTpls ; ++i) {
 			switch(pAction->eParamPassing) {
-				case ACT_STRING_PASSING:
-					CHKiRet(tplToString(pAction->ppTpl[i], pMsg,
-						(uchar**)&(pWrkrInfo->actParams.param[i]),
-						&pWrkrInfo->actParams.lenBuf[i],
-						&pWrkrInfo->actParams.lenStr[i], ttNow));
-					break;
-				case ACT_ARRAY_PASSING:
-					CHKiRet(tplToArray(pAction->ppTpl[i], pMsg,
-						(uchar***) &(pWrkrInfo->actParams.param[i]), ttNow));
-					break;
-				case ACT_MSG_PASSING:
-					pWrkrInfo->actParams.param[i] = (void*) pMsg;
-					break;
-				case ACT_JSON_PASSING:
-					CHKiRet(tplToJSON(pAction->ppTpl[i], pMsg, &json, ttNow));
-					pWrkrInfo->actParams.param[i] = (void*) json;
-					break;
-				default:dbgprintf("software bug/error: unknown pAction->eParamPassing "
-						  "%d in prepareDoActionParams\n",
-						   (int) pAction->eParamPassing);
-					assert(0); /* software bug if this happens! */
-					break;
+			case ACT_STRING_PASSING:
+				CHKiRet(tplToString(pAction->ppTpl[i], pMsg,
+					   &actParam(pWrkrInfo->p.nontx.actParams, pAction->iNumTpls, 0, i),
+					   ttNow));
+				break;
+			case ACT_ARRAY_PASSING:
+				CHKiRet(tplToArray(pAction->ppTpl[i], pMsg,
+					(uchar***) &(pWrkrInfo->p.nontx.actParams[i].param), ttNow));
+				break;
+			case ACT_MSG_PASSING:
+				pWrkrInfo->p.nontx.actParams[i].param = (void*) pMsg;
+				break;
+			case ACT_JSON_PASSING:
+				CHKiRet(tplToJSON(pAction->ppTpl[i], pMsg, &json, ttNow));
+				pWrkrInfo->p.nontx.actParams[i].param = (void*) json;
+				break;
+			default:dbgprintf("software bug/error: unknown pAction->eParamPassing "
+					  "%d in prepareDoActionParams\n",
+					   (int) pAction->eParamPassing);
+				assert(0); /* software bug if this happens! */
+				break;
 			}
 		}
 	}
@@ -937,7 +936,7 @@ releaseDoActionParams(action_t *__restrict__ const pAction, wti_t *__restrict__ 
 	pWrkrInfo = &(pWti->actWrkrInfo[pAction->iActionNbr]);
 	switch(pAction->eParamPassing) {
 	case ACT_ARRAY_PASSING:
-		ppMsgs = (uchar***) pWrkrInfo->actParams.param;
+		ppMsgs = (uchar***) pWrkrInfo->p.nontx.actParams[0].param;
 		for(j = 0 ; j < pAction->iNumTpls ; ++j) {
 			if(((uchar**)ppMsgs)[j] != NULL) {
 				jArr = 0;
@@ -954,8 +953,8 @@ releaseDoActionParams(action_t *__restrict__ const pAction, wti_t *__restrict__ 
 	case ACT_JSON_PASSING:
 		for(j = 0 ; j < pAction->iNumTpls ; ++j) {
 			json_object_put((struct json_object*)
-					pWrkrInfo->actParams.param[j]);
-			pWrkrInfo->actParams.param[j] = NULL;
+					pWrkrInfo->p.nontx.actParams[j].param);
+			pWrkrInfo->p.nontx.actParams[j].param = NULL;
 		}
 		break;
 	case ACT_STRING_PASSING:
@@ -1034,7 +1033,7 @@ actionCallCommitTransaction(action_t * const pThis,
 
 	iRet = pThis->pMod->mod.om.commitTransaction(
 		    pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData,
-		    wrkrInfo->iparams, wrkrInfo->currIParam);
+		    wrkrInfo->p.tx.iparams, wrkrInfo->p.tx.currIParam);
 	switch(iRet) {
 		case RS_RET_OK:
 			actionCommitted(pThis, pWti);
@@ -1093,20 +1092,26 @@ static rsRetVal
 doTransaction(action_t * const pThis, wti_t * const pWti)
 {
 	actWrkrInfo_t *wrkrInfo;
-	actWrkrIParams_t *iparamCurr;
 	int i;
+	void *param[CONF_OMOD_NUMSTRINGS_MAXSIZE];
+	int j;
 	DEFiRet;
 
 	wrkrInfo = &(pWti->actWrkrInfo[pThis->iActionNbr]);
 	if(pThis->pMod->mod.om.commitTransaction != NULL) {
 		dbgprintf("DDDD: have commitTransaction IF, using that\n");
 		CHKiRet(actionCallCommitTransaction(pThis, wrkrInfo, pWti));
-	} else {
+	} else { /* note: this branch is for compatibility with old TX modules.
+		  * It's performance is sub-optimal, as it is an interim solution.
+	          * It is thought that all should be upgraded. When this happens,
+		  * this code branch is no longer necessary. -- rgerhards, 2013-12-04
+		  */
 		dbgprintf("DDDD: doTransaction: action %d, currIParams %d\n",
-			   pThis->iActionNbr, wrkrInfo->currIParam);
-		for(i = 0 ; i < wrkrInfo->currIParam ; ++i) {
-			iparamCurr = wrkrInfo->iparams + i;
-			iRet = actionProcessMessage(pThis, iparamCurr->param, pWti);
+			   pThis->iActionNbr, wrkrInfo->p.tx.currIParam);
+		for(i = 0 ; i < wrkrInfo->p.tx.currIParam ; ++i) {
+			for(j = 0 ; j < pThis->iNumTpls ; ++j)
+				param[j] = actParam(wrkrInfo->p.tx.iparams, pThis->iNumTpls, i, j).param;
+			iRet = actionProcessMessage(pThis, param, pWti);
 		}
 	}
 finalize_it:
@@ -1155,7 +1160,7 @@ dbgprintf("DDDDD: calling endTransaction for action %d\n", pThis->iActionNbr);
 	iRet = getReturnCode(pThis, pWti);
 
 finalize_it:
-	pWti->actWrkrInfo[pThis->iActionNbr].currIParam = 0; /* reset to beginning */
+	pWti->actWrkrInfo[pThis->iActionNbr].p.tx.currIParam = 0; /* reset to beginning */
 	RETiRet;
 }
 
@@ -1206,7 +1211,7 @@ actionCommitAllDirect(wti_t * const pWti)
 
 	for(i = 0 ; i < iActionNbr ; ++i) {
 		dbgprintf("DDDD: actionCommitAll: action %d, state %u, nbr to commit %d\n",
-			  i, getActionStateByNbr(pWti, i), pWti->actWrkrInfo->currIParam);
+			  i, getActionStateByNbr(pWti, i), pWti->actWrkrInfo->p.tx.currIParam);
 		pAction = pWti->actWrkrInfo[i].pAction;
 		if(pAction != NULL && pAction->pQueue->qType == QUEUETYPE_DIRECT)
 			actionCommit(pAction, pWti);
@@ -1239,7 +1244,7 @@ dbgprintf("DDDD: processMsgMain[act %d], %s\n", pAction->iActionNbr, pMsg->pszRa
 	}
 
 	iRet = actionProcessMessage(pAction,
-				    pWti->actWrkrInfo[pAction->iActionNbr].actParams.param,
+				    pWti->actWrkrInfo[pAction->iActionNbr].p.nontx.actParams,
 				    pWti);
 	releaseDoActionParams(pAction, pWti);
 finalize_it:

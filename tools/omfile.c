@@ -142,6 +142,7 @@ typedef struct _instanceData {
 	int	fDirCreateMode;	/* creation mode for mkdir() */
 	int	bCreateDirs;	/* auto-create directories? */
 	int	bSyncFile;	/* should the file by sync()'ed? 1- yes, 0- no */
+	uint8_t iNumTpls;	/* number of tpls we use */
 	uid_t	fileUID;	/* IDs for creation */
 	uid_t	dirUID;
 	gid_t	fileGID;
@@ -788,7 +789,8 @@ finalize_it:
 /* rgerhards 2004-11-11: write to a file output.  */
 static rsRetVal
 writeFile(instanceData *pData,
-	  const actWrkrIParams_t *__restrict__ const pParam)
+	  const actWrkrIParams_t *__restrict__ const pParam,
+	  const int iMsg)
 {
 	DEFiRet;
 
@@ -797,8 +799,9 @@ writeFile(instanceData *pData,
 	 * check if it still is ok or a new file needs to be created
 	 */
 	if(pData->bDynamicName) {
-		DBGPRINTF("omfile: file to log to: %s\n", (uchar*) pParam->param[1]);
-		CHKiRet(prepareDynFile(pData, (uchar*) pParam->param[1]));
+		DBGPRINTF("omfile: file to log to: %s\n",
+			  (uchar*) actParam(pParam, pData->iNumTpls, iMsg, 1).param);
+		CHKiRet(prepareDynFile(pData, (uchar*) actParam(pParam, pData->iNumTpls, iMsg, 1).param));
 	} else { /* "regular", non-dynafile */
 		if(pData->pStrm == NULL) {
 			CHKiRet(prepareFile(pData, pData->fname));
@@ -809,7 +812,9 @@ writeFile(instanceData *pData,
 		}
 	}
 
-	CHKiRet(doWrite(pData, pParam->param[0], pParam->lenStr[0]));
+	CHKiRet(doWrite(pData,
+		 	(uchar*) actParam(pParam, pData->iNumTpls, iMsg, 0).param,
+		 	actParam(pParam, pData->iNumTpls, iMsg, 0).lenStr));
 
 finalize_it:
 	RETiRet;
@@ -948,7 +953,7 @@ CODESTARTcommitTransaction
 	pthread_mutex_lock(&pData->mutWrite);
 
 	for(i = 0 ; i < nParams ; ++i) {
-		writeFile(pData, pParams + i);
+		writeFile(pData, pParams, i);
 	}
 	/* Note: pStrm may be NULL if there was an error opening the stream */
 	if(pData->bFlushOnTXEnd && pData->pStrm != NULL) {
@@ -1207,12 +1212,14 @@ CODESTARTnewActInst
 
 	tplToUse = ustrdup((pData->tplName == NULL) ? getDfltTpl() : pData->tplName);
 	CHKiRet(OMSRsetEntry(*ppOMSR, 0, tplToUse, OMSR_NO_RQD_TPL_OPTS));
+	pData->iNumTpls = 1;
 
 	if(pData->bDynamicName) {
 		/* "filename" is actually a template name, we need this as string 1. So let's add it
 		 * to the pOMSR. -- rgerhards, 2007-07-27
 		 */
 		CHKiRet(OMSRsetEntry(*ppOMSR, 1, ustrdup(pData->fname), OMSR_NO_RQD_TPL_OPTS));
+		pData->iNumTpls = 2;
 		// TODO: create unified code for this (legacy+v6 system)
 		/* we now allocate the cache table */
 		CHKmalloc(pData->dynCache = (dynaFileCacheEntry**)
@@ -1254,6 +1261,7 @@ CODESTARTparseSelectorAct
 	switch(*p) {
         case '$':
 		CODE_STD_STRING_REQUESTparseSelectorAct(1)
+		pData->iNumTpls = 1;
 		/* rgerhards 2005-06-21: this is a special setting for output-channel
 		 * definitions. In the long term, this setting will probably replace
 		 * anything else, but for the time being we must co-exist with the
@@ -1269,6 +1277,7 @@ CODESTARTparseSelectorAct
 		   * a template name. rgerhards, 2007-07-03
 		   */
 		CODE_STD_STRING_REQUESTparseSelectorAct(2)
+		pData->iNumTpls = 2;
 		++p; /* eat '?' */
 		CHKiRet(cflineParseFileName(p, fname, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS, getDfltTpl()));
 		pData->fname = ustrdup(fname);
@@ -1286,6 +1295,7 @@ CODESTARTparseSelectorAct
 	case '/':
 	case '.':
 		CODE_STD_STRING_REQUESTparseSelectorAct(1)
+		pData->iNumTpls = 2;
 		CHKiRet(cflineParseFileName(p, fname, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS, getDfltTpl()));
 		pData->fname = ustrdup(fname);
 		pData->bDynamicName = 0;

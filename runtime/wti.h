@@ -39,15 +39,22 @@
 typedef struct actWrkrInfo {
 	action_t *pAction;
 	void *actWrkrData;
-	uint16_t uResumeOKinRow;/* number of times in a row that resume said OK with an immediate failure following */
+	uint16_t uResumeOKinRow;/* number of times in a row that resume said OK with an
+				   immediate failure following */
 	int	iNbrResRtry;	/* number of retries since last suspend */
 	struct {
 		unsigned actState : 3;
 	} flags;
-	actWrkrIParams_t *iparams;	/* dynamically sized array for template parameters */
-	int currIParam;
-	int maxIParams;	/* current max */
-	actWrkrIParams_t actParams;
+	union {
+		struct {
+			actWrkrIParams_t *iparams;/* dynamically sized array for transactional outputs */
+			int currIParam;
+			int maxIParams;	/* current max */
+		} tx;
+		struct {
+			actWrkrIParams_t actParams[CONF_OMOD_NUMSTRINGS_MAXSIZE];
+		} nontx;
+	} p; /* short name for "parameters" */
 } actWrkrInfo_t;
 
 /* the worker thread instance class */
@@ -58,9 +65,11 @@ struct wti_s {
 	sbool bAlwaysRunning;	/* should this thread always run? */
 	int *pbShutdownImmediate;/* end processing of this batch immediately if set to 1 */
 	wtp_t *pWtp; /* my worker thread pool (important if only the work thread instance is passed! */
-	batch_t batch; /* pointer to an object array meaningful for current user pointer (e.g. queue pUsr data elemt) */
+	batch_t batch; /* pointer to an object array meaningful for current user
+			  pointer (e.g. queue pUsr data elemt) */
 	uchar *pszDbgHdr;	/* header string for debug messages */
-	actWrkrInfo_t *actWrkrInfo; /* *array* of action wrkr infos for all actions (sized for max nbr of actions in config!) */
+	actWrkrInfo_t *actWrkrInfo; /* *array* of action wrkr infos for all actions
+				      (sized for max nbr of actions in config!) */
 	pthread_cond_t pcondBusy; /* condition to wake up the worker, protected by pmutUsr in wtp */
 	DEF_ATOMIC_HELPER_MUT(mutIsRunning);
 	struct {
@@ -145,27 +154,28 @@ incActionNbrResRtry(wti_t * const pWti, action_t * const pAction)
 
 /* note: this function is only called once in action.c */
 static inline rsRetVal
-wtiNewIParam(wti_t * const pWti, action_t * const pAction, actWrkrIParams_t **piparams)
+wtiNewIParam(wti_t *const pWti, action_t *const pAction, actWrkrIParams_t **piparams)
 {
 	actWrkrInfo_t *const wrkrInfo = &(pWti->actWrkrInfo[pAction->iActionNbr]);
 	actWrkrIParams_t *iparams;
 	int newMax;
 	DEFiRet;
 
-	if(wrkrInfo->currIParam == wrkrInfo->maxIParams) {
+	if(wrkrInfo->p.tx.currIParam == wrkrInfo->p.tx.maxIParams) {
 		/* we need to extend */
-		dbgprintf("DDDD: extending iparams, max %d\n", wrkrInfo->maxIParams);
-		newMax = (wrkrInfo->maxIParams == 0) ? CONF_IPARAMS_BUFSIZE : 2 * wrkrInfo->maxIParams;
-		CHKmalloc(iparams = realloc(wrkrInfo->iparams, sizeof(actWrkrIParams_t) * newMax));
-		memset(iparams+wrkrInfo->maxIParams, 0,
-		       sizeof(actWrkrIParams_t) * (newMax - wrkrInfo->maxIParams));
-		wrkrInfo->iparams = iparams;
-		wrkrInfo->maxIParams = newMax;
+		dbgprintf("DDDD: extending iparams, max %d\n", wrkrInfo->p.tx.maxIParams);
+		newMax = (wrkrInfo->p.tx.maxIParams == 0) ? CONF_IPARAMS_BUFSIZE
+							  : 2 * wrkrInfo->p.tx.maxIParams;
+		CHKmalloc(iparams = realloc(wrkrInfo->p.tx.iparams, sizeof(actWrkrIParams_t) * newMax));
+		memset(iparams+wrkrInfo->p.tx.maxIParams, 0,
+		       sizeof(actWrkrIParams_t) * (newMax - wrkrInfo->p.tx.maxIParams));
+		wrkrInfo->p.tx.iparams = iparams;
+		wrkrInfo->p.tx.maxIParams = newMax;
 	}
-dbgprintf("DDDD: adding param  %d for action %d\n", wrkrInfo->currIParam, pAction->iActionNbr);
-	iparams = wrkrInfo->iparams + wrkrInfo->currIParam;
+dbgprintf("DDDD: adding param  %d for action %d\n", wrkrInfo->p.tx.currIParam, pAction->iActionNbr);
+	iparams = wrkrInfo->p.tx.iparams + wrkrInfo->p.tx.currIParam;
 	*piparams = iparams;
-	++wrkrInfo->currIParam;
+	++wrkrInfo->p.tx.currIParam;
 
 finalize_it:
 	RETiRet;
