@@ -166,9 +166,10 @@ wtiNewIParam(wti_t *const pWti, action_t *const pAction, actWrkrIParams_t **pipa
 		dbgprintf("DDDD: extending iparams, max %d\n", wrkrInfo->p.tx.maxIParams);
 		newMax = (wrkrInfo->p.tx.maxIParams == 0) ? CONF_IPARAMS_BUFSIZE
 							  : 2 * wrkrInfo->p.tx.maxIParams;
-		CHKmalloc(iparams = realloc(wrkrInfo->p.tx.iparams, sizeof(actWrkrIParams_t) * newMax));
+		CHKmalloc(iparams = realloc(wrkrInfo->p.tx.iparams,
+					    sizeof(actWrkrIParams_t) * pAction->iNumTpls * newMax));
 		memset(iparams+wrkrInfo->p.tx.maxIParams, 0,
-		       sizeof(actWrkrIParams_t) * (newMax - wrkrInfo->p.tx.maxIParams));
+		       sizeof(actWrkrIParams_t) * pAction->iNumTpls * (newMax - wrkrInfo->p.tx.maxIParams));
 		wrkrInfo->p.tx.iparams = iparams;
 		wrkrInfo->p.tx.maxIParams = newMax;
 	}

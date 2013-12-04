@@ -212,7 +212,7 @@ tplToString(struct template *__restrict__ const pTpl,
 			if(iBuf + iLenVal >= iparam->lenBuf) /* we reserve one char for the final \0! */
 				CHKiRet(ExtendBuf(&iparam->param, &iparam->lenBuf, iBuf + iLenVal + 1));
 
-			memcpy(&iparam->param + iBuf, pVal, iLenVal);
+			memcpy(iparam->param + iBuf, pVal, iLenVal);
 			iBuf += iLenVal;
 		}
 
