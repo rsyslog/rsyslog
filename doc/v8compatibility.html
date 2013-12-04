@@ -102,6 +102,19 @@ createWrkrInstance populates pWrkrData-&gt;pData appropriately.
 <li>endTransaction
 </ul>
 
+<p><b>Changed entry points</b></p>
+<p>Some of the existing entry points have been changed.
+<p>The <b>doAction</b> entry point formerly got a variable <code>iMsgOpts</code>
+which is no longer provided. This variable was introduced in early days and exposed
+some internal message state information to the output module. Review of all known
+existing plugins showed that none except omfile ever used that variable. And 
+omfile only did so to do some no longer required legacy handling.
+<p>In essence, it is highly unlikely that you ever accessed this variable. So
+we expect that nobody actually notices that the variable has gone away.
+<p>Removal of the variable provides a slight performance gain, as we do
+no longer need to maintain it inside the output system (which leads to
+less CPU instructions and better cache hits).
+
 <p><b>RS_RET_SUSPENDED is no longer supported when creating an action instance</b>
 <p>This means a plugin must not try to establish any connections or the like
 before any of its processing entry points (like beginTransaction or doAction)
