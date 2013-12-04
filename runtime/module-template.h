@@ -261,7 +261,7 @@ static rsRetVal endTransaction(wrkrInstanceData_t __attribute__((unused)) *pWrkr
 /* doAction()
  */
 #define BEGINdoAction \
-static rsRetVal doAction(uchar __attribute__((unused)) **ppString, unsigned __attribute__((unused)) iMsgOpts, wrkrInstanceData_t __attribute__((unused)) *pWrkrData)\
+static rsRetVal doAction(uchar __attribute__((unused)) **ppString, wrkrInstanceData_t __attribute__((unused)) *pWrkrData)\
 {\
 	DEFiRet;
 

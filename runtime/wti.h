@@ -40,7 +40,6 @@
  * be passed as action parameters.
  */
 typedef struct actWrkrIParams {
-	int msgFlags;
 	/* following are caches to save allocs if not absolutely necessary */
 	unsigned staticLenStrings[CONF_OMOD_NUMSTRINGS_MAXSIZE];
 				/* and the same for the message length (if used) */

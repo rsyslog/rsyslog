@@ -186,7 +186,6 @@ typedef struct _instanceData {
 typedef struct linebuf {
 	uchar *filename; /* for dynafiles, make go away */
 	uchar *ln;
-	unsigned iMsgOpts;
 	struct linebuf *pNext;
 } linebuf_t;
 
@@ -651,7 +650,7 @@ finalize_it:
  * This is a helper to writeFile(). rgerhards, 2007-07-03
  */
 static inline rsRetVal
-prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
+prepareDynFile(instanceData *pData, uchar *newFileName)
 {
 	uint64 ctOldest; /* "timestamp" of oldest element */
 	int iOldest;
@@ -745,16 +744,10 @@ prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
 
 	/* check if we had an error */
 	if(localRet != RS_RET_OK) {
-		/* do not report anything if the message is an internally-generated
-		 * message. Otherwise, we could run into a never-ending loop. The bad
-		 * news is that we also lose errors on startup messages, but so it is.
+		/* We do no longer care about internal messages. The errmsg rate limiter
+		 * will take care of too-frequent error messages.
 		 */
-		if(iMsgOpts & INTERNAL_MSG) {
-			DBGPRINTF("Could not open dynaFile '%s', state %d, discarding message\n",
-				  newFileName, localRet);
-		} else {
-			errmsg.LogError(0, localRet, "Could not open dynamic file '%s' [state %d] - discarding message", newFileName, localRet);
-		}
+		errmsg.LogError(0, localRet, "Could not open dynamic file '%s' [state %d] - discarding message", newFileName, localRet);
 		ABORT_FINALIZE(localRet);
 	}
 
@@ -811,7 +804,7 @@ writeFile(instanceData *pData, linebuf_t *linebuf)
 	 * check if it still is ok or a new file needs to be created
 	 */
 	if(pData->bDynamicName) {
-		CHKiRet(prepareDynFile(pData, linebuf->filename, linebuf->iMsgOpts));
+		CHKiRet(prepareDynFile(pData, linebuf->filename));
 	} else { /* "regular", non-dynafile */
 		if(pData->pStrm == NULL) {
 			CHKiRet(prepareFile(pData, pData->fname));

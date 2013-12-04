@@ -887,7 +887,6 @@ prepareDoActionParams(action_t * __restrict__ const pAction,
 	if(pAction->isTransactional) {
 		CHKiRet(wtiNewIParam(pWti, pAction, &iparams));
 		for(i = 0 ; i < pAction->iNumTpls ; ++i) {
-			iparams->msgFlags = pMsg->msgFlags;
 			CHKiRet(tplToString(pAction->ppTpl[i], pMsg, (uchar**)&(iparams->staticActParams[i]),
 				&iparams->staticLenStrings[i], ttNow));
 			iparams->staticActParams[i] = iparams->staticActParams[i];
@@ -975,7 +974,7 @@ done:	return;
  * rgerhards, 2008-01-28
  */
 static rsRetVal
-actionCallDoAction(action_t * const pThis, int msgFlags, void *actParams, wti_t * const pWti)
+actionCallDoAction(action_t * const pThis, void *actParams, wti_t * const pWti)
 {
 	DEFiRet;
 
@@ -987,7 +986,7 @@ actionCallDoAction(action_t * const pThis, int msgFlags, void *actParams, wti_t 
 	CHKiRet(actionCheckAndCreateWrkrInstance(pThis, pWti));
 
 	pThis->bHadAutoCommit = 0;
-	iRet = pThis->pMod->mod.om.doAction(actParams, msgFlags,
+	iRet = pThis->pMod->mod.om.doAction(actParams,
 				            pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData);
 	switch(iRet) {
 		case RS_RET_OK:
@@ -1026,7 +1025,7 @@ finalize_it:
  * rgerhards, 2008-01-28
  */
 rsRetVal
-actionProcessMessage(action_t * const pThis, int msgFlags, void *actParams, wti_t * const pWti)
+actionProcessMessage(action_t * const pThis, void *actParams, wti_t * const pWti)
 {
 	DEFiRet;
 
@@ -1034,7 +1033,7 @@ actionProcessMessage(action_t * const pThis, int msgFlags, void *actParams, wti_
 	if(pThis->pMod->mod.om.SetShutdownImmdtPtr != NULL)
 		pThis->pMod->mod.om.SetShutdownImmdtPtr(pThis->pModData, pWti->pbShutdownImmediate);
 	if(getActionState(pWti, pThis) == ACT_STATE_ITX)
-		CHKiRet(actionCallDoAction(pThis, msgFlags, actParams, pWti));
+		CHKiRet(actionCallDoAction(pThis, actParams, pWti));
 
 	iRet = getReturnCode(pThis, pWti);
 finalize_it:
@@ -1055,9 +1054,7 @@ doTransaction(action_t * const pThis, wti_t * const pWti)
 	dbgprintf("DDDD: doTransaction: action %d, currIParams %d\n", pThis->iActionNbr, wrkrInfo->currIParam);
 	for(i = 0 ; i < wrkrInfo->currIParam ; ++i) {
 		iparamCurr = wrkrInfo->iparams + i;
-		iRet = actionProcessMessage(pThis, iparamCurr->msgFlags,
-					    iparamCurr->staticActParams,
-					    pWti);
+		iRet = actionProcessMessage(pThis, iparamCurr->staticActParams, pWti);
 		dbgprintf("DDDD: doTransaction loop, iRet %d\n", iRet);
 	}
 	RETiRet;
@@ -1188,7 +1185,7 @@ dbgprintf("DDDD: processMsgMain[act %d], %s\n", pAction->iActionNbr, pMsg->pszRa
 		FINALIZE;
 	}
 
-	iRet = actionProcessMessage(pAction, pMsg->msgFlags,
+	iRet = actionProcessMessage(pAction,
 				    pWti->actWrkrInfo[pAction->iActionNbr].staticActParams,
 				    pWti);
 	releaseDoActionParams(pAction, pWti);
