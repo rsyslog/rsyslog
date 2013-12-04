@@ -1295,7 +1295,7 @@ CODESTARTparseSelectorAct
 	case '/':
 	case '.':
 		CODE_STD_STRING_REQUESTparseSelectorAct(1)
-		pData->iNumTpls = 2;
+		pData->iNumTpls = 1;
 		CHKiRet(cflineParseFileName(p, fname, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS, getDfltTpl()));
 		pData->fname = ustrdup(fname);
 		pData->bDynamicName = 0;
