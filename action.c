@@ -741,9 +741,8 @@ actionCheckAndCreateWrkrInstance(action_t * const pThis, wti_t * const pWti)
 {
 	DEFiRet;
 	if(pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData == NULL) {
-dbgprintf("DDDD: wti %p create new worker instance for action %d\n", pWti, pThis->iActionNbr);
-		DBGPRINTF("we need to create a new action worker instance for "
-			  "action %d\n", pThis->iActionNbr);
+		DBGPRINTF("wti %p: we need to create a new action worker instance for "
+			  "action %d\n", pWti, pThis->iActionNbr);
 		CHKiRet(pThis->pMod->mod.om.createWrkrInstance(&(pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData),
 						               pThis->pModData));
 		pWti->actWrkrInfo[pThis->iActionNbr].pAction = pThis;
@@ -797,11 +796,10 @@ finalize_it:
  * rgerhards, 2009-05-07
  */
 static inline rsRetVal
-actionPrepare(action_t * const pThis, wti_t * const pWti)
+actionPrepare(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti)
 {
 	DEFiRet;
 
-	assert(pThis != NULL);
 	CHKiRet(actionCheckAndCreateWrkrInstance(pThis, pWti));
 	CHKiRet(actionTryResume(pThis, pWti));
 
@@ -983,8 +981,6 @@ actionCallDoAction(action_t * const pThis, void *actParams, wti_t * const pWti)
 
 	DBGPRINTF("entering actionCalldoAction(), state: %s, actionNbr %d\n",
 		  getActStateName(pThis, pWti), pThis->iActionNbr);
-
-	CHKiRet(actionCheckAndCreateWrkrInstance(pThis, pWti));
 
 	pThis->bHadAutoCommit = 0;
 	iRet = pThis->pMod->mod.om.doAction(actParams,
