@@ -548,7 +548,7 @@ sigprovPrepare(instanceData *pData, uchar *fn)
  * changed to iRet interface - 2009-03-19
  */
 static rsRetVal
-prepareFile(instanceData *pData, uchar *newFileName)
+prepareFile(instanceData *__restrict__ pData, const uchar *const newFileName)
 {
 	int fd;
 	DEFiRet;
@@ -650,7 +650,7 @@ finalize_it:
  * This is a helper to writeFile(). rgerhards, 2007-07-03
  */
 static inline rsRetVal
-prepareDynFile(instanceData *pData, uchar *newFileName)
+prepareDynFile(instanceData *const pData, const uchar *const newFileName)
 {
 	uint64 ctOldest; /* "timestamp" of oldest element */
 	int iOldest;
@@ -773,7 +773,7 @@ finalize_it:
  * rgerhards, 2009-06-03
  */
 static  rsRetVal
-doWrite(instanceData *pData, uchar *pszBuf, int lenBuf)
+doWrite(instanceData *__restrict__ const pData, uchar *const pszBuf, const int lenBuf)
 {
 	DEFiRet;
 	ASSERT(pData != NULL);
@@ -985,11 +985,9 @@ BEGINcommitTransaction
 	instanceData *__restrict__ const pData = pWrkrData->pData;
 	unsigned i;
 CODESTARTcommitTransaction
-dbgprintf("DDDD: in commitTransaction, nParams %u\n", nParams);
 	pthread_mutex_lock(&pData->mutWrite);
 
 	for(i = 0 ; i < nParams ; ++i) {
-dbgprintf("DDDD: commiting record %d\n", i);
 		writeFile(pData, pParams + i);
 	}
 	/* Note: pStrm may be NULL if there was an error opening the stream */

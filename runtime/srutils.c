@@ -191,7 +191,7 @@ uchar *srUtilStrDup(uchar *pOld, size_t len)
  * try because otherwise we would potentially run into an endless loop.
  * loop. -- rgerhards, 2010-03-25
  */
-int makeFileParentDirs(uchar *szFile, size_t lenFile, mode_t mode,
+int makeFileParentDirs(const uchar *const szFile, size_t lenFile, mode_t mode,
 		       uid_t uid, gid_t gid, int bFailOnChownFail)
 {
         uchar *p;
