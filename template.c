@@ -163,8 +163,7 @@ tplToString(struct template *__restrict__ const pTpl,
 	assert(pLenBuf != NULL);
 
 	if(pTpl->pStrgen != NULL) {
-		CHKiRet(pTpl->pStrgen(pMsg, ppBuf, pLenBuf));
-		*pStrLen = ustrlen(*ppBuf); // TODO: optimize, change strgen interface
+		CHKiRet(pTpl->pStrgen(pMsg, ppBuf, pLenBuf, pStrLen));
 		FINALIZE;
 	}
 

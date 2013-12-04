@@ -1050,9 +1050,15 @@ static rsRetVal parse(msg_t *pMsg)\
 
 
 /* strgen() - main entry point of parser modules
+ * Note that we do NOT use size_t as this permits us to store the
+ * values directly into optimized heap structures.
+ * ppBuf is the buffer pointer
+ * pLenBuf is the current max size of this buffer
+ * pStrLen is an output parameter that MUST hold the length
+ *         of the generated string on exit (this is cached)
  */
 #define BEGINstrgen \
-static rsRetVal strgen(msg_t *pMsg, uchar **ppBuf, size_t *pLenBuf) \
+static rsRetVal strgen(msg_t *const pMsg, uchar **ppBuf, size_t *const pLenBuf, unsigned *const pStrLen) \
 {\
 	DEFiRet;
 

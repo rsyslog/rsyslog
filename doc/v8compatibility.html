@@ -122,6 +122,14 @@ is called. This was generally also the case von v7, but was not enforced in
 all cases. In v8, creating action creation fails if anything but RS_RET_OK
 is returned.
 
+<h3>string generator interface</h3>
+<p>The BEGINstrgen() entry point now requires an additional output
+parameter pLenStr, which must hold the length of the generated string
+on exit. This is necessary as we cache the string sizes in order
+to reduced strlen() calls. Also, the numerical parameters are
+now unsigned and no longer size_t. This permits us to store them directly
+into optimized heap structures.
+
 <p>[<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
 
 <p><font size="2">This documentation is part of the

@@ -151,7 +151,7 @@ struct modInfo_s {
 			rsRetVal (*parse)(msg_t*);
 		} pm;
 		struct { /* data for strgen modules */
-			rsRetVal (*strgen)(msg_t*, uchar**, size_t *);
+			rsRetVal (*strgen)(msg_t*const, uchar**, unsigned *const, unsigned *const);
 		} sm;
 	} mod;
 	void *pModHdlr; /* handler to the dynamic library holding the module */

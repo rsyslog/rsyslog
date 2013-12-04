@@ -9,7 +9,7 @@
  *
  * File begun on 2010-06-01 by RGerhards
  *
- * Copyright 2010 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2010-2013 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -105,6 +105,8 @@ CODESTARTstrgen
 	/* trailer */
 	*(*ppBuf + iBuf++) = '\n';
 	*(*ppBuf + iBuf) = '\0';
+
+	*pStrLen = lenTotal - 1; /* do not count \0! */
 
 finalize_it:
 ENDstrgen

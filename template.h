@@ -39,7 +39,7 @@ struct template {
 	struct template *pNext;
 	char *pszName;
 	int iLenName;
-	rsRetVal (*pStrgen)(msg_t*, uchar**, size_t *);
+	rsRetVal (*pStrgen)(msg_t*const, uchar**, unsigned *const, unsigned *const);
 	sbool bHaveSubtree;
 	msgPropDescr_t subtree;	/* subtree property name for subtree-type templates */
 	int tpenElements; /* number of elements in templateEntry list */
