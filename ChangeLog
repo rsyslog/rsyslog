@@ -1,6 +1,10 @@
 ---------------------------------------------------------------------------
 Version 8.1.3 [devel] 2013-12-??
+- changes to the strgen module interface
+- new output module interface for transactional modules
 - performance improvements
+  * reduced number of malloc/frees due to further changes to the
+    output module interface
   * reduced number of malloc/frees during string template processing
     We now re-use once allocated string template memory for as long
     as the worker thread exists. This saves us from doing new memory
