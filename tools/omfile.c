@@ -182,17 +182,9 @@ typedef struct _instanceData {
 	STATSCOUNTER_DEF(ctrMax, mutCtrMax);
 } instanceData;
 
-/* to build a linked list for temporary storage of lines while we cannot commit */
-typedef struct linebuf {
-	uchar *filename; /* for dynafiles, make go away */
-	uchar *ln;
-	struct linebuf *pNext;
-} linebuf_t;
 
 typedef struct wrkrInstanceData {
 	instanceData *pData;
-	linebuf_t *pRoot;
-	linebuf_t *pLast;
 } wrkrInstanceData_t;
 
 
@@ -949,38 +941,6 @@ CODESTARTbeginTransaction
 ENDbeginTransaction
 
 
-static rsRetVal
-bufferLine(wrkrInstanceData_t *pWrkrData, uchar *filename, uchar *line)
-{
-	linebuf_t *lb;
-	DEFiRet;
-
-	CHKmalloc(lb = (linebuf_t*) malloc(sizeof(linebuf_t)));
-	CHKmalloc(lb->filename = ustrdup(filename));
-	CHKmalloc(lb->ln = ustrdup(line));
-	lb->pNext = NULL;
-	if(pWrkrData->pRoot == NULL) {
-		pWrkrData->pRoot = pWrkrData->pLast = lb;
-	} else {
-		pWrkrData->pLast->pNext = lb;
-		pWrkrData->pLast = lb;
-	}
-finalize_it:
-	RETiRet;
-}
-
-
-BEGINdoAction
-	instanceData *pData;
-CODESTARTdoAction
-	pData = pWrkrData->pData;
-	iRet = bufferLine(pWrkrData, (pData->bDynamicName) ? ppString[1] : pData->fname,
-	                     ppString[0]);
-	if(iRet == RS_RET_OK)
-		iRet = RS_RET_DEFER_COMMIT;
-ENDdoAction
-
-
 BEGINcommitTransaction
 	instanceData *__restrict__ const pData = pWrkrData->pData;
 	unsigned i;
@@ -1406,12 +1366,11 @@ ENDmodExit
 
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_OMOD_QUERIES
+CODEqueryEtryPt_STD_OMODTX_QUERIES
 CODEqueryEtryPt_STD_OMOD8_QUERIES
 CODEqueryEtryPt_STD_CONF2_QUERIES
 CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
-CODEqueryEtryPt_TXIFV8_OMOD_QUERIES /* we support the transactional interface! */
 CODEqueryEtryPt_doHUP
 ENDqueryEtryPt
 

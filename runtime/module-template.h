@@ -503,13 +503,33 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 	}
 
 /* the following definition is the standard block for queryEtryPt for output
- * modules. This can be used if no specific handling (e.g. to cover version
- * differences) is needed.
+ * modules WHICH DO NOT SUPPORT TRANSACTIONS.
  */
 #define CODEqueryEtryPt_STD_OMOD_QUERIES \
 	CODEqueryEtryPt_STD_MOD_QUERIES \
 	else if(!strcmp((char*) name, "doAction")) {\
 		*pEtryPoint = doAction;\
+	} else if(!strcmp((char*) name, "dbgPrintInstInfo")) {\
+		*pEtryPoint = dbgPrintInstInfo;\
+	} else if(!strcmp((char*) name, "freeInstance")) {\
+		*pEtryPoint = freeInstance;\
+	} else if(!strcmp((char*) name, "parseSelectorAct")) {\
+		*pEtryPoint = parseSelectorAct;\
+	} else if(!strcmp((char*) name, "isCompatibleWithFeature")) {\
+		*pEtryPoint = isCompatibleWithFeature;\
+	} else if(!strcmp((char*) name, "tryResume")) {\
+		*pEtryPoint = tryResume;\
+	}
+
+/* the following definition is the standard block for queryEtryPt for output
+ * modules using the transaction interface.
+ */
+#define CODEqueryEtryPt_STD_OMODTX_QUERIES \
+	CODEqueryEtryPt_STD_MOD_QUERIES \
+	else if(!strcmp((char*) name, "beginTransaction")) {\
+		*pEtryPoint = beginTransaction;\
+	} else if(!strcmp((char*) name, "commitTransaction")) {\
+		*pEtryPoint = commitTransaction;\
 	} else if(!strcmp((char*) name, "dbgPrintInstInfo")) {\
 		*pEtryPoint = dbgPrintInstInfo;\
 	} else if(!strcmp((char*) name, "freeInstance")) {\
@@ -539,18 +559,6 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 		*pEtryPoint = beginTransaction;\
 	} else if(!strcmp((char*) name, "endTransaction")) {\
 		*pEtryPoint = endTransaction;\
-	}
-
-
-/* the following definition is queryEtryPt block that must be added
- * if an output module supports the transactional v8+ interface.
- * rgerhards, 2013-12-04
- */
-#define CODEqueryEtryPt_TXIFV8_OMOD_QUERIES \
-	  else if(!strcmp((char*) name, "beginTransaction")) {\
-		*pEtryPoint = beginTransaction;\
-	} else if(!strcmp((char*) name, "commitTransaction")) {\
-		*pEtryPoint = commitTransaction;\
 	}
 
 
