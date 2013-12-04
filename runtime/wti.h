@@ -143,15 +143,15 @@ incActionNbrResRtry(wti_t * const pWti, action_t * const pAction)
 	pWti->actWrkrInfo[pAction->iActionNbr].iNbrResRtry++;
 }
 
+/* note: this function is only called once in action.c */
 static inline rsRetVal
 wtiNewIParam(wti_t * const pWti, action_t * const pAction, actWrkrIParams_t **piparams)
 {
-	actWrkrInfo_t *wrkrInfo;
+	actWrkrInfo_t *const wrkrInfo = &(pWti->actWrkrInfo[pAction->iActionNbr]);
 	actWrkrIParams_t *iparams;
 	int newMax;
 	DEFiRet;
 
-	wrkrInfo = &(pWti->actWrkrInfo[pAction->iActionNbr]);
 	if(wrkrInfo->currIParam == wrkrInfo->maxIParams) {
 		/* we need to extend */
 		dbgprintf("DDDD: extending iparams, max %d\n", wrkrInfo->maxIParams);
