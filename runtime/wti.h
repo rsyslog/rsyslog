@@ -36,24 +36,6 @@
 #define ACT_STATE_SUSP 4	/* suspended due to failure (return fail until timeout expired) */
 /* note: 3 bit bit field --> highest value is 7! */
 
-/* The following structure defines immutable parameters which need to
- * be passed as action parameters.
- *
- * WARNING: THIS STRUCTURE IS PART OF THE ***OUTPUT MODULE INTERFACE***
- * It is passed into the doCommit() function. Do NOT modify it until
- * absolutely necessary - all output plugins need to be changed!
- *
- * If a change is "just" for internal working, consider adding a
- * separate paramter outside of this structure. Of course, it is
- * best to avoid this as well ;-)
- * rgerhards, 2013-12-04
- */
-typedef struct actWrkrIParams {
-	void *param[CONF_OMOD_NUMSTRINGS_MAXSIZE];
-	uint32_t lenBuf[CONF_OMOD_NUMSTRINGS_MAXSIZE];  /* length of string buffer (if string ptr) */
-	uint32_t lenStr[CONF_OMOD_NUMSTRINGS_MAXSIZE];	/* length of current string (if string ptr) */
-} actWrkrIParams_t;
-
 typedef struct actWrkrInfo {
 	action_t *pAction;
 	void *actWrkrData;

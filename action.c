@@ -888,7 +888,7 @@ prepareDoActionParams(action_t * __restrict__ const pAction,
 		CHKiRet(wtiNewIParam(pWti, pAction, &iparams));
 		for(i = 0 ; i < pAction->iNumTpls ; ++i) {
 			CHKiRet(tplToString(pAction->ppTpl[i], pMsg, (uchar**)&(iparams->param[i]),
-				&iparams->lenBuf[i], ttNow));
+				&iparams->lenBuf[i], &iparams->lenStr[i], ttNow));
 			iparams->param[i] = iparams->param[i];
 		}
 	} else {
@@ -897,7 +897,8 @@ prepareDoActionParams(action_t * __restrict__ const pAction,
 				case ACT_STRING_PASSING:
 					CHKiRet(tplToString(pAction->ppTpl[i], pMsg,
 						(uchar**)&(pWrkrInfo->actParams.param[i]),
-						&pWrkrInfo->actParams.lenBuf[i], ttNow));
+						&pWrkrInfo->actParams.lenBuf[i],
+						&pWrkrInfo->actParams.lenStr[i], ttNow));
 					break;
 				case ACT_ARRAY_PASSING:
 					CHKiRet(tplToArray(pAction->ppTpl[i], pMsg,
@@ -1020,6 +1021,56 @@ finalize_it:
 }
 
 
+/* call the commitTransaction output plugin entry point
+ * TODO: combine common code with doAction() above! -- rgerhards, 2013-12-04
+ */
+static rsRetVal
+actionCallCommitTransaction(action_t * const pThis,
+	const actWrkrInfo_t *const wrkrInfo,
+	wti_t *const pWti)
+{
+	DEFiRet;
+
+	ASSERT(pThis != NULL);
+
+	DBGPRINTF("entering actionCallCommitTransaction(), state: %s, actionNbr %d\n",
+		  getActStateName(pThis, pWti), pThis->iActionNbr);
+
+	iRet = pThis->pMod->mod.om.commitTransaction(
+		    pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData,
+		    wrkrInfo->iparams, wrkrInfo->currIParam);
+	switch(iRet) {
+		case RS_RET_OK:
+			actionCommitted(pThis, pWti);
+			setActionResumeInRow(pWti, pThis, 0);
+			break;
+		case RS_RET_DEFER_COMMIT:
+			setActionResumeInRow(pWti, pThis, 0);
+			/* we are done, action state remains the same */
+			break;
+		case RS_RET_PREVIOUS_COMMITTED:
+			/* action state remains the same, but we had a commit. */
+			pThis->bHadAutoCommit = 1;
+			setActionResumeInRow(pWti, pThis, 0);
+			break;
+		case RS_RET_SUSPENDED:
+			actionRetry(pThis, pWti);
+			break;
+		case RS_RET_DISABLE_ACTION:
+			actionDisable(pThis);
+			break;
+		default:/* permanent failure of this message - no sense in retrying. This is
+			 * not yet handled (but easy TODO)
+			 */
+			FINALIZE;
+	}
+	iRet = getReturnCode(pThis, pWti);
+
+finalize_it:
+	RETiRet;
+}
+
+
 /* process a message
  * this readies the action and then calls doAction()
  * rgerhards, 2008-01-28
@@ -1051,12 +1102,18 @@ doTransaction(action_t * const pThis, wti_t * const pWti)
 	DEFiRet;
 
 	wrkrInfo = &(pWti->actWrkrInfo[pThis->iActionNbr]);
-	dbgprintf("DDDD: doTransaction: action %d, currIParams %d\n", pThis->iActionNbr, wrkrInfo->currIParam);
-	for(i = 0 ; i < wrkrInfo->currIParam ; ++i) {
-		iparamCurr = wrkrInfo->iparams + i;
-		iRet = actionProcessMessage(pThis, iparamCurr->param, pWti);
-		dbgprintf("DDDD: doTransaction loop, iRet %d\n", iRet);
+	if(pThis->pMod->mod.om.commitTransaction != NULL) {
+		dbgprintf("DDDD: have commitTransaction IF, using that\n");
+		CHKiRet(actionCallCommitTransaction(pThis, wrkrInfo, pWti));
+	} else {
+		dbgprintf("DDDD: doTransaction: action %d, currIParams %d\n",
+			   pThis->iActionNbr, wrkrInfo->currIParam);
+		for(i = 0 ; i < wrkrInfo->currIParam ; ++i) {
+			iparamCurr = wrkrInfo->iparams + i;
+			iRet = actionProcessMessage(pThis, iparamCurr->param, pWti);
+		}
 	}
+finalize_it:
 	RETiRet;
 }
 

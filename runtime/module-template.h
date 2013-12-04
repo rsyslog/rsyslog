@@ -243,6 +243,23 @@ static rsRetVal beginTransaction(wrkrInstanceData_t __attribute__((unused)) *pWr
 }
 
 
+/* commitTransaction()
+ * Commits a transaction. Note that beginTransaction() must have been
+ * called before this entry point. It receives the full batch of messages
+ * to be processed in pParam parameter.
+ * introduced in v8.1.3 -- rgerhards, 2013-12-04
+ */
+#define BEGINcommitTransaction \
+static rsRetVal commitTransaction(wrkrInstanceData_t __attribute__((unused)) *const pWrkrData, actWrkrIParams_t *const pParams, const unsigned nParams)\
+{\
+	DEFiRet;
+
+#define CODESTARTcommitTransaction /* currently empty, but may be extended */
+
+#define ENDcommitTransaction \
+	RETiRet;\
+}
+
 /* endTransaction()
  * introduced in v4.3.3 -- rgerhards, 2009-04-27
  */
@@ -522,6 +539,18 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 		*pEtryPoint = beginTransaction;\
 	} else if(!strcmp((char*) name, "endTransaction")) {\
 		*pEtryPoint = endTransaction;\
+	}
+
+
+/* the following definition is queryEtryPt block that must be added
+ * if an output module supports the transactional v8+ interface.
+ * rgerhards, 2013-12-04
+ */
+#define CODEqueryEtryPt_TXIFV8_OMOD_QUERIES \
+	  else if(!strcmp((char*) name, "beginTransaction")) {\
+		*pEtryPoint = beginTransaction;\
+	} else if(!strcmp((char*) name, "commitTransaction")) {\
+		*pEtryPoint = commitTransaction;\
 	}
 
 

@@ -147,6 +147,7 @@ tplToString(struct template *__restrict__ const pTpl,
 	    msg_t *__restrict__ const pMsg,
 	    uchar **ppBuf,
 	    size_t *__restrict__ const pLenBuf,
+	    unsigned *__restrict__ const pStrLen,
 	    struct syslogTime *const ttNow)
 {
 	DEFiRet;
@@ -163,6 +164,7 @@ tplToString(struct template *__restrict__ const pTpl,
 
 	if(pTpl->pStrgen != NULL) {
 		CHKiRet(pTpl->pStrgen(pMsg, ppBuf, pLenBuf));
+		*pStrLen = ustrlen(*ppBuf); // TODO: optimize, change strgen interface
 		FINALIZE;
 	}
 
@@ -236,6 +238,7 @@ tplToString(struct template *__restrict__ const pTpl,
 		CHKiRet(ExtendBuf(ppBuf, pLenBuf, iBuf + 1));
 	}
 	(*ppBuf)[iBuf] = '\0';
+	*pStrLen = iBuf;
 	
 finalize_it:
 	RETiRet;

@@ -779,7 +779,8 @@ doWrite(instanceData *pData, uchar *pszBuf, int lenBuf)
 	ASSERT(pData != NULL);
 	ASSERT(pszBuf != NULL);
 
-	DBGPRINTF("write to stream, pData->pStrm %p, lenBuf %d\n", pData->pStrm, lenBuf);
+	DBGPRINTF("omfile: write to stream, pData->pStrm %p, lenBuf %d, strt data %.128s\n",
+		  pData->pStrm, lenBuf, pszBuf);
 	if(pData->pStrm != NULL){
 		CHKiRet(strm.Write(pData->pStrm, pszBuf, lenBuf));
 		if(pData->useSigprov) {
@@ -794,27 +795,29 @@ finalize_it:
 
 /* rgerhards 2004-11-11: write to a file output.  */
 static rsRetVal
-writeFile(instanceData *pData, linebuf_t *linebuf)
+writeFile(instanceData *pData,
+	  const actWrkrIParams_t *__restrict__ const pParam)
 {
 	DEFiRet;
 
-	ASSERT(pData != NULL);
-
+	STATSCOUNTER_INC(pData->ctrRequests, pData->mutCtrRequests);
 	/* first check if we have a dynamic file name and, if so,
 	 * check if it still is ok or a new file needs to be created
 	 */
 	if(pData->bDynamicName) {
-		CHKiRet(prepareDynFile(pData, linebuf->filename));
+		DBGPRINTF("omfile: file to log to: %s\n", (uchar*) pParam->param[1]);
+		CHKiRet(prepareDynFile(pData, (uchar*) pParam->param[1]));
 	} else { /* "regular", non-dynafile */
 		if(pData->pStrm == NULL) {
 			CHKiRet(prepareFile(pData, pData->fname));
 			if(pData->pStrm == NULL) {
-				errmsg.LogError(0, RS_RET_NO_FILE_ACCESS, "Could no open output file '%s'", pData->fname);
+				errmsg.LogError(0, RS_RET_NO_FILE_ACCESS,
+					"Could no open output file '%s'", pData->fname);
 			}
 		}
 	}
 
-	CHKiRet(doWrite(pData, linebuf->ln, ustrlen(linebuf->ln)));
+	CHKiRet(doWrite(pData, pParam->param[0], pParam->lenStr[0]));
 
 finalize_it:
 	RETiRet;
@@ -966,26 +969,6 @@ finalize_it:
 	RETiRet;
 }
 
-static void
-submitCachedLines(wrkrInstanceData_t *pWrkrData, instanceData *pData)
-{
-	linebuf_t *curr, *todel;
-
-	for(curr = pWrkrData->pRoot ; curr != NULL ; ) {
-		DBGPRINTF("omfile: file to log to: %s\n", curr->filename);
-		DBGPRINTF("omfile: start of data: '%.128s'\n", curr->ln);
-		STATSCOUNTER_INC(pData->ctrRequests, pData->mutCtrRequests);
-		writeFile(pData, curr);
-
-		todel = curr;
-		curr = curr->pNext;
-		free(todel->filename);
-		free(todel->ln);
-		free(todel);
-	}
-	pWrkrData->pRoot = NULL;
-}
-
 
 BEGINdoAction
 	instanceData *pData;
@@ -997,13 +980,18 @@ CODESTARTdoAction
 		iRet = RS_RET_DEFER_COMMIT;
 ENDdoAction
 
-BEGINendTransaction
-	instanceData *pData;
-CODESTARTendTransaction
-	pData = pWrkrData->pData;
+
+BEGINcommitTransaction
+	instanceData *__restrict__ const pData = pWrkrData->pData;
+	unsigned i;
+CODESTARTcommitTransaction
+dbgprintf("DDDD: in commitTransaction, nParams %u\n", nParams);
 	pthread_mutex_lock(&pData->mutWrite);
 
-	submitCachedLines(pWrkrData, pData);
+	for(i = 0 ; i < nParams ; ++i) {
+dbgprintf("DDDD: commiting record %d\n", i);
+		writeFile(pData, pParams + i);
+	}
 	/* Note: pStrm may be NULL if there was an error opening the stream */
 	if(pData->bFlushOnTXEnd && pData->pStrm != NULL) {
 		/* if we have an async writer, it controls the flush via
@@ -1015,7 +1003,7 @@ CODESTARTendTransaction
 	}
 finalize_it:
 	pthread_mutex_unlock(&pData->mutWrite);
-ENDendTransaction
+ENDcommitTransaction
 
 
 static inline void
@@ -1425,7 +1413,7 @@ CODEqueryEtryPt_STD_OMOD8_QUERIES
 CODEqueryEtryPt_STD_CONF2_QUERIES
 CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
-CODEqueryEtryPt_TXIF_OMOD_QUERIES /* we support the transactional interface! */
+CODEqueryEtryPt_TXIFV8_OMOD_QUERIES /* we support the transactional interface! */
 CODEqueryEtryPt_doHUP
 ENDqueryEtryPt
 

@@ -673,6 +673,16 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 				ABORT_FINALIZE(localRet);
 			}
 
+			localRet = (*pNew->modQueryEtryPt)((uchar*)"commitTransaction",
+				   &pNew->mod.om.commitTransaction);
+			if(localRet == RS_RET_MODULE_ENTRY_POINT_NOT_FOUND) {
+				pNew->mod.om.commitTransaction = NULL;
+			} else if(localRet != RS_RET_OK) {
+				ABORT_FINALIZE(localRet);
+			}
+
+			// TODO: error checks for begin/commitTransaction interfaces
+
 			localRet = (*pNew->modQueryEtryPt)((uchar*)"endTransaction",
 				   &pNew->mod.om.endTransaction);
 			if(localRet == RS_RET_MODULE_ENTRY_POINT_NOT_FOUND) {

@@ -113,6 +113,7 @@ typedef uint64 qDeqID;	/* queue Dequeue order ID. 32 bits is considered dangerou
 
 typedef struct tcpLstnPortList_s tcpLstnPortList_t; // TODO: rename?
 typedef struct strmLstnPortList_s strmLstnPortList_t; // TODO: rename?
+typedef struct actWrkrIParams actWrkrIParams_t;
 
 /* under Solaris (actually only SPARC), we need to redefine some types
  * to be void, so that we get void* pointers. Otherwise, we will see
@@ -269,5 +270,3 @@ struct msgPropDescr_s {
 };
 
 #endif /* multi-include protection */
-/* vim:set ai:
- */
