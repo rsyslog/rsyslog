@@ -363,7 +363,7 @@ dbgprintf("DDDD: wti %p: worker starting\n", pThis);
 			for(j = 0 ; j < wrkrInfo->maxIParams ; ++j) {
 				iparamCurr = wrkrInfo->iparams + j;
 				for(k = 0 ; k < pAction->iNumTpls ; ++k) {
-					free(iparamCurr->staticActParams[k]);
+					free(iparamCurr->param[k]);
 				}
 			}
 			free(wrkrInfo->iparams);

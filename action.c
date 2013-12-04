@@ -887,28 +887,28 @@ prepareDoActionParams(action_t * __restrict__ const pAction,
 	if(pAction->isTransactional) {
 		CHKiRet(wtiNewIParam(pWti, pAction, &iparams));
 		for(i = 0 ; i < pAction->iNumTpls ; ++i) {
-			CHKiRet(tplToString(pAction->ppTpl[i], pMsg, (uchar**)&(iparams->staticActParams[i]),
-				&iparams->staticLenStrings[i], ttNow));
-			iparams->staticActParams[i] = iparams->staticActParams[i];
+			CHKiRet(tplToString(pAction->ppTpl[i], pMsg, (uchar**)&(iparams->param[i]),
+				&iparams->lenBuf[i], ttNow));
+			iparams->param[i] = iparams->param[i];
 		}
 	} else {
 		for(i = 0 ; i < pAction->iNumTpls ; ++i) {
 			switch(pAction->eParamPassing) {
 				case ACT_STRING_PASSING:
 					CHKiRet(tplToString(pAction->ppTpl[i], pMsg,
-						(uchar**)&(pWrkrInfo->staticActParams[i]),
-						&pWrkrInfo->staticLenStrings[i], ttNow));
+						(uchar**)&(pWrkrInfo->actParams.param[i]),
+						&pWrkrInfo->actParams.lenBuf[i], ttNow));
 					break;
 				case ACT_ARRAY_PASSING:
 					CHKiRet(tplToArray(pAction->ppTpl[i], pMsg,
-						(uchar***) &(pWrkrInfo->staticActParams[i]), ttNow));
+						(uchar***) &(pWrkrInfo->actParams.param[i]), ttNow));
 					break;
 				case ACT_MSG_PASSING:
-					pWrkrInfo->staticActParams[i] = (void*) pMsg;
+					pWrkrInfo->actParams.param[i] = (void*) pMsg;
 					break;
 				case ACT_JSON_PASSING:
 					CHKiRet(tplToJSON(pAction->ppTpl[i], pMsg, &json, ttNow));
-					pWrkrInfo->staticActParams[i] = (void*) json;
+					pWrkrInfo->actParams.param[i] = (void*) json;
 					break;
 				default:dbgprintf("software bug/error: unknown pAction->eParamPassing "
 						  "%d in prepareDoActionParams\n",
@@ -938,7 +938,7 @@ releaseDoActionParams(action_t *__restrict__ const pAction, wti_t *__restrict__ 
 	pWrkrInfo = &(pWti->actWrkrInfo[pAction->iActionNbr]);
 	switch(pAction->eParamPassing) {
 	case ACT_ARRAY_PASSING:
-		ppMsgs = (uchar***) pWrkrInfo->staticActParams;
+		ppMsgs = (uchar***) pWrkrInfo->actParams.param;
 		for(j = 0 ; j < pAction->iNumTpls ; ++j) {
 			if(((uchar**)ppMsgs)[j] != NULL) {
 				jArr = 0;
@@ -955,8 +955,8 @@ releaseDoActionParams(action_t *__restrict__ const pAction, wti_t *__restrict__ 
 	case ACT_JSON_PASSING:
 		for(j = 0 ; j < pAction->iNumTpls ; ++j) {
 			json_object_put((struct json_object*)
-					pWrkrInfo->staticActParams[j]);
-			pWrkrInfo->staticActParams[j] = NULL;
+					pWrkrInfo->actParams.param[j]);
+			pWrkrInfo->actParams.param[j] = NULL;
 		}
 		break;
 	case ACT_STRING_PASSING:
@@ -1054,7 +1054,7 @@ doTransaction(action_t * const pThis, wti_t * const pWti)
 	dbgprintf("DDDD: doTransaction: action %d, currIParams %d\n", pThis->iActionNbr, wrkrInfo->currIParam);
 	for(i = 0 ; i < wrkrInfo->currIParam ; ++i) {
 		iparamCurr = wrkrInfo->iparams + i;
-		iRet = actionProcessMessage(pThis, iparamCurr->staticActParams, pWti);
+		iRet = actionProcessMessage(pThis, iparamCurr->param, pWti);
 		dbgprintf("DDDD: doTransaction loop, iRet %d\n", iRet);
 	}
 	RETiRet;
@@ -1186,7 +1186,7 @@ dbgprintf("DDDD: processMsgMain[act %d], %s\n", pAction->iActionNbr, pMsg->pszRa
 	}
 
 	iRet = actionProcessMessage(pAction,
-				    pWti->actWrkrInfo[pAction->iActionNbr].staticActParams,
+				    pWti->actWrkrInfo[pAction->iActionNbr].actParams.param,
 				    pWti);
 	releaseDoActionParams(pAction, pWti);
 finalize_it:

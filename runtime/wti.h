@@ -38,12 +38,20 @@
 
 /* The following structure defines immutable parameters which need to
  * be passed as action parameters.
+ *
+ * WARNING: THIS STRUCTURE IS PART OF THE ***OUTPUT MODULE INTERFACE***
+ * It is passed into the doCommit() function. Do NOT modify it until
+ * absolutely necessary - all output plugins need to be changed!
+ *
+ * If a change is "just" for internal working, consider adding a
+ * separate paramter outside of this structure. Of course, it is
+ * best to avoid this as well ;-)
+ * rgerhards, 2013-12-04
  */
 typedef struct actWrkrIParams {
-	/* following are caches to save allocs if not absolutely necessary */
-	unsigned staticLenStrings[CONF_OMOD_NUMSTRINGS_MAXSIZE];
-				/* and the same for the message length (if used) */
-	void *staticActParams[CONF_OMOD_NUMSTRINGS_MAXSIZE];
+	void *param[CONF_OMOD_NUMSTRINGS_MAXSIZE];
+	uint32_t lenBuf[CONF_OMOD_NUMSTRINGS_MAXSIZE];  /* length of string buffer (if string ptr) */
+	uint32_t lenStr[CONF_OMOD_NUMSTRINGS_MAXSIZE];	/* length of current string (if string ptr) */
 } actWrkrIParams_t;
 
 typedef struct actWrkrInfo {
@@ -57,9 +65,7 @@ typedef struct actWrkrInfo {
 	actWrkrIParams_t *iparams;	/* dynamically sized array for template parameters */
 	int currIParam;
 	int maxIParams;	/* current max */
-	unsigned staticLenStrings[CONF_OMOD_NUMSTRINGS_MAXSIZE];
-				/* and the same for the message length (if used) */
-	void *staticActParams[CONF_OMOD_NUMSTRINGS_MAXSIZE]; /* for non-strings */
+	actWrkrIParams_t actParams;
 } actWrkrInfo_t;
 
 /* the worker thread instance class */
