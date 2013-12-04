@@ -493,7 +493,7 @@ extern int default_thr_sched_policy;
  * rgerhards, 2013-12-04
  */
 struct actWrkrIParams {
-	void *param;
+	uchar *param;
 	uint32_t lenBuf;  /* length of string buffer (if string ptr) */
 	uint32_t lenStr;  /* length of current string (if string ptr) */
 };

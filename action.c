@@ -894,7 +894,7 @@ prepareDoActionParams(action_t * __restrict__ const pAction,
 			switch(pAction->eParamPassing) {
 			case ACT_STRING_PASSING:
 				CHKiRet(tplToString(pAction->ppTpl[i], pMsg,
-					   &actParam(pWrkrInfo->p.nontx.actParams, pAction->iNumTpls, 0, i),
+					   &(pWrkrInfo->p.nontx.actParams[i]),
 					   ttNow));
 				break;
 			case ACT_ARRAY_PASSING:

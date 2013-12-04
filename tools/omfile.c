@@ -800,20 +800,20 @@ writeFile(instanceData *pData,
 	 */
 	if(pData->bDynamicName) {
 		DBGPRINTF("omfile: file to log to: %s\n",
-			  (uchar*) actParam(pParam, pData->iNumTpls, iMsg, 1).param);
-		CHKiRet(prepareDynFile(pData, (uchar*) actParam(pParam, pData->iNumTpls, iMsg, 1).param));
+			  actParam(pParam, pData->iNumTpls, iMsg, 1).param);
+		CHKiRet(prepareDynFile(pData, actParam(pParam, pData->iNumTpls, iMsg, 1).param));
 	} else { /* "regular", non-dynafile */
 		if(pData->pStrm == NULL) {
 			CHKiRet(prepareFile(pData, pData->fname));
 			if(pData->pStrm == NULL) {
 				errmsg.LogError(0, RS_RET_NO_FILE_ACCESS,
-					"Could no open output file '%s'", pData->fname);
+					"Could not open output file '%s'", pData->fname);
 			}
 		}
 	}
 
 	CHKiRet(doWrite(pData,
-		 	(uchar*) actParam(pParam, pData->iNumTpls, iMsg, 0).param,
+		 	actParam(pParam, pData->iNumTpls, iMsg, 0).param,
 		 	actParam(pParam, pData->iNumTpls, iMsg, 0).lenStr));
 
 finalize_it:

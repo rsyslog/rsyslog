@@ -156,7 +156,7 @@ tplToString(struct template *__restrict__ const pTpl,
 	rs_size_t iLenVal = 0;
 
 	if(pTpl->pStrgen != NULL) {
-		CHKiRet(pTpl->pStrgen(pMsg, (uchar**) &iparam->param, &iparam->lenBuf, &iparam->lenStr));
+		CHKiRet(pTpl->pStrgen(pMsg, &iparam->param, &iparam->lenBuf, &iparam->lenStr));
 #warning change strgen IF once again?
 		FINALIZE;
 	}
@@ -169,7 +169,7 @@ tplToString(struct template *__restrict__ const pTpl,
 		 */
 		getJSONPropVal(pMsg, &pTpl->subtree, &pVal, &iLenVal, &bMustBeFreed);
 		if(iLenVal >= (rs_size_t)iparam->lenBuf) /* we reserve one char for the final \0! */
-			CHKiRet(ExtendBuf((uchar**) &iparam->param, &iparam->lenBuf, iLenVal + 1));
+			CHKiRet(ExtendBuf(&iparam->param, &iparam->lenBuf, iLenVal + 1));
 		memcpy(iparam->param, pVal, iLenVal+1);
 		if(bMustBeFreed)
 			free(pVal);
@@ -210,9 +210,9 @@ tplToString(struct template *__restrict__ const pTpl,
 		if(iLenVal > 0) { /* may be zero depending on property */
 			/* first, make sure buffer fits */
 			if(iBuf + iLenVal >= iparam->lenBuf) /* we reserve one char for the final \0! */
-				CHKiRet(ExtendBuf((uchar**) &iparam->param, &iparam->lenBuf, iBuf + iLenVal + 1));
+				CHKiRet(ExtendBuf(&iparam->param, &iparam->lenBuf, iBuf + iLenVal + 1));
 
-			memcpy((uchar**) &iparam->param + iBuf, pVal, iLenVal);
+			memcpy(&iparam->param + iBuf, pVal, iLenVal);
 			iBuf += iLenVal;
 		}
 
@@ -228,9 +228,9 @@ tplToString(struct template *__restrict__ const pTpl,
 		 * forbid that case. However, performance toll is minimal, so 
 		 * I tend to permit it. -- 2010-11-05 rgerhards
 		 */
-		CHKiRet(ExtendBuf((uchar**) &iparam->param, &iparam->lenBuf, iBuf + 1));
+		CHKiRet(ExtendBuf(&iparam->param, &iparam->lenBuf, iBuf + 1));
 	}
-	((uchar**) iparam->param)[iBuf] = '\0';
+	iparam->param[iBuf] = '\0';
 	iparam->lenStr = iBuf;
 	
 finalize_it:
