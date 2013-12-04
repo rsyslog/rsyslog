@@ -124,15 +124,18 @@ bs_arrcmp_strtab(const void *s1, const void *s2)
 rsRetVal
 lookupBuildTable(lookup_t *pThis, struct json_object *jroot)
 {
-	struct json_object *jversion, *jnomatch, *jtype, *jtab;
+	//struct json_object *jversion, *jnomatch, *jtype, *jtab;
+	struct json_object *jtab;
 	struct json_object *jrow, *jindex, *jvalue;
 	uint32_t i;
 	uint32_t maxStrSize;
 	DEFiRet;
 
+#if 0 // enable when we continue to work on this module
 	jversion = json_object_object_get(jroot, "version");
 	jnomatch = json_object_object_get(jroot, "nomatch");
 	jtype = json_object_object_get(jroot, "type");
+#endif
 	jtab = json_object_object_get(jroot, "table");
 	pThis->nmemb = json_object_array_length(jtab);
 	CHKmalloc(pThis->d.strtab = malloc(pThis->nmemb * sizeof(lookup_string_tab_etry_t)));
