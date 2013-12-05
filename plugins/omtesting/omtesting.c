@@ -49,6 +49,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <assert.h>
+#include <pthread.h>
 #include "dirty.h"
 #include "syslogd-types.h"
 #include "module-template.h"
@@ -73,6 +74,7 @@ typedef struct _instanceData {
 	int	iFailFrequency;
 	int	iResumeAfter;
 	int	iCurrRetries;
+	pthread_mutex_t mut;
 } instanceData;
 
 typedef struct wrkrInstanceData {
@@ -93,6 +95,7 @@ BEGINcreateInstance
 CODESTARTcreateInstance
 	pData->iWaitSeconds = 1;
 	pData->iWaitUSeconds = 0;
+	pthread_mutex_init(&pData->mut, NULL);
 ENDcreateInstance
 
 
@@ -199,6 +202,7 @@ BEGINdoAction
 CODESTARTdoAction
 	dbgprintf("omtesting received msg '%s'\n", ppString[0]);
 	pData = pWrkrData->pData;
+	pthread_mutex_lock(&pData->mut);
 	switch(pData->mode) {
 		case MD_SLEEP:
 			iRet = doSleep(pData);
@@ -218,15 +222,14 @@ CODESTARTdoAction
 		fprintf(stdout, "%s", ppString[0]);
 		fflush(stdout);
 	}
+	pthread_mutex_unlock(&pData->mut);
 	dbgprintf(":omtesting: end doAction(), iRet %d\n", iRet);
 ENDdoAction
 
 
 BEGINfreeInstance
 CODESTARTfreeInstance
-	/* we do not have instance data, so we do not need to
-	 * do anything here. -- rgerhards, 2007-07-25
-	 */
+	pthread_mutex_destroy(&pData->mut);
 ENDfreeInstance
 
 
