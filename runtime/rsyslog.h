@@ -492,7 +492,7 @@ extern int default_thr_sched_policy;
  * best to avoid this as well ;-)
  * rgerhards, 2013-12-04
  */
-struct actWrkrIParams {
+struct __attribute__ ((__packed__)) actWrkrIParams {
 	uchar *param;
 	uint32_t lenBuf;  /* length of string buffer (if string ptr) */
 	uint32_t lenStr;  /* length of current string (if string ptr) */
