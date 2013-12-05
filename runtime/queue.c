@@ -259,7 +259,7 @@ qqueueDbgPrint(qqueue_t *pThis)
 		(pThis->pszFilePrefix == NULL) ? "[NONE]" : (char*)pThis->pszFilePrefix);
 	dbgoprint((obj_t*) pThis, "queue.size: %d\n", pThis->iMaxQueueSize);
 	dbgoprint((obj_t*) pThis, "queue.dequeuebatchsize: %d\n", pThis->iDeqBatchSize);
-	dbgoprint((obj_t*) pThis, "queue.maxdiskspace: %lld\n", pThis->iMaxFileSize);
+	dbgoprint((obj_t*) pThis, "queue.maxdiskspace: %lld\n", pThis->sizeOnDiskMax);
 	dbgoprint((obj_t*) pThis, "queue.highwatermark: %d\n", pThis->iHighWtrMrk);
 	dbgoprint((obj_t*) pThis, "queue.lowwatermark: %d\n", pThis->iLowWtrMrk);
 	dbgoprint((obj_t*) pThis, "queue.fulldelaymark: %d\n", pThis->iFullDlyMrk);
@@ -2700,7 +2700,7 @@ doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, msg_t *pMsg)
 	 * the queue to become ready or drop the new message. -- rgerhards, 2008-03-14
 	 */
 	while(   (pThis->iMaxQueueSize > 0 && pThis->iQueueSize >= pThis->iMaxQueueSize)
-	      || (pThis->qType == QUEUETYPE_DISK && pThis->sizeOnDiskMax != 0
+	      || ((pThis->qType == QUEUETYPE_DISK || pThis->bIsDA) && pThis->sizeOnDiskMax != 0
 	      	  && pThis->tVars.disk.sizeOnDisk > pThis->sizeOnDiskMax)) {
 		STATSCOUNTER_INC(pThis->ctrFull, pThis->mutCtrFull);
 		if(pThis->toEnq == 0 || pThis->bEnqOnly) {
@@ -2934,7 +2934,7 @@ qqueueApplyCnfParam(qqueue_t *pThis, struct nvlst *lst)
 		} else if(!strcmp(pblk.descr[i].name, "queue.dequeuebatchsize")) {
 			pThis->iDeqBatchSize = pvals[i].val.d.n;
 		} else if(!strcmp(pblk.descr[i].name, "queue.maxdiskspace")) {
-			pThis->iMaxFileSize = pvals[i].val.d.n;
+			pThis->sizeOnDiskMax = pvals[i].val.d.n;
 		} else if(!strcmp(pblk.descr[i].name, "queue.highwatermark")) {
 			pThis->iHighWtrMrk = pvals[i].val.d.n;
 		} else if(!strcmp(pblk.descr[i].name, "queue.lowwatermark")) {
