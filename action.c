@@ -884,36 +884,43 @@ prepareDoActionParams(action_t * __restrict__ const pAction,
 	pWrkrInfo = &(pWti->actWrkrInfo[pAction->iActionNbr]);
 	if(pAction->isTransactional) {
 		CHKiRet(wtiNewIParam(pWti, pAction, &iparams));
+dbgprintf("DDDD: next message\n");
 		for(i = 0 ; i < pAction->iNumTpls ; ++i) {
-			CHKiRet(tplToString(pAction->ppTpl[i], pMsg, (uchar**)&(iparams->param[i]),
-				&iparams->lenBuf[i], &iparams->lenStr[i], ttNow));
-			iparams->param[i] = iparams->param[i];
+			CHKiRet(tplToString(pAction->ppTpl[i], pMsg, 
+					    &actParam(iparams, pAction->iNumTpls, 0, i),
+				            ttNow));
 		}
+{
+int iMsg, j;
+for(iMsg = 0 ; iMsg < pWrkrInfo->p.tx.currIParam ; ++iMsg) {
+	for(j = 0; j < pAction->iNumTpls ; ++j)
+		dbgprintf("DDDD: prepareDoActionParams generated iMsg=%u j=%u, str: %s\n", iMsg, j, actParam(pWrkrInfo->p.tx.iparams, pAction->iNumTpls, iMsg, j).param);
+}
+}
 	} else {
 		for(i = 0 ; i < pAction->iNumTpls ; ++i) {
 			switch(pAction->eParamPassing) {
-				case ACT_STRING_PASSING:
-					CHKiRet(tplToString(pAction->ppTpl[i], pMsg,
-						(uchar**)&(pWrkrInfo->actParams.param[i]),
-						&pWrkrInfo->actParams.lenBuf[i],
-						&pWrkrInfo->actParams.lenStr[i], ttNow));
-					break;
-				case ACT_ARRAY_PASSING:
-					CHKiRet(tplToArray(pAction->ppTpl[i], pMsg,
-						(uchar***) &(pWrkrInfo->actParams.param[i]), ttNow));
-					break;
-				case ACT_MSG_PASSING:
-					pWrkrInfo->actParams.param[i] = (void*) pMsg;
-					break;
-				case ACT_JSON_PASSING:
-					CHKiRet(tplToJSON(pAction->ppTpl[i], pMsg, &json, ttNow));
-					pWrkrInfo->actParams.param[i] = (void*) json;
-					break;
-				default:dbgprintf("software bug/error: unknown pAction->eParamPassing "
-						  "%d in prepareDoActionParams\n",
-						   (int) pAction->eParamPassing);
-					assert(0); /* software bug if this happens! */
-					break;
+			case ACT_STRING_PASSING:
+				CHKiRet(tplToString(pAction->ppTpl[i], pMsg,
+					   &(pWrkrInfo->p.nontx.actParams[i]),
+					   ttNow));
+				break;
+			case ACT_ARRAY_PASSING:
+				CHKiRet(tplToArray(pAction->ppTpl[i], pMsg,
+					(uchar***) &(pWrkrInfo->p.nontx.actParams[i].param), ttNow));
+				break;
+			case ACT_MSG_PASSING:
+				pWrkrInfo->p.nontx.actParams[i].param = (void*) pMsg;
+				break;
+			case ACT_JSON_PASSING:
+				CHKiRet(tplToJSON(pAction->ppTpl[i], pMsg, &json, ttNow));
+				pWrkrInfo->p.nontx.actParams[i].param = (void*) json;
+				break;
+			default:dbgprintf("software bug/error: unknown pAction->eParamPassing "
+					  "%d in prepareDoActionParams\n",
+					   (int) pAction->eParamPassing);
+				assert(0); /* software bug if this happens! */
+				break;
 			}
 		}
 	}
@@ -937,7 +944,7 @@ releaseDoActionParams(action_t *__restrict__ const pAction, wti_t *__restrict__ 
 	pWrkrInfo = &(pWti->actWrkrInfo[pAction->iActionNbr]);
 	switch(pAction->eParamPassing) {
 	case ACT_ARRAY_PASSING:
-		ppMsgs = (uchar***) pWrkrInfo->actParams.param;
+		ppMsgs = (uchar***) pWrkrInfo->p.nontx.actParams[0].param;
 		for(j = 0 ; j < pAction->iNumTpls ; ++j) {
 			if(((uchar**)ppMsgs)[j] != NULL) {
 				jArr = 0;
@@ -954,8 +961,8 @@ releaseDoActionParams(action_t *__restrict__ const pAction, wti_t *__restrict__ 
 	case ACT_JSON_PASSING:
 		for(j = 0 ; j < pAction->iNumTpls ; ++j) {
 			json_object_put((struct json_object*)
-					pWrkrInfo->actParams.param[j]);
-			pWrkrInfo->actParams.param[j] = NULL;
+					pWrkrInfo->p.nontx.actParams[j].param);
+			pWrkrInfo->p.nontx.actParams[j].param = NULL;
 		}
 		break;
 	case ACT_STRING_PASSING:
@@ -973,17 +980,26 @@ done:	return;
  * rgerhards, 2008-01-28
  */
 static rsRetVal
-actionCallDoAction(action_t * const pThis, void *actParams, wti_t * const pWti)
+actionCallDoAction(action_t *__restrict__ const pThis,
+	actWrkrIParams_t *__restrict__ const iparams,
+	wti_t *__restrict__ const pWti)
 {
+	uchar *param[CONF_OMOD_NUMSTRINGS_MAXSIZE];
+	int i;
 	DEFiRet;
-
-	ASSERT(pThis != NULL);
 
 	DBGPRINTF("entering actionCalldoAction(), state: %s, actionNbr %d\n",
 		  getActStateName(pThis, pWti), pThis->iActionNbr);
 
 	pThis->bHadAutoCommit = 0;
-	iRet = pThis->pMod->mod.om.doAction(actParams,
+	/* for this interface, we need to emulate the old style way
+	 * of parameter passing.
+	 */
+	for(i = 0 ; i < pThis->iNumTpls ; ++i) {
+		param[i] = actParam(iparams, pThis->iNumTpls, 0, i).param;
+	}
+
+	iRet = pThis->pMod->mod.om.doAction(param,
 				            pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData);
 	switch(iRet) {
 		case RS_RET_OK:
@@ -1029,12 +1045,14 @@ actionCallCommitTransaction(action_t * const pThis,
 
 	ASSERT(pThis != NULL);
 
-	DBGPRINTF("entering actionCallCommitTransaction(), state: %s, actionNbr %d\n",
-		  getActStateName(pThis, pWti), pThis->iActionNbr);
+	DBGPRINTF("entering actionCallCommitTransaction(), state: %s, actionNbr %d, "
+		  "nMsgs %u\n",
+		  getActStateName(pThis, pWti), pThis->iActionNbr,
+		  wrkrInfo->p.tx.currIParam);
 
 	iRet = pThis->pMod->mod.om.commitTransaction(
 		    pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData,
-		    wrkrInfo->iparams, wrkrInfo->currIParam);
+		    wrkrInfo->p.tx.iparams, wrkrInfo->p.tx.currIParam);
 	switch(iRet) {
 		case RS_RET_OK:
 			actionCommitted(pThis, pWti);
@@ -1090,23 +1108,25 @@ finalize_it:
 
 /* the following functions simulates a potential future new omo callback */
 static rsRetVal
-doTransaction(action_t * const pThis, wti_t * const pWti)
+doTransaction(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti)
 {
 	actWrkrInfo_t *wrkrInfo;
-	actWrkrIParams_t *iparamCurr;
 	int i;
 	DEFiRet;
 
 	wrkrInfo = &(pWti->actWrkrInfo[pThis->iActionNbr]);
 	if(pThis->pMod->mod.om.commitTransaction != NULL) {
-		dbgprintf("DDDD: have commitTransaction IF, using that\n");
+		dbgprintf("DDDD: have commitTransaction IF, using that, pWrkrInfo %p\n", wrkrInfo);
 		CHKiRet(actionCallCommitTransaction(pThis, wrkrInfo, pWti));
-	} else {
-		dbgprintf("DDDD: doTransaction: action %d, currIParams %d\n",
-			   pThis->iActionNbr, wrkrInfo->currIParam);
-		for(i = 0 ; i < wrkrInfo->currIParam ; ++i) {
-			iparamCurr = wrkrInfo->iparams + i;
-			iRet = actionProcessMessage(pThis, iparamCurr->param, pWti);
+	} else { /* note: this branch is for compatibility with old TX modules */
+		dbgprintf("DDDD: doTransaction: action %d, currIParam %d\n",
+			   pThis->iActionNbr, wrkrInfo->p.tx.currIParam);
+		for(i = 0 ; i < wrkrInfo->p.tx.currIParam ; ++i) {
+			/* Note: we provide the message's base iparam - actionProcessMessage()
+			 * uses this as *base* address.
+			 */
+			iRet = actionProcessMessage(pThis,
+				&actParam(wrkrInfo->p.tx.iparams, pThis->iNumTpls, i, 0), pWti);
 		}
 	}
 finalize_it:
@@ -1155,7 +1175,7 @@ dbgprintf("DDDDD: calling endTransaction for action %d\n", pThis->iActionNbr);
 	iRet = getReturnCode(pThis, pWti);
 
 finalize_it:
-	pWti->actWrkrInfo[pThis->iActionNbr].currIParam = 0; /* reset to beginning */
+	pWti->actWrkrInfo[pThis->iActionNbr].p.tx.currIParam = 0; /* reset to beginning */
 	RETiRet;
 }
 
@@ -1165,10 +1185,15 @@ finalize_it:
  * rgerhards, 2013-11-06
  */
 static rsRetVal
-actionCommit(action_t * const pThis, wti_t * const pWti)
+actionCommit(action_t *__restrict__ const pThis, wti_t * const pWti)
 {
 	sbool bDone;
 	DEFiRet;
+
+	if(!pThis->isTransactional ||
+	   pWti->actWrkrInfo[pThis->iActionNbr].p.tx.currIParam == 0) {
+		FINALIZE;
+	}
 
 	/* even more TODO:
 		This is the place where retry processing needs to go in. If the action
@@ -1205,10 +1230,14 @@ actionCommitAllDirect(wti_t * const pWti)
 	action_t *pAction;
 
 	for(i = 0 ; i < iActionNbr ; ++i) {
-		dbgprintf("DDDD: actionCommitAll: action %d, state %u, nbr to commit %d\n",
-			  i, getActionStateByNbr(pWti, i), pWti->actWrkrInfo->currIParam);
 		pAction = pWti->actWrkrInfo[i].pAction;
-		if(pAction != NULL && pAction->pQueue->qType == QUEUETYPE_DIRECT)
+		if(pAction == NULL)
+			continue;
+		DBGPRINTF("actionCommitAll: action %d, state %u, nbr to commit %d "
+			  "isTransactional %d\n",
+			  i, getActionStateByNbr(pWti, i), pWti->actWrkrInfo->p.tx.currIParam,
+			  pAction->isTransactional);
+		if(pAction->pQueue->qType == QUEUETYPE_DIRECT)
 			actionCommit(pAction, pWti);
 	}
 }
@@ -1239,7 +1268,7 @@ dbgprintf("DDDD: processMsgMain[act %d], %s\n", pAction->iActionNbr, pMsg->pszRa
 	}
 
 	iRet = actionProcessMessage(pAction,
-				    pWti->actWrkrInfo[pAction->iActionNbr].actParams.param,
+				    pWti->actWrkrInfo[pAction->iActionNbr].p.nontx.actParams,
 				    pWti);
 	releaseDoActionParams(pAction, pWti);
 finalize_it:

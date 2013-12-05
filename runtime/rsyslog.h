@@ -478,6 +478,11 @@ extern int default_thr_sched_policy;
 /* The following structure defines immutable parameters which need to
  * be passed as action parameters.
  *
+ * Note that output plugins may request multiple templates. Let's say
+ * an output requests n templates. Than the overall table must hold
+ * n*nbrMsgs records, and each messages begins on a n-boundary. There
+ * is a macro defined below to access the proper element.
+ *
  * WARNING: THIS STRUCTURE IS PART OF THE ***OUTPUT MODULE INTERFACE***
  * It is passed into the doCommit() function. Do NOT modify it until
  * absolutely necessary - all output plugins need to be changed!
@@ -488,11 +493,19 @@ extern int default_thr_sched_policy;
  * rgerhards, 2013-12-04
  */
 struct actWrkrIParams {
-	void *param[CONF_OMOD_NUMSTRINGS_MAXSIZE];
-	uint32_t lenBuf[CONF_OMOD_NUMSTRINGS_MAXSIZE];  /* length of string buffer (if string ptr) */
-	uint32_t lenStr[CONF_OMOD_NUMSTRINGS_MAXSIZE];	/* length of current string (if string ptr) */
+	uchar *param;
+	uint32_t lenBuf;  /* length of string buffer (if string ptr) */
+	uint32_t lenStr;  /* length of current string (if string ptr) */
 };
 
+/* macro to access actWrkrIParams base object:
+ * param is ptr to base address
+ * nActTpls is the number of templates the action has requested
+ * iMsg is the message index
+ * iTpl is the template index
+ * This macro can be used for read and write access.
+ */
+#define actParam(param, nActTpls, iMsg, iTpl) (param[(iMsg*nActTpls)+iTpl])
 
 /* for the time being, we do our own portability handling here. It
  * looks like autotools either does not yet support checks for it, or

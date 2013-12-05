@@ -292,7 +292,6 @@ wtiWorker(wti_t *__restrict__ const pThis)
 	rsRetVal localRet;
 	rsRetVal terminateRet;
 	actWrkrInfo_t *__restrict__ wrkrInfo;
-	actWrkrIParams_t *__restrict__ iparamCurr;
 	int iCancelStateSave;
 	int i, j, k;
 	DEFiRet;
@@ -300,7 +299,7 @@ wtiWorker(wti_t *__restrict__ const pThis)
 	dbgSetThrdName(pThis->pszDbgHdr);
 	pthread_cleanup_push(wtiWorkerCancelCleanup, pThis);
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
-dbgprintf("DDDD: wti %p: worker starting\n", pThis);
+	DBGPRINTF("wti %p: worker starting\n", pThis);
 	/* now we have our identity, on to real processing */
 
 	/* note: in this loop, the mutex is "never" unlocked. Of course,
@@ -326,8 +325,8 @@ dbgprintf("DDDD: wti %p: worker starting\n", pThis);
 		if(terminateRet == RS_RET_TERMINATE_NOW) {
 			/* we now need to free the old batch */
 			localRet = pWtp->pfObjProcessed(pWtp->pUsr, pThis);
-			DBGOPRINT((obj_t*) pThis, "terminating worker because of TERMINATE_NOW mode, del iRet %d\n",
-				 localRet);
+			DBGOPRINT((obj_t*) pThis, "terminating worker because of "
+				  "TERMINATE_NOW mode, del iRet %d\n", localRet);
 			break;
 		}
 
@@ -356,28 +355,29 @@ dbgprintf("DDDD: wti %p: worker starting\n", pThis);
 		wrkrInfo = &(pThis->actWrkrInfo[i]);
 		dbgprintf("wti %p, action %d, ptr %p\n", pThis, i, wrkrInfo->actWrkrData);
 		if(wrkrInfo->actWrkrData != NULL) {
-			dbgprintf("DDDD: calling freeWrkrData, currIParam %d\n", wrkrInfo->currIParam);
 			pAction = wrkrInfo->pAction;
 			pAction->pMod->mod.om.freeWrkrInstance(wrkrInfo->actWrkrData);
-			/* free iparam "cache" - we need to go through to max! */
-			for(j = 0 ; j < wrkrInfo->maxIParams ; ++j) {
-				iparamCurr = wrkrInfo->iparams + j;
-				for(k = 0 ; k < pAction->iNumTpls ; ++k) {
-					free(iparamCurr->param[k]);
+			if(pAction->isTransactional) {
+				/* free iparam "cache" - we need to go through to max! */
+				for(j = 0 ; j < wrkrInfo->p.tx.maxIParams ; ++j) {
+					for(k = 0 ; k < pAction->iNumTpls ; ++k) {
+						free(actParam(wrkrInfo->p.tx.iparams,
+							      pAction->iNumTpls, j, k).param);
+					}
 				}
+				free(wrkrInfo->p.tx.iparams);
+				wrkrInfo->p.tx.iparams = NULL;
+				wrkrInfo->p.tx.currIParam = 0;
+				wrkrInfo->p.tx.maxIParams = 0;
 			}
-			free(wrkrInfo->iparams);
 			wrkrInfo->actWrkrData = NULL; /* re-init for next activation */
-			wrkrInfo->iparams = NULL;
-			wrkrInfo->currIParam = 0;
-			wrkrInfo->maxIParams = 0;
 		}
 	}
 
 	/* indicate termination */
 	pthread_cleanup_pop(0); /* remove cleanup handler */
 	pthread_setcancelstate(iCancelStateSave, NULL);
-dbgprintf("DDDD: wti %p: worker exiting\n", pThis);
+	dbgprintf("wti %p: worker exiting\n", pThis);
 
 	RETiRet;
 }

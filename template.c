@@ -145,9 +145,7 @@ finalize_it:
 rsRetVal
 tplToString(struct template *__restrict__ const pTpl,
 	    msg_t *__restrict__ const pMsg,
-	    uchar **ppBuf,
-	    size_t *__restrict__ const pLenBuf,
-	    unsigned *__restrict__ const pStrLen,
+	    actWrkrIParams_t *__restrict const iparam,
 	    struct syslogTime *const ttNow)
 {
 	DEFiRet;
@@ -157,13 +155,9 @@ tplToString(struct template *__restrict__ const pTpl,
 	uchar *pVal;
 	rs_size_t iLenVal = 0;
 
-	assert(pTpl != NULL);
-	assert(pMsg != NULL);
-	assert(ppBuf != NULL);
-	assert(pLenBuf != NULL);
-
 	if(pTpl->pStrgen != NULL) {
-		CHKiRet(pTpl->pStrgen(pMsg, ppBuf, pLenBuf, pStrLen));
+		CHKiRet(pTpl->pStrgen(pMsg, &iparam->param, &iparam->lenBuf, &iparam->lenStr));
+#warning change strgen IF once again?
 		FINALIZE;
 	}
 
@@ -174,9 +168,9 @@ tplToString(struct template *__restrict__ const pTpl,
 		 * in subtree mode and so most probably only used for debug & test.
 		 */
 		getJSONPropVal(pMsg, &pTpl->subtree, &pVal, &iLenVal, &bMustBeFreed);
-		if(iLenVal >= (rs_size_t)*pLenBuf) /* we reserve one char for the final \0! */
-			CHKiRet(ExtendBuf(ppBuf, pLenBuf, iLenVal + 1));
-		memcpy(*ppBuf, pVal, iLenVal+1);
+		if(iLenVal >= (rs_size_t)iparam->lenBuf) /* we reserve one char for the final \0! */
+			CHKiRet(ExtendBuf(&iparam->param, &iparam->lenBuf, iLenVal + 1));
+		memcpy(iparam->param, pVal, iLenVal+1);
 		if(bMustBeFreed)
 			free(pVal);
 		FINALIZE;
@@ -215,10 +209,10 @@ tplToString(struct template *__restrict__ const pTpl,
 		/* got source, now copy over */
 		if(iLenVal > 0) { /* may be zero depending on property */
 			/* first, make sure buffer fits */
-			if(iBuf + iLenVal >= *pLenBuf) /* we reserve one char for the final \0! */
-				CHKiRet(ExtendBuf(ppBuf, pLenBuf, iBuf + iLenVal + 1));
+			if(iBuf + iLenVal >= iparam->lenBuf) /* we reserve one char for the final \0! */
+				CHKiRet(ExtendBuf(&iparam->param, &iparam->lenBuf, iBuf + iLenVal + 1));
 
-			memcpy(*ppBuf + iBuf, pVal, iLenVal);
+			memcpy(iparam->param + iBuf, pVal, iLenVal);
 			iBuf += iLenVal;
 		}
 
@@ -228,16 +222,16 @@ tplToString(struct template *__restrict__ const pTpl,
 		pTpe = pTpe->pNext;
 	}
 
-	if(iBuf == *pLenBuf) {
+	if(iBuf == iparam->lenBuf) {
 		/* in the weired case of an *empty* template, this can happen.
 		 * it is debatable if we should really fix it here or simply
 		 * forbid that case. However, performance toll is minimal, so 
 		 * I tend to permit it. -- 2010-11-05 rgerhards
 		 */
-		CHKiRet(ExtendBuf(ppBuf, pLenBuf, iBuf + 1));
+		CHKiRet(ExtendBuf(&iparam->param, &iparam->lenBuf, iBuf + 1));
 	}
-	(*ppBuf)[iBuf] = '\0';
-	*pStrLen = iBuf;
+	iparam->param[iBuf] = '\0';
+	iparam->lenStr = iBuf;
 	
 finalize_it:
 	RETiRet;

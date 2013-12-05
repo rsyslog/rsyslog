@@ -312,7 +312,7 @@ BEGINdoAction
 	instanceData *pData;
 CODESTARTdoAction
 	pData = pWrkrData->pData;
-	DBGPRINTF(" (%s)\n", pData->pipe);
+	DBGPRINTF("ompipe: writing to %s\n", pData->pipe);
 	/* this module is single-threaded by nature */
 	pthread_mutex_lock(&pData->mutWrite);
 	iRet = writePipe(ppString, pData);
