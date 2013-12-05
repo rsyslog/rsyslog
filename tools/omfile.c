@@ -236,9 +236,13 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "flushontxend", eCmdHdlrBinary, 0 }, /* legacy: omfileflushontxend */
 	{ "iobuffersize", eCmdHdlrSize, 0 }, /* legacy: omfileiobuffersize */
 	{ "dirowner", eCmdHdlrUID, 0 }, /* legacy: dirowner */
+	{ "dirownernum", eCmdHdlrInt, 0 }, /* legacy: dirownernum */
 	{ "dirgroup", eCmdHdlrGID, 0 }, /* legacy: dirgroup */
+	{ "dirgroupnum", eCmdHdlrInt, 0 }, /* legacy: dirgroupnum */
 	{ "fileowner", eCmdHdlrUID, 0 }, /* legacy: fileowner */
+	{ "fileownernum", eCmdHdlrInt, 0 }, /* legacy: fileownernum */
 	{ "filegroup", eCmdHdlrGID, 0 }, /* legacy: filegroup */
+	{ "filegroupnum", eCmdHdlrInt, 0 }, /* legacy: filegroupnum */
 	{ "dircreatemode", eCmdHdlrFileCreateMode, 0 }, /* legacy: dircreatemode */
 	{ "filecreatemode", eCmdHdlrFileCreateMode, 0 }, /* legacy: filecreatemode */
 	{ "failonchownfailure", eCmdHdlrBinary, 0 }, /* legacy: failonchownfailure */
@@ -1148,11 +1152,19 @@ CODESTARTnewActInst
 			pData->iIOBufSize = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "dirowner")) {
 			pData->dirUID = (int) pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "dirownernum")) {
+			pData->dirUID = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "dirgroup")) {
+			pData->dirGID = (int) pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "dirgroupnum")) {
 			pData->dirGID = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "fileowner")) {
 			pData->fileUID = (int) pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "fileownernum")) {
+			pData->fileUID = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "filegroup")) {
+			pData->fileGID = (int) pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "filegroupnum")) {
 			pData->fileGID = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "dircreatemode")) {
 			pData->fDirCreateMode = (int) pvals[i].val.d.n;
@@ -1386,9 +1398,13 @@ INITLegCnfVars
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omfileflushontxend", 0, eCmdHdlrBinary, NULL, &cs.bFlushOnTXEnd, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omfileiobuffersize", 0, eCmdHdlrSize, NULL, &cs.iIOBufSize, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"dirowner", 0, eCmdHdlrUID, NULL, &cs.dirUID, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"dirownernum", 0, eCmdHdlrInt, NULL, &cs.dirUID, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"dirgroup", 0, eCmdHdlrGID, NULL, &cs.dirGID, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"dirgroupnum", 0, eCmdHdlrInt, NULL, &cs.dirGID, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"fileowner", 0, eCmdHdlrUID, NULL, &cs.fileUID, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"fileownernum", 0, eCmdHdlrInt, NULL, &cs.fileUID, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"filegroup", 0, eCmdHdlrGID, NULL, &cs.fileGID, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"filegroupnum", 0, eCmdHdlrInt, NULL, &cs.fileGID, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"dircreatemode", 0, eCmdHdlrFileCreateMode, NULL, &cs.fDirCreateMode, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"filecreatemode", 0, eCmdHdlrFileCreateMode, NULL, &cs.fCreateMode, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"createdirs", 0, eCmdHdlrBinary, NULL, &cs.bCreateDirs, STD_LOADABLE_MODULE_ID));
