@@ -50,6 +50,7 @@ TESTS +=  \
 	execonlywhenprevsuspended2.sh \
 	execonlywhenprevsuspended3.sh \
 	execonlywhenprevsuspended4.sh \
+	execonlywhenprevsuspended_multiwrkr.sh \
 	pipe_noreader.sh \
 	dircreate_dflt.sh \
 	dircreate_off.sh \
@@ -504,6 +505,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/execonlywhenprevsuspended3.conf \
 	   execonlywhenprevsuspended4.sh \
 	   testsuites/execonlywhenprevsuspended4.conf \
+	   execonlywhenprevsuspended_multiwrkr.sh \
+	   testsuites/execonlywhenprevsuspended_multiwrkr.conf \
 	   tabescape_dflt.sh \
 	   testsuites/tabescape_dflt.conf \
 	   testsuites/1.tabescape_dflt \
