@@ -163,19 +163,22 @@ wtiNewIParam(wti_t *const pWti, action_t *const pAction, actWrkrIParams_t **pipa
 
 	if(wrkrInfo->p.tx.currIParam == wrkrInfo->p.tx.maxIParams) {
 		/* we need to extend */
-		dbgprintf("DDDD: extending iparams, max %d\n", wrkrInfo->p.tx.maxIParams);
+		dbgprintf("DDDD: extending iparams, curr max %d\n", wrkrInfo->p.tx.maxIParams);
 		newMax = (wrkrInfo->p.tx.maxIParams == 0) ? CONF_IPARAMS_BUFSIZE
 							  : 2 * wrkrInfo->p.tx.maxIParams;
+dbgprintf("DDDD: realloc size %u\n", sizeof(actWrkrIParams_t) * pAction->iNumTpls * newMax);
 		CHKmalloc(iparams = realloc(wrkrInfo->p.tx.iparams,
 					    sizeof(actWrkrIParams_t) * pAction->iNumTpls * newMax));
-		memset(iparams+wrkrInfo->p.tx.maxIParams, 0,
+dbgprintf("DDDD: setting memory base %u, lenBytes %u, len %u\n", wrkrInfo->p.tx.currIParam * pAction->iNumTpls,
+		       sizeof(actWrkrIParams_t) * pAction->iNumTpls * (newMax - wrkrInfo->p.tx.maxIParams),
+		       pAction->iNumTpls * (newMax - wrkrInfo->p.tx.maxIParams));
+		memset(iparams + (wrkrInfo->p.tx.currIParam * pAction->iNumTpls), 0,
 		       sizeof(actWrkrIParams_t) * pAction->iNumTpls * (newMax - wrkrInfo->p.tx.maxIParams));
 		wrkrInfo->p.tx.iparams = iparams;
 		wrkrInfo->p.tx.maxIParams = newMax;
 	}
 dbgprintf("DDDD: adding param  %d for action %d\n", wrkrInfo->p.tx.currIParam, pAction->iActionNbr);
-	iparams = wrkrInfo->p.tx.iparams + wrkrInfo->p.tx.currIParam;
-	*piparams = iparams;
+	*piparams = wrkrInfo->p.tx.iparams + wrkrInfo->p.tx.currIParam * pAction->iNumTpls;
 	++wrkrInfo->p.tx.currIParam;
 
 finalize_it:

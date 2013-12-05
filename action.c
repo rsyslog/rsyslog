@@ -884,11 +884,19 @@ prepareDoActionParams(action_t * __restrict__ const pAction,
 	pWrkrInfo = &(pWti->actWrkrInfo[pAction->iActionNbr]);
 	if(pAction->isTransactional) {
 		CHKiRet(wtiNewIParam(pWti, pAction, &iparams));
+dbgprintf("DDDD: next message\n");
 		for(i = 0 ; i < pAction->iNumTpls ; ++i) {
 			CHKiRet(tplToString(pAction->ppTpl[i], pMsg, 
 					    &actParam(iparams, pAction->iNumTpls, 0, i),
 				            ttNow));
 		}
+{
+int iMsg, j;
+for(iMsg = 0 ; iMsg < pWrkrInfo->p.tx.currIParam ; ++iMsg) {
+	for(j = 0; j < pAction->iNumTpls ; ++j)
+		dbgprintf("DDDD: prepareDoActionParams generated iMsg=%u j=%u, str: %s\n", iMsg, j, actParam(pWrkrInfo->p.tx.iparams, pAction->iNumTpls, iMsg, j).param);
+}
+}
 	} else {
 		for(i = 0 ; i < pAction->iNumTpls ; ++i) {
 			switch(pAction->eParamPassing) {
