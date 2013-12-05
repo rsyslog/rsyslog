@@ -980,17 +980,26 @@ done:	return;
  * rgerhards, 2008-01-28
  */
 static rsRetVal
-actionCallDoAction(action_t * const pThis, void *actParams, wti_t * const pWti)
+actionCallDoAction(action_t *__restrict__ const pThis,
+	actWrkrIParams_t *__restrict__ const iparams,
+	wti_t *__restrict__ const pWti)
 {
+	uchar *param[CONF_OMOD_NUMSTRINGS_MAXSIZE];
+	int i;
 	DEFiRet;
-
-	ASSERT(pThis != NULL);
 
 	DBGPRINTF("entering actionCalldoAction(), state: %s, actionNbr %d\n",
 		  getActStateName(pThis, pWti), pThis->iActionNbr);
 
 	pThis->bHadAutoCommit = 0;
-	iRet = pThis->pMod->mod.om.doAction(actParams,
+	/* for this interface, we need to emulate the old style way
+	 * of parameter passing.
+	 */
+	for(i = 0 ; i < pThis->iNumTpls ; ++i) {
+		param[i] = actParam(iparams, pThis->iNumTpls, 0, i).param;
+	}
+
+	iRet = pThis->pMod->mod.om.doAction(param,
 				            pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData);
 	switch(iRet) {
 		case RS_RET_OK:
@@ -1099,31 +1108,25 @@ finalize_it:
 
 /* the following functions simulates a potential future new omo callback */
 static rsRetVal
-doTransaction(action_t * const pThis, wti_t * const pWti)
+doTransaction(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti)
 {
 	actWrkrInfo_t *wrkrInfo;
 	int i;
-	void *param[CONF_OMOD_NUMSTRINGS_MAXSIZE];
-	int j;
 	DEFiRet;
 
 	wrkrInfo = &(pWti->actWrkrInfo[pThis->iActionNbr]);
 	if(pThis->pMod->mod.om.commitTransaction != NULL) {
 		dbgprintf("DDDD: have commitTransaction IF, using that, pWrkrInfo %p\n", wrkrInfo);
-		if(wrkrInfo->p.tx.currIParam > 0) {
-			CHKiRet(actionCallCommitTransaction(pThis, wrkrInfo, pWti));
-		}
-	} else { /* note: this branch is for compatibility with old TX modules.
-		  * It's performance is sub-optimal, as it is an interim solution.
-	          * It is thought that all should be upgraded. When this happens,
-		  * this code branch is no longer necessary. -- rgerhards, 2013-12-04
-		  */
-		dbgprintf("DDDD: doTransaction: action %d, currIParams %d\n",
+		CHKiRet(actionCallCommitTransaction(pThis, wrkrInfo, pWti));
+	} else { /* note: this branch is for compatibility with old TX modules */
+		dbgprintf("DDDD: doTransaction: action %d, currIParam %d\n",
 			   pThis->iActionNbr, wrkrInfo->p.tx.currIParam);
 		for(i = 0 ; i < wrkrInfo->p.tx.currIParam ; ++i) {
-			for(j = 0 ; j < pThis->iNumTpls ; ++j)
-				param[j] = actParam(wrkrInfo->p.tx.iparams, pThis->iNumTpls, i, j).param;
-			iRet = actionProcessMessage(pThis, param, pWti);
+			/* Note: we provide the message's base iparam - actionProcessMessage()
+			 * uses this as *base* address.
+			 */
+			iRet = actionProcessMessage(pThis,
+				&actParam(wrkrInfo->p.tx.iparams, pThis->iNumTpls, i, 0), pWti);
 		}
 	}
 finalize_it:
@@ -1182,10 +1185,15 @@ finalize_it:
  * rgerhards, 2013-11-06
  */
 static rsRetVal
-actionCommit(action_t * const pThis, wti_t * const pWti)
+actionCommit(action_t *__restrict__ const pThis, wti_t * const pWti)
 {
 	sbool bDone;
 	DEFiRet;
+
+	if(!pThis->isTransactional ||
+	   pWti->actWrkrInfo[pThis->iActionNbr].p.tx.currIParam == 0) {
+		FINALIZE;
+	}
 
 	/* even more TODO:
 		This is the place where retry processing needs to go in. If the action
@@ -1222,10 +1230,14 @@ actionCommitAllDirect(wti_t * const pWti)
 	action_t *pAction;
 
 	for(i = 0 ; i < iActionNbr ; ++i) {
-		dbgprintf("DDDD: actionCommitAll: action %d, state %u, nbr to commit %d\n",
-			  i, getActionStateByNbr(pWti, i), pWti->actWrkrInfo->p.tx.currIParam);
 		pAction = pWti->actWrkrInfo[i].pAction;
-		if(pAction != NULL && pAction->pQueue->qType == QUEUETYPE_DIRECT)
+		if(pAction == NULL)
+			continue;
+		DBGPRINTF("actionCommitAll: action %d, state %u, nbr to commit %d "
+			  "isTransactional %d\n",
+			  i, getActionStateByNbr(pWti, i), pWti->actWrkrInfo->p.tx.currIParam,
+			  pAction->isTransactional);
+		if(pAction->pQueue->qType == QUEUETYPE_DIRECT)
 			actionCommit(pAction, pWti);
 	}
 }
