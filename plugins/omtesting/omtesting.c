@@ -74,6 +74,9 @@ typedef struct _instanceData {
 	int	iFailFrequency;
 	int	iResumeAfter;
 	int	iCurrRetries;
+	int	bFailed;	/* indicates if we are already in failed state - this is necessary
+	 			 * to work properly together with multiple worker instances.
+				 */
 	pthread_mutex_t mut;
 } instanceData;
 
@@ -126,6 +129,7 @@ static rsRetVal doFailOnResume(instanceData *pData)
 	dbgprintf("fail retry curr %d, max %d\n", pData->iCurrRetries, pData->iResumeAfter);
 	if(++pData->iCurrRetries == pData->iResumeAfter) {
 		iRet = RS_RET_OK;
+		pData->bFailed = 0;
 	} else {
 		iRet = RS_RET_SUSPENDED;
 	}
@@ -139,12 +143,18 @@ static rsRetVal doFail(instanceData *pData)
 {
 	DEFiRet;
 
-	dbgprintf("fail curr %d, frquency %d\n", pData->iCurrCallNbr, pData->iFailFrequency);
-	if(pData->iCurrCallNbr++ % pData->iFailFrequency == 0) {
-		pData->iCurrRetries = 0;
-		iRet = RS_RET_SUSPENDED;
+	dbgprintf("fail curr %d, frequency %d, bFailed %d\n", pData->iCurrCallNbr,
+		  pData->iFailFrequency, pData->bFailed);
+	if(pData->bFailed) {
+		ABORT_FINALIZE(RS_RET_SUSPENDED);
+	} else {
+		if(pData->iCurrCallNbr++ % pData->iFailFrequency == 0) {
+			pData->iCurrRetries = 0;
+			pData->bFailed = 1;
+			iRet = RS_RET_SUSPENDED;
+		}
 	}
-
+finalize_it:
 	RETiRet;
 }
 
@@ -181,6 +191,7 @@ static rsRetVal doRandFail(void)
 BEGINtryResume
 CODESTARTtryResume
 	dbgprintf("omtesting tryResume() called\n");
+	pthread_mutex_lock(&pWrkrData->pData->mut);
 	switch(pWrkrData->pData->mode) {
 		case MD_SLEEP:
 			break;
@@ -193,6 +204,7 @@ CODESTARTtryResume
 		case MD_ALWAYS_SUSPEND:
 			iRet = RS_RET_SUSPENDED;
 	}
+	pthread_mutex_unlock(&pWrkrData->pData->mut);
 	dbgprintf("omtesting tryResume() returns iRet %d\n", iRet);
 ENDtryResume
 
