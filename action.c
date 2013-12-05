@@ -1036,8 +1036,10 @@ actionCallCommitTransaction(action_t * const pThis,
 
 	ASSERT(pThis != NULL);
 
-	DBGPRINTF("entering actionCallCommitTransaction(), state: %s, actionNbr %d\n",
-		  getActStateName(pThis, pWti), pThis->iActionNbr);
+	DBGPRINTF("entering actionCallCommitTransaction(), state: %s, actionNbr %d, "
+		  "nMsgs %u\n",
+		  getActStateName(pThis, pWti), pThis->iActionNbr,
+		  wrkrInfo->p.tx.currIParam);
 
 	iRet = pThis->pMod->mod.om.commitTransaction(
 		    pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData,
@@ -1107,8 +1109,10 @@ doTransaction(action_t * const pThis, wti_t * const pWti)
 
 	wrkrInfo = &(pWti->actWrkrInfo[pThis->iActionNbr]);
 	if(pThis->pMod->mod.om.commitTransaction != NULL) {
-		dbgprintf("DDDD: have commitTransaction IF, using that\n");
-		CHKiRet(actionCallCommitTransaction(pThis, wrkrInfo, pWti));
+		dbgprintf("DDDD: have commitTransaction IF, using that, pWrkrInfo %p\n", wrkrInfo);
+		if(wrkrInfo->p.tx.currIParam > 0) {
+			CHKiRet(actionCallCommitTransaction(pThis, wrkrInfo, pWti));
+		}
 	} else { /* note: this branch is for compatibility with old TX modules.
 		  * It's performance is sub-optimal, as it is an interim solution.
 	          * It is thought that all should be upgraded. When this happens,
