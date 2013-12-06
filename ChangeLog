@@ -1,5 +1,9 @@
 ---------------------------------------------------------------------------
-Version 8.1.3 [devel] 2013-12-??
+Version 8.1.3 [devel] 2013-12-06
+
+THIS VERSION CAN BE CONSIDERED A "NORMAL" DEVEL RELEASE. It's no longer
+highly experimental. This assertion is based on real-world feedback.
+
 - changes to the strgen module interface
 - new output module interface for transactional modules
 - performance improvements
@@ -26,7 +30,7 @@ Version 8.1.3 [devel] 2013-12-??
     queue.maxdiskspace for disk assisted queues.
   Thanks to Karol Jurak for the patch.
 ---------------------------------------------------------------------------
-Version 8.1.2 [devel] 2013-11-28
+Version 8.1.2 [experimental] 2013-11-28
 - support for liblognorm1 added - results in performance improvements
   Thanks to Pavel Levshin for his work in this regard.
 - support for jemalloc added via --enable-jemalloc
@@ -45,7 +49,7 @@ Version 8.1.2 [devel] 2013-11-28
 - bugfix: legacy directive $ActionQueueWorkerThreads was not honored
 - bugfix: mmrfc5424addhmac: "key" parameter was not properly processed
 ---------------------------------------------------------------------------
-Version 8.1.1 [devel] 2013-11-19
+Version 8.1.1 [experimental] 2013-11-19
 - bugfix: STOP/discard(~) was mostly NOT honored
   This lead to execution of config code that was not meant to be executed.
 - bugfix: memory leak on worker thread termination
@@ -65,7 +69,7 @@ Version 8.1.1 [devel] 2013-11-19
   Thanks to Pavel Levshin for alerting us and providing a patch
   proposal.
 ---------------------------------------------------------------------------
-Version 8.1.0 [devel] 2013-11-15
+Version 8.1.0 [experimental] 2013-11-15
 - rewritten core engine for higher performance and new features
   In detail:
   * completely rewritten rule execution engine
