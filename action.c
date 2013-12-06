@@ -1185,7 +1185,7 @@ finalize_it:
  * rgerhards, 2013-11-06
  */
 static rsRetVal
-actionCommit(action_t *__restrict__ const pThis, wti_t * const pWti)
+actionCommit(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti)
 {
 	sbool bDone;
 	DEFiRet;
@@ -1224,7 +1224,7 @@ finalize_it:
 
 /* Commit all active transactions in *DIRECT mode* */
 void
-actionCommitAllDirect(wti_t * const pWti)
+actionCommitAllDirect(wti_t *__restrict__ const pWti)
 {
 	int i;
 	action_t *pAction;
@@ -1247,7 +1247,10 @@ actionCommitAllDirect(wti_t * const pWti)
  * queue thread if the action queue is set to "direct".
  */
 static rsRetVal
-processMsgMain(action_t * const pAction, wti_t * const pWti, msg_t *pMsg, struct syslogTime *ttNow)
+processMsgMain(action_t *__restrict__ const pAction,
+	wti_t *__restrict__ const pWti,
+	msg_t *__restrict__ const pMsg,
+	struct syslogTime *ttNow)
 {
 	DEFiRet;
 
@@ -1272,24 +1275,22 @@ dbgprintf("DDDD: processMsgMain[act %d], %s\n", pAction->iActionNbr, pMsg->pszRa
 				    pWti);
 	releaseDoActionParams(pAction, pWti);
 finalize_it:
-dbgprintf("XXXXX: iRet %d\n", iRet);
 	if(iRet == RS_RET_OK) {
 		if(pWti->execState.bDoAutoCommit)
 			iRet = actionCommit(pAction, pWti);
 	}
-dbgprintf("XXXXX: iRet2 %d\n", iRet);
 	pWti->execState.bPrevWasSuspended = (iRet == RS_RET_SUSPENDED || iRet == RS_RET_ACTION_FAILED);
-dbgprintf("DDDD: bPrevWasSuspended now %d, action state %d\n", (int)pWti->execState.bPrevWasSuspended, getActionState(pWti, pAction));
 	RETiRet;
 }
 
 /* This entry point is called by the ACTION queue (not main queue!)
  */
 static rsRetVal
-processBatchMain(void *pVoid, batch_t * const pBatch, wti_t * const pWti)
+processBatchMain(void *__restrict__ const pVoid,
+	batch_t *__restrict__ const pBatch,
+	wti_t *__restrict__ const pWti)
 {
-	action_t * const pAction = (action_t*) pVoid;
-	msg_t *pMsg;
+	action_t *__restrict__ const pAction = (action_t*__restrict__ const) pVoid;
 	int i;
 	struct syslogTime ttNow;
 	DEFiRet;
@@ -1300,8 +1301,7 @@ processBatchMain(void *pVoid, batch_t * const pBatch, wti_t * const pWti)
 
 	for(i = 0 ; i < batchNumMsgs(pBatch) && !*pWti->pbShutdownImmediate ; ++i) {
 		if(batchIsValidElem(pBatch, i)) {
-			pMsg = pBatch->pElem[i].pMsg;
-			iRet = processMsgMain(pAction, pWti, pMsg, &ttNow);
+			iRet = processMsgMain(pAction, pWti, pBatch->pElem[i].pMsg, &ttNow);
 			batchSetElemState(pBatch, i, BATCH_STATE_COMM);
 		}
 	}
