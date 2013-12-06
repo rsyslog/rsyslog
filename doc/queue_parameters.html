@@ -38,9 +38,17 @@ queues are not set up by default.</p>
 		FAQ: "lower bound for queue sizes"</a>.</li>
 	<li><strong>queue.dequeuebatchsize</strong> number 
 	<br>default 16</li>
-	<li><strong>queue.maxdiskspace</strong> number</li>
+	<li><strong>queue.maxdiskspace</strong> number
+	<br>The maximum size that all queue files together will use on disk.
+	Note that the actual size may be slightly larger than the configured max, as
+	rsyslog never writes partial queue records.
 	<li><strong>queue.highwatermark</strong> number
-	<br>default 8000</li>
+	<br>This applies to disk-assisted queues, only.
+	When the queue fills up to this number of messages, the queue begins
+	to spool messages to disk. Please note that this should note happen as
+	part of usual processing, because disk queue mode is very considerably
+	slower than in-memory queue mode. Going to disk should be reserved for
+	cases where an output action destination is offline for some period.
 	<li><strong>queue.lowwatermark</strong> number
 	<br>default 2000</li>
 	<li><strong>queue.fulldelaymark</strong> number</br>
