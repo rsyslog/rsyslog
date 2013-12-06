@@ -143,7 +143,7 @@ void tplDeleteAll(rsconf_t *conf);
 void tplDeleteNew(rsconf_t *conf);
 void tplPrintList(rsconf_t *conf);
 void tplLastStaticInit(rsconf_t *conf, struct template *tpl);
-rsRetVal ExtendBuf(uchar **pBuf, size_t *pLenBuf, size_t iMinSize);
+rsRetVal ExtendBuf(actWrkrIParams_t *const iparam, const size_t iMinSize);
 int tplRequiresDateCall(struct template *pTpl);
 /* note: if a compiler warning for undefined type tells you to look at this
  * code line below, the actual cause is that you currently MUST include template.h

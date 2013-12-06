@@ -84,7 +84,7 @@ CODESTARTstrgen
 
 	/* now make sure buffer is large enough */
 	if(lenTotal  >= iparam->lenBuf)
-		CHKiRet(ExtendBuf(&iparam->param, &iparam->lenBuf, lenTotal));
+		CHKiRet(ExtendBuf(iparam, lenTotal));
 
 	/* and concatenate the resulting string */
 	memcpy(iparam->param, pTimeStamp, CONST_LEN_TIMESTAMP_3164);

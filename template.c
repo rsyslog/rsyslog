@@ -116,16 +116,16 @@ static int bFirstRegexpErrmsg = 1; /**< did we already do a "can't load regexp" 
 /* helper to tplToString and strgen's, extends buffer */
 #define ALLOC_INC 128
 rsRetVal
-ExtendBuf(uchar **pBuf, size_t *__restrict__ const pLenBuf, const size_t iMinSize)
+ExtendBuf(actWrkrIParams_t *__restrict__ const iparam, const size_t iMinSize)
 {
 	uchar *pNewBuf;
 	size_t iNewSize;
 	DEFiRet;
 
 	iNewSize = (iMinSize / ALLOC_INC + 1) * ALLOC_INC;
-	CHKmalloc(pNewBuf = (uchar*) realloc(*pBuf, iNewSize));
-	*pBuf = pNewBuf;
-	*pLenBuf = iNewSize;
+	CHKmalloc(pNewBuf = (uchar*) realloc(iparam->param, iNewSize));
+	iparam->param = pNewBuf;
+	iparam->lenBuf = iNewSize;
 
 finalize_it:
 	RETiRet;
@@ -168,7 +168,7 @@ tplToString(struct template *__restrict__ const pTpl,
 		 */
 		getJSONPropVal(pMsg, &pTpl->subtree, &pVal, &iLenVal, &bMustBeFreed);
 		if(iLenVal >= (rs_size_t)iparam->lenBuf) /* we reserve one char for the final \0! */
-			CHKiRet(ExtendBuf(&iparam->param, &iparam->lenBuf, iLenVal + 1));
+			CHKiRet(ExtendBuf(iparam, iLenVal + 1));
 		memcpy(iparam->param, pVal, iLenVal+1);
 		if(bMustBeFreed)
 			free(pVal);
@@ -209,7 +209,7 @@ tplToString(struct template *__restrict__ const pTpl,
 		if(iLenVal > 0) { /* may be zero depending on property */
 			/* first, make sure buffer fits */
 			if(iBuf + iLenVal >= iparam->lenBuf) /* we reserve one char for the final \0! */
-				CHKiRet(ExtendBuf(&iparam->param, &iparam->lenBuf, iBuf + iLenVal + 1));
+				CHKiRet(ExtendBuf(iparam, iBuf + iLenVal + 1));
 
 			memcpy(iparam->param + iBuf, pVal, iLenVal);
 			iBuf += iLenVal;
@@ -227,7 +227,7 @@ tplToString(struct template *__restrict__ const pTpl,
 		 * forbid that case. However, performance toll is minimal, so 
 		 * I tend to permit it. -- 2010-11-05 rgerhards
 		 */
-		CHKiRet(ExtendBuf(&iparam->param, &iparam->lenBuf, iBuf + 1));
+		CHKiRet(ExtendBuf(iparam, iBuf + 1));
 	}
 	iparam->param[iBuf] = '\0';
 	iparam->lenStr = iBuf;
