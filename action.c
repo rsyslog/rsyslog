@@ -807,7 +807,6 @@ actionPrepare(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti
 	 * action state accordingly
 	 */
 	if(getActionState(pWti, pThis) == ACT_STATE_RDY) {
-dbgprintf("DDDDD: calling beginTransaction for action %d\n", pThis->iActionNbr);
 		iRet = pThis->pMod->mod.om.beginTransaction(pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData);
 		switch(iRet) {
 			case RS_RET_OK:
@@ -884,19 +883,11 @@ prepareDoActionParams(action_t * __restrict__ const pAction,
 	pWrkrInfo = &(pWti->actWrkrInfo[pAction->iActionNbr]);
 	if(pAction->isTransactional) {
 		CHKiRet(wtiNewIParam(pWti, pAction, &iparams));
-dbgprintf("DDDD: next message\n");
 		for(i = 0 ; i < pAction->iNumTpls ; ++i) {
 			CHKiRet(tplToString(pAction->ppTpl[i], pMsg, 
 					    &actParam(iparams, pAction->iNumTpls, 0, i),
 				            ttNow));
 		}
-{
-int iMsg, j;
-for(iMsg = 0 ; iMsg < pWrkrInfo->p.tx.currIParam ; ++iMsg) {
-	for(j = 0; j < pAction->iNumTpls ; ++j)
-		dbgprintf("DDDD: prepareDoActionParams generated iMsg=%u j=%u, str: %s\n", iMsg, j, actParam(pWrkrInfo->p.tx.iparams, pAction->iNumTpls, iMsg, j).param);
-}
-}
 	} else {
 		for(i = 0 ; i < pAction->iNumTpls ; ++i) {
 			switch(pAction->eParamPassing) {
@@ -1116,10 +1107,10 @@ doTransaction(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti
 
 	wrkrInfo = &(pWti->actWrkrInfo[pThis->iActionNbr]);
 	if(pThis->pMod->mod.om.commitTransaction != NULL) {
-		dbgprintf("DDDD: have commitTransaction IF, using that, pWrkrInfo %p\n", wrkrInfo);
+		DBGPRINTF("doTransaction: have commitTransaction IF, using that, pWrkrInfo %p\n", wrkrInfo);
 		CHKiRet(actionCallCommitTransaction(pThis, wrkrInfo, pWti));
 	} else { /* note: this branch is for compatibility with old TX modules */
-		dbgprintf("DDDD: doTransaction: action %d, currIParam %d\n",
+		DBGPRINTF("doTransaction: action %d, currIParam %d\n",
 			   pThis->iActionNbr, wrkrInfo->p.tx.currIParam);
 		for(i = 0 ; i < wrkrInfo->p.tx.currIParam ; ++i) {
 			/* Note: we provide the message's base iparam - actionProcessMessage()
@@ -1144,7 +1135,6 @@ actionTryCommit(action_t *__restrict__ const pThis, wti_t *__restrict__ const pW
 
 	CHKiRet(actionPrepare(pThis, pWti));
 	if(getActionState(pWti, pThis) == ACT_STATE_ITX) {
-dbgprintf("DDDDD: calling endTransaction for action %d\n", pThis->iActionNbr);
 		iRet = pThis->pMod->mod.om.endTransaction(pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData);
 		switch(iRet) {
 			case RS_RET_OK:
@@ -1260,11 +1250,10 @@ processMsgMain(action_t *__restrict__ const pAction,
 		FINALIZE;
 	}
 
-dbgprintf("DDDD: processMsgMain[act %d], %s\n", pAction->iActionNbr, pMsg->pszRawMsg);
 	iRet = prepareDoActionParams(pAction, pWti, pMsg, ttNow);
 	if(pAction->isTransactional) {
 		pWti->actWrkrInfo[pAction->iActionNbr].pAction = pAction;
-		dbgprintf("DDDD: action %d is transactional - executing in commit phase\n", pAction->iActionNbr);
+		DBGPRINTF("action %d is transactional - executing in commit phase\n", pAction->iActionNbr);
 		actionPrepare(pAction, pWti);
 		iRet = getReturnCode(pAction, pWti);
 		FINALIZE;
@@ -1308,7 +1297,6 @@ processBatchMain(void *__restrict__ const pVoid,
 
 	if(!pWti->execState.bDoAutoCommit)
 		iRet = actionCommit(pAction, pWti);
-dbgprintf("DDDD: processBatchMain - end\n");
 	RETiRet;
 }
 
