@@ -1272,8 +1272,12 @@ dbgprintf("DDDD: processMsgMain[act %d], %s\n", pAction->iActionNbr, pMsg->pszRa
 				    pWti);
 	releaseDoActionParams(pAction, pWti);
 finalize_it:
-	if(pWti->execState.bDoAutoCommit)
-		iRet = actionCommit(pAction, pWti);
+dbgprintf("XXXXX: iRet %d\n", iRet);
+	if(iRet == RS_RET_OK) {
+		if(pWti->execState.bDoAutoCommit)
+			iRet = actionCommit(pAction, pWti);
+	}
+dbgprintf("XXXXX: iRet2 %d\n", iRet);
 	pWti->execState.bPrevWasSuspended = (iRet == RS_RET_SUSPENDED || iRet == RS_RET_ACTION_FAILED);
 dbgprintf("DDDD: bPrevWasSuspended now %d, action state %d\n", (int)pWti->execState.bPrevWasSuspended, getActionState(pWti, pAction));
 	RETiRet;
