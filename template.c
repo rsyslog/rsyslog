@@ -156,8 +156,7 @@ tplToString(struct template *__restrict__ const pTpl,
 	rs_size_t iLenVal = 0;
 
 	if(pTpl->pStrgen != NULL) {
-		CHKiRet(pTpl->pStrgen(pMsg, &iparam->param, &iparam->lenBuf, &iparam->lenStr));
-#warning change strgen IF once again?
+		CHKiRet(pTpl->pStrgen(pMsg, iparam));
 		FINALIZE;
 	}
 

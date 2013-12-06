@@ -1066,7 +1066,7 @@ static rsRetVal parse(msg_t *pMsg)\
  *         of the generated string on exit (this is cached)
  */
 #define BEGINstrgen \
-static rsRetVal strgen(msg_t *const pMsg, uchar **ppBuf, size_t *const pLenBuf, unsigned *const pStrLen) \
+static rsRetVal strgen(msg_t *const pMsg, actWrkrIParams_t *const iparam) \
 {\
 	DEFiRet;
 

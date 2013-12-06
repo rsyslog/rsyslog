@@ -88,31 +88,31 @@ CODESTARTstrgen
 		++lenTotal; /* then we need to introduce one additional space */
 
 	/* now make sure buffer is large enough */
-	if(lenTotal  >= *pLenBuf)
-		CHKiRet(ExtendBuf(ppBuf, pLenBuf, lenTotal));
+	if(lenTotal  >= iparam->lenBuf)
+		CHKiRet(ExtendBuf(&iparam->param, &iparam->lenBuf, lenTotal));
 
 	/* and concatenate the resulting string */
-	memcpy(*ppBuf, pTimeStamp, lenTimeStamp);
+	memcpy(iparam->param, pTimeStamp, lenTimeStamp);
 	iBuf = lenTimeStamp;
-	*(*ppBuf + iBuf++) = ' ';
+	iparam->param[iBuf++] = ' ';
 
-	memcpy(*ppBuf + iBuf, pHOSTNAME, lenHOSTNAME);
+	memcpy(iparam->param + iBuf, pHOSTNAME, lenHOSTNAME);
 	iBuf += lenHOSTNAME;
-	*(*ppBuf + iBuf++) = ' ';
+	iparam->param[iBuf++] = ' ';
 
-	memcpy(*ppBuf + iBuf, pTAG, lenTAG);
+	memcpy(iparam->param + iBuf, pTAG, lenTAG);
 	iBuf += lenTAG;
 
 	if(pMSG[0] != ' ')
-		*(*ppBuf + iBuf++) = ' ';
-	memcpy(*ppBuf + iBuf, pMSG, lenMSG);
+		iparam->param[iBuf++] = ' ';
+	memcpy(iparam->param + iBuf, pMSG, lenMSG);
 	iBuf += lenMSG;
 
 	/* trailer */
-	*(*ppBuf + iBuf++) = '\n';
-	*(*ppBuf + iBuf) = '\0';
+	iparam->param[iBuf++] = '\n';
+	iparam->param[iBuf] = '\0';
 
-	*pStrLen = lenTotal - 1; /* do not count \0! */
+	iparam->lenStr = lenTotal - 1; /* do not count \0! */
 
 finalize_it:
 ENDstrgen

@@ -1,7 +1,7 @@
 /* This is the header for template processing code of rsyslog.
  * begun 2004-11-17 rgerhards
  *
- * Copyright (C) 2004-2012 by Rainer Gerhards and Adiscon GmbH
+ * Copyright (C) 2004-2013 by Rainer Gerhards and Adiscon GmbH
  *
  * This file is part of rsyslog.
  *
@@ -39,7 +39,7 @@ struct template {
 	struct template *pNext;
 	char *pszName;
 	int iLenName;
-	rsRetVal (*pStrgen)(msg_t*const, uchar**, unsigned *const, unsigned *const);
+	rsRetVal (*pStrgen)(const msg_t*const, actWrkrIParams_t *const iparam);
 	sbool bHaveSubtree;
 	msgPropDescr_t subtree;	/* subtree property name for subtree-type templates */
 	int tpenElements; /* number of elements in templateEntry list */

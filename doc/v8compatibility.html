@@ -123,8 +123,13 @@ all cases. In v8, creating action creation fails if anything but RS_RET_OK
 is returned.
 
 <h3>string generator interface</h3>
-<p>The BEGINstrgen() entry point now requires an additional output
-parameter pLenStr, which must hold the length of the generated string
+<p>Bottom line: string generators need to be changed or will abort.
+<p>The BEGINstrgen() entry point has greatly changed. Instead of two parameters
+for the output buffers, they now receive a single <code>iparam</code>
+pointer, which contains all data items needed. Also, the message pointer is
+now const to "prevent" (accidential) changes to the message via the strgen interface.
+<p>Note that strgen modules must now maintain the iparam->lenStr field,
+which must hold the length of the generated string
 on exit. This is necessary as we cache the string sizes in order
 to reduced strlen() calls. Also, the numerical parameters are
 now unsigned and no longer size_t. This permits us to store them directly
