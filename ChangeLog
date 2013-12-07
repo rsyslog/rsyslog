@@ -1,4 +1,8 @@
 ---------------------------------------------------------------------------
+Version 8.1.4 [devel] 2013-12-06
+- bugfix: action commitTransaction() processing did not properly handle
+  suspended actions
+---------------------------------------------------------------------------
 Version 8.1.3 [devel] 2013-12-06
 
 THIS VERSION CAN BE CONSIDERED A "NORMAL" DEVEL RELEASE. It's no longer
