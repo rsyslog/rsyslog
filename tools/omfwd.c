@@ -776,13 +776,7 @@ processMsg(wrkrInstanceData_t *__restrict__ const pWrkrData,
 	instanceData *__restrict__ const pData = pWrkrData->pData;
 	DEFiRet;
 
-	dbgprintf("DDDD: doAction: pWrkrData %p\n", pWrkrData);
-	CHKiRet(doTryResume(pWrkrData));
-
 	iMaxLine = glbl.GetMaxLine();
-
-	dbgprintf(" %s:%s/%s\n", pData->target, pData->port,
-		 pData->protocol == FORW_UDP ? "udp" : "tcp");
 
 	psz = iparam->param;
 	l = iparam->lenStr;
@@ -855,6 +849,11 @@ BEGINcommitTransaction
 	unsigned i;
 CODESTARTcommitTransaction
 dbgprintf("DDDDDD: omfwd processing nParams %d\n", nParams);
+	CHKiRet(doTryResume(pWrkrData));
+
+	dbgprintf(" %s:%s/%s\n", pWrkrData->pData->target, pWrkrData->pData->port,
+		 pWrkrData->pData->protocol == FORW_UDP ? "udp" : "tcp");
+
 	for(i = 0 ; i < nParams ; ++i) {
 dbgprintf("DDDDDD: omfwd processing msg %d\n", i);
 		iRet = processMsg(pWrkrData, &actParam(pParams, 1, i, 0));
