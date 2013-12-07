@@ -1166,7 +1166,9 @@ actionCommit(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti)
 	DEFiRet;
 
 	if(!pThis->isTransactional ||
-	   pWti->actWrkrInfo[pThis->iActionNbr].p.tx.currIParam == 0) {
+	   pWti->actWrkrInfo[pThis->iActionNbr].p.tx.currIParam == 0 ||
+	   getActionState(pWti, pThis) == ACT_STATE_SUSP
+	   ) {
 		FINALIZE;
 	}
 
@@ -1192,6 +1194,11 @@ actionCommit(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti)
 		} else if(iRet == RS_RET_OK ||
 			  iRet == RS_RET_SUSPENDED ||
 			  iRet == RS_RET_ACTION_FAILED) {
+			bDone = 1;
+		}
+dbgprintf("DDDDDD: actionState %s: \n", getActStateName(pThis, pWti));
+		if(getActionState(pWti, pThis) == ACT_STATE_RDY ||
+		   getActionState(pWti, pThis) == ACT_STATE_SUSP) {
 			bDone = 1;
 		}
 	} while(!bDone);
@@ -1239,6 +1246,7 @@ processMsgMain(action_t *__restrict__ const pAction,
 	}
 
 	iRet = prepareDoActionParams(pAction, pWti, pMsg, ttNow);
+
 	if(pAction->isTransactional) {
 		pWti->actWrkrInfo[pAction->iActionNbr].pAction = pAction;
 		DBGPRINTF("action %d is transactional - executing in commit phase\n", pAction->iActionNbr);
