@@ -1038,9 +1038,7 @@ actionCallDoAction(action_t *__restrict__ const pThis,
 }
 
 
-/* call the commitTransaction output plugin entry point
- * TODO: combine common code with doAction() above! -- rgerhards, 2013-12-04
- */
+/* call the commitTransaction output plugin entry point */
 static rsRetVal
 actionCallCommitTransaction(action_t * const pThis,
 	const actWrkrInfo_t *const wrkrInfo,
