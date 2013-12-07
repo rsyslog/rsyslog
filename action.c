@@ -800,10 +800,8 @@ actionPrepare(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti
 {
 	DEFiRet;
 
-dbgprintf("DDDDDD: actionPrepare called\n");
 	CHKiRet(actionCheckAndCreateWrkrInstance(pThis, pWti));
 	CHKiRet(actionTryResume(pThis, pWti));
-dbgprintf("DDDDDD: actionPrepare after tryResume\n");
 
 	/* if we are now ready, we initialize the transaction and advance
 	 * action state accordingly
@@ -825,7 +823,6 @@ dbgprintf("DDDDDD: actionPrepare after tryResume\n");
 	}
 
 finalize_it:
-dbgprintf("DDDDDD: result actionPrepare %d\n", iRet);
 	RETiRet;
 }
 
@@ -1196,14 +1193,12 @@ actionCommit(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti)
 			  iRet == RS_RET_ACTION_FAILED) {
 			bDone = 1;
 		}
-dbgprintf("DDDDDD: actionState %s: \n", getActStateName(pThis, pWti));
 		if(getActionState(pWti, pThis) == ACT_STATE_RDY ||
 		   getActionState(pWti, pThis) == ACT_STATE_SUSP) {
 			bDone = 1;
 		}
 	} while(!bDone);
 finalize_it:
-dbgprintf("DDDDDD: exiting actionCommit iRet %d\n", iRet);
 	RETiRet;
 }
 
