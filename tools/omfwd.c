@@ -393,7 +393,9 @@ ENDdbgPrintInstInfo
 /* Send a message via UDP
  * rgehards, 2007-12-20
  */
-static rsRetVal UDPSend(wrkrInstanceData_t *pWrkrData, char *msg, size_t len)
+static rsRetVal UDPSend(wrkrInstanceData_t *__restrict__ const pWrkrData,
+	uchar *__restrict__ const msg,
+	const size_t len)
 {
 	DEFiRet;
 	struct addrinfo *r;
@@ -761,17 +763,20 @@ dbgprintf("omfwd: beginTransaction\n");
 ENDbeginTransaction
 
 
-BEGINdoAction
-	char *psz; /* temporary buffering */
+static rsRetVal
+processMsg(wrkrInstanceData_t *__restrict__ const pWrkrData,
+	actWrkrIParams_t *__restrict__ const iparam)
+{
+	uchar *psz; /* temporary buffering */
 	register unsigned l;
 	int iMaxLine;
 #	ifdef	USE_NETZIP
 	Bytef *out = NULL; /* for compression */
 #	endif
-	instanceData *pData;
-CODESTARTdoAction
+	instanceData *__restrict__ const pData = pWrkrData->pData;
+	DEFiRet;
+
 	dbgprintf("DDDD: doAction: pWrkrData %p\n", pWrkrData);
-	pData = pWrkrData->pData;
 	CHKiRet(doTryResume(pWrkrData));
 
 	iMaxLine = glbl.GetMaxLine();
@@ -779,8 +784,8 @@ CODESTARTdoAction
 	dbgprintf(" %s:%s/%s\n", pData->target, pData->port,
 		 pData->protocol == FORW_UDP ? "udp" : "tcp");
 
-	psz = (char*) ppString[0];
-	l = strlen((char*) psz);
+	psz = iparam->param;
+	l = iparam->lenStr;
 	if((int) l > iMaxLine)
 		l = iMaxLine;
 
@@ -816,7 +821,7 @@ CODESTARTdoAction
 		} else if(destLen+1 < l) {
 			/* only use compression if there is a gain in using it! */
 			dbgprintf("there is gain in compression, so we do it\n");
-			psz = (char*) out;
+			psz = out;
 			l = destLen + 1; /* take care for the "z" at message start! */
 		}
 		++destLen;
@@ -828,7 +833,7 @@ CODESTARTdoAction
 		CHKiRet(UDPSend(pWrkrData, psz, l));
 	} else {
 		/* forward via TCP */
-		iRet = tcpclt.Send(pWrkrData->pTCPClt, pWrkrData, psz, l);
+		iRet = tcpclt.Send(pWrkrData->pTCPClt, pWrkrData, (char *)psz, l);
 		if(iRet != RS_RET_OK && iRet != RS_RET_DEFER_COMMIT && iRet != RS_RET_PREVIOUS_COMMITTED) {
 			/* error! */
 			dbgprintf("error forwarding via tcp, suspending\n");
@@ -843,18 +848,28 @@ finalize_it:
 #	ifdef USE_NETZIP
 	free(out); /* is NULL if it was never used... */
 #	endif
-ENDdoAction
+	RETiRet;
+}
 
+BEGINcommitTransaction
+	unsigned i;
+CODESTARTcommitTransaction
+dbgprintf("DDDDDD: omfwd processing nParams %d\n", nParams);
+	for(i = 0 ; i < nParams ; ++i) {
+dbgprintf("DDDDDD: omfwd processing msg %d\n", i);
+		iRet = processMsg(pWrkrData, &actParam(pParams, 1, i, 0));
+		if(iRet != RS_RET_OK && iRet != RS_RET_DEFER_COMMIT && iRet != RS_RET_PREVIOUS_COMMITTED)
+			FINALIZE;
+	}
 
-BEGINendTransaction
-CODESTARTendTransaction
-dbgprintf("omfwd: endTransaction, offsSndBuf %u\n", pWrkrData->offsSndBuf);
+dbgprintf("omfwd: endTransaction, offsSndBuf %u, iRet %d\n", pWrkrData->offsSndBuf, iRet);
 	if(pWrkrData->offsSndBuf != 0) {
 		iRet = TCPSendBuf(pWrkrData, pWrkrData->sndBuf, pWrkrData->offsSndBuf, IS_FLUSH);
 		pWrkrData->offsSndBuf = 0;
 	}
-ENDendTransaction
-
+finalize_it:
+dbgprintf("DDDDDD: omfwd commitTransaction exit, iRet %d\n", iRet);
+ENDcommitTransaction
 
 
 /* This function loads TCP support, if not already loaded. It will be called
@@ -1280,12 +1295,11 @@ ENDmodExit
 
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_OMOD_QUERIES
+CODEqueryEtryPt_STD_OMODTX_QUERIES
 CODEqueryEtryPt_STD_OMOD8_QUERIES
 CODEqueryEtryPt_STD_CONF2_QUERIES
 CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
-CODEqueryEtryPt_TXIF_OMOD_QUERIES /* we support the transactional interface! */
 ENDqueryEtryPt
 
 
