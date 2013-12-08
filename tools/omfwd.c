@@ -834,9 +834,6 @@ processMsg(wrkrInstanceData_t *__restrict__ const pWrkrData,
 			DestructTCPInstanceData(pWrkrData);
 			iRet = RS_RET_SUSPENDED;
 		}
-		if(pData->compressionMode >= COMPRESS_STREAM_ALWAYS && pData->strmCompFlushOnTxEnd)
-			/* mimic not committed, as we need the EndTx entry point to be called */
-			iRet = RS_RET_DEFER_COMMIT;
 	}
 finalize_it:
 #	ifdef USE_NETZIP
