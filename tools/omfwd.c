@@ -845,14 +845,12 @@ finalize_it:
 BEGINcommitTransaction
 	unsigned i;
 CODESTARTcommitTransaction
-dbgprintf("DDDDDD: omfwd processing nParams %d\n", nParams);
 	CHKiRet(doTryResume(pWrkrData));
 
 	dbgprintf(" %s:%s/%s\n", pWrkrData->pData->target, pWrkrData->pData->port,
 		 pWrkrData->pData->protocol == FORW_UDP ? "udp" : "tcp");
 
 	for(i = 0 ; i < nParams ; ++i) {
-dbgprintf("DDDDDD: omfwd processing msg %d\n", i);
 		iRet = processMsg(pWrkrData, &actParam(pParams, 1, i, 0));
 		if(iRet != RS_RET_OK && iRet != RS_RET_DEFER_COMMIT && iRet != RS_RET_PREVIOUS_COMMITTED)
 			FINALIZE;
@@ -864,7 +862,6 @@ dbgprintf("omfwd: endTransaction, offsSndBuf %u, iRet %d\n", pWrkrData->offsSndB
 		pWrkrData->offsSndBuf = 0;
 	}
 finalize_it:
-dbgprintf("DDDDDD: omfwd commitTransaction exit, iRet %d\n", iRet);
 ENDcommitTransaction
 
 
