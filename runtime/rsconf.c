@@ -585,6 +585,7 @@ dropPrivileges(rsconf_t *cnf)
 static inline void
 tellCoreConfigLoadDone(void)
 {
+	DBGPRINTF("telling rsyslog core that config load for %p is done\n", loadConf);
 	glblDoneLoadCnf();
 }
 

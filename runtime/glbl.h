@@ -95,5 +95,6 @@ static inline void glblSetOurPid(pid_t pid) { glbl_ourpid = pid; }
 void glblPrepCnf(void);
 void glblProcessCnf(struct cnfobj *o);
 void glblDoneLoadCnf(void);
+const uchar * glblGetWorkDirRaw(void);
 
 #endif /* #ifndef GLBL_H_INCLUDED */
