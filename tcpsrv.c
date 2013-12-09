@@ -1395,7 +1395,10 @@ stopWorkerPool(void)
 
 BEGINmodExit
 CODESTARTmodExit
-	stopWorkerPool();
+	if(bWrkrRunning) {
+		stopWorkerPool();
+		bWrkrRunning = 0;
+	}
 	/* de-init in reverse order! */
 	tcpsrvClassExit();
 	tcps_sessClassExit();
