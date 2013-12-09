@@ -1325,6 +1325,7 @@ rsRetVal qqueueConstruct(qqueue_t **ppThis, queueType_t qType, int iWorkerThread
 {
 	DEFiRet;
 	qqueue_t *pThis;
+	const uchar *const workDir = glblGetWorkDirRaw();
 
 	ASSERT(ppThis != NULL);
 	ASSERT(pConsumer != NULL);
@@ -1335,6 +1336,11 @@ rsRetVal qqueueConstruct(qqueue_t **ppThis, queueType_t qType, int iWorkerThread
 	/* we have an object, so let's fill the properties */
 	objConstructSetObjInfo(pThis);
 
+	if(workDir != NULL) {
+		if((pThis->pszSpoolDir = ustrdup(workDir)) == NULL)
+			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+		pThis->lenSpoolDir = ustrlen(pThis->pszSpoolDir);
+	}
 	/* set some water marks so that we have useful defaults if none are set specifically */
 	pThis->iFullDlyMrk  = -1;
 	pThis->iLightDlyMrk = -1;
