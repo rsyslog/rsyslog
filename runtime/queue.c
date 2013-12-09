@@ -1334,13 +1334,10 @@ rsRetVal qqueueConstruct(qqueue_t **ppThis, queueType_t qType, int iWorkerThread
 
 	/* we have an object, so let's fill the properties */
 	objConstructSetObjInfo(pThis);
-	if((pThis->pszSpoolDir = (uchar*) strdup((char*)glbl.GetWorkDir())) == NULL)
-		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 
 	/* set some water marks so that we have useful defaults if none are set specifically */
 	pThis->iFullDlyMrk  = -1;
 	pThis->iLightDlyMrk = -1;
-	pThis->lenSpoolDir = ustrlen(pThis->pszSpoolDir);
 	pThis->iMaxFileSize = 1024 * 1024; /* default is 1 MiB */
 	pThis->iQueueSize = 0;
 	pThis->nLogDeq = 0;
@@ -2064,6 +2061,16 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 
 	ASSERT(pThis != NULL);
 
+	dbgoprint((obj_t*) pThis, "starting queue\n");
+
+	if(pThis->pszSpoolDir == NULL) {
+		/* note: we need to pick the path so late as we do not have
+		 *       the workdir during early config load
+		 */
+		if((pThis->pszSpoolDir = (uchar*) strdup((char*)glbl.GetWorkDir())) == NULL)
+			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+		pThis->lenSpoolDir = ustrlen(pThis->pszSpoolDir);
+	}
 	/* set type-specific handlers and other very type-specific things
 	 * (we can not totally hide it...)
 	 */
