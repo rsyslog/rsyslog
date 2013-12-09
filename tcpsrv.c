@@ -1386,8 +1386,6 @@ stopWorkerPool(void)
 		pthread_cond_destroy(&wrkrInfo[i].run);
 	}
 	pthread_cond_destroy(&wrkrIdle);
-	pthread_mutex_destroy(&wrkrMut);
-
 }
 
 
@@ -1402,6 +1400,7 @@ CODESTARTmodExit
 	/* de-init in reverse order! */
 	tcpsrvClassExit();
 	tcps_sessClassExit();
+	pthread_mutex_destroy(&wrkrMut);
 ENDmodExit
 
 
