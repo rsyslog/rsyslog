@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 7.4.7  [v7.4-stable] 2013-11-??
+Version 7.4.7  [v7.4-stable] 2013-12-09
 - bugfix: limiting queue disk space did not work properly
   * queue.maxdiskspace actually initializes queue.maxfilesize
   * total size of queue files was not checked against
