@@ -2,6 +2,14 @@
 Version 8.1.4 [devel] 2013-12-06
 - bugfix: action commitTransaction() processing did not properly handle
   suspended actions
+- Add directives for numerically specifying GIDs/UIDs
+  The already present directives (FileOwner, FileGroup, DirOwner,
+  DirGroup) translate names to numerical IDs, which depends on the user
+  information being available during rsyslog's startup. This can fail if
+  the information is obtained over a network or from a service such as
+  SSSD. The new directives provide a way to specify the numerical IDs
+  directly and bypass the lookup.
+  Thanks to Tomas Heinrich for the patch.
 ---------------------------------------------------------------------------
 Version 8.1.3 [devel] 2013-12-06
 
