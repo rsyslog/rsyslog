@@ -2,8 +2,6 @@
 Version 8.1.4 [devel] 2013-12-??
 - imrelp: support for TCP KEEPALIVE added
 - bumped librelp dependency to 1.2.2 to support new KEEPALIVE feature
-- bugfix: action commitTransaction() processing did not properly handle
-  suspended actions
 - Add directives for numerically specifying GIDs/UIDs
   The already present directives (FileOwner, FileGroup, DirOwner,
   DirGroup) translate names to numerical IDs, which depends on the user
@@ -12,6 +10,9 @@ Version 8.1.4 [devel] 2013-12-??
   SSSD. The new directives provide a way to specify the numerical IDs
   directly and bypass the lookup.
   Thanks to Tomas Heinrich for the patch.
+- bugfix: action commitTransaction() processing did not properly handle
+  suspended actions
+- bugfix: omelasticsearch fail.es stats counter was improperly maitained
 ---------------------------------------------------------------------------
 Version 8.1.3 [devel] 2013-12-06
 
