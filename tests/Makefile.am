@@ -147,6 +147,10 @@ if ENABLE_OMUXSOCK
 TESTS += uxsock_simple.sh
 endif
 
+if ENABLE_RELP
+TESTS += sndrcv_relp.sh
+endif
+
 if ENABLE_OMUDPSPOOF
 TESTS += sndrcv_omudpspoof.sh \
 	 sndrcv_omudpspoof_nonstdpt.sh
@@ -422,6 +426,9 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   sndrcv.sh \
 	   testsuites/sndrcv_sender.conf \
 	   testsuites/sndrcv_rcvr.conf \
+	   sndrcv_relp.sh \
+	   testsuites/sndrcv_relp_sender.conf \
+	   testsuites/sndrcv_relp_rcvr.conf \
 	   sndrcv_udp.sh \
 	   testsuites/sndrcv_udp_sender.conf \
 	   testsuites/sndrcv_udp_rcvr.conf \
