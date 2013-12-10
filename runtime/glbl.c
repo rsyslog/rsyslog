@@ -478,6 +478,14 @@ GetWorkDir(void)
 	return(pszWorkDir == NULL ? (uchar*) "" : pszWorkDir);
 }
 
+/* return the "raw" working directory, which means
+ * NULL if unset.
+ */
+const uchar *
+glblGetWorkDirRaw(void)
+{
+	return pszWorkDir;
+}
 
 /* return the current default netstream driver */
 static uchar*
