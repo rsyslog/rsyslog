@@ -76,6 +76,7 @@ static struct configSettings_s {
 
 struct instanceConf_s {
 	uchar *pszBindPort;		/* port to bind to */
+	sbool bKeepAlive;			/* support keep-alive packets */
 	sbool bEnableTLS;
 	sbool bEnableTLSZip;
 	int dhBits;
@@ -84,6 +85,9 @@ struct instanceConf_s {
 	uchar *caCertFile;
 	uchar *myCertFile;
 	uchar *myPrivKeyFile;
+	int iKeepAliveIntvl;
+	int iKeepAliveProbes;
+	int iKeepAliveTime;
 	struct {
 		int nmemb;
 		uchar **name;
@@ -127,6 +131,10 @@ static struct cnfparamblk modpblk =
 /* input instance parameters */
 static struct cnfparamdescr inppdescr[] = {
 	{ "port", eCmdHdlrString, CNFPARAM_REQUIRED },
+	{ "keepalive", eCmdHdlrBinary, 0 },
+	{ "keepalive.probes", eCmdHdlrInt, 0 },
+	{ "keepalive.time", eCmdHdlrInt, 0 },
+	{ "keepalive.interval", eCmdHdlrInt, 0 },
 	{ "tls", eCmdHdlrBinary, 0 },
 	{ "tls.permittedpeer", eCmdHdlrArray, 0 },
 	{ "tls.authmode", eCmdHdlrString, 0 },
@@ -226,6 +234,7 @@ createInstance(instanceConf_t **pinst)
 	inst->next = NULL;
 
 	inst->pszBindPort = NULL;
+	inst->bKeepAlive = 0;
 	inst->bEnableTLS = 0;
 	inst->bEnableTLSZip = 0;
 	inst->dhBits = 0;
@@ -316,6 +325,8 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 	CHKiRet(statsobj.ConstructFinalize(inst->data.stats));
 	/* end stats counters */
 	relpSrvSetUsrPtr(pSrv, inst);
+	relpSrvSetKeepAlive(pSrv, inst->bKeepAlive, inst->iKeepAliveIntvl,
+			    inst->iKeepAliveProbes, inst->iKeepAliveTime);
 	if(inst->bEnableTLS) {
 		relpSrvEnableTLS(pSrv);
 		if(inst->bEnableTLSZip) {
@@ -373,6 +384,14 @@ CODESTARTnewInpInst
 			continue;
 		if(!strcmp(inppblk.descr[i].name, "port")) {
 			inst->pszBindPort = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(inppblk.descr[i].name, "keepalive")) {
+			inst->bKeepAlive = (sbool) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "keepalive.probes")) {
+			inst->iKeepAliveProbes = (int) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "keepalive.time")) {
+			inst->iKeepAliveTime = (int) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "keepalive.interval")) {
+			inst->iKeepAliveIntvl = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "tls")) {
 			inst->bEnableTLS = (unsigned) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "tls.dhbits")) {
