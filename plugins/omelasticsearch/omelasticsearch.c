@@ -608,6 +608,7 @@ checkResult(wrkrInstanceData_t *pWrkrData, uchar *reqmsg)
 	 * these in any case.
 	 */
 	if(iRet == RS_RET_DATAFAIL) {
+		STATSCOUNTER_INC(indexESFail, mutIndexESFail);
 		writeDataError(pWrkrData, pWrkrData->pData, &root, reqmsg);
 		iRet = RS_RET_OK; /* we have handled the problem! */
 	}
