@@ -151,6 +151,7 @@ enum relpCmdEnaState_e { /* command enabled state - what are we permitted to do/
 #define RELP_RET_ERR_INVAL	RELPERR_BASE + 41	/**< some parameter is invalid (like EINVAL) */
 #define RELP_RET_ERR_EPOLL_CTL	RELPERR_BASE + 42	/**< epoll_ctl() failed */
 #define RELP_RET_ERR_INTERNAL	RELPERR_BASE + 43	/**< internal error in librelp (bug) */
+#define RELP_RET_WRN_NO_KEEPALIVE	RELPERR_BASE + 44/**< KEEPALIVE cannot be enabled */
 
 /* some macros to work with librelp error codes */
 #define CHKRet(code) if((iRet = code) != RELP_RET_OK) goto finalize_it
@@ -191,6 +192,7 @@ relpRetVal relpSrvSetUsrPtr(relpSrv_t *pThis, void *pUsr);
 void relpSrvEnableTLS(relpSrv_t *pThis);
 void relpSrvEnableTLSZip(relpSrv_t *pThis);
 void relpSrvSetDHBits(relpSrv_t *pThis, int bits);
+void relpSrvSetKeepAlive(relpSrv_t *pThis, const int bEnabled, const int iKeepAliveIntvl, const int iKeepAliveProbes, const int iKeepAliveTime);
 relpRetVal relpSrvSetGnuTLSPriString(relpSrv_t *pThis, char *pristr);
 relpRetVal relpSrvSetCACert(relpSrv_t *pThis, char *cert);
 relpRetVal relpSrvSetOwnCert(relpSrv_t *pThis, char *cert);

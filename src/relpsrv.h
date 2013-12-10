@@ -1,6 +1,6 @@
 /* The RELPSRV object.
  *
- * Copyright 2008 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2013 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of librelp.
  *
@@ -47,7 +47,11 @@ struct relpSrv_s {
 	relpTcp_t *pTcp; /**< our tcp support object */
 	size_t maxDataSize;  /**< maximum size of a DATA element */
 	void *pUsr; /**< user pointer (passed back in to callback) */
-	int bEnableTLS;
+	int bKeepAlive;			/* support keep-alive packets */
+	int iKeepAliveIntvl;
+	int iKeepAliveProbes;
+	int iKeepAliveTime;
+	int bEnableTLS;			/* support for TLS */
 	int bEnableTLSZip;
 	int dhBits;	/**< number of bits for Diffie-Hellman key */
 	char *pristring; /**< priority string for GnuTLS */

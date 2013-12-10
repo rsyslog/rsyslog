@@ -170,7 +170,9 @@ relpTcpDestruct(relpTcp_t **ppThis)
 
 /* helper to call onErr if set */
 static void
-callOnErr(relpTcp_t *pThis, char *emsg, relpRetVal ecode)
+callOnErr(const relpTcp_t *__restrict__ const pThis,
+	char *__restrict__ const emsg,
+	const relpRetVal ecode)
 {
 	char objinfo[1024];
 	pThis->pEngine->dbgprint("librelp: generic error: ecode %d, "
@@ -586,6 +588,79 @@ finalize_it:
   	LEAVE_RELPFUNC;
 }
 
+/* Enable KEEPALIVE handling on the socket.  */
+static void
+EnableKeepAlive(const relpTcp_t *__restrict__ const pThis,
+	const relpSrv_t *__restrict__ const pSrv,
+	const int sock)
+{
+	int ret;
+	int optval;
+	socklen_t optlen;
+
+	optval = 1;
+	optlen = sizeof(optval);
+	ret = setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &optval, optlen);
+	if(ret < 0) {
+		pThis->pEngine->dbgprint("librelp: EnableKeepAlive socket call "
+					"returns error %d\n", ret);
+		goto done;
+	}
+
+#	if defined(TCP_KEEPCNT)
+	if(pSrv->iKeepAliveProbes > 0) {
+		optval = pSrv->iKeepAliveProbes;
+		optlen = sizeof(optval);
+		ret = setsockopt(sock, SOL_TCP, TCP_KEEPCNT, &optval, optlen);
+	} else {
+		ret = 0;
+	}
+#	else
+	ret = -1;
+#	endif
+	if(ret < 0) {
+		callOnErr(pThis, "librelp cannot set keepalive probes - ignored",
+			  RELP_RET_WRN_NO_KEEPALIVE);
+	}
+
+#	if defined(TCP_KEEPCNT)
+	if(pSrv->iKeepAliveTime > 0) {
+		optval = pSrv->iKeepAliveTime;
+		optlen = sizeof(optval);
+		ret = setsockopt(sock, SOL_TCP, TCP_KEEPIDLE, &optval, optlen);
+	} else {
+		ret = 0;
+	}
+#	else
+	ret = -1;
+#	endif
+	if(ret < 0) {
+		callOnErr(pThis, "librelp cannot set keepalive time - ignored",
+			  RELP_RET_WRN_NO_KEEPALIVE);
+	}
+
+#	if defined(TCP_KEEPCNT)
+	if(pSrv->iKeepAliveIntvl > 0) {
+		optval = pSrv->iKeepAliveIntvl;
+		optlen = sizeof(optval);
+		ret = setsockopt(sock, SOL_TCP, TCP_KEEPINTVL, &optval, optlen);
+	} else {
+		ret = 0;
+	}
+#	else
+	ret = -1;
+#	endif
+	if(ret < 0) {
+		callOnErr(pThis, "librelp cannot set keepalive intvl - ignored",
+			  RELP_RET_WRN_NO_KEEPALIVE);
+	}
+
+	pThis->pEngine->dbgprint("KEEPALIVE enabled for socket %d\n", sock);
+
+done:
+  	return;
+}
+
 /* accept an incoming connection request, sock provides the socket on which we can
  * accept the new session.
  * rgerhards, 2008-03-17
@@ -607,6 +682,9 @@ relpTcpAcceptConnReq(relpTcp_t **ppThis, int sock, relpSrv_t *pSrv)
 	if(iNewSock < 0) {
 		ABORT_FINALIZE(RELP_RET_ACCEPT_ERR);
 	}
+
+	if(pSrv->bKeepAlive)
+		EnableKeepAlive(pThis, pSrv, iNewSock);
 
 	/* construct our object so that we can use it... */
 	CHKRet(relpTcpConstruct(&pThis, pEngine, RELP_SRV_CONN, pSrv));

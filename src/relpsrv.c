@@ -295,6 +295,18 @@ relpSrvEnableTLSZip(relpSrv_t *pThis)
 	pThis->bEnableTLSZip = 1;
 }
 
+void
+relpSrvSetKeepAlive(relpSrv_t *pThis,
+	const int bEnabled,
+	const int iKeepAliveIntvl,
+	const int iKeepAliveProbes,
+	const int iKeepAliveTime)
+{
+	pThis->bKeepAlive = bEnabled;
+	pThis->iKeepAliveIntvl = iKeepAliveIntvl;
+	pThis->iKeepAliveProbes = iKeepAliveProbes;
+	pThis->iKeepAliveTime = iKeepAliveTime;
+}
 
 /* start a relp server - the server object must have all properties set
  * rgerhards, 2008-03-17

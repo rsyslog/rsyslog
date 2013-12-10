@@ -1,4 +1,8 @@
 ----------------------------------------------------------------------
+Version 1.2.2 - 2013-12-??
+- add capability to enable tcp KEEPALIVE
+- introduced new API relpSrvSetKeepAlive() to support KEEPALIVE
+----------------------------------------------------------------------
 Version 1.2.1 - 2013-09-26
 - errors binding listener port are now reported via error message
   callback
