@@ -243,7 +243,7 @@ Version 7.5.0 [devel] 2013-06-11
   connections
   Thanks to Axel Rau for the patch.
 ---------------------------------------------------------------------------
-Version 7.4.7  [v7.4-stable] 2013-11-??
+Version 7.4.7  [v7.4-stable] 2013-12-??
 - bugfix: limiting queue disk space did not work properly
   * queue.maxdiskspace actually initializes queue.maxfilesize
   * total size of queue files was not checked against
@@ -267,6 +267,8 @@ Version 7.4.7  [v7.4-stable] 2013-11-??
 - improved checking of queue config parameters on startup
 - bugfix: call to ruleset with async queue did not use the queue
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=443
+- bugfix: if imtcp is loaded and no listeners are configured (which is
+  uncommon), rsyslog crashes during shutdown.
 ---------------------------------------------------------------------------
 Version 7.4.6  [v7.4-stable] 2013-10-31
 - bugfix: potential abort during HUP
