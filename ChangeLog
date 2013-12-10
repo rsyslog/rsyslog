@@ -11,6 +11,7 @@ Version 7.5.8 [v7-devel] 2013-11-??
 - actions now report if they suspend and resume themselves
   this is by default on and controllable by the action.reportSuspension
   global parameter
+- bugfix: omelasticsearch fail.es stats counter was improperly maitained
 - bugfix: mmrfc5424addhmac: "key" parameter was not properly processed
 - add new impstats action counters:
   * suspended
