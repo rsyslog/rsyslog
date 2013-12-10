@@ -23,6 +23,8 @@ Version 7.4.7  [v7.4-stable] 2013-12-09
 - improved checking of queue config parameters on startup
 - bugfix: call to ruleset with async queue did not use the queue
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=443
+- bugfix: if imtcp is loaded and no listeners are configured (which is
+  uncommon), rsyslog crashes during shutdown.
 ---------------------------------------------------------------------------
 Version 7.4.6  [v7.4-stable] 2013-10-31
 - bugfix: potential abort during HUP
