@@ -447,7 +447,7 @@ finalize_it:
  * if the entry should be d_free()ed and 0 if not.
  */
 static rsRetVal
-dynaFileDelCacheEntry(instanceData *pData, int iEntry, int bFreeEntry)
+dynaFileDelCacheEntry(instanceData *__restrict__ const pData, const int iEntry, const int bFreeEntry)
 {
 	dynaFileCacheEntry **pCache = pData->dynCache;
 	DEFiRet;
@@ -487,7 +487,7 @@ finalize_it:
  * rgerhards, 2008-10-23
  */
 static inline void
-dynaFileFreeCacheEntries(instanceData *pData)
+dynaFileFreeCacheEntries(instanceData *__restrict__ const pData)
 {
 	register int i;
 	ASSERT(pData != NULL);
@@ -503,7 +503,7 @@ dynaFileFreeCacheEntries(instanceData *pData)
 
 /* This function frees the dynamic file name cache.
  */
-static void dynaFileFreeCache(instanceData *pData)
+static void dynaFileFreeCache(instanceData *__restrict__ const pData)
 {
 	ASSERT(pData != NULL);
 
@@ -517,7 +517,7 @@ static void dynaFileFreeCache(instanceData *pData)
 
 /* close current file */
 static rsRetVal
-closeFile(instanceData *pData)
+closeFile(instanceData *__restrict__ const pData)
 {
 	DEFiRet;
 	if(pData->useSigprov) {
@@ -531,7 +531,7 @@ closeFile(instanceData *pData)
 
 /* This prepares the signature provider to process a file */
 static rsRetVal
-sigprovPrepare(instanceData *pData, uchar *fn)
+sigprovPrepare(instanceData *__restrict__ const pData, uchar *__restrict__ const fn)
 {
 	DEFiRet;
 	pData->sigprov.OnFileOpen(pData->sigprovData, fn, &pData->sigprovFileData);
@@ -545,7 +545,7 @@ sigprovPrepare(instanceData *pData, uchar *fn)
  * changed to iRet interface - 2009-03-19
  */
 static rsRetVal
-prepareFile(instanceData *__restrict__ pData, const uchar *const newFileName)
+prepareFile(instanceData *__restrict__ const pData, const uchar *__restrict__ const newFileName)
 {
 	int fd;
 	DEFiRet;
@@ -647,7 +647,7 @@ finalize_it:
  * This is a helper to writeFile(). rgerhards, 2007-07-03
  */
 static inline rsRetVal
-prepareDynFile(instanceData *const pData, const uchar *const newFileName)
+prepareDynFile(instanceData *__restrict__ const pData, const uchar *__restrict__ const newFileName)
 {
 	uint64 ctOldest; /* "timestamp" of oldest element */
 	int iOldest;
@@ -770,7 +770,7 @@ finalize_it:
  * rgerhards, 2009-06-03
  */
 static  rsRetVal
-doWrite(instanceData *__restrict__ const pData, uchar *const pszBuf, const int lenBuf)
+doWrite(instanceData *__restrict__ const pData, uchar *__restrict__ const pszBuf, const int lenBuf)
 {
 	DEFiRet;
 	ASSERT(pData != NULL);
@@ -792,7 +792,7 @@ finalize_it:
 
 /* rgerhards 2004-11-11: write to a file output.  */
 static rsRetVal
-writeFile(instanceData *pData,
+writeFile(instanceData *__restrict__ const pData,
 	  const actWrkrIParams_t *__restrict__ const pParam,
 	  const int iMsg)
 {
@@ -974,7 +974,7 @@ ENDcommitTransaction
 
 
 static inline void
-setInstParamDefaults(instanceData *pData)
+setInstParamDefaults(instanceData *__restrict__ const pData)
 {
 	pData->fname = NULL;
 	pData->tplName = NULL;
@@ -1002,7 +1002,7 @@ setInstParamDefaults(instanceData *pData)
 
 
 static rsRetVal
-setupInstStatsCtrs(instanceData *pData)
+setupInstStatsCtrs(instanceData *__restrict__ const pData)
 {
 	uchar ctrName[512];
 	DEFiRet;
@@ -1038,7 +1038,7 @@ finalize_it:
 }
 
 static inline void
-initSigprov(instanceData *pData, struct nvlst *lst)
+initSigprov(instanceData *__restrict__ const pData, struct nvlst *lst)
 {
 	uchar szDrvrName[1024];
 
@@ -1080,7 +1080,7 @@ done:	return;
 }
 
 static inline rsRetVal
-initCryprov(instanceData *pData, struct nvlst *lst)
+initCryprov(instanceData *__restrict__ const pData, struct nvlst *lst)
 {
 	uchar szDrvrName[1024];
 	DEFiRet;
