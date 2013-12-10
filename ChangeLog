@@ -243,7 +243,7 @@ Version 7.5.0 [devel] 2013-06-11
   connections
   Thanks to Axel Rau for the patch.
 ---------------------------------------------------------------------------
-Version 7.4.7  [v7.4-stable] 2013-12-??
+Version 7.4.7  [v7.4-stable] 2013-12-10
 - bugfix: limiting queue disk space did not work properly
   * queue.maxdiskspace actually initializes queue.maxfilesize
   * total size of queue files was not checked against
