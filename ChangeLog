@@ -1,5 +1,13 @@
 ---------------------------------------------------------------------------
 Version 7.5.8 [v7-devel] 2013-11-??
+- Add directives for numerically specifying GIDs/UIDs
+  The already present directives (FileOwner, FileGroup, DirOwner,
+  DirGroup) translate names to numerical IDs, which depends on the user
+  information being available during rsyslog's startup. This can fail if
+  the information is obtained over a network or from a service such as
+  SSSD. The new directives provide a way to specify the numerical IDs
+  directly and bypass the lookup.
+  Thanks to Tomas Heinrich for the patch.
 - actions now report if they suspend and resume themselves
   this is by default on and controllable by the action.reportSuspension
   global parameter
