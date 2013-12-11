@@ -459,14 +459,12 @@ BEGINrunInput
 CODESTARTrunInput
 	/* this is an endless loop - it is terminated when the thread is
 	 * signalled to do so. This, however, is handled by the framework,
-	 * right into the sleep below.
+	 * right into the sleep below. Note that we DELIBERATLY output
+	 * final set of stats counters on termination request. Depending
+	 * on configuration, they may not make it to the final destination...
 	 */
-	while(1) {
+	while(glbl.GetGlobalInputTermState() == 0) {
 		srSleep(runModConf->iStatsInterval, 0); /* seconds, micro seconds */
-
-		if(glbl.GetGlobalInputTermState() == 1)
-			break; /* terminate input! */
-
 		DBGPRINTF("impstats: woke up, generating messages\n");
 		generateStatsMsgs();
 	}
