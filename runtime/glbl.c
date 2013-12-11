@@ -31,6 +31,7 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <fcntl.h>
 #include <unistd.h>
 #include <pthread.h>
 #include <assert.h>
@@ -62,6 +63,8 @@ DEFobjCurrIf(net)
  * For this object, these variables are obviously what makes the "meat" of the
  * class...
  */
+int glblDebugOnShutdown = 0;	/* start debug log when we are shut down */
+
 static struct cnfobj *mainqCnfObj = NULL;/* main queue object, to be used later in startup sequence */
 static uchar *pszWorkDir = NULL;
 static int bOptimizeUniProc = 1;	/* enable uniprocessor optimizations */
@@ -102,6 +105,8 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "dropmsgswithmaliciousdnsptrrecords", eCmdHdlrBinary, 0 },
 	{ "localhostname", eCmdHdlrGetWord, 0 },
 	{ "preservefqdn", eCmdHdlrBinary, 0 },
+	{ "debug.onshutdown", eCmdHdlrBinary, 0 },
+	{ "debug.logfile", eCmdHdlrString, 0 },
 	{ "defaultnetstreamdrivercafile", eCmdHdlrString, 0 },
 	{ "defaultnetstreamdriverkeyfile", eCmdHdlrString, 0 },
 	{ "defaultnetstreamdriver", eCmdHdlrString, 0 },
@@ -707,12 +712,26 @@ glblDoneLoadCnf(void)
 			bActionReportSuspension = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "maxmessagesize")) {
 			iMaxLine = (int) cnfparamvals[i].val.d.n;
+		} else if(!strcmp(paramblk.descr[i].name, "debug.onshutdown")) {
+			glblDebugOnShutdown = (int) cnfparamvals[i].val.d.n;
+		} else if(!strcmp(paramblk.descr[i].name, "debug.logfile")) {
+			if(pszAltDbgFileName == NULL) {
+				pszAltDbgFileName = es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
+				if((altdbg = open(pszAltDbgFileName, O_WRONLY|O_CREAT|O_TRUNC|O_NOCTTY|O_CLOEXEC, S_IRUSR|S_IWUSR)) == -1) {
+					//parser_errmsg("alternate debug file could not be opened, ignoring. Error: %s\n", strerror(errno));
+				}
+			}
 		} else {
 			dbgprintf("glblDoneLoadCnf: program error, non-handled "
 			  "param '%s'\n", paramblk.descr[i].name);
 		}
 	}
-finalize_it:	;
+
+	if(glblDebugOnShutdown && Debug != DEBUG_FULL) {
+		Debug = DEBUG_ONDEMAND;
+		stddbg = -1;
+	}
+finalize_it:	return;
 }
 
 
