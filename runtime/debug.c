@@ -60,7 +60,7 @@
 
 /* static data (some time to be replaced) */
 DEFobjCurrIf(obj)
-int Debug;		/* debug flag  - read-only after startup */
+int Debug = DEBUG_OFF;		/* debug flag  - read-only after startup */
 int debugging_on = 0;	 /* read-only, except on sig USR1 */
 static int bLogFuncFlow = 0; /* shall the function entry and exit be logged to the debug log? */
 static int bLogAllocFree = 0; /* shall calls to (m/c)alloc and free be logged to the debug log? */
