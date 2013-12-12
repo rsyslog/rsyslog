@@ -744,8 +744,6 @@ static void doDie(int sig)
 		 */
 		debugging_on = 0;
 		debug_switch();
-int rr;
-		if((rr = write(altdbg, MSG1, sizeof(MSG1) - 1))) {fprintf(stderr, "write altdbg ret: %d\n", rr);perror("writing altdbg");}
 	}
 #	undef MSG1
 #	undef MSG2
@@ -2048,8 +2046,8 @@ int realMain(int argc, char **argv)
 	 * rgerhards, 2009-06-29
 	 */
 	if(doFork) {
-		//close(1);
-		//close(2);
+		close(1);
+		close(2);
 		ourConf->globals.bErrMsgToStderr = 0;
 	}
 
