@@ -60,7 +60,7 @@
 
 /* static data (some time to be replaced) */
 DEFobjCurrIf(obj)
-int Debug;		/* debug flag  - read-only after startup */
+int Debug = DEBUG_OFF;		/* debug flag  - read-only after startup */
 int debugging_on = 0;	 /* read-only, except on sig USR1 */
 static int bLogFuncFlow = 0; /* shall the function entry and exit be logged to the debug log? */
 static int bLogAllocFree = 0; /* shall calls to (m/c)alloc and free be logged to the debug log? */
@@ -70,8 +70,8 @@ static int bPrintTime = 1;	/* print a timestamp together with debug message */
 static int bPrintAllDebugOnExit = 0;
 static int bAbortTrace = 1;	/* print a trace after SIGABRT or SIGSEGV */
 static int bOutputTidToStderr = 0;/* output TID to stderr on thread creation */
-static char *pszAltDbgFileName = NULL; /* if set, debug output is *also* sent to here */
-static int altdbg = -1;	/* and the handle for alternate debug output */
+char *pszAltDbgFileName = NULL; /* if set, debug output is *also* sent to here */
+int altdbg = -1;	/* and the handle for alternate debug output */
 int stddbg = 1; /* the handle for regular debug output, set to stdout if not forking, -1 otherwise */
 
 /* list of files/objects that should be printed */

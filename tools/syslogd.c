@@ -728,6 +728,13 @@ static void doDie(int sig)
 		abort();
 	}
 	bFinished = sig;
+	if(glblDebugOnShutdown) {
+		/* kind of hackish - set to 0, so that debug_swith will enable
+		 * and AND emit the "start debug log" message.
+		 */
+		debugging_on = 0;
+		debug_switch();
+	}
 #	undef MSG1
 #	undef MSG2
 }

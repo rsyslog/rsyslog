@@ -8,7 +8,7 @@
  * Please note that there currently is no glbl.c file as we do not yet
  * have any implementations.
  *
- * Copyright 2008-2012 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2013 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -91,6 +91,8 @@ ENDinterface(glbl)
 
 /* the remaining prototypes */
 PROTOTYPEObj(glbl);
+
+extern int glblDebugOnShutdown;	/* start debug log when we are shut down */
 
 static inline pid_t glblGetOurPid(void) { return glbl_ourpid; }
 static inline void glblSetOurPid(pid_t pid) { glbl_ourpid = pid; }
