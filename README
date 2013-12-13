@@ -29,11 +29,6 @@ you can view the documentation for *the most recent rsyslog version*
 online at
     http://www.rsyslog.com/doc
 
-Development Model
-=================
-Rsyslog uses the "integration manager" workflow as described here:
-    http://git-scm.com/book/en/Distributed-Git-Distributed-Workflows
-
 Project Philosophy
 ==================
 We are an open source project in all aspects and very open to outside feedback
