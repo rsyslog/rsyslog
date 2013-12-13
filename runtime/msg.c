@@ -2630,6 +2630,8 @@ jsonAddVal(uchar *pSrc, unsigned buflen, es_str_t **dst)
 	unsigned char c;
 	es_size_t i;
 	char numbuf[4];
+	int ni;
+	unsigned char nc;
 	int j;
 	DEFiRet;
 
@@ -2665,6 +2667,21 @@ jsonAddVal(uchar *pSrc, unsigned buflen, es_str_t **dst)
 				es_addBuf(dst, "\\/", 2);
 				break;
 			case '\\':
+				ni = i + 1;
+				if (ni <= buflen) {
+					nc = pSrc[ni];
+
+					/* Attempt to not double encode */
+					if (   nc == '"' || nc == '/' || nc == '\\' || nc == 'b' || nc == 'f'
+					    || nc == 'n' || nc == 'r' || nc == 't' || nc == 'u') {
+						
+						es_addChar(dst, c);
+						es_addChar(dst, nc);
+						i = ni;
+						break;
+					}
+				}
+
 				es_addBuf(dst, "\\\\", 2);
 				break;
 			case '\010':
