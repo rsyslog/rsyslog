@@ -1,5 +1,5 @@
-This file has been superseeded by the files in the doc folder.
-Please see doc/manual.html for futher details. If you are
-looking for install information doc/install.html is for you!
-If you do not have the doc set, see
+The main rsyslog documenation is available in html format. To read
+it, point your web browser to ./doc/manual.html. Alternatively,
+you can view the documenation for *the most recent rsyslog version*
+online at
     http://www.rsyslog.com/doc
