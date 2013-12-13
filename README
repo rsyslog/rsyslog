@@ -6,9 +6,10 @@ as a regular syslogd, it has evolved into a kind of swiss army knife of logging,
 being able to accept inputs from a wide variety of sources, transform them, and
 output to the results to diverse destinations.
 
-Rsyslog can deliver over one million messages (V7, December 2013) to local
-destinations when limited processing is applied. Even with remote destinations
-and more elaborate processing the performance is usually considered "stunning".
+Rsyslog can deliver over one million messages per second (V7, December 2013) to
+local destinations when limited processing is applied. Even with remote
+destinations and more elaborate processing the performance is usually
+considered "stunning".
 
 Project Philosophy
 ==================
@@ -34,7 +35,7 @@ commercial license (this is simply impossible for anyone due to rsyslog's
 license structure).
 
 Any third party is obviously also free to offer custom development, support
-and rsyslog consulting. We gladly merge result of such third-party work into
+and rsyslog consulting. We gladly merge results of such third-party work into
 the main repository (assuming it matches the few essential things written
 down in our contribution policy).
 
@@ -45,11 +46,11 @@ to contribute, please visit
     http://www.rsyslog.com/how-to-contribute-to-rsyslog/
 
 Note that the rsyslog team usually has a very long todo list. Help
-with that list is much appreicated.
+with that list is much appreciated.
 
 Documentation
 =============
-The main rsyslog documenation is available in html format. To read
+The main rsyslog documentation is available in html format. To read
 it, point your web browser to ./doc/manual.html. Alternatively,
 you can view the documentation for *the most recent rsyslog version*
 online at
@@ -57,5 +58,5 @@ online at
 
 Development Model
 =================
-Rsyslog uses the integration manager workflow as described here:
+Rsyslog uses the "integration manager" workflow as described here:
     http://git-scm.com/book/en/Distributed-Git-Distributed-Workflows
