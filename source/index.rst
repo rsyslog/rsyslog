@@ -6,7 +6,7 @@
 Welcome to Rsyslog Doc's documentation!
 =======================================
 
-Modules :
+#Modules :
 
 .. toctree::
    :maxdepth: 2
@@ -14,4 +14,3 @@ Modules :
 
    modules/*
 
-* :ref:`search`
