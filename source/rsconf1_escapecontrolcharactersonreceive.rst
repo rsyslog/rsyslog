@@ -1,0 +1,44 @@
+`back <rsyslog_conf_global.html>`_
+
+$EscapeControlCharactersOnReceive
+---------------------------------
+
+**Type:** global configuration directive
+
+**Default:** on
+
+**Description:**
+
+This directive instructs rsyslogd to replace control characters during
+reception of the message. The intent is to provide a way to stop
+non-printable messages from entering the syslog system as whole. If this
+option is turned on, all control-characters are converted to a 3-digit
+octal number and be prefixed with the $ControlCharacterEscapePrefix
+character (being '\\' by default). For example, if the BEL character
+(ctrl-g) is included in the message, it would be converted to "\\007".
+To be compatible to sysklogd, this option must be turned on.
+
+**Warning:**
+
+-  turning on this option most probably destroys non-western character
+   sets (like Japanese, Chinese and Korean)
+-  turning on this option destroys digital signatures if such exists
+   inside the message
+-  if turned on, the drop-cc, space-cc and escape-cc `property
+   replacer <property_replacer.html>`_ options do not work as expected
+   because control characters are already removed upon message
+   reception. If you intend to use these property replacer options, you
+   must turn off $EscapeControlCharactersOnReceive.
+
+**Sample:**
+
+``$EscapeControlCharactersOnReceive on``
+
+[`rsyslog.conf overview <rsyslog_conf.html>`_\ ] [`manual
+index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
+
+This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
+project.
+ Copyright © 2007 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
+and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
+version 2 or higher.

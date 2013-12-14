@@ -1,0 +1,233 @@
+Rsyslog Debug Support
+=====================
+
+Rsyslog provides a number of debug aides. Some of them are activated by
+adding the --enable-rtinst ./configure option ("rtinst" means runtime
+instrumentation). Turning debugging on obviously costs some performance
+(in some cases considerable).
+
+This is document is just being created and thus terse.
+
+Signals supported
+-----------------
+
+**SIGUSR1** - turns debug messages on and off. Note that for this signal
+to work, rsyslogd must be running with debugging enabled, either via the
+-d command line switch or the environment options specified below. It is
+**not** required that rsyslog was compiled with debugging enabled (but
+depending on the settings this may lead to better debug info).
+
+**SIGUSR2** - outputs debug information (including active threads and a
+call stack) for the state when SIGUSR2 was received. This is a one-time
+output. Can be sent as often as the user likes.
+
+**Note:** this signal **may go away** in later releases and may be
+replaced by something else.
+
+Environment Variables
+---------------------
+
+There are two environment variables that set several debug settings:
+
+-  The "RSYSLOG\_DEBUGLOG" (sample:
+    RSYSLOG\_DEBUGLOG="/path/to/debuglog/") writes (allmost) all debug
+   message to the specified log file in addition to stdout. Some system
+   messages (e.g. segfault or abort message) are not written to the file
+   as we can not capture them.
+-  Runtime debug support is controlled by "RSYSLOG\_DEBUG".
+
+   The "RSYSLOG\_DEBUG" environment variable contains an option string
+   with the following options possible (all are case insensitive):
+
+   -  **LogFuncFlow** - print out the logical flow of functions
+      (entering and exiting them)
+   -  **FileTrace** - specifies which files to trace LogFuncFlow. If
+      **not** set (the default), a LogFuncFlow trace is provided for all
+      files. Set to limit it to the files specified. FileTrace may be
+      specified multiple times, one file each (e.g. export
+      RSYSLOG\_DEBUG="LogFuncFlow FileTrace=vm.c FileTrace=expr.c"
+   -  **PrintFuncDB** - print the content of the debug function database
+      whenever debug information is printed (e.g. abort case)!
+   -  **PrintAllDebugInfoOnExit** - print all debug information
+      immediately before rsyslogd exits (currently not implemented!)
+   -  **PrintMutexAction** - print mutex action as it happens. Useful
+      for finding deadlocks and such.
+   -  **NoLogTimeStamp** - do not prefix log lines with a timestamp
+      (default is to do that).
+   -  **NoStdOut** - do not emit debug messages to stdout. If
+      RSYSLOG\_DEBUGLOG is not set, this means no messages will be
+      displayed at all.
+   -  **Debug** - if present, turns on the debug system and enables
+      debug output
+   -  **DebugOnDemand** - if present, turns on the debug system but does
+      not enable debug output itself. You need to send SIGUSR1 to turn
+      it on when desired.
+   -  **OutputTidToStderr** - if present, makes rsyslog output
+      information about the thread id (tid) of newly create processesto
+      stderr. Note that not necessarily all new threads are reported
+      (depends on the code, e.g. of plugins). This is only available
+      under Linux. This usually does NOT work when privileges have been
+      dropped (that's not a bug, but the way it is).
+   -  **help** - display a very short list of commands - hopefully a
+      life saver if you can't access the documentation...
+
+   Individual options are separated by spaces.
+
+Why Environment Variables?
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+You may ask why we use environment variables for debug-system parameters
+and not the usual rsyslog.conf configuration commands. After all,
+environment variables force one to change distro-specific configuration
+files, whereas regular configuration directives would fit nicely into
+the one central rsyslog.conf.
+
+The problem here is that many settings of the debug system must be
+initialized before the full rsyslog engine starts up. At that point,
+there is no such thing like rsyslog.conf or the objects needed to
+process it present in an running instance. And even if we would enable
+to change settings some time later, that would mean that we can not
+correctly monitor (and debug) the initial startup phase of rsyslogd.
+What makes matters worse is that during this startup phase (and never
+again later!) some of the base debug structure needs to be created, at
+least if the build is configured for that (many of these things only
+happen in --enable-rtinst mode). So if we do not initialize the debug
+system **before** actually startig up the rsyslog core, we get a number
+of data structures wrong.
+
+For these reasons, we utilize environment variables to initialize and
+configure the debugging system. We understand this may be somewhat
+painful, but now you know there are at least some good reasons for doing
+so.
+
+HOWEVER, if you have a too hard time to set debug instructions using the
+environment variables, there is a cure, described in the next paragraph.
+
+Enabling Debug via rsyslog.conf
+-------------------------------
+
+As described in the previous paragraph, enabling debug via rsyslog.conf
+may not be perfect for some debugging needs, but basic debug output will
+work - and that is what most often is requried. There are limited
+options available, but these cover the most important use cases.
+
+Debug processing is done via legacy config statements. There currently
+is no plan to move these over to the v6+ config system. Availabe
+settings are
+
+-  $DebugFile <filename> - sets the debug file name
+-  $DebugLevel <0\|1\|2> - sets the respective debug level, where 0
+   means debug off, 1 is debug on demand activated (but debug mode off)
+   and 2 is full debug mode.
+
+Note that in theory it is forbidden to specify these parameters more
+than once. However, we do not enforce that and if it happens results are
+undefined.
+
+Getting debug information from a running Instance
+-------------------------------------------------
+
+It is possible to obtain debugging information from a running instance,
+but this requires some setup. We assume that the instance runs in the
+background, so debug output to stdout is not desired. As such, all debug
+information needs to go into a log file.
+
+To create this setup, you need to
+
+-  point the RSYSLOG\_DEBUGLOG environment variable to a file that is
+   accessible during the while runtime (we strongly suggest a file in
+   the local file system!)
+-  set RSYSLOG\_DEBUG at least to "DebugOnDeman NoStdOut"
+-  make sure these environment variables are set in the correct
+   (distro-specifc) startup script if you do not run rsyslogd
+   interactively
+
+These settings enable the capability to react to SIGUSR1. The signal
+will toggle debug status when received. So send it one to turn debug
+loggin on, and send it again to turn debug logging off again. The third
+time it will be turned on again ... and so on.
+
+On a typical system, you can signal rsyslogd as follows:
+
+::
+
+    kill -USR1 `cat /var/run/rsyslogd.pid`
+
+Important: there are backticks around the "cat"-command. If you use the
+regular quote it won't work. The debug log will show whether debug
+logging has been turned on or off. There is no other indication of the
+status.
+
+Note: running with DebugOnDemand by itself does in practice not have any
+performance toll. However, switching debug logging on has a severe
+performance toll. Also, debug logging synchronizes much of the code,
+removing a lot of concurrency and thus potential race conditions. As
+such, the very same running instance may behave very differently with
+debug logging turned on vs. off. The on-demand debug log functionality
+is considered to be very valuable to analyze hard-to-find bugs that only
+manifest after a long runtime. Turning debug logging on a failing
+instance may reveal the cause of the failure. However, depending on the
+failure, debug logging may not even be successfully be turned on. Also
+note that with this rsyslog version we cannot obtain any debug
+information on events that happened *before* debug logging was turned
+on.
+
+If an instance hangs, it is possible to obtain some useful information
+about the current threads and their calling stack by sending SIGUSR2.
+However, the usefulness of that information is very much depending on
+rsyslog compile-time settings, must importantly the --enable-rtinst
+configure flag. Note that activating this option causes additional
+overhead and slows down rsyslgod considerable. So if you do that, you
+need to check if it is capable to handle the workload. Also, threading
+behavior is modified by the runtime instrumentation.
+
+Sending SIGUSR2 writes new process state information to the log file
+each time it is sent. So it may be useful to do that from time to time.
+It probably is most useful if the process seems to hang, in which case
+it may (may!) be able to output some diagnostic information on the
+current processing state. In that case, turning on the mutex debugging
+options (see above) is probably useful.
+
+Interpreting the Logs
+---------------------
+
+Debug logs are primarily meant for rsyslog developers. But they may
+still provide valuable information to users. Just be warned that logs
+sometimes contains informaton the looks like an error, but actually is
+none. We put a lot of extra information into the logs, and there are
+some cases where it is OK for an error to happen, we just wanted to
+record it inside the log. The code handles many cases automatically. So,
+in short, the log may not make sense to you, but it (hopefully) makes
+sense to a developer. Note that we developers often need many lines of
+the log file, it is relatively rare that a problem can be diagnosed by
+looking at just a couple of (hundered) log records.
+
+Security Risks
+--------------
+
+The debug log will reveal potentially sensible information, including
+user accounts and passwords, to anyone able to read the log file. As
+such, it is recommended to properly guard access to the log file. Also,
+an instance running with debug log enabled runs much slower than one
+without. An attacker may use this to place carry out a denial-of-service
+attack or try to hide some information from the log file. As such, it is
+suggested to enable DebugOnDemand mode only for a reason. Note that when
+no debug mode is enabled, SIGUSR1 and SIGUSR2 are completely ignored.
+
+When running in any of the debug modes (including on demand mode), an
+interactive instance of rsyslogd can be aborted by pressing ctl-c.
+
+**See Also**
+
+-  `How to use debug on
+   demand <http://www.rsyslog.com/how-to-use-debug-on-demand/>`_
+
+[`manual index <manual.html>`_\ ] [`rsyslog
+site <http://www.rsyslog.com/>`_\ ]
+
+This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
+project.
+ Copyright © 2008-2013 by `Rainer
+Gerhards <http://www.gerhards.net/rainer>`_ and
+`Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL version
+3 or higher.

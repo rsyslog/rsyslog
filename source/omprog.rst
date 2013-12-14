@@ -1,11 +1,11 @@
 Program integration Output module
 =================================
 
-**Module Name**:    omprog
+**Module Name:    omprog**
 
-**Available since**: 4.3.0
+**Available since:   ** 4.3.0
 
-**Author:** Rainer Gerhards <rgerhards@adiscon.com>
+**Author:**\ Rainer Gerhards <rgerhards@adiscon.com>
 
 **Description**:
 
@@ -33,9 +33,19 @@ mimic the same effect by defining multiple rulesets and including them
 
 **Configuration Directives**:
 
--  `$ActionOMProgBinary` <binary>
+-  **$ActionOMProgBinary** <binary>
     The binary program to be executed.
 
 **Caveats/Known Bugs:**
 
 Currently none known.
+
+[`rsyslog.conf overview <rsyslog_conf.html>`_\ ] [`manual
+index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
+
+This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
+project.
+ Copyright © 2008-2011 by `Rainer
+Gerhards <http://www.gerhards.net/rainer>`_ and
+`Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL version
+3 or higher.
