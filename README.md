@@ -14,21 +14,43 @@ Mailing List
 ============
     http://lists.adiscon.net/mailman/listinfo/rsyslog
 
+Installing rsyslog
+==================
+Most distributions carry rsyslog in their repository. So you usually just need
+to use the package manager to install it. Note that on non-systemd systems (most
+notably Ubuntu), rsyslog usually is already installed.
+
+Project-Provided Packages
+----------------------------
+Unfortunately, distributions often do not catch up with the pace of rsyslog
+development and as such only offer old versions. To solve that problem, we have
+created packages for current versions ourselfs.
+
+They are available for:
+ * RPM-based systems: http://www.rsyslog.com/rhelcentos-rpms/
+ * Ubuntu: http://www.rsyslog.com/ubuntu-repository/
+ * Debian: http://www.rsyslog.com/debian-repository/
+
+Building from Source
+--------------------
+Follow the instructions at:
+    http://www.rsyslog.com/doc/build_from_repo.html
+
 Reporting Bugs
 ==============
 
 Talk to the mailing list if you think something is a bug. Often, it's just a
 matter of doing some config trickery.
 
-File bugs at our Bugzilla:
+File bugs at:
     http://bugzilla.adiscon.com/
 
 How to Contribute
 =================
 Contributions to rsyslog are very welcome. Fork and send us your Pull Requests.
 
-To learn more about how to contribute, please visit:
-    http://www.rsyslog.com/how-to-contribute-to-rsyslog/
+For more information about contributing, see the
+[CONTRIBUTING](CONTRIBUTING.md) file.
 
 Documentation
 =============
